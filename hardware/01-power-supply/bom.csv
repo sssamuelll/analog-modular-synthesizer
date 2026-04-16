@@ -1,11 +1,24 @@
 ref,value,footprint,quantity,supplier,notes
-TR1,12VAC 2A,external,1,nacional,Transformador externo
-BR1,Bridge 1A,DIP-4,1,nacional,Puente de diodos
-U1,LM7805,TO-220,1,nacional,Regulador +5V
-U2,LM7812,TO-220,1,nacional,Regulador +12V
-U3,LM7912,TO-220,1,nacional,Regulador -12V
-C1-C3,4700uF/25V,Radial-D10,3,nacional,Filtrado de entrada
-C4-C9,100nF,C_Disc_D5_W2.5_P5,6,nacional,Bypass
-HS1-HS3,Heatsink TO-220,—,3,nacional,Disipadores
-J_BUS,Pin header 2x3,1x06,1,nacional,Bus de alimentación
-F1,Fuse 500mA,—,1,nacional,Protección secundario
+TR1,12VAC 2A center-tap,external,1,nacional,Transformador externo con secundario partido
+F1,Fuse 500mA slow,5x20mm,1,nacional,Protección primario 110VAC (fusible + portafusible)
+MOV1,V150LA20A / S14K150,disc-14mm,1,importado,Supresor transitorios primario (14mm 150VAC para red 110VAC)
+NTC1,SL10-5R020 (5Ω 2A),disc-10mm,1,importado,Inrush limiter en serie con primario AC
+BR1,KBP307 / DF06M (2A min),DIP-4,1,nacional,Puente rectificador
+U1,LM7812,TO-220,1,nacional,Regulador +12V (con zócalo)
+U2,LM7912,TO-220,1,nacional,Regulador -12V (tab = -Vin, aislar del chasis)
+U3,LM7805,TO-220,1,nacional,Regulador +5V para LCD y AD5686R
+C1,4700uF/25V electrolytic,Radial-D10,1,nacional,Bulk +V tras bridge
+C2,4700uF/25V electrolytic,Radial-D10,1,nacional,Bulk -V tras bridge
+C3,0.33uF ceramic,C_Disc_D5_W2.5_P5,3,nacional,Entrada de cada regulador (TI app note)
+C4,100uF/25V electrolytic,Radial-D6.3,3,nacional,Salida de cada regulador
+C5,0.1uF ceramic,C_Disc_D5_W2.5_P5,3,nacional,Bypass HF salida regulador
+D1,1N4001,DO-41,3,nacional,Diodos de protección anti-backfeed (uno por riel)
+HS1,Heatsink TO-220 Rth<=20 C/W,—,3,nacional,Disipadores con aleta (uno por regulador)
+LED1,LED rojo 3mm,LED-3mm,1,nacional,Indicador +12V
+LED2,LED amarillo 3mm,LED-3mm,1,nacional,Indicador -12V
+LED3,LED verde 3mm,LED-3mm,1,nacional,Indicador +5V
+R_LED,2.2k 1/4W,R_Axial,3,nacional,Limitadora de corriente LED
+SOCKET_TO220,TO-220 socket,—,3,nacional,Zócalo para reguladores (hot-swap si falla)
+J_IN,Barrier block 2 pos,TB-2,1,nacional,Entrada del transformador (12VAC CT)
+J_AC_IN,Barrier block 3 pos,TB-3,1,nacional,Entrada AC primaria con tierra de seguridad
+J_BUS,Pin header 2x5,1x10,2,nacional,Distribución al bus board (-12/-12/GND/GND/+12/+12/+5/+5)
