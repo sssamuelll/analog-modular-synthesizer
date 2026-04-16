@@ -1,0 +1,15 @@
+ref,value,footprint,quantity,supplier,notes
+U_PI,Raspberry Pi 3B+,—,1,importado,SBC con USB host y SPI
+U_DAC,AD5686RBRUZ,TSSOP-16,1,importado,DAC cuádruple 16-bit
+U_OP1,TL074,SOIC-14,1,nacional,Op-amp cuádruple JFET (buffer/escalado CV)
+LCD1,LCD 16x2 HD44780,—,1,nacional,Pantalla del menú
+SW1-SW4,Tactile switch,SW_PUSH_6mm,4,nacional,Back/Enter/Up/Down
+R_FILM_1k,1k 1%,R_0805,4,nacional,Película metálica - red de escalado
+R_FILM_1k5,1.5k 1%,R_0805,4,nacional,Película metálica - red de escalado
+R_PULLUP,10k,R_0805,8,nacional,Pull-ups GPIO
+C_DEC,100nF,C_0805,8,nacional,Bypass del DAC y op-amp
+C_BULK,10uF,C_0805,4,nacional,Bulk filtering
+J_USB,USB-A,—,1,nacional,Entrada del controlador MIDI (al Pi)
+J_CV1-J_CV3,Jack 3.5mm mono,—,3,nacional,Salidas CV
+J_GATE,Jack 3.5mm mono,—,1,nacional,Salida GATE
+PIN_BUS,Pin header 2x3,1x06,1,nacional,Bus de alimentación

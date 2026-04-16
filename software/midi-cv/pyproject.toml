@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sam17-midicv"
+version = "0.1.0"
+description = "MIDI-to-CV firmware for the SAM17 modular synthesizer"
+readme = "README.md"
+license = { text = "GPL-3.0-or-later" }
+authors = [
+    { name = "SAM17 contributors" },
+]
+requires-python = ">=3.10"
+dependencies = [
+    "mido>=1.3",
+    "python-rtmidi>=1.5",
+]
+
+[project.optional-dependencies]
+rpi = [
+    "RPi.GPIO>=0.7",
+    "spidev>=3.6",
+    "pyudev>=0.24",
+    "RPLCD>=1.3",
+]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.6",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+sam17-midicv = "sam17.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sam17"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true

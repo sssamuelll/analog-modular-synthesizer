@@ -1,0 +1,16 @@
+ref,value,footprint,quantity,supplier,notes
+U_OTA,LM13700,SOIC-16,1,importado,Doble OTA con buffers
+U_OP,TL074,SOIC-14,1,nacional,Buffers, sumador, conformación
+R_FILM,varias 1%,R_0805,30,nacional,Red exponencial y de polarización
+C_FILTER1,1nF NP0,C_0805,1,nacional,Capacitor de tempo etapa 1
+C_FILTER2,1nF NP0,C_0805,1,nacional,Capacitor de tempo etapa 2 (igual a C_FILTER1)
+C_BYP,100nF,C_0805,6,nacional,Bypass
+POT_CUTOFF,100k lin,RV24AF,1,importado,Frecuencia de corte
+POT_RES,100k lin,RV24AF,1,importado,Resonancia
+POT_CV,100k lin,RV24AF,1,importado,Atenuador CV-IN
+TRIM_SYM,10k multivuelta,—,1,nacional,Simetría OTA
+LED_RES,LED rojo 3mm,—,2,nacional,Saturación armónica del lazo de resonancia
+J_AIN,Jack 3.5mm mono,—,1,nacional,AUDIO-IN
+J_CV,Jack 3.5mm mono,—,1,nacional,CV-IN (1V/oct)
+J_AOUT,Jack 3.5mm mono,—,1,nacional,AUDIO-OUT
+PIN_BUS,Pin header 2x3,1x06,1,nacional,Bus de alimentación

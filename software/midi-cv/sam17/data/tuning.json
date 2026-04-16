@@ -1,0 +1,6 @@
+{
+  "_comment": "Per-VCO calibration: MIDI note number → 16-bit DAC value (0..65535). Run the firmware in `--mode tune` with an external tuner to generate this file.",
+  "VCO1": {},
+  "VCO2": {},
+  "VCO3": {}
+}
