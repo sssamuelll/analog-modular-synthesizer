@@ -213,17 +213,104 @@ módulo):
    (expectativa: < 70 °C en el cuerpo del TO-220).
 7. Documentar en `hardware/01-power-supply/notes/bring-up.md`.
 
-## 10. Decisiones pendientes / preguntas abiertas
+## 10. Decisiones resueltas
 
-- [ ] ¿Integramos el **riel +5 V auxiliar** en la PCB o lo dejamos fuera
-      porque el Pi ya tiene su adaptador? (Pros/Contras: una sola PSU
-      simplifica; pero el 7805 sin el Pi casi no hace nada.)
-- [ ] ¿Implementamos **soft-start** (NTC o MOSFET) para proteger el puente
-      rectificador del inrush de los 9400 µF totales? (Probablemente
-      innecesario a 12 VAC / 2 A, pero conviene medirlo.)
-- [ ] ¿Añadimos **MOV** (Metal Oxide Varistor) en el primario para
-      sobretensiones transitorias de red? En Venezuela, donde es común el
-      ruido de red, es barato y se recomienda.
+### 10.1 Riel +5 V → **integrado en la PCB del módulo**
+
+Aunque el Raspberry Pi se alimente por su propio adaptador USB, la sección
+analógica/digital local **necesita +5 V** para:
+
+- **AD5686R** (DAC del MIDI/CV): VDD 2.7 – 5.5 V, decoupling 10 µF ∥ 0.1 µF.
+- **LCD HD44780**: 5 V para lógica + ~80–100 mA del backlight.
+- Posibles módulos futuros (digital control, sensores).
+
+Carga estimada del riel +5 V (sin Pi):
+
+| Consumidor | Corriente |
+|------------|-----------|
+| AD5686R | ~1 mA |
+| LCD lógica | ~1.5 mA |
+| LCD backlight | ~100 mA (peor caso, sin PWM) |
+| Margen ×1.5 | — |
+| **Total +5 V** | **~150 mA** |
+
+**Disipación del 7805 alimentado desde el bulk +17 V**:
+
+```
+P_5V = (17 − 5) × 0.15 = 1.8 W
+```
+
+Con disipador estándar TO-220 (~20 °C/W): `Tj ≈ 25 + 1.8 × (5 + 20) = 70 °C`
+— margen amplio sobre los 125 °C de protección térmica.
+
+**Recomendación operativa**: PWM-ear el backlight del LCD para bajar la
+corriente media a ~30 mA cuando el menú no se está usando (lo implementa
+el firmware en `software/midi-cv/sam17/hardware/lcd.py`).
+
+**Layout crítico**: la corriente del backlight (variable y relativamente
+alta) puede crear *ground bounce* que se acople al plano analógico. Mitigar
+con:
+
+- Retorno **dedicado** del +5 V hasta el punto de estrella, **separado** del
+  retorno analógico hasta el último cm.
+- Trazas de potencia gruesas (≥ 1 mm) para el circuito del LCD.
+
+### 10.2 Soft-start con NTC → **incluido**
+
+Justificación: la suma de los electrolíticos (4700 µF en +V + 4700 µF en −V
++ 100 µF tras cada regulador) produce un inrush significativo al encender
+en frío. Sin limitación, el puente rectificador y los condensadores quedan
+expuestos a picos de cientos de amperios en el primer hemiciclo.
+
+**Selección**: NTC inrush limiter en **serie con el primario AC**:
+
+- Rating recomendado: **5 Ω fríos / 2 A continuos** — p. ej. **Ametherm
+  SL10 5R020** o **Vishay NTCS010** equivalente.
+- Caliente (régimen): R ≈ 0.2 – 0.5 Ω, caída despreciable a 2 A.
+- Posición: entre F1 y el primario del transformador.
+
+**Compromiso**: se sacrifican ~0.4 W en régimen permanente (calor del NTC
+caliente), aceptable a cambio de proteger el puente y duplicar la vida útil
+de los condensadores.
+
+### 10.3 MOV en el primario → **incluido**
+
+Justificación específica para Venezuela: red eléctrica con transitorios
+recurrentes (rayos, conmutación de cargas industriales, baja calidad del
+suministro). Coste marginal: < 1 USD.
+
+**Selección**: MOV de 14 mm rated **150 VAC** continuo para red 110 VAC:
+
+- Modelo: **V150LA20A** (Littelfuse), **S14K150** (Epcos) o **14D151K**
+  genérico.
+- Energía absorbible: ~70 J — suficiente para transitorios de switching
+  típicos, no para rayos directos.
+- Posición: en paralelo con el primario, **después** del fusible (para que
+  un MOV en cortocircuito haga saltar el fusible).
+- Vida útil limitada por el número de eventos absorbidos: especificar en
+  el manual de mantenimiento que se reemplace si se observa decoloración o
+  apertura.
+
+**Mejora opcional futura**: añadir un **GDT** (gas discharge tube) en
+paralelo con el MOV para transitorios de mayor energía, o un módulo
+SPD (surge protective device) externo. Fuera de alcance de la reproducción
+original.
+
+### Topología actualizada
+
+```
+   110 VAC                                12 VAC CT             ~17 VDC
+   Red ──┤├──[MOV]──[NTC 5Ω]──► TR1 ──────────────► BRIDGE ──► C1 ─► 7812 ─► +12V/300mA
+    60Hz F1 (500mA slow)            (split sec)     B1       4700µF │
+                                                                    │
+                                                                    │
+                                                                    ├─► (─V) ─► 7912 ─► −12V/300mA
+                                                                    │   C2
+                                                                    │   4700µF
+                                                                    │
+                                                                    └─► (+V) ─► 7805 ─► +5V/150mA
+                                                                                       (LCD + DAC)
+```
 
 ## 11. Hitos siguientes
 
