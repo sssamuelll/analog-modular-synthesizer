@@ -26,16 +26,32 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
 ├── kicad/      (pendiente — proyecto KiCad por capturar)
 ├── schematics/ (pendiente — exportados PDF)
 ├── pcb/        (pendiente — renderizados)
-└── notes/      (pendiente — mediciones de tensión y rizado)
+└── notes/
+    └── design-notes.md   Presupuesto de corriente, topología, cálculo
+                          térmico y checklist de bring-up.
 ```
 
 ## Estado
 
+- [x] Nota de diseño con presupuesto de corriente y cálculo térmico ([`notes/design-notes.md`](notes/design-notes.md))
+- [ ] Resolver preguntas abiertas (§10 de la nota de diseño)
 - [ ] Esquemático en KiCad
 - [ ] PCB ruteada
 - [ ] Verificación de tensiones bajo carga
 - [ ] Medición de rizado en cada riel
-- [ ] Cálculo de disipación térmica de los reguladores
+- [ ] Procedimiento de bring-up documentado
+
+## Decisiones clave (ver [`notes/design-notes.md`](notes/design-notes.md))
+
+- **Arquitectura**: *Opción A* — transformador 12 VAC/2 A para los rieles
+  analógicos ±12 V + adaptador USB 5 V independiente para el Raspberry Pi
+  (evita contaminación del plano analógico con el ruido del Pi).
+- **Reguladores**: LM7812 + LM7912 en TO-220 con disipador estándar
+  (T<sub>junction</sub> ≈ 60 °C a 300 mA).
+- **Protección**: fusible 500 mA lento en primario + diodos anti-backfeed +
+  LEDs indicadores por riel.
+- **Distribución**: bus board PCB (no daisy-chain) con tierra en estrella
+  desde los condensadores bulk.
 
 ## Mejoras propuestas
 
