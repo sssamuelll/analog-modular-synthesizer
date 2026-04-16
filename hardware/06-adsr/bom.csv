@@ -1,0 +1,15 @@
+ref,value,footprint,quantity,supplier,notes
+U_TIMER,ICM7555,DIP-8,1,importado,Timer CMOS de bajo consumo
+U_OP,LM358,SOIC-8,1,nacional,Drenador del nivel SUSTAIN
+Q_GATE,BC547,TO-92,2,nacional,Conformación de la señal de GATE
+Q_REL,BC547,TO-92,1,nacional,Polarización para etapa RELEASE
+D_ATK,1N4148,SOD-323,2,nacional,Direccionamiento de carga/descarga
+D_DEC,1N4148,SOD-323,2,nacional,Idem
+C_ENV,2.2uF tantalio,—,1,nacional,Capacitor de envolvente
+POT_A,1M log,RV24AF,1,importado,Attack
+POT_D,1M log,RV24AF,1,importado,Decay
+POT_S,100k lin,RV24AF,1,importado,Sustain
+POT_R,1M log,RV24AF,1,importado,Release
+J_GATE,Jack 3.5mm mono,—,1,nacional,GATE-IN
+J_OUT,Jack 3.5mm mono,—,1,nacional,ENV-OUT
+PIN_BUS,Pin header 2x3,1x06,1,nacional,Bus de alimentación

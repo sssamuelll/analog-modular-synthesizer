@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.env
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# KiCad
+*-backups/
+*.bak
+*.kicad_sch-bak
+*.kicad_pcb-bak
+*.kicad_prl
+fp-info-cache
+_autosave-*
+
+# LTspice / SPICE
+*.raw
+*.log
+*.op.raw
+*.net
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~

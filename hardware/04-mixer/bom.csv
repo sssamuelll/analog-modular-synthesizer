@@ -1,0 +1,9 @@
+ref,value,footprint,quantity,supplier,notes
+U_OP,TL074,SOIC-14,1,nacional,Sumador inversor + buffer
+R_IN,100k 1%,R_0805,3,nacional,Resistencia de entrada por canal
+R_FB,100k 1%,R_0805,1,nacional,Realimentación del sumador
+POT_LVL,100k log,RV24AF,3,importado,Volumen por canal
+C_BYP,100nF,C_0805,4,nacional,Bypass alimentación
+J_IN,Jack 3.5mm mono,—,3,nacional,Entradas de audio/CV
+J_OUT,Jack 3.5mm mono,—,1,nacional,Salida sumada
+PIN_BUS,Pin header 2x3,1x06,1,nacional,Bus de alimentación

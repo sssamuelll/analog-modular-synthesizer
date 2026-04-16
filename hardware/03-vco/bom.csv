@@ -1,0 +1,15 @@
+ref,value,footprint,quantity,supplier,notes
+U_VCO1-U_VCO3,CEM3340,DIP-16,3,importado,Núcleo VCO clásico (Prophet 5)
+U_OP,TL074,SOIC-14,2,nacional,Buffers y conformación de salidas
+R_TEMPCO,2k 3300ppm,—,3,importado,Resistencia de tempco para 1V/oct (opcional pero recomendado)
+R_FILM,varias 1%,R_0805,30,nacional,Resistencias de precisión 1V/oct y PWM
+C_TEMPO,1nF NP0/C0G,C_0805,3,nacional,Condensador de tempo del VCO (uno por oscilador)
+POT_TUNE,100k lin,RV24AF,3,importado,Pot. afinación
+POT_PWM,100k lin,RV24AF,3,importado,Pot. ancho de pulso
+TRIM_OFFSET,10k multivuelta,—,3,nacional,Trim offset 1V/oct
+TRIM_SCALE,10k multivuelta,—,3,nacional,Trim escala 1V/oct
+J_CV,Jack 3.5mm mono,—,3,nacional,Entrada CV por VCO
+J_SAW,Jack 3.5mm mono,—,3,nacional,Salida sierra
+J_TRI,Jack 3.5mm mono,—,3,nacional,Salida triangular
+J_SQR,Jack 3.5mm mono,—,3,nacional,Salida cuadrada
+PIN_BUS,Pin header 2x3,1x06,1,nacional,Bus de alimentación

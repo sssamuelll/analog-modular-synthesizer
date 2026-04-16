@@ -1,0 +1,16 @@
+ref,value,footprint,quantity,supplier,notes
+U_OTA,LM13700,SOIC-16,1,importado,OTA principal
+U_OP,TL074,SOIC-14,1,nacional,Transimpedancia + V/I + buffers
+Q_PNP,2N3906,TO-92,1,nacional,Conversor V/I
+D_PROT,1N4148,SOD-323,1,nacional,Protección base del PNP
+R_ATTEN_HI,100k 1%,R_0805,1,nacional,Divisor 100k/620 a la entrada de audio
+R_ATTEN_LO,620 1%,R_0805,1,nacional,Idem
+R_FB,18k 1%,R_0805,1,nacional,Realimentación I/V (Iout=576uA, Vout=±10V)
+R_VI,10k 1%,R_0805,1,nacional,Conversor V/I (5V → 500uA)
+R_PROT,6.8k 1%,R_0805,1,nacional,Protección Iabc (max 2mA)
+C_SMOOTH,470nF,C_0805,1,nacional,Filtrado del CV (anti-zipper)
+POT_VOL,100k log,RV24AF,1,importado,Volumen master
+J_AIN,Jack 3.5mm mono,—,1,nacional,AUDIO-IN
+J_ENV,Jack 3.5mm mono,—,1,nacional,ENV-IN
+J_AOUT,Jack 3.5mm mono,—,1,nacional,AUDIO-OUT (salida principal)
+PIN_BUS,Pin header 2x3,1x06,1,nacional,Bus de alimentación

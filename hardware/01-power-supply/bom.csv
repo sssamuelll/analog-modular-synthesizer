@@ -1,0 +1,11 @@
+ref,value,footprint,quantity,supplier,notes
+TR1,12VAC 2A,external,1,nacional,Transformador externo
+BR1,Bridge 1A,DIP-4,1,nacional,Puente de diodos
+U1,LM7805,TO-220,1,nacional,Regulador +5V
+U2,LM7812,TO-220,1,nacional,Regulador +12V
+U3,LM7912,TO-220,1,nacional,Regulador -12V
+C1-C3,4700uF/25V,Radial-D10,3,nacional,Filtrado de entrada
+C4-C9,100nF,C_Disc_D5_W2.5_P5,6,nacional,Bypass
+HS1-HS3,Heatsink TO-220,—,3,nacional,Disipadores
+J_BUS,Pin header 2x3,1x06,1,nacional,Bus de alimentación
+F1,Fuse 500mA,—,1,nacional,Protección secundario

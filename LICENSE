@@ -1,0 +1,28 @@
+CERN Open Hardware Licence Version 2 - Strongly Reciprocal (CERN-OHL-S v2)
+=============================================================================
+
+Copyright (c) 2020 Samuel Darío Ballesteros García
+Copyright (c) 2026 SAM17 contributors
+
+Hardware designs (schematics, PCB layouts, BOM, mechanical drawings) in this
+repository are licensed under the CERN Open Hardware Licence Version 2 -
+Strongly Reciprocal (CERN-OHL-S v2). The full text is available at:
+
+    https://cern-ohl.web.cern.ch/
+
+Software (everything under software/ and any scripts) is licensed under the
+GNU General Public License v3.0 or later (GPL-3.0-or-later):
+
+    https://www.gnu.org/licenses/gpl-3.0.html
+
+Documentation (everything under docs/ excluding thesis.pdf) is licensed under
+the Creative Commons Attribution-ShareAlike 4.0 International License
+(CC BY-SA 4.0):
+
+    https://creativecommons.org/licenses/by-sa/4.0/
+
+The original thesis (`docs/thesis.pdf`) is the intellectual property of its
+author and Universidad Yacambú, included here for documentation purposes only.
+
+THE WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. SEE EACH LICENCE
+TEXT FOR THE FULL DISCLAIMERS.
