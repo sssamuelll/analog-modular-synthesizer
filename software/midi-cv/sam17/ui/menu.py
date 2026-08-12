@@ -17,17 +17,20 @@ from sam17.hardware.lcd import Lcd
 class MenuNode:
     label: str
     children: list[MenuNode] = field(default_factory=list)
+    action: str | None = None
+    """Comando que la app ejecuta al seleccionar la hoja, p.ej. `mode:standard`."""
 
 
 def default_menu() -> MenuNode:
-    mode_names = ("standard", "tune", "glide", "arp", "step seq")
+    modes = (("standard", "standard"), ("tune", "tune"), ("glide", "glide"),
+             ("arp", "arp"), ("step seq", "step_sequencer"))
     help_entries = ("Documentation", "Guide", "Update", "About")
     return MenuNode(
         label="root",
         children=[
-            MenuNode("Tune", [MenuNode("VCO1"), MenuNode("VCO2"), MenuNode("VCO3")]),
-            MenuNode("Mode", [MenuNode(name) for name in mode_names]),
-            MenuNode("Help", [MenuNode(name) for name in help_entries]),
+            MenuNode("Tune", [MenuNode(v, action=f"tune:{v}") for v in ("VCO1", "VCO2", "VCO3")]),
+            MenuNode("Mode", [MenuNode(label, action=f"mode:{key}") for label, key in modes]),
+            MenuNode("Help", [MenuNode(name, action=f"help:{name}") for name in help_entries]),
         ],
     )
 

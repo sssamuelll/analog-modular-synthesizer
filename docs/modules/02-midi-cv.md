@@ -105,6 +105,11 @@ Modos definidos en la tesis original:
 4. **arp** — arpegiador *(declarado, pendiente)*.
 5. **step sequencer** — secuenciador por pasos *(declarado, pendiente)*.
 
+Qué contiene el PDF sobre el firmware, qué se recuperó literal y qué hubo que
+reconstruir: [`docs/thesis-software.md`](../thesis-software.md). Las mediciones
+de CV por nota (Tabla 11) están en
+[`docs/reference/vco-cv-measurements.csv`](../reference/vco-cv-measurements.csv).
+
 ## Mejoras propuestas
 
 - Migrar de `Adafruit_CharLCD` (deprecado) a `RPLCD` o

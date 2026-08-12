@@ -41,10 +41,14 @@ pytest
 ## Ejecución
 
 ```bash
-sam17-midicv          # arranca el bucle principal con LCD + botones
+sam17-midicv                      # arranca el bucle principal con LCD + botones
 sam17-midicv --mode standard
-sam17-midicv --mode tune --vco 1
+sam17-midicv --mode tune --vco VCO1
+sam17-midicv --generate-tuning    # reescribe tuning.json con la curva 1 V/oct
+sam17-midicv --dry-run            # cablea todo con stubs y sale (smoke test)
 ```
+
+`--dry-run` no toca GPIO, SPI ni MIDI, así que corre en cualquier máquina.
 
 En arranque automático del Pi: añade un servicio `systemd` (ver
 `scripts/sam17-midicv.service`).
@@ -55,10 +59,12 @@ En arranque automático del Pi: añade un servicio `systemd` (ver
 sam17/
 ├── __init__.py
 ├── __main__.py         Entry-point CLI
+├── app.py              Bucle principal, menú y cambio de modo
 ├── settings.py         Configuración global (pines, SPI, rangos, paths)
+├── calibration.py      Curva 1 V/oct y persistencia de la afinación
 ├── data/
 │   ├── notes.json      Mapa MIDI note → nombre (C1, C#1, …)
-│   └── tuning.json     Calibración fina por VCO (override de la curva 1V/oct)
+│   └── tuning.json     Calibración por VCO (curva de diseño + correcciones)
 ├── hardware/
 │   ├── __init__.py
 │   ├── dac.py          Driver del AD5686R (envío de tramas SPI 24-bit)
@@ -102,10 +108,23 @@ pytest --cov=sam17
 | `__init__` / `__call__` | Tipos con guion bajo simple (bug) | `__dunder__` correcto |
 | LCD | `Adafruit_CharLCD` (deprecado) | `RPLCD` con interfaz abstracta |
 | Tests | Ninguno | `pytest` con stubs de GPIO/SPI |
-| Modos de ejecución | 2 implementados, 3 declarados | Mismos 2 + 3 listos para implementar |
-| Concurrencia | `multiprocessing` + `threading` | `asyncio` para el bucle principal |
+| Modos de ejecución | 2 implementados, 3 declarados | Mismos 2 + 3 rechazados con aviso en el LCD |
+| Estado | Globales en `settings.init()` | Explícito en `App` |
+| Afinación | `afinacion.pickle` hecho a mano, perdido | Curva 1 V/oct generable + corrección persistida |
+
+## Afinación
+
+`tuning.json` arranca con la **curva de diseño**: 460 cuentas de DAC por semitono
+(la constante `note_res` de la tesis), o sea 1 V/octava exacto. El hardware real
+se desvía —la tesis midió +0.45 % en el VCO1, −3.32 % en el VCO2 y −18.62 % en el
+VCO3— y esa desviación se corrige nota por nota con `--mode tune`, contra un
+afinador externo, usando UP/DOWN para ajustar y ENTER para guardar.
+
+El paso de ajuste (`NUDGE_COUNTS`, ~1 cent) está en `modes/tune.py`; súbelo si
+afinar a oído resulta lento.
 
 ## Próximos pasos
 
-Ver `docs/modules/02-midi-cv.md` (sección *Mejoras propuestas*) y los
-tests pendientes en `tests/`.
+- Implementar **glide / arp / step sequencer**: la tesis los declara en
+  `settings.modos` pero nunca los escribió (ver [`docs/thesis-software.md`](../../docs/thesis-software.md)).
+- Ver `docs/modules/02-midi-cv.md`, sección *Mejoras propuestas*.

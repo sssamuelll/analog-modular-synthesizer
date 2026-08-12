@@ -2,20 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
+from sam17.calibration import VcoTuning
 from sam17.hardware.dac import Dac
 from sam17.hardware.gpio import Gpio
 from sam17.modes.base import Mode
 from sam17.settings import DacChannelMap, MidiRange, PitchBend
 
-
-@dataclass
-class VcoTuning:
-    """Per-VCO mapping from MIDI note (0..127) to 16-bit DAC value."""
-
-    name: str
-    note_to_value: dict[int, int]
+__all__ = ["StandardMode", "VcoTuning"]
 
 
 class StandardMode(Mode):
