@@ -321,6 +321,71 @@ original.
 5. Ejecutar checklist §9 y documentar en `bring-up.md`.
 6. Cerrar los checkboxes correspondientes del epic #2.
 
+## 12. Variante Europa (230 VAC / 50 Hz)
+
+El §10 de arriba documenta las decisiones **tal como se resolvieron
+originalmente**, para la red eléctrica de Venezuela (110 VAC / 60 Hz) — se
+deja intacto como referencia histórica de por qué se eligió cada componente.
+Esta sección documenta el cambio de región: la variante que se está
+construyendo ahora asume **mains europeo, 230 VAC nominal / 50 Hz**
+(estándar IEC 60038, vigente desde la armonización 1983-2003; "220 V" es el
+nombre coloquial preexistente en varios países, sigue siendo la misma red).
+
+**Lo que cambia:**
+
+- **RV1 (MOV)**: el `V150LA20A` del §10.3 (150 V nominal, pensado para
+  ~110-120 VAC) **no sirve en 230 V** — conduciría de forma continua y
+  fallaría, porque su tensión de operación está muy por debajo del pico de
+  230 VAC (≈325 V). Reemplazo: **S20K275** (Epcos/TDK) o equivalente
+  `V275LA20A` (Littelfuse) / `14D271K`, rated **275 VAC continuo**, con
+  margen sobre los 253 V del +10 % de tolerancia de la red europea.
+- **F1 (fusible)**: mismo transformador (12 VAC CT / 2 A ≈ 24 VA), pero la
+  corriente de primario cae a la mitad al doblar la tensión de línea
+  (≈ 24 VA / 230 V ≈ 104 mA, contra ≈ 218 mA a 110 V). Bajado de 500 mA a
+  **250 mA lento**, manteniendo el mismo margen (~2.4×) sobre la corriente
+  nominal que tenía el original.
+- **TR1 (transformador, externo)**: el secundario no cambia (12 VAC CT / 2 A),
+  pero el **primario debe pedirse para 230 VAC / 50 Hz**, no 110 VAC / 60 Hz —
+  es una pieza distinta a comprar, no una que se pueda usar indistintamente.
+  50 Hz (vs. 60 Hz) generalmente exige más vueltas o más núcleo para el mismo
+  flujo; queda del lado del fabricante del transformador, no de esta hoja.
+
+**Lo que NO cambia:**
+
+- **NT1 (NTC)**: el `SL10 5R020` del §10.2 se mantiene igual. Verificado
+  contra el datasheet real (Vishay/Ametherm, documento 24503,
+  `vishay.com/docs/24503/sl10.pdf`): **toda la familia SL10** (2R005 a
+  10003, todos los valores de resistencia) está rated **265 VAC máximo**,
+  con margen sobre los 253 V del peor caso europeo. No es una suposición por
+  familia de producto — está en la tabla de datos rápidos del fabricante.
+- Todo lo demás (reguladores, filtrado, protecciones DC, riel +5 V) es
+  independiente de la tensión de red: cuelga del lado DC, después del
+  puente rectificador.
+
+**Pendiente sin resolver** (no depende de la región, viene de antes): el
+esquemático sigue sin tercer pin de tierra de seguridad en `J3`, aunque
+`bom.csv` ya pedía un conector de 3 posiciones para la entrada AC primaria.
+Con mains 230 V la falta de PE es, si acaso, más urgente — la mayoría de
+electrodomésticos Clase I en Europa exigen tierra de protección por norma
+(marcado CE). Sigue siendo una decisión de esquema de puesta a tierra, no
+un componente que se pueda añadir a ciegas.
+
+### Topología actualizada (Europa)
+
+```
+   230 VAC                                12 VAC CT             ~17 VDC
+   Red ──┤├──[S20K275]──[NTC 5Ω]──► TR1 ──────────────► BRIDGE ──► C1 ─► 7812 ─► +12V/300mA
+    50Hz F1 (250mA slow)                (split sec)     B1       4700µF │
+                                                                        │
+                                                                        │
+                                                                        ├─► (─V) ─► 7912 ─► −12V/300mA
+                                                                        │   C2
+                                                                        │   4700µF
+                                                                        │
+                                                                        └─► (+V) ─► 7805 ─► +5V/150mA
+                                                                                           (LCD + DAC)
+```
+
 ## Referencias
 
 - [Modular Synthesizer Power Supplies (Rabid Elephant)](https://rabidelephant.com/blogs/general/modular-synthesizer-power-supplies-and-distribution-a-thorough-introduction) — fundamento de grounding y distribución.
@@ -331,3 +396,5 @@ original.
 - [Analog Devices AD5686R datasheet](https://www.analog.com/media/en/technical-documentation/data-sheets/ad5686r_5685r_5684r.pdf) — VDD 2.7–5.5 V, decoupling 10 µF ∥ 0.1 µF obligatorio.
 - [CEM3340 — Synth DIY Wiki](https://sdiy.info/wiki/CEM3340) — nota sobre el zener de 6.5 V en pin 3 con supply ±12 V.
 - [Pi 3B+ power measurements (RasPi.TV)](https://raspi.tv/2018/how-much-power-does-raspberry-pi-3b-use-power-measurements) — confirmación del pico de 1.3 A.
+- [Vishay/Ametherm SL10 datasheet](https://www.vishay.com/docs/24503/sl10.pdf) — tabla de datos rápidos: toda la familia SL10 rated 265 VAC máximo, independiente del valor de resistencia (§12).
+- [IEC 60038](https://en.wikipedia.org/wiki/IEC_60038) — estándar de tensión nominal 230 V/50 Hz para Europa, vigente desde la armonización 1983-2003 (§12).

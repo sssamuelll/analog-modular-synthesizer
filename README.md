@@ -47,7 +47,9 @@ Arquitectura global y diagrama de bloques: [`docs/architecture.md`](docs/archite
 - **Salidas**: 3 CV (1 V/octava, 84 notas) + 1 GATE (10 V)
 - **Puntos de conexión**: ~40 jacks de 3.5 mm (15 in / 25 out)
 - **Dimensiones cajón**: 950 × 440 × 100–200 mm
-- **Alimentación**: 110 VAC 60 Hz → 5 V / +12 V / −12 V
+- **Alimentación**: 230 VAC 50 Hz (variante Europa; tesis original: 110 VAC
+  60 Hz Venezuela, ver [`hardware/01-power-supply`](hardware/01-power-supply))
+  → 5 V / +12 V / −12 V
 
 ## Estructura del repositorio
 
