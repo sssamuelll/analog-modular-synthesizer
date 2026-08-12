@@ -19,3 +19,11 @@ class Mode(ABC):
 
     def on_exit(self) -> None:  # noqa: B027 — empty hook by design
         """Hook called when leaving the mode."""
+
+    def handle_button(self, name: str) -> bool:
+        """Handle a button press (`back`/`enter`/`up`/`down`).
+
+        Return `True` if the mode consumed the press; `False` lets the menu
+        handle it. Only the tuning mode needs this today.
+        """
+        return False
