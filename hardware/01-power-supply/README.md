@@ -23,8 +23,11 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
 01-power-supply/
 ├── README.md
 ├── bom.csv
-├── kicad/      (pendiente — proyecto KiCad por capturar)
-├── schematics/ (pendiente — exportados PDF)
+├── kicad/
+│   ├── build_schematic.py   Genera sam17-power.kicad_sch (ver hardware/tools/README.md)
+│   └── sam17-power.kicad_sch
+├── schematics/
+│   └── sam17-power.{svg,pdf}
 ├── pcb/        (pendiente — renderizados)
 └── notes/
     └── design-notes.md   Presupuesto de corriente, topología, cálculo
@@ -35,7 +38,11 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
 
 - [x] Nota de diseño con presupuesto de corriente y cálculo térmico ([`notes/design-notes.md`](notes/design-notes.md))
 - [x] Decisiones arquitectónicas resueltas (+5 V incluido, NTC soft-start, MOV en primario)
-- [ ] Esquemático en KiCad
+- [~] Esquemático en KiCad — **solo los rieles ±12 V** (rectificación, 7812,
+      7912, protecciones DC, indicadores). Faltan el riel +5 V (7805), el NTC
+      de soft-start y el MOV del primario, los tres ya resueltos en
+      [`notes/design-notes.md`](notes/design-notes.md) §10 pero no dibujados
+      todavía.
 - [ ] PCB ruteada
 - [ ] Verificación de tensiones bajo carga
 - [ ] Medición de rizado en cada riel
