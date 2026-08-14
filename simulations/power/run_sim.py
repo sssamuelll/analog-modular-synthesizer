@@ -151,9 +151,92 @@ def autocomprobacion(ng: Ng) -> None:
           f"rizado {a['vp_pp']:.3f} < cota {analitico:.3f} V)")
 
 
+# --- comparacion de arquitecturas -------------------------------------------
+# Cada escenario es una fuente entera: transformador, reguladores y carga. Se
+# comparan en las tres esquinas que importan — red baja (dropout), red alta
+# (calor) y nominal — porque una arquitectura puede ganar en una y perder en
+# otra. Fue justo lo que paso con el secundario de 15-0-15: daba margen de
+# sobra y casi duplicaba la disipacion.
+class Escenario:
+    def __init__(self, nombre, v_sec, i_sec_nom, dropout, i_12, i_5, r_hs,
+                 reg=0.12):
+        self.nombre, self.v_sec, self.i_sec_nom = nombre, v_sec, i_sec_nom
+        self.dropout, self.i_12, self.i_5 = dropout, i_12, i_5
+        self.r_hs, self.reg = r_hs, reg
+
+    @property
+    def i_pos(self):
+        return self.i_12 + self.i_5      # el 7805 cuelga de VRAW+ (sec.10.1)
+
+    def evalua(self, ng):
+        prev = (V_SEC_actual(), I_SEC_actual())
+        set_trafo(self.v_sec, self.i_sec_nom)
+        try:
+            r = {}
+            for v in (207.0, 230.0, 253.0):
+                r[v] = mide(ng, v_red=v, reg=self.reg,
+                            i_pos=self.i_pos, i_neg=self.i_12)
+            # El calor se calcula a red ALTA, que es donde mas cae el regulador.
+            alto = r[253.0]
+            v_med = (alto["vp_min"] + alto["vp_max"]) / 2
+            p_12 = (v_med - 12.0) * self.i_12
+            p_5 = (v_med - 5.0) * self.i_5
+            # R_thJC del TO-220 = 5 C/W. Se anade 1 C/W por la mica aislante,
+            # que hace falta si el tab del regulador no esta a masa.
+            tj = 25.0 + p_12 * (5.0 + 1.0 + self.r_hs)
+            return {"margen_207": r[207.0]["vp_min"] - 12.0 - self.dropout,
+                    "margen_230": r[230.0]["vp_min"] - 12.0 - self.dropout,
+                    "vraw_207": r[207.0]["vp_min"],
+                    "rizado": r[230.0]["vp_pp"],
+                    "irms": r[230.0]["ic1_rms"],
+                    "p_12": p_12, "p_5": p_5, "tj": tj}
+        finally:
+            set_trafo(*prev)
+
+
+def V_SEC_actual():
+    return globals()["V_SEC"]
+
+
+def I_SEC_actual():
+    return globals()["I_SEC_NOM"]
+
+
+def set_trafo(v, i):
+    globals()["V_SEC"], globals()["I_SEC_NOM"] = v, i
+
+
+ESCENARIOS = [
+    #             nombre                     Vsec  Inom  drop  I12    I5    Rhs
+    Escenario("HOY  12-0-12 2A, 78xx",         12.0, 2.0, 2.0, 0.300, 0.150, 20.0),
+    Escenario("650  12-0-12 3A, 78xx",         12.0, 3.0, 2.0, 0.650, 0.150, 8.0),
+    Escenario("650  15-0-15 2A, 78xx",         15.0, 2.0, 2.0, 0.650, 0.150, 4.0),
+    Escenario("650  12-0-12 3A, LDO tipico",   12.0, 3.0, 0.6, 0.650, 0.150, 8.0),
+    Escenario("650  12-0-12 3A, LDO MAXIMO",   12.0, 3.0, 1.0, 0.650, 0.150, 8.0),
+]
+
+
+def comparar(ng) -> None:
+    print()
+    print(f"{'arquitectura':30} | {'@207V':>16} {'@230V':>8} | "
+          f"{'P12':>6} {'Tj':>6} | {'Irms':>6} |")
+    print("-" * 88)
+    for e in ESCENARIOS:
+        r = e.evalua(ng)
+        est = "OK" if (r["margen_207"] >= 0 and r["tj"] < 100) else (
+              "CALOR" if r["margen_207"] >= 0 else "NO REGULA")
+        print(f"{e.nombre:30} | {r['vraw_207']:6.2f}V {r['margen_207']:+7.2f}V "
+              f"{r['margen_230']:+7.2f}V | {r['p_12']:5.2f}W {r['tj']:5.0f}C | "
+              f"{r['irms']:5.2f}A | {est}")
+    print()
+    print("Tj incluye 1 C/W de la mica aislante: el tab de un regulador")
+    print("negativo no esta a masa y hay que aislarlo del disipador.")
+
+
 def main() -> int:
     ng = Ng()
     autocomprobacion(ng)
+    comparar(ng)
     minimo = V_OUT + DROPOUT
 
     print(f"\nMinimo que necesita el 7812 para seguir regulando: {minimo:.1f} V")
