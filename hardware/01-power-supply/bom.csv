@@ -1,31 +1,31 @@
-refs,value,footprint,quantity,supplier,notes
-TR1,230VAC pri / 12-0-12 VAC 2A (24V totales con toma central),external,1,importado,Transformador externo — variante EU (230VAC/50Hz); ver design-notes.md §12 y §15. ATENCIÓN: son 12-0-12 (24 V totales), NO 12 V totales. Muchos vendedores llaman «12V CT» a un 6-0-6: con ese cada riel daría ~7.6 V y el 7812 no regularía nunca. Pedir además la tensión de secundario EN VACÍO: hace falta ≥13.3 V por semidevanado (regulación ≥10.7%) para que el riel de +12 V aguante la red al -10% a plena carga de diseño — simulado, ver simulations/power. No va en la placa: entra por J4 (primario) y vuelve por J1 (secundario)
-F1,Fuse 250mA slow + portafusible CERRADO 5x20,Fuseholder_Cylinder-5x20mm_Vertical_Closed,1,importado,Protección primario 230VAC — variante EU (§12). Cerrado, no de clips abiertos: son 230 V dentro de un cajón de madera y el aislamiento elegido es reforzado (§14). Referencia tipo Schurter FPG4 (IEC 60335-1, 250VAC/10A VDE)
-RV1,S20K275 / V275LA20A,sam17:RV_Disc_D21mm_W5.5mm_P10.0mm,1,importado,Supresor de transitorios en primario (20mm 275VAC para red 230VAC) — variante EU (§12). Va DESPUÉS de F1 para que un MOV en corto funda el fusible
-NT1,SL10-5R020 (5Ω 2A),sam17:NTC_Disc_D11.5mm_W4.5mm_P7.5mm,1,importado,Inrush limiter en serie con el primario AC (rated 265VAC — sirve igual en EU sin cambios)
-BR1,KBP206 (2A / 600V) o equivalente DIP-4,Diode_Bridge_DIP-4_W7.62mm_P5.08mm,1,nacional,Puente rectificador. ATENCIÓN antes de fabricar: verificar el ORDEN DE PATILLAS contra el datasheet de la pieza comprada. El símbolo del esquemático es D_Bridge_+-AA (pin1=+, pin2=−, pin3=~, pin4=~) y KiCad trae cinco variantes porque el orden cambia según el fabricante (§14)
-U1,LM7812,TO-220,1,nacional,Regulador +12V (con zócalo)
-U2,LM7912,TO-220,1,nacional,Regulador -12V (tab = -Vin — aislar del chasis)
-U3,LM7805,TO-220,1,nacional,Regulador +5V para LCD y AD5686R
-"C1,C2",4700uF/25V electrolytic (ripple ≥1.2A @100Hz),CP_Radial_D16.0mm_P7.50mm,2,nacional,Corriente de rizado simulada: 0.72-0.88 A RMS (§15). Bulk tras el puente — uno por riel (+V y -V). Diámetro 16 mm y paso 7.5 mm: el footprint que pedía este BOM (D10) no existe para 4700 µF/25 V — un D10 a esa tensión ronda los 470 µF
-"C3,C4,C9",0.33uF ceramic,C_Disc_D5_W2.5_P5,3,nacional,Entrada de cada regulador (TI app note)
-"C5,C6,C10",100uF/25V electrolytic,Radial-D6.3,3,nacional,Salida de cada regulador
-"C7,C8,C11",0.1uF ceramic,C_Disc_D5_W2.5_P5,3,nacional,Bypass HF en salida de regulador
-"D1,D2,D5",1N4001,DO-41,3,nacional,Diodos de protección anti-backfeed (uno por riel)
-D3,LED rojo 3mm,LED-3mm,1,nacional,Indicador +12V
-D4,LED amarillo 3mm,LED-3mm,1,nacional,Indicador -12V
-D6,LED verde 3mm,LED-3mm,1,nacional,Indicador +5V
-"R1,R2",2.2k 1/4W,R_Axial,2,nacional,Limitadora de los LED de ±12V (~4.5 mA)
-R3,680R 1/4W,R_Axial,1,nacional,Limitadora del LED de +5V. NO son 2.2k: a 5V darían ~1.3 mA y el LED queda apagado; 680R deja los mismos ~4.5 mA que los otros dos rieles
-"HS1,HS2,HS3",Heatsink TO-220 Rth<=20 C/W,—,3,nacional,Disipadores con aleta (uno por regulador) — mecánico, no aparece en el esquemático
-"XU1,XU2,XU3",TO-220 socket,—,3,nacional,Zócalo para reguladores (hot-swap si falla) — mecánico, no aparece en el esquemático
-J1,Barrier block 3 pos,TB-3,1,nacional,Entrada del secundario del transformador. Son TRES posiciones y no dos: el secundario es de toma central (12VAC CT) y lleva tres hilos — 12VAC / CT / 12VAC
-J2,Molex KK-254 4 pos (o pin header 1x4 con llave),KK-254-4,1,nacional,Bus analógico +12/GND/GND/-12 hacia los módulos 2-7. Resuelto en issue #8 (opción C): el +5V NO va por aquí — sale por J6 con retorno dedicado (§10.1/§10.4). Con llave/polarizado para que no se pueda enchufar al revés
-J3,Barrier block 3 pos,TB-3,1,nacional,Entrada AC primaria: L / N / PE. El pin 3 (PE) no lleva pista en la PCB — sale por cable al espárrago del chasis (§13)
-J4,Barrier block 2 pos,TB-2,1,nacional,Salida hacia el primario de TR1 (después de F1 + RV1 + NT1). Dibujado girado: J4.2 = línea y J4.1 = neutro — en un primario da igual cuál es cuál porque el devanado es flotante
-J5,Faston macho 6.3mm PCB (2 patillas),sam17:Faston_6.3x0.8mm_PCB_2Leg_P5.0mm,1,nacional,Puente único GND ↔ chasis (§13). Va al MISMO espárrago que el PE de J3 y a ningún otro sitio
-J6,Molex KK-254 2 pos (distinto de J2),KK-254-2,1,nacional,Feed de +5V al módulo 2 (AD5686R + LCD ~150 mA). Conector aparte del bus a propósito (issue #8 opción C): retorno dedicado hasta el punto de estrella (§10.1) y de 2 posiciones — imposible cruzarlo con el bus de ±12
-—,Espárrago M4 + tuerca + contratuerca + arandela dentada,—,1,nacional,Punto único de tierra del equipo (§13). Solo lo usan el PE del cable de red y el puente de J5. Ningún otro tornillo comparte ese espárrago
-—,Terminal de anillo M4 para 1.0 mm²,—,2,nacional,Uno para el PE del cable de red y otro para el puente de J5 (§13)
-—,Cable 1.0 mm² verde/amarillo,—,1,nacional,Puente J5 → espárrago. El verde/amarillo está reservado por norma a tierra de protección: no usarlo para nada más (§13)
-—,Prensaestopas / pasacables con retención de tracción,—,1,nacional,Entrada del cable de red al cajón. El conductor PE se corta más largo que L y N para que sea el último en soltarse si se tira del cable (§13)
+refs,value,footprint,quantity,supplier,notes,
+TR1,230VAC pri / 12-0-12 VAC 2A (24V totales con toma central),external,1,Reichelt/Mouser,Transformador externo — variante EU (230VAC/50Hz); ver design-notes.md §12 y §15. ATENCIÓN: son 12-0-12 (24 V totales),"[' NO 12 V totales. Muchos vendedores llaman «12V CT» a un 6-0-6: con ese cada riel daría ~7.6 V y el 7812 no regularía nunca. Pedir además la tensión de secundario EN VACÍO: hace falta ≥13.3 V por semidevanado (regulación ≥10.7%) para que el riel de +12 V aguante la red al -10% a plena carga de diseño — simulado', ' ver simulations/power. No va en la placa: entra por J4 (primario) y vuelve por J1 (secundario)']"
+F1,Fuse 250mA slow + portafusible CERRADO 5x20,Fuseholder_Cylinder-5x20mm_Vertical_Closed,1,Reichelt/Mouser,Protección primario 230VAC — variante EU (§12). Cerrado,"[' no de clips abiertos: son 230 V dentro de un cajón de madera y el aislamiento elegido es reforzado (§14). Referencia tipo Schurter FPG4 (IEC 60335-1', ' 250VAC/10A VDE)']"
+RV1,S20K275 / V275LA20A,sam17:RV_Disc_D21mm_W5.5mm_P10.0mm,1,Reichelt/Mouser,Supresor de transitorios en primario (20mm 275VAC para red 230VAC) — variante EU (§12). Va DESPUÉS de F1 para que un MOV en corto funda el fusible,
+NT1,SL10-5R020 (5Ω 2A),sam17:NTC_Disc_D11.5mm_W4.5mm_P7.5mm,1,Reichelt/Mouser,Inrush limiter en serie con el primario AC (rated 265VAC — sirve igual en EU sin cambios),
+BR1,KBP206 (2A / 600V) o equivalente DIP-4,Diode_Bridge_DIP-4_W7.62mm_P5.08mm,1,Reichelt,Puente rectificador. ATENCIÓN antes de fabricar: verificar el ORDEN DE PATILLAS contra el datasheet de la pieza comprada. El símbolo del esquemático es D_Bridge_+-AA (pin1=+,"[' pin2=−', ' pin3=~', ' pin4=~) y KiCad trae cinco variantes porque el orden cambia según el fabricante (§14)']"
+U1,LM7812,TO-220,1,Reichelt,Regulador +12V (con zócalo),
+U2,LM7912,TO-220,1,Reichelt,Regulador -12V (tab = -Vin — aislar del chasis),
+U3,LM7805,TO-220,1,Reichelt,Regulador +5V para LCD y AD5686R,
+"C1,C2",4700uF/25V electrolytic (ripple ≥1.2A @100Hz),CP_Radial_D16.0mm_P7.50mm,2,Reichelt,Corriente de rizado simulada: 0.72-0.88 A RMS (§15). Bulk tras el puente — uno por riel (+V y -V). Diámetro 16 mm y paso 7.5 mm: el footprint que pedía este BOM (D10) no existe para 4700 µF/25 V — un D10 a esa tensión ronda los 470 µF,
+"C3,C4,C9",0.33uF ceramic,C_Disc_D5_W2.5_P5,3,Reichelt,Entrada de cada regulador (TI app note),
+"C5,C6,C10",100uF/25V electrolytic,Radial-D6.3,3,Reichelt,Salida de cada regulador,
+"C7,C8,C11",0.1uF ceramic,C_Disc_D5_W2.5_P5,3,Reichelt,Bypass HF en salida de regulador,
+"D1,D2,D5",1N4001,DO-41,3,Reichelt,Diodos de protección anti-backfeed (uno por riel),
+D3,LED rojo 3mm,LED-3mm,1,Reichelt,Indicador +12V,
+D4,LED amarillo 3mm,LED-3mm,1,Reichelt,Indicador -12V,
+D6,LED verde 3mm,LED-3mm,1,Reichelt,Indicador +5V,
+"R1,R2",2.2k 1/4W,R_Axial,2,Reichelt,Limitadora de los LED de ±12V (~4.5 mA),
+R3,680R 1/4W,R_Axial,1,Reichelt,Limitadora del LED de +5V. NO son 2.2k: a 5V darían ~1.3 mA y el LED queda apagado; 680R deja los mismos ~4.5 mA que los otros dos rieles,
+"HS1,HS2,HS3",Heatsink TO-220 Rth<=20 C/W,—,3,Reichelt,Disipadores con aleta (uno por regulador) — mecánico,[' no aparece en el esquemático']
+"XU1,XU2,XU3",TO-220 socket,—,3,Reichelt,Zócalo para reguladores (hot-swap si falla) — mecánico,[' no aparece en el esquemático']
+J1,Barrier block 3 pos,TB-3,1,Reichelt,Entrada del secundario del transformador. Son TRES posiciones y no dos: el secundario es de toma central (12VAC CT) y lleva tres hilos — 12VAC / CT / 12VAC,
+J2,Molex KK-254 4 pos (o pin header 1x4 con llave),KK-254-4,1,Reichelt,Bus analógico +12/GND/GND/-12 hacia los módulos 2-7. Resuelto en issue #8 (opción C): el +5V NO va por aquí — sale por J6 con retorno dedicado (§10.1/§10.4). Con llave/polarizado para que no se pueda enchufar al revés,
+J3,Barrier block 3 pos,TB-3,1,Reichelt,Entrada AC primaria: L / N / PE. El pin 3 (PE) no lleva pista en la PCB — sale por cable al espárrago del chasis (§13),
+J4,Barrier block 2 pos,TB-2,1,Reichelt,Salida hacia el primario de TR1 (después de F1 + RV1 + NT1). Dibujado girado: J4.2 = línea y J4.1 = neutro — en un primario da igual cuál es cuál porque el devanado es flotante,
+J5,Faston macho 6.3mm PCB (2 patillas),sam17:Faston_6.3x0.8mm_PCB_2Leg_P5.0mm,1,Reichelt,Puente único GND ↔ chasis (§13). Va al MISMO espárrago que el PE de J3 y a ningún otro sitio,
+J6,Molex KK-254 2 pos (distinto de J2),KK-254-2,1,Reichelt,Feed de +5V al módulo 2 (AD5686R + LCD ~150 mA). Conector aparte del bus a propósito (issue #8 opción C): retorno dedicado hasta el punto de estrella (§10.1) y de 2 posiciones — imposible cruzarlo con el bus de ±12,
+—,Espárrago M4 + tuerca + contratuerca + arandela dentada,—,1,Reichelt,Punto único de tierra del equipo (§13). Solo lo usan el PE del cable de red y el puente de J5. Ningún otro tornillo comparte ese espárrago,
+—,Terminal de anillo M4 para 1.0 mm²,—,2,Reichelt,Uno para el PE del cable de red y otro para el puente de J5 (§13),
+—,Cable 1.0 mm² verde/amarillo,—,1,Reichelt,Puente J5 → espárrago. El verde/amarillo está reservado por norma a tierra de protección: no usarlo para nada más (§13),
+—,Prensaestopas / pasacables con retención de tracción,—,1,Reichelt,Entrada del cable de red al cajón. El conductor PE se corta más largo que L y N para que sea el último en soltarse si se tira del cable (§13),

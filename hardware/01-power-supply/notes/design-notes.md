@@ -727,6 +727,70 @@ daría ~7.6 V — el 7812 no regularía jamás. La línea de `TR1` ahora lo dice
 además pide la tensión de secundario **en vacío** (≥ 13.3 V por semidevanado),
 que es el dato del que depende todo esto y que no estaba pedido.
 
+## 16. Subir a 650 mA/riel: por qué LDO y no más tensión
+
+Decisión tomada con la simulación de §15 delante. Objetivo: **650 mA por riel**,
+la corriente de la Doepfer A-100NT12 (la generación lineal), con mejor ruido que
+su PSU3 actual, que es conmutada y arrastra quejas de ruido de alta frecuencia.
+
+### 16.1 El diseño actual no llega, y agrandar el bulk no lo salva
+
+A 650 mA y 207 V el margen es **−1.00 V**: no regula. Pediría un transformador
+con 40.7 % de regulación, que no existe. Subir el bulk de 4700 a 15000 µF solo
+recupera 0.44 V — sigue negativo.
+
+### 16.2 La solución NO es subir la tensión del secundario
+
+| Opción | Trafo | VRAW+ @207 V | P en el 7812 | |
+|---|---|---|---|---|
+| Como está hoy | 48 VA | 13.00 V (−1.00) | 3.37 W | no llega |
+| 12-0-12 de 4 A | 96 VA | 13.81 V (−0.19) | 3.97 W | no llega |
+| 15-0-15 2 A | 60 VA | 16.66 V (+2.66) | **6.34 W** | llega, disipador 4 °C/W |
+| **12-0-12 3 A + LDO** | **72 VA** | **13.53 V (+0.93)** | **3.76 W** | **elegida** |
+
+Subir el secundario a 15-0-15 da margen de sobra pero **casi duplica el calor**
+—6.34 W contra 3.76— y obliga a disipadores de 4 °C/W, mucho más grandes y con
+más área de placa dedicada solo a disipar. **Bajar el dropout hace lo contrario:
+mismo margen, la mitad del calor.** El camino no es más tensión, es menos caída.
+
+### 16.3 Diseñar con el dropout MÁXIMO, no con el típico
+
+Los datasheet de TI dan para el **LM2940** (positivo, 1 A, TO-220-3) un dropout
+típico de 0.5 V, y para el **LM2991** (negativo ajustable, 1 A, TO-220-5) un
+típico de 0.6 V — pero los dos garantizan **máximo 1.0 V sobre temperatura**. Con
+ese número:
+
+| Opción | Margen (típico) | **Margen (máximo)** |
+|---|---|---|
+| Mantener el trafo de 2 A | +0.40 V | **+0.00 V** |
+| **12-0-12 3 A** | +0.93 V | **+0.53 V** |
+
+Mantener el transformador actual daba **exactamente cero** de margen en el peor
+caso. Por eso el transformador sube a 3 A aunque los 2 A parecieran suficientes.
+
+### 16.4 Lo que esto implica en el esquemático
+
+- `U1`: 7812 → **LM2940-12**. Mismo TO-220-3, sustitución directa.
+- `U2`: 7912 → **LM2991**. Es TO-220-**5** y **ajustable**: cambia la huella y
+  hay que añadirle el divisor de resistencias. Es la única cirugía real.
+- `U3`: **se queda el 7805**. Cae de ~16 V a 5 V, headroom le sobra.
+- Los LDO son exigentes con la ESR del condensador de salida: `C5`/`C6` hay que
+  elegirlos contra el datasheet, no por costumbre.
+- `LM2991` a 650 mA está al 65 % de su capacidad de 1 A. Aceptable, pero es el
+  componente con menos holgura del módulo.
+
+### 16.5 Contexto de aprovisionamiento
+
+La tesis se hizo en Venezuela; la build vive en **Alemania**. Eso invalida la
+columna `supplier` del BOM (`nacional`/`importado`), que respondía a la
+disponibilidad venezolana y hacía caros los LDO. Con Reichelt/Mouser/TME el
+argumento desaparece.
+
+De paso: el transformador tiene que subir a 3 A igualmente, así que **se
+especifica toroidal**. Cuesta poco más que un EI en Alemania y tiene bastante
+menos campo disperso — el mismo cambio que da margen de dropout ataca también el
+zumbido por acoplamiento magnético.
+
 ## Referencias
 
 - [Modular Synthesizer Power Supplies (Rabid Elephant)](https://rabidelephant.com/blogs/general/modular-synthesizer-power-supplies-and-distribution-a-thorough-introduction) — fundamento de grounding y distribución.
