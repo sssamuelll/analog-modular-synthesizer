@@ -529,7 +529,37 @@ WIRES += [
 ]
 
 
+def check_footprints() -> None:
+    """Valida el mapa de huellas. Va ANTES de tocar el fichero a proposito.
+
+    create_schematic trunca el .kicad_sch nada mas empezar, asi que un assert
+    que salte despues deja la hoja vacia en disco — y una hoja vacia pasa el
+    ERC con 0 avisos, o sea que no chilla por ningun lado. Ya paso una vez: se
+    commiteo una hoja de 711 bytes creyendo que estaba entera. Esto es Python
+    puro y no necesita servidor, asi que no hay razon para hacerlo mas tarde.
+    """
+    faltan = [p[0] for p in PARTS if p[0] not in FOOTPRINT]
+    assert not faltan, f"componentes sin footprint: {faltan}"
+
+    # Que la huella exista. Escribir mal el nombre no da ningun error al
+    # colocar el componente: la hoja se genera igual, el ERC pasa igual, y el
+    # fallo aparece al abrir la placa — con el ruteo ya hecho encima.
+    if not os.path.isdir(KICAD_FP):
+        print(f"AVISO: no encuentro {KICAD_FP}, no compruebo las huellas")
+        return
+    rotos = []
+    for ref in [p[0] for p in PARTS]:
+        lib, _, name = FOOTPRINT[ref].partition(":")
+        base = (f"{DIR}/sam17.pretty" if lib == "sam17"
+                else os.path.join(KICAD_FP, f"{lib}.pretty"))
+        if not os.path.isfile(os.path.join(base, f"{name}.kicad_mod")):
+            rotos.append(f"{ref} -> {FOOTPRINT[ref]}")
+    print(f"huellas inexistentes: {len(rotos)} {rotos}")
+    assert not rotos, f"huellas que no estan en disco: {rotos}"
+
+
 def main() -> None:
+    check_footprints()
     c = Client()
     try:
         c.call("create_schematic", {"name": "sam17-power", "path": DIR})
@@ -553,25 +583,6 @@ def main() -> None:
         )
         with open(SCH, "w", encoding="utf-8") as fh:
             fh.write(txt.replace('(paper "A4")', title_block, 1))
-
-        faltan = [p[0] for p in PARTS if p[0] not in FOOTPRINT]
-        assert not faltan, f"componentes sin footprint: {faltan}"
-
-        # Que el footprint exista. Escribir mal el nombre no da ningun error al
-        # colocar el componente: la hoja se genera igual, el ERC pasa igual, y
-        # el fallo aparece al abrir la placa — con el ruteo ya hecho encima.
-        if os.path.isdir(KICAD_FP):
-            rotos = []
-            for ref in [p[0] for p in PARTS]:
-                lib, _, name = FOOTPRINT[ref].partition(":")
-                base = (f"{DIR}/sam17.pretty" if lib == "sam17"
-                        else os.path.join(KICAD_FP, f"{lib}.pretty"))
-                if not os.path.isfile(os.path.join(base, f"{name}.kicad_mod")):
-                    rotos.append(f"{ref} -> {FOOTPRINT[ref]}")
-            print(f"footprints inexistentes: {len(rotos)} {rotos}")
-            assert not rotos, f"footprints que no estan en disco: {rotos}"
-        else:
-            print(f"AVISO: no encuentro {KICAD_FP}, no compruebo los footprints")
 
         for ref, sym, x, y, rot, val in PARTS:
             c.call("add_schematic_component", {
