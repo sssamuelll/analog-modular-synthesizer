@@ -1,0 +1,55 @@
+sam17 modulo 1 - rectificacion y filtrado (caso nominal)
+*
+* Secundario 12-0-12 con toma central a masa, puente y bulk por riel.
+* Este fichero es el caso NOMINAL (230 V, transformador con 12% de regulacion,
+* plena carga de diseno). Los barridos de red, regulacion y carga los hace
+* run_sim.py, que genera este mismo circuito con otros valores.
+*
+* Correr:  ngspice -b sam17-power.cir      (o abrirlo en LTspice)
+*
+* Lo que hay que mirar: el MINIMO INSTANTANEO de v(vp). Si baja de 14 V el
+* 7812 deja de regular y el rizado de 100 Hz se cuela en el riel de +12 V.
+*
+* Modelo del transformador: fuente ideal + resistencia serie. El dato de placa
+* (12 V) es a PLENA carga, asi que en vacio da mas; aqui se modela con
+* v_vacio = 12 * 1.12 y r_dev = 0.12 * 12 / 2 A = 0.72 ohm por semidevanado.
+*
+* Las cargas son fuentes de corriente y no resistencias A PROPOSITO: un
+* regulador lineal en regulacion consume corriente casi constante pase lo que
+* pase con el rizado de su entrada. Con resistencias saldria un rizado
+* optimista.
+*
+* I1 = 450 mA: 300 mA del 7812 MAS 150 mA que se lleva el 7805, que cuelga del
+* mismo VRAW+. I2 = 300 mA: solo el 7912. Los dos rieles NO van igual cargados.
+
+V1 a 0 SIN(0 19.0071 50)
+V2 0 b SIN(0 19.0071 50)
+Rw1 a a1 0.72
+Rw2 b b1 0.72
+
+D1 a1 vp DMOD
+D2 b1 vp DMOD
+D3 vn a1 DMOD
+D4 vn b1 DMOD
+
+* Vmc a 0 V solo para poder medir la corriente de rizado de C1
+Vmc vp cp 0
+C1 cp 0 4700u
+C2 0 vn 4700u
+
+I1 vp 0 0.450
+I2 0 vn 0.300
+
+.model DMOD D(IS=1e-8 N=1.9 RS=0.025 BV=1000)
+.ic v(vp)=15 v(vn)=-15
+.tran 20u 400m 340m 20u
+
+.control
+run
+let margen = vecmin(v(vp)) - 14
+print vecmin(v(vp)) vecmax(v(vp)) margen
+print vecmax(v(vn)) vecmin(v(vn))
+print rms(i(vmc))
+.endc
+
+.end

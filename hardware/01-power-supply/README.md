@@ -77,7 +77,11 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
       especificación de la ranura y el aviso de `BR1`
 - [ ] **Antes de fabricar**: verificar el orden de patillas de `BR1` contra el
       datasheet de la pieza comprada ([§14.6](notes/design-notes.md))
-- [ ] Verificación de tensiones bajo carga
+- [x] **Margen de dropout simulado** ([§15](notes/design-notes.md),
+      [`simulations/power/`](../../simulations/power)) — a red nominal sobra;
+      a 207 V y plena carga de diseño hace falta un transformador con
+      regulación ≥ 10.7 %, que ahora el BOM pide explícitamente
+- [ ] Verificación de tensiones bajo carga (medida sobre placa real)
 - [ ] Medición de rizado en cada riel
 - [ ] Procedimiento de bring-up documentado
 
