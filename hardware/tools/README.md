@@ -52,3 +52,22 @@ en su docstring según se van descubriendo (p. ej. que un cable solo conecta si
   (virtual) salía visible en el dibujo en vez de ocultarse. Ambos son bugs del
   server, no del diseño — si tu clon los reproduce, son ~10 líneas de parche
   en `python/commands/dynamic_symbol_loader.py`.
+- `add_schematic_component` **acepta `mirrorY` y lo ignora**, sin error ni
+  aviso: el componente se coloca sin espejar y los pines siguen donde estaban.
+  Para voltear un símbolo hay que usar `rotate_schematic_component` con 180,
+  que sí funciona — teniendo en cuenta que 180 invierte también el orden
+  vertical de los pines, cosa que el espejo no haría.
+- `add_schematic_text` escribe el texto **doble-codificado**: un `§` sale como
+  `Â§` en el PDF. El cajetín no tiene el problema porque se escribe por texto
+  plano directamente en el fichero. Mantén las anotaciones de hoja en ASCII.
+
+## Verificar el trazado, no solo el ERC
+
+KiCad da por conectado un pin si hay un extremo de cable a menos de ~1 mm, así
+que **el ERC pasa igual con un trazado torcido**. En este repo eso escondió
+durante una revisión entera que `J3`/`J4` estuvieran cableados a 0.36 mm de sus
+pines reales. Por eso `build_schematic.py` comprueba, antes de dibujar nada, que
+cada pin tenga un vértice de `WIRES` **exacto** (<0.01 mm) y aborta si no.
+
+Si escribes un `build_schematic.py` para otro módulo, cópiate esa comprobación.
+Es la diferencia entre un esquemático que funciona y uno que funciona por ahora.

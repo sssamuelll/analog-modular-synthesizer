@@ -32,6 +32,7 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
 ├── bom.csv
 ├── kicad/
 │   ├── build_schematic.py   Genera sam17-power.kicad_sch (ver hardware/tools/README.md)
+│   ├── check_bom.py         Cruza bom.csv contra los designadores del esquemático
 │   └── sam17-power.kicad_sch
 ├── schematics/
 │   └── sam17-power.{svg,pdf}
@@ -46,11 +47,14 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
 - [x] Nota de diseño con presupuesto de corriente y cálculo térmico ([`notes/design-notes.md`](notes/design-notes.md))
 - [x] Decisiones arquitectónicas resueltas (+5 V incluido, NTC soft-start, MOV en primario)
 - [x] Esquemático en KiCad — rieles **±12 V y +5 V aux** (rectificación,
-      7812/7912/7805, protecciones DC, indicadores) **y** lado primario
+      7812/7912/7805, protecciones DC, indicadores), lado primario
       **230 V/50 Hz** (fusible 250 mA + MOV S20K275 + NTC de soft-start,
-      [`notes/design-notes.md`](notes/design-notes.md) §10/§12). ERC limpio,
-      netlist verificado. Dos huecos reales encontrados al cruzar contra
-      `bom.csv` (no resueltos, ver abajo).
+      [`notes/design-notes.md`](notes/design-notes.md) §10/§12) y **tierra de
+      protección** con puente de chasis en punto único (§13). ERC sin errores
+      ni avisos, netlist verificado, y `bom.csv` cuadra con el esquemático
+      designador a designador (`python kicad/check_bom.py`).
+- [ ] **Salida de +5 V al bus** — el riel se genera pero no sale de la placa
+      (ver abajo)
 - [ ] PCB ruteada
 - [ ] Verificación de tensiones bajo carga
 - [ ] Medición de rizado en cada riel
@@ -73,25 +77,54 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
   histórica.
 - **Protección DC**: diodos anti-backfeed (1N4001) en salida de cada
   regulador + LEDs indicadores por riel.
+- **Tierra de protección** ([§13](notes/design-notes.md)): puente **duro** entre
+  chasis y GND, en un **punto único** (espárrago M4 dedicado). No se usa red de
+  *ground lift* porque los paneles son lámina galvanizada y los ~40 jacks de
+  3.5 mm ya unen chasis y GND por el casquillo — una red de lift estaría
+  cortocircuitada 40 veces. El PE **no lleva pista en la PCB**: va del bornero
+  `J3.3` al espárrago por cable, y el 0 V sube al mismo espárrago por el faston
+  `J5`. La corriente de falla nunca pasa por la placa.
 - **Distribución**: bus board PCB (no daisy-chain) con tierra en estrella
   desde los condensadores bulk.
 
-## Discrepancias esquemático ↔ BOM sin resolver
+## Cruce esquemático ↔ BOM
 
-Encontradas al cruzar `sam17-power.kicad_sch` contra `bom.csv`, ninguna
-corregida a criterio propio porque las dos tocan la entrada de red:
+`bom.csv` lleva ahora una columna `refs` con los designadores reales del
+esquemático, y `kicad/check_bom.py` verifica el cruce en los dos sentidos. Hoy
+cuadra: 32 componentes en la hoja, ninguno sin línea de compra, ninguna línea
+apuntando a un designador que no existe.
 
-- **Falta tierra de seguridad**: `bom.csv` pide `J_AC_IN` como *"Barrier
-  block 3 pos... con tierra de seguridad"*, pero el esquemático dibuja `J3`
-  con solo 2 pines (L/N), sin PE. `design-notes.md` §7 tampoco cierra cómo
-  debe conectarse el chasis ("con cuidado ante ground loops") — hace falta
-  decidir el esquema de puesta a tierra antes de dibujar el tercer pin, no
-  solo agregarlo. Con la variante Europa esto pesa más: equipo Clase I con
-  marcado CE normalmente exige PE por norma.
-- **Conector de entrada del transformador no coincide**: `bom.csv` especifica
-  `J_IN` como *"Barrier block 2 pos"*, pero el esquemático usa `J1` de 3
-  pines (dos AC + toma central a GND). Uno de los dos está desactualizado —
-  no está claro cuál.
+Resuelto en esa pasada, además de los dos huecos que la motivaron:
+
+- **`J1` de 3 posiciones, no 2.** El secundario es de toma central: son tres
+  hilos (12 VAC / CT / 12 VAC). El esquemático tenía razón y el BOM estaba
+  viejo.
+- **`R3` es de 680 Ω, no de 2.2 kΩ.** El BOM pedía tres resistencias iguales
+  para los tres LED. A 5 V, 2.2 kΩ dan ~1.3 mA y el indicador de +5 V queda
+  apagado; 680 Ω dan los mismos ~4.5 mA que los otros dos rieles.
+- **Designadores alineados.** El BOM llamaba `MOV1`/`NTC1` a lo que la hoja
+  llama `RV1`/`NT1`, y sus `C3`/`C4`/`C5` eran condensadores distintos de los
+  `C3`/`C4`/`C5` del esquemático. Eso hacía el cruce imposible de automatizar.
+- **Faltaban `J4` y `J5`** en la lista de compra.
+
+## Pendiente: el riel de +5 V no sale de la placa
+
+Encontrado en el mismo cruce, y es más gordo que los dos anteriores:
+
+- El netlist dice `+5V: C10/1, C11/1, D5/2, R3/1, U3/3`. **Ningún pin de `J2`.**
+  El 7805 alimenta su propio LED indicador y nada más.
+- `J2` está dibujado con 4 pines: `+12 / GND / GND / −12`.
+- `bom.csv` pedía para el bus un *pin header 2×5* con
+  `-12/-12/GND/GND/+12/+12/+5/+5`, es decir, con +5 V.
+
+Pero el riel de +5 V existe justamente para alimentar el **AD5686R y el LCD**
+del módulo MIDI/CV ([`notes/design-notes.md`](notes/design-notes.md) §10.1), que
+están en otra placa. Tal como está dibujado, no puede llegar.
+
+No se ha corregido a criterio propio porque cambiar `J2` es cambiar la
+**interfaz del bus**, y de eso dependen todos los demás módulos: hay que decidir
+conector y orden de pines una vez, no improvisarlo aquí. La línea de `J2` en
+`bom.csv` queda marcada como *no comprar*.
 
 ## Mejoras propuestas
 

@@ -165,8 +165,9 @@ decide unificar; si el Pi sigue independiente, se puede suprimir).
   - Retorno de TR1/puente.
   - Retorno del bulk negativo.
   - Retorno del bus de distribución.
-  - Retorno de la masa del chasis (sólo si se quiere blindar EMI; con cuidado
-    ante ground loops).
+  - **Puente al chasis** — ya no es un «sólo si se quiere»: es obligatorio y va
+    por `J5`. Resuelto en §13, incluido por qué el bucle de tierra no se puede
+    evitar aquí aunque se quiera.
 - Distribución por **bus board dedicado** (PCB con pin headers en paralelo),
   no daisy-chain soldado en cada módulo. La tesis reportó justo este problema
   con sus cables jumper.
@@ -199,19 +200,22 @@ diseño de la fuente en sí, pero es una dependencia crítica.
 Orden sugerido al recibir la PCB fabricada (antes de conectar ningún otro
 módulo):
 
-1. **Inspección visual**: polaridad de los electrolíticos, orientación de
+1. **Continuidad de tierra, con el equipo desenchufado y ANTES de nada más**:
+   óhmetro entre la clavija de tierra del enchufe y cada panel, el espárrago y
+   el faston de `J5`. Miliohmios (§13.4). Si esto no pasa, no se enchufa.
+2. **Inspección visual**: polaridad de los electrolíticos, orientación de
    los reguladores, cortos en el silkscreen.
-2. Conectar **sólo el transformador** (sin carga), verificar ±17 V tras el
+3. Conectar **sólo el transformador** (sin carga), verificar ±17 V tras el
    bridge.
-3. Insertar reguladores en sus zócalos, verificar **+12 V ±1 %** y **−12 V
+4. Insertar reguladores en sus zócalos, verificar **+12 V ±1 %** y **−12 V
    ±1 %** en las salidas.
-4. Conectar carga resistiva (100 Ω, ~120 mA) en cada riel, medir la caída
+5. Conectar carga resistiva (100 Ω, ~120 mA) en cada riel, medir la caída
    de tensión (expectativa: < 50 mV).
-5. Medir **rizado pico-pico** con osciloscopio (DC coupling, 1 MHz BW):
+6. Medir **rizado pico-pico** con osciloscopio (DC coupling, 1 MHz BW):
    objetivo **< 10 mVpp** a plena carga.
-6. **Termograma o termopar** en los reguladores tras 15 min a plena carga
+7. **Termograma o termopar** en los reguladores tras 15 min a plena carga
    (expectativa: < 70 °C en el cuerpo del TO-220).
-7. Documentar en `hardware/01-power-supply/notes/bring-up.md`.
+8. Documentar en `hardware/01-power-supply/notes/bring-up.md`.
 
 ## 10. Decisiones resueltas
 
@@ -362,13 +366,11 @@ nombre coloquial preexistente en varios países, sigue siendo la misma red).
   independiente de la tensión de red: cuelga del lado DC, después del
   puente rectificador.
 
-**Pendiente sin resolver** (no depende de la región, viene de antes): el
-esquemático sigue sin tercer pin de tierra de seguridad en `J3`, aunque
-`bom.csv` ya pedía un conector de 3 posiciones para la entrada AC primaria.
-Con mains 230 V la falta de PE es, si acaso, más urgente — la mayoría de
-electrodomésticos Clase I en Europa exigen tierra de protección por norma
-(marcado CE). Sigue siendo una decisión de esquema de puesta a tierra, no
-un componente que se pueda añadir a ciegas.
+**Tierra de protección**: al cambiar de región esto pasó de conveniente a
+exigible — un equipo Clase I con marcado CE necesita PE por norma. Se resolvió
+en **§13**: `J3` ya tiene su tercer pin y el chasis se une a GND en un punto
+único. El esquema de puesta a tierra estaba sin decidir, y era eso lo que
+bloqueaba dibujar el pin, no el pin en sí.
 
 ### Topología actualizada (Europa)
 
@@ -386,6 +388,105 @@ un componente que se pueda añadir a ciegas.
                                                                                            (LCD + DAC)
 ```
 
+## 13. Tierra de protección (PE) y puente de chasis
+
+Cierra lo que §7 dejó a medias («retorno de la masa del chasis, sólo si se
+quiere blindar EMI; con cuidado ante ground loops») y el pendiente que
+arrastraba §12.
+
+### 13.1 Por qué el puente es duro y no una red de *lift*
+
+En audio hay una solución de compromiso muy conocida para la unión chasis ↔ 0 V:
+una red de *ground lift* — resistencia de 10-100 Ω en paralelo con un
+condensador de clase Y y un par de diodos en antiparalelo — que rompe el bucle
+de tierra a frecuencias de audio pero cortocircuita ante una falla. **Aquí no
+sirve**, y el motivo es mecánico, no eléctrico:
+
+- Los paneles son **lámina galvanizada de 0.5 mm**
+  ([`docs/modules/08-case-panels.md`](../../../docs/modules/08-case-panels.md)):
+  metal, no aislante.
+- El instrumento lleva **~40 jacks de 3.5 mm** montados a través de esos paneles
+  ([`docs/architecture.md`](../../../docs/architecture.md)). El casquillo de un
+  jack estándar es metálico y va a GND.
+
+Chasis y GND ya están unidos en ~40 puntos antes de que la fuente opine nada.
+Una red de lift quedaría cortocircuitada 40 veces y el esquemático estaría
+documentando un aislamiento que no existe. Así que **se une duro, en un punto
+definido, y se dice dónde**.
+
+Esta decisión se apoya en una sola premisa: jacks de casquillo metálico. Si
+alguna vez se pasa a jacks aislados de plástico, el chasis queda flotando
+respecto a GND y hay que rehacer este apartado desde cero.
+
+### 13.2 Qué se dibuja y qué no
+
+| Elemento | Dónde | Qué hace |
+|----------|-------|----------|
+| `J3` pin 3 | Bornero de entrada AC, 3 posiciones | Recibe el PE del cable de red |
+| Símbolo `Earth_Protective` | Colgando de `J3.3` | Declara la red **PE** y ahí se acaba: no sigue hacia la placa |
+| `J5` | Faston 6.3 mm sobre la red GND | Sube el 0 V del circuito al mismo espárrago |
+
+En el netlist salen **dos redes distintas**, `PE` y `GND`, y eso es correcto:
+se tocan en el metal, fuera de la PCB.
+
+```
+   PE del cable de red ──[J3.3]──┐
+                                 │
+                                 ├──► ESPÁRRAGO M4 DEDICADO ──► un cable por panel
+                                 │    (único punto de unión         (§13.3, punto 6)
+   0 V del circuito ────[J5]─────┘     PE ↔ GND del instrumento)
+
+   Fuera de la placa. En la PCB no hay ni una pista de PE.
+```
+
+**El PE no lleva pista de cobre.** No es un detalle de estilo. Ante un vivo
+tocando el chasis, la corriente de falla la corta el magnetotérmico de la
+instalación — 16 A típicos en Europa — y una pista de 0.5 mm no sobrevive el
+tiempo que tarda en disparar. El camino de seguridad va por cable y por herraje,
+nunca por la placa.
+
+### 13.3 Reglas de montaje
+
+1. **Un espárrago M4 dedicado**, soldado o remachado al chasis, con tuerca +
+   contratuerca y arandela dentada. Lo usan **solo** dos cosas: el terminal de
+   anillo del PE del cable de red y el del puente de `J5`. Ningún otro tornillo
+   comparte ese espárrago, y ese espárrago no sujeta nada más.
+2. **Sección del PE ≥ la de L y N** (1.0 mm² con este consumo).
+3. **El PE del cable de red se corta más largo que L y N**, para que sea el
+   último conductor en soltarse si alguien tira del cable.
+4. **Verde/amarillo solo para tierra de protección.** No usar esa combinación
+   para ninguna otra cosa dentro del cajón.
+5. **Rascar la galvanización** bajo cada terminal de anillo hasta ver metal, y
+   proteger después. El zinc conduce, pero el óxido de zinc no.
+6. **Cada panel se bonda por su cuenta** al mismo espárrago, con su propio cable
+   verde/amarillo y su tornillo. El cajón es de madera: los paneles **no** están
+   unidos entre sí por la estructura, y los casquillos de los jacks no cuentan
+   como unión de seguridad aunque eléctricamente lo estén. Esto es un requisito
+   que este módulo le impone a [`case/`](../../../case), no algo que se resuelva
+   en la PCB.
+
+### 13.4 Marco normativo y comprobación
+
+La norma aplicable a un equipo de audio de red en Europa es **IEC/EN 62368-1**,
+que sustituyó a IEC 60065 (audio/vídeo) y a IEC 60950-1 (informática); la
+Comisión Europea fijó el **20 de diciembre de 2020** como fecha de sustitución
+para marcado CE. El requisito que aplica aquí es su cláusula **5.6.6,
+*Resistance of the protective bonding system***.
+
+El valor límite concreto de esa cláusula **no se ha verificado** contra el texto
+de la norma (es de pago y no aparece en fuentes públicas), así que no se
+reproduce aquí ningún número presentándolo como normativo. Para bring-up basta
+un criterio de banco:
+
+> Con el equipo **desenchufado**, medir con un óhmetro entre la clavija de
+> tierra del enchufe y cualquier parte metálica accesible — cada panel, el
+> espárrago, el faston de `J5`. Debe dar **unidades de miliohmio**, del orden de
+> la resistencia de las propias puntas. Cualquier lectura que se despegue de eso
+> es un bonding malo, no una tolerancia.
+
+Si alguna vez se persigue marcado CE de verdad, hay que leer 5.6.6 y hacer el
+ensayo con la corriente y el tiempo que indique, no con un óhmetro.
+
 ## Referencias
 
 - [Modular Synthesizer Power Supplies (Rabid Elephant)](https://rabidelephant.com/blogs/general/modular-synthesizer-power-supplies-and-distribution-a-thorough-introduction) — fundamento de grounding y distribución.
@@ -398,3 +499,5 @@ un componente que se pueda añadir a ciegas.
 - [Pi 3B+ power measurements (RasPi.TV)](https://raspi.tv/2018/how-much-power-does-raspberry-pi-3b-use-power-measurements) — confirmación del pico de 1.3 A.
 - [Vishay/Ametherm SL10 datasheet](https://www.vishay.com/docs/24503/sl10.pdf) — tabla de datos rápidos: toda la familia SL10 rated 265 VAC máximo, independiente del valor de resistencia (§12).
 - [IEC 60038](https://en.wikipedia.org/wiki/IEC_60038) — estándar de tensión nominal 230 V/50 Hz para Europa, vigente desde la armonización 1983-2003 (§12).
+- [IEC 62368-1 sustituye a 60065 y 60950-1 (Eurofins/MET Labs)](https://metlabs.com/product-safety/faqs-iec-62368-1-replacing-iec-60950-1-iec-60065/) — norma vigente para equipos de audio de red y fecha de sustitución para marcado CE, 20-dic-2020 (§13.4).
+- [IEC 62368-1 ed. 3.0, muestra pública (IEC/iTeh)](https://cdn.standards.iteh.ai/samples/23618/92449acef5b2481da95e6e59387999ad/IEC-62368-1-2018.pdf) — índice donde figura la cláusula 5.6.6 *Resistance of the protective bonding system*. El texto completo de la cláusula es de pago: el límite numérico **no** se reproduce en §13.4 por no haberse podido verificar.

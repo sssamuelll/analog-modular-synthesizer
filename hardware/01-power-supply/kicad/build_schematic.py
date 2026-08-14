@@ -38,6 +38,14 @@ Convenciones del dibujo:
     tiempo y falla. NT1 (SL10 5R020) SI se mantiene igual: toda la familia
     SL10 esta rated 265VAC max (datasheet Vishay/Ametherm, documento 24503),
     con margen sobre los 253V del +10% de tolerancia de la red europea.
+  - Tierra de proteccion (design-notes.md §13): PE entra por J3.3 y muere en
+    un simbolo Earth_Protective — no hay pista de PE cruzando la placa. J5 es
+    el faston por el que GND sube al MISMO esparrago de chasis. Salen como dos
+    redes distintas en el netlist a proposito: se tocan en el metal, fuera de
+    la PCB, que es donde tiene que aguantar la corriente de falla. Puente duro
+    y no red de lift porque los paneles son lamina galvanizada y los 40 jacks
+    de 3.5 mm ya unen chasis y GND por el casquillo: una red de lift estaria
+    cortocircuitada 40 veces y el plano estaria mintiendo.
 
 Reglas de KiCad que mandan sobre el trazado, descubiertas midiendo (no estan
 documentadas en el server):
@@ -48,8 +56,22 @@ documentadas en el server):
   3. KiCad SUMA la rotacion del simbolo al angulo de sus campos: un componente
      girado 90/270 necesita el angulo complementario en Reference/Value o el
      texto sale vertical y las dos etiquetas se pisan.
+  4. Los pines de Conn_01x0N_Pin caen en ancla + (5.08, 2.54*(k-1) - 2.54*
+     floor((N-1)/2)), con k el numero de pin empezando en 1. Es decir: el ancla
+     se sienta en el CENTRO de la fila de pines redondeado a rejilla, no en el
+     pin 1. Con N par el centro cae fuera de rejilla y KiCad lo baja al pin 1
+     (N=2 -> offsets 0, +2.54); con N impar el ancla es el pin del medio
+     (N=3 -> -2.54, 0, +2.54). Medido sobre cuatro instancias con el ancla ya
+     en rejilla, y comprobado contra J2 (N=4, rot 180).
 Todo en multiplos de 1.27 mm: un extremo fuera de rejilla envenena las uniones
 de toda la hoja.
+
+KiCad conecta un pin con un extremo de cable a menos de ~1 mm, asi que un
+cableado torcido puede pasar el ERC igual. Eso disimulo durante una revision
+que J3/J4 estuviesen cableados a (+4.94, +0.33) en vez de a los (+5.08, 0)
+reales. Por eso main() no se fia del ERC: comprueba pin a pin que exista un
+extremo de cable EXACTO (<0.01 mm) y aborta si no. La tolerancia es del
+editor, no una licencia para dibujar a ojo.
 """
 from __future__ import annotations
 
@@ -68,7 +90,7 @@ YMID = 116.84                   # eje del puente y del conector de entrada
 YG_P, YG_N = 86.36, 147.32      # fila de simbolos GND (arriba / abajo)
 XU = 180.34                     # columna de los reguladores
 YOFF = 25.4                     # baja todo el dibujo para centrarlo en A3
-DATE, REV = "2026-08-12", "D"
+DATE, REV = "2026-08-14", "E"
 
 # Riel +5V (design-notes.md §10.1): fila intermedia entre +12V y -12V. Cuelga
 # del VRAW+ existente (tap sobre la union de la rail en x=106.68) en vez de
@@ -84,31 +106,56 @@ X5_LED = 297.18                 # columna propia del indicador +5V, ver PARTS.
                                  # NO usar 306.07: coincide con el codo del
                                  # cableado GND de J2 y crea un corto +5V-GND.
 
-# Lado primario 110 VAC (design-notes.md §10.2/§10.3), fila propia arriba de
-# todo lo demas (y<45.72, hueco libre hasta ahora).
+# Lado primario 230 VAC (design-notes.md §10.2/§10.3/§12/§13), fila propia
+# arriba de todo lo demas (y<45.72, hueco libre hasta ahora).
 #
-# OJO con Conn_01x02_Pin: medido con get_schematic_pin_locations, NO es el
-# offset simetrico +-2.54 que tienen otros conectores — es (+0.33, +2.87)
-# desde el centro. Server de KiCad, no yo: confirmado con Conn_01x03_Pin
-# tambien (offsets -2.21/+0.33/+2.87, no -2.54/0/+2.54). La tolerancia de
-# snap (1 mm) disimulaba el error en J1 porque redondear a la rejilla de
-# 1.27 quedaba a <0.33 mm del pin real; aqui J3/J4 usan los valores medidos
-# directo, sin redondear a ojo.
-Y_M = 20.32                     # centro de J3/J4
-Y_L = Y_M + 0.33                # linea/vivo = pin1 (fusible + MOV + NTC en serie)
-Y_N = Y_M + 2.87                # neutro = pin2 (paso directo, sin componentes)
+# J3 pasa a 3 pines para traer la tierra de proteccion (§13). Por la regla 4
+# del docstring el ancla de un Conn_01x03_Pin ES su pin del medio, asi que
+# anclarlo en Y_M deja L arriba, N en el ancla y PE abajo, los tres en
+# rejilla. J4 sigue siendo de 2 pines y ahi el ancla ES el pin 1: va a Y_L
+# para que sus dos pines caigan sobre las mismas lineas de L y N.
+XPIN = 5.08                     # offset en x del pin de un Conn_01x0N_Pin sin girar
+Y_M = 20.32                     # ancla de J3 = su pin 2
+Y_L = Y_M - 2.54                # J3.1 linea/vivo (fusible + MOV + NTC en serie)
+Y_N = Y_M                       # J3.2 neutro, solo el tramo hasta su codo
+Y_PE = Y_M + 2.54               # J3.3 tierra de proteccion -> chasis (§13)
 YRV = Y_L + 3.81                # centro del MOV: su pin1 cae EXACTO en Y_L
+
+# El MOV va de L a N, pero mide 7.62 mm y los pines de J3 estan a 2.54: dibujado
+# entre las dos lineas a la altura del conector, el cable de neutro le atraviesa
+# el cuerpo. Asi salio impreso hasta la rev D. N baja a su propio carril nada mas
+# salir de J3 y vuelve a subir justo antes de J4, que es lo que hace cualquier
+# plano de red: los pines del conector se abren a carriles comodos.
+Y_NL = 30.48                    # carril de neutro
+X_NJ, X_NJ2 = 45.72, 116.84     # codos de bajada y de subida de N
+# J4 se corre a la derecha respecto de la rev D: entre NT1 (acaba en 102.87) y
+# el sitio viejo solo quedaban 5 mm de cable, y ahi no cabe la etiqueta L_TR sin
+# montarse encima del numero de pin. Tambien separa "TR1 pri (ext)" de "NT1".
+X_J4A = 127.00                  # ancla de J4
+X_J4 = X_J4A - XPIN             # J4 va girado 180 (ver PARTS): sus pines quedan
+                                # a la IZQUIERDA del ancla, no a la derecha
+# PE baja por su propia columna, a la izquierda del codo de N, para no cruzarse
+# con el: un cruce entre neutro y tierra de proteccion es justo el que no
+# quieres tener que explicar mirando el plano.
+X_PE, Y_PES = 33.02, 33.02      # columna de bajada de PE y altura de su simbolo
+Y_PEF, X_PEF = 27.94, 40.64     # ramal del PWR_FLAG de la red PE
+Y_CH = 40.64                    # fila del faston de chasis J5: debajo del bloque
+                                # primario y muy por encima del riel VRAW+ (66.04)
 
 PARTS = [
     # --- lado primario, 110 VAC (design-notes.md §10.2/§10.3): el fusible va
     # AQUI, no en el secundario — protege contra un corto reflejado desde el
     # secundario, no solo un corto local. TR1 es externo (no esta en esta
     # placa): J4 es la salida hacia su devanado primario. ---
-    ("J3",  "Connector:Conn_01x02_Pin",       25.40, Y_M,     0, "AC 230V IN"),
+    ("J3",  "Connector:Conn_01x03_Pin",       25.40, Y_M,     0, "AC 230V IN"),
     ("F1",  "Device:Fuse",                    53.34, Y_L,    90, "250mA T"),
     ("RV1", "Device:Varistor",                76.20, YRV,     0, "S20K275"),
     ("NT1", "Device:Thermistor_NTC",          99.06, Y_L,    90, "NTC 5R/2A"),
-    ("J4",  "Connector:Conn_01x02_Pin",      113.03, Y_M,     0, "TR1 pri (ext)"),
+    ("J4",  "Connector:Conn_01x02_Pin",       X_J4A, Y_N,   180, "TR1 pri (ext)"),
+    # Faston del puente unico GND -> chasis (§13). Va aqui, pegado al bloque
+    # de red, para que se lea junto con el PE de J3: los dos cables acaban en
+    # el mismo esparrago. Electricamente cuelga de GND como cualquier retorno.
+    ("J5",  "Connector:Conn_01x01_Pin",       25.40, Y_CH,    0, "CHASIS"),
     ("J1",  "Connector:Conn_01x03_Pin",       30.48, YMID,    0, "12VAC CT 2A"),
     ("BR1", "Device:D_Bridge_+-AA",           91.44, YMID,   90, "KBP206"),
     # --- riel +12V ---
@@ -170,10 +217,54 @@ POWER = [
     ("#G18", "power:GND", 238.76, YG_5,   0),
     ("#G19", "power:GND", X5_LED, YD6 + 10.16, 0),
     ("#P2",  "power:+5V", 254.00, Y5 - 12.7, 0),
+    # --- tierra de proteccion (§13). Earth_Protective, no GND ni Earth a
+    # secas: es el simbolo IEC 60417-5019, el unico que dice "proteccion" y
+    # no "referencia de señal". La red muere aqui a proposito. ---
+    ("#PE1",  "power:Earth_Protective", X_PE,  Y_PES, 0),
+    ("#FLG4", "power:PWR_FLAG",         X_PEF, Y_PEF, 0),
+    ("#G20",  "power:GND",              53.34, Y_CH,  0),
 ]
 
+# KiCad saca el nombre de una red de potencia del Value del simbolo, no del
+# simbolo. "Earth_Protective" es como se llama el dibujo; la red se llama PE,
+# que es como la llama cualquiera que abra el plano o el netlist.
+POWER_VALUE = {"#PE1": "PE"}
+
+# J4 es una salida: sin girar, el cable le entra por encima del cuerpo y de los
+# numeros de pin, porque los pines de Conn_01x0N_Pin salen SIEMPRE hacia la
+# derecha. Lo suyo seria espejarlo, pero add_schematic_component acepta
+# mirrorY y lo ignora sin decir nada (comprobado: los pines siguen en +5.08).
+# Asi que gira 180 como J2, y como en J2 eso invierte el orden vertical de los
+# pines: anclando en Y_N el pin 2 sube a Y_L y el pin 1 se queda en Y_N, o sea
+# J4.1 = neutro y J4.2 = linea. Lo desambiguan las etiquetas L_TR y N impresas
+# en los propios cables; en un primario de transformador ademas da igual cual
+# es cual, porque el devanado es flotante — lo que importa (fusible y MOV en la
+# linea) queda aguas arriba de J4.
+
 # nombra los rieles crudos; sin esto el netlist los llama Net-(BR1-+)
-LABELS = [("VRAW+", 99.06, YP), ("VRAW-", 99.06, YN)]
+LABELS = [
+    ("VRAW+", 99.06, YP), ("VRAW-", 99.06, YN),
+    # La linea queda partida en tres nets por F1 y NT1, y sin nombre el netlist
+    # las llama Net-(F1-Pad1). En una seccion de red interesa que la PCB diga
+    # cual es cual sin tener que seguir el dibujo. PE no lleva etiqueta: se lo
+    # nombra el propio simbolo Earth_Protective y dos nombres en la misma red
+    # se pelean en el ERC.
+    ("L",    35.56,  Y_L), ("L_F",  63.50,  Y_L),
+    ("L_TR", 106.68, Y_L), ("N",    60.96,  Y_NL),
+    # Las dos patas del secundario partido, por el mismo motivo: se llamaban
+    # Net-(J1-Pin_1) y Net-(J1-Pin_3).
+    ("SEC_A", 60.96, 104.14), ("SEC_B", 60.96, 135.89),
+]
+
+# Anotaciones de la hoja: la decision de §13 tiene que viajar CON el plano, no
+# solo en el repo — quien monte esto mira el PDF, no design-notes.md. Sin "§"
+# aqui: add_schematic_text lo escribe doble-codificado y sale "Â§" en el PDF
+# (el cajetin si lo aguanta, porque se escribe por texto plano en el fichero).
+TEXTS = [
+    ("J5 = puente unico GND -> chasis. PE (J3.3) sube al MISMO esparrago.", 63.50, 39.37),
+    ("No hay pista de PE en la PCB: la corriente de falla no pasa por la",  63.50, 41.91),
+    ("placa. Apriete y ensayo de continuidad en design-notes.md sec. 13.",  63.50, 44.45),
+]
 
 
 def side_fields(ref: str, x: float, y: float) -> list:
@@ -194,8 +285,7 @@ for _r, _x, _y in [("C1", 121.92, 69.85), ("C3", 147.32, 69.85), ("C5", 213.36, 
                    ("R1", 271.78, 69.85), ("D3", 271.78, 85.09),
                    ("R2", 271.78, 144.78), ("D4", 271.78, 160.02),
                    ("C9", 147.32, Y5_ROW), ("C10", 213.36, Y5_ROW), ("C11", 238.76, Y5_ROW),
-                   ("R3", X5_LED, Y5_ROW), ("D6", X5_LED, YD6),
-                   ("RV1", 76.20, YRV)]:
+                   ("R3", X5_LED, Y5_ROW), ("D6", X5_LED, YD6)]:
     FIELDS += side_fields(_r, _x, _y)
 FIELDS += [
     ("J1",  "Value",     30.48, 107.95), ("J1",  "Reference",  30.48, 125.73),
@@ -206,7 +296,11 @@ FIELDS += [
     ("J3",  "Value",     25.40, 11.43), ("J3",  "Reference",  25.40, 29.21),
     ("F1",  "Reference", 53.34, 10.16), ("F1",  "Value",      53.34, 13.97),
     ("NT1", "Reference", 99.06, 10.16), ("NT1", "Value",      99.06, 13.97),
-    ("J4",  "Value",    113.03, 11.43), ("J4",  "Reference", 113.03, 29.21),
+    ("J4",  "Value",     X_J4,  11.43), ("J4",  "Reference",  X_J4,  29.21),
+    ("J5",  "Reference",  25.40, 44.45), ("J5", "Value",       25.40, 48.26),
+    # RV1 no usa side_fields: a +-2.54 del centro sus campos caen encima de la
+    # linea de L. Van al hueco que queda entre L (17.78) y el carril de N (30.48).
+    ("RV1", "Reference",  83.82, 22.86), ("RV1", "Value",      83.82, 26.67),
     ("U1",  "Value",       XU,   52.07), ("U1",  "Reference",    XU,   55.88),
     ("U2",  "Reference",   XU,  177.80), ("U2",  "Value",        XU,  181.61),
     ("D1",  "Reference",   XU,   38.10), ("D1",  "Value",        XU,   41.91),
@@ -217,7 +311,13 @@ FIELDS += [
     # lado): D5 arriba cerca del riel, U3 abajo cerca de su propio gnd —
     # separados para que sus etiquetas no se pisen entre si.
     ("D5",  "Reference",    XU,  92.71), ("D5",  "Value",        XU,  96.52),
-    ("U3",  "Reference",    XU, 127.00), ("U3",  "Value",        XU, 130.81),
+    # U3 es el unico regulador que no puede llevar los campos ni encima ni
+    # debajo: debajo estan su stub de GND y #G16, y encima el ramal de D5.
+    # Van al hueco de abajo a la derecha del cuerpo, la unica zona despejada de
+    # esta fila. x=190.5 aguanta el texto tanto si KiCad lo justifica a la
+    # izquierda como si lo centra — el cable vertical de D5 acaba en y=116.84 y
+    # aqui estamos por debajo.
+    ("U3",  "Value",     190.50, 123.19), ("U3", "Reference",  190.50, 127.00),
 ]
 
 ROT = {p[0]: p[4] for p in PARTS} | {p[0]: p[4] for p in POWER}
@@ -239,14 +339,29 @@ WIRES: list = [
     ("CT->GND",  [[35.56, YMID], [43.18, YMID], [43.18, 124.46]]),
     ("BR+ sube", [[91.44, 109.22], [91.44, YP]]),
     ("BR- baja", [[91.44, 124.46], [91.44, YN]]),
-    # --- entrada AC primaria, 110V (design-notes.md §10.2/§10.3) ---
-    ("AC L a",   [[30.34, Y_L], [49.53, Y_L]]),                 # J3.L -> F1
-    ("AC L b",   [[57.15, Y_L], [76.20, Y_L]]),                 # F1 -> tap RV1
-    ("AC L c",   [[76.20, Y_L], [95.25, Y_L]]),                 # tap RV1 -> NT1
-    ("AC L d",   [[102.87, Y_L], [117.97, Y_L]]),                # NT1 -> J4.L
-    ("AC N a",   [[30.34, Y_N], [76.20, Y_N]]),                  # J3.N -> tap RV1
-    ("AC N b",   [[76.20, Y_N], [117.97, Y_N]]),                 # tap RV1 -> J4.N
-    ("RV1 tap",  [[76.20, Y_N], [76.20, YRV + 3.81]]),           # tap N -> RV1.pin2
+    # --- entrada AC primaria, 230V (design-notes.md §10.2/§10.3/§12/§13) ---
+    ("AC L a",   [[25.40 + XPIN, Y_L], [49.53, Y_L]]),           # J3.1 -> F1
+    ("AC L b",   [[57.15, Y_L], [76.20, Y_L]]),                  # F1 -> tap RV1
+    ("AC L c",   [[76.20, Y_L], [95.25, Y_L]]),                  # tap RV1 -> NT1
+    ("AC L d",   [[102.87, Y_L], [X_J4, Y_L]]),                  # NT1 -> J4.1
+    ("AC N a",   [[25.40 + XPIN, Y_N], [X_NJ, Y_N]]),            # J3.2 -> codo
+    ("AC N b",   [[X_NJ, Y_N], [X_NJ, Y_NL]]),                   # baja al carril
+    ("AC N c",   [[X_NJ, Y_NL], [76.20, Y_NL]]),                 # carril -> tap RV1
+    ("AC N d",   [[76.20, Y_NL], [X_NJ2, Y_NL]]),                # tap RV1 -> codo
+    ("AC N e",   [[X_NJ2, Y_NL], [X_NJ2, Y_N]]),                 # sube a la altura de J4
+    ("AC N f",   [[X_NJ2, Y_N], [X_J4, Y_N]]),                   # -> J4.2
+    ("RV1 tap",  [[76.20, YRV + 3.81], [76.20, Y_NL]]),          # RV1.pin2 -> carril N
+    # --- PE (§13): sale de J3.3 y baja a su propio simbolo. No cruza L ni N y
+    # no sigue hacia la placa: el cable de tierra va del bornero al esparrago
+    # del chasis, no por cobre de PCB. El ramal del PWR_FLAG se parte en la
+    # vertical para que toda union quede extremo contra extremo (regla 2). ---
+    ("PE a",     [[25.40 + XPIN, Y_PE], [X_PE, Y_PE]]),          # J3.3 -> codo
+    ("PE b",     [[X_PE, Y_PE], [X_PE, Y_PEF]]),                 # codo -> ramal
+    ("PE c",     [[X_PE, Y_PEF], [X_PE, Y_PES]]),                # ramal -> #PE1
+    ("PE flag",  [[X_PE, Y_PEF], [X_PEF, Y_PEF]]),               # ramal -> #FLG4
+    # --- puente unico GND -> chasis: J5 es un retorno mas de la red GND. El
+    # "punto unico" lo hace el esparrago, no el cobre. ---
+    ("J5 gnd",   [[25.40 + XPIN, Y_CH], [53.34, Y_CH]]),
 ]
 # cortes: FLG | C bulk | C ceramico | ramal D | entrada del regulador
 WIRES += rail(YP, [91.44, 106.68, 121.92, 147.32, 160.02, 172.72], "VRAW_P ")
@@ -330,6 +445,7 @@ def main() -> None:
             '\t\t(company "SAM17 — Sintetizador analogico modular")\n'
             '\t\t(comment 1 "Variante Europa: primario 230VAC/50Hz. Rieles ±12 V y +5V aux.")\n'
             '\t\t(comment 2 "Primario: fusible + MOV S20K275 + NTC soft-start (design-notes.md §10/§12)")\n'
+            '\t\t(comment 3 "PE: J3.3 al esparrago de chasis; GND al mismo punto via J5 (§13)")\n'
             "\t)"
         )
         with open(SCH, "w", encoding="utf-8") as fh:
@@ -338,30 +454,46 @@ def main() -> None:
         for ref, sym, x, y, rot, val in PARTS:
             c.call("add_schematic_component", {
                 "schematicPath": SCH, "symbol": sym, "reference": ref,
-                "value": val, "position": {"x": x, "y": y + YOFF, "unit": "mm"}})
+                "value": val,
+                "position": {"x": x, "y": y + YOFF, "unit": "mm"}})
             if rot:
                 c.call("rotate_schematic_component",
                        {"schematicPath": SCH, "reference": ref, "angle": rot})
         for ref, sym, x, y, rot in POWER:
             c.call("add_schematic_component", {
                 "schematicPath": SCH, "symbol": sym, "reference": ref,
-                "value": sym.split(":")[1],
+                "value": POWER_VALUE.get(ref, sym.split(":")[1]),
                 "position": {"x": x, "y": y + YOFF, "unit": "mm"}})
             if rot:
                 c.call("rotate_schematic_component",
                        {"schematicPath": SCH, "reference": ref, "angle": rot})
         print(f"colocados {len(PARTS)} componentes + {len(POWER)} simbolos de potencia")
 
-        offgrid = []
+        # Dos comprobaciones sobre los pines, antes de tirar un solo cable. La
+        # segunda es la que importa: KiCad une pin y cable con ~1 mm de
+        # tolerancia, asi que el ERC da por bueno un trazado torcido — asi
+        # sobrevivieron J3/J4 cableados a 0.36 mm de sus pines durante toda una
+        # revision. Aqui se exige coincidencia exacta contra los vertices
+        # declarados en WIRES, y si falla se aborta antes de dibujar nada.
+        ends = {(round(wx, 2), round(wy + YOFF, 2))
+                for _lbl, wp in WIRES for wx, wy in wp}
+        offgrid, loose = [], []
         for ref in [p[0] for p in PARTS] + [p[0] for p in POWER]:
             txt = str(c.call("get_schematic_pin_locations",
                              {"schematicPath": SCH, "reference": ref}))
             for n, _nm, x, y in re.findall(
-                    r"Pin (\d) \(([^)]+)\): x=([\d.]+), y=([\d.]+)", txt.replace("\\n", "\n")):
-                for v in (float(x), float(y)):
+                    r"Pin (\w+) \(([^)]+)\): x=([\d.]+), y=([\d.]+)",
+                    txt.replace("\\n", "\n")):
+                px, py = float(x), float(y)
+                for v in (px, py):
                     if abs(round(v / 1.27) * 1.27 - v) > 0.01:
                         offgrid.append((ref, n, x, y))
+                if not any(abs(px - ex) < 0.01 and abs(py - ey) < 0.01
+                           for ex, ey in ends):
+                    loose.append(f"{ref}.{n}@({px:.2f},{py:.2f})")
         print(f"pines fuera de rejilla: {len(offgrid)} {offgrid[:5]}")
+        print(f"pines sin extremo de cable exacto: {len(loose)} {loose[:8]}")
+        assert not loose, f"cableado a ojo; corrigelo antes de seguir: {loose}"
 
         bad = 0
         for label, wp in WIRES:
@@ -379,6 +511,11 @@ def main() -> None:
             r = str(c.call("add_schematic_net_label", {
                 "schematicPath": SCH, "netName": name, "position": [x, y + YOFF]}))
             print(f"  label {name}: {r[:80]}")
+
+        for text, x, y in TEXTS:
+            c.call("add_schematic_text", {
+                "schematicPath": SCH, "text": text, "position": [x, y + YOFF]})
+        print(f"notas: {len(TEXTS)}")
 
         r = str(c.call("batch_set_schematic_property_positions", {
             "schematicPath": SCH,
