@@ -53,8 +53,9 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
       protección** con puente de chasis en punto único (§13). ERC sin errores
       ni avisos, netlist verificado, y `bom.csv` cuadra con el esquemático
       designador a designador (`python kicad/check_bom.py`).
-- [ ] **Salida de +5 V al bus** — el riel se genera pero no sale de la placa
-      (ver abajo)
+- [x] **Salida de +5 V** — resuelto en issue #8 (opción C): el riel sale por
+      `J6`, un conector de 2 posiciones aparte del bus, con retorno dedicado
+      al punto de estrella (ver abajo)
 - [ ] PCB ruteada
 - [ ] Verificación de tensiones bajo carga
 - [ ] Medición de rizado en cada riel
@@ -84,6 +85,13 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
   cortocircuitada 40 veces. El PE **no lleva pista en la PCB**: va del bornero
   `J3.3` al espárrago por cable, y el 0 V sube al mismo espárrago por el faston
   `J5`. La corriente de falla nunca pasa por la placa.
+- **Interfaz del bus** ([§10.4](notes/design-notes.md), issue #8): `J2` lleva
+  solo lo analógico (`+12/GND/GND/−12`, igual para los módulos 2-7) y el +5 V
+  sale por `J6`, un conector de 2 posiciones físicamente distinto. Así ningún
+  módulo recibe un +5 V que no usa, el feed digital no se puede cruzar con
+  ±12, y el retorno del +5 V — que §10.1 exige dedicado hasta el punto de
+  estrella porque el backlight del LCD va conmutado — queda separado por
+  construcción, no por convención de layout.
 - **Distribución**: bus board PCB (no daisy-chain) con tierra en estrella
   desde los condensadores bulk.
 
@@ -107,24 +115,21 @@ Resuelto en esa pasada, además de los dos huecos que la motivaron:
   `C3`/`C4`/`C5` del esquemático. Eso hacía el cruce imposible de automatizar.
 - **Faltaban `J4` y `J5`** en la lista de compra.
 
-## Pendiente: el riel de +5 V no sale de la placa
+## Resuelto: la salida de +5 V y la interfaz del bus (issue #8)
 
-Encontrado en el mismo cruce, y es más gordo que los dos anteriores:
+El riel de +5 V no salía de la placa (netlist sin ningún pin de `J2` en la red
+`+5V`), y arreglarlo era fijar la **interfaz del bus** de la que dependen los
+módulos 2-7. Se decidió la **opción C** del issue:
 
-- El netlist dice `+5V: C10/1, C11/1, D5/2, R3/1, U3/3`. **Ningún pin de `J2`.**
-  El 7805 alimenta su propio LED indicador y nada más.
-- `J2` está dibujado con 4 pines: `+12 / GND / GND / −12`.
-- `bom.csv` pedía para el bus un *pin header 2×5* con
-  `-12/-12/GND/GND/+12/+12/+5/+5`, es decir, con +5 V.
+- `J2` intacto — `+12 / GND / GND / −12`, el mismo bus analógico para todos.
+- `J6` nuevo — 2 posiciones, solo el feed de +5 V al módulo 2. Netlist ahora:
+  `+5V: C10/1, C11/1, D5/2, J6/1, R3/1, U3/3`.
 
-Pero el riel de +5 V existe justamente para alimentar el **AD5686R y el LCD**
-del módulo MIDI/CV ([`notes/design-notes.md`](notes/design-notes.md) §10.1), que
-están en otra placa. Tal como está dibujado, no puede llegar.
-
-No se ha corregido a criterio propio porque cambiar `J2` es cambiar la
-**interfaz del bus**, y de eso dependen todos los demás módulos: hay que decidir
-conector y orden de pines una vez, no improvisarlo aquí. La línea de `J2` en
-`bom.csv` queda marcada como *no comprar*.
+El porqué (contra el header 2×5 que pedía el BOM viejo) está en
+[`notes/design-notes.md` §10.4](notes/design-notes.md): retorno del +5 V
+dedicado por construcción (§10.1, el backlight va conmutado), ningún +5 V vivo
+en módulos que no lo usan, y la tesis nunca tuvo un bus formal que respetar.
+Las líneas de `J2` y `J6` en `bom.csv` vuelven a ser comprables.
 
 ## Mejoras propuestas
 

@@ -20,10 +20,11 @@ R3,680R 1/4W,R_Axial,1,nacional,Limitadora del LED de +5V. NO son 2.2k: a 5V dar
 "HS1,HS2,HS3",Heatsink TO-220 Rth<=20 C/W,—,3,nacional,Disipadores con aleta (uno por regulador) — mecánico, no aparece en el esquemático
 "XU1,XU2,XU3",TO-220 socket,—,3,nacional,Zócalo para reguladores (hot-swap si falla) — mecánico, no aparece en el esquemático
 J1,Barrier block 3 pos,TB-3,1,nacional,Entrada del secundario del transformador. Son TRES posiciones y no dos: el secundario es de toma central (12VAC CT) y lleva tres hilos — 12VAC / CT / 12VAC
-J2,Pin header 2x5,1x10,2,nacional,ATENCIÓN — sin resolver: el esquemático dibuja J2 con 4 pines (+12/GND/GND/-12) y el riel +5V NO sale de la placa. Este BOM refleja la intención documentada (bus con +5V). Ver README del módulo. No comprar hasta decidir el bus
+J2,Molex KK-254 4 pos (o pin header 1x4 con llave),KK-254-4,1,nacional,Bus analógico +12/GND/GND/-12 hacia los módulos 2-7. Resuelto en issue #8 (opción C): el +5V NO va por aquí — sale por J6 con retorno dedicado (§10.1/§10.4). Con llave/polarizado para que no se pueda enchufar al revés
 J3,Barrier block 3 pos,TB-3,1,nacional,Entrada AC primaria: L / N / PE. El pin 3 (PE) no lleva pista en la PCB — sale por cable al espárrago del chasis (§13)
 J4,Barrier block 2 pos,TB-2,1,nacional,Salida hacia el primario de TR1 (después de F1 + RV1 + NT1). Dibujado girado: J4.2 = línea y J4.1 = neutro — en un primario da igual cuál es cuál porque el devanado es flotante
 J5,Faston macho 6.3mm PCB,Faston-6.3,1,nacional,Puente único GND ↔ chasis (§13). Va al MISMO espárrago que el PE de J3 y a ningún otro sitio
+J6,Molex KK-254 2 pos (distinto de J2),KK-254-2,1,nacional,Feed de +5V al módulo 2 (AD5686R + LCD ~150 mA). Conector aparte del bus a propósito (issue #8 opción C): retorno dedicado hasta el punto de estrella (§10.1) y de 2 posiciones — imposible cruzarlo con el bus de ±12
 —,Espárrago M4 + tuerca + contratuerca + arandela dentada,—,1,nacional,Punto único de tierra del equipo (§13). Solo lo usan el PE del cable de red y el puente de J5. Ningún otro tornillo comparte ese espárrago
 —,Terminal de anillo M4 para 1.0 mm²,—,2,nacional,Uno para el PE del cable de red y otro para el puente de J5 (§13)
 —,Cable 1.0 mm² verde/amarillo,—,1,nacional,Puente J5 → espárrago. El verde/amarillo está reservado por norma a tierra de protección: no usarlo para nada más (§13)

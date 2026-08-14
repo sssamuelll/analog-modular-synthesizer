@@ -175,7 +175,8 @@ decide unificar; si el Pi sigue independiente, se puede suprimir).
   el regulador y el módulo más lejano a 300 mA (estimación a validar durante
   el routing del bus board).
 - Separar físicamente los retornos analógico y digital; unirlos **en el punto
-  de estrella**, no en los módulos.
+  de estrella**, no en los módulos. Resuelto a nivel de interfaz en §10.4: el
+  +5 V digital sale por `J6` con su propio retorno, no por el bus de `J2`.
 
 ## 8. Zona gris: corriente del CEM3340
 
@@ -299,6 +300,35 @@ suministro). Coste marginal: < 1 USD.
 paralelo con el MOV para transitorios de mayor energía, o un módulo
 SPD (surge protective device) externo. Fuera de alcance de la reproducción
 original.
+
+### 10.4 Interfaz del bus → **J2 analógico + J6 feed dedicado de +5 V** (issue #8, opción C)
+
+El cruce esquemático ↔ BOM del issue #8 destapó que el riel de +5 V no salía
+de la placa, y resolverlo obligaba a fijar la interfaz del bus de una vez.
+Sobre la mesa estaban el header 2×5 con +5 V que pedía el BOM viejo (opción A),
+el bus Eurorack de 16 pines (opción B, ya descartada a favor de un epic propio
+en §3) y un conector aparte solo para +5 V (opción C). **Se eligió C**:
+
+- **J2 queda como está** — `+12 / GND / GND / −12`, el mismo conector para los
+  módulos 2-7. Ningún módulo recibe un +5 V vivo que no usa, y un bus de 4
+  posiciones con llave no se puede enchufar corrido una fila (el clásico
+  mata-módulos de los IDC 2×N sin llave).
+- **J6 es el feed de +5 V**, 2 posiciones, solo hacia el módulo 2 (AD5686R +
+  LCD, ~150 mA). Físicamente distinto de J2: imposible cruzarlo con ±12.
+- **El retorno de J6 es la razón de fondo.** §10.1 ya exigía retorno dedicado
+  del +5 V hasta el punto de estrella «separado del retorno analógico hasta el
+  último cm», porque el backlight va conmutado por PWM: ~100 mA de flancos
+  sobre unas decenas de mΩ de retorno compartido son milivoltios de rebote en
+  la referencia del DAC — y a 1 V/octava, 1 mV ≈ 1.2 cents en el CV. Con un
+  header único esa separación quedaba como convención de layout sobre pines
+  GND compartidos; con conector propio la separación **es** el conector.
+- La fidelidad a la tesis no favorecía al 2×5: la tesis no tenía bus formal
+  (distribución con jumpers en daisy-chain, que ella misma reporta como
+  problema — §7). El 2×5 era una invención del BOM viejo, no un dato original.
+
+En la hoja, el retorno de J6 es la misma red `GND` que todo lo demás — la
+separación es una regla de **layout**, no de netlist — y viaja anotada en el
+propio plano al lado de J6, igual que la regla de PE de §13.
 
 ### Topología actualizada
 
