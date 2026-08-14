@@ -332,13 +332,28 @@
     },
     "net_colors": null,
     "netclass_assignments": {
+      "GND": [
+        "POTENCIA"
+      ],
       "+12V": [
+        "POTENCIA"
+      ],
+      "-12V": [
         "POTENCIA"
       ],
       "+5V": [
         "POTENCIA"
       ],
-      "-12V": [
+      "/VRAW+": [
+        "POTENCIA"
+      ],
+      "/VRAW-": [
+        "POTENCIA"
+      ],
+      "/SEC_A": [
+        "POTENCIA"
+      ],
+      "/SEC_B": [
         "POTENCIA"
       ],
       "/L": [
@@ -352,21 +367,6 @@
       ],
       "/N": [
         "RED_230V"
-      ],
-      "/SEC_A": [
-        "POTENCIA"
-      ],
-      "/SEC_B": [
-        "POTENCIA"
-      ],
-      "/VRAW+": [
-        "POTENCIA"
-      ],
-      "/VRAW-": [
-        "POTENCIA"
-      ],
-      "GND": [
-        "POTENCIA"
       ],
       "PE": [
         "RED_230V"

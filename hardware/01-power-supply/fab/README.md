@@ -5,8 +5,15 @@ regenerarlos, ver el final de este fichero.
 
 ## ⚠ Antes de pedir la placa
 
-**Verifica el orden de patillas de `BR1` contra el datasheet del puente que vayas
-a comprar** ([`../notes/design-notes.md` §14.6](../notes/design-notes.md)).
+**Dos cosas, y las dos destruyen piezas si se pasan por alto.**
+
+**1. El orden de patillas de `BR1`**, contra el datasheet del puente que compres
+([§14.6](../notes/design-notes.md)).
+
+**2. El tab de `U2` (LM2990T-12) NO está a masa: está a VRAW−**, hasta −20 V. Va
+con **mica y casquillo aislante**, obligatorios. Atornillarlo desnudo al mismo
+disipador que `U1` es un cortocircuito franco al encender
+([§16.7](../notes/design-notes.md)).
 
 El esquemático usa el símbolo `D_Bridge_+-AA`, que codifica `pin1 = +`,
 `pin2 = −`, `pin3 = ~`, `pin4 = ~`. KiCad trae cinco variantes de ese símbolo
@@ -31,12 +38,14 @@ primer semiciclo.
 
 ## Especificación para el fabricante
 
-- **100 × 150 mm**, 2 capas, FR-4 1.6 mm, cobre 1 oz. Acabado y colores, a gusto.
+- **150 × 200 mm**, 2 capas, FR-4 1.6 mm, cobre 1 oz. Acabado y colores, a gusto.
 - **La ranura de `Edge_Cuts` no es un error.** Es una fresa de 2 mm que separa
   la zona de 230 V del resto de la placa
-  ([§14.2](../notes/design-notes.md)); va de y = 12 a y = 138, con puentes de
-  material arriba y abajo para que la placa no se parta. En el gerber se ve como
-  un segundo contorno cerrado en x = 29…31.
+  ([§14.2](../notes/design-notes.md)); es **horizontal**, va de x = 10 a x = 140
+  a la altura y = 30…32, con puentes de material a izquierda y derecha para que
+  la placa no se parta. En el gerber se ve como un segundo contorno cerrado.
+- **Reservar 42 × 38 mm y 25 mm de alto** por regulador para su disipador
+  (Fischer SK 129/38,1). Van marcados en la capa F.Fab.
 - 4 taladros M3 sin metalizar (NPTH) en las esquinas. **Sin cobre a propósito**:
   el puente chasis↔masa es uno solo y va por el faston `J5`
   ([§13](../notes/design-notes.md)), así que un separador metálico no debe tocar

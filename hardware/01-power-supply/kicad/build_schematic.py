@@ -183,19 +183,24 @@ PARTS = [
     ("BR1", "Device:D_Bridge_+-AA",           91.44, YMID,   90, "KBP206"),
     # --- riel +12V ---
     ("C1",  "Device:C_Polarized",            121.92, 69.85,   0, "4700uF/25V"),
-    ("C3",  "Device:C",                      147.32, 69.85,   0, "0.33uF"),
-    ("U1",  "Regulator_Linear:LM7812_TO220",    XU, YP,       0, "LM7812"),
-    ("C5",  "Device:C_Polarized",            213.36, 69.85,   0, "100uF"),
+    # Segundo bulk por riel. Con 4700 uF el valle de VRAW+ a 207 V queda en
+    # 13.66 V contra los 13.6 que exige el LM2940: +0.06 V no es margen, es
+    # suerte. Con 9400 sube a 14.12 V (sec.16.5, simulado).
+    ("C12", "Device:C_Polarized",            134.62, 69.85,   0, "4700uF/25V"),
+    ("C3",  "Device:C",                      147.32, 69.85,   0, "0.47uF"),
+    ("U1",  "Regulator_Linear:LM7812_TO220",    XU, YP,       0, "LM2940CT-12"),
+    ("C5",  "Device:C_Polarized",            213.36, 69.85,   0, "100uF/25V ESR"),
     ("C7",  "Device:C",                      238.76, 69.85,   0, "0.1uF"),
     ("D1",  "Diode:1N4001",                     XU, 45.72,    0, "1N4001"),
     ("R1",  "Device:R",                      271.78, 69.85,   0, "2k2"),
     ("D3",  "Device:LED",                    271.78, 85.09,  90, "RED"),
     # --- riel -12V ---
     ("C2",  "Device:C_Polarized",            121.92, 163.83,  0, "4700uF/25V"),
-    ("C4",  "Device:C",                      147.32, 163.83,  0, "0.33uF"),
-    ("U2",  "Regulator_Linear:LM7912_TO220",    XU, YN,       0, "LM7912"),
-    ("C6",  "Device:C_Polarized",            213.36, 163.83,  0, "100uF"),
-    ("C8",  "Device:C",                      238.76, 163.83,  0, "0.1uF"),
+    ("C13", "Device:C_Polarized",            134.62, 163.83,  0, "4700uF/25V"),
+    ("C4",  "Device:C_Polarized",            147.32, 163.83,  0, "10uF/35V"),
+    ("U2",  "Regulator_Linear:LM2990SX-12",     XU, YN,       0, "LM2990T-12"),
+    ("C6",  "Device:C_Polarized",            213.36, 163.83,  0, "100uF/35V"),
+    ("C8",  "Device:C",                      238.76, 163.83,  0, "DNP"),
     ("D2",  "Diode:1N4001",                     XU, 187.96, 180, "1N4001"),
     ("R2",  "Device:R",                      271.78, 144.78,  0, "2k2"),
     ("D4",  "Device:LED",                    271.78, 160.02, 90, "YEL"),
@@ -249,6 +254,8 @@ FOOTPRINT = {
     # --- bulk: D16, NO D10. El bom.csv pedia Radial-D10 para 4700uF/25V, que
     # no existe fisicamente (un D10 a 25V ronda los 470uF). ---
     "C1":  "Capacitor_THT:CP_Radial_D16.0mm_P7.50mm",
+    "C12": "Capacitor_THT:CP_Radial_D16.0mm_P7.50mm",
+    "C13": "Capacitor_THT:CP_Radial_D16.0mm_P7.50mm",
     "C2":  "Capacitor_THT:CP_Radial_D16.0mm_P7.50mm",
     # --- reguladores: los tres verticales, con disipador propio. U2 no puede
     # compartir disipador (su tab es -Vin, no GND) — ver design-notes.md sec.4.
@@ -261,7 +268,10 @@ FOOTPRINT = {
 }
 # Los que se repiten por familia, para no escribir la misma cadena nueve veces.
 for _refs, _fp in [
-    (("C3", "C4", "C9"),  "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"),
+    (("C3", "C9"),       "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"),
+    # C4 dejo de ser ceramico: el LM2990 pide >=10 uF de aluminio a la
+    # entrada, asi que pasa a electrolitico radial pequeno.
+    (("C4",),            "Capacitor_THT:CP_Radial_D5.0mm_P2.50mm"),
     (("C5", "C6", "C10"), "Capacitor_THT:CP_Radial_D6.3mm_P2.50mm"),
     (("C7", "C8", "C11"), "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"),
     (("D1", "D2", "D5"),  "Diode_THT:D_DO-41_SOD81_P10.16mm_Horizontal"),
@@ -274,14 +284,16 @@ for _refs, _fp in [
 POWER = [
     ("#G1",  "power:GND",  43.18, 124.46,   0),
     ("#G2",  "power:GND", 121.92, YG_P,     0),
+    ("#G21", "power:GND", 134.62, YG_P,     0),
     ("#G3",  "power:GND", 147.32, YG_P,     0),
     ("#G4",  "power:GND",     XU, YG_P,     0),
     ("#G5",  "power:GND", 213.36, YG_P,     0),
     ("#G6",  "power:GND", 238.76, YG_P,     0),
     ("#G7",  "power:GND", 271.78,  95.25,   0),
     ("#G8",  "power:GND", 121.92, YG_N,   180),
+    ("#G22", "power:GND", 134.62, YG_N,   180),
     ("#G9",  "power:GND", 147.32, YG_N,   180),
-    ("#G10", "power:GND",     XU, YG_N,   180),
+    ("#G10", "power:GND",     XU, YN + 12.7, 0),
     ("#G11", "power:GND", 213.36, YG_N,   180),
     ("#G12", "power:GND", 238.76, YG_N,   180),
     ("#G13", "power:GND", 271.78, 138.43, 180),
@@ -357,6 +369,7 @@ TEXTS = [
 ]
 
 
+
 def side_fields(ref: str, x: float, y: float) -> list:
     """Campos a la derecha de un componente vertical (C, R, LED girado).
 
@@ -369,8 +382,8 @@ def side_fields(ref: str, x: float, y: float) -> list:
 # La colocacion automatica da campos verticales solapados en los simbolos
 # girados (F1, BR1, D3, D4), asi que aqui va cada campo a mano.
 FIELDS: list = []
-for _r, _x, _y in [("C1", 121.92, 69.85), ("C3", 147.32, 69.85), ("C5", 213.36, 69.85),
-                   ("C7", 238.76, 69.85), ("C2", 121.92, 163.83), ("C4", 147.32, 163.83),
+for _r, _x, _y in [("C3", 147.32, 69.85), ("C5", 213.36, 69.85),
+                   ("C7", 238.76, 69.85), ("C4", 147.32, 163.83),
                    ("C6", 213.36, 163.83), ("C8", 238.76, 163.83),
                    ("R1", 271.78, 69.85), ("D3", 271.78, 85.09),
                    ("R2", 271.78, 144.78), ("D4", 271.78, 160.02),
@@ -378,6 +391,17 @@ for _r, _x, _y in [("C1", 121.92, 69.85), ("C3", 147.32, 69.85), ("C5", 213.36, 
                    ("R3", X5_LED, Y5_ROW), ("D6", X5_LED, YD6)]:
     FIELDS += side_fields(_r, _x, _y)
 FIELDS += [
+    # El bulk va en parejas a 12.7 mm, la mitad de la separacion habitual, asi
+    # que sus etiquetas se reparten a lados opuestos: las del primero a la
+    # izquierda y las del segundo a la derecha. Centradas las cuatro se pisan,
+    # porque "4700uF/25V" mide ~15 mm y ahi solo hay 12.7.
+    ("C1",  "Reference", 114.30,  67.31), ("C1",  "Value",     114.30,  72.39),
+    # Las del segundo bulk van ENCIMA del riel (y debajo, en el negativo): a su
+    # derecha caian mas cerca de C3/C4 que de su propio condensador y se leian
+    # como si fueran de aquellos.
+    ("C12", "Reference", 134.62,  57.15), ("C12", "Value",     134.62,  60.96),
+    ("C2",  "Reference", 114.30, 161.29), ("C2",  "Value",     114.30, 166.37),
+    ("C13", "Reference", 134.62, 172.72), ("C13", "Value",     134.62, 176.53),
     ("J1",  "Value",     30.48, 107.95), ("J1",  "Reference",  30.48, 125.73),
     ("BR1", "Reference", 78.74, 128.27), ("BR1", "Value",      78.74, 132.08),
     # --- lado primario 110V, fila propia arriba de todo. F1/NT1 (horizontales,
@@ -392,7 +416,7 @@ FIELDS += [
     # linea de L. Van al hueco que queda entre L (17.78) y el carril de N (30.48).
     ("RV1", "Reference",  83.82, 22.86), ("RV1", "Value",      83.82, 26.67),
     ("U1",  "Value",       XU,   52.07), ("U1",  "Reference",    XU,   55.88),
-    ("U2",  "Reference",   XU,  177.80), ("U2",  "Value",        XU,  181.61),
+    ("U2",  "Reference", 180.34, 152.40), ("U2", "Value",     180.34, 156.21),
     ("D1",  "Reference",   XU,   38.10), ("D1",  "Value",        XU,   41.91),
     ("D2",  "Value",       XU,  191.77), ("D2",  "Reference",    XU,  195.58),
     ("J2",  "Value",    320.04, 106.68), ("J2",  "Reference", 320.04, 127.00),
@@ -461,24 +485,28 @@ WIRES: list = [
     ("J5 gnd",   [[25.40 + XPIN, Y_CH], [53.34, Y_CH]]),
 ]
 # cortes: FLG | C bulk | C ceramico | ramal D | entrada del regulador
-WIRES += rail(YP, [91.44, 106.68, 121.92, 147.32, 160.02, 172.72], "VRAW_P ")
-WIRES += rail(YN, [91.44, 106.68, 121.92, 147.32, 160.02, 172.72], "VRAW_N ")
+WIRES += rail(YP, [91.44, 106.68, 121.92, 134.62, 147.32, 160.02, 172.72], "VRAW_P ")
+WIRES += rail(YN, [91.44, 106.68, 121.92, 134.62, 147.32, 160.02, 170.18], "VRAW_N ")
 # cortes: ramal D | C electrolitico | C ceramico | simbolo de riel | indicador
 WIRES += rail(YP, [187.96, 195.58, 213.36, 238.76, 254.00, 271.78, 292.10], "+12V ")
-WIRES += rail(YN, [187.96, 195.58, 213.36, 238.76, 254.00, 271.78, 288.29], "-12V ")
+WIRES += rail(YN, [190.50, 195.58, 213.36, 238.76, 254.00, 271.78, 288.29], "-12V ")
 WIRES += [
     ("+12V->J2", [[292.10, YP], [292.10, 111.76], [314.96, 111.76]]),
     ("-12V->J2", [[288.29, YN], [288.29, 119.38], [314.96, 119.38]]),
     # --- retornos a GND (cada uno acaba en el pin del simbolo) ---
     ("C1 gnd",   [[121.92, 73.66], [121.92, YG_P]]),
+    ("C12 gnd",  [[134.62, 73.66], [134.62, YG_P]]),
     ("C3 gnd",   [[147.32, 73.66], [147.32, YG_P]]),
     ("U1 gnd",   [[XU, 73.66], [XU, YG_P]]),
     ("FLG3",     [[XU, YG_P], [195.58, YG_P]]),
     ("C5 gnd",   [[213.36, 73.66], [213.36, YG_P]]),
     ("C7 gnd",   [[238.76, 73.66], [238.76, YG_P]]),
     ("C2 gnd",   [[121.92, 160.02], [121.92, YG_N]]),
+    ("C13 gnd",  [[134.62, 160.02], [134.62, YG_N]]),
     ("C4 gnd",   [[147.32, 160.02], [147.32, YG_N]]),
-    ("U2 gnd",   [[XU, 160.02], [XU, YG_N]]),
+    # La masa de U2 sale por DEBAJO del cuerpo, asi que su simbolo GND baja
+    # con ella en vez de quedarse en la fila YG_N con los demas.
+    ("U2 gnd",   [[XU, YN + 7.62], [XU, YN + 12.7]]),
     ("C6 gnd",   [[213.36, 160.02], [213.36, YG_N]]),
     ("C8 gnd",   [[238.76, 160.02], [238.76, YG_N]]),
     # --- diodos de proteccion: el pin va de ultimo waypoint ---
@@ -556,6 +584,103 @@ def check_footprints() -> None:
             rotos.append(f"{ref} -> {FOOTPRINT[ref]}")
     print(f"huellas inexistentes: {len(rotos)} {rotos}")
     assert not rotos, f"huellas que no estan en disco: {rotos}"
+
+
+# --- puntos de prueba (sec.16.10) -------------------------------------------
+# Van en una fila propia debajo del circuito y NO colgando de los rieles: en los
+# rieles no queda hueco sin pisarle las etiquetas a algun condensador.
+#
+# El valle del rizado de VRAW es el numero que decide si esta fuente regula o no
+# (sec.16.5), y no hay forma de medirlo bien con un cocodrilo volando. TP1 y TP2
+# existen para eso; los otros cuatro porque cuestan cero.
+Y_TP = 208.28
+TESTPOINTS = [
+    ("TP1",  63.50, "VRAW+", "label"),
+    ("TP2",  88.90, "VRAW-", "label"),
+    ("TP3", 114.30, "+12V",  "sym"),
+    ("TP4", 139.70, "-12V",  "sym"),
+    ("TP5", 165.10, "+5V",   "sym"),
+    ("TP6", 190.50, "GND",   "gnd"),
+]
+for _r, _x, _net, _tipo in TESTPOINTS:
+    PARTS.append((_r, "Connector:TestPoint", _x, Y_TP, 0, _net))
+    FOOTPRINT[_r] = "TestPoint:TestPoint_THTPad_D2.0mm_Drill1.0mm"
+    FIELDS.append((_r, "Reference", _x + 6.35, Y_TP - 1.27))
+    FIELDS.append((_r, "Value",     _x + 6.35, Y_TP + 2.54))
+    if _tipo == "gnd":                       # el simbolo de masa cuelga por debajo
+        POWER.append((f"#G{_r}", "power:GND", _x, Y_TP + 7.62, 0))
+        WIRES.append((f"{_r} net", [[_x, Y_TP], [_x, Y_TP + 7.62]]))
+    elif _tipo == "sym":                     # los de riel apuntan hacia arriba
+        POWER.append((f"#P{_r}", f"power:{_net}", _x, Y_TP - 7.62, 0))
+        WIRES.append((f"{_r} net", [[_x, Y_TP - 7.62], [_x, Y_TP]]))
+    else:                                    # VRAW+/VRAW- no tienen simbolo de
+        WIRES.append((f"{_r} net", [[_x, Y_TP], [_x, Y_TP - 7.62]]))  # potencia
+        LABELS.append((_net, _x, Y_TP - 7.62))   # EN la punta del cable: a
+        # media pista la etiqueta nombra la red pero deja el extremo suelto, y
+        # el ERC lo canta como unconnected_wire_endpoint
+
+
+
+
+# --- crowbar del riel de +12 V (sec.16.8) -----------------------------------
+# Si U1 muere en corto, el bus ve VRAW+, que en el peor caso simulado son
+# 20.54 V. El abs max del AS3340 son 18 V entre VCC y GND: se lleva los tres
+# VCO por delante. El TL074 (42 V) y el LM13700 (36 V) ni se enteran, y el riel
+# negativo no lo necesita porque el 3340 entra por un zener interno.
+#
+# Quien abre el circuito es F1, el fusible de primario que YA existe: el SCR
+# cortocircuita el riel a traves del regulador ya muerto y F1 salta. Nada de
+# fusible en serie en VRAW+ ni en el riel — eso se come el margen de dropout
+# que costo todo el respin recuperar.
+#
+# Se usa el simbolo dedicado BT169D y no un Q_SCR_xxx generico a proposito: el
+# sufijo de los genericos codifica el ORDEN FISICO de patillas, igual que en
+# los puentes rectificadores, y ahi ya nos quemamos una vez.
+X_CB, Y_CB = 246.38, 207.01   # corrido a la derecha: en 231 el campo
+                              # de C14 se montaba con la etiqueta de TP6
+X_Z,  X_C = X_CB - 15.24, X_CB - 27.94   # zener y condensador de gate
+Y_GATE = Y_CB + 2.54                     # el gate del BT169D cae 2.54 bajo el ancla
+PARTS += [
+    ("Q1",  "Triac_Thyristor:BT169D", X_CB, Y_CB,          0, "BT169D"),
+    # El zener HORIZONTAL y girado 180: asi su catodo mira al riel (queda en
+    # inversa, que es como mide la tension). A 90 grados el catodo caia del
+    # lado del gate, o sea en DIRECTA: conduciria a 0.7 V y dispararia el SCR
+    # nada mas encender. Ademas en horizontal las etiquetas no salen giradas.
+    ("D7",  "Device:D_Zener",         X_Z,  Y_CB - 3.81,  180, "BZX55C15"),
+    ("R4",  "Device:R",               X_Z,  Y_GATE + 3.81,  0, "1k"),
+    ("C14", "Device:C",               X_C,  Y_GATE + 3.81,  0, "100nF"),
+]
+FOOTPRINT.update({
+    # Inline_Wide y no Inline: las patas de un TO-92 en linea estan a 1.27 mm
+    # y dejan 0.22 mm entre pads, por debajo del margen de la clase. Abiertas
+    # a 2.54 el problema desaparece y el SCR se dobla igual.
+    "Q1":  "Package_TO_SOT_THT:TO-92_Inline_Wide",
+    "D7":  "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal",
+    "R4":  "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal",
+    "C14": "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm",
+})
+POWER += [
+    ("#P3",  "power:+12V", X_CB, Y_CB - 11.43, 0),
+    ("#G23", "power:GND",  X_CB, Y_CB + 11.43, 0),
+    ("#G24", "power:GND",  X_Z,  Y_GATE + 15.24, 0),
+]
+WIRES += [
+    ("CB +12V",   [[X_CB, Y_CB - 11.43], [X_CB, Y_CB - 3.81]]),
+    ("CB zener",  [[X_CB, Y_CB - 3.81], [X_Z + 3.81, Y_CB - 3.81]]),
+    ("CB gate a", [[X_Z - 3.81, Y_CB - 3.81], [X_Z - 3.81, Y_GATE]]),
+    ("CB gate b", [[X_Z - 3.81, Y_GATE], [X_CB - 3.81, Y_GATE]]),
+    ("CB R4",     [[X_Z - 3.81, Y_GATE], [X_Z, Y_GATE]]),
+    ("CB C14",    [[X_Z - 3.81, Y_GATE], [X_C, Y_GATE]]),
+    ("CB catodo", [[X_CB, Y_CB + 3.81], [X_CB, Y_CB + 11.43]]),
+    ("CB rc gnd", [[X_C, Y_GATE + 7.62], [X_Z, Y_GATE + 7.62]]),
+    ("CB gnd",    [[X_Z, Y_GATE + 7.62], [X_Z, Y_GATE + 15.24]]),
+]
+FIELDS += [
+    ("Q1",  "Reference", X_CB + 8.89, Y_CB - 1.27), ("Q1",  "Value", X_CB + 8.89, Y_CB + 2.54),
+    ("D7",  "Reference", X_Z,  Y_CB - 8.89),        ("D7",  "Value", X_Z,  Y_CB - 6.35),
+    ("R4",  "Reference", X_Z + 6.35, Y_GATE + 2.54),("R4",  "Value", X_Z + 6.35, Y_GATE + 6.35),
+    ("C14", "Reference", X_C - 8.89, Y_GATE + 2.54),("C14", "Value", X_C - 8.89, Y_GATE + 6.35),
+]
 
 
 def main() -> None:

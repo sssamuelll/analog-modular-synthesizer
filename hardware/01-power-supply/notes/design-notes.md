@@ -727,6 +727,315 @@ daría ~7.6 V — el 7812 no regularía jamás. La línea de `TR1` ahora lo dice
 además pide la tensión de secundario **en vacío** (≥ 13.3 V por semidevanado),
 que es el dato del que depende todo esto y que no estaba pedido.
 
+## 16. Subir a 650 mA/riel: piezas verificadas
+
+Objetivo: **650 mA por riel**, la corriente de la Doepfer A-100NT12 (su
+generación lineal), con mejor ruido que la PSU3 actual, que es conmutada.
+
+Todo lo de abajo está verificado contra datasheet primario o simulado. Lo que no
+se pudo verificar está en §17, y **no se usó como hecho aquí**.
+
+### 16.1 La corrección que casi se cuela
+
+El dropout no es el criterio. **El LM2940-12 especifica `VIN ≥ 13,6 V`
+garantizado** sobre temperatura (TI SNVS769J), que no es lo mismo que
+`12 V + dropout = 13,0 V`. Diseñar contra 13,0 daba un margen que no existía:
+13,5 y 13,6 parecen el mismo número y no lo son.
+
+Y lo que manda no es el promedio sino **el valle del rizado de 100 Hz** con la
+red a 207 V y a plena carga.
+
+### 16.2 Por qué LDO y no más tensión
+
+| Opción | Trafo | VRAW+ @207 V | P en el regulador | |
+|---|---|---|---|---|
+| 78xx tal cual | 48 VA | 13.00 V | 3.37 W | no llega |
+| 15-0-15 + 78xx | 60 VA | 16.66 V | **6.34 W** | llega, disipador de 4 °C/W |
+| **12-0-12 + LDO** | 120 VA | **14.12 V** | **3.76 W** | **elegida** |
+
+Subir el secundario **casi duplica el calor** y obliga a disipadores mucho
+mayores. Bajar el dropout hace lo contrario. El camino no es más tensión, es
+menos caída.
+
+### 16.3 Los reguladores: los dos son sustitución directa
+
+| Ref | Pieza | Pinout | ¿Cambia algo? |
+|---|---|---|---|
+| `U1` | **LM2940CT-12/NOPB** | 1=IN, 2=GND, 3=OUT | Idéntico al 7812. Tab a **GND** |
+| `U2` | **LM2990T-12/NOPB** | 1=GND, 2=IN, 3=OUT | Idéntico al 7912. Tab a **IN** |
+| `U3` | 7805, se queda | — | Headroom le sobra |
+
+Confirmado contra TI SNVS769J y SNVS093G, cada uno con una segunda fuente
+independiente. **El LM2991 queda descartado**: es TO-220-5, exige divisor, carga
+mínima de 500 µA y su pin ON/OFF no se puede dejar al aire — todo eso a cambio
+de nada existiendo el LM2990-12.
+
+**Comprobación antes de soldar el `U2`**, con la pieza en la mano: continuidad
+entre el tab y la pata central = corto; entre el tab y la pata del punto de
+pin 1 = abierto. Si sale al revés, no es un LM2990T.
+
+### 16.4 El transformador: gana el que peor regula
+
+Simulado con la tensión en vacío **publicada** de cada Talema 2×12 V:
+
+| Modelo | Vacío | R devanado | Valle @207 V | Margen |
+|---|---|---|---|---|
+| 50 VA | 13.6 V | 0.77 Ω | 13.04 V | **−0.56 V** |
+| 80 VA | 13.8 V | 0.54 Ω | 13.85 V | +0.25 V |
+| **120 VA** | 13.4 V | **0.28 Ω** | **14.12 V** | **+0.52 V** |
+
+**El de 120 VA gana teniendo menos tensión en vacío.** Con filtro capacitivo la
+corriente circula en picos de 2-3× la continua, así que manda la resistencia del
+devanado, no la tensión nominal. Queda además al 34 % de su capacidad, así que
+va frío.
+
+Talema es el único de los fabricantes mirados que **publica la tensión en
+vacío**, que es exactamente el dato que decide esto. Sin él no se puede calcular
+el valle. Si se compra otro, **hay que medir el vacío con el multímetro antes de
+dar el diseño por bueno**.
+
+### 16.5 El bulk sube a 9400 µF por riel
+
+Simulado con el Talema de 120 VA a 207 V y plena carga:
+
+| Bulk/riel | Valle | Margen sobre 13.6 V |
+|---|---|---|
+| 4700 µF | 13.66 V | +0.06 V |
+| **9400 µF (2 × 4700)** | **14.12 V** | **+0.52 V** |
+| 14100 µF | 14.30 V | +0.70 V |
+
+Dos de 4700 µF/25 V en paralelo salen más baratos y más bajos que buscar un
+10000 µF, y reparten la corriente de rizado. Del tercero en adelante hay
+rendimientos decrecientes.
+
+**Tensión de los condensadores**: el pico máximo simulado con red a +10 % y casi
+en vacío es **20.54 V**, o sea el **82 %** de un condensador de 25 V. Pasa, pero
+justo. Los pequeños del riel negativo van a **35 V**, que cuestan céntimos.
+
+### 16.6 Los condensadores dejan de ser filtrado y pasan a ser estabilidad
+
+Es el cambio conceptual del respin. Un 78xx es estable con casi cualquier cosa;
+un LDO **oscila fuera de su ventana de ESR**.
+
+| Nodo | Valor | Requisito duro |
+|---|---|---|
+| Entrada `U1` | 0.47 µF | Valor de la Table 1 del datasheet, no 0.1 µF |
+| **Salida `U1`** | **100 µF/25 V aluminio estándar** | ≥22 µF **y ESR entre 100 mΩ y 1 Ω** |
+| Entrada `U2` | 10 µF/35 V aluminio | ≥10 µF |
+| Salida `U2` | 100 µF/35 V aluminio | ≥10 µF, ESR < 10 Ω |
+
+Reglas que no se negocian:
+
+1. **Nunca un cerámico X7R solo a la salida del LM2940.** Un MLCC tiene 2-20 mΩ,
+   entre 5 y 50 veces por debajo del piso de 100 mΩ. TI lo dice literal:
+   *oscillations can result*.
+2. **No pongas un MLCC gordo en paralelo con el electrolítico**: la ESR
+   resultante es el paralelo de las dos, y se va por debajo del piso.
+3. **Los 100 nF de desacoplo se mudan al conector de salida**, no al pin del
+   regulador. Así el riel sigue desacoplado en alta frecuencia sin comerse el
+   margen de fase del LDO.
+4. **`C8` (0.1 µF a la salida de `U2`) no se puebla.** Se deja la huella. Si al
+   medir hace falta, se pone con **1 Ω en serie**.
+
+### 16.7 Disipación: el más caliente es el negativo
+
+**Fischer SK 129/38,1 220, 6.5 K/W**, uno por regulador. Reserva **42 × 38.1 mm**
+y 25 mm de alto. Fischer mide en montaje vertical: **acostado son 7.7 K/W**, y
+ese es el número que vale.
+
+| Regulador | Tab a | Montaje | Tj a 45 °C ambiente |
+|---|---|---|---|
+| `U1` LM2940 | GND | directo, solo grasa | ~89 °C |
+| **`U2` LM2990** | **IN (hasta −20 V)** | **mica + casquillo aislante** | **~101 °C** |
+| `U3` 7805 | GND | directo | ~91 °C |
+
+**`U2` es el componente más caliente de la placa**, no `U1`, porque paga el
+aislante. Y no hay escapatoria: 7912, LM337, LM2990 y LM2991 tienen los cuatro el
+tab a Vin. Tampoco puede compartir disipador desnudo con `U1` o `U3` — tab de
+`U2` (VRAW−) contra tab de `U1` (GND) es un corto franco al encender.
+
+### 16.8 Sobretensión: sí en +12 V, no en −12 V
+
+Contra los absolute maximum leídos uno a uno:
+
+| Chip | Abs max | Con VRAW+ a 20.54 V | |
+|---|---|---|---|
+| TL074 | 42 V (TI) | 32.5 V | sobrevive holgado |
+| LM13700 | 36 V / ±18 V | 32.5 V | no se destruye |
+| **AS3340** | **VCC−GND: +18 V** | **20.54 V** | **se muere** |
+
+El pico de 20.54 V está **simulado**, y supera el abs max del 3340. Si `U1` falla
+en corto, el bus ve VRAW+ y se lleva los tres VCO por delante. **Crowbar en el
+riel de +12 V**, cuatro componentes y ~1,50 €:
+
+```
++12V ──┬── ánodo BT169D ── cátodo a GND
+       └── BZX55C15 ── gate ──┬── 1 kΩ ── GND
+                              └── 100 nF ── GND
+```
+
+Umbral peor caso 14.6-16.4 V: cabe entre los 12.60 V del riel sano y los 18 V del
+3340. **Quien abre el circuito es `F1`, el fusible de primario que ya existe** —
+el crowbar cortocircuita VRAW+ a través del regulador ya muerto. **No metas un
+fusible en serie en VRAW+ ni en el riel**: te comes otra vez el margen que tanto
+costó recuperar.
+
+El riel de −12 V **no lleva crowbar**: el 3340 alimenta su VEE por un zener
+interno y a −18 V la corriente sube a 18.4 mA, por debajo de su límite de 40 mA.
+Se desafina por autocalentamiento, no se destruye.
+
+### 16.9 Polyfuse: no en esta placa
+
+La razón honesta es que **se come el margen de dropout**. Un MF-R090 cae 0.20 V
+nuevo y 0.31 V después de un ciclo de disparo, y en el valle del rizado —que es
+donde se decide el dropout— la caída instantánea es 2-3 veces peor. Convierte un
+diseño que raspa en uno que no regula.
+
+Y uno por riel **no da lo que se busca**: mata todos los módulos por igual y no
+dice cuál falló. **Va uno pequeño por módulo en el bus board**, con un LED de
+4.7 kΩ en paralelo que se enciende solo cuando ese fusible dispara. Eso señala el
+conector culpable sin un solo componente activo.
+
+Miedo desmontado, para que no vuelva: el polyfuse **no modula el riel a
+frecuencias de audio**. Su constante de tiempo es térmica y vale segundos; entre
+20 Hz y 20 kHz es una resistencia fija. Con el peor PSRR garantizado del TL074, un
+salto de 20 mA sobre 0.27 Ω da 1.7 µV referidos a la entrada — dos órdenes de
+magnitud por debajo de la propia Vos del chip.
+
+### 16.10 Puntos de prueba: obligatorios
+
+`TP1..TP6` en VRAW+, VRAW−, +12 V, −12 V, +5 V y GND. Cuestan cero y son la única
+forma de cerrar este diseño: **el valle del rizado de VRAW es el número que decide
+todo** y hay que engancharle una punta de osciloscopio sin cocodrilos volando.
+
+### 16.11 KiCad: no hay que crear ningún símbolo
+
+| Ref | Símbolo | Nota |
+|---|---|---|
+| `U1` | `Regulator_Linear:LM7812_TO220` **reutilizado** | El símbolo del LM2940 no existe, pero su pinout es idéntico. `Value = LM2940CT-12` |
+| `U2` | `Regulator_Linear:LM2990SX-12` | Existe. El «SX» del nombre es del encapsulado SMD: pon `MPN = LM2990T-12/NOPB` bien visible o alguien pedirá el que no es |
+| `TP1..6` | `Connector:TestPoint` | Existe |
+
+### 16.12 El +5 V queda acotado a 300 mA
+
+Si el 7805 colgara de la **salida** del +12 V, `U1` tendría que dar 650 + 300 =
+950 mA por un LM2940 de 1 A. **Se queda colgado de VRAW+**, y el riel de +5 V se
+acota a **300 mA como límite de diseño**, no como estimación. Con eso el
+semidevanado positivo carga 950 mA, que es el número con el que está simulado
+todo lo anterior.
+
+Si algún día el +5 V pide más, esto se reabre: transformador aparte o conmutada
+para ese riel. No se tapa con «seguro aguanta».
+
+## 17. Lo que NO está confirmado del respin
+
+Esta sección es la que sostiene la credibilidad de §16. Nada de aquí abajo se usó
+como hecho allí arriba. Si algún día alguien tiene que decidir rápido, que empiece
+leyendo esto.
+
+### 17.1 El LDO cuesta rechazo de rizado, y eso es una regresión
+
+**Es la única pega real de cambiar a LDO, y conviene no taparla.** El LM2990 usa
+paso PNP, y su rechazo de fuente es **peor que el del 7912**:
+
+| | Garantizado | Típico |
+|---|---|---|
+| LM2990-12 | **42 dB mín a 1 kHz, con IOUT = 5 mA** | ~66 dB a 100 Hz |
+| 7912 | ~60 dB a 100 Hz | — |
+
+Con 0.68 Vpp de rizado en la entrada (el que da el bulk de 9400 µF) y el peor
+caso garantizado de 42 dB, salen **~5.4 mVpp** en el riel de −12 V. El objetivo
+de §9 son < 10 mVpp, así que **pasa — pero por poco, y es ocho veces peor que con
+el 7912**.
+
+Dos atenuantes reales: no hay mínimo garantizado a 100 Hz (a esa frecuencia
+suele ser mejor que a 1 kHz), y subir el bulk a 9400 µF ya redujo el rizado de
+entrada a la mitad, lo que compensa parte de la pérdida.
+
+**Hay que medirlo en la placa.** Y si sale mal, la salida está en el bus board,
+no aquí: un RC o LC por riel a la entrada de cada módulo.
+
+Dato adicional del mismo datasheet: la impedancia de salida del LM2990 pasa de
+~2-3 mΩ a **~30 mΩ si el regulador trabaja cerca del dropout**. Un orden de
+magnitud peor. Otra razón para no raspar el piso de VRAW.
+
+### 17.2 Huecos de datasheet
+
+1. **El dropout a 650 mA no existe como dato garantizado.** TI solo especifica a
+   100 mA y a 1 A. Hay curvas típicas, pero típico no es garantizado. Todo §16
+   usa el máximo a 1 A, que acota 650 mA de forma conservadora. **No interpoles y
+   lo llames garantizado.**
+2. **Contradicción dentro del datasheet del LM2990 sobre el VIN mínimo.** El
+   §7.4.1 dice que la entrada debe estar entre VOUT−5 V y −26 V, que leído literal
+   para la versión de −12 V exigiría |VIN| ≥ 17 V — y eso contradice frontalmente
+   su propio dropout y su tabla eléctrica (|VIN| ≥ 13 V). **No se pudo resolver en
+   fuente primaria.** Se usó el criterio conservador de 13 V. Si al medir el riel
+   negativo se comporta raro cerca del piso, **esta es la primera sospechosa**.
+3. **El límite inferior de ESR del LM2990 sale de una figura, no de texto**, y
+   además cae justo en el borde del eje: por debajo simplemente no está
+   caracterizado.
+4. **RθJC del LM2990: no leído.** El presupuesto térmico de `U2` usa 5.0 K/W por
+   analogía con el MC7900 de onsemi. Es conservador, pero es una analogía.
+
+### 17.3 Números de parte: dos trampas de compra
+
+5. **Contradicción sin resolver en el encapsulado del `LM2940T-12.0/NOPB`.** Una
+   lectura del addendum de TI dice TO-220; otra dice que ese código es TO-263
+   (SMD) y que el TO-220 es solo el `LM2940CT-12/NOPB`. **Por eso §16 especifica
+   el CT**, que sí está confirmado como TO-220 de 3 patas en dos sitios.
+6. **Reichelt vende el «LM2940 CT12» con fabricante FREI y enlaza dos datasheets
+   distintos**: el LM2940 de National **y el TS2940 de Taiwan Semiconductor. Si
+   llega un TS2940, su ventana de ESR puede no coincidir con la del de TI, y no
+   está verificada.** Cómpralo en TME o Mouser DE como `LM2940CT-12/NOPB` si
+   quieres silicio trazable.
+7. **Stock y precio sin verificar** para casi todo: reichelt.de devuelve 503 y
+   tme.eu 403 a consulta automatizada. Lo único confirmado leyendo la página del
+   distribuidor: LM2990T-12 (5,20 €, stock), condensador RAD KY 4700/25 (0,99 €),
+   disipador SK 129/38,1 (2,65 €).
+
+### 17.4 Térmica: la mica es una estimación
+
+8. **La resistencia térmica de la mica (1.0-1.4 K/W) es una estimación por
+   escalado de área**, no un dato de datasheet. Lo único medido es la lámina sola
+   (0.15 K/W por pulgada cuadrada), y la tabla de Fischer de la que sale está
+   **declarada para encapsulado TO-3**, no TO-220.
+9. Y un detalle que da que pensar: la página de producto de Fischer para esa mica
+   tiene un párrafo **marcado «KI-generiert» (generado por IA)** que dice 0.4 K/W,
+   **contradiciendo la tabla de datos de la propia página** (0.15 K/W por in²).
+   Varios distribuidores repiten el 0.4. Aquí se usó la tabla.
+10. **Los K/W de Fischer son típicos, no garantizados.** El propio fabricante
+    advierte de que no existe norma internacional que fije cómo se mide la Rth de
+    un disipador.
+
+### 17.5 Los chips que hay que proteger
+
+11. **El CEM3340 original de Curtis no tiene sitio de fabricante vivo que citar.**
+    Los absolute maximum usados son del **AS3340 de ALFA RPAR**. Si el chip que
+    compras es un **V3340 de Coolaudio, verifica sus abs max** antes de fijar el
+    umbral del crowbar — su PDF devuelve 404.
+12. **Inconsistencia dentro del propio datasheet del AS3340**: sus abs max dicen
+    −6 V entre VEE y GND, pero el texto describe un zener interno de 7.4 V y las
+    características se miden con ese zener. No afecta a la conclusión del riel
+    positivo, pero ahí está.
+13. **Abs max del AD5686R y del LCD no verificados.** La afirmación de que 16-17 V
+    destruye lo que cuelga del +5 V se apoya en que ningún CMOS de 5 V tolera eso,
+    **no en un datasheet leído**. Verifícalo antes de fijar un crowbar de +5 V.
+
+### 17.6 Lo que sí se cerró en esta pasada
+
+Para que quede claro qué dejó de ser incierto:
+
+- **El valle de VRAW ya está simulado**, no estimado. Con el Talema de 120 VA y
+  9400 µF/riel: **14.12 V a 207 V**, o sea +0.52 V sobre los 13.6 V. Y con
+  4700 µF sale **13.66 V**, que es +0.06 V: por eso el bulk sube.
+- **El pico máximo también**: 20.54 V con red a +10 % y casi en vacío. Eso es lo
+  que **justifica el crowbar** (supera los 18 V del 3340) y lo que deja los
+  condensadores de 25 V al 82 % de su tensión.
+
+Aun así, las dos cifras salen de un modelo cuyo transformador es una fuente ideal
+con una resistencia serie. **Mídelas con osciloscopio en el valle**, a plena carga
+y en caliente, antes de dar el diseño por bueno.
+
 ## Referencias
 
 - [Modular Synthesizer Power Supplies (Rabid Elephant)](https://rabidelephant.com/blogs/general/modular-synthesizer-power-supplies-and-distribution-a-thorough-introduction) — fundamento de grounding y distribución.

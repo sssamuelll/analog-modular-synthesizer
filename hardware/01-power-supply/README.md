@@ -65,14 +65,14 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
 - [x] **Huellas asignadas** — los 33 componentes con footprint, verificado
       contra disco en cada build. Tres huellas propias en `kicad/sam17.pretty`
       porque KiCad no las trae ([§14.3](notes/design-notes.md))
-- [x] **Placa colocada** — 100 × 150 mm, dos capas, franja de red aislada por
-      ranura fresada. Separación red↔SELV **medida en 12.4 mm** (mínimo 6), DRC
-      de KiCad sin infracciones ([§14.4](notes/design-notes.md))
-- [x] **PCB ruteada** — dos capas, una sola vía, sin plano de masa: GND es un
-      árbol con cero bucles, verificado por union-find, y el retorno del +5 V
-      llega a la estrella sin tocar ninguna otra rama
-      ([§14.5](notes/design-notes.md)). DRC de KiCad **0 infracciones, 0 pads
-      sin conectar**. Renders en [`pcb/`](pcb/)
+- [x] **PCB ruteada a 650 mA/riel** — 150 × 200 mm, dos capas, una sola vía,
+      sin plano de masa: GND es un árbol con cero bucles verificado por
+      union-find, y el retorno del +5 V llega a la estrella sin tocar ninguna
+      otra rama. Franja de red horizontal arriba, aislada por ranura fresada
+      (**9.43 mm medidos**), y los tres carriles en columnas, cada uno encima de
+      su regulador. DRC de KiCad **0 infracciones, 0 pads sin conectar, 0
+      errores de huella** ([§16](notes/design-notes.md)). Renders en
+      [`pcb/`](pcb/)
 - [x] **Ficheros de fabricación** — gerbers y taladros en [`fab/`](fab/), con la
       especificación de la ranura y el aviso de `BR1`
 - [ ] **Antes de fabricar**: verificar el orden de patillas de `BR1` contra el
@@ -81,7 +81,11 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
       [`simulations/power/`](../../simulations/power)) — a red nominal sobra;
       a 207 V y plena carga de diseño hace falta un transformador con
       regulación ≥ 10.7 %, que ahora el BOM pide explícitamente
-- [ ] Verificación de tensiones bajo carga (medida sobre placa real)
+- [ ] **Antes de soldar `U2`**: su tab está a VRAW− (hasta −20 V), no a masa.
+      Mica y casquillo aislante obligatorios ([§16.7](notes/design-notes.md))
+- [ ] Verificación de tensiones bajo carga (medida sobre placa real). Lo primero
+      a medir es el **valle del rizado de VRAW+** en `TP1`: es el número del que
+      depende todo el diseño y su margen es de +0.53 V
 - [ ] Medición de rizado en cada riel
 - [ ] Procedimiento de bring-up documentado
 
