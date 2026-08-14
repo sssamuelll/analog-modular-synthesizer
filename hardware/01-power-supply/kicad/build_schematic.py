@@ -14,7 +14,8 @@ a correrlo reconstruye la hoja desde cero a partir de este archivo, que es la
 fuente de verdad real.
 
 Convenciones del dibujo:
-  - Flujo izquierda->derecha: J1 -> F1 -> BR1 -> reguladores -> J2.
+  - Flujo izquierda->derecha: J3/J1 -> BR1 -> reguladores -> J2 (±12V) y
+    J6 (+5V).
   - Riel positivo arriba, negativo abajo, puente centrado entre ambos.
   - GND no es un bus largo: cada retorno es un stub corto a un simbolo power:GND
     (todos son la misma net). Los del riel negativo van girados 180 para que el
@@ -27,6 +28,14 @@ Convenciones del dibujo:
     que tienen +12V/-12V hacia fuera. El diodo de proteccion y las etiquetas de
     U3 se separaron a mano (uno arriba, otro abajo) para que no se pisen en ese
     espacio mas apretado — visto en el render, no adivinado.
+  - J6 (issue #8, opcion C): el +5V sale de la placa por su propio conector de
+    2 pines, NO por J2. El bus analogico J2 queda +12/G/G/-12 igual para todos
+    los modulos; J6 va solo al modulo 2 (DAC + LCD) en conector polarizado
+    distinto — imposible cruzarlo con ±12 — y su retorno se rutea DEDICADO
+    hasta el punto de estrella (design-notes.md §10.1/§10.4). El motivo es
+    fisico, no estetico: el backlight va PWM-eado y ~100 mA conmutados sobre
+    ~50 mΩ de retorno compartido son ~5 mV de rebote en la referencia del
+    DAC ≈ 6 cents de wobble en el CV.
   - Primario 230V/50Hz (variante Europa; design-notes.md §10.2/§10.3/§12),
     fila propia arriba de todo: F1 vive AQUI, no en el secundario — protege
     el primario contra un corto reflejado desde el secundario, que es lo que
@@ -90,7 +99,8 @@ YMID = 116.84                   # eje del puente y del conector de entrada
 YG_P, YG_N = 86.36, 147.32      # fila de simbolos GND (arriba / abajo)
 XU = 180.34                     # columna de los reguladores
 YOFF = 25.4                     # baja todo el dibujo para centrarlo en A3
-DATE, REV = "2026-08-14", "E"
+XPIN = 5.08                     # offset en x del pin de un Conn_01x0N_Pin sin girar
+DATE, REV = "2026-08-14", "F"
 
 # Riel +5V (design-notes.md §10.1): fila intermedia entre +12V y -12V. Cuelga
 # del VRAW+ existente (tap sobre la union de la rail en x=106.68) en vez de
@@ -106,6 +116,16 @@ X5_LED = 297.18                 # columna propia del indicador +5V, ver PARTS.
                                  # NO usar 306.07: coincide con el codo del
                                  # cableado GND de J2 y crea un corto +5V-GND.
 
+# J6, feed de +5V (issue #8, opcion C): vive en el bloque vacio ENCIMA del riel
+# +5V, pegado a J2 para que se lea como "las salidas de la placa". Girado 180
+# como J2, asi que sus pines quedan a la izquierda del ancla y el pin 2 sube
+# (mismo comportamiento medido en J4). La bajada del pin 1 al riel va por
+# x=281.94, a la izquierda del codo +12V->J2 (vertical en 292.10, horizontal
+# en y=111.76 desde alli): cero cruces.
+X_J6A = 287.02                  # ancla de J6
+X_J6 = X_J6A - XPIN             # = 281.94: columna del pin y de su bajada al riel
+Y_J6 = 106.68                   # J6.1 (+5V); J6.2 (retorno) queda en Y_J6 - 2.54
+
 # Lado primario 230 VAC (design-notes.md §10.2/§10.3/§12/§13), fila propia
 # arriba de todo lo demas (y<45.72, hueco libre hasta ahora).
 #
@@ -114,7 +134,6 @@ X5_LED = 297.18                 # columna propia del indicador +5V, ver PARTS.
 # anclarlo en Y_M deja L arriba, N en el ancla y PE abajo, los tres en
 # rejilla. J4 sigue siendo de 2 pines y ahi el ancla ES el pin 1: va a Y_L
 # para que sus dos pines caigan sobre las mismas lineas de L y N.
-XPIN = 5.08                     # offset en x del pin de un Conn_01x0N_Pin sin girar
 Y_M = 20.32                     # ancla de J3 = su pin 2
 Y_L = Y_M - 2.54                # J3.1 linea/vivo (fusible + MOV + NTC en serie)
 Y_N = Y_M                       # J3.2 neutro, solo el tramo hasta su codo
@@ -189,6 +208,9 @@ PARTS = [
     # riel +5V caian encima de esos dos a la vez.
     ("R3",  "Device:R",                      X5_LED, Y5_ROW,  0, "680"),
     ("D6",  "Device:LED",                    X5_LED, YD6,    90, "GRN"),
+    # --- feed de +5V al modulo 2 (issue #8, opcion C): conector propio, no
+    # va en J2. Ver el bloque de constantes X_J6A/Y_J6 y el docstring. ---
+    ("J6",  "Connector:Conn_01x02_Pin",       X_J6A, Y_J6,  180, "+5V/RTN"),
 ]
 
 POWER = [
@@ -223,6 +245,10 @@ POWER = [
     ("#PE1",  "power:Earth_Protective", X_PE,  Y_PES, 0),
     ("#FLG4", "power:PWR_FLAG",         X_PEF, Y_PEF, 0),
     ("#G20",  "power:GND",              53.34, Y_CH,  0),
+    # Retorno de J6. En la HOJA es la misma red GND que todo lo demas; la
+    # separacion del retorno que exige §10.1 es una regla de layout de la PCB
+    # y del cableado, anotada en el texto de al lado de J6.
+    ("#G21",  "power:GND",              269.24, Y_J6 - 2.54, 0),
 ]
 
 # KiCad saca el nombre de una red de potencia del Value del simbolo, no del
@@ -264,6 +290,12 @@ TEXTS = [
     ("J5 = puente unico GND -> chasis. PE (J3.3) sube al MISMO esparrago.", 63.50, 39.37),
     ("No hay pista de PE en la PCB: la corriente de falla no pasa por la",  63.50, 41.91),
     ("placa. Apriete y ensayo de continuidad en design-notes.md sec. 13.",  63.50, 44.45),
+    # La regla de layout del retorno de J6 viaja con el plano, igual que la
+    # de PE: quien rutee la PCB mira el PDF, no design-notes.md.
+    ("J6 = feed de +5V al modulo 2 (DAC + LCD, ~150 mA), issue #8 opcion C:", 300.99, 144.78),
+    ("conector aparte del bus a proposito. Rutear el retorno (J6.2) DEDICADO", 300.99, 147.32),
+    ("hasta el punto de estrella, separado del retorno analogico hasta el",    300.99, 149.86),
+    ("ultimo cm (design-notes.md sec. 10.1) - el backlight va conmutado.",     300.99, 152.40),
 ]
 
 
@@ -306,7 +338,10 @@ FIELDS += [
     ("D1",  "Reference",   XU,   38.10), ("D1",  "Value",        XU,   41.91),
     ("D2",  "Value",       XU,  191.77), ("D2",  "Reference",    XU,  195.58),
     ("J2",  "Value",    320.04, 106.68), ("J2",  "Reference", 320.04, 127.00),
-    ("#G14", "Value",   299.72, 111.76),
+    # El Value de #G14 va al hueco entre el cable de +12V (y=111.76) y el codo
+    # de GND (y=114.30): en 111.76 exacto el cable de pin 4 le pasaba por el
+    # medio a las letras y "GND" parecia etiquetar el +12V (visto en rev E/F).
+    ("#G14", "Value",   297.18, 113.03),
     # Fila +5V, apretada entre las filas de GND de +12V y -12V (30.48 mm cada
     # lado): D5 arriba cerca del riel, U3 abajo cerca de su propio gnd —
     # separados para que sus etiquetas no se pisen entre si.
@@ -318,6 +353,10 @@ FIELDS += [
     # izquierda como si lo centra — el cable vertical de D5 acaba en y=116.84 y
     # aqui estamos por debajo.
     ("U3",  "Value",     190.50, 123.19), ("U3", "Reference",  190.50, 127.00),
+    # J6: Value arriba y Reference debajo del cuerpo, como J1/J3 pero con menos
+    # vuelo porque el conector es de 2 pines y la fila de abajo (y=111.76) la
+    # roza el codo +12V->J2 a partir de x=292.10.
+    ("J6",  "Value",     X_J6A, 99.06), ("J6",  "Reference", X_J6A, 111.76),
 ]
 
 ROT = {p[0]: p[4] for p in PARTS} | {p[0]: p[4] for p in POWER}
@@ -411,8 +450,13 @@ WIRES += [
     ("VO->C10",    [[187.96, Y5], [213.36, Y5]]),
     ("C10->C11",   [[213.36, Y5], [238.76, Y5]]),
     ("C11->tap",   [[238.76, Y5], [254.00, Y5]]),
-    ("tap->R3",    [[254.00, Y5], [X5_LED, Y5]]),
+    ("tap->J6",    [[254.00, Y5], [X_J6, Y5]]),
+    ("J6->R3",     [[X_J6, Y5], [X5_LED, Y5]]),
     ("+5V sym",    [[254.00, Y5], [254.00, Y5 - 12.7]]),
+    # J6: bajada del pin de +5V al riel (union extremo contra extremo en
+    # x=281.94, regla 2) y retorno a su propio simbolo GND.
+    ("J6 +5V",     [[X_J6, Y_J6], [X_J6, Y5]]),
+    ("J6 rtn",     [[X_J6, Y_J6 - 2.54], [269.24, Y_J6 - 2.54]]),
     ("R3->D6",     [[X5_LED, Y5_ROW + 3.81], [X5_LED, YD6 - 3.81]]),
     ("D6 gnd",     [[X5_LED, YD6 + 3.81], [X5_LED, YD6 + 10.16]]),
     ("C9 gnd",     [[147.32, Y5_ROW + 3.81], [147.32, YG_5]]),
@@ -446,6 +490,7 @@ def main() -> None:
             '\t\t(comment 1 "Variante Europa: primario 230VAC/50Hz. Rieles ±12 V y +5V aux.")\n'
             '\t\t(comment 2 "Primario: fusible + MOV S20K275 + NTC soft-start (design-notes.md §10/§12)")\n'
             '\t\t(comment 3 "PE: J3.3 al esparrago de chasis; GND al mismo punto via J5 (§13)")\n'
+            '\t\t(comment 4 "Bus: J2 analogico +12/G/G/-12; +5V por J6 con retorno dedicado (§10.1)")\n'
             "\t)"
         )
         with open(SCH, "w", encoding="utf-8") as fh:
