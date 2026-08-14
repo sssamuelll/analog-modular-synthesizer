@@ -1,0 +1,68 @@
+(footprint "RV_Disc_D21mm_W5.5mm_P10.0mm"
+  (version 20241229)
+  (generator "kicad-mcp")
+  (generator_version "9.0")
+  (layer "F.Cu")
+  (descr "Varistor de disco 20mm (S20K275 / B72220S). Cuerpo 21mm dia max, 5.5mm espesor, patillas 0.8mm a 10.0mm. Lado de red 230VAC: respetar la barrera reforzada de design-notes.md sec.14")
+  (tags "varistor MOV disc THT mains 20mm S20K275")
+
+  (property "Reference" "REF**" (at 5 -12.7 0)
+    (layer "F.SilkS")
+    (uuid "a44ba7aa-75b2-4455-857e-f9f3d40f6e14")
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+  (property "Value" "RV_Disc_D21mm_W5.5mm_P10.0mm" (at 5 12.7 0)
+    (layer "F.Fab")
+    (uuid "39244668-81ed-49ba-8ec6-bbc3451cc24f")
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+  (property "Datasheet" "" (at 0 0 0)
+    (layer "F.Fab")
+    (uuid "4a9c27c0-7f47-4db8-8b70-840bd46118e7")
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+
+  (fp_rect
+    (start -6.5 -11.5)
+    (end 16.5 11.5)
+    (stroke (width 0.05) (type default))
+    (fill none)
+    (layer "F.CrtYd")
+    (uuid "b466635b-7c99-424a-848f-f09c04a9174a")
+  )
+
+  (fp_rect
+    (start -6 -11)
+    (end 16 11)
+    (stroke (width 0.12) (type default))
+    (fill none)
+    (layer "F.SilkS")
+    (uuid "896cc402-2622-49dc-9d97-c08e927bc196")
+  )
+
+  (fp_rect
+    (start -6 -11)
+    (end 16 11)
+    (stroke (width 0.1) (type default))
+    (fill none)
+    (layer "F.Fab")
+    (uuid "a68a079b-fbdf-4fd8-b94d-0e329895e0e5")
+  )
+
+  (pad "1" thru_hole circle
+    (at 0 0)
+    (size 2.2 2.2)
+    (drill 1.1)
+    (layers "*.Cu" "*.Mask")
+    (uuid "dadbf25e-71ce-438d-a5d8-390a181cf746")
+  )
+
+  (pad "2" thru_hole circle
+    (at 10 0)
+    (size 2.2 2.2)
+    (drill 1.1)
+    (layers "*.Cu" "*.Mask")
+    (uuid "499aa09b-485c-4003-baae-486f74e49dd7")
+  )
+
+)

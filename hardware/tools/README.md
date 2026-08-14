@@ -60,6 +60,13 @@ en su docstring según se van descubriendo (p. ej. que un cable solo conecta si
 - `add_schematic_text` escribe el texto **doble-codificado**: un `§` sale como
   `Â§` en el PDF. El cajetín no tiene el problema porque se escribe por texto
   plano directamente en el fichero. Mantén las anotaciones de hoja en ASCII.
+- `create_project` **trunca el `.kicad_sch` que ya exista con ese nombre**, sin
+  avisar y devolviendo `success: true`. Deja la hoja en ~200 bytes y con cero
+  componentes — y el ERC de esa hoja vacía sale limpio, así que no te enteras
+  por ahí. Crea el proyecto **antes** de generar el esquemático, o regenera
+  después. Aquí no costó nada porque `build_schematic.py` reconstruye la hoja
+  entera desde cero; en un flujo con la hoja dibujada a mano habría sido el
+  trabajo de una tarde.
 
 ## Verificar el trazado, no solo el ERC
 

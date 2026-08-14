@@ -205,7 +205,9 @@ módulo):
    óhmetro entre la clavija de tierra del enchufe y cada panel, el espárrago y
    el faston de `J5`. Miliohmios (§13.4). Si esto no pasa, no se enchufa.
 2. **Inspección visual**: polaridad de los electrolíticos, orientación de
-   los reguladores, cortos en el silkscreen.
+   los reguladores, cortos en el silkscreen. Y **el orden de patillas de
+   `BR1`** contra el datasheet de la pieza montada (§14.6) — si esto está mal
+   no se nota mirando la placa, se nota en el primer semiciclo.
 3. Conectar **sólo el transformador** (sin carga), verificar ±17 V tras el
    bridge.
 4. Insertar reguladores en sus zócalos, verificar **+12 V ±1 %** y **−12 V
@@ -516,6 +518,165 @@ un criterio de banco:
 
 Si alguna vez se persigue marcado CE de verdad, hay que leer 5.6.6 y hacer el
 ensayo con la corriente y el tiempo que indique, no con un óhmetro.
+
+## 14. Placa: decisiones de diseño
+
+### 14.1 Dos placas, no una
+
+El §11 dejaba abierto si la fuente y el *bus board* iban juntos. Van **separados**:
+
+- La fuente es compacta y vive junto al transformador; el bus board es largo y
+  estrecho porque tiene que llegar a los módulos 2-7 a lo ancho del cajón. Son
+  formas distintas.
+- El formato del cajón sigue sin decidirse (`case/README.md`). Con una sola
+  placa, la fuente no se podría fabricar hasta cerrar esa decisión. Separadas,
+  la fuente se manda a fabricar ya.
+- Una placa que cruza el cajón entero es el peor sitio posible para meter la
+  red de 230 V.
+
+### 14.2 Separación de la sección de red
+
+Aislamiento **reforzado**: ≥6 mm de línea de fuga y ≥4 mm al aire entre el
+primario (`J3 F1 RV1 NT1 J4`) y todo lo demás, con **ranura fresada** en la
+barrera.
+
+Lo hace fácil una propiedad del diseño: `TR1` es externo (sale por `J4`, vuelve
+por `J1`), así que primario y secundario son **dos islas sin ningún componente
+que las puentee**. La barrera puede ser física porque no hay nada que cruzarla.
+La ranura no cuesta extra en fabricación.
+
+El portafusible es **cerrado** (tipo Schurter FPG4, IEC 60335-1, 250 VAC/10 A
+VDE) y no de clips abiertos. Clips con 230 V a la intemperie dentro de un cajón
+de madera no pegan con haber elegido aislamiento reforzado.
+
+### 14.3 Huellas propias
+
+KiCad 10 no trae tres de las piezas, así que van en `kicad/sam17.pretty`:
+
+| Huella | Por qué |
+|---|---|
+| `RV_Disc_D21mm_W5.5mm_P10.0mm` | `Varistor.pretty` llega a D12; el S20K275 es un disco de 20 mm |
+| `NTC_Disc_D11.5mm_W4.5mm_P7.5mm` | No hay librería de termistores THT |
+| `Faston_6.3x0.8mm_PCB_2Leg_P5.0mm` | No hay ningún faston de PCB |
+
+El faston lleva **las dos patillas numeradas como el mismo pad 1**. El símbolo
+`Conn_01x01_Pin` de `J5` tiene un solo pin, pero esto conduce corriente de falla
+(§13) y necesita las dos patillas por resistencia mecánica y sección de cobre.
+Es el mismo truco que usa el portafusible de la librería de KiCad.
+
+### 14.4 Geometría de la placa
+
+**100 × 150 mm, dos capas.** El ancho se queda en 100 mm porque es el borde del
+tier barato de fabricación; el alto salió de la colocación, no al revés.
+
+```
+        x=0        30                              100
+   y=0  ┌──────────╥──────────────────────────────┐
+        │ H1       ║  J1      BR1              H2 │
+        │ J3 ──────╢                              │
+        │ F1       ║  C1        C2                │   bulk + estrella
+        │          ║      D1                      │
+        │ RV1      ║  C3   C7        ┌────────┐   │   ┐
+        │  (22 mm) ║    C5           │ U1 +HS │   │   │ +12 V
+        │          ║  R1   D3        └────────┘   │   ┘
+        │ NT1      ║      D5                      │
+        │          ║  C9   C11       ┌────────┐   │   ┐
+        │          ║    C10          │ U3 +HS │   │   │ +5 V
+        │ J4 ──────╢  R3   D6        └────────┘   │   ┘
+        │          ║      D2                      │
+        │          ║  C4   C8        ┌────────┐   │   ┐
+        │          ║    C6           │ U2 +HS │   │   │ −12 V
+        │ H3       ║  R2   D4        └────────┘ H4│   ┘
+  y=150 └──────────╨───── J5   J2   J6 ───────────┘
+                   ↑
+              ranura fresada (y de 12 a 138)
+```
+
+Notas de la colocación, todas medidas y no estimadas:
+
+- **La barrera está en x = 30, no en 25.** El cuerpo del `RV1` mide 22 mm y en
+  una franja de 21 mm se montaba encima de la ranura. Sus *pads* cumplían la
+  distancia; el problema era el encapsulado. Lo vio el render, no la medida.
+- **La ranura no llega a los bordes** (va de y=12 a y=138). Si llegara, la placa
+  se partiría en dos. Los puentes que quedan son lo que sujeta la franja de red,
+  y por eso `H1`/`H3` van justo ahí.
+- **Separación real medida: 12.4 mm** entre `J3.2` (neutro) y `H1` — el doble
+  del mínimo de 6 mm. El taladro de fijación cuenta como SELV a propósito: un
+  separador metálico está a potencial de chasis.
+- **Los disipadores no están en la huella.** `TO-220-3_Vertical` mide 10.6 × 5.0
+  y no sabe nada del disipador atornillado, así que se reservan 25 × 25 mm por
+  regulador, dibujados en F.Fab para que quien monte la placa los vea.
+
+`build_pcb.py` lo comprueba todo antes de guardar y aborta: piezas fuera del
+margen, piezas solapadas, piezas montadas sobre la ranura, pads sin red, y la
+separación red↔SELV. DRC de KiCad: **0 infracciones**.
+
+### 14.5 Ruteo
+
+Dos capas. **F** lleva los carriles y todo el lado de red; **B** lleva el árbol
+de masa y los tres bajantes hacia los conectores. Una sola vía en toda la placa.
+
+**No hay plano de masa, y es a propósito.** Un *pour* une todo con todo por el
+camino más corto — justo lo contrario de la estrella de §7 y del retorno
+dedicado de §10.1. Aquí GND es un árbol: sale del punto de estrella (`C1.2`, en
+el bulk del riel positivo), cada rama muere en su grupo funcional, y no hay ni
+un bucle. Eso último **no se puede ver mirando el dibujo** — un bucle de masa se
+ve igual que una rama — así que `build_pcb.py` lo comprueba con union-find sobre
+los extremos de los tramos y aborta si encuentra uno.
+
+El **retorno dedicado del +5 V** (`J6.2`) sube por el canto derecho, la única
+columna libre de ramas, y entra a la estrella por su propia vía. No toca ninguna
+otra rama en todo su recorrido, que es lo que §10.1 pide.
+
+Detalles que costaron una vuelta cada uno:
+
+- **Los tres reguladores tienen la salida en el mismo `x`** (89.1), así que un
+  bajante vertical corta a los otros dos. Se reparten tres columnas (90/93/97) y
+  el que termina más a la izquierda gira más arriba, para que ninguna horizontal
+  corte una vertical viva.
+- **Los tres LED estaban girados al revés**: el ánodo caía al lado opuesto de su
+  resistencia, así que la pista tenía que atravesar el pad del cátodo. Girados
+  180°.
+- **La espina de masa pasaba por encima de `D5.1` y `D2.1`.** Iba por `x=52.5`
+  y esos pads están en `x=52`. Movida a `x=56`, por el pasillo de 2.1 mm que
+  queda entre los pads de las resistencias (54.2) y los de los cerámicos (58).
+- **`RED_230V` se bajó de 2.5 a 2.0 mm de separación.** No por relajar el
+  diseño: es que el propio paso de 5 mm de los borneros deja 2.2 mm entre pad y
+  pad, y la regla era más estricta que la pieza. Entre *pistas* de red la
+  separación real sigue siendo ≥ 2.5 mm por trazado.
+
+`build_pcb.py` aborta si encuentra cruces entre pistas, pistas sobre pads
+ajenos, bucles de masa, piezas solapadas o sobre la ranura, o barrera por debajo
+de 6 mm. **DRC de KiCad: 0 infracciones y 0 pads sin conectar.**
+
+### 14.6 Antes de fabricar: verificar el orden de patillas de BR1
+
+**Esto es una puerta, no una nota.** El nombre del símbolo de un puente en KiCad
+codifica el **orden físico** de sus patillas, y por eso la librería trae cinco
+variantes: `D_Bridge_+-AA`, `+A-A`, `+AA-`, `-A+A`, `-AA+`. El esquemático usa
+`+-AA` (pin1 = +, pin2 = −, pin3 = ~, pin4 = ~), que se eligió sin atarlo a una
+pieza concreta.
+
+Al buscarlo, las fuentes secundarias se contradicen entre ellas sobre el orden
+real del DF06M/KBP206 — así que **aquí no se afirma cuál es**. Lo que hay que
+hacer, con el datasheet del puente que se compre delante:
+
+1. Leer el orden de patillas real del encapsulado.
+2. Si no es `+ − ~ ~`, cambiar el símbolo de `BR1` en `build_schematic.py` por la
+   variante que corresponda y regenerar.
+3. Volver a rutear las cuatro pistas de `BR1` (solo esas: la geometría DIP-4 es
+   la misma en los cuatro casos, lo que cambia es qué pad cae en qué red).
+
+Un puente cruzado pone el bulk en cortocircuito a través de dos diodos en el
+primer semiciclo. Se lleva el puente, y probablemente el fusible no llega a
+tiempo de salvar los condensadores.
+
+### 14.7 Un error del BOM que salió al asignar huellas
+
+`C1`/`C2` (4700 µF/25 V) pedían footprint `Radial-D10`. No existe: un
+electrolítico de 10 mm de diámetro a 25 V ronda los 470 µF, un orden de magnitud
+por debajo. El real es **D16 con paso de 7.5 mm**, y ocupa el cuádruple de área
+— lo que cambia el presupuesto de la placa, no solo la línea de compra.
 
 ## Referencias
 

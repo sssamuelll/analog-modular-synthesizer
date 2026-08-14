@@ -93,6 +93,10 @@ from kicad_mcp_client import Client  # noqa: E402
 
 DIR = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")
 SCH = f"{DIR}/sam17-power.kicad_sch"
+# Para comprobar que los footprints existen de verdad. Si la ruta no esta, la
+# comprobacion se salta con un aviso en vez de romper el build en otra maquina.
+KICAD_FP = os.environ.get("KICAD_FOOTPRINTS",
+                          r"C:\Program Files\KiCad\10.0\share\kicad\footprints")
 
 YP, YN = 66.04, 167.64          # rieles positivo / negativo
 YMID = 116.84                   # eje del puente y del conector de entrada
@@ -212,6 +216,60 @@ PARTS = [
     # va en J2. Ver el bloque de constantes X_J6A/Y_J6 y el docstring. ---
     ("J6",  "Connector:Conn_01x02_Pin",       X_J6A, Y_J6,  180, "+5V/RTN"),
 ]
+
+# Footprints. Van AQUI y no parcheados sobre el .kicad_sch porque este script
+# reescribe la hoja entera cada vez: un footprint puesto a mano en el fichero
+# desaparece en el siguiente build. Tres son de la libreria local sam17.pretty
+# (varistor de 20mm, NTC de disco y faston) porque KiCad 10 no los trae: su
+# Varistor.pretty llega a D12, no hay libreria de termistores THT y no hay
+# ningun faston de PCB.
+#
+# BR1 es el unico sin resolver del todo. El nombre del simbolo codifica el
+# ORDEN FISICO de patillas (+-AA = pin1:+, pin2:-, pin3:~, pin4:~) y KiCad trae
+# cinco variantes justo por eso. Cual toca depende del puente que se compre, y
+# las fuentes secundarias se contradicen entre si. La geometria DIP-4 es la
+# misma en los cuatro casos, asi que la placa se puede colocar y rutear igual;
+# lo que cambia es que pad cae en que red. VERIFICAR CONTRA EL DATASHEET DE LA
+# PIEZA COMPRADA ANTES DE FABRICAR (design-notes.md sec.14, checklist sec.9).
+FOOTPRINT = {
+    # --- primario 230 VAC ---
+    "J3":  "TerminalBlock:TerminalBlock_MaiXu_MX126-5.0-03P_1x03_P5.00mm",
+    # Portafusible CERRADO, no clips abiertos: 230V al descubierto dentro de un
+    # cajon de madera no pega con el aislamiento reforzado que se eligio. El
+    # FPG4 esta rated IEC 60335-1 250VAC/10A VDE y ademas mide 12.5mm contra
+    # los 24mm de un clip en linea.
+    "F1":  "Fuse:Fuseholder_Cylinder-5x20mm_Schurter_FPG4_Vertical_Closed",
+    "RV1": "sam17:RV_Disc_D21mm_W5.5mm_P10.0mm",
+    "NT1": "sam17:NTC_Disc_D11.5mm_W4.5mm_P7.5mm",
+    "J4":  "TerminalBlock:TerminalBlock_MaiXu_MX126-5.0-02P_1x02_P5.00mm",
+    "J5":  "sam17:Faston_6.3x0.8mm_PCB_2Leg_P5.0mm",
+    # --- secundario ---
+    "J1":  "TerminalBlock:TerminalBlock_MaiXu_MX126-5.0-03P_1x03_P5.00mm",
+    "BR1": "Diode_THT:Diode_Bridge_DIP-4_W7.62mm_P5.08mm",
+    # --- bulk: D16, NO D10. El bom.csv pedia Radial-D10 para 4700uF/25V, que
+    # no existe fisicamente (un D10 a 25V ronda los 470uF). ---
+    "C1":  "Capacitor_THT:CP_Radial_D16.0mm_P7.50mm",
+    "C2":  "Capacitor_THT:CP_Radial_D16.0mm_P7.50mm",
+    # --- reguladores: los tres verticales, con disipador propio. U2 no puede
+    # compartir disipador (su tab es -Vin, no GND) — ver design-notes.md sec.4.
+    "U1":  "Package_TO_SOT_THT:TO-220-3_Vertical",
+    "U2":  "Package_TO_SOT_THT:TO-220-3_Vertical",
+    "U3":  "Package_TO_SOT_THT:TO-220-3_Vertical",
+    # --- salidas del bus ---
+    "J2":  "Connector_Molex:Molex_KK-254_AE-6410-04A_1x04_P2.54mm_Vertical",
+    "J6":  "Connector_Molex:Molex_KK-254_AE-6410-02A_1x02_P2.54mm_Vertical",
+}
+# Los que se repiten por familia, para no escribir la misma cadena nueve veces.
+for _refs, _fp in [
+    (("C3", "C4", "C9"),  "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"),
+    (("C5", "C6", "C10"), "Capacitor_THT:CP_Radial_D6.3mm_P2.50mm"),
+    (("C7", "C8", "C11"), "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"),
+    (("D1", "D2", "D5"),  "Diode_THT:D_DO-41_SOD81_P10.16mm_Horizontal"),
+    (("D3", "D4", "D6"),  "LED_THT:LED_D3.0mm"),
+    (("R1", "R2", "R3"),
+     "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"),
+]:
+    FOOTPRINT.update(dict.fromkeys(_refs, _fp))
 
 POWER = [
     ("#G1",  "power:GND",  43.18, 124.46,   0),
@@ -471,7 +529,37 @@ WIRES += [
 ]
 
 
+def check_footprints() -> None:
+    """Valida el mapa de huellas. Va ANTES de tocar el fichero a proposito.
+
+    create_schematic trunca el .kicad_sch nada mas empezar, asi que un assert
+    que salte despues deja la hoja vacia en disco — y una hoja vacia pasa el
+    ERC con 0 avisos, o sea que no chilla por ningun lado. Ya paso una vez: se
+    commiteo una hoja de 711 bytes creyendo que estaba entera. Esto es Python
+    puro y no necesita servidor, asi que no hay razon para hacerlo mas tarde.
+    """
+    faltan = [p[0] for p in PARTS if p[0] not in FOOTPRINT]
+    assert not faltan, f"componentes sin footprint: {faltan}"
+
+    # Que la huella exista. Escribir mal el nombre no da ningun error al
+    # colocar el componente: la hoja se genera igual, el ERC pasa igual, y el
+    # fallo aparece al abrir la placa — con el ruteo ya hecho encima.
+    if not os.path.isdir(KICAD_FP):
+        print(f"AVISO: no encuentro {KICAD_FP}, no compruebo las huellas")
+        return
+    rotos = []
+    for ref in [p[0] for p in PARTS]:
+        lib, _, name = FOOTPRINT[ref].partition(":")
+        base = (f"{DIR}/sam17.pretty" if lib == "sam17"
+                else os.path.join(KICAD_FP, f"{lib}.pretty"))
+        if not os.path.isfile(os.path.join(base, f"{name}.kicad_mod")):
+            rotos.append(f"{ref} -> {FOOTPRINT[ref]}")
+    print(f"huellas inexistentes: {len(rotos)} {rotos}")
+    assert not rotos, f"huellas que no estan en disco: {rotos}"
+
+
 def main() -> None:
+    check_footprints()
     c = Client()
     try:
         c.call("create_schematic", {"name": "sam17-power", "path": DIR})
@@ -499,7 +587,7 @@ def main() -> None:
         for ref, sym, x, y, rot, val in PARTS:
             c.call("add_schematic_component", {
                 "schematicPath": SCH, "symbol": sym, "reference": ref,
-                "value": val,
+                "value": val, "footprint": FOOTPRINT[ref],
                 "position": {"x": x, "y": y + YOFF, "unit": "mm"}})
             if rot:
                 c.call("rotate_schematic_component",

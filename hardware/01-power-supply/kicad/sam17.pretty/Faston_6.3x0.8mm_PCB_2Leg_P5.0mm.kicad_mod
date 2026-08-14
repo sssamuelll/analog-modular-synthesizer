@@ -1,0 +1,68 @@
+(footprint "Faston_6.3x0.8mm_PCB_2Leg_P5.0mm"
+  (version 20241229)
+  (generator "kicad-mcp")
+  (generator_version "9.0")
+  (layer "F.Cu")
+  (descr "Faston macho 6.3x0.8mm de montaje en PCB, dos patillas a 5.0mm. Puente unico GND-chasis (J5, design-notes.md sec.13). LAS DOS PATILLAS SON EL MISMO PAD 1 a proposito: el simbolo Conn_01x01 tiene un pin, pero esto conduce corriente de falla y necesita las dos patillas por resistencia mecanica y seccion de cobre. Serigrafia a +-4.8 en x para no cruzar los pads, que llegan a 4.1")
+  (tags "faston quick-connect tab 6.3mm chassis ground bonding THT")
+
+  (property "Reference" "REF**" (at 0 -5.1 0)
+    (layer "F.SilkS")
+    (uuid "1291cdfd-d393-4950-a5c3-3765ff65007a")
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+  (property "Value" "Faston_6.3x0.8mm_PCB_2Leg_P5.0mm" (at 0 5.1 0)
+    (layer "F.Fab")
+    (uuid "7da35f41-179f-47b6-ba2d-c089cbfcab9a")
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+  (property "Datasheet" "" (at 0 0 0)
+    (layer "F.Fab")
+    (uuid "d83036f3-6147-4692-ac0d-1dd3f345e07d")
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+
+  (fp_rect
+    (start -5.2 -4)
+    (end 5.2 4)
+    (stroke (width 0.05) (type default))
+    (fill none)
+    (layer "F.CrtYd")
+    (uuid "66f4fb88-82ab-4829-bcf0-36a52711843e")
+  )
+
+  (fp_rect
+    (start -4.8 -3.5)
+    (end 4.8 3.5)
+    (stroke (width 0.12) (type default))
+    (fill none)
+    (layer "F.SilkS")
+    (uuid "6b4abd32-8eca-40b8-ade8-f631d92a7616")
+  )
+
+  (fp_rect
+    (start -3.15 -3.5)
+    (end 3.15 3.5)
+    (stroke (width 0.1) (type default))
+    (fill none)
+    (layer "F.Fab")
+    (uuid "a406436e-cfe9-4fbe-9fd3-be25256c7e3c")
+  )
+
+  (pad "1" thru_hole circle
+    (at -2.5 0)
+    (size 3.2 3.2)
+    (drill 1.6)
+    (layers "*.Cu" "*.Mask")
+    (uuid "7160b053-7d15-41d3-ae4d-dcbc7d081257")
+  )
+
+  (pad "1" thru_hole circle
+    (at 2.5 0)
+    (size 3.2 3.2)
+    (drill 1.6)
+    (layers "*.Cu" "*.Mask")
+    (uuid "cd24ebb3-a417-4a27-ba19-5e76553bb6f3")
+  )
+
+)
