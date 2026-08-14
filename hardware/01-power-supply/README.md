@@ -42,6 +42,7 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
 ├── schematics/
 │   └── sam17-power.{svg,pdf}
 ├── pcb/        sam17-power-{top,bottom}.svg y .pdf
+├── fab/        Gerbers + taladros, con la nota para el fabricante
 └── notes/
     └── design-notes.md   Presupuesto de corriente, topología, cálculo
                           térmico y checklist de bring-up.
@@ -72,6 +73,8 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
       llega a la estrella sin tocar ninguna otra rama
       ([§14.5](notes/design-notes.md)). DRC de KiCad **0 infracciones, 0 pads
       sin conectar**. Renders en [`pcb/`](pcb/)
+- [x] **Ficheros de fabricación** — gerbers y taladros en [`fab/`](fab/), con la
+      especificación de la ranura y el aviso de `BR1`
 - [ ] **Antes de fabricar**: verificar el orden de patillas de `BR1` contra el
       datasheet de la pieza comprada ([§14.6](notes/design-notes.md))
 - [ ] Verificación de tensiones bajo carga
