@@ -1,24 +1,30 @@
-ref,value,footprint,quantity,supplier,notes
-TR1,230VAC pri / 12VAC 2A CT sec,external,1,importado,Transformador externo con secundario partido — variante EU (230VAC/50Hz); ver design-notes.md §12
-F1,Fuse 250mA slow,5x20mm,1,importado,Protección primario 230VAC (fusible + portafusible) — variante EU, ver §12
-MOV1,S20K275 / V275LA20A,disc-20mm,1,importado,Supresor transitorios primario (20mm 275VAC para red 230VAC) — variante EU, ver §12
-NTC1,SL10-5R020 (5Ω 2A),disc-10mm,1,importado,Inrush limiter en serie con primario AC (rated 265VAC — sirve igual en EU, sin cambios)
+refs,value,footprint,quantity,supplier,notes
+TR1,230VAC pri / 12VAC 2A CT sec,external,1,importado,Transformador externo con secundario partido — variante EU (230VAC/50Hz); ver design-notes.md §12. No va en la placa: entra por J4 (primario) y vuelve por J1 (secundario)
+F1,Fuse 250mA slow + portafusible,5x20mm,1,importado,Protección primario 230VAC — variante EU (§12)
+RV1,S20K275 / V275LA20A,disc-20mm,1,importado,Supresor de transitorios en primario (20mm 275VAC para red 230VAC) — variante EU (§12). Va DESPUÉS de F1 para que un MOV en corto funda el fusible
+NT1,SL10-5R020 (5Ω 2A),disc-10mm,1,importado,Inrush limiter en serie con el primario AC (rated 265VAC — sirve igual en EU sin cambios)
 BR1,KBP307 / DF06M (2A min),DIP-4,1,nacional,Puente rectificador
 U1,LM7812,TO-220,1,nacional,Regulador +12V (con zócalo)
-U2,LM7912,TO-220,1,nacional,Regulador -12V (tab = -Vin, aislar del chasis)
+U2,LM7912,TO-220,1,nacional,Regulador -12V (tab = -Vin — aislar del chasis)
 U3,LM7805,TO-220,1,nacional,Regulador +5V para LCD y AD5686R
-C1,4700uF/25V electrolytic,Radial-D10,1,nacional,Bulk +V tras bridge
-C2,4700uF/25V electrolytic,Radial-D10,1,nacional,Bulk -V tras bridge
-C3,0.33uF ceramic,C_Disc_D5_W2.5_P5,3,nacional,Entrada de cada regulador (TI app note)
-C4,100uF/25V electrolytic,Radial-D6.3,3,nacional,Salida de cada regulador
-C5,0.1uF ceramic,C_Disc_D5_W2.5_P5,3,nacional,Bypass HF salida regulador
-D1,1N4001,DO-41,3,nacional,Diodos de protección anti-backfeed (uno por riel)
-HS1,Heatsink TO-220 Rth<=20 C/W,—,3,nacional,Disipadores con aleta (uno por regulador)
-LED1,LED rojo 3mm,LED-3mm,1,nacional,Indicador +12V
-LED2,LED amarillo 3mm,LED-3mm,1,nacional,Indicador -12V
-LED3,LED verde 3mm,LED-3mm,1,nacional,Indicador +5V
-R_LED,2.2k 1/4W,R_Axial,3,nacional,Limitadora de corriente LED
-SOCKET_TO220,TO-220 socket,—,3,nacional,Zócalo para reguladores (hot-swap si falla)
-J_IN,Barrier block 2 pos,TB-2,1,nacional,Entrada del transformador (12VAC CT)
-J_AC_IN,Barrier block 3 pos,TB-3,1,nacional,Entrada AC primaria con tierra de seguridad
-J_BUS,Pin header 2x5,1x10,2,nacional,Distribución al bus board (-12/-12/GND/GND/+12/+12/+5/+5)
+"C1,C2",4700uF/25V electrolytic,Radial-D10,2,nacional,Bulk tras el puente — uno por riel (+V y -V)
+"C3,C4,C9",0.33uF ceramic,C_Disc_D5_W2.5_P5,3,nacional,Entrada de cada regulador (TI app note)
+"C5,C6,C10",100uF/25V electrolytic,Radial-D6.3,3,nacional,Salida de cada regulador
+"C7,C8,C11",0.1uF ceramic,C_Disc_D5_W2.5_P5,3,nacional,Bypass HF en salida de regulador
+"D1,D2,D5",1N4001,DO-41,3,nacional,Diodos de protección anti-backfeed (uno por riel)
+D3,LED rojo 3mm,LED-3mm,1,nacional,Indicador +12V
+D4,LED amarillo 3mm,LED-3mm,1,nacional,Indicador -12V
+D6,LED verde 3mm,LED-3mm,1,nacional,Indicador +5V
+"R1,R2",2.2k 1/4W,R_Axial,2,nacional,Limitadora de los LED de ±12V (~4.5 mA)
+R3,680R 1/4W,R_Axial,1,nacional,Limitadora del LED de +5V. NO son 2.2k: a 5V darían ~1.3 mA y el LED queda apagado; 680R deja los mismos ~4.5 mA que los otros dos rieles
+"HS1,HS2,HS3",Heatsink TO-220 Rth<=20 C/W,—,3,nacional,Disipadores con aleta (uno por regulador) — mecánico, no aparece en el esquemático
+"XU1,XU2,XU3",TO-220 socket,—,3,nacional,Zócalo para reguladores (hot-swap si falla) — mecánico, no aparece en el esquemático
+J1,Barrier block 3 pos,TB-3,1,nacional,Entrada del secundario del transformador. Son TRES posiciones y no dos: el secundario es de toma central (12VAC CT) y lleva tres hilos — 12VAC / CT / 12VAC
+J2,Pin header 2x5,1x10,2,nacional,ATENCIÓN — sin resolver: el esquemático dibuja J2 con 4 pines (+12/GND/GND/-12) y el riel +5V NO sale de la placa. Este BOM refleja la intención documentada (bus con +5V). Ver README del módulo. No comprar hasta decidir el bus
+J3,Barrier block 3 pos,TB-3,1,nacional,Entrada AC primaria: L / N / PE. El pin 3 (PE) no lleva pista en la PCB — sale por cable al espárrago del chasis (§13)
+J4,Barrier block 2 pos,TB-2,1,nacional,Salida hacia el primario de TR1 (después de F1 + RV1 + NT1). Dibujado girado: J4.2 = línea y J4.1 = neutro — en un primario da igual cuál es cuál porque el devanado es flotante
+J5,Faston macho 6.3mm PCB,Faston-6.3,1,nacional,Puente único GND ↔ chasis (§13). Va al MISMO espárrago que el PE de J3 y a ningún otro sitio
+—,Espárrago M4 + tuerca + contratuerca + arandela dentada,—,1,nacional,Punto único de tierra del equipo (§13). Solo lo usan el PE del cable de red y el puente de J5. Ningún otro tornillo comparte ese espárrago
+—,Terminal de anillo M4 para 1.0 mm²,—,2,nacional,Uno para el PE del cable de red y otro para el puente de J5 (§13)
+—,Cable 1.0 mm² verde/amarillo,—,1,nacional,Puente J5 → espárrago. El verde/amarillo está reservado por norma a tierra de protección: no usarlo para nada más (§13)
+—,Prensaestopas / pasacables con retención de tracción,—,1,nacional,Entrada del cable de red al cajón. El conductor PE se corta más largo que L y N para que sea el último en soltarse si se tira del cable (§13)
