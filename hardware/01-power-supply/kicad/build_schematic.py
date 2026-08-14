@@ -651,7 +651,10 @@ PARTS += [
     ("C14", "Device:C",               X_C,  Y_GATE + 3.81,  0, "100nF"),
 ]
 FOOTPRINT.update({
-    "Q1":  "Package_TO_SOT_THT:TO-92_Inline",
+    # Inline_Wide y no Inline: las patas de un TO-92 en linea estan a 1.27 mm
+    # y dejan 0.22 mm entre pads, por debajo del margen de la clase. Abiertas
+    # a 2.54 el problema desaparece y el SCR se dobla igual.
+    "Q1":  "Package_TO_SOT_THT:TO-92_Inline_Wide",
     "D7":  "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal",
     "R4":  "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal",
     "C14": "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm",

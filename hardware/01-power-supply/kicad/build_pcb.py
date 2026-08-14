@@ -95,8 +95,8 @@ PLACEMENT = {
     # --- entrada del secundario y rectificacion ---------------------------
     "J1":  ( 10.0,  42.0,   0),
     "BR1": ( 32.0,  39.0,   0),
-    "TP1": ( 52.0,  42.0,   0),   # VRAW+ : el valle que decide todo
-    "TP2": ( 62.0,  42.0,   0),   # VRAW-
+    "TP3": ( 34.0,  77.0,   0),   # +12V, en la columna A
+    "TP5": ( 84.0,  77.0,   0),   # +5V, en la columna B
 
     # --- bulk: DOS por riel (9400 uF). Van los cuatro juntos y pegados al
     # puente para que el lazo de carga sea corto; el punto de estrella vive
@@ -115,9 +115,9 @@ PLACEMENT = {
     "C7":  ( 42.0,  82.0,   0),   # 0.1 uF -> se monta junto al conector
     "D1":  ( 18.0,  94.0,   0),
     "R1":  ( 38.0,  94.0,   0),
-    "D3":  ( 18.0, 105.0,   0),
+    "D3":  ( 42.0, 105.0, 180),
     # crowbar del riel de +12 V: en su propia columna, no perdido por ahi
-    "Q1":  ( 36.0, 105.0,   0),
+    "Q1":  ( 32.0, 105.0,   0),
     "D7":  ( 14.0, 116.0,   0),
     "R4":  ( 36.0, 116.0,   0),
     "C14": ( 14.0, 126.0,   0),
@@ -128,7 +128,7 @@ PLACEMENT = {
     "C11": ( 89.0,  82.0,   0),
     "D5":  ( 65.0,  94.0,   0),
     "R3":  ( 85.0,  94.0,   0),
-    "D6":  ( 65.0, 105.0,   0),
+    "D6":  ( 89.0, 105.0, 180),
 
     # columna C: -12 V, sobre U2
     "C4":  (106.0,  82.0,   0),
@@ -136,7 +136,7 @@ PLACEMENT = {
     "C8":  (136.0,  82.0,   0),   # DNP, pero la huella va puesta
     "D2":  (112.0,  94.0,   0),
     "R2":  (132.0,  94.0,   0),
-    "D4":  (112.0, 105.0,   0),
+    "D4":  (136.0, 105.0, 180),
 
     # --- reguladores en fila, cada uno con sus 42 x 38 mm de disipador ----
     # U2 lleva mica obligatoria: su tab esta a VRAW- (hasta -20 V), no a masa,
@@ -149,17 +149,144 @@ PLACEMENT = {
     "J5":  ( 18.0, 182.0,   0),   # faston GND -> chasis (sec.13)
     "J2":  ( 36.0, 182.0,   0),   # bus +12/GND/GND/-12
     "J6":  ( 54.0, 182.0,   0),   # feed de +5 V
-    "TP3": ( 72.0, 182.0,   0),   # +12V
-    "TP4": ( 84.0, 182.0,   0),   # -12V
-    "TP5": ( 96.0, 182.0,   0),   # +5V
-    "TP6": (108.0, 182.0,   0),   # GND
+    "TP1": ( 44.0,  77.0,   0),   # VRAW+
+    "TP4": (128.0,  77.0,   0),   # -12V, en la columna C
+    "TP2": (100.0,  77.0,   0),   # VRAW-
+    "TP6": ( 68.0,  77.0,   0),   # GND
 }
 
 F, B = "F.Cu", "B.Cu"
 ANCHO_POT, ANCHO_SEN, ANCHO_RED = 1.0, 0.4, 1.0
 ESTRELLA = (17.5, 62.0)        # = C1.2, el bulk del riel positivo (sec.7)
-TRACKS: list = []              # el ruteo se rehace en la pasada siguiente
-VIAS: list = []
+TRACKS = [
+    # ===================== lado de red 230 V, todo en F =====================
+    # Tres corredores: L y L_TR por ENCIMA de la fila (y=7), L_F y N por debajo
+    # (y=20 y y=27). Ninguno cruza a otro y ninguno baja de y=27, lo que deja
+    # 12 mm hasta el primer pad SELV.
+    ("/L",    F, [(18, 15), (18, 7), (38, 7), (38, 12)], ANCHO_RED),
+    ("/L",    F, [(38, 12), (38, 17.1)], ANCHO_RED),
+    ("/L_F",  F, [(45.6, 12), (45.6, 17.1)], ANCHO_RED),
+    ("/L_F",  F, [(45.6, 17.1), (45.6, 20), (80, 20), (80, 15)], ANCHO_RED),
+    ("/L_F",  F, [(58, 20), (58, 15)], ANCHO_RED),
+    ("/N",    F, [(23, 15), (23, 27), (110, 27), (110, 15)], ANCHO_RED),
+    ("/N",    F, [(90, 27), (90, 15)], ANCHO_RED),
+    ("/L_TR", F, [(65.5, 15), (65.5, 7), (115, 7), (115, 15)], ANCHO_RED),
+
+    # ===================== secundario, en B ================================
+    # Los dos en B para dejar F entera al abanico de VRAW+/VRAW-, que es donde
+    # de verdad aprieta: los cuatro pads de BR1 estan en dos columnas de dos.
+    ("/SEC_A", B, [(10, 42), (10, 50), (43, 50), (43, 44.1), (39.6, 44.1)], ANCHO_POT),
+    ("/SEC_B", B, [(20, 42), (20, 36), (39.6, 36), (39.6, 39)], ANCHO_POT),
+
+    # ===================== VRAW+ ============================================
+    # Sube de BR1.1 y rodea por arriba: bajar recto por x=32 lo llevaria encima
+    # de BR1.2, que es VRAW-.
+    ("/VRAW+", F, [(32, 39), (32, 34), (5, 34), (5, 58), (10, 58), (10, 62)], ANCHO_POT),
+    ("/VRAW+", F, [(10, 58), (28, 58), (28, 62)], ANCHO_POT),
+    ("/VRAW+", F, [(10, 62), (10, 72), (12, 72), (12, 82)], ANCHO_POT),
+    ("/VRAW+", F, [(28, 62), (28, 68), (44, 68), (44, 77)], ANCHO_POT),   # TP1
+    ("/VRAW+", F, [(44, 68), (59, 68), (59, 82)], ANCHO_POT),
+    ("/VRAW+", F, [(12, 82), (12, 90), (18, 90), (18, 94)], ANCHO_POT),
+    ("/VRAW+", F, [(59, 82), (59, 90), (65, 90), (65, 94)], ANCHO_POT),
+    # bajada a los reguladores por los pasillos entre reservas de disipador
+    ("/VRAW+", F, [(18, 90), (5, 90), (5, 148), (28, 148), (28, 154)], ANCHO_POT),
+    ("/VRAW+", F, [(65, 90), (53, 90), (53, 148), (75, 148), (75, 154)], ANCHO_POT),
+
+    # ===================== VRAW- ============================================
+    ("/VRAW-", F, [(32, 44.1), (32, 52), (73.5, 52), (73.5, 62)], ANCHO_POT),
+    ("/VRAW-", F, [(55.5, 52), (55.5, 62)], ANCHO_POT),
+    ("/VRAW-", F, [(73.5, 62), (73.5, 68), (100, 68), (100, 77)], ANCHO_POT),   # TP2
+    ("/VRAW-", F, [(100, 68), (108.5, 68), (108.5, 82)], ANCHO_POT),
+    ("/VRAW-", F, [(108.5, 82), (108.5, 88), (122.2, 88), (122.2, 94)], ANCHO_POT),
+    ("/VRAW-", F, [(108.5, 88), (101, 88), (101, 148), (124.5, 148), (124.5, 154)], ANCHO_POT),
+
+    # ===================== carril +12 V =====================================
+    # Sube del regulador por el pasillo derecho de su reserva y reparte por
+    # arriba: asi no corta el anodo del LED, que vive en y=99.
+    ("+12V", F, [(33.1, 154), (33.1, 144), (50, 144), (50, 86)], ANCHO_POT),
+    ("+12V", F, [(50, 86), (42, 86), (42, 82)], ANCHO_POT),
+    ("+12V", F, [(50, 86), (36, 86), (36, 77), (34, 77)], ANCHO_POT),  # TP3
+    ("+12V", F, [(36, 86), (28, 86), (28, 82)], ANCHO_POT),
+    ("+12V", F, [(36, 86), (38, 90), (38, 94)], ANCHO_POT),
+    ("+12V", F, [(28, 86), (28.2, 90), (28.2, 94)], ANCHO_SEN),
+    # al crowbar: pista fina, que las patas del TO-92 estan a 1.27 mm
+    ("+12V", F, [(28, 86), (24, 86), (24, 100), (32, 100), (32, 105)], ANCHO_SEN),
+    ("+12V", F, [(24, 100), (10, 100), (10, 116), (14, 116)], ANCHO_SEN),
+    ("+12V", B, [(33.1, 154), (33.1, 170), (43.6, 170), (43.6, 182)], ANCHO_POT),
+
+    # ===================== carril +5 V ======================================
+    ("+5V", F, [(80.1, 154), (80.1, 144), (97, 144), (97, 86)], ANCHO_POT),
+    ("+5V", F, [(97, 86), (89, 86), (89, 82)], ANCHO_POT),
+    ("+5V", F, [(97, 86), (83, 86), (83, 81), (84, 81), (84, 77)], ANCHO_POT),  # TP5
+    ("+5V", F, [(83, 86), (75, 86), (75, 82)], ANCHO_POT),
+    ("+5V", F, [(83, 86), (85, 90), (85, 94)], ANCHO_POT),
+    ("+5V", F, [(75, 86), (75.2, 90), (75.2, 94)], ANCHO_SEN),
+    ("+5V", B, [(80.1, 154), (80.1, 170), (54, 170), (54, 182)], ANCHO_POT),
+
+    # ===================== carril -12 V =====================================
+    ("-12V", F, [(127.1, 154), (127.1, 144), (146, 144), (146, 86)], ANCHO_POT),
+    ("-12V", F, [(146, 86), (141, 86), (141, 82)], ANCHO_POT),
+    ("-12V", F, [(146, 86), (130, 86), (130, 81), (128, 81), (128, 77)], ANCHO_POT),  # TP4
+    ("-12V", F, [(146, 112), (136, 112), (136, 105)], ANCHO_POT),
+    ("-12V", F, [(130, 86), (124.5, 86), (124.5, 82)], ANCHO_SEN),
+    ("-12V", F, [(146, 86), (146, 112), (112, 112), (112, 94)], ANCHO_POT),
+    # el unico que va en F abajo: cruza toda la placa y en B chocaria con los
+    # otros dos abanicos
+    ("-12V", F, [(127.1, 154), (127.1, 176), (36, 176), (36, 182)], ANCHO_POT),
+
+    # ===================== anodos de LED y gate del SCR =====================
+    ("Net-(D3-A)", F, [(48.16, 94), (48.16, 99), (39.46, 99), (39.46, 105)], ANCHO_SEN),
+    ("Net-(D6-A)", F, [(95.16, 94), (95.16, 99), (86.46, 99), (86.46, 105)], ANCHO_SEN),
+    ("Net-(D4-A)", F, [(142.16, 94), (142.16, 99), (133.46, 99), (133.46, 105)], ANCHO_SEN),
+    ("Net-(D7-A)", F, [(34.54, 105), (34.54, 111), (36, 111), (36, 116)], ANCHO_SEN),
+    ("Net-(D7-A)", F, [(36, 111), (21.6, 111), (21.6, 116)], ANCHO_SEN),
+    ("Net-(D7-A)", F, [(21.6, 116), (21.6, 122), (14, 122), (14, 126)], ANCHO_SEN),
+
+    # ===================== GND: el arbol, todo en B =========================
+    # Estrella en C1.2 (sec.7). Cada rama muere en su grupo y no vuelve.
+    ("GND", B, [(15, 42), (15, 36), (6, 36), (6, 66), (14, 66), (14, 62), (17.5, 62)], ANCHO_POT),
+    ("GND", B, [(17.5, 62), (17.5, 74), (35.5, 74), (35.5, 62)], ANCHO_POT),
+    ("GND", B, [(35.5, 74), (48, 74), (48, 62)], ANCHO_POT),
+    ("GND", B, [(48, 74), (68, 74), (68, 77)], ANCHO_POT),          # TP6
+    ("GND", B, [(48, 74), (66, 74), (66, 62)], ANCHO_POT),
+    # --- rama de la columna A (+12 V) y el crowbar ---
+    ("GND", B, [(17.5, 74), (20, 74), (20, 130)], ANCHO_POT),
+    ("GND", B, [(20, 82), (17, 82)], ANCHO_POT),
+    ("GND", B, [(20, 88), (30.5, 88), (30.5, 82)], ANCHO_POT),
+    ("GND", B, [(30.5, 88), (47, 88), (47, 82)], ANCHO_POT),
+    ("GND", B, [(20, 110), (37.08, 110), (37.08, 105)], ANCHO_SEN),
+    ("GND", B, [(37.08, 110), (42, 110), (42, 105)], ANCHO_POT),
+    ("GND", B, [(42, 110), (46.16, 110), (46.16, 116)], ANCHO_POT),
+    ("GND", B, [(20, 126), (19, 126)], ANCHO_POT),
+    ("GND", B, [(20, 130), (20, 160), (30.5, 160), (30.5, 154)], ANCHO_POT),
+    # --- rama de la columna B (+5 V). El bajante va por x=57, no por x=64:
+    # en 64 pasaba a 1 mm del pad de D5.1, que es VRAW+.
+    ("GND", B, [(48, 74), (48, 84), (57, 84), (57, 130)], ANCHO_POT),
+    ("GND", B, [(57, 84), (64, 84), (64, 82)], ANCHO_POT),
+    ("GND", B, [(64, 84), (77.5, 84), (77.5, 82)], ANCHO_POT),
+    ("GND", B, [(77.5, 84), (94, 84), (94, 82)], ANCHO_POT),
+    ("GND", B, [(57, 110), (89, 110), (89, 105)], ANCHO_POT),
+    ("GND", B, [(57, 130), (57, 160), (77.5, 160), (77.5, 154)], ANCHO_POT),
+    # --- rama de la columna C (-12 V) ---
+    ("GND", B, [(66, 74), (114, 74), (114, 78), (106, 78), (106, 82)], ANCHO_POT),
+    ("GND", B, [(114, 78), (118, 78), (118, 84), (122, 84), (122, 82)], ANCHO_POT),
+    ("GND", B, [(118, 84), (136, 84), (136, 82)], ANCHO_POT),
+    ("GND", B, [(118, 84), (118, 92), (132, 92), (132, 94)], ANCHO_POT),
+    ("GND", B, [(118, 92), (118, 160), (122, 160), (122, 154)], ANCHO_POT),
+    # --- rama de salidas: bus y faston de chasis. NO incluye J6.2, que va por
+    # su cuenta (retorno dedicado del +5 V, sec.10.1).
+    ("GND", B, [(20, 130), (12, 130), (12, 186), (15.5, 186), (15.5, 182)], ANCHO_POT),
+    ("GND", B, [(15.5, 186), (20.5, 186), (20.5, 182)], ANCHO_POT),
+    ("GND", B, [(20.5, 186), (38.5, 186), (38.5, 182)], ANCHO_POT),
+    ("GND", B, [(38.5, 186), (41.1, 186), (41.1, 182)], ANCHO_POT),
+    # --- RETORNO DEDICADO del +5 V (J6.2) -> estrella. Sube por el canto
+    # derecho en F, la unica columna sin ramas de masa, y entra a la estrella
+    # por su propia via sin haber tocado ninguna otra rama (sec.10.1).
+    ("GND", F, [(56.5, 182), (56.5, 188), (148, 188), (148, 58)], ANCHO_POT),
+    ("GND", B, [(148, 58), (148, 54), (20, 54), (20, 58), (17.5, 58), (17.5, 62)], ANCHO_POT),
+]
+
+VIAS = [(148.0, 58.0, "GND")]
 
 MOUNTING = [("H1", 7.0, 7.0), ("H2", 143.0, 7.0),
             ("H3", 7.0, 193.0), ("H4", 143.0, 193.0)]
