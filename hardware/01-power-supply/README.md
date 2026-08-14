@@ -41,7 +41,7 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
 │   └── sam17-power.kicad_pcb
 ├── schematics/
 │   └── sam17-power.{svg,pdf}
-├── pcb/        (pendiente — renderizados)
+├── pcb/        sam17-power-{top,bottom}.svg y .pdf
 └── notes/
     └── design-notes.md   Presupuesto de corriente, topología, cálculo
                           térmico y checklist de bring-up.
@@ -67,9 +67,13 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
 - [x] **Placa colocada** — 100 × 150 mm, dos capas, franja de red aislada por
       ranura fresada. Separación red↔SELV **medida en 12.4 mm** (mínimo 6), DRC
       de KiCad sin infracciones ([§14.4](notes/design-notes.md))
-- [ ] PCB ruteada — los 65 pads siguen sin pista
+- [x] **PCB ruteada** — dos capas, una sola vía, sin plano de masa: GND es un
+      árbol con cero bucles, verificado por union-find, y el retorno del +5 V
+      llega a la estrella sin tocar ninguna otra rama
+      ([§14.5](notes/design-notes.md)). DRC de KiCad **0 infracciones, 0 pads
+      sin conectar**. Renders en [`pcb/`](pcb/)
 - [ ] **Antes de fabricar**: verificar el orden de patillas de `BR1` contra el
-      datasheet de la pieza comprada ([§14.5](notes/design-notes.md))
+      datasheet de la pieza comprada ([§14.6](notes/design-notes.md))
 - [ ] Verificación de tensiones bajo carga
 - [ ] Medición de rizado en cada riel
 - [ ] Procedimiento de bring-up documentado

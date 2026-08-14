@@ -206,7 +206,7 @@ módulo):
    el faston de `J5`. Miliohmios (§13.4). Si esto no pasa, no se enchufa.
 2. **Inspección visual**: polaridad de los electrolíticos, orientación de
    los reguladores, cortos en el silkscreen. Y **el orden de patillas de
-   `BR1`** contra el datasheet de la pieza montada (§14.5) — si esto está mal
+   `BR1`** contra el datasheet de la pieza montada (§14.6) — si esto está mal
    no se nota mirando la placa, se nota en el primer semiciclo.
 3. Conectar **sólo el transformador** (sin carga), verificar ±17 V tras el
    bridge.
@@ -611,7 +611,45 @@ Notas de la colocación, todas medidas y no estimadas:
 margen, piezas solapadas, piezas montadas sobre la ranura, pads sin red, y la
 separación red↔SELV. DRC de KiCad: **0 infracciones**.
 
-### 14.5 Antes de fabricar: verificar el orden de patillas de BR1
+### 14.5 Ruteo
+
+Dos capas. **F** lleva los carriles y todo el lado de red; **B** lleva el árbol
+de masa y los tres bajantes hacia los conectores. Una sola vía en toda la placa.
+
+**No hay plano de masa, y es a propósito.** Un *pour* une todo con todo por el
+camino más corto — justo lo contrario de la estrella de §7 y del retorno
+dedicado de §10.1. Aquí GND es un árbol: sale del punto de estrella (`C1.2`, en
+el bulk del riel positivo), cada rama muere en su grupo funcional, y no hay ni
+un bucle. Eso último **no se puede ver mirando el dibujo** — un bucle de masa se
+ve igual que una rama — así que `build_pcb.py` lo comprueba con union-find sobre
+los extremos de los tramos y aborta si encuentra uno.
+
+El **retorno dedicado del +5 V** (`J6.2`) sube por el canto derecho, la única
+columna libre de ramas, y entra a la estrella por su propia vía. No toca ninguna
+otra rama en todo su recorrido, que es lo que §10.1 pide.
+
+Detalles que costaron una vuelta cada uno:
+
+- **Los tres reguladores tienen la salida en el mismo `x`** (89.1), así que un
+  bajante vertical corta a los otros dos. Se reparten tres columnas (90/93/97) y
+  el que termina más a la izquierda gira más arriba, para que ninguna horizontal
+  corte una vertical viva.
+- **Los tres LED estaban girados al revés**: el ánodo caía al lado opuesto de su
+  resistencia, así que la pista tenía que atravesar el pad del cátodo. Girados
+  180°.
+- **La espina de masa pasaba por encima de `D5.1` y `D2.1`.** Iba por `x=52.5`
+  y esos pads están en `x=52`. Movida a `x=56`, por el pasillo de 2.1 mm que
+  queda entre los pads de las resistencias (54.2) y los de los cerámicos (58).
+- **`RED_230V` se bajó de 2.5 a 2.0 mm de separación.** No por relajar el
+  diseño: es que el propio paso de 5 mm de los borneros deja 2.2 mm entre pad y
+  pad, y la regla era más estricta que la pieza. Entre *pistas* de red la
+  separación real sigue siendo ≥ 2.5 mm por trazado.
+
+`build_pcb.py` aborta si encuentra cruces entre pistas, pistas sobre pads
+ajenos, bucles de masa, piezas solapadas o sobre la ranura, o barrera por debajo
+de 6 mm. **DRC de KiCad: 0 infracciones y 0 pads sin conectar.**
+
+### 14.6 Antes de fabricar: verificar el orden de patillas de BR1
 
 **Esto es una puerta, no una nota.** El nombre del símbolo de un puente en KiCad
 codifica el **orden físico** de sus patillas, y por eso la librería trae cinco
@@ -633,7 +671,7 @@ Un puente cruzado pone el bulk en cortocircuito a través de dos diodos en el
 primer semiciclo. Se lleva el puente, y probablemente el fusible no llega a
 tiempo de salvar los condensadores.
 
-### 14.6 Un error del BOM que salió al asignar huellas
+### 14.7 Un error del BOM que salió al asignar huellas
 
 `C1`/`C2` (4700 µF/25 V) pedían footprint `Radial-D10`. No existe: un
 electrolítico de 10 mm de diámetro a 25 V ronda los 470 µF, un orden de magnitud
