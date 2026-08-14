@@ -33,6 +33,8 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
 ├── kicad/
 │   ├── build_schematic.py   Genera sam17-power.kicad_sch (ver hardware/tools/README.md)
 │   ├── check_bom.py         Cruza bom.csv contra los designadores del esquemático
+│   ├── sam17.pretty/        Huellas propias: varistor D20, NTC de disco, faston (§14.3)
+│   ├── fp-lib-table         Registra sam17.pretty en el proyecto
 │   └── sam17-power.kicad_sch
 ├── schematics/
 │   └── sam17-power.{svg,pdf}
@@ -56,7 +58,14 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
 - [x] **Salida de +5 V** — resuelto en issue #8 (opción C): el riel sale por
       `J6`, un conector de 2 posiciones aparte del bus, con retorno dedicado
       al punto de estrella (ver abajo)
-- [ ] PCB ruteada
+- [x] **Huellas asignadas** — los 33 componentes con footprint, verificado
+      contra disco en cada build. Tres huellas propias en `kicad/sam17.pretty`
+      porque KiCad no las trae ([§14.3](notes/design-notes.md))
+- [ ] PCB ruteada — dos placas separadas, fuente primero
+      ([§14.1](notes/design-notes.md)); aislamiento reforzado con ranura en la
+      barrera de red ([§14.2](notes/design-notes.md))
+- [ ] **Antes de fabricar**: verificar el orden de patillas de `BR1` contra el
+      datasheet de la pieza comprada ([§14.4](notes/design-notes.md))
 - [ ] Verificación de tensiones bajo carga
 - [ ] Medición de rizado en cada riel
 - [ ] Procedimiento de bring-up documentado

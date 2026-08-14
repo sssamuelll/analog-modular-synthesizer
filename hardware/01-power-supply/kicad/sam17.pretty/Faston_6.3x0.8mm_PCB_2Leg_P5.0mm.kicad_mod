@@ -1,0 +1,68 @@
+(footprint "Faston_6.3x0.8mm_PCB_2Leg_P5.0mm"
+  (version 20241229)
+  (generator "kicad-mcp")
+  (generator_version "9.0")
+  (layer "F.Cu")
+  (descr "Faston macho 6.3x0.8mm de montaje en PCB, dos patillas a 5.0mm. Puente unico GND-chasis (J5, design-notes.md sec.13). LAS DOS PATILLAS SON EL MISMO PAD 1 a proposito: el simbolo Conn_01x01 tiene un pin, pero esto conduce corriente de falla y necesita las dos patillas por resistencia mecanica y seccion de cobre")
+  (tags "faston quick-connect tab 6.3mm chassis ground bonding THT")
+
+  (property "Reference" "REF**" (at 0 -5.1 0)
+    (layer "F.SilkS")
+    (uuid "50ffdad8-ff59-4f16-8ee2-a67456d58259")
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+  (property "Value" "Faston_6.3x0.8mm_PCB_2Leg_P5.0mm" (at 0 5.1 0)
+    (layer "F.Fab")
+    (uuid "edf4d351-8ce6-4bf2-8ea7-ac23571d815a")
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+  (property "Datasheet" "" (at 0 0 0)
+    (layer "F.Fab")
+    (uuid "1b0fb0b6-8fd4-40bb-b72f-7ad39d34fb12")
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+
+  (fp_rect
+    (start -4.5 -4)
+    (end 4.5 4)
+    (stroke (width 0.05) (type default))
+    (fill none)
+    (layer "F.CrtYd")
+    (uuid "209ff147-1ef5-4b3d-82b7-7590c69d5838")
+  )
+
+  (fp_rect
+    (start -4 -3.5)
+    (end 4 3.5)
+    (stroke (width 0.12) (type default))
+    (fill none)
+    (layer "F.SilkS")
+    (uuid "f09b95ec-fe2c-48ff-a82b-9c315415b1f7")
+  )
+
+  (fp_rect
+    (start -3.15 -3.5)
+    (end 3.15 3.5)
+    (stroke (width 0.1) (type default))
+    (fill none)
+    (layer "F.Fab")
+    (uuid "66dae540-a613-49c7-b8b2-f65351706b45")
+  )
+
+  (pad "1" thru_hole circle
+    (at -2.5 0)
+    (size 3.2 3.2)
+    (drill 1.6)
+    (layers "*.Cu" "*.Mask")
+    (uuid "bdb15055-5f3e-4a76-b7a1-d3b2cf260f9f")
+  )
+
+  (pad "1" thru_hole circle
+    (at 2.5 0)
+    (size 3.2 3.2)
+    (drill 1.6)
+    (layers "*.Cu" "*.Mask")
+    (uuid "177023f3-d4d6-4371-a6e6-9f4f76bfeb68")
+  )
+
+)

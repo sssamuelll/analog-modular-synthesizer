@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "sam17")(type "KiCad")(uri "${KIPRJMOD}/sam17.pretty")(options "")(descr "Huellas propias del SAM17: las que KiCad 10 no trae (varistor de disco de 20 mm, NTC de disco, faston de PCB)"))
+)

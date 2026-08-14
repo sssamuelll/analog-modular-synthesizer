@@ -205,7 +205,9 @@ módulo):
    óhmetro entre la clavija de tierra del enchufe y cada panel, el espárrago y
    el faston de `J5`. Miliohmios (§13.4). Si esto no pasa, no se enchufa.
 2. **Inspección visual**: polaridad de los electrolíticos, orientación de
-   los reguladores, cortos en el silkscreen.
+   los reguladores, cortos en el silkscreen. Y **el orden de patillas de
+   `BR1`** contra el datasheet de la pieza montada (§14.4) — si esto está mal
+   no se nota mirando la placa, se nota en el primer semiciclo.
 3. Conectar **sólo el transformador** (sin carga), verificar ±17 V tras el
    bridge.
 4. Insertar reguladores en sus zócalos, verificar **+12 V ±1 %** y **−12 V
@@ -516,6 +518,80 @@ un criterio de banco:
 
 Si alguna vez se persigue marcado CE de verdad, hay que leer 5.6.6 y hacer el
 ensayo con la corriente y el tiempo que indique, no con un óhmetro.
+
+## 14. Placa: decisiones de diseño
+
+### 14.1 Dos placas, no una
+
+El §11 dejaba abierto si la fuente y el *bus board* iban juntos. Van **separados**:
+
+- La fuente es compacta y vive junto al transformador; el bus board es largo y
+  estrecho porque tiene que llegar a los módulos 2-7 a lo ancho del cajón. Son
+  formas distintas.
+- El formato del cajón sigue sin decidirse (`case/README.md`). Con una sola
+  placa, la fuente no se podría fabricar hasta cerrar esa decisión. Separadas,
+  la fuente se manda a fabricar ya.
+- Una placa que cruza el cajón entero es el peor sitio posible para meter la
+  red de 230 V.
+
+### 14.2 Separación de la sección de red
+
+Aislamiento **reforzado**: ≥6 mm de línea de fuga y ≥4 mm al aire entre el
+primario (`J3 F1 RV1 NT1 J4`) y todo lo demás, con **ranura fresada** en la
+barrera.
+
+Lo hace fácil una propiedad del diseño: `TR1` es externo (sale por `J4`, vuelve
+por `J1`), así que primario y secundario son **dos islas sin ningún componente
+que las puentee**. La barrera puede ser física porque no hay nada que cruzarla.
+La ranura no cuesta extra en fabricación.
+
+El portafusible es **cerrado** (tipo Schurter FPG4, IEC 60335-1, 250 VAC/10 A
+VDE) y no de clips abiertos. Clips con 230 V a la intemperie dentro de un cajón
+de madera no pegan con haber elegido aislamiento reforzado.
+
+### 14.3 Huellas propias
+
+KiCad 10 no trae tres de las piezas, así que van en `kicad/sam17.pretty`:
+
+| Huella | Por qué |
+|---|---|
+| `RV_Disc_D21mm_W5.5mm_P10.0mm` | `Varistor.pretty` llega a D12; el S20K275 es un disco de 20 mm |
+| `NTC_Disc_D11.5mm_W4.5mm_P7.5mm` | No hay librería de termistores THT |
+| `Faston_6.3x0.8mm_PCB_2Leg_P5.0mm` | No hay ningún faston de PCB |
+
+El faston lleva **las dos patillas numeradas como el mismo pad 1**. El símbolo
+`Conn_01x01_Pin` de `J5` tiene un solo pin, pero esto conduce corriente de falla
+(§13) y necesita las dos patillas por resistencia mecánica y sección de cobre.
+Es el mismo truco que usa el portafusible de la librería de KiCad.
+
+### 14.4 Antes de fabricar: verificar el orden de patillas de BR1
+
+**Esto es una puerta, no una nota.** El nombre del símbolo de un puente en KiCad
+codifica el **orden físico** de sus patillas, y por eso la librería trae cinco
+variantes: `D_Bridge_+-AA`, `+A-A`, `+AA-`, `-A+A`, `-AA+`. El esquemático usa
+`+-AA` (pin1 = +, pin2 = −, pin3 = ~, pin4 = ~), que se eligió sin atarlo a una
+pieza concreta.
+
+Al buscarlo, las fuentes secundarias se contradicen entre ellas sobre el orden
+real del DF06M/KBP206 — así que **aquí no se afirma cuál es**. Lo que hay que
+hacer, con el datasheet del puente que se compre delante:
+
+1. Leer el orden de patillas real del encapsulado.
+2. Si no es `+ − ~ ~`, cambiar el símbolo de `BR1` en `build_schematic.py` por la
+   variante que corresponda y regenerar.
+3. Volver a rutear las cuatro pistas de `BR1` (solo esas: la geometría DIP-4 es
+   la misma en los cuatro casos, lo que cambia es qué pad cae en qué red).
+
+Un puente cruzado pone el bulk en cortocircuito a través de dos diodos en el
+primer semiciclo. Se lleva el puente, y probablemente el fusible no llega a
+tiempo de salvar los condensadores.
+
+### 14.5 Un error del BOM que salió al asignar huellas
+
+`C1`/`C2` (4700 µF/25 V) pedían footprint `Radial-D10`. No existe: un
+electrolítico de 10 mm de diámetro a 25 V ronda los 470 µF, un orden de magnitud
+por debajo. El real es **D16 con paso de 7.5 mm**, y ocupa el cuádruple de área
+— lo que cambia el presupuesto de la placa, no solo la línea de compra.
 
 ## Referencias
 
