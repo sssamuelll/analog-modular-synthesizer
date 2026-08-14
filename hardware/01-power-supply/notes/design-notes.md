@@ -678,6 +678,55 @@ electrolítico de 10 mm de diámetro a 25 V ronda los 470 µF, un orden de magni
 por debajo. El real es **D16 con paso de 7.5 mm**, y ocupa el cuádruple de área
 — lo que cambia el presupuesto de la placa, no solo la línea de compra.
 
+## 15. Simulación: el margen de dropout
+
+Simulado en [`simulations/power/`](../../../simulations/power). Es la única
+cuenta del módulo que no se cierra a mano: con filtro de entrada capacitiva la
+corriente por el secundario circula en picos estrechos de 2-3 veces la continua,
+así que la caída en la resistencia del devanado es mucho peor que corriente
+media × resistencia.
+
+### 15.1 El resultado
+
+A red nominal el diseño va sobrado (+1.6 a +2.5 V de margen). **A 207 V — la red
+al −10 %, que está dentro de la tolerancia europea — y a plena carga de diseño,
+hace falta un transformador con regulación ≥ 10.7 %.** Por debajo de eso el 7812
+sale de regulación en los valles del rizado.
+
+Con la carga **real** de §2 (~80 mA analógicos por riel en vez de los 300 de
+objetivo) pasa incluso con un transformador malo: +0.54 V. Es decir, **el caso
+que falla es el objetivo de diseño, no el instrumento tal como lo describe la
+tesis.**
+
+### 15.2 Tres cosas que salieron y no eran obvias
+
+- **Subir el bulk casi no sirve.** De 4700 a 10000 µF se ganan 0.22 V. Lo que
+  limita no es el rizado sino el nivel medio: más capacidad estrecha el ángulo
+  de conducción, sube el pico de corriente y empeora la caída en el devanado.
+  Casi todo lo que ganas por un lado lo pierdes por el otro.
+- **Un secundario de 15-0-15 arregla el dropout y rompe el térmico.** Da +3.7 V
+  de margen, pero la unión del 7812 se va a 104-113 °C con el disipador de
+  20 °C/W de §6, contra los < 70 °C que esa misma sección fija. Descartado.
+- **Los dos rieles no van igual de cargados.** VRAW+ mueve 450 mA (7812 + 7805)
+  y VRAW− solo 300, así que el negativo tiene ~0.5 V más de margen. El que hay
+  que vigilar es el positivo.
+
+### 15.3 Lo que sale holgado
+
+- **El rizado de salida nunca fue el riesgo.** Con ~0.7 Vpp de entrada y 60-70 dB
+  de rechazo del 7812 salen ~0.2-0.7 mV, dos órdenes de magnitud por debajo del
+  objetivo de < 10 mVpp de §9.
+- **Rizado en C1: 0.72-0.88 A RMS.** Entra en un 4700 µF/25 V normal (1.4-2 A),
+  pero es un dato a mirar al comprar. Anotado en el BOM.
+
+### 15.4 Lo que cambió en el BOM
+
+`12VAC 2A CT` se lee de dos maneras y solo una funciona: **son 12-0-12, 24 V
+totales**. Muchos vendedores llaman «12V CT» a un 6-0-6, y con ese cada riel
+daría ~7.6 V — el 7812 no regularía jamás. La línea de `TR1` ahora lo dice, y
+además pide la tensión de secundario **en vacío** (≥ 13.3 V por semidevanado),
+que es el dato del que depende todo esto y que no estaba pedido.
+
 ## Referencias
 
 - [Modular Synthesizer Power Supplies (Rabid Elephant)](https://rabidelephant.com/blogs/general/modular-synthesizer-power-supplies-and-distribution-a-thorough-introduction) — fundamento de grounding y distribución.

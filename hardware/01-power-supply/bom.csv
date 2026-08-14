@@ -1,5 +1,5 @@
 refs,value,footprint,quantity,supplier,notes
-TR1,230VAC pri / 12VAC 2A CT sec,external,1,importado,Transformador externo con secundario partido — variante EU (230VAC/50Hz); ver design-notes.md §12. No va en la placa: entra por J4 (primario) y vuelve por J1 (secundario)
+TR1,230VAC pri / 12-0-12 VAC 2A (24V totales con toma central),external,1,importado,Transformador externo — variante EU (230VAC/50Hz); ver design-notes.md §12 y §15. ATENCIÓN: son 12-0-12 (24 V totales), NO 12 V totales. Muchos vendedores llaman «12V CT» a un 6-0-6: con ese cada riel daría ~7.6 V y el 7812 no regularía nunca. Pedir además la tensión de secundario EN VACÍO: hace falta ≥13.3 V por semidevanado (regulación ≥10.7%) para que el riel de +12 V aguante la red al -10% a plena carga de diseño — simulado, ver simulations/power. No va en la placa: entra por J4 (primario) y vuelve por J1 (secundario)
 F1,Fuse 250mA slow + portafusible CERRADO 5x20,Fuseholder_Cylinder-5x20mm_Vertical_Closed,1,importado,Protección primario 230VAC — variante EU (§12). Cerrado, no de clips abiertos: son 230 V dentro de un cajón de madera y el aislamiento elegido es reforzado (§14). Referencia tipo Schurter FPG4 (IEC 60335-1, 250VAC/10A VDE)
 RV1,S20K275 / V275LA20A,sam17:RV_Disc_D21mm_W5.5mm_P10.0mm,1,importado,Supresor de transitorios en primario (20mm 275VAC para red 230VAC) — variante EU (§12). Va DESPUÉS de F1 para que un MOV en corto funda el fusible
 NT1,SL10-5R020 (5Ω 2A),sam17:NTC_Disc_D11.5mm_W4.5mm_P7.5mm,1,importado,Inrush limiter en serie con el primario AC (rated 265VAC — sirve igual en EU sin cambios)
@@ -7,7 +7,7 @@ BR1,KBP206 (2A / 600V) o equivalente DIP-4,Diode_Bridge_DIP-4_W7.62mm_P5.08mm,1,
 U1,LM7812,TO-220,1,nacional,Regulador +12V (con zócalo)
 U2,LM7912,TO-220,1,nacional,Regulador -12V (tab = -Vin — aislar del chasis)
 U3,LM7805,TO-220,1,nacional,Regulador +5V para LCD y AD5686R
-"C1,C2",4700uF/25V electrolytic,CP_Radial_D16.0mm_P7.50mm,2,nacional,Bulk tras el puente — uno por riel (+V y -V). Diámetro 16 mm y paso 7.5 mm: el footprint que pedía este BOM (D10) no existe para 4700 µF/25 V — un D10 a esa tensión ronda los 470 µF
+"C1,C2",4700uF/25V electrolytic (ripple ≥1.2A @100Hz),CP_Radial_D16.0mm_P7.50mm,2,nacional,Corriente de rizado simulada: 0.72-0.88 A RMS (§15). Bulk tras el puente — uno por riel (+V y -V). Diámetro 16 mm y paso 7.5 mm: el footprint que pedía este BOM (D10) no existe para 4700 µF/25 V — un D10 a esa tensión ronda los 470 µF
 "C3,C4,C9",0.33uF ceramic,C_Disc_D5_W2.5_P5,3,nacional,Entrada de cada regulador (TI app note)
 "C5,C6,C10",100uF/25V electrolytic,Radial-D6.3,3,nacional,Salida de cada regulador
 "C7,C8,C11",0.1uF ceramic,C_Disc_D5_W2.5_P5,3,nacional,Bypass HF en salida de regulador
