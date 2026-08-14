@@ -33,9 +33,12 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
 ├── kicad/
 │   ├── build_schematic.py   Genera sam17-power.kicad_sch (ver hardware/tools/README.md)
 │   ├── check_bom.py         Cruza bom.csv contra los designadores del esquemático
+│   ├── build_pcb.py         Genera sam17-power.kicad_pcb — usa pcbnew DIRECTO,
+│   │                        va con el Python de KiCad, no con el del sistema
 │   ├── sam17.pretty/        Huellas propias: varistor D20, NTC de disco, faston (§14.3)
 │   ├── fp-lib-table         Registra sam17.pretty en el proyecto
-│   └── sam17-power.kicad_sch
+│   ├── sam17-power.kicad_sch
+│   └── sam17-power.kicad_pcb
 ├── schematics/
 │   └── sam17-power.{svg,pdf}
 ├── pcb/        (pendiente — renderizados)
@@ -61,11 +64,12 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
 - [x] **Huellas asignadas** — los 33 componentes con footprint, verificado
       contra disco en cada build. Tres huellas propias en `kicad/sam17.pretty`
       porque KiCad no las trae ([§14.3](notes/design-notes.md))
-- [ ] PCB ruteada — dos placas separadas, fuente primero
-      ([§14.1](notes/design-notes.md)); aislamiento reforzado con ranura en la
-      barrera de red ([§14.2](notes/design-notes.md))
+- [x] **Placa colocada** — 100 × 150 mm, dos capas, franja de red aislada por
+      ranura fresada. Separación red↔SELV **medida en 12.4 mm** (mínimo 6), DRC
+      de KiCad sin infracciones ([§14.4](notes/design-notes.md))
+- [ ] PCB ruteada — los 65 pads siguen sin pista
 - [ ] **Antes de fabricar**: verificar el orden de patillas de `BR1` contra el
-      datasheet de la pieza comprada ([§14.4](notes/design-notes.md))
+      datasheet de la pieza comprada ([§14.5](notes/design-notes.md))
 - [ ] Verificación de tensiones bajo carga
 - [ ] Medición de rizado en cada riel
 - [ ] Procedimiento de bring-up documentado

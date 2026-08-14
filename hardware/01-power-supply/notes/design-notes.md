@@ -206,7 +206,7 @@ módulo):
    el faston de `J5`. Miliohmios (§13.4). Si esto no pasa, no se enchufa.
 2. **Inspección visual**: polaridad de los electrolíticos, orientación de
    los reguladores, cortos en el silkscreen. Y **el orden de patillas de
-   `BR1`** contra el datasheet de la pieza montada (§14.4) — si esto está mal
+   `BR1`** contra el datasheet de la pieza montada (§14.5) — si esto está mal
    no se nota mirando la placa, se nota en el primer semiciclo.
 3. Conectar **sólo el transformador** (sin carga), verificar ±17 V tras el
    bridge.
@@ -564,7 +564,54 @@ El faston lleva **las dos patillas numeradas como el mismo pad 1**. El símbolo
 (§13) y necesita las dos patillas por resistencia mecánica y sección de cobre.
 Es el mismo truco que usa el portafusible de la librería de KiCad.
 
-### 14.4 Antes de fabricar: verificar el orden de patillas de BR1
+### 14.4 Geometría de la placa
+
+**100 × 150 mm, dos capas.** El ancho se queda en 100 mm porque es el borde del
+tier barato de fabricación; el alto salió de la colocación, no al revés.
+
+```
+        x=0        30                              100
+   y=0  ┌──────────╥──────────────────────────────┐
+        │ H1       ║  J1      BR1              H2 │
+        │ J3 ──────╢                              │
+        │ F1       ║  C1        C2                │   bulk + estrella
+        │          ║      D1                      │
+        │ RV1      ║  C3   C7        ┌────────┐   │   ┐
+        │  (22 mm) ║    C5           │ U1 +HS │   │   │ +12 V
+        │          ║  R1   D3        └────────┘   │   ┘
+        │ NT1      ║      D5                      │
+        │          ║  C9   C11       ┌────────┐   │   ┐
+        │          ║    C10          │ U3 +HS │   │   │ +5 V
+        │ J4 ──────╢  R3   D6        └────────┘   │   ┘
+        │          ║      D2                      │
+        │          ║  C4   C8        ┌────────┐   │   ┐
+        │          ║    C6           │ U2 +HS │   │   │ −12 V
+        │ H3       ║  R2   D4        └────────┘ H4│   ┘
+  y=150 └──────────╨───── J5   J2   J6 ───────────┘
+                   ↑
+              ranura fresada (y de 12 a 138)
+```
+
+Notas de la colocación, todas medidas y no estimadas:
+
+- **La barrera está en x = 30, no en 25.** El cuerpo del `RV1` mide 22 mm y en
+  una franja de 21 mm se montaba encima de la ranura. Sus *pads* cumplían la
+  distancia; el problema era el encapsulado. Lo vio el render, no la medida.
+- **La ranura no llega a los bordes** (va de y=12 a y=138). Si llegara, la placa
+  se partiría en dos. Los puentes que quedan son lo que sujeta la franja de red,
+  y por eso `H1`/`H3` van justo ahí.
+- **Separación real medida: 12.4 mm** entre `J3.2` (neutro) y `H1` — el doble
+  del mínimo de 6 mm. El taladro de fijación cuenta como SELV a propósito: un
+  separador metálico está a potencial de chasis.
+- **Los disipadores no están en la huella.** `TO-220-3_Vertical` mide 10.6 × 5.0
+  y no sabe nada del disipador atornillado, así que se reservan 25 × 25 mm por
+  regulador, dibujados en F.Fab para que quien monte la placa los vea.
+
+`build_pcb.py` lo comprueba todo antes de guardar y aborta: piezas fuera del
+margen, piezas solapadas, piezas montadas sobre la ranura, pads sin red, y la
+separación red↔SELV. DRC de KiCad: **0 infracciones**.
+
+### 14.5 Antes de fabricar: verificar el orden de patillas de BR1
 
 **Esto es una puerta, no una nota.** El nombre del símbolo de un puente en KiCad
 codifica el **orden físico** de sus patillas, y por eso la librería trae cinco
@@ -586,7 +633,7 @@ Un puente cruzado pone el bulk en cortocircuito a través de dos diodos en el
 primer semiciclo. Se lleva el puente, y probablemente el fusible no llega a
 tiempo de salvar los condensadores.
 
-### 14.5 Un error del BOM que salió al asignar huellas
+### 14.6 Un error del BOM que salió al asignar huellas
 
 `C1`/`C2` (4700 µF/25 V) pedían footprint `Radial-D10`. No existe: un
 electrolítico de 10 mm de diámetro a 25 V ronda los 470 µF, un orden de magnitud
