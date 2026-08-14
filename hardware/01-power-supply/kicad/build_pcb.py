@@ -49,17 +49,22 @@ STOCK = os.environ.get("KICAD_FOOTPRINTS",
                        r"C:\Program Files\KiCad\10.0\share\kicad\footprints")
 LOCAL = os.path.join(DIR, "sam17.pretty")
 
-W, H = 100.0, 150.0             # placa: cabe en el tier barato de 100 mm de ancho
+W, H = 150.0, 200.0             # crece desde 100x150: los disipadores pasan de
+                                # 25x25 a 42x38 (SK 129/38,1) y tres en fila
+                                # piden 136 mm de ancho. Con la franja de red
+                                # VERTICAL harian falta 175; puesta en
+                                # HORIZONTAL arriba, caben en 150.
 MARGEN = 3.0                    # de cualquier pieza al borde
-X_BARRERA = 30.0                # eje de la ranura. 30 y no 25: el CUERPO de
-                                # RV1 mide 22 mm y en una franja de 21 mm se
-                                # montaba encima de la ranura. Los pads si
-                                # cumplian — esto no lo ve la medida de cobre,
-                                # lo vio el render.
+# La barrera pasa a ser HORIZONTAL: la franja de red va ahora en una fila
+# arriba, no en una columna a la izquierda.
+Y_BARRERA = 31.0                # eje de la ranura
 RANURA_ANCHO = 2.0
-RANURA_Y0, RANURA_Y1 = 12.0, 138.0   # los puentes que quedan sostienen la placa
+RANURA_X0, RANURA_X1 = 10.0, 140.0   # los puentes que quedan sostienen la placa
 FUGA_MIN = 6.0                  # cobre de red <-> cobre SELV (sec.14.2)
-HS_LADO = 25.0                  # reserva cuadrada del disipador TO-220
+# Fischer SK 129/38,1 220 (6.5 K/W, 7.7 acostado). La huella TO-220-3_Vertical
+# mide 10.6 x 5.0 y no sabe NADA del disipador atornillado: sin esta reserva se
+# montan unos encima de otros.
+HS_ANCHO, HS_ALTO = 42.0, 38.1
 
 # Redes del lado de red. Todo lo que no este aqui es SELV y tiene que quedar al
 # otro lado de la barrera. PE entra en la lista aunque no lleve pista: su unico
@@ -78,186 +83,86 @@ def es_red(net: str) -> bool:
 # ref -> (x, y, rotacion). Medido, no estimado: ver la tabla de patios en el
 # commit que introduce este fichero.
 PLACEMENT = {
-    # --- franja de red, columna izquierda, de arriba abajo siguiendo el
-    # recorrido de la corriente: entra por J3, fusible, MOV, NTC, y sale por
-    # J4 hacia el primario de TR1. Repartidos por los 150 mm en vez de
-    # apelotonados arriba: asi caben los taladros de fijacion de la franja en
-    # los puentes de material, con sus 6 mm de separacion al cobre de red.
-    # J3 y J4 van a 180 y un Conn de bornera girada CRECE HACIA LA IZQUIERDA
-    # desde su origen (que es el pin 1, no el centro): a x=14 el borde caia en
-    # 0.97 mm, fuera de la placa.
-    # J3 a rot 0 y no 180: girado, el orden de pines salia PE-N-L de izquierda a
-    # derecha y el neutro tenia que CRUZAR la linea para llegar al MOV. Sin
-    # girar sale L-N-PE, y cada uno tira recto hacia donde va.
-    "J3":  (10.0,  24.0,   0),   # entrada de red 230 V
-    "F1":  (15.0,  45.0,   0),
-    "RV1": (10.0,  72.0,   0),   # el mas ancho de la placa: 23 mm de cuerpo
-    "NT1": (12.0,  98.0,   0),
-    "J4":  (16.0, 118.0, 180),   # salida al primario de TR1
-    # --- entrada del secundario y rectificacion ---
-    "J1":  (42.0,  10.0,   0),   # 12 VAC CT desde TR1
-    "BR1": (68.0,  11.0,   0),
-    # --- bulk. El punto de estrella de GND vive entre estos dos. ---
-    "C1":  (45.0,  33.0,   0),
-    "C2":  (67.0,  33.0,   0),
-    # --- carril +12 V ---
-    "C3":  (37.0,  56.0,   0),
-    "D1":  (52.0,  48.0,   0),
-    "U1":  (84.0,  56.0,   0),
-    "C5":  (48.0,  62.0,   0),
-    "C7":  (58.0,  56.0,   0),
-    "R1":  (44.0,  70.0,   0),
-    "D3":  (62.0,  70.0, 180),
-    # --- carril +5 V (el del medio, sec.10.1) ---
-    "C9":  (37.0,  88.0,   0),
-    "D5":  (52.0,  80.0,   0),
-    "U3":  (84.0,  88.0,   0),
-    "C10": (48.0,  94.0,   0),
-    "C11": (58.0,  88.0,   0),
-    "R3":  (44.0, 102.0,   0),
-    "D6":  (62.0, 102.0, 180),
-    # --- carril -12 V ---
-    "C4":  (37.0, 120.0,   0),
-    "D2":  (52.0, 112.0,   0),
-    "U2":  (84.0, 120.0,   0),
-    "C6":  (48.0, 126.0,   0),
-    "C8":  (58.0, 120.0,   0),
-    "R2":  (44.0, 134.0,   0),
-    "D4":  (62.0, 134.0, 180),
-    # --- salidas y puente de chasis, fila de abajo ---
-    "J2":  (60.0, 143.0,   0),   # bus +12/GND/GND/-12
-    "J6":  (76.0, 143.0,   0),   # feed de +5 V (sec.10.4)
-    "J5":  (40.0, 141.0,   0),   # faston GND -> chasis (sec.13)
+    # --- franja de red 230 V, fila HORIZONTAL arriba (y ~ 15) --------------
+    # En fila y no en columna: asi la barrera es horizontal y deja los 150 mm
+    # de ancho enteros para la fila de disipadores de abajo.
+    "J3":  ( 18.0,  15.0,   0),   # entrada de red: L / N / PE
+    "F1":  ( 38.0,  12.0,   0),   # portafusible cerrado
+    "NT1": ( 58.0,  15.0,   0),   # limitador de inrush
+    "RV1": ( 80.0,  15.0,   0),   # el mas grande de la placa: 23 mm de cuerpo
+    "J4":  (110.0,  15.0,   0),   # salida al primario de TR1
+
+    # --- entrada del secundario y rectificacion ---------------------------
+    "J1":  ( 10.0,  42.0,   0),
+    "BR1": ( 32.0,  39.0,   0),
+    "TP1": ( 52.0,  42.0,   0),   # VRAW+ : el valle que decide todo
+    "TP2": ( 62.0,  42.0,   0),   # VRAW-
+
+    # --- bulk: DOS por riel (9400 uF). Van los cuatro juntos y pegados al
+    # puente para que el lazo de carga sea corto; el punto de estrella vive
+    # entre ellos (sec.7). ---------------------------------------------------
+    "C1":  ( 10.0,  62.0,   0),
+    "C12": ( 28.0,  62.0,   0),
+    "C2":  ( 48.0,  62.0,   0),
+    "C13": ( 66.0,  62.0,   0),
+
+    # --- los tres carriles van en COLUMNAS, cada uno justo encima de su
+    # regulador. En filas horizontales el carril de -12 V tenia que cruzar la
+    # placa entera para llegar a su 7912, cortando los otros dos. ------------
+    # columna A: +12 V, sobre U1
+    "C3":  ( 12.0,  82.0,   0),   # 0.47 uF, entrada del LM2940
+    "C5":  ( 28.0,  82.0,   0),   # 100 uF de ESR controlada: ESTABILIDAD
+    "C7":  ( 42.0,  82.0,   0),   # 0.1 uF -> se monta junto al conector
+    "D1":  ( 18.0,  94.0,   0),
+    "R1":  ( 38.0,  94.0,   0),
+    "D3":  ( 18.0, 105.0,   0),
+    # crowbar del riel de +12 V: en su propia columna, no perdido por ahi
+    "Q1":  ( 36.0, 105.0,   0),
+    "D7":  ( 14.0, 116.0,   0),
+    "R4":  ( 36.0, 116.0,   0),
+    "C14": ( 14.0, 126.0,   0),
+
+    # columna B: +5 V, sobre U3
+    "C9":  ( 59.0,  82.0,   0),
+    "C10": ( 75.0,  82.0,   0),
+    "C11": ( 89.0,  82.0,   0),
+    "D5":  ( 65.0,  94.0,   0),
+    "R3":  ( 85.0,  94.0,   0),
+    "D6":  ( 65.0, 105.0,   0),
+
+    # columna C: -12 V, sobre U2
+    "C4":  (106.0,  82.0,   0),
+    "C6":  (122.0,  82.0,   0),
+    "C8":  (136.0,  82.0,   0),   # DNP, pero la huella va puesta
+    "D2":  (112.0,  94.0,   0),
+    "R2":  (132.0,  94.0,   0),
+    "D4":  (112.0, 105.0,   0),
+
+    # --- reguladores en fila, cada uno con sus 42 x 38 mm de disipador ----
+    # U2 lleva mica obligatoria: su tab esta a VRAW- (hasta -20 V), no a masa,
+    # y desnudo contra el mismo disipador que U1 seria un corto franco.
+    "U1":  ( 28.0, 154.0,   0),
+    "U3":  ( 75.0, 154.0,   0),
+    "U2":  (122.0, 154.0,   0),
+
+    # --- salidas y puntos de prueba, fila de abajo ------------------------
+    "J5":  ( 18.0, 182.0,   0),   # faston GND -> chasis (sec.13)
+    "J2":  ( 36.0, 182.0,   0),   # bus +12/GND/GND/-12
+    "J6":  ( 54.0, 182.0,   0),   # feed de +5 V
+    "TP3": ( 72.0, 182.0,   0),   # +12V
+    "TP4": ( 84.0, 182.0,   0),   # -12V
+    "TP5": ( 96.0, 182.0,   0),   # +5V
+    "TP6": (108.0, 182.0,   0),   # GND
 }
 
-# Los dos de la izquierda caen en los puentes de material que deja la ranura
-# (fuera del tramo RANURA_Y0..RANURA_Y1), que es lo unico que sujeta la franja
-# de red: sin ellos son 126 mm de tira colgando de dos puentes. Cuentan como
-# SELV en la medida de la barrera — un separador metalico esta a potencial de
-# chasis — asi que el propio script comprueba que no se acerquen a la red.
-# ---------------------------------------------------------------- pistas ----
-# (red, capa, puntos, ancho). F = cara de componentes, B = cara de soldadura.
-#
-# Reparto de capas: GND va entero por B, y todo lo demas por F. No es capricho
-# — GND tiene 23 pads repartidos por toda la placa y si comparte cara con los
-# rieles no hay forma de cerrar la estrella sin cruces por todos lados.
-#
-# NO HAY PLANO DE MASA, y es a proposito. Un pour une todo con todo por el
-# camino mas corto, que es justo lo contrario de la estrella que pide sec.7 y
-# del retorno dedicado de +5 V que exige sec.10.1. Aqui GND es un arbol: sale
-# del punto de estrella (C1.2, en el bulk del riel positivo) y cada rama muere
-# en su grupo funcional, sin bucles.
 F, B = "F.Cu", "B.Cu"
 ANCHO_POT, ANCHO_SEN, ANCHO_RED = 1.0, 0.4, 1.0
+ESTRELLA = (17.5, 62.0)        # = C1.2, el bulk del riel positivo (sec.7)
+TRACKS: list = []              # el ruteo se rehace en la pasada siguiente
+VIAS: list = []
 
-ESTRELLA = (52.5, 33.0)          # = C1.2, el bulk del riel positivo (sec.7)
-
-TRACKS = [
-    # --- lado de red, todo en F y confinado a la franja. Ninguna cruza la
-    # barrera y ninguna puede: al otro lado no hay ni un pad de red. ---
-    ("/L",    F, [(10, 24), (10, 40), (15, 40), (15, 45), (15, 50.1)], ANCHO_RED),
-    ("/L_F",  F, [(22.6, 45), (22.6, 50.1)], ANCHO_RED),
-    ("/L_F",  F, [(22.6, 50.1), (22.6, 56), (10, 56), (10, 72)], ANCHO_RED),
-    ("/L_F",  F, [(10, 72), (10, 90), (12, 90), (12, 98)], ANCHO_RED),
-    # El neutro baja por el canto derecho de la franja (x=26.5) para esquivar
-    # el fusible y el cuerpo del MOV. Ese 26.5 es el cobre de red mas cercano
-    # a la barrera y aun deja 9 mm al primer pad SELV.
-    ("/N",    F, [(15, 24), (15, 30), (27, 30), (27, 66), (20, 66), (20, 72)], ANCHO_RED),
-    ("/N",    F, [(20, 72), (20, 76), (27, 76), (27, 110), (16, 110), (16, 118)], ANCHO_RED),
-    ("/L_TR", F, [(19.5, 98), (19.5, 106), (11, 106), (11, 118)], ANCHO_RED),
-
-    # --- secundario del transformador, en B para dejar F a VRAW+ ---
-    ("/SEC_A", B, [(42, 10), (42, 19), (77, 19), (77, 16.1), (75.6, 16.1)], ANCHO_POT),
-    ("/SEC_B", B, [(52, 10), (52, 4), (79, 4), (79, 11), (75.6, 11)], ANCHO_POT),
-
-    # --- VRAW+. Baja por x=62 (el hueco entre los cuerpos de C1 y C2) y llega
-    # a C1.1 por debajo. A los reguladores entra por pasillos POR ENCIMA de su
-    # carril (y=44 e y=76): a la altura del carril no cabe, porque los pads de
-    # C7/C11 y el de GND del propio regulador estan en medio. ---
-    ("/VRAW+", F, [(68, 11), (68, 6), (62, 6), (62, 44), (45, 44), (45, 33)], ANCHO_POT),
-    ("/VRAW+", F, [(45, 44), (37, 44), (37, 56)], ANCHO_POT),
-    ("/VRAW+", F, [(37, 56), (37, 88)], ANCHO_POT),
-    ("/VRAW+", F, [(45, 44), (52, 44), (52, 48)], ANCHO_POT),
-    ("/VRAW+", F, [(52, 44), (78, 44), (78, 52), (84, 52), (84, 56)], ANCHO_POT),
-    ("/VRAW+", F, [(37, 76), (52, 76), (52, 80)], ANCHO_POT),
-    ("/VRAW+", F, [(52, 76), (78, 76), (78, 84), (84, 84), (84, 88)], ANCHO_POT),
-
-    # --- VRAW-: baja por el canto derecho en F, x=96 ---
-    ("/VRAW-", F, [(68, 16.1), (68, 22), (74.5, 22), (74.5, 33)], ANCHO_POT),
-    ("/VRAW-", F, [(74.5, 33), (74.5, 37), (96, 37), (96, 112)], ANCHO_POT),
-    ("/VRAW-", F, [(96, 112), (86.5, 112), (86.5, 120)], ANCHO_POT),
-    ("/VRAW-", F, [(96, 112), (66, 112), (62.2, 112)], ANCHO_POT),
-    ("/VRAW-", F, [(66, 112), (66, 108), (42, 108), (42, 120)], ANCHO_POT),
-
-    # --- GND: el arbol. Ramas en B, salvo el enlace de J1.2 (en F, porque en B
-    # lo cruzaria SEC_A) y el retorno dedicado. Sale de ESTRELLA y no vuelve. ---
-    ("GND", F, [(47, 10), (47, 26), (52.5, 26), (52.5, 33)], ANCHO_POT),
-    ("GND", B, [(52.5, 33), (67, 33)], ANCHO_POT),
-    # Espina en x=56 y no en 52.5: en 52.5 pasaba justo por encima de D5.1 y
-    # D2.1, que viven en x=52. El pasillo entre los pads de las resistencias
-    # (54.2) y los de los ceramicos (58) deja 2.1 mm libres; una pista de 1 mm
-    # centrada en 56 queda a 0.45 de un lado y 0.65 del otro.
-    ("GND", B, [(52.5, 33), (52.5, 40), (56, 40), (56, 122)], ANCHO_POT),
-    # rama del carril +12 V
-    ("GND", B, [(56, 50), (42, 50), (42, 56)], ANCHO_POT),
-    ("GND", B, [(42, 56), (42, 60), (50.5, 60), (50.5, 62)], ANCHO_POT),
-    ("GND", B, [(56, 50), (63, 50), (63, 56)], ANCHO_POT),
-    ("GND", B, [(63, 50), (86.5, 50), (86.5, 56)], ANCHO_POT),
-    ("GND", B, [(63, 56), (63, 60), (66, 60), (66, 70), (62, 70)], ANCHO_POT),
-    # rama del carril +5 V
-    ("GND", B, [(56, 82), (42, 82), (42, 88)], ANCHO_POT),
-    ("GND", B, [(42, 88), (42, 92), (50.5, 92), (50.5, 94)], ANCHO_POT),
-    ("GND", B, [(56, 82), (63, 82), (63, 88)], ANCHO_POT),
-    ("GND", B, [(63, 82), (86.5, 82), (86.5, 88)], ANCHO_POT),
-    ("GND", B, [(63, 88), (63, 94), (66, 94), (66, 102), (62, 102)], ANCHO_POT),
-    # rama del carril -12 V
-    ("GND", B, [(56, 122), (37, 122), (37, 120)], ANCHO_POT),
-    ("GND", B, [(56, 122), (48, 122), (48, 126)], ANCHO_POT),
-    ("GND", B, [(56, 122), (58, 122), (58, 120)], ANCHO_POT),
-    ("GND", B, [(58, 122), (84, 122), (84, 120)], ANCHO_POT),
-    ("GND", B, [(56, 122), (44, 122), (44, 134)], ANCHO_POT),
-    # rama de salidas: rodea POR DEBAJO de los conectores (y=146)
-    ("GND", B, [(56, 122), (56, 146), (62.5, 146), (62.5, 143)], ANCHO_POT),
-    ("GND", B, [(62.5, 146), (65.1, 146), (65.1, 143)], ANCHO_POT),
-    ("GND", B, [(56, 139), (42.5, 139), (42.5, 141)], ANCHO_POT),
-    ("GND", B, [(42.5, 139), (37.5, 139), (37.5, 141)], ANCHO_POT),
-    # RETORNO DEDICADO del +5 V (J6.2) -> estrella, sin tocar ninguna otra rama.
-    # sec.10.1 lo exige: el backlight del LCD va conmutado y su corriente no
-    # puede compartir camino con la referencia analogica. Sube por el canto
-    # derecho (x=98), la unica columna libre de ramas, y cambia a B con una via.
-    ("GND", F, [(78.5, 143), (78.5, 138), (98, 138), (98, 45)], ANCHO_POT),
-    ("GND", B, [(98, 45), (98, 30), (52.5, 30), (52.5, 33)], ANCHO_POT),
-
-    # --- rieles de salida. El tramo del carril va en F; el bajante hasta los
-    # conectores va en B, y cada uno por su columna (90/93/96) elegida para que
-    # el que termina mas a la izquierda gire primero y no corte a los otros. ---
-    ("+12V", F, [(89.1, 56), (89.1, 66), (48, 66), (48, 62)], ANCHO_POT),
-    ("+12V", F, [(58, 66), (58, 56)], ANCHO_POT),
-    ("+12V", F, [(58, 56), (58, 52), (62.2, 52), (62.2, 48)], ANCHO_POT),
-    ("+12V", F, [(48, 66), (44, 66), (44, 70)], ANCHO_POT),
-    ("+12V", B, [(89.1, 56), (97, 60), (97, 146), (67.6, 146), (67.6, 143)], ANCHO_POT),
-    ("+5V",  F, [(89.1, 88), (89.1, 98), (48, 98), (48, 94)], ANCHO_POT),
-    ("+5V",  F, [(58, 98), (58, 88)], ANCHO_POT),
-    ("+5V",  F, [(58, 88), (58, 84), (62.2, 84), (62.2, 80)], ANCHO_POT),
-    ("+5V",  F, [(48, 98), (44, 98), (44, 102)], ANCHO_POT),
-    ("+5V",  B, [(89.1, 88), (93, 92), (93, 137), (76, 137), (76, 143)], ANCHO_POT),
-    ("-12V", F, [(89.1, 120), (89.1, 130), (50.5, 130), (50.5, 126)], ANCHO_POT),
-    ("-12V", F, [(63, 130), (63, 120)], ANCHO_POT),
-    ("-12V", F, [(63, 130), (63, 126), (52, 126), (52, 112)], ANCHO_POT),
-    ("-12V", F, [(63, 130), (62, 130), (62, 134)], ANCHO_POT),
-    ("-12V", B, [(89.1, 120), (90, 124), (90, 133), (70, 133), (70, 141), (60, 141), (60, 143)], ANCHO_POT),
-
-    # --- anodos de los LED (girados 180, asi el anodo mira a su resistencia) ---
-    ("Net-(D3-A)", F, [(54.2, 70), (59.5, 70)], ANCHO_SEN),
-    ("Net-(D6-A)", F, [(54.2, 102), (59.5, 102)], ANCHO_SEN),
-    ("Net-(D4-A)", F, [(54.2, 134), (59.5, 134)], ANCHO_SEN),
-]
-
-# Cambios de capa a media pista. Solo hace falta uno: el retorno dedicado.
-VIAS = [(98.0, 45.0, "GND")]
-
-MOUNTING = [("H1", 11.0, 7.0), ("H2", 93.5, 7.0),
-            ("H3", 11.0, 143.5), ("H4", 93.5, 143.5)]
+MOUNTING = [("H1", 7.0, 7.0), ("H2", 143.0, 7.0),
+            ("H3", 7.0, 193.0), ("H4", 143.0, 193.0)]
 MOUNT_D = 3.2                   # M3, SIN pad de cobre (ver abajo)
 
 
@@ -415,11 +320,11 @@ def contorno(board: pcbnew.BOARD) -> None:
     for x1, y1, x2, y2 in [(0, 0, W, 0), (W, 0, W, H), (W, H, 0, H), (0, H, 0, 0)]:
         linea(x1, y1, x2, y2)
 
-    a, b = X_BARRERA - RANURA_ANCHO / 2, X_BARRERA + RANURA_ANCHO / 2
-    for x1, y1, x2, y2 in [(a, RANURA_Y0, b, RANURA_Y0),
-                           (b, RANURA_Y0, b, RANURA_Y1),
-                           (b, RANURA_Y1, a, RANURA_Y1),
-                           (a, RANURA_Y1, a, RANURA_Y0)]:
+    a, b = Y_BARRERA - RANURA_ANCHO / 2, Y_BARRERA + RANURA_ANCHO / 2
+    for x1, y1, x2, y2 in [(RANURA_X0, a, RANURA_X1, a),
+                           (RANURA_X1, a, RANURA_X1, b),
+                           (RANURA_X1, b, RANURA_X0, b),
+                           (RANURA_X0, b, RANURA_X0, a)]:
         linea(x1, y1, x2, y2)
 
 
@@ -433,11 +338,11 @@ def reserva_disipadores(board: pcbnew.BOARD) -> None:
     """
     for ref in ("U1", "U2", "U3"):
         x, y, _ = PLACEMENT[ref]
-        h = HS_LADO / 2
-        for x1, y1, x2, y2 in [(x - h, y - h, x + h, y - h),
-                               (x + h, y - h, x + h, y + h),
-                               (x + h, y + h, x - h, y + h),
-                               (x - h, y + h, x - h, y - h)]:
+        a, h = HS_ANCHO / 2, HS_ALTO / 2
+        for x1, y1, x2, y2 in [(x - a, y - h, x + a, y - h),
+                               (x + a, y - h, x + a, y + h),
+                               (x + a, y + h, x - a, y + h),
+                               (x - a, y + h, x - a, y - h)]:
             sh = pcbnew.PCB_SHAPE(board)
             sh.SetShape(pcbnew.SHAPE_T_SEGMENT)
             sh.SetStart(pcbnew.VECTOR2I(mm(x1), mm(y1)))
@@ -551,9 +456,9 @@ def main() -> None:
         ref = fp.GetReference()
         if ref in ("U1", "U2", "U3"):
             p = fp.GetPosition()
-            bb = pcbnew.BOX2I(pcbnew.VECTOR2I(p.x - mm(HS_LADO / 2),
-                                              p.y - mm(HS_LADO / 2)),
-                              pcbnew.VECTOR2I(mm(HS_LADO), mm(HS_LADO)))
+            bb = pcbnew.BOX2I(pcbnew.VECTOR2I(p.x - mm(HS_ANCHO / 2),
+                                              p.y - mm(HS_ALTO / 2)),
+                              pcbnew.VECTOR2I(mm(HS_ANCHO), mm(HS_ALTO)))
         else:
             bb = fp.GetCourtyard(pcbnew.F_CrtYd).BBox()
             if bb.GetWidth() == 0:
@@ -567,8 +472,8 @@ def main() -> None:
     # no sale en la comprobacion de arriba. J5 se colo asi: su patio pisaba el
     # extremo inferior de la ranura, o sea el faston medio en el aire.
     ranura = pcbnew.BOX2I(
-        pcbnew.VECTOR2I(mm(X_BARRERA - RANURA_ANCHO / 2), mm(RANURA_Y0)),
-        pcbnew.VECTOR2I(mm(RANURA_ANCHO), mm(RANURA_Y1 - RANURA_Y0)))
+        pcbnew.VECTOR2I(mm(RANURA_X0), mm(Y_BARRERA - RANURA_ANCHO / 2)),
+        pcbnew.VECTOR2I(mm(RANURA_X1 - RANURA_X0), mm(RANURA_ANCHO)))
     sobre_ranura = [ref for ref, bb in cajas
                     if distancia_bbox(bb, ranura) == 0.0]
     print(f"piezas montadas sobre la ranura: {len(sobre_ranura)} {sobre_ranura}")
