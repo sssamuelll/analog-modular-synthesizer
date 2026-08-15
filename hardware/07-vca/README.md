@@ -1,5 +1,12 @@
 # Hardware — Módulo 7: VCA
 
+> [!IMPORTANT]
+> **El SAM17 pasa a polifónico de 4 voces.** Cuatro VCA, cada uno con la
+> envolvente de su voz y su propia velocity.
+>
+> Arquitectura completa: [`docs/architecture-poly.md`](../../docs/architecture-poly.md)
+
+
 > Documentación funcional: [`docs/modules/07-vca.md`](../../docs/modules/07-vca.md).
 
 ## Resumen
