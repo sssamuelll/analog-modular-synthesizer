@@ -71,21 +71,68 @@ matriz de modulación · memoria de patches · autoafinado
 y no ampliable. Con DDR5 y NVMe como requisitos, la familia entera queda fuera —
 no por opinión, por hoja de datos.
 
-Lo que sí cumple, clase **Intel N100 / N150** (Alder Lake-N):
+Lo elegido: **Ryzen 9 móvil de última generación**, clase
+**Ryzen AI 9 HX 470** (Gorgon Point, Zen 5):
+
+| | Ryzen 9 5900X (la máquina de desarrollo) | **Ryzen AI 9 HX 470** |
+|---|---|---|
+| Núcleos / hilos | 12 / 24 | **12 / 24** (4 Zen 5 + 8 Zen 5c) |
+| Reloj | 3.7 → ~4.8 GHz | 2.0 → **5.2 GHz** |
+| TDP | **105 W** | **15–54 W configurable**, base 28 |
+| RAM | DDR4-2666 | **DDR5-5600 SO-DIMM**, hasta 128 GB |
+| Disco | — | PCIe 4, **2× M.2 NVMe** |
+
+Mismo número de núcleos que el 5900X, dos generaciones de arquitectura por
+delante, y **a una cuarta parte del consumo**.
+
+### El calor es el enemigo de la afinación
+
+Este es el criterio que manda al elegir el procesador, y no es el consumo por el
+consumo.
+
+Todo el sistema de autoafinado existe porque el convertidor exponencial del VCO
+se desvía **−0.33 % por cada grado centígrado**. Un procesador de escritorio de
+105 W dentro de la misma caja **no es que no quepa: sabotea el instrumento**,
+peleando justo contra lo que se diseñó para corregirlo.
+
+Por eso la regla es: **el cómputo va abajo, con su propio camino térmico hacia
+fuera, y lo más lejos posible de las placas analógicas.** El case de dos pisos
+da exactamente ese sitio.
+
+### El TDP configurable es una perilla, no una decisión
+
+Los **15–54 W** del HX 470 se ajustan por firmware. Eso convierte
+«prepararlo para que sea potente» en algo literal:
+
+- **15 W** → silencioso, para tocar
+- **54 W** → toda la potencia, para renderizar o procesar
+
+**La envolvente se diseña para 54 W y se corre a 15 mientras se toca.** No es un
+compromiso, es un ajuste.
+
+### La envolvente que hay que reservar
 
 | | |
 |---|---|
-| RAM | **DDR5-4800 SO-DIMM**, ampliable |
-| Disco | **2× M.2 NVMe** PCIe 3.0 |
-| Alimentación | **12 V DC**, entrada ancha 12–19 V |
-| TDP | **6 W**, disipación pasiva |
-| CPU | 4 núcleos, hasta 3.4–3.6 GHz |
+| Potencia | 54 W de CPU + NVMe + RAM ≈ **75–90 W de sistema**. Fuente propia |
+| Térmica | camino de disipación al exterior, en el piso inferior |
+| Espacio | placa formato mini-PC, del orden de 105 × 105 a 130 × 130 mm |
 
-Lo pasivo no es un detalle: **un ventilador dentro de un instrumento es ruido**,
-acústico y eléctrico. Era el problema que traía el Pi 5 bajo carga sostenida.
+Reservando eso entra cualquier cosa desde un N100 hasta el HX 470, así que la
+elección concreta del chip **deja de ser irreversible**.
+
+Sobre el ventilador: **uno dentro de un instrumento es ruido**, acústico y
+eléctrico. A 15 W se puede llevar en pasivo o con un ventilador grande y lento,
+que es prácticamente inaudible — los que se oyen son los pequeños a muchas
+revoluciones. A 54 W hace falta activo, y por eso ese modo es para renderizar,
+no para tocar.
 
 Y x86 abre lo que en un Pi nunca fue realista: **DAWs de verdad** — Reaper,
 Bitwig, Ardour corren nativos en Linux x86.
+
+Un apunte para no comprar de más: **la latencia de audio en Linux la decide
+sobre todo el kernel** (compilado con `PREEMPT_RT`), no el procesador. Una
+máquina modesta bien configurada late mejor que una bestia mal configurada.
 
 ### Lo que el cambio a x86 obliga a mover
 
@@ -108,7 +155,69 @@ instrumento inyectaría ruido justo donde el presupuesto de masa dice que no
 puede haberlo (1.21 cents es el suelo del instrumento). Misma regla que ya
 aplicaba al Pi (módulo 1 §3).
 
-## 4. El agente de IA
+## 4. Rust en el kernel: dónde sí y dónde no
+
+El instrumento se maneja **a nivel de kernel con Rust**. Pero hay una frontera
+real y conviene tenerla clara antes de escribir una línea.
+
+### Lo que está maduro (finales de 2026)
+
+| Abstracción | Estado |
+|---|---|
+| **misc device** | dentro. Greg Kroah-Hartman las llamó *«el punto de inflexión»* |
+| **char device** con `ioctl` | dentro |
+| registro de dispositivos **USB** | dentro |
+| drivers **HID** | desde marzo de 2026 |
+| PCI, plataforma, DMA, DRM | dentro o en curso |
+
+### Lo que NO existe
+
+**ALSA no tiene abstracción en Rust.** El subsistema de sonido sigue siendo C, y
+no hay nada en curso que lo cambie a corto plazo.
+
+Eso no es un obstáculo, es una señal de dónde poner el esfuerzo.
+
+### Dónde va nuestro módulo: el enlace del instrumento
+
+**`/dev/sam17` — un char device en Rust para el canal micro ↔ máquina.**
+
+Es el sitio correcto por tres razones, y ninguna es «porque mola»:
+
+1. **Es exactamente la abstracción que está madura.** Char device con `ioctl` es
+   de lo primero que se estabilizó en Rust for Linux.
+2. **Es la frontera del sistema.** Todo lo que quiera hablar con el instrumento
+   —el secuenciador, la DAW, el agente de IA— pasa por ahí. Un solo driver
+   contra media docena de programas reimplementando manejo de puerto serie cada
+   uno.
+3. **Se beneficia de vivir en el kernel.** El transporte deja de sufrir el
+   jitter del planificador de espacio de usuario, y con `PREEMPT_RT` se integra
+   con la planificación de tiempo real como corresponde.
+
+Lo que el módulo expone: apertura de canal, envío y recepción de mensajes hacia
+el micro, y `ioctl` para lo que no es flujo — estado de calibración, patches,
+modo. El formato de esos mensajes es el protocolo del §7, que sigue sin definir.
+
+### El audio NO va en el kernel
+
+Va con el **driver USB audio class que ya existe** (en C, probado, y funciona),
+y el DSP en **espacio de usuario** con prioridad de tiempo real sobre un kernel
+compilado con `PREEMPT_RT`.
+
+Escribir un driver de audio en Rust hoy significaría crear la abstracción de
+ALSA entera antes de escribir una sola línea útil. Eso es un proyecto de kernel,
+no un proyecto de instrumento.
+
+### Lo que cuesta, dicho por delante
+
+- **Un módulo va atado a la versión del kernel.** Cada actualización puede pedir
+  ajustes. Es mantenimiento permanente, no un «se escribe y ya».
+- **Las abstracciones incompletas se pagan en `unsafe`.** Donde no llega el
+  binding hay que bajar a FFI a mano, y ahí Rust deja de protegerte.
+- **Depurar en el kernel es mucho más duro** que en espacio de usuario, y un
+  fallo se lleva la máquina entera por delante — aunque Rust reduce mucho esa
+  clase de fallo, que es justamente el argumento para usarlo.
+
+## 5. El agente de IA
 
 **El LLM es remoto.** El instrumento no corre modelos: llama a una API. Eso
 mantiene el cómputo local en lo que de verdad necesita — red, un runtime
@@ -143,7 +252,7 @@ Dos cosas que **no** están y hay que construir:
    su API solo hace `/health` y `/score`. Si el instrumento responde a voz, la
    ruta HTTP hay que crearla.
 
-## 5. Qué placa hacemos nosotros
+## 6. Qué placa hacemos nosotros
 
 **La del micro, y solo la del micro.**
 
@@ -162,17 +271,21 @@ pines del Pi, el LCD y los cuatro pulsadores por **un QFN pequeño** deshace el
 atasco de ruteo que dejó 17 redes al aire en el módulo 2 (issue #22). El lado
 digital estaba congestionado precisamente por esas piezas.
 
-## 6. Lo que NO está confirmado
+## 7. Lo que NO está confirmado
 
-1. **La placa x86 concreta no está elegida.** Los números de arriba son de la
-   clase N100/N150 en general. Hay que fijar modelo, y comprobar que su entrada
-   de 12 V y su disipación pasiva aguantan **dentro de una caja cerrada** con el
-   calor de los reguladores lineales al lado.
-2. **El consumo real bajo carga de audio** no está medido. 6 W es el TDP del
-   chip, no el del sistema con NVMe y DDR5 trabajando.
+1. **La placa concreta no está elegida**, solo la clase. Hay que fijar modelo y
+   comprobar la entrada de continua, y sobre todo **medir la temperatura dentro
+   de la caja cerrada** con los reguladores lineales al lado.
+2. **El consumo real bajo carga de audio** no está medido, y el TDP es del chip,
+   no del sistema con NVMe y DDR5 trabajando.
+3. **A qué TDP se puede correr en pasivo** dentro de la caja: es lo que decide
+   si tocar es silencioso. Hay que medirlo, no suponerlo.
 3. **La latencia del audio por USB** no está medida y decide si los efectos
    sobre las voces analógicas son usables.
 4. **El protocolo micro ↔ máquina** no está definido. MIDI es lo obvio para
    notas y reloj; para el resto (patches, calibración, agente) hace falta algo
    más y no está decidido si es MIDI SysEx, serie con un protocolo propio, o USB.
-5. Nada de esto está medido. Son hojas de datos y arquitectura.
+   Es lo que expone `/dev/sam17` (§4), así que bloquea al módulo de kernel.
+5. **Contra qué versión de kernel se fija el módulo** no está decidido, y no es
+   menor: un módulo fuera del árbol se rompe con las actualizaciones.
+6. Nada de esto está medido. Son hojas de datos y arquitectura.
