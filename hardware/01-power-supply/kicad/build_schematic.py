@@ -180,7 +180,7 @@ PARTS = [
     # el mismo esparrago. Electricamente cuelga de GND como cualquier retorno.
     ("J5",  "Connector:Conn_01x01_Pin",       25.40, Y_CH,    0, "CHASIS"),
     ("J1",  "Connector:Conn_01x03_Pin",       30.48, YMID,    0, "12VAC CT 2A"),
-    ("BR1", "Device:D_Bridge_+-AA",           91.44, YMID,   90, "KBP206"),
+    ("BR1", "Device:D_Bridge_+-AA",           91.44, YMID,   90, "DB207"),
     # --- riel +12V ---
     ("C1",  "Device:C_Polarized",            121.92, 69.85,   0, "4700uF/25V"),
     # Segundo bulk por riel. Con 4700 uF el valle de VRAW+ a 207 V queda en
@@ -229,13 +229,14 @@ PARTS = [
 # Varistor.pretty llega a D12, no hay libreria de termistores THT y no hay
 # ningun faston de PCB.
 #
-# BR1 es el unico sin resolver del todo. El nombre del simbolo codifica el
-# ORDEN FISICO de patillas (+-AA = pin1:+, pin2:-, pin3:~, pin4:~) y KiCad trae
-# cinco variantes justo por eso. Cual toca depende del puente que se compre, y
-# las fuentes secundarias se contradicen entre si. La geometria DIP-4 es la
-# misma en los cuatro casos, asi que la placa se puede colocar y rutear igual;
-# lo que cambia es que pad cae en que red. VERIFICAR CONTRA EL DATASHEET DE LA
-# PIEZA COMPRADA ANTES DE FABRICAR (design-notes.md sec.14, checklist sec.9).
+# BR1: resuelto (issue #11). La pieza es el DB207 (case DB-1, el unico puente
+# de 2A que existe en DIP-4 W7.62/P5.08; el KBP206 del BOM original era SIP en
+# linea y no encajaba en la huella). Su datasheet primario (HY Electronic,
+# DB201-DB207 Rev.11, hygroup.com.tw) da: vista superior, fila de arriba - +,
+# fila de abajo ~ ~. Montado a 90 grados eso cae +:pad1, -:pad2, ~:pads 3/4 —
+# exactamente lo que codifica D_Bridge_+-AA, asi que ni el simbolo ni las
+# pistas cambiaron. Al montar: la esquina + del cuerpo va a la cruz + del silk
+# (design-notes.md sec.14.6, checklist sec.9 paso 2).
 FOOTPRINT = {
     # --- primario 230 VAC ---
     "J3":  "TerminalBlock:TerminalBlock_MaiXu_MX126-5.0-03P_1x03_P5.00mm",
