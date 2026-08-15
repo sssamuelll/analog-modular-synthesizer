@@ -7,9 +7,16 @@ hardware, código del firmware MIDI/CV o ideas nuevas para módulos adicionales.
 
 ## Antes de empezar
 
-1. Lee el [README](README.md) y la [arquitectura](docs/architecture.md).
-2. Revisa los *issues* abiertos para ver si tu idea ya está en discusión.
-3. Si vas a hacer un cambio grande, abre primero un *issue* para conversarlo.
+1. **Lee la [constitución](.specify/memory/constitution.md).** Son siete
+   principios innegociables y las puertas de calidad del proyecto. No son buenas
+   intenciones: cada uno está ahí porque su ausencia ya costó trabajo perdido, y
+   el caso viene citado. Todo PR se revisa contra ella.
+2. Lee el [README](README.md) y la
+   [arquitectura polifónica](docs/architecture-poly.md) — el diseño vigente es
+   un poly de 4 voces; [`architecture.md`](docs/architecture.md) es la
+   referencia monofónica de la tesis.
+3. Revisa los *issues* abiertos para ver si tu idea ya está en discusión.
+4. Si vas a hacer un cambio grande, abre primero un *issue* para conversarlo.
 
 ## Flujo de trabajo
 
