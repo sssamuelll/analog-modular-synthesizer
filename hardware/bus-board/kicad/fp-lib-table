@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "sam17")(type "KiCad")(uri "${KIPRJMOD}/sam17.pretty")(options "")(descr "Huellas propias del bus board: PTC radial que admite Bourns MF-R025 y Bel Fuse 0ZRE0025FF con el pad 2 duplicado"))
+)
