@@ -12,6 +12,13 @@ Esquemáticos, PCBs y BOMs para los 7 módulos del SAM17.
 | 6 — ADSR | [`06-adsr/`](06-adsr) | [`docs/modules/06-adsr.md`](../docs/modules/06-adsr.md) |
 | 7 — VCA | [`07-vca/`](07-vca) | [`docs/modules/07-vca.md`](../docs/modules/07-vca.md) |
 
+Y una placa que no es un módulo de la tesis pero sin la cual los módulos no
+afinan entre sí:
+
+| Placa | Carpeta | Qué decide |
+|---|---|---|
+| Bus board | [`bus-board/`](bus-board) | Reparte ±12 V a todos. **1 mV de diferencia de masa entre dos módulos = 1.2 cents de desafinación**; el presupuesto está en [`bus-board/ground_budget.py`](bus-board/ground_budget.py) y sale a 1.21 de 2 |
+
 ## Estructura por módulo
 
 Cada subdirectorio sigue la misma convención:

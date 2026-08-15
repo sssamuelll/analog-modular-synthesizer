@@ -1036,6 +1036,151 @@ Aun así, las dos cifras salen de un modelo cuyo transformador es una fuente ide
 con una resistencia serie. **Mídelas con osciloscopio en el valle**, a plena carga
 y en caliente, antes de dar el diseño por bueno.
 
+## 18. Zumbido: qué radia de verdad, y dónde va el transformador
+
+Frente abierto junto con el bus board. La pregunta de partida era "cómo oriento
+el toroide y a qué distancia lo pongo". La respuesta empieza antes: **el
+transformador casi nunca es lo que más radia en una fuente lineal.**
+
+### 18.1 El emisor no es el núcleo, es el lazo de carga
+
+Por el lazo transformador → puente → bulk no circula la corriente continua.
+Circulan **picos estrechos de 2-3 veces la continua**, a 100 Hz, con flancos de
+microsegundos (§16.4 ya lo usaba para elegir transformador). Y lo que se acopla
+a un lazo vecino no va con *I*, va con **dI/dt**.
+
+El acoplo entre dos lazos es un dipolo magnético:
+
+```
+V = (mu0 / 4pi) * (2 * Av / r^3) * A * dI/dt
+```
+
+donde `A` es el área del lazo emisor, `Av` la del lazo víctima y `r` la
+distancia. Todo lo que se puede hacer está en esa fórmula: bajar `A`, bajar
+`Av`, o subir `r`.
+
+Elegir un toroide en vez de un EI baja el campo del **núcleo**, que es un
+término distinto y que aquí resulta no ser el que manda.
+
+### 18.2 Lo que sí se pudo medir: el lazo de la PCB
+
+[`simulations/power/hum_loop.py`](../../../simulations/power/hum_loop.py) lo
+mide **sobre la placa ya ruteada**, no sobre una intención:
+
+| | |
+|---|---|
+| Caja envolvente de `J1`+`BR1`+`C1`+`C12` | 29.6 × 23.0 mm → **6.81 cm²** |
+| Separación media VRAW+ ↔ retorno de masa | 5.0 mm |
+| Inducido en un lazo víctima de 10 cm² a 150 mm | **5.0 µV** |
+| Referencia: −100 dBu | 7.75 µV |
+
+Pasa, con poco margen. El barrido completo:
+
+| Distancia | Inducido |
+|---|---|
+| 50 mm | 136 µV |
+| 100 mm | 17.0 µV |
+| **150 mm** | **5.0 µV** |
+| 200 mm | 2.1 µV |
+| 300 mm | 0.6 µV |
+
+El 1/r³ es brutal: **duplicar la distancia divide por ocho**. Alejar 5 cm más
+vale más que cualquier apantallamiento.
+
+Un aviso sobre este número, porque el primer intento estuvo mal: el script
+calculaba el área como "largo de la ida × separación media" y daba 7.82 cm²,
+**más que su propia caja envolvente de 6.81**, lo cual es imposible para un lazo
+cerrado. Contaba los 157 mm enteros de VRAW+, incluidas las bajadas a los
+reguladores y a `TP1`, que no forman parte del lazo de carga. Se quedó la caja
+envolvente, que es una cota superior de verdad.
+
+### 18.3 El que de verdad manda: el mazo del secundario
+
+Aquí está el hallazgo del frente. El secundario son **tres hilos sueltos**
+(12 V / CT / 12 V) desde el toroide hasta `J1`, y llevan exactamente la misma
+corriente de pico que el lazo de la placa.
+
+Con 200 mm de recorrido y los hilos separados 20 mm, el lazo son **40 cm²**.
+Seis veces el de la PCB. A 150 mm eso son **~29 µV**: cuatro veces por encima
+del suelo de −100 dBu, y haría falta irse a ~270 mm para bajar de ahí.
+
+> **El cableado del secundario radia más que la placa y más que el núcleo.**
+> Trenzarlo lo lleva a un área neta prácticamente nula, porque cada vuelta
+> invierte el signo del área.
+
+Reglas, por orden de lo que más vale:
+
+1. **Los tres hilos del secundario, trenzados** desde el toroide hasta `J1`.
+   Gratis y es la mejora más grande de toda esta sección.
+2. **El par del primario, también trenzado** (`J4` → toroide). Menos corriente,
+   pero está a 230 V y el mismo argumento aplica al acoplo capacitivo.
+3. **Lo más cortos que se pueda.** El área crece con el largo.
+
+### 18.4 Orientación del toroide
+
+El campo residual de un toroide sale de que el devanado da una vuelta completa
+alrededor del núcleo: se comporta como **una espira en el plano del toroide**,
+con el momento dipolar **a lo largo de su eje** (el que atraviesa el agujero).
+
+Para un dipolo `m` en el eje `z`:
+
+| Posición de la víctima | Campo | Dirección |
+|---|---|---|
+| En el eje, a distancia `d` | `mu0*m / (2*pi*d^3)` | paralelo al eje |
+| En el ecuador, a distancia `d` | `mu0*m / (4*pi*d^3)` | antiparalelo al eje |
+
+El ecuador ya es **2× mejor** que el eje solo por magnitud. Pero lo que decide
+es la *dirección*: el flujo que ve una PCB es la componente **perpendicular a
+su plano**.
+
+- Toroide con el eje **apuntando a las placas** → el campo llega perpendicular a
+  ellas. Acoplo máximo. **Este es el caso malo.**
+- Toroide con el eje **paralelo al plano de las placas**, con las placas hacia
+  su ecuador → el campo en las placas queda contenido *en* su plano y el flujo
+  es casi cero. **Este es el bueno.**
+
+En el SAM17 sale gratis: los paneles son verticales y las PCB van montadas
+detrás, o sea en planos verticales. **Un toroide atornillado plano al suelo del
+cajón tiene el eje vertical, que es paralelo a esos planos.** El montaje
+estándar ya es el correcto.
+
+Lo que **no** hay que hacer: montarlo sobre un soporte vertical en la trasera
+con el eje apuntando hacia adelante, hacia los módulos. Es el caso malo, y es
+una forma perfectamente razonable de montar un transformador si nadie te dice
+por qué no.
+
+### 18.5 Dónde va todo en el cajón de 950 mm
+
+- **Toroide**: en una punta, plano contra el suelo (eje vertical), a **≥ 200 mm**
+  del módulo de audio más cercano. Con 1/r³, 200 mm en vez de 150 baja el
+  acoplo un 58 %.
+- **PCB de la fuente**: junto al toroide, para que el mazo del secundario sea
+  corto. Lo que se aleja del audio es el conjunto, no cada pieza por separado.
+- **VCO y VCF lo más lejos posible del toroide.** Son los que más duelen: un
+  error en la referencia de tono no se enmascara, se oye como desafinación.
+- **Bus board**: a lo largo del centro, detrás de los paneles, para que los
+  cables de bajada bajen ≤ 150 mm (bus-board §4). Que quede lejos del toroide es
+  gratis y conveniente: sus cables son el lazo víctima más grande del aparato.
+
+### 18.6 Lo que NO está confirmado de esta sección
+
+1. **`T_FLANCO = 20 µs`** es una estimación del flanco del pico de carga. Es el
+   parámetro más flojo de todo §18 y el resultado es proporcional a él: con 5 µs
+   los números se multiplican por cuatro y el margen a 150 mm desaparece. Se mide
+   con una sonda de corriente en el secundario, o por la caída sobre una
+   resistencia serie pequeña.
+2. **El área del lazo víctima, 10 cm²**, es una suposición razonable para una
+   placa de módulo. No se ha medido en ninguna de las placas 2-7 porque todavía
+   no están ruteadas.
+3. **El campo residual del toroide no entra en el cálculo.** No hay dato de
+   momento dipolar en el datasheet del Talema — casi ningún fabricante lo
+   publica. Lo de §18.4 es la *dirección* correcta de montaje, no una cifra.
+4. **Nada de esto sustituye a medirlo.** El procedimiento: con el instrumento
+   montado y sin señal, mirar el espectro de la salida y buscar la línea de
+   100 Hz (rectificación) frente a la de 50 Hz (campo del núcleo). Cuál de las
+   dos domine dice cuál de los dos mecanismos manda, y hasta entonces esto es
+   una predicción.
+
 ## Referencias
 
 - [Modular Synthesizer Power Supplies (Rabid Elephant)](https://rabidelephant.com/blogs/general/modular-synthesizer-power-supplies-and-distribution-a-thorough-introduction) — fundamento de grounding y distribución.
@@ -1050,3 +1195,7 @@ y en caliente, antes de dar el diseño por bueno.
 - [IEC 60038](https://en.wikipedia.org/wiki/IEC_60038) — estándar de tensión nominal 230 V/50 Hz para Europa, vigente desde la armonización 1983-2003 (§12).
 - [IEC 62368-1 sustituye a 60065 y 60950-1 (Eurofins/MET Labs)](https://metlabs.com/product-safety/faqs-iec-62368-1-replacing-iec-60950-1-iec-60065/) — norma vigente para equipos de audio de red y fecha de sustitución para marcado CE, 20-dic-2020 (§13.4).
 - [IEC 62368-1 ed. 3.0, muestra pública (IEC/iTeh)](https://cdn.standards.iteh.ai/samples/23618/92449acef5b2481da95e6e59387999ad/IEC-62368-1-2018.pdf) — índice donde figura la cláusula 5.6.6 *Resistance of the protective bonding system*. El texto completo de la cláusula es de pago: el límite numérico **no** se reproduce en §13.4 por no haberse podido verificar.
+- [Doepfer A-100 Technical Details](https://doepfer.de/a100_man/a100t_e.htm) — bus de 16 pines: juego de senales, franja roja = -12 V abajo, y la prohibicion expresa de headers con caja y codigo en un bus board (bus-board §9).
+- [Doepfer A-100 DIY](https://doepfer.de/DIY/a100_diy.htm) — CV y Gate en los dos pares de arriba; los dos pines de cada par van unidos en la placa (bus-board §9).
+- [Bel Fuse 0ZRE Series (radial PTC)](https://www.belfuse.com/media/datasheets/products/circuit-protection/ds-cp-0zre-series.pdf) — 0ZRE0025FF: 0.25 A hold, 0.56 A trip, 240 V, 1.3 ohm (bus-board §7).
+- [Bourns MF-R Series](https://www.bourns.com/docs/product-datasheets/mf-r.pdf) — MF-R025 como alternativa: 0.25 A hold, 0.50 A trip, Rmin 1.00 / R1max 1.95 ohm (bus-board §7).

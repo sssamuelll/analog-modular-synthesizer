@@ -83,6 +83,13 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
       regulación ≥ 10.7 %, que ahora el BOM pide explícitamente
 - [ ] **Antes de soldar `U2`**: su tab está a VRAW− (hasta −20 V), no a masa.
       Mica y casquillo aislante obligatorios ([§16.7](notes/design-notes.md))
+- [x] **Zumbido: qué radia y dónde va el transformador** ([§18](notes/design-notes.md)).
+      El lazo de carga del rectificador está **medido sobre la placa ruteada**
+      ([`simulations/power/hum_loop.py`](../../simulations/power/hum_loop.py)):
+      cota de 6.81 cm², que a 150 mm induce 5.0 µV en un lazo víctima de 10 cm²
+      contra un suelo de 7.75 µV. Pero el que manda no es ni ese lazo ni el
+      núcleo: es **el mazo del secundario**, que sin trenzar son ~40 cm² y ~29 µV.
+      Trenzarlo es la mejora más grande y cuesta cero
 - [ ] Verificación de tensiones bajo carga (medida sobre placa real). Lo primero
       a medir es el **valle del rizado de VRAW+** en `TP1`: es el número del que
       depende todo el diseño y su margen es de +0.53 V
