@@ -70,8 +70,11 @@ del módulo — ver [`notes/design-notes.md`](notes/design-notes.md).
 - [x] Esquemático en KiCad — 42 componentes, **ERC 0 infracciones**
 - [x] Netlist verificado: 63 redes, masas separadas, gate no inversor
 - [x] `bom.csv` cuadra designador a designador (42/42)
-- [ ] **PCB ruteada** — siguiente paso. Restricción ya conocida: las dos masas
-      no pueden tocarse en ningún punto del cobre
+- [~] **PCB en curso** — colocación cerrada y verificada, las dos masas partidas
+      con **4.00 mm de hueco medido**, plano analógico entero en una sola isla,
+      DRC **0 infracciones**. Pero quedan **17 redes sin rutear**: la placa **no
+      es fabricable** todavía y `build_pcb.py` sale con error mientras siga así
+      ([§10](notes/design-notes.md))
 - [ ] Firmware: el cambio de rango a 0–7 V hay que reflejarlo en
       [`software/midi-cv/`](../../software/midi-cv)
 - [ ] Medir la deriva del CV con la temperatura sobre placa real
