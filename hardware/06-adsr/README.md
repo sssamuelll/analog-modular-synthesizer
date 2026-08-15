@@ -1,5 +1,13 @@
 # Hardware — Módulo 6: ADSR
 
+> [!IMPORTANT]
+> **El SAM17 pasa a polifónico de 4 voces.** Es el módulo que más cambia:
+> pasa de un disparo a **cuatro envolventes que corren a la vez y sin relación entre
+> sí**, cada una con su propio gate, y un solo juego de mandos para las cuatro.
+>
+> Arquitectura completa: [`docs/architecture-poly.md`](../../docs/architecture-poly.md)
+
+
 > Documentación funcional: [`docs/modules/06-adsr.md`](../../docs/modules/06-adsr.md).
 
 ## Resumen

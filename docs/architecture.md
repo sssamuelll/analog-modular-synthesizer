@@ -1,5 +1,11 @@
 # Arquitectura del SAM17
 
+> **Este documento describe la arquitectura MONOFÓNICA de la tesis.** El diseño
+> vigente es polifónico de 4 voces y está en
+> [`architecture-poly.md`](architecture-poly.md). Esto se queda como referencia
+> del punto de partida: lo que hay aquí sigue siendo válido para entender qué
+> hace la tesis, no para construir.
+
 Este documento describe el sistema completo a nivel de bloques, las
 interfaces entre módulos y las convenciones eléctricas que comparten.
 
