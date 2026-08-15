@@ -39,7 +39,8 @@ Lo que hace:
 - **4 CV de tono**, 1 V/octava.
 - **4 CV de velocity**, para que cada nota tenga su propio ataque.
 - **4 gates** independientes.
-- **Autoafinado** de los cuatro osciladores (§5).
+- **Autoafinado** de los cuatro osciladores, midiendo las cuatro a la vez
+  sobre pulsos lógicos que le llegan del módulo 3 (§5).
 - **La interfaz**: pantalla táctil de 7", que es lo que hace usable la
   configuración de un poly.
 
@@ -59,7 +60,8 @@ Lo que hace:
           ▼    ▼    ▼    ▼         ▼         ▲
      ┌─────────────────────────────────┐     │
      │  MÓDULO 3 — VCO x4              │     │
-     │  4x CEM3340, un juego de mandos │─────┘  (mux 74HC4051)
+     │  4x CEM3340 + 74HC14            │─────┘  4x pulso logico
+     │  un juego de mandos             │        (TUNE_OUT digital)
      └────┬────┬────┬────┬─────────────┘
           ▼    ▼    ▼    ▼
      ┌─────────────────────────────────┐
@@ -91,33 +93,67 @@ parafónico, no polifónico** — y es exactamente la diferencia entre los dos.
 | `CV_PITCH_n` | **0 – 7 V** | 4 | 1 V/oct, 7 octavas (C1–C8). Cambia respecto a los 3–10 V de la tesis: ver issue #18 |
 | `CV_VEL_n` | 0 – 7 V | 4 | Velocity por voz |
 | `GATE_n` | 0 / 10 V | 4 | Activo alto |
-| `TUNE_OUT_n` | audio | 4 | **Nuevo**: salida dedicada de cada VCO hacia el multiplexor de escucha |
+| `TUNE_OUT_n` | **lógico 3.3 V** | 4 | **Nuevo**: onda del VCO ya recortada, para medir su frecuencia. Digital a propósito (§5) |
 | `+12V` / `-12V` | ±12 V | — | 650 mA por riel |
 | `+5V` | 5 V | — | Solo el DAC. **La pantalla NO cuelga de aquí** (§6) |
 | `GNDA` / `GNDD` | — | — | Masas partidas, se unen solo en la estrella del módulo 1 |
 
-## 5. Autoafinado
+## 5. Los dos caminos de señal, que no se tocan
 
-Con una sola voz, un oscilador desafinado suena raro. **Con cuatro, suena mal de
-una forma que no se puede ignorar**: los batidos entre voces delatan errores que
-en monofónico ni notas. Por eso en un poly analógico el autoafinado no es un
-lujo, es infraestructura.
+Es la decisión que resuelve el dilema entre "quiero un instrumento modular" y
+"quiero que se afine solo". Parecen incompatibles hasta que ves que son **dos
+caminos distintos** que casualmente son los dos audio analógico.
 
-### Cómo escucha
+### El camino de sonido
 
-Un **multiplexor analógico 74HC4051** en el módulo 2 recibe las 4 salidas
-`TUNE_OUT` y selecciona cuál se mide. La señal seleccionada pasa por un
-atenuador, acoplo AC y un disparador Schmitt a 3.3 V, y de ahí a un GPIO.
+VCO → VCF → VCA → mixer → salida, y todo lo que el usuario quiera enrutar.
+**Aquí vive la modularidad**, y va por el patch bay (§6).
 
-Coste en pines: **3 de dirección + 1 de habilitación + 1 de medida = 5 GPIO**,
-para 8 osciladores. **No crece con las voces**, que es la razón de usar mux en
-vez de una entrada por VCO.
+### El camino de afinación
+
+El cerebro escucha a cada oscilador para medirle la frecuencia. Eso **no es
+sonido, es instrumentación** — como el cable de un afinador. Dos propiedades que
+lo definen:
+
+- **Va antes del filtro, siempre.** Se afina el oscilador, no el resultado
+  filtrado. Con el filtro cerrado no habría nada que medir.
+- **Es permanente e invisible.** A un afinador no se le patchea.
+
+**Los dos caminos no comparten un solo cable.** Esa separación es lo que permite
+patchear lo que sea sin quedarse nunca sin autoafinado.
+
+### Y el camino de afinación es DIGITAL
+
+A la medida no le hace falta el audio: solo necesita saber cuándo la onda cruza
+por cero. Así que **el recorte se hace en el propio módulo del VCO** con un
+disparador Schmitt, y lo que viaja hasta el cerebro es un **pulso lógico**.
+
+Lo que eso cambia respecto a mandar la señal analógica:
+
+| | Analógico | **Pulso lógico** |
+|---|---|---|
+| Diafonía con la alimentación | se la come | **inmune** |
+| Ensucia el bus con audio | sí | **no** |
+| Piezas en el cerebro | mux + atenuador + acoplo + Schmitt + fuente de −5 V | **un pin** |
+| Medir las 4 voces a la vez | no, el mux va de una en una | **sí** |
+
+Cuesta **un chip** en el módulo 3: un 74HC14 lleva seis disparadores, así que
+uno cubre los cuatro osciladores y sobran dos.
+
+Y para la modularidad es lo importante: **la interfaz de autoafinado pasa a ser
+digital y documentada**. Cualquier oscilador futuro es autoafinable con solo
+sacar un pulso lógico. Eso es mucho más modular que «mándame tu salida
+analógica».
+
+> Esto **sustituye** al multiplexor 74HC4051 que figuraba en la versión anterior
+> de este documento. El mux resolvía el problema equivocado: ahorraba pines a
+> costa de meter audio analógico en el cerebro y de medir de una en una.
 
 ### Cómo mide
 
-**Conteo recíproco**: se cronometra cuánto tardan N periodos y se saca `f = N/T`.
-Es lo contrario de contar ciclos por segundo, y es mucho mejor en las notas
-graves — que es donde el otro método se queda corto.
+**Conteo recíproco**: se cronometra cuánto tardan N periodos y se saca
+`f = N/T`. Es lo contrario de contar ciclos por segundo, y es mucho mejor en las
+notas graves — que es donde el otro método se queda corto.
 
 Los números están en
 [`hardware/02-midi-cv/autotune_budget.py`](../hardware/02-midi-cv/autotune_budget.py),
@@ -125,9 +161,10 @@ que es ejecutable:
 
 | | |
 |---|---|
-| Barrido completo 84 notas × 4 voces | **~14 s** |
+| Barrido completo 84 notas × 4 voces | **3.5 s** — las cuatro en paralelo |
+| Lo mismo de una en una, como exigía el mux | 14.1 s |
 | Precisión de la medida | **0.5 cents** peor caso |
-| Carga para el Pi | 72 flancos por medida, sin divisor por hardware |
+| Coste en pines del cerebro | **4 GPIO**, uno por oscilador |
 
 ### Lo que esto le hace al presupuesto de afinación
 
@@ -156,7 +193,34 @@ arregló primero, antes de saber que iba a ser polifónico.
 Una propiedad que sale gratis: el VCO suena siempre y el gate solo abre el VCA,
 así que **el autoafinado corre en silencio**.
 
-## 6. La alimentación aguanta, y con holgura
+## 6. El patch bay: normalizado
+
+Modularidad total y polifonía tiran en direcciones opuestas, y conviene verlo
+antes de decidir: **en un modular cada cable lleva una señal. Con 4 voces, cada
+conexión son 4 cables.** Un patcheo básico de un sinte de 4 voces serían 16
+cables solo para que suene. Eso no es libertad, es un estorbo.
+
+Los poly de verdad lo resuelven normalizando la cadena de voz y dejando
+patcheable la modulación y las excepciones. Aquí se hace lo mismo, pero sin
+renunciar a nada:
+
+- **Nada enchufado** → es un poly de 4 voces que suena solo, cero cables.
+- **Un cable enchufado** → **rompe el normalizado de esa conexión** y enrutas a
+  tu gusto, incluyendo sacar una voz suelta y meterla por donde quieras.
+- **Y la afinación** corre por su carril digital pase lo que pase.
+
+### Dónde vive el normalizado
+
+**En los jacks de cada módulo, no en un módulo aparte.** El jack elegido —el
+Thonkiconn `WQP-PJ398SM`, el mismo que ya está en el BOM del módulo 2— tiene tres
+patillas: punta, masa y **`TN`**, que es el contacto que se abre al meter un
+cable. Ese pin **es el mecanismo del normalizado**.
+
+En el módulo 2 quedó sin conectar y documentado como «un muelle mecánico que en
+este módulo no se usa». En un instrumento patcheable **ese pin es la pieza
+central**, y hay que conectarlo en todos los módulos.
+
+## 7. La alimentación aguanta, y con holgura
 
 Estimación para 4 voces completas, por riel:
 
@@ -178,15 +242,16 @@ el riel de +5 V está acotado a 300 mA por diseño (módulo 1 §16.12). Va alime
 desde la fuente USB del propio Pi, que es lo que hace el diseño oficial de
 Raspberry Pi de todas formas. Esa fuente sube de 2.5 A a **3 A**.
 
-## 7. Lo que esto le exige a los módulos que faltan
+## 8. Lo que esto le exige a los módulos que faltan
 
 Ninguno de los cuatro está dibujado, así que es el momento de imponerlo.
 
 **Módulo 3 — VCO.** Pasa de 3 osciladores independientes a **4 canales
 idénticos** con un solo juego de mandos. Y necesita algo que la tesis no tiene:
-una **salida `TUNE_OUT` dedicada por oscilador** hacia el módulo 2, además de la
-que va al filtro. Sin eso el autoafinado exige patchear cables a mano y deja de
-ser automático.
+una **salida `TUNE_OUT` DIGITAL por oscilador** — la onda recortada a nivel
+lógico con un 74HC14 en la propia placa, no la señal analógica. Sin eso el
+autoafinado exige patchear cables a mano y deja de ser automático, y meter audio
+por el bus lo ensuciaría (§5).
 
 **Módulo 5 — VCF.** Cuatro filtros idénticos, corte y resonancia comunes. El
 apareamiento entre los cuatro importa: si no filtran igual, el acorde suena
@@ -201,7 +266,7 @@ que corren a la vez y sin relación entre sí.
 **Módulo 4 — Mixer.** Se mueve al final de la cadena (§3) y pasa de sumar tres
 osciladores a sumar cuatro voces ya filtradas.
 
-## 8. Lo que NO está confirmado
+## 9. Lo que NO está confirmado
 
 1. **El jitter de 5 µs** del sellado de tiempos del Pi es de manual, no medido
    en la placa real. Todo el cálculo de autoafinado es proporcional a él. Si

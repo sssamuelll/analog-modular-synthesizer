@@ -5,9 +5,14 @@
 > osciladores independientes y pasa a ser **4 canales idénticos con un solo juego
 > de mandos** — el panel no crece con las voces, la PCB sí.
 >
-> Y necesita algo que la tesis no tiene: una **salida `TUNE_OUT` dedicada por
-> oscilador** hacia el multiplexor de escucha del módulo 2. Sin ella el autoafinado
-> exige patchear cables a mano y deja de ser automático.
+> Y necesita algo que la tesis no tiene: una **salida `TUNE_OUT` DIGITAL por
+> oscilador** — la onda recortada a nivel lógico con un 74HC14 **en esta placa**,
+> no la señal analógica. Un solo 74HC14 lleva seis, así que uno cubre los cuatro
+> y sobran dos.
+>
+> El camino de afinación es **instrumentación, no sonido**: va antes del filtro,
+> permanente, y no se patchea nunca. Por eso es digital — inmune a diafonía, no
+> ensucia el bus con audio, y deja medir las cuatro voces a la vez.
 >
 > Arquitectura completa: [`docs/architecture-poly.md`](../../docs/architecture-poly.md)
 
