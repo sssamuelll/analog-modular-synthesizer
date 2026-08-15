@@ -1,49 +1,61 @@
-# SAM17 — Diseño del case (consola inclinada de acrílico naranja)
+# SAM17 — Diseño del case (consola de dos pisos en acrílico naranja)
 
 **Fecha:** 2026-08-15
-**Estado:** aprobado en diseño, pendiente de plan de implementación
+**Estado:** aprobado en diseño (rev. 2: todo acrílico, dos pisos, sándwich
+modernista), pendiente de plan de implementación
 **Sustituye a:** formato de cajón de la tesis (madera 950 × 440 × 100–200 mm,
 paneles galvanizados pintados) descrito en
 [`docs/modules/08-case-panels.md`](../../modules/08-case-panels.md).
 **Diseño de entrada:** [`docs/architecture-poly.md`](../../architecture-poly.md)
-(4 voces, mandos compartidos, circuitos replicados).
+(4 voces con mandos compartidos y circuitos replicados; dos caminos de señal;
+patch bay normalizado).
 **Gobernada por:** [`.specify/memory/constitution.md`](../../../.specify/memory/constitution.md).
+
+> Rev. 2 — cambios sobre la rev. 1 (consola inclinada de un piso con cheeks
+> de madera): el case pasa a **todo acrílico**, a **dos pisos** y a lenguaje
+> **modernista de sándwich con separadores**; desaparecen la madera, los
+> finger joints y la pantalla táctil del frontal (la interfaz se vuelve app
+> web servida por el propio módulo 2).
 
 ## 1. Objetivo
 
 Diseñar y fabricar el case definitivo del SAM17 como pieza central del
-instrumento: una consola inclinada tipo skiff (silueta del case Eurorack de
-Moog, escalada al SAM17) que mezcla tres materiales con roles claros —
-**cheeks laterales de madera**, **cuerpo estructural de acrílico naranja
-translúcido** y **paneles de módulo en PCB de aluminio**. Todo se fabrica por
-servicios de corte láser/CNC a partir de archivos generados desde un modelo
-paramétrico versionado en este repo.
+instrumento: una **consola de dos pisos, íntegramente de acrílico naranja
+translúcido**, de estilo modernista — placas planas, retícula estricta, cero
+ornamento — unida por **separadores (standoffs) de aluminio a la vista** cuyo
+ritmo de tornillería es parte del diseño. Los módulos cierran las dos caras
+inclinadas con **paneles de PCB de aluminio**. Todo se fabrica por servicio de
+corte láser a partir de archivos generados desde un modelo paramétrico
+versionado en este repo.
 
-No es una reproducción fiel del cajón de la tesis: es la evolución "obra de
-arte" prevista en la sección *Mejoras propuestas* del módulo 8. El case se
-dimensiona **por paneles, no por voces**: la arquitectura polifónica fija que
-los mandos se comparten y los circuitos se replican, así que el frontal no
-crece al crecer las voces — crece la PCB detrás de cada panel. Se conservan
-del original el ancho total de 950 mm, la altura de panel de 190 mm y las
-convenciones de rotulación; el orden lógico pasa a ser el de la cadena
-polifónica — **MIDI/CV · VCO×3 · VCF · ADSR · VCA · MIXER** (el mixer se muda
-al final: en poly cada voz atraviesa su filtro y su VCA antes de mezclarse).
+El case se dimensiona **por paneles, no por voces**: la arquitectura
+polifónica fija que los mandos se comparten y los circuitos se replican, así
+que el frontal no crece al crecer las voces — crece la PCB detrás de cada
+panel. Se conservan de la tesis la altura de panel de 190 mm y las
+convenciones de rotulación. El orden lógico es el de la cadena polifónica,
+repartido en dos pisos por función:
+
+- **Piso superior — generación:** MIDI/CV · VCO ×3
+- **Piso inferior — procesamiento:** VCF · ADSR · VCA · MIXER
+
+(El mixer va al final: en poly cada voz atraviesa su filtro y su VCA antes de
+mezclarse.) El PSU vive dentro del piso inferior, sin panel propio más allá
+de su zona de conexión trasera.
 
 ## 2. Decisiones de diseño
 
 | Decisión | Elección | Por qué |
 |---|---|---|
-| Formato | Consola propia (no Eurorack 3U) | Los módulos de la tesis usan paneles de 190 mm; migrar a 3U obligaría a rediseñar todos los layouts y PCBs |
-| Geometría | Cuña inclinada tipo skiff Moog | Ergonomía, silueta escultural, referencia estética elegida |
-| Estructura | Acrílico naranja translúcido estructural + cheeks de madera | El acrílico es el cuerpo visible ("no completamente cerrado": el interior brilla a través); la madera aporta rigidez en los extremos y el acabado cálido |
-| Paneles de módulo | PCB de aluminio (KiCad → fabricante tipo JLCPCB) | Serigrafía perfecta para rótulos, agujeros exactos, acabado uniforme, bajo costo; reemplaza la lámina galvanizada pintada a mano |
-| Fabricación | Corte láser (acrílico) + CNC (madera) por servicio | Precisión de encajes; los DXF del repo son directamente los archivos de corte |
-| CAD | OpenSCAD paramétrico | Diseño-como-código versionable; exporta DXF (corte) y STL (render en Blender); espesor y kerf son parámetros de entrada |
-| Uniones acrílico–acrílico | Finger joints cementados con solvente | Unión química tipo acuario, look limpio, máxima resistencia |
-| Uniones acrílico–madera | Tornillos M4 en insertos roscados | Los cheeks abrazan el monocasco; nada de dientes contra madera |
-| Servicio | Tapa trasera atornillada + paneles de módulo desmontables | Acceso al PSU/bus board sin desarmar; los paneles son la "tapa" de la cara inclinada |
+| Formato | Consola propia de dos pisos (no Eurorack 3U) | Los módulos usan paneles de 190 mm; la referencia de dos pisos es la silueta, no el estándar |
+| Estilo | Modernista: placas planas, retícula, standoffs vistos | Decisión estética del proyecto; el naranja translúcido hace el trabajo expresivo |
+| Estructura | Sándwich de placas de acrílico + separadores de aluminio | 100 % desmontable; la precisión depende solo de posiciones de agujero (lo que mejor hace el láser); elimina de raíz el problema de encajes |
+| Paneles de módulo | PCB de aluminio (KiCad → fabricante tipo JLCPCB) | Serigrafía perfecta, agujeros exactos, acabado uniforme, bajo costo |
+| Interfaz del módulo 2 | App web servida por el Pi + botón físico AFINAR y LED de estado en el panel | Cualquier tablet/celular por navegador (el Pi levanta su propio punto de acceso Wi-Fi); el botón mantiene el instrumento autosuficiente; desaparecen el recorte de 7" y sus 450–550 mA |
+| Fabricación | Corte láser por servicio | Precisión; los DXF del repo son directamente los archivos de corte |
+| CAD | OpenSCAD paramétrico | Diseño-como-código versionable; exporta DXF (corte) y STL (render en Blender) |
+| Servicio | Todo desatornillable (standoffs) + paneles de módulo desmontables | Ningún pegamento estructural; acceso total al interior |
 
-## 3. Postmortem del intento anterior (y cómo este diseño lo evita)
+## 3. Postmortem del intento anterior (y cómo este diseño lo elimina)
 
 El primer intento (adaptación del diseño de todbot, Thingiverse 3941263,
 cortado en acrílico) falló porque **los dientes no cuadraron**. Causas raíz:
@@ -56,116 +68,124 @@ cortado en acrílico) falló porque **los dientes no cuadraron**. Causas raíz:
 2. Re-escalar el vector completo para compensar rompe el ancho de los dientes
    junto con las dimensiones generales.
 3. El plywood comprime ~0.5 mm y perdona el ajuste a presión; el acrílico es
-   rígido y frágil: o queda flojo o revienta. Un encaje pensado para madera
-   no se transfiere a acrílico sin recalcular la holgura.
+   rígido y frágil: o queda flojo o revienta.
 
-Mitigaciones obligatorias en este diseño:
+La rev. 2 no mitiga el problema: **lo elimina**. La arquitectura de sándwich
+con standoffs no tiene encajes — la geometría crítica son posiciones y
+diámetros de agujero, que no dependen del espesor de la plancha. Aun así:
 
-- **Modelo paramétrico**: `t_acrilico`, `t_madera` y `kerf` son variables;
-  toda la geometría de dientes y ranuras se genera desde ellas. Cambiar de
-  proveedor o espesor = cambiar un número y re-exportar.
-- **Cupón de calibración** (`coupon.scad`): pieza de prueba (~5 min de láser)
-  con tres pares diente/ranura a distintos ajustes de kerf. Se corta primero
-  con el acrílico y la máquina reales, se elige el ajuste que encaja firme
-  sin forzar, se fija ese `kerf` en el modelo y solo entonces se cortan las
+- `t_acrilico` y `kerf` siguen siendo parámetros del modelo (afectan agujeros,
+  largos de tornillo y estética de cantos).
+- **Cupón de calibración** (`coupon.scad`): pieza de ~5 min de láser con una
+  escalera de diámetros de agujero (ajuste deslizante y ajuste justo para
+  M3/M4) y una probeta de canto. Se corta primero con el acrílico y la
+  máquina reales, se fija el `kerf` medido, y solo entonces se cortan las
   planchas definitivas. **Prohibido cortar planchas sin cupón previo.**
 
 ## 4. Geometría (defaults; todo parametrizable)
 
-Perfil lateral: trapecio rectángulo con la cara inclinada hacia el intérprete.
+Perfil lateral escalonado: dos caras inclinadas, la inferior tendida y la
+superior más erguida, como una consola de estudio compacta.
 
 | Parámetro | Default | Nota |
 |---|---|---|
-| `ancho_total` | 950 mm | Como la tesis; se valida contra la suma de anchos de módulos + expansión |
-| `angulo` | 14° | Inclinación de la cara de paneles |
-| `alto_frontal` | 60 mm | Pared frontal (exterior) |
-| `alto_panel` | 190 mm | Altura de panel de la tesis, se conserva |
-| `fondo` | ~210 mm | Derivado: proyección de la cara inclinada + paredes |
-| `alto_trasero` | ~110 mm | Derivado: `alto_frontal` + seno del ángulo × cara |
-| `t_acrilico` | 5 mm | Decidir con el proveedor del acrílico naranja; el modelo se recalcula |
-| `t_madera` | 18 mm | Cheeks |
+| `ancho_total` | 500 mm | Lo fija la suma de anchos de módulo por piso (§11); default de partida |
+| `alto_panel` | 190 mm | Por piso; altura de panel de la tesis, se conserva |
+| `angulo_inferior` | 12° | Cara del piso de procesamiento |
+| `angulo_superior` | 35° | Cara del piso de generación |
+| `alto_frontal` | 50 mm | Borde delantero |
+| `fondo` / `alto_total` | derivados | Los calcula el modelo desde ángulos y caras |
+| `t_acrilico` | 5 mm | Placas del cuerpo; decidir con el proveedor, medir con calibre |
+| `t_cheek` | 8 mm | Costados portantes (o 2 × 4 mm laminados, decisión estética en CAD) |
 | `kerf` | 0.2 mm | Se calibra con el cupón, nunca se asume |
-| `n_costillas` | 2 | Divide el vano en 3 bahías (~300 mm cada una) |
+| `n_bulkheads` | 2 | Costados exteriores; el modelo admite uno central si el vano lo pide |
 
 Los valores derivados los calcula el modelo, no se fijan a mano. Las holguras
-que deciden el diseño viven en **`case/clearance_budget.py`** (Principio II de
-la constitución: presupuesto ejecutable con aserciones, no prosa):
+que deciden el diseño viven en **`case/clearance_budget.py`** (Principio II:
+presupuesto ejecutable con aserciones, no prosa):
 
-- altura interior trasera vs. altura del transformador real del módulo 1,
-  margen ≥ 15 mm;
-- profundidad libre bajo paneles vs. el módulo más hondo — MIDI/CV, que ahora
-  carga Raspberry Pi 3B+ **más la pantalla táctil de 7"** de la arquitectura
-  polifónica;
-- alto del conjunto de pantalla vs. panel de 190 mm;
-- suma de anchos mínimos de panel + expansión vs. ancho útil entre cheeks.
+- altura interior del piso inferior vs. altura del transformador real del
+  módulo 1, margen ≥ 15 mm;
+- profundidad libre bajo cada cara vs. el módulo más hondo de ese piso
+  (MIDI/CV: Raspberry Pi 3B+ sobre separadores, ya sin pantalla);
+- suma de anchos mínimos de panel + expansión vs. ancho útil, **por piso**;
+- largo de standoffs vs. espesores reales de placas apiladas.
 
 El script corre en verde **antes** de mandar nada a cortar (Principio III: la
 comprobación va antes del paso destructivo).
 
 ## 5. Estructura
 
-- **Cheeks (×2): madera maciza** (haya o roble según disponibilidad del
-  servicio CNC, acabado al aceite), 18 mm, perfil trapezoidal completo.
-  Llevan los insertos roscados M4 donde atornilla el cuerpo de acrílico, los
-  raíles y la tapa trasera.
-- **Cuerpo de acrílico naranja translúcido** (base, pared frontal, pared
-  trasera fija parcial — ver §7) unido con finger joints cementados, más la
-  **tapa trasera removible** (también acrílico, atornillada a insertos en los
-  cheeks).
-- **Costillas internas (×2) de acrílico**, mismo perfil interior, cementadas
-  a la base con encaje ranura-lengüeta. Sin ellas, 950 mm de vano comba.
-  Soportan los raíles a mitad de vano y sirven de anclaje del bus board.
-- **Paneles de módulo: PCB de aluminio** de ancho variable por módulo,
-  190 mm de alto, cerrando la cara inclinada.
-- **Pies de goma** atornillados a la base (la inclinación ya está en la
-  geometría, no en las patas).
+- **Costados (×2): acrílico naranja** de 8 mm (o laminado 2 × 4 mm), perfil
+  escalonado de dos pisos. Son las piezas portantes: reciben raíles,
+  bandejas y pieles vía standoffs.
+- **Bandejas horizontales de acrílico** (base y entrepiso) atadas a los
+  costados con standoffs de aluminio M4 — rigidizan el conjunto y cargan el
+  PSU (base) y el cableado entre pisos (entrepiso, con pasacables).
+- **Piel trasera de acrílico por piso**, flotando en standoffs con junta de
+  sombra (shadow gap) perimetral — desmontable, lleva la ventilación (§7).
+- **Paneles de módulo: PCB de aluminio** de ancho variable, 190 mm de alto,
+  cerrando las dos caras inclinadas.
+- **Separadores de aluminio M4** (macho-hembra y hembra-hembra) con
+  tornillería inox de botón: la retícula de puntos de unión es visible y
+  regular — es el ornamento permitido.
+- **Pies de goma** bajo la base.
+- Sin pegamento estructural en ninguna unión.
 
 ## 6. Raíles y sistema de paneles
 
-- **2 perfiles de aluminio 2020** (extrusión estándar de impresora 3D) de
-  950 mm, arriba y abajo de la cara inclinada, atornillados a los cheeks y
-  apoyados en las costillas.
+- **4 perfiles de aluminio 2020** (dos por piso, arriba y abajo de cada cara
+  inclinada), atornillados a los costados.
 - **Tuercas T deslizantes M3**: cada panel se atornilla en cualquier posición
-  horizontal, sin grilla de agujeros pretaladrada. Los anchos de módulo
-  pueden cambiar libremente durante el desarrollo.
+  horizontal; los anchos de módulo pueden cambiar libremente durante el
+  desarrollo.
 - Tornillos de panel a **5 mm del borde** superior e inferior → separación
-  entre centros de raíl = **180 mm**. Los offsets exactos raíl–panel los
+  entre centros de raíl = **180 mm** por piso. Offsets exactos raíl–panel los
   resuelve el modelo CAD.
+- **El patch bay normalizado no pide sitio propio**: vive en los jacks de
+  cada módulo (pin de switch del Thonkiconn), no en un módulo aparte — no se
+  reserva zona de patch bay en el frontal. Sí infla el ancho de los paneles
+  que ganan jacks; eso lo vigila el budget por piso.
 - La plantilla KiCad de panel (en `case/panels/`) fija: alto 190 mm, posición
   de agujeros de tornillo, zona útil de componentes y estilo de serigrafía
-  (tipografía y convenciones de `docs/modules/08-case-panels.md`). Admite
-  recortes grandes: la pantalla táctil de 7" del módulo 2 vive en su panel.
+  (tipografía y convenciones de `docs/modules/08-case-panels.md`, revisadas
+  al lenguaje modernista: retícula, sin adornos).
+- Requisito derivado para el panel del módulo 2: **botón AFINAR + LED de
+  estado** (la interfaz completa vive en la app web).
 
 ## 7. Eléctrico y seguridad
 
-- **Bloque trasero fijo** (esquina junto al cheek derecho): entrada IEC C14
-  con portafusible + interruptor. El cableado de 230 V vive solo en ese
-  bloque y llega al transformador del módulo 1, montado en la base junto al
-  cheek derecho. **La tapa removible nunca lleva mains.**
+- **Bloque trasero fijo del piso inferior** (esquina junto al costado
+  derecho): entrada IEC C14 con portafusible + interruptor. El cableado de
+  230 V vive solo en ese bloque y llega al transformador del módulo 1,
+  montado sobre la base junto al costado derecho. **Las pieles removibles
+  nunca llevan mains.**
 - **Bonding de tierra** (requisito del módulo 1,
   [`design-notes.md` §13](../../../hardware/01-power-supply/notes/design-notes.md)):
   espárrago M4 único junto al PSU + cable verde/amarillo con terminal de ojal
-  bajo un tornillo de cada panel de aluminio. Los raíles 2020 anodizados
-  **no** cuentan como camino de tierra confiable.
-- **Ventilación con firma**: rejillas de la tapa trasera y de la base (bajo
-  el PSU) cortadas con forma de **onda sierra, triangular y cuadrada** — las
-  tres formas de onda de los VCOs. Convección natural para el PSU lineal.
+  bajo un tornillo de cada panel de aluminio. Ni los raíles 2020 ni los
+  standoffs anodizados cuentan como camino de tierra confiable.
+- **Ventilación con firma**: las perforaciones de las pieles traseras y de la
+  base (bajo el PSU) dibujan **onda sierra, triangular y cuadrada** — las
+  tres formas de onda de los VCOs — trazadas como retícula geométrica
+  estricta, coherente con el lenguaje modernista. Convección natural para el
+  PSU lineal.
 - Requisito derivado hacia los módulos (no es trabajo del case): las PCBs
   llevan **conformal coating**, porque el cuerpo es deliberadamente abierto
-  (ranuras decorativas y de ventilación).
+  (juntas de sombra y ventilación).
 
 ## 8. Archivos y flujo de trabajo
 
 ```
 case/
 ├── cad/          sam17_case.scad (modelo paramétrico)
-│                 coupon.scad (cupón de calibración de kerf)
+│                 coupon.scad (cupón: escalera de agujeros + probeta de canto)
 │                 export.ps1 / Makefile → regenera DXF + STL con un comando
-├── plans/        DXF por plancha: acrílico (planchas nesteadas), cheeks
-│                 madera, tapa trasera — salida directa al servicio de corte
+├── plans/        DXF por plancha de acrílico, nesteados — salida directa
+│                 al servicio de corte
 ├── panels/       plantilla KiCad de panel de aluminio
-├── renders/      STL → Blender (materiales: acrílico naranja translúcido,
-│                 madera aceitada, aluminio) → PNG del conjunto
+├── renders/      STL → Blender (acrílico naranja translúcido, aluminio)
+│                 → PNG del conjunto
 ├── clearance_budget.py   holguras del §4, ejecutable con aserciones
 └── README.md     BOM de herrajes, orden de ensamblaje, procedimiento del
                   cupón, calibración de kerf
@@ -179,26 +199,27 @@ case/
 
 ## 9. BOM mecánico (categorías; cantidades exactas en implementación)
 
-Perfiles 2020 × 950 mm (×2), tuercas T M3 + tornillos M3×8 (paneles),
-insertos roscados M4 para madera + tornillos M4 avellanados (cuerpo, raíles,
-tapa), cemento solvente para acrílico (tipo Weld-On 4 / diclorometano),
-entrada IEC C14 con fusible e interruptor, espárrago M4 + cable 1.5 mm²
-verde/amarillo + terminales de ojal (bonding), pies de goma, tornillería del
-transformador.
+Standoffs de aluminio M4 (macho-hembra y hembra-hembra, varios largos),
+tornillería inox M4 de botón + arandelas (siempre arandela contra acrílico),
+perfiles 2020 (×4, largo = `ancho_total`), tuercas T M3 + tornillos M3×8
+(paneles), entrada IEC C14 con fusible e interruptor, espárrago M4 + cable
+1.5 mm² verde/amarillo + terminales de ojal (bonding), pies de goma,
+tornillería del transformador, pasacables del entrepiso.
 
 ## 10. Verificación
 
-1. **Cupón antes que planchas** — el kerf medido se registra en
-   `case/README.md` junto con proveedor, material y máquina. Es la aplicación
-   al láser de los Principios III y V: la comprobación va antes del paso
-   destructivo, y entre cortar a ciegas y no cortar, no se corta.
+1. **Cupón antes que planchas** — el kerf y los diámetros de ajuste medidos
+   se registran en `case/README.md` junto con proveedor, material y máquina.
+   Es la aplicación al láser de los Principios III y V: la comprobación va
+   antes del paso destructivo, y entre cortar a ciegas y no cortar, no se
+   corta.
 2. `case/clearance_budget.py` **en verde**, con autocomprobación del cálculo,
    aserciones que fallan si el diseño se sale, y bloque de lo que no cubre.
 3. El script de export debe regenerar todos los DXF/STL sin errores desde un
    repo limpio, y **salir con código de error** si algo queda a medias.
-4. Checklist de ensamblaje en `case/README.md` con el orden: cementado del
-   monocasco → insertos en cheeks → atornillado de cheeks → raíles →
-   electricidad y bonding → tapa → paneles.
+4. Checklist de ensamblaje en `case/README.md` con el orden: costados →
+   bandejas y standoffs → raíles → electricidad y bonding → pieles traseras
+   → paneles.
 
 ## 11. Lo que NO está confirmado
 
@@ -206,26 +227,36 @@ Convención del repo (Principio I): lo no verificado no se suaviza, se lista
 con qué habría que medir para cerrarlo.
 
 - **Espesor real del acrílico naranja**: el nominal miente (tolerancia de
-  fabricación; un "6 mm" puede medir menos). Se cierra midiendo con calibre la
-  plancha comprada y metiendo ese valor en `t_acrilico`.
-- **Kerf de la máquina con ese acrílico**: se cierra con el cupón; nunca se
-  asume el 0.2 mm del default.
-- **Dimensiones y fondo de montaje de la pantalla táctil de 7"**: los
-  194.6 × 110.8 × 20 mm del producto oficial de Raspberry Pi no están
-  verificados contra el datasheet del modelo exacto que se compre. Se cierra
-  con el datasheet + medida física antes de fijar el recorte del panel.
+  fabricación). Afecta largos de tornillo, apilados y estética de cantos. Se
+  cierra midiendo con calibre la plancha comprada y metiendo ese valor en
+  `t_acrilico` / `t_cheek`.
+- **Kerf y ajuste de agujeros con ese acrílico y esa máquina**: se cierra con
+  el cupón; nunca se asume el 0.2 mm del default.
 - **Altura del transformador real del módulo 1**: la aserción del budget usa
   un valor de catálogo hasta medir la pieza comprada.
-- **Suma de anchos de panel vs. 950 mm**: solo cierra cuando cada panel esté
-  dibujado; el budget la vigila con anchos mínimos estimados por módulo.
-- **Rigidez del vano con 2 costillas**: heurística (~300 mm entre apoyos), no
-  cálculo estructural. Si el prototipo comba, `n_costillas` sube a 3 y se
-  re-exporta; se cierra cargando el prototipo real.
+- **Suma de anchos de panel por piso vs. `ancho_total`**: solo cierra cuando
+  cada panel esté dibujado; el budget la vigila con anchos mínimos estimados
+  por módulo y por piso — y el patch bay normalizado añade jacks a varios
+  paneles. Si un piso no cabe, `ancho_total` sube — es un parámetro, no una
+  promesa.
+- **El fondo del módulo 2 depende de un pendiente ajeno**: el corte del
+  cerebro en dos (micro de tiempo real + Linux) está propuesto y **no
+  confirmado** (PR #27); el budget usa el conjunto actual (Pi 3B+ sobre
+  separadores) hasta que esa decisión se cierre.
+- **Rigidez del vano a ~500 mm sin costado central**: heurística. Si el
+  prototipo flexa, `n_bulkheads` pasa a 3 y se re-exporta; se cierra cargando
+  el prototipo real.
+- **Comportamiento del acrílico bajo apriete de standoffs**: el diseño manda
+  arandela y agujero con holgura, pero el par máximo antes de fisura no está
+  medido; se cierra con la probeta del cupón.
 
 ## 12. Fuera de alcance (el diseño no los bloquea)
 
 Al cerrar la tanda se abren como issues con evidencia (Principio VI):
 
+- **App web de configuración del módulo 2** (firmware: servidor en el Pi,
+  punto de acceso Wi-Fi, UI tablet-first). Va por el flujo spec-kit, que la
+  adopción de la constitución escopa justamente al firmware.
 - Tapa frontal de transporte.
 - Patas plegables / soporte de ángulo variable.
 - Iluminación LED dedicada del bus (el translúcido ya deja pasar la luz de
