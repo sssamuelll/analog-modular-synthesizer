@@ -1,15 +1,27 @@
-ref,value,footprint,quantity,supplier,notes
-U_PI,Raspberry Pi 3B+,—,1,importado,SBC con USB host y SPI
-U_DAC,AD5686RBRUZ,TSSOP-16,1,importado,DAC cuádruple 16-bit
-U_OP1,TL074,SOIC-14,1,nacional,Op-amp cuádruple JFET (buffer/escalado CV)
-LCD1,LCD 16x2 HD44780,—,1,nacional,Pantalla del menú
-SW1-SW4,Tactile switch,SW_PUSH_6mm,4,nacional,Back/Enter/Up/Down
-R_FILM_1k,1k 1%,R_0805,4,nacional,Película metálica - red de escalado
-R_FILM_1k5,1.5k 1%,R_0805,4,nacional,Película metálica - red de escalado
-R_PULLUP,10k,R_0805,8,nacional,Pull-ups GPIO
-C_DEC,100nF,C_0805,8,nacional,Bypass del DAC y op-amp
-C_BULK,10uF,C_0805,4,nacional,Bulk filtering
-J_USB,USB-A,—,1,nacional,Entrada del controlador MIDI (al Pi)
-J_CV1-J_CV3,Jack 3.5mm mono,—,3,nacional,Salidas CV
-J_GATE,Jack 3.5mm mono,—,1,nacional,Salida GATE
-PIN_BUS,Pin header 2x3,1x06,1,nacional,Bus de alimentación
+refs,value,footprint,quantity,supplier,notes
+U1,"AD5686RBRUZ — DAC cuadruple 16 bits, ref. interna 2.5V 2ppm/C",Package_SO:TSSOP-16_4.4x5mm_P0.65mm,1,Mouser,"Encapsulado **TSSOP-16**, no LFCSP: los dos pinouts van DESFASADOS DOS PINES y el simbolo esta dibujado contra el TSSOP (figura 7 del datasheet). El LFCSP ademas lleva pad termico que hay que soldar a masa. Grado comercial: INL +-2 LSB y referencia 2 ppm/C tipico / 5 max — el grado -EP es PEOR (+-4 LSB, 13 ppm/C) pese a llamarse enhanced"
+U2,"TL074H — cuadruple JFET, salida casi rail-to-rail",Package_DIP:DIP-14_W7.62mm_Socket,1,Reichelt,"La **H** no es opcional. El TL074 clasico garantiza +-12 V de salida a +-15 V de alimentacion, o sea 3 V de margen al riel: a +-12 V solo asegura +-9 V. Y su deriva de offset es 18 uV/C contra 2 del H, que son 1.21 contra 0.13 cents — y la deriva es justo lo que la tabla de afinacion NO puede absorber (../tuning_budget.py). Zocalo DIP para poder cambiarlo sin desoldar"
+J1,"Molex KK-254 4 pines vertical",Connector_Molex:Molex_KK-254_AE-6410-04A_1x04_P2.54mm_Vertical,1,Mouser,"Bus de +-12 V desde el bus board. Los DOS pines de masa se pueblan siempre: con uno solo el presupuesto de masa se sale de los 2 cents (hardware/bus-board/ground_budget.py)"
+J2,"Molex KK-254 2 pines vertical",Connector_Molex:Molex_KK-254_AE-6410-02A_1x02_P2.54mm_Vertical,1,Mouser,"+5 V con su retorno DEDICADO, desde J6 del modulo 1. Ese retorno es GNDD y **no se une a GNDA en esta placa**: el backlight del LCD va conmutado y su corriente no puede volver por la masa analogica"
+J3,"Tira de pines 2x20 2.54 mm",Connector_PinHeader_2.54mm:PinHeader_2x20_P2.54mm_Vertical,1,Reichelt,"Cabecera GPIO del Raspberry Pi 3B+. Los pines 2 y 4 (5 V del Pi) quedan SIN CONECTAR a proposito: el Pi lleva su propia fuente USB y unirlos seria alimentar una desde la otra"
+J4 J5 J6 J7,"Jack 3.5 mm mono de panel",Connector_Audio:Jack_3.5mm_QingPu_WQP-PJ398SM_Vertical_CircularHoles,4,Thomann,"Tres CV (0-7 V) y un GATE (10 V). El casquillo va a GNDA. Ojo: los ~40 jacks del sinte unen chasis y masa por el casquillo, y eso ya esta contado en la sec.13 del modulo 1"
+J8,"Tira de pines 1x16 2.54 mm",Connector_PinHeader_2.54mm:PinHeader_1x16_P2.54mm_Vertical,1,Reichelt,"Conexion al LCD 16x2 HD44780. Modo 4 bits: D0-D3 (pines 7-10) sin conectar"
+U_LCD,"LCD 16x2 HD44780 con backlight",—,1,Reichelt,"Alimentacion y backlight enteros en el dominio DIGITAL (GNDD)"
+U_PI,"Raspberry Pi 3B+",—,1,importado,"Con su propia fuente USB de 5 V / 2.5 A, independiente de esta placa"
+Q1 Q2,"2N7002 — MOSFET N canal logico",Package_TO_SOT_SMD:SOT-23,2,Reichelt,"Elevador del GATE de 3.3 V a 10 V. Son **dos** y no uno: una sola etapa invierte, y un gate invertido significa que al encender, con el GPIO todavia en alta impedancia, dispararian TODAS las envolventes. Con dos, el reposo es gate bajo"
+R1 R3 R5,"18k 1% pelicula metalica",Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal,3,Reichelt,"Realimentacion del buffer de CV. Con las de 10k dan ganancia 2.8, que lleva los 2.5 V del DAC a los 7 V del CV. Pelicula metalica por la deriva, no por la tolerancia: el error de ganancia lo calibra la tabla de afinacion, la deriva no"
+R2 R4 R6,"10k 1% pelicula metalica",Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal,3,Reichelt,"Pata de abajo de la red de ganancia, a GNDA"
+R7 R8 R9 R15,"1k 1%",Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal,4,Reichelt,"Serie de proteccion en cada salida (3 CV + gate). Limita la corriente si alguien enchufa una salida contra otra salida, que en un modular pasa"
+R10,"1k",Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal,1,Reichelt,"Resistencia de puerta de Q1"
+R11,"10k",Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal,1,Reichelt,"Carga de drenador de Q1"
+R12,"2k",Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal,1,Reichelt,"Con R13 forma el divisor que fija el gate en 10 V: 12 x 10/(2+10)"
+R13,"10k",Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal,1,Reichelt,"Pata de abajo del divisor de 10 V, a GNDD"
+R14,"10k",Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal,1,Reichelt,"Fija la puerta de Q1 a masa. Sin ella el GPIO flota mientras el Pi arranca y el gate queda indefinido durante unos segundos"
+R16,"47R",Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal,1,Reichelt,"Limitadora del backlight del LCD. 47R dan ~17 mA con 5 V; el presupuesto del riel de +5 V se hizo contra 100 mA de backlight, que es el peor caso de la sec.2 del modulo 1"
+R17 R18 R19 R20,"10k",Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal,4,Reichelt,"Pull-up de cada boton a +3V3. Externas y no las internas del Pi: no dependen de que el firmware las configure antes de leer"
+RV1,"Trimmer 10k vertical",Potentiometer_THT:Potentiometer_Bourns_3296W_Vertical,1,Reichelt,"Contraste del LCD (patilla VO)"
+C1 C2,"100nF ceramico",Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm,2,Reichelt,"Desacoplo de los rieles de +-12 V, junto a J1"
+C3,"10uF",Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm,1,Reichelt,"Bulk del +5 V"
+C4,"100nF ceramico",Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm,1,Reichelt,"Desacoplo del +3V3 que llega del Pi"
+C5,"100nF ceramico",Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm,1,Reichelt,"En la patilla VREF del DAC. La referencia interna sale por ahi y necesita su condensador"
+SW1 SW2 SW3 SW4,"Pulsador tactil 6 mm",Button_Switch_THT:SW_PUSH_6mm,4,Reichelt,"UP / DOWN / BACK / ENTER del menu. El otro extremo a GNDD"
