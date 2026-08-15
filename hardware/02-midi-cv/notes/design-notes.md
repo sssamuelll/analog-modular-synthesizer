@@ -197,7 +197,74 @@ Está probado contra ese segundo caso: revirtiendo el paso, el detector lo caza.
    DAC), así que debería sobrar, pero está sin medir.
 5. **El firmware todavía no existe** más allá de un stub. El cambio de rango
    (§3) y el mapa de pines de `J3` hay que reflejarlos en `software/midi-cv/`.
-6. **La PCB no está ruteada.** Esta tanda cierra el esquemático; el layout es el
-   paso siguiente, y tiene una restricción fuerte que ya se puede anticipar: las
-   dos masas tienen que llegar cada una a su conector **sin tocarse en ningún
-   punto del cobre**.
+6. **La PCB no está terminada** — ver §10.
+
+## 10. La PCB: dónde está y qué falta
+
+**No es fabricable todavía.** `build_pcb.py` sale con código de error mientras
+queden redes sin rutear, para que no se confunda con acabada.
+
+Lo que **sí** está cerrado y verificado:
+
+| | |
+|---|---|
+| Colocación | 44 huellas, nada fuera de placa, sin solapes de patio |
+| Frontera de masas | **4.00 mm de hueco medido** sobre el cobre relleno |
+| Plano analógico | **una sola isla** — ninguna pista lo parte |
+| Cada pieza en su dominio | verificado pad a pad |
+| DRC | **0 infracciones** sobre lo ruteado |
+| Ruteado | 134 segmentos, 26 vías |
+
+Lo que falta: **17 redes**, casi todas del lado digital — las seis del LCD, los
+botones y el SPI cruzando a la frontera.
+
+### La regla y su corolario
+
+La frontera es vertical en `x = 78`: a la izquierda el vertido de `GNDD`, a la
+derecha el de `GNDA`, y entre medias 4 mm sin cobre en B.Cu. Lo que cruza son
+señales por F.Cu, que pasan **por encima** del hueco sin unir las masas.
+
+El DAC vive justo en la frontera a propósito: su VDD y su VLOGIC son digitales,
+su GND y sus salidas analógicas. Es la pieza que cose los dos mundos, así que es
+la que menos cable tiene que cruzar. Y va **girado 180°** para que sus patillas
+de SPI miren al Pi y las analógicas al amplificador; sin girarlo, el SPI tiene
+que rodear el chip entero.
+
+Una asimetría deliberada: **el plano digital puede fragmentarse, el analógico
+no.** Allí el plano no mide nada, solo devuelve corriente lógica; aquí es lo que
+sostiene el presupuesto de afinación. La comprobación lo dice así: cuenta las
+islas del vertido analógico y exige exactamente una.
+
+### El ruteador, y por qué existe
+
+Calcular 40 redes de coordenadas a mano es donde se cuelan los cortocircuitos, y
+ya había pasado dos veces en el esquemático. `rutear_todo()` prueba caminos en L
+y en Z contra los obstáculos reales y se queda con el primero que no roce nada.
+
+No es un autorouter y no lo pretende: si un camino simple no cabe, el sitio
+donde hay que trabajar es la **colocación**, no el ruteador. Por eso, cuando
+falla, lo dice en vez de retorcerse.
+
+Tres errores propios que cazó, los tres del mismo tipo — el modelo era optimista
+y el DRC lo desmentía después:
+
+1. **Pads modelados como círculos** usando su dimensión mayor. Un pad TSSOP de
+   1.5 × 0.4 salía como un círculo de radio 0.75 que se comía a sus dos vecinos:
+   **ninguna** pista podía acercarse al DAC. Veinte redes sin rutear que
+   parecían culpa del ruteador y eran del modelo de obstáculos.
+2. **El ancho real de la pista no entraba en la cuenta.** Una pista de riel de
+   0.8 mm salía a 0.05 mm de un pad y el ruteador la daba por buena.
+3. **Vías encima de pads del TSSOP**, donde hay 0.65 mm de paso y una vía de
+   0.8 no entra. Seis infracciones de DRC, todas la misma causa.
+
+### Qué hace falta para cerrarla
+
+Las 17 que faltan no son culpa del ruteador sino de la congestión: seis señales
+de LCD, cuatro botones y el SPI comparten el lado izquierdo. Dos caminos:
+
+- **Rutearlas a mano** en KiCad sobre este fichero. Es lo más rápido, y es lo
+  que haría cualquiera con el editor delante.
+- **Darle al ruteador caminos de más de tres quiebros**, que es su límite hoy.
+
+Lo que **no** hay que hacer es aflojar la frontera de masas para que quepan: ese
+hueco es la razón de ser de esta placa.

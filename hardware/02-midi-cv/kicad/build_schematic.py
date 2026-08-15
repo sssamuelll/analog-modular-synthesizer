@@ -261,11 +261,18 @@ def construir() -> None:
         _labels.append((net, x, yy))
         _syms.append(("power:PWR_FLAG", 1, ref, "PWR_FLAG", x + g(4), yy, 0, None))
 
-    # desacoplo de los rieles, junto al conector
+    # Desacoplo. Cada condensador vuelve a la masa por la que vuelve SU riel, y
+    # no todos a la analogica: el +5 V y el +3V3 son digitales y su retorno es
+    # GNDD. Lo caza la comprobacion de lados de build_pcb.py, no el ERC.
+    #
+    # Y el DAC lleva los suyos APARTE (C6, C7) contra GNDA, porque es su propia
+    # patilla de masa: la corriente de sus buffers de E/S vuelve por ahi, no por
+    # el conector de donde sale el riel. Son microamperios, asi que no molestan
+    # a la masa analogica, pero tienen que tener por donde volver.
     for i, (net, masa, val) in enumerate((("+12V", "GNDA", "100n"),
                                           ("-12V", "GNDA", "100n"),
-                                          ("+5V", "GNDA", "10u"),
-                                          ("+3V3", "GNDA", "100n"))):
+                                          ("+5V", "GNDD", "10u"),
+                                          ("+3V3", "GNDD", "100n"))):
         x, y = g(46) + g(10) * i, g(20)
         pon("c", f"C{i+1}", val, x, y)
         c1, c2 = P("c", "1", x, y), P("c", "2", x, y)
@@ -287,14 +294,18 @@ def construir() -> None:
         "6": "DAC_C", "7": None, "8": None, "9": "GNDA", "10": "GNDA",
         "11": "+3V3", "12": "SCLK", "13": "SPI_CE1", "14": "SDIN",
         "15": "DAC_RESET", "16": "GNDA"}, largo=g(6))
-    # condensador de la referencia
-    x, y = g(178), g(60)
-    pon("c", "C5", "100n", x, y)
-    c1, c2 = P("c", "1", x, y), P("c", "2", x, y)
-    hilo(*c1, c1[0], c1[1] - g(4))
-    _labels.append(("VREF", c1[0], c1[1] - g(4)))
-    hilo(*c2, c2[0], c2[1] + g(4))
-    potencia("GNDA", c2[0], c2[1] + g(4), "#PWRVR")
+    # los tres condensadores que viven PEGADOS al DAC: su referencia, su VDD y
+    # su VLOGIC, los tres contra GNDA que es la masa del propio chip
+    for i, (ref, net, val) in enumerate((("C5", "VREF", "100n"),
+                                         ("C6", "+5V", "100n"),
+                                         ("C7", "+3V3", "100n"))):
+        x, y = g(174) + g(10) * i, g(60)
+        pon("c", ref, val, x, y)
+        c1, c2 = P("c", "1", x, y), P("c", "2", x, y)
+        hilo(*c1, c1[0], c1[1] - g(4))
+        _labels.append((net, c1[0], c1[1] - g(4)))
+        hilo(*c2, c2[0], c2[1] + g(4))
+        potencia("GNDA", c2[0], c2[1] + g(4), f"#PWRDAC{i}")
 
     # ---- tres canales de CV ---------------------------------------------
     for i in range(3):
