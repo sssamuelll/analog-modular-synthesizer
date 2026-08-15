@@ -5,8 +5,8 @@
 > referencia de lo que hace la tesis, que es el punto de partida y no el
 > destino.
 >
-> La parte digital — el corte del cerebro en micro de tiempo real + máquina
-> x86, y el agente de IA — está en
+> La parte digital — el micro de tiempo real, la computadora externa y el
+> agente de IA — está en
 > [`architecture-compute.md`](architecture-compute.md).
 
 El SAM17 pasa a ser un **sintetizador polifónico de 4 voces**. Cada nota tiene
@@ -36,10 +36,11 @@ de 4 canales con un solo juego de controles**, no cuatro placas.
 El módulo 2 deja de ser "el conversor MIDI a CV" y pasa a ser el que reparte las
 voces. Es donde empieza la polifonía.
 
-> **El cerebro va partido en dos**: un RP2350 en Rust bare-metal para todo lo de
-> tiempo real, y una máquina x86 con Linux para el secuenciador, los efectos, la
-> UI y el agente de IA. Con eso el instrumento **toca en milisegundos** aunque el
-> Linux esté arrancando. Detalle en
+> **El instrumento entero vive en un microcontrolador** (RP2350 en Rust
+> bare-metal): reparto de voces, CV, gates, autoafinado, secuenciador. La
+> computadora es **opcional, externa y puede ser cualquiera** — se enchufa por
+> USB MIDI y trae tu DAW y tus plugins. El instrumento **toca sin ella**, y sigue
+> sonando si se cae. Detalle en
 > [`architecture-compute.md`](architecture-compute.md).
 
 Lo que hace:

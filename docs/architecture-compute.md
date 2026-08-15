@@ -5,287 +5,192 @@ Cómo se reparte el trabajo digital del instrumento. Complementa a
 
 ---
 
-## 1. El cerebro va partido en dos, y no es una preferencia
+## 1. El cerebro va partido, y la computadora se queda FUERA
 
-Le estábamos pidiendo a un solo chip dos trabajos con requisitos **opuestos**:
-
-| | Necesita | Un Linux es… |
-|---|---|---|
-| CV, gates, autoafinado | temporización determinista de microsegundos | **malo** — no hay tiempo real duro |
-| Secuenciador, efectos, UI, agente | CPU, RAM, disco, pantalla | **bueno** — y un micro es malísimo |
-
-Así que van separados y hablan por MIDI/serie:
+El instrumento entero vive en un **microcontrolador**. La computadora es
+**opcional, externa, y puede ser cualquiera**.
 
 ```
-   ┌──────────────────────────────┐        ┌───────────────────────────┐
-   │  TIEMPO REAL — RP2350        │  MIDI  │  LA MÁQUINA — x86         │
-   │  Rust bare-metal, sin SO     │◄──────►│  Linux, DDR5, NVMe        │
-   │                              │  serie │                           │
-   │  · reparto de voces          │        │  · secuenciador, patrones │
-   │  · 8 CV por SPI (2x DAC)     │        │  · efectos y sampler      │
-   │  · 4 gates                   │        │  · UI táctil              │
-   │  · medida de afinado x4      │        │  · AGENTE DE IA (API      │
-   │  · reloj y sync              │        │    remota, no local)      │
-   │  · secuenciador básico       │        │  · grabación a NVMe       │
-   └──────────────────────────────┘        └───────────────────────────┘
-            │  arranca en ms                        │  arranca en ~20 s
-            ▼                                       ▼
-      el instrumento TOCA                     la máquina llega después
+   ┌────────────────────────────────┐         ┌───────────────────────┐
+   │  EL INSTRUMENTO — RP2350       │   USB   │ CUALQUIER COMPUTADORA │
+   │  Rust bare-metal, sin SO       │◄───────►│ la tuya, con TU DAW   │
+   │                                │  MIDI   │ y TUS plugins         │
+   │  · reparto de 4 voces          │   DIN   │                       │
+   │  · 8 CV por SPI (2x DAC)       │         │  · efectos, sampler   │
+   │  · 4 gates                     │         │  · el VST compañero   │
+   │  · autoafinado                 │         │  · el agente de IA    │
+   │  · secuenciador, arpegiador    │         │                       │
+   │  · reloj y sync                │         │  OPCIONAL             │
+   └────────────────────────────────┘         └───────────────────────┘
+        arranca en milisegundos                  enchúfala si quieres
+        TOCA SIN NADA MÁS
 ```
 
-Tres cosas que compra el corte, y las tres importan:
+**El instrumento está completo sin computadora.** Cuatro voces, secuenciador,
+arpegiador, afinado automático y USB. Todo lo demás es lujo, no requisito.
 
-**El instrumento toca aunque el Linux esté arrancando o colgado.** Enciendes y
-das una nota. No esperas medio minuto. Para un instrumento esto es lo que más
-pesa de todo este documento.
+Y si mañana enchufas una y esa se cae en mitad de un concierto, **el instrumento
+sigue sonando** — porque nunca dependió de ella.
 
-**Desaparece el número más flojo del autoafinado.** Todo el presupuesto colgaba
-de un jitter de 5 µs anotado como *«de manual, no medido»*. El PIO del RP2350
-hace captura de periodo por hardware: determinista y sub-microsegundo.
+### Lo que esta decisión resuelve de un plumazo
 
-**La elección de la máquina pasa a ser reversible.** Con el corte hecho puedes
-cambiar el x86, meter otro, o pilotarlo desde un portátil, **sin tocar el
-instrumento**. Esa es la propiedad que hay que proteger.
+- **El problema de los plugins.** En Linux hay poquísimo soporte comercial: u-he,
+  Bitwig, Reaper y poco más. Con la computadora fuera usas la tuya, con Windows
+  si quieres, y tienes **todos** tus plugins sin pelear con Wine ni con iLok.
+- **Todo el trabajo de cómputo embebido.** Elegir procesador, envolvente
+  térmica, fuente aparte, ventilador, imagen mínima de Linux: nada de eso hace
+  falta hoy.
+- **El instrumento se puede fabricar mucho antes.**
 
-## 2. El lado de tiempo real: RP2350 en Rust
+## 2. El camino de una nota
 
-**Rust bare-metal, sin sistema operativo.** El HAL está estable (`embassy-rp` /
-`rp235x-hal`), implementa `embedded-hal` 1.0 y soporta async y bloqueante.
-Raspberry Pi publicó ella misma sobre Rust en RP2350: no es terreno
-experimental.
+1. **Entra MIDI** por USB o DIN al micro.
+2. **El micro reparte la voz**: la que esté libre, o roba la más vieja. Ahí vive
+   la polifonía, en software.
+3. **Nota → voltaje.** No hay fórmula: **busca en una tabla, y hay una por
+   voz**, porque cada VCO tiene su propia personalidad. Saca el código de 16
+   bits y lo manda por SPI al DAC.
+4. **El DAC da 0–2.5 V**, el amplificador lo lleva a **0–7 V** con ganancia 2.8,
+   y sale por el bus al VCO de esa voz.
+5. **En paralelo sube el gate** — 10 V a la envolvente de esa voz.
+6. **VCO → su filtro → su VCA** (que abre según envolvente y velocity) → mixer
+   con las otras tres.
 
-Por qué Rust y no C aquí: el núcleo de un instrumento **no puede fallar a mitad
-de una actuación**, y Rust elimina por construcción la clase de fallo que en C
-aparece a las tres horas de concierto.
+El **mixer va al final**. Sumar antes del filtro sería parafónico, no
+polifónico, y esa es literalmente la diferencia entre los dos.
 
-Lo que corre aquí es el **nivel 0** completo — todo lo que hace falta para que
-esto sea un instrumento sin ninguna máquina detrás:
+## 3. El autoafinado, que corre por debajo
 
-secuenciador por pasos polifónico · arpegiador · quantizador de escala · memoria
-de acordes · reloj MIDI maestro y esclavo · LFOs y envolventes extra como CV ·
-matriz de modulación · memoria de patches · autoafinado
+Cada VCO lleva un **74HC14** que recorta su onda y manda un **pulso lógico** al
+micro. El **PIO del RP2350** mide el periodo **por hardware** de los cuatro a la
+vez, compara con la frecuencia que debería tener esa nota y corrige la tabla.
 
-## 3. El lado máquina: x86, no Raspberry
+**84 notas × 4 voces en 3.5 s**, en silencio — el VCO siempre oscila y el gate
+está cerrado.
 
-**Ningún Raspberry tiene DDR5.** El Pi 5 y el CM5 usan **LPDDR4X-4267**, soldada
-y no ampliable. Con DDR5 y NVMe como requisitos, la familia entera queda fuera —
-no por opinión, por hoja de datos.
+Esto mata el problema de fondo del analógico: el conversor exponencial se corre
+**−0.33 % por grado**. Sin esto calientas la caja y te desafinas; con esto se
+corrige solo.
 
-Lo elegido: **Ryzen 9 móvil de última generación**, clase
-**Ryzen AI 9 HX 470** (Gorgon Point, Zen 5):
+## 4. La interfaz: USB estándar, y DIN cuando importa
 
-| | Ryzen 9 5900X (la máquina de desarrollo) | **Ryzen AI 9 HX 470** |
-|---|---|---|
-| Núcleos / hilos | 12 / 24 | **12 / 24** (4 Zen 5 + 8 Zen 5c) |
-| Reloj | 3.7 → ~4.8 GHz | 2.0 → **5.2 GHz** |
-| TDP | **105 W** | **15–54 W configurable**, base 28 |
-| RAM | DDR4-2666 | **DDR5-5600 SO-DIMM**, hasta 128 GB |
-| Disco | — | PCIe 4, **2× M.2 NVMe** |
+Como la computadora puede ser **cualquiera**, el enlace tiene que ser
+**class-compliant**: MIDI USB sin drivers, en Windows, Mac, Linux o un iPad.
+Igual que cualquier sinte de hardware, y por eso todos funcionan con la DAW de
+todo el mundo. El RP2350 hace USB nativo.
 
-Mismo número de núcleos que el 5900X, dos generaciones de arquitectura por
-delante, y **a una cuarta parte del consumo**.
+> Esto **sustituye** al módulo de kernel en Rust (`/dev/sam17`) que figuraba en
+> la versión anterior. Un módulo de kernel solo sirve en Linux; si la
+> computadora puede ser cualquiera, la interfaz tiene que ser estándar. La idea
+> no muere: es lo que se escribe **el día que se meta una computadora dentro**.
 
-### El calor es el enemigo de la afinación
+**Y una trampa que hay que decir:** el USB trae la masa de la computadora —una
+fuente conmutada, con su ruido— metida en el instrumento. Lazo de tierra de
+manual.
 
-Este es el criterio que manda al elegir el procesador, y no es el consumo por el
-consumo.
+**El MIDI DIN no tiene ese problema**: el estándar exige optoacoplador desde
+1983, precisamente por eso. Está aislado galvánicamente por diseño.
 
-Todo el sistema de autoafinado existe porque el convertidor exponencial del VCO
-se desvía **−0.33 % por cada grado centígrado**. Un procesador de escritorio de
-105 W dentro de la misma caja **no es que no quepa: sabotea el instrumento**,
-peleando justo contra lo que se diseñó para corregirlo.
+Así que **USB para comodidad, DIN para grabar en serio**, o un aislador USB en
+medio.
 
-Por eso la regla es: **el cómputo va abajo, con su propio camino térmico hacia
-fuera, y lo más lejos posible de las placas analógicas.** El case de dos pisos
-da exactamente ese sitio.
+## 5. El VST compañero
 
-### El TDP configurable es una perilla, no una decisión
+Un plugin propio (CLAP + VST3) que vive dentro de tu DAW:
 
-Los **15–54 W** del HX 470 se ajustan por firmware. Eso convierte
-«prepararlo para que sea potente» en algo literal:
+- **Editor y librería**: patches, la tabla de afinación a la vista, diagnóstico
+  voz por voz
+- **Botón de afinar**: dispara el autoafinado sin salir de la sesión
+- **El agente de IA**
 
-- **15 W** → silencioso, para tocar
-- **54 W** → toda la potencia, para renderizar o procesar
+### Por qué plugin y no aplicación aparte
 
-**La envolvente se diseña para 54 W y se corre a 15 mientras se toca.** No es un
-compromiso, es un ajuste.
+**Los patches se guardan CON el proyecto.** Abres una sesión de hace seis meses
+y el instrumento se reconfigura solo. Eso los sintes de hardware no lo hacen, y
+es la diferencia entre tener un sinte y tenerlo integrado.
 
-### La envolvente que hay que reservar
+Además el host ya te da el MIDI enrutado al instrumento: sin drivers y sin
+pelear puertos.
 
-| | |
-|---|---|
-| Potencia | 54 W de CPU + NVMe + RAM ≈ **75–90 W de sistema**. Fuente propia |
-| Térmica | camino de disipación al exterior, en el piso inferior |
-| Espacio | placa formato mini-PC, del orden de 105 × 105 a 130 × 130 mm |
+### Con qué
 
-Reservando eso entra cualquier cosa desde un N100 hasta el HX 470, así que la
-elección concreta del chip **deja de ser irreversible**.
+**`nih-plug` (Rust)** — exporta CLAP y VST3, con GUI por egui/iced/VIZIA. El
+plugin es casi todo interfaz y MIDI, **casi nada de DSP**, que es justo donde
+Rust está cómodo y donde el ecosistema de C++ no compra tanto. Y deja el
+proyecto en **un solo lenguaje: Rust en el micro, Rust en el plugin**.
 
-Sobre el ventilador: **uno dentro de un instrumento es ruido**, acústico y
-eléctrico. A 15 W se puede llevar en pasivo o con un ventilador grande y lento,
-que es prácticamente inaudible — los que se oyen son los pequeños a muchas
-revoluciones. A 54 W hace falta activo, y por eso ese modo es para renderizar,
-no para tocar.
+JUCE (C++) queda como alternativa si algún día hace falta DSP pesado o AU en Mac.
 
-Y x86 abre lo que en un Pi nunca fue realista: **DAWs de verdad** — Reaper,
-Bitwig, Ardour corren nativos en Linux x86.
+### La trampa técnica
 
-Un apunte para no comprar de más: **la latencia de audio en Linux la decide
-sobre todo el kernel** (compilado con `PREEMPT_RT`), no el procesador. Una
-máquina modesta bien configurada late mejor que una bestia mal configurada.
+**El hilo de audio no puede bloquearse.** El MIDI está bien —el host pasa un
+buffer por bloque— pero **la llamada al LLM tarda segundos**: va en un hilo
+aparte, con una cola sin locks hacia el hilo de audio. Es práctica estándar y es
+justo donde la gente se estrella.
 
-### Lo que el cambio a x86 obliga a mover
+## 6. El agente de IA
 
-| | Con Pi | **Con x86** |
-|---|---|---|
-| Pantalla | DSI | **HDMI + táctil por USB** — más barato y sin límite de tamaño |
-| Audio | códec I2S | **interfaz USB** class-compliant, o tarjeta M.2 |
-| GPIO | 40 pines | **ninguno** — y da igual: los tiene el micro |
-| Alimentación | 5 V | **12 V propios**, ~1.5 A |
+**El LLM es remoto**: el instrumento no corre modelos, se llama a una API. Corre
+en la computadora que haya, así que **puede cambiar sin tocar un tornillo**.
 
-Lo del GPIO merece decirse al derecho: x86 no tiene, y eso **no es una pérdida**
-porque el corte del §1 ya había puesto todo lo de tiempo real en el micro. La
-máquina no necesita tocar un solo pin.
-
-### Alimentación: separada, y no es negociable
-
-El x86 va con **su propia fuente de 12 V**, nunca colgado de los rieles de
-audio. Un ordenador es una carga conmutada de 15–20 W: metida en los ±12 V del
-instrumento inyectaría ruido justo donde el presupuesto de masa dice que no
-puede haberlo (1.21 cents es el suelo del instrumento). Misma regla que ya
-aplicaba al Pi (módulo 1 §3).
-
-## 4. Rust en el kernel: dónde sí y dónde no
-
-El instrumento se maneja **a nivel de kernel con Rust**. Pero hay una frontera
-real y conviene tenerla clara antes de escribir una línea.
-
-### Lo que está maduro (finales de 2026)
-
-| Abstracción | Estado |
-|---|---|
-| **misc device** | dentro. Greg Kroah-Hartman las llamó *«el punto de inflexión»* |
-| **char device** con `ioctl` | dentro |
-| registro de dispositivos **USB** | dentro |
-| drivers **HID** | desde marzo de 2026 |
-| PCI, plataforma, DMA, DRM | dentro o en curso |
-
-### Lo que NO existe
-
-**ALSA no tiene abstracción en Rust.** El subsistema de sonido sigue siendo C, y
-no hay nada en curso que lo cambie a corto plazo.
-
-Eso no es un obstáculo, es una señal de dónde poner el esfuerzo.
-
-### Dónde va nuestro módulo: el enlace del instrumento
-
-**`/dev/sam17` — un char device en Rust para el canal micro ↔ máquina.**
-
-Es el sitio correcto por tres razones, y ninguna es «porque mola»:
-
-1. **Es exactamente la abstracción que está madura.** Char device con `ioctl` es
-   de lo primero que se estabilizó en Rust for Linux.
-2. **Es la frontera del sistema.** Todo lo que quiera hablar con el instrumento
-   —el secuenciador, la DAW, el agente de IA— pasa por ahí. Un solo driver
-   contra media docena de programas reimplementando manejo de puerto serie cada
-   uno.
-3. **Se beneficia de vivir en el kernel.** El transporte deja de sufrir el
-   jitter del planificador de espacio de usuario, y con `PREEMPT_RT` se integra
-   con la planificación de tiempo real como corresponde.
-
-Lo que el módulo expone: apertura de canal, envío y recepción de mensajes hacia
-el micro, y `ioctl` para lo que no es flujo — estado de calibración, patches,
-modo. El formato de esos mensajes es el protocolo del §7, que sigue sin definir.
-
-### El audio NO va en el kernel
-
-Va con el **driver USB audio class que ya existe** (en C, probado, y funciona),
-y el DSP en **espacio de usuario** con prioridad de tiempo real sobre un kernel
-compilado con `PREEMPT_RT`.
-
-Escribir un driver de audio en Rust hoy significaría crear la abstracción de
-ALSA entera antes de escribir una sola línea útil. Eso es un proyecto de kernel,
-no un proyecto de instrumento.
-
-### Lo que cuesta, dicho por delante
-
-- **Un módulo va atado a la versión del kernel.** Cada actualización puede pedir
-  ajustes. Es mantenimiento permanente, no un «se escribe y ya».
-- **Las abstracciones incompletas se pagan en `unsafe`.** Donde no llega el
-  binding hay que bajar a FFI a mano, y ahí Rust deja de protegerte.
-- **Depurar en el kernel es mucho más duro** que en espacio de usuario, y un
-  fallo se lleva la máquina entera por delante — aunque Rust reduce mucho esa
-  clase de fallo, que es justamente el argumento para usarlo.
-
-## 5. El agente de IA
-
-**El LLM es remoto.** El instrumento no corre modelos: llama a una API. Eso
-mantiene el cómputo local en lo que de verdad necesita — red, un runtime
-decente y disco.
-
-La arquitectura ya está resuelta en `projects/aurelius` y se reutiliza. Lo que
-se toma **tal cual**:
+Se reutiliza lo ya resuelto en `projects/aurelius`:
 
 | Pieza | Qué aporta |
 |---|---|
-| `brain/openai_compat.py` | cliente HTTP compatible con OpenAI, streaming SSE, bucle de herramientas con tope de 5 rondas, timeouts |
-| `brain/factory.py` `FallbackBrain` | *latch* a un segundo proveedor: si el primero falla, no vuelve en ese turno. En un escenario sin red esto es infraestructura, no lujo |
+| `brain/openai_compat.py` | cliente HTTP compatible con OpenAI, streaming SSE, bucle de herramientas, timeouts |
+| `brain/factory.py` `FallbackBrain` | *latch* a un segundo proveedor si el primero falla |
 | `organism/capability.py` | contrato declarativo de herramientas |
-| `events.py` | audit en JSONL con elisión de contenido: los textos largos se guardan como puntero con hash |
-| patrón `modo.state` / `modo.request` | fichero JSON atómico como bus de estado **entre procesos** — sirve tal cual para el canal micro ↔ máquina |
+| `events.py` | audit en JSONL con elisión de contenido |
 
-Lo que hay que **adaptar**: la capa de autoridad (`authority_core.py`, mandatos
-con TTL, denylist de irreversibles). El modelo por origen es portable, pero
-aurelius confirma **de viva voz** — un «dale» hablado. En un instrumento eso no
-vale: **la confirmación pasa a ser física**, un botón o un pedal.
+Se **adapta** la capa de autoridad (`authority_core.py`, mandatos con TTL,
+denylist de irreversibles): el modelo por origen es portable, pero aurelius
+confirma **de viva voz** y aquí la confirmación tiene que ser **física** — un
+botón o un pedal. Esa capa importa porque **un agente que puede reconfigurar tu
+instrumento necesita la misma contención que uno que puede borrar ficheros**.
 
-Y merece decirse por qué esa capa importa aquí: un agente que puede reconfigurar
-tu instrumento necesita exactamente la misma contención que uno que puede borrar
-ficheros.
+Falta por escribir: **cliente MCP** (aurelius es servidor, no cliente —
+verificado, cero `ClientSession`) y, si se quiere voz, **la ruta HTTP de STT**,
+que `speechtotext` no tiene.
 
-Dos cosas que **no** están y hay que construir:
+## 7. Qué placa hacemos nosotros
 
-1. **Cliente MCP.** Aurelius es servidor MCP, no cliente (verificado: cero
-   `ClientSession` en su código). Si el agente del instrumento debe consumir
-   servidores MCP externos, esa pieza se escribe.
-2. **STT remoto.** `speechtotext` transcribe por CLI local con faster-whisper y
-   su API solo hace `/health` y `/score`. Si el instrumento responde a voz, la
-   ruta HTTP hay que crearla.
+**Una: la del instrumento.**
 
-## 6. Qué placa hacemos nosotros
+RP2350 · 2× AD5686R encadenados (8 CV: 4 de tono + 4 de velocity) · 4 gates ·
+4 entradas de afinado digitales · MIDI DIN in/out con optoacoplador · USB ·
+pantalla pequeña con encoders · las dos masas separadas
 
-**La del micro, y solo la del micro.**
+Consecuencia buena que no se buscaba: cambiar la cabecera de 40 pines del Pi, el
+LCD de 16×2 y los cuatro pulsadores por **un QFN pequeño** deshace el atasco de
+ruteo que dejó 17 redes al aire en el módulo 2 (issue #22).
 
-Una placa base para DDR5 son ocho capas o más, con pares diferenciales,
-adaptación de longitudes y control de impedancia. Eso no se diseña como
-extensión de un proyecto de sintetizador: **el x86 se compra montado**.
+## 8. Lo que se consideró y se descartó
 
-La placa del cerebro en cambio es abordable y es lo siguiente que toca:
+Se deja escrito para no volver a discutirlo, y por qué:
 
-RP2350 · 2× AD5686R encadenados (8 CV) · 4 salidas de gate · 4 entradas de
-afinado (ahora digitales, sin mux ni acondicionado) · MIDI DIN in/out · USB ·
-serie hacia la máquina · las dos masas separadas
+| Idea | Por qué no |
+|---|---|
+| **Raspberry Pi / CM5 dentro** | Sin DDR5 (usa LPDDR4X soldada). Y arranca en 30 s |
+| **x86 Ryzen dentro** | Un Ryzen 9 de escritorio son 105 W dentro de la caja, y **el calor es el enemigo de la afinación**: el conversor exponencial se corre −0.33 %/°C. No es que no quepa, es que sabotea el instrumento |
+| **Módulo de kernel en Rust** | Solo sirve en Linux. Si la computadora puede ser cualquiera, la interfaz tiene que ser estándar |
+| **Sistema operativo propio** | Reimplementar USB, ficheros, pantalla y red. Años, y ni una nota de música |
+| **Un DAW propio** | Décadas de trabajo para competir con lo que ya usas — y no produce una canción que no pudieras hacer ya |
 
-Y trae una consecuencia buena que no se buscaba: sustituir la cabecera de 40
-pines del Pi, el LCD y los cuatro pulsadores por **un QFN pequeño** deshace el
-atasco de ruteo que dejó 17 redes al aire en el módulo 2 (issue #22). El lado
-digital estaba congestionado precisamente por esas piezas.
+Ninguna está muerta para siempre: el día que se meta una computadora dentro,
+vuelven a la mesa el x86 y el módulo de kernel. Pero **hoy no hacen falta**, y el
+corte del cerebro es lo que permite decidirlo después.
 
-## 7. Lo que NO está confirmado
+## 9. Lo que NO está confirmado
 
-1. **La placa concreta no está elegida**, solo la clase. Hay que fijar modelo y
-   comprobar la entrada de continua, y sobre todo **medir la temperatura dentro
-   de la caja cerrada** con los reguladores lineales al lado.
-2. **El consumo real bajo carga de audio** no está medido, y el TDP es del chip,
-   no del sistema con NVMe y DDR5 trabajando.
-3. **A qué TDP se puede correr en pasivo** dentro de la caja: es lo que decide
-   si tocar es silencioso. Hay que medirlo, no suponerlo.
-3. **La latencia del audio por USB** no está medida y decide si los efectos
-   sobre las voces analógicas son usables.
-4. **El protocolo micro ↔ máquina** no está definido. MIDI es lo obvio para
-   notas y reloj; para el resto (patches, calibración, agente) hace falta algo
-   más y no está decidido si es MIDI SysEx, serie con un protocolo propio, o USB.
-   Es lo que expone `/dev/sam17` (§4), así que bloquea al módulo de kernel.
-5. **Contra qué versión de kernel se fija el módulo** no está decidido, y no es
-   menor: un módulo fuera del árbol se rompe con las actualizaciones.
-6. Nada de esto está medido. Son hojas de datos y arquitectura.
+1. **La pantalla del instrumento** — se propone pantallita con encoders, para
+   poder afinar y elegir patch sin depender de ninguna computadora. **Sin
+   confirmar**: modelo, tamaño, y si lleva encoders o pulsadores.
+2. **El protocolo por encima del MIDI.** Notas y reloj son MIDI estándar; para
+   patches, tabla de afinación y agente hace falta algo más, y no está decidido
+   si es SysEx o serie propia por USB.
+3. **`nih-plug`** no se ha probado en este proyecto. Existe, exporta CLAP y VST3
+   y tiene plugins en uso real, pero eso es lo que dice su documentación, no una
+   medición nuestra.
+4. **El aislamiento del USB** no está medido. Que el DIN esté aislado por norma
+   es un hecho; cuánto ruido mete el USB en la práctica, no.
+5. Nada de esto está medido. Son hojas de datos y arquitectura.
