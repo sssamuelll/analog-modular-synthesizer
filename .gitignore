@@ -42,3 +42,6 @@ Thumbs.db
 # temporales de pruebas con pcbnew
 _probe.*
 *.rpt
+
+# Zips de fabricacion (regenerables desde fab/)
+hardware/*/fab/*-jlcpcb.zip

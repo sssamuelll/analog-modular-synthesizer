@@ -75,8 +75,11 @@ regulados que distribuye al resto del sintetizador a través del bus interno.
       [`pcb/`](pcb/)
 - [x] **Ficheros de fabricación** — gerbers y taladros en [`fab/`](fab/), con la
       especificación de la ranura y el aviso de `BR1`
-- [ ] **Antes de fabricar**: verificar el orden de patillas de `BR1` contra el
-      datasheet de la pieza comprada ([§14.6](notes/design-notes.md))
+- [x] **Orden de patillas de `BR1` verificado** contra datasheet primario
+      (HY Electronic DB201–DB207 Rev. 11): la pieza queda fijada en **DB207**
+      y el pinout ruteado ya era el correcto — el KBP206 original era SIP y no
+      encajaba en la huella ([§14.6](notes/design-notes.md), issue #11). Al
+      montar: esquina `+` del cuerpo a la cruz `+` del silk
 - [x] **Margen de dropout simulado** ([§15](notes/design-notes.md),
       [`simulations/power/`](../../simulations/power)) — a red nominal sobra;
       a 207 V y plena carga de diseño hace falta un transformador con

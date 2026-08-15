@@ -205,9 +205,10 @@ módulo):
    óhmetro entre la clavija de tierra del enchufe y cada panel, el espárrago y
    el faston de `J5`. Miliohmios (§13.4). Si esto no pasa, no se enchufa.
 2. **Inspección visual**: polaridad de los electrolíticos, orientación de
-   los reguladores, cortos en el silkscreen. Y **el orden de patillas de
-   `BR1`** contra el datasheet de la pieza montada (§14.6) — si esto está mal
-   no se nota mirando la placa, se nota en el primer semiciclo.
+   los reguladores, cortos en el silkscreen. Y **la orientación de `BR1`**:
+   la esquina `+` moldeada en el cuerpo del DB207 va a la cruz `+` del silk
+   (pad 1); girado 180° encaja igual y cruza el puente (§14.6) — si esto está
+   mal no se nota mirando la placa, se nota en el primer semiciclo.
 3. Conectar **sólo el transformador** (sin carga), verificar ±17 V tras el
    bridge.
 4. Insertar reguladores en sus zócalos, verificar **+12 V ±1 %** y **−12 V
@@ -670,6 +671,37 @@ hacer, con el datasheet del puente que se compre delante:
 Un puente cruzado pone el bulk en cortocircuito a través de dos diodos en el
 primer semiciclo. Se lleva el puente, y probablemente el fusible no llega a
 tiempo de salvar los condensadores.
+
+**RESUELTO (2026-08-15, issue #11).** La pieza queda fijada: **DB207** (2 A /
+1000 V, case DB-1; DB206 vale igual) — el único puente de 2 A que existe en
+DIP-4 W7.62/P5.08. La duda de variantes era doblemente teórica: el KBP206 que
+nombraba el BOM **no encaja en la huella** — su case KBP es SIP de 4 patas en
+línea, paso ~3.8 mm (datasheet primario de Diodes Inc, DS21205 Rev. 12,
+jul 2025).
+
+El orden de patillas, de dos fuentes primarias independientes que coinciden:
+
+- **HY Electronic**, `DB201 THRU DB207` Rev. 11 (hygroup.com.tw, el fabricante
+  que vende RS con la ref. 923-5485): vista superior, fila superior `− +`
+  (① −, ② +), fila inferior `~ ~` (③ ④).
+- **Taiwan Semiconductor**, serie HDBL101G — case DBL, mismo layout, y es el
+  datasheet que referencia la propia huella de KiCad: igual, `− +` arriba,
+  `~ ~` abajo.
+
+Montado girado 90° sobre la huella, eso cae `+` en pad 1 (`VRAW+`), `−` en
+pad 2 (`VRAW−`) y `~ ~` en pads 3/4 (`SEC_A`/`SEC_B`): exactamente lo que
+codifica el símbolo `D_Bridge_+-AA` ya elegido y lo que está ruteado. **No hubo
+que tocar ni el símbolo ni las pistas** — solo el valor del BOM y esta nota.
+
+El riesgo restante es insertar el cuerpo girado 180° (encaja físicamente y
+cruza el puente): el silk de la huella trae una cruz `+` junto al pad 1 y el
+cuerpo trae la polaridad moldeada, así que la inspección visual del checklist
+(§9 paso 2) lo cubre. Si se compra la serie DB20x de otro fabricante
+(Rectron/MCC), re-verificar su datasheet antes de soldar: la coincidencia
+HY↔TSC hace muy improbable una variante divergente, pero gratis no es.
+
+Reichelt no tiene ningún puente de 2 A en DIP-4 — por eso BR1 cambia de
+proveedor (RS o TME).
 
 ### 14.7 Un error del BOM que salió al asignar huellas
 
