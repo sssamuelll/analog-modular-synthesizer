@@ -37,8 +37,11 @@ COMO SE MIDE
   f = N/T. Es lo contrario de contar cuantos ciclos entran en un segundo, y es
   MUCHO mejor a frecuencias bajas — que es justo donde estan las notas graves.
 
-  La onda del VCO se recorta con un disparador Schmitt a 3.3 V y el Pi
-  cronometra los flancos. La precision no la pone el contador sino el JITTER del
+  La onda del VCO se recorta con un disparador Schmitt **en el propio modulo del
+  VCO**, y lo que llega al cerebro es un pulso logico por oscilador. No viaja
+  audio analogico entre modulos: ni se ensucia el bus ni hace falta mux,
+  atenuador ni fuente negativa en el cerebro. Y al ser lineas independientes,
+  las cuatro voces se miden A LA VEZ. La precision no la pone el contador sino el JITTER del
   sellado de tiempo, y sale despreciable en cuanto se miden unos milisegundos.
 """
 from __future__ import annotations
@@ -105,13 +108,19 @@ def demo() -> None:
         T = tiempo_medida(f)
         peor = max(peor, precision(f, T))
         total += T + ASENTAMIENTO
-    total *= N_VOCES
+    # Las N voces se miden EN PARALELO, no una detras de otra: se ponen las
+    # cuatro en la misma nota y se cronometran los cuatro pulsos a la vez.
+    # Se puede porque lo que llega del modulo 3 son senales LOGICAS
+    # independientes, una por oscilador — con el multiplexor analogico que
+    # habia antes habia que ir de una en una y el barrido duraba N veces mas.
 
     print(f"\npeor precision de las {N_NOTAS} notas: {peor:.3f} cents")
     assert peor <= OBJETIVO_CENTS + 1e-9, "la medida no llega al objetivo"
 
-    print(f"barrido completo {N_NOTAS} notas x {N_VOCES} voces: "
-          f"**{total:.1f} s**")
+    print(f"barrido completo: {N_NOTAS} notas, las {N_VOCES} voces en "
+          f"paralelo -> **{total:.1f} s**")
+    print(f"   (de una en una, como exigia el multiplexor, serian "
+          f"{total*N_VOCES:.1f} s)")
     assert total < 60, "un barrido de mas de un minuto nadie lo usa"
 
     # --- que gana el instrumento -----------------------------------------
