@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "sam17")(type "KiCad")(uri "${KIPRJMOD}/sam17.kicad_sym")(options "")(descr "Simbolos propios del SAM17: los que KiCad 10 no trae. Hoy solo el AD5686R, DAC cuadruple de 16 bits (KiCad trae los duales de la familia pero no el cuadruple)"))
+)
