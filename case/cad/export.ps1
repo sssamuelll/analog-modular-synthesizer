@@ -43,10 +43,6 @@ foreach ($m in "assembly_acrilico","assembly_aluminio") {
 }
 if ($fallos -gt 0) { Write-Error "$fallos exports fallidos"; exit 1 }
 
-# completa la emision: reescribe INSUNITS=6 (OpenSCAD 2021.01 quirk) a 4 (mm)
-python (Join-Path $repo "case/fix_dxf_units.py")
-if ($LASTEXITCODE -ne 0) { Write-Error "fix_dxf_units en ROJO"; exit 1 }
-
 # puerta de relectura: validar lo que el laser va a ver, no lo que dibujamos
 python (Join-Path $repo "case/check_dxf.py")
 if ($LASTEXITCODE -ne 0) { Write-Error "check_dxf en ROJO: no se manda a cortar"; exit 1 }

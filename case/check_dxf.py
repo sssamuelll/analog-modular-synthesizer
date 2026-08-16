@@ -36,7 +36,8 @@ SOBRES = {
 
 def revisar(nombre: str, sobre) -> list[str]:
     f: list[str] = []
-    doc = ezdxf.readfile(PLANS / f"{nombre}.dxf")
+    ruta = PLANS / f"{nombre}.dxf"
+    doc = ezdxf.readfile(ruta)
     ents = list(doc.modelspace())
     if not ents:
         return [f"{nombre}: DXF sin entidades"]
@@ -79,10 +80,15 @@ def revisar(nombre: str, sobre) -> list[str]:
     if not (ancho_ok and alto_ok):
         f.append(f"{nombre}: bbox {w:.1f} x {h:.1f} mm fuera del sobre "
                  f"{sobre} (unidades mal? factor 25.4?)")
-    ins = doc.header.get("$INSUNITS", 0)
-    # INSUNITS debe ser 0 (unitless) o 4 (mm); fix_dxf_units.py reescribe 6→4
-    if ins not in (0, 4):
-        f.append(f"{nombre}: $INSUNITS={ins} (ni ausente ni mm)")
+    # ezdxf SINTETIZA un header completo al leer: doc.header reporta
+    # $INSUNITS=6 aunque el archivo no lo traiga (verificado: la cadena
+    # aparece 0 veces). OpenSCAD 2021.01 emite R12 SIN seccion HEADER, asi
+    # que el DXF no declara unidades y la unica fuente honesta es el texto.
+    # Ausente = correcto (numeros crudos en mm; se le dice al servicio).
+    if "$INSUNITS" in ruta.read_text(encoding="utf-8", errors="replace"):
+        ins = doc.header.get("$INSUNITS", 0)
+        if ins not in (0, 4):
+            f.append(f"{nombre}: $INSUNITS={ins} (ni ausente ni mm)")
     print(f"  {nombre}: {len(ents)} entidades, bbox {w:.1f} x {h:.1f} mm")
     return f
 
