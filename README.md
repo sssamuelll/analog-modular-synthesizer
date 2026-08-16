@@ -33,7 +33,7 @@ aportes de la comunidad.
 | 5 | VCF | Analógico | LM13700 (OTA tipo MS-20) | [`hardware/05-vcf`](hardware/05-vcf) |
 | 6 | ADSR | Analógico | ICM7555 | [`hardware/06-adsr`](hardware/06-adsr) |
 | 7 | VCA | Analógico | LM13700 / CA3080 | [`hardware/07-vca`](hardware/07-vca) |
-| — | Cajón y paneles | Mecánico | Madera + lámina galv. | [`case/`](case) |
+| — | Cajón y paneles | Mecánico | Acrílico naranja + paneles PCB de aluminio | [`case/`](case) |
 
 Arquitectura global y diagrama de bloques: [`docs/architecture.md`](docs/architecture.md).
 
