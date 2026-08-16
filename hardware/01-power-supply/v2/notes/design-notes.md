@@ -487,8 +487,129 @@ rango de trimmer que Task 4/5 debe incorporar con este número en mano.
 
 ## §2 Stock
 
-| parte | código LCSC | stock | básica/extendida | precio | fecha |
-|-------|------------|-------|------------------|--------|-------|
+**Herramientas usadas**: se intentó primero `mcp__kicad__search_jlcpcb_parts` /
+`get_jlcpcb_part` / `suggest_jlcpcb_alternatives` — la base local de JLCPCB no
+está descargada en este entorno (`search_jlcpcb_parts` devuelve "No JLCPCB
+parts found" hasta para búsquedas triviales como "10k resistor 0805", y
+`get_jlcpcb_part` con un C-code real conocido responde "download the JLCPCB
+database first") y no hay credenciales de API en vivo configuradas. Se cambió
+entonces a la web de LCSC (`lcsc.com`, vía `WebSearch`/`WebFetch`), como
+autorizaba el fallback. **Fecha de consulta de toda esta sección: 2026-08-16.**
+
+### §2.1 Step 1 — Silicio ultra en LCSC
+
+Búsqueda de LT3045 y LT3094 en sus variantes de grado (E/I/H) y package
+(DFN/MSOP). Confirmado en LCSC (no en `findchips`/`octopart`, que solo sirven
+de puntero — el C-code y el stock se verificaron en `lcsc.com/product-detail`
+directamente):
+
+| variante | package | grado | LCSC C-code | stock | precio (1+/100+) |
+|---|---|---|---|---|---|
+| LT3045EDD#TRPBF | DFN-10-EP(3×3) | E (−40…125 °C) | **C514420** | 3.618 | $7.01 / $5.25 |
+| LT3045EDD#PBF (sin T&R) | DFN-10-EP(3×3) | E | C666574 | 817 | $8.03 / $6.89 (121+) |
+| LT3045HDD#PBF | DFN-10-EP(3×3) | H | C666580 | (no verificado a fondo) | — |
+| LT3045EMSE#PBF | MSOP-12-EP | E | C580012 | 3.020 | $9.20 / $6.86 |
+| LT3094EDD#PBF | WDFN-12-EP(3×3) | E | **C670492** | 1.475 | $7.30 / $6.36 |
+| LT3094EMSE#PBF | MSOP-12-EP | E | C498217 | 1.017 | $6.92 / $5.87 |
+
+Sanity check contra la cifra orientativa del brief ($3–6/ud en extended):
+los precios reales caen en **$4.8–9.2/ud según variante**, todos en el mismo
+orden de magnitud (ninguno a $0.10 ni marcado como otra categoría de parte) —
+la descripción de cada página coincide con "Voltage Regulators - Linear, Low
+Drop Out (LDO) Regulators", fabricante ADI, sin señales de mislabeling.
+Todas listadas como parte **Extended** (no Basic) en JLCPCB — esperable para
+un LDO ultra-bajo-ruido, no es un componente de línea básica.
+
+### §2.2 Step 2 — Elección de package
+
+**DFN-10-EP(3×3) para el LT3045 y DFN-12/WDFN-EP(3×3) para el LT3094**, por
+la regla del brief (DFN preferido por térmica, es el package de la nota de
+aplicación — pinout ya documentado en §1.3/§1.4). **El DFN no necesitó caer al
+fallback de MSOP**: ambos DFN tienen stock real y verificado (3.618 u. el
+LT3045EDD#TRPBF, 1.475 u. el LT3094EDD#PBF) — el MSOP queda solo como
+alternativa de segunda línea, ya cotizada arriba por si el DFN se agota entre
+esta puerta y la compra real. Grado **E** elegido sobre I/H: el circuito no
+tiene requisito documentado de rango extendido de temperatura (el propio LM2941/LM2991
+ya limitan a 0–125 °C/−40–125 °C aguas arriba, §1.1/§1.2), y el grado E es el
+que tiene más stock y menor precio de los tres.
+
+### §2.3 Step 3 — Veredicto GO/NO-GO de silicio
+
+**GO.** Tanto el LT3045 (C514420, 3.618 u.) como el LT3094 (C670492, 1.475 u.)
+tienen stock real, verificado en vivo en `lcsc.com`, en el package preferido
+por la regla del Step 2. No aplica el plan B de re-plan del brief.
+
+### §2.4 Step 4 — Pasivos y protecciones críticos
+
+| parte | código LCSC | stock | básica/extendida | precio (1+/100+) | fecha |
+|---|---|---|---|---|---|
+| R_SET 120 kΩ 1 % ±100 ppm/°C 0805 (YAGEO RC0805FR-07120KL) | C114524 | 169.800 | Extended | $0.0082 / $0.0054 | 2026-08-16 |
+| R_SET 121 kΩ 0,1 % ±25 ppm/°C 0805 (YAGEO RT0805BRD07121KL) | **sin C-code confirmado** — ver nota | — | — | — | 2026-08-16 |
+| Shunt 20 mΩ 1 % 1206 (Isabellenhuette VMK-R020-1.0-U, ±20 ppm/°C, 1.5 W) | **C6920584** | 1.000 | Basic | $0.75 / $0.48 | 2026-08-16 |
+| Shunt 20 mΩ 1 % 1206, alterno (Bourns CRF1206-FZ-R020ELF, ±50 ppm/°C, 1 W) | C1848840 | 196 | Extended | $0.52 / $0.30 | 2026-08-16 |
+| 22 µF X7R 25 V 1210 (HRE CGA1210X7R226K250RT, ±10 %) | **C6120032** | 2.685 | Basic | $0.27 / $0.16 | 2026-08-16 |
+| 10 µF X7R 50 V 1206 (Samsung CL31B106KBHNNNE, ±10 %) — ver nota de voltaje | **C89632** | 385.340 | Extended | $0.43 / $0.28 (500+) | 2026-08-16 |
+| SMAJ15A TVS (Littelfuse) | **C148216** | 10.030 | Basic | $0.139 / $0.076 (2500+) | 2026-08-16 |
+| SS14 Schottky SMA (MDD/Microdiode) | **C2480** | 1.081.100 | Basic | $0.0185 / $0.0085 (50k+) | 2026-08-16 |
+
+**Nota — R_SET (120/121 kΩ 0,1 % 25 ppm)**: el brief pide 120 kΩ; §1.3/§1.4 ya
+fijó el valor real de diseño en **121 kΩ** (Table 1 del DS del LT3045/LT3094,
+valor para VOUT = 12 V). El part number `YAGEO RT0805BRD07121KL` **existe
+como parte manufacturada real** — confirmado en DigiKey (121 kΩ ±0,1 %
+±25 ppm/°C, 0805, thin film) y la serie hermana (`RT0805BRD07`/`AT0805BRD07`,
+0,1 %/25 ppm, 0805) sí tiene SKUs confirmados en LCSC con C-code alrededor de
+ese valor (10 k→C110774/C110775, 100 k→C122537, 182 k→C865233, 301 k→C865388,
+560 k→C865557) — pero **no se pudo confirmar el C-code puntual de 121 kΩ en
+LCSC** con las herramientas de búsqueda disponibles (`search_jlcpcb_parts`
+sin base local, `WebSearch`/`WebFetch` sin poder ejecutar el buscador
+JS-driven de `lcsc.com/search`, que exige render en navegador). No es
+evidencia de que LCSC NO lo tenga — es un techo de la herramienta, no un
+NO-GO. **Fallback verificado y en stock real**: `RC0805FR-07120KL` (C114524,
+120 kΩ, 1 %, ±100 ppm/°C, 169.800 u.) — el propio DS del LT3045/LT3094 solo
+exige 1 % en Table 1 (§1.3), así que el 0,1 %/25 ppm del brief es un margen
+extra sobre lo que pide el fabricante, no un mínimo del DS. **Acción para
+Task 4/9**: antes de cerrar el BOM, verificar en `lcsc.com/search` (interfaz
+web, requiere JS) si existe C-code de 121 kΩ 0,1 % 25 ppm 0805 en stock; si
+no, decidir entre (a) usar el 120 kΩ 1 % de C114524 (aceptando el error de
+VOUT que eso introduce — 1 kΩ de diferencia sobre 121 kΩ ≈ 0,83 % de desvío en
+R_SET, comparable a la tolerancia misma) o (b) combinar dos resistencias de
+precisión en serie/paralelo para alcanzar 121 kΩ exacto con la serie 0,1 %/25 ppm
+que sí tiene stock confirmado.
+
+**Nota — 10 µF X7R 25 V 1206**: las partes con el voltaje exacto de 25 V que
+se encontraron (`TDK CGA5L1X7R1E106K160AC` C2168260: solo 3 u. en stock;
+`Taiyo Yuden TMK316B7106KL-TD` C92831: agotado; `Murata GRM31CB31E106KA75L`
+C86049: agotado) no sirven para producción. Se sustituyó por
+`Samsung CL31B106KBHNNNE` (C89632), rating **50 V** en vez de 25 V — un
+sobre-margen de voltaje siempre es válido eléctricamente (nunca un
+downgrade), y tiene 385.340 u. en stock real. Documentado para que Task 4/9
+no lo lea como un error de transcripción.
+
+**Shunt 20 mΩ — se documentan dos candidatos** porque ninguno es "Basic +
+stock alto + mejor tempco" a la vez: el Isabellenhuette (Basic, 1.000 u.,
+±20 ppm/°C) es la elección primaria por mejor tempco (importa para el
+reparto de corriente entre chips en paralelo, §1.3/§1.4); el Bourns queda
+como alterno si el Isabellenhuette se agota.
+
+### §2.5 Step 5 — THT (no va por LCSC)
+
+Verificado en DigiKey (Mouser bloqueó el `WebFetch` — timeout repetido en las
+tres páginas de producto, aparente bot-detection; DigiKey sirvió como
+alternativa equivalente, ambos son distribuidores autorizados TI/Bourns, no
+un canal gris):
+
+| parte | distribuidor / código | stock | precio (1 pc) | fecha |
+|---|---|---|---|---|
+| LM2941CT/NOPB (TI, TO-220-5) | DigiKey 148143 | 164 u. | $2.04 | 2026-08-16 |
+| LM2991T/NOPB (TI, TO-220-5) | DigiKey 212657 | 953 u. | $4.05 | 2026-08-16 |
+| Trimmer Bourns 3296W-1-102 (1 kΩ, 25 vueltas, ±10 %, ±100 ppm/°C) | DigiKey 84508 | 1.062 u. | $3.64 | 2026-08-16 |
+
+**LM2941CT/NOPB con 164 u. es el número más ajustado de toda la puerta** —
+sigue siendo stock real (no 0, no backorder), suficiente para una tanda
+chica (la fuente v2 usa 1 LM2941 por unidad), pero si el proyecto escala a
+producción de varias unidades convendría re-chequear antes de comprar. Lead
+time de fabricante declarado (16 semanas) es el de fabricación nueva de TI,
+no aplica mientras haya stock del distribuidor.
 
 ## §3 Decisiones y aritmética
 
