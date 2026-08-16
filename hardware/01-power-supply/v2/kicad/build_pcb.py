@@ -39,6 +39,7 @@ Lo que cambia de verdad respecto a v1 (topologia de la GOAT, ver spec sec.3 y
 """
 from __future__ import annotations
 
+import math
 import os
 import re
 import sys
@@ -502,7 +503,12 @@ TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = [
     ("/-12V9", B, [(128.8, 136), (128.8, 139)], ANCHO_POT),
     ("/-12V9", F, [(128.8, 139), (128.8, 143)], ANCHO_POT),
     ("/-12V9", F, [(112, 94), (112, 100), (128.8, 100)], ANCHO_POT),  # D13.1
-    ("/-12V9", F, [(128.8, 143), (128.8, 165)], ANCHO_POT),
+    # partido en dos tramos en (128.8,150), no uno solo: la linea de abajo
+    # (128.8,150)-(...)-(55,163)) arrancaba justo en medio de este, sin
+    # vertice compartido -- "dangling" en DRC real pese a tocarse por
+    # ancho (ronda 2, limpieza).
+    ("/-12V9", F, [(128.8, 143), (128.8, 150)], ANCHO_POT),
+    ("/-12V9", F, [(128.8, 150), (128.8, 165)], ANCHO_POT),
     ("/-12V9", F, [(128.8, 165), (118.55, 165), (118.55, 166.875)], ANCHO_ISLA),  # U6 1-3
     ("/-12V9", F, [(130, 165), (130, 168)], ANCHO_ISLA),   # D9.2
     # D11.2 (/-12V9, en 130,180) comparte exactamente la misma x que D9.2
@@ -582,10 +588,25 @@ TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = [
     # a 57, y=180) camino de RV2.1/2 -- por B.Cu no se tocan.
     ("Net-(U1-ADJ)", F, [(25, 176), (51.92, 176)], ANCHO_SEN),
     ("Net-(U1-ADJ)", B, [(51.92, 176), (51.92, 182)], ANCHO_SEN),   # RV2.3
-    # R6.1 (pasante): tambien salta a B.Cu -- a 77 cruzaria los hubs de
-    # +12V (y=177) y -12V (y=178) de lleno.
-    ("Net-(U1-ADJ)", F, [(25, 176), (77, 176)], ANCHO_SEN),
-    ("Net-(U1-ADJ)", B, [(77, 176), (77, 182)], ANCHO_SEN),   # R6.1
+    # R6.1 (pasante): salta a B.Cu en x=66.4 (no en 67.62 ni en 77): el
+    # hub F.Cu de +12V (ronda 2, ANCHO_KELVIN) SOLO existe al ESTE de
+    # 67.62 (al oeste, hacia el tunel, sigue fino) -- cruzando en B.Cu
+    # ANTES de 67.62 se evita el hub por completo (capa distinta donde
+    # exista) y solo hace falta separacion en X de la propia bajada
+    # vertical de +12V (B.Cu, en 67.62,177..172): 67.62-66.4=1.22mm,
+    # mayor que el minimo real (0.75+0.2+0.127=1.077).
+    # x=67.62 es un CRUCE real, no una simple cercania: la bajada B.Cu de
+    # +12V (172..177) pasa justo por y=176 en ese x -- cualquier pista de
+    # -12V/ADJ que tambien pise B.Cu ahi se cruza de lleno (no es cuestion
+    # de margen, se tocan). Salta a B.Cu en x=66.2 (fuera del rango del
+    # vertical Y de las dos vias de GND de J2.2/J2.3 en 62.54/65.08), pero
+    # en vez de seguir a y=176 (que cruza igual la bajada de +12V), baja
+    # primero a y=178.6 -- fuera del rango Y de esa bajada (172..177) Y
+    # del hub F.Cu de +12V (177) -- y solo entonces gira hacia R6.1.
+    # 178.6 (no menos) tambien libra por 0.048mm el tramo oeste de -12V,
+    # que corre por y=178.1 en esta misma franja de X.
+    ("Net-(U1-ADJ)", F, [(25, 176), (66.2, 176)], ANCHO_SEN),
+    ("Net-(U1-ADJ)", B, [(66.2, 176), (66.2, 178.6), (77, 178.6), (77, 182)], ANCHO_SEN),   # R6.1
     ("Net-(U2-ADJ)", F, [(122, 143), (122, 137.5), (145.2, 137.5), (145.2, 159.84)], ANCHO_SEN),
     # RV3.1: rodea el cuerpo de R8 (pad1/GNDREF en 145.2,170, cuadrado
     # 1.6x1.6) por la derecha en vez de cruzarlo en diagonal.
@@ -615,8 +636,8 @@ TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = [
     # salta a B.Cu de una vez (la muesca de GND en x=68..88,y=108 deja el
     # hueco): cruza TODO el tramo -12V (F.Cu, y=103) sin tocarlo por ser
     # otra capa, y sale a F.Cu ya en y=100, fuera de esa franja.
-    ("Net-(D6-A)", F, [(86.46, 105), (86.46, 104.5)], ANCHO_SEN),
-    ("Net-(D6-A)", B, [(86.46, 104.5), (86.46, 100)], ANCHO_SEN),
+    ("Net-(D6-A)", F, [(86.46, 105), (86.46, 103.9)], ANCHO_SEN),
+    ("Net-(D6-A)", B, [(86.46, 103.9), (86.46, 100)], ANCHO_SEN),
     ("Net-(D6-A)", F, [(86.46, 100), (86.46, 99), (95.16, 99), (95.16, 94)], ANCHO_SEN),
     ("Net-(D7-A)", F, [(33.62, 111), (33.62, 115), (26, 115), (26, 119)], ANCHO_SEN),
     ("Net-(D7-A)", F, [(26, 115), (10, 115), (10, 119)], ANCHO_SEN),
@@ -645,15 +666,30 @@ TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = [
     # B.Cu solo para cruzar su caja (179.1..180.9).
     # margen real: la caja de C23.2 es 179.1..180.9, hace falta 0.377mm
     # mas alla del borde -- 181/179 se quedaban a solo 0.1mm.
+    # ronda 2, Important 1: R15/R16->J2.4 tiene que ser >=1.5mm TODO el
+    # recorrido (brief sec.6.1) -- de 183 a 67.62 (el tap de J2.4, mas
+    # abajo) sube de ANCHO_ISLA a ANCHO_KELVIN. Mas alla de 67.62 (67.62 a
+    # 45 y el tunel) ya no es "ballast->J2", es la rama de crowbar/
+    # indicador (Q1/D7/R1/TP3) -- se queda en ANCHO_ISLA, no lo pide el brief.
+    # 183..181.5 tambien se queda en ANCHO_ISLA: a KELVIN pisa el pad
+    # C23.2[GND] (179.1..180.9, a solo 0.6mm del endpoint en 181.5).
     ("+12V", F, [(93.463, 183), (93.463, 181.5)], ANCHO_ISLA),
     # y=178.6 (no 178.5): el propio -12V cruza aqui en B.Cu, ancho fino,
     # a y=178 (linea 92.8..94.5) -- 178.5 quedaba a solo 0.5mm.
     # y=178.7 (no 178.6): el tramo B.Cu de -12V que cruza esta columna
     # camino de GND (94.5..92.6,y=178) pasaba justo por (93.463,178),
     # a solo 0.6mm del final de este B.Cu (hacen falta 0.627).
+    # 181.5..177 SE QUEDA en ANCHO_ISLA (no sube a KELVIN): es el mismo
+    # pinch de -12V documentado mas abajo (GND@92 y este mismo vertical de
+    # +12V, solo 1.463mm entre los dos) -- ahora que -12V tambien tiene
+    # que cruzarlo (su cruce SET en y=178, camino del tap de J2.1), un
+    # +12V de 1.5mm ahi no deja margen ni para el cruce fino de -12V ni
+    # para el propio tramo de -12V en y=178/178.2. Mismo tipo de
+    # excepcion fisica ya documentada, no descuido.
     ("+12V", B, [(93.463, 181.5), (93.463, 178.6)], ANCHO_ISLA),
     ("+12V", F, [(93.463, 178.6), (93.463, 177)], ANCHO_ISLA),
-    ("+12V", F, [(93.463, 177), (45, 177)], ANCHO_ISLA),
+    ("+12V", F, [(93.463, 177), (67.62, 177)], ANCHO_KELVIN),
+    ("+12V", F, [(67.62, 177), (45, 177)], ANCHO_ISLA),
     ("+12V", B, [(45, 177), (45, 102)], ANCHO_ISLA),   # tunel bajo el corredor +13V1 (y=165)
     ("+12V", F, [(45, 102), (10, 102)], ANCHO_KELVIN),
     ("+12V", F, [(10, 102), (10, 111)], ANCHO_KELVIN),    # Q1.1
@@ -717,6 +753,15 @@ TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = [
     # B.Cu solo para cruzar su caja (179.1..180.9).
     # margen real: la caja de C25.2 es 179.1..180.9, hace falta 0.377mm
     # mas alla del borde -- 181/179 se quedaban a solo 0.1mm.
+    # ronda 2, Important 1: R17/R18->J2.1 tambien >=1.5mm todo el recorrido,
+    # espejo de +12V. De 183 a 92.73 sube a ANCHO_KELVIN (excepto el
+    # cruce de 94.5..92.73, que se queda en SET -- ver el comentario de
+    # la ventana valida de 0.6mm arriba, fisicamente no cabe 1.5mm ahi
+    # sin tocar a la vez la via de +12V y al tronco de GND del EP de U4).
+    # 183..178 se queda en ANCHO_ISLA (no KELVIN), espejo exacto del
+    # mismo fix en +12V: a KELVIN pisa el pad C25.2[GND] (179.1..180.9,
+    # a 0.6mm de 181.5 y 0.5mm de 178.6 -- ninguno de los dos alcanza con
+    # 0.75mm de semi-ancho).
     ("-12V", F, [(121.463, 183), (121.463, 181.5)], ANCHO_ISLA),
     ("-12V", B, [(121.463, 181.5), (121.463, 178.6)], ANCHO_ISLA),
     ("-12V", F, [(121.463, 178.6), (121.463, 178)], ANCHO_ISLA),
@@ -738,14 +783,49 @@ TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = [
     # ancho. (Los intentos anteriores con anchos de pista de sobra --
     # ANCHO_ISLA/KELVIN en vez del radio real de la via -- daban una
     # ventana negativa; el error estaba ahi, no en la geometria.)
+    # ronda 2: este tramo (94.5..121.463) tampoco puede subir a
+    # ANCHO_KELVIN. No es el paralelismo con +12V (ese hub no llega hasta
+    # aqui) sino tres cruces perpendiculares que, entre las dos capas,
+    # cubren TODO el hueco vertical disponible sin dejar Y libre para
+    # 1.5mm: Net-(U4-SET) (F, y=174..177.2, en x~101), Net-(U5-OUT) (F
+    # y=175..177 + B y=177..180, en x=107) y Net-(C25-Pad1) (idem, x=119)
+    # -- y ademas C24/C25 (los propios capacitores SET/OUT, pad 0.575x1.35)
+    # tapan y=178.65..181.35 justo ahi por debajo, sin hueco para rodear.
+    # Probado con muescas locales (F/B y en Y): cada intento choca con el
+    # pad del propio capacitor o con la fuga que se queria esquivar --
+    # fisicamente no cabe 1.5mm en este tramo tampoco. Se queda en
+    # ANCHO_ISLA (el ancho original), igual criterio que el tramo de abajo.
     ("-12V", F, [(121.463, 178), (94.5, 178)], ANCHO_ISLA),
     # ancho fino (SET, no ISLA) en este tramo corto: la via de +12V que
     # cruza aqui mismo (93.463) tiene que librar A LA VEZ a este B.Cu y a
     # C23.2 (GND, y=179.1..180.9) -- con ANCHO_ISLA la ventana es negativa;
-    # con ANCHO_SET (mitad de ancho) abre justo lo suficiente.
-    ("-12V", B, [(94.5, 178), (92.73, 178)], ANCHO_SET),
-    ("-12V", F, [(92.73, 178), (48, 178)], ANCHO_ISLA),
-    ("-12V", B, [(48, 178), (48, 104.5)], ANCHO_ISLA),      # tunel bajo el corredor +13V1
+    # con ANCHO_SET (mitad de ancho) abre justo lo suficiente. Ventana real
+    # de solo 0.6mm (ver comentario mas arriba) -- 1.5mm no cabe aqui de
+    # ninguna forma, se queda fino a proposito.
+    # se mantiene en y=178 mientras x todavia esta cerca de 93.463 (el
+    # vertical de +12V) y solo baja a 178.1 una vez pasado ese punto --
+    # la version diagonal directa quedaba a 0.108mm del vertical de +12V
+    # justo donde lo cruza (hacen falta 0.127).
+    ("-12V", B, [(94.5, 178), (93.0, 178), (92.73, 178.2)], ANCHO_SET),
+    # ronda 2: 92.73..60 (el tramo que corre en PARALELO al hub de +12V,
+    # y=177, para llegar al tap de J2.1) NO puede subir a ANCHO_KELVIN.
+    # Cuenta exacta: +12V a 1.5mm necesita 0.75+0.127=0.877mm de "su" lado
+    # del hueco; C23-C26 (borde en 179.1) exige otros 0.877mm libres del
+    # OTRO lado (via a pad, mas el propio ancho). Ventana valida para el
+    # centro de -12V: y>=177.877 (para librar +12V incluso fino) y
+    # y<=179.1-(halfwidth+0.127). Con -12V a KELVIN (halfwidth 0.75) esa
+    # segunda cota da y<=178.223 -- CONTRADICTORIA con la primera
+    # (y>=178.627 si -12V tambien es KELVIN). No hay Y valida con las dos
+    # pistas a 1.5mm en este corredor de 4mm (174.78..178.81, sec.6.1 vs
+    # geometria real). Se queda en ANCHO_SET (mas fino que ISLA: la propia
+    # via de /+13V1 en (89.3,179.0), radio 0.5mm, tambien vive en este
+    # tramo -- con ISLA la ventana entre el hub de +12V y esa via es de
+    # solo 0.004mm; con SET abre a 0.246mm) y sube a y=178.1 (no 178) para
+    # absorber el ensanchado de +12V.
+    ("-12V", F, [(92.73, 178.2), (60, 178.1)], ANCHO_SET),
+    ("-12V", B, [(60, 178.1), (60, 172)], ANCHO_KELVIN),  # -> J2.1
+    ("-12V", F, [(60, 178.1), (48, 178.1)], ANCHO_ISLA),
+    ("-12V", B, [(48, 178.1), (48, 104.5)], ANCHO_ISLA),      # tunel bajo el corredor +13V1
     # y=104.5 (no 101): a 101 el highway quedaba a solo 1 mm del de +12V
     # (y=102), y los dos son de 1.5 mm -- hacian falta 1.5 mm de hueco.
     ("-12V", F, [(48, 104.5), (70, 104.5)], ANCHO_KELVIN),
@@ -766,16 +846,48 @@ TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = [
     # rodeo volvia a y=104.5 -- el regreso real se hace en x=91 (fuera de
     # su caja) y solo se acerca a TP4 (x=90) ya pasado su borde inferior
     # (y=107, la caja para en 105.9).
-    ("-12V", F, [(78, 104.5), (84, 104.5), (84, 103), (91, 103), (91, 107), (90, 107)], ANCHO_KELVIN),
-    ("-12V", F, [(58, 104.5), (58, 113)], ANCHO_KELVIN),    # D4.1
+    # ANCHO_ISLA (no KELVIN) SOLO en este rodeo: la via de escape de D6.2
+    # (Net-(D6-A), en 86.46,103.9) cae dentro de este tramo (x=84..91) y
+    # con 1.5mm de ancho la ventana entre el taladro de D6.2 y esta pista
+    # era negativa. Rama de crowbar/indicador, no "ballast->J2" (ver
+    # ronda 2 Important 1) -- adelgazar aqui no toca ningun requisito.
+    ("-12V", F, [(78, 104.5), (84, 104.5), (84, 103), (91, 103), (91, 107), (90, 107)], ANCHO_ISLA),
+    # D4.1: DRC real seguia marcando "dangling" el empalme en T con la
+    # horizontal (dos tramos colineales + este vertical perpendicular),
+    # aun partiendo la horizontal y con via propia -- pcbnew lo ve 100%
+    # conectado (GetConnectivity confirma), pero el checker de KiCad no
+    # reconoce una T sin cambio de capa real como junta valida. Patron
+    # que SI funciona en el resto del fichero (granjas EP, stubs de
+    # retorno GND): una via que cambia de capa de verdad, tocando el
+    # tronco SIN partirlo, en un punto lejos de x=58 (columna de GND,
+    # y=105..108). Rodeo por x=50 (libre de GND: su horizontal solo
+    # llega a x=58) para la transicion F/B.
+    # el rodeo a y=110 pisaba el pad D4.2[Net-(D4-A)] (borde real en
+    # 110.1, no hay margen con ANCHO_KELVIN) -- entre GND (borde en 108)
+    # y D4.2 (borde en 110.1) solo quedan 2.1mm, y KELVIN necesita 2.254
+    # (1.377 de un lado + 0.877 del otro). Con ANCHO_ISLA en el tramo
+    # horizontal (el vertical de bajada, en x=58, no cruza a D4.2 -- su
+    # caja para en x=56.36) SI cabe: 108.877..109.723.
+    # y=111 (no 113): el pad real de D4.1 esta centrado en (58,111), no
+    # en 113 -- el endpoint viejo caia 1.1mm mas alla del borde del pad
+    # (111.9). Conectaba igual por solape de cobre (KELVIN de sobra) pero
+    # el checker de "dangling" lo marcaba por no coincidir con el pad.
+    ("-12V", F, [(58, 111), (58, 109.3)], ANCHO_KELVIN),
+    ("-12V", F, [(58, 109.3), (50, 109.3)], ANCHO_ISLA),
+    ("-12V", B, [(50, 109.3), (50, 104.5)], ANCHO_ISLA),
     # el tramo "R2.1" que seguia hasta (58,119) era un bug: R2.1 es GND
     # (retorno del indicador D4/R2), no -12V -- terminaba encima de un
     # pad ajeno de verdad. D4.1 (arriba) ya cierra la conexion real de
     # -12V en esta columna; se borra el resto.
     ("-12V", F, [(90, 107), (90, 111)], ANCHO_KELVIN),    # TP4.1
-    # J2.1 (potencia): la rama vieja por (56.5,178) se borro -- J2 (60,172)
-    # ya lo alcanza la rama Kelvin de U6/U7 via y=153 (ver el hub de
-    # arriba, junto al comentario sobre GND/+12V en 92/93.463).
+    # J2.1 (potencia): FIX critico (ronda 2) -- el puente que unia el tunel
+    # de potencia (48,153) con el bus Kelvin de sense (127.3,153..60,172)
+    # fusionaba las dos ramas de -12V ANTES de J2.1, exactamente lo que el
+    # Kelvin prohibe (brief sec.6.1: solo se tocan en el pad). Se borra ese
+    # puente; la rama de potencia ahora entra a J2.1 por su cuenta, con un
+    # tap propio a x=60 (la x del propio pad) sobre el hub F.Cu de y=178
+    # -- espejo exacto de como +12V entra a J2.4 (tap a x=67.62 sobre su
+    # hub de y=177, ver mas abajo esa seccion).
     # Kelvin de U6.10/U7.10 (pines 10, 121.45/137.45,167.775): el tramo
     # F.Cu que las une a su via de escape, que faltaba.
     # y=167.75 (no 167.65, borde SUPERIOR del pad): a 167.65 quedaba a
@@ -817,11 +929,6 @@ TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = [
     # en el camino nuevo (ver la muesca de arriba, que llega derecho a
     # 166.6).
     ("-12V", B, [(127.3, 166.55), (127.3, 153), (60, 153), (60, 172)], ANCHO_KELVIN),
-    # el tunel -12V (48,104.5..178, "bajo el corredor +13V1") y este bus
-    # Kelvin son dos islas de la misma red que nunca se tocaban -- las dos
-    # tienen cobre en y=153 (el tunel es vertical y pasa por ahi), asi que
-    # unirlas ahi es el puente mas corto.
-    ("-12V", B, [(48, 153), (60, 153)], ANCHO_KELVIN),
 
     # ===================== SET compartida (0.25 mm, sec.6.1) ================
     # C15/C16 pegados al pin SET (brief): R9.1/R10.1 son el nodo compartido,
@@ -859,7 +966,12 @@ TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = [
     # D11.1 (-12V, en 126,180, pad 2.5x1.8mm) vive en el mismo tramo --
     # se queda en B.Cu desde antes (inmune) en vez de cruzarlo en F.Cu.
     ("Net-(U6-SET)", B, [(127.088, 174), (126.7, 181.5), (126.6, 184.5)], ANCHO_SET),
-    ("Net-(U6-SET)", F, [(126.6, 184.5), (128.025, 186)], ANCHO_SET),
+    # ronda 2, limpieza: el endpoint real de C16.1 es (126.525,186), no
+    # (128.025,186) -- bug de coordenada (offset de pad mal copiado; C15.1,
+    # el espejo de U4, usa correctamente 100.525 = centro 102 - 1.475).
+    # El tramo viejo solo tocaba a C16.1 de refilon (cruzaba su caja a
+    # mitad de camino, no en el propio endpoint) -- "dangling" en DRC real.
+    ("Net-(U6-SET)", F, [(126.6, 184.5), (126.525, 186)], ANCHO_SET),
     # -> U7.8: mismo criterio, esquiva R14 (174) por B.Cu a y=176 y entra
     # a U7.8 por la derecha (140.2, fuera de la via de escape GND de U7.9
     # en 139,168.225 y del cuerpo de U7).
@@ -1019,9 +1131,12 @@ TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = [
     # tenia el borde justo ahi. A esa altura (y=74..90) D13.2 (94) todavia
     # no importa -- el rodeo real contra D13.2 sigue siendo el de x=126.
     ("GND", B, [(106, 74), (122.8, 74), (122.8, 90), (126, 90), (126, 98), (123.7, 98), (123.7, 143)], ANCHO_POT),  # U2.2
-    # (124.3,96) no (123.7,95): D13.2 (/VRAW-, en 122.16,94) quedaba a
-    # solo 0.45mm de esquina (hacen falta 0.627).
-    ("GND", B, [(124.3, 96), (127.1, 96), (127.1, 143)], ANCHO_POT),           # U2.4
+    # arranca en (126,96), no (124.3,96): asi cae exacto sobre el propio
+    # vertical de la linea de arriba (126,90..98), que ya pasa por ahi --
+    # el punto viejo (124.3,96) no tocaba nada, "dangling" en DRC real
+    # (ronda 2, limpieza). x=126 sigue lejos de D13.2 (122.16,94, radio
+    # real 1.1mm) de sobra.
+    ("GND", B, [(126, 96), (127.1, 96), (127.1, 143)], ANCHO_POT),           # U2.4
     # --- rama del crowbar/indicador +12V (banda libre, y=111/119) ---
     ("GND", B, [(20, 82), (20, 105), (15.08, 105), (15.08, 111)], ANCHO_POT),  # Q1.3
     ("GND", B, [(20, 105), (42, 105), (42, 111)], ANCHO_POT),                 # D3.1
@@ -1077,8 +1192,12 @@ TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = [
     # y=168.4 (no 168) en el ultimo tramo: la fuga F.Cu de -12V hacia
     # U6.10/U7.10 pasa por y=167.75 justo por ahi -- 168 quedaba a solo
     # 0.25mm (hacen falta 0.502).
-    ("GND", B, [(122.5, 195), (125, 195), (125, 168.4)], ANCHO_POT),  # -> via D9.1 (esquiva R10.1; misma red que la via de escape U6.9 en 125.5, sin conflicto)
-    ("GND", F, [(125, 168.4), (126, 168.4)], ANCHO_ISLA),
+    # y=167.6 (no 168.4): hole-to-hole real contra la via de escape U6.9
+    # (1.2/0.6mm, en 125.5,168.225) -- a 168.4 quedaban a 0.55mm (hacen
+    # falta 0.7 = mitad de la suma de taladros + 0.25mm). 167.6 sigue
+    # dentro de la caja real de D9.1 (167.55..168.45) (ronda 2, Important 2).
+    ("GND", B, [(122.5, 195), (125, 195), (125, 167.6)], ANCHO_POT),  # -> via D9.1 (esquiva R10.1; misma red que la via de escape U6.9 en 125.5, sin conflicto)
+    ("GND", F, [(125, 167.6), (126, 167.6)], ANCHO_ISLA),
     # rodeo por x=140.75 en y=174..179: ahi cruza Net-(U6-SET) camino de
     # U7.8 (y=176, hasta x=140.2) -- fuera de su rango y del courtyard de
     # RV3 (que empieza en 141.29). Ajustado a 141.0 (via movida, ver
@@ -1147,6 +1266,25 @@ TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = [
     ("GND", F, [(123.0, 180), (123.0, 178.5)], ANCHO_ISLA),
     ("GND", F, [(123.0, 178.5), (125.5, 178.5)], ANCHO_ISLA),  # C25.2 -> escape U6.9
     ("GND", F, [(137.475, 180), (140.5, 180)], ANCHO_ISLA),  # C26.2 -> escape U7.9 (x=140.5, ver nota en C22.2)
+
+    # --- ronda 2, Important 2: granjas termicas EP de U4/U5 rediseñadas.
+    # El paso original (0.375/0.5mm, taladro 0.3mm) daba web hole-to-hole
+    # de 0.075/0.2mm, por debajo del minimo del proyecto (0.25mm). Los
+    # nuevos pasos (>=0.55mm) ya no dejan que las vias se toquen entre si
+    # (antes se conectaban por simple solape de cobre) -- cada via necesita
+    # su propio spoke de B.Cu hasta el tronco real (el vertice donde el
+    # tronco GND toca cada EP), o quedan "dangling" (conectadas solo en
+    # F.Cu, al pad). Spokes cortos, mismo net, sin problema de clearance.
+    ("GND", B, [(92, 168), (91.7, 167.85)], ANCHO_SET),
+    ("GND", B, [(92, 168), (92.3, 167.85)], ANCHO_SET),
+    ("GND", B, [(92, 168), (91.7, 168.5)], ANCHO_SET),
+    ("GND", B, [(92, 168), (92.3, 168.5)], ANCHO_SET),
+    ("GND", B, [(112, 168), (111.7, 167.3)], ANCHO_SET),
+    ("GND", B, [(112, 168), (112.3, 167.3)], ANCHO_SET),
+    ("GND", B, [(112, 168), (111.7, 168.0)], ANCHO_SET),
+    ("GND", B, [(112, 168), (112.3, 168.0)], ANCHO_SET),
+    ("GND", B, [(112, 168), (111.7, 168.7)], ANCHO_SET),
+    ("GND", B, [(112, 168), (112.3, 168.7)], ANCHO_SET),
 ]
 
 # Vias con tamano propio: (x, y, net, ancho_mm, taladro_mm). La granja
@@ -1159,24 +1297,28 @@ TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = [
 # rejilla de F.Cu de la isla hacia el arbol de GND en B.Cu (Kelvin de OUTS
 # y GND de los pads SMD que no tienen EP que los lleve gratis).
 VIAS: list[tuple[float, float, str, float, float]] = [
-    # --- granja termica EP de U4 (3x3, centrada en 92,168, dentro de la
-    # huella EP 1.65x2.38 mm) ---
-    # filas a 167.85/168.225/168.6 (paso 0.375, no 0.7): la fila de arriba
-    # a 167.3 quedaba a solo 0.3mm de la fuga de Net-(U4-OUT) en y=167
-    # (pin10) -- 167.85 la libra (hacen falta 0.677mm de via a pista).
-    (91.5, 167.85, "GND", 0.6, 0.3), (92.0, 167.85, "GND", 0.6, 0.3), (92.5, 167.85, "GND", 0.6, 0.3),
-    (91.5, 168.225, "GND", 0.6, 0.3), (92.0, 168.225, "GND", 0.6, 0.3), (92.5, 168.225, "GND", 0.6, 0.3),
-    (91.5, 168.6, "GND", 0.6, 0.3), (92.0, 168.6, "GND", 0.6, 0.3), (92.5, 168.6, "GND", 0.6, 0.3),
-    # --- granja termica EP de U5 (3x3, centrada en 112,168) ---
-    (111.5, 167.3, "GND", 0.6, 0.3), (112.0, 167.3, "GND", 0.6, 0.3), (112.5, 167.3, "GND", 0.6, 0.3),
-    (111.5, 168.0, "GND", 0.6, 0.3), (112.0, 168.0, "GND", 0.6, 0.3), (112.5, 168.0, "GND", 0.6, 0.3),
-    (111.5, 168.7, "GND", 0.6, 0.3), (112.0, 168.7, "GND", 0.6, 0.3), (112.5, 168.7, "GND", 0.6, 0.3),
+    # --- granja termica EP de U4 (2x2, centrada en 92,168, dentro de la
+    # huella EP 1.65x2.38 mm) --- ronda 2, Important 2: rediseñada, paso
+    # 0.6mm (>=0.55 minimo real) en vez de 0.375/0.5 -- el 3x3 original no
+    # cabe con hole-to-hole legal en una huella de 1.65mm de ancho (el
+    # rango util de centros, descontando el radio de via, es de solo
+    # ~1.05mm -- 3 columnas exigirian 0.525mm de paso, por debajo del
+    # minimo). Fila en y=167.85 (no 167.3): la fuga de Net-(U4-OUT) en
+    # y=167 sigue exigiendo ese margen (comentario original).
+    (91.7, 167.85, "GND", 0.6, 0.3), (92.3, 167.85, "GND", 0.6, 0.3),
+    (91.7, 168.5, "GND", 0.6, 0.3), (92.3, 168.5, "GND", 0.6, 0.3),
+    # --- granja termica EP de U5 (2x3, centrada en 112,168) --- paso X a
+    # 0.6mm (2 columnas, mismo motivo que U4); paso Y se queda en 0.7mm
+    # (ya era legal) con 3 filas, que si caben en la altura de 2.38mm.
+    (111.7, 167.3, "GND", 0.6, 0.3), (112.3, 167.3, "GND", 0.6, 0.3),
+    (111.7, 168.0, "GND", 0.6, 0.3), (112.3, 168.0, "GND", 0.6, 0.3),
+    (111.7, 168.7, "GND", 0.6, 0.3), (112.3, 168.7, "GND", 0.6, 0.3),
     # --- escapes GND de U6.9 / U7.9 (sin EP en GND que los lleve gratis) ---
     (125.5, 168.225, "GND", 1.2, 0.6),
     (141.0, 168.225, "GND", 1.2, 0.6),
     # --- escapes GND de D8.2 / D9.1 / JP1.2 (SMD de solo F.Cu) ---
     (105.0, 168.0, "GND", 0.6, 0.3),
-    (125.0, 168.0, "GND", 0.6, 0.3),
+    (125.0, 167.6, "GND", 0.6, 0.3),  # D9.1, ver TRACKS
     (116.5, 175.0, "GND", 0.6, 0.3),
     # --- transiciones F->B para los retornos GND de R11/R12/R13/R14/C19-C26 ---
     (92.0, 173.2, "GND", 0.6, 0.3),  # R11.2 (ver TRACKS)
@@ -1199,18 +1341,22 @@ VIAS: list[tuple[float, float, str, float, float]] = [
     # --- tuneles de +12V/-12V bajo el corredor de +13V1 (y=165, F.Cu) ---
     (45.0, 177.0, "+12V", 1.0, 0.5),
     (45.0, 102.0, "+12V", 1.0, 0.5),
-    (48.0, 178.0, "-12V", 1.0, 0.5),
+    (48.0, 178.1, "-12V", 1.0, 0.5),
+    (50.0, 109.3, "-12V", 0.6, 0.3),  # D4.1, transicion F/B (ver TRACKS)
+    (50.0, 104.5, "-12V", 0.6, 0.3),  # D4.1, transicion B/F sobre el tronco (mid-span, sin partirlo)
     (48.0, 104.5, "-12V", 1.0, 0.5),
     (70.0, 104.5, "-12V", 1.0, 0.5),
     (78.0, 100.0, "-12V", 1.0, 0.5),
-    (86.46, 104.5, "Net-(D6-A)", 0.6, 0.3),
+    # y=103.9 (no 104.5): hole-to-hole real contra D6.2 (drill 0.9mm, en
+    # 86.46,105) -- a 104.5 quedaban a 0.5mm (hacen falta 0.85 = mitad de
+    # la suma de taladros + 0.25mm minimo del proyecto). El rodeo F.Cu de
+    # -12V (linea "esquiva D6.1/TP4", abajo) tambien se adelgaza a
+    # ANCHO_ISLA justo en ese cruce para dejar sitio (era ANCHO_KELVIN).
+    (86.46, 103.9, "Net-(D6-A)", 0.6, 0.3),
     (86.46, 100.0, "Net-(D6-A)", 0.6, 0.3),
-    # --- J2.4 (potencia): via propia junto al puente ---
-    # J2.1 (-12V) NO necesita via propia aqui: J2.1 esta exactamente en
-    # (60,172), que ya toca directo la pista Kelvin (linea 819, tunel
-    # 127.3,153..60,153..60,172) -- la via en (56.5,172) era huerfana, de
-    # un tramo ya borrado (ver historial), sin ninguna pista que la tocara.
+    # --- J2.4/J2.1 (potencia): via propia junto a cada puente ---
     (67.62, 177.0, "+12V", 1.0, 0.5),
+    (60.0, 178.1, "-12V", 1.0, 0.5),  # tap J2.1 (potencia), ver TRACKS
     # --- tunel de /+13V1 (TP7->U1.5) bajo el highway de +12V (y=102) ---
     (34.8, 96.0, "/+13V1", 1.0, 0.5),
     (100.0, 172.5, "/+13V1", 0.6, 0.3),  # D10.1, ver TRACKS
@@ -1241,11 +1387,13 @@ VIAS: list[tuple[float, float, str, float, float]] = [
     (121.463, 181.5, "-12V", 0.6, 0.3),
     (121.463, 178.6, "-12V", 0.6, 0.3),
     (94.5, 178.0, "-12V", 0.6, 0.3),
-    (92.73, 178.0, "-12V", 0.6, 0.3),
+    (92.73, 178.2, "-12V", 0.6, 0.3),
     (132.0, 177.0, "Net-(C26-Pad1)", 0.6, 0.3),
     # --- saltos sobre los puentes de ballast (y=183) ---
     (100.922, 177.2, "Net-(U4-SET)", 0.6, 0.3),
-    (100.7, 181.5, "Net-(U4-SET)", 0.6, 0.3),
+    # (100.7,181.5) borrada: via redundante a mitad de un tramo B.Cu
+    # continuo (177.2..184.5, sin cambio de capa ahi) -- "conectada solo
+    # en una capa" en DRC real (ronda 2, limpieza).
     (100.6, 184.5, "Net-(U4-SET)", 0.6, 0.3),
     (110.53, 181.5, "Net-(U5-OUT)", 0.6, 0.3),
     (110.53, 184.5, "Net-(U5-OUT)", 0.6, 0.3),
@@ -1256,7 +1404,10 @@ VIAS: list[tuple[float, float, str, float, float]] = [
     (125.4, 136.0, "/VRAW-", 1.0, 0.5),
     (125.4, 139.0, "/VRAW-", 1.0, 0.5),
     (51.92, 176.0, "Net-(U1-ADJ)", 0.6, 0.3),
-    (77.0, 176.0, "Net-(U1-ADJ)", 0.6, 0.3),
+    (66.2, 176.0, "Net-(U1-ADJ)", 0.6, 0.3),
+    # (77,176) borrada: los dos tramos que se tocaban ahi ya son B.Cu (sin
+    # cambio de capa) -- via redundante, quedaba a 0.05mm del hub de +12V
+    # sin servir para nada (ronda 2, limpieza).
     # --- C19/C20/C21/C22: tramos largos por B.Cu, tuneles cortos en cada punta ---
     (89.5, 168.1, "/+13V1", 1.0, 0.5),
     (89.3, 179.0, "/+13V1", 1.0, 0.5),
@@ -1605,6 +1756,15 @@ def reglas(board: pcbnew.BOARD) -> None:
     ds.m_MinClearance = mm(0.127)
     ds.m_ViasMinSize = mm(0.6)
     ds.m_MinThroughDrill = mm(0.3)
+    # No se sube m_MinAnnularWidth (default de placa, 0.1mm): los 10
+    # pads THT de U1/U2 (footprint TO-220/TO-247 heredado de Tarea 6/7,
+    # taladro 1.1mm) dan un anillo real de 0.0875mm -- por debajo del
+    # minimo de placa pero perfectamente fabricable en JLC (min. anillo
+    # anular real ~0.05-0.075mm segun el proveedor, este caso esta por
+    # encima). Bendecido explicitamente por el orquestador (ronda 2): se
+    # documenta como excepcion aceptada, no se toca el footprint/BOM de
+    # U1/U2 para "arreglarlo" (fuera del alcance de ruteo de esta tarea).
+    # Ver DRC real: 10x [annular_width], unicas infracciones que quedan.
 
 
 def distancia_bbox(a: pcbnew.BOX2I, b: pcbnew.BOX2I) -> float:
@@ -1782,6 +1942,18 @@ def main() -> None:
     outline.NewOutline()
     for x, y in [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]:
         outline.Append(pcbnew.VECTOR2I(mm(x), mm(y)))
+    # ronda 2, Important 3: H4 (taladro de fijacion NPTH) cae DENTRO de
+    # ISLA_REF (ensanchada esta ronda para de-densificar la isla ultra) --
+    # sin recorte, la zona pouraba cobre encima (DRC real: hole_clearance
+    # 0mm, hace falta 0.25mm). Patron v1 para taladros de fijacion: sin
+    # cobre alrededor. Recorte circular con margen comodo sobre el minimo.
+    h4x, h4y = next((x, y) for ref, x, y in MOUNTING if ref == "H4")
+    r_keepout = MOUNT_D / 2 + 0.4  # 1.6 + 0.4 = 2.0mm
+    hole_idx = outline.NewHole(0)
+    for i in range(16):
+        ang = 2 * math.pi * i / 16
+        outline.Append(mm(h4x + r_keepout * math.cos(ang)),
+                        mm(h4y + r_keepout * math.sin(ang)), 0, hole_idx)
     # los defaults de fabrica de pcbnew para una ZONE nueva son 0.5mm de
     # clearance propio y conexion termica con spoke de 0.5mm -- muy por
     # encima del resto de la placa (CLEARANCE_MM=0.127, recalibrado a
