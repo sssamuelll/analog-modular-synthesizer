@@ -628,6 +628,43 @@ no aplica mientras haya stock del distribuidor.
 
 (vacío; Task 5 mete el worksheet de F1)
 
+### §3.1 Task 4 Step 1 — mapa ref→etapa de la v1
+
+Leído con `grep -n -B3` sobre `hardware/01-power-supply/kicad/build_schematic.py`
+(líneas exactas citadas abajo). Comentarios inline y posición X/Y del script
+son los que asignan cada pasivo a su etapa — el bom.csv v1 no lo dice
+explícito (agrupa C7+C11 y D1+D2+D5 en una sola fila por *valor*, no por
+etapa, ver más abajo).
+
+| ref(s) v1 | etapa | evidencia (`build_schematic.py`) | v2 |
+|---|---|---|---|
+| C1,C2,C12,C13 | bulk (rectificación, común a ambos rieles ±12V) | L189/L199, `4700uF/25V` en ambas filas de coordenadas (+12 y −12) | **sobrevive**, tal cual |
+| C3 | entrada de U1 (LM2940, riel +12V) | L190 `0.47uF` en la columna X=XU,Y=69.85 (fila +12V) | **muere** con la etapa; reemplazo conceptual: C27 (entrada U1 nuevo/LM2941) |
+| U1 (v1) | LM2940CT-12 | L191 `Regulator_Linear:LM7812_TO220` | **muere**; designador U1 se reutiliza en v2 para el pre-reg LM2941CT |
+| C5 | salida de U1 (cap. de estabilidad, ESR) | L192 `100uF/25V ESR` | **muere**; reemplazo conceptual: C17 |
+| C7 | desacoplo HF de salida de U1 | L193 `0.1uF`, misma fila +12V (69.85) | **muere**; en el bom.csv v1 estaba agrupado con C11 en una sola fila ("C7,C11") — se separan en v2 |
+| D1 | anti-backfeed de U1 | L194 `1N4001` en fila +12V | **muere**; reemplazo conceptual: D12 (out→in del U1 nuevo) |
+| R1 | limitadora del LED indicador +12V | L195 `2k2`, no depende del regulador que hace el riel | **sobrevive** — el LED indica el riel, no la etapa |
+| C13,C4,U2(v1),C6,C8,D2,R2 | etapa completa de U2 (LM2990, riel −12V) | L199-205 (fila Y=163.83/187.96/144.78) | C13 es bulk → **sobrevive**; C4 (entrada), U2(v1), C6 (salida), C8 (DNP), D2 (anti-backfeed) → **mueren**; R2 (LED −12V) → **sobrevive** |
+| J2 | bus de salida ±12V/GND hacia módulos | L207 | **sobrevive** |
+| C9,U3,C10,C11,D5 | etapa +5V completa (LM7805) | L210-214, fila `Y5_ROW` | **TODOS sobreviven** — U3 sigue vivo en v2 |
+| R3 | limitadora del LED indicador +5V | L218 `680` | **sobrevive** |
+| D7,Q1,R4,C14 | crowbar del riel +12V | L650-652 | **sobrevive completo** |
+
+**Etapas que mueren por completo**: U1(v1)=LM2940 y todos sus pasivos
+directos (C3, C5, C7, D1); U2(v1)=LM2990 y todos sus pasivos directos (C4,
+C6, C8, D2). Los designadores U1/U2 se **reutilizan** en v2 para los
+pre-reguladores LM2941CT/LM2991T (misma posición en la cascada — entrada de
+red regulada — pero ahora alimentan a la pareja LT3045/LT3094 en vez de ser
+el regulador final).
+
+**Ojo con la agrupación por valor del bom.csv v1** (no por etapa): la fila
+`"C7,C11",0.1uF ceramico,...` mezcla un componente que muere (C7, etapa U1)
+con uno que sobrevive (C11, etapa U3) porque ambos tienen el mismo valor de
+0.1 µF — igual la fila `"D1,D2,D5",1N4001,...` mezcla dos que mueren (D1,
+D2) con uno que sobrevive (D5, etapa U3). El Step 2 de Task 4 separa estas
+dos filas: hereda solo C11 y D5, con cantidad 1 cada una.
+
 ## §4 Medidas de la mula
 
 (vacío; Task 10 mete el protocolo)
