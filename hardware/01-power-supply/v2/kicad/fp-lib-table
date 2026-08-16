@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "sam17")(type "KiCad")(uri "${KIPRJMOD}/../../kicad/sam17.pretty")(options "")(descr "huellas propias sam17, compartidas con la v1"))
+)
