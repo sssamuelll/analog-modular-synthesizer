@@ -626,7 +626,210 @@ no aplica mientras haya stock del distribuidor.
 
 ## §3 Decisiones y aritmética
 
-(vacío; Task 5 mete el worksheet de F1)
+### §3.0 Worksheet F1 (Task 5 Step 6): sube de 250 mA a 1.6 A T
+
+**Hallazgo real, no maquillado**: la nota que fijó F1 en 250 mA (v1,
+`hardware/01-power-supply/notes/design-notes.md` líneas 379-383, sección "Lo
+que cambia" de la migración 110V→230V) calculó la corriente de primario con
+**TR1 = 24 VA** ("mismo transformador (12 VAC CT / 2 A ≈ 24 VA)") — pero ese
+no es el transformador que hay hoy en el bom.csv (v1 y v2 igual): el BOM real
+dice **Talema 0120P1-2-012, 120 VA** (subido en algún punto de la evolución
+de v1 para ganarle margen de valle al dropout del LM2940/LM2941, documentado
+en los comentarios de `build_schematic.py` sobre §16.5). Esa nota de F1 quedó
+**obsoleta sin que nadie la revisara** — es exactamente el tipo de bug que
+esta tarea pide cazar (brief Step 6).
+
+**Aritmética con el término nuevo:**
+
+```
+Corriente de primario de TR1 a plena carga (VA/V, exacto, no depende del PF):
+  120 VA / 230 V = 0.522 A
+
+Corriente de entrada del IRM-15-5 a 230 VAC:
+  Fuente primaria: meanwell.com, IRM-15-SPEC.PDF (File Name:IRM-15-SPEC,
+  fecha de archivo 2025-11-21), fila "AC CURRENT (Typ.)" de la tabla de
+  especificaciones — aplica a toda la familia IRM-15 (mismos ~15 W, la fila
+  no se repite por modelo): "0.35A/115Vac  0.2A/230Vac  0.17A/277Vac".
+  0.2 A/230Vac Typ. — más alto que el "~0.16A max" que orientaba el brief
+  (ese número no viene de esta hoja; el dato real medido por MeanWell es
+  0.2 A). Con ~78-83% de eficiencia típica de la propia hoja y 15 W de
+  salida, la potencia real de entrada da ~18-19 W — a 0.2 A/230V eso es
+  ~46 VA aparentes, factor de potencia ~0.4, normal en una fuente offline
+  pequeña sin PFC activo (rectificador de entrada por capacitor, corriente
+  en pulsos cerca del pico de la sinusoidal).
+
+Carga total sobre F1 (J7 comparte el mismo fusible que TR1, spec §7):
+  0.522 A (TR1) + 0.2 A (IRM-15-5) = 0.722 A
+```
+
+**Decisión: F1 sube de 250 mA a 1.6 A T.** Ni 250 mA (v1) ni las alternativas
+250/315/400 mA que orientaba el brief alcanzan: **todas quedan por debajo de
+la propia carga nominal de operación (0.722 A)** — con cualquiera de esos
+valores el fusible se fundiría en uso normal, no solo ante una falla. El
+salto real necesario es mucho mayor de lo que el brief anticipaba.
+
+Margen elegido: se replica la misma filosofía de margen que ya usó la nota
+de v1 al fijar 250 mA sobre 104 mA (~2.4× la corriente nominal) — un margen
+generoso apropiado para un transformador **toroidal** con arranque en frío
+más agresivo que un EI-core (mitigado por NT1, pero no eliminado) y para la
+tolerancia de red europea (±10%, la corriente sube algo más a 207 V). Con
+0.722 A de carga: 0.722 × 2.4 ≈ 1.73 A → el valor estándar de fusible lento
+5×20 mm más cercano por debajo de eso (para no sobre-fusionar y perder valor
+protector) es **1.6 A T**, dando 1.6/0.722 = 2.22× de margen — prácticamente
+el mismo ~2.2-2.4× que ya validó el diseño original, no un número inventado.
+A baja red (207 V, -10%): TR1 sube a ≈120/207=0.580 A, el IRM-15-5 sube algo
+menos (interpolando 0.35 A@115V / 0.2 A@230V, ronda ~0.22 A a 207 V) → total
+≈0.80 A, sigue siendo solo el 50% del rating de 1.6 A — cómodo.
+
+El portafusible **no cambia**: sigue siendo el Schurter FPG4 (cerrado, IEC
+60335-1, 250 VAC/**10 A** VDE) — 1.6 A queda muy por debajo de su límite
+mecánico/térmico, solo cambia el elemento fusible que se inserta.
+
+**Actualizado**: `bom.csv` v2, fila F1 (valor "1.6A lento" en vez de "250mA
+lento", nota con la aritmética completa) y `build_schematic.py` v2 (Value de
+F1 = "1.6A T").
+
+### §3.0.1 Worksheet de arranque (I²t) — fix F1 del task review
+
+**Hallazgo del review**: el valor 1.6 A T queda, pero la nota original no
+cuantificaba el arranque en frío ni el trade-off de protección que implica
+subir 6.4× el fusible respecto a v1. Se cierra aquí con números.
+
+**Supuestos declarados** (modelo simplificado a mano, no una simulación
+SPICE):
+
+1. Peor caso de conexión: el interruptor de red cierra en el PICO de la
+   sinusoide (325 V), con los bulk caps totalmente descargados — es el
+   escenario clásico de peor caso en una fuente offline con rectificador
+   de entrada por capacitor.
+2. Se ignora la inductancia de fuga de TR1 y el ESR de los bulk caps —
+   modelo puramente resistivo (solo NT1 en frío, 5 Ω, limitando). Esto es
+   **conservador**: cualquier inductancia real en serie limitaría el di/dt
+   y bajaría el pico real, así que el número que sale de aquí es un techo,
+   no un piso.
+3. Corriente pico: I_pk = V_pk / R_NTC(frío) = 230×√2 / 5 ≈ **65.05 A**
+   (mismo orden que orientaba el task review, ~65 A).
+4. Forma del primer semiciclo: se aproxima como un semiciclo senoidal
+   COMPLETO a esa amplitud (10 ms a 50 Hz) — sobreestima el I²t real,
+   porque en la práctica NT1 se autocalienta (su R cae, es NTC) y los
+   bulk caps ya tienen algo de carga antes de completar el semiciclo, así
+   que el pico real decae antes del final de esos 10 ms.
+5. Segundo semiciclo: con NT1 más caliente pero los bulk caps ya con
+   carga parcial (menos tensión disponible para forzar corriente), se
+   asume conservador una amplitud del 50% del pico (~32.5 A). Semiciclos
+   posteriores se desprecian — su aporte marginal al I²t total es chico
+   frente a los dos primeros.
+
+**Cálculo:**
+
+```
+I_pk = 230 x sqrt(2) / 5 = 65.05 A
+
+I²t(semiciclo 1, senoidal, T=10ms) = I_pk^2 x (T/2)
+  = 65.05^2 x 0.005 = 21.2 A²s
+
+I²t(semiciclo 2, ~50% amplitud) = (0.5 x 65.05)^2 x 0.005
+  = 32.53^2 x 0.005 = 5.3 A²s
+
+I²t total estimado (primeros ~20 ms) ~= 21.2 + 5.3 ~= 26.5 A²s
+```
+
+**Comparación contra el fusible**: un 5×20 T (slow-blow) de 1.6 A tiene un
+I²t de fusión (melting I²t, no el "no-fusión" a 10 s de las curvas
+tiempo-corriente) que ronda **10-30 A²s según el fabricante** — Bel,
+Littelfuse y Schurter no publican el mismo número para la misma corriente
+nominal, y esta puerta no tuvo acceso a un datasheet concreto de fusible
+para confirmarlo. Con el estimado de arranque de ~26.5 A²s, **el margen es
+fino**: si el fusible comprado cae en la parte baja del rango típico
+(10-15 A²s) hay riesgo real de que el arranque en frío lo funda
+espúreamente; si cae en la parte alta (25-30 A²s) sobrevive, pero con poco
+colchón. No se puede cerrar esta pregunta sin el datasheet del fusible
+concreto que se compre — **acción documentada en `bom.csv` v2, fila F1**:
+verificar I²t ≥ ~27 A²s contra ese datasheet antes de comprar.
+
+Esto NO invalida el dimensionamiento por corriente nominal (0.722 A × 2.2
+de margen = 1.6 A, §3.0 arriba) — es un chequeo independiente y adicional,
+igual que §1.5.1 fue un chequeo independiente del GO de §1.5.
+
+### §3.0.2 Trade-off de protección: qué deja de cubrir F1 a 1.6 A
+
+**Hallazgo del review**: subir F1 6.4× (250 mA → 1.6 A) no es gratis — hay
+una ventana de corriente de fallo que el fusible viejo SÍ abría y el nuevo
+YA NO abre en tiempo útil.
+
+Un fusible T (slow-blow) de 1.6 A típicamente NO abre en un tiempo útil
+(según su propia curva tiempo-corriente) para una corriente SOSTENIDA entre
+aproximadamente **0.4 A y 2 A** — por debajo de ~1.35× su nominal (2.16 A)
+puede tardar minutos u horas en abrir, y cerca de 1× (1.6 A) puede no abrir
+nunca en régimen permanente. Con el fusible viejo de 250 mA, esa misma
+ventana de corriente (0.4-2 A) SÍ habría disparado la protección en
+segundos. Ejemplos reales de falla que caen en esa ventana:
+
+- Fallo parcial del bobinado primario de TR1 (cortocircuito entre espiras,
+  no total) que sube la corriente de magnetización sin llegar a un
+  cortocircuito franco.
+- Fuga sostenida de un MOV (RV1) degradado por sobretensiones repetidas —
+  un MOV envejecido puede empezar a conducir en fuga sin llegar al corto
+  catastrófico que dispara F1 al instante.
+
+**Mitigantes reales** (no elimina el gap, lo acota):
+
+1. RV1 (MOV) sigue ahí para transitorios reales (el escenario que SÍ
+   dispara F1 rápido: un corto franco del MOV o un pico de red que lo hace
+   conducir duro).
+2. El portafusible es CERRADO (Schurter FPG4, no de clips abiertos) —
+   contiene un fallo aunque tarde en abrir, no hay arco expuesto dentro
+   del cajón.
+3. Muchos transformadores toroidales de esta potencia vienen con un
+   **fusible térmico embebido en el propio devanado** (protección térmica
+   independiente de F1, dispara por temperatura del bobinado, no por
+   corriente de línea) — si el TR1 comprado lo trae, cierra buena parte de
+   este gap de forma independiente del dimensionamiento de F1. **Acción
+   documentada en `bom.csv` v2, fila TR1**: confirmar si el TR1 comprado
+   (Talema 0120P1-2-012 u otro fabricante) trae fusible térmico embebido
+   antes de dar el diseño por cerrado en este punto.
+
+Este trade-off es inherente a la decisión de subir F1 para que no se funda
+en operación normal (§3.0 arriba) — no es un error de esta tarea, es el
+costo real de la corrección, y queda documentado explícito en vez de
+maquillado.
+
+### §3.1 Task 4 Step 1 — mapa ref→etapa de la v1
+
+Leído con `grep -n -B3` sobre `hardware/01-power-supply/kicad/build_schematic.py`
+(líneas exactas citadas abajo). Comentarios inline y posición X/Y del script
+son los que asignan cada pasivo a su etapa — el bom.csv v1 no lo dice
+explícito (agrupa C7+C11 y D1+D2+D5 en una sola fila por *valor*, no por
+etapa, ver más abajo).
+
+| ref(s) v1 | etapa | evidencia (`build_schematic.py`) | v2 |
+|---|---|---|---|
+| C1,C2,C12,C13 | bulk (rectificación, común a ambos rieles ±12V) | L189/L199, `4700uF/25V` en ambas filas de coordenadas (+12 y −12) | **sobrevive**, tal cual |
+| C3 | entrada de U1 (LM2940, riel +12V) | L190 `0.47uF` en la columna X=XU,Y=69.85 (fila +12V) | **muere** con la etapa; reemplazo conceptual: C27 (entrada U1 nuevo/LM2941) |
+| U1 (v1) | LM2940CT-12 | L191 `Regulator_Linear:LM7812_TO220` | **muere**; designador U1 se reutiliza en v2 para el pre-reg LM2941CT |
+| C5 | salida de U1 (cap. de estabilidad, ESR) | L192 `100uF/25V ESR` | **muere**; reemplazo conceptual: C17 |
+| C7 | desacoplo HF de salida de U1 | L193 `0.1uF`, misma fila +12V (69.85) | **muere**; en el bom.csv v1 estaba agrupado con C11 en una sola fila ("C7,C11") — se separan en v2 |
+| D1 | anti-backfeed de U1 | L194 `1N4001` en fila +12V | **muere**; reemplazo conceptual: D12 (out→in del U1 nuevo) |
+| R1 | limitadora del LED indicador +12V | L195 `2k2`, no depende del regulador que hace el riel | **sobrevive** — el LED indica el riel, no la etapa |
+| C13,C4,U2(v1),C6,C8,D2,R2 | etapa completa de U2 (LM2990, riel −12V) | L199-205 (fila Y=163.83/187.96/144.78) | C13 es bulk → **sobrevive**; C4 (entrada), U2(v1), C6 (salida), C8 (DNP), D2 (anti-backfeed) → **mueren**; R2 (LED −12V) → **sobrevive** |
+| J2 | bus de salida ±12V/GND hacia módulos | L207 | **sobrevive** |
+| C9,U3,C10,C11,D5 | etapa +5V completa (LM7805) | L210-214, fila `Y5_ROW` | **TODOS sobreviven** — U3 sigue vivo en v2 |
+| R3 | limitadora del LED indicador +5V | L218 `680` | **sobrevive** |
+| D7,Q1,R4,C14 | crowbar del riel +12V | L650-652 | **sobrevive completo** |
+
+**Etapas que mueren por completo**: U1(v1)=LM2940 y todos sus pasivos
+directos (C3, C5, C7, D1); U2(v1)=LM2990 y todos sus pasivos directos (C4,
+C6, C8, D2). Los designadores U1/U2 se **reutilizan** en v2 para los
+pre-reguladores LM2941CT/LM2991T (misma posición en la cascada — entrada de
+red regulada — pero ahora alimentan a la pareja LT3045/LT3094 en vez de ser
+el regulador final).
+
+**Ojo con la agrupación por valor del bom.csv v1** (no por etapa): la fila
+`"C7,C11",0.1uF ceramico,...` mezcla un componente que muere (C7, etapa U1)
+con uno que sobrevive (C11, etapa U3) porque ambos tienen el mismo valor de
+0.1 µF — igual la fila `"D1,D2,D5",1N4001,...` mezcla dos que mueren (D1,
+D2) con uno que sobrevive (D5, etapa U3). El Step 2 de Task 4 separa estas
+dos filas: hereda solo C11 y D5, con cantidad 1 cada una.
 
 ## §4 Medidas de la mula
 

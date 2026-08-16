@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "sam17")(type "KiCad")(uri "D:/Desktop/projects/sam17/.claude/worktrees/psu-v2/hardware/01-power-supply/v2/kicad/sam17.kicad_sym")(options "")(descr "Simbolos locales sam17 (LM2941CT/LM2991T pre-reg v2)"))
+)
