@@ -779,12 +779,34 @@ def setup_local_symbols(c: Client) -> None:
     print(f"  register_symbol_library: {str(r)[:160]}")
 
 
+# Namespace fijo del proyecto para UUIDs deterministas (fix F2 del task
+# review: uuid.uuid4() hacia ~543 lineas de ruido en git en cada corrida,
+# porque cada wire/label/texto se re-escribia con un UUID al azar aunque el
+# contenido no cambiara). Creado UNA vez con uuid.uuid4() y hardcodeado --
+# no tiene significado, solo tiene que quedar fijo para siempre.
+PROJECT_UUID_NAMESPACE = uuid.UUID("a17f9c2e-8b3d-4f61-9e2a-5c7d1b0f4a63")
+
+# Cuenta cuantas veces se pidio cada clave semantica, para que dos elementos
+# con la MISMA clave (p.ej. dos wires con las mismas coordenadas) no colisionen
+# en el mismo UUID -- el contador es estable porque WIRES/LABELS/TEXTS son
+# listas fijas recorridas siempre en el mismo orden (build determinista).
+_uuid_seen: dict[str, int] = {}
+
+
+def _stable_uuid(key: str) -> str:
+    """uuid5(PROJECT_UUID_NAMESPACE, clave) -- mismo texto de entrada, mismo
+    UUID en toda corrida, a diferencia de uuid4() (al azar cada vez)."""
+    n = _uuid_seen.get(key, 0)
+    _uuid_seen[key] = n + 1
+    return str(uuid.uuid5(PROJECT_UUID_NAMESPACE, key if n == 0 else f"{key}#{n}"))
+
+
 def _wire_sexpr(x1: float, y1: float, x2: float, y2: float) -> str:
     return (
         "\t(wire\n\t\t(pts\n"
         f"\t\t\t(xy {x1} {y1}) (xy {x2} {y2})\n"
         "\t\t)\n\t\t(stroke\n\t\t\t(width 0)\n\t\t\t(type default)\n\t\t)\n"
-        f'\t\t(uuid "{uuid.uuid4()}")\n\t)\n'
+        f'\t\t(uuid "{_stable_uuid(f"wire:{x1},{y1},{x2},{y2}")}")\n\t)\n'
     )
 
 
@@ -793,7 +815,7 @@ def _label_sexpr(name: str, x: float, y: float) -> str:
         f'\t(label "{name}"\n'
         f"\t\t(at {x} {y} 0)\n\t\t(effects\n\t\t\t(font\n\t\t\t\t(size 1.27 1.27)\n"
         "\t\t\t)\n\t\t\t(justify left bottom)\n\t\t)\n"
-        f'\t\t(uuid "{uuid.uuid4()}")\n\t)\n'
+        f'\t\t(uuid "{_stable_uuid(f"label:{name}:{x},{y}")}")\n\t)\n'
     )
 
 
@@ -804,7 +826,7 @@ def _text_sexpr(text: str, x: float, y: float) -> str:
         "\t\t(exclude_from_sim no)\n"
         f"\t\t(at {x} {y} 0)\n\t\t(effects\n\t\t\t(font\n\t\t\t\t(size 1.27 1.27)\n"
         "\t\t\t)\n\t\t\t(justify left bottom)\n\t\t)\n"
-        f'\t\t(uuid "{uuid.uuid4()}")\n\t)\n'
+        f'\t\t(uuid "{_stable_uuid(f"text:{x},{y}:{text}")}")\n\t)\n'
     )
 
 

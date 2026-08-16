@@ -689,6 +689,111 @@ mecánico/térmico, solo cambia el elemento fusible que se inserta.
 lento", nota con la aritmética completa) y `build_schematic.py` v2 (Value de
 F1 = "1.6A T").
 
+### §3.0.1 Worksheet de arranque (I²t) — fix F1 del task review
+
+**Hallazgo del review**: el valor 1.6 A T queda, pero la nota original no
+cuantificaba el arranque en frío ni el trade-off de protección que implica
+subir 6.4× el fusible respecto a v1. Se cierra aquí con números.
+
+**Supuestos declarados** (modelo simplificado a mano, no una simulación
+SPICE):
+
+1. Peor caso de conexión: el interruptor de red cierra en el PICO de la
+   sinusoide (325 V), con los bulk caps totalmente descargados — es el
+   escenario clásico de peor caso en una fuente offline con rectificador
+   de entrada por capacitor.
+2. Se ignora la inductancia de fuga de TR1 y el ESR de los bulk caps —
+   modelo puramente resistivo (solo NT1 en frío, 5 Ω, limitando). Esto es
+   **conservador**: cualquier inductancia real en serie limitaría el di/dt
+   y bajaría el pico real, así que el número que sale de aquí es un techo,
+   no un piso.
+3. Corriente pico: I_pk = V_pk / R_NTC(frío) = 230×√2 / 5 ≈ **65.05 A**
+   (mismo orden que orientaba el task review, ~65 A).
+4. Forma del primer semiciclo: se aproxima como un semiciclo senoidal
+   COMPLETO a esa amplitud (10 ms a 50 Hz) — sobreestima el I²t real,
+   porque en la práctica NT1 se autocalienta (su R cae, es NTC) y los
+   bulk caps ya tienen algo de carga antes de completar el semiciclo, así
+   que el pico real decae antes del final de esos 10 ms.
+5. Segundo semiciclo: con NT1 más caliente pero los bulk caps ya con
+   carga parcial (menos tensión disponible para forzar corriente), se
+   asume conservador una amplitud del 50% del pico (~32.5 A). Semiciclos
+   posteriores se desprecian — su aporte marginal al I²t total es chico
+   frente a los dos primeros.
+
+**Cálculo:**
+
+```
+I_pk = 230 x sqrt(2) / 5 = 65.05 A
+
+I²t(semiciclo 1, senoidal, T=10ms) = I_pk^2 x (T/2)
+  = 65.05^2 x 0.005 = 21.2 A²s
+
+I²t(semiciclo 2, ~50% amplitud) = (0.5 x 65.05)^2 x 0.005
+  = 32.53^2 x 0.005 = 5.3 A²s
+
+I²t total estimado (primeros ~20 ms) ~= 21.2 + 5.3 ~= 26.5 A²s
+```
+
+**Comparación contra el fusible**: un 5×20 T (slow-blow) de 1.6 A tiene un
+I²t de fusión (melting I²t, no el "no-fusión" a 10 s de las curvas
+tiempo-corriente) que ronda **10-30 A²s según el fabricante** — Bel,
+Littelfuse y Schurter no publican el mismo número para la misma corriente
+nominal, y esta puerta no tuvo acceso a un datasheet concreto de fusible
+para confirmarlo. Con el estimado de arranque de ~26.5 A²s, **el margen es
+fino**: si el fusible comprado cae en la parte baja del rango típico
+(10-15 A²s) hay riesgo real de que el arranque en frío lo funda
+espúreamente; si cae en la parte alta (25-30 A²s) sobrevive, pero con poco
+colchón. No se puede cerrar esta pregunta sin el datasheet del fusible
+concreto que se compre — **acción documentada en `bom.csv` v2, fila F1**:
+verificar I²t ≥ ~27 A²s contra ese datasheet antes de comprar.
+
+Esto NO invalida el dimensionamiento por corriente nominal (0.722 A × 2.2
+de margen = 1.6 A, §3.0 arriba) — es un chequeo independiente y adicional,
+igual que §1.5.1 fue un chequeo independiente del GO de §1.5.
+
+### §3.0.2 Trade-off de protección: qué deja de cubrir F1 a 1.6 A
+
+**Hallazgo del review**: subir F1 6.4× (250 mA → 1.6 A) no es gratis — hay
+una ventana de corriente de fallo que el fusible viejo SÍ abría y el nuevo
+YA NO abre en tiempo útil.
+
+Un fusible T (slow-blow) de 1.6 A típicamente NO abre en un tiempo útil
+(según su propia curva tiempo-corriente) para una corriente SOSTENIDA entre
+aproximadamente **0.4 A y 2 A** — por debajo de ~1.35× su nominal (2.16 A)
+puede tardar minutos u horas en abrir, y cerca de 1× (1.6 A) puede no abrir
+nunca en régimen permanente. Con el fusible viejo de 250 mA, esa misma
+ventana de corriente (0.4-2 A) SÍ habría disparado la protección en
+segundos. Ejemplos reales de falla que caen en esa ventana:
+
+- Fallo parcial del bobinado primario de TR1 (cortocircuito entre espiras,
+  no total) que sube la corriente de magnetización sin llegar a un
+  cortocircuito franco.
+- Fuga sostenida de un MOV (RV1) degradado por sobretensiones repetidas —
+  un MOV envejecido puede empezar a conducir en fuga sin llegar al corto
+  catastrófico que dispara F1 al instante.
+
+**Mitigantes reales** (no elimina el gap, lo acota):
+
+1. RV1 (MOV) sigue ahí para transitorios reales (el escenario que SÍ
+   dispara F1 rápido: un corto franco del MOV o un pico de red que lo hace
+   conducir duro).
+2. El portafusible es CERRADO (Schurter FPG4, no de clips abiertos) —
+   contiene un fallo aunque tarde en abrir, no hay arco expuesto dentro
+   del cajón.
+3. Muchos transformadores toroidales de esta potencia vienen con un
+   **fusible térmico embebido en el propio devanado** (protección térmica
+   independiente de F1, dispara por temperatura del bobinado, no por
+   corriente de línea) — si el TR1 comprado lo trae, cierra buena parte de
+   este gap de forma independiente del dimensionamiento de F1. **Acción
+   documentada en `bom.csv` v2, fila TR1**: confirmar si el TR1 comprado
+   (Talema 0120P1-2-012 u otro fabricante) trae fusible térmico embebido
+   antes de dar el diseño por cerrado en este punto.
+
+Este trade-off es inherente a la decisión de subir F1 para que no se funda
+en operación normal (§3.0 arriba) — no es un error de esta tarea, es el
+costo real de la corrección, y queda documentado explícito en vez de
+maquillado.
+
 ### §3.1 Task 4 Step 1 — mapa ref→etapa de la v1
 
 Leído con `grep -n -B3` sobre `hardware/01-power-supply/kicad/build_schematic.py`
