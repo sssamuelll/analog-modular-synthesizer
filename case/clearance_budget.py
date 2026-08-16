@@ -346,6 +346,9 @@ def main() -> int:
 
     print(f"perfil: alto_total={g['alto_total']:.1f}  "
           f"entrepiso={g['y_entrepiso']:.1f}  ancho_util={g['ancho_util']:.0f}")
+    print(f"kerf aplicado: {p['kerf']:+.2f} mm (firmado; cupon manda)")
+    exige(-0.5 <= p["kerf"] <= 0.5,
+          "kerf fuera de rango fisico [-0.5, +0.5] mm")
     for f in fallos:
         print(f"ROJO: {f}")
     if fallos:
