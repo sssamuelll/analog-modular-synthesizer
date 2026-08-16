@@ -626,7 +626,68 @@ no aplica mientras haya stock del distribuidor.
 
 ## §3 Decisiones y aritmética
 
-(vacío; Task 5 mete el worksheet de F1)
+### §3.0 Worksheet F1 (Task 5 Step 6): sube de 250 mA a 1.6 A T
+
+**Hallazgo real, no maquillado**: la nota que fijó F1 en 250 mA (v1,
+`hardware/01-power-supply/notes/design-notes.md` líneas 379-383, sección "Lo
+que cambia" de la migración 110V→230V) calculó la corriente de primario con
+**TR1 = 24 VA** ("mismo transformador (12 VAC CT / 2 A ≈ 24 VA)") — pero ese
+no es el transformador que hay hoy en el bom.csv (v1 y v2 igual): el BOM real
+dice **Talema 0120P1-2-012, 120 VA** (subido en algún punto de la evolución
+de v1 para ganarle margen de valle al dropout del LM2940/LM2941, documentado
+en los comentarios de `build_schematic.py` sobre §16.5). Esa nota de F1 quedó
+**obsoleta sin que nadie la revisara** — es exactamente el tipo de bug que
+esta tarea pide cazar (brief Step 6).
+
+**Aritmética con el término nuevo:**
+
+```
+Corriente de primario de TR1 a plena carga (VA/V, exacto, no depende del PF):
+  120 VA / 230 V = 0.522 A
+
+Corriente de entrada del IRM-15-5 a 230 VAC:
+  Fuente primaria: meanwell.com, IRM-15-SPEC.PDF (File Name:IRM-15-SPEC,
+  fecha de archivo 2025-11-21), fila "AC CURRENT (Typ.)" de la tabla de
+  especificaciones — aplica a toda la familia IRM-15 (mismos ~15 W, la fila
+  no se repite por modelo): "0.35A/115Vac  0.2A/230Vac  0.17A/277Vac".
+  0.2 A/230Vac Typ. — más alto que el "~0.16A max" que orientaba el brief
+  (ese número no viene de esta hoja; el dato real medido por MeanWell es
+  0.2 A). Con ~78-83% de eficiencia típica de la propia hoja y 15 W de
+  salida, la potencia real de entrada da ~18-19 W — a 0.2 A/230V eso es
+  ~46 VA aparentes, factor de potencia ~0.4, normal en una fuente offline
+  pequeña sin PFC activo (rectificador de entrada por capacitor, corriente
+  en pulsos cerca del pico de la sinusoidal).
+
+Carga total sobre F1 (J7 comparte el mismo fusible que TR1, spec §7):
+  0.522 A (TR1) + 0.2 A (IRM-15-5) = 0.722 A
+```
+
+**Decisión: F1 sube de 250 mA a 1.6 A T.** Ni 250 mA (v1) ni las alternativas
+250/315/400 mA que orientaba el brief alcanzan: **todas quedan por debajo de
+la propia carga nominal de operación (0.722 A)** — con cualquiera de esos
+valores el fusible se fundiría en uso normal, no solo ante una falla. El
+salto real necesario es mucho mayor de lo que el brief anticipaba.
+
+Margen elegido: se replica la misma filosofía de margen que ya usó la nota
+de v1 al fijar 250 mA sobre 104 mA (~2.4× la corriente nominal) — un margen
+generoso apropiado para un transformador **toroidal** con arranque en frío
+más agresivo que un EI-core (mitigado por NT1, pero no eliminado) y para la
+tolerancia de red europea (±10%, la corriente sube algo más a 207 V). Con
+0.722 A de carga: 0.722 × 2.4 ≈ 1.73 A → el valor estándar de fusible lento
+5×20 mm más cercano por debajo de eso (para no sobre-fusionar y perder valor
+protector) es **1.6 A T**, dando 1.6/0.722 = 2.22× de margen — prácticamente
+el mismo ~2.2-2.4× que ya validó el diseño original, no un número inventado.
+A baja red (207 V, -10%): TR1 sube a ≈120/207=0.580 A, el IRM-15-5 sube algo
+menos (interpolando 0.35 A@115V / 0.2 A@230V, ronda ~0.22 A a 207 V) → total
+≈0.80 A, sigue siendo solo el 50% del rating de 1.6 A — cómodo.
+
+El portafusible **no cambia**: sigue siendo el Schurter FPG4 (cerrado, IEC
+60335-1, 250 VAC/**10 A** VDE) — 1.6 A queda muy por debajo de su límite
+mecánico/térmico, solo cambia el elemento fusible que se inserta.
+
+**Actualizado**: `bom.csv` v2, fila F1 (valor "1.6A lento" en vez de "250mA
+lento", nota con la aritmética completa) y `build_schematic.py` v2 (Value de
+F1 = "1.6A T").
 
 ### §3.1 Task 4 Step 1 — mapa ref→etapa de la v1
 
