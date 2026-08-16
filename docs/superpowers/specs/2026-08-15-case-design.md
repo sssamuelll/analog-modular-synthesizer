@@ -1,21 +1,32 @@
 # SAM17 — Diseño del case (consola de dos pisos en acrílico naranja)
 
 **Fecha:** 2026-08-15
-**Estado:** aprobado en diseño (rev. 2: todo acrílico, dos pisos, sándwich
-modernista), pendiente de plan de implementación
+**Estado:** aprobado en diseño (rev. 3: pivote de cómputo, fuente v2 y
+geometría del board de diseño), pendiente de plan de implementación
 **Sustituye a:** formato de cajón de la tesis (madera 950 × 440 × 100–200 mm,
 paneles galvanizados pintados) descrito en
 [`docs/modules/08-case-panels.md`](../../modules/08-case-panels.md).
-**Diseño de entrada:** [`docs/architecture-poly.md`](../../architecture-poly.md)
-(4 voces con mandos compartidos y circuitos replicados; dos caminos de señal;
-patch bay normalizado).
+**Diseño de entrada:**
+[`docs/architecture-poly.md`](../../architecture-poly.md) (4 voces con mandos
+compartidos y circuitos replicados; dos caminos de señal; patch bay
+normalizado); pivote de cómputo del PR #30 (el instrumento entero vive en un
+RP2350, la computadora es externa y opcional); spec de la fuente v2
+([`2026-08-16-psu-v2-goat-design.md`](2026-08-16-psu-v2-goat-design.md)).
+**Render de intención aprobado:**
+[`case/renders/propuesta-diseno-2026-08-16.png`](../../../case/renders/propuesta-diseno-2026-08-16.png)
+(board del departamento de diseño, 2026-08-16 — manda sobre proporciones y
+lenguaje visual).
 **Gobernada por:** [`.specify/memory/constitution.md`](../../../.specify/memory/constitution.md).
 
-> Rev. 2 — cambios sobre la rev. 1 (consola inclinada de un piso con cheeks
-> de madera): el case pasa a **todo acrílico**, a **dos pisos** y a lenguaje
-> **modernista de sándwich con separadores**; desaparecen la madera, los
-> finger joints y la pantalla táctil del frontal (la interfaz se vuelve app
-> web servida por el propio módulo 2).
+> Historial de revisiones — **rev. 1**: consola inclinada de un piso, cheeks
+> de madera, finger joints cementados, pantalla táctil de 7". **rev. 2**: todo
+> acrílico, dos pisos, sándwich modernista con standoffs; muere la pantalla
+> (interfaz = app web servida por el Pi). **rev. 3**: el cerebro pasa de
+> Raspberry Pi 3B+ a **RP2350 con la computadora FUERA** — muere la app web
+> servida por el Pi y el compañero pasa a ser un **plugin VST/CLAP** en la
+> computadora del usuario; la fuente v2 fija los dominios de alimentación (y
+> prevé WS2812); los ángulos quedan **medidos desde la vertical**, como los
+> interpretó el board de diseño aprobado.
 
 ## 1. Objetivo
 
@@ -47,10 +58,10 @@ de su zona de conexión trasera.
 | Decisión | Elección | Por qué |
 |---|---|---|
 | Formato | Consola propia de dos pisos (no Eurorack 3U) | Los módulos usan paneles de 190 mm; la referencia de dos pisos es la silueta, no el estándar |
-| Estilo | Modernista: placas planas, retícula, standoffs vistos | Decisión estética del proyecto; el naranja translúcido hace el trabajo expresivo |
+| Estilo | Modernista: placas planas, retícula, standoffs vistos | Decisión estética del proyecto; el naranja translúcido hace el trabajo expresivo; el board de diseño aprobado fija el lenguaje |
 | Estructura | Sándwich de placas de acrílico + separadores de aluminio | 100 % desmontable; la precisión depende solo de posiciones de agujero (lo que mejor hace el láser); elimina de raíz el problema de encajes |
 | Paneles de módulo | PCB de aluminio (KiCad → fabricante tipo JLCPCB) | Serigrafía perfecta, agujeros exactos, acabado uniforme, bajo costo |
-| Interfaz del módulo 2 | App web servida por el Pi + botón físico AFINAR y LED de estado en el panel | Cualquier tablet/celular por navegador (el Pi levanta su propio punto de acceso Wi-Fi); el botón mantiene el instrumento autosuficiente; desaparecen el recorte de 7" y sus 450–550 mA |
+| Interfaz del módulo 2 | Instrumento autosuficiente en el RP2350; computadora **externa y opcional** por USB MIDI class-compliant + plugin compañero VST/CLAP. En el panel: **botón AFINAR + LED de estado**; los conectores de enlace (USB, MIDI DIN) los define el módulo 2 (panel o bloque trasero) | Pivote de cómputo del PR #30: si la computadora se cae en pleno concierto, el instrumento sigue sonando; desaparecen pantalla, Pi y sus consumos del frontal |
 | Fabricación | Corte láser por servicio | Precisión; los DXF del repo son directamente los archivos de corte |
 | CAD | OpenSCAD paramétrico | Diseño-como-código versionable; exporta DXF (corte) y STL (render en Blender) |
 | Servicio | Todo desatornillable (standoffs) + paneles de módulo desmontables | Ningún pegamento estructural; acceso total al interior |
@@ -70,7 +81,7 @@ cortado en acrílico) falló porque **los dientes no cuadraron**. Causas raíz:
 3. El plywood comprime ~0.5 mm y perdona el ajuste a presión; el acrílico es
    rígido y frágil: o queda flojo o revienta.
 
-La rev. 2 no mitiga el problema: **lo elimina**. La arquitectura de sándwich
+La rev. 2+ no mitiga el problema: **lo elimina**. La arquitectura de sándwich
 con standoffs no tiene encajes — la geometría crítica son posiciones y
 diámetros de agujero, que no dependen del espesor de la plancha. Aun así:
 
@@ -84,17 +95,20 @@ diámetros de agujero, que no dependen del espesor de la plancha. Aun así:
 
 ## 4. Geometría (defaults; todo parametrizable)
 
-Perfil lateral escalonado: dos caras inclinadas, la inferior tendida y la
-superior más erguida, como una consola de estudio compacta.
+Perfil lateral escalonado de consola de estudio erguida, como lo fijó el
+board de diseño: piso inferior casi vertical frente al intérprete, piso
+superior reclinado. **Los ángulos se miden desde la vertical** (convención
+del board; la rev. 2 era ambigua y el departamento de diseño la resolvió en
+esta dirección).
 
 | Parámetro | Default | Nota |
 |---|---|---|
-| `ancho_total` | 500 mm | Lo fija la suma de anchos de módulo por piso (§11); default de partida |
+| `ancho_total` | 500 mm | Lo fija la suma de anchos de módulo por piso (§11); coincide con el board |
 | `alto_panel` | 190 mm | Por piso; altura de panel de la tesis, se conserva |
-| `angulo_inferior` | 12° | Cara del piso de procesamiento |
-| `angulo_superior` | 35° | Cara del piso de generación |
-| `alto_frontal` | 50 mm | Borde delantero |
-| `fondo` / `alto_total` | derivados | Los calcula el modelo desde ángulos y caras |
+| `angulo_inferior` | 12° desde la vertical | Cara del piso de procesamiento, casi erguida |
+| `angulo_superior` | 35° desde la vertical | Cara del piso de generación, reclinada |
+| `alto_frontal` | 50 mm | Zócalo delantero |
+| `fondo` / `alto_total` | derivados | ≈ 350 mm / ≈ 380–390 mm con estos defaults — cuadra con el board (350 × ~380) |
 | `t_acrilico` | 5 mm | Placas del cuerpo; decidir con el proveedor, medir con calibre |
 | `t_cheek` | 8 mm | Costados portantes (o 2 × 4 mm laminados, decisión estética en CAD) |
 | `kerf` | 0.2 mm | Se calibra con el cupón, nunca se asume |
@@ -105,9 +119,10 @@ que deciden el diseño viven en **`case/clearance_budget.py`** (Principio II:
 presupuesto ejecutable con aserciones, no prosa):
 
 - altura interior del piso inferior vs. altura del transformador real del
-  módulo 1, margen ≥ 15 mm;
-- profundidad libre bajo cada cara vs. el módulo más hondo de ese piso
-  (MIDI/CV: Raspberry Pi 3B+ sobre separadores, ya sin pantalla);
+  módulo 1 (según spec de la fuente v2), margen ≥ 15 mm;
+- profundidad libre bajo cada cara vs. la PCB más honda del censo real de
+  módulos — tras el pivote de cómputo el cerebro es un RP2350 y ninguna pieza
+  domina de antemano, así que el censo se hace, no se supone;
 - suma de anchos mínimos de panel + expansión vs. ancho útil, **por piso**;
 - largo de standoffs vs. espesores reales de placas apiladas.
 
@@ -150,8 +165,10 @@ comprobación va antes del paso destructivo).
   de agujeros de tornillo, zona útil de componentes y estilo de serigrafía
   (tipografía y convenciones de `docs/modules/08-case-panels.md`, revisadas
   al lenguaje modernista: retícula, sin adornos).
-- Requisito derivado para el panel del módulo 2: **botón AFINAR + LED de
-  estado** (la interfaz completa vive en la app web).
+- Requisitos derivados para el panel del módulo 2: **botón AFINAR + LED de
+  estado**; los conectores de enlace con la computadora externa (USB MIDI
+  class-compliant, MIDI DIN con opto) los ubica el diseño del módulo 2 — en
+  su panel o en el bloque trasero fijo; el case solo garantiza el acceso.
 
 ## 7. Eléctrico y seguridad
 
@@ -168,8 +185,8 @@ comprobación va antes del paso destructivo).
 - **Ventilación con firma**: las perforaciones de las pieles traseras y de la
   base (bajo el PSU) dibujan **onda sierra, triangular y cuadrada** — las
   tres formas de onda de los VCOs — trazadas como retícula geométrica
-  estricta, coherente con el lenguaje modernista. Convección natural para el
-  PSU lineal.
+  estricta, coherente con el lenguaje modernista (así aparecen en la vista
+  posterior del board). Convección natural para el PSU lineal.
 - Requisito derivado hacia los módulos (no es trabajo del case): las PCBs
   llevan **conformal coating**, porque el cuerpo es deliberadamente abierto
   (juntas de sombra y ventilación).
@@ -184,7 +201,8 @@ case/
 ├── plans/        DXF por plancha de acrílico, nesteados — salida directa
 │                 al servicio de corte
 ├── panels/       plantilla KiCad de panel de aluminio
-├── renders/      STL → Blender (acrílico naranja translúcido, aluminio)
+├── renders/      propuesta-diseno-2026-08-16.png (board aprobado, intención)
+│                 STL → Blender (acrílico naranja translúcido, aluminio)
 │                 → PNG del conjunto
 ├── clearance_budget.py   holguras del §4, ejecutable con aserciones
 └── README.md     BOM de herrajes, orden de ensamblaje, procedimiento del
@@ -232,17 +250,19 @@ con qué habría que medir para cerrarlo.
   `t_acrilico` / `t_cheek`.
 - **Kerf y ajuste de agujeros con ese acrílico y esa máquina**: se cierra con
   el cupón; nunca se asume el 0.2 mm del default.
-- **Altura del transformador real del módulo 1**: la aserción del budget usa
-  un valor de catálogo hasta medir la pieza comprada.
+- **Transformador y térmica de la fuente v2**: la spec de la fuente
+  ([`2026-08-16-psu-v2-goat-design.md`](2026-08-16-psu-v2-goat-design.md))
+  define pre-reg + LT3045/LT3094 y trae su propia lista de no confirmado; el
+  budget del case toma de ahí la altura del transformador y la necesidad real
+  de ventilación cuando esa spec cierre sus números.
+- **Censo de fondos de PCB por módulo**: la aserción de profundidad usa
+  estimados hasta que cada módulo publique su PCB (tras el pivote de cómputo
+  ya no hay una pieza dominante conocida).
 - **Suma de anchos de panel por piso vs. `ancho_total`**: solo cierra cuando
   cada panel esté dibujado; el budget la vigila con anchos mínimos estimados
   por módulo y por piso — y el patch bay normalizado añade jacks a varios
   paneles. Si un piso no cabe, `ancho_total` sube — es un parámetro, no una
   promesa.
-- **El fondo del módulo 2 depende de un pendiente ajeno**: el corte del
-  cerebro en dos (micro de tiempo real + Linux) está propuesto y **no
-  confirmado** (PR #27); el budget usa el conjunto actual (Pi 3B+ sobre
-  separadores) hasta que esa decisión se cierre.
 - **Rigidez del vano a ~500 mm sin costado central**: heurística. Si el
   prototipo flexa, `n_bulkheads` pasa a 3 y se re-exporta; se cierra cargando
   el prototipo real.
@@ -254,12 +274,14 @@ con qué habría que medir para cerrarlo.
 
 Al cerrar la tanda se abren como issues con evidencia (Principio VI):
 
-- **App web de configuración del módulo 2** (firmware: servidor en el Pi,
-  punto de acceso Wi-Fi, UI tablet-first). Va por el flujo spec-kit, que la
-  adopción de la constitución escopa justamente al firmware.
+- **Plugin compañero VST/CLAP** (nih-plug, Rust) y todo el enlace con la
+  computadora externa — software, flujo spec-kit, ya descrito en el pivote de
+  cómputo del PR #30.
 - Tapa frontal de transporte.
 - Patas plegables / soporte de ángulo variable.
-- Iluminación LED dedicada del bus (el translúcido ya deja pasar la luz de
-  los LEDs existentes).
+- **Iluminación WS2812**: la fuente v2 ya le reserva alimentación
+  (+5 V digital con SMPS encapsulada para RP2350 + WS2812); el translúcido
+  naranja la difunde. El case no la implementa en esta tanda, pero las
+  bandejas dejan paso de cableado.
 - Layouts individuales de cada panel de módulo (trabajo por módulo usando la
   plantilla de `case/panels/`).
