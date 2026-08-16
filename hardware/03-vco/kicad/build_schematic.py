@@ -292,9 +292,14 @@ def bloque_alimentacion() -> None:
            {"1": None, "2": "+5V_LOC", "3": None, "4": "GNDA", "5": None,
             "6": "VREF_2V5", "7": None, "8": None})
 
-    # Bulk de 10uF en cada riel local, pegado a la salida de su regulador.
+    # Bulk de 10uF en cada riel local, pegado a la salida de su regulador,
+    # Y en los dos rieles del bus tal como entran por J1 (ds pag.6: "local
+    # bulk supply rail decoupling capacitors of 10uF or more" en AMBAS
+    # alimentaciones, ademas del 100nF pegado a cada chip).
     for ref, net, x, y in (("C8", "+5V_LOC", X_U11 + g(16), Y_U11),
-                            ("C9", "+3V3_LOC", X_U12 + g(16), Y_U12)):
+                            ("C9", "+3V3_LOC", X_U12 + g(16), Y_U12),
+                            ("C25", "+12V", X_J1 + g(16), Y_J1),
+                            ("C26", "-12V", X_J1 + g(26), Y_J1)):
         pon("c", ref, "10u", x, y)
         c1, c2 = P("c", "1", x, y), P("c", "2", x, y)
         hilo(*c1, c1[0], c1[1] - g(4))
@@ -527,6 +532,16 @@ def _redes_ssi2130(n: int) -> dict[str, str | None]:
     TRI OUT (pin 1) sube sin resistencia hasta el pin 31; el wiper del
     potenciometro PWM CTRL (aqui sustituido por el DAC, PWM_CV) baja sin
     resistencia hasta el pin 32.
+
+    Revision de controller (misma clase de fallo, misma figura/texto):
+    - LIN FREQ (pin 21) NO puede quedar NC: pag.5 dice que sin FM lineal
+      hay que darle ~5uA con 499k desde VREF, y pag.9 es explicita --
+      0 corriente ahi es 0 frecuencia, el oscilador se PARA. R_LIN{n} en
+      `pasivos` de dibujar_voz() lo resuelve.
+    - MIX AUX2 (pin 13) NO puede ir a masa directa: pag.8, "Do not connect
+      control inputs directly to ground" -- un canal sin usar va flotante
+      (NC) o a masa por >=50k. Se deja NC, igual que AUX2 IN (pin 5), que
+      es el otro lado del mismo canal sin usar.
     """
     return {
         "1": f"TRI_{n}",                      # TRI OUT
@@ -538,13 +553,13 @@ def _redes_ssi2130(n: int) -> dict[str, str | None]:
         "8": "-12V",                           # V-
         "9": f"N9_{n}", "10": f"N10_{n}",      # MIX TRI/SAW
         "11": f"N11_{n}", "12": f"N12_{n}",    # MIX PULSE/AUX1(=seno)
-        "13": "GNDA",                          # MIX AUX2: 0uA = mute
+        "13": None,                            # MIX AUX2: NC, no masa directa (ds pag.8)
         "14": f"N14_{n}",                      # TCAP
         "15": "GNDA", "16": "GNDA",            # DGND/AGND juntos, al plano
         "17": "GNDA",                          # HARD SYNC sin usar -> masa
         "18": "+5V_LOC",                       # TIME REVERSE: sierra ascendente
         "19": None,                            # SOFT SYNC: sin usar
-        "21": None,                            # LIN FREQ: FM lineal descartada
+        "21": f"N21_{n}",                      # LIN FREQ: ~5uA via R_LIN (ds pag.5/9)
         "22": f"N22_{n}",                      # EXPO SCALE
         "23": "VREF_2V5",
         "24": f"SINEO_{n}",                    # SINE OUT
@@ -557,6 +572,16 @@ def _redes_ssi2130(n: int) -> dict[str, str | None]:
         "32": "PWM_CV",                        # PWM+ <- CV del DAC (ver arriba)
         # 33 (EP) NO aparece aqui a proposito: ver dibujar_voz().
     }
+
+
+def _revisar_cobertura_ssi2130() -> None:
+    """Que el dict de _redes_ssi2130() tenga EXACTAMENTE los pines del
+    simbolo (menos el 33/EP, que se salta a proposito): una clave que se
+    borra por error tiene que tumbar el build, no colarse como una cruz
+    NC silenciosa que nadie pidio."""
+    esperado = set(symlib.pines(SYM["vco"])) - {"33"}
+    real = set(_redes_ssi2130(1))
+    assert real == esperado, f"_redes_ssi2130 no cubre los pines del simbolo: {esperado ^ real}"
 
 
 def dibujar_voz(n: int, origen: tuple[float, float]) -> None:
@@ -590,6 +615,9 @@ def dibujar_voz(n: int, origen: tuple[float, float]) -> None:
         # nodo suma EXPO FREQ (pin 7): CV del DAC + jack de entrada
         ("r", f"R_PITCH{n}", "16.5k", f"CV_PITCH_{n}", f"N7_{n}"),
         ("r", f"R_CVIN{n}", "49.9k", f"CVIN_{n}", f"N7_{n}"),
+        # LIN FREQ (pin 21): ~5uA fijo desde VREF -- sin ella el oscilador
+        # se PARA (ds pag.5/9, "0 current in equals 0 frequency out").
+        ("r", f"R_LIN{n}", "499k", "VREF_2V5", f"N21_{n}"),
         # TCAP (pin 14): C0G/NP0 obligatorio -- deriva termica del datasheet
         ("c", f"C_TCAP{n}", "3.9n C0G", f"N14_{n}", "GNDA"),
         # EXPO SCALE (pin 22): fija, trimless (bom.csv, sin trim de fabrica)
@@ -618,9 +646,11 @@ def dibujar_voz(n: int, origen: tuple[float, float]) -> None:
     for i, (clave, ref, val, net1, net2) in enumerate(pasivos):
         libre(clave, ref, val, X0 + g(10) * i, Y0, net1, net2)
 
-    # Desacoplo de U1-U4 (bom.csv C_DEC*): 100nF en V+, pegado al chip,
-    # retorno GNDA -- la propia masa del chip, igual que los DAC.
+    # Desacoplo de U1-U4 (bom.csv C_DEC*): 100nF en V+ Y en V-, pegados al
+    # chip, retorno GNDA -- el datasheet (pag.6) pide decoupling local en
+    # AMBAS alimentaciones, no solo en V+.
     _desacoplo(f"C{20 + n}", "100n", "+5V_LOC", "GNDA", ox + g(10), oy - g(34))
+    _desacoplo(f"C{26 + n}", "100n", "-12V", "GNDA", ox - g(10), oy - g(34))
 
     # I/V: unidad n de U9, transimpedancia MIX OUT -> VOICE_OUT (+-5V max).
     # + a masa (virtual de un ampli inversor), - al nodo MIXO_n (mismo
@@ -718,7 +748,7 @@ def revisar_hilos() -> None:
 def escribir() -> None:
     out = ['(kicad_sch', '\t(version 20260101)', '\t(generator "sam17-vco")',
            '\t(generator_version "10.0")', f'\t(uuid {SHEET_UUID})',
-           '\t(paper "A3")', '\t(title_block',
+           '\t(paper "User" 500 1000)', '\t(title_block',
            '\t\t(title "Modulo 03 - VCO x4 SSI2130: alimentacion, referencia y 4 voces")',
            f'\t\t(date "{DATE}")', f'\t\t(rev "{REV}")',
            '\t\t(company "SAM17 - Sintetizador analogico modular")',
@@ -781,6 +811,7 @@ def escribir() -> None:
 def main() -> None:
     check_footprints()
     revisar_pinout_dac()
+    _revisar_cobertura_ssi2130()
     construir()
     revisar_rejilla()
     revisar_hilos()

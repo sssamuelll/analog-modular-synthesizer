@@ -15,11 +15,12 @@ R_SCALE1-4,26.7k 1%,R_0805,4,nacional,VREF->EXPO SCALE ~94uA. FIJA - sin trim (s
 R_MIX*,49.9k 1%,R_0805,16,nacional,4 CV de mezcla x 4 voces (0-2.5V -> 0-50uA)
 R_IV1-4,10k 1%,R_0805,4,nacional,Transimpedancia MIX OUT (500uA -> 5V)
 R_SQ1-4,20k,R_0805,4,nacional,Pullup open-collector SQUARE OUT a +3V3
+R_LIN1-4,499k 1%,R_0805,4,nacional,VREF->LIN FREQ ~5uA. Sin ella el oscilador SE PARA (ds pag.5/9)
 R_I2C1-2,4.7k,R_0805,2,nacional,Pullups I2C
 RED_SINE*,4.02k+4.75k+4.75k 1%,R_0805,12,nacional,Red del shaper de seno (Figure 1 del datasheet)
 RED_BW1-4,270R+10nF,R_0805/C_0805,8,nacional,Compensacion BW COMP (pin 26)
-C_DEC*,100nF X7R,C_0805,~20,nacional,Desacoplo pegado a cada chip
-C_BULK*,10uF,C_0805,6,nacional,Bulk por riel local
+C_DEC*,100nF X7R,C_0805,~19,nacional,Desacoplo pegado a cada chip (incluye V- de U1-U4: ds pag.6 pide las dos alimentaciones)
+C_BULK*,10uF,C_0805,4,nacional,Bulk por riel: +5V_LOC +3V3_LOC +12V -12V (ds pag.6: >=10uF en ambas alimentaciones del bus, no solo en los rieles locales)
 C_AC*,10uF,C_0805,8,nacional,Acoplos AC del seno (TRI->SINE IN+ y SINEO->AUX1)
 J1,KK-254 4 pines,Molex KK,1,nacional,PSU +12/G/G/-12 (convencion del bus board)
 J2,IDC 2x6,IDC-Header_2x06,1,nacional,Mazo digital: contrato del enlace (spec par.7)
