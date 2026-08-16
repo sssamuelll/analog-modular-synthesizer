@@ -233,18 +233,42 @@ Pin Functions p.12):
 | 12 | OUT |
 | 13 (EP) | GND |
 
-- [x] **Orientación del Schottky de protección inversa (D10)**: "Protection
-  Features" (p.22): en escenarios de batería de respaldo (VOUT sostenido
-  mientras VIN cae/flota), corriente de hasta 15 mA puede fluir por el
-  circuito de "output overshoot recovery" hacia GND a través del clamp
-  OUTS-SET. "**This current flow... can be significantly reduced by
-  placing a Schottky diode between OUTS and SET pins, with its anode at
-  the OUTS pin.**" Es decir: **ánodo en OUTS (lado de salida), cátodo en
-  SET** — bloquea la trayectoria OUT→SET/GND cuando el chip no tiene
-  entrada. Es el único Schottky de protección inversa que menciona el
-  DS (aparte hay un 1N4148, no Schottky, entre IN y PGFB para proteger
-  ese pin cuando PGFB se ata a IN — "PGFB Disabled with Reverse Input
-  Protection", p.27, ánodo en IN).
+- [ ] **Orientación del Schottky de protección inversa out→in (D10) — GAP,
+  inferencia de ingeniería, no hecho citado.** La pregunta es sobre el
+  Schottky entre **OUT e IN** (nodos `+12V`→`+13V1` del plan, Task 4 Step
+  2), no entre OUTS y SET — son pines distintos. El DS **no da guía
+  explícita de orientación para un Schottky externo OUT→IN**: lo que sí
+  da, en "Protection Features" (p.22), es que el LT3045 trae protección
+  de entrada inversa **integrada en el chip** — "**the IN pin withstands
+  reverse voltages of up to ±20V without causing any input current flow
+  and without developing negative voltages at the OUT pin**" — y que, en
+  escenarios de batería de respaldo (VOUT sostenido mientras VIN cae o
+  flota), "**the reverse current protection circuitry prevents current
+  flow from output to the input**" (mismo párrafo, p.22). Es decir: el
+  propio LT3045 ya bloquea internamente la trayectoria OUT→IN; el DS no
+  dice si además hace falta (ni cómo orientar) un Schottky externo entre
+  esos dos pines — el plan lo incluye como defensa adicional (mismo
+  patrón que D12/D13 del LM2941/LM2991, §1.1/§1.2), no porque el DS del
+  LT3045 lo pida.
+
+  **Orientación esperable (inferencia, riel positivo)**: ánodo en OUT
+  (+12 V), cátodo en IN (+13V1) — reverso en operación normal
+  (V_OUT < V_IN); conduce solo si la entrada cae por debajo de la salida
+  (el mismo escenario de batería de respaldo que describe el DS, pero
+  para el diodo externo, no para el clamp interno). Antes de fijar D10 en
+  el esquemático: verificar contra el manual del demo board del LT3045
+  (**DC2491A**, citado en el propio DS — "Refer to the LT3045's DC2491A
+  demo board manual for further details", p.20) si el circuito de
+  referencia de Analog Devices muestra ese diodo externo.
+
+  Nota aparte — **no confundir con el Schottky OUTS→SET**, que sí cita el
+  DS explícito (p.22): "**placing a Schottky diode between OUTS and SET
+  pins, with its anode at the OUTS pin**" (ánodo en OUTS, cátodo en SET).
+  Es información real del DS, pero protege una trayectoria distinta (fuga
+  de hasta 15 mA hacia GND por el clamp OUTS-SET durante "output
+  overshoot recovery") — no responde la pregunta de D10. (Aparte hay
+  también un 1N4148, no Schottky, entre IN y PGFB — "PGFB Disabled with
+  Reverse Input Protection", p.27, ánodo en IN — tampoco es D10.)
 
 ### §1.4 LT3094
 
@@ -318,7 +342,7 @@ publicada del LT3094, verbatim ADI (no reescaneado).
   **no lo es**: en el LT3045 el tab/EP va a masa; en el LT3094 el tab/EP
   va al potencial de entrada negativa (VIN−) del propio regulador — el
   mismo patrón de "tab muerde" que ya se vio en el LM2991 de §1.2 y en
-  el LM2990 de la v1. **Si el EP del LT3094 (U2) toca un disipador o
+  el LM2990 de la v1. **Si el EP del LT3094 (U6/U7 en el BOM v2) toca un disipador o
   plano de masa de chasis, hace falta aislamiento** (mica o almohadilla
   térmica aislante), igual que con el LM2991.
 - [x] **PG sin usar**: **flotar**. Pin Functions, PG (p.15): "If the
