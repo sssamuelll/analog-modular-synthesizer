@@ -62,7 +62,7 @@ Render de intención: `case/renders/propuesta-diseno-2026-08-16.png`.
   Tasks 2–6 (lista exacta abajo). `OPENSCAD` invocable en
   `C:\Program Files\OpenSCAD\openscad.exe`.
 
-- [ ] **Step 1: Instalar OpenSCAD y verificar CLI**
+- [x] **Step 1: Instalar OpenSCAD y verificar CLI**
 
 ```powershell
 winget install --id OpenSCAD.OpenSCAD --silent --accept-package-agreements --accept-source-agreements
@@ -71,7 +71,7 @@ winget install --id OpenSCAD.OpenSCAD --silent --accept-package-agreements --acc
 Expected: `OpenSCAD version 20xx...` (si winget falla, descargar el
 instalador de https://openscad.org/downloads.html y repetir la verificación).
 
-- [ ] **Step 2: Escribir `case/cad/params.scad`**
+- [x] **Step 2: Escribir `case/cad/params.scad`**
 
 ```openscad
 // params.scad — unica fuente de verdad dimensional del case.
@@ -120,7 +120,7 @@ margen_transformador = 15; // spec §4
 fondo_pcb_max       = 60;  // censo estimado de PCB mas honda, no confirmado
 ```
 
-- [ ] **Step 3: Smoke test del CLI con los params**
+- [x] **Step 3: Smoke test del CLI con los params**
 
 ```powershell
 Set-Location case/cad
@@ -132,7 +132,7 @@ Remove-Item smoke.scad, smoke.stl
 ```
 Expected: sin excepción (STL > 100 bytes).
 
-- [ ] **Step 4: Enmienda §5/§9 de la spec (esqueleto 2020, standoffs a pieles)**
+- [x] **Step 4: Enmienda §5/§9 de la spec (esqueleto 2020, standoffs a pieles)**
 
 En `docs/superpowers/specs/2026-08-15-case-design.md`, §5, sustituir el bullet
 de bandejas por:
@@ -152,7 +152,7 @@ y en §9 añadir a la lista: `perfiles 2020 adicionales del esqueleto (5
 piezas, largo = ancho útil)` y `tornillos M5 de botón (extremos de los 9
 perfiles, alma del 2020 roscada M5)`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add case/cad/params.scad docs/superpowers/specs/2026-08-15-case-design.md
@@ -173,7 +173,7 @@ git commit -m "params del case como fuente unica y enmienda del esqueleto a 2020
   `perfil(p) -> dict` con claves `alto_total`, `prof_sup_min`,
   `alto_interior_inferior`, `ancho_util` que Task 6 y el README citan.
 
-- [ ] **Step 1: Escribir el budget con un valor deliberadamente roto (rojo)**
+- [x] **Step 1: Escribir el budget con un valor deliberadamente roto (rojo)**
 
 Escribir `case/clearance_budget.py` completo, pero con
 `alto_transformador = 45` sustituido temporalmente por `245` EN EL PARSE
@@ -303,23 +303,23 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Step 2: Verificar que FALLA con el valor roto**
+- [x] **Step 2: Verificar que FALLA con el valor roto**
 
 Run: `python case/clearance_budget.py`
 Expected: `ROJO: transformador no cabe...` y exit code 2
 (`$LASTEXITCODE` = 2).
 
-- [ ] **Step 3: Quitar la línea de rojo deliberado**
+- [x] **Step 3: Quitar la línea de rojo deliberado**
 
 Eliminar `params["alto_transformador"] = 245  # ROJO deliberado`.
 
-- [ ] **Step 4: Verificar VERDE**
+- [x] **Step 4: Verificar VERDE**
 
 Run: `python case/clearance_budget.py; echo $LASTEXITCODE`
 Expected: `clearance_budget: VERDE`, exit 0, y el `perfil:` impreso con
 `alto_total=391.5` aprox.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add case/clearance_budget.py
@@ -340,7 +340,7 @@ git commit -m "clearance_budget: las holguras del case dejan de ser prosa"
   `"assembly"` (default), `"costado"`, y los que añaden Tasks 4–5. Todas las
   planchas 2D se exportan con `PART="<pieza>_2d"`.
 
-- [ ] **Step 1: Escribir el esqueleto con perfil y costado**
+- [x] **Step 1: Escribir el esqueleto con perfil y costado**
 
 ```openscad
 // sam17_case.scad — consola de dos pisos en acrilico naranja (spec rev. 3).
@@ -427,7 +427,7 @@ defecto en OpenSCAD — `linear_extrude` va en Z, así que en `assembly()`
 rota/traslada según haga falta; lo importante verificable es que los DXF 2D
 son correctos y que el STL del conjunto se ve coherente en el render).
 
-- [ ] **Step 2: Exportar y verificar costado**
+- [x] **Step 2: Exportar y verificar costado**
 
 ```powershell
 $scad = "C:\Program Files\OpenSCAD\openscad.exe"
@@ -439,13 +439,13 @@ Remove-Item build_costado.stl, build_costado.dxf
 ```
 Expected: sin excepción y sin errores/asserts de OpenSCAD en consola.
 
-- [ ] **Step 3: Cruce contra el budget**
+- [x] **Step 3: Cruce contra el budget**
 
 Run: `python case/clearance_budget.py`
 Expected: VERDE (mismos números que dibuja el scad; si aquí sale rojo, el
 scad y el budget discrepan — parar y resolver antes de seguir).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add case/cad/sam17_case.scad
@@ -465,7 +465,7 @@ git commit -m "modelo del case: perfil de dos pisos, costados y esqueleto 2020"
   `zocalo_2d`, `piel_inferior_2d`, `piel_superior_2d`; módulo 2D
   `onda(tipo, largo)` con `tipo` ∈ `"sierra" | "triangulo" | "cuadrada"`.
 
-- [ ] **Step 1: Añadir las planchas al scad**
+- [x] **Step 1: Añadir las planchas al scad**
 
 ```openscad
 // --- planchas rectangulares del cuerpo (todas t_acrilico) -------------
@@ -572,7 +572,7 @@ else if (PART == "piel_inferior_2d")     piel_inferior_2d();
 else if (PART == "piel_superior_2d")     piel_superior_2d();
 ```
 
-- [ ] **Step 2: Exportar las cinco planchas y verificar**
+- [x] **Step 2: Exportar las cinco planchas y verificar**
 
 ```powershell
 $scad = "C:\Program Files\OpenSCAD\openscad.exe"
@@ -584,7 +584,7 @@ foreach ($p in "bandeja_base_2d","bandeja_entrepiso_2d","zocalo_2d","piel_inferi
 ```
 Expected: cinco exports sin error ni warnings de geometría degenerada.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```powershell
 git add case/cad/sam17_case.scad
@@ -608,7 +608,7 @@ git commit -m "planchas del cuerpo y ranuras de ventilacion con las tres ondas"
   rectángulo de plancha con 8 mm de margen), `PART="bom"` (solo `echo` de
   conteos). `coupon.scad` autónomo.
 
-- [ ] **Step 1: Completar `assembly()` y añadir lienzo + bom**
+- [x] **Step 1: Completar `assembly()` y añadir lienzo + bom**
 
 `assembly()` coloca: 2 costados (extremos), las 5 planchas en su plano según
 `pts_perfil()`, los 9 largueros (`centros_rail()` + `centros_esqueleto()`),
@@ -631,7 +631,7 @@ module bom() {
 }
 ```
 
-- [ ] **Step 2: Escribir `case/cad/coupon.scad`**
+- [x] **Step 2: Escribir `case/cad/coupon.scad`**
 
 ```openscad
 // coupon.scad — se corta ANTES que cualquier plancha (spec §3/§10).
@@ -651,7 +651,7 @@ difference() {
 }
 ```
 
-- [ ] **Step 3: Exportar assembly, lienzo, bom y coupon; verificar**
+- [x] **Step 3: Exportar assembly, lienzo, bom y coupon; verificar**
 
 ```powershell
 $scad = "C:\Program Files\OpenSCAD\openscad.exe"
@@ -664,7 +664,7 @@ Remove-Item chk_asm.stl, chk_lienzo.dxf, chk_nul.stl, chk_coupon.dxf
 ```
 Expected: 4 líneas `BOM:` en consola; exports sin errores.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add case/cad/sam17_case.scad case/cad/coupon.scad
@@ -694,7 +694,7 @@ git commit -m "assembly completo, lienzo de corte y cupon de calibracion"
 > SILENCIOSOS — se valida contra el DXF **releído**, jamás contra el objeto
 > que lo generó.
 
-- [ ] **Step 0a: Eco de kerf en el budget**
+- [x] **Step 0a: Eco de kerf en el budget**
 
 En `case/clearance_budget.py`, dentro de `main()` junto al print de `perfil:`,
 añadir:
@@ -708,7 +708,7 @@ añadir:
 (Lección L9: un override de kerf equivocado corrompe todos los agujeros con
 exit 0 si nadie lo imprime.)
 
-- [ ] **Step 0b: Escribir `case/check_dxf.py`**
+- [x] **Step 0b: Escribir `case/check_dxf.py`**
 
 ```python
 """Relee los DXF exportados y verifica lo que el laser va a ver.
@@ -826,7 +826,7 @@ número medido, no a ojo) y lo reporta — los sobres son control de 25.4×/esca
 no cotas de diseño. Requiere `python -m pip install ezdxf` (anotarlo en el
 README en Task 9).
 
-- [ ] **Step 1: Escribir el script**
+- [x] **Step 1: Escribir el script**
 
 ```powershell
 # export.ps1 — regenera DXF de corte y STL de render desde el modelo.
@@ -872,7 +872,7 @@ if ($LASTEXITCODE -ne 0) { Write-Error "check_dxf en ROJO: no se manda a cortar"
 Write-Output "export completo: $($piezas.Count + 3) artefactos regenerados y releidos"
 ```
 
-- [ ] **Step 2: Correr y verificar la ruta feliz**
+- [x] **Step 2: Correr y verificar la ruta feliz**
 
 Primero: `python -m pip install ezdxf` (dependencia de check_dxf.py).
 Run: `powershell -File case/cad/export.ps1; echo $LASTEXITCODE`
@@ -880,13 +880,13 @@ Expected: `export completo: 10 artefactos regenerados y releidos`, exit 0,
 `case/plans/` con 8 DXF + `case/renders/build/` con 2 STL, y las líneas
 `  <pieza>: N entidades, bbox W x H mm` + `check_dxf: VERDE` en la salida.
 
-- [ ] **Step 3: Verificar la ruta de fallo (Principio III)**
+- [x] **Step 3: Verificar la ruta de fallo (Principio III)**
 
 Renombrar temporalmente `coupon.scad` a `coupon.scad.off`, correr de nuevo,
 esperar exit 1 y mensaje de fallo; restaurar el nombre y correr una vez más
 hasta exit 0.
 
-- [ ] **Step 4: Commit (incluye los artefactos, como los gerbers)**
+- [x] **Step 4: Commit (incluye los artefactos, como los gerbers)**
 
 ```powershell
 git add case/cad/export.ps1 case/plans/ case/renders/build/
@@ -908,7 +908,7 @@ git commit -m "export reproducible: DXF de corte y STL de render con puerta de b
   módulos futuros COPIAN la plantilla. El artefacto es el script
   (constitución).
 
-- [ ] **Step 1: Escribir el generador con pcbnew de KiCad 10**
+- [x] **Step 1: Escribir el generador con pcbnew de KiCad 10**
 
 ```python
 """Genera panel-template.kicad_pcb: panel de aluminio de modulo del SAM17.
@@ -984,7 +984,7 @@ KiCad 10, buscar el equivalente con
 `python -c "import pcbnew; print([n for n in dir(pcbnew) if 'NPTH' in n])"`
 y ajustar — el criterio de aceptación es el Step 2, no el nombre exacto.
 
-- [ ] **Step 2: Generar y verificar con kicad-cli**
+- [x] **Step 2: Generar y verificar con kicad-cli**
 
 ```powershell
 Set-Location case/panels
@@ -996,7 +996,7 @@ Set-Location ../..
 ```
 Expected: `.kicad_pcb` generado y legible por `kicad-cli` (exit 0).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```powershell
 git add case/panels/build_template.py case/panels/panel-template.kicad_pcb
@@ -1018,7 +1018,7 @@ git commit -m "plantilla de panel de aluminio: el artefacto es el script"
   `propuesta-diseno-2026-08-16.png` (el board manda en lenguaje, el STL en
   geometría).
 
-- [ ] **Step 1: Escribir el script headless**
+- [x] **Step 1: Escribir el script headless**
 
 ```python
 """Render del case: acrilico naranja translucido + aluminio.
@@ -1091,7 +1091,7 @@ listar con `print([i.name for i in n.inputs])` y ajustar; el criterio de
 aceptación es el Step 2. Encuadre/energías: iterar hasta que el case entre
 completo en cuadro — son dos números, no una ciencia.
 
-- [ ] **Step 2: Renderizar y verificar**
+- [x] **Step 2: Renderizar y verificar**
 
 ```powershell
 & "C:\Program Files\Blender Foundation\Blender 5.0\blender.exe" -b -P case/renders/render.py
@@ -1100,7 +1100,7 @@ if ((Get-Item case/renders/sam17-case.png).Length -lt 100kb) { throw "render vac
 Expected: exit 0, PNG > 100 KB; abrir el PNG y comprobar A OJO que se ven
 dos pisos, naranja translúcido y largueros — contra el board aprobado.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```powershell
 git add case/renders/render.py case/renders/sam17-case.png
@@ -1120,7 +1120,7 @@ git commit -m "render headless del conjunto en Blender"
 - Consumes: salida `PART="bom"` (Task 5), `perfil:` impreso por el budget
   (Task 2), procedimiento del cupón (Task 5).
 
-- [ ] **Step 1: Reescribir `case/README.md`**
+- [x] **Step 1: Reescribir `case/README.md`**
 
 Estructura obligatoria (contenido real, con los números que imprimen
 `clearance_budget.py` y `PART="bom"` en el momento de ejecutar):
@@ -1175,7 +1175,7 @@ pieles traseras (standoffs M4, junta de sombra) → paneles (tuercas T M3).
 - [ ] Planchas cortadas y ensayo de ensamblaje
 ```
 
-- [ ] **Step 2: Nota de sustitución en `docs/modules/08-case-panels.md`**
+- [x] **Step 2: Nota de sustitución en `docs/modules/08-case-panels.md`**
 
 Añadir tras el título:
 
@@ -1187,12 +1187,12 @@ Añadir tras el título:
 > plantilla `case/panels/`.
 ```
 
-- [ ] **Step 3: Fila del README raíz**
+- [x] **Step 3: Fila del README raíz**
 
 En la tabla de módulos del `README.md`, cambiar la fila «Cajón y paneles»:
 `Madera + lámina galv.` → `Acrílico naranja + paneles PCB de aluminio`.
 
-- [ ] **Step 4: Verificar enlaces y commit**
+- [x] **Step 4: Verificar enlaces y commit**
 
 Comprobar que cada ruta citada en los tres ficheros existe (`Test-Path`).
 
@@ -1208,7 +1208,7 @@ git commit -m "documentacion del case: cupon, BOM, ensamblaje y sustitucion del 
 **Files:**
 - Ninguno nuevo (verificación + GitHub).
 
-- [ ] **Step 1: Regeneración desde cero**
+- [x] **Step 1: Regeneración desde cero**
 
 ```powershell
 Remove-Item case/plans/*.dxf, case/renders/build/*.stl
@@ -1219,14 +1219,17 @@ Expected: exit 0 y `git status` sin diffs inesperados (los DXF/STL
 regenerados deben ser idénticos byte a byte o, si OpenSCAD mete timestamps,
 documentarlo en case/README.md y excluir la línea del diff esperado).
 
-- [ ] **Step 2: Budget y checklist final**
+- [x] **Step 2: Budget y checklist final**
 
 ```powershell
 python case/clearance_budget.py
 ```
 Expected: VERDE. Repasar spec §10 punto a punto contra lo hecho.
 
-- [ ] **Step 3: Push y PR**
+- [ ] **Step 3: Push y PR** (NO ejecutado a propósito — RULING C del
+      dispatch: push/PR son acciones hacia afuera del worktree y las
+      autoriza Samuel, no el implementador. Material preparado como texto
+      en `.superpowers/sdd/2026-08-16-case-acrilico/cierre-pr-e-issues.md`.)
 
 ```powershell
 git push -u origin feat/case-design
@@ -1240,7 +1243,11 @@ EOF
 ```
 (El template real del repo manda; leerlo antes de crear el PR.)
 
-- [ ] **Step 4: Issues de lo aplazado (Principio VI, con evidencia)**
+- [ ] **Step 4: Issues de lo aplazado (Principio VI, con evidencia)** (NO
+      ejecutado a propósito — RULING C: `gh issue create` es una acción
+      hacia afuera del worktree, la autoriza Samuel. Los 10 issues, con
+      título y cuerpo evidenciado, están redactados y listos para disparar
+      en `.superpowers/sdd/2026-08-16-case-acrilico/cierre-pr-e-issues.md`.)
 
 ```powershell
 gh issue create --title "Cortar el cupon y registrar el kerf real" --body "Bloquea el corte de planchas. Evidencia: case/README.md tabla de kerf vacia; spec rev.3 §3/§10. Criterio de cierre: tabla con fecha/proveedor/espesor/kerf y params.scad actualizado."
@@ -1250,7 +1257,7 @@ gh issue create --title "Tapa de transporte y patas de angulo" --body "Spec rev.
 gh issue create --title "Censo real de fondos de PCB por modulo" --body "clearance_budget.py usa fondo_pcb_max=60 estimado (spec §11). Criterio: tabla modulo->fondo medido de cada PCB publicada y assert actualizado."
 ```
 
-- [ ] **Step 5: Marcar el plan**
+- [x] **Step 5: Marcar el plan**
 
 Actualizar este fichero con todos los checkboxes en `[x]` y commitear:
 

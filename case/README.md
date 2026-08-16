@@ -36,6 +36,52 @@ relee los DXF tal como los verá el láser; si cualquiera de los dos está en
 rojo, el script sale con código distinto de cero y no se exporta ni se deja
 nada a medias. Los DXF van en mm; decírselo explícito al servicio de corte.
 
+La plantilla KiCad de panel se regenera aparte, con el Python de KiCad (no
+el del sistema, porque importa `pcbnew`):
+
+```powershell
+"C:/Program Files/KiCad/10.0/bin/python.exe" case/panels/build_template.py --ancho 100
+```
+
+### Criterio de regeneración limpia — tres clases, no una
+
+`export.ps1` y `build_template.py` **no** producen los mismos bytes en cada
+corrida, y eso es esperado, no un fallo — un `git status` que exige
+identidad byte a byte da falso rojo en dos de las tres clases de artefacto.
+Verificado corriendo cada export 3 veces (el estado commiteado + 2
+regeneraciones desde cero, Task 10) y comparando con SHA-256:
+
+| Clase | ¿Byte-idéntico? | Qué SÍ es estable | Mecanismo |
+|-------|:---:|---|---|
+| **DXF** (`case/plans/*.dxf`) | **SÍ** | Todo — 8/8 archivos con el mismo SHA-256 en las 3 corridas | OpenSCAD 2021.01 emite R12 determinista para geometría 2D |
+| **STL** (`case/renders/build/*.stl`) | **NO** | El tamaño en bytes: `assembly_aluminio.stl` midió 25457 B las 3 veces, `assembly_acrilico.stl` 2478678 B las 3 veces | CGAL no garantiza el orden de facetas al triangular. `assembly_aluminio.stl` cambió de SHA-256 en las 2 regeneraciones (3 hashes distintos en 3 corridas); `assembly_acrilico.stl` coincidió por azar en esta muestra — no asumir que un STL se mantiene solo porque coincidió una vez |
+| **`.kicad_pcb`** (`case/panels/panel-template.kicad_pcb`) | **NO** | El *conjunto* de bloques top-level (posiciones de footprint, geometría de taladros y contorno) una vez se descartan las líneas `(uuid ...)`: 17/17 bloques idénticos en las 3 corridas, verificado por comparación estructural (no diff lineal) | KiCad reacuña un UUID nuevo por objeto en cada guardado y además **rota cíclicamente** el orden de los bloques `(footprint ...)` — un `diff` de texto sobre dos corridas muestra decenas de líneas cambiadas sin que ninguna posición real se haya movido |
+
+**Criterio de verificación correcto por clase** (el que aplica Task 10, y el
+que debe aplicar cualquier regeneración futura):
+
+- **DXF**: `git status --short` tiene que salir vacío tras regenerar.
+  Cualquier diff en un `.dxf` es un hallazgo real — algo cambió que no
+  debería (`params.scad` o el propio script).
+- **STL**: comparar tamaño en bytes, nunca el hash ni un diff. Un STL
+  committeado que cambia de *tamaño* tras regenerar sin tocar `params.scad`
+  sí es un hallazgo; un hash distinto con el mismo tamaño no lo es.
+- **`.kicad_pcb`**: comparar el conjunto de bloques top-level con los
+  `uuid` quitados, nunca un diff lineal ni el hash completo del archivo.
+
+Por eso `case/renders/build/*.stl` y `case/panels/panel-template.kicad_pcb`
+pueden aparecer como `M` en `git status` después de un `export.ps1` /
+`build_template.py` limpios sin que haya ningún hallazgo real detrás. Antes
+de investigar un diff en esos dos archivos: regenerar dos veces más y
+comparar las regeneraciones *entre sí* con el criterio de su clase, no
+contra lo commiteado con un diff de texto.
+
+(Nota aparte, sin relación con lo anterior: `panel-template.kicad_pcb`
+mide 7270 B recién escrito por `pcbnew` en Windows —CRLF— y 6905 B leído
+del blob de git con `git show` —LF—, por `core.autocrlf=true`. Es la
+misma conversión de fin de línea de siempre, no una cuarta clase de
+no-determinismo.)
+
 ## Procedimiento del cupón — OBLIGATORIO antes de cortar planchas
 
 1. Cortar [`plans/coupon.dxf`](plans/coupon.dxf) en el acrílico REAL con la
