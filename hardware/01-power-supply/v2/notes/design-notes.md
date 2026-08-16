@@ -146,12 +146,12 @@ membrete Linear Technology/ADI de las copias oficiales.
   dimensionar el ballast real del layout.
 - [x] **Fuga máxima del C_SET**: confirmado el cálculo del brief.
   "Output Voltage" (p.14): "**Leakages of 100nA into or out of the SET
-  pin creates a 0.1% error in the reference voltage**." Con R_SET = 121 kΩ
-  (Table 1, p.14, valor 1 % para VOUT = 12 V — coincide con los ~120 kΩ
-  del brief): cada nA de fuga × 121 kΩ = **121 µV de error** (el brief
-  decía 120 µV; la diferencia es solo redondeo 120 k vs 121 k, mismo
-  orden). Sanity check contra el DS: 100 nA × 121 kΩ = 12.1 mV, y
-  12.1 mV/12 V = 0.1 % — cuadra exacto con la cita. **Dieléctrico
+  pin creates a 0.1% error in the reference voltage**." Con R_SET = 120 kΩ
+  (valor de diseño del brief; la Table 1, p.14, da 121 kΩ como redondeo E96
+  de ADI para VOUT = 12 V — ver §2.4 sobre por qué se rechaza ese
+  redondeo): cada nA de fuga × 120 kΩ = **120 µV de error**, igual que el
+  brief. Sanity check contra el DS: 100 nA × 120 kΩ = 12.0 mV, y
+  12.0 mV/12 V = 0.1 % — cuadra exacto con la cita. **Dieléctrico
   recomendado**: "Set Pin (Bypass) Capacitance" (p.18): "any bypass
   capacitor leakage deteriorates the LT3045's DC regulation... **LTC
   recommends the use of a good quality low leakage ceramic capacitor**."
@@ -312,10 +312,11 @@ publicada del LT3094, verbatim ADI (no reescaneado).
 - [x] **Fuga máxima del C_SET**: mismo cálculo que el LT3045, cifra
   idéntica. "SET Pin (Bypass) Capacitance" (p.21): "Capacitor leakage of
   as little as **100nA causes a 0.1% DC error**. ADI recommends the use
-  of a good quality low leakage ceramic capacitor." Con R_SET = 121 kΩ
-  (Table 1, p.17, valor 1 % para VOUT = −12 V, mismo módulo que el lado
-  positivo): cada nA de fuga × 121 kΩ = **121 µV de error**, igual que en
-  §1.3. Dieléctrico recomendado: **X5R/X7R** (no Z5U/Y5V), serie
+  of a good quality low leakage ceramic capacitor." Con R_SET = 120 kΩ
+  (valor de diseño del brief; la Table 1, p.17, da 121 kΩ como redondeo E96
+  de ADI para VOUT = −12 V, mismo caso que el lado positivo — ver §2.4):
+  cada nA de fuga × 120 kΩ = **120 µV de error**, igual que en §1.3.
+  Dieléctrico recomendado: **X5R/X7R** (no Z5U/Y5V), serie
   **Murata GJ8** citada explícitamente (p.19) — texto casi calcado del
   LT3045.
 - [x] **Dropout máx. a 350 mA**: tampoco hay bin exacto a 350 mA. Tabla
@@ -503,22 +504,23 @@ Búsqueda de LT3045 y LT3094 en sus variantes de grado (E/I/H) y package
 de puntero — el C-code y el stock se verificaron en `lcsc.com/product-detail`
 directamente):
 
-| variante | package | grado | LCSC C-code | stock | precio (1+/100+) |
-|---|---|---|---|---|---|
-| LT3045EDD#TRPBF | DFN-10-EP(3×3) | E (−40…125 °C) | **C514420** | 3.618 | $7.01 / $5.25 |
-| LT3045EDD#PBF (sin T&R) | DFN-10-EP(3×3) | E | C666574 | 817 | $8.03 / $6.89 (121+) |
-| LT3045HDD#PBF | DFN-10-EP(3×3) | H | C666580 | (no verificado a fondo) | — |
-| LT3045EMSE#PBF | MSOP-12-EP | E | C580012 | 3.020 | $9.20 / $6.86 |
-| LT3094EDD#PBF | WDFN-12-EP(3×3) | E | **C670492** | 1.475 | $7.30 / $6.36 |
-| LT3094EMSE#PBF | MSOP-12-EP | E | C498217 | 1.017 | $6.92 / $5.87 |
+| variante | package | grado | LCSC C-code | stock | precio (1+/100+) | básica/extendida | fecha |
+|---|---|---|---|---|---|---|---|
+| LT3045EDD#TRPBF | DFN-10-EP(3×3) | E (−40…125 °C) | **C514420** | 3.618 | $7.01 / $5.25 | Extended | 2026-08-16 |
+| LT3045EDD#PBF (sin T&R) | DFN-10-EP(3×3) | E | C666574 | 817 | $8.03 / $6.89 (121+) | Extended | 2026-08-16 |
+| LT3045HDD#PBF | DFN-10-EP(3×3) | H | C666580 | no verificado | no verificado | Extended | 2026-08-16 |
+| LT3045EMSE#PBF | MSOP-12-EP | E | C580012 | 3.020 | $9.20 / $6.86 | Extended | 2026-08-16 |
+| LT3094EDD#PBF | WDFN-12-EP(3×3) | E | **C670492** | 1.475 | $7.30 / $6.36 | Extended | 2026-08-16 |
+| LT3094EMSE#PBF | MSOP-12-EP | E | C498217 | 1.017 | $6.92 / $5.87 | Extended | 2026-08-16 |
 
 Sanity check contra la cifra orientativa del brief ($3–6/ud en extended):
 los precios reales caen en **$4.8–9.2/ud según variante**, todos en el mismo
 orden de magnitud (ninguno a $0.10 ni marcado como otra categoría de parte) —
 la descripción de cada página coincide con "Voltage Regulators - Linear, Low
 Drop Out (LDO) Regulators", fabricante ADI, sin señales de mislabeling.
-Todas listadas como parte **Extended** (no Basic) en JLCPCB — esperable para
-un LDO ultra-bajo-ruido, no es un componente de línea básica.
+Como refleja la columna básica/extendida de la tabla, todas caen en
+**Extended** (no Basic) — esperable para un LDO ultra-bajo-ruido, no es un
+componente de línea básica.
 
 ### §2.2 Step 2 — Elección de package
 
@@ -544,7 +546,7 @@ por la regla del Step 2. No aplica el plan B de re-plan del brief.
 | parte | código LCSC | stock | básica/extendida | precio (1+/100+) | fecha |
 |---|---|---|---|---|---|
 | R_SET 120 kΩ 1 % ±100 ppm/°C 0805 (YAGEO RC0805FR-07120KL) | C114524 | 169.800 | Extended | $0.0082 / $0.0054 | 2026-08-16 |
-| R_SET 121 kΩ 0,1 % ±25 ppm/°C 0805 (YAGEO RT0805BRD07121KL) | **sin C-code confirmado** — ver nota | — | — | — | 2026-08-16 |
+| R_SET 120 kΩ 0,1 % ±25 ppm/°C 0805 (YAGEO RT0805BRD07120KL — a confirmar como SKU manufacturado) | **sin C-code confirmado** — ver nota | — | — | — | 2026-08-16 |
 | Shunt 20 mΩ 1 % 1206 (Isabellenhuette VMK-R020-1.0-U, ±20 ppm/°C, 1.5 W) | **C6920584** | 1.000 | Basic | $0.75 / $0.48 | 2026-08-16 |
 | Shunt 20 mΩ 1 % 1206, alterno (Bourns CRF1206-FZ-R020ELF, ±50 ppm/°C, 1 W) | C1848840 | 196 | Extended | $0.52 / $0.30 | 2026-08-16 |
 | 22 µF X7R 25 V 1210 (HRE CGA1210X7R226K250RT, ±10 %) | **C6120032** | 2.685 | Basic | $0.27 / $0.16 | 2026-08-16 |
@@ -552,29 +554,40 @@ por la regla del Step 2. No aplica el plan B de re-plan del brief.
 | SMAJ15A TVS (Littelfuse) | **C148216** | 10.030 | Basic | $0.139 / $0.076 (2500+) | 2026-08-16 |
 | SS14 Schottky SMA (MDD/Microdiode) | **C2480** | 1.081.100 | Basic | $0.0185 / $0.0085 (50k+) | 2026-08-16 |
 
-**Nota — R_SET (120/121 kΩ 0,1 % 25 ppm)**: el brief pide 120 kΩ; §1.3/§1.4 ya
-fijó el valor real de diseño en **121 kΩ** (Table 1 del DS del LT3045/LT3094,
-valor para VOUT = 12 V). El part number `YAGEO RT0805BRD07121KL` **existe
-como parte manufacturada real** — confirmado en DigiKey (121 kΩ ±0,1 %
-±25 ppm/°C, 0805, thin film) y la serie hermana (`RT0805BRD07`/`AT0805BRD07`,
-0,1 %/25 ppm, 0805) sí tiene SKUs confirmados en LCSC con C-code alrededor de
-ese valor (10 k→C110774/C110775, 100 k→C122537, 182 k→C865233, 301 k→C865388,
-560 k→C865557) — pero **no se pudo confirmar el C-code puntual de 121 kΩ en
-LCSC** con las herramientas de búsqueda disponibles (`search_jlcpcb_parts`
-sin base local, `WebSearch`/`WebFetch` sin poder ejecutar el buscador
-JS-driven de `lcsc.com/search`, que exige render en navegador). No es
-evidencia de que LCSC NO lo tenga — es un techo de la herramienta, no un
-NO-GO. **Fallback verificado y en stock real**: `RC0805FR-07120KL` (C114524,
-120 kΩ, 1 %, ±100 ppm/°C, 169.800 u.) — el propio DS del LT3045/LT3094 solo
-exige 1 % en Table 1 (§1.3), así que el 0,1 %/25 ppm del brief es un margen
-extra sobre lo que pide el fabricante, no un mínimo del DS. **Acción para
+**Nota — R_SET (120 kΩ, valor de diseño correcto)**: el objetivo es
+**12.000 V = 100 µA × 120 kΩ** — el brief pide 120 kΩ y ese es el valor de
+diseño correcto. §1.3/§1.4 habían citado la Table 1 del DS del
+LT3045/LT3094 (121 kΩ para VOUT = 12 V) como si fuera el valor a usar; esa
+lectura **se rechaza**: 121 kΩ es un redondeo a la serie E96 estándar de
+ADI, y 100 µA × 121 kΩ = **12.100 V, 100 mV fuera del blanco de 12.000 V**.
+La Table 1 solo sirve como referencia de que ADI redondea a su E96 más
+cercana — no reemplaza el objetivo exacto del brief.
+
+El part number `YAGEO RT0805BRD07121KL` **existe como parte manufacturada
+real** (confirmado en DigiKey, 121 kΩ ±0,1 % ±25 ppm/°C, 0805, thin film) y
+sirve como evidencia de que la serie hermana (`RT0805BRD07`/`AT0805BRD07`,
+0,1 %/25 ppm, 0805) existe y tiene SKUs confirmados en LCSC alrededor de ese
+rango de valores (10 k→C110774/C110775, 100 k→C122537, 182 k→C865233,
+301 k→C865388, 560 k→C865557) — pero el valor a buscar es **120 kΩ**, no
+121 kΩ. No se pudo confirmar el C-code puntual de 120 kΩ en LCSC con las
+herramientas de búsqueda disponibles (`search_jlcpcb_parts` sin base local,
+`WebSearch`/`WebFetch` sin poder ejecutar el buscador JS-driven de
+`lcsc.com/search`, que exige render en navegador). No es evidencia de que
+LCSC no lo tenga — es un techo de la herramienta, no un NO-GO.
+
+**Fallback ya confirmado y en stock real**: `RC0805FR-07120KL` (C114524,
+120 kΩ, 1 %, ±100 ppm/°C, 169.800 u.) tiene el **valor exacto correcto** —
+no introduce ningún desvío de VOUT, solo relaja tolerancia (1 % vs el 0,1 %
+del brief) y tempco (100 ppm/°C vs 25 ppm/°C). Deriva térmica de ese
+tempco: 100 ppm/°C × 120 kΩ = 12 Ω/°C de deriva en R_SET; como
+V_SET = I_SET × R_SET sin divisor resistivo en el LT3045/3094, eso equivale
+a 100 µA × 12 Ω/°C = 1,2 mV/°C, es decir **~100 ppm/°C de VOUT** (4× peor
+que los 25 ppm/°C del componente 0,1 % objetivo del brief). **Acción para
 Task 4/9**: antes de cerrar el BOM, verificar en `lcsc.com/search` (interfaz
-web, requiere JS) si existe C-code de 121 kΩ 0,1 % 25 ppm 0805 en stock; si
-no, decidir entre (a) usar el 120 kΩ 1 % de C114524 (aceptando el error de
-VOUT que eso introduce — 1 kΩ de diferencia sobre 121 kΩ ≈ 0,83 % de desvío en
-R_SET, comparable a la tolerancia misma) o (b) combinar dos resistencias de
-precisión en serie/paralelo para alcanzar 121 kΩ exacto con la serie 0,1 %/25 ppm
-que sí tiene stock confirmado.
+web, requiere JS) si existe C-code de **120 kΩ** 0,1 %/25 ppm 0805 en
+stock; si no, decidir entre (a) soldar a mano el 0,1 % comprado en
+Mouser/DigiKey (`RT0805BRD07120KL`, a confirmar como SKU manufacturado) o
+(b) aceptar el `C114524` con el impacto en deriva térmica calculado arriba.
 
 **Nota — 10 µF X7R 25 V 1206**: las partes con el voltaje exacto de 25 V que
 se encontraron (`TDK CGA5L1X7R1E106K160AC` C2168260: solo 3 u. en stock;
