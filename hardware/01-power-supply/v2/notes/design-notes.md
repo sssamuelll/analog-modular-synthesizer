@@ -93,46 +93,286 @@ Fuente: TI, `LM2991`, doc. SNVS099I (May 1999–Revised October 2016),
 
 ### §1.3 LT3045
 
-**BLOQUEADO — no se pudo descargar el datasheet.** `analog.com` resetea o
-cuelga la conexión (TLS) desde este entorno con **todos** los caminos
-probados: `curl` (con y sin cabeceras de navegador completas, forzando
-HTTP/1.1 y TLS 1.2, con cookie jar y referer), PowerShell
-`Invoke-WebRequest`, Python `urllib.request` (dos veces, con streaming y
-timeout de 90 s), `.NET HttpClient`, `Start-BitsTransfer` (este sí obtuvo
-cabeceras HTTP de vuelta, pero rechazó el cuerpo por no traer
-`Content-Length`) y la tool `WebFetch` (dos intentos, timeout de 60 s cada
-uno). El patrón — TLS handshake OK, request enviado, reset a los ~19-20 s
-sin cuerpo — es consistente con un bloqueo de bot-management (Akamai) del
-lado de `analog.com`, no con un problema de sintaxis de la petición.
-`ti.com` (LM2941, LM2991) bajó sin problema con el mismo `curl` simple.
+**Bloqueo de §Task 2 anterior resuelto.** `analog.com` sigue inalcanzable
+desde este entorno (mismo patrón: TLS ok, reset a ~19-20 s), y la Wayback
+Machine también devolvió **503 persistente** ("No server is available to
+handle this request") para *cualquier* PDF servido a través de
+`web.archive.org/web/<ts>/...` — se probó con 6 timestamps distintos del
+LT3045 y hasta con un PDF de `ti.com` ya confirmado accesible por otras
+vías; todos dieron 503 idéntico. No es un bloqueo específico de
+analog.com: el servicio de reproducción de binarios de archive.org está
+caído para este tráfico. Se usó entonces la ruta alternativa que autorizó
+el orquestador (copia verbatim de un distribuidor): **Farnell/element14,
+`https://www.farnell.com/datasheets/2163219.pdf`** — 30 páginas, PDF 1.4,
+descargado con `curl` (200 OK, 2.9 MB). Pie de página **"3045f"** en las
+30 páginas (revisión F de Linear Technology/ADI) — coincide con el
+formato de revisión del LT3045 en analog.com. Verificado como PDF nativo
+(no reescaneado/OCR): texto seleccionable, diagramas vectoriales, mismo
+membrete Linear Technology/ADI de las copias oficiales.
 
-No se inventó ningún número de este datasheet. Los valores esperados del
-brief (constante de R_ILIM, abs max V_IN ≈ 20 V, EP = GND, etc.) **siguen sin
-verificar contra fuente primaria** — quedan como pendiente explícito, no como
-hecho.
+- [x] **R_ILIM — fórmula y valor a 400 mA/chip**: Current Limit =
+  **150 mA·kΩ / R_ILIM** (factor de escala TYP, "Externally Programmable
+  Current Limit", p.19). Para 400 mA: R_ILIM = 150 000/400 = **375 Ω** →
+  **R11/R12 = 374 Ω 1 %** (E96 estándar más cercano; da 150000/374 =
+  401 mA con el factor TYP). **Ojo**: el DS **no garantiza el factor de
+  150 mA·kΩ en sí** — solo dos puntos MIN/MAX tabulados en la tabla
+  eléctrica (p.4): a R_ILIM = 300 Ω, 450–550 mA garantizado (TYP 500); a
+  R_ILIM = 1.5 kΩ, 90–110 mA garantizado (TYP 100). Ambos puntos caen
+  dentro de ±10 % del TYP. Por el mismo patrón, el valor a 374 Ω (no
+  tabulado) se estima en **~360–440 mA garantizado** — es extrapolación,
+  no una cifra que el DS cite directamente.
+- [x] **ILIM: uno por chip, NO compartible.** Pin Functions, ILIM (p.12):
+  "Connecting a resistor between ILIM and GND programs the current
+  limit. **For best accuracy, Kelvin connect this resistor directly to
+  the LT3045's GND pin**" — GND es el pin propio de cada IC, no un nodo
+  común. Confirmado sin ambigüedad en "Paralleling Multiple Devices Using
+  ILIM (Current Monitor) to Cancel Ballast Resistor Drop" (p.25): el
+  ejemplo de 2 chips en paralelo usa **dos resistencias RILIM
+  independientes (287 Ω cada una)**, una por chip, cada una a su propio
+  GND — con fórmula explícita `RILIM = 150 mA·kΩ/ILIM − RCDC·N` por
+  dispositivo. **R11 y R12 son dos resistencias separadas, no una
+  compartida.**
+- [x] **Red SET compartida + ballast**: confirmado exactamente como
+  esperaba el brief. "Direct Paralleling for Higher Current" (p.20):
+  "**Tie all SET pins together and all IN pins together.** Connect the
+  OUT pins together using small pieces of PCB trace (used as a ballast
+  resistor) to equalize currents in the LT3045s." Es decir: **una sola
+  R_SET + un solo C_SET**, con los pines SET de todos los chips unidos al
+  mismo nodo. Ballast recomendado: **pista de PCB de 20 mΩ** por salida
+  (ejemplo de referencia con 2 chips a 500 mA c/u: 20 mΩ × 2 chips da
+  <20 % de error de reparto de corriente, con solo 10 mV de caída de
+  regulación a 1 A total). Tabla 2 (p.20) da la resistencia de pista en
+  mΩ/pulgada según ancho (10 mil/20 mil) y peso de cobre (1 oz/2 oz) para
+  dimensionar el ballast real del layout.
+- [x] **Fuga máxima del C_SET**: confirmado el cálculo del brief.
+  "Output Voltage" (p.14): "**Leakages of 100nA into or out of the SET
+  pin creates a 0.1% error in the reference voltage**." Con R_SET = 121 kΩ
+  (Table 1, p.14, valor 1 % para VOUT = 12 V — coincide con los ~120 kΩ
+  del brief): cada nA de fuga × 121 kΩ = **121 µV de error** (el brief
+  decía 120 µV; la diferencia es solo redondeo 120 k vs 121 k, mismo
+  orden). Sanity check contra el DS: 100 nA × 121 kΩ = 12.1 mV, y
+  12.1 mV/12 V = 0.1 % — cuadra exacto con la cita. **Dieléctrico
+  recomendado**: "Set Pin (Bypass) Capacitance" (p.18): "any bypass
+  capacitor leakage deteriorates the LT3045's DC regulation... **LTC
+  recommends the use of a good quality low leakage ceramic capacitor**."
+  Sección de dieléctricos (p.16): descarta Z5U/Y5V (coeficiente de
+  voltaje/temperatura fuerte) a favor de **X5R/X7R**; recomienda
+  específicamente la serie **Murata GJ8** por su buen coeficiente de
+  voltaje en case size pequeño. Nota aparte: si el ambiente tiene
+  vibración, un cerámico en el pin SET puede generar ruido piezoeléctrico
+  (cientos de µV pico-pico) — ahí el DS sugiere tantalio/film en su lugar
+  (p.16-17), a costa de más ESR/ESL (tolerable en SET, no en OUT).
+- [x] **Dropout máx. a 350 mA**: el DS **no tabula 350 mA exacto** — los
+  puntos garantizados en la tabla eléctrica (p.3) son a 300 mA (MIN 220 /
+  TYP 280 / **MAX 350 mV**) y a 500 mA (MIN 260 / TYP 350 / **MAX 450
+  mV**). Por el mismo criterio conservador usado en §1.1/§1.2 (cuando no
+  hay un punto exacto, se toma el MAX del siguiente bin garantizado hacia
+  arriba): **dropout aplicable a 350 mA = 450 mV** (bin de 500 mA). El
+  bin de 300 mA (350 mV) es el dato más cercano pero queda *por debajo*
+  de 350 mA, así que no cubre el caso conservador. Hay una curva típica
+  a 400 mA en Typical Performance Characteristics (Fig. "Dropout
+  Voltage", p.6) pero es TYP, no garantizada.
+- [x] **V_IN abs max**: **±22 V** en el pin IN respecto a GND (Absolute
+  Maximum Ratings, p.2: "IN Pin Voltage ...........................±22V";
+  también "IN-to-OUT Differential...........................±22V" e
+  "IN-to-OUTS Differential...........................±22V"). **El brief
+  esperaba ≈20 V — ese es el rango de entrada de OPERACIÓN, no el abs
+  max**: "Input Voltage Range" en la tabla eléctrica (p.3) da MIN 2 V /
+  MAX **20 V** como ventana garantizada de funcionamiento regulado.
+  El abs max real (22 V) es el número que debe usarse para dimensionar
+  el margen de sobretensión del TVS D8, no 20 V — con 22 V de abs max el
+  TVS tiene 2 V más de colchón del que el brief asumía.
+- [x] **Conexión del EP**: **GND**, confirmado en ambos packages. Pin
+  Configuration (p.2): "EXPOSED PAD (PIN 11) IS GND, MUST BE SOLDERED TO
+  PCB" (DFN) y "EXPOSED PAD (PIN 13) IS GND, MUST BE SOLDERED TO PCB"
+  (MSOP). Pin Functions (p.12): "GND (Pin 8, Exposed Pad Pin 11/Pin 9,
+  Exposed Pad Pin 13): Ground. The exposed backside is an electrical
+  connection to GND... solder the exposed backside to the PCB ground and
+  tie it directly to the GND pin."
+- [x] **PG sin usar**: **flotar**. Pin Functions, PG (p.12): "If the
+  power good functionality is not needed, **float the PG pin**." (es
+  open-collector; no necesita pull-up si no se usa).
+- [x] **EN/UV atado a siempre-ON**: **atar a IN**. Pin Functions, EN/UV
+  (p.12): "If unused, **tie EN/UV to IN**. Do not float the EN/UV pin."
+  Threshold de encendido: MIN 1.18 / TYP 1.24 / MAX 1.32 V con 130 mV de
+  histéresis (tabla eléctrica, p.3) — con EN/UV = IN, el pin siempre está
+  muy por encima del threshold mientras el chip tenga alimentación.
 
-- [ ] Fórmula y constante de R_ILIM; calcular el valor para 400 mA/chip y escribirlo (es el valor de R11/R12).
-- [ ] ¿ILIM se comparte entre chips en paralelo o va uno por chip? (sección «Paralleling Devices» del DS).
-- [ ] Red SET en paralelo: confirmar «una sola R_SET + un solo C_SET, pines SET unidos» y el ballast recomendado.
-- [ ] Fuga máxima tolerable del C_SET: anotar el cálculo (cada nA de fuga × 120 kΩ = 120 µV de error) y qué dieléctrico recomienda el DS.
-- [ ] Dropout máx. a 350 mA; V_IN abs max (esperado 20 V — justifica el TVS D8); conexión del EP (esperado GND); PG si se deja sin usar; EN/UV atado a siempre-ON.
-- [ ] Pinera de los dos packages (DFN-10 3×3 y MSOP-12E) — tabla pin→función en §1.3.
-- [ ] Orientación del Schottky de protección inversa out→in en el circuito de aplicación (fija D10).
+**Pinera — DFN (DD, 10-lead 3×3 mm), TOP VIEW** (Pin Configuration p.2 +
+Pin Functions p.12):
+
+| Pin | Función |
+|---|---|
+| 1 | IN |
+| 2 | IN |
+| 3 | EN/UV |
+| 4 | PG |
+| 5 | ILIM |
+| 6 | PGFB |
+| 7 | SET |
+| 8 | GND |
+| 9 | OUTS |
+| 10 | OUT |
+| 11 (EP) | GND |
+
+**Pinera — MSOP (MSE, 12-lead), TOP VIEW**:
+
+| Pin | Función |
+|---|---|
+| 1 | IN |
+| 2 | IN |
+| 3 | IN |
+| 4 | EN/UV |
+| 5 | PG |
+| 6 | ILIM |
+| 7 | PGFB |
+| 8 | SET |
+| 9 | GND |
+| 10 | OUTS |
+| 11 | OUT |
+| 12 | OUT |
+| 13 (EP) | GND |
+
+- [x] **Orientación del Schottky de protección inversa (D10)**: "Protection
+  Features" (p.22): en escenarios de batería de respaldo (VOUT sostenido
+  mientras VIN cae/flota), corriente de hasta 15 mA puede fluir por el
+  circuito de "output overshoot recovery" hacia GND a través del clamp
+  OUTS-SET. "**This current flow... can be significantly reduced by
+  placing a Schottky diode between OUTS and SET pins, with its anode at
+  the OUTS pin.**" Es decir: **ánodo en OUTS (lado de salida), cátodo en
+  SET** — bloquea la trayectoria OUT→SET/GND cuando el chip no tiene
+  entrada. Es el único Schottky de protección inversa que menciona el
+  DS (aparte hay un 1N4148, no Schottky, entre IN y PGFB para proteger
+  ese pin cuando PGFB se ata a IN — "PGFB Disabled with Reverse Input
+  Protection", p.27, ánodo en IN).
 
 ### §1.4 LT3094
 
-**BLOQUEADO por la misma razón que §1.3** — `analog.com` inalcanzable desde
-este entorno con los mismos métodos agotados. No se probó siquiera a
-localizar la URL exacta del PDF (la página de producto tampoco cargó), así
-que ni la URL quedó confirmada.
+**Mismo bloqueo de red que §1.3** (analog.com + Wayback ambos
+inalcanzables). Copia verbatim vía distribuidor: **DigiKey,
+`https://media.digikey.com/pdf/Data%20Sheets/Analog%20Devices%20PDFs/LT3094_Rev0_9-5-18.pdf`**
+— 33 páginas, PDF 1.7, descargado con `curl` (200 OK, 2.6 MB). Pie de
+página **"Rev 0"** en las 33 páginas y "D17043-0-9/18(0)" en la
+contraportada (fecha 9/2018) — coincide exacto con el nombre del archivo
+del distribuidor ("Rev0_9-5-18"), confirmando que es la única revisión
+publicada del LT3094, verbatim ADI (no reescaneado).
 
-- [ ] Fórmula y constante de R_ILIM; calcular el valor para 400 mA/chip y escribirlo (es el valor de R13/R14).
-- [ ] ¿ILIM se comparte entre chips en paralelo o va uno por chip? (sección «Paralleling Devices» del DS).
-- [ ] Red SET en paralelo: confirmar «una sola R_SET + un solo C_SET, pines SET unidos» y el ballast recomendado.
-- [ ] Fuga máxima tolerable del C_SET: anotar el cálculo (cada nA de fuga × 120 kΩ = 120 µV de error) y qué dieléctrico recomienda el DS.
-- [ ] Dropout máx. a 350 mA; V_IN abs max (esperado 20 V — justifica el TVS D9); conexión del EP (esperado GND); PG si se deja sin usar; EN/UV atado a siempre-ON.
-- [ ] Pinera de los dos packages (DFN-10 3×3 y MSOP-12E) — tabla pin→función en §1.4.
-- [ ] Orientación del Schottky de protección inversa out→in en el circuito de aplicación (fija D11).
+- [x] **R_ILIM — fórmula y valor a 400 mA/chip**: Current Limit =
+  **3.75 A·kΩ / R_ILIM** (= 3750 mA·kΩ/R_ILIM; "Externally Programmable
+  Current Limit", p.25). Para 400 mA: R_ILIM = 3750/400 = **9.375 kΩ** →
+  **R13/R14 = 9.31 kΩ 1 %** (E96 estándar más cercano; da 3750/9.31 =
+  403 mA con el factor TYP; la alternativa 9.53 kΩ da 393 mA — cualquiera
+  sirve, 9.31 k queda más cerca del blanco). Igual que en el LT3045, el
+  factor de 3.75 A·kΩ es **TYP, no garantizado como constante**: la tabla
+  eléctrica (p.5) solo da dos puntos MIN/MAX: R_ILIM = 7.5 kΩ → 450–560 mA
+  garantizado (TYP 500); R_ILIM = 37.5 kΩ → 90–120 mA garantizado
+  (TYP 105). El valor a 9.31 kΩ (no tabulado) se estima por el mismo
+  patrón en **~350–460 mA garantizado** — extrapolación, no cifra citada
+  directamente por el DS.
+- [x] **ILIM: uno por chip, NO compartible.** Pin Functions, ILIM (p.15):
+  "Connecting a resistor between ILIM and GND programs the current
+  limit. **For best accuracy, Kelvin connect this resistor directly to
+  the LT3094's GND pin.**" Mismo patrón que el LT3045: GND es local a
+  cada IC. La sección "Direct Paralleling for Higher Current" (p.25) y
+  la Fig. 15 "Parallel Devices" muestran cada chip con su propio ILIM
+  (atado a su propio GND, sin compartir nodo) — **R13 y R14 son dos
+  resistencias separadas.**
+- [x] **Red SET compartida + ballast**: idéntico patrón al LT3045.
+  "Direct Paralleling for Higher Current" (p.25): "**Tie all SET pins
+  together and all IN pins together.** Connect the OUT pins together
+  using small pieces of PCB trace (used as a ballast resistor)..." Tabla
+  2 de resistencia de pista (p.25) es la misma que en el LT3045 (mΩ/in
+  por ancho/peso de cobre). Ejemplo de referencia: 2 chips con 20 mΩ de
+  ballast cada uno, <20 % de error de reparto a plena carga, 10 mV de
+  caída extra de regulación con 1 A total.
+- [x] **Fuga máxima del C_SET**: mismo cálculo que el LT3045, cifra
+  idéntica. "SET Pin (Bypass) Capacitance" (p.21): "Capacitor leakage of
+  as little as **100nA causes a 0.1% DC error**. ADI recommends the use
+  of a good quality low leakage ceramic capacitor." Con R_SET = 121 kΩ
+  (Table 1, p.17, valor 1 % para VOUT = −12 V, mismo módulo que el lado
+  positivo): cada nA de fuga × 121 kΩ = **121 µV de error**, igual que en
+  §1.3. Dieléctrico recomendado: **X5R/X7R** (no Z5U/Y5V), serie
+  **Murata GJ8** citada explícitamente (p.19) — texto casi calcado del
+  LT3045.
+- [x] **Dropout máx. a 350 mA**: tampoco hay bin exacto a 350 mA. Tabla
+  eléctrica (p.4): a 100 mA (MIN 185 / TYP 230 / **MAX 280 mV**) y a
+  500 mA (MIN 235 / TYP 310 / **MAX 410 mV**) — el hueco entre bins es
+  más grande que en el LT3045 (100→500 mA vs 300→500 mA). Con el mismo
+  criterio conservador: **dropout aplicable a 350 mA = 410 mV** (bin de
+  500 mA, el único que cubre 350 mA por arriba).
+- [x] **V_IN abs max**: **22 V de magnitud**, asimétrico por ser
+  regulador negativo. Absolute Maximum Ratings (p.3): "IN Pin Voltage
+  with Respect to GND Pin ...........................**−22V, 0.3V**"
+  (puede ir de −22 V hasta apenas +0.3 V respecto a GND). Igual que en
+  §1.3, el rango de **operación** garantizada es más angosto: "Input
+  Voltage Range" (p.4) da MIN **−20 V** / MAX −2.3 V. Mismo hallazgo que
+  el LT3045: el TVS (D9 en este caso) debe dimensionarse contra el abs
+  max de 22 V, no contra los 20 V de operación que asumía el brief —
+  refuerza que no es un error puntual sino el patrón real de la familia
+  LT304x.
+- [x] **Conexión del EP**: **IN, NO GND** — a diferencia del LT3045.
+  Pin Configuration (p.3): "EXPOSED PAD (PIN 13) IS **IN**, MUST BE
+  SOLDERED TO PCB" en ambos packages (DFN y MSOP). Pin Functions (p.15):
+  "IN (Pins 1, 2, **Exposed Pad Pin 13**): Input." Esto es una asimetría
+  real entre los dos chips que el brief pedía "espejo exacto" pero que
+  **no lo es**: en el LT3045 el tab/EP va a masa; en el LT3094 el tab/EP
+  va al potencial de entrada negativa (VIN−) del propio regulador — el
+  mismo patrón de "tab muerde" que ya se vio en el LM2991 de §1.2 y en
+  el LM2990 de la v1. **Si el EP del LT3094 (U2) toca un disipador o
+  plano de masa de chasis, hace falta aislamiento** (mica o almohadilla
+  térmica aislante), igual que con el LM2991.
+- [x] **PG sin usar**: **flotar**. Pin Functions, PG (p.15): "If the
+  power good functionality is not needed, **float the PG pin**. The PG
+  flag status is valid even if the LT3094 is in shutdown."
+- [x] **EN/UV atado a siempre-ON**: **atar a IN**. Pin Functions, EN/UV
+  (p.15): "The EN/UV pin is bidirectional... If unused, **tie EN/UV to
+  IN**. Do not float the EN/UV pin." Threshold: ±1.26 V (positivo o
+  negativo respecto a masa, histéresis 200/215 mV) — con IN en, por
+  ejemplo, −14 V, EN/UV = IN queda muy por debajo del threshold negativo
+  de −1.26 V, encendido garantizado.
+
+**Pinera — DFN (DD, 12-lead 3×3 mm) y MSOP (MSE, 12-lead), TOP VIEW**
+(idéntica numeración en ambos packages — a diferencia del LT3045, aquí el
+DFN también es de 12 pines; Pin Configuration p.3 + Pin Functions p.15):
+
+| Pin | Función |
+|---|---|
+| 1 | IN |
+| 2 | IN |
+| 3 | EN/UV |
+| 4 | PG |
+| 5 | PGFB |
+| 6 | ILIM |
+| 7 | VIOC |
+| 8 | SET |
+| 9 | GND |
+| 10 | OUTS |
+| 11 | OUT |
+| 12 | OUT |
+| 13 (EP) | **IN** (no GND — ver arriba) |
+
+Nota: el LT3094 tiene un pin **VIOC** (control de regulador upstream para
+minimizar disipación) que el LT3045 no tiene. Si no se usa: **flotar**
+("VIOC (Pin 7): ...If unused, float the VIOC pin", p.15).
+
+- [ ] **Orientación del Schottky de protección inversa (D11) — GAP, no
+  espejo confirmado.** A diferencia del LT3045, el DS del LT3094 **no
+  incluye** una nota de aplicación equivalente al Schottky OUTS→SET. La
+  sección "Protection Features" (p.28) del LT3094 solo cubre pull-up del
+  OUT por encima de masa y foldback de corriente — no menciona ningún
+  diodo Schottky en todo el documento (se revisaron las 33 páginas
+  completas, incluida la sección de protección). El brief pedía "espejo
+  exacto" del LT3045 para D11, pero **eso no está soportado por fuente
+  primaria contra el LT3094 específicamente**. Por simetría de polaridad
+  (regulador negativo), la orientación análoga *esperable* sería
+  invertida respecto al LT3045 — cátodo en OUTS, ánodo en SET, para
+  bloquear la misma trayectoria de corriente en el sentido correspondiente
+  a un riel negativo — pero esto es **inferencia de ingeniería, no un
+  hecho citado del DS**. Antes de fijar D11 en el esquemático: (a)
+  revisar el manual del demo board DC2624A del LT3094 (citado en p.26,
+  no descargado en esta tarea), o (b) confirmar por simulación/analogía
+  con el LT3090/LT1175 (reguladores negativos relacionados, Related
+  Parts p.32) cuál es la convención correcta para esta topología.
 
 ### §1.5 Veredicto GO/NO-GO de márgenes
 
@@ -168,9 +408,58 @@ No hace falta bajar el setpoint todavía porque el margen no dio negativo, pero
 con 0.02 V de colchón la recomendación para Task 4/5 es dejar el trimmer del
 divisor del LM2941 con margen para bajar el setpoint (el brief documenta el
 trimmer llegando hasta ~12.3 V) **si la medida en la mula real no confirma al
-menos unas décimas de margen**. Verificar contra el V_IN mínimo del LT3045
-queda pendiente de §1.3 (bloqueado, ver arriba) — no se pudo cerrar ese
-extremo de la cadena.
+menos unas décimas de margen**.
+
+#### §1.5.1 Headroom del LT3045/LT3094 contra el suelo bajable del pre-reg (cierra §1.3/§1.4)
+
+Con §1.3/§1.4 ya leídos, se puede cerrar el extremo de la cadena que quedó
+pendiente: ¿el suelo bajable del divisor con trimmer (~12.3 V positivo /
+−12.2 V negativo, documentado para Task 4/5) sigue dejando entrada
+suficiente al LT3045/LT3094 para sacar 12.000 V, sumando dropout garantizado
+del LT **más** la caída del ballast de paralelismo (20 mΩ × 0.325 A ≈ 7 mV
+por chip, corriente real de operación con 2 chips repartiendo ~650 mA/riel)?
+
+```
+V_IN_mínima_requerida_en_LT = V_OUT (12.000 V) + dropout_max(LT) + caída_ballast (7 mV)
+
+Positivo (LT3045), conservador (bin de 500 mA, MAX 450 mV — ver §1.3):
+  12.000 + 0.450 + 0.007 = 12.457 V requeridos
+  Suelo del pre-reg: 12.3 V
+  Margen = 12.3 − 12.457 = −0.157 V  →  NO ALCANZA (déficit de 157 mV)
+
+Positivo (LT3045), con el bin más cercano (300 mA, MAX 350 mV, optimista
+porque 325 mA > 300 mA):
+  12.000 + 0.350 + 0.007 = 12.357 V requeridos
+  Margen = 12.3 − 12.357 = −0.057 V  →  TAMPOCO alcanza, pero por 57 mV
+
+Negativo (LT3094), conservador (bin de 500 mA, MAX 410 mV — ver §1.4):
+  12.000 + 0.410 + 0.007 = 12.417 V requeridos (en magnitud)
+  Suelo del pre-reg: 12.2 V
+  Margen = 12.2 − 12.417 = −0.217 V  →  NO ALCANZA (déficit de 217 mV)
+```
+
+**Hallazgo real, no maquillado: en NINGÚN escenario (conservador u
+optimista) el suelo documentado del trimmer (~12.3 V / −12.2 V) alcanza para
+que el LT saque 12.000 V limpios**, una vez que se usa dropout garantizado
+(no típico) y se suma la caída del ballast. El déficit va de ~57 mV (mejor
+caso, LT3045 con el bin de 300 mA) hasta ~217 mV (peor caso, LT3094). Esto
+**no invalida el GO de §1.5** sobre el margen de valle del pre-reg en sí —
+esa cuenta (13.12 V ≥ 13.1 V / ≥ 12.9 V) sigue siendo válida y es un chequeo
+independiente — pero sí cierra la pregunta que había quedado abierta sobre
+si el trimmer podía bajarse "hasta ~12.3 V" con seguridad: **no puede, sin
+que el LT deje de garantizar 12.000 V exactos en el peor caso.**
+
+**Recomendación concreta para Task 4/5**: el suelo práctico y seguro del
+trimmer del pre-reg no debe bajar de ~**12.46 V** (positivo) / ~**−12.42 V**
+(negativo) si se quiere garantizar 12.000 V a la salida del LT bajo
+condiciones garantizadas de dropout — no de los ~12.3 V / −12.2 V que
+documentó Task 1. Alternativamente, aceptar que en el extremo bajo del
+trimmer el LT puede perder unas pocas decenas/centenas de mV de regulación
+(verificar si el presupuesto de tolerancia global de la spec absorbe esto)
+o medir en la mula real si el dropout real es más favorable que el
+garantizado (como ya se sospecha para el riel positivo del pre-reg en la
+sección anterior). Esto **no es un NO-GO del proyecto** — es un ajuste de
+rango de trimmer que Task 4/5 debe incorporar con este número en mano.
 
 ## §2 Stock
 
