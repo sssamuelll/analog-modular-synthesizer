@@ -23,7 +23,21 @@ t_panel    = 1.6;  // PCB de aluminio, espesor estandar JLCPCB
 // al nominal, kerf tiene que RESTAR. Un kerf de tabla de servicio (ancho de
 // canal, siempre positivo) entra aqui con el signo cambiado.
 // Magnitud provisional; SE CALIBRA con el cupon (spec §11, README paso 2).
+// ASIMETRIA DELIBERADA: el kerf se aplica a los HUECOS (agujeros, ranuras,
+// recortes), no a los CONTORNOS exteriores. Cada plancha sale por tanto ~0.2
+// mm mas chica que el nominal: en todas las piezas de este case eso es
+// holgura a favor (auditado pieza por pieza en el review final de rama), y
+// ninguna lleva encaje macho donde restaria. Si alguna vez se dibuja una
+// lengueta que deba entrar apretada, hay que aplicarle kerf a su contorno.
 kerf       = -0.2;
+
+// Teselado de circulos. VIVE AQUI, no en sam17_case.scad, porque todo .scad
+// que incluya params lo hereda: coupon.scad lo perdio cuando estaba alla y
+// sus agujeros salieron PENTAGONOS (5 segmentos, error de forma 0.33-0.48 mm
+// contra peldanos de 0.1 mm) -- la pieza de calibracion no podia calibrar, y
+// peor, devolvia un kerf errado con evidencia fisica que lo respaldaba.
+// clearance_budget.py lo ignora: su regex pide `\w` y `$` no lo es.
+$fn = 48;
 
 // --- sistema de paneles (spec §6) ---
 rail            = 20;   // perfil 2020

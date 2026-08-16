@@ -7,7 +7,8 @@
 
 include <params.scad>
 PART = "assembly";
-$fn = 48;
+// $fn vive en params.scad: asi lo hereda TODO .scad que incluya params.
+// Tenerlo aqui fue el bug del cupon pentagonal (ver nota en params.scad).
 
 // ancho interior entre costados; Tasks 4-5 lo consumen como ancho_util.
 ancho_util = ancho_total - 2*t_cheek;
