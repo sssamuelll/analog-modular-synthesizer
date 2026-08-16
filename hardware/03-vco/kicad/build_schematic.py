@@ -206,6 +206,7 @@ X_TEMP, Y_TEMP = g(300), g(100)                 # U13
 X_EEPROM, Y_EEPROM = g(300), g(125)              # U14
 X_PU, Y_PU = g(320), g(112)                      # R_I2C1-2 (pullups 4.7k)
 X_J2, Y_J2 = g(340), g(60)                       # J2 (IDC 2x6)
+X_DAC_DEC = g(245)                               # desacoplo U5-U7, entre DAC y HC14
 
 # J2 (IDC 2x6): CONTRATO del enlace -- misma tabla, mismas posiciones, en los
 # modulos 5, 6 y 7 (spec par.7). Se deja comentada a proposito -- vive como
@@ -334,16 +335,20 @@ def revisar_pinout_dac() -> None:
     assert got == esperado, f"pinout del DAC mal: {got}"
 
 
-def bloque_dac() -> None:
-    """3x AD5686R en cadena soldada (DCEN): U5.SDO->U6.SDIN->U7.SDO->MISO.
+def _desacoplo(ref: str, val: str, net: str, masa: str, x: float, y: float) -> None:
+    """Un 100nF pegado a un chip: arriba a su riel, abajo a SU masa -- la del
+    propio chip (GNDA o GNDD), no necesariamente la de la red mas cercana en
+    el dibujo. bom.csv: C_DEC*, "desacoplo pegado a cada chip"."""
+    pon("c", ref, val, x, y)
+    c1, c2 = P("c", "1", x, y), P("c", "2", x, y)
+    hilo(*c1, c1[0], c1[1] - g(4))
+    _labels.append((net, c1[0], c1[1] - g(4)))
+    hilo(*c2, c2[0], c2[1] + g(4))
+    potencia(masa, c2[0], c2[1] + g(4), f"#PWR{ref}")
 
-    Sin capacitores de desacoplo propios -- a diferencia del DAC unico del
-    modulo 2 (C5-C7), esta tarea no los pide (bom.csv reserva C_DEC* para
-    todo el modulo, y el layout de la Tarea 6 es quien decide donde va cada
-    100nF pegado a cada chip). ponytail: si una revision de diseno los
-    quiere ya en el esquematico, es un bloque de 3 capacitores trivial de
-    anadir aqui, igual que hace bloque_alimentacion() con C10/C11.
-    """
+
+def bloque_dac() -> None:
+    """3x AD5686R en cadena soldada (DCEN): U5.SDO->U6.SDIN->U7.SDO->MISO."""
     # U5: canales A-D = CV_PITCH 1-4. Primero de la cadena: SDIN <- SPI_MOSI.
     bloque("dac", "U5", "AD5686RBRUZ", X_DAC, Y_DAC1, 0, {
         **_DAC_STATICOS, "14": "SPI_MOSI", "12": "SPI_SCLK", "13": "SPI_CS3",
@@ -366,6 +371,15 @@ def bloque_dac() -> None:
         "8": "SPI_MISO",
         "3": "MIX_SINE", "2": None, "6": None, "7": None,
     }, largo=g(6))
+
+    # Desacoplo de los 3 DAC (bom.csv C_DEC*): 100nF en VDD y en VLOGIC de
+    # cada uno -- igual que el modulo 2 (C6/C7 de su unico DAC). Retorno a
+    # GNDA: es la masa del propio chip (pin GND de los tres esta en GNDA,
+    # no en GNDD). VREF no lleva desacoplo aqui: lo trae U8, la referencia
+    # (C10/C11 en bloque_alimentacion(), que es donde de verdad importa).
+    for i, y in enumerate((Y_DAC1, Y_DAC2, Y_DAC3)):
+        _desacoplo(f"C{12 + i * 2}", "100n", "+5V_LOC", "GNDA", X_DAC_DEC, y)
+        _desacoplo(f"C{13 + i * 2}", "100n", "+3V3_LOC", "GNDA", X_DAC_DEC + g(8), y)
 
 
 # Unidad de 74HC14 -> (pin de entrada, pin de salida), sacado con symlib
@@ -397,6 +411,10 @@ def bloque_hc14() -> None:
     stub("hc14", "14", X_HC14, y7, 0, "+3V3_LOC", g(4), unidad=7)
     stub("hc14", "7", X_HC14, y7, 0, "GNDD", g(4), unidad=7)
 
+    # Desacoplo de U10 (bom.csv C_DEC*): +3V3_LOC->GNDD, pegado al chip --
+    # es su propia masa (GND=GNDD, no GNDA como los DAC).
+    _desacoplo("C18", "100n", "+3V3_LOC", "GNDD", X_HC14 + g(18), y7)
+
 
 def bloque_telemetria() -> None:
     """U13 (sensor de temperatura) + U14 (EEPROM de identidad), mismo bus
@@ -410,6 +428,8 @@ def bloque_telemetria() -> None:
         "1": "I2C_SDA", "2": "I2C_SCL", "3": None, "4": "GNDD",
         "5": "GNDD", "6": "GNDD", "7": "GNDD", "8": "+3V3_LOC",
     })
+    # Desacoplo de U13 (bom.csv C_DEC*): +3V3_LOC->GNDD, pegado al chip.
+    _desacoplo("C19", "100n", "+3V3_LOC", "GNDD", X_TEMP + g(18), Y_TEMP)
 
     # U14: 24AA02E-OT en la libreria de KiCad = 24AA02E48 real (bom.csv:
     # mismo pinout, sin el sufijo E48 en el simbolo de sistema). Pin 5 no se
@@ -423,6 +443,8 @@ def bloque_telemetria() -> None:
     for num, net in (("1", "I2C_SCL"), ("2", "GNDD"),
                       ("3", "I2C_SDA"), ("4", "+3V3_LOC")):
         stub("eeprom", num, X_EEPROM, Y_EEPROM, 0, net)
+    # Desacoplo de U14 (bom.csv C_DEC*): +3V3_LOC->GNDD, pegado al chip.
+    _desacoplo("C20", "100n", "+3V3_LOC", "GNDD", X_EEPROM + g(18), Y_EEPROM)
 
     # R_I2C1-2 (bom.csv): pullups del bus, a +3V3_LOC -- nunca a +5V, mismo
     # motivo VIH que todo lo demas de este bloque.
