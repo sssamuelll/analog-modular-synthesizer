@@ -214,7 +214,11 @@ def bloque_alimentacion() -> None:
            {"1": "GNDA", "2": "+3V3_LOC", "3": "+5V_LOC"})
 
     # U8: ADR4525, +5V_LOC -> VREF_2V5. LA referencia de la placa entera.
-    bloque("vref", "U8", "ADR4525", X_U8, Y_U8, 0,
+    # Value = ADR4525BRZ (grado B): el spec dice que el grado A revienta el
+    # presupuesto de afinacion. El lib_id se queda en Reference_Voltage:ADR4525
+    # (asi resuelve KiCad el simbolo); el Value es la pieza que se compra de
+    # verdad, igual que AD5686RBRUZ/TL074H en el modulo 2.
+    bloque("vref", "U8", "ADR4525BRZ", X_U8, Y_U8, 0,
            {"1": None, "2": "+5V_LOC", "3": None, "4": "GNDA", "5": None,
             "6": "VREF_2V5", "7": None, "8": None})
 
