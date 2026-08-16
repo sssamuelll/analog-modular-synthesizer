@@ -1,0 +1,110 @@
+"""Genera panel-template.kicad_pcb: panel de aluminio de modulo del SAM17.
+
+    "C:/Program Files/KiCad/10.0/bin/python.exe" case/panels/build_template.py [--ancho 100]
+
+Corre desde la raiz del repo o desde case/panels: el import de
+clearance_budget y la escritura del .kicad_pcb se resuelven contra la
+ubicacion de este propio archivo (Path(__file__)), nunca contra el cwd.
+
+Alto de panel, inset de tornillo y diametro de taladro M3 NO se hardcodean
+aqui: salen de case/cad/params.scad via leer_params() de clearance_budget.py
+(unica fuente de verdad dimensional del proyecto). Solo --ancho sigue
+siendo argumento de linea de comandos, porque es lo unico que varia por
+modulo. Antes de dibujar nada se verifica que alto_panel - 2*inset_tornillo
+cuadre con sep_railes (spec §6): si params.scad se desincroniza, el script
+sale en rojo en vez de generar una plantilla que no atornilla contra los
+railes reales (Principio III de la constitucion: la comprobacion corre
+antes del paso destructivo).
+
+Dibuja: contorno rectangular en Edge.Cuts (ancho x alto_panel); 4 taladros
+M3 no plateados (NPTH) en los centros de rail, a inset_tornillo mm de cada
+borde horizontal, sin kerf (el kerf es del corte laser del acrilico, no de
+un taladro de PCB: el diametro que da params.scad ya es el final); rotulo
+de plantilla en F.Silkscreen.
+
+Fabricacion: PCB de aluminio 1.6 mm, serigrafia blanca (spec §2).
+
+Los modulos futuros COPIAN el .kicad_pcb generado y lo editan; el artefacto
+de verdad es este script, no el s-expr ("el artefacto es el script").
+"""
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+import pcbnew
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent))
+from clearance_budget import leer_params  # noqa: E402
+
+
+def mm(v: float) -> int:
+    return pcbnew.FromMM(v)
+
+
+def verificar_coherencia(p: dict[str, float]) -> None:
+    """Ruling A: si alguien cambia params.scad y alto_panel/inset_tornillo
+    dejan de cuadrar con sep_railes, ese quiebre tiene que verse ANTES de
+    generar la plantilla, no despues como un panel que no atornilla."""
+    calc = p["alto_panel"] - 2 * p["inset_tornillo"]
+    if abs(calc - p["sep_railes"]) > 1e-6:
+        print(f"ROJO: alto_panel({p['alto_panel']}) - 2*inset_tornillo("
+              f"{p['inset_tornillo']}) = {calc} != sep_railes("
+              f"{p['sep_railes']}) -- params.scad incoherente (spec §6)")
+        sys.exit(2)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(
+        description="SAM17: genera panel-template.kicad_pcb")
+    ap.add_argument("--ancho", type=float, default=100.0,
+                     help="ancho del panel en mm (varia por modulo)")
+    ancho = ap.parse_args().ancho
+
+    p = leer_params()
+    verificar_coherencia(p)
+    alto = p["alto_panel"]
+    inset = p["inset_tornillo"]
+    d_taladro = p["d_M3_paso"]  # sin kerf: taladro de PCB, diametro final
+
+    board = pcbnew.CreateEmptyBoard()
+    # contorno
+    pts = [(0, 0), (ancho, 0), (ancho, alto), (0, alto)]
+    for i in range(4):
+        seg = pcbnew.PCB_SHAPE(board)
+        seg.SetShape(pcbnew.SHAPE_T_SEGMENT)
+        seg.SetStart(pcbnew.VECTOR2I(mm(pts[i][0]), mm(pts[i][1])))
+        seg.SetEnd(pcbnew.VECTOR2I(mm(pts[(i + 1) % 4][0]), mm(pts[(i + 1) % 4][1])))
+        seg.SetLayer(pcbnew.Edge_Cuts)
+        seg.SetWidth(mm(0.1))
+        board.Add(seg)
+    # 4 agujeros M3 no plateados (NPTH) en los centros de rail
+    for x in (inset, ancho - inset):
+        for y in (inset, alto - inset):
+            fp = pcbnew.FOOTPRINT(board)
+            fp.SetPosition(pcbnew.VECTOR2I(mm(x), mm(y)))
+            pad = pcbnew.PAD(fp)
+            pad.SetShape(pcbnew.PAD_SHAPE_CIRCLE)
+            pad.SetAttribute(pcbnew.PAD_ATTRIB_NPTH)
+            pad.SetDrillSize(pcbnew.VECTOR2I(mm(d_taladro), mm(d_taladro)))
+            pad.SetSize(pcbnew.VECTOR2I(mm(d_taladro), mm(d_taladro)))
+            pad.SetPosition(pcbnew.VECTOR2I(mm(x), mm(y)))
+            fp.Add(pad)
+            board.Add(fp)
+    # rotulo de plantilla
+    txt = pcbnew.PCB_TEXT(board)
+    txt.SetText("SAM17 PANEL TEMPLATE")
+    txt.SetPosition(pcbnew.VECTOR2I(mm(ancho / 2), mm(alto / 2)))
+    txt.SetLayer(pcbnew.F_SilkS)
+    board.Add(txt)
+
+    out = HERE / "panel-template.kicad_pcb"
+    pcbnew.SaveBoard(str(out), board)
+    print(f"escrito {out.name} ({ancho} x {alto} mm, taladro M3 d={d_taladro} mm)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
