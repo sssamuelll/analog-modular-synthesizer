@@ -1,5 +1,11 @@
 # Cajón y paneles
 
+> **Sustituido**: el diseño vigente del case es la consola de dos pisos en
+> acrílico (spec `docs/superpowers/specs/2026-08-15-case-design.md`, rev. 3;
+> implementación en `case/`). Este documento queda como referencia de la
+> tesis. Las convenciones de rotulación siguen vigentes y las hereda la
+> plantilla `case/panels/`.
+
 > Referencia: tesis, *Diseño y Construcción de Cajón y Paneles* (Gráficos
 > 50–52).
 
@@ -21,10 +27,10 @@ expansión.
 
 ## Materiales
 
-- **Cajón**: madera de 20 mm.
-- **Paneles**: lámina galvanizada de 0.5 mm.
-- **Pintura**: para acabado y rotulación.
-- **Tornillos**: para fijación de paneles a raíles.
+Ver Gráficos 50–52 de la tesis para el detalle de materiales y espesores
+originales de este diseño. Quedaron sustituidos por el diseño vigente — ver
+la nota de sustitución al inicio de este documento y
+[`case/README.md`](../../case/README.md).
 
 ## Convenciones de diseño de paneles
 
@@ -36,8 +42,11 @@ expansión.
 
 ## Mejoras propuestas
 
-- Migrar a un **estándar Eurorack** (3U, 1HP = 5.08 mm) para
-  intercambiabilidad con módulos comerciales.
+- **Resuelto, en contra**: migrar a un estándar Eurorack (3U, 1HP =
+  5.08 mm) para intercambiabilidad con módulos comerciales — se evaluó y no
+  se adoptó. El case vigente usa formato propio (`alto_panel = 190 mm` vs.
+  128.5 mm de un Eurorack 3U); ver
+  [`case/README.md`](../../case/README.md#formato-propio-no-eurorack).
 - Generar planos en **DXF** o **SVG** para corte láser/CNC reproducible.
 - Diseño de paneles en **KiCad** o **FrontPanelDesigner**.
 - Soporte para iluminación LED del bus de alimentación.
