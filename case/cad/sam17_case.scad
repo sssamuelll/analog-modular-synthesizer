@@ -94,7 +94,7 @@ module bandeja_entrepiso_2d() {
         // pasacables entre pisos: 3 oblongos de 40 x 12
         for (x = [au*0.2, au*0.5, au*0.8])
             translate([x, fondo/2]) hull()
-                for (dx = [-14, 14]) translate([dx, 0]) circle(d = 12);
+                for (dx = [-14, 14]) translate([dx, 0]) circle(d = 12 + kerf);
     }
 }
 
@@ -151,8 +151,8 @@ module onda(tipo, largo) {
                 [(i + p[0]) * vent_periodo, p[1]]];
     for (i = [0 : len(pts) - 2])
         hull() {
-            translate(pts[i])   circle(d = vent_ancho_ranura);
-            translate(pts[i+1]) circle(d = vent_ancho_ranura);
+            translate(pts[i])   circle(d = vent_ancho_ranura + kerf);
+            translate(pts[i+1]) circle(d = vent_ancho_ranura + kerf);
         }
 }
 
