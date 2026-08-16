@@ -88,6 +88,13 @@ SYM = {
     "vref": "Reference_Voltage:ADR4525",
     "c": "Device:C",
     "tp": "Connector:TestPoint",
+    # Tarea 3: cadena DAC + mazo + telemetria
+    "dac": "sam17:AD5686RBRUZ",
+    "r": "Device:R",
+    "hc14": "74xx:74HC14",
+    "tempsens": "Sensor_Temperature:TMP1075DGK",
+    "eeprom": "Memory_EEPROM:24AA02E-OT",
+    "j2": "Connector_Generic:Conn_02x06_Odd_Even",
 }
 FP = {
     "conn4": "Connector_Molex:Molex_KK-254_AE-6410-04A_1x04_P2.54mm_Vertical",
@@ -96,6 +103,12 @@ FP = {
     "vref": "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm",
     "c": "Capacitor_SMD:C_0805_2012Metric",
     "tp": "TestPoint:TestPoint_Pad_D2.0mm",
+    "dac": "Package_SO:TSSOP-16_4.4x5mm_P0.65mm",
+    "r": "Resistor_SMD:R_0805_2012Metric",
+    "hc14": "Package_SO:SOIC-14_3.9x8.7mm_P1.27mm",
+    "tempsens": "Package_SO:VSSOP-8_3x3mm_P0.65mm",
+    "eeprom": "Package_TO_SOT_SMD:SOT-23-5",
+    "j2": "Connector_IDC:IDC-Header_2x06_P2.54mm_Vertical",
 }
 
 _wires: list = []
@@ -183,6 +196,31 @@ TESTPOINTS = ["+12V", "-12V", "+5V_LOC", "+3V3_LOC", "VREF_2V5",
               "CV_PITCH_1", "CV_PITCH_2", "CV_PITCH_3", "CV_PITCH_4",
               "MIXO_1", "MIXO_2", "MIXO_3", "MIXO_4", "GNDA", "GNDD"]
 
+# El bloque digital de la Tarea 3 sigue hacia la DERECHA de la alimentacion
+# (que termina en X~g(190)) y se queda por debajo de Y~g(150): la Tarea 4
+# tiene toda la franja de abajo libre para las 4 voces.
+X_DAC = g(220)
+Y_DAC1, Y_DAC2, Y_DAC3 = g(15), g(65), g(115)   # U5, U6, U7 en columna
+X_HC14, Y_HC14_0, HC14_PITCH = g(270), g(10), g(12)  # U10, 6 unidades + comun
+X_TEMP, Y_TEMP = g(300), g(100)                 # U13
+X_EEPROM, Y_EEPROM = g(300), g(125)              # U14
+X_PU, Y_PU = g(320), g(112)                      # R_I2C1-2 (pullups 4.7k)
+X_J2, Y_J2 = g(340), g(60)                       # J2 (IDC 2x6)
+
+# J2 (IDC 2x6): CONTRATO del enlace -- misma tabla, mismas posiciones, en los
+# modulos 5, 6 y 7 (spec par.7). Se deja comentada a proposito -- vive como
+# texto de referencia, no como dict vivo: sus claves son int y el resto del
+# script usa claves str (las que da symlib.pines()), asi que si alguien la
+# reutilizara tal cual para cablear se rompería en silencio (redes.get("1")
+# nunca encontraría la clave 1). El cableado real de J2 esta mas abajo, en
+# bloque_digital(), con las mismas redes escritas con claves str.
+#
+# J2_PINOUT = {  # contrato del enlace — modulos 5/6/7 usan las mismas posiciones
+#     1: "SPI_SCLK", 2: "GNDD",   3: "SPI_MOSI", 4: "SPI_MISO",
+#     5: "SPI_CS3",  6: "GNDD",   7: "I2C_SDA",  8: "I2C_SCL",
+#     9: "TUNE_OUT_1", 10: "TUNE_OUT_2", 11: "TUNE_OUT_3", 12: "TUNE_OUT_4",
+# }
+
 
 # --------------------------------------------------------------- construccion
 def bloque_alimentacion() -> None:
@@ -252,11 +290,177 @@ def bloque_testpoints() -> None:
         bloque("tp", f"TP{i + 1}", net, x, Y_TP, 0, {"1": net})
 
 
+# Pines ESTATICOS del AD5686R, iguales en los tres DAC (U5-U7). Mismo
+# tratamiento que decidio el modulo 2 para LDAC/GAIN/RSTSEL -- a GNDA los
+# tres: LDAC bajo = cada escritura SPI actualiza la salida al vuelo (no hace
+# falta pulso de carga sincrona), GAIN bajo = x1 (salida 0-2.5V, que es lo
+# que pide el spec par.4: R_PITCH/R_SCALE estan dimensionadas para VREF de
+# 2.5V, no 5V), RSTSEL bajo = al arrancar cae a fondo de escala CERO (con
+# RSTSEL alto arrancaria a media escala y las 4 voces sonarian una nota sola
+# al encender).
+#
+# RESET es la excepcion: el modulo 2 lo ata a un GPIO del Pi (DAC_RESET) para
+# que el firmware pueda resetear el chip por software. Esta placa NO tiene
+# esa linea -- el contrato del enlace serie (J2_PINOUT arriba) no reserva un
+# pin de reset, solo SPI+I2C+TUNE_OUT. Sin GPIO que lo controle, dejarlo a
+# GNDA lo dejaria en reset PERMANENTE (activo bajo, ~RESET) y el DAC nunca
+# arrancaria. Se ata a VLOGIC (+3V3_LOC): inactivo, el chip queda fuera de
+# reset todo el tiempo, que es el equivalente estatico correcto cuando no
+# hay quien lo controle.
+_DAC_STATICOS = {
+    "1": "VREF_2V5", "4": "GNDA", "5": "+5V_LOC", "11": "+3V3_LOC",
+    "9": "GNDA", "10": "GNDA", "16": "GNDA", "15": "+3V3_LOC",
+}
+
+
+def revisar_pinout_dac() -> None:
+    """El AD5686R lo dibujamos nosotros (sam17.kicad_sym) -- se contrasta aqui
+    igual que en el modulo 2, mismo motivo: TSSOP-16 y LFCSP-16 van
+    desfasados dos pines y copiar el diagrama equivocado pone VDD donde va
+    una salida analogica."""
+    esperado = {"1": "VREF", "2": "VOUTB", "3": "VOUTA", "4": "GND",
+                "5": "VDD", "6": "VOUTC", "7": "VOUTD", "8": "SDO",
+                "9": "LDAC", "10": "GAIN", "11": "VLOGIC", "12": "SCLK",
+                "13": "SYNC", "14": "SDIN", "15": "RESET", "16": "RSTSEL"}
+    import re
+    b = symlib.extraer(SYM["dac"])
+    got = {}
+    for m in re.finditer(r"\(pin\s", b):
+        w = b[m.start():m.start() + 400].replace("\n", " ")
+        nm = re.search(r'\(name "([^"]+)"', w)
+        nu = re.search(r'\(number "([^"]+)"', w)
+        if nm and nu:
+            got[nu.group(1)] = nm.group(1).replace("~{", "").replace("}", "")
+    assert got == esperado, f"pinout del DAC mal: {got}"
+
+
+def bloque_dac() -> None:
+    """3x AD5686R en cadena soldada (DCEN): U5.SDO->U6.SDIN->U7.SDO->MISO.
+
+    Sin capacitores de desacoplo propios -- a diferencia del DAC unico del
+    modulo 2 (C5-C7), esta tarea no los pide (bom.csv reserva C_DEC* para
+    todo el modulo, y el layout de la Tarea 6 es quien decide donde va cada
+    100nF pegado a cada chip). ponytail: si una revision de diseno los
+    quiere ya en el esquematico, es un bloque de 3 capacitores trivial de
+    anadir aqui, igual que hace bloque_alimentacion() con C10/C11.
+    """
+    # U5: canales A-D = CV_PITCH 1-4. Primero de la cadena: SDIN <- SPI_MOSI.
+    bloque("dac", "U5", "AD5686RBRUZ", X_DAC, Y_DAC1, 0, {
+        **_DAC_STATICOS, "14": "SPI_MOSI", "12": "SPI_SCLK", "13": "SPI_CS3",
+        "8": "DAC_LINK_12",
+        "3": "CV_PITCH_1", "2": "CV_PITCH_2", "6": "CV_PITCH_3", "7": "CV_PITCH_4",
+    }, largo=g(6))
+
+    # U6: A=PWM (compartido por las 4 voces), B-D = mezcla sierra/tri/pulso.
+    bloque("dac", "U6", "AD5686RBRUZ", X_DAC, Y_DAC2, 0, {
+        **_DAC_STATICOS, "14": "DAC_LINK_12", "12": "SPI_SCLK", "13": "SPI_CS3",
+        "8": "DAC_LINK_23",
+        "3": "PWM_CV", "2": "MIX_SAW", "6": "MIX_TRI", "7": "MIX_PULSE",
+    }, largo=g(6))
+
+    # U7: A=mezcla de seno. B-D quedan de RESERVA (spec par.6: "ch 10-12 de
+    # reserva, un parametro futuro cuesta cero hilos") -- NC con su cruz, no
+    # etiquetas colgando de nada. Ultimo de la cadena: SDO -> SPI_MISO.
+    bloque("dac", "U7", "AD5686RBRUZ", X_DAC, Y_DAC3, 0, {
+        **_DAC_STATICOS, "14": "DAC_LINK_23", "12": "SPI_SCLK", "13": "SPI_CS3",
+        "8": "SPI_MISO",
+        "3": "MIX_SINE", "2": None, "6": None, "7": None,
+    }, largo=g(6))
+
+
+# Unidad de 74HC14 -> (pin de entrada, pin de salida), sacado con symlib
+# directamente del simbolo (74xx:74HC14 no viene documentado pin a pin en
+# ningun sitio del repo, y el orden de un inversor multi-unidad no es obvio
+# a ojo). Unidad 7 es la comun: GND=pin7, VCC=pin14.
+_HC14_UNIDADES = [(1, "1", "2"), (2, "3", "4"), (3, "5", "6"),
+                  (4, "9", "8"), (5, "11", "10"), (6, "13", "12")]
+
+
+def bloque_hc14() -> None:
+    """U10: Schmitt trigger que limpia SQUARE_OUT (open-collector, RC del
+    pullup) antes del TUNE_OUT digital. 4 de las 6 puertas en uso; las 2
+    sobrantes con la entrada a GNDD y la salida en NC (spec par.6)."""
+    for i, (u, pin_in, pin_out) in enumerate(_HC14_UNIDADES):
+        y = Y_HC14_0 + HC14_PITCH * i
+        pon("hc14", "U10", "74HC14", X_HC14, y, 0, unidad=u)
+        if i < 4:
+            n_in, n_out = f"SQ_{i + 1}", f"TUNE_OUT_{i + 1}"
+        else:
+            n_in, n_out = "GNDD", None
+        stub("hc14", pin_in, X_HC14, y, 0, n_in, g(4), unidad=u)
+        stub("hc14", pin_out, X_HC14, y, 0, n_out, g(4), unidad=u)
+
+    # unidad comun: VCC a 3.3V (nunca 5V -- mismo umbral VIH que el DAC),
+    # GND al retorno digital.
+    y7 = Y_HC14_0 - HC14_PITCH
+    pon("hc14", "U10", "74HC14", X_HC14, y7, 0, unidad=7)
+    stub("hc14", "14", X_HC14, y7, 0, "+3V3_LOC", g(4), unidad=7)
+    stub("hc14", "7", X_HC14, y7, 0, "GNDD", g(4), unidad=7)
+
+
+def bloque_telemetria() -> None:
+    """U13 (sensor de temperatura) + U14 (EEPROM de identidad), mismo bus
+    I2C con pullups 4.7k. Los dos con GND en GNDD -- es el retorno de todo
+    lo digital, no de los DAC (que van a GNDA con el resto del audio)."""
+    # U13: TMP1075DGK. Direccion por straps = 0 (A2/A1/A0 los tres a GNDD).
+    # Los modulos 5/6/7 usaran las direcciones 1/2/3 -- otra combinacion de
+    # straps, mismo sensor, mismo bus. ALERT sin usar: NC (no hay linea de
+    # interrupcion en el contrato del enlace, J2_PINOUT arriba).
+    bloque("tempsens", "U13", "TMP1075DGK", X_TEMP, Y_TEMP, 0, {
+        "1": "I2C_SDA", "2": "I2C_SCL", "3": None, "4": "GNDD",
+        "5": "GNDD", "6": "GNDD", "7": "GNDD", "8": "+3V3_LOC",
+    })
+
+    # U14: 24AA02E-OT en la libreria de KiCad = 24AA02E48 real (bom.csv:
+    # mismo pinout, sin el sufijo E48 en el simbolo de sistema). Pin 5 no se
+    # cablea con bloque() (que le pondria una cruz de no-conexion): en el
+    # propio simbolo ya esta tipado "no_connect" -- el mismo caso que el EP
+    # del SSI2130 (Tarea 1). Un pin no_connect no lleva NADA encima, ni
+    # siquiera la cruz: ponersela es un no_connect que no ancla a ningun
+    # cable ("no_connect_dangling" en el ERC), justo el fallo que ya se
+    # evito en el EP.
+    pon("eeprom", "U14", "24AA02E48", X_EEPROM, Y_EEPROM, 0)
+    for num, net in (("1", "I2C_SCL"), ("2", "GNDD"),
+                      ("3", "I2C_SDA"), ("4", "+3V3_LOC")):
+        stub("eeprom", num, X_EEPROM, Y_EEPROM, 0, net)
+
+    # R_I2C1-2 (bom.csv): pullups del bus, a +3V3_LOC -- nunca a +5V, mismo
+    # motivo VIH que todo lo demas de este bloque.
+    for i, (ref, net) in enumerate((("R_I2C1", "I2C_SDA"), ("R_I2C2", "I2C_SCL"))):
+        x = X_PU + g(10) * i
+        pon("r", ref, "4.7k", x, Y_PU)
+        p1, p2 = P("r", "1", x, Y_PU), P("r", "2", x, Y_PU)
+        hilo(*p1, p1[0], p1[1] - g(4))
+        _labels.append((net, p1[0], p1[1] - g(4)))
+        hilo(*p2, p2[0], p2[1] + g(4))
+        _labels.append(("+3V3_LOC", p2[0], p2[1] + g(4)))
+
+
+def bloque_mazo() -> None:
+    """J2: el conector fisico del contrato de enlace (J2_PINOUT arriba),
+    cableado con las mismas 12 redes -- por posicion, tal cual la tabla."""
+    bloque("j2", "J2", "Mazo digital IDC 2x6", X_J2, Y_J2, 0, {
+        "1": "SPI_SCLK", "2": "GNDD", "3": "SPI_MOSI", "4": "SPI_MISO",
+        "5": "SPI_CS3", "6": "GNDD", "7": "I2C_SDA", "8": "I2C_SCL",
+        "9": "TUNE_OUT_1", "10": "TUNE_OUT_2", "11": "TUNE_OUT_3", "12": "TUNE_OUT_4",
+    })
+
+
+def bloque_digital() -> None:
+    bloque_dac()
+    bloque_hc14()
+    bloque_telemetria()
+    bloque_mazo()
+
+
 def construir() -> None:
     bloque_alimentacion()
     bloque_testpoints()
-    # Tarea 3: bloque_digital() -- 74HC14, TMP1075, 24AA02E, J2 (mazo GNDD)
-    # Tarea 4: voz(idx) x4 -- SSI2130, DAC (AD5686R x3), jacks CV-IN/OUT
+    bloque_digital()
+    # Tarea 4: voz(idx) x4 -- SSI2130, jacks CV-IN/OUT. Cierra los avisos que
+    # deja pendientes esta tarea: SQ_1..4 colgantes (los produce el SQUARE
+    # OUT de cada voz) y PWM_CV/MIX_* de un solo miembro (los consume el
+    # mezclador interno de cada SSI2130).
 
 
 # ------------------------------------------------------------ comprobaciones
@@ -374,6 +578,7 @@ def escribir() -> None:
 
 def main() -> None:
     check_footprints()
+    revisar_pinout_dac()
     construir()
     revisar_rejilla()
     revisar_hilos()
