@@ -198,9 +198,26 @@ PLACEMENT = {
     "R5":  ( 35.0, 182.0,   0),
     "RV2": ( 57.0, 182.0,   0),
     "R6":  ( 77.0, 182.0,   0),
-    "R7":  ( 35.0, 192.0,   0),
-    "RV3": ( 57.0, 192.0,   0),
-    "R8":  ( 77.0, 192.0,   0),
+    # AJUSTE DE PLACEMENT (orquestador, review Tarea 7): la fila R7/RV3/R8
+    # quedaba a ~87 mm del pin ADJ de U2 -- la traza de alta impedancia de
+    # verdad no es la de R7 (R7 solo toca -12V9, un riel de baja
+    # impedancia), es Net-(U2-ADJ): RV3.1 + R8.2 + U2.1(ADJ), sec.6.3/6.1
+    # del netlist Tarea 6. R8/RV3 (el nodo de ajuste) se reespejan al canal
+    # vertical virgen entre el disipador de U2 (borde derecho x=143) y el
+    # margen de placa (x=147) -- NO es un hueco dentro de la rejilla ya
+    # empaquetada de la isla ultra (esa rejilla llena x=89..138 fila a fila
+    # sin huecos, verificado contra el .kicad_pcb real). Giradas 90 grados
+    # (eje largo en Y) para caber en los 4 mm libres a la derecha del
+    # disipador. R8 ancla (pin1=GNDREF) DENTRO de ISLA_REF (x2 ensanchado a
+    # 147 mas abajo); su pin2 (ADJ) sale girado hacia ARRIBA del ancla y
+    # queda a ~29 mm de U2.ADJ sin necesitar que el cuerpo entero de R8 este
+    # dentro de la isla (solo el pad de GNDREF importa para la zona).
+    # R7 (la pata de -12V9, no sensible) vuelve al hueco que R8 dejo libre
+    # junto a R6: mismo canal x=74..89 de la isla, sin espejar de verdad
+    # porque no hace falta -- no es la traza que preocupaba al review.
+    "R8":  (145.2, 170.0,  90),   # pin1 GNDREF (ancla) abajo, pin2 ADJ arriba
+    "RV3": (144.0, 175.0,  90),
+    "R7":  ( 77.0, 192.0,   0),   # hueco que deja R8 al moverse; -12V9, no critico
 
     # --- ISLA ULTRA: pareja +12.000V (U4/U5, LT3045) -----------------------
     "U4":  ( 92.0, 168.0,   0),
@@ -242,10 +259,19 @@ PLACEMENT = {
 # con margen los 5 refs cuyos pads tocan la red GNDREF (R9.2, C15.2, R10.2,
 # C16.2, R6.2, R8.1 — netlist Tarea 6) mas JP1, el unico puente admitido a
 # GND (revisar_isla_referencia). x1=74 deja a R6/R8 (anclados en x=77,
-# cuerpo desde x=75.9) justo dentro; x2=139 cubre R10/C16 (anclados en
-# x=128, cuerpo hasta x=130.3). El cobre de esta isla se dibuja en la Tarea
-# 8 como zona sobre este mismo rectangulo.
-ISLA_REF = (74.0, 163.0, 139.0, 198.0)
+# cuerpo desde x=75.9) justo dentro; x2 cubre R10/C16 (anclados en x=128,
+# cuerpo hasta x=130.3). El cobre de esta isla se dibuja en la Tarea 8 como
+# zona sobre este mismo rectangulo.
+#
+# x2 ENSANCHADO de 139.0 a 147.0 en la Tarea 8 (ajuste de placement pedido
+# por el orquestador): R8 se reespejo al canal libre x=143..147, pegado al
+# canto derecho de la placa (ver comentario junto a su PLACEMENT), para
+# acercar el nodo de ajuste de U2 en vez de dejarlo a 87 mm cruzando la
+# placa. R8.1 (GNDREF) vive ahora en ese canal, asi que la isla tiene que
+# alcanzarlo o su pad se queda fuera de la zona de cobre GNDREF (sin
+# conexion). 147.0 = W - MARGEN: la zona llega hasta el mismo limite que ya
+# respetan los componentes, no mas alla.
+ISLA_REF = (74.0, 163.0, 147.0, 198.0)
 
 F, B = "F.Cu", "B.Cu"
 ANCHO_POT, ANCHO_SEN, ANCHO_RED = 1.0, 0.4, 1.0
