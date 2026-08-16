@@ -65,6 +65,193 @@ def autocomprobacion(p: dict[str, float]) -> None:
     assert abs(g["prof_sup_min"] - 168.50) < 0.05, g["prof_sup_min"]
 
 
+def _vertices(p: dict[str, float]) -> list[tuple[float, float]]:
+    """P0..P8 del perfil lateral, misma formula y numeracion que
+    pts_perfil() en sam17_case.scad."""
+    si, ci = math.sin(math.radians(p["angulo_inferior"])), math.cos(
+        math.radians(p["angulo_inferior"]))
+    ss, cs = math.sin(math.radians(p["angulo_superior"])), math.cos(
+        math.radians(p["angulo_superior"]))
+    ye = p["alto_frontal"] + p["alto_panel"] * ci
+    x2 = p["alto_panel"] * si
+    x3 = x2 + p["paso_horizontal"]
+    x4 = x3 + p["alto_panel"] * ss
+    yt = ye + p["alto_panel"] * cs
+    return [(0, 0), (0, p["alto_frontal"]), (x2, ye), (x3, ye), (x4, yt),
+            (p["prof_superior"], yt), (p["prof_superior"], ye),
+            (p["prof_inferior"], ye), (p["prof_inferior"], 0)]
+
+
+def _centros_rail(p: dict[str, float],
+                   P: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """4 centros de rail de panel [cara_inf x2, cara_sup x2], misma formula
+    que centros_rail() en sam17_case.scad."""
+    caras = [(P[1], P[2]), (P[3], P[4])]
+    off = p["t_panel"] + p["rail"] / 2
+    out = []
+    for c0, c1 in caras:
+        dx, dy = c1[0] - c0[0], c1[1] - c0[1]
+        dl = math.hypot(dx, dy)
+        dx, dy = dx / dl, dy / dl
+        nx, ny = dy, -dx
+        for s in (p["inset_tornillo"], p["alto_panel"] - p["inset_tornillo"]):
+            out.append((c0[0] + dx * s + nx * off, c0[1] + dy * s + ny * off))
+    return out
+
+
+def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
+                        cr: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """5 centros de larguero de esqueleto, misma formula que
+    centros_esqueleto() en sam17_case.scad (entrepiso delantero reubicado
+    y ambos railes de entrepiso a la altura nueva — fix de solapes,
+    ronda de revision del 2026-08-16)."""
+    r = p["rail"] / 2
+    x_ed = cr[2][0] + p["rail"] + p["holgura_rail"]
+    y_ep = P[3][1] - p["t_acrilico"] - r
+    return [(r + 2, r), (p["prof_inferior"] - r, r),
+            (x_ed, y_ep), (p["prof_inferior"] - r, y_ep),
+            (p["prof_superior"] - r, P[5][1] - r)]
+
+
+# Caja = (nombre, x0, x1, y0, y1, z0, z1)
+Caja = tuple
+
+
+def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja]]:
+    """AABB de los 9 railes y de las 5 planchas/pieles, misma formula que
+    rails()/planchas_acrilico() en sam17_case.scad."""
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    ce = _centros_esqueleto(p, P, cr)
+    rail, t_cheek = p["rail"], p["t_cheek"]
+    t_acr, gap = p["t_acrilico"], p["gap_sombra"]
+    ancho_total = p["ancho_total"]
+
+    nombres_cr = ["cara_inf s=inset", "cara_inf s=alto-inset",
+                  "cara_sup s=inset", "cara_sup s=alto-inset"]
+    angs = [p["angulo_inferior"], p["angulo_inferior"],
+            p["angulo_superior"], p["angulo_superior"]]
+    railes: list[Caja] = []
+    for nm, c, ang in zip(nombres_cr, cr, angs):
+        # R3: el rail gira -ang sobre su eje largo para calzar a ras de la
+        # cara. El AABB real de un cuadrado girado crece a
+        # (rail/2)*(|cos|+|sin|) — usar rail/2 sin mas SUBESTIMA el alcance
+        # de la esquina (0.261 mm de error verificado en la ronda de
+        # revision: rail/2*(|n.x|+|n.y|)=11.861 > off=11.6).
+        he = (rail / 2) * (abs(math.cos(math.radians(ang)))
+                            + abs(math.sin(math.radians(ang))))
+        railes.append((nm, c[0] - he, c[0] + he, c[1] - he, c[1] + he,
+                       t_cheek, ancho_total - t_cheek))
+    nombres_ce = ["base delantera", "base trasera", "entrepiso delantero",
+                  "entrepiso trasero", "remate superior"]
+    for nm, c in zip(nombres_ce, ce):
+        railes.append((nm, c[0] - rail / 2, c[0] + rail / 2,
+                       c[1] - rail / 2, c[1] + rail / 2,
+                       t_cheek, ancho_total - t_cheek))
+
+    planchas: list[Caja] = []
+    # bandeja_base: sin cambios en esta ronda
+    depth_bb = p["prof_inferior"] - 2 * rail - 4
+    planchas.append(("bandeja_base", rail, rail + depth_bb, rail, rail + t_acr,
+                     t_cheek, ancho_total - t_cheek))
+    # bandeja_entrepiso: R2 — canto trasero a ras de entrepiso-trasero,
+    # tope (no fondo) a ras de P3.y
+    x0_be = ce[2][0] - rail / 2
+    fondo_be = p["prof_inferior"] - ce[2][0] + rail / 2
+    planchas.append(("bandeja_entrepiso", x0_be, x0_be + fondo_be,
+                     P[3][1] - t_acr, P[3][1], t_cheek, ancho_total - t_cheek))
+    # zocalo: R1 — volado hacia -X (standoffs), ya no bolonado directo
+    alto_zoc = cr[0][1] - ce[0][1] + 30
+    y0_zoc = ce[0][1] - 15
+    planchas.append(("zocalo", -gap - t_acr, -gap, y0_zoc, y0_zoc + alto_zoc,
+                     t_cheek + gap, ancho_total - t_cheek - gap))
+    # piel_inferior: R1 — volada hacia +X mas alla de prof_inferior
+    alto_pi = ce[3][1] - ce[1][1] + 30
+    y0_pi = ce[1][1] - 15
+    planchas.append(("piel_inferior", P[8][0] + gap, P[8][0] + gap + t_acr,
+                     y0_pi, y0_pi + alto_pi, t_cheek + gap, ancho_total - t_cheek - gap))
+    # piel_superior: R1 — volada hacia +X mas alla de prof_superior
+    alto_ps = ce[4][1] - ce[3][1] + 30
+    y0_ps = ce[3][1] - 15
+    planchas.append(("piel_superior", P[6][0] + gap, P[6][0] + gap + t_acr,
+                     y0_ps, y0_ps + alto_ps, t_cheek + gap, ancho_total - t_cheek - gap))
+    return railes, planchas
+
+
+def _overlap(a: Caja, b: Caja) -> tuple[float, float, float] | None:
+    ax0, ax1, ay0, ay1, az0, az1 = a[1:]
+    bx0, bx1, by0, by1, bz0, bz1 = b[1:]
+    ox = min(ax1, bx1) - max(ax0, bx0)
+    oy = min(ay1, by1) - max(ay0, by0)
+    oz = min(az1, bz1) - max(az0, bz0)
+    return (ox, oy, oz) if (ox > 1e-9 and oy > 1e-9 and oz > 1e-9) else None
+
+
+# Pares tolerados: forzados TOPOLOGICAMENTE por R1+R2+R3 juntos (ronda de
+# revision 2026-08-16), no una lectura floja del checker — arreglarlos de
+# verdad exige tocar centros_rail() (fuera de las 5 reglas autorizadas) o
+# empeora un solape distinto (ver informe de la ronda de fix). Umbral sobre
+# min(dX,dY): dZ siempre sale grande porque las piezas corren casi todo el
+# ancho util, no es señal de gravedad. Si se vuelve a tocar
+# centros_rail()/centros_esqueleto(), reverificar estos dos numeros.
+TOLERADOS: dict[frozenset[str], float] = {
+    frozenset({"bandeja_entrepiso", "piel_superior"}): 6.0,            # ~5.0 mm real
+    frozenset({"cara_inf s=alto-inset", "cara_sup s=inset"}): 4.0,     # ~3.7 mm real (AABB; SAT exacto 2.5 mm)
+}
+
+
+def solapes(p: dict[str, float]) -> list[str]:
+    """9 railes + 5 planchas/pieles: ningun par se pisa en 3D, salvo los
+    TOLERADOS de arriba (impresos igual, nunca silenciados). Paneles
+    inclinados (1.6 mm, PCB de aluminio de cada modulo): su clase la
+    resuelve la rotacion de railes (R3), no entran en esta caja."""
+    railes, planchas = _cajas_solidas(p)
+    fallos: list[str] = []
+    todas = railes + planchas
+    n_rail = len(railes)
+    for i in range(len(todas)):
+        for j in range(i + 1, len(todas)):
+            a, b = todas[i], todas[j]
+            ov = _overlap(a, b)
+            if not ov:
+                continue
+            tol = TOLERADOS.get(frozenset({a[0], b[0]}))
+            estrecho = min(ov[0], ov[1])
+            if tol is not None and estrecho <= tol:
+                print(f"AMARILLO (tolerado): {a[0]} <-> {b[0]}  "
+                      f"dX={ov[0]:.2f} dY={ov[1]:.2f} dZ={ov[2]:.2f}")
+                continue
+            grupo = ("railes" if j < n_rail else
+                      "railes-planchas" if i < n_rail else "planchas")
+            fallos.append(f"solape [{grupo}] {a[0]} <-> {b[0]}: "
+                          f"dX={ov[0]:.2f} dY={ov[1]:.2f} dZ={ov[2]:.2f}")
+    return fallos
+
+
+def canario_solapes(p: dict[str, float]) -> None:
+    """Autocomprobacion roja: alimenta la posicion VIEJA (pre-fix, Task 5)
+    del rail entrepiso-delantero y exige que el checker la marque como
+    solape contra el rail de panel cara-superior s=inset_tornillo. Si esto
+    no dispara, el checker esta ciego y no detecta nada de verdad."""
+    P = _vertices(p)
+    r = p["rail"] / 2
+    old_ed = (P[3][0] + r, P[3][1] - r)          # formula pre-fix (Task 5)
+    cr = _centros_rail(p, P)
+    ang = p["angulo_superior"]
+    he = (p["rail"] / 2) * (abs(math.cos(math.radians(ang)))
+                             + abs(math.sin(math.radians(ang))))
+    c = cr[2]
+    vecino = ("cara_sup s=inset", c[0] - he, c[0] + he, c[1] - he, c[1] + he,
+              p["t_cheek"], p["ancho_total"] - p["t_cheek"])
+    viejo = ("entrepiso delantero VIEJO",
+             old_ed[0] - r, old_ed[0] + r, old_ed[1] - r, old_ed[1] + r,
+             p["t_cheek"], p["ancho_total"] - p["t_cheek"])
+    ov = _overlap(viejo, vecino)
+    assert ov is not None, (
+        "canario de solapes no disparo: el checker no detecta un choque "
+        "conocido (17.6x12.6 mm) — no confiar en el resto de solapes()")
+
+
 # Censo de anchos minimos de panel por piso, mm. ESTIMADOS (spec §11):
 # cierran cuando cada panel este dibujado. Fuente: conteo de mandos/jacks
 # de los README de modulo + patch bay normalizado que anade jacks.
@@ -76,6 +263,7 @@ EXPANSION_MIN = 40  # sitio reservado a crecer, por piso
 def main() -> int:
     p = leer_params()
     autocomprobacion(p)
+    canario_solapes(p)
     g = perfil(p)
     fallos: list[str] = []
 
@@ -99,6 +287,7 @@ def main() -> int:
           "sep_railes no sale de alto_panel - 2*inset (spec §6)")
     exige(p["vent_puente_min"] >= 0.8 * p["t_acrilico"],
           "puente de ventilacion fragil para el espesor")
+    fallos.extend(solapes(p))
 
     print(f"perfil: alto_total={g['alto_total']:.1f}  "
           f"entrepiso={g['y_entrepiso']:.1f}  ancho_util={g['ancho_util']:.0f}")
@@ -115,6 +304,10 @@ def main() -> int:
 #   * par de apriete sobre acrilico       -> probeta del cupon (spec §11)
 #   * termica de la fuente v2             -> spec PSU v2 y su validacion
 #   * nesting de planchas en el stock     -> lienzo del Task 5, a ojo
+#   * paneles inclinados (1.6 mm, PCB de aluminio de modulo) en solapes():
+#     su ajuste lo resuelve la rotacion de railes (R3), no un AABB — un
+#     rectangulo largo y fino en diagonal sobreestima demasiado con caja
+#     alineada a ejes como para que el resultado signifique algo
 
 if __name__ == "__main__":
     sys.exit(main())

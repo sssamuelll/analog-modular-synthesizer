@@ -41,12 +41,22 @@ function centros_rail() =
 // largueros del esqueleto (2020) que no son railes de panel:
 // base delantera, base trasera, entrepiso delantero, entrepiso trasero,
 // remate superior trasero. Centros [x, y]:
+//
+// entrepiso delantero reubicado (fix de solape, ronda de revision): el
+// original P[3].x+r invadia el rail de panel cara-superior s=inset_tornillo
+// (17.6x12.6 mm de solape, verificado). Ahora se apoya holgura_rail detras
+// del borde trasero de ESE rail. Y de ambos railes de entrepiso baja a
+// P3.y-t_acrilico-r para que la bandeja apoye con el CANTO SUPERIOR a ras
+// de P3.y (antes apoyaba con el canto inferior ahi, dejando la tapa 5 mm
+// por encima del plano de entrepiso).
 function centros_esqueleto() =
-    let (P = pts_perfil(), r = rail/2)
+    let (P = pts_perfil(), r = rail/2, cr = centros_rail(),
+         x_ed = cr[2].x + rail + holgura_rail,
+         y_ep = P[3].y - t_acrilico - r)
     [[r + 2,               r],                       // base delantera
      [prof_inferior - r,   r],                       // base trasera
-     [P[3].x + r,          P[3].y - r],               // entrepiso delantero
-     [prof_inferior - r,   P[6].y - r],               // entrepiso trasero
+     [x_ed,                y_ep],                     // entrepiso delantero
+     [prof_inferior - r,   y_ep],                     // entrepiso trasero
      [prof_superior - r,   P[5].y - r]];              // remate superior
 
 module perfil_lateral() { polygon(pts_perfil()); }
@@ -85,8 +95,8 @@ module bandeja_base_2d() {
 
 module bandeja_entrepiso_2d() {
     au = ancho_total - 2*t_cheek;
-    P = pts_perfil();
-    fondo = prof_inferior - P[3].x - 2*rail;
+    ce = centros_esqueleto();
+    fondo = prof_inferior - ce[2].x + rail/2;   // canto delantero a ras del rail reubicado
     difference() {
         plancha(au, fondo);
         fila_agujeros(au, rail/2);
@@ -98,19 +108,32 @@ module bandeja_entrepiso_2d() {
     }
 }
 
+// zocalo volado sobre standoffs M4 (R1, ronda de revision): antes bolonado
+// directo al rail base-delantera con una sola fila M3, y=10 quedaba a solo
+// 3 mm de holgura del rail (invadido en Y por 12 mm). Ahora comparte el
+// mismo esquema que las pieles: 4 esquinas M4, filas a ras de sus dos
+// railes limite (base delantera / rail de panel cara-inferior s=inset).
 module zocalo_2d() {
-    au = ancho_total - 2*t_cheek;
+    au = ancho_total - 2*t_cheek - 2*gap_sombra;   // volado, mismo ancho que las pieles
+    ce = centros_esqueleto();
+    cr = centros_rail();
+    alto = cr[0].y - ce[0].y + 30;                  // filas (inset 15) a ras de ambos railes
     difference() {
-        plancha(au, alto_frontal - alto_pie);
-        fila_agujeros(au, rail/2);
+        plancha(au, alto);
+        for (c = [[15,15],[au-15,15],[15,alto-15],[au-15,alto-15]])
+            translate(c) circle(d = d_M4_paso + kerf);
     }
 }
 
 // --- pieles traseras flotantes (standoffs M4, junta de sombra) --------
+// alto: filas de agujero (inset 15 mm) a ras de las centrelineas de los
+// dos railes limite de cada tramo (R1, ronda de revision — antes el alto
+// salia de un inset de gap_sombra sobre el perfil y quedaba invadiendo el
+// rail trasero correspondiente; ver centros_esqueleto()).
 module piel_inferior_2d() {
     au = ancho_total - 2*t_cheek - 2*gap_sombra;
-    P = pts_perfil();
-    alto = P[6].y - 2*gap_sombra;
+    ce = centros_esqueleto();
+    alto = ce[3].y - ce[1].y + 30;   // entrepiso trasero <-> base trasera
     difference() {
         plancha(au, alto);
         for (c = [[15,15],[au-15,15],[15,alto-15],[au-15,alto-15]])
@@ -125,8 +148,8 @@ module piel_inferior_2d() {
 
 module piel_superior_2d() {
     au = ancho_total - 2*t_cheek - 2*gap_sombra;
-    P = pts_perfil();
-    alto = P[4].y - P[6].y - 2*gap_sombra;
+    ce = centros_esqueleto();
+    alto = ce[4].y - ce[3].y + 30;   // remate superior <-> entrepiso trasero
     difference() {
         plancha(au, alto);
         for (c = [[15,15],[au-15,15],[15,alto-15],[au-15,alto-15]])
@@ -179,8 +202,21 @@ module costados() {
     translate([0, 0, ancho_total - t_cheek]) costado();
 }
 
+// railes de panel (centros_rail(), 4) van a ras de su cara: giro extra
+// sobre el propio eje largo (R3, ronda de revision) para que la cara del
+// rail quede paralela al panel en vez de un canto en diagonal. Centros
+// intactos (agujeros M5 del costado y todos los DXF, sin cambios).
+// rotate([0,0,-angulo]) alinea el lado +Y local del rail con el vector de
+// cara d=(sin,cos) — verificado con la matriz Rz(-angulo) a mano.
 module rails() {
-    for (c = concat(centros_rail(), centros_esqueleto()))
+    cr = centros_rail();                              // [cara_inf x2, cara_sup x2]
+    angs = [angulo_inferior, angulo_inferior, angulo_superior, angulo_superior];
+    for (i = [0 : 3])
+        translate([cr[i].x, cr[i].y, ancho_total/2])
+            rotate([0, 0, -angs[i]])
+                rotate([90, 0, 0])
+                    rail_2020(ancho_util);
+    for (c = centros_esqueleto())
         translate([c.x, c.y, ancho_total/2])
             rotate([90, 0, 0])
                 rail_2020(ancho_util);
@@ -192,36 +228,52 @@ module rails() {
 // grosor->Y (verificado a mano con la matriz de rotacion: local (x,y,z)
 // -> mundo (y,-z,-x)). Las bandejas apoyan encima de sus railes (grosor
 // crece hacia +Y desde el lomo del rail); el zocalo y las pieles son
-// paredes verticales (grosor crece hacia dentro en X).
+// paredes verticales, volados sobre standoffs (grosor crece hacia FUERA
+// del cuerpo en X — R1, ronda de revision: antes crecia hacia dentro y
+// el canto interior invadia el rail limite; ver piel_inferior_2d() etc.)
 module bandeja_base() {
     translate([rail, rail + t_acrilico, ancho_total - t_cheek])
         rotate([0, 90, 0]) rotate([90, 0, 0])
             linear_extrude(t_acrilico) bandeja_base_2d();
 }
 
+// tope de bandeja a ras de P3.y (canto SUPERIOR, no inferior — ver
+// centros_esqueleto()); canto delantero a ras del rail reubicado.
 module bandeja_entrepiso() {
+    ce = centros_esqueleto();
     P = pts_perfil();
-    translate([P[3].x + rail, P[3].y + t_acrilico, ancho_total - t_cheek])
+    translate([ce[2].x - rail/2, P[3].y, ancho_total - t_cheek])
         rotate([0, 90, 0]) rotate([90, 0, 0])
             linear_extrude(t_acrilico) bandeja_entrepiso_2d();
 }
 
+// volado: cara interior (la que mira al cuerpo) a X=-gap_sombra, engrosa
+// hacia -X. y0 deriva de la fila de agujero inferior (inset 15) cayendo
+// en el rail base-delantera (ce[0].y), igual que en zocalo_2d().
 module zocalo() {
-    translate([0, alto_pie, ancho_total - t_cheek])
+    ce = centros_esqueleto();
+    translate([-gap_sombra - t_acrilico, ce[0].y - 15, ancho_total - t_cheek - gap_sombra])
         rotate([0, 90, 0])
             linear_extrude(t_acrilico) zocalo_2d();
 }
 
+// volado: cara interior a X = prof_inferior + gap_sombra (fuera del
+// cuerpo, no ya recortado hacia dentro), engrosa hacia +X. y0 deriva de
+// la fila de agujero inferior cayendo en el rail base-trasera (ce[1].y).
 module piel_inferior() {
     P = pts_perfil();
-    translate([P[8].x - gap_sombra, gap_sombra, t_cheek + gap_sombra])
+    ce = centros_esqueleto();
+    translate([P[8].x + gap_sombra + t_acrilico, ce[1].y - 15, t_cheek + gap_sombra])
         rotate([0, -90, 0])
             linear_extrude(t_acrilico) piel_inferior_2d();
 }
 
+// volado: cara interior a X = prof_superior + gap_sombra. y0 deriva de la
+// fila de agujero inferior cayendo en el rail entrepiso-trasero (ce[3].y).
 module piel_superior() {
     P = pts_perfil();
-    translate([P[6].x - gap_sombra, P[6].y + gap_sombra, t_cheek + gap_sombra])
+    ce = centros_esqueleto();
+    translate([P[6].x + gap_sombra + t_acrilico, ce[3].y - 15, t_cheek + gap_sombra])
         rotate([0, -90, 0])
             linear_extrude(t_acrilico) piel_superior_2d();
 }
@@ -286,7 +338,7 @@ module lienzo_2d() {
     x1 = 0;              translate([x1, y2]) bandeja_base_2d();
     x2 = x1 + au + sep;  translate([x2, y2]) bandeja_entrepiso_2d();
     x3 = x2 + au + sep;  translate([x3, y2]) zocalo_2d();
-    x4 = x3 + au + sep;  translate([x4, y2]) piel_inferior_2d();
+    x4 = x3 + aup + sep; translate([x4, y2]) piel_inferior_2d();   // zocalo ahora ancho aup (volado, R1)
     x5 = x4 + aup + sep; translate([x5, y2]) piel_superior_2d();
     %square([1000, 600]);
 }
@@ -296,7 +348,7 @@ module bom() {
     echo(str("BOM: larguero 2020 x", len(centros_rail()) + len(centros_esqueleto()),
              " de ", au, " mm"));
     echo(str("BOM: tornillo M5 boton x", 2*(len(centros_rail()) + len(centros_esqueleto()))));
-    echo("BOM: standoff M4 x8 (pieles) + tornillo M4 boton x16 + arandela x16");
+    echo("BOM: standoff M4 x12 (pieles+zocalo, volados) + tornillo M4 boton x24 + arandela x24");
     echo(str("BOM: planchas t=", t_acrilico, ": base, entrepiso, zocalo, ",
              "piel inf, piel sup; costados t=", t_cheek, " x2"));
 }

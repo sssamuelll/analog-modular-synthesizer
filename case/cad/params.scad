@@ -24,6 +24,7 @@ kerf       = 0.2;  // default; SE CALIBRA con el cupon (spec §11)
 rail            = 20;   // perfil 2020
 inset_tornillo  = 5;    // tornillo de panel a 5 mm del borde
 sep_railes      = 180;  // centros de rail por piso = 190 - 2*5
+holgura_rail    = 4;    // separacion minima entre railes vecinos (fix solapes)
 
 // --- esqueleto y herrajes ---
 n_bulkheads      = 2;    // costados exteriores (3 si el vano flexa, spec §11)
