@@ -1,4 +1,4 @@
-# Módulo 3 «VCO ×4» — cuatro voces en una placa, con el DAC adentro
+# Módulo 3 «VCO ×4» — cuatro voces state-of-the-art en una placa
 
 > Sustituye al módulo de 3 osciladores independientes de la tesis (Gráficos
 > 25-26). Hereda y aplica las decisiones ya mergeadas: mandos fuera del audio
@@ -7,110 +7,126 @@
 
 ## 1. Objetivo
 
-La placa que genera el sonido crudo de las 4 voces. Cuatro canales idénticos
-CEM3340 con un solo juego de mandos (que ya no viven aquí: son sensores del
+La placa que genera el sonido crudo de las 4 voces: cuatro canales idénticos
+**SSI2130** con un solo juego de mandos (que no viven aquí: son sensores del
 panel, §7). Todo lo que la placa necesita del cerebro le llega como números
 por el enlace serie; todo lo que da al resto del sinte sale como audio por
 voz, ya mezclado, más los cuatro pulsos de afinación.
 
-**Objetivo medible**: calibración 1 V/oct dentro del rango de captura del DAC
-(0-7 V) en las 4 voces tras ajustar trims, y de ahí el autoafinado sostiene el
+**Objetivo medible**: las 7 octavas de cada voz dentro del rango del DAC
+**sin trimmers** (diseño trimless, §4), y de ahí el autoafinado sostiene el
 suelo de 0.58 cents de `dac_local_budget.py`.
 
 ## 2. Decisiones fijadas (con Samuel, 2026-08-16)
 
-1. **Mezcla de ondas por VCA con mando compartido.** 3 OTAs por voz; los 3 CV
-   de nivel (sierra/tri/cuadrada) salen del DAC y entran en presets.
-2. **Ni FM lineal ni hard sync.** La FM exponencial ya la da el jack CV-IN
-   (suma al pitch); el sync no tiene pareja con un VCO por voz.
-3. **Patch bay: 8 jacks.** CV-IN ×4 (suman, normalizados a 0 V por TN) y
-   salida de mezcla ×4 (normalizadas al VCF). Las ondas crudas no se exponen:
-   la mezcla da cualquier onda pura poniendo su CV a tope.
-4. **Enlace serie (#34): híbrido.** CS por módulo entre placas; los chips de
+1. **SSI2130 como núcleo** (Sound Semiconductor, 2020) en vez del CEM3340 de
+   la tesis. Datasheet verificado (ssi2130datasheet.pdf): deriva del expo
+   **200 ppm/°C típ compensada en chip** (16× mejor que el 3340 crudo, sin
+   R tempco), **mezclador VCA de 5 canales dentro del chip**, seno de 0.76 %
+   THD, sync y FM through-zero latentes. Se acepta a sabiendas: carácter
+   triangle-core distinto del saw-core Prophet-5, y ensamblaje SMD.
+2. **Mezcla de ondas con el mezclador interno, mando compartido.** 4 CV de
+   nivel (sierra/tri/pulso/seno) desde el DAC, directos por resistencia — el
+   control del mezclador es lineal, 0-50 µA. Entra en presets.
+3. **Ni FM lineal ni hard sync** en esta versión — aunque el chip los trae,
+   los jacks no: la FM exponencial ya la da el CV-IN, y el sync sin pareja
+   por voz no aporta. Quedan latentes a coste cero.
+4. **Patch bay: 8 jacks.** CV-IN ×4 (suman en el nodo del expo, normalizados
+   a 0 V por TN) y salida de mezcla ×4 (normalizadas al VCF). Ondas crudas no
+   se exponen: la mezcla da cualquier onda pura desde el preset.
+5. **Enlace serie (#34): híbrido.** CS por módulo entre placas; los chips de
    cada placa en cadena soldada (DCEN al arranque). SCLK/MOSI/MISO
    compartidos. Quitar un módulo solo mata su CS.
-5. **Telemetría de serie en toda placa** (patrón para 5, 6, 7 y cerebro):
+6. **Telemetría de serie en toda placa** (patrón para 5, 6, 7 y cerebro):
    sensor de temperatura I²C pegado al punto térmicamente crítico, EEPROM de
    identidad/calibración en el mismo I²C, y test points en los nodos clave.
-   Sin voltímetro de rieles (los LED del bus board + test points los cubren).
-6. **Trims y tempco se quedan** (decisión por defecto, razonada): trim de
-   escala y de offset por voz llevan cada VCO al rango de captura — el VCO3
-   de la tesis con −18.62 % pediría 8.5 V y se sale del DAC —; el R_TEMPCO
-   baja la deriva cruda de ~5.7 cents/°C unas 30× y el autoafinado pule el
-   resto.
+   Sin voltímetro de rieles.
+7. **Diseño trimless.** Sin trimmers de escala ni offset: el span nominal se
+   diseña con ~5 % de margen (≈7.4 octavas en el fondo de escala del DAC) y
+   `tuning.json` + autoafinado absorben todo lo estático — incluida la
+   no-conformidad del expo (0.3 %), que un trimmer no arregla y la tabla de
+   84 notas sí. Menos piezas que derivan, cero calibración manual.
+8. **Ensamblaje SMD de fábrica** (JLCPCB o similar): el QFN-32 de 4×4 mm lo
+   exige, y estrena el flujo de manufactura para las placas siguientes.
 
 ## 3. Bloques
 
 ```
-  enlace serie ──┐                              ┌── TUNE_OUT 1-4 (3.3 V)
-  (SPI+CS3+I²C)  ▼                              │
-        ┌─────────────────────┐           ┌─────┴────┐
-        │ 2x AD5686RB cadena  │           │  74HC14  │
-        │ ch1-4: PITCH        │           └─────▲────┘
-        │ ch5: PWM  ch6-8: MIX│                 │ (onda cuadrada de cada voz)
-        └──┬──────┬───────────┘                 │
-   pitch×4 ▼      ▼ pwm, mix×3 (compartidos)    │
-  ┌─────────────────────────────────────────────┴──┐
-  │  POR VOZ (×4):                                 │
-  │  CV: amp ×2.8 (TL074H) → sumador ← jack CV-IN  │
-  │      → trims escala/offset → CEM3340 + tempco  │
-  │  AUDIO: saw/tri/sqr → niveles ecualizados      │
-  │      → 3 OTAs (LM13700) ← mix CV compartidos   │
-  │      → suma → jack OUT (normal → VCF)          │
-  └────────────────────────────────────────────────┘
-  telemetría I²C: sensor temp (pegado a los CEM3340) + EEPROM identidad
-  alimentación local: +12 V → 78L05 (5 V DAC) → LDO 3.3 V (VLOGIC, 74HC14)
+  enlace serie ──┐                          ┌── TUNE_OUT 1-4 (3.3 V)
+  (SPI+CS3+I²C)  ▼                          │
+     ┌───────────────────────┐         ┌────┴─────┐
+     │ 3x AD5686 en cadena   │         │  74HC14  │
+     │ ch1-4: PITCH  ch5: PWM│         └────▲─────┘
+     │ ch6-9: MIX saw/tri/   │              │ SQUARE OUT (open-collector,
+     │        pulso/seno     │              │  pullup a 3.3 V, por voz)
+     │ ch10-12: reserva      │              │
+     └──┬──────┬─────────────┘              │
+ pitch×4 ▼      ▼ pwm, mix×4 (compartidos)  │
+  ┌─────────────────────────────────────────┴───┐
+  │  POR VOZ (×4):  SSI2130                     │
+  │  expo in (nodo de corriente) ← R ← DAC      │
+  │                              ← R ← jack CV-IN│
+  │  tri/saw/pulso + seno→AUX1 → mixer interno  │
+  │  MIX OUT (corriente) → op-amp I/V → jack OUT│
+  └─────────────────────────────────────────────┘
+  VREF 2.5 V única → DAC y los 4 SSI2130 (los errores escalan juntos)
+  telemetría I²C: sensor temp (en el racimo de SSI2130) + EEPROM identidad
+  alimentación local: +12 V → reg. 5 V (V+ de los chips y DAC) → LDO 3.3 V
 ```
 
 ## 4. El núcleo, por voz
 
-- **CEM3340** (o AS3340; decidir por sourcing, ver §11), condensador de tempo
-  **1 nF NP0/C0G**, **R_TEMPCO 2k 3300 ppm/°C acoplada térmicamente al chip**
-  (pegada, misma isla de cobre).
-- **Cadena de CV**: canal del DAC (0-2.5 V) → amplificador ×2.8 con **TL074H**
-  (el clásico deriva 9× más: `tuning_budget.py`) → nodo sumador donde entra el
-  jack CV-IN → red de trims → entrada 1 V/oct. Resistencias 1 % película
-  metálica: su error estático lo absorbe `tuning.json`, aquí solo importa la
-  deriva.
-- **Jack CV-IN**: Thonkiconn WQP-PJ398SM; el pin TN va a masa → sin cable el
-  sumador recibe 0 V. Con cable, el CV externo **se suma** al del DAC: FM
-  exponencial gratis sin perder el teclado.
-- **Trims**: multivuelta 10k, escala y offset, por voz. Meta del ajuste: error
-  de escala < ±2 % (que las 7 octavas quepan en 0-7 V con margen). El resto es
-  del autoafinado.
+- **SSI2130**: condensador de tempo **3.9 nF C0G** (valor recomendado del
+  datasheet), compensación térmica en chip — **la R_TEMPCO de la tesis
+  desaparece**.
+- **CV de tono por suma de corrientes**: la entrada del expo es un nodo a
+  tierra virtual (20 µA/octava). El canal del DAC entra por su resistencia
+  (escalada para ≈7.4 octavas de span en fondo de escala: margen del 5 % que
+  hace posible el trimless) y el jack CV-IN entra por 50 kΩ = 1 V/octava.
+  **El amplificador ×2.8 y su deriva desaparecen**: la escala la fijan
+  resistencias 1 % de película metálica, cuya tolerancia absorbe
+  `tuning.json` y cuya deriva (~50 ppm/°C tracking) queda muy por debajo del
+  término que el autoafinado ya cubre.
+- **Jack CV-IN**: Thonkiconn WQP-PJ398SM; TN a masa → sin cable suma 0 V. Con
+  cable, FM exponencial encima del teclado sin perder el control del cerebro.
+- **Una sola VREF de 2.5 V para todo**: el SSI2130 exige VREF externa
+  (2.49-2.51 V, 100 µA por chip) y su estabilidad manda en la afinación. La
+  misma referencia clase ≤5 ppm/°C sirve al DAC y a los 4 osciladores: al
+  compartirla, **sus errores escalan juntos y se cancelan** en el lazo
+  DAC→expo. Cómo se materializa (ADR4525 dedicada + AD5686 pelado, o la
+  interna del AD5686RB con buffer si su pin admite 400 µA) se fija en
+  implementación con el datasheet — el contrato es UNA referencia, §11.3.
 
-## 5. La mezcla, por voz
+## 5. La mezcla, por voz — dentro del chip
 
-- Las tres salidas del CEM3340 pasan por **redes de nivel fijas que ecualizan
-  amplitudes** (la triangular sale más baja de fábrica — tesis, Tabla 11 — y
-  se corrige aquí con resistencias, no con un mando) y atenúan al rango lineal
-  del OTA.
-- **6× LM13700** (2 OTAs por chip = 12 canales). Los 3 CV de mezcla del DAC se
-  convierten a corriente de control; **cada CV alimenta los 4 OTAs de su onda**
-  por resistencias 1 % — un 1 % de despareje entre voces es amplitud, no tono,
-  e inaudible.
-- Las salidas de corriente de los 3 OTAs de cada voz se suman en un op-amp a
-  tierra virtual → **jack OUT de la voz**, normalizado hacia la entrada del
+- El mezclador de 5 canales del SSI2130 recibe tri/sierra/pulso ya escalados
+  internamente (el problema de amplitudes desiguales de la tesis muere solo)
+  y el **seno entra por AUX 1** desde el shaper del propio chip. AUX 2 queda
+  NC (reserva).
+- **4 CV de mezcla compartidos** (sierra/tri/pulso/seno): del DAC directo por
+  resistencia (0-2.5 V sobre ~50 kΩ = 0-50 µA de control lineal, el máximo
+  recomendado). Cada CV alimenta los 4 chips por resistencias 1 %: un 1 % de
+  despareje entre voces es amplitud, no tono.
+- **MIX OUT es salida de corriente** (500 µA máx recomendado): un op-amp en
+  transimpedancia por voz → **jack OUT**, normalizado hacia la entrada del
   VCF (el TN del jack de ENTRADA del módulo 5 hace el normal, convención §6).
 
 ## 6. El bloque digital
 
-- **2× AD5686RB en cadena soldada** (DCEN, comando 1000; verificado en
-  ad5686r_5685r_5684r.pdf p. 21-23). Asignación: chip 1 = pitch de las 4
-  voces; chip 2 = PWM compartido (un buffer, fanout a los 4 CEM3340) + mezcla
-  sierra/tri/cuadrada. **8 canales de 8: sin reserva** — un parámetro nuevo
-  pediría un tercer chip en la cadena (cero hilos nuevos, que es el punto
-  de §8 de architecture-poly).
-- **Grado B obligatorio** (referencia 2 ppm/°C típ, 5 máx; el A con 20 máx
-  revienta el presupuesto — `dac_local_budget.py` lo asevera).
+- **3× AD5686 en cadena soldada** (DCEN, comando 1000; verificado en
+  ad5686r_5685r_5684r.pdf p. 21-23): ch 1-4 pitch, ch 5 PWM compartido
+  (fanout a los 4, la entrada PWM es de alta impedancia — rango exacto a
+  verificar, §11.5), ch 6-9 mezcla, **ch 10-12 de reserva** (un parámetro
+  futuro cuesta cero hilos).
+- **La referencia clase ≤5 ppm/°C es obligatoria** — grado B si es la interna
+  del RB; ADR4525 si es dedicada. El grado A / 20 ppm/°C revienta el
+  presupuesto (`dac_local_budget.py` lo asevera).
 - **SDO del último chip → MISO**: en cadena, lo que entra por MOSI sale por
-  el final tras atravesar los dos chips — el firmware verifica la integridad
-  del enlace comparando lo enviado con lo que vuelve. El readback de registros
-  (comando 1001) existe además, pero el self-test básico es el passthrough.
-- **74HC14 alimentado a 3.3 V**: 4 de sus 6 inversores recortan la cuadrada de
-  cada voz → TUNE_OUT 1-4. Los dos sobrantes, con entrada a masa.
-- **VDD del DAC a 5 V, VLOGIC a 3.3 V** — la lección del umbral VIH del
-  módulo 2 aplica igual con el RP2350.
+  el final tras atravesar los tres chips — el firmware verifica la
+  integridad del enlace comparando lo enviado con lo que vuelve.
+- **74HC14 alimentado a 3.3 V**: el SQUARE OUT de cada SSI2130 es
+  open-collector con pullup a 3.3 V; el Schmitt limpia el flanco RC del
+  pullup antes del PIO → TUNE_OUT 1-4. Los dos inversores sobrantes, a masa.
 
 ## 7. Enlace serie y mazo digital (cierra #34)
 
@@ -119,42 +135,44 @@ suelo de 0.58 cents de `dac_local_budget.py`.
   en el extremo del cerebro.
 - El pinout de este conector es **el contrato del enlace** para los módulos
   5, 6 y 7: mismo conector, mismas posiciones; cada módulo usa las señales
-  que le tocan (los que no tienen TUNE_OUT dejan esos pines NC) y recibe su
-  propio CS.
+  que le tocan (sin TUNE_OUT → pines NC) y recibe su propio CS.
 - Al cerrar #34 se actualiza la fila `SERIE` de la tabla de convenciones de
   architecture-poly §4 con el conteo real.
 
 ## 8. Telemetría (patrón de instrumento, estrena aquí)
 
-- **Sensor de temperatura I²C** clase TMP1075/PCT2075 (direccionable ≥8
-  posiciones por straps; parte exacta en §11), **colocado en el racimo de los
-  CEM3340** — mide lo que la R_TEMPCO experimenta, que es la temperatura que
-  desafina.
-- **EEPROM I²C** clase 24AA02E48 (con ID único de fábrica): tipo de placa,
+- **Sensor de temperatura I²C** clase TMP1075/PCT2075 (direccionable ≥8 por
+  straps; parte exacta en §11), **colocado en el racimo de los SSI2130** —
+  la compensación en chip deja un residuo de 200 ppm/°C típ, y este sensor es
+  el que permite correlacionarlo con las correcciones del autoafinado.
+- **EEPROM I²C** clase 24AA02E48 (ID único de fábrica): tipo de placa,
   revisión, serial, y el blob de calibración de sus 4 voces — **la
-  calibración viaja con la placa**, no se queda huérfana en el cerebro.
-- **El lazo que compra mejoras**: el cerebro registra (temperatura, correcciones
-  del autoafinado) por voz y por pasada. Con eso se mide en cents/°C reales si
-  un cambio térmico (acople del tempco, ventilación, layout) funcionó.
-- **Test points etiquetados**: +12, −12, +5 local, 3.3 local, VREF (pin del
-  DAC), CV de pitch de cada voz (post-amp), salida de mezcla de cada voz,
-  GNDA, GNDD.
+  calibración viaja con la placa**.
+- **El lazo que compra mejoras**: el cerebro registra (temperatura,
+  correcciones del autoafinado) por voz y por pasada. Con eso se mide en
+  cents/°C reales si un cambio térmico o de layout funcionó — y es también la
+  red de seguridad del diseño trimless.
+- **Test points etiquetados**: +12, −12, +5 local, 3.3 local, VREF, CV de
+  pitch en el nodo de cada voz, MIX OUT de cada voz, GNDA, GNDD.
 
 ## 9. Alimentación y masas
 
-- **78L05 desde +12 V** para VDD del DAC (~2 mA) → **LDO 3.3 V** para VLOGIC,
-  74HC14, sensor y EEPROM (~5 mA). Carga de un solo riel — retorna entera por
-  masa — dentro de la holgura de `I_MASA_SAM17` (50 mA).
-- **GNDA/GNDD patrón del módulo 2**: el DAC con GND en GNDA (su salida se
-  refiere ahí; su mA son 0.02 cents); la lógica cruza dominios sin problema;
-  GNDD del mazo digital retorna al cerebro. Se unen solo en la estrella del
-  módulo 1.
+- **V+ de los SSI2130 es +5 V regulado (máx absoluto 5.25 V)** — el regulador
+  local de §8 de architecture-poly pasa de «lógica» a alimentar también los
+  osciladores: 4×3.75 mA + DAC ≈ 20 mA por el reg. de 5 V (78L05 sobra;
+  ~180 mW de disipación, TO-92 aguanta). V− va de −12 V directo (el chip
+  admite hasta −18 V), 4×2.9 mA. LDO 3.3 V para 74HC14, sensor y EEPROM.
+- **Consumo total del módulo: ~35 mA en +12 V y ~15 mA en −12 V** — contra
+  los ~120 mA que pedía la versión CEM3340+LM13700. Menos calor en el cajón =
+  menos deriva para todos. La tabla de §9 de architecture-poly se actualiza
+  al mergear.
+- **GNDA/GNDD patrón del módulo 2**: DAC y osciladores con GND en GNDA;
+  la lógica cruza dominios sin problema; GNDD del mazo digital retorna al
+  cerebro. Se unen solo en la estrella del módulo 1.
 - **Regla de layout con aserción** (`dac_local_budget.py`): DAC pegado a los
-  VCO, el retorno del módulo no cruza el camino DAC→VCO. Cota pesimista 0.08
-  cents; bien hecho, 0.008.
-- Consumo estimado del módulo: ~120 mA en +12 V (4× CEM3340 = 80, 6× LM13700
-  ≈ 16, op-amps ≈ 20, lógica ≈ 7), ~100 mA en −12 V. La tabla de §9 de
-  architecture-poly se actualiza al mergear (los LM13700 de mezcla no estaban).
+  osciladores, el retorno del módulo no cruza el camino DAC→VCO. Y las del
+  datasheet del SSI2130: 100 nF pegado a cada chip, pad térmico (EP) soldado
+  al plano, C0G en el nodo de tempo con guard ring.
 
 ## 10. Verificación
 
@@ -163,39 +181,44 @@ El patrón completo del repo, sin excepciones:
 - `kicad/build_schematic.py` y `build_pcb.py` escriben el s-expr y verifican
   con kicad-cli (mismo motivo que bus board y módulo 2).
 - **ERC 0, DRC 0**, `check_netlist.py` y `check_bom.py` cruzados.
-- `dac_local_budget.py` ya en verde; sus aserciones vigilan grado de
-  referencia y regla de layout.
-- **Procedimiento de calibración** en `notes/`: (1) trim de offset centra el
-  rango, (2) trim de escala a < ±2 % sobre 7 octavas con el afinador, (3) el
-  autoafinado hace el resto y `tuning.json` queda en la EEPROM.
-- Firmware (cuando toque): self-test del enlace por readback del DAC, y
-  registro temperatura↔correcciones desde el primer arranque.
+- `dac_local_budget.py` ya en verde; sus aserciones vigilan la referencia y
+  la regla de layout.
+- **Bring-up documentado en `notes/`**: (1) verificar span ≥7 octavas por voz
+  dentro del rango del DAC (la apuesta trimless, §11.2), (2) autoafinado
+  puebla `tuning.json`, (3) el blob queda en la EEPROM.
+- Firmware (cuando toque): self-test del enlace por passthrough de la cadena,
+  y registro temperatura↔correcciones desde el primer arranque.
 
 ## 11. Riesgos y lo NO confirmado
 
-1. **CEM3340 vs AS3340**: la reedición de OnChip y el clon de Alfa no son
-   idénticos (rango de CV de PWM, red de sync). Decidir por sourcing real y
-   leer el datasheet del que se compre ANTES de fijar valores.
-2. **Parte exacta del sensor** (TMP1075 vs PCT2075 vs LM75B) y de la EEPROM:
-   por disponibilidad; el contrato es «I²C direccionable ≥8» e «ID único».
-3. **La linealidad de la mezcla por OTA** (distorsión a niveles altos de
-   entrada) depende de la atenuación elegida; se fija con el datasheet del
-   LM13700 en la mano y se comprueba en el prototipo.
-4. **Zipper noise al mover la mezcla o el PWM** — ya listado en
-   architecture-poly §11; si se oye, se suaviza por software (rampas).
-5. **El DCEN con dos chips reales** sigue sin probar (architecture-poly §11.5);
-   ahora es bloqueante y se prueba en el bring-up de esta placa.
-6. **Diafonía del mazo digital** (SPI/I²C junto a TUNE_OUT) a comprobar en
+1. **El SSI2130 es de proveedor único** (Sound Semiconductor; distribución
+   limitada — Cabintech, Amplified Parts, ~$6). Comprar los 4+repuestos al
+   arrancar la implementación. Si desaparece del mercado, el plan B es el
+   respin CEM3340 de la versión anterior de este spec (en el historial git).
+2. **La apuesta trimless**: si un chip cae fuera del margen del 5 % de span,
+   el bodge es una resistencia (no un re-spin), pero hay que comprobarlo en
+   bring-up con los 4 chips reales.
+3. **La materialización de la VREF única** (ADR4525 + AD5686 pelado vs
+   interna del RB con buffer): se decide leyendo cuánta carga admite el pin
+   VREF del AD5686R. Contrato: una sola referencia ≤5 ppm/°C para todo.
+4. **Primera placa QFN/SMD del proyecto**: estrena flujo de ensamblaje de
+   fábrica. Riesgo de proceso, no de diseño — pero es la primera vez.
+5. **Rango exacto de la entrada PWM** del SSI2130 con el DAC directo: a fijar
+   con el datasheet en la fase de esquemático.
+6. **El carácter sonoro triangle-core** se aceptó por datasheet, no por
+   oído. Si al oírlo no convence, el historial git guarda la alternativa.
+7. **El DCEN con tres chips reales** sigue sin probar; bloqueante en bring-up.
+8. **Diafonía del mazo digital** (SPI/I²C junto a TUNE_OUT): comprobar en
    bring-up; si aparece, bajar reloj y/o intercalar el GNDD del conector.
-7. Nada de esto está medido en placa. Son datasheets y presupuestos.
+9. Nada de esto está medido en placa. Son datasheets y presupuestos.
 
 ## 12. Fuera de alcance
 
-- FM lineal, hard sync, ondas crudas al patch bay (descartados en §2 — no
-  volver a discutir sin dato nuevo).
-- Voltímetro de rieles por placa (los LED del bus board y los test points lo
-  cubren; reabrirlo solo si el bring-up lo pide).
+- Jacks de FM lineal, sync o TZFM — el chip los trae latentes; exponerlos es
+  un respin de panel futuro con dato de uso real, no de esta versión.
+- Ondas crudas al patch bay (descartado en §2 — no volver a discutir sin
+  dato nuevo).
+- Voltímetro de rieles por placa (LED del bus board + test points lo cubren).
 - El firmware del cerebro (RP2350) — esta placa define su contrato (enlace,
   telemetría, TUNE_OUT), no su código.
-- La PCB del panel y la mecánica de los jacks (van con el diseño del case,
-  módulo 8).
+- La PCB del panel y la mecánica de los jacks (van con el case, módulo 8).
