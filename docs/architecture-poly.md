@@ -47,13 +47,14 @@ Lo que hace:
 
 - **Asignación de voces.** Decide qué nota va a qué voz, con robo de voz cuando
   llegan más notas que voces. Es una decisión de software y por eso vive aquí.
-- **4 CV de tono**, 1 V/octava.
-- **4 CV de velocity**, para que cada nota tenga su propio ataque.
+- **El valor de cada CV** — tono a 1 V/octava, velocity, y los mandos de §7.
+  Ya no salen de aquí como voltaje: salen como **números por el enlace serie**
+  (§8), y el voltaje lo fabrica el DAC del módulo que lo consume.
 - **4 gates** independientes.
 - **Autoafinado** de los cuatro osciladores, midiendo las cuatro a la vez
   sobre pulsos lógicos que le llegan del módulo 3 (§5).
-- **La interfaz**: pantalla táctil de 7", que es lo que hace usable la
-  configuración de un poly.
+- **La interfaz**: pantalla pequeña con encoders — modelo y mandos sin
+  confirmar ([`architecture-compute.md`](architecture-compute.md) §9).
 
 ## 3. Diagrama de bloques
 
@@ -63,16 +64,15 @@ Lo que hace:
                    ▼
         ┌──────────────────────────────────┐
         │       MÓDULO 2 — EL CEREBRO      │
-        │  Raspberry Pi + táctil 7"        │
-        │  2x AD5686R (8 CV) encadenados   │
+        │  RP2350 (Rust bare-metal)        │
         │  asignación de voces + autoafinado│
-        └─┬────┬────┬────┬─────────┬───────┘
-   TONO 1-4│    │    │    │  GATE 1-4       │ escucha
-          ▼    ▼    ▼    ▼         ▼         ▲
-     ┌─────────────────────────────────┐     │
-     │  MÓDULO 3 — VCO x4              │     │
-     │  4x CEM3340 + 74HC14            │─────┘  4x pulso logico
-     │  un juego de mandos             │        (TUNE_OUT digital)
+        └───────┬─────────────┬────────────┘
+          SERIE │     GATE 1-4│              escucha
+           (§8) ▼             ▼ (al ADSR)      ▲
+     ┌─────────────────────────────────┐       │
+     │  MÓDULO 3 — VCO x4              │       │
+     │  DAC + 4x CEM3340 + 74HC14      │───────┘  4x pulso logico
+     │  un juego de mandos             │          (TUNE_OUT digital)
      └────┬────┬────┬────┬─────────────┘
           ▼    ▼    ▼    ▼
      ┌─────────────────────────────────┐
@@ -92,6 +92,9 @@ Lo que hace:
              AUDIO OUT
 ```
 
+El enlace serie (§8) llega igual a los módulos 5, 6 y 7 — el diagrama solo
+dibuja la cadena de audio para no enredarse.
+
 El mixer se mueve **al final**. En el diseño monofónico sumaba los tres VCO
 antes del filtro; aquí no puede, porque cada voz tiene que atravesar su propio
 filtro y su propio VCA antes de mezclarse con las demás. **Sumar antes sería
@@ -101,12 +104,13 @@ parafónico, no polifónico** — y es exactamente la diferencia entre los dos.
 
 | Señal | Rango | Cantidad | Notas |
 |-------|-------|----------|-------|
-| `CV_PITCH_n` | **0 – 7 V** | 4 | 1 V/oct, 7 octavas (C1–C8). Cambia respecto a los 3–10 V de la tesis: ver issue #18 |
-| `CV_VEL_n` | 0 – 7 V | 4 | Velocity por voz |
+| `CV_PITCH_n` | **0 – 7 V** | 4 | 1 V/oct, 7 octavas (C1–C8). Cambia respecto a los 3–10 V de la tesis: ver issue #18. **No cruza entre módulos**: nace en el DAC de la placa del VCO (§8) |
+| `CV_VEL_n` | 0 – 7 V | 4 | Velocity por voz. Nace en el DAC de la placa del VCA (§8) |
 | `GATE_n` | 0 / 10 V | 4 | Activo alto |
 | `TUNE_OUT_n` | **lógico 3.3 V** | 4 | **Nuevo**: onda del VCO ya recortada, para medir su frecuencia. Digital a propósito (§5) |
+| `SERIE` | lógico 3.3 V | 3–5 hilos | SPI del cerebro a los DAC/digipots de cada módulo (§8). Conteo exacto de hilos: depende del direccionamiento, issue #34 |
 | `+12V` / `-12V` | ±12 V | — | 650 mA por riel |
-| `+5V` | 5 V | — | Solo el DAC. **La pantalla NO cuelga de aquí** (§6) |
+| `+5V` | 5 V | — | Solo el módulo 2. Los módulos con DAC se hacen su lógica con regulador local desde +12 V (§8). **La pantalla NO cuelga de aquí** (§9) |
 | `GNDA` / `GNDD` | — | — | Masas partidas, se unen solo en la estrella del módulo 1 |
 
 ## 5. Los dos caminos de señal, que no se tocan
@@ -186,20 +190,25 @@ tarde con un afinador.
 
 Lo único que sigue sin absorberse es el **error de masa**: depende de lo que
 estén consumiendo los otros módulos en ese instante, así que cambia después de
-calibrar.
+calibrar. Y ese error se encogió al mudar el DAC a la placa del VCO (§8) — el
+CV de tono ya no cruza el bus, solo el plano local del módulo.
 
 | | cents |
 |---|---|
-| Masa del bus board | **1.21** |
-| Medida del autoafinado | 0.50 |
-| **Suelo del instrumento** | **1.71** |
+| Masa local del módulo del VCO (§8) | 0.08 |
+| Medida del autoafinado | **0.50** |
+| **Suelo del instrumento** | **0.58** |
+
+(Era 1.71 cuando el CV de tono cruzaba el bus: 1.21 de masa + 0.50 de medida.
+Ese 1.21 sigue vigente — pero para el CV *patcheado*, no para el pitch.)
 
 Y la deriva del VCO — que sin autoafinado no está acotada, porque el convertidor
 exponencial arrastra −0.33 %/°C y su compensador hay que ajustarlo — **deja de
 contar**.
 
-O sea: el suelo del instrumento pasa a ser el bus board. Que es justo lo que se
-arregló primero, antes de saber que iba a ser polifónico.
+O sea: el suelo del instrumento pasa a ser **la medida del autoafinado**, que
+es exactamente donde quieres tenerlo — porque la medida mejora con software y
+paciencia, y la masa solo con cobre.
 
 Una propiedad que sale gratis: el VCO suena siempre y el gate solo abre el VCA,
 así que **el autoafinado corre en silencio**.
@@ -337,7 +346,73 @@ azules y verdes se mueren y todo tiende a naranja. Si el código de color tiene
 que leerse, los LEDs van en la cara del panel — que es PCB de aluminio y sirve —
 o hacen falta ventanas de acrílico transparente.
 
-## 8. La alimentación aguanta, y con holgura
+## 8. Los DAC viven en los módulos, no en el cerebro
+
+La consecuencia de §7 llevada a su sitio. Si el DAC fabrica los voltajes de
+control, la pregunta es dónde vive — y la respuesta cómoda, «todos en el
+cerebro y un cable por CV», tiene un defecto estructural: **el mazo de cables
+crece con voces × parámetros.** Son ~15-20 CV hoy, más si crecen las voces, y
+cada módulo nuevo pide re-cablear el instrumento.
+
+La decisión: **cada módulo lleva los DAC — y digipots — de sus propios
+parámetros, y del cerebro sale un enlace serie que no crece nunca.** Por el
+cableado viajan números, no voltajes. Un módulo nuevo, o pasar de 4 a 8
+voces, suma **cero hilos**.
+
+### El premio que no se buscaba: baja el suelo de afinación
+
+El término dominante del presupuesto de masa existía porque el DAC y el VCO
+referenciaban masas distintas: el CV de tono nacía en el cerebro y cruzaba el
+bus para morir en el VCO. Con el DAC **en la misma placa** que los cuatro
+osciladores, ese viaje desaparece — y con él, el término entero.
+
+| Suelo del pitch | cents |
+|---|---|
+| DAC en el cerebro: masa del bus 1.21 + medida 0.50 | 1.71 |
+| **DAC en la placa del VCO: plano local 0.08 + medida 0.50** | **0.58** |
+
+Tres veces menos, y cambia quién manda: **el suelo pasa a ser la medida del
+autoafinado, no la masa.** Los números — con la cota pesimista de layout y
+sus aserciones — están en
+[`hardware/03-vco/dac_local_budget.py`](../hardware/03-vco/dac_local_budget.py),
+ejecutable.
+
+Y lo que NO mejora, dicho claro: **el CV patcheado entre módulos sigue viendo
+el bus.** Para el patch bay siguen mandando los 1.21 cents y todas las reglas
+de `ground_budget.py`. El bus board no pierde ni una regla — ahora protege al
+patch en vez de al pitch.
+
+### La condición: la referencia
+
+La VREF no puede venir por el bus — el error de masa se mudaría a ella
+entero. Cada placa usa la referencia interna de su DAC, y ahí **el grado
+importa**: el AD5686R grado B da 2 ppm/°C típico y 5 máximo; el grado A da 20
+máximo — 3.4 cents de deriva, no cabe. **El BOM del módulo 3 exige
+AD5686RB.** (Verificado en el datasheet de ADI; ojo también con la variante
+-EP, 13 ppm/°C, que ya engañó una vez a `tuning_budget.py`.)
+
+Dos propiedades hacen la condición barata:
+
+- **Una referencia sirve a las 4 voces** — el módulo 3 es una placa, no
+  cuatro (§1) — así que su deriva es *común*: desplaza el teclado entero, no
+  el acorde, y el autoafinado la reabsorbe en la siguiente pasada.
+- **Su tolerancia estática (±2.5 mV) la absorbe `tuning.json`**, como
+  cualquier error que no se mueve después de calibrar.
+
+### Lo práctico
+
+- **La lógica se alimenta local.** El conector SAM17 lleva ±12 V y masa, no
+  5 V. Cada módulo con DAC se hace su lógica con un **regulador local desde
+  +12 V**. Es carga de un solo riel — retorna entera por masa — pero son un
+  par de mA, dentro de la holgura de `I_MASA_SAM17`.
+- **El mismo enlace sirve a los digipots del ADSR** (AD5293, que es SPI): el
+  enlace serie no es «para los DAC», es el sistema nervioso de todos los
+  mandos de §7.
+- **El direccionamiento** — cadena SPI contra chip-select decodificado — se
+  decide al dibujar el módulo 3: issue #34, con los pros de cada uno ya
+  escritos.
+
+## 9. La alimentación aguanta, y con holgura
 
 Estimación para 4 voces completas, por riel:
 
@@ -359,7 +434,7 @@ el riel de +5 V está acotado a 300 mA por diseño (módulo 1 §16.12). Va alime
 desde la fuente USB del propio Pi, que es lo que hace el diseño oficial de
 Raspberry Pi de todas formas. Esa fuente sube de 2.5 A a **3 A**.
 
-## 9. Lo que esto le exige a los módulos que faltan
+## 10. Lo que esto le exige a los módulos que faltan
 
 Ninguno de los cuatro está dibujado, así que es el momento de imponerlo.
 
@@ -368,25 +443,34 @@ idénticos** con un solo juego de mandos. Y necesita algo que la tesis no tiene:
 una **salida `TUNE_OUT` DIGITAL por oscilador** — la onda recortada a nivel
 lógico con un 74HC14 en la propia placa, no la señal analógica. Sin eso el
 autoafinado exige patchear cables a mano y deja de ser automático, y meter audio
-por el bus lo ensuciaría (§5).
+por el bus lo ensuciaría (§5). Y lleva **sus propios DAC** (§8): un
+**AD5686RB** — grado B obligatorio, la referencia manda — para el tono de las
+cuatro voces y lo que pida §7 (PWM, mezcla de ondas), con regulador local de
+lógica desde +12 V. Es el primer módulo que cuelga del enlace serie, así que
+al dibujarlo se cierra el direccionamiento (issue #34). Números:
+[`dac_local_budget.py`](../hardware/03-vco/dac_local_budget.py).
 
 **Módulo 5 — VCF.** Cuatro filtros idénticos, corte y resonancia comunes, **por
-CV desde el DAC, no por potenciómetro** (§7). Y ojo con la resonancia: en
+CV desde el DAC — que vive en esta placa (§8) —, no por potenciómetro** (§7).
+Y ojo con la resonancia: en
 topología MS-20 el pote está EN el audio, así que ahí va un VCA, no un digipot. El
 apareamiento entre los cuatro importa: si no filtran igual, el acorde suena
 desparejo. Hay que decidir si se ajusta canal a canal con trimmers.
 
 **Módulo 6 — ADSR.** Cuatro envolventes, un juego de mandos, **cuatro gates
 independientes**. Es el único módulo donde el DAC no basta: los tiempos son una
-RC y hace falta **resistencia controlable** — OTA, JFET o digipot (§7). Es el que más cambia: en mono era un disparo, aquí son cuatro
-que corren a la vez y sin relación entre sí.
+RC y hace falta **resistencia controlable** — OTA, JFET o digipot (§7), que si
+es digipot cuelga del mismo enlace serie que los DAC (§8). Es el que más
+cambia: en mono era un disparo, aquí son cuatro que corren a la vez y sin
+relación entre sí.
 
-**Módulo 7 — VCA.** Cuatro, con la envolvente de su voz y su velocity.
+**Módulo 7 — VCA.** Cuatro, con la envolvente de su voz y su velocity — cuyo
+CV nace en el DAC de esta placa (§8).
 
 **Módulo 4 — Mixer.** Se mueve al final de la cadena (§3) y pasa de sumar tres
 osciladores a sumar cuatro voces ya filtradas.
 
-## 10. Lo que NO está confirmado
+## 11. Lo que NO está confirmado
 
 1. **El jitter de 5 µs** del sellado de tiempos del Pi es de manual, no medido
    en la placa real. Todo el cálculo de autoafinado es proporcional a él. Si
@@ -400,13 +484,18 @@ osciladores a sumar cuatro voces ya filtradas.
 4. **La asignación de voces con robo** tiene decisiones que se oyen (cuál robar,
    si hacer retrigger, legato) y todavía no están tomadas.
 5. **El AD5686R encadenado** está en su tabla de comandos (bit 1000, *daisy-chain
-   enable*) pero no se ha probado con dos chips reales.
+   enable*) pero no se ha probado con dos chips reales. Si el direccionamiento
+   del enlace serie (issue #34) sale por cadena, esta prueba pasa a ser
+   bloqueante.
 6. **Cuántos CV hacen falta en total** no está cerrado, porque depende de los
-   módulos 3-7 que no están dibujados. La estimación es 15-20, lo que serían
-   4-5 AD5686R encadenados.
+   módulos 3-7 que no están dibujados. La estimación es 15-20, repartidos por
+   módulo (§8): probablemente 1-2 chips por placa.
 7. **El zipper noise** de mover un parámetro con un DAC no está evaluado. A 16
    bits debería ser inaudible, pero en un barrido rápido de corte hay que
    comprobarlo y probablemente suavizar por software.
 8. **Qué parámetro cae en cada uno de los tres casos** de §7 se decide módulo a
    módulo al dibujarlos, no antes.
-6. Nada de esto está medido. Son cálculos y datasheets.
+9. **El direccionamiento del enlace serie** — cadena SPI contra chip-select
+   decodificado — está abierto en el issue #34 y se cierra al dibujar el
+   módulo 3.
+10. Nada de esto está medido. Son cálculos y datasheets.

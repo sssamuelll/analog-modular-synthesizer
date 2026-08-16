@@ -16,7 +16,7 @@ El instrumento entero vive en un **microcontrolador**. La computadora es
    │  Rust bare-metal, sin SO       │◄───────►│ la tuya, con TU DAW   │
    │                                │  MIDI   │ y TUS plugins         │
    │  · reparto de 4 voces          │   DIN   │                       │
-   │  · 8 CV por SPI (2x DAC)       │         │  · efectos, sampler   │
+   │  · CV en serie a cada módulo   │         │  · efectos, sampler   │
    │  · 4 gates                     │         │  · el VST compañero   │
    │  · autoafinado                 │         │  · el agente de IA    │
    │  · secuenciador, arpegiador    │         │                       │
@@ -49,9 +49,11 @@ sigue sonando** — porque nunca dependió de ella.
    la polifonía, en software.
 3. **Nota → voltaje.** No hay fórmula: **busca en una tabla, y hay una por
    voz**, porque cada VCO tiene su propia personalidad. Saca el código de 16
-   bits y lo manda por SPI al DAC.
-4. **El DAC da 0–2.5 V**, el amplificador lo lleva a **0–7 V** con ganancia 2.8,
-   y sale por el bus al VCO de esa voz.
+   bits y lo manda por el enlace serie al DAC — **que vive en la placa del
+   VCO**, no aquí (architecture-poly §8).
+4. **El DAC da 0–2.5 V**, el amplificador lo lleva a **0–7 V** con ganancia
+   2.8, y llega al VCO de esa voz **sin salir de la placa** — por eso el
+   suelo de afinación baja de 1.71 a 0.58 cents.
 5. **En paralelo sube el gate** — 10 V a la envolvente de esa voz.
 6. **VCO → su filtro → su VCA** (que abre según envolvente y velocity) → mixer
    con las otras tres.
@@ -156,9 +158,14 @@ que `speechtotext` no tiene.
 
 **Una: la del instrumento.**
 
-RP2350 · 2× AD5686R encadenados (8 CV: 4 de tono + 4 de velocity) · 4 gates ·
+RP2350 · enlace serie hacia los DAC y digipots de los módulos
+(architecture-poly §8; direccionamiento en el issue #34) · 4 gates ·
 4 entradas de afinado digitales · MIDI DIN in/out con optoacoplador · USB ·
 pantalla pequeña con encoders · las dos masas separadas
+
+Los DAC ya no van aquí: **viven en el módulo que los consume**, y esta placa
+manda números, no voltajes. Menos analógico en el cerebro = menos que rutear
+y menos que pueda ensuciarse.
 
 Consecuencia buena que no se buscaba: cambiar la cabecera de 40 pines del Pi, el
 LCD de 16×2 y los cuatro pulsadores por **un QFN pequeño** deshace el atasco de
