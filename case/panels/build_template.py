@@ -6,23 +6,36 @@ Corre desde la raiz del repo o desde case/panels: el import de
 clearance_budget y la escritura del .kicad_pcb se resuelven contra la
 ubicacion de este propio archivo (Path(__file__)), nunca contra el cwd.
 
-Alto de panel, inset de tornillo y diametro de taladro M3 NO se hardcodean
-aqui: salen de case/cad/params.scad via leer_params() de clearance_budget.py
-(unica fuente de verdad dimensional del proyecto). Solo --ancho sigue
-siendo argumento de linea de comandos, porque es lo unico que varia por
-modulo. Antes de dibujar nada se verifica que alto_panel - 2*inset_tornillo
-cuadre con sep_railes (spec §6): si params.scad se desincroniza, el script
-sale en rojo en vez de generar una plantilla que no atornilla contra los
-railes reales (Principio III de la constitucion: la comprobacion corre
-antes del paso destructivo).
+Alto de panel, inset de tornillo, diametro de taladro M3 y espesor de PCB
+NO se hardcodean aqui: salen de case/cad/params.scad via leer_params() de
+clearance_budget.py (unica fuente de verdad dimensional del proyecto).
+Solo --ancho sigue siendo argumento de linea de comandos, porque es lo
+unico que varia por modulo. Antes de dibujar nada corren dos guardas:
+
+  1. que alto_panel - 2*inset_tornillo cuadre con sep_railes (spec §6) --
+     si params.scad se desincroniza, no atornilla contra los railes reales;
+  2. que el --ancho pedido deje puente de material entre los dos taladros
+     M3 de una misma cara (separacion en X = ancho - 2*inset_tornillo,
+     minimo d_M3_paso + 2 mm de puente -- ese 2 mm es un juicio de diseno,
+     no un numero derivado de ninguna spec) -- sin esto, un panel angosto
+     (ej. 2HP Eurorack = 10.16 mm) genera dos agujeros superpuestos sin
+     avisar (fallo invisible hasta fabricacion, Principio V).
+
+Si cualquiera falla, el script sale en ROJO en vez de generar una plantilla
+rota (Principio III de la constitucion: la comprobacion corre antes del
+paso destructivo).
 
 Dibuja: contorno rectangular en Edge.Cuts (ancho x alto_panel); 4 taladros
 M3 no plateados (NPTH) en los centros de rail, a inset_tornillo mm de cada
-borde horizontal, sin kerf (el kerf es del corte laser del acrilico, no de
-un taladro de PCB: el diametro que da params.scad ya es el final); rotulo
-de plantilla en F.Silkscreen.
+borde EN LOS DOS EJES (X e Y: no solo arriba/abajo, tambien izquierda/
+derecha), sin kerf (el kerf es del corte laser del acrilico, no de un
+taladro de PCB: el diametro que da params.scad ya es el final); rotulo de
+plantilla en F.Silkscreen.
 
-Fabricacion: PCB de aluminio 1.6 mm, serigrafia blanca (spec §2).
+Fabricacion: PCB de aluminio, espesor fijado desde t_panel de params.scad
+via GetDesignSettings().SetBoardThickness() -- no es el default de
+pcbnew, se lee de la fuente de verdad (spec §2; JLCPCB estandar 1.6 mm);
+serigrafia blanca.
 
 Los modulos futuros COPIAN el .kicad_pcb generado y lo editan; el artefacto
 de verdad es este script, no el s-expr ("el artefacto es el script").
@@ -56,6 +69,25 @@ def verificar_coherencia(p: dict[str, float]) -> None:
         sys.exit(2)
 
 
+def verificar_ancho_minimo(p: dict[str, float], ancho: float) -> None:
+    """Fix review Task 7: inset_tornillo posiciona los taladros M3 en LOS
+    DOS ejes, no solo en Y -- con --ancho chico los dos agujeros de una
+    misma cara (izquierda y derecha) se acercan en X y pueden superponerse
+    sin que nada avise (fallo invisible hasta fabricacion, Principio V).
+    PUENTE_MIN=2.0 mm es un juicio de diseno (cuanto material minimo dejar
+    entre dos taladros), no un numero derivado de ninguna spec."""
+    PUENTE_MIN = 2.0
+    sep_centros = ancho - 2 * p["inset_tornillo"]
+    minimo = p["d_M3_paso"] + PUENTE_MIN
+    if sep_centros < minimo:
+        ancho_min = 2 * p["inset_tornillo"] + minimo
+        print(f"ROJO: ancho={ancho} deja los taladros M3 de una cara a "
+              f"{sep_centros:.2f} mm de separacion entre centros (minimo "
+              f"{minimo:.2f} mm = d_M3_paso + {PUENTE_MIN} mm de puente) "
+              f"-- ancho minimo viable {ancho_min:.2f} mm")
+        sys.exit(2)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="SAM17: genera panel-template.kicad_pcb")
@@ -65,11 +97,13 @@ def main() -> int:
 
     p = leer_params()
     verificar_coherencia(p)
+    verificar_ancho_minimo(p, ancho)
     alto = p["alto_panel"]
     inset = p["inset_tornillo"]
     d_taladro = p["d_M3_paso"]  # sin kerf: taladro de PCB, diametro final
 
     board = pcbnew.CreateEmptyBoard()
+    board.GetDesignSettings().SetBoardThickness(mm(p["t_panel"]))
     # contorno
     pts = [(0, 0), (ancho, 0), (ancho, alto), (0, alto)]
     for i in range(4):
