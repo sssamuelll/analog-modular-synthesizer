@@ -168,6 +168,12 @@ NET = f"{DIR}/sam17-power-v2.net"
 KICAD_FP = os.environ.get("KICAD_FOOTPRINTS",
                           r"C:\Program Files\KiCad\10.0\share\kicad\footprints")
 
+ISLA_DX = 203.20   # Task 6: desplaza la isla +12V/-12V (LED/J2) para hacer
+                   # sitio a U4-U7 + red SET/ILIM/ballast entre el pre-reg y
+                   # ella. Nada mas cambia de sitio.
+X_P12 = X_N12 = 317.50   # columna del nodo de salida real (OUTS+ballast) de
+                         # la etapa ultra -- arranque de la isla +12V/-12V.
+
 YP, YN = 66.04, 167.64          # rieles positivo / negativo
 YMID = 116.84                   # eje del puente y del conector de entrada
 YG_P, YG_N = 86.36, 147.32      # fila de simbolos GND (arriba / abajo)
@@ -258,13 +264,15 @@ PARTS = [
     ("RV3", "Device:R_Potentiometer_Trim",   226.06, 153.67,  0, "1k"),
     ("R8",  "Device:R",                      226.06, 143.51,  0, "1k"),
     ("D9",  "Diode:SMAJ15A",                 241.30, 171.45,  90, "SMAJ15A"),
-    # --- bus "+12V"/"-12V" heredado de v1 — LED indicador, isla electrica
-    # hasta que la Task 6 lo reconecte a la salida real del LT3045/LT3094 ---
-    ("R1",  "Device:R",                      271.78, 69.85,   0, "2k2"),
-    ("D3",  "Device:LED",                    271.78, 85.09,  90, "RED"),
-    ("R2",  "Device:R",                      271.78, 144.78,  0, "2k2"),
-    ("D4",  "Device:LED",                    271.78, 160.02, 90, "YEL"),
-    ("J2",  "Connector:Conn_01x04_Pin",      320.04, 116.84, 180, "BUS +12/G/G/-12"),
+    # --- bus "+12V"/"-12V" heredado de v1 — LED indicador. Task 6 lo
+    # reconecta a la salida real de U4-U7 (ver rail() de +12V/-12V ISLA mas
+    # abajo); se corre ISLA_DX a la derecha para hacer sitio a la etapa
+    # ultra entre el pre-reg y aqui. ---
+    ("R1",  "Device:R",                      271.78 + ISLA_DX, 69.85,   0, "2k2"),
+    ("D3",  "Device:LED",                    271.78 + ISLA_DX, 85.09,  90, "RED"),
+    ("R2",  "Device:R",                      271.78 + ISLA_DX, 144.78,  0, "2k2"),
+    ("D4",  "Device:LED",                    271.78 + ISLA_DX, 160.02, 90, "YEL"),
+    ("J2",  "Connector:Conn_01x04_Pin",      320.04 + ISLA_DX, 116.84, 180, "BUS +12/G/G/-12"),
     # --- riel +5V aux (design-notes.md §10.1): sin cambios v1 ---
     ("C9",  "Device:C",                      147.32, Y5_ROW,  0, "0.33uF"),
     ("U3",  "Regulator_Linear:LM7805_TO220",     XU, Y5,      0, "LM7805"),
@@ -338,14 +346,16 @@ POWER = [
     ("#G3",  "power:GND", 147.32, YG_P,     0),
     ("#G4",  "power:GND",     XU, YG_P,     0),
     ("#G5",  "power:GND", 213.36, YG_P,     0),
-    ("#G_R6", "power:GND", 226.06, 96.52,   0),
+    # #G_R6: BORRADO (Task 6 Step 4) -- el fondo del divisor de U1 (R6) se
+    # mueve de GND a GNDREF, ver LABELS mas abajo (spec §6.3).
     ("#G_D8", "power:GND", 241.30, 77.47,   0),
     ("#G_U1ONOFF", "power:GND", 201.93, 63.50, 0),
-    ("#G7",  "power:GND", 271.78,  95.25,   0),
+    ("#G7",  "power:GND", 271.78 + ISLA_DX,  95.25,   0),
     ("#G8",  "power:GND", 121.92, YG_N,   180),
     ("#G22", "power:GND", 134.62, YG_N,   180),
     ("#G9",  "power:GND", 147.32, YG_N,   180),
-    ("#G_R8", "power:GND", 226.06, 137.16, 180),
+    # #G_R8: BORRADO (Task 6 Step 4) -- el fondo del divisor de U2 (R8) se
+    # mueve de GND a GNDREF, ver LABELS mas abajo.
     ("#G_D9", "power:GND", 241.30, 179.07, 180),
     ("#G_U2ONOFF", "power:GND", 201.93, 154.94, 180),
     # U2 (LM2991T) saca su masa por DEBAJO del cuerpo (offset +7.62 en hoja,
@@ -356,23 +366,24 @@ POWER = [
     # esta tarea, se cayo al reorganizar el POWER list de v1 a v2).
     ("#G10",  "power:GND",     XU, YN + 12.7, 180),
     ("#G11", "power:GND", 213.36, YG_N,   180),
-    ("#G13", "power:GND", 271.78, 138.43, 180),
-    ("#G14", "power:GND", 302.26, 115.57, 270),
-    ("#P1",  "power:+12V", 254.00,  53.34,  0),
-    ("#N1",  "power:-12V", 254.00, 180.34, 180),
+    ("#G13", "power:GND", 271.78 + ISLA_DX, 138.43, 180),
+    ("#G14", "power:GND", 302.26 + ISLA_DX, 115.57, 270),
+    ("#P1",  "power:+12V", 254.00 + ISLA_DX,  53.34,  0),
+    ("#N1",  "power:-12V", 254.00 + ISLA_DX, 180.34, 180),
     ("#FLG1", "power:PWR_FLAG", 106.68,  53.34,   0),
     ("#FLG2", "power:PWR_FLAG", 106.68, 180.34, 180),
     ("#FLG3", "power:PWR_FLAG", 195.58, YG_P,     0),
-    # El bus "+12V"/"-12V" heredado queda ISLA electrica en esta tarea (sin
-    # wire hasta U1/U2 nuevos, ver docstring): #P1/#N1 son simbolos power
-    # pero su tipo de pin real es power_IN (asi son TODOS los simbolos
-    # power: en KiCad, incluido power:GND) -- sin un power_out real en la
-    # red (que en v1 era el OUT del regulador, ahora desconectado a
-    # proposito), ERC real marca "power_pin_not_driven" en #P1/#N1. Mismo
-    # arreglo que ya usa v1 para VRAW+/VRAW- (#FLG1/#FLG2): un PWR_FLAG
-    # explicito le dice al ERC "esta red se da por buena a proposito".
-    ("#FLG5", "power:PWR_FLAG", 271.78,  53.34,   0),
-    ("#FLG6", "power:PWR_FLAG", 271.78, 180.34, 180),
+    # Task 6: el bus "+12V"/"-12V" heredado deja de ser isla -- ahora cuelga
+    # de verdad de U4-U7 via ballast (ver rail() "+12V/-12V ISLA" en WIRES,
+    # que arranca en el nodo de salida real de la etapa ultra). #P1/#N1
+    # (power:+12V/-12V, tipo power_in como TODO simbolo power: de KiCad) y
+    # sus PWR_FLAG (#FLG5/#FLG6) se DEJAN tal cual -- TP3/TP4 (mas abajo,
+    # TESTPOINTS) tambien ponen su propio simbolo power:+12V/-12V en esta
+    # misma red por nombre, y siguen necesitando el PWR_FLAG igual que antes
+    # (ERC no razona "ya hay una resistencia de ballast aguas arriba", solo
+    # mira tipos de pin) -- quitar el flag rompe TP3/TP4, no hace falta.
+    ("#FLG5", "power:PWR_FLAG", 271.78 + ISLA_DX,  53.34,   0),
+    ("#FLG6", "power:PWR_FLAG", 271.78 + ISLA_DX, 180.34, 180),
     ("#G15", "power:GND", 147.32, YG_5,   0),
     ("#G16", "power:GND",     XU, YG_5,   0),
     ("#G17", "power:GND", 213.36, YG_5,   0),
@@ -397,6 +408,14 @@ LABELS = [
     # riel real basta, TP7/TP8 se conectan por wire directo (no por nombre a
     # distancia como TP1/TP2).
     ("+13V1", 203.20, YP), ("-12V9", 203.20, YN),
+    # GNDREF (Task 6, spec §6.3): masa de referencia analogica -- SET/ILIM de
+    # U4-U7 y el fondo de los divisores de U1/U2. Union con GND SOLO por
+    # JP1 (net tie). Varios LABELS "GNDREF" en puntos distintos de la hoja
+    # SIN wire fisico entre ellos: KiCad los funde en una sola red por
+    # nombre (mismo mecanismo que ya usan +13V1/VRAW+ "a distancia"), asi
+    # que no hace falta trazar un unico riel continuo por toda la hoja.
+    ("GNDREF", 226.06, 96.52),   # fondo de R6 (divisor U1) -- Step 4
+    ("GNDREF", 226.06, 137.16),  # fondo de R8 (divisor U2) -- Step 4
 ]
 
 TEXTS = [
@@ -412,9 +431,13 @@ TEXTS = [
     ("medida real de la mula (design-notes.md v2 §1.5, margen +0.02V).",     195.58, 102.87),
     ("U2: el divisor R7+RV3/R8 ES la carga minima de 500uA del LM2991 -",    195.58, 175.26),
     ("no subir esos valores (design-notes.md v2 §1.2/spec §3).",             195.58, 177.80),
-    ("Bus +12V/-12V heredado de v1 (LED, J2, TP3/TP4, crowbar): sigue como", 271.78, 41.91),
-    ("isla electrica propia hasta que Task 6 lo cuelgue del LT3045/LT3094.", 271.78, 44.45),
+    ("Bus +12V/-12V heredado de v1 (LED, J2, TP3/TP4, crowbar): reconectado", 271.78 + ISLA_DX, 41.91),
+    ("en Task 6 al ballast real de U4/U5 (+12V) y U6/U7 (-12V). Ya no es isla.", 271.78 + ISLA_DX, 44.45),
 ]
+
+# Cruces de no-conexion (Task 6: PG/PGFB/VIOC de U4-U7, flotantes a proposito
+# segun DS -- ver bloque "etapa ultra" mas abajo, que las llena).
+NO_CONNECTS: list = []
 
 
 def side_fields(ref: str, x: float, y: float) -> list:
@@ -427,8 +450,8 @@ for _r, _x, _y in [("C27", 147.32, 69.85), ("C17", 213.36, 69.85),
                    ("R5", 226.06, 69.85), ("R6", 226.06, 90.17),
                    ("C28", 147.32, 163.83), ("C18", 213.36, 163.83),
                    ("R7", 226.06, 163.83), ("R8", 226.06, 143.51),
-                   ("R1", 271.78, 69.85), ("D3", 271.78, 85.09),
-                   ("R2", 271.78, 144.78), ("D4", 271.78, 160.02),
+                   ("R1", 271.78 + ISLA_DX, 69.85), ("D3", 271.78 + ISLA_DX, 85.09),
+                   ("R2", 271.78 + ISLA_DX, 144.78), ("D4", 271.78 + ISLA_DX, 160.02),
                    ("C9", 147.32, Y5_ROW), ("C10", 213.36, Y5_ROW), ("C11", 238.76, Y5_ROW),
                    ("R3", X5_LED, Y5_ROW), ("D6", X5_LED, YD6)]:
     FIELDS += side_fields(_r, _x, _y)
@@ -450,8 +473,8 @@ FIELDS += [
     ("D12", "Reference",   XU,   32.77), ("D12", "Value",        XU,   29.21),
     ("U2",  "Reference", 180.34, 199.39), ("U2", "Value",     180.34, 203.20),
     ("D13", "Value",       XU,  205.74), ("D13", "Reference",    XU,  209.55),
-    ("J2",  "Value",    320.04, 106.68), ("J2",  "Reference", 320.04, 127.00),
-    ("#G14", "Value",   297.18, 113.03),
+    ("J2",  "Value",    320.04 + ISLA_DX, 106.68), ("J2",  "Reference", 320.04 + ISLA_DX, 127.00),
+    ("#G14", "Value",   297.18 + ISLA_DX, 113.03),
     ("D5",  "Reference",    XU,  92.71), ("D5",  "Value",        XU,  96.52),
     ("U3",  "Value",     190.50, 123.19), ("U3", "Reference",  190.50, 127.00),
     ("J6",  "Value",     X_J6A, 99.06), ("J6",  "Reference", X_J6A, 111.76),
@@ -465,6 +488,12 @@ ROT = {p[0]: p[4] for p in PARTS} | {p[0]: p[4] for p in POWER}
 def rail(y: float, xs: list[float], tag: str) -> list:
     """Riel horizontal partido en cada `xs`: todo corte es un punto de union."""
     return [(f"{tag}{i}", [[xs[i], y], [xs[i + 1], y]]) for i in range(len(xs) - 1)]
+
+
+def vrail(x: float, ys: list[float], tag: str) -> list:
+    """Riel VERTICAL partido en cada `ys` -- mismo criterio que rail() pero en
+    Y (Task 6: troncales de IN/SET/ballast de U4-U7, todas verticales)."""
+    return [(f"{tag}{i}", [[x, ys[i]], [x, ys[i + 1]]]) for i in range(len(ys) - 1)]
 
 
 WIRES: list = [
@@ -517,14 +546,15 @@ WIRES += rail(YN, [91.44, 106.68, 121.92, 134.62, 147.32, 160.02, 170.18], "VRAW
 # tap divisor | tap TVS
 WIRES += rail(YP, [190.50, 195.58, 203.20, 213.36, 226.06, 241.30], "+13V1 ")
 WIRES += rail(YN, [190.50, 195.58, 203.20, 213.36, 226.06, 241.30], "-12V9 ")
-# bus "+12V"/"-12V" heredado de v1 (isla electrica, ver docstring): rieles
-# cortos propios, SIN wire hasta U1/U2 nuevos. Cortes en el tap de #P1/#N1
-# (254.00, via "+12V sym"/"-12V sym" mas abajo) y en el tap del LED
+# bus "+12V"/"-12V" heredado de v1 (Task 6: YA NO es isla). Arranca en el
+# nodo real de salida de la etapa ultra (X_P12=317.50/X_N12=317.50, cortes
+# de la red vertical de ballast+OUTS mas abajo -- ahi es donde entra la
+# corriente real), sigue hasta el tap de #P1/#N1 (shiftado) y el LED
 # indicador -- R1.pin_arriba para el positivo (66.04, la LED va DESPUES
 # hacia GND), D4.pin_lejano para el negativo (167.64, la LED va ANTES desde
 # GND -- ver "R2 gnd"/"D4->riel" mas abajo, mismo patron que v1).
-WIRES += rail(YP, [254.00, 271.78, 292.10], "+12V ISLA ")
-WIRES += rail(YN, [254.00, 271.78, 288.29], "-12V ISLA ")
+WIRES += rail(YP, [X_P12, 254.00 + ISLA_DX, 271.78 + ISLA_DX, 292.10 + ISLA_DX], "+12V ISLA ")
+WIRES += rail(YN, [X_N12, 254.00 + ISLA_DX, 271.78 + ISLA_DX, 288.29 + ISLA_DX], "-12V ISLA ")
 WIRES += [
     # --- retornos a GND del bulk / entrada de los pre-reg ---
     ("C1 gnd",   [[121.92, 73.66], [121.92, YG_P]]),
@@ -555,6 +585,8 @@ WIRES += [
     ("R5->RV2 gap",     [[226.06, 73.66], [226.06, 76.20]]),
     ("RV2 wiper short", [[226.06, 76.20], [229.87, 76.20], [229.87, 80.01]]),
     ("RV2->R6 gap",     [[226.06, 83.82], [226.06, 86.36]]),
+    # Task 6 Step 4: el fondo de R6 va a GNDREF (LABEL, no power:GND -- ver
+    # LABELS), no a GND. Mismo punto que antes, cambia solo el nombre de red.
     ("R6->GND gap",     [[226.06, 93.98], [226.06, 96.52]]),
     # ADJ(U1) hasta el nodo medio del divisor (pin1/top de R6): jog por
     # y=53.34 (fuera de la fila de ADJ/ON-OFF, y=58.42) y x=232.41 (columna
@@ -570,6 +602,7 @@ WIRES += [
     ("R7->RV3 gap",     [[226.06, 160.02], [226.06, 157.48]]),
     ("RV3 wiper short", [[226.06, 157.48], [229.87, 157.48], [229.87, 153.67]]),
     ("RV3->R8 gap",     [[226.06, 149.86], [226.06, 147.32]]),
+    # Task 6 Step 4: idem R6, el fondo de R8 va a GNDREF (LABEL).
     ("R8->GND gap",     [[226.06, 139.70], [226.06, 137.16]]),
     # ADJ(U2): jog hacia y=133.35 (fuera de la fila de ON-OFF/ADJ, y=160.02,
     # y fuera del rango ocupado por el propio divisor 137.16-163.83) antes
@@ -580,22 +613,22 @@ WIRES += [
     # --- simbolos de riel y PWR_FLAG ---
     ("FLG1",     [[106.68, YP], [106.68, 53.34]]),
     ("FLG2",     [[106.68, YN], [106.68, 180.34]]),
-    ("+12V sym", [[254.00, YP], [254.00, 53.34]]),
-    ("-12V sym", [[254.00, YN], [254.00, 180.34]]),
-    # --- indicadores LED (bus +12V/-12V heredado, isla — ver docstring) ---
-    ("FLG5",     [[271.78, 66.04], [271.78, 53.34]]),
-    ("R1->D3",   [[271.78, 73.66], [271.78, 81.28]]),
-    ("D3 gnd",   [[271.78, 88.90], [271.78, 95.25]]),
-    ("R2 gnd",   [[271.78, 140.97], [271.78, 138.43]]),
-    ("R2->D4",   [[271.78, 148.59], [271.78, 156.21]]),
-    ("D4->riel", [[271.78, 163.83], [271.78, YN]]),
-    ("FLG6",     [[271.78, YN], [271.78, 180.34]]),
+    ("+12V sym", [[254.00 + ISLA_DX, YP], [254.00 + ISLA_DX, 53.34]]),
+    ("-12V sym", [[254.00 + ISLA_DX, YN], [254.00 + ISLA_DX, 180.34]]),
+    # --- indicadores LED (bus +12V/-12V heredado -- Task 6 ya no es isla) ---
+    ("FLG5",     [[271.78 + ISLA_DX, 66.04], [271.78 + ISLA_DX, 53.34]]),
+    ("R1->D3",   [[271.78 + ISLA_DX, 73.66], [271.78 + ISLA_DX, 81.28]]),
+    ("D3 gnd",   [[271.78 + ISLA_DX, 88.90], [271.78 + ISLA_DX, 95.25]]),
+    ("R2 gnd",   [[271.78 + ISLA_DX, 140.97], [271.78 + ISLA_DX, 138.43]]),
+    ("R2->D4",   [[271.78 + ISLA_DX, 148.59], [271.78 + ISLA_DX, 156.21]]),
+    ("D4->riel", [[271.78 + ISLA_DX, 163.83], [271.78 + ISLA_DX, YN]]),
+    ("FLG6",     [[271.78 + ISLA_DX, YN], [271.78 + ISLA_DX, 180.34]]),
     # --- GND del conector de salida J2 (bus heredado) ---
-    ("J2 gnd a", [[314.96, 114.30], [306.07, 114.30], [306.07, 115.57]]),
-    ("J2 gnd b", [[306.07, 115.57], [306.07, 116.84], [314.96, 116.84]]),
-    ("J2 gnd c", [[306.07, 115.57], [302.26, 115.57]]),
-    ("+12V->J2", [[292.10, YP], [292.10, 111.76], [314.96, 111.76]]),
-    ("-12V->J2", [[288.29, YN], [288.29, 119.38], [314.96, 119.38]]),
+    ("J2 gnd a", [[314.96 + ISLA_DX, 114.30], [306.07 + ISLA_DX, 114.30], [306.07 + ISLA_DX, 115.57]]),
+    ("J2 gnd b", [[306.07 + ISLA_DX, 115.57], [306.07 + ISLA_DX, 116.84], [314.96 + ISLA_DX, 116.84]]),
+    ("J2 gnd c", [[306.07 + ISLA_DX, 115.57], [302.26 + ISLA_DX, 115.57]]),
+    ("+12V->J2", [[292.10 + ISLA_DX, YP], [292.10 + ISLA_DX, 111.76], [314.96 + ISLA_DX, 111.76]]),
+    ("-12V->J2", [[288.29 + ISLA_DX, YN], [288.29 + ISLA_DX, 119.38], [314.96 + ISLA_DX, 119.38]]),
     # --- riel +5V: sin cambios v1 ---
     ("VRAW+ ->5V", [[106.68, YP], [106.68, Y5], [147.32, Y5]]),
     ("C9->VI",     [[147.32, Y5], [172.72, Y5]]),
@@ -714,6 +747,286 @@ FIELDS += [
 ]
 
 
+# ============================================================================
+# Task 6 -- etapa ultra: LT3045 x2 (U4/U5, riel +12.000V) + LT3094 x2 (U6/U7,
+# riel -12.000V) en paralelo, con red SET compartida por riel, ILIM por chip
+# (Kelvin al GND propio de cada chip, design-notes.md v2 §1.3/§1.4), ballast
+# de 20 mOhm por chip, OUTS al nodo real de salida, y la isla de masa de
+# referencia GNDREF (SET + fondo de los divisores de U1/U2) unida a GND por
+# el UNICO puente JP1.
+#
+# Simbolos: Regulator_Linear:LT3045xDD / LT3094xDD, de la libreria ESTANDAR
+# de KiCad (Regulator_Linear.kicad_sym) -- NO simbolos locales. Pinera
+# verificada leyendo el .kicad_sym instalado (no de memoria) contra las
+# tablas de §1.3/§1.4: coincide pin a pin en los dos chips, incluidos el
+# EP (pin 11 del LT3045, apilado en la MISMA coordenada que el pin 8/GND --
+# conecta solo, sin wire aparte, por ser el mismo simbolo) y el EP del
+# LT3094 (pin 13, apilado con el pin 1/IN -- misma logica). La asimetria
+# real EP(LT3045)=GND / EP(LT3094)=IN que pide el brief queda resuelta por
+# la GEOMETRIA del propio simbolo estandar, no hace falta forzarla a mano.
+#
+# Geometria de pines (offset en HOJA respecto al ancla, sin rotar -- OJO: el
+# eje Y del simbolo en la libreria crece hacia ARRIBA, pero en la hoja crece
+# hacia ABAJO, asi que el offset en hoja es (dx_local, -dy_local); verificado
+# contra el patron ya usado en LM2941CT/LM2991T, docstring de
+# setup_local_symbols, "GND abajo" = dy_local negativo -> offset hoja
+# positivo):
+#   LT3045xDD (U4/U5): IN(dx-10.16,dy-2.54) EN/UV(dx-10.16,dy+0)
+#     ILIM(dx-10.16,dy+2.54) SET(dx-10.16,dy+5.08) GND/EP(dx0,dy+10.16)
+#     OUTS(dx+10.16,dy+0) OUT(dx+10.16,dy-2.54) PG(dx+10.16,dy+5.08)
+#     PGFB(dx+10.16,dy+2.54)
+#   LT3094xDD (U6/U7): IN/EP(dx-10.16,dy-5.08) EN/UV(dx-10.16,dy-2.54)
+#     PG(dx-10.16,dy+0) PGFB(dx+10.16,dy+0) ILIM(dx+10.16,dy+2.54)
+#     VIOC(dx-10.16,dy+2.54) SET(dx-10.16,dy+5.08) GND(dx0,dy+10.16)
+#     OUTS(dx+10.16,dy-2.54) OUT(dx+10.16,dy-5.08)
+# (ILIM cambia de lado entre los dos chips -- real, no error de transcripcion:
+# confirmado leyendo el .kicad_sym, no supuesto por simetria.)
+#
+# PG y PGFB: NC en los 4 chips. PG porque el DS pide flotarlo si no se usa
+# (§1.3/§1.4, "float the PG pin"). PGFB (pin de threshold del comparador de
+# PG) NO tiene componente en el bom.csv ni cita del DS en design-notes.md
+# para esta puerta -- dejarlo NC (en vez de inventar un tie a OUT sin
+# respaldo) es la lectura conservadora: PG ya esta sin monitorear, asi que
+# el threshold que fija PGFB no tiene efecto observable, y no maquillar una
+# conexion "inferida" que ningun documento pide es mas honesto que
+# inventarla. VIOC (solo LT3094): NC, "if unused, float the VIOC pin" (DS,
+# §1.4).
+XU45, XU67 = 274.32, 274.32          # ancla en X de U4/U5 y U6/U7 (misma
+                                      # columna, alineado visualmente)
+YU4, YU5 = 60.96, 86.36              # ancla en Y de U4/U5 (25.4mm aparte)
+YU6, YU7 = 161.29, 186.69            # ancla en Y de U6/U7
+XPL, XPR = 274.32 - 10.16, 274.32 + 10.16   # columnas de pines izq/der (264.16/284.48)
+
+X_C1922 = 248.92    # caps de entrada (C19-C22), pegadas al pin IN de cada chip
+X_C2326 = 299.72    # caps de salida (C23-C26), pegadas al pin OUT (pre-ballast)
+X_IN_TRUNK = 257.81  # troncal vertical que une IN+EN/UV de la pareja + feed
+X_SET_TRUNK = 261.62 # troncal vertical que une SET de la pareja -> R_SET/C_SET
+X_RILIM_L = 252.73   # columna de R11/R12 (ILIM a la IZQUIERDA en el LT3045)
+X_RILIM_R = 294.64   # columna de R13/R14 (ILIM a la DERECHA en el LT3094)
+X_RCSET = 245.11     # columna de R9+C15 / R10+C16 (SET->GNDREF)
+X_D = 287.02          # ancla de D10/D11 (puente IN_TRUNK <-> nodo de salida).
+                       # OJO: tiene que caer en la rejilla de 1.27mm -- el
+                       # punto medio geometrico entre X_IN_TRUNK y X_P12/X_N12
+                       # (287.655) NO cae, y el MCP lo redondeaba en silencio
+                       # al colocar el componente, dejando las wires (que
+                       # usan X_D-3.81/X_D+3.81, calculadas contra el valor
+                       # sin redondear) apuntando 0.63mm a un lado del pin
+                       # real -- "pines sin extremo de cable exacto" real,
+                       # cazado por el propio assert de main(), no un bug
+                       # cosmetico. 287.02 = 226 x 1.27, en rejilla.
+YD_P, YD_N = 76.20, 176.53   # fila de D10 / D11 (hueco entre cada pareja)
+
+PARTS += [
+    # --- pareja positiva U4/U5 (LT3045xDD, riel +12.000V) ---
+    ("U4", "Regulator_Linear:LT3045xDD", XU45, YU4, 0, "LT3045EDD#TRPBF"),
+    ("U5", "Regulator_Linear:LT3045xDD", XU45, YU5, 0, "LT3045EDD#TRPBF"),
+    ("C19", "Device:C", X_C1922, YU4 + 1.27, 0, "10uF"),
+    ("C20", "Device:C", X_C1922, YU5 + 1.27, 0, "10uF"),
+    ("C23", "Device:C", X_C2326, YU4 + 1.27, 0, "10uF"),
+    ("C24", "Device:C", X_C2326, YU5 + 1.27, 0, "10uF"),
+    ("R11", "Device:R", X_RILIM_L, YU4 + 6.35, 0, "374"),
+    ("R12", "Device:R", X_RILIM_L, YU5 + 6.35, 0, "374"),
+    ("R15", "Device:R", X_P12, YU4 + 1.27, 0, "20mOhm"),
+    ("R16", "Device:R", X_P12, YU5 + 1.27, 0, "20mOhm"),
+    ("R9",  "Device:R", X_RCSET, 82.55, 0, "120k"),
+    ("C15", "Device:C", X_RCSET, 92.71, 0, "22uF"),
+    ("D10", "Diode:SS14", X_D, YD_P, 0, "SS14"),
+    # --- pareja negativa U6/U7 (LT3094xDD, riel -12.000V) ---
+    ("U6", "Regulator_Linear:LT3094xDD", XU67, YU6, 0, "LT3094EDD#PBF"),
+    ("U7", "Regulator_Linear:LT3094xDD", XU67, YU7, 0, "LT3094EDD#PBF"),
+    ("C21", "Device:C", X_C1922, YU6 - 1.27, 0, "10uF"),
+    ("C22", "Device:C", X_C1922, YU7 - 1.27, 0, "10uF"),
+    ("C25", "Device:C", X_C2326, YU6 - 1.27, 0, "10uF"),
+    ("C26", "Device:C", X_C2326, YU7 - 1.27, 0, "10uF"),
+    ("R13", "Device:R", X_RILIM_R, YU6 + 6.35, 0, "9.31k"),
+    ("R14", "Device:R", X_RILIM_R, YU7 + 6.35, 0, "9.31k"),
+    ("R17", "Device:R", X_N12, YU6 - 1.27, 0, "20mOhm"),
+    ("R18", "Device:R", X_N12, YU7 - 1.27, 0, "20mOhm"),
+    ("R10", "Device:R", X_RCSET, 182.88, 0, "120k"),
+    ("C16", "Device:C", X_RCSET, 193.04, 0, "22uF"),
+    ("D11", "Diode:SS14", X_D, YD_N, 180, "SS14"),
+    # --- GNDREF <-> GND: unico puente ---
+    ("JP1", "Device:NetTie_2", 350.52, YMID, 0, "GNDREF-GND"),
+]
+
+FOOTPRINT.update({
+    "U4": "Package_DFN_QFN:DFN-10-1EP_3x3mm_P0.5mm_EP1.65x2.38mm",
+    "U5": "Package_DFN_QFN:DFN-10-1EP_3x3mm_P0.5mm_EP1.65x2.38mm",
+    "U6": "Package_DFN_QFN:DFN-12-1EP_3x3mm_P0.45mm_EP1.65x2.38mm_ThermalVias",
+    "U7": "Package_DFN_QFN:DFN-12-1EP_3x3mm_P0.45mm_EP1.65x2.38mm_ThermalVias",
+    "R9": "Resistor_SMD:R_0805_2012Metric", "R10": "Resistor_SMD:R_0805_2012Metric",
+    "R11": "Resistor_SMD:R_0603_1608Metric", "R12": "Resistor_SMD:R_0603_1608Metric",
+    "R13": "Resistor_SMD:R_0603_1608Metric", "R14": "Resistor_SMD:R_0603_1608Metric",
+    "R15": "Resistor_SMD:R_1206_3216Metric", "R16": "Resistor_SMD:R_1206_3216Metric",
+    "R17": "Resistor_SMD:R_1206_3216Metric", "R18": "Resistor_SMD:R_1206_3216Metric",
+    "C15": "Capacitor_SMD:C_1210_3225Metric", "C16": "Capacitor_SMD:C_1210_3225Metric",
+})
+FOOTPRINT.update(dict.fromkeys(
+    ("C19", "C20", "C21", "C22", "C23", "C24", "C25", "C26"),
+    "Capacitor_SMD:C_1206_3216Metric"))
+FOOTPRINT.update({"D10": "Diode_SMD:D_SMA", "D11": "Diode_SMD:D_SMA",
+                  "JP1": "NetTie:NetTie-2_SMD_Pad0.5mm"})
+
+POWER += [
+    # GND propio de cada chip -- Kelvin real: R_ILIM llega DIRECTO a este
+    # mismo punto (ver WIRES), no a un riel de GND compartido y lejano.
+    ("#G_U4", "power:GND", XU45, YU4 + 12.70, 0),
+    ("#G_U5", "power:GND", XU45, YU5 + 12.70, 0),
+    ("#G_U6", "power:GND", XU67, YU6 + 12.70, 0),
+    ("#G_U7", "power:GND", XU67, YU7 + 12.70, 0),
+    ("#G_C1922", "power:GND", X_C1922, 99.06, 0),
+    ("#G_C2122", "power:GND", X_C1922, 196.85, 0),
+    ("#G_C2326", "power:GND", X_C2326, 99.06, 0),
+    ("#G_C2526", "power:GND", X_C2326, 196.85, 0),
+    ("#G_JP1", "power:GND", 356.87, YMID, 0),
+]
+
+WIRES += [
+    # ===================== pareja positiva (U4/U5) =====================
+    # IN+EN/UV: jumper local dentro de cada chip (mismo X, EN/UV 2.54mm mas
+    # abajo que IN) -- ver docstring, "atar a IN" (§1.3).
+    ("U4 en tie", [[XPL, YU4 - 2.54], [XPL, YU4]]),
+    ("U5 en tie", [[XPL, YU5 - 2.54], [XPL, YU5]]),
+    # troncal IN: feed desde +13V1 (fin del riel existente en x=241.30) +
+    # tap de D10 + IN de U4/U5, todo en una columna vertical propia (evita
+    # pasar por ILIM/SET, que viven en la MISMA X que IN/EN-UV pero mas
+    # abajo -- columna separada, sin pass-through sobre pines ajenos).
+    ("+13V1 feed", [[241.30, YP], [X_IN_TRUNK, YP]]),
+    ("U4 IN tap", [[XPL, YU4 - 2.54], [X_IN_TRUNK, YU4 - 2.54]]),
+    ("U5 IN tap", [[XPL, YU5 - 2.54], [X_IN_TRUNK, YU5 - 2.54]]),
+] + vrail(X_IN_TRUNK, [YU4 - 2.54, YP, YD_P, YU5 - 2.54], "U45 IN trunk ") + [
+    # C19/C20: entrada, pegadas al pin IN de cada chip; retorno a GND propio.
+    ("C19 tap", [[X_C1922, YU4 - 2.54], [XPL, YU4 - 2.54]]),
+    ("C20 tap", [[X_C1922, YU5 - 2.54], [XPL, YU5 - 2.54]]),
+] + vrail(X_C1922, [YP, YU5 + 5.08, 99.06], "C1920 gnd ") + [
+    # ILIM(U4/U5) -> R11/R12 -> GND propio del chip (Kelvin: el jog llega
+    # exacto al mismo punto donde nace el stub de GND de ese chip).
+    ("R11 ilim", [[XPL, YU4 + 2.54], [X_RILIM_L, YU4 + 2.54]]),
+    ("R11 gnd",  [[X_RILIM_L, YU4 + 10.16], [XU45, YU4 + 10.16]]),
+    ("R12 ilim", [[XPL, YU5 + 2.54], [X_RILIM_L, YU5 + 2.54]]),
+    ("R12 gnd",  [[X_RILIM_L, YU5 + 10.16], [XU45, YU5 + 10.16]]),
+    ("U4 gnd stub", [[XU45, YU4 + 10.16], [XU45, YU4 + 12.70]]),
+    ("U5 gnd stub", [[XU45, YU5 + 10.16], [XU45, YU5 + 12.70]]),
+    # SET(U4/U5) unidos entre si -> R9(120k)+C15(22uF) -> GNDREF (spec
+    # §1.3: "tie all SET pins together").
+    ("U4 SET tap", [[XPL, YU4 + 5.08], [X_SET_TRUNK, YU4 + 5.08]]),
+    ("U5 SET tap", [[XPL, YU5 + 5.08], [X_SET_TRUNK, YU5 + 5.08]]),
+] + vrail(X_SET_TRUNK, [YU4 + 5.08, 78.74, YU5 + 5.08], "U45 SET trunk ") + [
+    ("R9 tap",     [[X_SET_TRUNK, 78.74], [X_RCSET, 78.74]]),
+    ("R9->C15 gap", [[X_RCSET, 86.36], [X_RCSET, 88.90]]),
+    ("C15 gndref", [[X_RCSET, 96.52], [X_RCSET, 99.06]]),
+    # OUTS(U4/U5) y OUT(U4/U5)->ballast(R15/R16), todos al nodo +12V real.
+    # C23/C24 (salida, pre-ballast) cuelgan del mismo tap que OUT.
+] + rail(YU4 - 2.54, [XPR, X_C2326, X_P12], "U4 out ") \
+  + rail(YU5 - 2.54, [XPR, X_C2326, X_P12], "U5 out ") \
+  + vrail(X_C2326, [YP, YU5 + 5.08, 99.06], "C2324 gnd ") + [
+    ("U4 outs", [[XPR, YU4], [X_P12, YU4]]),
+    ("U5 outs", [[XPR, YU5], [X_P12, YU5]]),
+] + vrail(X_P12, [YU4, YP, YD_P, YU5, YU5 + 5.08], "12V node ") + [
+    # D10: K(izq, sin rotar)->troncal IN(+13V1), A(der)->nodo +12V real
+    # (anodo en OUT/+12V, catodo en IN/+13V1 -- §1.3, orientacion inferida).
+    ("D10 k", [[X_IN_TRUNK, YD_P], [X_D - 3.81, YD_P]]),
+    ("D10 a", [[X_D + 3.81, YD_P], [X_P12, YD_P]]),
+
+    # ===================== pareja negativa (U6/U7) =====================
+    ("U6 en tie", [[XPL, YU6 - 5.08], [XPL, YU6 - 2.54]]),
+    ("U7 en tie", [[XPL, YU7 - 5.08], [XPL, YU7 - 2.54]]),
+    ("-12V9 feed", [[241.30, YN], [X_IN_TRUNK, YN]]),
+    ("U6 IN tap", [[XPL, YU6 - 5.08], [X_IN_TRUNK, YU6 - 5.08]]),
+    ("U7 IN tap", [[XPL, YU7 - 5.08], [X_IN_TRUNK, YU7 - 5.08]]),
+] + vrail(X_IN_TRUNK, [YU6 - 5.08, YN, YD_N, YU7 - 5.08], "U67 IN trunk ") + [
+    ("C21 tap", [[X_C1922, YU6 - 5.08], [XPL, YU6 - 5.08]]),
+    ("C22 tap", [[X_C1922, YU7 - 5.08], [XPL, YU7 - 5.08]]),
+] + vrail(X_C1922, [YU6 + 2.54, YU7 + 2.54, 196.85], "C2122 gnd ") + [
+    # ILIM(U6/U7) esta del lado DERECHO (asimetria real LT3094, ver
+    # docstring) -> R13/R14 -> GND propio, columna X_RILIM_R.
+    ("R13 ilim", [[XPR, YU6 + 2.54], [X_RILIM_R, YU6 + 2.54]]),
+    ("R13 gnd",  [[X_RILIM_R, YU6 + 10.16], [XU67, YU6 + 10.16]]),
+    ("R14 ilim", [[XPR, YU7 + 2.54], [X_RILIM_R, YU7 + 2.54]]),
+    ("R14 gnd",  [[X_RILIM_R, YU7 + 10.16], [XU67, YU7 + 10.16]]),
+    ("U6 gnd stub", [[XU67, YU6 + 10.16], [XU67, YU6 + 12.70]]),
+    ("U7 gnd stub", [[XU67, YU7 + 10.16], [XU67, YU7 + 12.70]]),
+    ("U6 SET tap", [[XPL, YU6 + 5.08], [X_SET_TRUNK, YU6 + 5.08]]),
+    ("U7 SET tap", [[XPL, YU7 + 5.08], [X_SET_TRUNK, YU7 + 5.08]]),
+] + vrail(X_SET_TRUNK, [YU6 + 5.08, 179.07, YU7 + 5.08], "U67 SET trunk ") + [
+    ("R10 tap",     [[X_SET_TRUNK, 179.07], [X_RCSET, 179.07]]),
+    ("R10->C16 gap", [[X_RCSET, 186.69], [X_RCSET, 189.23]]),
+    ("C16 gndref", [[X_RCSET, 196.85], [X_RCSET, 199.39]]),
+] + rail(YU6 - 5.08, [XPR, X_C2326, X_N12], "U6 out ") \
+  + rail(YU7 - 5.08, [XPR, X_C2326, X_N12], "U7 out ") \
+  + vrail(X_C2326, [YU6 + 2.54, YU7 + 2.54, 196.85], "C2526 gnd ") + [
+    ("U6 outs", [[XPR, YU6 - 2.54], [X_N12, YU6 - 2.54]]),
+    ("U7 outs", [[XPR, YU7 - 2.54], [X_N12, YU7 - 2.54]]),
+] + vrail(X_N12, [YU6 - 2.54, YU6 + 2.54, YN, YD_N, YU7 - 2.54, YU7 + 2.54], "-12V node ") + [
+    # D11: espejo negativo de D10 -- rotado 180, mismo patron que D13
+    # espeja a D12 (§1.4: gap real, inferencia por analogia con D10/D13).
+    # A(izq tras rotar)->troncal IN(-12V9), K(der tras rotar)->nodo -12V.
+    ("D11 a", [[X_IN_TRUNK, YD_N], [X_D - 3.81, YD_N]]),
+    ("D11 k", [[X_D + 3.81, YD_N], [X_N12, YD_N]]),
+
+    # ===================== isla de referencia GNDREF <-> GND =====================
+    ("JP1 gndref", [[350.52 - 2.54, YMID], [344.17, YMID]]),
+    ("JP1 gnd",    [[350.52 + 2.54, YMID], [356.87, YMID]]),
+]
+
+LABELS += [
+    ("GNDREF", X_RCSET, 99.06),    # C15 (SET positivo) -> GNDREF
+    ("GNDREF", X_RCSET, 199.39),   # C16 (SET negativo) -> GNDREF
+    ("GNDREF", 344.17, YMID),      # JP1, lado GNDREF
+]
+
+for _r, _x, _y in [("R9", X_RCSET, 82.55), ("C15", X_RCSET, 92.71),
+                   ("R10", X_RCSET, 182.88), ("C16", X_RCSET, 193.04),
+                   ("R11", X_RILIM_L, YU4 + 6.35), ("R12", X_RILIM_L, YU5 + 6.35),
+                   ("R13", X_RILIM_R, YU6 + 6.35), ("R14", X_RILIM_R, YU7 + 6.35),
+                   ("R15", X_P12, YU4 + 1.27), ("R16", X_P12, YU5 + 1.27),
+                   ("R17", X_N12, YU6 - 1.27), ("R18", X_N12, YU7 - 1.27),
+                   ("C19", X_C1922, YU4 + 1.27), ("C20", X_C1922, YU5 + 1.27),
+                   ("C21", X_C1922, YU6 - 1.27), ("C22", X_C1922, YU7 - 1.27),
+                   ("C23", X_C2326, YU4 + 1.27), ("C24", X_C2326, YU5 + 1.27),
+                   ("C25", X_C2326, YU6 - 1.27), ("C26", X_C2326, YU7 - 1.27)]:
+    FIELDS += side_fields(_r, _x, _y)
+FIELDS += [
+    ("U4", "Reference", 266.70, 52.07), ("U4", "Value", 266.70, 54.61),
+    ("U5", "Reference", 266.70, 77.47), ("U5", "Value", 266.70, 80.01),
+    ("U6", "Reference", 266.70, 149.86), ("U6", "Value", 266.70, 152.40),
+    ("U7", "Reference", 266.70, 175.26), ("U7", "Value", 266.70, 177.80),
+    ("D10", "Reference", X_D + 5.08, YD_P - 3.81), ("D10", "Value", X_D + 5.08, YD_P),
+    ("D11", "Reference", X_D + 5.08, YD_N - 3.81), ("D11", "Value", X_D + 5.08, YD_N),
+    ("JP1", "Reference", 350.52, YMID - 6.35), ("JP1", "Value", 350.52, YMID + 6.35),
+]
+
+# PG/PGFB: NC en los 4 chips (ver comentario grande arriba). VIOC: NC, solo
+# LT3094 (U6/U7 no tienen VIOC).
+NO_CONNECTS += [
+    (XPR, YU4 + 5.08), (XPR, YU4 + 2.54),   # U4 PG, PGFB
+    (XPR, YU5 + 5.08), (XPR, YU5 + 2.54),   # U5 PG, PGFB
+    (XPL, YU6), (XPR, YU6), (XPL, YU6 + 2.54),   # U6 PG, PGFB, VIOC
+    (XPL, YU7), (XPR, YU7), (XPL, YU7 + 2.54),   # U7 PG, PGFB, VIOC
+]
+
+TEXTS += [
+    ("GNDREF: isla de referencia -- SET, OUTS y divisores; unico puente JP1.",
+     322.58, 100.33),
+    ("0.8 uVrms es dato de datasheet con el layout de la nota de aplicacion:",
+     322.58, 102.87),
+    ("no se presume hasta medir con el LNA (spec S11.7).", 322.58, 105.41),
+    ("OUTS de U4/U5 y U6/U7 van al nodo +12V/-12V real (no a GNDREF, pese",
+     322.58, 107.95),
+    ("a la nota de arriba): el Kelvin fisico unico lo impone el PCB (Task 8).",
+     322.58, 110.49),
+    ("D10: orientacion inferida (no confirmada por el DS), verificar contra",
+     X_IN_TRUNK, 53.34),
+    ("demo board DC2491A/DC2624A antes de soldar (design-notes.md v2 S1.3).",
+     X_IN_TRUNK, 55.88),
+    ("D11: orientacion inferida por analogia con D10/D13 (no hay cita del",
+     X_IN_TRUNK, 203.20),
+    ("DS del LT3094 -- design-notes.md v2 S1.4), verificar contra demo board.",
+     X_IN_TRUNK, 205.74),
+]
+# ============================================================ fin Task 6 ==
+
+
 def setup_local_symbols(c: Client) -> None:
     """Crea (o actualiza) LM2941CT/LM2991T en una libreria local del proyecto
     y la registra en el sym-lib-table del proyecto (scope="project", junto al
@@ -830,9 +1143,23 @@ def _text_sexpr(text: str, x: float, y: float) -> str:
     )
 
 
-def inject_wires_labels_texts(sch_path: str, wires: list, labels: list, texts: list) -> None:
-    """Escribe wires/labels/texts DIRECTO al .kicad_sch por texto, sin pasar
-    por el MCP server.
+def _no_connect_sexpr(x: float, y: float) -> str:
+    """Cruz de no-conexion explicita (Task 6: PG/PGFB/VIOC de U4-U7, flotantes
+    a proposito segun DS -- §1.3/§1.4). Mismo patron ya usado en
+    hardware/03-vco/kicad/build_schematic.py para pines genuinamente sin
+    usar: sin esto, ERC marca pin_not_connected en un pin que el propio
+    datasheet pide dejar al aire."""
+    return (
+        "\t(no_connect\n"
+        f"\t\t(at {x} {y})\n"
+        f'\t\t(uuid "{_stable_uuid(f"nc:{x},{y}")}")\n\t)\n'
+    )
+
+
+def inject_wires_labels_texts(sch_path: str, wires: list, labels: list, texts: list,
+                               no_connects: list | None = None) -> None:
+    """Escribe wires/labels/texts/no_connects DIRECTO al .kicad_sch por texto,
+    sin pasar por el MCP server.
 
     Por que: add_schematic_wire/add_schematic_net_label via MCP demostraron
     ser catastroficamente lentos en esta hoja (medido: >5 min y 100% CPU
@@ -857,6 +1184,8 @@ def inject_wires_labels_texts(sch_path: str, wires: list, labels: list, texts: l
         segs.append(_label_sexpr(name, round(x, 2), round(y, 2)))
     for text, x, y in texts:
         segs.append(_text_sexpr(text, round(x, 2), round(y, 2)))
+    for x, y in (no_connects or []):
+        segs.append(_no_connect_sexpr(round(x, 2), round(y, 2)))
     block = "".join(segs)
 
     with open(sch_path, encoding="utf-8") as fh:
@@ -883,7 +1212,10 @@ def main() -> None:
         with open(SCH, encoding="utf-8") as fh:
             txt = fh.read()
         title_block = (
-            '(paper "A3")\n'
+            # A2 (no A3): la etapa ultra (Task 6) necesita ~280mm mas de ancho
+            # a la derecha del pre-reg para U4-U7 + red SET/ILIM/ballast antes
+            # de la isla +12V/-12V (que se corre a la derecha, ver ISLA_DX).
+            '(paper "A2")\n'
             "\t(title_block\n"
             '\t\t(title "Modulo 01 v2 — Alimentacion sub-uV, ±12 V / +5V")\n'
             f'\t\t(date "{DATE}")\n'
@@ -918,6 +1250,11 @@ def main() -> None:
 
         ends = {(round(wx, 2), round(wy + YOFF, 2))
                 for _lbl, wp in WIRES for wx, wy in wp}
+        # PG/PGFB/VIOC de U4-U7 (Task 6): flotantes a proposito (DS dixit),
+        # sin wire -- cuentan como "extremo valido" via su propia cruz NC,
+        # si no el check de pines sueltos de abajo los marca como cableado a
+        # ojo cuando en realidad es un no-connect intencional.
+        ends |= {(round(nx, 2), round(ny + YOFF, 2)) for nx, ny in NO_CONNECTS}
         offgrid, loose = [], []
         for ref in [p[0] for p in PARTS] + [p[0] for p in POWER]:
             txt = str(c.call("get_schematic_pin_locations",
@@ -942,10 +1279,12 @@ def main() -> None:
         wires_shifted = [(label, [[wx, wy + YOFF] for wx, wy in wp]) for label, wp in WIRES]
         labels_shifted = [(name, x, y + YOFF) for name, x, y in LABELS]
         texts_shifted = [(text, x, y + YOFF) for text, x, y in TEXTS]
-        inject_wires_labels_texts(SCH, wires_shifted, labels_shifted, texts_shifted)
+        nc_shifted = [(x, y + YOFF) for x, y in NO_CONNECTS]
+        inject_wires_labels_texts(SCH, wires_shifted, labels_shifted, texts_shifted, nc_shifted)
         n_segs = sum(len(wp) - 1 for _l, wp in WIRES)
         print(f"cables: {len(WIRES)} definidos ({n_segs} segmentos) + "
-              f"{len(LABELS)} labels + {len(TEXTS)} notas, escritos directo al fichero")
+              f"{len(LABELS)} labels + {len(TEXTS)} notas + {len(NO_CONNECTS)} "
+              f"no-connects, escritos directo al fichero")
 
         r = str(c.call("batch_set_schematic_property_positions", {
             "schematicPath": SCH,
