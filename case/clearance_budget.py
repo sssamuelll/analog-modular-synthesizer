@@ -101,16 +101,18 @@ def _centros_rail(p: dict[str, float],
 
 def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
                         cr: list[tuple[float, float]]) -> list[tuple[float, float]]:
-    """5 centros de larguero de esqueleto, misma formula que
-    centros_esqueleto() en sam17_case.scad (entrepiso delantero reubicado
-    y ambos railes de entrepiso a la altura nueva — fix de solapes,
-    ronda de revision del 2026-08-16)."""
+    """6 centros de larguero de esqueleto, misma formula que
+    centros_esqueleto() en sam17_case.scad (entrepiso delantero reubicado,
+    ambos railes de entrepiso a la altura nueva, y repisa — ronda de
+    revision 2, R6: piel_superior se reancla aqui en vez de en entrepiso
+    trasero, que vive en el plano del piso inferior y no del superior)."""
     r = p["rail"] / 2
     x_ed = cr[2][0] + p["rail"] + p["holgura_rail"]
     y_ep = P[3][1] - p["t_acrilico"] - r
     return [(r + 2, r), (p["prof_inferior"] - r, r),
             (x_ed, y_ep), (p["prof_inferior"] - r, y_ep),
-            (p["prof_superior"] - r, P[5][1] - r)]
+            (p["prof_superior"] - r, P[5][1] - r),
+            (p["prof_superior"] - r, P[3][1] + 15)]
 
 
 # Caja = (nombre, x0, x1, y0, y1, z0, z1)
@@ -118,7 +120,7 @@ Caja = tuple
 
 
 def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja]]:
-    """AABB de los 9 railes y de las 5 planchas/pieles, misma formula que
+    """AABB de los 10 railes y de las 5 planchas/pieles, misma formula que
     rails()/planchas_acrilico() en sam17_case.scad."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
@@ -143,7 +145,7 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja]]:
         railes.append((nm, c[0] - he, c[0] + he, c[1] - he, c[1] + he,
                        t_cheek, ancho_total - t_cheek))
     nombres_ce = ["base delantera", "base trasera", "entrepiso delantero",
-                  "entrepiso trasero", "remate superior"]
+                  "entrepiso trasero", "remate superior", "repisa"]
     for nm, c in zip(nombres_ce, ce):
         railes.append((nm, c[0] - rail / 2, c[0] + rail / 2,
                        c[1] - rail / 2, c[1] + rail / 2,
@@ -170,9 +172,10 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja]]:
     y0_pi = ce[1][1] - 15
     planchas.append(("piel_inferior", P[8][0] + gap, P[8][0] + gap + t_acr,
                      y0_pi, y0_pi + alto_pi, t_cheek + gap, ancho_total - t_cheek - gap))
-    # piel_superior: R1 — volada hacia +X mas alla de prof_superior
-    alto_ps = ce[4][1] - ce[3][1] + 30
-    y0_ps = ce[3][1] - 15
+    # piel_superior: R1 — volada hacia +X mas alla de prof_superior;
+    # re-anclada a la repisa (ce[5]) en vez de entrepiso trasero (R6)
+    alto_ps = ce[4][1] - ce[5][1] + 30
+    y0_ps = ce[5][1] - 15
     planchas.append(("piel_superior", P[6][0] + gap, P[6][0] + gap + t_acr,
                      y0_ps, y0_ps + alto_ps, t_cheek + gap, ancho_total - t_cheek - gap))
     return railes, planchas
@@ -187,24 +190,22 @@ def _overlap(a: Caja, b: Caja) -> tuple[float, float, float] | None:
     return (ox, oy, oz) if (ox > 1e-9 and oy > 1e-9 and oz > 1e-9) else None
 
 
-# Pares tolerados: forzados TOPOLOGICAMENTE por R1+R2+R3 juntos (ronda de
-# revision 2026-08-16), no una lectura floja del checker — arreglarlos de
-# verdad exige tocar centros_rail() (fuera de las 5 reglas autorizadas) o
-# empeora un solape distinto (ver informe de la ronda de fix). Umbral sobre
-# min(dX,dY): dZ siempre sale grande porque las piezas corren casi todo el
-# ancho util, no es señal de gravedad. Si se vuelve a tocar
-# centros_rail()/centros_esqueleto(), reverificar estos dos numeros.
-TOLERADOS: dict[frozenset[str], float] = {
-    frozenset({"bandeja_entrepiso", "piel_superior"}): 6.0,            # ~5.0 mm real
-    frozenset({"cara_inf s=alto-inset", "cara_sup s=inset"}): 4.0,     # ~3.7 mm real (AABB; SAT exacto 2.5 mm)
-}
+# Pares tolerados: ronda de revision 1 dejo 2 aqui (bandeja_entrepiso vs
+# piel_superior, y el par de railes tilted del quiebre P2-P3). Ronda 2 los
+# resuelve los dos de verdad (R6 reancla piel_superior a la repisa en vez
+# de entrepiso trasero; R7 abre paso_horizontal 20->25 y separa los railes
+# — ver guarda_escalon() mas abajo, que hace el chequeo SAT exacto de ESE
+# par como assert duro, no como tolerancia). Vacio a proposito: si un solape
+# nuevo aparece y de verdad no se puede resolver sin tocar centros_rail()
+# fuera de las reglas autorizadas, se documenta aqui igual que antes.
+TOLERADOS: dict[frozenset[str], float] = {}
 
 
 def solapes(p: dict[str, float]) -> list[str]:
-    """9 railes + 5 planchas/pieles: ningun par se pisa en 3D, salvo los
-    TOLERADOS de arriba (impresos igual, nunca silenciados). Paneles
-    inclinados (1.6 mm, PCB de aluminio de cada modulo): su clase la
-    resuelve la rotacion de railes (R3), no entran en esta caja."""
+    """10 railes + 5 planchas/pieles: ningun par se pisa en 3D, salvo los
+    TOLERADOS de arriba (impresos igual, nunca silenciados) — vacio ahora
+    mismo. Paneles inclinados (1.6 mm, PCB de aluminio de cada modulo): su
+    clase la resuelve la rotacion de railes (R3), no entran en esta caja."""
     railes, planchas = _cajas_solidas(p)
     fallos: list[str] = []
     todas = railes + planchas
@@ -252,6 +253,59 @@ def canario_solapes(p: dict[str, float]) -> None:
         "conocido (17.6x12.6 mm) — no confiar en el resto de solapes()")
 
 
+def _sat_gap(rail: float, c1: tuple[float, float], ang1: float,
+             c2: tuple[float, float], ang2: float) -> float:
+    """Holgura EXACTA (SAT, no AABB) entre 2 cuadrados de lado 'rail',
+    cada uno girado -ang grados sobre su eje largo (mismo signo que
+    rotate([0,0,-ang]) en rails(), R3). Positivo = hueco en mm; negativo =
+    profundidad de solape en mm. El AABB (usado en solapes()) SOBRESTIMA
+    el alcance real de un cuadrado girado salvo en la propia direccion de
+    la normal — para un umbral duro en mm hace falta el valor exacto."""
+    half = rail / 2
+
+    def esquinas(c: tuple[float, float], ang: float) -> list[tuple[float, float]]:
+        a = math.radians(-ang)
+        ux, uy = math.cos(a), math.sin(a)
+        vx, vy = -math.sin(a), math.cos(a)
+        return [(c[0] + sx * half * ux + sy * half * vx,
+                 c[1] + sx * half * uy + sy * half * vy)
+                for sx in (-1, 1) for sy in (-1, 1)]
+
+    def proyeccion(pts: list[tuple[float, float]],
+                    eje: tuple[float, float]) -> tuple[float, float]:
+        vals = [px * eje[0] + py * eje[1] for px, py in pts]
+        return min(vals), max(vals)
+
+    p1, p2 = esquinas(c1, ang1), esquinas(c2, ang2)
+    ejes = []
+    for ang in (ang1, ang2):
+        a = math.radians(-ang)
+        ejes.append((math.cos(a), math.sin(a)))
+        ejes.append((-math.sin(a), math.cos(a)))
+    separaciones = []
+    for eje in ejes:
+        a0, a1 = proyeccion(p1, eje)
+        b0, b1 = proyeccion(p2, eje)
+        separaciones.append(min(a1, b1) - max(a0, b0))
+    return -min(separaciones)  # min<=0 en algun eje separador -> hueco positivo
+
+
+def guarda_escalon(p: dict[str, float]) -> None:
+    """R7: paso_horizontal se abrio para separar los 2 railes tilted que
+    R3 acerco en el quiebre P2-P3 (cara_inf s=alto-inset, 12 grados, vs
+    cara_sup s=inset, 35 grados — a paso_horizontal=20 se solapaban 2.52 mm
+    exactos por SAT, verificado en la ronda de revision 1). Assert duro,
+    no tolerancia: exige >=1.0 mm de hueco REAL (no la caja alineada a
+    ejes, que aqui sobrestima)."""
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    gap = _sat_gap(p["rail"], cr[1], p["angulo_inferior"], cr[2], p["angulo_superior"])
+    assert gap >= 1.0, (
+        f"railes del escalon P2-P3 (cara_inf s=alto-inset vs cara_sup "
+        f"s=inset) a {gap:.3f} mm de hueco real (SAT) — se exige >=1.0 mm; "
+        f"subir paso_horizontal")
+
+
 # Censo de anchos minimos de panel por piso, mm. ESTIMADOS (spec §11):
 # cierran cuando cada panel este dibujado. Fuente: conteo de mandos/jacks
 # de los README de modulo + patch bay normalizado que anade jacks.
@@ -264,6 +318,7 @@ def main() -> int:
     p = leer_params()
     autocomprobacion(p)
     canario_solapes(p)
+    guarda_escalon(p)
     g = perfil(p)
     fallos: list[str] = []
 

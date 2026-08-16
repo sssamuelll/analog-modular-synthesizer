@@ -40,15 +40,24 @@ function centros_rail() =
 
 // largueros del esqueleto (2020) que no son railes de panel:
 // base delantera, base trasera, entrepiso delantero, entrepiso trasero,
-// remate superior trasero. Centros [x, y]:
+// remate superior, repisa. Centros [x, y]:
 //
-// entrepiso delantero reubicado (fix de solape, ronda de revision): el
+// entrepiso delantero reubicado (fix de solape, ronda de revision 1): el
 // original P[3].x+r invadia el rail de panel cara-superior s=inset_tornillo
 // (17.6x12.6 mm de solape, verificado). Ahora se apoya holgura_rail detras
 // del borde trasero de ESE rail. Y de ambos railes de entrepiso baja a
 // P3.y-t_acrilico-r para que la bandeja apoye con el CANTO SUPERIOR a ras
 // de P3.y (antes apoyaba con el canto inferior ahi, dejando la tapa 5 mm
 // por encima del plano de entrepiso).
+//
+// repisa (sexto larguero, ronda de revision 2 — R6): ancla piel_superior
+// SIN pasar por el rail entrepiso-trasero (ese vive en X=340, en el plano
+// del piso inferior; piel_superior vuela en X=prof_superior+gap_sombra=255,
+// el plano del piso superior — anclarla ahi invadia la bandeja de
+// entrepiso). Centro a P3.y+15: canto inferior del rail en P3.y+5 (5 mm
+// por encima del tope de la bandeja, sin tocarla) y la fila de agujero
+// inferior de piel_superior (inset 15) cae justo en P3.y, a ras del tope
+// de la bandeja.
 function centros_esqueleto() =
     let (P = pts_perfil(), r = rail/2, cr = centros_rail(),
          x_ed = cr[2].x + rail + holgura_rail,
@@ -57,7 +66,8 @@ function centros_esqueleto() =
      [prof_inferior - r,   r],                       // base trasera
      [x_ed,                y_ep],                     // entrepiso delantero
      [prof_inferior - r,   y_ep],                     // entrepiso trasero
-     [prof_superior - r,   P[5].y - r]];              // remate superior
+     [prof_superior - r,   P[5].y - r],               // remate superior
+     [prof_superior - r,   P[3].y + 15]];             // repisa (R6)
 
 module perfil_lateral() { polygon(pts_perfil()); }
 
@@ -146,10 +156,14 @@ module piel_inferior_2d() {
     }
 }
 
+// re-anclada a la repisa (R6, ronda de revision 2) en vez de entrepiso
+// trasero: ese rail vive en el plano del piso inferior (X=340), invadia
+// la bandeja de entrepiso 5x5x474 mm. La repisa vive en el plano del
+// piso superior, 5 mm por encima del tope de la bandeja.
 module piel_superior_2d() {
     au = ancho_total - 2*t_cheek - 2*gap_sombra;
     ce = centros_esqueleto();
-    alto = ce[4].y - ce[3].y + 30;   // remate superior <-> entrepiso trasero
+    alto = ce[4].y - ce[5].y + 30;   // remate superior <-> repisa
     difference() {
         plancha(au, alto);
         for (c = [[15,15],[au-15,15],[15,alto-15],[au-15,alto-15]])
@@ -195,8 +209,9 @@ else assert(false, str("PART desconocido: ", PART));
 
 // costado_2d vive en el plano XY del perfil (X = fondo, Y = altura);
 // costado() lo extruye en +Z por t_cheek, o sea Z pasa a ser el ancho.
-// Dos costados en los extremos de Z; 9 largueros 2020 (centros_rail() +
-// centros_esqueleto(), en ese orden) cruzando entre sus caras internas.
+// Dos costados en los extremos de Z; 10 largueros 2020 (centros_rail() +
+// centros_esqueleto(), en ese orden — 6 desde R6) cruzando entre sus
+// caras internas.
 module costados() {
     costado();
     translate([0, 0, ancho_total - t_cheek]) costado();
@@ -269,11 +284,13 @@ module piel_inferior() {
 }
 
 // volado: cara interior a X = prof_superior + gap_sombra. y0 deriva de la
-// fila de agujero inferior cayendo en el rail entrepiso-trasero (ce[3].y).
+// fila de agujero inferior cayendo en la repisa (ce[5].y) — R6, ronda de
+// revision 2. Con esto el canto inferior de la plancha cae exacto en
+// P3.y (tope de bandeja_entrepiso): a ras, cero solape.
 module piel_superior() {
     P = pts_perfil();
     ce = centros_esqueleto();
-    translate([P[6].x + gap_sombra + t_acrilico, ce[3].y - 15, t_cheek + gap_sombra])
+    translate([P[6].x + gap_sombra + t_acrilico, ce[5].y - 15, t_cheek + gap_sombra])
         rotate([0, -90, 0])
             linear_extrude(t_acrilico) piel_superior_2d();
 }

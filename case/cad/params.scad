@@ -12,7 +12,7 @@ angulo_superior = 35;    // desde la vertical, cara de generacion
 alto_frontal    = 50;    // zocalo delantero
 prof_inferior   = 350;   // board: PROFUNDIDAD TOTAL
 prof_superior   = 250;   // board: cota 250 del alzado lateral
-paso_horizontal = 20;    // repisa entre cara inferior y superior
+paso_horizontal = 25;    // abre el clip de los railes del escalon tras la rotacion al plano de cara
 
 // --- materiales ---
 t_acrilico = 5;    // planchas del cuerpo; MEDIR con calibre (spec §11)
