@@ -673,16 +673,158 @@ git commit -m "assembly completo, lienzo de corte y cupon de calibracion"
 
 ---
 
-### Task 6: `case/cad/export.ps1` — regeneración total con puerta de budget
+### Task 6: `case/cad/export.ps1` — regeneración total con puertas de budget y de relectura
 
 **Files:**
 - Create: `case/cad/export.ps1`
+- Create: `case/check_dxf.py`
+- Modify: `case/clearance_budget.py` (eco de kerf + aserción de rango)
 
 **Interfaces:**
 - Consumes: despachador PART (Tasks 3–5), `clearance_budget.py` (Task 2).
 - Produces: `case/plans/*.dxf` (7 piezas + lienzo + cupón),
-  `case/renders/build/assembly_acrilico.stl` y `assembly_aluminio.stl`.
-  Exit 0 solo si TODO se regeneró; cualquier fallo → exit 1 y lo dice.
+  `case/renders/build/assembly_acrilico.stl` y `assembly_aluminio.stl`,
+  y `case/check_dxf.py` (gate de relectura que consume el README de Task 9).
+  Exit 0 solo si TODO se regeneró Y la relectura pasó; cualquier fallo →
+  exit 1 y lo dice.
+
+> Lección incorporada de `projects/vectorizer` (docs/dxf-dialect.md, destilada
+> 2026-08-16, ver `.superpowers/sdd/2026-08-16-case-acrilico/lecciones-vectorizer-vina.md`):
+> los fallos de unidades, cierre de paths y entidades descartadas son
+> SILENCIOSOS — se valida contra el DXF **releído**, jamás contra el objeto
+> que lo generó.
+
+- [ ] **Step 0a: Eco de kerf en el budget**
+
+En `case/clearance_budget.py`, dentro de `main()` junto al print de `perfil:`,
+añadir:
+
+```python
+    print(f"kerf aplicado: {p['kerf']:+.2f} mm (firmado; cupon manda)")
+    exige(-0.5 <= p["kerf"] <= 0.5,
+          "kerf fuera de rango fisico [-0.5, +0.5] mm")
+```
+
+(Lección L9: un override de kerf equivocado corrompe todos los agujeros con
+exit 0 si nadie lo imprime.)
+
+- [ ] **Step 0b: Escribir `case/check_dxf.py`**
+
+```python
+"""Relee los DXF exportados y verifica lo que el laser va a ver.
+
+    python case/check_dxf.py
+
+Leccion de projects/vectorizer (docs/dxf-dialect.md): unidades, cierre de
+paths y entidades descartadas fallan EN SILENCIO. Se valida contra el
+archivo RELEIDO con ezdxf, jamas contra el objeto que lo genero. Corre
+dentro de export.ps1, despues de exportar y antes de dar el lote por bueno
+(Principio III). Requiere: python -m pip install ezdxf
+"""
+from __future__ import annotations
+
+import sys
+from collections import Counter
+from pathlib import Path
+
+import ezdxf
+
+PLANS = Path(__file__).parent / "plans"
+
+# sobre esperado por pieza, mm: (w_min, w_max, h_min, h_max) con margen
+SOBRES = {
+    "costado_2d":          (330, 370, 370, 410),
+    "bandeja_base_2d":     (460, 500, 290, 320),
+    "bandeja_entrepiso_2d": (460, 500, 235, 265),
+    "zocalo_2d":           (460, 500, 30, 55),
+    "piel_inferior_2d":    (450, 490, 210, 240),
+    "piel_superior_2d":    (450, 490, 130, 160),
+    "coupon":              (90, 110, 50, 75),
+}
+
+
+def revisar(nombre: str, sobre) -> list[str]:
+    f: list[str] = []
+    doc = ezdxf.readfile(PLANS / f"{nombre}.dxf")
+    ents = list(doc.modelspace())
+    if not ents:
+        return [f"{nombre}: DXF sin entidades"]
+    grados: Counter = Counter()   # paridad de extremos de LINEs sueltas
+    xs: list[float] = []
+    ys: list[float] = []
+
+    def punto(x, y):
+        xs.append(x); ys.append(y)
+        return (round(x, 3), round(y, 3))
+
+    for e in ents:
+        t = e.dxftype()
+        if t == "LINE":
+            grados[punto(e.dxf.start.x, e.dxf.start.y)] += 1
+            grados[punto(e.dxf.end.x, e.dxf.end.y)] += 1
+        elif t == "LWPOLYLINE":
+            pts = e.get_points("xy")
+            for x, y in pts:
+                punto(x, y)
+            cerrado = e.closed or (
+                len(pts) > 2
+                and abs(pts[0][0] - pts[-1][0]) < 1e-6
+                and abs(pts[0][1] - pts[-1][1]) < 1e-6)
+            if not cerrado:
+                f.append(f"{nombre}: LWPOLYLINE sin cerrar")
+        elif t in ("CIRCLE", "ARC"):
+            punto(e.dxf.center.x - e.dxf.radius, e.dxf.center.y - e.dxf.radius)
+            punto(e.dxf.center.x + e.dxf.radius, e.dxf.center.y + e.dxf.radius)
+            if t == "ARC":
+                f.append(f"{nombre}: ARC suelto (posible contorno abierto)")
+    sueltos = [p for p, n in grados.items() if n % 2]
+    if sueltos:
+        f.append(f"{nombre}: {len(sueltos)} extremos de LINE sin pareja "
+                 f"(contorno abierto), p.ej. {sueltos[:3]}")
+    w = max(xs) - min(xs)
+    h = max(ys) - min(ys)
+    ancho_ok = sobre[0] <= w <= sobre[1] or sobre[0] <= h <= sobre[1]
+    alto_ok = sobre[2] <= h <= sobre[3] or sobre[2] <= w <= sobre[3]
+    if not (ancho_ok and alto_ok):
+        f.append(f"{nombre}: bbox {w:.1f} x {h:.1f} mm fuera del sobre "
+                 f"{sobre} (unidades mal? factor 25.4?)")
+    ins = doc.header.get("$INSUNITS", 0)
+    if ins not in (0, 4):
+        f.append(f"{nombre}: $INSUNITS={ins} (ni ausente ni mm)")
+    print(f"  {nombre}: {len(ents)} entidades, bbox {w:.1f} x {h:.1f} mm")
+    return f
+
+
+def main() -> int:
+    fallos: list[str] = []
+    for nombre, sobre in SOBRES.items():
+        ruta = PLANS / f"{nombre}.dxf"
+        if not ruta.exists():
+            fallos.append(f"{nombre}: FALTA el DXF")
+            continue
+        fallos += revisar(nombre, sobre)
+    for m in fallos:
+        print(f"ROJO: {m}")
+    if fallos:
+        return 2
+    print("check_dxf: VERDE (unidades mm implicitas: decirselo al servicio)")
+    return 0
+
+
+# Lo que NO cubre: lienzo_2d (marco de referencia, piezas repetidas),
+# self-intersections, orden de corte, y la pieza fisica (eso es el cupon).
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+Nota de realidad: OpenSCAD 2021.01 exporta DXF como soup de LINEs o
+LWPOLYLINEs según versión — el script cubre ambos; el implementador verifica
+empíricamente cuál emite y lo dice en su reporte. Si un sobre de SOBRES no
+cuadra con la pieza real exportada, el implementador ajusta EL SOBRE (con el
+número medido, no a ojo) y lo reporta — los sobres son control de 25.4×/escala,
+no cotas de diseño. Requiere `python -m pip install ezdxf` (anotarlo en el
+README en Task 9).
 
 - [ ] **Step 1: Escribir el script**
 
@@ -707,7 +849,8 @@ $piezas = "costado_2d","bandeja_base_2d","bandeja_entrepiso_2d",
 $fallos = 0
 foreach ($p in $piezas) {
   $out = Join-Path $plans "$p.dxf"
-  & $scad -o $out -D ('PART="' + $p + '"') (Join-Path $PSScriptRoot "sam17_case.scad")
+  # ojo: comillas escapadas — PowerShell 5.1 despoja las internas sin \ (fallo silencioso, verificado en Task 3)
+  & $scad -o $out -D ('PART=\"' + $p + '\"') (Join-Path $PSScriptRoot "sam17_case.scad")
   if ($LASTEXITCODE -ne 0 -or -not (Test-Path $out) -or (Get-Item $out).Length -lt 1000) {
     Write-Warning "FALLO: $p"; $fallos++
   }
@@ -716,20 +859,26 @@ foreach ($p in $piezas) {
 if ($LASTEXITCODE -ne 0) { $fallos++ }
 foreach ($m in "assembly_acrilico","assembly_aluminio") {
   $out = Join-Path $build "$m.stl"
-  & $scad -o $out -D ('PART="' + $m + '"') (Join-Path $PSScriptRoot "sam17_case.scad")
+  & $scad -o $out -D ('PART=\"' + $m + '\"') (Join-Path $PSScriptRoot "sam17_case.scad")
   if ($LASTEXITCODE -ne 0 -or (Get-Item $out).Length -lt 10000) {
     Write-Warning "FALLO: $m"; $fallos++
   }
 }
 if ($fallos -gt 0) { Write-Error "$fallos exports fallidos"; exit 1 }
-Write-Output "export completo: $($piezas.Count + 3) artefactos regenerados"
+
+# puerta de relectura: validar lo que el laser va a ver, no lo que dibujamos
+python (Join-Path $repo "case/check_dxf.py")
+if ($LASTEXITCODE -ne 0) { Write-Error "check_dxf en ROJO: no se manda a cortar"; exit 1 }
+Write-Output "export completo: $($piezas.Count + 3) artefactos regenerados y releidos"
 ```
 
 - [ ] **Step 2: Correr y verificar la ruta feliz**
 
+Primero: `python -m pip install ezdxf` (dependencia de check_dxf.py).
 Run: `powershell -File case/cad/export.ps1; echo $LASTEXITCODE`
-Expected: `export completo: 10 artefactos regenerados`, exit 0, y
-`case/plans/` con 8 DXF + `case/renders/build/` con 2 STL.
+Expected: `export completo: 10 artefactos regenerados y releidos`, exit 0,
+`case/plans/` con 8 DXF + `case/renders/build/` con 2 STL, y las líneas
+`  <pieza>: N entidades, bbox W x H mm` + `check_dxf: VERDE` en la salida.
 
 - [ ] **Step 3: Verificar la ruta de fallo (Principio III)**
 
@@ -983,8 +1132,11 @@ Spec: ../docs/superpowers/specs/2026-08-15-case-design.md (rev. 3)
 Board de intención: renders/propuesta-diseno-2026-08-16.png
 
 ## Regenerar todo
+    python -m pip install ezdxf   # una vez; lo usa check_dxf.py
     powershell -File cad/export.ps1
-(corre clearance_budget.py primero; si está en rojo NO exporta)
+(corre clearance_budget.py ANTES de exportar y check_dxf.py DESPUÉS —
+relee los DXF como los verá el láser; si cualquiera está en rojo, exit 1.
+Los DXF van en mm; decírselo explícito al servicio de corte.)
 
 ## Procedimiento del cupón — OBLIGATORIO antes de cortar planchas
 1. Cortar plans/coupon.dxf en el acrílico REAL con la máquina REAL.
@@ -992,6 +1144,10 @@ Board de intención: renders/propuesta-diseno-2026-08-16.png
    entra firme sin forzar. kerf = diámetro_dibujado − diámetro_que_ajusta.
 3. Probar la ranura con el perfil 2020 y la lengüeta con arandela+tuerca
    (apretar hasta marcar, NO hasta fisurar; anotar sensación de tope).
+3b. **Confirmación anti-circular** (lección de projects/vectorizer): el kerf
+   elegido en el paso 2 se confirma con un ajuste INDEPENDIENTE — la ranura
+   del 2020 del paso 3 y un tornillo en una escalera DISTINTA de la que lo
+   fijó. Medir los mismos agujeros que definieron el kerf siempre "pasa".
 4. Registrar aquí: fecha, proveedor, material, espesor MEDIDO con calibre,
    máquina, kerf medido → actualizar params.scad y re-exportar.
 
