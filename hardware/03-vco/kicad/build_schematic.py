@@ -95,6 +95,10 @@ SYM = {
     "tempsens": "Sensor_Temperature:TMP1075DGK",
     "eeprom": "Memory_EEPROM:24AA02E-OT",
     "j2": "Connector_Generic:Conn_02x06_Odd_Even",
+    # Tarea 4: las 4 voces -- SSI2130, el I/V compartido y los 8 jacks.
+    "vco": "sam17:SSI2130",
+    "opamp": "Amplifier_Operational:TL074",
+    "jack": "Connector_Audio:AudioJack2_SwitchT",
 }
 FP = {
     "conn4": "Connector_Molex:Molex_KK-254_AE-6410-04A_1x04_P2.54mm_Vertical",
@@ -109,6 +113,11 @@ FP = {
     "tempsens": "Package_SO:VSSOP-8_3x3mm_P0.65mm",
     "eeprom": "Package_TO_SOT_SMD:SOT-23-5",
     "j2": "Connector_IDC:IDC-Header_2x06_P2.54mm_Vertical",
+    # QFN-32 4x4mm con pad termico AISLADO (bom.csv, pin 33/EP): el land
+    # existe en la huella pero sin red -- lo exige el datasheet pag.6.
+    "vco": "Package_DFN_QFN:QFN-32-1EP_4x4mm_P0.4mm_EP2.65x2.65mm",
+    "opamp": "Package_SO:SOIC-14_3.9x8.7mm_P1.27mm",
+    "jack": "Connector_Audio:Jack_3.5mm_QingPu_WQP-PJ398SM_Vertical_CircularHoles",
 }
 
 _wires: list = []
@@ -177,6 +186,21 @@ def bloque(clave: str, ref: str, val: str, x: float, y: float, rot: int,
         stub(clave, num, x, y, rot, redes.get(num), largo)
 
 
+def libre(clave: str, ref: str, val: str, x: float, y: float,
+          net1: str | None, net2: str | None, largo: float = g(4)) -> None:
+    """R o C SUELTO de 2 patillas: cada una con su propio rabito+etiqueta.
+
+    Se une al resto de la red por COINCIDENCIA de nombre, igual que los
+    pull-ups I2C o los TESTPOINTS -- no hace falta que el cable llegue de
+    verdad hasta el otro componente. Sirve para toda resistencia/condensador
+    de la Tarea 4 que cuelga entre dos redes ya nombradas (reales o
+    inventadas para un nodo interno de una sola voz, tipo "N7_2").
+    """
+    pon(clave, ref, val, x, y, 0)
+    stub(clave, "1", x, y, 0, net1, largo)
+    stub(clave, "2", x, y, 0, net2, largo)
+
+
 # --------------------------------------------------------------------- mapa
 # Todo el bloque de alimentacion en una franja horizontal, para que la Tarea
 # 3 pueda seguir hacia la derecha (bloque digital) y la Tarea 4 hacia abajo
@@ -207,6 +231,13 @@ X_EEPROM, Y_EEPROM = g(300), g(125)              # U14
 X_PU, Y_PU = g(320), g(112)                      # R_I2C1-2 (pullups 4.7k)
 X_J2, Y_J2 = g(340), g(60)                       # J2 (IDC 2x6)
 X_DAC_DEC = g(245)                               # desacoplo U5-U7, entre DAC y HC14
+
+# Las 4 voces van DEBAJO de todo lo anterior (Y~g(150) es lo mas bajo que
+# baja el bloque digital): cada dibujar_voz(n, origen) ocupa una franja de
+# DY_VOZ, apilada. ox de cada voz = X_VOZ (posicion del propio SSI2130); el
+# resto de la voz (jacks, pasivos, I/V) se coloca en offsets fijos desde ahi.
+X_VOZ, Y_VOZ0, DY_VOZ = g(180), g(190), g(170)
+X_U9, Y_U9 = X_VOZ + g(110), Y_VOZ0 - g(30)      # U9 unidad 5: solo alimentacion
 
 # J2 (IDC 2x6): CONTRATO del enlace -- misma tabla, mismas posiciones, en los
 # modulos 5, 6 y 7 (spec par.7). Se deja comentada a proposito -- vive como
@@ -475,14 +506,163 @@ def bloque_digital() -> None:
     bloque_mazo()
 
 
+# ------------------------------------------------------------- Tarea 4: voz
+# Unidad de U9 (TL074, I/V compartido) -> (salida, entrada-, entrada+), una
+# por voz. Sacado con symlib, igual que _HC14_UNIDADES: el orden de un
+# multi-unidad no es obvio a ojo. Unidad 5 es la comun (solo alimentacion).
+_U9_UNIDADES = {1: ("1", "2", "3"), 2: ("7", "6", "5"),
+                3: ("8", "9", "10"), 4: ("14", "13", "12")}
+
+
+def _redes_ssi2130(n: int) -> dict[str, str | None]:
+    """pin -> red del SSI2130 de la voz n. Figure 1 del datasheet (pag.5)
+    salvo donde el propio SAM17 decide otra cosa (comentarios inline).
+
+    CORRECCION sobre el borrador del brief: el datasheet -- Figure 1 Y el
+    texto de la pag.6 ("One input of the comparator (pin 31) is connected
+    to the buffered triangle output, while the second comparator input
+    (pin 32) is connected to... a voltage source to set pulse width") --
+    ata PWM- (31) al TRIANGULO y PWM+ (32) al CONTROL. El borrador los
+    tenia al reves. Verificado tambien contra la propia figura: el nodo de
+    TRI OUT (pin 1) sube sin resistencia hasta el pin 31; el wiper del
+    potenciometro PWM CTRL (aqui sustituido por el DAC, PWM_CV) baja sin
+    resistencia hasta el pin 32.
+    """
+    return {
+        "1": f"TRI_{n}",                      # TRI OUT
+        "2": f"N2_{n}", "3": f"N3_{n}",        # SINE IN+/- (redes internas)
+        "4": f"N4_{n}",                        # AUX1 IN (seno AC-acoplado)
+        "5": None,                             # AUX2 IN: reserva, sin usar
+        "6": None, "20": "GNDA",               # HF TRACK/HFT BASE: trimless
+        "7": f"N7_{n}",                        # EXPO FREQ: nodo suma
+        "8": "-12V",                           # V-
+        "9": f"N9_{n}", "10": f"N10_{n}",      # MIX TRI/SAW
+        "11": f"N11_{n}", "12": f"N12_{n}",    # MIX PULSE/AUX1(=seno)
+        "13": "GNDA",                          # MIX AUX2: 0uA = mute
+        "14": f"N14_{n}",                      # TCAP
+        "15": "GNDA", "16": "GNDA",            # DGND/AGND juntos, al plano
+        "17": "GNDA",                          # HARD SYNC sin usar -> masa
+        "18": "+5V_LOC",                       # TIME REVERSE: sierra ascendente
+        "19": None,                            # SOFT SYNC: sin usar
+        "21": None,                            # LIN FREQ: FM lineal descartada
+        "22": f"N22_{n}",                      # EXPO SCALE
+        "23": "VREF_2V5",
+        "24": f"SINEO_{n}",                    # SINE OUT
+        "25": f"MIXO_{n}",                     # MIX OUT -> virtual del I/V
+        "26": f"N26_{n}",                      # BW COMP
+        "27": "+5V_LOC",                       # V+ (100nF pegado, aparte)
+        "28": f"SQ_{n}",                       # SQUARE OUT (pullup aparte)
+        "29": None, "30": None,                # SAW/PULSE crudas: sin exponer
+        "31": f"TRI_{n}",                      # PWM- <- triangulo (ver arriba)
+        "32": "PWM_CV",                        # PWM+ <- CV del DAC (ver arriba)
+        # 33 (EP) NO aparece aqui a proposito: ver dibujar_voz().
+    }
+
+
+def dibujar_voz(n: int, origen: tuple[float, float]) -> None:
+    """Una voz completa: SSI2130 + su red pasiva + I/V (unidad n de U9) +
+    los 2 jacks. `origen` es la posicion del propio SSI2130; todo lo demas
+    cuelga de ahi en offsets fijos, asi que llamarla 4 veces con 4 origenes
+    (apilados por DY_VOZ) reproduce la voz entera 4 veces sin tocar nada
+    mas."""
+    ox, oy = origen
+    u = f"U{n}"
+
+    # SSI2130: se coloca y cablea a mano (no con bloque()) porque el pin 33
+    # (EP) esta tipado no_connect en el simbolo -- ponerle la cruz de
+    # bloque()/stub() produce "no_connect_dangling" en el ERC, EXACTAMENTE
+    # el fallo que ya se evito con el pin 5 del EEPROM (bloque_telemetria).
+    # Un pin no_connect no lleva nada encima, ni la cruz: por eso se salta
+    # aqui en vez de meterlo en el dict de redes.
+    pon("vco", u, "SSI2130", ox, oy, 0)
+    redes = _redes_ssi2130(n)
+    for num in symlib.pines(SYM["vco"]):
+        if num == "33":
+            continue
+        stub("vco", num, ox, oy, 0, redes.get(num))
+
+    # La red pasiva: cada R/C SUELTO, unido solo por nombre de red (ver
+    # libre()). UNA fila (no dos: dos filas reutilizan columna de X y sus
+    # rabitos verticales quedan colineales -- eso fusiona la red de una
+    # fila con la de la otra, lo caza revisar_fusiones()).
+    X0, Y0 = ox - g(60), oy + g(46)
+    pasivos = [
+        # nodo suma EXPO FREQ (pin 7): CV del DAC + jack de entrada
+        ("r", f"R_PITCH{n}", "16.5k", f"CV_PITCH_{n}", f"N7_{n}"),
+        ("r", f"R_CVIN{n}", "49.9k", f"CVIN_{n}", f"N7_{n}"),
+        # TCAP (pin 14): C0G/NP0 obligatorio -- deriva termica del datasheet
+        ("c", f"C_TCAP{n}", "3.9n C0G", f"N14_{n}", "GNDA"),
+        # EXPO SCALE (pin 22): fija, trimless (bom.csv, sin trim de fabrica)
+        ("r", f"R_SCALE{n}", "26.7k", "VREF_2V5", f"N22_{n}"),
+        # mezclador (pines 9-12): 0-2.5V DAC -> 0-50uA por canal
+        ("r", f"R_MIX{n}A", "49.9k", "MIX_TRI", f"N9_{n}"),
+        ("r", f"R_MIX{n}B", "49.9k", "MIX_SAW", f"N10_{n}"),
+        ("r", f"R_MIX{n}C", "49.9k", "MIX_PULSE", f"N11_{n}"),
+        ("r", f"R_MIX{n}D", "49.9k", "MIX_SINE", f"N12_{n}"),
+        # red del seno (Figure 1): TRI -> 10uF+4.02k -> SINE IN+, 4.75k a
+        # masa en SINE IN+ y SINE IN-
+        ("c", f"C_AC{n}A", "10u", f"TRI_{n}", f"N2M_{n}"),
+        ("r", f"R_SIN402_{n}", "4.02k", f"N2M_{n}", f"N2_{n}"),
+        ("r", f"R_SIN475A_{n}", "4.75k", f"N2_{n}", "GNDA"),
+        ("r", f"R_SIN475B_{n}", "4.75k", f"N3_{n}", "GNDA"),
+        # seno AC-acoplado a AUX1 IN, para que entre al mezclador (*)
+        ("c", f"C_AC{n}B", "10u", f"SINEO_{n}", f"N4_{n}"),
+        # BW COMP (pin 26): 270R + 10nF en serie a masa
+        ("r", f"R_BW{n}", "270R", f"N26_{n}", f"N26M_{n}"),
+        ("c", f"C_BW{n}", "10n", f"N26M_{n}", "GNDA"),
+        # pullup de SQUARE OUT: al dominio logico del 74HC14, no a V+
+        ("r", f"R_SQ{n}", "20k", f"SQ_{n}", "+3V3_LOC"),
+        # realimentacion del I/V (transimpedancia, 500uA -> 5V max)
+        ("r", f"R_IV{n}", "10k", f"MIXO_{n}", f"VOICE_OUT_{n}"),
+    ]
+    for i, (clave, ref, val, net1, net2) in enumerate(pasivos):
+        libre(clave, ref, val, X0 + g(10) * i, Y0, net1, net2)
+
+    # Desacoplo de U1-U4 (bom.csv C_DEC*): 100nF en V+, pegado al chip,
+    # retorno GNDA -- la propia masa del chip, igual que los DAC.
+    _desacoplo(f"C{20 + n}", "100n", "+5V_LOC", "GNDA", ox + g(10), oy - g(34))
+
+    # I/V: unidad n de U9, transimpedancia MIX OUT -> VOICE_OUT (+-5V max).
+    # + a masa (virtual de un ampli inversor), - al nodo MIXO_n (mismo
+    # nombre que el TP de la Tarea 2, asi queda conectado), realimentado
+    # por R_IV{n} (en `pasivos`, arriba) hasta la salida.
+    n_out, n_menos, n_mas = _U9_UNIDADES[n]
+    x_op, y_op = ox + g(110), oy
+    pon("opamp", "U9", "TL074H", x_op, y_op, 0, unidad=n)
+    stub("opamp", n_mas, x_op, y_op, 0, "GNDA", unidad=n)
+    stub("opamp", n_menos, x_op, y_op, 0, f"MIXO_{n}", unidad=n)
+    stub("opamp", n_out, x_op, y_op, 0, f"VOICE_OUT_{n}", unidad=n)
+
+    # J_CV{n}: punta=CVIN_n (al R_CVIN del nodo expo), manguito=GNDA, normal
+    # (TN)=GNDA -- sin cable el sumador ve 0V (el normalizado del spec §4).
+    x_jcv, y_jcv = ox - g(150), oy - g(10)
+    pon("jack", f"J_CV{n}", "WQP-PJ398SM", x_jcv, y_jcv, 0)
+    for num, net in (("T", f"CVIN_{n}"), ("S", "GNDA"), ("TN", "GNDA")):
+        stub("jack", num, x_jcv, y_jcv, 0, net)
+
+    # J_OUT{n}: punta=VOICE_OUT_n, manguito=GNDA, normal (TN)=NC -- el
+    # normal lo hace el jack de ENTRADA del modulo 5, no este.
+    x_jout, y_jout = ox + g(170), oy - g(10)
+    pon("jack", f"J_OUT{n}", "WQP-PJ398SM", x_jout, y_jout, 0)
+    for num, net in (("T", f"VOICE_OUT_{n}"), ("S", "GNDA"), ("TN", None)):
+        stub("jack", num, x_jout, y_jout, 0, net)
+
+
+def bloque_iv_alimentacion() -> None:
+    """U9 unidad 5: solo alimentacion, +-12V (el I/V necesita el rango
+    completo para ver los +-5V de salida de MIX OUT)."""
+    pon("opamp", "U9", "TL074H", X_U9, Y_U9, 0, unidad=5)
+    stub("opamp", "4", X_U9, Y_U9, 0, "+12V", unidad=5)
+    stub("opamp", "11", X_U9, Y_U9, 0, "-12V", unidad=5)
+
+
 def construir() -> None:
     bloque_alimentacion()
     bloque_testpoints()
     bloque_digital()
-    # Tarea 4: voz(idx) x4 -- SSI2130, jacks CV-IN/OUT. Cierra los avisos que
-    # deja pendientes esta tarea: SQ_1..4 colgantes (los produce el SQUARE
-    # OUT de cada voz) y PWM_CV/MIX_* de un solo miembro (los consume el
-    # mezclador interno de cada SSI2130).
+    bloque_iv_alimentacion()
+    for n in range(1, 5):
+        dibujar_voz(n, (X_VOZ, Y_VOZ0 + DY_VOZ * (n - 1)))
 
 
 # ------------------------------------------------------------ comprobaciones
