@@ -80,9 +80,9 @@ def revisar(nombre: str, sobre) -> list[str]:
         f.append(f"{nombre}: bbox {w:.1f} x {h:.1f} mm fuera del sobre "
                  f"{sobre} (unidades mal? factor 25.4?)")
     ins = doc.header.get("$INSUNITS", 0)
-    # OpenSCAD 2021.01 emite INSUNITS=6 (decímetros) aunque el contenido es en mm (quirk)
-    if ins not in (0, 4, 6):
-        f.append(f"{nombre}: $INSUNITS={ins} (ni ausente ni mm ni decimetros)")
+    # INSUNITS debe ser 0 (unitless) o 4 (mm); fix_dxf_units.py reescribe 6→4
+    if ins not in (0, 4):
+        f.append(f"{nombre}: $INSUNITS={ins} (ni ausente ni mm)")
     print(f"  {nombre}: {len(ents)} entidades, bbox {w:.1f} x {h:.1f} mm")
     return f
 
