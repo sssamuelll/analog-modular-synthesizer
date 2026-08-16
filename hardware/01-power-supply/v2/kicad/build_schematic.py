@@ -803,7 +803,11 @@ X_IN_TRUNK = 257.81  # troncal vertical que une IN+EN/UV de la pareja + feed
 X_SET_TRUNK = 261.62 # troncal vertical que une SET de la pareja -> R_SET/C_SET
 X_RILIM_L = 252.73   # columna de R11/R12 (ILIM a la IZQUIERDA en el LT3045)
 X_RILIM_R = 294.64   # columna de R13/R14 (ILIM a la DERECHA en el LT3094)
-X_RCSET = 245.11     # columna de R9+C15 / R10+C16 (SET->GNDREF)
+X_RCSET = 245.11     # columna de R9/R10 (rama R del SET->GNDREF)
+X_RCSET2 = 238.76    # columna de C15/C16 (rama C, EN PARALELO con R9/R10 --
+                     # fix round 1: R9/C15 estaban en SERIE, R_SET tiene que
+                     # ir del pin SET a GNDREF con C_SET en paralelo, no en
+                     # cascada -- si no el pin SET no tiene camino DC a masa)
 X_D = 287.02          # ancla de D10/D11 (puente IN_TRUNK <-> nodo de salida).
                        # OJO: tiene que caer en la rejilla de 1.27mm -- el
                        # punto medio geometrico entre X_IN_TRUNK y X_P12/X_N12
@@ -829,7 +833,7 @@ PARTS += [
     ("R15", "Device:R", X_P12, YU4 + 1.27, 0, "20mOhm"),
     ("R16", "Device:R", X_P12, YU5 + 1.27, 0, "20mOhm"),
     ("R9",  "Device:R", X_RCSET, 82.55, 0, "120k"),
-    ("C15", "Device:C", X_RCSET, 92.71, 0, "22uF"),
+    ("C15", "Device:C", X_RCSET2, 82.55, 0, "22uF"),
     ("D10", "Diode:SS14", X_D, YD_P, 0, "SS14"),
     # --- pareja negativa U6/U7 (LT3094xDD, riel -12.000V) ---
     ("U6", "Regulator_Linear:LT3094xDD", XU67, YU6, 0, "LT3094EDD#PBF"),
@@ -843,7 +847,7 @@ PARTS += [
     ("R17", "Device:R", X_N12, YU6 - 1.27, 0, "20mOhm"),
     ("R18", "Device:R", X_N12, YU7 - 1.27, 0, "20mOhm"),
     ("R10", "Device:R", X_RCSET, 182.88, 0, "120k"),
-    ("C16", "Device:C", X_RCSET, 193.04, 0, "22uF"),
+    ("C16", "Device:C", X_RCSET2, 182.88, 0, "22uF"),
     ("D11", "Diode:SS14", X_D, YD_N, 180, "SS14"),
     # --- GNDREF <-> GND: unico puente ---
     ("JP1", "Device:NetTie_2", 350.52, YMID, 0, "GNDREF-GND"),
@@ -911,10 +915,14 @@ WIRES += [
     # §1.3: "tie all SET pins together").
     ("U4 SET tap", [[XPL, YU4 + 5.08], [X_SET_TRUNK, YU4 + 5.08]]),
     ("U5 SET tap", [[XPL, YU5 + 5.08], [X_SET_TRUNK, YU5 + 5.08]]),
-] + vrail(X_SET_TRUNK, [YU4 + 5.08, 78.74, YU5 + 5.08], "U45 SET trunk ") + [
-    ("R9 tap",     [[X_SET_TRUNK, 78.74], [X_RCSET, 78.74]]),
-    ("R9->C15 gap", [[X_RCSET, 86.36], [X_RCSET, 88.90]]),
-    ("C15 gndref", [[X_RCSET, 96.52], [X_RCSET, 99.06]]),
+] + vrail(X_SET_TRUNK, [YU4 + 5.08, 78.74, YU5 + 5.08], "U45 SET trunk ") \
+  + rail(78.74, [X_RCSET2, X_RCSET, X_SET_TRUNK], "U45 SET tap ") + [
+    # R9 (120k) y C15 (22uF) EN PARALELO -- fix round 1 (task review): iban
+    # en serie (SET->R9->C15->GNDREF), lo que le quita a I_SET su camino DC
+    # a masa (el cap bloquea DC). Topologia correcta del DS (§1.3): ambos
+    # de SET a GNDREF, compartiendo los dos extremos.
+] + rail(86.36, [X_RCSET2, X_RCSET], "U45 SET gndref tie ") + [
+    ("C15 gndref", [[X_RCSET, 86.36], [X_RCSET, 88.90]]),
     # OUTS(U4/U5) y OUT(U4/U5)->ballast(R15/R16), todos al nodo +12V real.
     # C23/C24 (salida, pre-ballast) cuelgan del mismo tap que OUT.
 ] + rail(YU4 - 2.54, [XPR, X_C2326, X_P12], "U4 out ") \
@@ -948,10 +956,11 @@ WIRES += [
     ("U7 gnd stub", [[XU67, YU7 + 10.16], [XU67, YU7 + 12.70]]),
     ("U6 SET tap", [[XPL, YU6 + 5.08], [X_SET_TRUNK, YU6 + 5.08]]),
     ("U7 SET tap", [[XPL, YU7 + 5.08], [X_SET_TRUNK, YU7 + 5.08]]),
-] + vrail(X_SET_TRUNK, [YU6 + 5.08, 179.07, YU7 + 5.08], "U67 SET trunk ") + [
-    ("R10 tap",     [[X_SET_TRUNK, 179.07], [X_RCSET, 179.07]]),
-    ("R10->C16 gap", [[X_RCSET, 186.69], [X_RCSET, 189.23]]),
-    ("C16 gndref", [[X_RCSET, 196.85], [X_RCSET, 199.39]]),
+] + vrail(X_SET_TRUNK, [YU6 + 5.08, 179.07, YU7 + 5.08], "U67 SET trunk ") \
+  + rail(179.07, [X_RCSET2, X_RCSET, X_SET_TRUNK], "U67 SET tap ") + [
+    # R10/C16 en paralelo, mismo fix que R9/C15 arriba.
+] + rail(186.69, [X_RCSET2, X_RCSET], "U67 SET gndref tie ") + [
+    ("C16 gndref", [[X_RCSET, 186.69], [X_RCSET, 189.23]]),
 ] + rail(YU6 - 5.08, [XPR, X_C2326, X_N12], "U6 out ") \
   + rail(YU7 - 5.08, [XPR, X_C2326, X_N12], "U7 out ") \
   + vrail(X_C2326, [YU6 + 2.54, YU7 + 2.54, 196.85], "C2526 gnd ") + [
@@ -970,13 +979,13 @@ WIRES += [
 ]
 
 LABELS += [
-    ("GNDREF", X_RCSET, 99.06),    # C15 (SET positivo) -> GNDREF
-    ("GNDREF", X_RCSET, 199.39),   # C16 (SET negativo) -> GNDREF
+    ("GNDREF", X_RCSET, 88.90),    # fondo comun R9/C15 (SET positivo) -> GNDREF
+    ("GNDREF", X_RCSET, 189.23),   # fondo comun R10/C16 (SET negativo) -> GNDREF
     ("GNDREF", 344.17, YMID),      # JP1, lado GNDREF
 ]
 
-for _r, _x, _y in [("R9", X_RCSET, 82.55), ("C15", X_RCSET, 92.71),
-                   ("R10", X_RCSET, 182.88), ("C16", X_RCSET, 193.04),
+for _r, _x, _y in [("R9", X_RCSET, 82.55), ("C15", X_RCSET2, 82.55),
+                   ("R10", X_RCSET, 182.88), ("C16", X_RCSET2, 182.88),
                    ("R11", X_RILIM_L, YU4 + 6.35), ("R12", X_RILIM_L, YU5 + 6.35),
                    ("R13", X_RILIM_R, YU6 + 6.35), ("R14", X_RILIM_R, YU7 + 6.35),
                    ("R15", X_P12, YU4 + 1.27), ("R16", X_P12, YU5 + 1.27),
