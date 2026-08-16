@@ -46,7 +46,9 @@ Arquitectura global y diagrama de bloques: [`docs/architecture.md`](docs/archite
 - **Entrada MIDI**: USB (controladores MIDI clase USB)
 - **Salidas**: 3 CV (1 V/octava, 84 notas) + 1 GATE (10 V)
 - **Puntos de conexión**: ~40 jacks de 3.5 mm (15 in / 25 out)
-- **Dimensiones cajón**: 950 × 440 × 100–200 mm
+- **Dimensiones cajón**: ancho 500 mm × alto 50–391.5 mm (zócalo frontal a
+  punto más alto, por la inclinación) × fondo 350 mm de cuerpo (370 mm con
+  pieles y zócalo volados)
 - **Alimentación**: 230 VAC 50 Hz (variante Europa; tesis original: 110 VAC
   60 Hz Venezuela, ver [`hardware/01-power-supply`](hardware/01-power-supply))
   → 5 V / +12 V / −12 V

@@ -42,8 +42,11 @@ la nota de sustitución al inicio de este documento y
 
 ## Mejoras propuestas
 
-- Migrar a un **estándar Eurorack** (3U, 1HP = 5.08 mm) para
-  intercambiabilidad con módulos comerciales.
+- **Resuelto, en contra**: migrar a un estándar Eurorack (3U, 1HP =
+  5.08 mm) para intercambiabilidad con módulos comerciales — se evaluó y no
+  se adoptó. El case vigente usa formato propio (`alto_panel = 190 mm` vs.
+  128.5 mm de un Eurorack 3U); ver
+  [`case/README.md`](../../case/README.md#formato-propio-no-eurorack).
 - Generar planos en **DXF** o **SVG** para corte láser/CNC reproducible.
 - Diseño de paneles en **KiCad** o **FrontPanelDesigner**.
 - Soporte para iluminación LED del bus de alimentación.
