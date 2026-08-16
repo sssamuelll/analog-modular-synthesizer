@@ -16,7 +16,9 @@ busque compatibilidad Eurorack necesita un case aparte.
 **Dimensiones** (salida real de `clearance_budget.py` a la fecha de este
 documento): alto total 391.5 mm, altura de entrepiso 235.8 mm, ancho útil
 entre costados 484 mm (`ancho_total = 500 mm` menos 2×`t_cheek`). Kerf
-aplicado por defecto: +0.20 mm — lo confirma el cupón (ver abajo).
+aplicado por defecto: **−0.20 mm** — negativo a propósito (el láser
+ensancha y el dibujo compensa restando; el paso 2 del cupón lo desarrolla
+con números). Magnitud provisional: la confirma el cupón.
 
 **Ancho mínimo de panel: 15.40 mm** (= 2×`inset_tornillo` + `d_M3_paso` +
 2 mm de puente — guarda de
@@ -85,9 +87,33 @@ no-determinismo.)
 ## Procedimiento del cupón — OBLIGATORIO antes de cortar planchas
 
 1. Cortar [`plans/coupon.dxf`](plans/coupon.dxf) en el acrílico REAL con la
-   máquina REAL.
-2. Probar tornillos M3/M4/M5 en las escaleras; anotar el diámetro que entra
-   firme sin forzar. kerf = diámetro_dibujado − diámetro_que_ajusta.
+   máquina REAL. El cupón se dibuja CRUDO, sin kerf: es la pieza que lo mide.
+   Cada escalera tiene 11 peldaños, de 0.5 mm por debajo del diámetro nominal
+   del tornillo a 0.5 por encima, en pasos de 0.1 (M3: 2.5 → 3.5 dibujados).
+2. **El `kerf` de `params.scad` es NEGATIVO.** Probar los tornillos M3/M4/M5
+   en las escaleras y anotar el peldaño —el diámetro DIBUJADO— en el que el
+   tornillo entra firme sin forzar. Ese ajuste firme se da cuando el agujero
+   FÍSICO mide más o menos el diámetro nominal del tornillo (3.0 / 4.0 / 5.0),
+   así que:
+
+   ```
+   canal del láser = diámetro nominal del tornillo − peldaño dibujado que ajusta
+   kerf            = − canal del láser
+   ```
+
+   Ejemplo numérico completo (los números son de ejemplo, el procedimiento
+   no): el M3 entra firme en el peldaño **dibujado 2.7 mm**. Un M3 entra firme
+   en un agujero físico de ~3.0 mm, así que el láser se comió
+   3.0 − 2.7 = **0.30 mm** de canal → `kerf = -0.30`.
+
+   Comprobación de que el signo es el correcto, porque es el error caro: el
+   modelo dibuja todo hueco como `d + kerf`. Con `kerf = -0.30`, un agujero de
+   paso M3 se dibuja a 3.4 − 0.30 = 3.10 mm y sale físico a 3.10 + 0.30 =
+   **3.40 mm**, que es el nominal buscado. Con `kerf = +0.30` saldría a
+   **4.00 mm**: 0.6 mm de más, tornillo bailando en cada agujero de tuerca T
+   de las bandejas. Si el servicio te da un kerf de tabla (siempre positivo, es
+   el ancho del canal), va a `params.scad` **con el signo cambiado**;
+   `clearance_budget.py` avisa en AMARILLO si el valor entra positivo.
 3. Probar la ranura con el perfil 2020 y la lengüeta con arandela+tuerca
    (apretar hasta marcar, NO hasta fisurar; anotar sensación de tope).
 3b. **Confirmación anti-circular** (lección de projects/vectorizer): el kerf
@@ -109,9 +135,9 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 
 | Pieza | Cantidad | Nota |
 |-------|----------|------|
-| Larguero perfil 2020 | 10 | de 484 mm (`ancho_util`) cada uno |
-| Tornillo M5 botón | 20 | 2 por larguero, a rosca en el alma del 2020 |
-| Standoff M4 | 12 | pieles + zócalo, volados |
+| Larguero perfil 2020 | 11 | de 484 mm (`ancho_util`) cada uno |
+| Tornillo M5 botón | 22 | 2 por larguero, a rosca en el alma del 2020 |
+| Standoff M4 | 12 | pieles + zócalo, volados. **No todos del mismo largo**: 5 mm los 8 de las pieles, 7 mm el par inferior del zócalo, ~33 mm el par superior (su larguero va retirado para librar el raíl de panel, ver abajo) |
 | Tornillo M4 botón | 24 | con los standoffs de arriba |
 | Arandela M4 | 24 | ídem |
 | Plancha acrílico t=5 mm | 5 | base, entrepiso, zócalo, piel inf., piel sup. |
@@ -131,6 +157,33 @@ depende de la cuenta final de módulos, no de la geometría del cajón):
 Censo actual de paneles: 8 (MIDI/CV, VCO×3, VCF, ADSR, VCA, MIXER —
 `clearance_budget.py`, `ANCHOS_PISO_SUP`/`ANCHOS_PISO_INF`). **Estimado, no
 cerrado**: estos totales por panel cierran cuando cada panel esté dibujado.
+
+## Anclaje de las placas — solo a largueros del esqueleto
+
+Las cinco planchas de acrílico (2 bandejas, zócalo, 2 pieles) se atornillan
+**únicamente a largueros del esqueleto**, nunca a los 4 raíles de panel. Los
+raíles de panel van girados al ángulo de su cara (12° / 35°) para quedar a ras
+del panel: un tornillo contra esa cara entraría a 12° del eje de su agujero
+(≈1.05 mm de descentre en 5 mm de acrílico, contra 0.7–0.9 mm de holgura) y la
+arandela asentaría sobre cara inclinada — carga de borde sobre acrílico frágil,
+que es justo el modo de fallo que este proyecto ya conoce.
+
+Consecuencia práctica: el zócalo delantero lleva un larguero propio («zócalo
+superior», el 11.º del BOM), porque a la altura de su fila de arriba solo había
+un raíl de panel y entre el tope de la bandeja base y la esquina del raíl girado
+quedan 15.6 mm, menos que los 20 del perfil. Ese larguero se retira en X lo justo
+para librar esa esquina (`holgura_rail`), y por eso sus dos standoffs miden
+~33 mm en vez de 7. A cambio el canto superior del zócalo cae exacto en
+`alto_frontal` = 50 mm, en vez de sobrepasarlo 17.5 mm y tapar la fila de
+tornillos inferior de los paneles.
+
+Lo verifica `clearance_budget.py` en `alineacion()`: cada fila de agujeros de
+cada placa tiene que caer en la centerline del larguero de esqueleto que
+**declara**, con 0.05 mm de tolerancia. Una fila que declare un raíl de panel
+sale en ROJO aunque la geometría coincida al micrón. Es una puerta distinta de
+`solapes()`, que solo verifica que las piezas no se atraviesen — una placa
+flotando en el aire es perfectamente disjunta, y así se coló durante toda la
+tanda una bandeja base cuyo canto trasero no llegaba a tocar su larguero.
 
 ## Bonding de tierra — no negociable
 

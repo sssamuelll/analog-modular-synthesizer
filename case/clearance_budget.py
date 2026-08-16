@@ -101,27 +101,54 @@ def _centros_rail(p: dict[str, float],
 
 def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
                         cr: list[tuple[float, float]]) -> list[tuple[float, float]]:
-    """6 centros de larguero de esqueleto, misma formula que
+    """7 centros de larguero de esqueleto, misma formula que
     centros_esqueleto() en sam17_case.scad (entrepiso delantero reubicado,
-    ambos railes de entrepiso a la altura nueva, y repisa — ronda de
+    ambos railes de entrepiso a la altura nueva, repisa — ronda de
     revision 2, R6: piel_superior se reancla aqui en vez de en entrepiso
-    trasero, que vive en el plano del piso inferior y no del superior)."""
+    trasero, que vive en el plano del piso inferior y no del superior — y
+    zocalo superior, ronda final: la fila de arriba del zocalo anclaba a un
+    rail de PANEL, que va rotado)."""
     r = p["rail"] / 2
     x_ed = cr[2][0] + p["rail"] + p["holgura_rail"]
     y_ep = P[3][1] - p["t_acrilico"] - r
+    # semiextension en X del rail de panel cara-inferior TRAS la rotacion R3
+    # (cuadrado girado: r*(|cos|+|sin|)); el rail del zocalo se planta
+    # holgura_rail por detras de esa esquina, que es lo mas adelante que
+    # cabe sin invadirlo.
+    he_ci = r * (abs(math.cos(math.radians(p["angulo_inferior"])))
+                  + abs(math.sin(math.radians(p["angulo_inferior"]))))
+    x_zs = cr[0][0] + he_ci + p["holgura_rail"] + r
     return [(r + 2, r), (p["prof_inferior"] - r, r),
             (x_ed, y_ep), (p["prof_inferior"] - r, y_ep),
             (p["prof_superior"] - r, P[5][1] - r),
-            (p["prof_superior"] - r, P[3][1] + 15)]
+            (p["prof_superior"] - r, P[3][1] + 15),
+            (x_zs, p["alto_frontal"] - 15)]
+
+
+NOMBRES_CR = ["cara_inf s=inset", "cara_inf s=alto-inset",
+              "cara_sup s=inset", "cara_sup s=alto-inset"]
+NOMBRES_CE = ["base delantera", "base trasera", "entrepiso delantero",
+              "entrepiso trasero", "remate superior", "repisa",
+              "zocalo superior"]
 
 
 # Caja = (nombre, x0, x1, y0, y1, z0, z1)
 Caja = tuple
+# Fila de agujeros de una placa = (placa, fila, eje, coordenada en ese eje,
+# rail frontera al que DEBE anclar). El eje es el que recorre la placa de un
+# rail frontera al otro: X en las bandejas (horizontales), Y en el zocalo y
+# las pieles (verticales). El rail va declarado, no se busca el mas cercano:
+# una fila que cae por casualidad en la centerline de otro rail no esta
+# anclada donde el diseno dice, y ese acierto casual no debe pasar la puerta.
+Fila = tuple
 
 
-def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja]]:
-    """AABB de los 10 railes y de las 5 planchas/pieles, misma formula que
-    rails()/planchas_acrilico() en sam17_case.scad."""
+def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
+                                                  list[Fila]]:
+    """AABB de los 11 railes y de las 5 planchas/pieles, misma formula que
+    rails()/planchas_acrilico() en sam17_case.scad, mas las 10 filas de
+    agujeros de las placas (las mismas expresiones que dimensionan la caja,
+    para que un cambio de placa arrastre su fila y no se puedan separar)."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
     ce = _centros_esqueleto(p, P, cr)
@@ -129,12 +156,10 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja]]:
     t_acr, gap = p["t_acrilico"], p["gap_sombra"]
     ancho_total = p["ancho_total"]
 
-    nombres_cr = ["cara_inf s=inset", "cara_inf s=alto-inset",
-                  "cara_sup s=inset", "cara_sup s=alto-inset"]
     angs = [p["angulo_inferior"], p["angulo_inferior"],
             p["angulo_superior"], p["angulo_superior"]]
     railes: list[Caja] = []
-    for nm, c, ang in zip(nombres_cr, cr, angs):
+    for nm, c, ang in zip(NOMBRES_CR, cr, angs):
         # R3: el rail gira -ang sobre su eje largo para calzar a ras de la
         # cara. El AABB real de un cuadrado girado crece a
         # (rail/2)*(|cos|+|sin|) — usar rail/2 sin mas SUBESTIMA el alcance
@@ -144,41 +169,65 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja]]:
                             + abs(math.sin(math.radians(ang))))
         railes.append((nm, c[0] - he, c[0] + he, c[1] - he, c[1] + he,
                        t_cheek, ancho_total - t_cheek))
-    nombres_ce = ["base delantera", "base trasera", "entrepiso delantero",
-                  "entrepiso trasero", "remate superior", "repisa"]
-    for nm, c in zip(nombres_ce, ce):
+    for nm, c in zip(NOMBRES_CE, ce):
         railes.append((nm, c[0] - rail / 2, c[0] + rail / 2,
                        c[1] - rail / 2, c[1] + rail / 2,
                        t_cheek, ancho_total - t_cheek))
 
     planchas: list[Caja] = []
-    # bandeja_base: sin cambios en esta ronda
-    depth_bb = p["prof_inferior"] - 2 * rail - 4
-    planchas.append(("bandeja_base", rail, rail + depth_bb, rail, rail + t_acr,
-                     t_cheek, ancho_total - t_cheek))
+    filas: list[Fila] = []
+    # bandeja_base: ronda final — fondo y colocacion derivados de sus DOS
+    # railes frontera (antes: plancha de prof_inferior-2*rail-4 puesta en
+    # x=rail, filas a +18 y -24 mm de las centerlines y canto trasero a
+    # 4 mm de tocar el rail; la bandeja que carga el PSU no apoyaba atras).
+    x0_bb = ce[0][0] - rail / 2
+    fondo_bb = ce[1][0] + rail / 2 - x0_bb
+    y0_bb = ce[0][1] + rail / 2          # apoya en el lomo del rail
+    planchas.append(("bandeja_base", x0_bb, x0_bb + fondo_bb,
+                     y0_bb, y0_bb + t_acr, t_cheek, ancho_total - t_cheek))
+    filas += [("bandeja_base", "delantera", "x", x0_bb + rail / 2,
+               "base delantera"),
+              ("bandeja_base", "trasera", "x", x0_bb + fondo_bb - rail / 2,
+               "base trasera")]
     # bandeja_entrepiso: R2 — canto trasero a ras de entrepiso-trasero,
     # tope (no fondo) a ras de P3.y
     x0_be = ce[2][0] - rail / 2
     fondo_be = p["prof_inferior"] - ce[2][0] + rail / 2
     planchas.append(("bandeja_entrepiso", x0_be, x0_be + fondo_be,
                      P[3][1] - t_acr, P[3][1], t_cheek, ancho_total - t_cheek))
-    # zocalo: R1 — volado hacia -X (standoffs), ya no bolonado directo
-    alto_zoc = cr[0][1] - ce[0][1] + 30
+    filas += [("bandeja_entrepiso", "delantera", "x", x0_be + rail / 2,
+               "entrepiso delantero"),
+              ("bandeja_entrepiso", "trasera", "x", x0_be + fondo_be - rail / 2,
+               "entrepiso trasero")]
+    # zocalo: R1 — volado hacia -X (standoffs), ya no bolonado directo.
+    # Ronda final: fila superior anclada al rail de esqueleto "zocalo
+    # superior" (ce[6]) en vez del rail de PANEL cara_inf s=inset, que R3
+    # gira 12 grados.
+    alto_zoc = ce[6][1] - ce[0][1] + 30
     y0_zoc = ce[0][1] - 15
     planchas.append(("zocalo", -gap - t_acr, -gap, y0_zoc, y0_zoc + alto_zoc,
                      t_cheek + gap, ancho_total - t_cheek - gap))
+    filas += [("zocalo", "inferior", "y", y0_zoc + 15, "base delantera"),
+              ("zocalo", "superior", "y", y0_zoc + alto_zoc - 15,
+               "zocalo superior")]
     # piel_inferior: R1 — volada hacia +X mas alla de prof_inferior
     alto_pi = ce[3][1] - ce[1][1] + 30
     y0_pi = ce[1][1] - 15
     planchas.append(("piel_inferior", P[8][0] + gap, P[8][0] + gap + t_acr,
                      y0_pi, y0_pi + alto_pi, t_cheek + gap, ancho_total - t_cheek - gap))
+    filas += [("piel_inferior", "inferior", "y", y0_pi + 15, "base trasera"),
+              ("piel_inferior", "superior", "y", y0_pi + alto_pi - 15,
+               "entrepiso trasero")]
     # piel_superior: R1 — volada hacia +X mas alla de prof_superior;
     # re-anclada a la repisa (ce[5]) en vez de entrepiso trasero (R6)
     alto_ps = ce[4][1] - ce[5][1] + 30
     y0_ps = ce[5][1] - 15
     planchas.append(("piel_superior", P[6][0] + gap, P[6][0] + gap + t_acr,
                      y0_ps, y0_ps + alto_ps, t_cheek + gap, ancho_total - t_cheek - gap))
-    return railes, planchas
+    filas += [("piel_superior", "inferior", "y", y0_ps + 15, "repisa"),
+              ("piel_superior", "superior", "y", y0_ps + alto_ps - 15,
+               "remate superior")]
+    return railes, planchas, filas
 
 
 def _overlap(a: Caja, b: Caja) -> tuple[float, float, float] | None:
@@ -201,12 +250,116 @@ def _overlap(a: Caja, b: Caja) -> tuple[float, float, float] | None:
 TOLERADOS: dict[frozenset[str], float] = {}
 
 
+# Tolerancia de alineacion placa<->rail. La coincidencia es una IDENTIDAD
+# (la fila sale de la centerline del rail), asi que lo correcto es 0.00 y
+# esto solo absorbe ruido de coma flotante. Referencia fisica: la holgura
+# del agujero de paso M4 sobre el tornillo es 0.5 mm de diametro, o sea
+# 0.25 mm de radio — un desvio de 0.05 ya es 1/5 de eso, y cualquier error
+# de diseno real (milimetros, como el +18/-24 de la bandeja base) cae en
+# rojo con muchisimo margen.
+TOL_ALINEACION = 0.05
+
+
+def _desvio(coord: float, eje: str, centro: tuple[float, float]) -> float:
+    """Desvio FIRMADO de una fila respecto a una centerline de rail, sobre
+    el eje que recorre la placa."""
+    return coord - centro[0 if eje == "x" else 1]
+
+
+def _mas_cercano(coord: float, eje: str,
+                  candidatos: list[tuple[str, tuple[float, float]]]
+                  ) -> tuple[float, str]:
+    """Rail mas cercano de la lista (solo para el mensaje de diagnostico:
+    el criterio es el rail DECLARADO, no este)."""
+    return min(((_desvio(coord, eje, c), nm) for nm, c in candidatos),
+               key=lambda t: abs(t[0]))
+
+
+def alineacion(p: dict[str, float]) -> list[str]:
+    """ANCLAJE: cada fila de agujeros de cada placa cae en la centerline de
+    un rail del ESQUELETO (sin rotar).
+
+    Por que existe: solapes() verifica DISYUNCION, y una placa flotando en
+    el aire es perfectamente disjunta — nadie verificaba que las placas
+    apoyaran en algo. Dos formas de fallar, las dos en rojo:
+
+      (a) la fila no coincide con ningun rail: la placa se atornilla al
+          aire. Es el defecto de bandeja_base de la ronda final (filas a
+          +18.00 y -24.00 mm de sus railes, canto trasero flotando 4 mm
+          sobre una bandeja que carga el transformador del PSU).
+      (b) la fila coincide con un rail de PANEL: R3 los gira al angulo de
+          su cara (12/35 grados), asi que el tornillo entraria en diagonal
+          respecto al eje del agujero (~1.05 mm de descentre en 5 mm de
+          acrilico contra 0.7-0.9 de holgura) y la arandela asentaria de
+          canto — carga de borde sobre acrilico fragil. Las placas anclan
+          UNICAMENTE a railes de esqueleto; los de panel estan rotados
+          porque sirven a los paneles, no son superficie de anclaje.
+    """
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    ce = _centros_esqueleto(p, P, cr)
+    esqueleto = dict(zip(NOMBRES_CE, ce))
+    panel = dict(zip(NOMBRES_CR, cr))
+    _, _, filas = _cajas_solidas(p)
+    fallos: list[str] = []
+    peor = 0.0
+    for placa, fila, eje, coord, rail_decl in filas:
+        if rail_decl in panel:
+            d = _desvio(coord, eje, panel[rail_decl])
+            fallos.append(
+                f"anclaje [{placa}] fila {fila} ({eje}={coord:.2f}): declara "
+                f"anclar al rail de PANEL '{rail_decl}' (desvio {d:+.2f} mm), y "
+                f"esos van ROTADOS al angulo de su cara — las placas anclan "
+                f"solo a railes de esqueleto")
+            continue
+        assert rail_decl in esqueleto, (
+            f"fila [{placa}/{fila}] declara el rail '{rail_decl}', que no "
+            f"existe ni en el esqueleto ni en los railes de panel")
+        d = _desvio(coord, eje, esqueleto[rail_decl])
+        peor = max(peor, abs(d))
+        if abs(d) > TOL_ALINEACION:
+            d_cerca, nm_cerca = _mas_cercano(coord, eje, list(esqueleto.items()))
+            fallos.append(
+                f"anclaje [{placa}] fila {fila} ({eje}={coord:.2f}): {d:+.2f} mm "
+                f"de la centerline de '{rail_decl}' (tolerancia "
+                f"{TOL_ALINEACION:.2f} mm) — la placa no apoya donde dice; el "
+                f"rail mas cercano es '{nm_cerca}' a {d_cerca:+.2f} mm")
+    print(f"alineacion: {len(filas)} filas de agujeros revisadas, desvio "
+          f"maximo {peor:.2f} mm (tolerancia {TOL_ALINEACION:.2f})")
+    return fallos
+
+
+def canario_alineacion(p: dict[str, float]) -> None:
+    """Autocomprobacion roja de alineacion(): alimenta las filas de la
+    bandeja_base PRE-FIX (plancha de prof_inferior-2*rail-4 colocada en
+    x=rail, ronda final) y exige que el checker las rechace con los desvios
+    conocidos. Si esto no dispara, el checker esta ciego y su VERDE no vale
+    nada. Los desvios esperados salen del algebra, no de una medicion:
+    fila delantera = (rail + rail/2) - (rail/2 + 2) = rail - 2;
+    fila trasera = (prof_inferior - 1.5*rail - 4) - (prof_inferior - rail/2)
+                 = -(rail + 4)."""
+    P = _vertices(p)
+    ce = _centros_esqueleto(p, P, _centros_rail(p, P))
+    esqueleto = dict(zip(NOMBRES_CE, ce))
+    rail = p["rail"]
+    fondo_viejo = p["prof_inferior"] - 2 * rail - 4      # fondo pre-fix
+    casos = ((rail + rail / 2, "base delantera", rail - 2),
+             (rail + fondo_viejo - rail / 2, "base trasera", -(rail + 4)))
+    for coord, rail_decl, esperado in casos:
+        d = _desvio(coord, "x", esqueleto[rail_decl])
+        assert abs(d) > TOL_ALINEACION and abs(d - esperado) < 0.01, (
+            f"canario de alineacion no disparo: la fila pre-fix en x={coord} "
+            f"sale a {d:+.3f} mm de '{rail_decl}' (se esperaba {esperado:+.2f}) "
+            f"y la tolerancia vigente es {TOL_ALINEACION} mm — no confiar en "
+            f"el VERDE de alineacion()")
+
+
 def solapes(p: dict[str, float]) -> list[str]:
-    """10 railes + 5 planchas/pieles: ningun par se pisa en 3D, salvo los
+    """11 railes + 5 planchas/pieles: ningun par se pisa en 3D, salvo los
     TOLERADOS de arriba (impresos igual, nunca silenciados) — vacio ahora
     mismo. Paneles inclinados (1.6 mm, PCB de aluminio de cada modulo): su
     clase la resuelve la rotacion de railes (R3), no entran en esta caja."""
-    railes, planchas = _cajas_solidas(p)
+    railes, planchas, _ = _cajas_solidas(p)
     fallos: list[str] = []
     todas = railes + planchas
     n_rail = len(railes)
@@ -318,6 +471,7 @@ def main() -> int:
     p = leer_params()
     autocomprobacion(p)
     canario_solapes(p)
+    canario_alineacion(p)
     guarda_escalon(p)
     g = perfil(p)
     fallos: list[str] = []
@@ -343,10 +497,18 @@ def main() -> int:
     exige(p["vent_puente_min"] >= 0.8 * p["t_acrilico"],
           "puente de ventilacion fragil para el espesor")
     fallos.extend(solapes(p))
+    fallos.extend(alineacion(p))
 
     print(f"perfil: alto_total={g['alto_total']:.1f}  "
           f"entrepiso={g['y_entrepiso']:.1f}  ancho_util={g['ancho_util']:.0f}")
     print(f"kerf aplicado: {p['kerf']:+.2f} mm (firmado; cupon manda)")
+    print("  se espera NEGATIVO: el laser ENSANCHA y el modelo dibuja "
+          "`d + kerf`, o sea que kerf compensa RESTANDO (README paso 2).")
+    if p["kerf"] > 0:
+        print(f"AMARILLO: kerf {p['kerf']:+.2f} es POSITIVO — los agujeros "
+              f"saldrian {2 * p['kerf']:.2f} mm sobre el nominal. Un kerf de "
+              f"tabla de servicio (ancho de canal, siempre positivo) entra "
+              f"aqui con el signo cambiado.")
     exige(-0.5 <= p["kerf"] <= 0.5,
           "kerf fuera de rango fisico [-0.5, +0.5] mm")
     for f in fallos:
@@ -362,6 +524,12 @@ def main() -> int:
 #   * par de apriete sobre acrilico       -> probeta del cupon (spec §11)
 #   * termica de la fuente v2             -> spec PSU v2 y su validacion
 #   * nesting de planchas en el stock     -> lienzo del Task 5, a ojo
+#   * largo de standoff / distancia perpendicular placa<->rail: alineacion()
+#     verifica que la fila caiga en la centerline de un rail de esqueleto,
+#     no cuanto hay entre la placa y ese rail — en las piezas voladas esa
+#     distancia ES el largo del standoff (dato de compra del BOM, no una
+#     holgura): 7 mm el par inferior del zocalo, ~33 el superior, 5 las
+#     pieles. Se cierra midiendo los standoffs contra el modelo al comprar
 #   * paneles inclinados (1.6 mm, PCB de aluminio de modulo) en solapes():
 #     su ajuste lo resuelve la rotacion de railes (R3), no un AABB — un
 #     rectangulo largo y fino en diagonal sobreestima demasiado con caja

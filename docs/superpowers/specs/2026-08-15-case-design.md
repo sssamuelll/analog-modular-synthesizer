@@ -137,9 +137,15 @@ comprobación va antes del paso destructivo).
   los standoffs de las pieles.
 - **Bandejas horizontales de acrílico** (base y entrepiso) atornilladas con
   tuercas T M3 a un **esqueleto de perfiles 2020** (los mismos del sistema de
-  paneles: 2 largueros de base, 2 de entrepiso y 1 de remate superior, además
-  de los 4 raíles de paneles). Un solo sistema de fijación para todo el
-  instrumento; un standoff no puede sujetar una bandeja de 500 mm de vano.
+  paneles: 7 largueros de esqueleto —2 de base, 2 de entrepiso, remate
+  superior, repisa y zócalo superior— además de los 4 raíles de paneles; el
+  reparto exacto lo fija `centros_esqueleto()` en el modelo). Un solo sistema
+  de fijación para todo el instrumento; un standoff no puede sujetar una
+  bandeja de 500 mm de vano.
+- **Las placas de acrílico anclan solo a largueros de esqueleto**, nunca a los
+  4 raíles de panel: esos van girados al ángulo de su cara, y un tornillo
+  contra una cara inclinada entra descentrado y apoya la arandela de canto
+  sobre acrílico frágil. Verificado por `alineacion()` en el budget.
 - **Separadores (standoffs) de aluminio M4** (macho-hembra y hembra-hembra)
   con tornillería inox de botón: reservados a las pieles flotantes (junta de
   sombra de 5 mm) — la retícula visible y regular de puntos de unión es el
@@ -223,12 +229,18 @@ case/
 
 Standoffs de aluminio M4 (macho-hembra y hembra-hembra, varios largos),
 tornillería inox M4 de botón + arandelas (siempre arandela contra acrílico),
-perfiles 2020 (×4, largo = `ancho_total`), tuercas T M3 + tornillos M3×8
-(paneles), entrada IEC C14 con fusible e interruptor, espárrago M4 + cable
-1.5 mm² verde/amarillo + terminales de ojal (bonding), pies de goma,
-tornillería del transformador, pasacables del entrepiso, perfiles 2020
-adicionales del esqueleto (5 piezas, largo = ancho útil), tornillos M5 de
-botón (extremos de los 9 perfiles, alma del 2020 roscada M5).
+**perfiles 2020: 11 piezas, todas de `ancho_util` = 484 mm** (4 raíles de
+panel + 7 largueros de esqueleto), tuercas T M3 + tornillos M3×8 (paneles),
+entrada IEC C14 con fusible e interruptor, espárrago M4 + cable 1.5 mm²
+verde/amarillo + terminales de ojal (bonding), pies de goma, tornillería del
+transformador, pasacables del entrepiso, **22 tornillos M5 de botón** (2 por
+perfil, alma del 2020 roscada M5).
+
+Los perfiles van entre las caras internas de los costados, así que su largo es
+el ancho útil (484 mm), **no `ancho_total`** (500 mm). Cantidades y largo:
+salida real de `openscad -D 'PART=\"bom\"' case/cad/sam17_case.scad` — el
+modelo las cuenta de `centros_rail()` + `centros_esqueleto()`, y quien las
+recuente después de tocar `params.scad` toma ese eco, no este párrafo.
 
 ## 10. Verificación
 
@@ -255,7 +267,11 @@ con qué habría que medir para cerrarlo.
   cierra midiendo con calibre la plancha comprada y metiendo ese valor en
   `t_acrilico` / `t_cheek`.
 - **Kerf y ajuste de agujeros con ese acrílico y esa máquina**: se cierra con
-  el cupón; nunca se asume el 0.2 mm del default.
+  el cupón; nunca se asume el −0.2 mm del default. Ojo con el signo: `kerf` en
+  `params.scad` es **negativo** (el láser ensancha y el modelo dibuja
+  `d + kerf`, o sea que compensa restando), mientras que un kerf de tabla de
+  servicio es el ancho del canal y viene positivo. El procedimiento con
+  ejemplo numérico está en el paso 2 de `case/README.md`.
 - **Transformador y térmica de la fuente v2**: la spec de la fuente
   ([`2026-08-16-psu-v2-goat-design.md`](2026-08-16-psu-v2-goat-design.md))
   define pre-reg + LT3045/LT3094 y trae su propia lista de no confirmado; el

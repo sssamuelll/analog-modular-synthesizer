@@ -18,7 +18,12 @@ paso_horizontal = 25;    // abre el clip de los railes del escalon tras la rotac
 t_acrilico = 5;    // planchas del cuerpo; MEDIR con calibre (spec §11)
 t_cheek    = 8;    // costados portantes
 t_panel    = 1.6;  // PCB de aluminio, espesor estandar JLCPCB
-kerf       = 0.2;  // default; SE CALIBRA con el cupon (spec §11)
+// kerf FIRMADO y NEGATIVO por convencion: el modelo dibuja `d + kerf` en
+// todo hueco y el laser ensancha, asi que para que el agujero fisico salga
+// al nominal, kerf tiene que RESTAR. Un kerf de tabla de servicio (ancho de
+// canal, siempre positivo) entra aqui con el signo cambiado.
+// Magnitud provisional; SE CALIBRA con el cupon (spec §11, README paso 2).
+kerf       = -0.2;
 
 // --- sistema de paneles (spec §6) ---
 rail            = 20;   // perfil 2020

@@ -19,18 +19,33 @@ import ezdxf
 PLANS = Path(__file__).parent / "plans"
 
 # sobre esperado por pieza, mm: (w_min, w_max, h_min, h_max) con margen
-# SOBRES ajustados Task 6: mediciones reales de bboxes exportados
-# zocalo_2d real 474.0x72.5 -> (460, 490, 57, 87)  [era (460, 500, 30, 55)]
-# piel_inferior_2d real 474.0x240.8 -> (460, 490, 225, 255)  [era (450, 490, 210, 240)]
-# piel_superior_2d real 474.0x160.6 -> (460, 490, 145, 175)  [era (450, 490, 130, 160)]
+#
+# Los sobres de bandeja_base_2d, zocalo_2d y coupon salen de la GEOMETRIA
+# ESPERADA (params.scad + centros_esqueleto()), NO de medir el DXF. Medir el
+# artefacto para fijar el criterio que juzga al artefacto no valida nada: el
+# sobre viejo de bandeja_base_2d (290-320) se calibro midiendo la pieza
+# DEFECTUOSA de 306 mm de fondo, o sea que bendecia exactamente el fallo que
+# tenia que cazar (bandeja sin apoyo en su rail trasero).
+#   bandeja_base_2d = ancho_util x (ce[1].x + rail/2 - (ce[0].x - rail/2))
+#                   = 484 x 348  -> (460, 500, 333, 363)
+#   zocalo_2d       = (ancho_util - 2*gap_sombra) x (ce[6].y - ce[0].y + 30)
+#                   = 474 x 55   -> (460, 490, 40, 70)
+#   coupon          = (2*8 + (n-1)*paso) x 62 = 136 x 62 -> (126, 146, 50, 75)
+#
+# Los otros cuatro conservan los valores que Task 6 calibro MIDIENDO. Se
+# re-derivaron hoy de params para auditarlos (costado 350.00x391.49,
+# entrepiso 484.00x259.13, piel inf 474.00x240.85, piel sup 474.00x160.64) y
+# los cuatro caen dentro de su sobre: la calibracion vieja no escondia ningun
+# desvio. Aun asi el criterio correcto es el derivado — quien toque una de
+# esas piezas recalcula su sobre de params, no lo vuelve a medir del DXF.
 SOBRES = {
     "costado_2d":          (330, 370, 370, 410),
-    "bandeja_base_2d":     (460, 500, 290, 320),
+    "bandeja_base_2d":     (460, 500, 333, 363),
     "bandeja_entrepiso_2d": (460, 500, 235, 265),
-    "zocalo_2d":           (460, 490, 57, 87),
+    "zocalo_2d":           (460, 490, 40, 70),
     "piel_inferior_2d":    (460, 490, 225, 255),
     "piel_superior_2d":    (460, 490, 145, 175),
-    "coupon":              (90, 110, 50, 75),
+    "coupon":              (126, 146, 50, 75),
 }
 
 
