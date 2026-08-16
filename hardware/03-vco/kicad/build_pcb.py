@@ -1,5 +1,21 @@
-"""Genera sam17-vco.kicad_pcb: 114 x 118 mm, 2 capas, UNA masa (GNDA) con
-una isla GNDD minima en la esquina de J2.
+"""Genera sam17-vco.kicad_pcb: 114 x 124 mm, 4 capas, UNA masa (GNDA) en
+plano entero y una isla GNDD minima en la esquina de J2.
+
+EL STACKUP, que es la decision que manda sobre todo lo demas:
+
+    F.Cu     senal
+    In1.Cu   GNDA SOLIDA, sin una sola pista
+    In2.Cu   GNDD (la esquina de la isla) + potencia
+    B.Cu     senal
+
+La ronda anterior salio de aqui en 2 capas y no cerraba: 4 voces identicas
+comparten 7 buses, ese grafo no es planar, las senales tienen que cruzarse,
+y con dos capas la unica donde cruzar era el propio plano de masa. Once
+configuraciones medidas acotaron el intercambio de punta a punta (155 tramos
+al aire con el plano intacto, 15 con el plano al 96%) y ninguna cerraba las
+dos cosas. Con 4 capas se cierran las dos a la vez y ademas el presupuesto
+MEJORA: dac_local_budget.py modela un vertido de 20 mm de ancho, y lo que
+hay ahora debajo del camino DAC->VCO es una capa interna entera.
 
     set FREEROUTING_JAR=C:\\ruta\\freerouting-2.1.0.jar
     "C:\\Program Files\\KiCad\\10.0\\bin\\python.exe" build_pcb.py
@@ -19,7 +35,9 @@ Por eso la frontera no es una linea recta de punta a punta de la placa (como
 en el modulo 2): es una ISLA en la esquina de J2, recortada del plano GNDA
 con el mismo HUECO sin cobre que revisar_frontera() mide, adaptada para medir
 distancia 2D entre los dos vertidos (aqui la frontera dobla una esquina) en
-vez de solo la x.
+vez de solo la x. Los dos vertidos ya no comparten capa, asi que ese hueco
+es una separacion EN PLANTA: In1 esta recortada justo debajo de la isla
+digital para que los dos retornos no se solapen ni siquiera verticalmente.
 
 LA COLOCACION ES UN CUADRO 2x2, NO UNA FILA DE 4. Es la correccion de fondo
 de esta version. Con las 4 voces en fila el DAC de tono se queda en una punta
@@ -28,8 +46,7 @@ los 50 mm que modela dac_local_budget.LARGO_LOCAL. En cuadro, los 3 DAC y la
 referencia caben en el hueco central del cuadrado y las 4 voces quedan a la
 MISMA distancia del DAC -- el peor par baja a 41.8 mm (37.7 el de U5, que es
 el que manda la afinacion), dentro de la cota, y de paso la placa pasa de
-240x172 a 114x118: 3.1x menos area, y por debajo de los 14.000 mm2 del
-objetivo, aunque casi cuadrada en vez de apaisada.
+240x172 a 114x124: 3x menos area.
 
 EL RUTEO LO HACE FREEROUTING, no un ruteador casero. La version anterior de
 este script traia un ruteador voraz de caminos en L/Z: cerraba 70 de 106
@@ -38,26 +55,16 @@ cierra el 96% de las conexiones. El flujo -- exportar DSN, correr el jar
 headless, importar SES, repetir -- vive en rutear(). El jar NO se descarga
 solo: si falta, el script lo dice y aborta.
 
-LO QUE NO CIERRA, dicho aqui y no solo en el reporte: quedan 18 conexiones
-sin rutear (de ~500) y el plano analogico acaba en 30 islas, con el 96.5%
-del cobre en la mayor. El script sale con ERROR mientras eso pase.
-
-Las dos cosas son el mismo problema: 4 voces identicas comparten 7 buses,
-ese grafo no es planar, las senales tienen que cruzarse, y en dos capas la
-unica donde cruzar es B.Cu -- que es el plano. Cada cruce es una ranura.
-Medido de punta a punta: con B.Cu prohibido en todo el analogico (la regla
-literal del brief) quedan 155 tramos y el plano intacto; con la cruz
-central protegida, 15-22 y el plano al 96%; con B.Cu abierto salvo el
-cuadro de los DAC, 16 y el plano al 97%. Agrandar la placa a 122x128 NO
-ayuda (18, y peor plano): el cuello es topologico, no de sitio. Es una
-placa de 4 capas o un remate manual; esa decision no es de este script.
-
-ASIMETRIA DE RUTEO: la pista de esta placa vive en F.Cu. B.Cu es el plano
--- GNDA cubre el 95% de la placa, GNDD el resto. La comprobacion que importa
-no es "cuantas pistas hay en B.Cu" sino que el plano ANALOGICO siga siendo
-UNA SOLA ISLA (revisar() lo mide sobre el relleno real): lo que hace dano no
-es el cobre de abajo, es que la corriente de retorno tenga que rodear. Es la
-misma regla del modulo 2, dicha en la misma forma.
+LA REGLA DE RUTEO, ahora que hay 4 capas: **In1 no se toca.** F.Cu y B.Cu
+son dos capas de senal completas y por ellas puede ir lo que sea; por In1 no
+pasa ni una pista. La asimetria vieja de B.Cu (que existia solo porque el
+plano vivia ahi) se va con ella. Lo unico que atraviesa In1 son las VIAS,
+que son inevitables -- todo el cobre es SMD en F.Cu, asi que cada pad de
+masa baja al plano por una via y cada cambio de capa lo cruza. Una via deja
+un AGUJERO, que la corriente de retorno rodea sin enterarse; una pista
+dejaria una RANURA, que la obliga a dar la vuelta. revisar() lo comprueba a
+posteriori sobre el relleno real: la isla mayor de In1 tiene que llevarse
+mas del 99% del cobre.
 
 EL EP DE CADA SSI2130 (pin 33, land termico) queda AISLADO a proposito: la
 netlist ya lo trae con nombre unico "unconnected-(Un-EP-Pad33)" y este script
@@ -69,7 +76,9 @@ la placa ya ruteada, no sobre la intencion.
 """
 from __future__ import annotations
 
+import contextlib
 import json
+import math
 import os
 import re
 import subprocess
@@ -91,14 +100,14 @@ FREEROUTING = os.environ.get("FREEROUTING_JAR", "")
 PASADAS = int(os.environ.get("FREEROUTING_PASADAS", "250"))
 RONDAS = int(os.environ.get("FREEROUTING_RONDAS", "6"))
 
-W, H = 114.0, 118.0
+W, H = 114.0, 124.0
 MARGEN = 4.0
 # la isla GNDD: esquina inferior izquierda, x < ISLA_X1 e y > ISLA_Y1 (antes
 # de descontar el hueco). Los dos bordes que SI dan a GNDA son el derecho
 # (x=ISLA_X1) y el de arriba (y=ISLA_Y1); los otros dos coinciden con el
 # borde de la placa, ahi no hace falta hueco.
 ISLA_X1 = 56.0
-ISLA_Y1 = 90.0
+ISLA_Y1 = 96.0
 HUECO = 3.0                # ancho del hueco de cobre entre GNDA y GNDD, mm
 G = HUECO / 2
 
@@ -156,8 +165,8 @@ HUELLA = {
 # El indice de voz mapea a (columna, fila) asi: 1->(0,0) 2->(0,1) 3->(1,0)
 # 4->(1,1). Con los jacks del panel ordenados 1,2,3,4 de izquierda a derecha,
 # cada par CV/OUT cae encima de su columna de voces.
-CX = [30.0, 92.0]
-CY = [35.0, 77.0]
+CX = [27.0, 90.0]
+CY = [35.0, 81.0]
 CUADRANTE = {1: (0, 0), 2: (0, 1), 3: (1, 0), 4: (1, 1)}
 # La fila de ABAJO va girada 180 grados. No es simetria por gusto: cada lado
 # del QFN lleva unas senales fijas y girar la celda decide a que distancia
@@ -168,8 +177,8 @@ CUADRANTE = {1: (0, 0), 2: (0, 1), 3: (1, 0), 4: (1, 1)}
 #     vive en la isla digital de abajo.
 #   voz 1 y voz 3 sin girar: ahi el balance sale al reves.
 ROT_VOZ = {1: 0, 2: 180, 3: 0, 4: 180}
-JACK_Y = 8.0
-JACK_X0, JACK_PASO = 18.3, 11.5
+JACK_Y = 7.0
+JACK_X0, JACK_PASO = 18.25, 11.5
 
 # Plantilla de un canal: (formato-de-ref, dx, dy) relativo al centro del
 # QFN. Cada lado del chip agrupa las senales que entran por ese lado (visto
@@ -190,30 +199,30 @@ JACK_X0, JACK_PASO = 18.3, 11.5
 _PLANTILLA = [
     ("U{i}", 0.0, 0.0),
     # bloque izquierdo, columna exterior
-    ("R_SIN475B_{i}", -13.9, -4.5),
-    ("R_SIN402_{i}", -13.9, -1.5),
-    ("R_SIN475A_{i}", -13.9, 1.5),
-    ("C_AC{i}A", -13.9, 4.5),
+    ("R_SIN475B_{i}", -15.2, -4.5),
+    ("R_SIN402_{i}", -15.2, -1.5),
+    ("R_SIN475A_{i}", -15.2, 1.5),
+    ("C_AC{i}A", -15.2, 4.5),
     # bloque izquierdo, columna interior. C_AC*B es un PUENTE de verdad: sus
     # dos pines van a AUX1_IN (pin 4, izquierda) y a SINE_OUT (pin 24,
     # esquina arriba-derecha), lados OPUESTOS del chip. Se queda del lado de
     # su pin 4 y el rodeo lo resuelve el router.
-    ("C_AC{i}B", -9.5, -3.0),
-    ("R_PITCH{i}", -9.5, 0.0),
-    ("R_CVIN{i}", -9.5, 3.0),
+    ("C_AC{i}B", -10.5, -3.0),
+    ("R_PITCH{i}", -10.5, 0.0),
+    ("R_CVIN{i}", -10.5, 3.0),
     # columna derecha: la red de VREF
-    ("R_LIN{i}", 9.0, -3.0),
-    ("R_SCALE{i}", 9.0, 0.0),
+    ("R_LIN{i}", 10.0, -3.0),
+    ("R_SCALE{i}", 10.0, 0.0),
     # fila de arriba: lo que sale hacia U9 y U10
-    ("R_IV{i}", -6.0, -8.0),
-    ("R_BW{i}", -2.0, -8.0),
-    ("C_BW{i}", 2.0, -8.0),
-    ("R_SQ{i}", 6.0, -8.0),
+    ("R_IV{i}", -6.0, -9.0),
+    ("R_BW{i}", -2.0, -9.0),
+    ("C_BW{i}", 2.0, -9.0),
+    ("R_SQ{i}", 6.0, -9.0),
     # fila de abajo: las 4 entradas del mezclador
-    ("R_MIX{i}A", -6.0, 8.0),
-    ("R_MIX{i}B", -2.0, 8.0),
-    ("R_MIX{i}C", 2.0, 8.0),
-    ("R_MIX{i}D", 6.0, 8.0),
+    ("R_MIX{i}A", -6.0, 9.0),
+    ("R_MIX{i}B", -2.0, 9.0),
+    ("R_MIX{i}C", 2.0, 9.0),
+    ("R_MIX{i}D", 6.0, 9.0),
 ]
 # Los tres condensadores que van pegados al chip, cada uno alineado con SU
 # pin y girado para que sea el pad util (el 1) el que mira al chip -- girar
@@ -225,9 +234,9 @@ _PLANTILLA = [
 _DESACOPLO_5V = {1: "C21", 2: "C22", 3: "C23", 4: "C24"}
 _DESACOPLO_12V = {1: "C27", 2: "C28", 3: "C29", 4: "C30"}
 _PEGADOS = [
-    ("C_TCAP{i}", 0.6, 4.5, 270),
-    ("{c5v}", 5.0, 1.0, 0),
-    ("{c12v}", -5.2, 1.4, 180),
+    ("C_TCAP{i}", 0.6, 5.2, 270),
+    ("{c5v}", 5.6, 1.0, 0),
+    ("{c12v}", -5.6, 1.4, 180),
 ]
 
 COLOCACION: dict[str, tuple[str, float, float, int]] = {}
@@ -244,8 +253,8 @@ for _i, (_col, _fila) in CUADRANTE.items():
         _ref = _fmt.format(i=_i, c5v=_DESACOPLO_5V[_i], c12v=_DESACOPLO_12V[_i])
         COLOCACION[_ref] = ("c", _cx + _s * _dx, _cy + _s * _dy, (_rot + _r) % 360)
     # puntos de prueba de la voz, en la esquina libre de la celda
-    COLOCACION[f"TP{5 + _i}"] = ("tp", _cx - _s * 13.9, _cy - _s * 8.5, 0)  # CV_PITCH
-    COLOCACION[f"TP{9 + _i}"] = ("tp", _cx - _s * 13.9, _cy + _s * 8.5, 0)  # MIXO
+    COLOCACION[f"TP{5 + _i}"] = ("tp", _cx - _s * 15.2, _cy - _s * 9.6, 0)  # CV_PITCH
+    COLOCACION[f"TP{9 + _i}"] = ("tp", _cx - _s * 15.2, _cy + _s * 9.6, 0)  # MIXO
     # jacks del panel, en el borde de arriba, en el orden 1,2,3,4
     COLOCACION[f"J_CV{_i}"] = ("jack", JACK_X0 + JACK_PASO * (2 * _i - 2),
                                JACK_Y, 0)
@@ -264,20 +273,20 @@ for _i, (_col, _fila) in CUADRANTE.items():
 # LADO de su pin, que en un TSSOP-16 son los COSTADOS, no arriba y abajo:
 # +5V es el pin 5 (izquierda) y +3V3 los pines 11/15 (derecha).
 COLOCACION.update({
-    "U6": ("tssop16", 61.0, 49.0, 0),
-    "U5": ("tssop16", 61.0, 55.5, 0),
-    "U7": ("tssop16", 61.0, 62.0, 0),
-    "C14": ("c", 54.5, 49.325, 180), "C15": ("c", 67.5, 49.975, 0),   # U6
-    "C12": ("c", 54.5, 55.825, 180), "C13": ("c", 67.5, 56.475, 0),   # U5
-    "C16": ("c", 54.5, 62.325, 180), "C17": ("c", 67.5, 62.975, 0),   # U7
-    "U8": ("soic8", 46.0, 52.0, 0),
-    "C11": ("c", 51.5, 52.635, 0),
-    "TP5": ("tp", 46.0, 58.5, 0),
+    "U6": ("tssop16", 58.5, 51.5, 0),
+    "U5": ("tssop16", 58.5, 58.0, 0),
+    "U7": ("tssop16", 58.5, 64.5, 0),
+    "C14": ("c", 52.0, 51.825, 180), "C15": ("c", 65.0, 52.475, 0),   # U6
+    "C12": ("c", 52.0, 58.325, 180), "C13": ("c", 65.0, 58.975, 0),   # U5
+    "C16": ("c", 52.0, 64.825, 180), "C17": ("c", 65.0, 65.475, 0),   # U7
+    "U8": ("soic8", 72.0, 58.0, 0),
+    "C11": ("c", 78.0, 58.635, 0),
+    "TP5": ("tp", 72.0, 65.0, 0),
     # U9 (TL074) en el canal central de ARRIBA, entre los jacks y la fila
     # superior de voces: recibe MIXO_1..4 (pin 25, lado de arriba de cada
     # QFN) y devuelve VOICE_OUT_1..4 a los jacks. Abajo, con la fuente,
     # cada salida de audio se iba 90 mm hasta su jack.
-    "U9": ("soic14", 58.0, 32.0, 0),
+    "U9": ("soic14", 58.5, 32.0, 0),
     "TP14": ("tp", 68.0, 32.0, 0),
 })
 
@@ -330,45 +339,14 @@ COLOCACION.update({
 # puede quedar desfasada.
 
 
-# --------------------------------------------------- donde se puede bajar
-# Freerouting NO respeta un (plane ...) del DSN como obstaculo: da por hecho
-# que el vertido se rehara alrededor de sus pistas, y rutea por B.Cu tan
-# campante. Suelto sobre la placa entera metio 242 vias y dejo el plano
-# ANALOGICO partido en 12 islas -- justo el dano que revisar() existe para
-# cazar. Prohibido del todo (keepout sobre todo el analogico), la placa se
-# queda en una sola capa y no cierra: 155 tramos al aire.
-#
-# La linea que si sostiene el presupuesto: la CRUZ CENTRAL se queda de cobre
-# macizo -- la banda vertical x[41.5,75.5] y la horizontal y[46,66], que es
-# donde viven los DAC y por donde corre el camino DAC->VCO con su corriente
-# de retorno. Fuera de la cruz (las cuatro esquinas donde estan las voces, y
-# la franja de abajo con la isla digital y la fuente) se puede bajar. Es la
-# asimetria del modulo 2 aplicada a esta geometria: el cobre de abajo se
-# protege donde el presupuesto lo mide, no en toda la placa por principio.
-VENTANAS_BCU = [(0.0, 0.0, 46.0, 46.0),           # esquina de la voz 1
-                (0.0, 66.0, 46.0, ISLA_Y1 - G),   # esquina de la voz 2
-                (71.0, 0.0, W, 46.0),             # esquina de la voz 3
-                (71.0, 66.0, W, ISLA_Y1 - G),     # esquina de la voz 4
-                (0.0, ISLA_Y1 - G, W, H)]         # isla digital + fuente
-
-
-def _keepouts_bcu() -> list[tuple[float, float, float, float]]:
-    """El complemento de VENTANAS_BCU, en rectangulos.
-
-    Un area de reglas de KiCad no sabe decir "aqui SI"; solo "aqui no". Se
-    trocea la placa por las coordenadas de los bordes de las ventanas y se
-    queda con las celdas que no caen dentro de ninguna.
-    """
-    xs = sorted({0.0, W} | {v for r in VENTANAS_BCU for v in (r[0], r[2])})
-    ys = sorted({0.0, H} | {v for r in VENTANAS_BCU for v in (r[1], r[3])})
-    fuera = []
-    for x0, x1 in zip(xs, xs[1:]):
-        for y0, y1 in zip(ys, ys[1:]):
-            cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-            if not any(a <= cx <= c and b <= cy <= d
-                       for a, b, c, d in VENTANAS_BCU):
-                fuera.append((x0, y0, x1, y1))
-    return fuera
+# ------------------------------------------------------------- el stackup
+# 4 capas. La de en medio manda: In1 es GNDA ENTERA y no se rutea por ella.
+#   F.Cu   senal
+#   In1.Cu GNDA solida  <- el plano que sostiene dac_local_budget.py
+#   In2.Cu GNDD (la esquina de la isla) + potencia
+#   B.Cu   senal
+CAPA_GNDA = pcbnew.In1_Cu
+CAPA_GNDD = pcbnew.In2_Cu
 
 
 def en_isla(x: float, y: float) -> bool:
@@ -405,7 +383,7 @@ def colocar() -> None:
     check_huellas()
     nets = leer_netlist()
     board = pcbnew.CreateEmptyBoard()
-    board.SetCopperLayerCount(2)
+    board.SetCopperLayerCount(4)
     for n in sorted(set(nets.values())):
         board.Add(pcbnew.NETINFO_ITEM(board, n))
 
@@ -472,42 +450,31 @@ def colocar() -> None:
         board.Add(z)
         return z
 
-    # GNDA: todo el contorno de la placa MENOS la esquina de la isla. Los dos
-    # vertices que doblan la esquina (ISLA_X1+G, ISLA_Y1-G) son el borde real
-    # que da a GNDD; el resto del borde de la isla coincide con el borde de
-    # la placa y no necesita hueco.
-    zona("GNDA", pcbnew.B_Cu, [
+    # GNDA en In1: todo el contorno de la placa MENOS la esquina de la isla.
+    # Los dos vertices que doblan la esquina (ISLA_X1+G, ISLA_Y1-G) son el
+    # borde real que da a GNDD; el resto del borde de la isla coincide con el
+    # borde de la placa y no necesita hueco. El recorte no es decorativo: es
+    # lo que mantiene separados en PLANTA el retorno analogico y el digital,
+    # aunque ahora vivan en capas distintas.
+    zona("GNDA", CAPA_GNDA, [
         (MARGEN, MARGEN), (W - MARGEN, MARGEN), (W - MARGEN, H - MARGEN),
         (ISLA_X1 + G, H - MARGEN), (ISLA_X1 + G, ISLA_Y1 - G),
         (MARGEN, ISLA_Y1 - G),
     ])
-    zona("GNDD", pcbnew.B_Cu, [
+    # GNDD en In2, junto con la potencia: el retorno digital solo tiene que
+    # devolver corriente logica y le sobra con la esquina de la isla.
+    zona("GNDD", CAPA_GNDD, [
         (MARGEN, ISLA_Y1 + G), (ISLA_X1 - G, ISLA_Y1 + G),
         (ISLA_X1 - G, H - MARGEN), (MARGEN, H - MARGEN),
     ])
 
-    # ---- las areas prohibidas de B.Cu: la asimetria, dicha en un idioma
-    # que Freerouting entiende. Ver VENTANAS_BCU.
-    for x0, y0, x1, y1 in _keepouts_bcu():
-        ka = pcbnew.ZONE(board)
-        ka.SetLayer(pcbnew.B_Cu)
-        ka.SetIsRuleArea(True)
-        ka.SetDoNotAllowTracks(True)
-        # Vias SI, a proposito. Todo el cobre de esta placa es SMD en F.Cu:
-        # sin una via al lado, cada pad de GNDA se queda mirando el plano
-        # desde arriba sin tocarlo (con las vias prohibidas el DRC cantaba 50
-        # pads sueltos, casi todos de masa). Y una via de GNDA no agujerea el
-        # plano: es del mismo neto, el vertido la abraza. Lo que parte el
-        # plano son las PISTAS de otras redes, y esas siguen prohibidas.
-        ka.SetDoNotAllowVias(False)
-        ka.SetDoNotAllowZoneFills(False)
-        ka.SetDoNotAllowPads(False)
-        ka.SetDoNotAllowFootprints(False)
-        v = pcbnew.VECTOR_VECTOR2I()
-        for x, y in ((x0, y0), (x1, y0), (x1, y1), (x0, y1)):
-            v.append(pcbnew.VECTOR2I(mm(x), mm(y)))
-        ka.AddPolygon(v)
-        board.Add(ka)
+    # "In1 no se toca" NO se dice con un area de reglas de KiCad. Se probo:
+    # un keepout de placa entera sobre In1 se exporta como un wire_keepout
+    # que cubre todo, y Freerouting se atasca en seco -- 200 conexiones sin
+    # rutear desde la pasada 4 hasta la 139, sin moverse. Se dice en el DSN,
+    # marcando In1 como capa de POTENCIA (ver _ajustar_dsn), que es el
+    # idioma que Specctra tiene para esto: con eso el router baja de 222 a 80
+    # en 14 pasadas. Del lado de KiCad lo vigila revisar(), contando pistas.
 
     reglas = board.GetDesignSettings()
     reglas.m_TrackMinWidth = mm(ANCHO)
@@ -533,6 +500,154 @@ def _dist_seg(p, a, b) -> float:
     L = dx * dx + dy * dy
     t = 0.0 if L == 0 else max(0.0, min(1.0, ((p[0]-a[0])*dx + (p[1]-a[1])*dy) / L))
     return ((p[0] - (a[0]+t*dx))**2 + (p[1] - (a[1]+t*dy))**2) ** 0.5
+
+
+def _pads_sin_plano(board, net: str) -> list:
+    """Pads de `net` cuyo cobre NO llega a ninguna via, o sea al plano.
+
+    La pregunta correcta no es "tiene una via cerca" ni "le sale un rabito",
+    que es lo que preguntaban las dos versiones anteriores y por eso daban
+    por resueltos pads que el DRC seguia contando sueltos. La pregunta es si
+    el trozo de cobre del que forma parte el pad TOCA una via en algun sitio:
+    todo el cobre es SMD en F.Cu y el plano esta dentro de la placa, asi que
+    sin via no hay contacto, por muchos rabitos que haya.
+
+    Se arma el grafo del neto (pads, pistas y vias, uniendo lo que se toca
+    en la MISMA capa) y se devuelven los pads de los grupos que no tienen
+    ninguna via.
+    """
+    pads = [p for fp in board.GetFootprints() for p in fp.Pads()
+            if p.GetNetname() == net]
+    pistas = [t for t in board.GetTracks() if t.GetNetname() == net
+              and not isinstance(t, pcbnew.PCB_VIA)]
+    vias = [t for t in board.GetTracks() if t.GetNetname() == net
+            and isinstance(t, pcbnew.PCB_VIA)]
+    nodos = pads + pistas + vias
+    padre = list(range(len(nodos)))
+
+    def raiz(i):
+        while padre[i] != i:
+            padre[i] = padre[padre[i]]
+            i = padre[i]
+        return i
+
+    def unir(i, j):
+        padre[raiz(i)] = raiz(j)
+
+    def caja(p):
+        c = p.GetBoundingBox()
+        return (c.GetLeft() / 1e6 - 0.02, c.GetTop() / 1e6 - 0.02,
+                c.GetRight() / 1e6 + 0.02, c.GetBottom() / 1e6 + 0.02)
+
+    cajas = [caja(p) for p in pads]
+    extremos = [((t.GetStart().x / 1e6, t.GetStart().y / 1e6),
+                 (t.GetEnd().x / 1e6, t.GetEnd().y / 1e6), t.GetLayer())
+                for t in pistas]
+    puntos_via = [(v.GetPosition().x / 1e6, v.GetPosition().y / 1e6)
+                  for v in vias]
+    n_p, n_t = len(pads), len(pistas)
+
+    def dentro(q, c):
+        return c[0] <= q[0] <= c[2] and c[1] <= q[1] <= c[3]
+
+    for i, (a, b, capa) in enumerate(extremos):        # pista <-> pad
+        for j, c in enumerate(cajas):
+            if capa == pads[j].GetLayer() or pads[j].GetAttribute() != pcbnew.PAD_ATTRIB_SMD:
+                if dentro(a, c) or dentro(b, c):
+                    unir(n_p + i, j)
+    for i, (a, b, capa) in enumerate(extremos):        # pista <-> pista
+        for k in range(i + 1, n_t):
+            c, d, capa2 = extremos[k]
+            if capa == capa2 and (_dist_seg(a, c, d) < 0.02
+                                  or _dist_seg(b, c, d) < 0.02
+                                  or _dist_seg(c, a, b) < 0.02
+                                  or _dist_seg(d, a, b) < 0.02):
+                unir(n_p + i, n_p + k)
+    for v, q in enumerate(puntos_via):                 # via <-> pad y pista
+        for j, c in enumerate(cajas):
+            if dentro(q, c):
+                unir(n_p + n_t + v, j)
+        for i, (a, b, _capa) in enumerate(extremos):
+            if _dist_seg(q, a, b) < VIA_D / 2:
+                unir(n_p + n_t + v, n_p + i)
+
+    con_via = {raiz(n_p + n_t + v) for v in range(len(vias))}
+    return [p for j, p in enumerate(pads) if raiz(j) not in con_via]
+
+
+def limpiar_colgajos() -> int:
+    """Borra el cobre de masa que no llega a ningun sitio.
+
+    Freerouting deja trocitos de GNDA sueltos por la placa: rabos de medio
+    milimetro que empezo y abandono, y alguna pista larga que se quedo sin
+    los dos extremos. Cada trozo asi cuenta como una conexion abierta en el
+    DRC y no sirve para nada -- son islas de cobre flotando.
+
+    Se borra en bucle cualquier pista de masa con un extremo LIBRE: uno que
+    no toque un pad, ni una via, ni otra pista de su misma red. Borrar una
+    puede dejar libre el extremo de la siguiente, de ahi el bucle.
+
+    No puede tapar un problema: si se borrara un tramo que un pad necesitaba,
+    ese pad se queda suelto y el conteo de conexiones abiertas SUBE, no baja.
+    Y despues corre coser_masas(), que le pone su bajada como a los demas.
+    """
+    board = pcbnew.LoadBoard(PCB)
+    fijos = []          # pads y vias: puntos de anclaje
+    for fp in board.GetFootprints():
+        for p in fp.Pads():
+            c = p.GetBoundingBox()
+            fijos.append((p.GetNetname(), c.GetLeft() / 1e6, c.GetTop() / 1e6,
+                          c.GetRight() / 1e6, c.GetBottom() / 1e6))
+    borradas = 0
+    while True:
+        pistas, vias = [], []
+        for t in board.GetTracks():
+            if isinstance(t, pcbnew.PCB_VIA):
+                vias.append((t.GetNetname(), t.GetPosition().x / 1e6,
+                             t.GetPosition().y / 1e6))
+            elif t.GetNetname() in ("GNDA", "GNDD"):
+                pistas.append((t, t.GetNetname(),
+                               (t.GetStart().x / 1e6, t.GetStart().y / 1e6),
+                               (t.GetEnd().x / 1e6, t.GetEnd().y / 1e6)))
+
+        def anclado(net, q, propia) -> bool:
+            if any(n == net and x0 - 0.02 <= q[0] <= x1 + 0.02
+                   and y0 - 0.02 <= q[1] <= y1 + 0.02
+                   for n, x0, y0, x1, y1 in fijos):
+                return True
+            if any(n == net and (q[0] - vx) ** 2 + (q[1] - vy) ** 2
+                   < (VIA_D / 2) ** 2 for n, vx, vy in vias):
+                return True
+            return any(n == net and _dist_seg(q, a, b) < 0.02
+                       for otra, n, a, b in pistas if otra is not propia)
+
+        ronda = [t for t, net, a, b in pistas
+                 if not (anclado(net, a, t) and anclado(net, b, t))]
+        if not ronda:
+            break
+        for t in ronda:
+            board.Remove(t)
+        borradas += len(ronda)
+    pcbnew.SaveBoard(PCB, board)
+    print(f"colgajos de masa borrados: {borradas} tramos que no llegaban "
+          f"a ningun sitio")
+    return borradas
+
+
+def _abanico(px: float, py: float, ux: float, uy: float):
+    """Sitios candidatos para la via de un pad, del mas cercano al mas lejano.
+
+    (ux,uy) es el rumbo que se aleja del centro del encapsulado. A cada
+    distancia se prueba ese rumbo primero y luego se abre en abanico a los
+    dos lados, hasta darse la vuelta.
+    """
+    yield px, py
+    for d in (0.9, 1.3, 1.7, 2.1, 2.6, 3.2, 3.9, 4.6):
+        for grados in (0, 30, -30, 60, -60, 90, -90, 130, -130, 180):
+            r = math.radians(grados)
+            vx = ux * math.cos(r) - uy * math.sin(r)
+            vy = ux * math.sin(r) + uy * math.cos(r)
+            yield px + vx * d, py + vy * d
 
 
 def coser_masas() -> int:
@@ -562,30 +677,60 @@ def coser_masas() -> int:
     r_via = VIA_D / 2 + CLEARANCE
     cajas = [(p.GetNetname(), p.GetBoundingBox()) for fp in board.GetFootprints()
              for p in fp.Pads()]
-    segs, puntos = [], []
+    segs, segs_todas, puntos = [], [], []
     for t in board.GetTracks():
         if isinstance(t, pcbnew.PCB_VIA):
             puntos.append((t.GetNetname(), t.GetPosition().x / 1e6,
                            t.GetPosition().y / 1e6, VIA_D / 2))
         else:
+            segs_todas.append((t.GetNetname(),
+                               (t.GetStart().x / 1e6, t.GetStart().y / 1e6),
+                               (t.GetEnd().x / 1e6, t.GetEnd().y / 1e6),
+                               t.GetWidth() / 2e6))
+        if not isinstance(t, pcbnew.PCB_VIA) and t.GetLayer() == pcbnew.F_Cu:
+            # SOLO F.Cu. El rabito que une el pad con su via vive en F.Cu, y
+            # una pista de B.Cu o de In2 por debajo no le estorba: son capas
+            # distintas. Meterlas todas en el mismo saco (lo que hacia la
+            # primera version) daba por ocupado medio anillo del QFN y
+            # dejaba 13 pads de masa sin bajada que en realidad si cabian.
             segs.append((t.GetNetname(),
                          (t.GetStart().x / 1e6, t.GetStart().y / 1e6),
                          (t.GetEnd().x / 1e6, t.GetEnd().y / 1e6),
                          t.GetWidth() / 2e6))
 
-    def lejos(x: float, y: float, net: str, margen: float) -> bool:
-        for otra, caja in cajas:
+    # Cerca() recorta el cobre de la placa a lo que hay a menos de 8 mm del
+    # pad que se esta cosiendo. Sin ese recorte, cada candidato compara
+    # contra ~500 pads, ~1400 pistas y ~250 vias, y probar 90 candidatos por
+    # pad en 90 pads no termina nunca. Con el, cada comparacion mira dos
+    # docenas de cosas.
+    cerca_cajas = cerca_segs = cerca_todas = cerca_puntos = None
+
+    def cerca(px: float, py: float) -> None:
+        nonlocal cerca_cajas, cerca_segs, cerca_todas, cerca_puntos
+        R = 8.0
+        cerca_cajas = [(n, c) for n, c in cajas
+                       if abs((c.GetLeft() + c.GetRight()) / 2e6 - px) < R
+                       and abs((c.GetTop() + c.GetBottom()) / 2e6 - py) < R]
+        cerca_segs = [s for s in segs
+                      if _dist_seg((px, py), s[1], s[2]) < R]
+        cerca_todas = [s for s in segs_todas
+                       if _dist_seg((px, py), s[1], s[2]) < R]
+        cerca_puntos = [p for p in puntos
+                        if abs(p[1] - px) < R and abs(p[2] - py) < R]
+
+    def lejos(x, y, net: str, margen: float, todas=False) -> bool:
+        for otra, caja in cerca_cajas:
             if otra == net:
                 continue
             dx = max(0.0, caja.GetLeft() / 1e6 - x, x - caja.GetRight() / 1e6)
             dy = max(0.0, caja.GetTop() / 1e6 - y, y - caja.GetBottom() / 1e6)
             if dx * dx + dy * dy < margen * margen:
                 return False
-        for otra, a, b, w in segs:
+        for otra, a, b, w in (cerca_todas + cerca_segs if todas else cerca_segs):
             if otra != net and _dist_seg((x, y), a, b) < margen + w:
                 return False
         return all(otra == net or ((x - vx)**2 + (y - vy)**2) ** 0.5 >= margen + r
-                   for otra, vx, vy, r in puntos)
+                   for otra, vx, vy, r in cerca_puntos)
 
     def libre(px, py, x: float, y: float, net: str) -> bool:
         """La via y el rabito que la une al pad, los dos con su margen.
@@ -594,15 +739,62 @@ def coser_masas() -> int:
         geometria exacta: mide 3 mm como mucho y el pad mas fino de la
         placa (el del QFN, 0.2 mm) es mas ancho que el paso de muestreo.
         """
-        if not lejos(x, y, net, r_via):
-            return False
+        a, b = (px, py), (x, y)
         largo = ((x - px) ** 2 + (y - py) ** 2) ** 0.5
         pasos = int(largo / 0.2) + 1
-        return all(lejos(px + (x - px) * i / pasos, py + (y - py) * i / pasos,
+        return all(lejos(a[0] + (b[0] - a[0]) * i / pasos,
+                         a[1] + (b[1] - a[1]) * i / pasos,
                          net, CLEARANCE + ANCHO / 2)
                    for i in range(1, pasos + 1))
 
-    nuevas = faltan = 0
+    def camino(px, py, x, y, net, via=True, salida=None):
+        """Tramos del rabito pad->destino, o None si no hay por donde.
+
+        Recto primero y luego las dos eles. Con solo la recta (la version
+        anterior) el rabito chocaba casi siempre en cuanto el destino no
+        estaba en linea de vista; con las eles, el pad de masa encuentra la
+        vuelta por encima o por el lado.
+
+        `via=False` cuando el destino es cobre que YA existe (otra via, o el
+        extremo de una pista de la misma red): ahi no se va a taladrar nada,
+        asi que exigir el margen de una via en ese punto es pedirle sitio a
+        algo que no lo necesita -- y era justo lo que hacia fallar todos los
+        enganches en las zonas apretadas.
+        """
+        if via and not lejos(x, y, net, r_via, todas=True):
+            return None
+        # Los pines de un QFN salen de costado y tienen un vecino de otra
+        # red a 0.4 mm por cada lado: cualquier camino que empiece yendo
+        # "hacia el destino" les pasa por encima. Por eso se prueban tambien
+        # caminos que primero SALEN del chip (rumbo ux,uy) y luego doblan.
+        rutas = [(), ((x, py),), ((px, y),)]
+        if salida:
+            for e in (1.0, 1.7):
+                ex, ey = px + salida[0] * e, py + salida[1] * e
+                rutas += [((ex, ey),), ((ex, ey), (x, ey)), ((ex, ey), (ex, y))]
+        for esquinas in rutas:
+            puntos_cam = [(px, py), *esquinas, (x, y)]
+            tramos = [(puntos_cam[i], puntos_cam[i + 1])
+                      for i in range(len(puntos_cam) - 1)
+                      if puntos_cam[i] != puntos_cam[i + 1]]
+            if all(libre(a[0], a[1], b[0], b[1], net) for a, b in tramos):
+                return tramos
+        return None
+
+    def poner(tramos, net) -> None:
+        for a, b in tramos:
+            t = pcbnew.PCB_TRACK(board)
+            t.SetStart(pcbnew.VECTOR2I(mm(a[0]), mm(a[1])))
+            t.SetEnd(pcbnew.VECTOR2I(mm(b[0]), mm(b[1])))
+            t.SetWidth(mm(ANCHO))
+            t.SetLayer(pcbnew.F_Cu)
+            t.SetNet(board.FindNet(net))
+            board.Add(t)
+            segs.append((net, a, b, ANCHO / 2))
+
+    pendientes = {_xy(p) for p in _pads_sin_plano(board, "GNDA")
+                  + _pads_sin_plano(board, "GNDD")}
+    nuevas = faltan = enganchadas = 0
     for fp in board.GetFootprints():
         fx, fy = fp.GetPosition().x / 1e6, fp.GetPosition().y / 1e6
         for pad in fp.Pads():
@@ -610,16 +802,52 @@ def coser_masas() -> int:
             if net not in ("GNDA", "GNDD"):
                 continue
             px, py = _xy(pad)
-            if any(otra == net and ((px - vx)**2 + (py - vy)**2) ** 0.5 < 1.2
-                   for otra, vx, vy, _r in puntos):
-                continue          # el router ya le dejo una al lado
+            if (px, py) not in pendientes:
+                continue          # su cobre ya toca una via: llega al plano
             largo = ((px - fx) ** 2 + (py - fy) ** 2) ** 0.5 or 1.0
             ux, uy = (px - fx) / largo, (py - fy) / largo
-            sitio = next(((px + ux * d, py + uy * d)
-                          for d in (0.0, 0.9, 1.3, 1.7, 2.1, 2.5, 3.0)
-                          if libre(px, py, px + ux * d, py + uy * d, net)), None)
+            cerca(px, py)
+            # Se prueba en ABANICO, no en una sola recta: primero el sitio
+            # mas cercano, y a cada distancia el rumbo que se aleja del chip
+            # y luego los que se van abriendo a los lados. Con una sola recta
+            # (la version anterior) se quedaban 37 pads de masa sin bajada
+            # entre el cobre que ya habia puesto el router; con el abanico,
+            # casi ninguno.
+            sitio = rabito = None
+            for c in _abanico(px, py, ux, uy):
+                rabito = camino(px, py, c[0], c[1], net, salida=(ux, uy))
+                if rabito is not None:
+                    sitio = c
+                    break
             if sitio is None:
-                faltan += 1
+                # No cabe una via nueva: que se agarre a una que ya exista.
+                # Un pad de masa no necesita bajada PROPIA, necesita LLEGAR
+                # al plano, y varios pads compartiendo via es lo normal en
+                # una placa hecha a mano. Se busca la via de su misma red
+                # mas cercana y se le tira un rabito, si el camino esta
+                # limpio.
+                # Vale cualquier cobre de la misma red: una via, o el
+                # extremo de una pista que el router ya dejo puesta. Varios
+                # de estos pads tienen una pista de GNDA a 1.2 mm y lo unico
+                # que les falta es el saltito.
+                # Solo VIAS como destino. Se probo permitir tambien el
+                # extremo de una pista de la misma red y no vale: esa pista
+                # puede ser justo otro trozo que tampoco llega al plano, y
+                # el pad se engancha a un vecino tan huerfano como el (se
+                # veia en que cada vuelta "colgaba" los mismos 3 pads sin
+                # que bajara el conteo). Una via siempre llega.
+                vecinas = sorted(
+                    [(vx, vy) for otra, vx, vy, _r in puntos if otra == net],
+                    key=lambda q: (q[0]-px)**2 + (q[1]-py)**2)
+                vecinas = [q for q in vecinas
+                           if (q[0]-px)**2 + (q[1]-py)**2 < 36.0][:12]
+                enganche = next(filter(None, (camino(px, py, q[0], q[1], net, via=False, salida=(ux, uy))
+                                              for q in vecinas)), None)
+                if enganche is None:
+                    faltan += 1
+                    continue
+                poner(enganche, net)
+                enganchadas += 1
                 continue
             v = pcbnew.PCB_VIA(board)
             v.SetPosition(pcbnew.VECTOR2I(mm(sitio[0]), mm(sitio[1])))
@@ -629,17 +857,10 @@ def coser_masas() -> int:
             board.Add(v)
             puntos.append((net, sitio[0], sitio[1], VIA_D / 2))
             nuevas += 1
-            if sitio != (px, py):
-                t = pcbnew.PCB_TRACK(board)
-                t.SetStart(pcbnew.VECTOR2I(mm(px), mm(py)))
-                t.SetEnd(pcbnew.VECTOR2I(mm(sitio[0]), mm(sitio[1])))
-                t.SetWidth(mm(ANCHO))
-                t.SetLayer(pcbnew.F_Cu)
-                t.SetNet(board.FindNet(net))
-                board.Add(t)
-                segs.append((net, (px, py), sitio, ANCHO / 2))
+            poner(rabito, net)
     pcbnew.SaveBoard(PCB, board)
-    print(f"masas cosidas al plano: {nuevas} vias nuevas"
+    print(f"masas cosidas al plano: {nuevas} vias nuevas, {enganchadas} pads "
+          f"colgados de una via vecina"
           + (f", {faltan} pads sin sitio" if faltan else ""))
     return faltan
 
@@ -665,14 +886,19 @@ def ajustes_freerouting(tmp: str) -> None:
 
     Se PARCHEA el fichero, no se reescribe entero: el resto son preferencias
     del usuario (perfil, telemetria, GUI) que no son asunto de este script.
+    Y se devuelve el original para poder DEJARLO COMO ESTABA al terminar --
+    tocar la configuracion de una herramienta fuera del repo esta bien si es
+    para la corrida, no si se queda puesto: quien abra Freerouting a mano
+    despues no tiene por que encontrarse el fanout encendido.
     """
     ruta = os.path.join(tmp, "freerouting", "freerouting.json")
     os.makedirs(os.path.dirname(ruta), exist_ok=True)
     try:
         with open(ruta, encoding="utf-8") as fh:
-            cfg = json.load(fh)
+            original = fh.read()
+        cfg = json.loads(original)
     except (OSError, ValueError):
-        cfg = {}
+        original, cfg = None, {}
     router = cfg.setdefault("router", {})
     router.setdefault("fanout", {}).update(
         {"enabled": True, "algorithm": "freerouting-fanout", "max_passes": 100})
@@ -683,7 +909,19 @@ def ajustes_freerouting(tmp: str) -> None:
     router["max_passes"] = PASADAS
     with open(ruta, "w", encoding="utf-8") as fh:
         json.dump(cfg, fh, indent=2)
-    print(f"freerouting: fanout ON, via_costs 30 (escrito en {ruta})")
+    print(f"freerouting: fanout ON, via_costs 30, max_passes {PASADAS}\n"
+          f"  (parche temporal sobre {ruta}; se restaura al terminar)")
+    return ruta, original
+
+
+def restaurar_freerouting(ruta: str, original: str | None) -> None:
+    """Deja el freerouting.json del usuario como estaba antes de la corrida."""
+    if original is None:
+        with contextlib.suppress(OSError):
+            os.remove(ruta)          # no existia: no dejamos uno nuevo
+        return
+    with open(ruta, "w", encoding="utf-8") as fh:
+        fh.write(original)
 
 
 def rutear() -> None:
@@ -710,7 +948,44 @@ def rutear() -> None:
             "  Este script no lo descarga solo.")
 
     tmp = tempfile.gettempdir()
-    ajustes_freerouting(tmp)
+    ajustes, previo = ajustes_freerouting(tmp)
+    try:
+        _rondas(tmp)
+    finally:
+        restaurar_freerouting(ajustes, previo)
+
+
+def _ajustar_dsn(dsn: str) -> None:
+    """Dos retoques al DSN recien exportado, los dos imposibles desde KiCad.
+
+    1. **In1 pasa a capa de POTENCIA.** KiCad exporta las cuatro capas de
+       cobre como `(type signal)` y no tiene opcion para decir otra cosa.
+       Specctra si: una capa `(type power)` es un plano y el router no le
+       mete pistas -- que es exactamente la regla del stackup. Se probo
+       primero con un area de reglas de KiCad (keepout de placa entera sobre
+       In1): se exporta como wire_keepout y Freerouting se atasca en seco,
+       200 conexiones sin rutear desde la pasada 4 hasta la 139 sin moverse.
+       Con `(type power)` baja de 222 a 80 en 14 pasadas.
+    2. **El margen del router sube a 0.16 mm**, aunque el DRC siga pidiendo
+       0.15. Freerouting redondea sus coordenadas y deja pistas a 0.1480 mm
+       cuando apunta a 0.15 -- 2 micras por debajo, una infraccion de DRC
+       por pura aritmetica. Apuntando a 0.16 el redondeo cae del lado bueno.
+
+    Es un fichero temporal que acabamos de generar nosotros: no toca nada
+    del repo ni de la configuracion de KiCad.
+    """
+    with open(dsn, encoding="utf-8") as fh:
+        txt = fh.read()
+    viejo = "(layer In1.Cu\n      (type signal)"
+    assert viejo in txt, "el DSN no trae In1.Cu como capa de senal"
+    txt = txt.replace(viejo, "(layer In1.Cu\n      (type power)", 1)
+    holgado = f"(clearance {int(CLEARANCE * 1000) + 10})"
+    txt = txt.replace(f"(clearance {int(CLEARANCE * 1000)})", holgado)
+    with open(dsn, "w", encoding="utf-8") as fh:
+        fh.write(txt)
+
+
+def _rondas(tmp: str) -> None:
     dsn = os.path.join(tmp, "sam17-vco.dsn")
     ses = os.path.join(tmp, "sam17-vco.ses")
     log = os.path.join(tmp, "sam17-vco-freerouting.log")
@@ -729,6 +1004,7 @@ def rutear() -> None:
     for ronda in range(1, RONDAS + 1):
         assert pcbnew.ExportSpecctraDSN(pcbnew.LoadBoard(PCB), dsn), \
             "no se exporto el DSN"
+        _ajustar_dsn(dsn)
         print(f"freerouting ronda {ronda}/{RONDAS}, {PASADAS} pasadas\n"
               f"  (el avance, pasada a pasada, en {log})", flush=True)
         with open(log, "w", encoding="utf-8") as fh:
@@ -879,7 +1155,7 @@ def _areas_islas(zona) -> list[float]:
     """Area de cada isla del relleno de una zona, en mm2 (formula del cordon
     de zapato sobre el contorno; los agujeros interiores no cuentan aparte --
     aqui lo que interesa es si el plano quedo PARTIDO, no su area exacta)."""
-    poly = zona.GetFilledPolysList(pcbnew.B_Cu)
+    poly = zona.GetFilledPolysList(zona.GetLayer())
     fuera = []
     for i in range(poly.OutlineCount()):
         o = poly.Outline(i)
@@ -895,30 +1171,39 @@ def revisar(board) -> list[str]:
     fallos: list[str] = []
     zonas = {z.GetNetname(): z for z in board.Zones()}
 
-    for n in ("GNDA", "GNDD"):
+    for n, capa in (("GNDA", CAPA_GNDA), ("GNDD", CAPA_GNDD)):
         if n not in zonas:
             fallos.append(f"falta el vertido de {n}")
-        elif zonas[n].GetLayer() != pcbnew.B_Cu:
-            fallos.append(f"el vertido de {n} no esta en B.Cu")
+        elif zonas[n].GetLayer() != capa:
+            fallos.append(f"el vertido de {n} no esta en la capa que le toca")
     if not fallos:
         fallos += revisar_frontera(board, zonas)
 
-    # El plano ANALOGICO tiene que seguir siendo UNA sola isla: es la
-    # comprobacion real de la asimetria B.Cu (ver la cabecera), no una cuenta
-    # de pistas por capa. Lo que hace dano no es que haya cobre en la capa de
-    # abajo, es que el plano quede PARTIDO y el retorno tenga que rodear.
-    # Del digital no se exige: alli el plano no mide nada, solo devuelve
-    # corriente logica.
+    # In1 (GNDA) tiene que seguir siendo un plano CONTINUO. Es la regla del
+    # stackup de 4 capas, y sustituye a la vieja asimetria de B.Cu: ahora
+    # B.Cu es una capa de senal como F.Cu y por ahi puede ir lo que sea.
+    # Lo que no puede pasar es que el plano quede partido y la corriente de
+    # retorno tenga que rodear. Se exige que la isla mayor se lleve mas del
+    # 99% del cobre: las vias dejan agujeros (inevitables, todo el cobre es
+    # SMD) pero no deben aislar trozos. Del digital no se exige nada: alli
+    # el plano no mide, solo devuelve corriente logica.
+    en_in1 = [t for t in board.GetTracks()
+              if not isinstance(t, pcbnew.PCB_VIA) and t.GetLayer() == CAPA_GNDA]
+    if en_in1:
+        fallos.append(f"hay {len(en_in1)} pistas en In1: esa capa es el plano "
+                      f"de GNDA y no se rutea por ella")
+
     if "GNDA" in zonas:
         areas = sorted(_areas_islas(zonas["GNDA"]), reverse=True)
-        print(f"plano GNDA: {len(areas)} isla(s), la mayor {areas[0]:.0f} mm2 "
-              f"({100 * areas[0] / sum(areas):.2f}% del cobre vertido)")
-        if len(areas) != 1:
+        parte = areas[0] / sum(areas)
+        print(f"plano GNDA en In1: {len(areas)} isla(s), la mayor "
+              f"{areas[0]:.0f} mm2 ({100 * parte:.2f}% del cobre vertido)")
+        if parte <= 0.99:
             fallos.append(
-                f"el plano ANALOGICO quedo partido en {len(areas)} islas "
-                f"({', '.join(f'{a:.1f}' for a in areas[1:])} mm2 sueltos "
-                f"frente a {areas[0]:.0f}): alguna pista de B.Cu lo corta y "
-                f"la corriente de retorno tiene que rodear")
+                f"el plano ANALOGICO se fragmento: la isla mayor solo tiene "
+                f"el {100 * parte:.2f}% del cobre ({len(areas)} islas; "
+                f"sueltos {', '.join(f'{a:.1f}' for a in areas[1:6])} mm2). "
+                f"Algo esta cortando In1.")
 
     for fp in board.GetFootprints():
         ref = fp.GetReference()
@@ -985,9 +1270,15 @@ def revisar_frontera(board, zonas) -> list[str]:
     distancia euclidiana minima entre los vertices de los dos poligonos
     rellenados -- no hay operaciones booleanas en el binding de Python de
     pcbnew, recorrer vertices mide lo mismo.
+
+    Con el stackup de 4 capas los dos vertidos ya no comparten capa (GNDA en
+    In1, GNDD en In2), asi que esto mide la separacion EN PLANTA: In1 esta
+    recortada justo debajo de la isla digital, para que el retorno analogico
+    y el digital no se solapen ni siquiera verticalmente. Es la misma cifra
+    de siempre y sigue siendo la que importa.
     """
     def puntos(z) -> list[tuple[float, float]]:
-        poly = z.GetFilledPolysList(pcbnew.B_Cu)
+        poly = z.GetFilledPolysList(z.GetLayer())
         out = []
         for i in range(poly.OutlineCount()):
             linea = poly.Outline(i)
@@ -1013,7 +1304,11 @@ def main() -> None:
     board = colocar()
     medir_dac_vco(board)
     rutear()
-    coser_masas()
+    # Dos vueltas: la primera deja vias nuevas por toda la placa y la
+    # segunda las aprovecha para enganchar los pads que antes no tenian de
+    # donde agarrarse. Es idempotente -- un pad que ya tiene bajada se salta.
+    for _ in range(3):
+        coser_masas()
     board = rellenar(PCB)
     fallos = revisar(board) + medir_desacoplos(board)
     peor = medir_dac_vco(board)
