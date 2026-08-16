@@ -134,9 +134,14 @@ comprobación va antes del paso destructivo).
 - **Costados (×2): acrílico naranja** de 8 mm (o laminado 2 × 4 mm), perfil
   escalonado de dos pisos. Son las piezas portantes: reciben raíles,
   bandejas y pieles vía standoffs.
-- **Bandejas horizontales de acrílico** (base y entrepiso) atadas a los
-  costados con standoffs de aluminio M4 — rigidizan el conjunto y cargan el
-  PSU (base) y el cableado entre pisos (entrepiso, con pasacables).
+- **Bandejas horizontales de acrílico** (base y entrepiso) atornilladas con
+  tuercas T M3 a un **esqueleto de perfiles 2020** (los mismos del sistema de
+  paneles: 2 largueros de base, 2 de entrepiso y 1 de remate superior, además
+  de los 4 raíles de paneles). Un solo sistema de fijación para todo el
+  instrumento; un standoff no puede sujetar una bandeja de 500 mm de vano.
+- **Separadores (standoffs) de aluminio M4**: reservados a las pieles
+  flotantes (junta de sombra de 5 mm) y a los puntos vista del sándwich — el
+  ritmo visible de tornillería sigue siendo el ornamento permitido.
 - **Piel trasera de acrílico por piso**, flotando en standoffs con junta de
   sombra (shadow gap) perimetral — desmontable, lleva la ventilación (§7).
 - **Paneles de módulo: PCB de aluminio** de ancho variable, 190 mm de alto,
@@ -222,7 +227,9 @@ tornillería inox M4 de botón + arandelas (siempre arandela contra acrílico),
 perfiles 2020 (×4, largo = `ancho_total`), tuercas T M3 + tornillos M3×8
 (paneles), entrada IEC C14 con fusible e interruptor, espárrago M4 + cable
 1.5 mm² verde/amarillo + terminales de ojal (bonding), pies de goma,
-tornillería del transformador, pasacables del entrepiso.
+tornillería del transformador, pasacables del entrepiso, perfiles 2020
+adicionales del esqueleto (5 piezas, largo = ancho útil), tornillos M5 de
+botón (extremos de los 9 perfiles, alma del 2020 roscada M5).
 
 ## 10. Verificación
 
