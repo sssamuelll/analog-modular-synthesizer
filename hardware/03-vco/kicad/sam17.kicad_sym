@@ -273,7 +273,7 @@
 				)
 			)
 		)
-		(property "Description" "VCO FatKeys completo: nucleo triangulo/diente de sierra/pulso, conformador de seno, mezclador de 5 canales y conversor exponencial. QFN-32 4x4mm con pad termico (pin 33 -> AGND). Orden de los pines 9-13 (MIX TRI, MIX SAW, MIX PULSE, MIX AUX1, MIX AUX2) verificado contra la Figure 1 (Typical Application Circuit) del datasheet, pag.5 -- coincide con la serigrafia de la Figure 1, NO con el orden alfabetico de las senales."
+		(property "Description" "VCO FatKeys completo: nucleo triangulo/diente de sierra/pulso, conformador de seno, mezclador de 5 canales y conversor exponencial. QFN-32 4x4mm con pad termico (pin 33 = EP): el land del PCB, si existe, va AISLADO -- sin red, sin via, sin plano -- el datasheet pag.6 (Exposed Thermal Pad) dice que NO debe llevar conexion electrica ni de masa. Orden de los pines 9-13 (MIX TRI, MIX SAW, MIX PULSE, MIX AUX1, MIX AUX2) verificado contra la Figure 1 (Typical Application Circuit) del datasheet, pag.5 -- coincide con la serigrafia de la Figure 1, NO con el orden alfabetico de las senales."
 			(at 0 0 0)
 			(hide yes)
 			(effects
@@ -336,7 +336,7 @@
 					(effects (font (size 1.27 1.27)))
 				)
 			)
-			(pin power_in line
+			(pin no_connect line
 				(at 5.08 -27.94 90)
 				(length 2.54)
 				(name "EP"

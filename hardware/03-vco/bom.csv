@@ -25,4 +25,4 @@ J1,KK-254 4 pines,Molex KK,1,nacional,PSU +12/G/G/-12 (convencion del bus board)
 J2,IDC 2x6,IDC-Header_2x06,1,nacional,Mazo digital: contrato del enlace (spec par.7)
 J_CV1-4,WQP-PJ398SM,Thonkiconn,4,importado,CV-IN por voz. TN a GNDA (suma 0V sin cable)
 J_OUT1-4,WQP-PJ398SM,Thonkiconn,4,importado,Salida de voz. Normalizada al VCF en el jack del modulo 5
-TP*,Test point,TestPoint_Pad,14,nacional,+12 -12 +5 +3V3 VREF CV_PITCHx4 MIXOx4 GNDA GNDD
+TP*,Test point,TestPoint_Pad,15,nacional,+12 -12 +5 +3V3 VREF CV_PITCHx4 MIXOx4 GNDA GNDD
