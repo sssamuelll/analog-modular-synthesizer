@@ -46,7 +46,7 @@ ancho_total     = 544.32;
 // comerciales varian de marca (Vector 121.46, Tiptop 122.43, Doepfer 122.50) y
 // el que cuenta es el que se compra. De ahi salen las caras:
 //
-//   alto_cara_inf = 123.0 + inset_inf_frente + inset_inf_valle  = 150.0
+//   alto_cara_inf = 123.0 + inset_inf_frente + inset_inf_valle  = 153.25
 //   alto_cara_sup = 123.0 + inset_sup_valle  + inset_sup_remate = 155.5
 //
 // El de arriba sale mas CORTO aunque lleve el mismo estandar dentro, y es por
@@ -73,7 +73,7 @@ ancho_total     = 544.32;
 // fija de punta con un M5 directo al acrilico (taladro de 4.5 en su eje). Los
 // 2020 se quedan solo en el esqueleto -- base, entrepiso, remate y repisa --,
 // que es donde de verdad hacen estructura.
-alto_cara_inf   = 150.0; // DERIVADO: 123.0 + inset_inf_frente + inset_inf_valle
+alto_cara_inf   = 153.25; // DERIVADO: 123.0 + inset_inf_frente + inset_inf_valle
 alto_cara_sup   = 155.5; // DERIVADO: 123.0 + inset_sup_valle + inset_sup_remate
 alto_panel_inf  = 128.5; // PCB 3U EUROrack
 alto_panel_sup  = 128.5; // PCB 3U EUROrack: la fila de arriba tambien
@@ -109,8 +109,12 @@ angulo_superior = 45;    // 45 desde la horizontal, cara de generacion
 // 8.45 mm: "el tornillo del riel puede estar literalmente en toda la esquina y
 // ser tornillo base tambien". O sea: si la bandeja se RETIRA por detras del riel
 // en vez de pasarle por debajo, el riel deja de tener nada que librar y baja
-// hasta la propia esquina del case. Su M5 pasa a ser el nodo de esa esquina, que
-// es lo que hacia falta del larguero de base delantera.
+// hasta la propia esquina del case.
+//
+// OJO: ese M5 acabo siendo el CIERRE de la fila de abajo, no una fijacion fija
+// (las dos filas se abren, ver d_visagra). O sea que el nodo de la esquina es
+// intermitente. Con la tapa abierta, los costados los ata ahi la bandeja de base
+// y sus dos largueros, que sobran para eso.
 //
 // Las dos condiciones quedan asi:
 //
@@ -372,7 +376,7 @@ rail_er_eje     = 13.7;
 //   punta               curva            tangente  + riel/2 + mat = inset
 //   ------------------  ---------------  --------  -------------------------
 //   inferior / frente   punta redondeada    6.5      + 5 + 3.0   = 14.5
-//   inferior / valle    pico (r=5)          2.6      + 5 + 4.9   = 12.5*
+//   inferior / valle    pico (r=5)          2.6      + 5 + 8.15  = 15.75*
 //   superior / valle    valle (r=30)       12.4      + 5 + 2.1   = 19.5
 //   superior / remate   -- lo fija la PESTANA ---  8 + 5 = 13
 //
@@ -397,17 +401,28 @@ rail_er_eje     = 13.7;
 // railes_dentro_del_costado() en check_dxf, que lee el contorno del DXF.
 inset_inf_frente = 14.5;
 // (*) El del valle NO lo pone su curva desde el 2026-08-17: por la curva
-// bastarian 10, y lo que manda ahora es LA TAPA DEL VALLE. Esa plancha va a ras
-// del plano del valle, o sea con su cara de abajo a t_acrilico por debajo, y
-// justo ahi asoma la esquina de arriba del riel del valle de la cara de ABAJO.
-// La cuenta es exacta y no deja opinar:
-//   hueco = cos(35)*inset_inf_valle + sen(35)*(t_panel + rail_er_eje)
-//           - t_acrilico - he_er_y(35)
-// Con 10 daba 0.013 mm -- las dos piezas rozandose, y por pura casualidad
-// aritmetica. Con 12.5 quedan 2.06 mm limpios. Cuesta 2.05 mm de alto y 1.43 de
-// fondo, y es lo que vale tener el valle tapado de canto a canto en vez de con
-// un slot de 25 mm por delante.
-inset_inf_valle  = 12.5;
+// bastarian 10, y lo que manda es LA TAPA DEL VALLE. Esa plancha va a ras del
+// plano del valle, o sea con su cara de abajo a t_acrilico por debajo, y justo
+// ahi asoma la esquina de arriba del riel del valle de la cara de ABAJO.
+//
+// Fue 10 (0.013 mm de hueco: las dos piezas rozandose por casualidad aritmetica)
+// y luego 12.5, que daba 2.06 mm limpios PARADO. Y ahi estaba la trampa: Samuel
+// pidio que las DOS filas se abran, y esa cota hay que medirla GIRANDO.
+//
+//   parado:  hueco = cos(35)*i + sen(35)*(t_panel+rail_er_eje) - t_acrilico
+//                    - he_er_y(35)          he_er_y = 11.95
+//   girando: lo mismo pero contra el RADIO DE GIRO del riel = 14.58
+//
+// El riel gira sobre su propio M5, asi que lo que barre no es su esquina sino su
+// circulo. Con 12.5 el hueco parado era +2.06 y el de barrido -0.57: la fila de
+// abajo abria 24 grados y se comia la tapa del valle. La holgura estatica mentia
+// y solo lo dijo el barrido.
+//
+// 15.75 deja 2.09 mm de barrido y la fila abre entera. Cuesta 2.66 mm de alto y
+// 1.86 de fondo. La alternativa gratis era quitar la tapa del valle (5 tornillos)
+// antes de abrir abajo; se pagan los milimetros porque "que se abran las dos" fue
+// pedido explicito.
+inset_inf_valle  = 15.75;
 inset_sup_valle  = 19.5;
 inset_sup_remate = 13;
 // Cotas del PANEL (no de la cara). El horizontal es de estandar: primer taladro

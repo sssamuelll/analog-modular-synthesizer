@@ -753,12 +753,21 @@ module bom() {
     echo("BOM: standoff M4 x12 (las dos pieles, voladas; TRES columnas -- con");
     echo("     dos, el vano de 518 mm se descuelga 1.76 mm de peso propio)");
     echo("BOM: tornillo M4 boton x24 + arandela x24");
-    echo("BOM: los M5 de riel no son todos iguales -- x4 fijos (cara de abajo),");
-    echo("     x2 DE HOMBRO + arandela (riel de arriba: el eje, no se aprietan),");
-    echo("     x2 DE MANO (riel del valle de arriba: el cierre, se quitan para abrir)");
-    echo("BOM: paneles ciegos en TODO hueco de la fila de arriba -- no son estetica:");
+    // LAS DOS FILAS SON TAPA. Cada una gira sobre el M5 de su riel de arriba y
+    // se cierra con el de su otro extremo. De los 64 tornillos del case, solo
+    // CUATRO se tocan para abrirlo: dos por fila.
+    echo("BOM: los M5 de riel no son todos iguales --");
+    echo("     x4 DE HOMBRO + arandela: los EJES (riel del valle de la fila de");
+    echo("        abajo, riel del vertice de la de arriba). No se aprietan.");
+    echo("     x4 DE MANO: los CIERRES (riel del frente abajo, riel del valle");
+    echo("        arriba). Son los unicos que se quitan para abrir el case.");
+    echo(str("     x", 2*len(centros_esqueleto()), " fijos: los largueros de esqueleto"));
+    echo("BOM: tuercas T DE INSERCION LATERAL (drop-in), NO de deslizar. Con las");
+    echo("     de deslizar hay que enhebrarlas por la punta del larguero antes de");
+    echo("     montar, o sea que anadir un tornillo mas tarde obliga a desarmar.");
+    echo("BOM: paneles ciegos en TODO hueco de LAS DOS filas -- no son estetica:");
     echo("     con la tapa abierta son lo unico que ata sus dos rieles entre si");
-    echo("BOM: SIN CERRAR -- amortiguador que deje la tapa abierta");
+    echo("BOM: SIN CERRAR -- amortiguador que deje cada tapa abierta");
     echo(str("BOM: pestana superior x1, ", au, " x ", prof_sup, " en acrilico ",
              "t=", marco_sup, " -- apoya de canto en la cara de arriba del riel"));
     echo("BOM: tornillo M3 x5 para la pestana, entran por su canto al riel.");

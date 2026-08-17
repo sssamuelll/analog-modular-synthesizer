@@ -639,82 +639,6 @@ def _sat_gap(p: dict[str, float], c1: tuple[float, float], ang1: float,
     return -min(separaciones)  # min<=0 en algun eje separador -> hueco positivo
 
 
-# Los tres cuerpos que GIRAN. El resto del case se queda quieto.
-TAPA = {"cara_sup valle", "cara_sup remate", "remate_sup"}
-
-# Lo minimo que tiene que abrir la tapa para que sirva de algo. A 60 grados la
-# cara de arriba queda casi vertical y el interior a la vista; por debajo de 45
-# no cabe la mano para cablear.
-APERTURA_MIN = 60.0
-
-
-def guarda_tapa(p: dict[str, float]) -> None:
-    """La cara de arriba es una TAPA y tiene que poder abrir.
-
-    Gira sobre el M5 del riel de arriba -- el MISMO tornillo que lo fija de
-    punta al costado, que entra a lo largo del ancho y por tanto ya es un eje.
-    No hay bisagra que verificar porque no hay bisagra.
-
-    Dos asserts duros, porque solapes() no ve ninguno: solapes() mira la
-    posicion CERRADA y con cajas alineadas a ejes.
-
-    1. EL BARRIDO. Se gira la tapa grado a grado y se busca contra que topa. No
-       es una cota estimada: es el angulo real, y se imprime en cada corrida.
-       Se comprueban las esquinas de lo que gira contra las cajas de lo que no
-       -- o sea que caza el caso realista (una esquina de la tapa entrando en un
-       larguero) y no el patologico (un larguero fino atravesando la tapa sin
-       que ninguna esquina entre). Tampoco entra el FONDO de los modulos, que no
-       esta modelado: eso lo vigila fondo_pcb_max por otro lado.
-
-    2. LA PESTANA APOYADA EN EL RIEL. Ya no se comprueba que esten SEPARADAS
-       sino que se TOQUEN, que es lo contrario y es lo que hace falta: de esa
-       cara de aluminio cuelga la unica fijacion de la pestana (M3 por su canto).
-       En el AABB las dos se pisan porque van giradas 45 -- por eso siguen en
-       TOLERADOS --, y esta es la cuenta buena, hecha sobre la cara."""
-    P = _vertices(p)
-    cr = _centros_rail(p, P)
-    eje = cr[3]                       # el M5 del riel de arriba ES el eje
-    a2 = p["angulo_superior"]
-    ar = math.radians(a2)
-    d2, n2 = (math.sin(ar), math.cos(ar)), (math.cos(ar), -math.sin(ar))
-    s0 = p["inset_sup_valle"] - p["inset_er"]
-    panel = [(P[3][0] + d2[0] * s + n2[0] * q, P[3][1] + d2[1] * s + n2[1] * q)
-             for s in (s0, s0 + p["alto_panel_sup"])
-             for q in (0.0, p["t_panel"])]
-    giran = (_esquinas_er(p, cr[2], p[ANGS_CR[2]])
-             + _esquinas_er(p, cr[3], p[ANGS_CR[3]])
-             + _esquinas_pestana(p, P) + panel)
-    railes, planchas, _ = _cajas_solidas(p)
-    quietos = [c for c in railes + planchas if c[0] not in TAPA]
-    tope, culpable = 180.0, ""
-    for i in range(1, 721):                       # 0.25 grados hasta 180
-        th = math.radians(i * 0.25)
-        co, si = math.cos(th), math.sin(th)
-        for x, y in giran:
-            dx, dy = x - eje[0], y - eje[1]
-            rx, ry = eje[0] + dx * co + dy * si, eje[1] - dx * si + dy * co
-            for c in quietos:
-                if c[1] <= rx <= c[2] and c[3] <= ry <= c[4]:
-                    tope, culpable = i * 0.25, c[0]
-                    break
-            if culpable:
-                break
-        if culpable:
-            break
-    print(f"tapa: abre {tope:.1f} grados sobre el M5 del riel de arriba"
-          + (f", topa con '{culpable}'" if culpable else " sin topar con nada"))
-    assert tope >= APERTURA_MIN, (
-        f"la tapa solo abre {tope:.1f} grados antes de topar con '{culpable}' "
-        f"(se exige >= {APERTURA_MIN:.0f}). Bajar ese cuerpo o acercar el eje")
-
-    junta = p["inset_sup_remate"] - p["marco_sup"] - p["rail_er_alto"] / 2
-    assert abs(junta) < 0.01, (
-        f"la pestana no APOYA en el riel: {junta:+.3f} mm de junta (se exige 0). "
-        f"Es de donde cuelga su unica fijacion, asi que la cota no es opinable: "
-        f"inset_sup_remate = marco_sup + rail_er_alto/2 = "
-        f"{p['marco_sup'] + p['rail_er_alto']/2:.2f}")
-
-
 def guarda_piso(p: dict[str, float]) -> None:
     """El riel de panel del frente tiene que librar el SUELO del case.
 
@@ -753,6 +677,100 @@ def guarda_piso(p: dict[str, float]) -> None:
         f"x={cr[0][0] + hx:.2f} ({hueco:+.2f} mm, se exige "
         f">={p['holgura_rail']:.2f}). O se retira la bandeja o sube el riel, y "
         f"subir el riel cuesta 8 mm de aparato")
+
+
+# LAS DOS FILAS SE ABREN, cada una girando sobre el M5 de su riel de ARRIBA --
+# el mismo tornillo que la fija de punta al costado, que entra a lo largo del
+# ancho y por tanto ya es un eje. No hay bisagra en ningun sitio.
+#   (nombre, indice del riel-EJE, cuerpos que giran, vertice de arranque de la
+#    cara, angulo, inset del panel, alto del panel)
+TAPAS = (
+    ("fila de abajo", 1, frozenset({"cara_inf frente", "cara_inf valle"}),
+     1, "angulo_inferior", "inset_inf_frente", "alto_panel_inf"),
+    ("fila de arriba", 3,
+     frozenset({"cara_sup valle", "cara_sup remate", "remate_sup"}),
+     3, "angulo_superior", "inset_sup_valle", "alto_panel_sup"),
+)
+
+# Lo minimo que tiene que abrir una tapa para que sirva de algo. A 60 grados la
+# cara queda casi vertical y el interior a la vista; por debajo de 45 no cabe la
+# mano para cablear.
+APERTURA_MIN = 60.0
+
+
+def guarda_tapa(p: dict[str, float]) -> None:
+    """Las dos caras de panel son TAPAS y las dos tienen que poder abrir.
+
+    Cada una gira sobre el M5 de su riel de arriba. La de abajo pivota en el riel
+    del valle y saca su canto delantero hacia arriba; la de arriba pivota en el
+    del vertice y saca el valle. No hay bisagra que verificar porque no hay
+    bisagra: es el propio tornillo de fijacion.
+
+    Dos comprobaciones, y solapes() no ve ninguna -- mira la posicion CERRADA y
+    con cajas alineadas a ejes:
+
+    1. EL BARRIDO. Se gira cada tapa grado a grado y se busca contra que topa. No
+       es una cota estimada: es el angulo real, y se imprime en cada corrida.
+       Aqui esta la razon de que exista: parada, la fila de abajo libraba la tapa
+       del valle por +2.06 mm; GIRANDO la perdia por -0.57, porque el riel barre
+       su radio de giro (14.58) y no el alcance de su esquina quieta (11.95). La
+       holgura estatica mentia y solo lo dijo el barrido.
+       Se comprueban las esquinas de lo que gira contra las cajas de lo que no --
+       o sea que caza el caso realista (una esquina entrando en un larguero) y no
+       el patologico. Tampoco entra el FONDO de los modulos, que no esta
+       modelado: eso lo vigila fondo_pcb_max por otro lado.
+
+    2. LA PESTANA APOYADA EN EL RIEL. De esa cara de aluminio cuelga su unica
+       fijacion (M3 por su canto), asi que no se comprueba que esten separadas
+       sino que se TOQUEN. En el AABB se pisan porque van giradas 45 -- por eso
+       siguen en TOLERADOS --, y esta es la cuenta buena, hecha sobre la cara."""
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    railes, planchas, _ = _cajas_solidas(p)
+    for nombre, i_eje, propios, i_cara, k_ang, k_inset, k_panel in TAPAS:
+        eje = cr[i_eje]
+        ar = math.radians(p[k_ang])
+        d, n = (math.sin(ar), math.cos(ar)), (math.cos(ar), -math.sin(ar))
+        A = P[i_cara]
+        s0 = p[k_inset] - p["inset_er"]
+        giran = [(A[0] + d[0] * s + n[0] * q, A[1] + d[1] * s + n[1] * q)
+                 for s in (s0, s0 + p[k_panel]) for q in (0.0, p["t_panel"])]
+        for j, nm in enumerate(NOMBRES_CR):
+            if nm in propios:
+                giran += _esquinas_er(p, cr[j], p[ANGS_CR[j]])
+        if "remate_sup" in propios:
+            giran += _esquinas_pestana(p, P)
+        quietos = [c for c in railes + planchas if c[0] not in propios]
+        tope, culpable = 180.0, ""
+        for i in range(1, 721):                   # 0.25 grados hasta 180
+            th = math.radians(i * 0.25)
+            co, si = math.cos(th), math.sin(th)
+            for x, y in giran:
+                dx, dy = x - eje[0], y - eje[1]
+                rx, ry = eje[0] + dx * co + dy * si, eje[1] - dx * si + dy * co
+                for c in quietos:
+                    if c[1] <= rx <= c[2] and c[3] <= ry <= c[4]:
+                        tope, culpable = i * 0.25, c[0]
+                        break
+                if culpable:
+                    break
+            if culpable:
+                break
+        print(f"tapa {nombre}: abre {tope:.1f} grados sobre el M5 de "
+              f"'{NOMBRES_CR[i_eje]}'"
+              + (f", topa con '{culpable}'" if culpable else " sin topar"))
+        assert tope >= APERTURA_MIN, (
+            f"la {nombre} solo abre {tope:.1f} grados antes de topar con "
+            f"'{culpable}' (se exige >= {APERTURA_MIN:.0f}). Ojo: puede estar "
+            f"holgada PARADA y no caber girando -- el riel barre su radio de "
+            f"giro ({_radio_giro_riel(p):.2f}), no el alcance de su esquina")
+
+    junta = p["inset_sup_remate"] - p["marco_sup"] - p["rail_er_alto"] / 2
+    assert abs(junta) < 0.01, (
+        f"la pestana no APOYA en el riel: {junta:+.3f} mm de junta (se exige 0). "
+        f"Es de donde cuelga su unica fijacion, asi que la cota no es opinable: "
+        f"inset_sup_remate = marco_sup + rail_er_alto/2 = "
+        f"{p['marco_sup'] + p['rail_er_alto']/2:.2f}")
 
 
 def guarda_escalon(p: dict[str, float]) -> None:
