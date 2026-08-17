@@ -7,4 +7,5 @@
 //! puede expresar con estos tipos y estos mensajes, no esta terminada.
 
 pub mod descriptor;
+pub mod modelo;
 pub mod param;
