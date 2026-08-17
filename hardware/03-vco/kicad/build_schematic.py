@@ -537,7 +537,9 @@ def _redes_ssi2130(n: int) -> dict[str, str | None]:
     - LIN FREQ (pin 21) NO puede quedar NC: pag.5 dice que sin FM lineal
       hay que darle ~5uA con 499k desde VREF, y pag.9 es explicita --
       0 corriente ahi es 0 frecuencia, el oscilador se PARA. R_LIN{n} en
-      `pasivos` de dibujar_voz() lo resuelve.
+      `pasivos` de dibujar_voz() lo resuelve. Montada lleva 510k y no los
+      499k del datasheet, por disponibilidad de fabrica: el razonamiento
+      completo esta junto a la propia linea de R_LIN.
     - MIX AUX2 (pin 13) NO puede ir a masa directa: pag.8, "Do not connect
       control inputs directly to ground" -- un canal sin usar va flotante
       (NC) o a masa por >=50k. Se deja NC, igual que AUX2 IN (pin 5), que
@@ -617,7 +619,17 @@ def dibujar_voz(n: int, origen: tuple[float, float]) -> None:
         ("r", f"R_CVIN{n}", "49.9k", f"CVIN_{n}", f"N7_{n}"),
         # LIN FREQ (pin 21): ~5uA fijo desde VREF -- sin ella el oscilador
         # se PARA (ds pag.5/9, "0 current in equals 0 frequency out").
-        ("r", f"R_LIN{n}", "499k", "VREF_2V5", f"N21_{n}"),
+        # 510k y no los 499k del datasheet: el 499k en 0805 no existe en el
+        # catalogo de JLC -- ni stock ni pre-order (2026-08-17), y la placa no
+        # se monta a mano. El cambio es legitimo, no un apaño: pag.4 dice que
+        # esta corriente "sets the linear scale of the exponential converter's
+        # output" -- factor MULTIPLICATIVO, asi que el desvio escala la curva
+        # entera por igual y NO toca el tracking de 1V/oct. 510k da 4.902uA
+        # contra los 5.010uA del 499k: -2.2%, -38 cents identicos en las 4
+        # voces (misma VREF, misma resistencia), y hacia el grave, que gana
+        # margen en vez de gastarlo. El autoafinado absorbe exactamente esta
+        # clase de error estatico y uniforme -- es la premisa del trimless.
+        ("r", f"R_LIN{n}", "510k", "VREF_2V5", f"N21_{n}"),
         # TCAP (pin 14): C0G/NP0 obligatorio -- deriva termica del datasheet
         ("c", f"C_TCAP{n}", "3.9n C0G", f"N14_{n}", "GNDA"),
         # EXPO SCALE (pin 22): fija, trimless (bom.csv, sin trim de fabrica)
