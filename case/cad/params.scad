@@ -5,7 +5,30 @@
 // con valores numericos. No usar expresiones en este fichero.
 
 // --- silueta (spec §4 + board 350 x ~380) ---
-ancho_total     = 500;   // spec §4
+// Ancho del case. FUE 500 por spec §4, y era una eleccion; ahora lo fija el
+// riel que se compra, igual que sep_railes. Los Z-Rails vienen en largos de
+// catalogo, no a medida:
+//
+//   84 HP  = 426.72 mm    se queda 57 corto
+//   104 HP = 528.32 mm    <- este
+//
+// Con 484 de ancho util habia que cortarle 44 mm a cada riel, y cortar un
+// extremo se lleva por delante justo la punta por donde se fija. Samuel eligio
+// el 2026-08-17 alargar el case en vez de cortar el riel, asi que el ancho util
+// ES el largo del riel y el total se deriva:
+//
+//   ancho_total = 528.32 + 2*t_cheek = 544.32
+//
+// De paso los modulos ocupan 104 HP exactos de canto a canto, que es lo que el
+// riel promete. Contra el censo de anchos (360 arriba, 390 abajo) sobran 168 y
+// 138 mm de crecimiento por fila en vez de 124 y 94.
+//
+// OJO CON LA FLECHA: el vano entre costados pasa de 484 a 528, un 9 % mas, y la
+// flecha de una placa apoyada en sus extremos va con L^3 -- o sea un 30 % mas
+// de pandeo con el mismo espesor. n_bulkheads sigue en 2; si la bandeja del PSU
+// cede al cargarla, el remedio es el tercer costado interior que ya contempla
+// la spec §11, no engordar el acrilico.
+ancho_total     = 544.32;
 // CARA vs PANEL. Hasta el 2026-08-17 eran el mismo numero y por eso la puerta
 // de EUROrack estaba en rojo: con la cara valiendo 128.5 y los railes a 27 de
 // cada punta, los railes quedaban a 74.5 y un modulo 3U NO atornilla.
@@ -243,6 +266,10 @@ rail            = 20;   // perfil 2020, SOLO esqueleto (base, entrepiso, remate,
 // El riel se fija DE PUNTA, con un M5 que entra por el costado a ese taladro.
 // No hay 2020 detras de las caras: eso era el supuesto viejo y el plano lo
 // desmiente.
+// Largo de catalogo del riel. Es la cota que fija el ancho del case (ver
+// ancho_total): 104 HP x 5.08 = 528.32. No se puede "ajustar" -- o se compra
+// otro largo o se corta el riel, y cortarlo se lleva la punta por donde se fija.
+largo_riel      = 528.32;
 rail_er_alto    = 10;
 rail_er_fondo   = 27.4;
 rail_er_eje     = 13.7;

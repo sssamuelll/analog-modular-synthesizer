@@ -684,6 +684,14 @@ def main() -> int:
           f"ser punta y vuelve la meseta trasera")
     exige(p["fondo_pcb_max"] + 10 <= fondo(p) - p["rail"],
           "la PCB mas honda del censo no cabe bajo la cara superior")
+    # El ancho util ES el largo del riel, no una eleccion: los Z-Rails vienen en
+    # largos de catalogo y el que se compro mide 528.32 (104 HP). Si esto se
+    # desincroniza, o los rieles no llegan de costado a costado o hay que
+    # cortarlos -- y cortar un extremo se lleva la punta por donde se fijan.
+    exige(abs(g["ancho_util"] - p["largo_riel"]) < 0.01,
+          f"ancho_util={g['ancho_util']:.2f} != largo_riel={p['largo_riel']}: "
+          f"ancho_total tiene que valer largo_riel + 2*t_cheek = "
+          f"{p['largo_riel'] + 2 * p['t_cheek']:.2f}")
     exige(sum(ANCHOS_PISO_SUP.values()) + EXPANSION_MIN <= g["ancho_util"],
           "el piso superior no cabe en el ancho util")
     exige(sum(ANCHOS_PISO_INF.values()) + EXPANSION_MIN <= g["ancho_util"],
