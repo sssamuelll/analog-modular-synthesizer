@@ -107,17 +107,22 @@ def _vertices(p: dict[str, float]) -> list[tuple[float, float]]:
 
 def _centros_rail(p: dict[str, float],
                    P: list[tuple[float, float]]) -> list[tuple[float, float]]:
-    """3 centros de rail de panel [inf frente, inf valle, sup valle], misma
-    formula que centros_rail() en sam17_case.scad.
+    """4 centros de rail de panel [inf frente, inf valle, sup valle,
+    sup remate], misma formula que centros_rail() en sam17_case.scad.
 
-    SON TRES, NO CUATRO: la punta de arriba de la cara superior no lleva 2020
-    sino la BISAGRA (ver _eje_visagra), asi que el costado tampoco lleva
-    taladro ahi."""
+    ESTUVIERON EN TRES hasta el 2026-08-17: la bisagra ocupaba la linea de
+    tornillo de arriba y ahi no habia riel, o sea que los modulos de la fila de
+    arriba no tenian donde atornillar por su canto superior. Un nudillo no es un
+    riel. La bisagra se mudo a la arista del techo.
+
+    OJO al leerlo contra costado_2d(): el costado solo perfora los DOS primeros.
+    Los de la cara de arriba son TAPA y giran con ella."""
     # cada punta lleva SU inset, gobernado por la curva que la remata (ver la
     # tabla de insets en params.scad)
     caras = [(P[1], P[2], (p["inset_inf_frente"],
                            p["alto_cara_inf"] - p["inset_inf_valle"])),
-             (P[3], P[4], (p["inset_sup_valle"],))]
+             (P[3], P[4], (p["inset_sup_valle"],
+                           p["alto_cara_sup"] - p["inset_sup_remate"]))]
     # el eje del M5 de punta esta a rail_er_eje del panel, no a rail/2: el riel
     # EUROrack es hondo (27.4) y su taladro cae en su centroide
     off = p["t_panel"] + p["rail_er_eje"]
@@ -162,23 +167,28 @@ def _esquinas_er(p: dict[str, float], c: tuple[float, float],
 
 def _eje_visagra(p: dict[str, float],
                   P: list[tuple[float, float]]) -> tuple[float, float]:
-    """Eje de giro de la tapa superior, misma formula que eje_visagra() en
-    sam17_case.scad: sobre la cara superior, a inset_sup_remate de su punta --
-    o sea en la fila de taladros de arriba del panel -- y retirado t_panel +
-    d_visagra/2 para que el nudillo quede pegado al dorso del panel."""
+    """Eje de giro de la tapa, misma formula que eje_visagra() en
+    sam17_case.scad: en la ARISTA DEL TECHO, metido en la esquina EXTERIOR del
+    vertice, con el nudillo tangente a las dos caras que la forman.
+
+    Estuvo en la linea de tornillo de arriba del panel, que es donde va el riel.
+    No caben los dos, y el que atornilla los modulos es el riel."""
     dx, dy = P[4][0] - P[3][0], P[4][1] - P[3][1]
     dl = math.hypot(dx, dy)
     dx, dy = dx / dl, dy / dl
-    s = p["alto_cara_sup"] - p["inset_sup_remate"]
-    off = p["t_panel"] + p["d_visagra"] / 2
-    return (P[3][0] + dx * s + dy * off, P[3][1] + dy * s - dx * off)
+    nf = (-dy, dx)                       # normal EXTERIOR de la cara del panel
+    ux, uy = nf[0], nf[1] + 1.0          # bisectriz con la normal del techo
+    ul = math.hypot(ux, uy)
+    ux, uy = ux / ul, uy / ul
+    k = (p["d_visagra"] / 2) / (ux * nf[0] + uy * nf[1])
+    return (P[4][0] + ux * k, P[4][1] + uy * k)
 
 
 def _y_remate(p: dict[str, float], P: list[tuple[float, float]],
               cr: list[tuple[float, float]], r: float) -> float:
     """Y del larguero de remate, misma formula que y_rs en sam17_case.scad:
     el mas bajo de tres techos -- el techo YA REDONDEADO, el plano del panel de
-    arriba, y la bisagra (la que manda)."""
+    arriba, y el riel de arriba de la tapa (el que manda)."""
     a2 = math.radians(p["angulo_superior"])
     # he_cs y NO r: lo que se acerca al plano del panel es la ESQUINA del
     # larguero, que en diagonal alcanza 14.14 en vez de 10. Con marco_remate=22
@@ -191,11 +201,13 @@ def _y_remate(p: dict[str, float], P: list[tuple[float, float]],
     # esquina de atras cae donde el arco de la esquina trasera de arriba ya bajo
     # su tangente (marco_remate/2). P[5].y - r a secas lo dejaba FUERA.
     por_techo = P[5][1] - r - p["marco_remate"] / 2
-    # antes este techo lo ponia el rail de panel del remate; ese rail ya no
-    # existe y su sitio lo ocupa el nudillo de la bisagra
-    por_visagra = (_eje_visagra(p, P)[1] - p["d_visagra"] / 2
-                   - p["holgura_rail"] - r)
-    return min(por_techo, por_cara, por_visagra)
+    # Este techo lo puso primero un rail de panel, luego el nudillo de la
+    # bisagra cuando la bisagra ocupo esa linea, y desde el 2026-08-17 vuelve a
+    # ser un riel: el de verdad, el de arriba de la tapa. Contra su esquina de
+    # ABAJO, que va girada con la cara, no contra su centro.
+    por_riel = (cr[3][1] - _he_er(p, p["angulo_superior"])[1]
+                - p["holgura_rail"] - r)
+    return min(por_techo, por_cara, por_riel)
 
 
 def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
@@ -250,10 +262,13 @@ def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
 CARAS = {"inf": ("inset_inf_frente", "inset_inf_valle"),
          "sup": ("inset_sup_valle", "inset_sup_remate")}
 
-# 3 railes de panel, no 4: la punta de arriba de la cara superior la remata la
-# BISAGRA, que no es un 2020 ni lleva taladro en el costado.
-NOMBRES_CR = ["cara_inf frente", "cara_inf valle", "cara_sup valle"]
-ANGS_CR = ["angulo_inferior", "angulo_inferior", "angulo_superior"]
+# 4 railes de panel: dos por cara, como cualquier fila EUROrack. Los dos de la
+# cara superior son TAPA -- no llevan M5 al costado, que si lo llevaran la tapa
+# no abriria.
+NOMBRES_CR = ["cara_inf frente", "cara_inf valle",
+              "cara_sup valle", "cara_sup remate"]
+ANGS_CR = ["angulo_inferior", "angulo_inferior",
+           "angulo_superior", "angulo_superior"]
 NOMBRES_CE = ["base delantera", "base trasera", "entrepiso delantero",
               "entrepiso trasero", "remate superior", "repisa"]
 
@@ -379,13 +394,16 @@ def _overlap(a: Caja, b: Caja) -> tuple[float, float, float] | None:
 # nuevo aparece y de verdad no se puede resolver sin tocar centros_rail()
 # fuera de las reglas autorizadas, se documenta aqui igual que antes.
 TOLERADOS: dict[frozenset[str], float] = {
-    # bisagra <-> pestana superior: 0.04 mm de solape de CAJA, cero de solape
-    # real. La pestana va girada con la cara, asi que su esquina profunda cuelga
-    # por debajo del nudillo aunque en el plano de la cara esten a 4 mm limpios.
-    # El AABB no sabe distinguirlo; guarda_visagra() hace la cuenta exacta en el
-    # sistema de la cara y ademas comprueba el barrido, que es lo que de verdad
-    # importa entre una tapa que gira y el marco que la remata.
-    frozenset({"bisagra", "remate_sup"}): 0.5,
+    # riel de arriba de la tapa <-> pestana: solape de CAJA, cero de solape real.
+    # Los dos van girados 45 con la cara y sobre ELLA estan separados -- el riel
+    # remata a inset_sup_remate - rail_er_alto/2 del vertice y la pestana arranca
+    # a marco_sup, o sea 2.75 mm limpios. El AABB no sabe distinguirlo;
+    # guarda_tapa() hace la cuenta exacta en el sistema de la cara.
+    frozenset({"cara_sup remate", "remate_sup"}): 3.0,
+    # bisagra <-> pestana: se tocan EXACTAMENTE (el nudillo es tangente al plano
+    # del techo, que es donde remata la pestana), asi que el solape de caja es
+    # cero mas el ruido de coma flotante.
+    frozenset({"bisagra", "remate_sup"}): 0.01,
 }
 
 
@@ -593,41 +611,45 @@ def _sat_gap(p: dict[str, float], c1: tuple[float, float], ang1: float,
     return -min(separaciones)  # min<=0 en algun eje separador -> hueco positivo
 
 
-def guarda_visagra(p: dict[str, float]) -> None:
-    """La tapa de arriba tiene que poder GIRAR sin comerse la pestana.
+def guarda_tapa(p: dict[str, float]) -> None:
+    """La cara de arriba es una TAPA y tiene que poder abrir.
 
-    Son dos cosas distintas y las dos son assert duro, porque solapes() no ve
-    ninguna: trabaja con cajas alineadas a ejes y aqui todo esta girado 45.
+    Tres asserts duros, porque solapes() no ve ninguno: trabaja con cajas
+    alineadas a ejes y aqui todo esta girado 45.
 
-    1. ESTATICO. El nudillo (circulo de d_visagra) contra la pestana
-       (rectangulo marco_sup x t_cheek). La cuenta se hace en el sistema de la
-       cara -- (s a lo largo, q hacia dentro) --, donde los dos son rectos y la
-       distancia es exacta.
+    1 y 2. EL EJE, FUERA DE LAS DOS CARAS. El nudillo va metido en la esquina
+       EXTERIOR del vertice, tangente a la cara del panel y al techo. Si cae
+       dentro de cualquiera de las dos, la tapa se traba contra su propia
+       esquina en el primer grado -- y un modelo estatico no dice ni pio. Es la
+       version buena del chequeo de barrido que habia antes: aquel media cuanto
+       SUBE el canto del panel al girar, y esa cuenta murio cuando la pestana
+       paso a ser tapa (entre las dos ya no hay movimiento relativo).
 
-    2. BARRIDO, que es el que de verdad manda y no se le ocurre a nadie mirando
-       un corte. Al abrir, el canto de arriba del panel gira sobre un eje que
-       esta inset_er por debajo y t_panel + d_visagra/2 por detras. Ese canto no
-       se retira: primero SUBE, hasta radio - inset_er, y solo despues baja. Si
-       la pestana esta pegada al canto, la tapa se traba en el primer grado y el
-       modelo estatico no dice ni pio. De ahi sale gap_sombra."""
-    s_eje = p["alto_cara_sup"] - p["inset_sup_remate"]
-    q_eje = p["t_panel"] + p["d_visagra"] / 2
-    # rectangulo de la pestana en el sistema de la cara
-    s0, s1 = p["alto_cara_sup"] - p["marco_sup"], p["alto_cara_sup"]
-    q0, q1 = 0.0, p["t_cheek"]
-    ds = max(s0 - s_eje, 0.0, s_eje - s1)
-    dq = max(q0 - q_eje, 0.0, q_eje - q1)
-    hueco = math.hypot(ds, dq) - p["d_visagra"] / 2
-    assert hueco >= 2.0, (
-        f"la bisagra roza la pestana: {hueco:.2f} mm de hueco real (se exige "
-        f">= 2.0). Subir inset_sup_remate o bajar marco_sup")
+    3. EL RIEL DE ARRIBA CONTRA LA PESTANA. En el AABB se pisan (por eso van en
+       TOLERADOS) pero sobre la cara estan separados, y esta es la cuenta buena:
+       el riel remata a inset_sup_remate - rail_er_alto/2 del vertice y la
+       pestana arranca a marco_sup."""
+    P = _vertices(p)
+    ev = _eje_visagra(p, P)
+    rv = p["d_visagra"] / 2
+    a2 = math.radians(p["angulo_superior"])
+    # distancia del eje al plano de la cara del panel, positiva hacia DENTRO
+    q = ((ev[0] - P[3][0]) * math.cos(a2) - (ev[1] - P[3][1]) * math.sin(a2))
+    assert q <= -rv + 1e-6, (
+        f"el eje de la bisagra queda DENTRO de la cara del panel ({q:+.2f} mm "
+        f"del plano, se exige <= {-rv:.2f}): la tapa se traba contra su propia "
+        f"esquina al abrir")
+    assert ev[1] - P[4][1] >= rv - 1e-6, (
+        f"el eje de la bisagra queda por DEBAJO del techo ({ev[1] - P[4][1]:+.2f}"
+        f" mm sobre el, se exige >= {rv:.2f}): el nudillo pide sitio en el "
+        f"acrilico del remate")
 
-    radio = math.hypot(p["inset_er"], q_eje)
-    subida = radio - p["inset_er"]
-    assert p["gap_sombra"] >= subida + 1.0, (
-        f"la tapa se traba al abrir: el canto del panel SUBE {subida:.2f} mm en "
-        f"el barrido y la junta contra la pestana es de {p['gap_sombra']:.2f} "
-        f"(se exige subida + 1.0). Subir gap_sombra o acercar el eje al canto")
+    hueco = p["inset_sup_remate"] - p["marco_sup"] - p["rail_er_alto"] / 2
+    assert hueco >= 1.0, (
+        f"el riel de arriba se come la pestana: {hueco:.2f} mm de hueco real "
+        f"sobre la cara (se exige >= 1.0). Subir inset_sup_remate o bajar "
+        f"marco_sup -- y ojo, inset_sup_remate tambien decide si el riel cabe "
+        f"por detras (ver marco_remate)")
 
 
 def guarda_piso(p: dict[str, float]) -> None:
@@ -688,7 +710,7 @@ def main() -> int:
     canario_alineacion(p)
     guarda_piso(p)
     guarda_escalon(p)
-    guarda_visagra(p)
+    guarda_tapa(p)
     g = perfil(p)
     fallos: list[str] = []
 

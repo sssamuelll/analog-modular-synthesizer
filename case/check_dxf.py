@@ -63,9 +63,11 @@ TOL = 4.0
 # un DXF de contorno sin taladros, y eso es peor -- un fichero que parece
 # completo y se manda a cortar (constitucion, Principio V).
 SIN_DXF = {
-    "remate_sup": "pestana superior: a 8 mm de ancho no cabe una fila de M4, "
-                  "asi que la fijacion (standoff lateral, ranura en el costado "
-                  "o pegado) esta sin decidir y sus taladros no existen",
+    "remate_sup": "pestana superior: es el canto de ataque de la TAPA y queda "
+                  "2.75 mm por delante del riel de arriba; a 8 mm de ancho no "
+                  "cabe una fila de M4, asi que la fijacion (escuadra al riel, "
+                  "costadillo de tapa o pegado) esta sin decidir y sus taladros "
+                  "no existen",
 }
 
 

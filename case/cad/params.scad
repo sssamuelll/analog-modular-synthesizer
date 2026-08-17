@@ -155,9 +155,24 @@ alto_frontal    = 19;
 // arriba. Con el marco fijo, esa esquina se conserva aunque se muevan las
 // proporciones, que es lo que se quiere.
 //
-// FUE 22, que era la meseta que daba la punta redondeada gorda de arriba. Hoy
-// es el canto del techo, del GROSOR DEL ACRILICO (t_cheek = 8): de seccion
-// cuadrada, tan ancho como grueso es el costado que lo forma.
+// FUE 22 (la meseta de la punta gorda), luego 8 (el canto del techo, tan ancho
+// como grueso el costado) y desde el 2026-08-17 es 16. Lo subio una cota fisica,
+// no el gusto: EL RIEL DE ARRIBA NO CABIA.
+//
+// La cara superior necesita DOS rieles como cualquier fila EUROrack, y el de
+// arriba va en la linea de tornillo del vertice. Un Z-Rail mide 27.4 de fondo y
+// ahi el techo se estrechaba a 8, asi que el riel sobresalia 4.90 mm por detras
+// del plano trasero y ademas se comia el larguero de remate. La condicion es
+//
+//   0.7071*(inset_sup_remate - 34) + marco_remate >= 3
+//
+// y con (15.75, 8) daba -4.90. Habia tres salidas -- engordar el techo, bajar el
+// panel por la cara, o buscar un riel mas plano -- y Samuel eligio la primera:
+// es la unica que no mueve la altura y deja el panel rematando en el vertice con
+// su pestana de 8. Con 16 la holgura sale +3.10.
+//
+// Lo que cuesta: el fondo crece 8 mm y el techo, VISTO DE LADO, pasa de canto a
+// repisa. De frente no cambia nada -- lo que se ve sigue siendo marco_sup.
 //
 // OJO, ESTE NO ES EL BORDE QUE SE VE DE FRENTE. marco_remate pertenece al
 // COSTADO, o sea que solo existe en los dos laterales y no cruza el ancho: por
@@ -173,7 +188,7 @@ alto_frontal    = 19;
 // tangente 4 mm en vez de 11, o sea que las dos puntas del techo se vuelven
 // casi vivas. Eso ya no importa como antes -- lo que se ve arriba ahora es el
 // canto del panel, no un pico de acrilico.
-marco_remate    = 8;
+marco_remate    = 16;
 // Entrepiso: la franja horizontal entre el tope de la cara inferior y la base
 // de la superior -- el "valle del medio" de la silueta. Ahi va la bandeja
 // acrilica intermedia. Fue 25 (minimo tecnico de R7: por debajo, los dos
@@ -306,20 +321,24 @@ rail_er_eje     = 13.7;
 //   inferior / frente   punta redondeada    9.5      + 5 + 3.0   = 17.5
 //   inferior / valle    pico (r=5)          2.6      + 5 + 2.4   = 10
 //   superior / valle    valle (r=30)       12.4      + 5 + 2.1   = 19.5
-//   superior / remate   -- BISAGRA --   marco_sup + gap_sombra + 2.75 = 15.75
+//   superior / remate   -- el vertice --  marco_sup + gap_sombra + 2.75 = 15.75
 //
-// La cuarta se sale del patron porque ahi no hay perfil: es el eje de giro, y
-// no la fija ninguna curva sino lo que hay por encima. De arriba abajo:
+// La cuarta se sale del patron porque ahi no la fija ninguna curva sino lo que
+// hay por encima. De arriba abajo, desde el vertice:
 //   8     marco_sup   la pestana de acrilico que tapa el canto del panel
-//   5     gap_sombra  la junta que deja pasar el barrido de la tapa (ver abajo)
-//   2.75  inset_er    del canto del panel a su fila de taladros = al eje
+//   5     gap_sombra  la junta de sombra entre la pestana y el canto del panel
+//   2.75  inset_er    del canto del panel a su fila de taladros
 //
-// La junta NO es decorativa. Al abrir, el canto de arriba del panel gira sobre
-// un eje que esta 3 mm por debajo y 5.6 detras, o sea a 6.35 mm de radio; en el
-// barrido ese canto SUBE hasta 6.35 - 3 = 3.35 mm antes de retirarse. Con la
-// pestana pegada al canto, la tapa se traba en el primer grado. Los 5 de
-// gap_sombra dan 1.65 de margen y de paso son la misma junta de sombra que
-// llevan las pieles flotantes, asi que el detalle es el del resto del case.
+// ESTA LINEA LLEVA RIEL, y hasta el 2026-08-17 no lo llevaba: la ocupaba el eje
+// de la bisagra. Samuel lo cazo preguntando lo obvio -- "el riel superior del
+// segundo row deberia ir en la punta de lo alto del triangulo". Y tenia razon
+// dos veces, porque ademas de faltar el riel, el otro extremo de esa cara
+// estaba atornillado con M5 a los costados: la tapa estaba empernada y no podia
+// abrir. Ver marco_remate y d_visagra.
+//
+// La junta de 5 era el barrido de la tapa y ya no lo es: la pestana viaja CON el
+// panel (las dos son tapa), asi que entre ellas no hay movimiento relativo. Se
+// queda de junta de sombra, la misma que llevan las pieles flotantes.
 //
 // Las tangentes NO son parametros: salen del radio y del angulo del vertice.
 // Si se mueve un radio hay que rehacer la columna, y el que avisa es
@@ -366,14 +385,35 @@ gap_sombra  = 5;    // junta de sombra de las pieles flotantes
 alto_pie    = 8;    // altura de la patica
 d_pie       = 16;   // diametro; pequeno a proposito
 // BISAGRA de la tapa superior. Continua, de todo el ancho util, con el nudillo
-// corriendo por el vertice del techo: la cara de arriba entera se levanta como
-// el capo de un carro. Sustituye al 2020 que remataba esa cara, y por eso el
-// panel llega hasta el punto mas alto.
+// corriendo por la ARISTA DEL TECHO: la cara de arriba entera se levanta como el
+// capo de un carro.
 //
-// ASUMIDA igual que el riel EUROrack: 8 mm de nudillo es una bisagra continua
-// de aluminio corriente, pero el modelo no ha visto la pieza real. Lo que de
-// verdad manda es que el EJE quede a inset_er del canto del panel; si la pieza
-// pide otro diametro cambia d_visagra, no la geometria de la cara.
+// SE MUDO el 2026-08-17. Estaba en la linea de tornillo de arriba del panel, que
+// es justo donde tiene que ir el riel, y ahi no caben los dos. Ahora va donde va
+// una bisagra de piano: NESTLED EN LA ESQUINA EXTERIOR, tangente a las dos caras
+// que forman el vertice (la del panel y el techo). El eje se deriva de eso --
+// P[4] mas la bisectriz exterior por (d_visagra/2)/cos(22.5) -- y no es una
+// eleccion: cualquier otro sitio mete el nudillo dentro del acrilico o deja la
+// tapa sin poder girar.
+//
+// Que el eje quede FUERA de las dos caras es la condicion de que la tapa abra;
+// guarda_tapa() en clearance_budget lo comprueba en los dos planos.
+//
+// QUE ES TAPA Y QUE ES CASE, que es lo que de verdad cambio:
+//   tapa  = los 2 rieles de la cara de arriba + sus modulos + la pestana
+//   case  = todo lo demas
+// Los rieles de esa cara YA NO llevan M5 al costado -- si lo llevaran la tapa no
+// abriria --, asi que el costado pasa de 9 taladros de larguero a 8.
+//
+// ASUMIDA igual que el riel: 8 mm de nudillo es una bisagra continua de aluminio
+// corriente, pero el modelo no ha visto la pieza real. Si la pieza pide otro
+// diametro cambia d_visagra y el eje se recoloca solo.
+//
+// SIN CERRAR: las palas. La de la tapa cuelga de la pestana o del riel de
+// arriba, y la del case necesita algo a lo que agarrarse en el techo -- entre
+// los dos costados el techo esta ABIERTO, marco_remate es perfil de costado y no
+// cruza el ancho (la misma trampa que ya nos comio con marco_sup). Y con los
+// rieles sueltos del costado, la tapa tambien pide cierre y costadillos propios.
 d_visagra   = 8;
 // PESTANA SUPERIOR: la banda de acrilico que cruza de costado a costado por
 // encima del canto del panel de arriba, sobre la propia cara. Samuel la pidio
@@ -385,10 +425,15 @@ d_visagra   = 8;
 // Se lleva su ancho de la cara: la cara crece marco_sup y el canto del panel
 // baja otro tanto, o sea que el case sube marco_sup*cos(45) = 5.7 mm.
 //
-// PENDIENTE, igual que las palas de la bisagra: como se fija. Va volada sobre
-// el larguero de remate y a 8 mm de ancho no cabe una fila de M4, asi que sale
-// standoff lateral, ranura en el costado o pegado. Por eso todavia no tiene DXF
-// propio -- una pieza sin sus taladros no se manda a cortar.
+// ES PIEZA DE TAPA, no de case (2026-08-17): viaja con el panel cuando se abre.
+// De ahi que gap_sombra dejara de ser holgura de barrido -- entre la pestana y
+// el canto del panel ya no hay movimiento relativo.
+//
+// PENDIENTE, igual que las palas de la bisagra: como se fija. Queda 2.75 mm por
+// delante del riel de arriba (guarda_tapa lo mide) y a 8 mm de ancho no cabe una
+// fila de M4, asi que sale escuadra al riel, costadillo de tapa o pegado. Por
+// eso todavia no tiene DXF propio -- una pieza sin sus taladros no se manda a
+// cortar.
 marco_sup   = 8;
 
 // --- ventilacion con firma (spec §7) ---

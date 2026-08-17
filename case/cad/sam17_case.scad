@@ -48,10 +48,15 @@ function pts_perfil() =
 // del valle solo 2.6, asi que exigir el mismo inset en los dos extremos
 // regalaria 12 mm de altura de piso sin comprar nada.
 //
-// SON TRES, NO CUATRO. La punta de arriba de la cara superior no lleva 2020:
-// lleva la BISAGRA (ver eje_visagra()). Por eso el costado tampoco lleva
-// taladro ahi -- costado_2d() perfora esta lista, y la bisagra no cuelga del
-// acrilico sino del larguero de remate.
+// SON CUATRO: dos por cara, como cualquier fila EUROrack. Estuvieron en TRES
+// hasta el 2026-08-17 porque la bisagra ocupaba la linea de tornillo de arriba,
+// y un nudillo no es un riel: no tiene ranura ni tuercas, no le atornillas un
+// modulo. Samuel lo cazo mirando el render. La bisagra se mudo a la arista del
+// techo (ver eje_visagra()).
+//
+// PERO EL COSTADO SOLO PERFORA LOS DOS PRIMEROS. Los de la cara de arriba son
+// TAPA: giran con ella, asi que un M5 al costado ahi seria un cerrojo. Se
+// fijan a los costadillos de la tapa, que son herraje sin cerrar.
 
 // Semiextension del riel EUROrack ya girado con su cara. NO es un cuadrado:
 // mide rail_er_alto a lo largo de la cara y rail_er_fondo hacia dentro, asi que
@@ -67,26 +72,40 @@ function centros_rail() =
          // el eje del M5 de punta esta a rail_er_eje del panel, no a rail/2:
          // el riel es hondo y su taladro cae en su centroide
          off = t_panel + rail_er_eje,
-         // [origen, fin, los s sobre la cara que llevan 2020]
+         // [origen, fin, los s sobre la cara que llevan riel]
          caras = [[P[1], P[2], [inset_inf_frente,
                                 alto_cara_inf - inset_inf_valle]],
-                  [P[3], P[4], [inset_sup_valle]]])
+                  [P[3], P[4], [inset_sup_valle,
+                                alto_cara_sup - inset_sup_remate]]])
     [for (c = caras, s = c[2])
         let (d = (c[1]-c[0])/norm(c[1]-c[0]),      // unitario de la cara
              n = [d.y, -d.x])                       // normal hacia dentro
         c[0] + d*s + n*off];
 
-// Eje de giro de la tapa superior. Va sobre la cara, a inset_sup_remate de su
-// punta -- o sea EXACTAMENTE en la fila de taladros de arriba del panel, que
-// EUROrack pone a 3.0 mm del canto --, y retirado hacia dentro lo justo para
-// que el nudillo quede pegado al dorso del panel (t_panel + d_visagra/2).
-// El canto del panel queda por tanto marco_sup por debajo del vertice, que es
-// justo el hueco que ocupa la pestana.
+// Eje de giro de la tapa. Va en la ARISTA DEL TECHO, metido en la esquina
+// EXTERIOR del vertice: el nudillo tangente a las dos caras que la forman -- la
+// del panel y el techo --, como una bisagra de piano. De ahi sale su sitio sin
+// elegir nada:
+//
+//   u   = bisectriz de las dos normales EXTERIORES
+//   eje = P[4] + u * (d_visagra/2) / (u . nf)
+//
+// El denominador es el coseno del medio angulo entre las dos normales, o sea lo
+// que hay que avanzar por la bisectriz para que el nudillo toque las dos.
+//
+// ESTUVO EN LA LINEA DE TORNILLO del panel hasta el 2026-08-17, y ahi no cabia
+// junto al riel -- el riel es la pieza que atornilla los modulos y la bisagra le
+// habia quitado el sitio. Que el eje quede FUERA de las dos caras es ademas la
+// condicion de que la tapa abra: con el eje dentro del acrilico la tapa se traba
+// contra su propia esquina en el primer grado. guarda_tapa() lo comprueba en los
+// dos planos.
 function eje_visagra() =
     let (P = pts_perfil(),
          d = (P[4]-P[3])/norm(P[4]-P[3]),
-         n = [d.y, -d.x])
-    P[3] + d*(alto_cara_sup - inset_sup_remate) + n*(t_panel + d_visagra/2);
+         nf = [-d.y, d.x],            // normal EXTERIOR de la cara del panel
+         nt = [0, 1],                 // normal exterior del techo
+         u = (nf + nt)/norm(nf + nt))
+    P[4] + u*((d_visagra/2)/(u*nf));
 
 // largueros del esqueleto (2020) que no son railes de panel:
 // base delantera, base trasera, entrepiso delantero, entrepiso trasero,
@@ -141,14 +160,16 @@ function centros_esqueleto() =
          //      vez de 10. Con el marco en 22 este techo nunca mandaba y el
          //      error dormia; con el marco en 8 manda, y con la version vieja
          //      la esquina asomaba 2.54 mm por delante del panel.
-         //   3. la BISAGRA, que es la que de verdad manda. Antes este techo
-         //      lo ponia el rail de panel del remate; ese rail ya no existe
-         //      (lo sustituyo el eje de giro) y su sitio lo ocupa el nudillo,
-         //      del que el remate tiene que quedar holgura_rail por debajo.
+         //   3. el RIEL DE ARRIBA DE LA TAPA, que es el que de verdad manda.
+         //      Este techo lo puso primero un rail de panel, luego el nudillo
+         //      de la bisagra cuando la bisagra ocupo esa linea, y desde el
+         //      2026-08-17 vuelve a ser un riel: el de verdad, el que atornilla
+         //      los modulos. Se mide contra su esquina de ABAJO (he_er_y), que
+         //      va girada con la cara, no contra su centro.
          y_rs = min(P[5].y - r - marco_remate/2,
                     P[3].y + (cos(angulo_superior)*(fondo() - r - P[3].x)
                               - (he_cs + t_panel)) / sin(angulo_superior),
-                    eje_visagra().y - d_visagra/2 - holgura_rail - r))
+                    cr[3].y - he_er_y(angulo_superior) - holgura_rail - r))
     // Los dos largueros de la base ya NO viven en el canto de abajo. Desde que
     // la bandeja es el suelo (t_base) montan encima de ella, o sea con su centro
     // en t_base + r, y a esa altura el redondeo de las esquinas de abajo deja de
@@ -287,9 +308,12 @@ module perfil_lateral() {
 }
 
 module costado_2d() {
+    cr = centros_rail();
     difference() {
         perfil_lateral();
-        for (c = concat(centros_rail(), centros_esqueleto()))
+        // Solo los DOS railes de la cara de abajo se fijan de punta al costado.
+        // Los de arriba son tapa y giran: un M5 al costado ahi seria un cerrojo.
+        for (c = concat([cr[0], cr[1]], centros_esqueleto()))
             translate(c) circle(d = d_M5_paso + kerf);
     }
 }
@@ -439,8 +463,9 @@ module costados() {
 // rotate([0,0,-angulo]) alinea el lado +Y local del rail con el vector de
 // cara d=(sin,cos) — verificado con la matriz Rz(-angulo) a mano.
 module rails() {
-    cr = centros_rail();                    // [inf frente, inf valle, sup valle]
-    angs = [angulo_inferior, angulo_inferior, angulo_superior];
+    cr = centros_rail();   // [inf frente, inf valle, sup valle, sup remate]
+    angs = [angulo_inferior, angulo_inferior,
+            angulo_superior, angulo_superior];
     for (i = [0 : len(cr) - 1])
         translate([cr[i].x, cr[i].y, ancho_total/2])
             rotate([0, 0, -angs[i]])
@@ -557,9 +582,14 @@ module paneles() {
 // acrilico que da la vuelta del lateral al techo. Sin ella el panel remataba
 // pelado contra el aire, que es lo que Samuel vio en el render.
 //
-// Fijacion PENDIENTE (ver params.scad): a 8 mm de ancho no cabe una fila de
-// M4, asi que sale standoff lateral, ranura en el costado o pegado. Por eso no
-// tiene DXF propio todavia -- una pieza sin taladros no se manda a cortar.
+// ES PIEZA DE TAPA (2026-08-17): viaja con el panel al abrir, no se queda con
+// el case. Por eso entre ella y el canto del panel ya no hace falta holgura de
+// barrido -- gap_sombra ahi es junta de sombra y nada mas.
+//
+// Fijacion PENDIENTE (ver params.scad): queda 2.75 mm por delante del riel de
+// arriba y a 8 mm de ancho no cabe una fila de M4, asi que sale escuadra al
+// riel, costadillo de tapa o pegado. Por eso no tiene DXF propio todavia -- una
+// pieza sin taladros no se manda a cortar.
 module remate_sup() {
     P = pts_perfil();
     d = (P[4] - P[3]) / norm(P[4] - P[3]);
@@ -638,14 +668,16 @@ module lienzo_2d() {
 module bom() {
     au = ancho_total - 2*t_cheek;
     echo(str("BOM: larguero 2020 x", len(centros_esqueleto()), " de ", au, " mm"));
-    echo(str("BOM: riel EUROrack StudioRacks x", len(centros_rail()), " de ", au,
-             " mm (", rail_er_fondo, " x ", rail_er_alto, "), fijado de punta"));
+    echo(str("BOM: riel EUROrack x", len(centros_rail()), " de ", au, " mm (",
+             rail_er_fondo, " x ", rail_er_alto, ") -- 2 al case, fijados de ",
+             "punta con M5 al costado; 2 A LA TAPA, que gira y no lleva M5"));
     echo(str("BOM: tornillo M5 boton x", 2*(len(centros_rail()) + len(centros_esqueleto())),
              " -- OJO: la longitud del que entra al riel esta SIN CERRAR, John dijo",
              " que el M5x35 de catalogo no sirve para costado de ", t_cheek, " mm"));
     echo("BOM: standoff M4 x8 (las dos pieles, voladas) + tornillo M4 boton x16 + arandela x16");
     echo(str("BOM: bisagra continua x1 de ", au, " mm, nudillo d=", d_visagra,
-             " (tapa superior; palas al dorso del panel y al larguero de remate)"));
+             " en la arista del techo -- palas SIN CERRAR: el techo esta abierto",
+             " entre costados y la tapa pide cierre y costadillos propios"));
     echo(str("BOM: pestana superior x1, ", au, " x ", marco_sup,
              " en acrilico t=", t_cheek, " (fijacion sin cerrar)"));
     echo(str("BOM: patica metalica torneada x4, d=", d_pie, " x ", alto_pie, " mm"));
