@@ -109,7 +109,9 @@ const T_RESOLVED: u8 = 0x86;
 const T_HOLA: u8 = 0x87;
 const T_ERROR: u8 = 0x88;
 
-fn etiqueta(m: &Mensaje) -> u8 {
+/// La etiqueta con la que viaja. El servidor la necesita para poder decir
+/// QUE fallo en un `ERROR`.
+pub fn etiqueta_de(m: &Mensaje) -> u8 {
     use Mensaje::*;
     match m {
         Hello { .. } => T_HELLO,
@@ -138,14 +140,14 @@ fn etiqueta(m: &Mensaje) -> u8 {
 
 impl Mensaje {
     pub fn del_instrumento(&self) -> bool {
-        etiqueta(self) & 0x80 != 0
+        etiqueta_de(self) & 0x80 != 0
     }
 }
 
 pub fn codificar(m: &Mensaje, buf: &mut [u8]) -> Result<usize, ErrorProto> {
     use Mensaje::*;
     let mut w = Escritor { buf, n: 0 };
-    w.u8(etiqueta(m))?;
+    w.u8(etiqueta_de(m))?;
     match m {
         Hello { version } => w.u16(*version)?,
         Describe | PresetList | TuneStart | PatchScan | Telemetry | Modules | Jacks => {}
@@ -270,7 +272,7 @@ mod tests {
     fn ninguna_etiqueta_se_repite() {
         let mut vistas = heapless::Vec::<u8, 21>::new();
         for m in todas() {
-            let e = etiqueta(&m);
+            let e = etiqueta_de(&m);
             assert!(!vistas.contains(&e), "la etiqueta {e:#04x} esta duplicada");
             vistas.push(e).unwrap();
         }

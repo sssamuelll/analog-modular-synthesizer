@@ -19,5 +19,6 @@ pub mod pinout;
 pub mod preset;
 pub mod protocolo;
 pub mod retencion;
+pub mod servidor;
 pub mod sysex;
 pub mod usbmidi;
