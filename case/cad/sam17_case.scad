@@ -498,6 +498,7 @@ else if (PART == "assembly_aluminio")  assembly_aluminio();
 else if (PART == "bandeja_base_2d")      bandeja_base_2d();
 else if (PART == "bandeja_entrepiso_2d") bandeja_entrepiso_2d();
 else if (PART == "tapa_valle_2d")        tapa_valle_2d();
+else if (PART == "remate_sup_2d")        remate_sup_2d();
 else if (PART == "piel_inferior_2d")     piel_inferior_2d();
 else if (PART == "piel_superior_2d")     piel_superior_2d();
 else if (PART == "lienzo_2d")            lienzo_2d();
@@ -640,21 +641,33 @@ module paneles() {
 // acrilico que da la vuelta del lateral al techo. Sin ella el panel remataba
 // pelado contra el aire, que es lo que Samuel vio en el render.
 //
-// ES PIEZA DE TAPA (2026-08-17): viaja con el panel al abrir, no se queda con
-// el case. Por eso entre ella y el canto del panel ya no hace falta holgura de
-// barrido -- gap_sombra ahi es junta de sombra y nada mas.
+// ES PIEZA DE TAPA (2026-08-17): viaja con el panel al abrir.
 //
-// Fijacion PENDIENTE (ver params.scad): queda 2.75 mm por delante del riel de
-// arriba y a 8 mm de ancho no cabe una fila de M4, asi que sale escuadra al
-// riel, costadillo de tapa o pegado. Por eso no tiene DXF propio todavia -- una
-// pieza sin taladros no se manda a cortar.
+// YA SE FIJA (ver params.scad): APOYA DE CANTO en la cara de arriba del riel --
+// la que mira al vertice, 27.4 x 528 de aluminio plano -- y se atornilla a ella
+// con M3 que entran por su canto, a lo largo de la cara. Por delante no habia
+// manera: el riel solo asoma 2.25 mm por encima del panel y ahi no cabe una
+// cabeza. marco_sup es el ESPESOR de su plancha, prof_sup su fondo.
+//
+// El solido va con cube() y el DXF con remate_sup_2d(); los dos leen los mismos
+// dos parametros, asi que no pueden separarse sin que se note en params.
 module remate_sup() {
     P = pts_perfil();
     d = (P[4] - P[3]) / norm(P[4] - P[3]);
     translate([P[3].x, P[3].y, t_cheek])
         rotate([0, 0, atan2(d.y, d.x)])
-            translate([alto_cara_sup - marco_sup, -t_cheek, 0])
-                cube([marco_sup, t_cheek, ancho_util]);
+            translate([alto_cara_sup - marco_sup, -prof_sup, 0])
+                cube([marco_sup, prof_sup, ancho_util]);
+}
+
+// La pestana vista de canto: 528.32 x prof_sup en plancha de marco_sup. Los M3
+// atraviesan el ESPESOR, o sea que salen por la cara que apoya en el riel.
+module remate_sup_2d() {
+    au = ancho_total - 2*t_cheek;
+    difference() {
+        plancha(au, prof_sup);
+        fila_agujeros(au, prof_sup/2);
+    }
 }
 
 // Paticas torneadas bajo los costados. En X caen sobre los dos rieles de
@@ -721,6 +734,7 @@ module lienzo_2d() {
     x3 = x2 + au + sep;  translate([x3, y2]) piel_inferior_2d();
     x4 = x3 + aup + sep; translate([x4, y2]) piel_superior_2d();
     x5 = x4 + aup + sep; translate([x5, y2]) tapa_valle_2d();
+    x6 = x5 + au + sep;  translate([x6, y2]) remate_sup_2d();
     %square([1000, 600]);
 }
 
@@ -742,8 +756,11 @@ module bom() {
     echo("BOM: paneles ciegos en TODO hueco de la fila de arriba -- no son estetica:");
     echo("     con la tapa abierta son lo unico que ata sus dos rieles entre si");
     echo("BOM: SIN CERRAR -- amortiguador que deje la tapa abierta");
-    echo(str("BOM: pestana superior x1, ", au, " x ", marco_sup,
-             " en acrilico t=", t_cheek, " (fijacion sin cerrar)"));
+    echo(str("BOM: pestana superior x1, ", au, " x ", prof_sup, " en acrilico ",
+             "t=", marco_sup, " -- apoya de canto en la cara de arriba del riel"));
+    echo("BOM: tornillo M3 x5 para la pestana, entran por su canto al riel.");
+    echo("     CONFIRMAR con el riel en mano que esa cara admite rosca M3;");
+    echo("     si no, el mismo apoyo a tope pegado sobra para 60 g de acrilico");
     echo(str("BOM: patica metalica torneada x4, d=", d_pie, " x ", alto_pie, " mm"));
     echo(str("BOM: planchas t=", t_acrilico, ": entrepiso, tapa del valle, ",
              "piel inf, piel sup; suelo t=", t_base, " (la bandeja de base, ",

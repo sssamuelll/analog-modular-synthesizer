@@ -47,7 +47,7 @@ ancho_total     = 544.32;
 // el que cuenta es el que se compra. De ahi salen las caras:
 //
 //   alto_cara_inf = 123.0 + inset_inf_frente + inset_inf_valle  = 153.0
-//   alto_cara_sup = 123.0 + inset_sup_valle  + inset_sup_remate = 158.25
+//   alto_cara_sup = 123.0 + inset_sup_valle  + inset_sup_remate = 155.5
 //
 // El de arriba sale mas CORTO aunque lleve el mismo estandar dentro, y es por
 // la bisagra: su punta de arriba ya no la remata un 2020 sino el eje de giro.
@@ -74,7 +74,7 @@ ancho_total     = 544.32;
 // 2020 se quedan solo en el esqueleto -- base, entrepiso, remate y repisa --,
 // que es donde de verdad hacen estructura.
 alto_cara_inf   = 153.0; // DERIVADO: 123.0 + inset_inf_frente + inset_inf_valle
-alto_cara_sup   = 158.25; // DERIVADO: 123.0 + inset_sup_valle + inset_sup_remate
+alto_cara_sup   = 155.5; // DERIVADO: 123.0 + inset_sup_valle + inset_sup_remate
 alto_panel_inf  = 128.5; // PCB 3U EUROrack
 alto_panel_sup  = 128.5; // PCB 3U EUROrack: la fila de arriba tambien
 // Angulos de cara. El fichero los guarda DESDE LA VERTICAL (convencion del
@@ -188,7 +188,7 @@ alto_frontal    = 19;
 // tangente 4 mm en vez de 11, o sea que las dos puntas del techo se vuelven
 // casi vivas. Eso ya no importa como antes -- lo que se ve arriba ahora es el
 // canto del panel, no un pico de acrilico.
-marco_remate    = 16;
+marco_remate    = 18;
 // Entrepiso: la franja horizontal entre el tope de la cara inferior y la base
 // de la superior -- el "valle del medio" de la silueta. Ahi va la bandeja
 // acrilica intermedia. Fue 25 (minimo tecnico de R7: por debajo, los dos
@@ -321,13 +321,12 @@ rail_er_eje     = 13.7;
 //   inferior / frente   punta redondeada    9.5      + 5 + 3.0   = 17.5
 //   inferior / valle    pico (r=5)          2.6      + 5 + 4.9   = 12.5*
 //   superior / valle    valle (r=30)       12.4      + 5 + 2.1   = 19.5
-//   superior / remate   -- el vertice --  marco_sup + gap_sombra + 2.75 = 15.75
+//   superior / remate   -- lo fija la PESTANA ---  8 + 5 = 13
 //
-// La cuarta se sale del patron porque ahi no la fija ninguna curva sino lo que
-// hay por encima. De arriba abajo, desde el vertice:
-//   8     marco_sup   la pestana de acrilico que tapa el canto del panel
-//   5     gap_sombra  la junta de sombra entre la pestana y el canto del panel
-//   2.75  inset_er    del canto del panel a su fila de taladros
+// La cuarta se sale del patron: no la fija ninguna curva. La fija que la pestana
+// APOYE en el canto de arriba del riel, o sea marco_sup + rail_er_alto/2. Y de
+// ella cuelga marco_remate, que tiene que dar para que el riel quepa detras del
+// vertice: >= 3 - 0.7071*(13 - 34) = 17.85.
 //
 // ESTA LINEA LLEVA RIEL, y hasta el 2026-08-17 no lo llevaba: la ocupaba el eje
 // de la bisagra. Samuel lo cazo preguntando lo obvio -- "el riel superior del
@@ -357,7 +356,7 @@ inset_inf_frente = 17.5;
 // un slot de 25 mm por delante.
 inset_inf_valle  = 12.5;
 inset_sup_valle  = 19.5;
-inset_sup_remate = 15.75;
+inset_sup_remate = 13;
 // Cotas del PANEL (no de la cara). El horizontal es de estandar: primer taladro
 // a 7.5 mm del canto izquierdo y paso multiplo de 5.08 (1 HP), verificado el
 // 2026-08-17 contra midisoft.de y exploding-shed.com.
@@ -458,13 +457,47 @@ d_pie       = 16;   // diametro; pequeno a proposito
 // De ahi que gap_sombra dejara de ser holgura de barrido -- entre la pestana y
 // el canto del panel ya no hay movimiento relativo.
 //
-// PENDIENTE: como se fija. Es la pieza que mas lejos queda del eje de giro
-// (22 mm), o sea la que primero barre algo al abrir. Queda 2.75 mm por
-// delante del riel de arriba (guarda_tapa lo mide) y a 8 mm de ancho no cabe una
-// fila de M4, asi que sale escuadra al riel, costadillo de tapa o pegado. Por
-// eso todavia no tiene DXF propio -- una pieza sin sus taladros no se manda a
-// cortar.
+// YA NO ESTA PENDIENTE COMO SE FIJA (2026-08-17). Samuel: "podemos hacer que
+// esta conectara al riel? (atornillada al riel)". Si, pero no por donde parece.
+//
+// Por la cara del riel donde van los modulos NO SE PUEDE, y la cota es dura: el
+// panel 3U lleva sus taladros a 2.75 del canto y el riel mide 10 de alto, o sea
+// que por encima del panel solo asoman 5 - 2.75 = 2.25 mm de riel. Una cabeza de
+// M3 mide 5.5. No cabe, y no hay como hacerla caber sin mover la separacion de
+// 123, que no es nuestra.
+//
+// Lo que si hay es LA OTRA CARA del riel: la de arriba, la que mira al vertice.
+// 27.4 mm de fondo por 528 de largo, plana y libre, y la pestana se le apoya de
+// canto. Para eso tiene que TOCARLA -- hasta hoy habia 2.75 mm de aire --, y de
+// ahi sale el numero:
+//
+//   inset_sup_remate = marco_sup + rail_er_alto/2 = 8 + 5 = 13
+//
+// Y VA EN ESTE SENTIDO, no al reves, por una razon tonta y decisiva: marco_sup es
+// el ESPESOR DE LA PLANCHA de la que sale la pieza, porque el M3 la atraviesa a
+// lo largo de la cara. Derivar marco_sup de inset_sup_remate daba 10.75, que no
+// es un espesor que exista. Asi que manda el 8 -- el mismo del costado, comprable
+// -- y de el cuelgan inset_sup_remate y, detras, marco_remate.
+//
+// De paso la junta contra el canto del panel deja de ser aire: pasan a ser los
+// 2.25 mm de riel que asoman, o sea una linea de aluminio entre el panel y el
+// acrilico. Mejor detalle que el hueco.
+//
+// LO QUE QUEDA POR CONFIRMAR, y es una sola cosa: que esa cara del Z-Rail admita
+// un M3. Es el canto de una extrusion y no tenemos su seccion interior. Si no
+// admite rosca, el mismo apoyo a tope pegado con adhesivo estructural sobra para
+// una tira de 60 g -- los taladros del acrilico no estorban.
 marco_sup   = 8;
+// Fondo de la pestana hacia dentro del case. Fue t_cheek = 8 mientras no llevaba
+// tornillos; ahora los lleva, y el M3 entra POR EL CANTO, a lo largo de la cara,
+// atravesando los 10.75 de marco_sup y siguiendo hasta el riel. El material que
+// rodea ese agujero no lo pone marco_sup sino ESTE fondo: con 16 quedan 6.3 mm
+// de acrilico a cada lado del taladro; con los 8 de antes quedaban 2.3, que en
+// acrilico es donde arranca una fisura.
+//
+// La pieza sale de plancha de marco_sup = 8 (la misma del costado) y su DXF mide
+// 528.32 x prof_sup.
+prof_sup    = 16;
 
 // --- ventilacion con firma (spec §7) ---
 vent_ancho_ranura = 4;   // ancho de la ranura-onda

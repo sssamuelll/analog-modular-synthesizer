@@ -207,7 +207,7 @@ def _esquinas_pestana(p: dict[str, float],
     n2 = (d2[1], -d2[0])
     return [(P[3][0] + d2[0] * s + n2[0] * q, P[3][1] + d2[1] * s + n2[1] * q)
             for s in (p["alto_cara_sup"] - p["marco_sup"], p["alto_cara_sup"])
-            for q in (0.0, p["t_cheek"])]
+            for q in (0.0, p["prof_sup"])]
 
 
 def _y_remate(p: dict[str, float], P: list[tuple[float, float]],
@@ -422,11 +422,15 @@ def _overlap(a: Caja, b: Caja) -> tuple[float, float, float] | None:
 # fuera de las reglas autorizadas, se documenta aqui igual que antes.
 TOLERADOS: dict[frozenset[str], float] = {
     # riel de arriba de la tapa <-> pestana: solape de CAJA, cero de solape real.
-    # Los dos van girados 45 con la cara y sobre ELLA estan separados -- el riel
-    # remata a inset_sup_remate - rail_er_alto/2 del vertice y la pestana arranca
-    # a marco_sup, o sea 2.75 mm limpios. El AABB no sabe distinguirlo;
-    # guarda_tapa() hace la cuenta exacta en el sistema de la cara.
-    frozenset({"cara_sup remate", "remate_sup"}): 3.0,
+    # Los dos van girados 45 con la cara y sobre ELLA se TOCAN a tope, sin
+    # penetrarse: la pestana apoya en la cara de arriba del riel, que es de donde
+    # cuelga su fijacion. Dos rectangulos girados que comparten una arista tienen
+    # cajas que se pisan de largo -- de ahi la tolerancia gorda. guarda_tapa()
+    # hace la cuenta exacta sobre la cara y exige que la junta valga CERO.
+    # El solape de caja vale 10.18 mm con la seccion de hoy (marco_sup 8 x
+    # prof_sup 16 girados 45); 12 deja aire para el ruido y sigue siendo un
+    # numero, no un cheque en blanco.
+    frozenset({"cara_sup remate", "remate_sup"}): 12.0,
 }
 
 
@@ -661,10 +665,11 @@ def guarda_tapa(p: dict[str, float]) -> None:
        que ninguna esquina entre). Tampoco entra el FONDO de los modulos, que no
        esta modelado: eso lo vigila fondo_pcb_max por otro lado.
 
-    2. EL RIEL DE ARRIBA CONTRA LA PESTANA. En el AABB se pisan (por eso van en
-       TOLERADOS) pero sobre la cara estan separados, y esta es la cuenta buena:
-       el riel remata a inset_sup_remate - rail_er_alto/2 del vertice y la
-       pestana arranca a marco_sup."""
+    2. LA PESTANA APOYADA EN EL RIEL. Ya no se comprueba que esten SEPARADAS
+       sino que se TOQUEN, que es lo contrario y es lo que hace falta: de esa
+       cara de aluminio cuelga la unica fijacion de la pestana (M3 por su canto).
+       En el AABB las dos se pisan porque van giradas 45 -- por eso siguen en
+       TOLERADOS --, y esta es la cuenta buena, hecha sobre la cara."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
     eje = cr[3]                       # el M5 del riel de arriba ES el eje
@@ -701,12 +706,12 @@ def guarda_tapa(p: dict[str, float]) -> None:
         f"la tapa solo abre {tope:.1f} grados antes de topar con '{culpable}' "
         f"(se exige >= {APERTURA_MIN:.0f}). Bajar ese cuerpo o acercar el eje")
 
-    hueco = p["inset_sup_remate"] - p["marco_sup"] - p["rail_er_alto"] / 2
-    assert hueco >= 1.0, (
-        f"el riel de arriba se come la pestana: {hueco:.2f} mm de hueco real "
-        f"sobre la cara (se exige >= 1.0). Subir inset_sup_remate o bajar "
-        f"marco_sup -- y ojo, inset_sup_remate tambien decide si el riel cabe "
-        f"por detras (ver marco_remate)")
+    junta = p["inset_sup_remate"] - p["marco_sup"] - p["rail_er_alto"] / 2
+    assert abs(junta) < 0.01, (
+        f"la pestana no APOYA en el riel: {junta:+.3f} mm de junta (se exige 0). "
+        f"Es de donde cuelga su unica fijacion, asi que la cota no es opinable: "
+        f"inset_sup_remate = marco_sup + rail_er_alto/2 = "
+        f"{p['marco_sup'] + p['rail_er_alto']/2:.2f}")
 
 
 def guarda_piso(p: dict[str, float]) -> None:

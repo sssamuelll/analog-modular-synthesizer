@@ -62,13 +62,12 @@ TOL = 4.0
 # se imprime en cada corrida, asi que el hueco se ve. La alternativa era emitir
 # un DXF de contorno sin taladros, y eso es peor -- un fichero que parece
 # completo y se manda a cortar (constitucion, Principio V).
-SIN_DXF = {
-    "remate_sup": "pestana superior: es el canto de ataque de la TAPA y queda "
-                  "2.75 mm por delante del riel de arriba; a 8 mm de ancho no "
-                  "cabe una fila de M4, asi que la fijacion (escuadra al riel, "
-                  "costadillo de tapa o pegado) esta sin decidir y sus taladros "
-                  "no existen",
-}
+SIN_DXF: dict[str, str] = {}
+
+# Piezas que van GIRADAS con una cara, o sea que su caja en el mundo NO es su
+# DXF: la pestana mide 10.75 x 528 de caja en X y en Y (la diagonal de su
+# seccion a 45 grados) y la plancha real mide prof_sup. Su sobre se declara.
+GIRADAS = {"remate_sup"}
 
 
 def _sobres() -> dict[str, tuple[float, float, float, float]]:
@@ -86,9 +85,11 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
         # de _cajas_solidas porque no es una pieza del case.
         "coupon": (136.0, 62.0),
     }
+    au = p["ancho_total"] - 2 * p["t_cheek"]
+    dims["remate_sup_2d"] = (au, p["prof_sup"])
     for caja in planchas:
         nombre, x0, x1, y0, y1, z0, z1 = caja
-        if nombre in SIN_DXF:
+        if nombre in SIN_DXF or nombre in GIRADAS:
             continue
         aristas = sorted((x1 - x0, y1 - y0, z1 - z0), reverse=True)
         dims[f"{nombre}_2d"] = (aristas[0], aristas[1])   # se cae el espesor
