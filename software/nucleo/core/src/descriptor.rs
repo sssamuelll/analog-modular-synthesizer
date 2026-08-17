@@ -12,6 +12,7 @@
 //!               bit0 solo_lectura   bit1 medida   bit2 confirmacion_fisica
 //!               bit3 ambito (0 = compartido, 1 = por-voz)
 //!               bits 4-5 tipo (0 continuo, 1 enumerado, 2 booleano)
+//!               bit6 acepta_modulacion
 //!    3    4   min (i32)
 //!    7    4   max (i32)
 //!   11    4   def (i32)
@@ -90,6 +91,10 @@ pub struct Descriptor {
     pub medida: bool,
     /// §2.2: el micro RETIENE la operacion hasta la confirmacion fisica.
     pub confirmacion_fisica: bool,
+    /// §7.3 de la spec del tiempo musical. **Hoy no la usa nadie**: la
+    /// modulacion es de la spec 2. Esta puesta porque es un bit ahora contra
+    /// reescribir el modelo entero despues.
+    pub acepta_modulacion: bool,
     pub min: i32,
     pub max: i32,
     pub def: i32,
@@ -108,6 +113,7 @@ pub struct DescriptorLeido<'a> {
     pub solo_lectura: bool,
     pub medida: bool,
     pub confirmacion_fisica: bool,
+    pub acepta_modulacion: bool,
     pub min: i32,
     pub max: i32,
     pub def: i32,
@@ -156,7 +162,8 @@ pub fn escribir(d: &Descriptor, buf: &mut [u8]) -> Result<usize, ErrorCodec> {
         | ((d.medida as u8) << 1)
         | ((d.confirmacion_fisica as u8) << 2)
         | ((d.ambito as u8) << 3)
-        | ((d.tipo as u8) << 4);
+        | ((d.tipo as u8) << 4)
+        | ((d.acepta_modulacion as u8) << 6);
     w.u8(banderas)?;
     w.i32(d.min)?;
     w.i32(d.max)?;
@@ -204,6 +211,7 @@ pub fn leer(buf: &[u8]) -> Result<(DescriptorLeido<'_>, usize), ErrorCodec> {
             solo_lectura: banderas & 0b1 != 0,
             medida: banderas & 0b10 != 0,
             confirmacion_fisica: banderas & 0b100 != 0,
+            acepta_modulacion: banderas & 0b0100_0000 != 0,
             min,
             max,
             def,
@@ -288,6 +296,7 @@ mod tests {
         solo_lectura: false,
         medida: false,
         confirmacion_fisica: false,
+        acepta_modulacion: false,
         min: 0,
         max: 65535,
         def: 32768,
@@ -303,6 +312,7 @@ mod tests {
         solo_lectura: false,
         medida: false,
         confirmacion_fisica: true,
+        acepta_modulacion: false,
         min: 0,
         max: 3,
         def: 1,
@@ -318,6 +328,7 @@ mod tests {
         solo_lectura: true,
         medida: true,
         confirmacion_fisica: false,
+        acepta_modulacion: false,
         min: -6000,
         max: 0,
         def: 0,

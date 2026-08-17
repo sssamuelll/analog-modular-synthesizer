@@ -298,6 +298,7 @@ mod tests {
             solo_lectura: false,
             medida: false,
             confirmacion_fisica: false,
+            acepta_modulacion: false,
             min: 0,
             max: 65535,
             def: 0,

@@ -224,6 +224,7 @@ mod tests {
             solo_lectura,
             medida,
             confirmacion_fisica: confirma,
+            acepta_modulacion: false,
             min: -100,
             max: 100,
             def: 0,

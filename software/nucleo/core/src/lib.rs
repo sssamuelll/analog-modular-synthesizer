@@ -23,4 +23,5 @@ pub mod reloj;
 pub mod retencion;
 pub mod servidor;
 pub mod sysex;
+pub mod tiempo_params;
 pub mod usbmidi;
