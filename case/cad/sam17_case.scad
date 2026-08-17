@@ -15,33 +15,47 @@ ancho_util = ancho_total - 2*t_cheek;
 
 // vertices del perfil lateral (X = fondo, Y = arriba) — misma numeracion
 // que clearance_budget.perfil(): p0..p8
+// Fondo del case. DERIVADO, no parametro: es la proyeccion de la hipotenusa
+// mas el marco de remate (ver la nota larga en params.scad). Se calcula sin
+// llamar a pts_perfil para no morderse la cola.
+function fondo() = alto_panel_inf*sin(angulo_inferior) + paso_horizontal
+                 + alto_panel_sup*sin(angulo_superior) + marco_remate;
+
 function pts_perfil() =
     let (si = sin(angulo_inferior), ci = cos(angulo_inferior),
          ss = sin(angulo_superior), cs = cos(angulo_superior),
-         ye = alto_frontal + alto_panel*ci,          // y entrepiso
-         x2 = alto_panel*si,                          // fin cara inferior
+         ye = alto_frontal + alto_panel_inf*ci,       // y entrepiso
+         x2 = alto_panel_inf*si,                      // fin cara inferior
          x3 = x2 + paso_horizontal,
-         x4 = x3 + alto_panel*ss,
-         yt = ye + alto_panel*cs)                     // alto total
+         x4 = x3 + alto_panel_sup*ss,
+         yt = ye + alto_panel_sup*cs,                 // alto total
+         pf = fondo())
     [[0,0],[0,alto_frontal],[x2,ye],[x3,ye],[x4,yt],
-     [prof_superior,yt],[prof_superior,ye],[prof_inferior,ye],
-     [prof_inferior,0]];
+     [pf,yt],[pf,0]];
+// 7 puntos, no 9: el canto trasero es UN plano a plomo de toda la altura.
+// La version anterior metia p5..p7 en una repisa escalonada entre
+// prof_superior=250 y prof_inferior=350, y esa repisa era la que rompia la
+// lectura de triangulo. Al colapsarla, p5=(fondo,yt) y p6=(fondo,0), o sea
+// que el ANTIGUO P[8] (esquina trasera baja) es ahora P[6] -- ojo al leer
+// codigo viejo. x4 = fin de la cara superior; de x4 a fondo() queda el
+// marco de remate.
 
 // puntos medios de rail por cara: [origen, direccion] de cada cara y
 // centros a inset_tornillo y alto_panel-inset_tornillo sobre la cara,
 // retirados hacia dentro t_panel + rail/2 segun la normal
 function centros_rail() =
     let (P = pts_perfil(),
-         caras = [[P[1], P[2]], [P[3], P[4]]],
+         // cada cara lleva SU alto: los dos pisos ya no miden lo mismo
+         caras = [[P[1], P[2], alto_panel_inf], [P[3], P[4], alto_panel_sup]],
          off = t_panel + rail/2)
-    [for (c = caras, s = [inset_tornillo, alto_panel - inset_tornillo])
+    [for (c = caras, s = [inset_tornillo, c[2] - inset_tornillo])
         let (d = (c[1]-c[0])/norm(c[1]-c[0]),      // unitario de la cara
              n = [d.y, -d.x])                       // normal hacia dentro
         c[0] + d*s + n*off];
 
 // largueros del esqueleto (2020) que no son railes de panel:
 // base delantera, base trasera, entrepiso delantero, entrepiso trasero,
-// remate superior, repisa, zocalo superior. Centros [x, y]:
+// remate superior, repisa. Centros [x, y]:
 //
 // entrepiso delantero reubicado (fix de solape, ronda de revision 1): el
 // original P[3].x+r invadia el rail de panel cara-superior s=inset_tornillo
@@ -52,43 +66,180 @@ function centros_rail() =
 // por encima del plano de entrepiso).
 //
 // repisa (sexto larguero, ronda de revision 2 — R6): ancla piel_superior
-// SIN pasar por el rail entrepiso-trasero (ese vive en X=340, en el plano
-// del piso inferior; piel_superior vuela en X=prof_superior+gap_sombra=255,
-// el plano del piso superior — anclarla ahi invadia la bandeja de
-// entrepiso). Centro a P3.y+15: canto inferior del rail en P3.y+5 (5 mm
+// SIN pasar por el rail entrepiso-trasero. Nacio cuando habia DOS planos
+// traseros (piso inferior en X=350, superior en X=250) y anclar la piel
+// superior al rail de entrepiso invadia la bandeja. Con el fondo unico del
+// triangulo los dos planos son el mismo, pero la repisa sigue siendo
+// necesaria: separa en ALTURA las dos pieles, que ahora comparten plano y se
+// apilan en Y. Centro a P3.y+15: canto inferior del rail en P3.y+5 (5 mm
 // por encima del tope de la bandeja, sin tocarla) y la fila de agujero
 // inferior de piel_superior (inset 15) cae justo en P3.y, a ras del tope
 // de la bandeja.
 //
-// zocalo superior (septimo larguero, ronda final): la fila SUPERIOR del
-// zocalo anclaba al rail de panel cara-inferior s=inset, que R3 gira 12
-// grados — tornillo entrando en diagonal y arandela de canto sobre
-// acrilico. PRINCIPIO: las placas anclan unicamente a railes de ESQUELETO,
-// sin rotar; los railes de panel estan rotados porque sirven a los paneles.
-// No cabia un larguero a la altura del de panel (el hueco entre el tope de
-// bandeja_base y la esquina baja del rail girado mide 15.6 mm, menos que
-// los 20 del perfil), asi que este se retira en X: se planta holgura_rail
-// detras de la esquina mas saliente del rail girado (semiextension
-// r*(cos+sin) del cuadrado rotado) y su centro cae a alto_frontal-15, de
-// modo que el canto SUPERIOR del zocalo termina exacto en alto_frontal
-// (antes sobrepasaba 17.5 mm y tapaba la fila de tornillos del panel).
-// Canto inferior del rail a ras del tope de bandeja_base: contacto por
-// diseno, cero solape.
+// El SEPTIMO larguero, "zocalo superior", se retiro el 2026-08-17: Samuel
+// pidio DOS nodos en la esquina de abajo y no tres -- uno para amarrar la
+// estructura lateral con la vertical (base delantera) y otro solo para el
+// riel del panel. Con el se fue la plancha del zocalo, que se habria quedado
+// colgando de una sola fila de tornillos. El larguero habia nacido para dar
+// a esa plancha un anclaje a rail DERECHO en vez de al de panel girado; sin
+// plancha, el problema que resolvia deja de existir.
 function centros_esqueleto() =
     let (P = pts_perfil(), r = rail/2, cr = centros_rail(),
-         x_ed = cr[2].x + rail + holgura_rail,
+         // semiextension en X de un rail de panel TRAS su rotacion: el
+         // cuadrado girado sobresale r*(cos+sin) de su centro, no r. Los dos
+         // largueros que se plantan detras de un rail girado usan esta cota.
+         he_cs = r * (cos(angulo_superior) + sin(angulo_superior)),
+         x_ed = cr[2].x + he_cs + holgura_rail + r,
          y_ep = P[3].y - t_acrilico - r,
-         he_ci = r * (cos(angulo_inferior) + sin(angulo_inferior)),
-         x_zs = cr[0].x + he_ci + holgura_rail + r)
-    [[r + 2,               r],                       // base delantera
-     [prof_inferior - r,   r],                       // base trasera
+         // Remate superior. Su Y NO puede ser P[5].y - r: al acortar el marco
+         // de arriba para que la esquina se lea como PUNTA, el rincon se
+         // cierra y ahi ya no cabe. Tres techos, y manda el mas bajo:
+         //   1. el vertice: no puede pasar de P[5].y - r
+         //   2. el plano del panel de arriba: centro a r + t_panel de
+         //      distancia PERPENDICULAR, con la normal interior (cos, -sen)
+         //   3. el RAIL DE PANEL de esa cara, que es el que de verdad manda:
+         //      va girado, asi que baja hasta cr[3].y - he_cs, y el remate
+         //      tiene que quedar holgura_rail por DEBAJO de ese canto. Sin
+         //      este tercer techo los dos railes se solapaban en X (6.4 mm a
+         //      prof=415) por mucho que se bajara el remate.
+         y_rs = min(P[5].y - r,
+                    P[3].y + (cos(angulo_superior)*(fondo() - r - P[3].x)
+                              - (r + t_panel)) / sin(angulo_superior),
+                    cr[3].y - he_cs - holgura_rail - r))
+    // Los dos largueros de la base viven en las esquinas de abajo, que son
+    // justo las que el redondeo VACIA. No basta plantarlos a ras: hay que
+    // retirarlos hasta donde acaba la curva.
+    //   - Frente: el radio en punta se recorta a la mitad de la arista mas
+    //     corta, que es la cara frontal, asi que las dos tangentes se juntan
+    //     en su punto medio y la curva muere a alto_frontal/2 del vertice.
+    //   - Fondo: esquina de 90 grados con radio_perfil, tangente = radio_perfil.
+    // Sin esto, check_dxf los acusaba de salirse del acrilico (esquinas en
+    // (2.0, 0.0) y (405.0, 0.0), las dos dentro del trozo que quita la curva).
+    [[alto_frontal/2 + r + 2,          r],           // base delantera
+     [fondo() - r - radio_perfil, r],          // base trasera
      [x_ed,                y_ep],                     // entrepiso delantero
-     [prof_inferior - r,   y_ep],                     // entrepiso trasero
-     [prof_superior - r,   P[5].y - r],               // remate superior
-     [prof_superior - r,   P[3].y + 15],              // repisa (R6)
-     [x_zs,                alto_frontal - 15]];       // zocalo superior
+     [fondo() - r,   y_ep],                     // entrepiso trasero
+     [fondo() - r,   y_rs],                     // remate superior
+     [fondo() - r,   P[3].y + 15]];             // repisa (R6)
 
-module perfil_lateral() { polygon(pts_perfil()); }
+// --- redondeo del contorno, radio POR VERTICE --------------------------
+//
+// Aqui estuvo un cierre morfologico global (`offset(-r) offset(2r) offset(-r)`)
+// y no da la talla: un radio unico no puede a la vez COMERSE los 45 mm de
+// cara frontal -- que Samuel quiere que se lean como punta redondeada -- y
+// RESPETAR los 80 mm planos del valle. Con radio 14 el frente sigue siendo
+// una cara recta; con el radio 31 que hace falta para borrarla, el valle se
+// redondea entero y desaparece. Son requisitos opuestos sobre el mismo
+// numero, asi que el numero tiene que dejar de ser uno.
+//
+// Esto emite el arco de cada esquina explicitamente. El radio pedido se
+// RECORTA a lo que da de si la arista mas corta que llega al vertice, de
+// modo que pedir un radio enorme no rompe nada: da el maximo redondeo
+// posible, que es exactamente "punta redondeada".
+
+// Angulo interior en V entre las aristas que van a los vecinos a y b.
+function _ang(a, b) = let (u = a/norm(a), v = b/norm(b))
+    acos(max(-1, min(1, u*v)));
+
+// Radio efectivo: el pedido, o el que cabe si las dos tangentes no llegan a
+// la mitad de su arista (si no, el arco de un vertice se comeria al vecino).
+function _r_util(V, a, b, r) =
+    let (g = _ang(a, b) / 2, lim = min(norm(a), norm(b)) / 2 * tan(g))
+    min(r, lim * 0.999);
+
+function _arco(V, a, b, r, n = 16) =
+    let (u = a/norm(a), v = b/norm(b),
+         g  = _ang(a, b) / 2,
+         re = _r_util(V, a, b, r),
+         t  = re / tan(g),                       // distancia tangente
+         w  = (u + v) / norm(u + v),              // bisectriz interior
+         C  = V + w * (re / sin(g)),              // centro del arco
+         PA = V + u * t,
+         aA = atan2(PA.y - C.y, PA.x - C.x),
+         PB = V + v * t,
+         aB = atan2(PB.y - C.y, PB.x - C.x),
+         d  = ((aB - aA) + 540) % 360 - 180)      // giro corto, sirve para
+    [for (i = [0:n]) C + re * [cos(aA + d*i/n),   // convexos y concavos
+                               sin(aA + d*i/n)]];
+
+// --- bombeo de las rectas (entasis) ------------------------------------
+//
+// "Las rectas no son completamente rectas, por poquito." Cada tramo recto
+// entre dos arcos se cambia por una parabola muy plana que se abomba HACIA
+// FUERA. La flecha es proporcional al largo del tramo (bombeo mm por cada
+// 100 mm), no absoluta: una flecha fija se ve exagerada en un tramo corto y
+// no se ve en uno largo.
+//
+// El "hacia fuera" se decide contra el CENTROIDE y no por el sentido de giro
+// del poligono, que es una fuente de errores de signo silenciosos -- ya
+// pasamos por uno con la rotacion de los railes.
+function _suma(v, i = 0) = i >= len(v) ? [0, 0] : v[i] + _suma(v, i + 1);
+function _centro(P) = _suma(P) / len(P);
+
+function _bombear(A, B, C, n = 10) =
+    let (d = B - A, L = norm(d))
+    (bombeo <= 0 || L < 1) ? []
+    : let (u = d / L,
+           nl = [-u.y, u.x],
+           M = (A + B) / 2,
+           fuera = (nl * (M - C)) >= 0 ? nl : -nl,
+           s = L / 100 * bombeo)                       // flecha en el centro
+      [for (i = [1 : n-1])
+          let (t = i / n)
+          A + d*t + fuera * (s * 4*t*(1-t))];          // pico en t=0.5
+
+// sin_bombeo = indices de vertice cuyo tramo SALIENTE se deja recto de
+// verdad. El canto de abajo va aqui: es la cara de apoyo, y abombarla
+// significa que el case descansa sobre el centro de cada costado en vez de
+// sobre sus extremos.
+function redondear(P, R, sin_bombeo = []) =
+    let (n = len(P), C = _centro(P),
+         arcos = [for (i = [0:n-1])
+             R[i] <= 0 ? [P[i]]
+                       : _arco(P[i], P[(i-1+n)%n] - P[i], P[(i+1)%n] - P[i],
+                               R[i])])
+    [for (i = [0:n-1]) each concat(
+        arcos[i],
+        search(i, sin_bombeo) != []
+            ? []
+            : _bombear(arcos[i][len(arcos[i]) - 1], arcos[(i+1)%n][0], C))];
+
+// Radio por vertice del perfil, en el orden de pts_perfil(). Las dos esquinas
+// del valle llevan radios DISTINTOS y opuestos a proposito (2026-08-17):
+//
+//   0 frente-abajo  PUNTA    1 arranque cara  PUNTA
+//   2 valle-delante PICO     3 valle-detras   SUAVE
+//   4 apex          PUNTA    5 fondo-arriba   PUNTA
+//   6 fondo-abajo   normal
+//
+// El 2 es el vertice CONVEXO donde el tope del panel de abajo se encuentra
+// con el valle: radio corto, para que se lea como pico. El 3 es el CONCAVO
+// donde el valle arranca hacia la cara de arriba: radio largo, para que ese
+// angulo entre blando. Son los dos extremos de la misma pieza y por eso no
+// pueden compartir numero.
+//
+// radio_punta va deliberadamente sobredimensionado: _r_util lo recorta al
+// maximo que permite la arista, y ese maximo ES la punta.
+function radios_perfil() = [radio_punta, radio_punta,
+                            radio_pico,  radio_valle,
+                            radio_punta, radio_punta,
+                            radio_perfil];
+
+// Va DENTRO de perfil_lateral y no en costado_2d a proposito: costado_2d
+// resta los agujeros DESPUES, de modo que el redondeo no toca los taladros.
+// Si se aplicara al resultado de la resta, los M4 saldrian fuera de
+// diametro -- el mismo tipo de fallo que el cupon pentagonal.
+//
+// Ningun otro modulo consume este contorno (las demas piezas usan
+// pts_perfil() para coordenadas, no la silueta), asi que el radio no se
+// propaga a bandejas ni pieles.
+module perfil_lateral() {
+    // El tramo que SALE de P[6] es el canto de abajo (P[6] -> P[0]) y va
+    // recto de verdad: es la cara de apoyo del case. Abombada, el aparato
+    // descansaria sobre el centro de cada costado en vez de sobre sus
+    // extremos, y con paticas en las esquinas eso es un balancin.
+    polygon(redondear(pts_perfil(), radios_perfil(), [6]));
+}
 
 module costado_2d() {
     difference() {
@@ -135,41 +286,18 @@ module bandeja_base_2d() {
 module bandeja_entrepiso_2d() {
     au = ancho_total - 2*t_cheek;
     ce = centros_esqueleto();
-    fondo = prof_inferior - ce[2].x + rail/2;   // canto delantero a ras del rail reubicado
+    largo = fondo() - ce[2].x + rail/2;  // canto delantero a ras del rail reubicado
     difference() {
-        plancha(au, fondo);
+        plancha(au, largo);
         fila_agujeros(au, rail/2);
-        fila_agujeros(au, fondo - rail/2);
+        fila_agujeros(au, largo - rail/2);
         // pasacables entre pisos: 3 oblongos de 40 x 12
         for (x = [au*0.2, au*0.5, au*0.8])
-            translate([x, fondo/2]) hull()
+            translate([x, largo/2]) hull()
                 for (dx = [-14, 14]) translate([dx, 0]) circle(d = 12 + kerf);
     }
 }
 
-// zocalo volado sobre standoffs M4 (R1, ronda de revision): antes bolonado
-// directo al rail base-delantera con una sola fila M3, y=10 quedaba a solo
-// 3 mm de holgura del rail (invadido en Y por 12 mm). Ahora comparte el
-// mismo esquema que las pieles: 4 esquinas M4, filas a ras de sus dos
-// railes limite — los DOS del esqueleto (base delantera / zocalo superior)
-// desde la ronda final: la fila de arriba anclaba al rail de PANEL
-// cara-inferior s=inset, y ese va rotado 12 grados (ver centros_esqueleto()).
-module zocalo_2d() {
-    au = ancho_total - 2*t_cheek - 2*gap_sombra;   // volado, mismo ancho que las pieles
-    ce = centros_esqueleto();
-    alto = ce[6].y - ce[0].y + 30;                  // filas (inset 15) a ras de ambos railes
-    difference() {
-        plancha(au, alto);
-        for (c = [[15,15],[au-15,15],[15,alto-15],[au-15,alto-15]])
-            translate(c) circle(d = d_M4_paso + kerf);
-    }
-}
-
-// --- pieles traseras flotantes (standoffs M4, junta de sombra) --------
-// alto: filas de agujero (inset 15 mm) a ras de las centrelineas de los
-// dos railes limite de cada tramo (R1, ronda de revision — antes el alto
-// salia de un inset de gap_sombra sobre el perfil y quedaba invadiendo el
-// rail trasero correspondiente; ver centros_esqueleto()).
 module piel_inferior_2d() {
     au = ancho_total - 2*t_cheek - 2*gap_sombra;
     ce = centros_esqueleto();
@@ -233,7 +361,6 @@ else if (PART == "assembly_acrilico")  assembly_acrilico();
 else if (PART == "assembly_aluminio")  assembly_aluminio();
 else if (PART == "bandeja_base_2d")      bandeja_base_2d();
 else if (PART == "bandeja_entrepiso_2d") bandeja_entrepiso_2d();
-else if (PART == "zocalo_2d")            zocalo_2d();
 else if (PART == "piel_inferior_2d")     piel_inferior_2d();
 else if (PART == "piel_superior_2d")     piel_superior_2d();
 else if (PART == "lienzo_2d")            lienzo_2d();
@@ -299,23 +426,13 @@ module bandeja_entrepiso() {
             linear_extrude(t_acrilico) bandeja_entrepiso_2d();
 }
 
-// volado: cara interior (la que mira al cuerpo) a X=-gap_sombra, engrosa
-// hacia -X. y0 deriva de la fila de agujero inferior (inset 15) cayendo
-// en el rail base-delantera (ce[0].y), igual que en zocalo_2d().
-module zocalo() {
-    ce = centros_esqueleto();
-    translate([-gap_sombra - t_acrilico, ce[0].y - 15, ancho_total - t_cheek - gap_sombra])
-        rotate([0, 90, 0])
-            linear_extrude(t_acrilico) zocalo_2d();
-}
-
-// volado: cara interior a X = prof_inferior + gap_sombra (fuera del
+// volado: cara interior a X = fondo() + gap_sombra (fuera del
 // cuerpo, no ya recortado hacia dentro), engrosa hacia +X. y0 deriva de
 // la fila de agujero inferior cayendo en el rail base-trasera (ce[1].y).
 module piel_inferior() {
     P = pts_perfil();
     ce = centros_esqueleto();
-    translate([P[8].x + gap_sombra + t_acrilico, ce[1].y - 15, t_cheek + gap_sombra])
+    translate([P[6].x + gap_sombra + t_acrilico, ce[1].y - 15, t_cheek + gap_sombra])
         rotate([0, -90, 0])
             linear_extrude(t_acrilico) piel_inferior_2d();
 }
@@ -335,7 +452,6 @@ module piel_superior() {
 module planchas_acrilico() {
     bandeja_base();
     bandeja_entrepiso();
-    zocalo();
     piel_inferior();
     piel_superior();
 }
@@ -357,10 +473,24 @@ module paneles() {
     panel_cara(P[3], P[4]);   // cara superior (generacion, 35 grados)
 }
 
+// Paticas torneadas bajo los costados. En X caen sobre los dos rieles de
+// base, que es donde esta la estructura; en Z su cara exterior queda a ras
+// del canto del case (centro a d_pie/2) para que la carga del costado baje
+// recta al pie y no de canto.
+module paticas() {
+    ce = centros_esqueleto();
+    for (x = [ce[0].x, ce[1].x])
+        for (z = [d_pie/2, ancho_total - d_pie/2])
+            translate([x, 0, z])
+                rotate([90, 0, 0])
+                    cylinder(h = alto_pie, d = d_pie);
+}
+
 module assembly() {
     costados();
     rails();
     planchas_acrilico();
+    paticas();
     %paneles();                        // paneles de modulo: solo referencia
 }
 
@@ -387,13 +517,12 @@ module lienzo_2d() {
     // fila 1: los 2 costados
     costado_2d();
     translate([prof + sep, 0]) costado_2d();
-    // fila 2: las 5 planchas del cuerpo
+    // fila 2: las 4 planchas del cuerpo (eran 5 con el zocalo)
     y2 = alto + sep;
     x1 = 0;              translate([x1, y2]) bandeja_base_2d();
     x2 = x1 + au + sep;  translate([x2, y2]) bandeja_entrepiso_2d();
-    x3 = x2 + au + sep;  translate([x3, y2]) zocalo_2d();
-    x4 = x3 + aup + sep; translate([x4, y2]) piel_inferior_2d();   // zocalo ahora ancho aup (volado, R1)
-    x5 = x4 + aup + sep; translate([x5, y2]) piel_superior_2d();
+    x3 = x2 + au + sep;  translate([x3, y2]) piel_inferior_2d();
+    x4 = x3 + aup + sep; translate([x4, y2]) piel_superior_2d();
     %square([1000, 600]);
 }
 
@@ -402,7 +531,8 @@ module bom() {
     echo(str("BOM: larguero 2020 x", len(centros_rail()) + len(centros_esqueleto()),
              " de ", au, " mm"));
     echo(str("BOM: tornillo M5 boton x", 2*(len(centros_rail()) + len(centros_esqueleto()))));
-    echo("BOM: standoff M4 x12 (pieles+zocalo, volados) + tornillo M4 boton x24 + arandela x24");
-    echo(str("BOM: planchas t=", t_acrilico, ": base, entrepiso, zocalo, ",
+    echo("BOM: standoff M4 x8 (las dos pieles, voladas) + tornillo M4 boton x16 + arandela x16");
+    echo(str("BOM: patica metalica torneada x4, d=", d_pie, " x ", alto_pie, " mm"));
+    echo(str("BOM: planchas t=", t_acrilico, ": base, entrepiso, ",
              "piel inf, piel sup; costados t=", t_cheek, " x2"));
 }

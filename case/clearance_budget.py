@@ -32,17 +32,28 @@ def leer_params() -> dict[str, float]:
     return {k: float(v) for k, v in pares}
 
 
+def fondo(p: dict[str, float]) -> float:
+    """Fondo del case. DERIVADO del marco de remate, no parametro: es la
+    proyeccion de la hipotenusa mas el marco (ver la nota en params.scad). Va
+    asi para que la esquina de arriba NO cambie de forma cuando se mueve un
+    angulo o un alto de piso."""
+    return (p["alto_panel_inf"] * math.sin(math.radians(p["angulo_inferior"]))
+            + p["paso_horizontal"]
+            + p["alto_panel_sup"] * math.sin(math.radians(p["angulo_superior"]))
+            + p["marco_remate"])
+
+
 def perfil(p: dict[str, float]) -> dict[str, float]:
     """Vertices del perfil lateral (X = fondo hacia atras, Y = arriba)."""
     si, ci = math.sin(math.radians(p["angulo_inferior"])), math.cos(
         math.radians(p["angulo_inferior"]))
     ss, cs = math.sin(math.radians(p["angulo_superior"])), math.cos(
         math.radians(p["angulo_superior"]))
-    y_entrepiso = p["alto_frontal"] + p["alto_panel"] * ci
-    x_cara_inf = p["alto_panel"] * si
+    y_entrepiso = p["alto_frontal"] + p["alto_panel_inf"] * ci
+    x_cara_inf = p["alto_panel_inf"] * si
     x_cara_sup0 = x_cara_inf + p["paso_horizontal"]
-    x_cara_sup1 = x_cara_sup0 + p["alto_panel"] * ss
-    alto_total = y_entrepiso + p["alto_panel"] * cs
+    x_cara_sup1 = x_cara_sup0 + p["alto_panel_sup"] * ss
+    alto_total = y_entrepiso + p["alto_panel_sup"] * cs
     return {
         "y_entrepiso": y_entrepiso,
         "alto_total": alto_total,
@@ -53,9 +64,13 @@ def perfil(p: dict[str, float]) -> dict[str, float]:
 
 
 def autocomprobacion(p: dict[str, float]) -> None:
-    """Caso hecho a mano (spec §4): 12/35 grados, panel 190, zocalo 50."""
+    """Caso hecho a mano (spec §4 rev. 3): 12/35 grados, panel 190, vertice
+    frontal a 50. Son numeros FIJOS a proposito -- no los de params -- para
+    que la trigonometria se compruebe contra una cuenta hecha a lapiz que no
+    se mueve cuando el diseno cambia."""
     g = perfil({**p, "angulo_inferior": 12, "angulo_superior": 35,
-                "alto_panel": 190, "alto_frontal": 50, "paso_horizontal": 20,
+                "alto_panel_inf": 190, "alto_panel_sup": 190,
+                "alto_frontal": 50, "paso_horizontal": 20,
                 "t_acrilico": 5, "ancho_total": 500, "t_cheek": 8})
     # A mano: 50 + 190*cos12 = 50 + 185.85 = 235.85
     assert abs(g["y_entrepiso"] - 235.85) < 0.05, g["y_entrepiso"]
@@ -72,72 +87,110 @@ def _vertices(p: dict[str, float]) -> list[tuple[float, float]]:
         math.radians(p["angulo_inferior"]))
     ss, cs = math.sin(math.radians(p["angulo_superior"])), math.cos(
         math.radians(p["angulo_superior"]))
-    ye = p["alto_frontal"] + p["alto_panel"] * ci
-    x2 = p["alto_panel"] * si
+    ye = p["alto_frontal"] + p["alto_panel_inf"] * ci
+    x2 = p["alto_panel_inf"] * si
     x3 = x2 + p["paso_horizontal"]
-    x4 = x3 + p["alto_panel"] * ss
-    yt = ye + p["alto_panel"] * cs
+    x4 = x3 + p["alto_panel_sup"] * ss
+    yt = ye + p["alto_panel_sup"] * cs
+    pf = fondo(p)
     return [(0, 0), (0, p["alto_frontal"]), (x2, ye), (x3, ye), (x4, yt),
-            (p["prof_superior"], yt), (p["prof_superior"], ye),
-            (p["prof_inferior"], ye), (p["prof_inferior"], 0)]
+            # 7 puntos: canto trasero UNICO a plomo de toda la altura. Antes
+            # eran 9, con una repisa escalonada entre prof_superior=250 y
+            # prof_inferior=350 -- la que rompia la lectura de triangulo. El
+            # ANTIGUO P[8] es ahora P[6].
+            (pf, yt), (pf, 0)]
 
 
 def _centros_rail(p: dict[str, float],
                    P: list[tuple[float, float]]) -> list[tuple[float, float]]:
     """4 centros de rail de panel [cara_inf x2, cara_sup x2], misma formula
     que centros_rail() en sam17_case.scad."""
-    caras = [(P[1], P[2]), (P[3], P[4])]
+    # cada cara lleva SU alto: los dos pisos ya no miden lo mismo
+    caras = [(P[1], P[2], p["alto_panel_inf"]),
+             (P[3], P[4], p["alto_panel_sup"])]
     off = p["t_panel"] + p["rail"] / 2
     out = []
-    for c0, c1 in caras:
+    for c0, c1, largo in caras:
         dx, dy = c1[0] - c0[0], c1[1] - c0[1]
         dl = math.hypot(dx, dy)
         dx, dy = dx / dl, dy / dl
         nx, ny = dy, -dx
-        for s in (p["inset_tornillo"], p["alto_panel"] - p["inset_tornillo"]):
+        for s in (p["inset_tornillo"], largo - p["inset_tornillo"]):
             out.append((c0[0] + dx * s + nx * off, c0[1] + dy * s + ny * off))
     return out
 
 
+def _y_remate(p: dict[str, float], P: list[tuple[float, float]],
+              cr: list[tuple[float, float]], r: float) -> float:
+    """Y del larguero de remate, misma formula que y_rs en sam17_case.scad:
+    el mas bajo de tres techos -- el vertice, el plano del panel de arriba, y
+    el canto inferior del rail de panel girado de esa cara (el que manda)."""
+    a2 = math.radians(p["angulo_superior"])
+    por_cara = P[3][1] + (math.cos(a2) * (fondo(p) - r - P[3][0])
+                          - (r + p["t_panel"])) / math.sin(a2)
+    he_cs = r * (abs(math.cos(a2)) + abs(math.sin(a2)))
+    por_rail = cr[3][1] - he_cs - p["holgura_rail"] - r
+    return min(P[5][1] - r, por_cara, por_rail)
+
+
 def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
                         cr: list[tuple[float, float]]) -> list[tuple[float, float]]:
-    """7 centros de larguero de esqueleto, misma formula que
-    centros_esqueleto() en sam17_case.scad (entrepiso delantero reubicado,
-    ambos railes de entrepiso a la altura nueva, repisa — ronda de
-    revision 2, R6: piel_superior se reancla aqui en vez de en entrepiso
-    trasero, que vive en el plano del piso inferior y no del superior — y
-    zocalo superior, ronda final: la fila de arriba del zocalo anclaba a un
-    rail de PANEL, que va rotado)."""
+    """6 centros de larguero de esqueleto, misma formula que
+    centros_esqueleto() en sam17_case.scad. Eran 7: el septimo, "zocalo
+    superior", se retiro con la plancha del zocalo cuando Samuel fijo DOS
+    nodos en la esquina de abajo y no tres."""
     r = p["rail"] / 2
-    x_ed = cr[2][0] + p["rail"] + p["holgura_rail"]
+    # Semiextension en X de un rail de PANEL tras su rotacion: el cuadrado
+    # girado sobresale r*(|cos|+|sin|) de su centro, NO r. Los dos largueros
+    # que se plantan detras de un rail girado se separan de esa esquina, no
+    # del centro.
+    #
+    # x_ed estuvo escrito como `cr[2].x + rail + holgura_rail`, que deja el
+    # canto delantero SIEMPRE en +14.00 del centro del rail girado, sin mirar
+    # el angulo. La esquina real es r*(cos+sin) y vale 13.93 a 35 grados,
+    # 14.14 a 45 y 14.11 a 49: o sea que la holgura de diseno (4 mm) NO
+    # EXISTIO NUNCA en ningun angulo -- a 35 grados quedaban 0.07 mm, que
+    # entre dos perfiles de aluminio es contacto y esta por debajo de la
+    # tolerancia de la propia extrusion. La formula es negativa en toda la
+    # ventana 36-54 grados, y vuelve a rozar el cero a 55. Al relajar la cara
+    # superior a 49 el solape se hizo real (0.11 mm contra el larguero, 5 mm
+    # contra la bandeja de entrepiso) y solapes() lo canto. El cambio de
+    # angulo no rompio nada: destapo algo que llevaba roto desde Task 5.
+    he_cs = r * (abs(math.cos(math.radians(p["angulo_superior"])))
+                  + abs(math.sin(math.radians(p["angulo_superior"]))))
+    x_ed = cr[2][0] + he_cs + p["holgura_rail"] + r
     y_ep = P[3][1] - p["t_acrilico"] - r
-    # semiextension en X del rail de panel cara-inferior TRAS la rotacion R3
-    # (cuadrado girado: r*(|cos|+|sin|)); el rail del zocalo se planta
-    # holgura_rail por detras de esa esquina, que es lo mas adelante que
-    # cabe sin invadirlo.
-    he_ci = r * (abs(math.cos(math.radians(p["angulo_inferior"])))
-                  + abs(math.sin(math.radians(p["angulo_inferior"]))))
-    x_zs = cr[0][0] + he_ci + p["holgura_rail"] + r
-    return [(r + 2, r), (p["prof_inferior"] - r, r),
-            (x_ed, y_ep), (p["prof_inferior"] - r, y_ep),
-            (p["prof_superior"] - r, P[5][1] - r),
-            (p["prof_superior"] - r, P[3][1] + 15),
-            (x_zs, p["alto_frontal"] - 15)]
+    # Los dos largueros de la base se retiran hasta donde acaba el redondeo de
+    # su esquina: en el frente la curva en punta muere a alto_frontal/2 del
+    # vertice (el radio se recorta a la mitad de la arista mas corta, que es la
+    # cara frontal, y las dos tangentes se juntan en su punto medio); en el
+    # fondo la esquina es de 90 grados con radio_perfil, luego tangente =
+    # radio_perfil. A ras del vertice quedaban FUERA del acrilico.
+    return [(p["alto_frontal"] / 2 + r + 2, r),
+            (fondo(p) - r - p["radio_perfil"], r),
+            (x_ed, y_ep), (fondo(p) - r, y_ep),
+            # Remate superior: su Y se DERIVA de la cara que lo limita, no es
+            # P[5].y - r. Al acortar el marco de arriba para que la esquina se
+            # lea como punta, el rincon se cierra y un cuadrado de 20 pegado
+            # al vertice asomaria por la cara superior. Centro a r + t_panel
+            # de distancia perpendicular al plano del panel de arriba.
+            (fondo(p) - r, _y_remate(p, P, cr, r)),
+            (fondo(p) - r, P[3][1] + 15),
+            (fondo(p) - r, P[3][1] + 15)]
 
 
 NOMBRES_CR = ["cara_inf s=inset", "cara_inf s=alto-inset",
               "cara_sup s=inset", "cara_sup s=alto-inset"]
 NOMBRES_CE = ["base delantera", "base trasera", "entrepiso delantero",
-              "entrepiso trasero", "remate superior", "repisa",
-              "zocalo superior"]
+              "entrepiso trasero", "remate superior", "repisa"]
 
 
 # Caja = (nombre, x0, x1, y0, y1, z0, z1)
 Caja = tuple
 # Fila de agujeros de una placa = (placa, fila, eje, coordenada en ese eje,
 # rail frontera al que DEBE anclar). El eje es el que recorre la placa de un
-# rail frontera al otro: X en las bandejas (horizontales), Y en el zocalo y
-# las pieles (verticales). El rail va declarado, no se busca el mas cercano:
+# rail frontera al otro: X en las bandejas (horizontales), Y en las pieles
+# (verticales). El rail va declarado, no se busca el mas cercano:
 # una fila que cae por casualidad en la centerline de otro rail no esta
 # anclada donde el diseno dice, y ese acierto casual no debe pasar la puerta.
 Fila = tuple
@@ -192,28 +245,17 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # bandeja_entrepiso: R2 — canto trasero a ras de entrepiso-trasero,
     # tope (no fondo) a ras de P3.y
     x0_be = ce[2][0] - rail / 2
-    fondo_be = p["prof_inferior"] - ce[2][0] + rail / 2
+    fondo_be = fondo(p) - ce[2][0] + rail / 2
     planchas.append(("bandeja_entrepiso", x0_be, x0_be + fondo_be,
                      P[3][1] - t_acr, P[3][1], t_cheek, ancho_total - t_cheek))
     filas += [("bandeja_entrepiso", "delantera", "x", x0_be + rail / 2,
                "entrepiso delantero"),
               ("bandeja_entrepiso", "trasera", "x", x0_be + fondo_be - rail / 2,
                "entrepiso trasero")]
-    # zocalo: R1 — volado hacia -X (standoffs), ya no bolonado directo.
-    # Ronda final: fila superior anclada al rail de esqueleto "zocalo
-    # superior" (ce[6]) en vez del rail de PANEL cara_inf s=inset, que R3
-    # gira 12 grados.
-    alto_zoc = ce[6][1] - ce[0][1] + 30
-    y0_zoc = ce[0][1] - 15
-    planchas.append(("zocalo", -gap - t_acr, -gap, y0_zoc, y0_zoc + alto_zoc,
-                     t_cheek + gap, ancho_total - t_cheek - gap))
-    filas += [("zocalo", "inferior", "y", y0_zoc + 15, "base delantera"),
-              ("zocalo", "superior", "y", y0_zoc + alto_zoc - 15,
-               "zocalo superior")]
     # piel_inferior: R1 — volada hacia +X mas alla de prof_inferior
     alto_pi = ce[3][1] - ce[1][1] + 30
     y0_pi = ce[1][1] - 15
-    planchas.append(("piel_inferior", P[8][0] + gap, P[8][0] + gap + t_acr,
+    planchas.append(("piel_inferior", P[6][0] + gap, P[6][0] + gap + t_acr,
                      y0_pi, y0_pi + alto_pi, t_cheek + gap, ancho_total - t_cheek - gap))
     filas += [("piel_inferior", "inferior", "y", y0_pi + 15, "base trasera"),
               ("piel_inferior", "superior", "y", y0_pi + alto_pi - 15,
@@ -330,28 +372,46 @@ def alineacion(p: dict[str, float]) -> list[str]:
 
 
 def canario_alineacion(p: dict[str, float]) -> None:
-    """Autocomprobacion roja de alineacion(): alimenta las filas de la
-    bandeja_base PRE-FIX (plancha de prof_inferior-2*rail-4 colocada en
-    x=rail, ronda final) y exige que el checker las rechace con los desvios
-    conocidos. Si esto no dispara, el checker esta ciego y su VERDE no vale
-    nada. Los desvios esperados salen del algebra, no de una medicion:
-    fila delantera = (rail + rail/2) - (rail/2 + 2) = rail - 2;
-    fila trasera = (prof_inferior - 1.5*rail - 4) - (prof_inferior - rail/2)
-                 = -(rail + 4)."""
+    """Autocomprobacion ROJA de alineacion(): si esto no dispara, el checker
+    esta ciego y su VERDE no vale nada.
+
+    Antes reconstruia las filas historicas de la bandeja_base PRE-FIX y exigia
+    los desvios exactos de entonces (+18.00 y -24.00, que salian de la formula
+    vieja de 'base delantera', rail/2 + 2). Se rompio en cuanto ese larguero se
+    movio por una razon legitima -- retirarlo del trozo de acrilico que vacia el
+    redondeo en punta --, y dio un fallo sobre geometria CORRECTA. Es el mismo
+    vicio que tenian los sobres de check_dxf: el criterio clavado a un numero de
+    otra epoca, que caduca y grita en falso.
+
+    Ahora se desplaza a proposito una fila desde la centerline REAL y se exige
+    que el checker devuelva ese desplazamiento. Es la propiedad que de verdad
+    importa (¿mide bien el desvio y lo rechaza cuando pasa de la tolerancia?) y
+    no depende de la historia. Se prueban los dos lados del umbral: desvios
+    gordos como los del bloqueante real, uno finito justo por encima de la
+    tolerancia, y la fila bien puesta, que tiene que PASAR."""
     P = _vertices(p)
     ce = _centros_esqueleto(p, P, _centros_rail(p, P))
     esqueleto = dict(zip(NOMBRES_CE, ce))
-    rail = p["rail"]
-    fondo_viejo = p["prof_inferior"] - 2 * rail - 4      # fondo pre-fix
-    casos = ((rail + rail / 2, "base delantera", rail - 2),
-             (rail + fondo_viejo - rail / 2, "base trasera", -(rail + 4)))
-    for coord, rail_decl, esperado in casos:
-        d = _desvio(coord, "x", esqueleto[rail_decl])
-        assert abs(d) > TOL_ALINEACION and abs(d - esperado) < 0.01, (
-            f"canario de alineacion no disparo: la fila pre-fix en x={coord} "
-            f"sale a {d:+.3f} mm de '{rail_decl}' (se esperaba {esperado:+.2f}) "
-            f"y la tolerancia vigente es {TOL_ALINEACION} mm — no confiar en "
-            f"el VERDE de alineacion()")
+    casos = (("base delantera", "x"), ("base trasera", "x"),
+             ("remate superior", "y"), ("repisa", "y"))
+    for rail_decl, eje in casos:
+        centro = esqueleto[rail_decl][0 if eje == "x" else 1]
+        # los dos primeros son la magnitud del bloqueante real de la bandeja
+        # base; el tercero comprueba que el umbral no este dormido
+        for delta in (18.0, -24.0, TOL_ALINEACION * 2):
+            d = _desvio(centro + delta, eje, esqueleto[rail_decl])
+            assert abs(d - delta) < 0.01, (
+                f"canario de alineacion: el desvio esta MAL MEDIDO -- fila a "
+                f"{delta:+.2f} mm de '{rail_decl}' sobre el eje {eje} y el "
+                f"checker devuelve {d:+.3f}")
+            assert abs(d) > TOL_ALINEACION, (
+                f"canario de alineacion no disparo: fila a {delta:+.2f} mm de "
+                f"'{rail_decl}' y la tolerancia vigente es {TOL_ALINEACION} mm "
+                f"— no confiar en el VERDE de alineacion()")
+        d0 = _desvio(centro, eje, esqueleto[rail_decl])
+        assert abs(d0) <= TOL_ALINEACION, (
+            f"canario de alineacion: FALSO POSITIVO -- una fila puesta justo "
+            f"en la centerline de '{rail_decl}' sale a {d0:+.3f} mm")
 
 
 def solapes(p: dict[str, float]) -> list[str]:
@@ -482,18 +542,53 @@ def main() -> int:
     exige(g["alto_interior_inferior"]
           >= p["alto_transformador"] + p["margen_transformador"],
           "transformador no cabe en el piso inferior con margen")
-    exige(p["prof_superior"] >= g["prof_sup_min"] + 10,
-          "prof_superior no cubre la proyeccion de la cara superior + 10")
-    exige(p["prof_inferior"] >= p["prof_superior"] + 60,
-          "la repisa trasera del piso inferior queda menor de 60 mm")
-    exige(p["fondo_pcb_max"] + 10 <= p["prof_superior"] - p["rail"],
+    # Marco de remate = lo que queda del fondo detras de la cara superior.
+    # AQUI HUBO un `marco >= 20` con el argumento "no caben los 20 mm del rail
+    # de remate". La premisa caduco: el remate ya no vive en el marco, su Y se
+    # deriva y baja por debajo del rail girado del panel (ver _y_remate). El
+    # marco solo tiene que dar para que los largueros quepan DENTRO del
+    # acrilico, y eso ya no se estima con una cota a ojo -- lo comprueba
+    # `railes_dentro_del_costado()` en check_dxf.py, esquina por esquina y
+    # contra el contorno RELEIDO del DXF, que es el unico que sabe cuanto
+    # material se comio el redondeo en punta.
+    #
+    # Se conserva solo el techo, que sigue siendo un criterio de FORMA y no de
+    # ajuste: pasado ese ancho el remate deja de leerse como punta y vuelve la
+    # meseta trasera que hacia que la silueta pareciera una bota.
+    marco = fondo(p) - g["prof_sup_min"]
+    exige(marco <= 60,
+          f"el marco de remate mide {marco:.1f} mm; por encima de 60 deja de "
+          f"ser punta y vuelve la meseta trasera")
+    exige(p["fondo_pcb_max"] + 10 <= fondo(p) - p["rail"],
           "la PCB mas honda del censo no cabe bajo la cara superior")
     exige(sum(ANCHOS_PISO_SUP.values()) + EXPANSION_MIN <= g["ancho_util"],
           "el piso superior no cabe en el ancho util")
     exige(sum(ANCHOS_PISO_INF.values()) + EXPANSION_MIN <= g["ancho_util"],
           "el piso inferior no cabe en el ancho util")
-    exige(p["sep_railes"] == p["alto_panel"] - 2 * p["inset_tornillo"],
-          "sep_railes no sale de alto_panel - 2*inset (spec §6)")
+    for piso in ("inf", "sup"):
+        calc = p[f"alto_panel_{piso}"] - 2 * p["inset_tornillo"]
+        exige(abs(p[f"sep_railes_{piso}"] - calc) < 0.001,
+              f"sep_railes_{piso}={p[f'sep_railes_{piso}']} no sale de "
+              f"alto_panel_{piso} - 2*inset = {calc} (spec §6)")
+    # EUROrack en la primera fila. La cota que manda NO es el alto del panel
+    # (128.5 mm) sino la SEPARACION ENTRE RIELES: "ER Screw distance vertical
+    # = 122,50 mm" (Doepfer; los taladros van a 3.0 mm de cada canto del panel
+    # y miden 3.2). Verificado el 2026-08-17 contra midisoft.de y
+    # exploding-shed.com. Ojo: los rieles reales varian de marca -- Vector
+    # pide 121.46 y Tiptop 122.43 --, asi que este numero hay que fijarlo
+    # contra el riel que se compre, no contra el estandar a secas.
+    #
+    # ESTO ESTA EN ROJO A PROPOSITO. La primera fila se puso a 128.5 mm de
+    # CARA creyendo que con eso ya era EUROrack, y no lo es: con inset 27 los
+    # rieles quedan a 74.5 mm y un modulo no atornilla. Un fallo invisible es
+    # peor que un hueco visible (constitucion, Principio V), asi que la puerta
+    # se queda roja hasta que se decida el riel y se ajuste la geometria.
+    SEP_EUROrack = 122.5
+    exige(abs(p["sep_railes_inf"] - SEP_EUROrack) < 0.5,
+          f"sep_railes_inf={p['sep_railes_inf']} != {SEP_EUROrack} de EUROrack: "
+          f"un modulo 3U NO atornilla. Con perfil 2020 el inset no baja de 10, "
+          f"asi que la cara tendria que medir >= {SEP_EUROrack + 20:.1f} mm y el "
+          f"valle SUBIRIA. Decidir riel EUROrack real antes de tocar esto.")
     exige(p["vent_puente_min"] >= 0.8 * p["t_acrilico"],
           "puente de ventilacion fragil para el espesor")
     fallos.extend(solapes(p))

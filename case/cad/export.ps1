@@ -18,7 +18,7 @@ Remove-Item (Join-Path $plans "*.dxf") -ErrorAction SilentlyContinue
 Remove-Item (Join-Path $build "*.stl") -ErrorAction SilentlyContinue
 
 $piezas = "costado_2d","bandeja_base_2d","bandeja_entrepiso_2d",
-          "zocalo_2d","piel_inferior_2d","piel_superior_2d","lienzo_2d"
+          "piel_inferior_2d","piel_superior_2d","lienzo_2d"
 $fallos = 0
 foreach ($p in $piezas) {
   $out = Join-Path $plans "$p.dxf"

@@ -1,6 +1,6 @@
-"""Genera panel-template.kicad_pcb: panel de aluminio de modulo del SAM17.
+"""Genera panel-template-{inf,sup}.kicad_pcb: panel de aluminio del SAM17.
 
-    "C:/Program Files/KiCad/10.0/bin/python.exe" case/panels/build_template.py [--ancho 100]
+    "C:/Program Files/KiCad/10.0/bin/python.exe" case/panels/build_template.py       [--ancho 100] [--piso inf|sup]
 
 Corre desde la raiz del repo o desde case/panels: el import de
 clearance_budget y la escritura del .kicad_pcb se resuelven contra la
@@ -25,7 +25,7 @@ Si cualquiera falla, el script sale en ROJO en vez de generar una plantilla
 rota (Principio III de la constitucion: la comprobacion corre antes del
 paso destructivo).
 
-Dibuja: contorno rectangular en Edge.Cuts (ancho x alto_panel); 4 taladros
+Dibuja: contorno rectangular en Edge.Cuts (ancho x alto del piso); 4 taladros
 M3 no plateados (NPTH) en los centros de rail, a inset_tornillo mm de cada
 borde EN LOS DOS EJES (X e Y: no solo arriba/abajo, tambien izquierda/
 derecha), sin kerf (el kerf es del corte laser del acrilico, no de un
@@ -57,15 +57,21 @@ def mm(v: float) -> int:
     return pcbnew.FromMM(v)
 
 
-def verificar_coherencia(p: dict[str, float]) -> None:
+def verificar_coherencia(p: dict[str, float], piso: str) -> None:
     """Ruling A: si alguien cambia params.scad y alto_panel/inset_tornillo
     dejan de cuadrar con sep_railes, ese quiebre tiene que verse ANTES de
-    generar la plantilla, no despues como un panel que no atornilla."""
-    calc = p["alto_panel"] - 2 * p["inset_tornillo"]
-    if abs(calc - p["sep_railes"]) > 1e-6:
-        print(f"ROJO: alto_panel({p['alto_panel']}) - 2*inset_tornillo("
-              f"{p['inset_tornillo']}) = {calc} != sep_railes("
-              f"{p['sep_railes']}) -- params.scad incoherente (spec §6)")
+    generar la plantilla, no despues como un panel que no atornilla.
+
+    Desde el 2026-08-17 hay DOS altos de panel: la primera fila bajo a 128.5
+    (panel 3U de EUROrack, el minimo que admite un modulo) y la de arriba
+    sigue en 190. Por eso la plantilla necesita saber de que piso es."""
+    alto = p[f"alto_panel_{piso}"]
+    sep = p[f"sep_railes_{piso}"]
+    calc = alto - 2 * p["inset_tornillo"]
+    if abs(calc - sep) > 1e-6:
+        print(f"ROJO: alto_panel_{piso}({alto}) - 2*inset_tornillo("
+              f"{p['inset_tornillo']}) = {calc} != sep_railes_{piso}("
+              f"{sep}) -- params.scad incoherente (spec §6)")
         sys.exit(2)
 
 
@@ -90,15 +96,19 @@ def verificar_ancho_minimo(p: dict[str, float], ancho: float) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(
-        description="SAM17: genera panel-template.kicad_pcb")
+        description="SAM17: genera panel-template-{inf,sup}.kicad_pcb")
     ap.add_argument("--ancho", type=float, default=100.0,
                      help="ancho del panel en mm (varia por modulo)")
-    ancho = ap.parse_args().ancho
+    ap.add_argument("--piso", choices=("inf", "sup"), default="sup",
+                     help="piso del panel: inf = primera fila (3U EUROrack, "
+                          "128.5 mm), sup = fila de arriba (190 mm)")
+    args = ap.parse_args()
+    ancho, piso = args.ancho, args.piso
 
     p = leer_params()
-    verificar_coherencia(p)
+    verificar_coherencia(p, piso)
     verificar_ancho_minimo(p, ancho)
-    alto = p["alto_panel"]
+    alto = p[f"alto_panel_{piso}"]
     inset = p["inset_tornillo"]
     d_taladro = p["d_M3_paso"]  # sin kerf: taladro de PCB, diametro final
 
@@ -134,7 +144,9 @@ def main() -> int:
     txt.SetLayer(pcbnew.F_SilkS)
     board.Add(txt)
 
-    out = HERE / "panel-template.kicad_pcb"
+    # El nombre lleva el piso: los dos altos son plantillas DISTINTAS y con
+    # un solo nombre la segunda corrida se comia a la primera en silencio.
+    out = HERE / f"panel-template-{piso}.kicad_pcb"
     pcbnew.SaveBoard(str(out), board)
     print(f"escrito {out.name} ({ancho} x {alto} mm, taladro M3 d={d_taladro} mm)")
     return 0
