@@ -37,9 +37,9 @@ def fondo(p: dict[str, float]) -> float:
     proyeccion de la hipotenusa mas el marco (ver la nota en params.scad). Va
     asi para que la esquina de arriba NO cambie de forma cuando se mueve un
     angulo o un alto de piso."""
-    return (p["alto_panel_inf"] * math.sin(math.radians(p["angulo_inferior"]))
+    return (p["alto_cara_inf"] * math.sin(math.radians(p["angulo_inferior"]))
             + p["paso_horizontal"]
-            + p["alto_panel_sup"] * math.sin(math.radians(p["angulo_superior"]))
+            + p["alto_cara_sup"] * math.sin(math.radians(p["angulo_superior"]))
             + p["marco_remate"])
 
 
@@ -49,11 +49,11 @@ def perfil(p: dict[str, float]) -> dict[str, float]:
         math.radians(p["angulo_inferior"]))
     ss, cs = math.sin(math.radians(p["angulo_superior"])), math.cos(
         math.radians(p["angulo_superior"]))
-    y_entrepiso = p["alto_frontal"] + p["alto_panel_inf"] * ci
-    x_cara_inf = p["alto_panel_inf"] * si
+    y_entrepiso = p["alto_frontal"] + p["alto_cara_inf"] * ci
+    x_cara_inf = p["alto_cara_inf"] * si
     x_cara_sup0 = x_cara_inf + p["paso_horizontal"]
-    x_cara_sup1 = x_cara_sup0 + p["alto_panel_sup"] * ss
-    alto_total = y_entrepiso + p["alto_panel_sup"] * cs
+    x_cara_sup1 = x_cara_sup0 + p["alto_cara_sup"] * ss
+    alto_total = y_entrepiso + p["alto_cara_sup"] * cs
     return {
         "y_entrepiso": y_entrepiso,
         "alto_total": alto_total,
@@ -69,7 +69,7 @@ def autocomprobacion(p: dict[str, float]) -> None:
     que la trigonometria se compruebe contra una cuenta hecha a lapiz que no
     se mueve cuando el diseno cambia."""
     g = perfil({**p, "angulo_inferior": 12, "angulo_superior": 35,
-                "alto_panel_inf": 190, "alto_panel_sup": 190,
+                "alto_cara_inf": 190, "alto_cara_sup": 190,
                 "alto_frontal": 50, "paso_horizontal": 20,
                 "t_acrilico": 5, "ancho_total": 500, "t_cheek": 8})
     # A mano: 50 + 190*cos12 = 50 + 185.85 = 235.85
@@ -87,11 +87,11 @@ def _vertices(p: dict[str, float]) -> list[tuple[float, float]]:
         math.radians(p["angulo_inferior"]))
     ss, cs = math.sin(math.radians(p["angulo_superior"])), math.cos(
         math.radians(p["angulo_superior"]))
-    ye = p["alto_frontal"] + p["alto_panel_inf"] * ci
-    x2 = p["alto_panel_inf"] * si
+    ye = p["alto_frontal"] + p["alto_cara_inf"] * ci
+    x2 = p["alto_cara_inf"] * si
     x3 = x2 + p["paso_horizontal"]
-    x4 = x3 + p["alto_panel_sup"] * ss
-    yt = ye + p["alto_panel_sup"] * cs
+    x4 = x3 + p["alto_cara_sup"] * ss
+    yt = ye + p["alto_cara_sup"] * cs
     pf = fondo(p)
     return [(0, 0), (0, p["alto_frontal"]), (x2, ye), (x3, ye), (x4, yt),
             # 7 puntos: canto trasero UNICO a plomo de toda la altura. Antes
@@ -105,17 +105,23 @@ def _centros_rail(p: dict[str, float],
                    P: list[tuple[float, float]]) -> list[tuple[float, float]]:
     """4 centros de rail de panel [cara_inf x2, cara_sup x2], misma formula
     que centros_rail() en sam17_case.scad."""
-    # cada cara lleva SU alto: los dos pisos ya no miden lo mismo
-    caras = [(P[1], P[2], p["alto_panel_inf"]),
-             (P[3], P[4], p["alto_panel_sup"])]
+    # cada cara lleva SU alto y SUS DOS insets: los pisos ya no miden lo mismo
+    # ni se rematan igual. La cara inferior remata contra el valle, donde el
+    # pico solo se come 2.60 mm de acrilico frente a los 15 de la punta del
+    # frente -- de ahi que su inset de remate sea inset_valle y no
+    # inset_tornillo (ver params.scad).
+    caras = [(P[1], P[2], p["alto_cara_inf"],
+              p["inset_tornillo"], p["inset_valle"]),
+             (P[3], P[4], p["alto_cara_sup"],
+              p["inset_tornillo"], p["inset_tornillo"])]
     off = p["t_panel"] + p["rail"] / 2
     out = []
-    for c0, c1, largo in caras:
+    for c0, c1, largo, ins_a, ins_b in caras:
         dx, dy = c1[0] - c0[0], c1[1] - c0[1]
         dl = math.hypot(dx, dy)
         dx, dy = dx / dl, dy / dl
         nx, ny = dy, -dx
-        for s in (p["inset_tornillo"], largo - p["inset_tornillo"]):
+        for s in (ins_a, largo - ins_b):
             out.append((c0[0] + dx * s + nx * off, c0[1] + dy * s + ny * off))
     return out
 
@@ -565,11 +571,34 @@ def main() -> int:
           "el piso superior no cabe en el ancho util")
     exige(sum(ANCHOS_PISO_INF.values()) + EXPANSION_MIN <= g["ancho_util"],
           "el piso inferior no cabe en el ancho util")
-    for piso in ("inf", "sup"):
-        calc = p[f"alto_panel_{piso}"] - 2 * p["inset_tornillo"]
-        exige(abs(p[f"sep_railes_{piso}"] - calc) < 0.001,
-              f"sep_railes_{piso}={p[f'sep_railes_{piso}']} no sale de "
-              f"alto_panel_{piso} - 2*inset = {calc} (spec §6)")
+    # CARA y PANEL ya no son el mismo numero en el piso de abajo, asi que hay
+    # DOS derivaciones que tienen que dar lo mismo y no una: la separacion de
+    # railes sale de la cara (por donde se atornillan al costado) y tambien del
+    # panel (por donde los ve el modulo). Si se separan, el panel no atornilla
+    # -- que es exactamente el fallo que tuvo esta puerta en rojo.
+    calc = (p["alto_cara_inf"] - p["inset_tornillo"] - p["inset_valle"])
+    exige(abs(p["sep_railes_inf"] - calc) < 0.001,
+          f"sep_railes_inf={p['sep_railes_inf']} no sale de alto_cara_inf - "
+          f"inset_tornillo - inset_valle = {calc} (spec §6)")
+    calc = p["alto_panel_inf"] - 2 * p["inset_er"]
+    exige(abs(p["sep_railes_inf"] - calc) < 0.001,
+          f"sep_railes_inf={p['sep_railes_inf']} no sale del PANEL 3U "
+          f"(alto_panel_inf - 2*inset_er = {calc}): la cara y la PCB "
+          f"discrepan y el modulo no atornilla")
+    calc = p["alto_cara_sup"] - 2 * p["inset_tornillo"]
+    exige(abs(p["sep_railes_sup"] - calc) < 0.001,
+          f"sep_railes_sup={p['sep_railes_sup']} no sale de alto_cara_sup - "
+          f"2*inset_tornillo = {calc} (spec §6)")
+    exige(abs(p["alto_panel_sup"] - p["alto_cara_sup"]) < 0.001,
+          f"alto_panel_sup={p['alto_panel_sup']} != alto_cara_sup="
+          f"{p['alto_cara_sup']}: en el piso de arriba el panel cubre la cara "
+          f"entera; si eso deja de ser cierto hace falta su propio inset")
+    # El panel de abajo tiene que CABER en su cara, con bisel a los dos lados.
+    bisel_frente = p["inset_tornillo"] - p["inset_er"]
+    bisel_valle = p["inset_valle"] - p["inset_er"]
+    exige(min(bisel_frente, bisel_valle) > 0,
+          f"el panel 3U desborda su cara: bisel {bisel_frente:.1f} mm por el "
+          f"frente y {bisel_valle:.1f} por el valle (los dos han de ser > 0)")
     # EUROrack en la primera fila. La cota que manda NO es el alto del panel
     # (128.5 mm) sino la SEPARACION ENTRE RIELES: "ER Screw distance vertical
     # = 122,50 mm" (Doepfer; los taladros van a 3.0 mm de cada canto del panel
@@ -578,17 +607,23 @@ def main() -> int:
     # pide 121.46 y Tiptop 122.43 --, asi que este numero hay que fijarlo
     # contra el riel que se compre, no contra el estandar a secas.
     #
-    # ESTO ESTA EN ROJO A PROPOSITO. La primera fila se puso a 128.5 mm de
-    # CARA creyendo que con eso ya era EUROrack, y no lo es: con inset 27 los
-    # rieles quedan a 74.5 mm y un modulo no atornilla. Un fallo invisible es
-    # peor que un hueco visible (constitucion, Principio V), asi que la puerta
-    # se queda roja hasta que se decida el riel y se ajuste la geometria.
+    # ESTUVO EN ROJO A PROPOSITO hasta el 2026-08-17: la primera fila se puso a
+    # 128.5 mm de CARA creyendo que con eso ya era EUROrack, y no lo es -- con
+    # inset 27 los rieles quedaban a 74.5 y un modulo no atornillaba. Se cerro
+    # ASUMIENDO EL ESTANDAR (decision de Samuel: simular con el, adaptar cuando
+    # conteste SynthRacks): la cara se desacoplo del panel y crecio a 164.5 para
+    # que los railes caigan exactos en 122.50. El precio esta a la vista y es el
+    # que anunciaba el mensaje viejo -- el valle SUBIO, de 135.2 a 164.8 mm.
+    #
+    # Sigue siendo una puerta y no un comentario: si alguien mueve un inset o
+    # un alto de cara "para que quede mejor", esto vuelve a rojo antes de que
+    # se corte nada.
     SEP_EUROrack = 122.5
     exige(abs(p["sep_railes_inf"] - SEP_EUROrack) < 0.5,
           f"sep_railes_inf={p['sep_railes_inf']} != {SEP_EUROrack} de EUROrack: "
-          f"un modulo 3U NO atornilla. Con perfil 2020 el inset no baja de 10, "
-          f"asi que la cara tendria que medir >= {SEP_EUROrack + 20:.1f} mm y el "
-          f"valle SUBIRIA. Decidir riel EUROrack real antes de tocar esto.")
+          f"un modulo 3U NO atornilla. La cara inferior se dimensiona DESDE "
+          f"esta cota (alto_cara_inf = sep + inset_tornillo + inset_valle), no "
+          f"al reves.")
     exige(p["vent_puente_min"] >= 0.8 * p["t_acrilico"],
           "puente de ventilacion fragil para el espesor")
     fallos.extend(solapes(p))

@@ -6,22 +6,39 @@
 
 // --- silueta (spec §4 + board 350 x ~380) ---
 ancho_total     = 500;   // spec §4
-// Alto de cara POR PISO. Era un solo `alto_panel = 190` para las dos; se
-// separo el 2026-08-17 porque Samuel pidio bajar la PRIMERA fila al minimo
-// que siga admitiendo EUROrack.
+// CARA vs PANEL. Hasta el 2026-08-17 eran el mismo numero y por eso la puerta
+// de EUROrack estaba en rojo: con la cara valiendo 128.5 y los railes a 27 de
+// cada punta, los railes quedaban a 74.5 y un modulo 3U NO atornilla.
 //
-// El minimo que imponen nuestros propios rieles es 78 mm (dos perfiles de 20
-// a inset 27 con 4 de holgura). Pero manda EUROrack: el panel 3U estandar
-// mide 128.5 mm, y por debajo de eso no entra un modulo. Asi que 128.5 es el
-// piso, no una eleccion.
+//   alto_cara_*  = el TRAMO DEL PERFIL del costado. Es lo que dibuja la
+//                  silueta y donde se atornillan los railes.
+//   alto_panel_* = la PCB de aluminio que se monta encima. Es lo que
+//                  consume build_template.py y lo unico que ve el fabricante.
 //
-// OJO: los rieles 2020 NO estan en las cotas de EUROrack (sus taladros van a
-// 3 mm del canto del panel, los nuestros a 27). El 2020 es la ESTRUCTURA; el
-// riel EUROrack propiamente dicho se atornilla encima. Eso NO ESTA
-// CONFIRMADO con un perfil concreto -- hay que comprobar contra el catalogo
-// del riel que se compre que su brida cabe sobre el 2020.
-alto_panel_inf  = 128.5; // 3U EUROrack, el minimo que admite un modulo
-alto_panel_sup  = 190;   // spec §4, altura de panel de la tesis
+// En el piso de ARRIBA coinciden (el panel cubre la cara entera). En el de
+// ABAJO no pueden: el panel 3U mide 128.5 con sus taladros a 3.0 mm de cada
+// canto, o sea 122.50 mm entre centros ("ER Screw distance vertical",
+// Doepfer). Ese 122.50 es la cota que manda -- no el alto del panel --, y
+// alrededor de cada riel hace falta acrilico. De ahi sale la cara:
+//
+//   alto_cara_inf = sep_railes_inf + inset_tornillo + inset_valle
+//                 = 122.5 + 27 + 15 = 164.5
+//
+// Las dos puntas piden distinto y por eso los insets son asimetricos (ver
+// inset_valle abajo). El panel queda centrado en sus railes y sobra bisel:
+// 24 mm por delante -- de los que 15 se los come la curva en punta -- y 12
+// por el valle, de los que 2.6 se los come el pico. Samuel pidio
+// explicitamente apretar el lado del valle ("llevarlo mas cerca del hueco
+// del tornillo"), y ese es el lado que se aprieta.
+//
+// ASUMIDO, pendiente de Tobias (SynthRacks): que el riel EUROrack real se
+// atornille sobre el 2020 con su linea roscada EN LA CENTERLINE del 2020. Si
+// su perfil pone la rosca descentrada, lo que cambia es inset_valle y con el
+// alto_cara_inf -- la silueta se adapta sin tocar nada mas.
+alto_cara_inf   = 164.5; // DERIVADO: sep_railes_inf + inset_tornillo + inset_valle
+alto_cara_sup   = 190;   // spec §4, altura de panel de la tesis
+alto_panel_inf  = 128.5; // PCB 3U EUROrack (build_template.py --piso inf)
+alto_panel_sup  = 190;   // PCB del piso de arriba = cara entera
 // Angulos de cara. El fichero los guarda DESDE LA VERTICAL (convencion del
 // board), pero Samuel los especifica DESDE LA HORIZONTAL, que es como se
 // miran en el alzado. La traduccion es a = 90 - horizontal:
@@ -73,8 +90,8 @@ alto_frontal    = 30;
 //
 // MARCO DE REMATE: lo que sobra del fondo detras de la cara de arriba. Este
 // es el parametro, y el FONDO del case se deriva de el:
-//   fondo = alto_panel_inf*sen(a1) + paso_horizontal
-//           + alto_panel_sup*sen(a2) + marco_remate
+//   fondo = alto_cara_inf*sen(a1) + paso_horizontal
+//           + alto_cara_sup*sen(a2) + marco_remate
 //
 // Va al reves de lo obvio a proposito. El fondo era el parametro y el marco
 // salia de la resta, y eso se rompio dos veces: cada vez que se movia un
@@ -166,8 +183,29 @@ rail            = 20;   // perfil 2020
 // y <= 13 para que el tornillo siga cayendo dentro de la boca de la ranura
 // (~6 mm, o sea +-3 mm del centro de la cara). 10 lo centra exacto.
 inset_tornillo  = 27;
-sep_railes_inf  = 74.5; // centros de rail = alto_panel_inf - 2*inset = 128.5 - 54
-sep_railes_sup  = 136;  // centros de rail = alto_panel_sup - 2*inset = 190 - 54
+// inset_valle = el inset del OTRO extremo de la cara inferior, el que da al
+// valle. Es asimetrico a proposito: las dos puntas de esa cara no se comen lo
+// mismo. Por delante la curva en punta vacia alto_frontal/2 = 15 mm de cara,
+// asi que el riel no puede empezar antes de 15 + rail/2 + 2 = 27. Por el
+// valle el vertice lleva radio_pico = 5 y su tangente mide solo 2.60 mm, asi
+// que con 2.6 + rail/2 + 2 = 15 basta. Forzar la simetria costaria 12 mm de
+// cara -- y ese es justo el sitio que Samuel pidio recortar ("bajar la
+// posicion donde esta el acrilico del medio", 2026-08-17).
+inset_valle     = 15;
+// EUROrack, cotas del PANEL (no de la cara). Verificado el 2026-08-17 contra
+// midisoft.de y exploding-shed.com: taladro a 3.0 mm del canto superior e
+// inferior (de ahi los 122.50 entre centros) y el primero a 7.5 mm del canto
+// izquierdo, con paso horizontal multiplo de 5.08 (1 HP). Los usa
+// build_template.py para colocar los taladros del piso inferior; el piso
+// superior no es EUROrack y sigue con inset_tornillo en los dos ejes.
+inset_er        = 3.0;
+inset_er_x      = 7.5;
+// EUROrack manda aqui: "ER Screw distance vertical = 122.50 mm" (Doepfer).
+// OJO: los rieles comerciales varian -- Vector pide 121.46 y Tiptop 122.43 --,
+// asi que este numero se re-fija contra el riel que se compre. Es el ASUMIDO
+// principal de la silueta actual.
+sep_railes_inf  = 122.5;
+sep_railes_sup  = 136;  // centros de rail = alto_cara_sup - 2*inset = 190 - 54
 holgura_rail    = 4;    // separacion minima entre railes vecinos (fix solapes)
 
 // --- esqueleto y herrajes ---

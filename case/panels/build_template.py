@@ -12,11 +12,11 @@ clearance_budget.py (unica fuente de verdad dimensional del proyecto).
 Solo --ancho sigue siendo argumento de linea de comandos, porque es lo
 unico que varia por modulo. Antes de dibujar nada corren dos guardas:
 
-  1. que alto_panel - 2*inset_tornillo cuadre con sep_railes (spec §6) --
-     si params.scad se desincroniza, no atornilla contra los railes reales;
+  1. que alto_panel - 2*inset_y cuadre con sep_railes (spec §6) -- si
+     params.scad se desincroniza, no atornilla contra los railes reales;
   2. que el --ancho pedido deje puente de material entre los dos taladros
-     M3 de una misma cara (separacion en X = ancho - 2*inset_tornillo,
-     minimo d_M3_paso + 2 mm de puente -- ese 2 mm es un juicio de diseno,
+     M3 de una misma cara (separacion en X = ancho - 2*inset_x, minimo
+     d_M3_paso + 2 mm de puente -- ese 2 mm es un juicio de diseno,
      no un numero derivado de ninguna spec) -- sin esto, un panel angosto
      (ej. 2HP Eurorack = 10.16 mm) genera dos agujeros superpuestos sin
      avisar (fallo invisible hasta fabricacion, Principio V).
@@ -26,9 +26,10 @@ rota (Principio III de la constitucion: la comprobacion corre antes del
 paso destructivo).
 
 Dibuja: contorno rectangular en Edge.Cuts (ancho x alto del piso); 4 taladros
-M3 no plateados (NPTH) en los centros de rail, a inset_tornillo mm de cada
+M3 no plateados (NPTH) en los centros de rail, a inset_x / inset_y mm de cada
 borde EN LOS DOS EJES (X e Y: no solo arriba/abajo, tambien izquierda/
-derecha), sin kerf (el kerf es del corte laser del acrilico, no de un
+derecha; en el piso EUROrack esos dos insets NO son el mismo numero, ver
+insets()), sin kerf (el kerf es del corte laser del acrilico, no de un
 taladro de PCB: el diametro que da params.scad ya es el final); rotulo de
 plantilla en F.Silkscreen.
 
@@ -57,36 +58,56 @@ def mm(v: float) -> int:
     return pcbnew.FromMM(v)
 
 
-def verificar_coherencia(p: dict[str, float], piso: str) -> None:
-    """Ruling A: si alguien cambia params.scad y alto_panel/inset_tornillo
-    dejan de cuadrar con sep_railes, ese quiebre tiene que verse ANTES de
-    generar la plantilla, no despues como un panel que no atornilla.
+def insets(p: dict[str, float], piso: str) -> tuple[float, float]:
+    """Inset del taladro (x, y) del piso, en mm desde el canto del PANEL.
 
-    Desde el 2026-08-17 hay DOS altos de panel: la primera fila bajo a 128.5
-    (panel 3U de EUROrack, el minimo que admite un modulo) y la de arriba
-    sigue en 190. Por eso la plantilla necesita saber de que piso es."""
+    Los dos pisos no se miden igual y esa es la razon de ser del --piso:
+
+      inf  EUROrack manda. Taladro a inset_er = 3.0 mm de los cantos de
+           arriba y abajo (de ahi los 122.50 entre centros) y el primero a
+           inset_er_x = 7.5 del canto izquierdo. NO son el mismo numero en
+           los dos ejes -- el estandar no es simetrico.
+      sup  panel propio, atornillado a nuestros 2020: inset_tornillo en los
+           dos ejes, que es lo que hacia el fichero para todo antes."""
+    if piso == "inf":
+        return p["inset_er_x"], p["inset_er"]
+    return p["inset_tornillo"], p["inset_tornillo"]
+
+
+def verificar_coherencia(p: dict[str, float], piso: str) -> None:
+    """Ruling A: si alguien cambia params.scad y alto_panel/inset dejan de
+    cuadrar con sep_railes, ese quiebre tiene que verse ANTES de generar la
+    plantilla, no despues como un panel que no atornilla.
+
+    Desde el 2026-08-17 hay DOS altos de panel Y DOS insets: la primera fila
+    es un panel 3U de EUROrack (128.5 mm, taladro a 3.0 del canto) y la de
+    arriba sigue en 190 con nuestro inset de 27. Ojo: alto_panel_* es la PCB,
+    no el tramo de perfil del costado -- eso es alto_cara_*, y en el piso de
+    abajo ya no valen lo mismo."""
     alto = p[f"alto_panel_{piso}"]
     sep = p[f"sep_railes_{piso}"]
-    calc = alto - 2 * p["inset_tornillo"]
+    _, inset_y = insets(p, piso)
+    calc = alto - 2 * inset_y
     if abs(calc - sep) > 1e-6:
-        print(f"ROJO: alto_panel_{piso}({alto}) - 2*inset_tornillo("
-              f"{p['inset_tornillo']}) = {calc} != sep_railes_{piso}("
-              f"{sep}) -- params.scad incoherente (spec §6)")
+        print(f"ROJO: alto_panel_{piso}({alto}) - 2*inset_y({inset_y}) = "
+              f"{calc} != sep_railes_{piso}({sep}) -- params.scad "
+              f"incoherente (spec §6)")
         sys.exit(2)
 
 
-def verificar_ancho_minimo(p: dict[str, float], ancho: float) -> None:
-    """Fix review Task 7: inset_tornillo posiciona los taladros M3 en LOS
-    DOS ejes, no solo en Y -- con --ancho chico los dos agujeros de una
-    misma cara (izquierda y derecha) se acercan en X y pueden superponerse
-    sin que nada avise (fallo invisible hasta fabricacion, Principio V).
-    PUENTE_MIN=2.0 mm es un juicio de diseno (cuanto material minimo dejar
-    entre dos taladros), no un numero derivado de ninguna spec."""
+def verificar_ancho_minimo(p: dict[str, float], ancho: float,
+                            inset_x: float) -> None:
+    """Fix review Task 7: el inset posiciona los taladros M3 en LOS DOS ejes,
+    no solo en Y -- con --ancho chico los dos agujeros de una misma cara
+    (izquierda y derecha) se acercan en X y pueden superponerse sin que nada
+    avise (fallo invisible hasta fabricacion, Principio V). PUENTE_MIN=2.0 mm
+    es un juicio de diseno (cuanto material minimo dejar entre dos taladros),
+    no un numero derivado de ninguna spec."""
     PUENTE_MIN = 2.0
-    sep_centros = ancho - 2 * p["inset_tornillo"]
+    sep_centros = ancho - 2 * inset_x
     minimo = p["d_M3_paso"] + PUENTE_MIN
     if sep_centros < minimo:
-        ancho_min = 2 * p["inset_tornillo"] + minimo
+        ancho_min = 2 * inset_x + minimo
         print(f"ROJO: ancho={ancho} deja los taladros M3 de una cara a "
               f"{sep_centros:.2f} mm de separacion entre centros (minimo "
               f"{minimo:.2f} mm = d_M3_paso + {PUENTE_MIN} mm de puente) "
@@ -107,9 +128,9 @@ def main() -> int:
 
     p = leer_params()
     verificar_coherencia(p, piso)
-    verificar_ancho_minimo(p, ancho)
+    inset_x, inset_y = insets(p, piso)
+    verificar_ancho_minimo(p, ancho, inset_x)
     alto = p[f"alto_panel_{piso}"]
-    inset = p["inset_tornillo"]
     d_taladro = p["d_M3_paso"]  # sin kerf: taladro de PCB, diametro final
 
     board = pcbnew.CreateEmptyBoard()
@@ -125,8 +146,8 @@ def main() -> int:
         seg.SetWidth(mm(0.1))
         board.Add(seg)
     # 4 agujeros M3 no plateados (NPTH) en los centros de rail
-    for x in (inset, ancho - inset):
-        for y in (inset, alto - inset):
+    for x in (inset_x, ancho - inset_x):
+        for y in (inset_y, alto - inset_y):
             fp = pcbnew.FOOTPRINT(board)
             fp.SetPosition(pcbnew.VECTOR2I(mm(x), mm(y)))
             pad = pcbnew.PAD(fp)

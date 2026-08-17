@@ -18,16 +18,16 @@ ancho_util = ancho_total - 2*t_cheek;
 // Fondo del case. DERIVADO, no parametro: es la proyeccion de la hipotenusa
 // mas el marco de remate (ver la nota larga en params.scad). Se calcula sin
 // llamar a pts_perfil para no morderse la cola.
-function fondo() = alto_panel_inf*sin(angulo_inferior) + paso_horizontal
-                 + alto_panel_sup*sin(angulo_superior) + marco_remate;
+function fondo() = alto_cara_inf*sin(angulo_inferior) + paso_horizontal
+                 + alto_cara_sup*sin(angulo_superior) + marco_remate;
 
 function pts_perfil() =
     let (si = sin(angulo_inferior), ci = cos(angulo_inferior),
          ss = sin(angulo_superior), cs = cos(angulo_superior),
-         ye = alto_frontal + alto_panel_inf*ci,       // y entrepiso
-         x2 = alto_panel_inf*si,                      // fin cara inferior
+         ye = alto_frontal + alto_cara_inf*ci,        // y entrepiso
+         x2 = alto_cara_inf*si,                       // fin cara inferior
          x3 = x2 + paso_horizontal,
-         x4 = x3 + alto_panel_sup*ss,
+         x4 = x3 + alto_cara_sup*ss,
          yt = ye + alto_panel_sup*cs,                 // alto total
          pf = fondo())
     [[0,0],[0,alto_frontal],[x2,ye],[x3,ye],[x4,yt],
@@ -40,15 +40,22 @@ function pts_perfil() =
 // codigo viejo. x4 = fin de la cara superior; de x4 a fondo() queda el
 // marco de remate.
 
-// puntos medios de rail por cara: [origen, direccion] de cada cara y
-// centros a inset_tornillo y alto_panel-inset_tornillo sobre la cara,
-// retirados hacia dentro t_panel + rail/2 segun la normal
+// puntos medios de rail por cara: [origen, fin, alto, inset de arranque,
+// inset de remate] y centros sobre la cara a esos dos insets, retirados hacia
+// dentro t_panel + rail/2 segun la normal.
+//
+// Los DOS insets de la cara inferior son distintos (ver inset_valle en
+// params.scad): la punta redondeada del frente vacia 15 mm de cara y el pico
+// del valle solo 2.6, asi que exigir el mismo inset en los dos extremos
+// regalaria 12 mm de altura de piso sin comprar nada.
 function centros_rail() =
     let (P = pts_perfil(),
-         // cada cara lleva SU alto: los dos pisos ya no miden lo mismo
-         caras = [[P[1], P[2], alto_panel_inf], [P[3], P[4], alto_panel_sup]],
+         // cada cara lleva SU alto y SUS insets: los dos pisos ya no miden
+         // lo mismo ni se rematan igual
+         caras = [[P[1], P[2], alto_cara_inf, inset_tornillo, inset_valle],
+                  [P[3], P[4], alto_cara_sup, inset_tornillo, inset_tornillo]],
          off = t_panel + rail/2)
-    [for (c = caras, s = [inset_tornillo, c[2] - inset_tornillo])
+    [for (c = caras, s = [c[3], c[2] - c[4]])
         let (d = (c[1]-c[0])/norm(c[1]-c[0]),      // unitario de la cara
              n = [d.y, -d.x])                       // normal hacia dentro
         c[0] + d*s + n*off];
@@ -458,19 +465,27 @@ module planchas_acrilico() {
 
 // panel de modulo (PCB de aluminio, t_panel) sobre una cara del perfil
 // A->B: cara externa a ras del perfil, engrosa hacia dentro segun la
-// misma normal que centros_rail() ([d.y,-d.x]).
-module panel_cara(A, B) {
+// misma normal que centros_rail() ([d.y,-d.x]). s0 = donde ARRANCA el panel
+// sobre la cara; el panel ya no tiene por que cubrirla entera.
+module panel_cara(A, B, s0, largo) {
     d = (B - A) / norm(B - A);
     translate([A.x, A.y, t_cheek])
         rotate([0, 0, atan2(d.y, d.x)])
-            translate([0, -t_panel, 0])
-                cube([norm(B - A), t_panel, ancho_util]);
+            translate([s0, -t_panel, 0])
+                cube([largo, t_panel, ancho_util]);
 }
 
+// El panel de ABAJO no cubre su cara: es una PCB 3U de 128.5 mm con los
+// taladros a inset_er = 3 de cada canto, colgada de railes que estan a
+// inset_tornillo del frente. Arranca por tanto en s0 = 27 - 3 = 24 y sobra
+// bisel de acrilico a los dos lados (24 mm por el frente, de los que la punta
+// redondeada se come 15; 12 por el valle, de los que el pico se come 2.6).
+// Ese bisel es parte del alzado, no un descuadre -- si el render lo pintara
+// cubriendo la cara entera estaria mintiendo sobre lo que se va a ver.
 module paneles() {
     P = pts_perfil();
-    panel_cara(P[1], P[2]);   // cara inferior (procesamiento, 12 grados)
-    panel_cara(P[3], P[4]);   // cara superior (generacion, 35 grados)
+    panel_cara(P[1], P[2], inset_tornillo - inset_er, alto_panel_inf);
+    panel_cara(P[3], P[4], 0, alto_panel_sup);
 }
 
 // Paticas torneadas bajo los costados. En X caen sobre los dos rieles de
