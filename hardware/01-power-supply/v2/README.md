@@ -1,6 +1,14 @@
 # PSU v2 — Power Supply Module
 
-**Estado:** Diseño completo; pendiente de mula y stock LCSC el día de mandar.
+**Estado:** Diseño completo; pendiente solo de las comprobaciones del día de mandar
+(stock LCSC y rotaciones de DFN).
+
+> **La v1 no se construye** (decisión 2026-08-17). Era la mula contra la que se
+> iban a congelar los setpoints; se va directo a la v2 y los setpoints se ajustan
+> en sitio con RV2/RV3 durante el bring-up. Eso quita la puerta que bloqueaba el
+> pedido, y mete una condición nueva al bring-up: **medir el valle de VRAW contra
+> el umbral de 13.46 V** ([notes §4.1](notes/design-notes.md)) antes de dar la
+> placa por buena. La v1 queda como diseño documentado, no como hardware.
 
 ## Arquitectura
 
@@ -31,22 +39,24 @@ Cascada de **dos etapas reguladas por riel**:
 |---|---|
 | [docs/superpowers/specs/2026-08-16-psu-v2-goat-design.md](../../docs/superpowers/specs/2026-08-16-psu-v2-goat-design.md) | Especificación funcional y margen de tolerancia |
 | [docs/superpowers/plans/2026-08-16-psu-v2-goat.md](../../docs/superpowers/plans/2026-08-16-psu-v2-goat.md) | Plan de implementación (5 fases, tareas 6-10) |
-| [notes/design-notes.md](notes/design-notes.md) | Datasheet gates (§1), stock (§2), decisiones (§3), medidas de la mula (§4), bring-up (§5) |
+| [notes/design-notes.md](notes/design-notes.md) | Datasheet gates (§1), stock (§2), decisiones (§3), campaña de medidas + umbral de aborto (§4/§4.1), bring-up (§5) |
 | [fab/README.md](fab/README.md) | Ficheros Gerber, BOM JLCPCB, puertas antes de fabricar |
 | [kicad/](kicad/) | Esquemático y PCB (sam17-power-v2.kicad_sch / .kicad_pcb) |
 | [pcb/](pcb/) | Screenshots 3D de la placa (anteproyecto visual) |
 
 ## Puertas abiertas (antes de pedir a JLCPCB)
 
-1. **Medidas en la mula prototipo** (§4 design-notes): valle VRAW, pico en vacío,
-   rizado real, térmica → fija los setpoints RV2/RV3. Issue #56 — «Fuente v2:
-   campana de medidas de la mula».
-   
-2. **Re-verificar stock LCSC** (§2 design-notes): LT3045EDD/LT3094EDD (Extended,
+Las dos que quedan son comprobaciones del día de mandar, no trabajo de diseño:
+
+1. **Re-verificar stock LCSC** (§2 design-notes): LT3045EDD/LT3094EDD (Extended,
    citadas 2026-08-16) + fallback 120 kΩ 1 % ±100 ppm. Códigos en `fab/bom-jlc.csv`.
    
-3. **Rotaciones de DFN en JLCPCB** (fab/README.md): verificar miniaturas de
+2. **Rotaciones de DFN en JLCPCB** (fab/README.md): verificar miniaturas de
    ensamblaje para U4–U7 (DFN-10 y DFN-12 apaisados) — gotcha de KiCad ↔ JLC.
+
+~~3. Medidas en la mula prototipo~~ — **cerrada por decisión, no por medida**: la
+v1 no se construye. Los setpoints RV2/RV3 se fijan en el bring-up sobre la propia
+v2 (§5 paso 5), y el criterio de aborto es el valle contra 13.46 V (§4.1).
 
 ## ⚠ Advertencias de montaje
 

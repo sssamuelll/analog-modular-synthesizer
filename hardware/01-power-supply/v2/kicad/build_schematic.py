@@ -427,8 +427,8 @@ TEXTS = [
     ("hasta el punto de estrella, separado del retorno analogico hasta el",    300.99, 149.86),
     ("ultimo cm (design-notes.md sec. 10.1) - el backlight va conmutado.",     300.99, 152.40),
     # notas de la etapa pre-reg (Task 5, plan v2 Step 3/4)
-    ("U1: setpoint 13.1V. El trimmer RV2 compra margen de valle contra la",  195.58, 100.33),
-    ("medida real de la mula (design-notes.md v2 §1.5, margen +0.02V).",     195.58, 102.87),
+    ("U1: setpoint 13.1V solo tiene +0.02V de margen: BAJAR RV2 a ~12.9V",   195.58, 100.33),
+    ("en bring-up. Valle minimo 13.46V (design-notes.md v2 §4.1).",          195.58, 102.87),
     ("U2: el divisor R7+RV3/R8 ES la carga minima de 500uA del LM2991 -",    195.58, 175.26),
     ("no subir esos valores (design-notes.md v2 §1.2/spec §3).",             195.58, 177.80),
     ("Bus +12V/-12V heredado de v1 (LED, J2, TP3/TP4, crowbar): reconectado", 271.78 + ISLA_DX, 41.91),
@@ -1103,6 +1103,33 @@ def setup_local_symbols(c: Client) -> None:
         "scope": "project", "projectPath": PRO,
     })
     print(f"  register_symbol_library: {str(r)[:160]}")
+    _normalizar_sym_lib_table()
+
+
+def _normalizar_sym_lib_table() -> None:
+    """register_symbol_library escribe la uri de la libreria como ruta
+    ABSOLUTA, y ademas es idempotente-por-nombre: si ya hay una entrada
+    "sam17" contesta already_registered=True y NO la reescribe. Las dos cosas
+    juntas son una bomba de relojeria: el sym-lib-table commiteado quedo
+    apuntando a .claude/worktrees/psu-v2/... (el worktree de la ejecucion SDD,
+    ya borrado), asi que en cualquier otra ruta la libreria no resuelve,
+    add_schematic_component falla EN SILENCIO para U1/U2, y la corrida
+    regenera un esquematico sin los dos pre-reguladores (ERC pasa de 0 a 2
+    errores y el .kicad_sch encoge ~500 lineas). Se detecto al regenerar
+    desde un worktree nuevo el 2026-08-17.
+
+    Se reescribe a ${KIPRJMOD}, que es lo que ya hacia bien el fp-lib-table
+    de al lado. Idempotente: si ya esta normalizado no toca el fichero.
+    """
+    tabla = f"{DIR}/sym-lib-table"
+    if not os.path.exists(tabla):
+        return
+    original = open(tabla, encoding="utf-8").read()
+    nuevo = re.sub(r'(\(name "sam17"\)\(type "KiCad"\)\(uri ")[^"]*(")',
+                   r'\1${KIPRJMOD}/sam17.kicad_sym\2', original)
+    if nuevo != original:
+        open(tabla, "w", encoding="utf-8").write(nuevo)
+        print("  sym-lib-table: uri normalizada a ${KIPRJMOD}")
 
 
 # Namespace fijo del proyecto para UUIDs deterministas (fix F2 del task
