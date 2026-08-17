@@ -17,6 +17,7 @@ Para regenerarlos, ver el final de este fichero.
 | `sam17-vco-Edge_Cuts.gm1` | Contorno de la placa (114×124 mm) |
 | `sam17-vco-job.gbrjob` | Job file (metadatos del set de gerbers) |
 | `sam17-vco.drl` | Taladros, Excellon, mm — vías (0.20 mm) y through-hole (conectores) en un solo fichero |
+| `sam17-vco-drl_map.pdf` | Mapa de taladros (tamaño/símbolo por herramienta), para revisar visualmente antes de pedir |
 | `sam17-vco-pos.csv` | Posiciones SMD para ensamblaje (CSV, mm, ambas caras aunque todo cae en `top`) — **solo las 111 huellas SMD**; los conectores (`J1`, `J2`, `J_CV1-4`, `J_OUT1-4`) y los test points son through-hole/pads y se sueldan aparte |
 | `sam17-vco-bom.csv` | BOM de ensamblaje, columnas al estilo JLC (`Designator,Value,Footprint,Quantity,LCSC Part#,Notes`) — generado cruzando `../bom.csv` contra `sam17-vco-pos.csv`, 25 líneas cubriendo las 111 huellas SMD |
 
@@ -36,8 +37,17 @@ de los dos funciona con el resto del ensamblaje SMD normal de la fábrica:
 y el margen de span del oscilador es trimless (spec, [§11](../../../docs/superpowers/specs/2026-08-16-modulo-3-vco-design.md#11-riesgos-y-lo-no-confirmado)),
 así que un chip fuera de rango en bring-up se descarta, no se repara.
 
-Todo lo demás del BOM (los otros 107 refs SMD + los conectores through-hole)
-lo monta/suministra la fábrica por su flujo normal.
+Todo lo demás **SMD** (los otros 107 refs) lo monta la fábrica por su flujo
+normal, con `sam17-vco-pos.csv`/`sam17-vco-bom.csv` como entrada.
+
+**Los conectores through-hole llegan sin montar — no los monta la fábrica.**
+`J1` (KK-254), `J2` (IDC 2×6) y los 8 jacks Thonkiconn (`J_CV1-4`, `J_OUT1-4`)
+son de panel: se alinean mecánicamente contra el chasis/los potes antes de
+soldar, así que un ensamblaje automático los desalinearía. Por eso
+`sam17-vco-pos.csv` se generó con `--smd-only` y **no trae sus posiciones** —
+la fábrica no tiene cómo colocarlos aunque quisiera. Van en la misma tanda de
+soldadura a mano que los SSI2130 si se elige la opción "en casa" de arriba, o
+en una pasada aparte si el SSI2130 fue consignado.
 
 **Números de parte LCSC**: la columna queda vacía a propósito en
 `sam17-vco-bom.csv` — no hay ninguno confirmado todavía. Se rellenan al pedir
@@ -59,11 +69,20 @@ kicad-cli pcb export gerbers --output ../pcb/ \
   --no-x2 sam17-vco.kicad_pcb
 
 kicad-cli pcb export drill --output ../pcb/ \
-  --format excellon --excellon-units mm sam17-vco.kicad_pcb
+  --format excellon --excellon-units mm \
+  --generate-map --map-format pdf sam17-vco.kicad_pcb
 
 kicad-cli pcb export pos --output ../pcb/sam17-vco-pos.csv \
   --format csv --units mm --side both --smd-only sam17-vco.kicad_pcb
 ```
+
+`--no-x2` en los gerbers: genera RS-274X plano en vez del formato extendido
+X2 (que mete atributos de red/aperture como comentarios estructurados en
+cada gerber, incluyendo nombres de red). Compatibilidad más conservadora con
+el CAM de JLCPCB y no filtra nombres de red en los ficheros que se suben. La
+extensión de fichero por capa (`.gtl`/`.gbl`/`.gts`/...) es aparte: es el
+default de `kicad-cli` (nombres estilo Protel) sin tocar ningún flag, y es lo
+que JLCPCB usa para identificar cada capa al subir el zip.
 
 El BOM de ensamblaje (`sam17-vco-bom.csv`) no sale de kicad-cli: se genera
 cruzando `../bom.csv` (que agrupa referencias por rango, p. ej. `R_MIX*`)
