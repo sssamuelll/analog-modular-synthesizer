@@ -641,6 +641,76 @@ producción de varias unidades convendría re-chequear antes de comprar. Lead
 time de fabricante declarado (16 semanas) es el de fabricación nueva de TI,
 no aplica mientras haya stock del distribuidor.
 
+### §2.6 Re-verificación de stock del día de pedir (2026-08-17)
+
+Puerta 2 de `fab/README.md`. Los 10 códigos del BOM de ensamblaje,
+consultados en vivo uno por uno en `lcsc.com/product-detail/<code>.html`
+—valor, tolerancia y package confirmados en la ficha, no supuestos—:
+
+| código | pieza confirmada en la ficha | uds/placa | stock 08-17 | stock 08-16 |
+|---|---|---|---|---|
+| C514420 | LT3045EDD#TRPBF | 2 | 3.592 | (no cotizado) |
+| C670492 | LT3094EDD#PBF | 2 | 1.462 | (no cotizado) |
+| C114524 | RC0805FR-07120KL, 120 kΩ ±1 % ±100 ppm/°C 0805 | 2 | 170.000 | 169.800 |
+| C23149 | 0603WAF3740T5E, 374 Ω ±1 % 0603 | 2 | 9.800 | 9.800 |
+| C23126 | 0603WAF9311T5E, 9.31 kΩ ±1 % 0603 | 2 | 2.200 | 2.200 |
+| C6920584 | VMK-R020-1.0-U, 20 mΩ ±1 % 1.5 W 1206 | 4 | **1.000** | 1.000 |
+| C6120032 | CGA1210X7R226K250RT, 22 µF 25 V X7R 1210 | 2 | 2.685 | 2.685 |
+| C89632 | CL31B106KBHNNNE, 10 µF 50 V X7R 1206 | 8 | 381.245 | 385.340 |
+| C148216 | SMAJ15A, TVS 15 V DO-214AC | 2 | 10.010 | 10.030 |
+| C2480 | SS14, Schottky 40 V SMA | 2 | 1.062.050 | 1.081.100 |
+
+**Veredicto: GO.** Los diez con stock real y valores coincidentes. El más
+fino sigue siendo el shunt `C6920584` (1.000 u., Basic, 4 por placa): da
+para 250 placas, de sobra para esta tanda, pero es el único que conviene
+mirar otra vez si pasa tiempo entre este chequeo y el pedido. Alterno ya
+documentado en §2.4 si se agota: `C1848840` (Bourns, ±50 ppm/°C).
+
+#### §2.6.1 R_SET: se cierra la búsqueda del 0,1 %/25 ppm — y se descarta
+
+§2.4 dejó una acción abierta: «antes de comprar, re-intentar buscar el
+C-code de 120 kΩ 0,1 %/25 ppm 0805; si no, decidir entre soldar a mano uno
+de Mouser/DigiKey o aceptar el C114524». Se cierra aquí, y **el resultado
+es que no vale la pena perseguirlo** — no por no encontrarlo, sino por un
+número del propio chip que faltaba en la puerta.
+
+Leído verbatim en la tabla ELECTRICAL CHARACTERISTICS del DS del LT3045
+(Farnell `2163219.pdf`, p.3), fila **SET Pin Current (I_SET)**:
+
+```
+V_IN = 2V, I_LOAD = 1mA, V_OUT = 1.3V            MIN  99  TYP 100  MAX 101  µA
+2V<V_IN<20V, 0V<V_OUT<15V, 1mA<I_LOAD<500mA (l)  MIN  98  TYP 100  MAX 102  µA
+```
+
+La segunda fila es la que aplica a esta placa (V_IN = 13.1 V, V_OUT = 12 V,
+I_LOAD ≈ 325 mA) y lleva el marcador `l`, o sea garantizada sobre
+temperatura: **I_SET = ±2 %**. La portada del DS anuncia «±1 % Initial
+Accuracy», que es la primera fila — condición de test estrecha, no la de
+operación.
+
+Como `V_OUT = I_SET × R_SET` sin divisor, los dos errores se multiplican:
+
+| R_SET | ventana de V_OUT (peor caso) |
+|---|---|
+| 1 % (C114524, el que se compra) | 12.0 V **±3 %** → 11.64 … 12.36 V |
+| 0,1 % (el que se perseguía) | 12.0 V **±2,1 %** → 11.75 … 12.25 V |
+
+**El término dominante es el chip, no el resistor.** Gastar en el 0,1 %
+compra 0,9 puntos de una ventana de 3, y no acerca a «12.000 V exactos»:
+con esta topología esa cifra **no existe**, porque no hay trim de V_OUT en
+ningún punto de la etapa ultra. Lo que compra el LT3045/LT3094 es ruido
+(0,8 µVrms) y PSRR, no exactitud absoluta de cuatro cifras — y ninguna de
+esas dos cosas depende de la tolerancia de R_SET.
+
+**Ruling: se compra el C114524 y se cierra el tema.** El tempco de
+100 ppm/°C sigue siendo el que documenta §2.4 (1,2 mV/°C de deriva), y es
+de segundo orden encima de una ventana de ±2 % que ya incluye temperatura.
+Consecuencia de documentación: donde el proyecto dice «±12.000 V exactos»
+hay que leer **±12,0 V nominales, ±3 % peor caso**. Si algún módulo
+2-7 llegara a necesitar el riel como referencia de precisión (hoy ninguno:
+llevan su propio filtrado RC, issue #59), eso pide un LDO de referencia en
+el módulo, no un resistor mejor aquí.
+
 ## §3 Decisiones y aritmética
 
 ### §3.0 Worksheet F1 (Task 5 Step 6): sube de 250 mA a 1.6 A T

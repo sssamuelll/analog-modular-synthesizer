@@ -3,19 +3,30 @@
 Generados con `kicad-cli` desde `../kicad/sam17-power-v2.kicad_pcb`. Para
 regenerarlos, ver el final de este fichero.
 
-## Estado: listo para pedir, con dos comprobaciones dentro del propio pedido
+## Estado: listo para pedir
 
 El diseño está completo (silicio verificado GO en §2.3 del design-notes.md, ruteado con
-DRC=0). Las dos puertas que quedan **se resuelven en el flujo del pedido**, no antes:
+DRC=0) y el `sam17-power-v2-jlcpcb.zip` se genera con el comando del final de este
+fichero.
 
-1. **Stock LCSC el día de mandar**: re-verificar disponibilidad de piezas Extended 
-   (LT3045EDD, LT3094EDD) y del fallback 120 kΩ ±100 ppm (C114524). Los códigos 
-   están anotados en `bom.csv` con fecha de consulta 2026-08-16 — no son garantía 
-   de stock en el momento de compra.
-2. **Rotaciones de los DFN**: revisar las miniaturas de ensamblaje de JLCPCB para 
-   los chips U4–U7 (DFN-10 y DFN-12). Gotcha conocido: el cero de rotación de JLC 
-   no siempre coincide con el de KiCad, y los DFN apaisados lo hacen evidente al 
-   montaje.
+1. ~~**Stock LCSC el día de mandar**~~ — **CERRADA 2026-08-17**
+   ([`design-notes.md` §2.6](../notes/design-notes.md)): los 10 códigos del BOM de
+   ensamblaje verificados en vivo en `lcsc.com/product-detail/`, con valor,
+   tolerancia y package confirmados en la ficha. Los 10 con stock. El más ajustado
+   es el shunt `C6920584` (1.000 u., Basic, **4 por placa**) — el único que conviene
+   volver a mirar si pasan días hasta el pedido; alterno `C1848840` en §2.4.
+2. **Rotaciones de los DFN** — **única puerta que queda**, y se cierra dentro del
+   propio flujo del pedido: revisar las miniaturas de ensamblaje de JLCPCB para
+   los chips U4–U7 (DFN-10 y DFN-12). Gotcha conocido: el cero de rotación de JLC
+   no siempre coincide con el de KiCad, y los DFN apaisados lo hacen evidente al
+   montaje. **Si la miniatura muestra el pin 1 girado, se corrige en el editor de
+   JLC — no se re-exporta el `pos.csv`.**
+
+**Lo que NO viene de JLC**: todo el THT (trafo Talema, BR1, los 4×4700 µF,
+U1/U2 en TO-220, disipadores, portafusible, conectores, trimmers) va por
+Reichelt/DigiKey — está en `bom.csv` con proveedor por fila, y su puerta de
+stock es [§2.5](../notes/design-notes.md). El más ajustado de ese lado es el
+**LM2941CT/NOPB (164 u.)**.
 
 **La tercera puerta se cerró por decisión, no por medida** (2026-08-17): la v1 no
 se construye, así que no hay mula que confirme los setpoints antes de fabricar.
