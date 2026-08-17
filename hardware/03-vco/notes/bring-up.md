@@ -57,18 +57,34 @@ golpe**. Los dos repuestos no salvan nada: reponer un QFN pide el mismo horno
 que no tienes.
 
 **Camino B — SSI2130 a mano, después.** La fábrica monta los otros 107 SMD; tú
-sueldas U1-U4 con stencil y placa caliente **después de que los pasos 1 a 4
-pasen**. Los chips caros solo se ponen encima de rieles ya medidos.
+sueldas U1-U4 **después de que los pasos 1 a 4 pasen**. Los chips caros solo se
+ponen encima de rieles ya medidos.
 
-> **La regla de decisión: camino B si tienes placa caliente y stencil y ya has
-> hecho un QFN antes. Camino A si no.** El camino B elimina el riesgo eléctrico
-> y el A el mecánico — pero el B solo elimina el suyo si sabes soldar el QFN. Si
-> no, se come los chips igual, nada más que con soldador en vez de con tensión.
+> ## ► DECIDIDO 2026-08-17: va el CAMINO B
+>
+> Y no fue una elección entre iguales: **el camino A resultó imposible**. El
+> flujo de ensamblaje de JLCPCB rechaza de plano las piezas sin stock (*«Not
+> enough stock available, please click "search icon" to select another part»*),
+> y consignar es un trámite de importación previo al pedido con arancel, IVA
+> del 13 % y comisión mínima de US$ 10 — más 2-4 semanas. El detalle completo
+> está en [`pcb/README.md`](../pcb/README.md).
+>
+> **Y hay buena noticia: no hace falta ni placa caliente ni stencil.** El pad
+> central del QFN va **aislado** (el datasheet prohíbe conectarlo, pág. 6), así
+> que no hay plataforma térmica que refluir — que es lo que normalmente obliga
+> al horno. Y los pads **sobresalen 0.35 mm del cuerpo** del encapsulado, o sea
+> que hay escalón donde apoyar la punta. Se hace con **cautín, flux y malla**,
+> por arrastre. La lista de herramienta está en `pcb/README.md`.
+>
+> El corolario para el bring-up es el bueno: **los pasos 1 a 4 se hacen con la
+> placa sin los cuatro chips encima**, así que un riel mal no se lleva $100 de
+> silicio por delante. El riesgo eléctrico desaparece.
 
-Con el camino A no hay forma de quitar los chips, así que el sustituto del
-«medir antes de ponerlos» es la **fuente limitada y la rampa a mano** del
-Paso 1: impedir que el riel llegue nunca a un valor malo, ya que no se puede
-comprobar con la placa desierta.
+La advertencia del camino A se conserva por si alguna vez se vuelve viable
+(otra fábrica, o stock real en JLC): con A no hay forma de quitar los chips, y
+el sustituto del «medir antes de ponerlos» es la **fuente limitada y la rampa a
+mano** del Paso 1 — impedir que el riel llegue nunca a un valor malo, ya que no
+se puede comprobar con la placa desierta.
 
 ### Los conectores: cuáles hay que soldar YA
 

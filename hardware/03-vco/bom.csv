@@ -1,5 +1,5 @@
 ref,value,footprint,quantity,supplier,notes
-U1-U4,SSI2130,QFN-32 4x4mm EP,4,Cabintech/AmplifiedParts ~$6,VCO+mixer+seno. PROVEEDOR UNICO - comprar 6 (2 repuestos). Consignado en ensamblaje
+U1-U4,SSI2130,QFN-32 4x4mm EP,4,Cabintech/AmplifiedParts ~$6,VCO+mixer+seno. PROVEEDOR UNICO - comprar 6 (2 repuestos). NO se consigna: JLC rechaza piezas sin stock en su flujo de montaje (probado 2026-08-17). Se sueldan a mano con cautin -- el EP va aislado (no hay que refluir plataforma termica) y los pads sobresalen 0.35mm del cuerpo. Ver pcb/README.md
 U5-U7,AD5686RBRUZ,TSSOP-16,3,importado,DAC 16b x4. Cadena DCEN. Ref interna APAGADA por firmware (reg 0111)
 U8,ADR4525BRZ,SOIC-8,1,importado,LA referencia: 2.5V 2ppm/C max. Alimenta DACs y SSI2130s
 U9,TL074H,SOIC-14,1,nacional,I/V de MIX OUT x4 (el H por deriva: tuning_budget.py)

@@ -29,24 +29,80 @@ Para regenerarlos, ver el final de este fichero.
 | `sam17-vco-bottom.svg` | Vista 2D de la cara inferior, espejada (B.Cu + serigrafía + contorno) |
 | `sam17-vco.pdf` | Las 4 capas de cobre + serigrafía + contorno, una página por capa |
 
-## El SSI2130 va consignado
+## El SSI2130 se suelda a mano — DECIDIDO 2026-08-17
 
 **Proveedor único — JLCPCB no lo stockea.** El SSI2130 (Sound Semiconductor)
-solo se consigue en Cabintech o Amplified Parts (~$6/u). Dos caminos, cualquiera
-de los dos funciona con el resto del ensamblaje SMD normal de la fábrica:
+solo se consigue en Cabintech o Amplified Parts (~$6/u).
 
-1. **Consignado**: comprarlo y enviarlo a JLCPCB junto con el pedido, para que
-   lo suelden ellos con el resto del SMD (U1-U4, QFN-32 4×4 mm con EP térmico —
-   difícil a mano sin horno de reflow).
-2. **En casa**: soldar solo los 4 SSI2130 con stencil + placa caliente después
-   de que la fábrica monte todo lo demás.
+**El flujo de ensamblaje de JLC no acepta piezas sin stock, punto.** Probado
+contra el pedido real: al llegar a la selección de piezas, la fila del SSI2130
+sale como `8 shortfall` y el mensaje es *«Not enough stock available, please
+click "search icon" to select another part»*. Quiere una alternativa **en
+stock**, y siendo proveedor único no hay ninguna que ofrecer. El `C42420746`
+(Sound Semiconductor, mínimo 1 unidad, ~$24.80) sirve para comprarlo suelto,
+NO para meterlo en una orden de montaje. La otra entrada del catálogo,
+`C2886621`, tiene MOQ 75 y es inservible.
 
-**Comprar 6, no 4** (4 + 2 de repuesto) en la misma orden — es proveedor único
+Así que **la fábrica monta 107 de las 111 piezas** y los cuatro sitios de QFN
+llegan vacíos.
+
+### Por qué a mano y no consignado
+
+Consignar en JLC **no es meter los chips en un sobre**: es un trámite de
+importación previo al pedido — declarar courier, guía, contacto, precio
+unitario, fabricante, país de origen, peso y código HS; adjuntar la factura de
+compra; esperar dos días hábiles a que verifiquen el precio; y **pagar por
+adelantado** arancel + IVA del 13 % + comisión del 2 % con mínimo de US$ 10,
+antes de enviar nada a su almacén de Hong Kong. Sobre $36 de chips eso son
+$35-55 de sobrecosto y 2-4 semanas. Y sus términos dicen que **no prueban los
+componentes consignados ni responden** por fallos de montaje causados por
+ellos.
+
+### Y por qué a mano SÍ se puede, con cautín normal
+
+Dos cosas de la propia huella lo hacen viable sin horno ni placa caliente:
+
+1. **El EP no se suelda.** El pad central de 2.65×2.65 mm existe en la huella
+   pero va **aislado, sin red** — el datasheet prohíbe conectarlo (pág. 6). Lo
+   que normalmente hace imposible un QFN a mano es refluir esa plataforma
+   central, y aquí no hay que tocarla: el chip se apoya y ya.
+2. **Los pads sobresalen 0.35 mm del cuerpo.** Miden 0.8 mm de largo con el
+   centro a 1.95 mm del origen, y el encapsulado llega a 2.00 mm: queda un
+   escalón visible donde apoyar la punta. No se suelda a ciegas por debajo.
+
+Sigue siendo paso de 0.40 mm: hace falta flux, estaño fino, malla de desoldar
+y aumento. La técnica es arrastre (*drag soldering*), y los puentes que salgan
+se chupan con malla — es parte del método, no un fallo.
+
+**Consecuencia para los gerbers:** por este camino **no hace falta F.Paste**
+(eso era para cortar un stencil). El punto 2 del issue #66 queda sin urgencia.
+
+**Comprar 6, no 4** (4 + 2 de repuesto) — es proveedor único
 y el margen de span del oscilador es trimless (spec, [§11](../../../docs/superpowers/specs/2026-08-16-modulo-3-vco-design.md#11-riesgos-y-lo-no-confirmado)),
-así que un chip fuera de rango en bring-up se descarta, no se repara.
+así que un chip fuera de rango en bring-up se descarta, no se repara. Con
+soldadura a mano el repuesto cubre además el chip que se arruine soldando.
 
 Todo lo demás **SMD** (los otros 107 refs) lo monta la fábrica por su flujo
-normal, con `sam17-vco-pos.csv`/`sam17-vco-bom.csv` como entrada.
+normal, con `sam17-vco-bom-jlc.csv` y `sam17-vco-cpl-jlc.csv` como entrada
+(NO el `pos.csv` crudo — ver la tabla de arriba).
+
+### Lo que se compra para soldar los cuatro
+
+Herramienta, una sola vez y sirve para los módulos 5, 6 y 7:
+
+| | Para qué |
+|---|---|
+| Cautín con control de temperatura, punta fina | El trabajo |
+| **Flux en gel (jeringa), sin limpieza** | Lo que hace posible el arrastre — sin esto no funciona |
+| Estaño 0.5 mm o menos, con plomo (63/37) | El sin plomo es bastante más difícil a mano |
+| Malla de desoldar de 1.5-2 mm | Chupar los puentes. Se usa siempre, no es plan B |
+| Aumento (microscopio USB o lupa de cabeza) | A 0.40 mm de paso no se ve a ojo pelado |
+| Alcohol isopropílico + cepillo | Limpiar el flux al terminar |
+
+Orden de trabajo: flux generoso sobre toda la fila, fijar **una** pata de
+esquina para alinear el chip, verificar la alineación con aumento antes de
+seguir, y recién ahí arrastrar el resto de las filas. El pad central no se
+toca.
 
 **Los conectores through-hole llegan sin montar — no los monta la fábrica.**
 `sam17-vco-pos.csv` se generó con `--smd-only` y **no trae sus posiciones**, así
