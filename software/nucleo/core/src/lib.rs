@@ -11,6 +11,7 @@ pub mod descubrimiento;
 pub mod j2;
 pub mod modelo;
 pub mod param;
+pub mod partes;
 pub mod protocolo;
 pub mod retencion;
 pub mod sysex;
