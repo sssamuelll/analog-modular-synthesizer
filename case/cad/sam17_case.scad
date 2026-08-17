@@ -93,6 +93,22 @@ function centros_rail() =
 // lo que tiene que librar el larguero de remate (ver y_rs).
 function radio_giro_riel() = norm([rail_er_fondo, rail_er_alto])/2;
 
+// Tangente de la curva de un vertice: cuanto acrilico se come el redondeo a lo
+// largo de cada arista. Es la misma cuenta que _arco hace por dentro, sacada
+// aparte porque la tapa del valle necesita saber donde ACABA la curva del pico
+// para no asomar por delante de ella.
+function tangente(V, a, b, r) = _r_util(V, a, b, r) / tan(_ang(a, b) / 2);
+
+// Extremos de la tapa del valle. DERIVADOS los dos:
+//   delante  donde muere el redondeo del pico. Un milimetro mas y la plancha
+//            asoma por delante de la curva del costado.
+//   detras   holgura_rail por delante del riel del valle de la cara de arriba,
+//            contra su ESQUINA girada (he_er_x), no contra su centro.
+function x_valle() =
+    let (P = pts_perfil(), cr = centros_rail())
+    [P[2].x + tangente(P[2], P[1]-P[2], P[3]-P[2], radio_pico),
+     cr[2].x - he_er_x(angulo_superior) - holgura_rail];
+
 // largueros del esqueleto (2020) que no son railes de panel:
 // base delantera, base trasera, entrepiso delantero, entrepiso trasero,
 // remate superior, repisa. Centros [x, y]:
@@ -172,7 +188,13 @@ function centros_esqueleto() =
      [x_ed,                y_ep],                     // entrepiso delantero
      [fondo() - r,   y_ep],                     // entrepiso trasero
      [fondo() - r,   y_rs],                     // remate superior
-     [fondo() - r,   P[3].y + 15]];             // repisa (R6)
+     [fondo() - r,   P[3].y + 15],              // repisa (R6)
+     // valle: el septimo, y el unico que existe por una plancha y no por una
+     // union. Va CENTRADO bajo la tapa del valle para que los dos vuelos sean
+     // iguales; a la vez ata los dos costados por la cintura, que es donde el
+     // perfil es mas estrecho. Su ventana es corta -- entre las esquinas
+     // giradas de los dos railes del valle -- y clearance_budget la vigila.
+     [(x_valle()[0] + x_valle()[1])/2, y_ep]];
 
 // --- redondeo del contorno, radio POR VERTICE --------------------------
 //
@@ -400,6 +422,35 @@ module piel_superior_2d() {
     }
 }
 
+// --- tapa del valle ----------------------------------------------------
+// Ranura de extremos redondos. Redondos y no cuadrados por lo de siempre en
+// acrilico: una esquina viva dentro de un hueco es donde arranca la fisura.
+module ranura(largo, ancho) {
+    hull() for (s = [-1, 1])
+        translate([0, s*(largo - ancho)/2]) circle(d = ancho + kerf);
+}
+
+// La plancha del valle. Ver la nota de params.scad: campo de ranuras registrado
+// a la malla HP, partido por la espina maciza donde va la fila de M3.
+module tapa_valle_2d() {
+    au = ancho_total - 2*t_cheek;
+    ce = centros_esqueleto();
+    xv = x_valle();
+    largo = xv[1] - xv[0];
+    y_esp = ce[6].x - xv[0];                 // linea del larguero, en local
+    campos = [[valle_margen,               y_esp - valle_espina/2],
+              [y_esp + valle_espina/2,     largo - valle_margen]];
+    n_hp  = round(largo_riel/hp);            // 104
+    difference() {
+        plancha(au, largo);
+        fila_agujeros(au, y_esp);
+        for (c = campos)
+            for (n = [valle_paso_hp : valle_paso_hp : n_hp - valle_paso_hp])
+                translate([n*hp, (c[0] + c[1])/2])
+                    ranura(c[1] - c[0], vent_ancho_ranura);
+    }
+}
+
 // --- la firma: ranuras con forma de onda -------------------------------
 // Cada onda es una polilinea engordada vent_ancho_ranura, N periodos de
 // vent_periodo. Puentes >= vent_puente_min los garantiza el periodo.
@@ -428,6 +479,7 @@ else if (PART == "assembly_acrilico")  assembly_acrilico();
 else if (PART == "assembly_aluminio")  assembly_aluminio();
 else if (PART == "bandeja_base_2d")      bandeja_base_2d();
 else if (PART == "bandeja_entrepiso_2d") bandeja_entrepiso_2d();
+else if (PART == "tapa_valle_2d")        tapa_valle_2d();
 else if (PART == "piel_inferior_2d")     piel_inferior_2d();
 else if (PART == "piel_superior_2d")     piel_superior_2d();
 else if (PART == "lienzo_2d")            lienzo_2d();
@@ -519,9 +571,20 @@ module piel_superior() {
             linear_extrude(t_acrilico) piel_superior_2d();
 }
 
+// A ras del plano del valle, igual que la bandeja de entrepiso: el grosor crece
+// hacia -Y desde el origen, asi que el origen va en P[3].y.
+module tapa_valle() {
+    P = pts_perfil();
+    xv = x_valle();
+    translate([xv[0], P[3].y, ancho_total - t_cheek])
+        rotate([0, 90, 0]) rotate([90, 0, 0])
+            linear_extrude(t_acrilico) tapa_valle_2d();
+}
+
 module planchas_acrilico() {
     bandeja_base();
     bandeja_entrepiso();
+    tapa_valle();
     piel_inferior();
     piel_superior();
     remate_sup();
@@ -639,6 +702,7 @@ module lienzo_2d() {
     x2 = x1 + au + sep;  translate([x2, y2]) bandeja_entrepiso_2d();
     x3 = x2 + au + sep;  translate([x3, y2]) piel_inferior_2d();
     x4 = x3 + aup + sep; translate([x4, y2]) piel_superior_2d();
+    x5 = x4 + aup + sep; translate([x5, y2]) tapa_valle_2d();
     %square([1000, 600]);
 }
 
@@ -658,7 +722,7 @@ module bom() {
     echo(str("BOM: pestana superior x1, ", au, " x ", marco_sup,
              " en acrilico t=", t_cheek, " (fijacion sin cerrar)"));
     echo(str("BOM: patica metalica torneada x4, d=", d_pie, " x ", alto_pie, " mm"));
-    echo(str("BOM: planchas t=", t_acrilico, ": entrepiso, piel inf, piel sup; ",
-             "suelo t=", t_base, " (la bandeja de base, ahora portante); ",
-             "costados t=", t_cheek, " x2"));
+    echo(str("BOM: planchas t=", t_acrilico, ": entrepiso, tapa del valle, ",
+             "piel inf, piel sup; suelo t=", t_base, " (la bandeja de base, ",
+             "ahora portante); costados t=", t_cheek, " x2"));
 }

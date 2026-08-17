@@ -165,6 +165,30 @@ def _esquinas_er(p: dict[str, float], c: tuple[float, float],
             for sa in (-1, 1) for sf in (-1, 1)]
 
 
+def _tangente(V: tuple[float, float], A: tuple[float, float],
+               B: tuple[float, float], r: float) -> float:
+    """Cuanto acrilico se come el redondeo de un vertice a lo largo de cada
+    arista. Mismo recorte que _r_util/_arco en sam17_case.scad: el radio pedido
+    se limita a lo que da de si la arista mas corta."""
+    ax, ay = A[0] - V[0], A[1] - V[1]
+    bx, by = B[0] - V[0], B[1] - V[1]
+    la, lb = math.hypot(ax, ay), math.hypot(bx, by)
+    ang = math.acos(max(-1.0, min(1.0, (ax * bx + ay * by) / (la * lb))))
+    g = ang / 2
+    re = min(r, min(la, lb) / 2 * math.tan(g) * 0.999)
+    return re / math.tan(g)
+
+
+def _x_valle(p: dict[str, float], P: list[tuple[float, float]],
+              cr: list[tuple[float, float]]) -> tuple[float, float]:
+    """Extremos de la tapa del valle, misma formula que x_valle() en
+    sam17_case.scad: delante donde muere el redondeo del pico, detras
+    holgura_rail por delante de la ESQUINA girada del riel del valle de arriba
+    (no de su centro -- ese atajo ya costo tres fallos en este case)."""
+    return (P[2][0] + _tangente(P[2], P[1], P[3], p["radio_pico"]),
+            cr[2][0] - _he_er(p, p["angulo_superior"])[0] - p["holgura_rail"])
+
+
 def _radio_giro_riel(p: dict[str, float]) -> float:
     """Radio del barrido del riel de arriba al girar sobre su propio M5.
 
@@ -215,10 +239,10 @@ def _y_remate(p: dict[str, float], P: list[tuple[float, float]],
 
 def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
                         cr: list[tuple[float, float]]) -> list[tuple[float, float]]:
-    """6 centros de larguero de esqueleto, misma formula que
-    centros_esqueleto() en sam17_case.scad. Eran 7: el septimo, "zocalo
-    superior", se retiro con la plancha del zocalo cuando Samuel fijo DOS
-    nodos en la esquina de abajo y no tres."""
+    """7 centros de larguero de esqueleto, misma formula que
+    centros_esqueleto() en sam17_case.scad. Fueron 7 (con un "zocalo superior"
+    que se retiro), luego 6, y desde el 2026-08-17 son 7 otra vez: entro el del
+    valle, que es el unico que existe por una plancha y no por una union."""
     r = p["rail"] / 2
     # Semiextension en X de un rail de PANEL tras su rotacion: el cuadrado
     # girado sobresale r*(|cos|+|sin|) de su centro, NO r. Los dos largueros
@@ -257,7 +281,11 @@ def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
             # al vertice asomaria por la cara superior. Centro a r + t_panel
             # de distancia perpendicular al plano del panel de arriba.
             (fondo(p) - r, _y_remate(p, P, cr, r)),
-            (fondo(p) - r, P[3][1] + 15)]
+            (fondo(p) - r, P[3][1] + 15),
+            # valle: el septimo, y el unico que existe por una plancha y no por
+            # una union. Centrado bajo la tapa del valle para que los dos vuelos
+            # sean iguales, y de paso ata los costados por la cintura.
+            (sum(_x_valle(p, P, cr)) / 2, y_ep)]
 
 
 # Que inset gobierna cada punta de cada cara. El orden es el mismo que usa
@@ -273,7 +301,7 @@ NOMBRES_CR = ["cara_inf frente", "cara_inf valle",
 ANGS_CR = ["angulo_inferior", "angulo_inferior",
            "angulo_superior", "angulo_superior"]
 NOMBRES_CE = ["base delantera", "base trasera", "entrepiso delantero",
-              "entrepiso trasero", "remate superior", "repisa"]
+              "entrepiso trasero", "remate superior", "repisa", "valle"]
 
 
 # Caja = (nombre, x0, x1, y0, y1, z0, z1)
@@ -346,6 +374,15 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
                "entrepiso delantero"),
               ("bandeja_entrepiso", "trasera", "x", x0_be + fondo_be - rail / 2,
                "entrepiso trasero")]
+    # tapa_valle: a ras del plano del valle, igual que la de entrepiso, y con
+    # una sola fila de M3 -- la del larguero del valle, que va centrado bajo
+    # ella. Lo que la coloca en Y es lo mismo que obligo a subir
+    # inset_inf_valle: su cara de abajo tiene que librar la esquina de arriba
+    # del riel del valle de la cara inferior.
+    x0_tv, x1_tv = _x_valle(p, P, cr)
+    planchas.append(("tapa_valle", x0_tv, x1_tv,
+                     P[3][1] - t_acr, P[3][1], t_cheek, ancho_total - t_cheek))
+    filas += [("tapa_valle", "unica", "x", ce[6][0], "valle")]
     # piel_inferior: R1 — volada hacia +X mas alla de prof_inferior
     alto_pi = ce[3][1] - ce[1][1] + 30
     y0_pi = ce[1][1] - 15

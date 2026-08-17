@@ -46,7 +46,7 @@ ancho_total     = 544.32;
 // comerciales varian de marca (Vector 121.46, Tiptop 122.43, Doepfer 122.50) y
 // el que cuenta es el que se compra. De ahi salen las caras:
 //
-//   alto_cara_inf = 123.0 + inset_inf_frente + inset_inf_valle  = 150.5
+//   alto_cara_inf = 123.0 + inset_inf_frente + inset_inf_valle  = 153.0
 //   alto_cara_sup = 123.0 + inset_sup_valle  + inset_sup_remate = 158.25
 //
 // El de arriba sale mas CORTO aunque lleve el mismo estandar dentro, y es por
@@ -54,18 +54,18 @@ ancho_total     = 544.32;
 // Lo que hay entre el canto del panel y el vertice es la PESTANA (marco_sup),
 // no un perfil, y por eso caben 11 mm donde antes hacian falta 23.
 //
-// Los 27.5 / 35.25 mm de acrilico que envuelven el estandar son el minimo REAL,
-// medido contra las cotas que los limitan. La fila de abajo bajo otros 6 mm el
-// 2026-08-17 al voltearse la base (ver t_base y alto_frontal): lo que la
-// limitaba no era el estandar sino el sandwich de 25 mm que tenia debajo.
+// Los 30.0 / 35.25 mm de acrilico que envuelven el estandar salen de cotas
+// fisicas, no de gusto. La fila de abajo bajo 6 mm el 2026-08-17 al voltearse la
+// base (ver t_base y alto_frontal) y luego subio 2.5 por la tapa del valle: lo
+// que la limita nunca fue el estandar sino lo que tiene encima y debajo.
 //
 // El riel es FINO a lo largo de la cara (10, la mitad del 2020) pero HONDO hacia
 // dentro (27.4, con su eje a 13.7 del panel contra los 10 del 2020), y esa
 // profundidad tira de la esquina de abajo del riel hacia abajo. Por eso el
 // vertice frontal no baja tanto como el riel adelgaza.
 //
-// Bisel que sobra alrededor de cada panel (inset - inset_er): 14.75 y 7.25 mm
-// en la fila de abajo, 16.75 y marco_sup = 8 en la de arriba. Ese ultimo NO es
+// Bisel que sobra alrededor de cada panel (inset - inset_er)
+// (14.75 y 9.75 abajo, 16.75 y marco_sup = 8 arriba). Ese ultimo NO es
 // bisel de costado: es la pestana, que cruza de lado a lado.
 //
 // YA NO HAY SUPUESTO AQUI. Se asumia que el riel EUROrack iria atornillado
@@ -73,7 +73,7 @@ ancho_total     = 544.32;
 // fija de punta con un M5 directo al acrilico (taladro de 4.5 en su eje). Los
 // 2020 se quedan solo en el esqueleto -- base, entrepiso, remate y repisa --,
 // que es donde de verdad hacen estructura.
-alto_cara_inf   = 150.5; // DERIVADO: 123.0 + inset_inf_frente + inset_inf_valle
+alto_cara_inf   = 153.0; // DERIVADO: 123.0 + inset_inf_frente + inset_inf_valle
 alto_cara_sup   = 158.25; // DERIVADO: 123.0 + inset_sup_valle + inset_sup_remate
 alto_panel_inf  = 128.5; // PCB 3U EUROrack
 alto_panel_sup  = 128.5; // PCB 3U EUROrack: la fila de arriba tambien
@@ -319,7 +319,7 @@ rail_er_eje     = 13.7;
 //   punta               curva            tangente  + riel/2 + mat = inset
 //   ------------------  ---------------  --------  -------------------------
 //   inferior / frente   punta redondeada    9.5      + 5 + 3.0   = 17.5
-//   inferior / valle    pico (r=5)          2.6      + 5 + 2.4   = 10
+//   inferior / valle    pico (r=5)          2.6      + 5 + 4.9   = 12.5*
 //   superior / valle    valle (r=30)       12.4      + 5 + 2.1   = 19.5
 //   superior / remate   -- el vertice --  marco_sup + gap_sombra + 2.75 = 15.75
 //
@@ -344,7 +344,18 @@ rail_er_eje     = 13.7;
 // Si se mueve un radio hay que rehacer la columna, y el que avisa es
 // railes_dentro_del_costado() en check_dxf, que lee el contorno del DXF.
 inset_inf_frente = 17.5;
-inset_inf_valle  = 10;
+// (*) El del valle NO lo pone su curva desde el 2026-08-17: por la curva
+// bastarian 10, y lo que manda ahora es LA TAPA DEL VALLE. Esa plancha va a ras
+// del plano del valle, o sea con su cara de abajo a t_acrilico por debajo, y
+// justo ahi asoma la esquina de arriba del riel del valle de la cara de ABAJO.
+// La cuenta es exacta y no deja opinar:
+//   hueco = cos(35)*inset_inf_valle + sen(35)*(t_panel + rail_er_eje)
+//           - t_acrilico - he_er_y(35)
+// Con 10 daba 0.013 mm -- las dos piezas rozandose, y por pura casualidad
+// aritmetica. Con 12.5 quedan 2.06 mm limpios. Cuesta 2.05 mm de alto y 1.43 de
+// fondo, y es lo que vale tener el valle tapado de canto a canto en vez de con
+// un slot de 25 mm por delante.
+inset_inf_valle  = 12.5;
 inset_sup_valle  = 19.5;
 inset_sup_remate = 15.75;
 // Cotas del PANEL (no de la cara). El horizontal es de estandar: primer taladro
@@ -363,6 +374,10 @@ inset_sup_remate = 15.75;
 // en vertical; con insertos roscados (41 GBP) queda fijo en los dos ejes.
 inset_er        = 2.75;
 inset_er_x      = 7.5;
+// 1 HP. Es la unidad del rack y por tanto la del case entero: largo_riel son
+// 104 HP y el campo de ranuras de la tapa del valle va registrado a esta malla,
+// no a la plancha. Aqui como numero para que no ande suelto en tres sitios.
+hp              = 5.08;
 // Del plano de la mejilla FLAT-S: dos M5 a 5.00 mm de cada punta de una pieza de
 // 133.00, o sea 123.00 entre centros. Confirmado por escrito por John el
 // 2026-08-17 ("123mm ctr to ctr, 13.8mm in from front edge").
@@ -438,6 +453,25 @@ marco_sup   = 8;
 vent_ancho_ranura = 4;   // ancho de la ranura-onda
 vent_puente_min   = 4;   // puente minimo entre ranuras (fragilidad)
 vent_periodo      = 40;  // periodo horizontal de cada onda
+
+// --- tapa del valle ---
+// La plancha que cierra el escalon entre las dos filas. Es la unica cara
+// HORIZONTAL que se ve de pie delante del aparato, asi que es la que pone el
+// tono. Samuel la pidio "modernista pero seria, como si fuera de Darmstadt", o
+// sea: nada figurativo. Las ondas de las pieles DIBUJAN una senal; esto no
+// dibuja nada -- es un campo de ranuras y punto.
+//
+// Y no es un campo cualquiera: va REGISTRADO AL RACK. Una ranura en cada linea
+// HP par, o sea que cada una cae en un canto de modulo. El paso no es una
+// eleccion de dibujo, es la medida del instrumento; el adorno ES la regla.
+//
+// La ESPINA es la banda maciza del centro, donde va la fila de M3 contra el
+// larguero del valle. Por eso el campo sale partido en dos: la forma la pone la
+// estructura. Los margenes de delante y detras son iguales porque el larguero va
+// centrado bajo la plancha, no porque quedara bonito.
+valle_paso_hp   = 2;   // una ranura cada 2 HP -> 51 por campo, puente 6.16
+valle_espina    = 20;  // banda maciza central (cabeza de M3 + arandela)
+valle_margen    = 8;   // orilla maciza delante y detras
 
 // --- lo que el budget vigila (spec §11: catalogos, no medidos) ---
 alto_transformador  = 45;  // CATALOGO, no confirmado; medir pieza real
