@@ -1,7 +1,7 @@
 # El núcleo digital del SAM17 — modelo de parámetros y firmware de validación
 
 **Fecha:** 2026-08-17
-**Estado:** aprobado en brainstorming, pendiente de plan
+**Estado:** en ejecución — el contrato en `software/nucleo/` (verde), el bring-up sobre placa en su plan
 **Sustituye a:** el módulo 2 tal como está construido (Raspberry Pi 3B+ con DAC
 a bordo, LCD 16×2 y cuatro pulsadores). Esa placa quedó obsoleta por tres
 decisiones posteriores; ver §1.

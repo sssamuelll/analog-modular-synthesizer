@@ -1,0 +1,9 @@
+[package]
+name = "sam17-nucleo-core"
+version = "0.1.0"
+edition = "2021"
+description = "El contrato del SAM17: modelo de parametros, protocolo y los motores que no necesitan hierro"
+
+[dependencies]
+heapless = "0.8"
+libm = "0.2"
