@@ -116,18 +116,42 @@ ISLA_Y1 = 96.0
 HUECO = 3.0                # ancho del hueco de cobre entre GNDA y GNDD, mm
 G = HUECO / 2
 
-ANCHO = 0.2                 # pista. QFN de 0.4 mm de paso: con 0.25 (lo del
-                            # modulo 2) no cabe ni una entre pads.
-                            # UNA sola anchura, a proposito: lo mas "gordo"
-                            # de esta placa son +-12V, que solo alimentan un
-                            # TL074 y los pines V- de 4 SSI2130 -- decenas de
-                            # mA. 0.2 mm en 1 oz aguanta ~0.7 A. Una netclass
-                            # aparte para potencia seria complicar el DSN sin
-                            # ganar nada medible.
-VIA_D = 0.6                 # diametro exterior de via (drill 0.3)
-CLEARANCE = 0.15            # entre cobre de redes distintas. JLCPCB estandar
-                            # aguanta 0.127; 0.15 deja margen y sigue cabiendo
-                            # entre pads de 0.4 mm de paso.
+ANCHO = 0.12                # pista de senal. UNA sola anchura a proposito:
+                            # lo mas "gordo" de esta placa son +-12V, que solo
+                            # alimentan un TL074 y los pines V- de 4 SSI2130,
+                            # decenas de mA. 0.12 mm en 1 oz aguanta ~0.4 A.
+VIA_D = 0.45                # diametro exterior de via
+VIA_DRILL = 0.20            # taladro
+CLEARANCE = 0.10            # entre cobre de redes distintas
+HOLE_CLEARANCE = 0.20       # de un taladro al cobre ajeno
+
+# REGLAS AFINADAS A LA CAPACIDAD REAL DEL FABRICANTE. Verificado en
+# jlcpcb.com/capabilities/pcb-capabilities el 2026-08-17, proceso ESTANDAR
+# de 4 capas en 1 oz, sin HDI y sin via-in-pad:
+#
+#   pista / aislamiento minimos   0.09 / 0.09 mm  (3.5/3.5 mil, multicapa)
+#   taladro de via minimo         0.15 mm
+#   de taladro de via a pista     0.20 mm
+#   de taladro a taladro          0.20 mm
+#   via de 0.20 de taladro        SIN recargo si el diametro es >= 0.45 mm
+#                                 (textual: "0.2mm or 0.25mm hole size with
+#                                 via diameter less than 0.45mm, will cost
+#                                 more" -- por eso 0.45 y no 0.4)
+#
+# De ahi salen los valores de arriba: 0.45/0.20 es justo el punto sin
+# recargo, y 0.12/0.10 se quedan un 30% por encima del minimo publicado.
+#
+# POR QUE IMPORTA, y es la correccion de fondo de esta ronda: los valores
+# viejos (via 0.6, margen 0.15, pista 0.2) venian del modulo 2 -- dos capas,
+# componentes de paso ancho -- y aqui bloqueaban el escape de los QFN. Para
+# que el rabito de un pin pase al lado de la via de su vecino hace falta
+# VIA_D/2 + CLEARANCE + ANCHO/2, contra los 0.40 mm de paso del QFN:
+#
+#   0.6  / 0.15 / 0.2    ->  0.550 mm   NO CABE  (lo que atasco las rondas 5 y 6)
+#   0.45 / 0.10 / 0.12   ->  0.385 mm   CABE     (0.395 con el margen del DSN)
+#
+# La pared era de unos defaults heredados, no del fabricante.
+# _check_escape() lo comprueba antes de generar cobre.
 
 MOUNT = [(6.0, 6.0), (W - 6.0, 6.0), (6.0, H - 6.0), (W - 6.0, H - 6.0)]
 MOUNT_D = 3.2
@@ -510,6 +534,23 @@ def colocar() -> None:
     reglas = board.GetDesignSettings()
     reglas.m_TrackMinWidth = mm(ANCHO)
     reglas.m_MinClearance = mm(CLEARANCE)
+    # Los minimos de via tambien bajan, y con los numeros del fabricante, no
+    # con los que le convengan al ruteo: el DRC tiene que seguir siendo un
+    # examen de verdad. El anillo de una via 0.45/0.20 mide (0.45-0.20)/2 =
+    # 0.125 mm, asi que el minimo de anillo se pone justo ahi -- si alguien
+    # encoge la via sin encoger el taladro, salta.
+    # El margen de TALADRO tambien venia del default de KiCad (0.25 mm) y no
+    # de nadie mas. El fabricante publica 0.20 de taladro de via a pista y
+    # 0.20 de taladro a taladro. Con via 0.45/0.20 el anillo mide 0.125, asi
+    # que un vecino a CLEARANCE del cobre queda a 0.125+0.11 = 0.235 del
+    # taladro: por encima de los 0.20 que pide el fabricante y por debajo de
+    # los 0.25 que pedia el default. Eran 108 infracciones de una regla que
+    # nos habiamos inventado nosotros.
+    reglas.m_HoleClearance = mm(HOLE_CLEARANCE)
+    reglas.m_HoleToHoleMin = mm(HOLE_CLEARANCE)
+    reglas.m_ViasMinSize = mm(VIA_D)
+    reglas.m_MinThroughDrill = mm(VIA_DRILL)
+    reglas.m_ViasMinAnnularWidth = mm((VIA_D - VIA_DRILL) / 2)
     # m_MinClearance NO basta: el DRC de verdad (kicad-cli, no este script)
     # aplica el margen de la NETCLASS "Default", que nace en 0.2 mm y se
     # queda ahi si no se toca aparte. Ademas es lo que lee el exportador de
@@ -520,7 +561,7 @@ def colocar() -> None:
     clase.SetClearance(mm(CLEARANCE))
     clase.SetTrackWidth(mm(ANCHO))
     clase.SetViaDiameter(mm(VIA_D))
-    clase.SetViaDrill(mm(0.3))
+    clase.SetViaDrill(mm(VIA_DRILL))
 
     pcbnew.SaveBoard(PCB, board)
     return board
@@ -596,6 +637,21 @@ COSTURAS_RESERVADAS = ({(f"U{i}", "20") for i in (1, 2, 3, 4)}
 # Las redes que llevan escape explicito. Se protegen en el DSN para que
 # Freerouting no deshaga justo el tramo que le estamos regalando.
 REDES_ESCAPE: set[str] = set()
+
+
+def _check_escape() -> None:
+    """El rabito de un pin tiene que poder pasar al lado de la via del vecino.
+
+    Es la condicion que decide si un QFN de 0.4 mm de paso se deja escapar, y
+    la que bloqueo las rondas 5 y 6 con las reglas viejas. Si alguien vuelve
+    a subir VIA_D, CLEARANCE o ANCHO, esto salta antes de generar cobre en
+    vez de dejar once conexiones al aire y parecer mala suerte del router.
+    """
+    paso = 0.4                      # paso del QFN-32 4x4 del SSI2130
+    hace_falta = VIA_D / 2 + CLEARANCE + ANCHO / 2
+    assert hace_falta < paso, (
+        f"con via {VIA_D}, margen {CLEARANCE} y pista {ANCHO} el escape pide "
+        f"{hace_falta:.3f} mm y el paso del QFN es {paso}: no cabe")
 
 
 def _pads_sin_plano(board, net: str) -> list:
@@ -957,7 +1013,7 @@ def coser_masas(reservadas=False) -> int:
                 continue
             v = pcbnew.PCB_VIA(board)
             v.SetPosition(pcbnew.VECTOR2I(mm(sitio[0]), mm(sitio[1])))
-            v.SetDrill(mm(0.3))
+            v.SetDrill(mm(VIA_DRILL))
             v.SetWidth(mm(VIA_D))
             v.SetNet(board.FindNet(net))
             board.Add(v)
@@ -1421,6 +1477,7 @@ def revisar_frontera(board, zonas) -> list[str]:
 
 
 def main() -> None:
+    _check_escape()
     board = colocar()
     medir_dac_vco(board)
     coser_masas(reservadas=True)   # antes de rutear: ver COSTURAS_RESERVADAS
