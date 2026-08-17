@@ -3,22 +3,27 @@
 Generados con `kicad-cli` desde `../kicad/sam17-power-v2.kicad_pcb`. Para
 regenerarlos, ver el final de este fichero.
 
-## Estado: NO listo para pedir
+## Estado: listo para pedir, con dos comprobaciones dentro del propio pedido
 
 El diseño está completo (silicio verificado GO en §2.3 del design-notes.md, ruteado con
-DRC=0), pero hay **tres puertas abiertas** antes de solicitar la fabricación:
+DRC=0). Las dos puertas que quedan **se resuelven en el flujo del pedido**, no antes:
 
-1. **Medidas en la mula prototipo**: confirmar los setpoints RV2/RV3 con el valle 
-   real de la fuente de red y los límites de temperatura. Task 10 abre una issue 
-   por esto.
-2. **Stock LCSC el día de mandar**: re-verificar disponibilidad de piezas Extended 
+1. **Stock LCSC el día de mandar**: re-verificar disponibilidad de piezas Extended 
    (LT3045EDD, LT3094EDD) y del fallback 120 kΩ ±100 ppm (C114524). Los códigos 
    están anotados en `bom.csv` con fecha de consulta 2026-08-16 — no son garantía 
    de stock en el momento de compra.
-3. **Rotaciones de los DFN**: revisar las miniaturas de ensamblaje de JLCPCB para 
+2. **Rotaciones de los DFN**: revisar las miniaturas de ensamblaje de JLCPCB para 
    los chips U4–U7 (DFN-10 y DFN-12). Gotcha conocido: el cero de rotación de JLC 
    no siempre coincide con el de KiCad, y los DFN apaisados lo hacen evidente al 
    montaje.
+
+**La tercera puerta se cerró por decisión, no por medida** (2026-08-17): la v1 no
+se construye, así que no hay mula que confirme los setpoints antes de fabricar.
+Se ajustan sobre la propia v2 con RV2/RV3 durante el bring-up. Lo que esa decisión
+mete en la mesa de pruebas, y que **hay que leer antes de encender la placa**: el
+valle de VRAW medido con carga tiene que quedar en **13.46 V o más**
+([`design-notes.md` §4.1](../notes/design-notes.md)); por debajo de eso ningún
+giro de trimmer recupera los 12.000 V. Colchón contra el valle simulado: 0.66 V.
 
 ## ⚠ Al pedir
 

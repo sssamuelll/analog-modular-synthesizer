@@ -424,16 +424,20 @@ dropout **garantizado** en vez del típico, el margen del riel positivo cae a
 
 - Tolerancia de R1/R2 del divisor del LM2941 (desplaza el setpoint de 13.1 V).
 - Caída extra en conectores/pistas entre el bulk y el LM2941.
-- Que la mula real mida un valle por debajo de los 14.12 V simulados (la
-  propia spec, §11.4, ya avisa que esa cifra es "fina hasta que la mula mida").
+- Que el valle real esté por debajo de los 14.12 V simulados (la propia spec,
+  §11.4, ya avisa que esa cifra es "fina hasta que la mula mida"). **Sin mula
+  (§4), esa medida se hace ya con la v2 en la mesa** — el umbral por debajo del
+  cual el trimmer deja de salvarla está calculado en §4.1: **13.46 V**.
 - Que el dropout real a 650 mA/caliente esté más cerca del MAX de 1 A que del
   TYP de 0.5 V (el DS no da un punto intermedio garantizado — ver §1.1).
 
 No hace falta bajar el setpoint todavía porque el margen no dio negativo, pero
 con 0.02 V de colchón la recomendación para Task 4/5 es dejar el trimmer del
 divisor del LM2941 con margen para bajar el setpoint (el brief documenta el
-trimmer llegando hasta ~12.3 V) **si la medida en la mula real no confirma al
-menos unas décimas de margen**.
+trimmer llegando hasta ~12.3 V) **si la medida real no confirma al menos unas
+décimas de margen**. Ese trimmer dejó de ser una precaución al cancelarse la
+mula: es el mecanismo que absorbe el valle real, y el bring-up (§5 paso 5)
+espera usarlo, no encontrarlo intacto.
 
 #### §1.5.1 Headroom del LT3045/LT3094 contra el suelo bajable del pre-reg (cierra §1.3/§1.4)
 
@@ -882,13 +886,32 @@ de U6 y las dos vías extra de U5 dejarían de ser una curiosidad de layout
 y pasarían a ser sospechosas de un desbalance real que el ballast de 20 mΩ
 no está absorbiendo del todo.
 
-## §4 Protocolo de medidas de la mula
+## §4 Campaña de medidas — sobre la v2 misma
+
+> **Decisión (2026-08-17): la v1 no se construye.** El plan original usaba la v1
+> de mula de medidas y congelaba la v2 contra sus números (spec §11.4). Se va
+> directo a la v2. La v1 queda como diseño documentado y cerrado, no como
+> hardware. Consecuencias, sin maquillar:
+>
+> - **Lo que se gana:** el front-end (Talema 120 VA, BR1, 4×4700 µF) se compra
+>   una vez, no dos, y desaparece la puerta que bloqueaba el pedido. El valle
+>   simulado ya no hace falta confirmarlo *antes* de fabricar porque los
+>   setpoints son ajustables en sitio con RV2/RV3 — el trimmer **es** el
+>   sustituto de la mula, no un adorno.
+> - **Lo que se pierde:** si el valle real está muy por debajo del simulado, te
+>   enteras con la placa ya fabricada y montada, no antes. El umbral exacto a
+>   partir del cual el trimmer ya no salva la placa está en §4.1 — **léelo antes
+>   del paso 5 del bring-up.**
+> - **Lo que desaparece:** la fila 3 de la tabla (comparativa de rizado v1 vs
+>   v2) no se puede medir sin una v1 física.
+> - **Lo que sube de riesgo:** la v2 pasa a ser la única fuente del sistema. No
+>   hay fuente de respaldo para los módulos 2-7 mientras se depura.
 
 **Orden a seguir tras bring-up exitoso §5:** tierra y continuidad verificadas,
 placa sin carga a setpoint nominal (TP7 = +13.1 ± 0.3 V, TP8 = −12.9 ± 0.3 V).
 Cada medida cierra un número de **diseño congelado** — los resultados informan
-qué setpoints de RV2/RV3 se escriben en la pareja de LM2941/LM2991 que queda
-en producción. Medir con red a la tensión real del día.
+qué setpoints de RV2/RV3 se dejan puestos en la pareja de LM2941/LM2991.
+Medir con red a la tensión real del día.
 
 ### Tabla de medidas
 
@@ -896,7 +919,7 @@ en producción. Medir con red a la tensión real del día.
 |---|---|---|---|
 | 1 | Valle `VRAW+` y `VRAW−` (piso del rizado, no promedio) | Con carga dummy 18 Ω / 25 W por riel (12 V / 0.65 A) en **frío** y tras **30 min en caliente**. Medir con osciloscopio DC acoplado, 20 MHz BW limitado, punta en J2. Anotar la tensión de red en el momento. | (vacío) |
 | 2 | Pico nominal en vacío (sin dummy) | Con red a la tensión medida en paso 1. Valor esperado: ~14 V; documentar para cierre de margen §1.5. | (vacío) |
-| 3 | Rizado pico-pico real del riel −12 V de la v1 | Regresión conocida del LM2990 (§3.1). Medir con osciloscopio 20 MHz BW, carga dummy activada, régimen caliente. Documentar para hoja de datos de comparativa v1/v2. | (vacío) |
+| 3 | ~~Rizado pico-pico real del riel −12 V de la v1~~ | **ANULADA** — la v1 no se construye (ver cabecera de §4). La comparativa v1/v2 se queda sin lado v1; el rizado de la v2 se mide igual en el paso 6 del bring-up §5. | n/a |
 | 4 | Térmica en régimen: T_case y disipador | IR cámara termográfica u 8 termopares (U1/U2, U4-U7, disipadores FK sk129/38.1). Régimen: dummy 18 Ω × 30 min, después medir T cada 5 min hasta T_case estable (frontera). Anotar T_ambiente. Expectativa: < 70 °C en el TO-220 (§10.4.1 del datasheet del LM2941); cerámicos DFN < 90 °C. | (vacío) |
 
 ### Fórmula de cierre de márgenes
@@ -919,6 +942,56 @@ RV3 (negativo) hasta recuperar margen ≥ 0.2 V. **Rango útil del trimmer** (su
 bajable garantizado por headroom del LT3045/LT3094, §1.5.1): **12.46 V** (positivo) /
 **−12.42 V** (negativo). No bajar más allá — el margen del LT vs el dropout de la
 cascada se agota.
+
+### §4.1 Umbral de aborto: el valle mínimo que la placa aguanta
+
+Sin mula, la primera medida del valle se hace ya con la v2 fabricada. Esta es la
+cuenta que dice si el trimmer puede salvarla o no. Encadenando los dos dropouts
+garantizados (no típicos) de §1.5 y §1.5.1:
+
+```
+valle_mínimo = 12.000 V (V_OUT) + dropout_max(LT) + ballast (0.007 V) + dropout_max(pre-reg, 1.0 V)
+
+Positivo (LT3045, bin 500 mA, MAX 450 mV):
+  12.000 + 0.450 + 0.007 + 1.000 = 13.457 V   ← el que manda
+Negativo (LT3094, bin 500 mA, MAX 410 mV):
+  12.000 + 0.410 + 0.007 + 1.000 = 13.417 V
+```
+
+**El umbral es 13.46 V** (lo fija el riel positivo; ambos rieles comparten
+front-end, así que el valle es prácticamente el mismo en magnitud).
+
+| | Valor |
+|---|---|
+| Valle simulado (§16.5 de la v1, red a 207 V, plena carga) | **14.12 V** |
+| Valle mínimo viable | **13.46 V** |
+| **Colchón contra la simulación** | **0.66 V (4.7 %)** |
+
+Léelo así: **el valle real puede salir hasta 0.66 V por debajo del simulado y la
+placa sigue siendo recuperable girando RV2/RV3.** Ese colchón es lo que compra
+saltarse la mula. Por debajo de 13.46 V medidos no existe setpoint que funcione —
+ningún giro de trimmer arregla eso.
+
+**Lo que se espera realmente que pase en el paso 5 del bring-up:** el setpoint
+nominal del riel positivo (13.1 V) tiene solo **+0.02 V** de margen contra el
+valle simulado (§1.5). Eso no es margen, es empate. Con el valle en 14.12 V el
+techo del pre-reg queda en 13.12 V, así que para cumplir la regla de margen
+≥ 0.2 V hay que **bajar RV2 hasta ~12.9 V**. No es un fallo: es el primer
+ajuste previsto, y cae cómodamente dentro del rango (suelo 12.46 V). El riel
+negativo ya nace con +0.22 V y probablemente no haya que tocarlo.
+
+**Si el valle medido cae por debajo de 13.46 V**, en orden de coste:
+
+1. **Subir el bulk.** El valle lo fijan trafo + BR1 + C1/C2/C12/C13, todos THT.
+   Colgar más electrolítico en paralelo sube el valle sin rediseñar la placa —
+   es el arreglo barato y no toca el cobre.
+2. **Aceptar salida por debajo de 12.000 V.** Si los módulos 2-7 toleran
+   ±11.9 V, el umbral entero se relaja ~100 mV. Decisión de sistema, no de
+   la fuente.
+3. **Revisar la premisa de red.** El valle de 14.12 V está simulado a 207 V
+   (red −10 %). Si la red real está en nominal, el valle medido debería salir
+   por encima del simulado, no por debajo — un valle bajo con red nominal
+   apunta a trafo o bulk, no a margen de diseño.
 
 ## §5 Bring-up escalonado
 
@@ -945,6 +1018,14 @@ Orden recomendado al recibir la PCB montada (antes de conectar módulos o carga 
 5. **Conectar dummy 18 Ω / 25 W por riel** a J2 (medir con multímetro para verificar
    ~12 V/0.6 A en ambos rieles). Anotar que esta es la medida con carga nominal de
    diseño (§4, paso 1).
+
+   **Aquí está la puerta que antes cerraba la mula.** Con la dummy puesta, medir el
+   valle de `VRAW+`/`VRAW−` con osciloscopio (DC, 20 MHz BW) **antes de dar por buena
+   la placa**, y compararlo contra el umbral de **13.46 V** de §4.1:
+   - Valle ≥ 13.46 V → bajar RV2 hasta dejar margen ≥ 0.2 V (se espera aterrizar
+     en ~12.9 V en el positivo; el negativo suele no necesitar toque). Seguir.
+   - Valle < 13.46 V → **parar**. Ningún setpoint funciona; ir a la lista de
+     remedios de §4.1 (subir bulk / relajar V_OUT / revisar red y trafo).
 
 6. **Medir rizado pico-pico** en cada riel con osciloscopio (DC coupling, 20 MHz BW
    limitado, punta en J2 — misma condición que §4 filas 1 y 3). Criterio mínimo
