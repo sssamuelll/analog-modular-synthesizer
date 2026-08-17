@@ -528,8 +528,11 @@ Spec: [`docs/superpowers/specs/2026-08-16-modulo-3-vco-design.md`](superpowers/s
 Bring-up: [`hardware/03-vco/notes/bring-up.md`](../hardware/03-vco/notes/bring-up.md).
 Números: [`dac_local_budget.py`](../hardware/03-vco/dac_local_budget.py).
 
-**Módulo 5 — VCF.** Cuatro filtros idénticos, corte y resonancia comunes, **por
-CV desde el DAC — que vive en esta placa (§8) —, no por potenciómetro** (§7).
+**Módulo 5 — VCF.** Cuatro filtros idénticos con **un juego de perillas común**,
+**por CV desde el DAC — que vive en esta placa (§8) —, no por potenciómetro**
+(§7). Pero el **CV de corte va por voz, no compartido**: sin eso MPE es
+imposible, porque mover el timbre de una nota movería las cuatro (spec del
+núcleo digital §3.6, issue #79).
 Y ojo con la resonancia: en
 topología MS-20 el pote está EN el audio, así que ahí va un VCA, no un digipot. El
 apareamiento entre los cuatro importa: si no filtran igual, el acorde suena
