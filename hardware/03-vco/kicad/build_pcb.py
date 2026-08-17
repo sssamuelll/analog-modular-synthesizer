@@ -1759,12 +1759,14 @@ def main() -> None:
         fallos.append(f"quedan {sueltos} tramos sin rutear")
 
     _severidades_drc()      # justo antes del DRC: ver SEVERIDADES
-    # El informe se saca con TODAS las severidades, no solo errores: la
-    # serigrafia por debajo del minimo del fabricante es un AVISO de KiCad
-    # (text_height) y aun asi es un defecto de fabricacion -- 112 de esos
-    # avisos fue lo que dejo la ronda anterior por encoger los rotulos.
+    # El informe se saca con TODAS las severidades, no solo errores (falta
+    # --severity-all y el informe solo trae errores): la serigrafia por
+    # debajo del minimo del fabricante es un AVISO de KiCad (text_height) y
+    # aun asi es un defecto de fabricacion -- 112 de esos avisos fue lo que
+    # dejo la ronda anterior por encoger los rotulos.
     subprocess.run([KICAD_CLI, "pcb", "drc", "--format", "report",
-                    "-o", RPT, PCB], capture_output=True, text=True)
+                    "--severity-all", "-o", RPT, PCB],
+                   capture_output=True, text=True)
     with open(RPT, encoding="utf-8") as fh:
         informe = fh.read()
     avisos: dict[str, int] = {}
@@ -1774,10 +1776,17 @@ def main() -> None:
             avisos[k] = avisos.get(k, 0) + 1
     print("DRC por tipo (todas las severidades): "
           + (", ".join(f"{k} {n}" for k, n in sorted(avisos.items())) or "nada"))
-    if avisos.get("text_height") or avisos.get("text_thickness"):
-        fallos.append(f"serigrafia por debajo del minimo del fabricante: "
-                      f"{avisos.get('text_height', 0)} avisos de altura y "
-                      f"{avisos.get('text_thickness', 0)} de trazo")
+    # El vertido termico de U13 (SIN RED a proposito, ver ~582-599) es la
+    # UNICA infraccion deliberada de la placa: con --severity-all el DRC la
+    # marca "isolated_copper". Se descuenta nombrandola, exactamente una vez
+    # -- cualquier otro aviso (una segunda isla sin red incluida, o la
+    # propia serigrafia que motivo este gate) lo tumba.
+    EXCLUSIONES_DRC = {"isolated_copper": 1}
+    for tipo, n in sorted(avisos.items()):
+        de_mas = n - EXCLUSIONES_DRC.get(tipo, 0)
+        if de_mas > 0:
+            fallos.append(f"{de_mas} avisos de {tipo} sin explicar "
+                          f"(DRC --severity-all)")
 
     for f in fallos:
         print("FALLO:", f)

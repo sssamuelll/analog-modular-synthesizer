@@ -116,8 +116,8 @@ ruteador casero.
 │   ├── check_netlist.py        Conectividad contra el diseño declarado
 │   ├── check_bom.py            Cruce esquemático <-> bom.csv
 │   ├── sam17.kicad_sym         Símbolos propios: SSI2130 y AD5686RBRUZ
-│   ├── sam17-vco-erc.rpt       0 errores, 0 avisos
-│   └── sam17-vco-drc.rpt       0 infracciones
+│   ├── sam17-vco-erc.rpt       0 errores, 0 avisos (regenerado por build_schematic.py — *.rpt gitignorado, no vive en el repo)
+│   └── sam17-vco-drc.rpt       0 infracciones (regenerado por build_pcb.py — *.rpt gitignorado, no vive en el repo)
 ├── pcb/                        Gerbers, taladros, posiciones, BOM de ensamblaje
 │   └── README.md               Qué pedir, qué va consignado, qué se suelda a mano
 ├── schematics/                 (vacío — el PDF se exporta al pedir)

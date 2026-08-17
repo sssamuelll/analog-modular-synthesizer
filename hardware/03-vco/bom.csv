@@ -9,7 +9,7 @@ U12,LD1117S33,SOT-223,1,nacional,+3.3V local desde +5V
 U13,TMP1075,VSSOP-8,1,importado,Sensor temp I2C pegado al racimo U1-U4. Direccion por straps. Variante TMP1075DGK (VSSOP-8): SOT-23-6 no existe en Sensor_Temperature.kicad_sym, se descarta esa opcion
 U14,24AA02E48,SOT-23-5,1,importado,EEPROM I2C con MAC/ID unico. Identidad + blob de calibracion. Simbolo KiCad 24AA02E-OT (pinout identico, sin sufijo E48 en la libreria de sistema)
 C_TCAP1-4,3.9nF C0G,C_0805,4,nacional,Tempo del SSI2130 (valor del datasheet). SOLO C0G/NP0
-R_PITCH1-4,16.5k 1%,R_0805,4,nacional,DAC 0-2.5V -> 20uA/oct: span ~7.5 oct (margen trimless)
+R_PITCH1-4,16.5k 1%,R_0805,4,nacional,DAC 0-2.5V -> 20uA/oct: span 7.58 oct (margen trimless)
 R_CVIN1-4,49.9k 1%,R_0805,4,nacional,Jack CV-IN 1V/oct al nodo expo
 R_SCALE1-4,26.7k 1%,R_0805,4,nacional,VREF->EXPO SCALE ~94uA. FIJA - sin trim (spec par.2.7)
 R_MIX*,49.9k 1%,R_0805,16,nacional,4 CV de mezcla x 4 voces (0-2.5V -> 0-50uA)

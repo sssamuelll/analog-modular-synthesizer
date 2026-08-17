@@ -1,7 +1,8 @@
 # Ficheros de fabricación — Módulo 3 (VCO ×4)
 
 Generados con `kicad-cli` desde `../kicad/sam17-vco.kicad_pcb` (commit del board
-con DRC en 0, ver [Tarea 6](../../../.superpowers/sdd/2026-08-16-modulo-3-vco/task-6-report.md)).
+con DRC en 0; la misma historia está contada en el docstring de
+`../kicad/build_pcb.py`).
 Para regenerarlos, ver el final de este fichero.
 
 ## Qué hay

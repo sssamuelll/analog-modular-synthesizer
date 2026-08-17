@@ -94,9 +94,11 @@ suelo de 0.58 cents de `dac_local_budget.py`.
   (2.49-2.51 V, 100 µA por chip) y su estabilidad manda en la afinación. La
   misma referencia clase ≤5 ppm/°C sirve al DAC y a los 4 osciladores: al
   compartirla, **sus errores escalan juntos y se cancelan** en el lazo
-  DAC→expo. Cómo se materializa (ADR4525 dedicada + AD5686 pelado, o la
-  interna del AD5686RB con buffer si su pin admite 400 µA) se fija en
-  implementación con el datasheet — el contrato es UNA referencia, §11.3.
+  DAC→expo. **Resuelto**: ADR4525BRZ dedicada (U8), compartida por los tres
+  DAC y los cuatro SSI2130, con la referencia interna de cada DAC apagada
+  por firmware (registro `0111`) — la lista cerrada de la red `VREF_2V5`
+  queda aserida en `check_netlist.py` y el Paso 4 del bring-up la verifica
+  en placa, §11.3.
 
 ## 5. La mezcla, por voz — dentro del chip
 
@@ -202,13 +204,18 @@ El patrón completo del repo, sin excepciones:
 2. **La apuesta trimless**: si un chip cae fuera del margen del 7.6 % de span,
    el bodge es una resistencia (no un re-spin), pero hay que comprobarlo en
    bring-up con los 4 chips reales.
-3. **La materialización de la VREF única** (ADR4525 + AD5686 pelado vs
-   interna del RB con buffer): se decide leyendo cuánta carga admite el pin
-   VREF del AD5686R. Contrato: una sola referencia ≤5 ppm/°C para todo.
+3. **Resuelto — la materialización de la VREF única**: ADR4525BRZ dedicada
+   (U8), compartida por los tres DAC y los cuatro SSI2130, con la
+   referencia interna de cada DAC apagada por firmware (registro `0111`,
+   bom.csv). La lista cerrada de la red `VREF_2V5` está aserida en
+   `check_netlist.py` (§10) y el Paso 4 del bring-up la verifica en placa.
 4. **Primera placa QFN/SMD del proyecto**: estrena flujo de ensamblaje de
    fábrica. Riesgo de proceso, no de diseño — pero es la primera vez.
-5. **Rango exacto de la entrada PWM** del SSI2130 con el DAC directo: a fijar
-   con el datasheet en la fase de esquemático.
+5. **Resuelto en el papel — rango de la entrada PWM**: el comparador PWM
+   del SSI2130 acepta 0-VREF y el DAC entra directo (pin 32, sin
+   atenuador), implementado en `build_schematic.py` contra el texto del
+   datasheet (pág. 6). La verificación física — dónde cae el 50 % de ciclo
+   de trabajo — es del bring-up.
 6. **El carácter sonoro triangle-core** se aceptó por datasheet, no por
    oído. Si al oírlo no convence, el historial git guarda la alternativa.
 7. **El DCEN con tres chips reales** sigue sin probar; bloqueante en bring-up.
