@@ -6,6 +6,20 @@ on:
   pull_request:
 
 jobs:
+  hardware:
+    name: Puertas de calidad del hardware
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Sin dependencias a proposito: los gates son stdlib. Los dos scripts que
+      # necesitan KiCad (pcbnew, ngspice.dll) salen declarados como HUECO en el
+      # resumen -- instalar KiCad entero aqui costaria mas que lo que cubre.
+      - name: Gates
+        run: python hardware/tools/gates.py
+
   firmware:
     name: MIDI/CV firmware (lint + tests)
     runs-on: ubuntu-latest

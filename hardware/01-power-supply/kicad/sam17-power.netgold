@@ -1,0 +1,20 @@
+# firma de conectividad de sam17-power.net
+# generado por hardware/tools/netdiff.py -- NO editar a mano
+# 17 redes, 93 nodos
++12V: C5-1 C7-1 D1-2 D7-1 J2-4 Q1-1 R1-1 TP3-1 U1-3
++5V: C10-1 C11-1 D5-2 J6-1 R3-1 TP5-1 U3-3
+-12V: C6-2 C8-2 D2-1 D4-1 J2-1 TP4-1 U2-3
+GND: C1-2 C10-2 C11-2 C12-2 C13-1 C14-2 C2-1 C3-2 C4-1 C5-2 C6-1 C7-2 C8-1 C9-2 D3-1 D6-1 J1-2 J2-2 J2-3 J5-1 J6-2 Q1-3 R2-1 R4-2 TP6-1 U1-2 U2-1 U3-2
+L: F1-1 J3-1
+L_F: F1-2 NT1-1 RV1-1
+L_TR: J4-2 NT1-2
+N: J3-2 J4-1 RV1-2
+Net-(D3-A): D3-2 R1-2
+Net-(D4-A): D4-2 R2-2
+Net-(D6-A): D6-2 R3-2
+Net-(D7-A): C14-1 D7-2 Q1-2 R4-1
+PE: J3-3
+SEC_A: BR1-3 J1-1
+SEC_B: BR1-4 J1-3
+VRAW+: BR1-1 C1-1 C12-1 C3-1 C9-1 D1-1 D5-1 TP1-1 U1-1 U3-1
+VRAW-: BR1-2 C13-2 C2-2 C4-2 D2-2 TP2-1 U2-2

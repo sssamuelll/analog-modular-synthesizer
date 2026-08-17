@@ -1,3 +1,68 @@
+# Herramientas de hardware
+
+## Correr las puertas de calidad
+
+```
+python hardware/tools/gates.py
+```
+
+Es lo mismo que corre el CI en cada PR. Ejecuta **todos** los `check_*.py`,
+todos los `*_budget.py`, todo lo de `simulations/*/` y `netdiff.py`, y suma.
+Tarda ~2 s con KiCad instalado.
+
+Un gate nuevo se añade **escribiendo el fichero** con uno de esos nombres. No
+hay lista que actualizar aquí: si la hubiera, el día que a alguien se le olvide
+ampliarla el gate nace sin correr.
+
+Tres estados, y el del medio es el que importa:
+
+| | |
+|---|---|
+| `OK` | pasó |
+| `HUECO` | no se pudo comprobar, **con el motivo escrito**. No rompe el CI, sale en el resumen y se cuenta |
+| `FALLO` | rojo. No se cierra la tanda |
+
+Un `HUECO` es el Principio V aplicado a la propia herramienta: un `skip`
+silencioso consigue no correr *y* que no te enteres, las dos cosas a la vez.
+Hoy hay tres, los tres declarados — dos necesitan KiCad (`pcbnew`,
+`ngspice.dll`) y el tercero espera a que exista la placa del módulo 3.
+
+Para probar en local la rama que corre el CI (máquina sin KiCad):
+
+```
+KICAD_PYTHON=none python hardware/tools/gates.py
+```
+
+## La firma de conectividad (`netdiff.py`)
+
+```
+python hardware/tools/netdiff.py            compara contra los .netgold
+python hardware/tools/netdiff.py --write    los regenera
+```
+
+`check_netlist.py` comprueba los invariantes que **alguien declaró** a mano.
+Lo que nadie declaró se rompía en silencio. `netdiff.py` cubre el resto por
+fuerza bruta: reduce cada netlist a un texto canónico (`*.netgold`, sin UUIDs
+ni fechas) y cualquier red que se mueva sale **en el diff del PR**, con nombre
+y pines.
+
+Es lo que permite tocar un módulo cerrado sin apostar. Si el cambio es
+intencional: `--write` y el golden se commitea junto al diseño, de forma que la
+revisión ve el cambio de conectividad al lado del cambio de script.
+
+**Corolario que sale gratis: es también el test de determinismo de la
+regeneración.** Corre `build_schematic.py` y después `netdiff.py`; si el golden
+pasa, el script reproduce exactamente el artefacto commiteado. Si no, uno de
+los dos miente.
+
+Y cruza además el esquemático contra la placa, que antes no lo hacía nadie: los
+nombres de red reales tienen que coincidir, y una huella que esté en la placa y
+no en el netlist tiene que tener **cero redes** en sus pads — es lo que
+distingue un agujero de montaje de un componente que alguien añadió sin pasar
+por el esquemático.
+
+---
+
 # Generación de esquemáticos vía KiCAD-MCP-Server
 
 Los `.kicad_sch` de cada módulo se generan con un script Python

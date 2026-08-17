@@ -35,7 +35,20 @@ hardware, código del firmware MIDI/CV o ideas nuevas para módulos adicionales.
    pytest
    ```
 
-4. Abre el Pull Request indicando: módulo afectado, qué cambia y cómo se
+4. Si tocas hardware, corre las puertas de calidad antes de abrir el PR:
+
+   ```bash
+   python hardware/tools/gates.py
+   ```
+
+   Es exactamente lo que corre el CI: todos los `check_*.py`, todos los
+   `*_budget.py`, las simulaciones y la firma de conectividad. Si cambia la
+   conectividad de un módulo a propósito, regenera su golden con
+   `python hardware/tools/netdiff.py --write` y **commitéalo junto al cambio de
+   diseño**, para que la revisión vea las dos cosas a la vez. Detalle en
+   [`hardware/tools/README.md`](hardware/tools/README.md).
+
+5. Abre el Pull Request indicando: módulo afectado, qué cambia y cómo se
    probó (mediciones, simulaciones, capturas, etc.).
 
 ## Convenciones por área
