@@ -94,6 +94,8 @@ Bit alto de la etiqueta puesto = va del instrumento al cliente.
 | `0x04` | `SET` | | `0x84` | `JACKS` |
 | `0x05` | `SUBSCRIBE` | | `0x85` | `PENDING` |
 | `0x06` | `PRESET_LIST` | | `0x86` | `RESOLVED` |
+| | | | `0x87` | `HOLA` |
+| | | | `0x88` | `ERROR` |
 | `0x07` | `PRESET_LOAD` | | | |
 | `0x08` | `PRESET_SAVE` | | | |
 | `0x09` | `TUNE_START` | | | |
@@ -101,6 +103,12 @@ Bit alto de la etiqueta puesto = va del instrumento al cliente.
 | `0x0B` | `TELEMETRY` | | | |
 | `0x0C` | `POINT` | | | |
 | `0x0D` | `MEMO` | | | |
+
+`HOLA` y `ERROR` no estaban en la spec original: aparecieron al escribir el
+servidor, cuando salió que la tabla dejaba al cliente en silencio ante un
+`HELLO`, ante un `DESCRIBE` y ante **todo `SET` rechazado**. Ese último es el
+peor modo de fallo del diseño: el agente escribe, no pasa nada, y no sabe por
+qué.
 
 **Esta tabla es la superficie completa del instrumento.** Por §2.1 no puede
 haber capacidad fuera de ella, y la guardia no es un test: el `match` de

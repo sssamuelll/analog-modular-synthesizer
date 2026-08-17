@@ -15,6 +15,40 @@ pub struct Rgb {
     pub b: u8,
 }
 
+/// Por que fallo. Son los `ErrorSet` del modelo mas los que solo existen en
+/// el cable.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
+pub enum CodigoError {
+    NoExiste = 1,
+    SoloLectura = 2,
+    FueraDeRango = 3,
+    /// §2.2: quedo retenida. Llega ademas un `Pending` con su token.
+    ExigeConfirmacion = 4,
+    /// El instrumento entiende la etiqueta pero todavia no la sirve.
+    NoDisponible = 5,
+    ColaLlena = 6,
+    /// La etiqueta no esta en la tabla de §4.1, o venia en la direccion
+    /// equivocada — un cliente no puede fabricar un `CHANGED`.
+    Desconocido = 7,
+}
+
+impl CodigoError {
+    pub const TODOS: [CodigoError; 7] = [
+        CodigoError::NoExiste,
+        CodigoError::SoloLectura,
+        CodigoError::FueraDeRango,
+        CodigoError::ExigeConfirmacion,
+        CodigoError::NoDisponible,
+        CodigoError::ColaLlena,
+        CodigoError::Desconocido,
+    ];
+
+    pub fn de_byte(b: u8) -> Option<Self> {
+        Self::TODOS.into_iter().find(|c| *c as u8 == b)
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Mensaje {
     // --- del cliente al instrumento ---
@@ -43,6 +77,12 @@ pub enum Mensaje {
     Jacks,
     Pending { token: u16, id: ParamId },
     Resolved { token: u16, confirmado: bool },
+    /// La respuesta a `Hello`: la version que el instrumento acepta hablar.
+    /// Sin esto la negociacion es de un solo sentido y no negocia nada.
+    Hola { version: u16 },
+    /// Que etiqueta fallo y por que. Un protocolo sin mensaje de error deja
+    /// al cliente esperando en silencio, que es el peor modo de fallo posible.
+    Error { etiqueta: u8, codigo: CodigoError },
 }
 
 pub type ErrorProto = ErrorCodec;
@@ -66,6 +106,8 @@ const T_TUNE_PROGRESS: u8 = 0x83;
 const T_JACKS: u8 = 0x84;
 const T_PENDING: u8 = 0x85;
 const T_RESOLVED: u8 = 0x86;
+const T_HOLA: u8 = 0x87;
+const T_ERROR: u8 = 0x88;
 
 fn etiqueta(m: &Mensaje) -> u8 {
     use Mensaje::*;
@@ -89,6 +131,8 @@ fn etiqueta(m: &Mensaje) -> u8 {
         Jacks => T_JACKS,
         Pending { .. } => T_PENDING,
         Resolved { .. } => T_RESOLVED,
+        Hola { .. } => T_HOLA,
+        Error { .. } => T_ERROR,
     }
 }
 
@@ -129,6 +173,11 @@ pub fn codificar(m: &Mensaje, buf: &mut [u8]) -> Result<usize, ErrorProto> {
             w.u16(*token)?;
             w.u8(*confirmado as u8)?;
         }
+        Hola { version } => w.u16(*version)?,
+        Error { etiqueta, codigo } => {
+            w.u8(*etiqueta)?;
+            w.u8(*codigo as u8)?;
+        }
     }
     Ok(w.n)
 }
@@ -165,6 +214,11 @@ pub fn decodificar(buf: &[u8]) -> Result<Mensaje, ErrorProto> {
         T_JACKS => Jacks,
         T_PENDING => Pending { token: r.u16()?, id: ParamId(r.u16()?) },
         T_RESOLVED => Resolved { token: r.u16()?, confirmado: r.u8()? != 0 },
+        T_HOLA => Hola { version: r.u16()? },
+        T_ERROR => Error {
+            etiqueta: r.u8()?,
+            codigo: CodigoError::de_byte(r.u8()?).ok_or(ErrorCodec::Invalido)?,
+        },
         _ => return Err(ErrorCodec::Desconocido),
     })
 }
@@ -176,7 +230,7 @@ mod tests {
     /// Una de cada variante. El `match` del codec es exhaustivo, asi que
     /// añadir un mensaje sin codificarlo rompe la compilacion — que es la
     /// guardia de verdad de §4.1.
-    fn todas() -> [Mensaje; 19] {
+    fn todas() -> [Mensaje; 21] {
         let id = ParamId::nuevo(3, 2, 17);
         [
             Mensaje::Hello { version: 1 },
@@ -198,6 +252,8 @@ mod tests {
             Mensaje::Jacks,
             Mensaje::Pending { token: 4242, id },
             Mensaje::Resolved { token: 4242, confirmado: true },
+            Mensaje::Hola { version: 1 },
+            Mensaje::Error { etiqueta: 0x04, codigo: CodigoError::SoloLectura },
         ]
     }
 
@@ -212,7 +268,7 @@ mod tests {
 
     #[test]
     fn ninguna_etiqueta_se_repite() {
-        let mut vistas = heapless::Vec::<u8, 19>::new();
+        let mut vistas = heapless::Vec::<u8, 21>::new();
         for m in todas() {
             let e = etiqueta(&m);
             assert!(!vistas.contains(&e), "la etiqueta {e:#04x} esta duplicada");
@@ -234,6 +290,23 @@ mod tests {
         assert_eq!(decodificar(&[0x7F]), Err(ErrorCodec::Desconocido));
         assert_eq!(decodificar(&[]), Err(ErrorCodec::Truncado));
         assert_eq!(decodificar(&[T_GET, 0x11]), Err(ErrorCodec::Truncado));
+    }
+
+    #[test]
+    fn todo_codigo_de_error_sobrevive_el_viaje() {
+        // Si uno se perdiera, el cliente sabria que fallo pero no por que —
+        // que es casi tan malo como el silencio que esto vino a arreglar.
+        let mut buf = [0u8; 64];
+        for c in CodigoError::TODOS {
+            let m = Mensaje::Error { etiqueta: 0x04, codigo: c };
+            let n = codificar(&m, &mut buf).unwrap();
+            assert_eq!(decodificar(&buf[..n]).unwrap(), m, "se perdio {c:?}");
+        }
+    }
+
+    #[test]
+    fn un_codigo_de_error_inventado_se_rechaza() {
+        assert_eq!(decodificar(&[T_ERROR, 0x04, 99]), Err(ErrorCodec::Invalido));
     }
 
     #[test]
