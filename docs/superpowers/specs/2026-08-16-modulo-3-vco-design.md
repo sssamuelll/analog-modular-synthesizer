@@ -171,8 +171,11 @@ suelo de 0.58 cents de `dac_local_budget.py`.
   cerebro. Se unen solo en la estrella del módulo 1.
 - **Regla de layout con aserción** (`dac_local_budget.py`): DAC pegado a los
   osciladores, el retorno del módulo no cruza el camino DAC→VCO. Y las del
-  datasheet del SSI2130: 100 nF pegado a cada chip, pad térmico (EP) soldado
-  al plano, C0G en el nodo de tempo con guard ring.
+  datasheet del SSI2130: 100 nF pegado a cada chip, el land del EP existe en
+  la huella pero va **aislado** — sin conexión eléctrica ni de masa
+  (datasheet pág. 6, prohibición explícita: unirlo a masa convierte el land
+  en una antena de acoplo entre las cuatro voces) —, C0G en el nodo de tempo
+  con guard ring.
 
 ## 10. Verificación
 

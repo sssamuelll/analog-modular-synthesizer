@@ -71,7 +71,7 @@ Lo que hace:
            (§8) ▼             ▼ (al ADSR)      ▲
      ┌─────────────────────────────────┐       │
      │  MÓDULO 3 — VCO x4              │       │
-     │  DAC + 4x CEM3340 + 74HC14      │───────┘  4x pulso logico
+     │  DAC + 4x SSI2130 + 74HC14      │───────┘  4x pulso logico
      │  un juego de mandos             │          (TUNE_OUT digital)
      └────┬────┬────┬────┬─────────────┘
           ▼    ▼    ▼    ▼
@@ -107,8 +107,8 @@ parafónico, no polifónico** — y es exactamente la diferencia entre los dos.
 | `CV_PITCH_n` | **0 – 7 V** | 4 | 1 V/oct, 7 octavas (C1–C8). Cambia respecto a los 3–10 V de la tesis: ver issue #18. **No cruza entre módulos**: nace en el DAC de la placa del VCO (§8) |
 | `CV_VEL_n` | 0 – 7 V | 4 | Velocity por voz. Nace en el DAC de la placa del VCA (§8) |
 | `GATE_n` | 0 / 10 V | 4 | Activo alto |
-| `TUNE_OUT_n` | **lógico 3.3 V** | 4 | **Nuevo**: onda del VCO ya recortada, para medir su frecuencia. Digital a propósito (§5) |
-| `SERIE` | lógico 3.3 V | 3–5 hilos | SPI del cerebro a los DAC/digipots de cada módulo (§8). Conteo exacto de hilos: depende del direccionamiento, issue #34 |
+| `TUNE_OUT_n` | **lógico 3.3 V** | 4 | **Nuevo**: onda del VCO ya recortada, para medir su frecuencia. Digital a propósito (§5). Viaja en el mismo mazo J2 que `SERIE` (fila siguiente), no en un cable aparte |
+| `SERIE` | lógico 3.3 V | 12 hilos, IDC 2×6 | SPI + CS por módulo + I²C de telemetría + `TUNE_OUT`×4 + `GNDD`×2, todos en el mismo mazo (§8). Direccionamiento cerrado: híbrido CS-por-módulo con cadena soldada en placa (issue #34, spec del módulo 3) |
 | `+12V` / `-12V` | ±12 V | — | 650 mA por riel |
 | `+5V` | 5 V | — | Solo el módulo 2. Los módulos con DAC se hacen su lógica con regulador local desde +12 V (§8). **La pantalla NO cuelga de aquí** (§9) |
 | `GNDA` / `GNDD` | — | — | Masas partidas, se unen solo en la estrella del módulo 1 |
@@ -418,16 +418,20 @@ Estimación para 4 voces completas, por riel:
 
 | Bloque | Consumo |
 |---|---|
-| 4× CEM3340 | 80 mA |
+| Módulo 3 (VCO x4, SSI2130) | ~35 mA |
 | 4× VCF + 4× VCA (LM13700) | ~21 mA |
 | 4× ADSR | ~4 mA |
 | Op-amps de todo el instrumento (~8 TL074) | ~45 mA |
 | Módulo 2 (DAC + buffers) | ~11 mA |
-| **Total** | **~160 mA** |
+| **Total** | **~116 mA** |
 
-Contra los **650 mA/riel** del módulo 1. Sobra para 8 voces (~300 mA) sin tocar
-la fuente. El respin de la fuente ya dejó sitio para crecer aunque entonces
-todavía era un sinte mono.
+Contra los **650 mA/riel** del módulo 1 — con más holgura de la que se pensaba:
+la fila del módulo 3 era una estimación de la tesis (4× CEM3340, 80 mA); medido
+contra el diseño real ([`dac_local_budget.py`](../hardware/03-vco/dac_local_budget.py)),
+el módulo entero — VCO, DAC, referencia y telemetría — pide ~35 mA. Sobra para
+8 voces (~176 mA, doblando los bloques que escalan con voces) sin tocar la
+fuente, contra los ~300 mA que daba la cuenta vieja. El respin de la fuente ya
+dejó sitio para crecer aunque entonces todavía era un sinte mono.
 
 **Lo que no cabe es la pantalla en el +5 V.** El táctil de 7" pide 450–550 mA y
 el riel de +5 V está acotado a 300 mA por diseño (módulo 1 §16.12). Va alimentada
@@ -436,19 +440,32 @@ Raspberry Pi de todas formas. Esa fuente sube de 2.5 A a **3 A**.
 
 ## 10. Lo que esto le exige a los módulos que faltan
 
-Ninguno de los cuatro está dibujado, así que es el momento de imponerlo.
+El módulo 3 ya está dibujado; los otros tres (5, 6, 7) no, así que es el
+momento de imponerles esto.
 
 **Módulo 3 — VCO.** Pasa de 3 osciladores independientes a **4 canales
-idénticos** con un solo juego de mandos. Y necesita algo que la tesis no tiene:
-una **salida `TUNE_OUT` DIGITAL por oscilador** — la onda recortada a nivel
-lógico con un 74HC14 en la propia placa, no la señal analógica. Sin eso el
-autoafinado exige patchear cables a mano y deja de ser automático, y meter audio
-por el bus lo ensuciaría (§5). Y lleva **sus propios DAC** (§8): un
-**AD5686RB** — grado B obligatorio, la referencia manda — para el tono de las
-cuatro voces y lo que pida §7 (PWM, mezcla de ondas), con regulador local de
-lógica desde +12 V. Es el primer módulo que cuelga del enlace serie, así que
-al dibujarlo se cierra el direccionamiento (issue #34). Números:
-[`dac_local_budget.py`](../hardware/03-vco/dac_local_budget.py).
+idénticos SSI2130** (Sound Semiconductor) con un solo juego de mandos — no el
+CEM3340 de la tesis: el mezclador de 5 canales y el generador de seno viven
+dentro del propio chip, y su compensación térmica en chip se lleva por delante
+la R_TEMPCO. **Sin trimmers**: la escala de tono la fijan una única
+**ADR4525BRZ** (referencia de toda la placa, compartida por el DAC y los
+cuatro osciladores) y resistencias del 1 %, y el autoafinado absorbe el resto.
+El bloque digital son **3× AD5686 en cadena soldada** (DCEN) — 12 canales, 9
+en uso (pitch×4, PWM, mezcla×4) y 3 de reserva — con las tres referencias
+internas de los DAC apagadas por firmware para dejar mandar a la ADR4525BRZ.
+Necesita algo que la tesis no tiene: una **salida `TUNE_OUT` DIGITAL por
+oscilador** — el `SQUARE OUT` de cada SSI2130 recortado a nivel lógico con un
+74HC14, en la propia placa, no la señal analógica. Sin eso el autoafinado
+exige patchear cables a mano y deja de ser automático, y meter audio por el
+bus lo ensuciaría (§5). Lleva también la telemetría de serie de §8 (sensor de
+temperatura + EEPROM de calibración). Es el primer módulo que cuelga del
+enlace serie, y al dibujarlo se cerró el direccionamiento: híbrido
+CS-por-módulo entre placas, cadena soldada dentro de cada una (issue #34).
+**Ya está dibujado y verificado**: esquemático con ERC 0 errores/avisos, PCB
+con DRC 0 infracciones, y salidas de fabricación listas para pedir a JLCPCB.
+Spec: [`docs/superpowers/specs/2026-08-16-modulo-3-vco-design.md`](superpowers/specs/2026-08-16-modulo-3-vco-design.md).
+Bring-up: [`hardware/03-vco/notes/bring-up.md`](../hardware/03-vco/notes/bring-up.md).
+Números: [`dac_local_budget.py`](../hardware/03-vco/dac_local_budget.py).
 
 **Módulo 5 — VCF.** Cuatro filtros idénticos, corte y resonancia comunes, **por
 CV desde el DAC — que vive en esta placa (§8) —, no por potenciómetro** (§7).
@@ -484,18 +501,27 @@ osciladores a sumar cuatro voces ya filtradas.
 4. **La asignación de voces con robo** tiene decisiones que se oyen (cuál robar,
    si hacer retrigger, legato) y todavía no están tomadas.
 5. **El AD5686R encadenado** está en su tabla de comandos (bit 1000, *daisy-chain
-   enable*) pero no se ha probado con dos chips reales. Si el direccionamiento
-   del enlace serie (issue #34) sale por cadena, esta prueba pasa a ser
-   bloqueante.
-6. **Cuántos CV hacen falta en total** no está cerrado, porque depende de los
-   módulos 3-7 que no están dibujados. La estimación es 15-20, repartidos por
-   módulo (§8): probablemente 1-2 chips por placa.
+   enable*) y sigue sin probarse con chips reales — ahora es **bloqueante**:
+   el módulo 3 pone tres en cadena soldada, y sin ese passthrough no hay
+   control de tono (spec del módulo 3 §11.7, Paso 3 del bring-up).
+6. **Cuántos CV hacen falta en total** sigue abierto para los módulos 5, 6 y
+   7, que no están dibujados. Para el módulo 3 ya se cerró: **12 canales** en
+   3× AD5686 en cadena (9 en uso, 3 de reserva). La estimación de 15-20 CV
+   del instrumento entero, repartidos por módulo (§8), sigue en pie para lo
+   que falta.
 7. **El zipper noise** de mover un parámetro con un DAC no está evaluado. A 16
    bits debería ser inaudible, pero en un barrido rápido de corte hay que
    comprobarlo y probablemente suavizar por software.
 8. **Qué parámetro cae en cada uno de los tres casos** de §7 se decide módulo a
    módulo al dibujarlos, no antes.
-9. **El direccionamiento del enlace serie** — cadena SPI contra chip-select
-   decodificado — está abierto en el issue #34 y se cierra al dibujar el
-   módulo 3.
-10. Nada de esto está medido. Son cálculos y datasheets.
+9. **El direccionamiento del enlace serie** — **CERRADO** (issue #34, al
+   dibujar el módulo 3): híbrido CS-por-módulo entre placas, con los chips de
+   cada placa en cadena soldada (DCEN al arranque). Detalle en el
+   [spec del módulo 3](superpowers/specs/2026-08-16-modulo-3-vco-design.md)
+   §2.5 y §7.
+10. **La apuesta trimless del módulo 3** — span de 7 octavas sin trimmers,
+    con solo un 7.6 % de margen — depende de la dispersión chip a chip del
+    convertidor exponencial del SSI2130, que ningún datasheet garantiza. Se
+    cobra en el Paso 5 del bring-up (spec del módulo 3 §11.2); si una voz cae
+    fuera, el bodge previsto es cambiar su `R_PITCH`, no un re-spin.
+11. Nada de esto está medido. Son cálculos y datasheets.
