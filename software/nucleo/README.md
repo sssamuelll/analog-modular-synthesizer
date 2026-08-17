@@ -1,5 +1,9 @@
 # `nucleo` — el contrato del SAM17
 
+> **El binario ya existe**: `fw/` compila y enlaza para RP2350, con el
+> servidor del protocolo hablando por USB-MIDI. Lo que falta comprobar en
+> placa está en [`fw/EN-PLACA.md`](fw/EN-PLACA.md).
+
 Esto **no es el firmware**. Es el contrato del que cuelgan la app, el agente,
 el MCP y la pantalla: el modelo de parámetros, su protocolo, y los dos motores
 de análisis. Todo `no_std`, todo verificable con `cargo test` en tu máquina,
@@ -56,6 +60,9 @@ cargo build --release          # thumbv8m.main-none-eabihf, ya en .cargo/config.
 | `perturbacion` | §7.6 códigos ortogonales y correlación |
 | `atribucion` | §7.2 los dos niveles |
 | `medidas` | §7.3 las bandas perceptuales como parámetros |
+| `servidor` | **Donde el contrato contesta**: `atender(mensaje) -> respuestas` |
+| `usbmidi` | El troceo en paquetes de 4 bytes que pide USB-MIDI 1.0 |
+| `pinout` | La asignación de pines (§5.3), con sus invariantes probados |
 
 ## Los tres formatos de cable
 
