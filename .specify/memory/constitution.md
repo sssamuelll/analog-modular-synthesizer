@@ -120,11 +120,35 @@ Ninguna tanda de hardware se da por cerrada sin todo esto en verde:
 |---|---|
 | ERC | **0 infracciones** |
 | DRC | **0 infracciones y 0 elementos sin conectar** |
-| Netlist | contrastado pin a pin contra el diseño declarado aparte |
+| Netlist | contrastado pin a pin contra el diseño declarado aparte, **y su firma canónica sin cambios respecto al `.netgold` commiteado** |
 | BOM | cruzado en los dos sentidos con los designadores de la hoja |
 | Presupuestos | todos los `*_budget.py` en verde |
 
 Y para el firmware: nada sin test que falle antes de existir la implementación.
+
+**Quién hace cumplir esto: `python hardware/tools/gates.py`.** Durante la
+primera tanda larga de hardware estas puertas las hacía cumplir la memoria de
+quien mandaba el PR, y trece scripts con aserciones reales vivían en el repo sin
+que nada los ejecutara. Una puerta que depende de que alguien se acuerde no es
+una puerta.
+
+> **Estado 2026-08-17: se corre a mano.** El workflow de CI incluye el job
+> (`.github/workflows/ci.yml`), pero **GitHub Actions está deshabilitado a nivel
+> de repositorio**, así que hoy no corre nada automáticamente — tampoco el job
+> de firmware. Hasta que se active, `gates.py` antes de cada PR es obligatorio y
+> el PR dice su resultado. Esto se anota aquí, y no en un comentario del
+> workflow, porque es justo la clase de cosa que se olvida y deja a todo el
+> mundo creyendo que hay una red debajo.
+
+El runner descubre los gates **por patrón** (`check_*.py`, `*_budget.py`,
+`simulations/*/*.py`), no por lista: un gate nuevo se añade escribiendo el
+fichero. Una lista habría que acordarse de ampliarla, y el día que a alguien se
+le olvide, el gate nuevo nace ya sin correr.
+
+Y distingue tres estados, no dos. Lo que no se puede comprobar sale como
+**HUECO con el motivo escrito** y se cuenta en el resumen: no rompe el CI, pero
+tampoco se disfraza de verde. Un `skip` silencioso consigue las dos cosas a la
+vez — ni corre, ni te enteras — que es el Principio V con otra ropa.
 
 ## Los números que gobiernan el instrumento
 
@@ -151,4 +175,9 @@ MENOR si se añade uno, PARCHE si es redacción.
 Los principios I a VII son **innegociables**. El resto son convenciones y se
 pueden discutir.
 
-**Versión**: 1.0.0 | **Ratificada**: 2026-08-15 | **Última enmienda**: 2026-08-15
+**Versión**: 1.0.1 | **Ratificada**: 2026-08-15 | **Última enmienda**: 2026-08-17
+
+> **1.0.1** (PARCHE, redacción): las *Puertas de calidad* dicen ahora quién las
+> hace cumplir (`hardware/tools/gates.py`, en el CI) y qué es un HUECO. Se añade
+> la firma canónica del netlist a la puerta que ya existía. Ningún principio
+> cambia.

@@ -1,0 +1,66 @@
+# firma de conectividad de sam17-midicv.net
+# generado por hardware/tools/netdiff.py -- NO editar a mano
+# 63 redes, 171 nodos
++12V: C1-1 J1-1 R11-1 R12-1 U2-4
++3V3: C4-1 C7-1 J3-1 R17-1 R18-1 R19-1 R20-1 U1-11
++5V: C3-1 C6-1 J2-1 J8-2 R16-1 RV1-1 U1-5
+-12V: C2-1 J1-4 U2-11
+BTN_BACK: J3-36 R19-2 SW3-1
+BTN_DOWN: J3-11 R18-2 SW2-1
+BTN_ENTER: J3-37 R20-2 SW4-1
+BTN_UP: J3-7 R17-2 SW1-1
+CV1: J4-S R7-2
+CV2: J5-S R8-2
+CV3: J6-S R9-2
+DAC_A: U1-3 U2-3
+DAC_B: U1-2 U2-5
+DAC_C: U1-6 U2-10
+DAC_RESET: J3-31 U1-15
+GATE_12: Q2-3 R12-2 R13-1 U2-12
+GATE_G: Q1-1 R10-2 R14-1
+GATE_INV: Q1-3 Q2-1 R11-2
+GATE_IO: J3-13 R10-1
+GATE_OUT: J7-S R15-2
+GATE_OUT_B: R15-1 U2-13 U2-14
+GNDA: C1-2 C2-2 C5-2 C6-2 C7-2 J1-2 J1-3 J4-T J5-T J6-T J7-T R2-2 R4-2 R6-2 U1-10 U1-16 U1-4 U1-9
+GNDD: C3-2 C4-2 J2-2 J3-14 J3-20 J3-25 J3-30 J3-34 J3-39 J3-6 J3-9 J8-1 J8-16 J8-5 Q1-2 Q2-2 R13-2 R14-2 RV1-3 SW1-2 SW2-2 SW3-2 SW4-2
+LCD_BLA: J8-15 R16-2
+LCD_D4: J3-16 J8-11
+LCD_D5: J3-12 J8-12
+LCD_D6: J3-10 J8-13
+LCD_D7: J3-8 J8-14
+LCD_EN: J3-18 J8-6
+LCD_RS: J3-22 J8-4
+LCD_VO: J8-3 RV1-2
+Net-(R1-Pad2): R1-2 R7-1 U2-1
+Net-(R3-Pad2): R3-2 R8-1 U2-7
+Net-(R5-Pad2): R5-2 R9-1 U2-8
+Net-(U2A--): R1-1 R2-1 U2-2
+Net-(U2B--): R3-1 R4-1 U2-6
+Net-(U2C--): R5-1 R6-1 U2-9
+SCLK: J3-23 U1-12
+SDIN: J3-19 U1-14
+SPI_CE1: J3-26 U1-13
+VREF: C5-1 U1-1
+unconnected-(J3-Pin_15-Pad15): J3-15
+unconnected-(J3-Pin_17-Pad17): J3-17
+unconnected-(J3-Pin_2-Pad2): J3-2
+unconnected-(J3-Pin_21-Pad21): J3-21
+unconnected-(J3-Pin_24-Pad24): J3-24
+unconnected-(J3-Pin_27-Pad27): J3-27
+unconnected-(J3-Pin_28-Pad28): J3-28
+unconnected-(J3-Pin_29-Pad29): J3-29
+unconnected-(J3-Pin_3-Pad3): J3-3
+unconnected-(J3-Pin_32-Pad32): J3-32
+unconnected-(J3-Pin_33-Pad33): J3-33
+unconnected-(J3-Pin_35-Pad35): J3-35
+unconnected-(J3-Pin_38-Pad38): J3-38
+unconnected-(J3-Pin_4-Pad4): J3-4
+unconnected-(J3-Pin_40-Pad40): J3-40
+unconnected-(J3-Pin_5-Pad5): J3-5
+unconnected-(J8-Pin_10-Pad10): J8-10
+unconnected-(J8-Pin_7-Pad7): J8-7
+unconnected-(J8-Pin_8-Pad8): J8-8
+unconnected-(J8-Pin_9-Pad9): J8-9
+unconnected-(U1-SDO-Pad8): U1-8
+unconnected-(U1-VOUTD-Pad7): U1-7
