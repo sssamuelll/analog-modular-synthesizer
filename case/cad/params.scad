@@ -22,11 +22,21 @@ ancho_total     = 500;   // spec §4
 // alrededor de cada riel hace falta acrilico. De ahi sale la cara:
 //
 //   alto_cara_inf = sep_railes_inf + inset_tornillo + inset_valle
-//                 = 122.5 + 27 + 15 = 164.5
+//                 = 122.5 + 26.5 + 15 = 164.0
+//
+// Esos 41.5 mm de acrilico alrededor del estandar son el minimo REAL, medido
+// contra las tres cotas que lo limitan y no estimado:
+//   20.0  el medio perfil 2020 a cada punta (rail/2 x 2)
+//   16.6  las dos curvas del contorno (14 la punta del frente, 2.6 el pico)
+//    4.9  el material minimo contra cada curva
+// Bajar de aqui pide cambiar una de esas tres cosas, no apretar el numero. La
+// grande con diferencia es la primera: con un riel EUROrack de 10 mm en vez de
+// nuestro 2020 la cara baja a ~151 y la seccion pierde 14 mm de alto -- cinco
+// veces lo que se gana apretando el acrilico. Esta en el correo a Tobias.
 //
 // Las dos puntas piden distinto y por eso los insets son asimetricos (ver
 // inset_valle abajo). El panel queda centrado en sus railes y sobra bisel:
-// 24 mm por delante -- de los que 15 se los come la curva en punta -- y 12
+// 23.5 mm por delante -- de los que 14 se los come la curva en punta -- y 12
 // por el valle, de los que 2.6 se los come el pico. Samuel pidio
 // explicitamente apretar el lado del valle ("llevarlo mas cerca del hueco
 // del tornillo"), y ese es el lado que se aprieta.
@@ -35,7 +45,7 @@ ancho_total     = 500;   // spec §4
 // atornille sobre el 2020 con su linea roscada EN LA CENTERLINE del 2020. Si
 // su perfil pone la rosca descentrada, lo que cambia es inset_valle y con el
 // alto_cara_inf -- la silueta se adapta sin tocar nada mas.
-alto_cara_inf   = 164.5; // DERIVADO: sep_railes_inf + inset_tornillo + inset_valle
+alto_cara_inf   = 164.0; // DERIVADO: sep_railes_inf + inset_tornillo + inset_valle
 alto_cara_sup   = 190;   // spec §4, altura de panel de la tesis
 alto_panel_inf  = 128.5; // PCB 3U EUROrack (build_template.py --piso inf)
 alto_panel_sup  = 190;   // PCB del piso de arriba = cara entera
@@ -68,17 +78,35 @@ angulo_superior = 45;    // 45 desde la horizontal, cara de generacion
 // panel. El rail del panel necesita empezar despues de la curva, o sea
 //   inset_tornillo >= alto_frontal/2 + rail/2
 // Hay una SEGUNDA condicion, y es la que manda: en esa esquina van los DOS
-// nodos que pidio Samuel, y tienen que caber uno encima del otro. El de la
-// base ocupa y = 0..20; el del panel va empujado hacia ABAJO por el offset
-// perpendicular (la normal interior de una cara empinada apunta adentro y
-// abajo), asi que su centro cae en alto_frontal + cos(a)*inset - 6.65 y su
-// canto inferior 13.93 mas abajo. Exigiendo holgura_rail entre los dos:
-//   alto_frontal + cos(35)*inset >= 44.58
-// A alto_frontal = 10 el riel del panel se montaba 22.3 mm ENCIMA del de la
-// base (solapes() lo canto). Las dos condiciones juntas dan un minimo de
-// ~26 mm de vertice frontal; 30 con inset 27 deja 7.5 mm de holgura entre
-// railes y 2 mm de margen contra la curva.
-alto_frontal    = 30;
+// nodos que pidio Samuel, y tienen que caber uno encima del otro. El del panel
+// va empujado hacia ABAJO por el offset perpendicular (la normal interior de
+// una cara empinada apunta adentro y abajo), asi que su centro cae en
+// alto_frontal + cos(a)*inset - 6.65 y su canto inferior 13.93 mas abajo.
+//
+// OJO CON EL TECHO DE ABAJO, que es donde este calculo se hizo mal una vez: no
+// es el lomo del rail de base (y = 20) sino el TOPE DE LA BANDEJA que se apoya
+// encima de el (y = 20 + t_acrilico = 25). La bandeja es la que carga el PSU y
+// va apoyada en el lomo del rail, no colgada. Exigiendo holgura_rail:
+//   alto_frontal + cos(35)*inset >= 49.58
+// Derivarlo contra el rail y no contra la bandeja da 44.58, sale 5 mm de
+// barato, y solapes() lo canta (0.51 mm de solape rail-bandeja). A
+// alto_frontal = 10 el riel del panel se montaba 22.3 mm ENCIMA del de la base.
+//
+// Las dos condiciones se optimizan JUNTAS, y ahi esta el truco: la altura de
+// la primera seccion vale alto_frontal + alto_cara_inf*cos(35), y como
+// alto_cara_inf lleva el inset dentro, esa altura es exactamente
+// (alto_frontal + cos(35)*inset) + una constante. O sea que minimizar el piso
+// ES minimizar el lado izquierdo de la condicion de los dos nodos, y su suelo
+// es 49.58 -- por debajo no hay nada que rascar sin mover la bandeja.
+//
+// El par (28, 26.5) se apoya en las dos a la vez: 4.2 mm de holgura sobre la
+// bandeja (holgura_rail pide 4) y 2.5 mm de material contra la curva. FUE
+// 30/27, que dejaba 6.5 -- o sea que apretar hasta el suelo del calculo solo
+// gana 2.4 mm de alto (Samuel pidio el minimo el 2026-08-17, y 2.4 mm es lo
+// que hay). Ojo con bajar alto_frontal creyendo que siempre ayuda: a 0 la
+// esquina pasa a ser un vertice agudo de 55 grados y su redondeo se come 64 mm
+// de cara, cuatro veces mas que la punta de dos arcos de ahora.
+alto_frontal    = 28;
 // Fondo del case. UN SOLO plano trasero: el costado es un triangulo
 // rectangulo con el angulo recto atras y la hipotenusa quebrada en dos
 // tramos (35 arriba, 12 abajo) con el entrepiso en medio (Samuel eligio esta
@@ -182,7 +210,12 @@ rail            = 20;   // perfil 2020
 // el valle, 1.2 por el remate). Ventana valida: >= 10 para que el rail quepa,
 // y <= 13 para que el tornillo siga cayendo dentro de la boca de la ranura
 // (~6 mm, o sea +-3 mm del centro de la cara). 10 lo centra exacto.
-inset_tornillo  = 27;
+//
+// Hoy no manda esa ventana sino la esquina del frente: alto_frontal/2 de curva
+// + rail/2 de perfil + 2.5 de material = 26.5, y ese numero va emparejado con
+// alto_frontal = 28 (ver su nota). Mover uno sin el otro sube el case o rompe
+// la holgura sobre la bandeja de base.
+inset_tornillo  = 26.5;
 // inset_valle = el inset del OTRO extremo de la cara inferior, el que da al
 // valle. Es asimetrico a proposito: las dos puntas de esa cara no se comen lo
 // mismo. Por delante la curva en punta vacia alto_frontal/2 = 15 mm de cara,
@@ -205,7 +238,7 @@ inset_er_x      = 7.5;
 // asi que este numero se re-fija contra el riel que se compre. Es el ASUMIDO
 // principal de la silueta actual.
 sep_railes_inf  = 122.5;
-sep_railes_sup  = 136;  // centros de rail = alto_cara_sup - 2*inset = 190 - 54
+sep_railes_sup  = 137;  // centros de rail = alto_cara_sup - 2*inset = 190 - 53
 holgura_rail    = 4;    // separacion minima entre railes vecinos (fix solapes)
 
 // --- esqueleto y herrajes ---
