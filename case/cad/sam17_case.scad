@@ -28,7 +28,7 @@ function pts_perfil() =
          x2 = alto_cara_inf*si,                       // fin cara inferior
          x3 = x2 + paso_horizontal,
          x4 = x3 + alto_cara_sup*ss,
-         yt = ye + alto_panel_sup*cs,                 // alto total
+         yt = ye + alto_cara_sup*cs,                  // alto total
          pf = fondo())
     [[0,0],[0,alto_frontal],[x2,ye],[x3,ye],[x4,yt],
      [pf,yt],[pf,0]];
@@ -44,7 +44,7 @@ function pts_perfil() =
 // inset de remate] y centros sobre la cara a esos dos insets, retirados hacia
 // dentro t_panel + rail/2 segun la normal.
 //
-// Los DOS insets de la cara inferior son distintos (ver inset_valle en
+// Los DOS insets de cada cara son distintos (ver la tabla de insets en
 // params.scad): la punta redondeada del frente vacia 15 mm de cara y el pico
 // del valle solo 2.6, asi que exigir el mismo inset en los dos extremos
 // regalaria 12 mm de altura de piso sin comprar nada.
@@ -52,8 +52,8 @@ function centros_rail() =
     let (P = pts_perfil(),
          // cada cara lleva SU alto y SUS insets: los dos pisos ya no miden
          // lo mismo ni se rematan igual
-         caras = [[P[1], P[2], alto_cara_inf, inset_tornillo, inset_valle],
-                  [P[3], P[4], alto_cara_sup, inset_tornillo, inset_tornillo]],
+         caras = [[P[1], P[2], alto_cara_inf, inset_inf_frente, inset_inf_valle],
+                  [P[3], P[4], alto_cara_sup, inset_sup_valle, inset_sup_remate]],
          off = t_panel + rail/2)
     [for (c = caras, s = [c[3], c[2] - c[4]])
         let (d = (c[1]-c[0])/norm(c[1]-c[0]),      // unitario de la cara
@@ -65,7 +65,7 @@ function centros_rail() =
 // remate superior, repisa. Centros [x, y]:
 //
 // entrepiso delantero reubicado (fix de solape, ronda de revision 1): el
-// original P[3].x+r invadia el rail de panel cara-superior s=inset_tornillo
+// original P[3].x+r invadia el rail de panel de la cara superior
 // (17.6x12.6 mm de solape, verificado). Ahora se apoya holgura_rail detras
 // del borde trasero de ESE rail. Y de ambos railes de entrepiso baja a
 // P3.y-t_acrilico-r para que la bandeja apoye con el CANTO SUPERIOR a ras
@@ -475,17 +475,16 @@ module panel_cara(A, B, s0, largo) {
                 cube([largo, t_panel, ancho_util]);
 }
 
-// El panel de ABAJO no cubre su cara: es una PCB 3U de 128.5 mm con los
-// taladros a inset_er = 3 de cada canto, colgada de railes que estan a
-// inset_tornillo del frente. Arranca por tanto en s0 = 27 - 3 = 24 y sobra
-// bisel de acrilico a los dos lados (24 mm por el frente, de los que la punta
-// redondeada se come 15; 12 por el valle, de los que el pico se come 2.6).
-// Ese bisel es parte del alzado, no un descuadre -- si el render lo pintara
-// cubriendo la cara entera estaria mintiendo sobre lo que se va a ver.
+// NINGUN panel cubre su cara: los dos son PCB 3U de 128.5 mm con los taladros
+// a inset_er = 3 de cada canto, colgados de railes que estan a su inset de la
+// punta. Cada uno arranca por tanto en s0 = inset - inset_er y sobra bisel de
+// acrilico a los dos lados (23.5 y 12 abajo, 21.5 y 20 arriba). Ese bisel es
+// parte del alzado, no un descuadre -- si el render pintara el panel cubriendo
+// la cara entera estaria mintiendo sobre lo que se va a ver.
 module paneles() {
     P = pts_perfil();
-    panel_cara(P[1], P[2], inset_tornillo - inset_er, alto_panel_inf);
-    panel_cara(P[3], P[4], 0, alto_panel_sup);
+    panel_cara(P[1], P[2], inset_inf_frente - inset_er, alto_panel_inf);
+    panel_cara(P[3], P[4], inset_sup_valle  - inset_er, alto_panel_sup);
 }
 
 // Paticas torneadas bajo los costados. En X caen sobre los dos rieles de

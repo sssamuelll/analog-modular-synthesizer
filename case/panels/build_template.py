@@ -61,17 +61,18 @@ def mm(v: float) -> int:
 def insets(p: dict[str, float], piso: str) -> tuple[float, float]:
     """Inset del taladro (x, y) del piso, en mm desde el canto del PANEL.
 
-    Los dos pisos no se miden igual y esa es la razon de ser del --piso:
+    Desde el 2026-08-17 LAS DOS FILAS son 3U, asi que las dos se taladran con
+    las cotas de EUROrack: inset_er = 3.0 mm de los cantos de arriba y abajo
+    (de ahi los 122.50 entre centros) y inset_er_x = 7.5 del izquierdo. NO son
+    el mismo numero en los dos ejes -- el estandar no es simetrico, y eso es
+    justo lo que este fichero hacia mal cuando usaba un solo inset.
 
-      inf  EUROrack manda. Taladro a inset_er = 3.0 mm de los cantos de
-           arriba y abajo (de ahi los 122.50 entre centros) y el primero a
-           inset_er_x = 7.5 del canto izquierdo. NO son el mismo numero en
-           los dos ejes -- el estandar no es simetrico.
-      sup  panel propio, atornillado a nuestros 2020: inset_tornillo en los
-           dos ejes, que es lo que hacia el fichero para todo antes."""
-    if piso == "inf":
-        return p["inset_er_x"], p["inset_er"]
-    return p["inset_tornillo"], p["inset_tornillo"]
+    Sigue tomando `piso` aunque hoy devuelva lo mismo para los dos: es aqui
+    donde se ramifica el dia que una fila deje de ser 3U, y mientras tanto
+    verificar_coherencia() comprueba cada fila contra SU sep_railes, asi que
+    una divergencia en params.scad sale en rojo y no en silencio."""
+    del piso
+    return p["inset_er_x"], p["inset_er"]
 
 
 def verificar_coherencia(p: dict[str, float], piso: str) -> None:
@@ -79,11 +80,10 @@ def verificar_coherencia(p: dict[str, float], piso: str) -> None:
     cuadrar con sep_railes, ese quiebre tiene que verse ANTES de generar la
     plantilla, no despues como un panel que no atornilla.
 
-    Desde el 2026-08-17 hay DOS altos de panel Y DOS insets: la primera fila
-    es un panel 3U de EUROrack (128.5 mm, taladro a 3.0 del canto) y la de
-    arriba sigue en 190 con nuestro inset de 27. Ojo: alto_panel_* es la PCB,
-    no el tramo de perfil del costado -- eso es alto_cara_*, y en el piso de
-    abajo ya no valen lo mismo."""
+    Desde el 2026-08-17 las dos filas son 3U de EUROrack (128.5 mm, taladro a
+    3.0 del canto), asi que las dos plantillas salen iguales. Ojo: alto_panel_*
+    es la PCB, no el tramo de perfil del costado -- eso es alto_cara_*, y ya no
+    valen lo mismo en ninguna de las dos filas."""
     alto = p[f"alto_panel_{piso}"]
     sep = p[f"sep_railes_{piso}"]
     _, inset_y = insets(p, piso)
@@ -121,8 +121,9 @@ def main() -> int:
     ap.add_argument("--ancho", type=float, default=100.0,
                      help="ancho del panel en mm (varia por modulo)")
     ap.add_argument("--piso", choices=("inf", "sup"), default="sup",
-                     help="piso del panel: inf = primera fila (3U EUROrack, "
-                          "128.5 mm), sup = fila de arriba (190 mm)")
+                     help="piso del panel: las dos filas son 3U EUROrack "
+                          "(128.5 mm) y hoy salen identicas; el flag existe "
+                          "para el dia que una deje de serlo")
     args = ap.parse_args()
     ancho, piso = args.ancho, args.piso
 

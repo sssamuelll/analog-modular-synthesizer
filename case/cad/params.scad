@@ -15,40 +15,39 @@ ancho_total     = 500;   // spec §4
 //   alto_panel_* = la PCB de aluminio que se monta encima. Es lo que
 //                  consume build_template.py y lo unico que ve el fabricante.
 //
-// En el piso de ARRIBA coinciden (el panel cubre la cara entera). En el de
-// ABAJO no pueden: el panel 3U mide 128.5 con sus taladros a 3.0 mm de cada
-// canto, o sea 122.50 mm entre centros ("ER Screw distance vertical",
-// Doepfer). Ese 122.50 es la cota que manda -- no el alto del panel --, y
-// alrededor de cada riel hace falta acrilico. De ahi sale la cara:
+// LAS DOS FILAS SON 3U desde el 2026-08-17 (antes la de arriba media 190, la
+// "altura de panel de la tesis"). Un panel 3U mide 128.5 con sus taladros a
+// 3.0 mm de cada canto, o sea 122.50 mm entre centros ("ER Screw distance
+// vertical", Doepfer). Ese 122.50 es la cota que manda -- no el alto del panel
+// --, y alrededor de cada riel hace falta acrilico. De ahi salen las caras:
 //
-//   alto_cara_inf = sep_railes_inf + inset_tornillo + inset_valle
-//                 = 122.5 + 26.5 + 15 = 164.0
+//   alto_cara_inf = 122.5 + inset_inf_frente + inset_inf_valle  = 164.0
+//   alto_cara_sup = 122.5 + inset_sup_valle  + inset_sup_remate = 170.0
 //
-// Esos 41.5 mm de acrilico alrededor del estandar son el minimo REAL, medido
-// contra las tres cotas que lo limitan y no estimado:
-//   20.0  el medio perfil 2020 a cada punta (rail/2 x 2)
-//   16.6  las dos curvas del contorno (14 la punta del frente, 2.6 el pico)
-//    4.9  el material minimo contra cada curva
-// Bajar de aqui pide cambiar una de esas tres cosas, no apretar el numero. La
-// grande con diferencia es la primera: con un riel EUROrack de 10 mm en vez de
-// nuestro 2020 la cara baja a ~151 y la seccion pierde 14 mm de alto -- cinco
-// veces lo que se gana apretando el acrilico. Esta en el correo a Tobias.
+// El de arriba sale 6 mm mas largo con el MISMO estandar dentro, y no es
+// arbitrario: su curva del valle lleva radio_valle = 30 (Samuel lo pidio
+// suave) y esa tangente se come 12.4 mm de cara, contra los 2.6 del pico de
+// enfrente. El acabado se paga en altura, y esto dice cuanto.
 //
-// Las dos puntas piden distinto y por eso los insets son asimetricos (ver
-// inset_valle abajo). El panel queda centrado en sus railes y sobra bisel:
-// 23.5 mm por delante -- de los que 14 se los come la curva en punta -- y 12
-// por el valle, de los que 2.6 se los come el pico. Samuel pidio
-// explicitamente apretar el lado del valle ("llevarlo mas cerca del hueco
-// del tornillo"), y ese es el lado que se aprieta.
+// Los 41.5 / 47.5 mm de acrilico que envuelven el estandar son el minimo REAL,
+// medido contra las cotas que los limitan y no estimado. La partida grande de
+// las dos es la misma: 20 mm de medio perfil 2020, uno por punta. Con un riel
+// EUROrack de 10 mm en vez de nuestro 2020 cada cara pierde otros 10 -- mas
+// que todo lo que se gana apretando el acrilico. Esta en el correo a Tobias.
+//
+// Bisel que sobra alrededor de cada panel (inset - inset_er): 23.5 y 12 mm en
+// la fila de abajo, 21.5 y 20 en la de arriba. Samuel pidio explicitamente
+// apretar el lado del valle de la fila inferior ("llevarlo mas cerca del hueco
+// del tornillo"), y por eso ese es el unico bisel de 12.
 //
 // ASUMIDO, pendiente de Tobias (SynthRacks): que el riel EUROrack real se
 // atornille sobre el 2020 con su linea roscada EN LA CENTERLINE del 2020. Si
-// su perfil pone la rosca descentrada, lo que cambia es inset_valle y con el
-// alto_cara_inf -- la silueta se adapta sin tocar nada mas.
-alto_cara_inf   = 164.0; // DERIVADO: sep_railes_inf + inset_tornillo + inset_valle
-alto_cara_sup   = 190;   // spec §4, altura de panel de la tesis
-alto_panel_inf  = 128.5; // PCB 3U EUROrack (build_template.py --piso inf)
-alto_panel_sup  = 190;   // PCB del piso de arriba = cara entera
+// su perfil pone la rosca descentrada, lo que cambia son los insets y con
+// ellos las dos caras -- la silueta se adapta sin tocar nada mas.
+alto_cara_inf   = 164.0; // DERIVADO: 122.5 + inset_inf_frente + inset_inf_valle
+alto_cara_sup   = 170.0; // DERIVADO: 122.5 + inset_sup_valle + inset_sup_remate
+alto_panel_inf  = 128.5; // PCB 3U EUROrack
+alto_panel_sup  = 128.5; // PCB 3U EUROrack: la fila de arriba tambien
 // Angulos de cara. El fichero los guarda DESDE LA VERTICAL (convencion del
 // board), pero Samuel los especifica DESDE LA HORIZONTAL, que es como se
 // miran en el alzado. La traduccion es a = 90 - horizontal:
@@ -211,26 +210,35 @@ rail            = 20;   // perfil 2020
 // y <= 13 para que el tornillo siga cayendo dentro de la boca de la ranura
 // (~6 mm, o sea +-3 mm del centro de la cara). 10 lo centra exacto.
 //
-// Hoy no manda esa ventana sino la esquina del frente: alto_frontal/2 de curva
-// + rail/2 de perfil + 2.5 de material = 26.5, y ese numero va emparejado con
-// alto_frontal = 28 (ver su nota). Mover uno sin el otro sube el case o rompe
-// la holgura sobre la bandeja de base.
-inset_tornillo  = 26.5;
-// inset_valle = el inset del OTRO extremo de la cara inferior, el que da al
-// valle. Es asimetrico a proposito: las dos puntas de esa cara no se comen lo
-// mismo. Por delante la curva en punta vacia alto_frontal/2 = 15 mm de cara,
-// asi que el riel no puede empezar antes de 15 + rail/2 + 2 = 27. Por el
-// valle el vertice lleva radio_pico = 5 y su tangente mide solo 2.60 mm, asi
-// que con 2.6 + rail/2 + 2 = 15 basta. Forzar la simetria costaria 12 mm de
-// cara -- y ese es justo el sitio que Samuel pidio recortar ("bajar la
-// posicion donde esta el acrilico del medio", 2026-08-17).
-inset_valle     = 15;
+// Hoy no manda esa ventana sino la curva de cada esquina (ver la tabla de los
+// cuatro insets, abajo). El del frente ademas va emparejado con alto_frontal:
+// mover uno sin el otro sube el case o rompe la holgura sobre la bandeja.
+// CUATRO INSETS, uno por punta de cara. Hubo un `inset_tornillo` que servia
+// para todo y no daba: cada punta llega a una esquina distinta del contorno, y
+// lo que manda en cada una es CUANTO ACRILICO SE COME SU CURVA. El patron es
+// siempre el mismo -- tangente de la curva + rail/2 + material -- y lo unico
+// que cambia es la tangente:
+//
+//   punta               curva            tangente  + rail/2 + mat = inset
+//   ------------------  ---------------  --------  -------------------------
+//   inferior / frente   punta redondeada   14.0      + 10 + 2.5  = 26.5
+//   inferior / valle    pico (r=5)          2.6      + 10 + 2.4  = 15
+//   superior / valle    valle (r=30)       12.4      + 10 + 2.1  = 24.5
+//   superior / remate   punta redondeada   11.0      + 10 + 2.0  = 23
+//
+// Las tangentes NO son parametros: salen del radio y del angulo del vertice.
+// Si se mueve un radio hay que rehacer la columna, y el que avisa es
+// railes_dentro_del_costado() en check_dxf, que lee el contorno del DXF.
+inset_inf_frente = 26.5;
+inset_inf_valle  = 15;
+inset_sup_valle  = 24.5;
+inset_sup_remate = 23;
 // EUROrack, cotas del PANEL (no de la cara). Verificado el 2026-08-17 contra
 // midisoft.de y exploding-shed.com: taladro a 3.0 mm del canto superior e
 // inferior (de ahi los 122.50 entre centros) y el primero a 7.5 mm del canto
-// izquierdo, con paso horizontal multiplo de 5.08 (1 HP). Los usa
-// build_template.py para colocar los taladros del piso inferior; el piso
-// superior no es EUROrack y sigue con inset_tornillo en los dos ejes.
+// izquierdo, con paso horizontal multiplo de 5.08 (1 HP). LAS DOS FILAS son
+// 3U desde el 2026-08-17, asi que estos dos numeros valen para las dos
+// plantillas de build_template.py.
 inset_er        = 3.0;
 inset_er_x      = 7.5;
 // EUROrack manda aqui: "ER Screw distance vertical = 122.50 mm" (Doepfer).
@@ -238,7 +246,7 @@ inset_er_x      = 7.5;
 // asi que este numero se re-fija contra el riel que se compre. Es el ASUMIDO
 // principal de la silueta actual.
 sep_railes_inf  = 122.5;
-sep_railes_sup  = 137;  // centros de rail = alto_cara_sup - 2*inset = 190 - 53
+sep_railes_sup  = 122.5;
 holgura_rail    = 4;    // separacion minima entre railes vecinos (fix solapes)
 
 // --- esqueleto y herrajes ---
