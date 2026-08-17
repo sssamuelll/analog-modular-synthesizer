@@ -20,7 +20,9 @@ Para regenerarlos, ver el final de este fichero.
 | `sam17-vco.drl` | Taladros, Excellon, mm — vías (0.20 mm) y through-hole (conectores) en un solo fichero |
 | `sam17-vco-drl_map.pdf` | Mapa de taladros (tamaño/símbolo por herramienta), para revisar visualmente antes de pedir |
 | `sam17-vco-pos.csv` | Posiciones SMD para ensamblaje (CSV, mm, ambas caras aunque todo cae en `top`) — **solo las 111 huellas SMD**; los conectores (`J1`, `J2`, `J_CV1-4`, `J_OUT1-4`) y los test points son through-hole/pads y se sueldan aparte |
-| `sam17-vco-bom.csv` | BOM de ensamblaje, columnas al estilo JLC (`Designator,Value,Footprint,Quantity,LCSC Part#,Notes`) — generado cruzando `../bom.csv` contra `sam17-vco-pos.csv`, 25 líneas cubriendo las 111 huellas SMD |
+| `sam17-vco-bom.csv` | BOM de ensamblaje **con los códigos LCSC resueltos** (`Designator,Value,Footprint,Quantity,LCSC Part#,Notes`) — 26 líneas cubriendo las 111 huellas SMD. Cada nota lleva el MPN, el stock y la fecha en que se verificó. Es la fuente, no el fichero que se sube |
+| `sam17-vco-bom-jlc.csv` | El BOM **que se sube a JLCPCB** (`Comment,Designator,Footprint,LCSC Part #`) — lo genera `../kicad/bom_jlc.py` fusionando las filas que comparten código LCSC, porque JLC marca como duplicado el mismo part number en dos renglones |
+| `sam17-vco-cpl-jlc.csv` | El CPL (pick&place) **que se sube a JLCPCB** — lo genera `../kicad/cpl_jlc.py`. **El `pos.csv` crudo NO sirve**: falla con «Failed processing the CPL file» porque kicad-cli escribe las cabeceras de KiCad y JLC espera `Designator,Mid X,Mid Y,Layer,Rotation`, con Layer capitalizado y 2 decimales |
 | `sam17-vco-3d-top.png` | Render 3D cenital (kicad-cli pcb render, raytracing) — cómo se verá la placa montada, vista desde arriba |
 | `sam17-vco-3d-iso.png` | Render 3D isométrico — la placa en perspectiva |
 | `sam17-vco-top.svg` | Vista 2D de la cara superior (F.Cu + serigrafía + contorno) |
@@ -92,7 +94,16 @@ kicad-cli pcb export drill --output ../pcb/ \
 
 kicad-cli pcb export pos --output ../pcb/sam17-vco-pos.csv \
   --format csv --units mm --side both --smd-only sam17-vco.kicad_pcb
+
+python bom_jlc.py     # sam17-vco-bom.csv  -> sam17-vco-bom-jlc.csv
+python cpl_jlc.py     # sam17-vco-pos.csv  -> sam17-vco-cpl-jlc.csv
 ```
+
+`bom_jlc.py` falla en vez de escribir si alguna línea del BOM se quedó sin
+código LCSC válido, y `cpl_jlc.py` cruza BOM y posiciones **en los dos
+sentidos**: una pieza del BOM sin posición no se puede colocar, y una huella
+SMD con posición pero sin línea de BOM es un pad que la máquina deja vacío
+sin avisar. Los dos fallos los descubre la fábrica tarde y caro.
 
 `--no-x2` en los gerbers: genera RS-274X plano en vez del formato extendido
 X2 (que mete atributos de red/aperture como comentarios estructurados en
