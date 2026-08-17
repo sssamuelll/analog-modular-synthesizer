@@ -292,6 +292,13 @@ verificados con `cargo test` — sin una placa de por medio. El descriptor
 completo viaja en SysEx y vuelve idéntico, que era justo lo que el punto 2
 prometía.
 
+Y desde el mismo día **el instrumento contesta**: el servidor del protocolo
+está escrito y el binario compila para RP2350 hablando USB-MIDI. Al escribirlo
+salió que la tabla de §4.1 dejaba al cliente en silencio ante un `HELLO`, ante
+un `DESCRIBE` y ante **todo `SET` rechazado** — así que la tabla creció con
+`HOLA` y `ERROR`. Falta placa para comprobarlo: la lista está en
+`software/nucleo/fw/EN-PLACA.md`.
+
 ### Sigue abierto
 
 1. **El aislamiento del USB** no está medido. Que el DIN esté aislado por norma

@@ -366,6 +366,22 @@ el módulo 3 no sabe qué hay del otro lado del J2.
 | `JACKS` | → cliente | cambió la ocupación de los jacks |
 | `PENDING` | → cliente | una operación quedó **retenida** esperando confirmación física (§2.2) |
 | `RESOLVED` | → cliente | la operación retenida se confirmó o expiró |
+| `HOLA` | → cliente | la versión que el instrumento acepta hablar |
+| `ERROR` | → cliente | qué etiqueta falló y por qué |
+
+> **`HOLA` y `ERROR` se añadieron el 2026-08-17, al escribir el servidor.** La
+> tabla original dejaba al cliente **en silencio** en tres casos: `HELLO` —que
+> la propia tabla describe como *«negociar versión»*— no tenía respuesta;
+> `DESCRIBE` no tenía forma de contestar; y **todo `SET` rechazado** —solo
+> lectura, fuera de rango, no existe— se quedaba dentro del micro. El tercero
+> es el peor modo de fallo del diseño entero: el agente escribe, no pasa nada,
+> y no sabe por qué. §2.1 dice que eso se arregla creciendo la tabla, no
+> inventando una convención por fuera, y esto es hacerle caso.
+>
+> El volcado del descriptor **no** es un mensaje: es de largo variable y
+> grande, y meterlo en la enumeración obligaría a darle vida (`Mensaje<'a>`) y
+> a que eso rippleara por todo el códec. El servidor lo pide como respuesta
+> aparte y la capa de transporte lo sirve en su propio sobre.
 
 **`CHANGED` va a todos los suscriptores, sin importar quién movió el
 parámetro** — una perilla física, el VST, el teléfono o el agente. Es lo que

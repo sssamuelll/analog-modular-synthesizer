@@ -1,5 +1,9 @@
 # `nucleo` — el contrato del SAM17
 
+> **El binario ya existe**: `fw/` compila y enlaza para RP2350, con el
+> servidor del protocolo hablando por USB-MIDI. Lo que falta comprobar en
+> placa está en [`fw/EN-PLACA.md`](fw/EN-PLACA.md).
+
 Esto **no es el firmware**. Es el contrato del que cuelgan la app, el agente,
 el MCP y la pantalla: el modelo de parámetros, su protocolo, y los dos motores
 de análisis. Todo `no_std`, todo verificable con `cargo test` en tu máquina,
@@ -27,8 +31,17 @@ El alcance del firmware de validación (§8 de la spec) se parte solo:
 §9 ya lo tenía escrito así: casi todas sus filas dicen *«tests en host, Rust
 puro»*. Las que dicen protoboard o analizador se van al siguiente.
 
-Cuando llegue el binario de la placa entra como segundo miembro del workspace
-y consume esta biblioteca. Por eso hay workspace con un solo miembro.
+El binario vive en [`fw/`](fw) y **es un workspace aparte**, no un segundo
+miembro de este. Una versión anterior de este README decía lo contrario y
+estaba mal: los dos compilan para targets distintos, y en Rust estable no hay
+forma de decir «este paquete siempre va a este target» (`forced-target` es de
+nightly). Con los dos en el mismo workspace, `cargo test` aquí intentaría
+compilar el firmware para tu máquina. De ahí el `exclude = ["fw"]`.
+
+```bash
+cd software/nucleo/fw
+cargo build --release          # thumbv8m.main-none-eabihf, ya en .cargo/config.toml
+```
 
 ## Los módulos
 
@@ -47,6 +60,9 @@ y consume esta biblioteca. Por eso hay workspace con un solo miembro.
 | `perturbacion` | §7.6 códigos ortogonales y correlación |
 | `atribucion` | §7.2 los dos niveles |
 | `medidas` | §7.3 las bandas perceptuales como parámetros |
+| `servidor` | **Donde el contrato contesta**: `atender(mensaje) -> respuestas` |
+| `usbmidi` | El troceo en paquetes de 4 bytes que pide USB-MIDI 1.0 |
+| `pinout` | La asignación de pines (§5.3), con sus invariantes probados |
 
 ## Los tres formatos de cable
 
@@ -85,6 +101,8 @@ Bit alto de la etiqueta puesto = va del instrumento al cliente.
 | `0x04` | `SET` | | `0x84` | `JACKS` |
 | `0x05` | `SUBSCRIBE` | | `0x85` | `PENDING` |
 | `0x06` | `PRESET_LIST` | | `0x86` | `RESOLVED` |
+| | | | `0x87` | `HOLA` |
+| | | | `0x88` | `ERROR` |
 | `0x07` | `PRESET_LOAD` | | | |
 | `0x08` | `PRESET_SAVE` | | | |
 | `0x09` | `TUNE_START` | | | |
@@ -92,6 +110,12 @@ Bit alto de la etiqueta puesto = va del instrumento al cliente.
 | `0x0B` | `TELEMETRY` | | | |
 | `0x0C` | `POINT` | | | |
 | `0x0D` | `MEMO` | | | |
+
+`HOLA` y `ERROR` no estaban en la spec original: aparecieron al escribir el
+servidor, cuando salió que la tabla dejaba al cliente en silencio ante un
+`HELLO`, ante un `DESCRIBE` y ante **todo `SET` rechazado**. Ese último es el
+peor modo de fallo del diseño: el agente escribe, no pasa nada, y no sabe por
+qué.
 
 **Esta tabla es la superficie completa del instrumento.** Por §2.1 no puede
 haber capacidad fuera de ella, y la guardia no es un test: el `match` de
