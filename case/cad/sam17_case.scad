@@ -783,8 +783,12 @@ module bom() {
     echo(str("BOM: pestana superior x1, ", au, " x ", prof_sup, " en acrilico ",
              "t=", marco_sup, " -- apoya de canto en la cara de arriba del riel"));
     echo("BOM: tornillo M3 x5 para la pestana, entran por su canto al riel.");
-    echo("     CONFIRMAR con el riel en mano que esa cara admite rosca M3;");
-    echo("     si no, el mismo apoyo a tope pegado sobra para 60 g de acrilico");
+    echo("     LA HOJA DE TIPTOP LO PONE EN DUDA: el Z-Rail es un extruido de");
+    echo("     pared fina -- 1.2 mm en casi todo el contorno -- y lo unico macizo");
+    echo("     es el nucleo por donde pasa el M4 de punta. Un M3 de 6 mm en esa");
+    echo("     cara probablemente atraviese pared y salga al hueco.");
+    echo("     PLAN A menos que el calibrador diga otra cosa: el mismo apoyo a");
+    echo("     tope, PEGADO. Son 60 g de acrilico y la junta trabaja a cortante.");
     echo(str("BOM: patica metalica torneada x4, d=", d_pie, " x ", alto_pie, " mm"));
     echo(str("BOM: planchas t=", t_acrilico, ": entrepiso, tapa del valle, ",
              "piel inf, piel sup; suelo t=", t_base, " (la bandeja de base, ",
