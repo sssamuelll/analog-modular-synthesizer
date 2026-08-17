@@ -18,20 +18,25 @@ Lo que cambia y lo que no:
   * La electronica del CV (DAC, amplificador, red de ganancia) se muda entera
     al modulo 3 con sus derivas intactas: tuning_budget.py sigue valiendo
     termino a termino.
-  * Las 4 voces salen de UN AD5686R con UNA referencia interna: la deriva de
-    la VREF es COMUN a las voces — el acorde no se desafina entre si, y el
-    autoafinado la reabsorbe en la siguiente pasada. Ya era asi cuando el
-    chip iba en el cerebro; mudarlo no lo estropea.
+  * Las 4 voces salen de 3x AD5686 en cadena soldada, pero con UNA sola VREF:
+    la ADR4525BRZ dedicada de la placa (las tres referencias internas de los
+    DAC se apagan por firmware, registro 0111). La deriva de esa VREF es
+    COMUN a las voces — el acorde no se desafina entre si, y el autoafinado
+    la reabsorbe en la siguiente pasada. Ya era asi cuando el chip iba en el
+    cerebro; mudarlo no lo estropea.
   * El CV PATCHEADO entre modulos sigue viendo el bus: para el patch bay el
     presupuesto de ground_budget.py sigue vigente tal cual.
 
 Y las dos condiciones que esto impone al modulo 3:
 
-  * La referencia tiene que ser el grado B (AD5686RB...): 2 ppm/C tipico,
-    5 maximo. El grado A es 20 ppm/C maximo y aqui se demuestra que no cabe.
-    (Verificado en ad5686r_5685r_5684r.pdf de ADI, tabla de specs, pag. 4.
-    Ojo ademas con el -EP: 13 ppm/C, tampoco vale — tuning_budget.py ya
-    tropezo una vez con esa hoja.)
+  * La referencia tiene que quedar por debajo del techo de grado B: 5 ppm/C
+    maximo (REF_TC_MAX de tuning_budget.py, que sigue siendo EL CONTRATO y no
+    cambia). El grado A del AD5686R es 20 ppm/C maximo y aqui se demuestra que
+    no cabe. (Verificado en ad5686r_5685r_5684r.pdf de ADI, tabla de specs,
+    pag. 4. Ojo ademas con el -EP: 13 ppm/C, tampoco vale — tuning_budget.py
+    ya tropezo una vez con esa hoja.) La placa real cumple el contrato con
+    margen: la VREF que de verdad manda es la ADR4525BRZ dedicada, 2 ppm/C
+    MAXIMO — mejor que el propio techo de grado B, no solo que el A.
   * REGLA DE LAYOUT: el DAC va PEGADO a los VCO y el retorno del modulo no
     cruza entre ellos. La cota pesimista de abajo (todo el retorno del modulo
     atravesando el camino DAC->VCO) es el techo de lo que puede pasar si el
