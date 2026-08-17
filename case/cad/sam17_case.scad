@@ -54,9 +54,14 @@ function pts_perfil() =
 // modulo. Samuel lo cazo mirando el render. La bisagra se mudo a la arista del
 // techo (ver eje_visagra()).
 //
-// PERO EL COSTADO SOLO PERFORA LOS DOS PRIMEROS. Los de la cara de arriba son
-// TAPA: giran con ella, asi que un M5 al costado ahi seria un cerrojo. Se
-// fijan a los costadillos de la tapa, que son herraje sin cerrar.
+// LOS CUATRO LLEVAN M5 AL COSTADO, pero no todos hacen lo mismo:
+//   cr[0], cr[1]  fijacion. La cara de abajo no se mueve.
+//   cr[3]         EJE. Tornillo de hombro, no se aprieta (ver params.scad).
+//   cr[2]         CIERRE. Se quita para abrir la tapa y se pone para cerrarla.
+// Aqui hubo un rato en que cr[2] no llevaba taladro, con el argumento de que
+// con los dos extremos empernados la tapa no gira. Cierto, pero de ahi no se
+// sigue dejar el riel sin nada: se sigue que ese tornillo sea QUITABLE. Samuel
+// lo cazo en el render preguntando donde estaba el tornillo de ese riel.
 
 // Semiextension del riel EUROrack ya girado con su cara. NO es un cuadrado:
 // mide rail_er_alto a lo largo de la cara y rail_er_fondo hacia dentro, asi que
@@ -319,11 +324,9 @@ module costado_2d() {
     cr = centros_rail();
     difference() {
         perfil_lateral();
-        // Tres de los cuatro railes de panel se fijan de punta al costado. El
-        // que falta es cr[2], el del VALLE de la cara de arriba: con los dos
-        // extremos de esa cara empernados la tapa no giraria. El de arriba
-        // (cr[3]) si lleva su M5 -- ES el eje de giro.
-        for (c = concat([cr[0], cr[1], cr[3]], centros_esqueleto()))
+        // Los cuatro railes de panel llevan su M5 de punta al costado; lo que
+        // cambia es el papel de cada uno (ver la nota de centros_rail).
+        for (c = concat(cr, centros_esqueleto()))
             translate(c) circle(d = d_M5_paso + kerf);
     }
 }
@@ -716,9 +719,12 @@ module bom() {
              " -- OJO: la longitud del que entra al riel esta SIN CERRAR, John dijo",
              " que el M5x35 de catalogo no sirve para costado de ", t_cheek, " mm"));
     echo("BOM: standoff M4 x8 (las dos pieles, voladas) + tornillo M4 boton x16 + arandela x16");
-    echo(str("BOM: tornillo M5 DE HOMBRO x2 + arandela metalica x2 -- son los ",
-             "del riel de arriba y hacen de eje de la tapa; no se aprietan. ",
-             "SIN CERRAR: cierre del valle y amortiguador de tapa abierta"));
+    echo("BOM: los M5 de riel no son todos iguales -- x4 fijos (cara de abajo),");
+    echo("     x2 DE HOMBRO + arandela (riel de arriba: el eje, no se aprietan),");
+    echo("     x2 DE MANO (riel del valle de arriba: el cierre, se quitan para abrir)");
+    echo("BOM: paneles ciegos en TODO hueco de la fila de arriba -- no son estetica:");
+    echo("     con la tapa abierta son lo unico que ata sus dos rieles entre si");
+    echo("BOM: SIN CERRAR -- amortiguador que deje la tapa abierta");
     echo(str("BOM: pestana superior x1, ", au, " x ", marco_sup,
              " en acrilico t=", t_cheek, " (fijacion sin cerrar)"));
     echo(str("BOM: patica metalica torneada x4, d=", d_pie, " x ", alto_pie, " mm"));

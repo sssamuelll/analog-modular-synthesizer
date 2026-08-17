@@ -416,9 +416,24 @@ d_pie       = 16;   // diametro; pequeno a proposito
 // QUE ES TAPA Y QUE ES CASE:
 //   tapa  = los 2 rieles de la cara de arriba + sus modulos + la pestana
 //   case  = todo lo demas
-// El riel de ARRIBA conserva su M5 al costado, que es el eje. El del VALLE lo
-// pierde: con los dos empernados la tapa no gira. El costado sigue con 9
-// taladros de larguero, pero uno cambio de sitio.
+//
+// LOS CUATRO RIELES LLEVAN SU M5 AL COSTADO. Hubo un rato en que el del valle de
+// arriba no lo llevaba, con el argumento de que con los dos extremos empernados
+// la tapa no gira. Es cierto y es media verdad: de ahi no se sigue dejar el riel
+// colgando de nada, se sigue que ese tornillo sea QUITABLE. Samuel lo cazo en el
+// render -- "donde esta el tornillo del riel de abajo de la row superior?".
+// Papeles:
+//   cara de abajo   x2  fijacion, y ya
+//   riel de arriba  x2  EJE. De hombro, con arandela, sin apretar
+//   riel del valle  x2  CIERRE. De mano: se quitan para abrir, se ponen para
+//                       cerrar. Misma geometria que un tornillo fijo, distinta
+//                       intencion -- y si lo quieres sin herramienta, en ese
+//                       mismo taladro entra un pasador de bola con muelle.
+//
+// OJO CON LOS PANELES CIEGOS de la fila de arriba: con la tapa CERRADA la sujetan
+// los 4 tornillos, pero ABIERTA sus dos rieles solo estan atados entre si por lo
+// que haya atornillado de uno a otro, o sea los modulos. Un hueco sin tapar es
+// una charnela. Los ciegos no son estetica aqui, son estructura.
 //
 // LO QUE SE PAGA, y hay que decirlo: la tapa entera cuelga de DOS M5 apoyando en
 // acrilico de 8. Una bisagra continua repartia esa carga en 528 mm. Van tornillos
