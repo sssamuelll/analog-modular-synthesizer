@@ -83,17 +83,23 @@ Ninguno privilegiado, ninguno especial.
               auto-descriptivo · una sola verdad
                             │
                      ┌──────┴──────┐
-                     │   RP2350    │   dueño del estado
+                     │  RP2350B    │   dueño del estado
                      │    Rust     │   núcleo 0: tiempo real
-                     │             │   núcleo 1: análisis (§7)
+                     │             │   núcleo 1: atribución (§7)
                      └──────┬──────┘
-        ┌──────────┬────────┼────────┬──────────┐
-        │          │        │        │          │
-    J2 (SPI+I²C)  cadena  4× TUNE  4× GATE   cabeza local
-        │        WS2812    (PIO)
-   ┌────┴───┬────────┬────────┐
- mód 3    mód 5    mód 6    mód 7
+   ┌────────┬────────┬──────┴──┬────────┬────────┬────────┐
+   │        │        │         │        │        │        │
+  J2      cadena  4× TUNE   4× GATE   DIN in  clock/    pedal
+(SPI+I²C) WS2812   (PIO)              /out    reset
+   │
+   ├── mód 3 (VCO) ── mód 5 (VCF) ── mód 6 (ADSR) ── mód 7 (VCA)
+   │
+   └── mód 4 (mixer) ── OYE por él: códec 24 bits + FFT, y manda
+                        números por el mismo J2 (§7.4)
 ```
+
+*(Puertos completos y el porqué de cada uno: §5. El audio **no** entra al
+cerebro — §5.0.)*
 
 **El corolario que hace barato todo lo demás:** «control por MCP» deja de ser un
 subsistema y pasa a ser un adaptador (§4.5). El agente no necesita saber de
@@ -440,7 +446,22 @@ el descriptor tiene que ser suficiente para generarlo.)*
 | **Gates** | 4 salidas, activo alto | `architecture-poly.md` §4 |
 | **Cadena WS2812** | Un pin de datos, encadena todos los paneles | §6.2 |
 | **Cabeza local** | 4 dígitos + un encoder con pulsador + LEDs de estado | §5.2 |
-| **ADC de análisis** | Toma de medida desde el mixer | §7.4 |
+| **USB device** | Puerto nativo: hacia tu computadora | §4.2 |
+| **USB host** | PIO-USB: tu controlador enchufado al instrumento | §5.3 |
+| **MIDI DIN in/out** | UART + optoacoplador | §5.3 |
+| **Clock / reset** | Sync analógico, entrada y salida | §5.3 |
+| **Pedal** | Confirmación física y expresión | §5.3 |
+| **UART** | Zócalo del puente inalámbrico | §4.2 |
+
+### 5.0 Qué NO entra por aquí: el audio
+
+**El cerebro no tiene entrada de audio.** No es una carencia: es la regla que el
+resto del instrumento cumple —*«por el cableado viajan números, no
+voltajes»*— aplicada también aquí. La medida del sonido la hace el módulo 4,
+donde el audio ya está, y llega al cerebro convertida en números por el J2.
+
+El porqué completo, y la corrección de una versión anterior de esta spec que
+sí metía una línea analógica hasta el cerebro, están en §7.4.
 
 ### 5.1 El autoafinado: el número más flojo del diseño, resuelto
 
@@ -512,6 +533,100 @@ agente no cuesta hardware extra: ya estaba ahí.
 **Y el panel entero es la pantalla de verdad**: la cadena de LED direccionables
 —que ya estaba planeada para el soft-takeover de las perillas
 (`architecture-poly.md` §7)— dice más de un vistazo que cualquier OLED.
+
+### 5.3 Las conexiones al mundo, y por qué cada una
+
+#### USB de doble rol: es lo que hace verdad el «toca sin nada más»
+
+`architecture-compute.md` §1 promete un instrumento completo sin computadora.
+Con solo USB *device*, esa promesa es falsa en 2026: las notas solo entrarían
+por DIN o desde una máquina, y **casi todo controlador moderno es USB-only**.
+
+Verificado que se puede tener las dos cosas: [Pico-PIO-USB](https://github.com/sekigon-gonnoc/Pico-PIO-USB)
+implementa host sobre PIO en RP2350 **funcionando a la vez que el USB nativo
+hace de device** — confirmado con TinyUSB en enero de 2026.
+
+```
+  controlador USB ──► [PIO-USB host]  RP2350  [USB nativo] ──► tu DAW
+                                         │
+                                  su propio secuenciador
+```
+
+Y sale gratis un tercer papel: **el instrumento es un hub MIDI.** Tu teclado
+entra, se mezcla con lo que el secuenciador esté generando, y sale hacia la
+computadora.
+
+*(Riesgo: Pico-PIO-USB es C, misma escalera que §4.4, y hay reportes de que
+costó estabilizarlo en alguna placa. El instrumento funciona sin host; es
+degradación, no fallo.)*
+
+#### MIDI DIN: el que está aislado
+
+`architecture-compute.md` §7 ya lo pedía y una versión anterior de esta spec lo
+perdió. No es nostalgia: el DIN exige **optoacoplador desde 1983**, y es la
+razón por la que el propio documento concluye *«USB para comodidad, DIN para
+grabar en serio»*. Sin él vuelve entero el lazo de tierra del USB, que ese
+mismo documento marca como trampa conocida.
+
+#### Clock y reset: sin esto el secuenciador no toca con nadie
+
+Un secuenciador que solo sincroniza por MIDI no puede tocar con un rack modular
+ni con la mayoría del hardware. El estándar es viejo y estable: **TTL, 0 V /
+~+5 V, 24 PPQN** típico; entradas con Schmitt de umbral bajo ~0.1 V y alto
+1-2 V, y las fuentes dan pulsos de 10 V de ~1 ms.
+
+Y hay un detalle que **no** está estandarizado, y por eso importa:
+
+> **No existe comportamiento unificado de reset en Eurorack.** Unos módulos
+> miran el estado actual del reloj al recibirlo; otros esperan el siguiente
+> flanco de subida.
+
+Por eso **el comportamiento de reset va como parámetro, no como decisión
+cableada**. Y al ser parámetro, por §2.1 lo alcanza el agente: *«mi secuenciador
+externo entra corrido un paso, arréglalo»* pasa a ser algo que el instrumento
+puede resolver hablando. Una incompatibilidad clásica del formato, tratada como
+lo que es — una preferencia, no una verdad.
+
+#### El pedal: la spec lo pedía y no lo tenía
+
+§2.2 dice que la confirmación del agente es física, *«un botón o un pedal»*, y
+ninguna versión anterior definió el jack. Es la función de seguridad más crítica
+del diseño y colgaba de hardware inexistente.
+
+El pulsador del encoder sirve de respaldo, pero **en escena tienes las manos
+ocupadas**. Y si la entrada es analógica, el mismo jack da **expresión**, que
+por el mapeo universal se enruta a cualquier parámetro.
+
+#### La consecuencia de sumar pines: va el RP2350**B**
+
+Contando todo lo anterior —SPI, `CS` con holgura, I²C, 4× TUNE, 4× GATE, DIN
+in/out, UART del puente, WS2812, cabeza local, clock/reset in/out, pedal y los
+dos pines del PIO-USB— salen **~37 GPIO**.
+
+| | GPIO | Entradas analógicas | Encapsulado |
+|---|---|---|---|
+| RP2350**A** | 30 | 4 | QFN-60, 7×7 mm |
+| **RP2350B** | **48** | **8** | QFN-80, 10×10 mm |
+
+**No cabe en el A.** El B además da 8 entradas analógicas en vez de 4, que hacen
+falta para el pedal de expresión y dejan margen.
+
+Y el argumento de `architecture-compute.md` §7 sigue en pie: un QFN-80 de
+10×10 mm sigue siendo minúsculo al lado de la cabecera de 40 pines del Pi, así
+que el atasco de ruteo del issue #22 se disuelve igual.
+
+*(La elección final del encapsulado es de la spec de la placa. Aquí queda el
+conteo que la obliga.)*
+
+#### Y una función que no cuesta hardware: mapeo universal
+
+Cualquier CC de MIDI entrante, el pedal, o cualquier entrada de CV de cualquier
+módulo → **cualquier parámetro**. Es firmware sobre el modelo de §3, no un
+puerto más. Con el agente encima, *«mapea mi pedal de expresión al cutoff»*
+funciona sin que nadie programe nada.
+
+Actualización de firmware: **UF2 por USB**, arrastrar y soltar. Sale gratis del
+RP2350 y no hay que diseñar nada.
 
 ---
 
@@ -611,14 +726,31 @@ El objetivo, en palabras del brief: que el agente pueda saber que **está
 saliendo demasiado grave**, o que **hay una frecuencia que sobresale de las
 demás**, y actuar en consecuencia.
 
-**Cabe.** El RP2350 tiene dos Cortex-M33 a 150 MHz con **FPU por hardware e
-instrucciones DSP**, y CMSIS-DSP le da FFT y RMS ya hechos. El reparto es
-limpio:
+**Medir y atribuir son dos trabajos distintos, y cada uno quiere vivir en un
+sitio distinto.** Esa es la decisión que ordena toda esta sección:
+
+```
+  MÓDULO 4 (mixer)                          CEREBRO (RP2350B)
+  ┌────────────────────────┐                ┌──────────────────────┐
+  │ suma las 4 voces       │                │ sabe qué nota toca   │
+  │ códec de audio 24 bits │   J2: números  │ cada voz y dónde     │
+  │ FFT, bandas, picos     │ ─────────────► │ está cada filtro     │
+  │                        │                │          ↓           │
+  │        MIDE            │                │      ATRIBUYE        │
+  └────────────────────────┘                └──────────────────────┘
+```
+
+**El módulo 4 tiene el audio. El cerebro tiene el estado.** Ninguno puede hacer
+el trabajo del otro, y juntarlos obligaría a mover audio analógico a un sitio
+donde no tiene por qué estar.
+
+En el cerebro, el reparto entre núcleos sigue en pie:
 
 - **Núcleo 0** — tiempo real duro: notas, gates, tramas SPI, PIO.
-- **Núcleo 1** — no hace otra cosa que escuchar.
+- **Núcleo 1** — atribución (§7.2) y el motor de perturbación (§7.6).
 
-El análisis nunca le roba un ciclo a una nota.
+Nada de eso le roba un ciclo a una nota, y ninguna de las dos cosas es pesada:
+lo caro —la FFT— ya vino resuelto y convertido en números.
 
 ### 7.1 Tres lazos a tres velocidades
 
@@ -696,36 +828,73 @@ solo lectura, con unidad y rango, leídos con `GET` y seguidos con `SUBSCRIBE`.
 El agente no necesita saber que existe un motor de análisis; solo lee
 parámetros.
 
-### 7.4 De dónde sale el audio
+### 7.4 Dónde vive la medida — y la corrección de una versión anterior
 
-La mezcla existe en el **módulo 4**, que **no está dibujado** — su kicad,
-esquemático y PCB están pendientes. Decidirlo ahora no cuesta nada; decidirlo
-después es un respin.
+**Una versión anterior de esta spec mandaba una línea analógica diferencial
+desde el mixer hasta un ADC en el cerebro. Estaba mal, y merece decirse por qué.**
 
-**Una línea diferencial con buffer desde el mixer al ADC del cerebro.**
-Diferencial porque rechaza entera la diferencia de masas, así que la frontera
-`GNDA`/`GNDD` no se toca, y con buffer para que el ADC no cargue ni acople de
-vuelta hacia el mixer.
+Rompía la regla que el resto del instrumento cumple sin excepción —*«por el
+cableado viajan números, no voltajes»* (`architecture-poly.md` §8)— y era el
+único sitio de todo el diseño donde eso pasaba. La defensa que traía —«es una
+toma de medida, no un camino de audio»— es **cierta pero es una
+racionalización, no un argumento**: explicaba por qué el daño sería pequeño, no
+por qué había que hacerlo.
 
-> **Esto es una toma de medida, no un camino de audio.** Nada de lo que se oye
-> pasa por aquí. Las reglas duras de masa existen para proteger el CV de tono y
-> el audio; un ADC que mide tiene requisitos distintos y mucho más laxos.
+**La versión correcta: la medida vive donde vive el audio.**
 
-**Límites, dichos ahora:** el ADC interno del RP2350 no es de grado
-masterización — da medida **accionable**, no certificable, y es el intercambio
-correcto. Y «tiempo real» aquí significa **tasa de análisis** (decenas de Hz),
-no tasa de muestreo: «hay demasiado grave» no cambia 48 000 veces por segundo.
-Si algún día hace falta más, un ADC de audio dedicado en el módulo 4 es el
-camino de mejora, y no invalida nada de esto.
+El módulo 4 lleva un **submódulo de DSP de clase Daisy** —
+[Daisy Patch Submodule](https://electro-smith.com/products/patch-submodule),
+STM32H750 Cortex-M7 a 480 MHz, códec AKM de **24 bits hasta 192 kHz**, 64 MB de
+SDRAM, con acondicionamiento de señal Eurorack ya incorporado, ~£35 — que hace
+la FFT, las bandas perceptuales y la detección de resonancia **sobre la mezcla
+que ya tiene delante**, y publica **números** por el J2.
+
+No es una plataforma exótica: mueve el Qubit Surface y **toda la serie Versio de
+Noise Engineering**. Es hardware probado en módulos comerciales.
+
+**Lo que se gana, y no lo compraba un cerebro más rápido:**
+
+| | ADC en el cerebro (lo anterior) | Códec en el módulo 4 |
+|---|---|---|
+| Resolución | **12 bits** (~72 dB) | **24 bits** (~144 dB) |
+| Líneas analógicas cruzando a lo digital | una | **ninguna** |
+| Frontera `GNDA`/`GNDD` | hay que defenderla | no se toca |
+| Margen de cómputo | a tasa de análisis, justo | 480 MHz con SDRAM |
+
+**Oídos de 24 bits en vez de 12 no se consiguen con un micro más rápido: se
+consiguen poniendo el conversor donde está el sonido.** Ese es el punto entero.
+
+**Consecuencia de segundo orden, anotada para el módulo 4:** el mismo submódulo
+que analiza puede **procesar**. Es decir, el módulo 4 (mixer) y el módulo 8
+(efectos digitales) podrían acabar siendo la misma placa. No se decide aquí —
+es de su spec— pero conviene que quien la escriba lo sepa antes de empezar.
+
+**Lo que sigue igual:** «tiempo real» significa **tasa de análisis** (decenas de
+Hz), no tasa de muestreo. «Hay demasiado grave» no cambia 48 000 veces por
+segundo, y el lazo del agente sigue midiéndose en segundos (§7.1).
+
+**Y el momento es gratis:** el módulo 4 **no está dibujado** — kicad,
+esquemático y PCB pendientes. Decidirlo hoy no cuesta nada; decidirlo después es
+un respin.
 
 ### 7.5 El memo del agente
 
-Como el ADC ya está, grabar **unos segundos** en SRAM cuesta casi nada y sirve
-de verdad: *«¿en qué tonalidad está esto que toqué?»*, *«imita este timbre»*. Es
-el mensaje `MEMO` de §4.1.
+Con el códec y la SDRAM ya en el módulo 4 (§7.4), grabar unos segundos para que
+el agente los analice **no cuesta hardware nuevo**: *«¿en qué tonalidad está
+esto que toqué?»*, *«imita este timbre»*. El mensaje `MEMO` de §4.1 lo pide, el
+cerebro lo enruta y el módulo 4 lo graba.
 
-**No es un sampler**, y la diferencia importa: es que el agente pueda oír una
-frase. El sampler es el módulo 9 y §10 explica por qué no vive aquí.
+**Y sigue sin ser un sampler**, aunque ahora la memoria dé para mucho más que
+unos segundos. La diferencia no es la duración, es el trabajo:
+
+| | Memo | Sampler (módulo 9) |
+|---|---|---|
+| Para qué | Que el agente **analice** una frase | **Tocar** notas |
+| Necesita | Grabar y medir | Afinado por nota, polifonía, bucles, envolventes |
+| A dónde sale | A números, para el modelo | Al patch bay, y de ahí al VCF y al VCA analógicos |
+
+Grabar no es samplear. §10 explica por qué el sampler tampoco vive en el
+cerebro.
 
 ### 7.6 El motor de perturbación: una sola pieza para dos problemas
 
@@ -813,9 +982,14 @@ Corre sobre **placa de desarrollo RP2350**, no sobre PCB propia.
 - Guardar y recuperar presets en flash
 - **Retención de operaciones marcadas y confirmación física** (§2.2) — la regla
   la impone el micro, así que nace aquí, no en la app
-- **Motor de análisis en el núcleo 1** (§7) contra una señal de entrada de
-  prueba: bandas perceptuales, detección de resonancia, y las medidas
-  publicadas como parámetros
+- **Atribución en el núcleo 1** (§7.2): recibir medidas por el J2 —simuladas
+  mientras no exista módulo 4— publicarlas como parámetros de solo lectura, y
+  cruzarlas con el estado de las voces para producir hipótesis con confianza
+- **USB de doble rol** (§5.3): device y host a la vez sobre placa de
+  desarrollo, con un controlador MIDI real enchufado
+- **MIDI DIN, clock/reset y pedal** sobre protoboard: el DIN con su
+  optoacoplador, el reset **como parámetro** con sus dos comportamientos, y el
+  pedal reteniendo una operación marcada
 
 **Fuera, y va en specs posteriores:** secuenciador, arpegiador, LFOs, memoria de
 acordes; la UI web, el agente, el servidor MCP y el puente de §4.5; el puente
@@ -839,7 +1013,10 @@ Siguiendo la costumbre del repo —guiones ejecutables con aserciones, no prosa:
 | **Jitter del comparador** | Medido en placa y contrastado contra los **131 ns** que `autotune_budget.py` despeja. Aprobado o suspenso, no una incógnita |
 | `F_PIO` sin dividir | Comprobar que el PIO corre al reloj de sistema; si el firmware lo divide, `autotune_budget.py` hay que recalcularlo |
 | Reparto de voces | Tests en host con secuencias de notas conocidas |
-| Motor de análisis | Señales sintéticas de referencia: tono puro, ruido rosa, y una resonancia inyectada a frecuencia conocida. Se exige que la detecte donde está |
+| Medidas por el J2 | Se inyectan bandas y picos sintéticos como si vinieran del módulo 4, y se exige que salgan por `GET`/`SUBSCRIBE` como parámetros de solo lectura, con unidad y rango |
+| USB doble rol | Un controlador MIDI real enchufado al host **mientras** un DAW ve el instrumento como device. Notas de los dos caminos, mezcladas |
+| Reset como parámetro | Los dos comportamientos —mirar el estado del reloj y esperar el flanco— producen resultados distintos y reproducibles con el mismo pulso de entrada |
+| Pedal | Retiene una operación marcada y la libera. Mismo test que la confirmación física, por el otro camino |
 | **Motor de perturbación** | Simulación con topología y atenuaciones conocidas más ruido: se exige que recupere lo que se puso. **Y casos deliberadamente ambiguos: se exige que los declare ambiguos en vez de inventar** |
 | **Atribución** | Espectro sintético donde dos voces comparten un armónico: se exige confianza baja, no una respuesta segura y equivocada |
 | Confirmación física | Test: una operación marcada llega por USB y **no** se ejecuta hasta el pulsador |
@@ -855,8 +1032,16 @@ queda escrito se pierde.
 
 **Módulo 4 (mixer) — no dibujado, gratis decidirlo:**
 
-- **Salida diferencial con buffer hacia el ADC del cerebro** para el motor de
-  análisis (§7.4)
+- **Lleva el motor de análisis entero** (§7.4): submódulo de clase Daisy
+  (STM32H750, códec de 24 bits, SDRAM), FFT, bandas perceptuales y detección de
+  resonancia sobre la mezcla que ya tiene delante
+- **Publica números por el J2**, nunca audio. Ninguna línea analógica cruza
+  hacia el cerebro
+- Graba el `MEMO` de §7.5 cuando se lo piden
+- EEPROM de identidad y TMP1075, como todos
+- **Anotado para quien escriba su spec:** el mismo submódulo que analiza puede
+  procesar, así que el módulo 4 y el módulo 8 podrían ser una sola placa.
+  Decisión suya, no de aquí
 
 **Módulos 5, 6 y 7 — no dibujados, gratis decidirlo:**
 
@@ -873,11 +1058,17 @@ queda escrito se pierde.
 
 **El cerebro (spec siguiente):**
 
+- **RP2350B (QFN-80)**, no el A: el conteo de §5.3 da ~37 GPIO y el A solo
+  tiene 30. El B da 48 y 8 entradas analógicas
 - Mux I²C de 8 canales
-- Líneas de `CS` con holgura: módulos 3, 5, 6, 7 **y los futuros 8 y 9**, más
-  repuesto
+- Líneas de `CS` con holgura: módulos 3, **4**, 5, 6, 7 **y los futuros 8 y 9**,
+  más repuesto
 - Un pin para la cadena WS2812
-- Entrada de ADC para el análisis, con receptor diferencial
+- **Sin entrada de audio.** La medida llega como números por el J2 (§5.0, §7.4)
+- **USB de doble rol**: puerto nativo como device, PIO-USB como host
+- **MIDI DIN in/out** con optoacoplador
+- **Clock y reset**, entrada y salida, niveles TTL con Schmitt
+- **Jack de pedal**, a entrada analógica para que sirva también de expresión
 - Zócalo para el puente inalámbrico — **módulo pre-certificado, no chip de RF
   soldado**: no se diseña antena, el núcleo de tiempo real nunca ve una pila
   TCP, es reemplazable, y se puede omitir para una versión más barata
@@ -891,14 +1082,23 @@ para un sampler de verdad. Se descartan igual, por tres razones:
 
 1. **Convertirían al cerebro en fuente de audio**, que es justo lo que todas las
    decisiones anteriores sacaron de esa caja: *«el cerebro manda números, no
-   voltajes»*, *«menos analógico en el cerebro = menos que rutear y menos que
-   pueda ensuciarse»*.
-2. **El núcleo 1 ya tiene dueño**: el motor de análisis de §7, que es la función
-   diferencial del instrumento. Reproducir y resamplear competiría con ella.
+   voltajes»* — la regla que §5.0 y §7.4 dejan sin excepciones.
+2. **Existe una plataforma hecha para esto y les gana en todo.** La clase Daisy
+   —STM32H750 a 480 MHz, códec de 24 bits hasta 192 kHz, **64 MB de SDRAM** que
+   son diez minutos de audio, acondicionamiento Eurorack incluido, ~£35— no es
+   un compromiso: es lo que mueve el Qubit Surface y toda la serie Versio de
+   Noise Engineering. Contra eso, 16 MB de PSRAM en el cerebro es la versión
+   pobre de algo que ya se puede comprar hecho.
 3. **Como módulos son mejores.** Su salida cae en el patch bay, así que pasa por
    el VCF, el VCA y la envolvente **analógicos** — que es exactamente por qué se
    quiere un sampler de hardware y no un plugin. Y ese patch se guarda y se
    recupera con el resto (§6.2). Meterlos en el cerebro tiraría esa ventaja.
+
+> **La conclusión que ordena todo esto:** «un cerebro más potente» no es lo que
+> hace al instrumento más capaz, porque **el cerebro no tiene camino de audio a
+> propósito**. Los MHz que valen la pena viven donde vive el sonido — en el
+> módulo 4 para oír, y en el 8 y el 9 para producirlo. El cerebro se queda
+> pequeño, y esa es su función.
 
 **Lo que queda aplazado a propósito:**
 
@@ -923,6 +1123,10 @@ Los ocho puntos abiertos de la revisión inicial, verificados el **2026-08-17**.
 | **Webview en plugin** | Resuelto, y en Rust. [WRAC](https://www.kvraudio.com/forum/viewtopic.php?p=9248726) (NovoNotes, mayo 2026): WebView + Rust Audio + CLAP, **15 000+ usuarios en producción**, VST3/AU/Standalone vía `clap-wrapper`, crate `wxp` sobre `wry` con IPC bidireccional. CLAP tiene además extensión webview en borrador |
 | **24AA02E48** | Confirmado contra datasheet: SOT-23-5, A0/A1/A2 no conectadas → **dirección fija**, el mux I²C es obligatorio. Y el `check_netlist.py` del módulo 3 coincide con el pinout, pin por pin |
 | **RP2350 para DSP** | Confirmado: dual Cortex-M33 a 150 MHz con **FPU por hardware e instrucciones DSP**, CMSIS-DSP con FFT y RMS, 2-4× el RP2040 |
+| **USB de doble rol** | Confirmado: [Pico-PIO-USB](https://github.com/sekigon-gonnoc/Pico-PIO-USB) hace host sobre PIO en RP2350 **a la vez** que el USB nativo hace de device; funcionando con TinyUSB en enero de 2026 |
+| **Clock/reset Eurorack** | Confirmado: TTL 0 V / ~+5 V, 24 PPQN típico, Schmitt con umbrales ~0.1 V y 1-2 V. **Y que NO hay estándar de reset** — de ahí que vaya como parámetro (§5.3) |
+| **RP2350A contra B** | Confirmado: A = 30 GPIO / 4 analógicas / QFN-60; **B = 48 GPIO / 8 analógicas / QFN-80**. El conteo obliga al B |
+| **Plataforma para oír y para el audio digital** | Confirmada la clase Daisy: STM32H750 a 480 MHz, códec 24 bits/192 kHz, 64 MB SDRAM, acondicionamiento Eurorack, ~£35, probada en el Qubit Surface y la serie Versio de Noise Engineering |
 
 ### Las cuatro fricciones, resueltas en esta revisión
 
@@ -939,10 +1143,16 @@ test corre en simulación, sin hardware.
 
 ### Abiertos
 
-1. **El acoplo eléctrico real de §6.2 y §7.2.** Los algoritmos se validan en
+1. **El acoplo eléctrico real del barrido de §6.2.** El algoritmo se valida en
    simulación, así que lo que queda por probar es la electrónica: si la señal
    inyectada sobrevive el camino analógico real con margen suficiente. No hay
    dónde medirlo hasta que exista un módulo con jacks de CV sensados.
+2. **La atribución (§7.2) contra un instrumento sonando.** Ahora depende de dos
+   piezas en dos placas —el módulo 4 midiendo y el cerebro cruzando— así que
+   hasta que exista el módulo 4 solo se puede probar con medidas simuladas.
+3. **Pico-PIO-USB en Rust.** Está verificado que funciona, pero en C con
+   TinyUSB. Aplica la misma escalera de §4.4: se resuelve en el plan, y el
+   instrumento funciona sin host — es degradación, no fallo.
 2. **El jitter real del 74HC14 en placa.** Ya no es una incógnita abierta —hay
    131 ns contra los que contrastarlo— pero sigue sin medirse.
 3. **`F_PIO` = 150 MHz supone el reloj de sistema sin dividir para el PIO.** Si
