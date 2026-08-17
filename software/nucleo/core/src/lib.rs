@@ -10,6 +10,7 @@ pub mod atribucion;
 pub mod descriptor;
 pub mod descubrimiento;
 pub mod j2;
+pub mod medidas;
 pub mod modelo;
 pub mod param;
 pub mod partes;
