@@ -15,7 +15,11 @@
 >
 > **No se rutea, se reemplaza.** El sucesor es el **módulo 2 v2** sobre
 > **RP2350B**, especificado en
-> [`docs/superpowers/specs/2026-08-17-nucleo-digital-design.md`](../../docs/superpowers/specs/2026-08-17-nucleo-digital-design.md).
+> [`docs/superpowers/specs/2026-08-17-nucleo-digital-design.md`](../../docs/superpowers/specs/2026-08-17-nucleo-digital-design.md),
+> y **su contrato ya está escrito y en verde**: modelo de parámetros,
+> descriptor, protocolo, descubrimiento, partes, presets y los dos motores de
+> análisis viven en [`software/nucleo/`](../../software/nucleo), verificados con
+> `cargo test` sin haber tocado una placa.
 > El respin **disuelve el issue #22** en vez de resolverlo: la congestión que
 > dejó 17 redes al aire eran justo las seis líneas del LCD, los cuatro botones y
 > la cabecera del Pi.

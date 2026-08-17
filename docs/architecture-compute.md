@@ -285,6 +285,13 @@ la [spec del núcleo digital](superpowers/specs/2026-08-17-nucleo-digital-design
    15 000+ usuarios en producción. `nih-plug` deja de ser la elección por
    defecto.
 
+Y desde el **2026-08-17** los tres dejaron de ser diseño y pasaron a ser código
+con tests: el modelo de parámetros, el descriptor, el protocolo y el
+empaquetado SysEx viven en [`software/nucleo/`](../software/nucleo), `no_std` y
+verificados con `cargo test` — sin una placa de por medio. El descriptor
+completo viaja en SysEx y vuelve idéntico, que era justo lo que el punto 2
+prometía.
+
 ### Sigue abierto
 
 1. **El aislamiento del USB** no está medido. Que el DIN esté aislado por norma
