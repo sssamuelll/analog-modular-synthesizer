@@ -769,6 +769,20 @@ def guarda_escalon(p: dict[str, float]) -> None:
         f"railes del escalon P2-P3 (cara_inf valle vs cara_sup "
         f"valle) a {gap:.3f} mm de hueco real (SAT) — se exige >=1.0 mm; "
         f"subir paso_horizontal")
+    # Y el que de verdad limita cuanto se puede acortar el valle, que no es el
+    # anterior: el LARGUERO DEL VALLE va centrado bajo su tapa, y al acortar el
+    # valle su centro avanza mas rapido que el borde de su ventana. El SAT tiene
+    # 72 mm de margen y este 1.5, asi que sin esto uno acorta mirando la cota
+    # equivocada y se come la holgura del larguero sin enterarse.
+    r = p["rail"] / 2
+    ce = _centros_esqueleto(p, P, cr)
+    x_valle = ce[6][0]
+    lo = cr[1][0] + _he_er(p, p["angulo_inferior"])[0] + p["holgura_rail"] + r
+    hi = cr[2][0] - _he_er(p, p["angulo_superior"])[0] - p["holgura_rail"] - r
+    assert lo <= x_valle <= hi, (
+        f"el larguero del valle no cabe entre los dos railes del valle: va "
+        f"centrado en x={x_valle:.2f} y su ventana es [{lo:.2f}, {hi:.2f}]. "
+        f"Es lo que limita paso_horizontal, no el hueco SAT")
 
 
 # Censo de anchos minimos de panel por piso, mm. ESTIMADOS (spec §11):

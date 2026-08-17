@@ -206,11 +206,24 @@ alto_frontal    = 13;
 // canto del panel, no un pico de acrilico.
 marco_remate    = 18;
 // Entrepiso: la franja horizontal entre el tope de la cara inferior y la base
-// de la superior -- el "valle del medio" de la silueta. Ahi va la bandeja
-// acrilica intermedia. Fue 25 (minimo tecnico de R7: por debajo, los dos
-// railes girados se solapaban 2.52 mm), luego 40 cuando Samuel lo pidio
-// ancho, y ahora 80: pidio el valle "al menos el doble" (2026-08-17).
-paso_horizontal = 80;
+// de la superior -- el "valle del medio" de la silueta. Fue 25 (minimo tecnico
+// de R7: por debajo, los dos railes girados se solapaban 2.52 mm), luego 40,
+// luego 80 cuando Samuel lo pidio ancho, y ahora 60.
+//
+// Baja porque era el UNICO sitio del case con holgura de verdad. Auditadas todas
+// las cotas derivadas, alto_frontal, inset_inf_frente, inset_sup_remate y
+// marco_remate estan a cero o a decimas de su limite; el case ya esta apretado
+// contra el riel por todos lados. Aqui no: sobraban 23 mm.
+//
+// Y ojo con cual es el limite, porque el obvio no es. El hueco SAT entre los dos
+// railes del valle tiene 72 mm de margen sobre su minimo -- no manda. Lo que
+// manda es que EL LARGUERO DEL VALLE quepa en su ventana: va centrado bajo la
+// tapa, y al acortar el valle su centro avanza mas rapido que el borde de la
+// ventana. Se tocan en paso_horizontal = 57. A 60 quedan 1.54 mm, que es margen
+// de verdad; a 57 quedan 0.04, que es una cota de cuchillo.
+//
+// Lo vigila guarda_escalon(), que ya guardaba la otra holgura de este valle.
+paso_horizontal = 60;
 // Acabado modernista: ningun canto del costado es esquina viva. Hay DOS
 // radios porque el contorno pide dos cosas opuestas (ver la nota larga en
 // sam17_case.scad, funcion redondear).
@@ -560,8 +573,13 @@ vent_periodo      = 40;  // periodo horizontal de cada onda
 // estructura. Los margenes de delante y detras son iguales porque el larguero va
 // centrado bajo la plancha, no porque quedara bonito.
 valle_paso_hp   = 2;   // una ranura cada 2 HP -> 51 por campo, puente 6.16
-valle_espina    = 20;  // banda maciza central (cabeza de M3 + arandela)
-valle_margen    = 8;   // orilla maciza delante y detras
+// La espina y las orillas se recortan al acortarse el valle (paso 80 -> 60): la
+// tapa pasa de 84.78 a 64.78 de fondo, y con los 20 + 8 + 8 de antes los dos
+// campos de ranuras quedaban en 14.4 mm -- las ranuras dejaban de leerse como
+// campo y pasaban a rayitas. Con 16 + 6 + 6 vuelven a 18.4. La espina sigue
+// dando 4.5 mm de acrilico a cada lado de la arandela del M3.
+valle_espina    = 16;  // banda maciza central (cabeza de M3 + arandela)
+valle_margen    = 6;   // orilla maciza delante y detras
 
 // --- lo que el budget vigila (spec §11: catalogos, no medidos) ---
 alto_transformador  = 45;  // CATALOGO, no confirmado; medir pieza real
