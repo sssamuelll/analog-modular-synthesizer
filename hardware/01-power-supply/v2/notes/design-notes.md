@@ -844,6 +844,44 @@ con uno que sobrevive (C11, etapa U3) porque ambos tienen el mismo valor de
 D2) con uno que sobrevive (D5, etapa U3). El Step 2 de Task 4 separa estas
 dos filas: hereda solo C11 y D5, con cantidad 1 cada una.
 
+### §3.2 Asimetría térmica intra-pareja de las granjas EP (review fase C, F5)
+
+**Hallazgo del review**: las granjas de vías térmicas del EP de U4-U7
+(ballast LT3045/LT3094, pareja +12V y pareja −12V) no quedaron simétricas
+entre los dos chips de cada pareja — restricciones reales de routing
+(clearance hole-to-hole, pines vecinos, corredores ya ocupados por otras
+redes) forzaron un reparto desigual:
+
+- **U4**: 4 vías (rejilla 2×2, paso 0.6 mm).
+- **U5**: 6 vías (rejilla 2×3, paso 0.6×0.7 mm — la huella del EP es
+  1.65×2.38 mm, más alta que ancha, y U5 sí tenía sitio limpio para la
+  tercera fila).
+- **U6**: 4 vías de la granja nueva (2×2) **+ 1 vía vieja de 0.5 mm de
+  taladro** que ya existía como transición F/B del tronco `/-12V9` en
+  (120, 169) y hace de ancla — 5 puntos de contacto térmico en total.
+- **U7**: 4 vías (rejilla 2×2) — sin vía extra: el stub F.Cu del pin 3 al
+  EP se alargó 0.5 mm hasta aterrizar exacto en una de las cuatro vías de
+  su propia granja, que hace de ancla sin necesitar una vía adicional.
+
+**Por qué se acepta tal cual (no se re-rutea)**: el reparto de corriente
+entre los dos chips de una misma pareja lo domina el ballast de 20 mΩ en
+serie con cada uno (R15/R16 para +12V, R17/R18 para −12V) — es una
+resistencia de balance deliberada, mucho mayor que cualquier diferencia de
+resistencia térmica entre 4 y 6 vías de 0.3 mm. El efecto real de la
+asimetría es una diferencia de temperatura de juntura leve entre los dos
+chips de una pareja (U4 más caliente que U5, o U6 más caliente que U7 —
+menos vías = más resistencia térmica del EP a la plancha de cobre), no un
+desbalance de corriente. Con ~0.33 W por chip (spec sec.6.1) el margen
+térmico de un DFN-10/12 sobra incluso con la granja más pobre (4 vías).
+
+**Acción si la mula lo desmiente**: si las medidas térmicas (§4, con
+cámara termográfica o termopar sobre cada chip) muestran **más de 5 °C**
+de diferencia entre los dos chips de una misma pareja (U4 vs U5, o U6 vs
+U7) en operación sostenida a plena carga, revisar aquí — la vía adicional
+de U6 y las dos vías extra de U5 dejarían de ser una curiosidad de layout
+y pasarían a ser sospechosas de un desbalance real que el ballast de 20 mΩ
+no está absorbiendo del todo.
+
 ## §4 Medidas de la mula
 
 (vacío; Task 10 mete el protocolo)

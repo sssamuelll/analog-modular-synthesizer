@@ -39,6 +39,7 @@ Lo que cambia de verdad respecto a v1 (topologia de la GOAT, ver spec sec.3 y
 """
 from __future__ import annotations
 
+import csv
 import math
 import os
 import re
@@ -49,6 +50,7 @@ import pcbnew
 DIR = os.path.dirname(os.path.abspath(__file__))
 PCB = os.path.join(DIR, "sam17-power-v2.kicad_pcb")
 NET = os.path.join(DIR, "sam17-power-v2.net")
+BOM = os.path.join(DIR, "..", "bom.csv")
 STOCK = os.environ.get("KICAD_FOOTPRINTS",
                        r"C:\Program Files\KiCad\10.0\share\kicad\footprints")
 # sam17.pretty es de la v1: se comparte por fp-lib-table (ver ese fichero en
@@ -1331,14 +1333,21 @@ TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = [
 ]
 
 # Vias con tamano propio: (x, y, net, ancho_mm, taladro_mm). La granja
-# termica del EP de U4/U5 (brief Tarea 8, 3x3, 0.3 mm) vive aqui: el
-# footprint DFN-10-1EP (sin "_ThermalVias") no trae vias, a diferencia del
-# DFN-12-1EP..._ThermalVias de U6/U7, que YA las trae en el propio pad del
-# EP (numero 13) y hereda su red del pad (verificado: 8 sub-pads mas el pad
-# grande, todos en /-12V9 — el EP de U6/U7 es -IN, no GND, por diseno del
-# LT3094; nada que corregir ahi). Las demas vias son "escapes" cortos de la
-# rejilla de F.Cu de la isla hacia el arbol de GND en B.Cu (Kelvin de OUTS
-# y GND de los pads SMD que no tienen EP que los lleve gratis).
+# termica del EP de U4/U5 (brief Tarea 8, 3x3, 0.3 mm) vive aqui -- y
+# TAMBIEN la de U6/U7 (F6, review fase C: correccion de este comentario, que
+# decia lo contrario). Los CUATRO chips usan la variante SIN vias de la
+# huella DFN de la libreria stock de KiCad: U4/U5 son
+# "DFN-10-1EP_3x3mm_P0.5mm_EP1.65x2.38mm" y U6/U7 son
+# "DFN-12-1EP_3x3mm_P0.45mm_EP1.65x2.38mm" (netlist real, sam17-power-v2.net)
+# -- ninguna trae el sufijo "_ThermalVias". La huella con vias de fabrica en
+# el propio pad del EP nunca se uso en v2; el nombre quedo en una version
+# vieja de este comentario, sin que nadie lo corrigiera contra el netlist
+# real. Por eso el EP de U6/U7 TAMBIEN necesita su propia granja manual,
+# igual que U4/U5 -- son las entradas "ronda 3, F3" mas abajo en este mismo
+# VIAS (net /-12V9) y en TRACKS (los spokes B.Cu que las conectan al tronco).
+# Las demas vias son "escapes" cortos de la rejilla de F.Cu de la isla hacia
+# el arbol de GND en B.Cu (Kelvin de OUTS y GND de los pads SMD que no
+# tienen EP que los lleve gratis).
 VIAS: list[tuple[float, float, str, float, float]] = [
     # --- granja termica EP de U4 (2x2, centrada en 92,168, dentro de la
     # huella EP 1.65x2.38 mm) --- ronda 2, Important 2: rediseñada, paso
@@ -1516,6 +1525,79 @@ VIAS: list[tuple[float, float, str, float, float]] = [
 MOUNTING = [("H1", 7.0, 7.0), ("H2", 143.0, 7.0),
             ("H3", 7.0, 193.0), ("H4", 143.0, 193.0)]
 MOUNT_D = 3.2                   # M3, SIN pad de cobre (igual que v1)
+
+# ============================================================================
+# F1/F2 (review fase C, fixwave) -- textos libres en F.SilkS. La placa no
+# tenia NI UNO. Formato: (texto, x, y, tamano_mm, rotacion_deg). Todos
+# centrados (horiz. y vert.) en (x,y) -- mas facil de razonar en mm que con
+# justificacion left/top. Posiciones verificadas contra pads/vias/zonas de
+# cobre y contra la demas serigrafia con el mismo criterio que usa kicad-cli
+# (silk_overlap/silk_over_copper, ver fab-fixwave-report.md): 0 violaciones.
+# ============================================================================
+TEXTOS_SILK: list[tuple[str, float, float, float, float]] = [
+    # F1: fab/README.md manda alinear la esquina + del cuerpo de BR1 con "la
+    # cruz + del silk", pero la huella (Diode_Bridge_DIP-4, stock KiCad) es
+    # simetrica a 180 -- no hay tal cruz. Marca real junto al pad 1 (la
+    # esquina + real), a la IZQUIERDA del cuerpo (que en silk arranca en
+    # x=33.04) y fuera del propio pad (rect 1.6x1.6, hasta x=32.8).
+    ("+", 29.5, 39.0, 1.2, 0),
+
+    # F2(a): titulo + fecha/rev, tomados del title_block real del esquematico
+    # (sam17-power-v2.kicad_sch). Sitio: la franja y=111..119 que el propio
+    # PLACEMENT ya documentaba como "la placa entera sin usar" -- el lado
+    # este (x>95) sigue libre (TP4 termina en x~91, el tronco /-12V9 en
+    # x=128.8 es cobre F.Cu de otra red, no silk).
+    ("SAM17 PSU v2", 105.0, 113.0, 1.3, 0),
+    ("rev A - 2026-08-16", 108.0, 117.0, 1.1, 0),
+
+    # F2(b): señal de cada punto de prueba, leida del netlist real
+    # (leer_netlist(), no supuesta): TP1=/VRAW+, TP2=/VRAW-, TP3=+12V,
+    # TP4=-12V, TP5=+5V, TP6=GND, TP7=/+13V1, TP8=/-12V9. Debajo de cada pad
+    # (+2.7mm en Y): la huella TestPoint_THTPad stock ya pone la referencia
+    # "TPn" ARRIBA (offset -1.998mm), asi que no se pisan entre si.
+    ("VRAW+", 44.0, 79.7, 1.0, 0),
+    ("VRAW-", 100.0, 79.7, 1.0, 0),
+    ("+12V", 74.0, 113.7, 1.0, 0),
+    ("-12V", 90.0, 113.7, 1.0, 0),
+    ("+5V", 84.0, 79.7, 1.0, 0),
+    ("GND", 68.0, 79.7, 1.0, 0),
+    # TP7: debajo (y=76.7, mismo patron) SI choca con la referencia "C17"
+    # (kicad-cli DRC real, silk_overlap -- primer intento). Subirlo en vez
+    # de correrlo en X parecia obvio pero es peor: C12 (bulk, D16mm) tiene
+    # el circulo de su silk CENTRADO fuera del origen de la huella (huella
+    # "CP_Radial": fp_circle en local (3.75,0), no (0,0) -- centro real en
+    # board (31.75,62), radio ~8.12mm) y ese circulo llega hasta y=70.1,
+    # justo donde caia el primer intento (69.5) -- 61 violaciones nuevas de
+    # golpe (una por cada segmento del circulo). El circulo NO llega a
+    # y=76.7 (70.1 < 76.7 con 6.6mm de sobra): el hueco real esta corrido en
+    # X, no en Y -- se desplaza lejos de la referencia C17 (hasta x=30.83)
+    # sin tocar ni el circulo de C12 ni el anillo de TP7 (hasta x=33.2).
+    ("+13V1", 37.0, 76.7, 1.0, 0),
+    # TP8: el mismo patron con C18 (misma huella que C17) NO lo violaba en
+    # el DRC real (a diferencia de TP7/C17) -- se deja en su sitio original.
+    ("-12V9", 126.0, 76.7, 1.0, 0),
+
+    # F2(c): el aviso critico de "Al montar" (fab/README.md), tambien en la
+    # placa -- junto a la reserva de disipador de U2 (F.Fab, capa distinta a
+    # silk, no hay pisada). Hueco libre entre el cuerpo de U2 (silk hasta
+    # y=144.36) y el Kelvin de -12V en B.Cu (y=153, capa opuesta igual).
+    ("U2 TAB = VRAW- ¡MICA!", 105.0, 148.0, 1.1, 0),
+
+    # F2(d): polaridades de J2, netlist real (leer_netlist(), NO el orden
+    # "+12/G/G/-12" que suena obvio): pin1=-12V, pin2=GND, pin3=GND,
+    # pin4=+12V. Verticales (rot=90): a 2.54mm de paso un texto horizontal
+    # de 4-5 caracteres se solapa con el vecino; en vertical el ancho en X
+    # es solo el grosor de trazo. y=162.6, dentro del hueco de cobre libre
+    # entre el tronco /-12V9 (F.Cu, y=160, termina en 160.5) y el corredor
+    # /+13V1 (F.Cu, y=165, empieza en 164.75) -- el Kelvin de -12V que pasa
+    # por x=60 es B.Cu, capa opuesta, no cuenta para silk_over_copper.
+    # Tamano 0.85mm (no 0.7): kicad-cli DRC real exige >=0.8mm de alto de
+    # texto en esta placa (regla text_height) -- 0.7 lo violaba en los 4.
+    ("-12V", 60.00, 162.6, 0.85, 90),
+    ("GND", 62.54, 162.6, 0.85, 90),
+    ("GND", 65.08, 162.6, 0.85, 90),
+    ("+12V", 67.62, 162.6, 0.85, 90),
+]
 
 
 def dist_seg(a, b, c, d) -> float:
@@ -1732,6 +1814,22 @@ def mm(v: float) -> int:
     return pcbnew.FromMM(v)
 
 
+def texto_silk(board, texto: str, x: float, y: float, tam: float, rot: float):
+    """Un PCB_TEXT libre en F.SilkS, centrado en (x,y) (F1/F2, ver TEXTOS_SILK)."""
+    t = pcbnew.PCB_TEXT(board)
+    t.SetText(texto)
+    t.SetPosition(pcbnew.VECTOR2I(mm(x), mm(y)))
+    t.SetLayer(pcbnew.F_SilkS)
+    t.SetTextSize(pcbnew.VECTOR2I(mm(tam), mm(tam)))
+    t.SetTextThickness(mm(tam * 0.15))
+    t.SetHorizJustify(pcbnew.GR_TEXT_H_ALIGN_CENTER)
+    t.SetVertJustify(pcbnew.GR_TEXT_V_ALIGN_CENTER)
+    if rot:
+        t.SetTextAngleDegrees(rot)
+    board.Add(t)
+    return t
+
+
 def leer_netlist() -> tuple[dict, dict]:
     """Del .net saca ref -> huella y (ref, pad) -> red. Heredado v1 sin cambios."""
     txt = open(NET, encoding="utf-8").read()
@@ -1745,6 +1843,28 @@ def leer_netlist() -> tuple[dict, dict]:
         for ref, pad in re.findall(r'\(ref "([^"]+)"\)\s*\(pin "([^"]+)"\)', chunk):
             redes[(ref, pad)] = m.group(1)
     return huellas, redes
+
+
+def leer_bom() -> dict[str, str]:
+    """ref -> Value recortado, desde bom.csv (F7, review fase C).
+
+    Mismo criterio de columna `refs` (separada por coma, "—" son piezas
+    mecanicas fuera de hoja) que check_bom.py. El recorte toma el texto
+    antes de la primera coma O el primer parentesis, lo que aparezca antes
+    -- una fila del BOM es "valor, nota tecnica larga..." o "valor (detalle
+    tecnico); nota", y solo el primer trozo es un Value legible de
+    serigrafia/pos.csv. Antes de F7, fp.Value() se dejaba con el nombre de
+    la huella (ver comentario junto a fp.Value().SetVisible(False) en
+    main()) y eso es lo que terminaba en la columna Val del pos.csv.
+    """
+    valores: dict[str, str] = {}
+    with open(BOM, encoding="utf-8", newline="") as fh:
+        for row in csv.DictReader(fh):
+            valor = row["value"].split(",", 1)[0].split("(", 1)[0].strip()
+            for ref in (r.strip() for r in row["refs"].split(",")):
+                if ref and ref != "—":
+                    valores[ref] = valor
+    return valores
 
 
 def contorno(board: pcbnew.BOARD) -> None:
@@ -1810,15 +1930,15 @@ def reglas(board: pcbnew.BOARD) -> None:
     ds.m_MinClearance = mm(0.127)
     ds.m_ViasMinSize = mm(0.6)
     ds.m_MinThroughDrill = mm(0.3)
-    # No se sube m_MinAnnularWidth (default de placa, 0.1mm): los 10
-    # pads THT de U1/U2 (footprint TO-220/TO-247 heredado de Tarea 6/7,
-    # taladro 1.1mm) dan un anillo real de 0.0875mm -- por debajo del
-    # minimo de placa pero perfectamente fabricable en JLC (min. anillo
-    # anular real ~0.05-0.075mm segun el proveedor, este caso esta por
-    # encima). Bendecido explicitamente por el orquestador (ronda 2): se
-    # documenta como excepcion aceptada, no se toca el footprint/BOM de
-    # U1/U2 para "arreglarlo" (fuera del alcance de ruteo de esta tarea).
-    # Ver DRC real: 10x [annular_width], unicas infracciones que quedan.
+    # No hace falta subir m_MinAnnularWidth (default de placa, 0.1mm): ya NO
+    # hay pads por debajo de ese minimo. F3 (review fase C) RESOLVIO -- no
+    # bendijo -- las 10 violaciones annular_width de los pads THT de U1/U2
+    # (footprint TO-220-5 stock, taladro 1.1mm): antes daban un anillo real
+    # de 0.0875mm (por debajo de la capability JLC de 2 capas, 0.13mm), y en
+    # vez de documentarlas como excepcion aceptada se ensancho el eje corto
+    # del pad a 1.4mm (ver main(), justo despues de colocar U1/U2) -> anillo
+    # (1.4-1.1)/2=0.15mm, ya por encima del minimo real. DRC completo real:
+    # 0 violaciones de cualquier tipo, no 10 bendecidas.
 
 
 def distancia_bbox(a: pcbnew.BOX2I, b: pcbnew.BOX2I) -> float:
@@ -1903,6 +2023,7 @@ def main() -> None:
     huellas, redes = leer_netlist()
     faltan = sorted(set(huellas) - set(PLACEMENT))
     assert not faltan, f"componentes del netlist sin sitio en PLACEMENT: {faltan}"
+    bom_valores = leer_bom()
 
     board = pcbnew.NewBoard(PCB)
     contorno(board)
@@ -1935,7 +2056,28 @@ def main() -> None:
         # (BOM ya trae el valor de cada ref). Se oculta aqui, para todas las
         # huellas, no solo las nuevas de v2.
         fp.Value().SetVisible(False)
+        # F7 (review fase C): el campo Value SI se usa (aunque quede oculto
+        # en silk) como fuente de la columna "Val" del pos.csv que exporta
+        # kicad-cli -- sin esto quedaba con el nombre de la huella (ver
+        # comentario de arriba), no con el valor real del BOM.
+        valor = bom_valores.get(ref)
+        if valor:
+            fp.SetValue(valor)
         board.Add(fp)
+        if ref in ("U1", "U2"):
+            # F3 (review fase C): pad THT del TO-220-5 stock, 1.275x1.8mm con
+            # taladro 1.1mm -> anillo real (1.275-1.1)/2=0.0875mm, por debajo
+            # de la capability JLC de 2 capas (0.13mm) -- las 10 violaciones
+            # annular_width que fab/README.md y reglas() venian "bendiciendo".
+            # Se ensancha el eje CORTO (X) a 1.4mm -> anillo (1.4-1.1)/2=
+            # 0.15mm, ya por encima del minimo. El eje largo (Y=1.8) no
+            # cambia. El paso entre pads es 1.7mm en X: con pad 1.4mm el
+            # hueco pad-a-pad baja de 0.425 a 0.3mm, todavia >> CLEARANCE_MM
+            # (0.127) -- no crea clearance nueva contra el pad vecino (son
+            # ademas de la misma huella/distinta red, ya se separaban por
+            # mucho mas que el minimo).
+            for pad in fp.Pads():
+                pad.SetSize(pcbnew.VECTOR2I(mm(1.4), mm(1.8)))
         for pad in fp.Pads():
             # Huellas DFN con EP: el generador estandar de KiCad parte la
             # pasta del EP en varios sub-pads SOLO DE PASTA (F.Paste, sin
@@ -1960,6 +2102,11 @@ def main() -> None:
         fp.SetReference(ref)
         fp.SetPosition(pcbnew.VECTOR2I(mm(x), mm(y)))
         board.Add(fp)
+
+    # --- F1/F2: textos libres de serigrafia (review fase C, ver TEXTOS_SILK) ---
+    for texto, x, y, tam, rot in TEXTOS_SILK:
+        texto_silk(board, texto, x, y, tam, rot)
+    print(f"textos de serigrafia libres añadidos: {len(TEXTOS_SILK)}")
 
     # --- pistas (vacio en esta fase, ver TRACKS mas arriba) ---
     capas = {"F.Cu": pcbnew.F_Cu, "B.Cu": pcbnew.B_Cu}

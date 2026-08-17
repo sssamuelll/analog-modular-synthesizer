@@ -20,9 +20,26 @@ DRC=0), pero hay **tres puertas abiertas** antes de solicitar la fabricación:
    no siempre coincide con el de KiCad, y los DFN apaisados lo hacen evidente al 
    montaje.
 
+## ⚠ Al pedir
+
+**Vías de las granjas de EP de U4-U7 abiertas en la ventana de pasta.** Las
+granjas térmicas del EP (U4=4, U5=6, U6=4+1, U7=4 vías, 0.3 mm de taladro —
+detalle en `design-notes.md` §3.2) quedan dentro del área de pasta del EP,
+que abre solo el 7-12 % del EP (spec de stencil). Eso es riesgo de junta
+pobre por succión de pasta hacia el taladro durante el reflow (la vía actúa
+de mecha y drena estaño de la ventana). Dos opciones al pedir:
+
+1. **Pedir "Epoxy Filled & Capped"** para esas vías (tapadas y planas) si el
+   presupuesto lo permite — elimina el riesgo de succión sin tocar el
+   diseño.
+2. **Aceptar el wicking** (opción por defecto, sin coste extra) e
+   **inspeccionar las juntas del EP en el bring-up** — ítem añadido a la
+   lista "Al montar" de abajo.
+
 ## ⚠ Al montar
 
-**Dos cosas crean daño si se pasan por alto.**
+**Tres cosas crean daño (o una junta fría no detectada) si se pasan por
+alto.**
 
 **1. La orientación de `BR1`** (puente rectificador, THT): la esquina `+` moldeada 
 en el cuerpo va a la cruz `+` del silk (pad 1). Girado 180° encaja físicamente igual 
@@ -34,6 +51,13 @@ antes de soldar ([§14.6](../notes/design-notes.md)).
 hasta −20 V. Va con **mica y casquillo aislante**, obligatorios. Atornillarlo desnudo 
 al mismo disipador que `U1` es un cortocircuito franco al encender 
 ([§16.7](../notes/design-notes.md)).
+
+**3. Inspeccionar las juntas del EP de U4-U7** tras el reflow (lupa o rayos
+X si hay acceso) — consecuencia directa del wicking de la sección "Al
+pedir" de arriba si no se pidió "Epoxy Filled & Capped". Una junta pobre en
+el EP no es visible a simple vista en los pines periféricos y sube la
+resistencia térmica del chip justo donde más importa (el camino del EP a
+la plancha de cobre, ver `design-notes.md` §3.2).
 
 ## Qué hay
 
@@ -69,14 +93,19 @@ Es coherencia esperada: no es un error.
   ([§13](../notes/design-notes.md)), así que un separador metálico no debe tocar
   la masa de la placa.
 
-## Nota sobre DRC y anillos
+## Nota sobre DRC
 
-El archivo `.kicad_pcb` pasó un DRC completo (KiCad 10.0) con **10 violaciones 
-aceptadas por ruling**: anillo `annular_width` de 0.0875 mm en los taladros THT 
-de `U1` y `U2` (agujero de 1.1 mm, anillo mínimo de 0.075 mm). Esto es documentado 
-en Task 8 y es una configuración conocida de la placa — no es corrupción. Si 
-regeneras el DRC con este `.kicad_pcb`, ese número de violaciones reaparecerá; es 
-normal.
+El archivo `.kicad_pcb` pasa un DRC completo (KiCad 10.0) en **cero
+violaciones de cualquier tipo y cero elementos sin conectar**
+(`kicad-cli pcb drc --format json`). Hasta la review de fase C esto traía
+**10 violaciones `annular_width` aceptadas por ruling** (anillo de 0.0875 mm
+en los taladros THT de `U1`/`U2`, agujero 1.1 mm) — ya NO existen: los pads
+de `U1`/`U2` se ensancharon en el eje corto a 1.4×1.8 mm (anillo real
+0.15 mm, por encima de la capability JLC de 2 capas de 0.13 mm), en vez de
+seguir documentándolas como excepción. Si regeneras el DRC con este
+`.kicad_pcb` debe salir **0 infracciones, 0 elementos no conectados**; si
+aparece algo, es una regresión real, no una configuración conocida de la
+placa.
 
 ## Regenerar
 
