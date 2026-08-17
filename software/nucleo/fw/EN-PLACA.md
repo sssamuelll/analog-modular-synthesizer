@@ -80,6 +80,22 @@ Con `SUBSCRIBE` activo, un `SET` correcto tiene que devolver su `CHANGED`.
 Sin `SUBSCRIBE`, **no** devuelve nada, y eso es a propósito: si no, girar una
 perilla dispararía cientos de acks por segundo.
 
+## El tiempo musical, cuando haya reloj que enchufar
+
+**Umbrales del CLOCK IN.** `tiempo_budget.py` despeja **993 µs** de holgura
+para detectar el flanco. Es muchísimo, así que lo raro sería fallarlo — pero
+hay que medirlo, no suponerlo.
+
+**Niveles del CLOCK OUT.** TTL, 0 V / ~+5 V (§5.3 del núcleo).
+
+**MIDI clock por USB de verdad.** El seguidor está probado contra ±2 ms de
+jitter inyectado; falta ver cuánto tiembla el transporte real.
+
+**Link sobre el puente**, que necesita que el puente exista y esté elegido. Y
+cuando toque: **no escribir el protocolo desde cero** — existe
+`ableton-link-rs`, y hay precedente de la topología exacta (Link en un ESP32
+pasándole la sesión a un RP2350 por SPI).
+
 ## Lo que queda anotado para más adelante
 
 **VID/PID de verdad.** `0x1209` es pid.codes, el rango libre para proyectos

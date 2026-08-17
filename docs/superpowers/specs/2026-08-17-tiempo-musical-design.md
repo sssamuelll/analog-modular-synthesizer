@@ -1,7 +1,7 @@
 # El instrumento en tiempo musical — reloj, cuantización y rampas
 
 **Fecha:** 2026-08-17
-**Estado:** aprobado en brainstorming, pendiente de plan
+**Estado:** implementada — `software/nucleo/core` (verde), el bring-up en `fw/EN-PLACA.md`
 **Consume:** `docs/superpowers/specs/2026-08-17-nucleo-digital-design.md` (el núcleo digital, aprobado e implementado en `software/nucleo/`)
 
 ---
