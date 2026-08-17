@@ -553,6 +553,19 @@ por la regla del Step 2. No aplica el plan B de re-plan del brief.
 | 10 µF X7R 50 V 1206 (Samsung CL31B106KBHNNNE, ±10 %) — ver nota de voltaje | **C89632** | 385.340 | Extended | $0.43 / $0.28 (500+) | 2026-08-16 |
 | SMAJ15A TVS (Littelfuse) | **C148216** | 10.030 | Basic | $0.139 / $0.076 (2500+) | 2026-08-16 |
 | SS14 Schottky SMA (MDD/Microdiode) | **C2480** | 1.081.100 | Basic | $0.0185 / $0.0085 (50k+) | 2026-08-16 |
+| R_ILIM 374 Ω 1 % 0603 (UNI-ROYAL 0603WAF3740T5E) — R11/R12, LT3045 | **C23149** | 9.800 | Extended | $0.0027 / $0.0021 | 2026-08-17 |
+| R_ILIM 9.31 kΩ 1 % 0603 (UNI-ROYAL 0603WAF9311T5E) — R13/R14, LT3094 | **C23126** | 2.200 | Extended | $0.0014 / $0.0012 | 2026-08-17 |
+
+**Nota — R_ILIM (fix task review, 2026-08-17)**: R11/R12 (374 Ω) y R13/R14
+(9.31 kΩ), calculados en §1.3/§1.4, **nunca pasaron por esta puerta de
+stock** — el Step 4 original (2026-08-16) cotizó R_SET, shunts, C_SET,
+entrada/salida y protecciones, pero se saltó los R_ILIM. El implementador de
+Task 9 rellenó `bom.csv` con C17590/C25709 sin verificarlos contra
+`lcsc.com`; el task review los detectó como **inventados** (C17590 es un
+270 Ω 0805, C25709 un 75 kΩ 1210 — ninguno de los dos es la pieza real) y
+este fix los reemplaza por códigos verificados en vivo en el navegador
+contra `lcsc.com/product-detail/`: value + tolerancia + package confirmados
+en pantalla para ambos, con stock real (9.800 u. y 2.200 u.).
 
 **Nota — R_SET (120 kΩ, valor de diseño correcto)**: el objetivo es
 **12.000 V = 100 µA × 120 kΩ** — el brief pide 120 kΩ y ese es el valor de
