@@ -369,11 +369,13 @@ module plancha(l, a) square([l, a]);   // l = ancho_util, a = fondo local
 module bandeja_base_2d() {
     au = ancho_total - 2*t_cheek;
     ce = centros_esqueleto();
-    // Canto delantero donde muere el redondeo en punta (alto_frontal/2) mas 2 de
-    // material: es lo mas adelante que la plancha puede llegar sin asomar por la
-    // curva del costado. Ya no arranca en el larguero delantero -- ese se fue
-    // 39 mm hacia dentro para librar el riel, y la bandeja lo vuela.
-    x0 = alto_frontal/2 + 2;
+    // Canto delantero A RAS del larguero de base delantera, que a su vez esta
+    // derivado de la esquina del riel de panel. Esa es justo la cota que hace
+    // corto al case: la bandeja se RETIRA por detras del riel en vez de pasarle
+    // por debajo, y a cambio el riel baja hasta la esquina (ver alto_frontal).
+    // El precio son 32 mm de suelo abierto por delante, que es por donde entra
+    // el aire.
+    x0 = ce[0].x - rail/2;
     fondo = ce[1].x + rail/2 - x0;          // canto trasero a ras del rail
     difference() {
         plancha(au, fondo);
@@ -552,7 +554,8 @@ module bandeja_base() {
     // Ya no apoya en el lomo de nadie: ES el canto de abajo del case, de y = 0 a
     // y = t_base, y los largueros montan sobre ella. El grosor crece hacia -Y
     // desde el origen, asi que el origen va en t_base.
-    translate([alto_frontal/2 + 2, t_base, ancho_total - t_cheek])
+    ce = centros_esqueleto();
+    translate([ce[0].x - rail/2, t_base, ancho_total - t_cheek])
         rotate([0, 90, 0]) rotate([90, 0, 0])
             linear_extrude(t_base) bandeja_base_2d();
 }

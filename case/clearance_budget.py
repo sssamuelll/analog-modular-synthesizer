@@ -354,11 +354,12 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     planchas: list[Caja] = [planchas_extra]
     filas: list[Fila] = []
     # bandeja_base: es el SUELO del case desde el 2026-08-17, de y = 0 a
-    # y = t_base, con los dos largueros montados encima en vez de debajo. El
-    # canto delantero lo pone el redondeo en punta (muere a alto_frontal/2) mas
-    # 2 de material, no el larguero: ese se retiro para librar el riel de panel
-    # y la bandeja lo vuela. El trasero sigue a ras de su larguero.
-    x0_bb = p["alto_frontal"] / 2 + 2
+    # y = t_base, con los dos largueros montados encima en vez de debajo. Sus dos
+    # cantos van a ras de sus largueros, y el delantero es el que importa: se
+    # RETIRA por detras del riel de panel del frente para que ese riel pueda
+    # bajar hasta la esquina. Ahi se ganan 8 mm de altura del aparato y se pagan
+    # 32 mm de suelo abierto por delante (ver guarda_piso y alto_frontal).
+    x0_bb = ce[0][0] - rail / 2
     fondo_bb = ce[1][0] + rail / 2 - x0_bb
     planchas.append(("bandeja_base", x0_bb, x0_bb + fondo_bb,
                      0.0, p["t_base"], t_cheek, ancho_total - t_cheek))
@@ -722,23 +723,36 @@ def guarda_piso(p: dict[str, float]) -> None:
     solapes() trabaja con cajas y solo canta cuando los cuerpos YA se tocan, o
     sea que se come los 4 mm de holgura sin protestar.
 
-    El techo es el TOPE DE LA BANDEJA (t_base), no el lomo de un larguero. La
-    distincion no es academica: cuando la bandeja iba apilada encima del 2020,
-    derivarlo contra el larguero salia 5 mm de barato y dejaba 0.51 mm de solape
-    real. Hoy la bandeja ES el suelo y el techo son t_base limpios, pero el error
-    de mirar la pieza equivocada se repite igual de facil.
+    Y lo que hay debajo cambio dos veces el mismo dia. Primero era el lomo de un
+    larguero (mal: la bandeja iba encima, 5 mm de barato y 0.51 de solape real).
+    Luego el tope de la bandeja. Y desde que Samuel propuso retirar la bandeja
+    por detras del riel, ya no hay nada: solo el canto de abajo del case. Cada
+    version de esta cota valio milimetros de aparato, asi que son DOS asserts --
+    el riel dentro del acrilico, y la bandeja fuera de su camino. Si alguien
+    adelanta la bandeja sin subir el riel, cae aqui y no en solapes().
 
     Se mide sobre el centro REAL del riel (el que sale de _centros_rail), no
     rehaciendo la formula: si el .scad y el budget se separan, esto lo nota."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
-    y_bajo = cr[0][1] - _he_er(p, p["angulo_inferior"])[1]
-    techo = p["t_base"] + p["holgura_rail"]
-    assert y_bajo >= techo - 1e-9, (
-        f"el riel de panel del frente se come el suelo: su esquina de abajo cae "
-        f"en y={y_bajo:.2f} y el tope de la bandeja mas holgura_rail exige "
-        f">={techo:.2f}. Subir alto_frontal o inset_inf_frente (van emparejados: "
-        f"la curva en punta pide inset >= alto_frontal/2 + rail_er_alto/2 + 3)")
+    ce = _centros_esqueleto(p, P, cr)
+    hx, hy = _he_er(p, p["angulo_inferior"])
+    # 1. el riel dentro del acrilico por abajo, con material
+    y_bajo = cr[0][1] - hy
+    assert y_bajo >= p["holgura_rail"] - 1e-9, (
+        f"el riel de panel del frente se sale del case por abajo: su esquina "
+        f"cae en y={y_bajo:.2f} y se exige >={p['holgura_rail']:.2f} de acrilico "
+        f"bajo ella. Subir alto_frontal o inset_inf_frente (van emparejados: la "
+        f"curva en punta pide inset >= alto_frontal/2 + rail_er_alto/2 + 3)")
+    # 2. y la bandeja retirada POR DETRAS de el, que es lo que paga la 1
+    x0_bb = ce[0][0] - p["rail"] / 2
+    hueco = x0_bb - (cr[0][0] + hx)
+    assert hueco >= p["holgura_rail"] - 1e-9, (
+        f"la bandeja de base le pasa por debajo al riel del frente: arranca en "
+        f"x={x0_bb:.2f} y la esquina trasera del riel esta en "
+        f"x={cr[0][0] + hx:.2f} ({hueco:+.2f} mm, se exige "
+        f">={p['holgura_rail']:.2f}). O se retira la bandeja o sube el riel, y "
+        f"subir el riel cuesta 8 mm de aparato")
 
 
 def guarda_escalon(p: dict[str, float]) -> None:
