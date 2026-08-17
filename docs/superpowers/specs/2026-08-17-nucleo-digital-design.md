@@ -321,7 +321,7 @@ analógico hasta tu conversor *es* el producto.
 > sí mismo por otra vía (§7), y el plugin puede analizar la pista que le
 > enrutes. Lo que nunca viaja por el enlace de control es la forma de onda.
 
-### 4.4 MIDI 2.0 — verificado, con una tensión
+### 4.4 MIDI 2.0 — resuelto: es una escalera, no una bifurcación
 
 **En el host: maduro.** [NAMM 2026 fue el punto de
 inflexión](https://blog.imseankim.com/midi-2-0-daw-hardware-support-2026-update/):
@@ -335,19 +335,60 @@ muestra automáticamente los controles específicos del instrumento y **guarda s
 configuración en el fichero de proyecto**. Eso es el «recall total con el
 proyecto» que motivaba el VST compañero — gratis, del estándar.
 
-**En el micro: existe, pero es C.** Hay
+**En el micro había una fricción aparente: la pila UMP existe pero es C.** Hay
 [`tusb_ump` de AmeNote](https://github.com/midi2-dev/tusb_ump) (driver de clase
 UMP para TinyUSB) y un ejemplo de RP2350 en
-[midi2cpp](https://github.com/sauloverissimo/midi2cpp). Están probados, pero son
-C/C++, y **no aparece equivalente en Rust**. Eso choca con el «Rust bare-metal»
+[midi2cpp](https://github.com/sauloverissimo/midi2cpp), probados los dos, pero
+en C/C++ y sin equivalente en Rust. Eso parecía chocar con el «Rust bare-metal»
 de `architecture-compute.md`.
 
-Tres salidas, a decidir en el plan: FFI desde Rust a `tusb_ump`; escribir UMP en
-Rust; o quedarse en MIDI 1.0 con los parámetros en SysEx, perdiendo resolución
-en el canal y nada más.
+**Dos hechos verificados la disuelven.**
 
-**El modelo de §3 no depende de cuál gane.** Esa es la razón de haberlo definido
-aparte del transporte.
+**Primero: Property Exchange no necesita UMP.** *«Property Exchange usa SysEx
+estilo MIDI 1.0, **por MIDI 1.0 o por MIDI 2.0**»*, y los mensajes MIDI-CI
+*«son retrocompatibles con MIDI v1; técnicamente son solo mensajes System
+Exclusive»*. Fue diseñado así a propósito, para que los aparatos MIDI 1.0
+existentes pudieran negociar.
+
+O sea: **el descriptor, el auto-descubrimiento y el puente MCP de §4.5 funcionan
+enteros sobre MIDI 1.0.** UMP no compra nada de eso. Compra otra cosa —
+resolución de 32 bits en datos de *interpretación* y sellos de reducción de
+jitter— que es valiosa, pero no está en el camino crítico de nada.
+
+**Segundo: el propio estándar USB define la escalera.** Un dispositivo USB MIDI
+2.0 declara **dos alternate settings** en la misma interfaz: el `0` con
+`bcdMSC = 0x0100` (MIDI 1.0) y el `1` con `0x0200` (MIDI 2.0). Los hosts que no
+soportan 2.0 usan el `0`; los que sí, buscan el `1`.
+
+**Añadir el alternate setting 1 más tarde no es reescribir: es lo que la
+especificación espera que hagas.**
+
+Y una vez visto así, el trabajo en Rust se reduce a lo que de verdad es. «La
+pila UMP» son dos cosas muy distintas: los **descriptores de clase USB** —la
+parte tediosa, y para la que existe
+[`usbMIDI2DescriptorBuilder`](https://github.com/midi2-dev/usbMIDI2DescriptorBuilder)—
+y la **codificación de paquetes de 32 bits**, que es manipulación de bits y en
+Rust es trivial. No hay pila de red aquí.
+
+**Decisión:**
+
+| Etapa | Qué | Cuándo |
+|---|---|---|
+| **1** | USB MIDI 1.0 (alt setting 0) sobre `embassy-usb` + MIDI-CI/Property Exchange en SysEx. Descriptor, descubrimiento y puente MCP completos | El firmware de validación |
+| **2** | Añadir alt setting 1 con UMP | Cuando compre algo medible |
+
+**El criterio para subir el escalón, escrito ahora para no discutirlo después:**
+que los 7 bits del canal MIDI 1.0 se demuestren insuficientes en una medida
+real, o que el jitter de notas por USB se mida y moleste. Antes de eso, subir es
+gasto sin retorno.
+
+Los proyectos en C quedan como **referencia e implementación de contraste**, no
+como dependencia. Si la etapa 2 llega y escribir los descriptores en Rust
+resulta más caro de lo previsto, el FFI a `tusb_ump` sigue disponible — pero
+como plan B de una etapa opcional, no como fricción en el camino crítico.
+
+**El modelo de §3 no depende de ninguna de las dos etapas.** Esa es la razón de
+haberlo definido aparte del transporte, y aquí es donde se cobra.
 
 ### 4.5 El puente MCP ↔ Property Exchange
 
@@ -401,15 +442,55 @@ el descriptor tiene que ser suficiente para generarlo.)*
 | **Cabeza local** | 4 dígitos + un encoder con pulsador + LEDs de estado | §5.2 |
 | **ADC de análisis** | Toma de medida desde el mixer | §7.4 |
 
-### 5.1 El autoafinado y el número más flojo del diseño
+### 5.1 El autoafinado: el número más flojo del diseño, resuelto
 
-`hardware/02-midi-cv/autotune_budget.py` cierra hoy con `JITTER = 5e-6` s, y su
-propio comentario dice: *«ES EL PARAMETRO MAS FLOJO: hay que medirlo antes de
-fiarse»*. Ese número es del Pi con `pigpio`, que ya no existe en este diseño.
+`autotune_budget.py` colgaba de `JITTER = 5e-6` s, con un comentario que decía
+*«ES EL PARAMETRO MAS FLOJO: hay que medirlo antes de fiarse»*. Lo era: venía
+del Pi con `pigpio`, un aparato que este diseño ya no usa, y **todo el
+presupuesto era proporcional a él**.
 
-**Medir el jitter real del PIO y actualizar `autotune_budget.py` con el número
-medido es un entregable de esta spec**, no una nota al pie. Es lo único que
-convierte el autoafinado de promesa en presupuesto.
+**No se sustituyó por otra estimación. Se derivó, y el resto se despejó.**
+
+**El sellado de tiempos ya no se estima.** El PIO muestrea el pin de forma
+síncrona con el reloj de sistema, así que un flanco queda resuelto dentro de un
+ciclo; en conteo recíproco se sellan dos flancos y se restan, luego el error de
+la diferencia está acotado por **un tick**. A 150 MHz eso son **6.67 ns**, y no
+sale de un manual ajeno: sale del reloj.
+
+**El término que quedaba no se supuso: se invirtió en requisito.** El que de
+verdad manda ahora es el disparador Schmitt (74HC14), cuyo cruce de umbral
+tiembla con el ruido de la onda del VCO, y que sigue sin medir. En vez de
+inventarle un valor, el guion **despeja cuánto puede temblar como máximo** sin
+romper el objetivo, evaluado en la ventana más corta del barrido —la nota más
+aguda, que es la que menos perdona.
+
+Lo que sale, con las dos fuentes sumadas linealmente (pesimista a propósito:
+son independientes y sumarían en cuadratura):
+
+| | Antes (Pi + pigpio) | Ahora (PIO derivado) |
+|---|---|---|
+| Sellado de tiempos | 5 µs, de manual | **6.67 ns, derivado** — 750× mejor |
+| Peor precisión de las 84 notas | 0.5 cents (justo en el objetivo) | **0.024 cents** — 20× por debajo |
+| Barrido completo | 3.5 s | **2.7 s** |
+| Suelo de afinación con autoafinado | 1.68 cents | **1.23 cents** |
+| Carga de CPU por flanco | Real; hacía falta un 74HC4040 dividiendo por 16 | **Ninguna** — el PIO cronometra por hardware. El divisor sobra |
+| El 74HC14 | Sin acotar | **Puede temblar hasta 131 ns** y aún se cumple |
+
+**Ese último número es el resultado que importa.** «Medir el jitter del
+comparador» deja de ser una incógnita abierta y pasa a ser **un aprobado o
+suspenso contra 131 ns**. Y el sellado del PIO se lleva solo el **5 %** del
+error permitido, con lo que el micro deja de ser un término del presupuesto y
+pasa a ser ruido de redondeo.
+
+El guion lo **asevera**, no lo narra: falla si el sellado dejara de ser
+despreciable (por encima del 10 % de lo permitido), porque eso significaría que
+el cuello de botella volvió a ser el micro y habría que subir `F_PIO` o alargar
+la ventana.
+
+> **Lo que sigue sin confirmar, y ahora es concreto:** el jitter real del 74HC14
+> en placa. Y que `F_PIO` sean de verdad 150 MHz sin dividir para el PIO — si el
+> firmware lo divide, el sellado sube en la misma proporción y hay que
+> recalcular. El guion lo dice en su salida.
 
 ### 5.2 La cabeza local: qué muestra y por qué tan poca
 
@@ -472,6 +553,16 @@ mux de perillas viva **en el módulo** y devuelva por el `MISO` del J2.
 `PATCH_SCAN` existe en el protocolo desde el día uno. Su implementación espera a
 que exista un módulo con jacks de CV sensados (§10), pero el mensaje y el
 formato se congelan aquí.
+
+**Cómo se hace sin que sea frágil: §7.6.** Mover una fuente y buscar un salto se
+rompe con atenuadores, se ahoga en ruido y obliga a barrer de una en una. La
+versión que va en la spec es **códigos ortogonales y correlación**: todas las
+fuentes a la vez, inmune al ruido por ganancia de correlación, y **midiendo la
+atenuación además de la conexión** — así el preset guarda «VCO1 → CV del VCF1,
+atenuado al 40 %», que es más de lo que se pedía.
+
+Y cuando la correlación no es concluyente **no adivina**: cae a la ocupación,
+que es un hecho binario y fiable, y la app te pide confirmar la pareja.
 
 **Se descartó el cable con canal de sensado.** Un tercer conductor que una
 origen y destino daría la topología directa, sin ADC ni barrido, y es mucho más
@@ -562,6 +653,33 @@ Ninguna herramienta de masterización puede hacerlo porque ninguna tiene la
 fuente. Ningún sinte lo hace porque ninguno se escucha y razona sobre lo que
 oye. **Esta es la función que justifica el motor entero.**
 
+#### El algoritmo, porque «cruzarlo» a mano ondeada no es un diseño
+
+Con cuatro voces sonando, un pico a una frecuencia dada puede ser el fundamental
+de una voz, un armónico de cualquiera, la resonancia de cualquier filtro, un
+producto de intermodulación, o dos voces coincidiendo. **La ambigüedad es real y
+hay que tratarla, no ignorarla.** Va en dos niveles:
+
+**Nivel 1 — inferencia. Gratis, continua, sin cambiar nada de lo que suena.**
+El cerebro conoce el tono exacto de cada voz —lo mandó él, y el autoafinado lo
+midió— así que calcula la serie armónica esperada de cada una y la frecuencia
+resonante de cada filtro, y puntúa contra el pico observado. Sale una
+**hipótesis ordenada con su confianza**.
+
+**Nivel 2 — sonda causal. Solo cuando el nivel 1 queda ambiguo, y solo si se
+permite.** Se perturba mínimamente el parámetro sospechoso y se correlaciona el
+movimiento del pico. Si al mover la resonancia de la voz 2 el pico se mueve, es
+de la voz 2. **Eso es causalidad, no correlación de estado** — y es exactamente
+el motor de §7.6, la misma pieza que resuelve la topología del patch.
+
+**«Ambiguo» tiene definición, no criterio de barra:** si la primera hipótesis no
+se separa de la segunda por un margen dado, es ambigua. Punto.
+
+Y lo que se le entrega al agente es **la hipótesis con su confianza**, nunca una
+certeza fabricada. Un agente que recibe «probablemente la voz 2, 0.7» puede
+pedir la sonda, preguntarte, o abstenerse. Uno que recibe «la voz 2» a secas
+tarde o temprano te arregla el sonido equivocado con total aplomo.
+
 ### 7.3 Qué se mide de verdad — y por qué una FFT cruda no basta
 
 **Una FFT cruda no puede contestar «hay muchos graves».** En cualquier espectro
@@ -609,6 +727,69 @@ el mensaje `MEMO` de §4.1.
 **No es un sampler**, y la diferencia importa: es que el agente pueda oír una
 frase. El sampler es el módulo 9 y §10 explica por qué no vive aquí.
 
+### 7.6 El motor de perturbación: una sola pieza para dos problemas
+
+Los dos puntos más frágiles de esta spec —el barrido de topología de §6.2 y la
+atribución de §7.2— parecían problemas distintos. **No lo son.** Los dos
+preguntan lo mismo:
+
+> Observo un efecto. ¿Cuál de las N causas que controlo lo produjo?
+
+Y los dos se responden igual: **perturbar una magnitud controlada y correlacionar
+el cambio observado.** Una sola pieza de firmware sirve a ambos, y eso convierte
+dos funciones sin probar en **un componente con un test**.
+
+#### Correlación, no detección de escalón
+
+El planteamiento ingenuo —mover una fuente a un valor y buscar un salto en las
+entradas— es exactamente donde estaba la fragilidad: se rompe con atenuadores en
+el camino, se ahoga en el ruido, y obliga a barrer las fuentes de una en una.
+
+La versión robusta es la que usan el GPS, CDMA y la medida de salas con
+secuencias de longitud máxima: **darle a cada fuente un código distinto y
+correlacionar en cada punto de observación.**
+
+| Fragilidad del escalón | Lo que hace la correlación |
+|---|---|
+| Un atenuador deja el salto casi en cero | La ganancia de correlación lo encuentra igual — **y mide cuánto atenúa** |
+| El ruido de la entrada tapa el salto | La correlación integra: el ruido no correlaciona, la señal sí |
+| Un camino acoplado en AC no pasa DC | Se usa un código **sin componente de continua** |
+| Hay que barrer las fuentes una por una | Códigos ortogonales → **todas a la vez** |
+| Una fuente que va a dos destinos | Las dos correlaciones dan positivo; es 1-a-muchos y sale correcto |
+
+**Y el premio que no se buscaba: se aprende la atenuación, no solo la conexión.**
+El preset deja de guardar «VCO1 → CV del VCF1» y pasa a guardar «VCO1 → CV del
+VCF1, atenuado al 40 %». Es más información de la que el problema original pedía.
+
+#### Nunca adivina en silencio
+
+Toda correlación devuelve **una hipótesis y una confianza**, nunca una certeza.
+La regla de degradación, escrita para que no se improvise:
+
+1. **Confianza alta** — se acepta y se publica.
+2. **Confianza baja o dos hipótesis empatadas** — se marca como ambigua, **se
+   cae a la ocupación de §6.2** (que sí es un hecho binario y fiable), y la app
+   le pide al usuario que confirme la pareja.
+3. **Nunca** se publica una topología o una atribución inventada.
+
+El invariante de §2.1 obliga a lo mismo hacia el agente: **la confianza es parte
+del dato**. El agente recibe «probablemente la voz 2, confianza 0.7», no una
+afirmación. Con eso puede pedir una sonda, preguntarte, o abstenerse — que es lo
+que un buen ingeniero haría.
+
+#### Se prueba antes de que exista el hardware
+
+Esto es lo que saca a las dos funciones de la lista de riesgos: **el motor es
+código puro y se valida en simulación.**
+
+Se generan señales sintéticas con topología conocida, atenuaciones conocidas y
+ruido inyectado, y se exige que el motor recupere lo que se puso. Y —más
+importante— se le dan casos que **debe** declarar ambiguos, y se exige que los
+declare en vez de inventarse una respuesta.
+
+Así, cuando llegue el hardware, lo que se estará probando es el acoplo eléctrico
+real, no el algoritmo. **El algoritmo ya vino verde.**
+
 ---
 
 ## 8. Alcance del firmware de validación
@@ -621,7 +802,11 @@ Corre sobre **placa de desarrollo RP2350**, no sobre PCB propia.
 - Trama SPI del J2 contra la cadena de DAC del módulo 3
 - Captura de periodo con PIO, cuatro canales, **y la medida del jitter real**
 - Modelo de parámetros y descriptor (§3), con medidas de solo lectura
-- Protocolo sobre USB (§4), la tabla de mensajes completa
+- Protocolo sobre USB (§4): **USB MIDI 1.0 en alt setting 0 + MIDI-CI/Property
+  Exchange en SysEx**, con la tabla de mensajes completa. UMP es la etapa 2 y
+  no entra aquí (§4.4)
+- **Motor de perturbación (§7.6) validado en simulación**: códigos ortogonales,
+  correlación, y los casos que debe declarar ambiguos
 - Cadena WS2812 sobre una tira de desarrollo: valida `POINT` y el pintado del
   patcheo guiado sin esperar a que existan paneles
 - Reparto de voces con robo de la más vieja
@@ -634,8 +819,10 @@ Corre sobre **placa de desarrollo RP2350**, no sobre PCB propia.
 
 **Fuera, y va en specs posteriores:** secuenciador, arpegiador, LFOs, memoria de
 acordes; la UI web, el agente, el servidor MCP y el puente de §4.5; el puente
-inalámbrico; la PCB; la atribución de §7.2 —que necesita módulos reales
-sonando—; y la implementación, que no la definición, de `PATCH_SCAN`.
+inalámbrico; la PCB; el alternate setting 1 con UMP (§4.4); y el **acoplo
+eléctrico real** de §6.2 y §7.2 — o sea, `PATCH_SCAN` y la atribución contra
+hardware que suena. Sus algoritmos sí entran, validados en simulación: cuando
+llegue el hardware se estará probando la electrónica, no la matemática.
 
 ---
 
@@ -649,10 +836,14 @@ Siguiendo la costumbre del repo —guiones ejecutables con aserciones, no prosa:
 | Modelo y descriptor | Tests en host: un descriptor generado se parsea a lo mismo |
 | Trama del J2 | Captura con analizador lógico: 72 bits, `CS` abajo entero, orden `[U7][U6][U5]` |
 | Descubrimiento I²C | Con una EEPROM real en protoboard antes de que exista módulo 3 |
-| **Jitter del PIO** | **Medido, y el número entra en `autotune_budget.py`** |
+| **Jitter del comparador** | Medido en placa y contrastado contra los **131 ns** que `autotune_budget.py` despeja. Aprobado o suspenso, no una incógnita |
+| `F_PIO` sin dividir | Comprobar que el PIO corre al reloj de sistema; si el firmware lo divide, `autotune_budget.py` hay que recalcularlo |
 | Reparto de voces | Tests en host con secuencias de notas conocidas |
 | Motor de análisis | Señales sintéticas de referencia: tono puro, ruido rosa, y una resonancia inyectada a frecuencia conocida. Se exige que la detecte donde está |
+| **Motor de perturbación** | Simulación con topología y atenuaciones conocidas más ruido: se exige que recupere lo que se puso. **Y casos deliberadamente ambiguos: se exige que los declare ambiguos en vez de inventar** |
+| **Atribución** | Espectro sintético donde dos voces comparten un armónico: se exige confianza baja, no una respuesta segura y equivocada |
 | Confirmación física | Test: una operación marcada llega por USB y **no** se ejecuta hasta el pulsador |
+| Property Exchange sobre MIDI 1.0 | El descriptor completo viaja en SysEx y vuelve idéntico, sin UMP de por medio |
 | Presupuestos existentes | Los cuatro siguen en verde: `ground_budget.py`, `tuning_budget.py`, `autotune_budget.py`, `dac_local_budget.py` |
 
 ---
@@ -733,23 +924,32 @@ Los ocho puntos abiertos de la revisión inicial, verificados el **2026-08-17**.
 | **24AA02E48** | Confirmado contra datasheet: SOT-23-5, A0/A1/A2 no conectadas → **dirección fija**, el mux I²C es obligatorio. Y el `check_netlist.py` del módulo 3 coincide con el pinout, pin por pin |
 | **RP2350 para DSP** | Confirmado: dual Cortex-M33 a 150 MHz con **FPU por hardware e instrucciones DSP**, CMSIS-DSP con FFT y RMS, 2-4× el RP2040 |
 
+### Las cuatro fricciones, resueltas en esta revisión
+
+| Fricción | Cómo se resolvió |
+|---|---|
+| **Pila UMP en C, no en Rust** (§4.4) | Se disolvió con dos hechos: **Property Exchange corre sobre SysEx de MIDI 1.0** —así que el descriptor y el puente MCP no necesitan UMP— y el estándar USB define **alternate settings** para subir a MIDI 2.0 después. No es bifurcación: es escalera, con criterio escrito para cuándo subir |
+| **Jitter del PIO** (§5.1) | Se **derivó** en vez de estimarse: un tick a 150 MHz = **6.67 ns**, 750× mejor que el número prestado del Pi. Y el término que quedaba —el 74HC14— se **invirtió en requisito**: puede temblar hasta **131 ns**. `autotune_budget.py` lo asevera |
+| **Fragilidad del barrido por inyección** (§6.2) | **Códigos ortogonales y correlación** en vez de detección de escalón: inmune al ruido, atraviesa atenuadores —y **mide** la atenuación—, todas las fuentes a la vez. Con degradación explícita: si no es concluyente, cae a ocupación y pregunta |
+| **Ambigüedad de la atribución** (§7.2) | Algoritmo en **dos niveles**: inferencia contra la serie armónica conocida, y **sonda causal** cuando queda ambiguo. Se entrega hipótesis **con confianza**, nunca certeza fabricada |
+
+Y las dos últimas resultaron ser **la misma pieza**: el motor de perturbación de
+§7.6. Dos funciones sin probar se volvieron **un componente con un test**, y ese
+test corre en simulación, sin hardware.
+
 ### Abiertos
 
-1. **La pila UMP para RP2350 es C, no Rust** — el único punto que empeoró. Tres
-   salidas en §4.4; se decide en el plan.
-2. **El jitter del PIO sigue sin medir.** Es el entregable de §5.1: hasta que
-   exista, el presupuesto del autoafinado se apoya en un número ajeno que ya no
-   aplica.
-3. **El barrido por inyección no se ha probado nunca**, y no hay hardware donde
-   probarlo hasta que exista un módulo con jacks de CV sensados. Se congela el
-   mensaje y el formato; la implementación puede descubrir que hace falta más
-   hardware del previsto.
+1. **El acoplo eléctrico real de §6.2 y §7.2.** Los algoritmos se validan en
+   simulación, así que lo que queda por probar es la electrónica: si la señal
+   inyectada sobrevive el camino analógico real con margen suficiente. No hay
+   dónde medirlo hasta que exista un módulo con jacks de CV sensados.
+2. **El jitter real del 74HC14 en placa.** Ya no es una incógnita abierta —hay
+   131 ns contra los que contrastarlo— pero sigue sin medirse.
+3. **`F_PIO` = 150 MHz supone el reloj de sistema sin dividir para el PIO.** Si
+   el firmware lo divide, el sellado sube en la misma proporción y
+   `autotune_budget.py` hay que recalcularlo.
 4. **El mux I²C concreto no está elegido** ni verificado contra stock de LCSC.
-5. **La atribución de §7.2 no está probada.** El razonamiento es sólido —el
-   cerebro tiene el estado y la medida— pero cruzar un pico espectral con la voz
-   que lo causa no se ha hecho nunca aquí, y puede resultar más ambiguo de lo
-   que parece con cuatro voces sonando a la vez.
-6. **El invariante de §2.1 es una disciplina, y las disciplinas se rompen bajo
+5. **El invariante de §2.1 es una disciplina, y las disciplinas se rompen bajo
    presión.** El riesgo no es que sea imposible: es que aparezca un camino
    rápido —una perilla que escribe directo al DAC «porque es más simple»— y con
    él un rincón que el agente no alcanza. La defensa es que la tabla de mensajes
