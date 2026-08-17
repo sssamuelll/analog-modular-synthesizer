@@ -561,6 +561,31 @@ def _dist_seg(p, a, b) -> float:
 # ninguna alternativa (el pasillo mide 1-1.45 mm y da para una via, no para
 # un abanico), asi que reservarla es ganancia neta.
 #
+# Y el FANOUT COMPLETO -- una via por pin en tres coronas escalonadas
+# alrededor de cada QFN -- tampoco entra, aunque parezca el paso natural
+# despues de lo anterior. Se implemento entero y se midio; dos muros, los
+# dos de aritmetica y no de mana:
+#
+#   1. NO CABE. Para que el rabito de un pin pase al lado de la via de su
+#      vecino hacen falta VIA_D/2 + CLEARANCE + ANCHO/2 = 0.55 mm, y el paso
+#      del QFN es 0.40. La via mas gorda que dejaria pasar al vecino mide
+#      0.30 mm -- taladro laser, proceso HDI, otra liga de fabricacion. Con
+#      las tres coronas los que COMPARTEN corona quedan a 1.2 mm y esos si
+#      caben, pero los rabitos de las coronas de fuera tienen que cruzar la
+#      de dentro y ahi se acaba: de 119 vias de fanout, entraron 91 y 28 se
+#      quedaron fuera.
+#   2. AHOGA AL ROUTER. Con esas 91 vias en el modelo, Freerouting paso de
+#      ~15 s por pasada a ~8 minutos: veinte horas por ronda. Es el mismo
+#      efecto que ya se habia medido con las ~95 vias de coser todas las
+#      masas antes de rutear, y por eso aquella se movio a despues.
+#
+# Moraleja de las rondas 5 y 6, que es la que vale para el proximo QFN:
+# pre-colocar cobre ayuda donde la geometria fuerza UNA solucion (los siete
+# pines de masa de aqui arriba) y estorba donde hay varias, porque le quita
+# al router sitio que el reparte mejor. El fanout completo de un 0.4 mm no
+# es cuestion de insistir: es via-in-pad o HDI, y eso es decision de
+# proceso, no de layout.
+#
 # Se ponen antes del ruteo: el router las ve como obstaculo y da la vuelta;
 # puestas despues, no hay por donde. Son siete vias y el modelo del router
 # apenas lo nota (con las ~95 de toda la placa, cada pasada pasaba de 15 s
