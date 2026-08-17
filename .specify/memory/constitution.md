@@ -126,12 +126,19 @@ Ninguna tanda de hardware se da por cerrada sin todo esto en verde:
 
 Y para el firmware: nada sin test que falle antes de existir la implementación.
 
-**Quién hace cumplir esto: `python hardware/tools/gates.py`**, y lo corre el CI
-en cada PR. Durante la primera tanda larga de hardware estas puertas las hacía
-cumplir la memoria de quien mandaba el PR — el CI solo miraba el firmware y los
-enlaces de los markdown, y trece scripts con aserciones reales vivían en el repo
-sin que nada los ejecutara. Una puerta que depende de que alguien se acuerde no
-es una puerta.
+**Quién hace cumplir esto: `python hardware/tools/gates.py`.** Durante la
+primera tanda larga de hardware estas puertas las hacía cumplir la memoria de
+quien mandaba el PR, y trece scripts con aserciones reales vivían en el repo sin
+que nada los ejecutara. Una puerta que depende de que alguien se acuerde no es
+una puerta.
+
+> **Estado 2026-08-17: se corre a mano.** El workflow de CI incluye el job
+> (`.github/workflows/ci.yml`), pero **GitHub Actions está deshabilitado a nivel
+> de repositorio**, así que hoy no corre nada automáticamente — tampoco el job
+> de firmware. Hasta que se active, `gates.py` antes de cada PR es obligatorio y
+> el PR dice su resultado. Esto se anota aquí, y no en un comentario del
+> workflow, porque es justo la clase de cosa que se olvida y deja a todo el
+> mundo creyendo que hay una red debajo.
 
 El runner descubre los gates **por patrón** (`check_*.py`, `*_budget.py`,
 `simulations/*/*.py`), no por lista: un gate nuevo se añade escribiendo el

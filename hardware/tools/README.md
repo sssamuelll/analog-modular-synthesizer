@@ -6,9 +6,13 @@
 python hardware/tools/gates.py
 ```
 
-Es lo mismo que corre el CI en cada PR. Ejecuta **todos** los `check_*.py`,
-todos los `*_budget.py`, todo lo de `simulations/*/` y `netdiff.py`, y suma.
-Tarda ~2 s con KiCad instalado.
+Ejecuta **todos** los `check_*.py`, todos los `*_budget.py`, todo lo de
+`simulations/*/` y `netdiff.py`, y suma. Tarda ~2 s con KiCad instalado.
+
+> **Córrelo a mano antes de cada PR.** El job existe en
+> `.github/workflows/ci.yml`, pero **GitHub Actions está deshabilitado en este
+> repositorio** (comprobado 2026-08-17): hoy no corre solo. Para activarlo:
+> `gh api -X PUT repos/:owner/:repo/actions/permissions -f enabled=true`.
 
 Un gate nuevo se añade **escribiendo el fichero** con uno de esos nombres. No
 hay lista que actualizar aquí: si la hubiera, el día que a alguien se le olvide
