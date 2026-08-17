@@ -98,7 +98,12 @@ STOCK = os.environ.get("KICAD_FOOTPRINTS",
 JAVA = os.environ.get("JAVA", "java")
 FREEROUTING = os.environ.get("FREEROUTING_JAR", "")
 PASADAS = int(os.environ.get("FREEROUTING_PASADAS", "250"))
-RONDAS = int(os.environ.get("FREEROUTING_RONDAS", "6"))
+RONDAS = int(os.environ.get("FREEROUTING_RONDAS", "3"))
+# Coste de via del router. De fabrica 50, pensado para 2 capas donde bajar
+# es caro de verdad. Aqui hay dos capas de senal y un plano solido: cambiar
+# de capa es lo normal, y penalizarlo solo consigue que el router se ahogue
+# en el anillo de un QFN de 0.4 mm de paso en vez de escapar hacia abajo.
+VIA_COSTS = int(os.environ.get("FREEROUTING_VIA_COSTS", "8"))
 
 W, H = 114.0, 124.0
 MARGEN = 4.0
@@ -211,8 +216,8 @@ _PLANTILLA = [
     ("R_PITCH{i}", -10.5, 0.0),
     ("R_CVIN{i}", -10.5, 3.0),
     # columna derecha: la red de VREF
-    ("R_LIN{i}", 10.0, -3.0),
-    ("R_SCALE{i}", 10.0, 0.0),
+    ("R_LIN{i}", 11.5, -3.0),
+    ("R_SCALE{i}", 11.5, 0.0),
     # fila de arriba: lo que sale hacia U9 y U10
     ("R_IV{i}", -6.0, -9.0),
     ("R_BW{i}", -2.0, -9.0),
@@ -235,6 +240,11 @@ _DESACOPLO_5V = {1: "C21", 2: "C22", 3: "C23", 4: "C24"}
 _DESACOPLO_12V = {1: "C27", 2: "C28", 3: "C29", 4: "C30"}
 _PEGADOS = [
     ("C_TCAP{i}", 0.6, 5.2, 270),
+    # C_5V desacopla V+, que sale por dos pines: el 18 (costado derecho) y
+    # el 27 (arriba). Va junto al 18. Se probo ponerlo junto al 27 para
+    # despejar el abanico del costado derecho, y salio PEOR (8 conexiones
+    # abiertas contra 5): lo que despeja de un lado lo tapa del otro, y
+    # arriba compiten MIXO, BW_COMP, SQUARE_OUT y PWM_CV.
     ("{c5v}", 5.6, 1.0, 0),
     ("{c12v}", -5.6, 1.4, 180),
 ]
@@ -468,6 +478,27 @@ def colocar() -> None:
         (ISLA_X1 - G, H - MARGEN), (MARGEN, H - MARGEN),
     ])
 
+    # In2 lleva la potencia Y el vertido de GNDD. Dentro de la esquina de
+    # la isla digital se le prohiben las PISTAS: sin eso, el ruteo de
+    # potencia cruza el vertido de GNDD y lo parte en dos trozos que el DRC
+    # cuenta como conexion abierta (y que ademas obligan al retorno digital
+    # a rodear). Fuera de la isla In2 sigue libre; la potencia vive en el
+    # rincon opuesto y no necesita pasar por aqui.
+    ka = pcbnew.ZONE(board)
+    ka.SetLayer(CAPA_GNDD)
+    ka.SetIsRuleArea(True)
+    ka.SetDoNotAllowTracks(True)
+    ka.SetDoNotAllowVias(False)
+    ka.SetDoNotAllowZoneFills(False)
+    ka.SetDoNotAllowPads(False)
+    ka.SetDoNotAllowFootprints(False)
+    v = pcbnew.VECTOR_VECTOR2I()
+    for x, y in ((0.0, ISLA_Y1 - G), (ISLA_X1 + G, ISLA_Y1 - G),
+                 (ISLA_X1 + G, H), (0.0, H)):
+        v.append(pcbnew.VECTOR2I(mm(x), mm(y)))
+    ka.AddPolygon(v)
+    board.Add(ka)
+
     # "In1 no se toca" NO se dice con un area de reglas de KiCad. Se probo:
     # un keepout de placa entera sobre In1 se exporta como un wire_keepout
     # que cubre todo, y Freerouting se atasca en seco -- 200 conexiones sin
@@ -500,6 +531,27 @@ def _dist_seg(p, a, b) -> float:
     L = dx * dx + dy * dy
     t = 0.0 if L == 0 else max(0.0, min(1.0, ((p[0]-a[0])*dx + (p[1]-a[1])*dy) / L))
     return ((p[0] - (a[0]+t*dx))**2 + (p[1] - (a[1]+t*dy))**2) ** 0.5
+
+
+# Las siete costuras que hay que RESERVAR antes de rutear, con su motivo.
+# Son los pads de masa de los dos encapsulados de paso fino, y los unicos
+# que el router deja sin salida si llega antes que ellos:
+#
+#   U1..U4 pin 20 (GNDA)  -- costado derecho del QFN, con un vecino de otra
+#     red a 0.4 mm por arriba y otro por abajo. Su unica salida es hacia
+#     afuera, y hacia afuera esta el desacoplo de +5V a 5.6 mm. Es un
+#     pasillo de poco mas de 1 mm y el router lo llena con el abanico de
+#     escape de las senales.
+#   U5..U7 pin 4 (GNDA)   -- costado izquierdo del TSSOP, y a su izquierda
+#     el desacoplo de +5V. El hueco entre los dos pads mide 1.45 mm: cabe
+#     una via, pero solo si llega primero.
+#
+# Puestas antes del ruteo, el router las ve como obstaculo y da la vuelta;
+# puestas despues, no hay por donde. Son siete vias: el modelo del router
+# apenas lo nota (con las ~95 de toda la placa, cada pasada pasaba de 15 s
+# a tres minutos).
+COSTURAS_RESERVADAS = {(f"U{i}", "20") for i in (1, 2, 3, 4)} | \
+                      {(f"U{i}", "4") for i in (5, 6, 7)}
 
 
 def _pads_sin_plano(board, net: str) -> list:
@@ -650,7 +702,7 @@ def _abanico(px: float, py: float, ux: float, uy: float):
             yield px + vx * d, py + vy * d
 
 
-def coser_masas() -> int:
+def coser_masas(reservadas=False) -> int:
     """Una via de bajada al plano por cada pad de masa que no la tenga ya.
 
     Todo el cobre de esta placa es SMD en F.Cu y las dos masas viven en
@@ -802,6 +854,8 @@ def coser_masas() -> int:
             if net not in ("GNDA", "GNDD"):
                 continue
             px, py = _xy(pad)
+            if reservadas and (fp.GetReference(), pad.GetNumber())                     not in COSTURAS_RESERVADAS:
+                continue
             if (px, py) not in pendientes:
                 continue          # su cobre ya toca una via: llega al plano
             largo = ((px - fx) ** 2 + (py - fy) ** 2) ** 0.5 or 1.0
@@ -859,7 +913,8 @@ def coser_masas() -> int:
             nuevas += 1
             poner(rabito, net)
     pcbnew.SaveBoard(PCB, board)
-    print(f"masas cosidas al plano: {nuevas} vias nuevas, {enganchadas} pads "
+    print(f"{'costuras reservadas' if reservadas else 'masas cosidas al plano'}"
+          f": {nuevas} vias nuevas, {enganchadas} pads "
           f"colgados de una via vecina"
           + (f", {faltan} pads sin sitio" if faltan else ""))
     return faltan
@@ -902,7 +957,7 @@ def ajustes_freerouting(tmp: str) -> None:
     router = cfg.setdefault("router", {})
     router.setdefault("fanout", {}).update(
         {"enabled": True, "algorithm": "freerouting-fanout", "max_passes": 100})
-    router.setdefault("scoring", {})["via_costs"] = 30
+    router.setdefault("scoring", {})["via_costs"] = VIA_COSTS
     router["max_threads"] = 1
     # y el numero de pasadas TAMBIEN va aqui: -mp de la linea de comandos
     # queda por debajo del JSON (con -mp 150 y el JSON en 40, se paro en 45).
@@ -981,6 +1036,12 @@ def _ajustar_dsn(dsn: str) -> None:
     txt = txt.replace(viejo, "(layer In1.Cu\n      (type power)", 1)
     holgado = f"(clearance {int(CLEARANCE * 1000) + 10})"
     txt = txt.replace(f"(clearance {int(CLEARANCE * 1000)})", holgado)
+    # 3. El cobre de masa que ya esta puesto se marca como PROTEGIDO. KiCad
+    #    exporta todo el cableado existente como (type route), que para
+    #    Freerouting significa "puedes levantarlo si te estorba" -- y las
+    #    costuras reservadas existen justo para que NO se las levante.
+    for red in ("GNDA", "GNDD"):
+        txt = txt.replace(f"(net {red})(type route)", f"(net {red})(type protect)")
     with open(dsn, "w", encoding="utf-8") as fh:
         fh.write(txt)
 
@@ -1303,6 +1364,7 @@ def revisar_frontera(board, zonas) -> list[str]:
 def main() -> None:
     board = colocar()
     medir_dac_vco(board)
+    coser_masas(reservadas=True)   # antes de rutear: ver COSTURAS_RESERVADAS
     rutear()
     # Dos vueltas: la primera deja vias nuevas por toda la placa y la
     # segunda las aprovecha para enganchar los pads que antes no tenian de
