@@ -1,0 +1,9 @@
+#![cfg_attr(not(test), no_std)]
+//! El contrato publico del SAM17.
+//!
+//! Spec: `docs/superpowers/specs/2026-08-17-nucleo-digital-design.md`.
+//!
+//! El invariante de §2.1 manda aqui: si una capacidad del instrumento no se
+//! puede expresar con estos tipos y estos mensajes, no esta terminada.
+
+pub mod param;

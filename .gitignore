@@ -46,3 +46,6 @@ _probe.*
 # Zips de fabricacion (regenerables desde fab/)
 hardware/**/fab/*-jlcpcb.zip
 .claude/worktrees/
+
+# Rust
+target/
