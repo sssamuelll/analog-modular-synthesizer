@@ -40,14 +40,19 @@ ancho_total     = 544.32;
 //
 // LAS DOS FILAS SON 3U desde el 2026-08-17 (antes la de arriba media 190, la
 // "altura de panel de la tesis"). Un panel 3U mide 128.5, y lo que manda no es
-// ese numero sino la SEPARACION ENTRE RIELES. Ya no es un supuesto: StudioRacks
-// contesto el 2026-08-17 con los planos de su riel y de su mejilla FLAT-S, y su
-// cota es 123.00 mm entre centros -- no los 122.50 de Doepfer. Los rieles
-// comerciales varian de marca (Vector 121.46, Tiptop 122.43, Doepfer 122.50) y
-// el que cuenta es el que se compra. De ahi salen las caras:
+// ese numero sino la SEPARACION ENTRE RIELES, y con el Z-Rail esa cota NO LA
+// PONE EL RIEL: la ponemos nosotros al taladrar el costado. El Z-Rail es una
+// barra lisa con una pletina roscada continua (M3 cada 5.08 a todo lo largo),
+// asi que acepta la separacion que se le de. Los 123.00 de antes venian de la
+// MEJILLA FLAT-S de StudioRacks -- una mejilla ya taladrada, que aqui no se
+// compra porque el costado lo cortamos nosotros.
 //
-//   alto_cara_inf = 123.0 + inset_inf_frente + inset_inf_valle  = 153.25
-//   alto_cara_sup = 123.0 + inset_sup_valle  + inset_sup_remate = 155.5
+// Manda entonces el PANEL, que es lo unico que no se puede mover: un 3U mide
+// 128.5 y sus ranuras van a 3.00 de cada canto, o sea 122.50 entre centros.
+// De ahi salen las caras:
+//
+//   alto_cara_inf = 122.5 + inset_inf_frente + inset_inf_valle  = 152.75
+//   alto_cara_sup = 122.5 + inset_sup_valle  + inset_sup_remate = 155.0
 //
 // El de arriba sale mas CORTO aunque lleve el mismo estandar dentro, y es por
 // la bisagra: su punta de arriba ya no la remata un 2020 sino el eje de giro.
@@ -73,8 +78,8 @@ ancho_total     = 544.32;
 // fija de punta con un M5 directo al acrilico (taladro de 4.5 en su eje). Los
 // 2020 se quedan solo en el esqueleto -- base, entrepiso, remate y repisa --,
 // que es donde de verdad hacen estructura.
-alto_cara_inf   = 153.25; // DERIVADO: 123.0 + inset_inf_frente + inset_inf_valle
-alto_cara_sup   = 155.5; // DERIVADO: 123.0 + inset_sup_valle + inset_sup_remate
+alto_cara_inf   = 152.75; // DERIVADO: 122.5 + inset_inf_frente + inset_inf_valle
+alto_cara_sup   = 155.0; // DERIVADO: 122.5 + inset_sup_valle + inset_sup_remate
 alto_panel_inf  = 128.5; // PCB 3U EUROrack
 alto_panel_sup  = 128.5; // PCB 3U EUROrack: la fila de arriba tambien
 // Angulos de cara. El fichero los guarda DESDE LA VERTICAL (convencion del
@@ -330,30 +335,48 @@ $fn = 48;
 
 // --- sistema de paneles (spec §6) ---
 rail            = 20;   // perfil 2020, SOLO esqueleto (base, entrepiso, remate, repisa)
-// RIEL EUROrack REAL, de los planos que mando StudioRacks el 2026-08-17. Ya no
-// es un 2020 asumido ni un supuesto: es la seccion del perfil que se compra.
+// RIEL EUROrack: Z-Rail de TIPTOP AUDIO. Cotas de su hoja de datos oficial
+// (tiptopaudio.com/manuals/z-rails.pdf, seccion A "PROFILE", leida el
+// 2026-08-17).
 //
-//   rail_er_alto   10.00  a lo largo de la cara. La mitad del 2020, y de aqui
-//                         sale casi todo el recorte de los insets.
-//   rail_er_fondo  27.40  hacia dentro del case
-//   rail_er_eje    13.70  del taladro de 4.5 (el M5 de punta) a la cara que
-//                         toca el panel. Con el 2020 esta cota era rail/2 = 10.
+// ESTE FICHERO ESTUVO DIBUJADO CONTRA OTRO RIEL. Hasta el 2026-08-17 la seccion
+// salia de los planos que mando StudioRacks, y el riel que se compra es el
+// Tiptop. No es el mismo perfil: 27.40 de fondo contra 23.80. Un case entero
+// dimensionado contra la pieza equivocada -- y con +0.50 mm de margen medido en
+// esa cota, o sea que no habia holgura ninguna que lo absorbiera.
 //
-// El taladro cae centrado en las dos dimensiones (13.70 de 27.40 y 5.00 de
-// 10.00), asi que el eje ES el centroide de la seccion. La mejilla FLAT-S del
-// mismo fabricante lo confirma por otro lado: sus dos M5 van a 13.80 del canto
-// delantero, o sea el mismo 13.7 con la tolerancia del plano.
+//   rail_er_alto   10.00  a lo largo de la cara. Es la cota que NO cambio al
+//                         pasar de un fabricante al otro: los dos presentan
+//                         10 mm de canto al panel, que es lo estandar.
+//   rail_er_fondo  23.80  hacia dentro del case. La hoja la acota como la
+//                         dimension larga de la seccion.
+//   rail_er_eje    14.30  del taladro de punta a la cara que toca el panel.
+//                         La hoja lo acota al reves -- 9.50 al canto de
+//                         DETRAS --, y 23.80 - 9.50 = 14.30.
 //
-// El riel se fija DE PUNTA, con un M5 que entra por el costado a ese taladro.
-// No hay 2020 detras de las caras: eso era el supuesto viejo y el plano lo
-// desmiente.
+// El taladro NO esta centrado en el fondo (14.30 de 23.80), pero SI en el alto
+// (5.00 de 10.00): la hoja acota 5.0 desde el canto de arriba, y por debajo
+// 3.8 + 1.2 = 5.0 hasta el otro. Eso importa porque es lo que permite que el
+// M4 de punta y la linea de tornillos del panel caigan a la misma altura.
+//
+// EL TALADRO DE PUNTA ES M4, NO M5. La hoja lo dice con todas sus letras:
+// "M4 Tapping To (/)3.3". O sea que viene ROSCADO en el propio aluminio -- el
+// costado solo necesita agujero de PASO (d_M4_paso) y el tornillo muerde el
+// riel directamente, sin tuerca ni inserto. Los M5 se quedan para el esqueleto
+// 2020, que es otro herraje.
+//
+// LO QUE SIGUE SIN CONFIRMAR: cual de las dos caras de 10 mm mira al panel.
+// Se toma la del canal (el que lleva la pletina roscada), que es la unica que
+// puede recibir los M3 del modulo -- se ve en la foto de la hoja que el canal
+// abre de costado y no por la cara ancha. Si con el riel en mano resultara ser
+// la otra, rail_er_eje pasa de 14.30 a 9.50 y hay que re-derivar.
 // Largo de catalogo del riel. Es la cota que fija el ancho del case (ver
 // ancho_total): 104 HP x 5.08 = 528.32. No se puede "ajustar" -- o se compra
 // otro largo o se corta el riel, y cortarlo se lleva la punta por donde se fija.
 largo_riel      = 528.32;
 rail_er_alto    = 10;
-rail_er_fondo   = 27.4;
-rail_er_eje     = 13.7;
+rail_er_fondo   = 23.8;
+rail_er_eje     = 14.3;
 // Tornillo de panel, distancia al borde del panel. FUE 5 y era imposible:
 // el rail 2020 va ALINEADO con la cara, asi que se extiende +-rail/2 = +-10 mm
 // a lo largo de ella. Centrado a s=5 ocupaba de s=-5 a s=+15, o sea que
@@ -439,24 +462,28 @@ inset_sup_remate = 13;
 // 3.2 sobre M3 hay 0.2 mm de juego radial, asi que entra pero justo. Con tuercas
 // deslizantes (la opcion de 35 GBP) el juego horizontal es libre y solo aprieta
 // en vertical; con insertos roscados (41 GBP) queda fijo en los dos ejes.
-inset_er        = 2.75;
+inset_er        = 3.0;   // DERIVADO: (128.5 - 122.5)/2, la ranura del panel 3U
 inset_er_x      = 7.5;
 // 1 HP. Es la unidad del rack y por tanto la del case entero: largo_riel son
 // 104 HP y el campo de ranuras de la tapa del valle va registrado a esta malla,
 // no a la plancha. Aqui como numero para que no ande suelto en tres sitios.
 hp              = 5.08;
-// Del plano de la mejilla FLAT-S: dos M5 a 5.00 mm de cada punta de una pieza de
-// 133.00, o sea 123.00 entre centros. Confirmado por escrito por John el
-// 2026-08-17 ("123mm ctr to ctr, 13.8mm in from front edge").
-sep_railes_inf  = 123.0;
-sep_railes_sup  = 123.0;
+// Lo fija el PANEL, no el riel: el Z-Rail lleva pletina roscada continua y
+// acepta la separacion que se le de al taladrar el costado. Un panel 3U mide
+// 128.5 con las ranuras a 3.00 de cada canto -> 122.50 entre centros (Doepfer).
+// FUE 123.00 y era la cota de la mejilla FLAT-S de StudioRacks: una mejilla ya
+// taladrada, que no se compra porque el costado lo cortamos nosotros.
+sep_railes_inf  = 122.5;
+sep_railes_sup  = 122.5;
 holgura_rail    = 4;    // separacion minima entre railes vecinos (fix solapes)
 
 // --- esqueleto y herrajes ---
 n_bulkheads      = 2;    // costados exteriores (3 si el vano flexa, spec §11)
 d_M3_paso   = 3.4;  // agujero paso M3 (ISO holgura media)
-d_M4_paso   = 4.5;  // agujero paso M4
-d_M5_paso   = 5.5;  // agujero paso M5 (railes 2020 roscados en el alma)
+d_M4_paso   = 4.5;  // agujero paso M4: standoffs de las pieles Y los cuatro
+                    // rieles EUROrack, cuyo taladro de punta viene roscado M4
+                    // de fabrica (hoja Tiptop: "M4 Tapping To (/)3.3")
+d_M5_paso   = 5.5;  // agujero paso M5: SOLO el esqueleto 2020, roscado en el alma
 gap_sombra  = 5;    // junta de sombra de las pieles flotantes
 // Paticas: METALICAS, torneadas, pequenas (Samuel, 2026-08-17 -- "metalicas
 // y elegantes"). No son de goma: eso cambia el BOM y el acabado. Van bajo los

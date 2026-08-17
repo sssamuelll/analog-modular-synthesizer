@@ -255,23 +255,29 @@ def taladros_con_material() -> list[str]:
     P = cb._vertices(p)
     cr = cb._centros_rail(p, P)
     ce = cb._centros_esqueleto(p, P, cr)
-    d = p["d_M5_paso"]
-    minimo = BORDE_MIN_D * d
+    # El costado mezcla DOS diametros: M4 de paso en los cuatro railes EUROrack
+    # (su taladro de punta viene roscado M4 de fabrica) y M5 en los siete
+    # largueros 2020. El margen se exige en diametros, asi que hay que llevar el
+    # suyo a cada taladro -- con un solo `d` el criterio salia 22% duro en unos
+    # y 22% blando en otros.
+    taladros = ([(nm, c, p["d_M4_paso"], "M4") for nm, c in zip(cb.NOMBRES_CR, cr)]
+                + [(nm, c, p["d_M5_paso"], "M5") for nm, c in zip(cb.NOMBRES_CE, ce)])
     f: list[str] = []
-    peor, peor_nm = float("inf"), ""
-    for nm, c in zip(cb.NOMBRES_CR + cb.NOMBRES_CE, list(cr) + list(ce)):
+    peor, peor_nm, peor_d = float("inf"), "", 1.0
+    for nm, c, d, rosca in taladros:
         dist = _dist_al_contorno(contorno, c)
-        if dist < peor:
-            peor, peor_nm = dist, nm
-        if dist < minimo:
-            f.append(f"costado_2d: el M5 de '{nm}' cae a {dist:.2f} mm del canto "
-                     f"(se exige {minimo:.2f} = {BORDE_MIN_D} x D). Quedan "
-                     f"{dist - d/2:.2f} mm de acrilico entre el agujero y el "
-                     f"borde: eso se raja al apretar")
+        if dist / d < peor / peor_d:
+            peor, peor_nm, peor_d = dist, nm, d
+        if dist < BORDE_MIN_D * d:
+            f.append(f"costado_2d: el {rosca} de '{nm}' cae a {dist:.2f} mm del "
+                     f"canto (se exige {BORDE_MIN_D * d:.2f} = {BORDE_MIN_D} x D). "
+                     f"Quedan {dist - d/2:.2f} mm de acrilico entre el agujero y "
+                     f"el borde: eso se raja al apretar")
     if not f:
-        print(f"  costado_2d: los {len(cr) + len(ce)} taladros M5 tienen material "
-              f"alrededor (el mas justo, '{peor_nm}', a {peor:.2f} mm del canto "
-              f"= {peor / d:.2f} D)")
+        print(f"  costado_2d: los {len(taladros)} taladros (4 M4 de riel + "
+              f"{len(ce)} M5 de larguero) tienen material alrededor (el mas "
+              f"justo, '{peor_nm}', a {peor:.2f} mm del canto = "
+              f"{peor / peor_d:.2f} D)")
     return f
 
 

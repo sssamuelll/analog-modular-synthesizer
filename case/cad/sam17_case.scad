@@ -324,10 +324,15 @@ module costado_2d() {
     cr = centros_rail();
     difference() {
         perfil_lateral();
-        // Los cuatro railes de panel llevan su M5 de punta al costado; lo que
-        // cambia es el papel de cada uno (ver la nota de centros_rail).
-        for (c = concat(cr, centros_esqueleto()))
-            translate(c) circle(d = d_M5_paso + kerf);
+        // DOS DIAMETROS, no uno. El costado los mezcla porque los dos
+        // herrajes que atraviesa son distintos:
+        //   - los cuatro railes EUROrack traen el taladro de punta ROSCADO M4
+        //     de fabrica (hoja Tiptop), asi que aqui va agujero de PASO M4 y el
+        //     tornillo muerde el aluminio. Sin tuerca, sin inserto.
+        //   - los siete largueros 2020 se atornillan con M5 a tuerca T.
+        // Estuvieron todos a M5 mientras la seccion se creia la de StudioRacks.
+        for (c = cr) translate(c) circle(d = d_M4_paso + kerf);
+        for (c = centros_esqueleto()) translate(c) circle(d = d_M5_paso + kerf);
     }
 }
 
@@ -744,23 +749,30 @@ module lienzo_2d() {
 module bom() {
     au = ancho_total - 2*t_cheek;
     echo(str("BOM: larguero 2020 x", len(centros_esqueleto()), " de ", au, " mm"));
-    echo(str("BOM: riel EUROrack x", len(centros_rail()), " de ", au, " mm (",
-             rail_er_fondo, " x ", rail_er_alto, ") -- 2 al case, fijados de ",
-             "punta con M5 al costado; 2 A LA TAPA, que gira y no lleva M5"));
-    echo(str("BOM: tornillo M5 boton x", 2*(len(centros_rail()) + len(centros_esqueleto())),
-             " -- OJO: la longitud del que entra al riel esta SIN CERRAR, John dijo",
-             " que el M5x35 de catalogo no sirve para costado de ", t_cheek, " mm"));
+    echo(str("BOM: Z-Rail de Tiptop x", len(centros_rail()), ", largo ", largo_riel,
+             " (104 HP) -- seccion ", rail_er_fondo, " x ", rail_er_alto,
+             ", hoja de datos oficial. NO es el riel de StudioRacks: ese media",
+             " 27.4 de fondo y el case estuvo dibujado contra el hasta el",
+             " 2026-08-17."));
+    echo(str("BOM: tornillo M4 x8 para los rieles -- entran de punta por el ",
+             "costado y ROSCAN EN EL PROPIO RIEL (viene con M4 taladrado a 3.3 ",
+             "de fabrica). Sin tuerca, sin inserto. Largo = ", t_cheek,
+             " de costado + arandela + 8..10 de rosca dentro del aluminio."));
+    echo(str("BOM: tornillo M5 boton x", 2*len(centros_esqueleto()),
+             " + tuerca T -- SOLO para los largueros 2020 del esqueleto"));
     echo("BOM: standoff M4 x12 (las dos pieles, voladas; TRES columnas -- con");
     echo("     dos, el vano de 518 mm se descuelga 1.76 mm de peso propio)");
     echo("BOM: tornillo M4 boton x24 + arandela x24");
     // LAS DOS FILAS SON TAPA. Cada una gira sobre el M5 de su riel de arriba y
     // se cierra con el de su otro extremo. De los 64 tornillos del case, solo
     // CUATRO se tocan para abrirlo: dos por fila.
-    echo("BOM: los M5 de riel no son todos iguales --");
+    echo("BOM: los M4 de riel no son todos iguales --");
     echo("     x4 DE HOMBRO + arandela: los EJES (riel del valle de la fila de");
     echo("        abajo, riel del vertice de la de arriba). No se aprietan.");
     echo("     x4 DE MANO: los CIERRES (riel del frente abajo, riel del valle");
     echo("        arriba). Son los unicos que se quitan para abrir el case.");
+    echo("     Los ocho son M4 y roscan en el riel: el de hombro hay que");
+    echo("        pedirlo con espiga de 4 mm y rosca M4, no M5.");
     echo(str("     x", 2*len(centros_esqueleto()), " fijos: los largueros de esqueleto"));
     echo("BOM: tuercas T DE INSERCION LATERAL (drop-in), NO de deslizar. Con las");
     echo("     de deslizar hay que enhebrarlas por la punta del larguero antes de");

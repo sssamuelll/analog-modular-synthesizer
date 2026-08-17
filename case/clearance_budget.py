@@ -123,7 +123,7 @@ def _centros_rail(p: dict[str, float],
                            p["alto_cara_inf"] - p["inset_inf_valle"])),
              (P[3], P[4], (p["inset_sup_valle"],
                            p["alto_cara_sup"] - p["inset_sup_remate"]))]
-    # el eje del M5 de punta esta a rail_er_eje del panel, no a rail/2: el riel
+    # el eje del M4 de punta esta a rail_er_eje del panel, no a rail/2: el riel
     # EUROrack es hondo (27.4) y su taladro cae en su centroide
     off = p["t_panel"] + p["rail_er_eje"]
     out = []
@@ -190,7 +190,7 @@ def _x_valle(p: dict[str, float], P: list[tuple[float, float]],
 
 
 def _radio_giro_riel(p: dict[str, float]) -> float:
-    """Radio del barrido del riel de arriba al girar sobre su propio M5.
+    """Radio del barrido del riel de arriba al girar sobre su propio M4.
 
     No hay eje de bisagra que calcular: el eje ES el taladro del riel, o sea
     _centros_rail()[3]. Lo unico que hace falta derivar es cuanto barre el riel
@@ -230,7 +230,7 @@ def _y_remate(p: dict[str, float], P: list[tuple[float, float]],
     # Este techo lo puso primero un rail de panel, luego el nudillo de la
     # bisagra cuando la bisagra ocupo esa linea, y desde el 2026-08-17 vuelve a
     # ser un riel: el de arriba de la tapa. Y NO basta su esquina de abajo --
-    # ese riel GIRA sobre su propio M5, asi que lo que hay que librar es su
+    # ese riel GIRA sobre su propio M4, asi que lo que hay que librar es su
     # BARRIDO. he_er_y(45) da 13.22 y el radio de giro 14.58: 1.36 mm que solo
     # se notan abriendo la tapa, que es el peor momento para enterarse.
     por_riel = (cr[3][1] - _radio_giro_riel(p) - p["holgura_rail"] - r)
@@ -294,7 +294,7 @@ CARAS = {"inf": ("inset_inf_frente", "inset_inf_valle"),
          "sup": ("inset_sup_valle", "inset_sup_remate")}
 
 # 4 railes de panel: dos por cara, como cualquier fila EUROrack. Los dos de la
-# cara superior son TAPA -- no llevan M5 al costado, que si lo llevaran la tapa
+# cara superior son TAPA -- no llevan M4 al costado, que si lo llevaran la tapa
 # no abriria.
 NOMBRES_CR = ["cara_inf frente", "cara_inf valle",
               "cara_sup valle", "cara_sup remate"]
@@ -679,7 +679,7 @@ def guarda_piso(p: dict[str, float]) -> None:
         f"subir el riel cuesta 8 mm de aparato")
 
 
-# LAS DOS FILAS SE ABREN, cada una girando sobre el M5 de su riel de ARRIBA --
+# LAS DOS FILAS SE ABREN, cada una girando sobre el M4 de su riel de ARRIBA --
 # el mismo tornillo que la fija de punta al costado, que entra a lo largo del
 # ancho y por tanto ya es un eje. No hay bisagra en ningun sitio.
 #   (nombre, indice del riel-EJE, cuerpos que giran, vertice de arranque de la
@@ -701,7 +701,7 @@ APERTURA_MIN = 60.0
 def guarda_tapa(p: dict[str, float]) -> None:
     """Las dos caras de panel son TAPAS y las dos tienen que poder abrir.
 
-    Cada una gira sobre el M5 de su riel de arriba. La de abajo pivota en el riel
+    Cada una gira sobre el M4 de su riel de arriba. La de abajo pivota en el riel
     del valle y saca su canto delantero hacia arriba; la de arriba pivota en el
     del vertice y saca el valle. No hay bisagra que verificar porque no hay
     bisagra: es el propio tornillo de fijacion.
@@ -756,7 +756,7 @@ def guarda_tapa(p: dict[str, float]) -> None:
                     break
             if culpable:
                 break
-        print(f"tapa {nombre}: abre {tope:.1f} grados sobre el M5 de "
+        print(f"tapa {nombre}: abre {tope:.1f} grados sobre el M4 de "
               f"'{NOMBRES_CR[i_eje]}'"
               + (f", topa con '{culpable}'" if culpable else " sin topar"))
         assert tope >= APERTURA_MIN, (
@@ -882,23 +882,24 @@ def main() -> int:
             exige(p[nombre] - p["inset_er"] >= -1e-9,
                   f"el panel 3U desborda su cara por {nombre}: bisel "
                   f"{p[nombre] - p['inset_er']:.1f} mm (no puede ser negativo)")
-    # EUROrack en la primera fila. La cota que manda NO es el alto del panel
+    # EUROrack en las dos filas. La cota que manda NO es el alto del panel
     # (128.5 mm) sino la SEPARACION ENTRE RIELES: "ER Screw distance vertical
     # = 122,50 mm" (Doepfer; los taladros van a 3.0 mm de cada canto del panel
     # y miden 3.2). Verificado el 2026-08-17 contra midisoft.de y
-    # exploding-shed.com. Ojo: los rieles reales varian de marca -- Vector
-    # pide 121.46 y Tiptop 122.43 --, asi que este numero hay que fijarlo
-    # contra el riel que se compre, no contra el estandar a secas.
+    # exploding-shed.com.
     #
-    # ESTUVO EN ROJO A PROPOSITO, luego en 122.50 asumiendo el estandar Doepfer, y
-    # desde el 2026-08-17 en 123.00: la cota REAL del riel de StudioRacks, que
-    # llego por correo con sus planos. Ya no se simula contra un estandar de
-    # catalogo sino contra el perfil que se compra, que es lo unico que atornilla.
+    # ESTUVO EN ROJO A PROPOSITO, luego en 122.50, luego en 123.00 -- la cota de
+    # la MEJILLA FLAT-S de StudioRacks -- y de vuelta a 122.50 el 2026-08-17,
+    # cuando Samuel confirmo que el riel que compra es el Z-Rail de Tiptop.
+    # El 123.00 nunca fue una cota del riel: era la de una mejilla ya taladrada
+    # que aqui no se compra, porque el costado lo cortamos nosotros. El Z-Rail
+    # es una barra lisa con pletina roscada continua y acepta la separacion que
+    # se le de, asi que quien manda vuelve a ser el panel.
     #
     # Sigue siendo una puerta y no un comentario: si alguien mueve un inset o
     # un alto de cara "para que quede mejor", esto vuelve a rojo antes de que
     # se corte nada.
-    SEP_EUROrack = 123.0
+    SEP_EUROrack = 122.5
     for piso, (ins_a, ins_b) in CARAS.items():
         exige(abs(p[f"sep_railes_{piso}"] - SEP_EUROrack) < 0.5,
               f"sep_railes_{piso}={p[f'sep_railes_{piso}']} != {SEP_EUROrack} "
