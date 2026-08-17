@@ -20,3 +20,4 @@ pub mod preset;
 pub mod protocolo;
 pub mod retencion;
 pub mod sysex;
+pub mod usbmidi;
