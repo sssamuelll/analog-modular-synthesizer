@@ -11,3 +11,4 @@ pub mod modelo;
 pub mod param;
 pub mod protocolo;
 pub mod retencion;
+pub mod sysex;
