@@ -218,7 +218,7 @@ mal soldado o mal cableado.
 
 **U11 va a estar caliente y no es un fallo.** (12 − 5) V × ~25 mA = 175 mW en un
 SOT-89: unos 20-25 °C por encima del ambiente. Está en (84, 98), en la esquina
-de alimentación: 18 mm del QFN más cercano (U4) y **57 mm de U13**, el
+de alimentación: 18 mm del QFN más cercano (U4) y **53.4 mm de U13**, el
 termómetro. Su calor no contamina la medida del Paso 7, que es lo que importa.
 
 ### Si falla
@@ -343,12 +343,17 @@ Tres registros de desplazamiento de 24 bits en serie: **la cadena entera retrasa
 |---|---|---|
 | `1000` | **DCEN** — habilita cadena (DB0 = 1) | Verificado en el spec §6 y `bom.csv` contra `ad5686r_5685r_5684r.pdf` p. 21-23 |
 | `0111` | **Referencia interna** (DB0 = 1 → apagada) | Ídem, `bom.csv` |
-| `0011` | Escribir y actualizar canal | Convención de la familia AD568x — **contrástalo contra el datasheet antes de teclearlo** |
-| `0110` | Reset por software | Ídem |
-| `0000` | NOP | Ídem |
+| `0011` | Escribir y actualizar canal | `ad5686r.pdf` Rev. C, Tabla 7 (pág. 21) |
+| `0110` | Reset por software | Ídem, Tabla 7 |
+| `0000` | NOP | Ídem, Tabla 7 |
 
 Dirección de canal: **one-hot** de 4 bits (A=`0001`, B=`0010`, C=`0100`,
-D=`1000`) — misma advertencia, contrástalo.
+D=`1000`) — `ad5686r.pdf` Rev. C, Tabla 8 (pág. 21). Se pueden combinar bits
+para actualizar varios canales en la misma trama.
+
+Los cinco comandos y el direccionamiento están **verificados nibble a nibble
+contra `ad5686r.pdf` Rev. C, Tablas 7 y 8 (pág. 21) y Tabla 14 (pág. 26)**. No
+queda nada que contrastar en el banco.
 
 **No hay línea de reset por hardware en esta placa.** El contrato del mazo
 (J2) no reserva un pin para eso, así que `RESET` de los tres DAC está atado a

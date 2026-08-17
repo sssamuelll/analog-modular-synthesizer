@@ -44,9 +44,11 @@ de esta version. Con las 4 voces en fila el DAC de tono se queda en una punta
 o en medio de una recta larga, y el peor par DAC->VCO se iba a 85 mm contra
 los 50 mm que modela dac_local_budget.LARGO_LOCAL. En cuadro, los 3 DAC y la
 referencia caben en el hueco central del cuadrado y las 4 voces quedan a la
-MISMA distancia del DAC -- el peor par baja a 41.8 mm (37.7 el de U5, que es
+MISMA distancia del DAC -- el peor par baja a 43.2 mm (39.0 el de U5, que es
 el que manda la afinacion), dentro de la cota, y de paso la placa pasa de
-240x172 a 114x124: 3x menos area.
+240x172 a 114x124: 3x menos area. Esas dos cifras son las de la placa
+COMMITTEADA, medidas sobre sus coordenadas finales; las de rondas anteriores
+(41.8 / 37.7) se quedaron en un docstring que no se actualizo al recolocar.
 
 EL RUTEO LO HACE FREEROUTING, no un ruteador casero. La version anterior de
 este script traia un ruteador voraz de caminos en L/Z: cerraba 70 de 106

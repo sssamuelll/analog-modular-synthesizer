@@ -41,13 +41,25 @@ Todo lo demás **SMD** (los otros 107 refs) lo monta la fábrica por su flujo
 normal, con `sam17-vco-pos.csv`/`sam17-vco-bom.csv` como entrada.
 
 **Los conectores through-hole llegan sin montar — no los monta la fábrica.**
-`J1` (KK-254), `J2` (IDC 2×6) y los 8 jacks Thonkiconn (`J_CV1-4`, `J_OUT1-4`)
-son de panel: se alinean mecánicamente contra el chasis/los potes antes de
-soldar, así que un ensamblaje automático los desalinearía. Por eso
-`sam17-vco-pos.csv` se generó con `--smd-only` y **no trae sus posiciones** —
-la fábrica no tiene cómo colocarlos aunque quisiera. Van en la misma tanda de
-soldadura a mano que los SSI2130 si se elige la opción "en casa" de arriba, o
-en una pasada aparte si el SSI2130 fue consignado.
+`sam17-vco-pos.csv` se generó con `--smd-only` y **no trae sus posiciones**, así
+que la fábrica no tiene cómo colocarlos aunque quisiera. Pero **no todos esperan
+al panel, y confundirlos bloquea el bring-up**:
+
+- **`J1` (KK-254) y `J2` (IDC 2×6) se sueldan ANTES del bring-up.** No son de
+  panel: son conectores de **cable**, en el borde inferior de la placa (`J1` en
+  (94, 114), `J2` en (16, 115)). Sin `J1` no hay alimentación y sin `J2` no
+  entra `GNDD` — con el mazo fuera, el 74HC14, el sensor y la EEPROM tienen
+  alimentación pero ningún retorno. Ver el §0 de
+  [`../notes/bring-up.md`](../notes/bring-up.md).
+- **Los 8 jacks Thonkiconn (`J_CV1-4`, `J_OUT1-4`) sí son de panel**: se alinean
+  mecánicamente contra el chasis antes de soldar, así que un ensamblaje
+  automático los desalinearía. Los cuatro de CV-IN hay que soldarlos o puentear
+  su punta al manguito antes del paso del span (su normal ata `CVIN_n` a masa;
+  sin eso el nodo del expo capta zumbido y la afinación baila).
+
+Todos ellos van en la misma tanda de soldadura a mano que los SSI2130 si se
+elige la opción "en casa" de arriba, o en una pasada aparte si el SSI2130 fue
+consignado.
 
 **Números de parte LCSC**: la columna queda vacía a propósito en
 `sam17-vco-bom.csv` — no hay ninguno confirmado todavía. Se rellenan al pedir
