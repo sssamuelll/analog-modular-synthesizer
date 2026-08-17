@@ -235,13 +235,21 @@ def railes_dentro_del_costado() -> list[str]:
     # signo al reves la comprobacion acusaba a los cuatro railes de panel de
     # salirse -- eran falsos positivos, y con el signo bueno se ve que su cara
     # queda a 1.63 mm del plano del panel, o sea el t_panel de diseno.
+    # Cada elemento aporta sus CUATRO ESQUINAS ya en coordenadas del perfil, no
+    # un semilado: los rieles de panel son el EUROrack real (27.4 x 10, girado
+    # con su cara) y los de esqueleto son 2020 rectos, asi que no hay una sola
+    # cota que valga para todos.
+    #
     # La BISAGRA no entra aqui, y no por olvido: su nudillo vive en el vertice
     # del techo y asoma por delante del acrilico A PROPOSITO -- si no asomara,
     # la tapa no podria girar. Es el unico cuerpo del case que sale del contorno
     # por diseno. Que no se pise con el larguero de remate lo vigila solapes()
     # en clearance_budget, donde la bisagra si esta.
-    railes = ([(n, c, -p[a]) for n, c, a in zip(cb.NOMBRES_CR, cr, cb.ANGS_CR)]
-              + [(n, c, 0.0) for n, c in zip(cb.NOMBRES_CE, ce)])
+    cuerpos = [(n, cb._esquinas_er(p, c, p[a]))
+               for n, c, a in zip(cb.NOMBRES_CR, cr, cb.ANGS_CR)]
+    cuerpos += [(n, [(c[0] + dx, c[1] + dy)
+                     for dx in (-r, r) for dy in (-r, r)])
+                for n, c in zip(cb.NOMBRES_CE, ce)]
     # Varios largueros van A RAS del contorno por diseno (los de la cara
     # trasera tienen su centro en prof_inferior - r, o sea que su cara de atras
     # coincide con el plano trasero; los de la base apoyan en y=0). Un punto
@@ -249,22 +257,20 @@ def railes_dentro_del_costado() -> list[str]:
     # esquina se prueba tirada EPS hacia el centro del rail: a ras pasa, y
     # cualquier salida real es mucho mayor que EPS.
     EPS = 0.05
-    for nombre, (cx, cy), ang in railes:
-        co, si = math.cos(math.radians(ang)), math.sin(math.radians(ang))
-        for dx, dy in ((-r, -r), (r, -r), (r, r), (-r, r)):
-            ex = cx + dx * co - dy * si
-            ey = cy + dx * si + dy * co
+    for nombre, esquinas in cuerpos:
+        cx = sum(e[0] for e in esquinas) / len(esquinas)
+        cy = sum(e[1] for e in esquinas) / len(esquinas)
+        for ex, ey in esquinas:
             largo = math.hypot(ex - cx, ey - cy)
             esq = (cx + (ex - cx) * (largo - EPS) / largo,
                    cy + (ey - cy) * (largo - EPS) / largo)
             if not dentro(esq):
                 f.append(f"costado_2d: el larguero '{nombre}' se sale del "
                          f"acrilico -- esquina ({ex:.1f}, {ey:.1f}) fuera del "
-                         f"contorno (centro {cx:.1f}, {cy:.1f}, girado "
-                         f"{ang:.1f} grados)")
+                         f"contorno (centro {cx:.1f}, {cy:.1f})")
                 break
     if not f:
-        print(f"  costado_2d: los {len(railes)} largueros caben dentro del "
+        print(f"  costado_2d: los {len(cuerpos)} largueros caben dentro del "
               f"contorno ({len(contorno)} aristas de perimetro)")
     return f
 

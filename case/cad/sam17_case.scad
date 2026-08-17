@@ -40,9 +40,8 @@ function pts_perfil() =
 // codigo viejo. x4 = fin de la cara superior; de x4 a fondo() queda el
 // marco de remate.
 
-// puntos medios de rail por cara: [origen, fin, alto, inset de arranque,
-// inset de remate] y centros sobre la cara a esos dos insets, retirados hacia
-// dentro t_panel + rail/2 segun la normal.
+// puntos medios de riel por cara: centros sobre la cara a sus dos insets,
+// retirados hacia dentro t_panel + rail_er_eje segun la normal.
 //
 // Los DOS insets de cada cara son distintos (ver la tabla de insets en
 // params.scad): la punta redondeada del frente vacia 15 mm de cara y el pico
@@ -53,9 +52,21 @@ function pts_perfil() =
 // lleva la BISAGRA (ver eje_visagra()). Por eso el costado tampoco lleva
 // taladro ahi -- costado_2d() perfora esta lista, y la bisagra no cuelga del
 // acrilico sino del larguero de remate.
+
+// Semiextension del riel EUROrack ya girado con su cara. NO es un cuadrado:
+// mide rail_er_alto a lo largo de la cara y rail_er_fondo hacia dentro, asi que
+// cada eje del mundo recibe una mezcla distinta. Con el 2020 los dos daban lo
+// mismo y bastaba r*(cos+sin) -- con la seccion real hay que separarlos, y ese
+// atajo ya costo dos fallos en este case (x_ed en la Tarea 5, el techo del
+// remate en el marco de 8).
+function he_er_x(a) = rail_er_fondo/2*abs(cos(a)) + rail_er_alto/2*abs(sin(a));
+function he_er_y(a) = rail_er_fondo/2*abs(sin(a)) + rail_er_alto/2*abs(cos(a));
+
 function centros_rail() =
     let (P = pts_perfil(),
-         off = t_panel + rail/2,
+         // el eje del M5 de punta esta a rail_er_eje del panel, no a rail/2:
+         // el riel es hondo y su taladro cae en su centroide
+         off = t_panel + rail_er_eje,
          // [origen, fin, los s sobre la cara que llevan 2020]
          caras = [[P[1], P[2], [inset_inf_frente,
                                 alto_cara_inf - inset_inf_valle]],
@@ -109,11 +120,11 @@ function eje_visagra() =
 // plancha, el problema que resolvia deja de existir.
 function centros_esqueleto() =
     let (P = pts_perfil(), r = rail/2, cr = centros_rail(),
-         // semiextension en X de un rail de panel TRAS su rotacion: el
-         // cuadrado girado sobresale r*(cos+sin) de su centro, no r. Los dos
-         // largueros que se plantan detras de un rail girado usan esta cota.
+         // semiextension en X del RIEL EUROrack de la cara superior tras su
+         // rotacion (ver he_er_x). El larguero que se planta detras de el se
+         // separa de esa esquina, no de su centro.
          he_cs = r * (cos(angulo_superior) + sin(angulo_superior)),
-         x_ed = cr[2].x + he_cs + holgura_rail + r,
+         x_ed = cr[2].x + he_er_x(angulo_superior) + holgura_rail + r,
          y_ep = P[3].y - t_acrilico - r,
          // Remate superior. Su Y NO puede ser P[5].y - r: al acortar el marco
          // de arriba para que la esquina se lea como PUNTA, el rincon se
@@ -285,6 +296,12 @@ module costado() { linear_extrude(t_cheek) costado_2d(); }
 
 module rail_2020(largo) { cube([rail, largo, rail], center = true); }
 
+// Riel EUROrack. Los ejes locales no son intercambiables como en el 2020: tras
+// el rotate([0,0,-a]) rotate([90,0,0]) de rails(), la X local acaba sobre la
+// NORMAL INTERIOR de la cara (o sea el fondo del riel) y la Z local sobre la
+// direccion de la cara (su alto). Verificado con las dos matrices a mano.
+module rail_er(largo) { cube([rail_er_fondo, largo, rail_er_alto], center = true); }
+
 // --- planchas rectangulares del cuerpo (todas t_acrilico) -------------
 // Agujeros M3 de tuerca T cada ~100 mm contra los largueros 2020.
 module fila_agujeros(largo, y, paso = 100, d = d_M3_paso)
@@ -422,7 +439,7 @@ module rails() {
         translate([cr[i].x, cr[i].y, ancho_total/2])
             rotate([0, 0, -angs[i]])
                 rotate([90, 0, 0])
-                    rail_2020(ancho_util);
+                    rail_er(ancho_util);
     for (c = centros_esqueleto())
         translate([c.x, c.y, ancho_total/2])
             rotate([90, 0, 0])
@@ -599,9 +616,12 @@ module lienzo_2d() {
 
 module bom() {
     au = ancho_total - 2*t_cheek;
-    echo(str("BOM: larguero 2020 x", len(centros_rail()) + len(centros_esqueleto()),
-             " de ", au, " mm"));
-    echo(str("BOM: tornillo M5 boton x", 2*(len(centros_rail()) + len(centros_esqueleto()))));
+    echo(str("BOM: larguero 2020 x", len(centros_esqueleto()), " de ", au, " mm"));
+    echo(str("BOM: riel EUROrack StudioRacks x", len(centros_rail()), " de ", au,
+             " mm (", rail_er_fondo, " x ", rail_er_alto, "), fijado de punta"));
+    echo(str("BOM: tornillo M5 boton x", 2*(len(centros_rail()) + len(centros_esqueleto())),
+             " -- OJO: la longitud del que entra al riel esta SIN CERRAR, John dijo",
+             " que el M5x35 de catalogo no sirve para costado de ", t_cheek, " mm"));
     echo("BOM: standoff M4 x8 (las dos pieles, voladas) + tornillo M4 boton x16 + arandela x16");
     echo(str("BOM: bisagra continua x1 de ", au, " mm, nudillo d=", d_visagra,
              " (tapa superior; palas al dorso del panel y al larguero de remate)"));

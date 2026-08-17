@@ -16,36 +16,44 @@ ancho_total     = 500;   // spec §4
 //                  consume build_template.py y lo unico que ve el fabricante.
 //
 // LAS DOS FILAS SON 3U desde el 2026-08-17 (antes la de arriba media 190, la
-// "altura de panel de la tesis"). Un panel 3U mide 128.5 con sus taladros a
-// 3.0 mm de cada canto, o sea 122.50 mm entre centros ("ER Screw distance
-// vertical", Doepfer). Ese 122.50 es la cota que manda -- no el alto del panel
-// --, y alrededor de cada riel hace falta acrilico. De ahi salen las caras:
+// "altura de panel de la tesis"). Un panel 3U mide 128.5, y lo que manda no es
+// ese numero sino la SEPARACION ENTRE RIELES. Ya no es un supuesto: StudioRacks
+// contesto el 2026-08-17 con los planos de su riel y de su mejilla FLAT-S, y su
+// cota es 123.00 mm entre centros -- no los 122.50 de Doepfer. Los rieles
+// comerciales varian de marca (Vector 121.46, Tiptop 122.43, Doepfer 122.50) y
+// el que cuenta es el que se compra. De ahi salen las caras:
 //
-//   alto_cara_inf = 122.5 + inset_inf_frente + inset_inf_valle  = 164.0
-//   alto_cara_sup = 122.5 + inset_sup_valle  + inset_sup_remate = 163.0
+//   alto_cara_inf = 123.0 + inset_inf_frente + inset_inf_valle  = 156.5
+//   alto_cara_sup = 123.0 + inset_sup_valle  + inset_sup_remate = 158.25
 //
 // El de arriba sale mas CORTO aunque lleve el mismo estandar dentro, y es por
 // la bisagra: su punta de arriba ya no la remata un 2020 sino el eje de giro.
 // Lo que hay entre el canto del panel y el vertice es la PESTANA (marco_sup),
 // no un perfil, y por eso caben 11 mm donde antes hacian falta 23.
 //
-// Los 41.5 / 27.5 mm de acrilico que envuelven el estandar son el minimo REAL,
-// medido contra las cotas que los limitan y no estimado. En las TRES puntas que
-// rematan contra un 2020 la partida grande es siempre la misma: 10 mm de medio
-// perfil. Con un riel EUROrack de 10 mm en vez de nuestro 2020 cada una pierde
-// otros 5 -- mas que todo lo que se gana apretando el acrilico. Esta en el
-// correo a Tobias.
+// Los 33.5 / 35.25 mm de acrilico que envuelven el estandar son el minimo REAL,
+// medido contra las cotas que los limitan. Bajaron 8 y 12 mm respecto a la
+// version que suponia perfil 2020 en las caras, y por la razon que se
+// anticipaba: el riel real mide 10 mm A LO LARGO DE LA CARA, no 20, asi que su
+// media seccion pasa de 10 a 5 en cada punta.
 //
-// Bisel que sobra alrededor de cada panel (inset - inset_er): 23.5 y 12 mm en
-// la fila de abajo, 21.5 y marco_sup = 8 en la de arriba. Ese ultimo NO es
+// No sale todo a favor. El riel es FINO a lo largo de la cara pero HONDO hacia
+// dentro (27.4, con su eje a 13.7 del panel contra los 10 del 2020), y esa
+// profundidad tira de la esquina de abajo del riel hacia abajo -- de ahi que
+// alto_frontal subiera de 28 a 31 en vez de bajar. El neto es 6.5 mm menos de
+// alto y 9 menos de fondo.
+//
+// Bisel que sobra alrededor de cada panel (inset - inset_er): 20.75 y 7.25 mm
+// en la fila de abajo, 16.75 y marco_sup = 8 en la de arriba. Ese ultimo NO es
 // bisel de costado: es la pestana, que cruza de lado a lado.
 //
-// ASUMIDO, pendiente de Tobias (SynthRacks): que el riel EUROrack real se
-// atornille sobre el 2020 con su linea roscada EN LA CENTERLINE del 2020. Si
-// su perfil pone la rosca descentrada, lo que cambia son los insets y con
-// ellos las dos caras -- la silueta se adapta sin tocar nada mas.
-alto_cara_inf   = 164.0; // DERIVADO: 122.5 + inset_inf_frente + inset_inf_valle
-alto_cara_sup   = 163.0; // DERIVADO: 122.5 + inset_sup_valle + inset_sup_remate
+// YA NO HAY SUPUESTO AQUI. Se asumia que el riel EUROrack iria atornillado
+// SOBRE un 2020; el plano de StudioRacks ensena que no hace falta: el riel se
+// fija de punta con un M5 directo al acrilico (taladro de 4.5 en su eje). Los
+// 2020 se quedan solo en el esqueleto -- base, entrepiso, remate y repisa --,
+// que es donde de verdad hacen estructura.
+alto_cara_inf   = 156.5; // DERIVADO: 122.5 + inset_inf_frente + inset_inf_valle
+alto_cara_sup   = 158.25; // DERIVADO: 122.5 + inset_sup_valle + inset_sup_remate
 alto_panel_inf  = 128.5; // PCB 3U EUROrack
 alto_panel_sup  = 128.5; // PCB 3U EUROrack: la fila de arriba tambien
 // Angulos de cara. El fichero los guarda DESDE LA VERTICAL (convencion del
@@ -86,10 +94,10 @@ angulo_superior = 45;    // 45 desde la horizontal, cara de generacion
 // es el lomo del rail de base (y = 20) sino el TOPE DE LA BANDEJA que se apoya
 // encima de el (y = 20 + t_acrilico = 25). La bandeja es la que carga el PSU y
 // va apoyada en el lomo del rail, no colgada. Exigiendo holgura_rail:
-//   alto_frontal + cos(35)*inset >= 49.58
-// Derivarlo contra el rail y no contra la bandeja da 44.58, sale 5 mm de
-// barato, y solapes() lo canta (0.51 mm de solape rail-bandeja). A
-// alto_frontal = 10 el riel del panel se montaba 22.3 mm ENCIMA del de la base.
+//   alto_frontal + cos(35)*inset >= 49.73
+// Derivarlo contra el rail y no contra la bandeja sale 5 mm de barato, y
+// solapes() lo canta (0.51 mm de solape rail-bandeja). A alto_frontal = 10 el
+// riel del panel se montaba 22.3 mm ENCIMA del de la base.
 //
 // Las dos condiciones se optimizan JUNTAS, y ahi esta el truco: la altura de
 // la primera seccion vale alto_frontal + alto_cara_inf*cos(35), y como
@@ -98,14 +106,20 @@ angulo_superior = 45;    // 45 desde la horizontal, cara de generacion
 // ES minimizar el lado izquierdo de la condicion de los dos nodos, y su suelo
 // es 49.58 -- por debajo no hay nada que rascar sin mover la bandeja.
 //
-// El par (28, 26.5) se apoya en las dos a la vez: 4.2 mm de holgura sobre la
-// bandeja (holgura_rail pide 4) y 2.5 mm de material contra la curva. FUE
-// 30/27, que dejaba 6.5 -- o sea que apretar hasta el suelo del calculo solo
-// gana 2.4 mm de alto (Samuel pidio el minimo el 2026-08-17, y 2.4 mm es lo
-// que hay). Ojo con bajar alto_frontal creyendo que siempre ayuda: a 0 la
-// esquina pasa a ser un vertice agudo de 55 grados y su redondeo se come 64 mm
-// de cara, cuatro veces mas que la punta de dos arcos de ahora.
-alto_frontal    = 28;
+// El par (31, 23.5) se apoya en las dos a la vez: 0.52 mm sobre el suelo de los
+// dos nodos y 1.0 de material de sobra contra la curva.
+//
+// SUBIO de 28 a 31 al entrar el riel real, y es contraintuitivo: el riel es la
+// MITAD de alto que el 2020 a lo largo de la cara, pero su eje se va 15.3 mm
+// hacia dentro en vez de 11.6 y el perfil tiene 27.4 de fondo, asi que su
+// esquina de abajo cuelga mas y hay que subir el vertice para que libre la
+// bandeja. Lo fino de la seccion se cobra en los insets (bajan 3 y 5 mm); lo
+// hondo se paga aqui.
+//
+// Ojo con bajar alto_frontal creyendo que siempre ayuda: a 0 la esquina pasa a
+// ser un vertice agudo de 55 grados y su redondeo se come 64 mm de cara, cuatro
+// veces mas que la punta de dos arcos de ahora.
+alto_frontal    = 31;
 // Fondo del case. UN SOLO plano trasero: el costado es un triangulo
 // rectangulo con el angulo recto atras y la hipotenusa quebrada en dos
 // tramos (35 arriba, 12 abajo) con el entrepiso en medio (Samuel eligio esta
@@ -211,7 +225,27 @@ kerf       = -0.2;
 $fn = 48;
 
 // --- sistema de paneles (spec §6) ---
-rail            = 20;   // perfil 2020
+rail            = 20;   // perfil 2020, SOLO esqueleto (base, entrepiso, remate, repisa)
+// RIEL EUROrack REAL, de los planos que mando StudioRacks el 2026-08-17. Ya no
+// es un 2020 asumido ni un supuesto: es la seccion del perfil que se compra.
+//
+//   rail_er_alto   10.00  a lo largo de la cara. La mitad del 2020, y de aqui
+//                         sale casi todo el recorte de los insets.
+//   rail_er_fondo  27.40  hacia dentro del case
+//   rail_er_eje    13.70  del taladro de 4.5 (el M5 de punta) a la cara que
+//                         toca el panel. Con el 2020 esta cota era rail/2 = 10.
+//
+// El taladro cae centrado en las dos dimensiones (13.70 de 27.40 y 5.00 de
+// 10.00), asi que el eje ES el centroide de la seccion. La mejilla FLAT-S del
+// mismo fabricante lo confirma por otro lado: sus dos M5 van a 13.80 del canto
+// delantero, o sea el mismo 13.7 con la tolerancia del plano.
+//
+// El riel se fija DE PUNTA, con un M5 que entra por el costado a ese taladro.
+// No hay 2020 detras de las caras: eso era el supuesto viejo y el plano lo
+// desmiente.
+rail_er_alto    = 10;
+rail_er_fondo   = 27.4;
+rail_er_eje     = 13.7;
 // Tornillo de panel, distancia al borde del panel. FUE 5 y era imposible:
 // el rail 2020 va ALINEADO con la cara, asi que se extiende +-rail/2 = +-10 mm
 // a lo largo de ella. Centrado a s=5 ocupaba de s=-5 a s=+15, o sea que
@@ -231,18 +265,18 @@ rail            = 20;   // perfil 2020
 // siempre el mismo -- tangente de la curva + rail/2 + material -- y lo unico
 // que cambia es la tangente:
 //
-//   punta               curva            tangente  + rail/2 + mat = inset
+//   punta               curva            tangente  + riel/2 + mat = inset
 //   ------------------  ---------------  --------  -------------------------
-//   inferior / frente   punta redondeada   14.0      + 10 + 2.5  = 26.5
-//   inferior / valle    pico (r=5)          2.6      + 10 + 2.4  = 15
-//   superior / valle    valle (r=30)       12.4      + 10 + 2.1  = 24.5
-//   superior / remate   -- BISAGRA --   marco_sup + gap_sombra + 3 = 16
+//   inferior / frente   punta redondeada   15.5      + 5 + 3.0   = 23.5
+//   inferior / valle    pico (r=5)          2.6      + 5 + 2.4   = 10
+//   superior / valle    valle (r=30)       12.4      + 5 + 2.1   = 19.5
+//   superior / remate   -- BISAGRA --   marco_sup + gap_sombra + 2.75 = 15.75
 //
 // La cuarta se sale del patron porque ahi no hay perfil: es el eje de giro, y
 // no la fija ninguna curva sino lo que hay por encima. De arriba abajo:
-//   8  marco_sup   la pestana de acrilico que tapa el canto del panel
-//   5  gap_sombra  la junta que deja pasar el barrido de la tapa (ver abajo)
-//   3  inset_er    del canto del panel a su fila de taladros = al eje
+//   8     marco_sup   la pestana de acrilico que tapa el canto del panel
+//   5     gap_sombra  la junta que deja pasar el barrido de la tapa (ver abajo)
+//   2.75  inset_er    del canto del panel a su fila de taladros = al eje
 //
 // La junta NO es decorativa. Al abrir, el canto de arriba del panel gira sobre
 // un eje que esta 3 mm por debajo y 5.6 detras, o sea a 6.35 mm de radio; en el
@@ -254,24 +288,31 @@ rail            = 20;   // perfil 2020
 // Las tangentes NO son parametros: salen del radio y del angulo del vertice.
 // Si se mueve un radio hay que rehacer la columna, y el que avisa es
 // railes_dentro_del_costado() en check_dxf, que lee el contorno del DXF.
-inset_inf_frente = 26.5;
-inset_inf_valle  = 15;
-inset_sup_valle  = 24.5;
-inset_sup_remate = 16;
-// EUROrack, cotas del PANEL (no de la cara). Verificado el 2026-08-17 contra
-// midisoft.de y exploding-shed.com: taladro a 3.0 mm del canto superior e
-// inferior (de ahi los 122.50 entre centros) y el primero a 7.5 mm del canto
-// izquierdo, con paso horizontal multiplo de 5.08 (1 HP). LAS DOS FILAS son
-// 3U desde el 2026-08-17, asi que estos dos numeros valen para las dos
-// plantillas de build_template.py.
-inset_er        = 3.0;
+inset_inf_frente = 23.5;
+inset_inf_valle  = 10;
+inset_sup_valle  = 19.5;
+inset_sup_remate = 15.75;
+// Cotas del PANEL (no de la cara). El horizontal es de estandar: primer taladro
+// a 7.5 mm del canto izquierdo y paso multiplo de 5.08 (1 HP), verificado el
+// 2026-08-17 contra midisoft.de y exploding-shed.com.
+//
+// EL VERTICAL YA NO ES DE ESTANDAR, ES DEL RIEL QUE SE COMPRA. Doepfer pone el
+// taladro a 3.0 del canto (122.50 entre centros) pero el riel de StudioRacks
+// mide 123.00, asi que aqui van 2.75. Es la resta y no una eleccion:
+//   inset_er = (alto_panel_inf - sep_railes_inf)/2 = (128.5 - 123.0)/2
+//
+// CONSECUENCIA QUE HAY QUE SABER: un modulo de terceros con sus taladros a 3.0
+// queda 0.25 mm descentrado por lado contra nuestros rieles. En un taladro de
+// 3.2 sobre M3 hay 0.2 mm de juego radial, asi que entra pero justo. Con tuercas
+// deslizantes (la opcion de 35 GBP) el juego horizontal es libre y solo aprieta
+// en vertical; con insertos roscados (41 GBP) queda fijo en los dos ejes.
+inset_er        = 2.75;
 inset_er_x      = 7.5;
-// EUROrack manda aqui: "ER Screw distance vertical = 122.50 mm" (Doepfer).
-// OJO: los rieles comerciales varian -- Vector pide 121.46 y Tiptop 122.43 --,
-// asi que este numero se re-fija contra el riel que se compre. Es el ASUMIDO
-// principal de la silueta actual.
-sep_railes_inf  = 122.5;
-sep_railes_sup  = 122.5;
+// Del plano de la mejilla FLAT-S: dos M5 a 5.00 mm de cada punta de una pieza de
+// 133.00, o sea 123.00 entre centros. Confirmado por escrito por John el
+// 2026-08-17 ("123mm ctr to ctr, 13.8mm in from front edge").
+sep_railes_inf  = 123.0;
+sep_railes_sup  = 123.0;
 holgura_rail    = 4;    // separacion minima entre railes vecinos (fix solapes)
 
 // --- esqueleto y herrajes ---

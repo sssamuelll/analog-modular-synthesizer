@@ -114,7 +114,9 @@ def _centros_rail(p: dict[str, float],
     caras = [(P[1], P[2], (p["inset_inf_frente"],
                            p["alto_cara_inf"] - p["inset_inf_valle"])),
              (P[3], P[4], (p["inset_sup_valle"],))]
-    off = p["t_panel"] + p["rail"] / 2
+    # el eje del M5 de punta esta a rail_er_eje del panel, no a rail/2: el riel
+    # EUROrack es hondo (27.4) y su taladro cae en su centroide
+    off = p["t_panel"] + p["rail_er_eje"]
     out = []
     for c0, c1, esses in caras:
         dx, dy = c1[0] - c0[0], c1[1] - c0[1]
@@ -124,6 +126,34 @@ def _centros_rail(p: dict[str, float],
         for s in esses:
             out.append((c0[0] + dx * s + nx * off, c0[1] + dy * s + ny * off))
     return out
+
+
+def _he_er(p: dict[str, float], ang: float) -> tuple[float, float]:
+    """Semiextension (x, y) del riel EUROrack ya girado con su cara, misma
+    formula que he_er_x/he_er_y en sam17_case.scad.
+
+    NO es un cuadrado y ahi esta la trampa: mide rail_er_alto (10) a lo largo de
+    la cara y rail_er_fondo (27.4) hacia dentro, asi que cada eje del mundo
+    recibe una mezcla distinta. Con el 2020 los dos ejes daban r*(|cos|+|sin|) y
+    una sola cota servia; con la seccion real de StudioRacks no, y usar la vieja
+    subestima el alcance vertical en 2 mm justo en la esquina del frente, que es
+    donde el riel tiene que librar la bandeja del PSU."""
+    a = math.radians(ang)
+    ha, hf = p["rail_er_alto"] / 2, p["rail_er_fondo"] / 2
+    return (hf * abs(math.cos(a)) + ha * abs(math.sin(a)),
+            hf * abs(math.sin(a)) + ha * abs(math.cos(a)))
+
+
+def _esquinas_er(p: dict[str, float], c: tuple[float, float],
+                  ang: float) -> list[tuple[float, float]]:
+    """Las 4 esquinas REALES (no la caja) del riel girado, para las cuentas SAT."""
+    a = math.radians(ang)
+    d = (math.sin(a), math.cos(a))          # a lo largo de la cara
+    n = (d[1], -d[0])                        # hacia dentro
+    ha, hf = p["rail_er_alto"] / 2, p["rail_er_fondo"] / 2
+    return [(c[0] + sa * ha * d[0] + sf * hf * n[0],
+             c[1] + sa * ha * d[1] + sf * hf * n[1])
+            for sa in (-1, 1) for sf in (-1, 1)]
 
 
 def _eje_visagra(p: dict[str, float],
@@ -187,9 +217,7 @@ def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
     # superior a 49 el solape se hizo real (0.11 mm contra el larguero, 5 mm
     # contra la bandeja de entrepiso) y solapes() lo canto. El cambio de
     # angulo no rompio nada: destapo algo que llevaba roto desde Task 5.
-    he_cs = r * (abs(math.cos(math.radians(p["angulo_superior"])))
-                  + abs(math.sin(math.radians(p["angulo_superior"]))))
-    x_ed = cr[2][0] + he_cs + p["holgura_rail"] + r
+    x_ed = cr[2][0] + _he_er(p, p["angulo_superior"])[0] + p["holgura_rail"] + r
     y_ep = P[3][1] - p["t_acrilico"] - r
     # Los dos largueros de la base se retiran hasta donde acaba el redondeo de
     # su esquina: en el frente la curva en punta muere a alto_frontal/2 del
@@ -251,14 +279,10 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     angs = [p[k] for k in ANGS_CR]
     railes: list[Caja] = []
     for nm, c, ang in zip(NOMBRES_CR, cr, angs):
-        # R3: el rail gira -ang sobre su eje largo para calzar a ras de la
-        # cara. El AABB real de un cuadrado girado crece a
-        # (rail/2)*(|cos|+|sin|) — usar rail/2 sin mas SUBESTIMA el alcance
-        # de la esquina (0.261 mm de error verificado en la ronda de
-        # revision: rail/2*(|n.x|+|n.y|)=11.861 > off=11.6).
-        he = (rail / 2) * (abs(math.cos(math.radians(ang)))
-                            + abs(math.sin(math.radians(ang))))
-        railes.append((nm, c[0] - he, c[0] + he, c[1] - he, c[1] + he,
+        # el riel gira -ang para calzar a ras de la cara, y su AABB no es
+        # simetrico porque la seccion no es cuadrada (ver _he_er)
+        hx, hy = _he_er(p, ang)
+        railes.append((nm, c[0] - hx, c[0] + hx, c[1] - hy, c[1] + hy,
                        t_cheek, ancho_total - t_cheek))
     # La PESTANA superior: banda de acrilico sobre los ultimos marco_sup mm de
     # la cara de arriba, a ras por fuera y engordando t_cheek hacia dentro. Va
@@ -519,11 +543,9 @@ def canario_solapes(p: dict[str, float]) -> None:
     r = p["rail"] / 2
     old_ed = (P[3][0] + r, P[3][1] - r)          # formula pre-fix (Task 5)
     cr = _centros_rail(p, P)
-    ang = p["angulo_superior"]
-    he = (p["rail"] / 2) * (abs(math.cos(math.radians(ang)))
-                             + abs(math.sin(math.radians(ang))))
+    hx, hy = _he_er(p, p["angulo_superior"])
     c = cr[2]
-    vecino = ("cara_sup valle", c[0] - he, c[0] + he, c[1] - he, c[1] + he,
+    vecino = ("cara_sup valle", c[0] - hx, c[0] + hx, c[1] - hy, c[1] + hy,
               p["t_cheek"], p["ancho_total"] - p["t_cheek"])
     viejo = ("entrepiso delantero VIEJO",
              old_ed[0] - r, old_ed[0] + r, old_ed[1] - r, old_ed[1] + r,
@@ -534,23 +556,18 @@ def canario_solapes(p: dict[str, float]) -> None:
         "conocido (17.6x12.6 mm) — no confiar en el resto de solapes()")
 
 
-def _sat_gap(rail: float, c1: tuple[float, float], ang1: float,
+def _sat_gap(p: dict[str, float], c1: tuple[float, float], ang1: float,
              c2: tuple[float, float], ang2: float) -> float:
-    """Holgura EXACTA (SAT, no AABB) entre 2 cuadrados de lado 'rail',
-    cada uno girado -ang grados sobre su eje largo (mismo signo que
-    rotate([0,0,-ang]) en rails(), R3). Positivo = hueco en mm; negativo =
-    profundidad de solape en mm. El AABB (usado en solapes()) SOBRESTIMA
-    el alcance real de un cuadrado girado salvo en la propia direccion de
-    la normal — para un umbral duro en mm hace falta el valor exacto."""
-    half = rail / 2
+    """Holgura EXACTA (SAT, no AABB) entre 2 rieles de panel, cada uno girado
+    con su cara. Positivo = hueco en mm; negativo = profundidad de solape.
+
+    El AABB (usado en solapes()) SOBRESTIMA el alcance real de un rectangulo
+    girado salvo en la direccion de sus propios ejes — para un umbral duro en mm
+    hace falta el valor exacto. La seccion sale de _esquinas_er, o sea que sigue
+    al riel real y no a un cuadrado."""
 
     def esquinas(c: tuple[float, float], ang: float) -> list[tuple[float, float]]:
-        a = math.radians(-ang)
-        ux, uy = math.cos(a), math.sin(a)
-        vx, vy = -math.sin(a), math.cos(a)
-        return [(c[0] + sx * half * ux + sy * half * vx,
-                 c[1] + sx * half * uy + sy * half * vy)
-                for sx in (-1, 1) for sy in (-1, 1)]
+        return _esquinas_er(p, c, ang)
 
     def proyeccion(pts: list[tuple[float, float]],
                     eje: tuple[float, float]) -> tuple[float, float]:
@@ -560,9 +577,9 @@ def _sat_gap(rail: float, c1: tuple[float, float], ang1: float,
     p1, p2 = esquinas(c1, ang1), esquinas(c2, ang2)
     ejes = []
     for ang in (ang1, ang2):
-        a = math.radians(-ang)
-        ejes.append((math.cos(a), math.sin(a)))
-        ejes.append((-math.sin(a), math.cos(a)))
+        a = math.radians(ang)
+        ejes.append((math.sin(a), math.cos(a)))     # a lo largo de la cara
+        ejes.append((math.cos(a), -math.sin(a)))    # hacia dentro
     separaciones = []
     for eje in ejes:
         a0, a1 = proyeccion(p1, eje)
@@ -617,7 +634,7 @@ def guarda_escalon(p: dict[str, float]) -> None:
     ejes, que aqui sobrestima)."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
-    gap = _sat_gap(p["rail"], cr[1], p["angulo_inferior"], cr[2], p["angulo_superior"])
+    gap = _sat_gap(p, cr[1], p["angulo_inferior"], cr[2], p["angulo_superior"])
     assert gap >= 1.0, (
         f"railes del escalon P2-P3 (cara_inf valle vs cara_sup "
         f"valle) a {gap:.3f} mm de hueco real (SAT) — se exige >=1.0 mm; "
@@ -702,18 +719,15 @@ def main() -> int:
     # pide 121.46 y Tiptop 122.43 --, asi que este numero hay que fijarlo
     # contra el riel que se compre, no contra el estandar a secas.
     #
-    # ESTUVO EN ROJO A PROPOSITO hasta el 2026-08-17: la primera fila se puso a
-    # 128.5 mm de CARA creyendo que con eso ya era EUROrack, y no lo es -- con
-    # inset 27 los rieles quedaban a 74.5 y un modulo no atornillaba. Se cerro
-    # ASUMIENDO EL ESTANDAR (decision de Samuel: simular con el, adaptar cuando
-    # conteste SynthRacks): la cara se desacoplo del panel y crecio a 164.5 para
-    # que los railes caigan exactos en 122.50. El precio esta a la vista y es el
-    # que anunciaba el mensaje viejo -- el valle SUBIO, de 135.2 a 164.8 mm.
+    # ESTUVO EN ROJO A PROPOSITO, luego en 122.50 asumiendo el estandar Doepfer, y
+    # desde el 2026-08-17 en 123.00: la cota REAL del riel de StudioRacks, que
+    # llego por correo con sus planos. Ya no se simula contra un estandar de
+    # catalogo sino contra el perfil que se compra, que es lo unico que atornilla.
     #
     # Sigue siendo una puerta y no un comentario: si alguien mueve un inset o
     # un alto de cara "para que quede mejor", esto vuelve a rojo antes de que
     # se corte nada.
-    SEP_EUROrack = 122.5
+    SEP_EUROrack = 123.0
     for piso, (ins_a, ins_b) in CARAS.items():
         exige(abs(p[f"sep_railes_{piso}"] - SEP_EUROrack) < 0.5,
               f"sep_railes_{piso}={p[f'sep_railes_{piso}']} != {SEP_EUROrack} "
