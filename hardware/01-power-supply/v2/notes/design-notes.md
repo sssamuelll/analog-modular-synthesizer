@@ -946,9 +946,12 @@ Orden recomendado al recibir la PCB montada (antes de conectar módulos o carga 
    ~12 V/0.6 A en ambos rieles). Anotar que esta es la medida con carga nominal de
    diseño (§4, paso 1).
 
-6. **Medir rizado pico-pico** en cada riel con osciloscopio (DC coupling, 1 MHz BW
-   limitado, punta en J2). Expectativa inicial: < 10 mVpp (criterio mínimo, spec §10.4).
-   Criterio pleno de aceptación: medir con LNA delante (equipo aparte, issue dedicada).
+6. **Medir rizado pico-pico** en cada riel con osciloscopio (DC coupling, 20 MHz BW
+   limitado, punta en J2 — misma condición que §4 filas 1 y 3). Criterio mínimo
+   (spec §10.4): rizado bajo el suelo medible del osciloscopio con esa BW
+   (~sub-mV, ya 10× mejor que v1) — no es un umbral numérico fijo tipo "< X mVpp".
+   Criterio pleno de aceptación: medir con LNA delante (equipo aparte, issue #58 —
+   «LNA de medida para el nivel pleno del GOAT»).
 
 7. **Termograma o termopar** en U1/U2 (TO-220, disipadores de 38 mm) y en U4-U7 (DFN)
    tras 30 min a plena carga (dummy activada). Expectativa: < 70 °C en TO-220,

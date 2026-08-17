@@ -13,14 +13,17 @@ Cascada de **dos etapas reguladas por riel**:
   
 - **Etapa 2 (regulación de precisión):** Parejas de LT3045/LT3094 en paralelo
   (×2 por riel, DFN-10/DFN-12) regulan a +12.000 V / −12.000 V exactos con ruido
-  residual sub-milivoltio (LT3045: 8 µVrms típico; LT3094: 10 µVrms típico, 10 Hz–100 kHz).
+  residual objetivo: **0.8 µVrms (10 Hz–100 kHz)** — cifra de datasheet con el
+  layout de la nota de aplicación; no se presume hasta medir con el LNA (spec §11.7).
   Cada pareja comparte red SET + ballast de 20 mΩ por chip para igualar corriente.
 
 **Cifras de diseño:**
 - Corriente: ±650 mA (±325 mA por chip en la pareja).
 - Disipación térmica: ~0.33 W por chip LT, DFN pequeño con granja de vías EP.
 - Rizado de salida: < 1 mV pico-pico @ ±650 mA (expectativa, §4-5 miden).
-- Drift térmico: < ±50 ppm/°C (VREF del LT × tolerancia R_SET 1 %).
+- Drift térmico de VOUT: **~100 ppm/°C (1.2 mV/°C)** con el R_SET fallback en
+  stock (C114524, ±100 ppm/°C); bajaría a **~25 ppm/°C** si se consigue el
+  0,1 %/25 ppm pendiente de C-code (notes §2.4).
 
 ## Documentación
 
@@ -31,12 +34,13 @@ Cascada de **dos etapas reguladas por riel**:
 | [notes/design-notes.md](notes/design-notes.md) | Datasheet gates (§1), stock (§2), decisiones (§3), medidas de la mula (§4), bring-up (§5) |
 | [fab/README.md](fab/README.md) | Ficheros Gerber, BOM JLCPCB, puertas antes de fabricar |
 | [kicad/](kicad/) | Esquemático y PCB (sam17-power-v2.kicad_sch / .kicad_pcb) |
-| [pcb/renders/](pcb/renders/) | Screenshots 3D de la placa (anteproyecto visual) |
+| [pcb/](pcb/) | Screenshots 3D de la placa (anteproyecto visual) |
 
 ## Puertas abiertas (antes de pedir a JLCPCB)
 
 1. **Medidas en la mula prototipo** (§4 design-notes): valle VRAW, pico en vacío,
-   rizado real, térmica → fija los setpoints RV2/RV3. [Issue dedicada](../../issues).
+   rizado real, térmica → fija los setpoints RV2/RV3. Issue #56 — «Fuente v2:
+   campana de medidas de la mula».
    
 2. **Re-verificar stock LCSC** (§2 design-notes): LT3045EDD/LT3094EDD (Extended,
    citadas 2026-08-16) + fallback 120 kΩ 1 % ±100 ppm. Códigos en `fab/bom-jlc.csv`.
