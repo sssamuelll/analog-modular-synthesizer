@@ -173,13 +173,13 @@ Un parámetro se identifica con **16 bits**:
  └────────────┴────────────┴──────────────────────┘
 ```
 
-- **Ranura** — qué módulo. `0` está reservado para el propio cerebro
-  (parámetros globales: tempo, canal MIDI, modo de voces, y las medidas de §7).
+- **Ranura** — qué módulo. `0` está reservado para el propio cerebro.
   `1..15` son ranuras físicas del mazo, **de las que hoy solo existen 8**: las
   del mux I²C de §3.5. El campo se deja de 4 bits a propósito, para que ampliar
   el mux no obligue a cambiar el direccionamiento.
 - **Instancia** — qué voz o qué copia dentro del módulo. El módulo 3 tiene
-  cuatro; un módulo de una sola instancia usa `0`.
+  cuatro; un módulo de una sola instancia usa `0`. **En la ranura 0 significa
+  otra cosa: el número de parte** (§3.6).
 - **Índice** — qué parámetro dentro de esa instancia.
 
 16 bits caben en tres septetos de SysEx y en un campo de MIDI 2.0 sin pelear.
@@ -197,7 +197,8 @@ costó dinero conseguir. MIDI 2.0 usa 32 bits por la misma razón.
 
 Por cada parámetro el instrumento publica: identificador, nombre corto, tipo
 (continuo / enumerado / booleano), mínimo, máximo, valor por defecto, unidad,
-las marcas de §3.4 y §2.2, y —si es enumerado— las etiquetas.
+**el ámbito** (`por-voz` o `compartido`, §3.6), las marcas de §3.4 y §2.2, y
+—si es enumerado— las etiquetas.
 
 **El micro emite binario compacto; la carcasa lo expande a JSON.** El RP2350 no
 serializa JSON: emite una tabla empaquetada, y el VST, la app standalone o el
@@ -257,6 +258,85 @@ pin por pin.)*
 Esto confirma que **el mazo es en estrella, un cable por módulo**. Tenía que
 serlo igualmente: el J2 lleva un solo `CS`, así que nunca pudo ser un listón
 compartido.
+
+### 3.6 Partes: dejar preparada la polifonía que el mercado ya conoce
+
+Hoy son cuatro voces en un solo timbre. El instrumento tiene que poder crecer a
+los modos que cualquier sinte poli del mercado ofrece **sin reestructurar el
+modelo**, porque eso último se paga una sola vez y se paga caro.
+
+**Lo que NO necesita nada del modelo.** Son estrategias de reparto de voces, o
+sea firmware puro, y se escriben el día que se quieran sin tocar una línea de
+esta spec:
+
+> mono con prioridad de nota (última / grave / aguda) · legato y glide ·
+> unísono 2/4/8 con desafinado y apertura · poly con estrategia de robo
+> (más vieja, más suave, grave, aguda, round-robin) · parafónico —que aquí es un
+> **modo**, no un accidente, porque el mixer va al final— · memoria de acordes ·
+> ciclado de voces para promediar las diferencias entre voces analógicas
+
+**Lo que SÍ hay que poner ahora, porque después es reescritura**, son tres
+cosas.
+
+#### La parte
+
+Una **parte** es lo que habilita **multitímbrico, split de teclado y capas**:
+un canal MIDI, un rango de teclas, una reserva de voces y un preset propio.
+
+Encaja sin tocar el direccionamiento de §3.1: **en la ranura `0`, el campo
+*instancia* es el número de parte.** Dieciséis partes, y los parámetros
+globales de siempre —tempo, modo de voces, las medidas de §7— viven en la
+parte `0`.
+
+| Parámetro de parte | Para qué |
+|---|---|
+| Canal MIDI | Multitímbrico |
+| Nota más grave / más aguda | Split de teclado |
+| Voces asignadas y desde cuál empieza | Reparto, capas, y **poly-chain** entre dos instrumentos |
+| Preset | Que cada parte suene distinto |
+| Modo de voces y estrategia de robo | Los de la lista de arriba, por parte |
+
+Con un solo parámetro extra —**desde qué voz empieza esta parte**— queda
+resuelto también el *poly-chaining*: dos instrumentos encadenados, cada uno
+atendiendo su tramo del mismo pool.
+
+#### Por voz contra compartido, declarado
+
+El descriptor gana una marca de **ámbito**: `por-voz` o `compartido`. Hoy eso es
+implícito y ambiguo —el módulo 3 tiene el tono por voz pero el PWM compartido—
+y sin la marca ni la UI sabe dibujarlo, ni el agente sabe qué puede mover **por
+nota**, ni un preset sabe qué guardar una vez y qué guardar cuatro.
+
+#### El conteo de voces sale del descubrimiento, jamás de una constante
+
+**Ningún `4` escrito en el firmware.** El número de voces sale de los
+descriptores, con una regla explícita:
+
+> **Las voces del instrumento son el mínimo de la cadena.** Con 8 VCO y 4 VCF
+> tienes 4 voces, y el instrumento lo **dice** en vez de sonar raro.
+
+Es el mismo principio de §6.1 —fallar en voz alta— aplicado al conteo.
+
+#### MPE, y la restricción que impone aguas abajo
+
+**MPE** (*MIDI Polyphonic Expression*) pide tres dimensiones **por nota**: bend,
+timbre y presión. Es el estándar moderno de expresión y encaja entero en este
+modelo — son escrituras a parámetros marcados `por-voz` de la voz que toca esa
+nota.
+
+El bend ya funciona: el tono es por voz. Pero el timbre choca con un plan
+existente, y conviene decirlo antes de que se dibuje:
+
+> `architecture-poly.md` §3 describe el módulo 5 como *«VCF ×4, corte y
+> resonancia **comunes a las 4**»*.
+
+**Con el corte compartido, el timbre por nota es imposible**: hay cuatro filtros
+y un solo control. Así que los módulos 5, 6 y 7 —**ninguno dibujado**— necesitan
+**al menos un destino de timbre `por-voz`**: corte con CV propio por voz, aunque
+las perillas del panel sigan siendo comunes. Gratis hoy, respin mañana (§10).
+
+**El enlace aguanta:** 16 voces × 3 dimensiones × 100 Hz sobre tramas de 72 bits
+a 10 MHz salen a ~3.5 % de ocupación del SPI. El cuello de botella no está aquí.
 
 ---
 
@@ -628,6 +708,39 @@ funciona sin que nadie programe nada.
 Actualización de firmware: **UF2 por USB**, arrastrar y soltar. Sale gratis del
 RP2350 y no hay que diseñar nada.
 
+#### Dónde está el techo de voces, y por dónde se sale
+
+El modelo escala a 16 voces por módulo y 16 ranuras (§3.1), el descubrimiento
+se adapta solo, y el autoafinado **no tarda más** porque mide en paralelo. El
+techo real está en un solo sitio, y son **ocho cables dedicados**:
+
+```
+  4× GATE      del cerebro al ADSR
+  4× TUNE_OUT  del VCO al cerebro, por los pines 9-12 del J2
+```
+
+Y la trampa que hay que ver: **ponerle más pines no escala**. Serían cuatro
+líneas de afinado **por cada ranura capaz de llevar un VCO** — con 8 ranuras,
+32 pines solo para eso.
+
+**La salida es el movimiento que este diseño ya hizo dos veces:** que el módulo
+mida sus propios osciladores y **mande los números**, igual que el mux de
+perillas, el sensado de jacks y las medidas del módulo 4. Vuelven por el `MISO`
+que el J2 ya lleva, y el coste en pines del cerebro es **cero**.
+
+**El contrato del J2 no cambia ni un pin.** El README del módulo 3 ya lo
+permite: *«cada uno usa las señales que le tocan»* — un módulo de más voces
+simplemente no usaría los pines 9-12 y reportaría por `MISO`.
+
+Lo mismo con los gates: mandarlos **dentro de la trama SPI**, junto al tono, no
+solo escala — **sincroniza mejor**, porque tono y gate salen en el mismo
+instante en vez de por dos caminos distintos.
+
+> **Qué se hace hoy:** nada de hardware. El módulo 3 sale como está, con sus
+> cuatro líneas por J2. Lo que se hace es **no escribir el 4 en ninguna parte**
+> (§3.6) y dejar el camino escrito, para que quien diseñe ese módulo lo tome en
+> vez de inventar otro.
+
 ---
 
 ## 6. Presets: el patch es un dato de primera clase
@@ -640,6 +753,12 @@ RP2350 y no hay que diseñar nada.
 | Valores de parámetros | Lo obvio |
 | **Módulos requeridos** (tipo y revisión) | Para **fallar en voz alta**: si falta un módulo lo dice, en vez de sonar raro |
 | **Topología del patch**: pares (jack origen → jack destino) | §6.2 |
+
+**Un preset es de una parte** (§3.6). Y lo que en otros sintes se llama
+*performance* o *combi* —qué preset carga cada parte, con sus canales y sus
+rangos de teclas— **no necesita concepto nuevo**: son los parámetros de la
+ranura `0`, guardados como cualquier otro preset. Sale del modelo sin añadirle
+nada.
 
 ### 6.2 El patcheo guiado, que es la razón de que los presets existan de verdad
 
@@ -978,6 +1097,11 @@ Corre sobre **placa de desarrollo RP2350**, no sobre PCB propia.
   correlación, y los casos que debe declarar ambiguos
 - Cadena WS2812 sobre una tira de desarrollo: valida `POINT` y el pintado del
   patcheo guiado sin esperar a que existan paneles
+- **Partes** (§3.6): la estructura entera —canal, rango de teclas, reserva de
+  voces y preset por parte— aunque el firmware de validación solo estrene una.
+  Ponerla ahora es barato; retrofitearla es reestructurar el modelo
+- **Conteo de voces desde el descubrimiento**, con la regla del mínimo de la
+  cadena. **Ningún `4` escrito en el firmware**, y un test que lo demuestre
 - Reparto de voces con robo de la más vieja
 - Guardar y recuperar presets en flash
 - **Retención de operaciones marcadas y confirmación física** (§2.2) — la regla
@@ -1013,6 +1137,8 @@ Siguiendo la costumbre del repo —guiones ejecutables con aserciones, no prosa:
 | **Jitter del comparador** | Medido en placa y contrastado contra los **131 ns** que `autotune_budget.py` despeja. Aprobado o suspenso, no una incógnita |
 | `F_PIO` sin dividir | Comprobar que el PIO corre al reloj de sistema; si el firmware lo divide, `autotune_budget.py` hay que recalcularlo |
 | Reparto de voces | Tests en host con secuencias de notas conocidas |
+| **Conteo de voces** | Descriptores sintéticos de 8 VCO y 4 VCF: se exige que el instrumento reporte **4** y lo diga, no que asuma nada. Y un test que falle si aparece un `4` constante en el camino |
+| **Partes** | Dos partes en canales distintos con rangos de teclas solapados: cada nota va a la parte que le toca y a su reserva de voces |
 | Medidas por el J2 | Se inyectan bandas y picos sintéticos como si vinieran del módulo 4, y se exige que salgan por `GET`/`SUBSCRIBE` como parámetros de solo lectura, con unidad y rango |
 | USB doble rol | Un controlador MIDI real enchufado al host **mientras** un DAW ve el instrumento como device. Notas de los dos caminos, mezcladas |
 | Reset como parámetro | Los dos comportamientos —mirar el estado del reloj y esperar el flanco— producen resultados distintos y reproducibles con el mismo pulso de entrada |
@@ -1055,6 +1181,13 @@ queda escrito se pierde.
   hace posible el barrido por inyección
 - Las lecturas vuelven por el **`MISO` del J2**, sin hilos nuevos
 - Un LED de la cadena WS2812 por perilla y por jack
+- **Al menos un destino de timbre `por-voz`** — corte con CV propio por voz en
+  el módulo 5, aunque las perillas del panel sigan siendo comunes. Sin eso
+  **MPE es imposible** (§3.6), y `architecture-poly.md` §3 hoy los describe con
+  *«corte y resonancia comunes a las 4»*
+- **Declarar el ámbito de cada parámetro** en su descriptor: `por-voz` o
+  `compartido`. Sin la marca, ni la UI sabe dibujarlo ni el agente sabe qué
+  puede mover por nota
 
 **El cerebro (spec siguiente):**
 

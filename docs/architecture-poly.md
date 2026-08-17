@@ -82,8 +82,8 @@ Lo que hace:
      └────┬────┬────┬────┬─────────────┘
           ▼    ▼    ▼    ▼
      ┌─────────────────────────────────┐
-     │  MÓDULO 5 — VCF x4              │  ← corte y resonancia
-     │  4x LM13700, un juego de mandos │     comunes a las 4
+     │  MÓDULO 5 — VCF x4              │  ← perillas comunes,
+     │  4x LM13700, un juego de mandos │     pero CV de corte POR VOZ
      └────┬────┬────┬────┬─────────────┘
           ▼    ▼    ▼    ▼
      ┌─────────────────────────────────┐     ┌──────────────┐
@@ -107,6 +107,14 @@ y le devuelve **números** al cerebro por ese mismo enlace serie. Con eso el
 instrumento se escucha a sí mismo sin que le entre audio al cerebro — y como el
 cerebro sabe qué nota toca cada voz y dónde está cada filtro, puede **atribuir**
 lo que oye a la voz que lo causa.
+
+**Corrección al módulo 5 (2026-08-17):** una versión anterior decía *«corte y
+resonancia comunes a las 4»*. Las **perillas** sí son comunes —un juego de
+mandos, como el resto del instrumento— pero el **CV de corte tiene que ser por
+voz**. Si no, **MPE es imposible**: la expresión por nota necesita mover el
+timbre de *una* voz, y con el corte compartido se mueven las cuatro. El módulo 5
+no está dibujado, así que esto es gratis hoy y respin mañana. Detalle en la spec
+del núcleo digital §3.6.
 
 El mixer se mueve **al final**. En el diseño monofónico sumaba los tres VCO
 antes del filtro; aquí no puede, porque cada voz tiene que atravesar su propio
