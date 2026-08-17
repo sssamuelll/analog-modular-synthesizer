@@ -368,7 +368,15 @@ el módulo 3 no sabe qué hay del otro lado del J2.
 | `RESOLVED` | → cliente | la operación retenida se confirmó o expiró |
 | `HOLA` | → cliente | la versión que el instrumento acepta hablar |
 | `ERROR` | → cliente | qué etiqueta falló y por qué |
+| `RAMPA` | cliente → | ir a un destino en tiempo musical; duración 0 = salto cuantizado |
+| `ANULADO` | → cliente | tocaste algo automatizado y quedó anulado |
+| `REACTIVAR` | cliente → | devolverlo; con id, uno, sin id, todos |
 
+> **`RAMPA`, `ANULADO` y `REACTIVAR`** los añade la
+> [spec del tiempo musical](2026-08-17-tiempo-musical-design.md) del mismo día,
+> y son su coste entero en el protocolo: todo lo demás de aquella —el reloj,
+> las cuatro fuentes de sincronía, la cuantización— **son parámetros**.
+>
 > **`HOLA` y `ERROR` se añadieron el 2026-08-17, al escribir el servidor.** La
 > tabla original dejaba al cliente **en silencio** en tres casos: `HELLO` —que
 > la propia tabla describe como *«negociar versión»*— no tenía respuesta;

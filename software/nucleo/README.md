@@ -103,6 +103,8 @@ Bit alto de la etiqueta puesto = va del instrumento al cliente.
 | `0x06` | `PRESET_LIST` | | `0x86` | `RESOLVED` |
 | | | | `0x87` | `HOLA` |
 | | | | `0x88` | `ERROR` |
+| `0x0E` | `RAMPA` | | `0x89` | `ANULADO` |
+| `0x0F` | `REACTIVAR` | | | |
 | `0x07` | `PRESET_LOAD` | | | |
 | `0x08` | `PRESET_SAVE` | | | |
 | `0x09` | `TUNE_START` | | | |

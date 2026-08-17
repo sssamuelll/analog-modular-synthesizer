@@ -375,6 +375,34 @@ mod tests {
     }
 
     #[test]
+    fn la_marca_de_modulacion_sobrevive_el_viaje() {
+        // §7.3 de la spec del tiempo musical: un bit hoy contra reescribir el
+        // modelo en la spec 2. Si se perdiera, no nos enterariamos hasta que
+        // la modulacion existiera — y ahi ya seria tarde.
+        static D: Descriptor = Descriptor {
+            id: ParamId(0x1234),
+            nombre: "x",
+            tipo: Tipo::Continuo,
+            ambito: Ambito::Compartido,
+            solo_lectura: false,
+            medida: false,
+            confirmacion_fisica: false,
+            acepta_modulacion: true,
+            min: 0,
+            max: 100,
+            def: 0,
+            unidad: Unidad::Hz,
+            etiquetas: &[],
+        };
+        let mut buf = [0u8; 256];
+        let n = escribir(&D, &mut buf).unwrap();
+        assert!(leer(&buf[..n]).unwrap().0.acepta_modulacion);
+        // Y que no se cuele sola en los que no la piden.
+        let n = escribir(&CUTOFF, &mut buf).unwrap();
+        assert!(!leer(&buf[..n]).unwrap().0.acepta_modulacion);
+    }
+
+    #[test]
     fn las_banderas_de_medida_sobreviven_el_viaje() {
         // §3.4: si esto se pierde, un cliente escribiria sobre una medida.
         let mut buf = [0u8; 256];
