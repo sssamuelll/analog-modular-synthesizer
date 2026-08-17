@@ -342,10 +342,20 @@ module rail_2020(largo) { cube([rail, largo, rail], center = true); }
 module rail_er(largo) { cube([rail_er_fondo, largo, rail_er_alto], center = true); }
 
 // --- planchas rectangulares del cuerpo (todas t_acrilico) -------------
-// Agujeros M3 de tuerca T cada ~100 mm contra los largueros 2020.
-module fila_agujeros(largo, y, paso = 100, d = d_M3_paso)
-    for (x = [paso/2 : paso : largo - paso/4])
-        translate([x, y]) circle(d = d + kerf);
+// Agujeros M3 de tuerca T contra los largueros 2020, repartidos a ~paso.
+//
+// IBA DESCENTRADA y nadie la miraba: arrancaba en paso/2 y avanzaba de paso en
+// paso hasta donde llegara, o sea que sobre 528.32 dejaba 50.00 de orilla a la
+// izquierda y 78.32 a la derecha. 28 mm de diferencia en la pieza que carga el
+// transformador. El paso ahora se estira para caber un numero entero de veces,
+// que es lo que el codigo viejo QUERIA decir con ese paso/2 de arranque:
+// orillas iguales y valiendo medio paso.
+module fila_agujeros(largo, y, paso = 100, d = d_M3_paso) {
+    n = max(1, round(largo/paso));
+    e = largo/n;                       // paso real, <= paso pedido + pico
+    for (i = [0 : n-1])
+        translate([e*(i + 0.5), y]) circle(d = d + kerf);
+}
 
 module plancha(l, a) square([l, a]);   // l = ancho_util, a = fondo local
 
@@ -390,14 +400,19 @@ module bandeja_entrepiso_2d() {
     }
 }
 
+// TRES columnas de standoff, no dos. Con solo las cuatro esquinas el vano es
+// de 518 mm y la plancha se descuelga 1.76 mm por su PROPIO PESO, sin que nadie
+// la toque -- calculado con acrilico colado a 3 GPa. Partiendo el vano por la
+// mitad cae a 0.11 (la flecha va con L^4, asi que partir en dos divide por 16).
+// Cuatro tornillos mas en todo el case para que la cara trasera no ondee.
 module piel_inferior_2d() {
     au = ancho_total - 2*t_cheek - 2*gap_sombra;
     ce = centros_esqueleto();
     alto = ce[3].y - ce[1].y + 30;   // entrepiso trasero <-> base trasera
     difference() {
         plancha(au, alto);
-        for (c = [[15,15],[au-15,15],[15,alto-15],[au-15,alto-15]])
-            translate(c) circle(d = d_M4_paso + kerf);
+        for (x = [15, au/2, au-15]) for (y = [15, alto-15])
+            translate([x, y]) circle(d = d_M4_paso + kerf);
         translate([au*0.10, alto*0.62]) onda("triangulo", au*0.35);
         translate([au*0.55, alto*0.62]) onda("cuadrada",  au*0.35);
         // recorte IEC C14 con interruptor (bloque snap-in tipico
@@ -419,8 +434,8 @@ module piel_superior_2d() {
     alto = ce[4].y - ce[5].y + 30;   // remate superior <-> repisa
     difference() {
         plancha(au, alto);
-        for (c = [[15,15],[au-15,15],[15,alto-15],[au-15,alto-15]])
-            translate(c) circle(d = d_M4_paso + kerf);
+        for (x = [15, au/2, au-15]) for (y = [15, alto-15])
+            translate([x, y]) circle(d = d_M4_paso + kerf);
         translate([au*0.15, alto*0.45]) onda("sierra", au*0.70);
     }
 }
@@ -718,7 +733,9 @@ module bom() {
     echo(str("BOM: tornillo M5 boton x", 2*(len(centros_rail()) + len(centros_esqueleto())),
              " -- OJO: la longitud del que entra al riel esta SIN CERRAR, John dijo",
              " que el M5x35 de catalogo no sirve para costado de ", t_cheek, " mm"));
-    echo("BOM: standoff M4 x8 (las dos pieles, voladas) + tornillo M4 boton x16 + arandela x16");
+    echo("BOM: standoff M4 x12 (las dos pieles, voladas; TRES columnas -- con");
+    echo("     dos, el vano de 518 mm se descuelga 1.76 mm de peso propio)");
+    echo("BOM: tornillo M4 boton x24 + arandela x24");
     echo("BOM: los M5 de riel no son todos iguales -- x4 fijos (cara de abajo),");
     echo("     x2 DE HOMBRO + arandela (riel de arriba: el eje, no se aprietan),");
     echo("     x2 DE MANO (riel del valle de arriba: el cierre, se quitan para abrir)");

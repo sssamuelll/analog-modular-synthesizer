@@ -158,33 +158,18 @@ def revisar(nombre: str, sobre) -> list[str]:
     return f
 
 
-def railes_dentro_del_costado() -> list[str]:
-    """Cada larguero 2020 tiene que caber DENTRO del acrilico del costado.
+def _contorno_costado() -> list:
+    """Aristas del contorno EXTERIOR de costado_2d, releidas del DXF.
 
-    Esto no lo miraba nadie. `solapes()` compara railes contra railes y contra
-    planchas, o sea cuerpo contra cuerpo: un rail que se sale por el borde del
-    costado no solapa con NADA y pasa en verde. Y la comprobacion se volvio
-    urgente al redondear las esquinas en punta, porque el redondeo QUITA
-    material justo donde viven dos largueros (el de la base delantera se apoya
-    en el rincon del frente, que es el que mas radio se come).
-
-    Se valida contra el CONTORNO RELEIDO DEL DXF, no contra una copia de la
-    funcion redondear() en Python. Es a proposito: replicarla aqui es la
-    tercera copia de la misma matematica, y la version que cuenta es la que
-    salio al archivo que va al laser. Los centros y los angulos si vienen del
-    budget -- el DXF sabe donde estan los agujeros pero no que rail es cual ni
-    cuanto va girado."""
-    import clearance_budget as cb
-
-    f: list[str] = []
+    Se valida contra el ARCHIVO, no contra una copia de redondear() en Python:
+    replicarla aqui seria la tercera copia de la misma matematica, y la version
+    que cuenta es la que salio al fichero que va al laser. Los agujeros salen
+    como componentes aparte; el contorno es la de bbox mas grande."""
     doc = ezdxf.readfile(PLANS / "costado_2d.dxf")
     aristas = [((e.dxf.start.x, e.dxf.start.y), (e.dxf.end.x, e.dxf.end.y))
                for e in doc.modelspace() if e.dxftype() == "LINE"]
     if not aristas:
-        return ["costado_2d: sin LINEs, no se puede verificar el contorno"]
-
-    # Componentes conexas por extremos compartidos. La de bbox mas grande es
-    # el contorno exterior; las demas son los agujeros.
+        return []
     vecinos: dict[tuple, list[int]] = {}
     for i, (a, b) in enumerate(aristas):
         for pt in (a, b):
@@ -211,19 +196,109 @@ def railes_dentro_del_costado() -> list[str]:
         py = [p[1] for j in comp for p in aristas[j]]
         return (max(px) - min(px)) * (max(py) - min(py))
 
-    contorno = [aristas[j] for j in max(componentes, key=extension)]
+    return [aristas[j] for j in max(componentes, key=extension)]
+
+
+def _dentro(contorno, pt) -> bool:
+    """Ray casting horizontal contra la lista de aristas (no necesita que
+    esten ordenadas en anillo)."""
+    x, y = pt
+    cruces = 0
+    for (x0, y0), (x1, y1) in contorno:
+        if (y0 > y) != (y1 > y):
+            xc = x0 + (y - y0) * (x1 - x0) / (y1 - y0)
+            if xc > x:
+                cruces += 1
+    return cruces % 2 == 1
+
+
+def _dist_al_contorno(contorno, pt) -> float:
+    """Distancia del punto a la arista mas cercana del contorno."""
+    x, y = pt
+    mejor = float("inf")
+    for (x0, y0), (x1, y1) in contorno:
+        dx, dy = x1 - x0, y1 - y0
+        L2 = dx * dx + dy * dy
+        s = 0.0 if L2 == 0 else max(0.0, min(1.0, ((x - x0) * dx
+                                                    + (y - y0) * dy) / L2))
+        mejor = min(mejor, math.hypot(x - (x0 + s * dx), y - (y0 + s * dy)))
+    return mejor
+
+
+# Distancia MINIMA del centro de un taladro al canto, en diametros. La regla de
+# oficio para plastico es 2xD y lo ideal seria exigir eso, pero los tres
+# largueros del plano trasero viven entre 1.94 y 2.0 D por geometria -- ponerlo
+# en 2.0 seria una puerta gritando en falso sobre algo verificado. A 1.5 D queda
+# margen de sobra y sigue cazando el fallo de verdad: mover un larguero contra
+# una curva y no enterarse. Y el aplastamiento real no es el limite: el eje de
+# la tapa, que es el M5 mas cargado del case, trabaja a 0.33 MPa sobre acrilico
+# que aguanta ~100.
+BORDE_MIN_D = 1.5
+
+
+def taladros_con_material() -> list[str]:
+    """Cada taladro del costado necesita acrilico alrededor.
+
+    Esto no lo miraba nadie, igual que no se miraba si los largueros CABEN
+    (railes_dentro_del_costado). Y son cosas distintas: un larguero puede caber
+    de sobra y su M5 caer a dos milimetros de una curva, porque el taladro esta
+    en el centro del larguero y las curvas del contorno se mueven solas cada vez
+    que cambia un radio o un angulo. Un M5 asi no falla al montarlo -- falla al
+    apretarlo, y raja el costado."""
+    import clearance_budget as cb
+
+    contorno = _contorno_costado()
+    if not contorno:
+        return ["costado_2d: sin LINEs, no se puede verificar el contorno"]
+    p = cb.leer_params()
+    P = cb._vertices(p)
+    cr = cb._centros_rail(p, P)
+    ce = cb._centros_esqueleto(p, P, cr)
+    d = p["d_M5_paso"]
+    minimo = BORDE_MIN_D * d
+    f: list[str] = []
+    peor, peor_nm = float("inf"), ""
+    for nm, c in zip(cb.NOMBRES_CR + cb.NOMBRES_CE, list(cr) + list(ce)):
+        dist = _dist_al_contorno(contorno, c)
+        if dist < peor:
+            peor, peor_nm = dist, nm
+        if dist < minimo:
+            f.append(f"costado_2d: el M5 de '{nm}' cae a {dist:.2f} mm del canto "
+                     f"(se exige {minimo:.2f} = {BORDE_MIN_D} x D). Quedan "
+                     f"{dist - d/2:.2f} mm de acrilico entre el agujero y el "
+                     f"borde: eso se raja al apretar")
+    if not f:
+        print(f"  costado_2d: los {len(cr) + len(ce)} taladros M5 tienen material "
+              f"alrededor (el mas justo, '{peor_nm}', a {peor:.2f} mm del canto "
+              f"= {peor / d:.2f} D)")
+    return f
+
+
+def railes_dentro_del_costado() -> list[str]:
+    """Cada larguero 2020 tiene que caber DENTRO del acrilico del costado.
+
+    Esto no lo miraba nadie. `solapes()` compara railes contra railes y contra
+    planchas, o sea cuerpo contra cuerpo: un rail que se sale por el borde del
+    costado no solapa con NADA y pasa en verde. Y la comprobacion se volvio
+    urgente al redondear las esquinas en punta, porque el redondeo QUITA
+    material justo donde viven dos largueros (el de la base delantera se apoya
+    en el rincon del frente, que es el que mas radio se come).
+
+    Se valida contra el CONTORNO RELEIDO DEL DXF, no contra una copia de la
+    funcion redondear() en Python. Es a proposito: replicarla aqui es la
+    tercera copia de la misma matematica, y la version que cuenta es la que
+    salio al archivo que va al laser. Los centros y los angulos si vienen del
+    budget -- el DXF sabe donde estan los agujeros pero no que rail es cual ni
+    cuanto va girado."""
+    import clearance_budget as cb
+
+    f: list[str] = []
+    contorno = _contorno_costado()
+    if not contorno:
+        return ["costado_2d: sin LINEs, no se puede verificar el contorno"]
 
     def dentro(pt) -> bool:
-        """Ray casting horizontal contra la lista de aristas (no necesita que
-        esten ordenadas en anillo)."""
-        x, y = pt
-        cruces = 0
-        for (x0, y0), (x1, y1) in contorno:
-            if (y0 > y) != (y1 > y):
-                xc = x0 + (y - y0) * (x1 - x0) / (y1 - y0)
-                if xc > x:
-                    cruces += 1
-        return cruces % 2 == 1
+        return _dentro(contorno, pt)
 
     p = cb.leer_params()
     P = cb._vertices(p)
@@ -286,6 +361,7 @@ def main() -> int:
             continue
         fallos += revisar(nombre, sobre)
     fallos += railes_dentro_del_costado()
+    fallos += taladros_con_material()
     for nombre, motivo in SIN_DXF.items():
         print(f"  PENDIENTE (sin DXF, no bloquea): {nombre} -- {motivo}")
     for m in fallos:

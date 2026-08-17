@@ -435,10 +435,12 @@ d_pie       = 16;   // diametro; pequeno a proposito
 // que haya atornillado de uno a otro, o sea los modulos. Un hueco sin tapar es
 // una charnela. Los ciegos no son estetica aqui, son estructura.
 //
-// LO QUE SE PAGA, y hay que decirlo: la tapa entera cuelga de DOS M5 apoyando en
-// acrilico de 8. Una bisagra continua repartia esa carga en 528 mm. Van tornillos
-// de hombro con arandela metalica y el agujero del costado se vigila -- si se
-// ovala, el remedio es un casquillo, no apretar mas.
+// LO QUE SE PAGA -- y sale mas barato de lo que parecia. La tapa entera cuelga
+// de DOS M5 apoyando en acrilico de 8, pero echada la cuenta son 14.7 N por
+// tornillo con una fila llena de modulos (3 kg), o sea 0.33 MPa de aplastamiento
+// sobre el costado: el 0.3 % de lo que aguanta el acrilico a compresion. La carga
+// estatica no es el problema. Lo que hay que cuidar es el DESGASTE del giro, y
+// eso lo resuelve una arandela metalica y un tornillo de hombro, no mas seccion.
 //
 // SIN CERRAR: el cierre del valle (la tapa no tiene nada que la sujete cerrada) y
 // el amortiguador que la deje abierta.
