@@ -44,9 +44,12 @@ pub const TIMEOUT_RUEDA_LIBRE_MS: u64 = 500;
 /// `eps` desplaza la fase `eps * 500 ms`. Para que ese desplazamiento no pase
 /// de 1 ms: `eps <= 0.2 %`, que a 120 BPM son 240 milesimas.
 ///
-/// El 1 ms viene de la simultaneidad percibida entre dos ataques, que es el
-/// numero que `tiempo_budget.py` tiene que ir a buscar con fuente. **Cuando
-/// ese guion lo fije, esta constante se revisa contra el.**
+/// El 1 ms sale de `hardware/02-midi-cv/tiempo_budget.py`, que lo justifica
+/// con fuente: el umbral documentado para juzgar dos eventos auditivos como
+/// asincronos va de 2 a 60 ms segun el ataque del instrumento, y un sinte con
+/// gates rapidos vive en el extremo apretado — asi que se diseña contra los
+/// 2 ms y con la mitad de margen. **Ese guion asevera este mismo 240**, asi
+/// que si uno cambia el otro falla.
 pub const ERROR_TEMPO_MAX_MBPM: i64 = 240;
 
 /// Milesimas de BPM, que es como viaja el tempo en el modelo.

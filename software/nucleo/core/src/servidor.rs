@@ -42,10 +42,15 @@ pub enum Respuesta {
 
 pub type Respuestas = Vec<Respuesta, MAX_RESPUESTAS>;
 
-/// La ventana de aterrizaje, en pulsos. **Provisional**: la fija
-/// `tiempo_budget.py`, que es quien despeja cuanto puede tardar el sistema en
-/// colocar algo. Mientras no exista, cero — que es el caso conservador: nada
-/// llega «a tiempo» por los pelos.
+/// La ventana de aterrizaje, en pulsos (§5.3 de la spec del tiempo musical).
+///
+/// **Cero, y no por conservadurismo: por aritmetica.**
+/// `hardware/02-midi-cv/tiempo_budget.py` lo demuestra — el error de tiempo
+/// del sistema es de 1 ms, y un pulso de la rejilla interna dura entre 2.08 ms
+/// (a 300 BPM) y 31.25 ms (a 20 BPM). La rejilla es **mas gruesa que el error**
+/// a cualquier tempo del rango, asi que no hay ninguna llegada tarde que
+/// redondear. El peor caso son 0.48 pulsos, y el guion asevera que no pase de
+/// uno.
 pub const VENTANA_ATERRIZAJE: u32 = 0;
 
 pub struct Instrumento {
