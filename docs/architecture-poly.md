@@ -108,7 +108,7 @@ parafónico, no polifónico** — y es exactamente la diferencia entre los dos.
 | `CV_VEL_n` | 0 – 7 V | 4 | Velocity por voz. Nace en el DAC de la placa del VCA (§8) |
 | `GATE_n` | 0 / 10 V | 4 | Activo alto |
 | `TUNE_OUT_n` | **lógico 3.3 V** | 4 | **Nuevo**: onda del VCO ya recortada, para medir su frecuencia. Digital a propósito (§5). Viaja en el mismo mazo J2 que `SERIE` (fila siguiente), no en un cable aparte |
-| `SERIE` | lógico 3.3 V | 12 hilos, IDC 2×6 | SPI + CS por módulo + I²C de telemetría + `TUNE_OUT`×4 + `GNDD`×2, todos en el mismo mazo (§8). Direccionamiento cerrado: híbrido CS-por-módulo con cadena soldada en placa (issue #34, spec del módulo 3) |
+| `SERIE` | lógico 3.3 V | 12 hilos, IDC 2×6 | **J2**, el conector IDC del mazo digital del módulo (spec del módulo 3): SPI + CS por módulo + I²C de telemetría + `TUNE_OUT`×4 + `GNDD`×2, todos en el mismo mazo (§8). Direccionamiento cerrado: híbrido CS-por-módulo con cadena soldada en placa (issue #34) |
 | `+12V` / `-12V` | ±12 V | — | 650 mA por riel |
 | `+5V` | 5 V | — | Solo el módulo 2. Los módulos con DAC se hacen su lógica con regulador local desde +12 V (§8). **La pantalla NO cuelga de aquí** (§9) |
 | `GNDA` / `GNDD` | — | — | Masas partidas, se unen solo en la estrella del módulo 1 |
@@ -385,11 +385,18 @@ patch en vez de al pitch.
 ### La condición: la referencia
 
 La VREF no puede venir por el bus — el error de masa se mudaría a ella
-entero. Cada placa usa la referencia interna de su DAC, y ahí **el grado
-importa**: el AD5686R grado B da 2 ppm/°C típico y 5 máximo; el grado A da 20
-máximo — 3.4 cents de deriva, no cabe. **El BOM del módulo 3 exige
-AD5686RB.** (Verificado en el datasheet de ADI; ojo también con la variante
--EP, 13 ppm/°C, que ya engañó una vez a `tuning_budget.py`.)
+entero. Cada placa necesita su propia referencia de precisión, y ahí **el
+grado importa**: el contrato exige ≤5 ppm/°C máximo (el techo de grado B del
+AD5686R); a 20 ppm/°C máximo (grado A) son 3.4 cents de deriva, no cabe.
+
+**Cómo se materializa queda a criterio de cada placa** — el principio es que
+la VREF no cruce el bus, no que sea la interna de un DAC en concreto. El
+módulo 3 (§10) lo resolvió con una **ADR4525BRZ** dedicada, compartida por
+sus 3 DAC y sus 4 osciladores, con las referencias internas de los DAC
+apagadas por firmware (registro `0111`): 2 ppm/°C máximo, mejor que el
+propio techo del contrato. (Verificado en el datasheet de ADI; ojo también
+con la variante -EP del AD5686R, 13 ppm/°C, que ya engañó una vez a
+`tuning_budget.py`.)
 
 Dos propiedades hacen la condición barata:
 
@@ -492,9 +499,10 @@ osciladores a sumar cuatro voces ya filtradas.
 1. **El jitter de 5 µs** del sellado de tiempos del Pi es de manual, no medido
    en la placa real. Todo el cálculo de autoafinado es proporcional a él. Si
    sale peor, un 74HC4040 dividiendo por 16 lo arregla.
-2. **El consumo de 20 mA por CEM3340** viene de la tesis (§8 del módulo 1 ya lo
-   marcaba como zona gris). Con cuatro en vez de tres, un error ahí se
-   multiplica.
+2. **El consumo de 20 mA por CEM3340** era la estimación de la tesis para el
+   VCO del módulo 1 — **obsoleta** desde que el módulo 3 pasó a SSI2130: su
+   consumo real está medido, no estimado (~35 mA el módulo entero, no 20 mA
+   por chip; spec del módulo 3 §9, `dac_local_budget.py`).
 3. **El apareamiento entre los 4 filtros** no está estudiado. Es probablemente
    el problema más difícil de todo el instrumento polifónico, y no se resuelve
    con calibración digital como el tono: no hay nada que "escuche" el filtro.

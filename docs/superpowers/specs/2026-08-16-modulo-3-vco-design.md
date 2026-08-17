@@ -42,7 +42,8 @@ suelo de 0.58 cents de `dac_local_budget.py`.
    identidad/calibración en el mismo I²C, y test points en los nodos clave.
    Sin voltímetro de rieles.
 7. **Diseño trimless.** Sin trimmers de escala ni offset: el span nominal se
-   diseña con ~5 % de margen (≈7.4 octavas en el fondo de escala del DAC) y
+   diseña con ~7.6 % de margen (7.58 octavas en el fondo de escala del DAC,
+   con R_PITCH = 16.5 kΩ) y
    `tuning.json` + autoafinado absorben todo lo estático — incluida la
    no-conformidad del expo (0.3 %), que un trimmer no arregla y la tabla de
    84 notas sí. Menos piezas que derivan, cero calibración manual.
@@ -81,7 +82,7 @@ suelo de 0.58 cents de `dac_local_budget.py`.
   desaparece**.
 - **CV de tono por suma de corrientes**: la entrada del expo es un nodo a
   tierra virtual (20 µA/octava). El canal del DAC entra por su resistencia
-  (escalada para ≈7.4 octavas de span en fondo de escala: margen del 5 % que
+  (escalada para 7.58 octavas de span en fondo de escala: margen del 7.6 % que
   hace posible el trimless) y el jack CV-IN entra por 50 kΩ = 1 V/octava.
   **El amplificador ×2.8 y su deriva desaparecen**: la escala la fijan
   resistencias 1 % de película metálica, cuya tolerancia absorbe
@@ -198,7 +199,7 @@ El patrón completo del repo, sin excepciones:
    limitada — Cabintech, Amplified Parts, ~$6). Comprar los 4+repuestos al
    arrancar la implementación. Si desaparece del mercado, el plan B es el
    respin CEM3340 de la versión anterior de este spec (en el historial git).
-2. **La apuesta trimless**: si un chip cae fuera del margen del 5 % de span,
+2. **La apuesta trimless**: si un chip cae fuera del margen del 7.6 % de span,
    el bodge es una resistencia (no un re-spin), pero hay que comprobarlo en
    bring-up con los 4 chips reales.
 3. **La materialización de la VREF única** (ADR4525 + AD5686 pelado vs
