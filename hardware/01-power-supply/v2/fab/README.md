@@ -28,6 +28,23 @@ Reichelt/DigiKey — está en `bom.csv` con proveedor por fila, y su puerta de
 stock es [§2.5](../notes/design-notes.md). El más ajustado de ese lado es el
 **LM2941CT/NOPB (164 u.)**.
 
+### Qué se sube a JLC (tres ficheros, no dos)
+
+| fichero | dónde va | se genera con |
+|---|---|---|
+| `sam17-power-v2-jlcpcb.zip` | «Add gerber file» | bloque de zip al final de este README |
+| `sam17-power-v2-bom-jlc.csv` | «Add BOM File» | `python bom_jlc.py` |
+| `sam17-power-v2-cpl-jlc.csv` | «Add CPL File» | `python cpl_jlc.py` |
+
+**El `sam17-power-v2-pos.csv` NO se sube.** Es la salida cruda de
+`kicad-cli pcb export pos`, con las cabeceras de KiCad
+(`Ref,Val,Package,PosX,PosY,Rot,Side`); JLC espera las suyas
+(`Designator,Mid X,Mid Y,Layer,Rotation`) y devuelve **«Failed processing the
+CPL file»** — comprobado en el pedido del 2026-08-17, con el BOM aceptado en la
+misma pantalla. `cpl_jlc.py` traduce cabeceras, capitaliza `Top`/`Bottom`,
+recorta decimales y **filtra a los 28 designadores del BOM de ensamblaje** (el
+CPL solo tiene sentido para lo que monta la máquina; los 44 THT sobran ahí).
+
 **La tercera puerta se cerró por decisión, no por medida** (2026-08-17): la v1 no
 se construye, así que no hay mula que confirme los setpoints antes de fabricar.
 Se ajustan sobre la propia v2 con RV2/RV3 durante el bring-up. Lo que esa decisión
@@ -45,12 +62,24 @@ que abre solo el 7-12 % del EP (spec de stencil). Eso es riesgo de junta
 pobre por succión de pasta hacia el taladro durante el reflow (la vía actúa
 de mecha y drena estaño de la ventana). Dos opciones al pedir:
 
-1. **Pedir "Epoxy Filled & Capped"** para esas vías (tapadas y planas) si el
-   presupuesto lo permite — elimina el riesgo de succión sin tocar el
-   diseño.
-2. **Aceptar el wicking** (opción por defecto, sin coste extra) e
-   **inspeccionar las juntas del EP en el bring-up** — ítem añadido a la
-   lista "Al montar" de abajo.
+1. ~~**Pedir "Epoxy Filled & Capped"**~~ — **NO SE PUEDE si JLC monta la
+   placa.** Comprobado en el formulario el 2026-08-17: con `PCB Assembly`
+   apagado las opciones `Plugged` y `Epoxy Filled & Capped` están
+   disponibles; al encenderlo (da igual Economic o Standard, y da igual el
+   acabado — se probó con HASL y con ENIG) las dos se ponen en gris. Es un
+   XOR: **o te rellenan las vías, o te montan la placa.**
+2. **Aceptar el wicking** — ya no es una opción entre dos, es lo que hay
+   mientras el ensamblaje lo haga JLC. Mitigación: **inspeccionar las juntas
+   del EP en el bring-up** (ítem en la lista "Al montar" de abajo). Si algún
+   día el EP resulta ser el cuello de botella real, la salida es montar a
+   mano sobre placa pelada con las vías rellenas, no pelearse con el
+   formulario.
+
+**Acabado: se pide ENIG, no el HASL por defecto.** U6/U7 son DFN-12 de paso
+0.45 mm con pad térmico; el estañado por aire deja superficie ondulada justo
+donde la coplanaridad decide la junta. En el pedido del 2026-08-17 fueron
++$19.90 sobre una placa de $15.30 — caro en porcentaje, barato contra
+retrabajar un DFN.
 
 ## ⚠ Al montar
 
@@ -134,6 +163,7 @@ cd ../kicad
 "C:\Program Files\KiCad\10.0\bin\kicad-cli.exe" pcb export pos --format csv --units mm \
   --side front --output ../fab/sam17-power-v2-pos.csv sam17-power-v2.kicad_pcb
 python bom_jlc.py
+python cpl_jlc.py   # traduce el pos.csv al CPL que acepta JLC (ver arriba)
 ```
 
 El zip para JLCPCB (no versionado, se regenera aquí mismo):
