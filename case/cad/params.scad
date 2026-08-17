@@ -227,10 +227,34 @@ radio_perfil    = 14;
 // arranca una fisura.
 radio_pico      = 5;
 // radio_valle = el vertice CONCAVO del valle, donde arranca la cara de arriba.
-// Largo: "el round del angulo que se genera en el valle puede ser mas suave".
 // Es el opuesto exacto de radio_pico y por eso no pueden ser el mismo numero.
-// Techo: la funcion lo recorta a 96.6 mm con el valle en 80.
-radio_valle     = 30;
+//
+// FUE 30, y con 30 la cara de arriba bajaba recta y METIA EN EL VALLE DE UN
+// CORTE: la curva solo se comia 12.43 mm de cara antes de resolver. Samuel pidio
+// lo contrario -- "que cuando termine el panel de arriba no corte de una vez al
+// valle, sino que haya un poquito mas de caida y que el acrilico haga la curva
+// suavemente... le rinde tributo al modernismo de los anos 1880".
+//
+// La tangente vale radio_valle / tan(67.5), o sea r/2.4142 con la cara de arriba
+// a 45. Para alargarla 10 mm hacen falta 54:
+//
+//   r = 30 -> tangente 12.43, valle plano 64.97
+//   r = 54 -> tangente 22.37, valle plano 55.03
+//
+// Y ahi esta lo bueno: el valle se acorta SOLO, 9.94 mm, que es justo el "a
+// cambio el valle se hace mas corto" que pidio. Alto, fondo y ancho no se mueven
+// ni una micra -- esta curva no toca ningun vertice, solo la manera de llegar a
+// el. La tangente arranca ahora POR ENCIMA del canto de abajo del panel (22.37
+// contra 16.75), asi que el acrilico del costado sube barriendo por delante del
+// plano de la cara y el panel remata dentro de la curva en vez de contra una
+// esquina.
+//
+// El riel del valle no estorba, y eso hay que decirlo porque parece que si: esta
+// esquina es CONCAVA, o sea que el redondeo ANADE material al rincon en vez de
+// quitarlo. Verificado subiendo r hasta 80 contra railes_dentro_del_costado.
+// Techo real: la funcion lo recorta a min(paso_horizontal, alto_cara_sup)/2 *
+// tan(67.5) = 96.6 con el valle en 80.
+radio_valle     = 54;
 // bombeo = ENTASIS. "Las rectas no son completamente rectas, por poquito, una
 // ligera distorsion pero muy ligera". Flecha en MILIMETROS POR CADA 100 MM de
 // tramo recto, no absoluta: una flecha fija se ve exagerada en un tramo corto
