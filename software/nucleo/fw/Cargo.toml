@@ -1,0 +1,47 @@
+[package]
+name = "sam17-nucleo-fw"
+version = "0.1.0"
+edition = "2021"
+description = "El firmware del cerebro del SAM17 sobre RP2350"
+
+# Workspace propio: compila para thumbv8m y `core` para el host. En estable no
+# hay `forced-target`, asi que compartirlo haria que `cargo test` en la raiz
+# intentara compilar esto para tu maquina.
+[workspace]
+
+[dependencies]
+sam17-nucleo-core = { path = "../core" }
+
+embassy-rp = { version = "0.10", features = [
+    "rp235xb",
+    "time-driver",
+    "critical-section-impl",
+    "binary-info",
+    "defmt",
+] }
+embassy-executor = { version = "0.10", features = [
+    "platform-cortex-m",
+    "executor-thread",
+    "defmt",
+] }
+embassy-time = { version = "0.5", features = ["defmt"] }
+embassy-usb = { version = "0.6", default-features = false, features = ["defmt"] }
+embassy-futures = "0.1"
+
+defmt = "1.1"
+defmt-rtt = "1.0"
+panic-probe = { version = "1.0", features = ["print-defmt"] }
+cortex-m = { version = "0.7", features = ["inline-asm"] }
+cortex-m-rt = "0.7"
+static_cell = "2"
+
+[features]
+default = ["rp235xb"]
+rp235xb = ["embassy-rp/rp235xb"]
+# Para validar sobre una Pico 2, que lleva el A. Cambia el chip, no el codigo.
+rp235xa = ["embassy-rp/rp235xa"]
+
+[profile.release]
+debug = 2
+lto = true
+opt-level = "s"

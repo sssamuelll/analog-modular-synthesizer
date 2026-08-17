@@ -27,8 +27,17 @@ El alcance del firmware de validación (§8 de la spec) se parte solo:
 §9 ya lo tenía escrito así: casi todas sus filas dicen *«tests en host, Rust
 puro»*. Las que dicen protoboard o analizador se van al siguiente.
 
-Cuando llegue el binario de la placa entra como segundo miembro del workspace
-y consume esta biblioteca. Por eso hay workspace con un solo miembro.
+El binario vive en [`fw/`](fw) y **es un workspace aparte**, no un segundo
+miembro de este. Una versión anterior de este README decía lo contrario y
+estaba mal: los dos compilan para targets distintos, y en Rust estable no hay
+forma de decir «este paquete siempre va a este target» (`forced-target` es de
+nightly). Con los dos en el mismo workspace, `cargo test` aquí intentaría
+compilar el firmware para tu máquina. De ahí el `exclude = ["fw"]`.
+
+```bash
+cd software/nucleo/fw
+cargo build --release          # thumbv8m.main-none-eabihf, ya en .cargo/config.toml
+```
 
 ## Los módulos
 
