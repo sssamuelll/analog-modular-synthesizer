@@ -6,6 +6,7 @@
 //! El invariante de §2.1 manda aqui: si una capacidad del instrumento no se
 //! puede expresar con estos tipos y estos mensajes, no esta terminada.
 
+pub mod atribucion;
 pub mod descriptor;
 pub mod descubrimiento;
 pub mod j2;
