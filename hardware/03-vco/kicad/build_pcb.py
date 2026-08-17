@@ -546,12 +546,31 @@ def _dist_seg(p, a, b) -> float:
 #     el desacoplo de +5V. El hueco entre los dos pads mide 1.45 mm: cabe
 #     una via, pero solo si llega primero.
 #
-# Puestas antes del ruteo, el router las ve como obstaculo y da la vuelta;
-# puestas despues, no hay por donde. Son siete vias: el modelo del router
+# SOLO MASA, y esto se midio: se probo extender el mecanismo a ESCAPES de
+# senal para el abanico del costado derecho del QFN (pines 21 y 22, la red
+# de VREF, que son los que mas veces se quedan sin cerrar) y sale PEOR.
+#
+#   sin escapes de senal (cinco corridas):  4, 5, 8, 9, 10 abiertas
+#   con 8 escapes (pines 21, 22):           12
+#   con 20 escapes (+ pines 2, 3, 4):       16
+#
+# El motivo es que el anillo del QFN no tiene sitio de sobra: una via
+# reservada para un pin le quita al router justo el hueco que necesita para
+# el fanout de sus vecinos, y como los 32 pines salen por el mismo anillo,
+# se pierde mas de lo que se gana. Con la MASA no pasa: esos pines no tienen
+# ninguna alternativa (el pasillo mide 1-1.45 mm y da para una via, no para
+# un abanico), asi que reservarla es ganancia neta.
+#
+# Se ponen antes del ruteo: el router las ve como obstaculo y da la vuelta;
+# puestas despues, no hay por donde. Son siete vias y el modelo del router
 # apenas lo nota (con las ~95 de toda la placa, cada pasada pasaba de 15 s
 # a tres minutos).
-COSTURAS_RESERVADAS = {(f"U{i}", "20") for i in (1, 2, 3, 4)} | \
-                      {(f"U{i}", "4") for i in (5, 6, 7)}
+COSTURAS_RESERVADAS = ({(f"U{i}", "20") for i in (1, 2, 3, 4)}
+                       | {(f"U{i}", "4") for i in (5, 6, 7)})
+
+# Las redes que llevan escape explicito. Se protegen en el DSN para que
+# Freerouting no deshaga justo el tramo que le estamos regalando.
+REDES_ESCAPE: set[str] = set()
 
 
 def _pads_sin_plano(board, net: str) -> list:
@@ -851,13 +870,21 @@ def coser_masas(reservadas=False) -> int:
         fx, fy = fp.GetPosition().x / 1e6, fp.GetPosition().y / 1e6
         for pad in fp.Pads():
             net = pad.GetNetname()
-            if net not in ("GNDA", "GNDD"):
-                continue
             px, py = _xy(pad)
-            if reservadas and (fp.GetReference(), pad.GetNumber())                     not in COSTURAS_RESERVADAS:
-                continue
-            if (px, py) not in pendientes:
-                continue          # su cobre ya toca una via: llega al plano
+            if reservadas:
+                # Modo pre-ruteo: solo los pines de la lista, sea cual sea su
+                # red. Para una senal esto no es una "costura" sino un ESCAPE:
+                # sacarla del anillo del QFN hasta su primera via, que es el
+                # tramo que el router no consigue si llega tarde.
+                if (fp.GetReference(), pad.GetNumber()) not in COSTURAS_RESERVADAS:
+                    continue
+                if net not in ("GNDA", "GNDD"):
+                    REDES_ESCAPE.add(net)
+            else:
+                if net not in ("GNDA", "GNDD"):
+                    continue
+                if (px, py) not in pendientes:
+                    continue      # su cobre ya toca una via: llega al plano
             largo = ((px - fx) ** 2 + (py - fy) ** 2) ** 0.5 or 1.0
             ux, uy = (px - fx) / largo, (py - fy) / largo
             cerca(px, py)
@@ -935,9 +962,11 @@ def ajustes_freerouting(tmp: str) -> None:
       anillo de cada QFN. Encenderlo, con todo lo demas igual, bajo los
       tramos sin rutear de 31 a 11 en la misma placa y el mismo numero de
       pasadas. Es el cambio mas grande de toda la tanda.
-    * **via_costs: 30** (de fabrica 50). Con las ventanas de B.Cu ya
-      limitando DONDE se puede bajar, penalizar tanto la via solo consigue
-      que el router prefiera dar la vuelta por F.Cu y se quede sin sitio.
+    * **via_costs** (de fabrica 50, ver VIA_COSTS). En 4 capas bajar es
+      barato: hay dos capas de senal y un plano solido en medio. Penalizar
+      el cambio de capa solo consigue que el router se ahogue en el anillo
+      de un QFN de 0.4 mm de paso en vez de escapar hacia abajo. De 30 a 8,
+      en la misma placa: de ~40 conexiones sin cerrar a 24.
 
     Se PARCHEA el fichero, no se reescribe entero: el resto son preferencias
     del usuario (perfil, telemetria, GUI) que no son asunto de este script.
@@ -964,7 +993,7 @@ def ajustes_freerouting(tmp: str) -> None:
     router["max_passes"] = PASADAS
     with open(ruta, "w", encoding="utf-8") as fh:
         json.dump(cfg, fh, indent=2)
-    print(f"freerouting: fanout ON, via_costs 30, max_passes {PASADAS}\n"
+    print(f"freerouting: fanout ON, via_costs {VIA_COSTS}, max_passes {PASADAS}\n"
           f"  (parche temporal sobre {ruta}; se restaura al terminar)")
     return ruta, original
 
@@ -1010,7 +1039,7 @@ def rutear() -> None:
         restaurar_freerouting(ajustes, previo)
 
 
-def _ajustar_dsn(dsn: str) -> None:
+def _ajustar_dsn(dsn: str, ronda: int = 1) -> None:
     """Dos retoques al DSN recien exportado, los dos imposibles desde KiCad.
 
     1. **In1 pasa a capa de POTENCIA.** KiCad exporta las cuatro capas de
@@ -1040,7 +1069,12 @@ def _ajustar_dsn(dsn: str) -> None:
     #    exporta todo el cableado existente como (type route), que para
     #    Freerouting significa "puedes levantarlo si te estorba" -- y las
     #    costuras reservadas existen justo para que NO se las levante.
-    for red in ("GNDA", "GNDD"):
+    # Las redes de escape se protegen SOLO en la primera ronda, cuando lo
+    # unico que llevan es el tramo que les pusimos nosotros. A partir de la
+    # segunda ya llevan ruteo del router, y congelarlo le impide deshacer un
+    # camino malo: protegiendolas todas las rondas el resultado empeoraba.
+    escapes = sorted(REDES_ESCAPE) if ronda == 1 else ()
+    for red in ("GNDA", "GNDD", *escapes):
         txt = txt.replace(f"(net {red})(type route)", f"(net {red})(type protect)")
     with open(dsn, "w", encoding="utf-8") as fh:
         fh.write(txt)
@@ -1065,7 +1099,7 @@ def _rondas(tmp: str) -> None:
     for ronda in range(1, RONDAS + 1):
         assert pcbnew.ExportSpecctraDSN(pcbnew.LoadBoard(PCB), dsn), \
             "no se exporto el DSN"
-        _ajustar_dsn(dsn)
+        _ajustar_dsn(dsn, ronda)
         print(f"freerouting ronda {ronda}/{RONDAS}, {PASADAS} pasadas\n"
               f"  (el avance, pasada a pasada, en {log})", flush=True)
         with open(log, "w", encoding="utf-8") as fh:
