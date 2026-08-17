@@ -242,11 +242,11 @@ def railes_dentro_del_costado() -> list[str]:
     # con su cara) y los de esqueleto son 2020 rectos, asi que no hay una sola
     # cota que valga para todos.
     #
-    # La BISAGRA no entra aqui, y no por olvido: su nudillo vive en el vertice
-    # del techo y asoma por delante del acrilico A PROPOSITO -- si no asomara,
-    # la tapa no podria girar. Es el unico cuerpo del case que sale del contorno
-    # por diseno. Que no se pise con el larguero de remate lo vigila solapes()
-    # en clearance_budget, donde la bisagra si esta.
+    # Aqui estan los CUATRO railes de panel, incluido el de arriba de la tapa:
+    # cerrada, la tapa vive dentro del contorno como todo lo demas, y que ese
+    # riel quepa en el vertice es justo la cota que obligo a engordar
+    # marco_remate a 16. No hay ningun cuerpo excluido -- la bisagra que asomaba
+    # por diseno ya no existe: el eje es el propio M5 del riel.
     cuerpos = [(n, cb._esquinas_er(p, c, p[a]))
                for n, c, a in zip(cb.NOMBRES_CR, cr, cb.ANGS_CR)]
     cuerpos += [(n, [(c[0] + dx, c[1] + dy)

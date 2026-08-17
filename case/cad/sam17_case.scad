@@ -82,30 +82,16 @@ function centros_rail() =
              n = [d.y, -d.x])                       // normal hacia dentro
         c[0] + d*s + n*off];
 
-// Eje de giro de la tapa. Va en la ARISTA DEL TECHO, metido en la esquina
-// EXTERIOR del vertice: el nudillo tangente a las dos caras que la forman -- la
-// del panel y el techo --, como una bisagra de piano. De ahi sale su sitio sin
-// elegir nada:
+// El EJE DE LA TAPA no tiene funcion propia porque no es una pieza: es
+// centros_rail()[3], o sea el taladro del M5 con el que el riel de arriba se
+// fija de punta al costado. Ese tornillo entra a lo largo del ancho, que es la
+// direccion de un eje de giro, asi que el riel gira sobre el y arrastra la cara
+// entera. Ver la nota de params.scad donde estaba d_visagra.
 //
-//   u   = bisectriz de las dos normales EXTERIORES
-//   eje = P[4] + u * (d_visagra/2) / (u . nf)
-//
-// El denominador es el coseno del medio angulo entre las dos normales, o sea lo
-// que hay que avanzar por la bisectriz para que el nudillo toque las dos.
-//
-// ESTUVO EN LA LINEA DE TORNILLO del panel hasta el 2026-08-17, y ahi no cabia
-// junto al riel -- el riel es la pieza que atornilla los modulos y la bisagra le
-// habia quitado el sitio. Que el eje quede FUERA de las dos caras es ademas la
-// condicion de que la tapa abra: con el eje dentro del acrilico la tapa se traba
-// contra su propia esquina en el primer grado. guarda_tapa() lo comprueba en los
-// dos planos.
-function eje_visagra() =
-    let (P = pts_perfil(),
-         d = (P[4]-P[3])/norm(P[4]-P[3]),
-         nf = [-d.y, d.x],            // normal EXTERIOR de la cara del panel
-         nt = [0, 1],                 // normal exterior del techo
-         u = (nf + nt)/norm(nf + nt))
-    P[4] + u*((d_visagra/2)/(u*nf));
+// El radio de giro del propio riel sale de su seccion: la esquina mas lejana de
+// su centroide esta a hypot(rail_er_fondo, rail_er_alto)/2 = 14.58 mm, y eso es
+// lo que tiene que librar el larguero de remate (ver y_rs).
+function radio_giro_riel() = norm([rail_er_fondo, rail_er_alto])/2;
 
 // largueros del esqueleto (2020) que no son railes de panel:
 // base delantera, base trasera, entrepiso delantero, entrepiso trasero,
@@ -161,15 +147,15 @@ function centros_esqueleto() =
          //      error dormia; con el marco en 8 manda, y con la version vieja
          //      la esquina asomaba 2.54 mm por delante del panel.
          //   3. el RIEL DE ARRIBA DE LA TAPA, que es el que de verdad manda.
-         //      Este techo lo puso primero un rail de panel, luego el nudillo
-         //      de la bisagra cuando la bisagra ocupo esa linea, y desde el
-         //      2026-08-17 vuelve a ser un riel: el de verdad, el que atornilla
-         //      los modulos. Se mide contra su esquina de ABAJO (he_er_y), que
-         //      va girada con la cara, no contra su centro.
+         //      Y no basta con su esquina de abajo: ese riel GIRA sobre su
+         //      propio M5, asi que lo que hay que librar es su BARRIDO -- el
+         //      circulo de radio_giro_riel() alrededor de su centroide. Con
+         //      he_er_y(45) = 13.22 en vez de 14.58 el larguero se quedaba
+         //      1.36 mm corto y solo se enteraba uno abriendo la tapa.
          y_rs = min(P[5].y - r - marco_remate/2,
                     P[3].y + (cos(angulo_superior)*(fondo() - r - P[3].x)
                               - (he_cs + t_panel)) / sin(angulo_superior),
-                    cr[3].y - he_er_y(angulo_superior) - holgura_rail - r))
+                    cr[3].y - radio_giro_riel() - holgura_rail - r))
     // Los dos largueros de la base ya NO viven en el canto de abajo. Desde que
     // la bandeja es el suelo (t_base) montan encima de ella, o sea con su centro
     // en t_base + r, y a esa altura el redondeo de las esquinas de abajo deja de
@@ -311,9 +297,11 @@ module costado_2d() {
     cr = centros_rail();
     difference() {
         perfil_lateral();
-        // Solo los DOS railes de la cara de abajo se fijan de punta al costado.
-        // Los de arriba son tapa y giran: un M5 al costado ahi seria un cerrojo.
-        for (c = concat([cr[0], cr[1]], centros_esqueleto()))
+        // Tres de los cuatro railes de panel se fijan de punta al costado. El
+        // que falta es cr[2], el del VALLE de la cara de arriba: con los dos
+        // extremos de esa cara empernados la tapa no giraria. El de arriba
+        // (cr[3]) si lleva su M5 -- ES el eje de giro.
+        for (c = concat([cr[0], cr[1], cr[3]], centros_esqueleto()))
             translate(c) circle(d = d_M5_paso + kerf);
     }
 }
@@ -475,17 +463,6 @@ module rails() {
         translate([c.x, c.y, ancho_total/2])
             rotate([90, 0, 0])
                 rail_2020(ancho_util);
-    visagra();
-}
-
-// Bisagra continua de la tapa superior: el nudillo corre por el vertice del
-// techo, de costado a costado. Aqui va solo el nudillo -- las palas (una al
-// dorso del panel, otra al larguero de remate) son herraje, no geometria de
-// corte, y se cierran al comprar la pieza.
-module visagra() {
-    e = eje_visagra();
-    // el cilindro nace en +Z, que aqui ya es el ancho del case: sin girar.
-    translate([e.x, e.y, t_cheek]) cylinder(h = ancho_util, d = d_visagra);
 }
 
 // --- planchas del cuerpo colocadas en 3D --------------------------------
@@ -675,9 +652,9 @@ module bom() {
              " -- OJO: la longitud del que entra al riel esta SIN CERRAR, John dijo",
              " que el M5x35 de catalogo no sirve para costado de ", t_cheek, " mm"));
     echo("BOM: standoff M4 x8 (las dos pieles, voladas) + tornillo M4 boton x16 + arandela x16");
-    echo(str("BOM: bisagra continua x1 de ", au, " mm, nudillo d=", d_visagra,
-             " en la arista del techo -- palas SIN CERRAR: el techo esta abierto",
-             " entre costados y la tapa pide cierre y costadillos propios"));
+    echo(str("BOM: tornillo M5 DE HOMBRO x2 + arandela metalica x2 -- son los ",
+             "del riel de arriba y hacen de eje de la tapa; no se aprietan. ",
+             "SIN CERRAR: cierre del valle y amortiguador de tapa abierta"));
     echo(str("BOM: pestana superior x1, ", au, " x ", marco_sup,
              " en acrilico t=", t_cheek, " (fijacion sin cerrar)"));
     echo(str("BOM: patica metalica torneada x4, d=", d_pie, " x ", alto_pie, " mm"));

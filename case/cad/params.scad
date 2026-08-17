@@ -384,37 +384,34 @@ gap_sombra  = 5;    // junta de sombra de las pieles flotantes
 // extremos, un canto abombado convierte el apoyo en un balancin.
 alto_pie    = 8;    // altura de la patica
 d_pie       = 16;   // diametro; pequeno a proposito
-// BISAGRA de la tapa superior. Continua, de todo el ancho util, con el nudillo
-// corriendo por la ARISTA DEL TECHO: la cara de arriba entera se levanta como el
-// capo de un carro.
+// EJE DE LA TAPA: NO HAY BISAGRA. El eje es EL PROPIO M5 con el que el riel de
+// arriba se fija de punta al costado. Samuel, viendo el render: "deberia ser el
+// mismo tornillo con el que se atornilla la barra del eurorack no? por que tanto
+// rollo?".
 //
-// SE MUDO el 2026-08-17. Estaba en la linea de tornillo de arriba del panel, que
-// es justo donde tiene que ir el riel, y ahi no caben los dos. Ahora va donde va
-// una bisagra de piano: NESTLED EN LA ESQUINA EXTERIOR, tangente a las dos caras
-// que forman el vertice (la del panel y el techo). El eje se deriva de eso --
-// P[4] mas la bisectriz exterior por (d_visagra/2)/cos(22.5) -- y no es una
-// eleccion: cualquier otro sitio mete el nudillo dentro del acrilico o deja la
-// tapa sin poder girar.
+// Pues si. Ese M5 entra por el costado A LO LARGO DEL ANCHO, que es exactamente
+// la direccion que necesita un eje de giro; el riel gira sobre su propio taladro
+// y con el toda la cara de arriba. La bisagra continua que hubo aqui hasta el
+// 2026-08-17 era una pieza ASUMIDA (nunca vimos una), con dos palas sin decidir,
+// que ademas pedia un cierre de techo entre costados que no existe y sacaba un
+// nudillo de 8 mm fuera del case. Todo eso se cae de golpe.
 //
-// Que el eje quede FUERA de las dos caras es la condicion de que la tapa abra;
-// guarda_tapa() en clearance_budget lo comprueba en los dos planos.
+// Por eso no hay ningun parametro aqui: el eje no se elige, ES centros_rail()[3].
 //
-// QUE ES TAPA Y QUE ES CASE, que es lo que de verdad cambio:
+// QUE ES TAPA Y QUE ES CASE:
 //   tapa  = los 2 rieles de la cara de arriba + sus modulos + la pestana
 //   case  = todo lo demas
-// Los rieles de esa cara YA NO llevan M5 al costado -- si lo llevaran la tapa no
-// abriria --, asi que el costado pasa de 9 taladros de larguero a 8.
+// El riel de ARRIBA conserva su M5 al costado, que es el eje. El del VALLE lo
+// pierde: con los dos empernados la tapa no gira. El costado sigue con 9
+// taladros de larguero, pero uno cambio de sitio.
 //
-// ASUMIDA igual que el riel: 8 mm de nudillo es una bisagra continua de aluminio
-// corriente, pero el modelo no ha visto la pieza real. Si la pieza pide otro
-// diametro cambia d_visagra y el eje se recoloca solo.
+// LO QUE SE PAGA, y hay que decirlo: la tapa entera cuelga de DOS M5 apoyando en
+// acrilico de 8. Una bisagra continua repartia esa carga en 528 mm. Van tornillos
+// de hombro con arandela metalica y el agujero del costado se vigila -- si se
+// ovala, el remedio es un casquillo, no apretar mas.
 //
-// SIN CERRAR: las palas. La de la tapa cuelga de la pestana o del riel de
-// arriba, y la del case necesita algo a lo que agarrarse en el techo -- entre
-// los dos costados el techo esta ABIERTO, marco_remate es perfil de costado y no
-// cruza el ancho (la misma trampa que ya nos comio con marco_sup). Y con los
-// rieles sueltos del costado, la tapa tambien pide cierre y costadillos propios.
-d_visagra   = 8;
+// SIN CERRAR: el cierre del valle (la tapa no tiene nada que la sujete cerrada) y
+// el amortiguador que la deje abierta.
 // PESTANA SUPERIOR: la banda de acrilico que cruza de costado a costado por
 // encima del canto del panel de arriba, sobre la propia cara. Samuel la pidio
 // porque el panel remataba pelado ("no veo esa pestana ... quiero un top marco
@@ -429,7 +426,8 @@ d_visagra   = 8;
 // De ahi que gap_sombra dejara de ser holgura de barrido -- entre la pestana y
 // el canto del panel ya no hay movimiento relativo.
 //
-// PENDIENTE, igual que las palas de la bisagra: como se fija. Queda 2.75 mm por
+// PENDIENTE: como se fija. Es la pieza que mas lejos queda del eje de giro
+// (22 mm), o sea la que primero barre algo al abrir. Queda 2.75 mm por
 // delante del riel de arriba (guarda_tapa lo mide) y a 8 mm de ancho no cabe una
 // fila de M4, asi que sale escuadra al riel, costadillo de tapa o pegado. Por
 // eso todavia no tiene DXF propio -- una pieza sin sus taladros no se manda a
