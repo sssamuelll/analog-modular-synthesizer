@@ -45,8 +45,8 @@ voces se miden a la vez**.
 existe para no llevar trimmers. Nadie garantiza la dispersión chip a chip del
 convertidor exponencial del SSI2130, así que **hasta que no se mida no está
 demostrado**. El bodge previsto si una voz cae fuera es cambiar **su**
-`R_PITCH` — una resistencia, no un re-spin. Procedimiento y valores en
-[`notes/bring-up.md`](notes/bring-up.md) §5.
+`R_PITCH` — una resistencia, no un re-spin. Procedimiento y valores en el
+**Paso 5** de [`notes/bring-up.md`](notes/bring-up.md).
 
 ## Componentes principales
 
