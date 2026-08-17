@@ -149,17 +149,19 @@ function centros_esqueleto() =
                     P[3].y + (cos(angulo_superior)*(fondo() - r - P[3].x)
                               - (he_cs + t_panel)) / sin(angulo_superior),
                     eje_visagra().y - d_visagra/2 - holgura_rail - r))
-    // Los dos largueros de la base viven en las esquinas de abajo, que son
-    // justo las que el redondeo VACIA. No basta plantarlos a ras: hay que
-    // retirarlos hasta donde acaba la curva.
-    //   - Frente: el radio en punta se recorta a la mitad de la arista mas
-    //     corta, que es la cara frontal, asi que las dos tangentes se juntan
-    //     en su punto medio y la curva muere a alto_frontal/2 del vertice.
-    //   - Fondo: esquina de 90 grados con radio_perfil, tangente = radio_perfil.
-    // Sin esto, check_dxf los acusaba de salirse del acrilico (esquinas en
-    // (2.0, 0.0) y (405.0, 0.0), las dos dentro del trozo que quita la curva).
-    [[alto_frontal/2 + r + 2,          r],           // base delantera
-     [fondo() - r - radio_perfil, r],          // base trasera
+    // Los dos largueros de la base ya NO viven en el canto de abajo. Desde que
+    // la bandeja es el suelo (t_base) montan encima de ella, o sea con su centro
+    // en t_base + r, y a esa altura el redondeo de las esquinas de abajo deja de
+    // afectarles -- ahi ya hay acrilico de sobra.
+    //   - Frente: lo que manda ahora es el riel de panel, que le pasa por
+    //     delante. Misma cuenta que x_ed: se separa de la ESQUINA del riel
+    //     girado, no de su centro. Antes iba en alto_frontal/2 + r + 2, pegado
+    //     al vertice, y ahi el riel se le montaba encima.
+    //   - Fondo: se queda en fondo - r - radio_perfil. A y = 18 la curva trasera
+    //     ya no llega y sobra sitio, pero adelantarlo solo compra fondo de
+    //     bandeja y no hace falta.
+    [[cr[0].x + he_er_x(angulo_inferior) + holgura_rail + r, t_base + r],
+     [fondo() - r - radio_perfil, t_base + r],  // base trasera
      [x_ed,                y_ep],                     // entrepiso delantero
      [fondo() - r,   y_ep],                     // entrepiso trasero
      [fondo() - r,   y_rs],                     // remate superior
@@ -320,12 +322,16 @@ module plancha(l, a) square([l, a]);   // l = ancho_util, a = fondo local
 module bandeja_base_2d() {
     au = ancho_total - 2*t_cheek;
     ce = centros_esqueleto();
-    x0 = ce[0].x - rail/2;                  // canto delantero a ras del rail
+    // Canto delantero donde muere el redondeo en punta (alto_frontal/2) mas 2 de
+    // material: es lo mas adelante que la plancha puede llegar sin asomar por la
+    // curva del costado. Ya no arranca en el larguero delantero -- ese se fue
+    // 39 mm hacia dentro para librar el riel, y la bandeja lo vuela.
+    x0 = alto_frontal/2 + 2;
     fondo = ce[1].x + rail/2 - x0;          // canto trasero a ras del rail
     difference() {
         plancha(au, fondo);
-        fila_agujeros(au, rail/2);          // -> x0 + rail/2 = ce[0].x
-        fila_agujeros(au, fondo - rail/2);  // -> x0 + fondo - rail/2 = ce[1].x
+        fila_agujeros(au, ce[0].x - x0);    // los dos largueros van ENCIMA
+        fila_agujeros(au, ce[1].x - x0);
         // ventilacion bajo el PSU (tercio derecho): onda cuadrada
         translate([au*0.68, fondo*0.35])
             onda("cuadrada", au*0.25);
@@ -470,10 +476,12 @@ module visagra() {
 // bandeja_base_2d() para derivar su fondo (ronda final: antes iba en
 // x=rail, que no es donde esta el rail).
 module bandeja_base() {
-    ce = centros_esqueleto();
-    translate([ce[0].x - rail/2, rail + t_acrilico, ancho_total - t_cheek])
+    // Ya no apoya en el lomo de nadie: ES el canto de abajo del case, de y = 0 a
+    // y = t_base, y los largueros montan sobre ella. El grosor crece hacia -Y
+    // desde el origen, asi que el origen va en t_base.
+    translate([alto_frontal/2 + 2, t_base, ancho_total - t_cheek])
         rotate([0, 90, 0]) rotate([90, 0, 0])
-            linear_extrude(t_acrilico) bandeja_base_2d();
+            linear_extrude(t_base) bandeja_base_2d();
 }
 
 // tope de bandeja a ras de P3.y (canto SUPERIOR, no inferior — ver
@@ -567,7 +575,12 @@ module remate_sup() {
 // recta al pie y no de canto.
 module paticas() {
     ce = centros_esqueleto();
-    for (x = [ce[0].x, ce[1].x])
+    // El pie delantero ya no cae sobre un larguero: la base delantera se retiro
+    // 39 mm hacia dentro para librar el riel del panel, y un pie ahi dejaria todo
+    // el frente en voladizo justo donde se aprietan los mandos de abajo. Va donde
+    // acaba el redondeo de la punta, que es lo mas adelante que se puede apoyar
+    // con el disco entero sobre acrilico. El trasero sigue sobre su larguero.
+    for (x = [alto_frontal/2 + d_pie/2, ce[1].x])
         for (z = [d_pie/2, ancho_total - d_pie/2])
             translate([x, 0, z])
                 rotate([90, 0, 0])
@@ -587,6 +600,14 @@ module assembly_acrilico() {           // STL separado para Blender (Task 8)
     planchas_acrilico();
 }
 
+// OJO CON EL WARNING de 2-manifold que suelta este export: es INHERENTE y no un
+// defecto que arreglar. Aqui hay cuerpos que se tocan A PROPOSITO -- el dorso
+// del panel apoya EXACTAMENTE en la cara del riel (esa distancia ES t_panel) y
+// roza tangente el nudillo de la bisagra --, y una union de solidos que comparten
+// cara no es un 2-manifold limpio. Que salga o no salga el aviso depende de por
+// que lado caiga el redondeo de coma flotante, asi que aparece y desaparece al
+// mover el case (aparecio al bajar el suelo 17 mm, 2026-08-17). No afecta a
+// ningun DXF -- esto es el STL de referencia para Blender, y Blender lo carga.
 module assembly_aluminio() {           // idem, perfiles 2020 + paneles solidos
     rails();
     paneles();
@@ -628,6 +649,7 @@ module bom() {
     echo(str("BOM: pestana superior x1, ", au, " x ", marco_sup,
              " en acrilico t=", t_cheek, " (fijacion sin cerrar)"));
     echo(str("BOM: patica metalica torneada x4, d=", d_pie, " x ", alto_pie, " mm"));
-    echo(str("BOM: planchas t=", t_acrilico, ": base, entrepiso, ",
-             "piel inf, piel sup; costados t=", t_cheek, " x2"));
+    echo(str("BOM: planchas t=", t_acrilico, ": entrepiso, piel inf, piel sup; ",
+             "suelo t=", t_base, " (la bandeja de base, ahora portante); ",
+             "costados t=", t_cheek, " x2"));
 }

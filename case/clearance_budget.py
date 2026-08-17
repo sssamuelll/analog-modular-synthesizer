@@ -58,7 +58,11 @@ def perfil(p: dict[str, float]) -> dict[str, float]:
         "y_entrepiso": y_entrepiso,
         "alto_total": alto_total,
         "prof_sup_min": x_cara_sup1,
-        "alto_interior_inferior": y_entrepiso - p["t_acrilico"],
+        # del tope del suelo al fondo de la bandeja de entrepiso. Antes se
+        # medIa desde y = 0 y sobrestimaba en los 25 mm del sandwich viejo de
+        # la base; hoy el suelo son t_base.
+        "alto_interior_inferior": (y_entrepiso - p["t_acrilico"]
+                                    - p["t_base"]),
         "ancho_util": p["ancho_total"] - 2 * p["t_cheek"],
     }
 
@@ -219,14 +223,18 @@ def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
     # angulo no rompio nada: destapo algo que llevaba roto desde Task 5.
     x_ed = cr[2][0] + _he_er(p, p["angulo_superior"])[0] + p["holgura_rail"] + r
     y_ep = P[3][1] - p["t_acrilico"] - r
-    # Los dos largueros de la base se retiran hasta donde acaba el redondeo de
-    # su esquina: en el frente la curva en punta muere a alto_frontal/2 del
-    # vertice (el radio se recorta a la mitad de la arista mas corta, que es la
-    # cara frontal, y las dos tangentes se juntan en su punto medio); en el
-    # fondo la esquina es de 90 grados con radio_perfil, luego tangente =
-    # radio_perfil. A ras del vertice quedaban FUERA del acrilico.
-    return [(p["alto_frontal"] / 2 + r + 2, r),
-            (fondo(p) - r - p["radio_perfil"], r),
+    # Los dos largueros de la base ya NO viven en el canto de abajo. Desde que
+    # la bandeja es el suelo (t_base) montan ENCIMA de ella, con su centro en
+    # t_base + r, y a esa altura el redondeo de las esquinas de abajo deja de
+    # afectarles: ahi ya hay acrilico de sobra. Al delantero lo coloca ahora el
+    # riel de panel que le pasa por delante -- misma cuenta que x_ed, o sea
+    # contra la ESQUINA del riel girado y no contra su centro. Estuvo en
+    # alto_frontal/2 + r + 2, pegado al vertice, y ahi el riel se le montaba
+    # encima en cuanto el vertice bajo.
+    x_bd = cr[0][0] + _he_er(p, p["angulo_inferior"])[0] + p["holgura_rail"] + r
+    y_bd = p["t_base"] + r
+    return [(x_bd, y_bd),
+            (fondo(p) - r - p["radio_perfil"], y_bd),
             (x_ed, y_ep), (fondo(p) - r, y_ep),
             # Remate superior: su Y se DERIVA de la cara que lo limita, no es
             # P[5].y - r. Al acortar el marco de arriba para que la esquina se
@@ -234,7 +242,6 @@ def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
             # al vertice asomaria por la cara superior. Centro a r + t_panel
             # de distancia perpendicular al plano del panel de arriba.
             (fondo(p) - r, _y_remate(p, P, cr, r)),
-            (fondo(p) - r, P[3][1] + 15),
             (fondo(p) - r, P[3][1] + 15)]
 
 
@@ -313,19 +320,17 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
 
     planchas: list[Caja] = [planchas_extra]
     filas: list[Fila] = []
-    # bandeja_base: ronda final — fondo y colocacion derivados de sus DOS
-    # railes frontera (antes: plancha de prof_inferior-2*rail-4 puesta en
-    # x=rail, filas a +18 y -24 mm de las centerlines y canto trasero a
-    # 4 mm de tocar el rail; la bandeja que carga el PSU no apoyaba atras).
-    x0_bb = ce[0][0] - rail / 2
+    # bandeja_base: es el SUELO del case desde el 2026-08-17, de y = 0 a
+    # y = t_base, con los dos largueros montados encima en vez de debajo. El
+    # canto delantero lo pone el redondeo en punta (muere a alto_frontal/2) mas
+    # 2 de material, no el larguero: ese se retiro para librar el riel de panel
+    # y la bandeja lo vuela. El trasero sigue a ras de su larguero.
+    x0_bb = p["alto_frontal"] / 2 + 2
     fondo_bb = ce[1][0] + rail / 2 - x0_bb
-    y0_bb = ce[0][1] + rail / 2          # apoya en el lomo del rail
     planchas.append(("bandeja_base", x0_bb, x0_bb + fondo_bb,
-                     y0_bb, y0_bb + t_acr, t_cheek, ancho_total - t_cheek))
-    filas += [("bandeja_base", "delantera", "x", x0_bb + rail / 2,
-               "base delantera"),
-              ("bandeja_base", "trasera", "x", x0_bb + fondo_bb - rail / 2,
-               "base trasera")]
+                     0.0, p["t_base"], t_cheek, ancho_total - t_cheek))
+    filas += [("bandeja_base", "delantera", "x", ce[0][0], "base delantera"),
+              ("bandeja_base", "trasera", "x", ce[1][0], "base trasera")]
     # bandeja_entrepiso: R2 — canto trasero a ras de entrepiso-trasero,
     # tope (no fondo) a ras de P3.y
     x0_be = ce[2][0] - rail / 2
@@ -625,6 +630,33 @@ def guarda_visagra(p: dict[str, float]) -> None:
         f"(se exige subida + 1.0). Subir gap_sombra o acercar el eje al canto")
 
 
+def guarda_piso(p: dict[str, float]) -> None:
+    """El riel de panel del frente tiene que librar el SUELO del case.
+
+    Es la condicion que fija alto_frontal y con el la altura entera del aparato,
+    y hasta hoy vivia solo en un comentario de params.scad. Nadie la vigilaba:
+    solapes() trabaja con cajas y solo canta cuando los cuerpos YA se tocan, o
+    sea que se come los 4 mm de holgura sin protestar.
+
+    El techo es el TOPE DE LA BANDEJA (t_base), no el lomo de un larguero. La
+    distincion no es academica: cuando la bandeja iba apilada encima del 2020,
+    derivarlo contra el larguero salia 5 mm de barato y dejaba 0.51 mm de solape
+    real. Hoy la bandeja ES el suelo y el techo son t_base limpios, pero el error
+    de mirar la pieza equivocada se repite igual de facil.
+
+    Se mide sobre el centro REAL del riel (el que sale de _centros_rail), no
+    rehaciendo la formula: si el .scad y el budget se separan, esto lo nota."""
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    y_bajo = cr[0][1] - _he_er(p, p["angulo_inferior"])[1]
+    techo = p["t_base"] + p["holgura_rail"]
+    assert y_bajo >= techo - 1e-9, (
+        f"el riel de panel del frente se come el suelo: su esquina de abajo cae "
+        f"en y={y_bajo:.2f} y el tope de la bandeja mas holgura_rail exige "
+        f">={techo:.2f}. Subir alto_frontal o inset_inf_frente (van emparejados: "
+        f"la curva en punta pide inset >= alto_frontal/2 + rail_er_alto/2 + 3)")
+
+
 def guarda_escalon(p: dict[str, float]) -> None:
     """R7: paso_horizontal se abrio para separar los 2 railes tilted que
     R3 acerco en el quiebre P2-P3 (cara_inf valle, 12 grados, vs
@@ -654,6 +686,7 @@ def main() -> int:
     autocomprobacion(p)
     canario_solapes(p)
     canario_alineacion(p)
+    guarda_piso(p)
     guarda_escalon(p)
     guarda_visagra(p)
     g = perfil(p)

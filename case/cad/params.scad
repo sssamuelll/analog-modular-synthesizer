@@ -46,7 +46,7 @@ ancho_total     = 544.32;
 // comerciales varian de marca (Vector 121.46, Tiptop 122.43, Doepfer 122.50) y
 // el que cuenta es el que se compra. De ahi salen las caras:
 //
-//   alto_cara_inf = 123.0 + inset_inf_frente + inset_inf_valle  = 156.5
+//   alto_cara_inf = 123.0 + inset_inf_frente + inset_inf_valle  = 150.5
 //   alto_cara_sup = 123.0 + inset_sup_valle  + inset_sup_remate = 158.25
 //
 // El de arriba sale mas CORTO aunque lleve el mismo estandar dentro, y es por
@@ -54,19 +54,17 @@ ancho_total     = 544.32;
 // Lo que hay entre el canto del panel y el vertice es la PESTANA (marco_sup),
 // no un perfil, y por eso caben 11 mm donde antes hacian falta 23.
 //
-// Los 33.5 / 35.25 mm de acrilico que envuelven el estandar son el minimo REAL,
-// medido contra las cotas que los limitan. Bajaron 8 y 12 mm respecto a la
-// version que suponia perfil 2020 en las caras, y por la razon que se
-// anticipaba: el riel real mide 10 mm A LO LARGO DE LA CARA, no 20, asi que su
-// media seccion pasa de 10 a 5 en cada punta.
+// Los 27.5 / 35.25 mm de acrilico que envuelven el estandar son el minimo REAL,
+// medido contra las cotas que los limitan. La fila de abajo bajo otros 6 mm el
+// 2026-08-17 al voltearse la base (ver t_base y alto_frontal): lo que la
+// limitaba no era el estandar sino el sandwich de 25 mm que tenia debajo.
 //
-// No sale todo a favor. El riel es FINO a lo largo de la cara pero HONDO hacia
+// El riel es FINO a lo largo de la cara (10, la mitad del 2020) pero HONDO hacia
 // dentro (27.4, con su eje a 13.7 del panel contra los 10 del 2020), y esa
-// profundidad tira de la esquina de abajo del riel hacia abajo -- de ahi que
-// alto_frontal subiera de 28 a 31 en vez de bajar. El neto es 6.5 mm menos de
-// alto y 9 menos de fondo.
+// profundidad tira de la esquina de abajo del riel hacia abajo. Por eso el
+// vertice frontal no baja tanto como el riel adelgaza.
 //
-// Bisel que sobra alrededor de cada panel (inset - inset_er): 20.75 y 7.25 mm
+// Bisel que sobra alrededor de cada panel (inset - inset_er): 14.75 y 7.25 mm
 // en la fila de abajo, 16.75 y marco_sup = 8 en la de arriba. Ese ultimo NO es
 // bisel de costado: es la pestana, que cruza de lado a lado.
 //
@@ -75,8 +73,8 @@ ancho_total     = 544.32;
 // fija de punta con un M5 directo al acrilico (taladro de 4.5 en su eje). Los
 // 2020 se quedan solo en el esqueleto -- base, entrepiso, remate y repisa --,
 // que es donde de verdad hacen estructura.
-alto_cara_inf   = 156.5; // DERIVADO: 122.5 + inset_inf_frente + inset_inf_valle
-alto_cara_sup   = 158.25; // DERIVADO: 122.5 + inset_sup_valle + inset_sup_remate
+alto_cara_inf   = 150.5; // DERIVADO: 123.0 + inset_inf_frente + inset_inf_valle
+alto_cara_sup   = 158.25; // DERIVADO: 123.0 + inset_sup_valle + inset_sup_remate
 alto_panel_inf  = 128.5; // PCB 3U EUROrack
 alto_panel_sup  = 128.5; // PCB 3U EUROrack: la fila de arriba tambien
 // Angulos de cara. El fichero los guarda DESDE LA VERTICAL (convencion del
@@ -96,53 +94,47 @@ angulo_inferior = 35;    // 55 desde la horizontal, cara de procesamiento
 angulo_superior = 45;    // 45 desde la horizontal, cara de generacion
 // Altura del vertice frontal: donde arranca la cara del panel de abajo.
 //
-// FUE 45 mm, y ese numero era el piso fisico de un apilado de tres cosas
-// (rail base + bandeja + rail del zocalo). Ese apilado ya no existe: Samuel
-// pidio DOS nodos en la esquina de abajo y no tres -- el de estabilidad y el
-// del riel --, asi que el rail del zocalo se retiro, y con el la plancha del
-// zocalo, que se habria quedado colgando de una sola fila de tornillos (una
-// plancha de 474 mm de ancho sobre una fila pivota como una puerta).
+// FUE 45, luego 28, luego 31, y desde el 2026-08-17 es 19. Los cuatro numeros
+// salen del mismo sitio: EL TECHO QUE HAY BAJO EL RIEL DEL PANEL, o sea lo que
+// la esquina de abajo de ese riel tiene que librar. Todo lo demas se acomoda.
 //
-// Sin ese rail el minimo lo pone otra cosa: la esquina va REDONDEADA EN PUNTA,
-// y esa curva se come alto_frontal/2 de acrilico a lo largo de la cara del
-// panel. El rail del panel necesita empezar despues de la curva, o sea
-//   inset_tornillo >= alto_frontal/2 + rail/2
-// Hay una SEGUNDA condicion, y es la que manda: en esa esquina van los DOS
-// nodos que pidio Samuel, y tienen que caber uno encima del otro. El del panel
-// va empujado hacia ABAJO por el offset perpendicular (la normal interior de
-// una cara empinada apunta adentro y abajo), asi que su centro cae en
-// alto_frontal + cos(a)*inset - 6.65 y su canto inferior 13.93 mas abajo.
+// Lo que cambio no fue el riel sino el techo. La base era un SANDWICH -- el
+// larguero 2020 (20) con la bandeja del PSU apoyada encima (5) -- y esos 25 mm
+// caian justo debajo del riel. Samuel lo llamo por su nombre ("la base esta
+// bastante gruesa") y pidio bajarla al grosor del resto de la estructura. Hoy la
+// bandeja ES el suelo, una plancha de t_base = 8 a ras del canto de abajo, y los
+// dos largueros montan ENCIMA de ella (ver t_base). El techo pasa de 25 a 8.
 //
-// OJO CON EL TECHO DE ABAJO, que es donde este calculo se hizo mal una vez: no
-// es el lomo del rail de base (y = 20) sino el TOPE DE LA BANDEJA que se apoya
-// encima de el (y = 20 + t_acrilico = 25). La bandeja es la que carga el PSU y
-// va apoyada en el lomo del rail, no colgada. Exigiendo holgura_rail:
-//   alto_frontal + cos(35)*inset >= 49.73
-// Derivarlo contra el rail y no contra la bandeja sale 5 mm de barato, y
-// solapes() lo canta (0.51 mm de solape rail-bandeja). A alto_frontal = 10 el
-// riel del panel se montaba 22.3 mm ENCIMA del de la base.
+// Con el techo en 8 las dos condiciones quedan asi:
 //
-// Las dos condiciones se optimizan JUNTAS, y ahi esta el truco: la altura de
-// la primera seccion vale alto_frontal + alto_cara_inf*cos(35), y como
-// alto_cara_inf lleva el inset dentro, esa altura es exactamente
-// (alto_frontal + cos(35)*inset) + una constante. O sea que minimizar el piso
-// ES minimizar el lado izquierdo de la condicion de los dos nodos, y su suelo
-// es 49.58 -- por debajo no hay nada que rascar sin mover la bandeja.
+//   1. SUELO. La esquina de abajo del riel tiene que librar el tope de la
+//      bandeja con holgura_rail limpios:
+//        alto_frontal + cos(35)*inset_inf_frente
+//          >= t_base + holgura_rail + he_er_y(35) + off*sen(35)
+//           = 8 + 4 + 11.95 + 8.78 = 32.73
+//   2. CURVA. La esquina va REDONDEADA EN PUNTA y esa curva se come
+//      alto_frontal/2 de cara, asi que el riel no puede arrancar antes:
+//        inset_inf_frente >= alto_frontal/2 + rail_er_alto/2 + 3
 //
-// El par (31, 23.5) se apoya en las dos a la vez: 0.52 mm sobre el suelo de los
-// dos nodos y 1.0 de material de sobra contra la curva.
+// Se optimizan JUNTAS y ahi esta el truco: la altura del primer piso vale
+// alto_frontal + alto_cara_inf*cos(35), y como alto_cara_inf lleva el inset
+// dentro, esa altura es (alto_frontal + cos(35)*inset) + una constante. O sea
+// que minimizar el piso ES minimizar el lado izquierdo de la condicion 1.
 //
-// SUBIO de 28 a 31 al entrar el riel real, y es contraintuitivo: el riel es la
-// MITAD de alto que el 2020 a lo largo de la cara, pero su eje se va 15.3 mm
-// hacia dentro en vez de 11.6 y el perfil tiene 27.4 de fondo, asi que su
-// esquina de abajo cuelga mas y hay que subir el vertice para que libre la
-// bandeja. Lo fino de la seccion se cobra en los insets (bajan 3 y 5 mm); lo
-// hondo se paga aqui.
+// El par (19, 17.5) se apoya en las dos a la vez: 0.61 mm sobre el suelo y la
+// curva justa con sus 3 mm de material. El piso baja de 159.2 a 142.3 y el case
+// entero de 271.1 a 254.2.
 //
-// Ojo con bajar alto_frontal creyendo que siempre ayuda: a 0 la esquina pasa a
-// ser un vertice agudo de 55 grados y su redondeo se come 64 mm de cara, cuatro
-// veces mas que la punta de dos arcos de ahora.
-alto_frontal    = 31;
+// Ojo con bajar alto_frontal creyendo que siempre ayuda: la curva se come la
+// mitad, asi que cada mm que baja el vertice sube medio el inset y solo se gana
+// medio. A 0 la esquina pasa a ser un vertice agudo de 55 grados y su redondeo
+// se come 64 mm de cara, cuatro veces mas que la punta de dos arcos de ahora.
+//
+// Y esto ya no lo vigila un comentario: guarda_piso() en clearance_budget mide
+// la esquina de abajo del riel contra el tope de la bandeja. Derivarlo contra lo
+// que no toca costo 0.51 mm de solape en su dia -- se midio contra el lomo del
+// larguero y no contra la bandeja que iba encima.
+alto_frontal    = 19;
 // Fondo del case. UN SOLO plano trasero: el costado es un triangulo
 // rectangulo con el angulo recto atras y la hipotenusa quebrada en dos
 // tramos (35 arriba, 12 abajo) con el entrepiso en medio (Samuel eligio esta
@@ -225,6 +217,23 @@ radio_punta     = 400;
 // --- materiales ---
 t_acrilico = 5;    // planchas del cuerpo; MEDIR con calibre (spec §11)
 t_cheek    = 8;    // costados portantes
+// SUELO del case. La bandeja de base dejo de ser una plancha del cuerpo el
+// 2026-08-17: ya no se apoya ENCIMA de los dos largueros -- 20 + 5 = 25 mm de
+// sandwich justo debajo del riel del panel -- sino que pasa a ser el propio
+// canto de abajo, con los largueros montados sobre ella.
+//
+// LA ESTRUCTURA NO PIERDE NADA y conviene decirlo claro: son los mismos dos 2020
+// cruzando el mismo vano de 528, y la bandeja sigue atornillada a ellos cada
+// 100 mm; lo unico que cambia es por que cara. Pero el techo que el riel tiene
+// que librar baja de 25 a 8, y con el baja el case entero 17 mm.
+//
+// Sube de t_acrilico a t_cheek porque ahora es cara vista y de apoyo: el mismo 8
+// del costado, de la pestana y del marco de remate. Es lo que pidio Samuel --
+// "el mismo grosor que todo el resto de la estructura".
+//
+// No es un valor libre: si cambia t_cheek hay que cambiar este a mano (aqui no
+// se pueden escribir expresiones, ver la cabecera del fichero).
+t_base     = 8;
 t_panel    = 1.6;  // PCB de aluminio, espesor estandar JLCPCB
 // kerf FIRMADO y NEGATIVO por convencion: el modelo dibuja `d + kerf` en
 // todo hueco y el laser ensancha, asi que para que el agujero fisico salga
@@ -294,7 +303,7 @@ rail_er_eje     = 13.7;
 //
 //   punta               curva            tangente  + riel/2 + mat = inset
 //   ------------------  ---------------  --------  -------------------------
-//   inferior / frente   punta redondeada   15.5      + 5 + 3.0   = 23.5
+//   inferior / frente   punta redondeada    9.5      + 5 + 3.0   = 17.5
 //   inferior / valle    pico (r=5)          2.6      + 5 + 2.4   = 10
 //   superior / valle    valle (r=30)       12.4      + 5 + 2.1   = 19.5
 //   superior / remate   -- BISAGRA --   marco_sup + gap_sombra + 2.75 = 15.75
@@ -315,7 +324,7 @@ rail_er_eje     = 13.7;
 // Las tangentes NO son parametros: salen del radio y del angulo del vertice.
 // Si se mueve un radio hay que rehacer la columna, y el que avisa es
 // railes_dentro_del_costado() en check_dxf, que lee el contorno del DXF.
-inset_inf_frente = 23.5;
+inset_inf_frente = 17.5;
 inset_inf_valle  = 10;
 inset_sup_valle  = 19.5;
 inset_sup_remate = 15.75;
