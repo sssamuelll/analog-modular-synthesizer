@@ -22,30 +22,31 @@ ancho_total     = 500;   // spec §4
 // --, y alrededor de cada riel hace falta acrilico. De ahi salen las caras:
 //
 //   alto_cara_inf = 122.5 + inset_inf_frente + inset_inf_valle  = 164.0
-//   alto_cara_sup = 122.5 + inset_sup_valle  + inset_sup_remate = 170.0
+//   alto_cara_sup = 122.5 + inset_sup_valle  + inset_sup_remate = 150.0
 //
-// El de arriba sale 6 mm mas largo con el MISMO estandar dentro, y no es
-// arbitrario: su curva del valle lleva radio_valle = 30 (Samuel lo pidio
-// suave) y esa tangente se come 12.4 mm de cara, contra los 2.6 del pico de
-// enfrente. El acabado se paga en altura, y esto dice cuanto.
+// El de arriba sale mas CORTO aunque lleve el mismo estandar dentro, y es por
+// la bisagra: su punta de arriba ya no la remata un 2020 sino el eje de giro,
+// que va pegado al vertice (inset_sup_remate = inset_er = 3). El panel llega
+// por tanto al punto mas alto y el unico acrilico que lo acompana arriba es el
+// marco de remate del techo (Samuel, 2026-08-17).
 //
-// Los 41.5 / 47.5 mm de acrilico que envuelven el estandar son el minimo REAL,
-// medido contra las cotas que los limitan y no estimado. La partida grande de
-// las dos es la misma: 20 mm de medio perfil 2020, uno por punta. Con un riel
-// EUROrack de 10 mm en vez de nuestro 2020 cada cara pierde otros 10 -- mas
-// que todo lo que se gana apretando el acrilico. Esta en el correo a Tobias.
+// Los 41.5 / 27.5 mm de acrilico que envuelven el estandar son el minimo REAL,
+// medido contra las cotas que los limitan y no estimado. En las TRES puntas que
+// rematan contra un 2020 la partida grande es siempre la misma: 10 mm de medio
+// perfil. Con un riel EUROrack de 10 mm en vez de nuestro 2020 cada una pierde
+// otros 5 -- mas que todo lo que se gana apretando el acrilico. Esta en el
+// correo a Tobias.
 //
 // Bisel que sobra alrededor de cada panel (inset - inset_er): 23.5 y 12 mm en
-// la fila de abajo, 21.5 y 20 en la de arriba. Samuel pidio explicitamente
-// apretar el lado del valle de la fila inferior ("llevarlo mas cerca del hueco
-// del tornillo"), y por eso ese es el unico bisel de 12.
+// la fila de abajo, 21.5 y CERO en la de arriba. El cero no es un descuido: el
+// panel de arriba remata a ras del vertice porque de ahi cuelga la bisagra.
 //
 // ASUMIDO, pendiente de Tobias (SynthRacks): que el riel EUROrack real se
 // atornille sobre el 2020 con su linea roscada EN LA CENTERLINE del 2020. Si
 // su perfil pone la rosca descentrada, lo que cambia son los insets y con
 // ellos las dos caras -- la silueta se adapta sin tocar nada mas.
 alto_cara_inf   = 164.0; // DERIVADO: 122.5 + inset_inf_frente + inset_inf_valle
-alto_cara_sup   = 170.0; // DERIVADO: 122.5 + inset_sup_valle + inset_sup_remate
+alto_cara_sup   = 150.0; // DERIVADO: 122.5 + inset_sup_valle + inset_sup_remate
 alto_panel_inf  = 128.5; // PCB 3U EUROrack
 alto_panel_sup  = 128.5; // PCB 3U EUROrack: la fila de arriba tambien
 // Angulos de cara. El fichero los guarda DESDE LA VERTICAL (convencion del
@@ -224,7 +225,15 @@ rail            = 20;   // perfil 2020
 //   inferior / frente   punta redondeada   14.0      + 10 + 2.5  = 26.5
 //   inferior / valle    pico (r=5)          2.6      + 10 + 2.4  = 15
 //   superior / valle    valle (r=30)       12.4      + 10 + 2.1  = 24.5
-//   superior / remate   punta redondeada   11.0      + 10 + 2.0  = 23
+//   superior / remate   -- BISAGRA, no lleva 2020 --             = 3
+//
+// La cuarta se sale del patron porque ahi no hay perfil: es el eje de giro.
+// Vale inset_er (3.0) y no otra cosa, porque el eje coincide con la fila de
+// taladros de arriba del panel, que EUROrack pone a 3.0 del canto. O sea que el
+// panel remata exactamente en el vertice. Ese es el requisito de Samuel ("el
+// modulo debe terminar en el punto mas alto") y a la vez lo que hace girable la
+// tapa: con un 2020 ahi hacian falta 23 mm, el panel se quedaba 20 mm por debajo
+// del vertice y el eje de giro acababa enterrado detras de acrilico.
 //
 // Las tangentes NO son parametros: salen del radio y del angulo del vertice.
 // Si se mueve un radio hay que rehacer la columna, y el que avisa es
@@ -232,7 +241,7 @@ rail            = 20;   // perfil 2020
 inset_inf_frente = 26.5;
 inset_inf_valle  = 15;
 inset_sup_valle  = 24.5;
-inset_sup_remate = 23;
+inset_sup_remate = 3.0;
 // EUROrack, cotas del PANEL (no de la cara). Verificado el 2026-08-17 contra
 // midisoft.de y exploding-shed.com: taladro a 3.0 mm del canto superior e
 // inferior (de ahi los 122.50 entre centros) y el primero a 7.5 mm del canto
@@ -263,6 +272,16 @@ gap_sombra  = 5;    // junta de sombra de las pieles flotantes
 // extremos, un canto abombado convierte el apoyo en un balancin.
 alto_pie    = 8;    // altura de la patica
 d_pie       = 16;   // diametro; pequeno a proposito
+// BISAGRA de la tapa superior. Continua, de todo el ancho util, con el nudillo
+// corriendo por el vertice del techo: la cara de arriba entera se levanta como
+// el capo de un carro. Sustituye al 2020 que remataba esa cara, y por eso el
+// panel llega hasta el punto mas alto.
+//
+// ASUMIDA igual que el riel EUROrack: 8 mm de nudillo es una bisagra continua
+// de aluminio corriente, pero el modelo no ha visto la pieza real. Lo que de
+// verdad manda es que el EJE quede a inset_er del canto del panel; si la pieza
+// pide otro diametro cambia d_visagra, no la geometria de la cara.
+d_visagra   = 8;
 
 // --- ventilacion con firma (spec §7) ---
 vent_ancho_ranura = 4;   // ancho de la ranura-onda

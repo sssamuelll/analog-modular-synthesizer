@@ -222,8 +222,12 @@ def railes_dentro_del_costado() -> list[str]:
     # signo al reves la comprobacion acusaba a los cuatro railes de panel de
     # salirse -- eran falsos positivos, y con el signo bueno se ve que su cara
     # queda a 1.63 mm del plano del panel, o sea el t_panel de diseno.
-    railes = ([(n, c, -p["angulo_inferior"]) for n, c in zip(cb.NOMBRES_CR[:2], cr[:2])]
-              + [(n, c, -p["angulo_superior"]) for n, c in zip(cb.NOMBRES_CR[2:], cr[2:])]
+    # La BISAGRA no entra aqui, y no por olvido: su nudillo vive en el vertice
+    # del techo y asoma por delante del acrilico A PROPOSITO -- si no asomara,
+    # la tapa no podria girar. Es el unico cuerpo del case que sale del contorno
+    # por diseno. Que no se pise con el larguero de remate lo vigila solapes()
+    # en clearance_budget, donde la bisagra si esta.
+    railes = ([(n, c, -p[a]) for n, c, a in zip(cb.NOMBRES_CR, cr, cb.ANGS_CR)]
               + [(n, c, 0.0) for n, c in zip(cb.NOMBRES_CE, ce)])
     # Varios largueros van A RAS del contorno por diseno (los de la cara
     # trasera tienen su centro en prof_inferior - r, o sea que su cara de atras

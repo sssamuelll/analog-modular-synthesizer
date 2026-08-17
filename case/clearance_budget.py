@@ -103,40 +103,60 @@ def _vertices(p: dict[str, float]) -> list[tuple[float, float]]:
 
 def _centros_rail(p: dict[str, float],
                    P: list[tuple[float, float]]) -> list[tuple[float, float]]:
-    """4 centros de rail de panel [cara_inf x2, cara_sup x2], misma formula
-    que centros_rail() en sam17_case.scad."""
-    # cada cara lleva SU alto y SUS DOS insets: los pisos ya no miden lo mismo
-    # ni se rematan igual. La cara inferior remata contra el valle, donde el
-    # pico solo se come 2.60 mm de acrilico frente a los 15 de la punta del
-    # frente. Cada punta lleva SU inset, gobernado por la curva que la remata
-    # (ver la tabla de los cuatro insets en params.scad).
-    caras = [(P[1], P[2], p["alto_cara_inf"],
-              p["inset_inf_frente"], p["inset_inf_valle"]),
-             (P[3], P[4], p["alto_cara_sup"],
-              p["inset_sup_valle"], p["inset_sup_remate"])]
+    """3 centros de rail de panel [inf frente, inf valle, sup valle], misma
+    formula que centros_rail() en sam17_case.scad.
+
+    SON TRES, NO CUATRO: la punta de arriba de la cara superior no lleva 2020
+    sino la BISAGRA (ver _eje_visagra), asi que el costado tampoco lleva
+    taladro ahi."""
+    # cada punta lleva SU inset, gobernado por la curva que la remata (ver la
+    # tabla de insets en params.scad)
+    caras = [(P[1], P[2], (p["inset_inf_frente"],
+                           p["alto_cara_inf"] - p["inset_inf_valle"])),
+             (P[3], P[4], (p["inset_sup_valle"],))]
     off = p["t_panel"] + p["rail"] / 2
     out = []
-    for c0, c1, largo, ins_a, ins_b in caras:
+    for c0, c1, esses in caras:
         dx, dy = c1[0] - c0[0], c1[1] - c0[1]
         dl = math.hypot(dx, dy)
         dx, dy = dx / dl, dy / dl
         nx, ny = dy, -dx
-        for s in (ins_a, largo - ins_b):
+        for s in esses:
             out.append((c0[0] + dx * s + nx * off, c0[1] + dy * s + ny * off))
     return out
+
+
+def _eje_visagra(p: dict[str, float],
+                  P: list[tuple[float, float]]) -> tuple[float, float]:
+    """Eje de giro de la tapa superior, misma formula que eje_visagra() en
+    sam17_case.scad: sobre la cara superior, a inset_sup_remate de su punta --
+    o sea en la fila de taladros de arriba del panel -- y retirado t_panel +
+    d_visagra/2 para que el nudillo quede pegado al dorso del panel."""
+    dx, dy = P[4][0] - P[3][0], P[4][1] - P[3][1]
+    dl = math.hypot(dx, dy)
+    dx, dy = dx / dl, dy / dl
+    s = p["alto_cara_sup"] - p["inset_sup_remate"]
+    off = p["t_panel"] + p["d_visagra"] / 2
+    return (P[3][0] + dx * s + dy * off, P[3][1] + dy * s - dx * off)
 
 
 def _y_remate(p: dict[str, float], P: list[tuple[float, float]],
               cr: list[tuple[float, float]], r: float) -> float:
     """Y del larguero de remate, misma formula que y_rs en sam17_case.scad:
-    el mas bajo de tres techos -- el vertice, el plano del panel de arriba, y
-    el canto inferior del rail de panel girado de esa cara (el que manda)."""
+    el mas bajo de tres techos -- el techo YA REDONDEADO, el plano del panel de
+    arriba, y la bisagra (la que manda)."""
     a2 = math.radians(p["angulo_superior"])
     por_cara = P[3][1] + (math.cos(a2) * (fondo(p) - r - P[3][0])
                           - (r + p["t_panel"])) / math.sin(a2)
-    he_cs = r * (abs(math.cos(a2)) + abs(math.sin(a2)))
-    por_rail = cr[3][1] - he_cs - p["holgura_rail"] - r
-    return min(P[5][1] - r, por_cara, por_rail)
+    # el larguero vive pegado al plano trasero (x = fondo - r), o sea que su
+    # esquina de atras cae donde el arco de la esquina trasera de arriba ya bajo
+    # su tangente (marco_remate/2). P[5].y - r a secas lo dejaba FUERA.
+    por_techo = P[5][1] - r - p["marco_remate"] / 2
+    # antes este techo lo ponia el rail de panel del remate; ese rail ya no
+    # existe y su sitio lo ocupa el nudillo de la bisagra
+    por_visagra = (_eje_visagra(p, P)[1] - p["d_visagra"] / 2
+                   - p["holgura_rail"] - r)
+    return min(por_techo, por_cara, por_visagra)
 
 
 def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
@@ -190,8 +210,10 @@ def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
 CARAS = {"inf": ("inset_inf_frente", "inset_inf_valle"),
          "sup": ("inset_sup_valle", "inset_sup_remate")}
 
-NOMBRES_CR = ["cara_inf frente", "cara_inf valle",
-              "cara_sup valle", "cara_sup remate"]
+# 3 railes de panel, no 4: la punta de arriba de la cara superior la remata la
+# BISAGRA, que no es un 2020 ni lleva taladro en el costado.
+NOMBRES_CR = ["cara_inf frente", "cara_inf valle", "cara_sup valle"]
+ANGS_CR = ["angulo_inferior", "angulo_inferior", "angulo_superior"]
 NOMBRES_CE = ["base delantera", "base trasera", "entrepiso delantero",
               "entrepiso trasero", "remate superior", "repisa"]
 
@@ -209,10 +231,11 @@ Fila = tuple
 
 def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
                                                   list[Fila]]:
-    """AABB de los 11 railes y de las 5 planchas/pieles, misma formula que
-    rails()/planchas_acrilico() en sam17_case.scad, mas las 10 filas de
-    agujeros de las placas (las mismas expresiones que dimensionan la caja,
-    para que un cambio de placa arrastre su fila y no se puedan separar)."""
+    """AABB de los railes (3 de panel + 6 de esqueleto), de la bisagra y de las
+    planchas/pieles, misma formula que rails()/planchas_acrilico() en
+    sam17_case.scad, mas las filas de agujeros de las placas (las mismas
+    expresiones que dimensionan la caja, para que un cambio de placa arrastre
+    su fila y no se puedan separar)."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
     ce = _centros_esqueleto(p, P, cr)
@@ -220,8 +243,7 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     t_acr, gap = p["t_acrilico"], p["gap_sombra"]
     ancho_total = p["ancho_total"]
 
-    angs = [p["angulo_inferior"], p["angulo_inferior"],
-            p["angulo_superior"], p["angulo_superior"]]
+    angs = [p[k] for k in ANGS_CR]
     railes: list[Caja] = []
     for nm, c, ang in zip(NOMBRES_CR, cr, angs):
         # R3: el rail gira -ang sobre su eje largo para calzar a ras de la
@@ -233,6 +255,13 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
                             + abs(math.sin(math.radians(ang))))
         railes.append((nm, c[0] - he, c[0] + he, c[1] - he, c[1] + he,
                        t_cheek, ancho_total - t_cheek))
+    # la bisagra entra en la misma bolsa que los railes: es un cuerpo continuo
+    # de costado a costado y lo que interesa de ella aqui es que no se pise con
+    # el larguero de remate ni con la piel superior.
+    ev = _eje_visagra(p, P)
+    rv = p["d_visagra"] / 2
+    railes.append(("bisagra", ev[0] - rv, ev[0] + rv, ev[1] - rv, ev[1] + rv,
+                   t_cheek, ancho_total - t_cheek))
     for nm, c in zip(NOMBRES_CE, ce):
         railes.append((nm, c[0] - rail / 2, c[0] + rail / 2,
                        c[1] - rail / 2, c[1] + rail / 2,
@@ -592,11 +621,13 @@ def main() -> int:
               f"sep_railes_{piso}={sep} no sale del PANEL 3U "
               f"(alto_panel_{piso} - 2*inset_er = {calc}): la cara y la PCB "
               f"discrepan y el modulo no atornilla")
-        # el panel tiene que CABER en su cara, con bisel a los dos lados
+        # el panel tiene que CABER en su cara. Bisel CERO es legal y es lo que
+        # pasa arriba a proposito: el panel remata a ras del vertice porque de
+        # ahi cuelga la bisagra. Negativo no: seria panel volando sobre el aire.
         for nombre in (ins_a, ins_b):
-            exige(p[nombre] - p["inset_er"] > 0,
+            exige(p[nombre] - p["inset_er"] >= -1e-9,
                   f"el panel 3U desborda su cara por {nombre}: bisel "
-                  f"{p[nombre] - p['inset_er']:.1f} mm (ha de ser > 0)")
+                  f"{p[nombre] - p['inset_er']:.1f} mm (no puede ser negativo)")
     # EUROrack en la primera fila. La cota que manda NO es el alto del panel
     # (128.5 mm) sino la SEPARACION ENTRE RIELES: "ER Screw distance vertical
     # = 122,50 mm" (Doepfer; los taladros van a 3.0 mm de cada canto del panel

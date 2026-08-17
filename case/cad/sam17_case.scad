@@ -48,17 +48,34 @@ function pts_perfil() =
 // params.scad): la punta redondeada del frente vacia 15 mm de cara y el pico
 // del valle solo 2.6, asi que exigir el mismo inset en los dos extremos
 // regalaria 12 mm de altura de piso sin comprar nada.
+//
+// SON TRES, NO CUATRO. La punta de arriba de la cara superior no lleva 2020:
+// lleva la BISAGRA (ver eje_visagra()). Por eso el costado tampoco lleva
+// taladro ahi -- costado_2d() perfora esta lista, y la bisagra no cuelga del
+// acrilico sino del larguero de remate.
 function centros_rail() =
     let (P = pts_perfil(),
-         // cada cara lleva SU alto y SUS insets: los dos pisos ya no miden
-         // lo mismo ni se rematan igual
-         caras = [[P[1], P[2], alto_cara_inf, inset_inf_frente, inset_inf_valle],
-                  [P[3], P[4], alto_cara_sup, inset_sup_valle, inset_sup_remate]],
-         off = t_panel + rail/2)
-    [for (c = caras, s = [c[3], c[2] - c[4]])
+         off = t_panel + rail/2,
+         // [origen, fin, los s sobre la cara que llevan 2020]
+         caras = [[P[1], P[2], [inset_inf_frente,
+                                alto_cara_inf - inset_inf_valle]],
+                  [P[3], P[4], [inset_sup_valle]]])
+    [for (c = caras, s = c[2])
         let (d = (c[1]-c[0])/norm(c[1]-c[0]),      // unitario de la cara
              n = [d.y, -d.x])                       // normal hacia dentro
         c[0] + d*s + n*off];
+
+// Eje de giro de la tapa superior. Va sobre la cara, a inset_sup_remate de su
+// punta -- o sea EXACTAMENTE en la fila de taladros de arriba del panel, que
+// EUROrack pone a 3.0 mm del canto --, y retirado hacia dentro lo justo para
+// que el nudillo quede pegado al dorso del panel (t_panel + d_visagra/2).
+// El panel remata por tanto a ras del vertice, que es lo que Samuel pidio para
+// que la tapa pueda levantarse sin acrilico por encima estorbando.
+function eje_visagra() =
+    let (P = pts_perfil(),
+         d = (P[4]-P[3])/norm(P[4]-P[3]),
+         n = [d.y, -d.x])
+    P[3] + d*(alto_cara_sup - inset_sup_remate) + n*(t_panel + d_visagra/2);
 
 // largueros del esqueleto (2020) que no son railes de panel:
 // base delantera, base trasera, entrepiso delantero, entrepiso trasero,
@@ -101,18 +118,21 @@ function centros_esqueleto() =
          // Remate superior. Su Y NO puede ser P[5].y - r: al acortar el marco
          // de arriba para que la esquina se lea como PUNTA, el rincon se
          // cierra y ahi ya no cabe. Tres techos, y manda el mas bajo:
-         //   1. el vertice: no puede pasar de P[5].y - r
+         //   1. el TECHO YA REDONDEADO. La esquina trasera de arriba lleva
+         //      tangente marco_remate/2, y como este larguero vive pegado al
+         //      plano trasero (x = fondo - r), su esquina de atras cae justo
+         //      donde el arco ya bajo esa tangente. P[5].y - r a secas lo
+         //      dejaba FUERA del acrilico.
          //   2. el plano del panel de arriba: centro a r + t_panel de
          //      distancia PERPENDICULAR, con la normal interior (cos, -sen)
-         //   3. el RAIL DE PANEL de esa cara, que es el que de verdad manda:
-         //      va girado, asi que baja hasta cr[3].y - he_cs, y el remate
-         //      tiene que quedar holgura_rail por DEBAJO de ese canto. Sin
-         //      este tercer techo los dos railes se solapaban en X (6.4 mm a
-         //      prof=415) por mucho que se bajara el remate.
-         y_rs = min(P[5].y - r,
+         //   3. la BISAGRA, que es la que de verdad manda. Antes este techo
+         //      lo ponia el rail de panel del remate; ese rail ya no existe
+         //      (lo sustituyo el eje de giro) y su sitio lo ocupa el nudillo,
+         //      del que el remate tiene que quedar holgura_rail por debajo.
+         y_rs = min(P[5].y - r - marco_remate/2,
                     P[3].y + (cos(angulo_superior)*(fondo() - r - P[3].x)
                               - (r + t_panel)) / sin(angulo_superior),
-                    cr[3].y - he_cs - holgura_rail - r))
+                    eje_visagra().y - d_visagra/2 - holgura_rail - r))
     // Los dos largueros de la base viven en las esquinas de abajo, que son
     // justo las que el redondeo VACIA. No basta plantarlos a ras: hay que
     // retirarlos hasta donde acaba la curva.
@@ -391,9 +411,9 @@ module costados() {
 // rotate([0,0,-angulo]) alinea el lado +Y local del rail con el vector de
 // cara d=(sin,cos) — verificado con la matriz Rz(-angulo) a mano.
 module rails() {
-    cr = centros_rail();                              // [cara_inf x2, cara_sup x2]
-    angs = [angulo_inferior, angulo_inferior, angulo_superior, angulo_superior];
-    for (i = [0 : 3])
+    cr = centros_rail();                    // [inf frente, inf valle, sup valle]
+    angs = [angulo_inferior, angulo_inferior, angulo_superior];
+    for (i = [0 : len(cr) - 1])
         translate([cr[i].x, cr[i].y, ancho_total/2])
             rotate([0, 0, -angs[i]])
                 rotate([90, 0, 0])
@@ -402,6 +422,17 @@ module rails() {
         translate([c.x, c.y, ancho_total/2])
             rotate([90, 0, 0])
                 rail_2020(ancho_util);
+    visagra();
+}
+
+// Bisagra continua de la tapa superior: el nudillo corre por el vertice del
+// techo, de costado a costado. Aqui va solo el nudillo -- las palas (una al
+// dorso del panel, otra al larguero de remate) son herraje, no geometria de
+// corte, y se cierran al comprar la pieza.
+module visagra() {
+    e = eje_visagra();
+    // el cilindro nace en +Z, que aqui ya es el ancho del case: sin girar.
+    translate([e.x, e.y, t_cheek]) cylinder(h = ancho_util, d = d_visagra);
 }
 
 // --- planchas del cuerpo colocadas en 3D --------------------------------
@@ -546,6 +577,8 @@ module bom() {
              " de ", au, " mm"));
     echo(str("BOM: tornillo M5 boton x", 2*(len(centros_rail()) + len(centros_esqueleto()))));
     echo("BOM: standoff M4 x8 (las dos pieles, voladas) + tornillo M4 boton x16 + arandela x16");
+    echo(str("BOM: bisagra continua x1 de ", au, " mm, nudillo d=", d_visagra,
+             " (tapa superior; palas al dorso del panel y al larguero de remate)"));
     echo(str("BOM: patica metalica torneada x4, d=", d_pie, " x ", alto_pie, " mm"));
     echo(str("BOM: planchas t=", t_acrilico, ": base, entrepiso, ",
              "piel inf, piel sup; costados t=", t_cheek, " x2"));
