@@ -882,10 +882,80 @@ de U6 y las dos vías extra de U5 dejarían de ser una curiosidad de layout
 y pasarían a ser sospechosas de un desbalance real que el ballast de 20 mΩ
 no está absorbiendo del todo.
 
-## §4 Medidas de la mula
+## §4 Protocolo de medidas de la mula
 
-(vacío; Task 10 mete el protocolo)
+**Orden a seguir tras bring-up exitoso §5:** tierra y continuidad verificadas,
+placa sin carga a setpoint nominal (TP7 = +13.1 ± 0.3 V, TP8 = −12.9 ± 0.3 V).
+Cada medida cierra un número de **diseño congelado** — los resultados informan
+qué setpoints de RV2/RV3 se escriben en la pareja de LM2941/LM2991 que queda
+en producción. Medir con red a la tensión real del día.
 
-## §5 Bring-up
+### Tabla de medidas
 
-(vacío; Task 10)
+| # | Medida | Cómo | Resultado |
+|---|---|---|---|
+| 1 | Valle `VRAW+` y `VRAW−` (piso del rizado, no promedio) | Con carga dummy 18 Ω / 25 W por riel (12 V / 0.65 A) en **frío** y tras **30 min en caliente**. Medir con osciloscopio DC acoplado, 20 MHz BW limitado, punta en J2. Anotar la tensión de red en el momento. | (vacío) |
+| 2 | Pico nominal en vacío (sin dummy) | Con red a la tensión medida en paso 1. Valor esperado: ~14 V; documentar para cierre de margen §1.5. | (vacío) |
+| 3 | Rizado pico-pico real del riel −12 V de la v1 | Regresión conocida del LM2990 (§3.1). Medir con osciloscopio 20 MHz BW, carga dummy activada, régimen caliente. Documentar para hoja de datos de comparativa v1/v2. | (vacío) |
+| 4 | Térmica en régimen: T_case y disipador | IR cámara termográfica u 8 termopares (U1/U2, U4-U7, disipadores FK sk129/38.1). Régimen: dummy 18 Ω × 30 min, después medir T cada 5 min hasta T_case estable (frontera). Anotar T_ambiente. Expectativa: < 70 °C en el TO-220 (§10.4.1 del datasheet del LM2941); cerámicos DFN < 90 °C. | (vacío) |
+
+### Fórmula de cierre de márgenes
+
+Por cada riel, después de **todos los pasos anteriores**, calcular:
+
+```
+margen = valle_medido − dropout_max(riel) − setpoint_nominal
+```
+
+- `valle_medido`: valor pico inferior de VRAW+/VRAW− del paso 1, en frío (es el
+  escenario conservador).
+- `dropout_max(riel)`: del datasheet respectivo, MAX garantizado sobre temperatura
+  (LM2941 @ 650 mA: 1.0 V; LM2991 @ 650 mA: 1.0 V — ver §1.1/§1.2).
+- `setpoint_nominal`: TP7 medido (+13.1 V) o TP8 medido (−12.9 V) tras bring-up §5
+  con carga dummy.
+
+**Regla de ajuste**: si margen < 0.2 V, bajar el setpoint girando RV2 (positivo) o
+RV3 (negativo) hasta recuperar margen ≥ 0.2 V. **Rango útil del trimmer** (suelo
+bajable garantizado por headroom del LT3045/LT3094, §1.5.1): **12.46 V** (positivo) /
+**−12.42 V** (negativo). No bajar más allá — el margen del LT vs el dropout de la
+cascada se agota.
+
+## §5 Bring-up escalonado
+
+Orden recomendado al recibir la PCB montada (antes de conectar módulos o carga real):
+
+1. **Continuidad de tierra (equipo desenchufado)**. Óhmetro entre la clavija de tierra
+   del enchufe, cada panel, el espárrago y el faston de J5. Miliohmios o decenas de
+   miliohmios (§13.4). Si falla, no se enchufa.
+
+2. **Inspección visual**. Polaridad de electrolíticos, orientación de reguladores,
+   cortos en el silk. **Punto crítico**: esquina `+` moldeada en BR1 contra cruz `+`
+   del silk (pad 1); girado 180° cabe igual y cruza el puente en el primer semiciclo.
+   Mica y casquillo aislante en U2 (LM2991), tab NO está a masa (§1.2).
+
+3. **Solo trafo sin placa**, sin carga. Medir ±17 V entre fase y neutro tras BR1.
+   Desenchufar. Insertar reguladores THT en sus zócalos.
+
+4. **Placa sin carga**: enchufe con corriente — TP7 = +13.1 ± 0.3 V (prerreg +12V),
+   TP8 = −12.9 ± 0.3 V (prerreg −12V). Los test points ya están serigrafiados con su
+   señal en la placa (TP7=+13V1, TP8=−12V9). Si alguno está fuera de rango, no
+   conectar carga; revisar setpoints RV2/RV3 (giro manual, trimmer cerrado, ~10
+   vueltas) hasta meterlo en banda.
+
+5. **Conectar dummy 18 Ω / 25 W por riel** a J2 (medir con multímetro para verificar
+   ~12 V/0.6 A en ambos rieles). Anotar que esta es la medida con carga nominal de
+   diseño (§4, paso 1).
+
+6. **Medir rizado pico-pico** en cada riel con osciloscopio (DC coupling, 20 MHz BW
+   limitado, punta en J2 — misma condición que §4 filas 1 y 3). Criterio mínimo
+   (spec §10.4): rizado bajo el suelo medible del osciloscopio con esa BW
+   (~sub-mV, ya 10× mejor que v1) — no es un umbral numérico fijo tipo "< X mVpp".
+   Criterio pleno de aceptación: medir con LNA delante (equipo aparte, issue #58 —
+   «LNA de medida para el nivel pleno del GOAT»).
+
+7. **Termograma o termopar** en U1/U2 (TO-220, disipadores de 38 mm) y en U4-U7 (DFN)
+   tras 30 min a plena carga (dummy activada). Expectativa: < 70 °C en TO-220,
+   < 90 °C en DFN. Si T_case de U4 vs U5 o U6 vs U7 difieren > 5 °C, documentar en §3.2.
+
+8. **Llenar la tabla de §4** con los números medidos. Calcular margen de cada riel y
+   aceptar (margen ≥ 0.2 V) o reajustar setpoints si es necesario.
