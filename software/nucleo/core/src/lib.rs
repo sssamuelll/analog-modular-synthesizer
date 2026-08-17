@@ -19,6 +19,7 @@ pub mod pinout;
 pub mod preset;
 pub mod protocolo;
 pub mod rejilla;
+pub mod reloj;
 pub mod retencion;
 pub mod servidor;
 pub mod sysex;
