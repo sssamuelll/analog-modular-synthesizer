@@ -44,5 +44,5 @@ _probe.*
 *.rpt
 
 # Zips de fabricacion (regenerables desde fab/)
-hardware/*/fab/*-jlcpcb.zip
+hardware/**/fab/*-jlcpcb.zip
 .claude/worktrees/

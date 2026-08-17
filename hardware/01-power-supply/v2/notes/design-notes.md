@@ -553,6 +553,19 @@ por la regla del Step 2. No aplica el plan B de re-plan del brief.
 | 10 µF X7R 50 V 1206 (Samsung CL31B106KBHNNNE, ±10 %) — ver nota de voltaje | **C89632** | 385.340 | Extended | $0.43 / $0.28 (500+) | 2026-08-16 |
 | SMAJ15A TVS (Littelfuse) | **C148216** | 10.030 | Basic | $0.139 / $0.076 (2500+) | 2026-08-16 |
 | SS14 Schottky SMA (MDD/Microdiode) | **C2480** | 1.081.100 | Basic | $0.0185 / $0.0085 (50k+) | 2026-08-16 |
+| R_ILIM 374 Ω 1 % 0603 (UNI-ROYAL 0603WAF3740T5E) — R11/R12, LT3045 | **C23149** | 9.800 | Extended | $0.0027 / $0.0021 | 2026-08-17 |
+| R_ILIM 9.31 kΩ 1 % 0603 (UNI-ROYAL 0603WAF9311T5E) — R13/R14, LT3094 | **C23126** | 2.200 | Extended | $0.0014 / $0.0012 | 2026-08-17 |
+
+**Nota — R_ILIM (fix task review, 2026-08-17)**: R11/R12 (374 Ω) y R13/R14
+(9.31 kΩ), calculados en §1.3/§1.4, **nunca pasaron por esta puerta de
+stock** — el Step 4 original (2026-08-16) cotizó R_SET, shunts, C_SET,
+entrada/salida y protecciones, pero se saltó los R_ILIM. El implementador de
+Task 9 rellenó `bom.csv` con C17590/C25709 sin verificarlos contra
+`lcsc.com`; el task review los detectó como **inventados** (C17590 es un
+270 Ω 0805, C25709 un 75 kΩ 1210 — ninguno de los dos es la pieza real) y
+este fix los reemplaza por códigos verificados en vivo en el navegador
+contra `lcsc.com/product-detail/`: value + tolerancia + package confirmados
+en pantalla para ambos, con stock real (9.800 u. y 2.200 u.).
 
 **Nota — R_SET (120 kΩ, valor de diseño correcto)**: el objetivo es
 **12.000 V = 100 µA × 120 kΩ** — el brief pide 120 kΩ y ese es el valor de
@@ -830,6 +843,44 @@ con uno que sobrevive (C11, etapa U3) porque ambos tienen el mismo valor de
 0.1 µF — igual la fila `"D1,D2,D5",1N4001,...` mezcla dos que mueren (D1,
 D2) con uno que sobrevive (D5, etapa U3). El Step 2 de Task 4 separa estas
 dos filas: hereda solo C11 y D5, con cantidad 1 cada una.
+
+### §3.2 Asimetría térmica intra-pareja de las granjas EP (review fase C, F5)
+
+**Hallazgo del review**: las granjas de vías térmicas del EP de U4-U7
+(ballast LT3045/LT3094, pareja +12V y pareja −12V) no quedaron simétricas
+entre los dos chips de cada pareja — restricciones reales de routing
+(clearance hole-to-hole, pines vecinos, corredores ya ocupados por otras
+redes) forzaron un reparto desigual:
+
+- **U4**: 4 vías (rejilla 2×2, paso 0.6 mm).
+- **U5**: 6 vías (rejilla 2×3, paso 0.6×0.7 mm — la huella del EP es
+  1.65×2.38 mm, más alta que ancha, y U5 sí tenía sitio limpio para la
+  tercera fila).
+- **U6**: 4 vías de la granja nueva (2×2) **+ 1 vía vieja de 0.5 mm de
+  taladro** que ya existía como transición F/B del tronco `/-12V9` en
+  (120, 169) y hace de ancla — 5 puntos de contacto térmico en total.
+- **U7**: 4 vías (rejilla 2×2) — sin vía extra: el stub F.Cu del pin 3 al
+  EP se alargó 0.5 mm hasta aterrizar exacto en una de las cuatro vías de
+  su propia granja, que hace de ancla sin necesitar una vía adicional.
+
+**Por qué se acepta tal cual (no se re-rutea)**: el reparto de corriente
+entre los dos chips de una misma pareja lo domina el ballast de 20 mΩ en
+serie con cada uno (R15/R16 para +12V, R17/R18 para −12V) — es una
+resistencia de balance deliberada, mucho mayor que cualquier diferencia de
+resistencia térmica entre 4 y 6 vías de 0.3 mm. El efecto real de la
+asimetría es una diferencia de temperatura de juntura leve entre los dos
+chips de una pareja (U4 más caliente que U5, o U6 más caliente que U7 —
+menos vías = más resistencia térmica del EP a la plancha de cobre), no un
+desbalance de corriente. Con ~0.33 W por chip (spec sec.6.1) el margen
+térmico de un DFN-10/12 sobra incluso con la granja más pobre (4 vías).
+
+**Acción si la mula lo desmiente**: si las medidas térmicas (§4, con
+cámara termográfica o termopar sobre cada chip) muestran **más de 5 °C**
+de diferencia entre los dos chips de una misma pareja (U4 vs U5, o U6 vs
+U7) en operación sostenida a plena carga, revisar aquí — la vía adicional
+de U6 y las dos vías extra de U5 dejarían de ser una curiosidad de layout
+y pasarían a ser sospechosas de un desbalance real que el ballast de 20 mΩ
+no está absorbiendo del todo.
 
 ## §4 Medidas de la mula
 

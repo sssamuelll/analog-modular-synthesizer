@@ -856,8 +856,12 @@ PARTS += [
 FOOTPRINT.update({
     "U4": "Package_DFN_QFN:DFN-10-1EP_3x3mm_P0.5mm_EP1.65x2.38mm",
     "U5": "Package_DFN_QFN:DFN-10-1EP_3x3mm_P0.5mm_EP1.65x2.38mm",
-    "U6": "Package_DFN_QFN:DFN-12-1EP_3x3mm_P0.45mm_EP1.65x2.38mm_ThermalVias",
-    "U7": "Package_DFN_QFN:DFN-12-1EP_3x3mm_P0.45mm_EP1.65x2.38mm_ThermalVias",
+    # sin _ThermalVias (Tarea 8 ronda 1, orquestador): esa variante trae
+    # taladro 0.2mm, fuera de la capability JLC 2 capas (min 0.3mm) y de
+    # m_MinThroughDrill de la placa. Granja de vias 0.3mm manual en el EP,
+    # igual que U4/U5, ver build_pcb.py.
+    "U6": "Package_DFN_QFN:DFN-12-1EP_3x3mm_P0.45mm_EP1.65x2.38mm",
+    "U7": "Package_DFN_QFN:DFN-12-1EP_3x3mm_P0.45mm_EP1.65x2.38mm",
     "R9": "Resistor_SMD:R_0805_2012Metric", "R10": "Resistor_SMD:R_0805_2012Metric",
     "R11": "Resistor_SMD:R_0603_1608Metric", "R12": "Resistor_SMD:R_0603_1608Metric",
     "R13": "Resistor_SMD:R_0603_1608Metric", "R14": "Resistor_SMD:R_0603_1608Metric",
