@@ -146,8 +146,13 @@ def _y_remate(p: dict[str, float], P: list[tuple[float, float]],
     el mas bajo de tres techos -- el techo YA REDONDEADO, el plano del panel de
     arriba, y la bisagra (la que manda)."""
     a2 = math.radians(p["angulo_superior"])
+    # he_cs y NO r: lo que se acerca al plano del panel es la ESQUINA del
+    # larguero, que en diagonal alcanza 14.14 en vez de 10. Con marco_remate=22
+    # este techo nunca mandaba y el error dormia; con el marco en 8 manda, y con
+    # la version vieja la esquina asomaba 2.54 mm por delante del panel.
+    he_cs = r * (abs(math.cos(a2)) + abs(math.sin(a2)))
     por_cara = P[3][1] + (math.cos(a2) * (fondo(p) - r - P[3][0])
-                          - (r + p["t_panel"])) / math.sin(a2)
+                          - (he_cs + p["t_panel"])) / math.sin(a2)
     # el larguero vive pegado al plano trasero (x = fondo - r), o sea que su
     # esquina de atras cae donde el arco de la esquina trasera de arriba ya bajo
     # su tangente (marco_remate/2). P[5].y - r a secas lo dejaba FUERA.

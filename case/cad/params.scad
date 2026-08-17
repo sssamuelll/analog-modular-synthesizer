@@ -124,16 +124,24 @@ alto_frontal    = 28;
 // Va al reves de lo obvio a proposito. El fondo era el parametro y el marco
 // salia de la resta, y eso se rompio dos veces: cada vez que se movia un
 // angulo o un alto de panel, el marco cambiaba solo y con el la esquina de
-// arriba -- que es EXACTAMENTE la que Samuel dijo que le gustaba como estaba.
-// A 6.7 mm de marco el radio en punta se recorta a 3.3 y la esquina queda
-// casi viva; a 57 vuelve la meseta. Con el marco fijo, la esquina se
-// conserva aunque se muevan las proporciones, que es lo que se quiere.
+// arriba. Con el marco fijo, esa esquina se conserva aunque se muevan las
+// proporciones, que es lo que se quiere.
 //
-// 22 mm da la punta redondeada que se aprobo (era 21.7 con el fondo en 345 y
-// los angulos 35/45). Por delante nunca hay nada que recortar: el riel de
-// panel de la cara de abajo llega a x=11.1, y 11 mm es justo el material
-// minimo que quiere un M5 al canto.
-marco_remate    = 22;
+// FUE 22, que era la meseta que daba la punta redondeada gorda de arriba. Pero
+// desde que el panel remata a ras del vertice (la bisagra), esa meseta ya no
+// es punta: es solo el canto que asoma por encima del panel. Samuel lo pidio
+// del GROSOR DEL ACRILICO, o sea t_cheek = 8 -- el borde queda de seccion
+// cuadrada, tan ancho como grueso es el costado que lo forma.
+//
+// No es un valor libre: si cambia t_cheek hay que cambiar este a mano (aqui no
+// se pueden escribir expresiones, ver la cabecera del fichero). Y baja el
+// fondo del case 14 mm de golpe, porque el fondo se deriva de el.
+//
+// Efecto secundario buscado: con el marco en 8 la esquina de arriba pasa a
+// tangente 4 mm en vez de 11, o sea que las dos puntas del techo se vuelven
+// casi vivas. Eso ya no importa como antes -- lo que se ve arriba ahora es el
+// canto del panel, no un pico de acrilico.
+marco_remate    = 8;
 // Entrepiso: la franja horizontal entre el tope de la cara inferior y la base
 // de la superior -- el "valle del medio" de la silueta. Ahi va la bandeja
 // acrilica intermedia. Fue 25 (minimo tecnico de R7: por debajo, los dos

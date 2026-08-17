@@ -123,15 +123,20 @@ function centros_esqueleto() =
          //      plano trasero (x = fondo - r), su esquina de atras cae justo
          //      donde el arco ya bajo esa tangente. P[5].y - r a secas lo
          //      dejaba FUERA del acrilico.
-         //   2. el plano del panel de arriba: centro a r + t_panel de
-         //      distancia PERPENDICULAR, con la normal interior (cos, -sen)
+         //   2. el plano del panel de arriba, a distancia PERPENDICULAR con la
+         //      normal interior (cos, -sen). La cota es he_cs + t_panel y NO
+         //      r + t_panel: lo que se acerca al panel es la ESQUINA del
+         //      larguero, no su centro, y en diagonal alcanza he_cs = 14.14 en
+         //      vez de 10. Con el marco en 22 este techo nunca mandaba y el
+         //      error dormia; con el marco en 8 manda, y con la version vieja
+         //      la esquina asomaba 2.54 mm por delante del panel.
          //   3. la BISAGRA, que es la que de verdad manda. Antes este techo
          //      lo ponia el rail de panel del remate; ese rail ya no existe
          //      (lo sustituyo el eje de giro) y su sitio lo ocupa el nudillo,
          //      del que el remate tiene que quedar holgura_rail por debajo.
          y_rs = min(P[5].y - r - marco_remate/2,
                     P[3].y + (cos(angulo_superior)*(fondo() - r - P[3].x)
-                              - (r + t_panel)) / sin(angulo_superior),
+                              - (he_cs + t_panel)) / sin(angulo_superior),
                     eje_visagra().y - d_visagra/2 - holgura_rail - r))
     // Los dos largueros de la base viven en las esquinas de abajo, que son
     // justo las que el redondeo VACIA. No basta plantarlos a ras: hay que
