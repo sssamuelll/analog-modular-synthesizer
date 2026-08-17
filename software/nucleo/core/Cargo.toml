@@ -7,3 +7,6 @@ description = "El contrato del SAM17: modelo de parametros, protocolo y los moto
 [dependencies]
 heapless = "0.8"
 libm = "0.2"
+# Decodificado de MIDI: no_std, sin asignaciones y realtime-safe. `std` es su
+# unica feature y va por defecto, asi que se apaga.
+wmidi = { version = "4.0", default-features = false }

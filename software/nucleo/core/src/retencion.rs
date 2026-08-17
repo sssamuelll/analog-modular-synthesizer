@@ -101,6 +101,7 @@ mod tests {
         solo_lectura: false,
         medida: false,
         confirmacion_fisica: true,
+        acepta_modulacion: false,
         min: 0,
         max: 1,
         def: 0,

@@ -1,7 +1,7 @@
 # El instrumento en tiempo musical — reloj, cuantización y rampas
 
 **Fecha:** 2026-08-17
-**Estado:** aprobado en brainstorming, pendiente de plan
+**Estado:** implementada — `software/nucleo/core` (verde), el bring-up en `fw/EN-PLACA.md`
 **Consume:** `docs/superpowers/specs/2026-08-17-nucleo-digital-design.md` (el núcleo digital, aprobado e implementado en `software/nucleo/`)
 
 ---
@@ -411,7 +411,7 @@ host, no prosa.
 | La rampa, en general | Aterriza **exactamente** en el destino, no en el 99.7 %. Y ninguna rampa saca un valor fuera del min/max del descriptor |
 | Duración cero | Es un salto que cae en la rejilla, no un `SET` disfrazado |
 | **La rejilla** | Cada valor. Y el borde exacto: disparar justo *en* el 1 tiene que caer ya, no en el siguiente — decidido y fijado en un test |
-| **Seguimiento de tempo** | Pulsos con **±2 ms de jitter inyectado**: se exige que la lectura no se mueva más de **±0.1 BPM**. Sin filtro este test cae |
+| **Seguimiento de tempo** | Pulsos con **±2 ms de jitter inyectado**, contra el techo derivado de `ERROR_TEMPO_MAX_MBPM`. *(Corregido el 2026-08-17 al implementarlo: esta fila pedía ±0.1 BPM, que era una **desviación típica** presentada como techo. El peor caso se lleva un factor de tres, y el techo correcto sale de lo que el error **cuesta** — deriva de fase mientras se rueda libre — no de lo que la ventana casualmente da.)* |
 | **Sin RESET no hay compás** | `tiene fase` en falso, y una `RAMPA` con rejilla de 1 compás **aterriza en el pulso**, no en un compás inventado |
 | Precedencia | Las cuatro fuentes presentes → gana Link. Se quita → MIDI. Y así hasta interno |
 | Cambio de fuente | Cambiar a mitad de compás surte efecto **en el borde** |

@@ -63,6 +63,34 @@ cargo build --release          # thumbv8m.main-none-eabihf, ya en .cargo/config.
 | `servidor` | **Donde el contrato contesta**: `atender(mensaje) -> respuestas` |
 | `usbmidi` | El troceo en paquetes de 4 bytes que pide USB-MIDI 1.0 |
 | `pinout` | La asignación de pines (§5.3), con sus invariantes probados |
+| `rejilla` | La cuantización global, con los valores de Ableton |
+| `reloj` | Las cuatro fuentes de sincronía, el tempo, la fase y la rueda libre |
+| `rampa` | Las rampas: interpolación por unidad, curva, y el anulado |
+| `tiempo_params` | Los descriptores del reloj y sus medidas |
+
+## El tiempo musical
+
+**La regla de oro: `SET` es inmediato, `RAMPA` aterriza.** La cuantización es
+para lanzar cosas, no para mover perillas — un barrido de perilla cuantizado se
+sentiría espantoso. Y una `RAMPA` de duración cero **es** un salto cuantizado.
+
+Tres cosas que salieron de una cuenta y no del gusto, y que conviene no tocar
+sin rehacerla:
+
+- **`VENTANA_TEMPO = 96` pulsos.** Un promedio móvil sobre intervalos
+  consecutivos no llega al objetivo ni con una constante de 21 segundos;
+  alargar la base sí. Búfer circular y resta, no un PLL.
+- **`ERROR_TEMPO_MAX_MBPM = 240`.** Sale de lo que el error *cuesta*: el tempo
+  estimado solo desvía la fase mientras se rueda libre.
+- **`VENTANA_ATERRIZAJE = 0`.** No por conservadurismo: un pulso de la rejilla
+  interna dura entre 2.08 y 31.25 ms según el tempo, siempre más que el error
+  de 1 ms del sistema. La rejilla es más gruesa que el error.
+
+Las tres las asevera [`tiempo_budget.py`](../../hardware/02-midi-cv/tiempo_budget.py).
+
+Y la interpolación **la decide el descriptor**: `Hz` va en octavas —de 100 a
+1600 Hz, a mitad de tiempo van 400, no 850— y el resto lineal. Nadie lo
+configura; sale de un campo que se puso para otra cosa.
 
 ## Los tres formatos de cable
 
@@ -103,6 +131,8 @@ Bit alto de la etiqueta puesto = va del instrumento al cliente.
 | `0x06` | `PRESET_LIST` | | `0x86` | `RESOLVED` |
 | | | | `0x87` | `HOLA` |
 | | | | `0x88` | `ERROR` |
+| `0x0E` | `RAMPA` | | `0x89` | `ANULADO` |
+| `0x0F` | `REACTIVAR` | | | |
 | `0x07` | `PRESET_LOAD` | | | |
 | `0x08` | `PRESET_SAVE` | | | |
 | `0x09` | `TUNE_START` | | | |

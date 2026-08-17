@@ -83,6 +83,19 @@ pub enum Mensaje {
     /// Que etiqueta fallo y por que. Un protocolo sin mensaje de error deja
     /// al cliente esperando en silencio, que es el peor modo de fallo posible.
     Error { etiqueta: u8, codigo: CodigoError },
+
+    // --- El tiempo musical ---
+    /// Ir a un destino en tiempo musical. Aterriza en el borde de la rejilla,
+    /// y con `duracion` cero **es un salto cuantizado** (§5.4).
+    ///
+    /// La curva es `0` lineal, positivo arranca lento, negativo cede al final.
+    /// Que la interpolacion sea logaritmica o lineal **no se dice aqui**: sale
+    /// de la unidad del descriptor (§5.2).
+    Rampa { id: ParamId, destino: Valor, duracion: u32, curva: i8 },
+    /// Tocaste algo que tenia automatizacion corriendo, y quedo anulado (§6).
+    Anulado { id: ParamId, anulado: bool },
+    /// Devolverlo. Con id, uno; **sin id, todos**.
+    Reactivar { id: Option<ParamId> },
 }
 
 pub type ErrorProto = ErrorCodec;
@@ -108,6 +121,9 @@ const T_PENDING: u8 = 0x85;
 const T_RESOLVED: u8 = 0x86;
 const T_HOLA: u8 = 0x87;
 const T_ERROR: u8 = 0x88;
+const T_RAMPA: u8 = 0x0E;
+const T_REACTIVAR: u8 = 0x0F;
+const T_ANULADO: u8 = 0x89;
 
 /// La etiqueta con la que viaja. El servidor la necesita para poder decir
 /// QUE fallo en un `ERROR`.
@@ -135,6 +151,9 @@ pub fn etiqueta_de(m: &Mensaje) -> u8 {
         Resolved { .. } => T_RESOLVED,
         Hola { .. } => T_HOLA,
         Error { .. } => T_ERROR,
+        Rampa { .. } => T_RAMPA,
+        Anulado { .. } => T_ANULADO,
+        Reactivar { .. } => T_REACTIVAR,
     }
 }
 
@@ -180,6 +199,24 @@ pub fn codificar(m: &Mensaje, buf: &mut [u8]) -> Result<usize, ErrorProto> {
             w.u8(*etiqueta)?;
             w.u8(*codigo as u8)?;
         }
+        Rampa { id, destino, duracion, curva } => {
+            w.u16(id.0)?;
+            w.i32(*destino)?;
+            w.crudo(&duracion.to_le_bytes())?;
+            w.u8(*curva as u8)?;
+        }
+        Anulado { id, anulado } => {
+            w.u16(id.0)?;
+            w.u8(*anulado as u8)?;
+        }
+        // Un byte de presencia, para distinguir "este" de "todos".
+        Reactivar { id } => match id {
+            Some(p) => {
+                w.u8(1)?;
+                w.u16(p.0)?;
+            }
+            None => w.u8(0)?,
+        },
     }
     Ok(w.n)
 }
@@ -221,6 +258,16 @@ pub fn decodificar(buf: &[u8]) -> Result<Mensaje, ErrorProto> {
             etiqueta: r.u8()?,
             codigo: CodigoError::de_byte(r.u8()?).ok_or(ErrorCodec::Invalido)?,
         },
+        T_RAMPA => {
+            let id = ParamId(r.u16()?);
+            let destino = r.i32()?;
+            let duracion = u32::from_le_bytes(r.crudo(4)?.try_into().unwrap());
+            Rampa { id, destino, duracion, curva: r.u8()? as i8 }
+        }
+        T_ANULADO => Anulado { id: ParamId(r.u16()?), anulado: r.u8()? != 0 },
+        T_REACTIVAR => Reactivar {
+            id: if r.u8()? != 0 { Some(ParamId(r.u16()?)) } else { None },
+        },
         _ => return Err(ErrorCodec::Desconocido),
     })
 }
@@ -232,7 +279,7 @@ mod tests {
     /// Una de cada variante. El `match` del codec es exhaustivo, asi que
     /// añadir un mensaje sin codificarlo rompe la compilacion — que es la
     /// guardia de verdad de §4.1.
-    fn todas() -> [Mensaje; 21] {
+    fn todas() -> [Mensaje; 24] {
         let id = ParamId::nuevo(3, 2, 17);
         [
             Mensaje::Hello { version: 1 },
@@ -256,6 +303,9 @@ mod tests {
             Mensaje::Resolved { token: 4242, confirmado: true },
             Mensaje::Hola { version: 1 },
             Mensaje::Error { etiqueta: 0x04, codigo: CodigoError::SoloLectura },
+            Mensaje::Rampa { id, destino: -5000, duracion: 384, curva: -40 },
+            Mensaje::Anulado { id, anulado: true },
+            Mensaje::Reactivar { id: None },
         ]
     }
 
@@ -270,7 +320,7 @@ mod tests {
 
     #[test]
     fn ninguna_etiqueta_se_repite() {
-        let mut vistas = heapless::Vec::<u8, 21>::new();
+        let mut vistas = heapless::Vec::<u8, 24>::new();
         for m in todas() {
             let e = etiqueta_de(&m);
             assert!(!vistas.contains(&e), "la etiqueta {e:#04x} esta duplicada");
@@ -309,6 +359,31 @@ mod tests {
     #[test]
     fn un_codigo_de_error_inventado_se_rechaza() {
         assert_eq!(decodificar(&[T_ERROR, 0x04, 99]), Err(ErrorCodec::Invalido));
+    }
+
+    #[test]
+    fn reactivar_viaja_con_y_sin_id() {
+        // Sin id son todos (§7.1). Las dos formas tienen que distinguirse.
+        let mut buf = [0u8; 64];
+        for m in [
+            Mensaje::Reactivar { id: None },
+            Mensaje::Reactivar { id: Some(ParamId::nuevo(5, 0, 1)) },
+        ] {
+            let n = codificar(&m, &mut buf).unwrap();
+            assert_eq!(decodificar(&buf[..n]).unwrap(), m);
+        }
+    }
+
+    #[test]
+    fn la_curva_negativa_sobrevive_el_viaje() {
+        // Va como u8 en el cable: si alguien se olvida del signo, una curva
+        // que cede al final se convierte en una que arranca lentisimo.
+        let mut buf = [0u8; 64];
+        for curva in [-100i8, -1, 0, 1, 100] {
+            let m = Mensaje::Rampa { id: ParamId(1), destino: 0, duracion: 1, curva };
+            let n = codificar(&m, &mut buf).unwrap();
+            assert_eq!(decodificar(&buf[..n]).unwrap(), m, "curva {curva}");
+        }
     }
 
     #[test]
