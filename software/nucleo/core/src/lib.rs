@@ -18,6 +18,7 @@ pub mod perturbacion;
 pub mod pinout;
 pub mod preset;
 pub mod protocolo;
+pub mod rampa;
 pub mod rejilla;
 pub mod reloj;
 pub mod retencion;
