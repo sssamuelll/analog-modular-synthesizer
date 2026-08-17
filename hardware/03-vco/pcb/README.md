@@ -21,6 +21,11 @@ Para regenerarlos, ver el final de este fichero.
 | `sam17-vco-drl_map.pdf` | Mapa de taladros (tamaño/símbolo por herramienta), para revisar visualmente antes de pedir |
 | `sam17-vco-pos.csv` | Posiciones SMD para ensamblaje (CSV, mm, ambas caras aunque todo cae en `top`) — **solo las 111 huellas SMD**; los conectores (`J1`, `J2`, `J_CV1-4`, `J_OUT1-4`) y los test points son through-hole/pads y se sueldan aparte |
 | `sam17-vco-bom.csv` | BOM de ensamblaje, columnas al estilo JLC (`Designator,Value,Footprint,Quantity,LCSC Part#,Notes`) — generado cruzando `../bom.csv` contra `sam17-vco-pos.csv`, 25 líneas cubriendo las 111 huellas SMD |
+| `sam17-vco-3d-top.png` | Render 3D cenital (kicad-cli pcb render, raytracing) — cómo se verá la placa montada, vista desde arriba |
+| `sam17-vco-3d-iso.png` | Render 3D isométrico — la placa en perspectiva |
+| `sam17-vco-top.svg` | Vista 2D de la cara superior (F.Cu + serigrafía + contorno) |
+| `sam17-vco-bottom.svg` | Vista 2D de la cara inferior, espejada (B.Cu + serigrafía + contorno) |
+| `sam17-vco.pdf` | Las 4 capas de cobre + serigrafía + contorno, una página por capa |
 
 ## El SSI2130 va consignado
 
