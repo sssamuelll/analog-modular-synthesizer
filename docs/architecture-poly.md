@@ -53,8 +53,14 @@ Lo que hace:
 - **4 gates** independientes.
 - **Autoafinado** de los cuatro osciladores, midiendo las cuatro a la vez
   sobre pulsos lógicos que le llegan del módulo 3 (§5).
-- **La interfaz**: pantalla pequeña con encoders — modelo y mandos sin
-  confirmar ([`architecture-compute.md`](architecture-compute.md) §9).
+- **La interfaz**: **cabeza mínima local** —4 dígitos, un encoder con pulsador y
+  LEDs de estado— más la **pantalla inalámbrica** en tu teléfono. El panel
+  entero, con sus LEDs direccionables, es la pantalla de verdad (§7). Decidido
+  el 2026-08-17.
+- **Y escucha su propia salida**, sin que le entre audio: el módulo 4 mide la
+  mezcla con un códec de 24 bits y le manda **números** por el mismo enlace. El
+  cerebro pone el estado —qué nota toca cada voz, dónde está cada filtro— y con
+  eso **atribuye** lo que se oye a la voz y al parámetro que lo causan.
 
 ## 3. Diagrama de bloques
 
@@ -86,7 +92,8 @@ Lo que hace:
      └────┬────┬────┬────┬─────────────┘     └──────────────┘
           ▼    ▼    ▼    ▼                      ▲
      ┌─────────────────────────────────┐        │ GATE 1-4
-     │  MÓDULO 4 — MIXER 4:1           │        │
+     │  MÓDULO 4 — MIXER 4:1 + OÍDOS   │        │
+     │  códec 24 bits + FFT            │        │
      └────────────┬────────────────────┘
                   ▼
              AUDIO OUT
@@ -94,6 +101,12 @@ Lo que hace:
 
 El enlace serie (§8) llega igual a los módulos 5, 6 y 7 — el diagrama solo
 dibuja la cadena de audio para no enredarse.
+
+**Y hay un lazo que el dibujo no alcanza a mostrar:** el módulo 4 mide la mezcla
+y le devuelve **números** al cerebro por ese mismo enlace serie. Con eso el
+instrumento se escucha a sí mismo sin que le entre audio al cerebro — y como el
+cerebro sabe qué nota toca cada voz y dónde está cada filtro, puede **atribuir**
+lo que oye a la voz que lo causa.
 
 El mixer se mueve **al final**. En el diseño monofónico sumaba los tres VCO
 antes del filtro; aquí no puede, porque cada voz tiene que atravesar su propio
@@ -109,6 +122,8 @@ parafónico, no polifónico** — y es exactamente la diferencia entre los dos.
 | `GATE_n` | 0 / 10 V | 4 | Activo alto |
 | `TUNE_OUT_n` | **lógico 3.3 V** | 4 | **Nuevo**: onda del VCO ya recortada, para medir su frecuencia. Digital a propósito (§5). Viaja en el mismo mazo J2 que `SERIE` (fila siguiente), no en un cable aparte |
 | `SERIE` | lógico 3.3 V | 12 hilos, IDC 2×6 | **J2**, el conector IDC del mazo digital del módulo (spec del módulo 3): SPI + CS por módulo + I²C de telemetría + `TUNE_OUT`×4 + `GNDD`×2, todos en el mismo mazo (§8). Direccionamiento cerrado: híbrido CS-por-módulo con cadena soldada en placa (issue #34) |
+| `LED` | lógico 5 V | 3 hilos, mazo propio | **Cadena WS2812B/SK6812** (+5 V, dato, `GNDD`): un LED por perilla y **por jack**, encadenando todos los paneles (§7). Mazo aparte del J2 a propósito: conmuta corriente y no tiene por qué compartir con las señales de control |
+| `CLOCK` / `RESET` | lógico 0 / ~5 V | in y out | Sync analógico del cerebro, estándar Eurorack: TTL, **24 PPQN** típico, entradas con Schmitt (~0.1 V bajo, 1-2 V alto). **El comportamiento de reset va como parámetro**, porque el formato no lo estandarizó: unos módulos miran el estado del reloj y otros esperan el flanco |
 | `+12V` / `-12V` | ±12 V | — | 650 mA por riel |
 | `+5V` | 5 V | — | Solo el módulo 2. Los módulos con DAC se hacen su lógica con regulador local desde +12 V (§8). **La pantalla NO cuelga de aquí** (§9) |
 | `GNDA` / `GNDD` | — | — | Masas partidas, se unen solo en la estrella del módulo 1 |
@@ -304,6 +319,18 @@ cientos de hercios, que sobra para un mando humano.
 (Es el mismo tipo de chip que se descartó para el autoafinado, y ahí sí encaja:
 leer perillas no tiene prisa, medir frecuencia sí.)
 
+**Y ese mux vive EN EL MÓDULO, no en el cerebro** (decidido 2026-08-17; antes
+esto quedaba ambiguo aquí). Las lecturas vuelven por el `MISO` que el J2 ya
+lleva, así que no hace falta ni un hilo nuevo.
+
+No es una preferencia de reparto: es lo que hace posible el patcheo guiado de
+abajo. Si las entradas de CV son legibles por ADC **en el propio módulo**, el
+cerebro puede mover una fuente y ver **qué entrada se movió** — y de ahí sale la
+topología del patch. Con el mux en el cerebro, esa información no existe.
+
+Por eso los jacks de CV patcheables **también** cuelgan del mux, no solo las
+perillas.
+
 ### El desfase de la perilla: soft takeover con LED
 
 Al cargar un preset la perilla queda donde estaba. Se resuelve sin mecánica:
@@ -334,6 +361,17 @@ que hace valer el VST compañero).
 
 **Direccionables (WS2812B / SK6812)**: una sola línea de datos encadena todos los
 paneles. Color por preset o por banco, y de un vistazo sabes dónde estás.
+
+**Y hay un LED por jack, no solo por perilla** — porque esa misma cadena resuelve
+el problema de fondo del modular: **un modular no tiene presets porque el patch
+es físico.** Al cargar un preset, cada pareja de jacks se enciende en un color y
+tú pones el cable que toca; varios a la vez, en colores distintos. Con el sensado
+de ocupación, el LED se pone verde cuando aciertas.
+
+Eso convierte «recall total» de mentira piadosa en función real, y **cuesta más
+LEDs en un hilo que ya iba a estar ahí**. Existe arte previo patentado
+(US 10418013 / 10770052, Lafayette College): anotado en la spec del núcleo
+digital, §6.3.
 
 Dos avisos:
 
@@ -415,9 +453,17 @@ Dos propiedades hacen la condición barata:
 - **El mismo enlace sirve a los digipots del ADSR** (AD5293, que es SPI): el
   enlace serie no es «para los DAC», es el sistema nervioso de todos los
   mandos de §7.
-- **El direccionamiento** — cadena SPI contra chip-select decodificado — se
-  decide al dibujar el módulo 3: issue #34, con los pros de cada uno ya
-  escritos.
+- **El direccionamiento ya está cerrado** (issue #34, al dibujar el módulo 3):
+  **híbrido** — un `CS` por módulo hacia afuera, y cadena soldada dentro de cada
+  placa. Un módulo desenchufado no rompe a los demás.
+- **Por el mismo enlace vuelven las lecturas.** El `MISO` del J2 no es
+  decorativo: por ahí regresan el mux de perillas, el sensado de ocupación de
+  los jacks y —en el módulo 4— las medidas del análisis de audio. **El cerebro
+  nunca recibe voltajes, ni siquiera para oír.**
+- **El mazo es en estrella, un cable por módulo.** Tenía que serlo: el J2 lleva
+  un solo `CS`. Y además hace falta porque todas las EEPROM de identidad
+  responden en 0x50, así que el cerebro lleva un mux I²C y cada rama tiene su
+  canal.
 
 ## 9. La alimentación aguanta, y con holgura
 
