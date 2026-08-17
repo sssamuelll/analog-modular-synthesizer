@@ -15,7 +15,7 @@ R_SCALE1-4,26.7k 1%,R_0805,4,nacional,VREF->EXPO SCALE ~94uA. FIJA - sin trim (s
 R_MIX*,49.9k 1%,R_0805,16,nacional,4 CV de mezcla x 4 voces (0-2.5V -> 0-50uA)
 R_IV1-4,10k 1%,R_0805,4,nacional,Transimpedancia MIX OUT (500uA -> 5V)
 R_SQ1-4,20k,R_0805,4,nacional,Pullup open-collector SQUARE OUT a +3V3
-R_LIN1-4,499k 1%,R_0805,4,nacional,VREF->LIN FREQ ~5uA. Sin ella el oscilador SE PARA (ds pag.5/9)
+R_LIN1-4,510k 1%,R_0805,4,nacional,"VREF->LIN FREQ ~4.9uA. Sin ella el oscilador SE PARA (ds pag.5/9). El datasheet pide 499k pero ese valor no existe en 0805 en el catalogo de JLC (2026-08-17): 510k da -2.2% de corriente = -38 cents uniformes, y pag.4 aclara que esta corriente escala la salida del expo de forma MULTIPLICATIVA, asi que no toca el tracking de 1V/oct. Razonamiento completo en build_schematic.py, junto a la linea de R_LIN"
 R_I2C1-2,4.7k,R_0805,2,nacional,Pullups I2C
 R_SIN*,4.02k+4.75k+4.75k 1%,R_0805,12,nacional,Red del shaper de seno (Figure 1 del datasheet). Refs reales R_SIN402_n/R_SIN475A_n/R_SIN475B_n (RED_SINE* no matcheaba nada en la hoja)
 R_BW1-4 C_BW1-4,270R+10nF,R_0805/C_0805,8,nacional,Compensacion BW COMP (pin 26). Refs reales R_BW/C_BW (RED_BW1-4 no matcheaba nada en la hoja)
