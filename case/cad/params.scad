@@ -22,13 +22,12 @@ ancho_total     = 500;   // spec §4
 // --, y alrededor de cada riel hace falta acrilico. De ahi salen las caras:
 //
 //   alto_cara_inf = 122.5 + inset_inf_frente + inset_inf_valle  = 164.0
-//   alto_cara_sup = 122.5 + inset_sup_valle  + inset_sup_remate = 150.0
+//   alto_cara_sup = 122.5 + inset_sup_valle  + inset_sup_remate = 163.0
 //
 // El de arriba sale mas CORTO aunque lleve el mismo estandar dentro, y es por
-// la bisagra: su punta de arriba ya no la remata un 2020 sino el eje de giro,
-// que va pegado al vertice (inset_sup_remate = inset_er = 3). El panel llega
-// por tanto al punto mas alto y el unico acrilico que lo acompana arriba es el
-// marco de remate del techo (Samuel, 2026-08-17).
+// la bisagra: su punta de arriba ya no la remata un 2020 sino el eje de giro.
+// Lo que hay entre el canto del panel y el vertice es la PESTANA (marco_sup),
+// no un perfil, y por eso caben 11 mm donde antes hacian falta 23.
 //
 // Los 41.5 / 27.5 mm de acrilico que envuelven el estandar son el minimo REAL,
 // medido contra las cotas que los limitan y no estimado. En las TRES puntas que
@@ -38,15 +37,15 @@ ancho_total     = 500;   // spec §4
 // correo a Tobias.
 //
 // Bisel que sobra alrededor de cada panel (inset - inset_er): 23.5 y 12 mm en
-// la fila de abajo, 21.5 y CERO en la de arriba. El cero no es un descuido: el
-// panel de arriba remata a ras del vertice porque de ahi cuelga la bisagra.
+// la fila de abajo, 21.5 y marco_sup = 8 en la de arriba. Ese ultimo NO es
+// bisel de costado: es la pestana, que cruza de lado a lado.
 //
 // ASUMIDO, pendiente de Tobias (SynthRacks): que el riel EUROrack real se
 // atornille sobre el 2020 con su linea roscada EN LA CENTERLINE del 2020. Si
 // su perfil pone la rosca descentrada, lo que cambia son los insets y con
 // ellos las dos caras -- la silueta se adapta sin tocar nada mas.
 alto_cara_inf   = 164.0; // DERIVADO: 122.5 + inset_inf_frente + inset_inf_valle
-alto_cara_sup   = 150.0; // DERIVADO: 122.5 + inset_sup_valle + inset_sup_remate
+alto_cara_sup   = 163.0; // DERIVADO: 122.5 + inset_sup_valle + inset_sup_remate
 alto_panel_inf  = 128.5; // PCB 3U EUROrack
 alto_panel_sup  = 128.5; // PCB 3U EUROrack: la fila de arriba tambien
 // Angulos de cara. El fichero los guarda DESDE LA VERTICAL (convencion del
@@ -127,11 +126,15 @@ alto_frontal    = 28;
 // arriba. Con el marco fijo, esa esquina se conserva aunque se muevan las
 // proporciones, que es lo que se quiere.
 //
-// FUE 22, que era la meseta que daba la punta redondeada gorda de arriba. Pero
-// desde que el panel remata a ras del vertice (la bisagra), esa meseta ya no
-// es punta: es solo el canto que asoma por encima del panel. Samuel lo pidio
-// del GROSOR DEL ACRILICO, o sea t_cheek = 8 -- el borde queda de seccion
+// FUE 22, que era la meseta que daba la punta redondeada gorda de arriba. Hoy
+// es el canto del techo, del GROSOR DEL ACRILICO (t_cheek = 8): de seccion
 // cuadrada, tan ancho como grueso es el costado que lo forma.
+//
+// OJO, ESTE NO ES EL BORDE QUE SE VE DE FRENTE. marco_remate pertenece al
+// COSTADO, o sea que solo existe en los dos laterales y no cruza el ancho: por
+// eso ponerlo a 8 no hizo aparecer ninguna pestana en el render. La pestana que
+// tapa el canto del panel es marco_sup, una pieza aparte que si va de lado a
+// lado. Los dos valen 8 y juntos envuelven la punta de arriba en L.
 //
 // No es un valor libre: si cambia t_cheek hay que cambiar este a mano (aqui no
 // se pueden escribir expresiones, ver la cabecera del fichero). Y baja el
@@ -233,15 +236,20 @@ rail            = 20;   // perfil 2020
 //   inferior / frente   punta redondeada   14.0      + 10 + 2.5  = 26.5
 //   inferior / valle    pico (r=5)          2.6      + 10 + 2.4  = 15
 //   superior / valle    valle (r=30)       12.4      + 10 + 2.1  = 24.5
-//   superior / remate   -- BISAGRA, no lleva 2020 --             = 3
+//   superior / remate   -- BISAGRA --   marco_sup + gap_sombra + 3 = 16
 //
-// La cuarta se sale del patron porque ahi no hay perfil: es el eje de giro.
-// Vale inset_er (3.0) y no otra cosa, porque el eje coincide con la fila de
-// taladros de arriba del panel, que EUROrack pone a 3.0 del canto. O sea que el
-// panel remata exactamente en el vertice. Ese es el requisito de Samuel ("el
-// modulo debe terminar en el punto mas alto") y a la vez lo que hace girable la
-// tapa: con un 2020 ahi hacian falta 23 mm, el panel se quedaba 20 mm por debajo
-// del vertice y el eje de giro acababa enterrado detras de acrilico.
+// La cuarta se sale del patron porque ahi no hay perfil: es el eje de giro, y
+// no la fija ninguna curva sino lo que hay por encima. De arriba abajo:
+//   8  marco_sup   la pestana de acrilico que tapa el canto del panel
+//   5  gap_sombra  la junta que deja pasar el barrido de la tapa (ver abajo)
+//   3  inset_er    del canto del panel a su fila de taladros = al eje
+//
+// La junta NO es decorativa. Al abrir, el canto de arriba del panel gira sobre
+// un eje que esta 3 mm por debajo y 5.6 detras, o sea a 6.35 mm de radio; en el
+// barrido ese canto SUBE hasta 6.35 - 3 = 3.35 mm antes de retirarse. Con la
+// pestana pegada al canto, la tapa se traba en el primer grado. Los 5 de
+// gap_sombra dan 1.65 de margen y de paso son la misma junta de sombra que
+// llevan las pieles flotantes, asi que el detalle es el del resto del case.
 //
 // Las tangentes NO son parametros: salen del radio y del angulo del vertice.
 // Si se mueve un radio hay que rehacer la columna, y el que avisa es
@@ -249,7 +257,7 @@ rail            = 20;   // perfil 2020
 inset_inf_frente = 26.5;
 inset_inf_valle  = 15;
 inset_sup_valle  = 24.5;
-inset_sup_remate = 3.0;
+inset_sup_remate = 16;
 // EUROrack, cotas del PANEL (no de la cara). Verificado el 2026-08-17 contra
 // midisoft.de y exploding-shed.com: taladro a 3.0 mm del canto superior e
 // inferior (de ahi los 122.50 entre centros) y el primero a 7.5 mm del canto
@@ -290,6 +298,21 @@ d_pie       = 16;   // diametro; pequeno a proposito
 // verdad manda es que el EJE quede a inset_er del canto del panel; si la pieza
 // pide otro diametro cambia d_visagra, no la geometria de la cara.
 d_visagra   = 8;
+// PESTANA SUPERIOR: la banda de acrilico que cruza de costado a costado por
+// encima del canto del panel de arriba, sobre la propia cara. Samuel la pidio
+// porque el panel remataba pelado ("no veo esa pestana ... quiero un top marco
+// acrilico"), y no la daba marco_remate: ese pertenece al COSTADO y solo existe
+// en los dos laterales, no cruza el ancho. Son piezas distintas y las dos miden
+// 8 = t_cheek, asi que juntas envuelven la punta de arriba en L.
+//
+// Se lleva su ancho de la cara: la cara crece marco_sup y el canto del panel
+// baja otro tanto, o sea que el case sube marco_sup*cos(45) = 5.7 mm.
+//
+// PENDIENTE, igual que las palas de la bisagra: como se fija. Va volada sobre
+// el larguero de remate y a 8 mm de ancho no cabe una fila de M4, asi que sale
+// standoff lateral, ranura en el costado o pegado. Por eso todavia no tiene DXF
+// propio -- una pieza sin sus taladros no se manda a cortar.
+marco_sup   = 8;
 
 // --- ventilacion con firma (spec §7) ---
 vent_ancho_ranura = 4;   // ancho de la ranura-onda

@@ -57,6 +57,17 @@ PLANS = Path(__file__).parent / "plans"
 # 5 % (17 mm) o el factor 25.4 siguen cayendo de largo.
 TOL = 4.0
 
+# Piezas que el modelo YA coloca pero que todavia no tienen fichero de corte, con
+# el motivo. No es una lista de excepciones para tapar pendientes: cada entrada
+# se imprime en cada corrida, asi que el hueco se ve. La alternativa era emitir
+# un DXF de contorno sin taladros, y eso es peor -- un fichero que parece
+# completo y se manda a cortar (constitucion, Principio V).
+SIN_DXF = {
+    "remate_sup": "pestana superior: a 8 mm de ancho no cabe una fila de M4, "
+                  "asi que la fijacion (standoff lateral, ranura en el costado "
+                  "o pegado) esta sin decidir y sus taladros no existen",
+}
+
 
 def _sobres() -> dict[str, tuple[float, float, float, float]]:
     import clearance_budget as cb
@@ -75,6 +86,8 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
     }
     for caja in planchas:
         nombre, x0, x1, y0, y1, z0, z1 = caja
+        if nombre in SIN_DXF:
+            continue
         aristas = sorted((x1 - x0, y1 - y0, z1 - z0), reverse=True)
         dims[f"{nombre}_2d"] = (aristas[0], aristas[1])   # se cae el espesor
 
@@ -265,6 +278,8 @@ def main() -> int:
             continue
         fallos += revisar(nombre, sobre)
     fallos += railes_dentro_del_costado()
+    for nombre, motivo in SIN_DXF.items():
+        print(f"  PENDIENTE (sin DXF, no bloquea): {nombre} -- {motivo}")
     for m in fallos:
         print(f"ROJO: {m}")
     if fallos:

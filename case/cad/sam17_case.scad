@@ -69,8 +69,8 @@ function centros_rail() =
 // punta -- o sea EXACTAMENTE en la fila de taladros de arriba del panel, que
 // EUROrack pone a 3.0 mm del canto --, y retirado hacia dentro lo justo para
 // que el nudillo quede pegado al dorso del panel (t_panel + d_visagra/2).
-// El panel remata por tanto a ras del vertice, que es lo que Samuel pidio para
-// que la tapa pueda levantarse sin acrilico por encima estorbando.
+// El canto del panel queda por tanto marco_sup por debajo del vertice, que es
+// justo el hueco que ocupa la pestana.
 function eje_visagra() =
     let (P = pts_perfil(),
          d = (P[4]-P[3])/norm(P[4]-P[3]),
@@ -497,6 +497,7 @@ module planchas_acrilico() {
     bandeja_entrepiso();
     piel_inferior();
     piel_superior();
+    remate_sup();
 }
 
 // panel de modulo (PCB de aluminio, t_panel) sobre una cara del perfil
@@ -521,6 +522,26 @@ module paneles() {
     P = pts_perfil();
     panel_cara(P[1], P[2], inset_inf_frente - inset_er, alto_panel_inf);
     panel_cara(P[3], P[4], inset_sup_valle  - inset_er, alto_panel_sup);
+}
+
+// Pestana superior: la banda de acrilico que tapa el canto de arriba del panel
+// y cruza de costado a costado. Ocupa los ultimos marco_sup mm de la cara, con
+// su cara exterior EN EL PLANO DE LA CARA -- igual que el panel, o sea a ras y
+// no en resalte. Engorda hacia dentro t_cheek, que es el mismo grosor del
+// costado, de modo que por fuera el remate se lee como un canto continuo de
+// acrilico que da la vuelta del lateral al techo. Sin ella el panel remataba
+// pelado contra el aire, que es lo que Samuel vio en el render.
+//
+// Fijacion PENDIENTE (ver params.scad): a 8 mm de ancho no cabe una fila de
+// M4, asi que sale standoff lateral, ranura en el costado o pegado. Por eso no
+// tiene DXF propio todavia -- una pieza sin taladros no se manda a cortar.
+module remate_sup() {
+    P = pts_perfil();
+    d = (P[4] - P[3]) / norm(P[4] - P[3]);
+    translate([P[3].x, P[3].y, t_cheek])
+        rotate([0, 0, atan2(d.y, d.x)])
+            translate([alto_cara_sup - marco_sup, -t_cheek, 0])
+                cube([marco_sup, t_cheek, ancho_util]);
 }
 
 // Paticas torneadas bajo los costados. En X caen sobre los dos rieles de
@@ -584,6 +605,8 @@ module bom() {
     echo("BOM: standoff M4 x8 (las dos pieles, voladas) + tornillo M4 boton x16 + arandela x16");
     echo(str("BOM: bisagra continua x1 de ", au, " mm, nudillo d=", d_visagra,
              " (tapa superior; palas al dorso del panel y al larguero de remate)"));
+    echo(str("BOM: pestana superior x1, ", au, " x ", marco_sup,
+             " en acrilico t=", t_cheek, " (fijacion sin cerrar)"));
     echo(str("BOM: patica metalica torneada x4, d=", d_pie, " x ", alto_pie, " mm"));
     echo(str("BOM: planchas t=", t_acrilico, ": base, entrepiso, ",
              "piel inf, piel sup; costados t=", t_cheek, " x2"));

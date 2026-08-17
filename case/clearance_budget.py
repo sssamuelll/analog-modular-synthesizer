@@ -260,6 +260,21 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
                             + abs(math.sin(math.radians(ang))))
         railes.append((nm, c[0] - he, c[0] + he, c[1] - he, c[1] + he,
                        t_cheek, ancho_total - t_cheek))
+    # La PESTANA superior: banda de acrilico sobre los ultimos marco_sup mm de
+    # la cara de arriba, a ras por fuera y engordando t_cheek hacia dentro. Va
+    # girada con la cara, asi que su AABB sale de las cuatro esquinas y no de un
+    # semilado. Aqui interesa que no se pise con la bisagra ni con el larguero
+    # de remate, que viven justo debajo.
+    a2 = math.radians(p["angulo_superior"])
+    d2 = (math.sin(a2), math.cos(a2))
+    n2 = (d2[1], -d2[0])
+    esq = [(P[3][0] + d2[0] * s + n2[0] * q, P[3][1] + d2[1] * s + n2[1] * q)
+           for s in (p["alto_cara_sup"] - p["marco_sup"], p["alto_cara_sup"])
+           for q in (0.0, p["t_cheek"])]
+    planchas_extra = ("remate_sup",
+                      min(e[0] for e in esq), max(e[0] for e in esq),
+                      min(e[1] for e in esq), max(e[1] for e in esq),
+                      t_cheek, ancho_total - t_cheek)
     # la bisagra entra en la misma bolsa que los railes: es un cuerpo continuo
     # de costado a costado y lo que interesa de ella aqui es que no se pise con
     # el larguero de remate ni con la piel superior.
@@ -272,7 +287,7 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
                        c[1] - rail / 2, c[1] + rail / 2,
                        t_cheek, ancho_total - t_cheek))
 
-    planchas: list[Caja] = []
+    planchas: list[Caja] = [planchas_extra]
     filas: list[Fila] = []
     # bandeja_base: ronda final — fondo y colocacion derivados de sus DOS
     # railes frontera (antes: plancha de prof_inferior-2*rail-4 puesta en
@@ -334,7 +349,15 @@ def _overlap(a: Caja, b: Caja) -> tuple[float, float, float] | None:
 # par como assert duro, no como tolerancia). Vacio a proposito: si un solape
 # nuevo aparece y de verdad no se puede resolver sin tocar centros_rail()
 # fuera de las reglas autorizadas, se documenta aqui igual que antes.
-TOLERADOS: dict[frozenset[str], float] = {}
+TOLERADOS: dict[frozenset[str], float] = {
+    # bisagra <-> pestana superior: 0.04 mm de solape de CAJA, cero de solape
+    # real. La pestana va girada con la cara, asi que su esquina profunda cuelga
+    # por debajo del nudillo aunque en el plano de la cara esten a 4 mm limpios.
+    # El AABB no sabe distinguirlo; guarda_visagra() hace la cuenta exacta en el
+    # sistema de la cara y ademas comprueba el barrido, que es lo que de verdad
+    # importa entre una tapa que gira y el marco que la remata.
+    frozenset({"bisagra", "remate_sup"}): 0.5,
+}
 
 
 # Tolerancia de alineacion placa<->rail. La coincidencia es una IDENTIDAD
@@ -548,6 +571,43 @@ def _sat_gap(rail: float, c1: tuple[float, float], ang1: float,
     return -min(separaciones)  # min<=0 en algun eje separador -> hueco positivo
 
 
+def guarda_visagra(p: dict[str, float]) -> None:
+    """La tapa de arriba tiene que poder GIRAR sin comerse la pestana.
+
+    Son dos cosas distintas y las dos son assert duro, porque solapes() no ve
+    ninguna: trabaja con cajas alineadas a ejes y aqui todo esta girado 45.
+
+    1. ESTATICO. El nudillo (circulo de d_visagra) contra la pestana
+       (rectangulo marco_sup x t_cheek). La cuenta se hace en el sistema de la
+       cara -- (s a lo largo, q hacia dentro) --, donde los dos son rectos y la
+       distancia es exacta.
+
+    2. BARRIDO, que es el que de verdad manda y no se le ocurre a nadie mirando
+       un corte. Al abrir, el canto de arriba del panel gira sobre un eje que
+       esta inset_er por debajo y t_panel + d_visagra/2 por detras. Ese canto no
+       se retira: primero SUBE, hasta radio - inset_er, y solo despues baja. Si
+       la pestana esta pegada al canto, la tapa se traba en el primer grado y el
+       modelo estatico no dice ni pio. De ahi sale gap_sombra."""
+    s_eje = p["alto_cara_sup"] - p["inset_sup_remate"]
+    q_eje = p["t_panel"] + p["d_visagra"] / 2
+    # rectangulo de la pestana en el sistema de la cara
+    s0, s1 = p["alto_cara_sup"] - p["marco_sup"], p["alto_cara_sup"]
+    q0, q1 = 0.0, p["t_cheek"]
+    ds = max(s0 - s_eje, 0.0, s_eje - s1)
+    dq = max(q0 - q_eje, 0.0, q_eje - q1)
+    hueco = math.hypot(ds, dq) - p["d_visagra"] / 2
+    assert hueco >= 2.0, (
+        f"la bisagra roza la pestana: {hueco:.2f} mm de hueco real (se exige "
+        f">= 2.0). Subir inset_sup_remate o bajar marco_sup")
+
+    radio = math.hypot(p["inset_er"], q_eje)
+    subida = radio - p["inset_er"]
+    assert p["gap_sombra"] >= subida + 1.0, (
+        f"la tapa se traba al abrir: el canto del panel SUBE {subida:.2f} mm en "
+        f"el barrido y la junta contra la pestana es de {p['gap_sombra']:.2f} "
+        f"(se exige subida + 1.0). Subir gap_sombra o acercar el eje al canto")
+
+
 def guarda_escalon(p: dict[str, float]) -> None:
     """R7: paso_horizontal se abrio para separar los 2 railes tilted que
     R3 acerco en el quiebre P2-P3 (cara_inf valle, 12 grados, vs
@@ -578,6 +638,7 @@ def main() -> int:
     canario_solapes(p)
     canario_alineacion(p)
     guarda_escalon(p)
+    guarda_visagra(p)
     g = perfil(p)
     fallos: list[str] = []
 
