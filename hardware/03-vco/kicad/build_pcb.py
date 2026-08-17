@@ -66,6 +66,23 @@ dejaria una RANURA, que la obliga a dar la vuelta. revisar() lo comprueba a
 posteriori sobre el relleno real: la isla mayor de In1 tiene que llevarse
 mas del 99% del cobre.
 
+LAS VIAS VAN AL LADO DE LOS PADS, NUNCA ENCIMA. Durante siete rondas
+coser_masas() probaba el centro del pad como primer sitio para la via, y de
+ahi salieron 15 vias taladradas dentro del agujero de un jack o de un
+conector y 32 vias debajo de un pad SMD. Las dos cosas son mecanica, no
+electricidad: la broca no lee el netlist y una via debajo de un pad exige
+taponar y planarizar. Ahora la comprobacion de sitio esta partida en dos --
+lejos() para el margen ELECTRICO (que si se salta la propia red) y
+taladro_libre() para el MECANICO (que no se la salta) -- y revisar_taladros()
+lo vuelve a medir sobre la placa terminada. Ademas hole_to_hole y
+holes_co_located suben de aviso a ERROR en el .kicad_pro, que es lo que hace
+que el DRC de --severity-error los vea.
+
+EL TERMOMETRO VIVE CON LOS OSCILADORES. U13 (TMP1075) mide la temperatura
+que desafina, asi que va pegado al QFN de la voz 2 (2.1 mm de cuerpo a
+cuerpo) con un vertido termico AISLADO en medio, aunque electricamente siga
+siendo GNDD y llegue a su masa por pista. Ver TERMOMETRO, mas abajo.
+
 EL EP DE CADA SSI2130 (pin 33, land termico) queda AISLADO a proposito: la
 netlist ya lo trae con nombre unico "unconnected-(Un-EP-Pad33)" y este script
 NO lo toca -- ni via, ni red, ni union al plano. El datasheet (pag.6,
@@ -343,11 +360,8 @@ COLOCACION.update({
 })
 
 # --------------------------------------------------------- isla GNDD (J2)
-# Solo lo que pide el brief: J2, U10, U13, U14, sus desacoplos y los pullups
-# de I2C. U13 en la frontera de la isla ADYACENTE al racimo: mide la
-# temperatura de los osciladores, no la del conector. En (44,94) queda a
-# 20.8 mm del QFN de la voz 2 -- la esquina util de la isla, tan cerca del
-# racimo como deja el hueco de 3 mm.
+# Solo lo que pide el brief: J2, U10, U14, sus desacoplos y los pullups de
+# I2C. U13 NO vive aqui -- ver TERMOMETRO, mas abajo.
 # J2 GIRADO 90 grados: sin girar, el courtyard del IDC-2x06 con su cable
 # mide 24 mm de alto y obliga a la isla a ser mas alta que la placa que
 # queda por debajo del racimo. Girado mide 24 de ancho por 10 de alto y cabe
@@ -360,14 +374,56 @@ COLOCACION.update({
     "C18": ("c", 18.0, _IY - 0.31, 0),
     "U14": ("sot235", 26.0, _IY, 0),
     "R_I2C1": ("r", 33.0, _IY, 0),
-    "U13": ("vssop8", ISLA_X1 - 12.0, _IY, 0),
-    "C19": ("c", ISLA_X1 - 7.0, _IY - 0.975, 0),
     "C20": ("c", 26.0, _IY + 4.5, 0),
     "R_I2C2": ("r", 33.0, _IY + 5.5, 0),
     "TP15": ("tp", 40.0, _IY + 5.5, 0),
 })
 
-# La isla la forman J2, U10, U13, U14, C18-C20, R_I2C1-2 y TP15, y nadie mas.
+# ------------------------------------------------------------- TERMOMETRO
+# U13 (TMP1075) mide la temperatura que DESAFINA, no la del aire de la
+# placa. El brief lo pide "adyacente al racimo con vertido termico hacia
+# ellos" y eso manda sobre la comodidad de tenerlo en la isla digital: en la
+# esquina de la isla (donde estuvo hasta esta ronda) queda a 25.5 mm del QFN
+# mas cercano y al otro lado del hueco de 3 mm, o sea midiendo ambiente.
+#
+# Ahora va PEGADO al QFN de la voz 2, en diagonal a su esquina inferior
+# derecha: hueco cuerpo-a-cuerpo de 2.1 mm, dentro del area analogica. La
+# diagonal no es capricho -- los 8 pines de cada costado del QFN escapan
+# perpendiculares a su lado, asi que la esquina es la parte del anillo que
+# menos usa el router. La voz 2 y no otra porque es la que cae encima de la
+# isla digital: sus dos hilos de I2C y su retorno viajan 11-14 mm, no 60.
+#
+# ELECTRICAMENTE SIGUE EN GNDD. Lo que la doctrina del repo prohibe es
+# UNIR las dos masas (los NETOS, el cobre); una senal o un retorno que
+# cruzan de zona como PISTA son un cruce normal y controlado, que es lo que
+# hacen ya SPI, I2C y +3V3_LOC. Consecuencia practica: los 5 pads de GNDD de
+# U13/C19 no tienen plano debajo al que bajar, asi que quedan fuera del
+# censo de coser_masas() (ver FUERA_DEL_PLANO) y de la regla de "GNDD dentro
+# de la isla" de revisar(). La frontera se sigue midiendo donde de verdad
+# importa: entre los dos VERTIDOS.
+#
+# C19 conserva su geometria exacta respecto a U13 (pad util contra el pin 8),
+# solo que el par entero va girado 180 grados.
+U13_X, U13_Y, U13_ROT = 32.0, 86.0, 180
+COLOCACION.update({
+    "U13": ("vssop8", U13_X, U13_Y, U13_ROT),
+    "C19": ("c", U13_X - 5.0, U13_Y + 0.975, U13_ROT),
+})
+# El vertido termico de U13: cobre AISLADO, sin red, de la misma clase que
+# los cuatro lands del EP. Va debajo y alrededor del termometro y se estira
+# en diagonal hacia la esquina del QFN, que es el camino corto del calor.
+# Sin red porque no debe conducir NADA: si se le pusiera GNDA seria una
+# pista mas del plano analogico entrando en el anillo del QFN, y si se le
+# pusiera GNDD uniria las dos masas por la puerta de atras.
+VERTIDO_U13 = [(30.0, 82.6), (35.6, 82.6), (35.6, 88.4), (30.0, 88.4)]
+
+# Los pads de estas huellas no tienen plano de su red debajo (U13 y su
+# desacoplo viven en el area analogica pero son GNDD): coser_masas() no les
+# busca bajada y revisar() no les exige caer dentro de la isla. Su conexion
+# a GNDD la hace el router con una pista, como con cualquier otra senal.
+FUERA_DEL_PLANO = {"U13", "C19"}
+
+# La isla la forman J2, U10, U14, C18, C20, R_I2C1-2 y TP15, y nadie mas.
 # No hay lista que lo diga: revisar() lo comprueba PAD a PAD contra la red
 # (GNDD dentro de en_isla(), GNDA fuera), que es la unica version que no se
 # puede quedar desfasada.
@@ -412,7 +468,7 @@ def check_huellas() -> None:
     assert not rotos, f"huellas que no estan en disco: {rotos}"
 
 
-def colocar() -> None:
+def colocar():
     """Placa vacia con todo colocado, contorno, taladros, masas y reglas."""
     check_huellas()
     nets = leer_netlist()
@@ -429,15 +485,34 @@ def colocar() -> None:
         fp.SetPosition(pcbnew.VECTOR2I(mm(x), mm(y)))
         if rot:
             fp.SetOrientationDegrees(rot)
+        # SERIGRAFIA: nada por debajo del minimo publicado por el fabricante.
+        # La misma hoja de capacidades que da la pista de 0.09 mm dice, para
+        # la serigrafia, ALTURA MINIMA 1.0 mm ("less than that will be
+        # unidentifiable") y TRAZO MINIMO 0.15 mm -- son dos especificaciones
+        # distintas y la de la pista no vale para el texto. La version
+        # anterior encogia los rotulos de los pasivos a 0.5/0.10 citando el
+        # minimo de PISTA, y eso dejaba 112 avisos de text_height y una
+        # serigrafia que el fabricante no garantiza legible.
+        #
+        # El problema que aquel encogimiento resolvia era real (en un anillo
+        # de 0805 a 3 mm de paso los rotulos de 1 mm se pisan), pero la
+        # solucion de la industria para SMD es otra: se OCULTA la referencia
+        # de los pasivos. La identidad de cada pieza viaja en el fichero de
+        # posiciones y en el BOM, que es lo que lee la maquina que las
+        # coloca; el serigrafiado de R_MIX3C en la placa no lo mira nadie.
+        # Los integrados y los conectores, que si se buscan a ojo, conservan
+        # su rotulo a 1.0/0.15.
+        t = fp.Reference()
+        t.SetTextSize(pcbnew.VECTOR2I(mm(1.0), mm(1.0)))
+        t.SetTextThickness(mm(0.15))
         if clave in ("r", "c", "tp"):
-            # La referencia de stock mide 1x1 mm y en un anillo de 0805 a
-            # 3 mm de paso se pisa con la del vecino: el DRC de serigrafia
-            # cantaba 73 solapes, todos entre rotulos de pasivos. A 0.5 mm
-            # sigue siendo legible en la serigrafia real (paso minimo de
-            # JLCPCB: 0.15 mm de trazo) y dejan de pisarse.
-            t = fp.Reference()
-            t.SetTextSize(pcbnew.VECTOR2I(mm(0.5), mm(0.5)))
-            t.SetTextThickness(mm(0.1))
+            t.SetVisible(False)
+        elif ref in ("U5", "U6", "U7"):
+            # Los tres DAC van en columna a 6.5 mm de paso y el rotulo de
+            # stock se dibuja 3.5 mm por encima del cuerpo: cae encima de la
+            # silueta del vecino. Centrado sobre el propio cuerpo (4.4 mm de
+            # ancho, el texto mide 1.9) no pisa a nadie.
+            t.SetPosition(pcbnew.VECTOR2I(mm(x), mm(y)))
         board.Add(fp)
         for pad in fp.Pads():
             red = nets.get(f"{ref}-{pad.GetNumber()}")
@@ -502,6 +577,25 @@ def colocar() -> None:
         (ISLA_X1 - G, H - MARGEN), (MARGEN, H - MARGEN),
     ])
 
+    # El vertido termico de U13: una zona SIN RED en F.Cu, la misma clase de
+    # cobre que los cuatro lands del EP. Une termicamente el termometro con
+    # la esquina del QFN de la voz 2 sin unirlos electricamente. Al no tener
+    # red, el relleno guarda margen contra TODO el cobre de la placa, asi que
+    # las pistas que el router meta por ahi lo recortan en vez de chocar con
+    # el; lo que quede sigue conduciendo calor.
+    ter = pcbnew.ZONE(board)
+    ter.SetLayer(pcbnew.F_Cu)
+    ter.SetLocalClearance(mm(CLEARANCE))
+    ter.SetMinThickness(mm(0.2))
+    ter.SetIslandRemovalMode(pcbnew.ISLAND_REMOVAL_MODE_AREA)
+    ter.SetMinIslandArea(mm(0.5) * mm(0.5))
+    ter.SetIsFilled(False)
+    v = pcbnew.VECTOR_VECTOR2I()
+    for x, y in VERTIDO_U13:
+        v.append(pcbnew.VECTOR2I(mm(x), mm(y)))
+    ter.AddPolygon(v)
+    board.Add(ter)
+
     # In2 lleva la potencia Y el vertido de GNDD. Dentro de la esquina de
     # la isla digital se le prohiben las PISTAS: sin eso, el ruteo de
     # potencia cruza el vertido de GNDD y lo parte en dos trozos que el DRC
@@ -551,6 +645,10 @@ def colocar() -> None:
     reglas.m_ViasMinSize = mm(VIA_D)
     reglas.m_MinThroughDrill = mm(VIA_DRILL)
     reglas.m_ViasMinAnnularWidth = mm((VIA_D - VIA_DRILL) / 2)
+    # Serigrafia: los minimos que publica el fabricante, no los de KiCad
+    # (0.8/0.08). Si algun rotulo baja de aqui, el DRC lo canta.
+    reglas.m_MinSilkTextHeight = mm(1.0)
+    reglas.m_MinSilkTextThickness = mm(0.15)
     # m_MinClearance NO basta: el DRC de verdad (kicad-cli, no este script)
     # aplica el margen de la NETCLASS "Default", que nace en 0.2 mm y se
     # queda ahi si no se toca aparte. Ademas es lo que lee el exportador de
@@ -565,6 +663,42 @@ def colocar() -> None:
 
     pcbnew.SaveBoard(PCB, board)
     return board
+
+
+# Reglas de taladro que KiCad trae como AVISO y aqui son ERROR. No es un
+# gusto: las dos describen taladros que la fresa no puede hacer.
+#
+#   holes_co_located  dos taladros en el mismo sitio -- una via dentro del
+#                     agujero de un pad PTH. La broca pasa dos veces por el
+#                     mismo punto y el segundo paso rompe el barril del
+#                     primero.
+#   hole_to_hole      dos taladros a menos de 0.20 mm de pared a pared, que
+#                     es el minimo publicado por el fabricante. Por debajo,
+#                     el material entre los dos se desmigaja.
+#
+# En la ronda anterior la placa llevaba 15 vias DENTRO de taladros PTH y 3
+# pares de vias por debajo del minimo, y el gate no se entero porque el DRC
+# corre con --severity-error y estas dos venian de fabrica como "warning".
+# Subirlas a error es lo que convierte el gate en un examen de verdad.
+#
+# Van en el .kicad_pro, no en el .kicad_pcb: es donde KiCad guarda las
+# severidades, y el binding de Python no las expone (m_DRCSeverities llega
+# como un puntero opaco). Se parchea el JSON, y AL FINAL de todo: dentro de
+# un mismo proceso, la primera CreateEmptyBoard() deja cacheado un proyecto
+# con los valores de fabrica y cada SaveBoard() posterior lo vuelve a
+# escribir encima -- medido, no supuesto. Quien lee el fichero de verdad es
+# el kicad-cli del gate, que es otro proceso y lo lee de disco.
+SEVERIDADES = {"hole_to_hole": "error", "holes_co_located": "error"}
+
+
+def _severidades_drc() -> None:
+    ruta = PCB[:-len(".kicad_pcb")] + ".kicad_pro"
+    with open(ruta, encoding="utf-8") as fh:
+        proyecto = json.load(fh)
+    proyecto["board"]["design_settings"]["rule_severities"].update(SEVERIDADES)
+    with open(ruta, "w", encoding="utf-8") as fh:
+        json.dump(proyecto, fh, indent=2)
+        fh.write("\n")          # como lo deja KiCad: el diff son 2 lineas
 
 
 def _dist_seg(p, a, b) -> float:
@@ -633,10 +767,6 @@ def _dist_seg(p, a, b) -> float:
 # a tres minutos).
 COSTURAS_RESERVADAS = ({(f"U{i}", "20") for i in (1, 2, 3, 4)}
                        | {(f"U{i}", "4") for i in (5, 6, 7)})
-
-# Las redes que llevan escape explicito. Se protegen en el DSN para que
-# Freerouting no deshaga justo el tramo que le estamos regalando.
-REDES_ESCAPE: set[str] = set()
 
 
 def _check_escape() -> None:
@@ -727,74 +857,28 @@ def _pads_sin_plano(board, net: str) -> list:
     return [p for j, p in enumerate(pads) if raiz(j) not in con_via]
 
 
-def limpiar_colgajos() -> int:
-    """Borra el cobre de masa que no llega a ningun sitio.
-
-    Freerouting deja trocitos de GNDA sueltos por la placa: rabos de medio
-    milimetro que empezo y abandono, y alguna pista larga que se quedo sin
-    los dos extremos. Cada trozo asi cuenta como una conexion abierta en el
-    DRC y no sirve para nada -- son islas de cobre flotando.
-
-    Se borra en bucle cualquier pista de masa con un extremo LIBRE: uno que
-    no toque un pad, ni una via, ni otra pista de su misma red. Borrar una
-    puede dejar libre el extremo de la siguiente, de ahi el bucle.
-
-    No puede tapar un problema: si se borrara un tramo que un pad necesitaba,
-    ese pad se queda suelto y el conteo de conexiones abiertas SUBE, no baja.
-    Y despues corre coser_masas(), que le pone su bajada como a los demas.
-    """
-    board = pcbnew.LoadBoard(PCB)
-    fijos = []          # pads y vias: puntos de anclaje
-    for fp in board.GetFootprints():
-        for p in fp.Pads():
-            c = p.GetBoundingBox()
-            fijos.append((p.GetNetname(), c.GetLeft() / 1e6, c.GetTop() / 1e6,
-                          c.GetRight() / 1e6, c.GetBottom() / 1e6))
-    borradas = 0
-    while True:
-        pistas, vias = [], []
-        for t in board.GetTracks():
-            if isinstance(t, pcbnew.PCB_VIA):
-                vias.append((t.GetNetname(), t.GetPosition().x / 1e6,
-                             t.GetPosition().y / 1e6))
-            elif t.GetNetname() in ("GNDA", "GNDD"):
-                pistas.append((t, t.GetNetname(),
-                               (t.GetStart().x / 1e6, t.GetStart().y / 1e6),
-                               (t.GetEnd().x / 1e6, t.GetEnd().y / 1e6)))
-
-        def anclado(net, q, propia) -> bool:
-            if any(n == net and x0 - 0.02 <= q[0] <= x1 + 0.02
-                   and y0 - 0.02 <= q[1] <= y1 + 0.02
-                   for n, x0, y0, x1, y1 in fijos):
-                return True
-            if any(n == net and (q[0] - vx) ** 2 + (q[1] - vy) ** 2
-                   < (VIA_D / 2) ** 2 for n, vx, vy in vias):
-                return True
-            return any(n == net and _dist_seg(q, a, b) < 0.02
-                       for otra, n, a, b in pistas if otra is not propia)
-
-        ronda = [t for t, net, a, b in pistas
-                 if not (anclado(net, a, t) and anclado(net, b, t))]
-        if not ronda:
-            break
-        for t in ronda:
-            board.Remove(t)
-        borradas += len(ronda)
-    pcbnew.SaveBoard(PCB, board)
-    print(f"colgajos de masa borrados: {borradas} tramos que no llegaban "
-          f"a ningun sitio")
-    return borradas
-
-
 def _abanico(px: float, py: float, ux: float, uy: float):
     """Sitios candidatos para la via de un pad, del mas cercano al mas lejano.
 
     (ux,uy) es el rumbo que se aleja del centro del encapsulado. A cada
     distancia se prueba ese rumbo primero y luego se abre en abanico a los
     dos lados, hasta darse la vuelta.
+
+    EL CENTRO DEL PAD NO ES UN SITIO. Lo fue durante siete rondas -- este
+    generador empezaba probando (px,py) -- y de ahi salieron las 15 vias
+    metidas dentro del taladro de un jack o de un IDC y las 32 vias debajo
+    de un pad SMD que encontro la revision. Una via en el centro de un pad
+    PTH es la misma broca pasando dos veces por el mismo punto; una via
+    debajo de un pad SMD es via-in-pad, que exige taponar y planarizar y que
+    ya se habia descartado en la ronda 3 por ser decision de fabricacion.
+    La via va AL LADO del pad y un rabito de medio milimetro los une: el
+    pasillo que da para una via (la medida de la ronda 4) da para eso.
+
+    Por eso la primera distancia baja a 0.75 mm y los pasos se afinan: sin
+    el centro, el sitio bueno esta justo al borde del pad y hay que poder
+    apuntarle.
     """
-    yield px, py
-    for d in (0.9, 1.3, 1.7, 2.1, 2.6, 3.2, 3.9, 4.6):
+    for d in (0.75, 0.9, 1.05, 1.2, 1.4, 1.7, 2.1, 2.6, 3.2, 3.9, 4.6):
         for grados in (0, 30, -30, 60, -60, 90, -90, 130, -130, 180):
             r = math.radians(grados)
             vx = ux * math.cos(r) - uy * math.sin(r)
@@ -805,10 +889,11 @@ def _abanico(px: float, py: float, ux: float, uy: float):
 def coser_masas(reservadas=False) -> int:
     """Una via de bajada al plano por cada pad de masa que no la tenga ya.
 
-    Todo el cobre de esta placa es SMD en F.Cu y las dos masas viven en
-    B.Cu: un pad de GNDA sin via al lado no toca el plano, mira el cobre
-    desde arriba y se queda suelto. Freerouting pone algunas pero no llega
-    a todas -- sin este paso dejaba 7 pads de masa al aire.
+    Todo el cobre de esta placa es SMD en F.Cu y los dos planos de masa
+    viven en capas internas (GNDA en In1, GNDD en In2): un pad de GNDA sin
+    via al lado no toca su plano, lo mira desde arriba y se queda suelto.
+    Freerouting pone algunas pero no llega a todas -- sin este paso dejaba
+    7 pads de masa al aire.
 
     Va DESPUES de rutear, no antes. Metidas antes, esas ~95 vias entran en
     el modelo del router y cada pasada pasa de 15 s a casi 3 minutos, o sea
@@ -824,16 +909,41 @@ def coser_masas(reservadas=False) -> int:
     La via se busca ALEJANDOSE del centro del encapsulado: hacia afuera hay
     hueco, hacia adentro estan los otros pines (y, en el QFN, el land del
     EP, que no se puede tocar ni de cerca).
+
+    Y NUNCA ENCIMA DE UN PAD. El margen electrico (lejos()) se salta el
+    cobre de la propia red, que es lo correcto para un corto y lo
+    equivocado para una broca: taladro contra taladro y via contra pad
+    son separaciones MECANICAS y no saben de redes. Eso lo comprueba
+    taladro_libre(), aparte, y por eso existe.
     """
     board = pcbnew.LoadBoard(PCB)
     r_via = VIA_D / 2 + CLEARANCE
     cajas = [(p.GetNetname(), p.GetBoundingBox()) for fp in board.GetFootprints()
              for p in fp.Pads()]
+    # Los dos censos MECANICOS, sin red: todos los taladros de la placa
+    # (pads PTH y NPTH, mas las vias que se vayan poniendo) y todo el cobre
+    # de pad. Un taladro nuevo pide HOLE_CLEARANCE contra cualquier otro,
+    # aunque sean del mismo neto, y el cobre de una via no puede pisar el
+    # pad de nadie -- ni el suyo.
+    taladros = [(p.GetPosition().x / 1e6, p.GetPosition().y / 1e6,
+                 p.GetDrillSizeX() / 2e6)
+                for fp in board.GetFootprints() for p in fp.Pads()
+                if p.GetDrillSizeX() > 0]
+    # TODOS los pads, tengan taladro o no. La primera version de esta ronda
+    # solo miraba los pads SMD y dejo cuatro vias de masa taladradas sobre
+    # la CORONA de los jacks: taladros legales (0.24 mm de hueco) pero
+    # barril atravesando cobre soldable, que es via-in-pad igual. Lo que
+    # decide no es el tipo de pad, es que haya cobre de pad donde va el
+    # barril.
+    pads_cobre = [p.GetBoundingBox()
+                  for fp in board.GetFootprints() for p in fp.Pads()]
     segs, segs_todas, puntos = [], [], []
     for t in board.GetTracks():
         if isinstance(t, pcbnew.PCB_VIA):
             puntos.append((t.GetNetname(), t.GetPosition().x / 1e6,
                            t.GetPosition().y / 1e6, VIA_D / 2))
+            taladros.append((t.GetPosition().x / 1e6, t.GetPosition().y / 1e6,
+                             t.GetDrillValue() / 2e6))
         else:
             segs_todas.append((t.GetNetname(),
                                (t.GetStart().x / 1e6, t.GetStart().y / 1e6),
@@ -856,9 +966,11 @@ def coser_masas(reservadas=False) -> int:
     # pad en 90 pads no termina nunca. Con el, cada comparacion mira dos
     # docenas de cosas.
     cerca_cajas = cerca_segs = cerca_todas = cerca_puntos = None
+    cerca_taladros = cerca_pads = None
 
     def cerca(px: float, py: float) -> None:
         nonlocal cerca_cajas, cerca_segs, cerca_todas, cerca_puntos
+        nonlocal cerca_taladros, cerca_pads
         R = 8.0
         cerca_cajas = [(n, c) for n, c in cajas
                        if abs((c.GetLeft() + c.GetRight()) / 2e6 - px) < R
@@ -869,6 +981,47 @@ def coser_masas(reservadas=False) -> int:
                        if _dist_seg((px, py), s[1], s[2]) < R]
         cerca_puntos = [p for p in puntos
                         if abs(p[1] - px) < R and abs(p[2] - py) < R]
+        cerca_taladros = [t for t in taladros
+                          if abs(t[0] - px) < R and abs(t[1] - py) < R]
+        cerca_pads = [c for c in pads_cobre
+                      if abs((c.GetLeft() + c.GetRight()) / 2e6 - px) < R
+                      and abs((c.GetTop() + c.GetBottom()) / 2e6 - py) < R]
+
+    def taladro_libre(x: float, y: float) -> bool:
+        """Un taladro nuevo en (x,y), contra la geometria y no contra la red.
+
+        Dos comprobaciones que lejos() no puede hacer porque se salta el
+        cobre de la propia red:
+
+          * pared de taladro a pared de taladro >= HOLE_CLEARANCE contra
+            TODOS los taladros de la placa. Dos vias de GNDA que se pisan
+            son igual de irrealizables que dos de redes distintas -- la
+            broca no lee el netlist. Aqui es donde se colaban las 15 vias
+            plantadas dentro del taladro de un jack (hueco de -0.81 mm: los
+            dos agujeros solapados).
+          * el cobre de la via (no solo el taladro) no toca NINGUN pad --
+            ni SMD ni la corona de un PTH. Via-in-pad obliga a taponar y
+            planarizar, y esa decision de fabricacion ya se descarto; que
+            el pad sea de la misma red no lo hace mas barato, y que el
+            taladro quede al lado tampoco: por ahi se cuela la soldadura
+            del pin del jack.
+
+        Aqui el pad se mide por su CAJA y no por su forma, o sea de mas: es
+        una funcion que ELIGE sitio y pasarse de prudente solo le cuesta
+        descartar un candidato y probar el siguiente. Quien juzga la placa
+        terminada es revisar_taladros(), y ese si pregunta por la forma real
+        (un pad redondo tiene esquinas de caja que no son pad).
+        """
+        r = VIA_DRILL / 2
+        for tx, ty, tr in cerca_taladros:
+            if (x - tx) ** 2 + (y - ty) ** 2 < (r + tr + HOLE_CLEARANCE) ** 2:
+                return False
+        for c in cerca_pads:
+            dx = max(0.0, c.GetLeft() / 1e6 - x, x - c.GetRight() / 1e6)
+            dy = max(0.0, c.GetTop() / 1e6 - y, y - c.GetBottom() / 1e6)
+            if dx * dx + dy * dy < (VIA_D / 2) ** 2:
+                return False
+        return True
 
     def lejos(x, y, net: str, margen: float, todas=False) -> bool:
         for otra, caja in cerca_cajas:
@@ -913,7 +1066,8 @@ def coser_masas(reservadas=False) -> int:
         algo que no lo necesita -- y era justo lo que hacia fallar todos los
         enganches en las zonas apretadas.
         """
-        if via and not lejos(x, y, net, r_via, todas=True):
+        if via and not (lejos(x, y, net, r_via, todas=True)
+                        and taladro_libre(x, y)):
             return None
         # Los pines de un QFN salen de costado y tienen un vecino de otra
         # red a 0.4 mm por cada lado: cualquier camino que empiece yendo
@@ -953,20 +1107,29 @@ def coser_masas(reservadas=False) -> int:
             net = pad.GetNetname()
             px, py = _xy(pad)
             if reservadas:
-                # Modo pre-ruteo: solo los pines de la lista, sea cual sea su
-                # red. Para una senal esto no es una "costura" sino un ESCAPE:
-                # sacarla del anillo del QFN hasta su primera via, que es el
-                # tramo que el router no consigue si llega tarde.
+                # Modo pre-ruteo: solo los pines de la lista, que hoy son
+                # los siete de masa (ver COSTURAS_RESERVADAS).
                 if (fp.GetReference(), pad.GetNumber()) not in COSTURAS_RESERVADAS:
                     continue
-                if net not in ("GNDA", "GNDD"):
-                    REDES_ESCAPE.add(net)
             else:
                 if net not in ("GNDA", "GNDD"):
                     continue
+                if fp.GetReference() in FUERA_DEL_PLANO:
+                    continue      # su plano no pasa por debajo: va por pista
                 if (px, py) not in pendientes:
                     continue      # su cobre ya toca una via: llega al plano
-            largo = ((px - fx) ** 2 + (py - fy) ** 2) ** 0.5 or 1.0
+            largo = ((px - fx) ** 2 + (py - fy) ** 2) ** 0.5
+            if largo < 0.05:
+                # El pad ESTA en el centro de su huella -- el manguito de un
+                # jack, el pad de un punto de prueba -- asi que no existe un
+                # "hacia afuera del encapsulado" y el rumbo salia (0,0): el
+                # abanico entero degeneraba en un unico candidato, el propio
+                # centro del pad. Con el yield del centro delante nadie lo
+                # noto durante siete rondas, y de ahi salieron las ocho vias
+                # clavadas en el manguito de los jacks. Se sale hacia afuera
+                # de la PLACA y el abanico barre el resto de rumbos.
+                fx, fy = W / 2, H / 2
+                largo = ((px - fx) ** 2 + (py - fy) ** 2) ** 0.5 or 1.0
             ux, uy = (px - fx) / largo, (py - fy) / largo
             cerca(px, py)
             # Se prueba en ABANICO, no en una sola recta: primero el sitio
@@ -1018,6 +1181,7 @@ def coser_masas(reservadas=False) -> int:
             v.SetNet(board.FindNet(net))
             board.Add(v)
             puntos.append((net, sitio[0], sitio[1], VIA_D / 2))
+            taladros.append((sitio[0], sitio[1], VIA_DRILL / 2))
             nuevas += 1
             poner(rabito, net)
     pcbnew.SaveBoard(PCB, board)
@@ -1029,7 +1193,7 @@ def coser_masas(reservadas=False) -> int:
 
 
 # ------------------------------------------------------------------ ruteo
-def ajustes_freerouting(tmp: str) -> None:
+def ajustes_freerouting(tmp: str):
     """Las dos opciones que deciden la partida, y que NO tienen flag de CLI.
 
     Freerouting guarda sus preferencias en un JSON de usuario
@@ -1120,7 +1284,7 @@ def rutear() -> None:
         restaurar_freerouting(ajustes, previo)
 
 
-def _ajustar_dsn(dsn: str, ronda: int = 1) -> None:
+def _ajustar_dsn(dsn: str) -> None:
     """Dos retoques al DSN recien exportado, los dos imposibles desde KiCad.
 
     1. **In1 pasa a capa de POTENCIA.** KiCad exporta las cuatro capas de
@@ -1131,10 +1295,11 @@ def _ajustar_dsn(dsn: str, ronda: int = 1) -> None:
        In1): se exporta como wire_keepout y Freerouting se atasca en seco,
        200 conexiones sin rutear desde la pasada 4 hasta la 139 sin moverse.
        Con `(type power)` baja de 222 a 80 en 14 pasadas.
-    2. **El margen del router sube a 0.16 mm**, aunque el DRC siga pidiendo
-       0.15. Freerouting redondea sus coordenadas y deja pistas a 0.1480 mm
-       cuando apunta a 0.15 -- 2 micras por debajo, una infraccion de DRC
-       por pura aritmetica. Apuntando a 0.16 el redondeo cae del lado bueno.
+    2. **El margen del router sube 0.01 mm sobre el del DRC** (0.11 contra
+       los 0.10 de CLEARANCE). Freerouting redondea sus coordenadas y deja
+       pistas dos micras por debajo de lo que apunta -- una infraccion de
+       DRC por pura aritmetica. Con la decima de mas el redondeo cae del
+       lado bueno.
 
     Es un fichero temporal que acabamos de generar nosotros: no toca nada
     del repo ni de la configuracion de KiCad.
@@ -1150,12 +1315,7 @@ def _ajustar_dsn(dsn: str, ronda: int = 1) -> None:
     #    exporta todo el cableado existente como (type route), que para
     #    Freerouting significa "puedes levantarlo si te estorba" -- y las
     #    costuras reservadas existen justo para que NO se las levante.
-    # Las redes de escape se protegen SOLO en la primera ronda, cuando lo
-    # unico que llevan es el tramo que les pusimos nosotros. A partir de la
-    # segunda ya llevan ruteo del router, y congelarlo le impide deshacer un
-    # camino malo: protegiendolas todas las rondas el resultado empeoraba.
-    escapes = sorted(REDES_ESCAPE) if ronda == 1 else ()
-    for red in ("GNDA", "GNDD", *escapes):
+    for red in ("GNDA", "GNDD"):
         txt = txt.replace(f"(net {red})(type route)", f"(net {red})(type protect)")
     with open(dsn, "w", encoding="utf-8") as fh:
         fh.write(txt)
@@ -1180,7 +1340,7 @@ def _rondas(tmp: str) -> None:
     for ronda in range(1, RONDAS + 1):
         assert pcbnew.ExportSpecctraDSN(pcbnew.LoadBoard(PCB), dsn), \
             "no se exporto el DSN"
-        _ajustar_dsn(dsn, ronda)
+        _ajustar_dsn(dsn)
         print(f"freerouting ronda {ronda}/{RONDAS}, {PASADAS} pasadas\n"
               f"  (el avance, pasada a pasada, en {log})", flush=True)
         with open(log, "w", encoding="utf-8") as fh:
@@ -1327,6 +1487,97 @@ def verificar_ep(board) -> list[str]:
     return fallos
 
 
+def revisar_taladros(board) -> list[str]:
+    """Ninguna via dentro de un pad, y ningun taladro pegado a otro.
+
+    Esta es la comprobacion que faltaba durante siete rondas, y por eso se
+    escribe aparte y con nombre propio. La placa de la ronda 7 llevaba, sin
+    que ningun gate se enterara:
+
+        15 vias plantadas DENTRO del taladro de un pad PTH (jacks, J1, J2),
+           con solapes de -0.81 y -0.71 mm: dos agujeros pisandose;
+        32 vias debajo de un pad SMD -- via-in-pad -- incluidos pads de QFN
+           de 0.2 mm de ancho con una via de 0.45 encima;
+         3 parejas de vias por debajo del minimo de taladro a taladro del
+           fabricante, una de ellas a 0.0000 mm.
+
+    Se escapaban por dos rendijas a la vez: coser_masas() daba por bueno el
+    centro del pad como sitio para la via, y el DRC de KiCad trae
+    hole_to_hole y holes_co_located como AVISO, asi que --severity-error no
+    los veia. Las dos rendijas estan tapadas (ver _abanico, taladro_libre y
+    SEVERIDADES); esto es el cinturon encima de los tirantes, y ademas mide
+    y dice el peor caso en vez de solo aprobar o suspender.
+    """
+    # GetWidth() de una via PIDE capa en KiCad 10 (un padstack puede tener
+    # un diametro por capa); sin el argumento salta un assert y el proceso
+    # se queda esperando un dialogo que en headless no ve nadie.
+    vias = [(t.GetPosition().x / 1e6, t.GetPosition().y / 1e6,
+             t.GetDrillValue() / 2e6, t.GetWidth(pcbnew.F_Cu) / 2e6)
+            for t in board.GetTracks() if isinstance(t, pcbnew.PCB_VIA)]
+    pads = [(f"{fp.GetReference()}-{p.GetNumber()}", p)
+            for fp in board.GetFootprints() for p in fp.Pads()]
+
+    en_pad = []
+    peor_pth = peor_via = (99.0, "")
+    for nombre, p in pads:
+        px, py = _xy(p)
+        taladro = p.GetDrillSizeX() / 2e6
+        for vx, vy, vd, vw in vias:
+            if taladro > 0:                       # taladro contra taladro
+                hueco = ((vx - px) ** 2 + (vy - py) ** 2) ** 0.5 - vd - taladro
+                peor_pth = min(peor_pth, (hueco, nombre))
+            # Y el cobre de la via contra la FORMA REAL del pad -- de
+            # CUALQUIER pad, tenga taladro o no --, no contra su caja: TP14
+            # es un circulo de 2 mm y una via en la esquina de su caja esta
+            # fuera del pad por 0.34 mm. HitTest(punto, holgura) pregunta
+            # contra la geometria de verdad, que es la misma leccion que el
+            # GetSize() mentiroso de los pads custom del QFN.
+            if p.HitTest(pcbnew.VECTOR2I(mm(vx), mm(vy)), mm(vw)):
+                en_pad.append(nombre)
+    for i, (x1, y1, d1, _w) in enumerate(vias):
+        for x2, y2, d2, _w2 in vias[i + 1:]:
+            peor_via = min(peor_via,
+                           (((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5 - d1 - d2,
+                            f"({x1:.3f},{y1:.3f})"))
+
+    fallos = []
+    if peor_pth[0] < HOLE_CLEARANCE:
+        fallos.append(f"hay vias a menos de {HOLE_CLEARANCE} mm del taladro de "
+                      f"un pad: la peor contra {peor_pth[1]}, "
+                      f"{peor_pth[0]:+.3f} mm de hueco")
+    if en_pad:
+        fallos.append(f"{len(en_pad)} vias con su cobre encima de un pad "
+                      f"(via-in-pad): {sorted(set(en_pad))[:8]}")
+    if peor_via[0] < HOLE_CLEARANCE:
+        fallos.append(f"hay vias por debajo del minimo de taladro a taladro: "
+                      f"la peor en {peor_via[1]}, {peor_via[0]:+.3f} mm")
+    if not fallos:
+        print(f"taladros: 0 vias dentro de un pad, 0 via-in-pad; el peor hueco "
+              f"de taladro a taladro es {peor_pth[0]:.3f} mm contra un PTH y "
+              f"{peor_via[0]:.3f} mm entre vias (minimo del fabricante "
+              f"{HOLE_CLEARANCE})")
+    return fallos
+
+
+def medir_u13(board) -> float:
+    """Del cuerpo de U13 al cuerpo del SSI2130 mas cercano, borde a borde."""
+    fps = {fp.GetReference(): fp for fp in board.GetFootprints()}
+    ux, uy = (fps["U13"].GetPosition().x / 1e6, fps["U13"].GetPosition().y / 1e6)
+    peor, cual = 1e9, ""
+    for v in ("U1", "U2", "U3", "U4"):
+        qx = fps[v].GetPosition().x / 1e6
+        qy = fps[v].GetPosition().y / 1e6
+        # cuerpos reales: VSSOP-8 3x3, QFN-32 4x4
+        dx = max(0.0, (ux - 1.5) - (qx + 2.0), (qx - 2.0) - (ux + 1.5))
+        dy = max(0.0, (uy - 1.5) - (qy + 2.0), (qy - 2.0) - (uy + 1.5))
+        d = (dx * dx + dy * dy) ** 0.5
+        if d < peor:
+            peor, cual = d, v
+    print(f"U13 (termometro) al SSI2130 mas cercano ({cual}): {peor:.2f} mm "
+          f"de cuerpo a cuerpo, con vertido termico aislado en medio")
+    return peor
+
+
 def _areas_islas(zona) -> list[float]:
     """Area de cada isla del relleno de una zona, en mm2 (formula del cordon
     de zapato sobre el contorno; los agujeros interiores no cuentan aparte --
@@ -1383,8 +1634,8 @@ def revisar(board) -> list[str]:
 
     for fp in board.GetFootprints():
         ref = fp.GetReference()
-        if ref.startswith("H"):
-            continue
+        if ref.startswith("H") or ref in FUERA_DEL_PLANO:
+            continue          # el termometro es GNDD por PISTA, no por plano
         for pad in fp.Pads():
             k, red = f"{ref}-{pad.GetNumber()}", pad.GetNetname()
             px, py = _xy(pad)
@@ -1394,6 +1645,8 @@ def revisar(board) -> list[str]:
                 fallos.append(f"{k} es GNDA pero cae dentro de la isla")
 
     fallos += verificar_ep(board)
+    fallos += revisar_taladros(board)
+    medir_u13(board)
 
     # el QFN-32-1EP trae 4 pads SIN NUMERO (solo F.Paste, para segmentar la
     # pasta de soldar bajo el land termico y que no se junte en un charco):
@@ -1482,9 +1735,9 @@ def main() -> None:
     medir_dac_vco(board)
     coser_masas(reservadas=True)   # antes de rutear: ver COSTURAS_RESERVADAS
     rutear()
-    # Dos vueltas: la primera deja vias nuevas por toda la placa y la
-    # segunda las aprovecha para enganchar los pads que antes no tenian de
-    # donde agarrarse. Es idempotente -- un pad que ya tiene bajada se salta.
+    # Tres vueltas: cada una deja vias nuevas por la placa y la siguiente
+    # las aprovecha para enganchar los pads que antes no tenian de donde
+    # agarrarse. Es idempotente -- un pad que ya tiene bajada se salta.
     for _ in range(3):
         coser_masas()
     board = rellenar(PCB)
@@ -1502,14 +1755,33 @@ def main() -> None:
           f"{pistas} pistas + {vias} vias, {sueltos} tramos sin rutear")
     if sueltos:
         fallos.append(f"quedan {sueltos} tramos sin rutear")
+
+    _severidades_drc()      # justo antes del DRC: ver SEVERIDADES
+    # El informe se saca con TODAS las severidades, no solo errores: la
+    # serigrafia por debajo del minimo del fabricante es un AVISO de KiCad
+    # (text_height) y aun asi es un defecto de fabricacion -- 112 de esos
+    # avisos fue lo que dejo la ronda anterior por encoger los rotulos.
+    subprocess.run([KICAD_CLI, "pcb", "drc", "--format", "report",
+                    "-o", RPT, PCB], capture_output=True, text=True)
+    with open(RPT, encoding="utf-8") as fh:
+        informe = fh.read()
+    avisos: dict[str, int] = {}
+    for linea in informe.splitlines():
+        if linea.startswith("["):
+            k = linea[1:linea.index("]")]
+            avisos[k] = avisos.get(k, 0) + 1
+    print("DRC por tipo (todas las severidades): "
+          + (", ".join(f"{k} {n}" for k, n in sorted(avisos.items())) or "nada"))
+    if avisos.get("text_height") or avisos.get("text_thickness"):
+        fallos.append(f"serigrafia por debajo del minimo del fabricante: "
+                      f"{avisos.get('text_height', 0)} avisos de altura y "
+                      f"{avisos.get('text_thickness', 0)} de trazo")
+
     for f in fallos:
         print("FALLO:", f)
     if fallos:
         sys.exit(1)
 
-    subprocess.run([KICAD_CLI, "pcb", "drc", "--severity-error",
-                    "--format", "report", "-o", RPT, PCB],
-                   capture_output=True, text=True)
     drc = subprocess.run([KICAD_CLI, "pcb", "drc", "--severity-error",
                           "--exit-code-violations", PCB],
                          capture_output=True, text=True)
