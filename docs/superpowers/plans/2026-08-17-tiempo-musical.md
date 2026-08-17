@@ -6,7 +6,7 @@
 
 **Architecture:** Cuatro módulos nuevos en `software/nucleo/core`, todos funciones puras del tiempo: el tiempo entra como argumento, nunca se lee de un reloj. Eso los deja verificables enteros con `cargo test` — igual que el resto del contrato, y por la misma razón: no hay placa.
 
-**Tech Stack:** Rust 1.95 estable, `no_std`, `heapless` 0.8, `libm` 0.2. Sin dependencias nuevas.
+**Tech Stack:** Rust 1.95 estable, `no_std`, `heapless` 0.8, `libm` 0.2, y **`wmidi` 4.0 con `default-features = false`** — ver «Qué se adopta y qué no».
 
 **Spec:** `docs/superpowers/specs/2026-08-17-tiempo-musical-design.md`
 
@@ -36,6 +36,50 @@ Copiadas literales de la spec. Toda tarea las hereda.
 - **Nombres y comentarios en español.** Los que ve el agente se escriben para
   alguien que nunca ha visto el instrumento.
 - Commits en español contando el porqué, con el trailer de coautoría del repo.
+
+## Qué se adopta y qué no
+
+Buscado en crates.io antes de escribir nada. **Un acierto, un apunte para
+después, y tres rechazos con su razón** — porque «no reinventes» no significa
+«mete cualquier cosa».
+
+### Se adopta: `wmidi` 4.0
+
+Para decodificar los mensajes de tiempo real de MIDI. Verificado: **`no_std`,
+sin asignaciones al parsear o codificar, y realtime-safe**; es de RustAudio.
+Trae exactamente lo que hace falta:
+
+```rust
+MidiMessage::{ TimingClock, Start, Stop, Continue, SongPositionPointer(SongPosition) }
+MidiMessage::from_bytes(&[u8]) -> Result<Self, Error>
+```
+
+Y `SongPosition` **ya es el tipo de 14 bits** — los dos bytes de 7 bits
+ensamblados. Hacerlo a mano son treinta líneas de emparejar bytes de estado y
+armar enteros, que es justo donde se cuela un error silencioso.
+
+En `core/Cargo.toml`:
+
+```toml
+wmidi = { version = "4.0", default-features = false }
+```
+
+`std` es su única feature y va por defecto: **hay que apagarla**.
+
+### Se apunta para después: `ableton-link-rs`
+
+Existe una implementación nativa de Link en Rust (0.1.2, temprana). **No entra
+en este plan** —Link corre en el puente, no en el RP2350— pero se anota en
+`EN-PLACA.md` para que nadie escriba el protocolo desde cero el día que el
+puente exista. Y abre la puerta a que el puente también sea Rust.
+
+### Se rechazan, con motivo
+
+| Crate | Por qué no |
+|---|---|
+| `music-timer` | 0.1.6, basado en callbacks y casi seguro con `std`. Y `rejilla.rs` son cuarenta líneas de aritmética modular con semántica **propia**: los valores exactos de Ableton y la regla de la ventana de §5.3. Ninguna librería trae eso |
+| `keyframe`, `simple-easing`, `interpolation` | La curva es `t^k`, **una línea** con `libm::powf`. Y lo que de verdad tiene chicha —interpolar en log o lineal **según la unidad del descriptor**— no lo hace ninguna, porque es de este modelo |
+| `micromath` | Son aproximaciones rápidas, y `libm` es correcto. El test del barrido exige 400 Hz con ±2 de tolerancia, y el RP2350 tiene FPU por hardware: no hay nada que ganar cambiando precisión por velocidad |
 
 ## Estructura de ficheros
 
@@ -431,7 +475,8 @@ git commit -m "El tempo no pide un PLL, pide una base mas larga: un buffer y una
 - Modify: `software/nucleo/core/src/reloj.rs`
 
 **Interfaces:**
-- Consumes: `SeguidorTempo`, `rejilla::{pulsos_por_compas, PPQN_INTERNO}`.
+- Consumes: `SeguidorTempo`, `rejilla::{pulsos_por_compas, PPQN_INTERNO}`, y
+  **`wmidi::MidiMessage`** para decodificar el reloj de MIDI.
 - Produces: `Fuente` (enum), `Reloj` (`nuevo`, `pulso_externo`, `reset`,
   `link`, `tic_interno`, `al_pasar_el_tiempo`, `avanzar_a_pulso`, `posicion`,
   `pulsos_por_compas`, `mbpm`, `tiene_fase`, `rodando_libre`, `fuente_activa`,
@@ -548,6 +593,14 @@ mod tests_reloj {
 activa es la de mayor valor que no haya caducado. `pedir_fuente` guarda la
 petición y la aplica en el siguiente borde de compás, o de pulso si
 `!tiene_fase()`.
+
+**El decodificado de MIDI lo hace `wmidi`, no nosotros.** `Reloj::midi(bytes,
+t_us)` llama a `MidiMessage::from_bytes` y actúa según la variante:
+`TimingClock` es un pulso a 24 PPQN, `Start` reinicia la posición a cero,
+`Continue` sigue donde estaba, `Stop` para el transporte, y
+`SongPositionPointer(p)` da la posición en **beats MIDI** —seis relojes cada
+uno— de donde sale la fase sin necesitar RESET. Un `Err` se ignora en silencio:
+en el cable llegan mensajes que no son nuestros.
 
 `TIMEOUT_RUEDA_LIBRE_MS = 500` — dos negras a 120 BPM. Al vencer, la fuente se
 da por caída y el reloj sigue avanzando solo al último tempo conocido.
