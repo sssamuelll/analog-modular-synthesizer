@@ -38,8 +38,8 @@ Se gasta en esto.
 |---|---|---|
 | Material del chasis | **Acero**, no aluminio | El aluminio es casi transparente al campo magnético de 50/100 Hz; el ferromagnético no. Decidido en #107 |
 | Alcance del recinto | **Toda la fuente adentro**: toroide + PCB completa + entrada IEC | La red no sale nunca del recinto. Es lo que hacen las fuentes profesionales y es lo que da la regla del §3.2 |
-| Disipación | **Contra la pared del chasis**, sin disipadores discretos | Con 1.3 W el chasis sobra, y se ganan ~48 °C de unión |
-| Ventilación del recinto | **Ninguna. Va cerrado** | §3.1: 2.8 °C de subida. Una rejilla solo dejaría entrar polvo |
+| Disipación | **Contra la pared del chasis**, sin disipadores discretos | Con 1.3 W de regulación el chasis sobra, y se ganan ~43 °C de unión |
+| Ventilación del recinto | **Ninguna. Va cerrado** | §3.1: 6.4 °C de subida en el peor caso. Una rejilla solo dejaría entrar polvo |
 | Telemetría | **INA226 ×3 + TMP1075**, I²C | Tensión y corriente por riel con un chip; el TMP1075 ya se usa en el módulo 3 |
 | Cruce de masas | **Aislado, ISO1541** | En una fuente cuyo objetivo entero es sub-µV, meterle un bus digital sin aislar deshace el diseño |
 
@@ -58,34 +58,65 @@ tabla del §4 de la spec v2 (que está a 650 mA):
 | LT3094 ×2 | 0.58 W | 0.16 W |
 | **Regulación** | **4.80 W** | **1.29 W** |
 | Núcleo del toroide | ~2 W | ~2 W (no escala con carga) |
-| **Total dentro** | | **~3.3 W** |
+
+A eso hay que sumarle **la SMPS del +5 V digital**, que también vive dentro
+porque se alimenta de red. La IRM-15-5 rinde **78 %** (Mean Well, tabla de
+especificaciones), y su pérdida **no es constante: la manda el brillo de los
+LED**, que están fuera de la caja pero cuelgan de ella.
+
+| Estado | Salida | Pérdida IRM-15-5 | Total dentro | ΔT |
+|---|---|---|---|---|
+| LED apagados | 1.00 W | 0.28 W | **3.57 W** | **3.1 °C** |
+| LED al tope del #104 (2.80 A) | 15.00 W | 4.23 W | **7.52 W** | **6.4 °C** |
 
 Superficie del recinto propuesto (§3.3), **descontando la cara inferior**
 porque apoya contra la bandeja y no convecta:
 
 ```
-2(0.310 x 0.085) + 2(0.160 x 0.085) + 1(0.310 x 0.160)  =  0.129 m2
-dT = 3.3 W / (0.129 m2 x 9 W/m2K)                       =  2.8 C
+2(0.310 x 0.085) + 2(0.160 x 0.085) + 1(0.310 x 0.160)  =  0.1295 m2
+dT = 7.52 W / (0.1295 m2 x 9 W/m2K)                     =  6.4 C   (peor caso)
 ```
+
+**El presupuesto de brillo del #104 es también el termostato de esta caja.**
+Ninguno de los dos documentos lo sabía: el #104 se escribió pensando solo en
+que el riel no se hundiera, y la primera versión de esta sección olvidó contar
+la SMPS. Son el mismo número visto desde dos lados.
+
+Y sale un dato que el #104 necesita: al tope de 2.80 A la IRM-15-5 entrega
+**15.0 W de sus 15 W nominales — el 100 % de su capacidad**, dentro de un
+recinto cerrado. El árbitro no solo evita un brownout; es lo único que impide
+que una fuente de 15 W corra a 15 W de forma sostenida ahí dentro.
+
+El rendimiento a carga parcial es peor que el nominal, así que la fila de «LED
+apagados» es optimista. No cambia nada: el peor caso ya está calculado arriba.
 
 El coeficiente de 9 W/m²K es el valor de manual para convección natural en aire
 quieto sobre superficie pintada. **Es una estimación, no una medida** — pero
-con 2.8 °C de resultado, tendría que estar equivocado por un factor de diez
-para que importe.
+con 6.4 °C de resultado en el peor caso, tendría que estar equivocado por un
+factor de cinco para que importe.
 
-Cadena térmica del componente más caliente (`U2`, LM2991, 0.8 W en peor caso):
+Cadena térmica del componente más caliente, `U2` (LM2991, 0.8 W en peor caso).
+El chasis no se calienta solo por `U2`: lo calientan los 7.52 W de todo lo que
+hay dentro. Así que la cuenta va en dos tramos y **no** en una sola cadena —
+primero cuánto sube el chasis por el total, y encima cuánto sube la unión por
+su propia potencia.
 
 | Tramo | K/W | Procedencia |
 |---|---|---|
 | R_thJC TO-220-5 | ~3 | datasheet, **a confirmar** |
 | Aislante (mica + grasa o silpad) | ~1.5 | catálogo típico |
 | Extendido en chapa de acero 1.5 mm | ~4 | **estimado — el eslabón débil** |
-| Chasis a aire | 0.85 | de los 2.8 °C / 3.3 W de arriba |
-| **Total** | **~9.4** | |
+| **Unión a chasis** | **~8.5** | los tres de arriba |
 
-`Tj = 45 + 0.8 x 9.4 = ~52 °C`, contra los **~101 °C** que da hoy §16.7 con su
-Fischer individual. **48 °C de regalo por dejar de tratar el calor como un
-problema de tres piezas y tratarlo como uno de una sola.**
+```
+Tj = ambiente  +  subida del chasis por los 7,52 W  +  P_U2 x R_union-chasis
+   = 45 C      +  6,4 C                             +  0,8 W x 8,5 K/W
+   = 58 C
+```
+
+Contra los **~101 °C** que da hoy §16.7 con su Fischer individual. **43 °C de
+regalo por dejar de tratar el calor como un problema de tres piezas y tratarlo
+como uno de una sola.**
 
 El eslabón débil es el extendido en acero: el acero conduce ~4× peor que el
 aluminio. A 0.8 W no importa. Si al medir importara, la salida es una placa
@@ -203,6 +234,7 @@ Esto no es «ahora hay datos». Son cuatro cosas medibles:
   eslabón débil de la cadena y el único candidato a placa extensora de aluminio.
 - **El espesor de chapa.** 1.5 mm es supuesto; lo decide el taller de doblado
   junto con los radios de plegado.
+- **La curva de derating de la IRM-15-5.** Su rango es −30 a +85 °C «refer to Derating Curve», y esa curva no se ha leído. Al tope del #104 la SMPS entrega el **100 % de sus 15 W** dentro de un recinto cerrado: hay que confirmar dónde está el codo antes de dar por bueno ese tope.
 - **Si TR1 trae fusible térmico embebido** — ya pedido como ítem de compra en
   el BOM v2. Dentro de un recinto cerrado esa segunda línea de protección pesa
   más que antes.
@@ -211,7 +243,7 @@ Esto no es «ahora hay datos». Son cuatro cosas medibles:
 
 | Qué | Cómo | Cierra |
 |---|---|---|
-| La caja no se calienta | Termopar en la pared tras 2 h encendido a carga real. Se espera < 5 °C sobre ambiente | §3.1 |
+| La caja no se calienta | Termopar en la pared tras 2 h, **con los LED al tope del #104** (que es quien manda la pérdida de la SMPS). Se esperan < 10 °C sobre ambiente | §3.1 |
 | Ningún tab toca el chasis | Ohmímetro entre cada tab y el chasis, con la placa desconectada. Se espera circuito abierto | §3.2 |
 | El PE llega a todo metal accesible | Ohmímetro entre la clavija de tierra y el chasis. Se esperan miliohmios (§13.4) | #107, #47 |
 | La telemetría concuerda | Comparar la lectura de cada INA contra el multímetro en los test points TP1-TP6 | §4 |
