@@ -639,6 +639,47 @@ def _sat_gap(p: dict[str, float], c1: tuple[float, float], ang1: float,
     return -min(separaciones)  # min<=0 en algun eje separador -> hueco positivo
 
 
+# La fresa mas chica de catalogo del taller. Schaeffer: "The smallest tool
+# available is a milling cutter with a diameter of 1 mm."
+FRESA_MIN_D = 1.0
+
+
+def guarda_fresado(p: dict[str, float]) -> None:
+    """Lo que una fresa puede hacer y un laser no obliga a pensar.
+
+    Fresando, la geometria interior deja de ser libre: la herramienta es un
+    cilindro. No entra en un hueco mas estrecho que su diametro, y no deja una
+    esquina interior mas cerrada que su radio. Las esquinas EXTERIORES no
+    limitan nada -- ahi la fresa pasa por fuera y el radio lo pone el dibujo --,
+    asi que esta puerta solo mira huecos y concavos.
+
+    Hoy pasa de sobra, y esa es justo la razon de escribirla: el dia que alguien
+    estreche una ranura "para que se vea mas fina" o cierre el valle, el fallo
+    no aparece en pantalla ni en el DXF. Aparece en el presupuesto, como un
+    cambio de util que se paga, o en un correo del taller diciendo que la pieza
+    no es fabricable. Eso es tarde."""
+    r = p["fresa_d"] / 2
+    # 1. Las ranuras son hull de dos circulos (ver ranura() y onda()): sus
+    #    extremos ya son semicirculos de ancho/2, que es la forma que deja la
+    #    fresa por si sola. Lo que hay que garantizar es que QUEPA.
+    assert p["vent_ancho_ranura"] >= p["fresa_d"] - 1e-9, (
+        f"ranura de {p['vent_ancho_ranura']} mm y fresa de {p['fresa_d']}: "
+        f"la herramienta no entra. O se ensancha la ranura, o el taller cambia "
+        f"a una fresa mas fina y lo cobra.")
+    # 2. El valle es la unica esquina CONCAVA del perfil del costado; las otras
+    #    (pico, punta, perfil) son convexas y no limitan.
+    assert p["radio_valle"] >= r - 1e-9, (
+        f"radio_valle={p['radio_valle']} por debajo del radio de la fresa "
+        f"({r}): esa esquina interior no se puede fresar tal cual")
+    # 3. Taladros: por debajo de la fresa mas chica no hay agujero que valga.
+    for k in ("d_M3_paso", "d_M4_paso", "d_M5_paso"):
+        assert p[k] >= FRESA_MIN_D - 1e-9, (
+            f"{k}={p[k]} por debajo de la fresa mas chica ({FRESA_MIN_D} mm)")
+    print(f"fresado: ranura {p['vent_ancho_ranura']:.1f} y concavo minimo "
+          f"{p['radio_valle']:.1f} contra fresa de {p['fresa_d']:.1f} "
+          f"(radio {r:.1f}) -- sin cambio de util")
+
+
 def guarda_piso(p: dict[str, float]) -> None:
     """El riel de panel del frente tiene que librar el SUELO del case.
 
@@ -817,6 +858,7 @@ def main() -> int:
     canario_solapes(p)
     canario_alineacion(p)
     guarda_piso(p)
+    guarda_fresado(p)
     guarda_escalon(p)
     guarda_tapa(p)
     g = perfil(p)
@@ -913,10 +955,16 @@ def main() -> int:
 
     print(f"perfil: alto_total={g['alto_total']:.1f}  "
           f"entrepiso={g['y_entrepiso']:.1f}  ancho_util={g['ancho_util']:.0f}")
-    print(f"kerf aplicado: {p['kerf']:+.2f} mm (firmado; cupon manda)")
-    print("  se espera NEGATIVO: el laser ENSANCHA y el modelo dibuja "
-          "`d + kerf`, o sea que kerf compensa RESTANDO (README paso 2).")
-    if p["kerf"] > 0:
+    print(f"kerf aplicado: {p['kerf']:+.2f} mm  (proceso: FRESADO CNC)")
+    if p["kerf"] == 0:
+        print("  CERO es lo correcto fresando: el CAM compensa el radio de "
+              "herramienta y la pieza sale a la cota del dibujo.")
+    elif p["kerf"] < 0:
+        print(f"AMARILLO: kerf {p['kerf']:+.2f} es NEGATIVO, que es "
+              f"compensacion de LASER. Si de verdad se volvio al laser hay que "
+              f"medirlo con el cupon Y por espesor -- la franja no es la misma "
+              f"en 5 que en 8 mm. Si no, sobra y encoge todos los huecos.")
+    else:
         print(f"AMARILLO: kerf {p['kerf']:+.2f} es POSITIVO — los agujeros "
               f"saldrian {2 * p['kerf']:.2f} mm sobre el nominal. Un kerf de "
               f"tabla de servicio (ancho de canal, siempre positivo) entra "

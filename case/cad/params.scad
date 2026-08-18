@@ -312,18 +312,27 @@ t_cheek    = 8;    // costados portantes
 // se pueden escribir expresiones, ver la cabecera del fichero).
 t_base     = 8;
 t_panel    = 1.6;  // PCB de aluminio, espesor estandar JLCPCB
-// kerf FIRMADO y NEGATIVO por convencion: el modelo dibuja `d + kerf` en
-// todo hueco y el laser ensancha, asi que para que el agujero fisico salga
-// al nominal, kerf tiene que RESTAR. Un kerf de tabla de servicio (ancho de
-// canal, siempre positivo) entra aqui con el signo cambiado.
-// Magnitud provisional; SE CALIBRA con el cupon (spec §11, README paso 2).
+// EL PROCESO ES FRESADO CNC, NO LASER (decidido el 2026-08-17). Y por eso
+// este numero vale CERO, que no es lo mismo que "sin calibrar":
+//
+//   laser    quema una franja centrada en la linea. El hueco sale mas grande
+//            que el dibujo, nadie te dice cuanto, y hay que restarlo a mano.
+//            Ahi kerf es NEGATIVO y se mide con el cupon.
+//   fresado  el CAM aplica compensacion de radio de herramienta como parte
+//            normal del trabajo. La pieza sale a la cota del dibujo, con la
+//            tolerancia de produccion del taller (Schaeffer publica 0.05-0.10
+//            mm). No hay nada que compensar aqui: kerf = 0.
+//
+// Si el proceso volviera a laser, esto vuelve a ser negativo Y hay que medirlo
+// -- ademas por espesor, porque la franja no es la misma en 5 que en 8 mm.
+// El procedimiento del cupon sigue en README §"Procedimiento del cupon".
 // ASIMETRIA DELIBERADA: el kerf se aplica a los HUECOS (agujeros, ranuras,
 // recortes), no a los CONTORNOS exteriores. Cada plancha sale por tanto ~0.2
 // mm mas chica que el nominal: en todas las piezas de este case eso es
 // holgura a favor (auditado pieza por pieza en el review final de rama), y
 // ninguna lleva encaje macho donde restaria. Si alguna vez se dibuja una
 // lengueta que deba entrar apretada, hay que aplicarle kerf a su contorno.
-kerf       = -0.2;
+kerf       = 0;
 
 // Teselado de circulos. VIVE AQUI, no en sam17_case.scad, porque todo .scad
 // que incluya params lo hereda: coupon.scad lo perdio cuando estaba alla y
@@ -595,7 +604,14 @@ marco_sup   = 8;
 prof_sup    = 16;
 
 // --- ventilacion con firma (spec §7) ---
-vent_ancho_ranura = 4;   // ancho de la ranura-onda
+// Diametro de la fresa estandar del taller. NO es decoracion del BOM: manda
+// sobre toda la geometria interior, porque una fresa no puede entrar en un
+// hueco mas estrecho que ella ni dejar una esquina interior mas cerrada que su
+// radio. Schaeffer: fresa minima 1 mm (radio interior 0.5), y la de 3 mm es la
+// estandar -- pedir un radio mas cerrado obliga a cambio de util y se paga.
+// guarda_fresado() en clearance_budget.py lo comprueba contra la geometria.
+fresa_d           = 3;
+vent_ancho_ranura = 4;   // ancho de la ranura-onda. >= fresa_d por eso mismo
 vent_puente_min   = 4;   // puente minimo entre ranuras (fragilidad)
 vent_periodo      = 40;  // periodo horizontal de cada onda
 

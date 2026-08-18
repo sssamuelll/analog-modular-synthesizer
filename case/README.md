@@ -84,7 +84,18 @@ del blob de git con `git show` —LF—, por `core.autocrlf=true`. Es la
 misma conversión de fin de línea de siempre, no una cuarta clase de
 no-determinismo.)
 
-## Procedimiento del cupón — OBLIGATORIO antes de cortar planchas
+## Procedimiento del cupón — sólo si se vuelve al láser
+
+**Con el proceso actual (fresado CNC) este procedimiento NO aplica y `kerf`
+vale 0.** El CAM del taller compensa el radio de herramienta como parte normal
+del trabajo y la pieza sale a la cota del dibujo, con la tolerancia de
+producción del taller (Schaeffer publica 0.05–0.10 mm).
+
+Se conserva entero porque el láser sigue siendo una alternativa viable, y
+porque el día que se vuelva a él hay que hacer esto **dos veces, una por
+espesor**: la franja del láser no es la misma en 5 que en 8 mm, y `params.scad`
+tiene un único `kerf`. Ese día hay que partirlo antes de cortar nada.
+
 
 1. Cortar [`plans/coupon.dxf`](plans/coupon.dxf) en el acrílico REAL con la
    máquina REAL. El cupón se dibuja CRUDO, sin kerf: es la pieza que lo mide.
