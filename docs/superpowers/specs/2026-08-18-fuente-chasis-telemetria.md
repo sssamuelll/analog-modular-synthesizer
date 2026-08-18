@@ -92,11 +92,10 @@ apagados» es optimista. No cambia nada: el peor caso ya está calculado arriba.
 
 El coeficiente de 9 W/m²K es el valor de manual para convección natural en aire
 quieto sobre superficie pintada. **Es una estimación, no una medida** — pero
-con 2.8 °C de resultado, tendría que estar equivocado por un factor de diez
-para que importe.
+con 6.4 °C de resultado en el peor caso, tendría que estar equivocado por un
+factor de cinco para que importe.
 
-Cadena térmica del componente más caliente (`U2`, LM2991, 0.8 W en peor caso):
-
+Cadena térmica del componente más caliente, `U2` (LM2991, 0.8 W en peor caso).
 El chasis no se calienta solo por `U2`: lo calientan los 7.52 W de todo lo que
 hay dentro. Así que la cuenta va en dos tramos y **no** en una sola cadena —
 primero cuánto sube el chasis por el total, y encima cuánto sube la unión por
