@@ -44,8 +44,11 @@ _probe.*
 *.rpt
 
 # Zips de fabricacion (regenerables desde fab/)
-hardware/*/fab/*-jlcpcb.zip
+hardware/**/fab/*-jlcpcb.zip
 .claude/worktrees/
+
+# Rust
+target/
 
 # Case — artefactos de render (regenerables con case/cad/export.ps1)
 # EXPLICITO A PROPOSITO. Ya los alcanzaba el `build/` generico de la seccion de

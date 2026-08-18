@@ -2,6 +2,14 @@
 
 > Documentación funcional: [`docs/modules/01-power-supply.md`](../../docs/modules/01-power-supply.md).
 
+> **Estado (2026-08-17): esta v1 no se construye.** Queda como diseño cerrado y
+> documentado — el razonamiento de `notes/design-notes.md` sigue siendo la base
+> de la que hereda la [v2](v2/), incluido el front-end (trafo, puente, bulk) y
+> las simulaciones de valle y de lazo de zumbido. Lo que cambia es que **no hace
+> de mula**: la v2 se ajusta contra sus propias medidas en el bring-up
+> ([v2/notes/design-notes.md §4](v2/notes/design-notes.md)). La fuente que se
+> fabrica y alimenta el sintetizador es la **v2**.
+
 ## Resumen
 
 Convierte 12 VAC del transformador externo en **+5 V**, **+12 V** y **−12 V**

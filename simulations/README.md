@@ -5,7 +5,7 @@ analógicos antes de ir a la PCB.
 
 | Módulo | Carpeta | Qué validar |
 |--------|---------|-------------|
-| VCO | [`vco/`](vco) | Forma de las ondas, linealidad 1 V/oct, PWM |
+| VCO | [`vco/`](vco) | **Sin SPICE a propósito** — no hay modelo público del SSI2130. El span 1 V/oct se calcula en [`pitch_budget.py`](../hardware/03-vco/pitch_budget.py); las ondas se miden en el bring-up. [Por qué](vco/README.md) |
 | VCF | [`vcf/`](vcf) | Respuesta en frecuencia (Bode), tracking 1 V/oct, auto-oscilación |
 | ADSR | [`adsr/`](adsr) | Envolvente para distintos valores A/D/S/R, tiempos mínimos/máximos |
 | VCA | [`vca/`](vca) | THD vs nivel de entrada, feed-through del CV, transferencia |

@@ -424,16 +424,20 @@ dropout **garantizado** en vez del típico, el margen del riel positivo cae a
 
 - Tolerancia de R1/R2 del divisor del LM2941 (desplaza el setpoint de 13.1 V).
 - Caída extra en conectores/pistas entre el bulk y el LM2941.
-- Que la mula real mida un valle por debajo de los 14.12 V simulados (la
-  propia spec, §11.4, ya avisa que esa cifra es "fina hasta que la mula mida").
+- Que el valle real esté por debajo de los 14.12 V simulados (la propia spec,
+  §11.4, ya avisa que esa cifra es "fina hasta que la mula mida"). **Sin mula
+  (§4), esa medida se hace ya con la v2 en la mesa** — el umbral por debajo del
+  cual el trimmer deja de salvarla está calculado en §4.1: **13.46 V**.
 - Que el dropout real a 650 mA/caliente esté más cerca del MAX de 1 A que del
   TYP de 0.5 V (el DS no da un punto intermedio garantizado — ver §1.1).
 
 No hace falta bajar el setpoint todavía porque el margen no dio negativo, pero
 con 0.02 V de colchón la recomendación para Task 4/5 es dejar el trimmer del
 divisor del LM2941 con margen para bajar el setpoint (el brief documenta el
-trimmer llegando hasta ~12.3 V) **si la medida en la mula real no confirma al
-menos unas décimas de margen**.
+trimmer llegando hasta ~12.3 V) **si la medida real no confirma al menos unas
+décimas de margen**. Ese trimmer dejó de ser una precaución al cancelarse la
+mula: es el mecanismo que absorbe el valle real, y el bring-up (§5 paso 5)
+espera usarlo, no encontrarlo intacto.
 
 #### §1.5.1 Headroom del LT3045/LT3094 contra el suelo bajable del pre-reg (cierra §1.3/§1.4)
 
@@ -553,6 +557,19 @@ por la regla del Step 2. No aplica el plan B de re-plan del brief.
 | 10 µF X7R 50 V 1206 (Samsung CL31B106KBHNNNE, ±10 %) — ver nota de voltaje | **C89632** | 385.340 | Extended | $0.43 / $0.28 (500+) | 2026-08-16 |
 | SMAJ15A TVS (Littelfuse) | **C148216** | 10.030 | Basic | $0.139 / $0.076 (2500+) | 2026-08-16 |
 | SS14 Schottky SMA (MDD/Microdiode) | **C2480** | 1.081.100 | Basic | $0.0185 / $0.0085 (50k+) | 2026-08-16 |
+| R_ILIM 374 Ω 1 % 0603 (UNI-ROYAL 0603WAF3740T5E) — R11/R12, LT3045 | **C23149** | 9.800 | Extended | $0.0027 / $0.0021 | 2026-08-17 |
+| R_ILIM 9.31 kΩ 1 % 0603 (UNI-ROYAL 0603WAF9311T5E) — R13/R14, LT3094 | **C23126** | 2.200 | Extended | $0.0014 / $0.0012 | 2026-08-17 |
+
+**Nota — R_ILIM (fix task review, 2026-08-17)**: R11/R12 (374 Ω) y R13/R14
+(9.31 kΩ), calculados en §1.3/§1.4, **nunca pasaron por esta puerta de
+stock** — el Step 4 original (2026-08-16) cotizó R_SET, shunts, C_SET,
+entrada/salida y protecciones, pero se saltó los R_ILIM. El implementador de
+Task 9 rellenó `bom.csv` con C17590/C25709 sin verificarlos contra
+`lcsc.com`; el task review los detectó como **inventados** (C17590 es un
+270 Ω 0805, C25709 un 75 kΩ 1210 — ninguno de los dos es la pieza real) y
+este fix los reemplaza por códigos verificados en vivo en el navegador
+contra `lcsc.com/product-detail/`: value + tolerancia + package confirmados
+en pantalla para ambos, con stock real (9.800 u. y 2.200 u.).
 
 **Nota — R_SET (120 kΩ, valor de diseño correcto)**: el objetivo es
 **12.000 V = 100 µA × 120 kΩ** — el brief pide 120 kΩ y ese es el valor de
@@ -623,6 +640,76 @@ chica (la fuente v2 usa 1 LM2941 por unidad), pero si el proyecto escala a
 producción de varias unidades convendría re-chequear antes de comprar. Lead
 time de fabricante declarado (16 semanas) es el de fabricación nueva de TI,
 no aplica mientras haya stock del distribuidor.
+
+### §2.6 Re-verificación de stock del día de pedir (2026-08-17)
+
+Puerta 2 de `fab/README.md`. Los 10 códigos del BOM de ensamblaje,
+consultados en vivo uno por uno en `lcsc.com/product-detail/<code>.html`
+—valor, tolerancia y package confirmados en la ficha, no supuestos—:
+
+| código | pieza confirmada en la ficha | uds/placa | stock 08-17 | stock 08-16 |
+|---|---|---|---|---|
+| C514420 | LT3045EDD#TRPBF | 2 | 3.592 | (no cotizado) |
+| C670492 | LT3094EDD#PBF | 2 | 1.462 | (no cotizado) |
+| C114524 | RC0805FR-07120KL, 120 kΩ ±1 % ±100 ppm/°C 0805 | 2 | 170.000 | 169.800 |
+| C23149 | 0603WAF3740T5E, 374 Ω ±1 % 0603 | 2 | 9.800 | 9.800 |
+| C23126 | 0603WAF9311T5E, 9.31 kΩ ±1 % 0603 | 2 | 2.200 | 2.200 |
+| C6920584 | VMK-R020-1.0-U, 20 mΩ ±1 % 1.5 W 1206 | 4 | **1.000** | 1.000 |
+| C6120032 | CGA1210X7R226K250RT, 22 µF 25 V X7R 1210 | 2 | 2.685 | 2.685 |
+| C89632 | CL31B106KBHNNNE, 10 µF 50 V X7R 1206 | 8 | 381.245 | 385.340 |
+| C148216 | SMAJ15A, TVS 15 V DO-214AC | 2 | 10.010 | 10.030 |
+| C2480 | SS14, Schottky 40 V SMA | 2 | 1.062.050 | 1.081.100 |
+
+**Veredicto: GO.** Los diez con stock real y valores coincidentes. El más
+fino sigue siendo el shunt `C6920584` (1.000 u., Basic, 4 por placa): da
+para 250 placas, de sobra para esta tanda, pero es el único que conviene
+mirar otra vez si pasa tiempo entre este chequeo y el pedido. Alterno ya
+documentado en §2.4 si se agota: `C1848840` (Bourns, ±50 ppm/°C).
+
+#### §2.6.1 R_SET: se cierra la búsqueda del 0,1 %/25 ppm — y se descarta
+
+§2.4 dejó una acción abierta: «antes de comprar, re-intentar buscar el
+C-code de 120 kΩ 0,1 %/25 ppm 0805; si no, decidir entre soldar a mano uno
+de Mouser/DigiKey o aceptar el C114524». Se cierra aquí, y **el resultado
+es que no vale la pena perseguirlo** — no por no encontrarlo, sino por un
+número del propio chip que faltaba en la puerta.
+
+Leído verbatim en la tabla ELECTRICAL CHARACTERISTICS del DS del LT3045
+(Farnell `2163219.pdf`, p.3), fila **SET Pin Current (I_SET)**:
+
+```
+V_IN = 2V, I_LOAD = 1mA, V_OUT = 1.3V            MIN  99  TYP 100  MAX 101  µA
+2V<V_IN<20V, 0V<V_OUT<15V, 1mA<I_LOAD<500mA (l)  MIN  98  TYP 100  MAX 102  µA
+```
+
+La segunda fila es la que aplica a esta placa (V_IN = 13.1 V, V_OUT = 12 V,
+I_LOAD ≈ 325 mA) y lleva el marcador `l`, o sea garantizada sobre
+temperatura: **I_SET = ±2 %**. La portada del DS anuncia «±1 % Initial
+Accuracy», que es la primera fila — condición de test estrecha, no la de
+operación.
+
+Como `V_OUT = I_SET × R_SET` sin divisor, los dos errores se multiplican:
+
+| R_SET | ventana de V_OUT (peor caso) |
+|---|---|
+| 1 % (C114524, el que se compra) | 12.0 V **±3 %** → 11.64 … 12.36 V |
+| 0,1 % (el que se perseguía) | 12.0 V **±2,1 %** → 11.75 … 12.25 V |
+
+**El término dominante es el chip, no el resistor.** Gastar en el 0,1 %
+compra 0,9 puntos de una ventana de 3, y no acerca a «12.000 V exactos»:
+con esta topología esa cifra **no existe**, porque no hay trim de V_OUT en
+ningún punto de la etapa ultra. Lo que compra el LT3045/LT3094 es ruido
+(0,8 µVrms) y PSRR, no exactitud absoluta de cuatro cifras — y ninguna de
+esas dos cosas depende de la tolerancia de R_SET.
+
+**Ruling: se compra el C114524 y se cierra el tema.** El tempco de
+100 ppm/°C sigue siendo el que documenta §2.4 (1,2 mV/°C de deriva), y es
+de segundo orden encima de una ventana de ±2 % que ya incluye temperatura.
+Consecuencia de documentación: donde el proyecto dice «±12.000 V exactos»
+hay que leer **±12,0 V nominales, ±3 % peor caso**. Si algún módulo
+2-7 llegara a necesitar el riel como referencia de precisión (hoy ninguno:
+llevan su propio filtrado RC, issue #59), eso pide un LDO de referencia en
+el módulo, no un resistor mejor aquí.
 
 ## §3 Decisiones y aritmética
 
@@ -831,10 +918,195 @@ con uno que sobrevive (C11, etapa U3) porque ambos tienen el mismo valor de
 D2) con uno que sobrevive (D5, etapa U3). El Step 2 de Task 4 separa estas
 dos filas: hereda solo C11 y D5, con cantidad 1 cada una.
 
-## §4 Medidas de la mula
+### §3.2 Asimetría térmica intra-pareja de las granjas EP (review fase C, F5)
 
-(vacío; Task 10 mete el protocolo)
+**Hallazgo del review**: las granjas de vías térmicas del EP de U4-U7
+(ballast LT3045/LT3094, pareja +12V y pareja −12V) no quedaron simétricas
+entre los dos chips de cada pareja — restricciones reales de routing
+(clearance hole-to-hole, pines vecinos, corredores ya ocupados por otras
+redes) forzaron un reparto desigual:
 
-## §5 Bring-up
+- **U4**: 4 vías (rejilla 2×2, paso 0.6 mm).
+- **U5**: 6 vías (rejilla 2×3, paso 0.6×0.7 mm — la huella del EP es
+  1.65×2.38 mm, más alta que ancha, y U5 sí tenía sitio limpio para la
+  tercera fila).
+- **U6**: 4 vías de la granja nueva (2×2) **+ 1 vía vieja de 0.5 mm de
+  taladro** que ya existía como transición F/B del tronco `/-12V9` en
+  (120, 169) y hace de ancla — 5 puntos de contacto térmico en total.
+- **U7**: 4 vías (rejilla 2×2) — sin vía extra: el stub F.Cu del pin 3 al
+  EP se alargó 0.5 mm hasta aterrizar exacto en una de las cuatro vías de
+  su propia granja, que hace de ancla sin necesitar una vía adicional.
 
-(vacío; Task 10)
+**Por qué se acepta tal cual (no se re-rutea)**: el reparto de corriente
+entre los dos chips de una misma pareja lo domina el ballast de 20 mΩ en
+serie con cada uno (R15/R16 para +12V, R17/R18 para −12V) — es una
+resistencia de balance deliberada, mucho mayor que cualquier diferencia de
+resistencia térmica entre 4 y 6 vías de 0.3 mm. El efecto real de la
+asimetría es una diferencia de temperatura de juntura leve entre los dos
+chips de una pareja (U4 más caliente que U5, o U6 más caliente que U7 —
+menos vías = más resistencia térmica del EP a la plancha de cobre), no un
+desbalance de corriente. Con ~0.33 W por chip (spec sec.6.1) el margen
+térmico de un DFN-10/12 sobra incluso con la granja más pobre (4 vías).
+
+**Acción si la mula lo desmiente**: si las medidas térmicas (§4, con
+cámara termográfica o termopar sobre cada chip) muestran **más de 5 °C**
+de diferencia entre los dos chips de una misma pareja (U4 vs U5, o U6 vs
+U7) en operación sostenida a plena carga, revisar aquí — la vía adicional
+de U6 y las dos vías extra de U5 dejarían de ser una curiosidad de layout
+y pasarían a ser sospechosas de un desbalance real que el ballast de 20 mΩ
+no está absorbiendo del todo.
+
+## §4 Campaña de medidas — sobre la v2 misma
+
+> **Decisión (2026-08-17): la v1 no se construye.** El plan original usaba la v1
+> de mula de medidas y congelaba la v2 contra sus números (spec §11.4). Se va
+> directo a la v2. La v1 queda como diseño documentado y cerrado, no como
+> hardware. Consecuencias, sin maquillar:
+>
+> - **Lo que se gana:** el front-end (Talema 120 VA, BR1, 4×4700 µF) se compra
+>   una vez, no dos, y desaparece la puerta que bloqueaba el pedido. El valle
+>   simulado ya no hace falta confirmarlo *antes* de fabricar porque los
+>   setpoints son ajustables en sitio con RV2/RV3 — el trimmer **es** el
+>   sustituto de la mula, no un adorno.
+> - **Lo que se pierde:** si el valle real está muy por debajo del simulado, te
+>   enteras con la placa ya fabricada y montada, no antes. El umbral exacto a
+>   partir del cual el trimmer ya no salva la placa está en §4.1 — **léelo antes
+>   del paso 5 del bring-up.**
+> - **Lo que desaparece:** la fila 3 de la tabla (comparativa de rizado v1 vs
+>   v2) no se puede medir sin una v1 física.
+> - **Lo que sube de riesgo:** la v2 pasa a ser la única fuente del sistema. No
+>   hay fuente de respaldo para los módulos 2-7 mientras se depura.
+
+**Orden a seguir tras bring-up exitoso §5:** tierra y continuidad verificadas,
+placa sin carga a setpoint nominal (TP7 = +13.1 ± 0.3 V, TP8 = −12.9 ± 0.3 V).
+Cada medida cierra un número de **diseño congelado** — los resultados informan
+qué setpoints de RV2/RV3 se dejan puestos en la pareja de LM2941/LM2991.
+Medir con red a la tensión real del día.
+
+### Tabla de medidas
+
+| # | Medida | Cómo | Resultado |
+|---|---|---|---|
+| 1 | Valle `VRAW+` y `VRAW−` (piso del rizado, no promedio) | Con carga dummy 18 Ω / 25 W por riel (12 V / 0.65 A) en **frío** y tras **30 min en caliente**. Medir con osciloscopio DC acoplado, 20 MHz BW limitado, punta en J2. Anotar la tensión de red en el momento. | (vacío) |
+| 2 | Pico nominal en vacío (sin dummy) | Con red a la tensión medida en paso 1. Valor esperado: ~14 V; documentar para cierre de margen §1.5. | (vacío) |
+| 3 | ~~Rizado pico-pico real del riel −12 V de la v1~~ | **ANULADA** — la v1 no se construye (ver cabecera de §4). La comparativa v1/v2 se queda sin lado v1; el rizado de la v2 se mide igual en el paso 6 del bring-up §5. | n/a |
+| 4 | Térmica en régimen: T_case y disipador | IR cámara termográfica u 8 termopares (U1/U2, U4-U7, disipadores FK sk129/38.1). Régimen: dummy 18 Ω × 30 min, después medir T cada 5 min hasta T_case estable (frontera). Anotar T_ambiente. Expectativa: < 70 °C en el TO-220 (§10.4.1 del datasheet del LM2941); cerámicos DFN < 90 °C. | (vacío) |
+
+### Fórmula de cierre de márgenes
+
+Por cada riel, después de **todos los pasos anteriores**, calcular:
+
+```
+margen = valle_medido − dropout_max(riel) − setpoint_nominal
+```
+
+- `valle_medido`: valor pico inferior de VRAW+/VRAW− del paso 1, en frío (es el
+  escenario conservador).
+- `dropout_max(riel)`: del datasheet respectivo, MAX garantizado sobre temperatura
+  (LM2941 @ 650 mA: 1.0 V; LM2991 @ 650 mA: 1.0 V — ver §1.1/§1.2).
+- `setpoint_nominal`: TP7 medido (+13.1 V) o TP8 medido (−12.9 V) tras bring-up §5
+  con carga dummy.
+
+**Regla de ajuste**: si margen < 0.2 V, bajar el setpoint girando RV2 (positivo) o
+RV3 (negativo) hasta recuperar margen ≥ 0.2 V. **Rango útil del trimmer** (suelo
+bajable garantizado por headroom del LT3045/LT3094, §1.5.1): **12.46 V** (positivo) /
+**−12.42 V** (negativo). No bajar más allá — el margen del LT vs el dropout de la
+cascada se agota.
+
+### §4.1 Umbral de aborto: el valle mínimo que la placa aguanta
+
+Sin mula, la primera medida del valle se hace ya con la v2 fabricada. Esta es la
+cuenta que dice si el trimmer puede salvarla o no. Encadenando los dos dropouts
+garantizados (no típicos) de §1.5 y §1.5.1:
+
+```
+valle_mínimo = 12.000 V (V_OUT) + dropout_max(LT) + ballast (0.007 V) + dropout_max(pre-reg, 1.0 V)
+
+Positivo (LT3045, bin 500 mA, MAX 450 mV):
+  12.000 + 0.450 + 0.007 + 1.000 = 13.457 V   ← el que manda
+Negativo (LT3094, bin 500 mA, MAX 410 mV):
+  12.000 + 0.410 + 0.007 + 1.000 = 13.417 V
+```
+
+**El umbral es 13.46 V** (lo fija el riel positivo; ambos rieles comparten
+front-end, así que el valle es prácticamente el mismo en magnitud).
+
+| | Valor |
+|---|---|
+| Valle simulado (§16.5 de la v1, red a 207 V, plena carga) | **14.12 V** |
+| Valle mínimo viable | **13.46 V** |
+| **Colchón contra la simulación** | **0.66 V (4.7 %)** |
+
+Léelo así: **el valle real puede salir hasta 0.66 V por debajo del simulado y la
+placa sigue siendo recuperable girando RV2/RV3.** Ese colchón es lo que compra
+saltarse la mula. Por debajo de 13.46 V medidos no existe setpoint que funcione —
+ningún giro de trimmer arregla eso.
+
+**Lo que se espera realmente que pase en el paso 5 del bring-up:** el setpoint
+nominal del riel positivo (13.1 V) tiene solo **+0.02 V** de margen contra el
+valle simulado (§1.5). Eso no es margen, es empate. Con el valle en 14.12 V el
+techo del pre-reg queda en 13.12 V, así que para cumplir la regla de margen
+≥ 0.2 V hay que **bajar RV2 hasta ~12.9 V**. No es un fallo: es el primer
+ajuste previsto, y cae cómodamente dentro del rango (suelo 12.46 V). El riel
+negativo ya nace con +0.22 V y probablemente no haya que tocarlo.
+
+**Si el valle medido cae por debajo de 13.46 V**, en orden de coste:
+
+1. **Subir el bulk.** El valle lo fijan trafo + BR1 + C1/C2/C12/C13, todos THT.
+   Colgar más electrolítico en paralelo sube el valle sin rediseñar la placa —
+   es el arreglo barato y no toca el cobre.
+2. **Aceptar salida por debajo de 12.000 V.** Si los módulos 2-7 toleran
+   ±11.9 V, el umbral entero se relaja ~100 mV. Decisión de sistema, no de
+   la fuente.
+3. **Revisar la premisa de red.** El valle de 14.12 V está simulado a 207 V
+   (red −10 %). Si la red real está en nominal, el valle medido debería salir
+   por encima del simulado, no por debajo — un valle bajo con red nominal
+   apunta a trafo o bulk, no a margen de diseño.
+
+## §5 Bring-up escalonado
+
+Orden recomendado al recibir la PCB montada (antes de conectar módulos o carga real):
+
+1. **Continuidad de tierra (equipo desenchufado)**. Óhmetro entre la clavija de tierra
+   del enchufe, cada panel, el espárrago y el faston de J5. Miliohmios o decenas de
+   miliohmios (§13.4). Si falla, no se enchufa.
+
+2. **Inspección visual**. Polaridad de electrolíticos, orientación de reguladores,
+   cortos en el silk. **Punto crítico**: esquina `+` moldeada en BR1 contra cruz `+`
+   del silk (pad 1); girado 180° cabe igual y cruza el puente en el primer semiciclo.
+   Mica y casquillo aislante en U2 (LM2991), tab NO está a masa (§1.2).
+
+3. **Solo trafo sin placa**, sin carga. Medir ±17 V entre fase y neutro tras BR1.
+   Desenchufar. Insertar reguladores THT en sus zócalos.
+
+4. **Placa sin carga**: enchufe con corriente — TP7 = +13.1 ± 0.3 V (prerreg +12V),
+   TP8 = −12.9 ± 0.3 V (prerreg −12V). Los test points ya están serigrafiados con su
+   señal en la placa (TP7=+13V1, TP8=−12V9). Si alguno está fuera de rango, no
+   conectar carga; revisar setpoints RV2/RV3 (giro manual, trimmer cerrado, ~10
+   vueltas) hasta meterlo en banda.
+
+5. **Conectar dummy 18 Ω / 25 W por riel** a J2 (medir con multímetro para verificar
+   ~12 V/0.6 A en ambos rieles). Anotar que esta es la medida con carga nominal de
+   diseño (§4, paso 1).
+
+   **Aquí está la puerta que antes cerraba la mula.** Con la dummy puesta, medir el
+   valle de `VRAW+`/`VRAW−` con osciloscopio (DC, 20 MHz BW) **antes de dar por buena
+   la placa**, y compararlo contra el umbral de **13.46 V** de §4.1:
+   - Valle ≥ 13.46 V → bajar RV2 hasta dejar margen ≥ 0.2 V (se espera aterrizar
+     en ~12.9 V en el positivo; el negativo suele no necesitar toque). Seguir.
+   - Valle < 13.46 V → **parar**. Ningún setpoint funciona; ir a la lista de
+     remedios de §4.1 (subir bulk / relajar V_OUT / revisar red y trafo).
+
+6. **Medir rizado pico-pico** en cada riel con osciloscopio (DC coupling, 20 MHz BW
+   limitado, punta en J2 — misma condición que §4 filas 1 y 3). Criterio mínimo
+   (spec §10.4): rizado bajo el suelo medible del osciloscopio con esa BW
+   (~sub-mV, ya 10× mejor que v1) — no es un umbral numérico fijo tipo "< X mVpp".
+   Criterio pleno de aceptación: medir con LNA delante (equipo aparte, issue #58 —
+   «LNA de medida para el nivel pleno del GOAT»).
+
+7. **Termograma o termopar** en U1/U2 (TO-220, disipadores de 38 mm) y en U4-U7 (DFN)
+   tras 30 min a plena carga (dummy activada). Expectativa: < 70 °C en TO-220,
+   < 90 °C en DFN. Si T_case de U4 vs U5 o U6 vs U7 difieren > 5 °C, documentar en §3.2.
+
+8. **Llenar la tabla de §4** con los números medidos. Calcular margen de cada riel y
+   aceptar (margen ≥ 0.2 V) o reajustar setpoints si es necesario.

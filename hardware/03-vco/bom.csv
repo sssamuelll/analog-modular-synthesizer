@@ -1,15 +1,30 @@
 ref,value,footprint,quantity,supplier,notes
-U_VCO1-U_VCO3,CEM3340,DIP-16,3,importado,Núcleo VCO clásico (Prophet 5)
-U_OP,TL074,SOIC-14,2,nacional,Buffers y conformación de salidas
-R_TEMPCO,2k 3300ppm,—,3,importado,Resistencia de tempco para 1V/oct (opcional pero recomendado)
-R_FILM,varias 1%,R_0805,30,nacional,Resistencias de precisión 1V/oct y PWM
-C_TEMPO,1nF NP0/C0G,C_0805,3,nacional,Condensador de tempo del VCO (uno por oscilador)
-POT_TUNE,100k lin,RV24AF,3,importado,Pot. afinación
-POT_PWM,100k lin,RV24AF,3,importado,Pot. ancho de pulso
-TRIM_OFFSET,10k multivuelta,—,3,nacional,Trim offset 1V/oct
-TRIM_SCALE,10k multivuelta,—,3,nacional,Trim escala 1V/oct
-J_CV,Jack 3.5mm mono,—,3,nacional,Entrada CV por VCO
-J_SAW,Jack 3.5mm mono,—,3,nacional,Salida sierra
-J_TRI,Jack 3.5mm mono,—,3,nacional,Salida triangular
-J_SQR,Jack 3.5mm mono,—,3,nacional,Salida cuadrada
-PIN_BUS,Pin header 2x3,1x06,1,nacional,Bus de alimentación
+U1-U4,SSI2130,QFN-32 4x4mm EP,4,Cabintech/AmplifiedParts ~$6,VCO+mixer+seno. PROVEEDOR UNICO - comprar 6 (2 repuestos). NO se consigna: JLC rechaza piezas sin stock en su flujo de montaje (probado 2026-08-17). Se sueldan a mano con cautin -- el EP va aislado (no hay que refluir plataforma termica) y los pads sobresalen 0.35mm del cuerpo. Ver pcb/README.md
+U5-U7,AD5686RBRUZ,TSSOP-16,3,importado,DAC 16b x4. Cadena DCEN. Ref interna APAGADA por firmware (reg 0111)
+U8,ADR4525BRZ,SOIC-8,1,importado,LA referencia: 2.5V 2ppm/C max. Alimenta DACs y SSI2130s
+U9,TL074H,SOIC-14,1,nacional,I/V de MIX OUT x4 (el H por deriva: tuning_budget.py)
+U10,74HC14,SOIC-14,1,nacional,TUNE_OUT x4 a 3.3V. Entradas sobrantes a masa
+U11,L78L05,SOT-89,1,nacional,+5V local desde +12V (~20mA)
+U12,LD1117S33,SOT-223,1,nacional,+3.3V local desde +5V
+U13,TMP1075,VSSOP-8,1,importado,Sensor temp I2C pegado al racimo U1-U4. Direccion por straps. Variante TMP1075DGK (VSSOP-8): SOT-23-6 no existe en Sensor_Temperature.kicad_sym, se descarta esa opcion
+U14,24AA02E48,SOT-23-5,1,importado,EEPROM I2C con MAC/ID unico. Identidad + blob de calibracion. Simbolo KiCad 24AA02E-OT (pinout identico, sin sufijo E48 en la libreria de sistema)
+C_TCAP1-4,3.9nF C0G,C_0805,4,nacional,Tempo del SSI2130 (valor del datasheet). SOLO C0G/NP0
+R_PITCH1-4,16.5k 1%,R_0805,4,nacional,DAC 0-2.5V -> 20uA/oct: span 7.58 oct (margen trimless)
+R_CVIN1-4,49.9k 1%,R_0805,4,nacional,Jack CV-IN 1V/oct al nodo expo
+R_SCALE1-4,26.7k 1%,R_0805,4,nacional,VREF->EXPO SCALE ~94uA. FIJA - sin trim (spec par.2.7)
+R_MIX*,49.9k 1%,R_0805,16,nacional,4 CV de mezcla x 4 voces (0-2.5V -> 0-50uA)
+R_IV1-4,10k 1%,R_0805,4,nacional,Transimpedancia MIX OUT (500uA -> 5V)
+R_SQ1-4,20k,R_0805,4,nacional,Pullup open-collector SQUARE OUT a +3V3
+R_LIN1-4,499k 1%,R_0805,4,nacional,VREF->LIN FREQ ~5uA. Sin ella el oscilador SE PARA (ds pag.5/9)
+R_I2C1-2,4.7k,R_0805,2,nacional,Pullups I2C
+R_SIN*,4.02k+4.75k+4.75k 1%,R_0805,12,nacional,Red del shaper de seno (Figure 1 del datasheet). Refs reales R_SIN402_n/R_SIN475A_n/R_SIN475B_n (RED_SINE* no matcheaba nada en la hoja)
+R_BW1-4 C_BW1-4,270R+10nF,R_0805/C_0805,8,nacional,Compensacion BW COMP (pin 26). Refs reales R_BW/C_BW (RED_BW1-4 no matcheaba nada en la hoja)
+C10 C12-C24 C27-C30,100nF X7R,C_0805,18,nacional,Desacoplo pegado a cada chip (incluye V- de U1-U4: ds pag.6 pide las dos alimentaciones). Eran ~19 estimadas; contadas en la hoja: 18 (C_DEC* no matcheaba nada, la hoja usa numeracion plana)
+C8 C9 C25 C26,10uF,C_0805,4,nacional,Bulk por riel: +5V_LOC(C8) +3V3_LOC(C9) +12V(C25) -12V(C26) (ds pag.6: >=10uF en ambas alimentaciones del bus, no solo en los rieles locales). C_BULK* no matcheaba nada, identificadas por valor 10uF en la hoja
+C11,1uF,C_0805,1,nacional,Desacoplo de salida de VREF (U8/ADR4525): el datasheet pide un valor distinto (1uF) al 100nF generico del resto de la placa, por eso va aparte de C_DEC. Faltaba por completo en el BOM
+C_AC*,10uF,C_0805,8,nacional,Acoplos AC del seno (TRI->SINE IN+ y SINEO->AUX1)
+J1,KK-254 4 pines,Molex KK,1,nacional,PSU +12/G/G/-12 (convencion del bus board)
+J2,IDC 2x6,IDC-Header_2x06,1,nacional,Mazo digital: contrato del enlace (spec par.7)
+J_CV1-4,WQP-PJ398SM,Thonkiconn,4,importado,CV-IN por voz. TN a GNDA (suma 0V sin cable)
+J_OUT1-4,WQP-PJ398SM,Thonkiconn,4,importado,Salida de voz. Normalizada al VCF en el jack del modulo 5
+TP*,Test point,TestPoint_Pad,15,nacional,+12 -12 +5 +3V3 VREF CV_PITCHx4 MIXOx4 GNDA GNDD

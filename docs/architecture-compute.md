@@ -81,6 +81,20 @@ Como la computadora puede ser **cualquiera**, el enlace tiene que ser
 Igual que cualquier sinte de hardware, y por eso todos funcionan con la DAW de
 todo el mundo. El RP2350 hace USB nativo.
 
+**Y también hace de host, a la vez.** Sin eso, el «toca sin nada más» del §1
+sería mentira en 2026: casi todo controlador moderno es USB-only, así que un
+instrumento que solo es *device* necesita una computadora para que le toques.
+Con `Pico-PIO-USB` sobre PIO —verificado funcionando en paralelo con el USB
+nativo— le enchufas el teclado directo. De paso el instrumento se vuelve un
+**hub MIDI**: tu teclado entra, se mezcla con su secuenciador, y sale hacia el
+DAW.
+
+**MIDI 2.0 ya no es futuro**: Windows MIDI Services salió con driver de clase y
+UMP nativo, y todos los DAW grandes tienen implementación. Aquí se sube por
+escalones —MIDI 1.0 primero, el alternate setting de 2.0 después— porque
+**Property Exchange, que es lo que de verdad hace falta, funciona igual en los
+dos**.
+
 > Esto **sustituye** al módulo de kernel en Rust (`/dev/sam17`) que figuraba en
 > la versión anterior. Un módulo de kernel solo sirve en Linux; si la
 > computadora puede ser cualquiera, la interfaz tiene que ser estándar. La idea
@@ -114,14 +128,35 @@ es la diferencia entre tener un sinte y tenerlo integrado.
 Además el host ya te da el MIDI enrutado al instrumento: sin drivers y sin
 pelear puertos.
 
-### Con qué
+### Y algo del estándar que lo regala a medias
 
-**`nih-plug` (Rust)** — exporta CLAP y VST3, con GUI por egui/iced/VIZIA. El
-plugin es casi todo interfaz y MIDI, **casi nada de DSP**, que es justo donde
-Rust está cómodo y donde el ecosistema de C++ no compra tanto. Y deja el
-proyecto en **un solo lenguaje: Rust en el micro, Rust en el plugin**.
+**Property Exchange ya hace parte de esto sin que escribamos nada.** Logic 10.6+
+muestra automáticamente los controles del instrumento que le publica su
+descriptor **y guarda esa configuración en el fichero de proyecto**. O sea, el
+argumento de arriba —«los patches se guardan con el proyecto»— lo cumple el
+estándar. El plugin propio sirve para lo que el estándar no cubre: la librería,
+el diagnóstico voz por voz, el patcheo guiado y el agente.
 
-JUCE (C++) queda como alternativa si algún día hace falta DSP pesado o AU en Mac.
+### Con qué: una sola UI en tres carcasas
+
+Hay tres sitios donde mostrar lo mismo —el VST, la app standalone y el teléfono—
+y escribirlos tres veces sería meses de trabajo duplicado. Así que **la interfaz
+se escribe una vez, como aplicación web**, y las tres carcasas la montan:
+
+```
+              UI WEB (una sola)
+                     │
+      ┌──────────────┼──────────────┐
+      ▼              ▼              ▼
+   VST (USB)   standalone      teléfono (WiFi)
+```
+
+La pila existe y está probada: **WRAC** (WebView + Rust Audio + CLAP), liberada
+por NovoNotes en mayo de 2026 con más de 15 000 usuarios en producción, con
+`clap-wrapper` para salir también como VST3/AU y el crate `wxp` sobre `wry` para
+el IPC. Sigue dejando el proyecto en **Rust en el micro y Rust en la carcasa**.
+
+`nih-plug` y JUCE quedan como alternativas si WRAC no aguanta la prueba.
 
 ### La trampa técnica
 
@@ -154,22 +189,61 @@ Falta por escribir: **cliente MCP** (aurelius es servidor, no cliente —
 verificado, cero `ClientSession`) y, si se quiere voz, **la ruta HTTP de STT**,
 que `speechtotext` no tiene.
 
+### El puente que hace barato todo esto
+
+**MCP y MIDI-CI Property Exchange resuelven el mismo problema en dos mundos**, y
+la correspondencia es casi literal: `ResourceList` es `tools/list`, y
+`Get`/`Set Property Data` es `tools/call`. Los dos son JSON auto-descriptivo.
+
+Hoy los servidores MCP para sintes son de dos tipos, y ninguno cierra esto: los
+genéricos mandan números de CC que el modelo no sabe interpretar, y los
+específicos traen el mapa de parámetros escrito a mano, aparato por aparato
+(hay uno para el MicroFreak, otro para el Axe-Fx…). **No se encontró evidencia
+de que nadie haya puenteado los dos estándares.**
+
+Un instrumento que hable Property Exchange **se gana un servidor MCP genérico**,
+sin mapa a mano, y que además funciona con módulos que no existían cuando se
+escribió el agente. Por eso los nombres y las unidades de cada parámetro no son
+cosmética: son la documentación que el modelo va a leer.
+
+Y la contraparte obligatoria: si el agente alcanza todo, la contención tiene que
+ser real. **Qué operaciones exigen confirmación física lo declara el
+instrumento, no el cliente** — si lo decidiera el cliente, bastaría con un
+cliente que no pregunte.
+
 ## 7. Qué placa hacemos nosotros
 
 **Una: la del instrumento.**
 
-RP2350 · enlace serie hacia los DAC y digipots de los módulos
-(architecture-poly §8; direccionamiento en el issue #34) · 4 gates ·
-4 entradas de afinado digitales · MIDI DIN in/out con optoacoplador · USB ·
-pantalla pequeña con encoders · las dos masas separadas
+**RP2350B** (QFN-80, 48 GPIO — el A de 30 no da: el conteo sale a ~37) con:
 
-Los DAC ya no van aquí: **viven en el módulo que los consume**, y esta placa
-manda números, no voltajes. Menos analógico en el cerebro = menos que rutear
-y menos que pueda ensuciarse.
+| | |
+|---|---|
+| Enlace serie | Un **J2 por módulo, en estrella** hacia sus DAC, digipots, mux de perillas y sensado de jacks (architecture-poly §8; direccionamiento cerrado en el issue #34) |
+| Mux I²C de 8 canales | Todas las EEPROM de identidad responden en 0x50 y chocarían en un bus compartido |
+| 4 gates · 4 entradas de afinado | Las voces. El afinado por **PIO**, las cuatro a la vez |
+| **USB de doble rol** | Puerto nativo como *device* hacia tu computadora, **y host por PIO-USB** para enchufarle un controlador. A la vez |
+| **MIDI DIN in/out** | Con optoacoplador. Es el único aislado por norma |
+| **Clock y reset**, in/out | Sync analógico. Sin esto el secuenciador no toca con nadie |
+| **Jack de pedal** | Confirmación física del agente, y expresión |
+| Cadena WS2812 | Un pin de datos encadena los LEDs de todos los paneles |
+| Cabeza local | 4 dígitos + un encoder con pulsador + LEDs de estado |
+| Zócalo del puente inalámbrico | Módulo pre-certificado por UART, no chip de RF soldado |
+| Las dos masas separadas | Como siempre |
+
+**Y no lleva entrada de audio.** Esta placa manda números, no voltajes — los DAC
+viven en el módulo que los consume, y **la medida del sonido también**: el
+módulo 4 oye por ella con un códec de 24 bits y le manda números por el mismo
+J2. Menos analógico en el cerebro = menos que rutear y menos que pueda
+ensuciarse.
 
 Consecuencia buena que no se buscaba: cambiar la cabecera de 40 pines del Pi, el
-LCD de 16×2 y los cuatro pulsadores por **un QFN pequeño** deshace el atasco de
-ruteo que dejó 17 redes al aire en el módulo 2 (issue #22).
+LCD de 16×2 y los cuatro pulsadores por **un QFN** deshace el atasco de ruteo
+que dejó 17 redes al aire en el módulo 2 (issue #22) — un QFN-80 de 10×10 mm
+sigue siendo minúsculo al lado de aquello.
+
+> Detalle completo y los porqués:
+> [`superpowers/specs/2026-08-17-nucleo-digital-design.md`](superpowers/specs/2026-08-17-nucleo-digital-design.md).
 
 ## 8. Lo que se consideró y se descartó
 
@@ -189,15 +263,48 @@ corte del cerebro es lo que permite decidirlo después.
 
 ## 9. Lo que NO está confirmado
 
-1. **La pantalla del instrumento** — se propone pantallita con encoders, para
-   poder afinar y elegir patch sin depender de ninguna computadora. **Sin
-   confirmar**: modelo, tamaño, y si lleva encoders o pulsadores.
-2. **El protocolo por encima del MIDI.** Notas y reloj son MIDI estándar; para
-   patches, tabla de afinación y agente hace falta algo más, y no está decidido
-   si es SysEx o serie propia por USB.
-3. **`nih-plug`** no se ha probado en este proyecto. Existe, exporta CLAP y VST3
-   y tiene plugins en uso real, pero eso es lo que dice su documentación, no una
-   medición nuestra.
-4. **El aislamiento del USB** no está medido. Que el DIN esté aislado por norma
+### Cerrado el 2026-08-17
+
+Tres de los cinco puntos que vivían aquí ya están decididos, con la evidencia en
+la [spec del núcleo digital](superpowers/specs/2026-08-17-nucleo-digital-design.md):
+
+1. **La pantalla.** Va **cabeza mínima local** —4 dígitos, un encoder con
+   pulsador, LEDs de estado— más la **pantalla inalámbrica** en tu teléfono. Sin
+   menús: escribir nombres con un encoder es tortura y el teléfono lo hace
+   mejor; la cabeza local hace lo que el teléfono hace peor, que es estar
+   siempre ahí sin batería ni red. Y el pulsador del encoder resultó ser el
+   botón de confirmación física que el agente necesitaba.
+2. **El protocolo por encima del MIDI.** Va **MIDI-CI / Property Exchange sobre
+   SysEx**, que funciona igual en MIDI 1.0 y en MIDI 2.0 — verificado. Con eso
+   el instrumento publica su propia lista de parámetros en JSON, y **el servidor
+   MCP sale casi gratis** porque `ResourceList` es `tools/list`. MIDI 2.0 queda
+   como segundo escalón (alternate setting 1), no como bifurcación.
+3. **El plugin.** Se escribe **una sola UI web en tres carcasas** —VST,
+   standalone y teléfono— en vez de tres interfaces. La pila existe y está
+   probada: **WRAC** (WebView + Rust Audio + CLAP), liberada en mayo de 2026 con
+   15 000+ usuarios en producción. `nih-plug` deja de ser la elección por
+   defecto.
+
+Y desde el **2026-08-17** los tres dejaron de ser diseño y pasaron a ser código
+con tests: el modelo de parámetros, el descriptor, el protocolo y el
+empaquetado SysEx viven en [`software/nucleo/`](../software/nucleo), `no_std` y
+verificados con `cargo test` — sin una placa de por medio. El descriptor
+completo viaja en SysEx y vuelve idéntico, que era justo lo que el punto 2
+prometía.
+
+Y desde el mismo día **el instrumento contesta**: el servidor del protocolo
+está escrito y el binario compila para RP2350 hablando USB-MIDI. Al escribirlo
+salió que la tabla de §4.1 dejaba al cliente en silencio ante un `HELLO`, ante
+un `DESCRIBE` y ante **todo `SET` rechazado** — así que la tabla creció con
+`HOLA` y `ERROR`. Falta placa para comprobarlo: la lista está en
+`software/nucleo/fw/EN-PLACA.md`.
+
+### Sigue abierto
+
+1. **El aislamiento del USB** no está medido. Que el DIN esté aislado por norma
    es un hecho; cuánto ruido mete el USB en la práctica, no.
-5. Nada de esto está medido. Son hojas de datos y arquitectura.
+2. **La escalera de C a Rust.** Las pilas probadas de USB MIDI 2.0 (`tusb_ump`)
+   y de USB host (`Pico-PIO-USB`) son C. Ninguna de las dos está en el camino
+   crítico —el instrumento funciona sin ellas— pero hay que decidir si se hace
+   FFI o se escribe en Rust.
+3. Lo demás sigue siendo hojas de datos y arquitectura, no medidas nuestras.
