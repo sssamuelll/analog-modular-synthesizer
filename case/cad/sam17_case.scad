@@ -668,14 +668,14 @@ module remate_sup() {
                 cube([marco_sup, prof_sup, ancho_util]);
 }
 
-// La pestana vista de canto: 528.32 x prof_sup en plancha de marco_sup. Los M3
-// atraviesan el ESPESOR, o sea que salen por la cara que apoya en el riel.
+// La pestana vista de canto: 528.32 x prof_sup en plancha de marco_sup.
+// SIN TALADROS. Llevo cinco M3 mientras el plan era atornillarla al riel; la
+// hoja de datos del Z-Rail enseno que esa cara es pared de 1.2 mm, asi que la
+// union pasa a ser junta pegada y esos cinco agujeros dejaron de servir a
+// nadie. Fresando eso no es cosmetico: son cinco prestaciones que se pagan.
+// Si el calibrador encuentra material, volver a meterlos es una linea.
 module remate_sup_2d() {
-    au = ancho_total - 2*t_cheek;
-    difference() {
-        plancha(au, prof_sup);
-        fila_agujeros(au, prof_sup/2);
-    }
+    plancha(ancho_total - 2*t_cheek, prof_sup);
 }
 
 // Paticas torneadas bajo los costados. En X caen sobre los dos rieles de
@@ -782,13 +782,14 @@ module bom() {
     echo("BOM: SIN CERRAR -- amortiguador que deje cada tapa abierta");
     echo(str("BOM: pestana superior x1, ", au, " x ", prof_sup, " en acrilico ",
              "t=", marco_sup, " -- apoya de canto en la cara de arriba del riel"));
-    echo("BOM: tornillo M3 x5 para la pestana, entran por su canto al riel.");
-    echo("     LA HOJA DE TIPTOP LO PONE EN DUDA: el Z-Rail es un extruido de");
-    echo("     pared fina -- 1.2 mm en casi todo el contorno -- y lo unico macizo");
-    echo("     es el nucleo por donde pasa el M4 de punta. Un M3 de 6 mm en esa");
-    echo("     cara probablemente atraviese pared y salga al hueco.");
-    echo("     PLAN A menos que el calibrador diga otra cosa: el mismo apoyo a");
-    echo("     tope, PEGADO. Son 60 g de acrilico y la junta trabaja a cortante.");
+    echo("BOM: adhesivo estructural para la pestana -- va PEGADA al riel, sin");
+    echo("     tornillos. El Z-Rail es un extruido de pared fina (1.2 mm en casi");
+    echo("     todo el contorno; lo unico macizo es el nucleo del M4 de punta),");
+    echo("     asi que un M3 en esa cara atraviesa pared. La junta es el canto");
+    echo(str("     de la plancha contra el riel: ", ancho_total - 2*t_cheek,
+             " x ", marco_sup, " mm de superficie para 60 g de acrilico,"));
+    echo("     y trabaja a CORTANTE, no a traccion. Cianoacrilato no: el vapor");
+    echo("     empana el acrilico. Metacrilato de dos componentes o MS polimero.");
     echo(str("BOM: patica metalica torneada x4, d=", d_pie, " x ", alto_pie, " mm"));
     echo(str("BOM: planchas t=", t_acrilico, ": entrepiso, tapa del valle, ",
              "piel inf, piel sup; suelo t=", t_base, " (la bandeja de base, ",

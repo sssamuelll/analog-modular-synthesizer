@@ -587,20 +587,26 @@ d_pie       = 16;   // diametro; pequeno a proposito
 // 2.25 mm de riel que asoman, o sea una linea de aluminio entre el panel y el
 // acrilico. Mejor detalle que el hueco.
 //
-// LO QUE QUEDA POR CONFIRMAR, y es una sola cosa: que esa cara del Z-Rail admita
-// un M3. Es el canto de una extrusion y no tenemos su seccion interior. Si no
-// admite rosca, el mismo apoyo a tope pegado con adhesivo estructural sobra para
-// una tira de 60 g -- los taladros del acrilico no estorban.
+// YA ESTA CONFIRMADO, y salio que NO (2026-08-17). La hoja de datos del Z-Rail
+// da la seccion entera: es un extruido de pared fina, 1.2 mm en casi todo el
+// contorno, macizo solo en el nucleo por donde pasa el M4 de punta. Un M3 de 6
+// mm en esa cara atraviesa pared y sale al hueco. La union es JUNTA PEGADA, y
+// los cinco taladros que llevaba la pestana se quitaron (fresando cada uno se
+// paga). El apoyo a tope no cambia: lo que decide es que la junta exista, y de
+// eso se encarga la puerta de junta cero en clearance_budget.py.
 marco_sup   = 8;
-// Fondo de la pestana hacia dentro del case. Fue t_cheek = 8 mientras no llevaba
-// tornillos; ahora los lleva, y el M3 entra POR EL CANTO, a lo largo de la cara,
-// atravesando los 10.75 de marco_sup y siguiendo hasta el riel. El material que
-// rodea ese agujero no lo pone marco_sup sino ESTE fondo: con 16 quedan 6.3 mm
-// de acrilico a cada lado del taladro; con los 8 de antes quedaban 2.3, que en
-// acrilico es donde arranca una fisura.
+// Fondo de la pestana hacia dentro del case.
+//
+// OJO: ESTE NUMERO YA NO ESTA DERIVADO DE NADA. Fue t_cheek = 8 mientras la
+// pestana no llevaba tornillos, subio a 16 cuando los llevo -- para dejar 6.3
+// mm de acrilico a cada lado del M3, contra los 2.3 de antes, que en acrilico
+// es donde arranca una fisura -- y al quitarse los tornillos esa razon murio.
+// Se queda en 16 por FORMA, no por calculo, y podria bajar a 8 sin que ninguna
+// puerta se queje. Es de las pocas cotas libres que le quedan al case: si
+// alguien la toca, no esta rompiendo una derivacion.
 //
 // La pieza sale de plancha de marco_sup = 8 (la misma del costado) y su DXF mide
-// 528.32 x prof_sup.
+// 528.32 x prof_sup, sin taladros.
 prof_sup    = 16;
 
 // --- ventilacion con firma (spec §7) ---
