@@ -254,8 +254,16 @@ recuente después de tocar `params.scad` toma ese eco, no este párrafo.
 3. El script de export debe regenerar todos los DXF/STL sin errores desde un
    repo limpio, y **salir con código de error** si algo queda a medias.
 4. Checklist de ensamblaje en `case/README.md` con el orden: costados →
-   bandejas y standoffs → raíles → electricidad y bonding → pieles traseras
-   → paneles.
+   largueros 2020 → bandejas → raíles → tapa del valle → electricidad y
+   bonding → pieles y pestaña → paticas y paneles.
+
+   Este punto decía antes «costados → bandejas y standoffs → raíles», y era
+   físicamente imposible según el §5 de esta misma spec: las bandejas se
+   atornillan con tuercas T al esqueleto, y una tuerca T vive dentro de la
+   ranura del perfil. Sin largueros no hay dónde atornillar la bandeja
+   (issue #50). Además metía bandejas y pieles en el mismo paso, y no son el
+   mismo herraje: las bandejas van con tuerca T al esqueleto, las pieles
+   cuelgan de separadores M4 al final.
 
 ## 11. Lo que NO está confirmado
 

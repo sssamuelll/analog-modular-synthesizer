@@ -159,24 +159,22 @@ def revisar(nombre: str, sobre) -> list[str]:
     return f
 
 
-def _contorno_costado() -> list:
-    """Aristas del contorno EXTERIOR de costado_2d, releidas del DXF.
+def _componentes(nombre: str) -> tuple[list, list[list[int]]]:
+    """Parte el DXF en componentes conexas por sus extremos de LINE.
 
-    Se valida contra el ARCHIVO, no contra una copia de redondear() en Python:
-    replicarla aqui seria la tercera copia de la misma matematica, y la version
-    que cuenta es la que salio al fichero que va al laser. Los agujeros salen
-    como componentes aparte; el contorno es la de bbox mas grande."""
-    doc = ezdxf.readfile(PLANS / "costado_2d.dxf")
+    Devuelve (aristas, componentes). El contorno exterior y cada agujero salen
+    como componentes separadas porque no comparten ningun vertice."""
+    doc = ezdxf.readfile(PLANS / f"{nombre}.dxf")
     aristas = [((e.dxf.start.x, e.dxf.start.y), (e.dxf.end.x, e.dxf.end.y))
                for e in doc.modelspace() if e.dxftype() == "LINE"]
     if not aristas:
-        return []
+        return [], []
     vecinos: dict[tuple, list[int]] = {}
     for i, (a, b) in enumerate(aristas):
         for pt in (a, b):
             vecinos.setdefault((round(pt[0], 3), round(pt[1], 3)), []).append(i)
     visto: set[int] = set()
-    componentes: list[list[int]] = []
+    comps: list[list[int]] = []
     for i in range(len(aristas)):
         if i in visto:
             continue
@@ -190,8 +188,38 @@ def _contorno_costado() -> list:
                     if k not in visto:
                         visto.add(k)
                         pila.append(k)
-        componentes.append(comp)
+        comps.append(comp)
+    return aristas, comps
 
+
+def _redondos(nombre: str) -> list[tuple[float, float, float]]:
+    """Centros y diametros de los agujeros REDONDOS leidos del DXF.
+
+    Redondo = componente cuya caja es cuadrada dentro de una decima. Deja fuera
+    el contorno (que no lo es) y las ranuras del valle (obround, mas largas que
+    anchas), que no son agujeros de tornillo."""
+    aristas, comps = _componentes(nombre)
+    out = []
+    for comp in comps:
+        px = [p[0] for j in comp for p in aristas[j]]
+        py = [p[1] for j in comp for p in aristas[j]]
+        w, h = max(px) - min(px), max(py) - min(py)
+        if w < 0.1 or abs(w - h) > 0.1 or w > 30:
+            continue
+        out.append(((min(px) + max(px)) / 2, (min(py) + max(py)) / 2, (w + h) / 2))
+    return out
+
+
+def _contorno_costado() -> list:
+    """Aristas del contorno EXTERIOR de costado_2d, releidas del DXF.
+
+    Se valida contra el ARCHIVO, no contra una copia de redondear() en Python:
+    replicarla aqui seria la tercera copia de la misma matematica, y la version
+    que cuenta es la que salio al fichero que va al laser. Los agujeros salen
+    como componentes aparte; el contorno es la de bbox mas grande."""
+    aristas, componentes = _componentes("costado_2d")
+    if not aristas:
+        return []
     def extension(comp):
         px = [p[0] for j in comp for p in aristas[j]]
         py = [p[1] for j in comp for p in aristas[j]]
@@ -278,6 +306,123 @@ def taladros_con_material() -> list[str]:
               f"{len(ce)} M5 de larguero) tienen material alrededor (el mas "
               f"justo, '{peor_nm}', a {peor:.2f} mm del canto = "
               f"{peor / peor_d:.2f} D)")
+    return f
+
+
+# Cuanto puede desviarse un agujero del DXF respecto de donde el modelo lo
+# pone. No es tolerancia de fabricacion -- es cuanto se permite que MIENTAN el
+# uno sobre el otro, y la respuesta es casi nada: son el mismo numero pasado
+# por OpenSCAD.
+DESVIO_DXF_MAX = 0.02
+
+
+def agujeros_donde_toca() -> list[str]:
+    """Los agujeros del DXF caen donde el modelo dice. Leidos DEL FICHERO.
+
+    Esta puerta existe por el issue #51, y el issue traia su propia
+    reproduccion: mover las dos filas de bandeja_base_2d +10 y -10 mm, exportar,
+    y las dos puertas daban VERDE. check_dxf solo miraba el bbox -- que no
+    cambia, porque las filas viven DENTRO del contorno -- y alineacion() en
+    clearance_budget comparaba el modelo contra si mismo sin abrir un .dxf en
+    ningun momento. Un fichero con los agujeros en otro sitio pasaba entero.
+
+    Se comprueban dos cosas distintas segun lo que se pueda comparar sin
+    duplicar formulas:
+
+    COSTADO: comparacion EXACTA. costado_2d se dibuja directamente en las
+    coordenadas de pts_perfil(), asi que los centros del DXF y los de
+    _centros_rail()/_centros_esqueleto() viven en el mismo sistema y se restan
+    sin traducir nada. Once agujeros, uno por larguero.
+
+    PLANCHAS: se comprueba lo que es invariante dentro de su propio plano --
+    cuantas filas hay, cuantos agujeros por fila, el paso en X, y la SEPARACION
+    entre filas. Esa ultima es la que atrapa la reproduccion del issue: mover
+    una fila +10 y otra -10 cambia su separacion en 20 mm. No se comprueba la
+    posicion absoluta dentro de la plancha porque eso exigiria replicar aqui la
+    colocacion 3D de cada pieza, que es justo la copia de matematica que este
+    fichero evita a proposito."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    P = cb._vertices(p)
+    cr = cb._centros_rail(p, P)
+    ce = cb._centros_esqueleto(p, P, cr)
+    f: list[str] = []
+
+    # --- costado: exacto ---
+    esperados = list(cr) + list(ce)
+    leidos = _redondos("costado_2d")
+    if len(leidos) != len(esperados):
+        f.append(f"costado_2d: el DXF trae {len(leidos)} agujeros redondos y el "
+                 f"modelo pone {len(esperados)}")
+    else:
+        peor, peor_nm = 0.0, ""
+        for nm, (ex, ey) in zip(cb.NOMBRES_CR + cb.NOMBRES_CE, esperados):
+            d, _ = min(((math.hypot(cx - ex, cy - ey), i)
+                        for i, (cx, cy, _) in enumerate(leidos)))
+            if d > peor:
+                peor, peor_nm = d, nm
+            if d > DESVIO_DXF_MAX:
+                f.append(f"costado_2d: el agujero de '{nm}' esta a {d:.3f} mm de "
+                         f"donde el modelo lo pone ({ex:.2f}, {ey:.2f}). El DXF y "
+                         f"el modelo dicen cosas distintas, y al taller va el DXF")
+        if not f:
+            print(f"  costado_2d: los 11 agujeros del DXF caen donde el modelo "
+                  f"dice (desvio maximo {peor:.3f} mm en '{peor_nm}')")
+
+    # --- planchas: filas, paso y separacion ---
+    _, _, filas = cb._cajas_solidas(p)
+    au = p["ancho_total"] - 2 * p["t_cheek"]
+    n = max(1, round(au / 100))
+    e = au / n
+    # DOS REJILLAS, no una. Las bandejas y la tapa del valle se atornillan a un
+    # larguero a lo largo y usan fila_agujeros() -- n agujeros repartidos con
+    # margenes iguales. Las pieles cuelgan de separadores y usan otra cosa: tres
+    # columnas fijas, la del medio porque con solo las esquinas el vano de 518
+    # se descuelga 1.76 mm de peso propio. Meterlas en el mismo saco daba ROJO
+    # en la primera corrida de esta puerta, y el fallo era del saco.
+    # Y las pieles ni siquiera son igual de anchas: se meten gap_sombra por cada
+    # lado (piel_inferior_2d y piel_superior_2d lo definen asi). Usar el ancho
+    # util del case aqui daba la columna del medio 5 mm corrida, que es
+    # exactamente el tipo de fallo que esta puerta busca -- solo que en la
+    # puerta y no en la pieza.
+    au_piel = au - 2 * p["gap_sombra"]
+    REJILLA_FILA = [e * (i + 0.5) for i in range(n)]
+    REJILLA_PIEL = [15.0, au_piel / 2, au_piel - 15.0]
+    GRIDS = {"piel_inferior": REJILLA_PIEL, "piel_superior": REJILLA_PIEL}
+    por_placa: dict[str, list[float]] = {}
+    for placa, _, _, coord, _ in filas:
+        por_placa.setdefault(placa, []).append(coord)
+    for placa, coords in sorted(por_placa.items()):
+        nombre = f"{placa}_2d"
+        if not (PLANS / f"{nombre}.dxf").exists():
+            continue
+        rejilla = GRIDS.get(placa, REJILLA_FILA)
+        leidos = _redondos(nombre)
+        if len(leidos) != len(rejilla) * len(coords):
+            f.append(f"{nombre}: {len(leidos)} agujeros en el DXF y el modelo "
+                     f"pone {len(rejilla) * len(coords)} ({len(coords)} filas de "
+                     f"{len(rejilla)})")
+            continue
+        for cx, _, _ in leidos:
+            if min(abs(cx - r) for r in rejilla) > DESVIO_DXF_MAX:
+                f.append(f"{nombre}: un agujero en x={cx:.2f} se sale de la "
+                         f"rejilla de la pieza ({[round(r,1) for r in rejilla]})")
+                break
+        ys = sorted({round(cy, 3) for _, cy, _ in leidos})
+        if len(ys) != len(coords):
+            f.append(f"{nombre}: el DXF tiene {len(ys)} filas distintas y el "
+                     f"modelo pone {len(coords)}")
+        elif len(ys) > 1:
+            sep_dxf = round(ys[-1] - ys[0], 3)
+            sep_mod = round(max(coords) - min(coords), 3)
+            if abs(sep_dxf - sep_mod) > DESVIO_DXF_MAX:
+                f.append(f"{nombre}: las filas estan a {sep_dxf:.2f} mm en el DXF "
+                         f"y a {sep_mod:.2f} en el modelo (difieren "
+                         f"{sep_dxf - sep_mod:+.2f}) -- una de las dos se movio")
+    if not f:
+        print(f"  planchas: {sum(len(c) for c in por_placa.values())} filas de "
+              f"agujeros verificadas contra el DXF")
     return f
 
 
@@ -369,6 +514,7 @@ def main() -> int:
         fallos += revisar(nombre, sobre)
     fallos += railes_dentro_del_costado()
     fallos += taladros_con_material()
+    fallos += agujeros_donde_toca()
     for nombre, motivo in SIN_DXF.items():
         print(f"  PENDIENTE (sin DXF, no bloquea): {nombre} -- {motivo}")
     for m in fallos:

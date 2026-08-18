@@ -244,9 +244,26 @@ un cable asumiendo continuidad por el riel es riesgo de choque eléctrico.
 
 ## Orden de ensamblaje
 
-costados → largueros 2020 (M5) → bandejas y zócalo (tuercas T M3) →
-electricidad y bonding (bloque IEC fijo, espárrago junto al PSU) → pieles
-traseras (standoffs M4, junta de sombra) → paneles (tuercas T M3).
+1. **Esqueleto** — costados + los 7 largueros 2020, M5 por la punta desde
+   fuera. Meter aquí las 25 tuercas T M3 de las planchas: con tuercas de
+   inserción lateral se pueden añadir después, con las de deslizar no.
+2. **Bandejas** — base (8 mm, es el suelo) y entrepiso, 5 M3 por fila.
+3. **Los 4 Z-Rails** — M4 desde fuera, roscan en el propio riel. Comprobar
+   antes que la pletina roscada corre por su canal.
+4. **Tapa del valle** — 5 M3 al larguero del valle.
+5. **Electricidad y bonding** — bloque IEC fijo, espárrago junto al PSU.
+6. **Pieles traseras** — 12 separadores M4 de 5 mm, tres columnas.
+   **Pestaña** — a tope contra el riel y PEGADA, no atornillada.
+7. **Paticas y paneles** — y paneles ciegos en todo hueco de las dos filas,
+   que con una tapa abierta son lo único que ata sus dos raíles.
+
+El orden importa en tres sitios: las bandejas no se pueden atornillar antes
+que sus largueros (la tuerca T vive en la ranura del perfil), la pestaña es
+irreversible una vez pegada, y los raíles quieren estar antes que cualquier
+panel.
+
+Guía ilustrada con renders del modelo:
+https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
 
 ## Estado
 
