@@ -83,6 +83,21 @@ git commit -m "El censo de maximos absolutos deja de ser un parrafo y pasa a ser
 
 ### Task 2: El crowbar de −12 V y el I²t del lazo
 
+> **⏸ PARADA 2026-08-18 — issue #118.** El Step 3 se corrió antes que el resto
+> (si el SCR no sobrevive, dibujar el crowbar primero sería al revés) y el
+> resultado tumba la premisa de esta tarea. El lazo **no cierra con ningún
+> SCR**: el fusible de 1,6 A T ve 2,79 A, por debajo del 2,1×In donde IEC
+> 60127 obliga a abrir. Y al mirar por qué, salió algo mayor: **§16.8 se
+> escribió para la topología de la v1** —un regulador y al bus— mientras que
+> la v2 es una cascada donde ningún fallo simple pone más de 13,1 V en el
+> bus. Puede que el crowbar ya no proteja de nada.
+>
+> Esta tarea **no se ejecuta** hasta que el #118 cierre. Lo que salga de ahí
+> la reescribe: si la cascada protege sola, esta tarea desaparece; si no, el
+> sitio de la protección es entre etapas y no en el bus, que es otro
+> circuito.
+
+
 **Files:**
 - Modify: `hardware/01-power-supply/notes/design-notes.md` §16.8
 - Create: `hardware/01-power-supply/v3/notes/design-notes.md` (§1: protección)
