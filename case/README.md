@@ -84,6 +84,15 @@ del blob de git con `git show` —LF—, por `core.autocrlf=true`. Es la
 misma conversión de fin de línea de siempre, no una cuarta clase de
 no-determinismo.)
 
+## Artefactos que NO van al repositorio
+
+`case/renders/build/*.stl` se regenera con `cad/export.ps1` y **no se versiona**
+(issue #48). Son ~6,6 MB que cambian entera cada vez que se mueve un milímetro,
+y no aportan nada que el `.scad` no tenga: quien quiera el STL lo exporta.
+
+Lo que sí se versiona es `case/plans/*.dxf` — esos son el entregable que va al
+taller, y su diff es la prueba de qué se mandó a cortar y cuándo.
+
 ## Procedimiento del cupón — sólo si se vuelve al láser
 
 **Con el proceso actual (fresado CNC) este procedimiento NO aplica y `kerf`

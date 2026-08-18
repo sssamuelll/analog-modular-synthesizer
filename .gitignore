@@ -46,3 +46,11 @@ _probe.*
 # Zips de fabricacion (regenerables desde fab/)
 hardware/*/fab/*-jlcpcb.zip
 .claude/worktrees/
+
+# Case — artefactos de render (regenerables con case/cad/export.ps1)
+# EXPLICITO A PROPOSITO. Ya los alcanzaba el `build/` generico de la seccion de
+# Python, pero por accidente: un patron sin slash inicial que casa con cualquier
+# carpeta llamada build a cualquier profundidad. Eso hacia que `git add` de un
+# STL nuevo fallara EN SILENCIO y pidiera -f sin que nadie supiera por que
+# (issue #48). Aqui esta escrito con su ruta y su motivo.
+case/renders/build/
