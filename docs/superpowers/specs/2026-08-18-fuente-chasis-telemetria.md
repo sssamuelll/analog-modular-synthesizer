@@ -20,7 +20,7 @@ Dos cosas que hasta esta mañana no se podían pedir juntas:
 
 Lo que cambió hoy es el **censo** (#70, cerrado): el instrumento pide
 **174 mA/riel** con margen, no los 650 del punto de diseño. Con eso la
-disipación de toda la cadena de regulación cae a **~1.3 W**, y una caja cerrada
+disipación de toda la cadena de regulación cae a **~2.5 W**, y una caja cerrada
 deja de ser un horno. Antes del censo, el #107 se escribió con los reguladores
 FUERA precisamente por eso.
 
@@ -38,8 +38,8 @@ Se gasta en esto.
 |---|---|---|
 | Material del chasis | **Acero**, no aluminio | El aluminio es casi transparente al campo magnético de 50/100 Hz; el ferromagnético no. Decidido en #107 |
 | Alcance del recinto | **Toda la fuente adentro**: toroide + PCB completa + entrada IEC | La red no sale nunca del recinto. Es lo que hacen las fuentes profesionales y es lo que da la regla del §3.2 |
-| Disipación | **Contra la pared del chasis**, sin disipadores discretos | Con 1.3 W de regulación el chasis sobra, y se ganan ~43 °C de unión |
-| Ventilación del recinto | **Ninguna. Va cerrado** | §3.1: 6.4 °C de subida en el peor caso. Una rejilla solo dejaría entrar polvo |
+| Disipación | **Contra la pared del chasis**, sin disipadores discretos | Con 2.5 W de regulación el chasis sobra, y se ganan ~39 °C de unión |
+| Ventilación del recinto | **Ninguna. Va cerrado** | §3.1: 7.5 °C de subida en el peor caso. Una rejilla solo dejaría entrar polvo |
 | Telemetría | **INA226 ×3 + TMP1075**, I²C | Tensión y corriente por riel con un chip; el TMP1075 ya se usa en el módulo 3 |
 | Cruce de masas | **Aislado, ISO1541** | En una fuente cuyo objetivo entero es sub-µV, meterle un bus digital sin aislar deshace el diseño |
 
@@ -50,14 +50,34 @@ Se gasta en esto.
 Contenido térmico del recinto, al censo real (174 mA/riel), escalado desde la
 tabla del §4 de la spec v2 (que está a 650 mA):
 
-| Elemento | a 650 mA | a 174 mA |
-|---|---|---|
-| LM2941 | 1.70 W | 0.46 W |
-| LM2991 | 1.80 W | 0.48 W |
-| LT3045 ×2 | 0.72 W | 0.19 W |
-| LT3094 ×2 | 0.58 W | 0.16 W |
-| **Regulación** | **4.80 W** | **1.29 W** |
-| Núcleo del toroide | ~2 W | ~2 W (no escala con carga) |
+**La disipación NO escala con la corriente.** Cuando baja la carga, el riel
+crudo *sube* porque hay menos caída en la resistencia del devanado, así que el
+regulador quema más voltios por amperio. Escalar linealmente da la mitad del
+número real.
+
+```
+sin carga    VRAW = 20,54 V                       (§16.5)
+a 650 mA     VRAW = 15,70 V   -> caida de 4,84 V  (§4 de la spec v2)
+a 174 mA     VRAW ~ 19,24 V   -> caida de 1,30 V  (proporcional a la carga)
+```
+
+| Elemento | a 650 mA | a 174 mA, mal (lineal) | a 174 mA, **bien** |
+|---|---|---|---|
+| LM2941 | 1.70 W | ~~0.46 W~~ | **1.07 W** |
+| LM2991 | 1.80 W | ~~0.48 W~~ | **1.10 W** |
+| LT3045 ×2 | 0.72 W | 0.19 W | 0.19 W |
+| LT3094 ×2 | 0.58 W | 0.16 W | 0.16 W |
+| **Regulación** | **4.80 W** | ~~1.29 W~~ | **2.52 W** |
+| Núcleo del toroide | ~2 W | | ~2 W (no escala con carga) |
+
+Y de ahí sale un corolario que conviene dejar escrito, porque contradice la
+intuición: con `P(I) = (20.54 − 7.45·I − 13.1)·I`, la disipación del
+pre-regulador **tiene máximo en I ≈ 0.50 A**, no a plena carga.
+
+> **El peor caso térmico de esta fuente no está a 650 mA. Está a media carga.**
+
+Los 650 mA del punto de diseño ya van pasado el pico, y los 174 mA reales están
+holgadamente por debajo.
 
 A eso hay que sumarle **la SMPS del +5 V digital**, que también vive dentro
 porque se alimenta de red. La IRM-15-5 rinde **78 %** (Mean Well, tabla de
@@ -66,15 +86,15 @@ LED**, que están fuera de la caja pero cuelgan de ella.
 
 | Estado | Salida | Pérdida IRM-15-5 | Total dentro | ΔT |
 |---|---|---|---|---|
-| LED apagados | 1.00 W | 0.28 W | **3.57 W** | **3.1 °C** |
-| LED al tope del #104 (2.80 A) | 15.00 W | 4.23 W | **7.52 W** | **6.4 °C** |
+| LED apagados | 1.00 W | 0.28 W | **4.80 W** | **4.1 °C** |
+| LED al tope del #104 (2.80 A) | 15.00 W | 4.23 W | **8.75 W** | **7.5 °C** |
 
 Superficie del recinto propuesto (§3.3), **descontando la cara inferior**
 porque apoya contra la bandeja y no convecta:
 
 ```
 2(0.310 x 0.085) + 2(0.160 x 0.085) + 1(0.310 x 0.160)  =  0.1295 m2
-dT = 7.52 W / (0.1295 m2 x 9 W/m2K)                     =  6.4 C   (peor caso)
+dT = 8.75 W / (0.1295 m2 x 9 W/m2K)                     =  7.5 C   (peor caso)
 ```
 
 **El presupuesto de brillo del #104 es también el termostato de esta caja.**
@@ -92,11 +112,11 @@ apagados» es optimista. No cambia nada: el peor caso ya está calculado arriba.
 
 El coeficiente de 9 W/m²K es el valor de manual para convección natural en aire
 quieto sobre superficie pintada. **Es una estimación, no una medida** — pero
-con 6.4 °C de resultado en el peor caso, tendría que estar equivocado por un
-factor de cinco para que importe.
+con 7.5 °C de resultado en el peor caso, tendría que estar equivocado por un
+factor de cuatro para que importe.
 
-Cadena térmica del componente más caliente, `U2` (LM2991, 0.8 W en peor caso).
-El chasis no se calienta solo por `U2`: lo calientan los 7.52 W de todo lo que
+Cadena térmica del componente más caliente, `U2` (LM2991, ~1.1 W al censo real).
+El chasis no se calienta solo por `U2`: lo calientan los 8.75 W de todo lo que
 hay dentro. Así que la cuenta va en dos tramos y **no** en una sola cadena —
 primero cuánto sube el chasis por el total, y encima cuánto sube la unión por
 su propia potencia.
@@ -109,12 +129,12 @@ su propia potencia.
 | **Unión a chasis** | **~8.5** | los tres de arriba |
 
 ```
-Tj = ambiente  +  subida del chasis por los 7,52 W  +  P_U2 x R_union-chasis
-   = 45 C      +  6,4 C                             +  0,8 W x 8,5 K/W
-   = 58 C
+Tj = ambiente  +  subida del chasis por los 8,75 W  +  P_U2 x R_union-chasis
+   = 45 C      +  7,5 C                             +  1,1 W x 8,5 K/W
+   = 62 C
 ```
 
-Contra los **~101 °C** que da hoy §16.7 con su Fischer individual. **43 °C de
+Contra los **~101 °C** que da hoy §16.7 con su Fischer individual. **39 °C de
 regalo por dejar de tratar el calor como un problema de tres piezas y tratarlo
 como uno de una sola.**
 
@@ -234,6 +254,10 @@ Esto no es «ahora hay datos». Son cuatro cosas medibles:
   eslabón débil de la cadena y el único candidato a placa extensora de aluminio.
 - **El espesor de chapa.** 1.5 mm es supuesto; lo decide el taller de doblado
   junto con los radios de plegado.
+- **La protección de sobretensión está en revisión** (#114): §16.8 de
+  `design-notes.md` razona contra el AS3340 y el instrumento lleva SSI2130.
+  No afecta a la térmica ni a la geometría de aquí, pero sí a qué va dentro
+  de esta caja.
 - **La curva de derating de la IRM-15-5.** Su rango es −30 a +85 °C «refer to Derating Curve», y esa curva no se ha leído. Al tope del #104 la SMPS entrega el **100 % de sus 15 W** dentro de un recinto cerrado: hay que confirmar dónde está el codo antes de dar por bueno ese tope.
 - **Si TR1 trae fusible térmico embebido** — ya pedido como ítem de compra en
   el BOM v2. Dentro de un recinto cerrado esa segunda línea de protección pesa
