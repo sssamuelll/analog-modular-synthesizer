@@ -1,5 +1,17 @@
 # Case SAM17 (dos pisos, acrílico) — Implementation Plan
 
+> ## ⚠️ EJECUTADO Y SUPERADO — no seguir sus cotas
+>
+> Este plan se ejecutó y se cerró. **Sus números son los de la spec rev. 3 y
+> ya no describen el case**: dice `ancho_total = 500`, `alto_panel = 190` y
+> «DXF de corte láser». Hoy son 544.32, 128.5 (3U de EUROrack) y fresado CNC.
+>
+> Se conserva **sin reescribir**, a propósito: un plan es el registro de lo
+> que se decidió en un momento, y editarlo a posteriori borra el rastro de
+> cómo llegó el diseño hasta aquí. Para cotas vigentes manda
+> [`cad/params.scad`](../../../case/cad/params.scad), y para intención la
+> spec rev. 4.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Convertir la spec rev. 3 del case y el board de diseño aprobado en
