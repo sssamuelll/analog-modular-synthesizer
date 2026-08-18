@@ -780,19 +780,33 @@ module bom() {
     // riel + 14 M5 de larguero + 25 M3 de plancha + 24 M4 de piel), solo
     // CUATRO se tocan para abrirlo: dos por fila.
     echo("BOM: los M4 de riel no son todos iguales --");
-    echo("     x4 DE HOMBRO + arandela: los EJES (riel del valle de la fila de");
-    echo("        abajo, riel del vertice de la de arriba). No se aprietan.");
-    echo("     x4 DE MANO: los CIERRES (riel del frente abajo, riel del valle");
-    echo("        arriba). Son los unicos que se quitan para abrir el case.");
-    echo("     Los ocho son M4 y roscan en el riel: el de hombro hay que");
-    echo("        pedirlo con espiga de 4 mm y rosca M4, no M5.");
+    echo("     x4 EJES: tornillo de HOMBRO M4, espiga 4 mm (no M5 -- el riel");
+    echo("        cambio de herraje al cambiar de fabricante). Riel del valle");
+    echo("        de la fila de abajo, riel del vertice de la de arriba.");
+    echo("        Pila: Belleville + ARANDELA ANCHA d16. Ver la nota de abajo.");
+    echo("     x4 CIERRES: M4 de cabeza moleteada o palomilla -- se quitan a");
+    echo("        mano y son los unicos que se tocan para abrir el case.");
+    echo("        Riel del frente abajo, riel del valle arriba.");
     echo(str("     x", 2*len(centros_esqueleto()), " fijos: los largueros de esqueleto"));
     echo("BOM: tuercas T DE INSERCION LATERAL (drop-in), NO de deslizar. Con las");
     echo("     de deslizar hay que enhebrarlas por la punta del larguero antes de");
     echo("     montar, o sea que anadir un tornillo mas tarde obliga a desarmar.");
     echo("BOM: paneles ciegos en TODO hueco de LAS DOS filas -- no son estetica:");
     echo("     con la tapa abierta son lo unico que ata sus dos rieles entre si");
-    echo("BOM: SIN CERRAR -- amortiguador que deje cada tapa abierta");
+    // YA NO ES UN AMORTIGUADOR (2026-08-18). La tapa se queda abierta por
+    // FRICCION en su propio eje, que es la solucion que no anade ninguna pieza
+    // al case ni ningun taladro al acrilico.
+    echo("BOM: la tapa se sostiene abierta por FRICCION en su eje. Sin");
+    echo("     amortiguador, sin compas, sin anclaje nuevo.");
+    echo("     Par a vencer con la tapa horizontal: 2.5 N.m por fila");
+    echo("       (3.3 kg -- 2 rieles mas una fila llena -- a 77 mm de brazo).");
+    echo("     Dos ejes por fila con Belleville a ~800 N dan 3.84 N.m: 1.5x.");
+    echo("     LA ARANDELA ANCHA NO ES OPCIONAL. La friccion apoya sobre el");
+    echo("     costado, y el PMMA FLUYE bajo carga sostenida: por encima de");
+    echo("     ~10 MPa mantenidos la precarga se relaja sola en semanas y la");
+    echo("     tapa deja de quedarse abierta.");
+    echo("       arandela M4 normal (d9)  -> 16.3 MPa   se relaja");
+    echo("       arandela ANCHA   (d16)   ->  4.3 MPa   aguanta");
     echo(str("BOM: pestana superior x1, ", au, " x ", prof_sup, " en acrilico ",
              "t=", marco_sup, " -- apoya de canto en la cara de arriba del riel"));
     echo("BOM: adhesivo estructural para la pestana -- va PEGADA al riel, sin");

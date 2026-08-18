@@ -644,6 +644,36 @@ def _sat_gap(p: dict[str, float], c1: tuple[float, float], ang1: float,
 FRESA_MIN_D = 1.0
 
 
+# Largos de separador M4 que existen en catalogo. No es una lista de gustos: un
+# separador se compra, no se mecaniza, y pedir 5.7 mm significa torneado a medida.
+LARGOS_STANDOFF = (4, 5, 6, 8, 10, 12, 15, 18, 20, 25, 30, 35, 40)
+
+
+def guarda_standoff(p: dict[str, float]) -> None:
+    """El separador de las pieles tiene que ser una pieza comprable.
+
+    Las dos pieles van voladas: se atornillan a doce separadores M4 y no tocan
+    el cuerpo. La distancia a la que quedan NO es un parametro aparte -- es
+    gap_sombra, el mismo numero que las separa en el modelo. O sea que
+    gap_sombra ES el largo del separador, aunque no lo diga su nombre.
+
+    El issue #52 pedia esto cuando el case todavia tenia zocalo, con sus dos
+    standoffs de 33.25 y 7.00 mm y el miedo de que el cuerpo del de arriba
+    invadiera un riel girado. El zocalo se elimino y ese miedo se fue con el:
+    quedan doce separadores, todos iguales, todos entre piel y cuerpo, sin nada
+    girado cerca. Lo que sobrevive del issue es la otra mitad -- que el numero
+    sea comprable --, y eso es lo que se comprueba aqui.
+
+    Mismo criterio que marco_sup con el espesor de plancha: hay cotas que no las
+    elige el diseno sino el catalogo, y confundirlas cuesta un torneado."""
+    assert p["gap_sombra"] in LARGOS_STANDOFF, (
+        f"gap_sombra = {p['gap_sombra']} es el largo del separador de las pieles, "
+        f"y no esta en catalogo. Los que se compran: {LARGOS_STANDOFF}. Un valor "
+        f"fuera de esa lista significa mandar tornear doce piezas.")
+    print(f"standoff: 12 separadores M4 de {p['gap_sombra']:.0f} mm "
+          f"(= gap_sombra), largo de catalogo")
+
+
 def guarda_fresado(p: dict[str, float]) -> None:
     """Lo que una fresa puede hacer y un laser no obliga a pensar.
 
@@ -737,6 +767,10 @@ TAPAS = (
 # cara queda casi vertical y el interior a la vista; por debajo de 45 no cabe la
 # mano para cablear.
 APERTURA_MIN = 60.0
+# Linea de pegado maxima de la pestana. El metacrilato estructural de dos
+# componentes trabaja bien entre 0.1 y 0.3 mm; medio milimetro es el punto donde
+# deja de pegar y empieza a rellenar.
+JUNTA_PEGADO_MAX = 0.5
 
 
 def guarda_tapa(p: dict[str, float]) -> None:
@@ -806,12 +840,33 @@ def guarda_tapa(p: dict[str, float]) -> None:
             f"holgada PARADA y no caber girando -- el riel barre su radio de "
             f"giro ({_radio_giro_riel(p):.2f}), no el alcance de su esquina")
 
+    # LA JUNTA DE LA PESTANA. Esto exigia CERO EXACTO (abs < 0.01) y era correcto
+    # mientras la union era atornillada: el tornillo aprieta contra el riel y lo
+    # que no toca, no sujeta. Desde que la hoja de Tiptop enseno que esa cara es
+    # pared de 1.2 mm, la union es PEGADA -- y una junta pegada quiere lo
+    # contrario. El adhesivo estructural necesita linea de pegado; a cero no
+    # tiene donde quedarse, y una interferencia negativa impide que la pieza
+    # asiente.
+    #
+    # Asi que la puerta cambia de forma, no de rigor. Lo que de verdad no se
+    # puede permitir es el signo negativo -- eso es interferencia. Por arriba, el
+    # techo lo pone el adhesivo: pasado medio milimetro el metacrilato de dos
+    # componentes rellena un hueco que no deberia existir y la junta pierde
+    # resistencia en vez de ganarla.
+    #
+    # Hoy vale 0.000 y pasa. Si alguien quiere linea de pegado dibujada, sube
+    # inset_sup_remate -- pero OJO: eso mueve alto_cara_sup y con el la silueta
+    # del costado, o sea el DXF que ya esta presupuestado.
     junta = p["inset_sup_remate"] - p["marco_sup"] - p["rail_er_alto"] / 2
-    assert abs(junta) < 0.01, (
-        f"la pestana no APOYA en el riel: {junta:+.3f} mm de junta (se exige 0). "
-        f"Es de donde cuelga su unica fijacion, asi que la cota no es opinable: "
-        f"inset_sup_remate = marco_sup + rail_er_alto/2 = "
+    assert junta >= -1e-9, (
+        f"la pestana INTERFIERE con el riel: {junta:+.3f} mm. Negativo significa "
+        f"que la pieza no asienta, y ninguna cantidad de adhesivo arregla eso. "
+        f"El minimo es inset_sup_remate = marco_sup + rail_er_alto/2 = "
         f"{p['marco_sup'] + p['rail_er_alto']/2:.2f}")
+    assert junta <= JUNTA_PEGADO_MAX, (
+        f"la pestana se queda a {junta:.3f} mm del riel, y el maximo pegable es "
+        f"{JUNTA_PEGADO_MAX}. Mas alla de eso el adhesivo esta rellenando hueco "
+        f"en vez de pegar: la junta pierde resistencia segun engorda")
 
 
 def guarda_escalon(p: dict[str, float]) -> None:
@@ -859,6 +914,7 @@ def main() -> int:
     canario_alineacion(p)
     guarda_piso(p)
     guarda_fresado(p)
+    guarda_standoff(p)
     guarda_escalon(p)
     guarda_tapa(p)
     g = perfil(p)
