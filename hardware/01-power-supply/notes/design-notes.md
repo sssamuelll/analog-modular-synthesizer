@@ -22,6 +22,19 @@ correctas**. No hay mediciones de rizado ni de deriva bajo carga.
 
 ## 2. Presupuesto de corriente por riel (derivado de los datasheets)
 
+> **⚠️ SECCIÓN DE LA ÉPOCA DE LA TESIS — SUPERADA POR §16 Y POR EL CENSO.**
+> Las dos filas que dominan esta tabla ya no existen: el **LCD 16×2 murió en la
+> rev. 2** de la spec del case y el **Raspberry Pi en la rev. 3**, cuando el
+> cerebro pasó a **RP2350** ([architecture-poly §2](../../../docs/architecture-poly.md)).
+> El VCO tampoco son 3× CEM3340: es el módulo 3 con **4× SSI2130**, ~35 mA/riel
+> medidos contra su BOM real. Se conserva como registro de por dónde empezó el
+> cálculo — **no se usa para dimensionar nada**.
+>
+> **Los números vigentes:** ±12 V → censo cerrado el 2026-08-18 en
+> [spec fuente v2 §8](../../../docs/superpowers/specs/2026-08-16-psu-v2-goat-design.md),
+> **~116 mA/riel a 4 voces** contra un envelope de 650. +5 V → §16.12, acotado a
+> **300 mA como límite de diseño**, no como estimación.
+
 Inventario de chips por módulo en el peor caso (todos los módulos instalados):
 
 | Chip | Dónde | I típica (por chip) | Cantidad | Total |
@@ -44,9 +57,11 @@ Inventario de chips por módulo en el peor caso (todos los módulos instalados):
 | +5 V (con Pi) | ~1.4 A | 2.1 A | **2.5 A** |
 | +5 V (sin Pi, sólo LCD + DAC) | ~100 mA | 150 mA | 300 mA |
 
-**Conclusión**: los rieles analógicos ±12 V están holgados; el problema está en
-+5 V **por el Raspberry Pi**. Mantener el enfoque de la tesis (fuente dedicada
-para el Pi) es la decisión más limpia.
+**Conclusión de entonces** (ya no aplica): *«el problema está en +5 V por el
+Raspberry Pi; mantener el enfoque de la tesis —fuente dedicada para el Pi— es la
+decisión más limpia»*. Sin Pi y sin LCD, el +5 V del módulo 1 solo alimenta el
+AD5686R: el problema que esta sección identificó **desapareció con las piezas
+que lo causaban**. Los ±12 V siguen holgados, y por más margen del que decía.
 
 ## 3. Decisión de arquitectura
 
@@ -133,6 +148,20 @@ Ordenadas por valor/esfuerzo:
 
 ## 6. Cálculo térmico
 
+> **⚠️ CÁLCULO DE OTRO CIRCUITO — SUPERADO POR §16.7.**
+> Esta cuenta usa **LM78xx** y un disipador genérico de 20 °C/W. La placa real
+> no lleva ninguno de los dos: `U1` es un **LM2940CT-12** y `U2` un
+> **LM2990T-12** (§16.3), y el disipador es el **Fischer SK 129/38,1** —
+> 6.5 K/W vertical, **7.7 K/W acostado**, que es el número que vale.
+>
+> La diferencia no es cosmética: §16.7 da **Tj ≈ 89 / 101 / 91 °C** a 45 °C de
+> ambiente, ~30-40 °C por encima de los 62.5 °C que sale abajo. Y el más
+> caliente es `U2`, no `U1`, porque paga el aislante de mica que le exige tener
+> el tab a VIN.
+>
+> Se conserva como registro. **Para dimensionar disipador, caja o ventilación,
+> el número es el de §16.7.**
+
 Regulador +12 V caso crítico (todo el sistema encendido, 300 mA):
 
 ```
@@ -156,8 +185,10 @@ T_junction ≈ 25 + 37.5 = 62.5 °C  ✔ (< 125 °C protección térmica)
 Con un disipador del tamaño estándar **HS TO-220 con aleta** (≈ 15 °C/W) la
 temperatura de junction se mantiene incluso por debajo de 60 °C — confortable.
 
-El regulador +5 V auxiliar casi no disipa (sólo alimenta DAC + LCD si se
-decide unificar; si el Pi sigue independiente, se puede suprimir).
+El regulador +5 V (`U3`, 7805) **no se suprime**: es quien alimenta el AD5686R.
+La rama condicional que había aquí —*«si el Pi sigue independiente, se puede
+suprimir»*— se resolvió sola: no hay Pi. Su disipación real está en §16.7
+(Tj ~91 °C) y su riel acotado a 300 mA en §16.12.
 
 ## 7. Grounding y distribución
 

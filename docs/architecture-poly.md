@@ -494,10 +494,17 @@ el módulo entero — VCO, DAC, referencia y telemetría — pide ~35 mA. Sobra 
 fuente, contra los ~300 mA que daba la cuenta vieja. El respin de la fuente ya
 dejó sitio para crecer aunque entonces todavía era un sinte mono.
 
-**Lo que no cabe es la pantalla en el +5 V.** El táctil de 7" pide 450–550 mA y
-el riel de +5 V está acotado a 300 mA por diseño (módulo 1 §16.12). Va alimentada
-desde la fuente USB del propio Pi, que es lo que hace el diseño oficial de
-Raspberry Pi de todas formas. Esa fuente sube de 2.5 A a **3 A**.
+**Lo que no cabe es la pantalla en el +5 V.** El riel está acotado a 300 mA por
+diseño (módulo 1 §16.12) y cualquier táctil de 7" pide 450–550 mA: no entra, y
+el límite de 300 mA es de diseño, no una estimación que se pueda estirar.
+
+> **Nota 2026-08-18:** este párrafo decía que la pantalla iba «desde la fuente
+> USB del propio Pi», subiéndola de 2.5 A a 3 A. Eso describe la arquitectura
+> anterior al RP2350 y **contradice a §2 de este mismo documento**, donde el
+> instrumento entero vive en el microcontrolador y no hay Pi que alimente nada.
+> Dónde vive la UI hoy es el issue #41 (app compañera en tres carcasas). Lo que
+> **no** cambia es la conclusión: del +5 V del módulo 1 no cuelga ninguna
+> pantalla.
 
 ## 10. Lo que esto le exige a los módulos que faltan
 
