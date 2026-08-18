@@ -776,7 +776,8 @@ module bom() {
     echo("     dos, el vano de 518 mm se descuelga 1.76 mm de peso propio)");
     echo("BOM: tornillo M4 boton x24 + arandela x24");
     // LAS DOS FILAS SON TAPA. Cada una gira sobre el M5 de su riel de arriba y
-    // se cierra con el de su otro extremo. De los 64 tornillos del case, solo
+    // se cierra con el de su otro extremo. De los 71 tornillos del case (8 M4 de
+    // riel + 14 M5 de larguero + 25 M3 de plancha + 24 M4 de piel), solo
     // CUATRO se tocan para abrirlo: dos por fila.
     echo("BOM: los M4 de riel no son todos iguales --");
     echo("     x4 DE HOMBRO + arandela: los EJES (riel del valle de la fila de");
