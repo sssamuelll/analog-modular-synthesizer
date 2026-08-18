@@ -90,8 +90,12 @@ no-determinismo.)
 (issue #48). Son ~6,6 MB que cambian entera cada vez que se mueve un milímetro,
 y no aportan nada que el `.scad` no tenga: quien quiera el STL lo exporta.
 
-Lo que sí se versiona es `case/plans/*.dxf` — esos son el entregable que va al
-taller, y su diff es la prueba de qué se mandó a cortar y cuándo.
+`case/plans/lienzo_2d.dxf` va por el mismo camino: es la preview de las 7 piezas
+en rejilla, no se manda a ningún sitio, y son otras 97.512 líneas de diff.
+
+Lo que sí se versiona son los **siete DXF sueltos** de `case/plans/` — esos son
+el entregable que va al taller, y su diff es la prueba de qué se mandó a cortar
+y cuándo.
 
 ## Procedimiento del cupón — sólo si se vuelve al láser
 

@@ -54,3 +54,7 @@ hardware/*/fab/*-jlcpcb.zip
 # STL nuevo fallara EN SILENCIO y pidiera -f sin que nadie supiera por que
 # (issue #48). Aqui esta escrito con su ruta y su motivo.
 case/renders/build/
+# El lienzo es una PREVIEW: las 7 piezas en rejilla para mirarlas de un vistazo.
+# No se manda al taller (alli van los DXF sueltos) y lo regenera export.ps1.
+# Mismo criterio que los STL: 97.512 lineas de diff que no prueban nada.
+case/plans/lienzo_2d.dxf
