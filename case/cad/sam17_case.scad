@@ -759,7 +759,19 @@ module bom() {
              "de fabrica). Sin tuerca, sin inserto. Largo = ", t_cheek,
              " de costado + arandela + 8..10 de rosca dentro del aluminio."));
     echo(str("BOM: tornillo M5 boton x", 2*len(centros_esqueleto()),
-             " + tuerca T -- SOLO para los largueros 2020 del esqueleto"));
+             " + tuerca T -- por la PUNTA de los largueros 2020, desde el costado"));
+    // Faltaban. Los M5 de arriba atan el larguero al COSTADO; estos atan la
+    // PLANCHA al larguero, que es otra union y otro herraje. Salieron al montar
+    // la guia de ensamblaje: las planchas tenian los taladros dibujados y el BOM
+    // no tenia el tornillo. Cinco filas de fila_agujeros() en total -- dos en la
+    // bandeja de base, dos en la de entrepiso, una en la tapa del valle.
+    n_fila = max(1, round(au/100));
+    echo(str("BOM: tornillo M3 x", 5*n_fila, " + tuerca T M3 -- las planchas a",
+             " los largueros: base ", 2*n_fila, ", entrepiso ", 2*n_fila,
+             ", tapa del valle ", n_fila, "."));
+    echo("     Estos entran por la RANURA del 2020, no por su punta. Es donde");
+    echo("     la tuerca de insercion lateral se paga sola: con las de deslizar");
+    echo("     hay que dejarlas dentro ANTES de cerrar el esqueleto.");
     echo("BOM: standoff M4 x12 (las dos pieles, voladas; TRES columnas -- con");
     echo("     dos, el vano de 518 mm se descuelga 1.76 mm de peso propio)");
     echo("BOM: tornillo M4 boton x24 + arandela x24");
