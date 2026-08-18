@@ -84,7 +84,31 @@ del blob de git con `git show` —LF—, por `core.autocrlf=true`. Es la
 misma conversión de fin de línea de siempre, no una cuarta clase de
 no-determinismo.)
 
-## Procedimiento del cupón — OBLIGATORIO antes de cortar planchas
+## Artefactos que NO van al repositorio
+
+`case/renders/build/*.stl` se regenera con `cad/export.ps1` y **no se versiona**
+(issue #48). Son ~6,6 MB que cambian entera cada vez que se mueve un milímetro,
+y no aportan nada que el `.scad` no tenga: quien quiera el STL lo exporta.
+
+`case/plans/lienzo_2d.dxf` va por el mismo camino: es la preview de las 7 piezas
+en rejilla, no se manda a ningún sitio, y son otras 97.512 líneas de diff.
+
+Lo que sí se versiona son los **siete DXF sueltos** de `case/plans/` — esos son
+el entregable que va al taller, y su diff es la prueba de qué se mandó a cortar
+y cuándo.
+
+## Procedimiento del cupón — sólo si se vuelve al láser
+
+**Con el proceso actual (fresado CNC) este procedimiento NO aplica y `kerf`
+vale 0.** El CAM del taller compensa el radio de herramienta como parte normal
+del trabajo y la pieza sale a la cota del dibujo, con la tolerancia de
+producción del taller (Schaeffer publica 0.05–0.10 mm).
+
+Se conserva entero porque el láser sigue siendo una alternativa viable, y
+porque el día que se vuelva a él hay que hacer esto **dos veces, una por
+espesor**: la franja del láser no es la misma en 5 que en 8 mm, y `params.scad`
+tiene un único `kerf`. Ese día hay que partirlo antes de cortar nada.
+
 
 1. Cortar [`plans/coupon.dxf`](plans/coupon.dxf) en el acrílico REAL con la
    máquina REAL. El cupón se dibuja CRUDO, sin kerf: es la pieza que lo mide.
