@@ -42,11 +42,22 @@ la nota de sustitución al inicio de este documento y
 
 ## Mejoras propuestas
 
-- **Resuelto, en contra**: migrar a un estándar Eurorack (3U, 1HP =
-  5.08 mm) para intercambiabilidad con módulos comerciales — se evaluó y no
-  se adoptó. El case vigente usa formato propio (`alto_panel = 190 mm` vs.
-  128.5 mm de un Eurorack 3U); ver
-  [`case/README.md`](../../case/README.md#formato-propio-no-eurorack).
+- **Resuelto, A FAVOR — se revirtió el 2026-08-17.** Este punto decía lo
+  contrario hasta esa fecha: que migrar a Eurorack 3U se había evaluado y
+  descartado, y que el case usaba formato propio con `alto_panel = 190 mm`.
+  **Ya no es cierto.** Las dos filas son 3U de EUROrack (128.5 mm), el paso
+  es 1 HP = 5.08 mm, y los raíles que se compraron son Z-Rails de Tiptop de
+  104 HP. Lo confirman `case/cad/params.scad` (`alto_panel_inf = 128.5`) y
+  `case/panels/build_template.py`, que taladra las dos filas a 122.5 mm
+  entre centros.
+
+  Qué se ganó: cualquier jack, perilla, panel ciego y módulo de terceros del
+  mundo encaja, y los raíles se compran hechos en vez de fabricarse.
+
+  Qué se perdió, y conviene no olvidarlo: la proporción del render aprobado.
+  Ese board se dibujó para paneles de 190 mm y un case de ~380 mm de alto;
+  el case real mide **247.73 mm**. El board sigue mandando sobre lenguaje
+  visual, no sobre cotas.
 - Generar planos en **DXF** o **SVG** para corte láser/CNC reproducible.
 - Diseño de paneles en **KiCad** o **FrontPanelDesigner**.
 - Soporte para iluminación LED del bus de alimentación.

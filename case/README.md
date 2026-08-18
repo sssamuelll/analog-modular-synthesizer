@@ -1,24 +1,42 @@
 # Case SAM17 — consola de dos pisos en acrílico naranja
 
-Spec: [`docs/superpowers/specs/2026-08-15-case-design.md`](../docs/superpowers/specs/2026-08-15-case-design.md) (rev. 3)
+Spec: [`docs/superpowers/specs/2026-08-15-case-design.md`](../docs/superpowers/specs/2026-08-15-case-design.md) (rev. 4)
 Board de intención: [`renders/propuesta-diseno-2026-08-16.png`](renders/propuesta-diseno-2026-08-16.png)
+— **manda sobre lenguaje visual, NO sobre cotas**: se dibujó para paneles de
+190 mm y un case de 500 × 380 × 350, y el case real mide 544.32 × 247.73 × 276.3.
 
-## Formato: propio, no Eurorack
+## Formato: EUROrack 3U, las dos filas
 
-Pregunta abierta desde la tesis, ya resuelta: el SAM17 usa un **formato
-propio**, no el estándar Eurorack. `alto_panel = 190 mm`
-([`cad/params.scad`](cad/params.scad)) frente a los 128.5 mm de un
-Eurorack 3U. Consecuencia: los paneles del SAM17 no son intercambiables con
-módulos Eurorack comerciales — ni en alto de panel ni en el sistema de
-montaje (rieles 2020 a `sep_railes = 180 mm` entre centros, no HP). Quien
-busque compatibilidad Eurorack necesita un case aparte.
+**Este apartado decía lo contrario hasta el 2026-08-17.** Decía que el SAM17
+usaba formato propio de 190 mm y que no era intercambiable con Eurorack. Se
+revirtió: las dos filas son **3U de EUROrack** — `alto_panel_inf` =
+`alto_panel_sup` = **128.5 mm** ([`cad/params.scad`](cad/params.scad)), paso
+de 1 HP = 5.08 mm, y `sep_railes` = **122.5 mm** entre centros, que es la
+cota del panel (ranuras a 3.0 mm de cada canto), no del riel.
 
-**Dimensiones** (salida real de `clearance_budget.py` a la fecha de este
-documento): alto total 391.5 mm, altura de entrepiso 235.8 mm, ancho útil
-entre costados 484 mm (`ancho_total = 500 mm` menos 2×`t_cheek`). Kerf
-aplicado por defecto: **−0.20 mm** — negativo a propósito (el láser
-ensancha y el dibujo compensa restando; el paso 2 del cupón lo desarrolla
-con números). Magnitud provisional: la confirma el cupón.
+Los raíles son **Z-Rails de Tiptop de 104 HP** (528.3 mm), comprados el
+2026-08-18. Llevan pletina roscada M3 continua, así que la separación la
+pone el costado al taladrarse, no el riel.
+
+Consecuencia: cualquier jack, perilla, panel ciego y módulo Eurorack
+comercial encaja. Lo que se perdió es la proporción del board de intención,
+que se dibujó para 190 mm.
+
+**Dimensiones** (salida real de `clearance_budget.py`):
+
+| | |
+|---|---|
+| ancho total | **544.32 mm** = 528.32 (104 HP) + 2 × `t_cheek` |
+| alto total | **247.73 mm** |
+| fondo | **276.3 mm** |
+| altura de entrepiso | **138.13 mm** |
+| ancho útil entre costados | **528.32 mm** |
+
+**Kerf: 0.** El proceso es **fresado CNC**, no láser (decidido el
+2026-08-17). El CAM del taller compensa el radio de herramienta como parte
+normal del trabajo, así que la pieza sale a la cota del dibujo. Cero no
+significa «sin calibrar»: significa que no hay nada que compensar. Solo
+vuelve a ser negativo si se regresa al láser.
 
 **Ancho mínimo de panel: 15.40 mm** (= 2×`inset_tornillo` + `d_M3_paso` +
 2 mm de puente — guarda de
@@ -34,7 +52,7 @@ powershell -File cad/export.ps1
 ```
 
 Corre `clearance_budget.py` ANTES de exportar y `check_dxf.py` DESPUÉS —
-relee los DXF tal como los verá el láser; si cualquiera de los dos está en
+relee los DXF tal como los verá la fresadora; si cualquiera de los dos está en
 rojo, el script sale con código distinto de cero y no se exporta ni se deja
 nada a medias. Los DXF van en mm; decírselo explícito al servicio de corte.
 
@@ -159,13 +177,22 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 
 | Pieza | Cantidad | Nota |
 |-------|----------|------|
-| Larguero perfil 2020 | 11 | de 484 mm (`ancho_util`) cada uno |
-| Tornillo M5 botón | 22 | 2 por larguero, a rosca en el alma del 2020 |
-| Standoff M4 | 12 | pieles + zócalo, volados. **No todos del mismo largo**: 5 mm los 8 de las pieles, 7 mm el par inferior del zócalo, ~33 mm el par superior (su larguero va retirado para librar el raíl de panel, ver abajo) |
-| Tornillo M4 botón | 24 | con los standoffs de arriba |
-| Arandela M4 | 24 | ídem |
-| Plancha acrílico t=5 mm | 5 | base, entrepiso, zócalo, piel inf., piel sup. |
-| Costado portante t=8 mm | 2 | — |
+| Z-Rail de Tiptop | **4** | 104 HP (528.32 mm), sección 23.8 × 10. Se compran en pares: 2 unidades = 4 raíles |
+| Larguero perfil 2020 | **7** | de 528.32 mm cada uno: 2 de base, 2 de entrepiso, remate superior, repisa y valle |
+| Tornillo **M4** | **8** | entran de punta por el costado y **roscan en el propio Z-Rail** (viene con M4 taladrado a 3.3 de fábrica). Sin tuerca, sin inserto. **No vienen con el raíl.** 4 de hombro (los ejes de giro) + 4 de mano (los cierres) |
+| Tornillo M5 botón + tuerca T | **14** | 2 por larguero 2020, por la punta, desde el costado |
+| Tornillo M3 + tuerca T M3 | **25** | las planchas a los largueros: base 10, entrepiso 10, tapa del valle 5. Entran por la RANURA, no por la punta |
+| Standoff M4 de 5 mm | 12 | solo las dos pieles, voladas. Tres columnas: con dos, el vano de 518 mm se descuelga 1.76 mm de peso propio |
+| Tornillo M4 botón + arandela | 24 | con los standoffs de arriba |
+| Arandela ANCHA d16 | 4 | **no opcional**: en los ejes de giro. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 MPa y aguanta |
+| Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa. **Sustituye al amortiguador**, que se eliminó |
+| Plancha acrílico t=5 mm | **4** | entrepiso, tapa del valle, piel inf., piel sup. |
+| Plancha acrílico t=8 mm | **4** | 2 costados + suelo (bandeja de base, ahora portante) + pestaña de remate |
+| Adhesivo estructural | 1 | metacrilato 2K o MS polímero para la pestaña. **Cianoacrilato NO**: su vapor empaña el acrílico |
+| Patica metálica torneada | 4 | d=16 × 8 mm |
+
+**Total de tornillos del case: 71** — 8 M4 de raíl + 14 M5 de esqueleto +
+25 M3 de plancha + 24 M4 de piel.
 
 No calculados por el modelo (herrajes eléctricos y de panel; la cantidad
 depende de la cuenta final de módulos, no de la geometría del cajón):
@@ -184,22 +211,18 @@ cerrado**: estos totales por panel cierran cuando cada panel esté dibujado.
 
 ## Anclaje de las placas — solo a largueros del esqueleto
 
-Las cinco planchas de acrílico (2 bandejas, zócalo, 2 pieles) se atornillan
+Las planchas de acrílico (2 bandejas, tapa del valle, 2 pieles) se atornillan
 **únicamente a largueros del esqueleto**, nunca a los 4 raíles de panel. Los
-raíles de panel van girados al ángulo de su cara (12° / 35°) para quedar a ras
+raíles de panel van girados al ángulo de su cara (35° / 45° desde la vertical) para quedar a ras
 del panel: un tornillo contra esa cara entraría a 12° del eje de su agujero
 (≈1.05 mm de descentre en 5 mm de acrílico, contra 0.7–0.9 mm de holgura) y la
 arandela asentaría sobre cara inclinada — carga de borde sobre acrílico frágil,
 que es justo el modo de fallo que este proyecto ya conoce.
 
-Consecuencia práctica: el zócalo delantero lleva un larguero propio («zócalo
-superior», el 11.º del BOM), porque a la altura de su fila de arriba solo había
-un raíl de panel y entre el tope de la bandeja base y la esquina del raíl girado
-quedan 15.6 mm, menos que los 20 del perfil. Ese larguero se retira en X lo justo
-para librar esa esquina (`holgura_rail`), y por eso sus dos standoffs miden
-~33 mm en vez de 7. A cambio el canto superior del zócalo cae exacto en
-`alto_frontal` = 50 mm, en vez de sobrepasarlo 17.5 mm y tapar la fila de
-tornillos inferior de los paneles.
+**El zócalo delantero se eliminó** (2026-08-17), y con él su larguero propio y
+sus dos standoffs largos de ~33 mm. Este apartado describía esa pieza hasta
+esa fecha. `alto_frontal` pasó de 50 a **13 mm** y ya no es un zócalo: es el
+canto delantero del case.
 
 Lo verifica `clearance_budget.py` en `alineacion()`: cada fila de agujeros de
 cada placa tiene que caer en la centerline del larguero de esqueleto que

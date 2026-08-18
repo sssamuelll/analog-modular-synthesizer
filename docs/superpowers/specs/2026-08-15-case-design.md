@@ -26,7 +26,17 @@ lenguaje visual).
 > servida por el Pi y el compañero pasa a ser un **plugin VST/CLAP** en la
 > computadora del usuario; la fuente v2 fija los dominios de alimentación (y
 > prevé WS2812); los ángulos quedan **medidos desde la vertical**, como los
-> interpretó el board de diseño aprobado.
+> interpretó el board de diseño aprobado. **rev. 4** (2026-08-17/18): el
+> panel pasa a **3U de EUROrack** (128.5 mm, 1 HP) y se compran Z-Rails de
+> Tiptop de 104 HP — muere el formato propio de 190 mm y con él la
+> proporción del board; el proceso pasa de **láser a fresado CNC** y `kerf`
+> a 0; el zócalo se elimina; la pestaña de remate pasa a **junta pegada**;
+> la bandeja de base sube a 8 mm y se vuelve portante.
+>
+> **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
+> visual y proporciones *relativas*, pero **sus cotas están superadas**. Se
+> dibujó para paneles de 190 mm y un case de 500 × 380 × 350; el case real
+> mide **544.32 × 247.73 × 276.3**.
 
 ## 1. Objetivo
 
@@ -36,14 +46,15 @@ translúcido**, de estilo modernista — placas planas, retícula estricta, cero
 ornamento — unida por **separadores (standoffs) de aluminio a la vista** cuyo
 ritmo de tornillería es parte del diseño. Los módulos cierran las dos caras
 inclinadas con **paneles de PCB de aluminio**. Todo se fabrica por servicio de
-corte láser a partir de archivos generados desde un modelo paramétrico
-versionado en este repo.
+**fresado CNC** a partir de archivos generados desde un modelo paramétrico
+versionado en este repo. (Fue corte láser hasta el 2026-08-17; ver rev. 4.)
 
 El case se dimensiona **por paneles, no por voces**: la arquitectura
 polifónica fija que los mandos se comparten y los circuitos se replican, así
 que el frontal no crece al crecer las voces — crece la PCB detrás de cada
-panel. Se conservan de la tesis la altura de panel de 190 mm y las
-convenciones de rotulación. El orden lógico es el de la cadena polifónica,
+panel. Se conservan de la tesis las convenciones de rotulación; **la altura de
+panel de 190 mm NO se conservó** — desde el 2026-08-17 las dos filas son 3U
+de EUROrack, 128.5 mm (rev. 4). El orden lógico es el de la cadena polifónica,
 repartido en dos pisos por función:
 
 - **Piso superior — generación:** MIDI/CV · VCO ×3
@@ -57,14 +68,14 @@ de su zona de conexión trasera.
 
 | Decisión | Elección | Por qué |
 |---|---|---|
-| Formato | Consola propia de dos pisos (no Eurorack 3U) | Los módulos usan paneles de 190 mm; la referencia de dos pisos es la silueta, no el estándar |
+| Formato | Consola propia de dos pisos, **con paneles 3U de EUROrack** | La silueta es propia; el panel es estándar (128.5 mm, 1 HP = 5.08 mm). **Cambió el 2026-08-17**: antes eran 190 mm y explícitamente «no Eurorack». Se compraron Z-Rails de Tiptop de 104 HP |
 | Estilo | Modernista: placas planas, retícula, standoffs vistos | Decisión estética del proyecto; el naranja translúcido hace el trabajo expresivo; el board de diseño aprobado fija el lenguaje |
-| Estructura | Sándwich de placas de acrílico + separadores de aluminio | 100 % desmontable; la precisión depende solo de posiciones de agujero (lo que mejor hace el láser); elimina de raíz el problema de encajes |
+| Estructura | Sándwich de placas de acrílico + esqueleto de perfiles 2020 + separadores de aluminio | La precisión depende solo de posiciones de agujero; elimina de raíz el problema de encajes |
 | Paneles de módulo | PCB de aluminio (KiCad → fabricante tipo JLCPCB) | Serigrafía perfecta, agujeros exactos, acabado uniforme, bajo costo |
 | Interfaz del módulo 2 | Instrumento autosuficiente en el RP2350; computadora **externa y opcional** por USB MIDI class-compliant + plugin compañero VST/CLAP. En el panel: **botón AFINAR + LED de estado**; los conectores de enlace (USB, MIDI DIN) los define el módulo 2 (panel o bloque trasero) | Pivote de cómputo del PR #30: si la computadora se cae en pleno concierto, el instrumento sigue sonando; desaparecen pantalla, Pi y sus consumos del frontal |
-| Fabricación | Corte láser por servicio | Precisión; los DXF del repo son directamente los archivos de corte |
+| Fabricación | **Fresado CNC** por servicio | El taller compensa el radio de herramienta en CAM, así que `kerf = 0`. El láser dejaba canto cónico en 8 mm y microfisuras en los bordes cargados. Cambió el 2026-08-17. Los DXF del repo siguen siendo directamente los archivos de corte |
 | CAD | OpenSCAD paramétrico | Diseño-como-código versionable; exporta DXF (corte) y STL (render en Blender) |
-| Servicio | Todo desatornillable (standoffs) + paneles de módulo desmontables | Ningún pegamento estructural; acceso total al interior |
+| Servicio | Desatornillable salvo una junta + paneles de módulo desmontables | Acceso total al interior. **Excepción única: la pestaña de remate va PEGADA** (metacrilato 2K o MS polímero — cianoacrilato no, su vapor empaña el acrílico). El Z-Rail es extruido de pared fina de 1.2 mm y un M3 en esa cara atraviesa pared |
 
 ## 3. Postmortem del intento anterior (y cómo este diseño lo elimina)
 
@@ -87,11 +98,13 @@ diámetros de agujero, que no dependen del espesor de la plancha. Aun así:
 
 - `t_acrilico` y `kerf` siguen siendo parámetros del modelo (afectan agujeros,
   largos de tornillo y estética de cantos).
-- **Cupón de calibración** (`coupon.scad`): pieza de ~5 min de láser con una
+- **Cupón de calibración** (`coupon.scad`) — **solo aplica si se vuelve al
+  láser; con fresado `kerf = 0` y no hay nada que calibrar.** Pieza con una
   escalera de diámetros de agujero (ajuste deslizante y ajuste justo para
   M3/M4) y una probeta de canto. Se corta primero con el acrílico y la
   máquina reales, se fija el `kerf` medido, y solo entonces se cortan las
-  planchas definitivas. **Prohibido cortar planchas sin cupón previo.**
+  planchas definitivas. Con láser habría que hacerlo **dos veces**, una por
+  espesor: la franja no es la misma en 5 que en 8 mm.
 
 ## 4. Geometría (defaults; todo parametrizable)
 
@@ -103,15 +116,16 @@ esta dirección).
 
 | Parámetro | Default | Nota |
 |---|---|---|
-| `ancho_total` | 500 mm | Lo fija la suma de anchos de módulo por piso (§11); coincide con el board |
-| `alto_panel` | 190 mm | Por piso; altura de panel de la tesis, se conserva |
-| `angulo_inferior` | 12° desde la vertical | Cara del piso de procesamiento, casi erguida |
-| `angulo_superior` | 35° desde la vertical | Cara del piso de generación, reclinada |
-| `alto_frontal` | 50 mm | Zócalo delantero |
-| `fondo` / `alto_total` | derivados | ≈ 350 mm / ≈ 380–390 mm con estos defaults — cuadra con el board (350 × ~380) |
-| `t_acrilico` | 5 mm | Placas del cuerpo; decidir con el proveedor, medir con calibre |
-| `t_cheek` | 8 mm | Costados portantes (o 2 × 4 mm laminados, decisión estética en CAD) |
-| `kerf` | 0.2 mm | Se calibra con el cupón, nunca se asume |
+| `ancho_total` | **544.32 mm** | DERIVADO del riel: 528.32 (104 HP) + 2 × `t_cheek`. Ya no lo fija la suma de módulos |
+| `alto_panel_inf` / `_sup` | **128.5 mm** | 3U de EUROrack, las dos filas. Fue 190 hasta el 2026-08-17 |
+| `sep_railes` | **122.5 mm** | Entre centros. Lo fija el PANEL (ranuras a 3.0 de cada canto), no el riel: el Z-Rail lleva pletina roscada continua |
+| `angulo_inferior` | **35° desde la vertical** | Cara del piso de procesamiento |
+| `angulo_superior` | **45° desde la vertical** | Cara del piso de generación |
+| `alto_frontal` | **13 mm** | Canto delantero. **No es un zócalo**: el zócalo se eliminó |
+| `fondo` / `alto_total` | derivados | **276.3 mm / 247.73 mm**. Ya NO cuadra con el board (350 × ~380): el board se dibujó para paneles de 190 |
+| `t_acrilico` | 5 mm | Entrepiso, tapa del valle y las dos pieles. MEDIR con calibre (§11) |
+| `t_base` / `t_cheek` | 8 mm | Suelo portante y costados. La bandeja de base subió de 5 a 8 al pasar a ser el propio canto de abajo |
+| `kerf` | **0** | Correcto fresando: el CAM compensa el radio de herramienta. Solo vuelve a ser negativo si se regresa al láser |
 | `n_bulkheads` | 2 | Costados exteriores; el modelo admite uno central si el vano lo pide |
 
 Los valores derivados los calcula el modelo, no se fijan a mano. Las holguras
@@ -138,10 +152,10 @@ comprobación va antes del paso destructivo).
 - **Bandejas horizontales de acrílico** (base y entrepiso) atornilladas con
   tuercas T M3 a un **esqueleto de perfiles 2020** (los mismos del sistema de
   paneles: 7 largueros de esqueleto —2 de base, 2 de entrepiso, remate
-  superior, repisa y zócalo superior— además de los 4 raíles de paneles; el
+  superior, repisa y valle— además de los 4 raíles de paneles; el
   reparto exacto lo fija `centros_esqueleto()` en el modelo). Un solo sistema
   de fijación para todo el instrumento; un standoff no puede sujetar una
-  bandeja de 500 mm de vano.
+  bandeja de 528 mm de vano.
 - **Las placas de acrílico anclan solo a largueros de esqueleto**, nunca a los
   4 raíles de panel: esos van girados al ángulo de su cara, y un tornillo
   contra una cara inclinada entra descentrado y apoya la arandela de canto
@@ -152,10 +166,10 @@ comprobación va antes del paso destructivo).
   ornamento permitido.
 - **Piel trasera de acrílico por piso**, flotando en standoffs con junta de
   sombra (shadow gap) perimetral — desmontable, lleva la ventilación (§7).
-- **Paneles de módulo: PCB de aluminio** de ancho variable, 190 mm de alto,
-  cerrando las dos caras inclinadas.
+- **Paneles de módulo: PCB de aluminio** de ancho variable en múltiplos de
+  1 HP (5.08 mm), **128.5 mm de alto**, cerrando las dos caras inclinadas.
 - **Pies de goma** bajo la base.
-- Sin pegamento estructural en ninguna unión.
+- Sin pegamento estructural salvo la pestaña de remate (ver §2).
 
 ## 6. Raíles y sistema de paneles
 
@@ -171,7 +185,7 @@ comprobación va antes del paso destructivo).
   cada módulo (pin de switch del Thonkiconn), no en un módulo aparte — no se
   reserva zona de patch bay en el frontal. Sí infla el ancho de los paneles
   que ganan jacks; eso lo vigila el budget por piso.
-- La plantilla KiCad de panel (en `case/panels/`) fija: alto 190 mm, posición
+- La plantilla KiCad de panel (en `case/panels/`) fija: **alto 128.5 mm**, posición
   de agujeros de tornillo, zona útil de componentes y estilo de serigrafía
   (tipografía y convenciones de `docs/modules/08-case-panels.md`, revisadas
   al lenguaje modernista: retícula, sin adornos).
@@ -227,17 +241,21 @@ case/
 
 ## 9. BOM mecánico (categorías; cantidades exactas en implementación)
 
-Standoffs de aluminio M4 (macho-hembra y hembra-hembra, varios largos),
-tornillería inox M4 de botón + arandelas (siempre arandela contra acrílico),
-**perfiles 2020: 11 piezas, todas de `ancho_util` = 484 mm** (4 raíles de
-panel + 7 largueros de esqueleto), tuercas T M3 + tornillos M3×8 (paneles),
-entrada IEC C14 con fusible e interruptor, espárrago M4 + cable 1.5 mm²
-verde/amarillo + terminales de ojal (bonding), pies de goma, tornillería del
-transformador, pasacables del entrepiso, **22 tornillos M5 de botón** (2 por
-perfil, alma del 2020 roscada M5).
+Standoffs de aluminio M4 de 5 mm (solo las pieles), tornillería inox M4 de
+botón + arandelas (siempre arandela contra acrílico; **arandela ANCHA d16 en
+los cuatro ejes de giro**, que con la d9 normal el acrílico fluye),
+**4 Z-Rails de Tiptop de 104 HP** (528.32 mm, sección 23.8 × 10) + **7
+largueros 2020 de 528.32 mm**, tuercas T M3 + tornillos M3 (25: las planchas
+a los largueros), entrada IEC C14 con fusible e interruptor, espárrago M4 +
+cable 1.5 mm² verde/amarillo + terminales de ojal (bonding), paticas
+metálicas torneadas d16 × 8, tornillería del transformador, pasacables del
+entrepiso, **14 tornillos M5 de botón** (2 por larguero 2020) y **8 M4** que
+roscan en el propio Z-Rail — 4 de hombro con Belleville para los ejes, 4 de
+mano para los cierres. **Adhesivo estructural** (metacrilato 2K o MS
+polímero, nunca cianoacrilato) para la pestaña de remate.
 
 Los perfiles van entre las caras internas de los costados, así que su largo es
-el ancho útil (484 mm), **no `ancho_total`** (500 mm). Cantidades y largo:
+el ancho útil (**528.32 mm**), **no `ancho_total`** (544.32 mm). Cantidades y largo:
 salida real de `openscad -D 'PART=\"bom\"' case/cad/sam17_case.scad` — el
 modelo las cuenta de `centros_rail()` + `centros_esqueleto()`, y quien las
 recuente después de tocar `params.scad` toma ese eco, no este párrafo.
@@ -246,9 +264,11 @@ recuente después de tocar `params.scad` toma ese eco, no este párrafo.
 
 1. **Cupón antes que planchas** — el kerf y los diámetros de ajuste medidos
    se registran en `case/README.md` junto con proveedor, material y máquina.
-   Es la aplicación al láser de los Principios III y V: la comprobación va
-   antes del paso destructivo, y entre cortar a ciegas y no cortar, no se
-   corta.
+   **Con fresado esto se reduce a medir el espesor real de la plancha**, que
+   sigue siendo obligatorio: el PMMA colado llega con tolerancia de hasta
+   ±1.2 mm en 8 mm, y dos piezas están acotadas contra el espesor. Es la
+   aplicación de los Principios III y V: la comprobación va antes del paso
+   destructivo, y entre cortar a ciegas y no cortar, no se corta.
 2. `case/clearance_budget.py` **en verde**, con autocomprobación del cálculo,
    aserciones que fallan si el diseño se sale, y bloque de lo que no cubre.
 3. El script de export debe regenerar todos los DXF/STL sin errores desde un
@@ -270,16 +290,25 @@ recuente después de tocar `params.scad` toma ese eco, no este párrafo.
 Convención del repo (Principio I): lo no verificado no se suaviza, se lista
 con qué habría que medir para cerrarlo.
 
-- **Espesor real del acrílico naranja**: el nominal miente (tolerancia de
-  fabricación). Afecta largos de tornillo, apilados y estética de cantos. Se
-  cierra midiendo con calibre la plancha comprada y metiendo ese valor en
-  `t_acrilico` / `t_cheek`.
-- **Kerf y ajuste de agujeros con ese acrílico y esa máquina**: se cierra con
-  el cupón; nunca se asume el −0.2 mm del default. Ojo con el signo: `kerf` en
-  `params.scad` es **negativo** (el láser ensancha y el modelo dibuja
-  `d + kerf`, o sea que compensa restando), mientras que un kerf de tabla de
-  servicio es el ancho del canal y viene positivo. El procedimiento con
-  ejemplo numérico está en el paso 2 de `case/README.md`.
+- **Espesor real del acrílico naranja**: el nominal miente. Y con PMMA
+  **colado** (GS, que es el que pide el diseño por su baja tensión interna)
+  la tolerancia llega a **±(0.4 + 0.1 × espesor)**, o sea ±1.2 mm en 8 mm —
+  confirmado por escrito por Schaeffer AG el 2026-08-18: *«Die
+  Herstellungstoleranzen können wir jedoch nicht beeinflussen»*. Nadie la
+  mejora. Se cierra midiendo con calibre la plancha comprada y metiendo ese
+  valor en `t_acrilico` / `t_base` / `t_cheek`, **antes de cortar**. El
+  taller debe medir y avisar; es una de las preguntas del RFQ. Issue #98.
+- ~~**Kerf**~~ — **CERRADO por cambio de proceso** (2026-08-17). Con fresado
+  CNC el CAM compensa el radio de herramienta y la pieza sale a la cota del
+  dibujo, así que `kerf = 0` y no hay nada que calibrar. El procedimiento del
+  cupón se conserva en `case/README.md` por si se vuelve al láser — y
+  entonces hay que hacerlo **dos veces**, una por espesor. Issue #40.
+
+- **Qué cara del Z-Rail mira al panel**: la hoja de Tiptop acota el taladro
+  M4 de punta a 9.5 mm de un canto y por tanto a 14.3 del otro; cuál de los
+  dos toca el panel no está confirmado. Si fuera el otro, `rail_er_eje` pasa
+  de 14.3 a 9.5 y hay que re-derivar. Se cierra con el riel en la mano y un
+  calibrador. Issue #97.
 - **Transformador y térmica de la fuente v2**: la spec de la fuente
   ([`2026-08-16-psu-v2-goat-design.md`](2026-08-16-psu-v2-goat-design.md))
   define pre-reg + LT3045/LT3094 y trae su propia lista de no confirmado; el
