@@ -141,15 +141,63 @@ no hay dominio de máquina, ni SMPS de 60 W, ni DC jack de cómputo.
   para grabar, aislador USB como opción. Pendiente de la caja, anotado aquí
   para que no se pierda.
 
-## 8. Censo de corriente (estimación poly, pendiente de los respins de módulos)
+## 8. Censo de corriente (cerrado contra BOM y datasheets, 2026-08-18)
 
-4 voces completas + controles digitalizados: 4× CEM3340 (~80 mA/riel) + OTAs y
-opamps de 4× VCF/VCA/ADSR + mixer (~50-70 mA/riel) + ~20 CV (5× AD5686R, mA) +
-digipots AD5293 (µA). **Bruto ≈ 130-150 mA/riel, ×1.5 ≈ 200-225 mA.** El
-envelope de 650 mA queda con holgura ~3× — la elección de paridad Doepfer pasó
-de aspiración a necesidad con el poly. Este censo se rehace contra los BOM
-reales de los módulos v2 cuando existan; si alguna vez pide más de 650, el
-problema es de módulos, no de esta placa.
+**El censo vive en [`architecture-poly.md` §9](../../architecture-poly.md), no
+aquí.** Esta sección lo cita y le añade lo que solo importa del lado de la
+fuente. Un número, un dueño: hasta hoy había dos censos en dos documentos y
+esta sección llevaba el viejo.
+
+| Bloque | Consumo por riel | De dónde sale |
+|---|---|---|
+| Módulo 3 (VCO ×4, SSI2130) | ~35 mA | `dac_local_budget.py`, contra el BOM real del respin |
+| 4× VCF + 4× VCA (8× LM13700) | ~21 mA | 2.6 mA/encapsulado a I_ABC = 500 µA (TI SNOSBW2F) |
+| 4× ADSR (LM358 + ICM7555) | ~4 mA | ~0.6 mA/amplificador a ±12 V, **interpolado** entre los dos puntos que da el datasheet (300 µA a 5 V, 800 µA a 36 V — TI SLOS068AB); el 7555 es µA |
+| Op-amps del instrumento (~8× TL074) | ~45 mA | 1.4 mA/amplificador típ (TI SLOS080W) |
+| Módulo 2 (DAC + buffers) | ~11 mA | |
+| **Total 4 voces** | **~116 mA** | |
+| **Con ×1.5 de diseño** | **~174 mA** | |
+
+Contra el envelope de **650 mA/riel** eso es **holgura 3.7×**. A 8 voces
+(~176 mA brutos, ~264 mA con margen) siguen sobrando 2.5×.
+
+### Qué cambió respecto de la versión anterior de esta sección
+
+| | decía | dice |
+|---|---|---|
+| VCO | 4× CEM3340, ~80 mA | 4× SSI2130, ~35 mA — **la tesis, no el diseño** |
+| Bruto | 130-150 mA/riel | ~116 mA/riel |
+| Con margen | 200-225 mA | ~174 mA |
+| Estado | «pendiente de los respins» | cerrado para el módulo 3; estimado para 4-7 |
+
+El error viejo era **conservador**: sobra más holgura de la que se creía, así
+que nada de lo dimensionado contra él queda corto. El CEM3340 salió del diseño
+el 2026-08-17 (architecture-poly §10) y esta sección no se enteró.
+
+### Lo que este censo NO cierra
+
+- **Los módulos 4, 5, 6 y 7 no están respinados.** Sus `bom.csv` son los
+  esqueletos de la tesis del 2026-04-16, sin tocar desde entonces. Las filas de
+  arriba salen del recuento de encapsulados que impone
+  [architecture-poly §10](../../architecture-poly.md) (4× LM13700 por módulo,
+  un juego de mandos), no de un BOM respinado. Se re-verifica al respinarlos.
+- **Este censo no dimensiona TR1.** El toroidal de 120 VA **no se eligió por
+  corriente** — se eligió porque su resistencia de devanado es la mitad que la
+  del de 80 VA, y eso es lo que sostiene los 13.6 V de valle que exige U1 (ver
+  nota de TR1 en `hardware/01-power-supply/v2/bom.csv` y §16.5). Un censo bajo **no** autoriza bajar de
+  VA: el criterio es la caída bajo el pico de carga del banco de 9400 µF, no
+  los mA que pide el instrumento.
+
+### El techo que ya está construido: los PTC de la bus board
+
+La bus board lleva **12 PTC de 0.25 A hold / 0.50 A trip** — seis ranuras × dos
+rieles. Eso pone un techo por módulo de **250 mA/riel** que ninguna versión de
+este censo había escrito, y que es más estricto que el envelope global en el
+único sitio donde importa: un módulo solo no puede llevarse la fuente. Con
+~20-40 mA por módulo, el margen contra el hold es de un orden de magnitud.
+
+Si alguna vez el instrumento pide más de 650 mA/riel, el problema es de
+módulos, no de esta placa.
 
 ## 9. Placa, ensamblaje y repo
 
