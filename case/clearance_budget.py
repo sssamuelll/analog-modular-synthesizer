@@ -649,6 +649,31 @@ FRESA_MIN_D = 1.0
 LARGOS_STANDOFF = (4, 5, 6, 8, 10, 12, 15, 18, 20, 25, 30, 35, 40)
 
 
+def guarda_parametros_vivos(p: dict[str, float]) -> None:
+    """Ningun parametro promete una capacidad que el codigo no tiene.
+
+    n_bulkheads dice '2 (3 si el vano flexa)' y la spec §11 lo remata: 'si el
+    prototipo flexa, n_bulkheads pasa a 3 y se re-exporta'. Pero costados()
+    dibuja DOS costados fijos, uno en z=0 y otro en z=ancho_total-t_cheek, sin
+    ningun bucle sobre este parametro. Quien lo suba a 3 esperando un refuerzo
+    central no recibe nada: ni costado, ni error, ni aviso. El .scad sigue
+    sacando dos, y los DXF salen identicos.
+
+    Eso es lo que hace peligroso al parametro muerto -- no que no haga nada,
+    sino que PARECE que hace algo. Asi que en vez de borrarlo y perder la
+    intencion documentada, la puerta convierte el silencio en un fallo: quien lo
+    toque se entera de que hay codigo que escribir.
+
+    Issue #54. Su hermano alto_pie ya se resolvio solo -- cuando entraron las
+    paticas dejo de estar huerfano."""
+    assert p["n_bulkheads"] == 2, (
+        f"n_bulkheads = {p['n_bulkheads']}, y costados() solo sabe dibujar 2. "
+        f"El tercer costado central NO esta implementado: subir este numero no "
+        f"anade nada, solo lo parece. Para que sirva hay que tocar costados() "
+        f"en sam17_case.scad, y de paso decidir como cruzan los largueros por "
+        f"el (hoy van de punta a punta) y que agujeros lleva ese costado.")
+
+
 def guarda_standoff(p: dict[str, float]) -> None:
     """El separador de las pieles tiene que ser una pieza comprable.
 
@@ -915,6 +940,7 @@ def main() -> int:
     guarda_piso(p)
     guarda_fresado(p)
     guarda_standoff(p)
+    guarda_parametros_vivos(p)
     guarda_escalon(p)
     guarda_tapa(p)
     g = perfil(p)
