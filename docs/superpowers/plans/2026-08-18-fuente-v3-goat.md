@@ -294,7 +294,32 @@ Reglas que no son opcionales:
 
 ## FASE C — La PCB, con la restricción mecánica nueva (rama `feat/psu-v3-pcb`)
 
-### Task 6: Colocación — los tres TO-220 en fila
+### Task 6: Colocación — los tres TO-220 en fila — ✅ HECHA
+
+> **2026-08-19.** La placa gira a **200 × 150** y los disipadores desaparecen:
+> el canto de arriba es la pared del chasis. `build_pcb.py` LEE
+> `case/cad/params.scad` en vez de copiar la fila de agujeros, así que el
+> acoplamiento entre placa y chasis es ejecutable y no una nota.
+>
+> **La puerta del Step 1 existe y caza**, con 3 mutaciones probadas de 4:
+> desnivel de 0,5 mm entre tabs, uno girado al revés, uno corrido 3 mm. La
+> cuarta —cambiar el paso de los agujeros *en el chasis*— no falla, y es
+> correcto: la placa lo sigue.
+>
+> **Y se cerró un hueco más viejo que esta tarea.** `gates.py` sabía buscar el
+> Python de KiCad desde hace versiones y no había un solo fichero que lo usara:
+> ni la v1 ni la v2 tuvieron nunca la placa en la suite. `check_pcb.py` la mete,
+> y lee el `.kicad_pcb` **commiteado**, no el recién generado — lo que caza una
+> pieza movida en la GUI.
+>
+> Cuatro cosas salieron al colocar y están en el README de la v3: la franja de
+> red no cabía (el MOV mide 23,1), `L_SMPS`/`N_SMPS` faltaban en `NETS_RED`, el
+> filtro de modo común estaba al final de la cadena en vez de junto al fusible,
+> y `J3` quedaba a 5,83 mm de un tornillo que va a PE.
+>
+> `TRACKS` y `VIAS` siguen vacíos a propósito: eso es la Task 7.
+
+#### Pasos originales
 
 **Interfaces:**
 - Consume: la geometría del chasis de la Fase D (Task 9). **Esta tarea y la
