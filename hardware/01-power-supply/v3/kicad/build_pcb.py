@@ -328,13 +328,13 @@ PLACEMENT = {
     # toroide pero NO comparte el limitador, que esta dimensionado para TR1.
     "J3":  (  17.0,  132.0,   0),   # entrada de red: L / N / PE
     "F1":  (  38.0,  134.0,   0),   # portafusible cerrado, 1.6 A T
-    "NT1": ( 116.0,  135.0,   0),   # limitador de inrush
-    "RV1": ( 140.0,  135.0,   0),   # MOV
-    "L1":  (  56.0,  132.0,   0),   # choke de modo comun (poblado: va en SERIE)
-    "CY1": (  88.0,  128.0,   0),   # clase Y2 a PE -- SIN POBLAR (va en PARALELO)
-    "CY2": (  88.0,  141.0,   0),   # idem
-    "J7":  ( 102.0,  135.0,   0),   # deriva a la SMPS digital IRM-15-5
-    "J4":  ( 168.0,  135.0,   0),   # salida al primario de TR1
+    "NT1": (  88.0,  135.0,   0),   # limitador de inrush
+    "RV1": (  63.0,  135.0,   0),   # MOV
+    "L1":  ( 126.0,  131.0,   0),   # choke de modo comun (poblado: va en SERIE)
+    "CY1": ( 172.0,  129.0,   0),   # clase Y2 a PE -- SIN POBLAR (va en PARALELO)
+    "CY2": ( 172.0,  143.0,   0),   # idem
+    "J7":  ( 158.0,  135.0,   0),   # deriva a la SMPS digital IRM-15-5
+    "J4":  ( 110.0,  135.0,   0),   # salida al primario de TR1
 }
 
 # Rectangulo de colocacion de la isla GNDREF (x1, y1, x2, y2), en mm. Envuelve
@@ -450,6 +450,8 @@ class Ruteo:
 
     def via(self, p, red=None, ancho=0.6, taladro=0.3):
         x, y = self._pt(p)
+        if isinstance(red, tuple):
+            red = pad_red(self.board, *red)
         if red is None:
             assert isinstance(p[0], str), "una via suelta tiene que decir su red"
             red = pad_red(self.board, *p)
@@ -472,6 +474,198 @@ class Ruteo:
     def bajar(self, p, ancho_via=0.6):
         """Saca un pad de F.Cu a B.Cu con una via en el sitio."""
         return self.via(p, ancho=ancho_via)
+
+
+# --- el arbol de GND, entero en B.Cu ---------------------------------------
+# LA DECISION DE CAPA (issue #134, opcion B). GND son 68 de los 306 pads: mas
+# de la quinta parte de la placa. Sacarla entera de F.Cu es lo que deja sitio
+# a todo lo demas, y es lo que hizo la v2.
+#
+# Y va como ARBOL, no como plano. Un plano de masa es la respuesta correcta en
+# casi cualquier placa digital y la equivocada aqui: un plano crea lazos, y un
+# lazo alrededor del puente rectificador es una espira de 100 Hz acoplada a
+# todo. revisar_estrella() lo comprueba con union-find sobre los extremos de
+# los tramos, asi que las costillas se parten en cada punto de enganche -- si
+# fueran un solo tramo de punta a punta, el union-find solo veria sus dos
+# extremos y un lazo de verdad pasaria sin que nadie lo viera.
+#
+# Forma: un PEINE. Tronco vertical en x=11 (el canal libre del canto
+# izquierdo), y siete costillas horizontales en las bandas donde no hay ningun
+# pad pasante. Cada pad baja a su costilla por su propia x. Raiz electrica en
+# J1.2, la toma central del secundario -- que es por donde vuelve la corriente
+# de rectificacion, la mas grande de la placa.
+GND_TRONCO_X = 11.0
+GND_COSTILLAS = (11.0, 23.0, 44.0, 66.0, 84.0, 99.0, 117.0)
+ANCHO_GND = 1.0
+
+
+# Cuanto se separa la via del pad SMD al que sirve. Una via de 0.6 mm EN el
+# pad de un chip de 0.5 mm de paso deja 0.03 mm al pin vecino -- lo midio
+# revisar_vias() en 20 sitios. Se saca con un rabito corto en F.Cu, hacia
+# fuera del cuerpo del chip, y la via va al final. Los pads grandes (el EP
+# termico de un DFN) son la excepcion: ahi la via va dentro, que es para lo
+# que existe el EP.
+GND_FANOUT = 1.7
+GND_PAD_GRANDE = 1.5
+
+
+def _hay_sitio(board, punto, ref_propia: str, pin_propio: str,
+               radio: float = 0.75) -> bool:
+    """Si una via de 0.6 mm en `punto` deja aire a todo pad que no sea EL SUYO.
+
+    El radio de 0.75 no es holgura de gusto: es el radio de la via (0.3) mas
+    0.45 de aire, sobre un minimo de fabricacion de 0.127. Se probo con 1.3 y
+    la via de U9.7 no cabia por ningun lado -- en un MSOP de 0.5 mm de paso,
+    pedir 1.3 mm a los pines vecinos es pedir que el chip no exista.
+
+    "El suyo" es el pad exacto, no la huella entera. Saltarse la huella
+    completa fue el primer intento y salio mal en el sitio obvio: el rabito de
+    C29 esquivo a R21 yendose al oeste y aterrizo encima del OTRO pad de C29.
+    """
+    px, py = punto
+    for fp in board.GetFootprints():
+        for p in fp.Pads():
+            if fp.GetReference() == ref_propia and p.GetNumber() == pin_propio:
+                continue
+            bb = p.GetBoundingBox()
+            dx = max(bb.GetLeft() / 1e6 - px, 0, px - bb.GetRight() / 1e6)
+            dy = max(bb.GetTop() / 1e6 - py, 0, py - bb.GetBottom() / 1e6)
+            if (dx * dx + dy * dy) ** 0.5 < radio:
+                return False
+    return True
+
+
+def rutear_gnd(r: Ruteo) -> None:
+    board = r.board
+    pads = []
+    for fp in board.GetFootprints():
+        centro = fp.GetPosition()
+        for p in fp.Pads():
+            if p.GetNetname() != "GND":
+                continue
+            c, tam = p.GetPosition(), p.GetSize()
+            pads.append((c.x / 1e6, c.y / 1e6, fp.GetReference(), p.GetNumber(),
+                         p.GetAttribute() == pcbnew.PAD_ATTRIB_SMD,
+                         (centro.x / 1e6, centro.y / 1e6),
+                         min(tam.x, tam.y) / 1e6))
+    assert pads, "la placa no tiene pads de GND"
+
+    enganches: dict[float, set] = {y: set() for y in GND_COSTILLAS}
+    for x, y, ref, pin, smd, (cx, cy_fp), lado in pads:
+        xv, yv = x, y
+        if smd and lado < GND_PAD_GRANDE:
+            # Hacia fuera del cuerpo, por el eje en que el pad esta mas lejos
+            # del centro. Pero "fuera del chip" no siempre es "libre": el
+            # rabito de C29 salia al este y aterrizaba encima de R21. Asi que
+            # se prueban las cuatro direcciones en orden de preferencia y se
+            # coge la primera que deje sitio -- si ninguna lo deja, revienta
+            # aqui en vez de dejarlo pasar al DRC.
+            dx, dy = x - cx, y - cy_fp
+            eje_x = abs(dx) >= abs(dy)
+            orden = ([(GND_FANOUT if dx >= 0 else -GND_FANOUT, 0),
+                      (-GND_FANOUT if dx >= 0 else GND_FANOUT, 0),
+                      (0, GND_FANOUT), (0, -GND_FANOUT)] if eje_x else
+                     [(0, GND_FANOUT if dy >= 0 else -GND_FANOUT),
+                      (0, -GND_FANOUT if dy >= 0 else GND_FANOUT),
+                      (GND_FANOUT, 0), (-GND_FANOUT, 0)])
+            for ddx, ddy in orden:
+                cand = (x + ddx, y + ddy)
+                if _hay_sitio(board, cand, ref, pin):
+                    xv, yv = cand
+                    break
+            else:
+                raise AssertionError(
+                    f"la via de GND de {ref}.{pin} no cabe por ningun lado")
+            r.pista(F, [(x, y), (xv, yv)], 0.3, red=(ref, pin))
+        if smd:
+            r.via((xv, yv), red=(ref, pin))
+        cost = min(GND_COSTILLAS, key=lambda c: abs(c - yv))
+        enganches[cost].add(round(xv, 3))
+        if abs(yv - cost) > 0.01:
+            r.pista(B, [(xv, yv), (xv, cost)], ANCHO_GND, red=(ref, pin))
+
+    ref_gnd = (pads[0][2], pads[0][3])
+    for cy in GND_COSTILLAS:
+        xs = sorted(enganches[cy] | {GND_TRONCO_X})
+        for a, b in zip(xs, xs[1:]):
+            r.pista(B, [(a, cy), (b, cy)], ANCHO_GND, red=ref_gnd)
+
+    for a, b in zip(GND_COSTILLAS, GND_COSTILLAS[1:]):
+        r.pista(B, [(GND_TRONCO_X, a), (GND_TRONCO_X, b)], ANCHO_GND, red=ref_gnd)
+
+
+# --- la red, bajo la barrera -----------------------------------------------
+# Aqui el reparto de capas NO es el de la placa (F.Cu potencia / B.Cu masa):
+# bajo la barrera no hay masa, asi que las dos capas estan libres y se usan las
+# dos. La cadena caliente -- entrada, fusible, limitador, primario -- se queda
+# entera en F.Cu y de una pieza; el neutro, la tierra y la derivacion a la
+# SMPS bajan a B.Cu. No es simetria: es que L_F tiene que cruzar la franja
+# entera y todo lo demas se le pone delante.
+#
+# CARRILES. Cada red tiene su y reservada, y estan elegidas donde NO hay ningun
+# pad: 124.5 y 129 en F.Cu, 123.5 / 127 / 136-137 / 145.5 en B.Cu. La
+# separacion entre carriles de redes distintas es >= 2.5 mm, que es lo que
+# revisar_pistas() exige en cuanto una de las dos es de red.
+def rutear_red(r: Ruteo) -> None:
+    """La franja de red. Cinco carriles, y cada uno esta donde no hay pads.
+
+    EL PINOUT DEL CHOKE FUERZA UN CRUCE Y NO HAY FORMA DE COLOCARLO PARA
+    EVITARLO. En el 8104-RC la entrada de L y la de N estan en esquinas
+    OPUESTAS (pin 1 arriba-izquierda, pin 3 abajo-derecha), asi que sus dos
+    salidas tambien: L_SMPS sale por abajo-izquierda y N_SMPS por
+    arriba-derecha, y las dos tienen que llegar al mismo sitio a la derecha.
+    Se cruzan si van por la misma capa, se coloque el choke donde se coloque.
+
+    Se resuelve con capas, no con geometria: L_SMPS por B.Cu en el carril de
+    arriba, N_SMPS por F.Cu en el de abajo. Es la unica pareja de la placa que
+    necesita las dos capas para NO tocarse.
+
+    Los carriles, y el hueco donde vive cada uno:
+
+        F.Cu  123.0  L_F      (entre la ranura y la fila de pads de 129-135)
+        F.Cu  127.5  L        (solo x=17..38, delante del fusible)
+        F.Cu  129.0  L_TR     (entre NT1 y J4, por encima de sus pads)
+        F.Cu  143.0  N_SMPS
+        B.Cu  123.0  PE       (cruza la franja entera: es el carril mas largo)
+        B.Cu  126.5  L_SMPS
+
+    Los dos ultimos van a 2.50 y 2.50 mm exactos de su vecino mas cercano, que
+    es el minimo que revisar_pistas() exige en cuanto una de las dos redes es
+    de red. No sobra ni una decima: entre la ranura (122) y la fila de pads
+    del choke (131) hay 9 mm y ahi caben exactamente dos carriles de 230 V.
+        B.Cu  146.0  N
+
+    Ninguna de estas pistas lleva via: los 23 pads de red son todos pasantes,
+    asi que el cobre de las dos capas ya los toca. En una franja de 230 V eso
+    no es comodidad -- una via es un agujero metalizado de 0.3 mm en medio del
+    aislamiento, y no ponerlos es una decision.
+    """
+    # --- F.Cu ---------------------------------------------------------------
+    r.pista(F, [("J3", "1"), (17.0, 127.5), (38.0, 127.5), ("F1", "1")],
+            ANCHO_RED)
+    r.pista(F, [("F1", "2"), (45.62, 123.0), (126.0, 123.0)], ANCHO_RED,
+            red=("NT1", "1"))
+    for ref, pin in (("RV1", "1"), ("NT1", "1"), ("L1", "1")):
+        x, _ = pad_xy(r.board, ref, pin)
+        r.pista(F, [(x, 123.0), (ref, pin)], ANCHO_RED)
+    r.pista(F, [("NT1", "2"), (95.5, 129.0), (115.0, 129.0), ("J4", "2")],
+            ANCHO_RED)
+    r.pista(F, [("L1", "4"), (153.0, 131.0), (153.0, 143.0), ("CY2", "1")],
+            ANCHO_RED)
+    r.pista(F, [(163.0, 143.0), ("J7", "2")], ANCHO_RED, red=("J7", "2"))
+    r.pista(F, [("CY1", "2"), ("CY2", "2")], ANCHO_RED)
+
+    # --- B.Cu ---------------------------------------------------------------
+    r.pista(B, [("J3", "2"), (22.0, 146.0), (146.32, 146.0)], ANCHO_RED,
+            red=("J3", "2"))
+    for ref, pin in (("RV1", "2"), ("J4", "1"), ("L1", "3")):
+        x, _ = pad_xy(r.board, ref, pin)
+        r.pista(B, [(x, 146.0), (ref, pin)], ANCHO_RED)
+    r.pista(B, [("J3", "3"), (27.0, 123.0), (179.5, 123.0), ("CY1", "2")],
+            ANCHO_RED)
+    r.pista(B, [("L1", "2"), (120.0, 141.16), (120.0, 126.5), (172.0, 126.5),
+                ("CY1", "1")], ANCHO_RED)
+    r.pista(B, [(158.0, 126.5), ("J7", "1")], ANCHO_RED, red=("J7", "1"))
 
 
 def rutear(board) -> Ruteo:
@@ -504,7 +698,10 @@ def rutear(board) -> Ruteo:
     confundir el verde de las puertas de colocacion con una placa terminada.
     La v2 hizo exactamente esto entre sus Tareas 7 y 8.
     """
-    return Ruteo(board)
+    r = Ruteo(board)
+    rutear_gnd(r)
+    rutear_red(r)
+    return r
 
 
 TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = []
