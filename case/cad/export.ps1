@@ -53,9 +53,27 @@ foreach ($m in "assembly_acrilico","assembly_aluminio") {
     Write-Warning "FALLO: $m"; $fallos++
   }
 }
+
+# Vistas del chasis de acero. Es la unica pieza cuyo INTERIOR es el diseno, y no
+# se ve en ningun otro entregable: el DXF es plano y en el render del case queda
+# detras de los paneles (probado, ver la nota en render.py). Van a build/ y no se
+# versionan, igual que los STL -- son de viewport y se regeneran en un segundo.
+foreach ($v in "chasis_abierto=32,0,0", "chasis_cerrado=62,0,28") {
+  $nombre, $cam = $v.Split("=")
+  $out = Join-Path $build "vista_$nombre.png"
+  & $scad -o ($out.Replace('\', '/')) --imgsize=1500,950 --viewall --autocenter --colorscheme=Tomorrow --camera="0,0,0,$cam,0" -D ('PART=\"' + $nombre + '\"') (Join-Path $PSScriptRoot "sam17_case.scad") | Out-Null
+  if ($LASTEXITCODE -ne 0 -or -not (Test-Path $out) -or (Get-Item $out).Length -lt 5000) {
+    Write-Warning "FALLO: vista $nombre"; $fallos++
+  }
+}
 if ($fallos -gt 0) { Write-Error "$fallos exports fallidos"; exit 1 }
 
 # puerta de relectura: validar lo que el laser va a ver, no lo que dibujamos
 python (Join-Path $repo "case/check_dxf.py")
 if ($LASTEXITCODE -ne 0) { Write-Error "check_dxf en ROJO: no se manda a cortar"; exit 1 }
-Write-Output "export completo: $($piezas.Count + 3) artefactos regenerados y releidos"
+
+# El plano de plegado. El DXF NO es entregable completo para una chapa doblada:
+# lleva el corte y no dice de donde doblar. Este si se versiona.
+python (Join-Path $repo "case/renders/plano_chasis.py")
+if ($LASTEXITCODE -ne 0) { Write-Error "plano de plegado en ROJO"; exit 1 }
+Write-Output "export completo: $($piezas.Count + 6) artefactos regenerados y releidos"

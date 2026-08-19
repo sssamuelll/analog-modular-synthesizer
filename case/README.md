@@ -108,6 +108,12 @@ no-determinismo.)
 (issue #48). Son ~6,6 MB que cambian entera cada vez que se mueve un milímetro,
 y no aportan nada que el `.scad` no tenga: quien quiera el STL lo exporta.
 
+`case/renders/build/vista_chasis_*.png` también: son vistas de viewport de
+OpenSCAD, un segundo de regeneración cada una. Existen porque el chasis de acero
+es la única pieza cuyo **interior** es el diseño, y no se ve en ningún otro
+entregable — el DXF es plano y en el render del case queda detrás de los paneles
+(se probó metiéndolo en `render.py`: dos PNG idénticos y minutos de Cycles).
+
 `case/plans/lienzo_2d.dxf` va por el mismo camino: es la preview de las piezas
 de acrílico en rejilla, no se manda a ningún sitio, y son otras 97.512 líneas de
 diff. **El lienzo no lleva las tres piezas de acero** y es a propósito: van a
@@ -297,6 +303,10 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
 - [x] Chasis de acero del PSU (#107): cuerpo, tapa y refuerzo, con su
       desarrollo de plegado y su puerta — ver `guarda_chasis()` en
       `clearance_budget.py`
+- [x] **Plano de plegado** ([`renders/chasis-plano-plegado.png`](renders/chasis-plano-plegado.png)),
+      generado por `renders/plano_chasis.py` releyendo los mismos DXF que se
+      mandan a cortar. Un `.dxf` lleva geometría de corte y **no dice de dónde
+      doblar**: mandarlo solo es mandar media pieza
 - [x] Cupón de calibración
 - [x] `clearance_budget.py` en verde
 - [x] Plantilla de panel KiCad

@@ -735,6 +735,62 @@ module chasis() {
         chasis_3d();
 }
 
+// --- vistas de render del chasis (no salen en ningun DXF) ---------------
+// El color() y estas dos PART solo existen para mirar. Van aqui y no en un
+// fichero aparte por lo mismo que el resto del chasis: una vista que no se
+// regenera con el modelo miente en cuanto alguien mueve un parametro, y esta
+// es justo la pieza cuyo interior no se puede comprobar de otra forma.
+
+// TO-220 de pie contra la pared, con el tab atornillado. No es un modelo del
+// encapsulado -- es su estorbo: cuerpo, tab y la altura a la que cae su
+// taladro. Sirve para ver si la fila choca con algo, no para fabricar.
+module to220_estorbo() {
+    color([0.15, 0.15, 0.17]) translate([-5.08, 0, -12.4]) cube([10.16, 4.6, 16]);
+    color([0.7, 0.7, 0.72]) translate([-5.08, -0.5, -12.4]) cube([10.16, 0.5, 19]);
+}
+
+// La PCB no existe todavia (Fase C). Esto es su HUECO RESERVADO, que es un
+// dato distinto y hay que leerlo como tal: 200 x 150 flotando sobre sus
+// separadores, sin un solo componente encima porque no hay ninguno decidido.
+module pcb_reservada() {
+    color([0.05, 0.35, 0.15])
+        translate([chasis_pcb_x, chasis_pcb_y, t_chapa + chasis_pcb_standoff])
+            cube([chasis_pcb_ancho, chasis_pcb_fondo, 1.6]);
+}
+
+module chasis_contenido() {
+    pcb_reservada();
+    color([0.55, 0.35, 0.15])                       // toroide
+        translate([chasis_toroide_x, chasis_toroide_y, t_chapa])
+            difference() {
+                cylinder(d = diam_transformador, h = alto_transformador);
+                translate([0, 0, -1]) cylinder(d = 30, h = alto_transformador + 2);
+            }
+    color([0.8, 0.8, 0.82])                          // perno M6 x 60
+        translate([chasis_toroide_x, chasis_toroide_y, -8])
+            cylinder(d = 6, h = alto_transformador + 16);
+    for (x = ch_to220_x())                           // la fila que disipa
+        translate([x, t_chapa, t_chapa + chasis_to220_z]) to220_estorbo();
+}
+
+// Vista abierta: el cuerpo sin tapa y lo que lleva dentro.
+module chasis_abierto() {
+    e = ch_cuerpo_ext();
+    color([0.62, 0.63, 0.66]) {
+        cube([e.x, e.y, t_chapa]);
+        translate([0, 0, t_chapa]) {
+            cube([e.x, t_chapa, chasis_int_z]);
+            translate([0, e.y - t_chapa, 0]) cube([e.x, t_chapa, chasis_int_z]);
+            cube([t_chapa, e.y, chasis_int_z]);
+            translate([e.x - t_chapa, 0, 0]) cube([t_chapa, e.y, chasis_int_z]);
+        }
+    }
+    color([0.5, 0.51, 0.54])                         // el refuerzo, por debajo
+        translate([chasis_toroide_x + t_chapa, chasis_toroide_y + t_chapa, -t_chapa])
+            linear_extrude(t_chapa) chasis_refuerzo_2d();
+    translate([t_chapa, t_chapa, 0]) chasis_contenido();
+}
+
 if (PART == "costado")             costado();
 else if (PART == "costado_2d")     costado_2d();
 else if (PART == "assembly")           assembly();
@@ -750,6 +806,8 @@ else if (PART == "chasis_cuerpo_2d")     chasis_cuerpo_2d();
 else if (PART == "chasis_tapa_2d")       chasis_tapa_2d();
 else if (PART == "chasis_refuerzo_2d")   chasis_refuerzo_2d();
 else if (PART == "chasis")               chasis();
+else if (PART == "chasis_abierto")       chasis_abierto();
+else if (PART == "chasis_cerrado")       chasis_3d();
 else if (PART == "lienzo_2d")            lienzo_2d();
 else if (PART == "bom")                  bom();
 else assert(false, str("PART desconocido: ", PART));
