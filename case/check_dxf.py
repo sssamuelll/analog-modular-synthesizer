@@ -87,6 +87,17 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
     }
     au = p["ancho_total"] - 2 * p["t_cheek"]
     dims["remate_sup_2d"] = (au, p["prof_sup"])
+    # Las tres de ACERO. No salen de _cajas_solidas porque no son planchas del
+    # cuerpo del case, y sobre todo porque su DXF NO es su caja: el desarrollo
+    # de una chapa doblada es mas grande que la pieza montada (492.69 x 330.69
+    # de recorte para una caja de 338.6 x 176.6). Ese es justo el error que
+    # este sobre tiene que cazar -- exportar el contorno de la caja en vez del
+    # desarrollo da un DXF valido, con las cotas de la pieza, e inservible.
+    ch = cb._chasis(p)
+    dims["chasis_cuerpo_2d"] = (ch["blank_cuerpo_x"], ch["blank_cuerpo_y"])
+    dims["chasis_tapa_2d"] = (ch["blank_tapa_x"], ch["blank_tapa_y"])
+    dims["chasis_refuerzo_2d"] = (p["chasis_refuerzo_lado"],
+                                  p["chasis_refuerzo_lado"])
     for caja in planchas:
         nombre, x0, x1, y0, y1, z0, z1 = caja
         if nombre in SIN_DXF or nombre in GIRADAS:
@@ -504,6 +515,44 @@ def railes_dentro_del_costado() -> list[str]:
     return f
 
 
+def chasis_agujeros() -> list[str]:
+    """Las tres chapas de acero traen todos sus agujeros.
+
+    El sobre no lo ve: un agujero que desaparece no mueve el contorno ni un
+    milimetro, y el fichero sigue siendo valido. Ya paso una vez en este repo
+    -- la pestana perdio sus cinco M3 y quedo en un rectangulo perfecto de 378
+    bytes. Aqui duele mas que en el acrilico: la fila de los TO-220 ES la
+    refrigeracion (Tj de U2, 101 -> 61 C) y el M4 del esparrago ES la tierra de
+    proteccion. Una chapa sin ellos se dobla, se pinta y se monta antes de que
+    nadie note nada.
+
+    Se cuentan los REDONDOS, que es lo que _redondos() sabe leer. La ranura de
+    salida es obround y queda fuera a proposito: su tamano si lo ve el sobre de
+    clearance_budget, que comprueba que cabe en el suelo.
+    """
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    torn = 2 * (p["chasis_tornillos_largo"] + p["chasis_tornillos_corto"])
+    esperado = {
+        # 1 M6 del toroide + los TO-220 + 1 M4 de PE + los tornillos de la tapa
+        "chasis_cuerpo_2d": int(1 + p["chasis_to220_n"] + 1 + torn),
+        "chasis_tapa_2d": int(torn),
+        "chasis_refuerzo_2d": 1 + 4,             # M6 central + 4 remaches
+    }
+    f: list[str] = []
+    for nombre, n in esperado.items():
+        if not (PLANS / f"{nombre}.dxf").exists():
+            continue
+        hay = len(_redondos(nombre))
+        if hay != n:
+            f.append(f"{nombre}: {hay} agujeros redondos y se esperaban {n}")
+        else:
+            ds = sorted({round(d, 1) for _, _, d in _redondos(nombre)})
+            print(f"  {nombre}: {hay} agujeros, diametros {ds}")
+    return f
+
+
 def main() -> int:
     fallos: list[str] = []
     for nombre, sobre in SOBRES.items():
@@ -515,6 +564,7 @@ def main() -> int:
     fallos += railes_dentro_del_costado()
     fallos += taladros_con_material()
     fallos += agujeros_donde_toca()
+    fallos += chasis_agujeros()
     for nombre, motivo in SIN_DXF.items():
         print(f"  PENDIENTE (sin DXF, no bloquea): {nombre} -- {motivo}")
     for m in fallos:

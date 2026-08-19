@@ -39,7 +39,7 @@ Se gasta en esto.
 | Material del chasis | **Acero**, no aluminio | El aluminio es casi transparente al campo magnético de 50/100 Hz; el ferromagnético no. Decidido en #107 |
 | Alcance del recinto | **Toda la fuente adentro**: toroide + PCB completa + entrada IEC | La red no sale nunca del recinto. Es lo que hacen las fuentes profesionales y es lo que da la regla del §3.2 |
 | Disipación | **Contra la pared del chasis**, sin disipadores discretos | Con 3.0 W de regulación el chasis sobra, y se ganan ~39 °C de unión |
-| Ventilación del recinto | **Ninguna. Va cerrado** | §3.1: 6.8 °C de subida en el peor caso. Una rejilla solo dejaría entrar polvo |
+| Ventilación del recinto | **Ninguna. Va cerrado** | §3.1: 7.1 °C de subida en el peor caso. Una rejilla solo dejaría entrar polvo |
 | Telemetría | **INA226 ×2 + ADS1115 + TMP1075**, I²C | Corriente solo donde vale: §4.2. El ADS1115 entra por los dos VRAW, que es el número que nunca se ha medido. El TMP1075 ya se usa en el módulo 3 |
 | Cruce de masas | **Aislado, ISO1541** | En una fuente cuyo objetivo entero es sub-µV, meterle un bus digital sin aislar deshace el diseño |
 
@@ -100,15 +100,15 @@ LED**, que están fuera de la caja pero cuelgan de ella.
 
 | Estado | Salida | Pérdida IRM-15-5 | Total dentro | ΔT |
 |---|---|---|---|---|
-| LED apagados | 1.00 W | 0.28 W | **5.27 W** | **4.5 °C** |
-| LED al tope del #104 (2.80 A) | 15.00 W | 4.23 W | **9.22 W** | **6.8 °C** |
+| LED apagados | 1.00 W | 0.28 W | **5.27 W** | **4.0 °C** |
+| LED al tope del #104 (2.80 A) | 15.00 W | 4.23 W | **9.22 W** | **7.1 °C** |
 
 Superficie del recinto propuesto (§3.3), **descontando la cara inferior**
 porque apoya contra la bandeja y no convecta:
 
 ```
-2(0.342 x 0.085) + 2(0.180 x 0.085) + 1(0.342 x 0.180)  =  0.1503 m2
-dT = 9.22 W / (0.1503 m2 x 9 W/m2K)                     =  6.8 C   (peor caso)
+2(0.3386 x 0.083) + 2(0.1766 x 0.083) + 1(0.3386 x 0.1766) =  0.1453 m2
+dT = 9.22 W / (0.1453 m2 x 9 W/m2K)                        =  7.1 C  (peor caso)
 ```
 
 **El presupuesto de brillo del #104 es también el termostato de esta caja.**
@@ -126,13 +126,27 @@ apagados» es optimista. No cambia nada: el peor caso ya está calculado arriba.
 
 El coeficiente de 9 W/m²K es el valor de manual para convección natural en aire
 quieto sobre superficie pintada. **Es una estimación, no una medida** — pero
-con 6.8 °C de resultado en el peor caso, tendría que estar equivocado por un
+con 7.1 °C de resultado en el peor caso, tendría que estar equivocado por un
 factor de cuatro para que importe.
 
 > **Corregido el 2026-08-19.** Esta cuenta daba 7.9 °C sobre un recinto de
 > 310 × 160 × 85, que era demasiado pequeño para meter el toroide al lado de la
-> PCB (§3.3). Con el recinto real, 342 × 180 × 85, son **+16 % de superficie** y
-> la subida baja a 6.8 °C. La caja crece por geometría y disipa por superficie.
+> PCB (§3.3). Con el recinto real son **+12 % de superficie** y la subida baja de
+> 7.9 a 7.1 °C. La caja crece por geometría y disipa por superficie.
+
+> **Y otra vez el mismo día, al dibujarla.** Los 342 × 180 × 85 de la primera
+> versión de §3.3 no eran una cota: eran «chapa de 1.5 mm + pestañas», una
+> estimación de cuánto crece la caja alrededor de su interior. Al derivarla de
+> verdad —interior 332 × 170 × 80, chapa doblada, tapa con faldón por fuera— el
+> exterior sale **338.6 × 176.6 × 83**: 3.4, 3.4 y 2 mm MENOS.
+>
+> No cambia ninguna decisión y aun así se anota, porque la superficie es el
+> denominador de esta sección: 0.1453 m² en vez de 0.1503 (−3.3 %), ΔT de 7.1 en
+> vez de 6.8, y la Tj de `U2` de 61.4 en vez de 61.1 °C. Sigue redondeando a
+> **61** y el margen contra los 125 no se entera.
+>
+> La caja sobreestimada era la conservadora en el reparto de espacio y la
+> **optimista** en la térmica. Se corrigen las dos con el mismo número.
 
 > **Los 2 W del toroide también tenían fuente ahora.** La hoja de Nuvotem da
 > **0,73 W de pérdidas en hierro** (fijas, no escalan con la carga) y **15,2 W en
@@ -159,7 +173,7 @@ su propia potencia.
 
 ```
 Tj = ambiente  +  subida del chasis por los 9,22 W  +  P_U2 x R_union-chasis
-   = 45 C      +  6,8 C                             +  1,1 W x 8,5 K/W
+   = 45 C      +  7,1 C                             +  1,1 W x 8,5 K/W
    = 61 C
 ```
 
@@ -284,19 +298,36 @@ exactamente el fondo de la PCB, o sea cero holgura contra las paredes.
 
 ```
                  10 + 200 + 15 + 97 + 10
-interior   332 x 170 x 80 mm      pared, PCB, cableado, toroide, pared
-exterior   342 x 180 x 85 mm      chapa de 1.5 mm + pestanas
-sobra      186 mm de largo y 43 de fondo en la bandeja de 528,32 x 223,26
-           40 mm de alto sobre la caja, dentro de los 125,13 del piso
+interior   332   x 170   x 80  mm   pared, PCB, cableado, toroide, pared
+exterior   338,6 x 176,6 x 83  mm   DERIVADO (ver abajo), no estimado
+sobra      189,7 mm de largo y 46,7 de fondo en la bandeja de 528,32 x 223,26
+           32,1 mm de alto sobre la caja y sus pies, en los 125,13 del piso
 ```
 
+> **El exterior dejó de ser una estimación el 2026-08-19**, al dibujar la caja
+> (plan Task 9). Aquí decía *342 × 180 × 85, «chapa de 1.5 mm + pestañas»*, que
+> es una forma de decir «el interior más un poco». La caja real se deriva del
+> interior, del espesor y del faldón de la tapa, y sale **3,4 / 3,4 / 2 mm más
+> chica**. La consecuencia está en §3.1: menos superficie, ΔT de 7,1 y no 6,8.
+
 **Crecer resultó ser buena noticia.** La superficie de convección sube de
-0,1295 a **0,1503 m²** (+16 %), así que la caja disipa mejor de lo que decía
+0,1295 a **0,1453 m²** (+12 %), así que la caja disipa mejor de lo que decía
 §3.1 — ver la corrección ahí mismo.
 
-El recorte de ventilación de **104 × 32 mm** que la bandeja ya lleva cortado
-bajo el PSU (`bandeja_base_2d`) **deja de ser ventilación**: pasa a ser la
-salida de cables del recinto hacia el interior del case.
+El recorte de **104 × 32 mm** que la bandeja ya llevaba cortado bajo el PSU
+(`bandeja_base_2d`) **deja de ser ventilación**: pasa a ser la salida de cables
+del recinto hacia el interior del case. Y al dibujarlo salieron dos cosas que
+el párrafo anterior daba por hechas y no lo eran:
+
+- **Aquello no era un agujero.** Era un campo de ondas —ranuras de 4 mm con
+  puentes entre ellas— cuya *envolvente* mide 104 × 32. Por 4 mm no pasa un
+  mazo. Ahora es una abertura de verdad, y se deriva de la ranura del suelo del
+  chasis con una sola función, así que la contiene por construcción.
+- **La salida no cabe en el hueco de cableado.** Los 15 mm entre PCB y toroide
+  no dan para una ranura de 26, y correrla hacia el toroide la mete debajo de
+  él —lo cazó el propio gate al primer intento—. Así que **el mazo sale por
+  debajo de la PCB**, por el hueco de sus separadores de 10 mm. Eso es una
+  condición para la Task 6: `J2` y `J6` miran a ese canto.
 
 ## 4. La telemetría
 

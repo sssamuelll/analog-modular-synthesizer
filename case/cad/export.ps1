@@ -17,8 +17,12 @@ New-Item -ItemType Directory -Force $plans, $build | Out-Null
 Remove-Item (Join-Path $plans "*.dxf") -ErrorAction SilentlyContinue
 Remove-Item (Join-Path $build "*.stl") -ErrorAction SilentlyContinue
 
+# Las tres ultimas son de ACERO y van a otro taller (corte + plegado), no al
+# de acrilico. Salen igual de aqui para que hereden la puerta de relectura y no
+# vivan en un flujo aparte que nadie corre.
 $piezas = "costado_2d","bandeja_base_2d","bandeja_entrepiso_2d","tapa_valle_2d",
-          "remate_sup_2d","piel_inferior_2d","piel_superior_2d","lienzo_2d"
+          "remate_sup_2d","piel_inferior_2d","piel_superior_2d","lienzo_2d",
+          "chasis_cuerpo_2d","chasis_tapa_2d","chasis_refuerzo_2d"
 # Piso de tamano del DXF. Es un SMOKE TEST -- "OpenSCAD escribio algo" --, no una
 # verificacion: de eso se encarga check_dxf.py, que relee cada fichero con ezdxf
 # y comprueba entidades y envolvente. Fue 1000 y era un piso a ojo: el dia que la

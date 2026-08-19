@@ -1,7 +1,7 @@
 # PSU v3 — la primera que se construye
 
-**Estado:** Fase A cerrada (decisiones), Fase B cerrada (esquemático). Faltan
-PCB, chasis y validación.
+**Estado:** Fases A (decisiones), B (esquemático) y D (chasis) cerradas. Faltan
+la PCB y la validación.
 
 > **La v1 y la v2 son diseños de papel.** La v1 se abandonó el 2026-08-17 sin
 > fabricar; la v2 llegó a tener gerbers, BOM y CPL generados y tampoco se pidió.
@@ -125,9 +125,13 @@ metido ±12 V al revés en los seis módulos. Corregido aquí y en `design-notes
 ## Lo que falta
 
 - **Fase C — PCB.** Colocación de los tres TO-220 en fila con los tabs
-  coplanares, y la puerta `test_to220_coplanares` que lo mide. Se cierra con la
-  Fase D o no se cierra.
-- **Fase D — chasis.** Medir el toroide de verdad (el diámetro ni siquiera está
-  en `params.scad`, #46) y el chasis paramétrico en `case/cad/`.
+  coplanares, y la puerta `test_to220_coplanares` que lo mide. **Ya no está
+  bloqueada:** el chasis declara dónde están los tres agujeros (`chasis_to220_*`
+  en `case/cad/params.scad`) y a qué canto miran `J2` y `J6` — la PCB se pliega a
+  esa geometría, no al revés.
+- ~~**Fase D — chasis.**~~ **Cerrada.** El toroide tiene hoja del fabricante
+  (Ø93 × 46, 1,20 kg) y el chasis de acero existe en `case/cad/` con sus tres
+  DXF de corte y su puerta. Queda abierto solo el presupuesto de la pantalla
+  electrostática, que depende de Talema.
 - **Fase E — validación.** El LNA de medida (#58) y el bring-up: el valle real de
   VRAW y el número de ruido real, los dos por primera vez.

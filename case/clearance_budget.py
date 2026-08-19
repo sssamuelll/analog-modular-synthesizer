@@ -932,6 +932,234 @@ ANCHOS_PISO_INF = {"VCF": 100, "ADSR": 110, "VCA": 80, "MIXER": 100}
 EXPANSION_MIN = 40  # sitio reservado a crecer, por piso
 
 
+def _chasis(p: dict[str, float]) -> dict[str, float]:
+    """Geometria del chasis de acero, misma formula que sam17_case.scad.
+
+    Se recalcula aqui en vez de leerla del .scad por la misma razon que el
+    resto del budget: el .scad DIBUJA y este fichero DECIDE. Si las dos cuentas
+    se separan, el desarrollo de la fibra neutra de mas abajo lo caza.
+    """
+    t, r, k = p["t_chapa"], p["radio_doblez"], p["k_factor"]
+    sb = r + t
+    ba = math.pi / 2 * (r + k * t)
+    bd = 2 * sb - ba
+    ext_x = p["chasis_int_x"] + 2 * t
+    ext_y = p["chasis_int_y"] + 2 * t
+    ext_z = p["chasis_int_z"] + t                    # cuerpo, sin tapa
+    tapa_x = ext_x + p["chasis_hol_tapa"] + 2 * t
+    tapa_y = ext_y + p["chasis_hol_tapa"] + 2 * t
+    faldon = t + p["chasis_pestana"]
+    return {
+        "sb": sb, "ba": ba, "bd": bd,
+        "ext_x": ext_x, "ext_y": ext_y, "ext_z": ext_z,
+        "tapa_x": tapa_x, "tapa_y": tapa_y, "faldon": faldon,
+        "alto": 2 * t + p["chasis_int_z"],           # exterior, con tapa
+        "desfase": t + p["chasis_hol_tapa"] / 2,
+        "blank_cuerpo_x": ext_x + 2 * ext_z - 2 * bd,
+        "blank_cuerpo_y": ext_y + 2 * ext_z - 2 * bd,
+        "blank_tapa_x": tapa_x + 2 * faldon - 2 * bd,
+        "blank_tapa_y": tapa_y + 2 * faldon - 2 * bd,
+    }
+
+
+def _desarrollo_fibra(interior: float, alto_int: float,
+                      p: dict[str, float]) -> float:
+    """El desarrollo, andando la FIBRA NEUTRA en vez de restar deducciones.
+
+    Esta es la unica comprobacion del chasis que no se puede escribir dos veces
+    igual por accidente. La formula que usa el modelo -- desarrollo = suma de
+    lados exteriores menos una bend deduction por doblez -- es la de taller, y
+    es correcta, pero es OPACA: si el setback se escribe r en vez de r+t, o el
+    signo de la deduccion se invierte, el numero sigue saliendo plausible y la
+    chapa se corta mal. Cortada mal no se arregla: se vuelve a cortar.
+
+    Asi que aqui se calcula por geometria, siguiendo la fibra que ni se estira
+    ni se comprime, tramo por tramo:
+
+        recto del suelo   +   arco de 90 grados   +   recto de la pared
+
+    El centro del radio interior cae a (X_i - r, t + r) -- DENTRO de la esquina,
+    que es la parte que se equivoca a ojo: la cara concava del doblez mira al
+    interior de la caja. De ahi:
+
+        recto del suelo por semi-lado = X_i - r
+        arco (radio r + k*t, 90 grados) = BA
+        recto de la pared = alto_interior - r
+
+    y el total es el doble. Sale igual que la formula de taller -- lo cual es
+    justo el punto: son dos caminos distintos al mismo numero.
+    """
+    t, r, k = p["t_chapa"], p["radio_doblez"], p["k_factor"]
+    ba = math.pi / 2 * (r + k * t)
+    return 2 * (interior / 2 - r) + 2 * ba + 2 * (alto_int - r)
+
+
+def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
+    """El chasis de acero del PSU: cabe, contiene y se puede doblar (#107).
+
+    Lo que NO comprueba, dicho aqui para que no se confunda con cobertura:
+    que los tres agujeros de los TO-220 casen con los TO-220 de verdad. Esa
+    fila la DECLARA el chasis y la consume la Task 6 al colocar la PCB; hasta
+    que esa tarea exista, lo unico comprobable es que caigan en la pared con
+    material alrededor, y eso si esta abajo.
+    """
+    c = _chasis(p)
+    f: list[str] = []
+    t = p["t_chapa"]
+
+    def exige(cond: bool, msg: str) -> None:
+        if not cond:
+            f.append(msg)
+
+    # --- 1. el desarrollo, por los dos caminos -----------------------------
+    for nombre, interior, alto_int, blank in (
+            ("cuerpo X", p["chasis_int_x"], p["chasis_int_z"],
+             c["blank_cuerpo_x"]),
+            ("cuerpo Y", p["chasis_int_y"], p["chasis_int_z"],
+             c["blank_cuerpo_y"]),
+            ("tapa X", c["tapa_x"] - 2 * t, p["chasis_pestana"],
+             c["blank_tapa_x"]),
+            ("tapa Y", c["tapa_y"] - 2 * t, p["chasis_pestana"],
+             c["blank_tapa_y"])):
+        fibra = _desarrollo_fibra(interior, alto_int, p)
+        exige(abs(fibra - blank) < 1e-6,
+              f"desarrollo [{nombre}]: la deduccion de doblez da {blank:.3f} mm "
+              f"y la fibra neutra {fibra:.3f} mm ({blank - fibra:+.3f}). Una de "
+              f"las dos cuentas esta mal y la chapa se corta con la del modelo")
+
+    # --- 2. la caja cabe en el piso inferior del case ----------------------
+    au = p["ancho_total"] - 2 * p["t_cheek"]
+    fondo_bandeja = _fondo_bandeja(p)
+    exige(c["alto"] + p["chasis_pie"] < g["alto_interior_inferior"],
+          f"el chasis mide {c['alto'] + p['chasis_pie']:.1f} mm con sus pies y "
+          f"el piso inferior da {g['alto_interior_inferior']:.2f}")
+    exige(c["tapa_x"] + 2 * p["chasis_margen_bandeja"] <= au,
+          f"el chasis mide {c['tapa_x']:.1f} de largo y la bandeja {au:.2f}")
+    exige(c["tapa_y"] <= fondo_bandeja,
+          f"el chasis mide {c['tapa_y']:.1f} de fondo y la bandeja "
+          f"{fondo_bandeja:.2f}")
+
+    # --- 3. el reparto interior cierra -------------------------------------
+    # El toroide se mide con su holgura de salidas: la hoja avisa "allow extra
+    # 4mm at leads", asi que la envolvente de diseno es diam + 4 y NO el diam.
+    env = p["diam_transformador"] + 4
+    borde_pcb = p["chasis_pcb_x"] + p["chasis_pcb_ancho"]
+    exige(borde_pcb <= p["chasis_toroide_x"] - env / 2,
+          f"la PCB acaba en x={borde_pcb:.0f} y el toroide empieza en "
+          f"x={p['chasis_toroide_x'] - env / 2:.0f}: se pisan")
+    exige(p["chasis_toroide_x"] + env / 2 <= p["chasis_int_x"] - p["chasis_pcb_x"],
+          "el toroide se sale por la pared del fondo")
+    exige(p["chasis_toroide_y"] - env / 2 >= 0
+          and p["chasis_toroide_y"] + env / 2 <= p["chasis_int_y"],
+          "el toroide se sale del interior por el fondo")
+    exige(p["chasis_pcb_y"] + p["chasis_pcb_fondo"] <= p["chasis_int_y"],
+          "la PCB no cabe en el fondo interior")
+    exige(p["alto_transformador"] + p["margen_transformador"] <= p["chasis_int_z"],
+          f"el toroide pide {p['alto_transformador'] + p['margen_transformador']:.0f} "
+          f"mm de alto con margen y el interior da {p['chasis_int_z']:.0f}")
+
+    # --- 4. los agujeros de pared, con material alrededor ------------------
+    # Mismo criterio de borde que los taladros del acrilico (BORDE_MIN_D de
+    # check_dxf): un agujero pegado al canto de una chapa doblada se abre al
+    # doblar, y ademas se le come el radio del propio doblez.
+    borde = p["radio_doblez"] + p["t_chapa"] + 1.0
+    fila = [p["chasis_to220_x"] + p["chasis_to220_paso"] * (i - (p["chasis_to220_n"] - 1) / 2)
+            for i in range(int(p["chasis_to220_n"]))]
+    for x in fila:
+        exige(borde <= x - p["d_M3_paso"] / 2 and
+              x + p["d_M3_paso"] / 2 <= p["chasis_int_x"] - borde,
+              f"el TO-220 de x={x:.0f} se sale de la pared larga")
+    exige(borde <= p["chasis_to220_z"] - p["d_M3_paso"] / 2 and
+          p["chasis_to220_z"] + p["d_M3_paso"] / 2
+          <= p["chasis_int_z"] - p["chasis_tornillo_baja"] - p["d_M3_paso"],
+          f"la fila de TO-220 a z={p['chasis_to220_z']:.0f} no deja material "
+          f"contra el suelo o choca con la fila de tornillos de la tapa")
+    exige(borde <= p["chasis_pe_y"] <= p["chasis_int_y"] - borde and
+          borde <= p["chasis_pe_z"] <= p["chasis_int_z"] - borde,
+          "el esparrago de PE se sale de la pared corta")
+
+    # --- 5. la salida de cables ---------------------------------------------
+    # Que la ranura del chasis CAIGA DENTRO del agujero del acrilico no se
+    # comprueba aqui, y no por descuido: el .scad deriva el agujero de la
+    # ranura con una sola funcion (salida_cables_xy), asi que la contencion es
+    # cierta por construccion y un assert sobre ella no puede fallar nunca.
+    # Una puerta que no puede ponerse roja es peor que no tenerla: se lee como
+    # cobertura y no cubre nada.
+    #
+    # Lo que SI puede fallar es que la ranura se salga de la chapa o el agujero
+    # de la plancha, y eso es lo que hay debajo.
+    hol, rad = p["salida_holgura"], p["salida_radio"]
+    w = p["chasis_salida_ancho"] + 2 * hol
+    h = p["chasis_salida_fondo"] + 2 * hol
+    exige(rad <= min(w, h) / 2,
+          f"el redondeo de {rad:.0f} mm se come un agujero de {w:.0f} x {h:.0f}")
+    borde_suelo = p["radio_doblez"] + p["t_chapa"] + 5.0
+    exige(borde_suelo <= p["chasis_salida_x"] and
+          p["chasis_salida_x"] + p["chasis_salida_ancho"]
+          <= p["chasis_int_x"] - borde_suelo,
+          f"la ranura de salida ocupa x={p['chasis_salida_x']:.0f}.."
+          f"{p['chasis_salida_x'] + p['chasis_salida_ancho']:.0f} y el suelo "
+          f"util va de {borde_suelo:.1f} a {p['chasis_int_x'] - borde_suelo:.1f}")
+    exige(borde_suelo <= p["chasis_salida_y"] and
+          p["chasis_salida_y"] + p["chasis_salida_fondo"]
+          <= p["chasis_int_y"] - borde_suelo,
+          "la ranura de salida se sale del suelo por el fondo")
+    # y que no se la coma el toroide, que vive en el mismo suelo
+    env = p["diam_transformador"] + 4
+    exige(p["chasis_salida_x"] + p["chasis_salida_ancho"]
+          <= p["chasis_toroide_x"] - env / 2,
+          "la ranura de salida se mete debajo del toroide")
+    # el agujero del acrilico, en coordenadas de bandeja_base_2d
+    pos_x = au - p["chasis_margen_bandeja"] - c["tapa_x"]
+    pos_y = (fondo_bandeja - c["tapa_y"]) / 2
+    ax = pos_x + c["desfase"] + t + p["chasis_salida_x"] - hol
+    ay = pos_y + c["desfase"] + t + p["chasis_salida_y"] - hol
+    exige(0 <= ax and ax + w <= au and 0 <= ay and ay + h <= fondo_bandeja,
+          f"el agujero de cables cae en x={ax:.1f}..{ax + w:.1f}, "
+          f"y={ay:.1f}..{ay + h:.1f} y la bandeja mide {au:.2f} x "
+          f"{fondo_bandeja:.2f}: se sale de la plancha")
+
+    # --- 6. los dos largueros que cruzan la bandeja ------------------------
+    # bandeja_base dejo de colgar de los largueros el 2026-08-17: ahora ES el
+    # suelo y los dos 2020 van ENCIMA de ella. O sea que hay dos barras de
+    # 20 x 20 cruzando el sitio donde se apoya el chasis, y la caja tiene que
+    # pasar entre ellas. No lo ve solapes() -- el chasis no esta en el censo de
+    # cajas solidas -- ni el sobre del DXF, que es plano.
+    rail = p["rail"]
+    hol = p["chasis_holgura_larguero"]
+    libre_0, libre_1 = rail + hol, fondo_bandeja - rail - hol
+    exige(pos_y >= libre_0 and pos_y + c["tapa_y"] <= libre_1,
+          f"el chasis ocupa y={pos_y:.1f}..{pos_y + c['tapa_y']:.1f} de la "
+          f"bandeja y los dos largueros 2020, con {hol:.0f} mm de holgura "
+          f"exigida, dejan {libre_0:.1f}..{libre_1:.1f}")
+    print(f"  entre los dos largueros: {pos_y - rail:.2f} mm delante y "
+          f"{fondo_bandeja - rail - pos_y - c['tapa_y']:.2f} detras "
+          f"(minimo exigido {hol:.0f}) -- la cota mas justa del montaje")
+
+    # --- 7. el tornillo de la tapa muerde faldon y pared a la vez ----------
+    exige(p["chasis_tornillo_baja"] + p["d_M3_paso"] / 2 <= p["chasis_pestana"],
+          f"el tornillo va a {p['chasis_tornillo_baja']:.0f} mm del techo y el "
+          f"faldon solo baja {p['chasis_pestana']:.0f}: el agujero se sale")
+
+    print(f"chasis: interior {p['chasis_int_x']:.0f} x {p['chasis_int_y']:.0f} x "
+          f"{p['chasis_int_z']:.0f}, exterior {c['tapa_x']:.1f} x {c['tapa_y']:.1f} "
+          f"x {c['alto']:.1f}")
+    print(f"  desarrollo cuerpo {c['blank_cuerpo_x']:.2f} x {c['blank_cuerpo_y']:.2f}"
+          f", tapa {c['blank_tapa_x']:.2f} x {c['blank_tapa_y']:.2f}  "
+          f"(BA {c['ba']:.3f}, BD {c['bd']:.3f} por doblez)")
+    print(f"  holgura en la bandeja: {au - c['tapa_x']:.1f} de largo, "
+          f"{fondo_bandeja - c['tapa_y']:.1f} de fondo, "
+          f"{g['alto_interior_inferior'] - c['alto'] - p['chasis_pie']:.1f} de alto")
+    return f
+
+
+def _fondo_bandeja(p: dict[str, float]) -> float:
+    """Fondo de bandeja_base, misma derivacion que bandeja_base_2d()."""
+    P = _vertices(p)
+    ce = _centros_esqueleto(p, P, _centros_rail(p, P))
+    return ce[1][0] + p["rail"] / 2 - (ce[0][0] - p["rail"] / 2)
+
+
 def main() -> int:
     p = leer_params()
     autocomprobacion(p)
@@ -952,6 +1180,7 @@ def main() -> int:
     exige(g["alto_interior_inferior"]
           >= p["alto_transformador"] + p["margen_transformador"],
           "transformador no cabe en el piso inferior con margen")
+    fallos += guarda_chasis(p, g)
     # Marco de remate = lo que queda del fondo detras de la cara superior.
     # AQUI HUBO un `marco >= 20` con el argumento "no caben los 20 mm del rail
     # de remate". La premisa caduco: el remate ya no vive en el marco, su Y se

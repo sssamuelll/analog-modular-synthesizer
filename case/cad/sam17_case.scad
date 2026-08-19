@@ -386,9 +386,23 @@ module bandeja_base_2d() {
         plancha(au, fondo);
         fila_agujeros(au, ce[0].x - x0);    // los dos largueros van ENCIMA
         fila_agujeros(au, ce[1].x - x0);
-        // ventilacion bajo el PSU (tercio derecho): onda cuadrada
-        translate([au*0.68, fondo*0.35])
-            onda("cuadrada", au*0.25);
+        // LA SALIDA DE CABLES DEL CHASIS. Era un campo de ondas de 104 x 32
+        // dibujado como VENTILACION, y con la caja de acero encima ya no
+        // ventila nada (spec §3.3). El cambio no es solo de nombre: una onda
+        // son ranuras de 4 mm con puentes, y por 4 mm no pasa un mazo. Ahora
+        // es un agujero de verdad.
+        //
+        // Y se DERIVA de la ranura del suelo del chasis, no al reves: este
+        // hueco existe para dejarla pasar, asi que crece con ella y la
+        // contiene por construccion. El assert de clearance_budget lo
+        // confirma releyendo las dos, por si alguien toca una sola.
+        translate(salida_cables_xy()) {
+            w = chasis_salida_ancho + 2*salida_holgura;
+            h = chasis_salida_fondo + 2*salida_holgura;
+            r = salida_radio;
+            hull() for (dx = [r, w - r], dy = [r, h - r])
+                translate([dx, dy]) circle(r = r + kerf/2);
+        }
     }
 }
 
@@ -497,6 +511,230 @@ module onda(tipo, largo) {
         }
 }
 
+// =====================================================================
+// CHASIS DE ACERO DEL PSU  (#107, spec §3.3, plan v3 Task 9)
+// =====================================================================
+// Tres piezas de chapa: cuerpo (una sola pieza doblada en bandeja, esquinas
+// soldadas), tapa (plana con faldon) y refuerzo (plano, sin doblar).
+//
+// EL DESARROLLO NO SE DIBUJA A OJO. Un patron plano no es "la caja abierta":
+// la chapa se ESTIRA al doblar, asi que la suma de los lados exteriores no es
+// el largo del recorte. La cuenta estandar, con angulo de 90 grados:
+//
+//   setback  SB = r + t                         (lo que se come cada doblez)
+//   bend allowance  BA = (pi/2)(r + k*t)        (longitud del arco neutro)
+//   bend deduction  BD = 2*SB - BA              (lo que hay que restar)
+//   desarrollo = suma de lados EXTERIORES - BD por doblez
+//
+// Con r = t = 1.5 y k = 0.42 salen BA = 3.35 y BD = 2.65 mm: 5.3 mm menos de
+// chapa por eje. No es cosmetico -- cortar el desarrollo sin restarlos da una
+// caja 5 mm mas grande en las dos direcciones, y la tapa deja de casar con el
+// cuerpo aunque la caja siga entrando en la bandeja.
+//
+// Los tres numeros son SUPUESTOS del taller (ver params.scad). Cuando conteste
+// se cambian ahi y todo esto se recalcula solo.
+function ch_sb() = radio_doblez + t_chapa;
+function ch_ba() = PI/2 * (radio_doblez + k_factor*t_chapa);
+function ch_bd() = 2*ch_sb() - ch_ba();
+
+function ch_cuerpo_ext() = [chasis_int_x + 2*t_chapa,
+                            chasis_int_y + 2*t_chapa,
+                            chasis_int_z + t_chapa];
+function ch_tapa_int()   = [ch_cuerpo_ext().x + chasis_hol_tapa,
+                            ch_cuerpo_ext().y + chasis_hol_tapa];
+function ch_tapa_ext()   = [ch_tapa_int().x + 2*t_chapa,
+                            ch_tapa_int().y + 2*t_chapa];
+function ch_alto()       = 2*t_chapa + chasis_int_z;   // exterior, con tapa
+// desfase del cuerpo dentro de la envolvente de la tapa
+function ch_desfase()    = t_chapa + chasis_hol_tapa/2;
+
+// --- desarrollo ---
+// ala = trozo recto de la pared en el plano, del final del arco al canto
+function ch_ala(alto_ext) = alto_ext - ch_sb();
+function ch_blank_cuerpo() =
+    [ch_cuerpo_ext().x + 2*ch_cuerpo_ext().z - 2*ch_bd(),
+     ch_cuerpo_ext().y + 2*ch_cuerpo_ext().z - 2*ch_bd()];
+function ch_off_cuerpo() = ch_ala(ch_cuerpo_ext().z) + ch_ba();
+
+function ch_faldon_ext()  = t_chapa + chasis_pestana;
+function ch_blank_tapa()  = [ch_tapa_ext().x + 2*ch_faldon_ext() - 2*ch_bd(),
+                             ch_tapa_ext().y + 2*ch_faldon_ext() - 2*ch_bd()];
+function ch_off_tapa()    = ch_ala(ch_faldon_ext()) + ch_ba();
+
+// Un punto de una pared, a distancia d de la cara EXTERIOR desde la que se
+// dobla, cae en el plano a esta coordenada. La linea de plegado va en el
+// centro del arco (ala + BA/2) y desde ahi se mide d - SB de chapa recta.
+function ch_desarrollo(d, ala) = ala + ch_ba()/2 - (d - ch_sb());
+
+// Un punto del SUELO, en coordenadas interiores, cae aqui.
+function ch_suelo(i, off) = off + i - radio_doblez;
+
+// Reparto de los tornillos de la tapa a lo largo de un canto: orillas iguales,
+// mismo criterio que fila_agujeros() de las planchas de acrilico.
+function ch_tornillos(largo, n) = [for (i = [0:n-1]) largo*(i + 0.5)/n];
+function ch_to220_x() = [for (i = [0 : chasis_to220_n - 1])
+    chasis_to220_x + chasis_to220_paso*(i - (chasis_to220_n - 1)/2)];
+
+// --- el desarrollo del cuerpo ------------------------------------------
+// Bandeja de cuatro paredes desde UNA chapa. Las esquinas quedan abiertas por
+// construccion (las cuatro esquinas del blank no existen) y ademas llevan
+// alivio: la muesca se mete t_chapa dentro de la raiz del doblez, que es lo que
+// evita que la chapa se rasgue justo ahi. Las cuatro juntas van SOLDADAS -- no
+// remachadas: la caja tiene que ser continua electricamente para hacer de
+// pantalla y de referencia de PE, y una fila de remaches no lo garantiza.
+module chasis_cuerpo_2d() {
+    b   = ch_blank_cuerpo();
+    off = ch_off_cuerpo();
+    rel = t_chapa;                      // alivio de esquina
+    ext = ch_cuerpo_ext();
+    // altura de la fila de tornillos, medida desde la cara exterior del suelo
+    d_torn = t_chapa + chasis_int_z - chasis_tornillo_baja;
+    difference() {
+        square([b.x, b.y]);
+        // esquinas: la cruz se forma quitandolas
+        for (sx = [0, 1], sy = [0, 1])
+            translate([sx*(b.x - off - rel), sy*(b.y - off - rel)])
+                square([off + rel, off + rel]);
+        // --- suelo ---
+        translate([ch_suelo(chasis_toroide_x, off), ch_suelo(chasis_toroide_y, off)])
+            circle(d = d_M6_paso + kerf);
+        translate([ch_suelo(chasis_salida_x, off), ch_suelo(chasis_salida_y, off)])
+            hull() for (dx = [0, chasis_salida_ancho - chasis_salida_fondo])
+                translate([dx + chasis_salida_fondo/2, chasis_salida_fondo/2])
+                    circle(d = chasis_salida_fondo + kerf);
+        // --- pared larga y = 0: los tres TO-220 y nada mas ---
+        for (x = ch_to220_x())
+            translate([ch_suelo(x, off),
+                       ch_desarrollo(chasis_to220_z + t_chapa, ch_ala(ext.z))])
+                circle(d = d_M3_paso + kerf);
+        // --- pared corta x = 0: el esparrago de PE ---
+        translate([ch_desarrollo(chasis_pe_z + t_chapa, ch_ala(ext.z)),
+                   ch_suelo(chasis_pe_y, off)])
+            circle(d = d_M4_paso + kerf);
+        // --- los tornillos de la tapa, en las cuatro paredes ---
+        for (x = ch_tornillos(ext.x, chasis_tornillos_largo))
+            for (s = [0, 1])
+                translate([off + x - ch_sb(),
+                           abs(s*b.y - ch_desarrollo(d_torn, ch_ala(ext.z)))])
+                    circle(d = d_M3_paso + kerf);
+        for (y = ch_tornillos(ext.y, chasis_tornillos_corto))
+            for (s = [0, 1])
+                translate([abs(s*b.x - ch_desarrollo(d_torn, ch_ala(ext.z))),
+                           off + y - ch_sb()])
+                    circle(d = d_M3_paso + kerf);
+    }
+}
+
+// --- el desarrollo de la tapa ------------------------------------------
+// El faldon va por FUERA de la pared del cuerpo, no por dentro: asi la junta
+// solapa hacia abajo y la linea de union no es un camino recto hacia adentro.
+module chasis_tapa_2d() {
+    b   = ch_blank_tapa();
+    off = ch_off_tapa();
+    rel = t_chapa;
+    ext = ch_cuerpo_ext();
+    // el tornillo esta a esta distancia por debajo de la cara de arriba
+    d_torn = ch_alto() - (t_chapa + chasis_int_z - chasis_tornillo_baja);
+    difference() {
+        square([b.x, b.y]);
+        for (sx = [0, 1], sy = [0, 1])
+            translate([sx*(b.x - off - rel), sy*(b.y - off - rel)])
+                square([off + rel, off + rel]);
+        // Los del faldon casan con los del cuerpo: misma funcion, corridos por
+        // el desfase de la tapa sobre el cuerpo. Escribirlos dos veces es
+        // garantizar que se desincronicen el dia que cambie el reparto.
+        for (x = ch_tornillos(ext.x, chasis_tornillos_largo))
+            for (s = [0, 1])
+                translate([off + x + ch_desfase() - ch_sb(),
+                           abs(s*b.y - ch_desarrollo(d_torn, ch_ala(ch_faldon_ext())))])
+                    circle(d = d_M3_paso + kerf);
+        for (y = ch_tornillos(ext.y, chasis_tornillos_corto))
+            for (s = [0, 1])
+                translate([abs(s*b.x - ch_desarrollo(d_torn, ch_ala(ch_faldon_ext()))),
+                           off + y + ch_desfase() - ch_sb()])
+                    circle(d = d_M3_paso + kerf);
+    }
+}
+
+// --- el refuerzo bajo el toroide (#106) --------------------------------
+// Sin doblar: una chapa cuadrada del mismo material bajo el suelo, remachada o
+// soldada, con el M6 pasando por las dos. No es contra el peso -- 1.2 kg sobre
+// 1.5 mm de acero los aguanta de sobra -- es contra el MODO PROPIO: el suelo
+// libre bajo un peso puntual es un tambor, y el excitador que tiene encima
+// vibra a 100 Hz sin parar. Doblar el espesor local sube la frecuencia propia y
+// baja la amplitud a la vez.
+module chasis_refuerzo_2d() {
+    l = chasis_refuerzo_lado;
+    difference() {
+        translate([-l/2, -l/2]) square([l, l]);
+        circle(d = d_M6_paso + kerf);
+        // remaches en las cuatro esquinas, retirados del canto
+        for (sx = [-1, 1], sy = [-1, 1])
+            translate([sx*(l/2 - 10), sy*(l/2 - 10)]) circle(d = d_M3_paso + kerf);
+    }
+}
+
+// --- el chasis en 3D, para el censo de solapes y el render -------------
+// Marco local: X a lo largo de la envolvente de la tapa, Y en el fondo, Z
+// hacia arriba desde la cara de abajo del suelo.
+module chasis_3d() {
+    e = ch_cuerpo_ext();
+    t = ch_tapa_ext();
+    o = ch_desfase();
+    translate([o, o, 0]) {
+        cube([e.x, e.y, t_chapa]);                              // suelo
+        translate([0, 0, t_chapa]) {
+            cube([e.x, t_chapa, chasis_int_z]);                 // pared y=0
+            translate([0, e.y - t_chapa, 0]) cube([e.x, t_chapa, chasis_int_z]);
+            cube([t_chapa, e.y, chasis_int_z]);                 // pared x=0
+            translate([e.x - t_chapa, 0, 0]) cube([t_chapa, e.y, chasis_int_z]);
+        }
+    }
+    translate([0, 0, ch_alto() - t_chapa]) cube([t.x, t.y, t_chapa]);   // tapa
+    translate([0, 0, ch_alto() - t_chapa - chasis_pestana]) {           // faldon
+        cube([t.x, t_chapa, chasis_pestana]);
+        translate([0, t.y - t_chapa, 0]) cube([t.x, t_chapa, chasis_pestana]);
+        cube([t_chapa, t.y, chasis_pestana]);
+        translate([t.x - t_chapa, 0, 0]) cube([t_chapa, t.y, chasis_pestana]);
+    }
+    // refuerzo, por debajo del suelo (por eso no come altura util)
+    translate([o + chasis_toroide_x + t_chapa, o + chasis_toroide_y + t_chapa,
+               -t_chapa])
+        linear_extrude(t_chapa) chasis_refuerzo_2d();
+    // el toroide, tumbado sobre su perno central
+    %translate([o + chasis_toroide_x + t_chapa, o + chasis_toroide_y + t_chapa,
+                t_chapa])
+        cylinder(d = diam_transformador + 4, h = alto_transformador);
+}
+
+// Colocacion sobre la bandeja de base. La bandeja vive con su X local a lo
+// ANCHO del case y crece hacia -Z del mundo (ver bandeja_base()); el chasis
+// necesita ademas que su Z local suba, asi que el giro se escribe entero en
+// vez de encadenar rotates y confiar en que salga.
+function bandeja_base_fondo() =
+    let (ce = centros_esqueleto()) ce[1].x + rail/2 - (ce[0].x - rail/2);
+function ch_pos() = [ancho_total - 2*t_cheek - chasis_margen_bandeja
+                       - ch_tapa_ext().x,
+                     (bandeja_base_fondo() - ch_tapa_ext().y)/2];
+
+// Esquina de la salida de cables del chasis, en coordenadas locales de
+// bandeja_base_2d(). Una sola definicion: la consume el agujero del acrilico
+// y la comprueba el budget.
+function salida_cables_xy() =
+    let (pc = ch_pos(), d = ch_desfase() + t_chapa)
+    [pc.x + d + chasis_salida_x - salida_holgura,
+     pc.y + d + chasis_salida_y - salida_holgura];
+
+module chasis() {
+    ce = centros_esqueleto();
+    p  = ch_pos();
+    multmatrix([[0, 1, 0, ce[0].x - rail/2 + p.y],
+                [0, 0, 1, t_base + chasis_pie],
+                [-1, 0, 0, ancho_total - t_cheek - p.x],
+                [0, 0, 0, 1]])
+        chasis_3d();
+}
+
 if (PART == "costado")             costado();
 else if (PART == "costado_2d")     costado_2d();
 else if (PART == "assembly")           assembly();
@@ -508,6 +746,10 @@ else if (PART == "tapa_valle_2d")        tapa_valle_2d();
 else if (PART == "remate_sup_2d")        remate_sup_2d();
 else if (PART == "piel_inferior_2d")     piel_inferior_2d();
 else if (PART == "piel_superior_2d")     piel_superior_2d();
+else if (PART == "chasis_cuerpo_2d")     chasis_cuerpo_2d();
+else if (PART == "chasis_tapa_2d")       chasis_tapa_2d();
+else if (PART == "chasis_refuerzo_2d")   chasis_refuerzo_2d();
+else if (PART == "chasis")               chasis();
 else if (PART == "lienzo_2d")            lienzo_2d();
 else if (PART == "bom")                  bom();
 else assert(false, str("PART desconocido: ", PART));
@@ -700,6 +942,7 @@ module assembly() {
     costados();
     rails();
     planchas_acrilico();
+    chasis();
     paticas();
     %paneles();                        // paneles de modulo: solo referencia
 }

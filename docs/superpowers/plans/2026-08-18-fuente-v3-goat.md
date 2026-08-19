@@ -403,7 +403,55 @@ alto de catálogo (45 mm) nunca se confirmó.
 
 - [ ] **Step 3: Meter el diámetro en `params.scad`** — hoy solo está el alto
 
-### Task 9: El chasis paramétrico
+### Task 9: El chasis paramétrico — ✅ HECHA
+
+> **2026-08-19.** Cerrada. Tres piezas de chapa en `sam17_case.scad`
+> (`chasis_cuerpo_2d`, `chasis_tapa_2d`, `chasis_refuerzo_2d`), su geometría en
+> `params.scad`, la puerta `guarda_chasis()` en `clearance_budget.py` y el conteo
+> de agujeros en `check_dxf.py`. `export.ps1` saca los tres DXF y los relee.
+>
+> **El assert del Step 1 estaba en el eje equivocado.** Pedía
+> `diam_toroide + 2*pared + holgura <= alto_chasis_interior`, o sea 97 contra 80:
+> habría dado rojo sobre una caja correcta. El toroide va **acostado** sobre su
+> perno M6 central, así que contra el alto pelean sus 46 mm de grueso y contra la
+> planta su diámetro. Escrito como estaba trata la pieza como si fuera de canto.
+> Sustituido por los dos asserts que sí corresponden.
+>
+> **El exterior deja de ser una estimación.** La spec decía 342 × 180 × 85
+> («chapa de 1.5 mm + pestañas»). Derivado del interior, del espesor y del faldón
+> sale **338.6 × 176.6 × 83**. Menos superficie, así que ΔT sube de 6.8 a 7.1 °C
+> y la Tj de `U2` de 61.1 a 61.4: sigue siendo 61. Corregido en spec §3.1 y §3.3.
+>
+> **La puerta encontró dos cosas en el propio dibujo, no en una revisión:**
+>
+> 1. La ranura de salida de cables se metía **41 mm debajo del toroide**. No
+>    podía irse al hueco de cableado (15 mm no dan para 26), así que el mazo
+>    **sale por debajo de la PCB**, por el hueco de sus separadores. Eso es una
+>    condición nueva para la Task 6.
+> 2. El recorte de la bandeja que la spec llamaba «salida de cables» era un campo
+>    de **ondas de 4 mm** dibujado como ventilación. Por 4 mm no pasa un mazo.
+>    Ahora es una abertura de verdad, derivada de la ranura del chasis con una
+>    sola función, así que la contiene por construcción.
+>
+> **Lo que se verifica y lo que no**, dicho aquí para que no se lea como
+> cobertura de más:
+>
+> | Comprueba | Cómo |
+> |---|---|
+> | El desarrollo de plegado | dos caminos: deducción de doblez **y** fibra neutra. 5 mutaciones probadas, 4 rojas (la quinta no era un fallo) |
+> | Que la caja quepa y contenga | contra la bandeja real y contra el reparto interior |
+> | Que los agujeros existan | conteo de redondos releídos del DXF — un agujero que falta no mueve el contorno |
+> | Que los TO-220 casen | **no**. La fila la *declara* el chasis; la Task 6 se pliega a ella |
+> | El espesor y los radios | **no**. Son supuestos del taller (1.5 / r=t / k=0.42), marcados como tales en `params.scad` |
+>
+> **Lo que queda fuera y con motivo:** la entrada IEC C14 del #107 **no se
+> recortó**. El `bom.csv` no lista ninguna — `J3` es un bloque de barrera y la red
+> llega por cable — así que dibujar su hueco sería inventarse una cota de un
+> componente que nadie ha elegido. Es exactamente lo que costó la geometría del
+> toroide esta mañana. Hueco declarado, no tapado.
+
+#### Pasos originales
+
 
 **Files:**
 - Modify: `case/cad/sam17_case.scad` (PART nuevo), `case/cad/params.scad`

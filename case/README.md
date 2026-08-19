@@ -73,7 +73,7 @@ regeneraciones desde cero, Task 10) y comparando con SHA-256:
 
 | Clase | ¿Byte-idéntico? | Qué SÍ es estable | Mecanismo |
 |-------|:---:|---|---|
-| **DXF** (`case/plans/*.dxf`) | **SÍ** | Todo — 8/8 archivos con el mismo SHA-256 en las 3 corridas | OpenSCAD 2021.01 emite R12 determinista para geometría 2D |
+| **DXF** (`case/plans/*.dxf`) | **SÍ** | Todo — 8/8 archivos con el mismo SHA-256 en las 3 corridas (medido con 8; hoy son 11, las 3 nuevas son de acero) | OpenSCAD 2021.01 emite R12 determinista para geometría 2D |
 | **STL** (`case/renders/build/*.stl`) | **NO** | El tamaño en bytes: `assembly_aluminio.stl` midió 25457 B las 3 veces, `assembly_acrilico.stl` 2478678 B las 3 veces | CGAL no garantiza el orden de facetas al triangular. `assembly_aluminio.stl` cambió de SHA-256 en las 2 regeneraciones (3 hashes distintos en 3 corridas); `assembly_acrilico.stl` coincidió por azar en esta muestra — no asumir que un STL se mantiene solo porque coincidió una vez |
 | **`.kicad_pcb`** (`case/panels/panel-template.kicad_pcb`) | **NO** | El *conjunto* de bloques top-level (posiciones de footprint, geometría de taladros y contorno) una vez se descartan las líneas `(uuid ...)`: 17/17 bloques idénticos en las 3 corridas, verificado por comparación estructural (no diff lineal) | KiCad reacuña un UUID nuevo por objeto en cada guardado y además **rota cíclicamente** el orden de los bloques `(footprint ...)` — un `diff` de texto sobre dos corridas muestra decenas de líneas cambiadas sin que ninguna posición real se haya movido |
 
@@ -108,12 +108,15 @@ no-determinismo.)
 (issue #48). Son ~6,6 MB que cambian entera cada vez que se mueve un milímetro,
 y no aportan nada que el `.scad` no tenga: quien quiera el STL lo exporta.
 
-`case/plans/lienzo_2d.dxf` va por el mismo camino: es la preview de las 7 piezas
-en rejilla, no se manda a ningún sitio, y son otras 97.512 líneas de diff.
+`case/plans/lienzo_2d.dxf` va por el mismo camino: es la preview de las piezas
+de acrílico en rejilla, no se manda a ningún sitio, y son otras 97.512 líneas de
+diff. **El lienzo no lleva las tres piezas de acero** y es a propósito: van a
+otro taller, con otro proceso (corte + plegado) y otro material, así que
+nestearlas con el acrílico sería mentir sobre lo que se manda junto.
 
-Lo que sí se versiona son los **siete DXF sueltos** de `case/plans/` — esos son
-el entregable que va al taller, y su diff es la prueba de qué se mandó a cortar
-y cuándo.
+Lo que sí se versiona son los **diez DXF sueltos** de `case/plans/` — siete de
+acrílico y tres de acero. Son el entregable que va al taller, y su diff es la
+prueba de qué se mandó a cortar y cuándo.
 
 ## Procedimiento del cupón — sólo si se vuelve al láser
 
@@ -291,6 +294,9 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
 ## Estado
 
 - [x] Modelo paramétrico + DXF de corte
+- [x] Chasis de acero del PSU (#107): cuerpo, tapa y refuerzo, con su
+      desarrollo de plegado y su puerta — ver `guarda_chasis()` en
+      `clearance_budget.py`
 - [x] Cupón de calibración
 - [x] `clearance_budget.py` en verde
 - [x] Plantilla de panel KiCad
