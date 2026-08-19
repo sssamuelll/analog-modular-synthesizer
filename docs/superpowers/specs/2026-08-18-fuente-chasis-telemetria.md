@@ -370,10 +370,13 @@ alcanzable de esta fuente la saca de ahí.
 
 Dos cosas más que van con esto:
 
-- **Invariante de montaje, y va en la seda de la placa:** el 100 k mira siempre
-  al riel medido, el 20 k siempre a la referencia. Cambiarlos de sitio deja de
-  atenuar y mete el riel entero en un pin de 5.3 V de máximo absoluto. Es el
-  único error de esta isla que la puerta ejecutable **no puede ver**.
+- **Invariante:** el 100 k mira siempre al riel medido, el 20 k siempre a la
+  referencia. Cambiarlos de sitio deja de atenuar y mete el riel entero en un
+  pin de 5.3 V de máximo absoluto. Tiene **dos guardianes distintos**: si está
+  mal *dibujado* lo caza `kicad/check_netlist.py` contra el netlist real; si
+  está bien dibujado y mal *poblado* —un 20 k soldado en la huella del 100 k,
+  las dos son 0805 idénticos— no lo caza ninguna puerta, y por eso va además en
+  la **seda de la placa**. Ese hueco queda declarado, no tapado.
 - **Dos clamps Schottky** (`D14`, `D15`) en los taps negativos. No están por
   supervivencia —los 100 k limitan a 126 µA, 79 veces por debajo del límite de
   10 mA que TI publica para eso mismo (§9.1.3)— sino por esto, textual del

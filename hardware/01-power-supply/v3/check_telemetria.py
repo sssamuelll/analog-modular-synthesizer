@@ -72,10 +72,18 @@ INA_CM_MIN, INA_CM_MAX = -0.30, 40.0
 INA_SHUNT_FS = 81.92e-3
 
 # --- El divisor: dos valores, tres canales ----------------------------------
-# Invariante de montaje: el 100 k mira SIEMPRE al riel medido y el 20 k mira
-# SIEMPRE a la referencia (GNDA en el canal positivo, +5 V en los negativos).
-# Cambiarlos de sitio es el error de ensamblaje que esta puerta no puede ver,
-# asi que va escrito en el bom.csv y tiene que ir en la seda de la placa.
+# Invariante: el 100 k mira SIEMPRE al riel medido y el 20 k SIEMPRE a la
+# referencia (GNDA en el canal positivo, +5 V en los negativos).
+#
+# Esta puerta hace aritmetica sobre los valores, asi que el invariante en si lo
+# tiene que mirar otro. Reparto:
+#   * MAL DIBUJADO (el 100 k al lado equivocado en el esquematico) -> lo caza
+#     kicad/check_netlist.py, que lee el netlist real y comprueba que cada
+#     resistencia toque la red que le toca;
+#   * MAL POBLADO (un 20 k soldado en la huella del 100 k) -> no lo caza
+#     ninguna puerta, porque las dos huellas son 0805 identicos. Por eso el
+#     invariante va ademas en la SEDA de la placa. Ese es el hueco que queda,
+#     y queda declarado.
 R_RIEL, R_REF = 100_000.0, 20_000.0
 K = R_REF / (R_RIEL + R_REF)          # 1/6 exacto con estos dos valores
 VF_BAT54 = 0.29                       # peor caso en frio (~0 C) a ~100 uA
