@@ -75,6 +75,14 @@ CONTRATO = [
     ("SCL_A", {"U8.5", "U9.5", "U10.10", "U11.2", "U12.6", "R28.2"}, "SCL analogico"),
     ("SDA_D", {"U12.2", "J8.2"}, "SDA digital"),
     ("SCL_D", {"U12.3", "J8.3"}, "SCL digital"),
+    # --- el filtro de la SMPS, y donde pincha ---------------------------------
+    # L_F es el tramo entre F1 y NT1. Que L1 cuelgue de AHI y no de L_TR es la
+    # regla de la spec v2 §7: la SMPS comparte fusible con el toroide pero NO
+    # comparte el limitador de inrush, que esta dimensionado para TR1.
+    ("L_F",    {"L1.1", "F1.2", "NT1.1"}, "el choke pincha ANTES de NT1"),
+    ("L_SMPS", {"L1.2", "J7.1", "CY1.1"}, "salida del choke -> J7 + su cap Y"),
+    ("N_SMPS", {"L1.4", "J7.2", "CY2.1"}, "idem en N"),
+    ("PE",     {"CY1.2", "CY2.2", "J3.3"}, "las dos Y devuelven a tierra"),
 ]
 
 # (canal, red del riel medido, ref de la R de 100k, ref de la de 20k, tap)

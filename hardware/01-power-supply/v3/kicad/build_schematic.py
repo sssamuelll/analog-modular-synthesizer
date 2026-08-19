@@ -548,8 +548,7 @@ WIRES: list = [
     # esta tarea, ver task-5-report.md). J7 N ahora arranca en este mismo
     # vertice, union extremo-contra-extremo de 3 cables, no un tap a medio
     # cable.
-    ("AC N d1",  [[76.20, Y_NL], [X_J7N, Y_NL]]),
-    ("AC N d2",  [[X_J7N, Y_NL], [X_NJ2, Y_NL]]),
+    ("AC N d",   [[76.20, Y_NL], [X_NJ2, Y_NL]]),
     ("AC N e",   [[X_NJ2, Y_NL], [X_NJ2, Y_N]]),
     ("AC N f",   [[X_NJ2, Y_N], [X_J4, Y_N]]),
     ("RV1 tap",  [[76.20, YRV + 3.81], [76.20, Y_NL]]),
@@ -562,8 +561,11 @@ WIRES: list = [
     # nodo RV1/carril-N en 76.20,30.48) y del carril N (via X_J7N, empalma
     # directo en el cuerpo del carril — union valida por regla 6 del
     # docstring) ---
-    ("J7 L",     [[76.20, Y_L], [X_J7L, Y_L], [X_J7L, Y_J7], [X_J7A + XPIN, Y_J7]]),
-    ("J7 N",     [[X_J7N, Y_NL], [X_J7N, Y_J7 + 2.54], [X_J7A + XPIN, Y_J7 + 2.54]]),
+    # v3: J7 ya no cuelga del riel directamente. Entre el riel y la SMPS va el
+    # filtro de modo comun (L1 + CY1/CY2, mas abajo), y J7 cuelga de su salida
+    # por nombre -- L_SMPS / N_SMPS.
+    ("J7 L",     [[X_J7A + XPIN, Y_J7], [X_J7A + XPIN + 7.62, Y_J7]]),
+    ("J7 N",     [[X_J7A + XPIN, Y_J7 + 2.54], [X_J7A + XPIN + 7.62, Y_J7 + 2.54]]),
 ]
 # cortes: bulk | C entrada | D12 tap | entrada del regulador (offset propio
 # del simbolo LM2941CT/LM2991T: IN a ∓10.16 del ancla, NO ∓7.62 como el
@@ -719,6 +721,84 @@ def check_footprints() -> None:
     print(f"huellas inexistentes: {len(rotos)} {rotos}")
     assert not rotos, f"huellas que no estan en disco: {rotos}"
 
+
+
+# --- filtro de modo comun de la derivacion de la SMPS (v3, design-notes 18.7)
+#
+# Por que existe: la IRM-15 inyecta modo comun en la red compartida, la
+# capacidad entre devanados del toroide lo cruza al secundario, y el PSRR no lo
+# rechaza porque no llega como variacion de alimentacion sino como corriente por
+# la masa. Y su certificado EN 55032 clase B no cubre el fundamental: conmuta a
+# 65 kHz y la emision conducida de esa norma empieza a medir en 150 kHz.
+#
+# POR QUE EL CHOKE SE PUEBLA Y LAS Y NO. Es la diferencia entre un elemento SERIE
+# y uno PARALELO, y no es un detalle de estilo:
+#
+#   * L1 esta EN SERIE con la alimentacion de la SMPS. Un componente serie no
+#     puede ir DNP: sin poblar, la SMPS se queda sin red. O va puesto, o hay que
+#     puentearlo, y un puente de 230 V a 0.2 A no es un net-tie.
+#   * CY1/CY2 estan EN PARALELO. Sin poblar no rompen nada. Por eso SI pueden ser
+#     huella, y por eso son ellas las que esperan.
+#
+# Y esperan por un numero que este repo no puede acotar: la fuga a tierra que
+# anaden. 2 x 1 nF son 145 uA a 230 V/50 Hz, y el limite aplicable esta en la
+# clausula de IEC 62368-1 que design-notes 13.4 ya declino citar por ser de pago.
+# Se puebla con la medida del bring-up delante, no antes.
+#
+# La aritmetica de por que hacen falta las dos cosas, a 65 kHz:
+#   choke de 10 mH .................... 4.1 kohm
+#   C entre devanados del toroide ..... ~12 kohm (200 pF SUPUESTOS: nadie la publica)
+#   solo el choke ..... sigue pasando el 75 % de la corriente al toroide
+#   choke + 2 x 1 nF .. pasa el 7 %
+# El choke solo es teatro. La pantalla del toroide sigue siendo la solucion en
+# el sitio correcto: quita el camino en vez de repartir la corriente.
+X_FILT, Y_FILT = 45.72, 66.04
+PARTS += [
+    ("L1",  "Device:L_Coupled", X_FILT, Y_FILT, 0, "10mH CM"),
+    ("CY1", "Device:C", 40.64, 81.28, 0, "1nF Y2"),
+    ("CY2", "Device:C", 55.88, 81.28, 0, "1nF Y2"),
+]
+FOOTPRINT.update({
+    "L1":  "Inductor_THT:L_CommonMode_Toroid_Vertical_L30.5mm_W15.2mm_"
+           "Px10.16mm_Py20.32mm_Bourns_8100",
+    "CY1": "Capacitor_THT:C_Disc_D10.5mm_W5.0mm_P7.50mm",
+    "CY2": "Capacitor_THT:C_Disc_D10.5mm_W5.0mm_P7.50mm",
+})
+WIRES += [
+    ("L1 L in",  [[X_FILT - 5.08, Y_FILT - 2.54], [33.02, Y_FILT - 2.54]]),
+    ("L1 N in",  [[X_FILT - 5.08, Y_FILT + 2.54], [33.02, Y_FILT + 2.54]]),
+    ("L1 L out", [[X_FILT + 5.08, Y_FILT - 2.54], [58.42, Y_FILT - 2.54]]),
+    ("L1 N out", [[X_FILT + 5.08, Y_FILT + 2.54], [58.42, Y_FILT + 2.54]]),
+    ("CY1 top",  [[40.64, 77.47], [40.64, 74.93]]),
+    ("CY1 pe",   [[40.64, 85.09], [40.64, 88.90]]),
+    ("CY2 top",  [[55.88, 77.47], [55.88, 74.93]]),
+    ("CY2 pe",   [[55.88, 85.09], [55.88, 88.90]]),
+]
+LABELS += [
+    ("L_F",     33.02, Y_FILT - 2.54),
+    ("N",       33.02, Y_FILT + 2.54),
+    ("L_SMPS",  58.42, Y_FILT - 2.54),
+    ("N_SMPS",  58.42, Y_FILT + 2.54),
+    ("L_SMPS",  40.64, 74.93),
+    ("N_SMPS",  55.88, 74.93),
+    ("L_SMPS",  X_J7A + XPIN + 7.62, Y_J7),
+    ("N_SMPS",  X_J7A + XPIN + 7.62, Y_J7 + 2.54),
+]
+POWER += [
+    ("#PE2", "power:Earth_Protective", 40.64, 88.90, 180),
+    ("#PE3", "power:Earth_Protective", 55.88, 88.90, 180),
+]
+POWER_VALUE.update({"#PE2": "PE", "#PE3": "PE"})
+FIELDS += [
+    ("L1",  "Reference", X_FILT, Y_FILT - 8.89), ("L1",  "Value", X_FILT, Y_FILT + 8.89),
+    ("CY1", "Reference", 33.02, 80.01), ("CY1", "Value", 33.02, 83.82),
+    ("CY2", "Reference", 63.50, 80.01), ("CY2", "Value", 63.50, 83.82),
+]
+TEXTS += [
+    ("Filtro de modo comun de la SMPS (design-notes 18.7). L1 va POBLADO: en serie,", 25.40, 57.15),
+    ("sin el la SMPS se queda sin red. CY1/CY2 van SIN POBLAR: en paralelo, y su valor", 25.40, 59.69),
+    ("depende de un presupuesto de fuga a tierra que hoy no esta acotado.", 25.40, 62.23),
+]
 
 # --- puntos de prueba TP1-TP6 (heredados v1, sec.16.10, tecnica "a
 # distancia" via label/simbolo power: propio de cada TP) -------------------
