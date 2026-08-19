@@ -20,7 +20,7 @@ Dos cosas que hasta esta mañana no se podían pedir juntas:
 
 Lo que cambió hoy es el **censo** (#70, cerrado): el instrumento pide
 **174 mA/riel** con margen, no los 650 del punto de diseño. Con eso la
-disipación de toda la cadena de regulación cae a **~2.5 W**, y una caja cerrada
+disipación de toda la cadena de regulación cae a **~3.0 W**, y una caja cerrada
 deja de ser un horno. Antes del censo, el #107 se escribió con los reguladores
 FUERA precisamente por eso.
 
@@ -38,9 +38,9 @@ Se gasta en esto.
 |---|---|---|
 | Material del chasis | **Acero**, no aluminio | El aluminio es casi transparente al campo magnético de 50/100 Hz; el ferromagnético no. Decidido en #107 |
 | Alcance del recinto | **Toda la fuente adentro**: toroide + PCB completa + entrada IEC | La red no sale nunca del recinto. Es lo que hacen las fuentes profesionales y es lo que da la regla del §3.2 |
-| Disipación | **Contra la pared del chasis**, sin disipadores discretos | Con 2.5 W de regulación el chasis sobra, y se ganan ~39 °C de unión |
-| Ventilación del recinto | **Ninguna. Va cerrado** | §3.1: 7.5 °C de subida en el peor caso. Una rejilla solo dejaría entrar polvo |
-| Telemetría | **INA226 ×3 + TMP1075**, I²C | Tensión y corriente por riel con un chip; el TMP1075 ya se usa en el módulo 3 |
+| Disipación | **Contra la pared del chasis**, sin disipadores discretos | Con 3.0 W de regulación el chasis sobra, y se ganan ~39 °C de unión |
+| Ventilación del recinto | **Ninguna. Va cerrado** | §3.1: 7.9 °C de subida en el peor caso. Una rejilla solo dejaría entrar polvo |
+| Telemetría | **INA226 ×2 + ADS1115 + TMP1075**, I²C | Corriente solo donde vale: §4.2. El ADS1115 entra por los dos VRAW, que es el número que nunca se ha medido. El TMP1075 ya se usa en el módulo 3 |
 | Cruce de masas | **Aislado, ISO1541** | En una fuente cuyo objetivo entero es sub-µV, meterle un bus digital sin aislar deshace el diseño |
 
 ## 3. El chasis
@@ -67,8 +67,22 @@ a 174 mA     VRAW ~ 19,24 V   -> caida de 1,30 V  (proporcional a la carga)
 | LM2991 | 1.80 W | ~~0.48 W~~ | **1.10 W** |
 | LT3045 ×2 | 0.72 W | 0.19 W | 0.19 W |
 | LT3094 ×2 | 0.58 W | 0.16 W | 0.16 W |
-| **Regulación** | **4.80 W** | ~~1.29 W~~ | **2.52 W** |
+| **`U3` (7805)** | — | **faltaba** | **0.47 W** |
+| **Regulación** | **4.80 W** | ~~1.29 W~~ | **2.99 W** |
 | Núcleo del toroide | ~2 W | | ~2 W (no escala con carga) |
+
+`U3` no estaba en las dos primeras versiones de esta tabla y es el que más
+depende de una decisión, no de un cálculo: §16.12 acota su riel a **300 mA como
+límite de diseño**, y a ese techo disiparía **4.66 W** — más que los dos
+pre-reguladores juntos. Su carga real es otra cosa: desde el 2026-08-18 (#118)
+se sabe que alimenta **solo el módulo 2**, por el conector dedicado `J6`, y no
+«los DACs ×5» que decía §7 de la spec v2 — el bus SAM17 es de cuatro hilos
+(+12/GND/GND/−12) y **no lleva 5 V**. Con el módulo 2 más la isla de telemetría
+de §4, son ~30 mA y **0.47 W**.
+
+> **El techo de 300 mA de §16.12 es el que rompería esta caja, no la carga.** Si
+> algún día algo pide ese riel en serio, la térmica del recinto se rehace antes.
+
 
 Y de ahí sale un corolario que conviene dejar escrito, porque contradice la
 intuición: con `P(I) = (20.54 − 7.45·I − 13.1)·I`, la disipación del
@@ -86,15 +100,15 @@ LED**, que están fuera de la caja pero cuelgan de ella.
 
 | Estado | Salida | Pérdida IRM-15-5 | Total dentro | ΔT |
 |---|---|---|---|---|
-| LED apagados | 1.00 W | 0.28 W | **4.80 W** | **4.1 °C** |
-| LED al tope del #104 (2.80 A) | 15.00 W | 4.23 W | **8.75 W** | **7.5 °C** |
+| LED apagados | 1.00 W | 0.28 W | **5.27 W** | **4.5 °C** |
+| LED al tope del #104 (2.80 A) | 15.00 W | 4.23 W | **9.22 W** | **7.9 °C** |
 
 Superficie del recinto propuesto (§3.3), **descontando la cara inferior**
 porque apoya contra la bandeja y no convecta:
 
 ```
 2(0.310 x 0.085) + 2(0.160 x 0.085) + 1(0.310 x 0.160)  =  0.1295 m2
-dT = 8.75 W / (0.1295 m2 x 9 W/m2K)                     =  7.5 C   (peor caso)
+dT = 9.22 W / (0.1295 m2 x 9 W/m2K)                     =  7.9 C   (peor caso)
 ```
 
 **El presupuesto de brillo del #104 es también el termostato de esta caja.**
@@ -112,11 +126,11 @@ apagados» es optimista. No cambia nada: el peor caso ya está calculado arriba.
 
 El coeficiente de 9 W/m²K es el valor de manual para convección natural en aire
 quieto sobre superficie pintada. **Es una estimación, no una medida** — pero
-con 7.5 °C de resultado en el peor caso, tendría que estar equivocado por un
+con 7.9 °C de resultado en el peor caso, tendría que estar equivocado por un
 factor de cuatro para que importe.
 
 Cadena térmica del componente más caliente, `U2` (LM2991, ~1.1 W al censo real).
-El chasis no se calienta solo por `U2`: lo calientan los 8.75 W de todo lo que
+El chasis no se calienta solo por `U2`: lo calientan los 9.22 W de todo lo que
 hay dentro. Así que la cuenta va en dos tramos y **no** en una sola cadena —
 primero cuánto sube el chasis por el total, y encima cuánto sube la unión por
 su propia potencia.
@@ -129,8 +143,8 @@ su propia potencia.
 | **Unión a chasis** | **~8.5** | los tres de arriba |
 
 ```
-Tj = ambiente  +  subida del chasis por los 8,75 W  +  P_U2 x R_union-chasis
-   = 45 C      +  7,5 C                             +  1,1 W x 8,5 K/W
+Tj = ambiente  +  subida del chasis por los 9,22 W  +  P_U2 x R_union-chasis
+   = 45 C      +  7,9 C                             +  1,1 W x 8,5 K/W
    = 62 C
 ```
 
@@ -198,20 +212,30 @@ salida de cables del recinto hacia el interior del case.
 | Magnitud | Pieza | Por qué esa |
 |---|---|---|
 | Tensión + corriente de +12 V | INA226 | 16 bits, las dos medidas en un chip |
-| Tensión + corriente de −12 V | INA226 | ver §4.2 |
+| Tensión de −12 V (**solo tensión**) | canal del ADS1115, por divisor | ver §4.2 |
 | Tensión + corriente de +5 V | INA226 | cierra el lazo abierto del #104 |
+| **Valle de VRAW+ y VRAW−** | canales del ADS1115, por divisor | el número contra el que se pelearon los 9400 µF, el toroide de 120 VA y los 13.6 V de `U1` — y que hasta hoy **solo existe simulado** |
 | Temperatura del recinto | TMP1075 | **ya se usa en el módulo 3** — pieza conocida, driver escrito |
 
-Cuatro chips, ~8 USD, sin tocar la topología de regulación.
+Cinco chips, ~12 USD, sin tocar la topología de regulación. Se alimentan del
++5 V de `U3`, que es lineal y está en GNDA — el dominio correcto para medir los
+rieles analógicos (§3.1).
 
 ### 4.2 El riel negativo es el único punto difícil
 
 Un INA226 mide un shunt referido cerca de su propia alimentación. En −12 V no
-se enchufa y ya. La salida limpia es poner el shunt **en el retorno del riel
-negativo**, donde el nodo de sensado se queda pegado a masa y el INA trabaja en
-su rango normal.
+se enchufa y ya: obligaría a un segundo dominio aislado, con su propio ISO1541,
+por una medida que casi no se usa.
 
-Eso hay que dibujarlo a propósito. **El modo de fallo es descubrirlo soldando.**
+**Así que el riel negativo lleva solo tensión**, por divisor a referencia
+positiva leído por el ADS1115. La decisión es deliberada y su razón es de valor,
+no de dificultad: de las cuatro medidas, la corriente del riel negativo es la
+menos útil — el autoafinado quiere *tensión*, el árbitro del #104 vive en el
++5 V, y los PTC de la bus board son por módulo, no por riel.
+
+Queda **huella de shunt en −12 V poblada con 0 Ω**. Si el bring-up pide esa
+corriente, se cambia la resistencia y se resuelve entonces — no se diseña hoy
+por si acaso (Global Constraint de la v4).
 
 ### 4.3 El cruce de masas: aislado
 
