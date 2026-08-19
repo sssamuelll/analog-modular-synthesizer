@@ -204,7 +204,14 @@ el codo cae por debajo de eso, el tope del #104 baja, y baja hoy.
 
 ## FASE B — El esqueleto y el esquemático (rama `feat/psu-v3-schematic`)
 
-### Task 4: Módulo v3 — qué se hereda y qué cambia
+### Task 4: Módulo v3 — qué se hereda y qué cambia — ✅ HECHA
+
+> **CERRADA EL 2026-08-19.** Salieron `v3/README.md` y `v3/kicad/` (copia del
+> generador de la v2 con las rutas a v3). La tabla del delta cambió una fila
+> respecto de lo que decía esta tarea: **protección pasa de «crowbar en los dos
+> rieles» a «ninguno, en ningún riel»** — la Task 2 se disolvió después de que se
+> escribiera este plan.
+
 
 **Files:**
 - Create: `hardware/01-power-supply/v3/README.md`
@@ -226,7 +233,30 @@ con una descripción de la arquitectura (que es la misma). Cuatro filas:
 
 - [ ] **Step 3: Commit**
 
-### Task 5: Esquemático — quitar el crowbar y meter la isla
+### Task 5: Esquemático — quitar el crowbar y meter la isla — ✅ HECHA
+
+> **CERRADA EL 2026-08-19.** Rojo → verde tal cual estaba escrito: el
+> `check_bom.py` nombró 4 designadores sobrantes (`D7`, `Q1`, `C14`, `R4`) y 30
+> que faltaban, y quedó en 0/0. La hoja tiene 107 componentes, 0 pines fuera de
+> rejilla, 0 pines sin extremo de cable exacto y 0 errores de ERC.
+>
+> Tres cosas que no estaban en el plan y salieron al hacerlo:
+>
+> 1. **`kicad/check_netlist.py`, puerta nueva.** `check_bom.py` cruza
+>    designadores: pasaría en verde con SDA y SCL cambiados, con las dos
+>    resistencias de un divisor intercambiadas o con las dos masas unidas.
+>    Ninguna de esas tres es un componente de más: son cables. La puerta nueva
+>    lee el netlist y **cierra el hueco que `check_telemetria.py` declaraba
+>    ciego** — el invariante del 100 k/20 k. Probada con cuatro mutaciones: las
+>    cuatro la ponen roja.
+> 2. **El netlist salía en el formato equivocado.** El `export_netlist` del MCP
+>    escribe `kicadxml`; el resto del repo (módulos 2 y 3, `netdiff.py`, los
+>    `check_netlist.py`) lee el s-expression de `kicad-cli`. La v2 tenía el mismo
+>    problema y nadie se enteró porque su `.net` no llegaba a existir en disco
+>    cuando corrían las puertas — o sea que **la v2 nunca estuvo dentro del golden
+>    test de conectividad**. La v3 sí: `sam17-power-v3.netgold`, 58 redes.
+> 3. **El rótulo de `J2` estuvo mal desde la v1.** Ver abajo.
+
 
 - [ ] **Step 1: Escribir el test de paridad BOM ↔ hoja**
 

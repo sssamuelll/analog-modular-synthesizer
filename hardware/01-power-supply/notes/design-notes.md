@@ -343,8 +343,15 @@ Sobre la mesa estaban el header 2×5 con +5 V que pedía el BOM viejo (opción A
 el bus Eurorack de 16 pines (opción B, ya descartada a favor de un epic propio
 en §3) y un conector aparte solo para +5 V (opción C). **Se eligió C**:
 
-- **J2 queda como está** — `+12 / GND / GND / −12`, el mismo conector para los
-  módulos 2-7. Ningún módulo recibe un +5 V vivo que no usa, y un bus de 4
+- **J2 queda como está** — ~~`+12 / GND / GND / −12`~~ **`−12 / GND / GND / +12`**,
+  el mismo conector para los módulos 2-7. *(Corregido el 2026-08-19 al leer el
+  netlist de la v3: el pin 1 de `J2` siempre estuvo en la red `-12V` y el 4 en
+  `+12V`. No hay fallo eléctrico —el esquemático y la bus board coinciden, y el
+  `check_netlist.py` de la bus board lo afirma: «par 1 = franja roja = −12 V»,
+  «igual que J2 del módulo 1»— pero esta frase y el rótulo del conector decían
+  lo contrario, y quien montara el mazo leyéndolos habría metido ±12 V al revés
+  en los seis módulos. El rótulo se corrige en la v3; la v1 y la v2 quedan
+  congeladas con el suyo mal.)* Ningún módulo recibe un +5 V vivo que no usa, y un bus de 4
   posiciones con llave no se puede enchufar corrido una fila (el clásico
   mata-módulos de los IDC 2×N sin llave).
 - **J6 es el feed de +5 V**, 2 posiciones, solo hacia el módulo 2 (AD5686R +

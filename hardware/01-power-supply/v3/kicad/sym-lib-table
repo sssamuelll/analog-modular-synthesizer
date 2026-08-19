@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "sam17")(type "KiCad")(uri "${KIPRJMOD}/sam17.kicad_sym")(options "")(descr "Simbolos locales sam17 (LM2941CT/LM2991T pre-reg v2)"))
+)
