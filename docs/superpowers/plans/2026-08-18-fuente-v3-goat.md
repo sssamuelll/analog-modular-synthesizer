@@ -367,12 +367,25 @@ puente→bulk, que es el peor radiador de la placa.
 > 2,80 A pasa de −0,06…+0,43 W a +0,43…+0,69 W (3,1 % a 5,0 %). Sigue siendo de
 > un dígito contra el 16 % que da 2,50 A: **el tope se queda en 2,50 A.**
 >
-> **Step 1 — la pantalla: analizado, no decidido.** Sale `design-notes` §18.7,
-> que es la mitad de §18 que no existía: §18 entero mide acoplo *magnético* y
-> esto es *capacitivo*. Lo que decide no es la pantalla en sí sino el calendario
-> — va dentro del bobinado, o se pide así o no se pone nunca — y que en Talema no
-> es un sufijo sino un *special*. **Falta la decisión de Samuel** porque involucra
-> pedido especial, plazo y precio, no un cálculo.
+> **Step 1 — la pantalla: decidido a medias, y la mitad ejecutada.** Sale
+> `design-notes` §18.7, que es la mitad de §18 que no existía: §18 entero mide
+> acoplo *magnético* y esto es *capacitivo*. Lo que decide no es la pantalla en sí
+> sino el calendario — va dentro del bobinado, o se pide así o no se pone nunca —
+> y que en Talema no es un sufijo sino un *special*.
+>
+> **Decisión (Samuel, 2026-08-19): pedir presupuesto de la versión con pantalla, y
+> meter el filtro de modo común mientras tanto.** El filtro ya está en el
+> esquemático (`L1` + `CY1`/`CY2`), y al meterlo salió una regla que vale para
+> cualquier «lo dejamos con huella por si acaso»:
+>
+> > **Un componente en SERIE no puede ir sin poblar. Uno en PARALELO sí.**
+>
+> `L1` va poblado porque sin él la SMPS se queda sin red. `CY1`/`CY2` van sin
+> poblar porque en paralelo su ausencia no rompe nada — y esperan un número que
+> este repo no puede acotar (la fuga a tierra contra una cláusula de pago).
+>
+> **Lo que queda abierto es una acción de Samuel, no un análisis:** el presupuesto
+> y el plazo de Talema. Enlaces en el hilo.
 
 
 - [ ] **Step 1: Decidir toroide apantallado antes de comprar**
