@@ -354,7 +354,10 @@ ANCHO_POT, ANCHO_SEN, ANCHO_RED = 1.0, 0.4, 1.0
 # Anchos nuevos de la Tarea 8 (spec sec.6, brief):
 ANCHO_ISLA = 0.5     # +13V1/-12V9 locales, ILIM, OUT->ballast, fugas de GND
 ANCHO_SET = 0.25     # red SET: "pista corta y fina" (brief, sec.6.1)
-ANCHO_KELVIN = 1.5   # OUTS->J2 y ballast->J2 de +12V/-12V (brief, >=1.5mm)
+ANCHO_KELVIN = 1.5
+# Escapar un pin de un DFN de 0.5 mm de paso: 0.2 es lo unico que deja aire al
+# pin de arriba Y al de abajo. La pista se ensancha en cuanto sale del chip.
+ANCHO_ESCAPE = 0.2   # OUTS->J2 y ballast->J2 de +12V/-12V (brief, >=1.5mm)
 
 # ============================================================================
 # TASK 7 — ruteo. Vacio en esta fase A PROPOSITO: la Task 6 es colocacion, y
@@ -668,6 +671,132 @@ def rutear_red(r: Ruteo) -> None:
     r.pista(B, [(158.0, 126.5), ("J7", "1")], ANCHO_RED, red=("J7", "1"))
 
 
+def rutear_rieles(r: Ruteo) -> None:
+    """Los cuatro rieles: +13V1, -12V9 y las salidas +12V / -12V.
+
+    CARRILES. La isla ultra es una rejilla SMD de 0.5 mm de paso y no se puede
+    cruzar: las pistas entran por los dos canales verticales que quedan libres
+    entre sus columnas -- x=9.5 (al oeste de la columna 1) y x=30.5 (entre la
+    2 y la 3) -- y solo se meten en horizontal en la y exacta de cada pad.
+    Los dos canales sirven a las dos mitades de la isla, la de +12 arriba
+    (y 13..43) y la de -12 abajo (y 52..85), sin tocarse: entre las dos hay
+    8.4 mm de aire.
+
+    Los tramos largos usan las bandas donde no hay pads: y=9 (entre la fila de
+    TO-220 y las columnas de soporte), y=21, y=43.5, y=57, y=68, y=79 y y=84.
+    """
+    # ================= +13V1: de U1 a la mitad de arriba ==================
+    r.pista(F, [("U1", "5"), (73.2, 9.0), (90.0, 9.0), ("C17", "1")], ANCHO_POT)
+    r.pista(F, [("C17", "1"), (90.0, 21.0), (93.16, 21.0), ("D12", "2")], ANCHO_POT)
+    r.pista(F, [(90.0, 21.0), (78.0, 21.0), ("TP7", "1")], ANCHO_SEN,
+            red=("TP7", "1"))
+    # rama al divisor de ajuste de U1 y a la isla
+    r.pista(F, [(73.2, 9.0), (44.0, 9.0)], ANCHO_ISLA, red=("TP7", "1"))
+    r.pista(F, [(61.0, 9.0), ("R5", "1")], ANCHO_ISLA, red=("R5", "1"))
+    r.pista(F, [(44.0, 9.0), (44.0, 11.0), (9.5, 11.0)], ANCHO_ISLA,
+            red=("TP7", "1"))
+    r.pista(F, [(30.5, 11.0), (30.5, 40.0)], ANCHO_ISLA, red=("TP7", "1"))
+    r.pista(F, [(9.5, 11.0), (9.5, 40.0)], ANCHO_ISLA, red=("TP7", "1"))
+    r.pista(F, [(9.5, 40.0), ("C19", "1")], ANCHO_ISLA)
+    r.pista(F, [(30.5, 40.0), ("C20", "1")], ANCHO_ISLA)
+    for pin in ("1", "2", "3"):
+        r.pista(F, [(9.5, pad_xy(r.board, "U4", pin)[1]), ("U4", pin)], ANCHO_ESCAPE)
+        r.pista(F, [(30.5, pad_xy(r.board, "U5", pin)[1]), ("U5", pin)], ANCHO_ESCAPE)
+    # D8 y D10 cuelgan del canal del medio por su pad oeste
+    r.pista(F, [(20.5, 14.0), ("D8", "1")], ANCHO_ISLA)
+    r.pista(F, [(20.5, 27.0), ("D10", "1")], ANCHO_ISLA)
+    r.pista(F, [(20.5, 14.0), (20.5, 27.0)], ANCHO_ISLA, red=("D8", "1"))
+    r.pista(F, [(20.5, 14.0), (20.5, 11.0)], ANCHO_ISLA, red=("D8", "1"))
+
+    # ================= -12V9: de U2 a la mitad de abajo ===================
+    r.pista(F, [("U2", "5"), (113.2, 9.0), (166.5, 9.0), ("C18", "2")], ANCHO_POT)
+    r.pista(F, [("C18", "2"), (166.5, 21.0), (157.0, 21.0), ("D13", "1")], ANCHO_POT)
+    r.pista(F, [(157.0, 21.0), (157.0, 33.0), (158.0, 33.0), ("TP8", "1")],
+            ANCHO_SEN, red=("TP8", "1"))
+    r.pista(F, [(158.0, 33.0), (158.0, 46.0), (46.0, 46.0)], ANCHO_ISLA,
+            red=("TP8", "1"))
+    # cruza el tronco de +12V por debajo: dos vias y 6 mm de B.Cu, en el hueco
+    # que dejan las costillas 44 y 66 del peine de masa.
+    r.via((46.0, 46.0), red=("TP8", "1"))
+    r.pista(B, [(46.0, 46.0), (41.5, 46.0)], ANCHO_ISLA, red=("TP8", "1"))
+    r.via((41.5, 46.0), red=("TP8", "1"))
+    r.pista(F, [(41.5, 46.0), (41.5, 49.0), (9.5, 49.0)], ANCHO_ISLA,
+            red=("TP8", "1"))
+    r.pista(F, [(30.5, 49.0), (30.5, 79.0)], ANCHO_ISLA, red=("TP8", "1"))
+    r.pista(F, [(9.5, 49.0), (9.5, 79.0)], ANCHO_ISLA, red=("TP8", "1"))
+    r.pista(F, [(9.5, 79.0), ("C21", "1")], ANCHO_ISLA)
+    r.pista(F, [(30.5, 79.0), ("C22", "1")], ANCHO_ISLA)
+    # R7 vive al otro lado del tronco de +12V: otro buceo de 13 mm por B.Cu.
+    r.pista(F, [(70.0, 46.0), (70.0, 47.0)], ANCHO_ISLA, red=("TP8", "1"))
+    r.via((70.0, 47.0), red=("TP8", "1"))
+    r.pista(B, [(70.0, 47.0), (70.0, 59.5)], ANCHO_ISLA, red=("TP8", "1"))
+    r.via((70.0, 59.5), red=("TP8", "1"))
+    r.pista(F, [(70.0, 59.5), ("R7", "2")], ANCHO_ISLA)
+    for pin in ("1", "2", "3"):
+        r.pista(F, [(9.5, pad_xy(r.board, "U6", pin)[1]), ("U6", pin)], ANCHO_ESCAPE)
+        r.pista(F, [(30.5, pad_xy(r.board, "U7", pin)[1]), ("U7", pin)], ANCHO_ESCAPE)
+    # el EP de U6/U7 tambien es -12V9
+    for u in ("U6", "U7"):
+        x, y = pad_xy(r.board, u, "13")
+        r.pista(F, [(x, y), (x, y + 2.5)], 0.4, red=(u, "13"))
+    # D9 y D11 cuelgan del canal del medio por su pad ESTE
+    r.pista(F, [(30.5, 53.0), ("D9", "2")], ANCHO_ISLA)
+    r.pista(F, [(30.5, 66.0), ("D11", "2")], ANCHO_ISLA)
+
+    # ================= +12V: de los ballast al shunt ======================
+    # LAS CUATRO ESCAPADAS DE OUTS NO ESTAN, y no por descuido. El pin OUTS de
+    # un LT3045 es la realimentacion Kelvin: sale de un DFN de 0.5 mm de paso y
+    # su vecino inmediato es el pin de GND, que ademas necesita su propia via.
+    # Una via de 0.6 mm y una escapada de 0.2 a 0.5 mm de distancia no dejan
+    # los 0.127 de aire que exige la fabricacion, se pongan como se pongan --
+    # medido en las cuatro. Se resuelven con la rejilla de la isla en la mano y
+    # es lo primero de la tanda que viene, no un remate.
+    r.pista(F, [(19.5, 20.0), (19.5, 33.5), ("R15", "2")], ANCHO_ISLA,
+            red=("R15", "2"))
+    r.pista(F, [(41.5, 20.0), (41.5, 33.5), ("R16", "2")], ANCHO_ISLA,
+            red=("R16", "2"))
+    r.pista(F, [("D10", "2"), (27.0, 30.0), (19.5, 30.0)], ANCHO_ISLA)
+    r.pista(F, [("R16", "2"), (43.5, 33.5), (43.5, 85.0), (28.54, 85.0),
+                ("R19", "1")], ANCHO_KELVIN)
+    r.pista(F, [(43.5, 85.0), (45.5, 85.0), (45.5, 87.0), ("U8", "10")],
+            ANCHO_ESCAPE, red=("U8", "10"))
+    r.pista(F, [(43.5, 57.0), (112.0, 57.0), (112.0, 50.0), ("TP3", "1")],
+            ANCHO_SEN, red=("TP3", "1"))
+    r.pista(F, [(78.0, 57.0), ("R1", "1")], ANCHO_ISLA)
+
+    # ================= -12V: de los ballast a J2 ==========================
+    r.pista(F, [(19.5, 58.0), (19.5, 72.5), ("R17", "2")], ANCHO_ISLA,
+            red=("R17", "2"))
+    r.pista(F, [(41.5, 58.0), (41.5, 72.5), ("R18", "2")], ANCHO_ISLA,
+            red=("R18", "2"))
+    r.pista(F, [(19.5, 72.5), (19.5, 86.0), (15.0, 86.0), ("J2", "1")],
+            ANCHO_KELVIN, red=("J2", "1"))
+    r.pista(F, [("R18", "2"), (41.5, 72.5), (41.5, 76.0)], ANCHO_ISLA)
+    r.via((41.5, 76.0), red=("R18", "2"))
+    r.pista(B, [(41.5, 76.0), (25.0, 76.0)], ANCHO_ISLA, red=("R18", "2"))
+    r.via((25.0, 76.0), red=("R18", "2"))
+    r.pista(F, [(25.0, 76.0), (19.5, 76.0)], ANCHO_ISLA, red=("R18", "2"))
+    r.pista(F, [("D11", "1"), (21.5, 66.0), (21.5, 76.0)], ANCHO_ISLA)
+    r.pista(F, [(47.0, 68.0), (47.0, 84.0), (56.91, 84.0), ("R21", "2")],
+            ANCHO_ISLA, red=("R21", "2"))
+    r.pista(F, [(41.5, 68.0), (41.5, 72.5)], ANCHO_ISLA, red=("D4", "1"))
+    r.via((41.5, 68.0), red=("D4", "1"))
+    r.pista(B, [(41.5, 68.0), (47.0, 68.0)], ANCHO_ISLA, red=("D4", "1"))
+    r.via((47.0, 68.0), red=("D4", "1"))
+    r.pista(F, [(47.0, 68.0), (98.0, 68.0), (98.0, 60.0)], ANCHO_ISLA,
+            red=("D4", "1"))
+    # ultimo cruce de la tanda: el carril de +12V hacia TP3 va por y=57 y hay
+    # que pasarle por debajo. Seis milimetros de B.Cu entre las costillas 44 y
+    # 66 del peine, dos vias, y a seguir.
+    r.via((98.0, 60.0), red=("D4", "1"))
+    r.pista(B, [(98.0, 60.0), (98.0, 54.0)], ANCHO_ISLA, red=("D4", "1"))
+    r.via((98.0, 54.0), red=("D4", "1"))
+    r.pista(F, [(98.0, 54.0), (98.0, 50.0), ("D4", "1")], ANCHO_ISLA)
+    r.pista(F, [(120.0, 68.0), (120.0, 50.0), ("TP4", "1")], ANCHO_SEN,
+            red=("TP4", "1"))
+    r.pista(F, [(98.0, 68.0), (120.0, 68.0)], ANCHO_ISLA, red=("TP4", "1"))
+
+
 def rutear(board) -> Ruteo:
     """Todas las pistas de la placa. VACIA todavia -- ver la nota de arriba.
 
@@ -701,6 +830,7 @@ def rutear(board) -> Ruteo:
     r = Ruteo(board)
     rutear_gnd(r)
     rutear_red(r)
+    rutear_rieles(r)
     return r
 
 
