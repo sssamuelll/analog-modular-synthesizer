@@ -646,6 +646,21 @@ valle_espina    = 16;  // banda maciza central (cabeza de M3 + arandela)
 valle_margen    = 6;   // orilla maciza delante y detras
 
 // --- lo que el budget vigila (spec §11: catalogos, no medidos) ---
-alto_transformador  = 45;  // CATALOGO, no confirmado; medir pieza real
+// El toroide, corregido el 2026-08-19. Los 45 mm que habia aqui eran una cifra
+// heredada sin fuente: el catalogo del MPN real del bom.csv (Nuvotem Talema
+// 0120P1-2-012, 120 VA, 2x12 V, 5 A) da 52.1 mm de alto, 105 mm de diametro y
+// 1.33 kg. Son 7.1 mm mas altos de lo que se suponia -- 16 % -- sobre un
+// parametro que el issue #46 ya tenia marcado como no confirmado.
+//
+// Sigue siendo CATALOGO DE DISTRIBUIDOR (dos listados RS del mismo MPN, no la
+// hoja del fabricante) y sigue habiendo que medir la pieza al recibirla. Lo que
+// cambia es que ahora la cifra tiene procedencia en vez de no tenerla.
+//
+// El diametro no estaba aqui de ninguna forma, y es el que decide el largo del
+// chasis de la fuente: 200 mm de PCB + 105 de toroide no caben en los 300 mm de
+// interior que la spec daba por provisionales (ver spec 2026-08-18 §3.3).
+alto_transformador  = 52.1; // catalogo Talema 0120P1-2-012; medir al recibir
+diam_transformador  = 105;  // idem. Lo consume el chasis de la fuente (Task 9)
+peso_transformador  = 1.33; // kg, catalogo. Cierra la estimacion de masa (#106)
 margen_transformador = 15; // spec §4
 fondo_pcb_max       = 60;  // censo estimado de PCB mas honda, no confirmado
