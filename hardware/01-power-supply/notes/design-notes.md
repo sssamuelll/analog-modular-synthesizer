@@ -917,9 +917,132 @@ aislante. Y no hay escapatoria: 7912, LM337, LM2990 y LM2991 tienen los cuatro e
 tab a Vin. Tampoco puede compartir disipador desnudo con `U1` o `U3` — tab de
 `U2` (VRAW−) contra tab de `U1` (GND) es un corto franco al encender.
 
-### 16.8 Sobretensión: sí en +12 V, no en −12 V
+### 16.8 Sobretensión: la cascada de la v2 la resuelve sola
 
-Contra los absolute maximum leídos uno a uno:
+> **REESCRITA EL 2026-08-18 — issue #118.** Esta sección decía *«sí en +12 V, no
+> en −12 V»* y razonaba contra el **AS3340**, un chip que salió del instrumento
+> el 2026-08-17 con el respin del módulo 3. Al rehacerla contra el BOM real
+> salieron dos cosas a la vez: el lazo del crowbar **no cierra con ningún SCR**,
+> y la topología de la v2 **ya no lo necesita**. Se retira de la v3. El análisis
+> viejo queda al final como registro, no como instrucción.
+
+#### Lo que cambió no fue un chip: fue la topología
+
+La v1 era **un regulador y al bus**. Si fallaba, VRAW llegaba entero a los
+módulos, y de ahí salía el crowbar. La v2 es una **cascada de dos etapas por
+riel**, y los módulos cuelgan de la segunda:
+
+```
+VRAW+ 20,54 V --> [LM2941] --> 13,1 V --> [LT3045 x2] --> 12,000 V --> bus
+VRAW- 20,54 V --> [LM2991] --> 12,9 V --> [LT3094 x2] --> 12,000 V --> bus
+```
+
+Ningún fallo **simple** pone VRAW en el bus:
+
+| Fallo | Bus | ¿Mata módulos? |
+|---|---|---|
+| pre-regulador en corto | el post sigue en serie: **12,000 V**, o 0 V si entra en shutdown térmico | no |
+| pre-regulador abierto | **0 V** | no |
+| post-regulador en corto | la salida del pre: **+13,1 / −12,9 V** | **no** — dentro del límite de todos |
+| post-regulador abierto | **0 V** | no |
+
+#### La clave: el pre-regulador no arrastra al post-regulador
+
+Si esas dos etapas se llevaran por delante la una a la otra, lo de arriba no
+valdría: un corto del pre sería un fallo simple que mata a los dos. Verificado
+contra datasheet primario, **no ocurre**:
+
+| | IN abs max | VRAW peor caso | margen |
+|---|---|---|---|
+| LT3045 (ADI Rev. D, p.2) | **±22,00 V** | +20,54 V | **1,46 V** (6,6 %) |
+| LT3094 (ADI Rev. B, p.3) | **−22,00 V** | −20,54 V | **1,46 V** (6,6 %) |
+
+Los 20,54 V son el peor caso publicado —red a +10 % y casi en vacío, §16.5— no
+el nominal. Y lo que el post-regulador hace después de aguantarlos también es
+seguro: a la carga real del censo sigue regulando (Tj ≈ 70 °C con θJA = 34 °C/W)
+y al punto de diseño se acerca al shutdown térmico, que apaga la salida.
+
+**Regula o se apaga. Las dos son seguras.**
+
+Así que un fallo doble ya no es en cascada: para perder las dos etapas tienen
+que morirse por causas independientes.
+
+#### Los máximos absolutos, contra el BOM real
+
+La tabla vieja nombraba el AS3340. Esta nombra lo que hay, y vive además como
+puerta ejecutable en `hardware/01-power-supply/v3/check_absmax.py`:
+
+| Chip | Módulos | Abs max | Con ±13,1 V en el bus |
+|---|---|---|---|
+| TL074 | 02, 03, 04, 05, 07 | 42 V total (SOIC/DIP) | sobrevive holgado |
+| LM13700 | 05, 07 | 36 V o ±18 V | sobrevive |
+| LM358 | 06 | **±16 o 32 V** | sobrevive |
+| SSI2130 | 03 | V+ **+5,25 V** / V− **−18 V** | sobrevive |
+
+Dos notas que la tabla vieja no tenía:
+
+- **El SSI2130 no cuelga del bus por su V+**: viene del `L78L05` local del
+  propio módulo 3 (`U11`). Un fallo del riel positivo lo absorbe ese regulador,
+  no la protección de la fuente.
+- **El LM358 es el más apretado del instrumento** con sus ±16 V, y se pasaba
+  incluso del umbral peor caso del crowbar (16,40 V). Va fuera del diseño por
+  eso y por su corriente de polarización — issue #117.
+
+#### Por qué el crowbar no se arregla, se retira
+
+Aunque hiciera falta, **no podía funcionar**. Esta sección cerraba con *«quien
+abre el circuito es `F1`»*, y esa frase dejó de ser cierta cuando `F1` subió de
+250 mA a 1,6 A T en la v2 (correctamente: el inrush del toroide de 120 VA fundía
+el chico). Nadie cruzó las dos secciones.
+
+```
+cortocircuito del secundario   13,4 V / 0,28 ohm   =  47,9 A
+relacion de espiras            230 / 13,4          =  17,2 : 1
+reflejado al primario                              =   2,79 A  = 1,74x F1
+
+BT169D, I2t de fusion (10 ms)   0,32 A2s  ->    140 us a 47,9 A
+fusible 5x20 T de 1,6 A         10-30 A2s ->  1,3-3,9 s a 2,79 A
+```
+
+**IEC 60127 solo obliga a un fusible T a abrir en menos de 30 min a partir de
+2,1 × In**, o sea 3,36 A. El fallo produce 2,79 A: por debajo del punto donde la
+norma obliga. Si no abre, el toroide entrega 47,9 A a un corto — **I²R = 642 W en
+un transformador de 120 VA**.
+
+Un SCR mayor no lo arregla, porque el que no cierra es el fusible.
+
+Y de ahí sale el argumento que decide: **un crowbar cuyo lazo no cierra tiene un
+modo de fallo propio.** Si dispara por error —dv/dt, ruido en la puerta, que es
+justo para lo que existían `C14` y el `R` de gate— hace el corto igual, sin
+avería que lo justifique.
+
+> El fallo del guardaespaldas es peor que el peligro del que cuida.
+
+La amenaza que cubría es un fallo doble independiente. Su propio modo de fallo
+es 642 W dentro del transformador con un fusible que no está obligado a abrir.
+**No hay versión de esa cuenta que salga a favor de dejarlo.**
+
+#### Lo que NO se va con el crowbar
+
+**El fusible térmico embebido de TR1 pasa de deseable a requisito.** Los 642 W
+son la cuenta de *cualquier* corto del secundario —un fallo del puente, un
+cable pellizcado al montar, un condensador de bulk en corto— y `F1` sigue sin
+estar obligado a abrir a 2,79 A. Ese fusiblecito va dentro del bobinado y corta
+por temperatura pase lo que pase.
+
+La fila de `TR1` del `bom.csv` ya pedía *«confirmar si el TR1 comprado trae
+fusible térmico embebido»* como ítem de compra. **Deja de ser un item de compra
+y pasa a ser criterio de aceptación: un TR1 sin fusible térmico no se compra.**
+
+Y la regla que sí se conserva del análisis viejo, intacta: **no metas un fusible
+en serie en VRAW+ ni en el riel** — te comes el margen de dropout que costó
+subir el bulk a 9400 µF.
+
+#### Registro: lo que esta sección decía antes del 2026-08-18
+
+Decía *«Sobretensión: sí en +12 V, no en −12 V»*, con un crowbar de cuatro
+componentes (`D7` BZX55C15 + `Q1` BT169D + 1 kΩ + 100 nF, ~1,50 €) en el riel
+positivo y ninguno en el negativo. Su tabla de máximos absolutos era esta:
 
 | Chip | Abs max | Con VRAW+ a 20.54 V | |
 |---|---|---|---|
@@ -927,25 +1050,11 @@ Contra los absolute maximum leídos uno a uno:
 | LM13700 | 36 V / ±18 V | 32.5 V | no se destruye |
 | **AS3340** | **VCC−GND: +18 V** | **20.54 V** | **se muere** |
 
-El pico de 20.54 V está **simulado**, y supera el abs max del 3340. Si `U1` falla
-en corto, el bus ve VRAW+ y se lleva los tres VCO por delante. **Crowbar en el
-riel de +12 V**, cuatro componentes y ~1,50 €:
-
-```
-+12V ──┬── ánodo BT169D ── cátodo a GND
-       └── BZX55C15 ── gate ──┬── 1 kΩ ── GND
-                              └── 100 nF ── GND
-```
-
-Umbral peor caso 14.6-16.4 V: cabe entre los 12.60 V del riel sano y los 18 V del
-3340. **Quien abre el circuito es `F1`, el fusible de primario que ya existe** —
-el crowbar cortocircuita VRAW+ a través del regulador ya muerto. **No metas un
-fusible en serie en VRAW+ ni en el riel**: te comes otra vez el margen que tanto
-costó recuperar.
-
-El riel de −12 V **no lleva crowbar**: el 3340 alimenta su VEE por un zener
-interno y a −18 V la corriente sube a 18.4 mA, por debajo de su límite de 40 mA.
-Se desafina por autocalentamiento, no se destruye.
+Y justificaba la asimetría así: *«el 3340 alimenta su VEE por un zener interno y
+a −18 V la corriente sube a 18.4 mA, por debajo de su límite de 40 mA. Se
+desafina por autocalentamiento, no se destruye»*. Era correcto **para el AS3340
+y para la topología de un solo regulador**. Ya no aplica ninguna de las dos
+cosas.
 
 ### 16.9 Polyfuse: no en esta placa
 

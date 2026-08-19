@@ -81,75 +81,27 @@ git add hardware/01-power-supply/v3/
 git commit -m "El censo de maximos absolutos deja de ser un parrafo y pasa a ser una puerta"
 ```
 
-### Task 2: El crowbar de −12 V y el I²t del lazo
+### Task 2: ~~El crowbar de −12 V y el I²t del lazo~~ — DISUELTA
 
-> **⏸ PARADA 2026-08-18 — issue #118.** El Step 3 se corrió antes que el resto
-> (si el SCR no sobrevive, dibujar el crowbar primero sería al revés) y el
-> resultado tumba la premisa de esta tarea. El lazo **no cierra con ningún
-> SCR**: el fusible de 1,6 A T ve 2,79 A, por debajo del 2,1×In donde IEC
-> 60127 obliga a abrir. Y al mirar por qué, salió algo mayor: **§16.8 se
-> escribió para la topología de la v1** —un regulador y al bus— mientras que
-> la v2 es una cascada donde ningún fallo simple pone más de 13,1 V en el
-> bus. Puede que el crowbar ya no proteja de nada.
+> **CERRADA SIN EJECUTAR EL 2026-08-18 — issue #118.** Se corrió su Step 3
+> (verificar el I²t del lazo crowbar → F1) antes que el resto, y el resultado
+> tumbó primero la tarea y después la premisa entera.
 >
-> Esta tarea **no se ejecuta** hasta que el #118 cierre. Lo que salga de ahí
-> la reescribe: si la cascada protege sola, esta tarea desaparece; si no, el
-> sitio de la protección es entre etapas y no en el bus, que es otro
-> circuito.
-
-
-**Files:**
-- Modify: `hardware/01-power-supply/notes/design-notes.md` §16.8
-- Create: `hardware/01-power-supply/v3/notes/design-notes.md` (§1: protección)
-
-**Interfaces:**
-- Consume: el veredicto de `check_absmax.py` (Task 1)
-- Produce: las filas de `Q2`, `D8`, `R3`, `C15` para el `bom.csv` de la Task 3
-
-- [ ] **Step 1: Reescribir §16.8 contra el BOM real**
-
-La tabla actual nombra AS3340. La nueva nombra SSI2130, LM13700, LM358 y TL074
-con su cita, y dice explícitamente lo que cambió y desde cuándo — misma
-disciplina que el resto del §16. Incluye la frase que hoy falta:
-
-> El SSI2130 no cuelga del bus por su V+: viene del L78L05 del propio módulo 3.
-> Un fallo de +12 V lo absorbe el regulador local, no el crowbar. El crowbar de
-> +12 V sigue haciendo falta, pero por el LM13700 y el LM358.
-
-- [ ] **Step 2: Dibujar el crowbar de −12 V**
-
-Misma topología, espejada. **No es el mismo circuito girado** — el gate del
-BT169D se refiere a su cátodo, que en el riel negativo ya no está en masa:
-
-```
-GND ──── anodo BT169D ──── catodo a -12V
-                  gate ──┬── R3 1k ──── -12V
-                         └── C15 100nF ── -12V
-         BZX55C15 entre GND y el gate, catodo a GND
-```
-
-Verificar el sentido del zener sobre el esquemático antes de congelar: montado
-al revés dispara al encender, que es exactamente el fallo que §16.8 documenta
-para el `D7` del riel positivo.
-
-- [ ] **Step 3: Verificar el I²t del lazo crowbar → F1**
-
-Esto **aplica también al crowbar que ya existe en +12 V**, así que si el número
-no sale, el problema es de hoy y no de la v3.
-
-```
-F1 = 1.6 A T   (subio desde 250 mA en la v2, worksheet notes v2 §3.0.1)
-Q1/Q2 = BT169D, 0.8 A nominal
-```
-
-Buscar el `I_TSM` del BT169D en su datasheet primario (NXP/WeEn) y la curva
-tiempo-corriente del fusible concreto. La pregunta es una sola: **¿sobrevive el
-SCR el tiempo que tarda F1 en abrir?** Si no, la salida es un SCR mayor, no un
-fusible menor — bajar F1 rompe lo que el #61 arregló.
-
-- [ ] **Step 4: Cerrar #114 con el veredicto y correr Task 1 en verde**
-
-- [ ] **Step 5: Commit**
+> **El lazo no cierra con ningún SCR:** el fusible de 1,6 A T ve 2,79 A
+> reflejados, por debajo del 2,1×In donde IEC 60127 obliga a abrir. Y al mirar
+> por qué, salió lo de fondo: **§16.8 se escribió para la topología de la v1**
+> —un regulador y al bus—, mientras que la v2 es una cascada donde ningún fallo
+> simple pone más de ±13,1 V en el bus. Verificado contra datasheet primario que
+> el pre-regulador en corto **no arrastra** al post (LT3045/LT3094: ±22 V de abs
+> max contra ±20,54 V de VRAW, margen 1,46 V).
+>
+> **La v3 no lleva crowbar en ningún riel.** §16.8 está reescrita con el análisis
+> nuevo y el viejo como registro; `check_absmax.py` modela la cascada y está en
+> verde. Lo único que sobrevive de esta tarea es el requisito que salió de su
+> aritmética: **un TR1 sin fusible térmico embebido no se compra** — los 642 W
+> de un corto del secundario valen venga de donde venga.
+>
+> La Fase A pasa de tres tareas a dos.
 
 ### Task 3: La telemetría — el contrato en `bom.csv`
 
