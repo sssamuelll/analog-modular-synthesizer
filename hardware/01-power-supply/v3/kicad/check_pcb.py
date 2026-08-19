@@ -83,6 +83,17 @@ def main() -> int:
     fallos += bp.revisar_borde_ceramicos(board)
     fallos += bp.revisar_to220_coplanares(board)
 
+    # Las tres puertas de RUTEO. Leen los globales TRACKS/VIAS, que solo
+    # existen cuando alguien genera el ruteo -- asi que se genera aqui, contra
+    # la placa commiteada, y se comprueba. Sin esto, `gates.py` daria verde
+    # sobre una placa con pistas cruzadas: las puertas existen desde la v1 y
+    # nunca han corrido fuera de build_pcb.py.
+    bp.TRACKS, bp.VIAS = (lambda r: (r.tracks, r.vias))(bp.rutear(board))
+    fallos += [f"cruce: {x}" for x in bp.revisar_pistas()]
+    fallos += [f"masa: {x}" for x in bp.revisar_estrella()]
+    fallos += [f"pista sobre pad: {x}" for x in bp.revisar_pista_pad(board)]
+    fallos += [f"via: {x}" for x in bp.revisar_vias(board)]
+
     peor, par, pads_red, pads_selv = bp.revisar_fuga(board)
     if peor < bp.FUGA_MIN:
         fallos.append(f"la barrera de red mide {peor:.2f} mm y hacen falta "
@@ -104,6 +115,11 @@ def main() -> int:
           f"y {len(pads_selv)} SELV (minimo {bp.FUGA_MIN})")
     print(f"  los tres TO-220 en x={[round(v, 1) for v in bp.TO220_X]}, "
           f"leidos de case/cad/params.scad")
+    con = board.GetConnectivity()
+    con.RecalculateRatsnest()
+    print(f"  ruteo: {sum(len(t[2]) - 1 for t in bp.TRACKS)} segmentos y "
+          f"{len(bp.VIAS)} vias; quedan {con.GetUnconnectedCount(False)} "
+          f"conexiones sin rutear")
 
     if fallos:
         print(f"\nFALLO: {len(fallos)} en la placa")
