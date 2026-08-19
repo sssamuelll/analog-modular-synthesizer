@@ -1,7 +1,7 @@
 # PSU v3 — la primera que se construye
 
-**Estado:** Fases A (decisiones), B (esquemático) y D (chasis) cerradas. Faltan
-la PCB y la validación.
+**Estado:** Fases A (decisiones), B (esquemático), D (chasis) y la colocación
+de la Fase C cerradas. Faltan el ruteo y la validación.
 
 > **La v1 y la v2 son diseños de papel.** La v1 se abandonó el 2026-08-17 sin
 > fabricar; la v2 llegó a tener gerbers, BOM y CPL generados y tampoco se pidió.
@@ -54,10 +54,22 @@ tener que apuntarlas en ninguna lista:
 | [`check_telemetria.py`](check_telemetria.py) | ¿el instrumento sobrevive a medir? Divisores, shunts, direcciones I²C y alimentaciones contra el límite garantizado de cada datasheet |
 | [`kicad/check_bom.py`](kicad/check_bom.py) | ¿el BOM y la hoja tienen los mismos designadores? |
 | [`kicad/check_netlist.py`](kicad/check_netlist.py) | ¿la isla está **cableada** como dice el contrato? Shunts en serie, divisores en el sentido correcto, masas sin un nodo común |
+| [`kicad/check_pcb.py`](kicad/check_pcb.py) | ¿la placa **commiteada** está colocada como dice el script? Y la barrera de red, la isla de referencia, la diagonal del lazo y los tres tabs contra la pared |
 
-Las dos últimas se reparten un hueco a propósito: `check_bom.py` pasaría en verde
-con SDA y SCL cambiados —no falta ni sobra un componente, sobra un cable en el
-sitio equivocado— y por eso existe la de netlist.
+Las tres primeras se reparten huecos a propósito: `check_bom.py` pasaría en
+verde con SDA y SCL cambiados —no falta ni sobra un componente, sobra un cable
+en el sitio equivocado— y por eso existe la de netlist.
+
+Y `check_pcb.py` cierra uno más viejo. `gates.py` sabía buscar el Python de
+KiCad desde hace versiones (`necesita_kicad` / `PY_KICAD`) y **no había un solo
+fichero que lo usara**: ni la v1 ni la v2 tuvieron nunca la placa dentro de la
+suite. Todas sus comprobaciones —barrera de red incluida— corrían solo cuando
+alguien se acordaba de ejecutar `build_pcb.py` a mano.
+
+Lee el `.kicad_pcb` que está en git, no el que acaba de generarse. La
+diferencia es lo que caza una pieza movida en la GUI y guardada: a partir de
+ahí el fichero que va a fábrica y el script que dice cómo se colocó dejan de
+ser el mismo diseño.
 
 ## La telemetría
 
@@ -113,6 +125,69 @@ exacto donde más daño hace: quien montara el mazo leyendo esa columna habría
 metido ±12 V al revés en los seis módulos. Corregido aquí y en `design-notes`
 §10.4; la v1 y la v2 quedan congeladas con el suyo mal.
 
+## La placa
+
+**200 × 150, girada respecto de la v1 y la v2.** No es preferencia: el eje largo
+de la PCB va a lo ancho del case, 200 mm de los 528 disponibles contra solo 150
+de los 223 de fondo. Al revés no cabe.
+
+![colocación](pcb/sam17-power-v3-3d-top.png)
+
+Tres cosas de esta placa las decide el chasis, no el layout:
+
+**Desaparecen los disipadores.** La v1 y la v2 reservaban 42 × 38,1 mm por cada
+TO-220 para su Fischer individual. Aquí el disipador es la pared, así que esos
+3 × 1600 mm² vuelven al layout — y por eso una placa más corta en un eje sigue
+sobrándole sitio.
+
+**La fila de TO-220 no se elige aquí.** Su X la declara `chasis_to220_x` /
+`chasis_to220_paso` en `case/cad/params.scad`, y `build_pcb.py` **la lee de ese
+fichero**. El canto de la placa y la pared son la misma cota vista desde dos
+lados; copiar el número sería crear dos verdades que se separan en silencio el
+día que una se mueva.
+
+**El cuerpo de los tres cuelga fuera de la placa**, hacia la pared. Los 10 mm
+entre el canto y la cara interior son el sitio del conformado de patas. Las
+puertas de margen y de solape tienen esa excepción declarada: a esos tres se les
+mide por los pads.
+
+### Lo que la colocación tuvo que resolver
+
+| | |
+|---|---|
+| La franja de red no cabía | El MOV mide 23,1 mm y la banda bajo la barrera tenía 18. La barrera baja de y=128 a y=121 |
+| `L_SMPS` y `N_SMPS` no estaban en `NETS_RED` | Son la salida del choke hacia `J7`: **230 V igual que antes de entrar**. Sin ellas, `es_red()` las daba por SELV. Lo cazó la propia puerta de fuga midiendo 5,50 mm entre los dos pines de `CY2` — que son justo los que un Y2 existe para puentear |
+| El filtro de modo común estaba al final de la fila | Y su retorno a PE es *todo el mecanismo* (§18.7: el choke sube impedancia, los Y dan el camino de vuelta). Movido junto al fusible, donde pincha `L_F`: el lazo se parte por la mitad |
+| `J3` a 5,83 mm del tornillo `H3` | Ese tornillo va al chasis, o sea a PE. La fuga de 6 mm es exactamente la que hay que exigir ahí |
+
+### La telemetría y el lazo
+
+`revisar_diagonal()` heredada exige ≥ 80 mm entre el lazo de rectificación y la
+isla ultra (mide **93**). Se le añadió un segundo umbral, ≥ 30 mm hasta la isla
+de telemetría (mide **40**), y el umbral más bajo tiene motivo: la isla ultra
+defiende 0,8 µVrms; la telemetría mide con 16 bits sobre 4 V de fondo de
+escala, ~60 µV por cuenta. Tres órdenes de magnitud de diferencia en lo que hay
+que proteger. Lo que sí comparten es la razón de estar lejos: los divisores son
+de 100 k, y un nodo de alta impedancia junto a un lazo rectificador recoge por
+capacidad lo que no recogería uno de baja.
+
+### Y el invariante llegó a la seda
+
+El README de esta versión declaraba un hueco: el divisor mal *dibujado* lo caza
+`check_netlist.py`, mal *poblado* (un 20 k soldado donde va el 100 k, las dos son
+0805 idénticas) no lo caza nadie. Ahora hay dos líneas de serigrafía entre las
+dos filas, que es donde mira quien las suelda:
+
+```
+R21 R22 R23 = 100k (AL RIEL)
+R24 R25 R26 = 20k (A LA REFERENCIA)
+```
+
+Y el aviso que la v2 no necesitaba, porque allí cada TO-220 tenía su disipador
+suelto y solo `U2` pedía mica: **`TABS AISLADOS: MICA + PASADOR`**. Aquí los tres
+van contra la misma pared, que además es la referencia de PE, y dos de los tres
+tabs están a VRAW+ y VRAW−.
+
 ## Documentación
 
 | Fuente | Contenido |
@@ -124,11 +199,8 @@ metido ±12 V al revés en los seis módulos. Corregido aquí y en `design-notes
 
 ## Lo que falta
 
-- **Fase C — PCB.** Colocación de los tres TO-220 en fila con los tabs
-  coplanares, y la puerta `test_to220_coplanares` que lo mide. **Ya no está
-  bloqueada:** el chasis declara dónde están los tres agujeros (`chasis_to220_*`
-  en `case/cad/params.scad`) y a qué canto miran `J2` y `J6` — la PCB se pliega a
-  esa geometría, no al revés.
+- **Fase C — ruteo.** La colocación está cerrada (abajo); falta rutear, DRC
+  limpio y el paquete de fabricación.
 - ~~**Fase D — chasis.**~~ **Cerrada.** El toroide tiene hoja del fabricante
   (Ø93 × 46, 1,20 kg) y el chasis de acero existe en `case/cad/` con sus tres
   DXF de corte y su puerta. Queda abierto solo el presupuesto de la pantalla
