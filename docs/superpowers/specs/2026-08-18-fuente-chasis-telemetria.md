@@ -157,6 +157,47 @@ aluminio. A 0.8 W no importa. Si al medir importara, la salida es una placa
 extensora de aluminio atornillada a la pared — **no se dibuja hasta que la
 medida la pida**.
 
+#### La curva de derating, por fin leída — y el techo del #104 baja a 2.50 A
+
+Esta cuenta tenía un cabo suelto declarado: la IRM-15-5 se especifica de −30 a
++85 °C *«refer to Derating Curve»*, y esa curva nadie la había abierto. Ya está
+leída (Mean Well `IRM-15-SPEC`, 2025-11-21, p.3):
+
+**El tramo plano del 100 % acaba en +50 °C.** De ahí baja en recta hasta el
+final de la escala.
+
+Y la caja, al tope del #104, está **a 52.7 °C por dentro**. Tres grados pasado
+el codo. Lo que sigue es un lazo, no una tabla: la SMPS calienta el recinto, el
+recinto la derratea, y menos capacidad no significa menos calor.
+
+| Tope del #104 | Pide | Calor dentro | Aire dentro | Puede dar | Margen |
+|---|---|---|---|---|---|
+| **2.80 A** | 14.00 W | 8.94 W | 52.7 °C | 13.9 – 14.4 W | **−0.06 a +0.43 W** |
+| **2.50 A** | 12.50 W | 8.52 W | 52.3 °C | 14.1 – 14.5 W | **+1.58 a +2.01 W** |
+
+El rango sale de lo único que no se lee limpio del PDF: el codo a +50 °C es
+inequívoco (el segmento plano va de −10 a 50.0 °C), pero la **pendiente** de
+después depende de dónde acaba la recta, y la escala vertical de ese gráfico
+tiene marcas irregulares. Se dan las dos lecturas.
+
+**Da igual cuál sea la buena: a 2.80 A el margen es de menos del 3 %**, y esa
+cifra cuelga de un coeficiente de convección estimado y de un ambiente de 45 °C
+supuesto. Un margen del 3 % construido sobre dos suposiciones no es un margen.
+
+> **El tope del #104 baja de 2.80 A a 2.50 A.**
+
+Dos cosas honestas sobre esto:
+
+- **A 25 °C de ambiente no pasaría nada.** El interior quedaría en 32.7 °C, por
+  debajo del codo, y la SMPS daría sus 15 W enteros. Los 2.80 A funcionan en una
+  habitación normal y fallan en la habitación para la que se dimensionó todo lo
+  demás de este diseño. Se decide por el peor caso publicado, que es la regla de
+  §16.1.
+- **La tabla de arriba se queda con sus 9.22 W y sus 7.9 °C.** Con el tope nuevo
+  el número real es 8.52 W y 7.3 °C, pero bajarlo sería cambiar un techo por otro
+  más apretado. Se deja el conservador: ahora es un techo con margen en lugar de
+  un techo justo.
+
 ### 3.2 La regla: el chasis conduce calor, nunca corriente
 
 Los tres reguladores tienen el tab conectado a algo, y la caja está bondada a
@@ -207,35 +248,60 @@ salida de cables del recinto hacia el interior del case.
 
 ## 4. La telemetría
 
-### 4.1 Qué se mide
+### 4.1 Qué se mide, y en qué dirección
 
-| Magnitud | Pieza | Por qué esa |
-|---|---|---|
-| Tensión + corriente de +12 V | INA226 | 16 bits, las dos medidas en un chip |
-| Tensión de −12 V (**solo tensión**) | canal del ADS1115, por divisor | ver §4.2 |
-| Tensión + corriente de +5 V | INA226 | cierra el lazo abierto del #104 |
-| **Valle de VRAW+ y VRAW−** | canales del ADS1115, por divisor | el número contra el que se pelearon los 9400 µF, el toroide de 120 VA y los 13.6 V de `U1` — y que hasta hoy **solo existe simulado** |
-| Temperatura del recinto | TMP1075 | **ya se usa en el módulo 3** — pieza conocida, driver escrito |
+| Magnitud | Pieza | Dir. | Por qué esa |
+|---|---|---|---|
+| Tensión + corriente de +12 V | INA226 (`U8`) | 0x40 | 16 bits, las dos medidas en un chip, y su modo común llega a 40 V |
+| Tensión + corriente del +5 V de `U3` | INA226 (`U9`) | 0x41 | su **tensión** es la referencia de los canales negativos — §4.4 |
+| Tensión de −12 V (**solo tensión**) | ADS1115 `AIN0` (`U10`) | 0x49 | §4.2 |
+| **Valle de VRAW+ y VRAW−** | ADS1115 `AIN1` y `AIN2` | 0x49 | el número contra el que se pelearon los 9400 µF, el toroide de 120 VA y los 13.6 V de `U1` — y que hasta hoy **solo existe simulado** |
+| Temperatura del aire del recinto | TMP1075 (`U11`) | 0x48 | **ya se usa en el módulo 3**, con los mismos straps: driver escrito |
+
+`AIN3` se queda sin usar, atado a GNDA — el datasheet lo permite explícitamente
+(TI SBAS444E §9.1.4), así que no lleva ni puente ni huella.
 
 Cinco chips, ~12 USD, sin tocar la topología de regulación. Se alimentan del
 +5 V de `U3`, que es lineal y está en GNDA — el dominio correcto para medir los
 rieles analógicos (§3.1).
 
-### 4.2 El riel negativo es el único punto difícil
+Dos correcciones que salieron al escribir el `bom.csv` y que la primera versión
+de esta tabla tenía mal:
 
-Un INA226 mide un shunt referido cerca de su propia alimentación. En −12 V no
-se enchufa y ya: obligaría a un segundo dominio aislado, con su propio ISO1541,
-por una medida que casi no se usa.
+- **El TMP1075 se queda en 0x48 y el ADS1115 se mueve a 0x49**, no al revés. Con
+  `ADDR` a GND el ADS1115 también responde en 0x48 y **chocaba con el sensor**.
+  Se mueve el ADC porque el sensor en 0x48 conserva exactamente los straps del
+  `U13` del módulo 3, y con ellos el driver ya escrito.
+- **El +5 V que se mide es el de `U3`, no el de la SMPS.** El árbitro de LEDs del
+  #104 vive en el +5 V digital, y ese riel **no pasa por esta placa**: la
+  IRM-15-5 se monta fuera y su salida va directa al lado digital (spec v2 §7).
+  Medir sus 2.80 A es trabajo del módulo 2, no de aquí.
+
+### 4.2 El riel negativo: no es que sea difícil, es que no se puede
+
+Un INA226 mide un shunt referido cerca de su propia alimentación, y el datasheet
+pone el número: **modo común de entrada de −0.3 V a 40 V** (TI SBOS547C, p.4,
+tabla 5.1). Un shunt en el riel de −12 V lo pone a −12 V de modo común, o sea
+**40 veces fuera de su mínimo garantizado**. No es una incomodidad de diseño: es
+un máximo absoluto.
 
 **Así que el riel negativo lleva solo tensión**, por divisor a referencia
-positiva leído por el ADS1115. La decisión es deliberada y su razón es de valor,
-no de dificultad: de las cuatro medidas, la corriente del riel negativo es la
-menos útil — el autoafinado quiere *tensión*, el árbitro del #104 vive en el
-+5 V, y los PTC de la bus board son por módulo, no por riel.
+positiva leído por el ADS1115. Y la decisión sobrevive por valor además de por
+física: de las cuatro medidas, la corriente del riel negativo es la menos útil
+—el autoafinado quiere *tensión*, el árbitro del #104 vive en el +5 V, y los PTC
+de la bus board son por módulo, no por riel.
 
-Queda **huella de shunt en −12 V poblada con 0 Ω**. Si el bring-up pide esa
-corriente, se cambia la resistencia y se resuelve entonces — no se diseña hoy
-por si acaso (Global Constraint de la v4).
+> **Cambio respecto del plan: NO va huella de shunt de 0 Ω en −12 V.**
+>
+> El plan la dejaba «por si el bring-up pide esa corriente». Con el número del
+> datasheet delante, esa huella no habilita nada: para medirla haría falta un
+> segundo dominio aislado entero, con su propia alimentación y su propio
+> aislador. Eso es un diseño, no una resistencia. Y mientras tanto sería una
+> junta de soldadura más en serie con un riel de potencia, comprada a cambio de
+> nada.
+>
+> El constraint de «lo que no se decide sale con huella y DNP» es para lo que
+> queda **abierto**. Esto no quedó abierto: lo cerró un máximo absoluto.
 
 ### 4.3 El cruce de masas: aislado
 
@@ -249,8 +315,75 @@ dominios comparten transformador, pero el riesgo es que el reloj del I²C se
 acople al riel justo donde el LT3045 estaba comprando microvoltios. En una
 fuente cuya razón de existir es el ruido, esa apuesta no se hace por 3 USD.
 
+Los dos lados van a tensiones distintas —**lado 1 a 3.3 V** (el dominio del
+RP2350), **lado 2 a 5.0 V** (el analógico)— y eso no es un apaño: el chip admite
+3.0 a 5.5 V por lado, independientes (TI SLLSEB6F, p.1). El plano de masa no
+cruza la barrera.
+
+Los pull-ups del lado GNDA van en esta placa (`R27`/`R28`, 2.2 k). Los del lado
+GNDD **van con huella y DNP** (`R29`/`R30`): el módulo 2 todavía no está
+diseñado (#111) y no se sabe si los lleva. Son **mutuamente excluyentes** —
+poblar las dos parejas da 1.1 k en paralelo, 3 mA, y el lado 1 solo sumidera
+3.5 mA especificados.
+
+**El conector de ese bus, `J8`, es JST-PH de 2.00 mm a propósito.** `J2` (el bus
+de ±12 V) y `J6` (+5 V) son KK-254 de 2.54 mm: con este paso, el cable del I²C
+**no cabe** en ninguno de los dos. Un cable de I²C enchufado en el bus de ±12 V
+mata el RP2350 y los cuatro chips de la isla a la vez, y la única protección que
+de verdad funciona contra eso es geométrica.
+
 El bus entra al mux I²C que `architecture-poly.md` §8 ya tiene previsto por las
-EEPROM de identidad, que responden todas en 0x50. La fuente toma un canal.
+EEPROM de identidad, que responden todas en 0x50. La fuente toma un canal, y
+dentro de ese canal 0x40, 0x41, 0x48 y 0x49 no chocan ni entre sí ni con 0x50.
+
+### 4.4 Los divisores: dos valores, tres canales, un solo número
+
+Los tres canales del ADS1115 usan **las mismas dos resistencias al 0.1 %**:
+100 k y 20 k. Con eso la atenuación es **1/6 exacta**, igual en los tres, y el
+firmware queda con una sola pendiente:
+
+```
+canal positivo   tap = VRAW+ / 6                     (referencia = GNDA)
+canales negativos tap = V5 x 5/6  +  V_riel / 6      (referencia = +5 V)
+```
+
+El offset de los canales negativos es `V5 x 5/6`, y **`V5` es justo lo que mide
+`U9`**. La lectura de −12 V se autocalibra contra el mismo riel del que cuelga
+su divisor: eso es lo que compra el INA226 del +5 V, más que su corriente.
+
+**El 1/6 no es un número redondo por gusto.** Es el que hace que el pin del ADC
+llegue a 0.000 V exactamente cuando VRAW− llega a −25 V, o sea a la tensión
+nominal de los propios condensadores de bulk:
+
+| Riel | Pin del ADC |
+|---|---|
+| VRAW+ a +20.54 V (peor caso publicado) | +3.423 V |
+| VRAW+ al límite de 25 V del bulk | +4.167 V |
+| −12 V nominal | +2.167 V |
+| −12.9 V (post-regulador en corto) | +2.017 V |
+| VRAW− a −20.54 V | +0.743 V |
+| VRAW− al límite de 25 V del bulk | **0.000 V** |
+
+**La cadena de medida no falla antes que la pieza que mide.** La ventana del
+chip es GND−0.3 V a VDD+0.3 V (TI SBAS444E, p.4), y ningún estado físicamente
+alcanzable de esta fuente la saca de ahí.
+
+Dos cosas más que van con esto:
+
+- **Invariante de montaje, y va en la seda de la placa:** el 100 k mira siempre
+  al riel medido, el 20 k siempre a la referencia. Cambiarlos de sitio deja de
+  atenuar y mete el riel entero en un pin de 5.3 V de máximo absoluto. Es el
+  único error de esta isla que la puerta ejecutable **no puede ver**.
+- **Dos clamps Schottky** (`D14`, `D15`) en los taps negativos. No están por
+  supervivencia —los 100 k limitan a 126 µA, 79 veces por debajo del límite de
+  10 mA que TI publica para eso mismo (§9.1.3)— sino por esto, textual del
+  §7.3.1: *sobreexcitar una entrada del ADS1115 altera las conversiones de las
+  otras*. Sin diodo, un fallo del +5 V le quita la razón a las tres medidas a la
+  vez, justo cuando hacen falta para diagnosticarlo.
+
+Toda esta aritmética vive como puerta ejecutable en
+`hardware/01-power-supply/v3/check_telemetria.py`, con la cita de página al lado
+de cada límite.
 
 ## 5. Lo que compra
 
@@ -259,9 +392,13 @@ Esto no es «ahora hay datos». Son cuatro cosas medibles:
 1. **El autoafinado puede ATRIBUIR la deriva.** Hoy mide frecuencia y corrige.
    Con la tensión del riel distingue *«derivó el oscilador»* de *«se hundió la
    fuente»*, y solo quema calibración en el primero.
-2. **El #104 deja de ser a ciegas.** Ese árbitro de corriente de los LED se
-   escribió con un mecanismo de estimar-antes-de-encender porque no había forma
-   de medir. Con un INA en el +5 V, se mide: el diseño se **simplifica**.
+2. **El #104 deja de ser a ciegas — pero no desde aquí.** Ese árbitro de
+   corriente de los LED se escribió estimando-antes-de-encender porque no había
+   forma de medir. La medida existe ahora, y va en el módulo 2: el +5 V digital
+   **no pasa por esta placa** (§4.1). Lo que sí llega desde aquí es su
+   *consecuencia* — el `TMP1075` mide el aire que calientan los 4.23 W que
+   pierde la SMPS al tope de 2.80 A, así que ese tope deja de ser una fila de
+   tabla y pasa a ser algo que la caja reporta.
 3. **Los 12 PTC de la bus board dejan de ser invisibles.** Hoy un módulo que se
    acerca a sus 250 mA de hold no avisa; se entera cuando dispara.
 4. **El farol (#42) puede mostrar salud, no solo color.** Que es la versión
@@ -278,14 +415,29 @@ Esto no es «ahora hay datos». Son cuatro cosas medibles:
   eslabón débil de la cadena y el único candidato a placa extensora de aluminio.
 - **El espesor de chapa.** 1.5 mm es supuesto; lo decide el taller de doblado
   junto con los radios de plegado.
-- **La protección de sobretensión está en revisión** (#114): §16.8 de
-  `design-notes.md` razona contra el AS3340 y el instrumento lleva SSI2130.
-  No afecta a la térmica ni a la geometría de aquí, pero sí a qué va dentro
-  de esta caja.
-- **La curva de derating de la IRM-15-5.** Su rango es −30 a +85 °C «refer to Derating Curve», y esa curva no se ha leído. Al tope del #104 la SMPS entrega el **100 % de sus 15 W** dentro de un recinto cerrado: hay que confirmar dónde está el codo antes de dar por bueno ese tope.
-- **Si TR1 trae fusible térmico embebido** — ya pedido como ítem de compra en
-  el BOM v2. Dentro de un recinto cerrado esa segunda línea de protección pesa
-  más que antes.
+- ~~**La protección de sobretensión está en revisión** (#114)~~ — **cerrado el
+  2026-08-18.** §16.8 se reescribió contra el BOM real y salieron dos cosas: la
+  cascada de dos etapas de la v2 ya protege sola (ningún fallo simple pone más
+  de ±13.1 V en el bus, y los LT3045/LT3094 aguantan VRAW con 1.46 V de margen),
+  y el lazo del crowbar **no cerraba con ningún SCR** porque `F1` a 1.6 A no
+  está obligado a abrir a los 2.79 A que refleja el fallo. **La v3 no lleva
+  crowbar en ningún riel** (#118). Lo que sí queda dentro de esta caja por eso:
+  el requisito de fusible térmico en TR1.
+- ~~**La curva de derating de la IRM-15-5**~~ — **leída el 2026-08-19** (Mean
+  Well `IRM-15-SPEC`, 2025-11-21, p.3). El codo está en **+50 °C** y la caja al
+  tope viejo quedaba en 52.7 °C: el tope del #104 baja a **2.50 A**. Ver §3.1.
+  Lo que queda sin confirmar de ahí es solo la **pendiente** después del codo, y
+  la decisión no depende de ella.
+- ~~**Si TR1 trae fusible térmico embebido**~~ — dejó de ser una duda: en el
+  `bom.csv` de la v3 es **criterio de aceptación**. Un TR1 sin él no se compra.
+  Los 642 W de cualquier corto del secundario son la cuenta que ni `F1` ni un
+  crowbar cubren (#118), y esto pasa dentro de un recinto cerrado.
+- **El +5 V de la isla cuelga de un solo 7805.** `U3` en corto pone los 20.54 V
+  de VRAW+ en un nodo del que dependen cinco chips de 6 V de máximo absoluto
+  **y** el módulo 2 por `J6`. El riesgo ya existía para el módulo 2; la
+  telemetría le pone más detrás. Y no se arregla con un clamp: un clamp sin nada
+  que abra el circuito es exactamente el error del crowbar otra vez. Queda
+  abierto a propósito, no resuelto a medias.
 
 ## 7. Verificación
 
@@ -294,7 +446,8 @@ Esto no es «ahora hay datos». Son cuatro cosas medibles:
 | La caja no se calienta | Termopar en la pared tras 2 h, **con los LED al tope del #104** (que es quien manda la pérdida de la SMPS). Se esperan < 10 °C sobre ambiente | §3.1 |
 | Ningún tab toca el chasis | Ohmímetro entre cada tab y el chasis, con la placa desconectada. Se espera circuito abierto | §3.2 |
 | El PE llega a todo metal accesible | Ohmímetro entre la clavija de tierra y el chasis. Se esperan miliohmios (§13.4) | #107, #47 |
-| La telemetría concuerda | Comparar la lectura de cada INA contra el multímetro en los test points TP1-TP6 | §4 |
+| La telemetría concuerda | Comparar la lectura de cada INA contra el multímetro en TP1-TP6 | §4 |
+| **Los divisores atenúan lo que dicen** | Multímetro en TP9-TP11 (los taps) contra TP1/TP2/TP4 (los rieles): se espera 1/6 dentro del 0.2 %. Con las tres medidas —riel, tap y código I²C— se sabe **cuál** eslabón está mal; con dos solo que algo no cuadra | §4.4 |
 | El aislamiento sirve | Medir ruido de salida con el LNA (#58) con el I²C corriendo y en silencio | §4.3 |
 | El valle es el simulado | Leer VRAW con la telemetría a carga real y comparar contra los 14.12 V de §16.5 | §16.5 |
 
