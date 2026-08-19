@@ -364,6 +364,149 @@ ANCHO_KELVIN = 1.5   # OUTS->J2 y ballast->J2 de +12V/-12V (brief, >=1.5mm)
 # saltos cortos dentro de la isla, GNDREF sin pistas propias porque lo resuelve
 # la zona) se hereda tal cual y se reescribe contra estas coordenadas.
 # ============================================================================
+# ============================================================================
+# TASK 7 — ruteo.
+# ============================================================================
+# LA DIFERENCIA CON LA v2, y no es de estilo: alli TRACKS era una lista de
+# ~1000 coordenadas literales escritas a mano. Funciona, y tiene un modo de
+# fallo desagradable -- mover una pieza un milimetro no rompe nada VISIBLE:
+# las pistas se quedan donde estaban, apuntando a donde el pad ESTABA. El DRC
+# lo veria, pero solo si alguien lo corre, y la relacion entre el numero
+# "92.0" de una pista y el pad al que pretendia llegar no esta escrita en
+# ningun sitio.
+#
+# Aqui las pistas se CALCULAN de las posiciones reales de los pads, ya
+# colocados, leyendolas de la placa. Una ruta dice "de U4 pin 1 a C19 pin 1",
+# no "de (92.0, 168.0) a (92.0, 192.0)". Si la pieza se mueve, la pista se
+# mueve con ella; si el pin no existe, revienta al generar y no al fabricar.
+#
+# Lo que NO cambia respecto de la v2, porque es diseno y no herramienta:
+#
+#   * GND es un ARBOL, no una malla ni un plano. Un plano de masa es la
+#     respuesta correcta en casi cualquier placa digital y la equivocada aqui:
+#     crea lazos, y un lazo alrededor del puente rectificador es una espira de
+#     100 Hz acoplada a todo lo demas. revisar_estrella() lo comprueba.
+#   * El tronco de GND vive entero en B.Cu, y los pads escapan con una via
+#     corta nada mas salir. F.Cu se reserva para las señales y la potencia.
+#   * El Kelvin de OUTS (+12V/-12V) sale del pin por una via inmediata y viaja
+#     por B.Cu sin tocar la pista de potencia del ballast, hasta soldarse solo
+#     en el pad de J2.
+#   * SET va corta y fina. ILIM tambien.
+#   * El cobre de red va ancho y con 2.5 mm de aire a cualquier otra cosa.
+
+
+def pad_xy(board, ref: str, pin: str) -> tuple[float, float]:
+    """Centro de un pad, en mm, leido de la placa ya colocada."""
+    fp = board.FindFootprintByReference(ref)
+    assert fp, f"no existe {ref} en la placa"
+    for p in fp.Pads():
+        if p.GetNumber() == pin:
+            c = p.GetPosition()
+            return (c.x / 1e6, c.y / 1e6)
+    raise AssertionError(f"{ref} no tiene pin {pin}")
+
+
+def pad_red(board, ref: str, pin: str) -> str:
+    fp = board.FindFootprintByReference(ref)
+    for p in fp.Pads():
+        if p.GetNumber() == pin:
+            return p.GetNetname()
+    raise AssertionError(f"{ref}.{pin} no existe")
+
+
+class Ruteo:
+    """Acumula tramos y vias, y se asegura de que cada tramo diga su red.
+
+    La red NO se pasa a mano: se lee del primer pad del tramo. Asi una pista
+    no puede declarar una red y salir de otra, que es el error que ni el DRC
+    ni revisar_pistas() cazan bien -- los dos comprueban geometria, no
+    intencion.
+    """
+
+    def __init__(self, board):
+        self.board = board
+        self.tracks: list = []
+        self.vias: list = []
+
+    def _pt(self, p):
+        """(ref, pin) -> (x, y); (x, y) se deja tal cual."""
+        return pad_xy(self.board, *p) if isinstance(p[0], str) else p
+
+    def pista(self, capa, puntos, ancho, red=None):
+        """Un tramo. `puntos` mezcla (ref, pin) y (x, y) libremente."""
+        pts = [self._pt(p) for p in puntos]
+        # La red se declara como (ref, pin), NUNCA como cadena: el nombre que
+        # usa KiCad depende de si la red nace de una etiqueta local ("/L_F") o
+        # de un simbolo de alimentacion ("PE"), y escribirlo a mano es apostar
+        # a cual de las dos. Un pad no se equivoca.
+        if isinstance(red, tuple):
+            red = pad_red(self.board, *red)
+        if red is None:
+            anc = next((p for p in puntos if isinstance(p[0], str)), None)
+            assert anc, "una pista sin ningun pad tiene que declarar su red"
+            red = pad_red(self.board, *anc)
+        self.tracks.append((red, capa, pts, ancho))
+        return self
+
+    def via(self, p, red=None, ancho=0.6, taladro=0.3):
+        x, y = self._pt(p)
+        if red is None:
+            assert isinstance(p[0], str), "una via suelta tiene que decir su red"
+            red = pad_red(self.board, *p)
+        self.vias.append((x, y, red, ancho, taladro))
+        return self
+
+    def salto(self, capa, a, b, ancho, eje="x", red=None):
+        """Ruta en L entre dos puntos. `eje` = el tramo que va primero."""
+        xa, ya = self._pt(a)
+        xb, yb = self._pt(b)
+        codo = (xb, ya) if eje == "x" else (xa, yb)
+        return self.pista(capa, [a, codo, b], ancho, red)
+
+    def cadena(self, capa, puntos, ancho, red=None):
+        """Une una lista de pads en cadena, cada uno con el siguiente."""
+        for a, b in zip(puntos, puntos[1:]):
+            self.pista(capa, [a, b], ancho, red)
+        return self
+
+    def bajar(self, p, ancho_via=0.6):
+        """Saca un pad de F.Cu a B.Cu con una via en el sitio."""
+        return self.via(p, ancho=ancho_via)
+
+
+def rutear(board) -> Ruteo:
+    """Todas las pistas de la placa. VACIA todavia -- ver la nota de arriba.
+
+    El primer intento esta medido y descartado, y el numero es el argumento:
+    ruteando en L sobre F.Cu, con corredores elegidos a ojo, TRES de los diez
+    grupos (red, lazo de rectificacion y los dos rieles del pre-regulador,
+    77 tramos) dieron **54 cruces y 28 pistas sobre pads ajenos**. No es que
+    estuviera mal escrito: es que en dos capas no cabe una topologia plana.
+
+    Lo que hace falta antes de escribir una sola pista mas es una DISCIPLINA
+    DE CAPA declarada, y es una decision de diseno, no de herramienta:
+
+      * F.Cu horizontal / B.Cu vertical, con via en cada codo. Los cruces se
+        vuelven imposibles por construccion y el precio son cientos de vias.
+      * o el reparto de la v2 -- potencia en F.Cu, arbol de GND entero en
+        B.Cu -- que funciona porque GND es la mitad de la placa (68 de 306
+        pads) y quitarla de F.Cu deja sitio al resto.
+
+    La segunda es la que la v2 uso y la que este diseno pide, pero necesita
+    ademas un reparto de CORREDORES: una coordenada horizontal reservada por
+    riel, para que dos pistas de F.Cu no compartan la misma y. Eso es lo que
+    hay que escribir, y es un trabajo con su propia ronda, no un apendice de
+    la colocacion.
+
+    Mientras tanto esta funcion devuelve vacio, y eso es HONESTO en el sentido
+    del Principio V: revisar_pistas(), revisar_estrella() y revisar_pista_pad()
+    dan [] trivialmente y lo dicen, la placa no tiene rutas, y nadie puede
+    confundir el verde de las puertas de colocacion con una placa terminada.
+    La v2 hizo exactamente esto entre sus Tareas 7 y 8.
+    """
+    return Ruteo(board)
+
+
 TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = []
 
 # Vias con tamano propio: (x, y, net, ancho_mm, taladro_mm). La granja
@@ -1096,7 +1239,11 @@ def main() -> None:
         texto_silk(board, texto, x, y, tam, rot)
     print(f"textos de serigrafia libres añadidos: {len(TEXTOS_SILK)}")
 
-    # --- pistas (vacio en esta fase, ver TRACKS mas arriba) ---
+    # --- ruteo: se CALCULA de los pads ya colocados (ver rutear()) ---
+    global TRACKS, VIAS
+    _r = rutear(board)
+    TRACKS, VIAS = _r.tracks, _r.vias
+
     capas = {"F.Cu": pcbnew.F_Cu, "B.Cu": pcbnew.B_Cu}
     n_seg = 0
     for net, capa, pts, ancho in TRACKS:
