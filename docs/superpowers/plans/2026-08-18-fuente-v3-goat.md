@@ -103,7 +103,36 @@ git commit -m "El censo de maximos absolutos deja de ser un parrafo y pasa a ser
 >
 > La Fase A pasa de tres tareas a dos.
 
-### Task 3: La telemetría — el contrato en `bom.csv`
+### Task 3: La telemetría — el contrato en `bom.csv` — ✅ HECHA
+
+> **CERRADA EL 2026-08-19.** Salieron `v3/bom.csv` (79 filas, la v2 entera menos
+> el crowbar y los disipadores, más 16 filas de isla) y `v3/check_telemetria.py`,
+> en verde. Cuatro cosas se decidieron **contra** lo que decía esta tarea, y las
+> cuatro las decidió un datasheet:
+>
+> 1. **Choque de direcciones en la propia tabla del Step 2.** Ponía el ADS1115 en
+>    0x48 y el TMP1075 sin dirección, y el TMP1075 responde en 0x48. Se mueve el
+>    **ADC a 0x49** y no el sensor, porque el sensor en 0x48 conserva los straps
+>    exactos del módulo 3 y con ellos su driver.
+> 2. **NO va la huella de shunt de 0 Ω en −12 V.** El modo común de entrada del
+>    INA226 tiene mínimo garantizado **−0.3 V** (TI SBOS547C p.4): ninguna huella
+>    habilita esa medida, haría falta un dominio aislado entero. El constraint de
+>    «huella y DNP» es para lo que queda abierto, y esto lo cerró un máximo
+>    absoluto.
+> 3. **El +5 V que se mide es el de `U3`, no el de la SMPS.** El riel del árbitro
+>    del #104 no pasa por esta placa (la IRM-15-5 se monta fuera, spec v2 §7).
+>    Medir sus 2.80 A es del módulo 2. Lo que gana `U9` a cambio es mejor: su
+>    tensión es la **referencia** de los divisores negativos, así que la lectura
+>    de −12 V se autocalibra.
+> 4. **Los designadores son secuenciales** (`R19`…`R30`, `C29`…`C35`, `D14`,
+>    `D15`, `J8`, `TP9`–`TP11`), no `R_SH1`–`R_SH3`: el `check_bom.py` de la v2
+>    solo reconoce instancias `[A-Z]+\d+`, así que un `R_SH1` habría quedado en
+>    rojo permanente contra el esquemático.
+>
+> Y el Step 4 dio una decisión, no una confirmación: **el codo de la IRM-15-5
+> está en +50 °C y la caja al tope viejo queda en 52.7 °C**, así que el tope del
+> #104 **baja de 2.80 A a 2.50 A**. Cuenta completa en el spec §3.1.
+
 
 **Files:**
 - Create: `hardware/01-power-supply/v3/bom.csv`
@@ -197,15 +226,18 @@ con una descripción de la arquitectura (que es la misma). Cuatro filas:
 
 - [ ] **Step 3: Commit**
 
-### Task 5: Esquemático — crowbar negativo e isla de telemetría
+### Task 5: Esquemático — quitar el crowbar y meter la isla
 
 - [ ] **Step 1: Escribir el test de paridad BOM ↔ hoja**
 
 El `check_bom.py` de la v2 ya cruza `bom.csv` contra el esquemático. Correrlo
-contra el `bom.csv` de la Task 3 **falla**, nombrando U8–U12 y R_SH1–3. Ese es
-el rojo.
+contra el `bom.csv` de la Task 3 **falla** por los dos lados: nombra `U8`–`U12`,
+`R19`–`R30`, `C29`–`C35`, `D14`, `D15`, `J8` y `TP9`–`TP11` como «en el BOM y no
+en el esquemático», y `D7`, `Q1`, `C14` y `R4` como «en el esquemático y no en el
+BOM». Ese es el rojo, y tiene las dos mitades del trabajo dentro.
 
-- [ ] **Step 2: Añadir el crowbar de −12 V** con la referencia de gate de la Task 2
+- [ ] **Step 2: Borrar el crowbar de la hoja copiada** — `D7`, `Q1`, `C14`, `R4`
+  (issue #118). La primera mitad del rojo se apaga aquí.
 
 - [ ] **Step 3: Añadir la isla de telemetría**
 
@@ -216,9 +248,13 @@ Reglas que no son opcionales:
   cobre de alimentación mide el cobre, no el shunt.
 - El `ISO1541` parte el mundo: **U8–U11 en GNDA, el bus de salida en GNDD.** El
   plano no cruza la barrera.
-- Divisores del ADS1115 al **0.1 %**, y su referencia positiva **no** es el
-  +12 V del instrumento: es el +5 V local, para que un fallo del riel medido no
-  se lleve el medidor.
+- Divisores del ADS1115 al **0.1 %**, 100 k al riel y 20 k a la referencia,
+  **siempre en ese sentido** — y la referencia positiva no es el +12 V del
+  instrumento sino el +5 V local. El invariante va en la **seda de la placa**:
+  es el único error de esta isla que la puerta ejecutable no puede ver.
+- Los dos `BAT54` van **en el tap**, no en el pin del ADC: sujetan el nodo que
+  comparten los tres canales.
+- `AIN3` a GNDA, sin puente ni huella (TI SBAS444E §9.1.4).
 
 - [ ] **Step 4: `check_bom.py` en verde + ERC limpio**
 
