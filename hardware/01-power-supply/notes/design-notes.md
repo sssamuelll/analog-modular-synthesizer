@@ -859,6 +859,20 @@ corriente circula en picos de 2-3× la continua, así que manda la resistencia d
 devanado, no la tensión nominal. Queda además al 34 % de su capacidad, así que
 va frío.
 
+> **Confirmado con la hoja del fabricante el 2026-08-19.** Los 0.28 Ω de esta
+> tabla salían de la regulación publicada. La hoja completa de Nuvotem para el
+> `0120P1-2-012` cierra el círculo: **13.42 V en vacío, 12 V a 5 A** → resistencia
+> efectiva por semidevanado **(13.42 − 12) / 5 = 0.284 Ω**. Clavado.
+>
+> Y añade un dato que no estaba: la resistencia **óhmica** es **0.1336 Ω**, o sea
+> **el 47 % de esos 0.284**. El otro 53 % es reactancia de dispersión y núcleo.
+>
+> Eso importa en §16.8, y en la dirección tranquilizadora. El cortocircuito de
+> ahí se calcula con la efectiva (13.42 / 0.284 = **47.3 A**, contra los 47.9 que
+> dice), no con la óhmica — que daría 100 A pero ignorando la dispersión, que en
+> un corto sigue estando. **Los 47.9 A y el requisito de fusible térmico se
+> quedan como están.**
+
 Talema es el único de los fabricantes mirados que **publica la tensión en
 vacío**, que es exactamente el dato que decide esto. Sin él no se puede calcular
 el valle. Si se compra otro, **hay que medir el vacío con el multímetro antes de
