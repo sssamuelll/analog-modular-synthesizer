@@ -117,6 +117,11 @@ nt.links.new(mezcla.outputs["Shader"], nt.nodes["World Output"].inputs["Surface"
 esc.world = mundo
 
 # --- bbox real de las 2 mallas (Ruling B) --------------------------------
+# El chasis de acero del PSU (#107) NO se importa aqui, y se probo: se rendeo
+# con el dentro y no se ve en ninguna de las dos vistas -- vive en el piso
+# inferior, detras de los paneles y de la piel. Meterlo costaba minutos de
+# Cycles y 3,8 MB de diff en dos PNG que salian identicos. Para verlo estan
+# las vistas de OpenSCAD (build/vista_chasis_*.png) y el plano de plegado.
 # Ejes del ensamblado (sam17_case.scad/costado(): perfil en XY con
 # linear_extrude sobre Z): X = profundidad, Y = altura (arriba),
 # Z = ancho. Confirmado con el bbox real: X en [-10, 360], Y en [-5, 396],
