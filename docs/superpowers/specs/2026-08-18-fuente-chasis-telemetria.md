@@ -39,7 +39,7 @@ Se gasta en esto.
 | Material del chasis | **Acero**, no aluminio | El aluminio es casi transparente al campo magnético de 50/100 Hz; el ferromagnético no. Decidido en #107 |
 | Alcance del recinto | **Toda la fuente adentro**: toroide + PCB completa + entrada IEC | La red no sale nunca del recinto. Es lo que hacen las fuentes profesionales y es lo que da la regla del §3.2 |
 | Disipación | **Contra la pared del chasis**, sin disipadores discretos | Con 3.0 W de regulación el chasis sobra, y se ganan ~39 °C de unión |
-| Ventilación del recinto | **Ninguna. Va cerrado** | §3.1: 6.6 °C de subida en el peor caso. Una rejilla solo dejaría entrar polvo |
+| Ventilación del recinto | **Ninguna. Va cerrado** | §3.1: 6.8 °C de subida en el peor caso. Una rejilla solo dejaría entrar polvo |
 | Telemetría | **INA226 ×2 + ADS1115 + TMP1075**, I²C | Corriente solo donde vale: §4.2. El ADS1115 entra por los dos VRAW, que es el número que nunca se ha medido. El TMP1075 ya se usa en el módulo 3 |
 | Cruce de masas | **Aislado, ISO1541** | En una fuente cuyo objetivo entero es sub-µV, meterle un bus digital sin aislar deshace el diseño |
 
@@ -69,7 +69,7 @@ a 174 mA     VRAW ~ 19,24 V   -> caida de 1,30 V  (proporcional a la carga)
 | LT3094 ×2 | 0.58 W | 0.16 W | 0.16 W |
 | **`U3` (7805)** | — | **faltaba** | **0.47 W** |
 | **Regulación** | **4.80 W** | ~~1.29 W~~ | **2.99 W** |
-| Núcleo del toroide | ~2 W | | ~2 W (no escala con carga) |
+| Núcleo del toroide | ~2 W | | **~1.6 W**, y ahora con fuente |
 
 `U3` no estaba en las dos primeras versiones de esta tabla y es el que más
 depende de una decisión, no de un cálculo: §16.12 acota su riel a **300 mA como
@@ -101,14 +101,14 @@ LED**, que están fuera de la caja pero cuelgan de ella.
 | Estado | Salida | Pérdida IRM-15-5 | Total dentro | ΔT |
 |---|---|---|---|---|
 | LED apagados | 1.00 W | 0.28 W | **5.27 W** | **4.5 °C** |
-| LED al tope del #104 (2.80 A) | 15.00 W | 4.23 W | **9.22 W** | **6.6 °C** |
+| LED al tope del #104 (2.80 A) | 15.00 W | 4.23 W | **9.22 W** | **6.8 °C** |
 
 Superficie del recinto propuesto (§3.3), **descontando la cara inferior**
 porque apoya contra la bandeja y no convecta:
 
 ```
-2(0.354 x 0.085) + 2(0.180 x 0.085) + 1(0.354 x 0.180)  =  0.1545 m2
-dT = 9.22 W / (0.1545 m2 x 9 W/m2K)                     =  6.6 C   (peor caso)
+2(0.342 x 0.085) + 2(0.180 x 0.085) + 1(0.342 x 0.180)  =  0.1503 m2
+dT = 9.22 W / (0.1503 m2 x 9 W/m2K)                     =  6.8 C   (peor caso)
 ```
 
 **El presupuesto de brillo del #104 es también el termostato de esta caja.**
@@ -126,14 +126,23 @@ apagados» es optimista. No cambia nada: el peor caso ya está calculado arriba.
 
 El coeficiente de 9 W/m²K es el valor de manual para convección natural en aire
 quieto sobre superficie pintada. **Es una estimación, no una medida** — pero
-con 6.6 °C de resultado en el peor caso, tendría que estar equivocado por un
+con 6.8 °C de resultado en el peor caso, tendría que estar equivocado por un
 factor de cuatro para que importe.
 
 > **Corregido el 2026-08-19.** Esta cuenta daba 7.9 °C sobre un recinto de
-> 310 × 160 × 85. El toroide real es más grande de lo que decía `params.scad`
-> (§3.3) y obligó a crecer la caja a 354 × 180 × 85: **+19 % de superficie**, y
-> la subida baja a 6.6 °C. Es de las pocas veces que un dato peor de lo esperado
-> mejora el resultado — la caja crece por geometría y disipa por superficie.
+> 310 × 160 × 85, que era demasiado pequeño para meter el toroide al lado de la
+> PCB (§3.3). Con el recinto real, 342 × 180 × 85, son **+16 % de superficie** y
+> la subida baja a 6.8 °C. La caja crece por geometría y disipa por superficie.
+
+> **Los 2 W del toroide también tenían fuente ahora.** La hoja de Nuvotem da
+> **0,73 W de pérdidas en hierro** (fijas, no escalan con la carga) y **15,2 W en
+> cobre a plena carga**, o sea a 5 A por devanado. Al techo de diseño de la
+> fuente —650 mA por riel, ~1,17 A rms por devanado con el factor de forma de un
+> rectificador con filtro capacitivo— el cobre aporta 0,83 W: **1,56 W en total**,
+> no 2. Al censo real (174 mA/riel) son **0,79 W**.
+>
+> Se deja el 2 W redondo en la suma de 9,22 W: sigue siendo el techo conservador,
+> y ahora se sabe *cuánto* de conservador.
 
 Cadena térmica del componente más caliente, `U2` (LM2991, ~1.1 W al censo real).
 El chasis no se calienta solo por `U2`: lo calientan los 9.22 W de todo lo que
@@ -150,7 +159,7 @@ su propia potencia.
 
 ```
 Tj = ambiente  +  subida del chasis por los 9,22 W  +  P_U2 x R_union-chasis
-   = 45 C      +  6,6 C                             +  1,1 W x 8,5 K/W
+   = 45 C      +  6,8 C                             +  1,1 W x 8,5 K/W
    = 61 C
 ```
 
@@ -200,13 +209,13 @@ Dos cosas honestas sobre esto:
   demás de este diseño. Se decide por el peor caso publicado, que es la regla de
   §16.1.
 - **La tabla de arriba se queda con sus 9.22 W.** Con el tope nuevo el número
-  real es 8.52 W y 6.1 °C, pero bajarlo sería cambiar un techo por otro más
+  real es 8.52 W y 6.3 °C, pero bajarlo sería cambiar un techo por otro más
   apretado. Se deja el conservador: ahora es un techo con margen en lugar de un
   techo justo.
 - **La caja creció después de esta cuenta, y el veredicto no se movió.** Con el
-  recinto real (§3.3, +19 % de superficie) el interior al tope viejo queda en
-  51.4 °C en vez de 52.7, y el margen a 2.80 A pasa de −0.06…+0.43 W a
-  +0.43…+0.69 W, o sea **3.1 % a 5.0 %**. Sigue siendo un margen de un dígito
+  recinto real (§3.3, +16 % de superficie) el interior al tope viejo queda en
+  51.6 °C en vez de 52.7, y el margen a 2.80 A pasa de −0.06…+0.43 W a
+  +0.36…+0.66 W, o sea **2.6 % a 4.7 %**, contra el **16 %** que da 2.50 A. Sigue siendo un margen de un dígito
   sobre un coeficiente estimado y un ambiente supuesto, contra el **16 %** que da
   2.50 A. El tope se queda en 2.50 A.
 
@@ -236,25 +245,33 @@ Contenido y hueco disponible, medidos:
 
 ```
 PCB de la fuente        150 x 200 mm     (Edge.Cuts de sam17-power-v2)
-toroide                 O105 x 52,1 mm   1,33 kg -- catalogo del MPN REAL
+toroide                 O93 x 46 mm      1,20 kg -- hoja del FABRICANTE
 bandeja base            528,32 x 223,26 mm
 alto interior inferior  125,13 mm
 ```
 
-> **El toroide medía otra cosa.** `params.scad` decía `alto_transformador = 45`
-> —cifra heredada sin fuente, ya marcada como no confirmada en #46— y el diámetro
-> no estaba en ninguna parte. El catálogo del MPN que sí está en el `bom.csv`
-> (**Nuvotem Talema 0120P1-2-012**, 120 VA, 2×12 V, 5 A) da **Ø105 × 52,1 mm y
-> 1,33 kg**: **7,1 mm más alto**, un 16 %.
+> **El toroide se corrigió dos veces el mismo día, y la segunda deshizo la
+> primera.** Vale la pena dejarlo escrito, porque la moraleja pesa más que el
+> número.
 >
-> Y hay que sumarle **4 mm al diámetro**: la hoja de Nuvotem de esta familia
-> avisa de que la cota se mide *«away from leadout bulge; allow extra 4mm at
-> leads»*. El envolvente real de diseño son **Ø109**.
+> | | fuente | Ø | alto | peso |
+> |---|---|---|---|---|
+> | `params.scad` original | *ninguna*, heredado (#46) | — | 45 mm | — |
+> | «corrección» | dos listados **RS** del MPN | 105 mm | 52,1 mm | 1,33 kg |
+> | **buena** | **hoja Nuvotem `RS0120P1-2-012`** | **93 mm** | **46 mm** | **1,20 kg** |
 >
-> Sigue siendo catálogo de distribuidor, no la hoja del fabricante del modelo, y
-> sigue habiendo que **medir la pieza al recibirla**. Lo que cambia es que ahora
-> la cifra tiene procedencia. El peso, de paso, cierra la estimación de masa
-> del #106.
+> Los 45 originales estaban **a 1 mm de la verdad**. La corrección intermedia se
+> fue 6 mm en el otro sentido, apoyada en dos fuentes coincidentes que eran las
+> dos secundarias. **La regla de §16.1 —fuente primaria, no agregador— no es solo
+> para límites de seguridad**: aquí costó una geometría de chasis entera.
+>
+> El **+4 mm al diámetro sí se mantiene**, porque lo dice la propia hoja:
+> *«Measured away from leadout bulge; allow extra 4mm at leads»*. Envolvente de
+> diseño **Ø97**.
+>
+> Sigue habiendo que **medir la pieza al recibirla**. El peso, de paso, cierra la
+> estimación de masa del #106, y el kit de montaje resulta ser **perno M6×60 con
+> dos discos de neopreno y arandela cóncava** — dato que la Task 9 necesita.
 
 La PCB va con su **eje largo a lo ancho del case**: 200 mm de los 528
 disponibles, contra solo 150 de los 223 de fondo. Al revés no cabe — 200 mm de
@@ -266,15 +283,15 @@ más 109 de toroide son 309 antes de tocar una holgura, y los 150 de fondo eran
 exactamente el fondo de la PCB, o sea cero holgura contra las paredes.
 
 ```
-                 10 + 200 + 15 + 109 + 10
-interior   344 x 170 x 80 mm      pared, PCB, cableado, toroide, pared
-exterior   354 x 180 x 85 mm      chapa de 1.5 mm + pestanas
-sobra      174 mm de largo y 43 de fondo en la bandeja de 528,32 x 223,26
+                 10 + 200 + 15 + 97 + 10
+interior   332 x 170 x 80 mm      pared, PCB, cableado, toroide, pared
+exterior   342 x 180 x 85 mm      chapa de 1.5 mm + pestanas
+sobra      186 mm de largo y 43 de fondo en la bandeja de 528,32 x 223,26
            40 mm de alto sobre la caja, dentro de los 125,13 del piso
 ```
 
 **Crecer resultó ser buena noticia.** La superficie de convección sube de
-0,1295 a **0,1545 m²** (+19 %), así que la caja disipa mejor de lo que decía
+0,1295 a **0,1503 m²** (+16 %), así que la caja disipa mejor de lo que decía
 §3.1 — ver la corrección ahí mismo.
 
 El recorte de ventilación de **104 × 32 mm** que la bandeja ya lleva cortado
