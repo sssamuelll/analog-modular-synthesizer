@@ -342,7 +342,38 @@ puente→bulk, que es el peor radiador de la placa.
 
 ## FASE D — El chasis (rama `feat/psu-v3-chasis`, paralela desde la Fase A)
 
-### Task 8: Medir el toroide y decidir la pantalla
+### Task 8: Medir el toroide y decidir la pantalla — 🟡 A MEDIAS
+
+> **2026-08-19.** Los Steps 2 y 3 están hechos *con catálogo*, y el Step 1 está
+> analizado pero **no decidido**: depende de un pedido especial, y eso no lo
+> decide un análisis.
+>
+> **Step 2 no se pudo hacer como estaba escrito: no hay pieza que medir.** Nada
+> está comprado — ése era el punto de partida de todo el plan v3. Así que la
+> cifra sale del catálogo del MPN real del `bom.csv` (Nuvotem Talema
+> 0120P1-2-012): **Ø105 × 52,1 mm, 1,33 kg**, más 4 mm de holgura al diámetro por
+> el *leadout bulge* que avisa la hoja de la familia. Los 45 mm de alto que
+> llevaba `params.scad` eran **7,1 mm menos que la pieza**, sobre un parámetro
+> que #46 ya tenía marcado como sin confirmar. Medir la pieza real sigue
+> pendiente, ahora como criterio de recepción y no como incógnita.
+>
+> **El diámetro rompió la geometría provisional.** 200 mm de PCB + 109 de toroide
+> son 309 antes de tocar una holgura, contra los 300 de interior que daba la
+> spec. El recinto pasa a **344 × 170 × 80** interior. Y crecer salió a favor:
+> **+19 % de superficie**, la subida del recinto baja de 7,9 a **6,6 °C** y la Tj
+> de `U2` de 62 a 61 °C.
+>
+> **Y el techo del #104 se volvió a comprobar contra la caja nueva.** El margen a
+> 2,80 A pasa de −0,06…+0,43 W a +0,43…+0,69 W (3,1 % a 5,0 %). Sigue siendo de
+> un dígito contra el 16 % que da 2,50 A: **el tope se queda en 2,50 A.**
+>
+> **Step 1 — la pantalla: analizado, no decidido.** Sale `design-notes` §18.7,
+> que es la mitad de §18 que no existía: §18 entero mide acoplo *magnético* y
+> esto es *capacitivo*. Lo que decide no es la pantalla en sí sino el calendario
+> — va dentro del bobinado, o se pide así o no se pone nunca — y que en Talema no
+> es un sufijo sino un *special*. **Falta la decisión de Samuel** porque involucra
+> pedido especial, plazo y precio, no un cálculo.
+
 
 - [ ] **Step 1: Decidir toroide apantallado antes de comprar**
 

@@ -1360,6 +1360,102 @@ por qué no.
    dos domine dice cuál de los dos mecanismos manda, y hasta entonces esto es
    una predicción.
 
+### 18.7 La otra mitad: lo que no radia, conduce
+
+> **Añadido el 2026-08-19.** Todo lo anterior de §18 mide **acoplo magnético**:
+> lazos, áreas, dipolos, 1/r³. Está bien y está medido. Pero contesta una sola
+> de las dos preguntas, y la otra no existía cuando se escribió: la SMPS digital
+> entró en la v2 (§7 de su spec) y en la v3 se metió **dentro del mismo recinto
+> sellado**, compartiendo red con el toroide.
+
+#### El camino
+
+Una SMPS no ensucia solo por radiación. Inyecta **corriente de modo común** en
+la red —es lo que hace cualquier convertidor conmutado, por la capacidad de su
+propio transformador y por sus condensadores Y— y esa corriente viaja por L y N
+hasta el primario del toroide. De ahí al secundario **no hace falta acoplo
+magnético**: basta la **capacidad entre devanados** del propio toroide.
+
+```
+IRM-15-5  ->  red (L/N compartida)  ->  primario del toroide
+          ->  C_primario-secundario  ->  secundario  ->  puente  ->  masa analogica
+```
+
+Y aquí está lo que hace este camino distinto de todo lo demás de esta fuente:
+
+> **El PSRR no lo rechaza.** El LT3045 rechaza variaciones de su *alimentación*.
+> Esto no llega como una variación de alimentación: llega como una **corriente
+> que circula por la masa**. Los 0.8 µVrms que costaron la cascada entera se
+> miden entre salida y masa; si la masa se mueve, se mueven con ella.
+
+#### El dato que decide, y no es el que parece
+
+La IRM-15-5 cumple **EN 55032 clase B** en emisión conducida. Suena a que el
+problema está cubierto. No lo está:
+
+| | |
+|---|---|
+| Frecuencia de conmutación de la IRM-15 | **65 kHz** (Mean Well `IRM-15-SPEC`, p.3, diagrama de bloques) |
+| Rango de medida de la emisión conducida en CISPR 32 / EN 55032 | **150 kHz – 30 MHz** |
+
+**El fundamental de conmutación y su segundo armónico caen los dos por debajo
+del suelo de la norma.** 65 y 130 kHz no se miden, así que el certificado no
+dice nada sobre ellos. Y son justo las frecuencias donde este camino está
+abierto de par en par: la reactancia de una capacidad de decenas o cientos de pF
+a 65 kHz sigue siendo baja, y la masa analógica no tiene ninguna barrera puesta.
+
+Un certificado de clase B es una afirmación sobre lo que la norma mide. Aquí lo
+que importa es lo que no mide.
+
+#### Las dos salidas, y por qué solo una tiene fecha límite
+
+**Pantalla electrostática en el toroide.** Una lámina de cobre entre primario y
+secundario, conectada a PE. La corriente de modo común del primario se va por la
+lámina a tierra en vez de cruzar al secundario. Es la solución en el sitio
+correcto — corta el camino, no lo filtra.
+
+**Choke de modo común en la derivación de `J7`**, la que alimenta a la SMPS.
+Ataca el ruido en su origen: sube la impedancia de modo común del ramal, así que
+la corriente de la SMPS vuelve por sus propios condensadores a PE en vez de
+bajar por la línea compartida hasta el primario del toroide.
+
+La diferencia entre las dos no es de eficacia, es de **calendario**:
+
+> La pantalla va **dentro del bobinado**. O se pide así o no se pone nunca. El
+> choke es una huella en una placa que todavía no está ruteada.
+
+Y eso convierte esto en la única decisión de la Fase D que no se puede aplazar:
+todo lo demás del chasis se dibuja, se mide y se corrige. Un toroide bobinado no
+se corrige.
+
+#### Lo que no se sabe, dicho como tal
+
+**No hay número.** Ni la magnitud del ruido de modo común de la IRM-15 por
+debajo de 150 kHz (nadie la publica, porque nadie la mide), ni la capacidad
+entre devanados del toroide (Talema no la da en catálogo). Esta sección
+establece **un mecanismo y una fecha límite, no una cifra** — al contrario que
+§18.2, que sí tiene una medida sobre la placa ruteada.
+
+Lo que sí se sabe con certeza es la asimetría del coste de equivocarse:
+
+| | si sobra | si falta |
+|---|---|---|
+| Pantalla | se pagó de más por una lámina de cobre | no se puede añadir; hay que volver a comprar el toroide |
+| Choke | una huella sin poblar | se puebla |
+
+**Y la pantalla no está en catálogo.** El catálogo de Talema la lista bajo
+*«Specials: as per customer specification — Electrostatic copper shielding»*
+(p.3), no como un sufijo de referencia. O sea: pedido especial, con su plazo y su
+mínimo. Eso no cambia el argumento técnico, pero sí a quién le toca decidir.
+
+#### Lo que esto le hace a §18.5
+
+Nada. La regla de colocación —toroide en una punta, plano contra el suelo, ≥ 200
+mm del módulo de audio más cercano— sale del acoplo magnético y sigue igual. Lo
+de aquí no se arregla con distancia: **la capacidad entre devanados no depende de
+dónde pongas el transformador.**
+
+
 ## Referencias
 
 - [Modular Synthesizer Power Supplies (Rabid Elephant)](https://rabidelephant.com/blogs/general/modular-synthesizer-power-supplies-and-distribution-a-thorough-introduction) — fundamento de grounding y distribución.
