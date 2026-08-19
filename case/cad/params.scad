@@ -671,3 +671,116 @@ diam_transformador  = 93;   // idem; +4 de holgura por las salidas -> 97 util
 peso_transformador  = 1.20; // kg, idem. Cierra la estimacion de masa (#106)
 margen_transformador = 15; // spec §4
 fondo_pcb_max       = 60;  // censo estimado de PCB mas honda, no confirmado
+
+// =====================================================================
+// CHASIS DE ACERO DEL PSU  (#107, spec 2026-08-18 §3.3, plan Task 9)
+// =====================================================================
+// Es la pieza que §13.3 del design-notes daba por supuesta y no existia: la
+// regla decia "un esparrago M4 soldado o remachado AL CHASIS" y el case es
+// acrilico. Una caja de acero cerrada que contiene la red (J3 F1 RV1 NT1 J4 y
+// TR1) y de la que solo sale secundario de baja tension.
+//
+// ACERO Y NO ALUMINIO, decidido el 2026-08-18: el aluminio no blinda campo
+// magnetico a 100 Hz y el acero si. Casi toda caja de catalogo es de aluminio
+// fundido -- seguridad y RF si, zumbido cero.
+//
+// La caja tiene DOS papeles mas, y los dos mandan sobre su forma:
+//   1. Es el disipador. Los tres TO-220 atornillan sus tabs contra la pared
+//      larga de y = 0 (spec §3.1: Tj de U2 pasa de 101 a ~61 C). Por eso esa
+//      pared no lleva ni un agujero de mas.
+//   2. Es la referencia de PE. Todo se bonda a UN esparrago, no en cadena.
+
+// --- el interior, que es lo unico que no se puede negociar ---
+// 332 = 10 + 200 (PCB) + 15 (cableado) + 97 (toroide con su holgura) + 10
+// 170 = 10 + 150 (PCB) + 10
+// El eje largo de la PCB va a lo ANCHO del case: 200 mm de los 528 que hay,
+// contra solo 150 de los 223 de fondo. Al reves no cabe.
+chasis_int_x = 332;
+chasis_int_y = 170;
+chasis_int_z = 80;
+
+// --- la chapa, y los tres numeros que NO son nuestros ---
+// La spec lo dice en su propia lista de huecos: "1.5 mm es supuesto; lo decide
+// el taller de doblado junto con los radios de plegado". El desarrollo del
+// patron plano depende de los tres, asi que van como parametros y no como
+// cotas dibujadas: cuando el taller conteste se cambian tres lineas y el DXF
+// sale solo. Mientras tanto son SUPUESTOS declarados, igual que lo fueron los
+// 45 mm del toroide -- y aquel salio caro justamente por no estar marcado.
+t_chapa      = 1.5;   // SUPUESTO -- acero dulce; lo confirma el taller
+radio_doblez = 1.5;   // SUPUESTO -- r = t, plegado al aire, valor habitual
+k_factor     = 0.42;  // SUPUESTO -- fibra neutra; DIN 6935 varia con r/t
+
+// --- la tapa ---
+chasis_pestana  = 15;   // faldon de la tapa, por FUERA de la pared del cuerpo
+chasis_hol_tapa = 0.6;  // juego total para que la tapa entre sin forzar
+chasis_pie      = 10;   // separadores bajo el suelo. No son estetica: bajo el
+                        // suelo pasan la chapa de refuerzo (1.5) y la cabeza
+                        // del M6 del toroide (~5), y el acrilico no puede
+                        // apoyar contra acero caliente (Tg ~ 100 C)
+
+// --- lo que la Task 6 tiene que casar, no al reves ---
+// Estos tres agujeros los DECLARA el chasis y la PCB se pliega a ellos. Va en
+// ese sentido porque la pared existe antes que el ruteo: la Fase C esta
+// bloqueada esperando esta geometria, no al contrario. Son numeros elegidos,
+// no derivados, y por eso el gate solo puede comprobar que caen en la pared
+// con material alrededor -- que casen con los TO-220 lo comprueba la Task 6.
+chasis_to220_n     = 3;
+chasis_to220_paso  = 20;    // >= 10.16 del cuerpo del TO-220 + aislante + clip
+chasis_to220_x     = 110;   // centro de la fila = centro del canto de la PCB
+chasis_pcb_standoff = 10;   // separador bajo la PCB. Es tambien la altura por
+                            // la que sale el mazo hacia la ranura del suelo
+chasis_to220_z     = 28;    // sobre el suelo interior: chasis_pcb_standoff
+                            // + 1.6 (PCB) + ~16.4 hasta el taladro del tab
+chasis_pcb_x     = 10;    // hueco reservado a la PCB dentro del interior
+chasis_pcb_ancho = 200;
+chasis_pcb_y     = 10;
+chasis_pcb_fondo = 150;
+
+// --- el esparrago de PE (§13.3 regla 1) ---
+// Pasante con arandela dentada a los dos lados y la pintura enmascarada, no
+// roscado en la chapa: 1.5 mm de acero da metro y medio de rosca M4.
+// En la pared corta del lado de la red, que es donde entra J3.
+chasis_pe_y = 30;
+chasis_pe_z = 40;
+
+// --- la salida de cables ---
+// NO es un agujero nuevo: la bandeja de base ya lleva cortado un campo de
+// ondas de 104 x 32 bajo el PSU que se dibujo como ventilacion. Con la caja
+// encima deja de ventilar nada, asi que pasa a ser por donde bajan los cables
+// al interior del case. Esta ranura del suelo del chasis tiene que caer DENTRO
+// de aquel recorte, y de eso hay un assert.
+// x = 120 y no 178: la puerta caza que a 178 la ranura se metia 41 mm DEBAJO
+// del toroide, que vive de x=225 en adelante. Y no puede irse al hueco de
+// cableado de 15 mm que hay entre PCB y toroide -- 15 no da para 26 de ranura.
+// O sea que la salida va POR DEBAJO DE LA PCB, y eso es una condicion para la
+// Task 6: los conectores de salida miran a este canto y el mazo pasa por el
+// hueco de los separadores.
+chasis_salida_x     = 120;
+chasis_salida_ancho = 88;
+chasis_salida_y     = 40;
+chasis_salida_fondo = 26;
+
+// --- el refuerzo bajo el toroide (#106) ---
+// 1.20 kg colgando de UN perno M6 sobre 1.5 mm de chapa es un tambor con la
+// excitacion puesta encima. El remedio barato es una chapa doble local: mismo
+// material, sin doblar, remachada o soldada bajo el suelo. No sube la altura
+// util porque va por FUERA, entre el suelo y los separadores.
+chasis_refuerzo_lado = 120;
+chasis_toroide_x = 273.5;  // 225 + 97/2, el hueco que le deja el reparto
+chasis_toroide_y = 85;     // centrado en el fondo interior
+d_M6_paso = 6.5;
+
+// --- colocacion sobre la bandeja, y los tornillos de la tapa ---
+chasis_margen_bandeja = 10;  // orilla libre a la derecha de la bandeja
+// LA COTA MAS JUSTA DE TODO EL MONTAJE, y por eso es un parametro con nombre y
+// no un resultado. Los dos largueros 2020 van ENCIMA de la bandeja de base
+// desde el 2026-08-17, asi que el chasis pasa entre ellos y le quedan 3.33 mm
+// a cada lado. Una caja doblada sale con +-1 mm facil, y la soldadura de las
+// esquinas tira mas. Si el taller no promete esa tolerancia, lo que se toca es
+// chasis_int_y -- no la posicion, que ya esta centrada y no da mas de si.
+chasis_holgura_larguero = 3;
+chasis_tornillo_baja  = 8;   // cuanto por debajo del techo va la fila de M3
+chasis_tornillos_largo = 3;  // por faldon largo
+chasis_tornillos_corto = 2;  // por faldon corto
+salida_holgura = 6;   // orilla del agujero del acrilico alrededor de la ranura
+salida_radio   = 8;   // esquinas redondeadas: el acrilico raja desde una viva
