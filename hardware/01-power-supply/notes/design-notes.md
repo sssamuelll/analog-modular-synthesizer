@@ -1448,6 +1448,57 @@ Lo que sí se sabe con certeza es la asimetría del coste de equivocarse:
 (p.3), no como un sufijo de referencia. O sea: pedido especial, con su plazo y su
 mínimo. Eso no cambia el argumento técnico, pero sí a quién le toca decidir.
 
+#### Lo que se puso en la placa, y por qué la mitad va sin poblar
+
+El choke entró en el esquemático de la v3 el 2026-08-19 (`L1`, con `CY1`/`CY2`
+detrás). Y al ponerlo salió una regla que vale para cualquier «lo dejamos con
+huella por si acaso»:
+
+> **Un componente en SERIE no puede ir sin poblar. Uno en PARALELO sí.**
+
+`L1` está en serie con la alimentación de la SMPS: sin poblar, la SMPS se queda
+sin red. O va puesto, o hay que puentearlo — y un puente de 230 V a 0,2 A no es
+un *net tie*. Así que va **poblado**. Su inductancia de fuga es despreciable a
+50 Hz para 0,2 A, o sea que no molesta a nada.
+
+`CY1`/`CY2` van en paralelo. Su ausencia no rompe nada, así que **sí** pueden
+esperar — y esperan por un número que este repo no puede acotar: **2 × 1 nF
+añaden 145 µA de fuga a tierra** a 230 V/50 Hz (`2πfCV`), y el límite aplicable
+está en la cláusula de IEC 62368-1 que §13.4 ya declinó citar por ser de pago.
+Se pueblan con la medida del bring-up delante, no antes.
+
+Van **clase Y2 obligatoria**, y el prefijo es `CY` y no `C` a propósito: el modo
+de fallo de un cerámico normal en ese sitio es **en corto**, entre red y tierra.
+Que nadie lo sustituya leyendo solo el valor.
+
+#### La aritmética, que dice algo incómodo
+
+A los 65 kHz de la IRM-15:
+
+| | |
+|---|---|
+| Choke de 10 mH | **4,1 kΩ** |
+| Capacidad entre devanados del toroide, 200 pF **supuestos** | ~12 kΩ |
+| Dos condensadores Y de 1 nF | 2,45 kΩ cada uno |
+
+| Qué se puebla | Corriente de modo común que sigue llegando al toroide |
+|---|---|
+| Solo el choke | **75 %** |
+| Choke + 2 × 1 nF | **7 %** |
+
+> **El choke solo es teatro.** Sube la impedancia de un camino que ya era de alta
+> impedancia, y el reparto apenas se mueve. Lo que hace el trabajo es darle a la
+> corriente un **retorno local corto** antes de que llegue al choke — o sea, los
+> condensadores Y.
+
+Los 200 pF son un supuesto de orden de magnitud: Talema no publica la capacidad
+entre devanados, así que la tabla dice cuál es el mecanismo dominante, no cuánto
+sale exactamente.
+
+Y eso refuerza lo de arriba en vez de sustituirlo: **la pantalla del toroide no
+reparte la corriente, quita el camino.** El filtro de `J7` es un seguro contra
+que la pantalla no llegue o no baste, no un sustituto.
+
 #### Lo que esto le hace a §18.5
 
 Nada. La regla de colocación —toroide en una punta, plano contra el suelo, ≥ 200
