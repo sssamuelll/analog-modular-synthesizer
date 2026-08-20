@@ -27,8 +27,8 @@ aportes de la comunidad.
 | # | Módulo | Tipo | Tecnología clave | Directorio |
 |---|--------|------|-----------------|-----------|
 | 1 | Alimentación | Analógico | 7805, 7812, 7912 | [`hardware/01-power-supply`](hardware/01-power-supply) |
-| 2 | MIDI/CV | Digital | Raspberry Pi 3B+ + AD5686R | [`hardware/02-midi-cv`](hardware/02-midi-cv) + [`software/midi-cv`](software/midi-cv) |
-| 3 | VCO (×3) | Analógico | CEM3340 | [`hardware/03-vco`](hardware/03-vco) |
+| 2 | Cerebro (MIDI/CV/Voces) | Digital | RP2350 (Rust bare-metal) | [`hardware/02-midi-cv`](hardware/02-midi-cv) + [`software/midi-cv`](software/midi-cv) |
+| 3 | VCO (×4) | Analógico | 4x SSI2130 + DACs locales | [`hardware/03-vco`](hardware/03-vco) |
 | 4 | Mixer | Analógico | TL074 | [`hardware/04-mixer`](hardware/04-mixer) |
 | 5 | VCF | Analógico | LM13700 (OTA tipo MS-20) | [`hardware/05-vcf`](hardware/05-vcf) |
 | 6 | ADSR | Analógico | ICM7555 | [`hardware/06-adsr`](hardware/06-adsr) |
@@ -39,19 +39,19 @@ Arquitectura global y diagrama de bloques: [`docs/architecture.md`](docs/archite
 
 ## Especificaciones generales
 
-- **Polifonía**: monofónica
-- **Fuentes de sonido**: 3 VCOs (sierra, triangular, cuadrada con PWM)
+- **Polifonía**: 4 voces (diseño actual) / monofónica (tesis original)
+- **Fuentes de sonido**: 4 VCOs independientes (1 por voz, SSI2130 con sierra, triangular, cuadrada/pulso)
 - **Filtro**: VCF pasa-bajo con resonancia auto-oscilante (24 dB/oct)
 - **Envolvente**: ADSR (2 generadores en el diseño final)
-- **Entrada MIDI**: USB (controladores MIDI clase USB)
-- **Salidas**: 3 CV (1 V/octava, 84 notas) + 1 GATE (10 V)
-- **Puntos de conexión**: ~40 jacks de 3.5 mm (15 in / 25 out)
+- **Entrada MIDI**: USB y DIN MIDI al módulo central
+- **Salidas**: Enlace serie digital a módulos, 4x CV/Gate internos, Audio Out
+- **Puntos de conexión**: ~40 jacks de 3.5 mm (normalizados, diseño guiado por LEDs)
 - **Dimensiones cajón**: ancho 500 mm × alto 50–391.5 mm (zócalo frontal a
   punto más alto, por la inclinación) × fondo 350 mm de cuerpo (370 mm con
-  pieles y zócalo volados)
+  pieles y zócalo volados). Módulo de alimentación 100% interno y cerrado al chasis.
 - **Alimentación**: 230 VAC 50 Hz (variante Europa; tesis original: 110 VAC
   60 Hz Venezuela, ver [`hardware/01-power-supply`](hardware/01-power-supply))
-  → 5 V / +12 V / −12 V
+  → 5 V / +12 V / −12 V con telemetría I2C (INA226)
 
 ## Estructura del repositorio
 
@@ -69,7 +69,7 @@ analog-modular-synthesizer/
 
 ## Cómo empezar
 
-1. Lee el [resumen de la tesis](docs/summary.md) y la [arquitectura](docs/architecture.md).
+1. Lee el [resumen de la tesis](docs/summary.md) y la **nueva** [arquitectura polifónica](docs/architecture-poly.md).
 2. Elige un módulo: cada `hardware/NN-<módulo>/README.md` explica el objetivo,
    componentes, parámetros de diseño y mejoras pendientes.
 3. Para el firmware: `cd software/midi-cv && cat README.md`.
