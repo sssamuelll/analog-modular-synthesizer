@@ -114,8 +114,10 @@ def main() -> int:
              ("h", lc), ("h", c["blank_cuerpo_y"] - lc)],
             "CUERPO — 4 dobleces de 90° hacia arriba, esquinas soldadas",
             f"montado {c['ext_x']:.1f} x {c['ext_y']:.1f} x {c['ext_z']:.1f} "
-            f"exterior · agujeros: 1xM6, 3xM3 (TO-220), 1xM4 (PE), "
-            f"{int(2 * (p['chasis_tornillos_largo'] + p['chasis_tornillos_corto']))}xM3 (tapa)")
+            f"exterior · agujeros: 1xM6, {int(p['chasis_to220_n'])}xM3 (TO-220), "
+            f"1xM4 (PE), "
+            f"{int(2 * (p['chasis_tornillos_largo'] + p['chasis_tornillos_corto']))}xM3 "
+            f"(tapa), {int(2 * p['chasis_anclajes'])}xM5 (cuelgan del larguero)")
 
     dibujar(fig.add_subplot(gs[1, 0]), "chasis_tapa_2d",
             [("v", lt), ("v", c["blank_tapa_x"] - lt),
@@ -126,7 +128,8 @@ def main() -> int:
 
     dibujar(fig.add_subplot(gs[1, 1]), "chasis_refuerzo_2d", [],
             "REFUERZO — plano, sin doblar",
-            "bajo el suelo, contra el modo propio del toroide (#106)")
+            "DENTRO de la caja, sobre el suelo, contra el modo propio "
+            "del toroide (#106)")
 
     fig.suptitle("SAM17 · chasis de acero del PSU — plano de plegado",
                  fontsize=15, fontweight="bold", color=TINTA, y=0.975)
