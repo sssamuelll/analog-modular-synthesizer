@@ -173,6 +173,11 @@ HOLE_CLEARANCE = 0.20       # de un taladro al cobre ajeno
 # _check_escape() lo comprueba antes de generar cobre.
 
 MOUNT = [(6.0, 6.0), (W - 6.0, 6.0), (6.0, H - 6.0), (W - 6.0, H - 6.0)]
+# Los taladros de montaje se anaden en su propio bucle, no por COLOCACION, asi
+# que check_cobertura() no tiene de que eximirlos. El conjunto existe vacio a
+# proposito: el dia que algo mecanico SI entre por COLOCACION, este es el sitio
+# donde se declara, y no un `if` suelto dentro de la comprobacion.
+MECANICAS: frozenset[str] = frozenset()
 MOUNT_D = 3.2
 
 # ---------------------------------------------------------------- huellas
@@ -266,6 +271,14 @@ _PLANTILLA = [
     ("R_BW{i}", -2.0, -9.0),
     ("C_BW{i}", 2.0, -9.0),
     ("R_SQ{i}", 6.0, -9.0),
+    # segunda fila de arriba: la compensacion del I/V (simulations/vco/
+    # iv_stage.py). C_IV va en la MISMA COLUMNA que R_IV y pegado a el, a 4 mm
+    # -- el mismo paso que usa el resto de la fila: los dos estan en paralelo y
+    # forman el lazo de realimentacion, asi que el area que encierran es parte
+    # del circuito, no una cuestion de estetica. R_OUT no tiene esa exigencia
+    # (vive FUERA del lazo) y va al lado, en la columna de R_BW.
+    ("C_IV{i}", -6.0, -13.0),
+    ("R_OUT{i}", -2.0, -13.0),
     # fila de abajo: las 4 entradas del mezclador
     ("R_MIX{i}A", -6.0, 9.0),
     ("R_MIX{i}B", -2.0, 9.0),
@@ -470,10 +483,43 @@ def check_huellas() -> None:
     assert not rotos, f"huellas que no estan en disco: {rotos}"
 
 
+def check_cobertura(nets: dict[str, str]) -> None:
+    """COLOCACION tiene que cubrir el netlist EXACTAMENTE, en los dos sentidos.
+
+    check_huellas() parecia cubrir esto y no lo cubria: mira que los FICHEROS
+    de huella existan en disco, no que cada componente del esquematico tenga
+    donde ir. Es un proxy de manual (Principio IV) -- pasa, te deja tranquilo,
+    y el problema sigue entero.
+
+    Lo que costo: al anadir C_IV1-4 y R_OUT1-4 al esquematico, colocar() itero
+    sobre COLOCACION como siempre y los ocho quedaron fuera sin una palabra. La
+    placa salio con 136 huellas contra 144 componentes, cerro el ruteo con CERO
+    tramos al aire y DRC 0. Una placa verde que no era el esquematico, y lo que
+    lo caza es netdiff, o sea DESPUES de media hora de Freerouting.
+
+    Ahora aborta antes de crear un solo objeto.
+    """
+    del_net = {k.rsplit("-", 1)[0] for k in nets}
+    del_col = set(COLOCACION)
+    sin_sitio = sorted(del_net - del_col)
+    assert not sin_sitio, (
+        f"{len(sin_sitio)} componentes del esquematico sin entrada en "
+        f"COLOCACION: {sin_sitio}\n"
+        f"  La placa saldria sin ellos, y con el ruteo cerrado y el DRC en "
+        f"cero.\n"
+        f"  Anadelos a _PLANTILLA (si son de voz) o a COLOCACION.update().")
+    # El otro sentido: MECANICAS son las que existen a proposito sin red
+    # (taladros de montaje). Cualquier otra sobra y hay que enterarse.
+    sobran = sorted(del_col - del_net - MECANICAS)
+    assert not sobran, (
+        f"colocadas y no estan en el esquematico: {sobran}")
+
+
 def colocar():
     """Placa vacia con todo colocado, contorno, taladros, masas y reglas."""
     check_huellas()
     nets = leer_netlist()
+    check_cobertura(nets)
     board = pcbnew.CreateEmptyBoard()
     board.SetCopperLayerCount(4)
     for n in sorted(set(nets.values())):
@@ -515,6 +561,29 @@ def colocar():
             # silueta del vecino. Centrado sobre el propio cuerpo (4.4 mm de
             # ancho, el texto mide 1.9) no pisa a nadie.
             t.SetPosition(pcbnew.VECTOR2I(mm(x), mm(y)))
+        elif ref == "U12":
+            # Mismo problema que los DAC, con dos diferencias. La primera es
+            # quien llego despues: C_IV4 (la compensacion del I/V, ver
+            # simulations/vco/iv_stage.py) cae a dx=-2, dy=-5 de U12, y el
+            # rotulo de stock se dibuja por ARRIBA -- justo encima de su pad.
+            # El DRC lo saca como silk_over_copper y este script no perdona
+            # avisos sin explicar.
+            #
+            # La segunda es que a U12 NO se le puede aplicar el truco de los
+            # DAC. Es un SOT-223 y su pestana termica ocupa casi todo el
+            # cuerpo: centrar el texto ahi cambia un silk_over_copper por
+            # otro, sobre su propio cobre.
+            #
+            # Medido el vecindario: arriba-izquierda esta C_IV4, abajo C9 a
+            # 7 mm. La derecha PARECE libre de componentes, y no lo esta de
+            # cobre: un SOT-223 saca sus tres pines por el costado, asi que
+            # correr el rotulo en x lo lleva directo al pin 2 (probado: cambio
+            # un silk_over_copper por otro).
+            #
+            # La salida es la diagonal arriba-derecha: por encima de la fila
+            # de pines (que estan a la altura del cuerpo) y a la derecha de
+            # C_IV4. Verificado con el DRC, no a ojo.
+            t.SetPosition(pcbnew.VECTOR2I(mm(x + 3.5), mm(y - 4.0)))
         board.Add(fp)
         for pad in fp.Pads():
             red = nets.get(f"{ref}-{pad.GetNumber()}")
@@ -768,7 +837,30 @@ def _dist_seg(p, a, b) -> float:
 # apenas lo nota (con las ~95 de toda la placa, cada pasada pasaba de 15 s
 # a tres minutos).
 COSTURAS_RESERVADAS = ({(f"U{i}", "20") for i in (1, 2, 3, 4)}
-                       | {(f"U{i}", "4") for i in (5, 6, 7)})
+                       | {(f"U{i}", "4") for i in (5, 6, 7)}
+                       # Las CUATRO masas virtuales de los I/V (pines 3, 5, 10
+                       # y 12 de U9: la entrada + de cada unidad, atada a
+                       # GNDA). No es un pad de masa cualquiera: en un
+                       # amplificador de transimpedancia esa entrada ES la
+                       # referencia que define el punto virtual, y su
+                       # impedancia hasta el plano forma parte del circuito --
+                       # lo que se cuele ahi sale por el jack de esa voz.
+                       #
+                       # Entran aqui porque con las ocho piezas nuevas el
+                       # centro se congestiono y el pin 12 se quedo sin
+                       # camino: habia vias de GNDA a 3.27 y 5.39 mm, pero
+                       # despues de rutear ya no habia por donde llegar. Es
+                       # justo el caso que describe la moraleja de arriba --
+                       # geometria que fuerza UNA solucion -- y por eso se
+                       # reserva antes en vez de esperar a que sobre sitio.
+                       # Van las cuatro y no solo la que fallo: las cuatro son
+                       # el mismo nodo critico y cual falla depende del azar
+                       # del router.
+                       | {("U9", p) for p in ("3", "5", "10", "12")}
+                       # La segunda masa de U7 (la primera, el pin 4, ya
+                       # estaba). Mismo motivo: se quedo sin camino con vias
+                       # a 1.60 mm.
+                       | {("U7", "16")})
 
 
 def _check_escape() -> None:
