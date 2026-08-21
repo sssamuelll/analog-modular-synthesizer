@@ -439,6 +439,61 @@ diferencia no es el fallo: es que `check_dxf` relee esta pieza y el lienzo no.
 
 ---
 
+## T8 — Junto a la pared trasera quedan dos largueros  ✅ HECHA (2026-08-21)
+
+**Pedido:** «tenemos cinco barras junto a la pared trasera de acrílico, quiero
+que solo queden dos (la de abajo y la de arriba)».
+
+### Los cinco nunca se diseñaron como cinco
+
+Fueron creciendo uno por pieza, y cada pieza que los justificaba ya está muerta:
+
+| larguero | y | nació por | esa pieza murió en |
+|---|---|---|---|
+| base trasera | 18.00 | la bandeja de base | — **se queda** |
+| entrepiso trasero | 123.13 | la bandeja de entrepiso | T6 |
+| repisa | 153.13 | la piel superior | T6 |
+| remate superior | 200.38 | la tira de remate pegada de canto | T5 |
+| remate trasero | 229.73 | la tapa del techo atornillada | — **se queda** |
+
+Los tres de en medio sobrevivieron a sus motivos y seguían ahí solo como filas
+de tornillo de la trasera. Y esas filas **no compran rigidez**: desde T6 la
+trasera es una plancha continua de 8 mm atornillada arriba y abajo, o sea que esa
+cara ya tiene alma de cortante — y una plancha entera es mejor alma que cinco
+barras sueltas.
+
+### El vano
+
+211.73 mm libres entre las dos filas que quedan, sobre 528 de ancho y 8 de
+espesor. Viga ancha biapoyada, `δ = PL³/48EI` con E = 3 GPa e
+I = 528·8³/12 = 22 528 mm⁴:
+
+| empuje en el centro | flecha |
+|---|---|
+| 50 N (un dedo firme) | 0.15 mm |
+| 200 N (alguien apoyándose) | 0.59 mm |
+
+### Lo que arrastró
+
+- **`_y_remate()` muere entera** en `clearance_budget.py`, y con ella
+  `radio_giro_riel()` en el SCAD. Existían para bajar el larguero de remate
+  superior por debajo del barrido del Z-Rail; sin larguero no hay a quién bajar.
+  El radio de giro sigue vivo en `_radio_giro_riel()`, que es donde de verdad se
+  usa: `guarda_tapa()`.
+- **Las ondas de la trasera** se derivaban de las filas que las rodeaban, y tres
+  de esas filas ya no existen. Las fracciones se recalcularon contra las dos que
+  quedan para dejarlas *donde estaban*: 82.75 y 171.68 contra 83.33 y 171.39.
+- **El canario de `alineacion()`** probaba el umbral sobre «remate superior» y
+  «repisa». Pasa a probarlo sobre «base trasera» en Y y «remate trasero».
+
+### Balance
+
+8 largueros → **5**. 69 tornillos → **48** (−6 M5 y −15 M3). Dos DXF movidos:
+`costado_2d` (tres taladros M5 menos) y `piel_trasera_2d` (tres filas menos).
+Los dos gates en VERDE.
+
+---
+
 ## T2 — El chasis del PSU se monta sobre los largueros
 
 Hoy el chasis de acero pasa **entre** los dos largueros de base y se apoya en la
