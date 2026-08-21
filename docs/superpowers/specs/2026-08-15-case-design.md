@@ -51,6 +51,14 @@ lenguaje visual).
 > los CINCO largueros traseros comparten X y la trasera gana su quinta fila de
 > tornillos. `marco_remate` 42 -> 50 y el fondo 299.2 -> 307.2, que es lo que
 > pide el barrido del Z-Rail para conservar los 3.04 mm de margen.
+> **rev. 9** (2026-08-21): junto a la pared trasera quedan **DOS largueros, no
+> cinco**. *Entrepiso trasero*, *repisa* y *remate superior* nacieron cada uno
+> por una pieza —la bandeja de entrepiso, la piel superior, la tira de remate
+> pegada de canto— y las tres murieron en rev. 6-7: seguían solo como filas de
+> tornillo de la trasera. Una plancha continua de 8 mm atornillada arriba y
+> abajo ya es el alma de cortante de esa cara. Vano libre 211.73 mm, flecha
+> 0.15 mm con 50 N en el centro. El case baja de 8 a **5 largueros** y de 69 a
+> **48 tornillos**.
 >
 > **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
 > visual y proporciones *relativas*, pero **sus cotas están superadas**. Se

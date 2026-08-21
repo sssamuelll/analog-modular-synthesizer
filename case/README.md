@@ -35,7 +35,7 @@ que se dibujó para 190 mm.
 **La punta de arriba es cuadrada** (2026-08-21). El techo lleva una meseta de
 `marco_remate` = **50 mm** rematada por dos quiebres de 2 mm, en vez de la
 cúpula que salía antes. Fue 34 unas horas: subió a 42 cuando la meseta tuvo
-que alojar el octavo larguero (abajo). Son **dos** parámetros y no uno: los vértices 4 y 5
+que alojar el larguero del remate trasero (abajo). Son **dos** parámetros y no uno: los vértices 4 y 5
 dejaron de compartir `radio_punta` —que va sobredimensionado a propósito y se
 recorta a lo que quepa en la arista, o sea a `marco_remate/2`— y estrenan
 `radio_remate` = 2. Subir solo el marco **engorda** el round en vez de
@@ -52,12 +52,10 @@ montaje»— y el fondo libre de la bandeja sube de 46.7 a 62.7 mm.
 exterior 10 mm por detrás del canto de los costados y 5 mm de aire por los
 cuatro lados — la junta de sombra. Estaban partidas a la altura del entrepiso
 porque cada una se atornillaba a los dos largueros de su piso; al morir esa
-bandeja la frontera dejó de existir, y una sola plancha que abarca los **cuatro**
-largueros traseros está mejor sujeta que dos con dos filas cada una. Su cara
-exterior cae exactamente en el plano trasero, con `hol_piel` = 0.15 mm por lado
-de holgura de montaje.
+bandeja la frontera dejó de existir. Su cara exterior cae exactamente en el
+plano trasero, con `hol_piel` = 0.15 mm por lado de holgura de montaje.
 
-Para que enrase, **los cuatro largueros traseros comparten X**
+Para que enrase, **los largueros traseros comparten X**
 (`x_tr = fondo − rail/2 − t_piel`), y la plancha atornillada sobre su cara
 remata en el canto. El de base estaba 14 mm más adelante que los otros tres, y
 por ahí se había colado un fallo real: la fila de abajo de la piel de abajo pedía
@@ -66,7 +64,7 @@ en `clearance_budget.py`, la puerta nueva que exige que **todas las filas de una
 placa apoyen a la misma distancia** de la cara de su larguero — porque el
 separador de una placa es uno solo. `alineacion()` solo miraba un eje.
 
-**El octavo larguero, y el fin del pegamento** (2026-08-21). La tapa que cierra
+**El larguero del remate, y el fin del pegamento** (2026-08-21). La tapa que cierra
 la meseta del techo iba **pegada** al Z-Rail, y era la única junta irreversible
 del case: ahí arriba no había larguero al que atornillarla, y esa cara del riel
 es pared de 1.2 mm. Ahora hay uno — un 2020 en la arista trasera-superior, a ras
@@ -79,8 +77,22 @@ arriba obliga a que su centro esté en x ≥ 286.17, y por eso el fondo creció 
 otros 8 para que la trasera le pasara por delante. Con el centro en 289.22
 quedan 3.04 mm de margen — los mismos que tenía antes de moverse.
 
-Y con eso **los cinco largueros traseros comparten X**: una sola cota para todo
+Y con eso **todos los largueros traseros comparten X**: una sola cota para todo
 el plano de apoyo de la trasera.
+
+**Y junto a esa pared quedan DOS, no cinco** (2026-08-21). Llegaron a ser cinco
+porque fueron creciendo uno por pieza: *entrepiso trasero* por la bandeja de
+entrepiso, *repisa* por la piel superior, *remate superior* por la tira de
+remate pegada de canto. Las tres piezas están muertas, y los tres largueros
+seguían ahí solo como filas de tornillo de la trasera. Con la trasera hecha una
+plancha continua de 8 mm eso no compra rigidez: una plancha atornillada arriba y
+abajo **ya es el alma de cortante** de esa cara, y mejor alma que cinco barras
+sueltas. Quedan el de abajo (*base trasera*) y el de arriba (*remate trasero*).
+
+El vano libre entre los dos es **211.73 mm**, sobre 528 de ancho y 8 de espesor:
+0.15 mm de flecha con 50 N empujando en el centro, 0.6 mm si alguien se apoya
+con 200 N. La cuenta es la de una viga ancha biapoyada, `δ = PL³/48EI` con
+E = 3 GPa e I = 528·8³/12.
 
 Y la tapa **no llega hasta el pico**: se retira `inset_remate_frente` = 13 mm.
 Eso no es estética — es lo único que la deja abrir. Hasta ahora esta pieza
@@ -253,22 +265,23 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Pieza | Cantidad | Nota |
 |-------|----------|------|
 | Z-Rail de Tiptop | **4** | 104 HP (528.32 mm), sección 23.8 × 10. Se compran en pares: 2 unidades = 4 raíles |
-| Larguero perfil 2020 | **8** | de 528.32 mm cada uno: 2 de base, 2 de entrepiso, remate superior, repisa, valle y **remate trasero** |
+| Larguero perfil 2020 | **5** | de 528.32 mm cada uno: 2 de base, entrepiso delantero, valle y **remate trasero**. Fueron 8 hasta el 2026-08-21 |
 | Tornillo **M4** | **8** | entran de punta por el costado y **roscan en el propio Z-Rail** (viene con M4 taladrado a 3.3 de fábrica). Sin tuerca, sin inserto. **No vienen con el raíl.** 4 de hombro (los ejes de giro) + 4 de mano (los cierres) |
-| Tornillo M5 botón + tuerca T | **16** | 2 por larguero 2020, por la punta, desde el costado |
-| Tornillo M3 + tuerca T M3 | **45** | las planchas a los largueros: base 10, tapa del valle 5, tapa de remate 5, **trasera 25** (5 filas × 5). Entran por la RANURA, no por la punta |
+| Tornillo M5 botón + tuerca T | **10** | 2 por larguero 2020, por la punta, desde el costado |
+| Tornillo M3 + tuerca T M3 | **30** | las planchas a los largueros: base 10, tapa del valle 5, tapa de remate 5, **trasera 10** (2 filas × 5). Entran por la RANURA, no por la punta |
 | Arandela ANCHA d16 | 4 | **no opcional**: en los ejes de giro. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 MPa y aguanta |
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa. **Sustituye al amortiguador**, que se eliminó |
 | Plancha acrílico t=5 mm | **1** | solo la tapa del valle. Un espesor entero para **una** pieza — a resolver en el pliego, no en el modelo |
 | Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante) + tapa de remate (528.32 × 37) + **trasera** (528.02 × 236.73) |
 | Patica metálica torneada | 4 | d=16 × 8 mm |
 
-**Total de tornillos del case: 69** — 8 M4 de raíl + 16 M5 de esqueleto +
-45 M3 de plancha. Fueron 71 hasta el 2026-08-21: al empotrarse, la trasera se
-llevó por delante 12 separadores M4 y sus 24 tornillos de botón, y al morir la
-bandeja de entrepiso se fueron otros 10 M3; en medio volvieron 2 M5 y 5 M3 con
-el octavo larguero y su tapa de remate. Lo que no volvió es el adhesivo: **el
-case ya no lleva ninguna junta irreversible.**
+**Total de tornillos del case: 48** — 8 M4 de raíl + 10 M5 de esqueleto +
+30 M3 de plancha. Eran 71, y el 2026-08-21 perdió 23 de golpe: al empotrarse, la
+trasera se llevó por delante 12 separadores M4 y sus 24 tornillos de botón; al
+morir la bandeja de entrepiso se fueron 10 M3; volvieron 2 M5 y 5 M3 con el
+larguero del remate y su tapa; y al quedarse la pared trasera con dos largueros
+en vez de cinco se fueron 6 M5 y 15 M3 más. Lo que no volvió es el adhesivo:
+**el case ya no lleva ninguna junta irreversible.**
 
 No calculados por el modelo (herrajes eléctricos y de panel; la cantidad
 depende de la cuenta final de módulos, no de la geometría del cajón):

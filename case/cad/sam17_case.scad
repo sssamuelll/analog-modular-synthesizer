@@ -93,10 +93,11 @@ function centros_rail() =
 // direccion de un eje de giro, asi que el riel gira sobre el y arrastra la cara
 // entera. Ver la nota de params.scad donde estaba d_visagra.
 //
-// El radio de giro del propio riel sale de su seccion: la esquina mas lejana de
-// su centroide esta a hypot(rail_er_fondo, rail_er_alto)/2 = 14.58 mm, y eso es
-// lo que tiene que librar el larguero de remate (ver y_rs).
-function radio_giro_riel() = norm([rail_er_fondo, rail_er_alto])/2;
+// El radio de giro del riel (hypot(rail_er_fondo, rail_er_alto)/2 = 14.58 mm)
+// vivio aqui como funcion mientras el larguero de remate superior tenia que
+// librarlo. Ese larguero se retiro el 2026-08-21 y con el la unica llamada; la
+// cota sigue viva en _radio_giro_riel() de clearance_budget.py, que es donde de
+// verdad se usa: la guarda del barrido de la tapa.
 
 // Tangente de la curva de un vertice: cuanto acrilico se come el redondeo a lo
 // largo de cada arista. Es la misma cuenta que _arco hace por dentro, sacada
@@ -115,8 +116,19 @@ function x_valle() =
      cr[2].x - he_er_x(angulo_superior) - holgura_rail];
 
 // largueros del esqueleto (2020) que no son railes de panel:
-// base delantera, base trasera, entrepiso delantero, entrepiso trasero,
-// remate superior, repisa. Centros [x, y]:
+// base delantera, base trasera, entrepiso delantero, valle, remate trasero.
+// Centros [x, y]:
+//
+// JUNTO AL PLANO TRASERO QUEDAN DOS, no cinco (2026-08-21). Fueron creciendo
+// uno por pieza: entrepiso trasero por la bandeja de entrepiso, repisa por la
+// piel superior, remate superior por la tira de remate pegada de canto. Las
+// tres piezas murieron, y los tres largueros sobrevivieron solo como filas de
+// tornillo de la trasera. Con la trasera hecha UNA plancha de 8 esas filas no
+// compran rigidez: una plancha continua atornillada arriba y abajo YA es el
+// alma de cortante de esa cara, y mejor alma que cinco barras sueltas. Vano
+// libre 211.73 mm sobre 8 mm de acrilico y 528 de ancho: 0.15 mm de flecha
+// con 50 N en el centro. Quedan el de abajo (base trasera) y el de arriba
+// (remate trasero).
 //
 // entrepiso delantero reubicado (fix de solape, ronda de revision 1): el
 // original P[3].x+r invadia el rail de panel de la cara superior
@@ -125,17 +137,6 @@ function x_valle() =
 // P3.y-t_acrilico-r para que la bandeja apoye con el CANTO SUPERIOR a ras
 // de P3.y (antes apoyaba con el canto inferior ahi, dejando la tapa 5 mm
 // por encima del plano de entrepiso).
-//
-// repisa (sexto larguero, ronda de revision 2 — R6): ancla piel_superior
-// SIN pasar por el rail entrepiso-trasero. Nacio cuando habia DOS planos
-// traseros (piso inferior en X=350, superior en X=250) y anclar la piel
-// superior al rail de entrepiso invadia la bandeja. Con el fondo unico del
-// triangulo los dos planos son el mismo, pero la repisa sigue siendo
-// necesaria: separa en ALTURA las dos pieles, que ahora comparten plano y se
-// apilan en Y. Centro a P3.y+15: canto inferior del rail en P3.y+5 (5 mm
-// por encima del tope de la bandeja, sin tocarla) y la fila de agujero
-// inferior de piel_superior (inset 15) cae justo en P3.y, a ras del tope
-// de la bandeja.
 //
 // El SEPTIMO larguero, "zocalo superior", se retiro el 2026-08-17: Samuel
 // pidio DOS nodos en la esquina de abajo y no tres -- uno para amarrar la
@@ -146,45 +147,16 @@ function x_valle() =
 // plancha, el problema que resolvia deja de existir.
 function centros_esqueleto() =
     let (P = pts_perfil(), r = rail/2, cr = centros_rail(),
-         // Los CUATRO largueros traseros comparten X, y por eso esto es UNA
-         // cota y no cuatro copias: la cara donde apoyan las pieles tiene que
-         // ser un plano, no cuatro planos parecidos. Retirados t_acrilico del
-         // canto para que la piel atornillada encima remate EXACTAMENTE en el
+         // Los DOS largueros traseros comparten X, y por eso esto es UNA
+         // cota y no dos copias: la cara donde apoya la trasera tiene que ser
+         // un plano, no dos planos parecidos. Se retiran t_piel (y no
+         // t_acrilico: la trasera tiene su propio espesor desde el 2026-08-21)
+         // para que la plancha atornillada encima remate EXACTAMENTE en el
          // plano trasero -- empotrada y a ras, sin rebaje y sin dejar de ser
-         // un DXF plano. Se retiran t_piel y no t_acrilico: la trasera tiene
-         // su propio espesor desde el 2026-08-21.
+         // un DXF plano.
          x_tr = fondo() - r - t_piel,
-         // semiextension en X del RIEL EUROrack de la cara superior tras su
-         // rotacion (ver he_er_x). El larguero que se planta detras de el se
-         // separa de esa esquina, no de su centro.
-         he_cs = r * (cos(angulo_superior) + sin(angulo_superior)),
          x_ed = cr[2].x + he_er_x(angulo_superior) + holgura_rail + r,
-         y_ep = P[3].y - t_acrilico - r,
-         // Remate superior. Su Y NO puede ser P[5].y - r: al acortar el marco
-         // de arriba para que la esquina se lea como PUNTA, el rincon se
-         // cierra y ahi ya no cabe. Tres techos, y manda el mas bajo:
-         //   1. el TECHO YA REDONDEADO. La esquina trasera de arriba lleva
-         //      tangente radio_remate, y como este larguero vive pegado al
-         //      plano trasero (x = fondo - r), su esquina de atras cae justo
-         //      donde el arco ya bajo esa tangente. P[5].y - r a secas lo
-         //      dejaba FUERA del acrilico.
-         //   2. el plano del panel de arriba, a distancia PERPENDICULAR con la
-         //      normal interior (cos, -sen). La cota es he_cs + t_panel y NO
-         //      r + t_panel: lo que se acerca al panel es la ESQUINA del
-         //      larguero, no su centro, y en diagonal alcanza he_cs = 14.14 en
-         //      vez de 10. Con el marco en 22 este techo nunca mandaba y el
-         //      error dormia; con el marco en 8 manda, y con la version vieja
-         //      la esquina asomaba 2.54 mm por delante del panel.
-         //   3. el RIEL DE ARRIBA DE LA TAPA, que es el que de verdad manda.
-         //      Y no basta con su esquina de abajo: ese riel GIRA sobre su
-         //      propio M5, asi que lo que hay que librar es su BARRIDO -- el
-         //      circulo de radio_giro_riel() alrededor de su centroide. Con
-         //      he_er_y(45) = 13.22 en vez de 14.58 el larguero se quedaba
-         //      1.36 mm corto y solo se enteraba uno abriendo la tapa.
-         y_rs = min(P[5].y - r - radio_remate,
-                    P[3].y + (cos(angulo_superior)*(x_tr - P[3].x)
-                              - (he_cs + t_panel)) / sin(angulo_superior),
-                    cr[3].y - radio_giro_riel() - holgura_rail - r))
+         y_ep = P[3].y - t_acrilico - r)
     // Los dos largueros de la base ya NO viven en el canto de abajo. Desde que
     // la bandeja es el suelo (t_base) montan encima de ella, o sea con su centro
     // en t_base + r, y a esa altura el redondeo de las esquinas de abajo deja de
@@ -193,33 +165,31 @@ function centros_esqueleto() =
     //     delante. Misma cuenta que x_ed: se separa de la ESQUINA del riel
     //     girado, no de su centro. Antes iba en alto_frontal/2 + r + 2, pegado
     //     al vertice, y ahi el riel se le montaba encima.
-    //   - Fondo: comparte X con los otros tres traseros (x_tr). Estuvo en
+    //   - Fondo: comparte X con el de arriba (x_tr). Estuvo en
     //     fondo - r - radio_perfil, 14 mm mas adelante que ellos, con la nota
     //     de que "adelantarlo solo compra fondo de bandeja y no hace falta".
-    //     Si hacia falta: la piel inferior apoya en EL y en el de entrepiso, y
-    //     con 14 mm de diferencia una de sus dos filas se atornillaba al aire.
+    //     Si hacia falta: la trasera apoya en EL y en el de arriba, y con
+    //     14 mm de diferencia una de sus dos filas se atornillaba al aire.
     //     Lo canta apoyo() en clearance_budget. Cabe: a y=8 la curva del canto
     //     trasero esta en x=289.87 y la esquina del riel movido en 286.22.
     [[cr[0].x + he_er_x(angulo_inferior) + holgura_rail + r, t_base + r],
      [x_tr,          t_base + r],               // base trasera
      [x_ed,                y_ep],                     // entrepiso delantero
-     [x_tr,          y_ep],                     // entrepiso trasero
-     [x_tr,          y_rs],                     // remate superior
-     [x_tr,          P[3].y + 15],              // repisa (R6)
-     // valle: el septimo, y el unico que existe por una plancha y no por una
+     // valle: el cuarto, y el unico que existe por una plancha y no por una
      // union. Va CENTRADO bajo la tapa del valle para que los dos vuelos sean
      // iguales; a la vez ata los dos costados por la cintura, que es donde el
      // perfil es mas estrecho. Su ventana es corta -- entre las esquinas
      // giradas de los dos railes del valle -- y clearance_budget la vigila.
      [(x_valle()[0] + x_valle()[1])/2, y_ep],
-     // remate trasero: el OCTAVO, del 2026-08-21. Existe para que la tapa del
+     // remate trasero: el QUINTO, del 2026-08-21. Existe para que la tapa del
      // techo tenga a que atornillarse -- antes iba pegada al Z-Rail porque ahi
      // arriba no habia nada mas, y esa era la unica junta irreversible del case.
      // Va a ras del plano trasero y con su cara de arriba a marco_sup del techo,
      // de modo que la plancha apoye encima y remate a ras. No puede acercarse
      // mas al frente: el barrido del Z-Rail al abrir la tapa se lo come.
-     // Comparte X con los otros cuatro traseros desde que la trasera le pasa
-     // por delante: los CINCO largueros traseros son una sola cota.
+     // Comparte X con el de base desde que la trasera le pasa por delante:
+     // los DOS largueros traseros son una sola cota, y entre ellos la plancha
+     // vuela 211.73 mm sin apoyo intermedio -- a proposito.
      [x_tr,        P[5].y - marco_sup - r]];
 
 // --- redondeo del contorno, radio POR VERTICE --------------------------
@@ -444,29 +414,31 @@ module piel_trasera_2d() {
     // UNA sola plancha desde el 2026-08-21: fueron dos (piel_inferior y
     // piel_superior) partidas a la altura del entrepiso, porque cada una se
     // atornillaba a los dos largueros de SU piso. Muerta la bandeja de
-    // entrepiso esa frontera dejo de existir, y una plancha que abarca los
-    // cuatro largueros traseros esta mejor sujeta que dos con dos filas cada
-    // una. Va en t_piel (8), no en t_acrilico.
+    // entrepiso esa frontera dejo de existir. Va en t_piel (8), no en
+    // t_acrilico.
     y0   = ce[1].y - 15;                    // canto de abajo
     // Hasta la cara de ABAJO DE LA TAPA DE REMATE. Antes se frenaba en el
     // larguero de remate, que vivia a ras del plano trasero y le tapaba la
     // banda; desde que ese larguero se retiro t_piel, la trasera le pasa por
     // delante y llega arriba del todo.
     alto = (P[5].y - marco_sup) - y0;
-    // Las CUATRO filas caen en su larguero, no a una distancia del canto.
+    // DOS filas, una por larguero trasero, y las dos caen en SU centerline y
+    // no a una distancia del canto. Fueron CINCO hasta el 2026-08-21: los tres
+    // largueros de en medio no sujetaban ya nada mas que estas filas, y una
+    // plancha continua de 8 atornillada arriba y abajo trabaja de alma de
+    // cortante en esa cara mejor que cinco barras sueltas.
     f_base = ce[1].y - y0;
-    f_entr = ce[3].y - y0;
-    f_rep  = ce[5].y - y0;
-    f_rem  = ce[4].y - y0;
-    f_tras = ce[7].y - y0;                  // la quinta, en el larguero que se movio
+    f_tras = ce[4].y - y0;
     // Las ondas conservan su altura fisica de siempre, pero derivadas de las
-    // filas que las rodean: asi no se acercan a un tornillo si un larguero se
-    // mueve. Las fracciones son las que tenian en las dos pieles viejas.
-    y_bajas  = f_base + 0.65*(f_entr - f_base);
-    y_sierra = f_rep  + 0.45*(f_rem  - f_rep);
+    // dos filas que las rodean: asi no se acercan a un tornillo si un larguero
+    // se mueve. Las fracciones se recalcularon al pasar de cinco filas a dos
+    // para dejar las ondas DONDE YA ESTABAN: 82.75 y 171.68 contra 83.33 y
+    // 171.39 de antes, o sea medio milimetro.
+    y_bajas  = f_base + 0.32*(f_tras - f_base);
+    y_sierra = f_base + 0.74*(f_tras - f_base);
     difference() {
         plancha(au, alto);
-        for (y = [f_base, f_entr, f_rep, f_rem, f_tras]) fila_agujeros(au, y);
+        for (y = [f_base, f_tras]) fila_agujeros(au, y);
         translate([au*0.10, y_bajas])  onda("triangulo", au*0.35);
         translate([au*0.55, y_bajas])  onda("cuadrada",  au*0.35);
         translate([au*0.15, y_sierra]) onda("sierra", au*0.70);
@@ -492,7 +464,7 @@ module tapa_valle_2d() {
     ce = centros_esqueleto();
     xv = x_valle();
     largo = xv[1] - xv[0];
-    y_esp = ce[6].x - xv[0];                 // linea del larguero, en local
+    y_esp = ce[3].x - xv[0];                 // linea del larguero, en local
     campos = [[valle_margen,               y_esp - valle_espina/2],
               [y_esp + valle_espina/2,     largo - valle_margen]];
     n_hp  = round(largo_riel/hp);            // 104
@@ -828,9 +800,9 @@ else assert(false, str("PART desconocido: ", PART));
 
 // costado_2d vive en el plano XY del perfil (X = fondo, Y = altura);
 // costado() lo extruye en +Z por t_cheek, o sea Z pasa a ser el ancho.
-// Dos costados en los extremos de Z; 11 largueros 2020 (centros_rail() +
-// centros_esqueleto(), en ese orden — 7 de esqueleto desde el rail nuevo
-// del zocalo) cruzando entre sus caras internas.
+// Dos costados en los extremos de Z; 9 largueros 2020 (centros_rail() +
+// centros_esqueleto(), en ese orden — 5 de esqueleto desde que los tres
+// traseros de en medio se retiraron) cruzando entre sus caras internas.
 module costados() {
     costado();
     translate([0, 0, ancho_total - t_cheek]) costado();
@@ -884,8 +856,8 @@ module bandeja_base() {
 
 // EMPOTRADA (2026-08-21): cara exterior EN el plano trasero, x = fondo(), y
 // crece hacia dentro. Estuvo volada sobre separadores, con la cara exterior 10
-// mm por detras del canto. Apoya en la cara de los largueros traseros, que por
-// eso viven todos en x_tr = fondo - r - t_acrilico. y0 deriva de la fila de
+// mm por detras del canto. Apoya en la cara de los DOS largueros traseros, que
+// por eso viven los dos en x_tr = fondo - r - t_piel. y0 deriva de la fila de
 // agujero inferior cayendo en el rail base-trasera (ce[1].y).
 module piel_trasera() {
     P = pts_perfil();
@@ -974,7 +946,7 @@ module remate_sup_2d() {
         plancha(au, prof_sup);
         // la fila cae en la centerline del larguero nuevo, medida desde el
         // canto DELANTERO de la plancha (el que remata el canto del panel).
-        fila_agujeros(au, ce[7].x - P[4].x - inset_remate_frente);
+        fila_agujeros(au, ce[4].x - P[4].x - inset_remate_frente);
     }
 }
 
@@ -1070,29 +1042,32 @@ module bom() {
     // Faltaban. Los M5 de arriba atan el larguero al COSTADO; estos atan la
     // PLANCHA al larguero, que es otra union y otro herraje. Salieron al montar
     // la guia de ensamblaje: las planchas tenian los taladros dibujados y el BOM
-    // no tenia el tornillo. Cinco filas de fila_agujeros() en total -- dos en la
-    // bandeja de base, dos en la de entrepiso, una en la tapa del valle.
+    // no tenia el tornillo.
     n_fila = max(1, round(au/100));
-    // Nueve filas de n_fila: dos de la bandeja de base, una de la tapa del
-    // valle, una de la tapa de remate y CINCO de la trasera -- una por cada
-    // larguero trasero, que desde que la trasera llega arriba son cinco.
-    echo(str("BOM: tornillo M3 x", 9*n_fila, " + tuerca T M3 -- las planchas a",
+    // SEIS filas de n_fila: dos de la bandeja de base, una de la tapa del
+    // valle, una de la tapa de remate y DOS de la trasera -- una por larguero
+    // trasero. Fueron nueve hasta el 2026-08-21, con cinco en la trasera; se
+    // fueron con los tres largueros traseros de en medio.
+    echo(str("BOM: tornillo M3 x", 6*n_fila, " + tuerca T M3 -- las planchas a",
              " los largueros: base ", 2*n_fila,
              ", tapa del valle ", n_fila, ", tapa de remate ", n_fila,
-             ", trasera ", 5*n_fila, "."));
+             ", trasera ", 2*n_fila, "."));
     echo("     Estos entran por la RANURA del 2020, no por su punta. Es donde");
     echo("     la tuerca de insercion lateral se paga sola: con las de deslizar");
     echo("     hay que dejarlas dentro ANTES de cerrar el esqueleto.");
     echo(str("BOM: la TRASERA es UNA plancha empotrada de t=", t_piel, ", no dos:"));
-    echo(str("     ", ancho_total - 2*t_cheek - 2*hol_piel, " de ancho, y",
-             " apoya en los CUATRO largueros traseros a la vez. Fueron dos"));
-    echo("     pieles de 5 partidas a la altura del entrepiso, y colgadas de 12");
-    echo("     separadores M4 hasta el 2026-08-21 -- separadores, junta de");
-    echo("     sombra y una de las dos planchas murieron el mismo dia.");
+    echo(str("     ", ancho_total - 2*t_cheek - 2*hol_piel, " de ancho,",
+             " atornillada arriba y abajo y NADA en medio: 211.73 mm de vano"));
+    echo("     libre, que en 8 mm de acrilico son 0.15 de flecha con 50 N en el");
+    echo("     centro. Fueron dos pieles de 5 partidas a la altura del");
+    echo("     entrepiso, colgadas de 12 separadores M4 y con cinco filas de");
+    echo("     tornillo. Separadores, junta de sombra, una plancha entera y");
+    echo("     tres largueros murieron por el camino, todos el 2026-08-21.");
     // LAS DOS FILAS SON TAPA. Cada una gira sobre el M5 de su riel de arriba y
-    // se cierra con el de su otro extremo. De los 71 tornillos del case (8 M4 de
-    // riel + 14 M5 de larguero + 25 M3 de plancha + 24 M4 de piel), solo
-    // CUATRO se tocan para abrirlo: dos por fila.
+    // se cierra con el de su otro extremo. De los 48 tornillos del case (8 M4 de
+    // riel + 10 M5 de larguero + 30 M3 de plancha; los 24 M4 de separador se
+    // fueron con los separadores), solo CUATRO se tocan para abrirlo: dos por
+    // fila.
     echo("BOM: los M4 de riel no son todos iguales --");
     echo("     x4 EJES: tornillo de HOMBRO M4, espiga 4 mm (no M5 -- el riel");
     echo("        cambio de herraje al cambiar de fabricante). Riel del valle");
