@@ -3,7 +3,7 @@
 Spec: [`docs/superpowers/specs/2026-08-15-case-design.md`](../docs/superpowers/specs/2026-08-15-case-design.md) (rev. 5)
 Board de intención: [`renders/propuesta-diseno-2026-08-16.png`](renders/propuesta-diseno-2026-08-16.png)
 — **manda sobre lenguaje visual, NO sobre cotas**: se dibujó para paneles de
-190 mm y un case de 500 × 380 × 350, y el case real mide 544.32 × 247.73 × 300.4.
+190 mm y un case de 500 × 380 × 350, y el case real mide 544.32 × 247.73 × 308.4.
 
 ## Formato: EUROrack 3U, las dos filas
 
@@ -28,12 +28,12 @@ que se dibujó para 190 mm.
 |---|---|
 | ancho total | **544.32 mm** = 528.32 (104 HP) + 2 × `t_cheek` |
 | alto total | **247.73 mm** |
-| fondo | **300.4 mm** |
+| fondo | **308.4 mm** |
 | altura de entrepiso | **138.13 mm** |
 | ancho útil entre costados | **528.32 mm** |
 
 **La punta de arriba es cuadrada** (2026-08-21). El techo lleva una meseta de
-`marco_remate` = **42 mm** rematada por dos quiebres de 2 mm, en vez de la
+`marco_remate` = **50 mm** rematada por dos quiebres de 2 mm, en vez de la
 cúpula que salía antes. Fue 34 unas horas: subió a 42 cuando la meseta tuvo
 que alojar el octavo larguero (abajo). Son **dos** parámetros y no uno: los vértices 4 y 5
 dejaron de compartir `radio_punta` —que va sobredimensionado a propósito y se
@@ -75,7 +75,12 @@ entero se desatornilla.**
 
 No cabía más adelante: el **barrido del Z-Rail al abrir la tapa** de la fila de
 arriba obliga a que su centro esté en x ≥ 286.17, y por eso el fondo creció de
-291.2 a 299.2. Con el centro en 289.22 quedan 3.04 mm de margen.
+291.2 a 299.2, y luego a **307.2** cuando ese mismo larguero tuvo que retirarse
+otros 8 para que la trasera le pasara por delante. Con el centro en 289.22
+quedan 3.04 mm de margen — los mismos que tenía antes de moverse.
+
+Y con eso **los cinco largueros traseros comparten X**: una sola cota para todo
+el plano de apoyo de la trasera.
 
 Y la tapa **no llega hasta el pico**: se retira `inset_remate_frente` = 13 mm.
 Eso no es estética — es lo único que la deja abrir. Hasta ahora esta pieza
@@ -251,15 +256,15 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Larguero perfil 2020 | **8** | de 528.32 mm cada uno: 2 de base, 2 de entrepiso, remate superior, repisa, valle y **remate trasero** |
 | Tornillo **M4** | **8** | entran de punta por el costado y **roscan en el propio Z-Rail** (viene con M4 taladrado a 3.3 de fábrica). Sin tuerca, sin inserto. **No vienen con el raíl.** 4 de hombro (los ejes de giro) + 4 de mano (los cierres) |
 | Tornillo M5 botón + tuerca T | **16** | 2 por larguero 2020, por la punta, desde el costado |
-| Tornillo M3 + tuerca T M3 | **40** | las planchas a los largueros: base 10, tapa del valle 5, tapa de remate 5, **trasera 20** (4 filas × 5). Entran por la RANURA, no por la punta |
+| Tornillo M3 + tuerca T M3 | **45** | las planchas a los largueros: base 10, tapa del valle 5, tapa de remate 5, **trasera 25** (5 filas × 5). Entran por la RANURA, no por la punta |
 | Arandela ANCHA d16 | 4 | **no opcional**: en los ejes de giro. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 MPa y aguanta |
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa. **Sustituye al amortiguador**, que se eliminó |
 | Plancha acrílico t=5 mm | **1** | solo la tapa del valle. Un espesor entero para **una** pieza — a resolver en el pliego, no en el modelo |
-| Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante) + tapa de remate (528.32 × 29) + **trasera** (528.02 × 216.73) |
+| Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante) + tapa de remate (528.32 × 37) + **trasera** (528.02 × 236.73) |
 | Patica metálica torneada | 4 | d=16 × 8 mm |
 
-**Total de tornillos del case: 64** — 8 M4 de raíl + 16 M5 de esqueleto +
-40 M3 de plancha. Fueron 71 hasta el 2026-08-21: al empotrarse, la trasera se
+**Total de tornillos del case: 69** — 8 M4 de raíl + 16 M5 de esqueleto +
+45 M3 de plancha. Fueron 71 hasta el 2026-08-21: al empotrarse, la trasera se
 llevó por delante 12 separadores M4 y sus 24 tornillos de botón, y al morir la
 bandeja de entrepiso se fueron otros 10 M3; en medio volvieron 2 M5 y 5 M3 con
 el octavo larguero y su tapa de remate. Lo que no volvió es el adhesivo: **el
@@ -346,8 +351,8 @@ un cable asumiendo continuidad por el riel es riesgo de choque eléctrico.
    antes que la pletina roscada corre por su canal.
 4. **Tapa del valle** — 5 M3 al larguero del valle.
 5. **Electricidad y bonding** — bloque IEC fijo, espárrago junto al PSU.
-6. **Trasera** — UNA plancha de 8 mm, EMPOTRADA, 20 M3 a tuerca T repartidos
-   en las cuatro filas de los largueros traseros. Va después de los largueros
+6. **Trasera** — UNA plancha de 8 mm, EMPOTRADA, 25 M3 a tuerca T repartidos
+   en las cinco filas de los largueros traseros. Va después de los largueros
    porque la tuerca T vive dentro de la ranura.
 7. **Tapa de remate** — 5 M3 al larguero de remate trasero. Va ATORNILLADA
    desde el 2026-08-21; hasta entonces iba pegada al Z-Rail y era la única

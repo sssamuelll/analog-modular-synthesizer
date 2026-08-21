@@ -46,11 +46,16 @@ lenguaje visual).
 > entrepiso** (su papel de barrera ya lo hace el chasis de acero) y las dos
 > pieles se funden en **una sola plancha de 8 mm** atornillada a los cuatro
 > largueros traseros. El case pierde dos planchas y gana rigidez en la trasera.
+> **rev. 8** (2026-08-21): el acrílico de la trasera **llega hasta arriba** — el
+> larguero de remate se retira `t_piel` para que le pase por delante, con lo que
+> los CINCO largueros traseros comparten X y la trasera gana su quinta fila de
+> tornillos. `marco_remate` 42 -> 50 y el fondo 299.2 -> 307.2, que es lo que
+> pide el barrido del Z-Rail para conservar los 3.04 mm de margen.
 >
 > **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
 > visual y proporciones *relativas*, pero **sus cotas están superadas**. Se
 > dibujó para paneles de 190 mm y un case de 500 × 380 × 350; el case real
-> mide **544.32 × 247.73 × 300.4**.
+> mide **544.32 × 247.73 × 308.4**.
 
 ## 1. Objetivo
 
@@ -136,7 +141,7 @@ esta dirección).
 | `angulo_inferior` | **35° desde la vertical** | Cara del piso de procesamiento |
 | `angulo_superior` | **45° desde la vertical** | Cara del piso de generación |
 | `alto_frontal` | **13 mm** | Canto delantero. **No es un zócalo**: el zócalo se eliminó |
-| `fondo` / `alto_total` | derivados | **300.4 mm / 247.73 mm**. Ya NO cuadra con el board (350 × ~380): el board se dibujó para paneles de 190 |
+| `fondo` / `alto_total` | derivados | **308.4 mm / 247.73 mm**. Ya NO cuadra con el board (350 × ~380): el board se dibujó para paneles de 190 |
 | `t_acrilico` / `t_piel` | 5 / **8 mm** | `t_acrilico` ya solo viste la tapa del valle; la trasera tiene su propio espesor de 8. MEDIR los dos con calibre (§11) |
 | `t_base` / `t_cheek` | 8 mm | Suelo portante y costados. La bandeja de base subió de 5 a 8 al pasar a ser el propio canto de abajo |
 | `kerf` | **0** | Correcto fresando: el CAM compensa el radio de herramienta. Solo vuelve a ser negativo si se regresa al láser |

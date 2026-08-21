@@ -218,7 +218,9 @@ function centros_esqueleto() =
      // Va a ras del plano trasero y con su cara de arriba a marco_sup del techo,
      // de modo que la plancha apoye encima y remate a ras. No puede acercarse
      // mas al frente: el barrido del Z-Rail al abrir la tapa se lo come.
-     [fondo() - r, P[5].y - marco_sup - r]];
+     // Comparte X con los otros cuatro traseros desde que la trasera le pasa
+     // por delante: los CINCO largueros traseros son una sola cota.
+     [x_tr,        P[5].y - marco_sup - r]];
 
 // --- redondeo del contorno, radio POR VERTICE --------------------------
 //
@@ -438,6 +440,7 @@ module bandeja_base_2d() {
 module piel_trasera_2d() {
     au = ancho_total - 2*t_cheek - 2*hol_piel;
     ce = centros_esqueleto();
+    P  = pts_perfil();
     // UNA sola plancha desde el 2026-08-21: fueron dos (piel_inferior y
     // piel_superior) partidas a la altura del entrepiso, porque cada una se
     // atornillaba a los dos largueros de SU piso. Muerta la bandeja de
@@ -445,12 +448,17 @@ module piel_trasera_2d() {
     // cuatro largueros traseros esta mejor sujeta que dos con dos filas cada
     // una. Va en t_piel (8), no en t_acrilico.
     y0   = ce[1].y - 15;                    // canto de abajo
-    alto = (ce[7].y - rail/2) - y0;         // hasta la cara de abajo del remate trasero
+    // Hasta la cara de ABAJO DE LA TAPA DE REMATE. Antes se frenaba en el
+    // larguero de remate, que vivia a ras del plano trasero y le tapaba la
+    // banda; desde que ese larguero se retiro t_piel, la trasera le pasa por
+    // delante y llega arriba del todo.
+    alto = (P[5].y - marco_sup) - y0;
     // Las CUATRO filas caen en su larguero, no a una distancia del canto.
     f_base = ce[1].y - y0;
     f_entr = ce[3].y - y0;
     f_rep  = ce[5].y - y0;
     f_rem  = ce[4].y - y0;
+    f_tras = ce[7].y - y0;                  // la quinta, en el larguero que se movio
     // Las ondas conservan su altura fisica de siempre, pero derivadas de las
     // filas que las rodean: asi no se acercan a un tornillo si un larguero se
     // mueve. Las fracciones son las que tenian en las dos pieles viejas.
@@ -458,7 +466,7 @@ module piel_trasera_2d() {
     y_sierra = f_rep  + 0.45*(f_rem  - f_rep);
     difference() {
         plancha(au, alto);
-        for (y = [f_base, f_entr, f_rep, f_rem]) fila_agujeros(au, y);
+        for (y = [f_base, f_entr, f_rep, f_rem, f_tras]) fila_agujeros(au, y);
         translate([au*0.10, y_bajas])  onda("triangulo", au*0.35);
         translate([au*0.55, y_bajas])  onda("cuadrada",  au*0.35);
         translate([au*0.15, y_sierra]) onda("sierra", au*0.70);
@@ -1065,13 +1073,13 @@ module bom() {
     // no tenia el tornillo. Cinco filas de fila_agujeros() en total -- dos en la
     // bandeja de base, dos en la de entrepiso, una en la tapa del valle.
     n_fila = max(1, round(au/100));
-    // Ocho filas de n_fila: dos de la bandeja de base, una de la tapa del
-    // valle, una de la tapa de remate y CUATRO de la trasera -- una por cada
-    // larguero trasero. La bandeja de entrepiso se llevo sus dos al morir.
-    echo(str("BOM: tornillo M3 x", 8*n_fila, " + tuerca T M3 -- las planchas a",
+    // Nueve filas de n_fila: dos de la bandeja de base, una de la tapa del
+    // valle, una de la tapa de remate y CINCO de la trasera -- una por cada
+    // larguero trasero, que desde que la trasera llega arriba son cinco.
+    echo(str("BOM: tornillo M3 x", 9*n_fila, " + tuerca T M3 -- las planchas a",
              " los largueros: base ", 2*n_fila,
              ", tapa del valle ", n_fila, ", tapa de remate ", n_fila,
-             ", trasera ", 4*n_fila, "."));
+             ", trasera ", 5*n_fila, "."));
     echo("     Estos entran por la RANURA del 2020, no por su punta. Es donde");
     echo("     la tuerca de insercion lateral se paga sola: con las de deslizar");
     echo("     hay que dejarlas dentro ANTES de cerrar el esqueleto.");

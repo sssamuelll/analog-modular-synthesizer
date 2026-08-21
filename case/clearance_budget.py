@@ -306,7 +306,8 @@ def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
             # arriba no habia otra cosa, y era la unica junta irreversible del
             # case. A ras del plano trasero, cara de arriba a marco_sup del
             # techo. No puede adelantarse: el barrido del Z-Rail se lo come.
-            (fondo(p) - r, P[5][1] - p["marco_sup"] - r)]
+            # comparte X con los otros cuatro: la trasera le pasa por delante
+            (x_tr, P[5][1] - p["marco_sup"] - r)]
 
 
 # Que inset gobierna cada punta de cada cara. El orden es el mismo que usa
@@ -409,7 +410,7 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # largueros de su piso; muerta esa bandeja la frontera dejo de existir. Va
     # en t_piel (8) y declara CUATRO filas, una por larguero trasero.
     y0_pt = ce[1][1] - 15
-    alto_pt = (ce[7][1] - rail / 2) - y0_pt
+    alto_pt = (P[5][1] - p["marco_sup"]) - y0_pt
     planchas.append(("piel_trasera", P[6][0] - p["t_piel"], P[6][0],
                      y0_pt, y0_pt + alto_pt, t_cheek + hol,
                      ancho_total - t_cheek - hol))
@@ -417,6 +418,7 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
               ("piel_trasera", "entrepiso", "y", ce[3][1], "entrepiso trasero"),
               ("piel_trasera", "repisa", "y", ce[5][1], "repisa"),
               ("piel_trasera", "remate", "y", ce[4][1], "remate superior"),
+              ("piel_trasera", "remate trasero", "y", ce[7][1], "remate trasero"),
               ("remate_sup", "unica", "x", ce[7][0], "remate trasero")]
     return railes, planchas, filas
 

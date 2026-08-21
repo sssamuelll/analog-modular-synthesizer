@@ -236,7 +236,17 @@ alto_frontal    = 13;
 // quedan 3.04 mm de margen -- la misma holgura que el presupuesto ya exige entre
 // el chasis y sus largueros. A 40 quedaria 1 mm contra una pieza EN MOVIMIENTO,
 // y a 39 cero.
-marco_remate    = 42;
+// Y SUBIO A 50 el mismo dia. La razon otra vez es una pieza, no la forma: el
+// acrilico de la trasera se frenaba en y=219.73 porque el larguero de remate
+// vivia A RAS del plano trasero y le tapaba la banda. Para que la trasera le
+// pase por delante, ese larguero tiene que retirarse t_piel -- y ahi vuelve a
+// meterse en el barrido del Z-Rail, que es lo que lo mando al plano trasero en
+// primer lugar. La unica salida es fondo.
+//
+// A 50 el larguero cae en x_tr = 289.22 y conserva los mismos 3.04 mm de
+// margen contra el barrido. El minimo absoluto son 47 (fondo 304.17) y ahi el
+// margen es 0.04 mm contra una pieza EN MOVIMIENTO.
+marco_remate    = 50;
 // Entrepiso: la franja horizontal entre el tope de la cara inferior y la base
 // de la superior -- el "valle del medio" de la silueta. Fue 25 (minimo tecnico
 // de R7: por debajo, los dos railes girados se solapaban 2.52 mm), luego 40,
@@ -677,7 +687,7 @@ marco_sup   = 8;
 // marco_remate, que es lo que mide la meseta: aqui no se pueden escribir
 // expresiones (ver la cabecera), asi que la relacion la vigila guarda_remate()
 // en clearance_budget.py.
-prof_sup    = 29;
+prof_sup    = 37;
 // Cuanto se RETIRA la tapa de remate del pico, y no es estetica: es la unica
 // razon por la que la tapa de la fila de arriba sigue abriendo.
 //

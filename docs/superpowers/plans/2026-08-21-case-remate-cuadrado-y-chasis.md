@@ -402,6 +402,43 @@ que el comentario de esa puerta advertía por escrito desde su primera versión.
 
 ---
 
+## T7 — El acrílico de atrás llega hasta arriba  ✅ HECHA (2026-08-21)
+
+La trasera se frenaba en y=219.73 porque el larguero de remate vivía **a ras del
+plano trasero** y le tapaba esa banda. Para que le pase por delante, ese larguero
+tiene que retirarse `t_piel` — y ahí vuelve a meterse en el barrido del Z-Rail,
+que es exactamente lo que lo mandó al plano trasero en la T5.
+
+| centro del larguero | distancia al pivote | ¿libra? |
+|---|---|---|
+| 281.22 (retirado 8, fondo sin tocar) | 11.95 | **no** — la tapa deja de abrir |
+| 286.17 | 16.91 | mínimo absoluto, margen 0.04 |
+| **289.22 (marco_remate 50)** | **19.95** | **sí, 3.04 mm** — los mismos que tenía |
+
+`marco_remate` 42 → **50**, fondo 299.2 → **307.2** (308.4 dibujado).
+
+Resultado:
+
+- La trasera corre de y=3 hasta **239.73**, la cara de abajo de la tapa de
+  remate. 528.02 × **236.73** en 8 mm.
+- Gana su **quinta fila** de tornillos, en el larguero que se movió.
+- **Los cinco largueros traseros comparten X.** Una sola cota para todo el plano
+  de apoyo.
+- Desaparece la banda de aluminio de la trasera: acrílico de abajo arriba, con
+  el canto de 8 mm de la tapa de remate rematando.
+
+### Lo que la T7 encontró
+
+`piel_trasera_2d()` salió con **bbox de 1.0 × 1.0 mm**. El módulo usaba `P[5].y`
+para derivar su alto y `P` no estaba definido en ese scope: OpenSCAD lo trata
+como `undef`, `alto` sale `undef` y `plancha()` no dibuja nada.
+
+Es el mismo fallo que el del lienzo dos tandas atrás — variable ausente que no
+levanta error —, pero **aquí sí lo cazó la puerta**, y a la primera. La
+diferencia no es el fallo: es que `check_dxf` relee esta pieza y el lienzo no.
+
+---
+
 ## T2 — El chasis del PSU se monta sobre los largueros
 
 Hoy el chasis de acero pasa **entre** los dos largueros de base y se apoya en la
