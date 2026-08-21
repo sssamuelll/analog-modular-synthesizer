@@ -19,9 +19,9 @@ Para regenerarlos, ver el final de este fichero.
 | `sam17-vco-job.gbrjob` | Job file (metadatos del set de gerbers) |
 | `sam17-vco.drl` | Taladros, Excellon, mm — vías (0.20 mm) y through-hole (conectores) en un solo fichero |
 | `sam17-vco-drl_map.pdf` | Mapa de taladros (tamaño/símbolo por herramienta), para revisar visualmente antes de pedir |
-| `sam17-vco-pos.csv` | Posiciones SMD para ensamblaje (CSV, mm, ambas caras aunque todo cae en `top`) — **solo las 111 huellas SMD**; los conectores (`J1`, `J2`, `J_CV1-4`, `J_OUT1-4`) y los test points son through-hole/pads y se sueldan aparte |
-| `sam17-vco-bom.csv` | BOM de ensamblaje **con los códigos LCSC resueltos** (`Designator,Value,Footprint,Quantity,LCSC Part#,Notes`) — 26 líneas cubriendo las 111 huellas SMD. Cada nota lleva el MPN, el stock y la fecha en que se verificó. Es la fuente, no el fichero que se sube |
-| `sam17-vco-bom-jlc.csv` | El BOM **que se sube a JLCPCB** (`Comment,Designator,Footprint,LCSC Part #`) — lo genera `../kicad/bom_jlc.py` fusionando las filas que comparten código LCSC, porque JLC marca como duplicado el mismo part number en dos renglones |
+| `sam17-vco-pos.csv` | Posiciones SMD para ensamblaje (CSV, mm, ambas caras aunque todo cae en `top`) — **solo las 119 huellas SMD**; los conectores (`J1`, `J2`, `J_CV1-4`, `J_OUT1-4`) y los test points son through-hole/pads y se sueldan aparte |
+| `sam17-vco-bom.csv` | BOM de ensamblaje **con los códigos LCSC resueltos** (`Designator,Value,Footprint,Quantity,LCSC Part#,Notes`) — 28 líneas cubriendo las 119 huellas SMD. Cada nota lleva el MPN, el stock y la fecha en que se verificó. Es la fuente, no el fichero que se sube |
+| `sam17-vco-bom-jlc.csv` | **NO ESTÁ, y es a propósito.** El BOM que se sube a JLCPCB (`Comment,Designator,Footprint,LCSC Part #`) — lo genera `../kicad/bom_jlc.py` fusionando las filas que comparten código LCSC, porque JLC marca como duplicado el mismo part number en dos renglones. Hoy `bom_jlc.py` se niega a escribirlo: `C_IV1-4` y `R_OUT1-4` siguen sin código LCSC verificado. Un fichero viejo con este nombre es peor que ninguno — alguien lo sube |
 | `sam17-vco-cpl-jlc.csv` | El CPL (pick&place) **que se sube a JLCPCB** — lo genera `../kicad/cpl_jlc.py`. **El `pos.csv` crudo NO sirve**: falla con «Failed processing the CPL file» porque kicad-cli escribe las cabeceras de KiCad y JLC espera `Designator,Mid X,Mid Y,Layer,Rotation`, con Layer capitalizado y 2 decimales |
 | `sam17-vco-3d-top.png` | Render 3D cenital (kicad-cli pcb render, raytracing) — cómo se verá la placa montada, vista desde arriba |
 | `sam17-vco-3d-iso.png` | Render 3D isométrico — la placa en perspectiva |
@@ -43,7 +43,7 @@ stock**, y siendo proveedor único no hay ninguna que ofrecer. El `C42420746`
 NO para meterlo en una orden de montaje. La otra entrada del catálogo,
 `C2886621`, tiene MOQ 75 y es inservible.
 
-Así que **la fábrica monta 107 de las 111 piezas** y los cuatro sitios de QFN
+Así que **la fábrica monta 115 de las 119 piezas** y los cuatro sitios de QFN
 llegan vacíos.
 
 ### Por qué a mano y no consignado
