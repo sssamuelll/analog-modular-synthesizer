@@ -450,17 +450,37 @@ Patrón de instrumento, estrenado en el módulo 3 y aplicado aquí sin excepció
 
 | Riel | De dónde | Para qué |
 |---|---|---|
-| **+5 V** | IRM-15-5 (vive fuera), por el conector dedicado **`J6`**, KK-254 | Lógica de 5 V, la cadena WS2812, VBUS del USB host, lado no aislado del aislador |
+| **+5 V digital** | **IRM-15-5** (5 V/3 A), por cable directo — no pasa por la placa de la fuente | Lógica de 5 V, la cadena WS2812, VBUS del USB host, lado no aislado del aislador |
 | **+12 V** | Bus board, peine Eurorack (650 mA por riel) | **Solo** el riel local de 10 V de los gates |
 | **+3V3** | Regulador local desde +5 V | Micro, puente RF, y todo lo digital |
 | **+10 V** | Local desde +12 V | Los cuatro gates, y nada más |
 | **−12 V** | Llega por el peine | **Sin usar.** Se declara así, no se deja ambiguo |
 
-El +5 V **no llega por el peine**: el bus SAM17 es de cuatro hilos
-(+12/GND/GND/−12) y no lleva 5 V. Llega por `J6`, que la spec de la fuente
-declara dedicado a este módulo. Con la regla del **issue #59** en la entrada de
-cada riel: protección de polaridad inversa y RC, que es la única defensa válida
-contra la cinta IDC invertida.
+El +5 V **no llega por el peine** —el bus SAM17 es de cuatro hilos
+(+12/GND/GND/−12) y no lleva 5 V— **ni por `J6`**, y esto último es una
+corrección de una versión anterior de este documento que hay que decir entera
+porque casi mete una masa donde no va:
+
+> Este instrumento tiene **tres** rieles de 5 V y no son el mismo. `J6` es el
+> del **`U3`, el 7805 heredado de la v1**: 300 mA de límite de diseño y
+> **referenciado a `GNDA`**. Se dimensionó para el AD5686R y el backlight del
+> LCD del módulo 2 **del Raspberry Pi**, y ninguna de las dos cosas existe ya.
+> Meter ese riel en esta placa, cuya masa es `GNDD`, sería cruzar las masas que
+> el diseño separa por construcción — y encima pedirle 2,5 A a un 7805 acotado
+> a 300 mA.
+>
+> El riel de esta placa es el **digital**: la IRM-15-5 de 5 V/3 A, que
+> **no pasa por la placa de la fuente** —se monta fuera y su salida va directa
+> al lado digital— y por eso la spec de la fuente le asigna la medida a este
+> módulo. Entra por un conector propio dimensionado para los 3 A.
+>
+> Consecuencia para la fuente, que se anota aquí porque su ruteo está vivo:
+> **`J6` se queda sin su cliente principal.** Le sigue quedando la isla de
+> telemetría de §4 de su spec; el módulo 2 ya no cuelga de ahí.
+
+Con la regla del **issue #59** en la entrada de cada riel: protección de
+polaridad inversa y RC, que es la única defensa válida contra la cinta IDC
+invertida.
 
 ### 9.1 El +5 V pasa por aquí, y esta placa lo mide
 
@@ -470,9 +490,15 @@ asigna la medida a este módulo por escrito —§4.1: *«medir sus 2.80 A es tra
 del módulo 2, no de aquí»*— y sin la cual el árbitro de brillo del issue #104
 no existe en ninguna placa del instrumento. Se corrige aquí.
 
-El +5 V entra por `J6` y sale hacia la cadena por su propio conector, con un
+El +5 V digital entra por su conector y sale hacia la cadena por otro, con un
 **sensor de corriente en ese camino**: es lo que convierte el tope del #104 de
 una constante de firmware en un árbitro con realimentación.
+
+Con una advertencia que el propio #104 deja escrita y que el sensor **no**
+deroga: *«se estima antes de enviar, no se mide después — cuando el amperímetro
+note la caída, el RP2350 ya se reseteó»*. El árbitro sigue estimando cada
+cuadro antes de empujarlo; el sensor es para **calibrar la estimación y
+detectar deriva**, no para cerrar el lazo en tiempo real.
 
 Y entra con una **regla de trazado que es una puerta, no una intención**: la
 corriente de la cadena vive en una **isla de potencia en el canto de la placa**
@@ -647,10 +673,20 @@ terminado**, no la línea de código que pretendía lograrlo.
    nadie haya tocado el afinado**. Es el riesgo con más alcance de esta lista
    porque invalida en silencio el presupuesto del que cuelga la afinación
    entera. Issue #150.
-5. **El +5 V no cierra hoy.** Al tope de 2,50 A del #104, la IRM-15-5 deja
-   +1,58 a +2,01 W, y el host USB en su límite pide 2,50 W. O baja el límite
-   del interruptor de carga, o el árbitro le quita brillo a los LED cuando hay
-   un controlador enchufado, o cambia la fuente. **Es un bloqueante del plan.**
+5. **El puerto host no es una clase del árbitro del #104.** Una versión anterior
+   de esta lista decía que «el +5 V no cierra hoy», comparando el **tope** de
+   los LED contra el **límite** del host. Estaba mal planteado: el #104 dice
+   explícitamente que ese tope es **una política, no una carga** —el uso real
+   que documenta es 2,04 a 2,28 A de 2,80— y ya trae mecanismo de arbitraje con
+   prioridades: la guía de patcheo no se atenúa nunca, el farol cede primero, y
+   los 0,2 A del RP2350 son piso duro fuera del reparto.
+
+   Lo que de verdad falta es que **el puerto host no está en esa tabla de
+   prioridades**, y es una clase distinta de las tres que hay: el firmware **no
+   la puede atenuar**, aparece cuando alguien enchufa un teclado, y desaparece
+   cuando lo saca. Con `HOST_EN` y el sensor de corriente, el árbitro puede
+   reservarle su cuota y quitarle brillo al farol mientras esté activo. **Cuesta
+   cero hardware** y es la razón de que `HOST_EN` sea un GPIO y no un riel.
    Issue #151.
 6. **El censo de anchos del case es de la arquitectura anterior**, y
    `panel_budget.py` lo importa. Hay que arreglarlo antes de que el guion se

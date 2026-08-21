@@ -111,21 +111,41 @@ Ninguna línea de esquemático se escribe hasta que esta tarea cierre. La spec d
 **Interfaces:**
 - Produce: los números de parte y los pinouts que consumen las tareas 4 a 9, y las constantes de corriente que consume `power_budget.py` (Task 2).
 
-- [ ] **Step 1: Resolver el issue #151 antes que nada.** Es un bloqueante aritmético, no una preferencia. Los números, de la spec de la fuente:
+- [ ] **Step 1: Cerrar el issue #151 — de qué riel cuelga esta placa, y cuánto le toca.**
+
+Primero lo que hay que tener claro, porque una versión anterior de este plan lo tenía mal: **este instrumento tiene tres rieles de 5 V y no son el mismo.**
 
 ```
-tope del #104 ......................... 2,50 A  (bajó de 2,80 el 2026-08-19)
-margen de la IRM-15-5 a ese tope ...... +1,58 a +2,01 W
-host USB en su límite (500 mA @ 5 V) .. 2,50 W
++5V analogico   U3, el 7805 de la v1.  300 mA de diseno.  GNDA.  Sale por J6.
+                Se dimensiono para el AD5686R y el backlight del LCD del
+                modulo 2 DEL PI. Ninguna de las dos cosas existe ya.
++5V digital     IRM-15-5, 5 V / 3,00 A.  GNDD.  NO pasa por la placa de la
+                fuente: se monta fuera y va directa al lado digital.
+                <- ESTE es el riel de esta placa.
++12V            La cascada GOAT, 650 mA/riel, GNDA. Solo para los gates.
 ```
 
-Tres salidas, y hay que elegir **una** y escribirla en `piezas-v2.md` con su razón:
+Colgar el cerebro de `J6` cruzaría `GNDA` con `GNDD` **y** le pediría amperios a un 7805 acotado a 300 mA. No se hace.
 
-  1. **Bajar el límite del interruptor de carga** a lo que de verdad pide un controlador MIDI (medirlo, no suponerlo). Un teclado USB típico está muy por debajo de 500 mA, pero eso es una afirmación que hay que respaldar.
-  2. **Que el árbitro le quite brillo a los LED** cuando `HOST_EN` está activo. Es la clase de arbitraje que el #104 pedía y ya tienes el sensor.
-  3. **Cambiar la fuente digital** por una de más vatios, lo que rehace la térmica del recinto (la spec de la fuente avisa: «si algún día algo pide ese riel en serio, la térmica se rehace antes»).
+Y el reparto del riel digital, con los números del #104 y de la spec de la fuente:
 
-Decisión de Samuel. Sin ella, `power_budget.py` no se puede escribir bien.
+```
+IRM-15-5 nominal ....................... 3,00 A
+piso duro del RP2350 (fuera del reparto) 0,20 A
+tope del #104 para toda la luz ......... 2,50 A   (bajo de 2,80 el 2026-08-19)
+uso REAL que el #104 documenta ......... 2,04 - 2,28 A
+host USB en su limite .................. 0,50 A
+```
+
+**El tope no es una carga: es una política.** El #104 ya trae el mecanismo —estimar la corriente de cada cuadro antes de enviarlo y escalar **por clase**— con tres clases y sus prioridades: la guía de patcheo no se atenúa nunca, los LED de estado ceden si hace falta, el farol cede primero.
+
+Lo que falta, y es lo que esta tarea cierra:
+
+  1. **Añadir el puerto host como cuarta clase** de esa tabla, con la propiedad que lo hace distinto de las otras tres: **el firmware no lo puede atenuar**. Aparece cuando alguien enchufa un teclado y se va cuando lo saca. Va por encima del farol y por debajo de la guía.
+  2. **Decidir el límite del interruptor de carga.** 500 mA es lo que reserva el estándar; lo que pide un controlador MIDI real es bastante menos, pero eso hay que **medirlo y citarlo**, no suponerlo. El límite elegido es la cuota que el árbitro reserva cuando `HOST_EN` está activo.
+  3. Escribir las dos cosas en `piezas-v2.md` con su razón, para que `power_budget.py` (Task 2) las asevere.
+
+Si al medir resulta que ni con el farol apagado cabe, entonces sí se sube la fuente digital — y la spec de la fuente ya reserva ese camino: *«si algún día algo pide ese riel en serio, la térmica del recinto se rehace antes»*. Es la salida, no la primera opción.
 
 - [ ] **Step 2: Elegir las once piezas** contra su criterio de la spec, y **abrir la hoja de cada una**. La tabla va a `piezas-v2.md` con esta forma exacta, y **una fila sin las tres últimas columnas es una fila que no entra al BOM**:
 
@@ -191,14 +211,19 @@ Van **antes** del esquemático porque pueden tumbar una pieza o un pin, y correg
 # 3. Asevera MARGEN DE CAIDA, no solo corriente: la tension minima
 #    garantizada en la entrada del regulador de 10 V, despues del PTC de
 #    la bus board y del elemento de proteccion del #59.
-# 4. Falla si el host USB en su limite no cabe con el tope del #104.
-#    Ese fallo es el issue #151: la Task 1 decide como se resuelve, y
-#    este guion es quien lo verifica.
+# 4. Asevera el riel digital en DOS escenarios, no en uno:
+#      a) los LED en su tope y el host apagado
+#      b) el host en su limite y el arbitro habiendo cedido el farol
+#    Falla si CUALQUIERA de los dos no cabe. Un solo escenario deja fuera
+#    justo el caso que decide el diseno: alguien enchufa un teclado.
+# 5. NO cuelga esta placa de J6. J6 es el 7805 de 300 mA en GNDA; el riel
+#    de esta placa es la IRM-15-5 en GNDD. Si el guion los suma, esta
+#    sumando dos fuentes distintas con dos masas distintas.
 ```
 
-- [ ] **Step 2: Correrlo y verlo fallar** con la configuración de hoy. `Expected: FALLO`, con el mensaje del punto 4. Si sale verde antes de aplicar la decisión de la Task 1, el guion no está midiendo lo que dice.
+- [ ] **Step 2: Correr el escenario (b) sin la cuota del host reservada** y verlo fallar. `Expected: FALLO`. Si sale verde antes de que la Task 1 haya decidido el límite y la clase, el guion no está midiendo lo que dice.
 
-- [ ] **Step 3: Aplicar la decisión de la Task 1 y verlo pasar.**
+- [ ] **Step 3: Aplicar la decisión de la Task 1 y verlo pasar** en los dos escenarios.
 
 - [ ] **Step 4: `pio_budget.py`.** Cuenta lo que de verdad escasea:
 
