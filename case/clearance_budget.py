@@ -58,9 +58,12 @@ def perfil(p: dict[str, float]) -> dict[str, float]:
         "y_entrepiso": y_entrepiso,
         "alto_total": alto_total,
         "prof_sup_min": x_cara_sup1,
-        # del tope del suelo al fondo de la bandeja de entrepiso. Antes se
-        # medIa desde y = 0 y sobrestimaba en los 25 mm del sandwich viejo de
-        # la base; hoy el suelo son t_base.
+        # del tope del suelo al fondo de la TAPA DEL VALLE. Fue la bandeja de
+        # entrepiso hasta el 2026-08-21, y el numero no cambio al morir ella:
+        # las dos planchas eran coplanares y del mismo espesor, asi que el techo
+        # solo cambio de dueno. Donde el chasis NO queda debajo de la tapa del
+        # valle la altura real es mayor -- este numero se queda corto a
+        # proposito, que es el lado seguro.
         "alto_interior_inferior": (y_entrepiso - p["t_acrilico"]
                                     - p["t_base"]),
         "ancho_util": p["ancho_total"] - 2 * p["t_cheek"],
@@ -198,51 +201,30 @@ def _radio_giro_riel(p: dict[str, float]) -> float:
     return math.hypot(p["rail_er_fondo"], p["rail_er_alto"]) / 2
 
 
-def _esquinas_pestana(p: dict[str, float],
-                       P: list[tuple[float, float]]) -> list[tuple[float, float]]:
-    """4 esquinas de la pestana superior en coordenadas del perfil. Va girada
-    con la cara, asi que su caja sale de las esquinas y no de un semilado."""
-    a2 = math.radians(p["angulo_superior"])
-    d2 = (math.sin(a2), math.cos(a2))
-    n2 = (d2[1], -d2[0])
-    return [(P[3][0] + d2[0] * s + n2[0] * q, P[3][1] + d2[1] * s + n2[1] * q)
-            for s in (p["alto_cara_sup"] - p["marco_sup"], p["alto_cara_sup"])
-            for q in (0.0, p["prof_sup"])]
+def _caja_remate(p: dict[str, float],
+                 P: list[tuple[float, float]]) -> tuple[float, float, float, float]:
+    """Caja de la tapa de remate en el perfil: (x0, x1, y0, y1).
 
-
-def _y_remate(p: dict[str, float], P: list[tuple[float, float]],
-              cr: list[tuple[float, float]], r: float) -> float:
-    """Y del larguero de remate, misma formula que y_rs en sam17_case.scad:
-    el mas bajo de tres techos -- el techo YA REDONDEADO, el plano del panel de
-    arriba, y el riel de arriba de la tapa (el que manda)."""
-    a2 = math.radians(p["angulo_superior"])
-    # he_cs y NO r: lo que se acerca al plano del panel es la ESQUINA del
-    # larguero, que en diagonal alcanza 14.14 en vez de 10. Con marco_remate=22
-    # este techo nunca mandaba y el error dormia; con el marco en 8 manda, y con
-    # la version vieja la esquina asomaba 2.54 mm por delante del panel.
-    he_cs = r * (abs(math.cos(a2)) + abs(math.sin(a2)))
-    por_cara = P[3][1] + (math.cos(a2) * (fondo(p) - r - P[3][0])
-                          - (he_cs + p["t_panel"])) / math.sin(a2)
-    # el larguero vive pegado al plano trasero (x = fondo - r), o sea que su
-    # esquina de atras cae donde el arco de la esquina trasera de arriba ya bajo
-    # su tangente (marco_remate/2). P[5].y - r a secas lo dejaba FUERA.
-    por_techo = P[5][1] - r - p["marco_remate"] / 2
-    # Este techo lo puso primero un rail de panel, luego el nudillo de la
-    # bisagra cuando la bisagra ocupo esa linea, y desde el 2026-08-17 vuelve a
-    # ser un riel: el de arriba de la tapa. Y NO basta su esquina de abajo --
-    # ese riel GIRA sobre su propio M4, asi que lo que hay que librar es su
-    # BARRIDO. he_er_y(45) da 13.22 y el radio de giro 14.58: 1.36 mm que solo
-    # se notan abriendo la tapa, que es el peor momento para enterarse.
-    por_riel = (cr[3][1] - _radio_giro_riel(p) - p["holgura_rail"] - r)
-    return min(por_techo, por_cara, por_riel)
+    Fue _esquinas_pestana() y devolvia CUATRO ESQUINAS porque la pieza iba
+    girada con la cara de arriba -- una tira de canto pegada al Z-Rail. Desde
+    el 2026-08-21 es una plancha HORIZONTAL sobre la meseta del techo,
+    atornillada al larguero de remate trasero, asi que su caja vuelve a estar
+    alineada con los ejes y las esquinas sobran."""
+    return (P[4][0] + p["inset_remate_frente"], P[5][0],
+            P[5][1] - p["marco_sup"], P[5][1])
 
 
 def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
                         cr: list[tuple[float, float]]) -> list[tuple[float, float]]:
-    """7 centros de larguero de esqueleto, misma formula que
+    """5 centros de larguero de esqueleto, misma formula que
     centros_esqueleto() en sam17_case.scad. Fueron 7 (con un "zocalo superior"
-    que se retiro), luego 6, y desde el 2026-08-17 son 7 otra vez: entro el del
-    valle, que es el unico que existe por una plancha y no por una union."""
+    que se retiro), luego 6, 7 otra vez, y 8 al entrar el remate trasero. Desde
+    el 2026-08-21 son 5: junto al plano trasero quedan DOS y no cinco.
+    Entrepiso trasero, repisa y remate superior nacieron cada uno por una pieza
+    -- la bandeja de entrepiso, la piel superior y la tira de remate pegada de
+    canto -- y ninguna de las tres existe ya. Seguian ahi solo como filas de
+    tornillo de la trasera, y una plancha continua de 8 atornillada arriba y
+    abajo es mejor alma de cortante para esa cara que cinco barras sueltas."""
     r = p["rail"] / 2
     # Semiextension en X de un rail de PANEL tras su rotacion: el cuadrado
     # girado sobresale r*(|cos|+|sin|) de su centro, NO r. Los dos largueros
@@ -270,22 +252,38 @@ def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
     # contra la ESQUINA del riel girado y no contra su centro. Estuvo en
     # alto_frontal/2 + r + 2, pegado al vertice, y ahi el riel se le montaba
     # encima en cuanto el vertice bajo.
-    x_bd = cr[0][0] + _he_er(p, p["angulo_inferior"])[0] + p["holgura_rail"] + r
+    # El chasis del PSU se pega al larguero TRASERO y el delantero al chasis:
+    # una sola cadena, x_tr -> chasis -> base delantera. Estuvo derivado del
+    # riel de panel (x=49.68) y ahi hacia dos cosas malas a la vez: se leia
+    # pegado al riel (4.00 mm clavados) y se metia en el envolvente de los
+    # modulos de la fila de abajo. Ver la nota larga en el .scad -- el limitante
+    # de verdad era el chasis, no el.
+    x_tr_ = fondo(p) - r - p["t_piel"]
+    x_ch_frente = ((x_tr_ - r) - p["chasis_holgura_larguero"]
+                   - _chasis(p)["tapa_y"])
+    x_bd = x_ch_frente - p["chasis_holgura_larguero"] - r
     y_bd = p["t_base"] + r
+    # Los DOS largueros traseros comparten X, y por eso es UNA cota y no dos
+    # copias: la cara donde apoya la trasera tiene que ser un plano. Se retira
+    # t_piel del canto para que la plancha atornillada encima remate
+    # EXACTAMENTE en el plano trasero. El de base estuvo 14 mm mas adelante
+    # (- radio_perfil) y por ahi se colo el fallo que caza apoyo().
+    x_tr = fondo(p) - r - p["t_piel"]
     return [(x_bd, y_bd),
-            (fondo(p) - r - p["radio_perfil"], y_bd),
-            (x_ed, y_ep), (fondo(p) - r, y_ep),
-            # Remate superior: su Y se DERIVA de la cara que lo limita, no es
-            # P[5].y - r. Al acortar el marco de arriba para que la esquina se
-            # lea como punta, el rincon se cierra y un cuadrado de 20 pegado
-            # al vertice asomaria por la cara superior. Centro a r + t_panel
-            # de distancia perpendicular al plano del panel de arriba.
-            (fondo(p) - r, _y_remate(p, P, cr, r)),
-            (fondo(p) - r, P[3][1] + 15),
-            # valle: el septimo, y el unico que existe por una plancha y no por
+            (x_tr, y_bd),
+            (x_ed, y_ep),
+            # valle: el cuarto, y el unico que existe por una plancha y no por
             # una union. Centrado bajo la tapa del valle para que los dos vuelos
             # sean iguales, y de paso ata los costados por la cintura.
-            (sum(_x_valle(p, P, cr)) / 2, y_ep)]
+            (sum(_x_valle(p, P, cr)) / 2, y_ep),
+            # remate trasero: el QUINTO, del 2026-08-21. Le da a la tapa del
+            # techo a que atornillarse -- antes iba PEGADA al Z-Rail porque ahi
+            # arriba no habia otra cosa, y era la unica junta irreversible del
+            # case. A ras del plano trasero, cara de arriba a marco_sup del
+            # techo. No puede adelantarse: el barrido del Z-Rail se lo come.
+            # Comparte X con el de base: la trasera le pasa por delante a los
+            # dos, y entre ellos vuela 211.73 mm sin apoyo intermedio.
+            (x_tr, P[5][1] - p["marco_sup"] - r)]
 
 
 # Que inset gobierna cada punta de cada cara. El orden es el mismo que usa
@@ -301,7 +299,7 @@ NOMBRES_CR = ["cara_inf frente", "cara_inf valle",
 ANGS_CR = ["angulo_inferior", "angulo_inferior",
            "angulo_superior", "angulo_superior"]
 NOMBRES_CE = ["base delantera", "base trasera", "entrepiso delantero",
-              "entrepiso trasero", "remate superior", "repisa", "valle"]
+              "valle", "remate trasero"]
 
 
 # Caja = (nombre, x0, x1, y0, y1, z0, z1)
@@ -326,7 +324,7 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     cr = _centros_rail(p, P)
     ce = _centros_esqueleto(p, P, cr)
     rail, t_cheek = p["rail"], p["t_cheek"]
-    t_acr, gap = p["t_acrilico"], p["gap_sombra"]
+    t_acr, hol = p["t_acrilico"], p["hol_piel"]
     ancho_total = p["ancho_total"]
 
     angs = [p[k] for k in ANGS_CR]
@@ -341,10 +339,8 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # la cara de arriba, a ras por fuera y engordando t_cheek hacia dentro.
     # Aqui interesa que no se pise con el riel de arriba ni con el larguero de
     # remate, que viven justo debajo.
-    esq = _esquinas_pestana(p, P)
-    planchas_extra = ("remate_sup",
-                      min(e[0] for e in esq), max(e[0] for e in esq),
-                      min(e[1] for e in esq), max(e[1] for e in esq),
+    rx0, rx1, ry0, ry1 = _caja_remate(p, P)
+    planchas_extra = ("remate_sup", rx0, rx1, ry0, ry1,
                       t_cheek, ancho_total - t_cheek)
     for nm, c in zip(NOMBRES_CE, ce):
         railes.append((nm, c[0] - rail / 2, c[0] + rail / 2,
@@ -356,25 +352,29 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # bandeja_base: es el SUELO del case desde el 2026-08-17, de y = 0 a
     # y = t_base, con los dos largueros montados encima en vez de debajo. Sus dos
     # cantos van a ras de sus largueros, y el delantero es el que importa: se
-    # RETIRA por detras del riel de panel del frente para que ese riel pueda
-    # bajar hasta la esquina. Ahi se ganan 8 mm de altura del aparato y se pagan
-    # 32 mm de suelo abierto por delante (ver guarda_piso y alto_frontal).
-    x0_bb = ce[0][0] - rail / 2
+    # RETIRABA por detras del riel de panel del frente para que ese riel pudiera
+    # bajar hasta la esquina: 8 mm de altura ganados, 37.96 mm de suelo abierto
+    # pagados. El 2026-08-21 se deshizo el trato -- el suelo cierra, el riel sube
+    # y el aparato paga los 8.46 mm (ver guarda_piso y alto_frontal). El canto
+    # delantero ya no es el larguero sino donde muere la curva del costado.
+    x0_bb = ce[0][0] - rail / 2 - _vuelo_bandeja(p)
     fondo_bb = ce[1][0] + rail / 2 - x0_bb
     planchas.append(("bandeja_base", x0_bb, x0_bb + fondo_bb,
                      0.0, p["t_base"], t_cheek, ancho_total - t_cheek))
     filas += [("bandeja_base", "delantera", "x", ce[0][0], "base delantera"),
               ("bandeja_base", "trasera", "x", ce[1][0], "base trasera")]
-    # bandeja_entrepiso: R2 — canto trasero a ras de entrepiso-trasero,
-    # tope (no fondo) a ras de P3.y
-    x0_be = ce[2][0] - rail / 2
-    fondo_be = fondo(p) - ce[2][0] + rail / 2
-    planchas.append(("bandeja_entrepiso", x0_be, x0_be + fondo_be,
-                     P[3][1] - t_acr, P[3][1], t_cheek, ancho_total - t_cheek))
-    filas += [("bandeja_entrepiso", "delantera", "x", x0_be + rail / 2,
-               "entrepiso delantero"),
-              ("bandeja_entrepiso", "trasera", "x", x0_be + fondo_be - rail / 2,
-               "entrepiso trasero")]
+    # bandeja_entrepiso MURIO el 2026-08-21 ("vamos a evitar la complejidad").
+    # Era el piso del piso de arriba, y su papel de barrera entre la fuente y
+    # los modulos ya lo hace el chasis de ACERO (#107): la red y el toroide
+    # viven dentro de una caja metalica a tierra, no detras de una plancha de
+    # acrilico. Lo que si se fue con ella son sus 3 pasacables de 40 x 12 -- el
+    # cable entre pisos se queda sin paso definido, y eso es del #103.
+    #
+    # De sus DOS largueros se queda UNO, el delantero: ata los costados a media
+    # altura en un vano de 528 sin bulkhead central. El trasero se fue el
+    # 2026-08-21 con los otros dos de en medio -- ya solo daba una fila de
+    # tornillo de la trasera, y esa fila no compra rigidez que la propia
+    # plancha de 8 no de ya.
     # tapa_valle: a ras del plano del valle, igual que la de entrepiso, y con
     # una sola fila de M3 -- la del larguero del valle, que va centrado bajo
     # ella. Lo que la coloca en Y es lo mismo que obligo a subir
@@ -383,24 +383,20 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     x0_tv, x1_tv = _x_valle(p, P, cr)
     planchas.append(("tapa_valle", x0_tv, x1_tv,
                      P[3][1] - t_acr, P[3][1], t_cheek, ancho_total - t_cheek))
-    filas += [("tapa_valle", "unica", "x", ce[6][0], "valle")]
-    # piel_inferior: R1 — volada hacia +X mas alla de prof_inferior
-    alto_pi = ce[3][1] - ce[1][1] + 30
-    y0_pi = ce[1][1] - 15
-    planchas.append(("piel_inferior", P[6][0] + gap, P[6][0] + gap + t_acr,
-                     y0_pi, y0_pi + alto_pi, t_cheek + gap, ancho_total - t_cheek - gap))
-    filas += [("piel_inferior", "inferior", "y", y0_pi + 15, "base trasera"),
-              ("piel_inferior", "superior", "y", y0_pi + alto_pi - 15,
-               "entrepiso trasero")]
-    # piel_superior: R1 — volada hacia +X mas alla de prof_superior;
-    # re-anclada a la repisa (ce[5]) en vez de entrepiso trasero (R6)
-    alto_ps = ce[4][1] - ce[5][1] + 30
-    y0_ps = ce[5][1] - 15
-    planchas.append(("piel_superior", P[6][0] + gap, P[6][0] + gap + t_acr,
-                     y0_ps, y0_ps + alto_ps, t_cheek + gap, ancho_total - t_cheek - gap))
-    filas += [("piel_superior", "inferior", "y", y0_ps + 15, "repisa"),
-              ("piel_superior", "superior", "y", y0_ps + alto_ps - 15,
-               "remate superior")]
+    filas += [("tapa_valle", "unica", "x", ce[3][0], "valle")]
+    # piel_trasera: UNA sola plancha desde el 2026-08-21. Fueron dos, partidas
+    # a la altura del entrepiso porque cada una se atornillaba a los dos
+    # largueros de su piso; muerta esa bandeja la frontera dejo de existir. Va
+    # en t_piel (8) y declara DOS filas, una por larguero trasero -- las de los
+    # tres largueros de en medio se fueron con ellos el 2026-08-21.
+    y0_pt = ce[1][1] - 15
+    alto_pt = (P[5][1] - p["marco_sup"]) - y0_pt
+    planchas.append(("piel_trasera", P[6][0] - p["t_piel"], P[6][0],
+                     y0_pt, y0_pt + alto_pt, t_cheek + hol,
+                     ancho_total - t_cheek - hol))
+    filas += [("piel_trasera", "base", "y", ce[1][1], "base trasera"),
+              ("piel_trasera", "remate", "y", ce[4][1], "remate trasero"),
+              ("remate_sup", "unica", "x", ce[4][0], "remate trasero")]
     return railes, planchas, filas
 
 
@@ -514,6 +510,58 @@ def alineacion(p: dict[str, float]) -> list[str]:
     return fallos
 
 
+def apoyo(p: dict[str, float]) -> list[str]:
+    """ANCLAJE, el otro eje: las filas de una misma placa tienen que apoyar a
+    la MISMA distancia de la cara de su larguero.
+
+    alineacion() verifica que cada fila caiga en la centerline de su rail, y lo
+    hace sobre el eje que RECORRE la placa. El eje perpendicular -- lo que
+    separa la placa de la cara del larguero donde se apoya -- no lo miraba
+    nadie, y por ahi se colo esto: piel_inferior declara su fila de abajo
+    contra "base trasera", un larguero que vive 14 mm mas adelante que los
+    otros tres traseros (lleva un - radio_perfil que los demas no llevan). La
+    altura casa al micron y la profundidad no, asi que esa fila pide un
+    separador de 19 mm mientras el BOM lista los doce de 5.
+
+    Lo que se exige NO es una distancia concreta -- cuanto vale el separador lo
+    decide el diseno -- sino que las filas de una misma placa COINCIDAN: el
+    separador de una placa es uno solo, y si dos filas apoyan a distancias
+    distintas hay una que no apoya. Con una sola fila no hay nada que comparar.
+    """
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    ce = _centros_esqueleto(p, P, cr)
+    esqueleto = dict(zip(NOMBRES_CE, ce))
+    _, planchas, filas = _cajas_solidas(p)
+    cajas = {c[0]: c[1:] for c in planchas}
+    r = p["rail"] / 2
+    fallos: list[str] = []
+    por_placa: dict[str, list[tuple[str, float]]] = {}
+    for placa, fila, eje, _coord, rail_decl in filas:
+        if rail_decl not in esqueleto or placa not in cajas:
+            continue                       # de eso ya se queja alineacion()
+        sup = "y" if eje == "x" else "x"
+        x0, x1, y0, y1, _z0, _z1 = cajas[placa]
+        lo, hi = (x0, x1) if sup == "x" else (y0, y1)
+        c = esqueleto[rail_decl][0 if sup == "x" else 1]
+        hueco = lo - (c + r) if lo >= c else (c - r) - hi
+        por_placa.setdefault(placa, []).append((fila, hueco))
+    for placa, filas_placa in sorted(por_placa.items()):
+        if len(filas_placa) < 2:
+            continue
+        huecos = [h for _, h in filas_placa]
+        if max(huecos) - min(huecos) > TOL_ALINEACION:
+            detalle = ", ".join(f"{nm} a {h:.2f}" for nm, h in filas_placa)
+            fallos.append(
+                f"apoyo [{placa}]: sus filas apoyan a distancias distintas de "
+                f"la cara de su larguero ({detalle} mm). El separador de una "
+                f"placa es UNO, asi que la que se sale no apoya en nada: o el "
+                f"larguero se mueve, o esa fila declara otro")
+    print(f"apoyo: {len(por_placa)} placas revisadas, "
+          f"{sum(len(v) for v in por_placa.values())} filas")
+    return fallos
+
+
 def canario_alineacion(p: dict[str, float]) -> None:
     """Autocomprobacion ROJA de alineacion(): si esto no dispara, el checker
     esta ciego y su VERDE no vale nada.
@@ -536,7 +584,7 @@ def canario_alineacion(p: dict[str, float]) -> None:
     ce = _centros_esqueleto(p, P, _centros_rail(p, P))
     esqueleto = dict(zip(NOMBRES_CE, ce))
     casos = (("base delantera", "x"), ("base trasera", "x"),
-             ("remate superior", "y"), ("repisa", "y"))
+             ("base trasera", "y"), ("remate trasero", "y"))
     for rail_decl, eje in casos:
         centro = esqueleto[rail_decl][0 if eje == "x" else 1]
         # los dos primeros son la magnitud del bloqueante real de la bandeja
@@ -558,7 +606,7 @@ def canario_alineacion(p: dict[str, float]) -> None:
 
 
 def solapes(p: dict[str, float]) -> list[str]:
-    """11 railes + 5 planchas/pieles: ningun par se pisa en 3D, salvo los
+    """9 railes + 4 planchas: ningun par se pisa en 3D, salvo los
     TOLERADOS de arriba (impresos igual, nunca silenciados) — vacio ahora
     mismo. Paneles inclinados (1.6 mm, PCB de aluminio de cada modulo): su
     clase la resuelve la rotacion de railes (R3), no entran en esta caja."""
@@ -646,7 +694,6 @@ FRESA_MIN_D = 1.0
 
 # Largos de separador M4 que existen en catalogo. No es una lista de gustos: un
 # separador se compra, no se mecaniza, y pedir 5.7 mm significa torneado a medida.
-LARGOS_STANDOFF = (4, 5, 6, 8, 10, 12, 15, 18, 20, 25, 30, 35, 40)
 
 
 def guarda_parametros_vivos(p: dict[str, float]) -> None:
@@ -674,29 +721,181 @@ def guarda_parametros_vivos(p: dict[str, float]) -> None:
         f"el (hoy van de punta a punta) y que agujeros lleva ese costado.")
 
 
-def guarda_standoff(p: dict[str, float]) -> None:
-    """El separador de las pieles tiene que ser una pieza comprable.
+# guarda_standoff() vivio aqui hasta el 2026-08-21. Comprobaba que gap_sombra
+# -- que ERA el largo de los doce separadores de las pieles -- estuviera en
+# catalogo, para no mandar tornear doce piezas. Murio con su sujeto: al
+# empotrar las pieles contra la cara de los largueros no hay separador que
+# comprar, y LARGOS_STANDOFF se fue con ella. Lo que aquella guarda no miraba
+# -- si las dos filas de una piel apoyan a la MISMA distancia -- lo mira ahora
+# apoyo(), y es justo por ahi por donde se colaba el fallo real.
 
-    Las dos pieles van voladas: se atornillan a doce separadores M4 y no tocan
-    el cuerpo. La distancia a la que quedan NO es un parametro aparte -- es
-    gap_sombra, el mismo numero que las separa en el modelo. O sea que
-    gap_sombra ES el largo del separador, aunque no lo diga su nombre.
 
-    El issue #52 pedia esto cuando el case todavia tenia zocalo, con sus dos
-    standoffs de 33.25 y 7.00 mm y el miedo de que el cuerpo del de arriba
-    invadiera un riel girado. El zocalo se elimino y ese miedo se fue con el:
-    quedan doce separadores, todos iguales, todos entre piel y cuerpo, sin nada
-    girado cerca. Lo que sobrevive del issue es la otra mitad -- que el numero
-    sea comprable --, y eso es lo que se comprueba aqui.
+def _area_ranuras(n: int, largo: float, ancho: float) -> float:
+    """Area abierta de n ranuras de extremos redondos: el rectangulo central
+    mas el circulo que forman las dos puntas juntas."""
+    return n * ((largo - ancho) * ancho + math.pi * (ancho / 2) ** 2)
 
-    Mismo criterio que marco_sup con el espesor de plancha: hay cotas que no las
-    elige el diseno sino el catalogo, y confundirlas cuesta un torneado."""
-    assert p["gap_sombra"] in LARGOS_STANDOFF, (
-        f"gap_sombra = {p['gap_sombra']} es el largo del separador de las pieles, "
-        f"y no esta en catalogo. Los que se compran: {LARGOS_STANDOFF}. Un valor "
-        f"fuera de esa lista significa mandar tornear doce piezas.")
-    print(f"standoff: 12 separadores M4 de {p['gap_sombra']:.0f} mm "
-          f"(= gap_sombra), largo de catalogo")
+
+def _rejilla_valle(p: dict[str, float]) -> tuple[int, float, float]:
+    """Las ranuras de SALIDA, mismas cuentas que tapa_valle_2d()."""
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    ce = _centros_esqueleto(p, P, cr)
+    xv = _x_valle(p, P, cr)
+    largo = xv[1] - xv[0]
+    y_esp = ce[3][0] - xv[0]
+    campos = ((p["valle_margen"], y_esp - p["valle_espina"] / 2),
+              (y_esp + p["valle_espina"] / 2, largo - p["valle_margen"]))
+    paso = int(p["valle_paso_hp"])
+    n_hp = round(p["largo_riel"] / p["hp"])
+    ns = len(range(paso, int(n_hp) - paso + 1, paso))
+    area = sum(_area_ranuras(ns, c[1] - c[0], p["vent_ancho_ranura"])
+               for c in campos)
+    return 2 * ns, campos[0][1] - campos[0][0], area
+
+
+def _rejilla_entrada(p: dict[str, float]) -> tuple[int, float, float, float]:
+    """Las ranuras de ENTRADA, mismas cuentas que rejilla_entrada().
+
+    Devuelve (n, largo, area, y_centroide). El centroide va en coordenadas del
+    case porque lo que gobierna el tiro no es solo cuanta area hay sino a que
+    ALTURA esta. Esta rejilla vive abajo del todo en la trasera; paso unas horas
+    en el suelo (y=4, mas tiro y mas area) y volvio aqui porque en el vuelo de
+    la bandeja se transparentaba por el canto inferior."""
+    P = _vertices(p)
+    ce = _centros_esqueleto(p, P, _centros_rail(p, P))
+    au = p["ancho_total"] - 2 * p["t_cheek"] - 2 * p["hol_piel"]
+    y0_pl = ce[1][1] - 15
+    f_base, f_tras = ce[1][1] - y0_pl, ce[4][1] - y0_pl
+    y_bajas = f_base + 0.37 * (f_tras - f_base)
+    y0 = f_base + p["valle_espina"] / 2 + p["vent_puente_min"]
+    # vent_ancho_ranura/2: la onda es un hull de circulos y su borde de material
+    # cae medio ancho de ranura por debajo de la polilinea (ver el .scad)
+    y1 = (y_bajas - p["vent_periodo"] * 0.35 - p["vent_ancho_ranura"] / 2
+          - p["vent_separacion"])
+    paso = int(p["valle_paso_hp"])
+    n_hp = round(p["largo_riel"] / p["hp"])
+    x_iec = au - 70 + 24
+    hueco = (48 + p["vent_ancho_ranura"]) / 2 + p["vent_puente_min"]
+    ns = [n for n in range(paso, int(n_hp) - paso + 1, paso)
+          if abs(n * p["hp"] - x_iec) >= hueco]
+    return (len(ns), y1 - y0,
+            _area_ranuras(len(ns), y1 - y0, p["vent_ancho_ranura"]),
+            y0_pl + (y0 + y1) / 2)
+
+
+def _onda_area(p: dict[str, float], tipo: str, largo: float) -> float:
+    """Area abierta de una onda, mismas cuentas que onda() en el .scad.
+
+    La onda es el barrido de un circulo de vent_ancho_ranura a lo largo de una
+    polilinea, o sea una salchicha: largo del camino por el ancho, mas el
+    circulo que forman las dos puntas. En los quiebres la cuenta se pasa y se
+    queda corta alternativamente, y en un zigzag eso se compensa."""
+    per = p["vent_periodo"]
+    a = per * 0.35
+    n = max(2, math.floor(largo / per))
+    base = {"sierra": ((0, -a), (1, a)),
+            "triangulo": ((0, -a), (0.5, a))}.get(
+                tipo, ((0, -a), (0.001, a), (0.5, a), (0.501, -a)))
+    pts = [((i + q[0]) * per, q[1]) for i in range(n) for q in base]
+    L = sum(math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1])
+            for i in range(len(pts) - 1))
+    w = p["vent_ancho_ranura"]
+    return L * w + math.pi * (w / 2) ** 2
+
+
+def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
+    """Las tres ondas de la trasera: (area, y_centroide en el case).
+
+    Son SALIDA, no entrada: arrancan a 74 mm del suelo y suben hasta 195. Es la
+    unica ventilacion que Samuel quiso dejar en esa pieza."""
+    P = _vertices(p)
+    ce = _centros_esqueleto(p, P, _centros_rail(p, P))
+    au = p["ancho_total"] - 2 * p["t_cheek"] - 2 * p["hol_piel"]
+    y0_pl = ce[1][1] - 15
+    f_base, f_tras = ce[1][1] - y0_pl, ce[4][1] - y0_pl
+    y_bajas = f_base + 0.37 * (f_tras - f_base)
+    y_sierra = f_base + 0.74 * (f_tras - f_base)
+    trozos = ((_onda_area(p, "triangulo", au * 0.35), y_bajas),
+              (_onda_area(p, "cuadrada", au * 0.35), y_bajas),
+              (_onda_area(p, "sierra", au * 0.70), y_sierra))
+    area = sum(a for a, _ in trozos)
+    centro = sum(a * (y0_pl + y) for a, y in trozos) / area
+    return area, centro
+
+
+# Aire a 20 C y el coeficiente de descarga de una rejilla de ranuras. Los tres
+# primeros son fisica; C_D es SUPUESTO -- 0.6-0.7 es lo que se usa para chapa
+# perforada y ranurada, y es el numero que mas manda en el resultado.
+RHO_AIRE, CP_AIRE, G, T_AMB = 1.2, 1005.0, 9.81, 293.0
+CD_TIRO = 0.65
+
+
+def guarda_aire(p: dict[str, float]) -> None:
+    """El case no puede calentarse mas de salto_termico_max sobre ambiente.
+
+    ESTA PUERTA CAMBIO DE CRITERIO EL MISMO DIA QUE NACIO, y conviene saber por
+    que. Nacio midiendo "entrada >= salida", que valia mientras la entrada era la
+    rejilla de la trasera: 8317 mm2 contra 7499 de salida. Al mudarse la entrada
+    al suelo -- Samuel pidio dejar la trasera solo con sus tres ondas -- el area
+    baja a 3536 y esa desigualdad se rompe A PROPOSITO. Mantenerla habria sido
+    tener una puerta roja sobre un diseno correcto, que es justo el vicio que ya
+    costo una tanda entera en este repo.
+
+    Lo que de verdad hay que exigir no es paridad de areas: es que el aparato no
+    se caliente. Y eso se calcula, porque el area no es lo unico que manda --
+    tambien manda la ALTURA entre entrada y salida. La rejilla del suelo tiene
+    menos de la mitad de area que la de la trasera y aun asi sale casi igual de
+    bien, porque entra a 4 mm en vez de a 53 y el tiro gana lo que pierde.
+
+    Tiro de chimenea, regimen laminar de caja cerrada:
+
+        Q = C_D * A_ef * sqrt(2 g h dT / T)        caudal
+        P = rho * cp * Q * dT                      calor que se lleva
+        =>  P = k * dT^1.5,  k = rho*cp*C_D*A_ef*sqrt(2 g h / T)
+
+    A_ef son entrada y salida EN SERIE (1/A_ef^2 = 1/A_in^2 + 1/A_out^2), y h la
+    distancia entre sus centroides. Nada de esto esta medido: C_D, la altura
+    efectiva y las perdidas del trafo son supuestos, y por eso el techo va en 15
+    K y no pegado al resultado. Sirve para ordenes de magnitud y para que un
+    cambio de geometria no empeore el tiro sin que nadie se entere."""
+    n_ent, largo_ent, a_ent, y_ent = _rejilla_entrada(p)
+    n_val, largo_val, a_val = _rejilla_valle(p)
+    P = _vertices(p)
+    y_val = P[3][1] - p["t_acrilico"] / 2
+    a_ond, y_ond = _ondas_trasera(p)
+    a_sal = a_val + a_ond
+    y_sal = (a_val * y_val + a_ond * y_ond) / a_sal
+
+    assert largo_ent >= 4 * p["vent_ancho_ranura"], (
+        f"la rejilla de entrada mide {largo_ent:.1f} mm de largo con ranuras "
+        f"de {p['vent_ancho_ranura']:.0f}: deja de leerse como campo y pasa a "
+        f"rayitas (es la misma cuenta que recorto la espina del valle)")
+
+    a_ef = 1.0 / math.sqrt(1 / a_ent ** 2 + 1 / a_sal ** 2)
+    h = (y_sal - y_ent) / 1000.0
+    assert h > 0, (
+        f"la salida de aire ({y_sal:.1f} mm) no queda por encima de la entrada "
+        f"({y_ent:.1f} mm): sin desnivel no hay tiro y la conveccion natural no "
+        f"arranca")
+    k = (RHO_AIRE * CP_AIRE * CD_TIRO * a_ef * 1e-6
+         * math.sqrt(2 * G * h / T_AMB))
+    dt = (p["potencia_disipada"] / k) ** (2.0 / 3.0)
+    assert dt <= p["salto_termico_max"] + 1e-9, (
+        f"el case sube {dt:.1f} K sobre ambiente con {p['potencia_disipada']:.2f} "
+        f"W y el techo son {p['salto_termico_max']:.0f}. Entrada {a_ent:.0f} mm2 "
+        f"a y={y_ent:.0f}, salida {a_sal:.0f} a y={y_sal:.0f}, tiro {h*1000:.0f} "
+        f"mm. Sube el area de la rejilla o bajala mas (el tiro va con la raiz de "
+        f"la altura, el area va lineal)")
+
+    print(f"aire: entrada {a_ent:.0f} mm2 en {n_ent} ranuras de "
+          f"{largo_ent:.1f} x {p['vent_ancho_ranura']:.0f} (trasera, y={y_ent:.0f})")
+    print(f"  salida {a_sal:.0f} mm2 = {a_val:.0f} del valle ({n_val} ranuras) + "
+          f"{a_ond:.0f} de las tres ondas, centroide y={y_sal:.0f}")
+    print(f"  tiro {h*1000:.0f} mm, area efectiva {a_ef:.0f} mm2 -> "
+          f"{dt:.1f} K sobre ambiente con {p['potencia_disipada']:.2f} W "
+          f"(techo {p['salto_termico_max']:.0f}). SUPUESTO: C_D={CD_TIRO}, "
+          f"sin perdidas de trafo")
 
 
 def guarda_fresado(p: dict[str, float]) -> None:
@@ -743,36 +942,59 @@ def guarda_piso(p: dict[str, float]) -> None:
     solapes() trabaja con cajas y solo canta cuando los cuerpos YA se tocan, o
     sea que se come los 4 mm de holgura sin protestar.
 
-    Y lo que hay debajo cambio dos veces el mismo dia. Primero era el lomo de un
-    larguero (mal: la bandeja iba encima, 5 mm de barato y 0.51 de solape real).
-    Luego el tope de la bandeja. Y desde que Samuel propuso retirar la bandeja
-    por detras del riel, ya no hay nada: solo el canto de abajo del case. Cada
-    version de esta cota valio milimetros de aparato, asi que son DOS asserts --
-    el riel dentro del acrilico, y la bandeja fuera de su camino. Si alguien
-    adelanta la bandeja sin subir el riel, cae aqui y no en solapes().
+    Y lo que hay debajo cambio CUATRO veces. Primero era el lomo de un larguero
+    (mal: la bandeja iba encima, 5 mm de barato y 0.51 de solape real). Luego el
+    tope de la bandeja. Luego nada, cuando Samuel retiro la bandeja por detras
+    del riel -- solo el canto de abajo del case. Y desde el 2026-08-21 vuelve a
+    ser el tope de la bandeja, porque el suelo cierra: la plancha llega hasta
+    donde muere la curva del costado y le pasa POR DEBAJO al riel.
+
+    Cada version de esta cota valio milimetros de aparato, y la ultima vuelta
+    costo 8.46. Siguen siendo DOS asserts, pero la segunda cambio de signo: ya
+    no se exige que la bandeja se aparte del riel sino que LLEGUE al frente.
 
     Se mide sobre el centro REAL del riel (el que sale de _centros_rail), no
     rehaciendo la formula: si el .scad y el budget se separan, esto lo nota."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
     ce = _centros_esqueleto(p, P, cr)
-    hx, hy = _he_er(p, p["angulo_inferior"])
-    # 1. el riel dentro del acrilico por abajo, con material
+    _, hy = _he_er(p, p["angulo_inferior"])
+    # 1. el riel PASA POR ENCIMA de la bandeja, con aire
     y_bajo = cr[0][1] - hy
-    assert y_bajo >= p["holgura_rail"] - 1e-9, (
-        f"el riel de panel del frente se sale del case por abajo: su esquina "
-        f"cae en y={y_bajo:.2f} y se exige >={p['holgura_rail']:.2f} de acrilico "
-        f"bajo ella. Subir alto_frontal o inset_inf_frente (van emparejados: la "
-        f"curva en punta pide inset >= alto_frontal/2 + rail_er_alto/2 + 3)")
-    # 2. y la bandeja retirada POR DETRAS de el, que es lo que paga la 1
-    x0_bb = ce[0][0] - p["rail"] / 2
-    hueco = x0_bb - (cr[0][0] + hx)
-    assert hueco >= p["holgura_rail"] - 1e-9, (
-        f"la bandeja de base le pasa por debajo al riel del frente: arranca en "
-        f"x={x0_bb:.2f} y la esquina trasera del riel esta en "
-        f"x={cr[0][0] + hx:.2f} ({hueco:+.2f} mm, se exige "
-        f">={p['holgura_rail']:.2f}). O se retira la bandeja o sube el riel, y "
-        f"subir el riel cuesta 8 mm de aparato")
+    minimo = p["t_base"] + p["holgura_rail"]
+    assert y_bajo >= minimo - 1e-9, (
+        f"el riel de panel del frente se mete en el suelo: su esquina girada "
+        f"cae en y={y_bajo:.2f} y el techo de la bandeja esta en "
+        f"y={p['t_base']:.2f}, o sea que se exige >={minimo:.2f}. Ninguna "
+        f"plancha plana le pasa por debajo asi. Subir alto_frontal o "
+        f"inset_inf_frente (van emparejados: la curva en punta pide "
+        f"inset >= alto_frontal/2 + rail_er_alto/2 + 3)")
+    # 2. y la bandeja LLEGA al frente, que es lo que paga la 1. Se lee la caja
+    #    DECLARADA en _cajas_solidas y no se rehace la cuenta: el bloqueante de
+    #    14 mm de la bandeja salio justo de una caja declarada por su cuenta que
+    #    no coincidia con la geometria que decia representar.
+    _, planchas, _ = _cajas_solidas(p)
+    x0_bb = next(c[1] for c in planchas if c[0] == "bandeja_base")
+    t_curva = _tangente(P[0], P[6], P[1], p["radio_punta"])
+    assert abs(x0_bb - t_curva) < 1e-6, (
+        f"la bandeja de base no cierra el suelo: su canto delantero cae en "
+        f"x={x0_bb:.2f} y la curva de la esquina inferior delantera muere en "
+        f"x={t_curva:.2f} ({x0_bb - t_curva:+.2f} mm). Por encima queda suelo "
+        f"abierto; por debajo la plancha asoma por delante del redondeo del "
+        f"costado, que es lo que x_valle() evita en el pico")
+    # 3. el larguero de base delantera se aparta del riel de panel. ESTO ANTES
+    #    SALIA SOLO: el larguero se DERIVABA del riel, asi que la holgura era
+    #    por construccion. Desde el 2026-08-21 lo coloca el chasis del PSU y la
+    #    holgura pasa a ser una consecuencia, no una premisa -- o sea justo la
+    #    clase de cota que se rompe callada cuando alguien mueve el chasis.
+    hx, _ = _he_er(p, p["angulo_inferior"])
+    aparte = (ce[0][0] - p["rail"] / 2) - (cr[0][0] + hx)
+    assert aparte >= p["holgura_rail"] - 1e-9, (
+        f"el larguero de base delantera se le echa encima al riel de panel del "
+        f"frente: su cara delantera cae en x={ce[0][0] - p['rail'] / 2:.2f} y la "
+        f"esquina trasera del riel esta en x={cr[0][0] + hx:.2f} "
+        f"({aparte:+.2f} mm, se exige >={p['holgura_rail']:.2f}). Lo coloca el "
+        f"chasis del PSU, asi que lo que hay que mirar es donde quedo el chasis")
 
 
 # LAS DOS FILAS SE ABREN, cada una girando sobre el M4 de su riel de ARRIBA --
@@ -783,8 +1005,13 @@ def guarda_piso(p: dict[str, float]) -> None:
 TAPAS = (
     ("fila de abajo", 1, frozenset({"cara_inf frente", "cara_inf valle"}),
      1, "angulo_inferior", "inset_inf_frente", "alto_panel_inf"),
+    # remate_sup SALIO de este conjunto el 2026-08-21. Giraba con la tapa
+    # porque iba PEGADA al Z-Rail, que es parte de la tapa. Desde que se
+    # atornilla al larguero de remate trasero es pieza QUIETA, o sea un
+    # obstaculo que la tapa tiene que librar al abrir -- que es justo lo que
+    # esta puerta comprueba.
     ("fila de arriba", 3,
-     frozenset({"cara_sup valle", "cara_sup remate", "remate_sup"}),
+     frozenset({"cara_sup valle", "cara_sup remate"}),
      3, "angulo_superior", "inset_sup_valle", "alto_panel_sup"),
 )
 
@@ -838,8 +1065,6 @@ def guarda_tapa(p: dict[str, float]) -> None:
         for j, nm in enumerate(NOMBRES_CR):
             if nm in propios:
                 giran += _esquinas_er(p, cr[j], p[ANGS_CR[j]])
-        if "remate_sup" in propios:
-            giran += _esquinas_pestana(p, P)
         quietos = [c for c in railes + planchas if c[0] not in propios]
         tope, culpable = 180.0, ""
         for i in range(1, 721):                   # 0.25 grados hasta 180
@@ -865,33 +1090,43 @@ def guarda_tapa(p: dict[str, float]) -> None:
             f"holgada PARADA y no caber girando -- el riel barre su radio de "
             f"giro ({_radio_giro_riel(p):.2f}), no el alcance de su esquina")
 
-    # LA JUNTA DE LA PESTANA. Esto exigia CERO EXACTO (abs < 0.01) y era correcto
-    # mientras la union era atornillada: el tornillo aprieta contra el riel y lo
-    # que no toca, no sujeta. Desde que la hoja de Tiptop enseno que esa cara es
-    # pared de 1.2 mm, la union es PEGADA -- y una junta pegada quiere lo
-    # contrario. El adhesivo estructural necesita linea de pegado; a cero no
-    # tiene donde quedarse, y una interferencia negativa impide que la pieza
-    # asiente.
+    # LA JUNTA DE LA PESTANA vivio aqui hasta el 2026-08-21, y murio con su
+    # sujeto. Medía el hueco entre la tira de remate y el Z-Rail, primero
+    # exigiendo cero exacto (union atornillada) y despues una linea de pegado
+    # entre 0 y medio milimetro (union pegada, tras descubrir que esa cara del
+    # riel es pared de 1.2 mm). Desde que la pieza se atornilla al larguero de
+    # remate trasero no hay junta con el riel que medir: lo que la sujeta lo
+    # verifican alineacion() y apoyo() como a cualquier otra plancha, y que no
+    # estorbe a la tapa lo verifica el barrido de aqui arriba.
     #
-    # Asi que la puerta cambia de forma, no de rigor. Lo que de verdad no se
-    # puede permitir es el signo negativo -- eso es interferencia. Por arriba, el
-    # techo lo pone el adhesivo: pasado medio milimetro el metacrilato de dos
-    # componentes rellena un hueco que no deberia existir y la junta pierde
-    # resistencia en vez de ganarla.
-    #
-    # Hoy vale 0.000 y pasa. Si alguien quiere linea de pegado dibujada, sube
-    # inset_sup_remate -- pero OJO: eso mueve alto_cara_sup y con el la silueta
-    # del costado, o sea el DXF que ya esta presupuestado.
-    junta = p["inset_sup_remate"] - p["marco_sup"] - p["rail_er_alto"] / 2
-    assert junta >= -1e-9, (
-        f"la pestana INTERFIERE con el riel: {junta:+.3f} mm. Negativo significa "
-        f"que la pieza no asienta, y ninguna cantidad de adhesivo arregla eso. "
-        f"El minimo es inset_sup_remate = marco_sup + rail_er_alto/2 = "
-        f"{p['marco_sup'] + p['rail_er_alto']/2:.2f}")
-    assert junta <= JUNTA_PEGADO_MAX, (
-        f"la pestana se queda a {junta:.3f} mm del riel, y el maximo pegable es "
-        f"{JUNTA_PEGADO_MAX}. Mas alla de eso el adhesivo esta rellenando hueco "
-        f"en vez de pegar: la junta pierde resistencia segun engorda")
+    # Lo que si sigue sin poder derivarse en params.scad -- ese fichero no
+    # admite expresiones -- es que la tapa cubra la meseta entera, y eso es lo
+    # que exige guarda_remate().
+
+
+def guarda_remate(p: dict[str, float]) -> None:
+    """La tapa de remate cubre la meseta del techo, ni mas ni menos.
+
+    La meseta mide marco_remate. La tapa mide prof_sup y arranca
+    inset_remate_frente por detras del pico, asi que los dos numeros tienen que
+    sumar el primero. En params.scad no se pueden escribir expresiones, o sea
+    que esta relacion se mantiene A MANO y por eso hace falta una puerta: mover
+    marco_remate sin mover prof_sup deja la meseta abierta por detras o la tapa
+    asomando por el plano trasero, y ninguna de las dos se ve en un DXF plano.
+
+    El inset NO es estetica y no se toca a la ligera: es la unica razon por la
+    que la tapa de la fila de arriba sigue abriendo. Ver su nota en params.scad.
+    """
+    suma = p["prof_sup"] + p["inset_remate_frente"]
+    assert abs(suma - p["marco_remate"]) < 1e-9, (
+        f"la tapa de remate no cuadra con la meseta: prof_sup + "
+        f"inset_remate_frente = {suma:.2f} y marco_remate = "
+        f"{p['marco_remate']:.2f}. Sobra o falta {suma - p['marco_remate']:+.2f} "
+        f"mm. Los tres se mantienen a mano porque params.scad no admite "
+        f"expresiones")
+    print(f"remate: tapa de {p['prof_sup']:.0f} mm atornillada al larguero "
+          f"trasero, retirada {p['inset_remate_frente']:.0f} del pico para que "
+          f"la tapa de arriba abra")
 
 
 def guarda_escalon(p: dict[str, float]) -> None:
@@ -915,7 +1150,7 @@ def guarda_escalon(p: dict[str, float]) -> None:
     # equivocada y se come la holgura del larguero sin enterarse.
     r = p["rail"] / 2
     ce = _centros_esqueleto(p, P, cr)
-    x_valle = ce[6][0]
+    x_valle = ce[3][0]
     lo = cr[1][0] + _he_er(p, p["angulo_inferior"])[0] + p["holgura_rail"] + r
     hi = cr[2][0] - _he_er(p, p["angulo_superior"])[0] - p["holgura_rail"] - r
     assert lo <= x_valle <= hi, (
@@ -1111,30 +1346,65 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
           "la ranura de salida se mete debajo del toroide")
     # el agujero del acrilico, en coordenadas de bandeja_base_2d
     pos_x = au - p["chasis_margen_bandeja"] - c["tapa_x"]
-    pos_y = (fondo_bandeja - c["tapa_y"]) / 2
+    # El chasis se pega al larguero TRASERO y el delantero a el. En el marco
+    # local de la plancha eso es vuelo + rail + holgura, sin mirar donde acabo
+    # ce[0] -- la cadena ya lo puso ahi.
+    vuelo = _vuelo_bandeja(p)
+    pos_y = vuelo + p["rail"] + p["chasis_holgura_larguero"]
     ax = pos_x + c["desfase"] + t + p["chasis_salida_x"] - hol
     ay = pos_y + c["desfase"] + t + p["chasis_salida_y"] - hol
-    exige(0 <= ax and ax + w <= au and 0 <= ay and ay + h <= fondo_bandeja,
+    exige(0 <= ax and ax + w <= au
+          and 0 <= ay and ay + h <= vuelo + fondo_bandeja,
           f"el agujero de cables cae en x={ax:.1f}..{ax + w:.1f}, "
           f"y={ay:.1f}..{ay + h:.1f} y la bandeja mide {au:.2f} x "
-          f"{fondo_bandeja:.2f}: se sale de la plancha")
+          f"{vuelo + fondo_bandeja:.2f}: se sale de la plancha")
 
-    # --- 6. los dos largueros que cruzan la bandeja ------------------------
-    # bandeja_base dejo de colgar de los largueros el 2026-08-17: ahora ES el
-    # suelo y los dos 2020 van ENCIMA de ella. O sea que hay dos barras de
-    # 20 x 20 cruzando el sitio donde se apoya el chasis, y la caja tiene que
-    # pasar entre ellas. No lo ve solapes() -- el chasis no esta en el censo de
-    # cajas solidas -- ni el sobre del DXF, que es plano.
+    # --- 6. el chasis CUELGA de los dos largueros --------------------------
+    # La premisa se invirtio el 2026-08-21 (#106). Era "la caja tiene que PASAR
+    # entre las dos barras de 20 x 20 sin tocarlas", porque se apoyaba en la
+    # bandeja de acrilico -- y esa plancha resuena justo donde el toroide
+    # excita. Ahora la caja cuelga de los largueros con 4 M5 a la ranura
+    # interior del 2020: la carga va chasis -> tornillos -> largueros ->
+    # costados, y el acrilico deja de sostener el toroide.
+    #
+    # El assert no cambia de forma y por eso conviene decir por que sigue: la
+    # caja tiene que seguir cabiendo entre los dos largueros con holgura, solo
+    # que ahora ese hueco no es "aire para que no roce" sino la luz que cruza
+    # cada tornillo. Lo que cambio es lo que significa, no lo que mide.
     rail = p["rail"]
     hol = p["chasis_holgura_larguero"]
-    libre_0, libre_1 = rail + hol, fondo_bandeja - rail - hol
+    libre_0 = vuelo + rail + hol
+    libre_1 = vuelo + fondo_bandeja - rail - hol
     exige(pos_y >= libre_0 and pos_y + c["tapa_y"] <= libre_1,
           f"el chasis ocupa y={pos_y:.1f}..{pos_y + c['tapa_y']:.1f} de la "
           f"bandeja y los dos largueros 2020, con {hol:.0f} mm de holgura "
           f"exigida, dejan {libre_0:.1f}..{libre_1:.1f}")
-    print(f"  entre los dos largueros: {pos_y - rail:.2f} mm delante y "
-          f"{fondo_bandeja - rail - pos_y - c['tapa_y']:.2f} detras "
+    print(f"  entre los dos largueros: {pos_y - vuelo - rail:.2f} mm delante y "
+          f"{fondo_bandeja - rail - (pos_y - vuelo) - c['tapa_y']:.2f} detras "
           f"(minimo exigido {hol:.0f}) -- la cota mas justa del montaje")
+
+    # --- 6b. y los 4 M5 con que cuelga caben en la pared -------------------
+    # El tornillo entra por la ranura INTERIOR del 2020, cuyo eje esta a rail/2
+    # sobre la bandeja. Lo que queda de pared bajo ese eje es rail/2 -
+    # chasis_pie, y de eso los primeros radio_doblez + t_chapa son CURVA: ahi
+    # no se taladra. Es la cota que ata chasis_pie por arriba, y no la ve nadie
+    # mas -- ni solapes(), ni el sobre del DXF, que es plano.
+    sube = p["rail"] / 2 - p["chasis_pie"]
+    curva = p["radio_doblez"] + p["t_chapa"]
+    margen = sube - curva - p["d_M5_paso"] / 2
+    exige(margen >= 0,
+          f"el M5 que cuelga el chasis cae a {sube:.2f} mm del suelo de la caja "
+          f"y ahi todavia hay doblez: la curva ocupa {curva:.2f} y el taladro "
+          f"pide {p['d_M5_paso'] / 2:.2f} de radio ({margen:+.2f}). Baja "
+          f"chasis_pie o el tornillo no se puede taladrar")
+    exige(p["chasis_pie"] > 0,
+          "chasis_pie a cero deja el suelo del chasis TOCANDO la bandeja, que "
+          "es lo mismo que apoyarlo: el #106 pide que el acrilico no sostenga "
+          "el toroide")
+    print(f"  cuelga de {2 * int(p['chasis_anclajes'])} M5 a la ranura interior "
+          f"del 2020, a {sube:.1f} mm del suelo de la caja ({margen:.2f} de "
+          f"margen tras el doblez); {p['chasis_pie']:.0f} mm de aire bajo el "
+          f"suelo -- el acrilico ya no sostiene el toroide (#106)")
 
     # --- 7. el tornillo de la tapa muerde faldon y pared a la vez ----------
     exige(p["chasis_tornillo_baja"] + p["d_M3_paso"] / 2 <= p["chasis_pestana"],
@@ -1154,10 +1424,26 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
 
 
 def _fondo_bandeja(p: dict[str, float]) -> float:
-    """Fondo de bandeja_base, misma derivacion que bandeja_base_2d()."""
+    """VANO ENTRE LARGUEROS de bandeja_base, no el fondo de la plancha.
+
+    Fueron el mismo numero hasta el 2026-08-21, cuando la plancha paso a volar
+    por delante del larguero delantero para cerrar el suelo. Todo lo del chasis
+    se mide contra ESTE, que es lo que de verdad lo encierra."""
     P = _vertices(p)
     ce = _centros_esqueleto(p, P, _centros_rail(p, P))
     return ce[1][0] + p["rail"] / 2 - (ce[0][0] - p["rail"] / 2)
+
+
+def _vuelo_bandeja(p: dict[str, float]) -> float:
+    """Lo que bandeja_base vuela por delante del larguero de base delantera.
+
+    DERIVADO, misma regla que usa _x_valle para el pico: la plancha llega hasta
+    donde MUERE LA CURVA de la esquina inferior delantera del costado. Un mm mas
+    y asoma por delante del redondeo; uno menos y queda suelo sin cubrir."""
+    P = _vertices(p)
+    ce = _centros_esqueleto(p, P, _centros_rail(p, P))
+    return ((ce[0][0] - p["rail"] / 2)
+            - _tangente(P[0], P[6], P[1], p["radio_punta"]))
 
 
 def main() -> int:
@@ -1166,11 +1452,12 @@ def main() -> int:
     canario_solapes(p)
     canario_alineacion(p)
     guarda_piso(p)
+    guarda_aire(p)
     guarda_fresado(p)
-    guarda_standoff(p)
     guarda_parametros_vivos(p)
     guarda_escalon(p)
     guarda_tapa(p)
+    guarda_remate(p)
     g = perfil(p)
     fallos: list[str] = []
 
@@ -1183,8 +1470,9 @@ def main() -> int:
     fallos += guarda_chasis(p, g)
     # Marco de remate = lo que queda del fondo detras de la cara superior.
     # AQUI HUBO un `marco >= 20` con el argumento "no caben los 20 mm del rail
-    # de remate". La premisa caduco: el remate ya no vive en el marco, su Y se
-    # deriva y baja por debajo del rail girado del panel (ver _y_remate). El
+    # de remate". La premisa caduco dos veces: primero el remate dejo de vivir
+    # en el marco (su Y se derivaba y bajaba por debajo del rail girado del
+    # panel), y desde el 2026-08-21 ese larguero ya no existe. El
     # marco solo tiene que dar para que los largueros quepan DENTRO del
     # acrilico, y eso ya no se estima con una cota a ojo -- lo comprueba
     # `railes_dentro_del_costado()` en check_dxf.py, esquina por esquina y
@@ -1263,6 +1551,7 @@ def main() -> int:
           "puente de ventilacion fragil para el espesor")
     fallos.extend(solapes(p))
     fallos.extend(alineacion(p))
+    fallos.extend(apoyo(p))
 
     print(f"perfil: alto_total={g['alto_total']:.1f}  "
           f"entrepiso={g['y_entrepiso']:.1f}  ancho_util={g['ancho_util']:.0f}")
@@ -1295,12 +1584,13 @@ def main() -> int:
 #   * par de apriete sobre acrilico       -> probeta del cupon (spec §11)
 #   * termica de la fuente v2             -> spec PSU v2 y su validacion
 #   * nesting de planchas en el stock     -> lienzo del Task 5, a ojo
-#   * largo de standoff / distancia perpendicular placa<->rail: alineacion()
-#     verifica que la fila caiga en la centerline de un rail de esqueleto,
-#     no cuanto hay entre la placa y ese rail — en las piezas voladas esa
-#     distancia ES el largo del standoff (dato de compra del BOM, no una
-#     holgura): 7 mm el par inferior del zocalo, ~33 el superior, 5 las
-#     pieles. Se cierra midiendo los standoffs contra el modelo al comprar
+#   * (CERRADO el 2026-08-21) distancia perpendicular placa<->rail. Decia que
+#     alineacion() verifica que la fila caiga en la centerline de un rail pero
+#     no cuanto hay entre la placa y ese rail. Ahora lo verifica apoyo(): exige
+#     que todas las filas de una placa apoyen a la MISMA distancia, que es la
+#     forma comprobable de la regla — el separador de una placa es uno solo.
+#     Con eso salio el fallo que este hueco tapaba: la fila de abajo de
+#     piel_inferior apoyaba 14 mm mas lejos que la de arriba
 #   * paneles inclinados (1.6 mm, PCB de aluminio de modulo) en solapes():
 #     su ajuste lo resuelve la rotacion de railes (R3), no un AABB — un
 #     rectangulo largo y fino en diagonal sobreestima demasiado con caja
