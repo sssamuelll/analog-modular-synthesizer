@@ -5,7 +5,7 @@ analógicos antes de ir a la PCB.
 
 | Módulo | Carpeta | Qué validar |
 |--------|---------|-------------|
-| VCO | [`vco/`](vco) | **Sin SPICE a propósito** — no hay modelo público del SSI2130. El span 1 V/oct se calcula en [`pitch_budget.py`](../hardware/03-vco/pitch_budget.py); las ondas se miden en el bring-up. [Por qué](vco/README.md) |
+| VCO | [`vco/`](vco) | **El chip no se simula a propósito** — no hay modelo público del SSI2130; el span 1 V/oct se calcula en [`pitch_budget.py`](../hardware/03-vco/pitch_budget.py) y las ondas se miden en el bring-up. **La etapa I/V que va después sí**: [`iv_stage.py`](vco/iv_stage.py), estabilidad de la transimpedancia con el cable de patcheo colgando. [Por qué la frontera cae ahí](vco/README.md) |
 | VCF | [`vcf/`](vcf) | Respuesta en frecuencia (Bode), tracking 1 V/oct, auto-oscilación |
 | ADSR | [`adsr/`](adsr) | Envolvente para distintos valores A/D/S/R, tiempos mínimos/máximos |
 | VCA | [`vca/`](vca) | THD vs nivel de entrada, feed-through del CV, transferencia |
