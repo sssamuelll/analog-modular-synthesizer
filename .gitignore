@@ -28,6 +28,16 @@ _autosave-*
 *.log
 *.op.raw
 *.net
+# ...pero NO las netlists de KiCad. Son FUENTE, no artefacto: build_pcb.py las
+# lee para saber que huellas colocar y en que redes, y check_netlist.py y
+# netdiff.py las leen para comprobarlo. La regla de arriba vive en la seccion
+# de SPICE y se llevaba por delante las cinco del repo de rebote (#68).
+#
+# La consecuencia, medida el 2026-08-21 en un worktree recien creado desde
+# main: `build_pcb.py` muere con FileNotFoundError en leer_netlist(). Desde un
+# clon limpio la placa NO se podia regenerar, que es la unica cosa que este
+# repo dice que un generador tiene que poder hacer.
+!hardware/**/*.net
 
 # OS
 .DS_Store
