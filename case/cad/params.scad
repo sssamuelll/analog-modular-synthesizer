@@ -544,6 +544,16 @@ d_M5_paso   = 5.5;  // agujero paso M5: SOLO el esqueleto 2020, roscado en el al
 // 528 mm: entra sin forzar y se lee como junta, no como hueco. Si al ensamblar
 // aprieta, esto es lo que sube -- no el ancho de la piel.
 hol_piel    = 0.15;
+// Espesor de la TRASERA, y solo de ella. Samuel la pidio en 8 el 2026-08-21
+// -- misma plancha que los costados y el suelo -- mientras el resto del cuerpo
+// sigue en t_acrilico. No es lo mismo que t_acrilico y por eso es un parametro
+// aparte: de este numero cuelga cuanto se retiran los cuatro largueros
+// traseros para que la trasera enrase con el canto.
+//
+// Efecto secundario anotado y NO resuelto aqui: con la trasera en 8 y muerta la
+// bandeja de entrepiso, el unico cliente del acrilico de 5 mm es la tapa del
+// valle. Comprar una plancha entera para una pieza es cosa del pliego.
+t_piel      = 8;
 // Paticas: METALICAS, torneadas, pequenas (Samuel, 2026-08-17 -- "metalicas
 // y elegantes"). No son de goma: eso cambia el BOM y el acabado. Van bajo los
 // COSTADOS, que son las piezas portantes de 8 mm, con su cara exterior a ras

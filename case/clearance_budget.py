@@ -58,9 +58,12 @@ def perfil(p: dict[str, float]) -> dict[str, float]:
         "y_entrepiso": y_entrepiso,
         "alto_total": alto_total,
         "prof_sup_min": x_cara_sup1,
-        # del tope del suelo al fondo de la bandeja de entrepiso. Antes se
-        # medIa desde y = 0 y sobrestimaba en los 25 mm del sandwich viejo de
-        # la base; hoy el suelo son t_base.
+        # del tope del suelo al fondo de la TAPA DEL VALLE. Fue la bandeja de
+        # entrepiso hasta el 2026-08-21, y el numero no cambio al morir ella:
+        # las dos planchas eran coplanares y del mismo espesor, asi que el techo
+        # solo cambio de dueno. Donde el chasis NO queda debajo de la tapa del
+        # valle la altura real es mayor -- este numero se queda corto a
+        # proposito, que es el lado seguro.
         "alto_interior_inferior": (y_entrepiso - p["t_acrilico"]
                                     - p["t_base"]),
         "ancho_util": p["ancho_total"] - 2 * p["t_cheek"],
@@ -222,7 +225,7 @@ def _y_remate(p: dict[str, float], P: list[tuple[float, float]],
     # este techo nunca mandaba y el error dormia; con el marco en 8 manda, y con
     # la version vieja la esquina asomaba 2.54 mm por delante del panel.
     he_cs = r * (abs(math.cos(a2)) + abs(math.sin(a2)))
-    x_tr = fondo(p) - r - p["t_acrilico"]
+    x_tr = fondo(p) - r - p["t_piel"]
     por_cara = P[3][1] + (math.cos(a2) * (x_tr - P[3][0])
                           - (he_cs + p["t_panel"])) / math.sin(a2)
     # el larguero vive pegado al plano trasero (x = fondo - r), o sea que su
@@ -283,7 +286,7 @@ def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
     # Retirados t_acrilico del canto para que la piel atornillada encima remate
     # EXACTAMENTE en el plano trasero. El de base estuvo 14 mm mas adelante
     # (- radio_perfil) y por ahi se colo el fallo que caza apoyo().
-    x_tr = fondo(p) - r - p["t_acrilico"]
+    x_tr = fondo(p) - r - p["t_piel"]
     return [(x_bd, y_bd),
             (x_tr, y_bd),
             (x_ed, y_ep), (x_tr, y_ep),
@@ -382,19 +385,16 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
                      0.0, p["t_base"], t_cheek, ancho_total - t_cheek))
     filas += [("bandeja_base", "delantera", "x", ce[0][0], "base delantera"),
               ("bandeja_base", "trasera", "x", ce[1][0], "base trasera")]
-    # bandeja_entrepiso: R2 — canto trasero a ras de entrepiso-trasero,
-    # tope (no fondo) a ras de P3.y
-    x0_be = ce[2][0] - rail / 2
-    # canto trasero a ras de SU larguero, no del plano exterior del case: al
-    # retirar el trasero t_acrilico para empotrar la piel, cotar contra fondo()
-    # dejaba la bandeja 5 mm larga y metida dentro de la piel.
-    fondo_be = ce[3][0] + rail / 2 - x0_be
-    planchas.append(("bandeja_entrepiso", x0_be, x0_be + fondo_be,
-                     P[3][1] - t_acr, P[3][1], t_cheek, ancho_total - t_cheek))
-    filas += [("bandeja_entrepiso", "delantera", "x", x0_be + rail / 2,
-               "entrepiso delantero"),
-              ("bandeja_entrepiso", "trasera", "x", x0_be + fondo_be - rail / 2,
-               "entrepiso trasero")]
+    # bandeja_entrepiso MURIO el 2026-08-21 ("vamos a evitar la complejidad").
+    # Era el piso del piso de arriba, y su papel de barrera entre la fuente y
+    # los modulos ya lo hace el chasis de ACERO (#107): la red y el toroide
+    # viven dentro de una caja metalica a tierra, no detras de una plancha de
+    # acrilico. Lo que si se fue con ella son sus 3 pasacables de 40 x 12 -- el
+    # cable entre pisos se queda sin paso definido, y eso es del #103.
+    #
+    # Sus DOS largueros se quedan: atan los costados a media altura en un vano
+    # de 528 sin bulkhead central, y ahora dan dos de las cuatro filas de la
+    # trasera.
     # tapa_valle: a ras del plano del valle, igual que la de entrepiso, y con
     # una sola fila de M3 -- la del larguero del valle, que va centrado bajo
     # ella. Lo que la coloca en Y es lo mismo que obligo a subir
@@ -404,26 +404,19 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     planchas.append(("tapa_valle", x0_tv, x1_tv,
                      P[3][1] - t_acr, P[3][1], t_cheek, ancho_total - t_cheek))
     filas += [("tapa_valle", "unica", "x", ce[6][0], "valle")]
-    # piel_inferior: R1 — volada hacia +X mas alla de prof_inferior
-    alto_pi = ce[3][1] - ce[1][1] + 30
-    y0_pi = ce[1][1] - 15
-    planchas.append(("piel_inferior", P[6][0] - t_acr, P[6][0],
-                     y0_pi, y0_pi + alto_pi, t_cheek + hol, ancho_total - t_cheek - hol))
-    filas += [("piel_inferior", "inferior", "y", y0_pi + 15, "base trasera"),
-              ("piel_inferior", "superior", "y", y0_pi + alto_pi - 15,
-               "entrepiso trasero")]
-    # piel_superior: R1 — volada hacia +X mas alla de prof_superior;
-    # re-anclada a la repisa (ce[5]) en vez de entrepiso trasero (R6)
-    # sube hasta la cara de abajo del larguero de remate trasero (ce[7]):
-    # con eso la trasera queda cerrada del todo
-    y0_ps = ce[5][1] - 15
-    alto_ps = (ce[7][1] - rail / 2) - y0_ps
-    planchas.append(("piel_superior", P[6][0] - t_acr, P[6][0],
-                     y0_ps, y0_ps + alto_ps, t_cheek + hol, ancho_total - t_cheek - hol))
-    filas += [("piel_superior", "inferior", "y", y0_ps + 15, "repisa"),
-              ("piel_superior", "superior", "y", ce[4][1], "remate superior"),
-              # la tapa de remate: desde el 2026-08-21 declara fila como
-              # cualquier otra plancha, porque por fin tiene a que atornillarse.
+    # piel_trasera: UNA sola plancha desde el 2026-08-21. Fueron dos, partidas
+    # a la altura del entrepiso porque cada una se atornillaba a los dos
+    # largueros de su piso; muerta esa bandeja la frontera dejo de existir. Va
+    # en t_piel (8) y declara CUATRO filas, una por larguero trasero.
+    y0_pt = ce[1][1] - 15
+    alto_pt = (ce[7][1] - rail / 2) - y0_pt
+    planchas.append(("piel_trasera", P[6][0] - p["t_piel"], P[6][0],
+                     y0_pt, y0_pt + alto_pt, t_cheek + hol,
+                     ancho_total - t_cheek - hol))
+    filas += [("piel_trasera", "base", "y", ce[1][1], "base trasera"),
+              ("piel_trasera", "entrepiso", "y", ce[3][1], "entrepiso trasero"),
+              ("piel_trasera", "repisa", "y", ce[5][1], "repisa"),
+              ("piel_trasera", "remate", "y", ce[4][1], "remate superior"),
               ("remate_sup", "unica", "x", ce[7][0], "remate trasero")]
     return railes, planchas, filas
 

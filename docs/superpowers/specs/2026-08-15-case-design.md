@@ -42,6 +42,10 @@ lenguaje visual).
 > que le da a la tapa de remate a qué atornillarse: se acabó la única junta
 > pegada del case. `marco_remate` 34 → 42 y el fondo 291.2 → 299.2, que es lo
 > que pide el barrido del Z-Rail para que la tapa siga abriendo 180°.
+> **rev. 7** (2026-08-21): «evitar la complejidad» — muere la **bandeja de
+> entrepiso** (su papel de barrera ya lo hace el chasis de acero) y las dos
+> pieles se funden en **una sola plancha de 8 mm** atornillada a los cuatro
+> largueros traseros. El case pierde dos planchas y gana rigidez en la trasera.
 >
 > **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
 > visual y proporciones *relativas*, pero **sus cotas están superadas**. Se
@@ -133,7 +137,7 @@ esta dirección).
 | `angulo_superior` | **45° desde la vertical** | Cara del piso de generación |
 | `alto_frontal` | **13 mm** | Canto delantero. **No es un zócalo**: el zócalo se eliminó |
 | `fondo` / `alto_total` | derivados | **300.4 mm / 247.73 mm**. Ya NO cuadra con el board (350 × ~380): el board se dibujó para paneles de 190 |
-| `t_acrilico` | 5 mm | Entrepiso, tapa del valle y las dos pieles. MEDIR con calibre (§11) |
+| `t_acrilico` / `t_piel` | 5 / **8 mm** | `t_acrilico` ya solo viste la tapa del valle; la trasera tiene su propio espesor de 8. MEDIR los dos con calibre (§11) |
 | `t_base` / `t_cheek` | 8 mm | Suelo portante y costados. La bandeja de base subió de 5 a 8 al pasar a ser el propio canto de abajo |
 | `kerf` | **0** | Correcto fresando: el CAM compensa el radio de herramienta. Solo vuelve a ser negativo si se regresa al láser |
 | `n_bulkheads` | 2 | Costados exteriores; el modelo admite uno central si el vano lo pide |
@@ -159,7 +163,8 @@ comprobación va antes del paso destructivo).
   escalonado de dos pisos. Son las piezas portantes: reciben los
   perfiles 2020 del esqueleto (raíles y largueros, tornillo M5 al alma) y
   los standoffs de las pieles.
-- **Bandejas horizontales de acrílico** (base y entrepiso) atornilladas con
+- **Bandeja de base de acrílico** —la de entrepiso murió el 2026-08-21, su
+  papel de barrera lo hace el chasis de acero— atornillada con
   tuercas T M3 a un **esqueleto de perfiles 2020** (los mismos del sistema de
   paneles: 8 largueros de esqueleto —2 de base, 2 de entrepiso, remate
   superior, repisa, valle y remate trasero— además de los 4 raíles de paneles; el
@@ -174,8 +179,10 @@ comprobación va antes del paso destructivo).
   con tornillería inox de botón: reservados a las pieles flotantes (junta de
   sombra de 5 mm) — la retícula visible y regular de puntos de unión es el
   ornamento permitido.
-- **Piel trasera de acrílico por piso**, flotando en standoffs con junta de
-  sombra (shadow gap) perimetral — desmontable, lleva la ventilación (§7).
+- **Trasera: UNA plancha de acrílico de 8 mm**, EMPOTRADA a ras del canto de
+  los costados y atornillada a los cuatro largueros traseros — desmontable,
+  lleva la ventilación (§7). Fueron dos pieles de 5 flotando sobre standoffs
+  con junta de sombra hasta el 2026-08-21; flotar y sellar son incompatibles.
 - **Paneles de módulo: PCB de aluminio** de ancho variable en múltiplos de
   1 HP (5.08 mm), **128.5 mm de alto**, cerrando las dos caras inclinadas.
 - **Pies de goma** bajo la base.

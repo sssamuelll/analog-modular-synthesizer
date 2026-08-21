@@ -47,17 +47,20 @@ presupuesto, y ninguna se buscó: la tapa de la fila de arriba **abre 180°**
 **11.33 mm** contra los largueros de base —era «la cota más justa del
 montaje»— y el fondo libre de la bandeja sube de 46.7 a 62.7 mm.
 
-**La trasera va empotrada y sella** (2026-08-21). Hasta esa fecha las dos
-pieles **flotaban**: colgaban de doce separadores, con su cara exterior 10 mm
-por detrás del canto de los costados y 5 mm de aire por los cuatro lados — la
-junta de sombra. Ahora su cara exterior cae exactamente en el plano trasero, con
-`hol_piel` = 0.15 mm por lado de holgura de montaje, y el hueco directo de la
-cara trasera baja de **207.9 cm² a 170.9**, que es lo que falta cerrar arriba.
+**La trasera es UNA plancha de 8 mm, empotrada y sellada** (2026-08-21). Fueron
+**dos pieles de 5 mm flotando**: colgaban de doce separadores, con su cara
+exterior 10 mm por detrás del canto de los costados y 5 mm de aire por los
+cuatro lados — la junta de sombra. Estaban partidas a la altura del entrepiso
+porque cada una se atornillaba a los dos largueros de su piso; al morir esa
+bandeja la frontera dejó de existir, y una sola plancha que abarca los **cuatro**
+largueros traseros está mejor sujeta que dos con dos filas cada una. Su cara
+exterior cae exactamente en el plano trasero, con `hol_piel` = 0.15 mm por lado
+de holgura de montaje.
 
-Para que enrasen, **los cuatro largueros traseros comparten X**
-(`x_tr = fondo − rail/2 − t_acrilico`), y la piel atornillada sobre su cara
+Para que enrase, **los cuatro largueros traseros comparten X**
+(`x_tr = fondo − rail/2 − t_piel`), y la plancha atornillada sobre su cara
 remata en el canto. El de base estaba 14 mm más adelante que los otros tres, y
-por ahí se había colado un fallo real: la fila de abajo de `piel_inferior` pedía
+por ahí se había colado un fallo real: la fila de abajo de la piel de abajo pedía
 un separador de 19 mm mientras el BOM listaba los de 5. Lo caza ahora `apoyo()`
 en `clearance_budget.py`, la puerta nueva que exige que **todas las filas de una
 placa apoyen a la misma distancia** de la cara de su larguero — porque el
@@ -248,18 +251,19 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Larguero perfil 2020 | **8** | de 528.32 mm cada uno: 2 de base, 2 de entrepiso, remate superior, repisa, valle y **remate trasero** |
 | Tornillo **M4** | **8** | entran de punta por el costado y **roscan en el propio Z-Rail** (viene con M4 taladrado a 3.3 de fábrica). Sin tuerca, sin inserto. **No vienen con el raíl.** 4 de hombro (los ejes de giro) + 4 de mano (los cierres) |
 | Tornillo M5 botón + tuerca T | **16** | 2 por larguero 2020, por la punta, desde el costado |
-| Tornillo M3 + tuerca T M3 | **42** | las planchas a los largueros: base 10, entrepiso 10, tapa del valle 5, **tapa de remate 5**, piel inferior 6, piel superior 6. Entran por la RANURA, no por la punta |
+| Tornillo M3 + tuerca T M3 | **40** | las planchas a los largueros: base 10, tapa del valle 5, tapa de remate 5, **trasera 20** (4 filas × 5). Entran por la RANURA, no por la punta |
 | Arandela ANCHA d16 | 4 | **no opcional**: en los ejes de giro. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 MPa y aguanta |
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa. **Sustituye al amortiguador**, que se eliminó |
-| Plancha acrílico t=5 mm | **4** | entrepiso, tapa del valle, piel inf., piel sup. |
-| Plancha acrílico t=8 mm | **4** | 2 costados + suelo (bandeja de base, ahora portante) + **tapa de remate** (528.32 × 29) |
+| Plancha acrílico t=5 mm | **1** | solo la tapa del valle. Un espesor entero para **una** pieza — a resolver en el pliego, no en el modelo |
+| Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante) + tapa de remate (528.32 × 29) + **trasera** (528.02 × 216.73) |
 | Patica metálica torneada | 4 | d=16 × 8 mm |
 
-**Total de tornillos del case: 66** — 8 M4 de raíl + 16 M5 de esqueleto +
-42 M3 de plancha. Fueron 71 hasta el 2026-08-21: al empotrarse, las pieles se
-llevaron por delante 12 separadores M4 y sus 24 tornillos de botón; después
-volvieron 2 M5 y 5 M3 con el octavo larguero y su tapa de remate. Lo que no
-volvió es el adhesivo: **el case ya no lleva ninguna junta irreversible.**
+**Total de tornillos del case: 64** — 8 M4 de raíl + 16 M5 de esqueleto +
+40 M3 de plancha. Fueron 71 hasta el 2026-08-21: al empotrarse, la trasera se
+llevó por delante 12 separadores M4 y sus 24 tornillos de botón, y al morir la
+bandeja de entrepiso se fueron otros 10 M3; en medio volvieron 2 M5 y 5 M3 con
+el octavo larguero y su tapa de remate. Lo que no volvió es el adhesivo: **el
+case ya no lleva ninguna junta irreversible.**
 
 No calculados por el modelo (herrajes eléctricos y de panel; la cantidad
 depende de la cuenta final de módulos, no de la geometría del cajón):
@@ -278,7 +282,7 @@ cerrado**: estos totales por panel cierran cuando cada panel esté dibujado.
 
 ## Anclaje de las placas — solo a largueros del esqueleto
 
-Las planchas de acrílico (2 bandejas, tapa del valle, 2 pieles) se atornillan
+Las planchas de acrílico (bandeja de base, tapa del valle, tapa de remate y trasera) se atornillan
 **únicamente a largueros del esqueleto**, nunca a los 4 raíles de panel. Los
 raíles de panel van girados al ángulo de su cara (35° / 45° desde la vertical) para quedar a ras
 del panel: un tornillo contra esa cara entraría a 12° del eje de su agujero
@@ -337,14 +341,14 @@ un cable asumiendo continuidad por el riel es riesgo de choque eléctrico.
 1. **Esqueleto** — costados + los 8 largueros 2020, M5 por la punta desde
    fuera. Meter aquí las 42 tuercas T M3 de las planchas: con tuercas de
    inserción lateral se pueden añadir después, con las de deslizar no.
-2. **Bandejas** — base (8 mm, es el suelo) y entrepiso, 5 M3 por fila.
+2. **Bandeja de base** — 8 mm, es el suelo, 5 M3 por fila. Era «bandejas» en plural hasta el 2026-08-21: la de entrepiso murió.
 3. **Los 4 Z-Rails** — M4 desde fuera, roscan en el propio riel. Comprobar
    antes que la pletina roscada corre por su canal.
 4. **Tapa del valle** — 5 M3 al larguero del valle.
 5. **Electricidad y bonding** — bloque IEC fijo, espárrago junto al PSU.
-6. **Pieles traseras** — EMPOTRADAS, 6 M3 cada una a tuerca T de los largueros
-   traseros, tres columnas. Van después de los largueros porque la tuerca T
-   vive dentro de la ranura.
+6. **Trasera** — UNA plancha de 8 mm, EMPOTRADA, 20 M3 a tuerca T repartidos
+   en las cuatro filas de los largueros traseros. Va después de los largueros
+   porque la tuerca T vive dentro de la ranura.
 7. **Tapa de remate** — 5 M3 al larguero de remate trasero. Va ATORNILLADA
    desde el 2026-08-21; hasta entonces iba pegada al Z-Rail y era la única
    pieza irreversible del case.

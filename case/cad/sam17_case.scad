@@ -151,8 +151,9 @@ function centros_esqueleto() =
          // ser un plano, no cuatro planos parecidos. Retirados t_acrilico del
          // canto para que la piel atornillada encima remate EXACTAMENTE en el
          // plano trasero -- empotrada y a ras, sin rebaje y sin dejar de ser
-         // un DXF plano.
-         x_tr = fondo() - r - t_acrilico,
+         // un DXF plano. Se retiran t_piel y no t_acrilico: la trasera tiene
+         // su propio espesor desde el 2026-08-21.
+         x_tr = fondo() - r - t_piel,
          // semiextension en X del RIEL EUROrack de la cara superior tras su
          // rotacion (ver he_er_x). El larguero que se planta detras de el se
          // separa de esa esquina, no de su centro.
@@ -428,73 +429,43 @@ module bandeja_base_2d() {
     }
 }
 
-module bandeja_entrepiso_2d() {
-    au = ancho_total - 2*t_cheek;
-    ce = centros_esqueleto();
-    // Los DOS cantos a ras de su propio larguero, igual que bandeja_base. El
-    // trasero estuvo cotado contra fondo() -- el plano exterior del case -- y
-    // eso funciono solo mientras el larguero trasero vivia pegado a ese plano.
-    // Al retirarlo t_acrilico para empotrar la piel, la bandeja se quedaba 5 mm
-    // larga y se metia dentro de la piel. Se cota contra el riel que la sujeta.
-    largo = ce[3].x + rail/2 - (ce[2].x - rail/2);
-    difference() {
-        plancha(au, largo);
-        fila_agujeros(au, rail/2);
-        fila_agujeros(au, largo - rail/2);
-        // pasacables entre pisos: 3 oblongos de 40 x 12
-        for (x = [au*0.2, au*0.5, au*0.8])
-            translate([x, largo/2]) hull()
-                for (dx = [-14, 14]) translate([dx, 0]) circle(d = 12 + kerf);
-    }
-}
 
 // TRES columnas de standoff, no dos. Con solo las cuatro esquinas el vano es
 // de 518 mm y la plancha se descuelga 1.76 mm por su PROPIO PESO, sin que nadie
 // la toque -- calculado con acrilico colado a 3 GPa. Partiendo el vano por la
 // mitad cae a 0.11 (la flecha va con L^4, asi que partir en dos divide por 16).
 // Cuatro tornillos mas en todo el case para que la cara trasera no ondee.
-module piel_inferior_2d() {
+module piel_trasera_2d() {
     au = ancho_total - 2*t_cheek - 2*hol_piel;
     ce = centros_esqueleto();
-    alto = ce[3].y - ce[1].y + 30;   // entrepiso trasero <-> base trasera
+    // UNA sola plancha desde el 2026-08-21: fueron dos (piel_inferior y
+    // piel_superior) partidas a la altura del entrepiso, porque cada una se
+    // atornillaba a los dos largueros de SU piso. Muerta la bandeja de
+    // entrepiso esa frontera dejo de existir, y una plancha que abarca los
+    // cuatro largueros traseros esta mejor sujeta que dos con dos filas cada
+    // una. Va en t_piel (8), no en t_acrilico.
+    y0   = ce[1].y - 15;                    // canto de abajo
+    alto = (ce[7].y - rail/2) - y0;         // hasta la cara de abajo del remate trasero
+    // Las CUATRO filas caen en su larguero, no a una distancia del canto.
+    f_base = ce[1].y - y0;
+    f_entr = ce[3].y - y0;
+    f_rep  = ce[5].y - y0;
+    f_rem  = ce[4].y - y0;
+    // Las ondas conservan su altura fisica de siempre, pero derivadas de las
+    // filas que las rodean: asi no se acercan a un tornillo si un larguero se
+    // mueve. Las fracciones son las que tenian en las dos pieles viejas.
+    y_bajas  = f_base + 0.65*(f_entr - f_base);
+    y_sierra = f_rep  + 0.45*(f_rem  - f_rep);
     difference() {
         plancha(au, alto);
-        // M3 y no M4: desde que la piel se empotra, entra por la RANURA del
-        // 2020 con tuerca T como las bandejas, no por un separador M4.
-        for (x = [15, au/2, au-15]) for (y = [15, alto-15])
-            translate([x, y]) circle(d = d_M3_paso + kerf);
-        translate([au*0.10, alto*0.62]) onda("triangulo", au*0.35);
-        translate([au*0.55, alto*0.62]) onda("cuadrada",  au*0.35);
+        for (y = [f_base, f_entr, f_rep, f_rem]) fila_agujeros(au, y);
+        translate([au*0.10, y_bajas])  onda("triangulo", au*0.35);
+        translate([au*0.55, y_bajas])  onda("cuadrada",  au*0.35);
+        translate([au*0.15, y_sierra]) onda("sierra", au*0.70);
         // recorte IEC C14 con interruptor (bloque snap-in tipico
         // 48 x 27.5; CONFIRMAR contra el datasheet de la pieza comprada).
-        // +kerf como todo hueco interior del fichero (ruling T4: la
-        // geometria laser no lleva convencion mixta) — era el unico que
-        // faltaba, y en un recorte de encaje a presion el que mas duele.
+        // +kerf como todo hueco interior del fichero.
         translate([au - 70, 22]) square([48 + kerf, 27.5 + kerf]);
-    }
-}
-
-// re-anclada a la repisa (R6, ronda de revision 2) en vez de entrepiso
-// trasero: ese rail vive en el plano del piso inferior (X=340), invadia
-// la bandeja de entrepiso 5x5x474 mm. La repisa vive en el plano del
-// piso superior, 5 mm por encima del tope de la bandeja.
-module piel_superior_2d() {
-    au = ancho_total - 2*t_cheek - 2*hol_piel;
-    ce = centros_esqueleto();
-    // Sube hasta la cara de abajo del larguero de remate trasero: con eso la
-    // trasera queda cerrada del todo. El tramo que sobresale de su fila de
-    // arriba es voladizo, y no carga nada.
-    y0 = ce[5].y - 15;
-    alto = (ce[7].y - rail/2) - y0;
-    difference() {
-        plancha(au, alto);
-        // M3 y no M4: desde que la piel se empotra, entra por la RANURA del
-        // 2020 con tuerca T como las bandejas, no por un separador M4.
-        // Y las filas caen en SUS largueros, no a 15 del canto: al crecer la
-        // plancha hacia arriba el canto dejo de ser referencia.
-        for (x = [15, au/2, au-15]) for (y = [15, ce[4].y - y0])
-            translate([x, y]) circle(d = d_M3_paso + kerf);
-        translate([au*0.15, alto*0.45]) onda("sierra", au*0.70);
     }
 }
 
@@ -834,11 +805,9 @@ else if (PART == "assembly")           assembly();
 else if (PART == "assembly_acrilico")  assembly_acrilico();
 else if (PART == "assembly_aluminio")  assembly_aluminio();
 else if (PART == "bandeja_base_2d")      bandeja_base_2d();
-else if (PART == "bandeja_entrepiso_2d") bandeja_entrepiso_2d();
 else if (PART == "tapa_valle_2d")        tapa_valle_2d();
 else if (PART == "remate_sup_2d")        remate_sup_2d();
-else if (PART == "piel_inferior_2d")     piel_inferior_2d();
-else if (PART == "piel_superior_2d")     piel_superior_2d();
+else if (PART == "piel_trasera_2d")      piel_trasera_2d();
 else if (PART == "chasis_cuerpo_2d")     chasis_cuerpo_2d();
 else if (PART == "chasis_tapa_2d")       chasis_tapa_2d();
 else if (PART == "chasis_refuerzo_2d")   chasis_refuerzo_2d();
@@ -904,37 +873,18 @@ module bandeja_base() {
 
 // tope de bandeja a ras de P3.y (canto SUPERIOR, no inferior — ver
 // centros_esqueleto()); canto delantero a ras del rail reubicado.
-module bandeja_entrepiso() {
-    ce = centros_esqueleto();
-    P = pts_perfil();
-    translate([ce[2].x - rail/2, P[3].y, ancho_total - t_cheek])
-        rotate([0, 90, 0]) rotate([90, 0, 0])
-            linear_extrude(t_acrilico) bandeja_entrepiso_2d();
-}
 
 // EMPOTRADA (2026-08-21): cara exterior EN el plano trasero, x = fondo(), y
 // crece hacia dentro. Estuvo volada sobre separadores, con la cara exterior 10
 // mm por detras del canto. Apoya en la cara de los largueros traseros, que por
 // eso viven todos en x_tr = fondo - r - t_acrilico. y0 deriva de la fila de
 // agujero inferior cayendo en el rail base-trasera (ce[1].y).
-module piel_inferior() {
+module piel_trasera() {
     P = pts_perfil();
     ce = centros_esqueleto();
     translate([P[6].x, ce[1].y - 15, t_cheek + hol_piel])
         rotate([0, -90, 0])
-            linear_extrude(t_acrilico) piel_inferior_2d();
-}
-
-// EMPOTRADA, igual que la inferior: cara exterior en x = fondo(). y0 deriva de
-// la fila de agujero inferior cayendo en la repisa (ce[5].y) — R6, ronda de
-// revision 2. Con esto el canto inferior de la plancha cae exacto en
-// P3.y (tope de bandeja_entrepiso): a ras, cero solape.
-module piel_superior() {
-    P = pts_perfil();
-    ce = centros_esqueleto();
-    translate([P[6].x, ce[5].y - 15, t_cheek + hol_piel])
-        rotate([0, -90, 0])
-            linear_extrude(t_acrilico) piel_superior_2d();
+            linear_extrude(t_piel) piel_trasera_2d();
 }
 
 // A ras del plano del valle, igual que la bandeja de entrepiso: el grosor crece
@@ -949,10 +899,8 @@ module tapa_valle() {
 
 module planchas_acrilico() {
     bandeja_base();
-    bandeja_entrepiso();
     tapa_valle();
-    piel_inferior();
-    piel_superior();
+    piel_trasera();
     remate_sup();
 }
 
@@ -1083,9 +1031,7 @@ module lienzo_2d() {
     // fila 2: las 4 planchas del cuerpo (eran 5 con el zocalo)
     y2 = alto + sep;
     x1 = 0;              translate([x1, y2]) bandeja_base_2d();
-    x2 = x1 + au + sep;  translate([x2, y2]) bandeja_entrepiso_2d();
-    x3 = x2 + au + sep;  translate([x3, y2]) piel_inferior_2d();
-    x4 = x3 + aup + sep; translate([x4, y2]) piel_superior_2d();
+    x3 = x2 + au + sep;  translate([x3, y2]) piel_trasera_2d();
     x5 = x4 + aup + sep; translate([x5, y2]) tapa_valle_2d();
     x6 = x5 + au + sep;  translate([x6, y2]) remate_sup_2d();
     %square([1000, 600]);
@@ -1111,25 +1057,22 @@ module bom() {
     // no tenia el tornillo. Cinco filas de fila_agujeros() en total -- dos en la
     // bandeja de base, dos en la de entrepiso, una en la tapa del valle.
     n_fila = max(1, round(au/100));
-    // Y desde el 2026-08-21 tambien las dos pieles: al empotrarse dejaron de
-    // colgar de separadores M4 y pasaron a ser plancha a larguero como las
-    // demas. Su rejilla es de TRES columnas ([15, au/2, au-15]), dos filas
-    // cada una, dos pieles -> 4*n_piel.
-    n_piel = 3;
-    echo(str("BOM: tornillo M3 x", 6*n_fila + 4*n_piel, " + tuerca T M3 -- las planchas a",
-             " los largueros: base ", 2*n_fila, ", entrepiso ", 2*n_fila,
+    // Ocho filas de n_fila: dos de la bandeja de base, una de la tapa del
+    // valle, una de la tapa de remate y CUATRO de la trasera -- una por cada
+    // larguero trasero. La bandeja de entrepiso se llevo sus dos al morir.
+    echo(str("BOM: tornillo M3 x", 8*n_fila, " + tuerca T M3 -- las planchas a",
+             " los largueros: base ", 2*n_fila,
              ", tapa del valle ", n_fila, ", tapa de remate ", n_fila,
-             ", piel inferior ", 2*n_piel, ", piel superior ", 2*n_piel, "."));
+             ", trasera ", 4*n_fila, "."));
     echo("     Estos entran por la RANURA del 2020, no por su punta. Es donde");
     echo("     la tuerca de insercion lateral se paga sola: con las de deslizar");
     echo("     hay que dejarlas dentro ANTES de cerrar el esqueleto.");
-    echo("BOM: las dos pieles van EMPOTRADAS y atornilladas a los largueros");
-    echo("     traseros: 12 M3 mas 12 tuercas T (2 filas x 3 columnas x 2");
-    echo("     pieles), contados ya en el total de M3 de plancha. TRES");
-    echo("     columnas y no dos: con dos, el vano se descuelga de peso propio.");
-    echo("     Hasta el 2026-08-21 colgaban de 12 separadores M4 de 5 mm con 24");
-    echo("     M4 de boton y arandela -- esas tres lineas del BOM murieron al");
-    echo("     dejar de flotar.");
+    echo(str("BOM: la TRASERA es UNA plancha empotrada de t=", t_piel, ", no dos:"));
+    echo(str("     ", ancho_total - 2*t_cheek - 2*hol_piel, " de ancho, y",
+             " apoya en los CUATRO largueros traseros a la vez. Fueron dos"));
+    echo("     pieles de 5 partidas a la altura del entrepiso, y colgadas de 12");
+    echo("     separadores M4 hasta el 2026-08-21 -- separadores, junta de");
+    echo("     sombra y una de las dos planchas murieron el mismo dia.");
     // LAS DOS FILAS SON TAPA. Cada una gira sobre el M5 de su riel de arriba y
     // se cierra con el de su otro extremo. De los 71 tornillos del case (8 M4 de
     // riel + 14 M5 de larguero + 25 M3 de plancha + 24 M4 de piel), solo
@@ -1172,7 +1115,8 @@ module bom() {
     echo(str("     Se retira ", inset_remate_frente, " mm del pico, y eso NO es"));
     echo("     estetica: es lo unico que deja abrir la tapa de la fila de arriba.");
     echo(str("BOM: patica metalica torneada x4, d=", d_pie, " x ", alto_pie, " mm"));
-    echo(str("BOM: planchas t=", t_acrilico, ": entrepiso, tapa del valle, ",
-             "piel inf, piel sup; suelo t=", t_base, " (la bandeja de base, ",
-             "ahora portante); costados t=", t_cheek, " x2"));
+    echo(str("BOM: plancha t=", t_acrilico, ": SOLO la tapa del valle -- ojo, un",
+             " espesor entero para UNA pieza, cosa del pliego"));
+    echo(str("BOM: plancha t=", t_cheek, ": costados x2, suelo (bandeja de base,",
+             " portante), tapa de remate y TRASERA -- 5 piezas"));
 }

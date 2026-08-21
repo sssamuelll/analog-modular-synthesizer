@@ -399,10 +399,19 @@ def agujeros_donde_toca() -> list[str]:
     # el tipo de fallo que esta puerta busca -- solo que en la puerta y no en la
     # pieza. Con las pieles empotradas ese margen bajo de 5 mm a 0.15, pero la
     # cuenta es la misma y por eso sigue leyendo el parametro.
+    # La trasera usa la MISMA rejilla que las bandejas -- fila_agujeros con 5
+    # taladros -- pero sobre SU ancho, que es 2*hol_piel mas estrecho que el
+    # util del case porque va empotrada entre los costados. Calcular su rejilla
+    # con el ancho del case corre cada columna 0.06 mm y la ultima 0.27: la
+    # puerta lo canto a la primera corrida de esta tanda, que es para lo que
+    # esta. Fueron tres columnas ([15, medio, ancho-15]) mientras las pieles
+    # colgaban de separadores; desde que se atornillan a los largueros usan el
+    # mismo paso que el resto de las planchas.
     au_piel = au - 2 * p["hol_piel"]
+    e_piel = au_piel / n
     REJILLA_FILA = [e * (i + 0.5) for i in range(n)]
-    REJILLA_PIEL = [15.0, au_piel / 2, au_piel - 15.0]
-    GRIDS = {"piel_inferior": REJILLA_PIEL, "piel_superior": REJILLA_PIEL}
+    REJILLA_PIEL = [e_piel * (i + 0.5) for i in range(n)]
+    GRIDS = {"piel_trasera": REJILLA_PIEL}
     por_placa: dict[str, list[float]] = {}
     for placa, _, _, coord, _ in filas:
         por_placa.setdefault(placa, []).append(coord)

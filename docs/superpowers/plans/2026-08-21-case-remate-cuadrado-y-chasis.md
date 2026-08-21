@@ -334,6 +334,74 @@ redondear al gusto.
 
 ---
 
+## T6 — Se va el entrepiso y la trasera pasa a UNA pieza de 8  ✅ HECHA (2026-08-21)
+
+**Pedido el 2026-08-21:** «vamos a evitar la complejidad». Muere la bandeja de
+entrepiso, las dos pieles se funden en una sola plancha empotrada de 8 mm, y las
+ondas se conservan. La marca KONDOR se descartó para más adelante.
+
+### Por qué el entrepiso se puede ir
+
+Su papel de barrera entre la fuente y los módulos **ya lo hace el chasis de
+acero** (#107): la red y el toroide viven dentro de una caja metálica puesta a
+tierra. El acrílico no blindaba ni aislaba — era piso y nada más.
+
+Lo que sí se va con él: **los 3 pasacables de 40 × 12** que ordenaban el cable
+entre pisos. El volumen pasa a ser uno solo y el cableado deja de tener paso
+definido. Toca el **#103**; no bloquea esta tanda.
+
+`alto_interior_inferior` **no cambia de valor**, solo de dueño: se derivaba de
+`y_entrepiso - t_acrilico`, que es la cara de abajo de la bandeja — pero la tapa
+del valle es COPLANAR y del mismo espesor, así que el número sigue siendo el
+mismo y ahora lo pone ella. Queda conservador donde el chasis no está debajo de
+la tapa del valle, y conservador es el lado correcto.
+
+### La trasera
+
+| | hoy | T6 |
+|---|---|---|
+| piezas | 2 (piel inferior + superior) | **1** |
+| espesor | 5 mm | **8 mm** |
+| tamaño | 135 y 82 de alto | **528.02 × 216.73** |
+| filas de tornillo | 2 cada una | **4** — base trasera, entrepiso trasero, repisa, remate superior |
+
+Cuatro filas en vez de dos es lo que de verdad la sujeta: la plancha grande
+apoya en todo el ancho y en toda la altura del esqueleto trasero.
+
+Y los cuatro largueros traseros se retiran **8 mm** en vez de 5 para que siga
+enrasando — 3 mm más adentro que hoy.
+
+- [x] **Paso 1:** muere `bandeja_entrepiso` en los dos modelos, en `export.ps1`
+      y en el lienzo. Los dos largueros de entrepiso se quedan. Reescribir el
+      comentario de `alto_interior_inferior`: su techo es ahora la tapa del valle.
+- [x] **Paso 2:** `t_piel = 8`, nuevo, y los cuatro largueros traseros pasan de
+      `fondo - r - t_acrilico` a `fondo - r - t_piel`.
+- [x] **Paso 3:** `piel_inferior` + `piel_superior` → `piel_trasera`, con cuatro
+      filas de 5 taladros (`fila_agujeros`, como el resto de las planchas) y las
+      tres ondas en su altura de siempre, derivadas de las filas que las rodean.
+- [x] **Paso 4:** las dos puertas, export, borrar los tres DXF que sobran, los
+      dos renders.
+- [x] **Paso 5:** BOM, README, spec. Commit.
+
+### Supuestos anotados
+
+- **La tapa del valle se queda en 5 mm.** No se pidió tocarla y subirla movería
+  la Y de dos largueros. Consecuencia: el acrílico de 5 lo compra **una sola
+  pieza**. Se cierra en el pliego, no aquí.
+- **5 taladros por fila**, como las bandejas, no 3 como las pieles viejas. La
+  retícula visible de uniones es el ornamento que autoriza la spec §5, y una
+  plancha de 528 × 217 en 8 mm los quiere.
+
+### Lo que la T6 encontró
+
+`check_dxf` salió en ROJO a la primera con «un agujero en x=475.22 se sale de la
+rejilla». La trasera va **empotrada**, o sea `2 × hol_piel` más estrecha que el
+ancho útil del case, y la rejilla se estaba calculando sobre el ancho del case:
+cada columna corrida 0.06 mm y la última 0.27. Es exactamente el fallo contra el
+que el comentario de esa puerta advertía por escrito desde su primera versión.
+
+---
+
 ## T2 — El chasis del PSU se monta sobre los largueros
 
 Hoy el chasis de acero pasa **entre** los dos largueros de base y se apoya en la
