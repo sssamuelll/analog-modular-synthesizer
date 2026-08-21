@@ -1,7 +1,8 @@
 # PSU v3 — la primera que se construye
 
-**Estado:** Fases A (decisiones), B (esquemático), D (chasis) y la colocación
-de la Fase C cerradas. Faltan el ruteo y la validación.
+**Estado:** Fases A (decisiones), B (esquemático), C (placa) y D (chasis)
+cerradas. La placa está **ruteada y con DRC en cero**; falta la validación —
+que empieza cuando exista la placa física.
 
 > **La v1 y la v2 son diseños de papel.** La v1 se abandonó el 2026-08-17 sin
 > fabricar; la v2 llegó a tener gerbers, BOM y CPL generados y tampoco se pidió.
@@ -197,10 +198,86 @@ tabs están a VRAW+ y VRAW−.
 | [notes/design-notes.md](../notes/design-notes.md) | §16.8 (protección), §16.5 (VRAW), §16.12 (+5 V) |
 | [../v2/README.md](../v2/README.md) | La arquitectura de regulación, que aquí no cambia |
 
-## Lo que falta
+## El ruteo
 
-- **Fase C — ruteo.** La colocación está cerrada (abajo); falta rutear, DRC
-  limpio y el paquete de fabricación.
+**1033 segmentos, 176 vías, DRC de `kicad-cli` en cero infracciones y cero
+elementos sin conectar.** Al empezar la fase eran 48 infracciones y 126 sin
+conectar.
+
+El reparto no es por longitud sino por **quién define la forma de la pista**:
+
+| a mano | por qué no lo puede decidir un camino más corto |
+|---|---|
+| `rutear_gnd` | GND es un **árbol**, no un plano: un plano crea una espira de 100 Hz alrededor del puente |
+| `rutear_red` | los 230 V van en carriles con 2,5 mm de aire, y eso lo manda el aislamiento |
+| `rutear_rieles` | dónde se suelda el sense de `OUTS` decide **qué tensión queda regulada** |
+
+Las otras 126 conexiones —I²C, los tres divisores, el lazo de rectificación,
++5 V, las SET/ILIM locales— solo piden no cruzarse con nada, y eso lo hace
+mejor un BFS de Lee que yo. **El ruteador ya estaba en el repo**:
+`hardware/tools/maze.py`, escrito para el módulo 2, probado con su propia
+demo, y sin que lo importara ni la v1 ni la v2 ni esta versión.
+
+### Lo que costó, medido
+
+| | |
+|---|---|
+| Rejilla de 0,1 mm y no de 0,25 | con 0,25 el riel de +5 V dejaba 5 pines al aire, y los cinco eran el pin del **medio** de un MSOP |
+| `via_ok` en O(1) | preguntarle a `_hay_sitio()` —que recorre los 310 pads— una vez por nodo no terminaba en diez minutos |
+| El clearance tenía **tres** verdades | `CLEARANCE_MM` = 0,127, `m_MinClearance` = 0,127 y la netclass en el 0,2 de fábrica, que es contra la que compara el DRC. 34 infracciones con las puertas propias en verde |
+| El pasillo entre dos pines de 0,45 mm | mide **0,196 mm** y no admite margen de cortesía: la rejilla redondeaba hacia fuera y se comía las dos únicas celdas |
+| GND va la **última** | iba primera y sus vías se posaban en el pasillo por el que luego salía un pin de MSOP. Su forma la fijan `GND_TRONCO_X` y `GND_COSTILLAS`; lo único que se adapta es dónde cae cada vía, que es justo lo que debe adaptarse |
+
+Y una que no es de ruteo: **U7.9 no cabía por ningún lado**. Con 0,45 mm de
+paso, una vía de 0,6 mm en la banda de un pin invade los carriles de sus dos
+vecinos —pide 0,527 mm y hay 0,45—, y alargar el rabito recto solo empeora,
+porque cruza más cosas. Se resolvió **girando**, como haría un layouter: sale,
+pasa de largo las escapadas de sus vecinos, y baja de capa ya fuera de la
+fila. Ninguna separación se aflojó.
+
+## Tres cosas que el ruteo destapó y no eran del ruteo
+
+**La isla de referencia se rellenaba a 140 mm de donde tenía que estar.** El
+recorte circular de `H4` se escribió cuando la placa medía 150 × 200 y el
+taladro caía dentro de `ISLA_REF`; al girarla a 200 × 150 se fue a (193, 143)
+y el recorte se quedó — un agujero fuera de su propio polígono. La zona de
+3256 mm² se rellenaba como **un trozo de 12,24 mm² alrededor del taladro**. De
+ahí salían, los dos a la vez, el `isolated_copper` y los seis pads de GNDREF
+sin conectar.
+
+**`R6.2` no ha estado conectado en ninguna versión.** R6 y R8 son el mismo
+divisor de ajuste a cada lado de la placa, con la misma huella y la misma
+colocación, pero dibujados **espejados**: el pin que toca la referencia es el 2
+en uno y el 1 en el otro. En la placa eso mandaba el pad de GNDREF de R6 a
+x = 57,16, con la isla acabando en 54. Es el fondo del divisor de ajuste de
+`U1`, el pre-regulador de +12 V. Se arregló girando el símbolo 180° — el
+cableado del esquemático no se mueve y la huella tampoco, un resistor es
+simétrico — y `netdiff` lo cazó en dos líneas.
+
+> No se vio antes porque `revisar_isla_referencia()` solo mira **pistas** de
+> GNDREF, y hasta esta tanda no había ninguna. Era verde por vacía, que es
+> exactamente lo que dice el Principio VIII de la constitución.
+
+**El EP de `U6`/`U7` no llegaba a ningún sitio** — salía 2,5 mm y ahí se
+quedaba, con la entrada de los dos LT3094 conectada solo por sus pines 1-3 —
+y **`F1` tiene dos clips por lado**: el portafusible tiene dos posiciones y
+solo una estaba cableada.
+
+## Dos trampas de la herramienta, con fecha
+
+**`ZONE_FILLER.Fill()` hace SEGFAULT** desde el Python de KiCad 10.0 con esta
+placa ya ruteada (2026-08-21: exit 139, sin traceback, con 1042 segmentos;
+con 995 todavía pasaba). No es la zona ni su geometría — se probó con el
+polígono ya arreglado y se sigue cayendo. El relleno lo hace `kicad-cli pcb
+drc --refill-zones --save-board`, que es el mismo código fuera del proceso, y
+por eso es un **paso del pipeline de fabricación**, no un detalle.
+
+**Y la netclass se escapa por dos sitios.** Escribirla solo en el `.kicad_pro`
+no basta: `kicad-cli --save-board` la devuelve al 0,2 de fábrica, porque
+guarda lo que la **placa** lleva en memoria y no lo que hubiera en el fichero
+de proyecto. Va escrita en el objeto `board`.
+
+## Lo que falta
 - ~~**Fase D — chasis.**~~ **Cerrada.** El toroide tiene hoja del fabricante
   (Ø93 × 46, 1,20 kg) y el chasis de acero existe en `case/cad/` con sus tres
   DXF de corte y su puerta. Queda abierto solo el presupuesto de la pantalla
