@@ -1028,12 +1028,20 @@ module lienzo_2d() {
     // fila 1: los 2 costados
     costado_2d();
     translate([prof + sep, 0]) costado_2d();
-    // fila 2: las 4 planchas del cuerpo (eran 5 con el zocalo)
+    // fila 2: las 4 planchas del cuerpo. Fueron 6 hasta el 2026-08-21 (murio la
+    // bandeja de entrepiso y las dos pieles se fundieron en una).
+    //
+    // La cadena se renumero al quitarlas: antes cada x colgaba de la anterior
+    // (x3 = x2 + ...) y al borrar las lineas de las piezas muertas se fueron
+    // con ellas las variables intermedias. OpenSCAD no falla con eso -- trata
+    // la variable ausente como undef y coloca la pieza en NaN --, y como el
+    // lienzo es PREVIEW y no lo relee check_dxf, ninguna puerta lo hubiera
+    // cazado. Por eso va encadenado sin huecos y no por indices sueltos.
     y2 = alto + sep;
-    x1 = 0;              translate([x1, y2]) bandeja_base_2d();
-    x3 = x2 + au + sep;  translate([x3, y2]) piel_trasera_2d();
-    x5 = x4 + aup + sep; translate([x5, y2]) tapa_valle_2d();
-    x6 = x5 + au + sep;  translate([x6, y2]) remate_sup_2d();
+    x1 = 0;               translate([x1, y2]) bandeja_base_2d();
+    x2 = x1 + au + sep;   translate([x2, y2]) piel_trasera_2d();
+    x3 = x2 + aup + sep;  translate([x3, y2]) tapa_valle_2d();
+    x4 = x3 + au + sep;   translate([x4, y2]) remate_sup_2d();
     %square([1000, 600]);
 }
 

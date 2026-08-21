@@ -181,8 +181,8 @@ diff. **El lienzo no lleva las tres piezas de acero** y es a propósito: van a
 otro taller, con otro proceso (corte + plegado) y otro material, así que
 nestearlas con el acrílico sería mentir sobre lo que se manda junto.
 
-Lo que sí se versiona son los **diez DXF sueltos** de `case/plans/` — siete de
-acrílico y tres de acero. Son el entregable que va al taller, y su diff es la
+Lo que sí se versiona son los **nueve DXF sueltos** de `case/plans/` — cinco
+piezas de acrílico, tres de acero y el cupón. Son el entregable que va al taller, y su diff es la
 prueba de qué se mandó a cortar y cuándo.
 
 ## Procedimiento del cupón — sólo si se vuelve al láser
