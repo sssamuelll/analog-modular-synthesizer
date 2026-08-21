@@ -545,9 +545,11 @@ def chasis_agujeros() -> list[str]:
 
     p = cb.leer_params()
     torn = 2 * (p["chasis_tornillos_largo"] + p["chasis_tornillos_corto"])
+    # los 4 M5 con que el chasis cuelga de los largueros, dos por pared larga
+    anclajes = 2 * int(p["chasis_anclajes"])
     esperado = {
-        # 1 M6 del toroide + los TO-220 + 1 M4 de PE + los tornillos de la tapa
-        "chasis_cuerpo_2d": int(1 + p["chasis_to220_n"] + 1 + torn),
+        # 1 M6 del toroide + los TO-220 + 1 M4 de PE + los de la tapa + anclajes
+        "chasis_cuerpo_2d": int(1 + p["chasis_to220_n"] + 1 + torn + anclajes),
         "chasis_tapa_2d": int(torn),
         "chasis_refuerzo_2d": 1 + 4,             # M6 central + 4 remaches
     }

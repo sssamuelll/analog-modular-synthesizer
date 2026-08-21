@@ -1359,12 +1359,18 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
           f"y={ay:.1f}..{ay + h:.1f} y la bandeja mide {au:.2f} x "
           f"{vuelo + fondo_bandeja:.2f}: se sale de la plancha")
 
-    # --- 6. los dos largueros que cruzan la bandeja ------------------------
-    # bandeja_base dejo de colgar de los largueros el 2026-08-17: ahora ES el
-    # suelo y los dos 2020 van ENCIMA de ella. O sea que hay dos barras de
-    # 20 x 20 cruzando el sitio donde se apoya el chasis, y la caja tiene que
-    # pasar entre ellas. No lo ve solapes() -- el chasis no esta en el censo de
-    # cajas solidas -- ni el sobre del DXF, que es plano.
+    # --- 6. el chasis CUELGA de los dos largueros --------------------------
+    # La premisa se invirtio el 2026-08-21 (#106). Era "la caja tiene que PASAR
+    # entre las dos barras de 20 x 20 sin tocarlas", porque se apoyaba en la
+    # bandeja de acrilico -- y esa plancha resuena justo donde el toroide
+    # excita. Ahora la caja cuelga de los largueros con 4 M5 a la ranura
+    # interior del 2020: la carga va chasis -> tornillos -> largueros ->
+    # costados, y el acrilico deja de sostener el toroide.
+    #
+    # El assert no cambia de forma y por eso conviene decir por que sigue: la
+    # caja tiene que seguir cabiendo entre los dos largueros con holgura, solo
+    # que ahora ese hueco no es "aire para que no roce" sino la luz que cruza
+    # cada tornillo. Lo que cambio es lo que significa, no lo que mide.
     rail = p["rail"]
     hol = p["chasis_holgura_larguero"]
     libre_0 = vuelo + rail + hol
@@ -1376,6 +1382,29 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
     print(f"  entre los dos largueros: {pos_y - vuelo - rail:.2f} mm delante y "
           f"{fondo_bandeja - rail - (pos_y - vuelo) - c['tapa_y']:.2f} detras "
           f"(minimo exigido {hol:.0f}) -- la cota mas justa del montaje")
+
+    # --- 6b. y los 4 M5 con que cuelga caben en la pared -------------------
+    # El tornillo entra por la ranura INTERIOR del 2020, cuyo eje esta a rail/2
+    # sobre la bandeja. Lo que queda de pared bajo ese eje es rail/2 -
+    # chasis_pie, y de eso los primeros radio_doblez + t_chapa son CURVA: ahi
+    # no se taladra. Es la cota que ata chasis_pie por arriba, y no la ve nadie
+    # mas -- ni solapes(), ni el sobre del DXF, que es plano.
+    sube = p["rail"] / 2 - p["chasis_pie"]
+    curva = p["radio_doblez"] + p["t_chapa"]
+    margen = sube - curva - p["d_M5_paso"] / 2
+    exige(margen >= 0,
+          f"el M5 que cuelga el chasis cae a {sube:.2f} mm del suelo de la caja "
+          f"y ahi todavia hay doblez: la curva ocupa {curva:.2f} y el taladro "
+          f"pide {p['d_M5_paso'] / 2:.2f} de radio ({margen:+.2f}). Baja "
+          f"chasis_pie o el tornillo no se puede taladrar")
+    exige(p["chasis_pie"] > 0,
+          "chasis_pie a cero deja el suelo del chasis TOCANDO la bandeja, que "
+          "es lo mismo que apoyarlo: el #106 pide que el acrilico no sostenga "
+          "el toroide")
+    print(f"  cuelga de {2 * int(p['chasis_anclajes'])} M5 a la ranura interior "
+          f"del 2020, a {sube:.1f} mm del suelo de la caja ({margen:.2f} de "
+          f"margen tras el doblez); {p['chasis_pie']:.0f} mm de aire bajo el "
+          f"suelo -- el acrilico ya no sostiene el toroide (#106)")
 
     # --- 7. el tornillo de la tapa muerde faldon y pared a la vez ----------
     exige(p["chasis_tornillo_baja"] + p["d_M3_paso"] / 2 <= p["chasis_pestana"],

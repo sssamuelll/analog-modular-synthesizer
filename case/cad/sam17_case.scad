@@ -704,6 +704,18 @@ module chasis_cuerpo_2d() {
                 translate([abs(s*b.x - ch_desarrollo(d_torn, ch_ala(ext.z))),
                            off + y - ch_sb()])
                     circle(d = d_M3_paso + kerf);
+        // --- los 4 M5 que CUELGAN el chasis de los dos largueros (#106) ---
+        // Van en las dos paredes LARGAS, que son las que miran a los largueros:
+        // la matriz de chasis() manda su Y local al X del case. La altura sale
+        // del case y no del chasis -- es el eje de la ranura interior del 2020,
+        // que esta a rail/2 sobre la bandeja, menos lo que el suelo ya subio.
+        // Por eso chasis_pie no puede crecer: se come la pared que hay debajo.
+        for (x = ch_tornillos(ext.x, chasis_anclajes))
+            for (s = [0, 1])
+                translate([off + x - ch_sb(),
+                           abs(s*b.y - ch_desarrollo(rail/2 - chasis_pie,
+                                                     ch_ala(ext.z)))])
+                    circle(d = d_M5_paso + kerf);
     }
 }
 
@@ -1162,6 +1174,11 @@ module bom() {
              " de costado + arandela + 8..10 de rosca dentro del aluminio."));
     echo(str("BOM: tornillo M5 boton x", 2*len(centros_esqueleto()),
              " + tuerca T -- por la PUNTA de los largueros 2020, desde el costado"));
+    echo(str("BOM: tornillo M5 x", 2*chasis_anclajes, " + tuerca T + SEPARADOR de ",
+             chasis_holgura_larguero, " -- cuelgan el chasis del PSU de la ranura"));
+    echo("     INTERIOR de los dos largueros de base (#106). El separador no es");
+    echo("     opcional: el tornillo cruza ese aire y sin el, apretar abolla la");
+    echo("     pared de 1.5 de chapa hacia dentro.");
     // Faltaban. Los M5 de arriba atan el larguero al COSTADO; estos atan la
     // PLANCHA al larguero, que es otra union y otro herraje. Salieron al montar
     // la guia de ensamblaje: las planchas tenian los taladros dibujados y el BOM

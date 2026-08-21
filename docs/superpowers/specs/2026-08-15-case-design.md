@@ -97,6 +97,13 @@ lenguaje visual).
 > uno. Subir la onda sola no servía: el borde de la rejilla estaba derivado de
 > ella. Entra `vent_separacion` como cota de dibujo propia y `y_bajas` sube
 > 0.32 → 0.37. ΔT 6.5 → 6.6 K.
+> **rev. 15** (2026-08-21, **#106**): el chasis del PSU deja de apoyarse en el
+> acrílico y **cuelga** de la ranura interior de los dos largueros de base con
+> 4 M5 + separador. `chasis_pie` deja de ser separadores (10) y pasa a ser aire
+> (2). La caja no cambia de tamaño. El fondo de módulo sube de 34.4 a **38.3 mm**
+> —el limitante deja de ser el chasis y pasa a ser la bandeja— y el techo libre
+> del piso de abajo de 40.6 a **48.6**. Pide que la chapa de refuerzo y el
+> herraje del M6 del toroide vayan POR DENTRO de la caja.
 >
 > **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
 > visual y proporciones *relativas*, pero **sus cotas están superadas**. Se

@@ -396,6 +396,7 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Larguero perfil 2020 | **5** | de 528.32 mm cada uno: 2 de base, entrepiso delantero, valle y **remate trasero**. Fueron 8 hasta el 2026-08-21 |
 | Tornillo **M4** | **8** | entran de punta por el costado y **roscan en el propio Z-Rail** (viene con M4 taladrado a 3.3 de fábrica). Sin tuerca, sin inserto. **No vienen con el raíl.** 4 de hombro (los ejes de giro) + 4 de mano (los cierres) |
 | Tornillo M5 botón + tuerca T | **10** | 2 por larguero 2020, por la punta, desde el costado |
+| Tornillo M5 + tuerca T + separador 3 mm | **4** | cuelgan el chasis del PSU de la ranura **interior** de los dos largueros de base (#106). El separador no es opcional |
 | Tornillo M3 + tuerca T M3 | **30** | las planchas a los largueros: base 10, tapa del valle 5, tapa de remate 5, **trasera 10** (2 filas × 5). Entran por la RANURA, no por la punta |
 | Arandela ANCHA d16 | 4 | **no opcional**: en los ejes de giro. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 MPa y aguanta |
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa. **Sustituye al amortiguador**, que se eliminó |
@@ -403,7 +404,8 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante, 528.32 × 291.4) + tapa de remate (528.32 × 37) + **trasera** (528.02 × 245.18, con las tres ondas y la rejilla de entrada de aire) |
 | Patica metálica torneada | 4 | d=16 × 8 mm |
 
-**Total de tornillos del case: 48** — 8 M4 de raíl + 10 M5 de esqueleto +
+**Total de tornillos del case: 52** — 8 M4 de raíl + 10 M5 de esqueleto +
+4 M5 que cuelgan el chasis +
 30 M3 de plancha. Eran 71, y el 2026-08-21 perdió 23 de golpe: al empotrarse, la
 trasera se llevó por delante 12 separadores M4 y sus 24 tornillos de botón; al
 morir la bandeja de entrepiso se fueron 10 M3; volvieron 2 M5 y 5 M3 con el
@@ -486,21 +488,26 @@ un cable asumiendo continuidad por el riel es riesgo de choque eléctrico.
 
 ## Orden de ensamblaje
 
-1. **Esqueleto** — costados + los 8 largueros 2020, M5 por la punta desde
-   fuera. Meter aquí las 42 tuercas T M3 de las planchas: con tuercas de
+1. **Esqueleto** — costados + los 5 largueros 2020, M5 por la punta desde
+   fuera. Meter aquí las 30 tuercas T M3 de las planchas: con tuercas de
    inserción lateral se pueden añadir después, con las de deslizar no.
-2. **Bandeja de base** — 8 mm, es el suelo, 5 M3 por fila. Era «bandejas» en plural hasta el 2026-08-21: la de entrepiso murió.
-3. **Los 4 Z-Rails** — M4 desde fuera, roscan en el propio riel. Comprobar
+2. **Bandeja de base** — 8 mm, es el suelo, 2 filas de 5 M3. Era «bandejas» en
+   plural hasta el 2026-08-21: la de entrepiso murió.
+3. **Chasis del PSU** — **cuelga** de la ranura interior de los dos largueros
+   de base, 4 M5 con separador de 3 mm. No apoya en el acrílico: quedan 2 mm de
+   aire bajo su suelo, que es de lo que va el #106. Va aquí y no más tarde
+   porque después el valle y los paneles cierran el piso por arriba.
+4. **Los 4 Z-Rails** — M4 desde fuera, roscan en el propio riel. Comprobar
    antes que la pletina roscada corre por su canal.
-4. **Tapa del valle** — 5 M3 al larguero del valle.
-5. **Electricidad y bonding** — bloque IEC fijo, espárrago junto al PSU.
-6. **Trasera** — UNA plancha de 8 mm, EMPOTRADA, 25 M3 a tuerca T repartidos
-   en las cinco filas de los largueros traseros. Va después de los largueros
-   porque la tuerca T vive dentro de la ranura.
-7. **Tapa de remate** — 5 M3 al larguero de remate trasero. Va ATORNILLADA
+5. **Tapa del valle** — 5 M3 al larguero del valle.
+6. **Electricidad y bonding** — bloque IEC fijo, espárrago junto al PSU.
+7. **Trasera** — UNA plancha de 8 mm, EMPOTRADA, 10 M3 a tuerca T en las dos
+   filas de los largueros traseros. Va después de los largueros porque la
+   tuerca T vive dentro de la ranura.
+8. **Tapa de remate** — 5 M3 al larguero de remate trasero. Va ATORNILLADA
    desde el 2026-08-21; hasta entonces iba pegada al Z-Rail y era la única
    pieza irreversible del case.
-8. **Paticas y paneles** — y paneles ciegos en todo hueco de las dos filas,
+9. **Paticas y paneles** — y paneles ciegos en todo hueco de las dos filas,
    que con una tapa abierta son lo único que ata sus dos raíles.
 
 El orden importa en dos sitios: las bandejas no se pueden atornillar antes

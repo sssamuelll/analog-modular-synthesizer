@@ -880,10 +880,25 @@ k_factor     = 0.42;  // SUPUESTO -- fibra neutra; DIN 6935 varia con r/t
 // --- la tapa ---
 chasis_pestana  = 15;   // faldon de la tapa, por FUERA de la pared del cuerpo
 chasis_hol_tapa = 0.6;  // juego total para que la tapa entre sin forzar
-chasis_pie      = 10;   // separadores bajo el suelo. No son estetica: bajo el
-                        // suelo pasan la chapa de refuerzo (1.5) y la cabeza
-                        // del M6 del toroide (~5), y el acrilico no puede
-                        // apoyar contra acero caliente (Tg ~ 100 C)
+// YA NO SON SEPARADORES (2026-08-21, #106). Eran 10 mm de pata porque el
+// chasis SE APOYABA en la bandeja y bajo su suelo tenian que pasar la chapa de
+// refuerzo (1.5) y la cabeza del M6 del toroide (~5). Desde que el chasis
+// CUELGA de los dos largueros, nada suyo toca el acrilico y esos dos herrajes
+// se mudan al interior de la caja -- que es cambio del chasis, no del case.
+//
+// Lo que queda es AIRE: el hueco entre el suelo del chasis y la bandeja, para
+// que la plancha no sostenga el toroide y deje de resonar donde el #106 dice
+// que resuena. Dos milimetros y no cero: cero seria contacto, que es lo mismo
+// que apoyar. La pila de tolerancias (taladro de chapa +-0.5, larguero +-0.3,
+// espesor del acrilico +-0.4) se come 1.2 en el peor caso y aun queda hueco.
+//
+// Y no puede crecer mucho: el M5 que ancla al larguero entra por la RANURA
+// INTERIOR del 2020, cuyo eje esta en rail/2 sobre la bandeja. Cuanto mas sube
+// el suelo, menos pared queda por debajo de ese eje, y los primeros
+// radio_doblez + t_chapa milimetros de pared son curva y no admiten taladro.
+// Con 2 el tornillo sube 8 por la pared y sobran 2.25 tras el doblez y el radio
+// del taladro. Lo comprueba guarda_chasis.
+chasis_pie      = 2;    // AIRE bajo el suelo del chasis, no separadores
 
 // --- lo que la Task 6 tiene que casar, no al reves ---
 // Estos tres agujeros los DECLARA el chasis y la PCB se pliega a ellos. Va en
@@ -941,11 +956,20 @@ d_M6_paso = 6.5;
 chasis_margen_bandeja = 10;  // orilla libre a la derecha de la bandeja
 // LA COTA MAS JUSTA DE TODO EL MONTAJE, y por eso es un parametro con nombre y
 // no un resultado. Los dos largueros 2020 van ENCIMA de la bandeja de base
-// desde el 2026-08-17, asi que el chasis pasa entre ellos y le quedan 3.33 mm
-// a cada lado. Una caja doblada sale con +-1 mm facil, y la soldadura de las
-// esquinas tira mas. Si el taller no promete esa tolerancia, lo que se toca es
-// chasis_int_y -- no la posicion, que ya esta centrada y no da mas de si.
+// desde el 2026-08-17, asi que el chasis va entre ellos con esto a cada lado.
+// Una caja doblada sale con +-1 mm facil, y la soldadura de las esquinas tira
+// mas; por eso el hueco existe y no se cierra a cero.
+//
+// DESDE EL 2026-08-21 ESTE HUECO ES ADEMAS LA LUZ QUE SALVA EL TORNILLO. El
+// chasis ya no pasa entre los largueros: cuelga de ellos, con 4 M5 que entran
+// por sus paredes largas y muerden la ranura interior del 2020. Cada tornillo
+// cruza estos 3 mm de aire, asi que lleva separador -- sin el, apretar
+// abollaria la pared de 1.5 hacia dentro.
 chasis_holgura_larguero = 3;
+// M5 por pared larga. Dos y no uno: con uno solo el cajon pivota sobre el, y
+// con tres el reparto deja de casar con ch_tornillos(). Son los mismos que
+// llevan la tapa, repartidos con la misma regla.
+chasis_anclajes = 2;
 chasis_tornillo_baja  = 8;   // cuanto por debajo del techo va la fila de M3
 chasis_tornillos_largo = 3;  // por faldon largo
 chasis_tornillos_corto = 2;  // por faldon corto

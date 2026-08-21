@@ -731,7 +731,44 @@ centrado sin que nada lo cantara.
 
 ---
 
-## T2 — El chasis del PSU se monta sobre los largueros
+## T2 — El chasis del PSU cuelga de los largueros  ✅ HECHA (2026-08-21)
+
+> **Lo que se hizo NO es lo que decían los pasos de abajo.** Se conservan porque
+> el diagnóstico (#106) sigue siendo el bueno y porque explican de dónde salían
+> las cotas; lo que caducó es el *cómo*. El plan pedía subir el chasis ENCIMA de
+> los largueros con la tapa abarcando de uno a otro (`tapa_y = vano + 40`), y
+> medido contra la geometría de hoy eso deja el fondo de módulo en **0.02 mm**:
+> el cajón crecería de 176.6 a 242.6 y subiría 20, y su esquina delantera-alta
+> se come el envolvente entero de la fila de abajo. Además la pata trasera caería
+> en x=310.94 con el plano trasero en 300.94 — se sale del case por atrás. Y
+> `tapa_y` derivado del vano choca de frente con el larguero delantero, que desde
+> la T10 está derivado del chasis: recursión.
+>
+> **Lo que se hizo:** el chasis NO sube. Se queda donde está y **cuelga** de la
+> ranura interior de los dos largueros con 4 M5, dos por pared larga. La carga va
+> chasis → tornillos → largueros → costados, que es lo que pide el #106, y el
+> acrílico deja de sostener el toroide. La caja no cambia de tamaño: la holgura
+> de 3 mm ya hacía que midiera el vano menos 6, así que `chasis_int_y` se queda
+> en 170 y no hay recursión que romper.
+>
+> | | antes | ahora |
+> |---|---|---|
+> | fondo de módulo mínimo | 34.43 mm (lo ponía el chasis) | **38.29 mm** (lo pone la bandeja) |
+> | panel útil con 50 mm de fondo | 67.6 % | **77.1 %** |
+> | techo libre del piso de abajo | 40.58 mm | **48.58 mm** |
+> | `chasis_pie` | 10 (separadores) | **2** (aire) |
+>
+> **Lo que costó, y no es del case:** la chapa de refuerzo y el herraje del M6
+> del toroide tienen que ir POR DENTRO de la caja. El M5 entra por la ranura
+> interior del 2020, cuyo eje está a `rail/2` sobre la bandeja; cuanto más sube
+> el suelo del chasis menos pared queda debajo, y los primeros
+> `radio_doblez + t_chapa` son curva y no admiten taladro. Con `chasis_pie` = 6.5
+> —lo que pedía el herraje colgando— el tornillo caía DENTRO del doblez. Con 2
+> sube 8 mm por la pared y sobran 2.25. Lo vigila `guarda_chasis`.
+>
+> **Y el separador de 3 mm no es opcional:** el tornillo cruza el aire que hay
+> entre la pared y el larguero, y sin él apretar abolla la chapa de 1.5 hacia
+> dentro.
 
 Hoy el chasis de acero pasa **entre** los dos largueros de base y se apoya en la
 bandeja de acrílico. El toroide, que es lo que pesa, cuelga de una plancha de PMMA
