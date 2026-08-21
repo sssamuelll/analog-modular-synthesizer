@@ -1,9 +1,9 @@
 # Case SAM17 — consola de dos pisos en acrílico naranja
 
-Spec: [`docs/superpowers/specs/2026-08-15-case-design.md`](../docs/superpowers/specs/2026-08-15-case-design.md) (rev. 4)
+Spec: [`docs/superpowers/specs/2026-08-15-case-design.md`](../docs/superpowers/specs/2026-08-15-case-design.md) (rev. 5)
 Board de intención: [`renders/propuesta-diseno-2026-08-16.png`](renders/propuesta-diseno-2026-08-16.png)
 — **manda sobre lenguaje visual, NO sobre cotas**: se dibujó para paneles de
-190 mm y un case de 500 × 380 × 350, y el case real mide 544.32 × 247.73 × 276.3.
+190 mm y un case de 500 × 380 × 350, y el case real mide 544.32 × 247.73 × 292.4.
 
 ## Formato: EUROrack 3U, las dos filas
 
@@ -28,9 +28,23 @@ que se dibujó para 190 mm.
 |---|---|
 | ancho total | **544.32 mm** = 528.32 (104 HP) + 2 × `t_cheek` |
 | alto total | **247.73 mm** |
-| fondo | **276.3 mm** |
+| fondo | **292.4 mm** |
 | altura de entrepiso | **138.13 mm** |
 | ancho útil entre costados | **528.32 mm** |
+
+**La punta de arriba es cuadrada** (2026-08-21). El techo lleva una meseta de
+`marco_remate` = **34 mm** rematada por dos quiebres de 2 mm, en vez de la
+cúpula que salía antes. Son **dos** parámetros y no uno: los vértices 4 y 5
+dejaron de compartir `radio_punta` —que va sobredimensionado a propósito y se
+recorta a lo que quepa en la arista, o sea a `marco_remate/2`— y estrenan
+`radio_remate` = 2. Subir solo el marco **engorda** el round en vez de
+cuadrarlo: de 9 mm de tangente a 17.
+
+Los 16 mm de fondo que costó relajaron las tres cotas más apretadas del
+presupuesto, y ninguna se buscó: la tapa de la fila de arriba **abre 180°**
+(abría 151.2° y topaba con el remate), el chasis del PSU pasa de 3.33 a
+**11.33 mm** contra los largueros de base —era «la cota más justa del
+montaje»— y el fondo libre de la bandeja sube de 46.7 a 62.7 mm.
 
 **Kerf: 0.** El proceso es **fresado CNC**, no láser (decidido el
 2026-08-17). El CAM del taller compensa el radio de herramienta como parte

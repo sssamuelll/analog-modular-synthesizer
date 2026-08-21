@@ -213,7 +213,22 @@ alto_frontal    = 13;
 // tangente 4 mm en vez de 11, o sea que las dos puntas del techo se vuelven
 // casi vivas. Eso ya no importa como antes -- lo que se ve arriba ahora es el
 // canto del panel, no un pico de acrilico.
-marco_remate    = 18;
+//
+// SUBIO A 34 el 2026-08-21, y esta vez lo pide la FORMA y no una cota fisica:
+// Samuel quiere la punta de arriba CUADRADA y el case tirado un poco hacia
+// atras. Cuesta 16 mm de fondo (275.2 -> 291.2) y no cuesta ni un milimetro de
+// alto. Sondeado de 18 a 50 contra clearance_budget: verde en todo el rango, o
+// sea que dentro de esa ventana el numero es libre.
+//
+// (El parrafo de arriba decia 16 y el valor era 18 desde 2507d46, que subio la
+// cota sin tocar el texto. Corregido de paso.)
+//
+// OJO -- ESTE PARAMETRO SOLO NO CUADRA LA PUNTA: LA ENGORDA. Los vertices 4 y 5
+// usaban radio_punta, que va sobredimensionado y se recorta a lo que quepa en la
+// arista mas corta, o sea a marco_remate/2. Subir el marco sin tocar nada mas
+// convierte el techo en una cupula de 17 mm de tangente en vez de 9. Lo que
+// cuadra la punta es radio_remate. Los dos van juntos o no van.
+marco_remate    = 34;
 // Entrepiso: la franja horizontal entre el tope de la cara inferior y la base
 // de la superior -- el "valle del medio" de la silueta. Fue 25 (minimo tecnico
 // de R7: por debajo, los dos railes girados se solapaban 2.52 mm), luego 40,
@@ -289,7 +304,21 @@ bombeo          = 0.5;
 // proposito: la funcion lo recorta al maximo que permite la arista mas corta
 // del vertice, y ese maximo es justo la punta. Subirlo mas no cambia nada;
 // bajarlo devuelve la cara plana.
+//
+// Desde el 2026-08-21 ya NO gobierna los dos vertices de arriba: esos pasaron a
+// radio_remate. Aqui quedan los dos de abajo -- frente-abajo y arranque de cara
+// --, que siguen leyendose como punta redondeada.
 radio_punta     = 400;
+// radio_remate = los dos vertices de ARRIBA (apex y fondo-arriba), que desde el
+// 2026-08-21 se leen CUADRADOS y no como punta. Es un radio de verdad y no un
+// sobredimensionado: aqui lo que se pide es lo que sale.
+//
+// 2 y no 0 a proposito. Una esquina viva en acrilico colado de 8 mm es donde
+// arranca una fisura -- la misma razon por la que radio_pico no baja de 5 -- y 2
+// es ademas el radio que el issue #45 pide para las esquinas de panel, asi que
+// case y paneles rematan con el mismo canto. Queda por encima del minimo de la
+// fresa (radio 1.5 con la de 3), o sea que el taller lo saca sin cambiar util.
+radio_remate    = 2;
 
 // --- materiales ---
 t_acrilico = 5;    // planchas del cuerpo; MEDIR con calibre (spec §11)

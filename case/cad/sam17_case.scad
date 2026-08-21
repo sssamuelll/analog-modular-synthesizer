@@ -156,7 +156,7 @@ function centros_esqueleto() =
          // de arriba para que la esquina se lea como PUNTA, el rincon se
          // cierra y ahi ya no cabe. Tres techos, y manda el mas bajo:
          //   1. el TECHO YA REDONDEADO. La esquina trasera de arriba lleva
-         //      tangente marco_remate/2, y como este larguero vive pegado al
+         //      tangente radio_remate, y como este larguero vive pegado al
          //      plano trasero (x = fondo - r), su esquina de atras cae justo
          //      donde el arco ya bajo esa tangente. P[5].y - r a secas lo
          //      dejaba FUERA del acrilico.
@@ -173,7 +173,7 @@ function centros_esqueleto() =
          //      circulo de radio_giro_riel() alrededor de su centroide. Con
          //      he_er_y(45) = 13.22 en vez de 14.58 el larguero se quedaba
          //      1.36 mm corto y solo se enteraba uno abriendo la tapa.
-         y_rs = min(P[5].y - r - marco_remate/2,
+         y_rs = min(P[5].y - r - radio_remate,
                     P[3].y + (cos(angulo_superior)*(fondo() - r - P[3].x)
                               - (he_cs + t_panel)) / sin(angulo_superior),
                     cr[3].y - radio_giro_riel() - holgura_rail - r))
@@ -288,7 +288,7 @@ function redondear(P, R, sin_bombeo = []) =
 //
 //   0 frente-abajo  PUNTA    1 arranque cara  PUNTA
 //   2 valle-delante PICO     3 valle-detras   SUAVE
-//   4 apex          PUNTA    5 fondo-arriba   PUNTA
+//   4 apex          REMATE   5 fondo-arriba   REMATE
 //   6 fondo-abajo   normal
 //
 // El 2 es el vertice CONVEXO donde el tope del panel de abajo se encuentra
@@ -299,9 +299,13 @@ function redondear(P, R, sin_bombeo = []) =
 //
 // radio_punta va deliberadamente sobredimensionado: _r_util lo recorta al
 // maximo que permite la arista, y ese maximo ES la punta.
-function radios_perfil() = [radio_punta, radio_punta,
-                            radio_pico,  radio_valle,
-                            radio_punta, radio_punta,
+// Los vertices 4 y 5 compartieron radio_punta hasta el 2026-08-21. Ahi el radio
+// efectivo no era el pedido sino el que cabia en la meseta (marco_remate/2), asi
+// que ensanchar el techo lo volvia MAS redondo. Con radio_remate se pide un
+// radio y sale ese: la punta de arriba se lee cuadrada a cualquier marco.
+function radios_perfil() = [radio_punta,  radio_punta,
+                            radio_pico,   radio_valle,
+                            radio_remate, radio_remate,
                             radio_perfil];
 
 // Va DENTRO de perfil_lateral y no en costado_2d a proposito: costado_2d

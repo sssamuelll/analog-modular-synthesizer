@@ -31,12 +31,17 @@ lenguaje visual).
 > Tiptop de 104 HP — muere el formato propio de 190 mm y con él la
 > proporción del board; el proceso pasa de **láser a fresado CNC** y `kerf`
 > a 0; el zócalo se elimina; la pestaña de remate pasa a **junta pegada**;
-> la bandeja de base sube a 8 mm y se vuelve portante.
+> la bandeja de base sube a 8 mm y se vuelve portante. **rev. 5**
+> (2026-08-21): la punta de arriba se lee **cuadrada** — `marco_remate` sube
+> de 18 a 34 y los dos vértices del techo estrenan `radio_remate` = 2 en vez
+> de compartir `radio_punta` —, el fondo crece 16 mm, y con eso la tapa de la
+> fila de arriba pasa a abrir 180°. Muere de paso la idea de doblar la piel
+> superior en cascada: no hace falta doblar nada.
 >
 > **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
 > visual y proporciones *relativas*, pero **sus cotas están superadas**. Se
 > dibujó para paneles de 190 mm y un case de 500 × 380 × 350; el case real
-> mide **544.32 × 247.73 × 276.3**.
+> mide **544.32 × 247.73 × 292.4**.
 
 ## 1. Objetivo
 
@@ -122,7 +127,7 @@ esta dirección).
 | `angulo_inferior` | **35° desde la vertical** | Cara del piso de procesamiento |
 | `angulo_superior` | **45° desde la vertical** | Cara del piso de generación |
 | `alto_frontal` | **13 mm** | Canto delantero. **No es un zócalo**: el zócalo se eliminó |
-| `fondo` / `alto_total` | derivados | **276.3 mm / 247.73 mm**. Ya NO cuadra con el board (350 × ~380): el board se dibujó para paneles de 190 |
+| `fondo` / `alto_total` | derivados | **292.4 mm / 247.73 mm**. Ya NO cuadra con el board (350 × ~380): el board se dibujó para paneles de 190 |
 | `t_acrilico` | 5 mm | Entrepiso, tapa del valle y las dos pieles. MEDIR con calibre (§11) |
 | `t_base` / `t_cheek` | 8 mm | Suelo portante y costados. La bandeja de base subió de 5 a 8 al pasar a ser el propio canto de abajo |
 | `kerf` | **0** | Correcto fresando: el CAM compensa el radio de herramienta. Solo vuelve a ser negativo si se regresa al láser |

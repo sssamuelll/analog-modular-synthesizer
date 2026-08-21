@@ -225,8 +225,12 @@ def _y_remate(p: dict[str, float], P: list[tuple[float, float]],
                           - (he_cs + p["t_panel"])) / math.sin(a2)
     # el larguero vive pegado al plano trasero (x = fondo - r), o sea que su
     # esquina de atras cae donde el arco de la esquina trasera de arriba ya bajo
-    # su tangente (marco_remate/2). P[5].y - r a secas lo dejaba FUERA.
-    por_techo = P[5][1] - r - p["marco_remate"] / 2
+    # su tangente (radio_remate). P[5].y - r a secas lo dejaba FUERA.
+    #
+    # Fue marco_remate/2 mientras los vertices 4 y 5 usaban radio_punta: ahi el
+    # radio efectivo lo ponia la arista, no el parametro. Desde el 2026-08-21 esos
+    # dos vertices piden radio_remate y la tangente es ese numero.
+    por_techo = P[5][1] - r - p["radio_remate"]
     # Este techo lo puso primero un rail de panel, luego el nudillo de la
     # bisagra cuando la bisagra ocupo esa linea, y desde el 2026-08-17 vuelve a
     # ser un riel: el de arriba de la tapa. Y NO basta su esquina de abajo --
