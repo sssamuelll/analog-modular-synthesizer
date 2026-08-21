@@ -1530,6 +1530,154 @@ de aquí no se arregla con distancia: **la capacidad entre devanados no depende 
 dónde pongas el transformador.**
 
 
+## 19. Cuatro piezas que no se podían comprar
+
+Las cuatro salieron el mismo día, de la misma pregunta: *¿contra qué hoja está
+esto?* Ninguna la caza el ERC, ninguna la caza el DRC, y ninguna aparece hasta
+que la pieza está encima de la placa y no entra.
+
+Las tres primeras son de la PCB y las verifica
+[`check_huellas.py`](../v3/check_huellas.py). La cuarta no está en la placa
+—está en la pared del chasis— y la verifica
+[`check_red_chasis.py`](../v3/check_red_chasis.py).
+
+### 19.1 El MOV: la hoja desmintió a dos distribuidores, y destapó otra cosa
+
+`RV1` es el varistor del primario, un **SIOV-S20K275**. Su ancho decidió bajar
+la barrera de red de y=128 a y=121, así que era el número que más falta hacía
+confirmar. Dos distribuidores (TME `.eu` y TME `.com`) decían **22,5 mm**.
+
+La hoja de EPCOS/TDK —serie *SIOV StandarD* B722\*, marzo 2018, p. 17, fila
+`B72220S0271K101`— dice:
+
+| cota | valor |
+|---|---|
+| `e` paso de patas | 10,0 ±1 |
+| `wmax` ancho del disco | **21,5** |
+| `thmax` espesor | 5,4 |
+| `hmax` alto | 25,5 |
+| `d` **diámetro de pata** | **1,0 ±0,05** |
+
+O sea que el nombre de la huella (`D21`) y su courtyard de 23,00 estaban bien
+desde el principio, y **los dos distribuidores estaban equivocados en el mismo
+milímetro**. Es exactamente la lección del alto del toroide (#46): 45 mm
+heredados sin fuente, «corregidos» a 52,1 con dos listados coincidentes, y la
+hoja del fabricante diciendo 46.
+
+**Y de paso destapó un fallo que nadie buscaba.** La huella taladraba 1,1 mm
+para una pata de 1,0 ±0,05:
+
+| | nominal | peor caso |
+|---|---|---|
+| agujero (tolerancia JLC ±0,08) | 1,10 | **1,02** |
+| pata | 1,00 | **1,05** |
+| aire | 0,10 | **−0,03** |
+
+No es que entrara apretada: **medía más que el agujero**. IPC-2222 pide 0,25 mm
+nominal sobre el diámetro de la pata y no baja de 0,15 en ningún caso. El
+taladro pasa a **1,3 mm** — 0,30 de aire nominal, 0,17 en el peor caso, y el
+anillo anular se queda en 0,45 mm, muy por encima del 0,13 de JLC.
+
+### 19.2 El NTC: el BOM pedía una referencia que no existe
+
+`NT1` decía `SL10-5R020`. En la nomenclatura de Ametherm los **tres últimos
+dígitos son amperios**, así que eso es *5 Ω / 20 A* — y la serie SL10, de 10 mm
+de disco, no llega a 20 A. El de 5 Ω y 20 A es el **SL32**, un disco de 29 mm
+que no cabe en esta placa ni de lejos.
+
+Lo que §10.2 pide es **5 Ω fríos / 2 A continuos**, y esa pieza sí existe: el
+**SL10 5R002**. Hoja del fabricante (ametherm.com, rev. 2012-03-29): D 10,0
+máx, T 4,0 máx, **paso 5,1 nom**, pata 0,5 nom.
+
+Y ahí estaba el segundo problema: **la huella ponía las patas a 7,5 mm**. La
+pieza correcta tampoco entraba — habría habido que doblarle las patas 1,2 mm
+por lado en el montaje, en serie con el primario de 230 V y dentro de un
+recinto cerrado.
+
+La huella nueva es `NTC_Disc_D10.0mm_W4.0mm_P5.1mm`: paso 5,1, taladro 0,8
+(pata + 0,30) y courtyard de 12 × 12, que deja 1 mm de aire por lado sobre el
+disco porque el NTC caliente disipa ~0,4 W. La vieja **no se borra**: la monta
+la v2, que está congelada.
+
+> El `95.5` de `rutear_red()` era la x del pad 2 con la huella vieja. Al mover
+> el paso, la subida de `NT1.2` arrancaba en el aire. Ahora se pide con
+> `pad_xy()`, como sus dos vecinos: un literal que depende de una huella es
+> una cota escrita dos veces.
+
+### 19.3 El faston de masa: la pieza más crítica en seguridad no tenía fabricante
+
+`J5` es el **único puente chasis-masa del instrumento** (§13). El BOM decía
+«Faston macho 6.3mm PCB (2 patillas)», que es una descripción, no una
+referencia: no hay hoja que mirar ni pieza concreta que pedir.
+
+La pieza es **Vogt 3866A.68** (latón estañado). Hoja del fabricante —Vogt AG,
+*Steckzungen für gedruckte Schaltungen*, DIN 46342 parte 1—, fila `3866A`:
+**A = 5** (paso entre las dos patas) y, en la columna marcada *Print Bohrung /
+Trou / Hole*, **Ø 1,3**.
+
+Ese segundo número es el caso cómodo: **el fabricante da el agujero**, así que
+no hay que derivarlo de la pata ni aplicarle IPC-2222. La huella taladraba
+**1,6** — no impide montar, pero deja la pieza bailando en el agujero de la
+única unión que tiene que aguantar una corriente de falla. Pasa a 1,3.
+
+Por eso la tabla de `check_huellas.py` dice **de qué cota se trata** en vez de
+asumir que siempre es la pata: cuando la hoja da el taladro, se compara contra
+el taladro y se acabó.
+
+**Lo que sigue sin confirmar** es el fondo de la pieza (el eje Y en planta): la
+tabla de Vogt da `A`, `B1`, `S`, `L`, `L1`, `T`, `D` y `B`, pero solo las tres
+primeras se pueden leer sin el dibujo acotado. El courtyard reserva 8,0 mm en
+Y y ese número no está contrastado.
+
+### 19.4 El fusible de red se quedó sin sitio donde vivir
+
+Al sacar `F1` de la placa —dos fusibles en serie en el mismo primario y ninguno
+de los dos documentos decía cuál mandaba— el instrumento se quedó **sin ningún
+fusible declarado en ningún sitio**. El del recinto era una frase del #107 («la
+entrada IEC C14 con fusible e interruptor»), y una frase no se compra, no tiene
+recorte y no tiene hoja.
+
+La entrada es **Schurter KM00.1105.11**: C14, portafusibles 2 polos,
+interruptor 2 polos, clase I, sin blindaje EMC, snap-in por delante.
+
+| | valor | de dónde sale |
+|---|---|---|
+| recorte del panel | **28 (+0,10/−0,05) × 47 (+0,10/−0,05)**, esquinas R 0,3 máx | `typ_KM.pdf` p. 3, *KM without shield* |
+| espesor de chapa | 1 / 1,5 / **2** / 2,5 mm, *all steps with one variant* | `typ_KM.pdf` p. 1 |
+| brida | 30,5 × 50, sobresale 2,5 | p. 3 |
+| detrás del panel | 26,15 + 3,2 de clips = **29,35** | p. 3 |
+| portafusibles | shocksafe **PC2** (IEC 60127-6) | p. 1 |
+| PE | pasa directo: ni el fusible ni el interruptor lo cortan | diagrama p. 3 |
+
+El chasis de acero es de **1,5 mm** (`t_chapa`), que está en la lista. Y el
+recorte de 47 mm cabe en su pared interior de 80 con 23 mm de sobra sobre los
+5 mm de margen de plegado.
+
+**Tres decisiones que el #130 dejaba abiertas, y por qué salieron así:**
+
+- **IEC y no prensaestopas.** El fusible tiene que ser accesible sin abrir un
+  recinto de acero cerrado, y el cable desenchufable permite cambiarlo por
+  región.
+- **Fusible bipolar.** Con un Schuko no sabes cuál de los dos es L: es
+  reversible. Un fusible de un solo polo protege el neutro la mitad de las
+  veces.
+- **Con interruptor.** El instrumento no tenía ninguno, y apagarlo
+  desenchufándolo no es apagarlo. El módulo lo trae en la misma pieza y el
+  mismo recorte.
+
+**Dos cosas que hay que pedir aparte y es fácil que se olviden:** el cajón
+portafusibles (**4301.1403**, *Extra-Safe*, 2 polos) que la hoja lista como
+*Required Accessory* y **no viene incluido**; y **dos** fusibles, porque el
+portafusibles es bipolar — `0001.2506`, SPT 5×20, **1,6 A T**, 250 VAC, con
+capacidad de corte **H = 1500 A** y tubo cerámico, que es lo que pide una
+entrada de red.
+
+Lo único que queda abierto es el **recorte en `case/cad/params.scad`**:
+`chasis_iec_ancho = 28` y `chasis_iec_alto = 47`. La puerta lo reclama en
+HUECO con las cotas puestas, y no se escribe desde aquí porque el chasis se
+está dibujando en otra rama.
+
+
 ## Referencias
 
 - [Modular Synthesizer Power Supplies (Rabid Elephant)](https://rabidelephant.com/blogs/general/modular-synthesizer-power-supplies-and-distribution-a-thorough-introduction) — fundamento de grounding y distribución.
@@ -1548,3 +1696,8 @@ dónde pongas el transformador.**
 - [Doepfer A-100 DIY](https://doepfer.de/DIY/a100_diy.htm) — CV y Gate en los dos pares de arriba; los dos pines de cada par van unidos en la placa (bus-board §9).
 - [Bel Fuse 0ZRE Series (radial PTC)](https://www.belfuse.com/media/datasheets/products/circuit-protection/ds-cp-0zre-series.pdf) — 0ZRE0025FF: 0.25 A hold, 0.56 A trip, 240 V, 1.3 ohm (bus-board §7).
 - [Bourns MF-R Series](https://www.bourns.com/docs/product-datasheets/mf-r.pdf) — MF-R025 como alternativa: 0.25 A hold, 0.50 A trip, Rmin 1.00 / R1max 1.95 ohm (bus-board §7).
+- [EPCOS/TDK SIOV StandarD, serie B722*](https://www.tdk-electronics.tdk.com/) — marzo 2018, p. 17, fila `B72220S0271K101` (SIOV-S20K275): `wmax` 21,5 mm y `d` 1,0 ±0,05 mm. Los dos números de §19.1, y los dos desmienten a los distribuidores.
+- [Ametherm SL10 5R002](https://www.ametherm.com/thermistor/inrush-current-limiter-sl10-5r002) — hoja del fabricante, rev. 2012-03-29: D 10,0 máx, T 4,0 máx, paso 5,1 nom, pata 0,5 nom. La nomenclatura `SL<diámetro> <resistencia><amperios>` es lo que delata que `5R020` son 20 A y no existe en la serie SL10 (§19.2).
+- [Vogt AG — Steckzungen für gedruckte Schaltungen](https://www.vogt.ch/) — DIN 46342 parte 1, fila `3866A`: `A` 5 mm de paso y *Print Bohrung* Ø 1,3, que es el taladro de PCB que especifica el propio fabricante (§19.3).
+- [Schurter KM — IEC Appliance Inlet C14 with Fuseholder, Line Switch](https://www.schurter.com/en/datasheet/typ_KM.pdf) — recorte 28 × 47 (R 0,3 máx), snap-in 1/1,5/2/2,5 mm con una sola referencia, portafusibles shocksafe PC2, PE sin cortar (§19.4).
+- [Schurter SPT 5×20](https://www.schurter.com/en/datasheet/typ_spt_5x20.pdf) — `0001.2506`: 1,6 A T, 250 VAC, capacidad de corte H = 1500 A @ p.f. 0,7–0,8, tubo cerámico (§19.4).

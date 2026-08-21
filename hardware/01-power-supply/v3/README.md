@@ -47,8 +47,9 @@ ni un crowbar cubren, y esto pasa dentro de un recinto cerrado.
 
 ## Las puertas
 
-Cuatro, todas ejecutables, todas recogidas por `hardware/tools/gates.py` sin
-tener que apuntarlas en ninguna lista:
+Nueve, todas ejecutables, todas recogidas por `hardware/tools/gates.py` sin
+tener que apuntarlas en ninguna lista — se añade una escribiendo el fichero,
+nunca ampliando un índice que alguien puede olvidar:
 
 | Puerta | Qué pregunta |
 |---|---|
@@ -57,9 +58,14 @@ tener que apuntarlas en ninguna lista:
 | [`kicad/check_bom.py`](kicad/check_bom.py) | ¿el BOM y la hoja tienen los mismos designadores? |
 | [`kicad/check_netlist.py`](kicad/check_netlist.py) | ¿la isla está **cableada** como dice el contrato? Shunts en serie, divisores en el sentido correcto, masas sin un nodo común |
 | [`kicad/check_pcb.py`](kicad/check_pcb.py) | ¿la placa **commiteada** está colocada como dice el script? Y la barrera de red, la isla de referencia, la diagonal del lazo y los tres tabs contra la pared |
+| [`check_fab.py`](check_fab.py) | ¿lo que se **manda a fábrica** dice lo mismo que la placa? A JLC no se le sube el `.kicad_pcb`: se le suben seis gerbers y un drill que ninguna otra puerta mira |
+| [`check_huellas.py`](check_huellas.py) | ¿las huellas dibujadas a mano son las de la **pieza real**? Es geometría, no conectividad: no la ve el ERC, ni el DRC, ni la netlist |
+| [`check_red_chasis.py`](check_red_chasis.py) | ¿la red entra por una pieza que **existe**, con un solo fusible, y el chasis tiene su recorte? |
+| [`check_bringup.py`](check_bringup.py) | ¿la placa física mide lo que el diseño predijo? 55 puntos con su criterio y su cita |
+| [`valle_budget.py`](valle_budget.py) | ¿el valle de VRAW aguanta el peor caso? ngspice, no una tabla |
 
-Las tres primeras se reparten huecos a propósito: `check_bom.py` pasaría en
-verde con SDA y SCL cambiados —no falta ni sobra un componente, sobra un cable
+`check_bom.py` y `check_netlist.py` se reparten huecos a propósito: el primero
+pasaría en verde con SDA y SCL cambiados —no falta ni sobra un componente, sobra un cable
 en el sitio equivocado— y por eso existe la de netlist.
 
 Y `check_pcb.py` cierra uno más viejo. `gates.py` sabía buscar el Python de
@@ -285,3 +291,11 @@ de proyecto. Va escrita en el objeto `board`.
   electrostática, que depende de Talema.
 - **Fase E — validación.** El LNA de medida (#58) y el bring-up: el valle real de
   VRAW y el número de ruido real, los dos por primera vez.
+- **El recorte del IEC en la chapa** (#130, lo único que queda de él). La pieza
+  está elegida y con hoja — Schurter `KM00.1105.11`, §19.4 — y
+  `check_red_chasis.py` reclama en HUECO los `chasis_iec_ancho = 28` y
+  `chasis_iec_alto = 47` que le faltan a `case/cad/params.scad`. No bloquea la
+  PCB; sí la chapa, y una chapa cortada no se deshace.
+- **El fondo del faston `J5`** (§19.3): la tabla de Vogt da el paso y el
+  taladro, pero el eje Y en planta necesita el dibujo acotado. El courtyard
+  reserva 8,0 mm sin contrastar.
