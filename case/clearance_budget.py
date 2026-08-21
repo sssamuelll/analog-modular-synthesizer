@@ -343,10 +343,12 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # bandeja_base: es el SUELO del case desde el 2026-08-17, de y = 0 a
     # y = t_base, con los dos largueros montados encima en vez de debajo. Sus dos
     # cantos van a ras de sus largueros, y el delantero es el que importa: se
-    # RETIRA por detras del riel de panel del frente para que ese riel pueda
-    # bajar hasta la esquina. Ahi se ganan 8 mm de altura del aparato y se pagan
-    # 32 mm de suelo abierto por delante (ver guarda_piso y alto_frontal).
-    x0_bb = ce[0][0] - rail / 2
+    # RETIRABA por detras del riel de panel del frente para que ese riel pudiera
+    # bajar hasta la esquina: 8 mm de altura ganados, 37.96 mm de suelo abierto
+    # pagados. El 2026-08-21 se deshizo el trato -- el suelo cierra, el riel sube
+    # y el aparato paga los 8.46 mm (ver guarda_piso y alto_frontal). El canto
+    # delantero ya no es el larguero sino donde muere la curva del costado.
+    x0_bb = ce[0][0] - rail / 2 - _vuelo_bandeja(p)
     fondo_bb = ce[1][0] + rail / 2 - x0_bb
     planchas.append(("bandeja_base", x0_bb, x0_bb + fondo_bb,
                      0.0, p["t_base"], t_cheek, ancho_total - t_cheek))
@@ -719,6 +721,84 @@ def guarda_parametros_vivos(p: dict[str, float]) -> None:
 # apoyo(), y es justo por ahi por donde se colaba el fallo real.
 
 
+def _area_ranuras(n: int, largo: float, ancho: float) -> float:
+    """Area abierta de n ranuras de extremos redondos: el rectangulo central
+    mas el circulo que forman las dos puntas juntas."""
+    return n * ((largo - ancho) * ancho + math.pi * (ancho / 2) ** 2)
+
+
+def _rejilla_valle(p: dict[str, float]) -> tuple[int, float, float]:
+    """Las ranuras de SALIDA, mismas cuentas que tapa_valle_2d()."""
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    ce = _centros_esqueleto(p, P, cr)
+    xv = _x_valle(p, P, cr)
+    largo = xv[1] - xv[0]
+    y_esp = ce[3][0] - xv[0]
+    campos = ((p["valle_margen"], y_esp - p["valle_espina"] / 2),
+              (y_esp + p["valle_espina"] / 2, largo - p["valle_margen"]))
+    paso = int(p["valle_paso_hp"])
+    n_hp = round(p["largo_riel"] / p["hp"])
+    ns = len(range(paso, int(n_hp) - paso + 1, paso))
+    area = sum(_area_ranuras(ns, c[1] - c[0], p["vent_ancho_ranura"])
+               for c in campos)
+    return 2 * ns, campos[0][1] - campos[0][0], area
+
+
+def _rejilla_entrada(p: dict[str, float]) -> tuple[int, float, float]:
+    """Las ranuras de ENTRADA, mismas cuentas que rejilla_entrada()."""
+    P = _vertices(p)
+    ce = _centros_esqueleto(p, P, _centros_rail(p, P))
+    au = p["ancho_total"] - 2 * p["t_cheek"] - 2 * p["hol_piel"]
+    y0_pl = ce[1][1] - 15
+    f_base = ce[1][1] - y0_pl
+    f_tras = ce[4][1] - y0_pl
+    y_bajas = f_base + 0.35 * (f_tras - f_base)
+    y0 = f_base + p["valle_espina"] / 2 + p["vent_puente_min"]
+    y1 = y_bajas - p["vent_periodo"] * 0.35 - p["vent_puente_min"]
+    paso = int(p["valle_paso_hp"])
+    n_hp = round(p["largo_riel"] / p["hp"])
+    x_iec = au - 70 + 24
+    hueco = (48 + p["vent_ancho_ranura"]) / 2 + p["vent_puente_min"]
+    ns = [n for n in range(paso, int(n_hp) - paso + 1, paso)
+          if abs(n * p["hp"] - x_iec) >= hueco]
+    return len(ns), y1 - y0, _area_ranuras(len(ns), y1 - y0,
+                                           p["vent_ancho_ranura"])
+
+
+def guarda_aire(p: dict[str, float]) -> None:
+    """La ENTRADA de aire no puede quedar mas estrecha que la SALIDA.
+
+    Nace el 2026-08-21, el dia que la entrada cambia de sitio. Hasta hoy era el
+    hueco de 37.96 mm que la bandeja dejaba por delante -- 20054 mm2 contra los
+    7499 de la salida del valle, o sea que el cuello de botella estaba en la
+    salida y nadie tenia que vigilar nada. Al cerrar el suelo, la entrada pasa a
+    ser una rejilla dibujada, y una rejilla dibujada SI se puede quedar corta.
+
+    Es exactamente el tipo de cota que se pierde: no sale en ningun render, no
+    la ve solapes() ni el sobre del DXF, y el aparato arranca igual. Solo se
+    entera uno cuando el disipador va caliente meses despues.
+
+    Las dos areas se derivan de sus modulos, no se cablean: si alguien mueve
+    valle_paso_hp o acorta el valle, esto se recalcula solo."""
+    n_ent, largo_ent, a_ent = _rejilla_entrada(p)
+    n_sal, largo_sal, a_sal = _rejilla_valle(p)
+    assert largo_ent >= 4 * p["vent_ancho_ranura"], (
+        f"la rejilla de entrada mide {largo_ent:.1f} mm de largo con ranuras "
+        f"de {p['vent_ancho_ranura']:.0f}: deja de leerse como campo y pasa a "
+        f"rayitas (es la misma cuenta que recorto la espina del valle)")
+    assert a_ent >= a_sal - 1e-9, (
+        f"la ENTRADA de aire ({a_ent:.0f} mm2 en {n_ent} ranuras) es mas "
+        f"estrecha que la SALIDA del valle ({a_sal:.0f} mm2 en {n_sal}). Asi la "
+        f"entrada es el cuello de botella y el aparato respira peor que con el "
+        f"hueco del suelo que habia antes")
+    print(f"aire: entrada {a_ent:.0f} mm2 en {n_ent} ranuras de "
+          f"{largo_ent:.1f} x {p['vent_ancho_ranura']:.0f} (trasera, abajo) -> "
+          f"salida {a_sal:.0f} mm2 en {n_sal} de {largo_sal:.1f} (valle)")
+    print(f"  +{100 * (a_ent / a_sal - 1):.0f} % de margen. Entra por abajo y "
+          f"sale por arriba: es tiro natural, no adorno")
+
+
 def guarda_fresado(p: dict[str, float]) -> None:
     """Lo que una fresa puede hacer y un laser no obliga a pensar.
 
@@ -763,36 +843,45 @@ def guarda_piso(p: dict[str, float]) -> None:
     solapes() trabaja con cajas y solo canta cuando los cuerpos YA se tocan, o
     sea que se come los 4 mm de holgura sin protestar.
 
-    Y lo que hay debajo cambio dos veces el mismo dia. Primero era el lomo de un
-    larguero (mal: la bandeja iba encima, 5 mm de barato y 0.51 de solape real).
-    Luego el tope de la bandeja. Y desde que Samuel propuso retirar la bandeja
-    por detras del riel, ya no hay nada: solo el canto de abajo del case. Cada
-    version de esta cota valio milimetros de aparato, asi que son DOS asserts --
-    el riel dentro del acrilico, y la bandeja fuera de su camino. Si alguien
-    adelanta la bandeja sin subir el riel, cae aqui y no en solapes().
+    Y lo que hay debajo cambio CUATRO veces. Primero era el lomo de un larguero
+    (mal: la bandeja iba encima, 5 mm de barato y 0.51 de solape real). Luego el
+    tope de la bandeja. Luego nada, cuando Samuel retiro la bandeja por detras
+    del riel -- solo el canto de abajo del case. Y desde el 2026-08-21 vuelve a
+    ser el tope de la bandeja, porque el suelo cierra: la plancha llega hasta
+    donde muere la curva del costado y le pasa POR DEBAJO al riel.
+
+    Cada version de esta cota valio milimetros de aparato, y la ultima vuelta
+    costo 8.46. Siguen siendo DOS asserts, pero la segunda cambio de signo: ya
+    no se exige que la bandeja se aparte del riel sino que LLEGUE al frente.
 
     Se mide sobre el centro REAL del riel (el que sale de _centros_rail), no
     rehaciendo la formula: si el .scad y el budget se separan, esto lo nota."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
-    ce = _centros_esqueleto(p, P, cr)
-    hx, hy = _he_er(p, p["angulo_inferior"])
-    # 1. el riel dentro del acrilico por abajo, con material
+    _, hy = _he_er(p, p["angulo_inferior"])
+    # 1. el riel PASA POR ENCIMA de la bandeja, con aire
     y_bajo = cr[0][1] - hy
-    assert y_bajo >= p["holgura_rail"] - 1e-9, (
-        f"el riel de panel del frente se sale del case por abajo: su esquina "
-        f"cae en y={y_bajo:.2f} y se exige >={p['holgura_rail']:.2f} de acrilico "
-        f"bajo ella. Subir alto_frontal o inset_inf_frente (van emparejados: la "
-        f"curva en punta pide inset >= alto_frontal/2 + rail_er_alto/2 + 3)")
-    # 2. y la bandeja retirada POR DETRAS de el, que es lo que paga la 1
-    x0_bb = ce[0][0] - p["rail"] / 2
-    hueco = x0_bb - (cr[0][0] + hx)
-    assert hueco >= p["holgura_rail"] - 1e-9, (
-        f"la bandeja de base le pasa por debajo al riel del frente: arranca en "
-        f"x={x0_bb:.2f} y la esquina trasera del riel esta en "
-        f"x={cr[0][0] + hx:.2f} ({hueco:+.2f} mm, se exige "
-        f">={p['holgura_rail']:.2f}). O se retira la bandeja o sube el riel, y "
-        f"subir el riel cuesta 8 mm de aparato")
+    minimo = p["t_base"] + p["holgura_rail"]
+    assert y_bajo >= minimo - 1e-9, (
+        f"el riel de panel del frente se mete en el suelo: su esquina girada "
+        f"cae en y={y_bajo:.2f} y el techo de la bandeja esta en "
+        f"y={p['t_base']:.2f}, o sea que se exige >={minimo:.2f}. Ninguna "
+        f"plancha plana le pasa por debajo asi. Subir alto_frontal o "
+        f"inset_inf_frente (van emparejados: la curva en punta pide "
+        f"inset >= alto_frontal/2 + rail_er_alto/2 + 3)")
+    # 2. y la bandeja LLEGA al frente, que es lo que paga la 1. Se lee la caja
+    #    DECLARADA en _cajas_solidas y no se rehace la cuenta: el bloqueante de
+    #    14 mm de la bandeja salio justo de una caja declarada por su cuenta que
+    #    no coincidia con la geometria que decia representar.
+    _, planchas, _ = _cajas_solidas(p)
+    x0_bb = next(c[1] for c in planchas if c[0] == "bandeja_base")
+    t_curva = _tangente(P[0], P[6], P[1], p["radio_punta"])
+    assert abs(x0_bb - t_curva) < 1e-6, (
+        f"la bandeja de base no cierra el suelo: su canto delantero cae en "
+        f"x={x0_bb:.2f} y la curva de la esquina inferior delantera muere en "
+        f"x={t_curva:.2f} ({x0_bb - t_curva:+.2f} mm). Por encima queda suelo "
+        f"abierto; por debajo la plancha asoma por delante del redondeo del "
+        f"costado, que es lo que x_valle() evita en el pico")
 
 
 # LAS DOS FILAS SE ABREN, cada una girando sobre el M4 de su riel de ARRIBA --
@@ -1144,13 +1233,17 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
           "la ranura de salida se mete debajo del toroide")
     # el agujero del acrilico, en coordenadas de bandeja_base_2d
     pos_x = au - p["chasis_margen_bandeja"] - c["tapa_x"]
-    pos_y = (fondo_bandeja - c["tapa_y"]) / 2
+    # El chasis sigue CENTRADO ENTRE LOS LARGUEROS; el vuelo entra solo como
+    # desplazamiento del origen local de la plancha (ver ch_pos en el .scad).
+    vuelo = _vuelo_bandeja(p)
+    pos_y = vuelo + (fondo_bandeja - c["tapa_y"]) / 2
     ax = pos_x + c["desfase"] + t + p["chasis_salida_x"] - hol
     ay = pos_y + c["desfase"] + t + p["chasis_salida_y"] - hol
-    exige(0 <= ax and ax + w <= au and 0 <= ay and ay + h <= fondo_bandeja,
+    exige(0 <= ax and ax + w <= au
+          and 0 <= ay and ay + h <= vuelo + fondo_bandeja,
           f"el agujero de cables cae en x={ax:.1f}..{ax + w:.1f}, "
           f"y={ay:.1f}..{ay + h:.1f} y la bandeja mide {au:.2f} x "
-          f"{fondo_bandeja:.2f}: se sale de la plancha")
+          f"{vuelo + fondo_bandeja:.2f}: se sale de la plancha")
 
     # --- 6. los dos largueros que cruzan la bandeja ------------------------
     # bandeja_base dejo de colgar de los largueros el 2026-08-17: ahora ES el
@@ -1160,13 +1253,14 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
     # cajas solidas -- ni el sobre del DXF, que es plano.
     rail = p["rail"]
     hol = p["chasis_holgura_larguero"]
-    libre_0, libre_1 = rail + hol, fondo_bandeja - rail - hol
+    libre_0 = vuelo + rail + hol
+    libre_1 = vuelo + fondo_bandeja - rail - hol
     exige(pos_y >= libre_0 and pos_y + c["tapa_y"] <= libre_1,
           f"el chasis ocupa y={pos_y:.1f}..{pos_y + c['tapa_y']:.1f} de la "
           f"bandeja y los dos largueros 2020, con {hol:.0f} mm de holgura "
           f"exigida, dejan {libre_0:.1f}..{libre_1:.1f}")
-    print(f"  entre los dos largueros: {pos_y - rail:.2f} mm delante y "
-          f"{fondo_bandeja - rail - pos_y - c['tapa_y']:.2f} detras "
+    print(f"  entre los dos largueros: {pos_y - vuelo - rail:.2f} mm delante y "
+          f"{fondo_bandeja - rail - (pos_y - vuelo) - c['tapa_y']:.2f} detras "
           f"(minimo exigido {hol:.0f}) -- la cota mas justa del montaje")
 
     # --- 7. el tornillo de la tapa muerde faldon y pared a la vez ----------
@@ -1187,10 +1281,26 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
 
 
 def _fondo_bandeja(p: dict[str, float]) -> float:
-    """Fondo de bandeja_base, misma derivacion que bandeja_base_2d()."""
+    """VANO ENTRE LARGUEROS de bandeja_base, no el fondo de la plancha.
+
+    Fueron el mismo numero hasta el 2026-08-21, cuando la plancha paso a volar
+    por delante del larguero delantero para cerrar el suelo. Todo lo del chasis
+    se mide contra ESTE, que es lo que de verdad lo encierra."""
     P = _vertices(p)
     ce = _centros_esqueleto(p, P, _centros_rail(p, P))
     return ce[1][0] + p["rail"] / 2 - (ce[0][0] - p["rail"] / 2)
+
+
+def _vuelo_bandeja(p: dict[str, float]) -> float:
+    """Lo que bandeja_base vuela por delante del larguero de base delantera.
+
+    DERIVADO, misma regla que usa _x_valle para el pico: la plancha llega hasta
+    donde MUERE LA CURVA de la esquina inferior delantera del costado. Un mm mas
+    y asoma por delante del redondeo; uno menos y queda suelo sin cubrir."""
+    P = _vertices(p)
+    ce = _centros_esqueleto(p, P, _centros_rail(p, P))
+    return ((ce[0][0] - p["rail"] / 2)
+            - _tangente(P[0], P[6], P[1], p["radio_punta"]))
 
 
 def main() -> int:
@@ -1199,6 +1309,7 @@ def main() -> int:
     canario_solapes(p)
     canario_alineacion(p)
     guarda_piso(p)
+    guarda_aire(p)
     guarda_fresado(p)
     guarda_parametros_vivos(p)
     guarda_escalon(p)

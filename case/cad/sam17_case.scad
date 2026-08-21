@@ -369,13 +369,19 @@ module plancha(l, a) square([l, a]);   // l = ancho_util, a = fondo local
 module bandeja_base_2d() {
     au = ancho_total - 2*t_cheek;
     ce = centros_esqueleto();
-    // Canto delantero A RAS del larguero de base delantera, que a su vez esta
-    // derivado de la esquina del riel de panel. Esa es justo la cota que hace
-    // corto al case: la bandeja se RETIRA por detras del riel en vez de pasarle
-    // por debajo, y a cambio el riel baja hasta la esquina (ver alto_frontal).
-    // El precio son 32 mm de suelo abierto por delante, que es por donde entra
-    // el aire.
-    x0 = ce[0].x - rail/2;
+    // EL SUELO CIERRA (2026-08-21). El canto delantero estuvo A RAS del larguero
+    // de base delantera, y como ese larguero se retira por detras del riel de
+    // panel, el suelo del case tenia 37.96 mm abiertos por delante. Ahora la
+    // plancha vuela por delante del larguero hasta donde muere la curva del
+    // costado: el unico hueco que queda por abajo es el propio redondeo de la
+    // esquina, que se lee como esquina y no como ranura.
+    //
+    // No salio gratis: el riel de panel del frente bajaba a y=4.84 y el techo de
+    // la plancha esta en y=8, o sea que se metia 3.16 mm dentro del plano del
+    // suelo. Subirlo costo 8.46 mm de alto de aparato (ver alto_frontal). Y la
+    // ENTRADA DE AIRE, que era este hueco, se muda a la rejilla de la trasera.
+    v  = bandeja_base_vuelo();
+    x0 = ce[0].x - rail/2 - v;
     fondo = ce[1].x + rail/2 - x0;          // canto trasero a ras del rail
     difference() {
         plancha(au, fondo);
@@ -429,16 +435,16 @@ module piel_trasera_2d() {
     // cortante en esa cara mejor que cinco barras sueltas.
     f_base = ce[1].y - y0;
     f_tras = ce[4].y - y0;
-    // Las ondas conservan su altura fisica de siempre, pero derivadas de las
-    // dos filas que las rodean: asi no se acercan a un tornillo si un larguero
-    // se mueve. Las fracciones se recalcularon al pasar de cinco filas a dos
-    // para dejar las ondas DONDE YA ESTABAN: 82.75 y 171.68 contra 83.33 y
-    // 171.39 de antes, o sea medio milimetro.
-    y_bajas  = f_base + 0.32*(f_tras - f_base);
+    // Las ondas van derivadas de las dos filas que las rodean: asi no se acercan
+    // a un tornillo si un larguero se mueve. La banda de abajo subio de 0.32 a
+    // 0.35 el 2026-08-21 para dejarle sitio a la rejilla de entrada de aire, que
+    // vive por debajo de ella.
+    y_bajas  = f_base + 0.35*(f_tras - f_base);
     y_sierra = f_base + 0.74*(f_tras - f_base);
     difference() {
         plancha(au, alto);
         for (y = [f_base, f_tras]) fila_agujeros(au, y);
+        rejilla_entrada(au, f_base, y_bajas);
         translate([au*0.10, y_bajas])  onda("triangulo", au*0.35);
         translate([au*0.55, y_bajas])  onda("cuadrada",  au*0.35);
         translate([au*0.15, y_sierra]) onda("sierra", au*0.70);
@@ -447,6 +453,40 @@ module piel_trasera_2d() {
         // +kerf como todo hueco interior del fichero.
         translate([au - 70, 22]) square([48 + kerf, 27.5 + kerf]);
     }
+}
+
+// LA ENTRADA DE AIRE DEL CASE (2026-08-21). Vivio hasta hoy en el suelo, como
+// un hueco de 37.96 mm por delante de la bandeja, y se fue con el: al cerrar el
+// suelo habia que darle otra puerta al aire o el aparato respira peor que antes.
+//
+// Va ABAJO en la trasera a proposito. El aire frio entra por lo mas bajo del
+// piso de la fuente -- que es donde estan el toroide y los reguladores -- y sale
+// por las ranuras del valle, 90 mm mas arriba: es tiro natural, no un adorno.
+// Entrar por arriba lo mataria.
+//
+// Ranuras IGUALES a las del valle: mismo ancho, mismo paso HP, misma malla. No
+// es economia de codigo, es que la malla HP es la medida del instrumento y el
+// adorno ES la regla (ver la nota de valle_paso_hp en params.scad).
+//
+// El area la vigila guarda_aire() en clearance_budget contra la salida del
+// valle. No basta con que "haya ranuras": si la entrada queda mas estrecha que
+// la salida, la entrada pasa a ser el cuello de botella y el cambio de sitio
+// habria empeorado el aparato sin que se note en ningun render.
+module rejilla_entrada(au, f_base, y_bajas) {
+    // Abajo: la fila de M3 necesita su banda maciza, la misma que la espina del
+    // valle (cabeza + arandela). Arriba: el borde inferior de la onda, menos el
+    // puente minimo. Las dos fronteras son piezas reales, no margenes a ojo.
+    y0 = f_base + valle_espina/2 + vent_puente_min;
+    y1 = y_bajas - vent_periodo*0.35 - vent_puente_min;
+    n_hp = round(largo_riel/hp);
+    // El IEC se salta por columnas enteras: una ranura partida por el recorte
+    // deja un diente de acrilico colgando de un lado, que es justo donde el
+    // PMMA rompe. Se aparta media anchura de recorte + media de ranura + puente.
+    x_iec = au - 70 + 24;
+    hueco = (48 + vent_ancho_ranura)/2 + vent_puente_min;
+    for (n = [valle_paso_hp : valle_paso_hp : n_hp - valle_paso_hp])
+        if (abs(n*hp - x_iec) >= hueco)
+            translate([n*hp, (y0 + y1)/2]) ranura(y1 - y0, vent_ancho_ranura);
 }
 
 // --- tapa del valle ----------------------------------------------------
@@ -699,11 +739,32 @@ module chasis_3d() {
 // ANCHO del case y crece hacia -Z del mundo (ver bandeja_base()); el chasis
 // necesita ademas que su Z local suba, asi que el giro se escribe entero en
 // vez de encadenar rotates y confiar en que salga.
+// OJO: esto es el VANO ENTRE LARGUEROS, no el fondo de la plancha. Fueron el
+// mismo numero hasta el 2026-08-21, cuando la bandeja paso a volar por delante
+// del larguero delantero. Todo lo del chasis se mide contra ESTE, que es lo que
+// de verdad lo encierra; el fondo de la plancha es este mas el vuelo.
 function bandeja_base_fondo() =
     let (ce = centros_esqueleto()) ce[1].x + rail/2 - (ce[0].x - rail/2);
+
+// Lo que la plancha vuela por delante del larguero de base delantera. DERIVADO,
+// no parametro: llega hasta donde MUERE LA CURVA de la esquina inferior
+// delantera del costado, que es la misma regla que usa x_valle() para el pico.
+// Un milimetro mas y la plancha asoma por delante del redondeo; uno menos y
+// queda suelo sin cubrir. Con alto_frontal=19 la curva muere en x=9.49 y el
+// larguero arranca en 39.68, o sea 30.19 de vuelo.
+function bandeja_base_vuelo() =
+    let (P = pts_perfil(), ce = centros_esqueleto())
+    (ce[0].x - rail/2) - tangente(P[0], P[6]-P[0], P[1]-P[0], radio_punta);
+
+// El chasis sigue CENTRADO ENTRE LOS LARGUEROS, no en la plancha. Si se
+// centrara en la plancha, estirarla por delante lo habria arrastrado 15 mm
+// hacia el frente y se habria comido la holgura contra el larguero delantero,
+// que es "la cota mas justa del montaje". El vuelo entra solo como
+// desplazamiento del origen local, que es donde vive el dibujo.
 function ch_pos() = [ancho_total - 2*t_cheek - chasis_margen_bandeja
                        - ch_tapa_ext().x,
-                     (bandeja_base_fondo() - ch_tapa_ext().y)/2];
+                     bandeja_base_vuelo()
+                       + (bandeja_base_fondo() - ch_tapa_ext().y)/2];
 
 // Esquina de la salida de cables del chasis, en coordenadas locales de
 // bandeja_base_2d(). Una sola definicion: la consume el agujero del acrilico
@@ -844,9 +905,11 @@ module rails() {
 module bandeja_base() {
     // Ya no apoya en el lomo de nadie: ES el canto de abajo del case, de y = 0 a
     // y = t_base, y los largueros montan sobre ella. El grosor crece hacia -Y
-    // desde el origen, asi que el origen va en t_base.
+    // desde el origen, asi que el origen va en t_base. Y desde el 2026-08-21 el
+    // origen se adelanta el VUELO: la plancha empieza por delante del larguero.
     ce = centros_esqueleto();
-    translate([ce[0].x - rail/2, t_base, ancho_total - t_cheek])
+    translate([ce[0].x - rail/2 - bandeja_base_vuelo(), t_base,
+               ancho_total - t_cheek])
         rotate([0, 90, 0]) rotate([90, 0, 0])
             linear_extrude(t_base) bandeja_base_2d();
 }

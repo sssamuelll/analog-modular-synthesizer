@@ -3,7 +3,7 @@
 Spec: [`docs/superpowers/specs/2026-08-15-case-design.md`](../docs/superpowers/specs/2026-08-15-case-design.md) (rev. 5)
 Board de intención: [`renders/propuesta-diseno-2026-08-16.png`](renders/propuesta-diseno-2026-08-16.png)
 — **manda sobre lenguaje visual, NO sobre cotas**: se dibujó para paneles de
-190 mm y un case de 500 × 380 × 350, y el case real mide 544.32 × 247.73 × 308.4.
+190 mm y un case de 500 × 380 × 350, y el case real mide 544.32 × 256.18 × 308.94.
 
 ## Formato: EUROrack 3U, las dos filas
 
@@ -27,10 +27,58 @@ que se dibujó para 190 mm.
 | | |
 |---|---|
 | ancho total | **544.32 mm** = 528.32 (104 HP) + 2 × `t_cheek` |
-| alto total | **247.73 mm** |
-| fondo | **308.4 mm** |
-| altura de entrepiso | **138.13 mm** |
+| alto total | **256.18 mm** |
+| fondo | **308.94 mm** |
+| altura de entrepiso | **146.58 mm** |
 | ancho útil entre costados | **528.32 mm** |
+
+**El suelo cierra, y cuesta 8.46 mm de alto** (2026-08-21). La bandeja de base
+llegaba solo hasta el larguero de base delantera, que a su vez se retira por
+detrás del raíl de panel para que ese raíl pueda bajar hasta la esquina. El
+resultado eran **37.96 mm de suelo abierto** por delante — que no era un
+descuido: era la entrada de aire.
+
+Cerrarlo no era estirar la plancha. El Z-Rail de abajo va girado 35° y su
+esquina baja caía en **y = 4.84**, o sea 3.16 mm *por debajo* del techo de la
+bandeja (y = 8): ninguna plancha plana le pasa por debajo. Hubo que subir el
+raíl, y `alto_frontal` no viaja solo — la punta redondeada se come
+`alto_frontal/2` de cara, así que arrastra `inset_inf_frente`, que va dentro de
+`alto_cara_inf`, que es quien fija el fondo:
+
+| | antes | ahora |
+|---|---|---|
+| `alto_frontal` | 13 | **19** |
+| `inset_inf_frente` | 14.5 | **17.5** |
+| `alto_cara_inf` (derivado) | 152.75 | **155.75** |
+| esquina del raíl | y = 4.84 | **y = 13.29** (5.29 de aire) |
+| alto del case | 247.73 | **256.18** |
+| fondo | 307.22 | **308.94** |
+
+Es exactamente el precio que el propio `params.scad` había anotado cuando se
+hizo el trato al revés: «subir el riel cuesta 8 mm de aparato». Se paga entero.
+
+Por debajo ya no queda hueco: la plancha llega hasta donde **muere la curva** de
+la esquina inferior delantera (x = 9.49), que es la misma regla que usa
+`x_valle()` para el pico. Lo único abierto es el propio redondeo, y eso se lee
+como esquina, no como ranura.
+
+**Y la entrada de aire se mudó a la trasera.** Es la mitad del cambio que no se
+ve en ningún render: 45 ranuras iguales a las del valle, abajo del todo, por
+debajo de la banda de ondas. El aire frío entra por lo más bajo del piso de la
+fuente —donde están el toroide y los reguladores— y sale por el valle 90 mm más
+arriba. Tiro natural, no adorno.
+
+| | área abierta | ranuras |
+|---|---|---|
+| entrada (trasera, abajo) | **8 317 mm²** | 45 de 47.1 × 4 |
+| salida (valle) | 7 499 mm² | 102 de 19.2 × 4 |
+
+Los 11 % de margen los exige `guarda_aire()` en `clearance_budget.py`, que
+compara las dos áreas derivándolas de sus módulos. Es el tipo de cota que se
+pierde sola: no sale en ningún render, no la ve `solapes()` ni el sobre del DXF,
+y el aparato arranca igual — solo se entera uno meses después con el disipador
+caliente. **No cabía en el suelo**: la bandeja solo vuela 30.19 mm por delante
+del larguero, y ahí las mismas ranuras dan 3 536 mm², menos de la mitad.
 
 **La punta de arriba es cuadrada** (2026-08-21). El techo lleva una meseta de
 `marco_remate` = **50 mm** rematada por dos quiebres de 2 mm, en vez de la
@@ -272,7 +320,7 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Arandela ANCHA d16 | 4 | **no opcional**: en los ejes de giro. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 MPa y aguanta |
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa. **Sustituye al amortiguador**, que se eliminó |
 | Plancha acrílico t=5 mm | **1** | solo la tapa del valle. Un espesor entero para **una** pieza — a resolver en el pliego, no en el modelo |
-| Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante) + tapa de remate (528.32 × 37) + **trasera** (528.02 × 236.73) |
+| Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante, 528.32 × 291.4) + tapa de remate (528.32 × 37) + **trasera** (528.02 × 245.18, con la rejilla de entrada de aire) |
 | Patica metálica torneada | 4 | d=16 × 8 mm |
 
 **Total de tornillos del case: 48** — 8 M4 de raíl + 10 M5 de esqueleto +
@@ -310,8 +358,10 @@ que es justo el modo de fallo que este proyecto ya conoce.
 
 **El zócalo delantero se eliminó** (2026-08-17), y con él su larguero propio y
 sus dos standoffs largos de ~33 mm. Este apartado describía esa pieza hasta
-esa fecha. `alto_frontal` pasó de 50 a **13 mm** y ya no es un zócalo: es el
-canto delantero del case.
+esa fecha. `alto_frontal` pasó de 50 a 13 mm y ya no es un zócalo: es el canto
+delantero del case. Volvió a **19 mm** el 2026-08-21, y no por estética: es lo
+que hace falta para levantar el raíl de panel por encima de la bandeja y poder
+cerrar el suelo.
 
 Lo verifica `clearance_budget.py` en `alineacion()`: cada fila de agujeros de
 cada placa tiene que caer en la centerline del larguero de esqueleto que
@@ -398,8 +448,8 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
 - [x] Render del conjunto — dos vistas: frontal
       ([`renders/sam17-case.png`](renders/sam17-case.png)) y trasera
       ([`renders/sam17-case-trasera.png`](renders/sam17-case-trasera.png)).
-      La trasera es la que importa: muestra las ranuras de ventilación en
-      forma de onda — sierra, triángulo y cuadrada, las tres formas del
-      VCO — que son la firma visual del case.
+      La trasera es la que importa: muestra las tres ondas — sierra, triángulo
+      y cuadrada, las tres formas del VCO — que son la firma visual del case,
+      y por debajo de ellas la rejilla de entrada de aire.
 - [ ] Cupón cortado y kerf registrado (bloquea el corte de planchas)
 - [ ] Planchas cortadas y ensayo de ensamblaje

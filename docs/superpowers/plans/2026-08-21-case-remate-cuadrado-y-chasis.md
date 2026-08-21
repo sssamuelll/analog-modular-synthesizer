@@ -494,6 +494,75 @@ Los dos gates en VERDE.
 
 ---
 
+## T9 — El suelo cierra, y el aire se muda atrás  ✅ HECHA (2026-08-21)
+
+**Pedido:** «la barra que está chocando con el riel inferior… preferiría quitar
+la barra y estirar la base para que selle completamente por debajo».
+
+### Lo que se midió antes de tocar
+
+Tres cosas, y las tres cambiaron el pedido:
+
+1. **No chocaban.** Entre la esquina girada del Z-Rail y la cara del 2020 hay
+   4.00 mm exactos = `holgura_rail`. Es el mínimo de diseño, clavado.
+2. **El hueco era la entrada de aire**, documentado en `params.scad`: «no es un
+   descuido: es por donde entra el aire frío, y sale por las ranuras del valle».
+3. **La bandeja no podía estirarse.** El Z-Rail girado 35° baja a y = 4.84,
+   3.16 mm por debajo del techo de la bandeja (y = 8), en la ventana
+   x 23.70…30.44. Ninguna plancha plana le pasa por debajo.
+
+Y quitar la barra habría dejado la bandeja en voladizo de 289 mm bajo el chasis
+del PSU, en acrílico que fluye con carga sostenida. Se descartó.
+
+### El lever real: `alto_frontal`
+
+No viaja solo. La punta redondeada se come `alto_frontal/2` de cara, así que
+arrastra `inset_inf_frente`, que va dentro de `alto_cara_inf`, que fija el fondo:
+
+| | antes | ahora |
+|---|---|---|
+| `alto_frontal` | 13 | **19** |
+| `inset_inf_frente` | 14.5 | **17.5** |
+| `alto_cara_inf` (derivado) | 152.75 | **155.75** |
+| esquina baja del raíl | 4.84 | **13.29** (5.29 de aire) |
+| alto del case | 247.73 | **256.18** |
+| fondo | 307.22 | **308.94** |
+
+Es el precio que el propio `params.scad` tenía anotado de cuando se hizo el
+trato al revés: «subir el riel cuesta 8 mm de aparato». Salieron 8.46.
+
+El canto delantero de la bandeja se deriva ahora igual que el de la tapa del
+valle: hasta donde **muere la curva** de la esquina (x = 9.49). Un mm más y la
+plancha asoma por delante del redondeo; uno menos y queda suelo sin cubrir.
+
+### La entrada de aire, y la puerta que la vigila
+
+45 ranuras iguales a las del valle, abajo del todo en la trasera, por debajo de
+la banda de ondas (que subió de 0.32 a 0.35 para hacerle sitio).
+
+| | área abierta | ranuras |
+|---|---|---|
+| entrada (trasera, abajo) | **8 317 mm²** | 45 de 47.1 × 4 |
+| salida (valle) | 7 499 mm² | 102 de 19.2 × 4 |
+
+**No cabía en el suelo.** La bandeja solo vuela 30.19 mm por delante del
+larguero — con las mismas ranuras salen 3 536 mm², menos de la mitad.
+
+`guarda_aire()` es nueva y compara las dos áreas derivándolas de sus módulos. Es
+justo la cota que se pierde sola: no sale en ningún render, no la ve `solapes()`
+ni el sobre del DXF, y el aparato arranca igual. Antes no hacía falta vigilarla
+porque la entrada eran 20 054 mm² de hueco accidental contra 7 499 de salida.
+
+### `guarda_piso` cambia de signo
+
+Su segundo assert exigía que la bandeja se **apartara** del raíl. Ahora exige
+que **llegue** al frente, y lee la caja declarada en `_cajas_solidas` en vez de
+rehacer la cuenta — que es de donde salió el bloqueante de 14 mm en T4. El
+primero pasa de medir contra el canto del case a medir contra el techo de la
+bandeja: es la cuarta vez que esa cota cambia de referencia.
+
+---
+
 ## T2 — El chasis del PSU se monta sobre los largueros
 
 Hoy el chasis de acero pasa **entre** los dos largueros de base y se apoya en la

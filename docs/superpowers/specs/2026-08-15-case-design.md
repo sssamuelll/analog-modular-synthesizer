@@ -59,11 +59,20 @@ lenguaje visual).
 > abajo ya es el alma de cortante de esa cara. Vano libre 211.73 mm, flecha
 > 0.15 mm con 50 N en el centro. El case baja de 8 a **5 largueros** y de 69 a
 > **48 tornillos**.
+> **rev. 10** (2026-08-21): **el suelo cierra**. La bandeja de base llegaba solo
+> hasta el larguero delantero y dejaba 37.96 mm de suelo abierto — que era la
+> entrada de aire. Ahora vuela hasta donde muere la curva de la esquina (x=9.49)
+> y lo único abierto por abajo es el propio redondeo. No salió gratis: el Z-Rail
+> de abajo se metía 3.16 mm en el plano del suelo, así que `alto_frontal` 13→19
+> e `inset_inf_frente` 14.5→17.5 (van emparejados), y el case pasa a
+> **256.18 × 308.94**. La ENTRADA DE AIRE se muda a una rejilla baja en la
+> trasera: 8 317 mm² contra los 7 499 de salida del valle, con `guarda_aire()`
+> comparando las dos.
 >
 > **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
 > visual y proporciones *relativas*, pero **sus cotas están superadas**. Se
 > dibujó para paneles de 190 mm y un case de 500 × 380 × 350; el case real
-> mide **544.32 × 247.73 × 308.4**.
+> mide **544.32 × 256.18 × 308.94**.
 
 ## 1. Objetivo
 
@@ -148,8 +157,8 @@ esta dirección).
 | `sep_railes` | **122.5 mm** | Entre centros. Lo fija el PANEL (ranuras a 3.0 de cada canto), no el riel: el Z-Rail lleva pletina roscada continua |
 | `angulo_inferior` | **35° desde la vertical** | Cara del piso de procesamiento |
 | `angulo_superior` | **45° desde la vertical** | Cara del piso de generación |
-| `alto_frontal` | **13 mm** | Canto delantero. **No es un zócalo**: el zócalo se eliminó |
-| `fondo` / `alto_total` | derivados | **308.4 mm / 247.73 mm**. Ya NO cuadra con el board (350 × ~380): el board se dibujó para paneles de 190 |
+| `alto_frontal` | **19 mm** | Canto delantero. **No es un zócalo**: el zócalo se eliminó. Fue 13 hasta rev. 10; subió para que el raíl de panel del frente librara la bandeja |
+| `fondo` / `alto_total` | derivados | **308.94 mm / 256.18 mm**. Ya NO cuadra con el board (350 × ~380): el board se dibujó para paneles de 190 |
 | `t_acrilico` / `t_piel` | 5 / **8 mm** | `t_acrilico` ya solo viste la tapa del valle; la trasera tiene su propio espesor de 8. MEDIR los dos con calibre (§11) |
 | `t_base` / `t_cheek` | 8 mm | Suelo portante y costados. La bandeja de base subió de 5 a 8 al pasar a ser el propio canto de abajo |
 | `kerf` | **0** | Correcto fresando: el CAM compensa el radio de herramienta. Solo vuelve a ser negativo si se regresa al láser |

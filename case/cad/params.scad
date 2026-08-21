@@ -51,7 +51,7 @@ ancho_total     = 544.32;
 // 128.5 y sus ranuras van a 3.00 de cada canto, o sea 122.50 entre centros.
 // De ahi salen las caras:
 //
-//   alto_cara_inf = 122.5 + inset_inf_frente + inset_inf_valle  = 152.75
+//   alto_cara_inf = 122.5 + inset_inf_frente + inset_inf_valle  = 155.75
 //   alto_cara_sup = 122.5 + inset_sup_valle  + inset_sup_remate = 155.0
 //
 // El de arriba sale mas CORTO aunque lleve el mismo estandar dentro, y es por
@@ -78,7 +78,7 @@ ancho_total     = 544.32;
 // fija de punta con un M5 directo al acrilico (taladro de 4.5 en su eje). Los
 // 2020 se quedan solo en el esqueleto -- base, entrepiso, remate y repisa --,
 // que es donde de verdad hacen estructura.
-alto_cara_inf   = 152.75; // DERIVADO: 122.5 + inset_inf_frente + inset_inf_valle
+alto_cara_inf   = 155.75; // DERIVADO: 122.5 + inset_inf_frente + inset_inf_valle
 alto_cara_sup   = 155.0; // DERIVADO: 122.5 + inset_sup_valle + inset_sup_remate
 alto_panel_inf  = 128.5; // PCB 3U EUROrack
 alto_panel_sup  = 128.5; // PCB 3U EUROrack: la fila de arriba tambien
@@ -123,14 +123,17 @@ angulo_superior = 45;    // 45 desde la horizontal, cara de generacion
 //
 // Las dos condiciones quedan asi:
 //
-//   1. SUELO. Ya no lo pone la bandeja sino EL CANTO DE ABAJO DEL CASE. La
-//      esquina de abajo del riel solo tiene que quedar dentro del acrilico con
-//      material:
+//   1. SUELO. Volvio a ponerlo LA BANDEJA el 2026-08-21, y por eso los 8 de
+//      t_base vuelven a la cuenta. La esquina de abajo del riel tiene que
+//      quedar por encima del techo de la plancha, con material:
 //        alto_frontal + cos(35)*inset_inf_frente
-//          >= holgura_rail + he_er_y(35) + off*sen(35)
-//           = 4 + 11.95 + 8.78 = 24.73
-//      Eran 32.73 con la bandeja por debajo: los 8 de t_base salen de la cuenta,
-//      y 8 mm de esa suma son 8 mm de aparato.
+//          >= t_base + holgura_rail + he_er_y(35) + off*sen(35)
+//           = 8 + 4 + 11.95 + 8.78 = 32.73
+//      Este numero ha ido y venido dos veces. Fue 32.73 mientras la bandeja
+//      pasaba por debajo; bajo a 24.73 cuando Samuel la retiro por detras del
+//      riel (y esos 8 mm eran 8 mm de aparato); y vuelve a 32.73 ahora que la
+//      bandeja LLEGA AL FRENTE y sella el suelo. Se paga lo mismo que se gano
+//      entonces, a cambio de que el case cierre por abajo.
 //   2. CURVA. La esquina va REDONDEADA EN PUNTA y esa curva se come
 //      alto_frontal/2 de cara, asi que el riel no puede arrancar antes:
 //        inset_inf_frente >= alto_frontal/2 + rail_er_alto/2 + 3
@@ -140,26 +143,46 @@ angulo_superior = 45;    // 45 desde la horizontal, cara de generacion
 // dentro, esa altura es (alto_frontal + cos(35)*inset) + una constante. O sea
 // que minimizar el piso ES minimizar el lado izquierdo de la condicion 1.
 //
-// El par (13, 14.5) se apoya en las dos a la vez: la curva justa con sus 3 mm de
-// material y 4.15 de acrilico bajo la esquina del riel. El piso de la primera
-// seccion baja a 135.9 y el case entero a 245.8.
+// El par (19, 17.5) se apoya en las dos a la vez: la curva justa con sus 3 mm de
+// material y 5.29 mm de aire entre la esquina del riel y el techo de la bandeja.
 //
-// LO QUE CUESTA, y no se ve en ningun render: la bandeja de base ya no llega al
-// frente. Arranca a ras del larguero de base delantera, que a su vez se retira
-// por detras del riel -- x = 38.94 --, o sea que el suelo del case tiene 32 mm
-// abiertos por delante. No es un descuido: es por donde entra el aire frio, y
-// sale por las ranuras del valle. Antes no habia entrada.
+// Fue (13, 14.5) hasta el 2026-08-21 y eso dejaba el suelo del case con 37.96 mm
+// abiertos por delante -- la bandeja arrancaba a ras del larguero de base
+// delantera, que a su vez se retira por detras del riel. Aquel hueco NO era un
+// descuido: era la entrada de aire frio, y salia por las ranuras del valle.
+//
+// Samuel pidio cerrarlo ("estirar la base para que selle completamente por
+// debajo"). Cerrarlo obliga a subir el riel, porque su esquina girada bajaba a
+// y=4.84 y el techo de la bandeja esta en y=8: el riel se metia 3.16 mm dentro
+// del plano del suelo y ninguna plancha plana le pasaba por debajo. Subirlo
+// cuesta 8.46 mm de aparato (247.73 -> 256.18) y 1.72 de fondo, porque
+// inset_inf_frente va dentro de alto_cara_inf.
+//
+// Y LA ENTRADA DE AIRE SE MUDA A LA TRASERA, que es lo que de verdad hay que
+// mirar aqui: la salida del valle son 7499 mm2 en 102 ranuras, o sea que la
+// entrada nueva tiene que dar al menos eso o el aparato respira peor que antes.
+// La rejilla de la trasera da 8316 en 45 ranuras iguales a las del valle. Lo
+// vigila guarda_aire() en clearance_budget, que compara las dos areas.
+//
+// NO cabe en el suelo: la bandeja solo vuela 30.19 mm por delante del larguero,
+// y con las ranuras del valle ahi caben 3536 mm2 -- menos de la mitad.
 //
 // Ojo con bajar alto_frontal creyendo que siempre ayuda: la curva se come la
 // mitad, asi que cada mm que baja el vertice sube medio el inset y solo se gana
 // medio. A 0 la esquina pasa a ser un vertice agudo de 55 grados y su redondeo
 // se come 64 mm de cara, cuatro veces mas que la punta de dos arcos de ahora.
 //
+// Y ojo tambien al reves: cada mm que SUBE el vertice engorda el radio efectivo
+// de la esquina de abajo, porque radio_punta va sobredimensionado (400) y lo
+// recorta la arista corta, que es alto_frontal. A 13 la curva moria en x=6.49;
+// a 19 muere en 9.49. Ahi es donde arranca la bandeja, asi que la curva se paga
+// dos veces: en inset y en cuanto suelo queda sin cubrir por delante.
+//
 // Y esto ya no lo vigila un comentario: guarda_piso() en clearance_budget mide
 // la esquina de abajo del riel contra el tope de la bandeja. Derivarlo contra lo
 // que no toca costo 0.51 mm de solape en su dia -- se midio contra el lomo del
 // larguero y no contra la bandeja que iba encima.
-alto_frontal    = 13;
+alto_frontal    = 19;
 // Fondo del case. UN SOLO plano trasero: el costado es un triangulo
 // rectangulo con el angulo recto atras y la hipotenusa quebrada en dos
 // tramos (35 arriba, 12 abajo) con el entrepiso en medio (Samuel eligio esta
@@ -478,7 +501,12 @@ rail_er_eje     = 14.3;
 // Las tangentes NO son parametros: salen del radio y del angulo del vertice.
 // Si se mueve un radio hay que rehacer la columna, y el que avisa es
 // railes_dentro_del_costado() en check_dxf, que lee el contorno del DXF.
-inset_inf_frente = 14.5;
+// Subio de 14.5 a 17.5 el 2026-08-21 y NO por su propia condicion: lo arrastro
+// alto_frontal. La regla es inset >= alto_frontal/2 + rail_er_alto/2 + 3, y con
+// el vertice en 19 eso da 17.5 clavado. Los 3 mm van dentro de alto_cara_inf,
+// que es DERIVADO, asi que hay que recontarlo ahi tambien -- por eso el case
+// gano 1.72 de fondo ademas de los 6 de alto.
+inset_inf_frente = 17.5;
 // (*) El del valle NO lo pone su curva desde el 2026-08-17: por la curva
 // bastarian 10, y lo que manda es LA TAPA DEL VALLE. Esa plancha va a ras del
 // plano del valle, o sea con su cara de abajo a t_acrilico por debajo, y justo
