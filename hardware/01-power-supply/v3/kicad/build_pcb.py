@@ -129,7 +129,7 @@ FUGA_MIN = 6.0                  # cobre de red <-> cobre SELV (heredado v1)
 # propio cobre. Lo cazó ella sola al colocar: 5.50 mm de fuga entre los dos
 # pines de CY2, que son justamente los que un condensador de clase Y2 existe
 # para puentear.
-NETS_RED = {"L", "L_F", "L_TR", "N", "PE", "L_SMPS", "N_SMPS"}
+NETS_RED = {"L", "L_TR", "N", "PE", "L_SMPS", "N_SMPS"}
 
 
 def es_red(net: str) -> bool:
@@ -323,13 +323,14 @@ PLACEMENT = {
     "TP11":(  54.0,  114.0,   0),
 
     # --- FRANJA DE RED 230 V, bajo la barrera -------------------------------
-    # Orden electrico de izquierda a derecha: entrada, fusible, y ahi el nodo
-    # L_F se parte en dos -- al limitador de inrush y al toroide por un lado,
-    # al filtro de modo comun y la SMPS por el otro. Que L1 pinche en L_F y no
-    # en L_TR es la regla de la spec v2 §7: la SMPS comparte fusible con el
-    # toroide pero NO comparte el limitador, que esta dimensionado para TR1.
+    # Orden electrico de izquierda a derecha: entrada y, nada mas entrar, el
+    # nodo L se parte en dos -- al limitador de inrush y al toroide por un
+    # lado, al filtro de modo comun y la SMPS por el otro. Que L1 pinche en L
+    # y no en L_TR es la regla de la spec v2 §7: la SMPS comparte el fusible
+    # con el toroide pero NO comparte el limitador, que esta dimensionado
+    # para TR1. El fusible es el del IEC C14 de la pared; en esta placa ya no
+    # hay ninguno (#130).
     "J3":  (  17.0,  132.0,   0),   # entrada de red: L / N / PE
-    "F1":  (  38.0,  134.0,   0),   # portafusible cerrado, 1.6 A T
     "NT1": (  88.0,  135.0,   0),   # limitador de inrush
     "RV1": (  63.0,  135.0,   0),   # MOV
     "L1":  ( 126.0,  131.0,   0),   # choke de modo comun (poblado: va en SERIE)
@@ -825,7 +826,7 @@ def rutear_gnd(r: Ruteo) -> None:
 # bajo la barrera no hay masa, asi que las dos capas estan libres y se usan las
 # dos. La cadena caliente -- entrada, fusible, limitador, primario -- se queda
 # entera en F.Cu y de una pieza; el neutro, la tierra y la derivacion a la
-# SMPS bajan a B.Cu. No es simetria: es que L_F tiene que cruzar la franja
+# SMPS bajan a B.Cu. No es simetria: es que L tiene que cruzar la franja
 # entera y todo lo demas se le pone delante.
 #
 # CARRILES. Cada red tiene su y reservada, y estan elegidas donde NO hay ningun
@@ -848,8 +849,8 @@ def rutear_red(r: Ruteo) -> None:
 
     Los carriles, y el hueco donde vive cada uno:
 
-        F.Cu  123.0  L_F      (entre la ranura y la fila de pads de 129-135)
-        F.Cu  127.5  L        (solo x=17..38, delante del fusible)
+        F.Cu  123.0  L        (entre la ranura y la fila de pads de 129-135)
+        F.Cu  127.5  L        (solo x=17..38, la bajada desde J3)
         F.Cu  129.0  L_TR     (entre NT1 y J4, por encima de sus pads)
         F.Cu  143.0  N_SMPS
         B.Cu  123.0  PE       (cruza la franja entera: es el carril mas largo)
@@ -867,10 +868,10 @@ def rutear_red(r: Ruteo) -> None:
     aislamiento, y no ponerlos es una decision.
     """
     # --- F.Cu ---------------------------------------------------------------
-    r.pista(F, [("J3", "1"), (17.0, 127.5), (38.0, 127.5), ("F1", "1")],
-            ANCHO_RED)
-    r.pista(F, [("F1", "2"), (45.62, 123.0), (126.0, 123.0)], ANCHO_RED,
-            red=("NT1", "1"))
+    # De J3 al carril de 123 sin escala: los 7.6 mm de F1 y sus cuatro clips
+    # ya no estan en medio.
+    r.pista(F, [("J3", "1"), (17.0, 127.5), (38.0, 127.5), (38.0, 123.0),
+                (126.0, 123.0)], ANCHO_RED)
     for ref, pin in (("RV1", "1"), ("NT1", "1"), ("L1", "1")):
         x, _ = pad_xy(r.board, ref, pin)
         r.pista(F, [(x, 123.0), (ref, pin)], ANCHO_RED)
@@ -880,15 +881,6 @@ def rutear_red(r: Ruteo) -> None:
             ANCHO_RED)
     r.pista(F, [(163.0, 143.0), ("J7", "2")], ANCHO_RED, red=("J7", "2"))
     r.pista(F, [("CY1", "2"), ("CY2", "2")], ANCHO_RED)
-    # F1 es un portafusible con DOS clips por lado: su huella trae dos pads
-    # numerados "1" y dos numerados "2", a 5.08 mm uno de otro. La cadena de
-    # red entraba por uno de cada par y el otro se quedaba sin cobre -- el
-    # fusible tiene dos posiciones y solo una estaba cableada. pad_xy()
-    # devuelve el primero que encuentra, asi que el segundo se busca por
-    # coordenada.
-    for pin in ("1", "2"):
-        x, _ = pad_xy(r.board, "F1", pin)
-        r.pista(F, [(x, 134.0), (x, 139.08)], ANCHO_RED, red=("F1", pin))
 
     # --- B.Cu ---------------------------------------------------------------
     r.pista(B, [("J3", "2"), (22.0, 146.0), (146.32, 146.0)], ANCHO_RED,
@@ -2120,10 +2112,26 @@ def distancia_bbox(a: pcbnew.BOX2I, b: pcbnew.BOX2I) -> float:
 
 
 def bbox_de(board, refs: list[str]) -> pcbnew.BOX2I:
-    """Caja que envuelve la huella de cada ref en refs (brief Tarea 7)."""
+    """Caja que envuelve la huella de cada ref, SIN su serigrafia.
+
+    `_caja_util()` y no `GetBoundingBox()` a secas, y la diferencia se midio:
+    mover la referencia "C2" de sitio -- por un choque de serigrafia, decision
+    puramente cosmetica -- estrechaba la diagonal del lazo de rectificacion a
+    la isla de telemetria de 39.9 mm a 31.8, a dos milimetros de su umbral.
+
+    Una regla que protege contra ACOPLAMIENTO no puede depender de donde este
+    impresa una letra: lo que acopla es el cobre. El repo ya habia tropezado
+    con esto por el otro lado y lo resolvio igual -- el campo Value se oculta
+    en main() justo porque `GetBoundingBox()` lo cuenta e infla la caja de una
+    pieza SMD hasta decenas de mm. El campo Reference hacia lo mismo y seguia
+    contando.
+
+    Los umbrales NO se tocan: 80 mm y 30 mm siguen siendo los de la spec. Lo
+    que cambia es que ahora se comparan contra la distancia que existe.
+    """
     caja = pcbnew.BOX2I()
     for ref in refs:
-        caja.Merge(board.FindFootprintByReference(ref).GetBoundingBox())
+        caja.Merge(_caja_util(board.FindFootprintByReference(ref)))
     return caja
 
 

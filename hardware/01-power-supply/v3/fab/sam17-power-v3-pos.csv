@@ -42,7 +42,6 @@ Ref,Val,Package,PosX,PosY,Rot,Side
 "D13","1N4001","D_DO-41_SOD81_P10.16mm_Horizontal",157.000000,-27.000000,0.000000,top
 "D14","BAT54","D_SOD-323",56.000000,-104.000000,0.000000,top
 "D15","BAT54","D_SOD-323",66.000000,-104.000000,0.000000,top
-"F1","Fusible 1.6A lento + portafusible CERRADO 5x20","Fuseholder_Cylinder-5x20mm_Schurter_FPG4_Vertical_Closed",38.000000,-134.000000,0.000000,top
 "J1","Barrier block 3 pos","TerminalBlock_MaiXu_MX126-5.0-03P_1x03_P5.00mm",182.000000,-74.000000,0.000000,top
 "J2","Molex KK-254 4 pos","Molex_KK-254_AE-6410-04A_1x04_P2.54mm_Vertical",15.000000,-90.000000,0.000000,top
 "J3","Barrier block 3 pos","TerminalBlock_MaiXu_MX126-5.0-03P_1x03_P5.00mm",17.000000,-132.000000,0.000000,top

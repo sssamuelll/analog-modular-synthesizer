@@ -576,7 +576,7 @@ El §11 dejaba abierto si la fuente y el *bus board* iban juntos. Van **separado
 ### 14.2 Separación de la sección de red
 
 Aislamiento **reforzado**: ≥6 mm de línea de fuga y ≥4 mm al aire entre el
-primario (`J3 F1 RV1 NT1 J4`) y todo lo demás, con **ranura fresada** en la
+primario (`J3 RV1 NT1 J4`) y todo lo demás, con **ranura fresada** en la
 barrera.
 
 Lo hace fácil una propiedad del diseño: `TR1` es externo (sale por `J4`, vuelve
@@ -584,9 +584,18 @@ por `J1`), así que primario y secundario son **dos islas sin ningún componente
 que las puentee**. La barrera puede ser física porque no hay nada que cruzarla.
 La ranura no cuesta extra en fabricación.
 
-El portafusible es **cerrado** (tipo Schurter FPG4, IEC 60335-1, 250 VAC/10 A
-VDE) y no de clips abiertos. Clips con 230 V a la intemperie dentro de un cajón
-de madera no pegan con haber elegido aislamiento reforzado.
+El portafusible es **cerrado** y no de clips abiertos: clips con 230 V a la
+intemperie dentro de un recinto no pegan con haber elegido aislamiento
+reforzado.
+
+> **Desde la v3 ese portafusible no está en la placa.** La spec del case §7
+> pone un IEC C14 **con portafusible** en la pared del recinto, y tener además
+> `F1` en la PCB eran dos fusibles en serie en el mismo primario — el mismo
+> fallo los ve a los dos y no hay forma de saber cuál miró. Se queda el del
+> IEC, que es el accesible sin abrir la caja. **El requisito no se va con la
+> pieza:** el fusible del IEC tiene que ser igual de cerrado, y su valor sigue
+> siendo 1,6 A lento por el inrush del toroide de 120 VA más los 0,2 A de la
+> SMPS. La referencia concreta se cierra en el #130.
 
 ### 14.3 Huellas propias
 

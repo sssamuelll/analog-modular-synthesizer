@@ -20,6 +20,7 @@ que la rodea.
 | **Disipación** | 3 disipadores Fischer individuales | los tabs contra la pared del chasis | Tj de `U2`: 101 → **62 °C** |
 | **Colocación de los TO-220** | diagonal opuesta a la isla SMD | en fila sobre un canto, **tabs coplanares** | lo impone la pared, no la estética |
 | **Protección** | crowbar en +12 V | **ninguno, en ningún riel** | #118 |
+| **Fusible de red** | `F1` en la placa | en el **IEC C14 de la pared** | #130 |
 | **Instrumentación** | 6 test points | test points + **isla de telemetría** | spec §4 |
 
 ### La protección: no se sustituye, se retira

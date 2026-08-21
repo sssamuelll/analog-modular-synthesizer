@@ -19,7 +19,7 @@ CIRUGIA DE HERENCIA v2 -> v3 (Tasks 4 y 5 del plan v3):
   - MUEREN: el crowbar entero (D7 zener, Q1 SCR, R4 pull-down de gate, C14
     filtro de dv/dt). No se sustituye por nada — issue #118: la cascada de dos
     etapas ya protege sola (ningun fallo simple pone mas de +-13,1 V en el bus)
-    y el lazo del crowbar no cerraba con ningun SCR, porque F1 a 1,6 A no esta
+    y el lazo del crowbar no cerraba con ningun SCR, porque el fusible de 1,6 A no esta
     obligado a abrir a los 2,79 A que refleja el fallo.
   - SOBREVIVE todo lo demas del circuito, sin un cable movido: entrada 230 V,
     rectificacion, bulk, los dos pre-reguladores, las dos parejas
@@ -48,7 +48,7 @@ HERENCIA v1 -> v2, conservada como registro:
   se REUTILIZAN para los pre-reguladores nuevos (misma posicion en la
   cascada, ahora alimentan a la pareja LT3045/LT3094 de la Task 6 en vez
   de ser el regulador final).
-  - SOBREVIVEN intactos: entrada 230V (J1/F1/RV1/NT1/J4+J5 faston),
+  - SOBREVIVEN intactos: entrada 230V (J1/RV1/NT1/J4+J5 faston),
   rectificacion (BR1), bulk (C1/C2/C12/C13), 7805 completo (C9/U3/C10/
   C11/D5/R3/D6/J6), crowbar completo (D7/Q1/R4/C14), LED de riel (R1/D3/
   R2/D4), J2, TP1-TP6, check_footprints().
@@ -90,7 +90,7 @@ Convenciones del dibujo (heredadas de v1, con lo que agrega esta tarea):
   - Riel +5V (design-notes.md §10.1) en la fila intermedia, sin cambios v1.
   - J6 sin cambios v1 (issue #8, opcion C).
   - Primario 230V/50Hz sin cambios v1, salvo J7 nuevo (Step 5 del plan v2):
-    cuelga DESPUES de F1+RV1 y ANTES de NT1/J4 (lado 230V de la barrera,
+    cuelga DESPUES de RV1 y ANTES de NT1/J4 (lado 230V de la barrera,
     "antes del primario" de TR1) — mismo nodo L/N que ve NT1 a la entrada,
     para que el inrush-limiter de NT1 (dimensionado para TR1) no le imponga
     caida a la SMPS digital ni la SMPS le sume corriente de inrush al NTC.
@@ -240,7 +240,7 @@ Y_PEF, X_PEF = 27.94, 40.64
 Y_CH = 40.64
 
 # --- J7 (Step 5 del plan v2): derivacion 230V hacia la SMPS digital
-# IRM-15-5, DESPUES de F1+RV1 y ANTES de NT1/J4 (spec §7 — comparte fusible,
+# IRM-15-5, DESPUES de RV1 y ANTES de NT1/J4 (spec §7 — comparte el
 # no comparte inrush-limiter porque NT1 esta dimensionado para TR1). Tapa el
 # nodo L en x=76.20 (mismo punto donde ya tapa RV1) y el carril de N en el
 # mismo x, cada uno por su PROPIA columna vertical para no cruzarse entre si
@@ -253,14 +253,20 @@ X_J7N = 93.98                   # columna vertical de la baja de N (distinta de
                                  # X_J7L para que las dos bajadas no se toquen)
 
 PARTS = [
-    # --- lado primario, 230 VAC (design-notes.md §10.2/§10.3): el fusible va
-    # AQUI, no en el secundario. TR1 es externo (no esta en esta placa). ---
+    # --- lado primario, 230 VAC (design-notes.md §10.2/§10.3). El fusible NO
+    # esta en esta placa: va en el IEC C14 de la pared (#130). TR1 tampoco --
+    # es externo, sale por J4 y vuelve por J1. ---
     ("J3",  "Connector:Conn_01x03_Pin",       25.40, Y_M,     0, "AC 230V IN"),
-    # Subido de 250mA a 1.6A T (Step 6, notes v2 §3): con el TR1 real del BOM
-    # (120 VA, no los 24 VA de la nota v1 que fijo 250mA) mas el tap nuevo de
-    # J7 hacia la SMPS IRM-15-5 (0.2A/230Vac typ., datasheet meanwell.com),
-    # la carga primaria sube a ~0.72A -- 250mA se fundiria en operacion normal.
-    ("F1",  "Device:Fuse",                    53.34, Y_L,    90, "1.6A T"),
+    # EL FUSIBLE YA NO ESTA EN LA PLACA. La spec del case §7 pone un IEC C14
+    # **con portafusible** en la pared del recinto, y `F1` estaba aqui: dos
+    # fusibles en serie en el mismo primario, que es peor que uno solo --
+    # el mismo fallo los ve a los dos y no hay forma de saber cual miro.
+    #
+    # Se queda el del IEC porque es el ACCESIBLE: cambiarlo no obliga a abrir
+    # un recinto de acero cerrado, que es como se hace en equipo de audio de
+    # red. El valor y su justificacion no se van con la pieza -- 1.6 A lento,
+    # por el inrush del toroide de 120 VA mas los 0.2 A de la SMPS IRM-15-5:
+    # siguen aplicando, solo que a un fusible que vive en el chasis (#130).
     ("RV1", "Device:Varistor",                76.20, YRV,     0, "S20K275"),
     ("NT1", "Device:Thermistor_NTC",          99.06, Y_L,    90, "NTC 5R/2A"),
     ("J4",  "Connector:Conn_01x02_Pin",       X_J4A, Y_N,   180, "TR1 pri (ext)"),
@@ -326,7 +332,6 @@ PARTS = [
 FOOTPRINT = {
     # --- primario 230 VAC ---
     "J3":  "TerminalBlock:TerminalBlock_MaiXu_MX126-5.0-03P_1x03_P5.00mm",
-    "F1":  "Fuse:Fuseholder_Cylinder-5x20mm_Schurter_FPG4_Vertical_Closed",
     "RV1": "sam17:RV_Disc_D21mm_W5.5mm_P10.0mm",
     "NT1": "sam17:NTC_Disc_D11.5mm_W4.5mm_P7.5mm",
     "J4":  "TerminalBlock:TerminalBlock_MaiXu_MX126-5.0-02P_1x02_P5.00mm",
@@ -440,7 +445,7 @@ POWER_VALUE = {"#PE1": "PE"}
 # nombra los rieles crudos; sin esto el netlist los llama Net-(BR1-+)
 LABELS = [
     ("VRAW+", 99.06, YP), ("VRAW-", 99.06, YN),
-    ("L",    35.56,  Y_L), ("L_F",  63.50,  Y_L),
+    ("L",    35.56,  Y_L),
     ("L_TR", 106.68, Y_L), ("N",    60.96,  Y_NL),
     ("SEC_A", 60.96, 104.14), ("SEC_B", 60.96, 135.89),
     # nets nuevos v2 (nodos intermedios de los pre-reg): un solo label en el
@@ -502,7 +507,6 @@ FIELDS += [
     ("J1",  "Value",     30.48, 107.95), ("J1",  "Reference",  30.48, 125.73),
     ("BR1", "Reference", 78.74, 128.27), ("BR1", "Value",      78.74, 132.08),
     ("J3",  "Value",     25.40, 11.43), ("J3",  "Reference",  25.40, 29.21),
-    ("F1",  "Reference", 53.34, 10.16), ("F1",  "Value",      53.34, 13.97),
     ("NT1", "Reference", 99.06, 10.16), ("NT1", "Value",      99.06, 13.97),
     ("J4",  "Value",     X_J4,  11.43), ("J4",  "Reference",  X_J4,  29.21),
     ("J5",  "Reference",  25.40, 44.45), ("J5", "Value",       25.40, 48.26),
@@ -545,8 +549,9 @@ WIRES: list = [
     ("BR+ sube", [[91.44, 109.22], [91.44, YP]]),
     ("BR- baja", [[91.44, 124.46], [91.44, YN]]),
     # --- entrada AC primaria, 230V ---
-    ("AC L a",   [[25.40 + XPIN, Y_L], [49.53, Y_L]]),
-    ("AC L b",   [[57.15, Y_L], [76.20, Y_L]]),
+    # De J3 al nodo de RV1 de una pieza: aqui iban los dos pines de F1 y el
+    # hueco de 7.62 mm que dejaban entre ellos.
+    ("AC L a",   [[25.40 + XPIN, Y_L], [76.20, Y_L]]),
     ("AC L c",   [[76.20, Y_L], [95.25, Y_L]]),
     ("AC L d",   [[102.87, Y_L], [X_J4, Y_L]]),
     ("AC N a",   [[25.40 + XPIN, Y_N], [X_NJ, Y_N]]),
@@ -786,7 +791,7 @@ WIRES += [
     ("CY2 pe",   [[55.88, 85.09], [55.88, 88.90]]),
 ]
 LABELS += [
-    ("L_F",     33.02, Y_FILT - 2.54),
+    ("L",       33.02, Y_FILT - 2.54),
     ("N",       33.02, Y_FILT + 2.54),
     ("L_SMPS",  58.42, Y_FILT - 2.54),
     ("N_SMPS",  58.42, Y_FILT + 2.54),

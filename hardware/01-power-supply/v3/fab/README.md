@@ -69,11 +69,30 @@ designadores del BOM de ensamblaje.
 `U1`/`U2` en TO-220, portafusible, conectores, trimmers, el MOV) va por
 Reichelt/DigiKey — está en `bom.csv` con proveedor por fila.
 
-## Las tres puertas que quedan
+## El fusible NO está en esta placa
 
-1. **La entrada de red no tiene pieza decidida** (#130). `J3` es un bloque de
-   barrera y el #107 pedía un IEC C14. **Esto se decide antes del pedido**, no
-   después: cambia la huella y por tanto los gerbers.
+La spec del case §7 pone un **IEC C14 con portafusible** en la pared del
+recinto. Tener además `F1` en la PCB eran **dos fusibles en serie en el mismo
+primario** — el mismo fallo los ve a los dos y no hay forma de saber cuál
+miró. Se queda el del IEC, que es el accesible sin abrir un recinto de acero
+cerrado.
+
+**El requisito no se fue con la pieza.** El fusible del chasis tiene que ser:
+
+| | |
+|---|---|
+| valor | **1,6 A lento (T)** — por el inrush del toroide de 120 VA más los 0,2 A de la SMPS IRM-15-5 |
+| portafusible | **cerrado**, no de clips abiertos: es lo que pide haber elegido aislamiento reforzado |
+
+Si el IEC que se compre no cumple las dos, **no vale**: la placa ya no tiene
+red de seguridad detrás.
+
+## Las dos puertas que quedan
+
+1. **La referencia del IEC C14 sigue sin elegir** (#130). Sin ella no hay
+   recorte en la chapa, y **el recorte se decide antes de cortar**: después
+   de doblada no hay dónde ponerlo. Ya no cambia los gerbers de la PCB — eso
+   se cerró al sacar `F1` — pero sí bloquea el chasis.
 2. **Stock LCSC el día de mandar** (#57), incluidos `U8`–`U12`. La v2 dejó
    escrito cuál es el más ajustado de su lado; esta versión añade cinco chips
    que no estaban.
