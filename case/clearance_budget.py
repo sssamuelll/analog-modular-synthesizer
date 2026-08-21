@@ -767,9 +767,12 @@ def _rejilla_entrada(p: dict[str, float]) -> tuple[int, float, float, float]:
     au = p["ancho_total"] - 2 * p["t_cheek"] - 2 * p["hol_piel"]
     y0_pl = ce[1][1] - 15
     f_base, f_tras = ce[1][1] - y0_pl, ce[4][1] - y0_pl
-    y_bajas = f_base + 0.32 * (f_tras - f_base)
+    y_bajas = f_base + 0.37 * (f_tras - f_base)
     y0 = f_base + p["valle_espina"] / 2 + p["vent_puente_min"]
-    y1 = y_bajas - p["vent_periodo"] * 0.35 - p["vent_puente_min"]
+    # vent_ancho_ranura/2: la onda es un hull de circulos y su borde de material
+    # cae medio ancho de ranura por debajo de la polilinea (ver el .scad)
+    y1 = (y_bajas - p["vent_periodo"] * 0.35 - p["vent_ancho_ranura"] / 2
+          - p["vent_separacion"])
     paso = int(p["valle_paso_hp"])
     n_hp = round(p["largo_riel"] / p["hp"])
     x_iec = au - 70 + 24
@@ -811,7 +814,7 @@ def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
     au = p["ancho_total"] - 2 * p["t_cheek"] - 2 * p["hol_piel"]
     y0_pl = ce[1][1] - 15
     f_base, f_tras = ce[1][1] - y0_pl, ce[4][1] - y0_pl
-    y_bajas = f_base + 0.32 * (f_tras - f_base)
+    y_bajas = f_base + 0.37 * (f_tras - f_base)
     y_sierra = f_base + 0.74 * (f_tras - f_base)
     trozos = ((_onda_area(p, "triangulo", au * 0.35), y_bajas),
               (_onda_area(p, "cuadrada", au * 0.35), y_bajas),

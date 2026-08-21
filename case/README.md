@@ -84,9 +84,20 @@ lado: se saltan sus columnas enteras, con 6.98 mm de material alrededor. Partir
 una ranura con el recorte dejaría un diente de acrílico colgando de un lado, que
 es justo donde el PMMA rompe.
 
+La rejilla y las ondas se separan **14.00 mm**. Eran 4 —`vent_puente_min`, el
+mínimo por fragilidad— y los dos campos se leían como uno. Subir la onda sola no
+lo arreglaba: el borde de la rejilla estaba *derivado* de la onda, así que subía
+con ella y la separación se quedaba clavada en el mínimo. Se movieron las dos:
+`y_bajas` 0.32 → **0.37** del vano entre filas, y la separación pasa a ser un
+parámetro de dibujo propio (`vent_separacion`) en vez del mínimo de fragilidad.
+
+Se mide **entre bordes de material**, no contra la polilínea de la onda: la onda
+es un hull de círculos y asoma medio ancho de ranura por debajo de su polilínea.
+La primera versión se olvidó ese término y los 14 salieron 12.
+
 | | área abierta | altura | ranuras |
 |---|---|---|---|
-| entrada (trasera, abajo) | **7 128 mm²** | y = 50 | 45 de 40.5 × 4 |
+| entrada (trasera, abajo) | **6 950 mm²** | y = 50 | 45 de 39.5 × 4 |
 | salida — valle | 7 499 mm² | y = 144 | 102 de 19.2 × 4 |
 | salida — las tres ondas | 5 110 mm² | y ≈ 137 | — |
 
@@ -104,9 +115,9 @@ P = ρ · c_p · Q · ΔT                    calor que se lleva
 ```
 
 `A_ef` son entrada y salida **en serie**; `h`, la distancia entre sus
-centroides. Con 6.33 W de reguladores (spec PSU v2 §4) salen **6.5 K** sobre
+centroides. Con 6.33 W de reguladores (spec PSU v2 §4) salen **6.6 K** sobre
 ambiente contra un techo de 15. En el suelo salían 4.6 —más área y más tiro—,
-y esos 1.9 K son lo que cuesta que no se vea. **SUPUESTO, no medido**: `C_D` = 0.65, y las
+y esos 2 K son lo que cuesta que no se vea. **SUPUESTO, no medido**: `C_D` = 0.65, y las
 pérdidas del transformador no están itemizadas — por eso el techo va holgado.
 
 ## El espacio de los módulos lo comía el chasis, no la barra

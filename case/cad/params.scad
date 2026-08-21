@@ -750,6 +750,22 @@ fresa_d           = 3;
 vent_ancho_ranura = 4;   // ancho de la ranura-onda. >= fresa_d por eso mismo
 vent_puente_min   = 4;   // puente minimo entre ranuras (fragilidad)
 vent_periodo      = 40;  // periodo horizontal de cada onda
+// Separacion entre el CAMPO DE RANURAS de la trasera y la banda de ondas que
+// tiene encima. NO es vent_puente_min, y esa confusion es justo lo que se
+// arregla aqui: el puente minimo es una cota de FRAGILIDAD -- lo que hace falta
+// para que dos huecos no se coman el acrilico que queda entre ellos -- y con 4
+// mm los dos campos se leian como uno solo. Esto es una cota de DIBUJO: lo que
+// hace falta para que la rejilla y las ondas se lean como DOS cosas.
+//
+// Y por eso la onda subio a la vez (0.32 -> 0.37 del vano entre filas): con el
+// borde de la rejilla derivado de la onda, subir solo la onda arrastraba la
+// rejilla con ella y la separacion se quedaba clavada en el minimo. Las dos se
+// mueven juntas o no se mueve nada.
+// Se mide entre BORDES DE MATERIAL, no entre la polilinea de la onda y el canto
+// del campo: la onda es un hull de circulos y asoma medio ancho de ranura por
+// debajo de su polilinea. La primera version se olvido ese termino y los 14
+// salieron 12.
+vent_separacion   = 14;  // rejilla <-> ondas. De dibujo, no de fragilidad
 
 // --- tapa del valle ---
 // La plancha que cierra el escalon entre las dos filas. Es la unica cara

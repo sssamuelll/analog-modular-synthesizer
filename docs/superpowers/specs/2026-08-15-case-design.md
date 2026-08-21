@@ -92,6 +92,11 @@ lenguaje visual).
 > IEC embebido en el campo y 6.98 mm de material alrededor. ΔT 4.6 → **6.5 K**
 > contra el techo de 15: eso es lo que cuesta que no se vea. El vuelo del suelo
 > queda de plancha maciza.
+> **rev. 14** (2026-08-21): la rejilla y las ondas se **separan 14 mm**. Eran 4
+> (`vent_puente_min`, el mínimo por fragilidad) y los dos campos se leían como
+> uno. Subir la onda sola no servía: el borde de la rejilla estaba derivado de
+> ella. Entra `vent_separacion` como cota de dibujo propia y `y_bajas` sube
+> 0.32 → 0.37. ΔT 6.5 → 6.6 K.
 >
 > **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
 > visual y proporciones *relativas*, pero **sus cotas están superadas**. Se

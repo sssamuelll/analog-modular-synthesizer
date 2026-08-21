@@ -686,6 +686,51 @@ razón que no es de dibujo.
 
 ---
 
+## T12 — La rejilla y las ondas se separan  ✅ HECHA (2026-08-21)
+
+**Pedido:** «vamos a subir el row de las ondas un poco para separar más entre las
+ondas y la rejilla».
+
+### Subir la onda sola no separaba nada
+
+El borde de arriba de la rejilla estaba **derivado** de la onda
+(`y_bajas − amplitud − vent_puente_min`), así que subir `y_bajas` subía la
+rejilla con ella y la separación se quedaba clavada en 4 mm. Es el mismo patrón
+que ya apareció con el vuelo de la bandeja: derivar corta en los dos sentidos.
+
+Lo que separa de verdad es que la separación **deje de ser el mínimo de
+fragilidad**. `vent_puente_min` = 4 responde a «que dos huecos no se coman el
+acrílico entre ellos»; que dos campos se lean como dos cosas es otra pregunta y
+merece su propio número. Entra `vent_separacion` = 14, y `y_bajas` sube de 0.32
+a 0.37 para que la rejilla no encoja al hacerle sitio.
+
+### El parámetro tiene que valer lo que dice
+
+Primer intento: 14 en el parámetro, **12.00 medidos** en el DXF. La onda es un
+hull de círculos, así que su borde de *material* cae `vent_ancho_ranura/2` por
+debajo de la polilínea, y la fórmula solo restaba la amplitud.
+
+Corregido, mide 14.00 exactos. No es cosmético: un parámetro que vale 2 mm menos
+de lo que dice es el tipo de cota que engaña al siguiente que la toque.
+
+### Balance
+
+| | antes | ahora |
+|---|---|---|
+| separación rejilla ↔ onda | 4.00 mm | **14.00 mm** |
+| `y_bajas` | 0.32 | **0.37** |
+| banda de la rejilla | 40.46 mm | 39.47 mm |
+| área de entrada | 7 128 mm² | 6 950 mm² |
+| ΔT | 6.5 K | **6.6 K** (techo 15) |
+
+El IEC sigue centrado en el campo: 5.99 mm de ranura por encima, 5.98 por debajo.
+La banda se calcula **una vez** en `piel_trasera_2d()` y se le pasa a
+`rejilla_entrada()`, en vez de que cada uno la rederive — si no, tocar
+`vent_separacion` los movería por separado y el recorte dejaría de estar
+centrado sin que nada lo cantara.
+
+---
+
 ## T2 — El chasis del PSU se monta sobre los largueros
 
 Hoy el chasis de acero pasa **entre** los dos largueros de base y se apoya en la

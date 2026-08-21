@@ -465,24 +465,33 @@ module piel_trasera_2d() {
     // Las ondas van derivadas de las dos filas que las rodean: asi no se acercan
     // a un tornillo si un larguero se mueve.
     //
-    // La de abajo estuvo en 0.35 unas horas para dejarle mas banda a la rejilla
-    // de entrada. Se queda en 0.32: con la rejilla de vuelta aqui la banda libre
-    // da 40.46 mm, que es campo de sobra, y subir la onda solo para engordar la
-    // rejilla mueve el dibujo por una razon que no es de dibujo.
-    y_bajas  = f_base + 0.32*(f_tras - f_base);
+    // La de abajo sube a 0.37 (estuvo en 0.32) para SEPARARSE de la rejilla que
+    // tiene debajo. Con la banda derivada de la onda y separada solo por
+    // vent_puente_min, los dos campos se leian como uno; subir la onda sola no
+    // arreglaba nada, porque la rejilla subia con ella. Lo que separa de verdad
+    // es vent_separacion, y la onda sube para que la rejilla no encoja al
+    // hacerle sitio: la banda pasa de 40.46 a 41.47 mm.
+    y_bajas  = f_base + 0.37*(f_tras - f_base);
     y_sierra = f_base + 0.74*(f_tras - f_base);
     // El IEC va CENTRADO en la banda libre que dejan la fila de tornillos por
     // abajo y la onda por arriba. Estuvo en y=22 fijo, a 7 mm de la fila -- y
     // uno de los cinco M3 cae justo dentro de su franja de X (x=475.2), asi que
     // ahi quedaban 3.5 mm entre la arandela y el recorte. Ahora las dos
     // fronteras son piezas reales y el hueco se reparte solo.
+    // La banda libre entre la fila de tornillos y la onda. La comparten la
+    // rejilla y el IEC, y por eso se calcula UNA vez aqui y se les pasa: si cada
+    // uno la rederivara, un cambio en vent_separacion los moveria por separado y
+    // el recorte dejaria de estar centrado en el campo.
     iec_alto = 27.5;
     lib0 = f_base + valle_espina/2 + vent_puente_min;
-    lib1 = y_bajas - vent_periodo*0.35 - vent_puente_min;
+    // vent_ancho_ranura/2 y no solo la amplitud: la onda es un hull de circulos,
+    // asi que su borde de MATERIAL cae medio ancho de ranura por debajo de la
+    // polilinea. Sin ese termino el parametro medía 2 mm menos de lo que decia.
+    lib1 = y_bajas - vent_periodo*0.35 - vent_ancho_ranura/2 - vent_separacion;
     difference() {
         plancha(au, alto);
         for (y = [f_base, f_tras]) fila_agujeros(au, y);
-        rejilla_entrada(au, f_base, y_bajas);
+        rejilla_entrada(au, lib0, lib1);
         translate([au*0.10, y_bajas])  onda("triangulo", au*0.35);
         translate([au*0.55, y_bajas])  onda("cuadrada",  au*0.35);
         translate([au*0.15, y_sierra]) onda("sierra", au*0.70);
@@ -518,14 +527,11 @@ module piel_trasera_2d() {
 // TERMICO. "Entrada >= salida" fue el criterio unas horas y se rompio en la
 // mudanza 3, a proposito: lo que hay que exigir no es paridad de areas sino que
 // el aparato no se caliente, y eso se calcula.
-module rejilla_entrada(au, f_base, y_bajas) {
-    // Abajo: la fila de M3 necesita su banda maciza, la misma que la espina del
-    // valle (cabeza + arandela). Arriba: el borde inferior de la onda, menos el
-    // puente minimo. Las dos fronteras son piezas reales, no margenes a ojo --
-    // y son las MISMAS que centran el hueco del IEC, que vive dentro de esta
-    // banda y por eso queda embebido en el campo en vez de al lado.
-    y0 = f_base + valle_espina/2 + vent_puente_min;
-    y1 = y_bajas - vent_periodo*0.35 - vent_puente_min;
+// La banda (y0, y1) llega DADA desde piel_trasera_2d y no se rederiva aqui: es
+// la misma que centra el hueco del IEC, y si cada uno la calculara por su cuenta
+// bastaria tocar vent_separacion para que el recorte dejara de estar centrado en
+// el campo sin que nada lo cantara.
+module rejilla_entrada(au, y0, y1) {
     n_hp = round(largo_riel/hp);
     // El IEC se salta por COLUMNAS ENTERAS: una ranura partida por el recorte
     // deja un diente de acrilico colgando de un lado, que es justo donde el
