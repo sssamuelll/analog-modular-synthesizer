@@ -161,13 +161,12 @@ angulo_superior = 45;    // 45 desde la horizontal, cara de generacion
 // Y LA ENTRADA DE AIRE SE MUDA A LA TRASERA, que es lo que de verdad hay que
 // mirar aqui: la salida del valle son 7499 mm2 en 102 ranuras, o sea que la
 // entrada nueva tiene que dar al menos eso o el aparato respira peor que antes.
-// Se probo unas horas en la trasera (8316 mm2 en 45 ranuras) y acabo en el
-// SUELO, en el vuelo de la bandeja: Samuel pidio dejar la trasera solo con sus
-// tres ondas. Empezo ahi con 3535 mm2 -- menos de la mitad de area que en la
-// trasera, pero entrando a y=4 en vez de a y=53, y el tiro de chimenea gana lo
-// que pierde. Al correr despues el larguero delantero hacia atras (ver
-// centros_esqueleto) el vuelo paso de 30.19 a 68.85 y la rejilla crecio con el:
-// 11421 mm2, y el salto termico de 8.5 a 4.6 K.
+// Se mudo CUATRO veces en el mismo dia y acabo abajo del todo en la TRASERA.
+// El paseo, por si alguien lo repite: hueco del suelo (no era diseno, era lo que
+// sobraba) -> trasera -> suelo otra vez, dibujada en el vuelo de la bandeja ->
+// trasera. La tercera murio por una razon que no sale en ningun numero: en el
+// vuelo SE VEIA. El acrilico naranja es traslucido y el campo de ranuras se
+// transparentaba a lo largo del canto de abajo.
 //
 // Por eso guarda_aire() no compara areas sino SALTO TERMICO. La entrada llego a
 // quedar mas estrecha que la salida a proposito, y lo que hay que exigir no es

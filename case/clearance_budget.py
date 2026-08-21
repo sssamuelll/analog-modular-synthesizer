@@ -759,15 +759,26 @@ def _rejilla_entrada(p: dict[str, float]) -> tuple[int, float, float, float]:
 
     Devuelve (n, largo, area, y_centroide). El centroide va en coordenadas del
     case porque lo que gobierna el tiro no es solo cuanta area hay sino a que
-    ALTURA esta: esta rejilla vive en el suelo, a 4 mm, y por eso compra tiro lo
-    que pierde de area frente a la version que se probo en la trasera."""
-    vuelo = _vuelo_bandeja(p)
-    largo = vuelo - 2 * p["valle_margen"]
+    ALTURA esta. Esta rejilla vive abajo del todo en la trasera; paso unas horas
+    en el suelo (y=4, mas tiro y mas area) y volvio aqui porque en el vuelo de
+    la bandeja se transparentaba por el canto inferior."""
+    P = _vertices(p)
+    ce = _centros_esqueleto(p, P, _centros_rail(p, P))
+    au = p["ancho_total"] - 2 * p["t_cheek"] - 2 * p["hol_piel"]
+    y0_pl = ce[1][1] - 15
+    f_base, f_tras = ce[1][1] - y0_pl, ce[4][1] - y0_pl
+    y_bajas = f_base + 0.32 * (f_tras - f_base)
+    y0 = f_base + p["valle_espina"] / 2 + p["vent_puente_min"]
+    y1 = y_bajas - p["vent_periodo"] * 0.35 - p["vent_puente_min"]
     paso = int(p["valle_paso_hp"])
     n_hp = round(p["largo_riel"] / p["hp"])
-    n = len(range(paso, int(n_hp) - paso + 1, paso))
-    return (n, largo, _area_ranuras(n, largo, p["vent_ancho_ranura"]),
-            p["t_base"] / 2)
+    x_iec = au - 70 + 24
+    hueco = (48 + p["vent_ancho_ranura"]) / 2 + p["vent_puente_min"]
+    ns = [n for n in range(paso, int(n_hp) - paso + 1, paso)
+          if abs(n * p["hp"] - x_iec) >= hueco]
+    return (len(ns), y1 - y0,
+            _area_ranuras(len(ns), y1 - y0, p["vent_ancho_ranura"]),
+            y0_pl + (y0 + y1) / 2)
 
 
 def _onda_area(p: dict[str, float], tipo: str, largo: float) -> float:
@@ -875,7 +886,7 @@ def guarda_aire(p: dict[str, float]) -> None:
         f"la altura, el area va lineal)")
 
     print(f"aire: entrada {a_ent:.0f} mm2 en {n_ent} ranuras de "
-          f"{largo_ent:.1f} x {p['vent_ancho_ranura']:.0f} (suelo, y={y_ent:.0f})")
+          f"{largo_ent:.1f} x {p['vent_ancho_ranura']:.0f} (trasera, y={y_ent:.0f})")
     print(f"  salida {a_sal:.0f} mm2 = {a_val:.0f} del valle ({n_val} ranuras) + "
           f"{a_ond:.0f} de las tres ondas, centroide y={y_sal:.0f}")
     print(f"  tiro {h*1000:.0f} mm, area efectiva {a_ef:.0f} mm2 -> "

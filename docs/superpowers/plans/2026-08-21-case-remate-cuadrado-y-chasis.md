@@ -649,6 +649,43 @@ El larguero delantero acaba en x = 88.34: **42.7 mm del raíl de panel** en vez 
 
 ---
 
+## T11 — La entrada de aire vuelve a la trasera  ✅ HECHA (2026-08-21)
+
+**Pedido:** «vamos a quitar el respiradero del piso de ahí, mejor colocarlo
+atrás (el efecto que hemos movido ya varias veces para la ventilación)».
+
+### Cuatro mudanzas, y cada una cerró una pregunta
+
+| | dónde | por qué se fue |
+|---|---|---|
+| 1 | hueco de 37.96 mm en el suelo | no era diseño, era lo que sobraba |
+| 2 | trasera, abajo | al cerrar el suelo hubo que dibujarla |
+| 3 | suelo, en el vuelo de la bandeja | Samuel dejó la trasera con sus ondas |
+| **4** | **trasera otra vez** | en el vuelo **se veía** |
+
+La tercera murió por algo que no sale en ninguna cota y que solo se vio en el
+render: el acrílico naranja es **traslúcido**, y el campo de ranuras se
+transparentaba a lo largo del canto inferior. Había crecido además de 18.2 a
+56.8 mm de ranura al correr el larguero delantero, así que se notaba más.
+
+### Lo que queda
+
+45 ranuras de 40.5 × 4 (**7 128 mm²**) en la banda que dejan libre la fila de M3
+por abajo y la onda por arriba. El hueco del IEC vive **dentro** de esa banda —
+las dos fronteras que lo centran son las mismas que limitan el campo—, así que
+queda embebido en la rejilla y no al lado. Se saltan sus columnas enteras, con
+6.98 mm de material alrededor: partir una ranura con el recorte dejaría un diente
+de acrílico colgando de un lado, que es donde el PMMA rompe.
+
+ΔT pasa de 4.6 a **6.5 K** contra el techo de 15. Esos 1.9 K son lo que cuesta
+que no se vea: en el suelo había más área (11 421) y más tiro (137 mm contra 91).
+
+`y_bajas` se queda en 0.32 y no vuelve a 0.35. La banda da 40.46 mm, que es campo
+de sobra, y subir la onda solo para engordar la rejilla movería el dibujo por una
+razón que no es de dibujo.
+
+---
+
 ## T2 — El chasis del PSU se monta sobre los largueros
 
 Hoy el chasis de acero pasa **entre** los dos largueros de base y se apoya en la

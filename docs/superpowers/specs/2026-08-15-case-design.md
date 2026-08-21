@@ -85,6 +85,13 @@ lenguaje visual).
 > raíl de panel en vez de a 4.00, y no se retira: sostiene la fila delantera de
 > la bandeja. El vuelo crece a 68.85, la rejilla de aire con él, y ΔT baja a
 > 4.6 K.
+> **rev. 13** (2026-08-21): la entrada de aire **vuelve a la trasera** y se queda.
+> En el vuelo de la bandeja se transparentaba: el acrílico naranja es traslúcido
+> y el campo de ranuras se veía por el canto inferior. Son 45 ranuras de 40.5 × 4
+> (7 128 mm²) en la banda libre entre la fila de M3 y la onda, con el hueco del
+> IEC embebido en el campo y 6.98 mm de material alrededor. ΔT 4.6 → **6.5 K**
+> contra el techo de 15: eso es lo que cuesta que no se vea. El vuelo del suelo
+> queda de plancha maciza.
 >
 > **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
 > visual y proporciones *relativas*, pero **sus cotas están superadas**. Se

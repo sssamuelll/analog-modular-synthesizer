@@ -62,27 +62,33 @@ la esquina inferior delantera (x = 9.49), que es la misma regla que usa
 `x_valle()` para el pico. Lo único abierto es el propio redondeo, y eso se lee
 como esquina, no como ranura.
 
-**Y la entrada de aire vuelve al suelo, pero dibujada.** Es la mitad del cambio
-que no se ve en ningún render. Se probó unas horas abajo en la trasera; Samuel
-pidió dejar esa pieza solo con sus tres ondas, así que la entrada acabó donde
-siempre estuvo — 51 ranuras iguales a las del valle, en el **vuelo** de la
-bandeja, por delante del larguero y fuera del camino de carga.
+**Y la entrada de aire se queda abajo del todo en la trasera.** Se mudó cuatro
+veces el mismo día y el paseo vale la pena, porque cada mudanza cerró una
+pregunta:
 
-Donde está es mejor de lo que parece. Tiene menos de la mitad de área que la
-versión trasera, pero entra a **y = 4** en vez de a 53, y el tiro de chimenea
-gana los 50 mm que pierde de área. No se ve desde ningún ángulo normal: el
-plenum lo dan las paticas de 8 mm, que abren ~13 600 mm² de perímetro contra los
-3 535 de la rejilla.
+| | dónde | por qué se fue |
+|---|---|---|
+| 1 | hueco de 37.96 mm en el suelo | no era diseño, era lo que sobraba |
+| 2 | trasera, abajo | al cerrar el suelo hubo que dibujarla |
+| 3 | suelo, en el vuelo de la bandeja | Samuel dejó la trasera con sus ondas |
+| **4** | **trasera otra vez** | en el vuelo **se veía** |
+
+La tercera murió por una razón que no sale en ningún número: el acrílico naranja
+es **traslúcido**, y el campo de ranuras se transparentaba a lo largo del canto
+inferior. Se ve en el render oficial, no en la geometría.
+
+Son 45 ranuras iguales a las del valle —mismo ancho, mismo paso HP— en la banda
+que dejan libre la fila de tornillos por abajo y la onda por arriba. El hueco del
+IEC vive **dentro** de esa banda, así que queda embebido en el campo en vez de al
+lado: se saltan sus columnas enteras, con 6.98 mm de material alrededor. Partir
+una ranura con el recorte dejaría un diente de acrílico colgando de un lado, que
+es justo donde el PMMA rompe.
 
 | | área abierta | altura | ranuras |
 |---|---|---|---|
-| entrada (suelo, en el vuelo) | **11 421 mm²** | y = 4 | 51 de 56.8 × 4 |
+| entrada (trasera, abajo) | **7 128 mm²** | y = 50 | 45 de 40.5 × 4 |
 | salida — valle | 7 499 mm² | y = 144 | 102 de 19.2 × 4 |
 | salida — las tres ondas | 5 110 mm² | y ≈ 137 | — |
-
-La rejilla nació con 3 535 mm² en ranuras de 18.2 y **creció sola** a 11 421
-cuando el larguero delantero se corrió hacia atrás (abajo): está derivada del
-vuelo, no de un número escrito a mano.
 
 **`guarda_aire()` dejó de medir área y pasa a medir salto térmico.** Nació
 exigiendo «entrada ≥ salida», que valía mientras la entrada estaba en la
@@ -98,8 +104,9 @@ P = ρ · c_p · Q · ΔT                    calor que se lleva
 ```
 
 `A_ef` son entrada y salida **en serie**; `h`, la distancia entre sus
-centroides. Con 6.33 W de reguladores (spec PSU v2 §4) salen **4.6 K** sobre
-ambiente contra un techo de 15. **SUPUESTO, no medido**: `C_D` = 0.65, y las
+centroides. Con 6.33 W de reguladores (spec PSU v2 §4) salen **6.5 K** sobre
+ambiente contra un techo de 15. En el suelo salían 4.6 —más área y más tiro—,
+y esos 1.9 K son lo que cuesta que no se vea. **SUPUESTO, no medido**: `C_D` = 0.65, y las
 pérdidas del transformador no están itemizadas — por eso el techo va holgado.
 
 ## El espacio de los módulos lo comía el chasis, no la barra
@@ -132,9 +139,11 @@ que molestaba.
 la plancha queda en voladizo de 280 mm bajo el chasis, y los 4 puntos de panel
 que se ganarían a 60 mm de fondo no pagan eso.
 
-Efecto colateral que sale gratis: el vuelo de la bandeja pasa de 30.19 a
-**68.85 mm**, la rejilla de entrada crece con él y el salto térmico baja de 8.5 a
-**4.6 K**.
+Efecto colateral: el vuelo de la bandeja pasa de 30.19 a **68.85 mm**. Mientras
+la rejilla de entrada vivió ahí creció con él —está derivada del vuelo, no de un
+número a mano— y el salto térmico bajó a 4.6 K. Al volver la rejilla a la
+trasera, el vuelo se queda de plancha maciza: 68.85 mm de suelo continuo por
+delante del larguero.
 
 Lo que dejó de salir solo: la holgura contra el raíl de panel. Estaba garantizada
 por construcción mientras el larguero se *derivaba* del raíl; ahora es una
@@ -380,7 +389,7 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Arandela ANCHA d16 | 4 | **no opcional**: en los ejes de giro. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 MPa y aguanta |
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa. **Sustituye al amortiguador**, que se eliminó |
 | Plancha acrílico t=5 mm | **1** | solo la tapa del valle. Un espesor entero para **una** pieza — a resolver en el pliego, no en el modelo |
-| Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante, 528.32 × 291.4, con la rejilla de entrada de aire en el vuelo) + tapa de remate (528.32 × 37) + **trasera** (528.02 × 245.18) |
+| Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante, 528.32 × 291.4) + tapa de remate (528.32 × 37) + **trasera** (528.02 × 245.18, con las tres ondas y la rejilla de entrada de aire) |
 | Patica metálica torneada | 4 | d=16 × 8 mm |
 
 **Total de tornillos del case: 48** — 8 M4 de raíl + 10 M5 de esqueleto +
@@ -509,7 +518,7 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
       ([`renders/sam17-case.png`](renders/sam17-case.png)) y trasera
       ([`renders/sam17-case-trasera.png`](renders/sam17-case-trasera.png)).
       La trasera es la que importa: muestra las tres ondas — sierra, triángulo
-      y cuadrada, las tres formas del VCO — que son la firma visual del case y
-      la única ventilación de esa pieza.
+      y cuadrada, las tres formas del VCO — que son la firma visual del case, y
+      por debajo la rejilla de entrada de aire con el IEC embebido.
 - [ ] Cupón cortado y kerf registrado (bloquea el corte de planchas)
 - [ ] Planchas cortadas y ensayo de ensamblaje

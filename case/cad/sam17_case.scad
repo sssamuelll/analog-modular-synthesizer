@@ -403,8 +403,10 @@ module bandeja_base_2d() {
     // No salio gratis: el riel de panel del frente bajaba a y=4.84 y el techo de
     // la plancha esta en y=8, o sea que se metia 3.16 mm dentro del plano del
     // suelo. Subirlo costo 8.46 mm de alto de aparato (ver alto_frontal). Y la
-    // ENTRADA DE AIRE, que era este hueco, vuelve al mismo sitio pero DIBUJADA:
-    // la rejilla de rejilla_entrada() vive en el vuelo, justo aqui delante.
+    // ENTRADA DE AIRE, que era este hueco, se fue a la trasera. Vivio aqui unas
+    // horas como rejilla dibujada en el vuelo y se le veia: el acrilico naranja
+    // es TRASLUCIDO y el campo de ranuras se transparentaba a lo largo del canto
+    // inferior. Ahora el vuelo es plancha maciza y el suelo cierra de verdad.
     v  = bandeja_base_vuelo();
     x0 = ce[0].x - rail/2 - v;
     fondo = ce[1].x + rail/2 - x0;          // canto trasero a ras del rail
@@ -412,7 +414,6 @@ module bandeja_base_2d() {
         plancha(au, fondo);
         fila_agujeros(au, ce[0].x - x0);    // los dos largueros van ENCIMA
         fila_agujeros(au, ce[1].x - x0);
-        rejilla_entrada(au, v);            // la entrada de aire, en el vuelo
         // LA SALIDA DE CABLES DEL CHASIS. Era un campo de ondas de 104 x 32
         // dibujado como VENTILACION, y con la caja de acero encima ya no
         // ventila nada (spec §3.3). El cambio no es solo de nombre: una onda
@@ -464,10 +465,10 @@ module piel_trasera_2d() {
     // Las ondas van derivadas de las dos filas que las rodean: asi no se acercan
     // a un tornillo si un larguero se mueve.
     //
-    // La de abajo subio a 0.35 unas horas el 2026-08-21, cuando la entrada de
-    // aire se probo AQUI y habia que hacerle sitio por debajo. La entrada acabo
-    // en el suelo y esta banda vuelve a su sitio: en esta pieza no hay mas
-    // ventilacion que las tres ondas, que es lo que Samuel pidio dejar.
+    // La de abajo estuvo en 0.35 unas horas para dejarle mas banda a la rejilla
+    // de entrada. Se queda en 0.32: con la rejilla de vuelta aqui la banda libre
+    // da 40.46 mm, que es campo de sobra, y subir la onda solo para engordar la
+    // rejilla mueve el dibujo por una razon que no es de dibujo.
     y_bajas  = f_base + 0.32*(f_tras - f_base);
     y_sierra = f_base + 0.74*(f_tras - f_base);
     // El IEC va CENTRADO en la banda libre que dejan la fila de tornillos por
@@ -481,6 +482,7 @@ module piel_trasera_2d() {
     difference() {
         plancha(au, alto);
         for (y = [f_base, f_tras]) fila_agujeros(au, y);
+        rejilla_entrada(au, f_base, y_bajas);
         translate([au*0.10, y_bajas])  onda("triangulo", au*0.35);
         translate([au*0.55, y_bajas])  onda("cuadrada",  au*0.35);
         translate([au*0.15, y_sierra]) onda("sierra", au*0.70);
@@ -492,44 +494,47 @@ module piel_trasera_2d() {
     }
 }
 
-// LA ENTRADA DE AIRE DEL CASE. Cambio de sitio dos veces el 2026-08-21 y acaba
-// donde empezo: en el suelo. Fue un hueco de 37.96 mm por delante de la bandeja
-// hasta que el suelo se cerro; se probo en la trasera, abajo; y Samuel pidio
-// dejar esa pieza solo con sus tres ondas. Asi que vuelve al suelo, pero
-// DIBUJADA: 51 ranuras en el vuelo de la bandeja en vez de un hueco.
+// LA ENTRADA DE AIRE DEL CASE. Se mudo CUATRO veces el 2026-08-21 y se queda
+// aqui, abajo del todo en la trasera. Vale la pena el recuento porque cada
+// mudanza cerro una pregunta:
 //
-// Donde esta es mejor de lo que parece. Entra por lo mas BAJO del case (y=4
-// contra los 53 de la version trasera), o sea que el tiro de chimenea gana lo
-// que pierde de area. Y no se ve desde ningun angulo normal: el plenum lo dan
-// las paticas de 8 mm, que abren ~13600 mm2 de perimetro, del orden de la propia
-// rejilla, asi que no son ellas el cuello de botella.
+//   1. hueco de 37.96 mm en el suelo   -- no era diseno, era lo que sobraba
+//   2. trasera, abajo                  -- al cerrar el suelo hubo que dibujarla
+//   3. suelo, en el vuelo              -- Samuel dejo la trasera con sus ondas
+//   4. trasera otra vez                -- en el vuelo SE VEIA: el acrilico
+//                                         naranja es traslucido y el campo se
+//                                         transparentaba por el canto de abajo
 //
-// Nacio con 3535 mm2 en ranuras de 18.2, cuando el vuelo eran 30.19. Al correr
-// el larguero delantero hacia atras para dejarle sitio a los modulos, el vuelo
-// paso a 68.85 y la rejilla crecio con el: 11421 mm2 en ranuras de 56.8, y el
-// salto termico bajo de 8.5 a 4.6 K. No se toco nada suyo -- crecio sola porque
-// esta derivada del vuelo y no de un numero escrito a mano.
-//
-// Vive en el VUELO -- por delante del larguero de base delantera --, o sea
-// fuera del camino de carga entre los dos largueros. La plancha sigue siendo el
-// suelo portante donde se apoya el chasis del PSU; esto es el trozo que sobra
-// por delante y que hasta ayer no existia.
+// Va ABAJO a proposito. El aire frio entra por lo mas bajo del piso de la
+// fuente -- que es donde estan el toroide y los reguladores -- y sale por las
+// ranuras del valle y por las ondas, 90 mm mas arriba. Es tiro natural, no
+// adorno; entrar por arriba lo mataria.
 //
 // Ranuras IGUALES a las del valle: mismo ancho, mismo paso HP, misma malla. No
 // es economia de codigo, es que la malla HP es la medida del instrumento y el
 // adorno ES la regla (ver la nota de valle_paso_hp en params.scad).
 //
-// Lo vigila guarda_aire() en clearance_budget, y ya no por area sino por SALTO
-// TERMICO: al mudarse al suelo la entrada quedo mas estrecha que la salida a
-// proposito, asi que "entrada >= salida" dejo de ser el criterio. Lo que hay que
-// exigir es que el aparato no se caliente, y eso se calcula.
-module rejilla_entrada(au, vuelo) {
-    // Las dos orillas son la del canto delantero del case (que es un canto
-    // visto, no un borde cualquiera) y la del larguero que se planta encima.
-    largo = vuelo - 2*valle_margen;
+// Lo vigila guarda_aire() en clearance_budget, y no por area sino por SALTO
+// TERMICO. "Entrada >= salida" fue el criterio unas horas y se rompio en la
+// mudanza 3, a proposito: lo que hay que exigir no es paridad de areas sino que
+// el aparato no se caliente, y eso se calcula.
+module rejilla_entrada(au, f_base, y_bajas) {
+    // Abajo: la fila de M3 necesita su banda maciza, la misma que la espina del
+    // valle (cabeza + arandela). Arriba: el borde inferior de la onda, menos el
+    // puente minimo. Las dos fronteras son piezas reales, no margenes a ojo --
+    // y son las MISMAS que centran el hueco del IEC, que vive dentro de esta
+    // banda y por eso queda embebido en el campo en vez de al lado.
+    y0 = f_base + valle_espina/2 + vent_puente_min;
+    y1 = y_bajas - vent_periodo*0.35 - vent_puente_min;
     n_hp = round(largo_riel/hp);
+    // El IEC se salta por COLUMNAS ENTERAS: una ranura partida por el recorte
+    // deja un diente de acrilico colgando de un lado, que es justo donde el
+    // PMMA rompe. Se aparta media anchura de recorte + media de ranura + puente.
+    x_iec = au - 70 + 24;
+    hueco = (48 + vent_ancho_ranura)/2 + vent_puente_min;
     for (n = [valle_paso_hp : valle_paso_hp : n_hp - valle_paso_hp])
-        translate([n*hp, vuelo/2]) ranura(largo, vent_ancho_ranura);
+        if (abs(n*hp - x_iec) >= hueco)
+            translate([n*hp, (y0 + y1)/2]) ranura(y1 - y0, vent_ancho_ranura);
 }
 
 // --- tapa del valle ----------------------------------------------------
