@@ -47,17 +47,27 @@ BOM = os.path.join(DIR, "bom.csv")
 CONFIRMADO = {
     # Ametherm SL10 5R002, hoja del fabricante (ametherm.com, rev. 2012-03-29):
     # D 10.0 max, T 4.0 max, S 5.1 nom, pata 0.5 nom, 5.0 ohm +-20%, 2.00 A.
-    "NT1": (5.1, 10.0, "hoja Ametherm SL10 5R002"),
+    "NT1": (5.1, 10.0, 0.50, "hoja Ametherm SL10 5R002"),
+    # EPCOS/TDK SIOV StandarD B722*, marzo 2018, p.17 (VRMS = 275 V), fila
+    # B72220S0271K101 = SIOV-S20K275:
+    #     e 10.0 +-1   a 2.0 tip   wmax 21.5   thmax 5.4   hmax 25.5
+    #     lmin 25.0    d 1.0 +-0.05
+    # Y confirma la leccion del toroide otra vez: DOS distribuidores decian
+    # 22.5 mm de ancho y la hoja dice 21.5. Un milimetro, en el numero que
+    # decidio bajar la barrera de red.
+    "RV1": (10.0, 21.5, 1.00, "hoja EPCOS/TDK SIOV StandarD p.17"),
 }
+
+# Holgura minima entre el taladro y la pata que va dentro. IPC-2222 pide para
+# un agujero metalizado 0.25 mm nominal sobre el diametro de la pata, y no
+# baja de 0.15 en ningun caso. Por debajo de eso la pieza entra a presion o no
+# entra: la tolerancia de taladrado de JLC es +-0.08 mm, asi que un agujero
+# nominal de 1.1 puede salir de 1.02.
+HOLGURA_MIN = 0.15
 
 # Lo que falta por confirmar contra la hoja del fabricante, con QUE habria que
 # medir. No se disimula: se lista, se cuenta y se imprime (Principio V).
 SIN_CONFIRMAR = [
-    ("RV1", "S20K275 / V275LA20A",
-     "el diametro del disco CON recubrimiento. Dos distribuidores (TME .eu y "
-     ".com) dicen 22.5 mm y el nombre de la huella dice D21; el courtyard de "
-     "23.00 los cubre, pero un distribuidor no es la hoja",
-     "ese numero decidio bajar la barrera de red de y=128 a y=121 (README v3)"),
     ("J5", "Faston macho 6.3mm PCB (2 patillas)",
      "TODO: el BOM no da referencia de fabricante, asi que no hay hoja que "
      "mirar ni pieza concreta que pedir",
@@ -131,12 +141,18 @@ def main() -> int:
         for ref in quien.split(", "):
             if ref not in CONFIRMADO:
                 continue
-            paso_real, diam_real, fuente = CONFIRMADO[ref]
+            paso_real, diam_real, pata, fuente = CONFIRMADO[ref]
             xs = sorted(p[1] for p in h["pads"])
             paso_huella = max(xs) - min(xs)
+            taladro = min(h["drills"]) if h["drills"] else 0.0
+            holgura = taladro - pata
             print(f"    contra la pieza ({fuente}):")
-            print(f"      paso   pieza {paso_real} mm  vs huella "
+            print(f"      paso     pieza {paso_real} mm  vs huella "
                   f"{paso_huella:.2f} mm")
+            print(f"      cuerpo   pieza {diam_real} mm  vs courtyard "
+                  f"{min(h['crt']):.2f} mm" if h["crt"] else "")
+            print(f"      taladro  pata {pata} mm  vs agujero {taladro} mm  "
+                  f"-> {holgura:+.2f} mm de holgura")
             if abs(paso_huella - paso_real) > 0.5:
                 fallos.append(
                     f"{nom}: {ref} tiene las patas a {paso_real} mm "
@@ -146,6 +162,13 @@ def main() -> int:
             if h["crt"] and min(h["crt"]) < diam_real:
                 fallos.append(f"{nom}: {ref} mide {diam_real} mm de cuerpo "
                               f"({fuente}) y su courtyard {min(h['crt']):.2f}")
+            if holgura < HOLGURA_MIN:
+                fallos.append(
+                    f"{nom}: la pata de {ref} mide {pata} mm ({fuente}) y el "
+                    f"agujero {taladro}: {holgura:.2f} mm de holgura, por "
+                    f"debajo de los {HOLGURA_MIN} que pide IPC-2222. Con la "
+                    f"tolerancia de taladrado de JLC (+-0.08) el agujero "
+                    f"puede salir de {taladro-0.08:.2f} y la pata no entra")
 
         # 4) una huella propia que no usa nadie es una huella que sobra, y una
         #    que usa alguien sin estar aqui la habria cazado ya check_bom.py
