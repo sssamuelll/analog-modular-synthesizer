@@ -1306,7 +1306,7 @@ def _celdas_de_pista(rej, a, b, capa) -> set:
 
 
 def _trazar(r: Ruteo, rej, camino, ancho: float, pad, fin,
-            inicio=None) -> None:
+            inicio=None, capas_ini=(0,)) -> None:
     """Del camino en celdas a tramos y vias de verdad.
 
     Un cambio de capa nunca sobrevive a comprimir() -- exige que los tres
@@ -1335,7 +1335,14 @@ def _trazar(r: Ruteo, rej, camino, ancho: float, pad, fin,
     # exactamente la esquina del pad de R7, y KiCad la daba por desconectada
     # con toda la razon. Rematar al centro es siempre legal -- de la esquina
     # al centro se va por dentro del propio pad.
-    if inicio is not None and tramos[0][1][0] != inicio:
+    # ...pero solo si ese tramo esta en una capa donde el pad TIENE cobre. El
+    # primer punto del camino puede caer en B.Cu -- el cobre ya trazado de la
+    # red esta en las dos caras -- y si ademas cae dentro del bounding box de
+    # un pad SMD, rematar al centro creaba un tramo de B.Cu que nacia en un
+    # pad que solo existe en F.Cu: tres rabitos de 0.5 mm colgando, uno por
+    # cada vez que paso.
+    if (inicio is not None and tramos[0][1][0] != inicio
+            and tramos[0][0] in capas_ini):
         tramos[0][1].insert(0, inicio)
     for i, (capa, pts) in enumerate(tramos):
         if len(pts) > 1:
@@ -1530,10 +1537,12 @@ def rutear_resto(r: Ruteo, escapes: dict) -> list[str]:
             n_antes = len(r.tracks)
             # de que pad nace el camino: el que contenga su primer punto
             x0, y0 = rej.a_mm(camino[0][0], camino[0][1])
-            arranque = next((punta(h) for h in hechos
-                             if h[1] - 0.01 <= x0 <= h[3] + 0.01
-                             and h[2] - 0.01 <= y0 <= h[4] + 0.01), None)
-            _trazar(r, rej, camino, CALIBRES[cal], obj, punta(obj), arranque)
+            nace_en = next((h for h in hechos
+                            if h[1] - 0.01 <= x0 <= h[3] + 0.01
+                            and h[2] - 0.01 <= y0 <= h[4] + 0.01), None)
+            _trazar(r, rej, camino, CALIBRES[cal], obj, punta(obj),
+                    punta(nace_en) if nace_en else None,
+                    tuple(nace_en[5]) if nace_en else ())
             # lo recien trazado pasa a ser obstaculo para el resto de redes,
             # y origen para el resto de pads de esta
             for rd, capa, pts, anc in r.tracks[n_antes:]:
@@ -1612,6 +1621,23 @@ TRACKS: list[tuple[str, str, list[tuple[float, float]], float]] = []
 # tienen EP que los lleve gratis).
 VIAS: list[tuple[float, float, str, float, float]] = []
 
+# Referencias de serigrafia que hay que apartar a mano. KiCad las pone por
+# defecto justo encima del cuerpo, y ahi chocan cuando dos piezas grandes
+# quedan proximas: la seda de C1 acaba en y=100.3 y la referencia de C2
+# empezaba en 100.75, 0.45 mm de separacion sobre un minimo de 0.5. Los
+# cuatro casos salieron del DRC real, no de mirar el dibujo.
+SILK_REF = {
+    # AL LADO y no debajo: debajo de estos dos no hay 1.2 mm libres. El
+    # cuerpo acaba en y=118.3 y la RANURA de la barrera de red empieza en
+    # 120, asi que la referencia caia justo en medio (silk_edge_clearance
+    # contra Edge.Cuts). El hueco de 5 mm que queda entre los dos bulk si
+    # tiene sitio.
+    "C2":  (124.0, 110.0),
+    "C13": (172.0, 110.0),
+    "C30": (52.0, 104.2),     # debajo del 0805, fuera del rotulo del divisor
+    "RV1": (63.0, 147.5),     # estaba a 122.3, encima de la ranura de la red
+}
+
 MOUNTING = [("H1", 7.0, 7.0), ("H2", 193.0, 7.0),
             ("H3", 7.0, 143.0), ("H4", 193.0, 143.0)]
 MOUNT_D = 3.2                   # M3, SIN pad de cobre (igual que v1)
@@ -1657,7 +1683,11 @@ TEXTOS_SILK: list[tuple[str, float, float, float, float]] = [
     # nadie. Esta linea es ese "nadie". Va entre las dos filas del divisor,
     # que es donde mira quien las suelda.
     ("R21 R22 R23 = 100k (AL RIEL)", 66.0, 84.5, 0.9, 0),
-    ("R24 R25 R26 = 20k (A LA REFERENCIA)", 66.0, 99.8, 0.9, 0),
+    # x=71 y no 66 como su gemelo de arriba: centrado en 66 el rotulo
+    # llega por la izquierda hasta x=53.5 y se come el "C30" de la
+    # serigrafia (silk_overlap en el DRC real). Arriba no pasa porque
+    # ahi no hay ninguna pieza a esa altura.
+    ("R24 R25 R26 = 20k (A LA REFERENCIA)", 71.0, 99.8, 0.9, 0),
 
     # Rotulo de J2. Es el bug del #121 puesto en cobre: el pin 1 es -12V, no
     # +12V. Quien monte el mazo lee ESTO, no el esquematico.
@@ -2401,6 +2431,12 @@ def main() -> None:
         board.Add(fp)
 
     # --- F1/F2: textos libres de serigrafia (review fase C, ver TEXTOS_SILK) ---
+    for ref, (rx, ry) in SILK_REF.items():
+        fp = board.FindFootprintByReference(ref)
+        assert fp, f"SILK_REF nombra una pieza que no existe: {ref}"
+        fp.Reference().SetPosition(pcbnew.VECTOR2I(mm(rx), mm(ry)))
+    print(f"referencias de serigrafia apartadas: {len(SILK_REF)}")
+
     for texto, x, y, tam, rot in TEXTOS_SILK:
         texto_silk(board, texto, x, y, tam, rot)
     print(f"textos de serigrafia libres añadidos: {len(TEXTOS_SILK)}")
@@ -2444,18 +2480,32 @@ def main() -> None:
     outline.NewOutline()
     for x, y in [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]:
         outline.Append(pcbnew.VECTOR2I(mm(x), mm(y)))
-    # ronda 2, Important 3: H4 (taladro de fijacion NPTH) cae DENTRO de
-    # ISLA_REF (ensanchada esta ronda para de-densificar la isla ultra) --
-    # sin recorte, la zona pouraba cobre encima (DRC real: hole_clearance
-    # 0mm, hace falta 0.25mm). Patron v1 para taladros de fijacion: sin
-    # cobre alrededor. Recorte circular con margen comodo sobre el minimo.
-    h4x, h4y = next((x, y) for ref, x, y in MOUNTING if ref == "H4")
-    r_keepout = MOUNT_D / 2 + 0.4  # 1.6 + 0.4 = 2.0mm
-    hole_idx = outline.NewHole(0)
-    for i in range(16):
-        ang = 2 * math.pi * i / 16
-        outline.Append(mm(h4x + r_keepout * math.cos(ang)),
-                        mm(h4y + r_keepout * math.sin(ang)), 0, hole_idx)
+    # EL RECORTE DE H4 APUNTABA FUERA DEL CONTORNO. Se escribio cuando la
+    # placa medía 150x200 y H4 caia dentro de ISLA_REF; al girarla a 200x150
+    # (Task 6) el taladro se fue a (193, 143) y el recorte se quedo -- un
+    # "agujero" fuera de su propio poligono, que es geometria invalida.
+    #
+    # Lo que hacia, medido: la zona de 3256 mm2 sobre ISLA_REF se rellenaba
+    # como UN trozo de 12.24 mm2 centrado en (193, 143), o sea alrededor del
+    # taladro y a 140 mm de donde tenia que estar. De ahi salian el
+    # `isolated_copper` del DRC y los seis pads de GNDREF sin conectar, y muy
+    # probablemente tambien el SEGFAULT del ZONE_FILLER.
+    #
+    # Ahora se recorta lo que de verdad haya dentro, y si no hay nada no se
+    # recorta. El patron de la v1 para taladros de fijacion sigue igual: sin
+    # cobre alrededor, porque el puente chasis-masa es uno solo y va por J5.
+    r_keepout = MOUNT_D / 2 + 0.4            # 1.6 + 0.4 = 2.0 mm
+    dentro = [(hx, hy) for _ref, hx, hy in MOUNTING
+              if x1 - r_keepout < hx < x2 + r_keepout
+              and y1 - r_keepout < hy < y2 + r_keepout]
+    for hx, hy in dentro:
+        hole_idx = outline.NewHole(0)
+        for i in range(16):
+            ang = 2 * math.pi * i / 16
+            outline.Append(mm(hx + r_keepout * math.cos(ang)),
+                           mm(hy + r_keepout * math.sin(ang)), 0, hole_idx)
+    print(f"taladros recortados de la zona GNDREF: {len(dentro)} {dentro}")
+
     # los defaults de fabrica de pcbnew para una ZONE nueva son 0.5mm de
     # clearance propio y conexion termica con spoke de 0.5mm -- muy por
     # encima del resto de la placa (CLEARANCE_MM=0.127, recalibrado a
@@ -2466,6 +2516,13 @@ def main() -> None:
     # resto de la placa.
     zona.SetLocalClearance(mm(CLEARANCE_MM))
     zona.SetPadConnection(pcbnew.ZONE_CONNECTION_FULL)
+    # Los trozos de relleno que no tocan nada se TIRAN. El default de KiCad es
+    # conservarlos, y entonces el gerber lleva cobre que no conecta con nada:
+    # el DRC lo canta como `isolated_copper` y en la placa real es una isla
+    # flotante junto a la referencia de los divisores, que es el peor sitio
+    # donde dejar cobre sin potencial definido. Con la isla ultra ruteada
+    # encima, la zona se trocea por fuerza y esos restos aparecen solos.
+    zona.SetIslandRemovalMode(pcbnew.ISLAND_REMOVAL_MODE_ALWAYS)
     zona.SetIsFilled(False)
     board.Add(zona)
     # LA ZONA SE ANADE SIN RELLENAR, Y NO ES UN OLVIDO. `ZONE_FILLER.Fill()`
