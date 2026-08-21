@@ -90,6 +90,159 @@ el aire caliente, así que cerrarla toca el issue #46.
 
 ---
 
+## T4 — La trasera se empotra y sella  🔸 PASOS 1–3 HECHOS (2026-08-21)
+
+**Decidido el 2026-08-21.** Samuel pidió que el acrílico encaje a la perfección
+y selle el case. Eso **mata la junta de sombra**, que la spec §5 nombra como
+lenguaje visual («tornillería inox de botón: reservados a las pieles
+flotantes»). Se escribe aquí porque es una decisión de forma y no un ajuste: la
+trasera deja de leerse como paneles suspendidos y pasa a ser una cara continua.
+
+### Lo que hay hoy, medido
+
+Las pieles **no están empotradas: cuelgan**. Su cara exterior queda 10 mm por
+detrás del canto de los costados, sobre 12 separadores de 5 mm, y miden 518.32
+en un hueco de 528.32.
+
+| | |
+|---|---|
+| cara trasera entre costados | 1308.8 cm² |
+| lo que tapan las dos pieles | 1100.9 cm² |
+| **hueco directo** | **207.9 cm²** |
+| — franja de arriba (32.3 × 528) | 170.7 cm² |
+| — junta de sombra y canto de abajo | 37.2 cm² |
+| ondas de ventilación | 51.1 cm² |
+
+### El número térmico ya existía, y sale a favor
+
+El #46 pide comparar el área de ondas contra la potencia del §4 de la spec de la
+fuente, y esa potencia está escrita ahí: LM2941 ~2.7 W, LM2991 ~2.9 W, LT3045×2
+~0.4 W, LT3094×2 ~0.33 W = **~6.3 W** en reguladores, más pérdidas del trafo (no
+itemizadas).
+
+Sellada la trasera quedan los **51.1 cm² de las tres ondas** como escape contra
+~169 cm² de entrada por el suelo delantero. Tiro de chimenea, área efectiva
+dominada por la salida (48.9 cm²), h ≈ 0.15 m, C_d = 0.65, aire a 20 °C:
+
+```
+P = 0.38 · ΔT^1.5      6.3 W  ->  ΔT ~ 6 °C
+                        10 W  ->  ΔT ~ 9 °C
+```
+
+**SUPUESTO, no medido**: C_d, la altura efectiva de chimenea y las pérdidas del
+transformador. Pero el orden de magnitud dice dos cosas útiles: sellar no es lo
+que calienta el case, y **las ondas no hay que agrandarlas**.
+
+### Dos hallazgos que van al #46, no a esta tanda
+
+1. **El #46 cuenta 4 motivos de onda y hay 3.** El cuarto vivía en el suelo
+   (`bandeja_base_2d`, «ventilación bajo el PSU») y se convirtió en la salida de
+   cables cuando entró el chasis de acero. El inventario del issue está viejo.
+2. **El chasis del PSU es una caja de acero cerrada.** Su única abertura es la
+   ranura de cables de 88 × 26 = **22.9 cm²**, y está **en el suelo**, que es el
+   peor sitio para un escape. Los ~6.3 W se disipan dentro de esa caja y al aire
+   del case solo llegan por la chapa: ventilar el case no ventila el chasis.
+
+---
+
+- [x] **Paso 1: la puerta primero — `alineacion()` no mira la profundidad**
+
+`piel_inferior` declara su fila de abajo contra `base trasera`, cuya cara trasera
+está en x=277.22, y las otras tres en 291.22. Con la piel a 296.22 esa fila pide
+un separador de **19 mm** y el BOM solo lista los de 5. `alineacion()` no lo caza
+porque para las pieles solo compara el eje Y.
+
+Antes de mover nada: que la puerta compare **también el eje de apoyo**. Cada fila
+declara un larguero; hoy se verifica que coincida en un eje y se ignora el otro.
+La piel apoya en la cara del larguero, así que esa distancia es parte del
+anclaje, no un detalle.
+
+```bash
+python case/clearance_budget.py ; echo "EXIT=$?"
+```
+
+Esperado: **ROJO** citando la fila de abajo de `piel_inferior` a 14 mm de donde
+apoya. Rojo = la puerta mide. Si sale verde, la puerta nueva está mal escrita.
+
+- [x] **Paso 2: los cuatro largueros traseros al mismo plano**
+
+En `centros_esqueleto()` de `sam17_case.scad` **y** en `_centros_esqueleto()` de
+`clearance_budget.py`, a la vez y en el mismo commit:
+
+```
+base trasera        fondo - r - radio_perfil   ->  fondo - r - t_acrilico
+entrepiso trasero   fondo - r                  ->  fondo - r - t_acrilico
+remate superior     fondo - r                  ->  fondo - r - t_acrilico
+repisa              fondo - r                  ->  fondo - r - t_acrilico
+```
+
+Con eso la cara del larguero queda en `fondo - t_acrilico` y la piel apoyada
+encima remata **exactamente en el plano trasero**: enrasada, sin rebaje, sin
+fresado 2.5D, sin dejar de ser un DXF plano.
+
+Verificado que el de base cabe: a y=8 la curva del canto trasero está en
+x=289.87 y la esquina del riel movido en 286.22. El comentario que hoy justifica
+el `- radio_perfil` («adelantarlo solo compra fondo de bandeja y no hace falta»)
+se reescribe: sí hacía falta, y por esto.
+
+- [x] **Paso 3: las pieles se empotran**
+
+`gap_sombra` deja de ser junta de sombra. Las pieles pasan a ancho completo menos
+una **holgura de ajuste por lado** —parámetro nuevo, y libre: lo pone la
+tolerancia de corte del taller (Schaeffer publica 0.05–0.10 mm), no el gusto— y
+su X pasa de `P[6].x + gap_sombra + t_acrilico` a `P[6].x - t_acrilico`.
+
+Mueren los 12 separadores M4 y sus 24 tornillos. Las pieles se atornillan con
+tuerca T al larguero, como las bandejas.
+
+- [x] **Paso 4: cerrar la franja de arriba — MEDIDO, y mata una opcion**
+
+Los 32.34 mm de arriba son **170.9 cm²**, el hueco mas grande que le queda al
+case. La pregunta era si cabe un larguero en la esquina de arriba para
+atornillar ahi la tapa de remate. **No cabe, y no es opinion.** Los tres techos
+de `_y_remate` para un larguero en `x_tr = 276.22`:
+
+| techo | limite |
+|---|---|
+| el acrilico del techo (radio_remate = 2) | y ≤ 235.73 |
+| el plano del panel de arriba | y ≤ 244.46 |
+| **el BARRIDO del Z-Rail al abrir la tapa** | **y ≤ 200.38** ← manda |
+
+Un larguero ahi arriba tendria su cara superior **37.34 mm por debajo del
+techo**. La tapa de la fila de arriba gira sobre su propio M4 y barre ese
+volumen: cualquier cosa que se meta ahi la deja sin abrir. Es la misma cuenta
+que empujo al larguero de remate 47 mm abajo en su dia.
+
+**Muere la salida 1** (larguero nuevo). Quedan, y son de Samuel:
+
+2. La tapa de remate **anclada a los dos costados** por sus puntas. Sin larguero
+   y sin pegamento, pero 528 mm apoyados solo en los extremos.
+3. **Junta pegada de dos cantos** en vez de uno: con la piel superior subida
+   hasta el techo, la tapa pega contra su canto Y contra el remate. Es peor
+   que atornillar y mejor que la junta de hoy, que pega por un solo canto
+   contra una pared de 1.2 mm.
+4. **Subir la piel superior hasta el techo y que la tapa apoye en su canto.**
+   Cierra la parte vertical (los 170.9 cm²) sin pieza nueva ni pegamento; deja
+   abierta la meseta horizontal, 29 mm × 528 desde el apex hasta la piel.
+
+- [ ] **Paso 5: BOM y documentos**
+
+Fuera 12 standoffs M4 de 5 y 24 M4 de botón; dentro los M3 + tuerca T de las dos
+pieles. **Recontar con el eco del modelo**, no a mano — el total de 71 cambia.
+README: la sección de dimensiones y el orden de ensamblaje paso 6, que hoy dice
+«12 separadores M4 de 5 mm, tres columnas». Spec §5: muere la junta de sombra.
+
+- [ ] **Paso 6: las dos puertas, export, los dos renders**
+
+El render trasero es el que juzga esta tanda — es literalmente la cara que se
+cambió. Regenerarlo y mirarlo, no solo leer que la puerta salió verde.
+
+- [ ] **Paso 7: commit, PR, y comentar el #46** con las tres cosas que esta tanda
+      le aporta: el área real de ondas (51.1 cm²), que los motivos son 3 y no 4, y
+      que el chasis es una caja cerrada con su única salida en el suelo.
+
+---
+
 ## T2 — El chasis del PSU se monta sobre los largueros
 
 Hoy el chasis de acero pasa **entre** los dos largueros de base y se apoya en la

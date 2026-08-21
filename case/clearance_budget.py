@@ -221,7 +221,8 @@ def _y_remate(p: dict[str, float], P: list[tuple[float, float]],
     # este techo nunca mandaba y el error dormia; con el marco en 8 manda, y con
     # la version vieja la esquina asomaba 2.54 mm por delante del panel.
     he_cs = r * (abs(math.cos(a2)) + abs(math.sin(a2)))
-    por_cara = P[3][1] + (math.cos(a2) * (fondo(p) - r - P[3][0])
+    x_tr = fondo(p) - r - p["t_acrilico"]
+    por_cara = P[3][1] + (math.cos(a2) * (x_tr - P[3][0])
                           - (he_cs + p["t_panel"])) / math.sin(a2)
     # el larguero vive pegado al plano trasero (x = fondo - r), o sea que su
     # esquina de atras cae donde el arco de la esquina trasera de arriba ya bajo
@@ -276,16 +277,22 @@ def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
     # encima en cuanto el vertice bajo.
     x_bd = cr[0][0] + _he_er(p, p["angulo_inferior"])[0] + p["holgura_rail"] + r
     y_bd = p["t_base"] + r
+    # Los CUATRO largueros traseros comparten X, y por eso es UNA cota y no
+    # cuatro copias: la cara donde apoyan las pieles tiene que ser un plano.
+    # Retirados t_acrilico del canto para que la piel atornillada encima remate
+    # EXACTAMENTE en el plano trasero. El de base estuvo 14 mm mas adelante
+    # (- radio_perfil) y por ahi se colo el fallo que caza apoyo().
+    x_tr = fondo(p) - r - p["t_acrilico"]
     return [(x_bd, y_bd),
-            (fondo(p) - r - p["radio_perfil"], y_bd),
-            (x_ed, y_ep), (fondo(p) - r, y_ep),
+            (x_tr, y_bd),
+            (x_ed, y_ep), (x_tr, y_ep),
             # Remate superior: su Y se DERIVA de la cara que lo limita, no es
             # P[5].y - r. Al acortar el marco de arriba para que la esquina se
             # lea como punta, el rincon se cierra y un cuadrado de 20 pegado
             # al vertice asomaria por la cara superior. Centro a r + t_panel
             # de distancia perpendicular al plano del panel de arriba.
-            (fondo(p) - r, _y_remate(p, P, cr, r)),
-            (fondo(p) - r, P[3][1] + 15),
+            (x_tr, _y_remate(p, P, cr, r)),
+            (x_tr, P[3][1] + 15),
             # valle: el septimo, y el unico que existe por una plancha y no por
             # una union. Centrado bajo la tapa del valle para que los dos vuelos
             # sean iguales, y de paso ata los costados por la cintura.
@@ -330,7 +337,7 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     cr = _centros_rail(p, P)
     ce = _centros_esqueleto(p, P, cr)
     rail, t_cheek = p["rail"], p["t_cheek"]
-    t_acr, gap = p["t_acrilico"], p["gap_sombra"]
+    t_acr, hol = p["t_acrilico"], p["hol_piel"]
     ancho_total = p["ancho_total"]
 
     angs = [p[k] for k in ANGS_CR]
@@ -372,7 +379,10 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # bandeja_entrepiso: R2 — canto trasero a ras de entrepiso-trasero,
     # tope (no fondo) a ras de P3.y
     x0_be = ce[2][0] - rail / 2
-    fondo_be = fondo(p) - ce[2][0] + rail / 2
+    # canto trasero a ras de SU larguero, no del plano exterior del case: al
+    # retirar el trasero t_acrilico para empotrar la piel, cotar contra fondo()
+    # dejaba la bandeja 5 mm larga y metida dentro de la piel.
+    fondo_be = ce[3][0] + rail / 2 - x0_be
     planchas.append(("bandeja_entrepiso", x0_be, x0_be + fondo_be,
                      P[3][1] - t_acr, P[3][1], t_cheek, ancho_total - t_cheek))
     filas += [("bandeja_entrepiso", "delantera", "x", x0_be + rail / 2,
@@ -391,8 +401,8 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # piel_inferior: R1 — volada hacia +X mas alla de prof_inferior
     alto_pi = ce[3][1] - ce[1][1] + 30
     y0_pi = ce[1][1] - 15
-    planchas.append(("piel_inferior", P[6][0] + gap, P[6][0] + gap + t_acr,
-                     y0_pi, y0_pi + alto_pi, t_cheek + gap, ancho_total - t_cheek - gap))
+    planchas.append(("piel_inferior", P[6][0] - t_acr, P[6][0],
+                     y0_pi, y0_pi + alto_pi, t_cheek + hol, ancho_total - t_cheek - hol))
     filas += [("piel_inferior", "inferior", "y", y0_pi + 15, "base trasera"),
               ("piel_inferior", "superior", "y", y0_pi + alto_pi - 15,
                "entrepiso trasero")]
@@ -400,8 +410,8 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # re-anclada a la repisa (ce[5]) en vez de entrepiso trasero (R6)
     alto_ps = ce[4][1] - ce[5][1] + 30
     y0_ps = ce[5][1] - 15
-    planchas.append(("piel_superior", P[6][0] + gap, P[6][0] + gap + t_acr,
-                     y0_ps, y0_ps + alto_ps, t_cheek + gap, ancho_total - t_cheek - gap))
+    planchas.append(("piel_superior", P[6][0] - t_acr, P[6][0],
+                     y0_ps, y0_ps + alto_ps, t_cheek + hol, ancho_total - t_cheek - hol))
     filas += [("piel_superior", "inferior", "y", y0_ps + 15, "repisa"),
               ("piel_superior", "superior", "y", y0_ps + alto_ps - 15,
                "remate superior")]
@@ -515,6 +525,58 @@ def alineacion(p: dict[str, float]) -> list[str]:
                 f"rail mas cercano es '{nm_cerca}' a {d_cerca:+.2f} mm")
     print(f"alineacion: {len(filas)} filas de agujeros revisadas, desvio "
           f"maximo {peor:.2f} mm (tolerancia {TOL_ALINEACION:.2f})")
+    return fallos
+
+
+def apoyo(p: dict[str, float]) -> list[str]:
+    """ANCLAJE, el otro eje: las filas de una misma placa tienen que apoyar a
+    la MISMA distancia de la cara de su larguero.
+
+    alineacion() verifica que cada fila caiga en la centerline de su rail, y lo
+    hace sobre el eje que RECORRE la placa. El eje perpendicular -- lo que
+    separa la placa de la cara del larguero donde se apoya -- no lo miraba
+    nadie, y por ahi se colo esto: piel_inferior declara su fila de abajo
+    contra "base trasera", un larguero que vive 14 mm mas adelante que los
+    otros tres traseros (lleva un - radio_perfil que los demas no llevan). La
+    altura casa al micron y la profundidad no, asi que esa fila pide un
+    separador de 19 mm mientras el BOM lista los doce de 5.
+
+    Lo que se exige NO es una distancia concreta -- cuanto vale el separador lo
+    decide el diseno -- sino que las filas de una misma placa COINCIDAN: el
+    separador de una placa es uno solo, y si dos filas apoyan a distancias
+    distintas hay una que no apoya. Con una sola fila no hay nada que comparar.
+    """
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    ce = _centros_esqueleto(p, P, cr)
+    esqueleto = dict(zip(NOMBRES_CE, ce))
+    _, planchas, filas = _cajas_solidas(p)
+    cajas = {c[0]: c[1:] for c in planchas}
+    r = p["rail"] / 2
+    fallos: list[str] = []
+    por_placa: dict[str, list[tuple[str, float]]] = {}
+    for placa, fila, eje, _coord, rail_decl in filas:
+        if rail_decl not in esqueleto or placa not in cajas:
+            continue                       # de eso ya se queja alineacion()
+        sup = "y" if eje == "x" else "x"
+        x0, x1, y0, y1, _z0, _z1 = cajas[placa]
+        lo, hi = (x0, x1) if sup == "x" else (y0, y1)
+        c = esqueleto[rail_decl][0 if sup == "x" else 1]
+        hueco = lo - (c + r) if lo >= c else (c - r) - hi
+        por_placa.setdefault(placa, []).append((fila, hueco))
+    for placa, filas_placa in sorted(por_placa.items()):
+        if len(filas_placa) < 2:
+            continue
+        huecos = [h for _, h in filas_placa]
+        if max(huecos) - min(huecos) > TOL_ALINEACION:
+            detalle = ", ".join(f"{nm} a {h:.2f}" for nm, h in filas_placa)
+            fallos.append(
+                f"apoyo [{placa}]: sus filas apoyan a distancias distintas de "
+                f"la cara de su larguero ({detalle} mm). El separador de una "
+                f"placa es UNO, asi que la que se sale no apoya en nada: o el "
+                f"larguero se mueve, o esa fila declara otro")
+    print(f"apoyo: {len(por_placa)} placas revisadas, "
+          f"{sum(len(v) for v in por_placa.values())} filas")
     return fallos
 
 
@@ -650,7 +712,6 @@ FRESA_MIN_D = 1.0
 
 # Largos de separador M4 que existen en catalogo. No es una lista de gustos: un
 # separador se compra, no se mecaniza, y pedir 5.7 mm significa torneado a medida.
-LARGOS_STANDOFF = (4, 5, 6, 8, 10, 12, 15, 18, 20, 25, 30, 35, 40)
 
 
 def guarda_parametros_vivos(p: dict[str, float]) -> None:
@@ -678,29 +739,13 @@ def guarda_parametros_vivos(p: dict[str, float]) -> None:
         f"el (hoy van de punta a punta) y que agujeros lleva ese costado.")
 
 
-def guarda_standoff(p: dict[str, float]) -> None:
-    """El separador de las pieles tiene que ser una pieza comprable.
-
-    Las dos pieles van voladas: se atornillan a doce separadores M4 y no tocan
-    el cuerpo. La distancia a la que quedan NO es un parametro aparte -- es
-    gap_sombra, el mismo numero que las separa en el modelo. O sea que
-    gap_sombra ES el largo del separador, aunque no lo diga su nombre.
-
-    El issue #52 pedia esto cuando el case todavia tenia zocalo, con sus dos
-    standoffs de 33.25 y 7.00 mm y el miedo de que el cuerpo del de arriba
-    invadiera un riel girado. El zocalo se elimino y ese miedo se fue con el:
-    quedan doce separadores, todos iguales, todos entre piel y cuerpo, sin nada
-    girado cerca. Lo que sobrevive del issue es la otra mitad -- que el numero
-    sea comprable --, y eso es lo que se comprueba aqui.
-
-    Mismo criterio que marco_sup con el espesor de plancha: hay cotas que no las
-    elige el diseno sino el catalogo, y confundirlas cuesta un torneado."""
-    assert p["gap_sombra"] in LARGOS_STANDOFF, (
-        f"gap_sombra = {p['gap_sombra']} es el largo del separador de las pieles, "
-        f"y no esta en catalogo. Los que se compran: {LARGOS_STANDOFF}. Un valor "
-        f"fuera de esa lista significa mandar tornear doce piezas.")
-    print(f"standoff: 12 separadores M4 de {p['gap_sombra']:.0f} mm "
-          f"(= gap_sombra), largo de catalogo")
+# guarda_standoff() vivio aqui hasta el 2026-08-21. Comprobaba que gap_sombra
+# -- que ERA el largo de los doce separadores de las pieles -- estuviera en
+# catalogo, para no mandar tornear doce piezas. Murio con su sujeto: al
+# empotrar las pieles contra la cara de los largueros no hay separador que
+# comprar, y LARGOS_STANDOFF se fue con ella. Lo que aquella guarda no miraba
+# -- si las dos filas de una piel apoyan a la MISMA distancia -- lo mira ahora
+# apoyo(), y es justo por ahi por donde se colaba el fallo real.
 
 
 def guarda_fresado(p: dict[str, float]) -> None:
@@ -1171,7 +1216,6 @@ def main() -> int:
     canario_alineacion(p)
     guarda_piso(p)
     guarda_fresado(p)
-    guarda_standoff(p)
     guarda_parametros_vivos(p)
     guarda_escalon(p)
     guarda_tapa(p)
@@ -1267,6 +1311,7 @@ def main() -> int:
           "puente de ventilacion fragil para el espesor")
     fallos.extend(solapes(p))
     fallos.extend(alineacion(p))
+    fallos.extend(apoyo(p))
 
     print(f"perfil: alto_total={g['alto_total']:.1f}  "
           f"entrepiso={g['y_entrepiso']:.1f}  ancho_util={g['ancho_util']:.0f}")
@@ -1299,12 +1344,13 @@ def main() -> int:
 #   * par de apriete sobre acrilico       -> probeta del cupon (spec §11)
 #   * termica de la fuente v2             -> spec PSU v2 y su validacion
 #   * nesting de planchas en el stock     -> lienzo del Task 5, a ojo
-#   * largo de standoff / distancia perpendicular placa<->rail: alineacion()
-#     verifica que la fila caiga en la centerline de un rail de esqueleto,
-#     no cuanto hay entre la placa y ese rail — en las piezas voladas esa
-#     distancia ES el largo del standoff (dato de compra del BOM, no una
-#     holgura): 7 mm el par inferior del zocalo, ~33 el superior, 5 las
-#     pieles. Se cierra midiendo los standoffs contra el modelo al comprar
+#   * (CERRADO el 2026-08-21) distancia perpendicular placa<->rail. Decia que
+#     alineacion() verifica que la fila caiga en la centerline de un rail pero
+#     no cuanto hay entre la placa y ese rail. Ahora lo verifica apoyo(): exige
+#     que todas las filas de una placa apoyen a la MISMA distancia, que es la
+#     forma comprobable de la regla — el separador de una placa es uno solo.
+#     Con eso salio el fallo que este hueco tapaba: la fila de abajo de
+#     piel_inferior apoyaba 14 mm mas lejos que la de arriba
 #   * paneles inclinados (1.6 mm, PCB de aluminio de modulo) en solapes():
 #     su ajuste lo resuelve la rotacion de railes (R3), no un AABB — un
 #     rectangulo largo y fino en diagonal sobreestima demasiado con caja

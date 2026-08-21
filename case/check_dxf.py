@@ -392,12 +392,13 @@ def agujeros_donde_toca() -> list[str]:
     # columnas fijas, la del medio porque con solo las esquinas el vano de 518
     # se descuelga 1.76 mm de peso propio. Meterlas en el mismo saco daba ROJO
     # en la primera corrida de esta puerta, y el fallo era del saco.
-    # Y las pieles ni siquiera son igual de anchas: se meten gap_sombra por cada
+    # Y las pieles ni siquiera son igual de anchas: se meten hol_piel por cada
     # lado (piel_inferior_2d y piel_superior_2d lo definen asi). Usar el ancho
-    # util del case aqui daba la columna del medio 5 mm corrida, que es
-    # exactamente el tipo de fallo que esta puerta busca -- solo que en la
-    # puerta y no en la pieza.
-    au_piel = au - 2 * p["gap_sombra"]
+    # util del case aqui daba la columna del medio corrida, que es exactamente
+    # el tipo de fallo que esta puerta busca -- solo que en la puerta y no en la
+    # pieza. Con las pieles empotradas ese margen bajo de 5 mm a 0.15, pero la
+    # cuenta es la misma y por eso sigue leyendo el parametro.
+    au_piel = au - 2 * p["hol_piel"]
     REJILLA_FILA = [e * (i + 0.5) for i in range(n)]
     REJILLA_PIEL = [15.0, au_piel / 2, au_piel - 15.0]
     GRIDS = {"piel_inferior": REJILLA_PIEL, "piel_superior": REJILLA_PIEL}

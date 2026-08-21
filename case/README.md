@@ -46,6 +46,22 @@ presupuesto, y ninguna se buscó: la tapa de la fila de arriba **abre 180°**
 **11.33 mm** contra los largueros de base —era «la cota más justa del
 montaje»— y el fondo libre de la bandeja sube de 46.7 a 62.7 mm.
 
+**La trasera va empotrada y sella** (2026-08-21). Hasta esa fecha las dos
+pieles **flotaban**: colgaban de doce separadores, con su cara exterior 10 mm
+por detrás del canto de los costados y 5 mm de aire por los cuatro lados — la
+junta de sombra. Ahora su cara exterior cae exactamente en el plano trasero, con
+`hol_piel` = 0.15 mm por lado de holgura de montaje, y el hueco directo de la
+cara trasera baja de **207.9 cm² a 170.9**, que es lo que falta cerrar arriba.
+
+Para que enrasen, **los cuatro largueros traseros comparten X**
+(`x_tr = fondo − rail/2 − t_acrilico`), y la piel atornillada sobre su cara
+remata en el canto. El de base estaba 14 mm más adelante que los otros tres, y
+por ahí se había colado un fallo real: la fila de abajo de `piel_inferior` pedía
+un separador de 19 mm mientras el BOM listaba los de 5. Lo caza ahora `apoyo()`
+en `clearance_budget.py`, la puerta nueva que exige que **todas las filas de una
+placa apoyen a la misma distancia** de la cara de su larguero — porque el
+separador de una placa es uno solo. `alineacion()` solo miraba un eje.
+
 **Kerf: 0.** El proceso es **fresado CNC**, no láser (decidido el
 2026-08-17). El CAM del taller compensa el radio de herramienta como parte
 normal del trabajo, así que la pieza sale a la cota del dibujo. Cero no
@@ -204,9 +220,7 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Larguero perfil 2020 | **7** | de 528.32 mm cada uno: 2 de base, 2 de entrepiso, remate superior, repisa y valle |
 | Tornillo **M4** | **8** | entran de punta por el costado y **roscan en el propio Z-Rail** (viene con M4 taladrado a 3.3 de fábrica). Sin tuerca, sin inserto. **No vienen con el raíl.** 4 de hombro (los ejes de giro) + 4 de mano (los cierres) |
 | Tornillo M5 botón + tuerca T | **14** | 2 por larguero 2020, por la punta, desde el costado |
-| Tornillo M3 + tuerca T M3 | **25** | las planchas a los largueros: base 10, entrepiso 10, tapa del valle 5. Entran por la RANURA, no por la punta |
-| Standoff M4 de 5 mm | 12 | solo las dos pieles, voladas. Tres columnas: con dos, el vano de 518 mm se descuelga 1.76 mm de peso propio |
-| Tornillo M4 botón + arandela | 24 | con los standoffs de arriba |
+| Tornillo M3 + tuerca T M3 | **37** | las planchas a los largueros: base 10, entrepiso 10, tapa del valle 5, **piel inferior 6, piel superior 6**. Entran por la RANURA, no por la punta |
 | Arandela ANCHA d16 | 4 | **no opcional**: en los ejes de giro. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 MPa y aguanta |
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa. **Sustituye al amortiguador**, que se eliminó |
 | Plancha acrílico t=5 mm | **4** | entrepiso, tapa del valle, piel inf., piel sup. |
@@ -214,8 +228,10 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Adhesivo estructural | 1 | metacrilato 2K o MS polímero para la pestaña. **Cianoacrilato NO**: su vapor empaña el acrílico |
 | Patica metálica torneada | 4 | d=16 × 8 mm |
 
-**Total de tornillos del case: 71** — 8 M4 de raíl + 14 M5 de esqueleto +
-25 M3 de plancha + 24 M4 de piel.
+**Total de tornillos del case: 59** — 8 M4 de raíl + 14 M5 de esqueleto +
+37 M3 de plancha. Fueron 71 hasta el 2026-08-21: al empotrarse, las pieles se
+llevaron por delante 12 separadores M4 y sus 24 tornillos de botón. Doce
+tornillos menos y una pieza de compra menos.
 
 No calculados por el modelo (herrajes eléctricos y de panel; la cantidad
 depende de la cuenta final de módulos, no de la geometría del cajón):
@@ -298,8 +314,10 @@ un cable asumiendo continuidad por el riel es riesgo de choque eléctrico.
    antes que la pletina roscada corre por su canal.
 4. **Tapa del valle** — 5 M3 al larguero del valle.
 5. **Electricidad y bonding** — bloque IEC fijo, espárrago junto al PSU.
-6. **Pieles traseras** — 12 separadores M4 de 5 mm, tres columnas.
-   **Pestaña** — a tope contra el riel y PEGADA, no atornillada.
+6. **Pieles traseras** — EMPOTRADAS, 6 M3 cada una a tuerca T de los largueros
+   traseros, tres columnas. Van después de los largueros porque la tuerca T
+   vive dentro de la ranura. **Pestaña** — a tope contra el riel y PEGADA, no
+   atornillada.
 7. **Paticas y paneles** — y paneles ciegos en todo hueco de las dos filas,
    que con una tapa abierta son lo único que ata sus dos raíles.
 

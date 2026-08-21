@@ -522,7 +522,20 @@ d_M4_paso   = 4.5;  // agujero paso M4: standoffs de las pieles Y los cuatro
                     // rieles EUROrack, cuyo taladro de punta viene roscado M4
                     // de fabrica (hoja Tiptop: "M4 Tapping To (/)3.3")
 d_M5_paso   = 5.5;  // agujero paso M5: SOLO el esqueleto 2020, roscado en el alma
-gap_sombra  = 5;    // junta de sombra de las pieles flotantes
+// hol_piel = holgura de AJUSTE de las pieles EMPOTRADAS, por lado.
+//
+// Sustituye a gap_sombra (5 mm), que era otra cosa: la junta de sombra de las
+// pieles FLOTANTES. Hasta el 2026-08-21 las dos pieles colgaban de doce
+// separadores, con su cara exterior 10 mm POR DETRAS del canto de los costados
+// y 5 mm de aire por los cuatro lados. Samuel pidio que la trasera encaje y
+// SELLE, asi que dejan de flotar: se empotran a ras del plano trasero y el
+// hueco perimetral pasa de junta de diseno a holgura de montaje.
+//
+// El numero no lo elige el gusto, lo pone la tolerancia de corte del taller
+// (Schaeffer publica 0.05-0.10 mm). 0.15 por lado son 0.30 de juego total en
+// 528 mm: entra sin forzar y se lee como junta, no como hueco. Si al ensamblar
+// aprieta, esto es lo que sube -- no el ancho de la piel.
+hol_piel    = 0.15;
 // Paticas: METALICAS, torneadas, pequenas (Samuel, 2026-08-17 -- "metalicas
 // y elegantes"). No son de goma: eso cambia el BOM y el acabado. Van bajo los
 // COSTADOS, que son las piezas portantes de 8 mm, con su cara exterior a ras
