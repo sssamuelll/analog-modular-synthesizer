@@ -453,8 +453,22 @@ class Ruteo:
         return pad_xy(self.board, *p) if isinstance(p[0], str) else p
 
     def pista(self, capa, puntos, ancho, red=None):
-        """Un tramo. `puntos` mezcla (ref, pin) y (x, y) libremente."""
-        pts = [self._pt(p) for p in puntos]
+        """Un tramo. `puntos` mezcla (ref, pin) y (x, y) libremente.
+
+        Los puntos repetidos se caen aqui, y no es cosmetica. Rematar una ruta
+        al centro de su pad genera un punto duplicado siempre que el camino ya
+        terminara ahi, y un segmento de longitud CERO hace SEGFAULT al
+        ZONE_FILLER de KiCad 10 -- sin traceback, sin mensaje, con el proceso
+        muerto justo despues de dibujar las pistas (medido 2026-08-21: exit
+        139 con 1050 segmentos, de los cuales dos de longitud 0.0000 mm que el
+        DRC ya venia listando como `track_dangling`).
+        """
+        pts = []
+        for p in [self._pt(q) for q in puntos]:
+            if not pts or abs(p[0] - pts[-1][0]) > 1e-6                     or abs(p[1] - pts[-1][1]) > 1e-6:
+                pts.append(p)
+        if len(pts) < 2:
+            return self
         # La red se declara como (ref, pin), NUNCA como cadena: el nombre que
         # usa KiCad depende de si la red nace de una etiqueta local ("/L_F") o
         # de un simbolo de alimentacion ("PE"), y escribirlo a mano es apostar
@@ -866,6 +880,15 @@ def rutear_red(r: Ruteo) -> None:
             ANCHO_RED)
     r.pista(F, [(163.0, 143.0), ("J7", "2")], ANCHO_RED, red=("J7", "2"))
     r.pista(F, [("CY1", "2"), ("CY2", "2")], ANCHO_RED)
+    # F1 es un portafusible con DOS clips por lado: su huella trae dos pads
+    # numerados "1" y dos numerados "2", a 5.08 mm uno de otro. La cadena de
+    # red entraba por uno de cada par y el otro se quedaba sin cobre -- el
+    # fusible tiene dos posiciones y solo una estaba cableada. pad_xy()
+    # devuelve el primero que encuentra, asi que el segundo se busca por
+    # coordenada.
+    for pin in ("1", "2"):
+        x, _ = pad_xy(r.board, "F1", pin)
+        r.pista(F, [(x, 134.0), (x, 139.08)], ANCHO_RED, red=("F1", pin))
 
     # --- B.Cu ---------------------------------------------------------------
     r.pista(B, [("J3", "2"), (22.0, 146.0), (146.32, 146.0)], ANCHO_RED,
@@ -944,10 +967,17 @@ def rutear_rieles(r: Ruteo) -> None:
     for pin in ("1", "2", "3"):
         r.pista(F, [(9.5, pad_xy(r.board, "U6", pin)[1]), ("U6", pin)], ANCHO_ESCAPE)
         r.pista(F, [(30.5, pad_xy(r.board, "U7", pin)[1]), ("U7", pin)], ANCHO_ESCAPE)
-    # el EP de U6/U7 tambien es -12V9
-    for u in ("U6", "U7"):
+    # El EP de U6/U7 tambien es -12V9, y hasta ahora salia 2.5 mm hacia el sur
+    # y se quedaba ahi: un munon que no llegaba a ningun sitio, con la entrada
+    # del chip conectada solo por los pines 1-3. El DRC real lo cantaba
+    # ("missing connection" entre la pista de -12V9 y el pad 13); las puertas
+    # propias no, porque miden separacion y no continuidad. Ahora baja hasta
+    # y=55.5 -- por debajo de la fila de pines, que acaba en 54.25, y muy por
+    # encima de R13/R14 en 59.5 -- y de ahi va al canal vertical del que
+    # cuelga esa mitad de la isla.
+    for u, canal in (("U6", 9.5), ("U7", 30.5)):
         x, y = pad_xy(r.board, u, "13")
-        r.pista(F, [(x, y), (x, y + 2.5)], 0.4, red=(u, "13"))
+        r.pista(F, [(x, y), (x, 55.5), (canal, 55.5)], 0.4, red=(u, "13"))
     # D9 y D11 cuelgan del canal del medio por su pad ESTE
     r.pista(F, [(30.5, 53.0), ("D9", "2")], ANCHO_ISLA)
     r.pista(F, [(30.5, 66.0), ("D11", "2")], ANCHO_ISLA)
@@ -1092,6 +1122,14 @@ PENDIENTES = [
     ("Net-(U2-ADJ)", "fina"), ("Net-(R7-Pad1)", "fina"),
     # los ballast de la carga minima
     ("Net-(D3-A)", "fina"), ("Net-(D4-A)", "fina"), ("Net-(D6-A)", "fina"),
+    # La isla de referencia. La zona de ISLA_REF la resolvia sola mientras la
+    # placa no tenia pistas; con la isla ultra ruteada encima, la zona queda
+    # partida en trozos y sus siete pads en cinco grupos sin unir -- seis
+    # "missing connection" y un isolated_copper en el DRC real. La zona se
+    # queda (es el cobre que da la referencia), pero la CONTINUIDAD se cablea:
+    # una zona partida por una pista es invisible para todas las puertas de
+    # separacion, que es justamente lo que este repo dice que no vale.
+    ("/GNDREF", "fina"),
     # los tres divisores de telemetria
     ("/TAP_VRAW+", "fina"), ("/TAP_VRAW-", "fina"), ("/TAP_-12V", "fina"),
     # el lado aislado de la barrera I2C, y el I2C de los dos dominios
@@ -1306,6 +1344,62 @@ def _trazar(r: Ruteo, rej, camino, ancho: float, pad, fin,
             r.via(pts[-1], red=(ref, pin))
 
 
+def _islas_de(r: Ruteo, red: str, saltar: set) -> list:
+    """Los trozos de cobre INDEPENDIENTES que una red ya tiene trazados.
+
+    Una red a medio rutear a mano puede ser varias islas, y `+12V` lo era: el
+    canal de x=19.5 con R15.2 y D10.2 por un lado, y el de x=41.5 con R16.2,
+    el shunt y TP3 por otro, sin nada que los una. Tratar todo su cobre como
+    un solo "ya conectado" hacia que el laberinto no viera nada que hacer --
+    cada pad tocaba ALGUN cobre de su red -- y las dos islas se quedaban
+    separadas con las puertas propias en verde y el DRC diciendo "missing
+    connection between items" entre dos pistas de +12V.
+
+    Union-find sobre los extremos, mas los puntos que caen SOBRE otro tramo:
+    en el ruteo escrito a mano una derivacion nace a mitad de camino y no en
+    un extremo, y sin esa segunda parte cada derivacion seria su propia isla.
+
+    `saltar` son las escapadas de pin fino, que no son cobre util todavia:
+    llevan del pad a un munon de 2.7 mm que aun no va a ningun sitio.
+    """
+    tramos = [(pts, capa) for rd, capa, pts, _a in r.tracks
+              if rd == red and not (len(pts) == 2 and tuple(pts[1]) in saltar)]
+    padre: dict = {}
+
+    def raiz(n):
+        padre.setdefault(n, n)
+        while padre[n] != n:
+            padre[n] = padre[padre[n]]
+            n = padre[n]
+        return n
+
+    def unir(a, b):
+        ra, rb = raiz(a), raiz(b)
+        if ra != rb:
+            padre[ra] = rb
+
+    for i, (pts, _c) in enumerate(tramos):
+        for a, b in zip(pts, pts[1:]):
+            unir((i, round(a[0], 3), round(a[1], 3)),
+                 (i, round(b[0], 3), round(b[1], 3)))
+    # y ahora entre tramos: un punto de uno que toque a otro
+    for i, (pts, _ci) in enumerate(tramos):
+        for p in pts:
+            for j, (qts, _cj) in enumerate(tramos):
+                if i == j:
+                    continue
+                for a, b in zip(qts, qts[1:]):
+                    if dist_seg(a, b, p, p) < 0.01:
+                        unir((i, round(p[0], 3), round(p[1], 3)),
+                             (j, round(a[0], 3), round(a[1], 3)))
+                        break
+    grupos: dict = {}
+    for i, (pts, capa) in enumerate(tramos):
+        k = raiz((i, round(pts[0][0], 3), round(pts[0][1], 3)))
+        grupos.setdefault(k, []).append((pts, capa))
+    return list(grupos.values())
+
+
 def rutear_resto(r: Ruteo, escapes: dict) -> list[str]:
     """Las redes de PENDIENTES, con el laberinto. Devuelve las que no cerraron.
 
@@ -1356,17 +1450,32 @@ def rutear_resto(r: Ruteo, escapes: dict) -> list[str]:
         actual[0] = rid
 
         puntas = {tuple(v) for v in escapes.values()}
-        conectado: set = set()
-        for rd, capa, pts, _a in r.tracks:
-            if rd != red or (len(pts) == 2 and tuple(pts[1]) in puntas):
-                continue
-            for i in range(len(pts) - 1):
-                conectado |= _celdas_de_pista(rej, pts[i], pts[i + 1],
-                                              CAPA_N[capa])
+        islas = _islas_de(r, red, puntas)
+
+        def celdas_isla(isla) -> set:
+            out: set = set()
+            for pts, capa in isla:
+                for i in range(len(pts) - 1):
+                    out |= _celdas_de_pista(rej, pts[i], pts[i + 1],
+                                            CAPA_N[capa])
+            return out
+
+        # La isla mas grande es el tronco; las demas son trozos que hay que
+        # engancharle. Los pads de un trozo NO cuentan como resueltos: si
+        # contaran, el laberinto no tendria nada que hacer y los trozos se
+        # quedarian separados (ver _islas_de).
+        celdas_por_isla = [celdas_isla(i) for i in islas]
+        troncal = max(range(len(islas)), key=lambda k: len(celdas_por_isla[k]),
+                      default=None)
+        conectado: set = set(celdas_por_isla[troncal]) if islas else set()
+        sueltas = [c for k, c in enumerate(celdas_por_isla) if k != troncal]
         for x, y, rd, _an, _t in r.vias:
-            if rd == red:
-                ix, iy = rej.a_celda(x, y)
-                conectado |= {c * rej.n + iy * rej.nx + ix for c in (0, 1)}
+            if rd != red:
+                continue
+            ix, iy = rej.a_celda(x, y)
+            nodos = {c * rej.n + iy * rej.nx + ix for c in (0, 1)}
+            if nodos & conectado:
+                conectado |= nodos
 
         faltan = list(pads)
         hechos = []
@@ -1436,6 +1545,10 @@ def rutear_resto(r: Ruteo, escapes: dict) -> list[str]:
                     rej.via(rid, x, y, anc)
             conectado |= {c * rej.n + iy * rej.nx + ix
                           for ix, iy, c in camino}
+            for k, cel in enumerate(sueltas):
+                if cel & conectado:
+                    conectado |= cel
+                    sueltas[k] = set()
             hechos.append(obj)
     return sin_cerrar
 
@@ -1896,6 +2009,18 @@ def reglas(board: pcbnew.BOARD) -> None:
     ds.m_MinClearance = mm(CLEARANCE_MM)
     ds.m_ViasMinSize = mm(VIA_D)
     ds.m_MinThroughDrill = mm(VIA_TALADRO)
+    # La NETCLASS, y aqui dentro. El DRC no compara contra m_MinClearance --
+    # eso es el suelo de la placa -- sino contra la clase que le toca a cada
+    # red, y con una sola clase definida eso es siempre `Default`. Escribirlo
+    # solo en el .kicad_pro no basta y costo dos rondas averiguarlo: la
+    # primera version lo ponia ahi, y `kicad-cli pcb drc --save-board` volvio
+    # a dejarlo en el 0.2 de fabrica -- porque el valor que guarda es el que
+    # la PLACA lleva en memoria, no el que hubiera en el fichero de proyecto.
+    # Escrito en el objeto, viaja con la placa lo guarde quien lo guarde.
+    nc = ds.m_NetSettings.GetDefaultNetclass()
+    nc.SetClearance(mm(CLEARANCE_MM))
+    nc.SetViaDiameter(mm(VIA_D)) if hasattr(nc, "SetViaDiameter") else None
+    nc.SetViaDrill(mm(VIA_TALADRO)) if hasattr(nc, "SetViaDrill") else None
     # No hace falta subir m_MinAnnularWidth (default de placa, 0.1mm): ya NO
     # hay pads por debajo de ese minimo. F3 (review fase C) RESOLVIO -- no
     # bendijo -- las 10 violaciones annular_width de los pads THT de U1/U2
@@ -2188,7 +2313,13 @@ def main() -> None:
     assert not faltan, f"componentes del netlist sin sitio en PLACEMENT: {faltan}"
     bom_valores = leer_bom()
 
-    board = pcbnew.NewBoard(PCB)
+    # CreateEmptyBoard() y no NewBoard(PCB): el segundo TRUNCA el fichero de
+    # destino al crearlo, asi que cualquier fallo posterior -- una red que el
+    # ruteador no cierra, una via que no cabe -- dejaba en el disco un
+    # .kicad_pcb vacio en vez del ultimo bueno. Un artefacto vaciado pasa el
+    # ERC con 0 avisos (constitucion, Principio VIII): el fichero solo se
+    # escribe al final, cuando ya se sabe que hay algo que escribir.
+    board = pcbnew.CreateEmptyBoard()
     contorno(board)
     franja_to220(board)
     reglas(board)
@@ -2337,9 +2468,18 @@ def main() -> None:
     zona.SetPadConnection(pcbnew.ZONE_CONNECTION_FULL)
     zona.SetIsFilled(False)
     board.Add(zona)
-    filler = pcbnew.ZONE_FILLER(board)
-    filler.Fill(board.Zones())
-    print("zona GNDREF creada sobre ISLA_REF y rellenada")
+    # LA ZONA SE ANADE SIN RELLENAR, Y NO ES UN OLVIDO. `ZONE_FILLER.Fill()`
+    # desde el Python de KiCad 10.0 hace SEGFAULT con esta placa ya ruteada
+    # (medido 2026-08-21: exit 139, sin traceback, con 1042 segmentos; con
+    # 995 todavia pasaba). No es la zona: quitando el recorte de H4 tambien
+    # peta, y sin la zona la placa entera sale en verde. Es el filler.
+    #
+    # El relleno lo hace `kicad-cli pcb drc --refill-zones --save-board`, que
+    # es el mismo codigo corriendo fuera del proceso y no se cae. Queda como
+    # paso del pipeline en el README de fab -- declarado, no escondido: una
+    # zona sin rellenar en un gerber es cobre que no existe.
+    zona.SetIsFilled(False)
+    print("zona GNDREF creada sobre ISLA_REF -- se rellena con kicad-cli")
 
     # --- comprobaciones antes de guardar ---
     print(f"colocados {len(huellas)} componentes, {len(netinfo)} redes")
