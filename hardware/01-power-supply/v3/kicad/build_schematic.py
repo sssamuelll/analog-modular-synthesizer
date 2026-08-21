@@ -279,7 +279,18 @@ PARTS = [
     ("C17", "Device:C_Polarized",            213.36, 69.85,   0, "22uF ESR"),
     ("R5",  "Device:R",                      226.06, 69.85,   0, "8.66k"),
     ("RV2", "Device:R_Potentiometer_Trim",   226.06, 80.01,   0, "1k"),
-    ("R6",  "Device:R",                      226.06, 90.17,   0, "1k"),
+    # GIRADO 180 para que su pin 1 sea el de GNDREF, igual que en R8.
+    # Los dos son el mismo divisor a cada lado de la placa y estan
+    # dibujados espejados -- R6 lleva GNDREF abajo y R8 arriba -- asi que
+    # el pin que toca la referencia era el 2 en uno y el 1 en el otro. En
+    # la PLACA eso mandaba el pad de GNDREF de R6 a x=57.16, fuera de
+    # ISLA_REF (que acaba en 54), donde ni la zona lo alcanzaba ni una
+    # pista puede ir sin sacar la referencia de su isla: R6.2 no ha estado
+    # conectado en ninguna version. Con el simbolo girado el cableado del
+    # esquematico no se mueve ni un milimetro y la huella tampoco -- un
+    # resistor es simetrico -- pero el pad de GNDREF pasa a ser el 1, que
+    # esta en x=47 y dentro de la isla, como el de R8.
+    ("R6",  "Device:R",                      226.06, 90.17, 180, "1k"),
     ("D8",  "Diode:SMAJ15A",                 241.30, 69.85,  270, "SMAJ15A"),
     # --- riel -12V9 (pre-reg negativo, U2=LM2991T) ---
     ("C2",  "Device:C_Polarized",            121.92, 163.83,  0, "4700uF/25V"),
