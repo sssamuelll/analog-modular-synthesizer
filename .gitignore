@@ -71,3 +71,6 @@ case/renders/build/
 # No se manda al taller (alli van los DXF sueltos) y lo regenera export.ps1.
 # Mismo criterio que los STL: 97.512 lineas de diff que no prueban nada.
 case/plans/lienzo_2d.dxf
+
+# salida de diagnostico de kicad-cli pcb drc: se regenera en cada pasada
+hardware/**/fab/drc.json
