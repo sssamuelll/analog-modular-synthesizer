@@ -2488,8 +2488,9 @@ def main() -> None:
     # Lo que hacia, medido: la zona de 3256 mm2 sobre ISLA_REF se rellenaba
     # como UN trozo de 12.24 mm2 centrado en (193, 143), o sea alrededor del
     # taladro y a 140 mm de donde tenia que estar. De ahi salian el
-    # `isolated_copper` del DRC y los seis pads de GNDREF sin conectar, y muy
-    # probablemente tambien el SEGFAULT del ZONE_FILLER.
+    # `isolated_copper` del DRC y los seis pads de GNDREF sin conectar. El
+    # segfault del ZONE_FILLER NO era esto: se probo a proposito con el
+    # poligono ya arreglado y se sigue cayendo.
     #
     # Ahora se recorta lo que de verdad haya dentro, y si no hay nada no se
     # recorta. El patron de la v1 para taladros de fijacion sigue igual: sin
@@ -2528,8 +2529,10 @@ def main() -> None:
     # LA ZONA SE ANADE SIN RELLENAR, Y NO ES UN OLVIDO. `ZONE_FILLER.Fill()`
     # desde el Python de KiCad 10.0 hace SEGFAULT con esta placa ya ruteada
     # (medido 2026-08-21: exit 139, sin traceback, con 1042 segmentos; con
-    # 995 todavia pasaba). No es la zona: quitando el recorte de H4 tambien
-    # peta, y sin la zona la placa entera sale en verde. Es el filler.
+    # 995 todavia pasaba). No es la zona ni su geometria: sigue petando con
+    # el poligono ya arreglado -- el recorte de H4 apuntaba fuera de su
+    # contorno, ver mas abajo -- y sin la zona la placa entera sale en verde.
+    # Es el filler, y los dos fallos eran independientes.
     #
     # El relleno lo hace `kicad-cli pcb drc --refill-zones --save-board`, que
     # es el mismo codigo corriendo fuera del proceso y no se cae. Queda como
