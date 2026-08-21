@@ -380,7 +380,7 @@ mod tests {
     fn cuando_no_caben_mas_se_dice() {
         let mut rs = Rampas::nueva();
         for i in 0..MAX_RAMPAS {
-            rs.empujar(Rampa::nueva(ParamId(i as u16), 0, 100, 0, 384)).unwrap();
+            rs.empujar(Rampa::nueva(ParamId(i as u32), 0, 100, 0, 384)).unwrap();
         }
         assert_eq!(
             rs.empujar(Rampa::nueva(ParamId(999), 0, 100, 0, 384)),

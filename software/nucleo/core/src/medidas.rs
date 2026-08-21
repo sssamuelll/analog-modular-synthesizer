@@ -268,7 +268,7 @@ mod tests {
     fn ningun_id_se_repite() {
         // Si dos medidas compartieran id, `registrar` daria Duplicado y una
         // de las dos no existiria — el agente leeria la equivocada.
-        let mut ids: heapless::Vec<u16, { N_BANDAS + 3 }> =
+        let mut ids: heapless::Vec<u32, { N_BANDAS + 3 }> =
             MEDIDAS.iter().map(|d| d.id.0).collect();
         ids.sort_unstable();
         assert!(

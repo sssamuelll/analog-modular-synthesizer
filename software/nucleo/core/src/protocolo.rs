@@ -170,15 +170,15 @@ pub fn codificar(m: &Mensaje, buf: &mut [u8]) -> Result<usize, ErrorProto> {
     match m {
         Hello { version } => w.u16(*version)?,
         Describe | PresetList | TuneStart | PatchScan | Telemetry | Modules | Jacks => {}
-        Get(id) => w.u16(id.0)?,
+        Get(id) => w.u32(id.0)?,
         Set(id, v) | Changed(id, v) => {
-            w.u16(id.0)?;
+            w.u32(id.0)?;
             w.i32(*v)?;
         }
         Subscribe { activo } => w.u8(*activo as u8)?,
         PresetLoad(n) | PresetSave(n) | Memo { segundos: n } => w.u8(*n)?,
         Point { id, color } => {
-            w.u16(id.0)?;
+            w.u32(id.0)?;
             w.crudo(&[color.r, color.g, color.b])?;
         }
         TuneProgress { voz, cents_x100, hecho } => {
@@ -188,7 +188,7 @@ pub fn codificar(m: &Mensaje, buf: &mut [u8]) -> Result<usize, ErrorProto> {
         }
         Pending { token, id } => {
             w.u16(*token)?;
-            w.u16(id.0)?;
+            w.u32(id.0)?;
         }
         Resolved { token, confirmado } => {
             w.u16(*token)?;
@@ -200,20 +200,20 @@ pub fn codificar(m: &Mensaje, buf: &mut [u8]) -> Result<usize, ErrorProto> {
             w.u8(*codigo as u8)?;
         }
         Rampa { id, destino, duracion, curva } => {
-            w.u16(id.0)?;
+            w.u32(id.0)?;
             w.i32(*destino)?;
             w.crudo(&duracion.to_le_bytes())?;
             w.u8(*curva as u8)?;
         }
         Anulado { id, anulado } => {
-            w.u16(id.0)?;
+            w.u32(id.0)?;
             w.u8(*anulado as u8)?;
         }
         // Un byte de presencia, para distinguir "este" de "todos".
         Reactivar { id } => match id {
             Some(p) => {
                 w.u8(1)?;
-                w.u16(p.0)?;
+                w.u32(p.0)?;
             }
             None => w.u8(0)?,
         },
@@ -228,8 +228,8 @@ pub fn decodificar(buf: &[u8]) -> Result<Mensaje, ErrorProto> {
     Ok(match t {
         T_HELLO => Hello { version: r.u16()? },
         T_DESCRIBE => Describe,
-        T_GET => Get(ParamId(r.u16()?)),
-        T_SET => Set(ParamId(r.u16()?), r.i32()?),
+        T_GET => Get(ParamId(r.u32()?)),
+        T_SET => Set(ParamId(r.u32()?), r.i32()?),
         T_SUBSCRIBE => Subscribe { activo: r.u8()? != 0 },
         T_PRESET_LIST => PresetList,
         T_PRESET_LOAD => PresetLoad(r.u8()?),
@@ -238,12 +238,12 @@ pub fn decodificar(buf: &[u8]) -> Result<Mensaje, ErrorProto> {
         T_PATCH_SCAN => PatchScan,
         T_TELEMETRY => Telemetry,
         T_POINT => {
-            let id = ParamId(r.u16()?);
+            let id = ParamId(r.u32()?);
             let c = r.crudo(3)?;
             Point { id, color: Rgb { r: c[0], g: c[1], b: c[2] } }
         }
         T_MEMO => Memo { segundos: r.u8()? },
-        T_CHANGED => Changed(ParamId(r.u16()?), r.i32()?),
+        T_CHANGED => Changed(ParamId(r.u32()?), r.i32()?),
         T_MODULES => Modules,
         T_TUNE_PROGRESS => {
             let voz = r.u8()?;
@@ -251,7 +251,7 @@ pub fn decodificar(buf: &[u8]) -> Result<Mensaje, ErrorProto> {
             TuneProgress { voz, cents_x100, hecho: r.u8()? != 0 }
         }
         T_JACKS => Jacks,
-        T_PENDING => Pending { token: r.u16()?, id: ParamId(r.u16()?) },
+        T_PENDING => Pending { token: r.u16()?, id: ParamId(r.u32()?) },
         T_RESOLVED => Resolved { token: r.u16()?, confirmado: r.u8()? != 0 },
         T_HOLA => Hola { version: r.u16()? },
         T_ERROR => Error {
@@ -259,14 +259,14 @@ pub fn decodificar(buf: &[u8]) -> Result<Mensaje, ErrorProto> {
             codigo: CodigoError::de_byte(r.u8()?).ok_or(ErrorCodec::Invalido)?,
         },
         T_RAMPA => {
-            let id = ParamId(r.u16()?);
+            let id = ParamId(r.u32()?);
             let destino = r.i32()?;
             let duracion = u32::from_le_bytes(r.crudo(4)?.try_into().unwrap());
             Rampa { id, destino, duracion, curva: r.u8()? as i8 }
         }
-        T_ANULADO => Anulado { id: ParamId(r.u16()?), anulado: r.u8()? != 0 },
+        T_ANULADO => Anulado { id: ParamId(r.u32()?), anulado: r.u8()? != 0 },
         T_REACTIVAR => Reactivar {
-            id: if r.u8()? != 0 { Some(ParamId(r.u16()?)) } else { None },
+            id: if r.u8()? != 0 { Some(ParamId(r.u32()?)) } else { None },
         },
         _ => return Err(ErrorCodec::Desconocido),
     })

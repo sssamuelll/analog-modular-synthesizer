@@ -163,26 +163,76 @@ experiencia; el instrumento impone la regla.
 
 ### 3.1 Direccionamiento
 
-Un parámetro se identifica con **16 bits**:
+> **Revisado el 2026-08-21.** Este campo era de **16 bits con una sola
+> ranura de 4**, o sea 16 destinos y punto. Se amplió a 32 bits con **ruta de
+> tres niveles** antes de que existiera el primer preset guardado, que es la
+> única ventana en la que este cambio es gratis: `preset.rs` escribe el id
+> **tal cual** al fichero, así que cambiarlo después invalida todo lo que la
+> gente haya guardado. El porqué, y por qué no se resolvió con más pines, está
+> al final de esta sección.
+
+Un parámetro se identifica con **32 bits**:
 
 ```
-  15        12 11         8 7                    0
- ┌────────────┬────────────┬──────────────────────┐
- │   ranura   │  instancia │        índice        │
- │   4 bits   │   4 bits   │        8 bits        │
- └────────────┴────────────┴──────────────────────┘
+  31        24 23    20 19    16 15    12 11      8 7                    0
+ ┌────────────┬────────┬────────┬────────┬─────────┬──────────────────────┐
+ │  reservado │nivel 1 │nivel 2 │nivel 3 │instancia│        índice        │
+ │   8 bits   │ 4 bits │ 4 bits │ 4 bits │  4 bits │        8 bits        │
+ └────────────┴────────┴────────┴────────┴─────────┴──────────────────────┘
 ```
 
-- **Ranura** — qué módulo. `0` está reservado para el propio cerebro.
-  `1..15` son ranuras físicas del mazo, **de las que hoy solo existen 8**: las
-  del mux I²C de §3.5. El campo se deja de 4 bits a propósito, para que ampliar
-  el mux no obligue a cambiar el direccionamiento.
+- **Ruta** — por dónde se llega al módulo, en hasta tres saltos. El **nivel 1**
+  es la ranura física del mazo: `0` es el propio cerebro y `1..15` son ranuras,
+  de las que hoy solo existen 8 (las del mux I²C de §3.5). Los niveles 2 y 3
+  son `0` para todo módulo enchufado directo — que es **todo módulo que existe
+  hoy**— y solo se usan cuando el módulo cuelga de un **concentrador** (§3.1.1).
 - **Instancia** — qué voz o qué copia dentro del módulo. El módulo 3 tiene
   cuatro; un módulo de una sola instancia usa `0`. **En la ranura 0 significa
   otra cosa: el número de parte** (§3.6).
 - **Índice** — qué parámetro dentro de esa instancia.
 
-16 bits caben en tres septetos de SysEx y en un campo de MIDI 2.0 sin pelear.
+Dos invariantes, y las dos son ejecutables en `ParamId::valida()`:
+
+1. **Los 8 bits reservados van a cero.** El día que se usen, será una decisión.
+2. **La ruta no tiene huecos.** Un `(2, 0, 5)` —un módulo colgando de nada— no
+   significa nada, y si se aceptara, dos módulos distintos podrían acabar con la
+   misma dirección según quién la construyera.
+
+**Los niveles van en los bits altos y eso no es decorativo:** el subárbol entero
+de un concentrador queda **contiguo** en el entero, así que barrerlo es un rango
+y no una búsqueda. La búsqueda binaria del modelo (§3.3) sigue funcionando sin
+tocarla.
+
+### 3.1.1 Por qué una ruta y no más ranuras
+
+La pregunta que lo abrió fue si el cerebro puede manejar cientos de módulos. La
+respuesta corta es que **los pines nunca fueron el límite**: ocho líneas de `CS`
+se convierten en 256 con un decodificador de 3 a 8, y eso cuesta tres pines.
+
+Lo que sí eran límites, en orden de qué tan caro es moverlos:
+
+| Qué | Techo | Qué cuesta subirlo |
+|---|---|---|
+| **Esta dirección** | 16 destinos | Casi nada hoy. **Todos los presets guardados**, mañana |
+| **Potencia** | ±12 V a 650 mA/riel; el módulo 3 pide 35 mA en +12 → **~18 módulos** | Otra arquitectura de alimentación, y los 0,8 µVrms se van con ella |
+| **El bus** | SPI a 10 MHz en estrella con `MISO` compartido, 8 stubs | A ~200 stubs no funciona a ninguna velocidad |
+| **Físico** | Un cable por módulo a una placa de ~100 mm | Ahí muere la topología en estrella |
+
+El instrumento está diseñado coherentemente para ~16 módulos: nada está corto
+por accidente. **Y la salida a más no es un bus más ancho: es jerarquía.** Un
+**concentrador** es un módulo que habla J2 hacia arriba y J2 hacia abajo, y desde
+el cerebro es un módulo más — así que el contrato J2 sigue congelado y ninguna
+placa ya ruteada se toca. Ocho por ocho son 64; otro nivel, 512. Y reparte de
+paso la potencia y los cables, que es donde se moría de verdad.
+
+Esta sección **no compromete a construir ningún concentrador.** Solo evita que
+el direccionamiento sea lo que impida construirlo, que es lo único de esta lista
+que no se puede arreglar después.
+
+**Lo que esto cuesta hoy**, dicho en voz alta: cada mensaje con id crece 2 bytes,
+y el id pasa de tres septetos de SysEx a **cinco**. Sobre MIDI DIN a 31250
+baudios un `SET` completo son ~2,6 ms, que es de sobra para parámetros y sigue
+sin servir para audio — igual que antes.
 
 ### 3.2 Valores
 
@@ -734,7 +784,7 @@ RP2350 y no hay que diseñar nada.
 
 #### Dónde está el techo de voces, y por dónde se sale
 
-El modelo escala a 16 voces por módulo y 16 ranuras (§3.1), el descubrimiento
+El modelo escala a 16 voces por módulo y a una ruta de tres niveles (§3.1), el descubrimiento
 se adapta solo, y el autoafinado **no tarda más** porque mide en paralelo. El
 techo real está en un solo sitio, y son **ocho cables dedicados**:
 

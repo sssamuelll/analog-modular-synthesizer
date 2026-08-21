@@ -137,7 +137,7 @@ mod tests {
     use super::*;
     use crate::descriptor::{Ambito, Tipo, Unidad};
 
-    const fn d(id: u16, solo_lectura: bool, medida: bool, confirma: bool) -> Descriptor {
+    const fn d(id: u32, solo_lectura: bool, medida: bool, confirma: bool) -> Descriptor {
         Descriptor {
             id: ParamId(id),
             nombre: "prueba",
@@ -227,7 +227,7 @@ mod tests {
     #[test]
     fn registrar_en_desorden_deja_la_tabla_ordenada() {
         let m = modelo();
-        let ids: heapless::Vec<u16, 8> = m.descriptores().map(|d| d.id.0).collect();
+        let ids: heapless::Vec<u32, 8> = m.descriptores().map(|d| d.id.0).collect();
         assert_eq!(ids.as_slice(), &[0x1000, 0x1001, 0x1002]);
     }
 }

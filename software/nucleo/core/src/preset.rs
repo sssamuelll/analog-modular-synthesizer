@@ -13,7 +13,7 @@
 //!   1 + n   autor
 //!   1       numero de etiquetas, luego 1 + n cada una
 //!   1       numero de modulos requeridos, luego por cada uno: u16 tipo + u8 rev
-//!   1       numero de valores, luego por cada uno: u16 id + i32 valor
+//!   1       numero de valores, luego por cada uno: u32 id + i32 valor
 //!   1       numero de conexiones, luego por cada una:
 //!             u8 ranura origen, u8 jack origen,
 //!             u8 ranura destino, u8 jack destino,
@@ -26,6 +26,10 @@ use crate::param::{ParamId, Valor};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct JackId {
+    /// Plana a proposito **por ahora**: `ParamId` ya lleva ruta de tres
+    /// niveles (§3.1) y esto no. Que un jack detras de un concentrador
+    /// exista es una pregunta del patch bay, que es de cables analogicos y
+    /// no del bus digital. Issue #157.
     pub ranura: u8,
     pub jack: u8,
 }
@@ -87,10 +91,10 @@ impl<'a> PresetLeido<'a> {
     }
 
     pub fn valores(&self) -> impl Iterator<Item = (ParamId, Valor)> + 'a {
-        self.valores.chunks_exact(6).map(|c| {
+        self.valores.chunks_exact(8).map(|c| {
             (
-                ParamId(u16::from_le_bytes([c[0], c[1]])),
-                i32::from_le_bytes([c[2], c[3], c[4], c[5]]),
+                ParamId(u32::from_le_bytes([c[0], c[1], c[2], c[3]])),
+                i32::from_le_bytes([c[4], c[5], c[6], c[7]]),
             )
         })
     }
@@ -133,7 +137,7 @@ pub fn escribir_preset(p: &Preset, buf: &mut [u8]) -> Result<usize, ErrorCodec> 
     }
     w.u8(u8::try_from(p.valores.len()).map_err(|_| ErrorCodec::Invalido)?)?;
     for (id, v) in p.valores {
-        w.u16(id.0)?;
+        w.u32(id.0)?;
         w.i32(*v)?;
     }
     w.u8(u8::try_from(p.topologia.len()).map_err(|_| ErrorCodec::Invalido)?)?;
@@ -158,7 +162,7 @@ pub fn leer_preset(buf: &[u8]) -> Result<PresetLeido<'_>, ErrorCodec> {
     let n_req = r.u8()? as usize;
     let requiere = r.crudo(n_req * 3)?;
     let n_val = r.u8()? as usize;
-    let valores = r.crudo(n_val * 6)?;
+    let valores = r.crudo(n_val * 8)?;
     let n_top = r.u8()? as usize;
     let topologia = r.crudo(n_top * 6)?;
 

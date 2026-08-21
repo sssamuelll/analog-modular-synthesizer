@@ -377,7 +377,7 @@ mod tests {
     use crate::descriptor::{Ambito, Descriptor, Tipo, Unidad};
     use crate::retencion::TTL_MS;
 
-    const fn d(id: u16, solo_lectura: bool, medida: bool, confirma: bool) -> Descriptor {
+    const fn d(id: u32, solo_lectura: bool, medida: bool, confirma: bool) -> Descriptor {
         Descriptor {
             id: ParamId(id),
             nombre: "prueba",
