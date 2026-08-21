@@ -68,6 +68,14 @@ lenguaje visual).
 > **256.18 × 308.94**. La ENTRADA DE AIRE se muda a una rejilla baja en la
 > trasera: 8 317 mm² contra los 7 499 de salida del valle, con `guarda_aire()`
 > comparando las dos.
+> **rev. 11** (2026-08-21): la trasera se queda **solo con sus tres ondas** y la
+> entrada de aire vuelve al suelo, dibujada: 51 ranuras en el vuelo de la
+> bandeja (3 535 mm² a y=4). Menos área que en la trasera, pero entra 50 mm más
+> abajo y el tiro compensa. `guarda_aire()` deja de medir paridad de áreas y
+> pasa a medir **salto térmico**: 8.5 K sobre ambiente con 6.33 W contra un
+> techo de 15 (`potencia_disipada` y `salto_termico_max`, los dos SUPUESTO). El
+> hueco del IEC sube de y=22 a y=33, centrado en la banda libre entre la fila de
+> M3 y la onda — estaba a 3.5 mm de la arandela de un tornillo.
 >
 > **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
 > visual y proporciones *relativas*, pero **sus cotas están superadas**. Se

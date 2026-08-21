@@ -745,58 +745,134 @@ def _rejilla_valle(p: dict[str, float]) -> tuple[int, float, float]:
     return 2 * ns, campos[0][1] - campos[0][0], area
 
 
-def _rejilla_entrada(p: dict[str, float]) -> tuple[int, float, float]:
-    """Las ranuras de ENTRADA, mismas cuentas que rejilla_entrada()."""
+def _rejilla_entrada(p: dict[str, float]) -> tuple[int, float, float, float]:
+    """Las ranuras de ENTRADA, mismas cuentas que rejilla_entrada().
+
+    Devuelve (n, largo, area, y_centroide). El centroide va en coordenadas del
+    case porque lo que gobierna el tiro no es solo cuanta area hay sino a que
+    ALTURA esta: esta rejilla vive en el suelo, a 4 mm, y por eso compra tiro lo
+    que pierde de area frente a la version que se probo en la trasera."""
+    vuelo = _vuelo_bandeja(p)
+    largo = vuelo - 2 * p["valle_margen"]
+    paso = int(p["valle_paso_hp"])
+    n_hp = round(p["largo_riel"] / p["hp"])
+    n = len(range(paso, int(n_hp) - paso + 1, paso))
+    return (n, largo, _area_ranuras(n, largo, p["vent_ancho_ranura"]),
+            p["t_base"] / 2)
+
+
+def _onda_area(p: dict[str, float], tipo: str, largo: float) -> float:
+    """Area abierta de una onda, mismas cuentas que onda() en el .scad.
+
+    La onda es el barrido de un circulo de vent_ancho_ranura a lo largo de una
+    polilinea, o sea una salchicha: largo del camino por el ancho, mas el
+    circulo que forman las dos puntas. En los quiebres la cuenta se pasa y se
+    queda corta alternativamente, y en un zigzag eso se compensa."""
+    per = p["vent_periodo"]
+    a = per * 0.35
+    n = max(2, math.floor(largo / per))
+    base = {"sierra": ((0, -a), (1, a)),
+            "triangulo": ((0, -a), (0.5, a))}.get(
+                tipo, ((0, -a), (0.001, a), (0.5, a), (0.501, -a)))
+    pts = [((i + q[0]) * per, q[1]) for i in range(n) for q in base]
+    L = sum(math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1])
+            for i in range(len(pts) - 1))
+    w = p["vent_ancho_ranura"]
+    return L * w + math.pi * (w / 2) ** 2
+
+
+def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
+    """Las tres ondas de la trasera: (area, y_centroide en el case).
+
+    Son SALIDA, no entrada: arrancan a 74 mm del suelo y suben hasta 195. Es la
+    unica ventilacion que Samuel quiso dejar en esa pieza."""
     P = _vertices(p)
     ce = _centros_esqueleto(p, P, _centros_rail(p, P))
     au = p["ancho_total"] - 2 * p["t_cheek"] - 2 * p["hol_piel"]
     y0_pl = ce[1][1] - 15
-    f_base = ce[1][1] - y0_pl
-    f_tras = ce[4][1] - y0_pl
-    y_bajas = f_base + 0.35 * (f_tras - f_base)
-    y0 = f_base + p["valle_espina"] / 2 + p["vent_puente_min"]
-    y1 = y_bajas - p["vent_periodo"] * 0.35 - p["vent_puente_min"]
-    paso = int(p["valle_paso_hp"])
-    n_hp = round(p["largo_riel"] / p["hp"])
-    x_iec = au - 70 + 24
-    hueco = (48 + p["vent_ancho_ranura"]) / 2 + p["vent_puente_min"]
-    ns = [n for n in range(paso, int(n_hp) - paso + 1, paso)
-          if abs(n * p["hp"] - x_iec) >= hueco]
-    return len(ns), y1 - y0, _area_ranuras(len(ns), y1 - y0,
-                                           p["vent_ancho_ranura"])
+    f_base, f_tras = ce[1][1] - y0_pl, ce[4][1] - y0_pl
+    y_bajas = f_base + 0.32 * (f_tras - f_base)
+    y_sierra = f_base + 0.74 * (f_tras - f_base)
+    trozos = ((_onda_area(p, "triangulo", au * 0.35), y_bajas),
+              (_onda_area(p, "cuadrada", au * 0.35), y_bajas),
+              (_onda_area(p, "sierra", au * 0.70), y_sierra))
+    area = sum(a for a, _ in trozos)
+    centro = sum(a * (y0_pl + y) for a, y in trozos) / area
+    return area, centro
+
+
+# Aire a 20 C y el coeficiente de descarga de una rejilla de ranuras. Los tres
+# primeros son fisica; C_D es SUPUESTO -- 0.6-0.7 es lo que se usa para chapa
+# perforada y ranurada, y es el numero que mas manda en el resultado.
+RHO_AIRE, CP_AIRE, G, T_AMB = 1.2, 1005.0, 9.81, 293.0
+CD_TIRO = 0.65
 
 
 def guarda_aire(p: dict[str, float]) -> None:
-    """La ENTRADA de aire no puede quedar mas estrecha que la SALIDA.
+    """El case no puede calentarse mas de salto_termico_max sobre ambiente.
 
-    Nace el 2026-08-21, el dia que la entrada cambia de sitio. Hasta hoy era el
-    hueco de 37.96 mm que la bandeja dejaba por delante -- 20054 mm2 contra los
-    7499 de la salida del valle, o sea que el cuello de botella estaba en la
-    salida y nadie tenia que vigilar nada. Al cerrar el suelo, la entrada pasa a
-    ser una rejilla dibujada, y una rejilla dibujada SI se puede quedar corta.
+    ESTA PUERTA CAMBIO DE CRITERIO EL MISMO DIA QUE NACIO, y conviene saber por
+    que. Nacio midiendo "entrada >= salida", que valia mientras la entrada era la
+    rejilla de la trasera: 8317 mm2 contra 7499 de salida. Al mudarse la entrada
+    al suelo -- Samuel pidio dejar la trasera solo con sus tres ondas -- el area
+    baja a 3536 y esa desigualdad se rompe A PROPOSITO. Mantenerla habria sido
+    tener una puerta roja sobre un diseno correcto, que es justo el vicio que ya
+    costo una tanda entera en este repo.
 
-    Es exactamente el tipo de cota que se pierde: no sale en ningun render, no
-    la ve solapes() ni el sobre del DXF, y el aparato arranca igual. Solo se
-    entera uno cuando el disipador va caliente meses despues.
+    Lo que de verdad hay que exigir no es paridad de areas: es que el aparato no
+    se caliente. Y eso se calcula, porque el area no es lo unico que manda --
+    tambien manda la ALTURA entre entrada y salida. La rejilla del suelo tiene
+    menos de la mitad de area que la de la trasera y aun asi sale casi igual de
+    bien, porque entra a 4 mm en vez de a 53 y el tiro gana lo que pierde.
 
-    Las dos areas se derivan de sus modulos, no se cablean: si alguien mueve
-    valle_paso_hp o acorta el valle, esto se recalcula solo."""
-    n_ent, largo_ent, a_ent = _rejilla_entrada(p)
-    n_sal, largo_sal, a_sal = _rejilla_valle(p)
+    Tiro de chimenea, regimen laminar de caja cerrada:
+
+        Q = C_D * A_ef * sqrt(2 g h dT / T)        caudal
+        P = rho * cp * Q * dT                      calor que se lleva
+        =>  P = k * dT^1.5,  k = rho*cp*C_D*A_ef*sqrt(2 g h / T)
+
+    A_ef son entrada y salida EN SERIE (1/A_ef^2 = 1/A_in^2 + 1/A_out^2), y h la
+    distancia entre sus centroides. Nada de esto esta medido: C_D, la altura
+    efectiva y las perdidas del trafo son supuestos, y por eso el techo va en 15
+    K y no pegado al resultado. Sirve para ordenes de magnitud y para que un
+    cambio de geometria no empeore el tiro sin que nadie se entere."""
+    n_ent, largo_ent, a_ent, y_ent = _rejilla_entrada(p)
+    n_val, largo_val, a_val = _rejilla_valle(p)
+    P = _vertices(p)
+    y_val = P[3][1] - p["t_acrilico"] / 2
+    a_ond, y_ond = _ondas_trasera(p)
+    a_sal = a_val + a_ond
+    y_sal = (a_val * y_val + a_ond * y_ond) / a_sal
+
     assert largo_ent >= 4 * p["vent_ancho_ranura"], (
         f"la rejilla de entrada mide {largo_ent:.1f} mm de largo con ranuras "
         f"de {p['vent_ancho_ranura']:.0f}: deja de leerse como campo y pasa a "
         f"rayitas (es la misma cuenta que recorto la espina del valle)")
-    assert a_ent >= a_sal - 1e-9, (
-        f"la ENTRADA de aire ({a_ent:.0f} mm2 en {n_ent} ranuras) es mas "
-        f"estrecha que la SALIDA del valle ({a_sal:.0f} mm2 en {n_sal}). Asi la "
-        f"entrada es el cuello de botella y el aparato respira peor que con el "
-        f"hueco del suelo que habia antes")
+
+    a_ef = 1.0 / math.sqrt(1 / a_ent ** 2 + 1 / a_sal ** 2)
+    h = (y_sal - y_ent) / 1000.0
+    assert h > 0, (
+        f"la salida de aire ({y_sal:.1f} mm) no queda por encima de la entrada "
+        f"({y_ent:.1f} mm): sin desnivel no hay tiro y la conveccion natural no "
+        f"arranca")
+    k = (RHO_AIRE * CP_AIRE * CD_TIRO * a_ef * 1e-6
+         * math.sqrt(2 * G * h / T_AMB))
+    dt = (p["potencia_disipada"] / k) ** (2.0 / 3.0)
+    assert dt <= p["salto_termico_max"] + 1e-9, (
+        f"el case sube {dt:.1f} K sobre ambiente con {p['potencia_disipada']:.2f} "
+        f"W y el techo son {p['salto_termico_max']:.0f}. Entrada {a_ent:.0f} mm2 "
+        f"a y={y_ent:.0f}, salida {a_sal:.0f} a y={y_sal:.0f}, tiro {h*1000:.0f} "
+        f"mm. Sube el area de la rejilla o bajala mas (el tiro va con la raiz de "
+        f"la altura, el area va lineal)")
+
     print(f"aire: entrada {a_ent:.0f} mm2 en {n_ent} ranuras de "
-          f"{largo_ent:.1f} x {p['vent_ancho_ranura']:.0f} (trasera, abajo) -> "
-          f"salida {a_sal:.0f} mm2 en {n_sal} de {largo_sal:.1f} (valle)")
-    print(f"  +{100 * (a_ent / a_sal - 1):.0f} % de margen. Entra por abajo y "
-          f"sale por arriba: es tiro natural, no adorno")
+          f"{largo_ent:.1f} x {p['vent_ancho_ranura']:.0f} (suelo, y={y_ent:.0f})")
+    print(f"  salida {a_sal:.0f} mm2 = {a_val:.0f} del valle ({n_val} ranuras) + "
+          f"{a_ond:.0f} de las tres ondas, centroide y={y_sal:.0f}")
+    print(f"  tiro {h*1000:.0f} mm, area efectiva {a_ef:.0f} mm2 -> "
+          f"{dt:.1f} K sobre ambiente con {p['potencia_disipada']:.2f} W "
+          f"(techo {p['salto_termico_max']:.0f}). SUPUESTO: C_D={CD_TIRO}, "
+          f"sin perdidas de trafo")
 
 
 def guarda_fresado(p: dict[str, float]) -> None:

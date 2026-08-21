@@ -161,11 +161,14 @@ angulo_superior = 45;    // 45 desde la horizontal, cara de generacion
 // Y LA ENTRADA DE AIRE SE MUDA A LA TRASERA, que es lo que de verdad hay que
 // mirar aqui: la salida del valle son 7499 mm2 en 102 ranuras, o sea que la
 // entrada nueva tiene que dar al menos eso o el aparato respira peor que antes.
-// La rejilla de la trasera da 8316 en 45 ranuras iguales a las del valle. Lo
-// vigila guarda_aire() en clearance_budget, que compara las dos areas.
+// Se probo unas horas en la trasera (8316 mm2 en 45 ranuras) y acabo en el
+// SUELO, en el vuelo de la bandeja: Samuel pidio dejar la trasera solo con sus
+// tres ondas. Ahi son 3535 mm2 en 51 ranuras -- menos de la mitad de area, pero
+// entra a y=4 en vez de a y=53 y el tiro de chimenea gana lo que pierde.
 //
-// NO cabe en el suelo: la bandeja solo vuela 30.19 mm por delante del larguero,
-// y con las ranuras del valle ahi caben 3536 mm2 -- menos de la mitad.
+// Por eso guarda_aire() no compara areas sino SALTO TERMICO: la entrada quedo
+// mas estrecha que la salida a proposito, y lo que hay que exigir es que el
+// aparato no se caliente. Salen 8.5 K sobre ambiente contra un techo de 15.
 //
 // Ojo con bajar alto_frontal creyendo que siempre ayuda: la curva se come la
 // mitad, asi que cada mm que baja el vertice sube medio el inset y solo se gana
@@ -769,6 +772,27 @@ valle_paso_hp   = 2;   // una ranura cada 2 HP -> 51 por campo, puente 6.16
 // dando 4.5 mm de acrilico a cada lado de la arandela del M3.
 valle_espina    = 16;  // banda maciza central (cabeza de M3 + arandela)
 valle_margen    = 6;   // orilla maciza delante y detras
+
+// --- tiro de aire ---
+// El case se refrigera por CONVECCION NATURAL y nada mas: no hay ventilador y
+// no va a haberlo. El aire entra por la rejilla del suelo, sube por el piso de
+// la fuente y sale por las ranuras del valle y por las ondas de la trasera.
+//
+// Estos dos numeros existen porque el 2026-08-21 la entrada de aire cambio de
+// sitio DOS VECES en el mismo dia -- del hueco del suelo a la trasera, y de la
+// trasera al vuelo de la bandeja -- y en cada mudanza el area y la altura de
+// tiro cambian. Mientras la entrada fue un hueco accidental de 20054 mm2 nadie
+// tenia que vigilar nada; una rejilla DIBUJADA si se puede quedar corta.
+//
+// La potencia sale de la spec de la fuente v2, §4, sumando los reguladores:
+// LM2941 ~2.7 + LM2991 ~2.9 + LT3045x2 ~0.4 + LT3094x2 ~0.33 = 6.33 W. NO
+// incluye las perdidas del transformador, que no estan itemizadas -- por eso el
+// techo de salto termico va holgado y no pegado al numero.
+potencia_disipada = 6.33; // W, SUPUESTO: spec PSU v2 §4, sin perdidas de trafo
+// Techo de salto sobre ambiente. 15 K es el criterio de siempre para caja de
+// electronica lineal con electroliticos dentro: a partir de ahi la vida del
+// condensador se parte por dos cada 10 K y deja de ser un detalle.
+salto_termico_max = 15;  // K sobre ambiente, SUPUESTO de diseno
 
 // --- lo que el budget vigila (spec §11: catalogos, no medidos) ---
 // El toroide, con la hoja del FABRICANTE delante (Nuvotem Talema, "120VA Open

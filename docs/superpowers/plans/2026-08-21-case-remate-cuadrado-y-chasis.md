@@ -538,7 +538,9 @@ plancha asoma por delante del redondeo; uno menos y queda suelo sin cubrir.
 ### La entrada de aire, y la puerta que la vigila
 
 45 ranuras iguales a las del valle, abajo del todo en la trasera, por debajo de
-la banda de ondas (que subió de 0.32 a 0.35 para hacerle sitio).
+la banda de ondas (que subió de 0.32 a 0.35 para hacerle sitio). **Duró unas
+horas** — ver «La entrada de aire se mudó otra vez», más abajo en esta misma
+tanda: acabó en el suelo y la banda volvió a 0.32.
 
 | | área abierta | ranuras |
 |---|---|---|
@@ -552,6 +554,37 @@ larguero — con las mismas ranuras salen 3 536 mm², menos de la mitad.
 justo la cota que se pierde sola: no sale en ningún render, no la ve `solapes()`
 ni el sobre del DXF, y el aparato arranca igual. Antes no hacía falta vigilarla
 porque la entrada eran 20 054 mm² de hueco accidental contra 7 499 de salida.
+
+### La entrada de aire se mudó otra vez, y la puerta cambió de criterio
+
+Samuel miró los renders y pidió quitar la rejilla de la trasera: esa pieza se
+queda **solo con sus tres ondas**. Lo que eso destapa es que ya no había dónde
+entrara el aire, porque el suelo se acababa de cerrar.
+
+Medido antes de tocar, con el modelo térmico que el propio plan ya tenía:
+
+| entrada | área | altura | ΔT a 6.33 W |
+|---|---|---|---|
+| rejilla en la trasera | 8 317 mm² | y ≈ 53 | ~7 K |
+| **rejilla en el suelo** | **3 535 mm²** | **y = 4** | **8.5 K** |
+| sin rejilla ninguna | solo ondas | y ≈ 75 | ~14 K |
+
+La del suelo tiene menos de la mitad de área y sale casi igual: entra 50 mm más
+abajo y el tiro va con la raíz de la altura. Y es invisible — vive en el vuelo
+de 30 mm que la bandeja gana por delante del larguero, fuera del camino de carga
+entre los dos 2020, con el plenum de las paticas de 8 mm (~13 600 mm² de
+perímetro) por debajo.
+
+**`guarda_aire()` cambió de criterio el mismo día que nació.** Nació midiendo
+«entrada ≥ salida», que valía con la rejilla en la trasera. Al mudarse al suelo
+esa desigualdad se rompe a propósito. Mantener el assert habría sido tener una
+puerta roja sobre geometría correcta — el vicio que costó la T0 entera. Ahora
+mide **salto térmico** (`P = k·ΔT^1.5`, entrada y salida en serie, `h` entre
+centroides) contra `salto_termico_max` = 15 K. Da 8.5.
+
+Y el hueco del IEC subió de y=22 a **y=33**, centrado en la banda libre. No era
+solo estética: uno de los cinco M3 de la fila de abajo cae dentro de su franja
+de X (x=475.2), y a y=22 quedaban 3.5 mm entre la arandela y el recorte.
 
 ### `guarda_piso` cambia de signo
 

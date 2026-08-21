@@ -62,23 +62,41 @@ la esquina inferior delantera (x = 9.49), que es la misma regla que usa
 `x_valle()` para el pico. Lo único abierto es el propio redondeo, y eso se lee
 como esquina, no como ranura.
 
-**Y la entrada de aire se mudó a la trasera.** Es la mitad del cambio que no se
-ve en ningún render: 45 ranuras iguales a las del valle, abajo del todo, por
-debajo de la banda de ondas. El aire frío entra por lo más bajo del piso de la
-fuente —donde están el toroide y los reguladores— y sale por el valle 90 mm más
-arriba. Tiro natural, no adorno.
+**Y la entrada de aire vuelve al suelo, pero dibujada.** Es la mitad del cambio
+que no se ve en ningún render. Se probó unas horas abajo en la trasera; Samuel
+pidió dejar esa pieza solo con sus tres ondas, así que la entrada acabó donde
+siempre estuvo — 51 ranuras iguales a las del valle, en el **vuelo** de la
+bandeja, por delante del larguero y fuera del camino de carga.
 
-| | área abierta | ranuras |
-|---|---|---|
-| entrada (trasera, abajo) | **8 317 mm²** | 45 de 47.1 × 4 |
-| salida (valle) | 7 499 mm² | 102 de 19.2 × 4 |
+Donde está es mejor de lo que parece. Tiene menos de la mitad de área que la
+versión trasera, pero entra a **y = 4** en vez de a 53, y el tiro de chimenea
+gana los 50 mm que pierde de área. No se ve desde ningún ángulo normal: el
+plenum lo dan las paticas de 8 mm, que abren ~13 600 mm² de perímetro contra los
+3 535 de la rejilla.
 
-Los 11 % de margen los exige `guarda_aire()` en `clearance_budget.py`, que
-compara las dos áreas derivándolas de sus módulos. Es el tipo de cota que se
-pierde sola: no sale en ningún render, no la ve `solapes()` ni el sobre del DXF,
-y el aparato arranca igual — solo se entera uno meses después con el disipador
-caliente. **No cabía en el suelo**: la bandeja solo vuela 30.19 mm por delante
-del larguero, y ahí las mismas ranuras dan 3 536 mm², menos de la mitad.
+| | área abierta | altura | ranuras |
+|---|---|---|---|
+| entrada (suelo, en el vuelo) | **3 535 mm²** | y = 4 | 51 de 18.2 × 4 |
+| salida — valle | 7 499 mm² | y = 144 | 102 de 19.2 × 4 |
+| salida — las tres ondas | 5 110 mm² | y ≈ 137 | — |
+
+**`guarda_aire()` dejó de medir área y pasa a medir salto térmico.** Nació
+exigiendo «entrada ≥ salida», que valía mientras la entrada estaba en la
+trasera. Al mudarse al suelo esa desigualdad se rompe *a propósito*, y mantener
+el assert habría sido tener una puerta roja sobre un diseño correcto — el vicio
+que ya costó una tanda entera en este repo. Lo que hay que exigir no es paridad
+de áreas: es que el aparato no se caliente.
+
+```
+Q = C_D · A_ef · √(2 g h ΔT / T)        caudal
+P = ρ · c_p · Q · ΔT                    calor que se lleva
+⇒  P = k · ΔT^1.5,  k = ρ·c_p·C_D·A_ef·√(2 g h / T)
+```
+
+`A_ef` son entrada y salida **en serie**; `h`, la distancia entre sus
+centroides. Con 6.33 W de reguladores (spec PSU v2 §4) salen **8.5 K** sobre
+ambiente contra un techo de 15. **SUPUESTO, no medido**: `C_D` = 0.65, y las
+pérdidas del transformador no están itemizadas — por eso el techo va holgado.
 
 **La punta de arriba es cuadrada** (2026-08-21). El techo lleva una meseta de
 `marco_remate` = **50 mm** rematada por dos quiebres de 2 mm, en vez de la
@@ -320,7 +338,7 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Arandela ANCHA d16 | 4 | **no opcional**: en los ejes de giro. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 MPa y aguanta |
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa. **Sustituye al amortiguador**, que se eliminó |
 | Plancha acrílico t=5 mm | **1** | solo la tapa del valle. Un espesor entero para **una** pieza — a resolver en el pliego, no en el modelo |
-| Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante, 528.32 × 291.4) + tapa de remate (528.32 × 37) + **trasera** (528.02 × 245.18, con la rejilla de entrada de aire) |
+| Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante, 528.32 × 291.4, con la rejilla de entrada de aire en el vuelo) + tapa de remate (528.32 × 37) + **trasera** (528.02 × 245.18) |
 | Patica metálica torneada | 4 | d=16 × 8 mm |
 
 **Total de tornillos del case: 48** — 8 M4 de raíl + 10 M5 de esqueleto +
@@ -449,7 +467,7 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
       ([`renders/sam17-case.png`](renders/sam17-case.png)) y trasera
       ([`renders/sam17-case-trasera.png`](renders/sam17-case-trasera.png)).
       La trasera es la que importa: muestra las tres ondas — sierra, triángulo
-      y cuadrada, las tres formas del VCO — que son la firma visual del case,
-      y por debajo de ellas la rejilla de entrada de aire.
+      y cuadrada, las tres formas del VCO — que son la firma visual del case y
+      la única ventilación de esa pieza.
 - [ ] Cupón cortado y kerf registrado (bloquea el corte de planchas)
 - [ ] Planchas cortadas y ensayo de ensamblaje
