@@ -252,7 +252,16 @@ def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
     # contra la ESQUINA del riel girado y no contra su centro. Estuvo en
     # alto_frontal/2 + r + 2, pegado al vertice, y ahi el riel se le montaba
     # encima en cuanto el vertice bajo.
-    x_bd = cr[0][0] + _he_er(p, p["angulo_inferior"])[0] + p["holgura_rail"] + r
+    # El chasis del PSU se pega al larguero TRASERO y el delantero al chasis:
+    # una sola cadena, x_tr -> chasis -> base delantera. Estuvo derivado del
+    # riel de panel (x=49.68) y ahi hacia dos cosas malas a la vez: se leia
+    # pegado al riel (4.00 mm clavados) y se metia en el envolvente de los
+    # modulos de la fila de abajo. Ver la nota larga en el .scad -- el limitante
+    # de verdad era el chasis, no el.
+    x_tr_ = fondo(p) - r - p["t_piel"]
+    x_ch_frente = ((x_tr_ - r) - p["chasis_holgura_larguero"]
+                   - _chasis(p)["tapa_y"])
+    x_bd = x_ch_frente - p["chasis_holgura_larguero"] - r
     y_bd = p["t_base"] + r
     # Los DOS largueros traseros comparten X, y por eso es UNA cota y no dos
     # copias: la cara donde apoya la trasera tiene que ser un plano. Se retira
@@ -934,6 +943,7 @@ def guarda_piso(p: dict[str, float]) -> None:
     rehaciendo la formula: si el .scad y el budget se separan, esto lo nota."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
+    ce = _centros_esqueleto(p, P, cr)
     _, hy = _he_er(p, p["angulo_inferior"])
     # 1. el riel PASA POR ENCIMA de la bandeja, con aire
     y_bajo = cr[0][1] - hy
@@ -958,6 +968,19 @@ def guarda_piso(p: dict[str, float]) -> None:
         f"x={t_curva:.2f} ({x0_bb - t_curva:+.2f} mm). Por encima queda suelo "
         f"abierto; por debajo la plancha asoma por delante del redondeo del "
         f"costado, que es lo que x_valle() evita en el pico")
+    # 3. el larguero de base delantera se aparta del riel de panel. ESTO ANTES
+    #    SALIA SOLO: el larguero se DERIVABA del riel, asi que la holgura era
+    #    por construccion. Desde el 2026-08-21 lo coloca el chasis del PSU y la
+    #    holgura pasa a ser una consecuencia, no una premisa -- o sea justo la
+    #    clase de cota que se rompe callada cuando alguien mueve el chasis.
+    hx, _ = _he_er(p, p["angulo_inferior"])
+    aparte = (ce[0][0] - p["rail"] / 2) - (cr[0][0] + hx)
+    assert aparte >= p["holgura_rail"] - 1e-9, (
+        f"el larguero de base delantera se le echa encima al riel de panel del "
+        f"frente: su cara delantera cae en x={ce[0][0] - p['rail'] / 2:.2f} y la "
+        f"esquina trasera del riel esta en x={cr[0][0] + hx:.2f} "
+        f"({aparte:+.2f} mm, se exige >={p['holgura_rail']:.2f}). Lo coloca el "
+        f"chasis del PSU, asi que lo que hay que mirar es donde quedo el chasis")
 
 
 # LAS DOS FILAS SE ABREN, cada una girando sobre el M4 de su riel de ARRIBA --
@@ -1309,10 +1332,11 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
           "la ranura de salida se mete debajo del toroide")
     # el agujero del acrilico, en coordenadas de bandeja_base_2d
     pos_x = au - p["chasis_margen_bandeja"] - c["tapa_x"]
-    # El chasis sigue CENTRADO ENTRE LOS LARGUEROS; el vuelo entra solo como
-    # desplazamiento del origen local de la plancha (ver ch_pos en el .scad).
+    # El chasis se pega al larguero TRASERO y el delantero a el. En el marco
+    # local de la plancha eso es vuelo + rail + holgura, sin mirar donde acabo
+    # ce[0] -- la cadena ya lo puso ahi.
     vuelo = _vuelo_bandeja(p)
-    pos_y = vuelo + (fondo_bandeja - c["tapa_y"]) / 2
+    pos_y = vuelo + p["rail"] + p["chasis_holgura_larguero"]
     ax = pos_x + c["desfase"] + t + p["chasis_salida_x"] - hol
     ay = pos_y + c["desfase"] + t + p["chasis_salida_y"] - hol
     exige(0 <= ax and ax + w <= au

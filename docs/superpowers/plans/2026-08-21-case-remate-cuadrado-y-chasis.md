@@ -596,6 +596,59 @@ bandeja: es la cuarta vez que esa cota cambia de referencia.
 
 ---
 
+## T10 — El espacio de los módulos lo comía el chasis  ✅ HECHA (2026-08-21)
+
+**Pedido:** «aún estoy interesado en quitar la barra del frente que está muy
+cerca del riel, preferiría que los módulos tengan máximo espacio».
+
+### Por caja no se ve; hay que recorrer el panel
+
+El primer intento midió cada estorbo por su caja envolvente y dio un número
+falso: el mínimo de una caja puede caer en una `s` que el panel ni siquiera
+ocupa. La medida buena recorre el panel y pregunta, en cada punto, cuál es el
+estorbo más cercano al plano.
+
+Hecho así, el limitante no era el larguero:
+
+| | mínimo | quién lo pone | panel útil a 50 mm | a 60 mm |
+|---|---|---|---|---|
+| antes | 18.6 mm | **chasis** | 27 % | 11 % |
+| solo quitar el larguero | 18.6 mm | chasis | 42 % | 20 % |
+| solo mover el chasis | 25.8 mm | el larguero | 53 % | 37 % |
+| **los dos atrás** | **34.4 mm** | chasis | **68 %** | 42 % |
+| sin larguero + chasis atrás | 34.4 mm | chasis | 68 % | 46 % |
+
+El chasis mide 176.6 × 93 y se sentaba centrado entre los dos largueros de base.
+Los módulos de la fila inferior cuelgan del panel hacia dentro y hacia abajo y se
+metían en su esquina delantera-alta. **Nadie había decidido que fuera centrado**:
+`ch_pos()` simplemente lo centraba.
+
+### La cadena, en un solo sentido
+
+`x_tr → chasis → base delantera`, los dos saltos a `chasis_holgura_larguero`.
+Escrito al revés habría dado recursión — `ch_pos()` mira `bandeja_base_fondo()`,
+que mira `ce[0]`—, así que el chasis se ancla al larguero **trasero**, que solo
+depende de `x_tr`.
+
+El larguero delantero acaba en x = 88.34: **42.7 mm del raíl de panel** en vez de
+4.00, que era la otra mitad de lo que molestaba.
+
+### Lo que la tanda encontró
+
+- **La holgura contra el raíl dejó de salir sola.** Estaba garantizada por
+  construcción mientras el larguero se *derivaba* del raíl; al pasar a colocarlo
+  el chasis se volvió una consecuencia, o sea la clase de cota que se rompe
+  callada. `guarda_piso()` la exige ahora como tercer assert.
+- **La rejilla de aire creció sola.** El vuelo de la bandeja pasa de 30.19 a
+  68.85 mm y la rejilla vive en el vuelo: 3 535 → 11 421 mm², ΔT de 8.5 a 4.6 K.
+  Está derivada del vuelo y no de un número a mano, así que no hubo que tocarla.
+- **La barra no se retira.** Sostiene la fila delantera de la bandeja; sin ella
+  la plancha queda en voladizo de 280 mm bajo el chasis (1.15 MPa, ~1.4 mm de
+  flecha más creep) y la T2 pierde uno de los dos largueros donde quiere montar
+  el chasis. Los 4 puntos de panel que se ganarían a 60 mm no pagan eso.
+
+---
+
 ## T2 — El chasis del PSU se monta sobre los largueros
 
 Hoy el chasis de acero pasa **entre** los dos largueros de base y se apoya en la

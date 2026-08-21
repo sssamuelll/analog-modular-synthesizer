@@ -76,6 +76,15 @@ lenguaje visual).
 > techo de 15 (`potencia_disipada` y `salto_termico_max`, los dos SUPUESTO). El
 > hueco del IEC sube de y=22 a y=33, centrado en la banda libre entre la fila de
 > M3 y la onda — estaba a 3.5 mm de la arandela de un tornillo.
+> **rev. 12** (2026-08-21): **el chasis del PSU deja de ir centrado**. Medido a
+> lo largo del panel, lo que le comía fondo a los módulos de la fila de abajo no
+> era el larguero delantero sino el chasis: 18.6 mm de fondo libre a media
+> altura. Ahora el chasis se pega al larguero trasero y el delantero al chasis,
+> los dos a `chasis_holgura_larguero`. Fondo mínimo 18.6 → **34.4 mm**, panel
+> útil con módulos de 50 mm de 27 % → **68 %**. El larguero queda a 42.7 mm del
+> raíl de panel en vez de a 4.00, y no se retira: sostiene la fila delantera de
+> la bandeja. El vuelo crece a 68.85, la rejilla de aire con él, y ΔT baja a
+> 4.6 K.
 >
 > **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
 > visual y proporciones *relativas*, pero **sus cotas están superadas**. Se

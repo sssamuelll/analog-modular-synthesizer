@@ -163,12 +163,15 @@ angulo_superior = 45;    // 45 desde la horizontal, cara de generacion
 // entrada nueva tiene que dar al menos eso o el aparato respira peor que antes.
 // Se probo unas horas en la trasera (8316 mm2 en 45 ranuras) y acabo en el
 // SUELO, en el vuelo de la bandeja: Samuel pidio dejar la trasera solo con sus
-// tres ondas. Ahi son 3535 mm2 en 51 ranuras -- menos de la mitad de area, pero
-// entra a y=4 en vez de a y=53 y el tiro de chimenea gana lo que pierde.
+// tres ondas. Empezo ahi con 3535 mm2 -- menos de la mitad de area que en la
+// trasera, pero entrando a y=4 en vez de a y=53, y el tiro de chimenea gana lo
+// que pierde. Al correr despues el larguero delantero hacia atras (ver
+// centros_esqueleto) el vuelo paso de 30.19 a 68.85 y la rejilla crecio con el:
+// 11421 mm2, y el salto termico de 8.5 a 4.6 K.
 //
-// Por eso guarda_aire() no compara areas sino SALTO TERMICO: la entrada quedo
-// mas estrecha que la salida a proposito, y lo que hay que exigir es que el
-// aparato no se caliente. Salen 8.5 K sobre ambiente contra un techo de 15.
+// Por eso guarda_aire() no compara areas sino SALTO TERMICO. La entrada llego a
+// quedar mas estrecha que la salida a proposito, y lo que hay que exigir no es
+// paridad de areas: es que el aparato no se caliente.
 //
 // Ojo con bajar alto_frontal creyendo que siempre ayuda: la curva se come la
 // mitad, asi que cada mm que baja el vertice sube medio el inset y solo se gana

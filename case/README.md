@@ -76,9 +76,13 @@ plenum lo dan las paticas de 8 mm, que abren ~13 600 mm² de perímetro contra l
 
 | | área abierta | altura | ranuras |
 |---|---|---|---|
-| entrada (suelo, en el vuelo) | **3 535 mm²** | y = 4 | 51 de 18.2 × 4 |
+| entrada (suelo, en el vuelo) | **11 421 mm²** | y = 4 | 51 de 56.8 × 4 |
 | salida — valle | 7 499 mm² | y = 144 | 102 de 19.2 × 4 |
 | salida — las tres ondas | 5 110 mm² | y ≈ 137 | — |
+
+La rejilla nació con 3 535 mm² en ranuras de 18.2 y **creció sola** a 11 421
+cuando el larguero delantero se corrió hacia atrás (abajo): está derivada del
+vuelo, no de un número escrito a mano.
 
 **`guarda_aire()` dejó de medir área y pasa a medir salto térmico.** Nació
 exigiendo «entrada ≥ salida», que valía mientras la entrada estaba en la
@@ -94,9 +98,47 @@ P = ρ · c_p · Q · ΔT                    calor que se lleva
 ```
 
 `A_ef` son entrada y salida **en serie**; `h`, la distancia entre sus
-centroides. Con 6.33 W de reguladores (spec PSU v2 §4) salen **8.5 K** sobre
+centroides. Con 6.33 W de reguladores (spec PSU v2 §4) salen **4.6 K** sobre
 ambiente contra un techo de 15. **SUPUESTO, no medido**: `C_D` = 0.65, y las
 pérdidas del transformador no están itemizadas — por eso el techo va holgado.
+
+## El espacio de los módulos lo comía el chasis, no la barra
+
+Samuel quiso retirar el larguero de base delantera: se leía pegado al raíl de
+panel (4.00 mm, la holgura clavada) y parecía comerle fondo a los módulos de la
+fila de abajo. Medido a lo largo del panel —y no por caja, que es donde se
+esconde el error—, el limitante era otro.
+
+El **chasis de acero del PSU** mide 176.6 × 93 mm y se sentaba *centrado* entre
+los dos largueros de base. Los módulos de la fila inferior cuelgan del panel
+hacia dentro y hacia abajo, y se metían en su esquina delantera-alta: el fondo
+libre caía a **18.6 mm** a media altura del panel. Nadie había decidido que el
+chasis fuera centrado — `ch_pos()` simplemente lo centraba.
+
+| | mínimo | quién lo pone | panel útil a 50 mm | a 60 mm |
+|---|---|---|---|---|
+| antes | 18.6 mm | chasis | 27 % | 11 % |
+| solo quitar el larguero | 18.6 mm | chasis | 42 % | 20 % |
+| solo mover el chasis | 25.8 mm | el larguero | 53 % | 37 % |
+| **los dos atrás** | **34.4 mm** | chasis | **68 %** | 42 % |
+
+Así que ahora **el chasis se pega al larguero trasero y el delantero se pega al
+chasis**, los dos a `chasis_holgura_larguero`. Una sola cadena y en un solo
+sentido: `x_tr → chasis → base delantera`. El larguero acaba en x = 88.34, o sea
+a **42.7 mm del raíl de panel** en vez de a 4.00 — que era la otra mitad de lo
+que molestaba.
+
+**No se retira.** Sostiene la fila delantera de tornillos de la bandeja; sin él
+la plancha queda en voladizo de 280 mm bajo el chasis, y los 4 puntos de panel
+que se ganarían a 60 mm de fondo no pagan eso.
+
+Efecto colateral que sale gratis: el vuelo de la bandeja pasa de 30.19 a
+**68.85 mm**, la rejilla de entrada crece con él y el salto térmico baja de 8.5 a
+**4.6 K**.
+
+Lo que dejó de salir solo: la holgura contra el raíl de panel. Estaba garantizada
+por construcción mientras el larguero se *derivaba* del raíl; ahora es una
+consecuencia, así que `guarda_piso()` la exige explícitamente.
 
 **La punta de arriba es cuadrada** (2026-08-21). El techo lleva una meseta de
 `marco_remate` = **50 mm** rematada por dos quiebres de 2 mm, en vez de la

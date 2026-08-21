@@ -155,16 +155,40 @@ function centros_esqueleto() =
          // plano trasero -- empotrada y a ras, sin rebaje y sin dejar de ser
          // un DXF plano.
          x_tr = fondo() - r - t_piel,
+         // El chasis del PSU se pega al larguero TRASERO, y el larguero
+         // delantero se pega al chasis. Una sola cadena y en un solo sentido:
+         // x_tr -> chasis -> base delantera. Ver la nota de abajo.
+         x_ch_frente = (x_tr - r) - chasis_holgura_larguero - ch_tapa_ext().y,
+         x_bd = x_ch_frente - chasis_holgura_larguero - r,
          x_ed = cr[2].x + he_er_x(angulo_superior) + holgura_rail + r,
          y_ep = P[3].y - t_acrilico - r)
     // Los dos largueros de la base ya NO viven en el canto de abajo. Desde que
     // la bandeja es el suelo (t_base) montan encima de ella, o sea con su centro
     // en t_base + r, y a esa altura el redondeo de las esquinas de abajo deja de
     // afectarles -- ahi ya hay acrilico de sobra.
-    //   - Frente: lo que manda ahora es el riel de panel, que le pasa por
-    //     delante. Misma cuenta que x_ed: se separa de la ESQUINA del riel
-    //     girado, no de su centro. Antes iba en alto_frontal/2 + r + 2, pegado
-    //     al vertice, y ahi el riel se le montaba encima.
+    //   - Frente: LO QUE MANDA ES EL CHASIS DEL PSU, no el riel de panel
+    //     (2026-08-21). Estuvo derivado del riel -- se plantaba holgura_rail
+    //     detras de su esquina girada, x=49.68 -- y ahi hacia dos cosas malas a
+    //     la vez: se leia pegado al riel (4.00 mm, la holgura clavada) y se
+    //     metia en el envolvente de los modulos de la fila de abajo, que dejaba
+    //     en 25.7 mm de fondo el tramo bajo del panel.
+    //
+    //     Lo que se midio al ir a retirarlo: el limitante de verdad NO era el,
+    //     era el CHASIS. Sus 176.6 x 93 sentados en medio del piso dejaban el
+    //     fondo de modulo en 18.6 mm a media altura del panel, y quitar el
+    //     larguero solo subia el panel util de 11 % a 20 % con 60 mm de fondo.
+    //     Lo que mueve la aguja es correr el chasis contra el larguero trasero
+    //     -- nadie decidio que fuera centrado, ch_pos() simplemente lo centraba.
+    //
+    //     Asi que ahora los dos se apartan: el chasis se pega al trasero y este
+    //     se pega al chasis, los dos a chasis_holgura_larguero. El larguero
+    //     acaba en x=88.34, o sea a 42.7 mm del riel de panel en vez de a 4.00,
+    //     y el fondo de modulo sube de 18.6 a 34.4 mm (68 % del panel util con
+    //     50 mm de fondo, contra el 27 % de antes).
+    //
+    //     No se retira: sostiene la fila delantera de tornillos de la bandeja.
+    //     Sin el la plancha queda en voladizo de 280 mm bajo el chasis, y los
+    //     4 puntos de panel que se ganarian a 60 mm no pagan eso.
     //   - Fondo: comparte X con el de arriba (x_tr). Estuvo en
     //     fondo - r - radio_perfil, 14 mm mas adelante que ellos, con la nota
     //     de que "adelantarlo solo compra fondo de bandeja y no hace falta".
@@ -172,7 +196,7 @@ function centros_esqueleto() =
     //     14 mm de diferencia una de sus dos filas se atornillaba al aire.
     //     Lo canta apoyo() en clearance_budget. Cabe: a y=8 la curva del canto
     //     trasero esta en x=289.87 y la esquina del riel movido en 286.22.
-    [[cr[0].x + he_er_x(angulo_inferior) + holgura_rail + r, t_base + r],
+    [[x_bd,          t_base + r],               // base delantera
      [x_tr,          t_base + r],               // base trasera
      [x_ed,                y_ep],                     // entrepiso delantero
      // valle: el cuarto, y el unico que existe por una plancha y no por una
@@ -475,10 +499,16 @@ module piel_trasera_2d() {
 // DIBUJADA: 51 ranuras en el vuelo de la bandeja en vez de un hueco.
 //
 // Donde esta es mejor de lo que parece. Entra por lo mas BAJO del case (y=4
-// contra los 53 de la version trasera), o sea que el tiro de chimenea gana los
-// 50 mm que pierde de area. Y no se ve desde ningun angulo normal: el plenum lo
-// dan las paticas de 8 mm, que abren ~13600 mm2 de perimetro contra los 3536 de
-// la rejilla, asi que no son ellas el cuello de botella.
+// contra los 53 de la version trasera), o sea que el tiro de chimenea gana lo
+// que pierde de area. Y no se ve desde ningun angulo normal: el plenum lo dan
+// las paticas de 8 mm, que abren ~13600 mm2 de perimetro, del orden de la propia
+// rejilla, asi que no son ellas el cuello de botella.
+//
+// Nacio con 3535 mm2 en ranuras de 18.2, cuando el vuelo eran 30.19. Al correr
+// el larguero delantero hacia atras para dejarle sitio a los modulos, el vuelo
+// paso a 68.85 y la rejilla crecio con el: 11421 mm2 en ranuras de 56.8, y el
+// salto termico bajo de 8.5 a 4.6 K. No se toco nada suyo -- crecio sola porque
+// esta derivada del vuelo y no de un numero escrito a mano.
 //
 // Vive en el VUELO -- por delante del larguero de base delantera --, o sea
 // fuera del camino de carga entre los dos largueros. La plancha sigue siendo el
@@ -763,21 +793,27 @@ function bandeja_base_fondo() =
 // no parametro: llega hasta donde MUERE LA CURVA de la esquina inferior
 // delantera del costado, que es la misma regla que usa x_valle() para el pico.
 // Un milimetro mas y la plancha asoma por delante del redondeo; uno menos y
-// queda suelo sin cubrir. Con alto_frontal=19 la curva muere en x=9.49 y el
-// larguero arranca en 39.68, o sea 30.19 de vuelo.
+// queda suelo sin cubrir. Con alto_frontal=19 la curva muere en x=9.49; el
+// larguero arranca en 78.34 desde que lo coloca el chasis, o sea 68.85 de
+// vuelo. Fueron 30.19 mientras el larguero se derivaba del riel de panel, y ese
+// crecimiento se lo lleva entero la rejilla de entrada de aire, que vive aqui.
 function bandeja_base_vuelo() =
     let (P = pts_perfil(), ce = centros_esqueleto())
     (ce[0].x - rail/2) - tangente(P[0], P[6]-P[0], P[1]-P[0], radio_punta);
 
-// El chasis sigue CENTRADO ENTRE LOS LARGUEROS, no en la plancha. Si se
-// centrara en la plancha, estirarla por delante lo habria arrastrado 15 mm
-// hacia el frente y se habria comido la holgura contra el larguero delantero,
-// que es "la cota mas justa del montaje". El vuelo entra solo como
-// desplazamiento del origen local, que es donde vive el dibujo.
+// El chasis YA NO VA CENTRADO entre los largueros (2026-08-21). Se pega al
+// TRASERO, a chasis_holgura_larguero, y el larguero delantero se pega a el: una
+// sola cadena, x_tr -> chasis -> base delantera. Centrarlo no lo habia decidido
+// nadie -- ch_pos() simplemente lo centraba -- y salia caro: sus 176.6 x 93 en
+// medio del piso dejaban el fondo de modulo de la fila de abajo en 18.6 mm.
+//
+// Aqui se expresa en el marco LOCAL de la plancha, cuyo origen esta el vuelo por
+// delante del larguero delantero. Como el larguero se planta a
+// chasis_holgura_larguero del chasis, la cuenta se cierra sola y no necesita
+// mirar donde acabo ce[0]: vuelo + rail + holgura.
 function ch_pos() = [ancho_total - 2*t_cheek - chasis_margen_bandeja
                        - ch_tapa_ext().x,
-                     bandeja_base_vuelo()
-                       + (bandeja_base_fondo() - ch_tapa_ext().y)/2];
+                     bandeja_base_vuelo() + rail + chasis_holgura_larguero];
 
 // Esquina de la salida de cables del chasis, en coordenadas locales de
 // bandeja_base_2d(). Una sola definicion: la consume el agujero del acrilico
