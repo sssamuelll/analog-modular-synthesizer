@@ -21,6 +21,17 @@
 > interruptor del host (§6.2), el `RESET` del mux (§8), y la puerta
 > `check_pinout.py`, que estaba definida de una forma que la volvía una
 > tautología (§11). Abrió los issues **#143** a **#152**.
+>
+> **Segunda revisión del 2026-08-21**: la cabeza local pasa de cuatro dígitos a
+> una **pantalla SPI de 2,8"** (§7). Se evaluó una de 7 pulgadas y se descartó
+> con tres números, escritos ahí mismo para que no vuelva a proponerse a ciegas.
+> Arrastra: el buffer de 5 V se queda fijo en cuatro canales (§6.4), la
+> retroiluminación entra como clase atenuable en el árbitro del #104 (§9.1), la
+> tabla de panel y la de bloques cambian su fila (§3, §10), `check_pinout.py`
+> gana una cuarta comprobación —cuántos GPIO quedan libres— y la primera gana el
+> SPI1 (§11.1). **El margen de pines baja de nueve a dos** (§12.16), y la
+> interfaz de la pantalla es alcance de firmware que hoy no está planificado
+> (§12.17).
 
 ## 1. Objetivo
 
@@ -82,7 +93,7 @@ J2. El cerebro no ve un voltaje ni para oír.
 | **Afinado** | 4 entradas al PIO, ya recortadas por el 74HC14 **del módulo 3** | Núcleo §5.1 |
 | **Gates ×4** | 0/10 V activo alto, cable propio al ADSR | `architecture-poly.md` §4 |
 | **WS2812** | El dato, y el +5 V de la cadena **con su medida de corriente** (§9.1) | `architecture-poly.md` §4, §7; issues #104, #151 |
-| **Cabeza local** | 4 dígitos + encoder con pulsador + LEDs de estado | Núcleo §5.2 |
+| **Cabeza local** | Pantalla SPI de 2,8" + encoder con pulsador | Núcleo §5.2 |
 | **USB device** | USB-B, **aislado** | Núcleo §4.2; issue #60 |
 | **USB host** | USB-A por PIO-USB, con interruptor de carga limitado | Núcleo §5.3 |
 | **MIDI DIN** | In y out, DIN-5, con optoacoplador en la entrada | Núcleo §5.3 |
@@ -359,9 +370,9 @@ pieza que el módulo 3** (WQP-PJ398SM).
   guion se pone rojo aquí y no con un módulo prestado enchufado.
 - **Salidas.** 0/5 V, o sea traducción desde 3,3 V. **La misma pieza traduce
   clock out, reset out y el dato del WS2812**, que pedían exactamente lo mismo:
-  tres canales de un buffer de cuatro. Si el driver de dígitos (§7) resulta
-  necesitar traducción, este buffer pasa a ser de seis canales en vez de
-  añadirse otro integrado.
+  tres canales de un buffer de cuatro. Una versión anterior dejaba abierto que
+  creciera a seis si el driver de dígitos necesitaba traducción; con los dígitos
+  fuera (§7) esa puerta se cierra: **cuatro canales, y ya no depende de nada**.
 
 ### 6.5 Pedal — jack de 6,35 mm a entrada analógica
 
@@ -396,26 +407,83 @@ día que salga de casa, no.
 
 ## 7. La cabeza local
 
-Cuatro dígitos, un encoder con pulsador, y LEDs de estado. Cubre lo único que
-no puede esperar a que aparezca un teléfono: número de preset, canal MIDI, y si
-el autoafinado corre o si una voz se salió de rango (núcleo §5.2). No lleva
-menús a propósito.
+Una **pantalla SPI de 2,8 pulgadas** y un encoder con pulsador. Cubre lo único
+que no puede esperar a que aparezca un teléfono: número de preset, canal MIDI, y
+si el autoafinado corre o si una voz se salió de rango (núcleo §5.2). Y algo que
+con cuatro dígitos no se podía decir y ahora sí: **qué operación retenida está
+esperando el dedo**, escrita en palabras en vez de en un código de tres letras.
 
-`pinout.rs` reserva tres pines para los dígitos —**datos, reloj, latch**— y eso
-ya dice qué clase de pieza va: un **driver serie que refresque por hardware**.
-El criterio de elección va escrito y se verifica en la fase de BOM:
+Sustituye a los cuatro dígitos de la versión anterior de esta spec, y la
+sustitución **devuelve** tres pines (`DIG_DATA`, `DIG_CLK`, `DIG_LATCH`), una
+pieza del BOM y la única razón por la que el buffer de 5 V de §6.4 podía tener
+que crecer a seis canales.
 
-1. Refresco y brillo por hardware. El núcleo de tiempo real no puede estar
-   multiplexando dígitos mientras cronometra cuatro osciladores.
-2. Umbrales de entrada que acepten 3,3 V. Si no los aceptan, se suma al buffer
-   de 5 V de §6.4 en vez de añadir un integrado.
+**De dónde sale el tamaño.** Se evaluó una de 7 pulgadas y no entra, por tres
+razones independientes y cada una basta sola:
 
-**Los LEDs de estado cuelgan del mismo driver.** `pinout.rs` no reserva ni un
-pin para ellos, y no es un olvido: a un driver de ocho dígitos le sobran cuatro
-cuando solo se usan cuatro. Cero pines, cero piezas.
+| Lo que se rompe | El número |
+|---|---|
+| Ancho de panel | ~155 × 87 mm de área activa contra los **80 mm** que el censo del case le da a este módulo y los **128,5 mm** del 3U — donde además siguen viviendo los nueve conectores y los dos botones de §10 |
+| Corriente | **300-500 mA** de retroiluminación en el mismo riel de +5 V que hoy está abierto en el issue #151 |
+| Memoria | Un framebuffer de 800×480 a 16 bits son **768 KB** contra los **520 KB** de SRAM del RP2350 |
 
-**El pulsador del encoder es la confirmación física de respaldo** (núcleo §5.2
-y §2.2). Con antirrebote, y con el mismo criterio de fallo seguro que el pedal.
+La de 2,8" mide ~57 × 43 mm de área activa, cabe en los 80 mm, y su consumo
+entra en el presupuesto sin moverlo.
+
+**Si algún día se quiere una pantalla grande, no va en este módulo.** Va en el
+case como **otro cliente del protocolo**, con su propio micro y su propia
+alimentación, hablando por el UART del puente (§6.6). La arquitectura de «un
+modelo, N pieles» ya la admite sin tocar esta placa, y esa es la respuesta que
+esta spec da a esa petición cuando vuelva a aparecer.
+
+**Bus propio, no J2.** El RP2350 trae dos periféricos SPI; el J2 es contrato
+congelado a 10 MHz con ocho stubs colgando y no admite un cliente más (§4). La
+pantalla va en el segundo SPI, a su ritmo, y **no usa PIO** — o sea que no entra
+en el reparto de ventanas de 32 pines de §11.1.
+
+`pinout.rs` le reserva **cinco** pines: `LCD_SCLK`, `LCD_MOSI`, `LCD_CS`,
+`LCD_DC` y `LCD_BL`. No hay `MISO` porque la pantalla no se lee, y **no hay pin
+de reset propio: cuelga del reset del sistema**. Ese ahorro de un pin no es
+cosmético — ver §12.16.
+
+**Y esos cinco pines no son cualquiera.** El J2 ocupa el SPI0 (`SCLK` en GPIO 2,
+`MOSI` en 3, `MISO` en 4), así que la pantalla va forzosamente en el **SPI1**, y
+en el RP2350 cada periférico solo aparece en unos GPIO concretos. Con el mapa de
+hoy eso deja `LCD_SCLK` y `LCD_MOSI` obligados al bloque **40-47** — que además
+es el único tramo libre que queda del tamaño necesario. `LCD_CS`, `LCD_DC` y
+`LCD_BL` sí son libres, con la única condición de que `LCD_BL` tenga PWM.
+
+Esa asignación **se verifica contra la tabla de funciones de GPIO del datasheet
+del RP2350B, no contra este párrafo**: es la cuarta razón por la que
+`check_pinout.py` mide capacidad y no identidad (§11.1).
+
+Criterio de elección de la pieza, que se verifica en la fase de BOM y no antes:
+
+1. **Controlador con framebuffer propio** (clase ILI9341 o equivalente). El
+   núcleo de tiempo real no puede estar refrescando píxeles mientras cronometra
+   cuatro osciladores — es el mismo criterio que descartaba multiplexar dígitos.
+2. **Retroiluminación con entrada de PWM accesible**, no atada a `VCC`. Sin eso
+   la pantalla no puede entrar en el árbitro de brillo del #104 (§9.1).
+3. **Lógica a 3,3 V sin traducción.** Si la pieza elegida no la acepta, se
+   descarta la pieza; el buffer de §6.4 **no** vuelve a crecer por esto.
+
+**Los LEDs de estado desaparecen: ahora son píxeles.** Colgaban de las salidas
+que le sobraban al driver de dígitos, y con el driver fuera no tienen dónde
+colgar — pero tampoco tienen por qué. Si más adelante se quisiera un indicador
+físico que sobreviva a una pantalla apagada, cuelga de la cadena WS2812 que ya
+existe (§9.1), a coste cero de pines.
+
+**Sin táctil, a propósito.** Se maneja girando y apretando. Ahorra pines y
+ahorra calibración, pero la razón de peso es otra: **el pulsador del encoder es
+la confirmación física** (núcleo §5.2 y §2.2), y un táctil sobre la misma
+pantalla que muestra la operación retenida convertiría la llave en parte de lo
+que está autorizando. La llave tiene que estar fuera de la superficie que
+propone. Con antirrebote, y con el mismo criterio de fallo seguro que el pedal.
+
+**Y sigue sin llevar menús profundos, a propósito.** Tener pantalla no es
+permiso para mudar el instrumento a un árbol de configuración: la interfaz sigue
+siendo el panel, los pomos y los cables. Lo que gana es decir en palabras lo que
+cuatro dígitos decían en clave.
 
 ## 8. Telemetría
 
@@ -500,6 +568,13 @@ note la caída, el RP2350 ya se reseteó»*. El árbitro sigue estimando cada
 cuadro antes de empujarlo; el sensor es para **calibrar la estimación y
 detectar deriva**, no para cerrar el lazo en tiempo real.
 
+**La retroiluminación de la pantalla (§7) entra en ese árbitro como clase
+atenuable**: por debajo de la guía del patch bay, por encima del farol. Son
+~60-80 mA que el firmware **sí** puede bajar, a diferencia del host USB, que es
+presencia o ausencia y no se atenúa (#151). Su PWM sale de `LCD_BL`, o sea que
+la palanca ya existe en el cobre; lo que falta es la fila en la tabla del #104,
+y esa decisión va con la del host.
+
 Y entra con una **regla de trazado que es una puerta, no una intención**: la
 corriente de la cadena vive en una **isla de potencia en el canto de la placa**
 y no cruza el plano que sostiene el SPI. Se comprueba sobre la placa ruteada
@@ -550,7 +625,7 @@ otro nombre:
 | 3, 4 | MIDI DIN in / out | DIN-5 ×2 |
 | 5, 6, 7, 8 | Clock in / out, reset in / out | Thonkiconn 3,5 mm ×4 |
 | 9 | Pedal | Jack 6,35 mm |
-| 10 | **La cabeza local** | 4 dígitos + encoder con pulsador + LEDs de estado |
+| 10 | **La cabeza local** | Pantalla SPI de 2,8" (~57 × 43 mm activos) + encoder con pulsador |
 | 11 | **Los botones** | BOOTSEL y RUN |
 
 **Son nueve conectores, no once**, y una versión anterior de este documento los
@@ -594,7 +669,7 @@ cálculo NO cubre):
 |---|---|
 | `panel_budget.py` | Que los once elementos de panel de §10 quepan, y que el ancho quepa en la fila del case |
 | `sync_budget.py` | El divisor y los umbrales de clock/reset contra fuentes de 5 V **y** de 10 V |
-| `power_budget.py` | Corriente **y margen de caída** por riel: micro, puente RF en pico, host USB en su límite, driver de dígitos **y la cadena WS2812 entera** — contra lo que da la IRM-15-5 con el tope del #104 **importado** de la spec de la fuente, y contra los 650 mA del +12 |
+| `power_budget.py` | Corriente **y margen de caída** por riel: micro, puente RF en pico, host USB en su límite, **retroiluminación de la pantalla** (§7) **y la cadena WS2812 entera** — contra lo que da la IRM-15-5 con el tope del #104 **importado** de la spec de la fuente, y contra los 650 mA del +12 |
 | `enlace_budget.py` | El flanco de 10 MHz por cinta plana con ocho stubs, la resistencia de serie con sus **dos** restricciones opuestas, el `V_IH` resultante, y el tiempo de subida de las ocho ramas de I²C contra la longitud declarada del mazo |
 | `pio_budget.py` | Máquinas de estado, memoria de instrucciones, canales de DMA y reparto de núcleos — y el conflicto de `clk_sys` entre el host USB y el afinado (issue #150) |
 
@@ -620,8 +695,9 @@ Lo que sí puede fallar, y por tanto lo que la puerta mide, es la **capacidad**:
 
 1. **Que cada función caiga en un pin que la sepa hacer**, contra el datasheet
    del RP2350B: el pedal en una entrada de ADC de las que existen, `SDA`/`SCL`
-   en pines con función I²C, y ninguna función encima de los pines que la placa
-   necesita para el arranque por QSPI.
+   en pines con función I²C, **`LCD_SCLK` y `LCD_MOSI` en pines que expongan el
+   SPI1 —el SPI0 se lo lleva el J2 (§7)— y `LCD_BL` en uno con PWM**, y ninguna
+   función encima de los pines que la placa necesita para el arranque por QSPI.
 2. **Que los pines de un mismo programa de PIO caigan en la misma ventana.**
    Cada bloque PIO ve 32 pines (base 0 o base 16 — a confirmar contra el
    datasheet, issue #150). Con el mapa propuesto, `TUNE_OUT` en 13-16 exige
@@ -629,9 +705,15 @@ Lo que sí puede fallar, y por tanto lo que la puerta mide, es la **capacidad**:
    pero **nada lo prueba hoy** y `pinout.rs` tiene tests para cosas menores.
 3. **Que el par del PIO-USB siga adyacente**, que ya lo prueba `pinout.rs` y
    aquí se cruza contra el cobre.
+4. **Cuántos pines quedan libres.** Con la pantalla dentro el mapa ocupa **46
+   de 48** (§12.16). La puerta los cuenta y **se pone roja si bajan de dos** —
+   no para prohibir gastarlos, sino para que gastarlos sea una decisión
+   deliberada y no un descubrimiento en la fase de ruteo.
 
 **Mutación:** mover un `TUNE_OUT` por encima del pin 31 y comprobar que se pone
-rojo. Esa modificación pasa hoy todos los tests de `pinout.rs`.
+rojo. Esa modificación pasa hoy todos los tests de `pinout.rs`. Y para la
+cuarta: añadir dos pines inventados al mapa y comprobar que también se pone
+rojo — si no lo hace, la cuenta de libres está mirando otra cosa.
 
 Y la parte honesta, que va escrita en el bring-up y no en un guion: **el único
 juez que puede decir que el cobre hace lo que el firmware cree tiene un
@@ -701,7 +783,7 @@ terminado**, no la línea de código que pretendía lograrlo.
    placa, pero **el bring-up de §1 depende de varios**: sin la confirmación
    cableada no hay nada que probar del pedal.
 8. **El mux I²C no está elegido ni verificado contra stock de LCSC.** Issue #81.
-9. **El driver de dígitos, el optoacoplador, el aislador y el módulo del puente
+9. **La pantalla de 2,8", el optoacoplador, el aislador y el módulo del puente
    tampoco.** Cada uno tiene su criterio escrito (§6, §7); ninguno tiene número
    de parte hasta que alguien abra su hoja. **Dato inventado nunca: verificado
    contra datasheet, o celda vacía.**
@@ -719,13 +801,31 @@ terminado**, no la línea de código que pretendía lograrlo.
    una tarde en este proyecto.
 14. **`pinout.rs` va a crecer con esta placa**, y son cinco pines nuevos: la
     bandera de fallo **y el `EN`** del interruptor del host (§6.2), el `EN` y el
-    arranque del puente (§6.6), y el **`RESET` del mux I²C** (§8). Hay GPIO
-    libres —38, 39 y del 41 al 47, o sea nueve— y el fichero existe para esto:
+    arranque del puente (§6.6), y el **`RESET` del mux I²C** (§8). Una versión
+    anterior de este riesgo decía que quedaban nueve GPIO libres; con la
+    pantalla de §7 dentro **quedan dos** (§12.16). El fichero existe para esto:
     dice de sí mismo que es una propuesta y que cuando haya placa **él es el
     único que cambia**. Sus tests de pin repetido y de pin inexistente siguen
     corriendo, y `check_pinout.py` le añade los de capacidad y ventana de PIO.
 15. **Nada de esto está medido en placa.** Son datasheets, contratos y
     presupuestos.
+16. **El margen de pines queda en dos, y esa es la noticia de la pantalla.** La
+    cuenta: **39** hoy, **+5** de §12.14 (bandera y `EN` del host, `EN` y
+    arranque del puente, `RESET` del mux), **−3** de los dígitos que se van,
+    **+5** de la pantalla = **46 de 48**. Y cabe porque el `RST` de la pantalla
+    se ata al reset del sistema en vez de llevar pin propio (§7): sin ese ahorro
+    serían 47. **A partir de aquí, cualquier función nueva que pida más de dos
+    pines no entra sin quitar otra cosa.** Si eso llega a pasar, la salida
+    **no** es un segundo micro —eso compra un problema de coherencia de modelo
+    para resolver uno de conteo—: es un expansor colgado del bus I²C del mux,
+    que ya está puesto (§8). Se cierra con la cuarta comprobación de
+    `check_pinout.py` (§11.1), que hoy no existe.
+17. **La interfaz de la pantalla es alcance de firmware que no está en ningún
+    plan.** Driver `no_std` de la clase ILI9341, `embedded-graphics`, tipografía
+    y modelo de navegación. Es camino trillado y **no bloquea la placa** —se
+    puebla y se deja apagada, y el instrumento toca igual—, pero sí bloquea que
+    la cabeza local sirva para algo. Se declara aquí para que no entre de
+    contrabando en una tarea de hardware. **Issue #156.**
 
 ## 13. Fuera de alcance
 

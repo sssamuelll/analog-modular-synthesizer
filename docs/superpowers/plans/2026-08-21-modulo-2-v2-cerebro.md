@@ -86,7 +86,7 @@
 | `DIN_OUT_4`, `DIN_OUT_5` | pines 4 y 5 del DIN-5 de salida |
 | `PEDAL_T`, `PEDAL_R` | punta y anillo del jack de 6,35 mm |
 | `PEDAL_ADC` | después de la protección, a la entrada analógica |
-| `DIG_DATA`, `DIG_CLK`, `DIG_LATCH` | los tres pines del driver de dígitos |
+| `LCD_SCLK`, `LCD_MOSI`, `LCD_CS`, `LCD_DC`, `LCD_BL` | la pantalla de 2,8", en el SPI1 (el SPI0 es del J2) |
 | `ENC_A`, `ENC_B`, `ENC_SW` | encoder y su pulsador |
 | `BRIDGE_TX`, `BRIDGE_RX`, `BRIDGE_EN`, `BRIDGE_BOOT` | el zócalo del puente |
 
@@ -160,11 +160,11 @@ Las once, con lo que hay que confirmar en cada una:
 | **Mux I²C 8 canales** (issue #81) | Que tenga pin de `RESET`, la tensión de los dos lados, y stock |
 | **Aislador USB** | Que sea full-speed, **de qué lado va la pull-up de `D+`**, y qué pines de control necesita |
 | **Optoacoplador DIN** | Tiempo de subida contra el bitrate de MIDI, y los valores de la variante de 3,3 V de la especificación de la MIDI Association |
-| **Driver de dígitos** | Refresco por hardware, umbral de entrada con 3,3 V, y cuántos dígitos sobran para los LED de estado |
+| **Pantalla SPI de 2,8"** | Controlador con framebuffer propio, **entrada de PWM en la retroiluminación** (sin eso no entra en el árbitro del #104), lógica de 3,3 V sin traducción, y su consumo real de retroiluminación al 100 % — no el del datasheet del panel suelto |
 | **Módulo del puente** | Que sea la variante con **U.FL**, su pico de corriente, y qué antenas cubre su certificado |
 | **Interruptor de carga** | Límite, bandera, y **si se enclava en fallo** (de ahí el `EN` por GPIO) |
 | **Sensor de corriente del +5 V** | Rango contra 2,50 A, y salida compatible con una entrada de ADC de 3,3 V |
-| **Buffer de 5 V** | Umbral de entrada TTL (que 3,3 V lea como alto), y cuántos canales — 4 si el driver de dígitos no necesita traducción, 6 si sí |
+| **Buffer de 5 V** | Umbral de entrada TTL (que 3,3 V lea como alto). **Cuatro canales fijos**: con los dígitos fuera ya no hay nada que pueda hacerlo crecer a seis |
 | **MOSFET de gate ×2** | Umbral de puerta con 3,3 V, y que la cadena de dos sea **no inversora** |
 | **Regulador de 10 V** | **Margen de caída** contra el peor caso de `+12V` (Task 2), no solo corriente |
 | **Regulador de 3V3** | Corriente con el puente RF en pico, y su disipación — el TMP1075 va pegado a él |
@@ -255,7 +255,7 @@ Van **antes** del esquemático porque pueden tumbar una pieza o un pin, y correg
 - Create: `hardware/02-midi-cv/kicad-v2/check_pinout.py`
 
 **Interfaces:**
-- Produce: los cinco pines nuevos que consumen las tareas 6, 8 y 9, y la función `pines()` que `build_schematic.py` importa.
+- Produce: los **diez** pines nuevos (cinco de placa + cinco de pantalla) que consumen las tareas 6, 8 y 9, la baja de los tres de dígitos, y la función `pines()` que `build_schematic.py` importa.
 
 - [ ] **Step 1: Escribir los tests que fallan** en `pinout.rs`, antes de tocar el mapa:
 
@@ -286,17 +286,41 @@ fn los_pines_de_un_mismo_bloque_pio_caben_en_una_ventana() {
 }
 
 #[test]
-fn los_cinco_pines_nuevos_de_la_placa_existen() {
+fn los_pines_nuevos_de_la_placa_existen() {
     for nombre in ["host EN", "host fallo", "puente EN", "puente arranque",
-                   "mux RESET"] {
+                   "mux RESET", "LCD SCLK", "LCD MOSI", "LCD CS", "LCD DC",
+                   "LCD BL"] {
         assert!(PINOUT.iter().any(|p| p.para == nombre), "falta {nombre}");
     }
 }
+
+#[test]
+fn los_digitos_ya_no_estan() {
+    // La pantalla de 2,8" los sustituye (spec §7). Si vuelven, alguien esta
+    // trabajando contra una version vieja del plan y se van a pelear un pin.
+    for nombre in ["digitos: datos", "digitos: reloj", "digitos: latch"] {
+        assert!(!PINOUT.iter().any(|p| p.para == nombre),
+                "{nombre} deberia haberse ido con los digitos");
+    }
+}
+
+#[test]
+fn quedan_al_menos_dos_gpio_libres() {
+    // Con la pantalla dentro el mapa ocupa 46 de 48 (spec §12.16). Este test
+    // no prohibe gastar los dos que quedan: obliga a que gastarlos sea una
+    // decision, y no un descubrimiento en la fase de ruteo.
+    assert!(GPIO_MAX as usize - N_PINES_USADOS >= 2,
+            "quedan {} GPIO libres de {GPIO_MAX}", GPIO_MAX as usize - N_PINES_USADOS);
+}
 ```
 
-- [ ] **Step 2: Verlo fallar.** `cargo test -p sam17-nucleo-core pinout`. Expected: FAIL en los dos.
+- [ ] **Step 2: Verlo fallar.** `cargo test -p sam17-nucleo-core pinout`. Expected: FAIL en `los_pines_nuevos_de_la_placa_existen` y en `los_digitos_ya_no_estan`. Los otros dos pasan hoy y tienen que **seguir** pasando: son los que se pondrán rojos si el mapa se pasa de la raya más adelante.
 
-- [ ] **Step 3: Añadir los cinco pines** de GPIO libres (38, 39, 41-47) y los dos grupos de PIO. Correr `cargo test` hasta verde. **Los 183 tests anteriores siguen pasando** — si alguno se rompe, el mapa tenía un problema antes.
+- [ ] **Step 3: Dar de baja los tres de dígitos y añadir los diez nuevos.** El fondo disponible son los nueve GPIO libres (38, 39, 41-47) más los tres que devuelven los dígitos (33, 34, 35): **doce para diez**, y quedan dos.
+
+  `LCD_SCLK` y `LCD_MOSI` **no se colocan a ojo**: el J2 ocupa el SPI0, así que van forzosamente en GPIO que expongan el **SPI1**, y `LCD_BL` en uno con PWM (spec §7 y §11.1). **Abre la tabla de funciones de GPIO del datasheet del RP2350B antes de escribir un número** — esta es exactamente la clase de dato que el plan no puede darte de memoria.
+
+  Añade también los dos grupos de PIO. Correr `cargo test` hasta verde. **Los 183 tests anteriores siguen pasando** — si alguno se rompe, el mapa tenía un problema antes.
 
 - [ ] **Step 4: `check_pinout.py`** — y **no** compara la netlist con `pinout.rs`. Si `build_schematic.py` lee `pinout.rs`, esa comparación compara la propuesta consigo misma: es el golden de netlist otra vez, un verde vacío. Mide **capacidad**:
 
@@ -325,7 +349,7 @@ fn los_cinco_pines_nuevos_de_la_placa_existen() {
 
 - [ ] **Step 1: Copiar de `hardware/03-vco/kicad/build_schematic.py`** la estructura: imports de `symlib` y `schcheck`, helpers de escritura, cajetín, y **las dos guardias antes de escribir nada** (vértice exacto <0,01 mm en cada pin; `schcheck.py` contra redes fusionadas). Docstring nuevo con las decisiones no obvias de **esta** placa: que los pines salen de `pinout.rs`, que `GND_ISO` no toca `GNDD`, y que la corriente del LED no cruza el plano del SPI.
 
-- [ ] **Step 2: Los símbolos propios** que KiCad no trae, en `sam17.kicad_sym`: el mux I²C, el aislador, el driver de dígitos, el módulo del puente y el sensor de corriente, con los pines **de la figura del datasheet**, no de memoria.
+- [ ] **Step 2: Los símbolos propios** que KiCad no trae, en `sam17.kicad_sym`: el mux I²C, el aislador, el módulo del puente y el sensor de corriente, con los pines **de la figura del datasheet**, no de memoria.
 
 - [ ] **Step 3: Probar que `symlib` extrae todo lo que la hoja va a usar** antes de dibujar. Es la comprobación que va **antes** del paso destructivo: una hoja vacía de 711 bytes pasa el ERC con cero errores.
 
@@ -448,7 +472,7 @@ El pinout del contrato va **comentado en el script como tabla**, igual que en el
 
 - [ ] **Step 4: El pedal.** Jack de 6,35 mm, `PEDAL_R` con la referencia, `PEDAL_T` → protección → `PEDAL_ADC`. Y el sesgo que hace que **sin pedal enchufado la entrada lea «no pulsado»** — esto no es una preferencia, es la función de seguridad, y la Task 10 lo asevera.
 
-- [ ] **Step 5: La cabeza local.** Driver de dígitos por `DIG_DATA`/`DIG_CLK`/`DIG_LATCH`, los cuatro dígitos, **los LED de estado colgados de las salidas que le sobran al driver**, y el encoder con antirrebote en `ENC_A`/`ENC_B`/`ENC_SW`.
+- [ ] **Step 5: La cabeza local.** El conector de la pantalla de 2,8" con `LCD_SCLK`/`LCD_MOSI`/`LCD_CS`/`LCD_DC`/`LCD_BL`, su `RST` **atado al reset del sistema** (no lleva pin propio, spec §7), la resistencia de serie de la retroiluminación dimensionada al PWM, y el encoder con antirrebote en `ENC_A`/`ENC_B`/`ENC_SW`. **Sin LED de estado y sin driver de dígitos**: los dos se fueron con la pantalla — si el esquemático los trae, viene de una versión vieja del plan.
 
 - [ ] **Step 6: El zócalo del puente**: `BRIDGE_TX`/`RX`/`EN`/`BOOT` y su alimentación de `+3V3`. Sin keepout: el módulo lleva U.FL y la antena sale por un pigtail.
 
