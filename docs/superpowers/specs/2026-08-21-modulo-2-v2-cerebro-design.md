@@ -269,6 +269,11 @@ Todo lo que sale por el panel lleva protección contra descargas y contra que lo
 enchufen mal. Se declara aquí una vez y aplica a los **nueve conectores**
 enumerados en §10.
 
+Y se declara con criterio, porque es una **pieza que hay que comprar** y no una
+buena intención: la capacidad parásita de la protección se elige contra el
+flanco que protege. La del USB y la del clock no pueden ser la misma pieza — un
+supresor cómodo para un jack de 3,5 mm redondea un flanco de USB full-speed.
+
 ### 6.1 USB device — USB-B, aislado
 
 **USB-B** porque es el conector que trae el cable que ya existe en cualquier
