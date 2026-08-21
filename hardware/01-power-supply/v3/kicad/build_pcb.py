@@ -875,7 +875,12 @@ def rutear_red(r: Ruteo) -> None:
     for ref, pin in (("RV1", "1"), ("NT1", "1"), ("L1", "1")):
         x, _ = pad_xy(r.board, ref, pin)
         r.pista(F, [(x, 123.0), (ref, pin)], ANCHO_RED)
-    r.pista(F, [("NT1", "2"), (95.5, 129.0), (115.0, 129.0), ("J4", "2")],
+    # El 95.5 estaba escrito a mano y era la x del pad 2 CON LA HUELLA VIEJA
+    # (paso 7.5). Al corregir NT1 a su paso real de 5.1 el pad se movio a 93.1
+    # y la subida arrancaba en el aire. Se pide la x que tenga, como sus dos
+    # vecinos de arriba.
+    x_nt2, _ = pad_xy(r.board, "NT1", "2")
+    r.pista(F, [("NT1", "2"), (x_nt2, 129.0), (115.0, 129.0), ("J4", "2")],
             ANCHO_RED)
     r.pista(F, [("L1", "4"), (153.0, 131.0), (153.0, 143.0), ("CY2", "1")],
             ANCHO_RED)

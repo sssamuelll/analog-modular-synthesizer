@@ -6,11 +6,14 @@ regenerarlos, ver el final de este fichero.
 ## Estado: ruteada y con DRC en cero. **Todavía no pedible.**
 
 ```
-DRC (kicad-cli, --severity-all)   0 infracciones   0 elementos sin conectar
-ERC                               11 lib_symbol_mismatch, preexistentes
-ruteo                             1033 segmentos, 176 vías, 2 capas
+DRC (kicad-cli, --severity-all)   0 infracciones   0 sin conectar   0 paridad
+ruteo                             1024 segmentos, 176 vías, 2 capas
 placa                             200 × 150 mm, FR-4 1,6 mm, 1 oz
-barrera de red                    10,63 mm medidos sobre un mínimo de 6
+barrera de red                    10,63 mm entre pads · 7,99 mm medidos sobre
+                                  el COBRE del gerber (mínimo 6)
+zona GNDREF en el gerber          2159 mm² de cobre relleno
+huellas propias                   4, todas contra hoja de fabricante salvo un
+                                  hueco declarado (el fondo del faston J5)
 ```
 
 Lo que **falta** antes de mandar nada está abajo, en «Las tres puertas que
@@ -77,22 +80,29 @@ primario** — el mismo fallo los ve a los dos y no hay forma de saber cuál
 miró. Se queda el del IEC, que es el accesible sin abrir un recinto de acero
 cerrado.
 
-**El requisito no se fue con la pieza.** El fusible del chasis tiene que ser:
+**El requisito no se fue con la pieza**, y ahora tiene quien lo cumpla:
 
-| | |
-|---|---|
-| valor | **1,6 A lento (T)** — por el inrush del toroide de 120 VA más los 0,2 A de la SMPS IRM-15-5 |
-| portafusible | **cerrado**, no de clips abiertos: es lo que pide haber elegido aislamiento reforzado |
+| | pedía | lo que se compró |
+|---|---|---|
+| valor | **1,6 A lento (T)** — por el inrush del toroide de 120 VA más los 0,2 A de la SMPS IRM-15-5 | `0001.2506`, 1,6 A T, 250 VAC, corte H = 1500 A |
+| portafusible | **cerrado**, no de clips abiertos: es lo que pide haber elegido aislamiento reforzado | shocksafe **PC2** (IEC 60127-6), en el propio KM |
 
-Si el IEC que se compre no cumple las dos, **no vale**: la placa ya no tiene
-red de seguridad detrás.
+Que las dos se sigan cumpliendo lo comprueba
+[`../check_red_chasis.py`](../check_red_chasis.py) contra el BOM del chasis, y
+de paso vigila que `F1` no vuelva a la placa: **la placa ya no tiene red de
+seguridad detrás**, y dos fusibles en serie no son el doble de protección sino
+un fallo que ninguno de los dos documentos sabe atribuir.
 
-## Las dos puertas que quedan
+## Las puertas que quedan
 
-1. **La referencia del IEC C14 sigue sin elegir** (#130). Sin ella no hay
-   recorte en la chapa, y **el recorte se decide antes de cortar**: después
-   de doblada no hay dónde ponerlo. Ya no cambia los gerbers de la PCB — eso
-   se cerró al sacar `F1` — pero sí bloquea el chasis.
+1. ~~**La referencia del IEC C14 sigue sin elegir**~~ **Elegida**: Schurter
+   **KM00.1105.11** (C14 + portafusibles 2 polos + interruptor 2 polos,
+   snap-in), con su cajón `4301.1403` y dos fusibles `0001.2506` de 1,6 A T.
+   Está en [`../bom-chasis.csv`](../bom-chasis.csv) y lo verifica
+   [`../check_red_chasis.py`](../check_red_chasis.py). Lo que queda del #130
+   es solo el **recorte de 28 × 47 en `case/cad/params.scad`**, que la puerta
+   reclama en HUECO con las cotas puestas — no bloquea la PCB, sí la chapa, y
+   **el recorte se decide antes de cortar**.
 2. **Stock LCSC el día de mandar** (#57), incluidos `U8`–`U12`. La v2 dejó
    escrito cuál es el más ajustado de su lado; esta versión añade cinco chips
    que no estaban.

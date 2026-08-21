@@ -46,12 +46,12 @@ Ref,Val,Package,PosX,PosY,Rot,Side
 "J2","Molex KK-254 4 pos","Molex_KK-254_AE-6410-04A_1x04_P2.54mm_Vertical",15.000000,-90.000000,0.000000,top
 "J3","Barrier block 3 pos","TerminalBlock_MaiXu_MX126-5.0-03P_1x03_P5.00mm",17.000000,-132.000000,0.000000,top
 "J4","Barrier block 2 pos","TerminalBlock_MaiXu_MX126-5.0-02P_1x02_P5.00mm",110.000000,-135.000000,0.000000,top
-"J5","Faston macho 6.3mm PCB","Faston_6.3x0.8mm_PCB_2Leg_P5.0mm",16.000000,-114.000000,0.000000,top
+"J5","Vogt 3866A.68 faston 6.3x0.8 PCB","Faston_6.3x0.8mm_PCB_2Leg_P5.0mm",16.000000,-114.000000,0.000000,top
 "J6","Molex KK-254 2 pos","Molex_KK-254_AE-6410-02A_1x02_P2.54mm_Vertical",15.000000,-104.000000,0.000000,top
 "J7","Barrier block 2 pos","TerminalBlock_MaiXu_MX126-5.0-02P_1x02_P5.00mm",158.000000,-135.000000,0.000000,top
 "J8","JST-PH 4 pos","JST_PH_B4B-PH-K_1x04_P2.00mm_Vertical",106.000000,-114.000000,0.000000,top
 "L1","Choke de modo comun 10 mH / >=0.5 A / 250 VAC","L_CommonMode_Toroid_Vertical_L30.5mm_W15.2mm_Px10.16mm_Py20.32mm_Bourns_8100",126.000000,-131.000000,0.000000,top
-"NT1","SL10-5R020","NTC_Disc_D11.5mm_W4.5mm_P7.5mm",88.000000,-135.000000,0.000000,top
+"NT1","Ametherm SL10 5R002","NTC_Disc_D10.0mm_W4.0mm_P5.1mm",88.000000,-135.000000,0.000000,top
 "R1","2.2k 1/4W","R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal",78.000000,-60.000000,0.000000,top
 "R2","2.2k 1/4W","R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal",94.000000,-60.000000,0.000000,top
 "R3","680R 1/4W","R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal",123.000000,-27.000000,0.000000,top

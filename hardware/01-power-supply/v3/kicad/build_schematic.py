@@ -333,7 +333,7 @@ FOOTPRINT = {
     # --- primario 230 VAC ---
     "J3":  "TerminalBlock:TerminalBlock_MaiXu_MX126-5.0-03P_1x03_P5.00mm",
     "RV1": "sam17:RV_Disc_D21mm_W5.5mm_P10.0mm",
-    "NT1": "sam17:NTC_Disc_D11.5mm_W4.5mm_P7.5mm",
+    "NT1": "sam17:NTC_Disc_D10.0mm_W4.0mm_P5.1mm",
     "J4":  "TerminalBlock:TerminalBlock_MaiXu_MX126-5.0-02P_1x02_P5.00mm",
     "J5":  "sam17:Faston_6.3x0.8mm_PCB_2Leg_P5.0mm",
     # J7: mismo footprint que J4 (barrier block 2 pos), spec §7.
