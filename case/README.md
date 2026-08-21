@@ -3,7 +3,7 @@
 Spec: [`docs/superpowers/specs/2026-08-15-case-design.md`](../docs/superpowers/specs/2026-08-15-case-design.md) (rev. 5)
 Board de intención: [`renders/propuesta-diseno-2026-08-16.png`](renders/propuesta-diseno-2026-08-16.png)
 — **manda sobre lenguaje visual, NO sobre cotas**: se dibujó para paneles de
-190 mm y un case de 500 × 380 × 350, y el case real mide 544.32 × 247.73 × 292.4.
+190 mm y un case de 500 × 380 × 350, y el case real mide 544.32 × 247.73 × 300.4.
 
 ## Formato: EUROrack 3U, las dos filas
 
@@ -28,13 +28,14 @@ que se dibujó para 190 mm.
 |---|---|
 | ancho total | **544.32 mm** = 528.32 (104 HP) + 2 × `t_cheek` |
 | alto total | **247.73 mm** |
-| fondo | **292.4 mm** |
+| fondo | **300.4 mm** |
 | altura de entrepiso | **138.13 mm** |
 | ancho útil entre costados | **528.32 mm** |
 
 **La punta de arriba es cuadrada** (2026-08-21). El techo lleva una meseta de
-`marco_remate` = **34 mm** rematada por dos quiebres de 2 mm, en vez de la
-cúpula que salía antes. Son **dos** parámetros y no uno: los vértices 4 y 5
+`marco_remate` = **42 mm** rematada por dos quiebres de 2 mm, en vez de la
+cúpula que salía antes. Fue 34 unas horas: subió a 42 cuando la meseta tuvo
+que alojar el octavo larguero (abajo). Son **dos** parámetros y no uno: los vértices 4 y 5
 dejaron de compartir `radio_punta` —que va sobredimensionado a propósito y se
 recorta a lo que quepa en la arista, o sea a `marco_remate/2`— y estrenan
 `radio_remate` = 2. Subir solo el marco **engorda** el round en vez de
@@ -61,6 +62,33 @@ un separador de 19 mm mientras el BOM listaba los de 5. Lo caza ahora `apoyo()`
 en `clearance_budget.py`, la puerta nueva que exige que **todas las filas de una
 placa apoyen a la misma distancia** de la cara de su larguero — porque el
 separador de una placa es uno solo. `alineacion()` solo miraba un eje.
+
+**El octavo larguero, y el fin del pegamento** (2026-08-21). La tapa que cierra
+la meseta del techo iba **pegada** al Z-Rail, y era la única junta irreversible
+del case: ahí arriba no había larguero al que atornillarla, y esa cara del riel
+es pared de 1.2 mm. Ahora hay uno — un 2020 en la arista trasera-superior, a ras
+del plano trasero y con su cara de arriba a `marco_sup` del techo. **El case
+entero se desatornilla.**
+
+No cabía más adelante: el **barrido del Z-Rail al abrir la tapa** de la fila de
+arriba obliga a que su centro esté en x ≥ 286.17, y por eso el fondo creció de
+291.2 a 299.2. Con el centro en 289.22 quedan 3.04 mm de margen.
+
+Y la tapa **no llega hasta el pico**: se retira `inset_remate_frente` = 13 mm.
+Eso no es estética — es lo único que la deja abrir. Hasta ahora esta pieza
+giraba CON la tapa (por eso iba pegada al riel, que es parte de la tapa); al
+fijarla pasa a ser obstáculo, y una plancha fija encima de una bisagra bloquea
+la bisagra. Medido barriendo el conjunto giratorio contra la banda de la meseta:
+
+| retiro | la tapa abre |
+|---|---|
+| 0 mm | 13.2° |
+| 9.3 mm | 61.0° |
+| **13 mm** | **180°** |
+
+Lo que queda descubierto por delante de la tapa no es un agujero: debajo está el
+propio Z-Rail, que llega a x=271.22. Es la línea de sombra entre la tapa que se
+abre y el marco que no.
 
 **Kerf: 0.** El proceso es **fresado CNC**, no láser (decidido el
 2026-08-17). El CAM del taller compensa el radio de herramienta como parte
@@ -217,21 +245,21 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Pieza | Cantidad | Nota |
 |-------|----------|------|
 | Z-Rail de Tiptop | **4** | 104 HP (528.32 mm), sección 23.8 × 10. Se compran en pares: 2 unidades = 4 raíles |
-| Larguero perfil 2020 | **7** | de 528.32 mm cada uno: 2 de base, 2 de entrepiso, remate superior, repisa y valle |
+| Larguero perfil 2020 | **8** | de 528.32 mm cada uno: 2 de base, 2 de entrepiso, remate superior, repisa, valle y **remate trasero** |
 | Tornillo **M4** | **8** | entran de punta por el costado y **roscan en el propio Z-Rail** (viene con M4 taladrado a 3.3 de fábrica). Sin tuerca, sin inserto. **No vienen con el raíl.** 4 de hombro (los ejes de giro) + 4 de mano (los cierres) |
-| Tornillo M5 botón + tuerca T | **14** | 2 por larguero 2020, por la punta, desde el costado |
-| Tornillo M3 + tuerca T M3 | **37** | las planchas a los largueros: base 10, entrepiso 10, tapa del valle 5, **piel inferior 6, piel superior 6**. Entran por la RANURA, no por la punta |
+| Tornillo M5 botón + tuerca T | **16** | 2 por larguero 2020, por la punta, desde el costado |
+| Tornillo M3 + tuerca T M3 | **42** | las planchas a los largueros: base 10, entrepiso 10, tapa del valle 5, **tapa de remate 5**, piel inferior 6, piel superior 6. Entran por la RANURA, no por la punta |
 | Arandela ANCHA d16 | 4 | **no opcional**: en los ejes de giro. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 MPa y aguanta |
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa. **Sustituye al amortiguador**, que se eliminó |
 | Plancha acrílico t=5 mm | **4** | entrepiso, tapa del valle, piel inf., piel sup. |
-| Plancha acrílico t=8 mm | **4** | 2 costados + suelo (bandeja de base, ahora portante) + pestaña de remate |
-| Adhesivo estructural | 1 | metacrilato 2K o MS polímero para la pestaña. **Cianoacrilato NO**: su vapor empaña el acrílico |
+| Plancha acrílico t=8 mm | **4** | 2 costados + suelo (bandeja de base, ahora portante) + **tapa de remate** (528.32 × 29) |
 | Patica metálica torneada | 4 | d=16 × 8 mm |
 
-**Total de tornillos del case: 59** — 8 M4 de raíl + 14 M5 de esqueleto +
-37 M3 de plancha. Fueron 71 hasta el 2026-08-21: al empotrarse, las pieles se
-llevaron por delante 12 separadores M4 y sus 24 tornillos de botón. Doce
-tornillos menos y una pieza de compra menos.
+**Total de tornillos del case: 66** — 8 M4 de raíl + 16 M5 de esqueleto +
+42 M3 de plancha. Fueron 71 hasta el 2026-08-21: al empotrarse, las pieles se
+llevaron por delante 12 separadores M4 y sus 24 tornillos de botón; después
+volvieron 2 M5 y 5 M3 con el octavo larguero y su tapa de remate. Lo que no
+volvió es el adhesivo: **el case ya no lleva ninguna junta irreversible.**
 
 No calculados por el modelo (herrajes eléctricos y de panel; la cantidad
 depende de la cuenta final de módulos, no de la geometría del cajón):
@@ -306,8 +334,8 @@ un cable asumiendo continuidad por el riel es riesgo de choque eléctrico.
 
 ## Orden de ensamblaje
 
-1. **Esqueleto** — costados + los 7 largueros 2020, M5 por la punta desde
-   fuera. Meter aquí las 25 tuercas T M3 de las planchas: con tuercas de
+1. **Esqueleto** — costados + los 8 largueros 2020, M5 por la punta desde
+   fuera. Meter aquí las 42 tuercas T M3 de las planchas: con tuercas de
    inserción lateral se pueden añadir después, con las de deslizar no.
 2. **Bandejas** — base (8 mm, es el suelo) y entrepiso, 5 M3 por fila.
 3. **Los 4 Z-Rails** — M4 desde fuera, roscan en el propio riel. Comprobar
@@ -316,15 +344,18 @@ un cable asumiendo continuidad por el riel es riesgo de choque eléctrico.
 5. **Electricidad y bonding** — bloque IEC fijo, espárrago junto al PSU.
 6. **Pieles traseras** — EMPOTRADAS, 6 M3 cada una a tuerca T de los largueros
    traseros, tres columnas. Van después de los largueros porque la tuerca T
-   vive dentro de la ranura. **Pestaña** — a tope contra el riel y PEGADA, no
-   atornillada.
-7. **Paticas y paneles** — y paneles ciegos en todo hueco de las dos filas,
+   vive dentro de la ranura.
+7. **Tapa de remate** — 5 M3 al larguero de remate trasero. Va ATORNILLADA
+   desde el 2026-08-21; hasta entonces iba pegada al Z-Rail y era la única
+   pieza irreversible del case.
+8. **Paticas y paneles** — y paneles ciegos en todo hueco de las dos filas,
    que con una tapa abierta son lo único que ata sus dos raíles.
 
-El orden importa en tres sitios: las bandejas no se pueden atornillar antes
-que sus largueros (la tuerca T vive en la ranura del perfil), la pestaña es
-irreversible una vez pegada, y los raíles quieren estar antes que cualquier
-panel.
+El orden importa en dos sitios: las bandejas no se pueden atornillar antes
+que sus largueros (la tuerca T vive en la ranura del perfil), y los raíles
+quieren estar antes que cualquier panel. Era en TRES: el tercero era que la
+pestaña quedaba irreversible una vez pegada, y ese ya no existe — todo el
+case se desmonta.
 
 Guía ilustrada con renders del modelo:
 https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17

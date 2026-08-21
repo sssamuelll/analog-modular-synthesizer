@@ -198,16 +198,17 @@ def _radio_giro_riel(p: dict[str, float]) -> float:
     return math.hypot(p["rail_er_fondo"], p["rail_er_alto"]) / 2
 
 
-def _esquinas_pestana(p: dict[str, float],
-                       P: list[tuple[float, float]]) -> list[tuple[float, float]]:
-    """4 esquinas de la pestana superior en coordenadas del perfil. Va girada
-    con la cara, asi que su caja sale de las esquinas y no de un semilado."""
-    a2 = math.radians(p["angulo_superior"])
-    d2 = (math.sin(a2), math.cos(a2))
-    n2 = (d2[1], -d2[0])
-    return [(P[3][0] + d2[0] * s + n2[0] * q, P[3][1] + d2[1] * s + n2[1] * q)
-            for s in (p["alto_cara_sup"] - p["marco_sup"], p["alto_cara_sup"])
-            for q in (0.0, p["prof_sup"])]
+def _caja_remate(p: dict[str, float],
+                 P: list[tuple[float, float]]) -> tuple[float, float, float, float]:
+    """Caja de la tapa de remate en el perfil: (x0, x1, y0, y1).
+
+    Fue _esquinas_pestana() y devolvia CUATRO ESQUINAS porque la pieza iba
+    girada con la cara de arriba -- una tira de canto pegada al Z-Rail. Desde
+    el 2026-08-21 es una plancha HORIZONTAL sobre la meseta del techo,
+    atornillada al larguero de remate trasero, asi que su caja vuelve a estar
+    alineada con los ejes y las esquinas sobran."""
+    return (P[4][0] + p["inset_remate_frente"], P[5][0],
+            P[5][1] - p["marco_sup"], P[5][1])
 
 
 def _y_remate(p: dict[str, float], P: list[tuple[float, float]],
@@ -296,7 +297,13 @@ def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
             # valle: el septimo, y el unico que existe por una plancha y no por
             # una union. Centrado bajo la tapa del valle para que los dos vuelos
             # sean iguales, y de paso ata los costados por la cintura.
-            (sum(_x_valle(p, P, cr)) / 2, y_ep)]
+            (sum(_x_valle(p, P, cr)) / 2, y_ep),
+            # remate trasero: el OCTAVO, del 2026-08-21. Le da a la tapa del
+            # techo a que atornillarse -- antes iba PEGADA al Z-Rail porque ahi
+            # arriba no habia otra cosa, y era la unica junta irreversible del
+            # case. A ras del plano trasero, cara de arriba a marco_sup del
+            # techo. No puede adelantarse: el barrido del Z-Rail se lo come.
+            (fondo(p) - r, P[5][1] - p["marco_sup"] - r)]
 
 
 # Que inset gobierna cada punta de cada cara. El orden es el mismo que usa
@@ -312,7 +319,8 @@ NOMBRES_CR = ["cara_inf frente", "cara_inf valle",
 ANGS_CR = ["angulo_inferior", "angulo_inferior",
            "angulo_superior", "angulo_superior"]
 NOMBRES_CE = ["base delantera", "base trasera", "entrepiso delantero",
-              "entrepiso trasero", "remate superior", "repisa", "valle"]
+              "entrepiso trasero", "remate superior", "repisa", "valle",
+              "remate trasero"]
 
 
 # Caja = (nombre, x0, x1, y0, y1, z0, z1)
@@ -352,10 +360,8 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # la cara de arriba, a ras por fuera y engordando t_cheek hacia dentro.
     # Aqui interesa que no se pise con el riel de arriba ni con el larguero de
     # remate, que viven justo debajo.
-    esq = _esquinas_pestana(p, P)
-    planchas_extra = ("remate_sup",
-                      min(e[0] for e in esq), max(e[0] for e in esq),
-                      min(e[1] for e in esq), max(e[1] for e in esq),
+    rx0, rx1, ry0, ry1 = _caja_remate(p, P)
+    planchas_extra = ("remate_sup", rx0, rx1, ry0, ry1,
                       t_cheek, ancho_total - t_cheek)
     for nm, c in zip(NOMBRES_CE, ce):
         railes.append((nm, c[0] - rail / 2, c[0] + rail / 2,
@@ -408,13 +414,17 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
                "entrepiso trasero")]
     # piel_superior: R1 — volada hacia +X mas alla de prof_superior;
     # re-anclada a la repisa (ce[5]) en vez de entrepiso trasero (R6)
-    alto_ps = ce[4][1] - ce[5][1] + 30
+    # sube hasta la cara de abajo del larguero de remate trasero (ce[7]):
+    # con eso la trasera queda cerrada del todo
     y0_ps = ce[5][1] - 15
+    alto_ps = (ce[7][1] - rail / 2) - y0_ps
     planchas.append(("piel_superior", P[6][0] - t_acr, P[6][0],
                      y0_ps, y0_ps + alto_ps, t_cheek + hol, ancho_total - t_cheek - hol))
     filas += [("piel_superior", "inferior", "y", y0_ps + 15, "repisa"),
-              ("piel_superior", "superior", "y", y0_ps + alto_ps - 15,
-               "remate superior")]
+              ("piel_superior", "superior", "y", ce[4][1], "remate superior"),
+              # la tapa de remate: desde el 2026-08-21 declara fila como
+              # cualquier otra plancha, porque por fin tiene a que atornillarse.
+              ("remate_sup", "unica", "x", ce[7][0], "remate trasero")]
     return railes, planchas, filas
 
 
@@ -832,8 +842,13 @@ def guarda_piso(p: dict[str, float]) -> None:
 TAPAS = (
     ("fila de abajo", 1, frozenset({"cara_inf frente", "cara_inf valle"}),
      1, "angulo_inferior", "inset_inf_frente", "alto_panel_inf"),
+    # remate_sup SALIO de este conjunto el 2026-08-21. Giraba con la tapa
+    # porque iba PEGADA al Z-Rail, que es parte de la tapa. Desde que se
+    # atornilla al larguero de remate trasero es pieza QUIETA, o sea un
+    # obstaculo que la tapa tiene que librar al abrir -- que es justo lo que
+    # esta puerta comprueba.
     ("fila de arriba", 3,
-     frozenset({"cara_sup valle", "cara_sup remate", "remate_sup"}),
+     frozenset({"cara_sup valle", "cara_sup remate"}),
      3, "angulo_superior", "inset_sup_valle", "alto_panel_sup"),
 )
 
@@ -887,8 +902,6 @@ def guarda_tapa(p: dict[str, float]) -> None:
         for j, nm in enumerate(NOMBRES_CR):
             if nm in propios:
                 giran += _esquinas_er(p, cr[j], p[ANGS_CR[j]])
-        if "remate_sup" in propios:
-            giran += _esquinas_pestana(p, P)
         quietos = [c for c in railes + planchas if c[0] not in propios]
         tope, culpable = 180.0, ""
         for i in range(1, 721):                   # 0.25 grados hasta 180
@@ -914,33 +927,43 @@ def guarda_tapa(p: dict[str, float]) -> None:
             f"holgada PARADA y no caber girando -- el riel barre su radio de "
             f"giro ({_radio_giro_riel(p):.2f}), no el alcance de su esquina")
 
-    # LA JUNTA DE LA PESTANA. Esto exigia CERO EXACTO (abs < 0.01) y era correcto
-    # mientras la union era atornillada: el tornillo aprieta contra el riel y lo
-    # que no toca, no sujeta. Desde que la hoja de Tiptop enseno que esa cara es
-    # pared de 1.2 mm, la union es PEGADA -- y una junta pegada quiere lo
-    # contrario. El adhesivo estructural necesita linea de pegado; a cero no
-    # tiene donde quedarse, y una interferencia negativa impide que la pieza
-    # asiente.
+    # LA JUNTA DE LA PESTANA vivio aqui hasta el 2026-08-21, y murio con su
+    # sujeto. Medía el hueco entre la tira de remate y el Z-Rail, primero
+    # exigiendo cero exacto (union atornillada) y despues una linea de pegado
+    # entre 0 y medio milimetro (union pegada, tras descubrir que esa cara del
+    # riel es pared de 1.2 mm). Desde que la pieza se atornilla al larguero de
+    # remate trasero no hay junta con el riel que medir: lo que la sujeta lo
+    # verifican alineacion() y apoyo() como a cualquier otra plancha, y que no
+    # estorbe a la tapa lo verifica el barrido de aqui arriba.
     #
-    # Asi que la puerta cambia de forma, no de rigor. Lo que de verdad no se
-    # puede permitir es el signo negativo -- eso es interferencia. Por arriba, el
-    # techo lo pone el adhesivo: pasado medio milimetro el metacrilato de dos
-    # componentes rellena un hueco que no deberia existir y la junta pierde
-    # resistencia en vez de ganarla.
-    #
-    # Hoy vale 0.000 y pasa. Si alguien quiere linea de pegado dibujada, sube
-    # inset_sup_remate -- pero OJO: eso mueve alto_cara_sup y con el la silueta
-    # del costado, o sea el DXF que ya esta presupuestado.
-    junta = p["inset_sup_remate"] - p["marco_sup"] - p["rail_er_alto"] / 2
-    assert junta >= -1e-9, (
-        f"la pestana INTERFIERE con el riel: {junta:+.3f} mm. Negativo significa "
-        f"que la pieza no asienta, y ninguna cantidad de adhesivo arregla eso. "
-        f"El minimo es inset_sup_remate = marco_sup + rail_er_alto/2 = "
-        f"{p['marco_sup'] + p['rail_er_alto']/2:.2f}")
-    assert junta <= JUNTA_PEGADO_MAX, (
-        f"la pestana se queda a {junta:.3f} mm del riel, y el maximo pegable es "
-        f"{JUNTA_PEGADO_MAX}. Mas alla de eso el adhesivo esta rellenando hueco "
-        f"en vez de pegar: la junta pierde resistencia segun engorda")
+    # Lo que si sigue sin poder derivarse en params.scad -- ese fichero no
+    # admite expresiones -- es que la tapa cubra la meseta entera, y eso es lo
+    # que exige guarda_remate().
+
+
+def guarda_remate(p: dict[str, float]) -> None:
+    """La tapa de remate cubre la meseta del techo, ni mas ni menos.
+
+    La meseta mide marco_remate. La tapa mide prof_sup y arranca
+    inset_remate_frente por detras del pico, asi que los dos numeros tienen que
+    sumar el primero. En params.scad no se pueden escribir expresiones, o sea
+    que esta relacion se mantiene A MANO y por eso hace falta una puerta: mover
+    marco_remate sin mover prof_sup deja la meseta abierta por detras o la tapa
+    asomando por el plano trasero, y ninguna de las dos se ve en un DXF plano.
+
+    El inset NO es estetica y no se toca a la ligera: es la unica razon por la
+    que la tapa de la fila de arriba sigue abriendo. Ver su nota en params.scad.
+    """
+    suma = p["prof_sup"] + p["inset_remate_frente"]
+    assert abs(suma - p["marco_remate"]) < 1e-9, (
+        f"la tapa de remate no cuadra con la meseta: prof_sup + "
+        f"inset_remate_frente = {suma:.2f} y marco_remate = "
+        f"{p['marco_remate']:.2f}. Sobra o falta {suma - p['marco_remate']:+.2f} "
+        f"mm. Los tres se mantienen a mano porque params.scad no admite "
+        f"expresiones")
+    print(f"remate: tapa de {p['prof_sup']:.0f} mm atornillada al larguero "
+          f"trasero, retirada {p['inset_remate_frente']:.0f} del pico para que "
+          f"la tapa de arriba abra")
 
 
 def guarda_escalon(p: dict[str, float]) -> None:
@@ -1219,6 +1242,7 @@ def main() -> int:
     guarda_parametros_vivos(p)
     guarda_escalon(p)
     guarda_tapa(p)
+    guarda_remate(p)
     g = perfil(p)
     fallos: list[str] = []
 

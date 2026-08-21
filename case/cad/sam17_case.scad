@@ -210,7 +210,14 @@ function centros_esqueleto() =
      // iguales; a la vez ata los dos costados por la cintura, que es donde el
      // perfil es mas estrecho. Su ventana es corta -- entre las esquinas
      // giradas de los dos railes del valle -- y clearance_budget la vigila.
-     [(x_valle()[0] + x_valle()[1])/2, y_ep]];
+     [(x_valle()[0] + x_valle()[1])/2, y_ep],
+     // remate trasero: el OCTAVO, del 2026-08-21. Existe para que la tapa del
+     // techo tenga a que atornillarse -- antes iba pegada al Z-Rail porque ahi
+     // arriba no habia nada mas, y esa era la unica junta irreversible del case.
+     // Va a ras del plano trasero y con su cara de arriba a marco_sup del techo,
+     // de modo que la plancha apoye encima y remate a ras. No puede acercarse
+     // mas al frente: el barrido del Z-Rail al abrir la tapa se lo come.
+     [fondo() - r, P[5].y - marco_sup - r]];
 
 // --- redondeo del contorno, radio POR VERTICE --------------------------
 //
@@ -474,12 +481,18 @@ module piel_inferior_2d() {
 module piel_superior_2d() {
     au = ancho_total - 2*t_cheek - 2*hol_piel;
     ce = centros_esqueleto();
-    alto = ce[4].y - ce[5].y + 30;   // remate superior <-> repisa
+    // Sube hasta la cara de abajo del larguero de remate trasero: con eso la
+    // trasera queda cerrada del todo. El tramo que sobresale de su fila de
+    // arriba es voladizo, y no carga nada.
+    y0 = ce[5].y - 15;
+    alto = (ce[7].y - rail/2) - y0;
     difference() {
         plancha(au, alto);
         // M3 y no M4: desde que la piel se empotra, entra por la RANURA del
         // 2020 con tuerca T como las bandejas, no por un separador M4.
-        for (x = [15, au/2, au-15]) for (y = [15, alto-15])
+        // Y las filas caen en SUS largueros, no a 15 del canto: al crecer la
+        // plancha hacia arriba el canto dejo de ser referencia.
+        for (x = [15, au/2, au-15]) for (y = [15, ce[4].y - y0])
             translate([x, y]) circle(d = d_M3_paso + kerf);
         translate([au*0.15, alto*0.45]) onda("sierra", au*0.70);
     }
@@ -987,11 +1000,8 @@ module paneles() {
 // dos parametros, asi que no pueden separarse sin que se note en params.
 module remate_sup() {
     P = pts_perfil();
-    d = (P[4] - P[3]) / norm(P[4] - P[3]);
-    translate([P[3].x, P[3].y, t_cheek])
-        rotate([0, 0, atan2(d.y, d.x)])
-            translate([alto_cara_sup - marco_sup, -prof_sup, 0])
-                cube([marco_sup, prof_sup, ancho_util]);
+    translate([P[4].x + inset_remate_frente, P[5].y - marco_sup, t_cheek])
+        cube([prof_sup, marco_sup, ancho_util]);
 }
 
 // La pestana vista de canto: 528.32 x prof_sup en plancha de marco_sup.
@@ -1001,7 +1011,15 @@ module remate_sup() {
 // nadie. Fresando eso no es cosmetico: son cinco prestaciones que se pagan.
 // Si el calibrador encuentra material, volver a meterlos es una linea.
 module remate_sup_2d() {
-    plancha(ancho_total - 2*t_cheek, prof_sup);
+    au = ancho_total - 2*t_cheek;
+    P = pts_perfil();
+    ce = centros_esqueleto();
+    difference() {
+        plancha(au, prof_sup);
+        // la fila cae en la centerline del larguero nuevo, medida desde el
+        // canto DELANTERO de la plancha (el que remata el canto del panel).
+        fila_agujeros(au, ce[7].x - P[4].x - inset_remate_frente);
+    }
 }
 
 // Paticas torneadas bajo los costados. En X caen sobre los dos rieles de
@@ -1098,9 +1116,9 @@ module bom() {
     // demas. Su rejilla es de TRES columnas ([15, au/2, au-15]), dos filas
     // cada una, dos pieles -> 4*n_piel.
     n_piel = 3;
-    echo(str("BOM: tornillo M3 x", 5*n_fila + 4*n_piel, " + tuerca T M3 -- las planchas a",
+    echo(str("BOM: tornillo M3 x", 6*n_fila + 4*n_piel, " + tuerca T M3 -- las planchas a",
              " los largueros: base ", 2*n_fila, ", entrepiso ", 2*n_fila,
-             ", tapa del valle ", n_fila,
+             ", tapa del valle ", n_fila, ", tapa de remate ", n_fila,
              ", piel inferior ", 2*n_piel, ", piel superior ", 2*n_piel, "."));
     echo("     Estos entran por la RANURA del 2020, no por su punta. Es donde");
     echo("     la tuerca de insercion lateral se paga sola: con las de deslizar");
@@ -1144,16 +1162,15 @@ module bom() {
     echo("     tapa deja de quedarse abierta.");
     echo("       arandela M4 normal (d9)  -> 16.3 MPa   se relaja");
     echo("       arandela ANCHA   (d16)   ->  4.3 MPa   aguanta");
-    echo(str("BOM: pestana superior x1, ", au, " x ", prof_sup, " en acrilico ",
-             "t=", marco_sup, " -- apoya de canto en la cara de arriba del riel"));
-    echo("BOM: adhesivo estructural para la pestana -- va PEGADA al riel, sin");
-    echo("     tornillos. El Z-Rail es un extruido de pared fina (1.2 mm en casi");
-    echo("     todo el contorno; lo unico macizo es el nucleo del M4 de punta),");
-    echo("     asi que un M3 en esa cara atraviesa pared. La junta es el canto");
-    echo(str("     de la plancha contra el riel: ", ancho_total - 2*t_cheek,
-             " x ", marco_sup, " mm de superficie para 60 g de acrilico,"));
-    echo("     y trabaja a CORTANTE, no a traccion. Cianoacrilato no: el vapor");
-    echo("     empana el acrilico. Metacrilato de dos componentes o MS polimero.");
+    echo(str("BOM: tapa de remate x1, ", au, " x ", prof_sup, " en acrilico ",
+             "t=", marco_sup, " -- plancha HORIZONTAL sobre la meseta del techo,"));
+    echo(str("     atornillada con ", n_fila, " M3 al larguero de remate trasero."));
+    echo("     SIN ADHESIVO. Hasta el 2026-08-21 era una tira de canto PEGADA al");
+    echo("     Z-Rail, porque ahi arriba no habia larguero al que atornillarla y");
+    echo("     esa cara del riel es pared de 1.2 mm. Con el octavo larguero deja");
+    echo("     de hacer falta: el case ya no lleva ninguna junta irreversible.");
+    echo(str("     Se retira ", inset_remate_frente, " mm del pico, y eso NO es"));
+    echo("     estetica: es lo unico que deja abrir la tapa de la fila de arriba.");
     echo(str("BOM: patica metalica torneada x4, d=", d_pie, " x ", alto_pie, " mm"));
     echo(str("BOM: planchas t=", t_acrilico, ": entrepiso, tapa del valle, ",
              "piel inf, piel sup; suelo t=", t_base, " (la bandeja de base, ",

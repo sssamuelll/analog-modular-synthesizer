@@ -228,7 +228,15 @@ alto_frontal    = 13;
 // arista mas corta, o sea a marco_remate/2. Subir el marco sin tocar nada mas
 // convierte el techo en una cupula de 17 mm de tangente en vez de 9. Lo que
 // cuadra la punta es radio_remate. Los dos van juntos o no van.
-marco_remate    = 34;
+// SUBIO OTRA VEZ, a 42, el 2026-08-21, y esta vez NO lo pide la forma: lo pide
+// una pieza. La tapa de remate pasa a atornillarse a un larguero 2020 nuevo en
+// la arista trasera-superior (el octavo), y ese larguero no cabe en el fondo de
+// 34: el BARRIDO del Z-Rail al abrir la tapa de la fila de arriba obliga a que
+// su centro este en x >= 286.17. Con marco_remate = 42 el centro cae en 289.22 y
+// quedan 3.04 mm de margen -- la misma holgura que el presupuesto ya exige entre
+// el chasis y sus largueros. A 40 quedaria 1 mm contra una pieza EN MOVIMIENTO,
+// y a 39 cero.
+marco_remate    = 42;
 // Entrepiso: la franja horizontal entre el tope de la cara inferior y la base
 // de la superior -- el "valle del medio" de la silueta. Fue 25 (minimo tecnico
 // de R7: por debajo, los dos railes girados se solapaban 2.52 mm), luego 40,
@@ -649,7 +657,34 @@ marco_sup   = 8;
 //
 // La pieza sale de plancha de marco_sup = 8 (la misma del costado) y su DXF mide
 // 528.32 x prof_sup, sin taladros.
-prof_sup    = 16;
+// TIENE QUE VALER LO MISMO QUE marco_remate. Desde el 2026-08-21 la pestana no
+// es una tira de canto: es la PLANCHA HORIZONTAL que tapa la meseta del techo,
+// y esa meseta mide exactamente marco_remate. Aqui no se pueden escribir
+// expresiones (ver la cabecera del fichero), asi que la relacion la vigila
+// guarda_remate() en clearance_budget.py: si alguien mueve uno y no el otro,
+// sale en rojo antes de exportar.
+// FONDO de la tapa de remate. Con inset_remate_frente tiene que sumar
+// marco_remate, que es lo que mide la meseta: aqui no se pueden escribir
+// expresiones (ver la cabecera), asi que la relacion la vigila guarda_remate()
+// en clearance_budget.py.
+prof_sup    = 29;
+// Cuanto se RETIRA la tapa de remate del pico, y no es estetica: es la unica
+// razon por la que la tapa de la fila de arriba sigue abriendo.
+//
+// Hasta el 2026-08-21 esta pieza iba PEGADA al Z-Rail, o sea que GIRABA CON LA
+// TAPA y nunca le estorbaba. Al atornillarla a un larguero fijo pasa a ser
+// obstaculo, y una plancha fija encima de una bisagra bloquea la bisagra:
+// llegando hasta el pico la tapa abria 13.2 grados. Medido barriendo el
+// conjunto giratorio contra la banda de la meseta:
+//
+//     retiro 0 mm  -> abre  13.2 grados
+//     retiro 9.3   -> abre  61.0
+//     retiro 12.8  -> abre 180.0
+//
+// 13 esta al otro lado de ese acantilado. Lo que queda descubierto por delante
+// NO es un agujero: debajo esta el propio Z-Rail de la tapa, que llega a
+// x=271.22, asi que es una linea de sombra entre la tapa y el marco fijo.
+inset_remate_frente = 13;
 
 // --- ventilacion con firma (spec §7) ---
 // Diametro de la fresa estandar del taller. NO es decoracion del BOM: manda

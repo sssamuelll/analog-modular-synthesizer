@@ -65,9 +65,12 @@ TOL = 4.0
 SIN_DXF: dict[str, str] = {}
 
 # Piezas que van GIRADAS con una cara, o sea que su caja en el mundo NO es su
-# DXF: la pestana mide 10.75 x 528 de caja en X y en Y (la diagonal de su
-# seccion a 45 grados) y la plancha real mide prof_sup. Su sobre se declara.
-GIRADAS = {"remate_sup"}
+# DXF. Esta vacio desde el 2026-08-21: la unica que estaba era la pestana de
+# remate, que iba de canto sobre la cara de arriba y median 10.75 x 528 de caja
+# por la diagonal de su seccion a 45 grados. Ahora es una plancha HORIZONTAL
+# sobre la meseta, alineada con los ejes, y su caja YA es su DXF -- o sea que
+# sale sola de _cajas_solidas y no hay que declarar su sobre a mano.
+GIRADAS: set[str] = set()
 
 
 def _sobres() -> dict[str, tuple[float, float, float, float]]:
@@ -85,8 +88,6 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
         # de _cajas_solidas porque no es una pieza del case.
         "coupon": (136.0, 62.0),
     }
-    au = p["ancho_total"] - 2 * p["t_cheek"]
-    dims["remate_sup_2d"] = (au, p["prof_sup"])
     # Las tres de ACERO. No salen de _cajas_solidas porque no son planchas del
     # cuerpo del case, y sobre todo porque su DXF NO es su caja: el desarrollo
     # de una chapa doblada es mas grande que la pieza montada (492.69 x 330.69

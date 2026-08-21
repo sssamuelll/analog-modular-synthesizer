@@ -36,12 +36,17 @@ lenguaje visual).
 > de 18 a 34 y los dos vértices del techo estrenan `radio_remate` = 2 en vez
 > de compartir `radio_punta` —, el fondo crece 16 mm, y con eso la tapa de la
 > fila de arriba pasa a abrir 180°. Muere de paso la idea de doblar la piel
-> superior en cascada: no hace falta doblar nada.
+> superior en cascada: no hace falta doblar nada. **rev. 6** (2026-08-21): la
+> trasera deja de flotar y se **empotra** —mueren la junta de sombra y los 12
+> separadores—, y entra el **octavo larguero** en la arista trasera-superior,
+> que le da a la tapa de remate a qué atornillarse: se acabó la única junta
+> pegada del case. `marco_remate` 34 → 42 y el fondo 291.2 → 299.2, que es lo
+> que pide el barrido del Z-Rail para que la tapa siga abriendo 180°.
 >
 > **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
 > visual y proporciones *relativas*, pero **sus cotas están superadas**. Se
 > dibujó para paneles de 190 mm y un case de 500 × 380 × 350; el case real
-> mide **544.32 × 247.73 × 292.4**.
+> mide **544.32 × 247.73 × 300.4**.
 
 ## 1. Objetivo
 
@@ -80,7 +85,7 @@ de su zona de conexión trasera.
 | Interfaz del módulo 2 | Instrumento autosuficiente en el RP2350; computadora **externa y opcional** por USB MIDI class-compliant + plugin compañero VST/CLAP. En el panel: **botón AFINAR + LED de estado**; los conectores de enlace (USB, MIDI DIN) los define el módulo 2 (panel o bloque trasero) | Pivote de cómputo del PR #30: si la computadora se cae en pleno concierto, el instrumento sigue sonando; desaparecen pantalla, Pi y sus consumos del frontal |
 | Fabricación | **Fresado CNC** por servicio | El taller compensa el radio de herramienta en CAM, así que `kerf = 0`. El láser dejaba canto cónico en 8 mm y microfisuras en los bordes cargados. Cambió el 2026-08-17. Los DXF del repo siguen siendo directamente los archivos de corte |
 | CAD | OpenSCAD paramétrico | Diseño-como-código versionable; exporta DXF (corte) y STL (render en Blender) |
-| Servicio | Desatornillable salvo una junta + paneles de módulo desmontables | Acceso total al interior. **Excepción única: la pestaña de remate va PEGADA** (metacrilato 2K o MS polímero — cianoacrilato no, su vapor empaña el acrílico). El Z-Rail es extruido de pared fina de 1.2 mm y un M3 en esa cara atraviesa pared |
+| Servicio | **Enteramente desatornillable** + paneles de módulo desmontables | Acceso total al interior, sin una sola junta irreversible. Tuvo una **excepción única** hasta el 2026-08-21: la pestaña de remate iba PEGADA, porque el Z-Rail es extruido de pared fina de 1.2 mm y un M3 en esa cara atraviesa pared. La resolvió el **octavo larguero** — un 2020 en la arista trasera-superior que le da a esa tapa a qué atornillarse |
 
 ## 3. Postmortem del intento anterior (y cómo este diseño lo elimina)
 
@@ -127,7 +132,7 @@ esta dirección).
 | `angulo_inferior` | **35° desde la vertical** | Cara del piso de procesamiento |
 | `angulo_superior` | **45° desde la vertical** | Cara del piso de generación |
 | `alto_frontal` | **13 mm** | Canto delantero. **No es un zócalo**: el zócalo se eliminó |
-| `fondo` / `alto_total` | derivados | **292.4 mm / 247.73 mm**. Ya NO cuadra con el board (350 × ~380): el board se dibujó para paneles de 190 |
+| `fondo` / `alto_total` | derivados | **300.4 mm / 247.73 mm**. Ya NO cuadra con el board (350 × ~380): el board se dibujó para paneles de 190 |
 | `t_acrilico` | 5 mm | Entrepiso, tapa del valle y las dos pieles. MEDIR con calibre (§11) |
 | `t_base` / `t_cheek` | 8 mm | Suelo portante y costados. La bandeja de base subió de 5 a 8 al pasar a ser el propio canto de abajo |
 | `kerf` | **0** | Correcto fresando: el CAM compensa el radio de herramienta. Solo vuelve a ser negativo si se regresa al láser |
@@ -156,8 +161,8 @@ comprobación va antes del paso destructivo).
   los standoffs de las pieles.
 - **Bandejas horizontales de acrílico** (base y entrepiso) atornilladas con
   tuercas T M3 a un **esqueleto de perfiles 2020** (los mismos del sistema de
-  paneles: 7 largueros de esqueleto —2 de base, 2 de entrepiso, remate
-  superior, repisa y valle— además de los 4 raíles de paneles; el
+  paneles: 8 largueros de esqueleto —2 de base, 2 de entrepiso, remate
+  superior, repisa, valle y remate trasero— además de los 4 raíles de paneles; el
   reparto exacto lo fija `centros_esqueleto()` en el modelo). Un solo sistema
   de fijación para todo el instrumento; un standoff no puede sujetar una
   bandeja de 528 mm de vano.
@@ -254,10 +259,10 @@ largueros 2020 de 528.32 mm**, tuercas T M3 + tornillos M3 (25: las planchas
 a los largueros), entrada IEC C14 con fusible e interruptor, espárrago M4 +
 cable 1.5 mm² verde/amarillo + terminales de ojal (bonding), paticas
 metálicas torneadas d16 × 8, tornillería del transformador, pasacables del
-entrepiso, **14 tornillos M5 de botón** (2 por larguero 2020) y **8 M4** que
+entrepiso, **16 tornillos M5 de botón** (2 por larguero 2020) y **8 M4** que
 roscan en el propio Z-Rail — 4 de hombro con Belleville para los ejes, 4 de
-mano para los cierres. **Adhesivo estructural** (metacrilato 2K o MS
-polímero, nunca cianoacrilato) para la pestaña de remate.
+mano para los cierres. **Sin adhesivo**: la tapa de remate dejó de ir pegada
+el 2026-08-21.
 
 Los perfiles van entre las caras internas de los costados, así que su largo es
 el ancho útil (**528.32 mm**), **no `ancho_total`** (544.32 mm). Cantidades y largo:

@@ -243,6 +243,97 @@ cambió. Regenerarlo y mirarlo, no solo leer que la puerta salió verde.
 
 ---
 
+## T5 — El octavo larguero, y el techo se atornilla  ✅ HECHA (2026-08-21)
+
+**Decidido el 2026-08-21.** De las cuatro salidas de la T4, Samuel eligió la que
+la T4 no tenía: un **larguero 2020 más**, en la arista trasera-superior, que le
+da a la tapa de remate algo a lo que atornillarse. Con eso muere el pegamento y
+con él la «excepción única» de la spec §2: el case pasa a ser enteramente
+desatornillable.
+
+Se estudiaron dos versiones renderizadas antes de escribir nada. **A** (elegida):
+la plancha del techo va ENCIMA del larguero y lo tapa; la fijación es un tornillo
+hacia abajo contra la cara de arriba del perfil, que es la dirección natural.
+**B**: el larguero es el canto y la plancha topa contra su cara delantera; se ve
+mucho más pero el tornillo entra horizontal por el canto de la plancha. Samuel
+eligió A por la fijación.
+
+### El case crece, y no es opcional
+
+El larguero no cabe en el fondo de hoy. El barrido del Z-Rail al abrir la tapa
+obliga a que su centro esté como mínimo en x=286.17, y el costado tiene que
+cubrirle la cara de punta para llevar su M5 como los otros siete.
+
+| centro del larguero | distancia al pivote | ¿libra? |
+|---|---|---|
+| 281.22 (fondo de hoy) | 11.95 | **no** — el barrido mide 12.91 + 4 de holgura |
+| 286.22 | 16.95 | justo |
+| **289.22 (marco_remate 42)** | **19.95** | **sí, 3.04 mm de margen** |
+
+`marco_remate` 34 → **42**, fondo 291.2 → **299.2**. Los 3 mm de margen son la
+misma holgura que el presupuesto ya exige entre el chasis y sus largueros: margen
+de verdad, no de cuchillo.
+
+### La pieza
+
+- **Larguero nuevo**: 2020 de 528.32, centro en `(fondo − rail/2, P[5].y −
+  marco_sup − rail/2)` = (289.22, 233.73). Cara trasera a ras del plano trasero,
+  cara de arriba a `marco_sup` del techo. Es el larguero **8**.
+- **`remate_sup`** deja de ser tira en L pegada al Z-Rail y pasa a **plancha
+  horizontal** sobre la meseta: 42 × 528.32 en acrílico de 8 (`marco_sup` sin
+  tocar — mismo espesor que los costados, mismo stock). Se atornilla con 3 M3 a
+  la ranura de arriba del larguero nuevo, y su canto delantero remata el canto
+  del panel de arriba, que es lo que hacía la tira.
+- **`piel_superior`** sube hasta la cara de abajo del larguero nuevo y cierra la
+  franja que quedó abierta en la T4.
+
+- [x] **Paso 1: `marco_remate` 34 → 42**, con la razón escrita: la manda el
+      barrido, no el gusto. Correr `clearance_budget.py`: verde esperado, el
+      cambio es de fondo y ya se sondeó ese rango.
+
+- [x] **Paso 2: el octavo larguero, en los DOS modelos**
+
+`centros_esqueleto()` / `_centros_esqueleto()` pasan de 7 a 8 entradas, y
+`NOMBRES_CE` gana «remate trasero». Al final de la lista, para no mover ningún
+índice existente.
+
+- [x] **Paso 3: `remate_sup` pasa a plancha horizontal atornillada**
+
+Su DXF pasa de 528.32 × 16 a 528.32 × 42 y gana 3 taladros M3 sobre la
+centerline del larguero nuevo. Declara su fila contra ese larguero, así que la
+juzgan `alineacion()` y `apoyo()` como a cualquier otra plancha — que es
+exactamente lo que no se podía hacer mientras iba pegada.
+
+- [x] **Paso 4: `piel_superior` sube hasta el larguero nuevo**
+
+Su canto de arriba pasa de y=215.4 a la cara de abajo del perfil. Con eso la
+trasera queda cerrada del todo.
+
+- [x] **Paso 5: muere el pegamento**
+
+Fuera el adhesivo estructural del BOM y del `echo` del modelo. Spec §2 pierde su
+«excepción única»: ya no hay ninguna junta irreversible en el case. README:
+orden de ensamblaje paso 6, que hoy dice «la pestaña va PEGADA».
+
+- [x] **Paso 6: las dos puertas, export, los dos renders, README y spec.**
+
+### Lo que la T5 encontró, y no estaba en el plan
+
+Una plancha FIJA encima de una bisagra bloquea la bisagra. La tapa de remate
+giraba CON la tapa de la fila de arriba —por eso iba pegada al Z-Rail, que es
+parte de esa tapa— y al atornillarla a un larguero fijo pasó a ser obstáculo:
+la fila de arriba bajó de 180° a **13.2°**. Lo cazó `guarda_tapa()` sin que
+nadie lo buscara.
+
+Se resolvió retirando la tapa `inset_remate_frente` = 13 mm del pico. El
+acantilado es abrupto — 9.3 mm dan 61°, 12.8 dan 180° — y por eso el número
+lleva su medición escrita en `params.scad`: no es una cota que se pueda
+redondear al gusto.
+
+- [ ] **Paso 7: commit y PR.**
+
+---
+
 ## T2 — El chasis del PSU se monta sobre los largueros
 
 Hoy el chasis de acero pasa **entre** los dos largueros de base y se apoya en la
