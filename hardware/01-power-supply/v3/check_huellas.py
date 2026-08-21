@@ -37,17 +37,30 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 PRETTY = os.path.join(DIR, "..", "kicad", "sam17.pretty")
 BOM = os.path.join(DIR, "bom.csv")
 
+# Cotas CONFIRMADAS contra la hoja del fabricante. La clave es el designador y
+# el valor es (paso de patas, diametro de cuerpo, de donde sale). None = no se
+# ha podido confirmar, y eso NO se disimula: se lista abajo con su motivo.
+#
+# El repo ya tiene grabada la leccion de fiarse de un distribuidor: los 45 mm
+# de alto del toroide, "corregidos" a 52,1 con dos listados coincidentes, y la
+# hoja del fabricante dijo 46. Por eso aqui solo entra lo que sale de la hoja.
+CONFIRMADO = {
+    # Ametherm SL10 5R002, hoja del fabricante (ametherm.com, rev. 2012-03-29):
+    # D 10.0 max, T 4.0 max, S 5.1 nom, pata 0.5 nom, 5.0 ohm +-20%, 2.00 A.
+    "NT1": (5.1, 10.0, "hoja Ametherm SL10 5R002"),
+}
+
 # Lo que falta por confirmar contra la hoja del fabricante, con QUE habria que
 # medir. No se disimula: se lista, se cuenta y se imprime (Principio V).
 SIN_CONFIRMAR = [
     ("RV1", "S20K275 / V275LA20A",
-     "diametro del disco CON recubrimiento contra el courtyard de 23.00 mm",
-     "decidio bajar la barrera de red de y=128 a y=121 (README v3)"),
-    ("NT1", "NTC 5R/2A",
-     "diametro del disco y paso real de patas",
-     "va en serie con el primario: si no entra, no hay limitador de inrush"),
-    ("J5", "Faston 6.3x0.8",
-     "ancho de la lengueta y separacion de sus dos patas",
+     "el diametro del disco CON recubrimiento. Dos distribuidores (TME .eu y "
+     ".com) dicen 22.5 mm y el nombre de la huella dice D21; el courtyard de "
+     "23.00 los cubre, pero un distribuidor no es la hoja",
+     "ese numero decidio bajar la barrera de red de y=128 a y=121 (README v3)"),
+    ("J5", "Faston macho 6.3mm PCB (2 patillas)",
+     "TODO: el BOM no da referencia de fabricante, asi que no hay hoja que "
+     "mirar ni pieza concreta que pedir",
      "es el UNICO puente chasis-masa de todo el instrumento (sec.13)"),
 ]
 
@@ -111,7 +124,30 @@ def main() -> int:
                               f"MENOR que el cuerpo que anuncia el nombre "
                               f"(D{cuerpo}): la pieza no cabe en su propia caja")
 
-        # 3) una huella propia que no usa nadie es una huella que sobra, y una
+        # 3) EL PASO DE LA PIEZA REAL, cuando hay hoja. Es la unica de las
+        #    comprobaciones que puede decir que la pieza NO ENTRA -- las de
+        #    arriba solo miran que la huella sea coherente consigo misma, y
+        #    una huella puede ser perfectamente coherente y no casar con nada.
+        for ref in quien.split(", "):
+            if ref not in CONFIRMADO:
+                continue
+            paso_real, diam_real, fuente = CONFIRMADO[ref]
+            xs = sorted(p[1] for p in h["pads"])
+            paso_huella = max(xs) - min(xs)
+            print(f"    contra la pieza ({fuente}):")
+            print(f"      paso   pieza {paso_real} mm  vs huella "
+                  f"{paso_huella:.2f} mm")
+            if abs(paso_huella - paso_real) > 0.5:
+                fallos.append(
+                    f"{nom}: {ref} tiene las patas a {paso_real} mm "
+                    f"({fuente}) y la huella las pone a {paso_huella:.2f}. "
+                    f"Hay que doblarlas {abs(paso_huella-paso_real)/2:.2f} mm "
+                    f"por lado para que entre")
+            if h["crt"] and min(h["crt"]) < diam_real:
+                fallos.append(f"{nom}: {ref} mide {diam_real} mm de cuerpo "
+                              f"({fuente}) y su courtyard {min(h['crt']):.2f}")
+
+        # 4) una huella propia que no usa nadie es una huella que sobra, y una
         #    que usa alguien sin estar aqui la habria cazado ya check_bom.py
         if quien == "NADIE":
             fallos.append(f"{nom}: no la usa ningun componente del BOM")
