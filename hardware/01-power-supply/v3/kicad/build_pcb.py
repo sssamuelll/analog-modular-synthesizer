@@ -47,6 +47,7 @@ para esta fase -- y es exactamente lo que hizo la v2 entre sus Tareas 7 y 8.
 from __future__ import annotations
 
 import csv
+import json
 import math
 import os
 import re
@@ -56,6 +57,7 @@ import pcbnew
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 PCB = os.path.join(DIR, "sam17-power-v3.kicad_pcb")
+PRO = os.path.join(DIR, "sam17-power-v3.kicad_pro")
 NET = os.path.join(DIR, "sam17-power-v3.net")
 BOM = os.path.join(DIR, "..", "bom.csv")
 STOCK = os.environ.get("KICAD_FOOTPRINTS",
@@ -350,6 +352,21 @@ F, B = "F.Cu", "B.Cu"
 # (placa THT); con eso alineado a reglas() el chequeo propio y el DRC real
 # dejan de discrepar.
 CLEARANCE_MM = 0.127
+# La via estandar de la placa. Estaban repartidos por el fichero como valores
+# por defecto de Ruteo.via() y como literales dentro de reglas(); ahora los
+# escribe tambien reglas_proyecto() en la netclass, y tres sitios con el mismo
+# numero suelto es como nacio la discrepancia del clearance.
+VIA_D, VIA_TALADRO = 0.6, 0.3
+# Dos vias no pueden acercarse mas que su cobre: diametro + clearance. El
+# taladro pide menos (0.3 + 0.25 de min_hole_clearance = 0.55), asi que manda
+# el cobre. _hay_sitio() no lo miraba -- solo esquivaba PADS -- y el fanout de
+# GND puso dos vias a 0.5 mm: 1 hole_to_hole en el DRC real.
+VIA_A_VIA = VIA_D + CLEARANCE_MM
+# Y dos TALADROS tampoco, aunque sean de la misma red: eso ya no es electrico
+# sino de taladrado, y por eso revisar_vias() -- que salta el par cuando las
+# dos vias comparten red -- no lo veia. min_hole_clearance del proyecto.
+HOLE_CLEARANCE = 0.25
+TALADRO_A_TALADRO = VIA_TALADRO + HOLE_CLEARANCE
 ANCHO_POT, ANCHO_SEN, ANCHO_RED = 1.0, 0.4, 1.0
 # Anchos nuevos de la Tarea 8 (spec sec.6, brief):
 ANCHO_ISLA = 0.5     # +13V1/-12V9 locales, ILIM, OUT->ballast, fugas de GND
@@ -451,7 +468,7 @@ class Ruteo:
         self.tracks.append((red, capa, pts, ancho))
         return self
 
-    def via(self, p, red=None, ancho=0.6, taladro=0.3):
+    def via(self, p, red=None, ancho=VIA_D, taladro=VIA_TALADRO):
         x, y = self._pt(p)
         if isinstance(red, tuple):
             red = pad_red(self.board, *red)
@@ -474,7 +491,7 @@ class Ruteo:
             self.pista(capa, [a, b], ancho, red)
         return self
 
-    def bajar(self, p, ancho_via=0.6):
+    def bajar(self, p, ancho_via=VIA_D):
         """Saca un pad de F.Cu a B.Cu con una via en el sitio."""
         return self.via(p, ancho=ancho_via)
 
@@ -510,10 +527,16 @@ ANCHO_GND = 1.0
 # que existe el EP.
 GND_FANOUT = 1.7
 GND_PAD_GRANDE = 1.5
+# Y cuanto MAS lejos por cada vecino que tenga que escapar por el mismo lado.
+# La via a GND_FANOUT pelado le tapaba el pasillo a los suyos: 11 conexiones
+# sin camino, y las once eran un pin del MEDIO de una fila de DFN o de MSOP
+# (U6.8 SET, U8.9, U9.6/8, U10.1/8...). Un pasillo de escape mide el ancho de
+# la pista mas su aire por los dos lados; 1.0 mm cabe de sobra y es redondo.
+GND_ESCAPE_PASO = 1.0
 
 
 def _hay_sitio(board, punto, ref_propia: str, pin_propio: str,
-               radio: float = 0.75) -> bool:
+               radio: float = 0.75, vias=()) -> bool:
     """Si una via de 0.6 mm en `punto` deja aire a todo pad que no sea EL SUYO.
 
     El radio de 0.75 no es holgura de gusto: es el radio de la via (0.3) mas
@@ -524,8 +547,18 @@ def _hay_sitio(board, punto, ref_propia: str, pin_propio: str,
     "El suyo" es el pad exacto, no la huella entera. Saltarse la huella
     completa fue el primer intento y salio mal en el sitio obvio: el rabito de
     C29 esquivo a R21 yendose al oeste y aterrizo encima del OTRO pad de C29.
+
+    `vias` son las que ya se han colocado en esta misma pasada. Van aparte de
+    los pads porque no estan en la placa todavia -- se estan calculando -- y
+    porque su criterio es otro: VIA_A_VIA de centro a centro, no `radio`.
     """
     px, py = punto
+    # Las vias ya puestas cuentan igual que un pad. No estaban aqui, y el
+    # fanout de GND llego a poner dos a 0.5 mm cuando su cobre pide
+    # VIA_A_VIA: una hole_to_hole en el DRC real con esta funcion en verde.
+    for vx, vy, *_ in vias:
+        if ((vx - px) ** 2 + (vy - py) ** 2) ** 0.5 < VIA_A_VIA:
+            return False
     for fp in board.GetFootprints():
         for p in fp.Pads():
             if fp.GetReference() == ref_propia and p.GetNumber() == pin_propio:
@@ -538,7 +571,150 @@ def _hay_sitio(board, punto, ref_propia: str, pin_propio: str,
     return True
 
 
+def _indice_en_fila(fp, pad) -> int:
+    """Cuantos pines quedan entre este y el extremo mas cercano de su fila.
+
+    De un pin de ESQUINA se sale a donde sea. De uno del MEDIO no: sus dos
+    vecinos tienen que salir por el mismo lado, y lo que se ponga cerca les
+    tapa el pasillo. Esto es lo que cuenta cuantos pasillos hay que respetar.
+
+    Devuelve 0 para todo lo que no viva en una fila de tres o mas (un 0805, un
+    SOT, un pad pasante): ahi no hay pasillo que respetar y el fanout corto es
+    el correcto.
+    """
+    x, y = pad.GetPosition().x / 1e6, pad.GetPosition().y / 1e6
+    for clave, propia, otra in ((lambda p: p.GetPosition().y, x,
+                                 lambda p: p.GetPosition().x / 1e6),
+                                (lambda p: p.GetPosition().x, y,
+                                 lambda p: p.GetPosition().y / 1e6)):
+        fila = [p for p in fp.Pads()
+                if p.GetNumber() and abs(otra(p) - propia) < 0.05]
+        if len(fila) < 3:
+            continue
+        orden = sorted(fila, key=clave)
+        i = next(k for k, p in enumerate(orden)
+                 if p.GetNumber() == pad.GetNumber())
+        return min(i, len(orden) - 1 - i)
+    return 0
+
+
+def _libre_de_pistas(r: Ruteo, a, b, ancho: float, red: str, capa: str) -> bool:
+    """Si el tramo `ab` deja aire a todo lo YA trazado en su misma capa.
+
+    `_hay_sitio()` mira pads y vias. Le faltaba esto, y se noto donde tenia que
+    notarse: el fan-out de GND aterrizaba encima de una escapada de pin fino
+    -- siete vias a 0.05 y 0.10 mm de una pista de otra red -- y su bajante en
+    B.Cu cruzaba el buceo de -12V9 por y=46. Ninguna de las dos cosas la ve un
+    chequeo que solo conoce pads.
+    """
+    for net, cp, pts, anc in r.tracks:
+        if net == red or cp != capa:
+            continue
+        minimo = 2.5 if (es_red(net) or es_red(red)) else CLEARANCE_MM
+        for i in range(len(pts) - 1):
+            if dist_seg(a, b, pts[i], pts[i + 1]) - ancho / 2 - anc / 2 < minimo:
+                return False
+    return True
+
+
+def _libre_de_pads(board, a, b, ancho: float, red: str, capa: str) -> bool:
+    """Si el tramo `ab` deja aire a todo PAD de otra red en su capa.
+
+    Mismo criterio que revisar_pista_pad(), que es la puerta que lo mide
+    despues: dist_seg_rect contra la caja del pad, no contra su centro.
+
+    Va aparte de _hay_sitio() porque la pregunta es otra. _hay_sitio() mira un
+    PUNTO -- donde cae una via -- y con eso basta mientras el rabito sea
+    corto. Cuando el rabito de GND empezo a girar y a medir milimetros, dejo
+    de bastar: el de U10.7 bajaba 2.7 mm por x=90.1 y le pasaba por encima al
+    pad de U10.6, que esta en esa misma columna 0.5 mm mas abajo. Los dos
+    extremos del tramo estaban libres; el tramo no.
+    """
+    capas = {"F.Cu": pcbnew.F_Cu, "B.Cu": pcbnew.B_Cu}
+    for fp in board.GetFootprints():
+        for pad in fp.Pads():
+            pnet = pad.GetNetname()
+            if pnet == red or not pad.GetLayerSet().Contains(capas[capa]):
+                continue
+            bb = pad.GetBoundingBox()
+            cx = (bb.GetLeft() + bb.GetRight()) / 2e6
+            cy = (bb.GetTop() + bb.GetBottom()) / 2e6
+            d = dist_seg_rect(a, b, cx, cy,
+                              bb.GetWidth() / 2e6, bb.GetHeight() / 2e6)
+            minimo = 2.5 if (es_red(pnet) or es_red(red)) else CLEARANCE_MM
+            if d - ancho / 2 < minimo:
+                return False
+    return True
+
+
+def _via_gnd_cabe(r: Ruteo, board, tramos, punto, ref: str, pin: str) -> bool:
+    """Las TRES cosas que ocupa un fan-out: el rabito, la via y el bajante."""
+    if not _hay_sitio(board, punto, ref, pin, vias=r.vias):
+        return False
+    # La VIA contra las pistas, en las dos capas y con su propio diametro. El
+    # rabito de 0.3 mm pasa a 0.45 mm de una escapada vecina -- legal -- y la
+    # via de 0.6 mm en el mismo punto no: pide 0.527. Comprobar solo el rabito
+    # dejaba cinco vias de GND a 0.05 y 0.10 mm de una pista de otra red.
+    for capa in (F, B):
+        if not _libre_de_pistas(r, punto, punto, VIA_D, "GND", capa):
+            return False
+    for a, b, ancho in tramos:
+        if not _libre_de_pistas(r, a, b, ancho, "GND", F):
+            return False
+        if not _libre_de_pads(board, a, b, ancho, "GND", F):
+            return False
+    cost = min(GND_COSTILLAS, key=lambda c: abs(c - punto[1]))
+    return _libre_de_pistas(r, punto, (punto[0], cost), ANCHO_GND, "GND", B)
+
+
+def _fanout_en_L(r: Ruteo, board, x, y, cx, cy_fp, fo, ref, pin, alto):
+    """Sale por el eje del pad, GIRA, y pone la via fuera de la fila.
+
+    El fan-out recto no tiene solucion en U7.9 y la razon es geometrica, no de
+    busqueda: con 0.45 mm de paso y una via de 0.6 mm, una via en la banda de
+    un pin invade los carriles de sus dos vecinos -- pide 0.527 mm de aire y
+    solo hay 0.45. Da igual lo lejos que se vaya: mientras siga en su propia
+    y, sigue dentro de las bandas de al lado. Y alargar el rabito recto solo
+    empeora, porque cruza mas cosas: a 7.7 mm ya se lleva por delante el canal
+    de -12V9 y el tronco de +12V.
+
+    Lo que hace un layouter es girar. Sale al este lo justo para pasar de
+    largo las escapadas de sus vecinos, gira perpendicular, y baja de capa ya
+    fuera de la fila -- donde una via de 0.6 mm no le quita el sitio a nadie.
+    En U7.9 solo cruza la escapada de U7.8, y por eso el recto tiene que
+    llegar mas alla de donde ESA termina antes de girar.
+    """
+    dx, dy = x - cx, y - cy_fp
+    eje_x = abs(dx) >= abs(dy)
+    for extra in range(6):
+        largo = fo + extra * GND_ESCAPE_PASO
+        for sgn in ((1, -1) if (dx >= 0 if eje_x else dy >= 0) else (-1, 1)):
+            codo = ((x + sgn * largo, y) if eje_x else (x, y + sgn * largo))
+            for lado in (1, -1):
+                salida = alto / 2 + GND_FANOUT
+                fin = ((codo[0], y + lado * salida) if eje_x
+                       else (x + lado * salida, codo[1]))
+                tramos = [((x, y), codo, 0.3), (codo, fin, 0.3)]
+                if _via_gnd_cabe(r, board, tramos, fin, ref, pin):
+                    return codo, fin
+    return None
+
+
 def rutear_gnd(r: Ruteo) -> None:
+    """El arbol de masa. VA EL ULTIMO de los cuatro bloques escritos a mano.
+
+    No por importancia sino por grados de libertad, que es el criterio que
+    ordena a los cuatro: la FORMA del arbol esta fijada por constantes
+    (GND_TRONCO_X, GND_COSTILLAS) y lo unico que se adapta es donde cae la via
+    de cada pad -- que es justo lo que tiene que adaptarse. Los carriles de
+    230 V, los cuatro rieles y las escapadas de los pines finos no pueden
+    moverse: los suyos los decide el aislamiento, el Kelvin y el paso del
+    encapsulado.
+
+    Cuando iba primero, sus vias se posaban en el pasillo por el que despues
+    tenia que salir un pin de MSOP -- siete conflictos medidos, todos del
+    mismo tipo. Ahora ve todo lo demas y se aparta.
+    """
     board = r.board
     pads = []
     for fp in board.GetFootprints():
@@ -550,36 +726,69 @@ def rutear_gnd(r: Ruteo) -> None:
             pads.append((c.x / 1e6, c.y / 1e6, fp.GetReference(), p.GetNumber(),
                          p.GetAttribute() == pcbnew.PAD_ATTRIB_SMD,
                          (centro.x / 1e6, centro.y / 1e6),
-                         min(tam.x, tam.y) / 1e6))
+                         min(tam.x, tam.y) / 1e6, _indice_en_fila(fp, p),
+                         fp.GetBoundingBox(False, False).GetHeight() / 1e6,
+                         fp.GetBoundingBox(False, False).GetWidth() / 1e6))
     assert pads, "la placa no tiene pads de GND"
 
     enganches: dict[float, set] = {y: set() for y in GND_COSTILLAS}
-    for x, y, ref, pin, smd, (cx, cy_fp), lado in pads:
+    for x, y, ref, pin, smd, (cx, cy_fp), lado, idx, alto, ancho_fp in pads:
         xv, yv = x, y
         if smd and lado < GND_PAD_GRANDE:
             # Hacia fuera del cuerpo, por el eje en que el pad esta mas lejos
             # del centro. Pero "fuera del chip" no siempre es "libre": el
-            # rabito de C29 salia al este y aterrizaba encima de R21. Asi que
-            # se prueban las cuatro direcciones en orden de preferencia y se
-            # coge la primera que deje sitio -- si ninguna lo deja, revienta
-            # aqui en vez de dejarlo pasar al DRC.
+            # rabito de C29 salia al este y aterrizaba encima de R21. Se
+            # prueban las cuatro direcciones en orden de preferencia y se coge
+            # la primera que deje sitio -- y "sitio" significa las TRES cosas
+            # que la pieza ocupa: el rabito en F.Cu, la via, y el bajante en
+            # B.Cu hasta su costilla. Si ninguna lo deja, revienta aqui en vez
+            # de dejarlo pasar al DRC.
             dx, dy = x - cx, y - cy_fp
             eje_x = abs(dx) >= abs(dy)
-            orden = ([(GND_FANOUT if dx >= 0 else -GND_FANOUT, 0),
-                      (-GND_FANOUT if dx >= 0 else GND_FANOUT, 0),
-                      (0, GND_FANOUT), (0, -GND_FANOUT)] if eje_x else
-                     [(0, GND_FANOUT if dy >= 0 else -GND_FANOUT),
-                      (0, -GND_FANOUT if dy >= 0 else GND_FANOUT),
-                      (GND_FANOUT, 0), (-GND_FANOUT, 0)])
-            for ddx, ddy in orden:
-                cand = (x + ddx, y + ddy)
-                if _hay_sitio(board, cand, ref, pin):
-                    xv, yv = cand
+            # CUATRO DIRECCIONES POR CADA ESCALON, y los escalones crecen.
+            # Un escalon fijo no basta: `min(i, n-1-i)` le da el MISMO a dos
+            # pines simetricos de la fila, y los dos acaban en la misma x. A
+            # dos pistas eso les da igual -- van a distinta y -- pero una via
+            # no es una pista: es un circulo de 0.6 mm que pide VIA_A_VIA a
+            # todo lo que pase cerca, y a 0.45 mm de paso el vecino no cabe.
+            # U7.9 se quedo sin las cuatro direcciones por eso, encajonado
+            # entre las escapadas de U7.8 y U7.10 y el canal de -12V9.
+            #
+            # Se alarga en vez de aflojar. Cada vuelta se va un pasillo mas
+            # lejos, con las mismas separaciones -- ninguna regla se toca --
+            # y si a los cuatro escalones sigue sin caber, revienta aqui con
+            # nombre y apellido en vez de dejarlo pasar al DRC.
+            base = GND_FANOUT + idx * GND_ESCAPE_PASO
+            camino = None
+            for extra in range(5):
+                fo = base + extra * GND_ESCAPE_PASO
+                orden = ([(fo if dx >= 0 else -fo, 0),
+                          (-fo if dx >= 0 else fo, 0),
+                          (0, fo), (0, -fo)] if eje_x else
+                         [(0, fo if dy >= 0 else -fo),
+                          (0, -fo if dy >= 0 else fo),
+                          (fo, 0), (-fo, 0)])
+                for ddx, ddy in orden:
+                    cand = (x + ddx, y + ddy)
+                    if _via_gnd_cabe(r, board, [((x, y), cand, 0.3)],
+                                     cand, ref, pin):
+                        camino = [cand]
+                        break
+                if camino:
                     break
-            else:
+            if camino is None:
+                # el recto no tiene solucion: se prueba en L (ver _fanout_en_L)
+                largo_fila = alto if eje_x else ancho_fp
+                en_l = _fanout_en_L(r, board, x, y, cx, cy_fp, base,
+                                    ref, pin, largo_fila)
+                if en_l:
+                    camino = list(en_l)
+            if camino is None:
                 raise AssertionError(
-                    f"la via de GND de {ref}.{pin} no cabe por ningun lado")
-            r.pista(F, [(x, y), (xv, yv)], 0.3, red=(ref, pin))
+                    f"la via de GND de {ref}.{pin} no cabe: ni recta hasta "
+                    f"{base + 4 * GND_ESCAPE_PASO:.1f} mm ni girando")
+            xv, yv = camino[-1]
+            r.pista(F, [(x, y)] + camino, 0.3, red=(ref, pin))
         if smd:
             r.via((xv, yv), red=(ref, pin))
         cost = min(GND_COSTILLAS, key=lambda c: abs(c - yv))
@@ -797,40 +1006,476 @@ def rutear_rieles(r: Ruteo) -> None:
     r.pista(F, [(98.0, 68.0), (120.0, 68.0)], ANCHO_ISLA, red=("TP4", "1"))
 
 
-def rutear(board) -> Ruteo:
-    """Todas las pistas de la placa. VACIA todavia -- ver la nota de arriba.
+# ============================================================================
+# Lo que queda: el laberinto de hardware/tools/maze.py
+# ============================================================================
+# HASTA AQUI TODO SE HA ESCRITO A MANO, y eso NO es una etapa que el laberinto
+# venga a sustituir. Las cuatro cosas de arriba -- el arbol de GND, la franja
+# de red, los cuatro rieles y el Kelvin de OUTS -- se rutean a mano porque su
+# forma ES el diseno: un plano de masa en vez de un arbol mete una espira de
+# 100 Hz, y el punto exacto donde se suelda el sense de un LT3045 decide que
+# tension queda regulada. "El camino mas corto" es la respuesta equivocada a
+# las dos preguntas.
+#
+# Lo que queda despues son 126 conexiones de otra naturaleza: I2C, los tres
+# divisores de telemetria, +3V3, GNDD, las SET/ILIM/OUT locales de la isla, el
+# lazo de rectificacion y el riel de +5V. Ahi lo que hace falta es no cruzarse
+# con nada, y eso es exactamente lo que un BFS de Lee hace mejor que yo.
+#
+# El ruteador ya estaba EN EL REPO. `hardware/tools/maze.py` se escribio para
+# el modulo 2 ("se quedaron 17 redes al aire"), esta probado con su propia
+# demo, y ni la v1 ni la v2 ni esta version lo habian importado nunca.
+#
+# Dos numeros decidieron como se usa, los dos medidos y no supuestos:
+#
+#   * PASO 0.1 mm, no 0.25. Con 0.25 el riel de +5V dejo 5 pines al aire, y
+#     los cinco eran el pin del MEDIO de un MSOP: para escapar de un pad de
+#     0.5 mm de paso hay que salir recto hasta pasar a los vecinos, y una
+#     rejilla de 0.25 no tiene ninguna celda en ese pasillo. Con 0.1 salieron
+#     las 25 conexiones de +5V en 25 s.
+#   * `via_ok` en O(1). La primera version preguntaba a _hay_sitio(), que
+#     recorre los 310 pads de la placa -- y el BFS la llama una vez por cada
+#     nodo que se plantea cambiar de capa. No termino en diez minutos. La
+#     rejilla ya sabia responder eso: una clase de ancho mas, "via", pintada
+#     con VIA_D, y su mapa ES el mapa de donde cabe una via.
+sys.path.insert(0, os.path.join(DIR, "..", "..", "..", "tools"))
+import maze                                                       # noqa: E402
 
-    El primer intento esta medido y descartado, y el numero es el argumento:
+PASO_REJILLA = 0.1
+
+# Las clases de ancho de la rejilla. No son los anchos de dibujo (esos siguen
+# siendo ANCHO_*): son los CALIBRES que el laberinto sabe reservar, y cada red
+# pendiente se pide en uno de ellos. Un mapa por calibre es lo que permite que
+# el escape de un DFN se mida con 0.2 mm y el lazo de rectificacion con 1.0,
+# en vez de bloquear el TSSOP entero con el margen del riel mas gordo.
+CALIBRES = {"fina": ANCHO_ESCAPE, "media": ANCHO_SEN, "pot": ANCHO_POT,
+            "ancha": ANCHO_KELVIN, "via": VIA_D}
+
+# El sur es de la red. Ningun pad SELV baja de y=114 (J8, J5 y los tres test
+# points de telemetria son los ultimos), y el carril de 230 V mas al norte va
+# por y=123: FUGA_MIN por debajo de el son 117. El laberinto no sabe de
+# aislamiento -- veria una autopista libre y la usaria de atajo -- asi que la
+# franja se le pinta como pared. revisar_fuga() mide pads, no pistas; esto es
+# lo que hace que no le haga falta.
+Y_SELV_MAX = 117.0
+
+# Que calibre pide cada red, y en que ORDEN se rutean. El orden importa: quien
+# va primero coge el camino recto. Primero la potencia (el lazo de
+# rectificacion, que ademas quiere area minima), luego los rieles, y al final
+# las senales, que son las que mejor toleran dar un rodeo.
+PENDIENTES = [
+    # el lazo de rectificacion: J1 -> BR1 -> los cuatro bulk. Mismo calibre
+    # que le dio la v2 a estas cuatro redes.
+    ("/SEC_A", "pot"), ("/SEC_B", "pot"),
+    ("/VRAW+", "pot"), ("/VRAW-", "pot"),
+    # la salida de +12 V pasada por el shunt del INA226 hacia J2
+    ("/+12V_BUS", "ancha"),
+    # Y EL KELVIN DE OUTS. De estas dos redes solo falta eso: el tronco
+    # de potencia (ballast -> shunt -> J2) ya esta escrito a mano en
+    # rutear_rieles(), con sus munones esperando en (19.5,20) y
+    # (41.5,20) para +12V y (19.5,58) y (41.5,58) para -12V. El pin
+    # OUTS de un LT3045 no lleva corriente -- es realimentacion -- asi
+    # que va con calibre de escape, que ademas es el unico que sale de
+    # un DFN de 0.5 mm de paso.
+    ("+12V", "fina"), ("-12V", "fina"),
+    # el riel de la telemetria y del modulo 2
+    ("+5V", "media"), ("/+5V_M2", "media"),
+    # las salidas locales de los cuatro reguladores y su ballast
+    ("Net-(U4-OUT)", "fina"), ("Net-(U5-OUT)", "fina"),
+    ("Net-(C25-Pad1)", "fina"), ("Net-(C26-Pad1)", "fina"),
+    # la realimentacion: SET va corta y fina (brief sec.6.1), ILIM tambien
+    ("Net-(U4-SET)", "fina"), ("Net-(U6-SET)", "fina"),
+    ("Net-(U4-ILIM)", "fina"), ("Net-(U5-ILIM)", "fina"),
+    ("Net-(U6-ILIM)", "fina"), ("Net-(U7-ILIM)", "fina"),
+    # el ajuste de los dos pre-reguladores
+    ("Net-(U1-ADJ)", "fina"), ("Net-(R5-Pad2)", "fina"),
+    ("Net-(U2-ADJ)", "fina"), ("Net-(R7-Pad1)", "fina"),
+    # los ballast de la carga minima
+    ("Net-(D3-A)", "fina"), ("Net-(D4-A)", "fina"), ("Net-(D6-A)", "fina"),
+    # los tres divisores de telemetria
+    ("/TAP_VRAW+", "fina"), ("/TAP_VRAW-", "fina"), ("/TAP_-12V", "fina"),
+    # el lado aislado de la barrera I2C, y el I2C de los dos dominios
+    ("+3V3", "fina"), ("GNDD", "fina"),
+    ("/SDA_A", "fina"), ("/SCL_A", "fina"),
+    ("/SDA_D", "fina"), ("/SCL_D", "fina"),
+]
+
+CAPA_N = {F: 0, B: 1}
+CAPA_NOM = {0: F, 1: B}
+
+
+def _calibre_util(pad, pedido: str) -> str:
+    """El calibre que de verdad cabe: el de la red, o el que admita el pad.
+
+    Una pista no puede salir mas ancha que el pad del que sale. Suena obvio y
+    no lo era: `/+12V_BUS` pide "ancha" (1.5 mm) porque lleva la corriente del
+    bus, y dos de sus cuatro pads son pines IN- de un INA226 en MSOP, de
+    0.3 mm de lado. La red entera se quedaba sin rutear.
+
+    Y los dos pines son SENSE: no llevan corriente. Lo que hacia falta no era
+    una excepcion escrita a mano para ellos sino esta regla, que es geometria
+    y no preferencia -- el tramo que si lleva la corriente (R19 -> J2, pads
+    grandes los dos) conserva su 1.5 mm sin que nadie lo declare.
+    """
+    lado = min(pad[3] - pad[1], pad[4] - pad[2])
+    tope = min(CALIBRES[pedido], lado)
+    cabe = [c for c in CALIBRES if c != "via" and CALIBRES[c] <= tope]
+    assert cabe, f"ni el calibre mas fino cabe en {pad[0]} ({lado:.2f} mm)"
+    return max(cabe, key=lambda c: CALIBRES[c])
+
+
+def escapar_pines_finos(r: Ruteo) -> dict:
+    """Saca de la fila, ANTES de rutear nada, cada pin que este atrapado.
+
+    Es el fan-out de `rutear_gnd` aplicado al resto de las redes, y esta aqui
+    por lo mismo: en una fila de pines de 0.45 o 0.5 mm de paso, el que sale
+    primero coge el pasillo recto y deja a los de dentro sin salida. GND ya lo
+    resolvia escalonando su via -- cuantos mas vecinos tenga que dejar pasar,
+    mas lejos se va antes de bajar de capa -- y las demas redes no, porque las
+    ruteaba el laberinto una a una, cada una buscando su camino mas corto sin
+    saber que le tapaba el paso a la siguiente.
+
+    Se veia como siete redes "sin camino" que no compartian nada excepto el
+    sitio donde se atascaban: U8.4, U9.9, U10.4. Los tres son el pin del medio
+    de una fila cuyos vecinos ya estaban ruteados.
+
+    La escapada es recta, perpendicular a la fila, hacia fuera del cuerpo del
+    chip, y su longitud es la misma formula que la del fan-out de GND: cada
+    indice, un pasillo mas. Asi dos pines de la misma fila no giran nunca a la
+    misma x, y el laberinto se encuentra los extremos ya en campo abierto.
+
+    Los pines de EXTREMO no la necesitan (indice 0): a esos no hay nadie que
+    dejar pasar. Y las redes que no rutea el laberinto tampoco -- +13V1 y
+    -12V9 entran a la isla por sus dos canales verticales, escritos a mano.
+    """
+    board = r.board
+    pendientes = {red for red, _ in PENDIENTES}
+    escapes: dict = {}
+    for fp in board.GetFootprints():
+        cx = fp.GetPosition().x / 1e6
+        cy = fp.GetPosition().y / 1e6
+        for p in fp.Pads():
+            if p.GetNetname() not in pendientes:
+                continue
+            if p.GetAttribute() != pcbnew.PAD_ATTRIB_SMD:
+                continue
+            idx = _indice_en_fila(fp, p)
+            if not idx:
+                continue
+            x, y = p.GetPosition().x / 1e6, p.GetPosition().y / 1e6
+            largo = GND_FANOUT + idx * GND_ESCAPE_PASO
+            dx, dy = x - cx, y - cy
+            if abs(dx) >= abs(dy):
+                destino = (x + (largo if dx >= 0 else -largo), y)
+            else:
+                destino = (x, y + (largo if dy >= 0 else -largo))
+            r.pista(F, [(x, y), destino], ANCHO_ESCAPE,
+                    red=(fp.GetReference(), p.GetNumber()))
+            escapes[f"{fp.GetReference()}.{p.GetNumber()}"] = destino
+    return escapes
+
+
+def _pads_por_red(board) -> dict:
+    """(red) -> [(nombre, x0, y0, x1, y1, capas, cx, cy)], en mm.
+
+    Las `unconnected-*` que KiCad inventa para un pin sin conectar quedan
+    fuera a proposito: no son una red, son la ausencia de una.
+    """
+    porred: dict = {}
+    for fp in board.GetFootprints():
+        for p in fp.Pads():
+            red = p.GetNetname()
+            if not red or red.startswith("unconnected-"):
+                continue
+            ls = p.GetLayerSet()
+            capas = [c for c, l in ((0, pcbnew.F_Cu), (1, pcbnew.B_Cu))
+                     if ls.Contains(l)]
+            if not capas:            # sub-pad de solo pasta: no es cobre
+                continue
+            bb = p.GetBoundingBox()
+            porred.setdefault(red, []).append(
+                (f"{fp.GetReference()}.{p.GetNumber()}",
+                 bb.GetLeft() / 1e6, bb.GetTop() / 1e6,
+                 bb.GetRight() / 1e6, bb.GetBottom() / 1e6, capas,
+                 (bb.GetLeft() + bb.GetRight()) / 2e6,
+                 (bb.GetTop() + bb.GetBottom()) / 2e6))
+    return porred
+
+
+def _sembrar_pista(rej, red_id: int, a, b, ancho: float, capa: int) -> None:
+    """Como rej.pista(), pero con el ancho REAL y no con el calibre mas cercano.
+
+    rej.pista() pide una CLASE, y la clase mas cercana por arriba a un rabito
+    de GND de 0.3 mm es "media", de 0.4. Esos 0.05 mm de radio inventado
+    tapaban la unica celda por la que sale el pin OUTS de un LT3045: el
+    pasillo entre dos pines de 0.5 mm de paso mide una celda de alto y no
+    admite margen de cortesia. El aire de una pista se mide con su ancho, que
+    aqui se conoce, no con el del calibre en el que cabria.
+    """
+    x0, x1 = min(a[0], b[0]), max(a[0], b[0])
+    y0, y1 = min(a[1], b[1]), max(a[1], b[1])
+    for clase, w in rej.anchos.items():
+        rej._pintar(red_id, x0, y0, x1, y1,
+                    rej.cl + w / 2 + ancho / 2, clase, capa)
+
+
+def _sembrar(rej, board, r: Ruteo, dar_id) -> None:
+    """Pinta en la rejilla todo lo que ya ocupa cobre: pads, pistas y vias."""
+    for fp in board.GetFootprints():
+        for p in fp.Pads():
+            ls = p.GetLayerSet()
+            capas = [c for c, l in ((0, pcbnew.F_Cu), (1, pcbnew.B_Cu))
+                     if ls.Contains(l)]
+            if not capas:
+                continue
+            bb = p.GetBoundingBox()
+            # Un pin sin red no comparte cobre con nadie: cada uno es su
+            # propio obstaculo, no todos el mismo.
+            red = p.GetNetname() or f"__{fp.GetReference()}.{p.GetNumber()}"
+            rej.pad(dar_id(red), bb.GetLeft() / 1e6, bb.GetTop() / 1e6,
+                    bb.GetRight() / 1e6, bb.GetBottom() / 1e6, capas=capas)
+    for red, capa, pts, ancho in r.tracks:
+        for i in range(len(pts) - 1):
+            _sembrar_pista(rej, dar_id(red), pts[i], pts[i + 1],
+                           ancho, CAPA_N[capa])
+    for x, y, red, ancho, _t in r.vias:
+        rej.via(dar_id(red), x, y, ancho)
+    # la franja de red, como pared: un id que no es de nadie
+    pared = dar_id("__FRANJA_DE_RED")
+    for capa in (0, 1):
+        for cal in CALIBRES:
+            rej._pintar(pared, 0.0, Y_SELV_MAX, W, H, 0.0, cal, capa)
+
+
+def _celdas_de_pista(rej, a, b, capa) -> set:
+    """Las celdas del EJE de un tramo -- lo que ya esta conectado de una red.
+
+    `rej.pista()` pinta el tramo ENGORDADO, que es lo que hay que esquivar;
+    para arrancar un BFS hace falta lo contrario, el cobre en si. Muestreo
+    denso en vez de Bresenham: los tramos son de milimetros y el paso es
+    0.1 mm, asi que sobran puntos y sobra sencillez.
+    """
+    (ax, ay), (bx, by) = a, b
+    largo = ((bx - ax) ** 2 + (by - ay) ** 2) ** 0.5
+    n = max(2, int(largo / (rej.paso / 2)) + 1)
+    out = set()
+    for i in range(n):
+        t = i / (n - 1)
+        ix, iy = rej.a_celda(ax + (bx - ax) * t, ay + (by - ay) * t)
+        if 0 <= ix < rej.nx and 0 <= iy < rej.ny:
+            out.add(capa * rej.n + iy * rej.nx + ix)
+    return out
+
+
+def _trazar(r: Ruteo, rej, camino, ancho: float, pad, fin,
+            inicio=None) -> None:
+    """Del camino en celdas a tramos y vias de verdad.
+
+    Un cambio de capa nunca sobrevive a comprimir() -- exige que los tres
+    puntos compartan capa -- asi que las transiciones estan todas, y cada una
+    es una via en el punto que las dos capas comparten.
+    """
+    ref, _, pin = pad[0].partition(".")
+    puntos = [(rej.a_mm(ix, iy), capa)
+              for ix, iy, capa in maze.comprimir(camino)]
+    tramos: list = []
+    for pt, capa in puntos:
+        if tramos and tramos[-1][0] == capa:
+            tramos[-1][1].append(pt)
+        else:
+            tramos.append((capa, [pt]))
+    # El ultimo punto cae DENTRO del pad de destino, no en su centro
+    # (celdas_rect es estricta a proposito, y por un motivo escrito: redondear
+    # hacia fuera dejaba las pistas naciendo a un paso de rejilla del cobre y
+    # KiCad las daba por desconectadas). Se remata al centro, que es cobre
+    # propio y por tanto siempre legal.
+    if tramos[-1][1][-1] != fin:
+        tramos[-1][1].append(fin)
+    # Y EL PRIMERO, cuando nace en un pad. celdas_rect trabaja sobre el
+    # bounding box, y la esquina del bounding box de un pad REDONDO no es
+    # cobre: la pista de Net-(R7-Pad1) nacia en (60.2, 60.2), que es
+    # exactamente la esquina del pad de R7, y KiCad la daba por desconectada
+    # con toda la razon. Rematar al centro es siempre legal -- de la esquina
+    # al centro se va por dentro del propio pad.
+    if inicio is not None and tramos[0][1][0] != inicio:
+        tramos[0][1].insert(0, inicio)
+    for i, (capa, pts) in enumerate(tramos):
+        if len(pts) > 1:
+            r.pista(CAPA_NOM[capa], pts, ancho, red=(ref, pin))
+        if i + 1 < len(tramos):
+            r.via(pts[-1], red=(ref, pin))
+
+
+def rutear_resto(r: Ruteo, escapes: dict) -> list[str]:
+    """Las redes de PENDIENTES, con el laberinto. Devuelve las que no cerraron.
+
+    Una red no empieza de cero: arranca de TODO lo que ya tiene trazado a
+    mano, y de ahi cuelga los pads que le falten. Es lo que hace que las
+    cuatro escapadas de OUTS acaben en el munon que rutear_rieles() dejo
+    esperando en (19.5, 20) y sus tres simetricos -- el camino mas corto desde
+    el pin hasta el cobre de su propia red es justo ese, y el punto de sensado
+    sigue decidido a mano y no por un BFS.
+    """
+    board = r.board
+    ids: dict = {}
+
+    def dar_id(nombre: str) -> int:
+        return ids.setdefault(nombre, len(ids) + 1)
+
+    rej = maze.Rejilla(W, H, PASO_REJILLA, CLEARANCE_MM, CALIBRES)
+    _sembrar(rej, board, r, dar_id)
+    porred = _pads_por_red(board)
+
+    mv = [rej.mapa["via"][0], rej.mapa["via"][1]]
+    dv = [rej.red_de["via"][0], rej.red_de["via"][1]]
+    actual = [0]
+
+    def via_ok(punto) -> bool:
+        ix, iy = rej.a_celda(*punto)
+        k = iy * rej.nx + ix
+        return all(not m[k] or d.get(k) == actual[0] for m, d in zip(mv, dv))
+
+    def punta(p):
+        # Si el pin tiene escapada preparada, el laberinto empieza y acaba en
+        # SU EXTREMO, no en el pad: hasta ahi ya esta cableado.
+        return escapes.get(p[0]) or (p[6], p[7])
+
+    def celdas(p) -> set:
+        if p[0] in escapes:
+            return {rej.nodo(*escapes[p[0]], 0)}
+        s: set = set()
+        for c in p[5]:
+            s |= rej.celdas_rect(p[1], p[2], p[3], p[4], c)
+        return s
+
+    sin_cerrar = []
+    for red, calibre in PENDIENTES:
+        pads = porred.get(red)
+        assert pads, f"PENDIENTES nombra una red que no existe: {red}"
+        rid = dar_id(red)
+        actual[0] = rid
+
+        puntas = {tuple(v) for v in escapes.values()}
+        conectado: set = set()
+        for rd, capa, pts, _a in r.tracks:
+            if rd != red or (len(pts) == 2 and tuple(pts[1]) in puntas):
+                continue
+            for i in range(len(pts) - 1):
+                conectado |= _celdas_de_pista(rej, pts[i], pts[i + 1],
+                                              CAPA_N[capa])
+        for x, y, rd, _an, _t in r.vias:
+            if rd == red:
+                ix, iy = rej.a_celda(x, y)
+                conectado |= {c * rej.n + iy * rej.nx + ix for c in (0, 1)}
+
+        faltan = list(pads)
+        hechos = []
+        # los pads que YA toca el cobre trazado a mano no se rutean otra vez
+        for p in list(faltan):
+            if celdas(p) & conectado:
+                faltan.remove(p)
+                hechos.append(p)
+        if not hechos and faltan:
+            # Red virgen: se ancla en el pad MAS GRANDE, no en el primero de
+            # la lista. Anclar en el primero salio caro: a `/TAP_VRAW+` le
+            # tocaba un pin de MSOP, y de un pin de MSOP no siempre se sale --
+            # con lo que fallaba el BFS del ancla y con el la red entera, tres
+            # pads que no tenian ningun problema. Un 0805 o un test point
+            # tienen sitio alrededor por construccion.
+            sueltos = [p for p in faltan if p[0] not in escapes] or faltan
+            p0 = max(sueltos, key=lambda p: (p[3] - p[1]) * (p[4] - p[2]))
+            faltan.remove(p0)
+            conectado |= celdas(p0)
+            hechos.append(p0)
+
+        # Dos vueltas. Un pad al que no se llega con la red a medio tender
+        # puede tener camino cuando ya esta entera: el BFS busca hasta CUALQUIER
+        # punto del cobre de su red, y ese cobre crece en cada iteracion. La
+        # segunda vuelta es la unica que ve el arbol completo.
+        fallidos: list = []
+        segunda: set = set()
+        while faltan or fallidos:
+            if not faltan:
+                if not hechos or len(fallidos) == len(pads):
+                    break
+                faltan, fallidos = fallidos, []
+                if not faltan:
+                    break
+            # el mas cercano a lo ya conectado. Greedy, no optimo: el arbol de
+            # Steiner minimo es NP-duro y esto es una PCB, no un teorema.
+            obj = min(faltan, key=lambda p: min((p[6] - h[6]) ** 2
+                                                + (p[7] - h[7]) ** 2
+                                                for h in hechos))
+            faltan.remove(obj)
+            cal = _calibre_util(obj, calibre)
+            camino = rej.buscar(rid, cal, conectado, celdas(obj),
+                                via_ok, capas=(0, 1))
+            if camino is None:
+                if obj[0] in segunda:
+                    sin_cerrar.append(f"{red}: sin camino hasta {obj[0]} "
+                                      f"(calibre {cal})")
+                else:
+                    segunda.add(obj[0])
+                    fallidos.append(obj)
+                continue
+            n_antes = len(r.tracks)
+            # de que pad nace el camino: el que contenga su primer punto
+            x0, y0 = rej.a_mm(camino[0][0], camino[0][1])
+            arranque = next((punta(h) for h in hechos
+                             if h[1] - 0.01 <= x0 <= h[3] + 0.01
+                             and h[2] - 0.01 <= y0 <= h[4] + 0.01), None)
+            _trazar(r, rej, camino, CALIBRES[cal], obj, punta(obj), arranque)
+            # lo recien trazado pasa a ser obstaculo para el resto de redes,
+            # y origen para el resto de pads de esta
+            for rd, capa, pts, anc in r.tracks[n_antes:]:
+                for i in range(len(pts) - 1):
+                    _sembrar_pista(rej, rid, pts[i], pts[i + 1], anc,
+                                   CAPA_N[capa])
+            for x, y, rd, anc, _t in r.vias:
+                if rd == red:
+                    rej.via(rid, x, y, anc)
+            conectado |= {c * rej.n + iy * rej.nx + ix
+                          for ix, iy, c in camino}
+            hechos.append(obj)
+    return sin_cerrar
+
+
+def rutear(board) -> Ruteo:
+    """Todas las pistas de la placa, en dos mitades y por ese orden.
+
+    EL PRIMER INTENTO ESTA MEDIDO Y DESCARTADO, y el numero fue el argumento:
     ruteando en L sobre F.Cu, con corredores elegidos a ojo, TRES de los diez
     grupos (red, lazo de rectificacion y los dos rieles del pre-regulador,
-    77 tramos) dieron **54 cruces y 28 pistas sobre pads ajenos**. No es que
-    estuviera mal escrito: es que en dos capas no cabe una topologia plana.
+    77 tramos) dieron **54 cruces y 28 pistas sobre pads ajenos**. No estaba
+    mal escrito: es que en dos capas no cabe una topologia plana, y hacia
+    falta una DISCIPLINA DE CAPA declarada antes de escribir una pista mas.
 
-    Lo que hace falta antes de escribir una sola pista mas es una DISCIPLINA
-    DE CAPA declarada, y es una decision de diseno, no de herramienta:
+    La disciplina es la de la v2 -- potencia en F.Cu, arbol de GND entero en
+    B.Cu -- y funciona porque GND es 68 de los 306 pads: sacarla de F.Cu es lo
+    que deja sitio al resto. La alternativa (F.Cu horizontal / B.Cu vertical,
+    via en cada codo) hace los cruces imposibles por construccion y cuesta
+    cientos de vias, y cada via en un retorno es inductancia que esta fuente
+    no quiere pagar.
 
-      * F.Cu horizontal / B.Cu vertical, con via en cada codo. Los cruces se
-        vuelven imposibles por construccion y el precio son cientos de vias.
-      * o el reparto de la v2 -- potencia en F.Cu, arbol de GND entero en
-        B.Cu -- que funciona porque GND es la mitad de la placa (68 de 306
-        pads) y quitarla de F.Cu deja sitio al resto.
+    A MANO va lo que se define por su FORMA, no por su longitud:
 
-    La segunda es la que la v2 uso y la que este diseno pide, pero necesita
-    ademas un reparto de CORREDORES: una coordenada horizontal reservada por
-    riel, para que dos pistas de F.Cu no compartan la misma y. Eso es lo que
-    hay que escribir, y es un trabajo con su propia ronda, no un apendice de
-    la colocacion.
+      * `rutear_gnd`     el arbol de masa. Un plano crearia lazos, y un lazo
+                         alrededor del puente es una espira de 100 Hz.
+      * `rutear_red`     los 230 V, en carriles con 2.5 mm de aire entre
+                         redes distintas.
+      * `rutear_rieles`  los cuatro rieles y el Kelvin de OUTS, cuyo punto de
+                         sensado decide que tension queda regulada.
 
-    Mientras tanto esta funcion devuelve vacio, y eso es HONESTO en el sentido
-    del Principio V: revisar_pistas(), revisar_estrella() y revisar_pista_pad()
-    dan [] trivialmente y lo dicen, la placa no tiene rutas, y nadie puede
-    confundir el verde de las puertas de colocacion con una placa terminada.
-    La v2 hizo exactamente esto entre sus Tareas 7 y 8.
+    CON EL LABERINTO va el resto (`rutear_resto`), que son 126 conexiones
+    donde lo unico que se pide es no cruzarse con nada.
     """
     r = Ruteo(board)
-    rutear_gnd(r)
     rutear_red(r)
     rutear_rieles(r)
+    escapes = escapar_pines_finos(r)
+    rutear_gnd(r)
+    abiertas = rutear_resto(r, escapes)
+    assert not abiertas, "el laberinto no cerro: " + "; ".join(abiertas)
     return r
 
 
@@ -1037,7 +1682,8 @@ def revisar_pista_pad(board) -> list[str]:
 
 
 def revisar_vias(board) -> list[str]:
-    """Vias contra pads, pistas y otras vias de OTRA red.
+    """Vias contra pads, pistas y otras vias -- de otra red por el cobre, de
+    cualquiera por el taladro.
 
     Ausente en v1 (que no tenia vias -- una sola cara de cobre real hasta
     esta placa) y por eso ausente aqui hasta ahora: revisar_pistas() solo
@@ -1088,9 +1734,18 @@ def revisar_vias(board) -> list[str]:
                                  f"de pista {net} ({a}-{b})")
     for i, (x1, y1, n1, a1, _t1) in enumerate(VIAS):
         for x2, y2, n2, a2, _t2 in VIAS[i + 1:]:
+            centros = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
+            # Dos vias de la MISMA red pueden tocarse en cobre -- son el mismo
+            # nodo -- pero sus TALADROS no: eso es una regla de fabricacion,
+            # no electrica. El `continue` de aqui se comia justamente ese
+            # caso, y el DRC real lo canto (dos vias de GND a 0.5 mm).
+            if centros < TALADRO_A_TALADRO:
+                malos.append(f"via {n1}({x1},{y1}) y via {n2}({x2},{y2}): "
+                             f"taladros a {centros:.2f}mm de centro a centro "
+                             f"y hacen falta {TALADRO_A_TALADRO}")
             if n1 == n2:
                 continue
-            d = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5 - a1 / 2 - a2 / 2
+            d = centros - a1 / 2 - a2 / 2
             minimo = 2.5 if (es_red(n1) or es_red(n2)) else CLEARANCE_MM
             if d < minimo:
                 malos.append(f"via {n1}({x1},{y1}) a {d:.2f}mm "
@@ -1237,10 +1892,10 @@ def reglas(board: pcbnew.BOARD) -> None:
     # de la via, no el taladro) se deja en 0.6mm: JLC permite bajarlo, pero
     # no hace falta -- no es el cuello de botella de esta placa.
     ds = board.GetDesignSettings()
-    ds.m_TrackMinWidth = mm(0.127)
-    ds.m_MinClearance = mm(0.127)
-    ds.m_ViasMinSize = mm(0.6)
-    ds.m_MinThroughDrill = mm(0.3)
+    ds.m_TrackMinWidth = mm(CLEARANCE_MM)
+    ds.m_MinClearance = mm(CLEARANCE_MM)
+    ds.m_ViasMinSize = mm(VIA_D)
+    ds.m_MinThroughDrill = mm(VIA_TALADRO)
     # No hace falta subir m_MinAnnularWidth (default de placa, 0.1mm): ya NO
     # hay pads por debajo de ese minimo. F3 (review fase C) RESOLVIO -- no
     # bendijo -- las 10 violaciones annular_width de los pads THT de U1/U2
@@ -1250,6 +1905,56 @@ def reglas(board: pcbnew.BOARD) -> None:
     # del pad a 1.4mm (ver main(), justo despues de colocar U1/U2) -> anillo
     # (1.4-1.1)/2=0.15mm, ya por encima del minimo real. DRC completo real:
     # 0 violaciones de cualquier tipo, no 10 bendecidas.
+
+
+def reglas_proyecto() -> list[str]:
+    """El clearance que aplica el DRC vive en la NETCLASS, y esa no la guarda
+    SaveBoard(): esta en el .kicad_pro.
+
+    `m_MinClearance` es el SUELO de la placa -- el valor por debajo del cual
+    KiCad no deja bajar a nadie. El que el DRC compara de verdad, pista contra
+    pista, es el de la netclass que le toque a cada red, y con una sola clase
+    definida eso es siempre `Default`. Estaba en 0.2 mm: el default de fabrica
+    de KiCad, que nadie eligio y que ningun comentario de este fichero
+    menciona.
+
+    El resultado fue tres verdades sobre el mismo numero -- CLEARANCE_MM
+    (0.127, con fuente), `m_MinClearance` (0.127, escrito aqui) y la netclass
+    (0.2, escrita por KiCad) -- y mandaba la unica que no estaba en el codigo:
+    34 infracciones de margen de 0.15 y 0.175 mm con revisar_pistas() y
+    revisar_pista_pad() en verde, porque las dos miden contra CLEARANCE_MM.
+
+    Devuelve las claves que cambio, para que quien lo llame lo imprima. Un
+    fichero de proyecto reescrito en silencio es la forma comoda de que la
+    proxima discrepancia tarde otra version en salir.
+    """
+    with open(PRO, encoding="utf-8") as fh:
+        pro = json.load(fh)
+    cambios = []
+    for clase in pro["net_settings"]["classes"]:
+        for clave, valor in (("clearance", CLEARANCE_MM),
+                             ("via_diameter", VIA_D),
+                             ("via_drill", VIA_TALADRO)):
+            if abs(clase.get(clave, 0) - valor) > 1e-9:
+                cambios.append(f"{clase['name']}.{clave}: "
+                               f"{clase.get(clave)} -> {valor}")
+                clase[clave] = valor
+    reglas_pcb = pro["board"]["design_settings"]["rules"]
+    for clave, valor in (("min_clearance", CLEARANCE_MM),
+                         ("min_track_width", CLEARANCE_MM),
+                         ("min_hole_clearance", HOLE_CLEARANCE),
+                         ("min_through_hole_diameter", VIA_TALADRO)):
+        if clave in reglas_pcb and abs(reglas_pcb[clave] - valor) > 1e-9:
+            cambios.append(f"rules.{clave}: {reglas_pcb[clave]} -> {valor}")
+            reglas_pcb[clave] = valor
+    if cambios:
+        # indent 2 y salto de linea de la plataforma, que es como lo
+        # escribe KiCad: el objetivo es que el diff sea el valor que
+        # cambio y no el fichero entero.
+        with open(PRO, "w", encoding="utf-8") as fh:
+            json.dump(pro, fh, indent=2, ensure_ascii=False)
+            fh.write(chr(10))
+    return cambios
 
 
 def distancia_bbox(a: pcbnew.BOX2I, b: pcbnew.BOX2I) -> float:
@@ -1487,6 +2192,9 @@ def main() -> None:
     contorno(board)
     franja_to220(board)
     reglas(board)
+    cambios_pro = reglas_proyecto()
+    print(f"reglas del .kicad_pro alineadas con el script: "
+          f"{len(cambios_pro)} {cambios_pro}")
 
     netinfo = {}
     for nombre in sorted(set(redes.values())):

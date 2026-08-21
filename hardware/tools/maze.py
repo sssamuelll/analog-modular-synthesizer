@@ -26,6 +26,7 @@ dejaria cortos que el DRC canta despues.
 """
 from __future__ import annotations
 
+import math
 from collections import deque
 
 class Rejilla:
@@ -55,18 +56,52 @@ class Rejilla:
         return (round(ix * self.paso, 3), round(iy * self.paso, 3))
 
     def _pintar(self, red_id, cx0, cy0, cx1, cy1, r, clase, capa):
-        """Marca las celdas de un rectangulo engordado en r mm."""
+        """Marca las celdas cuyo CENTRO cae dentro del rectangulo + r mm.
+
+        El centro, no el solape. La primera version redondeaba hacia fuera por
+        los dos lados -- `int()` abajo, `+1` arriba -- y con eso una celda
+        quedaba bloqueada por estar hasta un paso entero FUERA del margen que
+        el obstaculo pide. En una placa holgada no se nota; en el lado este de
+        un DFN de 0.45 mm de paso se lo come todo: el pasillo real por el que
+        puede ir el eje de una pista de 0.2 mm entre dos pines mide 0.196 mm,
+        y el redondeo generoso bloqueaba las dos unicas celdas que caben.
+
+        `r` ya es el margen entero (clearance + medio ancho de quien vaya a
+        pasar, mas medio ancho del obstaculo si es una pista), asi que una
+        celda cuyo centro esta a mas de `r` del cobre es legal por
+        construccion. Redondear hacia dentro no afloja el criterio: lo aplica.
+
+        La guarda del final es para el caso degenerado -- un rectangulo mas
+        estrecho que la rejilla y mal alineado no contendria ningun centro, y
+        un obstaculo sin pintar es peor que uno pintado de mas.
+        """
         m = self.mapa[clase][capa]
         d = self.red_de[clase][capa]
-        i0 = max(0, int((cx0 - r) / self.paso))
-        i1 = min(self.nx - 1, int((cx1 + r) / self.paso) + 1)
-        j0 = max(0, int((cy0 - r) / self.paso))
-        j1 = min(self.ny - 1, int((cy1 + r) / self.paso) + 1)
+        i0 = max(0, math.ceil((cx0 - r) / self.paso))
+        i1 = min(self.nx - 1, math.floor((cx1 + r) / self.paso))
+        j0 = max(0, math.ceil((cy0 - r) / self.paso))
+        j1 = min(self.ny - 1, math.floor((cy1 + r) / self.paso))
+        if i1 < i0 or j1 < j0:
+            ix, iy = self.a_celda((cx0 + cx1) / 2, (cy0 + cy1) / 2)
+            if 0 <= ix < self.nx and 0 <= iy < self.ny:
+                k = iy * self.nx + ix
+                d[k] = red_id if (not m[k] or d.get(k) == red_id) else 0
+                m[k] = 1
+            return
         for j in range(j0, j1 + 1):
             base = j * self.nx
             for i in range(i0, i1 + 1):
-                m[base + i] = 1
-                d[base + i] = red_id
+                k = base + i
+                # Una celda que reclaman DOS redes distintas no es de ninguna.
+                # Antes se la quedaba la ultima en pintar, y la otra red la
+                # veia como propia y pasaba por ella: dos pistas del mismo
+                # ancho compartiendo el aire que cada una creia suyo. Sale
+                # como un roce de decimas de mm en el sitio mas apretado --
+                # entre dos pines de un MSOP -- y con el BFS en verde, porque
+                # para el la celda era legal. `red_id` empieza en 1, asi que
+                # el 0 no coincide con nadie y bloquea a las dos.
+                d[k] = red_id if (not m[k] or d.get(k) == red_id) else 0
+                m[k] = 1
 
     # ------------------------------------------------------------ obstaculos
     def pad(self, red_id: int, x0: float, y0: float, x1: float, y1: float,
@@ -173,7 +208,6 @@ class Rejilla:
         Si el pad es mas pequeño que la rejilla no queda ninguna celda dentro;
         en ese caso se devuelve la del centro, que es lo unico razonable.
         """
-        import math
         out = set()
         i0 = max(0, math.ceil(x0 / self.paso))
         i1 = min(self.nx - 1, math.floor(x1 / self.paso))
