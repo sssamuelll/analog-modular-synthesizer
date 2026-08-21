@@ -97,6 +97,47 @@ Precedentes: los «40-80 cents» del daisy-chain que en realidad eran 6.3 con
 contacto bueno y 29.7 con Dupont; un estimador de área que daba 7.82 cm² siendo
 su propia cota superior 6.81, que es imposible.
 
+### VIII. Una comprobación que nunca se ha visto fallar no es una comprobación
+
+El Principio III dice *cuándo* corre una comprobación. Este dice si de verdad
+**distingue** una placa buena de una rota. Y eso no se razona: se prueba
+rompiendo a propósito lo que vigila y viendo el gate ponerse rojo.
+
+Todo gate nuevo — `check_*.py`, `*_budget.py`, un golden, una aserción dentro de
+un generador — nace con su **mutación**: la modificación mínima que tiene que
+hacerlo fallar. Si la mutación pasa en verde, el gate no vigila nada.
+
+Casos:
+
+- La mutación del `.netgold` **no falló**. La cadena de prueba estaba mal
+  construida (le faltaba un pin) y el verde era un verde vacío: el golden llevaba
+  tiempo sin mirar lo que decía mirar. Es el Principio III mordiendo a la propia
+  herramienta.
+- `run_sim.py` encontraba una esquina fuera de regulación y **salía en verde**.
+  Corolario: un gate que halla algo **sale rojo**. No basta con que no explote.
+- Un generador que falla **no puede vaciar el artefacto**: se mide el tamaño del
+  fichero antes y después de forzar el error (181 785 B las dos veces), porque
+  una hoja vacía pasa el ERC con 0 avisos.
+
+### IX. Lo que ninguna medida numérica ve, lo ve el ojo — y el ojo es una puerta
+
+Hay una clase de defecto que no tiene check: el que vive en la geometría de las
+piezas y no en el cobre. Ninguna aserción de este repositorio lo mira, y no es
+por falta de escribirlas.
+
+Caso: **el cuerpo de RV1 montaba sobre la ranura.** Los pads estaban donde
+tocaba, el DRC en cero, el netlist correcto, todas las distancias dentro de
+presupuesto. *«Esto no lo ve ninguna medida de cobre — lo vio el render.»* En la
+misma revisión, J5 al aire.
+
+Por eso el render **no es cosmética ni documentación**: es un gate del proceso.
+Cada tanda de hardware exporta la vista 2D y el render 3D, y **una persona los
+mira antes de cerrar**. Que el ojo humano no se pueda automatizar no lo convierte
+en opcional: lo convierte en el único gate de su clase.
+
+Corolario: los renders se commitean con la placa. Un gate cuyo resultado no queda
+en el repositorio no se puede volver a revisar.
+
 ---
 
 ## Cómo se construye el hardware
@@ -123,6 +164,8 @@ Ninguna tanda de hardware se da por cerrada sin todo esto en verde:
 | Netlist | contrastado pin a pin contra el diseño declarado aparte, **y su firma canónica sin cambios respecto al `.netgold` commiteado** |
 | BOM | cruzado en los dos sentidos con los designadores de la hoja |
 | Presupuestos | todos los `*_budget.py` en verde |
+| Mutación | cada gate **nuevo o tocado** en esta tanda, visto fallar con su mutación (Principio VIII) |
+| Render | vista 2D y render 3D exportados, **mirados por una persona** y commiteados (Principio IX) |
 
 Y para el firmware: nada sin test que falle antes de existir la implementación.
 
@@ -172,11 +215,19 @@ con el motivo, en vez de saltárselo en un módulo.
 Las enmiendas suben de versión: MAYOR si se quita o se invierte un principio,
 MENOR si se añade uno, PARCHE si es redacción.
 
-Los principios I a VII son **innegociables**. El resto son convenciones y se
+Los principios I a IX son **innegociables**. El resto son convenciones y se
 pueden discutir.
 
-**Versión**: 1.0.1 | **Ratificada**: 2026-08-15 | **Última enmienda**: 2026-08-17
+**Versión**: 1.1.0 | **Ratificada**: 2026-08-15 | **Última enmienda**: 2026-08-21
 
+> **1.1.0** (MENOR, dos principios nuevos): se añaden el **VIII** (todo gate se
+> valida con una mutación que tiene que hacerlo fallar) y el **IX** (el render
+> mirado por una persona es una puerta del proceso). Los dos salen de fallos que
+> ya ocurrieron y que ningún documento del repositorio recogía: la mutación del
+> golden que pasó en verde vacío, y el cuerpo de RV1 montado sobre la ranura con
+> todos los checks numéricos en verde. Se añaden sus dos filas a las *Puertas de
+> calidad*. Ningún principio anterior cambia.
+>
 > **1.0.1** (PARCHE, redacción): las *Puertas de calidad* dicen ahora quién las
 > hace cumplir (`hardware/tools/gates.py`, en el CI) y qué es un HUECO. Se añade
 > la firma canónica del netlist a la puerta que ya existía. Ningún principio

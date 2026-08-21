@@ -257,9 +257,17 @@ def main(argv: list[str]) -> int:
     if not solo_coh:
         print("\nfirma de conectividad contra el golden commiteado:")
         fallos += cmd_golden(escribir)
-    if not escribir:
-        print("\ncoherencia esquematico <-> placa:")
-        fallos += cmd_coherencia()
+    # La coherencia esquematico <-> placa corre SIEMPRE, tambien con --write.
+    #
+    # Antes se saltaba con --write, y el razonamiento estaba justo al reves:
+    # el instante posterior a regenerar los goldens es cuando la placa tiene
+    # MAS probabilidad de estar vieja -- acabas de cambiar el esquematico. Ahi
+    # imprimia "netdiff: VERDE" con cuatro redes y ocho huellas sin llegar a la
+    # placa. El flujo real (toco el esquematico -> --write -> veo VERDE -> doy
+    # la tanda por buena) tenia su unica red de seguridad apagada exactamente
+    # en el paso donde hace falta.
+    print("\ncoherencia esquematico <-> placa:")
+    fallos += cmd_coherencia()
 
     for f in fallos:
         print("\nFALLO:", f)
