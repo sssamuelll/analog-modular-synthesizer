@@ -1,7 +1,11 @@
-# El módulo de Voz total: dieciséis canales completos, y la constitución que faltaba
+# El módulo de Voz total: dieciséis canales completos, y la doctrina que los gobierna
 
-> Diseño validado en sesión con Samuel el 2026-08-23, con crítica ontológica
-> de la junta (Voronov) absorbida sección a sección. **Es papel, no cobre.**
+> Diseño validado en sesión con Samuel el 2026-08-23 y pasado **dos veces**
+> por la junta: crítica ontológica (Voronov) sobre la propuesta, y sobre el
+> spec escrito una segunda pasada triple — clínica (Serrano), de runtime
+> (Halberg, verificada contra el firmware que corre) y ontológica segunda
+> (Voronov). **Los tres dictámenes están absorbidos con nombre y resolución
+> en §12.** Es papel, no cobre.
 >
 > Este spec REABRE parcialmente el de los dieciséis osciladores
 > (`2026-08-22-modulo-3-vco-dieciseis-design.md`, PR #164) y SUSTITUYE la
@@ -10,12 +14,19 @@
 
 ---
 
-## 0. El acta constitucional
+## 0. La doctrina
 
-La junta encontró que cada tensión de este diseño venía de legislar con dos
-constituciones a la vez: los principios de la era de 4 voces seguían vigentes
-mientras las decisiones nuevas obedecían una regla que nadie había escrito.
-Esta sección la escribe. **Es anterior a cualquier decisión de cobre.**
+La primera versión de esta sección se llamó «acta constitucional» y se
+declaró «anterior a cualquier decisión de cobre». La segunda pasada de la
+junta demostró que eso era falso — sus definiciones citaban al diseño que
+decían fundar (V2-0, §12). Se corrige la pretensión, no el contenido:
+
+> **Esta sección es doctrina destilada del diseño, no su fundamento.** Es el
+> retrato honesto de las reglas con las que este diseño se juzga a sí mismo,
+> escrita antes de cortar cobre y **enmendable solo por acta**, nunca por
+> accidente. Cuando llegue un caso que estas reglas no imaginaron, el caso
+> no se resuelve preguntándole al cobre: se resuelve enmendando aquí, en
+> voz alta.
 
 ### 0.1 La regla de la frontera
 
@@ -23,365 +34,538 @@ Esta sección la escribe. **Es anterior a cualquier decisión de cobre.**
 > el interior, física en la frontera.**
 
 Por dentro, todo punto de ruteo es reconfigurable a través del modelo — la
-matriz de modulación, los selectores, el crosspoint de la bahía, los roles y
-la dormancia **son** el patch, y un preset es un patch completo. Por fuera,
-la modularidad es cobre y cable.
+matriz de modulación, los selectores, el crosspoint de la bahía, los roles
+y la dormancia **son** el patch, y un preset es un patch completo. Por
+fuera, la modularidad es cobre y cable.
 
 La frase corta: **por dentro el patch es un preset, por fuera es un cable.**
 
 Dos derogaciones formales de `architecture-poly.md`:
 
 - *«El cable siempre gana»* queda **restringido a los jacks de la bahía**
-  (§5). Allí sigue intacto: meter un cable rompe el normalizado de esa
+  (§5), donde sigue intacto: meter un cable rompe el normalizado de esa
   conexión y el sensado de ocupación se lo cuenta al modelo.
-- *«En el patch bay vive la modularidad»* (§5 de architecture-poly) se
-  sustituye por la regla de los dos regímenes.
+- *«En el patch bay vive la modularidad»* se sustituye por la regla de los
+  dos regímenes.
 
-Y dos normas para disputas futuras, que es lo que una constitución debe dar:
+Dos normas para disputas futuras:
 
 1. **Toda capacidad de ruteo interior debe ser expresable en el modelo.**
-   Ruteo que solo existe en soldadura sin declarar no es modular: es un
-   normalizado declarado (§0.4).
-2. **Todo lo que cruza la frontera debe ser físico.** Jacks, perillas, audio.
+   Incluida la convergencia fija: lo que no es reconfigurable es un
+   **normalizado declarado** (§0.4), nunca un accidente.
+2. **Todo lo que cruza la frontera debe ser físico.**
 
-### 0.2 La representación del patch: la interfaz es la vista, no el motor
+### 0.2 Las carcasas: escritores con ley de capas, no «vistas»
 
-El patch interior se representa mediante la interfaz gráfica, en cualquiera
-de sus carcasas: **app standalone, VST, MCP o web app vía wifi**. El agente
-de IA no es un caso aparte: **MCP es una carcasa más** de la misma interfaz.
+La primera versión decía «la interfaz es la vista, no el motor» y en el
+mismo párrafo la hacía escribir. La junta lo cazó (V2-VI): una
+representación que escribe es un controlador, y cuatro controladores
+concurrentes sin árbitro de intención son un conflicto. Se legisla:
 
-La distinción que evita contradecir «el instrumento toca sin computadora»
-(architecture-compute): **la interfaz representa el patch; no lo ejecuta.**
-El patch vive y corre en el cerebro y los módulos siempre; todas las carcasas
-son vistas y editores del mismo modelo, y se renderizan **desde los
-descriptores** — no desde tablas mantenidas a mano, que es exactamente lo que
-la memoria de 32 KB del módulo vino a matar (#164). El bit de dormancia
-(§6) tiene ahí su cara visible: el parámetro durmiente se pinta atenuado.
+**El patch vive y corre en el cerebro y los módulos, siempre.** El
+instrumento toca sin computadora. Las carcasas — **app standalone, VST,
+MCP (el agente es una carcasa más) y web app vía wifi** — son **editores
+concurrentes** del mismo modelo autoritativo, renderizados desde los
+descriptores, y cada una sostiene su estado optimista local hasta que el
+`CHANGED` del cerebro reconcilia. No hay «un modelo»: hay **un modelo
+autoritativo y N vistas optimistas**, y decirlo es lo que evita mentirse.
 
-El panel físico queda como la superficie de **interpretación**: perillas-
-sensor, LEDs, bahía. Tocar es físico, editar es programático, y ambos
-escriben el mismo modelo.
+**La ley de capas, por parámetro y no por modo** — diseñada para el caso de
+uso que manda: un directo donde Samuel colabora con su agente en vivo,
+el agente automatizando secuencias completas mientras la mano patchea y
+tuerce perillas encima:
 
-### 0.3 Los cinco términos, definidos
+1. **La mano gana por parámetro.** Un gesto físico (perilla, cable en la
+   bahía) captura ese parámetro o ruta: la automatización del agente sobre
+   él queda `ANULADO` (el primitivo del núcleo §4.1, extendido: el agente
+   es una fuente de automatización más). Todo lo demás sigue bajo el
+   agente. `REACTIVAR` lo devuelve. Es touch/latch de DAW, hecho
+   instrumento.
+2. **El pairing decide quién, no cuándo.** Las carcasas remotas (wifi,
+   MCP) requieren emparejamiento explícito. El agente emparejado escribe
+   en vivo sin fricción; un cliente no emparejado no escribe nada.
+3. **La asimetría del núcleo §2.2 se restaura, acotada a lo
+   irreversible**: borrar bancos, escribir calibración, firmware — piden
+   confirmación física. Tocar, secuenciar y rutear en vivo, no.
 
-La junta encontró cinco términos cargando todo el peso del diseño sin
-definición vigente. Aquí están:
+El panel físico es la superficie de **interpretación**: perillas-sensor,
+LEDs, bahía. Tocar es físico, editar es programático, y ambos escriben el
+mismo modelo — bajo la ley de capas.
+
+### 0.3 Los términos, y la partición de roles
 
 | Término | Definición |
 |---|---|
-| **Oscilador** | La unidad física de generación: SSI2130 + convertidor exponencial + tap a la matriz. El máximo común divisor de todos los roles. R-M6 de la orquestación sigue intacta |
+| **Oscilador** | La unidad física de generación: SSI2130 + convertidor exponencial + tap a la matriz |
 | **Canal** | La unidad física de replicación: oscilador + filtro + VCA de resonancia + VCA de voz, soldados en la misma placa. El canal **ofrece** roles; no **es** ninguno |
-| **Voz** | Rol computado del estado, nunca cobre: un canal cuenta como voz si su oscilador no es fuente de modulación de otro, no está en modo lento, y su VCA de voz participa de la salida |
-| **Módulo** | Tres clases, declaradas en el descriptor (cambio 15 al núcleo, §7): **poseedor** (posee instancias de parámetro: la Voz, el mixer), **referente** (posee vínculos a parámetros ajenos: el panel de mandos), **relator** (posee aristas: la bahía) |
-| **Carácter** | Criterio ejecutable, no gusto: es carácter **lo que procesa audio de forma no lineal** (el MS-20, los LEDs del lazo, un drive futuro) → analógico soberano. Lo que genera **control** (envolventes, CV) → del modelo. Lo que aplica **ganancia lineal** (los SSI2164) → indiferente, decide la ingeniería |
+| **Rol** | El estado computado de un canal. **Partición total**: todo canal tiene exactamente un rol en cada instante (tabla abajo) |
+| **Módulo** | Una unidad con bajada de J2 que declara un **conjunto** de clases: **poseedor** (posee instancias de parámetro), **referente** (posee vínculos a parámetros ajenos), **relator** (posee aristas). La Voz es poseedora; el panel de mandos, referente; la bahía, relatora; **el mixer es poseedor y su suma 16:1 es normalizado declarado** (§0.4) — la junta cazó que caía entre las clases (V2-V) |
+| **Carácter** | Criterio ejecutable: lo que procesa **audio de forma no lineal** → analógico soberano. Lo que genera **control** → del modelo. Lo que aplica **ganancia lineal** → indiferente, decide la ingeniería |
 
-La fila de *carácter* disuelve el doble estándar que la junta señaló: la
-exponencial de una RC es control, no audio — la disolución del ADSR en
-firmware queda **legislada**, no colada. Y el 2164 dentro del lazo de
-resonancia es ganancia lineal; la no-linealidad que define el carácter (los
-LEDs) sigue siendo cobre soberano.
+**La partición de roles** — sustituye la definición de Voz de la v1, que
+era oscilador-céntrica y dejaba residuos (V2-I, S-6). El cerebro computa
+**exactamente un rol por canal**, con esta precedencia descendente cuando
+varias condiciones se dan a la vez:
+
+| Rol | Condición | Reparto de notas |
+|---|---|---|
+| **medición** | El canal está en caracterización (§4) | excluido |
+| **moduladora** | Su salida pre-filtro es consumida por la matriz como fuente de al menos un destino | excluido |
+| **lfo** | Su oscilador está en modo lento (lo consuma alguien o no — el residuo «lento sin consumidores» de la junta cae aquí) | excluido |
+| **conducto** | Su oscilador está silenciado y hay señal externa activa en su nodo de suma: suena **lo externo** por su filtro y su VCA. El caso DJ: mandar una voz a un pedal y devolverla por el canal de otro | excluido — el cerebro **no asigna notas a un oscilador silenciado** (V2-I caso 2) |
+| **voz** | Su oscilador suena hacia su nodo de suma y su VCA de voz es asignable | **elegible** |
+| **mudo** | Nada de lo anterior | excluido |
+
+Esto **enmienda R-M6** de la orquestación (era una condición doble; ahora
+es esta partición) — anotado como parte del cambio 16 (§7). La dormancia
+(§6) se deriva de esta partición.
 
 ### 0.4 El normalizado declarado
 
-La cadena soldada oscilador → filtro → VCA de voz es una **decisión, no un
-accidente**: el tramo donde la modularidad programática eligió no tener
-puntos. Sus dos puntos de ruptura son el **nodo de suma pre-filtro** y la
-**salida post-filtro** — y son los únicos, por la regla de §5.2.
+Lo no-reconfigurable es decisión escrita, no accidente. El normalizado
+declarado del instrumento es:
+
+1. **La cadena de canal**: oscilador → nodo de suma → filtro → VCA de voz,
+   soldada, con **dos** puntos tocables por la bahía: el nodo de suma
+   (entrada) y la salida **post-VCA** (salida — cambiado desde post-filtro,
+   V2-II: la bahía exporta **la voz articulada**, no una señal cruda
+   siempre viva que contradiga el silencio).
+2. **La convergencia**: las dieciséis salidas post-VCA suman al bus del
+   mixer, 16:1, fija (V2-V).
+3. **El tap de la matriz FM**: pre-filtro, fijo (§2).
+4. **El tap de caracterización**: post-filtro, interno, hacia el mux de
+   medida (§4) — instrumentación, no audio.
+
+Por qué dos puntos de bahía y no más, dicho sin bucle (V2-II): el nodo de
+suma es el único punto donde lo externo puede **sumarse** sin romper la
+semántica D9, y la salida post-VCA es el único punto donde el canal ya es
+una voz articulada. Cualquier punto intermedio exportaría un objeto que el
+modelo no puede nombrar. Si un día hace falta el tercero, es enmienda de
+§0, no cobre furtivo.
 
 ---
 
 ## 1. Qué es el módulo de Voz
 
-El módulo 3 deja de ser «el VCO» y pasa a ser **la Voz**: dieciséis canales
-completos, cada uno oscilador → filtro → VCA, soldado de punta a punta en la
-misma placa. Los módulos 5 (VCF) y 7 (VCA) **desaparecen como hardware
-separado**: su cobre se muda aquí. El módulo 6 (ADSR) desaparece como
-circuito y se ejecuta **en los micros de este módulo** (§3), con sus perillas
-en el panel de mandos (§8).
+El módulo 3 deja de ser «el VCO» y pasa a ser **la Voz**: dieciséis
+canales completos, cada uno oscilador → filtro → VCA, soldado de punta a
+punta en la misma placa. Los módulos 5 (VCF) y 7 (VCA) **desaparecen como
+hardware separado**. El módulo 6 (ADSR) desaparece como circuito y se
+ejecuta **en los micros de este módulo** (§3), con sus perillas en el
+panel de mandos (§8).
 
-El módulo suelda canales y se llama Voz: el preset computa cuáles canales
-son voces en cada instante (§0.3). En FM 8×2 hay 16 canales y 8 voces; los
-filtros y VCAs de las moduladoras están **durmientes** (§6), no ociosos por
-error.
+El módulo suelda canales; el preset computa roles (§0.3). En FM 8×2 hay
+16 canales, 8 voces y 8 moduladoras con sus filtros durmientes (§6) — no
+ociosos por error.
 
-**De #164 se conserva** (sin tocar): los dieciséis SSI2130 y sus tres
-correcciones de exactitud, la matriz de modulación analógica de 16 líneas y
-la digital de sync, la partición en dos columnas con dos micros RP2350B
-(límite de PIO), la referencia única distribuida y bufferizada, el
-convertidor de tono pegado a cada oscilador, los juguetes (§10 de aquel
-spec), el camino de silencio, la telemetría y el J2.
+**De #164 se conserva**: los dieciséis SSI2130 y sus tres correcciones de
+exactitud, la matriz de modulación analógica de 16 líneas y la digital de
+sync, la partición en dos columnas con dos micros RP2350B, la referencia
+única distribuida y bufferizada, el convertidor de tono pegado a cada
+oscilador, los juguetes, la telemetría y el J2.
 
 **De #164 se reabre**: la partición física de placas (§8), el panel de 32
-jacks (muere: §5), y el censo de parámetros y memoria (§7). #164 se mergea
-tal cual — es el acta de su junta — y este spec declara la supersesión.
+jacks (muere: §5), el **camino de silencio** (S-1: ya no basta el pull del
+oscilador — hay 32 VCAs nuevos; su estado seguro se rediseña en §9), y el
+censo de parámetros y memoria (§7). #164 se mergea tal cual — es el acta
+de su junta — y este spec declara la supersesión.
 
 ## 2. El canal analógico
 
 ```
-            nodo de suma
-SSI2130 ──────►(+)──► filtro MS-20 ──► VCA de voz ──► bus del mixer
-   │            ▲     LM13700 + TL074      ▲          (¼ SSI2164)
-   │            │     LP 24 dB/oct         │
-   │      bahía: audio  LEDs en el lazo    │ CV de envolvente
-   │      externo (§5)  res. por VCA       │ (generador local, §3)
-   │                    (¼ SSI2164)        │
-   └──► matriz de modulación FM (16 líneas), SIN filtrar
+            nodo de suma                                    bus del mixer
+SSI2130 ──────►(+)──► filtro MS-20 ──┬──► VCA de voz ──►──── (16:1, fijo)
+   │            ▲     LM13700+TL074  │    (¼ SSI2164)
+   │            │     LP 24 dB/oct   │        ▲
+   │      bahía IN     LEDs, res.    │        │ CV envolvente
+   │      (externo,    por VCA       │        │ (generador local, §3)
+   │       se suma)    (¼ SSI2164)   │        └──► bahía OUT (post-VCA)
+   │                                 │
+   │                                 └──► tap de caracterización ──► mux
+   │                                      16:1 ──► Schmitt ──► contador
+   └──► matriz de modulación FM (16 líneas), SIN filtrar        del micro
 ```
 
-- **El tap de la matriz sale ANTES del filtro.** La moduladora de FM es la
-  señal cruda del oscilador; filtrarla acoplaría el índice de modulación al
-  corte.
-- **El filtro es el MS-20 de la tesis** — LM13700 en dos celdas, pasa-bajo
-  24 dB/oct, LEDs en el lazo de resonancia — elegido por carácter (§0.3) y
-  estabilizado digitalmente (§4). **LP solo**: las variantes multimode/12 dB
-  del doc funcional quedan fuera; la placa no reserva lo que nadie pidió.
+- **El tap de la matriz sale ANTES del filtro**: la moduladora de FM es la
+  señal cruda; filtrarla acoplaría el índice de modulación al corte.
+- **El filtro es el MS-20 de la tesis** — LM13700 en dos celdas, LP
+  24 dB/oct, LEDs en el lazo — elegido por carácter (§0.3) y estabilizado
+  digitalmente (§4). **LP solo.**
 - **La resonancia se controla por VCA** (¼ SSI2164 en el lazo), nunca
-  digipot — herencia directa de architecture-poly §7, caso 2.
-- **El VCA de voz es ¼ de SSI2164**: ganancia limpia; el carácter ya salió
-  del filtro. 16 canales de voz + 16 de resonancia = 32 VCAs = **8× SSI2164**.
-- **El nodo de suma pre-filtro** es donde entra el audio de la bahía y donde
-  sobrevive la semántica D9 de la orquestación: lo externo **se suma**, no
-  sustituye.
-- **CVs nuevos por canal: 3** — corte, resonancia, envolvente. La velocity y
-  el escalado son multiplicaciones en el micro del módulo, no canales de DAC.
+  digipot.
+- **El VCA de voz es ¼ de SSI2164**. 16 + 16 = 32 VCAs = **8× SSI2164**.
+- **El tap de caracterización** (S-3, era el BLOCKER 3): la señal
+  post-filtro de cada canal, pre-VCA, va a un **mux analógico 16:1 → un
+  Schmitt → un contador del micro**. Es la ruta física por la que la
+  auto-oscilación llega al conteo recíproco con el VCA de voz cerrado.
+  Instrumentación, no audio: no toca el camino de voz.
+- **El CV de corte tiene un solo escritor: el micro del módulo** (S-9).
+  Todas las fuentes — valor base + curva de calibración + envolvente de
+  filtro local + modulación que mande el cerebro por la trama — **se suman
+  digitalmente en el micro**, que escribe el DAC. No hay nodo analógico de
+  suma de CV que arbitrar.
+- **CVs nuevos por canal: 3** — corte, resonancia, envolvente de VCA.
+  Velocity y escalados son multiplicaciones en el micro.
 
-## 3. Ejecución: las envolventes son generadores del módulo
+## 3. Ejecución: generadores, eventos y la ley que los limita
 
-El golpe más duro de la junta: al disolver el ADSR desaparecían las líneas
-físicas `GATE`, y un ataque por trama J2 a 1 kHz queda cuantizado a 1 ms —
-con R-M1 vigente («el módulo no interpola»), un ataque sub-milisegundo no
-podía existir. La solución estaba dentro del módulo: **ya hay dos RP2350B**.
+### 3.1 Las envolventes son generadores del módulo
 
-- **Las envolventes se ejecutan en los micros del módulo.** El cerebro manda
-  el evento de nota y los parámetros (A, D, S, R, formas); el micro renderiza
-  la curva localmente contra los DACs de envolvente por su SPI privado, a
-  decenas de kHz. La *forma* del ataque no tiene límite de trama.
-- **Enmienda a R-M1** (cambio 17 al núcleo): «el módulo no interpola
-  parámetros» se mantiene, y se añade: «el módulo ejecuta **generadores**
-  declarados en su descriptor». La envolvente es un generador, no una
-  interpolación.
-- **El evento de nota va en la trama** — resuelve el riesgo 2 de la
-  orquestación (gates-en-trama) en la dirección que ya apuntaba.
-- **Presupuesto nuevo y bloqueante: `ataque_budget.py`** — cota del camino
-  completo nota-a-VCA. Estimación de diseño: USB-MIDI 1 ms + trama 1 ms +
-  arranque del generador ≈ **2 ms peor caso**, el estándar de la categoría
-  (USB-MIDI solo ya cuantiza a 1 ms). El script lo asevera con los números
-  reales del protocolo, no con esta estimación.
+El cerebro manda el evento de nota y los parámetros; **el micro del módulo
+renderiza la curva localmente** contra los DACs por su SPI privado. La
+*forma* del ataque no depende de la trama.
 
-## 4. Calibración: dos regímenes con nombre
+**Tasa de render: 10 kHz por canal, con RC de reconstrucción en la salida
+del DAC** — no «decenas de kHz» (H-BP1): 8 envolventes × 10 kHz son 80k
+escrituras/s por micro, y esa cifra entra en un presupuesto, no en un acto
+de fe. **`spi_privado_budget.py` es bloqueante e INVALIDANTE**: suma todos
+los flujos del SPI privado (tono 1 kHz, índices, envolventes, eventos) y
+si no cierra, esta sección cae — no «se ajusta en el plan».
 
-La doctrina «el camino de afinación va antes del filtro, siempre»
-(architecture-poly §5) era de una era con un solo régimen. Ahora hay dos:
+### 3.2 El test de membresía de «generador» (cambio 17, con cerradura)
 
-**Afinación** (osciladores). Permanente, paralela, pre-filtro, invisible,
-digital. Intacta de #164: conteo recíproco, 0,5 cents, TUNE_OUT por
-oscilador.
+La junta cazó que la categoría no tenía límite (V2-IV). Lo tiene:
 
-**Caracterización** (filtros). Bajo demanda, **muxeada** (calibrar no tiene
-la prisa que tenía afinar), y atraviesa el camino de sonido **en estado de
-no-uso**: el filtro se mide convertido en oscilador. La premisa del README
-del VCF — «no hay nada que escuche un filtro» — era **falsa para este
-filtro en concreto**: auto-oscila por diseño, y un filtro auto-oscilando es
-un oscilador senoidal que el Schmitt recorta y el conteo recíproco mide.
+Un generador es un proceso del módulo que **(a)** se dispara por un evento
+de la trama, **(b)** entre eventos solo consume parámetros constantes —
+nunca un flujo de valores del cerebro (eso sería interpolar, y R-M1 sigue
+prohibiéndolo), y **(c)** su dominio declarado excluye el tono: **R-M2
+prevalece con cita cruzada** — el tono lo genera solo el cerebro. Un
+«generador de glide» viola (b). Un «generador de pitch-blip» viola (c).
 
-Tres lazos, con el VCA de voz cerrado (en silencio, como el autoafinado):
+**La envolvente de tono queda prohibida en v1, en voz alta.** La FM
+percusiva no queda huérfana: el cerebro ya puede secuenciar tono a 1 kHz
+bajo R-M2 — el agente hace pitch-automation hoy. El generador local de
+tono es una **enmienda futura declarada**: tocaría R-M2, el autotune (que
+corregiría lo que otro mueve) y este test. Huella anotada, no prometida.
 
-1. **Curva corte-vs-CV por canal**: resonancia al máximo, barrido del CV de
-   corte, medida de la auto-oscilación → curva a la EEPROM de calibración.
-   «Corte a 800 Hz» corta en 800 Hz en los dieciséis canales, cada uno
-   corregido por su propia curva. La lotería del LM13700 deja de sonar
-   despareja: se vuelve dieciséis offsets que el software se come.
-2. **Compensación térmica**: el sensor de la telemetría interpola la curva
-   con la temperatura — y con la fusión, ese sensor ve **la misma**
-   temperatura que el expo del oscilador. Ganancia directa de soldar el
-   canal entero en una placa.
-3. **Ancla de resonancia**: el umbral de CV donde arranca la auto-oscilación
-   de cada canal define «resonancia 100 %» de ese canal. La resonancia se
-   siente igual en las dieciséis voces aunque los chips difieran.
+Los parámetros de un generador se capturan **al evento**: la próxima nota
+usa los valores nuevos; el sustain aplica en vivo (S-12).
 
-La tesis que la junta pidió escribir, escrita: **se conserva el filtro por
-lo inmedible (los LEDs, el carácter) y se estabiliza midiendo todo lo demás
-(corte, tracking, umbral).** La dispersión del carácter entre canales no se
-calibra: es lo que en un poly analógico siempre se llamó encanto.
+### 3.3 El evento de nota: diseño pendiente, dicho sin maquillaje
+
+La v1 de este spec declaró «resuelto» el riesgo 2 de la orquestación. Era
+falso (S-2, era el BLOCKER 2): el formato del mensaje, su sello de tiempo
+y la entrega al esclavo **no están diseñados**. Este spec no los diseña —
+los declara **prerrequisito bloqueante**, a diseñar junto a los riesgos 1
+y 2 de la orquestación, con estas cotas como criterio de aceptación:
+
+- Peor caso nota-a-VCA **incluyendo la etapa maestro→esclavo** (S-5,
+  H-BP2: la cuenta de 2 ms de la v1 la omitía, y el jitter
+  maestro-vs-esclavo es sistemático y asimétrico): objetivo ≤ 3 ms,
+  uniforme entre columnas dentro de ±0,5 ms.
+- `ataque_budget.py` asevera el camino completo **cuando el mensaje
+  exista**, no antes.
+
+### 3.4 El reparto del micro, declarado
+
+El micro del módulo es tiempo real duro por tres frentes (esclavo J2,
+render de envolventes, PIO de afinación) y la v1 no asignaba nada
+(H-CF1). Se declara el reparto — el plan lo detalla, este spec lo fija:
+
+- **Núcleo 0**: esclavo J2 + eventos + telemetría (latencia manda).
+- **Núcleo 1**: render de envolventes + escritura DAC + drenaje de PIO
+  (caudal manda).
+- Prioridades NVIC y canales DMA: documento del plan, **bloqueante**, con
+  la regla de que el esclavo J2 nunca pierde su ventana de MISO.
+
+## 4. Calibración: dos regímenes, y su ley de concurrencia
+
+**Afinación** (osciladores): permanente, paralela, pre-filtro, invisible.
+Intacta de #164.
+
+**Caracterización** (filtros): bajo demanda, muxeada (§2), en silencio
+(VCA de voz cerrado), por el tap post-filtro → Schmitt → contador. Tres
+lazos: curva corte-vs-CV por canal → EEPROM; compensación térmica por el
+sensor común (que ve la misma temperatura que el expo del oscilador —
+ganancia de la fusión); ancla de resonancia en el umbral de
+auto-oscilación. La premisa del README del VCF («no hay nada que escuche
+un filtro») era falsa para este filtro: auto-oscila por diseño.
+
+**La ley de concurrencia** (H-CF3, era indefinido):
+
+- Un canal en caracterización tiene rol **medición** (§0.3): el cerebro
+  **no le asigna notas**. No hay carrera nota-contra-medida: la partición
+  la excluye por construcción.
+- La caracterización **nunca se dispara por un recall**: corre a demanda
+  explícita o como mantenimiento en silencios, canal a canal, robando como
+  máximo un canal a la vez al reparto.
+- **`cal_filtro_budget.py` es bloqueante**: asentamiento de la
+  auto-oscilación × puntos de curva × 16 canales, con la aserción de que
+  el mantenimiento por canal cabe en un silencio musical razonable y el
+  barrido completo se reserva a la primera calibración.
+
+La tesis, escrita: **se conserva el filtro por lo inmedible (el carácter)
+y se estabiliza midiendo todo lo demás.** La dispersión del carácter entre
+canales no se calibra: es lo que siempre se llamó encanto.
 
 ## 5. La bahía asignable
 
 ### 5.1 Qué es
 
-La frontera física del patch: **8 entradas + 8 salidas** en jacks
-Thonkiconn (TN conectado, sensado de ocupación, LED por jack), ruteadas por
-**dos AD75019** (crosspoint 16×16, ±12 V, carga serie): uno de entradas
-(8 jacks → 16 destinos), uno de salidas (16 fuentes → 8 jacks). El jack deja
-de ser un punto del circuito y pasa a ser **un nombre que le da el preset**;
-su LED dice en color qué es. El recall del patch interior deja de ser
-LED-guiado-manual (el arte previo de Lafayette anotado en el núcleo §6.3):
-**se recuerda solo**. Solo los cables hacia el mundo siguen siendo físicos,
-porque físico es el mundo al que van.
+**8 entradas + 8 salidas** en jacks Thonkiconn (TN conectado, sensado de
+ocupación, LED por jack), ruteadas por **dos AD75019** (crosspoint 16×16,
+±12 V, carga serie): entradas → los 16 nodos de suma; las 16 salidas
+post-VCA → salidas. El jack es un nombre que le da el preset; su LED dice
+en color qué es. El recall del patch interior se recuerda solo; solo los
+cables hacia el mundo siguen siendo físicos.
 
-Es un módulo clase **relator** (§0.3): sus parámetros son aristas. Su
-esquema de descriptor es el **cambio 15 al núcleo** (§7). Vive como módulo
-propio con su bajada de J2, panel en la fila A junto a la Voz (§8).
+Módulo clase **relator**, con su bajada de J2 y su panel en la fila A.
 
-### 5.2 La derogación, en voz alta
+### 5.2 La derogación del anti-acotamiento, en voz alta
 
-#164 (decisión 12) elevó a ley: «si el enrutado se acota, la matriz completa
-que justifica un solo módulo deja de existir». La bahía es un enrutado
-acotado, y la contradicción se resuelve **derogando el principio para el
-dominio del patch, no esquivándolo**: la matriz FM es topología
-**generadora** — la identidad del instrumento, sigue sin acotarse — y la
-bahía es topología **de frontera**.
+#164 (decisión 12) legisló: «si el enrutado se acota, la matriz que
+justifica un solo módulo deja de existir». Se deroga **para el dominio del
+patch**: la matriz FM es topología **generadora** — identidad del
+instrumento, sigue sin acotarse — y la bahía es topología **de frontera**,
+gobernada por §0.4 (los dos puntos, con su porqué sin bucle).
 
-Y los 16 puntos internos no son una lista (una lista tiene punto 17): son
-una **regla** — *la bahía rutea fronteras de canal, nunca interiores*:
+### 5.3 La ley de conmutación, contra el chip real
 
-- **Destinos** (entradas): los 16 nodos de suma pre-filtro (§2).
-- **Fuentes** (salidas): las 16 salidas post-filtro.
+La v1 legisló «conmutar al silencio del canal afectado» sobre un chip de
+**commit global** (H-CF2: el AD75019 carga 256 bits y aplica todo a la
+vez). Se rediseña:
 
-El punto 17 no existe por partida doble: la regla no enumera puntos, y el
-régimen programático (§0.1) dice que añadir puntos interiores es
-legislación del modelo sobre cobre ya previsto, no cobre nuevo.
+- **Imagen sombra** (decisión de Samuel): el cerebro mantiene la imagen
+  completa de los 256 bits; conmutar es recargar la imagen entera y
+  latchear. **Supuesto marcado**: los cruces que no cambian no glitchean
+  en el latch — se verifica contra datasheet y en bring-up **con su
+  mutación** (un cruce sonando, recarga de otro, se mide el primero). Si
+  el supuesto cae, la bahía pasa a switches direccionables y §8 se rehace.
+- **Barrera de cambiados-en-silencio**: el commit espera a que **todos los
+  canales cuyos cruces cambian** estén en silencio. Los que no cambian no
+  votan.
+- **Política de drones, configurable por preset** (decisión de Samuel):
+  `diferir` (espera al silencio; la interfaz y el LED del jack muestran
+  «pendiente») o `forzar` (timeout declarado y mute breve del canal). Un
+  drone bajo `diferir` nunca se corta solo (H-OF3: la starvation deja de
+  ser un bug y pasa a ser una elección del intérprete, visible).
+- **El commit no viaja por la máquina de retención** (H-RC1: el buzón de 4
+  ranuras y TTL 30 s no puede ser cerrojo de topología): la conmutación
+  pendiente es **estado propio del relator** («ruta activa» / «ruta
+  pendiente»), visible en el descriptor, sin TTL — coherente con
+  `diferir` indefinido.
 
-### 5.3 Límites declarados, con motivo
+### 5.4 Estado seguro y fondo
 
-1. **La bahía v1 no inyecta en la matriz FM.** Las 16 líneas de la matriz
-   son buses siempre conducidos (salidas de op-amp); inyectar exige un
-   desconectador por línea. El cobre **reserva la huella** para esa
-   expansión sin prometer la función. Es un hueco declarado, no un olvido.
-2. **Ley de conmutación**: el crosspoint conmuta bajo la ley de retención
-   existente — los cambios de topología aplican **al silencio de nota del
-   canal afectado**, espejo de R-M5. Cargar un preset no replomea audio a
-   medio acorde.
-3. **El camino patcheado ve el bus**: siguen mandando los 1,21 cents y
-   todas las reglas de `ground_budget.py`. La bahía no promete el suelo del
-   pitch; promete el del patch, que siempre fue otro.
+- **Arranque** (H-OF4): el AD75019 despierta con el registro aleatorio y
+  sin reset a abierto. El driver del latch arranca **inhibido por
+  hardware** (pull) hasta que el micro shiftea ceros: la bahía nace
+  desconectada, con la misma doctrina del §9 de #164.
+- **Fondo presupuestado** (S-13): la bahía hereda la fila que la v1 le
+  quitó al módulo de Voz — jack 13,0 + placa 1,6 + AD75019 y orilla — pila
+  propia ≤ 50, en `voz_total_budget.py` ampliado.
 
 ## 6. El parámetro durmiente
 
-El dual del hueco, legislado. La junta lo llamó «escritura muda»: en FM 8×2,
-~90 parámetros de canales-moduladora (corte, resonancia, envolvente) se
-aceptan y no significan nada — y el modelo tenía doctrina para lecturas
-vacías (R-F1: «nunca un valor que parezca una medida») y ninguna para esto.
+Un parámetro cuyo rol lo silencia **no es nulo — está durmiente**: se
+acepta, se guarda, se aplica, y toda lectura lo devuelve con su bit de
+dormancia, **derivado de la partición de roles (§0.3), nunca almacenado**.
 
-**Cambio 16 al núcleo**: un parámetro cuyo rol lo silencia **no es nulo —
-está durmiente**. Se acepta, se guarda y se aplica (es estado real: editar
-un preset en modo FM debe persistir y despertar cuando el rol cambie), y
-toda lectura lo devuelve con su **bit de dormancia**, computado del mapa de
-roles que R-M6 ya calcula. Consecuencias:
+**La dormancia se computa en el cerebro, para todos los módulos** (V2-III:
+la v1 la computaba «donde R-M6 vive» y las aristas de la bahía — que tocan
+canales de *otro* módulo — resucitaban la escritura muda un piso más
+arriba). El cerebro es el único que tiene todos los mapas: deriva la
+dormancia de los parámetros del poseedor **y de las aristas del relator**
+(una arista hacia el nodo de suma de un canal durmiente está durmiente), y
+la publica en los descriptores. El descriptor del relator declara de qué
+roles dependen sus aristas. **Cambio 16** (§7), que incluye la enmienda de
+R-M6 a la partición.
 
-- El agente (carcasa MCP, §0.2) no modula a ciegas: el modelo le dice «esto
-  hoy no suena, y despertará cuando el rol cambie».
-- La interfaz pinta el parámetro atenuado en todas las carcasas.
-- La dormancia es **derivada**, nunca almacenada: no puede desincronizarse
-  del rol.
+Consecuencias: el agente no modula a ciegas; las carcasas pintan atenuado;
+la coherencia dormancia↔rol no puede desincronizarse porque no existe dos
+veces. Y la serialización que faltaba (H-CI1): **el recompute de roles,
+dormancia y reparto es una barrera única al final de la aplicación de un
+preset** — no muta mientras el lote está en vuelo.
 
-## 7. El re-censo: los números de #164 ya no son los suyos
+## 7. El re-censo y los cambios al núcleo
 
-La lista «esto no cambia de #164» de la primera versión de esta propuesta
-era aritméticamente falsa, y la junta lo demostró. Números re-estimados —
-`censo_voz.py` los asevera en el plan, **bloqueante**:
+`censo_voz.py` asevera; **bloqueante**. Estimaciones:
 
 | | #164 | Voz total |
 |---|---|---|
-| Parámetros escribibles | 226 | **~520**: +9/canal (corte, res, A, D, S, R, forma×2, nivel) ×16, + aristas de la bahía, + vínculos del panel de mandos |
-| Descriptor | ~18,3 KB de 32 | **~24 KB** + 16 curvas de calibración (~1,6 KB) + umbrales → **la EEPROM pasa a 64 KB** |
-| Cotas de `MAX_RESPUESTAS` / lotes | derivadas de 226 | se re-derivan de ~520 |
-| Clases de módulo en el descriptor | 1 (poseedor implícito) | **3** (cambio 15) |
-| Cambios al núcleo | 14 | **17** |
+| Parámetros escribibles | 226 | **~520** (+9/canal ×16, + aristas, + vínculos) |
+| Descriptor | ~18,3 KB de 32 | **~24 KB** + curvas (~1,6 KB) → **EEPROM 64 KB** |
+| Clases de módulo | 1 implícita | conjunto de clases (cambio 15) |
+| Cambios al núcleo | 14 | **18** |
 
-Los tres cambios nuevos al núcleo, con nombre:
+Los cambios nuevos, y los viejos que ascienden a prerrequisito:
 
-- **Cambio 15**: clases de módulo en el descriptor (poseedor / referente /
-  relator), y con ellas el esquema de aristas de la bahía y el de vínculos
-  del panel de mandos (la integridad referencial inter-módulo del
-  soft-takeover, que el descriptor por-ranura no expresaba).
-- **Cambio 16**: el bit de dormancia (§6).
-- **Cambio 17**: generadores declarados del módulo — la enmienda a R-M1
-  (§3).
+- **Cambio 15**: clases de módulo como conjunto + esquema de aristas y de
+  vínculos (la integridad referencial del panel de mandos).
+- **Cambio 16**: dormancia derivada en el cerebro, incluidas aristas +
+  enmienda de R-M6 a la partición de roles (§0.3).
+- **Cambio 17**: generadores con test de membresía (§3.2).
+- **Cambio 18**: el largo del descriptor pasa de u8 a u16 (H-CI2:
+  `descubrimiento.rs:87` lee el largo como u8, techo 255 B — la identidad
+  del módulo literalmente no cabe hasta este cambio).
+- **Los cambios 2 (ranuras lógicas) y 12 (lotes) ascienden a
+  PRERREQUISITO BLOQUEANTE** (H-RC2/RC3, verificado en cobre:
+  `MAX_INSTANCIAS = 16` está consumido y `MAX_RESPUESTAS = 4` contra ~520
+  `CHANGED` es un desbordamiento de 130×). Hasta que aterricen, **el
+  modelo de la Voz total no es direccionable** — este spec lo dice en vez
+  de fingir que las carcasas ya renderizan lo que el firmware no publica.
+- **El cerrojo de retención se rediseña dentro del cambio 12** (H-RC1): la
+  carga de preset es un lote con barrera final (§6), no una ocupación del
+  buzón de 4 ranuras.
 
-## 8. Geometría y placas
+## 8. Geometría, consumo y reparto físico
 
-Presupuesto ejecutable: `voz_total_budget.py` (**VERDE**, se adopta al repo
-como puerta). Datos: `case/clearance_budget.py` (ancho útil 528,32/fila,
-reserva 40/fila), #164 §4 (fondo 50,0 disponible), issue #152 (placa v1
-114×124).
-
-**Las placas** siguen el patrón de #164 — dos columnas, dos diseños:
-
-- **Placa de voces** (×4): pasa de 4 osciladores a **4 canales completos**.
-  La fusión añade ~33 % de área (LM13700 + TL074 + ½ 2164 ×2 + ~50 pasivos
-  + 3 canales de DAC por canal, factor de ruteo ×2,2 estimado). Como a lo
-  alto no queda nada (124 de 128,5), el crecimiento va a lo ancho: columna
-  de 114,3 → **~153 mm**.
-- **Placa de panel** (×2): pierde los 32 jacks (bahía, §5) y no gana
-  perillas (mandos-sensor, abajo). Queda: LEDs y ventana, sensado muerto.
+`voz_total_budget.py` (**VERDE**, se adopta como puerta; se amplía con el
+fondo de la bahía, §5.4). Sin cambios sobre la v1:
 
 | | mm |
 |---|---|
-| Módulo de Voz | 228,6 → **~305** (dos columnas de ~153) |
-| Máximo estirable en su fila | 388 — **27 % de holgura**; el ruteo tendría que salir ×4,6 (contra ×2,2 estimado) para agotarla |
+| Módulo de Voz | 228,6 → **~305** (dos columnas de ~153; máx. 388, 27 % de holgura; el ruteo tendría que salir ×4,6 contra ×2,2 estimado) |
 | Fila A: Voz 305 + bahía 100 + reserva 40 | **445 de 528** ✓ |
 | Fila B: cerebro 150 + mandos 120 + mixer 100 + reserva 40 | **410 de 528** ✓ |
-| Fondo: pila sin jacks (frente 5 + panel 1,6 + 2×10,6 + 2×h) | **37,8 de 50** con h=5 — era 45,8; h máx sube de 7,1 a **11,1** |
+| Fondo Voz: 5 + 1,6 + 2×10,6 + 2×h | **37,8 de 50** (h ≤ 11,1) |
 
-El primer reparto de filas (Voz+bahía+mixer juntas) salió **ROJO por 17 mm**
-y el guion lo registra: el mixer se mudó a la fila del cerebro, que sobraba.
+El primer reparto salió ROJO por 17 mm y el guion lo registra.
 
-**El panel de mandos** (corte, resonancia, A-D-S-R, nivel, macros) vive en
-la fila B con el cerebro, no encima de los filtros: como las perillas son
-sensores (architecture-poly §7), separarlas del cobre no cuesta un hilo de
-audio — y es lo que libera el frente y el fondo del módulo de Voz. Es la
-sección de control única de los polys clásicos. Módulo clase **referente**.
+**El consumo se re-suma entero, no en delta** (S-8: la v1 comparaba +90 mA
+contra los 650 totales como si fueran holgura libre). `consumo_total.py`,
+**bloqueante**, suma el instrumento completo por riel: módulo de Voz (16
+SSI2130 + 16 LM13700 + 16 TL074 + 8 SSI2164 + DACs), cerebro, mixer,
+bahía, LEDs — contra los 650 mA/riel del módulo 1. Estimación de diseño:
+~350–420 mA/riel; **si no cierra con un 30 % de margen, se renegocia
+antes del cobre**.
 
-Marcado **ESTIMADO** en el guion (se mide al dibujar): áreas de componente,
-factor ×2,2, anchos de bahía/cerebro/mandos, frente de 5 mm.
+**El panel de mandos** vive en la fila B (perillas-sensor: separarlas del
+cobre no cuesta un hilo de audio). Módulo clase referente; la semántica
+del vínculo es del cambio 15, y la de edición en vivo, de §3.2.
 
-## 9. Verificación
+**El arranque se presupuesta** (S-14): `arranque_budget.py` — descriptor
+de ~24 KB + curvas por I²C, con el cambio 18 puesto, contra un objetivo de
+instrumento listo en < 3 s sin caracterización.
 
-- **Presupuestos ejecutables nuevos**: `ataque_budget.py` (§3, bloqueante),
-  `censo_voz.py` (§7, bloqueante), `cal_filtro_budget.py` (tiempo de
-  caracterización de 16 canales — que el arranque no cueste minutos),
-  `voz_total_budget.py` (§8, adoptado), consumo re-sumado (~+90 mA/riel
-  estimado por filtros y VCAs, contra 650 — holgado, se asevera).
-- **Prototipo primero**: se fabrica **UNA placa de voz**, y su bring-up
-  completo — afinación, caracterización, y la convivencia del dominio de
-  0,58 cents del oscilador con los meneos de audio del filtro en el mismo
-  cobre — es **bloqueante** antes de pedir las otras tres.
-- Cada arreglo con su mutación corrida (Principio VIII), y el veredicto del
-  oído sobre el carácter del MS-20 estabilizado es una puerta (Principio
-  IX), no una esperanza.
+## 9. Silencio, fallos y verificación
+
+### 9.1 El camino de silencio, rehecho para 32 VCAs (S-1, era el BLOCKER 1)
+
+El de #164 protegía osciladores; ahora hay 32 VCAs gobernados por DAC.
+Estado de reposo **garantizado por hardware, antes de que corra
+firmware**:
+
+- Los DACs de envolvente y resonancia arrancan a **cero-escala por
+  RSTSEL** (supuesto contra datasheet AD5686R, **se verifica y se muta en
+  bring-up**), y cero = VCA cerrado, resonancia sin auto-oscilar.
+- Pull-downs analógicos en los CV de VCA durante reset, para la ventana
+  anterior al power-on-reset del DAC.
+- Criterio: **encender el instrumento con cables puestos no suena** — ni
+  voces ni aullidos de dieciséis filtros. Mutación: arrancar sin firmware
+  y medir el bus.
+
+### 9.2 Watchdogs: los failsafes que el ADSR físico se llevó (H-OF1/OF2)
+
+El gate con pull-down era el failsafe y la v1 lo borró sin sustituto:
+
+- **Watchdog de trama en el módulo**: sin trama válida en N ms (N del
+  plan, ~50), todos los generadores van a **release** y el módulo afirma
+  silencio localmente. Trama perdida ≠ sustain infinito.
+- **Heartbeat del esclavo dentro del SPI privado**: el maestro lo vigila;
+  esclavo muerto → `RESET_ESCLAVO` (los DACs vuelven a cero-escala, §9.1).
+- **El esclavo vigila al maestro**: SPI privado mudo en N ms → release
+  local. Maestro muerto ≠ ocho voces congeladas sonando.
+- Mutaciones: matar cada micro a mitad de nota y medir que el silencio
+  llega solo.
+
+### 9.3 El prototipo, con su alcance dicho (S-11)
+
+Se fabrica **una placa de voces, la maestra (con micro)**. Su bring-up
+valida: afinación, caracterización, generadores, watchdog de trama,
+convivencia térmica y de ruido del canal completo. **Declarado fuera de su
+alcance**: maestro↔esclavo, bus de matriz inter-columna, bahía. Esas
+tienen su **segunda puerta**: dos placas + handshake antes de la tanda.
+
+### 9.4 Los presupuestos, todos, con su carácter
+
+| Script | Qué asevera | Carácter |
+|---|---|---|
+| `voz_total_budget.py` | geometría + fondo bahía | adoptado, VERDE |
+| `spi_privado_budget.py` | caudal del SPI con todos los flujos | **bloqueante e invalidante de §3** |
+| `ataque_budget.py` | nota-a-VCA completo, ambas columnas | bloqueante, tras §3.3 |
+| `censo_voz.py` | parámetros, memoria, cotas | bloqueante |
+| `cal_filtro_budget.py` | tiempos de caracterización | bloqueante |
+| `consumo_total.py` | instrumento entero por riel | bloqueante |
+| `arranque_budget.py` | descriptor + curvas por I²C | bloqueante |
+
+Y las dos leyes de siempre: cada arreglo con su mutación (Principio VIII),
+y el carácter del MS-20 estabilizado se decide con el oído (Principio IX).
 
 ## 10. Supersesiones y papeles
 
 | Documento | Qué le pasa |
 |---|---|
-| Spec #164 (dieciséis) | Se mergea tal cual como acta. Este spec sustituye su §3 (partición física), su §4 (geometría y panel) y deroga su decisión 12 para el dominio del patch (§5.2). Todo lo demás sigue vigente |
-| Spec orquestación (#164) | Vigente; gana los cambios 15-17 (§7) y la resolución del riesgo 2 (§3). Sus números de censo se re-derivan (§7) |
-| `docs/architecture-poly.md` | Se reescribe: 16 canales, dos regímenes de calibración (§4), constitución de §0, y cae su §11.3 («no hay nada que escuche un filtro») |
-| `docs/modules/05-vcf.md`, `06-adsr.md`, `07-vca.md` | Se reescriben apuntando aquí; el README de `hardware/05-vcf/` corrige la premisa falsa de calibración |
-| Censo del case (#152) | Se actualiza con los anchos de §8 |
-| Issue #41 (carcasas de la app) | Gana la carcasa MCP y la web-via-wifi como pares (§0.2) |
+| Spec #164 (dieciséis) | Se mergea como acta. Este spec sustituye su §3, §4, panel y camino de silencio (§9.1), y deroga su decisión 12 para el dominio del patch |
+| Spec orquestación | Vigente; gana los cambios 15-18, la enmienda de R-M6, el test de generadores, y sus riesgos 1-2 pasan a prerrequisito de §3.3 |
+| Núcleo digital | Su §2.2 (asimetría del agente) se **restaura acotada** (§0.2); `ANULADO`/`REACTIVAR` se extiende al agente como fuente |
+| `docs/architecture-poly.md` | Se reescribe: 16 canales, partición de roles, dos regímenes de calibración, ley de capas; cae su §11.3 |
+| `docs/modules/05/06/07`, README del VCF | Se reescriben apuntando aquí |
+| Censo del case (#152) | Anchos nuevos de §8 |
+| Issue #41 | Gana MCP y web-wifi como carcasas pares, bajo la ley de capas |
 
-**Issues a abrir**: cambios 15, 16 y 17 al núcleo; EEPROM a 64 KB; la
-expansión de inyección FM de la bahía (huella reservada); los cuatro
-presupuestos nuevos; la reescritura de architecture-poly.
+**Issues a abrir**: cambios 15-18; ascenso de 2 y 12 a prerrequisito;
+EEPROM 64 KB; los siete presupuestos; verificación del latch del AD75019;
+RSTSEL del AD5686R; la enmienda futura del generador de tono; reescritura
+de architecture-poly.
 
 ## 11. Lo que NO está confirmado
 
-1. Las áreas y factores de §8 marcados ESTIMADO — se miden al dibujar.
-2. El AD75019 en el camino patcheado: distorsión y diafonía reales del
-   crosspoint, contra datasheet. Si no da la talla, la bahía pide relés o
-   switches discretos y su presupuesto de placa cambia.
-3. El tiempo de caracterización de 16 filtros (asentamiento de la
-   auto-oscilación por punto de la curva) — `cal_filtro_budget.py`.
-4. Los ~520 parámetros del censo son estimación hasta `censo_voz.py`.
-5. La convivencia térmica y de ruido del canal completo en una placa: es
-   exactamente lo que el prototipo-primero (§9) va a medir.
-6. El carácter del MS-20 con la resonancia anclada digitalmente **se decide
-   con el oído** en el bring-up. Si el ancla lo mata, el ancla es
-   configurable por preset, no obligatoria.
-7. **La entrada de CV externo por voz de #164 muere con su panel**, y este
-   spec no la repone: la bahía v1 rutea audio a los nodos de suma, no CV a
-   los sumadores de tono. Si el caso de uso vuelve (CV de otro modular al
-   tono de una voz), es una expansión de la bahía — destinos de clase CV —
-   que hay que decidir en revisión, no un olvido.
-8. Nada de esto está medido. Son cálculos, datasheets y una junta.
+1. Áreas y factores de §8 marcados ESTIMADO — se miden al dibujar.
+2. **El latch del AD75019 no glitchea cruces que no cambian** — supuesto
+   que sostiene §5.3; contra datasheet y bring-up, con mutación. Si cae:
+   switches direccionables y §8 se rehace.
+3. **RSTSEL del AD5686R arranca a cero-escala** — sostiene §9.1; contra
+   datasheet y bring-up.
+4. Distorsión y diafonía reales del AD75019 en el camino patcheado.
+5. Asentamiento de la auto-oscilación por punto de curva
+   (`cal_filtro_budget.py`).
+6. Los ~520 parámetros y los ~24 KB son estimación hasta `censo_voz.py`.
+7. El caudal del SPI privado a 10 kHz de render (`spi_privado_budget.py`).
+8. La convivencia térmica y de ruido del canal completo en una placa — el
+   prototipo §9.3.
+9. El carácter del MS-20 con la resonancia anclada se decide con el oído;
+   si el ancla lo mata, es configurable por preset.
+10. **La entrada de CV externo por voz de #164 muere con su panel** y este
+    spec no la repone: la bahía rutea audio. Si el caso vuelve, es
+    expansión declarada (destinos de clase CV), no un olvido.
+11. Nada de esto está medido. Son cálculos, datasheets y tres juntas.
+
+## 12. El registro de las juntas
+
+Cada hallazgo, con su resolución o su confesión. S = Serrano (clínico),
+H = Halberg (runtime, verificado contra firmware), V2 = Voronov segunda
+pasada (ontológico). El primer dictamen de Voronov está absorbido desde la
+v1 y re-auditado por V2.
+
+| Hallazgo | Qué era | Resolución |
+|---|---|---|
+| S-1 / BLOCKER | 32 VCAs sin estado de arranque; 16 filtros pueden aullar sin firmware | §9.1: cero-escala por RSTSEL + pulls + mutación de encendido |
+| S-2 / BLOCKER, H-BP2 | «Evento de nota resuelto» era falso; maestro→esclavo fuera de la cuenta | §3.3: prerrequisito bloqueante con cotas de aceptación, sin maquillaje |
+| S-3 / BLOCKER | La auto-oscilación no tenía ruta física al contador | §2: tap post-filtro → mux 16:1 → Schmitt → contador |
+| S-4, H-BP1 | Caudal SPI de envolventes sin presupuestar; «decenas de kHz» de fe | §3.1: 10 kHz + RC; `spi_privado_budget.py` invalidante |
+| S-5 | Ataque prometido uniforme sin contar la columna del esclavo | §3.3: cota de uniformidad ±0,5 ms entre columnas |
+| S-6, V2-I | «Voz» divergía de R-M6 y el espacio de roles no particionaba | §0.3: partición total con precedencia; enmienda R-M6 (cambio 16) |
+| S-7, V2-VI | Carcasas remotas sin autoridad; §2.2 del núcleo borrado | §0.2: ley de capas + pairing + §2.2 restaurado acotado |
+| S-8 | Consumo en delta contra el total | §8: `consumo_total.py` bloqueante |
+| S-9 | CV de corte con fuentes sin árbitro | §2: el micro es el único escritor; suma digital |
+| S-10, H-CF2, H-OF3 | Ley de conmutación imposible en el chip; drones = starvation | §5.3: imagen sombra + barrera de cambiados + política por preset |
+| S-11 | Prototipo único sobre-prometía | §9.3: alcance declarado + segunda puerta |
+| S-12 | Vínculo perilla→parámetro y edición en vivo ambiguos | §3.2 (captura al evento) + cambio 15 |
+| S-13 | Fondo de la bahía sin presupuestar | §5.4 |
+| S-14, H-CI2 | Arranque del descriptor sin presupuesto; largo u8 (255 B) | §8: `arranque_budget.py`; cambio 18 |
+| H-RC1 | La retención (4 ranuras, TTL 30 s) usada como cerrojo de topología | §5.3 y §7: estado del relator + lote con barrera, no buzón |
+| H-RC2/RC3 | `MAX_RESPUESTAS=4` vs ~520; `MAX_INSTANCIAS=16` consumido | §7: cambios 2 y 12 ascienden a prerrequisito; el modelo no es direccionable hasta entonces, dicho |
+| H-CF1 | Prioridades/núcleos del micro sin asignar | §3.4: reparto por núcleos declarado; NVIC/DMA bloqueante en plan |
+| H-CF3 | Note-on durante caracterización indefinido | §4: rol medición excluido del reparto; cal nunca por recall |
+| H-CI1 | Roles/dormancia mutando con el lote en vuelo | §6: barrera única al final del preset |
+| H-OF1/OF2 | Esclavo muerto = notas pegadas; trama perdida = sustain infinito | §9.2: watchdog de trama + heartbeat bidireccional + mutaciones |
+| H-OF4 | Crosspoint aleatorio al arrancar | §5.4: driver inhibido por hardware hasta shiftear ceros |
+| V2-0 | El acta era un autorretrato que se decía anterior | §0: se declara doctrina destilada, enmendable por acta |
+| V2-I | Canal sonando por bahía contaba como voz; lento-sin-consumidores sin rol | §0.3: roles conducto y lfo; partición total |
+| V2-II | «Frontera» era una lista con abrigo; fuente post-filtro exportaba señal sin envolvente | §0.4: cardinalidad fundada sin bucle; fuente movida a post-VCA |
+| V2-III | La dormancia moría en la frontera del relator | §6: computada en el cerebro para todos los módulos |
+| V2-IV | «Generador» sin test; pitch-env legal e ilegal a la vez | §3.2: test (a)(b)(c); pitch prohibido v1 con huella de enmienda |
+| V2-V | El mixer rompía la taxonomía que lo ejemplificaba | §0.3/§0.4: conjunto de clases + la suma 16:1 como normalizado |
+| V2-VI | «Vista que escribe»; N+1 modelos negados | §0.2: editores concurrentes + modelo autoritativo y vistas optimistas |
