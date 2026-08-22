@@ -1195,31 +1195,57 @@ Cada uno con cómo se cierra, que es la puerta de esta fase.
    bring-up, ahora con dieciséis muestras en vez de cuatro — que es, de paso, la
    mejor medida de esa dispersión que va a tener el proyecto.
 
+### Decisiones cerradas por catálogo (2026-08-22)
+
+Cuatro piezas buscadas y verificadas contra páginas de fabricante y
+distribuidor. Lo que solo vivía en un PDF quedó marcado y sigue en §17.
+
+1. **El jack: `PJ366ST` (WQP419GR), estéreo, formato Thonkiconn M6.** ~£0,39 en
+   cantidades de 50. **No existe estéreo con contacto de conmutación en este
+   formato** — Thonk lo dice literal: la versión estéreo *«sustituye el switch
+   por el conector de señal del manguito»*. Sí existe en otro formato
+   (`WQP-PJ3410`, bush plástico de 8 mm), y se descartó porque cambia el agujero
+   de panel de treinta y dos jacks y suma fondo donde no sobra.
+   **Consecuencia, y mejora el diseño:** el anillo hace de detector —con cable
+   mono queda a masa— y **la cascada la hace el selector**, no el cobre. Cada
+   oscilador elige si su tono entra por su jack o por el de arriba, y lo decide
+   el cerebro. La cascada pasa de cable fijo a dato guardable en el preset, y el
+   cable sigue mandando porque el anillo lo delata.
+   **Lo que esto añade y hay que presupuestar:** un selector 2:1 por oscilador en
+   el camino del CV de tono, que es señal de precisión. Entra en
+   `matriz_budget.py` con el mismo criterio de inyección de carga del punto 2.
+
+2. **El multiplexor: `ADG1206` en el camino analógico, `CD74HC4067` en el de
+   sync.** Son dos matrices distintas (§8) y no hay razón para pagar precisión
+   analógica en la que solo lleva flancos lógicos.
+   El ADG1206 es el único candidato con **inyección de carga publicada: <1 pC**,
+   rail-to-rail y rango bipolar. Ese dato es el que importa aquí y no el `Ron`:
+   la inyección de carga de un conmutador **es un desplazamiento de continua**, y
+   §10.2 ya declara que el desplazamiento de continua es lo que desafina la FM.
+   Sus 120 Ω de `Ron` son irrelevantes contra una entrada de alta impedancia.
+   Coste: ~$5,29 la unidad contra ~$0,60 del barato — el reparto deja el gasto
+   donde compra algo.
+
+3. **La memoria: `24AA256UID-I/SN`** (SOIC-8) o `-I/ST` (TSSOP-8), ~$1,10.
+   Son los 32 KB pedidos **y** trae de fábrica EUI-48, EUI-64 y un identificador
+   único de 32 bits, con el mismo esquema de direcciones A0-A2 del chip actual.
+   **Es un chip, no dos**: cierra a la vez el blob de calibración y el descriptor
+   que el módulo tiene que cargar. La ubicación exacta del identificador en el
+   array solo está en su PDF y queda en §17.
+
 ### Decisiones abiertas
 
-1. **El jack de las entradas de control.** Si existe uno con contacto de
-   conmutación independiente en el mismo formato mecánico, hay normalizado en
-   cascada **y** sensado directo (§6.3, camino A). Cierra: buscarlo en catálogo y
-   comprobar la huella contra el paso de 12 mm de §4. **Si no existe, gana el
-   camino B**, que ya está especificado y no cuesta piezas, así que esta decisión
-   no bloquea el layout — solo cambia la huella del jack y una entrada de
-   registro serie.
-2. **La familia del multiplexor analógico de la matriz.** Necesita rango
-   bipolar, `Ron` acotada, inyección de carga acotada y 16:1. Cierra: con el
-   punto 5 de §17 (amplitud real de las ondas) y contra stock. Criterio:
-   `Ron` ≤ 200 Ω, para que su efecto sea ≤2 % de amplitud sobre el camino de
-   índice de 10 kΩ — amplitud, no tono.
-3. **La altura del conector de apilar.** Cierra con el riesgo 1: *h* ≤ 7,1 mm
-   con el jack en 13,0 mm, y menos si el jack sobresale más.
-4. **Dos o tres conversores por placa de voces** (§11). Cierra con el riesgo 5:
+1. **La altura del conector de apilar, y su paso.** Con el dato en la mano, el
+   paso de 2,54 mm **no llega**: el Harwin de 40 pines mide 7,50 mm contra los
+   7,1 que da §4, y el Samtec no publica su altura en catálogo HTML. **La salida
+   verificada es bajar a paso de 2,00 mm.** Cierra: elegir la familia de 2,00 mm
+   y meter su altura real en `depth_budget.py`, junto con el fondo del jack
+   (riesgo 1), que sigue sin aparecer en ninguna ficha.
+2. **Dos o tres conversores por placa de voces** (§11). Cierra con el riesgo 5:
    si el área de la placa aguanta el tercero, entra, porque la reserva por placa
    es lo que evita un respin por cada CV nuevo. Si no, gana el reparto de nueve
    chips y **se declara por escrito que las tres placas no maestras quedan sin
    reserva**.
-5. **Una pieza de memoria o dos** (§13). Cierra: buscar en el catálogo del
-   fabricante un chip que junte EUI-48 de fábrica con ≥32 KB. Si existe y su
-   dirección I²C no choca, es un chip menos. **Si no existe, dos chips es la
-   respuesta** y no bloquea nada, porque el de identidad no se toca.
 
 ## 19. Fuera de alcance
 
