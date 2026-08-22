@@ -60,9 +60,12 @@ de CV externo dentro de 3 cents por octava**.
 8. **El patrón completo del núcleo §10**: sensado de ocupación en los 16 jacks,
    lectura por ADC de las 8 entradas de control, un LED por jack, EEPROM de
    identidad, y telemetría térmica ampliada.
-9. **Exactitud, dos correcciones** (§5).
-10. **Los juguetes**: sync entre voces enrutable, FM que cruza el cero, y
-   modulación en anillo (§7).
+9. **Exactitud, tres correcciones** (§5): la resistencia de escala, la
+   compensación de agudos y la histéresis del comparador de PWM.
+10. **Los juguetes** (§7), todo lo que el chip trae y la v1 dejó dormido: sync
+   entre voces enrutable, FM que cruza el cero, **modulación de fase**,
+   modulación en anillo, **los dos caracteres de PWM**, **la sierra
+   reversible**, y **voces que pueden bajar a frecuencia de modulación**.
 11. **Todo entra como parámetro con descriptor y ámbito declarado**
     (`por-voz` / `compartido`). Sin jumpers, sin modos escondidos. Es la
     condición para que el agente y las tres pieles lo alcancen sin escribirles
@@ -192,6 +195,25 @@ lo único que sostiene la apuesta.
 
 **Entran las dos resistencias por voz.** Es exactitud, no una función.
 
+### 5.3 Al comparador de PWM le falta histéresis
+
+El datasheet lo dice en una línea suelta al pie de su figura 12, y por eso es
+fácil de perder:
+
+> «un poco de histéresis ayuda mucho a que el PWM suene bien»
+
+La v1 no la tiene: ata `PWM−` al triángulo y `PWM+` al CV del convertidor, sin
+realimentación (`build_schematic.py:571-572`). Sin histéresis, un comparador
+cerca del punto de cruce puede conmutar sucio cuando le llega ruido, y eso en el
+ancho de pulso se oye. **Entra una resistencia de realimentación por voz**, con
+su valor presupuestado contra la amplitud de la triangular. Como las otras dos
+de §5: es calidad, no una función.
+
+*(De propina, del mismo párrafo: llevando la entrada del comparador un poco por
+encima de la referencia o por debajo de masa, la salida se fuerza a alto o a bajo
+**sin chasquidos**. Es una forma limpia de silenciar el pulso que no cuesta nada
+declarar.)*
+
 ## 6. El bloque digital: el micro
 
 Un micro en la placa A, candidato **RP2350B**, con dos razones de encaje que
@@ -257,7 +279,54 @@ Figura 19 del datasheet: un operacional por voz y los **dos canales auxiliares
 del mezclador interno** —el AUX 2 está libre en la v1— dan un multiplicador de
 cuatro cuadrantes. Sonidos metálicos y campanas sin tocar el camino de tono.
 
-### 7.4 Lo que esto le hace a los canales del convertidor
+### 7.4 Modulación de fase, por el precio de un condensador
+
+El mismo circuito de la figura 18 tiene **dos entradas**: una hace FM y la otra
+hace modulación de fase. La diferencia es un condensador que deriva la señal
+moduladora.
+
+Y no es un adorno, porque el datasheet dice cuál es mejor y por qué:
+
+> «como la señal moduladora va acoplada en continua, cualquier offset deja el
+> oscilador desafinado metiendo un desplazamiento constante de frecuencia. La PM
+> quita el offset y **mantiene el oscilador afinado**»
+
+O sea: **la FM te desafina la nota y la PM no.** Si ya se paga el circuito de la
+FM, dejar fuera la PM sería dejar fuera la mitad buena. Entra.
+
+### 7.5 Dos sabores de PWM, y la sierra al revés
+
+Dos capacidades que salen del mismo sitio donde ya vamos a poner las manos:
+
+**El PWM tiene dos caracteres** según de qué onda se alimente el comparador
+(datasheet pág. 7). Con triangular mantiene constante el tiempo entre los centros
+de los pulsos. Con sierra, un flanco queda clavado al corte de la sierra y solo
+se mueve el otro, y eso **añade un vibrato suave** como parte del propio efecto.
+Son dos sonidos distintos y elegir cuesta **un conmutador analógico por voz**.
+Es el único de este grupo con coste real.
+
+**La sierra se puede invertir.** El pin `TIME REVERSE` no solo sirve para cruzar
+el cero: quieto en alto da sierra ascendente y en bajo da sierra descendente. Si
+ya se cablea para la FM, esto es gratis.
+
+> **Restricción que hay que escribir, porque es el mismo pin:** una voz no puede
+> tener la sierra fija en una dirección **mientras** hace FM que cruza el cero.
+> Son usos excluyentes del mismo pin y el modelo tiene que decirlo en voz alta,
+> no dejar que el usuario descubra que un parámetro le pisa el otro.
+
+### 7.6 Una voz puede ser un oscilador lento
+
+El chip cubre **1000:1 —diez octavas— con menos de un cent de error**
+(especificaciones, pág. 2), y el diseño usa siete. El propio datasheet contempla
+usarlo de oscilador de baja frecuencia.
+
+Eso significa que **una voz configurada abajo del todo es un modulador**, y no
+cuesta ni una pieza: es rango de código del convertidor. Con ocho voces y el
+enrutado del micro, dedicar una o dos a modular a las demás es un preset, no un
+respin. Lo que sí hay que hacer es **declararlo como parámetro** —el modo de la
+voz— y comprobar en el bring-up hasta dónde baja de verdad antes de prometerlo.
+
+### 7.7 Lo que esto le hace a los canales del convertidor
 
 Es el cuello nuevo y hay que verlo con números. El AD5686R da 4 canales.
 
