@@ -1,185 +1,99 @@
-# Contrato: módulo de voz que se mide a sí mismo
+# Contrato de módulo de voz — DISUELTO
 
-> Lo consumen los módulos **5 (VCF), 6 (ADSR) y 7 (VCA)**, ninguno dibujado, y
-> lo estrena el **módulo 3 v2** (dieciséis osciladores)
-> ([`2026-08-22-modulo-3-vco-dieciseis-design.md`](2026-08-22-modulo-3-vco-dieciseis-design.md)).
-> Origen: núcleo §5.3 y §10; issue #158.
-> Este documento define **una interfaz**, no una placa. Vive aparte a propósito:
-> enterrado dentro del spec de un módulo concreto, los otros tres lo copiarían
-> mal.
+> **Estado: disuelto el 2026-08-22**, el mismo día en que se escribió y antes de
+> pasar a plan, por
+> [`2026-08-22-junta-vco-hallazgos.md`](2026-08-22-junta-vco-hallazgos.md) §4.10
+> y §4.11.
+>
+> Este documento ya no define nada. Existe para que los enlaces que apuntan aquí
+> no se rompan, para dejar constancia de **qué afirmaba y por qué no se sostenía**,
+> y para decir **dónde vive ahora cada parte que sí valía**.
+>
+> Sus dos herederos son:
+> [`2026-08-22-modulo-3-vco-dieciseis-design.md`](2026-08-22-modulo-3-vco-dieciseis-design.md)
+> (el cobre) y
+> [`2026-08-22-vco-orquestacion-design.md`](2026-08-22-vco-orquestacion-design.md)
+> (la ejecución).
 
-## 1. El problema que resuelve
+## 1. Qué pretendía ser
 
-El J2 lleva **cuatro líneas de afinación** y están cableadas solo en la ranura 1.
-Con más de cuatro osciladores no dan, y ponerle más pines no escala: serían cuatro por cada
-ranura capaz de llevar un módulo de voz, o sea 32 pines solo para eso (núcleo
-§5.3).
+Una interfaz común para los módulos **5 (VCF), 6 (ADSR) y 7 (VCA)** —ninguno
+dibujado— estrenada por el módulo 3 v2. Vivía aparte del spec de un módulo
+concreto a propósito, con el argumento de que enterrada dentro de uno los otros
+tres la copiarían mal.
 
-La salida es el movimiento que este diseño ya hizo tres veces —el mux de
-perillas, el sensado de jacks, las medidas del módulo 4—: **que el módulo mida y
-mande los números**. Coste en pines del cerebro: cero. El contrato del J2 **no
-cambia ni un pin**.
+El problema del que partía era real y sigue siéndolo: el J2 lleva **cuatro líneas
+de afinación** cableadas solo en la ranura 1, con más de cuatro osciladores no
+dan, y ponerle más pines no escala —serían 32 pines solo para eso (núcleo §5.3)—.
+**Ese problema no se disuelve; su solución tampoco.** Lo que se disuelve es la
+generalización que se construyó encima.
 
-## 2. Qué es un módulo de voz que se mide a sí mismo
+## 2. Por qué se disuelve
 
-Un módulo que cumple estas cinco:
+### 2.1 Sus cinco propiedades eran esta placa con otro nombre
 
-1. **Tiene micro propio** —uno o varios— y todo lo que reporta pasa por el que
-   habla con el J2.
-2. **Se mide**: cronometra o lee lo que en él se desvía, y manda números.
-3. **Se declara**: EEPROM `24AA02E48` en 0x50 con tipo, revisión, serial y su
-   blob de calibración. La calibración viaja con la placa.
-4. **Se deja auditar**: sensa la ocupación de sus jacks y lee por ADC toda
-   entrada de CV patcheable, para que el barrido por inyección del núcleo §7.6
-   sea posible.
-5. **Se deja gobernar**: cada capacidad suya es un parámetro con descriptor y
-   ámbito (`por-voz` / `compartido`). Lo que no está en el modelo no existe
-   (núcleo §2.1).
+El documento definía «módulo de voz que se mide a sí mismo» con cinco
+propiedades: micro propio, se mide, se declara, se deja auditar, se deja
+gobernar. Puestas una al lado de otra, no describen una categoría de módulos:
+**describen el módulo 3 v2**. Una interfaz que solo tiene un implementador
+posible no es una interfaz, es una descripción con la etiqueta cambiada.
 
-## 3. Quién suelta el `MISO` — el hueco que este contrato cierra
+### 2.2 Dos de las cinco son insatisfacibles por sus propios consumidores
 
-`MISO` es un **bus compartido entre ocho ranuras** y el contrato congelado no
-decía quién lo suelta. El spec del cerebro (§4.1) puso cuatro defensas y fue
-honesto sobre la última:
+**«Se mide».** `architecture-poly.md` §11.3 ya decía que al filtro **no hay nada
+que lo escuche** y que su apareamiento *«no se resuelve con calibración digital
+como el tono»*. El VCF, el ADSR y el VCA presentarían «se mide a sí mismo» como
+**hueco permanente, para siempre**. Un contrato cuya propiedad central es un
+hueco en tres de sus cuatro firmantes no es un contrato.
 
-> «una resistencia de serie no evita la pelea, la hace sobrevivible. Lo que evita
-> la pelea es la pieza 4, y esa vive en placas que todavía no se han dibujado —
-> salvo una, que ya está en gerbers y nunca leyó este documento.»
+**«Tiene micro propio».** El núcleo §10, en su sección de lo aplazado a
+propósito, reservaba al diseño del módulo 5 decidir si los módulos 5/6/7 llevan
+micro propio o se resuelven con registro de desplazamiento y ADC en la cadena
+SPI, **y explicaba por qué se podía aplazar sin riesgo: las dos opciones caben en
+el J2 ya congelado**. La Regla 2 de este contrato cerraba esa decisión por
+decreto, desde el spec de otro módulo, sin el dato que la iba a cerrar.
 
-Esa placa es el módulo 3 v1, y es la que se está rediseñando. **El contrato se
-cierra aquí**, y el micro lo hace posible:
+### 2.3 Y llevaba el nombre de la propiedad más frágil
 
-> **Regla 1 — El `MISO` del J2 lo suelta UN micro del módulo, y nadie más.**
-> Si el módulo lleva varios, solo el maestro toca el bus; los demás cuelgan de su
-> SPI privado.
-> En alta impedancia siempre que su `CS` esté alto, sin excepciones de modo. Se
-> mide en el bring-up: `CS` alto, `MISO` sondado. Aprobado o suspenso.
+El título del documento era la propiedad que solo su autor posee. Eso no es un
+detalle de redacción: es lo que hacía que la generalización pareciera legítima.
 
-Esto es lo que un micro garantiza y un chip de conversión no: los AD5686R de la
-v1 arrancan en modo standalone con su salida deshabilitada, o sea que sueltan la
-línea **exactamente en el estado en que no sirve para nada**, y su datasheet no
-dice qué hacen con la cadena encendida, que es el estado en el que hay control de
-tono.
+## 3. Dónde vive ahora cada parte
 
-### 3.1 Consecuencia: el SPI de dentro del módulo es privado
-
-Si el micro es el único que habla por el J2, **los chips del módulo dejan de
-colgar del bus del instrumento**. El cerebro le habla al micro; el micro le habla
-a sus conversores por un SPI suyo, dentro de la placa.
-
-> **Regla 2 — Del J2 cuelga el micro, no los chips del módulo.**
-
-Lo que compra, y es más de lo que parece:
-
-- **La pelea del `MISO` se acaba de raíz**, no se hace sobrevivible.
-- **La trama de 72 bits deja de estar clavada en el contrato.** Era el tamaño de
-  la cadena de tres conversores de la v1: un número de una placa concreta metido
-  en una interfaz común.
-- **Cuántos conversores lleva el módulo deja de ser asunto del cerebro.** El
-  módulo 3 v2 lleva del orden de catorce sin que nadie fuera se entere, y ese
-  conteo es hoy una decisión abierta suya.
-- **El módulo puede hacer trabajo local** entre dos tramas: interpolar, suavizar
-  un salto, sostener un portamento, sin gastar ancho de banda del bus.
-
-Lo que cuesta, y hay que presupuestarlo: **una etapa más de latencia** entre lo
-que el cerebro manda y lo que el chip recibe. Irrelevante para el tono; **no
-irrelevante para un disparo**, que es justo lo que el #160 pide acotar. Riesgo 1.
-
-## 4. Qué reporta, y con qué cadencia
-
-Tres clases, y no se mezclan porque no corren al mismo ritmo:
-
-| Clase | Qué | Cuándo |
+| Del contrato | Qué era | Dónde vive ahora |
 |---|---|---|
-| **Medida de calibración** | La frecuencia real de cada oscilador del módulo | Solo durante un barrido, y lo pide el cerebro |
-| **Estado del patch** | Qué jacks tienen cable; el valor de cada entrada de CV | Al cambiar, y en el barrido de arranque |
-| **Salud** | Temperatura de cada racimo, tensiones de riel si las mide, identidad | Lento y periódico |
+| §1, el problema del J2 | Cuatro líneas de afinación no escalan | Sigue vigente: núcleo §5.3. Su solución en este módulo: cobre §2, decisión 2 |
+| §2, las cinco propiedades | La generalización | **Eliminada.** Lo que describían es cobre §2 y §3 |
+| §3, **Regla 1** — quién suelta el `MISO` | Interfaz real y valiosa | Orquestación §7, **R-J1** — reenunciada **sin presuponer un micro**, para que un registro de desplazamiento que suelte bien la línea también cumpla |
+| §3.1, **Regla 2** — del J2 cuelga el micro | Decisión de una placa vendida como ley | Orquestación §7, **R-J2** — pasa a ser decisión del módulo 3 v2 (cobre §2, decisión 3), y el núcleo §10 **queda abierto** otra vez |
+| §3.1, lo que la Regla 2 compra | Trama desclavada, conteo de conversores privado, pelea del `MISO` resuelta | Orquestación §7, y el trabajo real que eso obliga es el cambio 1 de orquestación §8 |
+| §3.1, lo que cuesta: una etapa de latencia | Riesgo 1 del contrato | Orquestación §9, riesgo 1, con el presupuesto `evento_budget.py` nombrado |
+| §4, **Regla 3** — no habla sin que le pregunten | Cadencia de bus | Orquestación §7, **R-J3** |
+| §4, **Regla 4** — las medidas son parámetros | Ya era del núcleo §3.4 | Orquestación §7, **R-J4** |
+| §4, **Regla 5** — el conteo de voces sale del descriptor | Correcta, e insuficiente | Orquestación §7, **R-J5**, refinada por **R-M6**: en este módulo el conteo sale del **estado** y cambia con el preset |
+| §4, **Regla 6** — lo que no se pudo medir es hueco | Correcta, y hoy imposible de expresar | Orquestación §4, **R-F1**, y el cambio 5 de orquestación §8, que es lo que la hace representable |
+| §4, la tabla de tres clases y sus cadencias | Buena, y sin números | Orquestación §7.1, con las cadencias **declaradas** (50 ms el patch, 1 Hz la salud) |
+| §5, el reparto con el cerebro | La medida se muda, el criterio se queda | Orquestación §3.1. La mudanza de `autotune_budget.py`: cobre §15 |
+| §5.1, compatibilidad hacia atrás | Las cuatro líneas de la ranura 1 no se derogan | Sigue vigente tal cual: núcleo §5.3, y cobre §2, decisión 2 |
+| §6, lo que heredaba del núcleo §10 | Repetía el núcleo §10 sin añadirle nada | **Vuelve al núcleo §10**, que es donde estaba. Las piezas concretas de este módulo: cobre §9, §13 y §14 |
+| §7, riesgo 2 — los gates dentro de la trama | Declarado y no resuelto | Orquestación §9, riesgo 2 |
+| §7, riesgo 3 — el formato de los números | Abierto | Orquestación §9, riesgo 3, **ahora con criterio**: la resolución tiene que bajar de 0,139 cents |
+| §7, riesgo 4 — la longitud del mazo por rama | Heredado del cerebro | Orquestación §9, riesgo 4 |
+| §8, fuera de alcance | Correcto | Repartido entre cobre §19 y orquestación §11 |
 
-Reglas que las gobiernan:
+## 4. Qué queda como enseñanza, para no repetirlo
 
-> **Regla 3 — El módulo nunca habla sin que le pregunten.** El J2 es un bus con
-> ocho ranuras; un módulo que hable por su cuenta se pelea con otro. Todo va a
-> petición del cerebro.
+Tres cosas, escritas porque el error fue barato esta vez y no lo será la
+siguiente.
 
-> **Regla 4 — Las medidas son parámetros de primera clase, no un canal aparte.**
-> Núcleo §3.4 ya lo decidió: entran por el mismo camino que cualquier otro
-> parámetro, con su descriptor. Así el agente y las tres pieles las ven sin que
-> nadie escriba nada para ellos.
-
-> **Regla 5 — El conteo de voces lo dice el descriptor, nunca una constante.**
-> Las voces del instrumento son el mínimo de la cadena (núcleo §3.6): con ocho
-> osciladores y cuatro filtros, el instrumento tiene cuatro voces **y lo dice**,
-> en vez de sonar raro.
-
-> **Regla 6 — Lo que no se pudo medir se reporta como hueco, con su motivo.**
-> Nunca un valor por defecto que parezca una medida. Es el `HUECO` de la casa
-> aplicado al bus: un cero silencioso consigue no medir *y* que nadie se entere.
-
-## 5. El reparto con el cerebro
-
-Lo que se muda al módulo y lo que se queda, dicho explícitamente porque hoy está
-repartido de otra forma:
-
-| Pieza | Antes | Ahora |
-|---|---|---|
-| Cronometrar los osciladores | El cerebro, con su PIO y las 4 líneas del J2 | **El módulo** |
-| `autotune_budget.py` | En `hardware/02-midi-cv/` | **Se muda al módulo que mide** |
-| Los 131 ns de jitter del 74HC14 | Requisito del cerebro sobre una pieza que vive en el módulo 3 | **Requisito interno del módulo** |
-| Decidir cuándo se afina y con qué tabla | El cerebro | **El cerebro** — no cambia |
-| La tabla de 84 notas y la corrección | El cerebro | **El cerebro** — no cambia |
-| Las 4 líneas `TUNE_OUT` de la ranura 1 | Único camino de afinado | **Camino heredado.** Un módulo que cumple este contrato no las usa |
-
-El cerebro **conserva el criterio**: cuándo afinar, qué hacer con los números,
-cuándo dar una voz por mala. El módulo aporta **la medida**, no el juicio.
-
-### 5.1 Compatibilidad hacia atrás
-
-La ranura 1 sigue teniendo sus cuatro líneas cableadas y rotuladas. Un módulo de
-cuatro voces que las use sigue siendo válido: **este contrato no las deroga, las
-deja de necesitar.** Y el cerebro ya tiene que decir por el modelo si hay camino
-de afinado en la ranura donde está el módulo, así que la diferencia es visible en
-vez de silenciosa.
-
-## 6. Lo que este contrato hereda del núcleo §10
-
-Todo módulo que lo cumpla trae además, sin renegociarlo:
-
-- EEPROM `24AA02E48` en 0x50, y `TMP1075` de telemetría.
-- **El mux de perillas vive en el módulo**, no en el cerebro.
-- Las lecturas vuelven por el `MISO` del J2, sin hilos nuevos.
-- Un LED de la cadena WS2812 por perilla y por jack.
-- **Al menos un destino de timbre `por-voz`** en los módulos 5, 6 y 7 — corte con
-  CV propio por voz en el 5, aunque las perillas del panel sean comunes. Sin eso
-  **MPE es imposible** (núcleo §3.6), y `architecture-poly.md` §3 todavía los
-  describe con «corte y resonancia comunes a las 4»: hay que corregirlo.
-- **Declarar el ámbito de cada parámetro**. Sin la marca, ni la interfaz sabe
-  dibujarlo ni el agente sabe qué puede mover por nota.
-
-## 7. Riesgos y decisiones abiertas
-
-1. **La latencia del reenvío** (§3.1). El módulo deja de recibir la trama
-   directamente y la recibe reenviada por su micro. Cierra: un presupuesto de
-   temporización de evento —que hoy no existe en el repo— con su criterio de
-   aprobado y suspenso **declarado antes de medir**, igual que se hizo con los
-   131 ns del 74HC14. Es la misma pieza que pide el #160 para el disparo de
-   percusión, y **debe diseñarse una sola vez** para los dos.
-2. **Los gates dentro de la trama.** El #158 obliga a mudarlos porque cuatro
-   cables no dan para ocho voces, y el núcleo §5.3 ya dijo que además sincroniza
-   mejor, porque tono y gate salen en el mismo instante. Este contrato **no lo
-   resuelve**: define quién habla por el bus, no qué mensajes lleva. Cierra: al
-   diseñar el evento con sello de tiempo, junto al riesgo 1.
-3. **El formato de los números.** Qué manda el módulo para «la voz 3 mide
-   440,12 Hz»: unidad, resolución y si va crudo o ya en cents. Cierra: al
-   escribir el plan, con el firmware del cerebro delante, porque quien consume
-   decide el formato.
-4. **La longitud máxima del mazo por rama** no existe en ningún documento del
-   repo, y sin ese número no hay presupuesto de flanco. Lo hereda del spec del
-   cerebro y le afecta igual. Cierra: se declara en el plan y entra como
-   constante citada en `enlace_budget.py`.
-
-## 8. Fuera de alcance
-
-- **Qué mensajes lleva el protocolo.** Este contrato dice quién habla y cuándo,
-  no el catálogo de mensajes — eso es del núcleo §4.1.
-- **El enrutado de audio entre módulos.** Se abre como su propio ciclo.
-- **El firmware**, del cerebro y del módulo. Aquí está la interfaz.
+1. **Una interfaz con un solo implementador posible no es una interfaz.** Antes
+   de sacar un contrato del spec que lo produce, hay que poder nombrar dos
+   implementadores que lo cumplan sin dejar huecos permanentes.
+2. **Un contrato no cierra decisiones que otro documento dejó abiertas a
+   propósito.** El núcleo §10 explicaba por qué el micro de los módulos 5/6/7 se
+   podía aplazar sin riesgo; ese razonamiento seguía siendo válido y el contrato
+   lo pisó sin refutarlo.
+3. **Enunciar las reglas de bus sin presuponer quién las cumple.** R-J1 dice
+   «quien hable en esa ranura», no «el micro del módulo». Enunciada así, la regla
+   vale para el módulo 3 v2, para un registro de desplazamiento en el módulo 5, y
+   para lo que venga.
