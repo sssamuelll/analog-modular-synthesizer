@@ -389,7 +389,10 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # largueros de su piso; muerta esa bandeja la frontera dejo de existir. Va
     # en t_piel (8) y declara DOS filas, una por larguero trasero -- las de los
     # tres largueros de en medio se fueron con ellos el 2026-08-21.
-    y0_pt = ce[1][1] - 15
+    # Canto de abajo en el PLANO DEL SUELO (y=0), el mismo datum de la
+    # bandeja de base. Estuvo en ce[1][1] - 15 y dejaba 3 mm de rebaje
+    # corrido bajo la trasera -- ver guarda_piso(), assert 4.
+    y0_pt = 0.0
     alto_pt = (P[5][1] - p["marco_sup"]) - y0_pt
     planchas.append(("piel_trasera", P[6][0] - p["t_piel"], P[6][0],
                      y0_pt, y0_pt + alto_pt, t_cheek + hol,
@@ -765,7 +768,11 @@ def _rejilla_entrada(p: dict[str, float]) -> tuple[int, float, float, float]:
     P = _vertices(p)
     ce = _centros_esqueleto(p, P, _centros_rail(p, P))
     au = p["ancho_total"] - 2 * p["t_cheek"] - 2 * p["hol_piel"]
-    y0_pl = ce[1][1] - 15
+    # y=0: el canto de abajo de la plancha, en el plano del suelo. Da igual
+    # para el resultado -- se resta al formar f_base/f_tras y se vuelve a
+    # sumar al devolver el centroide, asi que se cancela -- pero tiene que
+    # decir lo mismo que el .scad o el dia que deje de cancelarse miente.
+    y0_pl = 0.0
     f_base, f_tras = ce[1][1] - y0_pl, ce[4][1] - y0_pl
     y_bajas = f_base + 0.37 * (f_tras - f_base)
     y0 = f_base + p["valle_espina"] / 2 + p["vent_puente_min"]
@@ -812,7 +819,11 @@ def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
     P = _vertices(p)
     ce = _centros_esqueleto(p, P, _centros_rail(p, P))
     au = p["ancho_total"] - 2 * p["t_cheek"] - 2 * p["hol_piel"]
-    y0_pl = ce[1][1] - 15
+    # y=0: el canto de abajo de la plancha, en el plano del suelo. Da igual
+    # para el resultado -- se resta al formar f_base/f_tras y se vuelve a
+    # sumar al devolver el centroide, asi que se cancela -- pero tiene que
+    # decir lo mismo que el .scad o el dia que deje de cancelarse miente.
+    y0_pl = 0.0
     f_base, f_tras = ce[1][1] - y0_pl, ce[4][1] - y0_pl
     y_bajas = f_base + 0.37 * (f_tras - f_base)
     y_sierra = f_base + 0.74 * (f_tras - f_base)
@@ -995,6 +1006,31 @@ def guarda_piso(p: dict[str, float]) -> None:
         f"esquina trasera del riel esta en x={cr[0][0] + hx:.2f} "
         f"({aparte:+.2f} mm, se exige >={p['holgura_rail']:.2f}). Lo coloca el "
         f"chasis del PSU, asi que lo que hay que mirar es donde quedo el chasis")
+    # 4. y la trasera TAMBIEN llega al suelo. El suelo no lo cierra solo la
+    #    bandeja: la cara trasera es la cuarta pared, y si su canto de abajo no
+    #    baja hasta el mismo plano queda un rebaje corrido a lo largo de los
+    #    528 mm. Eso es una JUNTA DE SOMBRA, que es justo el lenguaje que se
+    #    enterro el 2026-08-21 cuando la trasera dejo de ser piel flotante y
+    #    paso a plancha empotrada -- no es fuga (el canto de la bandeja lo
+    #    cierra t_piel adentro), es que la pieza deja de leerse empotrada.
+    #
+    #    Nadie lo vigilaba: solapes() no canta porque no hay solape, y
+    #    alineacion()/apoyo() solo miran filas de agujeros. El canto de abajo
+    #    salia de un `- 15` sin derivar (la distancia al canto de la fila de
+    #    M3), copiado en cinco sitios, y ese 15 no sabia donde estaba el suelo.
+    #
+    #    Se lee la caja DECLARADA, no se rehace la cuenta -- misma leccion que
+    #    el assert 2.
+    y0_pt = next(c[3] for c in planchas if c[0] == "piel_trasera")
+    assert abs(y0_pt) < 1e-6, (
+        f"la trasera no llega al suelo: su canto de abajo cae en "
+        f"y={y0_pt:.2f} y el plano inferior del case es y=0, o sea un rebaje "
+        f"corrido de {p['ancho_total'] - 2 * p['t_cheek']:.0f} x {y0_pt:.2f} x "
+        f"{p['t_piel']:.0f} mm a lo largo de todo el canto trasero. La "
+        f"plancha tiene que bajar hasta 0: la distancia al canto bajo la fila "
+        f"de M3 CRECE al hacerlo (mas material alrededor del tornillo, no "
+        f"menos), y las ondas y la rejilla no se mueven porque van derivadas "
+        f"de f_base y f_tras, que son diferencias contra ce[1].y")
 
 
 # LAS DOS FILAS SE ABREN, cada una girando sobre el M4 de su riel de ARRIBA --

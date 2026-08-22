@@ -183,6 +183,27 @@ porque cada una se atornillaba a los dos largueros de su piso; al morir esa
 bandeja la frontera dejó de existir. Su cara exterior cae exactamente en el
 plano trasero, con `hol_piel` = 0.15 mm por lado de holgura de montaje.
 
+**Y baja hasta el suelo** (2026-08-22). Su canto inferior estaba en y = 3 y el
+plano del piso es y = 0: quedaba un rebaje corrido de **528 × 3 × 8 mm** a lo
+largo de todo el canto trasero. No era fuga —el canto de la bandeja lo cierra
+8 mm adentro— pero era una **junta de sombra**, justo el lenguaje que esta pieza
+enterró al empotrarse, y por eso la plancha se leía colgada en vez de asentada.
+
+Venía de un `- 15` sin derivar copiado en cinco sitios (dos en el `.scad`, tres
+en `clearance_budget.py`): era la distancia al canto de la fila de M3, leída
+como si fuera una cota del case. Ese 15 no sabía dónde estaba el suelo. Ahora el
+canto es **y = 0**, el mismo datum del que cuelga la bandeja de base, y lo exige
+`guarda_piso()` en su cuarto assert — ninguna otra puerta lo miraba: `solapes()`
+no canta porque no hay solape, y `alineacion()`/`apoyo()` solo ven filas de
+agujeros.
+
+Lo que costó: la plancha pasa de 245.18 a **248.18 mm** de alto. Lo que NO se
+movió, y se verificó con la salida de la puerta byte a byte contra la de antes:
+las tres ondas, la rejilla de entrada, el área abierta y los 6.6 K. Van
+derivadas de `f_base` y `f_tras`, que son diferencias contra `ce[].y`, así que
+no dependen del canto. Y la fila de M3 de abajo se **aleja** del canto, de 15 a
+18 mm: más material alrededor del tornillo, no menos.
+
 Para que enrase, **los largueros traseros comparten X**
 (`x_tr = fondo − rail/2 − t_piel`), y la plancha atornillada sobre su cara
 remata en el canto. El de base estaba 14 mm más adelante que los otros tres, y
@@ -401,7 +422,7 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Arandela ANCHA d16 | 4 | **no opcional**: en los ejes de giro. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 MPa y aguanta |
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa. **Sustituye al amortiguador**, que se eliminó |
 | Plancha acrílico t=5 mm | **1** | solo la tapa del valle. Un espesor entero para **una** pieza — a resolver en el pliego, no en el modelo |
-| Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante, 528.32 × 291.4) + tapa de remate (528.32 × 37) + **trasera** (528.02 × 245.18, con las tres ondas y la rejilla de entrada de aire) |
+| Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante, 528.32 × 291.4) + tapa de remate (528.32 × 37) + **trasera** (528.02 × 248.18, con las tres ondas y la rejilla de entrada de aire) |
 | Patica metálica torneada | 4 | d=16 × 8 mm |
 
 **Total de tornillos del case: 52** — 8 M4 de raíl + 10 M5 de esqueleto +
