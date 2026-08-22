@@ -1149,13 +1149,25 @@ Cada uno con cómo se cierra, que es la puerta de esta fase.
    en uso. Cierra: `dac_channels.py` con el censo, y verificar la familia de ocho
    canales contra su datasheet —16 bits con referencia externa, referencia
    interna apagable, comportamiento de la cadena— antes de proponerla en firme.
-4. **Los micros candidatos no están confirmados contra su datasheet**: máquinas
-   de estado de PIO, entrada de reloj externo o salida de reloj por pin, pines
-   totales y consumo. Con la decisión 18 la cuenta de entradas analógicas deja de
-   ser el cuello, pero **el PIO sigue cerrando justo** —16 de 24 con dos micros—
-   y de él depende el reparto en columnas. Y de la entrada o salida de reloj
-   depende §7.2. Cierra: leer el datasheet y escribir `pines_budget.py` **antes
-   que ninguna otra cosa del bloque digital**.
+4. **Parcialmente cerrado — los tres números del micro están confirmados contra
+   fuente primaria** (`docs/reference/datasheets/rp2350-product-brief-2024-08.pdf`,
+   Raspberry Pi Ltd, agosto 2024). Su tabla de variantes da para el **RP2350B**:
+   QFN-80, **48 GPIO y 8 entradas analógicas**; y el texto: *«Three
+   high-performance Programmable I/O (PIO) co-processors, with a total of
+   **twelve** independent state machines, support software-defined interfacing,
+   **with little or no CPU overhead**»*. O sea **12 máquinas por micro, 24 entre
+   los dos**, de las que 16 van a los osciladores y quedan 8 — con sitio de sobra
+   para la cadena de LED de §14, que es lo que el requisito de latencia exige.
+   Esa última frase del datasheet es además la garantía literal de que pintar las
+   luces no roba procesador.
+   **Lo que sigue abierto de este riesgo:** la entrada o salida de reloj por pin
+   —de la que depende la base de tiempo única de §7.2—, los pines totales una vez
+   repartidos, y el consumo. Cierra: `pines_budget.py`, que se sigue escribiendo
+   **antes que ninguna otra cosa del bloque digital**.
+   **Anotado para el plan:** el **RP2354B** es el mismo chip con 2 MB de flash
+   apilada dentro. Quita el chip de memoria externa de cada micro y su ruteo
+   rápido — dos piezas y dos buses menos en placas donde el área es la cota
+   (riesgo 5).
 5. **El área de la placa de voces.** Pasa de ~15 chips para 4 osciladores en la
    v1 a ~30: cuatro SSI2130, dos o tres conversores, ocho multiplexores, siete
    registros, cuatro LM311, cuatro MOSFET, tres cuádruples de operacional, el
