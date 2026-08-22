@@ -66,11 +66,14 @@ de CV externo dentro de 3 cents por octava**.
    entre voces enrutable, FM que cruza el cero, **modulación de fase**,
    modulación en anillo, **los dos caracteres de PWM**, **la sierra
    reversible**, y **voces que pueden bajar a frecuencia de modulación**.
-11. **Todo entra como parámetro con descriptor y ámbito declarado**
+11. **La imperfección se controla, no se elimina** (§7.7). Desafinado, deriva y
+   carácter de placa entran como parámetros `por-voz`. Un instrumento que deriva
+   de verdad no puede ofrecer esto, porque en él no se elige.
+12. **Todo entra como parámetro con descriptor y ámbito declarado**
     (`por-voz` / `compartido`). Sin jumpers, sin modos escondidos. Es la
     condición para que el agente y las tres pieles lo alcancen sin escribirles
     una línea (núcleo §2.1, §3.5, §4.5).
-12. **Montaje escalonado**: se fabrican las tres placas, se monta primero una de
+13. **Montaje escalonado**: se fabrican las tres placas, se monta primero una de
     voces más la de panel —un instrumento de cuatro voces completo— y la segunda
     entra cuando la primera responde. Su bring-up es gratis: es la misma placa.
 
@@ -117,6 +120,40 @@ Qué cruza el conector, y por qué aguanta:
 
 El total de piezas sube un poco; **la placa difícil baja a la mitad**, y esa es
 la que decide si esto avanza o se atasca.
+
+### Y si hace falta un segundo banco: otro módulo, no más placas
+
+Para **FM de ocho voces** hacen falta dieciséis osciladores, porque en FM la
+moduladora tiene que seguir a su portadora en frecuencia: una moduladora
+compartida entre ocho notas distintas no da FM tonal, da campanas disonantes.
+
+Dieciséis **dentro de este módulo no caben**: serían cuatro placas apiladas, o
+sea 65 mm de fondo con los conectores más bajos que existen, contra los 50 que da
+el 68 % del panel. La salida no es apretar la placa —el chip es solo el 3 % del
+área de una voz, así que encogerlo no compra nada— sino:
+
+> **El segundo banco es otro módulo, no otra placa dentro de este.**
+
+| | fondo | ancho |
+|---|---|---|
+| 16 osciladores en un módulo (4 placas) | 65 mm — **no cabe** | 114 mm |
+| **Dos módulos de ocho, uno al lado del otro** | **39,8 mm cada uno** | 228 mm de los 528 de la fila |
+
+El instrumento entero —dos VCO, cerebro, filtro, envolvente, VCA y mezclador—
+sale en 798 mm de los 1056, con 258 de sobra. Y **el diseño nuevo que hace falta
+es ninguno: es esta misma placa fabricada dos veces más.**
+
+Como los dos módulos son idénticos, lo que sea cada uno lo decide el preset:
+
+- **Ocho voces de FM**, cada portadora con su moduladora siguiéndola.
+- **Dieciséis osciladores parafónicos** sobre ocho filtros — unísonos enormes.
+- **Ocho voces limpias más ocho moduladores** libres para sync, anillo o
+  frecuencia baja.
+
+Nada de esto se construye en este ciclo. Se escribe aquí porque **es gratis
+dejarlo posible y caro descubrirlo después**: el conteo de voces ya sale del
+descubrimiento (núcleo §3.6) y el direccionamiento aguanta dieciséis por módulo,
+así que el instrumento contaría el segundo banco solo.
 
 ## 4. La cota que manda: el fondo
 
@@ -326,7 +363,44 @@ enrutado del micro, dedicar una o dos a modular a las demás es un preset, no un
 respin. Lo que sí hay que hacer es **declararlo como parámetro** —el modo de la
 voz— y comprobar en el bring-up hasta dónde baja de verdad antes de prometerlo.
 
-### 7.7 Lo que esto le hace a los canales del convertidor
+### 7.7 La imperfección no se elimina: se controla
+
+Este módulo se afina solo, no deriva y sus ocho voces son iguales por diseño
+—referencia única, tabla de 84 notas, autoafinado—. Eso es una virtud técnica y,
+dicho sin rodeos, un riesgo musical: lo que hace que un analógico suene vivo son
+sus imperfecciones, y aquí están eliminadas por construcción.
+
+La respuesta no es empeorar el circuito. Es que **la imperfección sea un
+parámetro**, que es algo que un instrumento con deriva de verdad no puede
+ofrecer, porque en él no se elige. Tres, y ninguna cuesta una pieza:
+
+| | Qué es | Ámbito |
+|---|---|---|
+| **Desafinado** | Un desplazamiento fijo por voz. Lo que engorda un unísono | `por-voz` |
+| **Deriva** | Que cada voz vague despacio unos cents, con la amplitud y la velocidad como parámetros | `por-voz` |
+| **Carácter de placa** | Un error pequeño y fijo por voz, guardado en la EEPROM de identidad. Hace que **este** instrumento suene distinto de otro igual, y viaja con la placa | `por-voz`, en la calibración |
+
+**La resolución alcanza de sobra**, y por un motivo estructural que ya está
+decidido: como las ocho voces cuelgan de **la misma referencia**, el error común
+se cancela al restar, así que **desafinar dos voces entre sí es más fino que
+afinarlas en absoluto**. El suelo absoluto es 0,58 cents; el paso relativo es
+1 LSB = **0,139 cents**.
+
+Traducido a lo que se oye, a 440 Hz:
+
+| Se pide | Se oye |
+|---|---|
+| 1 paso (0,139 cents) | batido de 0,035 Hz — un ciclo cada 28 s |
+| El batido más lento que se nota (~0,1 Hz) | 2,8 pasos |
+| Unísono gordo (10 cents) | 72 pasos dentro del efecto |
+
+Y el corolario que hay que escribir para que nadie lo rompa después: **el
+autoafinado corrige la afinación, no el desafinado pedido.** Son dos capas
+distintas —una quita el error que nadie quiso, la otra añade el que sí— y el
+firmware tiene que sumarlas en ese orden, nunca dejar que la primera se coma a la
+segunda.
+
+### 7.8 Lo que esto le hace a los canales del convertidor
 
 Es el cuello nuevo y hay que verlo con números. El AD5686R da 4 canales.
 
@@ -419,7 +493,7 @@ Cada uno con cómo se cierra, que es la puerta de esta fase.
    comprar ocho más repuestos al arrancar, y que el bring-up empiece por una sola
    placa de voces.
 7. **Nada de este proyecto se ha fabricado nunca.** Cierra: el montaje escalonado
-   de la decisión 12 — una placa de voces y la de panel primero.
+   de la decisión 13 — una placa de voces y la de panel primero.
 8. **La dispersión chip a chip del conversor exponencial** sigue sin garantizarla
    ningún datasheet. Se hereda de la v1 y se cierra igual: midiendo los chips
    reales en el bring-up.
