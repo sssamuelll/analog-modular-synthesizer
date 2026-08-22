@@ -14,6 +14,8 @@ R_CVIN1-4,49.9k 1%,R_0805,4,nacional,Jack CV-IN 1V/oct al nodo expo
 R_SCALE1-4,26.7k 1%,R_0805,4,nacional,VREF->EXPO SCALE ~94uA. FIJA - sin trim (spec par.2.7)
 R_MIX*,49.9k 1%,R_0805,16,nacional,4 CV de mezcla x 4 voces (0-2.5V -> 0-50uA)
 R_IV1-4,10k 1%,R_0805,4,nacional,Transimpedancia MIX OUT (500uA -> 5V)
+C_IV1-4,33p C0G,C_0805,4,nacional,Compensacion del I/V. Sin el la transimpedancia timbra 59% ya con 5pF de nodo y la salida al aire (simulations/vco/iv_stage.py). Polo del I/V a 482 kHz: no toca la banda de audio. C0G obligatorio - esta DENTRO del lazo
+R_OUT1-4,220R 1%,R_0805,4,nacional,Aislamiento de carga capacitiva entre el opamp y el jack. El TL074H se caracteriza con CL=20pF y un cable de patcheo son ~100pF/m; sin esta R el lazo OSCILA en 15 de 20 casos del barrido. Va FUERA del lazo (realimentacion en IVO_n)
 R_SQ1-4,20k,R_0805,4,nacional,Pullup open-collector SQUARE OUT a +3V3
 R_LIN1-4,499k 1%,R_0805,4,nacional,VREF->LIN FREQ ~5uA. Sin ella el oscilador SE PARA (ds pag.5/9)
 R_I2C1-2,4.7k,R_0805,2,nacional,Pullups I2C

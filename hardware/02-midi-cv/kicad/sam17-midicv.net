@@ -1,8 +1,8 @@
 (export
 	(version "E")
 	(design
-		(source "D:\\Desktop\\projects\\sam17\\hardware\\02-midi-cv\\kicad\\sam17-midicv.kicad_sch")
-		(date "2026-08-15T20:26:42")
+		(source "D:\\Desktop\\projects\\sam17\\.claude\\worktrees\\gates-honestos-y-iv\\hardware\\02-midi-cv\\kicad\\sam17-midicv.kicad_sch")
+		(date "2026-08-21T13:25:33")
 		(tool "Eeschema 10.0.3")
 		(sheet
 			(number "1")

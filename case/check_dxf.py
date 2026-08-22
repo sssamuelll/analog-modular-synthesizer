@@ -65,9 +65,12 @@ TOL = 4.0
 SIN_DXF: dict[str, str] = {}
 
 # Piezas que van GIRADAS con una cara, o sea que su caja en el mundo NO es su
-# DXF: la pestana mide 10.75 x 528 de caja en X y en Y (la diagonal de su
-# seccion a 45 grados) y la plancha real mide prof_sup. Su sobre se declara.
-GIRADAS = {"remate_sup"}
+# DXF. Esta vacio desde el 2026-08-21: la unica que estaba era la pestana de
+# remate, que iba de canto sobre la cara de arriba y median 10.75 x 528 de caja
+# por la diagonal de su seccion a 45 grados. Ahora es una plancha HORIZONTAL
+# sobre la meseta, alineada con los ejes, y su caja YA es su DXF -- o sea que
+# sale sola de _cajas_solidas y no hay que declarar su sobre a mano.
+GIRADAS: set[str] = set()
 
 
 def _sobres() -> dict[str, tuple[float, float, float, float]]:
@@ -85,8 +88,6 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
         # de _cajas_solidas porque no es una pieza del case.
         "coupon": (136.0, 62.0),
     }
-    au = p["ancho_total"] - 2 * p["t_cheek"]
-    dims["remate_sup_2d"] = (au, p["prof_sup"])
     # Las tres de ACERO. No salen de _cajas_solidas porque no son planchas del
     # cuerpo del case, y sobre todo porque su DXF NO es su caja: el desarrollo
     # de una chapa doblada es mas grande que la pieza montada (492.69 x 330.69
@@ -392,15 +393,25 @@ def agujeros_donde_toca() -> list[str]:
     # columnas fijas, la del medio porque con solo las esquinas el vano de 518
     # se descuelga 1.76 mm de peso propio. Meterlas en el mismo saco daba ROJO
     # en la primera corrida de esta puerta, y el fallo era del saco.
-    # Y las pieles ni siquiera son igual de anchas: se meten gap_sombra por cada
+    # Y las pieles ni siquiera son igual de anchas: se meten hol_piel por cada
     # lado (piel_inferior_2d y piel_superior_2d lo definen asi). Usar el ancho
-    # util del case aqui daba la columna del medio 5 mm corrida, que es
-    # exactamente el tipo de fallo que esta puerta busca -- solo que en la
-    # puerta y no en la pieza.
-    au_piel = au - 2 * p["gap_sombra"]
+    # util del case aqui daba la columna del medio corrida, que es exactamente
+    # el tipo de fallo que esta puerta busca -- solo que en la puerta y no en la
+    # pieza. Con las pieles empotradas ese margen bajo de 5 mm a 0.15, pero la
+    # cuenta es la misma y por eso sigue leyendo el parametro.
+    # La trasera usa la MISMA rejilla que las bandejas -- fila_agujeros con 5
+    # taladros -- pero sobre SU ancho, que es 2*hol_piel mas estrecho que el
+    # util del case porque va empotrada entre los costados. Calcular su rejilla
+    # con el ancho del case corre cada columna 0.06 mm y la ultima 0.27: la
+    # puerta lo canto a la primera corrida de esta tanda, que es para lo que
+    # esta. Fueron tres columnas ([15, medio, ancho-15]) mientras las pieles
+    # colgaban de separadores; desde que se atornillan a los largueros usan el
+    # mismo paso que el resto de las planchas.
+    au_piel = au - 2 * p["hol_piel"]
+    e_piel = au_piel / n
     REJILLA_FILA = [e * (i + 0.5) for i in range(n)]
-    REJILLA_PIEL = [15.0, au_piel / 2, au_piel - 15.0]
-    GRIDS = {"piel_inferior": REJILLA_PIEL, "piel_superior": REJILLA_PIEL}
+    REJILLA_PIEL = [e_piel * (i + 0.5) for i in range(n)]
+    GRIDS = {"piel_trasera": REJILLA_PIEL}
     por_placa: dict[str, list[float]] = {}
     for placa, _, _, coord, _ in filas:
         por_placa.setdefault(placa, []).append(coord)
@@ -534,9 +545,11 @@ def chasis_agujeros() -> list[str]:
 
     p = cb.leer_params()
     torn = 2 * (p["chasis_tornillos_largo"] + p["chasis_tornillos_corto"])
+    # los 4 M5 con que el chasis cuelga de los largueros, dos por pared larga
+    anclajes = 2 * int(p["chasis_anclajes"])
     esperado = {
-        # 1 M6 del toroide + los TO-220 + 1 M4 de PE + los tornillos de la tapa
-        "chasis_cuerpo_2d": int(1 + p["chasis_to220_n"] + 1 + torn),
+        # 1 M6 del toroide + los TO-220 + 1 M4 de PE + los de la tapa + anclajes
+        "chasis_cuerpo_2d": int(1 + p["chasis_to220_n"] + 1 + torn + anclajes),
         "chasis_tapa_2d": int(torn),
         "chasis_refuerzo_2d": 1 + 4,             # M6 central + 4 remaches
     }

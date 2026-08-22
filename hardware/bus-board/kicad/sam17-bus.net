@@ -1,8 +1,8 @@
 (export
 	(version "E")
 	(design
-		(source "D:\\Desktop\\projects\\sam17\\hardware\\bus-board\\kicad\\sam17-bus.kicad_sch")
-		(date "2026-08-15T15:01:20")
+		(source "D:\\Desktop\\projects\\sam17\\.claude\\worktrees\\gates-honestos-y-iv\\hardware\\bus-board\\kicad\\sam17-bus.kicad_sch")
+		(date "2026-08-21T13:25:35")
 		(tool "Eeschema 10.0.3")
 		(sheet
 			(number "1")

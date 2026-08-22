@@ -51,7 +51,7 @@ ancho_total     = 544.32;
 // 128.5 y sus ranuras van a 3.00 de cada canto, o sea 122.50 entre centros.
 // De ahi salen las caras:
 //
-//   alto_cara_inf = 122.5 + inset_inf_frente + inset_inf_valle  = 152.75
+//   alto_cara_inf = 122.5 + inset_inf_frente + inset_inf_valle  = 155.75
 //   alto_cara_sup = 122.5 + inset_sup_valle  + inset_sup_remate = 155.0
 //
 // El de arriba sale mas CORTO aunque lleve el mismo estandar dentro, y es por
@@ -78,7 +78,7 @@ ancho_total     = 544.32;
 // fija de punta con un M5 directo al acrilico (taladro de 4.5 en su eje). Los
 // 2020 se quedan solo en el esqueleto -- base, entrepiso, remate y repisa --,
 // que es donde de verdad hacen estructura.
-alto_cara_inf   = 152.75; // DERIVADO: 122.5 + inset_inf_frente + inset_inf_valle
+alto_cara_inf   = 155.75; // DERIVADO: 122.5 + inset_inf_frente + inset_inf_valle
 alto_cara_sup   = 155.0; // DERIVADO: 122.5 + inset_sup_valle + inset_sup_remate
 alto_panel_inf  = 128.5; // PCB 3U EUROrack
 alto_panel_sup  = 128.5; // PCB 3U EUROrack: la fila de arriba tambien
@@ -123,14 +123,17 @@ angulo_superior = 45;    // 45 desde la horizontal, cara de generacion
 //
 // Las dos condiciones quedan asi:
 //
-//   1. SUELO. Ya no lo pone la bandeja sino EL CANTO DE ABAJO DEL CASE. La
-//      esquina de abajo del riel solo tiene que quedar dentro del acrilico con
-//      material:
+//   1. SUELO. Volvio a ponerlo LA BANDEJA el 2026-08-21, y por eso los 8 de
+//      t_base vuelven a la cuenta. La esquina de abajo del riel tiene que
+//      quedar por encima del techo de la plancha, con material:
 //        alto_frontal + cos(35)*inset_inf_frente
-//          >= holgura_rail + he_er_y(35) + off*sen(35)
-//           = 4 + 11.95 + 8.78 = 24.73
-//      Eran 32.73 con la bandeja por debajo: los 8 de t_base salen de la cuenta,
-//      y 8 mm de esa suma son 8 mm de aparato.
+//          >= t_base + holgura_rail + he_er_y(35) + off*sen(35)
+//           = 8 + 4 + 11.95 + 8.78 = 32.73
+//      Este numero ha ido y venido dos veces. Fue 32.73 mientras la bandeja
+//      pasaba por debajo; bajo a 24.73 cuando Samuel la retiro por detras del
+//      riel (y esos 8 mm eran 8 mm de aparato); y vuelve a 32.73 ahora que la
+//      bandeja LLEGA AL FRENTE y sella el suelo. Se paga lo mismo que se gano
+//      entonces, a cambio de que el case cierre por abajo.
 //   2. CURVA. La esquina va REDONDEADA EN PUNTA y esa curva se come
 //      alto_frontal/2 de cara, asi que el riel no puede arrancar antes:
 //        inset_inf_frente >= alto_frontal/2 + rail_er_alto/2 + 3
@@ -140,26 +143,51 @@ angulo_superior = 45;    // 45 desde la horizontal, cara de generacion
 // dentro, esa altura es (alto_frontal + cos(35)*inset) + una constante. O sea
 // que minimizar el piso ES minimizar el lado izquierdo de la condicion 1.
 //
-// El par (13, 14.5) se apoya en las dos a la vez: la curva justa con sus 3 mm de
-// material y 4.15 de acrilico bajo la esquina del riel. El piso de la primera
-// seccion baja a 135.9 y el case entero a 245.8.
+// El par (19, 17.5) se apoya en las dos a la vez: la curva justa con sus 3 mm de
+// material y 5.29 mm de aire entre la esquina del riel y el techo de la bandeja.
 //
-// LO QUE CUESTA, y no se ve en ningun render: la bandeja de base ya no llega al
-// frente. Arranca a ras del larguero de base delantera, que a su vez se retira
-// por detras del riel -- x = 38.94 --, o sea que el suelo del case tiene 32 mm
-// abiertos por delante. No es un descuido: es por donde entra el aire frio, y
-// sale por las ranuras del valle. Antes no habia entrada.
+// Fue (13, 14.5) hasta el 2026-08-21 y eso dejaba el suelo del case con 37.96 mm
+// abiertos por delante -- la bandeja arrancaba a ras del larguero de base
+// delantera, que a su vez se retira por detras del riel. Aquel hueco NO era un
+// descuido: era la entrada de aire frio, y salia por las ranuras del valle.
+//
+// Samuel pidio cerrarlo ("estirar la base para que selle completamente por
+// debajo"). Cerrarlo obliga a subir el riel, porque su esquina girada bajaba a
+// y=4.84 y el techo de la bandeja esta en y=8: el riel se metia 3.16 mm dentro
+// del plano del suelo y ninguna plancha plana le pasaba por debajo. Subirlo
+// cuesta 8.46 mm de aparato (247.73 -> 256.18) y 1.72 de fondo, porque
+// inset_inf_frente va dentro de alto_cara_inf.
+//
+// Y LA ENTRADA DE AIRE SE MUDA A LA TRASERA, que es lo que de verdad hay que
+// mirar aqui: la salida del valle son 7499 mm2 en 102 ranuras, o sea que la
+// entrada nueva tiene que dar al menos eso o el aparato respira peor que antes.
+// Se mudo CUATRO veces en el mismo dia y acabo abajo del todo en la TRASERA.
+// El paseo, por si alguien lo repite: hueco del suelo (no era diseno, era lo que
+// sobraba) -> trasera -> suelo otra vez, dibujada en el vuelo de la bandeja ->
+// trasera. La tercera murio por una razon que no sale en ningun numero: en el
+// vuelo SE VEIA. El acrilico naranja es traslucido y el campo de ranuras se
+// transparentaba a lo largo del canto de abajo.
+//
+// Por eso guarda_aire() no compara areas sino SALTO TERMICO. La entrada llego a
+// quedar mas estrecha que la salida a proposito, y lo que hay que exigir no es
+// paridad de areas: es que el aparato no se caliente.
 //
 // Ojo con bajar alto_frontal creyendo que siempre ayuda: la curva se come la
 // mitad, asi que cada mm que baja el vertice sube medio el inset y solo se gana
 // medio. A 0 la esquina pasa a ser un vertice agudo de 55 grados y su redondeo
 // se come 64 mm de cara, cuatro veces mas que la punta de dos arcos de ahora.
 //
+// Y ojo tambien al reves: cada mm que SUBE el vertice engorda el radio efectivo
+// de la esquina de abajo, porque radio_punta va sobredimensionado (400) y lo
+// recorta la arista corta, que es alto_frontal. A 13 la curva moria en x=6.49;
+// a 19 muere en 9.49. Ahi es donde arranca la bandeja, asi que la curva se paga
+// dos veces: en inset y en cuanto suelo queda sin cubrir por delante.
+//
 // Y esto ya no lo vigila un comentario: guarda_piso() en clearance_budget mide
 // la esquina de abajo del riel contra el tope de la bandeja. Derivarlo contra lo
 // que no toca costo 0.51 mm de solape en su dia -- se midio contra el lomo del
 // larguero y no contra la bandeja que iba encima.
-alto_frontal    = 13;
+alto_frontal    = 19;
 // Fondo del case. UN SOLO plano trasero: el costado es un triangulo
 // rectangulo con el angulo recto atras y la hipotenusa quebrada en dos
 // tramos (35 arriba, 12 abajo) con el entrepiso en medio (Samuel eligio esta
@@ -213,7 +241,40 @@ alto_frontal    = 13;
 // tangente 4 mm en vez de 11, o sea que las dos puntas del techo se vuelven
 // casi vivas. Eso ya no importa como antes -- lo que se ve arriba ahora es el
 // canto del panel, no un pico de acrilico.
-marco_remate    = 18;
+//
+// SUBIO A 34 el 2026-08-21, y esta vez lo pide la FORMA y no una cota fisica:
+// Samuel quiere la punta de arriba CUADRADA y el case tirado un poco hacia
+// atras. Cuesta 16 mm de fondo (275.2 -> 291.2) y no cuesta ni un milimetro de
+// alto. Sondeado de 18 a 50 contra clearance_budget: verde en todo el rango, o
+// sea que dentro de esa ventana el numero es libre.
+//
+// (El parrafo de arriba decia 16 y el valor era 18 desde 2507d46, que subio la
+// cota sin tocar el texto. Corregido de paso.)
+//
+// OJO -- ESTE PARAMETRO SOLO NO CUADRA LA PUNTA: LA ENGORDA. Los vertices 4 y 5
+// usaban radio_punta, que va sobredimensionado y se recorta a lo que quepa en la
+// arista mas corta, o sea a marco_remate/2. Subir el marco sin tocar nada mas
+// convierte el techo en una cupula de 17 mm de tangente en vez de 9. Lo que
+// cuadra la punta es radio_remate. Los dos van juntos o no van.
+// SUBIO OTRA VEZ, a 42, el 2026-08-21, y esta vez NO lo pide la forma: lo pide
+// una pieza. La tapa de remate pasa a atornillarse a un larguero 2020 nuevo en
+// la arista trasera-superior (el octavo), y ese larguero no cabe en el fondo de
+// 34: el BARRIDO del Z-Rail al abrir la tapa de la fila de arriba obliga a que
+// su centro este en x >= 286.17. Con marco_remate = 42 el centro cae en 289.22 y
+// quedan 3.04 mm de margen -- la misma holgura que el presupuesto ya exige entre
+// el chasis y sus largueros. A 40 quedaria 1 mm contra una pieza EN MOVIMIENTO,
+// y a 39 cero.
+// Y SUBIO A 50 el mismo dia. La razon otra vez es una pieza, no la forma: el
+// acrilico de la trasera se frenaba en y=219.73 porque el larguero de remate
+// vivia A RAS del plano trasero y le tapaba la banda. Para que la trasera le
+// pase por delante, ese larguero tiene que retirarse t_piel -- y ahi vuelve a
+// meterse en el barrido del Z-Rail, que es lo que lo mando al plano trasero en
+// primer lugar. La unica salida es fondo.
+//
+// A 50 el larguero cae en x_tr = 289.22 y conserva los mismos 3.04 mm de
+// margen contra el barrido. El minimo absoluto son 47 (fondo 304.17) y ahi el
+// margen es 0.04 mm contra una pieza EN MOVIMIENTO.
+marco_remate    = 50;
 // Entrepiso: la franja horizontal entre el tope de la cara inferior y la base
 // de la superior -- el "valle del medio" de la silueta. Fue 25 (minimo tecnico
 // de R7: por debajo, los dos railes girados se solapaban 2.52 mm), luego 40,
@@ -289,7 +350,21 @@ bombeo          = 0.5;
 // proposito: la funcion lo recorta al maximo que permite la arista mas corta
 // del vertice, y ese maximo es justo la punta. Subirlo mas no cambia nada;
 // bajarlo devuelve la cara plana.
+//
+// Desde el 2026-08-21 ya NO gobierna los dos vertices de arriba: esos pasaron a
+// radio_remate. Aqui quedan los dos de abajo -- frente-abajo y arranque de cara
+// --, que siguen leyendose como punta redondeada.
 radio_punta     = 400;
+// radio_remate = los dos vertices de ARRIBA (apex y fondo-arriba), que desde el
+// 2026-08-21 se leen CUADRADOS y no como punta. Es un radio de verdad y no un
+// sobredimensionado: aqui lo que se pide es lo que sale.
+//
+// 2 y no 0 a proposito. Una esquina viva en acrilico colado de 8 mm es donde
+// arranca una fisura -- la misma razon por la que radio_pico no baja de 5 -- y 2
+// es ademas el radio que el issue #45 pide para las esquinas de panel, asi que
+// case y paneles rematan con el mismo canto. Queda por encima del minimo de la
+// fresa (radio 1.5 con la de 3), o sea que el taller lo saca sin cambiar util.
+radio_remate    = 2;
 
 // --- materiales ---
 t_acrilico = 5;    // planchas del cuerpo; MEDIR con calibre (spec §11)
@@ -431,7 +506,12 @@ rail_er_eje     = 14.3;
 // Las tangentes NO son parametros: salen del radio y del angulo del vertice.
 // Si se mueve un radio hay que rehacer la columna, y el que avisa es
 // railes_dentro_del_costado() en check_dxf, que lee el contorno del DXF.
-inset_inf_frente = 14.5;
+// Subio de 14.5 a 17.5 el 2026-08-21 y NO por su propia condicion: lo arrastro
+// alto_frontal. La regla es inset >= alto_frontal/2 + rail_er_alto/2 + 3, y con
+// el vertice en 19 eso da 17.5 clavado. Los 3 mm van dentro de alto_cara_inf,
+// que es DERIVADO, asi que hay que recontarlo ahi tambien -- por eso el case
+// gano 1.72 de fondo ademas de los 6 de alto.
+inset_inf_frente = 17.5;
 // (*) El del valle NO lo pone su curva desde el 2026-08-17: por la curva
 // bastarian 10, y lo que manda es LA TAPA DEL VALLE. Esa plancha va a ras del
 // plano del valle, o sea con su cara de abajo a t_acrilico por debajo, y justo
@@ -493,7 +573,30 @@ d_M4_paso   = 4.5;  // agujero paso M4: standoffs de las pieles Y los cuatro
                     // rieles EUROrack, cuyo taladro de punta viene roscado M4
                     // de fabrica (hoja Tiptop: "M4 Tapping To (/)3.3")
 d_M5_paso   = 5.5;  // agujero paso M5: SOLO el esqueleto 2020, roscado en el alma
-gap_sombra  = 5;    // junta de sombra de las pieles flotantes
+// hol_piel = holgura de AJUSTE de las pieles EMPOTRADAS, por lado.
+//
+// Sustituye a gap_sombra (5 mm), que era otra cosa: la junta de sombra de las
+// pieles FLOTANTES. Hasta el 2026-08-21 las dos pieles colgaban de doce
+// separadores, con su cara exterior 10 mm POR DETRAS del canto de los costados
+// y 5 mm de aire por los cuatro lados. Samuel pidio que la trasera encaje y
+// SELLE, asi que dejan de flotar: se empotran a ras del plano trasero y el
+// hueco perimetral pasa de junta de diseno a holgura de montaje.
+//
+// El numero no lo elige el gusto, lo pone la tolerancia de corte del taller
+// (Schaeffer publica 0.05-0.10 mm). 0.15 por lado son 0.30 de juego total en
+// 528 mm: entra sin forzar y se lee como junta, no como hueco. Si al ensamblar
+// aprieta, esto es lo que sube -- no el ancho de la piel.
+hol_piel    = 0.15;
+// Espesor de la TRASERA, y solo de ella. Samuel la pidio en 8 el 2026-08-21
+// -- misma plancha que los costados y el suelo -- mientras el resto del cuerpo
+// sigue en t_acrilico. No es lo mismo que t_acrilico y por eso es un parametro
+// aparte: de este numero cuelga cuanto se retiran los cuatro largueros
+// traseros para que la trasera enrase con el canto.
+//
+// Efecto secundario anotado y NO resuelto aqui: con la trasera en 8 y muerta la
+// bandeja de entrepiso, el unico cliente del acrilico de 5 mm es la tapa del
+// valle. Comprar una plancha entera para una pieza es cosa del pliego.
+t_piel      = 8;
 // Paticas: METALICAS, torneadas, pequenas (Samuel, 2026-08-17 -- "metalicas
 // y elegantes"). No son de goma: eso cambia el BOM y el acabado. Van bajo los
 // COSTADOS, que son las piezas portantes de 8 mm, con su cara exterior a ras
@@ -607,7 +710,34 @@ marco_sup   = 8;
 //
 // La pieza sale de plancha de marco_sup = 8 (la misma del costado) y su DXF mide
 // 528.32 x prof_sup, sin taladros.
-prof_sup    = 16;
+// TIENE QUE VALER LO MISMO QUE marco_remate. Desde el 2026-08-21 la pestana no
+// es una tira de canto: es la PLANCHA HORIZONTAL que tapa la meseta del techo,
+// y esa meseta mide exactamente marco_remate. Aqui no se pueden escribir
+// expresiones (ver la cabecera del fichero), asi que la relacion la vigila
+// guarda_remate() en clearance_budget.py: si alguien mueve uno y no el otro,
+// sale en rojo antes de exportar.
+// FONDO de la tapa de remate. Con inset_remate_frente tiene que sumar
+// marco_remate, que es lo que mide la meseta: aqui no se pueden escribir
+// expresiones (ver la cabecera), asi que la relacion la vigila guarda_remate()
+// en clearance_budget.py.
+prof_sup    = 37;
+// Cuanto se RETIRA la tapa de remate del pico, y no es estetica: es la unica
+// razon por la que la tapa de la fila de arriba sigue abriendo.
+//
+// Hasta el 2026-08-21 esta pieza iba PEGADA al Z-Rail, o sea que GIRABA CON LA
+// TAPA y nunca le estorbaba. Al atornillarla a un larguero fijo pasa a ser
+// obstaculo, y una plancha fija encima de una bisagra bloquea la bisagra:
+// llegando hasta el pico la tapa abria 13.2 grados. Medido barriendo el
+// conjunto giratorio contra la banda de la meseta:
+//
+//     retiro 0 mm  -> abre  13.2 grados
+//     retiro 9.3   -> abre  61.0
+//     retiro 12.8  -> abre 180.0
+//
+// 13 esta al otro lado de ese acantilado. Lo que queda descubierto por delante
+// NO es un agujero: debajo esta el propio Z-Rail de la tapa, que llega a
+// x=271.22, asi que es una linea de sombra entre la tapa y el marco fijo.
+inset_remate_frente = 13;
 
 // --- ventilacion con firma (spec §7) ---
 // Diametro de la fresa estandar del taller. NO es decoracion del BOM: manda
@@ -620,6 +750,22 @@ fresa_d           = 3;
 vent_ancho_ranura = 4;   // ancho de la ranura-onda. >= fresa_d por eso mismo
 vent_puente_min   = 4;   // puente minimo entre ranuras (fragilidad)
 vent_periodo      = 40;  // periodo horizontal de cada onda
+// Separacion entre el CAMPO DE RANURAS de la trasera y la banda de ondas que
+// tiene encima. NO es vent_puente_min, y esa confusion es justo lo que se
+// arregla aqui: el puente minimo es una cota de FRAGILIDAD -- lo que hace falta
+// para que dos huecos no se coman el acrilico que queda entre ellos -- y con 4
+// mm los dos campos se leian como uno solo. Esto es una cota de DIBUJO: lo que
+// hace falta para que la rejilla y las ondas se lean como DOS cosas.
+//
+// Y por eso la onda subio a la vez (0.32 -> 0.37 del vano entre filas): con el
+// borde de la rejilla derivado de la onda, subir solo la onda arrastraba la
+// rejilla con ella y la separacion se quedaba clavada en el minimo. Las dos se
+// mueven juntas o no se mueve nada.
+// Se mide entre BORDES DE MATERIAL, no entre la polilinea de la onda y el canto
+// del campo: la onda es un hull de circulos y asoma medio ancho de ranura por
+// debajo de su polilinea. La primera version se olvido ese termino y los 14
+// salieron 12.
+vent_separacion   = 14;  // rejilla <-> ondas. De dibujo, no de fragilidad
 
 // --- tapa del valle ---
 // La plancha que cierra el escalon entre las dos filas. Es la unica cara
@@ -644,6 +790,27 @@ valle_paso_hp   = 2;   // una ranura cada 2 HP -> 51 por campo, puente 6.16
 // dando 4.5 mm de acrilico a cada lado de la arandela del M3.
 valle_espina    = 16;  // banda maciza central (cabeza de M3 + arandela)
 valle_margen    = 6;   // orilla maciza delante y detras
+
+// --- tiro de aire ---
+// El case se refrigera por CONVECCION NATURAL y nada mas: no hay ventilador y
+// no va a haberlo. El aire entra por la rejilla del suelo, sube por el piso de
+// la fuente y sale por las ranuras del valle y por las ondas de la trasera.
+//
+// Estos dos numeros existen porque el 2026-08-21 la entrada de aire cambio de
+// sitio DOS VECES en el mismo dia -- del hueco del suelo a la trasera, y de la
+// trasera al vuelo de la bandeja -- y en cada mudanza el area y la altura de
+// tiro cambian. Mientras la entrada fue un hueco accidental de 20054 mm2 nadie
+// tenia que vigilar nada; una rejilla DIBUJADA si se puede quedar corta.
+//
+// La potencia sale de la spec de la fuente v2, §4, sumando los reguladores:
+// LM2941 ~2.7 + LM2991 ~2.9 + LT3045x2 ~0.4 + LT3094x2 ~0.33 = 6.33 W. NO
+// incluye las perdidas del transformador, que no estan itemizadas -- por eso el
+// techo de salto termico va holgado y no pegado al numero.
+potencia_disipada = 6.33; // W, SUPUESTO: spec PSU v2 §4, sin perdidas de trafo
+// Techo de salto sobre ambiente. 15 K es el criterio de siempre para caja de
+// electronica lineal con electroliticos dentro: a partir de ahi la vida del
+// condensador se parte por dos cada 10 K y deja de ser un detalle.
+salto_termico_max = 15;  // K sobre ambiente, SUPUESTO de diseno
 
 // --- lo que el budget vigila (spec §11: catalogos, no medidos) ---
 // El toroide, con la hoja del FABRICANTE delante (Nuvotem Talema, "120VA Open
@@ -713,10 +880,25 @@ k_factor     = 0.42;  // SUPUESTO -- fibra neutra; DIN 6935 varia con r/t
 // --- la tapa ---
 chasis_pestana  = 15;   // faldon de la tapa, por FUERA de la pared del cuerpo
 chasis_hol_tapa = 0.6;  // juego total para que la tapa entre sin forzar
-chasis_pie      = 10;   // separadores bajo el suelo. No son estetica: bajo el
-                        // suelo pasan la chapa de refuerzo (1.5) y la cabeza
-                        // del M6 del toroide (~5), y el acrilico no puede
-                        // apoyar contra acero caliente (Tg ~ 100 C)
+// YA NO SON SEPARADORES (2026-08-21, #106). Eran 10 mm de pata porque el
+// chasis SE APOYABA en la bandeja y bajo su suelo tenian que pasar la chapa de
+// refuerzo (1.5) y la cabeza del M6 del toroide (~5). Desde que el chasis
+// CUELGA de los dos largueros, nada suyo toca el acrilico y esos dos herrajes
+// se mudan al interior de la caja -- que es cambio del chasis, no del case.
+//
+// Lo que queda es AIRE: el hueco entre el suelo del chasis y la bandeja, para
+// que la plancha no sostenga el toroide y deje de resonar donde el #106 dice
+// que resuena. Dos milimetros y no cero: cero seria contacto, que es lo mismo
+// que apoyar. La pila de tolerancias (taladro de chapa +-0.5, larguero +-0.3,
+// espesor del acrilico +-0.4) se come 1.2 en el peor caso y aun queda hueco.
+//
+// Y no puede crecer mucho: el M5 que ancla al larguero entra por la RANURA
+// INTERIOR del 2020, cuyo eje esta en rail/2 sobre la bandeja. Cuanto mas sube
+// el suelo, menos pared queda por debajo de ese eje, y los primeros
+// radio_doblez + t_chapa milimetros de pared son curva y no admiten taladro.
+// Con 2 el tornillo sube 8 por la pared y sobran 2.25 tras el doblez y el radio
+// del taladro. Lo comprueba guarda_chasis.
+chasis_pie      = 2;    // AIRE bajo el suelo del chasis, no separadores
 
 // --- lo que la Task 6 tiene que casar, no al reves ---
 // Estos tres agujeros los DECLARA el chasis y la PCB se pliega a ellos. Va en
@@ -774,11 +956,20 @@ d_M6_paso = 6.5;
 chasis_margen_bandeja = 10;  // orilla libre a la derecha de la bandeja
 // LA COTA MAS JUSTA DE TODO EL MONTAJE, y por eso es un parametro con nombre y
 // no un resultado. Los dos largueros 2020 van ENCIMA de la bandeja de base
-// desde el 2026-08-17, asi que el chasis pasa entre ellos y le quedan 3.33 mm
-// a cada lado. Una caja doblada sale con +-1 mm facil, y la soldadura de las
-// esquinas tira mas. Si el taller no promete esa tolerancia, lo que se toca es
-// chasis_int_y -- no la posicion, que ya esta centrada y no da mas de si.
+// desde el 2026-08-17, asi que el chasis va entre ellos con esto a cada lado.
+// Una caja doblada sale con +-1 mm facil, y la soldadura de las esquinas tira
+// mas; por eso el hueco existe y no se cierra a cero.
+//
+// DESDE EL 2026-08-21 ESTE HUECO ES ADEMAS LA LUZ QUE SALVA EL TORNILLO. El
+// chasis ya no pasa entre los largueros: cuelga de ellos, con 4 M5 que entran
+// por sus paredes largas y muerden la ranura interior del 2020. Cada tornillo
+// cruza estos 3 mm de aire, asi que lleva separador -- sin el, apretar
+// abollaria la pared de 1.5 hacia dentro.
 chasis_holgura_larguero = 3;
+// M5 por pared larga. Dos y no uno: con uno solo el cajon pivota sobre el, y
+// con tres el reparto deja de casar con ch_tornillos(). Son los mismos que
+// llevan la tapa, repartidos con la misma regla.
+chasis_anclajes = 2;
 chasis_tornillo_baja  = 8;   // cuanto por debajo del techo va la fila de M3
 chasis_tornillos_largo = 3;  // por faldon largo
 chasis_tornillos_corto = 2;  // por faldon corto

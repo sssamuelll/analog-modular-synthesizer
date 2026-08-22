@@ -56,7 +56,7 @@ la nota de sustitución al inicio de este documento y
 
   Qué se perdió, y conviene no olvidarlo: la proporción del render aprobado.
   Ese board se dibujó para paneles de 190 mm y un case de ~380 mm de alto;
-  el case real mide **247.73 mm**. El board sigue mandando sobre lenguaje
+  el case real mide **256.18 mm**. El board sigue mandando sobre lenguaje
   visual, no sobre cotas.
 - Generar planos en **DXF** o **SVG** para corte láser/CNC reproducible.
 - Diseño de paneles en **KiCad** o **FrontPanelDesigner**.

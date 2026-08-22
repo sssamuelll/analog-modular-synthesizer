@@ -28,16 +28,14 @@ _autosave-*
 *.log
 *.op.raw
 *.net
-# ...pero NO las netlists de KiCad. Son FUENTE, no artefacto: build_pcb.py las
-# lee para saber que huellas colocar y en que redes, y check_netlist.py y
-# netdiff.py las leen para comprobarlo. La regla de arriba vive en la seccion
-# de SPICE y se llevaba por delante las cinco del repo de rebote (#68).
-#
-# La consecuencia, medida el 2026-08-21 en un worktree recien creado desde
-# main: `build_pcb.py` muere con FileNotFoundError en leer_netlist(). Desde un
-# clon limpio la placa NO se podia regenerar, que es la unica cosa que este
-# repo dice que un generador tiene que poder hacer.
-!hardware/**/*.net
+# ...pero los netlists de KiCad NO son SPICE y SI se versionan (issue #68).
+# Esta regla vive en la seccion de SPICE y se estaba tragando los .net de los
+# modulos por el sufijo. El precio real: en cualquier checkout limpio -- un
+# worktree, un clon, el CI -- tres de los cuatro check_netlist.py no tenian
+# que leer. Dos reventaban con traceback y el tercero decia "HUECO: falta el
+# .net" y salia con codigo 0, o sea VERDE. El unico que funcionaba era el del
+# modulo 3, y solo porque su .net se habia anadido a la fuerza en su dia.
+!hardware/**/kicad/*.net
 
 # OS
 .DS_Store
@@ -67,10 +65,7 @@ target/
 # STL nuevo fallara EN SILENCIO y pidiera -f sin que nadie supiera por que
 # (issue #48). Aqui esta escrito con su ruta y su motivo.
 case/renders/build/
-# El lienzo es una PREVIEW: las 7 piezas en rejilla para mirarlas de un vistazo.
+# El lienzo es una PREVIEW: las 6 piezas en rejilla para mirarlas de un vistazo.
 # No se manda al taller (alli van los DXF sueltos) y lo regenera export.ps1.
 # Mismo criterio que los STL: 97.512 lineas de diff que no prueban nada.
 case/plans/lienzo_2d.dxf
-
-# salida de diagnostico de kicad-cli pcb drc: se regenera en cada pasada
-hardware/**/fab/drc.json
