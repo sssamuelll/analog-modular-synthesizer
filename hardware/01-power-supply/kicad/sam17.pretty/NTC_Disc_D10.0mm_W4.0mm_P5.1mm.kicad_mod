@@ -1,0 +1,68 @@
+(footprint "NTC_Disc_D10.0mm_W4.0mm_P5.1mm"
+  (version 20241229)
+  (generator "sam17")
+  (generator_version "9.0")
+  (layer "F.Cu")
+  (descr "Limitador de inrush NTC de disco, Ametherm SL10 5R002. Hoja del fabricante (ametherm.com, rev. 2012-03-29): D 10.0 max, T 4.0 max, S 5.1 nom de paso, pata 0.5 nom. Taladro 0.8 = pata + 0.30 (IPC-2222 pide 0.25 nominal sobre la pata y nunca menos de 0.15). SUSTITUYE a NTC_Disc_D11.5mm_W4.5mm_P7.5mm, que ponia las patas a 7.5 mm: el disco no llega, habia que doblarlas 1.2 mm por lado. Courtyard 12x12 con 1 mm de aire por lado sobre el disco: el NTC disipa ~0.4 W caliente (design-notes sec.10.2). En serie con el primario 230VAC")
+  (tags "NTC thermistor inrush disc THT mains SL10 Ametherm")
+
+  (property "Reference" "REF**" (at 2.55 -7.2 0)
+    (layer "F.SilkS")
+    (uuid "5c6f0b40-8b91-4f2e-9d2a-1a7c3e5b7001")
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+  (property "Value" "NTC_Disc_D10.0mm_W4.0mm_P5.1mm" (at 2.55 7.2 0)
+    (layer "F.Fab")
+    (uuid "5c6f0b40-8b91-4f2e-9d2a-1a7c3e5b7002")
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+  (property "Datasheet" "" (at 2.55 0 0)
+    (layer "F.Fab")
+    (uuid "5c6f0b40-8b91-4f2e-9d2a-1a7c3e5b7003")
+    (effects (font (size 1 1) (thickness 0.15)))
+  )
+
+  (fp_rect
+    (start -3.45 -6)
+    (end 8.55 6)
+    (stroke (width 0.05) (type default))
+    (fill none)
+    (layer "F.CrtYd")
+    (uuid "5c6f0b40-8b91-4f2e-9d2a-1a7c3e5b7010")
+  )
+
+  (fp_rect
+    (start -2.95 -5.5)
+    (end 8.05 5.5)
+    (stroke (width 0.12) (type default))
+    (fill none)
+    (layer "F.SilkS")
+    (uuid "5c6f0b40-8b91-4f2e-9d2a-1a7c3e5b7011")
+  )
+
+  (fp_rect
+    (start -2.45 -5)
+    (end 7.55 5)
+    (stroke (width 0.1) (type default))
+    (fill none)
+    (layer "F.Fab")
+    (uuid "5c6f0b40-8b91-4f2e-9d2a-1a7c3e5b7012")
+  )
+
+  (pad "1" thru_hole circle
+    (at 0 0)
+    (size 1.8 1.8)
+    (drill 0.8)
+    (layers "*.Cu" "*.Mask")
+    (uuid "5c6f0b40-8b91-4f2e-9d2a-1a7c3e5b7020")
+  )
+
+  (pad "2" thru_hole circle
+    (at 5.1 0)
+    (size 1.8 1.8)
+    (drill 0.8)
+    (layers "*.Cu" "*.Mask")
+    (uuid "5c6f0b40-8b91-4f2e-9d2a-1a7c3e5b7021")
+  )
+
+)

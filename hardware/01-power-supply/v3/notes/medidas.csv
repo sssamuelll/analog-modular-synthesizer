@@ -1,0 +1,56 @@
+paso,magnitud,unidad,medido,placa,fecha,nota
+0,aislamiento_tab_U1_a_chasis,Mohm,,,,par.0.1: el tab de U1 esta a VRAW+ y la pared es acero a PE. ESTA medida autoriza a enchufar
+0,aislamiento_tab_U2_a_chasis,Mohm,,,,par.0.1: el tab de U2 esta a VRAW- y la pared es acero a PE. ESTA medida autoriza a enchufar
+0,aislamiento_tab_U3_a_chasis,Mohm,,,,par.0.1: el tab de U3 esta a +5V in y la pared es acero a PE. ESTA medida autoriza a enchufar
+0,continuidad_tierra_clavija_a_J5,mohm,,,,par.0.2: mili u decenas de miliohmios (design-notes §13.4)
+0,BR1_esquina_mas_contra_cruz_del_silk,si/no,,,,par.0.3: girado 180 cabe igual y cruza el puente
+0,fusible_IEC_es_1A6_lento_cerrado,si/no,,,,"par.0.4: el fusible ya no esta en la placa (#130). Si no lo es, no se enchufa: la placa no tiene red detras"
+0,referencia_del_IEC_montado,texto,,,,"par.0.4: registro, para el BOM del chasis"
+1,secundario_A_a_toma_central,V,,,,par.1: +-17 V
+1,secundario_B_a_toma_central,V,,,,par.1: +-17 V
+2,TP7_+13V1_sin_carga,V,,,,par.2: 13.1 +-0.3
+2,TP8_-12V9_sin_carga,V,,,,par.2: -12.9 +-0.3
+2,TP3_+12V_sin_carga,V,,,,par.2: 12.0 +-0.05
+2,TP4_-12V_sin_carga,V,,,,par.2: -12.0 +-0.05
+2,TP5_+5V_sin_carga,V,,,,par.2: 5.0 +-0.25
+3,J2_pin1,V,,,,"par.3: -12 V medido, no leido del rotulo"
+3,J2_pin2,V,,,,"par.3: +0 V medido, no leido del rotulo"
+3,J2_pin3,V,,,,"par.3: +0 V medido, no leido del rotulo"
+3,J2_pin4,V,,,,"par.3: +12 V medido, no leido del rotulo"
+4,valle_VRAW+_frio,V,,,,par.4: umbral de aborto 13.46 V (v2 §4.1). Por debajo no hay setpoint que funcione
+4,valle_VRAW+_30min_caliente,V,,,,par.4: umbral de aborto 13.46 V (v2 §4.1). Por debajo no hay setpoint que funcione
+4,valle_VRAW-_frio,V,,,,par.4: umbral de aborto 13.46 V (v2 §4.1). Por debajo no hay setpoint que funcione
+4,valle_VRAW-_30min_caliente,V,,,,par.4: umbral de aborto 13.46 V (v2 §4.1). Por debajo no hay setpoint que funcione
+4,tension_de_red_del_momento,V,,,,par.4: registro
+4,I_dummy_positivo,A,,,,par.4: ~0.6 A
+4,I_dummy_negativo,A,,,,par.4: ~0.6 A
+5,rizado_pp_+12V,mV,,,,par.5: bajo el suelo del osciloscopio a 20 MHz BW. El criterio PLENO necesita el LNA (#58): esto es registro
+5,rizado_pp_-12V,mV,,,,par.5: bajo el suelo del osciloscopio a 20 MHz BW. El criterio PLENO necesita el LNA (#58): esto es registro
+6,I2C_responde_0x40_U8_INA226,si/no,,,,par.6.1: direccion fijada por straps
+6,I2C_responde_0x41_U9_INA226,si/no,,,,par.6.1: direccion fijada por straps
+6,I2C_responde_0x49_U10_ADS1115,si/no,,,,par.6.1: direccion fijada por straps
+6,I2C_responde_0x48_U11_TMP1075,si/no,,,,par.6.1: direccion fijada por straps
+6,I2C_direcciones_inesperadas,cuantas,,,,par.6.1: 0x50 esta reservada a la EEPROM de OTRAS placas; si aparece aqui hay algo mal atado
+6,aislamiento_GNDA_a_GNDD,Mohm,,,,"par.6.2: la barrera del ISO1541, comprobada en COBRE y no en el dibujo"
+6,error_relativo_U8_V_+12V,%,,,,par.6.3: +-1 % contra el multimetro. Fuera de escala -> mirar R21-R26 contra las dos lineas de seda
+6,error_relativo_U8_I_+12V,%,,,,par.6.3: +-1 % contra el multimetro. Fuera de escala -> mirar R21-R26 contra las dos lineas de seda
+6,error_relativo_U9_V_+5V,%,,,,par.6.3: +-1 % contra el multimetro. Fuera de escala -> mirar R21-R26 contra las dos lineas de seda
+6,error_relativo_U10_V_-12V,%,,,,par.6.3: +-1 % contra el multimetro. Fuera de escala -> mirar R21-R26 contra las dos lineas de seda
+6,error_relativo_U10_V_VRAW+,%,,,,par.6.3: +-1 % contra el multimetro. Fuera de escala -> mirar R21-R26 contra las dos lineas de seda
+6,error_relativo_U10_V_VRAW-,%,,,,par.6.3: +-1 % contra el multimetro. Fuera de escala -> mirar R21-R26 contra las dos lineas de seda
+7,T_case_U1,C,,,,"par.7: < 70 C (§10.4.1 del datasheet del LM2941). El disipador es la PARED, y la caja esta cerrada"
+7,T_case_U2,C,,,,"par.7: < 70 C (§10.4.1 del datasheet del LM2941). El disipador es la PARED, y la caja esta cerrada"
+7,T_case_U3,C,,,,"par.7: < 70 C (§10.4.1 del datasheet del LM2941). El disipador es la PARED, y la caja esta cerrada"
+7,T_case_U4,C,,,,"par.7: < 90 C, ceramicos de precision"
+7,T_case_U5,C,,,,"par.7: < 90 C, ceramicos de precision"
+7,T_case_U6,C,,,,"par.7: < 90 C, ceramicos de precision"
+7,T_case_U7,C,,,,"par.7: < 90 C, ceramicos de precision"
+7,T_ambiente,C,,,,par.7: registro
+7,T_aire_del_recinto_U11,C,,,,par.7: registro -- es el primer dato que existe de esto
+7,T_pared_junto_a_los_tabs,C,,,,par.7: registro
+7,delta_T_case_U4_U5,C,,,,par.7: > 5 C es la asimetria intra-pareja de las granjas EP (v2 §3.2)
+7,delta_T_case_U6_U7,C,,,,par.7: idem
+8,margen_positivo,V,,,,"par.8: valle - dropout_max - setpoint. Aceptar con >= 0.2 V; si no, bajar RV2/RV3"
+8,margen_negativo,V,,,,"par.8: valle - dropout_max - setpoint. Aceptar con >= 0.2 V; si no, bajar RV2/RV3"
+8,setpoint_final_TP7,V,,,,par.8: suelo bajable garantizado 12.46 V
+8,setpoint_final_TP8,V,,,,par.8: suelo bajable garantizado -12.42 V

@@ -76,10 +76,17 @@ CONTRATO = [
     ("SDA_D", {"U12.2", "J8.2"}, "SDA digital"),
     ("SCL_D", {"U12.3", "J8.3"}, "SCL digital"),
     # --- el filtro de la SMPS, y donde pincha ---------------------------------
-    # L_F es el tramo entre F1 y NT1. Que L1 cuelgue de AHI y no de L_TR es la
-    # regla de la spec v2 §7: la SMPS comparte fusible con el toroide pero NO
-    # comparte el limitador de inrush, que esta dimensionado para TR1.
-    ("L_F",    {"L1.1", "F1.2", "NT1.1"}, "el choke pincha ANTES de NT1"),
+    # `L` es todo lo que hay entre la entrada y NT1. Que L1 cuelgue de AHI y
+    # no de L_TR es la regla de la spec v2 §7, y no ha cambiado: la SMPS
+    # comparte el fusible con el toroide pero NO comparte el limitador de
+    # inrush, que esta dimensionado para TR1.
+    #
+    # Antes esta linea pedia `L_F` y nombraba `F1.2`. Las dos cosas se fueron
+    # con el fusible a la pared del recinto (#130): al no haber pieza en
+    # medio, `L` y `L_F` son el mismo nodo y solo hace falta un nombre. Lo que
+    # el invariante VIGILA es lo mismo -- de que nodo cuelga el choke.
+    ("L",      {"J3.1", "L1.1", "NT1.1", "RV1.1"},
+     "el choke pincha ANTES de NT1, y el MOV esta en la entrada"),
     ("L_SMPS", {"L1.2", "J7.1", "CY1.1"}, "salida del choke -> J7 + su cap Y"),
     ("N_SMPS", {"L1.4", "J7.2", "CY2.1"}, "idem en N"),
     ("PE",     {"CY1.2", "CY2.2", "J3.3"}, "las dos Y devuelven a tierra"),
