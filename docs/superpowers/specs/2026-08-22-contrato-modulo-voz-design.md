@@ -1,8 +1,8 @@
 # Contrato: módulo de voz que se mide a sí mismo
 
 > Lo consumen los módulos **5 (VCF), 6 (ADSR) y 7 (VCA)**, ninguno dibujado, y
-> lo estrena el **módulo 3 v2**
-> ([`2026-08-22-modulo-3-vco-ocho-voces-design.md`](2026-08-22-modulo-3-vco-ocho-voces-design.md)).
+> lo estrena el **módulo 3 v2** (dieciséis osciladores)
+> ([`2026-08-22-modulo-3-vco-dieciseis-design.md`](2026-08-22-modulo-3-vco-dieciseis-design.md)).
 > Origen: núcleo §5.3 y §10; issue #158.
 > Este documento define **una interfaz**, no una placa. Vive aparte a propósito:
 > enterrado dentro del spec de un módulo concreto, los otros tres lo copiarían
@@ -11,7 +11,7 @@
 ## 1. El problema que resuelve
 
 El J2 lleva **cuatro líneas de afinación** y están cableadas solo en la ranura 1.
-Con ocho voces no dan, y ponerle más pines no escala: serían cuatro por cada
+Con más de cuatro osciladores no dan, y ponerle más pines no escala: serían cuatro por cada
 ranura capaz de llevar un módulo de voz, o sea 32 pines solo para eso (núcleo
 §5.3).
 
@@ -24,7 +24,8 @@ cambia ni un pin**.
 
 Un módulo que cumple estas cinco:
 
-1. **Tiene un micro propio** y todo lo que reporta pasa por él.
+1. **Tiene micro propio** —uno o varios— y todo lo que reporta pasa por el que
+   habla con el J2.
 2. **Se mide**: cronometra o lee lo que en él se desvía, y manda números.
 3. **Se declara**: EEPROM `24AA02E48` en 0x50 con tipo, revisión, serial y su
    blob de calibración. La calibración viaja con la placa.
@@ -48,7 +49,9 @@ honesto sobre la última:
 Esa placa es el módulo 3 v1, y es la que se está rediseñando. **El contrato se
 cierra aquí**, y el micro lo hace posible:
 
-> **Regla 1 — El `MISO` del J2 lo suelta el micro del módulo, y nadie más.**
+> **Regla 1 — El `MISO` del J2 lo suelta UN micro del módulo, y nadie más.**
+> Si el módulo lleva varios, solo el maestro toca el bus; los demás cuelgan de su
+> SPI privado.
 > En alta impedancia siempre que su `CS` esté alto, sin excepciones de modo. Se
 > mide en el bring-up: `CS` alto, `MISO` sondado. Aprobado o suspenso.
 
@@ -73,7 +76,7 @@ Lo que compra, y es más de lo que parece:
   la cadena de tres conversores de la v1: un número de una placa concreta metido
   en una interfaz común.
 - **Cuántos conversores lleva el módulo deja de ser asunto del cerebro.** El
-  módulo 3 v2 puede llevar cuatro u ocho sin que nadie fuera se entere, y ese
+  módulo 3 v2 lleva del orden de catorce sin que nadie fuera se entere, y ese
   conteo es hoy una decisión abierta suya.
 - **El módulo puede hacer trabajo local** entre dos tramas: interpolar, suavizar
   un salto, sostener un portamento, sin gastar ancho de banda del bus.
