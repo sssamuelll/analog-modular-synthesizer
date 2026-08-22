@@ -263,9 +263,29 @@ def main() -> int:
     print("Nota: 'reg' es la regulacion del transformador — cuanto sube su "
           "tension\nen vacio respecto al dato de placa, que es a plena carga. "
           "El BOM no la fija;\npor eso se barre.")
-    if fallos:
-        print(f"\nSALE DE REGULACION en {len(fallos)} de los 9 casos.")
-    return 0
+    if not fallos:
+        return 0
+
+    # Un gate que ENCUENTRA algo no puede salir en verde (constitucion,
+    # Principio VIII). Hasta hoy este hacia `return 0` pase lo que pase, asi
+    # que gates.py lo listaba en OK con "SALE DE REGULACION en 1 de los 9
+    # casos" escrito al lado, y el resumen decia GATES EN VERDE.
+    #
+    # Pero rojo tampoco es el veredicto correcto: este modelo es el de la V1
+    # (7812, trafo de 2 A) y la v1 esta CONGELADA -- no se construye. El
+    # diseno vivo es la v3. El hallazgo es cierto y no aplica a lo que se
+    # fabrica, que es exactamente la definicion de HUECO: no se pudo
+    # comprobar lo que importa, con el motivo escrito.
+    #
+    # Codigo 2 = HUECO por convencion del repo. Se vuelve FALLO el dia que
+    # este .cir modele la v3 -- eso es el issue #128.
+    print(f"\nSALE DE REGULACION en {len(fallos)} de los 9 casos:")
+    for v_red, reg, mp, mn in fallos:
+        print(f"  red {v_red:.0f} V, reg {reg*100:.0f}%: "
+              f"margen +{mp:+.2f} V / -{mn:+.2f} V")
+    print("HUECO: este modelo es la v1, congelada. El diseno vivo es la v3 "
+          "(issue #128).")
+    return 2
 
 
 if __name__ == "__main__":

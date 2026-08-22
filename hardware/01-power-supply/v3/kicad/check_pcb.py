@@ -46,7 +46,8 @@ import build_pcb as bp                                # noqa: E402
 def main() -> int:
     if not os.path.exists(PCB):
         print("HUECO: falta sam17-power-v3.kicad_pcb -- correr build_pcb.py")
-        return 0
+        # Codigo 2, no 0: gates.py lee el codigo de salida, no la prosa.
+        return 2
     board = pcbnew.LoadBoard(PCB)
     fallos: list[str] = []
 

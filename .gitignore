@@ -28,6 +28,14 @@ _autosave-*
 *.log
 *.op.raw
 *.net
+# ...pero los netlists de KiCad NO son SPICE y SI se versionan (issue #68).
+# Esta regla vive en la seccion de SPICE y se estaba tragando los .net de los
+# modulos por el sufijo. El precio real: en cualquier checkout limpio -- un
+# worktree, un clon, el CI -- tres de los cuatro check_netlist.py no tenian
+# que leer. Dos reventaban con traceback y el tercero decia "HUECO: falta el
+# .net" y salia con codigo 0, o sea VERDE. El unico que funcionaba era el del
+# modulo 3, y solo porque su .net se habia anadido a la fuerza en su dia.
+!hardware/**/kicad/*.net
 
 # OS
 .DS_Store

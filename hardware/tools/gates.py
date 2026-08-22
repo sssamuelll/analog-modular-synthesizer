@@ -44,6 +44,7 @@ menciona `pcbnew` o `ngspice`, lo necesita.
 """
 from __future__ import annotations
 
+import contextlib
 import glob
 import os
 import subprocess
@@ -85,9 +86,25 @@ def descubrir() -> list[str]:
     vistos: list[str] = []
     for pat in PATRONES:
         for p in glob.glob(os.path.join(RAIZ, pat), recursive=True):
-            if any(x in p for x in EXCLUIR) or p in vistos:
+            # El filtro va contra la ruta RELATIVA a RAIZ, no contra la
+            # absoluta. Con la absoluta, correr gates.py DENTRO de un worktree
+            # (que es .claude/worktrees/<algo>/) excluia TODAS las puertas: la
+            # cadena ".claude\worktrees" esta en la ruta de cada una. Salian 1
+            # de 24 y el resumen decia GATES EN VERDE.
+            #
+            # Es el mismo fallo invisible que el HUECO fabricado y el gate que
+            # salia en verde encontrando cosas: no corre Y no te enteras. Y
+            # pegaba justo donde mas duele, porque el worktree es el flujo
+            # aislado que recomienda el propio repo.
+            rel = os.path.relpath(p, RAIZ)
+            if any(x in rel for x in EXCLUIR) or p in vistos:
                 continue
             vistos.append(p)
+    if not vistos:
+        raise SystemExit(
+            f"FALLO: los patrones no encontraron ni una puerta bajo {RAIZ}.\n"
+            "  Eso no es un repositorio sin gates, es el descubridor roto.\n"
+            "  Cero puertas NUNCA es verde.")
     netdiff = os.path.join(RAIZ, "hardware", "tools", "netdiff.py")
     return [netdiff] + sorted(vistos, key=lambda p: os.path.relpath(p, RAIZ))
 
@@ -127,12 +144,45 @@ def corre(ruta: str) -> tuple[str, str, float]:
         # build_pcb.py del modulo 2 con las redes sin rutear, y la usa
         # check_bringup.py mientras falten medidas de la placa fisica.
         return "HUECO", (ultima[-1][:64] if ultima else "codigo 2"), dt
-    if dep:
+    if dep and _dep_ausente(salida, dep):
         return "HUECO", f"necesita {dep}: {salida.strip().splitlines()[-1][:60]}", dt
     return "FALLO", salida.strip(), dt
 
 
+def _dep_ausente(salida: str, dep: str) -> bool:
+    """¿El script murio por FALTA de la dependencia, o por lo que fue a mirar?
+
+    Antes se daba por hecho lo primero: cualquier salida distinta de cero en un
+    script que necesitara KiCad se reportaba como HUECO "necesita pcbnew". Eso
+    convierte un FALLO REAL en un hueco, y el hueco no rompe el resumen -- asi
+    que la tanda se cerraba con "GATES EN VERDE" encima de una placa con
+    problemas. Caso: check_pcb.py de la fuente v3 corria 141 s con pcbnew bien
+    cargado, encontraba 5 pistas GNDREF fuera de su isla, salia con codigo 1, y
+    se reportaba como que no se habia podido comprobar.
+
+    Es el Principio V al reves: la herramienta fabricaba la invisibilidad. Un
+    hueco solo es hueco si la dependencia de verdad no esta, y eso lo dice el
+    import que revienta, no el codigo de salida.
+    """
+    modulo = dep.split(".")[0].lower()
+    bajo = salida.lower()
+    return any(
+        marca in bajo and modulo in bajo
+        for marca in ("modulenotfounderror", "importerror", "dll load failed",
+                      "no module named")
+    )
+
+
 def main() -> int:
+    # La salida de los gates se decodifica con errors="replace", asi que puede
+    # traer U+FFFD. En una consola cp1252 (la de Windows por defecto) eso hace
+    # que el propio runner reviente a media lista y las puertas que quedaban
+    # NO se corran -- que es exactamente el fallo invisible del Principio V:
+    # el resumen final nunca llega y nadie se entera de que falta la mitad.
+    for flujo in (sys.stdout, sys.stderr):
+        with contextlib.suppress(AttributeError, ValueError):
+            flujo.reconfigure(encoding="utf-8", errors="replace")
+
     scripts = descubrir()
     print(f"puertas de calidad del SAM17 -- {len(scripts)} scripts")
     print(f"python del sistema: {sys.version.split()[0]}")

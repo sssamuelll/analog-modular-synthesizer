@@ -650,7 +650,27 @@ def dibujar_voz(n: int, origen: tuple[float, float]) -> None:
         # pullup de SQUARE OUT: al dominio logico del 74HC14, no a V+
         ("r", f"R_SQ{n}", "20k", f"SQ_{n}", "+3V3_LOC"),
         # realimentacion del I/V (transimpedancia, 500uA -> 5V max)
-        ("r", f"R_IV{n}", "10k", f"MIXO_{n}", f"VOICE_OUT_{n}"),
+        ("r", f"R_IV{n}", "10k", f"MIXO_{n}", f"IVO_{n}"),
+        # COMPENSACION DEL I/V -- las dos piezas que salieron de
+        # simulations/vco/iv_stage.py. Ver ahi el barrido completo.
+        #
+        # C_IV: sin el, la capacidad del nodo MIXO_n con los 10k forma un cero
+        # en la ganancia de ruido y el margen de fase se hunde. El barrido daba
+        # 59% de sobreimpulso ya con 5 pF de nodo y la salida AL AIRE. Con 33p
+        # el polo del I/V queda en 482 kHz -- 24 veces por encima del techo de
+        # audio, o sea gratis. C0G porque esta en el lazo.
+        ("c", f"C_IV{n}", "33p C0G", f"MIXO_{n}", f"IVO_{n}"),
+        # R_OUT: aislamiento de carga capacitiva. El TL074H esta caracterizado
+        # con CL = 20 pF (datasheet, margen de fase 56 grados) y un cable de
+        # patcheo son ~100 pF por metro; con la Zo de 125 ohm eso es un polo
+        # DENTRO del lazo. Sin esta resistencia, 15 de las 20 combinaciones del
+        # barrido OSCILAN en cuanto enchufas un cable.
+        #
+        # Va FUERA del lazo (la realimentacion se toma en IVO_n, antes): asi el
+        # cable no entra en el lazo y no hay error de carga en continua, porque
+        # la entrada del modulo 5 no consume. 220R contra ~100k de entrada es
+        # un divisor del 0.2 por mil.
+        ("r", f"R_OUT{n}", "220R", f"IVO_{n}", f"VOICE_OUT_{n}"),
     ]
     for i, (clave, ref, val, net1, net2) in enumerate(pasivos):
         libre(clave, ref, val, X0 + g(10) * i, Y0, net1, net2)
@@ -664,13 +684,17 @@ def dibujar_voz(n: int, origen: tuple[float, float]) -> None:
     # I/V: unidad n de U9, transimpedancia MIX OUT -> VOICE_OUT (+-5V max).
     # + a masa (virtual de un ampli inversor), - al nodo MIXO_n (mismo
     # nombre que el TP de la Tarea 2, asi queda conectado), realimentado
-    # por R_IV{n} (en `pasivos`, arriba) hasta la salida.
+    # por R_IV{n} || C_IV{n} (en `pasivos`, arriba) hasta IVO_n.
+    #
+    # La SALIDA DEL OPAMP es IVO_n, no VOICE_OUT_n: entre las dos va R_OUT{n}.
+    # Esa es la frontera del lazo -- lo que hay despues (jack, cable, modulo 5)
+    # queda fuera y no puede desestabilizarlo.
     n_out, n_menos, n_mas = _U9_UNIDADES[n]
     x_op, y_op = ox + g(110), oy
     pon("opamp", "U9", "TL074H", x_op, y_op, 0, unidad=n)
     stub("opamp", n_mas, x_op, y_op, 0, "GNDA", unidad=n)
     stub("opamp", n_menos, x_op, y_op, 0, f"MIXO_{n}", unidad=n)
-    stub("opamp", n_out, x_op, y_op, 0, f"VOICE_OUT_{n}", unidad=n)
+    stub("opamp", n_out, x_op, y_op, 0, f"IVO_{n}", unidad=n)
 
     # J_CV{n}: punta=CVIN_n (al R_CVIN del nodo expo), manguito=GNDA, normal
     # (TN)=GNDA -- sin cable el sumador ve 0V (el normalizado del spec §4).

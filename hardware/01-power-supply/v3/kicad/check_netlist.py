@@ -101,7 +101,10 @@ def main() -> int:
     if not os.path.exists(NET):
         print("HUECO: falta sam17-power-v3.net -- correr build_schematic.py "
               "(necesita el KiCAD-MCP-Server, ver hardware/tools/README.md)")
-        return 0
+        # Codigo 2, no 0. Decir HUECO en el texto y salir con 0 hace que
+        # gates.py lo cuente en VERDE: el runner lee el codigo, no la prosa.
+        # Un gate que no ha comprobado nada nunca es verde (Principio VIII).
+        return 2
     nets = leer()
     fallos = []
 
