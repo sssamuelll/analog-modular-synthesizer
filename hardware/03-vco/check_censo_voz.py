@@ -7,7 +7,7 @@ poder NOMBRAR, no lo que tiene que poder sonar, y lo compara contra tres techos
 que ya estan escritos en cobre y en codigo:
 
   1. MAX_PARAMS = 512   software/nucleo/core/src/modelo.rs:9
-  2. 32 KB de EEPROM    dieciseis S19 y S13 (decision tomada, chip elegido)
+  2. 64 KB de EEPROM    acta E-7 (eran 32 KB hasta que este censo corrio)
   3. largo del blob u8  software/nucleo/core/src/descubrimiento.rs:87
 
 Los tres se miden aqui. Dos de ellos NO pasan, y no pasan a proposito: la spec
@@ -36,7 +36,11 @@ from __future__ import annotations
 
 # --- techos que ya existen (citados) ----------------------------------------
 MAX_PARAMS = 512            # modelo.rs:9
-EEPROM_B = 32 * 1024        # dieciseis S19: "La memoria pasa a 32 KB"
+EEPROM_B = 64 * 1024        # acta E-7: 24AA512. Eran 32 KB (24AA256UID)
+                            # hasta que este censo dio 91 % de ocupacion.
+EEPROM_B_VIEJA = 32 * 1024  # dieciseis S19, para poder ensenar la diferencia
+MARGEN_MIN = 0.30           # tiene que sobrar al menos un 30 %: el censo se
+                            # movio 21,7 % en una sola sesion (acta E-5/E-6)
 BLOB_U8_TECHO = 238         # descubrimiento.rs: u8 con FIN_ZONA_LIBRE = 0xFA
 
 # --- el censo de parametros -------------------------------------------------
@@ -113,17 +117,23 @@ def demo() -> None:
     sin = sum(eeprom(False).values())
     print(f"\n  sin estereo serian {sin} B ({sin/EEPROM_B:.1%}): el paneo "
           f"cuesta {total - sin} B")
-    assert total <= EEPROM_B, (
-        f"no cabe: {total} B contra {EEPROM_B} B")
-    print(f"  cabe, pero al {total/EEPROM_B:.0%}. La spec S7 pedia "
-          "64 KB")
-    print("  y el chip que se acaba de elegir (24AA256UID) son 32. Cabe hoy;")
-    print("  el siguiente parametro por canal cuesta "
-          f"{CANALES * B_POR_ENTRADA} B y quedan "
-          f"{EEPROM_B - total} B.")
-    assert (EEPROM_B - total) < 4096, (
-        "si sobraran mas de 4 KB, la peticion de 64 KB de S7 no tendria "
-        "sentido y habria que quitarla de la spec")
+    por_canal = CANALES * B_POR_ENTRADA
+    print()
+    print(f"  con los 32 KB del 24AA256UID:  {total/EEPROM_B_VIEJA:5.1%}  "
+          f"-> caben {(EEPROM_B_VIEJA - total)//por_canal} parametros mas "
+          "por canal")
+    print(f"  con los 64 KB del 24AA512:     {total/EEPROM_B:5.1%}  "
+          f"-> caben {(EEPROM_B - total)//por_canal} parametros mas por canal")
+    assert total <= EEPROM_B * (1 - MARGEN_MIN), (
+        f"no cabe con el {MARGEN_MIN:.0%} de margen: {total} B contra "
+        f"{EEPROM_B * (1 - MARGEN_MIN):.0f} B utiles")
+    assert total > EEPROM_B_VIEJA * (1 - MARGEN_MIN), (
+        "si el censo bajara tanto que los 32 KB cumplieran el margen, el "
+        "acta E-7 dejaria de estar justificada y habria que revisarla: "
+        "el 24AA512 cuesta el chip de identidad aparte")
+    print()
+    print(f"  el margen es lo que se compra, no el sitio: 29,8 KB caben en")
+    print("  los dos. Lo que no cabe en 32 es el diseno de la semana que viene.")
 
     # --- 3. el techo que rompe primero ------------------------------------
     desc = e["descriptor"] + e["etiquetas de enumerados"]

@@ -712,6 +712,37 @@ treinta y dos de voz. El criterio «encender el instrumento con cables puestos
 no suena» no se ablanda por eso, y la mutación de encendido tiene que cubrir
 los nuevos.
 
+### E-7. La memoria del módulo pasa a 64 KB, y vuelve a ser dos chips
+
+`check_censo_voz.py` dio **29 800 B**. Contra los 32 KB decididos en #164 §19
+eso es el **91 %**, y deja sitio para **cuatro parámetros más por canal**. El
+censo de este módulo creció un 21,7 % en área y ganó un parámetro por canal en
+**una sola sesión** (E-5 y E-6). Cuatro no es margen: es el diseño de la semana
+que viene.
+
+**Se sube a 64 KB: `24AA512`.** Con eso el censo baja al **45 %** y quedan 53
+parámetros más por canal.
+
+**Y cuesta algo, dicho en voz alta.** #164 (pieza 3) había encontrado el
+`24AA256UID`, que resolvía los 32 KB **y** traía EUI-48, EUI-64 y un serial de
+fábrica — *«es un chip, no dos»*. **Esa pieza no existe en 64 KB**: la familia
+UID de Microchip se acaba en el 24AA256UID, verificado contra el catálogo y las
+hojas. Así que subir a 64 KB significa volver al arreglo de dos chips que #164
+§13 ya describía: el `24AA512` para el blob y el descriptor, y el `24AA02E48`
+—que nunca se quitó del BOM— para la identidad.
+
+El precio es **un chip de ~$0,30 y una huella SOT-23-5**. Se paga.
+
+**Deroga** la decisión 19 de #164 y su pieza 3. El resto de §13 de aquel spec
+—dos direcciones en el mismo canal del mux I²C, el descubrimiento sin tocar—
+vuelve a ser exactamente lo que decía antes de la optimización.
+
+> **El camino que haría esto innecesario, declarado y no tomado:** el descriptor
+> es el **69 %** de la memoria, y describe dieciséis canales idénticos entrada
+> por entrada. Un descriptor que dijera «este bloque, ×16» lo colapsaría a un
+> tercio. Es la respuesta buena, y toca el formato congelado y sus 190 tests: no
+> se hace hoy por un chip de treinta centavos, y no se olvida.
+
 ### Lo que este acta NO decide
 
 El reparto de anchos de panel con los conectores ya mudados, quién shiftea el
