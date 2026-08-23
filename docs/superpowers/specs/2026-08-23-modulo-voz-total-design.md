@@ -657,36 +657,51 @@ no era un módulo — era una parte.
 Decidido: el instrumento reparte sus voces en el campo estéreo. Es la mitad de
 por qué un poli suena grande, y decidirlo después del layout cuesta el layout.
 
-**El cómo NO se decide aquí**, porque son dos caminos y los dos mueven
-presupuestos (cuentas derivadas de §2 — ¼ SSI2164 por VCA, 3 CV por canal — no
-medidas):
+Eran dos caminos, y esta primera versión del acta dejó la elección para el
+pase de diseño **suponiendo** que el caudal la decidía. `spi_privado_budget.py`
+ya está escrito y corrido, y esa suposición era falsa:
 
-| | VCAs de voz | CV por canal | Tráfico del SPI privado |
-|---|---|---|---|
-| **A**: dos VCAs por canal (L/R), cada rama con envolvente × paneo | 32 | 4 | **×2** — las dos ramas se escriben a 10 kHz |
-| **B**: un VCA de envolvente + etapa de paneo detrás | 48 | 5 | **igual que hoy** — el paneo solo cambia al evento de nota |
+| | VCAs de voz | CV por canal | SPI privado por micro | SCLK que pide |
+|---|---|---|---|---|
+| **A**: dos VCAs por canal (L/R), cada rama con envolvente × paneo | 32 | 4 | 6,05 Mbit/s | **10,1 MHz** |
+| **B**: un VCA de envolvente + etapa de paneo detrás | 48 | 5 | 4,16 Mbit/s | **6,9 MHz** |
 
-A es menos cobre y más caudal; B es más cobre y deja el caudal intacto. Y el
-caudal es justo lo que `spi_privado_budget.py` puede invalidar (§9.4). Se
-resuelve en el pase de diseño, con los dos presupuestos corridos, no aquí.
+**A pide 1,45× el caudal de B, no 2×**, y las dos caben con holgura contra un
+techo declarado de 20 MHz. El error del razonamiento: el CV de corte **ya** es
+un flujo a tasa de render en las dos topologías —§2 hace que el micro le sume
+la envolvente de filtro y escriba el DAC— así que A pasa de dos flujos por
+canal a tres, no de uno a dos.
+
+**Se elige A.** Menos cobre —ocho chips menos entre VCA y DAC— y el único
+argumento que sostenía a B se cayó con el número delante. La holgura de cómputo
+también aguanta: 625 ciclos por valor de envolvente a 150 MHz.
+
+> **Y un hallazgo que sale de escribir el guion, que toca al cuerpo del spec:**
+> §3.1 cuenta *«8 envolventes × 10 kHz son 80k escrituras/s por micro»* — una
+> por canal. Pero §2 hace del CV de corte un segundo flujo a tasa de render, y
+> el módulo 6 que desaparece eran **dos** generadores ADSR, no uno. La línea
+> base de §3.1 está a la mitad de lo que su propio §2 implica, **antes** de
+> meter estéreo. No rompe nada —el caso corregido también cierra, 6,9 MHz— pero
+> la cifra del spec está mal y hay que corregirla.
 
 **Lo que E-6 reabre, sin excepción:**
 
-- `spi_privado_budget.py` — invalidante, y ahora con dos topologías que medir.
+- ~~`spi_privado_budget.py`~~ — **escrito, corrido y VERDE**. La sección de
+  generadores (§3) sobrevive: el peor caso pide 10,1 MHz de 20.
 - `consumo_total.py` — más VCAs y más DACs por riel, y encima la reserva de
   invitados de E-4.
 - `voz_total_budget.py` — hoy VERDE con 27 % de holgura y un factor de ruteo
-  **estimado**; con entre 8 y 16 chips más de VCA y DAC, esa holgura hay que
-  volver a ganársela.
-- `censo_voz.py` — los CV por canal pasan de 3 a 4 o 5, y los ~520 parámetros
+  **estimado**; con ocho chips más de VCA y DAC encima, esa holgura hay que
+  volver a ganársela. **Es el que ahora manda.**
+- `censo_voz.py` — los CV por canal pasan de 3 a 4, y los ~520 parámetros
   crecen con el paneo por canal.
-- **§9.1, el camino de silencio** — ya no son 32 VCAs en estado seguro, son 48
-  o 64 según el camino. El criterio «encender el instrumento con cables puestos
-  no suena» no se ablanda por eso.
+- **§9.1, el camino de silencio** — ya no son 32 VCAs en estado seguro, son
+  **48**: los dieciséis de resonancia más treinta y dos de voz. El criterio
+  «encender el instrumento con cables puestos no suena» no se ablanda por eso,
+  y la mutación de encendido tiene que cubrir los nuevos.
 
 ### Lo que este acta NO decide
 
-La topología de paneo (E-6), el reparto de anchos de panel con los conectores
-ya mudados, quién shiftea el crosspoint (E-3), y nada del cajón. Cada uno va en
-su propio pase. La idea de que la fila de abajo fuera también un módulo único
-**muere aquí**, con E-4.
+El reparto de anchos de panel con los conectores ya mudados, quién shiftea el
+crosspoint (E-3), y nada del cajón. Cada uno va en su propio pase. La idea de
+que la fila de abajo fuera también un módulo único **muere aquí**, con E-4.
