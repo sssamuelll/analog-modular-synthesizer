@@ -61,7 +61,9 @@ impl Modelo {
         match self.descs.binary_search_by_key(&d.id, |x| x.id) {
             Ok(_) => Err(ErrorRegistro::Duplicado),
             Err(pos) => {
-                self.descs.insert(pos, d).map_err(|_| ErrorRegistro::Lleno)?;
+                self.descs
+                    .insert(pos, d)
+                    .map_err(|_| ErrorRegistro::Lleno)?;
                 // Si esta segunda insercion fallara, las dos tablas quedarian
                 // descuadradas; como comparten capacidad, no puede pasar.
                 self.vals
@@ -177,7 +179,13 @@ mod tests {
     fn un_set_devuelve_el_cambio_que_alimenta_a_changed() {
         // §4.1: CHANGED va a todos los suscriptores venga de donde venga el SET.
         let mut m = modelo();
-        assert_eq!(m.set(NORMAL.id, 42), Ok(Cambio { id: NORMAL.id, valor: 42 }));
+        assert_eq!(
+            m.set(NORMAL.id, 42),
+            Ok(Cambio {
+                id: NORMAL.id,
+                valor: 42
+            })
+        );
         assert_eq!(m.get(NORMAL.id), Some(42));
     }
 

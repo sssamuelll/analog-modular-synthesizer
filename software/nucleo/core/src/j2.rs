@@ -78,9 +78,15 @@ pub const fn palabra(cmd: u8, canal: Canal, dato: u16) -> u32 {
 /// El primer word que sale acaba en U7 y el ultimo se queda en U5.
 pub const fn trama(u7: u32, u6: u32, u5: u32) -> [u8; BYTES_TRAMA] {
     [
-        (u7 >> 16) as u8, (u7 >> 8) as u8, u7 as u8,
-        (u6 >> 16) as u8, (u6 >> 8) as u8, u6 as u8,
-        (u5 >> 16) as u8, (u5 >> 8) as u8, u5 as u8,
+        (u7 >> 16) as u8,
+        (u7 >> 8) as u8,
+        u7 as u8,
+        (u6 >> 16) as u8,
+        (u6 >> 8) as u8,
+        u6 as u8,
+        (u5 >> 16) as u8,
+        (u5 >> 8) as u8,
+        u5 as u8,
     ]
 }
 
@@ -135,7 +141,11 @@ mod tests {
         let t = trama(0x311111, 0x322222, 0x333333);
         assert_eq!(t.len(), 9);
         assert_eq!(BITS_TRAMA, 72);
-        assert_eq!(word(&t, U7) & 0xFFFF, 0x1111, "el primer word que sale acaba en U7");
+        assert_eq!(
+            word(&t, U7) & 0xFFFF,
+            0x1111,
+            "el primer word que sale acaba en U7"
+        );
         assert_eq!(word(&t, U5) & 0xFFFF, 0x3333, "el ultimo se queda en U5");
     }
 
@@ -150,7 +160,12 @@ mod tests {
 
     #[test]
     fn los_canales_son_one_hot_y_distintos() {
-        let cs = [Canal::A as u32, Canal::B as u32, Canal::C as u32, Canal::D as u32];
+        let cs = [
+            Canal::A as u32,
+            Canal::B as u32,
+            Canal::C as u32,
+            Canal::D as u32,
+        ];
         for c in cs {
             assert_eq!(c.count_ones(), 1, "direccionamiento one-hot del AD5686R");
         }
@@ -164,8 +179,17 @@ mod tests {
         assert_eq!(ts.len(), 4, "cuatro canales son cuatro tramas");
         for (i, t) in ts.iter().enumerate() {
             let u5 = word(t, U5);
-            assert_eq!(u5 & 0xFFFF, tono[i] as u32, "trama {i}: tono de la voz {}", i + 1);
-            assert_eq!((u5 >> 16) & 0xF, Canal::de_indice(i) as u32, "trama {i}: canal");
+            assert_eq!(
+                u5 & 0xFFFF,
+                tono[i] as u32,
+                "trama {i}: tono de la voz {}",
+                i + 1
+            );
+            assert_eq!(
+                (u5 >> 16) & 0xF,
+                Canal::de_indice(i) as u32,
+                "trama {i}: canal"
+            );
         }
     }
 
@@ -179,7 +203,12 @@ mod tests {
 
     #[test]
     fn la_mezcla_cae_en_los_canales_b_c_y_d_de_u6() {
-        let m = Mezcla { sierra: 0x1111, triangular: 0x2222, pulso: 0x3333, seno: 0x4444 };
+        let m = Mezcla {
+            sierra: 0x1111,
+            triangular: 0x2222,
+            pulso: 0x3333,
+            seno: 0x4444,
+        };
         let ts = tramas_vco4(&[0; 4], 0, m);
         assert_eq!(word(&ts[1], U6) & 0xFFFF, 0x1111, "sierra en B");
         assert_eq!(word(&ts[2], U6) & 0xFFFF, 0x2222, "triangular en C");
@@ -189,7 +218,12 @@ mod tests {
 
     #[test]
     fn los_canales_de_reserva_de_u7_salen_en_cero() {
-        let m = Mezcla { sierra: 0xFFFF, triangular: 0xFFFF, pulso: 0xFFFF, seno: 0xFFFF };
+        let m = Mezcla {
+            sierra: 0xFFFF,
+            triangular: 0xFFFF,
+            pulso: 0xFFFF,
+            seno: 0xFFFF,
+        };
         let ts = tramas_vco4(&[0xFFFF; 4], 0xFFFF, m);
         for (i, t) in ts.iter().enumerate().skip(1) {
             assert_eq!(word(t, U7) & 0xFFFF, 0, "U7 canal {i} es de reserva");

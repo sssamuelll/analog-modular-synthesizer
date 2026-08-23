@@ -60,7 +60,10 @@ pub enum Veredicto {
     },
     /// §7.6 regla 2: se cae a la ocupacion —que si es un hecho binario y
     /// fiable— y la app pide confirmar la pareja.
-    Ambiguo { a: usize, b: usize },
+    Ambiguo {
+        a: usize,
+        b: usize,
+    },
     Desconectado,
 }
 
@@ -143,7 +146,11 @@ impl Correlador {
         } else {
             f32::INFINITY
         };
-        let factor_snr = if snr.is_finite() { snr / (snr + 1.0) } else { 1.0 };
+        let factor_snr = if snr.is_finite() {
+            snr / (snr + 1.0)
+        } else {
+            1.0
+        };
         let confianza = sep * factor_snr;
 
         // Paso 7: si no alcanza, se dice. Nunca se inventa.
@@ -159,7 +166,11 @@ impl Correlador {
             return Veredicto::Ambiguo { a: fuente, b: otra };
         }
 
-        Veredicto::Conectado { fuente, ganancia: g1, confianza }
+        Veredicto::Conectado {
+            fuente,
+            ganancia: g1,
+            confianza,
+        }
     }
 
     fn correlacion(&self, k: usize, amplitud: f32) -> f32 {
@@ -241,7 +252,11 @@ mod tests {
     #[test]
     fn recupera_la_conexion_y_ademas_cuanto_atenua() {
         match correr(&[(3, 0.4)], 0.01, 1) {
-            Veredicto::Conectado { fuente, ganancia, confianza } => {
+            Veredicto::Conectado {
+                fuente,
+                ganancia,
+                confianza,
+            } => {
                 assert_eq!(fuente, 3);
                 assert!((ganancia - 0.4).abs() < 0.02, "ganancia {ganancia}");
                 assert!(confianza > CONFIANZA_MINIMA, "confianza {confianza}");
@@ -254,7 +269,9 @@ mod tests {
     fn un_atenuador_fuerte_no_lo_esconde() {
         // El detector de escalon fallaba justo aqui (§7.6).
         match correr(&[(5, 0.05)], 0.01, 2) {
-            Veredicto::Conectado { fuente, ganancia, .. } => {
+            Veredicto::Conectado {
+                fuente, ganancia, ..
+            } => {
                 assert_eq!(fuente, 5);
                 assert!((ganancia - 0.05).abs() < 0.01, "ganancia {ganancia}");
             }
@@ -305,7 +322,9 @@ mod tests {
         // Un camino inversor es un camino: la topologia es la misma y el
         // preset tiene que poder guardar el signo.
         match correr(&[(2, -0.35)], 0.01, 9) {
-            Veredicto::Conectado { fuente, ganancia, .. } => {
+            Veredicto::Conectado {
+                fuente, ganancia, ..
+            } => {
                 assert_eq!(fuente, 2);
                 assert!(ganancia < 0.0, "se perdio el signo: {ganancia}");
             }

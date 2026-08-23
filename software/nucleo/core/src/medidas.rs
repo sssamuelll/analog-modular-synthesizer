@@ -38,8 +38,8 @@ pub const ID_SONORIDAD: ParamId = ParamId::nuevo(0, 0, IDX_SONORIDAD);
 /// Bordes superiores de las bandas de Bark, en Hz. Solo se usan para escribir
 /// nombres que un LLM pueda entender sin haber visto el instrumento (§2.1).
 const BORDES_BARK: [u16; N_BANDAS] = [
-    100, 200, 300, 400, 510, 630, 770, 920, 1080, 1270, 1480, 1720, 2000, 2320,
-    2700, 3150, 3700, 4400, 5300, 6400, 7700, 9500, 12000, 15500,
+    100, 200, 300, 400, 510, 630, 770, 920, 1080, 1270, 1480, 1720, 2000, 2320, 2700, 3150, 3700,
+    4400, 5300, 6400, 7700, 9500, 12000, 15500,
 ];
 
 const fn banda(n: usize) -> Descriptor {
@@ -282,7 +282,10 @@ mod tests {
         // Aqui SI se recorta, y por eso es distinto de un SET: no es la
         // intencion de nadie, es un sensor.
         let mut m = instrumento();
-        let t = TramaMedida { pico_hz: 999_999, ..Default::default() };
+        let t = TramaMedida {
+            pico_hz: 999_999,
+            ..Default::default()
+        };
         ingerir(&mut m, &t);
         let d = MEDIDAS.iter().find(|d| d.id == ID_PICO_HZ).unwrap();
         assert_eq!(m.get(ID_PICO_HZ), Some(d.max));

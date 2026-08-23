@@ -59,7 +59,10 @@ pub struct Hipotesis {
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Atribucion {
-    Probable { h: Hipotesis, confianza: f32 },
+    Probable {
+        h: Hipotesis,
+        confianza: f32,
+    },
     /// Las dos mejores, empatadas dentro del margen.
     Ambigua(Hipotesis, Hipotesis),
     Desconocida,
@@ -128,14 +131,20 @@ pub fn atribuir(pico_hz: f32, voces: &[EstadoVozAudio]) -> Atribucion {
         return Atribucion::Desconocida;
     };
     let Some(s) = segunda else {
-        return Atribucion::Probable { h: m, confianza: 1.0 };
+        return Atribucion::Probable {
+            h: m,
+            confianza: 1.0,
+        };
     };
 
     let sep = (m.puntaje - s.puntaje) / m.puntaje;
     if sep < MARGEN {
         Atribucion::Ambigua(m, s)
     } else {
-        Atribucion::Probable { h: m, confianza: sep }
+        Atribucion::Probable {
+            h: m,
+            confianza: sep,
+        }
     }
 }
 
@@ -160,13 +169,25 @@ mod tests {
     use super::*;
 
     fn voz(f: f32) -> EstadoVozAudio {
-        EstadoVozAudio { sonando: true, f_hz: f, f_corte_hz: 20_000.0, resonancia: 0.0 }
+        EstadoVozAudio {
+            sonando: true,
+            f_hz: f,
+            f_corte_hz: 20_000.0,
+            resonancia: 0.0,
+        }
     }
 
     #[test]
     fn el_fundamental_de_una_voz_sola_es_una_respuesta_clara() {
         match atribuir(440.0, &[voz(440.0), voz(113.0)]) {
-            Atribucion::Probable { h: Hipotesis { causa: Causa::Armonico { voz, n }, .. }, confianza } => {
+            Atribucion::Probable {
+                h:
+                    Hipotesis {
+                        causa: Causa::Armonico { voz, n },
+                        ..
+                    },
+                confianza,
+            } => {
                 assert_eq!((voz, n), (0, 1));
                 assert!(confianza > 0.5, "confianza {confianza}");
             }
@@ -179,7 +200,10 @@ mod tests {
         // §9, fila "Atribucion". 440 es el 4.o de 110 y el 2.o de 220: nadie
         // puede saberlo, y el motor tampoco puede fingir que si.
         let a = atribuir(440.0, &[voz(110.0), voz(220.0)]);
-        assert!(matches!(a, Atribucion::Ambigua(_, _)), "dio una certeza fabricada: {a:?}");
+        assert!(
+            matches!(a, Atribucion::Ambigua(_, _)),
+            "dio una certeza fabricada: {a:?}"
+        );
         let sonda = sonda_sugerida(&a).expect("si es ambigua, hay algo que sondear");
         assert_eq!([sonda[0].min(sonda[1]), sonda[0].max(sonda[1])], [0, 1]);
     }
@@ -187,23 +211,43 @@ mod tests {
     #[test]
     fn una_resonancia_marcada_gana_al_armonico_lejano() {
         let voces = [
-            EstadoVozAudio { sonando: true, f_hz: 110.0, f_corte_hz: 1_500.0, resonancia: 0.95 },
+            EstadoVozAudio {
+                sonando: true,
+                f_hz: 110.0,
+                f_corte_hz: 1_500.0,
+                resonancia: 0.95,
+            },
             voz(97.0),
         ];
         assert!(matches!(
             atribuir(1_500.0, &voces),
-            Atribucion::Probable { h: Hipotesis { causa: Causa::Resonancia { voz: 0 }, .. }, .. }
+            Atribucion::Probable {
+                h: Hipotesis {
+                    causa: Causa::Resonancia { voz: 0 },
+                    ..
+                },
+                ..
+            }
         ));
     }
 
     #[test]
     fn un_filtro_sin_resonancia_no_se_lleva_el_merito() {
         let voces = [EstadoVozAudio {
-            sonando: true, f_hz: 110.0, f_corte_hz: 1_500.0, resonancia: 0.0,
+            sonando: true,
+            f_hz: 110.0,
+            f_corte_hz: 1_500.0,
+            resonancia: 0.0,
         }];
         assert!(!matches!(
             atribuir(1_500.0, &voces),
-            Atribucion::Probable { h: Hipotesis { causa: Causa::Resonancia { .. }, .. }, .. }
+            Atribucion::Probable {
+                h: Hipotesis {
+                    causa: Causa::Resonancia { .. },
+                    ..
+                },
+                ..
+            }
         ));
     }
 
@@ -223,7 +267,10 @@ mod tests {
     fn un_pico_que_no_encaja_con_nada_se_declara_desconocido() {
         // 7331 Hz contra una voz de 110: el armonico mas cercano es el 16.o
         // (1760) y se queda cortisimo. No hay nada que reportar.
-        assert!(matches!(atribuir(7_331.0, &[voz(110.0)]), Atribucion::Desconocida));
+        assert!(matches!(
+            atribuir(7_331.0, &[voz(110.0)]),
+            Atribucion::Desconocida
+        ));
     }
 
     #[test]

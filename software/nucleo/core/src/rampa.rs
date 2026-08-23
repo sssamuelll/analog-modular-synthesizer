@@ -304,13 +304,19 @@ mod tests {
         let id = ParamId(0x0100);
 
         // Tick al cuarto del recorrido: escribe.
-        assert_eq!(rs.tick(1000 + 96, |_| Unidad::Ninguna).as_slice(), &[(id, 250)]);
+        assert_eq!(
+            rs.tick(1000 + 96, |_| Unidad::Ninguna).as_slice(),
+            &[(id, 250)]
+        );
         // Se anula: deja de escribir.
         assert!(rs.anular(id));
         assert!(rs.tick(1000 + 192, |_| Unidad::Ninguna).is_empty());
         // Se reactiva a tres cuartos: cae en 750, no en 500.
         assert!(rs.reactivar(id));
-        assert_eq!(rs.tick(1000 + 288, |_| Unidad::Ninguna).as_slice(), &[(id, 750)]);
+        assert_eq!(
+            rs.tick(1000 + 288, |_| Unidad::Ninguna).as_slice(),
+            &[(id, 750)]
+        );
     }
 
     #[test]
@@ -366,21 +372,27 @@ mod tests {
     #[test]
     fn reactivar_todas_dice_cuales_devolvio() {
         let mut rs = Rampas::nueva();
-        rs.empujar(Rampa::nueva(ParamId(1), 0, 100, 0, 384)).unwrap();
-        rs.empujar(Rampa::nueva(ParamId(2), 0, 100, 0, 384)).unwrap();
+        rs.empujar(Rampa::nueva(ParamId(1), 0, 100, 0, 384))
+            .unwrap();
+        rs.empujar(Rampa::nueva(ParamId(2), 0, 100, 0, 384))
+            .unwrap();
         rs.anular(ParamId(1));
         rs.anular(ParamId(2));
         let ids = rs.reactivar_todas();
         assert_eq!(ids.len(), 2);
         assert_eq!(rs.anuladas(), 0);
-        assert!(rs.reactivar_todas().is_empty(), "no queda nada que devolver");
+        assert!(
+            rs.reactivar_todas().is_empty(),
+            "no queda nada que devolver"
+        );
     }
 
     #[test]
     fn cuando_no_caben_mas_se_dice() {
         let mut rs = Rampas::nueva();
         for i in 0..MAX_RAMPAS {
-            rs.empujar(Rampa::nueva(ParamId(i as u32), 0, 100, 0, 384)).unwrap();
+            rs.empujar(Rampa::nueva(ParamId(i as u32), 0, 100, 0, 384))
+                .unwrap();
         }
         assert_eq!(
             rs.empujar(Rampa::nueva(ParamId(999), 0, 100, 0, 384)),

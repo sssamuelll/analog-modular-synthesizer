@@ -158,13 +158,22 @@ mod tests {
     fn un_byte_con_el_bit_alto_dentro_del_sobre_no_se_traga() {
         // Si esto pasara, un byte de estado de MIDI se colaria como dato.
         let mut buf = [0u8; 64];
-        assert_eq!(desempaquetar(&[0x00, 0x41, 0xC0], &mut buf), Err(ErrorCodec::Invalido));
-        assert_eq!(desempaquetar(&[0x80, 0x41], &mut buf), Err(ErrorCodec::Invalido));
+        assert_eq!(
+            desempaquetar(&[0x00, 0x41, 0xC0], &mut buf),
+            Err(ErrorCodec::Invalido)
+        );
+        assert_eq!(
+            desempaquetar(&[0x80, 0x41], &mut buf),
+            Err(ErrorCodec::Invalido)
+        );
     }
 
     #[test]
     fn el_buffer_de_salida_corto_se_queja() {
         let mut corto = [0u8; 4];
-        assert_eq!(empaquetar(&patron(32), &mut corto), Err(ErrorCodec::SinSitio));
+        assert_eq!(
+            empaquetar(&patron(32), &mut corto),
+            Err(ErrorCodec::SinSitio)
+        );
     }
 }

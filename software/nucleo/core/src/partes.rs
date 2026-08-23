@@ -107,8 +107,17 @@ impl Repartidor {
             });
 
         let robada = self.voces[elegida].nota;
-        self.voces[elegida] = EstadoVoz { nota: Some(nota), canal, sello: self.reloj };
-        Some(Asignacion { parte: i_parte, voz: elegida as u8, nota, robada })
+        self.voces[elegida] = EstadoVoz {
+            nota: Some(nota),
+            canal,
+            sello: self.reloj,
+        };
+        Some(Asignacion {
+            parte: i_parte,
+            voz: elegida as u8,
+            nota,
+            robada,
+        })
     }
 
     pub fn nota_off(&mut self, canal: u8, nota: u8) -> Option<u8> {
@@ -128,8 +137,22 @@ mod tests {
     fn dos_partes() -> [Parte; 2] {
         [
             // Rangos SOLAPADOS a proposito: §9 pide justo eso.
-            Parte { canal: 0, nota_min: 21, nota_max: 72, voces: 2, primera_voz: 0, preset: 0 },
-            Parte { canal: 1, nota_min: 48, nota_max: 108, voces: 2, primera_voz: 2, preset: 1 },
+            Parte {
+                canal: 0,
+                nota_min: 21,
+                nota_max: 72,
+                voces: 2,
+                primera_voz: 0,
+                preset: 0,
+            },
+            Parte {
+                canal: 1,
+                nota_min: 48,
+                nota_max: 108,
+                voces: 2,
+                primera_voz: 2,
+                preset: 1,
+            },
         ]
     }
 
@@ -149,7 +172,9 @@ mod tests {
 
     #[test]
     fn una_nota_fuera_de_todo_rango_no_asigna_nada() {
-        assert!(Repartidor::nueva(4).nota_on(&dos_partes(), 0, 100).is_none());
+        assert!(Repartidor::nueva(4)
+            .nota_on(&dos_partes(), 0, 100)
+            .is_none());
         assert!(Repartidor::nueva(4).nota_on(&dos_partes(), 9, 60).is_none());
     }
 
@@ -171,7 +196,10 @@ mod tests {
         r.nota_on(&partes, 1, 60).unwrap();
         r.nota_on(&partes, 1, 62).unwrap();
         let tercera = r.nota_on(&partes, 1, 64).unwrap();
-        assert!((2..4).contains(&tercera.voz), "la parte 1 no puede tocar las voces de la 0");
+        assert!(
+            (2..4).contains(&tercera.voz),
+            "la parte 1 no puede tocar las voces de la 0"
+        );
         // Y las de la parte 0 siguen libres.
         assert!(r.voz(0).is_none() && r.voz(1).is_none());
     }
@@ -201,15 +229,23 @@ mod tests {
         // El anti-`4` de verdad: si alguien lo escribiera, esto revienta.
         for n in 1..=MAX_VOCES as u8 {
             let partes = [Parte {
-                canal: 0, nota_min: 0, nota_max: 127,
-                voces: n, primera_voz: 0, preset: 0,
+                canal: 0,
+                nota_min: 0,
+                nota_max: 127,
+                voces: n,
+                primera_voz: 0,
+                preset: 0,
             }];
             let mut r = Repartidor::nueva(n);
             assert_eq!(r.n_voces(), n);
             let mut vistas = Vec::<u8, MAX_VOCES>::new();
             for nota in 0..n {
                 let a = r.nota_on(&partes, 0, 60 + nota).unwrap();
-                assert!(!vistas.contains(&a.voz), "repitio la voz {} con n={n}", a.voz);
+                assert!(
+                    !vistas.contains(&a.voz),
+                    "repitio la voz {} con n={n}",
+                    a.voz
+                );
                 assert!(a.robada.is_none(), "robo teniendo libres, n={n}");
                 vistas.push(a.voz).unwrap();
                 assert!(a.voz < n);
@@ -223,8 +259,12 @@ mod tests {
     fn primera_voz_es_lo_que_hace_posible_el_poly_chain() {
         // §3.6: dos instrumentos encadenados, cada uno con su tramo del pool.
         let partes = [Parte {
-            canal: 0, nota_min: 0, nota_max: 127,
-            voces: 2, primera_voz: 6, preset: 0,
+            canal: 0,
+            nota_min: 0,
+            nota_max: 127,
+            voces: 2,
+            primera_voz: 6,
+            preset: 0,
         }];
         let mut r = Repartidor::nueva(8);
         for nota in 0..2 {
@@ -236,8 +276,12 @@ mod tests {
     fn una_parte_que_pide_mas_voces_de_las_que_hay_se_recorta_sin_reventar() {
         // El caso real: preset guardado con 8 voces, instrumento con 4.
         let partes = [Parte {
-            canal: 0, nota_min: 0, nota_max: 127,
-            voces: 8, primera_voz: 0, preset: 0,
+            canal: 0,
+            nota_min: 0,
+            nota_max: 127,
+            voces: 8,
+            primera_voz: 0,
+            preset: 0,
         }];
         let mut r = Repartidor::nueva(4);
         for nota in 0..4 {
@@ -249,8 +293,12 @@ mod tests {
     #[test]
     fn una_parte_cuyo_tramo_cae_fuera_del_pool_no_asigna() {
         let partes = [Parte {
-            canal: 0, nota_min: 0, nota_max: 127,
-            voces: 2, primera_voz: 9, preset: 0,
+            canal: 0,
+            nota_min: 0,
+            nota_max: 127,
+            voces: 2,
+            primera_voz: 9,
+            preset: 0,
         }];
         assert!(Repartidor::nueva(4).nota_on(&partes, 0, 60).is_none());
     }

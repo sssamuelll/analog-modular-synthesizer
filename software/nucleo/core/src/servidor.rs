@@ -137,9 +137,12 @@ impl Instrumento {
                 }
                 self.escribir(&mut r, &m, id, v, ahora_ms);
             }
-            Mensaje::Rampa { id, destino, duracion, curva } => {
-                self.arrancar_rampa(&mut r, &m, id, destino, duracion, curva)
-            }
+            Mensaje::Rampa {
+                id,
+                destino,
+                duracion,
+                curva,
+            } => self.arrancar_rampa(&mut r, &m, id, destino, duracion, curva),
             Mensaje::Reactivar { id } => self.reactivar(&mut r, id),
             Mensaje::Subscribe { activo } => self.suscrito = activo,
             Mensaje::Point { .. } => {
@@ -283,14 +286,7 @@ impl Instrumento {
         }
     }
 
-    fn escribir(
-        &mut self,
-        r: &mut Respuestas,
-        m: &Mensaje,
-        id: ParamId,
-        v: Valor,
-        ahora_ms: u64,
-    ) {
+    fn escribir(&mut self, r: &mut Respuestas, m: &Mensaje, id: ParamId, v: Valor, ahora_ms: u64) {
         match self.modelo.set(id, v) {
             Ok(c) => self.anunciar(r, c.id, c.valor),
             Err(ErrorSet::ExigeConfirmacion) => {
@@ -421,7 +417,9 @@ mod tests {
         let r = instrumento().atender(Mensaje::Hello { version: 1 }, 0);
         assert_eq!(
             mensajes(&r).as_slice(),
-            &[Mensaje::Hola { version: VERSION_PROTOCOLO }]
+            &[Mensaje::Hola {
+                version: VERSION_PROTOCOLO
+            }]
         );
     }
 
@@ -468,7 +466,10 @@ mod tests {
             let r = mensajes(&i.atender(Mensaje::Set(id, valor), 0));
             assert_eq!(
                 r.as_slice(),
-                &[Mensaje::Error { etiqueta: 0x04, codigo }],
+                &[Mensaje::Error {
+                    etiqueta: 0x04,
+                    codigo
+                }],
                 "{id:?} tenia que quejarse con {codigo:?}"
             );
         }
@@ -480,7 +481,10 @@ mod tests {
         let r = mensajes(&i.atender(Mensaje::Get(ParamId(0xBEEF)), 0));
         assert_eq!(
             r.as_slice(),
-            &[Mensaje::Error { etiqueta: 0x03, codigo: CodigoError::NoExiste }]
+            &[Mensaje::Error {
+                etiqueta: 0x03,
+                codigo: CodigoError::NoExiste
+            }]
         );
     }
 
@@ -490,17 +494,26 @@ mod tests {
         let mut i = instrumento();
         let r = mensajes(&i.atender(Mensaje::Set(PELIGROSO.id, 1), 0));
         let token = match r.as_slice() {
-            [Mensaje::Error { codigo: CodigoError::ExigeConfirmacion, .. }, Mensaje::Pending { token, id }] =>
-            {
+            [Mensaje::Error {
+                codigo: CodigoError::ExigeConfirmacion,
+                ..
+            }, Mensaje::Pending { token, id }] => {
                 assert_eq!(*id, PELIGROSO.id);
                 *token
             }
             otro => panic!("tenia que retener y avisar: {otro:?}"),
         };
-        assert_eq!(i.modelo().get(PELIGROSO.id), Some(0), "no puede haberse aplicado");
+        assert_eq!(
+            i.modelo().get(PELIGROSO.id),
+            Some(0),
+            "no puede haberse aplicado"
+        );
 
         let r = mensajes(&i.confirmacion_fisica(1_000));
-        assert!(r.contains(&Mensaje::Resolved { token, confirmado: true }));
+        assert!(r.contains(&Mensaje::Resolved {
+            token,
+            confirmado: true
+        }));
         assert_eq!(i.modelo().get(PELIGROSO.id), Some(1));
     }
 
@@ -511,7 +524,10 @@ mod tests {
         let r = mensajes(&i.caducar(TTL_MS));
         assert!(matches!(
             r.as_slice(),
-            [Mensaje::Resolved { confirmado: false, .. }]
+            [Mensaje::Resolved {
+                confirmado: false,
+                ..
+            }]
         ));
         assert_eq!(i.modelo().get(PELIGROSO.id), Some(0));
     }
@@ -529,13 +545,19 @@ mod tests {
             Mensaje::PatchScan,
             Mensaje::Telemetry,
             Mensaje::Memo { segundos: 2 },
-            Mensaje::Point { id: NORMAL.id, color: crate::protocolo::Rgb { r: 1, g: 2, b: 3 } },
+            Mensaje::Point {
+                id: NORMAL.id,
+                color: crate::protocolo::Rgb { r: 1, g: 2, b: 3 },
+            },
         ] {
             let r = mensajes(&i.atender(m, 0));
             assert!(
                 matches!(
                     r.as_slice(),
-                    [Mensaje::Error { codigo: CodigoError::NoDisponible, .. }]
+                    [Mensaje::Error {
+                        codigo: CodigoError::NoDisponible,
+                        ..
+                    }]
                 ),
                 "{m:?} se quedo callado"
             );
@@ -557,7 +579,10 @@ mod tests {
         let r = mensajes(&i.atender(Mensaje::Changed(NORMAL.id, 7), 0));
         assert_eq!(
             r.as_slice(),
-            &[Mensaje::Error { etiqueta: 0x81, codigo: CodigoError::Desconocido }]
+            &[Mensaje::Error {
+                etiqueta: 0x81,
+                codigo: CodigoError::Desconocido
+            }]
         );
         assert_eq!(i.modelo().get(NORMAL.id), Some(0));
     }
@@ -659,7 +684,12 @@ mod tests {
     }
 
     fn rampa(id: ParamId, destino: Valor) -> Mensaje {
-        Mensaje::Rampa { id, destino, duracion: 384, curva: 0 }
+        Mensaje::Rampa {
+            id,
+            destino,
+            duracion: 384,
+            curva: 0,
+        }
     }
 
     #[test]
@@ -670,7 +700,11 @@ mod tests {
         i.tick(300);
         assert_eq!(i.modelo().get(NORMAL.id), Some(0));
         i.tick(PXC);
-        assert_eq!(i.modelo().get(NORMAL.id), Some(0), "arranca EN el borde, en el origen");
+        assert_eq!(
+            i.modelo().get(NORMAL.id),
+            Some(0),
+            "arranca EN el borde, en el origen"
+        );
         i.tick(PXC + 192);
         assert!(i.modelo().get(NORMAL.id).unwrap() > 0, "y de ahi se mueve");
     }
@@ -682,11 +716,18 @@ mod tests {
         i.atender(rampa(NORMAL.id, 100), 0);
         i.tick(PXC + 96);
         let r = mensajes(&i.atender(Mensaje::Set(NORMAL.id, 7), 0));
-        assert!(r.contains(&Mensaje::Anulado { id: NORMAL.id, anulado: true }));
+        assert!(r.contains(&Mensaje::Anulado {
+            id: NORMAL.id,
+            anulado: true
+        }));
         assert_eq!(i.modelo().get(NORMAL.id), Some(7));
         // Y el tick ya no la pisa.
         i.tick(PXC + 192);
-        assert_eq!(i.modelo().get(NORMAL.id), Some(7), "la rampa dejo de escribir");
+        assert_eq!(
+            i.modelo().get(NORMAL.id),
+            Some(7),
+            "la rampa dejo de escribir"
+        );
     }
 
     #[test]
@@ -696,10 +737,22 @@ mod tests {
         i.atender(rampa(NORMAL.id, 100), 0);
         i.tick(PXC + 96);
         i.atender(Mensaje::Set(NORMAL.id, 7), 0);
-        let r = mensajes(&i.atender(Mensaje::Reactivar { id: Some(NORMAL.id) }, 0));
-        assert!(r.contains(&Mensaje::Anulado { id: NORMAL.id, anulado: false }));
+        let r = mensajes(&i.atender(
+            Mensaje::Reactivar {
+                id: Some(NORMAL.id),
+            },
+            0,
+        ));
+        assert!(r.contains(&Mensaje::Anulado {
+            id: NORMAL.id,
+            anulado: false
+        }));
         i.tick(PXC + 288);
-        assert_eq!(i.modelo().get(NORMAL.id), Some(75), "tres cuartos, no la mitad");
+        assert_eq!(
+            i.modelo().get(NORMAL.id),
+            Some(75),
+            "tres cuartos, no la mitad"
+        );
     }
 
     #[test]
@@ -728,7 +781,10 @@ mod tests {
         let r = mensajes(&i.atender(rampa(NORMAL.id, 99_999), 0));
         assert_eq!(
             r.as_slice(),
-            &[Mensaje::Error { etiqueta: 0x0E, codigo: CodigoError::FueraDeRango }]
+            &[Mensaje::Error {
+                etiqueta: 0x0E,
+                codigo: CodigoError::FueraDeRango
+            }]
         );
     }
 
@@ -773,7 +829,10 @@ mod tests {
     fn el_tick_publica_donde_esta_el_reloj() {
         let mut i = con_reloj();
         i.tick(PXC * 2 + 50);
-        assert_eq!(i.modelo().get(tiempo_params::ID_POSICION), Some((PXC * 2 + 50) as i32));
+        assert_eq!(
+            i.modelo().get(tiempo_params::ID_POSICION),
+            Some((PXC * 2 + 50) as i32)
+        );
         assert_eq!(i.modelo().get(tiempo_params::ID_COMPAS_ACTUAL), Some(2));
         assert_eq!(i.modelo().get(tiempo_params::ID_TIENE_FASE), Some(1));
     }
