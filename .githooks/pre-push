@@ -1,0 +1,105 @@
+#!/bin/sh
+# Las puertas de este repo, corriendo solas antes de cada push.
+#
+# GitHub Actions esta DESHABILITADO a proposito -- repo privado, y el workflow
+# figura como `disabled_manually`. Asi que esto no es un adelanto de otra
+# puerta: es LA puerta. Si esto no corre, no corre nada.
+#
+# Y de paso cubre mas que el workflow: los dos guiones que necesitan el Python
+# de KiCad salian HUECO en CI (instalar KiCad en el runner costaba mas de lo
+# que cubria) y aqui corren de verdad, porque la maquina lo tiene.
+#
+# Instalar:   git config core.hooksPath .githooks
+# Saltar:     git push --no-verify     (y decirlo en el PR)
+#
+# Tarda unos dos minutos y medio. Casi todo es check_pcb.py de la fuente v3.
+set -u
+
+RAIZ=$(git rev-parse --show-toplevel)
+LOG=$(mktemp -d 2>/dev/null || echo "${TMPDIR:-/tmp}/prepush.$$")
+mkdir -p "$LOG"
+rojos=0
+sin_correr=0
+
+echo ""
+echo "puertas locales -- Actions esta apagado, esto ES la puerta (~2m30s)"
+echo ""
+
+# corre <nombre> <comando-como-funcion>
+corre() {
+    nombre=$1
+    printf '  %-22s ' "$nombre"
+    if "$2" > "$LOG/$nombre.log" 2>&1; then
+        echo "OK"
+    else
+        echo "ROJO"
+        sed 's/^/      /' "$LOG/$nombre.log" | tail -20
+        rojos=$((rojos + 1))
+    fi
+}
+
+# falta <nombre> <razon>
+falta() {
+    printf '  %-22s NO-CORRIDO   %s\n' "$1" "$2"
+    sin_correr=$((sin_correr + 1))
+}
+
+g_hardware() { cd "$RAIZ" && python hardware/tools/gates.py; }
+g_ruff()     { cd "$RAIZ/software/midi-cv" && ruff check .; }
+g_pytest()   { cd "$RAIZ/software/midi-cv" && python -m pytest -q; }
+g_cargo()    { cd "$RAIZ/software/nucleo" && cargo test --workspace --quiet; }
+g_clippy()   { cd "$RAIZ/software/nucleo" && cargo clippy --workspace --all-targets -- -D warnings; }
+g_fmt()      { cd "$RAIZ/software/nucleo" && cargo fmt --all --check; }
+
+corre hardware g_hardware
+
+if command -v ruff > /dev/null 2>&1; then
+    corre ruff g_ruff
+else
+    falta ruff "pip install ruff"
+fi
+corre pytest g_pytest
+
+# software/nucleo no lo cubria NADIE hasta el issue #173: ni CI ni esta puerta.
+#
+# Y ojo con clippy y rustfmt: `command -v cargo` los da por buenos y son
+# COMPONENTES aparte. La primera corrida de este hook bloqueo un push porque
+# rustfmt no estaba instalado -- que es un NO-CORRIDO, no un rojo. Se pregunta
+# por cada subcomando, no por cargo.
+if command -v cargo > /dev/null 2>&1; then
+    corre cargo-test g_cargo
+    if cargo clippy --version > /dev/null 2>&1; then
+        corre cargo-clippy g_clippy
+    else
+        falta cargo-clippy "rustup component add clippy"
+    fi
+    if cargo fmt --version > /dev/null 2>&1; then
+        corre cargo-fmt g_fmt
+    else
+        falta cargo-fmt "rustup component add rustfmt"
+    fi
+else
+    falta cargo-test "instala Rust: https://rustup.rs"
+    falta cargo-clippy "instala Rust: https://rustup.rs"
+    falta cargo-fmt "instala Rust: https://rustup.rs"
+fi
+
+echo ""
+if [ "$rojos" -gt 0 ]; then
+    echo "PUSH BLOQUEADO: $rojos en rojo. Los logs completos en $LOG"
+    echo "Si sabes lo que haces: git push --no-verify (y dilo en el PR)"
+    echo ""
+    exit 1
+fi
+
+# ponytail: un NO-CORRIDO avisa pero no bloquea. Bloquear a quien empuja un
+# cambio de documentacion desde una maquina sin Rust ensena a usar --no-verify,
+# que es peor que el hueco. Subirlo a bloqueante el dia que haya mas de una
+# maquina tocando firmware.
+if [ "$sin_correr" -gt 0 ]; then
+    echo "PUERTAS EN VERDE, con $sin_correr sin correr (arriba dice cual y como)."
+else
+    echo "PUERTAS EN VERDE."
+fi
+echo ""
+exit 0

@@ -49,3 +49,25 @@ jobs:
         with:
           use-quiet-mode: 'yes'
           config-file: '.github/markdown-link-check.json'
+
+  # Este job no ha corrido nunca: Actions esta deshabilitado en el repositorio
+  # (privado) y el workflow figura como `disabled_manually`. Se escribe igual
+  # para que la receta este completa el dia que se encienda -- y porque
+  # .githooks/pre-push la espeja paso a paso, que es lo que de verdad corre.
+  nucleo:
+    name: Nucleo digital (Rust)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: software/nucleo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Tests
+        run: cargo test --workspace
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Formato
+        run: cargo fmt --all --check
