@@ -569,3 +569,124 @@ v1 y re-auditado por V2.
 | V2-IV | «Generador» sin test; pitch-env legal e ilegal a la vez | §3.2: test (a)(b)(c); pitch prohibido v1 con huella de enmienda |
 | V2-V | El mixer rompía la taxonomía que lo ejemplificaba | §0.3/§0.4: conjunto de clases + la suma 16:1 como normalizado |
 | V2-VI | «Vista que escribe»; N+1 modelos negados | §0.2: editores concurrentes + modelo autoritativo y vistas optimistas |
+
+---
+
+## 13. Acta del 2026-08-23: seis decisiones tomadas después de la junta
+
+§0 dice que la doctrina se enmienda **por acta y en voz alta, nunca por
+accidente**. Estas seis se tomaron en sesión con Samuel el mismo día, después
+de cerrar la v2, y cambian cosas que el cuerpo de este spec da por sentadas. Se
+registran aquí en vez de reescribirlo, para que el rastro de las tres juntas
+quede intacto.
+
+### E-1. El cerebro y las voces NO se funden
+
+Se evaluó fusionar la placa del cerebro con la de voces y se descarta, con tres
+razones que ya estaban en el repo y ninguna es de opinión:
+
+- **Pines.** El cerebro deja 2 GPIO libres de 48 tras la pantalla de 2,8"
+  (spec del cerebro §12.16). El maestro de la Voz ya gasta ocho en cronómetros
+  de PIO. Fusionar no ahorra un chip: deja tres chips en una placa más grande.
+- **Reloj.** `autotune_budget.py` fija `F_PIO = 150 MHz` y Pico-PIO-USB impone
+  el suyo (#150, abierto). Fusionados, el host USB le dicta la base de tiempo
+  al afinado de los dieciséis osciladores.
+- **Masa.** El spec del cerebro corta **ahí** el lazo con la masa de la
+  computadora. Esta placa es donde **1 mV son 3,6 cents**. La puerta sucia no
+  vive en el cuarto limpio.
+
+**Nada de este spec cambia por E-1.** Se registra para que no se vuelva a
+proponer sin estos tres números delante.
+
+### E-2. El frente se unifica; los conectores del mundo se van atrás
+
+Una cara continua por fila, tarjetas separadas detrás, y USB / MIDI DIN /
+clock / pedal a la trasera del cajón. Lo habilita el mismo argumento que este
+spec ya usa para el panel de mandos (§8): **las perillas son sensores, mandan
+números, y los números viajan por cable plano sin ensuciarse.** Detalle,
+consecuencias y lo que hay que tocar del cajón: **#167**.
+
+### E-3. La fila de arriba es UN módulo
+
+La bahía deja de ser módulo aparte — **deroga §5.1** en «con su bajada de J2 y
+su panel en la fila A». Se funde en el de Voz, que pasa a declarar también la
+clase **relator**. Legal sin inventar nada: el cambio 15 hizo que un módulo
+declare un *conjunto* de clases, y esta es su primera consecuencia real.
+
+Gana una sola bajada de J2 en vez de dos, una sola identidad y una ranura
+libre. Queda por resolver: **quién shiftea los 256 bits del AD75019** ahora que
+la bahía no tiene bajada propia. Barato en pines, pero los micros de este
+módulo son justo los apretados.
+
+### E-4. Los demás módulos SÍ son modulares, y la fila de abajo es rack de verdad
+
+La regla de los dos regímenes (§0.1) se mantiene y ahora tiene frontera física
+declarada: **arriba el instrumento, abajo módulos Eurorack intercambiables** —
+un mixer de utilidad, un delay analógico, lo que Samuel quiera llevarse a otro
+instrumento. La bahía (§5) es el puente, y ya está en el jack correcto
+(Thonkiconn, ±12 V).
+
+Dos cosas que esto exige y hoy no existen:
+
+- **Bus board en la fila de abajo**, con el peine de 16 pines estándar. No está
+  en ningún plano.
+- **Reserva de invitados por riel.** `consumo_total.py` (§9.4) deja de sumar
+  «el instrumento» y pasa a sumar el instrumento **más una reserva declarada**.
+  Con los 650 mA/riel del módulo 1 y los 350–420 estimados del instrumento, la
+  reserva sale del orden de 230–300 mA — que es una cifra que hay que escribir,
+  no una holgura que se descubre enchufando el cuarto módulo.
+
+### E-5. El módulo 4 desaparece como hardware separado
+
+El módulo de Voz se basta solo: es un sintetizador completo, no un banco de
+osciladores. Se mudan a esta placa la suma de los dieciséis, el volumen
+general, la salida principal **y los oídos** — el códec de 24 bits que hoy vive
+en el módulo 4 y que es como el cerebro se escucha a sí mismo.
+
+**Deroga §0.4 punto 2.** La convergencia 16:1 sigue siendo normalizado
+declarado, pero ya no «suma al bus del mixer»: **termina en la salida de este
+módulo**. El mixer que viva en la fila de abajo es un invitado cualquiera y no
+tiene relación con esta suma.
+
+El motivo, dicho por Samuel: *un mixer solo tiene sentido si es independiente
+de su fuente y de sus salidas.* El de hoy estaba soldado a las voces, así que
+no era un módulo — era una parte.
+
+### E-6. La salida es ESTÉREO, con sitio por voz
+
+Decidido: el instrumento reparte sus voces en el campo estéreo. Es la mitad de
+por qué un poli suena grande, y decidirlo después del layout cuesta el layout.
+
+**El cómo NO se decide aquí**, porque son dos caminos y los dos mueven
+presupuestos (cuentas derivadas de §2 — ¼ SSI2164 por VCA, 3 CV por canal — no
+medidas):
+
+| | VCAs de voz | CV por canal | Tráfico del SPI privado |
+|---|---|---|---|
+| **A**: dos VCAs por canal (L/R), cada rama con envolvente × paneo | 32 | 4 | **×2** — las dos ramas se escriben a 10 kHz |
+| **B**: un VCA de envolvente + etapa de paneo detrás | 48 | 5 | **igual que hoy** — el paneo solo cambia al evento de nota |
+
+A es menos cobre y más caudal; B es más cobre y deja el caudal intacto. Y el
+caudal es justo lo que `spi_privado_budget.py` puede invalidar (§9.4). Se
+resuelve en el pase de diseño, con los dos presupuestos corridos, no aquí.
+
+**Lo que E-6 reabre, sin excepción:**
+
+- `spi_privado_budget.py` — invalidante, y ahora con dos topologías que medir.
+- `consumo_total.py` — más VCAs y más DACs por riel, y encima la reserva de
+  invitados de E-4.
+- `voz_total_budget.py` — hoy VERDE con 27 % de holgura y un factor de ruteo
+  **estimado**; con entre 8 y 16 chips más de VCA y DAC, esa holgura hay que
+  volver a ganársela.
+- `censo_voz.py` — los CV por canal pasan de 3 a 4 o 5, y los ~520 parámetros
+  crecen con el paneo por canal.
+- **§9.1, el camino de silencio** — ya no son 32 VCAs en estado seguro, son 48
+  o 64 según el camino. El criterio «encender el instrumento con cables puestos
+  no suena» no se ablanda por eso.
+
+### Lo que este acta NO decide
+
+La topología de paneo (E-6), el reparto de anchos de panel con los conectores
+ya mudados, quién shiftea el crosspoint (E-3), y nada del cajón. Cada uno va en
+su propio pase. La idea de que la fila de abajo fuera también un módulo único
+**muere aquí**, con E-4.
