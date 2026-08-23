@@ -737,6 +737,20 @@ El precio es **un chip de ~$0,30 y una huella SOT-23-5**. Se paga.
 —dos direcciones en el mismo canal del mux I²C, el descubrimiento sin tocar—
 vuelve a ser exactamente lo que decía antes de la optimización.
 
+**Y por qué no 128 KB, para no volver a preguntarlo.** El `24AA1025` existe,
+pero **no es un chip de 128 KB: son dos de 64 con un interruptor.** La mitad se
+elige con un bit `B0` que viaja en el byte de control, y su pata `A2` deja de ser
+configurable —tiene que ir atada a VCC—, así que ocupa dos direcciones del bus y
+el firmware tiene que saber que hay una costura a mitad del array y cambiar de
+mitad al cruzarla. El `24AA512`, en cambio, es pin a pin lo mismo que ya hay: se
+cambia la línea del BOM y no se entera nadie.
+
+Y el reparto no lo justifica: con 64 KB caben **53 parámetros más por canal** y
+hoy se usan **nueve**. Eso ya es seis veces el diseño actual. El día que haga
+falta guardar de verdad —formas de onda, bancos grandes— la respuesta no es una
+EEPROM mayor sino **flash SPI**, que da megabytes por el mismo dinero. Los
+128 KB son el medio incómodo: de más para configuración, de menos para audio.
+
 > **El camino que haría esto innecesario, declarado y no tomado:** el descriptor
 > es el **69 %** de la memoria, y describe dieciséis canales idénticos entrada
 > por entrada. Un descriptor que dijera «este bloque, ×16» lo colapsaría a un
