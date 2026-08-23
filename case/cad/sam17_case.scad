@@ -449,7 +449,23 @@ module piel_trasera_2d() {
     // atornillaba a los dos largueros de SU piso. Muerta la bandeja de
     // entrepiso esa frontera dejo de existir. Va en t_piel (8), no en
     // t_acrilico.
-    y0   = ce[1].y - 15;                    // canto de abajo
+    // Canto de abajo EN EL PLANO DEL SUELO. Estuvo en ce[1].y - 15 (o sea
+    // y=3), que no era una cota del case sino la distancia al canto de la fila
+    // de M3 leida al reves: 15 mm por debajo del larguero de base trasera. Ese
+    // 15 no sabia donde estaba el suelo, y dejaba un rebaje corrido de
+    // 528 x 3 x 8 a lo largo de todo el canto trasero -- una junta de sombra,
+    // que es el lenguaje que esta pieza enterro al empotrarse. Ahora la cara
+    // trasera es continua desde el piso hasta la tapa de remate.
+    //
+    // El 0 no es un numero libre: es el plano inferior del case, el mismo
+    // datum del que cuelga la bandeja de base (y=0 a t_base) y donde muere el
+    // canto de los costados. Lo vigila guarda_piso(), assert 4.
+    //
+    // La fila de M3 de abajo se aleja del canto al bajarlo: 15 -> 18 mm, o sea
+    // MAS material alrededor del tornillo. Y las ondas y la rejilla no se
+    // mueven: van derivadas de f_base/f_tras, que son diferencias contra
+    // ce[].y y por tanto no dependen de y0.
+    y0   = 0;                               // canto de abajo = plano del suelo
     // Hasta la cara de ABAJO DE LA TAPA DE REMATE. Antes se frenaba en el
     // larguero de remate, que vivia a ras del plano trasero y le tapaba la
     // banda; desde que ese larguero se retiro t_piel, la trasera le pasa por
@@ -992,12 +1008,15 @@ module bandeja_base() {
 // EMPOTRADA (2026-08-21): cara exterior EN el plano trasero, x = fondo(), y
 // crece hacia dentro. Estuvo volada sobre separadores, con la cara exterior 10
 // mm por detras del canto. Apoya en la cara de los DOS largueros traseros, que
-// por eso viven los dos en x_tr = fondo - r - t_piel. y0 deriva de la fila de
-// agujero inferior cayendo en el rail base-trasera (ce[1].y).
+// por eso viven los dos en x_tr = fondo - r - t_piel.
+//
+// Y desde el 2026-08-22 baja hasta el PLANO DEL SUELO (y=0) en vez de quedarse
+// en y=3: empotrada por los cuatro costados y no por tres. Ver el comentario
+// largo en piel_trasera_2d().
 module piel_trasera() {
     P = pts_perfil();
     ce = centros_esqueleto();
-    translate([P[6].x, ce[1].y - 15, t_cheek + hol_piel])
+    translate([P[6].x, 0, t_cheek + hol_piel])
         rotate([0, -90, 0])
             linear_extrude(t_piel) piel_trasera_2d();
 }
