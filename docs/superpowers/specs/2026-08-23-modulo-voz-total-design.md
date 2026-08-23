@@ -684,21 +684,33 @@ también aguanta: 625 ciclos por valor de envolvente a 150 MHz.
 > meter estéreo. No rompe nada —el caso corregido también cierra, 6,9 MHz— pero
 > la cifra del spec está mal y hay que corregirla.
 
-**Lo que E-6 reabre, sin excepción:**
+**Lo que E-6 reabrió, y cómo quedó.** Los cuatro presupuestos estaban
+declarados en §9.4 y **ninguno existía como guion**. Se escriben, se corren, y
+el resultado es este:
 
-- ~~`spi_privado_budget.py`~~ — **escrito, corrido y VERDE**. La sección de
-  generadores (§3) sobrevive: el peor caso pide 10,1 MHz de 20.
-- `consumo_total.py` — más VCAs y más DACs por riel, y encima la reserva de
-  invitados de E-4.
-- `voz_total_budget.py` — hoy VERDE con 27 % de holgura y un factor de ruteo
-  **estimado**; con ocho chips más de VCA y DAC encima, esa holgura hay que
-  volver a ganársela. **Es el que ahora manda.**
-- `censo_voz.py` — los CV por canal pasan de 3 a 4, y los ~520 parámetros
-  crecen con el paneo por canal.
-- **§9.1, el camino de silencio** — ya no son 32 VCAs en estado seguro, son
-  **48**: los dieciséis de resonancia más treinta y dos de voz. El criterio
-  «encender el instrumento con cables puestos no suena» no se ablanda por eso,
-  y la mutación de encendido tiene que cubrir los nuevos.
+| Guion | Veredicto | Cifra |
+|---|---|---|
+| `spi_privado_budget.py` | **VERDE** | 10,1 MHz de SCLK contra un techo de 20. §3 sobrevive |
+| `voz_total_budget.py` | **VERDE, más estrecho** | fila A a 421,5 de 488,3 mm (15,8 %); el factor de ruteo al que rompe baja de ×4,6 a **×3,79** |
+| `consumo_total.py` | **VERDE** | 340 mA en el peor riel de 500 útiles; quedan **160 mA/riel** para los invitados de E-4 |
+| `censo_voz.py` | **ROJO en dos de tres techos** | ver abajo |
+
+**El censo es el que trae malas noticias, y son las que la spec ya esperaba:**
+
+- **`MAX_PARAMS = 512` (`modelo.rs:9`) contra 536 parámetros.** Se pasa por 24.
+  Y el techo es del **instrumento entero**, no de este módulo: un solo módulo se
+  come el 105 %. Es el cambio 2, y esto es la cifra que lo hace prerrequisito.
+- **El descriptor son 25 512 B contra los 238 B que el `u8` de
+  `descubrimiento.rs` puede anunciar** — 107×. Es el cambio 18.
+- **La memoria sí cabe, al 91 %** de los 32 KB elegidos en #164. La petición de
+  64 KB de §7 queda justificada por el margen, no por la necesidad: hoy entra,
+  pero el siguiente parámetro por canal cuesta 672 B y solo quedan 2 968.
+
+Y una consecuencia que no es de presupuesto: **§9.1, el camino de silencio** —
+ya no son 32 VCAs en estado seguro, son **48**: los dieciséis de resonancia más
+treinta y dos de voz. El criterio «encender el instrumento con cables puestos
+no suena» no se ablanda por eso, y la mutación de encendido tiene que cubrir
+los nuevos.
 
 ### Lo que este acta NO decide
 
