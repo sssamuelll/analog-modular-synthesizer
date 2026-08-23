@@ -42,9 +42,7 @@ hardware, código del firmware MIDI/CV o ideas nuevas para módulos adicionales.
    ```
 
    Corre todos los `check_*.py`, todos los `*_budget.py`, las simulaciones y la
-   firma de conectividad. **Hazlo a mano y pon el resultado en el PR**: el job
-   está en el workflow, pero GitHub Actions está deshabilitado en este
-   repositorio y hoy no corre nada solo. Si cambia la
+   firma de conectividad. Si cambia la
    conectividad de un módulo a propósito, regenera su golden con
    `python hardware/tools/netdiff.py --write` y **commitéalo junto al cambio de
    diseño**, para que la revisión vea las dos cosas a la vez. Detalle en
@@ -52,6 +50,44 @@ hardware, código del firmware MIDI/CV o ideas nuevas para módulos adicionales.
 
 5. Abre el Pull Request indicando: módulo afectado, qué cambia y cómo se
    probó (mediciones, simulaciones, capturas, etc.).
+
+## Las puertas corren solas, y son las únicas que hay
+
+**GitHub Actions está deshabilitado en este repositorio** — es privado, y el
+workflow figura como `disabled_manually`. El `ci.yml` sigue ahí porque es la
+receta, pero **no ha corrido desde el PR #3**. Así que las puertas locales no
+son un adelanto de CI: **son la única puerta que tiene el proyecto.**
+
+Para que no dependan de acordarse, hay un hook. Se instala una vez:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+A partir de ahí, cada `git push` corre lo mismo que correría el workflow, en el
+mismo orden:
+
+| | Qué corre |
+|---|---|
+| `hardware` | `python hardware/tools/gates.py` |
+| `firmware` | `ruff check .` y `pytest` en `software/midi-cv` |
+| `nucleo` | `cargo test`, `cargo clippy -D warnings` y `cargo fmt --check` en `software/nucleo` |
+
+Tarda unos dos minutos y medio; casi todo es `check_pcb.py` de la fuente v3.
+
+Y cubre **más** que el workflow: los dos guiones que necesitan el Python de
+KiCad salían HUECO en CI —instalar KiCad en el runner costaba más de lo que
+cubría— y aquí corren de verdad, porque la máquina lo tiene.
+
+Si algo sale en rojo, el push se bloquea y el hook imprime el log. Saltárselo se
+puede —`git push --no-verify`— pero **entonces dilo en el PR**.
+
+> Lo que un hook no puede cazar es lo que su propia lista no incluye. Dos veces
+> en un mismo día pasó lo mismo: `software/nucleo` llevaba 190 tests que ningún
+> job ejecutaba, y dos presupuestos nuevos salieron con nombres que el glob de
+> `gates.py` no recogía. **Si añades un guion ejecutable, que se llame
+> `check_*.py` o `*_budget.py`** — es lo que el descubridor busca, y un guion
+> que el gate no ve no es un gate.
 
 ## Convenciones por área
 

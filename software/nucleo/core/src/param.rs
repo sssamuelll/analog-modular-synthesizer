@@ -43,13 +43,7 @@ impl ParamId {
     }
 
     /// La forma completa. `nivel2` y `nivel3` a `0` significan «no hay».
-    pub const fn nuevo_ruta(
-        nivel1: u8,
-        nivel2: u8,
-        nivel3: u8,
-        instancia: u8,
-        indice: u8,
-    ) -> Self {
+    pub const fn nuevo_ruta(nivel1: u8, nivel2: u8, nivel3: u8, instancia: u8, indice: u8) -> Self {
         ParamId(
             (nib(nivel1) << 20)
                 | (nib(nivel2) << 16)

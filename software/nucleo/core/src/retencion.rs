@@ -121,9 +121,15 @@ mod tests {
         let (mut m, mut r) = escena();
         assert_eq!(m.set(PELIGROSO.id, 1), Err(ErrorSet::ExigeConfirmacion));
         let token = r.retener(PELIGROSO.id, 1, 0).unwrap();
-        assert_eq!(m.get(PELIGROSO.id), Some(0), "no puede haberse aplicado todavia");
+        assert_eq!(
+            m.get(PELIGROSO.id),
+            Some(0),
+            "no puede haberse aplicado todavia"
+        );
 
-        let pendiente = r.confirmar(1_000).expect("el pulsador tenia algo que confirmar");
+        let pendiente = r
+            .confirmar(1_000)
+            .expect("el pulsador tenia algo que confirmar");
         assert_eq!(pendiente.token, token);
         m.aplicar_confirmado(pendiente.id, pendiente.valor).unwrap();
         assert_eq!(m.get(PELIGROSO.id), Some(1));
@@ -176,8 +182,15 @@ mod tests {
         r.retener(PELIGROSO.id, 0, TTL_MS).unwrap();
 
         assert_eq!(r.confirmar(TTL_MS + 1).unwrap().valor, 0, "agarro la viva");
-        assert!(r.confirmar(TTL_MS + 1).is_none(), "no puede confirmar una vencida");
-        assert_eq!(r.caducar(TTL_MS + 1).as_slice(), &[vieja], "y la vencida se anuncia");
+        assert!(
+            r.confirmar(TTL_MS + 1).is_none(),
+            "no puede confirmar una vencida"
+        );
+        assert_eq!(
+            r.caducar(TTL_MS + 1).as_slice(),
+            &[vieja],
+            "y la vencida se anuncia"
+        );
         assert!(r.pendientes().is_empty());
     }
 }

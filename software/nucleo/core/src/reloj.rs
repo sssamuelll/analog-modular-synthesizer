@@ -282,7 +282,8 @@ impl Reloj {
             return;
         }
         let borde = if self.tiene_fase {
-            self.posicion.is_multiple_of(self.pulsos_por_compas().max(1) as u64)
+            self.posicion
+                .is_multiple_of(self.pulsos_por_compas().max(1) as u64)
         } else {
             true
         };
@@ -550,7 +551,11 @@ mod tests {
         // el instrumento. Manda cuando es UTILIZABLE, no cuando aparece.
         let mut r = Reloj::nuevo();
         r.pulso_externo(Fuente::ClockIn, 1_000_000, 24);
-        assert_eq!(r.fuente_activa(), Fuente::Interno, "un pulso no es un tempo");
+        assert_eq!(
+            r.fuente_activa(),
+            Fuente::Interno,
+            "un pulso no es un tempo"
+        );
         estabilizar(&mut r, Fuente::ClockIn, 1_020_833);
         assert_eq!(r.fuente_activa(), Fuente::ClockIn);
     }
@@ -568,7 +573,11 @@ mod tests {
         // quien hace avanzar el tiempo es la fuente ACTIVA, asi que hay que
         // seguir alimentando ClockIn hasta llegar a uno.
         let t = estabilizar(&mut r, Fuente::Midi, t);
-        assert_eq!(r.fuente_activa(), Fuente::ClockIn, "todavia no toca el relevo");
+        assert_eq!(
+            r.fuente_activa(),
+            Fuente::ClockIn,
+            "todavia no toca el relevo"
+        );
         let mut t2 = t;
         while !r.posicion().is_multiple_of(PXC) || r.fuente_activa() == Fuente::ClockIn {
             r.pulso_externo(Fuente::ClockIn, t2, 24);
@@ -600,7 +609,10 @@ mod tests {
         r.avanzar_a_pulso(200); // a mitad de compas
         r.reset();
         assert!(r.tiene_fase());
-        assert!(r.posicion().is_multiple_of(PXC), "el reset deja el 1 donde toca");
+        assert!(
+            r.posicion().is_multiple_of(PXC),
+            "el reset deja el 1 donde toca"
+        );
     }
 
     #[test]
@@ -650,7 +662,10 @@ mod tests {
         r.al_pasar_el_tiempo(ultimo_pulso + 500_000);
         let avanzo = r.posicion() - antes;
         assert!(r.rodando_libre());
-        assert!((avanzo as i64 - 96).abs() <= 2, "avanzo {avanzo}, esperaba 96");
+        assert!(
+            (avanzo as i64 - 96).abs() <= 2,
+            "avanzo {avanzo}, esperaba 96"
+        );
     }
 
     #[test]

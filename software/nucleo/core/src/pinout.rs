@@ -17,10 +17,18 @@ pub struct Pin {
 }
 
 const fn d(gpio: u8, para: &'static str) -> Pin {
-    Pin { gpio, para, analogico: false }
+    Pin {
+        gpio,
+        para,
+        analogico: false,
+    }
 }
 const fn a(gpio: u8, para: &'static str) -> Pin {
-    Pin { gpio, para, analogico: true }
+    Pin {
+        gpio,
+        para,
+        analogico: true,
+    }
 }
 
 /// El RP2350B: 48 GPIO (§5.3). El A tiene 30 y por eso no daba.
@@ -104,7 +112,11 @@ mod tests {
         // perifericos peleandose un pin. Aqui cuesta un test.
         for (i, a) in PINOUT.iter().enumerate() {
             for b in PINOUT.iter().skip(i + 1) {
-                assert_ne!(a.gpio, b.gpio, "{} y {} comparten GPIO{}", a.para, b.para, a.gpio);
+                assert_ne!(
+                    a.gpio, b.gpio,
+                    "{} y {} comparten GPIO{}",
+                    a.para, b.para, a.gpio
+                );
             }
         }
     }
@@ -113,7 +125,12 @@ mod tests {
     fn todos_caben_en_el_rp2350b() {
         // §5.3: el B da 48 GPIO. El A da 30 y por eso no sirve.
         for p in PINOUT.iter() {
-            assert!(p.gpio < GPIO_MAX, "{} pide GPIO{} y el B llega a 47", p.para, p.gpio);
+            assert!(
+                p.gpio < GPIO_MAX,
+                "{} pide GPIO{} y el B llega a 47",
+                p.para,
+                p.gpio
+            );
         }
     }
 
@@ -122,7 +139,11 @@ mod tests {
         // El B trae 8 (GPIO40..47). Pedir una que no existe no compila en
         // `fw`, pero falla aqui antes y con un mensaje que se entiende.
         for p in PINOUT.iter().filter(|p| p.analogico) {
-            assert!(ANALOGICOS.contains(&p.gpio), "{} no es una entrada analogica", p.para);
+            assert!(
+                ANALOGICOS.contains(&p.gpio),
+                "{} no es una entrada analogica",
+                p.para
+            );
         }
     }
 

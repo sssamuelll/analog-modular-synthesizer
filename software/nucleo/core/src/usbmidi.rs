@@ -94,7 +94,10 @@ impl Default for Desempaquetador {
 
 impl Desempaquetador {
     pub const fn nuevo() -> Self {
-        Desempaquetador { buf: Vec::new(), desbordado: false }
+        Desempaquetador {
+            buf: Vec::new(),
+            desbordado: false,
+        }
     }
 
     /// Mete un paquete. Devuelve algo solo cuando se completa un mensaje.
@@ -239,7 +242,10 @@ mod tests {
         let mut salida = None;
         for (i, p) in paquetes[..np].iter().enumerate() {
             if i == 1 {
-                assert!(matches!(d.empujar(&[0x09, 0x90, 64, 90]), Some(Trozo::Midi(_))));
+                assert!(matches!(
+                    d.empujar(&[0x09, 0x90, 64, 90]),
+                    Some(Trozo::Midi(_))
+                ));
             }
             if let Some(Trozo::Sysex(b)) = d.empujar(p) {
                 salida = Some(Vec::<u8, MAX_SYSEX>::from_slice(b).unwrap());
@@ -263,7 +269,10 @@ mod tests {
         for _ in 0..(MAX_SYSEX / 3 + 4) {
             d.empujar(&[0x04, 1, 2, 3]);
         }
-        assert!(d.empujar(&[0x05, 0xF7, 0, 0]).is_none(), "no puede entregar basura");
+        assert!(
+            d.empujar(&[0x05, 0xF7, 0, 0]).is_none(),
+            "no puede entregar basura"
+        );
 
         // Y despues de eso el siguiente mensaje bueno tiene que salir bien.
         let msg = sysex(4);
@@ -281,7 +290,10 @@ mod tests {
     #[test]
     fn si_no_caben_los_paquetes_se_dice_en_vez_de_truncar() {
         let mut p = [[0u8; 4]; 2];
-        assert_eq!(empaquetar_sysex(&sysex(40), &mut p), Err(ErrorCodec::SinSitio));
+        assert_eq!(
+            empaquetar_sysex(&sysex(40), &mut p),
+            Err(ErrorCodec::SinSitio)
+        );
     }
 
     #[test]

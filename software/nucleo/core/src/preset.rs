@@ -101,8 +101,14 @@ impl<'a> PresetLeido<'a> {
 
     pub fn topologia(&self) -> impl Iterator<Item = Conexion> + 'a {
         self.topologia.chunks_exact(6).map(|c| Conexion {
-            origen: JackId { ranura: c[0], jack: c[1] },
-            destino: JackId { ranura: c[2], jack: c[3] },
+            origen: JackId {
+                ranura: c[0],
+                jack: c[1],
+            },
+            destino: JackId {
+                ranura: c[2],
+                jack: c[3],
+            },
             atenuacion_milesimas: u16::from_le_bytes([c[4], c[5]]),
         })
     }
@@ -111,9 +117,7 @@ impl<'a> PresetLeido<'a> {
     /// nombra el modulo no sirve para nada.
     pub fn comprobar(&self, presentes: &[(TipoPlaca, u8)]) -> Result<(), ErrorCarga> {
         for (tipo, revision) in self.requiere() {
-            let hay = presentes
-                .iter()
-                .any(|(t, r)| *t == tipo && *r >= revision);
+            let hay = presentes.iter().any(|(t, r)| *t == tipo && *r >= revision);
             if !hay {
                 return Err(ErrorCarga::FaltaModulo { tipo, revision });
             }
@@ -142,7 +146,12 @@ pub fn escribir_preset(p: &Preset, buf: &mut [u8]) -> Result<usize, ErrorCodec> 
     }
     w.u8(u8::try_from(p.topologia.len()).map_err(|_| ErrorCodec::Invalido)?)?;
     for c in p.topologia {
-        w.crudo(&[c.origen.ranura, c.origen.jack, c.destino.ranura, c.destino.jack])?;
+        w.crudo(&[
+            c.origen.ranura,
+            c.origen.jack,
+            c.destino.ranura,
+            c.destino.jack,
+        ])?;
         w.u16(c.atenuacion_milesimas)?;
     }
     Ok(w.n)
@@ -166,7 +175,14 @@ pub fn leer_preset(buf: &[u8]) -> Result<PresetLeido<'_>, ErrorCodec> {
     let n_top = r.u8()? as usize;
     let topologia = r.crudo(n_top * 6)?;
 
-    Ok(PresetLeido { nombre, autor, etiquetas, requiere, valores, topologia })
+    Ok(PresetLeido {
+        nombre,
+        autor,
+        etiquetas,
+        requiere,
+        valores,
+        topologia,
+    })
 }
 
 #[cfg(test)]
@@ -230,7 +246,10 @@ mod tests {
         assert_eq!(p.comprobar(&[(VCO, 1), (VCF, 1)]), Ok(()));
         assert_eq!(
             p.comprobar(&[(VCO, 1)]),
-            Err(ErrorCarga::FaltaModulo { tipo: VCF, revision: 1 })
+            Err(ErrorCarga::FaltaModulo {
+                tipo: VCF,
+                revision: 1
+            })
         );
     }
 
@@ -238,15 +257,24 @@ mod tests {
     fn una_revision_vieja_tambien_se_avisa_pero_una_nueva_sirve() {
         let (buf, n) = guardado();
         let p = leer_preset(&buf[..n]).unwrap();
-        assert!(p.comprobar(&[(VCO, 0), (VCF, 1)]).is_err(), "rev 0 < la pedida");
-        assert!(p.comprobar(&[(VCO, 7), (VCF, 1)]).is_ok(), "una rev mas nueva vale");
+        assert!(
+            p.comprobar(&[(VCO, 0), (VCF, 1)]).is_err(),
+            "rev 0 < la pedida"
+        );
+        assert!(
+            p.comprobar(&[(VCO, 7), (VCF, 1)]).is_ok(),
+            "una rev mas nueva vale"
+        );
     }
 
     #[test]
     fn cualquier_truncamiento_se_rechaza_en_vez_de_leer_basura() {
         let (buf, n) = guardado();
         for corte in 0..n {
-            assert!(leer_preset(&buf[..corte]).is_err(), "trunco en {corte} y no se quejo");
+            assert!(
+                leer_preset(&buf[..corte]).is_err(),
+                "trunco en {corte} y no se quejo"
+            );
         }
     }
 

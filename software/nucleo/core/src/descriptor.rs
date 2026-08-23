@@ -346,7 +346,10 @@ mod tests {
         let mut buf = [0u8; 256];
         let n = escribir(d, &mut buf).unwrap();
         let (leido, consumido) = leer(&buf[..n]).unwrap();
-        assert_eq!(consumido, n, "el parser tiene que consumir lo que se escribio");
+        assert_eq!(
+            consumido, n,
+            "el parser tiene que consumir lo que se escribio"
+        );
         assert_eq!(leido.id, d.id);
         assert_eq!(leido.nombre, d.nombre);
         assert_eq!(leido.tipo, d.tipo);
@@ -371,12 +374,18 @@ mod tests {
     #[test]
     fn el_buffer_corto_no_desborda_ni_entra_en_panico() {
         let mut buf = [0u8; 4];
-        assert!(matches!(escribir(&MODO, &mut buf), Err(ErrorCodec::SinSitio)));
+        assert!(matches!(
+            escribir(&MODO, &mut buf),
+            Err(ErrorCodec::SinSitio)
+        ));
         let mut ok = [0u8; 256];
         let n = escribir(&MODO, &mut ok).unwrap();
         for corte in 0..n {
             // Cualquier truncamiento tiene que dar error, jamas un parse a medias.
-            assert!(leer(&ok[..corte]).is_err(), "trunco en {corte} y no se quejo");
+            assert!(
+                leer(&ok[..corte]).is_err(),
+                "trunco en {corte} y no se quejo"
+            );
         }
     }
 

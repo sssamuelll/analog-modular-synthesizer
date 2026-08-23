@@ -122,12 +122,18 @@ mod tests {
             assert_eq!(Rejilla::Dieciseisavo.en_pulsos(pxc), PPQN_INTERNO / 4);
         }
         assert_eq!(Rejilla::Compas1.en_pulsos(CUATRO_CUARTOS), CUATRO_CUARTOS);
-        assert_eq!(Rejilla::Compases4.en_pulsos(CUATRO_CUARTOS), 4 * CUATRO_CUARTOS);
+        assert_eq!(
+            Rejilla::Compases4.en_pulsos(CUATRO_CUARTOS),
+            4 * CUATRO_CUARTOS
+        );
     }
 
     #[test]
     fn sin_rejilla_no_hay_borde_que_esperar() {
-        assert_eq!(siguiente_borde(100, Rejilla::Ninguna, CUATRO_CUARTOS, 0), None);
+        assert_eq!(
+            siguiente_borde(100, Rejilla::Ninguna, CUATRO_CUARTOS, 0),
+            None
+        );
     }
 
     #[test]
@@ -153,10 +159,19 @@ mod tests {
         // cosa que llegue a menos de eso de un borde esta, para todo lo que se
         // puede oir, EN ese borde — aunque llegue tarde.
         let v = 5;
-        assert_eq!(siguiente_borde(386, Rejilla::Compas1, CUATRO_CUARTOS, v), Some(386));
-        assert_eq!(siguiente_borde(389, Rejilla::Compas1, CUATRO_CUARTOS, v), Some(389));
+        assert_eq!(
+            siguiente_borde(386, Rejilla::Compas1, CUATRO_CUARTOS, v),
+            Some(386)
+        );
+        assert_eq!(
+            siguiente_borde(389, Rejilla::Compas1, CUATRO_CUARTOS, v),
+            Some(389)
+        );
         // Un pulso mas alla ya es tarde: le toca el siguiente.
-        assert_eq!(siguiente_borde(390, Rejilla::Compas1, CUATRO_CUARTOS, v), Some(768));
+        assert_eq!(
+            siguiente_borde(390, Rejilla::Compas1, CUATRO_CUARTOS, v),
+            Some(768)
+        );
     }
 
     #[test]
@@ -165,7 +180,10 @@ mod tests {
         // Se recorta a la mitad de la rejilla: nunca puede tragarse un borde.
         let g = Rejilla::Dieciseisavo.en_pulsos(CUATRO_CUARTOS);
         assert_eq!(g, 24);
-        assert_eq!(siguiente_borde(37, Rejilla::Dieciseisavo, CUATRO_CUARTOS, 20), Some(48));
+        assert_eq!(
+            siguiente_borde(37, Rejilla::Dieciseisavo, CUATRO_CUARTOS, 20),
+            Some(48)
+        );
     }
 
     #[test]

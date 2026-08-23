@@ -157,7 +157,12 @@ mod tests {
     }
 
     fn placa(voces: u8) -> Placa {
-        Placa { tipo: TipoPlaca(0x9999), nombre: "x", voces, params: &[] }
+        Placa {
+            tipo: TipoPlaca(0x9999),
+            nombre: "x",
+            voces,
+            params: &[],
+        }
     }
 
     #[test]

@@ -52,11 +52,15 @@ impl CodigoError {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Mensaje {
     // --- del cliente al instrumento ---
-    Hello { version: u16 },
+    Hello {
+        version: u16,
+    },
     Describe,
     Get(ParamId),
     Set(ParamId, Valor),
-    Subscribe { activo: bool },
+    Subscribe {
+        activo: bool,
+    },
     PresetList,
     PresetLoad(u8),
     PresetSave(u8),
@@ -65,24 +69,44 @@ pub enum Mensaje {
     Telemetry,
     /// §2.1: enciende el LED de un parametro o de un jack. Señalar y el
     /// patcheo guiado son el mismo mecanismo.
-    Point { id: ParamId, color: Rgb },
+    Point {
+        id: ParamId,
+        color: Rgb,
+    },
     /// §7.5: unos segundos de audio para que el agente los analice.
-    Memo { segundos: u8 },
+    Memo {
+        segundos: u8,
+    },
 
     // --- del instrumento al cliente ---
     /// Va a TODOS los suscriptores, sin importar quien movio el parametro.
     Changed(ParamId, Valor),
     Modules,
-    TuneProgress { voz: u8, cents_x100: i16, hecho: bool },
+    TuneProgress {
+        voz: u8,
+        cents_x100: i16,
+        hecho: bool,
+    },
     Jacks,
-    Pending { token: u16, id: ParamId },
-    Resolved { token: u16, confirmado: bool },
+    Pending {
+        token: u16,
+        id: ParamId,
+    },
+    Resolved {
+        token: u16,
+        confirmado: bool,
+    },
     /// La respuesta a `Hello`: la version que el instrumento acepta hablar.
     /// Sin esto la negociacion es de un solo sentido y no negocia nada.
-    Hola { version: u16 },
+    Hola {
+        version: u16,
+    },
     /// Que etiqueta fallo y por que. Un protocolo sin mensaje de error deja
     /// al cliente esperando en silencio, que es el peor modo de fallo posible.
-    Error { etiqueta: u8, codigo: CodigoError },
+    Error {
+        etiqueta: u8,
+        codigo: CodigoError,
+    },
 
     // --- El tiempo musical ---
     /// Ir a un destino en tiempo musical. Aterriza en el borde de la rejilla,
@@ -91,11 +115,21 @@ pub enum Mensaje {
     /// La curva es `0` lineal, positivo arranca lento, negativo cede al final.
     /// Que la interpolacion sea logaritmica o lineal **no se dice aqui**: sale
     /// de la unidad del descriptor (§5.2).
-    Rampa { id: ParamId, destino: Valor, duracion: u32, curva: i8 },
+    Rampa {
+        id: ParamId,
+        destino: Valor,
+        duracion: u32,
+        curva: i8,
+    },
     /// Tocaste algo que tenia automatizacion corriendo, y quedo anulado (§6).
-    Anulado { id: ParamId, anulado: bool },
+    Anulado {
+        id: ParamId,
+        anulado: bool,
+    },
     /// Devolverlo. Con id, uno; **sin id, todos**.
-    Reactivar { id: Option<ParamId> },
+    Reactivar {
+        id: Option<ParamId>,
+    },
 }
 
 pub type ErrorProto = ErrorCodec;
@@ -181,7 +215,11 @@ pub fn codificar(m: &Mensaje, buf: &mut [u8]) -> Result<usize, ErrorProto> {
             w.u32(id.0)?;
             w.crudo(&[color.r, color.g, color.b])?;
         }
-        TuneProgress { voz, cents_x100, hecho } => {
+        TuneProgress {
+            voz,
+            cents_x100,
+            hecho,
+        } => {
             w.u8(*voz)?;
             w.crudo(&cents_x100.to_le_bytes())?;
             w.u8(*hecho as u8)?;
@@ -199,7 +237,12 @@ pub fn codificar(m: &Mensaje, buf: &mut [u8]) -> Result<usize, ErrorProto> {
             w.u8(*etiqueta)?;
             w.u8(*codigo as u8)?;
         }
-        Rampa { id, destino, duracion, curva } => {
+        Rampa {
+            id,
+            destino,
+            duracion,
+            curva,
+        } => {
             w.u32(id.0)?;
             w.i32(*destino)?;
             w.crudo(&duracion.to_le_bytes())?;
@@ -230,7 +273,9 @@ pub fn decodificar(buf: &[u8]) -> Result<Mensaje, ErrorProto> {
         T_DESCRIBE => Describe,
         T_GET => Get(ParamId(r.u32()?)),
         T_SET => Set(ParamId(r.u32()?), r.i32()?),
-        T_SUBSCRIBE => Subscribe { activo: r.u8()? != 0 },
+        T_SUBSCRIBE => Subscribe {
+            activo: r.u8()? != 0,
+        },
         T_PRESET_LIST => PresetList,
         T_PRESET_LOAD => PresetLoad(r.u8()?),
         T_PRESET_SAVE => PresetSave(r.u8()?),
@@ -240,7 +285,14 @@ pub fn decodificar(buf: &[u8]) -> Result<Mensaje, ErrorProto> {
         T_POINT => {
             let id = ParamId(r.u32()?);
             let c = r.crudo(3)?;
-            Point { id, color: Rgb { r: c[0], g: c[1], b: c[2] } }
+            Point {
+                id,
+                color: Rgb {
+                    r: c[0],
+                    g: c[1],
+                    b: c[2],
+                },
+            }
         }
         T_MEMO => Memo { segundos: r.u8()? },
         T_CHANGED => Changed(ParamId(r.u32()?), r.i32()?),
@@ -248,11 +300,21 @@ pub fn decodificar(buf: &[u8]) -> Result<Mensaje, ErrorProto> {
         T_TUNE_PROGRESS => {
             let voz = r.u8()?;
             let cents_x100 = i16::from_le_bytes(r.crudo(2)?.try_into().unwrap());
-            TuneProgress { voz, cents_x100, hecho: r.u8()? != 0 }
+            TuneProgress {
+                voz,
+                cents_x100,
+                hecho: r.u8()? != 0,
+            }
         }
         T_JACKS => Jacks,
-        T_PENDING => Pending { token: r.u16()?, id: ParamId(r.u32()?) },
-        T_RESOLVED => Resolved { token: r.u16()?, confirmado: r.u8()? != 0 },
+        T_PENDING => Pending {
+            token: r.u16()?,
+            id: ParamId(r.u32()?),
+        },
+        T_RESOLVED => Resolved {
+            token: r.u16()?,
+            confirmado: r.u8()? != 0,
+        },
         T_HOLA => Hola { version: r.u16()? },
         T_ERROR => Error {
             etiqueta: r.u8()?,
@@ -262,11 +324,23 @@ pub fn decodificar(buf: &[u8]) -> Result<Mensaje, ErrorProto> {
             let id = ParamId(r.u32()?);
             let destino = r.i32()?;
             let duracion = u32::from_le_bytes(r.crudo(4)?.try_into().unwrap());
-            Rampa { id, destino, duracion, curva: r.u8()? as i8 }
+            Rampa {
+                id,
+                destino,
+                duracion,
+                curva: r.u8()? as i8,
+            }
         }
-        T_ANULADO => Anulado { id: ParamId(r.u32()?), anulado: r.u8()? != 0 },
+        T_ANULADO => Anulado {
+            id: ParamId(r.u32()?),
+            anulado: r.u8()? != 0,
+        },
         T_REACTIVAR => Reactivar {
-            id: if r.u8()? != 0 { Some(ParamId(r.u32()?)) } else { None },
+            id: if r.u8()? != 0 {
+                Some(ParamId(r.u32()?))
+            } else {
+                None
+            },
         },
         _ => return Err(ErrorCodec::Desconocido),
     })
@@ -293,17 +367,39 @@ mod tests {
             Mensaje::TuneStart,
             Mensaje::PatchScan,
             Mensaje::Telemetry,
-            Mensaje::Point { id, color: Rgb { r: 255, g: 0, b: 128 } },
+            Mensaje::Point {
+                id,
+                color: Rgb {
+                    r: 255,
+                    g: 0,
+                    b: 128,
+                },
+            },
             Mensaje::Memo { segundos: 8 },
             Mensaje::Changed(id, i32::MIN),
             Mensaje::Modules,
-            Mensaje::TuneProgress { voz: 3, cents_x100: -1750, hecho: false },
+            Mensaje::TuneProgress {
+                voz: 3,
+                cents_x100: -1750,
+                hecho: false,
+            },
             Mensaje::Jacks,
             Mensaje::Pending { token: 4242, id },
-            Mensaje::Resolved { token: 4242, confirmado: true },
+            Mensaje::Resolved {
+                token: 4242,
+                confirmado: true,
+            },
             Mensaje::Hola { version: 1 },
-            Mensaje::Error { etiqueta: 0x04, codigo: CodigoError::SoloLectura },
-            Mensaje::Rampa { id, destino: -5000, duracion: 384, curva: -40 },
+            Mensaje::Error {
+                etiqueta: 0x04,
+                codigo: CodigoError::SoloLectura,
+            },
+            Mensaje::Rampa {
+                id,
+                destino: -5000,
+                duracion: 384,
+                curva: -40,
+            },
             Mensaje::Anulado { id, anulado: true },
             Mensaje::Reactivar { id: None },
         ]
@@ -350,7 +446,10 @@ mod tests {
         // que es casi tan malo como el silencio que esto vino a arreglar.
         let mut buf = [0u8; 64];
         for c in CodigoError::TODOS {
-            let m = Mensaje::Error { etiqueta: 0x04, codigo: c };
+            let m = Mensaje::Error {
+                etiqueta: 0x04,
+                codigo: c,
+            };
             let n = codificar(&m, &mut buf).unwrap();
             assert_eq!(decodificar(&buf[..n]).unwrap(), m, "se perdio {c:?}");
         }
@@ -367,7 +466,9 @@ mod tests {
         let mut buf = [0u8; 64];
         for m in [
             Mensaje::Reactivar { id: None },
-            Mensaje::Reactivar { id: Some(ParamId::nuevo(5, 0, 1)) },
+            Mensaje::Reactivar {
+                id: Some(ParamId::nuevo(5, 0, 1)),
+            },
         ] {
             let n = codificar(&m, &mut buf).unwrap();
             assert_eq!(decodificar(&buf[..n]).unwrap(), m);
@@ -380,7 +481,12 @@ mod tests {
         // que cede al final se convierte en una que arranca lentisimo.
         let mut buf = [0u8; 64];
         for curva in [-100i8, -1, 0, 1, 100] {
-            let m = Mensaje::Rampa { id: ParamId(1), destino: 0, duracion: 1, curva };
+            let m = Mensaje::Rampa {
+                id: ParamId(1),
+                destino: 0,
+                duracion: 1,
+                curva,
+            };
             let n = codificar(&m, &mut buf).unwrap();
             assert_eq!(decodificar(&buf[..n]).unwrap(), m, "curva {curva}");
         }
@@ -392,7 +498,10 @@ mod tests {
         for m in todas() {
             let n = codificar(&m, &mut buf).unwrap();
             for corte in 1..n {
-                assert!(decodificar(&buf[..corte]).is_err(), "{m:?} trunco en {corte}");
+                assert!(
+                    decodificar(&buf[..corte]).is_err(),
+                    "{m:?} trunco en {corte}"
+                );
             }
         }
     }
