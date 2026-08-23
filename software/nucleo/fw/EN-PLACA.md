@@ -36,7 +36,7 @@ Por `defmt` tiene que salir:
 
 ```
 SAM17: el cerebro arranco, protocolo v1
-38 pines en el mapa
+39 pines en el mapa
 sin descubrimiento todavia: 27 parametros, todos de medida
 ```
 

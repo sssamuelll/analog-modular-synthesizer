@@ -157,7 +157,7 @@ pub enum ErrorCodec {
 
 pub fn escribir(d: &Descriptor, buf: &mut [u8]) -> Result<usize, ErrorCodec> {
     let mut w = Escritor { buf, n: 0 };
-    w.u16(d.id.0)?;
+    w.u32(d.id.0)?;
     let banderas = (d.solo_lectura as u8)
         | ((d.medida as u8) << 1)
         | ((d.confirmacion_fisica as u8) << 2)
@@ -179,7 +179,7 @@ pub fn escribir(d: &Descriptor, buf: &mut [u8]) -> Result<usize, ErrorCodec> {
 
 pub fn leer(buf: &[u8]) -> Result<(DescriptorLeido<'_>, usize), ErrorCodec> {
     let mut r = Lector { buf, n: 0 };
-    let id = ParamId(r.u16()?);
+    let id = ParamId(r.u32()?);
     let banderas = r.u8()?;
     let tipo = match (banderas >> 4) & 0b11 {
         0 => Tipo::Continuo,
@@ -246,6 +246,9 @@ impl Escritor<'_> {
     pub fn u16(&mut self, v: u16) -> Result<(), ErrorCodec> {
         self.crudo(&v.to_le_bytes())
     }
+    pub fn u32(&mut self, v: u32) -> Result<(), ErrorCodec> {
+        self.crudo(&v.to_le_bytes())
+    }
     pub fn i32(&mut self, v: i32) -> Result<(), ErrorCodec> {
         self.crudo(&v.to_le_bytes())
     }
@@ -274,6 +277,9 @@ impl<'a> Lector<'a> {
     }
     pub fn u16(&mut self) -> Result<u16, ErrorCodec> {
         Ok(u16::from_le_bytes(self.crudo(2)?.try_into().unwrap()))
+    }
+    pub fn u32(&mut self) -> Result<u32, ErrorCodec> {
+        Ok(u32::from_le_bytes(self.crudo(4)?.try_into().unwrap()))
     }
     pub fn i32(&mut self) -> Result<i32, ErrorCodec> {
         Ok(i32::from_le_bytes(self.crudo(4)?.try_into().unwrap()))
