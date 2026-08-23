@@ -70,8 +70,8 @@ porque enseña el instrumento al que lo mira:
 ```
 
 - Las perillas son **por programa**: una perilla CUTOFF habla con las 16
-  voces a la vez, como en todo polifónico. Las perillas de la matriz FM
-  (voz-total §2) viven en la sección OSC.
+  voces a la vez, como en todo polifónico. Cómo se toca la matriz FM —
+  identidad del instrumento — es la decisión C2 del inventario (§7).
 - La **bahía cierra la fila a la derecha**: los cables hacia el mundo
   cuelgan del extremo, lejos de las perillas. El patch interno no ocupa
   cara — lo recuerda el preset (§5.1).
@@ -83,7 +83,7 @@ porque enseña el instrumento al que lo mira:
 ### Fila B — la cabeza y el rack abierto
 
 - **Izquierda, ~150 mm: la cabeza del cerebro.** Pantalla 2,8" + encoder
-  con pulsador (ya especificados), más los botones de programa (D3). Abajo
+  con pulsador (ya especificados), más los botones de programa (E1). Abajo
   y a la izquierda: donde la mano descansa, donde se cambia de preset sin
   taparse la cara del instrumento.
 - **Resto, ~338 mm ≈ 66 HP: rieles abiertos para invitados.** La muerte del
@@ -130,16 +130,65 @@ Los LEDs entran en la línea de LEDs de `consumo_total_budget.py`.
   mandos) es diseño del módulo referente, no de este papel. Cota sana:
   3 muxes 16:1 leen 48 perillas con 3 entradas ADC y 4 líneas de selección.
 
-## 7. Las decisiones de Samuel
+## 7. Las decisiones de Samuel: el inventario completo
 
-- **D1 — El reparto** (§4): mandos en la cara A y rack de 66 HP abajo, ¿o
-  el viejo §8 (mandos abajo, cara A solo máquina)?
-- **D2 — El recall** (§5): ¿captura al cruce con LED, salto, o relativo?
-- **D3 — La botonera de programa**: ¿botones físicos de preset en la cabeza
-  (cuántos), o solo pantalla + encoder?
-- **D4 — Asignar la bahía en v1**: ¿desde la cabeza/carcasas (propuesto), o
-  se diseña ya un gesto físico en el panel? (El gesto físico puede ser
-  enmienda futura sin romper nada: los jacks ya tienen sensado y LED.)
+La primera versión de este papel listaba cuatro. Samuel cazó que eran más, y
+tenía razón: contadas honestas son **veintitrés**, en seis familias. Cada una
+con recomendación cuando la hay honesta; se recorren de a una, y lo que no se
+decida aquí queda POR-DECIDIR en voz alta, no supuesto.
+
+### A. La mano — qué se toca
+
+| # | Decisión | Opciones, y recomendación si la hay |
+|---|---|---|
+| A1 | ¿Perillas con tope o encoders sin fin? | **Potes con tope** (recomendado): el feel analógico manda, y el precio — el recall — se paga en A3. Los encoders siempre «aciertan» tras un recall, pero se sienten a máquina |
+| A2 | ¿Sliders, y dónde? | Samuel los nombró. Candidato natural: **envolventes ADSR deslizables** (la tradición Juno/Jupiter) — el gesto se lee de lejos y se agarra con cuatro dedos. Cuestan altura de cara y fondo de placa: si se aprueba, entra a `voz_total_budget.py` |
+| A3 | El recall (§5) | **Captura al cruce con LED por perilla** (recomendada) vs salto vs relativo |
+| A4 | Los parámetros discretos (formas de onda, modo del filtro, on/off) | **Botón ciclador + fila de LEDs** (recomendado: barato, táctil) vs selector rotativo (más analógico, más área) vs perilla con muescas |
+| A5 | ¿Shift/alt en la superficie de interpretación? | **Prohibido** (recomendado): un gesto = un cambio de sonido. Lo que no gana control físico vive en carcasas y agente, no debajo de una tecla escondida |
+| A6 | Paso y tamaño de perillas | ~25 mm ESTIMADO; se congela cuando el censo diga cuántas son |
+
+### B. La vista — qué se ve
+
+| # | Decisión | Opciones, y recomendación si la hay |
+|---|---|---|
+| B1 | ¿La cabeza lee el último parámetro tocado? | **Sí** (recomendado): giras CUTOFF y la pantalla dice nombre y valor. El número ya viaja por el cable plano; es gratis |
+| B2 | ¿Pantallitas por sección? | **No** (recomendado): una sola cabeza. Sobriedad, consumo, y la cara no compite consigo misma |
+| B3 | ¿La vida de las 16 voces en la cara? | **Sí** (recomendado): 16 LEDs respirando con sus envolventes — el alma del polifónico, visible. Entra en la línea de LEDs del consumo |
+| B4 | La política de luz | Sobria vs exuberante. El QUÉ se enciende se decide aquí; el color y la intensidad, en el pase de piel |
+
+### C. El motor en la cara
+
+| # | Decisión | Opciones, y recomendación si la hay |
+|---|---|---|
+| C1 | El reparto de filas (§4) | **Mandos arriba + rack de 66 HP abajo** (recomendado) vs el viejo §8 (mandos abajo, cara A solo máquina) |
+| C2 | **La matriz FM — la gorda** | Es «identidad del instrumento» (voz-total §5.2) y no cabe entera en perillas. (a) Sección propia: selección origen→destino + una perilla de cantidad; (b) perillas fijas para las rutas canónicas y el resto en carcasas; (c) todo en carcasas en v1. **Sin recomendación**: depende de cuántas rutas FM se tuercen EN VIVO, y eso lo sabe el intérprete, no el papel |
+| C3 | Envolventes dedicadas | ¿Cuántas en cara, con su ADSR completo cada una? Cruza con A2 (sliders) y con el censo |
+| C4 | El estéreo en cara | Qué perillas lo representan: PAN global, SPREAD/WIDTH, ¿algo por voz? La lista fina la da el censo, la categoría se decide aquí |
+| C5 | Volumen maestro y auriculares | Perilla maestra dedicada + **jack de auriculares al frente** (recomendado — un sinte sin auriculares al frente no es un instrumento serio); la salida principal se va atrás con #167 |
+| C6 | ¿Botón TUNE físico? | **Sí** (recomendado): la calibración de §4 del spec con su gesto de tradición, no enterrada en un menú |
+
+### D. La bahía
+
+| # | Decisión | Opciones, y recomendación si la hay |
+|---|---|---|
+| D1 | Posición | **Cerrando la fila A a la derecha** (recomendado): los cables cuelgan del extremo, lejos de las perillas. Alternativa: franja superior |
+| D2 | Asignación en v1 | **Desde la cabeza/carcasas** (recomendado); el gesto físico en panel cabe después sin romper nada — los jacks ya tienen sensado y LED |
+| D3 | Pares estéreo | ¿El preset puede declarar dos salidas como par L/R? (E-6 lo sugiere; costo cero en hardware — es semántica del relator) |
+
+### E. La cabeza
+
+| # | Decisión | Opciones, y recomendación si la hay |
+|---|---|---|
+| E1 | La botonera de programa | ¿Cuántos botones físicos de preset? ¿Banco×programa al estilo clásico, o solo pantalla + encoder? |
+| E2 | ¿Transporte físico? | ¿Play/stop/tap-tempo en la cara, o el tiempo vive solo en el clock trasero y MIDI? |
+
+### F. Identidad (la frontera con la piel)
+
+| # | Decisión | Opciones, y recomendación si la hay |
+|---|---|---|
+| F1 | El idioma de la serigrafía | **¿CUTOFF o CORTE?** Primer instrumento de la casa: la decide la casa, no la ingeniería. Lo único recomendado: una sola lengua — bilingüe es ruido |
+| F2 | Marca y tipografía | Pase de piel, ya declarado. Aquí solo se reserva el sitio |
 
 ## 8. Lo que sigue
 
