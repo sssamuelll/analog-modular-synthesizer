@@ -1,198 +1,374 @@
 # La gramática del panel: la cara es lienzo libre, y se reparte aquí
 
-**Estado: PROPUESTA.** No toca cobre, no toca cajón, no toca spec. El acta del
-2026-08-23 dejó dicho: «El reparto de anchos de panel con los conectores ya
-mudados […] Cada uno va en su propio pase». Este papel es ese pase. Se revisa
-de a una, como todo lo que toca la caja.
+**Estado: PROPUESTA, versión 2 — reescrita tras la junta del 2026-08-23**
+(Serrano, Voronov, Halberg y Elke Brandt; dictámenes condensados en §10).
+No toca cobre, no toca cajón, no toca spec. El acta madre dejó dicho: «El
+reparto de anchos de panel con los conectores ya mudados […] Cada uno va en
+su propio pase». Este papel es ese pase.
 
-**Principio rector, dictado por Samuel el 2026-08-23:** *no hay nada precioso
-en un análogo como sentirlo — tocar potenciómetros, botones, sliders.* El
-panel se diseña desde la mano, no desde la placa. Y la marca entra aquí: el
-plan del case del día 21 dejó KONDOR «para más adelante»; más adelante es
-este panel. Es el primer instrumento de la casa.
+**Principios rectores, dictados por Samuel el 2026-08-23, citas exactas:**
+
+1. *«no hay nada precioso en un analogo que sentirlo, tocar potenciometros,
+   botones, slides»* — el panel se diseña desde la mano, no desde la placa.
+2. *«sobrio y aleman. porque ese es el plan»* — la imagen de KONDOR. La
+   referencia de puesta en escena: Soulwax — *«sus sintes parece que tienen
+   solo cuatro perillas gigantes y ya eso es todo. y lo que pasa por dentro
+   de esos cajones es una locura»*. La cara calla, el cajón ruge. Un
+   instrumento *«que no pretenda ser mas que los demas porque simplemente no
+   lo necesita, ya lo sabe»*.
+3. La tesis del proyecto: *«es el primer sintetizador hecho para que un
+   agente lo manipule por completo»*.
+4. La premisa de comportamiento: *«todo comportamiento del sintetizador es
+   configurable […] viene resuelto por modos de ejecucion, modos de live
+   performance, modos de exploracion»*. Qué pasa cuando el agente ejecuta y
+   la mano toca no es una ley única: es política del **modo** activo. El
+   precedente ya existe en la casa: la política de drones de la bahía
+   (`diferir`/`forzar`) es configurable por preset desde el spec madre §5.3.
+
+Y la marca entra aquí: el plan del case del día 21 dejó KONDOR «para más
+adelante»; más adelante es este panel. Es el primer instrumento de la casa.
 
 ---
 
 ## 1. Qué decide y qué NO
 
 **Decide:** la gramática — qué secciones tiene la cara, en qué orden, en qué
-fila vive cada cosa, y cómo se comporta una perilla cuando el preset y la
-mano no coinciden.
+fila vive cada cosa, qué controles existen, y qué *requisitos* debe cumplir
+el comportamiento (los mecanismos exactos se diseñan donde manda el núcleo).
 
-**NO decide:** la piel (color, tipografía, posición exacta de la marca — su
-propio pase, con renders sobre el case real), el cajón y la mudanza de
-conectores (#167), quién shiftea el crosspoint (#171), ni la lista final de
-perillas (sale del censo, §6).
+**NO decide:** la piel (color, tipografía, marca — su pase, con renders), el
+cajón y la mudanza de conectores (#167), quién shiftea el crosspoint (#171),
+la lista final de perillas (censo), ni los cambios de núcleo que este papel
+exige — esos se ACTAN aquí como requisito y se diseñan en su propia mesa
+(§11).
 
 ## 2. Lo que ya está legislado, y este papel hereda
-
-Nada de esto se rediscute aquí; se cita:
 
 | Ley | Fuente |
 |---|---|
 | «El panel físico es la superficie de **interpretación**: perillas-sensor, LEDs, bahía» | voz-total §0.2 |
 | «Las perillas son sensores, mandan números, y los números viajan por cable plano sin ensuciarse» | acta E-2 |
-| **La mano gana por parámetro** (gesto físico → `ANULADO` para el agente, en ese parámetro) | voz-total §0.2, ley de capas 1 |
+| **La mano gana por parámetro** (gesto físico → `ANULADO`), `REACTIVAR` lo devuelve | voz-total §0.2, ley de capas 1 |
 | El panel de mandos es módulo clase **referente** (posee vínculos, no parámetros) | voz-total §0.3, cambio 15 |
 | La bahía: 8 entradas + 8 salidas Thonkiconn, LED por jack, «el jack es un nombre que le da el preset» | voz-total §5.1 |
+| Conmutación de bahía: imagen sombra, barrera de silencio, política de drones por preset | voz-total §5.3 |
 | Fila A = UN módulo (Voz + bahía, una cara continua) | acta E-3, E-2 |
 | Fila B = rack Eurorack de verdad, con regleta e invitados | acta E-4, #169 |
 | El mixer y la salida estéreo viven dentro del módulo de Voz | acta E-5, E-6 |
 | Cabeza local del cerebro: pantalla SPI 2,8" + encoder con pulsador | cerebro-v2 §5.2 |
+| Los paneles del case son PCB de aluminio y **«cada panel se bonda por su cuenta, sin excepción»** | case/README.md §13 |
 
-## 3. El descubrimiento que libera el diseño
+La última fila la subió la junta (S-1): cualquier propuesta de material de
+cara **colisiona con ley escrita del case** y se resuelve en voz alta, no
+por omisión.
 
-De «las perillas son sensores» se sigue algo que la v1 no explotó: **la
-posición física de una perilla no está atada a ninguna placa.** Una perilla
-manda un número por cable plano al escáner del panel de mandos; puede vivir
-en cualquier punto de cualquier fila sin costar un hilo de audio. La cara es
-lienzo libre.
+## 3. El descubrimiento que libera el diseño — con su corrección
 
-Las únicas piezas **ancladas** son las analógicas: los 16 jacks de la bahía
-(audio a ±12 V — viven encima de su placa, tramos cortos) y los conectores
-del mundo (que ya se van atrás, #167). Todo lo demás — perillas, botones,
-LEDs, pantalla — se coloca donde la mano lo pida.
+De «las perillas son sensores» se sigue que **la posición de una perilla no
+está atada a ninguna placa**: manda un número por cable plano y puede vivir
+donde la mano lo pida. La cara es lienzo libre **para los controles**.
 
-Consecuencia directa: el viejo reparto de §8 («mandos 120 mm en fila B»)
-era una restricción imaginaria. Se propone derogarlo.
+La corrección de la junta (S-1, H-2, E-C5): lo que SÍ ancla son (a) los 16
+jacks de la bahía (audio ±12 V, tramos cortos sobre su placa), (b) los
+conectores del mundo (ya rumbo atrás, #167), y (c) **cualquier pantalla**:
+un rectángulo rígido cuyo cuerpo compite por el mismo fondo que los cuerpos
+de los potes. El viejo «mandos 120 mm en fila B» de §8 del spec sigue
+derogado; la libertad es real, pero no absoluta.
 
-## 4. El reparto propuesto
+## 4. El reparto propuesto (v2, con los milímetros de Elke Brandt)
 
-### Fila A — la cara del instrumento
+Números CITADOS de `params.scad` y `voz_total_budget.py`; el resto ESTIMADO
+con su medición nombrada. Detalle completo en el dictamen de Elke (§10.4).
 
-Una cara continua (E-2). De izquierda a derecha, **el orden del flujo de
-señal** — la gramática que Prophet hizo canon y que sigue siendo la correcta
-porque enseña el instrumento al que lo mira:
+### Fila A — panel de 83 HP = 421,64 × 128,5 mm
 
-```
-[ OSC ]  [ FILTRO ]  [ ENVOLVENTES ]  [ VCA · PAN · MEZCLA ]  [ BAHÍA ]
-   la marca KONDOR / SAM17 en esta cara: posición exacta en el pase de piel
-```
+El PCB cierra en 421,5 mm; el panel se redondea al múltiplo de HP: **83 HP**.
+No se dibuja más ancho a propósito: el factor de ruteo ×2,2 es «el número
+menos medido de todo el diseño» y la reserva de fila es suya. Si el censo
+pide más perillas, el panel crece hacia la izquierda; la bahía no se mueve.
 
-- Las perillas son **por programa**: una perilla CUTOFF habla con las 16
-  voces a la vez, como en todo polifónico. Cómo se toca la matriz FM —
-  identidad del instrumento — es la decisión C2 del inventario (§7).
-- La **bahía cierra la fila a la derecha**: los cables hacia el mundo
-  cuelgan del extremo, lejos de las perillas. El patch interno no ocupa
-  cara — lo recuerda el preset (§5.1).
-- Ancho disponible: **488,32 mm** (fuente: `voz_total_budget.py`, VERDE con
-  Voz+bahía en 421,5). Quitando ~100 de bahía quedan ~388 mm de secciones:
-  a paso de ~25 mm son **~45 perillas máximo** en tres alturas. ESTIMADO —
-  la lista real la fija el censo (§6).
+De izquierda a derecha:
 
-### Fila B — la cabeza y el rack abierto
-
-- **Izquierda, ~150 mm: la cabeza del cerebro.** Pantalla 2,8" + encoder
-  con pulsador (ya especificados), más los botones de programa (E1). Abajo
-  y a la izquierda: donde la mano descansa, donde se cambia de preset sin
-  taparse la cara del instrumento.
-- **Resto, ~338 mm ≈ 66 HP: rieles abiertos para invitados.** La muerte del
-  mixer separado (E-5) y la mudanza de los mandos a la fila A convierten a
-  E-4 en un rack **generoso**, no simbólico. La regleta y la reserva de
-  corriente ya están legisladas (#169: 160 mA/riel).
-
-### Por qué así y no al revés
-
-Arriba se **toca**, abajo se **configura y se expande**. Las perillas a la
-altura de los ojos y de la mano alzada; los cables de los invitados y de la
-bahía sin cruzar jamás la superficie de interpretación. Un solo gesto — girar
-una perilla de la fila A — es un cambio de sonido, sin menú, sin página, sin
-shift. La pantalla existe para **leer** (presets, calibración, diagnóstico),
-no para tocar.
-
-## 5. El recall: cuando la perilla y el preset no coinciden
-
-El problema que perillas-sensor crea y la v1 no legisló: cargas un preset y
-las 45 perillas físicas quedan apuntando a valores viejos. Tres opciones:
-
-| Opción | Qué hace | Costo |
+| Zona | Contenido | Números que mandan |
 |---|---|---|
-| **Salto** | Tocar la perilla impone su posición de inmediato | Brutal tras un recall: un roce = un salto de octava |
-| **Captura al cruce** (pickup) | El parámetro espera a que la perilla cruce el valor guardado; ahí engancha | Un LED tenue por perilla que dice «aún no me capturas» |
-| **Relativo** | Los giros suman en delta | La posición física miente siempre; anti-táctil |
+| **MACROS** | 4 potes gigantes en cuadro 2×2, corona de LEDs por cap (valor); el nombre vive en el renglón | Cap ≤ Ø38: el 2×2 cabe en 91 mm. **De Ø44 en adelante no hay cuadro**: fila de 4 = 224 mm = cinco columnas de perillas curadas menos. Se decide con dos caps en un tablón (§11.3) |
+| **PERILLAS** | 16 potes curados, cap Ø20, 8×2, paso 28×34 mm | 8 mm de aire entre caps (mínimo de pinza); serigrafía fija |
+| **RENGLÓN** | UNA ventana de 216×18 mm: nombre+valor del último parámetro tocado (alineado con su perilla), las 16 voces respirando, y los acuses del modo MATRIZ | Sustituye a «una ventana por perilla» (dieciséis alineaciones y dieciséis fugas: The Cut de Elke). No rompe B2: no es una segunda cabeza, es una etiqueta que cambia |
+| **FUENTES** | 1 botón MATRIZ + **10** botones de fuente Ø12, paso 18 | 12 no caben sin pisado de yema o +36 mm de panel: el precio quedó dicho |
+| **BAHÍA** | 16 Thonkiconn en **4×4 a paso 17 mm, pegada al canto derecho** + ventana propia de 68×16 (nombre de cada jack) | El 2×8 pide 136 mm > los 100 presupuestados (colisión E-C6). El paso 17 es acceso de llave de vaso. Al canto: el mazo de cables se barre al costado y **no tapa el valle de ventilación** (con el valle tapado, el salto térmico pasa de 6,6 a 8,8 K) |
 
-**Recomendación: captura al cruce, con LED por perilla.** Y la costura con la
-ley de capas se dice en voz alta: el `ANULADO` del agente ocurre **al primer
-cambio efectivo** (al cruce), no al roce — tocar sin cruzar no captura nada.
-Los LEDs entran en la línea de LEDs de `consumo_total_budget.py`.
+Densidad resultante: 68 % — los separadores hacen de gramática.
 
-## 6. Los números que vigilan esta propuesta
+### Fila B — 104 HP repartidos
 
-- `voz_total_budget.py` — la fila A con bahía ya cierra en VERDE; las
-  perillas no lo mueven (sensores, §3). Los 16 jacks sí: ya presupuestados
-  (§5.4 del spec, pila ≤ 50 de fondo).
-- `consumo_total_budget.py` — suma ~45 LEDs de perilla + 16 de jack a su
-  línea de LEDs cuando la lista exista.
-- `check_censo_voz.py` — el censo dice qué parámetros existen; de ahí sale
-  **la lista de los que ganan perilla dedicada** (los demás quedan en
-  carcasas y agente). Esa lista es el siguiente papel de esta serie.
-- El escáner de perillas (muxes analógicos → ADC del micro del panel de
-  mandos) es diseño del módulo referente, no de este papel. Cota sana:
-  3 muxes 16:1 leen 48 perillas con 3 entradas ADC y 4 líneas de selección.
-
-## 7. Las decisiones de Samuel: el inventario completo
-
-La primera versión de este papel listaba cuatro. Samuel cazó que eran más, y
-tenía razón: contadas honestas son **veintitrés**, en seis familias. Cada una
-con recomendación cuando la hay honesta; se recorren de a una, y lo que no se
-decida aquí queda POR-DECIDIR en voz alta, no supuesto.
-
-### A. La mano — qué se toca
-
-| # | Decisión | Opciones, y recomendación si la hay |
+| Zona | HP | Contenido |
 |---|---|---|
-| A1 | ¿Perillas con tope o encoders sin fin? | **Potes con tope** (recomendado): el feel analógico manda, y el precio — el recall — se paga en A3. Los encoders siempre «aciertan» tras un recall, pero se sienten a máquina |
-| A2 | ¿Sliders, y dónde? | Samuel los nombró. Candidato natural: **envolventes ADSR deslizables** (la tradición Juno/Jupiter) — el gesto se lee de lejos y se agarra con cuatro dedos. Cuestan altura de cara y fondo de placa: si se aprueba, entra a `voz_total_budget.py` |
-| A3 | El recall (§5) | **Captura al cruce con LED por perilla** (recomendada) vs salto vs relativo |
-| A4 | Los parámetros discretos (formas de onda, modo del filtro, on/off) | **Botón ciclador + fila de LEDs** (recomendado: barato, táctil) vs selector rotativo (más analógico, más área) vs perilla con muescas |
-| A5 | ¿Shift/alt en la superficie de interpretación? | **Prohibido** (recomendado): un gesto = un cambio de sonido. Lo que no gana control físico vive en carcasas y agente, no debajo de una tecla escondida |
-| A6 | Paso y tamaño de perillas | ~25 mm ESTIMADO; se congela cuando el censo diga cuántas son |
+| **CABEZA** | 30 | pantalla 2,8" (**IPS obligatoria**: a 55° una TN invierte) + encoder + botones de programa (E1) + TUNE (C6) |
+| **INVITADOS** | **62** | riel abierto. *El plan v1 decía 66: 4 HP son el precio del drapeado de la bahía, dicho antes del montaje y no el día del montaje* |
+| **SOMBRA** | 12 | panel ciego bajo la bahía — donde cae lo que aun así cuelgue |
 
-### B. La vista — qué se ve
+### La fijación, que no es detalle
 
-| # | Decisión | Opciones, y recomendación si la hay |
+- **Acrílico: 5 mm mínimo** (a 3 mm, alguien apoyándose = 18 MPa: fluencia).
+- **5 tornillos M3 por riel** (10 en total): flecha de 0,21 mm al tirar un
+  cable. Con los 4 de esquina de la plantilla actual: 13,9 mm — una tapa.
+- **Rebaje trasero fresado Ø12×3 mm en cada pote y cada jack**: un
+  Thonkiconn tiene 4,7 mm de casquillo — **en 5 mm no rosca** (−0,3 mm).
+  El proceso ya es CNC; el rebaje es tiempo de máquina, no utillaje.
+- Requisito para las muestras de A1: casquillo ≥8,5 mm o rebaje; eje ≥18 mm.
+
+## 5. El comportamiento: los modos, y el salto suave enmendado
+
+### 5.1 La premisa de modos (principio 4)
+
+Qué puede escribir la mano y qué el agente **no es una constante: es el modo
+de ejecución activo** — live performance, ejecución, exploración, los que el
+censo declare. Cada modo es una **política nombrada de arbitraje sobre
+escrituras con autor**. Consecuencia dura, dicha por la junta entera y
+asumida: **esto exige que el modelo sepa quién escribe**. Hoy un mensaje
+lleva (parámetro, valor) y ningún «quién»; la ley de capas es, en palabras
+de Voronov, «una cortesía que el agente puede retirar». La autoría como
+objeto de primera clase es un **cambio de núcleo, prerrequisito de este
+papel**, y se acta en §11.1 — junto con la regla de quién puede cambiar el
+modo mismo (propuesta por defecto: cambiar de modo es gesto físico o
+consentido; POR-DECIDIR con el núcleo).
+
+### 5.2 El salto suave, enmendado en voz alta
+
+**Lo que Samuel firmó y se sostiene:** al tocar una perilla el valor
+*planea* hasta ella — sin zona muerta de captura, sin accidente — y **cada
+parámetro declara su forma de aterrizar**, ahora bajo el principio 4:
+la clase de aterrizaje es configurable, por parámetro y por modo.
+
+**Lo que la junta tumbó y se deroga:** la implementación citada. `rampa.rs`
+trabaja en **pulsos musicales cuantizados** (el mismo planeo duraría 3× más
+a 60 BPM que a 180 y puede arrancar compases tarde), R-M1 prohíbe al módulo
+interpolar flujos del cerebro, la entrega J2 de parámetros no-tono va a
+100 Hz — tasa que el propio spec declaró «se oyen como escalones» — y
+`MAX_RAMPAS = 16` no aguanta ni una automatización de programa (16 voces =
+16 ranuras). *Nadie leyó el archivo que citó* (H-1); queda dicho.
+
+**Los requisitos que el mecanismo nuevo debe cumplir** (diseño en la mesa
+del núcleo, §11.1):
+
+1. Motor de aterrizaje en **milisegundos de pared**, separado del motor de
+   automatización musical.
+2. **Umbral de gesto en LSB con histéresis, declarado y aseverado** — «sin
+   zona muerta» se refiere a la captura, no al ruido: sin umbral, 1 LSB de
+   ruido de ADC en 45 potes le quita el instrumento al agente en silencio
+   (S-4, H-1).
+3. Política de blanco móvil (la perilla sigue girando), de recall a mitad
+   de rampa, y de qué produce `ANULADO` — **por modo** (principio 4).
+4. **Cota mano→DAC declarada en ms y aseverada por guion.** Hoy no existe
+   ninguna en el repo; «inmediato» sin número no es falsable.
+5. El estado `ANULADO` necesita **superficie física**: A3 mató el LED por
+   perilla y el spec del tiempo (§6.3) le tenía asignada esa segunda
+   función. El renglón lo repone: parámetro anulado que se toca → el
+   renglón lo dice. La cuenta agregada (`ID_ANULADOS`) no basta: el
+   descriptor debe publicar **cuáles** (cambio de núcleo, §11.1).
+
+## 6. La bahía y el modo MATRIZ
+
+**El gesto se sostiene:** botón MATRIZ (modo visible a gritos — la cara
+entera cambia de estado), fuentes en su fila, y el destino y la cantidad
+son **la perilla de siempre del destino**. El mismo gesto asigna jacks. La
+cabeza queda como camino completo. La sección FM dedicada **muere** (The
+Cut de Elke): MATRIZ da el mismo gesto sin gastar un mm².
+
+**Registro honesto de C2:** esta decisión ES la respuesta a C2 («la matriz
+FM, la gorda»): la matriz no gana sección propia en la cara; se toca por
+MATRIZ y por carcasas. La fila de 10 fuentes **no acota la matriz** (que
+sigue ilimitada por dentro, §5.2 del spec): acota qué fuentes tienen botón
+directo. El criterio de cuáles, y si la fila es fija o por preset, queda
+POR-DECIDIR con el censo (S-13).
+
+**Las condiciones de la junta para que MATRIZ corra** (H-3):
+
+1. **Épocas en las muestras**: cada lote de perilla lleva número de
+   generación de modo; un lote rancio (muestreado en un modo, entregado en
+   otro) se descarta. Sin esto, salir de MATRIZ con una vuelta en vuelo
+   escribe el corte de verdad en 16 voces.
+2. **`ANULADO` con tipo de arista**: la ley de capas promete «ese parámetro
+   o ruta» y la mitad «ruta» no existe en el modelo (cambio de núcleo,
+   §11.1).
+3. **Acuse local en el renglón**: bajo `diferir` con un drone sonando, el
+   gesto produce «ruta pendiente» — indefinidamente y por diseño. Eso se
+   muestra donde ocurrió el gesto, no solo en el LED del jack; y los
+   commits pendientes sobre el mismo cruce **se fusionan** (el último
+   gana), no se encolan en ráfaga.
+4. El estado «pendiente» sobrevive como estado del relator (ya legislado,
+   spec §5.3); un reset lo pierde y **lo dice** al volver.
+
+**Sub-decisión abierta:** fuentes con botones físicos vs zonas táctiles
+tras el acrílico. La medición de §11.3 la cierra; si el capacitivo no
+cruza el espesor real (rebaje a 2,5 mm incluido), son botones físicos.
+
+## 7. El frente: material y frente muerto, las dos opciones
+
+La idea de Samuel («¿y si el panel es una pantalla de la que salen las
+perillas?») traducida a lo fabricable sigue viva, **acotada por la junta**:
+no dieciséis ventanas — UNA de renglón, una de bahía, y cuatro coronas de
+LED. Pero el material de la cara colisiona con ley del case (§2, última
+fila) y se decide en voz alta:
+
+| | **Opción A: aluminio con ventanas** | **Opción B: acrílico entero (5 mm)** |
 |---|---|---|
-| B1 | ¿La cabeza lee el último parámetro tocado? | **Sí** (recomendado): giras CUTOFF y la pantalla dice nombre y valor. El número ya viaja por el cable plano; es gratis |
-| B2 | ¿Pantallitas por sección? | **No** (recomendado): una sola cabeza. Sobriedad, consumo, y la cara no compite consigo misma |
-| B3 | ¿La vida de las 16 voces en la cara? | **Sí** (recomendado): 16 LEDs respirando con sus envolventes — el alma del polifónico, visible. Entra en la línea de LEDs del consumo |
-| B4 | La política de luz | Sobria vs exuberante. El QUÉ se enciende se decide aquí; el color y la intensidad, en el pase de piel |
+| Qué es | Panel PCB de aluminio (como legisla el case) con dos recortes: renglón 216×18 y bahía 68×16, cubiertos con ahumado; coronas de LED por luz pasante | La cara completa en acrílico ahumado; pantallas detrás; impresión negra en segunda superficie como máscara |
+| Bonding/EMC | **Cumple la ley del case tal cual**; blindaje sobre 16 voces donde 1 mV = 3,6 cents | Necesita **excepción escrita** a «sin excepción» + camino de blindaje sustituto (plano de masa en placas + bonding de casquillos) — no es firma de este papel |
+| Frente muerto | Parcial: las ventanas son frente muerto; el resto, serigrafía fija | Total: apagado, losa muda |
+| Riesgos propios | Menos: la ley física de Elke («donde imprimes no iluminas») aplica solo a las ventanas | Guía de onda (la luz viaja por el canto y sale por cada agujero: máscara + chimeneas obligatorias), fuga por 20 taladros |
+| Común a ambas | **Acabado mate en la cara frontal, obligatorio**: la fila A está a 45° apuntando a las lámparas del techo; con brillo, el reflejo especular mata la lectura de día sea cual sea la transmitancia | |
 
-### C. El motor en la cara
+Recomendación de este papel: **empezar la medición de §11.3 con las dos**;
+la opción A es la que no le pide permiso a nadie. La B es más KONDOR y más
+cara de conseguir en ley y en física. Decide Samuel con el retazo en la
+mano.
 
-| # | Decisión | Opciones, y recomendación si la hay |
+**Quién maneja el frente y el escaneo — la salida arquitectónica (§11.2):**
+el cerebro está cerrado por escrito (2 GPIO libres, dos SPI gastados, «no
+admite un cliente más» en J2 desde su spec §7… pero **E-3 liberó una
+ranura de J2** al fundir la bahía en la Voz). Propuesta: **el panel de
+mandos se vuelve módulo de verdad** — clase referente, su propia bajada de
+J2 en la ranura liberada, su micro, su escaneo de 45 potes (3 muxes 16:1),
+su renglón, sus coronas y su presupuesto de +5 V. Un dominio de fallo
+propio: pantalla muerta ≠ perillas muertas, y el camino nota→VCA del
+cerebro ni se entera.
+
+## 8. Los números que vigilan — corregidos por la junta
+
+- `voz_total_budget.py` presupuesta **PCB, no panel**: falta la línea
+  `ANCHO_PANEL_A` (83 HP) y falta modelar el fondo de los potes — el
+  cuerpo (~10 mm ESTIMADO) entra en los 10,6 de hueco con **0,6 mm** de
+  margen, y el fondo de fila A está al 100 % (E-C5). Se amplía el guion al
+  aprobar la gramática.
+- **La línea de LEDs del ±12 V no existe**: el guion dice textual «LED NO
+  cargan este presupuesto: cuelgan de otra fuente». Toda la luz nueva
+  (coronas, jacks, renglón, botones) carga al **+5 V de la IRM-15-5, cuya
+  suma ya no cierra hoy (#151) y no tiene guion**. El presupuesto de +5 V
+  es prerrequisito bloqueante de este plan (§11.4). *El plan v1 citó tres
+  veces un presupuesto fantasma; queda dicho.*
+- La reserva de invitados de E-4 es **230–300 mA/riel a escribir**, no los
+  160 sobrantes de hoy. Los 62 HP se publican con esa reserva, no contra
+  el sobrante (S-9).
+- Tres presupuestos declarados bloqueantes en el spec madre **no existen
+  como guion** (`ataque`, `cal_filtro`, `arranque`), ni `trama_j2_budget.py`
+  ni `check_pinout.py` — y `pinout.rs` describe una cabeza que ya no existe
+  (H-6). Se abren como issues al mergear (§11.4).
+
+## 9. El inventario de decisiones — estado tras la junta
+
+### Firmadas por Samuel
+
+| # | Decisión | Nota de junta |
 |---|---|---|
-| C1 | El reparto de filas (§4) | **Mandos arriba + rack de 66 HP abajo** (recomendado) vs el viejo §8 (mandos abajo, cara A solo máquina) |
-| C2 | **La matriz FM — la gorda** | Es «identidad del instrumento» (voz-total §5.2) y no cabe entera en perillas. (a) Sección propia: selección origen→destino + una perilla de cantidad; (b) perillas fijas para las rutas canónicas y el resto en carcasas; (c) todo en carcasas en v1. **Sin recomendación**: depende de cuántas rutas FM se tuercen EN VIVO, y eso lo sabe el intérprete, no el papel |
-| C3 | Envolventes dedicadas | ¿Cuántas en cara, con su ADSR completo cada una? Cruza con A2 (sliders) y con el censo |
-| C4 | El estéreo en cara | Qué perillas lo representan: PAN global, SPREAD/WIDTH, ¿algo por voz? La lista fina la da el censo, la categoría se decide aquí |
-| C5 | Volumen maestro y auriculares | Perilla maestra dedicada + **jack de auriculares al frente** (recomendado — un sinte sin auriculares al frente no es un instrumento serio); la salida principal se va atrás con #167 |
-| C6 | ¿Botón TUNE físico? | **Sí** (recomendado): la calibración de §4 del spec con su gesto de tradición, no enterrada en un menú |
+| A1 | Potes con tope, de los mejores; pieza exacta al BOM con muestras | Requisito nuevo: casquillo ≥8,5 mm o rebaje trasero; eje ≥18 mm (§4) |
+| A2 | Puras perillas; sin sliders ni motores | — |
+| A3 | **Salto suave: la sensación firmada se sostiene; el mecanismo citado se deroga y se re-diseña con los requisitos de §5.2** | Enmienda de junta, en voz alta |
+| A4 | Discretos: botón ciclador + LEDs; on/off con botón | — |
+| B2 | Una sola cabeza | El renglón no la contradice: es etiqueta, no cabeza. La enmienda se re-firma contra sus TRES motivos (sobriedad ✓ apagado; consumo → al presupuesto de +5 V de §11.4; competencia visual → UNA ventana, no N) (S-14) |
+| B4 | Luz sobria | — |
+| **Principio 4** | **Todo comportamiento es configurable, por modos de ejecución** | Exige autoría en el núcleo (§5.1, §11.1) |
 
-### D. La bahía
+### Propuestas de este papel (se votan EN PAQUETE, S-7)
 
-| # | Decisión | Opciones, y recomendación si la hay |
-|---|---|---|
-| D1 | Posición | **Cerrando la fila A a la derecha** (recomendado): los cables cuelgan del extremo, lejos de las perillas. Alternativa: franja superior |
-| D2 | Asignación en v1 | **Desde la cabeza/carcasas** (recomendado); el gesto físico en panel cabe después sin romper nada — los jacks ya tienen sensado y LED |
-| D3 | Pares estéreo | ¿El preset puede declarar dos salidas como par L/R? (E-6 lo sugiere; costo cero en hardware — es semántica del relator) |
+Cara curada (16+4) · frente muerto acotado (renglón + ventana bahía +
+coronas) · modo MATRIZ con sus 4 condiciones · material opción A/B ·
+83 HP / 62 HP · bahía 4×4 al canto. **Son un paquete porque se sostienen
+entre sí** (la macro sin renglón no tiene nombre; MATRIZ sin frente no
+tiene acuse). Si la medición §11.3 mata el frente muerto, cae el paquete y
+la cara curada se re-propone con serigrafía fija y macros no reasignables.
 
-### E. La cabeza
+### Aún no tocadas
 
-| # | Decisión | Opciones, y recomendación si la hay |
-|---|---|---|
-| E1 | La botonera de programa | ¿Cuántos botones físicos de preset? ¿Banco×programa al estilo clásico, o solo pantalla + encoder? |
-| E2 | ¿Transporte físico? | ¿Play/stop/tap-tempo en la cara, o el tiempo vive solo en el clock trasero y MIDI? |
+A5 (shift: **sigue siendo recomendación, no ley** — MATRIZ se defiende
+como modo visible, no contra A5; S-8), A6, B1 (de facto favorable), B3
+(resuelta de facto: las voces se dibujan en el renglón, cuestan cero), C1
+(la firma implícita del reparto va en el paquete), C3, C4, C5 (auriculares:
+**fuera de la fila A** — The Cut; su casa la decide #167), C6 (TUNE va en
+la cabeza, §4), D1 (en paquete: 4×4 al canto), D2, D3, E1, E2, F1, F2, y
+el botón PANEL (aparcado en E).
 
-### F. Identidad (la frontera con la piel)
+## 10. La junta del 2026-08-23 — dictámenes condensados
 
-| # | Decisión | Opciones, y recomendación si la hay |
-|---|---|---|
-| F1 | El idioma de la serigrafía | **¿CUTOFF o CORTE?** Primer instrumento de la casa: la decide la casa, no la ingeniería. Lo único recomendado: una sola lengua — bilingüe es ruido |
-| F2 | Marca y tipografía | Pase de piel, ya declarado. Aquí solo se reserva el sitio |
+Los cuatro textos completos quedan en la sesión; aquí lo que cambió el
+papel. IDs: S=Serrano, V=Voronov, H=Halberg, E-C=colisiones de Elke.
 
-## 8. Lo que sigue
+**Voronov (ontología):** el modelo no tiene eje de autoría — `Set(id,
+valor)` sin «quién»; la ley de capas es inexpresable; `REACTIVAR` es de
+cualquier cliente, así que el agente puede deshacer la captura de la mano
+(V-II). La perilla «por programa» no tiene referente (16 instancias; el
+gesto mínimo desborda el buzón de reconciliación 8×) (V-IV). MATRIZ cambia
+el codominio del vínculo (parámetro↔arista) sin declarar el tipo (V-V). La
+macro es un vínculo cuyo destino es dato: tipo reflexivo sin declarar, y
+la dormancia muere en la frontera del referente — V2-III un piso más
+arriba (V-VI). El frente no puede ser autoridad y vista en el mismo plano
+sin un tercer objeto que diga cuál manda: la autoría (V-VIII). *Reencuadre:
+este es el primer papel que exige que el modelo distinga quién escribe.*
 
-Aprobada la gramática: (1) el censo produce la lista de perillas con nombre
-y sección; (2) el pase de piel — color, tipografía, marca, renders sobre el
-case; (3) #167 muda los conectores y el cajón se retoca una sola vez, con
-la gramática ya congelada.
+**Serrano (clínica, 7 BLOCKERS):** cara de acrílico vs aluminio bondado
+del case, sin derogación declarada (S-1). Pantallas sin dueño, bus ni
+pines (S-2). Presupuesto de LEDs citado al revés; +5 V sin guion y sin
+cerrar (#151) (S-3). A3 sin máquina de estados ni umbral — «sin zona
+muerta» como virtud es la respuesta más peligrosa posible (S-4). `ANULADO`
+sin disparador y `REACTIVAR` sin gesto (S-5). Reasignación (macros/MATRIZ)
+deja posiciones heredadas: el salto que descartamos, de vuelta por la
+puerta de atrás (S-6 — lo cubren las épocas y la política de blanco de
+§5.2/§6). Votación acoplada presentada como independiente (S-7). C2 había
+desaparecido del acta (S-8; registrada en §6). 66 HP sobre reserva
+insuficiente y ancho de cabeza caduco (S-9). §5/§6 del plan v1
+contradecían al §9 (S-15; esta v2 los reescribe).
+
+**Halberg (runtime): NO-CORRE-ASÍ en los cuatro frentes** como estaban
+escritos. `rampa.rs` en pulsos cuantizados vs «decenas de ms»; R-M1 cierra
+el módulo; 100 Hz de J2 para no-tono «se oyen como escalones»; `MAX_RAMPAS
+= 16` vs 45 potes ×16 voces (H-1). Frente muerto sin tercer SPI, con 2
+GPIO y sobre un riel que no cierra (H-2). MATRIZ: race de interpretación
+sin épocas; `ANULADO` sin tipo para aristas; gesto mudo bajo `diferir`
+(H-3). Escaneo sin micro: el sitio legislado murió con los módulos 5-7 y
+los tres candidatos están cerrados por escrito (H-4) — de ahí §7/§11.2.
+Además: hoy **ninguna carcasa puede renderizar el módulo** (536>512,
+descriptor 107×, respuestas 130×) — el frente construye sobre un contrato
+roto que #172 ya rastrea; y `pinout.rs` contradice a su spec (H-6). *«El
+runtime no discute con las actas. Mide los pulsos, cuenta los pines y suma
+los vatios.»*
+
+**Elke Brandt (materia): fabricable con cuatro condiciones** — 5 mm + 10
+tornillos; rebaje trasero Ø12×3 (un Thonkiconn NO rosca en 5 mm); bahía
+4×4 a paso 17 al canto (2×8 no cabe y tapa la ventilación: ΔT 6,6→8,8 K);
+mate obligatorio a 45°. El bonding no es su firma: o excepción escrita o
+la cara no es acrílico entero (§7). El cap de las macros decide la cara:
+hasta Ø38 hay cuadro 2×2; de Ø44 en adelante, fila de 224 mm y la cara
+curada baja a ~6 perillas (§11.3). Diez colisiones E-C1..E-C10 con
+presupuestos y ficheros, incluida una preexistente: `params.scad` dice
+panel 1,6 mm y `voz_total_budget.py` reserva 5,0 — **dos ficheros del repo
+se contradicen hoy, antes de este papel** (E-C1).
+
+## 11. El camino
+
+1. **Acta de autoría y modos, al núcleo.** Autoría en cada escritura; el
+   modo como política nombrada de arbitraje; `ANULADO`/`REACTIVAR` por
+   autor y con tipo de arista; publicación de CUÁLES parámetros están
+   anulados (no solo la cuenta); quién cambia el modo. El motor de
+   aterrizaje de §5.2 con sus requisitos. Se abre como issue con la
+   evidencia de la junta al mergear este PR; se diseña con #172 (los
+   techos del modelo: 536>512, descriptor, buzón — sin eso ninguna carcasa
+   ni frente renderiza).
+2. **El módulo de mandos, de verdad.** Clase referente con la bajada J2
+   que E-3 liberó: micro propio, escaneo, renglón, coronas, +5 V. Su spec
+   corto es el siguiente papel técnico de esta serie.
+3. **Las tres mediciones de Elke, antes de congelar** (cada una cambia la
+   gramática si sale mal): (a) retazo del ahumado real a 45° con luz de
+   techo, brillante vs mate, 5 mm y rebajado — criterio de aprobado
+   ESCRITO antes de medir; (b) capacitivo tras 5 mm y tras rebaje a
+   2,5 mm — si falla, botones físicos; (c) dos caps de macro en un tablón
+   a 53 y 60 mm de paso — decide Ø38 vs Ø44+ y con ello cuántas perillas
+   curadas existen.
+4. **Deudas de guion que este papel deja abiertas** (issues al mergear):
+   presupuesto de +5 V (no existe; #151 sigue sin cerrar), `ANCHO_PANEL_A`
+   y fondo de potes en `voz_total_budget.py`, reserva de invitados
+   230–300 mA escrita en `consumo_total_budget.py`, los tres presupuestos
+   bloqueantes fantasma del spec madre, `trama_j2_budget.py`,
+   `check_pinout.py`, y la contradicción E-C1 (`t_panel` 1,6 vs 5,0).
+
+Aprobado el paquete: el censo produce la lista de perillas; el pase de
+piel viste la cara; #167 muda los conectores con la gramática congelada.
