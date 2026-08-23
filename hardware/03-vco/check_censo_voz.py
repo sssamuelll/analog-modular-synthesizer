@@ -7,7 +7,7 @@ poder NOMBRAR, no lo que tiene que poder sonar, y lo compara contra tres techos
 que ya estan escritos en cobre y en codigo:
 
   1. MAX_PARAMS = 512   software/nucleo/core/src/modelo.rs:9
-  2. 64 KB de EEPROM    acta E-7 (eran 32 KB hasta que este censo corrio)
+  2. 128 KB de EEPROM   acta E-7 (eran 32 KB hasta que este censo corrio)
   3. largo del blob u8  software/nucleo/core/src/descubrimiento.rs:87
 
 Los tres se miden aqui. Dos de ellos NO pasan, y no pasan a proposito: la spec
@@ -36,11 +36,19 @@ from __future__ import annotations
 
 # --- techos que ya existen (citados) ----------------------------------------
 MAX_PARAMS = 512            # modelo.rs:9
-EEPROM_B = 64 * 1024        # acta E-7: 24AA512. Eran 32 KB (24AA256UID)
+EEPROM_B = 128 * 1024       # acta E-7: 24AA1025. Eran 32 KB (24AA256UID)
                             # hasta que este censo dio 91 % de ocupacion.
-EEPROM_B_VIEJA = 32 * 1024  # dieciseis S19, para poder ensenar la diferencia
 MARGEN_MIN = 0.30           # tiene que sobrar al menos un 30 %: el censo se
                             # movio 21,7 % en una sola sesion (acta E-5/E-6)
+CANDIDATAS_KB = (32, 64, 128, 256)
+
+# El numero que DECIDE el tamano no es cuantos parametros caben: es cuantos
+# bytes ocupa la entrada de cada uno. Hoy son 42 (dieciseis S13), pero el
+# descriptor no es un dato interno -- architecture-compute S6: "los nombres y
+# las unidades de cada parametro no son cosmetica: son la documentacion que el
+# modelo va a leer". Nombre legible + unidad + rango + defecto + una linea de
+# que hace no caben en 42 B.
+B_POR_ENTRADA_RICO = 100    # OBJETIVO DECLARADO, no medido
 BLOB_U8_TECHO = 238         # descubrimiento.rs: u8 con FIN_ZONA_LIBRE = 0xFA
 
 # --- el censo de parametros -------------------------------------------------
@@ -117,23 +125,33 @@ def demo() -> None:
     sin = sum(eeprom(False).values())
     print(f"\n  sin estereo serian {sin} B ({sin/EEPROM_B:.1%}): el paneo "
           f"cuesta {total - sin} B")
-    por_canal = CANALES * B_POR_ENTRADA
+    fijo = total - e["descriptor"]
     print()
-    print(f"  con los 32 KB del 24AA256UID:  {total/EEPROM_B_VIEJA:5.1%}  "
-          f"-> caben {(EEPROM_B_VIEJA - total)//por_canal} parametros mas "
-          "por canal")
-    print(f"  con los 64 KB del 24AA512:     {total/EEPROM_B:5.1%}  "
-          f"-> caben {(EEPROM_B - total)//por_canal} parametros mas por canal")
+    print("cuanto descriptor aguanta cada tamano, que es lo que decide:")
+    print()
+    print(f"  {'':7s} {'B por entrada':>14s}   con el objetivo declarado de "
+          f"{B_POR_ENTRADA_RICO} B")
+    for kb in CANDIDATAS_KB:
+        util = kb * 1024 * (1 - MARGEN_MIN)
+        techo = (util - fijo) / n
+        rico = fijo + n * B_POR_ENTRADA_RICO
+        veredicto = "cabe" if rico <= util else "NO CABE"
+        marca = "  <- elegido" if kb * 1024 == EEPROM_B else ""
+        print(f"  {kb:3d} KB {techo:11.1f} B    {rico:7d} B de {util:7.0f} "
+              f"utiles  {veredicto:7s}{marca}")
+    print()
+    print(f"  hoy la entrada son {B_POR_ENTRADA} B ({total} B en total).")
+
     assert total <= EEPROM_B * (1 - MARGEN_MIN), (
-        f"no cabe con el {MARGEN_MIN:.0%} de margen: {total} B contra "
+        f"no cabe ni hoy: {total} B contra "
         f"{EEPROM_B * (1 - MARGEN_MIN):.0f} B utiles")
-    assert total > EEPROM_B_VIEJA * (1 - MARGEN_MIN), (
-        "si el censo bajara tanto que los 32 KB cumplieran el margen, el "
-        "acta E-7 dejaria de estar justificada y habria que revisarla: "
-        "el 24AA512 cuesta el chip de identidad aparte")
-    print()
-    print(f"  el margen es lo que se compra, no el sitio: 29,8 KB caben en")
-    print("  los dos. Lo que no cabe en 32 es el diseno de la semana que viene.")
+    assert fijo + n * B_POR_ENTRADA_RICO <= EEPROM_B * (1 - MARGEN_MIN), (
+        "el tamano elegido no aguanta el descriptor rico, que es la razon "
+        "por la que se eligio")
+    assert fijo + n * B_POR_ENTRADA_RICO > 64 * 1024 * (1 - MARGEN_MIN), (
+        "si 64 KB aguantara el descriptor rico, el acta E-7 estaria eligiendo "
+        "128 sin motivo y habria que revisarla: el 1025 cuesta la costura "
+        "del bloque en firmware")
 
     # --- 3. el techo que rompe primero ------------------------------------
     desc = e["descriptor"] + e["etiquetas de enumerados"]

@@ -712,44 +712,66 @@ treinta y dos de voz. El criterio «encender el instrumento con cables puestos
 no suena» no se ablanda por eso, y la mutación de encendido tiene que cubrir
 los nuevos.
 
-### E-7. La memoria del módulo pasa a 64 KB, y vuelve a ser dos chips
+### E-7. La memoria del módulo pasa a 128 KB
 
 `check_censo_voz.py` dio **29 800 B**. Contra los 32 KB decididos en #164 §19
-eso es el **91 %**, y deja sitio para **cuatro parámetros más por canal**. El
-censo de este módulo creció un 21,7 % en área y ganó un parámetro por canal en
-**una sola sesión** (E-5 y E-6). Cuatro no es margen: es el diseño de la semana
-que viene.
+eso es el **91 %** — y este módulo creció un 21,7 % de área y ganó un parámetro
+por canal en **una sola sesión** (E-5 y E-6).
 
-**Se sube a 64 KB: `24AA512`.** Con eso el censo baja al **45 %** y quedan 53
-parámetros más por canal.
+**Pero el tamaño no lo decide cuántos parámetros caben. Lo decide cuántos bytes
+ocupa la entrada de cada uno.** Hoy son 42 B (#164 §13). Y el descriptor no es
+un dato interno: `architecture-compute` §6 lo dice sin ambigüedad — *«los
+nombres y las unidades de cada parámetro no son cosmética: son la documentación
+que el modelo va a leer»*. El servidor MCP sale casi gratis por eso. Nombre
+legible, unidad, rango, valor por defecto y una línea de qué hace no caben en
+42 B: caben en unos **100**.
 
-**Y cuesta algo, dicho en voz alta.** #164 (pieza 3) había encontrado el
-`24AA256UID`, que resolvía los 32 KB **y** traía EUI-48, EUI-64 y un serial de
-fábrica — *«es un chip, no dos»*. **Esa pieza no existe en 64 KB**: la familia
-UID de Microchip se acaba en el 24AA256UID, verificado contra el catálogo y las
-hojas. Así que subir a 64 KB significa volver al arreglo de dos chips que #164
-§13 ya describía: el `24AA512` para el blob y el descriptor, y el `24AA02E48`
-—que nunca se quitó del BOM— para la identidad.
+Con ese objetivo declarado, el guion decide solo:
 
-El precio es **un chip de ~$0,30 y una huella SOT-23-5**. Se paga.
+| | Aguanta hasta | Con 100 B/entrada |
+|---|---|---|
+| 32 KB | 29 B | NO CABE |
+| 64 KB | 72 B | NO CABE |
+| **128 KB** | **158 B** | **cabe** ← elegido |
+| 256 KB | 329 B | cabe, y sobra |
 
-**Deroga** la decisión 19 de #164 y su pieza 3. El resto de §13 de aquel spec
-—dos direcciones en el mismo canal del mux I²C, el descubrimiento sin tocar—
-vuelve a ser exactamente lo que decía antes de la optimización.
+**Se sube a 128 KB: `24AA1025`.** Es el más pequeño que aguanta la razón por la
+que se sube. El censo queda al **23 %**.
 
-**Y por qué no 128 KB, para no volver a preguntarlo.** El `24AA1025` existe,
-pero **no es un chip de 128 KB: son dos de 64 con un interruptor.** La mitad se
-elige con un bit `B0` que viaja en el byte de control, y su pata `A2` deja de ser
-configurable —tiene que ir atada a VCC—, así que ocupa dos direcciones del bus y
-el firmware tiene que saber que hay una costura a mitad del array y cambiar de
-mitad al cruzarla. El `24AA512`, en cambio, es pin a pin lo mismo que ya hay: se
-cambia la línea del BOM y no se entera nadie.
+**Por qué no 256, para no volver a preguntarlo.** A 329 B por parámetro se
+compra un párrafo entero por perilla, que nadie escribe. Y pasado el `24AA1025`
+la pregunta deja de ser *«qué EEPROM»* y pasa a ser *«por qué EEPROM»*: una
+flash SPI de 4 MB cuesta lo mismo y da dieciséis veces más, **en un bus que este
+módulo ya tiene**. Lo que ata a la EEPROM es que se escribe byte a byte y la
+flash se borra por sectores de 4 KB — y la tabla de afinación la reescribe el
+autoafinado solo. El día que haga falta guardar **sonido** —formas de onda,
+bancos grandes— la respuesta es flash, y es otra decisión.
 
-Y el reparto no lo justifica: con 64 KB caben **53 parámetros más por canal** y
-hoy se usan **nueve**. Eso ya es seis veces el diseño actual. El día que haga
-falta guardar de verdad —formas de onda, bancos grandes— la respuesta no es una
-EEPROM mayor sino **flash SPI**, que da megabytes por el mismo dinero. Los
-128 KB son el medio incómodo: de más para configuración, de menos para audio.
+**Lo que cuesta, en dos partes.**
+
+*Un chip.* #164 (pieza 3) había encontrado el `24AA256UID`, que daba los 32 KB
+**y** EUI-48, EUI-64 y serial de fábrica — *«es un chip, no dos»*. **Esa pieza
+no existe por encima de 32 KB**: la familia UID de Microchip se acaba ahí,
+verificado contra catálogo y hojas. Se vuelve al arreglo de dos chips que #164
+§13 ya describía, con el `24AA02E48` —que nunca salió del BOM— haciendo la
+identidad.
+
+*Una costura.* El `24AA1025` **no es un chip de 128 KB: son dos de 64 con un
+interruptor.** Verificado contra su hoja (DS21941H): el byte de control es
+`1010 B0 A1 A0`, el bit `B0` hace de A16, y **`A2` no es configurable — va atado
+a VCC o el chip no responde**. Tres consecuencias:
+
+1. **Ocupa dos direcciones.** Con `A0` = 1 responde en **0x51** (bloque bajo) y
+   **0x55** (alto). Con `A0` = 0 caería en **0x50**, que es donde vive el
+   `24AA02E48`: **hay colisión si se cablea a cero.** El 0x51 que #164 §13 ya
+   planeaba sigue valiendo; el **0x55 es nuevo y hay que reservarlo**.
+2. **El firmware tiene que conocer la costura**: cambiar de dirección al cruzar
+   los 64 KB, y partir en dos cualquier escritura que la atraviese. Unas veinte
+   líneas y un test que escriba a caballo del borde.
+3. Página de **128 B** y **1 000 000 de ciclos** en modo página — misma
+   resistencia que las piezas que ya hay. Eso no empeora.
+
+**Deroga** la decisión 19 de #164 y su pieza 3.
 
 > **El camino que haría esto innecesario, declarado y no tomado:** el descriptor
 > es el **69 %** de la memoria, y describe dieciséis canales idénticos entrada
