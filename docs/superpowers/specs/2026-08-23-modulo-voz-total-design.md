@@ -380,7 +380,7 @@ preset** — no muta mientras el lote está en vuelo.
 
 ## 7. El re-censo y los cambios al núcleo
 
-`censo_voz.py` asevera; **bloqueante**. Estimaciones:
+`check_censo_voz.py` asevera; **bloqueante**. Estimaciones:
 
 | | #164 | Voz total |
 |---|---|---|
@@ -424,7 +424,7 @@ fondo de la bahía, §5.4). Sin cambios sobre la v1:
 El primer reparto salió ROJO por 17 mm y el guion lo registra.
 
 **El consumo se re-suma entero, no en delta** (S-8: la v1 comparaba +90 mA
-contra los 650 totales como si fueran holgura libre). `consumo_total.py`,
+contra los 650 totales como si fueran holgura libre). `consumo_total_budget.py`,
 **bloqueante**, suma el instrumento completo por riel: módulo de Voz (16
 SSI2130 + 16 LM13700 + 16 TL074 + 8 SSI2164 + DACs), cerebro, mixer,
 bahía, LEDs — contra los 650 mA/riel del módulo 1. Estimación de diseño:
@@ -485,9 +485,9 @@ tienen su **segunda puerta**: dos placas + handshake antes de la tanda.
 | `voz_total_budget.py` | geometría + fondo bahía | adoptado, VERDE |
 | `spi_privado_budget.py` | caudal del SPI con todos los flujos | **bloqueante e invalidante de §3** |
 | `ataque_budget.py` | nota-a-VCA completo, ambas columnas | bloqueante, tras §3.3 |
-| `censo_voz.py` | parámetros, memoria, cotas | bloqueante |
+| `check_censo_voz.py` | parámetros, memoria, cotas | bloqueante |
 | `cal_filtro_budget.py` | tiempos de caracterización | bloqueante |
-| `consumo_total.py` | instrumento entero por riel | bloqueante |
+| `consumo_total_budget.py` | instrumento entero por riel | bloqueante |
 | `arranque_budget.py` | descriptor + curvas por I²C | bloqueante |
 
 Y las dos leyes de siempre: cada arreglo con su mutación (Principio VIII),
@@ -521,7 +521,7 @@ de architecture-poly.
 4. Distorsión y diafonía reales del AD75019 en el camino patcheado.
 5. Asentamiento de la auto-oscilación por punto de curva
    (`cal_filtro_budget.py`).
-6. Los ~520 parámetros y los ~24 KB son estimación hasta `censo_voz.py`.
+6. Los ~520 parámetros y los ~24 KB son estimación hasta `check_censo_voz.py`.
 7. El caudal del SPI privado a 10 kHz de render (`spi_privado_budget.py`).
 8. La convivencia térmica y de ruido del canal completo en una placa — el
    prototipo §9.3.
@@ -548,7 +548,7 @@ v1 y re-auditado por V2.
 | S-5 | Ataque prometido uniforme sin contar la columna del esclavo | §3.3: cota de uniformidad ±0,5 ms entre columnas |
 | S-6, V2-I | «Voz» divergía de R-M6 y el espacio de roles no particionaba | §0.3: partición total con precedencia; enmienda R-M6 (cambio 16) |
 | S-7, V2-VI | Carcasas remotas sin autoridad; §2.2 del núcleo borrado | §0.2: ley de capas + pairing + §2.2 restaurado acotado |
-| S-8 | Consumo en delta contra el total | §8: `consumo_total.py` bloqueante |
+| S-8 | Consumo en delta contra el total | §8: `consumo_total_budget.py` bloqueante |
 | S-9 | CV de corte con fuentes sin árbitro | §2: el micro es el único escritor; suma digital |
 | S-10, H-CF2, H-OF3 | Ley de conmutación imposible en el chip; drones = starvation | §5.3: imagen sombra + barrera de cambiados + política por preset |
 | S-11 | Prototipo único sobre-prometía | §9.3: alcance declarado + segunda puerta |
@@ -569,3 +569,151 @@ v1 y re-auditado por V2.
 | V2-IV | «Generador» sin test; pitch-env legal e ilegal a la vez | §3.2: test (a)(b)(c); pitch prohibido v1 con huella de enmienda |
 | V2-V | El mixer rompía la taxonomía que lo ejemplificaba | §0.3/§0.4: conjunto de clases + la suma 16:1 como normalizado |
 | V2-VI | «Vista que escribe»; N+1 modelos negados | §0.2: editores concurrentes + modelo autoritativo y vistas optimistas |
+
+---
+
+## 13. Acta del 2026-08-23: seis decisiones tomadas después de la junta
+
+§0 dice que la doctrina se enmienda **por acta y en voz alta, nunca por
+accidente**. Estas seis se tomaron en sesión con Samuel el mismo día, después
+de cerrar la v2, y cambian cosas que el cuerpo de este spec da por sentadas. Se
+registran aquí en vez de reescribirlo, para que el rastro de las tres juntas
+quede intacto.
+
+### E-1. El cerebro y las voces NO se funden
+
+Se evaluó fusionar la placa del cerebro con la de voces y se descarta, con tres
+razones que ya estaban en el repo y ninguna es de opinión:
+
+- **Pines.** El cerebro deja 2 GPIO libres de 48 tras la pantalla de 2,8"
+  (spec del cerebro §12.16). El maestro de la Voz ya gasta ocho en cronómetros
+  de PIO. Fusionar no ahorra un chip: deja tres chips en una placa más grande.
+- **Reloj.** `autotune_budget.py` fija `F_PIO = 150 MHz` y Pico-PIO-USB impone
+  el suyo (#150, abierto). Fusionados, el host USB le dicta la base de tiempo
+  al afinado de los dieciséis osciladores.
+- **Masa.** El spec del cerebro corta **ahí** el lazo con la masa de la
+  computadora. Esta placa es donde **1 mV son 3,6 cents**. La puerta sucia no
+  vive en el cuarto limpio.
+
+**Nada de este spec cambia por E-1.** Se registra para que no se vuelva a
+proponer sin estos tres números delante.
+
+### E-2. El frente se unifica; los conectores del mundo se van atrás
+
+Una cara continua por fila, tarjetas separadas detrás, y USB / MIDI DIN /
+clock / pedal a la trasera del cajón. Lo habilita el mismo argumento que este
+spec ya usa para el panel de mandos (§8): **las perillas son sensores, mandan
+números, y los números viajan por cable plano sin ensuciarse.** Detalle,
+consecuencias y lo que hay que tocar del cajón: **#167**.
+
+### E-3. La fila de arriba es UN módulo
+
+La bahía deja de ser módulo aparte — **deroga §5.1** en «con su bajada de J2 y
+su panel en la fila A». Se funde en el de Voz, que pasa a declarar también la
+clase **relator**. Legal sin inventar nada: el cambio 15 hizo que un módulo
+declare un *conjunto* de clases, y esta es su primera consecuencia real.
+
+Gana una sola bajada de J2 en vez de dos, una sola identidad y una ranura
+libre. Queda por resolver: **quién shiftea los 256 bits del AD75019** ahora que
+la bahía no tiene bajada propia. Barato en pines, pero los micros de este
+módulo son justo los apretados.
+
+### E-4. Los demás módulos SÍ son modulares, y la fila de abajo es rack de verdad
+
+La regla de los dos regímenes (§0.1) se mantiene y ahora tiene frontera física
+declarada: **arriba el instrumento, abajo módulos Eurorack intercambiables** —
+un mixer de utilidad, un delay analógico, lo que Samuel quiera llevarse a otro
+instrumento. La bahía (§5) es el puente, y ya está en el jack correcto
+(Thonkiconn, ±12 V).
+
+Dos cosas que esto exige y hoy no existen:
+
+- **Bus board en la fila de abajo**, con el peine de 16 pines estándar. No está
+  en ningún plano.
+- **Reserva de invitados por riel.** `consumo_total_budget.py` (§9.4) deja de sumar
+  «el instrumento» y pasa a sumar el instrumento **más una reserva declarada**.
+  Con los 650 mA/riel del módulo 1 y los 350–420 estimados del instrumento, la
+  reserva sale del orden de 230–300 mA — que es una cifra que hay que escribir,
+  no una holgura que se descubre enchufando el cuarto módulo.
+
+### E-5. El módulo 4 desaparece como hardware separado
+
+El módulo de Voz se basta solo: es un sintetizador completo, no un banco de
+osciladores. Se mudan a esta placa la suma de los dieciséis, el volumen
+general, la salida principal **y los oídos** — el códec de 24 bits que hoy vive
+en el módulo 4 y que es como el cerebro se escucha a sí mismo.
+
+**Deroga §0.4 punto 2.** La convergencia 16:1 sigue siendo normalizado
+declarado, pero ya no «suma al bus del mixer»: **termina en la salida de este
+módulo**. El mixer que viva en la fila de abajo es un invitado cualquiera y no
+tiene relación con esta suma.
+
+El motivo, dicho por Samuel: *un mixer solo tiene sentido si es independiente
+de su fuente y de sus salidas.* El de hoy estaba soldado a las voces, así que
+no era un módulo — era una parte.
+
+### E-6. La salida es ESTÉREO, con sitio por voz
+
+Decidido: el instrumento reparte sus voces en el campo estéreo. Es la mitad de
+por qué un poli suena grande, y decidirlo después del layout cuesta el layout.
+
+Eran dos caminos, y esta primera versión del acta dejó la elección para el
+pase de diseño **suponiendo** que el caudal la decidía. `spi_privado_budget.py`
+ya está escrito y corrido, y esa suposición era falsa:
+
+| | VCAs de voz | CV por canal | SPI privado por micro | SCLK que pide |
+|---|---|---|---|---|
+| **A**: dos VCAs por canal (L/R), cada rama con envolvente × paneo | 32 | 4 | 6,05 Mbit/s | **10,1 MHz** |
+| **B**: un VCA de envolvente + etapa de paneo detrás | 48 | 5 | 4,16 Mbit/s | **6,9 MHz** |
+
+**A pide 1,45× el caudal de B, no 2×**, y las dos caben con holgura contra un
+techo declarado de 20 MHz. El error del razonamiento: el CV de corte **ya** es
+un flujo a tasa de render en las dos topologías —§2 hace que el micro le sume
+la envolvente de filtro y escriba el DAC— así que A pasa de dos flujos por
+canal a tres, no de uno a dos.
+
+**Se elige A.** Menos cobre —ocho chips menos entre VCA y DAC— y el único
+argumento que sostenía a B se cayó con el número delante. La holgura de cómputo
+también aguanta: 625 ciclos por valor de envolvente a 150 MHz.
+
+> **Y un hallazgo que sale de escribir el guion, que toca al cuerpo del spec:**
+> §3.1 cuenta *«8 envolventes × 10 kHz son 80k escrituras/s por micro»* — una
+> por canal. Pero §2 hace del CV de corte un segundo flujo a tasa de render, y
+> el módulo 6 que desaparece eran **dos** generadores ADSR, no uno. La línea
+> base de §3.1 está a la mitad de lo que su propio §2 implica, **antes** de
+> meter estéreo. No rompe nada —el caso corregido también cierra, 6,9 MHz— pero
+> la cifra del spec está mal y hay que corregirla.
+
+**Lo que E-6 reabrió, y cómo quedó.** Los cuatro presupuestos estaban
+declarados en §9.4 y **ninguno existía como guion**. Se escriben, se corren, y
+el resultado es este:
+
+| Guion | Veredicto | Cifra |
+|---|---|---|
+| `spi_privado_budget.py` | **VERDE** | 10,1 MHz de SCLK contra un techo de 20. §3 sobrevive |
+| `voz_total_budget.py` | **VERDE, más estrecho** | fila A a 421,5 de 488,3 mm (15,8 %); el factor de ruteo al que rompe baja de ×4,6 a **×3,79** |
+| `consumo_total_budget.py` | **VERDE** | 340 mA en el peor riel de 500 útiles; quedan **160 mA/riel** para los invitados de E-4 |
+| `check_censo_voz.py` | **ROJO en dos de tres techos** | ver abajo |
+
+**El censo es el que trae malas noticias, y son las que la spec ya esperaba:**
+
+- **`MAX_PARAMS = 512` (`modelo.rs:9`) contra 536 parámetros.** Se pasa por 24.
+  Y el techo es del **instrumento entero**, no de este módulo: un solo módulo se
+  come el 105 %. Es el cambio 2, y esto es la cifra que lo hace prerrequisito.
+- **El descriptor son 25 512 B contra los 238 B que el `u8` de
+  `descubrimiento.rs` puede anunciar** — 107×. Es el cambio 18.
+- **La memoria sí cabe, al 91 %** de los 32 KB elegidos en #164. La petición de
+  64 KB de §7 queda justificada por el margen, no por la necesidad: hoy entra,
+  pero el siguiente parámetro por canal cuesta 672 B y solo quedan 2 968.
+
+Y una consecuencia que no es de presupuesto: **§9.1, el camino de silencio** —
+ya no son 32 VCAs en estado seguro, son **48**: los dieciséis de resonancia más
+treinta y dos de voz. El criterio «encender el instrumento con cables puestos
+no suena» no se ablanda por eso, y la mutación de encendido tiene que cubrir
+los nuevos.
+
+### Lo que este acta NO decide
+
+El reparto de anchos de panel con los conectores ya mudados, quién shiftea el
+crosspoint (E-3), y nada del cajón. Cada uno va en su propio pase. La idea de
+que la fila de abajo fuera también un módulo único **muere aquí**, con E-4.
