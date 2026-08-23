@@ -57,6 +57,13 @@ PATRONES = (
     "hardware/**/check_*.py",
     "hardware/**/*_budget.py",
     "case/**/*_budget.py",
+    # check_dxf.py del case NO estaba, y era el unico que relee los DXF
+    # exportados -- o sea el unico que mira el artefacto que se manda al taller,
+    # no el modelo que lo genero. El glob de arriba solo recoge presupuestos, y
+    # `hardware/**/check_*.py` no llega hasta aqui. Es literalmente el aviso que
+    # CONTRIBUTING.md da dos parrafos mas abajo: "un guion que el gate no ve no
+    # es un gate".
+    "case/**/check_*.py",
     "simulations/*/*.py",
 )
 EXCLUIR = ("__pycache__", ".venv", os.path.join(".claude", "worktrees"), "site-packages")

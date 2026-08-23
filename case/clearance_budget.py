@@ -16,6 +16,8 @@ Corre en verde ANTES de mandar nada a cortar (constitucion, Principio III).
 """
 from __future__ import annotations
 
+import contextlib
+import io
 import math
 import re
 import sys
@@ -757,6 +759,28 @@ def _rejilla_valle(p: dict[str, float]) -> tuple[int, float, float]:
     return 2 * ns, campos[0][1] - campos[0][0], area
 
 
+def _banda_libre_trasera(p: dict[str, float]) -> tuple[float, float]:
+    """La banda de la trasera entre la fila de M3 de abajo y la onda de encima.
+
+    La comparten la rejilla de entrada de aire y la ventana de la entrada de
+    red, y por eso se calcula UNA vez. El .scad dice lo mismo con las mismas
+    palabras en piel_trasera_2d(): si cada uno la rederivara, bastaria tocar
+    vent_separacion para que los dos campos se movieran por separado.
+
+    El termino vent_ancho_ranura/2 no es decorativo: la onda es un hull de
+    circulos y su borde de MATERIAL cae medio ancho de ranura por debajo de su
+    polilinea. La primera version se lo olvido y los 14 mm de vent_separacion
+    salieron 12."""
+    P = _vertices(p)
+    ce = _centros_esqueleto(p, P, _centros_rail(p, P))
+    f_base, f_tras = ce[1][1], ce[4][1]
+    y_bajas = f_base + 0.37 * (f_tras - f_base)
+    y0 = f_base + p["valle_espina"] / 2 + p["vent_puente_min"]
+    y1 = (y_bajas - p["vent_periodo"] * 0.35 - p["vent_ancho_ranura"] / 2
+          - p["vent_separacion"])
+    return y0, y1
+
+
 def _rejilla_entrada(p: dict[str, float]) -> tuple[int, float, float, float]:
     """Las ranuras de ENTRADA, mismas cuentas que rejilla_entrada().
 
@@ -773,17 +797,18 @@ def _rejilla_entrada(p: dict[str, float]) -> tuple[int, float, float, float]:
     # sumar al devolver el centroide, asi que se cancela -- pero tiene que
     # decir lo mismo que el .scad o el dia que deje de cancelarse miente.
     y0_pl = 0.0
-    f_base, f_tras = ce[1][1] - y0_pl, ce[4][1] - y0_pl
-    y_bajas = f_base + 0.37 * (f_tras - f_base)
-    y0 = f_base + p["valle_espina"] / 2 + p["vent_puente_min"]
-    # vent_ancho_ranura/2: la onda es un hull de circulos y su borde de material
-    # cae medio ancho de ranura por debajo de la polilinea (ver el .scad)
-    y1 = (y_bajas - p["vent_periodo"] * 0.35 - p["vent_ancho_ranura"] / 2
-          - p["vent_separacion"])
+    # La banda sale de _banda_libre_trasera(), que es la unica que la calcula.
+    # Estuvo copiada aqui y en _ondas_trasera(); ahora tambien la lee la ventana
+    # de la entrada de red, o sea tres consumidores de la misma cuenta.
+    y0, y1 = _banda_libre_trasera(p)
     paso = int(p["valle_paso_hp"])
     n_hp = round(p["largo_riel"] / p["hp"])
-    x_iec = au - 70 + 24
-    hueco = (48 + p["vent_ancho_ranura"]) / 2 + p["vent_puente_min"]
+    # La tercera copia del mismo numero. Estuvo como "au - 70 + 24" con el 48
+    # escrito a mano al lado -- el .scad lo tenia dos veces mas. Ahora sale de
+    # params.scad, que es de donde tiene que salir para que el dia que la pieza
+    # de red se elija no haya que acordarse de tres sitios.
+    x_iec = au - p["iec_margen_der"] - p["iec_ancho"] / 2
+    hueco = (p["iec_ancho"] + p["vent_ancho_ranura"]) / 2 + p["vent_puente_min"]
     ns = [n for n in range(paso, int(n_hp) - paso + 1, paso)
           if abs(n * p["hp"] - x_iec) >= hueco]
     return (len(ns), y1 - y0,
@@ -907,6 +932,142 @@ def guarda_aire(p: dict[str, float]) -> None:
           f"{dt:.1f} K sobre ambiente con {p['potencia_disipada']:.2f} W "
           f"(techo {p['salto_termico_max']:.0f}). SUPUESTO: C_D={CD_TIRO}, "
           f"sin perdidas de trafo")
+
+
+def guarda_red(p: dict[str, float]) -> None:
+    """La ventana de la entrada de red: que quepa, y que se sepa que es provisional.
+
+    NACE PORQUE NADIE LA MIRABA. El hueco de la entrada de red eran dos literales
+    (48 x 27.5) escritos dentro de sam17_case.scad, con su propio comentario
+    diciendo "bloque snap-in tipico -- CONFIRMAR contra el datasheet de la pieza
+    comprada", y el mismo numero copiado en tres sitios: dos en el .scad y uno
+    aqui, en _rejilla_entrada(). Ninguna puerta lo tocaba. Es el mismo patron del
+    `- 15` de la trasera, que estaba en cinco sitios y ninguno sabia donde estaba
+    el suelo.
+
+    Y CAMBIO DE NATURALEZA el 2026-08-23. Hasta ese dia el conector se encajaba a
+    presion en el acrilico, lo cual rompia sin decirlo la regla que la spec del
+    case escribe en su §7 -- "las pieles removibles nunca llevan mains" --, porque
+    la trasera se quita con 10 M3. Samuel decidio montarlo en una PIEZA FIJA y
+    dejar el acrilico con la ventana de paso. Eso mueve la cota critica al metal,
+    que se rehace barato; el acrilico, que es lo que no se deshace, se queda con
+    un hueco holgado.
+
+    Por eso esta puerta no comprueba que el conector encaje -- ya no encaja aqui.
+    Comprueba lo que le toca al acrilico, y son DOS cosas, no tres: que la
+    ventana quepa en la banda libre sin comerse el puente, y que no se arrime al
+    canto. El puente contra la ranura mas cercana se calcula y se imprime pero
+    NO se asevera, porque seria un verde vacio -- ver la nota del punto 2.
+
+    Y IMPRIME de que pieza NO se derivan las cotas. La Schurter KM00.1105.11 SI
+    esta elegida (bom-chasis.csv de la fuente v3, hoja typ_KM.pdf) y su snap-in
+    agarra chapa de 1 a 2.5 mm: en una plancha de 8 no se monta, y nunca pudo.
+    Los 48 x 27.5 de hoy son su recorte girado 90 grados y redondeado a ojo. No
+    se "arreglan" a 47 x 28 aqui: esta ventana ya no es un recorte de encaje
+    sino un paso, y su cota la decide la pieza fija que aun no existe (#130).
+
+    Su mutacion vive en canario_red(), como manda el Principio VIII."""
+    P = _vertices(p)
+    ce = _centros_esqueleto(p, P, _centros_rail(p, P))
+    au = p["ancho_total"] - 2 * p["t_cheek"] - 2 * p["hol_piel"]
+    f_base = ce[1][1]
+    lib0, lib1 = _banda_libre_trasera(p)   # la misma que centra la rejilla
+    puente = p["vent_puente_min"]
+
+    # 1. cabe de alto en la banda, y deja puente arriba y abajo. Va centrada,
+    #    asi que el margen es el mismo por los dos lados -- se comprueba una vez
+    #    y se nombran los dos.
+    holgura_v = (lib1 - lib0 - p["iec_alto"]) / 2
+    assert holgura_v >= puente, (
+        f"la ventana de la entrada de red mide {p['iec_alto']:.1f} mm de alto y "
+        f"la banda libre entre la fila de M3 y la onda mide {lib1 - lib0:.2f} "
+        f"(y={lib0:.2f}..{lib1:.2f}): quedan {holgura_v:.2f} mm de acrilico "
+        f"arriba y abajo y el puente minimo son {puente:.0f}. O baja iec_alto, o "
+        f"la banda tiene que crecer -- y crecerla mueve vent_separacion, que es "
+        f"cota de dibujo, o la fila de M3, que es estructura")
+
+    # 2. el puente contra la ranura mas cercana NO SE ASEVERA, y conviene decir
+    #    por que: seria un verde vacio. _rejilla_entrada() se salta columnas con
+    #    la condicion |x - x_iec| >= (iec_ancho + vent_ancho_ranura)/2 + puente,
+    #    y "el puente que queda" es esa misma desigualdad despejada. Aseverarlo
+    #    aqui es preguntarle a la regla si cumple la regla: sale verde SIEMPRE,
+    #    con cualquier valor de cualquier parametro, incluso con la geometria
+    #    rota. Es exactamente lo que prohibe el Principio VIII -- y la primera
+    #    version de esta puerta lo tenia escrito como assert, en verde, sin
+    #    vigilar nada.
+    #
+    #    Se calcula igual porque el NUMERO si vale: sale impreso, y una persona
+    #    que lo vea encoger sabe que la ventana esta comiendose el campo. Lo que
+    #    de verdad protege ese puente es el propio salto de columnas del .scad,
+    #    y quien comprueba que el .scad hizo lo que dice es check_dxf.py, que
+    #    relee el DXF exportado -- no este guion.
+    x_iec = au - p["iec_margen_der"] - p["iec_ancho"] / 2
+    paso = int(p["valle_paso_hp"])
+    n_hp = round(p["largo_riel"] / p["hp"])
+    hueco = (p["iec_ancho"] + p["vent_ancho_ranura"]) / 2 + puente
+    xs = [n * p["hp"] for n in range(paso, int(n_hp) - paso + 1, paso)
+          if abs(n * p["hp"] - x_iec) >= hueco]
+    borde = min(abs(x - x_iec) - (p["iec_ancho"] + p["vent_ancho_ranura"]) / 2
+                for x in xs)
+
+    # 3. no se arrima al canto derecho de la plancha. Un hueco cerca de un
+    #    canto libre en PMMA es el otro sitio donde arranca la fisura.
+    assert p["iec_margen_der"] >= puente, (
+        f"la ventana de la entrada de red deja {p['iec_margen_der']:.1f} mm "
+        f"hasta el canto derecho de la trasera y el minimo son {puente:.0f}")
+
+    print(f"entrada de red: ventana de {p['iec_ancho']:.1f} x {p['iec_alto']:.1f} "
+          f"en x={x_iec - p['iec_ancho'] / 2:.2f}..{x_iec + p['iec_ancho'] / 2:.2f}, "
+          f"y={lib0 + holgura_v:.2f}..{lib1 - holgura_v:.2f}")
+    print(f"  {holgura_v:.2f} mm de puente arriba y abajo, {borde:.2f} contra la "
+          f"ranura mas cercana, {p['iec_margen_der']:.1f} al canto derecho")
+    print(f"  SIN DERIVAR de la Schurter KM00.1105.11 (hoja typ_KM.pdf p.3: "
+          f"recorte 28 x 47, brida 30.5 x 50). Su snap-in agarra chapa de 1 a "
+          f"2.5 mm y esta plancha tiene {p['t_piel']:.0f}: aqui NO se encaja")
+    print(f"  la sostiene una pieza fija atornillada al larguero de base "
+          f"trasera, {lib0 + holgura_v - (f_base + p['rail'] / 2):.2f} mm mas "
+          f"abajo -- sin dibujar todavia (#130)")
+
+
+def canario_red(p: dict[str, float]) -> None:
+    """Autocomprobacion ROJA de guarda_red(): si esto no dispara, su VERDE no
+    vale nada (Principio VIII).
+
+    Se rompe la geometria a proposito por los DOS lados que la puerta asevera y
+    se exige que salte; y despues se corre con los parametros de verdad y se
+    exige que NO salte, que es la mitad que se olvida y la que caza un canario
+    que dispara siempre.
+
+    Las mutaciones no son numeros bonitos: son el modo de fallo real de cada
+    aserto. La ventana crece hasta comerse el puente contra la onda -- que es lo
+    que pasaria el dia que se elija una pieza mas alta que la inventada, o sea
+    el desenlace mas probable del #130 -- y la ventana se arrima al canto
+    derecho, que es donde el PMMA raja."""
+    lib0, lib1 = _banda_libre_trasera(p)
+    banda = lib1 - lib0
+    sordo = io.StringIO()
+
+    # el puente arriba y abajo es (banda - iec_alto)/2, asi que basta con que
+    # iec_alto pase de banda - 2*puente para que el aserto 1 tenga que saltar
+    alto_roto = banda - 2 * p["vent_puente_min"] + 0.5
+    casos = (("iec_alto", alto_roto,
+              "una ventana que se come el puente contra la onda"),
+             ("iec_margen_der", p["vent_puente_min"] - 0.5,
+              "una ventana pegada al canto derecho"))
+    for clave, valor, que in casos:
+        roto = dict(p)
+        roto[clave] = valor
+        try:
+            with contextlib.redirect_stdout(sordo):
+                guarda_red(roto)
+        except AssertionError:
+            continue
+        raise AssertionError(
+            f"canario de red NO disparo: con {clave}={valor:.2f} hay {que} y "
+            f"guarda_red() la deja pasar — no confiar en su VERDE")
+
+    with contextlib.redirect_stdout(sordo):
+        guarda_red(dict(p))          # y con la geometria buena, verde
 
 
 def guarda_fresado(p: dict[str, float]) -> None:
@@ -1489,6 +1650,8 @@ def main() -> int:
     canario_alineacion(p)
     guarda_piso(p)
     guarda_aire(p)
+    canario_red(p)
+    guarda_red(p)
     guarda_fresado(p)
     guarda_parametros_vivos(p)
     guarda_escalon(p)

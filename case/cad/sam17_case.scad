@@ -498,7 +498,11 @@ module piel_trasera_2d() {
     // rejilla y el IEC, y por eso se calcula UNA vez aqui y se les pasa: si cada
     // uno la rederivara, un cambio en vent_separacion los moveria por separado y
     // el recorte dejaria de estar centrado en el campo.
-    iec_alto = 27.5;
+    // El canto izquierdo de la ventana se DERIVA del margen al canto derecho.
+    // Estuvo como "au - 70" en tres sitios (dos aqui y uno en el budget), o sea
+    // el canto izquierdo contado desde la derecha -- un numero que no queria
+    // decir nada y que ya no sabia si lo que protegia era el canto o el campo.
+    x_iec0 = au - iec_margen_der - iec_ancho;
     lib0 = f_base + valle_espina/2 + vent_puente_min;
     // vent_ancho_ranura/2 y no solo la amplitud: la onda es un hull de circulos,
     // asi que su borde de MATERIAL cae medio ancho de ranura por debajo de la
@@ -507,15 +511,18 @@ module piel_trasera_2d() {
     difference() {
         plancha(au, alto);
         for (y = [f_base, f_tras]) fila_agujeros(au, y);
-        rejilla_entrada(au, lib0, lib1);
+        rejilla_entrada(au, lib0, lib1, x_iec0);
         translate([au*0.10, y_bajas])  onda("triangulo", au*0.35);
         translate([au*0.55, y_bajas])  onda("cuadrada",  au*0.35);
         translate([au*0.15, y_sierra]) onda("sierra", au*0.70);
-        // recorte IEC C14 con interruptor (bloque snap-in tipico
-        // 48 x 27.5; CONFIRMAR contra el datasheet de la pieza comprada).
+        // VENTANA de paso de la entrada de red -- no el recorte donde se encaja
+        // el conector. El conector lo sostiene una pieza fija atornillada al
+        // larguero de base trasera (Samuel, 2026-08-23): la trasera se quita con
+        // 10 M3 y la spec §7 dice que las pieles removibles nunca llevan mains.
+        // Las tres cotas son PROVISIONALES y viven en params.scad (#130).
         // +kerf como todo hueco interior del fichero.
-        translate([au - 70, lib0 + (lib1 - lib0 - iec_alto)/2])
-            square([48 + kerf, iec_alto + kerf]);
+        translate([x_iec0, lib0 + (lib1 - lib0 - iec_alto)/2])
+            square([iec_ancho + kerf, iec_alto + kerf]);
     }
 }
 
@@ -547,13 +554,18 @@ module piel_trasera_2d() {
 // la misma que centra el hueco del IEC, y si cada uno la calculara por su cuenta
 // bastaria tocar vent_separacion para que el recorte dejara de estar centrado en
 // el campo sin que nada lo cantara.
-module rejilla_entrada(au, y0, y1) {
+module rejilla_entrada(au, y0, y1, x_iec0) {
     n_hp = round(largo_riel/hp);
     // El IEC se salta por COLUMNAS ENTERAS: una ranura partida por el recorte
     // deja un diente de acrilico colgando de un lado, que es justo donde el
     // PMMA rompe. Se aparta media anchura de recorte + media de ranura + puente.
-    x_iec = au - 70 + 24;
-    hueco = (48 + vent_ancho_ranura)/2 + vent_puente_min;
+    //
+    // x_iec0 llega DADO por la misma razon que la banda (y0, y1): rederivarlo
+    // aqui fue lo que dejo el mismo "au - 70" copiado en tres sitios, y el dia
+    // que la pieza de red se elija y cambie iec_ancho, un campo se enteraria y
+    // el otro no.
+    x_iec = x_iec0 + iec_ancho/2;
+    hueco = (iec_ancho + vent_ancho_ranura)/2 + vent_puente_min;
     for (n = [valle_paso_hp : valle_paso_hp : n_hp - valle_paso_hp])
         if (abs(n*hp - x_iec) >= hueco)
             translate([n*hp, (y0 + y1)/2]) ranura(y1 - y0, vent_ancho_ranura);
