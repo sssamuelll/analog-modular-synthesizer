@@ -269,14 +269,20 @@ cerebro ni se entera.
 | B4 | Luz sobria | — |
 | **Principio 4** | **Todo comportamiento es configurable, por modos de ejecución** | Exige autoría en el núcleo (§5.1, §11.1) |
 
-### Propuestas de este papel (se votan EN PAQUETE, S-7)
+### El paquete — FIRMADO por Samuel el 2026-08-23 («dale pues»)
 
 Cara curada (16+4) · frente muerto acotado (renglón + ventana bahía +
-coronas) · modo MATRIZ con sus 4 condiciones · material opción A/B ·
-83 HP / 62 HP · bahía 4×4 al canto. **Son un paquete porque se sostienen
-entre sí** (la macro sin renglón no tiene nombre; MATRIZ sin frente no
-tiene acuse). Si la medición §11.3 mata el frente muerto, cae el paquete y
-la cara curada se re-propone con serigrafía fija y macros no reasignables.
+coronas) · modo MATRIZ con sus 4 condiciones · 83 HP / 62 HP · bahía 4×4
+al canto. **Son un paquete porque se sostienen entre sí** (la macro sin
+renglón no tiene nombre; MATRIZ sin frente no tiene acuse). La firma es de
+dirección, con las dos puertas que este mismo papel legisla intactas:
+
+- Las **mediciones de §11.3 siguen siendo puerta del congelado**: si el
+  retazo mata el frente muerto, el paquete vuelve a la mesa y la cara
+  curada se re-propone con serigrafía fija y macros no reasignables.
+- El **material (opción A aluminio-con-ventanas vs B acrílico entero)
+  queda sin firmar**: se decide con el retazo en la mano, porque la B
+  además pide la excepción de bonding que no es de esta mesa.
 
 ### Aún no tocadas
 
