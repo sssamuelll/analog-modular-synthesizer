@@ -1,6 +1,6 @@
 """Corriente del instrumento por riel, y cuanto queda para los invitados.
 
-    python consumo_total.py
+    python consumo_total_budget.py
 
 BLOQUEANTE (modulo-voz-total S8 y S9.4). Nace de dos hallazgos de la junta:
 

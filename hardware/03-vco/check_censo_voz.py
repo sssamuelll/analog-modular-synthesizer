@@ -1,6 +1,6 @@
 """Censo del modulo de Voz: parametros, descriptor y memoria.
 
-    python censo_voz.py
+    python check_censo_voz.py
 
 BLOQUEANTE (modulo-voz-total S7 y S9.4). Cuenta lo que el modulo tiene que
 poder NOMBRAR, no lo que tiene que poder sonar, y lo compara contra tres techos

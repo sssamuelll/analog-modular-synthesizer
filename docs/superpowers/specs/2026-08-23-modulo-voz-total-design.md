@@ -380,7 +380,7 @@ preset** — no muta mientras el lote está en vuelo.
 
 ## 7. El re-censo y los cambios al núcleo
 
-`censo_voz.py` asevera; **bloqueante**. Estimaciones:
+`check_censo_voz.py` asevera; **bloqueante**. Estimaciones:
 
 | | #164 | Voz total |
 |---|---|---|
@@ -424,7 +424,7 @@ fondo de la bahía, §5.4). Sin cambios sobre la v1:
 El primer reparto salió ROJO por 17 mm y el guion lo registra.
 
 **El consumo se re-suma entero, no en delta** (S-8: la v1 comparaba +90 mA
-contra los 650 totales como si fueran holgura libre). `consumo_total.py`,
+contra los 650 totales como si fueran holgura libre). `consumo_total_budget.py`,
 **bloqueante**, suma el instrumento completo por riel: módulo de Voz (16
 SSI2130 + 16 LM13700 + 16 TL074 + 8 SSI2164 + DACs), cerebro, mixer,
 bahía, LEDs — contra los 650 mA/riel del módulo 1. Estimación de diseño:
@@ -485,9 +485,9 @@ tienen su **segunda puerta**: dos placas + handshake antes de la tanda.
 | `voz_total_budget.py` | geometría + fondo bahía | adoptado, VERDE |
 | `spi_privado_budget.py` | caudal del SPI con todos los flujos | **bloqueante e invalidante de §3** |
 | `ataque_budget.py` | nota-a-VCA completo, ambas columnas | bloqueante, tras §3.3 |
-| `censo_voz.py` | parámetros, memoria, cotas | bloqueante |
+| `check_censo_voz.py` | parámetros, memoria, cotas | bloqueante |
 | `cal_filtro_budget.py` | tiempos de caracterización | bloqueante |
-| `consumo_total.py` | instrumento entero por riel | bloqueante |
+| `consumo_total_budget.py` | instrumento entero por riel | bloqueante |
 | `arranque_budget.py` | descriptor + curvas por I²C | bloqueante |
 
 Y las dos leyes de siempre: cada arreglo con su mutación (Principio VIII),
@@ -521,7 +521,7 @@ de architecture-poly.
 4. Distorsión y diafonía reales del AD75019 en el camino patcheado.
 5. Asentamiento de la auto-oscilación por punto de curva
    (`cal_filtro_budget.py`).
-6. Los ~520 parámetros y los ~24 KB son estimación hasta `censo_voz.py`.
+6. Los ~520 parámetros y los ~24 KB son estimación hasta `check_censo_voz.py`.
 7. El caudal del SPI privado a 10 kHz de render (`spi_privado_budget.py`).
 8. La convivencia térmica y de ruido del canal completo en una placa — el
    prototipo §9.3.
@@ -548,7 +548,7 @@ v1 y re-auditado por V2.
 | S-5 | Ataque prometido uniforme sin contar la columna del esclavo | §3.3: cota de uniformidad ±0,5 ms entre columnas |
 | S-6, V2-I | «Voz» divergía de R-M6 y el espacio de roles no particionaba | §0.3: partición total con precedencia; enmienda R-M6 (cambio 16) |
 | S-7, V2-VI | Carcasas remotas sin autoridad; §2.2 del núcleo borrado | §0.2: ley de capas + pairing + §2.2 restaurado acotado |
-| S-8 | Consumo en delta contra el total | §8: `consumo_total.py` bloqueante |
+| S-8 | Consumo en delta contra el total | §8: `consumo_total_budget.py` bloqueante |
 | S-9 | CV de corte con fuentes sin árbitro | §2: el micro es el único escritor; suma digital |
 | S-10, H-CF2, H-OF3 | Ley de conmutación imposible en el chip; drones = starvation | §5.3: imagen sombra + barrera de cambiados + política por preset |
 | S-11 | Prototipo único sobre-prometía | §9.3: alcance declarado + segunda puerta |
@@ -630,7 +630,7 @@ Dos cosas que esto exige y hoy no existen:
 
 - **Bus board en la fila de abajo**, con el peine de 16 pines estándar. No está
   en ningún plano.
-- **Reserva de invitados por riel.** `consumo_total.py` (§9.4) deja de sumar
+- **Reserva de invitados por riel.** `consumo_total_budget.py` (§9.4) deja de sumar
   «el instrumento» y pasa a sumar el instrumento **más una reserva declarada**.
   Con los 650 mA/riel del módulo 1 y los 350–420 estimados del instrumento, la
   reserva sale del orden de 230–300 mA — que es una cifra que hay que escribir,
@@ -692,8 +692,8 @@ el resultado es este:
 |---|---|---|
 | `spi_privado_budget.py` | **VERDE** | 10,1 MHz de SCLK contra un techo de 20. §3 sobrevive |
 | `voz_total_budget.py` | **VERDE, más estrecho** | fila A a 421,5 de 488,3 mm (15,8 %); el factor de ruteo al que rompe baja de ×4,6 a **×3,79** |
-| `consumo_total.py` | **VERDE** | 340 mA en el peor riel de 500 útiles; quedan **160 mA/riel** para los invitados de E-4 |
-| `censo_voz.py` | **ROJO en dos de tres techos** | ver abajo |
+| `consumo_total_budget.py` | **VERDE** | 340 mA en el peor riel de 500 útiles; quedan **160 mA/riel** para los invitados de E-4 |
+| `check_censo_voz.py` | **ROJO en dos de tres techos** | ver abajo |
 
 **El censo es el que trae malas noticias, y son las que la spec ya esperaba:**
 
