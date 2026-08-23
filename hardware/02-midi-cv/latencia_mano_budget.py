@@ -36,9 +36,11 @@ concretos queda POR_CONFIRMAR: se mide con osciloscopio, no se declara.
 
 --- Lo que NO esta confirmado ----------------------------------------------
 
-  * T_ASENTAMIENTO_CANAL: el mux + la impedancia real del pote contra el
-    condensador de muestreo del ADC. Es el numero que decide si el barrido
-    rapido es fisicamente posible. No hay placa de panel todavia.
+  * T_ASENTAMIENTO y T_CONVERSION: el mux + la impedancia real del pote contra
+    el condensador de muestreo, y la tasa del SAR del RP2350B, que el repo NO
+    documenta. Juntos deciden si el barrido rapido es fisicamente posible, y
+    hoy son EL CUELLO: a 8 kHz el bus va al 43 % y el barrido ya no da.
+    No hay placa de panel para medirlos.
   * TAU_RC: la reconstruccion analogica detras del DAC. Es latencia tambien, y
     es el suelo duro: el filtro que borra los escalones ES el retardo.
   * SCLK_J2 = 10 MHz es el techo del contrato congelado; el maximo real del
@@ -64,10 +66,22 @@ BITS_SONDEO_PANEL = 256     # bloque de vuelta del panel: deltas + cabecera
 BITS_ESCRITURA = BITS_BLOQUE_TONO   # el bloque agrupado hacia la Voz
 
 # --- por confirmar (con su valor de trabajo) ---------------------------------
-T_ASENTAMIENTO_CANAL_US = 5.0   # POR_CONFIRMAR: mux + pote + S/H del ADC
-TAU_RC_MS = 0.0                 # POR_CONFIRMAR: no hay filtro elegido
+T_ASENTAMIENTO_US = 5.0     # POR_CONFIRMAR: mux + impedancia del pote + S/H
+T_CONVERSION_US = 2.0       # POR_CONFIRMAR: el repo NO documenta la tasa del
+                            # ADC del RP2350B. Valor de trabajo; sale de la hoja
+TAU_RC_MS = 0.0             # POR_CONFIRMAR: no hay filtro de reconstruccion
+                            # elegido, y su tau ES latencia
 
-CANDIDATAS_HZ = (500.0, 1_000.0, 2_000.0, 4_000.0, 8_000.0)
+# La correccion del 2026-08-23: la v1 de este guion modelo el barrido como
+# SECUENCIAL -- 45 canales en fila, asentamiento + conversion cada uno. Es
+# falso por topologia, no por datasheet: si hay N muxes colgando de N entradas
+# de ADC, TODOS reciben la misma direccion y asientan A LA VEZ. El
+# asentamiento se paga UNA vez por paso de direccion y se reparte entre N
+# conversiones. Con un solo SAR las conversiones si van en fila.
+N_MUXES = 3                 # DECLARADO: 3 de las 8 entradas analogicas
+                            # (48 GPIO / 8 ADC del RP2350B, citado en el repo)
+
+CANDIDATAS_HZ = (500.0, 1_000.0, 2_000.0, 4_000.0, 8_000.0, 16_000.0)
 
 
 def suelo_midi_din_ms() -> float:
@@ -95,8 +109,19 @@ def cadena(f_barrido: float, f_lazo: float) -> dict[str, float]:
     }
 
 
-def us_por_canal(f_barrido: float) -> float:
-    return 1e6 / f_barrido / N_POTES
+def t_barrido_necesario_us(n_muxes: int) -> float:
+    """Lo que TARDA un barrido completo de los potes, por topologia.
+
+    Pasos de direccion = potes / muxes. En cada paso los N muxes asientan a la
+    vez (una sola espera) y luego el SAR convierte los N en fila.
+    """
+    pasos = -(-N_POTES // n_muxes)          # techo de la division
+    return pasos * (T_ASENTAMIENTO_US + n_muxes * T_CONVERSION_US)
+
+
+def holgura_barrido(f_barrido: float, n_muxes: int) -> float:
+    """Cuantas veces cabe el barrido en su propio periodo. <1 = no cabe."""
+    return (1e6 / f_barrido) / t_barrido_necesario_us(n_muxes)
 
 
 def main() -> None:
@@ -108,46 +133,57 @@ def main() -> None:
     print()
     print("  El bus no es el cuello: la cadencia del lazo lo es.")
     print()
-    print(f"  {'lazo':>8}  {'total':>9}  {'ocupacion':>10}  {'us/canal':>9}  veredicto")
+    print(f"  {'lazo':>8}  {'total':>9}  {'bus':>8}  {'barrido':>9}  veredicto")
 
     viables = []
     for f in CANDIDATAS_HZ:
-        etapas = cadena(f, f)
-        total = sum(etapas.values())
+        total = sum(cadena(f, f).values())
         ocu = ocupacion(f)
-        upc = us_por_canal(f)
-        cabe = total <= OBJETIVO_MS and ocu <= TECHO_OCUPACION
+        holg = holgura_barrido(f, N_MUXES)
+        cabe = total <= OBJETIVO_MS and ocu <= TECHO_OCUPACION and holg >= 1.0
         if cabe:
-            viables.append((f, total, ocu, upc))
-        marca = "OK" if cabe else ("bus" if ocu > TECHO_OCUPACION else "lento")
-        print(f"  {f/1e3:6.1f}k  {total:7.3f}ms  {ocu*100:8.1f}%  {upc:7.2f}us  {marca}")
+            viables.append((f, total, ocu, holg))
+        if ocu > TECHO_OCUPACION:
+            marca = "bus lleno"
+        elif holg < 1.0:
+            marca = "no barre"
+        elif total > OBJETIVO_MS:
+            marca = "lento"
+        else:
+            marca = "OK"
+        print(f"  {f/1e3:6.1f}k  {total:7.3f}ms  {ocu*100:6.1f}%  {holg:7.2f}x  {marca}")
 
     print()
+    print(f"  Barrido de {N_POTES} potes con {N_MUXES} muxes en paralelo:")
+    print(f"    {-(-N_POTES // N_MUXES)} pasos de direccion x "
+          f"({T_ASENTAMIENTO_US:.0f} us de asentamiento + "
+          f"{N_MUXES} x {T_CONVERSION_US:.0f} us) = "
+          f"{t_barrido_necesario_us(N_MUXES):.0f} us")
+    print(f"    Secuencial (1 mux) serian "
+          f"{t_barrido_necesario_us(1):.0f} us -- "
+          f"{t_barrido_necesario_us(1)/t_barrido_necesario_us(N_MUXES):.1f}x peor.")
+    print("    El asentamiento se paga UNA vez por paso: los muxes asientan a la vez.")
+    print()
+
     if viables:
-        f, total, ocu, upc = viables[0]
-        print(f"  La mas lenta que cumple: {f/1e3:.1f} kHz")
+        f, total, ocu, holg = viables[-1]   # la MAS RAPIDA que cumple
+        print(f"  La mas rapida que cumple: {f/1e3:.1f} kHz")
         print(f"    {total:.3f} ms peor caso, {total/2:.3f} ms promedio")
         print(f"    {ocu*100:.1f}% del J2 -- queda {(1-ocu)*100:.1f}% libre")
+        print(f"    barrido con {holg:.2f}x de holgura")
         print(f"    {suelo_midi_din_ms()/total:.1f}x por debajo del suelo de MIDI DIN")
         print()
         print("  Desglose del peor caso:")
         for nombre, ms in cadena(f, f).items():
             print(f"    {nombre:<22} {ms:7.3f} ms")
-        print()
-        print("  EL CUELLO NO ESTA EN EL BUS. Esta aqui:")
-        print(f"    {upc:.2f} us por canal para mux + asentamiento + conversion,")
-        print(f"    con {T_ASENTAMIENTO_CANAL_US:.1f} us POR_CONFIRMAR de asentamiento solo.")
-        if upc < T_ASENTAMIENTO_CANAL_US * 2:
-            print("    -> Margen menor de 2x. Se mide con la placa del panel antes")
-            print("       de congelar la tasa, o se barre en dos mitades alternas.")
 
     # --- las puertas -------------------------------------------------------
     assert viables, (
         f"Ninguna cadencia candidata cumple {OBJETIVO_MS} ms con "
         f"{TECHO_OCUPACION*100:.0f}% de techo de bus."
     )
-    f_ok = viables[0][0]
-    total_ok = viables[0][1]
+    f_ok = viables[-1][0]
+    total_ok = viables[-1][1]
     assert total_ok < suelo_midi_din_ms(), (
         "El objetivo tiene que quedar POR DEBAJO del suelo de MIDI DIN, "
         "o la frase 'la latencia mas baja' no significa nada."
