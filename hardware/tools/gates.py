@@ -70,8 +70,10 @@ EXCLUIR = ("__pycache__", ".venv", os.path.join(".claude", "worktrees"), "site-p
 # cualquier otra cosa que este pasando en la maquina.
 #
 # Una puerta que se pone roja por carga y no por la placa es peor que no
-# tenerla: ensena a empujar con --no-verify. 600 s deja el doble de lo medido
-# y sigue cazando un cuelgue de verdad, que es lo que esto va a buscar.
+# tenerla: ensena a empujar con --no-verify. 600 s son 2.65x los 226 medidos
+# --  decia "el doble", y el doble de 226 son 452, no 600. El numero esta bien
+# y la cuenta estaba mal; se corrige la cuenta, no el numero: 2.65x sigue
+# cazando un cuelgue de verdad, que es lo que esto va a buscar.
 TIMEOUT_S = 600
 
 def _python_kicad() -> str | None:
@@ -149,7 +151,7 @@ def corre(ruta: str) -> tuple[str, str, float]:
         return "FALLO", f"timeout a los {TIMEOUT_S} s", time.time() - t0
     dt = time.time() - t0
     salida = (r.stdout or "") + (r.stderr or "")
-    ultima = [l for l in salida.strip().splitlines() if l.strip()]
+    ultima = [x for x in salida.strip().splitlines() if x.strip()]
     if r.returncode == 0:
         return "OK", (ultima[-1][:64] if ultima else ""), dt
     if r.returncode == 2:
@@ -216,7 +218,7 @@ def main() -> int:
     print()
     for rel, detalle in fallos:
         print(f"--- FALLO en {rel} " + "-" * max(0, 50 - len(rel)))
-        print("\n".join("    " + l for l in detalle.splitlines()[-25:]))
+        print("\n".join("    " + x for x in detalle.splitlines()[-25:]))
         print()
 
     ok = len(scripts) - len(fallos) - len(huecos)
