@@ -19,7 +19,7 @@ use embassy_usb::{Builder, Config, UsbDevice};
 use sam17_nucleo_core::descriptor;
 use sam17_nucleo_core::protocolo::{codificar, decodificar, Mensaje};
 use sam17_nucleo_core::servidor::{Instrumento, Respuesta};
-use sam17_nucleo_core::sysex::{desenvolver, envolver};
+use sam17_nucleo_core::sysex::{desenvolver, envolver, largo_empaquetado};
 use sam17_nucleo_core::usbmidi::{empaquetar_sysex, Desempaquetador, Paquete, Trozo, MAX_SYSEX};
 use static_cell::StaticCell;
 
@@ -35,6 +35,27 @@ const PID: u16 = 0x0017;
 
 /// 64 bytes es el maximo de un endpoint bulk a full speed.
 const TAM_PAQUETE: u16 = 64;
+
+/// Lo que ocupa UN descriptor ya metido en su sobre de SysEx.
+///
+/// Era `384`, un literal a ojo dentro de `mandar_descriptores`, justo al lado
+/// de un `MAX_DESCRIPTOR_B` que si se leia de `core`. Sobraba, pero sobraba
+/// por casualidad: nadie habia escrito la cuenta y nada la rehacia si
+/// `MAX_DESCRIPTOR_B` subiera -- que es exactamente lo que una de las dos
+/// ramas de N4 propone hacer.
+///
+/// La cuenta, con las dos piezas citadas de `core::sysex`:
+///
+/// ```text
+///   empaquetado 7-a-8   largo_empaquetado(256) = 256 + ceil(256/7) = 293
+///   sobre               F0 + 0x7D + ... + F7                       =   3
+///                                                                    ---
+///                                                                    296
+/// ```
+///
+/// Ya no se escribe el 296: se deriva, para que la cuenta la rehaga el
+/// compilador y no la memoria de nadie.
+const MAX_SOBRE_B: usize = 3 + largo_empaquetado(descriptor::MAX_DESCRIPTOR_B);
 
 pub type Sam17Usb = UsbDevice<'static, Driver<'static, USB>>;
 
@@ -157,7 +178,7 @@ async fn mandar_descriptores(
     instrumento: &Instrumento,
 ) -> Result<(), ()> {
     let mut plano = [0u8; descriptor::MAX_DESCRIPTOR_B];
-    let mut sobre = [0u8; 384];
+    let mut sobre = [0u8; MAX_SOBRE_B];
     for d in instrumento.modelo().descriptores() {
         // Antes esto era `?`, o sea que UN descriptor que no cupiera se
         // llevaba por delante el volcado ENTERO y el cliente se quedaba con un
@@ -166,17 +187,37 @@ async fn mandar_descriptores(
         // mejor que mandar los que dio tiempo antes de reventar.
         //
         // La puerta que impide llegar aqui vive en core (descriptor.rs,
-        // `ningun_descriptor_se_acerca_al_techo_del_volcado`) y salta al 75 %
-        // del techo. Esto es el cinturon, no el freno.
+        // `ningun_descriptor_compilado_se_acerca_al_techo_del_volcado`) y salta
+        // al 75 % del techo. Esto es el cinturon, no el freno -- y hoy el freno
+        // solo agarra los descriptores COMPILADOS: los de modulo llegan por
+        // I2C y el peor caso declarado ya mide 250 B de 256 (N4).
         let Ok(n) = descriptor::escribir(d, &mut plano) else {
+            warn!("USB: un descriptor no cabe en el volcado, se salta");
             continue;
         };
-        let s = envolver(&plano[..n], &mut sobre).map_err(|_| ())?;
+        // Y este era el MISMO fallo 5, una linea mas abajo y sin arreglar:
+        // `escribir` ya no abortaba el volcado, pero `envolver` si. Un solo
+        // sobre que no quepa no tiene por que llevarse los otros doscientos
+        // noventa y nueve.
+        //
+        // Por construccion no puede fallar: `MAX_SOBRE_B` es exactamente lo
+        // que ocupa envuelto un plano de `MAX_DESCRIPTOR_B`. Justamente por
+        // eso el dia que falle sera porque alguien movio una de las dos
+        // constantes, que es cuando menos falta hace que se caiga todo.
+        let Ok(s) = envolver(&plano[..n], &mut sobre) else {
+            warn!("USB: un sobre no cabe en el buffer, se salta");
+            continue;
+        };
+        // Este `?` SI se queda: si el USB se cayo no hay volcado que salvar,
+        // y el `warn` de arriba tampoco iba a salir por ningun lado.
         mandar_sysex(midi, &sobre[..s]).await?;
     }
     // NO se manda terminador ni conteo: el cliente sigue sin poder distinguir
-    // "termino" de "se aborto". Eso es un cambio de FORMATO y lo decide N4 del
-    // pase del nucleo -- aqui no se inventa.
+    // "termino" de "falto uno", y ahora hay DOS sitios que se saltan uno en
+    // silencio. Eso es correcto y es lo que hay: el terminador es un cambio de
+    // FORMATO y lo decide N4 del pase del nucleo -- aqui no se inventa. Lo
+    // unico que se puede hacer sin tocar el formato es lo de arriba: dejar
+    // rastro en el log del propio instrumento.
     Ok(())
 }
 

@@ -176,10 +176,24 @@ pub const MAX_DESCRIPTOR_B: usize = 256;
 
 /// Cuanto de ese techo se deja ocupar antes de dar la alarma.
 ///
-/// MEDIDO el 2026-08-24: el mas gordo son 106 B ("cuantizacion global"), o sea
-/// el 41 %. Esto salta al 75 %, mucho antes del acantilado, porque lo que
-/// engorda un descriptor son las ETIQUETAS de los enumerados y esas crecen de
-/// a poco y sin que nadie mire.
+/// MEDIDO el 2026-08-24, y hay que leer las DOS medidas juntas porque miden
+/// poblaciones distintas:
+///
+/// ```text
+///   peor de los 42 COMPILADOS ("cuantizacion global"):  106 B   41 %
+///   peor caso DECLARADO (selector de 17 fuentes):       250 B   98 %
+/// ```
+///
+/// El 41 % es cierto y no dice nada: los compilados son los del cerebro, y los
+/// que engordan son los de MODULO, que llegan por I2C en tiempo de ejecucion
+/// (§3.5) y por definicion ningun test de compilacion los ve. El 250 esta
+/// medido con `escribir` en `el_peor_caso_declarado_cabe_en_el_volcado`, y ya
+/// pasa esta alarma con cincuenta y ocho bytes de sobra.
+///
+/// O sea que el 75 % ya no es "mucho antes del acantilado": es un aviso que el
+/// caso realista se salto hace rato. Cerrarlo es la decision N4 del pase del
+/// nucleo (descriptor troceado contra largo ancho); subir el techo no es el
+/// arreglo, es una de las dos ramas de esa decision.
 pub const OCUPACION_MAX_B: usize = MAX_DESCRIPTOR_B * 3 / 4;
 
 pub fn escribir(d: &Descriptor, buf: &mut [u8]) -> Result<usize, ErrorCodec> {
@@ -456,30 +470,42 @@ mod tests {
 
 #[cfg(test)]
 mod techo_del_volcado {
-    use super::{escribir, MAX_DESCRIPTOR_B, OCUPACION_MAX_B};
+    use super::{escribir, Ambito, Descriptor, Tipo, Unidad, MAX_DESCRIPTOR_B, OCUPACION_MAX_B};
+    use crate::param::ParamId;
 
-    /// #182, fallo 5. Un descriptor que no quepa en el buffer del volcado no
-    /// se pierde solo: se lleva por delante TODO el volcado, porque
-    /// `mandar_descriptores` abortaba el bucle entero. Y como no hay conteo ni
-    /// terminador en el protocolo, el cliente no puede distinguir "termino" de
-    /// "se aborto" -- se queda con un modelo a medias creyendo que esta
-    /// completo.
+    /// Mide un descriptor SIN el techo de por medio.
     ///
-    /// Esta puerta lo caza en el gate, que es donde tiene que cazarse, en vez
-    /// de en la mesa de alguien que no entiende por que su carcasa esta vacia.
+    /// El buffer es holgado a proposito. Con uno de `MAX_DESCRIPTOR_B`, el que
+    /// no cabe devuelve `SinSitio` y ya: no dice por CUANTO se pasa, que es
+    /// justo el numero con el que se decide si se recorta el nombre o si hay
+    /// que trocear el descriptor (N4). Un fallo que solo dice "no" no sirve
+    /// para tomar la decision que el propio fallo obliga a tomar.
+    fn tam(d: &Descriptor) -> usize {
+        let mut buf = [0u8; MAX_DESCRIPTOR_B * 4];
+        escribir(d, &mut buf)
+            .unwrap_or_else(|_| panic!("\"{}\" no cabe ni en 4x el techo", d.nombre))
+    }
+
+    /// #182, fallo 5, **y solo sobre los descriptores COMPILADOS**.
+    ///
+    /// Un descriptor que no quepa en el buffer del volcado no se pierde solo:
+    /// se llevaba por delante TODO el volcado, porque `mandar_descriptores`
+    /// abortaba el bucle entero. Y como no hay conteo ni terminador en el
+    /// protocolo, el cliente no puede distinguir "termino" de "se aborto".
+    ///
+    /// Lo que esta puerta NO ve, y hay que decirlo aqui porque su nombre viejo
+    /// (`ningun_descriptor_...`) prometia lo contrario: los descriptores de
+    /// MODULO llegan por I2C en tiempo de ejecucion (§3.5), asi que este
+    /// bucle no los tiene delante y no puede tenerlos. Son ademas los gordos,
+    /// porque son los de las matrices de 16. Ese caso lo mide
+    /// `el_peor_caso_declarado_cabe_en_el_volcado`, aqui abajo, y NO pasa.
     #[test]
-    fn ningun_descriptor_se_acerca_al_techo_del_volcado() {
-        let mut buf = [0u8; MAX_DESCRIPTOR_B];
+    fn ningun_descriptor_compilado_se_acerca_al_techo_del_volcado() {
         for d in crate::tiempo_params::TIEMPO
             .iter()
             .chain(crate::medidas::MEDIDAS.iter())
         {
-            let n = escribir(d, &mut buf).unwrap_or_else(|_| {
-                panic!(
-                    "\"{}\" NO CABE en {MAX_DESCRIPTOR_B} B. Hoy eso aborta el                      volcado entero en silencio y ninguna carcasa puede pintar                      el instrumento",
-                    d.nombre
-                )
-            });
+            let n = tam(d);
             assert!(
                 n <= OCUPACION_MAX_B,
                 "\"{}\" ocupa {n} B de {MAX_DESCRIPTOR_B} ({:.0}%), y la alarma                  esta en {OCUPACION_MAX_B}. Todavia cabe, pero lo que engorda un                  descriptor son las etiquetas de los enumerados y crecen sin que                  nadie mire: o se recorta, o se decide el troceado (N4)",
@@ -487,6 +513,97 @@ mod techo_del_volcado {
                 n as f32 / MAX_DESCRIPTOR_B as f32 * 100.0
             );
         }
+    }
+
+    /// Las 17 fuentes del selector de modulacion del modulo de dieciseis: las
+    /// dieciseis del bus mas "sin fuente".
+    ///
+    /// El 17 no es mio. `hardware/03-vco/check_censo_voz.py:91` lo cita
+    /// textualmente de la spec del modulo ("los selectores de fuente son
+    /// enumerados de 17"), y §8 de esa spec dice de donde salen: "cada
+    /// oscilador elige de cual de los dieciseis come", 16 selectores por
+    /// matriz.
+    ///
+    /// Los nombres son del largo que este repo se exige a si mismo, no cortos
+    /// para que la cuenta salga: `tiempo_params.rs` encabeza su tabla con
+    /// "Nombres escritos para alguien que nunca ha visto el instrumento", y
+    /// §2.1 dice para quien son de verdad -- son la documentacion que lee el
+    /// agente. "osc 1" ahorra bytes y le quita al LLM lo unico que tenia.
+    const FUENTES: &[&str] = &[
+        "sin fuente",
+        "oscilador 1",
+        "oscilador 2",
+        "oscilador 3",
+        "oscilador 4",
+        "oscilador 5",
+        "oscilador 6",
+        "oscilador 7",
+        "oscilador 8",
+        "oscilador 9",
+        "oscilador 10",
+        "oscilador 11",
+        "oscilador 12",
+        "oscilador 13",
+        "oscilador 14",
+        "oscilador 15",
+        "oscilador 16",
+    ];
+
+    /// El peor caso REALISTA, y es el barato: el nombre no repite de que
+    /// oscilador es porque eso ya va en la instancia del `ParamId` (§3.1), y
+    /// las etiquetas son las cortas que siguen siendo legibles. Si el diseno
+    /// acaba metiendo el numero de oscilador en el nombre, esto crece.
+    static SELECTOR_DE_FUENTE: Descriptor = Descriptor {
+        // Ranura 3 (el modulo), instancia 5 (el oscilador), indice cualquiera.
+        id: ParamId::nuevo(3, 5, 0x20),
+        nombre: "fuente de modulacion",
+        tipo: Tipo::Enumerado,
+        ambito: Ambito::PorVoz,
+        solo_lectura: false,
+        medida: false,
+        confirmacion_fisica: false,
+        acepta_modulacion: false,
+        min: 0,
+        max: 16,
+        def: 0,
+        unidad: Unidad::Ninguna,
+        etiquetas: FUENTES,
+    };
+
+    /// **Esta puerta esta en ROJO a proposito y por eso esta `ignore`.** No es
+    /// un test a medio escribir: es el resultado, y el resultado es que el
+    /// formato de hoy no aguanta el peor caso que el propio repo ya declara.
+    ///
+    /// MEDIDO el 2026-08-24 con `escribir`, no calculado a mano: el selector
+    /// de arriba ocupa **250 B**. El techo del volcado son 256 y la alarma
+    /// esta en 192. O sea: entra por seis bytes y revienta la alarma por
+    /// cincuenta y ocho. Para comparar, el mas gordo de los 42 compilados son
+    /// 106 B ("cuantizacion global") -- el test de arriba mide una poblacion
+    /// que nunca iba a tener el problema.
+    ///
+    /// Seis bytes de margen no son margen: son un nombre un poco mas largo, o
+    /// una etiqueta decimoctava, o que el diseno decida poner el numero de
+    /// oscilador en el nombre -- " del oscilador 3" son 16 B mas, o sea 266, y
+    /// entonces ni `escribir` termina.
+    ///
+    /// **Que lo desbloquea:** la decision N4 del pase del nucleo, descriptor
+    /// troceado contra largo ancho. Mientras N4 no exista no hay nada que
+    /// arreglar aqui: subir `MAX_DESCRIPTOR_B` es *elegir* "largo ancho", y
+    /// eso es la decision, no el arreglo. Tomada N4, se quita el `ignore` y
+    /// esto pasa a verde o se cambia el peor caso que mide.
+    #[test]
+    #[ignore = "ROJO real, no pendiente: el peor caso declarado (selector de 17 \
+                fuentes) mide 250 B contra una alarma de 192. Lo desbloquea la \
+                decision N4 del pase del nucleo (descriptor troceado vs largo \
+                ancho), no un cambio de codigo."]
+    fn el_peor_caso_declarado_cabe_en_el_volcado() {
+        let n = tam(&SELECTOR_DE_FUENTE);
+        assert!(
+            n <= OCUPACION_MAX_B,
+            "el selector de {} fuentes ocupa {n} B de {MAX_DESCRIPTOR_B} ({:.0}%),              y la alarma esta en {OCUPACION_MAX_B}. Este descriptor no esta              compilado en el cerebro: llega por I2C desde el modulo, asi que la              otra puerta jamas lo vera. Lo decide N4",
+            FUENTES.len(),
+            n as f32 / MAX_DESCRIPTOR_B as f32 * 100.0
+        );
     }
 }
 
