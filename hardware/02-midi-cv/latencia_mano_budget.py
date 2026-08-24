@@ -36,11 +36,12 @@ concretos queda POR_CONFIRMAR: se mide con osciloscopio, no se declara.
 
 --- Lo que NO esta confirmado ----------------------------------------------
 
-  * T_ASENTAMIENTO y T_CONVERSION: el mux + la impedancia real del pote contra
-    el condensador de muestreo, y la tasa del SAR del RP2350B, que el repo NO
-    documenta. Juntos deciden si el barrido rapido es fisicamente posible, y
-    hoy son EL CUELLO: a 8 kHz el bus va al 43 % y el barrido ya no da.
-    No hay placa de panel para medirlos.
+  * T_ASENTAMIENTO: el mux + la impedancia real del pote contra el condensador
+    de muestreo. Es EL CUELLO y es lo unico sin confirmar de los dos: a 8 kHz
+    el bus va al 43 % y el barrido ya no da. No hay placa de panel para medirlo.
+    (T_CONVERSION ya NO esta aqui: la tasa del SAR se leyo de la hoja del
+    RP2350 el 2026-08-24 y esta CITADA abajo. Esta lista decia que "el repo NO
+    documenta" la tasa mientras la constante de al lado la citaba con pagina.)
   * TAU_RC: la reconstruccion analogica detras del DAC. Es latencia tambien, y
     es el suelo duro: el filtro que borra los escalones ES el retardo.
   * SCLK_J2 = 10 MHz es el techo del contrato congelado; el maximo real del
@@ -77,7 +78,14 @@ T_CONVERSION_US = 2.0       # CITADO: hoja del RP2350, p. 1071 -- "Capturing a
                             # margen que rascar aqui. La unica palanca que queda
                             # sobre el barrido es T_ASENTAMIENTO_US.
 TAU_RC_MS = 0.0             # POR_CONFIRMAR: no hay filtro de reconstruccion
-                            # elegido, y su tau ES latencia
+                            # elegido, y su tau ES latencia.
+                            #
+                            # Cero no es una medida, es un HUECO, y hay que
+                            # leerlo asi: el "peor caso" que este guion publica
+                            # son CUATRO etapas de cinco. La quinta entra el dia
+                            # que se elija el filtro, y entra sumando -- ninguna
+                            # de las puertas de abajo tiene margen reservado
+                            # para ella.
 
 # La correccion del 2026-08-23: la v1 de este guion modelo el barrido como
 # SECUENCIAL -- 45 canales en fila, asentamiento + conversion cada uno. Es
@@ -196,6 +204,15 @@ def main() -> None:
     #     convierte en fila. Por eso poner mas muxes se agota tan rapido --
     #     de 3 a 8 el barrido solo baja de 165 a 126 us, y 8 kHz sigue sin
     #     caber. El suelo con un convertidor son 45 x 2 us = 90 us.
+    #
+    #     PERO ese "sigue sin caber" se sostiene por 1 us. El periodo de 8 kHz
+    #     son 125 us y con 8 muxes salen 126: falla por menos del 1 %. El
+    #     asentamiento al que se invierte es 4.833 us contra los 5.0
+    #     SUPUESTOS -- o sea 3.3 % de margen sobre un numero POR_CONFIRMAR.
+    #     Que 8 muxes no sirvan NO es una conclusion de topologia: es un
+    #     empate decidido por un supuesto que nadie ha medido. Si el
+    #     asentamiento real sale por debajo de 4.833, la conclusion se
+    #     invierte y 8 muxes SI dan 8 kHz.
     #   - al LAZO lo limita el bus: los bits del giro contra el techo del J2.
     #
     # Separarlos no cuesta cobre y era la unica palanca gratis que quedaba.
@@ -222,8 +239,17 @@ def main() -> None:
     print(f"    {suelo_midi_din_ms()/total_ok:.1f}x por debajo del suelo de MIDI DIN")
     print()
     print("  Desglose del peor caso:")
+    huecos = [n for n, ms in cadena(f_barrido, f_lazo).items() if ms == 0.0]
     for nombre, ms in cadena(f_barrido, f_lazo).items():
-        print(f"    {nombre:<22} {ms:7.3f} ms")
+        marca = "  <- HUECO, no medido" if ms == 0.0 else ""
+        print(f"    {nombre:<22} {ms:7.3f} ms{marca}")
+    if huecos:
+        # Un cero en un presupuesto no es "no cuesta": es "no se ha medido", y
+        # las dos cosas se leen igual en la tabla. El total que se cita en los
+        # papeles tiene que decir de cuantas etapas es.
+        print(f"    -> el total son {len(cadena(f_barrido, f_lazo)) - len(huecos)}"
+              f" etapas de {len(cadena(f_barrido, f_lazo))};"
+              f" {', '.join(huecos)} entra sumando cuando se mida")
     print()
     print(f"  El lazo NO puede subir mas: a "
           f"{TECHO_OCUPACION*SCLK_J2/bits_por_giro(True)/1e3:.2f} kHz el J2 llega"

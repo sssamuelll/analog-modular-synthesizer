@@ -70,8 +70,10 @@ EXCLUIR = ("__pycache__", ".venv", os.path.join(".claude", "worktrees"), "site-p
 # cualquier otra cosa que este pasando en la maquina.
 #
 # Una puerta que se pone roja por carga y no por la placa es peor que no
-# tenerla: ensena a empujar con --no-verify. 600 s deja el doble de lo medido
-# y sigue cazando un cuelgue de verdad, que es lo que esto va a buscar.
+# tenerla: ensena a empujar con --no-verify. 600 s son 2.65x los 226 medidos
+# --  decia "el doble", y el doble de 226 son 452, no 600. El numero esta bien
+# y la cuenta estaba mal; se corrige la cuenta, no el numero: 2.65x sigue
+# cazando un cuelgue de verdad, que es lo que esto va a buscar.
 TIMEOUT_S = 600
 
 def _python_kicad() -> str | None:
