@@ -13,6 +13,14 @@
 //! que pedia, o un `ERROR` que dice por que no. Un agente que escribe y no
 //! recibe nada no sabe si llego, si se aplico, o si el instrumento se colgo.
 
+// El #182 fue, entero, la misma linea escrita seis veces: `let _ = algo()`
+// donde `algo()` devolvia un `Result` que importaba. `unused_must_use` no lo
+// ve -- `let _ =` es justo su valvula de escape -- asi que aqui la clase
+// entera es un error de compilacion. Si algun dia hace falta descartar un
+// `Result` a proposito, que sea con un `#[allow]` y su razon escrita al lado,
+// no con un `let _` que no se distingue de un olvido.
+#![deny(clippy::let_underscore_must_use)]
+
 use crate::medidas;
 use crate::modelo::{ErrorSet, Modelo};
 use crate::param::{ParamId, Valor};
@@ -26,10 +34,18 @@ use heapless::Vec;
 
 /// La version que este firmware sabe hablar.
 pub const VERSION_PROTOCOLO: u16 = 1;
-/// Las medidas que `publicar_medidas_del_reloj` publica en cada tick. Hoy NO
-/// producen `CHANGED` (#182, fallo 4), pero el buzon se dimensiona como si lo
-/// hicieran: arreglar ese fallo no puede volver a desbordar esto.
+/// Las cinco medidas del reloj que `publicar_medidas_del_reloj` publica en
+/// cada tick, y que desde el #182 fallo 4 SI producen `CHANGED`.
 const MEDIDAS_POR_TICK: usize = 5;
+
+/// Los suscriptores que el instrumento puede tener HOY: **uno**.
+///
+/// No es una eleccion, es una lectura: `suscrito` es un `bool`, no un
+/// conjunto. Esta constante existe para que el termino aparezca en la formula
+/// del buzon en vez de estar escondido dentro de un `1` implicito. El #145
+/// vuelve `suscrito` un conjunto; quien lo haga sube este numero, y las
+/// aserciones de abajo dicen si el buzon aguanta o hay que rederivarlo.
+const MAX_SUSCRIPTORES: usize = 1;
 
 /// DERIVADO del peor caso real, no elegido.
 ///
@@ -41,9 +57,48 @@ const MEDIDAS_POR_TICK: usize = 5;
 /// Los dos desbordaban EN SILENCIO, porque todos los push eran `let _ =`.
 /// Es el #182, fallos 1 y 3.
 ///
-/// Al derivarlo de `MAX_RAMPAS` deja de poder quedarse viejo: si alguien sube
-/// las rampas, el buzon sube con ellas.
-pub const MAX_RESPUESTAS: usize = MAX_RAMPAS + MEDIDAS_POR_TICK + 2;
+/// **Y estuvo en `MAX_RAMPAS + MEDIDAS_POR_TICK + 2` con el comentario "al
+/// derivarlo de `MAX_RAMPAS` deja de poder quedarse viejo", que era falso.**
+/// El fan-out de un tick tiene TRES factores -- `(rampas + medidas) x
+/// suscriptores` -- y la formula solo seguia a uno. Hoy no reventaba porque
+/// `MAX_SUSCRIPTORES` es 1 y multiplicar por uno no se nota; con dos pieles
+/// abiertas, un tick produce `(16 + 5) * 2 = 42` en un buzon de 23.
+///
+/// Ahora el termino esta escrito, y las aserciones de abajo cubren los
+/// caminos que la formula sola no puede cubrir -- entre ellos `caducar()`,
+/// que esta acotado por `MAX_RETENIDAS` y no aparecia por ningun lado.
+pub const MAX_RESPUESTAS: usize = (MAX_RAMPAS + MEDIDAS_POR_TICK) * MAX_SUSCRIPTORES + 2;
+
+/// El peor caso de CADA camino que empuja al buzon, aseverado en tiempo de
+/// compilacion. Si alguno se pasa, esto **no compila** -- que es la unica
+/// forma de que la derivacion no vuelva a quedarse vieja en silencio (#182,
+/// fallos 1 y 3). Un test no sirve: `MAX_RESPUESTAS` es el tamaño del `Vec`,
+/// asi que para cuando un test corre, el buzon ya se dimensiono.
+///
+/// Si añades un camino que empuje, añade su renglon aqui.
+const _: () = {
+    /// `tick()`: hasta `MAX_RAMPAS` escrituras de rampa mas las cinco medidas
+    /// del reloj, y cada una se anuncia a cada suscriptor.
+    const TICK: usize = (MAX_RAMPAS + MEDIDAS_POR_TICK) * MAX_SUSCRIPTORES;
+    /// `Reactivar { id: None }`: un `Anulado` por rampa reactivada -- que es
+    /// respuesta al que pidio, no fan-out -- mas el `CHANGED` del contador de
+    /// anulados, que si va a cada suscriptor.
+    const REACTIVAR_TODAS: usize = MAX_RAMPAS + MAX_SUSCRIPTORES;
+    /// `caducar()`: un `Resolved` por retenida vencida. Este era el otro
+    /// termino que no aparecia en ninguna parte de la formula vieja.
+    const CADUCAR: usize = crate::retencion::MAX_RETENIDAS;
+    /// Un `SET` que anula: `Anulado`, `CHANGED` del contador de anulados y
+    /// `CHANGED` del parametro. Los dos ultimos van a cada suscriptor.
+    const SET_QUE_ANULA: usize = 1 + 2 * MAX_SUSCRIPTORES;
+    /// Un `SET` sobre algo que exige confirmacion fisica: `ERROR` + `PENDING`.
+    const SET_RETENIDO: usize = 2;
+
+    assert!(TICK <= MAX_RESPUESTAS);
+    assert!(REACTIVAR_TODAS <= MAX_RESPUESTAS);
+    assert!(CADUCAR <= MAX_RESPUESTAS);
+    assert!(SET_QUE_ANULA <= MAX_RESPUESTAS);
+    assert!(SET_RETENIDO <= MAX_RESPUESTAS);
+};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Respuesta {
@@ -56,27 +111,6 @@ pub enum Respuesta {
 }
 
 pub type Respuestas = Vec<Respuesta, MAX_RESPUESTAS>;
-
-/// Empujar al buzon SIN tragarse el desbordamiento.
-///
-/// `MAX_RESPUESTAS` esta derivado del peor caso real, asi que esto no deberia
-/// dispararse. Si se dispara es que el peor caso cambio y hay que rederivarlo
-/// -- y esa es exactamente la clase de fallo que estuvo escondida detras de
-/// once `r.empujar(..)`: sin error, sin contador y sin forma de que el
-/// cliente se entere de que le falto algo (#182).
-trait Buzon {
-    fn empujar(&mut self, x: Respuesta);
-}
-
-impl Buzon for Respuestas {
-    fn empujar(&mut self, x: Respuesta) {
-        debug_assert!(
-            self.len() < MAX_RESPUESTAS,
-            "buzon de respuestas lleno: alguien esta perdiendo un mensaje en              silencio, y una vista optimista diverge para siempre"
-        );
-        let _ = self.push(x);
-    }
-}
 
 /// La ventana de aterrizaje, en pulsos (§5.3 de la spec del tiempo musical).
 ///
@@ -95,6 +129,9 @@ pub struct Instrumento {
     rampas: Rampas,
     reloj: Reloj,
     suscrito: bool,
+    /// Cuantos mensajes NO cupieron en un buzon, desde el arranque. Ver
+    /// `empujar`: es el rastro que el `debug_assert!` no dejaba en release.
+    desbordes: u16,
 }
 
 impl Default for Instrumento {
@@ -111,23 +148,51 @@ impl Instrumento {
             rampas: Rampas::nueva(),
             reloj: Reloj::nuevo(),
             suscrito: false,
+            desbordes: 0,
         }
     }
 
     /// Un instrumento con lo unico que hoy existe sin periféricos: las medidas
     /// de §7.3. El descubrimiento por I²C llega con el plan de los periféricos.
+    ///
+    /// #182, fallo 5 de la junta. Los dos registros eran `let _ =`, o sea que
+    /// `ErrorRegistro::Lleno` y `Duplicado` se tragaban enteros y la placa
+    /// arrancaba con un modelo PARCIAL **en silencio**: el agente pediria un
+    /// parametro que el descriptor promete y le contestarian `NoExiste`, sin
+    /// nada que explique por que.
+    ///
+    /// No puede devolver `Result`: `fw/src/main.rs` la llama dentro de
+    /// `INSTRUMENTO.init(..)`, que quiere un `Instrumento` y no un `Result`.
+    /// Y no hace falta que lo devuelva. Las dos tablas son `static` y suman
+    /// mucho menos que `MAX_PARAMS`, asi que esto no puede fallar por nada que
+    /// pase en marcha: solo si alguien edita las tablas y mete un id repetido
+    /// o se pasa del techo. Eso es un fallo de PROGRAMACION, y el sitio de un
+    /// fallo de programacion es el arranque, a gritos -- no un instrumento a
+    /// medias que parece sano. En el host lo caza antes el test
+    /// `el_instrumento_de_arranque_trae_las_medidas_y_el_reloj`, que cuenta
+    /// los parametros; esto es la red por si nadie corrio el test.
     pub fn con_medidas() -> Self {
         let mut i = Self::nuevo();
-        let _ = medidas::registrar(&mut i.modelo);
-        let _ = tiempo_params::registrar(&mut i.modelo);
+        medidas::registrar(&mut i.modelo).expect("las medidas de S7.3 no entraron en el modelo");
+        tiempo_params::registrar(&mut i.modelo)
+            .expect("los parametros de tiempo no entraron en el modelo");
         i
     }
 
+    /// Solo de lectura, y a proposito.
+    ///
+    /// Al lado vivia `reloj_mut() -> &mut Reloj`, `pub`, con CERO llamadores
+    /// en todo el repo -- ni el firmware, ni los tests. Era la misma puerta
+    /// que `modelo_mut` (#182, fallo 6) tres lineas mas abajo: abierta para el
+    /// primer periferico apurado. Y esta pesa mas, porque el reloj gobierna la
+    /// cuantizacion de las rampas y las cinco medidas de §7.3: quien lo mueva
+    /// por fuera desplaza los bordes de la rejilla sin que `tick` se entere.
+    /// No se cierra a `#[cfg(test)]` como `modelo_mut` porque ningun test lo
+    /// usa tampoco, y un `#[cfg(test)]` muerto es una advertencia. El dia que
+    /// un periferico necesite mover el reloj, que llegue con su metodo y su
+    /// razon escrita.
     pub fn reloj(&self) -> &Reloj {
         &self.reloj
-    }
-    pub fn reloj_mut(&mut self) -> &mut Reloj {
-        &mut self.reloj
     }
 
     pub fn modelo(&self) -> &Modelo {
@@ -149,6 +214,16 @@ impl Instrumento {
         self.suscrito
     }
 
+    /// Cuantos mensajes se perdieron por no caber en un buzon, desde el
+    /// arranque. Satura en `u16::MAX`: dar la vuelta a cero despues de 65 536
+    /// perdidas seria peor que no contarlas.
+    ///
+    /// Existe para que el desbordamiento sea DETECTABLE en release. Ver
+    /// `empujar` (#182, fallo 2 de la junta).
+    pub fn desbordes(&self) -> u16 {
+        self.desbordes
+    }
+
     /// Lo que llega por el cable.
     pub fn atender(&mut self, m: Mensaje, ahora_ms: u64) -> Respuestas {
         let mut r = Respuestas::new();
@@ -159,16 +234,19 @@ impl Instrumento {
         }
         match m {
             Mensaje::Hello { .. } => {
-                r.empujar(Respuesta::Mensaje(Mensaje::Hola {
-                    version: VERSION_PROTOCOLO,
-                }));
+                self.empujar(
+                    &mut r,
+                    Respuesta::Mensaje(Mensaje::Hola {
+                        version: VERSION_PROTOCOLO,
+                    }),
+                );
             }
             Mensaje::Describe => {
-                r.empujar(Respuesta::Descriptores);
+                self.empujar(&mut r, Respuesta::Descriptores);
             }
             Mensaje::Get(id) => match self.modelo.get(id) {
                 Some(v) => {
-                    r.empujar(Respuesta::Mensaje(Mensaje::Changed(id, v)));
+                    self.empujar(&mut r, Respuesta::Mensaje(Mensaje::Changed(id, v)));
                 }
                 None => self.error(&mut r, &m, CodigoError::NoExiste),
             },
@@ -177,8 +255,11 @@ impl Instrumento {
                 // El del tick no — y esa diferencia vive aqui, no en el
                 // modelo, que no gana ninguna puerta nueva.
                 if self.rampas.anular(id) {
-                    r.empujar(Respuesta::Mensaje(Mensaje::Anulado { id, anulado: true }));
-                    self.publicar_anulados();
+                    self.empujar(
+                        &mut r,
+                        Respuesta::Mensaje(Mensaje::Anulado { id, anulado: true }),
+                    );
+                    self.publicar_anulados(&mut r);
                 }
                 self.escribir(&mut r, &m, id, v, ahora_ms);
             }
@@ -260,22 +341,28 @@ impl Instrumento {
         match id {
             Some(p) => {
                 if self.rampas.reactivar(p) {
-                    r.empujar(Respuesta::Mensaje(Mensaje::Anulado {
-                        id: p,
-                        anulado: false,
-                    }));
+                    self.empujar(
+                        r,
+                        Respuesta::Mensaje(Mensaje::Anulado {
+                            id: p,
+                            anulado: false,
+                        }),
+                    );
                 }
             }
             None => {
                 for p in self.rampas.reactivar_todas() {
-                    r.empujar(Respuesta::Mensaje(Mensaje::Anulado {
-                        id: p,
-                        anulado: false,
-                    }));
+                    self.empujar(
+                        r,
+                        Respuesta::Mensaje(Mensaje::Anulado {
+                            id: p,
+                            anulado: false,
+                        }),
+                    );
                 }
             }
         }
-        self.publicar_anulados();
+        self.publicar_anulados(r);
     }
 
     fn rejilla(&self) -> Rejilla {
@@ -285,9 +372,25 @@ impl Instrumento {
             .unwrap_or(Rejilla::Compas1)
     }
 
-    fn publicar_anulados(&mut self) {
+    /// #182, fallo 4, la SEXTA medida. Esto tiraba el `Cambio` con `let _` y
+    /// no llamaba a `anunciar`, igual que hacian las cinco del reloj antes de
+    /// arreglarse -- y `ID_ANULADOS` esta declarado `medida: true` en
+    /// `tiempo_params`, con el nucleo S4.1 prometiendo que las medidas se
+    /// siguen con `SUBSCRIBE`.
+    ///
+    /// Se quedo viva porque el test que la cubria aseveraba contra el MODELO
+    /// (`i.modelo().get(..)`) y no contra el CABLE: el modelo si se escribia.
+    fn publicar_anulados(&mut self, r: &mut Respuestas) {
+        let id = tiempo_params::ID_ANULADOS;
         let n = self.rampas.anuladas() as Valor;
-        let _ = self.modelo.publicar_medida(tiempo_params::ID_ANULADOS, n);
+        // El mismo filtro que las cinco del reloj, por la misma razon:
+        // `publicar_medida` NO filtra, devuelve `Ok` aunque el valor sea
+        // identico. `reactivar` llama aqui aunque no haya reactivado nada, asi
+        // que sin comparar antes esto anunciaria el mismo cero cada vez.
+        let se_movio = self.modelo.get(id) != Some(n);
+        if self.modelo.publicar_medida(id, n).is_ok() && se_movio {
+            self.anunciar(r, id, n);
+        }
     }
 
     /// Corre el tiempo. Publica las medidas del reloj y escribe lo que las
@@ -350,7 +453,7 @@ impl Instrumento {
                 self.error(r, m, CodigoError::ExigeConfirmacion);
                 match self.retenidas.retener(id, v, ahora_ms) {
                     Ok(token) => {
-                        r.empujar(Respuesta::Mensaje(Mensaje::Pending { token, id }));
+                        self.empujar(r, Respuesta::Mensaje(Mensaje::Pending { token, id }));
                     }
                     Err(_) => self.error(r, m, CodigoError::ColaLlena),
                 }
@@ -365,10 +468,13 @@ impl Instrumento {
         let Some(p) = self.retenidas.confirmar(ahora_ms) else {
             return r;
         };
-        r.empujar(Respuesta::Mensaje(Mensaje::Resolved {
-            token: p.token,
-            confirmado: true,
-        }));
+        self.empujar(
+            &mut r,
+            Respuesta::Mensaje(Mensaje::Resolved {
+                token: p.token,
+                confirmado: true,
+            }),
+        );
         if let Ok(c) = self.modelo.aplicar_confirmado(p.id, p.valor) {
             self.anunciar(&mut r, c.id, c.valor);
         }
@@ -380,10 +486,13 @@ impl Instrumento {
     pub fn caducar(&mut self, ahora_ms: u64) -> Respuestas {
         let mut r = Respuestas::new();
         for token in self.retenidas.caducar(ahora_ms) {
-            r.empujar(Respuesta::Mensaje(Mensaje::Resolved {
-                token,
-                confirmado: false,
-            }));
+            self.empujar(
+                &mut r,
+                Respuesta::Mensaje(Mensaje::Resolved {
+                    token,
+                    confirmado: false,
+                }),
+            );
         }
         r
     }
@@ -398,19 +507,49 @@ impl Instrumento {
         r
     }
 
-    /// §4.1: `CHANGED` va a los SUSCRIPTORES, venga de donde venga el cambio.
-    /// Mandarselo a quien no pidio nada llena el cable de trafico que nadie lee.
-    fn anunciar(&self, r: &mut Respuestas, id: ParamId, v: Valor) {
-        if self.suscrito {
-            r.empujar(Respuesta::Mensaje(Mensaje::Changed(id, v)));
+    /// Empujar al buzon SIN tragarse el desbordamiento.
+    ///
+    /// #182, fallo 2 de la junta. Esto era un `debug_assert!` seguido de
+    /// `let _ = self.push(x)`, bajo un docstring que decia justo lo
+    /// contrario de lo que hacia. `debug_assert!` **se compila fuera en
+    /// release** y `fw/Cargo.toml` no declara `debug-assertions`, asi que lo
+    /// que se flashea a la placa era el `let _`: el fallo entero, intacto.
+    /// El papel de la autopista lo prohibe con todas las letras -- «un envio
+    /// que no cabe es un error con nombre, nunca un `let _`».
+    ///
+    /// El nombre es un contador, no un mensaje. Un `ERROR` nuevo por
+    /// desbordamiento cambiaria el formato del protocolo, y esa es la
+    /// decision N4, que NO esta tomada. Un contador saturante que la
+    /// telemetria lee (`desbordes()`) cabe entero dentro de esa restriccion:
+    /// no es tan bueno como avisarle al cliente en el momento, pero es la
+    /// diferencia entre una perdida invisible y una medible.
+    ///
+    /// El contador vive en el `Instrumento` y no en `Respuestas` a proposito:
+    /// el buzon se crea y se tira en cada `atender`/`tick`, asi que un
+    /// contador dentro de el se iria con la basura antes de que nadie lo
+    /// leyera. Por eso `empujar` es un metodo del instrumento y no del `Vec`.
+    fn empujar(&mut self, r: &mut Respuestas, x: Respuesta) {
+        if r.push(x).is_err() {
+            self.desbordes = self.desbordes.saturating_add(1);
         }
     }
 
-    fn error(&self, r: &mut Respuestas, m: &Mensaje, codigo: CodigoError) {
-        r.empujar(Respuesta::Mensaje(Mensaje::Error {
-            etiqueta: crate::protocolo::etiqueta_de(m),
-            codigo,
-        }));
+    /// §4.1: `CHANGED` va a los SUSCRIPTORES, venga de donde venga el cambio.
+    /// Mandarselo a quien no pidio nada llena el cable de trafico que nadie lee.
+    fn anunciar(&mut self, r: &mut Respuestas, id: ParamId, v: Valor) {
+        if self.suscrito {
+            self.empujar(r, Respuesta::Mensaje(Mensaje::Changed(id, v)));
+        }
+    }
+
+    fn error(&mut self, r: &mut Respuestas, m: &Mensaje, codigo: CodigoError) {
+        self.empujar(
+            r,
+            Respuesta::Mensaje(Mensaje::Error {
+                etiqueta: crate::protocolo::etiqueta_de(m),
+                codigo,
+            }),
+        );
     }
 }
 
@@ -913,6 +1052,37 @@ mod tests {
         );
     }
 
+    /// #182, fallo 3 de la junta: `MAX_RESPUESTAS` se habia derivado de UNO
+    /// de los tres factores del fan-out. Las aserciones `const` de arriba son
+    /// la guardia de verdad -- se disparan antes de que exista un `Vec` que
+    /// probar -- y esto es el otro lado: los dos peores casos REALES,
+    /// corridos, con un suscriptor mirando, sin perder un solo mensaje.
+    ///
+    /// Se apoya en el contador del fallo 2: sin `desbordes()` no habia forma
+    /// de aseverar esto, porque el descarte era mudo.
+    #[test]
+    fn el_peor_caso_real_no_desborda_el_buzon() {
+        let mut i = con_reloj_y_muchos();
+        i.atender(Mensaje::Subscribe { activo: true }, 0);
+        for desc in MUCHOS.iter() {
+            i.atender(rampa(desc.id, 100), 0);
+        }
+        // `tick()`: MAX_RAMPAS escrituras de rampa + las cinco del reloj.
+        i.tick(PXC + 96);
+        assert_eq!(i.desbordes(), 0, "el tick se comio mensajes");
+
+        // `Reactivar { id: None }`: un `Anulado` por rampa + el contador.
+        for desc in MUCHOS.iter() {
+            i.atender(Mensaje::Set(desc.id, 7), 0);
+        }
+        i.atender(Mensaje::Reactivar { id: None }, 0);
+        assert_eq!(
+            i.desbordes(),
+            0,
+            "la reactivacion en bloque se comio mensajes"
+        );
+    }
+
     /// #182, fallo 4. `publicar_medidas_del_reloj` tiraba el `Cambio` con
     /// `let _`, asi que las cinco medidas del reloj NUNCA producian `CHANGED`
     /// -- y las cinco tienen `medida: true`, con el nucleo S4.1 prometiendo
@@ -986,6 +1156,52 @@ mod tests {
         assert!(!i.tick(PXC + 192).is_empty());
     }
 
+    /// #182, fallo 4, la SEXTA medida -- la que quedo viva cuando se
+    /// arreglaron las cinco del reloj. `publicar_anulados` tiraba el `Cambio`
+    /// con `let _` y nunca llamaba a `anunciar`, aunque `ID_ANULADOS` esta
+    /// declarado `medida: true` y el nucleo S4.1 promete que las medidas se
+    /// siguen con `SUBSCRIBE`.
+    ///
+    /// El test que la cubria -- `el_contador_de_anulados_es_una_medida_de_verdad`
+    /// -- aseveraba contra `i.modelo().get(..)`, o sea contra el MODELO y no
+    /// contra el CABLE, y por eso pasaba en verde con el fallo puesto. Este
+    /// mira lo que le llega al suscriptor.
+    #[test]
+    fn el_contador_de_anulados_se_anuncia_a_quien_se_suscribio() {
+        let mut i = con_reloj_a_mitad();
+        i.atender(Mensaje::Subscribe { activo: true }, 0);
+        i.atender(rampa(NORMAL.id, 100), 0);
+        i.tick(PXC + 96);
+
+        let r = mensajes(&i.atender(Mensaje::Set(NORMAL.id, 7), 0));
+        assert!(
+            r.contains(&Mensaje::Changed(tiempo_params::ID_ANULADOS, 1)),
+            "el contador subio y el suscriptor no se entero: {r:?}"
+        );
+
+        let r = mensajes(&i.atender(Mensaje::Reactivar { id: None }, 0));
+        assert!(
+            r.contains(&Mensaje::Changed(tiempo_params::ID_ANULADOS, 0)),
+            "el contador bajo y el suscriptor no se entero: {r:?}"
+        );
+    }
+
+    /// La otra mitad, igual que en las cinco del reloj: `publicar_medida` NO
+    /// filtra, devuelve `Ok` aunque el valor sea identico. Un `Reactivar` que
+    /// no reactiva nada reescribe el mismo cero, y anunciar sin comparar
+    /// cambiaria el silencio del fallo por una inundacion.
+    #[test]
+    fn un_contador_de_anulados_que_no_se_movio_no_se_reanuncia() {
+        let mut i = con_reloj_a_mitad();
+        i.atender(Mensaje::Subscribe { activo: true }, 0);
+        let r = mensajes(&i.atender(Mensaje::Reactivar { id: None }, 0));
+        assert!(
+            !r.iter()
+                .any(|m| matches!(m, Mensaje::Changed(id, _) if *id == tiempo_params::ID_ANULADOS)),
+            "nadie estaba anulado, nada se movio, y aun asi se anuncio: {r:?}"
+        );
+    }
+
     #[test]
     fn el_contador_de_anulados_es_una_medida_de_verdad() {
         let mut i = con_reloj_a_mitad();
@@ -996,6 +1212,54 @@ mod tests {
         assert_eq!(i.modelo().get(tiempo_params::ID_ANULADOS), Some(1));
         i.atender(Mensaje::Reactivar { id: None }, 0);
         assert_eq!(i.modelo().get(tiempo_params::ID_ANULADOS), Some(0));
+    }
+
+    /// #182, fallo 2 de la junta. El guardia del buzon era un `debug_assert!`
+    /// seguido de `let _ = self.push(x)`. `debug_assert!` se compila FUERA en
+    /// release, y `fw/Cargo.toml` no declara `debug-assertions`: lo que se
+    /// flashea a la placa era, literalmente, el `let _`.
+    ///
+    /// Este test tiene que pasar en **release**, que es donde el fallo vivia:
+    ///
+    /// ```text
+    /// cargo test --release un_empujon_que_no_cabe
+    /// ```
+    ///
+    /// El papel de la autopista del mismo PR lo prohibe con todas las letras:
+    /// «un envio que no cabe es un error con nombre, nunca un `let _`». El
+    /// nombre no puede ser un mensaje nuevo -- eso cambia el protocolo y es la
+    /// decision N4, sin tomar -- asi que es un contador que la telemetria lee.
+    #[test]
+    fn un_empujon_que_no_cabe_deja_rastro_en_release() {
+        let mut i = instrumento();
+        let mut r = Respuestas::new();
+        while r.len() < MAX_RESPUESTAS {
+            i.empujar(&mut r, Respuesta::Descriptores);
+        }
+        assert_eq!(i.desbordes(), 0, "todavia cabian todos");
+
+        i.empujar(&mut r, Respuesta::Descriptores);
+        assert_eq!(
+            i.desbordes(),
+            1,
+            "el buzon se comio un mensaje y no dejo rastro que la telemetria pueda leer"
+        );
+        assert_eq!(r.len(), MAX_RESPUESTAS, "y el buzon sigue sin desbordarse");
+    }
+
+    /// El contador satura en vez de dar la vuelta: un `0` despues de 65 536
+    /// mensajes perdidos seria peor que no contarlos.
+    #[test]
+    fn el_contador_de_desbordes_satura_en_vez_de_dar_la_vuelta() {
+        let mut i = instrumento();
+        let mut r = Respuestas::new();
+        while r.len() < MAX_RESPUESTAS {
+            i.empujar(&mut r, Respuesta::Descriptores);
+        }
+        for _ in 0..(u16::MAX as u32 + 8) {
+            i.empujar(&mut r, Respuesta::Descriptores);
+        }
+        assert_eq!(i.desbordes(), u16::MAX);
     }
 
     #[test]
