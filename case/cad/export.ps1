@@ -20,8 +20,14 @@ Remove-Item (Join-Path $build "*.stl") -ErrorAction SilentlyContinue
 # Las tres ultimas son de ACERO y van a otro taller (corte + plegado), no al
 # de acrilico. Salen igual de aqui para que hereden la puerta de relectura y no
 # vivan en un flujo aparte que nadie corre.
+# kondor_cajeado_2d NO es una pieza de corte: es el CAJEADO CIEGO del relieve
+# de la trasera, que no se recorta en piel_trasera_2d porque no atraviesa. Va
+# en su propio fichero porque un DXF 2D no sabe decir "a 4 mm de profundidad"
+# -- el mismo caso del chasis, cuyo corte no dice de donde doblar. Sin este
+# fichero la trasera vuelve del taller SIN LA MARCA y nadie se entera hasta
+# desembalarla. Lo vigila guarda_kondor() en check_dxf.
 $piezas = "costado_2d","bandeja_base_2d","tapa_valle_2d",
-          "remate_sup_2d","piel_trasera_2d","lienzo_2d",
+          "remate_sup_2d","piel_trasera_2d","kondor_cajeado_2d","lienzo_2d",
           "chasis_cuerpo_2d","chasis_tapa_2d","chasis_refuerzo_2d"
 # Piso de tamano del DXF. Es un SMOKE TEST -- "OpenSCAD escribio algo" --, no una
 # verificacion: de eso se encarga check_dxf.py, que relee cada fichero con ezdxf

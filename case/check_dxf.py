@@ -458,6 +458,108 @@ def agujeros_donde_toca() -> list[str]:
     return f
 
 
+def _anillo(aristas, comp) -> list[tuple[float, float]]:
+    """Ordena las aristas de una componente conexa en un anillo de vertices.
+
+    Hace falta porque OpenSCAD 2021.01 emite DXF R12, que NO tiene
+    LWPOLYLINE: cada contorno llega como un monton de LINE sueltas, sin
+    orden. Para rellenar un poligono hay que devolverles el orden.
+    """
+    def clave(pt):
+        return (round(pt[0], 3), round(pt[1], 3))
+
+    porpunto: dict[tuple, list[int]] = {}
+    for i in comp:
+        for pt in aristas[i]:
+            porpunto.setdefault(clave(pt), []).append(i)
+    inicio = comp[0]
+    anillo = [aristas[inicio][0], aristas[inicio][1]]
+    usados = {inicio}
+    while True:
+        actual = clave(anillo[-1])
+        sig = [i for i in porpunto.get(actual, []) if i not in usados]
+        if not sig:
+            return anillo
+        i = sig[0]
+        usados.add(i)
+        a, b = aristas[i]
+        anillo.append(b if clave(a) == actual else a)
+
+
+def guarda_kondor() -> list[str]:
+    """El relieve KONDOR: que la fuente sea la buena y que la fresa entre.
+
+    DOS FALLOS DISTINTOS, los dos silenciosos, y por eso hay puerta:
+
+    1. SUSTITUCION DE FUENTE. text() en OpenSCAD NO falla si la fuente no
+       esta instalada: avisa por consola y pone otra. El DXF sale, parece
+       bueno, y la pieza es otra. La huella de Franklin Gothic Medium con los
+       parametros de params.scad son 10 CONTORNOS (K1 O2 N1 D2 O2 R2) y una
+       caja de 216.87 x 32.44 mm.
+
+    2. TRAZO MAS FINO QUE LA FRESA. Es un CAJEADO, o sea que la fresa tiene
+       que entrar DENTRO del trazo de cada letra: un trazo mas estrecho que
+       fresa_d no se puede vaciar. Se comprueba erosionando la palabra el
+       radio de la fresa y contando trozos. Medido el 2026-08-24: Franklin
+       Medium y Demi aguantan hasta fresa de 4 mm; Bahnschrift, Arial y
+       Franklin Book se rompen ahi.
+
+    guarda_fresado() en clearance_budget mira las ranuras y los concavos, no
+    la palabra. Este es su hueco.
+    """
+    import clearance_budget as cb
+    import numpy as np
+    from matplotlib.path import Path as MPath
+    from scipy import ndimage
+
+    fallos: list[str] = []
+    p = cb.leer_params()
+    aristas, comps = _componentes("kondor_cajeado_2d")
+    if len(comps) != 10:
+        return [f"kondor: {len(comps)} contornos y se esperan 10 "
+                f"(K1 O2 N1 D2 O2 R2). La fuente se sustituyo."]
+    anillos = [_anillo(aristas, c) for c in comps]
+    xs = [q[0] for a in anillos for q in a]
+    ys = [q[1] for a in anillos for q in a]
+    w, h = max(xs) - min(xs), max(ys) - min(ys)
+    if abs(w - 216.87) > 0.5 or abs(h - 32.44) > 0.5:
+        fallos.append(f"kondor: caja {w:.2f} x {h:.2f} y se espera "
+                      f"216.87 x 32.44. La fuente se sustituyo o cambio de "
+                      f"version.")
+
+    # Fresabilidad: rasterizar y erosionar el radio de la fresa.
+    ESC = 4.0                                  # px por mm
+    W, H = int(w * ESC) + 20, int(h * ESC) + 20
+    yy, xx = np.mgrid[0:H, 0:W]
+    px = xx / ESC + min(xs) - 10 / ESC
+    py = yy / ESC + min(ys) - 10 / ESC
+    pts = np.column_stack([px.ravel(), py.ravel()])
+    dentro = np.zeros((H, W), dtype=int)
+    for a in anillos:                          # par-impar: las contras restan
+        dentro += MPath(a).contains_points(pts).reshape(H, W).astype(int)
+    img = (dentro % 2) == 1
+    r_px = int(round(p["fresa_d"] / 2 * ESC))
+    ero = ndimage.binary_erosion(
+        img, ndimage.generate_binary_structure(2, 1), iterations=r_px)
+    # SE CALIBRA SOLO: se comparan los trozos ANTES y DESPUES de erosionar en
+    # vez de contra un numero fijo. Si la palabra cambia -- otra fuente, otro
+    # texto, otro cuerpo -- la referencia cambia con ella. Un numero magico
+    # aqui se rompe en cuanto alguien toque kondor_size.
+    _, antes = ndimage.label(img)
+    _, despues = ndimage.label(ero)
+    if despues != antes:
+        fallos.append(
+            f"kondor: la palabra son {antes} trozos y al erosionar el radio "
+            f"de la fresa ({p['fresa_d']/2:g} mm) quedan {despues}: algun "
+            f"trazo mide menos que la fresa y no se puede vaciar. Sube "
+            f"kondor_size o pasa a una fuente con mas peso.")
+    elif not fallos:
+        print(f"  kondor_cajeado_2d: 10 contornos, {w:.2f} x {h:.2f} mm, y los "
+              f"{antes} trozos sobreviven a la fresa de {p['fresa_d']:g} -- "
+              f"fuente correcta y fresable")
+    return fallos
+
+
 def railes_dentro_del_costado() -> list[str]:
     """Cada larguero 2020 tiene que caber DENTRO del acrilico del costado.
 
@@ -585,6 +687,7 @@ def main() -> int:
             continue
         fallos += revisar(nombre, sobre)
     fallos += railes_dentro_del_costado()
+    fallos += guarda_kondor()
     fallos += taladros_con_material()
     fallos += agujeros_donde_toca()
     fallos += chasis_agujeros()
