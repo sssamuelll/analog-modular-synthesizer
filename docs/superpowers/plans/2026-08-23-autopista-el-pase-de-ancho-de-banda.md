@@ -226,6 +226,36 @@ estado de arranque en voz alta, no por omisión.
 
 ## 9. Las decisiones de Samuel
 
+> **TOMADAS el 2026-08-24.** Lo de abajo se queda como el razonamiento. Dos
+> de estas cambiaron AL VERIFICARLAS, y las dos por el mismo motivo: nadie
+> habia corrido el modelo variando lo que se podia variar.
+
+| # | Decision | |
+|---|---|---|
+| **B1** | **Barrido 4 kHz, lazo DESACOPLADO** — 8 kHz, el mas rapido que el bus aguanta. **0,529 ms** peor caso contra 0,654 acoplado: 125 us que no cuestan cobre. | **cambio** |
+| **B2** | R-M4 se eleva a **ley de la casa**: todo modulo declara bloques con su tasa, y `trama_j2_budget.py` es su puerta. | |
+| **B3** | **La huella Y el contrato, juntos**, y recoge N4: conteo de entradas, terminador y largo por entrada. Rompe el formato, asi que N7 va antes. | **bloqueante** |
+| **B4** | El canal binario crudo **solo si tras medir la huella sigue doliendo**. Sin el contrato de B3 no arreglaria nada de todos modos. | |
+| **B5** | Arranque **permisivo, pero DICHO**. Es N6 del papel del nucleo, misma decision. | |
+
+> **Por que B1 cambio.** `cadena(f_barrido, f_lazo)` siempre acepto dos
+> frecuencias y `main()` la llamaba con el mismo numero para las dos. Son
+> etapas con techos distintos: al barrido lo limita el analogico, al lazo lo
+> limita el bus. Separarlas era gratis y nadie lo habia hecho.
+>
+> **Y dos numeros se cerraron de paso.** La conversion del ADC era
+> POR_CONFIRMAR y salio **CITADA** de la hoja del RP2350, p. 1071: 96 ciclos a
+> 48 MHz = **2 us exactos**. El valor de trabajo era correcto, no conservador,
+> asi que ahi no hay margen que rascar. Y **mas muxes no es la salida**: de 3
+> a 8 el barrido solo baja de 165 a 126 us y 8 kHz sigue sin caber, porque las
+> conversiones van en fila por un unico convertidor. La unica palanca que
+> queda sobre el barrido es el asentamiento del mux, que sigue sin medir.
+>
+> **El techo del lazo, para que no se vuelva a proponer:** a 9,19 kHz el J2
+> llega al 50 % declarado. Proponer 16 kHz —como se hizo en esta misma
+> sesion— lo pone al 87 %.
+
+
 - **B1 — La cadencia del lazo:** 4 kHz (0,654 ms, 22 % del bus, 1,52× de
   barrido) o forzar 8 kHz añadiendo muxes en paralelo para que el barrido dé.
   Recomendado: **4 kHz**, y subir solo si la medición del asentamiento sale
