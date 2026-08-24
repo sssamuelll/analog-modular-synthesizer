@@ -637,15 +637,26 @@ firmware donde el reloj no late.
 
 | # | Decision | |
 |---|---|---|
-| **N1** | `Puerta` son **cuatro variantes sin payload**: `Mano`, `Usb`, `Inalambrica`, `Interno`. Partir `Mano` despues es anadir variantes, no rehacer. | **A Rust ya** |
+| **N1** | `Puerta` son **cuatro variantes sin payload**: `Mano`, `Usb`, `Inalambrica`, `Interno`. Partir `Mano` despues es anadir variantes, no rehacer. | **EN EL COBRE** |
 | **N2a** | Se legisla **sobre la etiqueta del mensaje**. Es la unica clave que existe, cubre los quince mensajes de cliente y cuesta cero bytes. | |
 | **N2b** | **Una sola regla por puerta para todo `Set`**, y la limitacion se dice en voz alta. La ranura queda anotada como la salida barata si un caso real la pide. | |
 | **N3** | La politica vive en **la flash del cerebro**. No viaja: nadie cambia permisos mandando un preset. | |
 | **N4** | **Cedida a B3** de la autopista, y alli ya esta recogida con la medicion que la vuelve bloqueante. | |
 | **N5** | La identidad del suscriptor **la asigna el transporte** al aceptar la conexion. Mismo patron que `puerta`: infalsificable, cero bytes de cliente. Cierra #145. | |
 | **N6** | Arranque **permisivo, pero DICHO**: el estado queda legible como parametro de medida, para que un CRC malo no se disfrace de fabrica. Es B5. | |
-| **N7** | La negociacion de version **se arregla ANTES de romper ningun formato**. Como B3 es una ruptura de formato, esto es el primer PR. | **Va primero** |
+| **N7** | La negociacion de version **se arregla ANTES de romper ningun formato**. Como B3 es una ruptura de formato, esto es el primer PR. | **EN EL COBRE** |
 | **N8** | **No vuelve a junta.** Lo que la segunda produjo no fueron correcciones sino problemas abiertos, y esos se cierran decidiendo. | |
+
+> **Aterrizado el 2026-08-24, en este orden.** N7 primero por su propia regla,
+> y N1 detras porque no dependia de nadie. Con N1 en el cobre entraron tambien
+> N2a (se legisla sobre la etiqueta), N2b (una regla por puerta para todo
+> `Set`, con la limitacion **aseverada** por un test que exige que dos `Set`
+> distintos den el mismo veredicto) y la mitad DICHO de N6 (`politica()` deja
+> leer si la tabla esta vacia).
+>
+> Lo que queda de N3 no es decision sino cableado: la tabla vive en `core` y
+> arranca vacia; leerla de la flash del cerebro es firmware, y necesita el
+> driver que todavia no existe.
 
 > **Lo que N7 ordena.** Al decidir que ninguna ruptura entra antes que la
 > negociacion funcione, el orden de trabajo queda fijado solo: primero N7

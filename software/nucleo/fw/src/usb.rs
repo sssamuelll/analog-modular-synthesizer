@@ -19,6 +19,7 @@ use embassy_rp::usb::{Driver, InterruptHandler};
 use embassy_usb::class::midi::MidiClass;
 use embassy_usb::{Builder, Config, UsbDevice};
 use sam17_nucleo_core::descriptor;
+use sam17_nucleo_core::politica::Puerta;
 use sam17_nucleo_core::protocolo::{codificar, decodificar, Mensaje};
 use sam17_nucleo_core::servidor::{Instrumento, Respuesta};
 use sam17_nucleo_core::sysex::{desenvolver, envolver, largo_empaquetado};
@@ -199,7 +200,16 @@ pub async fn atender(
             };
 
             let ahora = embassy_time::Instant::now().as_millis();
-            for resp in instrumento.atender(m, ahora) {
+            // N1. Aqui es donde se estampa: este lazo ES la puerta USB, asi
+            // que lo sabe por construccion y el mensaje no tuvo que decirlo.
+            // Cuando entre el puente inalambrico, su lazo estampara
+            // `Inalambrica` y ninguno de los dos podra equivocarse, porque
+            // ninguno de los dos lee el dato: lo pone.
+            //
+            // Ojo con lo que esto NO separa: el agente por MCP y una carcasa
+            // web entran los dos por aqui y salen los dos como `Usb`. Se
+            // separaran el dia que se lea el nibble de cable (#182, fallo 7).
+            for resp in instrumento.atender(m, ahora, Puerta::Usb) {
                 if responder(&mut midi, instrumento, resp).await.is_err() {
                     break;
                 }

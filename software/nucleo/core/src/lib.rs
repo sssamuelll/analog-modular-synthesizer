@@ -16,6 +16,7 @@ pub mod param;
 pub mod partes;
 pub mod perturbacion;
 pub mod pinout;
+pub mod politica;
 pub mod preset;
 pub mod protocolo;
 pub mod rampa;

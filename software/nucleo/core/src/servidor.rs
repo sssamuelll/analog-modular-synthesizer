@@ -24,7 +24,8 @@
 use crate::medidas;
 use crate::modelo::{ErrorSet, Modelo};
 use crate::param::{ParamId, Valor};
-use crate::protocolo::{CodigoError, Mensaje};
+use crate::politica::{Politica, Puerta, Regla};
+use crate::protocolo::{etiqueta_de, CodigoError, Mensaje};
 use crate::rampa::{Rampa, Rampas, MAX_RAMPAS};
 use crate::rejilla::PPQN_INTERNO;
 use crate::rejilla::{siguiente_borde, Rejilla};
@@ -106,12 +107,16 @@ const _: () = {
     const SET_QUE_ANULA: usize = 1 + 2 * MAX_SUSCRIPTORES;
     /// Un `SET` sobre algo que exige confirmacion fisica: `ERROR` + `PENDING`.
     const SET_RETENIDO: usize = 2;
+    /// Un `HELLO` de otra version: `HOLA` con la nuestra + `ERROR` con nombre
+    /// (N7). Los dos van al que pregunto, no a los suscriptores.
+    const HELLO_INCOMPATIBLE: usize = 2;
 
     assert!(TICK <= MAX_RESPUESTAS);
     assert!(REACTIVAR_TODAS <= MAX_RESPUESTAS);
     assert!(CADUCAR <= MAX_RESPUESTAS);
     assert!(SET_QUE_ANULA <= MAX_RESPUESTAS);
     assert!(SET_RETENIDO <= MAX_RESPUESTAS);
+    assert!(HELLO_INCOMPATIBLE <= MAX_RESPUESTAS);
 };
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -148,6 +153,8 @@ pub struct Instrumento {
     desbordes: u16,
     /// La ultima hora de pared que entro por `avanzar_a`. `0` = nunca.
     ultimo_us: u64,
+    /// N1-N3. Vacia por defecto, y vacia significa TODO ABIERTO.
+    politica: Politica,
 }
 
 impl Default for Instrumento {
@@ -166,6 +173,7 @@ impl Instrumento {
             suscrito: false,
             desbordes: 0,
             ultimo_us: 0,
+            politica: Politica::nueva(),
         }
     }
 
@@ -241,22 +249,74 @@ impl Instrumento {
         self.desbordes
     }
 
-    /// Lo que llega por el cable.
-    pub fn atender(&mut self, m: Mensaje, ahora_ms: u64) -> Respuestas {
+    /// Mete una fila en la politica. Estrecho a proposito: un
+    /// `politica_mut() -> &mut Politica` seria el `modelo_mut` de #182 otra
+    /// vez -- entregar el objeto entero para que cualquiera lo reescriba.
+    pub fn cargar_regla(&mut self, r: Regla) -> Result<(), Regla> {
+        self.politica.cargar(r)
+    }
+
+    /// N6, la mitad «DICHO». El arranque es permisivo, asi que el estado de
+    /// la tabla tiene que ser legible desde fuera: sin esto, un CRC malo o una
+    /// ranura trabada dan acceso total y silencioso, indistinguible del estado
+    /// de fabrica.
+    pub fn politica(&self) -> &Politica {
+        &self.politica
+    }
+
+    /// Lo que llega por el cable, **con la puerta por la que entro**.
+    ///
+    /// N1. La puerta NO viaja en el mensaje: la estampa el transporte que lo
+    /// recibio. Por eso es un parametro y no un campo -- un cliente no puede
+    /// mentir sobre por donde entro porque no hay campo que falsificar, y
+    /// cuesta cero bytes en el cable.
+    ///
+    /// Y por eso NO tiene valor por defecto: si `atender` pudiera llamarse sin
+    /// decir la puerta, el primer transporte apurado la omitiria y la politica
+    /// legislaria sobre un dato que nadie estampo. Que el compilador lo exija
+    /// ES la guardia.
+    pub fn atender(&mut self, m: Mensaje, ahora_ms: u64, puerta: Puerta) -> Respuestas {
         let mut r = Respuestas::new();
         // Un cliente no puede fabricar un `CHANGED` y mentirle a los demas.
         if m.del_instrumento() {
             self.error(&mut r, &m, CodigoError::Desconocido);
             return r;
         }
+        // N2a. La politica se consulta ANTES de tocar nada: un rechazo que
+        // igual escribe no es una politica, es un aviso. Y va DESPUES de la
+        // guardia de arriba a proposito -- un `CHANGED` fabricado se rechaza
+        // venga por donde venga, sin que ninguna tabla pueda permitirlo.
+        if !self.politica.permite_mensaje(puerta, &m) {
+            self.error(&mut r, &m, CodigoError::PuertaSinPermiso);
+            return r;
+        }
         match m {
-            Mensaje::Hello { .. } => {
+            // N7. Esto era `Hello { .. }`: la version del cliente se leia del
+            // cable y se tiraba, y se contestaba `Hola` a cualquiera. El
+            // docstring de `Hola` ya lo denunciaba -- "sin esto la negociacion
+            // es de un solo sentido y no negocia nada" -- y encima el papel del
+            // nucleo y el de la autopista PLANIFICAN rupturas de formato
+            // apoyandose en un mecanismo que no funcionaba.
+            //
+            // El `Hola` sale igual y sale primero, coincida o no: el otro lado
+            // necesita saber QUE hablamos para decidir que hacer. Negarse sin
+            // decir la version deja al cliente tan a ciegas como el silencio.
+            Mensaje::Hello { version } => {
                 self.empujar(
                     &mut r,
                     Respuesta::Mensaje(Mensaje::Hola {
                         version: VERSION_PROTOCOLO,
                     }),
                 );
+                if version != VERSION_PROTOCOLO {
+                    self.empujar(
+                        &mut r,
+                        Respuesta::Mensaje(Mensaje::Error {
+                            etiqueta: etiqueta_de(&m),
+                            codigo: CodigoError::VersionIncompatible,
+                        }),
+                    );
+                }
             }
             Mensaje::Describe => {
                 self.empujar(&mut r, Respuesta::Descriptores);
@@ -610,7 +670,7 @@ impl Instrumento {
         self.empujar(
             r,
             Respuesta::Mensaje(Mensaje::Error {
-                etiqueta: crate::protocolo::etiqueta_de(m),
+                etiqueta: etiqueta_de(m),
                 codigo,
             }),
         );
@@ -684,6 +744,15 @@ mod tests {
         i
     }
 
+    impl Instrumento {
+        /// Atajo de los tests que no legislan sobre la puerta: `Usb` es por
+        /// donde entra un cliente hoy. Los que SI legislan llaman a `atender`
+        /// entera y dicen cual, que es lo que lo hace visible cuando importa.
+        fn atender_usb(&mut self, m: Mensaje, ahora_ms: u64) -> Respuestas {
+            self.atender(m, ahora_ms, Puerta::Usb)
+        }
+    }
+
     fn mensajes(r: &Respuestas) -> Vec<Mensaje, MAX_RESPUESTAS> {
         r.iter()
             .filter_map(|x| match x {
@@ -693,9 +762,101 @@ mod tests {
             .collect()
     }
 
+    /// N1 + N2a. La politica legisla sobre `(puerta, etiqueta)`, y negar una
+    /// casilla tiene que hacer DOS cosas: contestar un error con nombre, y no
+    /// escribir. Un rechazo que igual escribe no es una politica.
+    #[test]
+    fn una_puerta_sin_permiso_no_escribe_y_lo_dice() {
+        let mut i = instrumento();
+        let set = Mensaje::Set(NORMAL.id, 7);
+        i.cargar_regla(Regla {
+            puerta: Puerta::Usb,
+            etiqueta: etiqueta_de(&set),
+            permitido: false,
+        })
+        .unwrap();
+
+        let antes = i.modelo().get(NORMAL.id);
+        let r = i.atender(set, 0, Puerta::Usb);
+        assert_eq!(
+            mensajes(&r).as_slice(),
+            &[Mensaje::Error {
+                etiqueta: etiqueta_de(&set),
+                codigo: CodigoError::PuertaSinPermiso,
+            }]
+        );
+        assert_eq!(i.modelo().get(NORMAL.id), antes, "nego y escribio igual");
+    }
+
+    /// La misma escritura, por otra puerta, pasa. Es lo que separa una
+    /// politica de un interruptor general.
+    #[test]
+    fn la_regla_de_una_puerta_no_toca_a_las_otras() {
+        let mut i = instrumento();
+        let set = Mensaje::Set(NORMAL.id, 7);
+        i.cargar_regla(Regla {
+            puerta: Puerta::Usb,
+            etiqueta: etiqueta_de(&set),
+            permitido: false,
+        })
+        .unwrap();
+        i.atender(set, 0, Puerta::Mano);
+        assert_eq!(i.modelo().get(NORMAL.id), Some(7));
+    }
+
+    /// N6, la mitad «DICHO». Sin esto, un CRC malo o una ranura trabada dan
+    /// acceso total y silencioso, **indistinguible del estado de fabrica**.
+    /// La unica defensa barata es que el estado se pueda LEER.
+    #[test]
+    fn el_arranque_permisivo_se_puede_distinguir_de_la_fabrica() {
+        let mut i = instrumento();
+        assert!(i.politica().vacia(), "arranca vacia = todo abierto");
+        i.cargar_regla(Regla {
+            puerta: Puerta::Usb,
+            etiqueta: 0x04,
+            permitido: false,
+        })
+        .unwrap();
+        assert!(
+            !i.politica().vacia(),
+            "con politica cargada tiene que notarse"
+        );
+    }
+
+    /// N7. `Hello` descartaba la version del cliente con `{ .. }` y contestaba
+    /// `Hola` a cualquiera, aunque el docstring de `Hola` (`protocolo.rs`) diga
+    /// que sin mirarla "la negociacion es de un solo sentido y no negocia
+    /// nada". Y tanto el papel del nucleo como el de la autopista planifican
+    /// rupturas de formato apoyandose en este mecanismo.
+    ///
+    /// Un cliente que habla otra version tiene que enterarse AQUI, con un
+    /// codigo que se pueda nombrar -- no tres mensajes despues, en forma de
+    /// basura silenciosa que el no sabe leer.
+    #[test]
+    fn un_cliente_de_otra_version_recibe_un_error_con_nombre() {
+        let ajena = VERSION_PROTOCOLO + 1;
+        let r = instrumento().atender_usb(Mensaje::Hello { version: ajena }, 0);
+        assert_eq!(
+            mensajes(&r).as_slice(),
+            &[
+                // El `Hola` va PRIMERO y va igual: el cliente necesita saber
+                // QUE hablamos para decidir que hacer, no solo que no nos
+                // entendemos. Decirle "no" sin decirle "esto es lo que hay"
+                // lo deja tan a ciegas como el silencio de antes.
+                Mensaje::Hola {
+                    version: VERSION_PROTOCOLO
+                },
+                Mensaje::Error {
+                    etiqueta: etiqueta_de(&Mensaje::Hello { version: ajena }),
+                    codigo: CodigoError::VersionIncompatible,
+                },
+            ]
+        );
+    }
+
     #[test]
     fn hello_se_contesta_con_la_version_acordada() {
-        let r = instrumento().atender(Mensaje::Hello { version: 1 }, 0);
+        let r = instrumento().atender_usb(Mensaje::Hello { version: 1 }, 0);
         assert_eq!(
             mensajes(&r).as_slice(),
             &[Mensaje::Hola {
@@ -706,7 +867,7 @@ mod tests {
 
     #[test]
     fn describe_pide_el_volcado_del_descriptor() {
-        let r = instrumento().atender(Mensaje::Describe, 0);
+        let r = instrumento().atender_usb(Mensaje::Describe, 0);
         assert!(r.iter().any(|x| matches!(x, Respuesta::Descriptores)));
     }
 
@@ -714,10 +875,10 @@ mod tests {
     fn un_get_devuelve_el_valor_y_un_set_lo_mueve() {
         let mut i = instrumento();
         assert_eq!(
-            mensajes(&i.atender(Mensaje::Get(NORMAL.id), 0)).as_slice(),
+            mensajes(&i.atender_usb(Mensaje::Get(NORMAL.id), 0)).as_slice(),
             &[Mensaje::Changed(NORMAL.id, 0)]
         );
-        i.atender(Mensaje::Set(NORMAL.id, 42), 0);
+        i.atender_usb(Mensaje::Set(NORMAL.id, 42), 0);
         assert_eq!(i.modelo().get(NORMAL.id), Some(42));
     }
 
@@ -726,10 +887,10 @@ mod tests {
         // §4.1: CHANGED va a los SUSCRIPTORES. Mandarselo a quien no pidio
         // nada llena el cable de trafico que nadie lee.
         let mut i = instrumento();
-        assert!(mensajes(&i.atender(Mensaje::Set(NORMAL.id, 1), 0)).is_empty());
-        i.atender(Mensaje::Subscribe { activo: true }, 0);
+        assert!(mensajes(&i.atender_usb(Mensaje::Set(NORMAL.id, 1), 0)).is_empty());
+        i.atender_usb(Mensaje::Subscribe { activo: true }, 0);
         assert_eq!(
-            mensajes(&i.atender(Mensaje::Set(NORMAL.id, 2), 0)).as_slice(),
+            mensajes(&i.atender_usb(Mensaje::Set(NORMAL.id, 2), 0)).as_slice(),
             &[Mensaje::Changed(NORMAL.id, 2)]
         );
     }
@@ -744,7 +905,7 @@ mod tests {
             (NORMAL.id, 99_999, CodigoError::FueraDeRango),
             (ParamId(0xBEEF), 1, CodigoError::NoExiste),
         ] {
-            let r = mensajes(&i.atender(Mensaje::Set(id, valor), 0));
+            let r = mensajes(&i.atender_usb(Mensaje::Set(id, valor), 0));
             assert_eq!(
                 r.as_slice(),
                 &[Mensaje::Error {
@@ -759,7 +920,7 @@ mod tests {
     #[test]
     fn un_get_de_lo_que_no_existe_tambien_se_queja() {
         let mut i = instrumento();
-        let r = mensajes(&i.atender(Mensaje::Get(ParamId(0xBEEF)), 0));
+        let r = mensajes(&i.atender_usb(Mensaje::Get(ParamId(0xBEEF)), 0));
         assert_eq!(
             r.as_slice(),
             &[Mensaje::Error {
@@ -773,7 +934,7 @@ mod tests {
     fn lo_marcado_queda_pendiente_y_solo_el_pulsador_lo_suelta() {
         // §2.2 de punta a punta, por el protocolo.
         let mut i = instrumento();
-        let r = mensajes(&i.atender(Mensaje::Set(PELIGROSO.id, 1), 0));
+        let r = mensajes(&i.atender_usb(Mensaje::Set(PELIGROSO.id, 1), 0));
         let token = match r.as_slice() {
             [Mensaje::Error {
                 codigo: CodigoError::ExigeConfirmacion,
@@ -801,7 +962,7 @@ mod tests {
     #[test]
     fn si_nadie_confirma_el_cliente_se_entera_de_que_expiro() {
         let mut i = instrumento();
-        i.atender(Mensaje::Set(PELIGROSO.id, 1), 0);
+        i.atender_usb(Mensaje::Set(PELIGROSO.id, 1), 0);
         let r = mensajes(&i.caducar(TTL_MS));
         assert!(matches!(
             r.as_slice(),
@@ -831,7 +992,7 @@ mod tests {
                 color: crate::protocolo::Rgb { r: 1, g: 2, b: 3 },
             },
         ] {
-            let r = mensajes(&i.atender(m, 0));
+            let r = mensajes(&i.atender_usb(m, 0));
             assert!(
                 matches!(
                     r.as_slice(),
@@ -848,7 +1009,7 @@ mod tests {
     #[test]
     fn una_medida_publicada_llega_a_los_suscriptores() {
         let mut i = instrumento();
-        i.atender(Mensaje::Subscribe { activo: true }, 0);
+        i.atender_usb(Mensaje::Subscribe { activo: true }, 0);
         let r = mensajes(&i.publicar_medida(MEDIDA.id, -100));
         assert_eq!(r.as_slice(), &[Mensaje::Changed(MEDIDA.id, -100)]);
     }
@@ -857,7 +1018,7 @@ mod tests {
     fn un_mensaje_del_instrumento_que_llega_de_fuera_se_rechaza() {
         // Un cliente no puede fabricar un CHANGED y mentirle a los demas.
         let mut i = instrumento();
-        let r = mensajes(&i.atender(Mensaje::Changed(NORMAL.id, 7), 0));
+        let r = mensajes(&i.atender_usb(Mensaje::Changed(NORMAL.id, 7), 0));
         assert_eq!(
             r.as_slice(),
             &[Mensaje::Error {
@@ -887,7 +1048,7 @@ mod tests {
                 || matches!(m, Mensaje::Set(id, v) if i.modelo().descriptor_de(id)
                     .is_some_and(|d| !d.solo_lectura && !d.confirmacion_fisica
                                      && v >= d.min && v <= d.max));
-            let r = i.atender(m, 0);
+            let r = i.atender_usb(m, 0);
             if callar_esta_bien {
                 continue;
             }
@@ -900,13 +1061,13 @@ mod tests {
         // El otro lado de la regla de arriba: quien quiere saber que su
         // escritura llego, se suscribe. El agente lo hace.
         let mut i = instrumento();
-        i.atender(Mensaje::Subscribe { activo: true }, 0);
+        i.atender_usb(Mensaje::Subscribe { activo: true }, 0);
         for m in mensajes_de_cliente(&NORMAL.id) {
             if matches!(m, Mensaje::Subscribe { .. }) {
                 continue;
             }
             assert!(
-                !i.atender(m, 0).is_empty(),
+                !i.atender_usb(m, 0).is_empty(),
                 "suscrito, {m:?} no puede dejar silencio"
             );
         }
@@ -976,7 +1137,7 @@ mod tests {
     #[test]
     fn una_rampa_aceptada_arranca_en_el_borde_de_la_rejilla() {
         let mut i = con_reloj_a_mitad();
-        i.atender(rampa(NORMAL.id, 100), 0);
+        i.atender_usb(rampa(NORMAL.id, 100), 0);
         // Todavia no se movio: espera al borde.
         i.tick(300);
         assert_eq!(i.modelo().get(NORMAL.id), Some(0));
@@ -994,9 +1155,9 @@ mod tests {
     fn un_set_del_cliente_anula_la_rampa_y_lo_avisa() {
         // §6.1. Este es el test de la seccion entera.
         let mut i = con_reloj_a_mitad();
-        i.atender(rampa(NORMAL.id, 100), 0);
+        i.atender_usb(rampa(NORMAL.id, 100), 0);
         i.tick(PXC + 96);
-        let r = mensajes(&i.atender(Mensaje::Set(NORMAL.id, 7), 0));
+        let r = mensajes(&i.atender_usb(Mensaje::Set(NORMAL.id, 7), 0));
         assert!(r.contains(&Mensaje::Anulado {
             id: NORMAL.id,
             anulado: true
@@ -1015,10 +1176,10 @@ mod tests {
     fn reactivar_la_devuelve_donde_la_cinta_este_ahora() {
         // §6.2: la cinta siguio corriendo mientras estuvo anulada.
         let mut i = con_reloj_a_mitad();
-        i.atender(rampa(NORMAL.id, 100), 0);
+        i.atender_usb(rampa(NORMAL.id, 100), 0);
         i.tick(PXC + 96);
-        i.atender(Mensaje::Set(NORMAL.id, 7), 0);
-        let r = mensajes(&i.atender(
+        i.atender_usb(Mensaje::Set(NORMAL.id, 7), 0);
+        let r = mensajes(&i.atender_usb(
             Mensaje::Reactivar {
                 id: Some(NORMAL.id),
             },
@@ -1040,13 +1201,13 @@ mod tests {
     fn reactivar_sin_id_los_devuelve_todos() {
         let mut i = con_reloj_a_mitad();
         for id in [NORMAL.id, OTRO.id] {
-            i.atender(rampa(id, 100), 0);
+            i.atender_usb(rampa(id, 100), 0);
         }
         i.tick(PXC + 96);
         for id in [NORMAL.id, OTRO.id] {
-            i.atender(Mensaje::Set(id, 7), 0);
+            i.atender_usb(Mensaje::Set(id, 7), 0);
         }
-        let r = mensajes(&i.atender(Mensaje::Reactivar { id: None }, 0));
+        let r = mensajes(&i.atender_usb(Mensaje::Reactivar { id: None }, 0));
         assert_eq!(
             r.iter()
                 .filter(|m| matches!(m, Mensaje::Anulado { anulado: false, .. }))
@@ -1070,13 +1231,13 @@ mod tests {
     fn reactivar_sin_id_no_pierde_ninguno_cuando_pasan_de_cuatro() {
         let mut i = con_reloj_y_muchos();
         for desc in MUCHOS.iter() {
-            i.atender(rampa(desc.id, 100), 0);
+            i.atender_usb(rampa(desc.id, 100), 0);
         }
         i.tick(PXC + 96);
         for desc in MUCHOS.iter() {
-            i.atender(Mensaje::Set(desc.id, 7), 0);
+            i.atender_usb(Mensaje::Set(desc.id, 7), 0);
         }
-        let r = mensajes(&i.atender(Mensaje::Reactivar { id: None }, 0));
+        let r = mensajes(&i.atender_usb(Mensaje::Reactivar { id: None }, 0));
         assert_eq!(
             r.iter()
                 .filter(|m| matches!(m, Mensaje::Anulado { anulado: false, .. }))
@@ -1097,9 +1258,9 @@ mod tests {
     #[test]
     fn el_tick_no_se_come_los_changed_de_las_rampas() {
         let mut i = con_reloj_y_muchos();
-        i.atender(Mensaje::Subscribe { activo: true }, 0);
+        i.atender_usb(Mensaje::Subscribe { activo: true }, 0);
         for desc in MUCHOS.iter() {
-            i.atender(rampa(desc.id, 100), 0);
+            i.atender_usb(rampa(desc.id, 100), 0);
         }
         let r = mensajes(&i.tick(PXC + 96));
         // Solo los de las RAMPAS: desde que el fallo 4 esta arreglado, el tick
@@ -1127,9 +1288,9 @@ mod tests {
     #[test]
     fn el_peor_caso_real_no_desborda_el_buzon() {
         let mut i = con_reloj_y_muchos();
-        i.atender(Mensaje::Subscribe { activo: true }, 0);
+        i.atender_usb(Mensaje::Subscribe { activo: true }, 0);
         for desc in MUCHOS.iter() {
-            i.atender(rampa(desc.id, 100), 0);
+            i.atender_usb(rampa(desc.id, 100), 0);
         }
         // `tick()`: MAX_RAMPAS escrituras de rampa + las cinco del reloj.
         i.tick(PXC + 96);
@@ -1137,9 +1298,9 @@ mod tests {
 
         // `Reactivar { id: None }`: un `Anulado` por rampa + el contador.
         for desc in MUCHOS.iter() {
-            i.atender(Mensaje::Set(desc.id, 7), 0);
+            i.atender_usb(Mensaje::Set(desc.id, 7), 0);
         }
-        i.atender(Mensaje::Reactivar { id: None }, 0);
+        i.atender_usb(Mensaje::Reactivar { id: None }, 0);
         assert_eq!(
             i.desbordes(),
             0,
@@ -1154,7 +1315,7 @@ mod tests {
     #[test]
     fn las_medidas_del_reloj_se_anuncian_a_quien_se_suscribio() {
         let mut i = con_reloj();
-        i.atender(Mensaje::Subscribe { activo: true }, 0);
+        i.atender_usb(Mensaje::Subscribe { activo: true }, 0);
         let r = mensajes(&i.tick(384));
         assert!(
             r.iter().any(|m| matches!(
@@ -1191,8 +1352,8 @@ mod tests {
     #[test]
     fn con_el_tiempo_andando_una_rampa_escribe_de_verdad() {
         let mut i = con_reloj();
-        i.atender(Mensaje::Subscribe { activo: true }, 0);
-        i.atender(rampa(NORMAL.id, 100), 0);
+        i.atender_usb(Mensaje::Subscribe { activo: true }, 0);
+        i.atender_usb(rampa(NORMAL.id, 100), 0);
         let antes = i.modelo().get(NORMAL.id);
         // Un compas entero: la rampa arranca en el borde y corre 384 pulsos.
         for paso in 1..=8 {
@@ -1225,7 +1386,7 @@ mod tests {
     #[test]
     fn una_medida_del_reloj_que_no_se_movio_no_se_reanuncia() {
         let mut i = con_reloj();
-        i.atender(Mensaje::Subscribe { activo: true }, 0);
+        i.atender_usb(Mensaje::Subscribe { activo: true }, 0);
         i.tick(384);
         let r = mensajes(&i.tick(384));
         assert!(
@@ -1238,7 +1399,7 @@ mod tests {
     fn una_rampa_a_un_destino_fuera_de_rango_se_rechaza_al_aceptarla() {
         // Mejor ahora que descubrirlo a mitad del barrido.
         let mut i = con_reloj();
-        let r = mensajes(&i.atender(rampa(NORMAL.id, 99_999), 0));
+        let r = mensajes(&i.atender_usb(rampa(NORMAL.id, 99_999), 0));
         assert_eq!(
             r.as_slice(),
             &[Mensaje::Error {
@@ -1256,7 +1417,7 @@ mod tests {
             (PELIGROSO.id, CodigoError::ExigeConfirmacion),
             (ParamId(0xBEEF), CodigoError::NoExiste),
         ] {
-            let r = mensajes(&i.atender(rampa(id, 1), 0));
+            let r = mensajes(&i.atender_usb(rampa(id, 1), 0));
             assert!(
                 matches!(r.as_slice(), [Mensaje::Error { codigo: c, .. }] if *c == codigo),
                 "{id:?} tenia que dar {codigo:?}, dio {r:?}"
@@ -1267,9 +1428,9 @@ mod tests {
     #[test]
     fn el_tick_solo_avisa_a_los_suscriptores() {
         let mut i = con_reloj_a_mitad();
-        i.atender(rampa(NORMAL.id, 100), 0);
+        i.atender_usb(rampa(NORMAL.id, 100), 0);
         assert!(i.tick(PXC + 96).is_empty());
-        i.atender(Mensaje::Subscribe { activo: true }, 0);
+        i.atender_usb(Mensaje::Subscribe { activo: true }, 0);
         assert!(!i.tick(PXC + 192).is_empty());
     }
 
@@ -1286,17 +1447,17 @@ mod tests {
     #[test]
     fn el_contador_de_anulados_se_anuncia_a_quien_se_suscribio() {
         let mut i = con_reloj_a_mitad();
-        i.atender(Mensaje::Subscribe { activo: true }, 0);
-        i.atender(rampa(NORMAL.id, 100), 0);
+        i.atender_usb(Mensaje::Subscribe { activo: true }, 0);
+        i.atender_usb(rampa(NORMAL.id, 100), 0);
         i.tick(PXC + 96);
 
-        let r = mensajes(&i.atender(Mensaje::Set(NORMAL.id, 7), 0));
+        let r = mensajes(&i.atender_usb(Mensaje::Set(NORMAL.id, 7), 0));
         assert!(
             r.contains(&Mensaje::Changed(tiempo_params::ID_ANULADOS, 1)),
             "el contador subio y el suscriptor no se entero: {r:?}"
         );
 
-        let r = mensajes(&i.atender(Mensaje::Reactivar { id: None }, 0));
+        let r = mensajes(&i.atender_usb(Mensaje::Reactivar { id: None }, 0));
         assert!(
             r.contains(&Mensaje::Changed(tiempo_params::ID_ANULADOS, 0)),
             "el contador bajo y el suscriptor no se entero: {r:?}"
@@ -1310,8 +1471,8 @@ mod tests {
     #[test]
     fn un_contador_de_anulados_que_no_se_movio_no_se_reanuncia() {
         let mut i = con_reloj_a_mitad();
-        i.atender(Mensaje::Subscribe { activo: true }, 0);
-        let r = mensajes(&i.atender(Mensaje::Reactivar { id: None }, 0));
+        i.atender_usb(Mensaje::Subscribe { activo: true }, 0);
+        let r = mensajes(&i.atender_usb(Mensaje::Reactivar { id: None }, 0));
         assert!(
             !r.iter()
                 .any(|m| matches!(m, Mensaje::Changed(id, _) if *id == tiempo_params::ID_ANULADOS)),
@@ -1323,11 +1484,11 @@ mod tests {
     fn el_contador_de_anulados_es_una_medida_de_verdad() {
         let mut i = con_reloj_a_mitad();
         assert_eq!(i.modelo().get(tiempo_params::ID_ANULADOS), Some(0));
-        i.atender(rampa(NORMAL.id, 100), 0);
+        i.atender_usb(rampa(NORMAL.id, 100), 0);
         i.tick(PXC + 96);
-        i.atender(Mensaje::Set(NORMAL.id, 7), 0);
+        i.atender_usb(Mensaje::Set(NORMAL.id, 7), 0);
         assert_eq!(i.modelo().get(tiempo_params::ID_ANULADOS), Some(1));
-        i.atender(Mensaje::Reactivar { id: None }, 0);
+        i.atender_usb(Mensaje::Reactivar { id: None }, 0);
         assert_eq!(i.modelo().get(tiempo_params::ID_ANULADOS), Some(0));
     }
 
@@ -1395,8 +1556,8 @@ mod tests {
     fn un_set_sobre_algo_sin_rampa_no_avisa_de_ningun_anulado() {
         // Solo se anula lo que de verdad tenia automatizacion corriendo.
         let mut i = con_reloj();
-        i.atender(Mensaje::Subscribe { activo: true }, 0);
-        let r = mensajes(&i.atender(Mensaje::Set(NORMAL.id, 5), 0));
+        i.atender_usb(Mensaje::Subscribe { activo: true }, 0);
+        let r = mensajes(&i.atender_usb(Mensaje::Set(NORMAL.id, 5), 0));
         assert!(!r.iter().any(|m| matches!(m, Mensaje::Anulado { .. })));
     }
 }
