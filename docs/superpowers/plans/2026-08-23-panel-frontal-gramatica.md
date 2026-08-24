@@ -133,6 +133,20 @@ papel**, y se acta en §11.1 — junto con la regla de quién puede cambiar el
 modo mismo (propuesta por defecto: cambiar de modo es gesto físico o
 consentido; POR-DECIDIR con el núcleo).
 
+> **Estado del prerrequisito, 2026-08-24** (PR #181). Aterrizó **la mitad**.
+> La autoría ya existe: `Puerta` —Mano / Usb / Inalambrica / Interno— y toda
+> escritura llega estampada. Y salió más barata de lo que este papel temía:
+> **cuesta cero bytes en la trama**, porque la puerta no viaja en el mensaje,
+> la estampa el transporte. Un mensaje que declara su propio origen puede
+> mentir gratis; lo único honesto es quién lo recibió.
+>
+> **El modo como objeto NO aterrizó, y no por falta de tiempo.** El mecanismo
+> que el núcleo proponía para sostenerlo —«el sello se arrastra», que la
+> autoría viajara a las escrituras derivadas— quedó DEROGADO en su v3: si la
+> autoría se arrastra, una escritura automática termina cargando la autoridad
+> de la mano, y la ley de capas 1 se vuelve inaplicable contra sí misma.
+> El modo necesita otro mecanismo. Sigue en #177.
+
 ### 5.2 El salto suave, enmendado en voz alta
 
 **Lo que Samuel firmó y se sostiene:** al tocar una perilla el valor

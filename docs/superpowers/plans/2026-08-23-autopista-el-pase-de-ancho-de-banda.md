@@ -235,10 +235,33 @@ estado de arranque en voz alta, no por omisión.
   **ley**, con `trama_j2_budget.py` como su puerta.
 - **B3 — La huella del descriptor:** es el cambio de mayor rendimiento de todo
   el pase y toca el contrato con las carcasas. ¿Entra ya?
+
+  **Y ahora también carga el contrato del volcado.** El papel del núcleo le
+  cedió N4 en su v3: conteo de entradas, terminador y largo por entrada se
+  deciden **aquí**, no allá. El razonamiento de la cesión es que decidir el
+  formato sin saber si el descriptor se va a mandar casi nunca es decidir a
+  ciegas — y eso lo responde la huella, que es esta misma decisión.
+
+  **Esto dejó de ser holgado.** MEDIDO el 2026-08-24: el descriptor compilado
+  más grande son 106 B de 256 (41 %), pero el **peor caso que el propio repo
+  declara** —el selector de 17 fuentes con nombres y etiquetas realistas—
+  mide **250 B de 256, el 98 %**. El test vive en `core/src/descriptor.rs`
+  (`el_peor_caso_declarado_cabe_en_el_volcado`), está en rojo de verdad y
+  marcado `#[ignore]` esperando esta decisión. Un descriptor que no quepa hoy
+  se salta con un `warn!` y el cliente **no puede enterarse**, porque no hay
+  conteo ni terminador con que notarlo — que es exactamente lo que B3 y B4
+  tienen que resolver juntos.
+
 - **B4 — El canal crudo para el volcado:** ¿se añade el endpoint binario, o se
   vive con SysEx confiando en que la huella haga que casi nunca se use?
   Recomendado: **la huella primero**; el canal crudo solo si tras medirla sigue
   doliendo.
+
+  Ojo con el orden: si la huella (B3) entra y el volcado sigue sin conteo ni
+  terminador, el canal crudo no arregla nada — el cliente seguiría sin poder
+  distinguir «terminó» de «se abortó». El contrato es prerrequisito del
+  canal, no al revés.
+
 - **B5 — El estado de arranque:** ¿permisivo declarado (coherente con «tabla
   vacía = todo abierto») o cerrado hasta que la política cargue? Recomendado:
   **permisivo, pero DICHO** — y con telemetría de por qué, para que un fallo de
