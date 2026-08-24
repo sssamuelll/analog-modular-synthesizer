@@ -278,6 +278,17 @@ async fn mandar_descriptores(
     midi: &mut MidiClass<'static, Driver<'static, USB>>,
     instrumento: &Instrumento,
 ) -> Result<(), ()> {
+    // B3, el contrato del volcado. La cabecera va ANTES del primer descriptor
+    // y dice cuantos vienen; el cierre va al final y dice cuantos salieron de
+    // verdad. Con las dos, el cliente distingue por fin las tres cosas que
+    // hasta hoy le llegaban identicas: «termino», «se aborto» y «todavia
+    // viene». Y si `enviados` no cuadra con `n`, alguno se salto -- que es un
+    // caso REAL, dos lineas mas abajo, y era invisible desde el otro lado.
+    let n = instrumento.modelo().descriptores().count() as u16;
+    let huella = instrumento.modelo().huella();
+    mandar_mensaje(midi, &Mensaje::VolcadoInicio { n, huella }).await?;
+
+    let mut enviados: u16 = 0;
     let mut plano = [0u8; descriptor::MAX_DESCRIPTOR_B];
     let mut sobre = [0u8; MAX_SOBRE_B];
     for d in instrumento.modelo().descriptores() {
@@ -312,13 +323,16 @@ async fn mandar_descriptores(
         // Este `?` SI se queda: si el USB se cayo no hay volcado que salvar,
         // y el `warn` de arriba tampoco iba a salir por ningun lado.
         mandar_sysex(midi, &sobre[..s]).await?;
+        enviados += 1;
     }
-    // NO se manda terminador ni conteo: el cliente sigue sin poder distinguir
-    // "termino" de "falto uno", y ahora hay DOS sitios que se saltan uno en
-    // silencio. Eso es correcto y es lo que hay: el terminador es un cambio de
-    // FORMATO y lo decide N4 del pase del nucleo -- aqui no se inventa. Lo
-    // unico que se puede hacer sin tocar el formato es lo de arriba: dejar
-    // rastro en el log del propio instrumento.
+    // Aqui vivia una nota diciendo que el terminador era un cambio de FORMATO
+    // y lo decidia N4 del pase del nucleo. N4 se cedio a B3, B3 se decidio el
+    // 2026-08-24, y esto es la decision.
+    //
+    // El `?` se queda por lo mismo que el de arriba: si el USB se cayo no hay
+    // volcado que cerrar. Un cliente que no recibe el cierre tiene que leerlo
+    // como «se aborto», que es exactamente lo que paso.
+    mandar_mensaje(midi, &Mensaje::VolcadoFin { enviados }).await?;
     Ok(())
 }
 

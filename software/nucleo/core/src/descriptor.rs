@@ -163,6 +163,23 @@ pub enum ErrorCodec {
     Desconocido,
 }
 
+/// El punto de partida de FNV-1a de 32 bits. No es cero a proposito: un cero
+/// seria indistinguible de «no se calculo», que es justo el significado que
+/// `modelo::HUELLA_NO_CACHEABLE` le reserva al cero de la huella.
+pub const FNV_BASE: u32 = 0x811C_9DC5;
+
+/// FNV-1a, 32 bits. Se elige por lo que NO trae: sin tablas, sin estado, sin
+/// dependencias, y el mismo resultado en el cerebro y en la carcasa web --
+/// que es donde se va a comparar. No es criptografico y no hace falta que lo
+/// sea: esto decide si hay que remandar un volcado, no si alguien miente.
+pub fn fnv1a(mut h: u32, bytes: &[u8]) -> u32 {
+    for b in bytes {
+        h ^= *b as u32;
+        h = h.wrapping_mul(0x0100_0193);
+    }
+    h
+}
+
 /// Lo mas que puede ocupar UN descriptor en el cable.
 ///
 /// No es un techo del formato: es el tamano del buffer del volcado en
@@ -171,7 +188,8 @@ pub enum ErrorCodec {
 /// Y no es un techo blando. `mandar_descriptores` hacia `?` sobre `escribir`,
 /// asi que UN solo descriptor pasado se llevaba por delante el volcado ENTERO
 /// -- en silencio, y sin que el cliente pudiera distinguir "termino" de "se
-/// aborto". Es el #182, fallo 5.
+/// aborto". Es el #182, fallo 5. Hoy se lo salta y lo cuenta, y el modelo que
+/// tenga uno asi deja de ser cacheable (`modelo::HUELLA_NO_CACHEABLE`).
 pub const MAX_DESCRIPTOR_B: usize = 256;
 
 /// Cuanto de ese techo se deja ocupar antes de dar la alarma.
@@ -586,11 +604,23 @@ mod techo_del_volcado {
     /// oscilador en el nombre -- " del oscilador 3" son 16 B mas, o sea 266, y
     /// entonces ni `escribir` termina.
     ///
-    /// **Que lo desbloquea:** la decision N4 del pase del nucleo, descriptor
-    /// troceado contra largo ancho. Mientras N4 no exista no hay nada que
-    /// arreglar aqui: subir `MAX_DESCRIPTOR_B` es *elegir* "largo ancho", y
-    /// eso es la decision, no el arreglo. Tomada N4, se quita el `ignore` y
-    /// esto pasa a verde o se cambia el peor caso que mide.
+    /// **Que lo desbloquea:** el descriptor troceado contra largo ancho. N4
+    /// se cedio a B3 de la autopista, y B3 se decidio y aterrizo el
+    /// 2026-08-24 -- pero **aterrizo la otra mitad**, y conviene no
+    /// confundirlas:
+    ///
+    /// - Lo que B3 SI arreglo es *cuando* se manda el volcado (la huella: si
+    ///   coincide no se manda nada) y que el otro lado pueda NOTAR un salto
+    ///   (cabecera con la cuenta, cierre con los enviados). Antes, un
+    ///   descriptor que no cabia se saltaba en silencio absoluto; ahora la
+    ///   carcasa ve que `enviados` no cuadra con `n` y sabe que le falta uno.
+    /// - Lo que B3 NO arreglo es que UN descriptor mida 250 de 256. Eso es el
+    ///   FORMATO, y sigue igual. Notar el salto es mejor que no notarlo, pero
+    ///   el parametro que se salto sigue sin llegar.
+    ///
+    /// Subir `MAX_DESCRIPTOR_B` sigue siendo *elegir* "largo ancho", que es la
+    /// decision y no el arreglo. Tomada, se quita el `ignore` y esto pasa a
+    /// verde o se cambia el peor caso que mide.
     #[test]
     #[ignore = "ROJO real, no pendiente: el peor caso declarado (selector de 17 \
                 fuentes) mide 250 B contra una alarma de 192. Lo desbloquea la \

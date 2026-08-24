@@ -110,8 +110,37 @@ pub enum Mensaje {
     },
     /// La respuesta a `Hello`: la version que el instrumento acepta hablar.
     /// Sin esto la negociacion es de un solo sentido y no negocia nada.
+    ///
+    /// **B3: y la huella del volcado, aqui mismo.** Va en el saludo y no en un
+    /// mensaje propio para que la carcasa la sepa SIN gastar un viaje: al
+    /// conectarse ya puede comparar contra su cache y decidir si pedir
+    /// `Describe` o no pedirlo nunca. Un mensaje aparte costaria justo el
+    /// viaje que este mecanismo existe para ahorrar.
+    ///
+    /// **Una huella de CERO significa «no cachees»** y hay que tratarla como
+    /// tal: el instrumento sabe que su volcado sale incompleto. Ver
+    /// `modelo::HUELLA_NO_CACHEABLE`. Guardar el volcado bajo un cero es
+    /// cachear una tabla coja para siempre.
     Hola {
         version: u16,
+        huella: u32,
+    },
+    /// B3, el contrato del volcado. Va ANTES del primer descriptor y dice
+    /// cuantos vienen. Sin esto el cliente no puede distinguir «termino» de
+    /// «se aborto» de «todavia viene».
+    ///
+    /// La huella repetida aqui es la misma que la del saludo, y el cero
+    /// significa lo mismo: no cachees lo que viene.
+    VolcadoInicio {
+        n: u16,
+        huella: u32,
+    },
+    /// Y este va al final, con los que de verdad salieron. Si `enviados` no
+    /// coincide con el `n` del inicio, alguno se salto -- que es un caso REAL
+    /// (`fw/src/usb.rs` se salta el que no cabe) y hasta hoy era invisible
+    /// desde el otro lado.
+    VolcadoFin {
+        enviados: u16,
     },
     /// Que etiqueta fallo y por que. Un protocolo sin mensaje de error deja
     /// al cliente esperando en silencio, que es el peor modo de fallo posible.
@@ -170,6 +199,8 @@ const T_ERROR: u8 = 0x88;
 const T_RAMPA: u8 = 0x0E;
 const T_REACTIVAR: u8 = 0x0F;
 const T_ANULADO: u8 = 0x89;
+const T_VOLCADO_INICIO: u8 = 0x8A;
+const T_VOLCADO_FIN: u8 = 0x8B;
 
 /// La etiqueta con la que viaja. El servidor la necesita para poder decir
 /// QUE fallo en un `ERROR`.
@@ -196,6 +227,8 @@ pub fn etiqueta_de(m: &Mensaje) -> u8 {
         Pending { .. } => T_PENDING,
         Resolved { .. } => T_RESOLVED,
         Hola { .. } => T_HOLA,
+        VolcadoInicio { .. } => T_VOLCADO_INICIO,
+        VolcadoFin { .. } => T_VOLCADO_FIN,
         Error { .. } => T_ERROR,
         Rampa { .. } => T_RAMPA,
         Anulado { .. } => T_ANULADO,
@@ -244,7 +277,15 @@ pub fn codificar(m: &Mensaje, buf: &mut [u8]) -> Result<usize, ErrorProto> {
             w.u16(*token)?;
             w.u8(*confirmado as u8)?;
         }
-        Hola { version } => w.u16(*version)?,
+        Hola { version, huella } => {
+            w.u16(*version)?;
+            w.u32(*huella)?;
+        }
+        VolcadoInicio { n, huella } => {
+            w.u16(*n)?;
+            w.u32(*huella)?;
+        }
+        VolcadoFin { enviados } => w.u16(*enviados)?,
         Error { etiqueta, codigo } => {
             w.u8(*etiqueta)?;
             w.u8(*codigo as u8)?;
@@ -327,7 +368,15 @@ pub fn decodificar(buf: &[u8]) -> Result<Mensaje, ErrorProto> {
             token: r.u16()?,
             confirmado: r.u8()? != 0,
         },
-        T_HOLA => Hola { version: r.u16()? },
+        T_HOLA => Hola {
+            version: r.u16()?,
+            huella: r.u32()?,
+        },
+        T_VOLCADO_INICIO => VolcadoInicio {
+            n: r.u16()?,
+            huella: r.u32()?,
+        },
+        T_VOLCADO_FIN => VolcadoFin { enviados: r.u16()? },
         T_ERROR => Error {
             etiqueta: r.u8()?,
             codigo: CodigoError::de_byte(r.u8()?).ok_or(ErrorCodec::Invalido)?,
@@ -365,7 +414,13 @@ mod tests {
     /// Una de cada variante. El `match` del codec es exhaustivo, asi que
     /// añadir un mensaje sin codificarlo rompe la compilacion — que es la
     /// guardia de verdad de §4.1.
-    fn todas() -> [Mensaje; 24] {
+    /// Cuantos mensajes hay. Un solo numero para el largo del array y para el
+    /// techo del test de etiquetas: estaban escritos a mano por separado y al
+    /// anadir dos mensajes el segundo reventaba por CAPACIDAD, diciendo
+    /// "etiqueta duplicada" cuando no habia ninguna.
+    const N_MENSAJES: usize = 26;
+
+    fn todas() -> [Mensaje; N_MENSAJES] {
         let id = ParamId::nuevo(3, 2, 17);
         [
             Mensaje::Hello { version: 1 },
@@ -401,7 +456,15 @@ mod tests {
                 token: 4242,
                 confirmado: true,
             },
-            Mensaje::Hola { version: 1 },
+            Mensaje::Hola {
+                version: 1,
+                huella: 0xDEAD_BEEF,
+            },
+            Mensaje::VolcadoInicio {
+                n: 536,
+                huella: 0xDEAD_BEEF,
+            },
+            Mensaje::VolcadoFin { enviados: 535 },
             Mensaje::Error {
                 etiqueta: 0x04,
                 codigo: CodigoError::SoloLectura,
@@ -428,7 +491,7 @@ mod tests {
 
     #[test]
     fn ninguna_etiqueta_se_repite() {
-        let mut vistas = heapless::Vec::<u8, 24>::new();
+        let mut vistas = heapless::Vec::<u8, N_MENSAJES>::new();
         for m in todas() {
             let e = etiqueta_de(&m);
             assert!(!vistas.contains(&e), "la etiqueta {e:#04x} esta duplicada");
