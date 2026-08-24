@@ -88,8 +88,20 @@ barato*, porque agrupa (R-M4).
 > brevas (registros de configuración, selectores).
 
 La cuenta que lo justifica está aseverada: los mismos 16 parámetros sueltos a
-4 kHz cuestan **46,1 %** del bus; agrupados, **21,8 %**. **La agrupación compra
-la velocidad, no el reloj.**
+4 kHz cuestan **56,3 %** del bus; agrupados, **21,8 %**, contra un techo
+declarado del 50 %. **La agrupación compra la velocidad, no el reloj.**
+
+**[corregido 2026-08-24]** Esta línea publicaba **46,1 %**, y era una cifra
+sesgada a favor de lo que defiende: el assert de `latencia_mano_budget.py`
+cargaba los 256 bits del sondeo del panel al lado **agrupado** y no al suelto,
+o sea comparaba payloads distintos. Peor, la cadencia se cancelaba en los dos
+lados, así que la desigualdad real era `1152 > 544` — cierta para cualquier
+reloj y cualquier lazo, y por tanto **un assert que no podía fallar**. Lo cazó
+la junta adversarial (Serrano, hallazgo 8). Con el sondeo cargado a las dos
+configuraciones, los sueltos son 1408 bits por giro (56,3 %) y el agrupado 544
+(21,8 %). El assert nuevo sí puede fallar, y el guion imprime las tres
+condiciones que lo ponen rojo: J2 ≥ 11,26 MHz, lazo por debajo de 3,6 kHz, o
+techo de bus por encima del 56,3 %.
 
 **Deuda:** `trama_j2_budget.py` — el árbitro que suma todos los módulos con su
 tasa declarada y **falla si un módulo no declara la suya** — está declarado en
