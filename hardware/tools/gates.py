@@ -61,6 +61,19 @@ PATRONES = (
 )
 EXCLUIR = ("__pycache__", ".venv", os.path.join(".claude", "worktrees"), "site-packages")
 
+# Cuanto se le da a UN guion antes de darlo por colgado.
+#
+# Estaba en 300 s y se puso rojo el 2026-08-24 con la maquina cargada.
+# check_pcb.py de la fuente v3 es el unico que se acerca: 141 s documentados
+# con la maquina libre, MEDIDO 226 s con renders y varios servidores KiCad
+# corriendo al lado. O sea que el margen real eran 74 s, y se lo come
+# cualquier otra cosa que este pasando en la maquina.
+#
+# Una puerta que se pone roja por carga y no por la placa es peor que no
+# tenerla: ensena a empujar con --no-verify. 600 s deja el doble de lo medido
+# y sigue cazando un cuelgue de verdad, que es lo que esto va a buscar.
+TIMEOUT_S = 600
+
 def _python_kicad() -> str | None:
     """El Python que trae KiCad, o None. `KICAD_PYTHON=none` lo desactiva.
 
@@ -130,10 +143,10 @@ def corre(ruta: str) -> tuple[str, str, float]:
     try:
         r = subprocess.run([interprete, os.path.basename(ruta)],
                            cwd=os.path.dirname(ruta), capture_output=True,
-                           text=True, timeout=300, encoding="utf-8",
+                           text=True, timeout=TIMEOUT_S, encoding="utf-8",
                            errors="replace")
     except subprocess.TimeoutExpired:
-        return "FALLO", "timeout a los 300 s", time.time() - t0
+        return "FALLO", f"timeout a los {TIMEOUT_S} s", time.time() - t0
     dt = time.time() - t0
     salida = (r.stdout or "") + (r.stderr or "")
     ultima = [l for l in salida.strip().splitlines() if l.strip()]

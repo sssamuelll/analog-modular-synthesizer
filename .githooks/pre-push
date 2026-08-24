@@ -15,6 +15,34 @@
 # Tarda unos dos minutos y medio. Casi todo es check_pcb.py de la fuente v3.
 set -u
 
+# Un push de BORRADO no lleva codigo: git pasa el oid local en ceros. Correr
+# dos minutos y medio de puertas para borrar una rama YA mergeada no verifica
+# nada, y ensena a empujar con --no-verify -- que es justo el habito que estas
+# puertas existen para no crear.
+#
+# stdin de un pre-push es una linea por ref (githooks(5)):
+#     <ref_local> <oid_local> <ref_remoto> <oid_remoto>
+# En un borrado, <ref_local> es "(delete)" y <oid_local> son 40 ceros.
+#
+# Se salta SOLO si TODAS las lineas son borrados: un push mixto lleva codigo y
+# se verifica entero. Y sin stdin no se salta nada, para que correr esto a mano
+# (`sh .githooks/pre-push < /dev/null`) siga probando las puertas de verdad.
+solo_borrados=1
+hubo_ref=0
+while read -r _ref oid_local _resto; do
+    hubo_ref=1
+    case "$oid_local" in
+        *[!0]*) solo_borrados=0 ;;
+    esac
+done
+
+if [ "$hubo_ref" = 1 ] && [ "$solo_borrados" = 1 ]; then
+    echo ""
+    echo "push de borrado: no hay codigo nuevo que verificar, puertas omitidas"
+    echo ""
+    exit 0
+fi
+
 RAIZ=$(git rev-parse --show-toplevel)
 LOG=$(mktemp -d 2>/dev/null || echo "${TMPDIR:-/tmp}/prepush.$$")
 mkdir -p "$LOG"

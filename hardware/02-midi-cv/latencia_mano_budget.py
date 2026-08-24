@@ -70,8 +70,12 @@ BITS_ESCRITURA = BITS_BLOQUE_TONO   # el bloque agrupado hacia la Voz
 
 # --- por confirmar (con su valor de trabajo) ---------------------------------
 T_ASENTAMIENTO_US = 5.0     # POR_CONFIRMAR: mux + impedancia del pote + S/H
-T_CONVERSION_US = 2.0       # POR_CONFIRMAR: el repo NO documenta la tasa del
-                            # ADC del RP2350B. Valor de trabajo; sale de la hoja
+T_CONVERSION_US = 2.0       # CITADO: hoja del RP2350, p. 1071 -- "Capturing a
+                            # sample takes 96 clock cycles (96 x 1/48 MHz) = 2 us
+                            # per sample (500 kS/s)". Era POR_CONFIRMAR y el valor
+                            # de trabajo resulto EXACTO, no conservador: no hay
+                            # margen que rascar aqui. La unica palanca que queda
+                            # sobre el barrido es T_ASENTAMIENTO_US.
 TAU_RC_MS = 0.0             # POR_CONFIRMAR: no hay filtro de reconstruccion
                             # elegido, y su tau ES latencia
 
@@ -182,29 +186,62 @@ def main() -> None:
     print("    El asentamiento se paga UNA vez por paso: los muxes asientan a la vez.")
     print()
 
-    if viables:
-        f, total, ocu, holg = viables[-1]   # la MAS RAPIDA que cumple
-        print(f"  La mas rapida que cumple: {f/1e3:.1f} kHz")
-        print(f"    {total:.3f} ms peor caso, {total/2:.3f} ms promedio")
-        print(f"    {ocu*100:.1f}% del J2 -- queda {(1-ocu)*100:.1f}% libre")
-        print(f"    barrido con {holg:.2f}x de holgura")
-        print(f"    {suelo_midi_din_ms()/total:.1f}x por debajo del suelo de MIDI DIN")
-        print()
-        print("  Desglose del peor caso:")
-        for nombre, ms in cadena(f, f).items():
-            print(f"    {nombre:<22} {ms:7.3f} ms")
+    # --- la cadencia, DESACOPLADA (decision de Samuel, 2026-08-24) ---------
+    #
+    # Hasta hoy esto llamaba `cadena(f, f)`: el mismo numero para el barrido y
+    # para el lazo. Pero `cadena` SIEMPRE acepto dos frecuencias y nadie las
+    # separo nunca. Son etapas distintas con techos distintos:
+    #
+    #   - al BARRIDO lo limita el analogico: 45 potes por un solo SAR, que
+    #     convierte en fila. Por eso poner mas muxes se agota tan rapido --
+    #     de 3 a 8 el barrido solo baja de 165 a 126 us, y 8 kHz sigue sin
+    #     caber. El suelo con un convertidor son 45 x 2 us = 90 us.
+    #   - al LAZO lo limita el bus: los bits del giro contra el techo del J2.
+    #
+    # Separarlos no cuesta cobre y era la unica palanca gratis que quedaba.
+    f_barrido = max((f for f in CANDIDATAS_HZ
+                     if holgura_barrido(f, N_MUXES) >= 1.0), default=0.0)
+    f_lazo = max((f for f in CANDIDATAS_HZ
+                  if ocupacion(f) <= TECHO_OCUPACION), default=0.0)
+    assert f_barrido and f_lazo, (
+        f"Sin candidata viable: barrido {f_barrido}, lazo {f_lazo}. "
+        f"El barrido lo tumba el analogico; el lazo, el techo de bus.")
+
+    total_ok = sum(cadena(f_barrido, f_lazo).values())
+    f_ok = f_lazo          # el bus lo carga el LAZO, no el barrido
+
+    print(f"  Desacoplado: barrido {f_barrido/1e3:.0f} kHz, "
+          f"lazo {f_lazo/1e3:.2f} kHz")
+    print(f"    {total_ok:.3f} ms peor caso, contra "
+          f"{sum(cadena(f_barrido, f_barrido).values()):.3f} ms acoplado"
+          f" -- {(sum(cadena(f_barrido,f_barrido).values())-total_ok)*1e3:.0f}"
+          f" us que no cuestan cobre")
+    print(f"    {ocupacion(f_lazo)*100:.1f}% del J2 -- "
+          f"queda {(1-ocupacion(f_lazo))*100:.1f}% libre")
+    print(f"    barrido con {holgura_barrido(f_barrido, N_MUXES):.2f}x de holgura")
+    print(f"    {suelo_midi_din_ms()/total_ok:.1f}x por debajo del suelo de MIDI DIN")
+    print()
+    print("  Desglose del peor caso:")
+    for nombre, ms in cadena(f_barrido, f_lazo).items():
+        print(f"    {nombre:<22} {ms:7.3f} ms")
+    print()
+    print(f"  El lazo NO puede subir mas: a "
+          f"{TECHO_OCUPACION*SCLK_J2/bits_por_giro(True)/1e3:.2f} kHz el J2 llega"
+          f" al techo del {TECHO_OCUPACION*100:.0f}%.")
+    print("  Y el barrido tampoco, hasta que se mida el asentamiento del mux:")
+    print(f"    con {T_ASENTAMIENTO_US:.0f} us supuestos el barrido son "
+          f"{t_barrido_necesario_us(N_MUXES):.0f} us y 8 kHz no cabe;")
+    print("    a 2 us caeria a 120 us y SI cabria, con estos mismos 3 muxes.")
 
     # --- las puertas -------------------------------------------------------
-    assert viables, (
-        f"Ninguna cadencia candidata cumple {OBJETIVO_MS} ms con "
-        f"{TECHO_OCUPACION*100:.0f}% de techo de bus."
-    )
-    f_ok = viables[-1][0]
-    total_ok = viables[-1][1]
+    assert total_ok <= OBJETIVO_MS, (
+        f"Desacoplado da {total_ok:.3f} ms y el objetivo declarado es "
+        f"{OBJETIVO_MS} ms.")
     assert total_ok < suelo_midi_din_ms(), (
         "El objetivo tiene que quedar POR DEBAJO del suelo de MIDI DIN, "
         "o la frase 'la latencia mas baja' no significa nada."
     )
+
     # --- la puerta que justifica R-M4 --------------------------------------
     #
     # La v1 comparaba 16 tramas sueltas SIN sondeo del panel contra el bloque

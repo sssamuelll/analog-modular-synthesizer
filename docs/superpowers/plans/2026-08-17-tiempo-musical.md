@@ -1001,8 +1001,19 @@ git commit -m "Tres mensajes, y la tabla sigue cabiendo de un vistazo"
 
 **Interfaces:**
 - Consumes: todo lo anterior.
-- Produces: `Instrumento::{tick, reloj, reloj_mut}`, y el manejo de los tres
+- Produces: `Instrumento::{tick, reloj, avanzar_a}`, y el manejo de los tres
   mensajes nuevos en `atender`.
+
+  > **Enmienda del 2026-08-24** (PR #181). Esta línea decía `reloj_mut`, y
+  > eso ya no existe: se borró en `87e8310` (#182, fallo 6) porque entregaba
+  > un `&mut Reloj` entero, era `pub`, y **no tenía un solo llamador** —ni
+  > siquiera en los tests.
+  >
+  > Cerrarlo dejó al descubierto que el instrumento **no corría**: `tick`
+  > pide un pulso, y el firmware no sabe en qué pulso está porque eso
+  > depende del tempo, que vive dentro del `Reloj`. Ese hueco lo tapa
+  > `avanzar_a(t_us)`: el firmware dice qué hora es, el instrumento decide
+  > cuántos pulsos pasaron. La cuenta vive en `core`, donde hay tests.
 
 Los tests usan un helper `instrumento_con_reloj()` —como el `instrumento()` que
 ya existe en `servidor.rs`, más `tiempo_params::registrar` y el reloj arrancado

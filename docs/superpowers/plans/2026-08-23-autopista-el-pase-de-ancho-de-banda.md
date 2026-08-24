@@ -226,6 +226,36 @@ estado de arranque en voz alta, no por omisión.
 
 ## 9. Las decisiones de Samuel
 
+> **TOMADAS el 2026-08-24.** Lo de abajo se queda como el razonamiento. Dos
+> de estas cambiaron AL VERIFICARLAS, y las dos por el mismo motivo: nadie
+> habia corrido el modelo variando lo que se podia variar.
+
+| # | Decision | |
+|---|---|---|
+| **B1** | **Barrido 4 kHz, lazo DESACOPLADO** — 8 kHz, el mas rapido que el bus aguanta. **0,529 ms** peor caso contra 0,654 acoplado: 125 us que no cuestan cobre. | **cambio** |
+| **B2** | R-M4 se eleva a **ley de la casa**: todo modulo declara bloques con su tasa, y `trama_j2_budget.py` es su puerta. | |
+| **B3** | **La huella Y el contrato, juntos**, y recoge N4: conteo de entradas, terminador y largo por entrada. Rompe el formato, asi que N7 va antes. | **bloqueante** |
+| **B4** | El canal binario crudo **solo si tras medir la huella sigue doliendo**. Sin el contrato de B3 no arreglaria nada de todos modos. | |
+| **B5** | Arranque **permisivo, pero DICHO**. Es N6 del papel del nucleo, misma decision. | |
+
+> **Por que B1 cambio.** `cadena(f_barrido, f_lazo)` siempre acepto dos
+> frecuencias y `main()` la llamaba con el mismo numero para las dos. Son
+> etapas con techos distintos: al barrido lo limita el analogico, al lazo lo
+> limita el bus. Separarlas era gratis y nadie lo habia hecho.
+>
+> **Y dos numeros se cerraron de paso.** La conversion del ADC era
+> POR_CONFIRMAR y salio **CITADA** de la hoja del RP2350, p. 1071: 96 ciclos a
+> 48 MHz = **2 us exactos**. El valor de trabajo era correcto, no conservador,
+> asi que ahi no hay margen que rascar. Y **mas muxes no es la salida**: de 3
+> a 8 el barrido solo baja de 165 a 126 us y 8 kHz sigue sin caber, porque las
+> conversiones van en fila por un unico convertidor. La unica palanca que
+> queda sobre el barrido es el asentamiento del mux, que sigue sin medir.
+>
+> **El techo del lazo, para que no se vuelva a proponer:** a 9,19 kHz el J2
+> llega al 50 % declarado. Proponer 16 kHz —como se hizo en esta misma
+> sesion— lo pone al 87 %.
+
+
 - **B1 — La cadencia del lazo:** 4 kHz (0,654 ms, 22 % del bus, 1,52× de
   barrido) o forzar 8 kHz añadiendo muxes en paralelo para que el barrido dé.
   Recomendado: **4 kHz**, y subir solo si la medición del asentamiento sale
@@ -235,10 +265,33 @@ estado de arranque en voz alta, no por omisión.
   **ley**, con `trama_j2_budget.py` como su puerta.
 - **B3 — La huella del descriptor:** es el cambio de mayor rendimiento de todo
   el pase y toca el contrato con las carcasas. ¿Entra ya?
+
+  **Y ahora también carga el contrato del volcado.** El papel del núcleo le
+  cedió N4 en su v3: conteo de entradas, terminador y largo por entrada se
+  deciden **aquí**, no allá. El razonamiento de la cesión es que decidir el
+  formato sin saber si el descriptor se va a mandar casi nunca es decidir a
+  ciegas — y eso lo responde la huella, que es esta misma decisión.
+
+  **Esto dejó de ser holgado.** MEDIDO el 2026-08-24: el descriptor compilado
+  más grande son 106 B de 256 (41 %), pero el **peor caso que el propio repo
+  declara** —el selector de 17 fuentes con nombres y etiquetas realistas—
+  mide **250 B de 256, el 98 %**. El test vive en `core/src/descriptor.rs`
+  (`el_peor_caso_declarado_cabe_en_el_volcado`), está en rojo de verdad y
+  marcado `#[ignore]` esperando esta decisión. Un descriptor que no quepa hoy
+  se salta con un `warn!` y el cliente **no puede enterarse**, porque no hay
+  conteo ni terminador con que notarlo — que es exactamente lo que B3 y B4
+  tienen que resolver juntos.
+
 - **B4 — El canal crudo para el volcado:** ¿se añade el endpoint binario, o se
   vive con SysEx confiando en que la huella haga que casi nunca se use?
   Recomendado: **la huella primero**; el canal crudo solo si tras medirla sigue
   doliendo.
+
+  Ojo con el orden: si la huella (B3) entra y el volcado sigue sin conteo ni
+  terminador, el canal crudo no arregla nada — el cliente seguiría sin poder
+  distinguir «terminó» de «se abortó». El contrato es prerrequisito del
+  canal, no al revés.
+
 - **B5 — El estado de arranque:** ¿permisivo declarado (coherente con «tabla
   vacía = todo abierto») o cerrado hasta que la política cargue? Recomendado:
   **permisivo, pero DICHO** — y con telemetría de por qué, para que un fallo de

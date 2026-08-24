@@ -631,6 +631,28 @@ firmware donde el reloj no late.
 
 ## 11. Las decisiones de Samuel
 
+> **TOMADAS el 2026-08-24.** Lo de abajo se queda como el razonamiento que las
+> produjo; esto es lo que se decidio. Los apartados que cambiaron al
+> verificarlos llevan la nota.
+
+| # | Decision | |
+|---|---|---|
+| **N1** | `Puerta` son **cuatro variantes sin payload**: `Mano`, `Usb`, `Inalambrica`, `Interno`. Partir `Mano` despues es anadir variantes, no rehacer. | **A Rust ya** |
+| **N2a** | Se legisla **sobre la etiqueta del mensaje**. Es la unica clave que existe, cubre los quince mensajes de cliente y cuesta cero bytes. | |
+| **N2b** | **Una sola regla por puerta para todo `Set`**, y la limitacion se dice en voz alta. La ranura queda anotada como la salida barata si un caso real la pide. | |
+| **N3** | La politica vive en **la flash del cerebro**. No viaja: nadie cambia permisos mandando un preset. | |
+| **N4** | **Cedida a B3** de la autopista, y alli ya esta recogida con la medicion que la vuelve bloqueante. | |
+| **N5** | La identidad del suscriptor **la asigna el transporte** al aceptar la conexion. Mismo patron que `puerta`: infalsificable, cero bytes de cliente. Cierra #145. | |
+| **N6** | Arranque **permisivo, pero DICHO**: el estado queda legible como parametro de medida, para que un CRC malo no se disfrace de fabrica. Es B5. | |
+| **N7** | La negociacion de version **se arregla ANTES de romper ningun formato**. Como B3 es una ruptura de formato, esto es el primer PR. | **Va primero** |
+| **N8** | **No vuelve a junta.** Lo que la segunda produjo no fueron correcciones sino problemas abiertos, y esos se cierran decidiendo. | |
+
+> **Lo que N7 ordena.** Al decidir que ninguna ruptura entra antes que la
+> negociacion funcione, el orden de trabajo queda fijado solo: primero N7
+> (barato, `servidor.rs:161`), despues N1 (la unica que no depende de nadie),
+> y B3 detras. No hace falta un plan aparte para saberlo.
+
+
 - **N1 — El conjunto de `Puerta`.** ¿`Mano`, `Usb`, `Inalambrica`, `Interno` —
   cuatro variantes, **sin payload**— o hace falta separar `Mano` en
   panel/cabeza/pedal desde ya? *Recomendado: las cuatro sin payload.* El `u8`
