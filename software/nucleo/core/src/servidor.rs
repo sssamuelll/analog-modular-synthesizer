@@ -133,7 +133,16 @@ impl Instrumento {
     pub fn modelo(&self) -> &Modelo {
         &self.modelo
     }
-    pub fn modelo_mut(&mut self) -> &mut Modelo {
+    /// SOLO en tests (#182, fallo 6).
+    ///
+    /// Estuvo `pub`, o sea que exportaba `&mut Modelo` a cualquiera desde el
+    /// modulo cuyo docstring dice "si algo muta el instrumento sin pasar por
+    /// aqui, el agente no lo alcanza". Nadie de produccion lo usaba: el
+    /// firmware arranca con `con_medidas()`, que toca el campo directamente.
+    /// Estaba abierto para el primer periferico apurado, y S2.1 se habria
+    /// roto sin que nadie lo notara.
+    #[cfg(test)]
+    fn modelo_mut(&mut self) -> &mut Modelo {
         &mut self.modelo
     }
     pub fn suscrito(&self) -> bool {
@@ -300,11 +309,15 @@ impl Instrumento {
                 self.anunciar(&mut r, c.id, c.valor);
             }
         }
-        self.publicar_medidas_del_reloj();
+        self.publicar_medidas_del_reloj(&mut r);
         r
     }
 
-    fn publicar_medidas_del_reloj(&mut self) {
+    /// #182, fallo 4. Esto tiraba el `Cambio` con `let _`, asi que las cinco
+    /// medidas del reloj no llegaban a nadie, aunque las cinco tienen
+    /// `medida: true` y el nucleo S4.1 promete que las medidas se siguen con
+    /// `SUBSCRIBE`.
+    fn publicar_medidas_del_reloj(&mut self, r: &mut Respuestas) {
         use tiempo_params as tp;
         let pos = self.reloj.posicion().min(i32::MAX as u64) as Valor;
         let compas = self.reloj.compas().min(i32::MAX as u64) as Valor;
@@ -318,7 +331,14 @@ impl Instrumento {
             (tp::ID_TIENE_FASE, fase),
             (tp::ID_RODANDO_LIBRE, libre),
         ] {
-            let _ = self.modelo.publicar_medida(id, v);
+            // `publicar_medida` NO filtra: devuelve `Ok` aunque el valor sea
+            // identico. Anunciar sin comparar cambiaria un silencio por una
+            // inundacion -- cinco `CHANGED` en cada tick, para siempre. Se
+            // mira ANTES de escribir, que es la unica forma de saberlo.
+            let se_movio = self.modelo.get(id) != Some(v);
+            if self.modelo.publicar_medida(id, v).is_ok() && se_movio {
+                self.anunciar(r, id, v);
+            }
         }
     }
 
@@ -879,12 +899,51 @@ mod tests {
             i.atender(rampa(desc.id, 100), 0);
         }
         let r = mensajes(&i.tick(PXC + 96));
+        // Solo los de las RAMPAS: desde que el fallo 4 esta arreglado, el tick
+        // anuncia ademas las medidas del reloj que se movieron.
         assert_eq!(
             r.iter()
-                .filter(|m| matches!(m, Mensaje::Changed(..)))
+                .filter(|m| matches!(
+                    m,
+                    Mensaje::Changed(id, _) if MUCHOS.iter().any(|d| d.id == *id)
+                ))
                 .count(),
             crate::rampa::MAX_RAMPAS,
             "la automatizacion escribio y la vista no se entero"
+        );
+    }
+
+    /// #182, fallo 4. `publicar_medidas_del_reloj` tiraba el `Cambio` con
+    /// `let _`, asi que las cinco medidas del reloj NUNCA producian `CHANGED`
+    /// -- y las cinco tienen `medida: true`, con el nucleo S4.1 prometiendo
+    /// que las medidas se siguen con `SUBSCRIBE`. Para esas cinco, no.
+    #[test]
+    fn las_medidas_del_reloj_se_anuncian_a_quien_se_suscribio() {
+        let mut i = con_reloj();
+        i.atender(Mensaje::Subscribe { activo: true }, 0);
+        let r = mensajes(&i.tick(384));
+        assert!(
+            r.iter().any(|m| matches!(
+                m,
+                Mensaje::Changed(id, _) if *id == tiempo_params::ID_POSICION
+            )),
+            "el reloj avanzo y el suscriptor no se entero"
+        );
+    }
+
+    /// La otra mitad del fallo 4, y la razon por la que no basta con anunciar
+    /// a lo bruto: `publicar_medida` NO filtra, devuelve `Ok` aunque el valor
+    /// sea el mismo. Anunciar sin comparar convertiria cada tick en cinco
+    /// `CHANGED` para siempre, o sea cambiar un silencio por una inundacion.
+    #[test]
+    fn una_medida_del_reloj_que_no_se_movio_no_se_reanuncia() {
+        let mut i = con_reloj();
+        i.atender(Mensaje::Subscribe { activo: true }, 0);
+        i.tick(384);
+        let r = mensajes(&i.tick(384));
+        assert!(
+            !r.iter().any(|m| matches!(m, Mensaje::Changed(..))),
+            "mismo pulso, nada se movio, y aun asi se anuncio: {r:?}"
         );
     }
 
