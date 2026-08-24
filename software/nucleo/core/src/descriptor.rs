@@ -155,6 +155,25 @@ pub enum ErrorCodec {
     Desconocido,
 }
 
+/// Lo mas que puede ocupar UN descriptor en el cable.
+///
+/// No es un techo del formato: es el tamano del buffer del volcado en
+/// `fw/src/usb.rs`, que lo LEE de aqui en vez de repetir el 256 por su cuenta.
+///
+/// Y no es un techo blando. `mandar_descriptores` hacia `?` sobre `escribir`,
+/// asi que UN solo descriptor pasado se llevaba por delante el volcado ENTERO
+/// -- en silencio, y sin que el cliente pudiera distinguir "termino" de "se
+/// aborto". Es el #182, fallo 5.
+pub const MAX_DESCRIPTOR_B: usize = 256;
+
+/// Cuanto de ese techo se deja ocupar antes de dar la alarma.
+///
+/// MEDIDO el 2026-08-24: el mas gordo son 106 B ("cuantizacion global"), o sea
+/// el 41 %. Esto salta al 75 %, mucho antes del acantilado, porque lo que
+/// engorda un descriptor son las ETIQUETAS de los enumerados y esas crecen de
+/// a poco y sin que nadie mire.
+pub const OCUPACION_MAX_B: usize = MAX_DESCRIPTOR_B * 3 / 4;
+
 pub fn escribir(d: &Descriptor, buf: &mut [u8]) -> Result<usize, ErrorCodec> {
     let mut w = Escritor { buf, n: 0 };
     w.u32(d.id.0)?;
@@ -424,5 +443,41 @@ mod tests {
         let n = escribir(&BRILLO, &mut buf).unwrap();
         let (leido, _) = leer(&buf[..n]).unwrap();
         assert!(leido.solo_lectura && leido.medida);
+    }
+}
+
+#[cfg(test)]
+mod techo_del_volcado {
+    use super::{escribir, MAX_DESCRIPTOR_B, OCUPACION_MAX_B};
+
+    /// #182, fallo 5. Un descriptor que no quepa en el buffer del volcado no
+    /// se pierde solo: se lleva por delante TODO el volcado, porque
+    /// `mandar_descriptores` abortaba el bucle entero. Y como no hay conteo ni
+    /// terminador en el protocolo, el cliente no puede distinguir "termino" de
+    /// "se aborto" -- se queda con un modelo a medias creyendo que esta
+    /// completo.
+    ///
+    /// Esta puerta lo caza en el gate, que es donde tiene que cazarse, en vez
+    /// de en la mesa de alguien que no entiende por que su carcasa esta vacia.
+    #[test]
+    fn ningun_descriptor_se_acerca_al_techo_del_volcado() {
+        let mut buf = [0u8; MAX_DESCRIPTOR_B];
+        for d in crate::tiempo_params::TIEMPO
+            .iter()
+            .chain(crate::medidas::MEDIDAS.iter())
+        {
+            let n = escribir(d, &mut buf).unwrap_or_else(|_| {
+                panic!(
+                    "\"{}\" NO CABE en {MAX_DESCRIPTOR_B} B. Hoy eso aborta el                      volcado entero en silencio y ninguna carcasa puede pintar                      el instrumento",
+                    d.nombre
+                )
+            });
+            assert!(
+                n <= OCUPACION_MAX_B,
+                "\"{}\" ocupa {n} B de {MAX_DESCRIPTOR_B} ({:.0}%), y la alarma                  esta en {OCUPACION_MAX_B}. Todavia cabe, pero lo que engorda un                  descriptor son las etiquetas de los enumerados y crecen sin que                  nadie mire: o se recorta, o se decide el troceado (N4)",
+                d.nombre,
+                n as f32 / MAX_DESCRIPTOR_B as f32 * 100.0
+            );
+        }
     }
 }

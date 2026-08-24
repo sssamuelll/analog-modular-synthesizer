@@ -17,7 +17,7 @@ use crate::medidas;
 use crate::modelo::{ErrorSet, Modelo};
 use crate::param::{ParamId, Valor};
 use crate::protocolo::{CodigoError, Mensaje};
-use crate::rampa::{Rampa, Rampas};
+use crate::rampa::{Rampa, Rampas, MAX_RAMPAS};
 use crate::rejilla::{siguiente_borde, Rejilla};
 use crate::reloj::Reloj;
 use crate::retencion::Retenidas;
@@ -26,9 +26,24 @@ use heapless::Vec;
 
 /// La version que este firmware sabe hablar.
 pub const VERSION_PROTOCOLO: u16 = 1;
-/// Lo mas que produce una sola peticion: `ERROR` + `PENDING` son dos, y el
-/// margen sobra.
-pub const MAX_RESPUESTAS: usize = 4;
+/// Las medidas que `publicar_medidas_del_reloj` publica en cada tick. Hoy NO
+/// producen `CHANGED` (#182, fallo 4), pero el buzon se dimensiona como si lo
+/// hicieran: arreglar ese fallo no puede volver a desbordar esto.
+const MEDIDAS_POR_TICK: usize = 5;
+
+/// DERIVADO del peor caso real, no elegido.
+///
+/// Estuvo en 4, con el comentario "lo mas que produce una sola peticion:
+/// `ERROR` + `PENDING` son dos, y el margen sobra". Era cierto cuando se
+/// escribio y dejo de serlo sin que nadie lo notara: despues llegaron
+/// `Reactivar { id: None }`, que empuja un `Anulado` por rampa reactivada
+/// (hasta `MAX_RAMPAS`), y `tick()`, que anuncia hasta `MAX_RAMPAS` valores.
+/// Los dos desbordaban EN SILENCIO, porque todos los push eran `let _ =`.
+/// Es el #182, fallos 1 y 3.
+///
+/// Al derivarlo de `MAX_RAMPAS` deja de poder quedarse viejo: si alguien sube
+/// las rampas, el buzon sube con ellas.
+pub const MAX_RESPUESTAS: usize = MAX_RAMPAS + MEDIDAS_POR_TICK + 2;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Respuesta {
@@ -41,6 +56,27 @@ pub enum Respuesta {
 }
 
 pub type Respuestas = Vec<Respuesta, MAX_RESPUESTAS>;
+
+/// Empujar al buzon SIN tragarse el desbordamiento.
+///
+/// `MAX_RESPUESTAS` esta derivado del peor caso real, asi que esto no deberia
+/// dispararse. Si se dispara es que el peor caso cambio y hay que rederivarlo
+/// -- y esa es exactamente la clase de fallo que estuvo escondida detras de
+/// once `r.empujar(..)`: sin error, sin contador y sin forma de que el
+/// cliente se entere de que le falto algo (#182).
+trait Buzon {
+    fn empujar(&mut self, x: Respuesta);
+}
+
+impl Buzon for Respuestas {
+    fn empujar(&mut self, x: Respuesta) {
+        debug_assert!(
+            self.len() < MAX_RESPUESTAS,
+            "buzon de respuestas lleno: alguien esta perdiendo un mensaje en              silencio, y una vista optimista diverge para siempre"
+        );
+        let _ = self.push(x);
+    }
+}
 
 /// La ventana de aterrizaje, en pulsos (§5.3 de la spec del tiempo musical).
 ///
@@ -114,16 +150,16 @@ impl Instrumento {
         }
         match m {
             Mensaje::Hello { .. } => {
-                let _ = r.push(Respuesta::Mensaje(Mensaje::Hola {
+                r.empujar(Respuesta::Mensaje(Mensaje::Hola {
                     version: VERSION_PROTOCOLO,
                 }));
             }
             Mensaje::Describe => {
-                let _ = r.push(Respuesta::Descriptores);
+                r.empujar(Respuesta::Descriptores);
             }
             Mensaje::Get(id) => match self.modelo.get(id) {
                 Some(v) => {
-                    let _ = r.push(Respuesta::Mensaje(Mensaje::Changed(id, v)));
+                    r.empujar(Respuesta::Mensaje(Mensaje::Changed(id, v)));
                 }
                 None => self.error(&mut r, &m, CodigoError::NoExiste),
             },
@@ -132,7 +168,7 @@ impl Instrumento {
                 // El del tick no — y esa diferencia vive aqui, no en el
                 // modelo, que no gana ninguna puerta nueva.
                 if self.rampas.anular(id) {
-                    let _ = r.push(Respuesta::Mensaje(Mensaje::Anulado { id, anulado: true }));
+                    r.empujar(Respuesta::Mensaje(Mensaje::Anulado { id, anulado: true }));
                     self.publicar_anulados();
                 }
                 self.escribir(&mut r, &m, id, v, ahora_ms);
@@ -215,7 +251,7 @@ impl Instrumento {
         match id {
             Some(p) => {
                 if self.rampas.reactivar(p) {
-                    let _ = r.push(Respuesta::Mensaje(Mensaje::Anulado {
+                    r.empujar(Respuesta::Mensaje(Mensaje::Anulado {
                         id: p,
                         anulado: false,
                     }));
@@ -223,7 +259,7 @@ impl Instrumento {
             }
             None => {
                 for p in self.rampas.reactivar_todas() {
-                    let _ = r.push(Respuesta::Mensaje(Mensaje::Anulado {
+                    r.empujar(Respuesta::Mensaje(Mensaje::Anulado {
                         id: p,
                         anulado: false,
                     }));
@@ -294,7 +330,7 @@ impl Instrumento {
                 self.error(r, m, CodigoError::ExigeConfirmacion);
                 match self.retenidas.retener(id, v, ahora_ms) {
                     Ok(token) => {
-                        let _ = r.push(Respuesta::Mensaje(Mensaje::Pending { token, id }));
+                        r.empujar(Respuesta::Mensaje(Mensaje::Pending { token, id }));
                     }
                     Err(_) => self.error(r, m, CodigoError::ColaLlena),
                 }
@@ -309,7 +345,7 @@ impl Instrumento {
         let Some(p) = self.retenidas.confirmar(ahora_ms) else {
             return r;
         };
-        let _ = r.push(Respuesta::Mensaje(Mensaje::Resolved {
+        r.empujar(Respuesta::Mensaje(Mensaje::Resolved {
             token: p.token,
             confirmado: true,
         }));
@@ -324,7 +360,7 @@ impl Instrumento {
     pub fn caducar(&mut self, ahora_ms: u64) -> Respuestas {
         let mut r = Respuestas::new();
         for token in self.retenidas.caducar(ahora_ms) {
-            let _ = r.push(Respuesta::Mensaje(Mensaje::Resolved {
+            r.empujar(Respuesta::Mensaje(Mensaje::Resolved {
                 token,
                 confirmado: false,
             }));
@@ -346,12 +382,12 @@ impl Instrumento {
     /// Mandarselo a quien no pidio nada llena el cable de trafico que nadie lee.
     fn anunciar(&self, r: &mut Respuestas, id: ParamId, v: Valor) {
         if self.suscrito {
-            let _ = r.push(Respuesta::Mensaje(Mensaje::Changed(id, v)));
+            r.empujar(Respuesta::Mensaje(Mensaje::Changed(id, v)));
         }
     }
 
     fn error(&self, r: &mut Respuestas, m: &Mensaje, codigo: CodigoError) {
-        let _ = r.push(Respuesta::Mensaje(Mensaje::Error {
+        r.empujar(Respuesta::Mensaje(Mensaje::Error {
             etiqueta: crate::protocolo::etiqueta_de(m),
             codigo,
         }));
@@ -394,6 +430,28 @@ mod tests {
     static NORMAL: Descriptor = d(0x1000, false, false, false);
     static MEDIDA: Descriptor = d(0x1001, true, true, false);
     static PELIGROSO: Descriptor = d(0x1002, false, false, true);
+
+    /// Dieciseis, que es `MAX_RAMPAS`: el peor caso REAL de una reactivacion
+    /// o de un tick, no un numero bonito.
+    static MUCHOS: [Descriptor; crate::rampa::MAX_RAMPAS] = {
+        let mut a = [d(0x2000, false, false, false); crate::rampa::MAX_RAMPAS];
+        let mut k = 0;
+        while k < crate::rampa::MAX_RAMPAS {
+            a[k] = d(0x2000 + k as u32, false, false, false);
+            k += 1;
+        }
+        a
+    };
+
+    fn con_reloj_y_muchos() -> Instrumento {
+        let mut i = Instrumento::nuevo();
+        tiempo_params::registrar(i.modelo_mut()).unwrap();
+        for desc in MUCHOS.iter() {
+            i.modelo_mut().registrar(desc).unwrap();
+        }
+        i.tick(200);
+        i
+    }
 
     fn instrumento() -> Instrumento {
         let mut i = Instrumento::nuevo();
@@ -771,6 +829,62 @@ mod tests {
                 .filter(|m| matches!(m, Mensaje::Anulado { anulado: false, .. }))
                 .count(),
             2
+        );
+    }
+
+    /// #182, fallo 1. `Reactivar { id: None }` empuja un `Anulado` por rampa
+    /// reactivada -- hasta `MAX_RAMPAS` = 16 -- dentro de un buzon que tenia
+    /// cuatro huecos, y TODOS los push eran `let _ =`: descarte SILENCIOSO,
+    /// sin error y sin contador.
+    ///
+    /// La consecuencia no es perder un mensaje: es que el cliente sigue
+    /// pintando esos parametros como anulados PARA SIEMPRE, mientras el
+    /// instrumento cree que estan vivos.
+    ///
+    /// Y el test de arriba usaba exactamente DOS rampas y aseveraba 2, asi que
+    /// pasaba en verde con el fallo puesto. Este usa el peor caso real.
+    #[test]
+    fn reactivar_sin_id_no_pierde_ninguno_cuando_pasan_de_cuatro() {
+        let mut i = con_reloj_y_muchos();
+        for desc in MUCHOS.iter() {
+            i.atender(rampa(desc.id, 100), 0);
+        }
+        i.tick(PXC + 96);
+        for desc in MUCHOS.iter() {
+            i.atender(Mensaje::Set(desc.id, 7), 0);
+        }
+        let r = mensajes(&i.atender(Mensaje::Reactivar { id: None }, 0));
+        assert_eq!(
+            r.iter()
+                .filter(|m| matches!(m, Mensaje::Anulado { anulado: false, .. }))
+                .count(),
+            crate::rampa::MAX_RAMPAS,
+            "el buzon se comio reactivaciones en silencio"
+        );
+    }
+
+    /// #182, fallo 3. El mismo buzon, desbordado por el `tick()`: escribe
+    /// hasta `MAX_RAMPAS` valores y anuncia cada uno. Con un suscriptor, los
+    /// que no caben se van al vacio.
+    ///
+    /// Aqui la consecuencia es peor que en el fallo 1: la automatizacion
+    /// escribio el modelo y la vista no se entero, o sea DIVERGENCIA
+    /// PERMANENTE de la vista optimista -- justo lo que voz-total S0.2 dice
+    /// que este mecanismo impide.
+    #[test]
+    fn el_tick_no_se_come_los_changed_de_las_rampas() {
+        let mut i = con_reloj_y_muchos();
+        i.atender(Mensaje::Subscribe { activo: true }, 0);
+        for desc in MUCHOS.iter() {
+            i.atender(rampa(desc.id, 100), 0);
+        }
+        let r = mensajes(&i.tick(PXC + 96));
+        assert_eq!(
+            r.iter()
+                .filter(|m| matches!(m, Mensaje::Changed(..)))
+                .count(),
+            crate::rampa::MAX_RAMPAS,
+            "la automatizacion escribio y la vista no se entero"
         );
     }
 

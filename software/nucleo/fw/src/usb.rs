@@ -156,13 +156,27 @@ async fn mandar_descriptores(
     midi: &mut MidiClass<'static, Driver<'static, USB>>,
     instrumento: &Instrumento,
 ) -> Result<(), ()> {
-    let mut plano = [0u8; 256];
+    let mut plano = [0u8; descriptor::MAX_DESCRIPTOR_B];
     let mut sobre = [0u8; 384];
     for d in instrumento.modelo().descriptores() {
-        let n = descriptor::escribir(d, &mut plano).map_err(|_| ())?;
+        // Antes esto era `?`, o sea que UN descriptor que no cupiera se
+        // llevaba por delante el volcado ENTERO y el cliente se quedaba con un
+        // modelo a medias sin saberlo (#182, fallo 5). Saltarselo tampoco es
+        // bonito, pero mandar 300 descriptores menos uno es estrictamente
+        // mejor que mandar los que dio tiempo antes de reventar.
+        //
+        // La puerta que impide llegar aqui vive en core (descriptor.rs,
+        // `ningun_descriptor_se_acerca_al_techo_del_volcado`) y salta al 75 %
+        // del techo. Esto es el cinturon, no el freno.
+        let Ok(n) = descriptor::escribir(d, &mut plano) else {
+            continue;
+        };
         let s = envolver(&plano[..n], &mut sobre).map_err(|_| ())?;
         mandar_sysex(midi, &sobre[..s]).await?;
     }
+    // NO se manda terminador ni conteo: el cliente sigue sin poder distinguir
+    // "termino" de "se aborto". Eso es un cambio de FORMATO y lo decide N4 del
+    // pase del nucleo -- aqui no se inventa.
     Ok(())
 }
 
