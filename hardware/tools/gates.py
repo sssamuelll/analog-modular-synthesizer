@@ -151,7 +151,7 @@ def corre(ruta: str) -> tuple[str, str, float]:
         return "FALLO", f"timeout a los {TIMEOUT_S} s", time.time() - t0
     dt = time.time() - t0
     salida = (r.stdout or "") + (r.stderr or "")
-    ultima = [l for l in salida.strip().splitlines() if l.strip()]
+    ultima = [x for x in salida.strip().splitlines() if x.strip()]
     if r.returncode == 0:
         return "OK", (ultima[-1][:64] if ultima else ""), dt
     if r.returncode == 2:
@@ -218,7 +218,7 @@ def main() -> int:
     print()
     for rel, detalle in fallos:
         print(f"--- FALLO en {rel} " + "-" * max(0, 50 - len(rel)))
-        print("\n".join("    " + l for l in detalle.splitlines()[-25:]))
+        print("\n".join("    " + x for x in detalle.splitlines()[-25:]))
         print()
 
     ok = len(scripts) - len(fallos) - len(huecos)
