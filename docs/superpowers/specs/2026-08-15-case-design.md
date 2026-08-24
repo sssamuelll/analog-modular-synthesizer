@@ -104,6 +104,49 @@ lenguaje visual).
 > —el limitante deja de ser el chasis y pasa a ser la bandeja— y el techo libre
 > del piso de abajo de 40.6 a **48.6**. Pide que la chapa de refuerzo y el
 > herraje del M6 del toroide vayan POR DENTRO de la caja.
+> **rev. 16** (2026-08-24): **los cantos que apoyan contra algo plano dejan de
+> abombarse**. La éntasis (`bombeo` = 0.5 mm por cada 100 mm de tramo) curvaba
+> hacia fuera todos los tramos rectos del costado, y el canto trasero —el más
+> largo que todavía se abombaba, 256.18 mm— **sobresalía 1.197 mm** del plano
+> trasero a media altura, enrasando en las puntas. Contra `hol_piel` = 0.15 mm
+> de holgura de montaje de la trasera eso es **ocho veces la junta**, y por eso
+> la plancha no encajaba a ras. La meseta del techo hacía lo mismo con 0.240 mm
+> bajo la tapa de remate. Los dos entran en `sin_bombeo` junto al canto de abajo
+> —exento desde el principio por las paticas—, y la regla queda dicha entera:
+> **el canto que apoya contra algo plano va recto; el que solo dibuja silueta
+> conserva la éntasis**. El costado pasa a medir su envolvente nominal (bbox
+> 310.137 × 256.420 → **308.936 × 256.184**, contra 308.94 × 256.18 nominales) y
+> de los nueve DXF **solo cambia `costado_2d`**. La mayor flecha que queda son
+> 0.779 mm en la cara del panel de abajo, que no apoya contra nada. Se corrigen
+> de paso dos comentarios —`params.scad` y `check_dxf.py`— que culpaban al canto
+> de abajo («1.7 mm en el canto de abajo») de un abombamiento que no tiene desde
+> que está exento: quien se comía la tolerancia era el canto trasero.
+> **rev. 17** (2026-08-24): **las dos esquinas del plano trasero pasan a
+> esquina viva** (`radio_trasero` = 0). Medido sobre el DXF, el costado se metía
+> hacia dentro del plano trasero **14.004 mm en `y` = 0** (vértice fondo-abajo,
+> que llevaba `radio_perfil` = 14) y **2.004 mm arriba** (fondo-arriba,
+> `radio_remate` = 2). La trasera es un rectángulo de 528.020 × 248.184 **con
+> esquinas vivas** que baja hasta `y` = 0, así que su esquina inferior quedaba
+> colgando 14 mm por fuera de la silueta del costado. Ahora el desajuste es
+> **0.000 mm** en las dos, y la tapa de remate gana lo mismo arriba. El costado
+> baja de 578 a **546 entidades** y el bbox no se mueve.
+>
+> **Se deroga aquí una regla escrita**, y se deja dicho por qué en vez de
+> saltársela: `radio_remate` sostenía «2 y no 0: una esquina viva en acrílico
+> colado de 8 mm es donde arranca una fisura». Eso **se mantiene en los vértices
+> cóncavos y en las ranuras** —lo sigue vigilando `guarda_fresado()`, cóncavo
+> mínimo 54.0 contra fresa de radio 1.5— pero **no se sostenía como regla
+> general**, y el propio repo ya lo demostraba: la trasera se corta con sus
+> cuatro esquinas vivas en 8 mm desde que se empotró. Lo nuevo no es la
+> excepción, es decirla. **Lo que sí se acepta**: una esquina viva convexa en
+> PMMA se desportilla si se golpea, y la de fondo-abajo está a ras del suelo. Es
+> riesgo de manipulación, no de rotura en carga; si aparece en el prototipo el
+> remedio es un chaflán de 0.5 × 45°, no volver al radio.
+>
+> Muere de paso **`radio_perfil`**: se quedó sin un solo cliente, y su comentario
+> llevaba tiempo mintiendo —decía que «manda en el valle» cuando el valle lo
+> gobiernan `radio_pico` y `radio_valle`—, así que quien quisiera suavizar el
+> valle movía ese número y lo que cambiaba era una esquina trasera.
 >
 > **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
 > visual y proporciones *relativas*, pero **sus cotas están superadas**. Se

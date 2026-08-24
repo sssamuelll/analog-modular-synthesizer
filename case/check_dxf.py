@@ -52,9 +52,19 @@ PLANS = Path(__file__).parent / "plans"
 #
 # Estuvo en 2.0 y subio a 4.0 al meter el BOMBEO del contorno (la entasis de
 # las rectas): el abombamiento va hacia fuera, asi que crece el bbox de forma
-# legitima -- 1.7 mm en el canto de abajo con bombeo = 0.5. No afloja lo que
-# importa: 4 mm sobre una pieza de 345 es un 1.2 %, y un error de escala del
-# 5 % (17 mm) o el factor 25.4 siguen cayendo de largo.
+# legitima. No afloja lo que importa: 4 mm sobre una pieza de 309 es un 1.3 %,
+# y un error de escala del 5 % (15 mm) o el factor 25.4 siguen cayendo de largo.
+#
+# ESTA NOTA CULPABA AL CANTO DE ABAJO ("1.7 mm en el canto de abajo") y ese
+# canto esta EXENTO de bombeo desde que entro en sin_bombeo por las paticas
+# -- o sea que no crecia nada. Quien se comia la tolerancia era el CANTO
+# TRASERO: 1.197 mm medidos sobre este mismo DXF. El 2026-08-24 se eximio
+# tambien (y con el la meseta del techo, 0.250 mm), asi que hoy la mayor
+# flecha del contorno son 0.779 mm en la cara del panel de abajo.
+#
+# TOL NO SE BAJA AQUI a proposito, aunque ahora sobre: esta puerta existe para
+# cazar unidades y escala, no flechas de decimas, y estrecharla a la medida de
+# la geometria de hoy la vuelve fragil al proximo cambio de silueta.
 TOL = 4.0
 
 # Piezas que el modelo YA coloca pero que todavia no tienen fichero de corte, con

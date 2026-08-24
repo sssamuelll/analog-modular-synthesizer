@@ -812,10 +812,30 @@ def _onda_area(p: dict[str, float], tipo: str, largo: float) -> float:
 
 
 def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
-    """Las tres ondas de la trasera: (area, y_centroide en el case).
+    """Las ondas ABIERTAS de la trasera: (area, y_centroide en el case).
 
-    Son SALIDA, no entrada: arrancan a 74 mm del suelo y suben hasta 195. Es la
-    unica ventilacion que Samuel quiso dejar en esa pieza."""
+    Son SALIDA, no entrada. Es la unica ventilacion que Samuel quiso dejar en
+    esa pieza.
+
+    SON DOS, NO TRES, DESDE EL 2026-08-24. La sierra dejo de existir: ese sitio
+    lo ocupa ahora el CAJEADO CIEGO de la palabra KONDOR (kondor_prof), que no
+    atraviesa la plancha y por tanto no ventila y no puede seguir sumando aqui.
+    La salida baja de 12609 a 9943 mm2 y el salto termico sube de 6.6 a 7.1 K
+    contra el techo de 15.
+
+    El motivo no es termico sino de lo que hay DETRAS de cada onda, medido
+    contra el envolvente de un modulo de fondo_pcb_max:
+
+        triangulo y cuadrada  y =  99.47   171 mm de aire (piso de abajo)
+        sierra                y = 180.94    32 mm: dorso de los modulos de
+                                            arriba -- ranura que ensena cable
+                                            y deja entrar polvo
+
+    LO QUE ESTE NUMERO NO DICE, y hay que decirlo: potencia_disipada son SOLO
+    los reguladores del PSU. La disipacion de los modulos no esta en ningun
+    presupuesto de este repo, asi que el 7.1 K describe el camino del PSU --
+    que sale por el valle y por estas dos ondas, las dos por debajo del
+    entrepiso-- y NO la bahia de arriba, que es la que el cajeado sella."""
     P = _vertices(p)
     ce = _centros_esqueleto(p, P, _centros_rail(p, P))
     au = p["ancho_total"] - 2 * p["t_cheek"] - 2 * p["hol_piel"]
@@ -826,10 +846,11 @@ def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
     y0_pl = 0.0
     f_base, f_tras = ce[1][1] - y0_pl, ce[4][1] - y0_pl
     y_bajas = f_base + 0.37 * (f_tras - f_base)
-    y_sierra = f_base + 0.74 * (f_tras - f_base)
+    # La sierra iba aqui con (_onda_area(p, "sierra", au * 0.70), y_sierra) y
+    # y_sierra = f_base + 0.74 * (f_tras - f_base). Se cae con el cajeado: el
+    # dibujo sigue existiendo en la plancha, la ventilacion no.
     trozos = ((_onda_area(p, "triangulo", au * 0.35), y_bajas),
-              (_onda_area(p, "cuadrada", au * 0.35), y_bajas),
-              (_onda_area(p, "sierra", au * 0.70), y_sierra))
+              (_onda_area(p, "cuadrada", au * 0.35), y_bajas))
     area = sum(a for a, _ in trozos)
     centro = sum(a * (y0_pl + y) for a, y in trozos) / area
     return area, centro
@@ -902,7 +923,8 @@ def guarda_aire(p: dict[str, float]) -> None:
     print(f"aire: entrada {a_ent:.0f} mm2 en {n_ent} ranuras de "
           f"{largo_ent:.1f} x {p['vent_ancho_ranura']:.0f} (trasera, y={y_ent:.0f})")
     print(f"  salida {a_sal:.0f} mm2 = {a_val:.0f} del valle ({n_val} ranuras) + "
-          f"{a_ond:.0f} de las tres ondas, centroide y={y_sal:.0f}")
+          f"{a_ond:.0f} de las DOS ondas abiertas (el relieve KONDOR es cajeado "
+          f"ciego y no ventila), centroide y={y_sal:.0f}")
     print(f"  tiro {h*1000:.0f} mm, area efectiva {a_ef:.0f} mm2 -> "
           f"{dt:.1f} K sobre ambiente con {p['potencia_disipada']:.2f} W "
           f"(techo {p['salto_termico_max']:.0f}). SUPUESTO: C_D={CD_TIRO}, "
