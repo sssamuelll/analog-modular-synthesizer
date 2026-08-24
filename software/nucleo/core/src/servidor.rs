@@ -35,7 +35,11 @@ use crate::tiempo_params;
 use heapless::Vec;
 
 /// La version que este firmware sabe hablar.
-pub const VERSION_PROTOCOLO: u16 = 1;
+/// Sube a 2 el 2026-08-24: `Hola` gano la huella del volcado (B3), asi que el
+/// formato cambio. Es exactamente para esto que N7 se arreglo primero -- una
+/// carcasa que hable la 1 ahora recibe un `ERROR` con nombre en vez de leer
+/// cuatro bytes de huella como si fueran otra cosa.
+pub const VERSION_PROTOCOLO: u16 = 2;
 /// Las cinco medidas del reloj que `publicar_medidas_del_reloj` publica en
 /// cada tick, y que desde el #182 fallo 4 SI producen `CHANGED`.
 const MEDIDAS_POR_TICK: usize = 5;
@@ -334,6 +338,10 @@ impl Instrumento {
                     &mut r,
                     Respuesta::Mensaje(Mensaje::Hola {
                         version: VERSION_PROTOCOLO,
+                        // B3. La huella viaja en el saludo para que la carcasa
+                        // pueda decidir si pedir el volcado SIN gastar un
+                        // viaje en preguntarlo.
+                        huella: self.modelo.huella(),
                     }),
                 );
                 if version != VERSION_PROTOCOLO {
@@ -886,7 +894,9 @@ mod tests {
     #[test]
     fn un_cliente_de_otra_version_recibe_un_error_con_nombre() {
         let ajena = VERSION_PROTOCOLO + 1;
-        let r = instrumento().atender_usb(Mensaje::Hello { version: ajena }, 0);
+        let mut i = instrumento();
+        let huella = i.modelo().huella();
+        let r = i.atender_usb(Mensaje::Hello { version: ajena }, 0);
         assert_eq!(
             mensajes(&r).as_slice(),
             &[
@@ -895,7 +905,8 @@ mod tests {
                 // entendemos. Decirle "no" sin decirle "esto es lo que hay"
                 // lo deja tan a ciegas como el silencio de antes.
                 Mensaje::Hola {
-                    version: VERSION_PROTOCOLO
+                    version: VERSION_PROTOCOLO,
+                    huella,
                 },
                 Mensaje::Error {
                     etiqueta: etiqueta_de(&Mensaje::Hello { version: ajena }),
@@ -905,14 +916,62 @@ mod tests {
         );
     }
 
+    /// Ojo con lo que este test enseno al subir la version a 2: mandaba
+    /// `version: 1` escrito a mano, asi que en cuanto `VERSION_PROTOCOLO`
+    /// paso a 2 empezo a recibir el `ERROR` de N7. Un numero a mano en un
+    /// test es una version congelada que nadie declaro.
     #[test]
     fn hello_se_contesta_con_la_version_acordada() {
-        let r = instrumento().atender_usb(Mensaje::Hello { version: 1 }, 0);
+        let mut i = instrumento();
+        let huella = i.modelo().huella();
+        let r = i.atender_usb(
+            Mensaje::Hello {
+                version: VERSION_PROTOCOLO,
+            },
+            0,
+        );
         assert_eq!(
             mensajes(&r).as_slice(),
             &[Mensaje::Hola {
-                version: VERSION_PROTOCOLO
+                version: VERSION_PROTOCOLO,
+                huella,
             }]
+        );
+    }
+
+    /// B3. La huella del saludo tiene que ser la del modelo VIVO, no una
+    /// constante ni la de cuando se construyo: si un modulo entra por I2C
+    /// despues del arranque, la carcasa que ya tenia cache tiene que
+    /// enterarse en el siguiente saludo.
+    #[test]
+    fn la_huella_del_saludo_sigue_al_modelo() {
+        let mut i = instrumento();
+        let antes = match mensajes(&i.atender_usb(
+            Mensaje::Hello {
+                version: VERSION_PROTOCOLO,
+            },
+            0,
+        ))[0]
+        {
+            Mensaje::Hola { huella, .. } => huella,
+            otro => panic!("no contesto Hola: {otro:?}"),
+        };
+
+        i.modelo_mut().registrar(&OTRO_MAS).unwrap();
+
+        let despues = match mensajes(&i.atender_usb(
+            Mensaje::Hello {
+                version: VERSION_PROTOCOLO,
+            },
+            0,
+        ))[0]
+        {
+            Mensaje::Hola { huella, .. } => huella,
+            otro => panic!("no contesto Hola: {otro:?}"),
+        };
+        assert_ne!(
+            antes, despues,
+            "entro un descriptor y la huella no se movio"
         );
     }
 
@@ -1155,6 +1214,9 @@ mod tests {
     // --- El tiempo musical ---
 
     static OTRO: Descriptor = d(0x1003, false, false, false);
+    /// Uno que NO registra `instrumento()`, para poder meterlo a mitad de un
+    /// test y ver moverse la huella.
+    static OTRO_MAS: Descriptor = d(0x1004, false, false, false);
     const PXC: u64 = 384; // 4/4 a 96 PPQN
 
     fn con_reloj() -> Instrumento {

@@ -102,6 +102,45 @@ impl Modelo {
         self.descs.iter().copied()
     }
 
+    /// B3. La huella del volcado entero: la carcasa la compara contra la que
+    /// tiene en disco y, si coincide, **no se manda nada**. Ese es el peldano
+    /// que convierte el arranque de segundos en milisegundos, y el que hace
+    /// irrelevantes a los otros dos del rediseno.
+    ///
+    /// Se calcula sobre la SERIALIZACION de cada descriptor, no sobre sus
+    /// campos. Es a proposito: hashear campos obliga a acordarse de anadir
+    /// cada campo nuevo al hash, y el dia que a alguien se le olvide la huella
+    /// no se movera cuando el volcado si -- que es exactamente el fallo que
+    /// esto no puede permitirse. Sobre la serializacion, cualquier campo que
+    /// viaje cuenta por construccion.
+    ///
+    /// **No depende del orden de registro**, porque `registrar` inserta
+    /// ordenado por `ParamId`. Importa mas de lo que parece: los descriptores
+    /// de modulo llegan por I2C y el orden del barrido no esta garantizado.
+    /// Si la huella fuera historica y no canonica, la cache se invalidaria
+    /// sola en cada arranque y todo esto no serviria para nada.
+    pub fn huella(&self) -> u32 {
+        let mut plano = [0u8; crate::descriptor::MAX_DESCRIPTOR_B];
+        let mut h = crate::descriptor::FNV_BASE;
+        for d in self.descriptores() {
+            match crate::descriptor::escribir(d, &mut plano) {
+                Ok(n) => h = crate::descriptor::fnv1a(h, &plano[..n]),
+                // Uno que no cabe NO se manda (el firmware se lo salta), pero
+                // tiene que seguir moviendo la huella: si no, dos modelos que
+                // solo difieren en un descriptor gordo compartirian cache.
+                //
+                // Limite conocido: dos descriptores del mismo id que NO quepan
+                // y difieran entre si dan la misma huella. Se vive con ello
+                // porque el terminador del volcado lleva la cuenta de lo que
+                // SI se mando, asi que un salto es detectable por ahi -- y
+                // porque un descriptor que no cabe ya es un volcado roto, y la
+                // huella no es el sitio donde se arregla eso. Es N4/B3.
+                Err(_) => h = crate::descriptor::fnv1a(h, &d.id.0.to_be_bytes()),
+            }
+        }
+        h
+    }
+
     pub fn get(&self, id: ParamId) -> Option<Valor> {
         self.pos(id).map(|i| self.vals[i])
     }
@@ -289,5 +328,79 @@ mod tests {
         let m = modelo();
         let ids: heapless::Vec<u32, 8> = m.descriptores().map(|d| d.id.0).collect();
         assert_eq!(ids.as_slice(), &[0x1000, 0x1001, 0x1002]);
+    }
+}
+#[cfg(test)]
+mod tests_huella {
+    use super::*;
+    use crate::descriptor::{Ambito, Tipo, Unidad};
+
+    const fn d(id: u32, solo_lectura: bool) -> Descriptor {
+        Descriptor {
+            id: ParamId(id),
+            nombre: "prueba",
+            tipo: Tipo::Continuo,
+            ambito: Ambito::Compartido,
+            solo_lectura,
+            medida: false,
+            confirmacion_fisica: false,
+            acepta_modulacion: false,
+            min: 0,
+            max: 100,
+            def: 0,
+            unidad: Unidad::Ninguna,
+            etiquetas: &[],
+        }
+    }
+
+    static A: Descriptor = d(0x0100_0001, false);
+    static B: Descriptor = d(0x0100_0002, false);
+    static C: Descriptor = d(0x0100_0003, false);
+    /// Mismo id que A, distinto contenido.
+    static A_CAMBIADO: Descriptor = d(0x0100_0001, true);
+
+    fn con(ds: &[&'static Descriptor]) -> Modelo {
+        let mut m = Modelo::nuevo();
+        for x in ds {
+            m.registrar(x).unwrap();
+        }
+        m
+    }
+
+    /// Sin esto la huella no sirve de nada: la carcasa la compara contra la
+    /// que guardo en disco.
+    #[test]
+    fn el_mismo_modelo_da_la_misma_huella() {
+        assert_eq!(con(&[&A, &B, &C]).huella(), con(&[&A, &B, &C]).huella());
+    }
+
+    /// La que de verdad importa. Los descriptores de modulo llegan por I2C y
+    /// el orden del barrido no esta garantizado: si la huella dependiera del
+    /// orden de REGISTRO, la cache se invalidaria sola en cada arranque y el
+    /// mecanismo entero no serviria para nada.
+    ///
+    /// Se sostiene porque `registrar` inserta ordenado por `ParamId`
+    /// (`binary_search_by_key`), asi que el orden de `descriptores()` es
+    /// canonico y no historico.
+    #[test]
+    fn registrar_en_otro_orden_da_la_misma_huella() {
+        assert_eq!(con(&[&C, &A, &B]).huella(), con(&[&A, &B, &C]).huella());
+    }
+
+    #[test]
+    fn cambiar_un_descriptor_cambia_la_huella() {
+        assert_ne!(con(&[&A, &B]).huella(), con(&[&A_CAMBIADO, &B]).huella());
+    }
+
+    #[test]
+    fn anadir_un_descriptor_cambia_la_huella() {
+        assert_ne!(con(&[&A, &B]).huella(), con(&[&A, &B, &C]).huella());
+    }
+
+    /// Un cero seria indistinguible de «no se calculo», que es justo el modo
+    /// de fallo que esto viene a cerrar.
+    #[test]
+    fn el_modelo_vacio_tiene_huella_y_no_es_cero() {
+        assert_ne!(Modelo::nuevo().huella(), 0);
     }
 }

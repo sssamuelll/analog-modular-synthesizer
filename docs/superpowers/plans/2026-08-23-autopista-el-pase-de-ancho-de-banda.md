@@ -234,9 +234,27 @@ estado de arranque en voz alta, no por omisión.
 |---|---|---|
 | **B1** | **Barrido 4 kHz, lazo DESACOPLADO** — 8 kHz, el mas rapido que el bus aguanta. **0,529 ms** peor caso contra 0,654 acoplado: 125 us que no cuestan cobre. | **cambio** |
 | **B2** | R-M4 se eleva a **ley de la casa**: todo modulo declara bloques con su tasa, y `trama_j2_budget.py` es su puerta. | |
-| **B3** | **La huella Y el contrato, juntos**, y recoge N4: conteo de entradas, terminador y largo por entrada. Rompe el formato, asi que N7 va antes. | **bloqueante** |
+| **B3** | **La huella Y el contrato, juntos**, y recoge N4: conteo de entradas, terminador y largo por entrada. Rompe el formato, asi que N7 va antes. | **EN EL COBRE (a medias)** |
 | **B4** | El canal binario crudo **solo si tras medir la huella sigue doliendo**. Sin el contrato de B3 no arreglaria nada de todos modos. | |
 | **B5** | Arranque **permisivo, pero DICHO**. Es N6 del papel del nucleo, misma decision. | |
+
+> **B3 aterrizo el 2026-08-24, y aterrizo la mitad que valia.** La huella esta
+> en `Modelo::huella()` y viaja **en el saludo**, no en un mensaje propio: asi
+> la carcasa la sabe al conectarse y decide si pedir `Describe` sin gastar un
+> viaje en preguntarlo. Se calcula sobre la SERIALIZACION de cada descriptor
+> —no sobre sus campos— para que cualquier campo nuevo la mueva sin que nadie
+> se acuerde, y **no depende del orden de registro**, que importa mas de lo que
+> parece: los descriptores de modulo llegan por I2C y el orden del barrido no
+> esta garantizado.
+>
+> Del contrato entraron **dos de tres**: cabecera con la cuenta y cierre con
+> los enviados. El **largo por entrada** no entro y no por olvido -- sobre
+> SysEx cada descriptor ya viaja en su propio sobre, que lo delimita. Hace
+> falta cuando el volcado vaya por el canal crudo, o sea que es de B4.
+>
+> Y el formato del descriptor **sigue sin tocarse**: un descriptor sigue
+> midiendo 250 de 256 en el peor caso declarado, y su test sigue en rojo con
+> `ignore`. Lo que cambio es que saltarselo ya no es invisible.
 
 > **Por que B1 cambio.** `cadena(f_barrido, f_lazo)` siempre acepto dos
 > frecuencias y `main()` la llamaba con el mismo numero para las dos. Son
