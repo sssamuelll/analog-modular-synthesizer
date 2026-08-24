@@ -931,6 +931,51 @@ def guarda_aire(p: dict[str, float]) -> None:
           f"sin perdidas de trafo")
 
 
+# Coeficiente par-precarga de un tornillo de acero SECO. 0.2 es valor de
+# manual. Con la rosca engrasada baja a ~0.15, o sea que el MISMO par mete un
+# 30% mas de precarga -- y sobre acrilico eso fisura. Los M3 van secos, y va
+# dicho en el pliego y en el orden de ensamblaje, no solo aqui.
+K_PAR = 0.20
+
+
+def guarda_apriete(p: dict[str, float]) -> None:
+    """El par de los M3 sale de la ARANDELA, no del tornillo.
+
+    Hasta el 2026-08-24 la instruccion era "apretar hasta marcar, NO hasta
+    fisurar" (README, procedimiento del cupon) y la spec §11 admitia que "el
+    par maximo antes de fisura no esta medido". Treinta tornillos VISIBLES
+    apretados a tacto sobre acrilico son treinta puntos de craquelado.
+
+    Lo que decide si el PMMA craquela no es el tornillo sino cuanta area de
+    acrilico reparte su precarga. Precedente en el propio BOM: con arandela
+    M4 normal (d9) los ejes de giro daban 16.3 MPa y "el PMMA fluye en
+    semanas"; con d16 dan 4.3 y aguantan. Aqui se hace la cuenta al reves --
+    dada la arandela, cual es el par que no pasa del umbral.
+
+    El segundo assert es el que sorprende: exige un par MINIMO. Un par por
+    debajo de 1 N*m no lo da ninguna llave dinamometrica de 1/4", asi que
+    volveria a apretarse a tacto, que es lo que este cambio vino a quitar.
+    Lo que compra par es subir la arandela, no bajar el apriete.
+    """
+    SIGMA_PMMA = 10.0                      # #106
+    area = math.pi * (p["d_arandela"] ** 2 - p["d_M3_paso"] ** 2) / 4
+    par_max = K_PAR * (SIGMA_PMMA * area) * 0.003
+    sigma = p["par_m3"] / (K_PAR * 0.003 * area)
+    assert p["par_m3"] <= par_max, (
+        f"par_m3 = {p['par_m3']} N*m con arandela d{p['d_arandela']:g} aplasta "
+        f"el acrilico a {sigma:.1f} MPa, y el umbral son {SIGMA_PMMA}. Maximo "
+        f"{par_max:.2f} N*m -- o sube la arandela, que es lo que de verdad "
+        f"compra par.")
+    assert p["par_m3"] >= 1.0, (
+        f"par_m3 = {p['par_m3']} N*m: por debajo de 1 N*m no hay llave "
+        f"dinamometrica de 1/4\" que lo de, asi que se volveria a apretar a "
+        f"tacto. Sube la arandela hasta que el par quepa en una herramienta "
+        f"que existe (d16 da {par_max:.2f} si ya la llevas).")
+    print(f"apriete: 30 M3 a {p['par_m3']} N*m con arandela d{p['d_arandela']:g} "
+          f"-> {sigma:.1f} MPa sobre el acrilico (techo {SIGMA_PMMA}, "
+          f"par maximo {par_max:.2f})")
+
+
 def guarda_chaflan(p: dict[str, float]) -> None:
     """El chaflan mata el filo sin comerse la pieza.
 
@@ -1546,6 +1591,7 @@ def main() -> int:
     guarda_piso(p)
     guarda_aire(p)
     guarda_chaflan(p)
+    guarda_apriete(p)
     guarda_fresado(p)
     guarda_parametros_vivos(p)
     guarda_escalon(p)

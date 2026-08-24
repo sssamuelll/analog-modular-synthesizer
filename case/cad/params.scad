@@ -651,6 +651,35 @@ d_M4_paso   = 4.5;  // agujero paso M4: standoffs de las pieles Y los cuatro
                     // rieles EUROrack, cuyo taladro de punta viene roscado M4
                     // de fabrica (hoja Tiptop: "M4 Tapping To (/)3.3")
 d_M5_paso   = 5.5;  // agujero paso M5: SOLO el esqueleto 2020, roscado en el alma
+// APRIETE DE LOS 30 M3, y la arandela de la que sale.
+//
+// Hasta el 2026-08-24 la instruccion era "apretar hasta marcar, NO hasta
+// fisurar" (README, procedimiento del cupon) y la spec §11 admitia que "el
+// par maximo antes de fisura no esta medido". Treinta tornillos VISIBLES
+// apretados a tacto sobre acrilico son treinta puntos de craquelado.
+//
+// EL NUMERO LO PONE LA ARANDELA, no el tornillo: lo que decide si el PMMA
+// craquela es cuanta area reparte la precarga. Con el umbral de 10 MPa del
+// #106 y T = 0.2*F*d:
+//
+//   arandela   area apoyo   precarga a 10 MPa   par maximo
+//   d9           54.5 mm2       545 N            0.33 N*m
+//   d12         104.0 mm2      1040 N            0.62 N*m
+//   d16         191.9 mm2      1919 N            1.15 N*m   <- esta
+//
+// SE ELIGE d16 POR DOS RAZONES QUE VAN JUNTAS. Es la unica que deja el par
+// por encima de 1 N*m, que es donde una llave dinamometrica de 1/4" empieza
+// a existir -- por debajo hace falta destornillador dinamometrico de
+// precision, y "apretar con cuidado" nos devuelve al tacto. Y YA ESTA EN EL
+// BOM: es la misma arandela ancha de los cuatro ejes de giro, asi que la
+// familia de herraje baja de dos arandelas a una. Consistencia de herraje es
+// justo lo que separa un producto de un montaje.
+//
+// OJO CON ENGRASAR LA ROSCA: el par se convierte en precarga con coeficiente
+// 0.2 en seco y ~0.15 engrasado, o sea que el MISMO par mete un 30% mas de
+// precarga y fisura. LOS M3 VAN SECOS.
+d_arandela  = 16;   // mm, arandela ancha bajo cada M3 visible
+par_m3      = 1.0;  // N*m. Techo por arandela: 1.15
 // hol_piel = holgura de AJUSTE de las pieles EMPOTRADAS, por lado.
 //
 // Sustituye a gap_sombra (5 mm), que era otra cosa: la junta de sombra de las

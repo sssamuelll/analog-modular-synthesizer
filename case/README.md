@@ -392,8 +392,10 @@ tiene un único `kerf`. Ese día hay que partirlo antes de cortar nada.
    de las bandejas. Si el servicio te da un kerf de tabla (siempre positivo, es
    el ancho del canal), va a `params.scad` **con el signo cambiado**;
    `clearance_budget.py` avisa en AMARILLO si el valor entra positivo.
-3. Probar la ranura con el perfil 2020 y la lengüeta con arandela+tuerca
-   (apretar hasta marcar, NO hasta fisurar; anotar sensación de tope).
+3. Probar la ranura con el perfil 2020 y la lengüeta con arandela+tuerca,
+   **apretando a `par_m3` (1.0 N·m) con destornillador dinamométrico**. La
+   «sensación de tope» dejó de ser el criterio el 2026-08-24: el par sale de
+   la arandela y está calculado, no se estima con la muñeca.
 3b. **Confirmación anti-circular** (lección de projects/vectorizer): el kerf
     elegido en el paso 2 se confirma con un ajuste INDEPENDIENTE — la
     ranura del 2020 del paso 3 y un tornillo en una escalera DISTINTA de la
@@ -418,8 +420,8 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Tornillo **M4** | **8** | entran de punta por el costado y **roscan en el propio Z-Rail** (viene con M4 taladrado a 3.3 de fábrica). Sin tuerca, sin inserto. **No vienen con el raíl.** 4 de hombro (los ejes de giro) + 4 de mano (los cierres) |
 | Tornillo M5 botón + tuerca T | **10** | 2 por larguero 2020, por la punta, desde el costado |
 | Tornillo M5 + tuerca T + separador 3 mm | **4** | cuelgan el chasis del PSU de la ranura **interior** de los dos largueros de base (#106). El separador no es opcional |
-| Tornillo M3 + tuerca T M3 | **30** | las planchas a los largueros: base 10, tapa del valle 5, tapa de remate 5, **trasera 10** (2 filas × 5). Entran por la RANURA, no por la punta |
-| Arandela ANCHA d16 | 4 | **no opcional**: en los ejes de giro. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 MPa y aguanta |
+| Tornillo **M3 botón** + tuerca T M3 + **arandela ancha d16** | **30** | las planchas a los largueros: base 10, tapa del valle 5, tapa de remate 5, **trasera 10** (2 filas × 5). Entran por la RANURA, no por la punta. **Apriete 1.0 N·m con rosca SECA** — engrasarla mete un 30 % más de precarga con el mismo par y fisura. Ver `par_m3` |
+| Arandela ANCHA d16 | **34** | 30 bajo los M3 de plancha + 4 en los ejes de giro. **No opcional en ninguno de los dos sitios**, y es la misma pieza en ambos: la familia de herraje baja de dos arandelas a una. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 y aguanta. En los M3 además es la que sube el par utilizable de 0.33 a 1.15 N·m — por debajo de 1 N·m no hay llave dinamométrica de 1/4" que lo dé |
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa. **Sustituye al amortiguador**, que se eliminó |
 | Plancha acrílico t=5 mm | **1** | solo la tapa del valle. Un espesor entero para **una** pieza — a resolver en el pliego, no en el modelo |
 | Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante, 528.32 × 291.4) + tapa de remate (528.32 × 37) + **trasera** (528.02 × 248.18, con las tres ondas y la rejilla de entrada de aire) |
