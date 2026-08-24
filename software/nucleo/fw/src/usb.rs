@@ -39,6 +39,12 @@ const PID: u16 = 0x0017;
 /// 64 bytes es el maximo de un endpoint bulk a full speed.
 const TAM_PAQUETE: u16 = 64;
 
+// El buffer de lectura se DERIVA de esta constante (`[0u8; TAM_PAQUETE as
+// usize]`), asi que la invariante "el buffer es al menos el tamano de endpoint"
+// se cumple por construccion y no hay nada que aseverar. Aqui llego a haber un
+// `const assert!(TAM_PAQUETE >= 4)`, que no comprobaba esa invariante sino otra
+// trivial: un aval que se lee como puerta y no lo es.
+
 /// Lo que ocupa UN descriptor ya metido en su sobre de SysEx.
 ///
 /// Era `384`, un literal a ojo dentro de `mandar_descriptores`, justo al lado
@@ -137,7 +143,20 @@ pub async fn atender(
     instrumento: &'static mut Instrumento,
 ) -> ! {
     let mut desemp = Desempaquetador::nuevo();
-    let mut entrada: Paquete = [0; 4];
+    // `read_packet` EXIGE un buffer del tamano del endpoint. embassy-usb lo
+    // dice textualmente (`class/midi.rs`): "read_packet must be called with a
+    // buffer large enough to hold max_packet_size bytes".
+    //
+    // Aqui habia un `[0; 4]` contra un endpoint declarado de 64, y no fallaba
+    // suave: embassy-rp devuelve `BufferOverflow` ANTES de re-armar el
+    // endpoint, asi que el hardware no vuelve a aceptar un paquete nunca; el
+    // `Err` de abajo lo leia como desconexion, `wait_connection` contestaba
+    // listo al primer poll porque el endpoint sigue habilitado, y vuelta a
+    // empezar. Ningun poll de ese ciclo devuelve `Pending`: la tarea gira para
+    // siempre dentro de un solo `poll()` y se lleva por delante la pila USB y
+    // el reloj. Bastaba con que el host agrupara eventos en una transferencia,
+    // que es lo normal y es para lo que sirve declarar 64.
+    let mut entrada = [0u8; TAM_PAQUETE as usize];
     let mut plano = [0u8; MAX_SYSEX];
     let mut proximo = Instant::now() + PERIODO_TICK;
 
@@ -173,46 +192,58 @@ pub async fn atender(
                     continue;
                 }
             };
-            match leido {
-                Ok(4) => {}
-                Ok(n) => {
-                    // USB-MIDI son paquetes de cuatro bytes. Otra cosa no es
-                    // nuestra: se tira sin tocar el mensaje en curso.
-                    warn!("USB: paquete de {} bytes, se ignora", n);
-                    continue;
-                }
+            let n = match leido {
+                Ok(n) => n,
                 Err(_) => break, // se desconecto; a esperar de nuevo
+            };
+            // Un bulk de 64 B trae HASTA DIECISEIS paquetes USB-MIDI de 4, y
+            // antes solo se miraba el caso de uno suelto: `Ok(4) => {}` y
+            // cualquier otra cosa a la basura. O sea que en cuanto el host
+            // agrupara, se tiraba la transferencia entera.
+            if n % 4 != 0 {
+                warn!("USB: transferencia de {} B, no es multiplo de 4", n);
             }
+            let mut caido = false;
+            for trozo in entrada[..n].chunks_exact(4) {
+                let Ok(paquete) = <&Paquete>::try_from(trozo) else {
+                    continue;
+                };
+                let Some(Trozo::Sysex(bytes)) = desemp.empujar(paquete) else {
+                    // Notas y CC son del plan de los perifericos: todavia no
+                    // hay gates ni J2 a donde mandarlas.
+                    continue;
+                };
+                let Ok(largo) = desenvolver(bytes, &mut plano) else {
+                    warn!("USB: sobre que no es nuestro, se ignora");
+                    continue;
+                };
+                let Ok(m) = decodificar(&plano[..largo]) else {
+                    warn!("USB: mensaje que no se entiende");
+                    continue;
+                };
 
-            let Some(Trozo::Sysex(bytes)) = desemp.empujar(&entrada) else {
-                // Notas y CC son del plan de los perifericos: todavia no hay
-                // gates ni J2 a donde mandarlas.
-                continue;
-            };
-
-            let Ok(n) = desenvolver(bytes, &mut plano) else {
-                warn!("USB: sobre que no es nuestro, se ignora");
-                continue;
-            };
-            let Ok(m) = decodificar(&plano[..n]) else {
-                warn!("USB: mensaje que no se entiende");
-                continue;
-            };
-
-            let ahora = embassy_time::Instant::now().as_millis();
-            // N1. Aqui es donde se estampa: este lazo ES la puerta USB, asi
-            // que lo sabe por construccion y el mensaje no tuvo que decirlo.
-            // Cuando entre el puente inalambrico, su lazo estampara
-            // `Inalambrica` y ninguno de los dos podra equivocarse, porque
-            // ninguno de los dos lee el dato: lo pone.
-            //
-            // Ojo con lo que esto NO separa: el agente por MCP y una carcasa
-            // web entran los dos por aqui y salen los dos como `Usb`. Se
-            // separaran el dia que se lea el nibble de cable (#182, fallo 7).
-            for resp in instrumento.atender(m, ahora, Puerta::Usb) {
-                if responder(&mut midi, instrumento, resp).await.is_err() {
+                let ahora = embassy_time::Instant::now().as_millis();
+                // N1. Aqui es donde se estampa: este lazo ES la puerta USB,
+                // asi que lo sabe por construccion y el mensaje no tuvo que
+                // decirlo. Cuando entre el puente inalambrico, su lazo
+                // estampara `Inalambrica` y ninguno de los dos podra
+                // equivocarse, porque ninguno lee el dato: lo pone.
+                //
+                // Lo que esto NO separa: el agente por MCP y una carcasa web
+                // entran los dos por aqui y salen los dos como `Usb`. Se
+                // separaran cuando se lea el nibble de cable (#182, fallo 7).
+                for resp in instrumento.atender(m, ahora, Puerta::Usb) {
+                    if responder(&mut midi, instrumento, resp).await.is_err() {
+                        caido = true;
+                        break;
+                    }
+                }
+                if caido {
                     break;
                 }
+            }
+            if caido {
+                break;
             }
         }
     }
