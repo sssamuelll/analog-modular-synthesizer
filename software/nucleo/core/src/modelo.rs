@@ -3,6 +3,7 @@
 
 use crate::descriptor::Descriptor;
 use crate::param::{ParamId, Valor};
+use crate::politica::Puerta;
 use heapless::Vec;
 
 /// Capacidad del INSTRUMENTO entero, no de un modulo.
@@ -61,6 +62,19 @@ pub enum ErrorRegistro {
 pub struct Modelo {
     descs: Vec<&'static Descriptor, MAX_PARAMS>,
     vals: Vec<Valor, MAX_PARAMS>,
+    /// Por donde entro la ULTIMA escritura de cada parametro: la *puerta
+    /// residente* de §3. Es el segundo argumento de
+    /// `(puerta_entrante, puerta_residente, clase)`, y sin el la ley de capas
+    /// no es legislable -- no hay forma de preguntar quien tiene capturado
+    /// esto.
+    ///
+    /// `None` es "nadie lo ha escrito todavia", y tiene que existir: dar
+    /// `Mano` por defecto haria que la ley leyera "capturado" sobre un
+    /// parametro que nadie toco.
+    ///
+    /// Cuesta 1 B por ranura (`Option<Puerta>` cabe en el nicho de un `u8`
+    /// con cuatro variantes), o sea 1 KB de los 520 de SRAM del RP2350B.
+    puertas: Vec<Option<Puerta>, MAX_PARAMS>,
 }
 
 impl Default for Modelo {
@@ -74,6 +88,7 @@ impl Modelo {
         Modelo {
             descs: Vec::new(),
             vals: Vec::new(),
+            puertas: Vec::new(),
         }
     }
 
@@ -93,10 +108,13 @@ impl Modelo {
                 self.descs
                     .insert(pos, d)
                     .map_err(|_| ErrorRegistro::Lleno)?;
-                // Si esta segunda insercion fallara, las dos tablas quedarian
+                // Si estas inserciones fallaran, las tablas quedarian
                 // descuadradas; como comparten capacidad, no puede pasar.
                 self.vals
                     .insert(pos, d.def)
+                    .map_err(|_| ErrorRegistro::Lleno)?;
+                self.puertas
+                    .insert(pos, None)
                     .map_err(|_| ErrorRegistro::Lleno)?;
                 Ok(())
             }
@@ -164,10 +182,19 @@ impl Modelo {
     }
 
     /// La escritura de un cliente. Aplica las tres reglas del descriptor.
-    pub fn set(&mut self, id: ParamId, v: Valor) -> Result<Cambio, ErrorSet> {
+    ///
+    /// `puerta` no es decoracion ni telemetria: es lo que §2.1 exige que baje
+    /// hasta AQUI en vez de quedarse en `atender`. `atender` es uno de siete
+    /// caminos que escriben el modelo; este es el cuello por donde pasan los
+    /// siete. Un sello puesto arriba solo sella un septimo.
+    pub fn set(&mut self, id: ParamId, v: Valor, puerta: Puerta) -> Result<Cambio, ErrorSet> {
         let i = self.pos(id).ok_or(ErrorSet::NoExiste)?;
         let d = self.descs[i];
-        if d.solo_lectura {
+        // `medida` cuenta como solo lectura aunque no lo declare: §3.4 dice
+        // que una medida **la publica el instrumento**, y esa es la bandera
+        // que lo dice. Mirar solo `solo_lectura` dejaba entrar un SET del
+        // cable encima de lo que el sensor acaba de medir.
+        if d.solo_lectura || d.medida {
             return Err(ErrorSet::SoloLectura);
         }
         if v < d.min || v > d.max {
@@ -176,24 +203,53 @@ impl Modelo {
         if d.confirmacion_fisica {
             return Err(ErrorSet::ExigeConfirmacion);
         }
+        self.escribir(i, v, puerta)
+    }
+
+    /// El sitio unico donde un valor entra en la tabla, con su puerta.
+    ///
+    /// Existe para que no haya forma de escribir `vals` sin tocar `puertas`:
+    /// dos asignaciones separadas en tres metodos son seis sitios donde se
+    /// puede olvidar la segunda, y el olvido no rompe nada visible -- deja la
+    /// puerta residente mintiendo, que es peor.
+    fn escribir(&mut self, i: usize, v: Valor, puerta: Puerta) -> Result<Cambio, ErrorSet> {
         self.vals[i] = v;
-        Ok(Cambio { id, valor: v })
+        self.puertas[i] = Some(puerta);
+        Ok(Cambio {
+            id: self.descs[i].id,
+            valor: v,
+        })
+    }
+
+    /// Por donde entro la ultima escritura de `id`, o `None` si nadie lo ha
+    /// escrito desde que se registro.
+    pub fn puerta_de(&self, id: ParamId) -> Option<Puerta> {
+        self.pos(id).and_then(|i| self.puertas[i])
     }
 
     /// El unico camino que escribe una medida (§3.4). Lo llama el instrumento,
     /// nunca un cliente.
-    pub fn publicar_medida(&mut self, id: ParamId, v: Valor) -> Result<Cambio, ErrorSet> {
+    pub fn publicar_medida(
+        &mut self,
+        id: ParamId,
+        v: Valor,
+        puerta: Puerta,
+    ) -> Result<Cambio, ErrorSet> {
         let i = self.pos(id).ok_or(ErrorSet::NoExiste)?;
         if !self.descs[i].medida {
             return Err(ErrorSet::SoloLectura);
         }
-        self.vals[i] = v;
-        Ok(Cambio { id, valor: v })
+        self.escribir(i, v, puerta)
     }
 
     /// La puerta que abre la confirmacion fisica (§2.2). Salta el veto de
     /// `confirmacion_fisica` y NADA MAS: rango y solo-lectura siguen mandando.
-    pub fn aplicar_confirmado(&mut self, id: ParamId, v: Valor) -> Result<Cambio, ErrorSet> {
+    pub fn aplicar_confirmado(
+        &mut self,
+        id: ParamId,
+        v: Valor,
+        puerta: Puerta,
+    ) -> Result<Cambio, ErrorSet> {
         let i = self.pos(id).ok_or(ErrorSet::NoExiste)?;
         let d = self.descs[i];
         if d.solo_lectura {
@@ -202,8 +258,7 @@ impl Modelo {
         if v < d.min || v > d.max {
             return Err(ErrorSet::FueraDeRango);
         }
-        self.vals[i] = v;
-        Ok(Cambio { id, valor: v })
+        self.escribir(i, v, puerta)
     }
 }
 
@@ -289,7 +344,7 @@ mod tests {
         // §4.1: CHANGED va a todos los suscriptores venga de donde venga el SET.
         let mut m = modelo();
         assert_eq!(
-            m.set(NORMAL.id, 42),
+            m.set(NORMAL.id, 42, Puerta::Usb),
             Ok(Cambio {
                 id: NORMAL.id,
                 valor: 42
@@ -302,9 +357,9 @@ mod tests {
     fn una_medida_no_se_escribe_desde_un_cliente() {
         // §3.4: el unico camino que la escribe es publicar_medida.
         let mut m = modelo();
-        assert_eq!(m.set(MEDIDA.id, 5), Err(ErrorSet::SoloLectura));
+        assert_eq!(m.set(MEDIDA.id, 5, Puerta::Usb), Err(ErrorSet::SoloLectura));
         assert_eq!(m.get(MEDIDA.id), Some(0));
-        assert!(m.publicar_medida(MEDIDA.id, -1200).is_ok());
+        assert!(m.publicar_medida(MEDIDA.id, -1200, Puerta::Interno).is_ok());
         assert_eq!(m.get(MEDIDA.id), Some(-1200));
     }
 
@@ -313,7 +368,10 @@ mod tests {
         // §6.1 fallar en voz alta: recortar en silencio le miente al agente,
         // que creeria haber puesto 500.
         let mut m = modelo();
-        assert_eq!(m.set(NORMAL.id, 500), Err(ErrorSet::FueraDeRango));
+        assert_eq!(
+            m.set(NORMAL.id, 500, Puerta::Usb),
+            Err(ErrorSet::FueraDeRango)
+        );
         assert_eq!(m.get(NORMAL.id), Some(0));
     }
 
@@ -321,17 +379,46 @@ mod tests {
     fn lo_marcado_no_se_ejecuta_de_una() {
         // §2.2: la regla la impone el instrumento, no el cliente.
         let mut m = modelo();
-        assert_eq!(m.set(PELIGROSO.id, 7), Err(ErrorSet::ExigeConfirmacion));
+        assert_eq!(
+            m.set(PELIGROSO.id, 7, Puerta::Usb),
+            Err(ErrorSet::ExigeConfirmacion)
+        );
         assert_eq!(m.get(PELIGROSO.id), Some(0));
         // Solo la retencion (Task 4) puede aplicarlo, y por otra puerta.
-        assert!(m.aplicar_confirmado(PELIGROSO.id, 7).is_ok());
+        assert!(m.aplicar_confirmado(PELIGROSO.id, 7, Puerta::Mano).is_ok());
         assert_eq!(m.get(PELIGROSO.id), Some(7));
     }
 
     #[test]
     fn un_parametro_que_no_existe_lo_dice() {
         let mut m = modelo();
-        assert_eq!(m.set(ParamId(0xBEEF), 1), Err(ErrorSet::NoExiste));
+        assert_eq!(
+            m.set(ParamId(0xBEEF), 1, Puerta::Usb),
+            Err(ErrorSet::NoExiste)
+        );
+    }
+
+    /// §3.4: una medida **la publica el instrumento**, y ese es el punto
+    /// entero de la bandera. `set` solo miraba `solo_lectura`, asi que un
+    /// descriptor declarado `medida: true` sin marcar ademas `solo_lectura`
+    /// se dejaba escribir desde el cable -- un cliente sobreescribiendo lo
+    /// que el sensor acaba de medir, y nada avisando.
+    ///
+    /// Hoy no hay ninguno asi en el arbol; la guardia entra ANTES de que lo
+    /// haya, que es el unico momento en que sale gratis.
+    #[test]
+    fn una_medida_no_se_escribe_con_set_aunque_no_este_marcada_solo_lectura() {
+        // solo_lectura: false, medida: true.
+        static MEDIDA_ABIERTA: Descriptor = d(0x1003, false, true, false);
+        let mut m = Modelo::nuevo();
+        m.registrar(&MEDIDA_ABIERTA).unwrap();
+        assert_eq!(
+            m.set(MEDIDA_ABIERTA.id, 42, Puerta::Usb),
+            Err(ErrorSet::SoloLectura)
+        );
+        assert!(m
+            .publicar_medida(MEDIDA_ABIERTA.id, 42, Puerta::Interno)
+            .is_ok());
         assert_eq!(m.get(ParamId(0xBEEF)), None);
     }
 

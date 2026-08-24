@@ -364,17 +364,26 @@ impl Instrumento {
                 None => self.error(&mut r, &m, CodigoError::NoExiste),
             },
             Mensaje::Set(id, v) => {
-                // El SET de un CLIENTE anula la rampa que tenga ese parametro.
-                // El del tick no — y esa diferencia vive aqui, no en el
-                // modelo, que no gana ninguna puerta nueva.
-                if self.rampas.anular(id) {
+                // LA LEY DE CAPAS, y dice **la MANO gana** (voz-total §0.2,
+                // clausula 1), no "el cliente gana".
+                //
+                // Esto anulaba con cualquier SET de cliente. Consecuencia
+                // medida: el agente que automatiza por USB y manda un ajuste
+                // **se anulaba a si mismo** -- justo al reves de la ley, que
+                // existe para que la mano capture UN parametro mientras el
+                // agente sigue con los otros treinta y nueve.
+                //
+                // La diferencia ya no se puede decidir aqui a ojo: se lee de
+                // la puerta, que es lo que §2.1 manda que baje hasta la
+                // escritura.
+                if puerta == Puerta::Mano && self.rampas.anular(id) {
                     self.empujar(
                         &mut r,
                         Respuesta::Mensaje(Mensaje::Anulado { id, anulado: true }),
                     );
                     self.publicar_anulados(&mut r);
                 }
-                self.escribir(&mut r, &m, id, v, ahora_ms);
+                self.escribir(&mut r, &m, id, v, ahora_ms, puerta);
             }
             Mensaje::Rampa {
                 id,
@@ -501,7 +510,7 @@ impl Instrumento {
         // identico. `reactivar` llama aqui aunque no haya reactivado nada, asi
         // que sin comparar antes esto anunciaria el mismo cero cada vez.
         let se_movio = self.modelo.get(id) != Some(n);
-        if self.modelo.publicar_medida(id, n).is_ok() && se_movio {
+        if self.modelo.publicar_medida(id, n, Puerta::Interno).is_ok() && se_movio {
             self.anunciar(r, id, n);
         }
     }
@@ -591,7 +600,11 @@ impl Instrumento {
         };
         let escrituras = self.rampas.tick(pulso, unidad_de);
         for (id, v) in escrituras {
-            if let Ok(c) = self.modelo.set(id, v) {
+            // Una rampa escribe por `Interno` SIEMPRE. §2.2 derogo el
+            // arrastre del sello: la rampa no lleva la puerta de quien la
+            // pidio, y llevarla anularia la automatizacion del agente en los
+            // parametros que la mano no toco.
+            if let Ok(c) = self.modelo.set(id, v, Puerta::Interno) {
                 self.anunciar(&mut r, c.id, c.valor);
             }
         }
@@ -622,14 +635,22 @@ impl Instrumento {
             // inundacion -- cinco `CHANGED` en cada tick, para siempre. Se
             // mira ANTES de escribir, que es la unica forma de saberlo.
             let se_movio = self.modelo.get(id) != Some(v);
-            if self.modelo.publicar_medida(id, v).is_ok() && se_movio {
+            if self.modelo.publicar_medida(id, v, Puerta::Interno).is_ok() && se_movio {
                 self.anunciar(r, id, v);
             }
         }
     }
 
-    fn escribir(&mut self, r: &mut Respuestas, m: &Mensaje, id: ParamId, v: Valor, ahora_ms: u64) {
-        match self.modelo.set(id, v) {
+    fn escribir(
+        &mut self,
+        r: &mut Respuestas,
+        m: &Mensaje,
+        id: ParamId,
+        v: Valor,
+        ahora_ms: u64,
+        puerta: Puerta,
+    ) {
+        match self.modelo.set(id, v, puerta) {
             Ok(c) => self.anunciar(r, c.id, c.valor),
             Err(ErrorSet::ExigeConfirmacion) => {
                 // §2.2: el micro RETIENE. La regla la impone el instrumento.
@@ -658,7 +679,11 @@ impl Instrumento {
                 confirmado: true,
             }),
         );
-        if let Ok(c) = self.modelo.aplicar_confirmado(p.id, p.valor) {
+        // El valor lo eligio quien mando el SET, pero **la escritura la
+        // autoriza un gesto fisico**, y §2.2 derogo que el sello se arrastre.
+        // Sella `Mano`, con la consecuencia buscada: confirmar a mano CAPTURA
+        // el parametro, que es exactamente lo que la ley de capas quiere.
+        if let Ok(c) = self.modelo.aplicar_confirmado(p.id, p.valor, Puerta::Mano) {
             self.anunciar(&mut r, c.id, c.valor);
         }
         r
@@ -682,9 +707,9 @@ impl Instrumento {
 
     /// Lo que mide el instrumento (§3.4). No viene del cable, pero lo que
     /// produce tambien hay que mandarlo.
-    pub fn publicar_medida(&mut self, id: ParamId, v: Valor) -> Respuestas {
+    pub fn publicar_medida(&mut self, id: ParamId, v: Valor, puerta: Puerta) -> Respuestas {
         let mut r = Respuestas::new();
-        if let Ok(c) = self.modelo.publicar_medida(id, v) {
+        if let Ok(c) = self.modelo.publicar_medida(id, v, puerta) {
             self.anunciar(&mut r, c.id, c.valor);
         }
         r
@@ -809,6 +834,14 @@ mod tests {
         /// entera y dicen cual, que es lo que lo hace visible cuando importa.
         fn atender_usb(&mut self, m: Mensaje, ahora_ms: u64) -> Respuestas {
             self.atender(m, ahora_ms, Puerta::Usb)
+        }
+
+        /// El otro atajo, y el que la ley de capas obliga a distinguir: un
+        /// gesto fisico. Los tests de anulacion lo usan porque **solo la mano
+        /// captura** -- si usaran `atender_usb` estarian aseverando la ley
+        /// vieja, la que dejaba que el agente se anulara a si mismo.
+        fn atender_mano(&mut self, m: Mensaje, ahora_ms: u64) -> Respuestas {
+            self.atender(m, ahora_ms, Puerta::Mano)
         }
     }
 
@@ -1120,7 +1153,7 @@ mod tests {
     fn una_medida_publicada_llega_a_los_suscriptores() {
         let mut i = instrumento();
         i.atender_usb(Mensaje::Subscribe { activo: true }, 0);
-        let r = mensajes(&i.publicar_medida(MEDIDA.id, -100));
+        let r = mensajes(&i.publicar_medida(MEDIDA.id, -100, Puerta::Interno));
         assert_eq!(r.as_slice(), &[Mensaje::Changed(MEDIDA.id, -100)]);
     }
 
@@ -1247,6 +1280,53 @@ mod tests {
         }
     }
 
+    /// LA LEY DE CAPAS, tal como la escribe voz-total §0.2 clausula 1: **la
+    /// MANO gana por parametro**. Un gesto fisico captura ese parametro y la
+    /// automatizacion sobre el queda `ANULADO`; todo lo demas sigue bajo el
+    /// agente.
+    ///
+    /// Hoy dice otra cosa. `atender` anula con cualquier `Set` de cliente, y
+    /// el comentario de al lado lo declara: *"El SET de un CLIENTE anula la
+    /// rampa que tenga ese parametro"*. O sea que el agente que automatiza y
+    /// manda un ajuste **se anula a si mismo**, que es exactamente al reves
+    /// de la ley: la ley existe para que la mano capture mientras el agente
+    /// sigue con lo demas.
+    #[test]
+    fn un_set_por_usb_no_anula_la_automatizacion() {
+        let mut i = con_reloj_a_mitad();
+        i.atender_usb(rampa(NORMAL.id, 100), 0);
+        let r = i.atender_usb(Mensaje::Set(NORMAL.id, 7), 0);
+        assert!(
+            !mensajes(&r)
+                .iter()
+                .any(|x| matches!(x, Mensaje::Anulado { anulado: true, .. })),
+            "el agente se anulo su propia automatizacion"
+        );
+        assert_eq!(i.rampas.anuladas(), 0, "la rampa quedo anulada por USB");
+    }
+
+    /// La puerta residente, que es lo que hace legislable la ley de capas: el
+    /// modelo tiene que poder decir QUIEN escribio cada parametro por ultima
+    /// vez. Sin esto, `(puerta_entrante, puerta_residente, clase)` de §3 no
+    /// tiene segundo argumento.
+    #[test]
+    fn el_modelo_recuerda_por_donde_entro_cada_escritura() {
+        let mut i = instrumento();
+        i.atender_usb(Mensaje::Set(NORMAL.id, 7), 0);
+        assert_eq!(i.modelo().puerta_de(NORMAL.id), Some(Puerta::Usb));
+        i.atender(Mensaje::Set(NORMAL.id, 9), 0, Puerta::Mano);
+        assert_eq!(i.modelo().puerta_de(NORMAL.id), Some(Puerta::Mano));
+    }
+
+    /// Un parametro que nadie ha escrito no tiene puerta residente. Devolver
+    /// `Mano` por defecto seria mentir en el sentido que mas duele: la ley de
+    /// capas leeria "capturado" sobre algo que nadie toco.
+    #[test]
+    fn un_parametro_recien_registrado_no_tiene_puerta() {
+        let i = instrumento();
+        assert_eq!(i.modelo().puerta_de(NORMAL.id), None);
+    }
+
     #[test]
     fn una_rampa_aceptada_arranca_en_el_borde_de_la_rejilla() {
         let mut i = con_reloj_a_mitad();
@@ -1265,12 +1345,17 @@ mod tests {
     }
 
     #[test]
-    fn un_set_del_cliente_anula_la_rampa_y_lo_avisa() {
+    fn un_set_de_la_mano_anula_la_rampa_y_lo_avisa() {
         // §6.1. Este es el test de la seccion entera.
+        //
+        // Se llamaba "del cliente" y anulaba con un SET por USB. La ley de
+        // capas dice **la mano** (voz-total §0.2, clausula 1), y la
+        // diferencia no es de matiz: por USB entra el agente, y el agente
+        // anulandose a si mismo es lo contrario de lo que la ley protege.
         let mut i = con_reloj_a_mitad();
         i.atender_usb(rampa(NORMAL.id, 100), 0);
         i.tick(PXC + 96);
-        let r = mensajes(&i.atender_usb(Mensaje::Set(NORMAL.id, 7), 0));
+        let r = mensajes(&i.atender_mano(Mensaje::Set(NORMAL.id, 7), 0));
         assert!(r.contains(&Mensaje::Anulado {
             id: NORMAL.id,
             anulado: true
@@ -1291,7 +1376,7 @@ mod tests {
         let mut i = con_reloj_a_mitad();
         i.atender_usb(rampa(NORMAL.id, 100), 0);
         i.tick(PXC + 96);
-        i.atender_usb(Mensaje::Set(NORMAL.id, 7), 0);
+        i.atender_mano(Mensaje::Set(NORMAL.id, 7), 0);
         let r = mensajes(&i.atender_usb(
             Mensaje::Reactivar {
                 id: Some(NORMAL.id),
@@ -1318,7 +1403,7 @@ mod tests {
         }
         i.tick(PXC + 96);
         for id in [NORMAL.id, OTRO.id] {
-            i.atender_usb(Mensaje::Set(id, 7), 0);
+            i.atender_mano(Mensaje::Set(id, 7), 0);
         }
         let r = mensajes(&i.atender_usb(Mensaje::Reactivar { id: None }, 0));
         assert_eq!(
@@ -1348,7 +1433,7 @@ mod tests {
         }
         i.tick(PXC + 96);
         for desc in MUCHOS.iter() {
-            i.atender_usb(Mensaje::Set(desc.id, 7), 0);
+            i.atender_mano(Mensaje::Set(desc.id, 7), 0);
         }
         let r = mensajes(&i.atender_usb(Mensaje::Reactivar { id: None }, 0));
         assert_eq!(
@@ -1410,9 +1495,22 @@ mod tests {
         assert_eq!(i.desbordes(), 0, "el tick se comio mensajes");
 
         // `Reactivar { id: None }`: un `Anulado` por rampa + el contador.
+        //
+        // Va por la MANO, y no es cosmetico: con la ley de capas nueva un SET
+        // por USB no anula nada, asi que este bucle dejaria cero rampas
+        // anuladas y el `Reactivar` de abajo no tendria que anunciar nada. El
+        // test seguiria en VERDE sin correr el peor caso que dice medir --
+        // que es el Principio V en su forma mas comoda: no corre y no te
+        // enteras. La asercion del medio existe para que no vuelva a pasar en
+        // silencio.
         for desc in MUCHOS.iter() {
-            i.atender_usb(Mensaje::Set(desc.id, 7), 0);
+            i.atender_mano(Mensaje::Set(desc.id, 7), 0);
         }
+        assert_eq!(
+            i.rampas.anuladas(),
+            crate::rampa::MAX_RAMPAS,
+            "el peor caso no se armo: no hay nada que reactivar"
+        );
         i.atender_usb(Mensaje::Reactivar { id: None }, 0);
         assert_eq!(
             i.desbordes(),
@@ -1633,7 +1731,7 @@ mod tests {
         i.atender_usb(rampa(NORMAL.id, 100), 0);
         i.tick(PXC + 96);
 
-        let r = mensajes(&i.atender_usb(Mensaje::Set(NORMAL.id, 7), 0));
+        let r = mensajes(&i.atender_mano(Mensaje::Set(NORMAL.id, 7), 0));
         assert!(
             r.contains(&Mensaje::Changed(tiempo_params::ID_ANULADOS, 1)),
             "el contador subio y el suscriptor no se entero: {r:?}"
@@ -1668,7 +1766,7 @@ mod tests {
         assert_eq!(i.modelo().get(tiempo_params::ID_ANULADOS), Some(0));
         i.atender_usb(rampa(NORMAL.id, 100), 0);
         i.tick(PXC + 96);
-        i.atender_usb(Mensaje::Set(NORMAL.id, 7), 0);
+        i.atender_mano(Mensaje::Set(NORMAL.id, 7), 0);
         assert_eq!(i.modelo().get(tiempo_params::ID_ANULADOS), Some(1));
         i.atender_usb(Mensaje::Reactivar { id: None }, 0);
         assert_eq!(i.modelo().get(tiempo_params::ID_ANULADOS), Some(0));
@@ -1737,9 +1835,12 @@ mod tests {
     #[test]
     fn un_set_sobre_algo_sin_rampa_no_avisa_de_ningun_anulado() {
         // Solo se anula lo que de verdad tenia automatizacion corriendo.
+        //
+        // Por la MANO a proposito: por USB pasaria por la razon equivocada
+        // -- la puerta -- y dejaria de probar la que dice probar.
         let mut i = con_reloj();
         i.atender_usb(Mensaje::Subscribe { activo: true }, 0);
-        let r = mensajes(&i.atender_usb(Mensaje::Set(NORMAL.id, 5), 0));
+        let r = mensajes(&i.atender_mano(Mensaje::Set(NORMAL.id, 5), 0));
         assert!(!r.iter().any(|m| matches!(m, Mensaje::Anulado { .. })));
     }
 }

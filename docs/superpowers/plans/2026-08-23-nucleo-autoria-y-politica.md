@@ -637,7 +637,7 @@ firmware donde el reloj no late.
 
 | # | Decision | |
 |---|---|---|
-| **N1** | `Puerta` son **cuatro variantes sin payload**: `Mano`, `Usb`, `Inalambrica`, `Interno`. Partir `Mano` despues es anadir variantes, no rehacer. | **EN EL COBRE** |
+| **N1** | `Puerta` son **cuatro variantes sin payload**: `Mano`, `Usb`, `Inalambrica`, `Interno`. Partir `Mano` despues es anadir variantes, no rehacer. | **EN EL COBRE**, y en la ESCRITURA como manda §2.1 |
 | **N2a** | Se legisla **sobre la etiqueta del mensaje**. Es la unica clave que existe, cubre los quince mensajes de cliente y cuesta cero bytes. | |
 | **N2b** | **Una sola regla por puerta para todo `Set`**, y la limitacion se dice en voz alta. La ranura queda anotada como la salida barata si un caso real la pide. | |
 | **N3** | La politica vive en **la flash del cerebro**. No viaja: nadie cambia permisos mandando un preset. | |
@@ -657,6 +657,48 @@ firmware donde el reloj no late.
 > Lo que queda de N3 no es decision sino cableado: la tabla vive en `core` y
 > arranca vacia; leerla de la flash del cerebro es firmware, y necesita el
 > driver que todavia no existe.
+
+> **La puerta bajo a la escritura el 2026-08-24, y §2.1 tenia razon.** La
+> primera pasada de N1 puso `puerta` como argumento de `atender` -- que es
+> exactamente lo que este papel dice con todas sus letras que **no** se puede
+> hacer: *«tiene que ser un argumento de la escritura»*. Lo cazó la junta
+> adversarial, y al bajarla salieron dos cosas que estaban tapadas debajo:
+>
+> **1. La ley de capas decia lo contrario de lo que dice.** El codigo anulaba
+> la automatizacion con *cualquier* `SET` de cliente, y lo declaraba en un
+> comentario: *«El SET de un CLIENTE anula la rampa que tenga ese
+> parametro»*. Pero la ley es **«la MANO gana»** (voz-total §0.2, clausula 1),
+> y por USB entra el agente. O sea que el agente que automatiza y manda un
+> ajuste **se anulaba a si mismo**, justo al reves de lo que la ley protege:
+> que la mano capture UN parametro mientras el agente sigue con los otros
+> treinta y nueve. No era implementable arriba porque `atender` no distinguia,
+> y el comentario de al lado cerraba la puerta a mano: *«esa diferencia vive
+> aqui, no en el modelo, que no gana ninguna puerta nueva»*.
+>
+> **2. Un test se quedaba vacio y seguia en verde.** `el_peor_caso_real_no_
+> desborda_el_buzon` armaba su peor caso anulando dieciseis rampas con `SET`
+> por USB. Con la ley corregida eso ya no anula nada, asi que el `Reactivar`
+> de despues no tenia que anunciar nada y el test pasaba **sin correr el caso
+> que dice medir**. Lleva una asercion en medio para que no vuelva a pasar en
+> silencio.
+>
+> `Modelo` gana la **puerta residente** por parametro (`puerta_de`), que es el
+> segundo argumento de `(puerta_entrante, puerta_residente, clase)` de §3 y
+> sin el la ley de capas no era legislable. `None` mientras nadie escriba: dar
+> `Mano` por defecto haria leer «capturado» sobre algo que nadie toco.
+>
+> **Lo que NO bajo, y por que.** El corte de politica sigue en `atender`. La
+> clave de la tabla es la **etiqueta** (N2a) y en el `Modelo` no hay etiqueta,
+> solo `ParamId` -- que es literalmente el problema abierto P2 de §3.2. Bajar
+> el corte sin resolver P2 obligaria a inventar una clave, que es lo que §9
+> prohibe por las dos vias posibles. Dicho de otra forma: la puerta baja
+> porque es un dato de la escritura; la politica se queda porque su clave es
+> un dato del mensaje.
+>
+> **Y de paso.** `set` solo miraba `solo_lectura`, asi que un descriptor
+> `medida: true` que no lo declarara ademas se dejaba escribir desde el cable,
+> encima de lo que el sensor acaba de medir. Hoy no hay ninguno asi en el
+> arbol -- la guardia entra antes de que lo haya, que es cuando sale gratis.
 
 > **Lo que N7 ordena.** Al decidir que ninguna ruptura entra antes que la
 > negociacion funcione, el orden de trabajo queda fijado solo: primero N7
