@@ -938,6 +938,42 @@ def guarda_aire(p: dict[str, float]) -> None:
 K_PAR = 0.20
 
 
+def guarda_paticas(p: dict[str, float]) -> None:
+    """Una goma dura no aisla menos: AMPLIFICA.
+
+    El toroide excita a 100 Hz -- magnetostriccion al doble de la red, #106.
+    La pata y la masa del case forman un muelle, y si su frecuencia propia
+    cae cerca de esos 100 Hz la transmisibilidad se dispara: la mesa recibe
+    MAS zumbido del que recibiria con el acrilico apoyado en seco. Una mesa
+    es una superficie radiante mucho mayor que el case.
+
+    Por eso la cota que decide una patica no es la dureza ni el diametro:
+    es CUANTO SE HUNDE bajo carga. f_propia = 15.76 / sqrt(flecha_mm) es la
+    formula de manual para un grado de libertad bajo su propio peso.
+
+    Se exige f_propia <= 100/3. El factor 3 es el minimo habitual para que la
+    transmisibilidad baje del 15 %; por debajo de 3 se entra en la zona donde
+    la curva sube en vez de bajar.
+
+    ES REQUISITO DE COMPRA, NO DE DIBUJO: la flecha sale de la curva
+    carga-deformacion del fabricante. Una goma que no publica esa curva no se
+    puede verificar, y por tanto no sirve.
+    """
+    MASA_CASE, F_TOROIDE = 9.30, 100.0        # kg (#106, con 5 largueros), Hz
+    carga = MASA_CASE * 9.81 / 4
+    f_propia = 15.76 / math.sqrt(p["flecha_pie"])
+    transmision = 1 / abs((F_TOROIDE / f_propia) ** 2 - 1)
+    flecha_min = (15.76 / (F_TOROIDE / 3)) ** 2
+    assert f_propia <= F_TOROIDE / 3, (
+        f"flecha_pie = {p['flecha_pie']} mm da f propia {f_propia:.1f} Hz "
+        f"contra los {F_TOROIDE:.0f} Hz del toroide: transmite "
+        f"{transmision*100:.0f} %. Una goma que se hunde poco NO aisla menos, "
+        f"AMPLIFICA. Hace falta >= {flecha_min:.2f} mm de flecha.")
+    print(f"paticas: {carga:.1f} N por pata, se hunden {p['flecha_pie']} mm "
+          f"-> f propia {f_propia:.1f} Hz, transmiten {transmision*100:.0f} % "
+          f"de los {F_TOROIDE:.0f} Hz del toroide")
+
+
 def guarda_apriete(p: dict[str, float]) -> None:
     """El par de los M3 sale de la ARANDELA, no del tornillo.
 
@@ -1592,6 +1628,7 @@ def main() -> int:
     guarda_aire(p)
     guarda_chaflan(p)
     guarda_apriete(p)
+    guarda_paticas(p)
     guarda_fresado(p)
     guarda_parametros_vivos(p)
     guarda_escalon(p)

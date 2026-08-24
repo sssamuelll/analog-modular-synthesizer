@@ -704,14 +704,41 @@ hol_piel    = 0.15;
 // bandeja de entrepiso, el unico cliente del acrilico de 5 mm es la tapa del
 // valle. Comprar una plancha entera para una pieza es cosa del pliego.
 t_piel      = 8;
-// Paticas: METALICAS, torneadas, pequenas (Samuel, 2026-08-17 -- "metalicas
-// y elegantes"). No son de goma: eso cambia el BOM y el acabado. Van bajo los
-// COSTADOS, que son las piezas portantes de 8 mm, con su cara exterior a ras
-// del costado; el resto del disco vuela hacia dentro, bajo la bandeja. El
-// canto de abajo del perfil va RECTO por esto mismo: con paticas en los
-// extremos, un canto abombado convierte el apoyo en un balancin.
-alto_pie    = 8;    // altura de la patica
-d_pie       = 16;   // diametro; pequeno a proposito
+// PATICAS: DE GOMA. Samuel, 2026-08-24 -- "prefiero las gomas solamente,
+// pero unas gomas serias".
+//
+// ESTO REVIERTE LA NOTA DEL 2026-08-17 que decia "METALICAS, torneadas,
+// pequenas... No son de goma: eso cambia el BOM y el acabado". Y al
+// revertirla, LA SPEC §5 DEJA DE ESTAR EQUIVOCADA: nunca dejo de decir "pies
+// de goma bajo la base". Habia una contradiccion de TRES documentos -- este
+// fichero decia metal, el README listaba las dos cosas a la vez en dos
+// tablas distintas, y la spec decia goma -- y se cierra volviendo al unico
+// que no se movio.
+//
+// LA COTA QUE DECIDE SI SIRVE ES CUANTO SE HUNDE, no la dureza ni el
+// diametro. El toroide excita a 100 Hz (#106) y la pata es un muelle: si su
+// frecuencia propia cae cerca de ahi, AMPLIFICA en vez de aislar, y le pasa
+// a la mesa mas zumbido del que le pasaria el acrilico en seco.
+//
+//   se hunde   f propia   transmite
+//   0.10 mm     49.8 Hz     33 %
+//   0.25 mm     31.5 Hz     11 %    <- esta
+//   0.50 mm     22.3 Hz      5 %
+//   1.00 mm     15.8 Hz    2.5 %
+//
+// 0.25 es el minimo que deja la f propia a un tercio de la excitacion, que
+// es el criterio de manual. Mas blanda aisla mejor y se bambolea mas.
+//
+// ES REQUISITO DE COMPRA, NO DE DIBUJO: se exige la curva carga-deformacion
+// del fabricante. Una goma que no publica esa curva no se puede verificar y
+// por tanto no sirve, por seria que parezca.
+//
+// La altura sale gratis: la entrada de aire se mudo a la trasera el
+// 2026-08-21, asi que la separacion al suelo ya no ventila nada y alto_pie
+// no entra en ninguna derivacion.
+flecha_pie  = 0.25; // mm bajo 22.8 N. DE HOJA DE DATOS, no estimado
+alto_pie    = 10;   // sube de 8: la flecha necesita material donde ocurrir
+d_pie       = 20;   // sube de 16: area para no aplastarse permanentemente   // diametro; pequeno a proposito
 // EJE DE LA TAPA: NO HAY BISAGRA. El eje es EL PROPIO M5 con el que el riel de
 // arriba se fija de punta al costado. Samuel, viendo el render: "deberia ser el
 // mismo tornillo con el que se atornilla la barra del eurorack no? por que tanto

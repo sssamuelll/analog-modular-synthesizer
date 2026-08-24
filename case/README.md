@@ -425,7 +425,7 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa. **Sustituye al amortiguador**, que se eliminó |
 | Plancha acrílico t=5 mm | **1** | solo la tapa del valle. Un espesor entero para **una** pieza — a resolver en el pliego, no en el modelo |
 | Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante, 528.32 × 291.4) + tapa de remate (528.32 × 37) + **trasera** (528.02 × 248.18, con las tres ondas y la rejilla de entrada de aire) |
-| Patica metálica torneada | 4 | d=16 × 8 mm |
+| Patica de goma con casquillo roscado | 4 | EPDM o NBR, Shore 45–55 A, **d20 × 10**. **Se exige la curva carga-deformación: ≥ 0.25 mm de flecha con 22.8 N** — por debajo la pata AMPLIFICA los 100 Hz del toroide en vez de aislarlos (`flecha_pie`). Casquillo roscado moldeado: se atornilla, **no se pega** — el case no lleva juntas irreversibles |
 
 **Total de tornillos del case: 52** — 8 M4 de raíl + 10 M5 de esqueleto +
 4 M5 que cuelgan el chasis +
@@ -445,7 +445,6 @@ depende de la cuenta final de módulos, no de la geometría del cajón):
 | Espárrago M4 (bonding) | 1 | único — ver «Bonding de tierra» |
 | Cable verde/amarillo + terminal de ojal | 1 por panel | al espárrago único, sin excepción |
 | Tuerca T M3 | 4 por panel | uno por taladro de `panels/build_template.py` |
-| Pies de goma | sin fijar | base rectangular; cantidad a definir en el ensayo de ensamblaje |
 
 Censo actual de paneles: 8 (MIDI/CV, VCO×3, VCF, ADSR, VCA, MIXER —
 `clearance_budget.py`, `ANCHOS_PISO_SUP`/`ANCHOS_PISO_INF`). **Estimado, no
