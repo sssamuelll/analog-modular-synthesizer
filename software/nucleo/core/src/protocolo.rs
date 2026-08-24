@@ -36,10 +36,15 @@ pub enum CodigoError {
     /// que el otro lado sepa que se habla aqui y no solo que no nos
     /// entendemos.
     VersionIncompatible = 8,
+    /// N1/N2a: la politica no le deja esta etiqueta a la puerta por la que
+    /// entro. Es la puerta la que no puede, no el parametro el que se niega:
+    /// por eso NO es `SoloLectura`, que dice otra cosa y mandaria al cliente
+    /// a arreglar lo que no esta roto.
+    PuertaSinPermiso = 9,
 }
 
 impl CodigoError {
-    pub const TODOS: [CodigoError; 8] = [
+    pub const TODOS: [CodigoError; 9] = [
         CodigoError::NoExiste,
         CodigoError::SoloLectura,
         CodigoError::FueraDeRango,
@@ -48,6 +53,7 @@ impl CodigoError {
         CodigoError::ColaLlena,
         CodigoError::Desconocido,
         CodigoError::VersionIncompatible,
+        CodigoError::PuertaSinPermiso,
     ];
 
     pub fn de_byte(b: u8) -> Option<Self> {
