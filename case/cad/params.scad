@@ -425,6 +425,24 @@ radio_remate    = 2;
 // Si aparece en el prototipo, el remedio NO es volver al radio -- es un chaflan
 // de 0.5 x 45, que mata el filo sin devolver el hueco contra la trasera.
 radio_trasero   = 0;
+// CHAFLAN de toda arista VISTA. 0.5 x 45 grados.
+//
+// NO ES GEOMETRIA DE ESTE MODELO y por eso no aparece en ningun DXF: un
+// fichero de corte 2D no sabe decir "y ademas matale el filo". Es cota de
+// PLIEGO, y vive aqui para que tenga puerta y no se pierda en un correo.
+//
+// POR QUE EXISTE. El 2026-08-24 las dos esquinas traseras pasaron a VIVAS
+// (radio_trasero, arriba) para que la trasera empotre a ras, y ese mismo dia
+// se decidio canto DIAMANTADO. Arista viva mas canto pulido = se desportilla
+// al primer roce, y la de fondo-abajo esta a ras del suelo, justo donde el
+// case roza al arrastrarlo por una mesa. El chaflan resuelve el filo SIN
+// devolver el hueco contra la trasera, que es lo que costaba el radio.
+//
+// 0.5 y no menos: por debajo de 0.3 el taller no lo ejecuta como chaflan, lo
+// redondea. Y no mas: en la tapa del valle (5 mm) un chaflan grande deja el
+// canto en filo otra vez por el otro lado, porque se come las DOS caras.
+// Lo vigila guarda_chaflan() por los dos extremos.
+chaflan         = 0.5;
 
 // --- materiales ---
 t_acrilico = 5;    // planchas del cuerpo; MEDIR con calibre (spec §11)

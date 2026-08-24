@@ -931,6 +931,40 @@ def guarda_aire(p: dict[str, float]) -> None:
           f"sin perdidas de trafo")
 
 
+def guarda_chaflan(p: dict[str, float]) -> None:
+    """El chaflan mata el filo sin comerse la pieza.
+
+    Existe porque el 2026-08-24 las dos esquinas traseras pasaron a VIVAS
+    (radio_trasero = 0) para que la trasera empotre a ras, y ese mismo dia se
+    decidio canto DIAMANTADO. Arista viva mas canto pulido es una esquina que
+    se desportilla al primer roce, y la de fondo-abajo esta a ras del suelo,
+    que es donde el case roza al arrastrarlo por una mesa.
+
+    NO ES GEOMETRIA DE ESTE MODELO y por eso no aparece en ningun DXF: un
+    fichero de corte 2D no sabe decir "y ademas matale el filo". Es cota de
+    PLIEGO. Vive aqui para tener puerta y no perderse.
+
+    Dos limites, y muerden por razones distintas:
+      - por abajo, la maquina: un chaflan menor que 0.3 no se ejecuta como
+        chaflan, se redondea solo. Pedir arista viva es otra cosa y se dice
+        aparte.
+      - por arriba, la plancha mas FINA: el chaflan se come material de las
+        DOS caras, y en la tapa del valle (5 mm) uno grande deja el canto en
+        filo otra vez, por el otro lado.
+    """
+    t_min = min(p["t_acrilico"], p["t_base"], p["t_cheek"], p["t_piel"])
+    assert p["chaflan"] >= 0.3, (
+        f"chaflan = {p['chaflan']} mm: por debajo de 0.3 el taller no lo "
+        f"ejecuta como chaflan, lo redondea. Pedir 0 (arista viva) es otra "
+        f"cosa y hay que decirlo aparte, no colarlo por aqui.")
+    assert p["chaflan"] <= t_min / 4, (
+        f"chaflan = {p['chaflan']} mm contra la plancha mas fina ({t_min:g} "
+        f"mm): se come mas de un cuarto del espesor por cada cara y el canto "
+        f"vuelve a quedar en filo. Maximo {t_min/4:.2f}.")
+    print(f"chaflan: {p['chaflan']} mm x 45 en toda arista vista "
+          f"(techo por la plancha de {t_min:g} mm: {t_min/4:.2f})")
+
+
 def guarda_fresado(p: dict[str, float]) -> None:
     """Lo que una fresa puede hacer y un laser no obliga a pensar.
 
@@ -1511,6 +1545,7 @@ def main() -> int:
     canario_alineacion(p)
     guarda_piso(p)
     guarda_aire(p)
+    guarda_chaflan(p)
     guarda_fresado(p)
     guarda_parametros_vivos(p)
     guarda_escalon(p)
