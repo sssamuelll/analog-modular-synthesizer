@@ -7,21 +7,29 @@
 //!
 //! ```text
 //!   off  tam  campo
-//!    0    2   id (u16)
-//!    2    1   banderas
+//!    0    4   id (u32)
+//!    4    1   banderas
 //!               bit0 solo_lectura   bit1 medida   bit2 confirmacion_fisica
 //!               bit3 ambito (0 = compartido, 1 = por-voz)
 //!               bits 4-5 tipo (0 continuo, 1 enumerado, 2 booleano)
 //!               bit6 acepta_modulacion
-//!    3    4   min (i32)
-//!    7    4   max (i32)
-//!   11    4   def (i32)
-//!   15    1   unidad
-//!   16    1   largo del nombre
-//!   17    n   nombre en UTF-8
-//!        1   numero de etiquetas
+//!    5    4   min (i32)
+//!    9    4   max (i32)
+//!   13    4   def (i32)
+//!   17    1   unidad
+//!   18    1   largo del nombre
+//!   19    n   nombre en UTF-8
+//!   19+n  1   numero de etiquetas
 //!        por etiqueta: 1 byte de largo + los bytes UTF-8
 //! ```
+//!
+//! Esta tabla decia `0 2 id (u16)` y el codec siempre escribio `w.u32`, asi
+//! que TODOS los offsets estaban corridos por 2 -- y quien implementara el
+//! parser desde este comentario, que es exactamente lo que hara quien escriba
+//! la carcasa web, sacaba basura en todos los campos. Es el #182, fallo 2.
+//!
+//! Ahora la tabla no se cree: la clava `la_tabla_de_arriba_es_la_de_verdad`,
+//! que asevera cada offset contra bytes de verdad.
 
 use crate::param::ParamId;
 
@@ -479,5 +487,73 @@ mod techo_del_volcado {
                 n as f32 / MAX_DESCRIPTOR_B as f32 * 100.0
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod forma_del_cable {
+    use super::*;
+
+    /// Un descriptor con TODOS los campos distintos entre si, para que un
+    /// offset corrido no pueda pasar desapercibido por casualidad.
+    static PIN: Descriptor = Descriptor {
+        id: ParamId(0x0A0B_0C0D),
+        nombre: "ab",
+        tipo: Tipo::Enumerado,
+        ambito: Ambito::PorVoz,
+        solo_lectura: true,
+        medida: false,
+        confirmacion_fisica: false,
+        acepta_modulacion: true,
+        min: -2,
+        max: 3,
+        def: 1,
+        unidad: Unidad::Ninguna,
+        etiquetas: &["x"],
+    };
+
+    /// La tabla del encabezado de este modulo es la UNICA especificacion
+    /// publicada del formato, y su propio texto dice para quien: "lo van a
+    /// parsear el puente inalambrico y JavaScript en la UI web, y un
+    /// `DataView` tiene que poder leerlo sin librerias".
+    ///
+    /// Un `DataView` lee por OFFSET. Si la tabla miente, el parser no falla:
+    /// devuelve numeros plausibles y equivocados, que es peor. Por eso esto se
+    /// asevera byte a byte y NO con un ida y vuelta -- un `escribir` + `leer`
+    /// pasa igual de bien con la tabla mintiendo, porque los dos lados
+    /// comparten el error. Eso es justo lo que dejo pasar el fallo 2.
+    #[test]
+    fn la_tabla_de_arriba_es_la_de_verdad() {
+        let mut b = [0u8; 64];
+        let n = escribir(&PIN, &mut b).unwrap();
+
+        //  0  4  id (u32 LE)
+        assert_eq!(
+            &b[0..4],
+            &[0x0D, 0x0C, 0x0B, 0x0A],
+            "id: off 0, cuatro bytes"
+        );
+        //  4  1  banderas
+        //          bit6 modulacion --+
+        //   bits 4-5 tipo = 01 enumerado |
+        //          bit3 ambito por-voz | |
+        //          bit0 solo_lectura | | |
+        //                            v v v
+        let esperadas = 0b0101_1001; // 1 + 8 + 16 + 64 = 89
+        assert_eq!(b[4], esperadas, "banderas: off 4");
+        //  5  4  min      9  4  max     13  4  def
+        assert_eq!(&b[5..9], &(-2i32).to_le_bytes(), "min: off 5");
+        assert_eq!(&b[9..13], &3i32.to_le_bytes(), "max: off 9");
+        assert_eq!(&b[13..17], &1i32.to_le_bytes(), "def: off 13");
+        // 17  1  unidad
+        assert_eq!(b[17], Unidad::Ninguna as u8, "unidad: off 17");
+        // 18  1  largo del nombre   19  n  nombre
+        assert_eq!(b[18], 2, "largo del nombre: off 18");
+        assert_eq!(&b[19..21], b"ab", "nombre: off 19");
+        // 19+n  1  numero de etiquetas, y luego largo + bytes
+        assert_eq!(b[21], 1, "numero de etiquetas: off 19+n");
+        assert_eq!(b[22], 1, "largo de la etiqueta");
+        assert_eq!(&b[23..24], b"x", "la etiqueta");
+        assert_eq!(n, 24, "el total, que es lo que avanza el sobre");
     }
 }
