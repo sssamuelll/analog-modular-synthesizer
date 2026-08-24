@@ -24,7 +24,7 @@
 use crate::medidas;
 use crate::modelo::{ErrorSet, Modelo};
 use crate::param::{ParamId, Valor};
-use crate::protocolo::{CodigoError, Mensaje};
+use crate::protocolo::{etiqueta_de, CodigoError, Mensaje};
 use crate::rampa::{Rampa, Rampas, MAX_RAMPAS};
 use crate::rejilla::PPQN_INTERNO;
 use crate::rejilla::{siguiente_borde, Rejilla};
@@ -106,12 +106,16 @@ const _: () = {
     const SET_QUE_ANULA: usize = 1 + 2 * MAX_SUSCRIPTORES;
     /// Un `SET` sobre algo que exige confirmacion fisica: `ERROR` + `PENDING`.
     const SET_RETENIDO: usize = 2;
+    /// Un `HELLO` de otra version: `HOLA` con la nuestra + `ERROR` con nombre
+    /// (N7). Los dos van al que pregunto, no a los suscriptores.
+    const HELLO_INCOMPATIBLE: usize = 2;
 
     assert!(TICK <= MAX_RESPUESTAS);
     assert!(REACTIVAR_TODAS <= MAX_RESPUESTAS);
     assert!(CADUCAR <= MAX_RESPUESTAS);
     assert!(SET_QUE_ANULA <= MAX_RESPUESTAS);
     assert!(SET_RETENIDO <= MAX_RESPUESTAS);
+    assert!(HELLO_INCOMPATIBLE <= MAX_RESPUESTAS);
 };
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -250,13 +254,32 @@ impl Instrumento {
             return r;
         }
         match m {
-            Mensaje::Hello { .. } => {
+            // N7. Esto era `Hello { .. }`: la version del cliente se leia del
+            // cable y se tiraba, y se contestaba `Hola` a cualquiera. El
+            // docstring de `Hola` ya lo denunciaba -- "sin esto la negociacion
+            // es de un solo sentido y no negocia nada" -- y encima el papel del
+            // nucleo y el de la autopista PLANIFICAN rupturas de formato
+            // apoyandose en un mecanismo que no funcionaba.
+            //
+            // El `Hola` sale igual y sale primero, coincida o no: el otro lado
+            // necesita saber QUE hablamos para decidir que hacer. Negarse sin
+            // decir la version deja al cliente tan a ciegas como el silencio.
+            Mensaje::Hello { version } => {
                 self.empujar(
                     &mut r,
                     Respuesta::Mensaje(Mensaje::Hola {
                         version: VERSION_PROTOCOLO,
                     }),
                 );
+                if version != VERSION_PROTOCOLO {
+                    self.empujar(
+                        &mut r,
+                        Respuesta::Mensaje(Mensaje::Error {
+                            etiqueta: etiqueta_de(&m),
+                            codigo: CodigoError::VersionIncompatible,
+                        }),
+                    );
+                }
             }
             Mensaje::Describe => {
                 self.empujar(&mut r, Respuesta::Descriptores);
@@ -610,7 +633,7 @@ impl Instrumento {
         self.empujar(
             r,
             Respuesta::Mensaje(Mensaje::Error {
-                etiqueta: crate::protocolo::etiqueta_de(m),
+                etiqueta: etiqueta_de(m),
                 codigo,
             }),
         );
@@ -691,6 +714,37 @@ mod tests {
                 _ => None,
             })
             .collect()
+    }
+
+    /// N7. `Hello` descartaba la version del cliente con `{ .. }` y contestaba
+    /// `Hola` a cualquiera, aunque el docstring de `Hola` (`protocolo.rs`) diga
+    /// que sin mirarla "la negociacion es de un solo sentido y no negocia
+    /// nada". Y tanto el papel del nucleo como el de la autopista planifican
+    /// rupturas de formato apoyandose en este mecanismo.
+    ///
+    /// Un cliente que habla otra version tiene que enterarse AQUI, con un
+    /// codigo que se pueda nombrar -- no tres mensajes despues, en forma de
+    /// basura silenciosa que el no sabe leer.
+    #[test]
+    fn un_cliente_de_otra_version_recibe_un_error_con_nombre() {
+        let ajena = VERSION_PROTOCOLO + 1;
+        let r = instrumento().atender(Mensaje::Hello { version: ajena }, 0);
+        assert_eq!(
+            mensajes(&r).as_slice(),
+            &[
+                // El `Hola` va PRIMERO y va igual: el cliente necesita saber
+                // QUE hablamos para decidir que hacer, no solo que no nos
+                // entendemos. Decirle "no" sin decirle "esto es lo que hay"
+                // lo deja tan a ciegas como el silencio de antes.
+                Mensaje::Hola {
+                    version: VERSION_PROTOCOLO
+                },
+                Mensaje::Error {
+                    etiqueta: etiqueta_de(&Mensaje::Hello { version: ajena }),
+                    codigo: CodigoError::VersionIncompatible,
+                },
+            ]
+        );
     }
 
     #[test]

@@ -31,10 +31,15 @@ pub enum CodigoError {
     /// La etiqueta no esta en la tabla de §4.1, o venia en la direccion
     /// equivocada — un cliente no puede fabricar un `CHANGED`.
     Desconocido = 7,
+    /// N7: el cliente habla una version del protocolo que no es la
+    /// nuestra. Va SIEMPRE acompanado de un `Hola` con la nuestra, para
+    /// que el otro lado sepa que se habla aqui y no solo que no nos
+    /// entendemos.
+    VersionIncompatible = 8,
 }
 
 impl CodigoError {
-    pub const TODOS: [CodigoError; 7] = [
+    pub const TODOS: [CodigoError; 8] = [
         CodigoError::NoExiste,
         CodigoError::SoloLectura,
         CodigoError::FueraDeRango,
@@ -42,6 +47,7 @@ impl CodigoError {
         CodigoError::NoDisponible,
         CodigoError::ColaLlena,
         CodigoError::Desconocido,
+        CodigoError::VersionIncompatible,
     ];
 
     pub fn de_byte(b: u8) -> Option<Self> {
