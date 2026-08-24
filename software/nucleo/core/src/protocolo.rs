@@ -116,6 +116,11 @@ pub enum Mensaje {
     /// conectarse ya puede comparar contra su cache y decidir si pedir
     /// `Describe` o no pedirlo nunca. Un mensaje aparte costaria justo el
     /// viaje que este mecanismo existe para ahorrar.
+    ///
+    /// **Una huella de CERO significa «no cachees»** y hay que tratarla como
+    /// tal: el instrumento sabe que su volcado sale incompleto. Ver
+    /// `modelo::HUELLA_NO_CACHEABLE`. Guardar el volcado bajo un cero es
+    /// cachear una tabla coja para siempre.
     Hola {
         version: u16,
         huella: u32,
@@ -123,6 +128,9 @@ pub enum Mensaje {
     /// B3, el contrato del volcado. Va ANTES del primer descriptor y dice
     /// cuantos vienen. Sin esto el cliente no puede distinguir «termino» de
     /// «se aborto» de «todavia viene».
+    ///
+    /// La huella repetida aqui es la misma que la del saludo, y el cero
+    /// significa lo mismo: no cachees lo que viene.
     VolcadoInicio {
         n: u16,
         huella: u32,

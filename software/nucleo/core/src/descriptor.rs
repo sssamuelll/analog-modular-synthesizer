@@ -163,17 +163,9 @@ pub enum ErrorCodec {
     Desconocido,
 }
 
-/// Lo mas que puede ocupar UN descriptor en el cable.
-///
-/// No es un techo del formato: es el tamano del buffer del volcado en
-/// `fw/src/usb.rs`, que lo LEE de aqui en vez de repetir el 256 por su cuenta.
-///
-/// Y no es un techo blando. `mandar_descriptores` hacia `?` sobre `escribir`,
-/// asi que UN solo descriptor pasado se llevaba por delante el volcado ENTERO
-/// -- en silencio, y sin que el cliente pudiera distinguir "termino" de "se
-/// aborto". Es el #182, fallo 5.
 /// El punto de partida de FNV-1a de 32 bits. No es cero a proposito: un cero
-/// seria indistinguible de «no se calculo».
+/// seria indistinguible de «no se calculo», que es justo el significado que
+/// `modelo::HUELLA_NO_CACHEABLE` le reserva al cero de la huella.
 pub const FNV_BASE: u32 = 0x811C_9DC5;
 
 /// FNV-1a, 32 bits. Se elige por lo que NO trae: sin tablas, sin estado, sin
@@ -188,6 +180,16 @@ pub fn fnv1a(mut h: u32, bytes: &[u8]) -> u32 {
     h
 }
 
+/// Lo mas que puede ocupar UN descriptor en el cable.
+///
+/// No es un techo del formato: es el tamano del buffer del volcado en
+/// `fw/src/usb.rs`, que lo LEE de aqui en vez de repetir el 256 por su cuenta.
+///
+/// Y no es un techo blando. `mandar_descriptores` hacia `?` sobre `escribir`,
+/// asi que UN solo descriptor pasado se llevaba por delante el volcado ENTERO
+/// -- en silencio, y sin que el cliente pudiera distinguir "termino" de "se
+/// aborto". Es el #182, fallo 5. Hoy se lo salta y lo cuenta, y el modelo que
+/// tenga uno asi deja de ser cacheable (`modelo::HUELLA_NO_CACHEABLE`).
 pub const MAX_DESCRIPTOR_B: usize = 256;
 
 /// Cuanto de ese techo se deja ocupar antes de dar la alarma.

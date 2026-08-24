@@ -24,6 +24,19 @@ use heapless::Vec;
 /// El numero lo LEE `check_censo_voz.py` de esta linea. No lo copies.
 pub const MAX_PARAMS: usize = 1024;
 
+/// **No cachees**: el volcado de este modelo sale incompleto.
+///
+/// Lo devuelve `Modelo::huella` cuando algun descriptor no cabe en el sobre.
+/// Cero es el centinela porque ya lo era de hecho: el test del modelo vacio
+/// existia desde el primer dia para que la huella buena no valiera cero,
+/// justamente porque "seria indistinguible de <<no se calculo>>". Esto solo
+/// convierte esa reserva en contrato.
+///
+/// Que un modelo sano de cero por casualidad es 1 entre 2^32, y el precio de
+/// esa casualidad es que la carcasa pida el volcado siempre: mas lento, nunca
+/// incorrecto. El lado seguro del error esta escogido a proposito.
+pub const HUELLA_NO_CACHEABLE: u32 = 0;
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Cambio {
     pub id: ParamId,
@@ -119,23 +132,28 @@ impl Modelo {
     /// de modulo llegan por I2C y el orden del barrido no esta garantizado.
     /// Si la huella fuera historica y no canonica, la cache se invalidaria
     /// sola en cada arranque y todo esto no serviria para nada.
+    ///
+    /// **Devuelve `HUELLA_NO_CACHEABLE` en cuanto uno no cabe.** No es un
+    /// caso raro que se tolera: es el unico desenlace honesto. El volcado de
+    /// ese modelo sale corto para siempre, y una huella estable sobre un
+    /// volcado corto es una cache coja que ya nunca se vuelve a mirar.
+    ///
+    /// Lo que este numero NO lleva es la version del protocolo, y el papel de
+    /// la Autopista la pedia («hash del descriptor completo + version»). Se
+    /// deja fuera porque N7 ya cierra ese hueco por delante: un cliente de
+    /// otra version no llega a comparar huellas -- se lleva un
+    /// `VersionIncompatible` en el saludo. Meterla aqui seria un segundo
+    /// candado en una puerta que ya no abre.
     pub fn huella(&self) -> u32 {
         let mut plano = [0u8; crate::descriptor::MAX_DESCRIPTOR_B];
         let mut h = crate::descriptor::FNV_BASE;
         for d in self.descriptores() {
             match crate::descriptor::escribir(d, &mut plano) {
                 Ok(n) => h = crate::descriptor::fnv1a(h, &plano[..n]),
-                // Uno que no cabe NO se manda (el firmware se lo salta), pero
-                // tiene que seguir moviendo la huella: si no, dos modelos que
-                // solo difieren en un descriptor gordo compartirian cache.
-                //
-                // Limite conocido: dos descriptores del mismo id que NO quepan
-                // y difieran entre si dan la misma huella. Se vive con ello
-                // porque el terminador del volcado lleva la cuenta de lo que
-                // SI se mando, asi que un salto es detectable por ahi -- y
-                // porque un descriptor que no cabe ya es un volcado roto, y la
-                // huella no es el sitio donde se arregla eso. Es N4/B3.
-                Err(_) => h = crate::descriptor::fnv1a(h, &d.id.0.to_be_bytes()),
+                // Uno que no cabe NO se manda, asi que este modelo no se puede
+                // reconstruir desde el volcado -- y lo que no se puede
+                // reconstruir no se cachea. Ver `HUELLA_NO_CACHEABLE`.
+                Err(_) => return HUELLA_NO_CACHEABLE,
             }
         }
         h
@@ -335,7 +353,7 @@ mod tests_huella {
     use super::*;
     use crate::descriptor::{Ambito, Tipo, Unidad};
 
-    const fn d(id: u32, solo_lectura: bool) -> Descriptor {
+    const fn d(id: u32, solo_lectura: bool, etiquetas: &'static [&'static str]) -> Descriptor {
         Descriptor {
             id: ParamId(id),
             nombre: "prueba",
@@ -349,15 +367,24 @@ mod tests_huella {
             max: 100,
             def: 0,
             unidad: Unidad::Ninguna,
-            etiquetas: &[],
+            etiquetas,
         }
     }
 
-    static A: Descriptor = d(0x0100_0001, false);
-    static B: Descriptor = d(0x0100_0002, false);
-    static C: Descriptor = d(0x0100_0003, false);
+    static A: Descriptor = d(0x0100_0001, false, &[]);
+    static B: Descriptor = d(0x0100_0002, false, &[]);
+    static C: Descriptor = d(0x0100_0003, false, &[]);
     /// Mismo id que A, distinto contenido.
-    static A_CAMBIADO: Descriptor = d(0x0100_0001, true);
+    static A_CAMBIADO: Descriptor = d(0x0100_0001, true, &[]);
+
+    /// El descriptor que NO cabe en el sobre. Se hace gordo por las etiquetas
+    /// a proposito y no por el nombre: es la via que `descriptor.rs` senala
+    /// como la que engorda sin que nadie mire -- "lo que engorda un descriptor
+    /// son las etiquetas de los enumerados y crecen sin que nadie mire".
+    ///
+    /// 32 etiquetas de 36 B son 1184 B contra los 256 de `MAX_DESCRIPTOR_B`.
+    static ETIQUETAS_GORDAS: [&str; 32] = ["una etiqueta larguisima de enumerado"; 32];
+    static GORDO: Descriptor = d(0x0100_0004, false, &ETIQUETAS_GORDAS);
 
     fn con(ds: &[&'static Descriptor]) -> Modelo {
         let mut m = Modelo::nuevo();
@@ -402,5 +429,28 @@ mod tests_huella {
     #[test]
     fn el_modelo_vacio_tiene_huella_y_no_es_cero() {
         assert_ne!(Modelo::nuevo().huella(), 0);
+    }
+
+    /// El envenenamiento de la cache, que es lo que B3 se juega entero.
+    ///
+    /// Un descriptor que no cabe no se manda. El terminador del volcado lo
+    /// canta -- `enviados` no cuadra con `n` -- pero lo canta UNA vez, en la
+    /// primera conexion. Si el modelo incompleto tuviera huella cacheable, el
+    /// cliente guardaria la tabla coja bajo esa huella y en el arranque
+    /// siguiente la huella COINCIDE: el volcado ya no se pide, el terminador
+    /// ya no se manda, y el parametro que falta deja de existir para siempre.
+    ///
+    /// Un fallo que se ve una vez y luego se calla es peor que uno que no se
+    /// ve nunca, porque el primero deja constancia de que se miro.
+    #[test]
+    fn un_modelo_que_no_cabe_entero_no_es_cacheable() {
+        assert_eq!(con(&[&A, &GORDO]).huella(), HUELLA_NO_CACHEABLE);
+    }
+
+    /// Y el corte no puede depender de en que sitio del barrido esta el gordo:
+    /// si el bucle sale antes o despues, la respuesta es la misma.
+    #[test]
+    fn da_igual_donde_este_el_que_no_cabe() {
+        assert_eq!(con(&[&GORDO, &A]).huella(), con(&[&A, &GORDO]).huella());
     }
 }

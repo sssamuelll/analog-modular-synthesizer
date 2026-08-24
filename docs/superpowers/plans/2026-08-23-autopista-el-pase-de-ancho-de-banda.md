@@ -255,6 +255,27 @@ estado de arranque en voz alta, no por omisión.
 > Y el formato del descriptor **sigue sin tocarse**: un descriptor sigue
 > midiendo 250 de 256 en el peor caso declarado, y su test sigue en rojo con
 > `ignore`. Lo que cambio es que saltarselo ya no es invisible.
+>
+> **Y lo que la junta adversarial encontro encima.** La primera version de la
+> huella dejaba que un modelo con un descriptor gordo siguiera teniendo huella
+> estable. Los tres dictamenes lo marcaron por separado, cada uno por un
+> camino distinto, y el modo de fallo es el mismo: el terminador canta el
+> faltante **en la primera conexion y nunca mas**, porque a partir de la
+> segunda la huella coincide con la cacheada y el volcado ya no se pide. Un
+> fallo que se ve una vez y luego se calla es peor que uno que no se ve nunca:
+> el primero deja constancia de que se miro.
+>
+> Se cierra con un centinela, no con un parche: **huella cero = no cachees**
+> (`modelo::HUELLA_NO_CACHEABLE`). El cero ya estaba reservado de hecho desde
+> el primer dia -- el test del modelo vacio existia para que la huella buena
+> nunca valiera cero, *"seria indistinguible de no se calculo"*. Esto solo
+> convierte esa reserva en contrato.
+>
+> **La version NO entra en la huella**, aunque este papel la pedia (§ *"hash
+> del descriptor completo + version"*). N7 ya cierra ese hueco por delante: un
+> cliente de otra version se lleva un `VersionIncompatible` en el saludo y
+> nunca llega a comparar huellas. Meterla seria un segundo candado en una
+> puerta que ya no abre.
 
 > **Por que B1 cambio.** `cadena(f_barrido, f_lazo)` siempre acepto dos
 > frecuencias y `main()` la llamaba con el mismo numero para las dos. Son
