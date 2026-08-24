@@ -12,6 +12,8 @@
 //! ```
 
 use defmt::{info, warn};
+use embassy_futures::select::{select, Either};
+use embassy_time::{Duration, Instant, Timer};
 use embassy_rp::peripherals::USB;
 use embassy_rp::usb::{Driver, InterruptHandler};
 use embassy_usb::class::midi::MidiClass;
@@ -19,7 +21,7 @@ use embassy_usb::{Builder, Config, UsbDevice};
 use sam17_nucleo_core::descriptor;
 use sam17_nucleo_core::protocolo::{codificar, decodificar, Mensaje};
 use sam17_nucleo_core::servidor::{Instrumento, Respuesta};
-use sam17_nucleo_core::sysex::{desenvolver, envolver};
+use sam17_nucleo_core::sysex::{desenvolver, envolver, largo_empaquetado};
 use sam17_nucleo_core::usbmidi::{empaquetar_sysex, Desempaquetador, Paquete, Trozo, MAX_SYSEX};
 use static_cell::StaticCell;
 
@@ -35,6 +37,27 @@ const PID: u16 = 0x0017;
 
 /// 64 bytes es el maximo de un endpoint bulk a full speed.
 const TAM_PAQUETE: u16 = 64;
+
+/// Lo que ocupa UN descriptor ya metido en su sobre de SysEx.
+///
+/// Era `384`, un literal a ojo dentro de `mandar_descriptores`, justo al lado
+/// de un `MAX_DESCRIPTOR_B` que si se leia de `core`. Sobraba, pero sobraba
+/// por casualidad: nadie habia escrito la cuenta y nada la rehacia si
+/// `MAX_DESCRIPTOR_B` subiera -- que es exactamente lo que una de las dos
+/// ramas de N4 propone hacer.
+///
+/// La cuenta, con las dos piezas citadas de `core::sysex`:
+///
+/// ```text
+///   empaquetado 7-a-8   largo_empaquetado(256) = 256 + ceil(256/7) = 293
+///   sobre               F0 + 0x7D + ... + F7                       =   3
+///                                                                    ---
+///                                                                    296
+/// ```
+///
+/// Ya no se escribe el 296: se deriva, para que la cuenta la rehaga el
+/// compilador y no la memoria de nadie.
+const MAX_SOBRE_B: usize = 3 + largo_empaquetado(descriptor::MAX_DESCRIPTOR_B);
 
 pub type Sam17Usb = UsbDevice<'static, Driver<'static, USB>>;
 
@@ -75,6 +98,37 @@ pub async fn correr_usb(mut d: Sam17Usb) -> ! {
     d.run().await
 }
 
+/// Cada cuanto se le dice al instrumento que hora es.
+///
+/// A 120 BPM un pulso interno dura 5,2 ms (PPQN_INTERNO = 96), asi que 1 ms da
+/// cinco tics por pulso; a 300 BPM, dos. Es resolucion de sobra para que el
+/// planeo de una rampa no se vea escalonado, y el coste es un `select` que ya
+/// estaba ahi.
+///
+/// DECLARADO, no medido: no hay medida del coste de CPU de este lazo ni del
+/// jitter que mete el volcado de descriptores reteniendo el `await`. Sale de
+/// `arranque_budget.py` el dia que exista (#180).
+const PERIODO_TICK: Duration = Duration::from_millis(1);
+
+/// Un tic: se le dice la hora al instrumento y se manda lo que conteste.
+///
+/// Son DOS llamadas a proposito. `avanzar_a` no caduca las retenidas porque
+/// las aserciones `const` del buzon acotan los caminos por separado; meterlas
+/// en el mismo `Respuestas` podria desbordarlo.
+async fn correr_el_reloj(
+    midi: &mut MidiClass<'static, Driver<'static, USB>>,
+    instrumento: &mut Instrumento,
+) -> Result<(), ()> {
+    let ahora = Instant::now();
+    for resp in instrumento.avanzar_a(ahora.as_micros()) {
+        responder(midi, instrumento, resp).await?;
+    }
+    for resp in instrumento.caducar(ahora.as_millis()) {
+        responder(midi, instrumento, resp).await?;
+    }
+    Ok(())
+}
+
 /// El lazo. Todo lo que hace es cablear piezas ya probadas.
 #[embassy_executor::task]
 pub async fn atender(
@@ -84,14 +138,41 @@ pub async fn atender(
     let mut desemp = Desempaquetador::nuevo();
     let mut entrada: Paquete = [0; 4];
     let mut plano = [0u8; MAX_SYSEX];
+    let mut proximo = Instant::now() + PERIODO_TICK;
 
     loop {
-        midi.wait_connection().await;
+        // El reloj corre HAYA O NO cliente. Esto es un instrumento, no un
+        // periferico: si nadie ha abierto el puerto MIDI, las rampas tienen
+        // que seguir escribiendo igual y la posicion del compas tiene que
+        // seguir siendo verdad. Por eso el tic tambien compite con la espera
+        // de conexion, y no solo con la lectura.
+        loop {
+            match select(midi.wait_connection(), Timer::at(proximo)).await {
+                Either::First(()) => break,
+                Either::Second(()) => {
+                    proximo += PERIODO_TICK;
+                    // Sin cliente no hay a quien contestar: se deja correr el
+                    // estado y se tiran las respuestas a proposito.
+                    let _ = instrumento.avanzar_a(Instant::now().as_micros());
+                    let _ = instrumento.caducar(Instant::now().as_millis());
+                }
+            }
+        }
         info!("USB: un cliente se conecto");
         desemp.reiniciar();
 
         loop {
-            match midi.read_packet(&mut entrada).await {
+            let leido = match select(midi.read_packet(&mut entrada), Timer::at(proximo)).await {
+                Either::First(r) => r,
+                Either::Second(()) => {
+                    proximo += PERIODO_TICK;
+                    if correr_el_reloj(&mut midi, instrumento).await.is_err() {
+                        break;
+                    }
+                    continue;
+                }
+            };
+            match leido {
                 Ok(4) => {}
                 Ok(n) => {
                     // USB-MIDI son paquetes de cuatro bytes. Otra cosa no es
@@ -156,13 +237,47 @@ async fn mandar_descriptores(
     midi: &mut MidiClass<'static, Driver<'static, USB>>,
     instrumento: &Instrumento,
 ) -> Result<(), ()> {
-    let mut plano = [0u8; 256];
-    let mut sobre = [0u8; 384];
+    let mut plano = [0u8; descriptor::MAX_DESCRIPTOR_B];
+    let mut sobre = [0u8; MAX_SOBRE_B];
     for d in instrumento.modelo().descriptores() {
-        let n = descriptor::escribir(d, &mut plano).map_err(|_| ())?;
-        let s = envolver(&plano[..n], &mut sobre).map_err(|_| ())?;
+        // Antes esto era `?`, o sea que UN descriptor que no cupiera se
+        // llevaba por delante el volcado ENTERO y el cliente se quedaba con un
+        // modelo a medias sin saberlo (#182, fallo 5). Saltarselo tampoco es
+        // bonito, pero mandar 300 descriptores menos uno es estrictamente
+        // mejor que mandar los que dio tiempo antes de reventar.
+        //
+        // La puerta que impide llegar aqui vive en core (descriptor.rs,
+        // `ningun_descriptor_compilado_se_acerca_al_techo_del_volcado`) y salta
+        // al 75 % del techo. Esto es el cinturon, no el freno -- y hoy el freno
+        // solo agarra los descriptores COMPILADOS: los de modulo llegan por
+        // I2C y el peor caso declarado ya mide 250 B de 256 (N4).
+        let Ok(n) = descriptor::escribir(d, &mut plano) else {
+            warn!("USB: un descriptor no cabe en el volcado, se salta");
+            continue;
+        };
+        // Y este era el MISMO fallo 5, una linea mas abajo y sin arreglar:
+        // `escribir` ya no abortaba el volcado, pero `envolver` si. Un solo
+        // sobre que no quepa no tiene por que llevarse los otros doscientos
+        // noventa y nueve.
+        //
+        // Por construccion no puede fallar: `MAX_SOBRE_B` es exactamente lo
+        // que ocupa envuelto un plano de `MAX_DESCRIPTOR_B`. Justamente por
+        // eso el dia que falle sera porque alguien movio una de las dos
+        // constantes, que es cuando menos falta hace que se caiga todo.
+        let Ok(s) = envolver(&plano[..n], &mut sobre) else {
+            warn!("USB: un sobre no cabe en el buffer, se salta");
+            continue;
+        };
+        // Este `?` SI se queda: si el USB se cayo no hay volcado que salvar,
+        // y el `warn` de arriba tampoco iba a salir por ningun lado.
         mandar_sysex(midi, &sobre[..s]).await?;
     }
+    // NO se manda terminador ni conteo: el cliente sigue sin poder distinguir
+    // "termino" de "falto uno", y ahora hay DOS sitios que se saltan uno en
+    // silencio. Eso es correcto y es lo que hay: el terminador es un cambio de
+    // FORMATO y lo decide N4 del pase del nucleo -- aqui no se inventa. Lo
+    // unico que se puede hacer sin tocar el formato es lo de arriba: dejar
+    // rastro en el log del propio instrumento.
     Ok(())
 }
 

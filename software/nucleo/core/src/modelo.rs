@@ -5,8 +5,24 @@ use crate::descriptor::Descriptor;
 use crate::param::{ParamId, Valor};
 use heapless::Vec;
 
-/// Capacidad, no conteo. Cinco modulos poblados con sus voces caben de sobra.
-pub const MAX_PARAMS: usize = 512;
+/// Capacidad del INSTRUMENTO entero, no de un modulo.
+///
+/// Estuvo en 512 con el comentario "cinco modulos poblados con sus voces caben
+/// de sobra", y `check_censo_voz.py` lo desmintio: la Voz total sola son 536.
+/// O sea un modulo se comia el 105 % de un techo que es de todos.
+///
+/// Sube a 1024 contra el unico censo que existe -- 536 de la Voz mas 256
+/// DECLARADOS de reserva para cerebro, bahia, mandos, telemetria e invitados.
+/// No hay censo a nivel de instrumento; cuando exista, este numero se deriva
+/// de el en vez de declararse.
+///
+/// Subirlo es barato y conviene decir por que: `Modelo` guarda 8 B por ranura
+/// (`&'static Descriptor` + `Valor = i32`), asi que 1024 son 8 KB de los
+/// 520 KB de SRAM del RP2350B. Y no cuesta tiempo: `pos()` es busqueda
+/// binaria sobre el conteo REAL, no sobre la capacidad.
+///
+/// El numero lo LEE `check_censo_voz.py` de esta linea. No lo copies.
+pub const MAX_PARAMS: usize = 1024;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Cambio {
@@ -160,6 +176,42 @@ mod tests {
     static NORMAL: Descriptor = d(0x1000, false, false, false);
     static MEDIDA: Descriptor = d(0x1001, true, true, false);
     static PELIGROSO: Descriptor = d(0x1002, false, false, true);
+
+    /// La capacidad declarada tiene que ser REAL. Un `MAX_PARAMS = 1024` no
+    /// vale nada si la insercion numero 900 rebota, y `registrar` mete en DOS
+    /// tablas que comparten capacidad: si se descuadraran, `pos()` devolveria
+    /// el indice de una y el valor de la otra, en silencio y para siempre.
+    ///
+    /// Se llena hasta el borde, se lee el primero y el ultimo, y se comprueba
+    /// que el que sobra REBOTA en vez de corromper.
+    static LLENO: [Descriptor; MAX_PARAMS] = {
+        let mut a = [d(0, false, false, false); MAX_PARAMS];
+        let mut i = 0;
+        while i < MAX_PARAMS {
+            a[i] = d(i as u32, false, false, false);
+            i += 1;
+        }
+        a
+    };
+
+    static UNO_DE_MAS: Descriptor = d(0xFFFF, false, false, false);
+
+    #[test]
+    fn la_capacidad_declarada_es_real() {
+        let mut m = Modelo::nuevo();
+        for desc in LLENO.iter() {
+            m.registrar(desc).unwrap();
+        }
+        assert_eq!(m.len(), MAX_PARAMS);
+
+        // las dos tablas van en fila: el borde de abajo y el de arriba
+        assert_eq!(m.get(ParamId(0)), Some(0));
+        assert_eq!(m.get(ParamId(MAX_PARAMS as u32 - 1)), Some(0));
+
+        // y el que sobra rebota
+        assert_eq!(m.registrar(&UNO_DE_MAS), Err(ErrorRegistro::Lleno));
+        assert_eq!(m.len(), MAX_PARAMS);
+    }
 
     fn modelo() -> Modelo {
         let mut m = Modelo::nuevo();

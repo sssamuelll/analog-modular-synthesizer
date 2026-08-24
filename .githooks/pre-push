@@ -50,6 +50,12 @@ g_pytest()   { cd "$RAIZ/software/midi-cv" && python -m pytest -q; }
 g_cargo()    { cd "$RAIZ/software/nucleo" && cargo test --workspace --quiet; }
 g_clippy()   { cd "$RAIZ/software/nucleo" && cargo clippy --workspace --all-targets -- -D warnings; }
 g_fmt()      { cd "$RAIZ/software/nucleo" && cargo fmt --all --check; }
+# `fw` esta EXCLUIDO del workspace (software/nucleo/Cargo.toml: exclude=["fw"])
+# porque compila para thumbv8m y `core` para el host. Consecuencia que nadie
+# habia notado: `cargo test --workspace` NUNCA lo compilaba, asi que el
+# firmware -- la mitad que de verdad se flashea -- no lo miraba ninguna puerta.
+# Lo caza la junta adversarial del 2026-08-24 (Serrano, BLOCKER 1).
+g_fw()       { cd "$RAIZ/software/nucleo/fw" && cargo check --quiet; }
 
 corre hardware g_hardware
 
@@ -78,10 +84,17 @@ if command -v cargo > /dev/null 2>&1; then
     else
         falta cargo-fmt "rustup component add rustfmt"
     fi
+    # El firmware va aparte: otro target y otro workspace.
+    if rustup target list --installed 2>/dev/null | grep -q thumbv8m.main-none-eabihf; then
+        corre firmware g_fw
+    else
+        falta firmware "rustup target add thumbv8m.main-none-eabihf"
+    fi
 else
     falta cargo-test "instala Rust: https://rustup.rs"
     falta cargo-clippy "instala Rust: https://rustup.rs"
     falta cargo-fmt "instala Rust: https://rustup.rs"
+    falta firmware "instala Rust: https://rustup.rs"
 fi
 
 echo ""
