@@ -26,8 +26,9 @@ use crate::modelo::{ErrorSet, Modelo};
 use crate::param::{ParamId, Valor};
 use crate::protocolo::{CodigoError, Mensaje};
 use crate::rampa::{Rampa, Rampas, MAX_RAMPAS};
+use crate::rejilla::PPQN_INTERNO;
 use crate::rejilla::{siguiente_borde, Rejilla};
-use crate::reloj::Reloj;
+use crate::reloj::{Fuente, Reloj};
 use crate::retencion::Retenidas;
 use crate::tiempo_params;
 use heapless::Vec;
@@ -67,6 +68,19 @@ const MAX_SUSCRIPTORES: usize = 1;
 /// Ahora el termino esta escrito, y las aserciones de abajo cubren los
 /// caminos que la formula sola no puede cubrir -- entre ellos `caducar()`,
 /// que esta acotado por `MAX_RETENIDAS` y no aparecia por ningun lado.
+/// Lo mas que el reloj recupera de un solo golpe, en pulsos internos.
+///
+/// Si el firmware se atasca -- un volcado de descriptores largo, un cliente
+/// que no drena su endpoint -- al volver puede haber miles de pulsos debidos.
+/// Generarlos todos seria un lazo sin cota DENTRO de un tick, y ademas
+/// dispararia miles de escrituras de rampa de golpe. Pasado el tope el reloj
+/// SALTA, que es preferible a que el instrumento se quede dando vueltas.
+///
+/// POR_CONFIRMAR: 960 sale de "cinco segundos a 120 BPM con PPQN_INTERNO=96",
+/// no de una medida del peor atasco real. Sale de `arranque_budget.py` el dia
+/// que exista (declarado BLOQUEANTE en voz-total S9.4, issue #180).
+pub const MAX_PULSOS_POR_AVANCE: u32 = 960;
+
 pub const MAX_RESPUESTAS: usize = (MAX_RAMPAS + MEDIDAS_POR_TICK) * MAX_SUSCRIPTORES + 2;
 
 /// El peor caso de CADA camino que empuja al buzon, aseverado en tiempo de
@@ -132,6 +146,8 @@ pub struct Instrumento {
     /// Cuantos mensajes NO cupieron en un buzon, desde el arranque. Ver
     /// `empujar`: es el rastro que el `debug_assert!` no dejaba en release.
     desbordes: u16,
+    /// La ultima hora de pared que entro por `avanzar_a`. `0` = nunca.
+    ultimo_us: u64,
 }
 
 impl Default for Instrumento {
@@ -149,6 +165,7 @@ impl Instrumento {
             reloj: Reloj::nuevo(),
             suscrito: false,
             desbordes: 0,
+            ultimo_us: 0,
         }
     }
 
@@ -396,6 +413,53 @@ impl Instrumento {
     /// Corre el tiempo. Publica las medidas del reloj y escribe lo que las
     /// rampas dicten — **por la ruta que NO anula**, que es la diferencia con
     /// un `SET` de cliente.
+    /// El tiempo de pared entra por aqui. Es la contraparte de `atender` para
+    /// el reloj.
+    ///
+    /// EL INSTRUMENTO NO CORRIA. `fw/src/main.rs` arranca dos tareas y ninguna
+    /// llamaba a `tick()`, asi que en la placa una rampa aceptada nunca
+    /// escribia un valor, las medidas del reloj no se publicaban y la
+    /// retencion no caducaba. Lo caza la junta adversarial del 2026-08-24.
+    ///
+    /// Y no bastaba con llamar a `tick(pulso)` desde el firmware, porque el
+    /// firmware NO SABE en que pulso esta: depende del tempo, que vive dentro
+    /// del `Reloj`, y `reloj_mut` esta cerrado (#182, fallo 6) y no se
+    /// reabre. La cuenta vive aqui, en `core`, que es lo que `fw/src/main.rs`
+    /// promete de si mismo: *"capa DELGADA a proposito: si una funcion de aqui
+    /// merece un test, es que vive en la caja equivocada"*.
+    ///
+    /// NO caduca las retenidas: `caducar()` es su propia llamada a proposito.
+    /// Meterla aqui sumaria hasta `MAX_RETENIDAS` respuestas a las del tick en
+    /// el mismo buzon, y las aserciones `const` de arriba acotan los caminos
+    /// POR SEPARADO. El firmware llama a las dos.
+    pub fn avanzar_a(&mut self, t_us: u64) -> Respuestas {
+        // 1. SIEMPRE, aunque no llegue nada: la caida de una fuente se nota
+        //    justamente en que NO llega (reloj.rs, `al_pasar_el_tiempo`).
+        self.reloj.al_pasar_el_tiempo(t_us);
+
+        // 2. Con la fuente interna, los pulsos los pone el instrumento: nadie
+        //    externo los manda. `tic_interno` avanza UNO por llamada, asi que
+        //    hay que emitir los que se deban desde la ultima vez.
+        // `ultimo_us == 0` no es un caso especial: el instrumento arranco en
+        // t=0, asi que la primera llamada tiene dt legitimo. Lo patologico -- un
+        // arranque tardio, un atasco largo -- lo acota MAX_PULSOS_POR_AVANCE,
+        // no una guarda que se comeria el primer avance siempre.
+        if self.reloj.fuente_activa() == Fuente::Interno {
+            let dt = t_us.saturating_sub(self.ultimo_us);
+            let mbpm = self.reloj.mbpm() as u64;
+            // Misma formula que `al_pasar_el_tiempo`, y a proposito: si las dos
+            // no coincidieran, cambiar de fuente cambiaria el tempo percibido.
+            let debidos = dt * mbpm * PPQN_INTERNO as u64 / 60_000_000_000;
+            for _ in 0..debidos.min(MAX_PULSOS_POR_AVANCE as u64) {
+                self.reloj.tic_interno(t_us);
+            }
+        }
+        self.ultimo_us = t_us;
+
+        let pulso = self.reloj.posicion();
+        self.tick(pulso)
+    }
+
     pub fn tick(&mut self, pulso: u64) -> Respuestas {
         let mut r = Respuestas::new();
         self.reloj.avanzar_a_pulso(pulso);
@@ -1098,6 +1162,59 @@ mod tests {
                 Mensaje::Changed(id, _) if *id == tiempo_params::ID_POSICION
             )),
             "el reloj avanzo y el suscriptor no se entero"
+        );
+    }
+
+    /// El instrumento NO CORRIA. `fw/src/main.rs` arranca dos tareas y ninguna
+    /// llama a `tick()`, asi que en la placa una rampa aceptada nunca escribia
+    /// un valor y las medidas del reloj no se publicaban nunca. Lo caza la
+    /// junta adversarial del 2026-08-24 (Halberg, punto 1).
+    ///
+    /// Y no se arregla llamando a `tick(pulso)` desde el firmware, porque el
+    /// firmware no sabe en que pulso esta: eso depende del tempo, que vive
+    /// dentro del `Reloj`, y `reloj_mut` esta cerrado. La cuenta tiene que
+    /// vivir aqui, en core, donde hay tests.
+    ///
+    /// Media negra a 120 BPM son 96 pulsos internos (PPQN_INTERNO = 96).
+    #[test]
+    fn el_tiempo_de_pared_mueve_el_reloj() {
+        let mut i = con_reloj();
+        i.avanzar_a(500_000);
+        let p = i.reloj().posicion();
+        assert!(
+            (p as i64 - 96).abs() <= 2,
+            "medio segundo a 120 BPM son 96 pulsos, y avanzo {p}"
+        );
+    }
+
+    /// Y con el reloj andando, una rampa por fin escribe.
+    #[test]
+    fn con_el_tiempo_andando_una_rampa_escribe_de_verdad() {
+        let mut i = con_reloj();
+        i.atender(Mensaje::Subscribe { activo: true }, 0);
+        i.atender(rampa(NORMAL.id, 100), 0);
+        let antes = i.modelo().get(NORMAL.id);
+        // Un compas entero: la rampa arranca en el borde y corre 384 pulsos.
+        for paso in 1..=8 {
+            i.avanzar_a(paso * 500_000);
+        }
+        let despues = i.modelo().get(NORMAL.id);
+        assert_ne!(
+            antes, despues,
+            "la rampa no escribio nada: el reloj no esta moviendo el instrumento"
+        );
+    }
+
+    /// El tope de recuperacion existe y esta declarado: si el firmware se
+    /// atasca, el reloj NO se pone a generar pulsos sin fin.
+    #[test]
+    fn un_atasco_largo_no_genera_pulsos_sin_fin() {
+        let mut i = con_reloj();
+        i.avanzar_a(60_000_000); // un minuto de golpe
+        let p = i.reloj().posicion();
+        assert!(
+            p <= MAX_PULSOS_POR_AVANCE as u64,
+            "genero {p} pulsos de un golpe, y el tope declarado es              {MAX_PULSOS_POR_AVANCE}"
         );
     }
 

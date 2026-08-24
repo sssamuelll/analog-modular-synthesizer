@@ -12,6 +12,8 @@
 //! ```
 
 use defmt::{info, warn};
+use embassy_futures::select::{select, Either};
+use embassy_time::{Duration, Instant, Timer};
 use embassy_rp::peripherals::USB;
 use embassy_rp::usb::{Driver, InterruptHandler};
 use embassy_usb::class::midi::MidiClass;
@@ -96,6 +98,37 @@ pub async fn correr_usb(mut d: Sam17Usb) -> ! {
     d.run().await
 }
 
+/// Cada cuanto se le dice al instrumento que hora es.
+///
+/// A 120 BPM un pulso interno dura 5,2 ms (PPQN_INTERNO = 96), asi que 1 ms da
+/// cinco tics por pulso; a 300 BPM, dos. Es resolucion de sobra para que el
+/// planeo de una rampa no se vea escalonado, y el coste es un `select` que ya
+/// estaba ahi.
+///
+/// DECLARADO, no medido: no hay medida del coste de CPU de este lazo ni del
+/// jitter que mete el volcado de descriptores reteniendo el `await`. Sale de
+/// `arranque_budget.py` el dia que exista (#180).
+const PERIODO_TICK: Duration = Duration::from_millis(1);
+
+/// Un tic: se le dice la hora al instrumento y se manda lo que conteste.
+///
+/// Son DOS llamadas a proposito. `avanzar_a` no caduca las retenidas porque
+/// las aserciones `const` del buzon acotan los caminos por separado; meterlas
+/// en el mismo `Respuestas` podria desbordarlo.
+async fn correr_el_reloj(
+    midi: &mut MidiClass<'static, Driver<'static, USB>>,
+    instrumento: &mut Instrumento,
+) -> Result<(), ()> {
+    let ahora = Instant::now();
+    for resp in instrumento.avanzar_a(ahora.as_micros()) {
+        responder(midi, instrumento, resp).await?;
+    }
+    for resp in instrumento.caducar(ahora.as_millis()) {
+        responder(midi, instrumento, resp).await?;
+    }
+    Ok(())
+}
+
 /// El lazo. Todo lo que hace es cablear piezas ya probadas.
 #[embassy_executor::task]
 pub async fn atender(
@@ -105,14 +138,41 @@ pub async fn atender(
     let mut desemp = Desempaquetador::nuevo();
     let mut entrada: Paquete = [0; 4];
     let mut plano = [0u8; MAX_SYSEX];
+    let mut proximo = Instant::now() + PERIODO_TICK;
 
     loop {
-        midi.wait_connection().await;
+        // El reloj corre HAYA O NO cliente. Esto es un instrumento, no un
+        // periferico: si nadie ha abierto el puerto MIDI, las rampas tienen
+        // que seguir escribiendo igual y la posicion del compas tiene que
+        // seguir siendo verdad. Por eso el tic tambien compite con la espera
+        // de conexion, y no solo con la lectura.
+        loop {
+            match select(midi.wait_connection(), Timer::at(proximo)).await {
+                Either::First(()) => break,
+                Either::Second(()) => {
+                    proximo += PERIODO_TICK;
+                    // Sin cliente no hay a quien contestar: se deja correr el
+                    // estado y se tiran las respuestas a proposito.
+                    let _ = instrumento.avanzar_a(Instant::now().as_micros());
+                    let _ = instrumento.caducar(Instant::now().as_millis());
+                }
+            }
+        }
         info!("USB: un cliente se conecto");
         desemp.reiniciar();
 
         loop {
-            match midi.read_packet(&mut entrada).await {
+            let leido = match select(midi.read_packet(&mut entrada), Timer::at(proximo)).await {
+                Either::First(r) => r,
+                Either::Second(()) => {
+                    proximo += PERIODO_TICK;
+                    if correr_el_reloj(&mut midi, instrumento).await.is_err() {
+                        break;
+                    }
+                    continue;
+                }
+            };
+            match leido {
                 Ok(4) => {}
                 Ok(n) => {
                     // USB-MIDI son paquetes de cuatro bytes. Otra cosa no es
