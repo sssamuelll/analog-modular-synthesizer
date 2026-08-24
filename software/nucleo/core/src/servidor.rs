@@ -69,20 +69,35 @@ const MAX_SUSCRIPTORES: usize = 1;
 /// Ahora el termino esta escrito, y las aserciones de abajo cubren los
 /// caminos que la formula sola no puede cubrir -- entre ellos `caducar()`,
 /// que esta acotado por `MAX_RETENIDAS` y no aparecia por ningun lado.
+pub const MAX_RESPUESTAS: usize = (MAX_RAMPAS + MEDIDAS_POR_TICK) * MAX_SUSCRIPTORES + 2;
+
 /// Lo mas que el reloj recupera de un solo golpe, en pulsos internos.
 ///
 /// Si el firmware se atasca -- un volcado de descriptores largo, un cliente
 /// que no drena su endpoint -- al volver puede haber miles de pulsos debidos.
 /// Generarlos todos seria un lazo sin cota DENTRO de un tick, y ademas
-/// dispararia miles de escrituras de rampa de golpe. Pasado el tope el reloj
-/// SALTA, que es preferible a que el instrumento se quede dando vueltas.
+/// dispararia miles de escrituras de rampa de golpe.
+///
+/// **Pasado el tope el reloj NO salta: se atrasa.** Aqui decia "salta", y no
+/// es lo mismo -- saltar seria adelantar la posicion perdiendo la generacion
+/// intermedia; lo que pasa es que la hora de pared avanza entera y la posicion
+/// no, asi que el compas queda corrido contra el reloj para siempre.
+///
+/// Acumular la deuda tampoco vale: soltar diez mil pulsos de golpe es una
+/// rafaga de escrituras, que musicalmente es peor que el atraso. Asi que se
+/// descarta -- y por eso se CUENTA, en `pulsos_perdidos()`. Lo inaceptable no
+/// era perder tiempo musical en un atasco: era que no se notara.
 ///
 /// POR_CONFIRMAR: 960 sale de "cinco segundos a 120 BPM con PPQN_INTERNO=96",
 /// no de una medida del peor atasco real. Sale de `arranque_budget.py` el dia
 /// que exista (declarado BLOQUEANTE en voz-total S9.4, issue #180).
 pub const MAX_PULSOS_POR_AVANCE: u32 = 960;
 
-pub const MAX_RESPUESTAS: usize = (MAX_RAMPAS + MEDIDAS_POR_TICK) * MAX_SUSCRIPTORES + 2;
+/// El denominador de la cuenta de pulsos, en unidades de `us x mbpm x PPQN`.
+/// Sesenta segundos en microsegundos, por mil (las milesimas del BPM). Se le
+/// da nombre porque `avanzar_a` lo usa dos veces y un 60_000_000_000 suelto
+/// escrito dos veces es dos sitios donde equivocarse.
+const US_MBPM_PPQN_POR_PULSO: u64 = 60_000_000_000;
 
 /// El peor caso de CADA camino que empuja al buzon, aseverado en tiempo de
 /// compilacion. Si alguno se pasa, esto **no compila** -- que es la unica
@@ -153,6 +168,10 @@ pub struct Instrumento {
     desbordes: u16,
     /// La ultima hora de pared que entro por `avanzar_a`. `0` = nunca.
     ultimo_us: u64,
+    /// Lo que sobro del ultimo reparto, sin llegar a un pulso entero.
+    resto_pulso: u64,
+    /// Pulsos que `MAX_PULSOS_POR_AVANCE` no dejo emitir, desde el arranque.
+    pulsos_perdidos: u32,
     /// N1-N3. Vacia por defecto, y vacia significa TODO ABIERTO.
     politica: Politica,
 }
@@ -173,6 +192,8 @@ impl Instrumento {
             suscrito: false,
             desbordes: 0,
             ultimo_us: 0,
+            resto_pulso: 0,
+            pulsos_perdidos: 0,
             politica: Politica::nueva(),
         }
     }
@@ -245,6 +266,13 @@ impl Instrumento {
     ///
     /// Existe para que el desbordamiento sea DETECTABLE en release. Ver
     /// `empujar` (#182, fallo 2 de la junta).
+    /// Pulsos que el tope de `avanzar_a` descarto, desde el arranque. Misma
+    /// razon que `desbordes`: si el instrumento pierde tiempo musical, tiene
+    /// que poder decirlo en vez de que se note solo en que el compas no cuadra.
+    pub fn pulsos_perdidos(&self) -> u32 {
+        self.pulsos_perdidos
+    }
+
     pub fn desbordes(&self) -> u16 {
         self.desbordes
     }
@@ -507,12 +535,35 @@ impl Instrumento {
         if self.reloj.fuente_activa() == Fuente::Interno {
             let dt = t_us.saturating_sub(self.ultimo_us);
             let mbpm = self.reloj.mbpm() as u64;
-            // Misma formula que `al_pasar_el_tiempo`, y a proposito: si las dos
-            // no coincidieran, cambiar de fuente cambiaria el tempo percibido.
-            let debidos = dt * mbpm * PPQN_INTERNO as u64 / 60_000_000_000;
-            for _ in 0..debidos.min(MAX_PULSOS_POR_AVANCE as u64) {
+            // EL RESTO SE ACUMULA. Antes esto era una division suelta y
+            // `ultimo_us` se adelantaba igual, asi que lo que no llegaba a un
+            // pulso entero se tiraba en CADA llamada. A la cadencia de los
+            // tests (500 ms) no se notaba, porque 500 000 us son exactamente
+            // 96 pulsos a 120 BPM: cero resto. A la cadencia del firmware
+            // (`PERIODO_TICK`, 1 ms) el cociente es CERO -- hacen falta 5209 us
+            // para un solo pulso -- y el reloj no avanzaba nunca en la placa.
+            //
+            // Se acumula en unidades del numerador (us x mbpm x PPQN) y no en
+            // microsegundos por pulso: `60e9 / (120000 x 96)` son 5208,33 us,
+            // y redondear eso a 5208 corre el compas ~5 s al dia. Sin
+            // division no hay redondeo que arrastrar.
+            self.resto_pulso += dt * mbpm * PPQN_INTERNO as u64;
+            let debidos = self.resto_pulso / US_MBPM_PPQN_POR_PULSO;
+            self.resto_pulso %= US_MBPM_PPQN_POR_PULSO;
+
+            let emitidos = debidos.min(MAX_PULSOS_POR_AVANCE as u64);
+            for _ in 0..emitidos {
                 self.reloj.tic_interno(t_us);
             }
+            // Lo que el tope no emitio se DESCARTA, y por eso se cuenta. El
+            // docstring del tope decia que el reloj "salta"; no salta, se
+            // atrasa, y el compas queda corrido contra el tiempo de pared para
+            // siempre. Acumular la deuda tampoco sirve: soltar diez mil pulsos
+            // de golpe es una rafaga de escrituras que musicalmente es peor que
+            // el atraso. Lo unico inaceptable era que no se notara.
+            self.pulsos_perdidos = self
+                .pulsos_perdidos
+                .saturating_add((debidos - emitidos) as u32);
         }
         self.ultimo_us = t_us;
 
@@ -1368,6 +1419,75 @@ mod tests {
 
     /// El tope de recuperacion existe y esta declarado: si el firmware se
     /// atasca, el reloj NO se pone a generar pulsos sin fin.
+    /// DICTAMEN HALBERG, BLOCKER 2. `avanzar_a` se probaba con pasos de
+    /// 500_000 us, que a 120 BPM son EXACTAMENTE 96 pulsos: cero resto. El
+    /// firmware tica cada 1000 us (`PERIODO_TICK`), o sea 500 veces mas fino,
+    /// y ahi la division entera da CERO -- el umbral para un solo pulso son
+    /// 5209 us. Como `ultimo_us` se adelantaba igual, el resto se tiraba en
+    /// cada llamada y el reloj no avanzaba NUNCA en la placa.
+    ///
+    /// El commit que introdujo esto se titulaba "El instrumento por fin
+    /// corre". No corria. Este test tica como tica el firmware.
+    #[test]
+    fn el_reloj_avanza_a_la_cadencia_de_verdad_del_firmware() {
+        let mut i = instrumento();
+        // Un segundo, en pasos de 1 ms, que es lo que hace `PERIODO_TICK`.
+        for ms in 1..=1000u64 {
+            i.avanzar_a(ms * 1_000);
+        }
+        // 120 BPM y PPQN 96 -> 192 pulsos por segundo.
+        let esperados = 120 * PPQN_INTERNO as u64 / 60;
+        assert_eq!(
+            i.reloj().posicion(),
+            esperados,
+            "un segundo de tics de 1 ms tiene que dar {esperados} pulsos"
+        );
+    }
+
+    /// Y el resto no se puede tirar. En pasos que NO son multiplo del pulso,
+    /// la cuenta tiene que cuadrar igual: si se tira, el compas se corre
+    /// contra el tiempo de pared para siempre.
+    ///
+    /// Cuatro segundos y no diez, a proposito: diez segundos son 1920 pulsos
+    /// y el tope es 960, asi que el salto de un golpe saldria topado y esto
+    /// estaria midiendo el tope en vez del resto. La primera version de este
+    /// test cometia justo ese error.
+    #[test]
+    fn el_resto_no_se_tira_entre_llamadas() {
+        let mut i = instrumento();
+        // 7 ms no es multiplo de 5208,33 us: cada paso deja resto.
+        let mut t = 0u64;
+        while t < 4_000_000 {
+            t += 7_000;
+            i.avanzar_a(t);
+        }
+        let a_pasitos = i.reloj().posicion();
+
+        let mut j = instrumento();
+        j.avanzar_a(t);
+        assert_eq!(
+            a_pasitos,
+            j.reloj().posicion(),
+            "el resto se perdio por el camino"
+        );
+        assert_eq!(i.pulsos_perdidos(), 0, "nada deberia haberse topado aqui");
+    }
+
+    /// El tope descarta, y descartar en silencio era el problema. Antes el
+    /// docstring decia que el reloj "salta"; no salta, se atrasa, y no habia
+    /// forma de saberlo.
+    #[test]
+    fn lo_que_el_tope_no_emite_se_cuenta() {
+        let mut i = instrumento();
+        i.avanzar_a(60_000_000); // un minuto de golpe: 11 520 pulsos debidos
+        assert_eq!(i.reloj().posicion(), MAX_PULSOS_POR_AVANCE as u64);
+        let debidos = 60_000_000u64 * 120_000 * PPQN_INTERNO as u64 / 60_000_000_000;
+        assert_eq!(
+            i.pulsos_perdidos() as u64,
+            debidos - MAX_PULSOS_POR_AVANCE as u64,
+            "el instrumento tiene que poder decir cuanto tiempo musical perdio"
+        );
+    }
     #[test]
     fn un_atasco_largo_no_genera_pulsos_sin_fin() {
         let mut i = con_reloj();
