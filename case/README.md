@@ -278,6 +278,11 @@ python -m pip install ezdxf   # una vez; lo usa check_dxf.py
 powershell -File cad/export.ps1
 ```
 
+Lo que se manda al taller **no son solo los DXF**: van con
+[`PLIEGO.md`](PLIEGO.md), que lleva material, procesos, acabados, profundidad
+de cajeado y qué cara es la exterior. Un DXF suelto es media pieza. Para
+elegir taller antes de pedir, [`RFQ.md`](RFQ.md).
+
 Corre `clearance_budget.py` ANTES de exportar y `check_dxf.py` DESPUÉS —
 relee los DXF tal como los verá la fresadora; si cualquiera de los dos está en
 rojo, el script sale con código distinto de cero y no se exporta ni se deja
@@ -524,13 +529,21 @@ un cable asumiendo continuidad por el riel es riesgo de choque eléctrico.
 5. **Tapa del valle** — 5 M3 al larguero del valle.
 6. **Electricidad y bonding** — bloque IEC fijo, espárrago junto al PSU.
 7. **Trasera** — UNA plancha de 8 mm, EMPOTRADA, 10 M3 a tuerca T en las dos
-   filas de los largueros traseros. Va después de los largueros porque la
-   tuerca T vive dentro de la ranura.
+   filas de los largueros traseros, **a 1.0 N·m con arandela d16 y rosca
+   SECA**. Va después de los largueros porque la tuerca T vive dentro de la
+   ranura. **ATENCIÓN A LA CARA**: esta plancha dejó de ser simétrica el
+   2026-08-24 — el cajeado de KONDOR va en la cara EXTERIOR. Montada al revés,
+   el relieve queda mirando al interior y la palabra se lee invertida.
 8. **Tapa de remate** — 5 M3 al larguero de remate trasero. Va ATORNILLADA
    desde el 2026-08-21; hasta entonces iba pegada al Z-Rail y era la única
    pieza irreversible del case.
 9. **Paticas y paneles** — y paneles ciegos en todo hueco de las dos filas,
    que con una tapa abierta son lo único que ata sus dos raíles.
+10. **Quitar el film protector** — al final, no al recibir. El acrílico llega
+    con las dos caras protegidas de fábrica, y es durante el MONTAJE cuando se
+    raya: al deslizarlo por la mesa, al apoyar una herramienta, al girar una
+    pieza sobre otra. El film es lo único que lo evita, y solo sirve si sigue
+    puesto.
 
 El orden importa en dos sitios: las bandejas no se pueden atornillar antes
 que sus largueros (la tuerca T vive en la ranura del perfil), y los raíles

@@ -148,6 +148,25 @@ lenguaje visual).
 > gobiernan `radio_pico` y `radio_valle`—, así que quien quisiera suavizar el
 > valle movía ese número y lo que cambiaba era una esquina trasera.
 >
+> **rev. 18** (2026-08-24): **el acabado deja de estar implícito**. La revisión
+> adversarial destapó que hay nueve DXF y 563 líneas de README y **ningún
+> documento que vaya al taller**; entran [`case/PLIEGO.md`](../../../case/PLIEGO.md)
+> y [`case/RFQ.md`](../../../case/RFQ.md). Con ellos, tres procesos que no
+> aparecían ni una vez en el proyecto: **recocido** (sin él el PMMA fresado
+> craquela en meses alrededor de los taladros), **canto diamantado** en los
+> ~7.5 m de contorno visible con pulido a llama **prohibido**, y **chaflán
+> 0.5 × 45°** en toda arista vista — obligatorio desde que la rev. 17 dejó dos
+> esquinas vivas. Los 30 M3 dejan de apretarse «hasta marcar»: **1.0 N·m con
+> arandela d16 y rosca seca**, y el número sale de la arandela, no del
+> tornillo. Las **paticas pasan a goma**, lo que revierte la nota del
+> 2026-08-17 y **devuelve la razón a esta spec**, que nunca dejó de decir
+> «pies de goma»; su cota de compra es la flecha (≥0.25 mm bajo 22.8 N),
+> porque una goma dura no aisla menos sino que **amplifica** los 100 Hz del
+> toroide. Y `kondor_cajeado_2d` entra en `export.ps1`: existía como pieza y
+> no se generaba, así que la trasera habría vuelto **sin la marca**. Cuatro
+> puertas nuevas — `guarda_chaflan()`, `guarda_apriete()`, `guarda_paticas()`
+> y `guarda_kondor()`.
+>
 > **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
 > visual y proporciones *relativas*, pero **sus cotas están superadas**. Se
 > dibujó para paneles de 190 mm y un case de 500 × 380 × 350; el case real
