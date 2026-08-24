@@ -54,6 +54,9 @@ from __future__ import annotations
 SCLK_J2 = 10e6              # j2.rs: contrato congelado, "<=10 MHz"
 BITS_TRAMA_VCO = 72         # j2.rs: 3 x AD5686R en cadena
 BITS_BLOQUE_TONO = 288      # orquestacion R-M4: 16 x 16 bits + cabecera
+PARAMS_POR_BLOQUE = 16      # orquestacion R-M4: los parametros que ese bloque
+                            # agrupa. Es el 16 de la linea de arriba, con nombre
+                            # -- el payload que las dos configuraciones mueven
 F_RENDER_VOZ = 10_000.0     # voz-total S3.1: render de envolventes a 10 kHz
 N_POTES = 45                # plan del panel S4: 16 curadas + 4 macro + margen
 BAUDIOS_MIDI_DIN = 31250.0  # norma MIDI 1.0
@@ -89,13 +92,27 @@ def suelo_midi_din_ms() -> float:
     return BITS_NOTE_ON_DIN / BAUDIOS_MIDI_DIN * 1e3
 
 
-def t_transmision_ms() -> float:
+def bits_por_giro(agrupado: bool = True) -> int:
+    """Bits que el J2 mueve en un giro del lazo, con el MISMO payload.
+
+    El payload son los 16 parametros hacia la Voz, en las dos configuraciones:
+    agrupados van en UN bloque de 288 bits (R-M4); sueltos, en 16 tramas de 72.
+
+    El sondeo del panel es comun a las dos y por eso se carga a las dos. La v1
+    de este guion se lo cargaba SOLO al lado agrupado, o sea comparaba cargas
+    distintas -- y la de mas peso se la ponia a la opcion que defiende.
+    """
+    carga = BITS_ESCRITURA if agrupado else PARAMS_POR_BLOQUE * BITS_TRAMA_VCO
+    return BITS_SONDEO_PANEL + carga
+
+
+def t_transmision_ms(agrupado: bool = True) -> float:
     """Sondeo del panel + escritura a la Voz, en el mismo giro del lazo."""
-    return (BITS_SONDEO_PANEL + BITS_ESCRITURA) / SCLK_J2 * 1e3
+    return bits_por_giro(agrupado) / SCLK_J2 * 1e3
 
 
-def ocupacion(f_lazo: float) -> float:
-    return t_transmision_ms() * 1e-3 * f_lazo
+def ocupacion(f_lazo: float, agrupado: bool = True) -> float:
+    return t_transmision_ms(agrupado) * 1e-3 * f_lazo
 
 
 def cadena(f_barrido: float, f_lazo: float) -> dict[str, float]:
@@ -188,17 +205,50 @@ def main() -> None:
         "El objetivo tiene que quedar POR DEBAJO del suelo de MIDI DIN, "
         "o la frase 'la latencia mas baja' no significa nada."
     )
-    # La agrupacion es lo que lo hace posible: sin ella, un parametro por trama.
-    sin_agrupar = BITS_TRAMA_VCO / SCLK_J2 * 1e3 * 1e-3 * f_ok * 16
-    assert sin_agrupar > ocupacion(f_ok), (
-        "Si mandar 16 parametros sueltos NO costara mas que el bloque agrupado, "
-        "R-M4 no tendria razon de ser y esta cuenta estaria mal montada."
+    # --- la puerta que justifica R-M4 --------------------------------------
+    #
+    # La v1 comparaba 16 tramas sueltas SIN sondeo del panel contra el bloque
+    # agrupado CON los 256 bits del sondeo: dos cargas distintas, y la de mas
+    # peso puesta del lado que el guion defiende. Y encima f_ok se cancelaba en
+    # los dos lados, asi que la desigualdad real era 1152 > 544 -- cierta para
+    # cualquier cadencia y cualquier reloj. Un assert que no puede fallar no es
+    # una puerta: es una decoracion que se lee como aval.
+    #
+    # Esto es lo que R-M4 promete y lo que SI puede romperse: con el mismo
+    # payload y el mismo sondeo cargado a las dos, los parametros sueltos se
+    # pasan del techo de bus declarado a la cadencia elegida, y el bloque
+    # agrupado no.
+    ocu_suelta = ocupacion(f_ok, agrupado=False)
+    ocu_agrupada = ocupacion(f_ok, agrupado=True)
+    assert ocu_suelta > TECHO_OCUPACION, (
+        f"Con {PARAMS_POR_BLOQUE} parametros sueltos el J2 va al "
+        f"{ocu_suelta*100:.1f}% y el techo declarado es "
+        f"{TECHO_OCUPACION*100:.0f}%: CABEN. Si caben, R-M4 no se sostiene por "
+        f"presupuesto de bus. Habra que justificarla por otra cosa -- que el "
+        f"cambio de tono llegue atomico, el jitter entre parametros -- o "
+        f"retirarla, pero no con esta cuenta."
     )
+    # Que la agrupada quepa no se asevera aqui: ya lo exigio el filtro de
+    # `viables` (ocu <= TECHO_OCUPACION) para elegir f_ok. Aseverarlo otra vez
+    # seria otra decoracion.
+    sclk_que_la_apaga = bits_por_giro(False) * f_ok / TECHO_OCUPACION
+    f_que_la_apaga = TECHO_OCUPACION * SCLK_J2 / bits_por_giro(False)
     print()
-    print(f"  Sin agrupar (16 tramas sueltas a {f_ok/1e3:.0f} kHz): "
-          f"{sin_agrupar*100:.1f}% del bus")
-    print(f"  Agrupado (R-M4):                        {ocupacion(f_ok)*100:.1f}%")
-    print(f"  La agrupacion es lo que compra la velocidad, no el reloj.")
+    print(f"  R-M4, el mismo payload de {PARAMS_POR_BLOQUE} parametros a "
+          f"{f_ok/1e3:.0f} kHz")
+    print(f"  (los {BITS_SONDEO_PANEL} bits del sondeo del panel van en las dos):")
+    print(f"    sueltos   {bits_por_giro(False):5d} bits/giro   "
+          f"{ocu_suelta*100:5.1f}% del J2")
+    print(f"    agrupado  {bits_por_giro(True):5d} bits/giro   "
+          f"{ocu_agrupada*100:5.1f}% del J2")
+    print(f"    {'techo de bus declarado':<28}{TECHO_OCUPACION*100:5.1f}%")
+    print("  La agrupacion es lo que compra la velocidad, no el reloj.")
+    print()
+    print("  Esta puerta se pone ROJA -- y tiene como -- si los sueltos pasan a")
+    print(f"  caber: con el J2 a {sclk_que_la_apaga/1e6:.2f} MHz o mas (hoy "
+          f"{SCLK_J2/1e6:.0f}), con el lazo por debajo de "
+          f"{f_que_la_apaga/1e3:.1f} kHz,")
+    print(f"  o subiendo el techo de bus por encima del {ocu_suelta*100:.1f}%.")
     print()
     print("OK: presupuesto cerrado.")
     print()
