@@ -1,5 +1,11 @@
 # Módulo 5 — VCF (filtro pasa-bajo OTA tipo MS-20)
 
+> [!IMPORTANT]
+> **Superado como módulo separado — 2026-08-23.** Hay un filtro por canal —dieciséis— dentro de la placa del módulo de Voz. Sigue siendo el MS-20, pero la resonancia se controla por VCA (¼ de SSI2164), nunca por digipot.
+> Lo de abajo se conserva como el diseño de referencia del circuito, que
+> es de donde sale el carácter. Manda el
+> [spec del módulo de Voz total](../superpowers/specs/2026-08-23-modulo-voz-total-design.md).
+
 > Referencia: tesis, *Módulo VCF* (Gráficos 29–35). Filtro inspirado en el
 > Korg MS-20 y desarrollado a partir del estudio de Stinchcombe (2006).
 

@@ -15,9 +15,9 @@ El instrumento entero vive en un **microcontrolador**. La computadora es
    │  EL INSTRUMENTO — RP2350       │   USB   │ CUALQUIER COMPUTADORA │
    │  Rust bare-metal, sin SO       │◄───────►│ la tuya, con TU DAW   │
    │                                │  MIDI   │ y TUS plugins         │
-   │  · reparto de 4 voces          │   DIN   │                       │
+   │  · reparto de 16 canales       │   DIN   │                       │
    │  · CV en serie a cada módulo   │         │  · efectos, sampler   │
-   │  · 4 gates                     │         │  · el VST compañero   │
+   │  · gates y envolventes         │         │  · el VST compañero   │
    │  · autoafinado                 │         │  · el agente de IA    │
    │  · secuenciador, arpegiador    │         │                       │
    │  · reloj y sync                │         │  OPCIONAL             │
@@ -67,8 +67,10 @@ Cada VCO lleva un **74HC14** que recorta su onda y manda un **pulso lógico** al
 micro. El **PIO del RP2350** mide el periodo **por hardware** de los cuatro a la
 vez, compara con la frecuencia que debería tener esa nota y corrige la tabla.
 
-**84 notas × 4 voces en 3.5 s**, en silencio — el VCO siempre oscila y el gate
-está cerrado.
+**84 notas × 4 voces en 3.5 s** medidos sobre la v1 del módulo 3, en silencio —
+el VCO siempre oscila y el gate está cerrado. Con 16 osciladores el barrido se
+re-presupuesta: el reparto y las cadencias están en
+[la spec de orquestación](superpowers/specs/2026-08-22-vco-orquestacion-design.md).
 
 Esto mata el problema de fondo del analógico: el conversor exponencial se corre
 **−0.33 % por grado**. Sin esto calientas la caja y te desafinas; con esto se

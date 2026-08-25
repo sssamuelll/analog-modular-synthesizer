@@ -12,11 +12,17 @@ aportes de la comunidad.
 
 ## Filosofía del proyecto
 
-- **Modularidad**: cada uno de los 7 módulos del sintetizador vive en su propio
-  directorio dentro de `hardware/`, con su propio README, BOM y esquemáticos.
+- **Modularidad, en dos regímenes**: por dentro del instrumento es
+  programática — la matriz de modulación, los roles y el crosspoint **son** el
+  patch, y un preset es un patch completo. En la frontera es física: cable y
+  jack. *Por dentro el patch es un preset; por fuera es un cable.*
+- **Un directorio por módulo** dentro de `hardware/`, con su README, BOM y
+  esquemáticos. La numeración de siete viene de la tesis y se conserva aunque el
+  diseño vigente ya no tenga siete placas.
 - **Hardware y software por separado**: la electrónica analógica está en
-  `hardware/`, las simulaciones SPICE en `simulations/`, y el firmware del
-  conversor MIDI/CV (único módulo digital) en `software/midi-cv/`.
+  `hardware/`, las simulaciones SPICE en `simulations/`, y el firmware en
+  `software/nucleo/` (Rust, RP2350). `software/midi-cv/` es el firmware Python
+  de la v1 de Raspberry Pi, superada.
 - **Reproducible**: todo lo necesario para construir el instrumento (BOM,
   planos, código, manual) está versionado.
 - **Mejorable**: cada módulo lista explícitamente las mejoras propuestas sobre
@@ -24,34 +30,62 @@ aportes de la comunidad.
 
 ## Módulos del sintetizador
 
-| # | Módulo | Tipo | Tecnología clave | Directorio |
+La numeración de siete módulos viene de la tesis y se conserva como índice.
+**El diseño vigente ya no son siete placas**: el módulo de Voz absorbió cuatro
+de ellas, por la razón de la §1 del
+[spec de Voz total](docs/superpowers/specs/2026-08-23-modulo-voz-total-design.md)
+— un canal es oscilador → filtro → VCA soldado de punta a punta, y partirlo en
+tres placas era cablear dieciséis veces lo que cabe en una pista.
+
+| # | Módulo | Estado en el diseño vigente | Tecnología clave | Directorio |
 |---|--------|------|-----------------|-----------|
-| 1 | Alimentación | Analógico | 7805, 7812, 7912 | [`hardware/01-power-supply`](hardware/01-power-supply) |
-| 2 | Cerebro (MIDI/CV/Voces) | Digital | RP2350 (Rust bare-metal) | [`hardware/02-midi-cv`](hardware/02-midi-cv) + [`software/midi-cv`](software/midi-cv) |
-| 3 | VCO (×4) | Analógico | 4x SSI2130 + DACs locales | [`hardware/03-vco`](hardware/03-vco) |
-| 4 | Mixer | Analógico | TL074 | [`hardware/04-mixer`](hardware/04-mixer) |
-| 5 | VCF | Analógico | LM13700 (OTA tipo MS-20) | [`hardware/05-vcf`](hardware/05-vcf) |
-| 6 | ADSR | Analógico | ICM7555 | [`hardware/06-adsr`](hardware/06-adsr) |
-| 7 | VCA | Analógico | LM13700 / CA3080 | [`hardware/07-vca`](hardware/07-vca) |
-| — | Cajón y paneles | Mecánico | Acrílico naranja + paneles PCB de aluminio | [`case/`](case) |
+| 1 | Alimentación | **Vigente**; la v1 queda como diseño cerrado que no se construye | LM7805 en +5 V, parejas LT3045/LT3094 en ±12 V | [`hardware/01-power-supply`](hardware/01-power-supply) |
+| 2 | Cerebro | **Vigente**; la v1 de Raspberry Pi está superada por la v2 sobre RP2350B | RP2350B (Rust bare-metal) | [`hardware/02-midi-cv`](hardware/02-midi-cv) + [`software/nucleo`](software/nucleo) |
+| 3 | **Voz** (era «VCO») | **Vigente, y creció**: 16 canales completos + la bahía asignable | 16× SSI2130, 16× LM13700, 8× SSI2164, 2× RP2350B, 2× AD75019 | [`hardware/03-vco`](hardware/03-vco) |
+| 4 | Mixer | **Desaparece como placa**: suma, volumen, salida y los oídos se mudan al módulo de Voz | — | [`hardware/04-mixer`](hardware/04-mixer) |
+| 5 | VCF | **Desaparece como placa**: un filtro por canal, dentro del módulo de Voz | LM13700 (OTA tipo MS-20) | [`hardware/05-vcf`](hardware/05-vcf) |
+| 6 | ADSR | **Desaparece como circuito**: las envolventes son generadores en los micros del módulo de Voz | firmware | [`hardware/06-adsr`](hardware/06-adsr) |
+| 7 | VCA | **Desaparece como placa**: dos VCA por canal (voz y resonancia), dentro del módulo de Voz | SSI2164 | [`hardware/07-vca`](hardware/07-vca) |
+| — | Bus board | Vigente | plano de masa sólido, 6 slots por segmento | [`hardware/bus-board`](hardware/bus-board) |
+| — | Cajón y paneles | Vigente | Acrílico naranja, Eurorack 3U en las dos filas | [`case/`](case) |
 
 Arquitectura global y diagrama de bloques: [`docs/architecture.md`](docs/architecture.md).
 
 ## Especificaciones generales
 
-- **Polifonía**: 4 voces (diseño actual) / monofónica (tesis original)
-- **Fuentes de sonido**: 4 VCOs independientes (1 por voz, SSI2130 con sierra, triangular, cuadrada/pulso)
-- **Filtro**: VCF pasa-bajo con resonancia auto-oscilante (24 dB/oct)
-- **Envolvente**: ADSR (2 generadores en el diseño final)
-- **Entrada MIDI**: USB y DIN MIDI al módulo central
-- **Salidas**: Enlace serie digital a módulos, 4x CV/Gate internos, Audio Out
-- **Puntos de conexión**: ~40 jacks de 3.5 mm (normalizados, diseño guiado por LEDs)
-- **Dimensiones cajón**: ancho 500 mm × alto 50–391.5 mm (zócalo frontal a
-  punto más alto, por la inclinación) × fondo 350 mm de cuerpo (370 mm con
-  pieles y zócalo volados). Módulo de alimentación 100% interno y cerrado al chasis.
+- **Canales**: **16 canales analógicos completos**, cada uno oscilador → filtro
+  → VCA, soldados de punta a punta en la misma placa. El módulo suelda canales;
+  **el preset reparte los roles**.
+- **Polifonía**: 16 voces limpias, u **8 voces de FM** (2 osciladores por voz:
+  portadora + moduladora), o cualquier mezcla. Lo decide el preset, no el cobre.
+  La tesis original era monofónica.
+- **Por qué dieciséis y no ocho**: en FM cada voz necesita dos osciladores,
+  porque la moduladora tiene que seguir a su portadora en frecuencia. Una
+  moduladora compartida entre ocho notas distintas no da FM tonal, da campanas
+  disonantes.
+- **Osciladores**: SSI2130 (sierra, triangular, cuadrada/pulso, seno por el
+  shaper del chip), con matriz de modulación FM de 16 líneas — cualquiera de los
+  dieciséis puede modular a cualquiera, y por eso van en **un solo módulo**: en
+  dos, la matriz se parte por la mitad.
+- **Filtro**: uno por canal. Pasa-bajo 24 dB/oct tipo MS-20 (LM13700 + TL074)
+  con LEDs en el lazo. **Resonancia controlada por VCA**, nunca digipot.
+- **VCA**: dos por canal (voz y resonancia) — 32 en total, sobre 8× SSI2164.
+- **Envolventes**: ya no son un circuito. Son **generadores que corren en los
+  micros del módulo de Voz**, con sus perillas en el panel de mandos.
+- **Bahía asignable**: 8 entradas + 8 salidas en jacks Thonkiconn con sensado de
+  ocupación y LED por jack, ruteadas por dos AD75019 (crosspoint 16×16). Por
+  dentro el patch es un preset; por fuera es un cable.
+- **Entrada MIDI**: USB y DIN. Los conectores del mundo van **a la trasera** del
+  cajón, no al frente.
+- **Salida**: **estéreo**, con sitio por voz en el campo.
+- **Formato**: Eurorack 3U en las dos filas. Arriba el instrumento; abajo, rack
+  de verdad para módulos invitados intercambiables.
+- **Dimensiones del cajón**: las manda [`case/clearance_budget.py`](case/clearance_budget.py);
+  la cifra vigente vive en [`case/README.md`](case/README.md) y no se copia aquí
+  para que no envejezca.
 - **Alimentación**: 230 VAC 50 Hz (variante Europa; tesis original: 110 VAC
   60 Hz Venezuela, ver [`hardware/01-power-supply`](hardware/01-power-supply))
-  → 5 V / +12 V / −12 V con telemetría I2C (INA226)
+  → +5 V / +12 V / −12 V. El envelope es de 650 mA por riel.
 
 ## Estructura del repositorio
 
@@ -61,7 +95,8 @@ analog-modular-synthesizer/
 │                      arquitectura y documentación detallada por módulo.
 ├── hardware/          Un subdirectorio por módulo con esquemáticos KiCad, PCB,
 │                      BOM y notas de diseño.
-├── software/          Firmware Python para el módulo MIDI/CV (Raspberry Pi).
+├── software/          nucleo/  — contrato y firmware en Rust para RP2350.
+│                      midi-cv/ — firmware Python de la v1 (superada).
 ├── simulations/       Simulaciones SPICE / LTspice para validar diseños.
 ├── case/              Planos mecánicos del cajón y paneles frontales.
 └── .github/           CI y plantillas.
@@ -69,11 +104,19 @@ analog-modular-synthesizer/
 
 ## Cómo empezar
 
-1. Lee el [resumen de la tesis](docs/summary.md) y la **nueva** [arquitectura polifónica](docs/architecture-poly.md).
-2. Elige un módulo: cada `hardware/NN-<módulo>/README.md` explica el objetivo,
+1. Lee el [resumen de la tesis](docs/summary.md) para saber de dónde sale esto.
+2. **El diseño vigente vive en las specs fechadas de
+   [`docs/superpowers/specs/`](docs/superpowers/specs), y la más reciente manda.**
+   Las dos que gobiernan hoy el instrumento son
+   [Voz total](docs/superpowers/specs/2026-08-23-modulo-voz-total-design.md)
+   (los 16 canales y la doctrina) y
+   [el cerebro v2](docs/superpowers/specs/2026-08-21-modulo-2-v2-cerebro-design.md).
+   [`docs/architecture-poly.md`](docs/architecture-poly.md) está pendiente de
+   reescritura contra ellas y **lleva aviso**.
+3. Elige un módulo: cada `hardware/NN-<módulo>/README.md` explica el objetivo,
    componentes, parámetros de diseño y mejoras pendientes.
-3. Para el firmware: `cd software/midi-cv && cat README.md`.
-4. Para contribuir: [`CONTRIBUTING.md`](CONTRIBUTING.md).
+4. Para el firmware: `cd software/nucleo && cargo test`.
+5. Para contribuir: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Licencia
 
