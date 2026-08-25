@@ -294,16 +294,22 @@ marco_remate    = 50;
 //
 // Lo vigila guarda_escalon(), que ya guardaba la otra holgura de este valle.
 paso_horizontal = 60;
-// Acabado modernista: ningun canto del costado es esquina viva. Hay DOS
-// radios porque el contorno pide dos cosas opuestas (ver la nota larga en
-// sam17_case.scad, funcion redondear).
+// Acabado modernista. ESTE ENCABEZADO DECIA "ningun canto del costado es
+// esquina viva" Y DEJO DE SER CIERTO EL 2026-08-24: las dos esquinas
+// TRASERAS son vivas a peticion de Samuel, para que la trasera y la tapa de
+// remate empotren a ras. Ver radio_trasero.
 //
-// radio_perfil = las esquinas SUAVES. Manda en el valle, donde hace la curva
-// que Samuel describio: sube de la base del panel superior, queda un tramo
-// recto en medio ("una pajuela o dos") y se encorva hacia abajo al llegar al
-// tope del inferior. Ese tramo recto es paso_horizontal menos lo que se
-// comen las dos curvas -- AJUSTAR MIRANDO EL RENDER, no a ciegas.
-radio_perfil    = 14;
+// AQUI VIVIA radio_perfil = 14, y se BORRA el 2026-08-24 por dos razones que
+// conviene dejar escritas, porque la segunda es la peligrosa:
+//
+//   1. Se queda sin un solo uso. Su unico cliente era el vertice 6
+//      (trasera-abajo), que pasa a radio_trasero.
+//   2. SU COMENTARIO MENTIA, y llevaba tiempo haciendolo. Decia "manda en el
+//      valle, donde hace la curva que Samuel describio", y el valle no lo
+//      gobierna: lo gobiernan radio_pico (vertice 2) y radio_valle (3).
+//      Quien quisiera suavizar el valle tocaba este numero y lo que se movia
+//      era una esquina trasera. Es justo el parametro que PARECE que hace
+//      algo, que es lo que guarda_parametros_vivos() existe para cazar.
 // radio_pico = el vertice CONVEXO del valle, donde acaba el tope del panel de
 // abajo. Corto a proposito: Samuel lo quiere leyendose como PICO, "el round
 // mas durito". No bajar a 0 -- una esquina viva en acrilico de 8 mm es donde
@@ -341,9 +347,22 @@ radio_valle     = 54;
 // bombeo = ENTASIS. "Las rectas no son completamente rectas, por poquito, una
 // ligera distorsion pero muy ligera". Flecha en MILIMETROS POR CADA 100 MM de
 // tramo recto, no absoluta: una flecha fija se ve exagerada en un tramo corto
-// y no se ve en uno largo. A 0.5 el canto de abajo (345 mm) se abomba 1.7 mm.
-// Se abomba hacia FUERA, asi que crece el bbox -- por eso la tolerancia de
-// check_dxf tuvo que pasar de 2 a 4 mm. Poner 0 lo desactiva.
+// y no se ve en uno largo. Se abomba hacia FUERA, asi que crece el bbox --
+// por eso la tolerancia de check_dxf tuvo que pasar de 2 a 4 mm. Poner 0 lo
+// desactiva.
+//
+// ESTE COMENTARIO CITABA EL CANTO DE ABAJO ("345 mm, se abomba 1.7") Y ERA
+// FALSO POR PARTIDA DOBLE (corregido el 2026-08-24): el canto de abajo esta
+// EXENTO -- va en sin_bombeo de perfil_lateral() por las paticas --, o sea que
+// es justo el que NO se abomba; y ya no mide 345 sino 308.94. La flecha que de
+// verdad se comia la tolerancia era la del CANTO TRASERO, 1.197 mm medidos
+// sobre el DXF.
+//
+// NO SE ABOMBA TODO EL CONTORNO. La regla la aplica sin_bombeo en
+// perfil_lateral(): el canto que APOYA CONTRA ALGO PLANO va recto (suelo,
+// trasera y meseta del techo), y solo se abomba lo que dibuja silueta. Tras
+// eximir los tres, la flecha mayor que queda son 0.779 mm en la cara del panel
+// de abajo.
 bombeo          = 0.5;
 // radio_punta = las esquinas que tienen que leerse como PUNTA redondeada
 // (frente-abajo y remate de arriba, 2026-08-17). Va sobredimensionado a
@@ -355,16 +374,75 @@ bombeo          = 0.5;
 // radio_remate. Aqui quedan los dos de abajo -- frente-abajo y arranque de cara
 // --, que siguen leyendose como punta redondeada.
 radio_punta     = 400;
-// radio_remate = los dos vertices de ARRIBA (apex y fondo-arriba), que desde el
-// 2026-08-21 se leen CUADRADOS y no como punta. Es un radio de verdad y no un
-// sobredimensionado: aqui lo que se pide es lo que sale.
+// radio_remate = el vertice del APEX, el pico de arriba donde la cara superior
+// se encuentra con la meseta del techo. Desde el 2026-08-21 se lee CUADRADO y
+// no como punta. Es un radio de verdad y no un sobredimensionado: aqui lo que
+// se pide es lo que sale.
 //
-// 2 y no 0 a proposito. Una esquina viva en acrilico colado de 8 mm es donde
-// arranca una fisura -- la misma razon por la que radio_pico no baja de 5 -- y 2
-// es ademas el radio que el issue #45 pide para las esquinas de panel, asi que
-// case y paneles rematan con el mismo canto. Queda por encima del minimo de la
+// GOBERNABA DOS VERTICES (apex y fondo-arriba) hasta el 2026-08-24. El de
+// fondo-arriba se fue a radio_trasero, asi que aqui queda uno solo.
+//
+// 2 y no 0 a proposito, y esta razon SI se sostiene para este vertice: es el
+// radio que el issue #45 pide para las esquinas de panel, asi que case y
+// paneles rematan con el mismo canto. Queda ademas por encima del minimo de la
 // fresa (radio 1.5 con la de 3), o sea que el taller lo saca sin cambiar util.
 radio_remate    = 2;
+// radio_trasero = los DOS vertices del plano trasero -- fondo-arriba (5) y
+// fondo-abajo (6). CERO: esquina viva.
+//
+// Lo pidio Samuel el 2026-08-24: "quiero que sean cuadradas tambien para que
+// empotre perfectamente entre las piezas". Y era un desajuste medido, no una
+// impresion. Sobre el DXF que va al taller, el costado se metia hacia adentro
+// del plano trasero:
+//
+//   fondo-abajo (radio_perfil 14)  ->  14.004 mm en y = 0
+//   fondo-arriba (radio_remate 2)  ->   2.004 mm en y = 256.18
+//
+// La trasera es un rectangulo de 528.020 x 248.184 que baja hasta y = 0 y con
+// ESQUINAS VIVAS (medido: 2 puntos por esquina en el DXF). O sea que su esquina
+// de abajo quedaba colgando 14 mm por fuera de la silueta del costado. Con 0
+// el desajuste es 0.000 en las dos.
+//
+// SE DEROGA AQUI UNA REGLA ESCRITA, y por eso va con su porque en vez de
+// saltarsela en silencio. radio_remate decia "2 y no 0: una esquina viva en
+// acrilico colado de 8 mm es donde arranca una fisura". Lo que se sostiene de
+// esa regla y lo que no:
+//
+//   SE SOSTIENE en los vertices CONCAVOS y en las ranuras. Es donde el
+//   material tiene que rodear un rincon y donde el PMMA es notch-sensitive.
+//   Eso lo sigue vigilando guarda_fresado() (concavo minimo 54.0 contra la
+//   fresa de radio 1.5) y no lo toca este cambio.
+//
+//   NO SE SOSTENIA COMO REGLA GENERAL, y el propio repo ya lo demostraba: la
+//   TRASERA se corta con las cuatro esquinas vivas en acrilico de 8 mm desde
+//   que se empotro. La regla ya no se aplicaba pareja; lo unico nuevo es
+//   decirlo.
+//
+// LO QUE SI SE ACEPTA, dicho para que no sorprenda al desembalar: una esquina
+// viva CONVEXA en PMMA de 8 mm se DESPORTILLA si se golpea, y la de
+// fondo-abajo esta a ras del suelo, que es justo donde el case roza al
+// arrastrarlo por una mesa. Es riesgo de manipulacion, no de rotura en carga.
+// Si aparece en el prototipo, el remedio NO es volver al radio -- es un chaflan
+// de 0.5 x 45, que mata el filo sin devolver el hueco contra la trasera.
+radio_trasero   = 0;
+// CHAFLAN de toda arista VISTA. 0.5 x 45 grados.
+//
+// NO ES GEOMETRIA DE ESTE MODELO y por eso no aparece en ningun DXF: un
+// fichero de corte 2D no sabe decir "y ademas matale el filo". Es cota de
+// PLIEGO, y vive aqui para que tenga puerta y no se pierda en un correo.
+//
+// POR QUE EXISTE. El 2026-08-24 las dos esquinas traseras pasaron a VIVAS
+// (radio_trasero, arriba) para que la trasera empotre a ras, y ese mismo dia
+// se decidio canto DIAMANTADO. Arista viva mas canto pulido = se desportilla
+// al primer roce, y la de fondo-abajo esta a ras del suelo, justo donde el
+// case roza al arrastrarlo por una mesa. El chaflan resuelve el filo SIN
+// devolver el hueco contra la trasera, que es lo que costaba el radio.
+//
+// 0.5 y no menos: por debajo de 0.3 el taller no lo ejecuta como chaflan, lo
+// redondea. Y no mas: en la tapa del valle (5 mm) un chaflan grande deja el
+// canto en filo otra vez por el otro lado, porque se come las DOS caras.
+// Lo vigila guarda_chaflan() por los dos extremos.
+chaflan         = 0.5;
 
 // --- materiales ---
 t_acrilico = 5;    // planchas del cuerpo; MEDIR con calibre (spec §11)
@@ -573,6 +651,35 @@ d_M4_paso   = 4.5;  // agujero paso M4: standoffs de las pieles Y los cuatro
                     // rieles EUROrack, cuyo taladro de punta viene roscado M4
                     // de fabrica (hoja Tiptop: "M4 Tapping To (/)3.3")
 d_M5_paso   = 5.5;  // agujero paso M5: SOLO el esqueleto 2020, roscado en el alma
+// APRIETE DE LOS 30 M3, y la arandela de la que sale.
+//
+// Hasta el 2026-08-24 la instruccion era "apretar hasta marcar, NO hasta
+// fisurar" (README, procedimiento del cupon) y la spec §11 admitia que "el
+// par maximo antes de fisura no esta medido". Treinta tornillos VISIBLES
+// apretados a tacto sobre acrilico son treinta puntos de craquelado.
+//
+// EL NUMERO LO PONE LA ARANDELA, no el tornillo: lo que decide si el PMMA
+// craquela es cuanta area reparte la precarga. Con el umbral de 10 MPa del
+// #106 y T = 0.2*F*d:
+//
+//   arandela   area apoyo   precarga a 10 MPa   par maximo
+//   d9           54.5 mm2       545 N            0.33 N*m
+//   d12         104.0 mm2      1040 N            0.62 N*m
+//   d16         191.9 mm2      1919 N            1.15 N*m   <- esta
+//
+// SE ELIGE d16 POR DOS RAZONES QUE VAN JUNTAS. Es la unica que deja el par
+// por encima de 1 N*m, que es donde una llave dinamometrica de 1/4" empieza
+// a existir -- por debajo hace falta destornillador dinamometrico de
+// precision, y "apretar con cuidado" nos devuelve al tacto. Y YA ESTA EN EL
+// BOM: es la misma arandela ancha de los cuatro ejes de giro, asi que la
+// familia de herraje baja de dos arandelas a una. Consistencia de herraje es
+// justo lo que separa un producto de un montaje.
+//
+// OJO CON ENGRASAR LA ROSCA: el par se convierte en precarga con coeficiente
+// 0.2 en seco y ~0.15 engrasado, o sea que el MISMO par mete un 30% mas de
+// precarga y fisura. LOS M3 VAN SECOS.
+d_arandela  = 16;   // mm, arandela ancha bajo cada M3 visible
+par_m3      = 1.0;  // N*m. Techo por arandela: 1.15
 // hol_piel = holgura de AJUSTE de las pieles EMPOTRADAS, por lado.
 //
 // Sustituye a gap_sombra (5 mm), que era otra cosa: la junta de sombra de las
@@ -597,14 +704,41 @@ hol_piel    = 0.15;
 // bandeja de entrepiso, el unico cliente del acrilico de 5 mm es la tapa del
 // valle. Comprar una plancha entera para una pieza es cosa del pliego.
 t_piel      = 8;
-// Paticas: METALICAS, torneadas, pequenas (Samuel, 2026-08-17 -- "metalicas
-// y elegantes"). No son de goma: eso cambia el BOM y el acabado. Van bajo los
-// COSTADOS, que son las piezas portantes de 8 mm, con su cara exterior a ras
-// del costado; el resto del disco vuela hacia dentro, bajo la bandeja. El
-// canto de abajo del perfil va RECTO por esto mismo: con paticas en los
-// extremos, un canto abombado convierte el apoyo en un balancin.
-alto_pie    = 8;    // altura de la patica
-d_pie       = 16;   // diametro; pequeno a proposito
+// PATICAS: DE GOMA. Samuel, 2026-08-24 -- "prefiero las gomas solamente,
+// pero unas gomas serias".
+//
+// ESTO REVIERTE LA NOTA DEL 2026-08-17 que decia "METALICAS, torneadas,
+// pequenas... No son de goma: eso cambia el BOM y el acabado". Y al
+// revertirla, LA SPEC §5 DEJA DE ESTAR EQUIVOCADA: nunca dejo de decir "pies
+// de goma bajo la base". Habia una contradiccion de TRES documentos -- este
+// fichero decia metal, el README listaba las dos cosas a la vez en dos
+// tablas distintas, y la spec decia goma -- y se cierra volviendo al unico
+// que no se movio.
+//
+// LA COTA QUE DECIDE SI SIRVE ES CUANTO SE HUNDE, no la dureza ni el
+// diametro. El toroide excita a 100 Hz (#106) y la pata es un muelle: si su
+// frecuencia propia cae cerca de ahi, AMPLIFICA en vez de aislar, y le pasa
+// a la mesa mas zumbido del que le pasaria el acrilico en seco.
+//
+//   se hunde   f propia   transmite
+//   0.10 mm     49.8 Hz     33 %
+//   0.25 mm     31.5 Hz     11 %    <- esta
+//   0.50 mm     22.3 Hz      5 %
+//   1.00 mm     15.8 Hz    2.5 %
+//
+// 0.25 es el minimo que deja la f propia a un tercio de la excitacion, que
+// es el criterio de manual. Mas blanda aisla mejor y se bambolea mas.
+//
+// ES REQUISITO DE COMPRA, NO DE DIBUJO: se exige la curva carga-deformacion
+// del fabricante. Una goma que no publica esa curva no se puede verificar y
+// por tanto no sirve, por seria que parezca.
+//
+// La altura sale gratis: la entrada de aire se mudo a la trasera el
+// 2026-08-21, asi que la separacion al suelo ya no ventila nada y alto_pie
+// no entra en ninguna derivacion.
+flecha_pie  = 0.25; // mm bajo 22.8 N. DE HOJA DE DATOS, no estimado
+alto_pie    = 10;   // sube de 8: la flecha necesita material donde ocurrir
+d_pie       = 20;   // sube de 16: area para no aplastarse permanentemente   // diametro; pequeno a proposito
 // EJE DE LA TAPA: NO HAY BISAGRA. El eje es EL PROPIO M5 con el que el riel de
 // arriba se fija de punta al costado. Samuel, viendo el render: "deberia ser el
 // mismo tornillo con el que se atornilla la barra del eurorack no? por que tanto
@@ -766,6 +900,78 @@ vent_periodo      = 40;  // periodo horizontal de cada onda
 // debajo de su polilinea. La primera version se olvido ese termino y los 14
 // salieron 12.
 vent_separacion   = 14;  // rejilla <-> ondas. De dibujo, no de fragilidad
+// PROFUNDIDAD DEL CAJEADO DE LA SIERRA. La sierra dejo de ser ranura PASANTE
+// el 2026-08-24 y pasa a ser un vaciado ciego en la plancha de 8.
+//
+// EL PORQUE, que es geometrico y no de gusto. Detras de la trasera, a la
+// altura de cada onda, hay esto (medido contra el envolvente de un modulo de
+// fondo_pcb_max):
+//
+//   triangulo y cuadrada   y =  99.47   171 mm de aire: el volumen abierto
+//                                       del piso de abajo. Siguen PASANTES.
+//   sierra                 y = 180.94    32 mm: el dorso de los modulos de la
+//                                       fila de arriba. Esta es la que cambia.
+//
+// No habia choque -- 32 mm sobran -- pero una ranura de 4 mm a 32 mm de un
+// dorso de PCB ensena cable y deja entrar polvo y dedo. Y el propio repo ya
+// habia pagado por esto: el 2026-08-21 la rejilla de entrada se fue del suelo
+// porque "se transparentaba", y costo 2 K. Aqui es la misma fisica con el
+// problema al reves.
+//
+// EN ACRILICO TRASLUCIDO UN CAJEADO CIEGO SE LEE MEJOR QUE UNA RANURA: atrapa
+// luz y brilla contra el espesor, en vez de ser un hueco oscuro que ensena lo
+// que hay detras.
+//
+// 4 = la mitad de t_piel. Deja 4 mm de alma, y la fresa estandar lo saca
+// (vent_ancho_ranura 4 >= fresa_d 3). Va desde la cara EXTERIOR: hoy no hay
+// iluminacion interior (spec §12 deja la WS2812 fuera de alcance), asi que un
+// cajeado por dentro seria casi invisible. Si algun dia entra esa luz, voltear
+// la cara es una linea en piel_trasera().
+//
+// LO QUE CUESTA: 0.5 K. La salida baja de 12609 a 9943 mm2 y el salto termico
+// sube de 6.6 a 7.1 K contra un techo de 15 -- lo dice guarda_aire() en cada
+// corrida. OJO con leer ese numero de mas: potencia_disipada son SOLO los
+// reguladores del PSU, y la disipacion de los modulos no esta en ningun
+// presupuesto de este repo. El 7.1 describe el camino del PSU, no la bahia de
+// arriba, que es justo lo que se sella.
+//
+// Y EL CAJEADO YA NO ES UNA SIERRA: es la palabra KONDOR (Samuel, 2026-08-24).
+// Eso arregla solo el problema que el render del cajeado habia destapado --
+// la sierra ciega se leia floja PORQUE competia con dos ondas abiertas y
+// perdia. Un logotipo no compite: se lee distinto a proposito.
+//
+// LO QUE SE PIERDE, y hay que decirlo: el README describe la trasera como
+// "las tres ondas -- sierra, triangulo y cuadrada, las tres formas del VCO --
+// que son la firma visual del case". Con la sierra fuera quedan DOS de las
+// tres formas mas el nombre de la casa. La idea de "las tres ondas del VCO"
+// muere aqui y hay que reescribir ese parrafo.
+kondor_prof     = 4;    // cajeado ciego, desde la cara exterior
+// Tamano nominal de la fuente. Con Franklin Gothic Medium da una ALTURA DE
+// CAJA de 32.44 mm -- caja y no "size", que en tipografia no son lo mismo: el
+// size es el cuerpo y lo que se mide en la plancha son las mayusculas.
+//
+// 32.44 cae casi clavado en la banda que ocupaba la sierra (su semialtura era
+// vent_periodo*0.35 + vent_ancho_ranura/2 = 16, o sea 32 de banda), asi que la
+// composicion de la trasera no se mueve al cambiar el dibujo por la palabra.
+// Con Bahnschrift esto medía 34.22; Franklin tiene la mayuscula mas corta al
+// mismo cuerpo.
+kondor_size     = 34;
+// Tracking, y bajo de 2.32 a 1.3 el 2026-08-24 a peticion de Samuel ("con
+// menos intercalado"). 1.0 seria el avance natural de la fuente, asi que 1.3
+// sigue siendo letra espaciada -- que es la manera modernista de componer
+// mayusculas -- pero deja de ser un cartel estirado.
+//
+// Medido sobre el DXF con Franklin Gothic Medium a size 34:
+//
+//   spacing 1.00 -> 172.52 mm      spacing 1.50 -> 246.43
+//   spacing 1.15 -> 194.69         spacing 1.80 -> 290.78
+//   spacing 1.30 -> 216.87  <- este
+//
+// POR QUE 1.3 Y NO OTRO: cada bloque de onda de la trasera mide au*0.35 =
+// 184.8 mm. Con 216.87 la palabra es el elemento mas ancho de la pieza -- que
+// es lo que le toca al nombre -- sin aplastar a las ondas, que es lo que
+// pasaba con los 369 de antes (el doble que una onda entera).
+kondor_spacing  = 1.3;
 
 // --- la entrada de red ---
 // La VENTANA de la trasera por donde asoma la entrada de red. Ojo con la

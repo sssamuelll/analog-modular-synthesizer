@@ -837,10 +837,30 @@ def _onda_area(p: dict[str, float], tipo: str, largo: float) -> float:
 
 
 def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
-    """Las tres ondas de la trasera: (area, y_centroide en el case).
+    """Las ondas ABIERTAS de la trasera: (area, y_centroide en el case).
 
-    Son SALIDA, no entrada: arrancan a 74 mm del suelo y suben hasta 195. Es la
-    unica ventilacion que Samuel quiso dejar en esa pieza."""
+    Son SALIDA, no entrada. Es la unica ventilacion que Samuel quiso dejar en
+    esa pieza.
+
+    SON DOS, NO TRES, DESDE EL 2026-08-24. La sierra dejo de existir: ese sitio
+    lo ocupa ahora el CAJEADO CIEGO de la palabra KONDOR (kondor_prof), que no
+    atraviesa la plancha y por tanto no ventila y no puede seguir sumando aqui.
+    La salida baja de 12609 a 9943 mm2 y el salto termico sube de 6.6 a 7.1 K
+    contra el techo de 15.
+
+    El motivo no es termico sino de lo que hay DETRAS de cada onda, medido
+    contra el envolvente de un modulo de fondo_pcb_max:
+
+        triangulo y cuadrada  y =  99.47   171 mm de aire (piso de abajo)
+        sierra                y = 180.94    32 mm: dorso de los modulos de
+                                            arriba -- ranura que ensena cable
+                                            y deja entrar polvo
+
+    LO QUE ESTE NUMERO NO DICE, y hay que decirlo: potencia_disipada son SOLO
+    los reguladores del PSU. La disipacion de los modulos no esta en ningun
+    presupuesto de este repo, asi que el 7.1 K describe el camino del PSU --
+    que sale por el valle y por estas dos ondas, las dos por debajo del
+    entrepiso-- y NO la bahia de arriba, que es la que el cajeado sella."""
     P = _vertices(p)
     ce = _centros_esqueleto(p, P, _centros_rail(p, P))
     au = p["ancho_total"] - 2 * p["t_cheek"] - 2 * p["hol_piel"]
@@ -851,10 +871,11 @@ def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
     y0_pl = 0.0
     f_base, f_tras = ce[1][1] - y0_pl, ce[4][1] - y0_pl
     y_bajas = f_base + 0.37 * (f_tras - f_base)
-    y_sierra = f_base + 0.74 * (f_tras - f_base)
+    # La sierra iba aqui con (_onda_area(p, "sierra", au * 0.70), y_sierra) y
+    # y_sierra = f_base + 0.74 * (f_tras - f_base). Se cae con el cajeado: el
+    # dibujo sigue existiendo en la plancha, la ventilacion no.
     trozos = ((_onda_area(p, "triangulo", au * 0.35), y_bajas),
-              (_onda_area(p, "cuadrada", au * 0.35), y_bajas),
-              (_onda_area(p, "sierra", au * 0.70), y_sierra))
+              (_onda_area(p, "cuadrada", au * 0.35), y_bajas))
     area = sum(a for a, _ in trozos)
     centro = sum(a * (y0_pl + y) for a, y in trozos) / area
     return area, centro
@@ -927,11 +948,127 @@ def guarda_aire(p: dict[str, float]) -> None:
     print(f"aire: entrada {a_ent:.0f} mm2 en {n_ent} ranuras de "
           f"{largo_ent:.1f} x {p['vent_ancho_ranura']:.0f} (trasera, y={y_ent:.0f})")
     print(f"  salida {a_sal:.0f} mm2 = {a_val:.0f} del valle ({n_val} ranuras) + "
-          f"{a_ond:.0f} de las tres ondas, centroide y={y_sal:.0f}")
+          f"{a_ond:.0f} de las DOS ondas abiertas (el relieve KONDOR es cajeado "
+          f"ciego y no ventila), centroide y={y_sal:.0f}")
     print(f"  tiro {h*1000:.0f} mm, area efectiva {a_ef:.0f} mm2 -> "
           f"{dt:.1f} K sobre ambiente con {p['potencia_disipada']:.2f} W "
           f"(techo {p['salto_termico_max']:.0f}). SUPUESTO: C_D={CD_TIRO}, "
           f"sin perdidas de trafo")
+
+
+# Coeficiente par-precarga de un tornillo de acero SECO. 0.2 es valor de
+# manual. Con la rosca engrasada baja a ~0.15, o sea que el MISMO par mete un
+# 30% mas de precarga -- y sobre acrilico eso fisura. Los M3 van secos, y va
+# dicho en el pliego y en el orden de ensamblaje, no solo aqui.
+K_PAR = 0.20
+
+
+def guarda_paticas(p: dict[str, float]) -> None:
+    """Una goma dura no aisla menos: AMPLIFICA.
+
+    El toroide excita a 100 Hz -- magnetostriccion al doble de la red, #106.
+    La pata y la masa del case forman un muelle, y si su frecuencia propia
+    cae cerca de esos 100 Hz la transmisibilidad se dispara: la mesa recibe
+    MAS zumbido del que recibiria con el acrilico apoyado en seco. Una mesa
+    es una superficie radiante mucho mayor que el case.
+
+    Por eso la cota que decide una patica no es la dureza ni el diametro:
+    es CUANTO SE HUNDE bajo carga. f_propia = 15.76 / sqrt(flecha_mm) es la
+    formula de manual para un grado de libertad bajo su propio peso.
+
+    Se exige f_propia <= 100/3. El factor 3 es el minimo habitual para que la
+    transmisibilidad baje del 15 %; por debajo de 3 se entra en la zona donde
+    la curva sube en vez de bajar.
+
+    ES REQUISITO DE COMPRA, NO DE DIBUJO: la flecha sale de la curva
+    carga-deformacion del fabricante. Una goma que no publica esa curva no se
+    puede verificar, y por tanto no sirve.
+    """
+    MASA_CASE, F_TOROIDE = 9.30, 100.0        # kg (#106, con 5 largueros), Hz
+    carga = MASA_CASE * 9.81 / 4
+    f_propia = 15.76 / math.sqrt(p["flecha_pie"])
+    transmision = 1 / abs((F_TOROIDE / f_propia) ** 2 - 1)
+    flecha_min = (15.76 / (F_TOROIDE / 3)) ** 2
+    assert f_propia <= F_TOROIDE / 3, (
+        f"flecha_pie = {p['flecha_pie']} mm da f propia {f_propia:.1f} Hz "
+        f"contra los {F_TOROIDE:.0f} Hz del toroide: transmite "
+        f"{transmision*100:.0f} %. Una goma que se hunde poco NO aisla menos, "
+        f"AMPLIFICA. Hace falta >= {flecha_min:.2f} mm de flecha.")
+    print(f"paticas: {carga:.1f} N por pata, se hunden {p['flecha_pie']} mm "
+          f"-> f propia {f_propia:.1f} Hz, transmiten {transmision*100:.0f} % "
+          f"de los {F_TOROIDE:.0f} Hz del toroide")
+
+
+def guarda_apriete(p: dict[str, float]) -> None:
+    """El par de los M3 sale de la ARANDELA, no del tornillo.
+
+    Hasta el 2026-08-24 la instruccion era "apretar hasta marcar, NO hasta
+    fisurar" (README, procedimiento del cupon) y la spec §11 admitia que "el
+    par maximo antes de fisura no esta medido". Treinta tornillos VISIBLES
+    apretados a tacto sobre acrilico son treinta puntos de craquelado.
+
+    Lo que decide si el PMMA craquela no es el tornillo sino cuanta area de
+    acrilico reparte su precarga. Precedente en el propio BOM: con arandela
+    M4 normal (d9) los ejes de giro daban 16.3 MPa y "el PMMA fluye en
+    semanas"; con d16 dan 4.3 y aguantan. Aqui se hace la cuenta al reves --
+    dada la arandela, cual es el par que no pasa del umbral.
+
+    El segundo assert es el que sorprende: exige un par MINIMO. Un par por
+    debajo de 1 N*m no lo da ninguna llave dinamometrica de 1/4", asi que
+    volveria a apretarse a tacto, que es lo que este cambio vino a quitar.
+    Lo que compra par es subir la arandela, no bajar el apriete.
+    """
+    SIGMA_PMMA = 10.0                      # #106
+    area = math.pi * (p["d_arandela"] ** 2 - p["d_M3_paso"] ** 2) / 4
+    par_max = K_PAR * (SIGMA_PMMA * area) * 0.003
+    sigma = p["par_m3"] / (K_PAR * 0.003 * area)
+    assert p["par_m3"] <= par_max, (
+        f"par_m3 = {p['par_m3']} N*m con arandela d{p['d_arandela']:g} aplasta "
+        f"el acrilico a {sigma:.1f} MPa, y el umbral son {SIGMA_PMMA}. Maximo "
+        f"{par_max:.2f} N*m -- o sube la arandela, que es lo que de verdad "
+        f"compra par.")
+    assert p["par_m3"] >= 1.0, (
+        f"par_m3 = {p['par_m3']} N*m: por debajo de 1 N*m no hay llave "
+        f"dinamometrica de 1/4\" que lo de, asi que se volveria a apretar a "
+        f"tacto. Sube la arandela hasta que el par quepa en una herramienta "
+        f"que existe (d16 da {par_max:.2f} si ya la llevas).")
+    print(f"apriete: 30 M3 a {p['par_m3']} N*m con arandela d{p['d_arandela']:g} "
+          f"-> {sigma:.1f} MPa sobre el acrilico (techo {SIGMA_PMMA}, "
+          f"par maximo {par_max:.2f})")
+
+
+def guarda_chaflan(p: dict[str, float]) -> None:
+    """El chaflan mata el filo sin comerse la pieza.
+
+    Existe porque el 2026-08-24 las dos esquinas traseras pasaron a VIVAS
+    (radio_trasero = 0) para que la trasera empotre a ras, y ese mismo dia se
+    decidio canto DIAMANTADO. Arista viva mas canto pulido es una esquina que
+    se desportilla al primer roce, y la de fondo-abajo esta a ras del suelo,
+    que es donde el case roza al arrastrarlo por una mesa.
+
+    NO ES GEOMETRIA DE ESTE MODELO y por eso no aparece en ningun DXF: un
+    fichero de corte 2D no sabe decir "y ademas matale el filo". Es cota de
+    PLIEGO. Vive aqui para tener puerta y no perderse.
+
+    Dos limites, y muerden por razones distintas:
+      - por abajo, la maquina: un chaflan menor que 0.3 no se ejecuta como
+        chaflan, se redondea solo. Pedir arista viva es otra cosa y se dice
+        aparte.
+      - por arriba, la plancha mas FINA: el chaflan se come material de las
+        DOS caras, y en la tapa del valle (5 mm) uno grande deja el canto en
+        filo otra vez, por el otro lado.
+    """
+    t_min = min(p["t_acrilico"], p["t_base"], p["t_cheek"], p["t_piel"])
+    assert p["chaflan"] >= 0.3, (
+        f"chaflan = {p['chaflan']} mm: por debajo de 0.3 el taller no lo "
+        f"ejecuta como chaflan, lo redondea. Pedir 0 (arista viva) es otra "
+        f"cosa y hay que decirlo aparte, no colarlo por aqui.")
+    assert p["chaflan"] <= t_min / 4, (
+        f"chaflan = {p['chaflan']} mm contra la plancha mas fina ({t_min:g} "
+        f"mm): se come mas de un cuarto del espesor por cada cara y el canto "
+        f"vuelve a quedar en filo. Maximo {t_min/4:.2f}.")
+    print(f"chaflan: {p['chaflan']} mm x 45 en toda arista vista "
+          f"(techo por la plancha de {t_min:g} mm: {t_min/4:.2f})")
 
 
 def guarda_red(p: dict[str, float]) -> None:
@@ -1650,6 +1787,9 @@ def main() -> int:
     canario_alineacion(p)
     guarda_piso(p)
     guarda_aire(p)
+    guarda_chaflan(p)
+    guarda_apriete(p)
+    guarda_paticas(p)
     canario_red(p)
     guarda_red(p)
     guarda_fresado(p)

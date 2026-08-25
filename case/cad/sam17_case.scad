@@ -318,10 +318,19 @@ function redondear(P, R, sin_bombeo = []) =
 // efectivo no era el pedido sino el que cabia en la meseta (marco_remate/2), asi
 // que ensanchar el techo lo volvia MAS redondo. Con radio_remate se pide un
 // radio y sale ese: la punta de arriba se lee cuadrada a cualquier marco.
+// Los vertices 5 y 6 -- los DOS del plano trasero -- pasan a radio_trasero = 0
+// el 2026-08-24: esquina viva, para que la trasera y la tapa de remate
+// empotren a ras. Antes eran radio_remate (2) y radio_perfil (14), y ese 14 le
+// dejaba a la trasera 14 mm de esquina colgando fuera de la silueta del
+// costado. radio_perfil se quedo sin clientes y se borro. El porque completo,
+// y que parte de la regla anti-fisura se sostiene y cual no, en params.scad.
+//
+// redondear() ya sabe tratar el 0: R[i] <= 0 devuelve el vertice pelado, sin
+// arco. No hace falta tocarla.
 function radios_perfil() = [radio_punta,  radio_punta,
                             radio_pico,   radio_valle,
-                            radio_remate, radio_remate,
-                            radio_perfil];
+                            radio_remate, radio_trasero,
+                            radio_trasero];
 
 // Va DENTRO de perfil_lateral y no en costado_2d a proposito: costado_2d
 // resta los agujeros DESPUES, de modo que el redondeo no toca los taladros.
@@ -332,11 +341,33 @@ function radios_perfil() = [radio_punta,  radio_punta,
 // pts_perfil() para coordenadas, no la silueta), asi que el radio no se
 // propaga a bandejas ni pieles.
 module perfil_lateral() {
-    // El tramo que SALE de P[6] es el canto de abajo (P[6] -> P[0]) y va
-    // recto de verdad: es la cara de apoyo del case. Abombada, el aparato
-    // descansaria sobre el centro de cada costado en vez de sobre sus
-    // extremos, y con paticas en las esquinas eso es un balancin.
-    polygon(redondear(pts_perfil(), radios_perfil(), [6]));
+    // TRES tramos van rectos de verdad, y la regla es una sola: EL CANTO QUE
+    // APOYA CONTRA ALGO PLANO NO SE ABOMBA. Los que solo dibujan silueta
+    // conservan la entasis, que es para lo que existe.
+    //
+    //   [6] canto de abajo   (P[6] -> P[0], 308.94 mm)  la cara de apoyo.
+    //       Abombada, el aparato descansaria sobre el centro de cada costado
+    //       en vez de sobre sus extremos, y con paticas en las esquinas eso
+    //       es un balancin. Exento desde el principio.
+    //   [5] canto trasero    (P[5] -> P[6], 256.18 mm)  contra la TRASERA.
+    //   [4] meseta del techo (P[4] -> P[5],  50.00 mm)  contra la TAPA DE
+    //       REMATE.
+    //
+    // Los dos ultimos entran el 2026-08-24, a peticion de Samuel: "siento que
+    // no esta recta la linea de ese corte y preferiria que fuera recta para
+    // que encaje a la perfeccion con la pieza trasera". Y no era percepcion.
+    // Medido sobre el DXF que va al taller, el canto trasero SOBRESALIA
+    // 1.1970 mm del plano trasero a media altura y enrasaba en las puntas
+    // -- contra hol_piel = 0.15 mm de holgura de montaje de la trasera, o sea
+    // OCHO VECES la junta. La meseta hacia lo mismo con 0.250 mm bajo la tapa
+    // de remate.
+    //
+    // El canto trasero era ademas EL TRAMO MAS LARGO QUE TODAVIA SE ABOMBABA
+    // (256.18 mm; el de abajo es mayor pero ya estaba exento), asi que se
+    // llevaba la flecha mas grande del perfil. Lo que queda de entasis tras
+    // esto es 0.779 mm en la cara del panel de abajo, que no apoya contra
+    // nada.
+    polygon(redondear(pts_perfil(), radios_perfil(), [4, 5, 6]));
 }
 
 module costado_2d() {
@@ -440,6 +471,98 @@ module bandeja_base_2d() {
 // la toque -- calculado con acrilico colado a 3 GPa. Partiendo el vano por la
 // mitad cae a 0.11 (la flecha va con L^4, asi que partir en dos divide por 16).
 // Cuatro tornillos mas en todo el case para que la cara trasera no ondee.
+// EL RELIEVE DE LA TRASERA. Era la onda SIERRA; desde el 2026-08-24 es la
+// palabra KONDOR, el nombre de la casa (Samuel). Vive fuera de
+// piel_trasera_2d() porque tiene DOS clientes con papeles distintos: NO se
+// recorta en el 2D de corte (es cajeado ciego) y la vacia piel_trasera() en 3D
+// a kondor_prof. Derivar su sitio dos veces es el patron del `- 15` copiado en
+// cinco ficheros que costo la tanda de la trasera, asi que se deriva UNA vez
+// aqui y los dos la llaman.
+//
+// LA FUENTE ES UNA DEPENDENCIA DE COMPILACION, y de las peligrosas: si no esta
+// instalada, OpenSCAD NO falla -- avisa por consola y sustituye por otra, o
+// sea que el fichero sale, parece bueno y la pieza es otra.
+//
+// HUELLA PARA CAZAR LA SUSTITUCION: con la fuente correcta y los parametros de
+// params.scad, KONDOR sale en 10 CONTORNOS (K1 O2 N1 D2 O2 R2) y la caja mide
+// 216.87 x 32.44 mm. Si esos numeros no salen, la fuente se sustituyo.
+//
+// POR QUE FRANKLIN GOTHIC MEDIUM (2026-08-24, Samuel pidio "brutalismo y
+// modernismo berlines"). Los dos berlines apuntan a letras distintas:
+//
+//   modernismo berlines  = la GROTESCA. En concreto la Akzidenz-Grotesk de
+//                          H. Berthold AG, BERLIN, 1896 -- la letra de la
+//                          Neue Typographie de Tschichold. No esta instalada
+//                          (Berthold, con licencia) y Franklin Gothic es lo
+//                          mas cerca que se llega sin comprarla: grotesca de
+//                          1902, misma generacion y color parecido.
+//   brutalismo berlines  = la DIN 1451 (Bahnschrift), que es lo que se estarce
+//                          en una señal y en una placa de maquina.
+//
+// Se elige la grotesca porque la DIN es MONOLINEAL DE INGENIERIA: como nombre
+// se lee a numero de pieza, no a marca. Franklin tiene peso, que es lo que el
+// brutalismo pide y la DIN no da.
+//
+// Y GANA TAMBIEN POR FABRICACION, que aqui no es un desempate menor: el
+// relieve es un CAJEADO, o sea que la fresa tiene que entrar DENTRO del trazo
+// de cada letra, asi que ningun trazo puede medir menos que fresa_d. Medido
+// erosionando la palabra y contando contornos (si al erosionar r se pierde un
+// trazo, ese trazo medía menos de 2r):
+//
+//   fuente                   fresa 3 mm   fresa 4 mm
+//   Bahnschrift (DIN)           pasa        ROMPE
+//   Bahnschrift SemiBold        pasa        ROMPE
+//   Franklin Gothic Book        pasa        ROMPE
+//   Franklin Gothic Medium      pasa         pasa     <- este
+//   Franklin Gothic Demi        pasa         pasa
+//   Arial                       pasa        ROMPE
+//
+// O sea: con la fresa REAL (3 mm) valen todas, pero Medium y Demi tienen todo
+// trazo >= 4 mm y las demas se quedan entre 3 y 4. Si el taller sube de fresa,
+// las otras dejan de salir. Demi es el mismo trato con mas masa: cambiar esta
+// linea es todo lo que hace falta.
+//
+// ESTO NO LO VIGILA NINGUNA PUERTA TODAVIA. guarda_fresado() mira las ranuras
+// y los concavos, no la palabra. Pendiente.
+//
+// No vive en params.scad porque ese fichero es NUMERICO PURO (ver su cabecera):
+// el regex de leer_params() pide un valor numerico, asi que una cadena ahi se
+// ignoraria en silencio -- que es peor que no ponerla.
+KONDOR_FONT = "Franklin Gothic Medium";
+
+function trasera_au() = ancho_total - 2*t_cheek - 2*hol_piel;
+function trasera_y_relieve() =
+    let (ce = centros_esqueleto())
+    ce[1].y + 0.74*(ce[4].y - ce[1].y);   // y0 = 0, ver piel_trasera_2d()
+
+// OJO CON EL ESPEJO -- ESTO NO ES UN DESCUIDO, ES LA CORRECCION.
+//
+// piel_trasera() extruye desde el plano trasero HACIA DENTRO del case, asi que
+// la cara que se ve desde fuera es la z=0 de la extrusion: el DXF de la trasera
+// esta dibujado TAL COMO SE VE DESDE DENTRO. Mientras cada recorte fue una onda,
+// una ranura o un rectangulo eso daba igual -- ninguno es quiral y la plancha se
+// voltea. Una PALABRA si lo es, y el primer render salio leyendo "ЯODNOX".
+//
+// Por eso hay dos versiones y cada una tiene su cliente:
+//
+//   espejo = false  el fichero de FABRICACION (PART kondor_cajeado_2d). Se lee
+//                   KONDOR del derecho, que es lo unico que un taller puede
+//                   interpretar sin preguntar: "esto es lo que tiene que verse
+//                   en la cara exterior".
+//   espejo = true   lo que resta piel_trasera() en 3D, para que al mirar el
+//                   case por detras la palabra se lea.
+//
+// Si algun dia se decide que el DXF de la trasera se dibuje visto desde FUERA
+// (que seria mas sano ahora que la pieza tiene una cara con cajeado y otra sin
+// el), esto se cae y hay que mover con el la x del recorte del IEC, que HOY
+// esta bien: cae junto al costado derecho como pide la spec §7.
+module kondor_2d(espejo = false) {
+    translate([trasera_au()/2, trasera_y_relieve()])
+        scale([espejo ? -1 : 1, 1])
+            text("KONDOR", font = KONDOR_FONT, size = kondor_size,
+                 spacing = kondor_spacing, halign = "center", valign = "center");
+}
+
 module piel_trasera_2d() {
     au = ancho_total - 2*t_cheek - 2*hol_piel;
     ce = centros_esqueleto();
@@ -514,7 +637,11 @@ module piel_trasera_2d() {
         rejilla_entrada(au, lib0, lib1, x_iec0);
         translate([au*0.10, y_bajas])  onda("triangulo", au*0.35);
         translate([au*0.55, y_bajas])  onda("cuadrada",  au*0.35);
-        translate([au*0.15, y_sierra]) onda("sierra", au*0.70);
+        // AQUI IBA LA SIERRA, y desde el 2026-08-24 no va nada: ese relieve
+        // es la palabra KONDOR y es CAJEADO CIEGO. Un DXF de contorno no sabe
+        // decir "hasta 4 mm de profundidad", asi que la vacia piel_trasera()
+        // en 3D. Ver kondor_2d() arriba. Este fichero de corte YA NO ES la
+        // pieza entera, igual que el DXF del chasis no dice de donde doblar.
         // VENTANA de paso de la entrada de red -- no el recorte donde se encaja
         // el conector. El conector lo sostiene una pieza fija atornillada al
         // larguero de base trasera (Samuel, 2026-08-23): la trasera se quita con
@@ -949,6 +1076,12 @@ else if (PART == "bandeja_base_2d")      bandeja_base_2d();
 else if (PART == "tapa_valle_2d")        tapa_valle_2d();
 else if (PART == "remate_sup_2d")        remate_sup_2d();
 else if (PART == "piel_trasera_2d")      piel_trasera_2d();
+// El relieve KONDOR en su propio fichero, y no es un extra: es la UNICA forma
+// de que llegue al taller. No se recorta en piel_trasera_2d (es ciego), asi que
+// el DXF de la trasera SIN esto es media pieza -- el mismo caso del chasis, que
+// necesita su plano de plegado porque el corte no dice de donde doblar. Va con
+// su cota de profundidad (kondor_prof) escrita al lado, en el pliego.
+else if (PART == "kondor_cajeado_2d")    kondor_2d();
 else if (PART == "chasis_cuerpo_2d")     chasis_cuerpo_2d();
 else if (PART == "chasis_tapa_2d")       chasis_tapa_2d();
 else if (PART == "chasis_refuerzo_2d")   chasis_refuerzo_2d();
@@ -1025,12 +1158,22 @@ module bandeja_base() {
 // Y desde el 2026-08-22 baja hasta el PLANO DEL SUELO (y=0) en vez de quedarse
 // en y=3: empotrada por los cuatro costados y no por tres. Ver el comentario
 // largo en piel_trasera_2d().
+// El cajeado de la sierra se vacia AQUI y no en el 2D. Ojo con el sentido: la
+// extrusion arranca en el plano trasero (P[6].x) y crece hacia DENTRO del case
+// por el rotate([0,-90,0]), asi que z local 0 es la cara EXTERIOR. Vaciar de 0
+// a kondor_prof deja el cajeado por fuera, que es donde se ve sin luz
+// interior. Para voltearlo a la cara de dentro seria translate a
+// t_piel - kondor_prof.
 module piel_trasera() {
     P = pts_perfil();
     ce = centros_esqueleto();
     translate([P[6].x, 0, t_cheek + hol_piel])
         rotate([0, -90, 0])
-            linear_extrude(t_piel) piel_trasera_2d();
+            difference() {
+                linear_extrude(t_piel) piel_trasera_2d();
+                translate([0, 0, -0.1])
+                    linear_extrude(kondor_prof + 0.1) kondor_2d(espejo = true);
+            }
 }
 
 // A ras del plano del valle, igual que la bandeja de entrepiso: el grosor crece
