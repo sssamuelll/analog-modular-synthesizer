@@ -7,21 +7,29 @@
 //!
 //! ```text
 //!   off  tam  campo
-//!    0    2   id (u16)
-//!    2    1   banderas
+//!    0    4   id (u32)
+//!    4    1   banderas
 //!               bit0 solo_lectura   bit1 medida   bit2 confirmacion_fisica
 //!               bit3 ambito (0 = compartido, 1 = por-voz)
 //!               bits 4-5 tipo (0 continuo, 1 enumerado, 2 booleano)
 //!               bit6 acepta_modulacion
-//!    3    4   min (i32)
-//!    7    4   max (i32)
-//!   11    4   def (i32)
-//!   15    1   unidad
-//!   16    1   largo del nombre
-//!   17    n   nombre en UTF-8
-//!        1   numero de etiquetas
+//!    5    4   min (i32)
+//!    9    4   max (i32)
+//!   13    4   def (i32)
+//!   17    1   unidad
+//!   18    1   largo del nombre
+//!   19    n   nombre en UTF-8
+//!   19+n  1   numero de etiquetas
 //!        por etiqueta: 1 byte de largo + los bytes UTF-8
 //! ```
+//!
+//! Esta tabla decia `0 2 id (u16)` y el codec siempre escribio `w.u32`, asi
+//! que TODOS los offsets estaban corridos por 2 -- y quien implementara el
+//! parser desde este comentario, que es exactamente lo que hara quien escriba
+//! la carcasa web, sacaba basura en todos los campos. Es el #182, fallo 2.
+//!
+//! Ahora la tabla no se cree: la clava `la_tabla_de_arriba_es_la_de_verdad`,
+//! que asevera cada offset contra bytes de verdad.
 
 use crate::param::ParamId;
 
@@ -154,6 +162,57 @@ pub enum ErrorCodec {
     /// Etiqueta de mensaje que no esta en la tabla de §4.1 (lo usa `protocolo`).
     Desconocido,
 }
+
+/// El punto de partida de FNV-1a de 32 bits. No es cero a proposito: un cero
+/// seria indistinguible de «no se calculo», que es justo el significado que
+/// `modelo::HUELLA_NO_CACHEABLE` le reserva al cero de la huella.
+pub const FNV_BASE: u32 = 0x811C_9DC5;
+
+/// FNV-1a, 32 bits. Se elige por lo que NO trae: sin tablas, sin estado, sin
+/// dependencias, y el mismo resultado en el cerebro y en la carcasa web --
+/// que es donde se va a comparar. No es criptografico y no hace falta que lo
+/// sea: esto decide si hay que remandar un volcado, no si alguien miente.
+pub fn fnv1a(mut h: u32, bytes: &[u8]) -> u32 {
+    for b in bytes {
+        h ^= *b as u32;
+        h = h.wrapping_mul(0x0100_0193);
+    }
+    h
+}
+
+/// Lo mas que puede ocupar UN descriptor en el cable.
+///
+/// No es un techo del formato: es el tamano del buffer del volcado en
+/// `fw/src/usb.rs`, que lo LEE de aqui en vez de repetir el 256 por su cuenta.
+///
+/// Y no es un techo blando. `mandar_descriptores` hacia `?` sobre `escribir`,
+/// asi que UN solo descriptor pasado se llevaba por delante el volcado ENTERO
+/// -- en silencio, y sin que el cliente pudiera distinguir "termino" de "se
+/// aborto". Es el #182, fallo 5. Hoy se lo salta y lo cuenta, y el modelo que
+/// tenga uno asi deja de ser cacheable (`modelo::HUELLA_NO_CACHEABLE`).
+pub const MAX_DESCRIPTOR_B: usize = 256;
+
+/// Cuanto de ese techo se deja ocupar antes de dar la alarma.
+///
+/// MEDIDO el 2026-08-24, y hay que leer las DOS medidas juntas porque miden
+/// poblaciones distintas:
+///
+/// ```text
+///   peor de los 42 COMPILADOS ("cuantizacion global"):  106 B   41 %
+///   peor caso DECLARADO (selector de 17 fuentes):       250 B   98 %
+/// ```
+///
+/// El 41 % es cierto y no dice nada: los compilados son los del cerebro, y los
+/// que engordan son los de MODULO, que llegan por I2C en tiempo de ejecucion
+/// (§3.5) y por definicion ningun test de compilacion los ve. El 250 esta
+/// medido con `escribir` en `el_peor_caso_declarado_cabe_en_el_volcado`, y ya
+/// pasa esta alarma con cincuenta y ocho bytes de sobra.
+///
+/// O sea que el 75 % ya no es "mucho antes del acantilado": es un aviso que el
+/// caso realista se salto hace rato. Cerrarlo es la decision N4 del pase del
+/// nucleo (descriptor troceado contra largo ancho); subir el techo no es el
+/// arreglo, es una de las dos ramas de esa decision.
+pub const OCUPACION_MAX_B: usize = MAX_DESCRIPTOR_B * 3 / 4;
 
 pub fn escribir(d: &Descriptor, buf: &mut [u8]) -> Result<usize, ErrorCodec> {
     let mut w = Escritor { buf, n: 0 };
@@ -424,5 +483,224 @@ mod tests {
         let n = escribir(&BRILLO, &mut buf).unwrap();
         let (leido, _) = leer(&buf[..n]).unwrap();
         assert!(leido.solo_lectura && leido.medida);
+    }
+}
+
+#[cfg(test)]
+mod techo_del_volcado {
+    use super::{escribir, Ambito, Descriptor, Tipo, Unidad, MAX_DESCRIPTOR_B, OCUPACION_MAX_B};
+    use crate::param::ParamId;
+
+    /// Mide un descriptor SIN el techo de por medio.
+    ///
+    /// El buffer es holgado a proposito. Con uno de `MAX_DESCRIPTOR_B`, el que
+    /// no cabe devuelve `SinSitio` y ya: no dice por CUANTO se pasa, que es
+    /// justo el numero con el que se decide si se recorta el nombre o si hay
+    /// que trocear el descriptor (N4). Un fallo que solo dice "no" no sirve
+    /// para tomar la decision que el propio fallo obliga a tomar.
+    fn tam(d: &Descriptor) -> usize {
+        let mut buf = [0u8; MAX_DESCRIPTOR_B * 4];
+        escribir(d, &mut buf)
+            .unwrap_or_else(|_| panic!("\"{}\" no cabe ni en 4x el techo", d.nombre))
+    }
+
+    /// #182, fallo 5, **y solo sobre los descriptores COMPILADOS**.
+    ///
+    /// Un descriptor que no quepa en el buffer del volcado no se pierde solo:
+    /// se llevaba por delante TODO el volcado, porque `mandar_descriptores`
+    /// abortaba el bucle entero. Y como no hay conteo ni terminador en el
+    /// protocolo, el cliente no puede distinguir "termino" de "se aborto".
+    ///
+    /// Lo que esta puerta NO ve, y hay que decirlo aqui porque su nombre viejo
+    /// (`ningun_descriptor_...`) prometia lo contrario: los descriptores de
+    /// MODULO llegan por I2C en tiempo de ejecucion (§3.5), asi que este
+    /// bucle no los tiene delante y no puede tenerlos. Son ademas los gordos,
+    /// porque son los de las matrices de 16. Ese caso lo mide
+    /// `el_peor_caso_declarado_cabe_en_el_volcado`, aqui abajo, y NO pasa.
+    #[test]
+    fn ningun_descriptor_compilado_se_acerca_al_techo_del_volcado() {
+        for d in crate::tiempo_params::TIEMPO
+            .iter()
+            .chain(crate::medidas::MEDIDAS.iter())
+        {
+            let n = tam(d);
+            assert!(
+                n <= OCUPACION_MAX_B,
+                "\"{}\" ocupa {n} B de {MAX_DESCRIPTOR_B} ({:.0}%), y la alarma                  esta en {OCUPACION_MAX_B}. Todavia cabe, pero lo que engorda un                  descriptor son las etiquetas de los enumerados y crecen sin que                  nadie mire: o se recorta, o se decide el troceado (N4)",
+                d.nombre,
+                n as f32 / MAX_DESCRIPTOR_B as f32 * 100.0
+            );
+        }
+    }
+
+    /// Las 17 fuentes del selector de modulacion del modulo de dieciseis: las
+    /// dieciseis del bus mas "sin fuente".
+    ///
+    /// El 17 no es mio. `hardware/03-vco/check_censo_voz.py:91` lo cita
+    /// textualmente de la spec del modulo ("los selectores de fuente son
+    /// enumerados de 17"), y §8 de esa spec dice de donde salen: "cada
+    /// oscilador elige de cual de los dieciseis come", 16 selectores por
+    /// matriz.
+    ///
+    /// Los nombres son del largo que este repo se exige a si mismo, no cortos
+    /// para que la cuenta salga: `tiempo_params.rs` encabeza su tabla con
+    /// "Nombres escritos para alguien que nunca ha visto el instrumento", y
+    /// §2.1 dice para quien son de verdad -- son la documentacion que lee el
+    /// agente. "osc 1" ahorra bytes y le quita al LLM lo unico que tenia.
+    const FUENTES: &[&str] = &[
+        "sin fuente",
+        "oscilador 1",
+        "oscilador 2",
+        "oscilador 3",
+        "oscilador 4",
+        "oscilador 5",
+        "oscilador 6",
+        "oscilador 7",
+        "oscilador 8",
+        "oscilador 9",
+        "oscilador 10",
+        "oscilador 11",
+        "oscilador 12",
+        "oscilador 13",
+        "oscilador 14",
+        "oscilador 15",
+        "oscilador 16",
+    ];
+
+    /// El peor caso REALISTA, y es el barato: el nombre no repite de que
+    /// oscilador es porque eso ya va en la instancia del `ParamId` (§3.1), y
+    /// las etiquetas son las cortas que siguen siendo legibles. Si el diseno
+    /// acaba metiendo el numero de oscilador en el nombre, esto crece.
+    static SELECTOR_DE_FUENTE: Descriptor = Descriptor {
+        // Ranura 3 (el modulo), instancia 5 (el oscilador), indice cualquiera.
+        id: ParamId::nuevo(3, 5, 0x20),
+        nombre: "fuente de modulacion",
+        tipo: Tipo::Enumerado,
+        ambito: Ambito::PorVoz,
+        solo_lectura: false,
+        medida: false,
+        confirmacion_fisica: false,
+        acepta_modulacion: false,
+        min: 0,
+        max: 16,
+        def: 0,
+        unidad: Unidad::Ninguna,
+        etiquetas: FUENTES,
+    };
+
+    /// **Esta puerta esta en ROJO a proposito y por eso esta `ignore`.** No es
+    /// un test a medio escribir: es el resultado, y el resultado es que el
+    /// formato de hoy no aguanta el peor caso que el propio repo ya declara.
+    ///
+    /// MEDIDO el 2026-08-24 con `escribir`, no calculado a mano: el selector
+    /// de arriba ocupa **250 B**. El techo del volcado son 256 y la alarma
+    /// esta en 192. O sea: entra por seis bytes y revienta la alarma por
+    /// cincuenta y ocho. Para comparar, el mas gordo de los 42 compilados son
+    /// 106 B ("cuantizacion global") -- el test de arriba mide una poblacion
+    /// que nunca iba a tener el problema.
+    ///
+    /// Seis bytes de margen no son margen: son un nombre un poco mas largo, o
+    /// una etiqueta decimoctava, o que el diseno decida poner el numero de
+    /// oscilador en el nombre -- " del oscilador 3" son 16 B mas, o sea 266, y
+    /// entonces ni `escribir` termina.
+    ///
+    /// **Que lo desbloquea:** el descriptor troceado contra largo ancho. N4
+    /// se cedio a B3 de la autopista, y B3 se decidio y aterrizo el
+    /// 2026-08-24 -- pero **aterrizo la otra mitad**, y conviene no
+    /// confundirlas:
+    ///
+    /// - Lo que B3 SI arreglo es *cuando* se manda el volcado (la huella: si
+    ///   coincide no se manda nada) y que el otro lado pueda NOTAR un salto
+    ///   (cabecera con la cuenta, cierre con los enviados). Antes, un
+    ///   descriptor que no cabia se saltaba en silencio absoluto; ahora la
+    ///   carcasa ve que `enviados` no cuadra con `n` y sabe que le falta uno.
+    /// - Lo que B3 NO arreglo es que UN descriptor mida 250 de 256. Eso es el
+    ///   FORMATO, y sigue igual. Notar el salto es mejor que no notarlo, pero
+    ///   el parametro que se salto sigue sin llegar.
+    ///
+    /// Subir `MAX_DESCRIPTOR_B` sigue siendo *elegir* "largo ancho", que es la
+    /// decision y no el arreglo. Tomada, se quita el `ignore` y esto pasa a
+    /// verde o se cambia el peor caso que mide.
+    #[test]
+    #[ignore = "ROJO real, no pendiente: el peor caso declarado (selector de 17 \
+                fuentes) mide 250 B contra una alarma de 192. Lo desbloquea la \
+                decision N4 del pase del nucleo (descriptor troceado vs largo \
+                ancho), no un cambio de codigo."]
+    fn el_peor_caso_declarado_cabe_en_el_volcado() {
+        let n = tam(&SELECTOR_DE_FUENTE);
+        assert!(
+            n <= OCUPACION_MAX_B,
+            "el selector de {} fuentes ocupa {n} B de {MAX_DESCRIPTOR_B} ({:.0}%),              y la alarma esta en {OCUPACION_MAX_B}. Este descriptor no esta              compilado en el cerebro: llega por I2C desde el modulo, asi que la              otra puerta jamas lo vera. Lo decide N4",
+            FUENTES.len(),
+            n as f32 / MAX_DESCRIPTOR_B as f32 * 100.0
+        );
+    }
+}
+
+#[cfg(test)]
+mod forma_del_cable {
+    use super::*;
+
+    /// Un descriptor con TODOS los campos distintos entre si, para que un
+    /// offset corrido no pueda pasar desapercibido por casualidad.
+    static PIN: Descriptor = Descriptor {
+        id: ParamId(0x0A0B_0C0D),
+        nombre: "ab",
+        tipo: Tipo::Enumerado,
+        ambito: Ambito::PorVoz,
+        solo_lectura: true,
+        medida: false,
+        confirmacion_fisica: false,
+        acepta_modulacion: true,
+        min: -2,
+        max: 3,
+        def: 1,
+        unidad: Unidad::Ninguna,
+        etiquetas: &["x"],
+    };
+
+    /// La tabla del encabezado de este modulo es la UNICA especificacion
+    /// publicada del formato, y su propio texto dice para quien: "lo van a
+    /// parsear el puente inalambrico y JavaScript en la UI web, y un
+    /// `DataView` tiene que poder leerlo sin librerias".
+    ///
+    /// Un `DataView` lee por OFFSET. Si la tabla miente, el parser no falla:
+    /// devuelve numeros plausibles y equivocados, que es peor. Por eso esto se
+    /// asevera byte a byte y NO con un ida y vuelta -- un `escribir` + `leer`
+    /// pasa igual de bien con la tabla mintiendo, porque los dos lados
+    /// comparten el error. Eso es justo lo que dejo pasar el fallo 2.
+    #[test]
+    fn la_tabla_de_arriba_es_la_de_verdad() {
+        let mut b = [0u8; 64];
+        let n = escribir(&PIN, &mut b).unwrap();
+
+        //  0  4  id (u32 LE)
+        assert_eq!(
+            &b[0..4],
+            &[0x0D, 0x0C, 0x0B, 0x0A],
+            "id: off 0, cuatro bytes"
+        );
+        //  4  1  banderas
+        //          bit6 modulacion --+
+        //   bits 4-5 tipo = 01 enumerado |
+        //          bit3 ambito por-voz | |
+        //          bit0 solo_lectura | | |
+        //                            v v v
+        let esperadas = 0b0101_1001; // 1 + 8 + 16 + 64 = 89
+        assert_eq!(b[4], esperadas, "banderas: off 4");
+        //  5  4  min      9  4  max     13  4  def
+        assert_eq!(&b[5..9], &(-2i32).to_le_bytes(), "min: off 5");
+        assert_eq!(&b[9..13], &3i32.to_le_bytes(), "max: off 9");
+        assert_eq!(&b[13..17], &1i32.to_le_bytes(), "def: off 13");
+        // 17  1  unidad
+        assert_eq!(b[17], Unidad::Ninguna as u8, "unidad: off 17");
+        // 18  1  largo del nombre   19  n  nombre
+        assert_eq!(b[18], 2, "largo del nombre: off 18");
+        assert_eq!(&b[19..21], b"ab", "nombre: off 19");
+        // 19+n  1  numero de etiquetas, y luego largo + bytes
+        assert_eq!(b[21], 1, "numero de etiquetas: off 19+n");
+        assert_eq!(b[22], 1, "largo de la etiqueta");
+        assert_eq!(&b[23..24], b"x", "la etiqueta");
+        assert_eq!(n, 24, "el total, que es lo que avanza el sobre");
     }
 }

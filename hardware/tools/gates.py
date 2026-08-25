@@ -57,9 +57,31 @@ PATRONES = (
     "hardware/**/check_*.py",
     "hardware/**/*_budget.py",
     "case/**/*_budget.py",
+    # check_dxf.py del case NO estaba, y era el unico que relee los DXF
+    # exportados -- o sea el unico que mira el artefacto que se manda al taller,
+    # no el modelo que lo genero. El glob de arriba solo recoge presupuestos, y
+    # `hardware/**/check_*.py` no llega hasta aqui. Es literalmente el aviso que
+    # CONTRIBUTING.md da dos parrafos mas abajo: "un guion que el gate no ve no
+    # es un gate".
+    "case/**/check_*.py",
     "simulations/*/*.py",
 )
 EXCLUIR = ("__pycache__", ".venv", os.path.join(".claude", "worktrees"), "site-packages")
+
+# Cuanto se le da a UN guion antes de darlo por colgado.
+#
+# Estaba en 300 s y se puso rojo el 2026-08-24 con la maquina cargada.
+# check_pcb.py de la fuente v3 es el unico que se acerca: 141 s documentados
+# con la maquina libre, MEDIDO 226 s con renders y varios servidores KiCad
+# corriendo al lado. O sea que el margen real eran 74 s, y se lo come
+# cualquier otra cosa que este pasando en la maquina.
+#
+# Una puerta que se pone roja por carga y no por la placa es peor que no
+# tenerla: ensena a empujar con --no-verify. 600 s son 2.65x los 226 medidos
+# --  decia "el doble", y el doble de 226 son 452, no 600. El numero esta bien
+# y la cuenta estaba mal; se corrige la cuenta, no el numero: 2.65x sigue
+# cazando un cuelgue de verdad, que es lo que esto va a buscar.
+TIMEOUT_S = 600
 
 def _python_kicad() -> str | None:
     """El Python que trae KiCad, o None. `KICAD_PYTHON=none` lo desactiva.
@@ -130,13 +152,13 @@ def corre(ruta: str) -> tuple[str, str, float]:
     try:
         r = subprocess.run([interprete, os.path.basename(ruta)],
                            cwd=os.path.dirname(ruta), capture_output=True,
-                           text=True, timeout=300, encoding="utf-8",
+                           text=True, timeout=TIMEOUT_S, encoding="utf-8",
                            errors="replace")
     except subprocess.TimeoutExpired:
-        return "FALLO", "timeout a los 300 s", time.time() - t0
+        return "FALLO", f"timeout a los {TIMEOUT_S} s", time.time() - t0
     dt = time.time() - t0
     salida = (r.stdout or "") + (r.stderr or "")
-    ultima = [l for l in salida.strip().splitlines() if l.strip()]
+    ultima = [x for x in salida.strip().splitlines() if x.strip()]
     if r.returncode == 0:
         return "OK", (ultima[-1][:64] if ultima else ""), dt
     if r.returncode == 2:
@@ -203,7 +225,7 @@ def main() -> int:
     print()
     for rel, detalle in fallos:
         print(f"--- FALLO en {rel} " + "-" * max(0, 50 - len(rel)))
-        print("\n".join("    " + l for l in detalle.splitlines()[-25:]))
+        print("\n".join("    " + x for x in detalle.splitlines()[-25:]))
         print()
 
     ok = len(scripts) - len(fallos) - len(huecos)

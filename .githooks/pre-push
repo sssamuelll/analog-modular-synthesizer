@@ -15,6 +15,34 @@
 # Tarda unos dos minutos y medio. Casi todo es check_pcb.py de la fuente v3.
 set -u
 
+# Un push de BORRADO no lleva codigo: git pasa el oid local en ceros. Correr
+# dos minutos y medio de puertas para borrar una rama YA mergeada no verifica
+# nada, y ensena a empujar con --no-verify -- que es justo el habito que estas
+# puertas existen para no crear.
+#
+# stdin de un pre-push es una linea por ref (githooks(5)):
+#     <ref_local> <oid_local> <ref_remoto> <oid_remoto>
+# En un borrado, <ref_local> es "(delete)" y <oid_local> son 40 ceros.
+#
+# Se salta SOLO si TODAS las lineas son borrados: un push mixto lleva codigo y
+# se verifica entero. Y sin stdin no se salta nada, para que correr esto a mano
+# (`sh .githooks/pre-push < /dev/null`) siga probando las puertas de verdad.
+solo_borrados=1
+hubo_ref=0
+while read -r _ref oid_local _resto; do
+    hubo_ref=1
+    case "$oid_local" in
+        *[!0]*) solo_borrados=0 ;;
+    esac
+done
+
+if [ "$hubo_ref" = 1 ] && [ "$solo_borrados" = 1 ]; then
+    echo ""
+    echo "push de borrado: no hay codigo nuevo que verificar, puertas omitidas"
+    echo ""
+    exit 0
+fi
+
 RAIZ=$(git rev-parse --show-toplevel)
 LOG=$(mktemp -d 2>/dev/null || echo "${TMPDIR:-/tmp}/prepush.$$")
 mkdir -p "$LOG"
@@ -50,6 +78,12 @@ g_pytest()   { cd "$RAIZ/software/midi-cv" && python -m pytest -q; }
 g_cargo()    { cd "$RAIZ/software/nucleo" && cargo test --workspace --quiet; }
 g_clippy()   { cd "$RAIZ/software/nucleo" && cargo clippy --workspace --all-targets -- -D warnings; }
 g_fmt()      { cd "$RAIZ/software/nucleo" && cargo fmt --all --check; }
+# `fw` esta EXCLUIDO del workspace (software/nucleo/Cargo.toml: exclude=["fw"])
+# porque compila para thumbv8m y `core` para el host. Consecuencia que nadie
+# habia notado: `cargo test --workspace` NUNCA lo compilaba, asi que el
+# firmware -- la mitad que de verdad se flashea -- no lo miraba ninguna puerta.
+# Lo caza la junta adversarial del 2026-08-24 (Serrano, BLOCKER 1).
+g_fw()       { cd "$RAIZ/software/nucleo/fw" && cargo check --quiet; }
 
 corre hardware g_hardware
 
@@ -78,10 +112,17 @@ if command -v cargo > /dev/null 2>&1; then
     else
         falta cargo-fmt "rustup component add rustfmt"
     fi
+    # El firmware va aparte: otro target y otro workspace.
+    if rustup target list --installed 2>/dev/null | grep -q thumbv8m.main-none-eabihf; then
+        corre firmware g_fw
+    else
+        falta firmware "rustup target add thumbv8m.main-none-eabihf"
+    fi
 else
     falta cargo-test "instala Rust: https://rustup.rs"
     falta cargo-clippy "instala Rust: https://rustup.rs"
     falta cargo-fmt "instala Rust: https://rustup.rs"
+    falta firmware "instala Rust: https://rustup.rs"
 fi
 
 echo ""

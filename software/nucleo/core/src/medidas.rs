@@ -17,6 +17,7 @@
 use crate::descriptor::{Ambito, Descriptor, Tipo, Unidad};
 use crate::modelo::Modelo;
 use crate::param::ParamId;
+use crate::politica::Puerta;
 
 /// Las 24 bandas criticas de Bark.
 pub const N_BANDAS: usize = 24;
@@ -187,18 +188,18 @@ pub fn registrar(m: &mut Modelo) -> Result<(), crate::modelo::ErrorRegistro> {
 /// Aqui **si** se recorta al rango, y por eso es distinto de un `SET`: no es
 /// la intencion de nadie, es un sensor. Tirar la trama entera porque un
 /// sensor se salio de escala seria peor que recortar.
-pub fn ingerir(m: &mut Modelo, t: &TramaMedida) {
+pub fn ingerir(m: &mut Modelo, t: &TramaMedida, puerta: Puerta) {
     for (n, v) in t.bandas.iter().enumerate() {
-        publicar(m, id_banda(n), *v);
+        publicar(m, id_banda(n), *v, puerta);
     }
-    publicar(m, ID_PICO_HZ, t.pico_hz);
-    publicar(m, ID_PICO_EXCESO, t.pico_exceso_mdb);
-    publicar(m, ID_SONORIDAD, t.sonoridad_mdb);
+    publicar(m, ID_PICO_HZ, t.pico_hz, puerta);
+    publicar(m, ID_PICO_EXCESO, t.pico_exceso_mdb, puerta);
+    publicar(m, ID_SONORIDAD, t.sonoridad_mdb, puerta);
 }
 
-fn publicar(m: &mut Modelo, id: ParamId, v: i32) {
+fn publicar(m: &mut Modelo, id: ParamId, v: i32, puerta: Puerta) {
     let Some(d) = m.descriptor_de(id) else { return };
-    let _ = m.publicar_medida(id, v.clamp(d.min, d.max));
+    let _ = m.publicar_medida(id, v.clamp(d.min, d.max), puerta);
 }
 
 /// El borde superior de la banda `n`, en Hz. Para quien tenga que dibujarlas.
@@ -233,7 +234,7 @@ mod tests {
             pico_exceso_mdb: 9_500,
             sonoridad_mdb: -14_000,
         };
-        ingerir(&mut m, &t);
+        ingerir(&mut m, &t, Puerta::Interno);
 
         assert_eq!(m.get(id_banda(0)), Some(-3_000));
         assert_eq!(m.get(id_banda(23)), Some(-41_000));
@@ -245,8 +246,14 @@ mod tests {
     #[test]
     fn ningun_cliente_puede_escribirlas() {
         let mut m = instrumento();
-        assert_eq!(m.set(ID_PICO_HZ, 100), Err(ErrorSet::SoloLectura));
-        assert_eq!(m.set(id_banda(5), 0), Err(ErrorSet::SoloLectura));
+        assert_eq!(
+            m.set(ID_PICO_HZ, 100, Puerta::Usb),
+            Err(ErrorSet::SoloLectura)
+        );
+        assert_eq!(
+            m.set(id_banda(5), 0, Puerta::Usb),
+            Err(ErrorSet::SoloLectura)
+        );
     }
 
     #[test]
@@ -286,7 +293,7 @@ mod tests {
             pico_hz: 999_999,
             ..Default::default()
         };
-        ingerir(&mut m, &t);
+        ingerir(&mut m, &t, Puerta::Interno);
         let d = MEDIDAS.iter().find(|d| d.id == ID_PICO_HZ).unwrap();
         assert_eq!(m.get(ID_PICO_HZ), Some(d.max));
     }

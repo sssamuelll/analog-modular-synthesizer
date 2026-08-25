@@ -973,6 +973,60 @@ kondor_size     = 34;
 // pasaba con los 369 de antes (el doble que una onda entera).
 kondor_spacing  = 1.3;
 
+// --- la entrada de red ---
+// La VENTANA de la trasera por donde asoma la entrada de red. Ojo con la
+// palabra: es una ventana de PASO, no el recorte donde se encaja el conector.
+//
+// Hasta el 2026-08-23 el conector se encajaba a presion en el propio acrilico,
+// y eso rompia la regla que la spec del case escribe en su §7 -- "las pieles
+// removibles nunca llevan mains" -- porque la trasera se quita con 10 M3. Se
+// decidio (Samuel, 2026-08-23) montarlo en una PIEZA FIJA, y el acrilico se
+// queda solo con el hueco por donde pasa.
+//
+// El #107 pedia montarlo en el chasis de acero, y NO LLEGA: su pared trasera
+// esta a 23.00 mm de la cara interior del acrilico y 20 de esos 23 son el
+// larguero de base trasera, que va en medio. La pieza fija se atornilla al
+// larguero, que es la unica estructura que hay detras de esta ventana y que se
+// queda puesta cuando la plancha sale.
+//
+// LA PIEZA SI ESTA ELEGIDA, y este fichero era el ultimo en enterarse. Es la
+// Schurter KM00.1105.11 (clase I, portafusibles bipolar, interruptor bipolar,
+// sin filtro EMC), listada en hardware/01-power-supply/v3/bom-chasis.csv, y
+// hardware/01-power-supply/v3/check_red_chasis.py lleva tiempo diciendo HUECO
+// porque su recorte "no esta en case/cad/params.scad". De su hoja typ_KM.pdf:
+//
+//   p.1  Panel Thickness / Snap-in: 1 / 1.5 / 2 / 2.5 mm
+//   p.3  recorte  28 (+0.10/-0.05) x 47 (+0.10/-0.05), esquinas max R 0.3
+//        brida    30.5 x 50, sobresale 2.5 del panel
+//        detras   26.15 de cuerpo + 3.2 de clips = 29.35
+//
+// Lo primero de esa lista CIERRA la discusion de donde va: el snap-in agarra
+// chapa de 1 a 2.5 mm y esta plancha tiene 8. NUNCA pudo montarse aqui. Va en
+// chapa, que es lo que dice el #107 y lo que exige check_red_chasis.py.
+//
+// LOS DOS NUMEROS DE ABAJO SIGUEN SIN DERIVARSE DE ELLA, y por eso se dejan
+// como estan en vez de "corregirse" a 47 x 28. Tres razones:
+//
+//   1. 48 x 27.5 es el recorte de la hoja GIRADO 90 grados y redondeado a ojo
+//      (47 -> 48, 28 -> 27.5). Nadie escribio que fuera girado.
+//   2. Esta ventana ya no es un recorte de encaje, asi que su cota no es la del
+//      recorte: tiene que dejar pasar el enchufe del cable, y eso depende de
+//      donde quede la brida, que depende de la pieza fija que aun no existe.
+//   3. Y hay un choque sin resolver: con la brida en el plano del acrilico el
+//      cuerpo llega a x=271.59 y la pared trasera del chasis esta en 277.94,
+//      o sea 6.35 mm de interferencia. Se decide con Samuel, no aqui.
+//
+// Ponerles 47 x 28 seria pasar de un numero inventado a un numero PRESTADO de
+// otra pieza del ensamblaje -- que es peor, porque parece derivado. Se quedan
+// visibles y rotos hasta que la pieza fija se dibuje (Principio V).
+iec_ancho      = 48;     // SIN DERIVAR de la KM00.1105.11 -- ver arriba
+iec_alto       = 27.5;   // SIN DERIVAR de la KM00.1105.11 -- ver arriba
+iec_margen_der = 22;     // acrilico entre la ventana y el canto derecho.
+                         // Era "au - 70" al reves, o sea el canto IZQUIERDO
+                         // contado desde la derecha: un numero que no queria
+                         // decir nada. Esto es una distancia al canto, que es
+                         // lo que de verdad importa en una plancha de PMMA.
+
 // --- tapa del valle ---
 // La plancha que cierra el escalon entre las dos filas. Es la unica cara
 // HORIZONTAL que se ve de pie delante del aparato, asi que es la que pone el

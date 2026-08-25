@@ -65,6 +65,31 @@ target/
 # STL nuevo fallara EN SILENCIO y pidiera -f sin que nadie supiera por que
 # (issue #48). Aqui esta escrito con su ruta y su motivo.
 case/renders/build/
+case/renders/olders/
+case/renders/oldest/
+# Los PNG de render no entran al historial, SALVO los que ilustran un documento.
+#
+# La regla no es "PNG si o no": es si alguien lo mira desde un .md. Medido el
+# 2026-08-24 sobre los catorce que habia en case/renders/: cuatro estaban
+# enlazados desde case/README.md y los planes del case; los otros diez, de
+# nadie. Esos diez pesaban 18,4 MB.
+#
+# Y no es solo peso. Blender samplea de forma estocastica, asi que renderizar
+# DOS VECES la misma geometria da PNG bit-distintos: los diez del disco eran
+# distintos de los diez que estaban en main, con menos del 0,5 % de diferencia
+# de tamano -- o sea la misma geometria, solo ruido. Con los renders
+# versionados, mirar si el render salio bien ya ensucia el arbol con 18 MB que
+# no significan nada, y la puerta de arbol limpio se pone roja por haber
+# mirado. Es el mismo motivo del `build/` de aqui arriba y del lienzo de abajo.
+#
+# El sentido del riesgo esta escogido: por defecto NO entra, y meter uno exige
+# escribirlo aqui. Asi el que entra es siempre una decision, nunca un descuido.
+# Es la #195.
+case/renders/*.png
+!case/renders/chasis-plano-plegado.png
+!case/renders/propuesta-diseno-2026-08-16.png
+!case/renders/sam17-case.png
+!case/renders/sam17-case-trasera.png
 # El lienzo es una PREVIEW: las 6 piezas en rejilla para mirarlas de un vistazo.
 # No se manda al taller (alli van los DXF sueltos) y lo regenera export.ps1.
 # Mismo criterio que los STL: 97.512 lineas de diff que no prueban nada.

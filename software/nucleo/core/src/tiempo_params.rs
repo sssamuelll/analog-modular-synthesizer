@@ -231,6 +231,7 @@ pub fn registrar(m: &mut Modelo) -> Result<(), ErrorRegistro> {
 mod tests {
     use super::*;
     use crate::modelo::ErrorSet;
+    use crate::politica::Puerta;
 
     fn instrumento() -> Modelo {
         let mut m = Modelo::nuevo();
@@ -251,7 +252,7 @@ mod tests {
     fn el_transporte_es_un_parametro_no_un_mensaje() {
         // §7.2, con consecuencia: por §2.1 el agente puede arrancarlo.
         let mut m = instrumento();
-        assert!(m.set(ID_TRANSPORTE, 1).is_ok());
+        assert!(m.set(ID_TRANSPORTE, 1, Puerta::Usb).is_ok());
         assert_eq!(m.get(ID_TRANSPORTE), Some(1));
     }
 
@@ -266,7 +267,11 @@ mod tests {
             ID_RODANDO_LIBRE,
             ID_ANULADOS,
         ] {
-            assert_eq!(m.set(id, 1), Err(ErrorSet::SoloLectura), "{id:?}");
+            assert_eq!(
+                m.set(id, 1, Puerta::Usb),
+                Err(ErrorSet::SoloLectura),
+                "{id:?}"
+            );
         }
     }
 

@@ -92,6 +92,7 @@ mod tests {
     use super::*;
     use crate::descriptor::{Ambito, Descriptor, Tipo, Unidad};
     use crate::modelo::{ErrorSet, Modelo};
+    use crate::politica::Puerta;
 
     static PELIGROSO: Descriptor = Descriptor {
         id: ParamId(0x0055),
@@ -119,7 +120,10 @@ mod tests {
     fn llega_por_usb_y_no_se_ejecuta_hasta_el_pulsador() {
         // §9, fila "Confirmacion fisica". Este es EL test de §2.2.
         let (mut m, mut r) = escena();
-        assert_eq!(m.set(PELIGROSO.id, 1), Err(ErrorSet::ExigeConfirmacion));
+        assert_eq!(
+            m.set(PELIGROSO.id, 1, Puerta::Usb),
+            Err(ErrorSet::ExigeConfirmacion)
+        );
         let token = r.retener(PELIGROSO.id, 1, 0).unwrap();
         assert_eq!(
             m.get(PELIGROSO.id),
@@ -131,7 +135,8 @@ mod tests {
             .confirmar(1_000)
             .expect("el pulsador tenia algo que confirmar");
         assert_eq!(pendiente.token, token);
-        m.aplicar_confirmado(pendiente.id, pendiente.valor).unwrap();
+        m.aplicar_confirmado(pendiente.id, pendiente.valor, Puerta::Mano)
+            .unwrap();
         assert_eq!(m.get(PELIGROSO.id), Some(1));
         assert!(r.confirmar(1_001).is_none(), "no puede quedar residuo");
     }
