@@ -1,25 +1,50 @@
-"""Simula el rectificador y el filtro del modulo 1 y mide el margen de dropout.
+"""Simula el rectificador + filtro + pre-regulador de la fuente v3 y mide el
+margen de dropout real de LM2941 (U1, VRAW+) y LM2991 (U2, VRAW-).
 
     "C:\\Program Files\\KiCad\\10.0\\bin\\python.exe" run_sim.py
 
-Que pregunta responde: con la red al -10% y el transformador cargado, la
-tension MINIMA INSTANTANEA sobre C1, ¿se queda por encima de lo que el 7812
-necesita para seguir regulando? Es la unica cuenta del modulo que no se puede
-cerrar a mano, porque con filtro de entrada capacitiva la corriente por el
-devanado no es senoidal: circula en picos estrechos de 2-3 veces la continua,
-asi que la caida en la resistencia del secundario es bastante peor de lo que
-sale de multiplicar corriente media por resistencia.
+Que pregunta responde: con la red al -10% y el transformador cargado, ¿el
+valle instantaneo de VRAW se queda por encima de lo que el pre-regulador
+necesita para seguir regulando su propia salida (13,1 V en U1, -12,9 V en U2
+-- design-notes.md §16.8)? Es la unica cuenta del modulo que no se cierra a
+mano, porque con filtro de entrada capacitiva la corriente por el devanado no
+es senoidal: circula en picos estrechos de 2-3 veces la continua, asi que la
+caida en la resistencia del secundario es bastante peor de lo que sale de
+multiplicar corriente media por resistencia.
+
+Hasta el issue #128 este fichero simulaba la v1 (7812, transformador de 2 A,
+dropout de 2 V) -- diseño abandonado el 2026-08-17 -- y corria como puerta en
+`main` contestando una pregunta que ya nadie hace. Modela ahora la v3:
+transformador real (Nuvotem Talema 0120P1-2-012, 13,42 V en vacio / 12 V a
+5 A -- design-notes.md §16.4) y el dropout GARANTIZADO (no tipico) de LM2941
+y LM2991, leido de la hoja primaria el 2026-08-25:
+
+    LM2941 (TI SNVS770I, rev. ene-2015, tabla 6.5/6.6 p.5-6):
+        dropout MAX 1,0 V a IOUT = 1 A, sobre toda la temperatura
+    LM2991 (TI SNVS099I, rev. oct-2016, tabla 6.5 p.5):
+        dropout MAX 1,0 V a IOUT = 1 A, sobre toda la temperatura
+
+Ninguna hoja garantiza el dropout justo a 650 mA (solo hay fila a 100 mA y a
+1 A): se usa el de 1 A como cota conservadora, porque el dropout crece con la
+corriente (curva tipica de la propia hoja) y 650 mA < 1 A. No es el numero
+mas ajustado que existe -- es el mas ajustado que el datasheet GARANTIZA
+(leccion §16.1: garantizado != tipico).
+
+Ya no se barre la regulacion del transformador (`reg` en versiones previas de
+este fichero): antes el BOM no la fijaba y por eso se barria; ahora la hoja
+de Nuvotem la fija en un numero, no en un rango (design-notes.md §16.4,
+corregido el 2026-08-19).
+
+`U3` (7805) tambien cuelga de VRAW+ (sec.10.1 / design-notes.md §16.12), pero
+su propio margen -- 5 V + ~2 V de dropout tipico de un 7805 -- nunca es el
+limitante frente a los ~14-20 V de VRAW+: no se gatea aparte. Lo que si suma
+es su CORRIENTE, que sale del mismo nodo VRAW+ que U1 y por eso hunde el
+valle igual que ella.
 
 No usa un binario de ngspice porque KiCad no lo trae: solo ngspice.dll, que es
 la que usa su simulador interno. Se maneja por ctypes. El fichero
-sam17-power.cir de al lado es el mismo circuito en formato estandar, para poder
-repetirlo en LTspice o en un ngspice de consola sin depender de esto.
-
-Modelo del transformador: fuente ideal por semidevanado mas una resistencia
-serie que representa la regulacion. Un transformador se especifica a PLENA
-carga, asi que en vacio da mas tension; ese margen es justo lo que decide si el
-diseno aguanta a 207 V, y como el BOM no lo fija, aqui se BARRE en vez de
-suponerlo.
+sam17-power.cir de al lado es el mismo circuito en formato estandar, para
+poder repetirlo en LTspice o en un ngspice de consola sin depender de esto.
 """
 from __future__ import annotations
 
@@ -29,14 +54,29 @@ import sys
 
 KICAD_BIN = os.environ.get("KICAD_BIN", r"C:\Program Files\KiCad\10.0\bin")
 
-V_NOM = 230.0                   # red nominal europea
-V_SEC = 12.0                    # por semidevanado, A PLENA CARGA (2 A)
-I_SEC_NOM = 2.0
-C_BULK = 4700e-6
-I_POS = 0.450                   # 300 mA del 7812 + 150 mA del 7805 (sec.10.1)
-I_NEG = 0.300                   # solo el 7912: los rieles NO van igual de cargados
-DROPOUT = 2.0                   # 78xx/79xx, peor caso de datasheet
-V_OUT = 12.0
+V_NOM = 230.0                    # red nominal europea
+V_SEC = 12.0                     # por semidevanado, a PLENA carga (5 A) -- Nuvotem 0120P1-2-012
+I_SEC_NOM = 5.0
+REG = 1.42 / 12.0                # (13.42 - 12) / 12 -- hoja Nuvotem, design-notes.md §16.4
+C_BULK = 9400e-6                 # 2x4700 uF/riel en paralelo -- design-notes.md §16.5
+
+# Carga en VRAW+: LT3045 x2 (bus +-12 V) MAS U3/7805, que cuelga del mismo
+# VRAW+ (sec.10.1 / design-notes.md §16.12). Carga en VRAW-: solo LT3094 x2 --
+# no hay equivalente de U3 en el riel negativo.
+I_12_CENSO = 0.174               # A/riel de censo real, con margen (#70)
+I_5_CENSO = 0.030                # U3: modulo 2 + isla de telemetria (spec 2026-08-18 §3.1)
+I_12_DISENO = 0.650              # A/riel, envolvente de diseno
+I_5_DISENO = 0.300               # A, techo de U3 (design-notes.md §16.12)
+
+# Pre-reguladores de la cascada v2/v3 (design-notes.md §16.8): el pre no
+# entrega 12,000 V -- entrega el escalon que necesita el post-regulador
+# (LT3045 x2 / LT3094 x2) para tener margen.
+VOUT_U1 = 13.1                   # V, salida de LM2941 (VRAW+)
+VOUT_U2 = 12.9                   # V, |salida| de LM2991 (VRAW-)
+DROPOUT_U1 = 1.0                 # V, MAX a 1 A / temperatura completa -- TI SNVS770I p.5-6
+DROPOUT_U2 = 1.0                 # V, MAX a 1 A / temperatura completa -- TI SNVS099I p.5
+MIN_VIN_U1 = VOUT_U1 + DROPOUT_U1  # 14.1 V
+MIN_VIN_U2 = VOUT_U2 + DROPOUT_U2  # 13.9 V
 
 
 class VecInfo(C.Structure):
@@ -151,141 +191,55 @@ def autocomprobacion(ng: Ng) -> None:
           f"rizado {a['vp_pp']:.3f} < cota {analitico:.3f} V)")
 
 
-# --- comparacion de arquitecturas -------------------------------------------
-# Cada escenario es una fuente entera: transformador, reguladores y carga. Se
-# comparan en las tres esquinas que importan — red baja (dropout), red alta
-# (calor) y nominal — porque una arquitectura puede ganar en una y perder en
-# otra. Fue justo lo que paso con el secundario de 15-0-15: daba margen de
-# sobra y casi duplicaba la disipacion.
-class Escenario:
-    def __init__(self, nombre, v_sec, i_sec_nom, dropout, i_12, i_5, r_hs,
-                 reg=0.12):
-        self.nombre, self.v_sec, self.i_sec_nom = nombre, v_sec, i_sec_nom
-        self.dropout, self.i_12, self.i_5 = dropout, i_12, i_5
-        self.r_hs, self.reg = r_hs, reg
-
-    @property
-    def i_pos(self):
-        return self.i_12 + self.i_5      # el 7805 cuelga de VRAW+ (sec.10.1)
-
-    def evalua(self, ng):
-        prev = (V_SEC_actual(), I_SEC_actual())
-        set_trafo(self.v_sec, self.i_sec_nom)
-        try:
-            r = {}
-            for v in (207.0, 230.0, 253.0):
-                r[v] = mide(ng, v_red=v, reg=self.reg,
-                            i_pos=self.i_pos, i_neg=self.i_12)
-            # El calor se calcula a red ALTA, que es donde mas cae el regulador.
-            alto = r[253.0]
-            v_med = (alto["vp_min"] + alto["vp_max"]) / 2
-            p_12 = (v_med - 12.0) * self.i_12
-            p_5 = (v_med - 5.0) * self.i_5
-            # R_thJC del TO-220 = 5 C/W. Se anade 1 C/W por la mica aislante,
-            # que hace falta si el tab del regulador no esta a masa.
-            tj = 25.0 + p_12 * (5.0 + 1.0 + self.r_hs)
-            return {"margen_207": r[207.0]["vp_min"] - 12.0 - self.dropout,
-                    "margen_230": r[230.0]["vp_min"] - 12.0 - self.dropout,
-                    "vraw_207": r[207.0]["vp_min"],
-                    "rizado": r[230.0]["vp_pp"],
-                    "irms": r[230.0]["ic1_rms"],
-                    "p_12": p_12, "p_5": p_5, "tj": tj}
-        finally:
-            set_trafo(*prev)
-
-
-def V_SEC_actual():
-    return globals()["V_SEC"]
-
-
-def I_SEC_actual():
-    return globals()["I_SEC_NOM"]
-
-
-def set_trafo(v, i):
-    globals()["V_SEC"], globals()["I_SEC_NOM"] = v, i
-
-
-ESCENARIOS = [
-    #             nombre                     Vsec  Inom  drop  I12    I5    Rhs
-    Escenario("HOY  12-0-12 2A, 78xx",         12.0, 2.0, 2.0, 0.300, 0.150, 20.0),
-    Escenario("650  12-0-12 3A, 78xx",         12.0, 3.0, 2.0, 0.650, 0.150, 8.0),
-    Escenario("650  15-0-15 2A, 78xx",         15.0, 2.0, 2.0, 0.650, 0.150, 4.0),
-    Escenario("650  12-0-12 3A, LDO tipico",   12.0, 3.0, 0.6, 0.650, 0.150, 8.0),
-    Escenario("650  12-0-12 3A, LDO MAXIMO",   12.0, 3.0, 1.0, 0.650, 0.150, 8.0),
+ESCENARIOS_CARGA = [
+    ("censo real, con margen (#70)", I_12_CENSO, I_5_CENSO),
+    ("envolvente de diseno", I_12_DISENO, I_5_DISENO),
 ]
-
-
-def comparar(ng) -> None:
-    print()
-    print(f"{'arquitectura':30} | {'@207V':>16} {'@230V':>8} | "
-          f"{'P12':>6} {'Tj':>6} | {'Irms':>6} |")
-    print("-" * 88)
-    for e in ESCENARIOS:
-        r = e.evalua(ng)
-        est = "OK" if (r["margen_207"] >= 0 and r["tj"] < 100) else (
-              "CALOR" if r["margen_207"] >= 0 else "NO REGULA")
-        print(f"{e.nombre:30} | {r['vraw_207']:6.2f}V {r['margen_207']:+7.2f}V "
-              f"{r['margen_230']:+7.2f}V | {r['p_12']:5.2f}W {r['tj']:5.0f}C | "
-              f"{r['irms']:5.2f}A | {est}")
-    print()
-    print("Tj incluye 1 C/W de la mica aislante: el tab de un regulador")
-    print("negativo no esta a masa y hay que aislarlo del disipador.")
 
 
 def main() -> int:
     ng = Ng()
     autocomprobacion(ng)
-    comparar(ng)
-    minimo = V_OUT + DROPOUT
 
-    print(f"\nMinimo que necesita el 7812 para seguir regulando: {minimo:.1f} V")
-    print(f"Carga: +{I_POS*1000:.0f} mA en VRAW+ (7812 + 7805), "
-          f"-{I_NEG*1000:.0f} mA en VRAW-\n")
-    print(f"{'red':>6} {'reg':>5} | {'VRAW+ min':>10} {'rizado':>8} {'margen':>8} "
-          f"| {'VRAW- min':>10} {'margen':>8} | {'Irms C1':>8} | ")
-    print("-" * 88)
+    print(f"\nTransformador Nuvotem 0120P1-2-012: {V_SEC:.0f}-0-{V_SEC:.0f} V a "
+          f"{I_SEC_NOM:.0f} A, regulacion {REG * 100:.2f}% "
+          f"(13.42 V en vacio -- hoja del fabricante, design-notes.md §16.4)")
+    print(f"Bulk: {C_BULK * 1e6:.0f} uF/riel (design-notes.md §16.5)")
+    print(f"U1 LM2941 (VRAW+): sale a {VOUT_U1} V, dropout MAX {DROPOUT_U1:.1f} V a 1 A "
+          f"(TI SNVS770I) -> VIN minimo {MIN_VIN_U1:.1f} V")
+    print(f"U2 LM2991 (VRAW-): sale a -{VOUT_U2} V, dropout MAX {DROPOUT_U2:.1f} V a 1 A "
+          f"(TI SNVS099I) -> VIN minimo {MIN_VIN_U2:.1f} V\n")
+
+    print(f"{'carga':32} {'red':>5} | {'VRAW+ min':>10} {'margen U1':>10} | "
+          f"{'VRAW- min':>10} {'margen U2':>10} | {'Irms C1':>8} |")
+    print("-" * 100)
 
     fallos = []
-    for reg in (0.08, 0.12, 0.20):
+    for nombre, i_12, i_5 in ESCENARIOS_CARGA:
+        i_pos, i_neg = i_12 + i_5, i_12
         for v_red in (253.0, 230.0, 207.0):
-            m = mide(ng, v_red=v_red, reg=reg, i_pos=I_POS, i_neg=I_NEG)
-            marg_p = m["vp_min"] - minimo
-            marg_n = abs(m["vn_max"]) - minimo
-            ok = "OK" if min(marg_p, marg_n) >= 0 else "NO REGULA"
-            if min(marg_p, marg_n) < 0:
-                fallos.append((v_red, reg, marg_p, marg_n))
-            print(f"{v_red:6.0f} {reg*100:4.0f}% | {m['vp_min']:9.2f}V "
-                  f"{m['vp_pp']:7.2f}V {marg_p:+7.2f}V | {abs(m['vn_max']):9.2f}V "
-                  f"{marg_n:+7.2f}V | {m['ic1_rms']:7.2f}A | {ok}")
+            m = mide(ng, v_red=v_red, reg=REG, i_pos=i_pos, i_neg=i_neg, c_bulk=C_BULK)
+            marg_pos = m["vp_min"] - MIN_VIN_U1
+            marg_neg = abs(m["vn_max"]) - MIN_VIN_U2
+            ok = min(marg_pos, marg_neg) >= 0
+            if not ok:
+                fallos.append((nombre, v_red, marg_pos, marg_neg))
+            print(f"{nombre:32} {v_red:5.0f} | {m['vp_min']:9.2f}V {marg_pos:+9.2f}V | "
+                  f"{abs(m['vn_max']):9.2f}V {marg_neg:+9.2f}V | {m['ic1_rms']:7.2f}A | "
+                  f"{'OK' if ok else 'NO REGULA'}")
         print()
 
-    print("Nota: 'reg' es la regulacion del transformador — cuanto sube su "
-          "tension\nen vacio respecto al dato de placa, que es a plena carga. "
-          "El BOM no la fija;\npor eso se barre.")
     if not fallos:
+        print("OK: los dos pre-reguladores regulan en todos los escenarios, contra el "
+              "dropout GARANTIZADO (no tipico) de su propia hoja.")
         return 0
 
-    # Un gate que ENCUENTRA algo no puede salir en verde (constitucion,
-    # Principio VIII). Hasta hoy este hacia `return 0` pase lo que pase, asi
-    # que gates.py lo listaba en OK con "SALE DE REGULACION en 1 de los 9
-    # casos" escrito al lado, y el resumen decia GATES EN VERDE.
-    #
-    # Pero rojo tampoco es el veredicto correcto: este modelo es el de la V1
-    # (7812, trafo de 2 A) y la v1 esta CONGELADA -- no se construye. El
-    # diseno vivo es la v3. El hallazgo es cierto y no aplica a lo que se
-    # fabrica, que es exactamente la definicion de HUECO: no se pudo
-    # comprobar lo que importa, con el motivo escrito.
-    #
-    # Codigo 2 = HUECO por convencion del repo. Se vuelve FALLO el dia que
-    # este .cir modele la v3 -- eso es el issue #128.
-    print(f"\nSALE DE REGULACION en {len(fallos)} de los 9 casos:")
-    for v_red, reg, mp, mn in fallos:
-        print(f"  red {v_red:.0f} V, reg {reg*100:.0f}%: "
-              f"margen +{mp:+.2f} V / -{mn:+.2f} V")
-    print("HUECO: este modelo es la v1, congelada. El diseno vivo es la v3 "
-          "(issue #128).")
-    return 2
+    print(f"NO REGULA en {len(fallos)} caso(s):")
+    for nombre, v_red, mp, mn in fallos:
+        print(f"  {nombre}, red {v_red:.0f} V: margen U1 {mp:+.2f} V, margen U2 {mn:+.2f} V")
+    print("\nEsto usa el dropout MAXIMO garantizado a 1 A (TI), no el tipico a 650 mA: "
+          "es una cota conservadora, no una medida real. Issue #128.")
+    return 1
 
 
 if __name__ == "__main__":
