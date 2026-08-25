@@ -12,7 +12,8 @@ hardware, código del firmware MIDI/CV o ideas nuevas para módulos adicionales.
    intenciones: cada uno está ahí porque su ausencia ya costó trabajo perdido, y
    el caso viene citado. Todo PR se revisa contra ella.
 2. Lee el [README](README.md) y las dos arquitecturas vigentes:
-   [analógica](docs/architecture-poly.md) (poly de 4 voces) y
+   [analógica](docs/architecture-poly.md) (superada en su reparto de módulos:
+   lee el aviso de su cabecera y las specs que la sustituyen) y
    [de cómputo](docs/architecture-compute.md) (micro en Rust, computadora
    externa y opcional, VST compañero y agente de IA). [`architecture.md`](docs/architecture.md) es la referencia
    monofónica de la tesis.

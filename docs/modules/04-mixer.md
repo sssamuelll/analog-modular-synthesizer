@@ -1,5 +1,11 @@
 # Módulo 4 — Mixer (mezclador de VCOs)
 
+> [!IMPORTANT]
+> **Superado como módulo separado — 2026-08-23.** La suma de los dieciséis canales, el volumen general, la salida principal y los oídos se mudan a la placa del módulo de Voz. Un mixer solo tiene sentido si es independiente de su fuente y de sus salidas; éste estaba soldado a las voces.
+> Lo de abajo se conserva como el diseño de referencia del circuito, que
+> es de donde sale el carácter. Manda el
+> [spec del módulo de Voz total](../superpowers/specs/2026-08-23-modulo-voz-total-design.md).
+
 > Referencia: tesis, *Módulo Mezclador* (Gráficos 27, 28).
 
 ## Objetivo

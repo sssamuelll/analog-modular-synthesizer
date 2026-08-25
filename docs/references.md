@@ -38,7 +38,20 @@ Lista de referencias citadas en la tesis original, complementada con recursos
 - **6N137** — optoacoplador (entrada MIDI estándar DIN, opcional).
 - **PIC** — microcontrolador citado en el anexo (no usado en el prototipo final).
 
-Los PDFs originales no se redistribuyen; descárgalos del fabricante.
+Esa lista es la del anexo de la tesis. Sus PDFs no se redistribuyen aquí;
+descárgalos del fabricante.
+
+## Hojas de datos en el repositorio
+
+Las de las piezas que el diseño vigente usa de verdad, versionadas porque los
+presupuestos ejecutables citan sus tablas por número:
+
+| Fichero | Pieza | Dónde se usa |
+|---|---|---|
+| [`reference/datasheets/ssi2130-rev2.4-2020-12.pdf`](reference/datasheets/ssi2130-rev2.4-2020-12.pdf) | SSI2130 — VCO | Los 16 osciladores del módulo de Voz |
+| [`reference/datasheets/rp2350-datasheet-2024-08.pdf`](reference/datasheets/rp2350-datasheet-2024-08.pdf) | RP2350 | Cerebro y los dos micros del módulo de Voz |
+| [`reference/datasheets/rp2350-product-brief-2024-08.pdf`](reference/datasheets/rp2350-product-brief-2024-08.pdf) | RP2350 (resumen) | — |
+| [`reference/datasheets/ad5686r-revf-2024-11.pdf`](reference/datasheets/ad5686r-revf-2024-11.pdf) | AD5686R/85R/84R — DAC cuádruple 16 bits | CV de tono; el `RSTSEL` que sostiene el camino de silencio |
 
 ## Recursos complementarios recomendados
 
