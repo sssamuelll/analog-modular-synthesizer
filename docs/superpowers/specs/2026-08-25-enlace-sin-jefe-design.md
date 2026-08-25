@@ -135,12 +135,13 @@ pase de 12 mA, y a 220 Ω el flanco se muere) — MISO y SCLK/MOSI llevan piezas
 distintas por diseño, y el segundo oyente cuelga **solo** de SCLK/MOSI/CS.
 
 Reparto de periféricos **esperado, POR_CONFIRMAR hasta que exista
-`pines_budget.py`** (§9): la columna B tendría sus dos SPI de hardware
-ocupados (esclava del bus privado de la cabecera, ama de su propio bus de
-DACs), así que su escucha del J2 iría por PIO — 8 de sus 12 máquinas están en
-cronómetros. El mismo guion tiene que contar además el códec que el acta E-5
-mudó a este módulo (los oídos: el RP2350 no trae I²S — come PIO o un SPI de
-alguien) antes de dar el reparto por bueno.
+`pines_budget.py`** (§9 — el de los micros de la Voz, no el del cerebro): la
+columna B tendría sus dos SPI de hardware ocupados (esclava del bus privado de
+la cabecera, ama de su propio bus de DACs), así que su escucha del J2 iría por
+PIO — 8 de sus 12 máquinas están en cronómetros. El mismo guion tiene que
+contar además el códec que el acta E-5 mudó a este módulo (los oídos: el
+RP2350 no trae I²S — come PIO o un SPI de alguien) antes de dar el reparto por
+bueno.
 
 ### D2. La cabecera: la placa que concentra lo que no puede duplicarse
 
@@ -492,18 +493,29 @@ Las cotas de voz-total §3.3 estaban escritas sobre la etapa que desaparece
 
   Y un término que ya se sabe que está y que no puede caerse: **la espera de
   la ranura de trama.** Si el evento viaja dentro de la trama —que es lo que
-  el cerebro §5 quiere, *«tono y gate salen en el mismo instante»*— un evento
-  que queda listo justo después de que salga una trama espera a la siguiente.
-  Con el bloque de tono a 1 kHz (R-M4) eso es hasta **1 ms**, contra los
-  **28,8 µs** que dura el aire de una trama de 288 bits a 10 MHz: **treinta y
-  cinco veces**. El término manda sobre el que lo acompaña, y el instrumento
-  entero se diseña contra 1 ms (`tiempo_budget.py`).
+  el núcleo §5.3 escribió, *«tono y gate salen en el mismo instante en vez de
+  por dos caminos distintos»*, y el cerebro §5 hereda— entonces un evento que
+  queda listo justo después de que salga una trama espera a la siguiente.
+
+  Cuánto, en el punto de operación real y no en el declarado: el lazo corre a
+  **8 kHz** (`latencia_mano_budget.py`), así que la trama sale cada **125 µs**.
+  Contra los **28,8 µs** del aire de un bloque de tono de 288 bits a 10 MHz, y
+  los **54,4 µs** del giro entero del lazo (sondeo de panel 256 + escritura
+  288 = 544 bits). O sea que montar el evento en la trama cuesta entre **dos y
+  cuatro veces** lo que cuesta sacarlo aparte — no las treinta y cinco veces
+  que daría leer el 1 kHz de R-M4, que es **tasa mínima declarada**, no punto
+  de operación. El 1 ms solo aparece si el bloque de tono cayera a ese mínimo.
+
+  Y el otro lado de la cuenta, que hay que decir en la misma frase: sacar el
+  evento aparte lo mete en un bus que ya va al **43,5 % de un techo del 50 %**.
+  Un evento son décimas de por ciento, así que cabe — pero entra sobre 6,5
+  puntos de holgura, no sobre una carretera vacía.
 
   Este papel **no lo resuelve** —cómo se planifica el evento sobre la trama es
   el formato del evento, o sea el pase siguiente— pero lo deja escrito, porque
   callar un término de la cadena es exactamente el pecado que H-BP2 cazó en la
   v1 y que este papel existe para corregir. Hallazgo de la sesión `sam17-3a`,
-  2026-08-25.
+  2026-08-25, con su propia corrección de las cifras el mismo día.
 - **La uniformidad ±0,5 ms entre columnas deja de ser una cota a perseguir y
   pasa a ser una propiedad a medir**: ambos micros capturan el mismo flanco de
   SCLK; el sesgo residual es diferencia de cómputo local entre dos copias del
@@ -697,7 +709,7 @@ Re-especificación; se escriben en sus pases, no en este.
 | `enlace_budget.py` | existe (PR #198) | +la línea del CS en T; **la puerta del caso adoptado pasa a umbral continuo** (resolver la longitud, no muestrear la rejilla — el 600 escondía el 721); la cabecera del guion pasa de «hoy lo prohíbe la decisión 3» a sellado-condicionado citando §7; el docstring re-sincroniza su cita del alcance con el cerebro §11 nuevo |
 | `spi_privado_budget.py` | existe | −`enlace esclavo`; +`vuelta` con cifra (medidas, TuneProgress, latido); renombres (`MICROS = 2 # cabecera + columna B`; la glosa de E-3 pasa a citar D8); el assert de ciclos vale para **ambos** micros contra voz-total §3.4; conserva su deuda del `SCLK_TECHO` (hoja del AD5686R, nunca leída) |
 | `check_censo_voz.py` | existe | `BASE_V2` 226 → 228, y su cascada (536 → 538 con estéreo; 792 → 794 de 1024) |
-| `pines_budget.py` | **no existe** — sigue siendo «antes que ninguna otra cosa del bloque digital» | Cuenta lo nuevo: columna B +3 entradas (SCLK/MOSI/CS) +1 strap +1 SM de PIO para la escucha (contra el framing del cambio 1, no contra 72 bits fijos); cabecera +1 strap; el códec de E-5 (los oídos — PIO o SPI); los dos hilos RESET/OK que se recuperan; cita el watchdog (§12.9, pág. 1193) |
+| `pines_budget.py` | **no existe** — sigue siendo «antes que ninguna otra cosa del bloque digital» | **Es el censo de los DOS micros de la Voz** (dieciséis §15: «16 de 24 máquinas de PIO»), no el del cerebro — ese es otro chip y otro guion. Cuenta lo nuevo: columna B +3 entradas (SCLK/MOSI/CS) +1 strap +1 SM de PIO para la escucha (contra el framing del cambio 1, no contra 72 bits fijos); cabecera +1 strap; el códec de E-5 (los oídos — PIO o SPI); los dos hilos RESET/OK que se recuperan; cita el watchdog (§12.9, pág. 1193). Con 8 de 12 máquinas ya en cronómetros por micro, es el censo más apretado del instrumento |
 | `evento_budget.py` | no existe | La cadena sin etapa de reenvío; asevera el sesgo residual entre columnas (§4.5) en vez de compensarlo; sigue sirviendo al #160 |
 | `arranque_budget.py` | no existe | Presupuesta §4.1: EEPROM + descriptor por I²C con la cifra **importada** de `check_censo_voz.py` (hoy 22 512 B) y el peor caso del objetivo E-7 (100 B/entrada), contra instrumento listo < 3 s |
 | `trama_j2_budget.py` | no existe | El árbitro de R-M4: la Voz declara sus bloques como **un** módulo de 16 (D4/R-S1); el largo máximo de mazo entra como constante citada |
