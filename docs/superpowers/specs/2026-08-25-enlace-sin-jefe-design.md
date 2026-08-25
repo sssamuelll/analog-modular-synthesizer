@@ -410,14 +410,16 @@ Ya estaba enunciada sin presuponer rol.
 > **R-A4 (texto nuevo). Reiniciarse silencia primero, por el camino de OE.**
 > El reset — del perro o de la orden — suelta los GPIO, el pull-up sube OE y
 > los pulls devuelven cada oscilador al reposo: el silencio audible no depende
-> del firmware ni de los DACs. Lo que el reset caliente **se supone que no**
-> hace es borrar los DACs: el cero-escala de RSTSEL es del encendido según el
-> supuesto que voz-total §9.1 dejó marcado contra la hoja del AD5686R — nunca
-> leída (§7, condición 4) — y ningún papel sostiene que se re-aplique en un
-> reboot mientras el /RESET de los conversores no esté cableado (§10, riesgo
-> 6: atarlo al estado RUN del micro es la decisión de cobre pendiente). Por
-> eso el paso 2 de §4.1 escribe reposo **antes** de bajar OE — conservador
-> bajo cualquier lectura de la hoja. La mutación de verificación mide el
+> del firmware ni de los DACs. Lo que el reset caliente **no** hace es borrar
+> los DACs, y esto ya no es supuesto: la hoja del AD5686R (en el árbol desde
+> el 2026-08-25, p. 24) dice que RSTSEL gobierna el **power-on reset** y que
+> *«the output remains powered up at this level until a valid write sequence
+> is made to the DAC»* — un reinicio del micro no lo vuelve a disparar. Por
+> eso el paso 2 de §4.1 escribe reposo **antes** de bajar OE. La misma hoja
+> trae la respuesta a la decisión de cobre pendiente (§10, riesgo 6): el pin
+> `/RESET` del conversor limpia las salidas **en caliente** al valor que
+> RSTSEL elige, y además *«the outputs cannot be updated while the RESET pin
+> is low»* — es cerrojo, no solo borrado. La mutación de verificación mide el
 > **tiempo hasta el silencio** contra una cota declarada en el plan, no «que
 > llega solo».
 
@@ -482,8 +484,26 @@ hasta el silencio contra cota declarada.
 Las cotas de voz-total §3.3 estaban escritas sobre la etapa que desaparece
 (*«peor caso nota-a-VCA incluyendo la etapa maestro→esclavo»*). Quedan así:
 
-- **≤ 3 ms nota-a-VCA se mantiene** como criterio de aceptación del evento
-  (pase siguiente), ahora sobre la cadena real: cerebro → trama → parse → DAC.
+- **≤ 3 ms nota-a-VCA se mantiene** como criterio de aceptación del evento,
+  ahora sobre la cadena real — **cuyos términos los fija el pase del evento,
+  no este papel.** Lo que aquí se retira es la etapa de reenvío; enumerar el
+  resto sería cerrar por decreto una lista que el pase siguiente todavía tiene
+  que abrir.
+
+  Y un término que ya se sabe que está y que no puede caerse: **la espera de
+  la ranura de trama.** Si el evento viaja dentro de la trama —que es lo que
+  el cerebro §5 quiere, *«tono y gate salen en el mismo instante»*— un evento
+  que queda listo justo después de que salga una trama espera a la siguiente.
+  Con el bloque de tono a 1 kHz (R-M4) eso es hasta **1 ms**, contra los
+  **28,8 µs** que dura el aire de una trama de 288 bits a 10 MHz: **treinta y
+  cinco veces**. El término manda sobre el que lo acompaña, y el instrumento
+  entero se diseña contra 1 ms (`tiempo_budget.py`).
+
+  Este papel **no lo resuelve** —cómo se planifica el evento sobre la trama es
+  el formato del evento, o sea el pase siguiente— pero lo deja escrito, porque
+  callar un término de la cadena es exactamente el pecado que H-BP2 cazó en la
+  v1 y que este papel existe para corregir. Hallazgo de la sesión `sam17-3a`,
+  2026-08-25.
 - **La uniformidad ±0,5 ms entre columnas deja de ser una cota a perseguir y
   pasa a ser una propiedad a medir**: ambos micros capturan el mismo flanco de
   SCLK; el sesgo residual es diferencia de cómputo local entre dos copias del
@@ -581,12 +601,13 @@ las rastrea.
    *puerta, no prueba*.
 4. **Los POR_CONFIRMAR de `enlace_budget.py`**: Z0 y velocidad de la cinta
    (catálogo genérico), capacidad de pin y de conector (declaradas — el
-   datasheet no las publica). Aparte, y en su guion: la hoja del AD5686R
-   **nunca se leyó** (`j2.rs`: tres intentos con timeout; pedírsela a Samuel),
-   y de ella cuelgan dos deudas: el techo real de SCLK
-   (`spi_privado_budget.py`) y la semántica exacta de RSTSEL que R-A4 usa como
-   supuesto. No condicionan la T — los DACs no cuelgan del J2 — pero sí la
-   renegociación del reloj y el riesgo 6.
+   datasheet no las publica). **La deuda del AD5686R queda saldada**: la hoja
+   entró al árbol el 2026-08-25 (`docs/reference/datasheets/`
+   `ad5686r-revf-2024-11.pdf`) y está leída. Su techo de SCLK son **25 MHz en
+   cadena** y 50 MHz suelto, los dos con VLOGIC ≥ 2,7 V (Tablas 4 y 5, p. 5-6)
+   — contra los 10 MHz del contrato, sobra dos veces y media, así que el DAC
+   nunca fue el techo. `spi_privado_budget.py` puede citar en vez de declarar
+   sus 20 MHz (§9).
 5. **La línea del CS en T** entra a `enlace_budget.py` (§9) — pendiente de
    escribirse, aunque su costo se espera trivial.
 
@@ -711,10 +732,16 @@ Re-especificación; se escriben en sus pases, no en este.
    su test; el bring-up la sonda con la trama real.
 6. **El reset caliente no borra los DACs** (§4.2): entre el reboot y el paso 2
    del rearranque, los CV retienen su último valor con el sonido ya cortado
-   por OE. Queda una decisión de cobre nombrada: atar el /RESET de los
-   conversores al estado RUN de su micro, o aceptar la ventana con su cota.
-   Cierra: la decisión en el pase de cobre del módulo, y la mutación de
-   tiempo-hasta-silencio con la cota declarada.
+   por OE. La decisión de cobre que lo cerraría **ya tiene respuesta en la
+   hoja**, leída el 2026-08-25: atar el `/RESET` del conversor al estado RUN
+   de su micro hace que un reset caliente sí los mande a reposo, y de paso
+   los blinda contra escrituras durante el reboot. Con una letra pequeña que
+   hay que respetar: *«if the RESET pin is pulled low at power-up, the device
+   does not initialize correctly until the pin is released»* — el conversor
+   nace dormido y despierta con el micro, que es el mismo patrón que la bahía
+   (H-OF4) y es lo que se quiere. **La decisión sigue siendo de Samuel**: son
+   pines y cobre, no prosa. Cierra: en el pase de cobre del módulo, y la
+   mutación de tiempo-hasta-silencio con la cota declarada.
 
 ---
 
@@ -767,6 +794,18 @@ en la junta de verificación de este papel, todas vetables:
 - La alimentación del perro con dos condiciones (D3 — corrige el borrador, que
   solo miraba el lazo de trama y dejaba el núcleo 1 sin vigilar).
 - La política del cerebro ante un módulo presente-y-mudo (§4.3).
+
+Y lo que la coordinación entre sesiones aportó al papel, el mismo día:
+
+- **La espera de la ranura de trama** (§4.5), de `sam17-3a`: la cadena del
+  evento tenía un término sin contar que vale hasta 1 ms — treinta y cinco
+  veces el aire de la trama — y el instrumento entero se diseña contra 1 ms.
+  Es el mismo género de hallazgo que H-BP2, y habría sido feo repetirlo en el
+  papel que lo corrige. Se registra aquí; **lo resuelve el pase del evento**.
+- **La hoja del AD5686R** entró al árbol con el PR #200 y Samuel la dejó
+  además en el Desktop el mismo día. Con ella se saldan dos deudas que este
+  papel llevaba abiertas: el techo real de SCLK (§7) y la semántica de RSTSEL
+  y del pin `/RESET` (R-A4, riesgo 6).
 
 Origen del encargo: decisión de Samuel del 2026-08-24 — *«prefiero cambiar
 toda la arquitectura, no quiero que haya un microcontrolador al que le lleguen
