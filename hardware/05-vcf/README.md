@@ -1,14 +1,17 @@
 # Hardware — Módulo 5: VCF (filtro pasa-bajo OTA)
 
 > [!IMPORTANT]
-> **El SAM17 pasa a polifónico de 4 voces.** Cuatro filtros idénticos con
-> **corte y resonancia comunes** a los cuatro: un panel, cuatro circuitos detrás.
+> ## Este módulo DESAPARECE como placa separada — 2026-08-23
 >
-> El problema difícil de este módulo es el **apareamiento**: si los cuatro no
-> filtran igual, el acorde suena desparejo. Y a diferencia del tono, esto **no se
-> puede calibrar digitalmente** — no hay nada que escuche un filtro.
+> Hay **un filtro por canal, dentro de la placa del módulo de Voz**: dieciséis, no cuatro, y no en placa propia.
 >
-> Arquitectura completa: [`docs/architecture-poly.md`](../../docs/architecture-poly.md)
+> Sigue siendo el MS-20 (LM13700 en dos celdas, LP 24 dB/oct, LEDs en el lazo), elegido por carácter. Dos cosas cambian: la **resonancia se controla por VCA** (¼ de SSI2164 en el lazo), nunca por digipot; y el problema de apareamiento que esta página daba por incalibrable **sí se calibra** — un tap de caracterización lleva la señal post-filtro de cada canal a un mux 16:1 y a un contador del micro, que es la ruta por la que la auto-oscilación se mide con el VCA de voz cerrado.
+>
+> Lo de abajo queda como **diseño de referencia del circuito**: sigue siendo de
+> donde sale el carácter, y el spec de Voz lo hereda. Lo que ya no vale es que
+> esto sea una placa con su panel y su bajada de bus.
+>
+> Manda: [spec del módulo de Voz total, §2 y §4](../../docs/superpowers/specs/2026-08-23-modulo-voz-total-design.md).
 
 
 > Documentación funcional: [`docs/modules/05-vcf.md`](../../docs/modules/05-vcf.md).

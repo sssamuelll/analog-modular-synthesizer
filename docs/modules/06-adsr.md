@@ -1,5 +1,11 @@
 # Módulo 6 — ADSR (generador de envolvente)
 
+> [!IMPORTANT]
+> **Superado como módulo separado — 2026-08-23.** Las envolventes dejan de ser un circuito: son generadores que corren en los micros del módulo de Voz, con sus perillas en el panel de mandos. No queda ICM7555 ni placa.
+> Lo de abajo se conserva como el diseño de referencia del circuito, que
+> es de donde sale el carácter. Manda el
+> [spec del módulo de Voz total](../superpowers/specs/2026-08-23-modulo-voz-total-design.md).
+
 > Referencia: tesis, *Módulo de Envolvente* (Gráficos 36–41) y Schmitz Bits
 > *Third ADSR* schematic.
 

@@ -9,8 +9,35 @@
 > agente de IA — está en
 > [`architecture-compute.md`](architecture-compute.md).
 
-El SAM17 pasa a ser un **sintetizador polifónico de 4 voces**. Cada nota tiene
-su propio oscilador, su propio filtro, su propio VCA y su propia envolvente.
+> [!IMPORTANT]
+> ## Este documento está SUPERADO en su arquitectura de módulos — 2026-08-23
+>
+> Lo que sigue describe el instrumento de **4 voces en módulos separados**, y
+> ese reparto ya no existe. Dos specs posteriores lo sustituyen, y ellas mandan:
+>
+> | Lo que dice este documento | Lo que se decidió después |
+> |---|---|
+> | 4 voces | **16 canales**: 16 voces limpias u 8 de FM, lo decide el preset — [Voz total §1](superpowers/specs/2026-08-23-modulo-voz-total-design.md) |
+> | Módulos 5 (VCF) y 7 (VCA) separados | Desaparecen: el canal es oscilador → filtro → VCA en la misma placa — [Voz total §2](superpowers/specs/2026-08-23-modulo-voz-total-design.md) |
+> | Módulo 6 (ADSR) como circuito | Las envolventes son **generadores en los micros** del módulo de Voz — [Voz total §3](superpowers/specs/2026-08-23-modulo-voz-total-design.md) |
+> | Módulo 4 (mixer) como placa | Desaparece: suma, volumen, salida y oídos se mudan al módulo de Voz — acta E-5 |
+> | «En el patch bay vive la modularidad» | **Dos regímenes**: programática por dentro, física en la frontera — [Voz total §0.1](superpowers/specs/2026-08-23-modulo-voz-total-design.md) |
+> | «El cable siempre gana» | Restringido a los jacks de la bahía |
+> | Salida mono | **Estéreo**, con sitio por voz — acta E-6 |
+> | §11.3 | Cae |
+>
+> **Lo que de aquí sigue vigente** y no lo repite ningún spec: el sistema de
+> LED por jack que guía el patcheo (§7), el razonamiento del enlace serie (§8),
+> y el porqué de que los mandos sean sensores y no potenciómetros en el camino
+> de audio.
+>
+> La reescritura completa está declarada como trabajo pendiente en
+> [Voz total §10](superpowers/specs/2026-08-23-modulo-voz-total-design.md).
+> Hasta que ocurra, **la spec fechada más reciente manda sobre este documento**.
+
+El SAM17 pasó a ser un **sintetizador polifónico**. Cada nota tiene su propio
+oscilador, su propio filtro, su propio VCA y su propia envolvente — el número de
+voces y el reparto en placas son lo que las specs de arriba corrigen.
 
 ---
 

@@ -1,5 +1,11 @@
 # Módulo 7 — VCA (amplificador controlado por voltaje)
 
+> [!IMPORTANT]
+> **Superado como módulo separado — 2026-08-23.** Hay dos VCA por canal —voz y resonancia—, 32 en total, sobre 8× SSI2164, dentro de la placa del módulo de Voz. Ya no es LM13700.
+> Lo de abajo se conserva como el diseño de referencia del circuito, que
+> es de donde sale el carácter. Manda el
+> [spec del módulo de Voz total](../superpowers/specs/2026-08-23-modulo-voz-total-design.md).
+
 > Referencia: tesis, *Módulo VCA* (Gráficos 42–49). Diseño basado en
 > Wiltshire, *Design a Eurorack Vintage VCA with the LM13700* y Chamberlin,
 > *Musical Applications of Microprocessors* (CA3080).

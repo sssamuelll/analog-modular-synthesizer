@@ -1,14 +1,17 @@
 # Hardware — Módulo 4: Mixer
 
 > [!IMPORTANT]
-> **El SAM17 pasa a polifónico de 4 voces.** Este módulo **se mueve al final
-> de la cadena**: ya no suma tres osciladores antes del filtro, suma **cuatro voces
-> ya filtradas y con su VCA**.
+> ## Este módulo DESAPARECE como placa separada — 2026-08-23
 >
-> No es un detalle de orden: sumar antes del filtro sería parafónico, no polifónico.
-> Es exactamente la diferencia entre los dos.
+> La suma de los dieciséis canales, el volumen general, la salida principal **y los oídos** (el códec de 24 bits con el que el instrumento se escucha a sí mismo) se mudan a la placa del módulo de Voz.
 >
-> Arquitectura completa: [`docs/architecture-poly.md`](../../docs/architecture-poly.md)
+> El motivo, dicho por Samuel: *un mixer solo tiene sentido si es independiente de su fuente y de sus salidas.* El de aquí estaba soldado a las voces, así que no era un módulo — era una parte. El mixer que viva en la fila de abajo es un invitado Eurorack cualquiera y no tiene relación con esta suma.
+>
+> Lo de abajo queda como **diseño de referencia del circuito**: sigue siendo de
+> donde sale el carácter, y el spec de Voz lo hereda. Lo que ya no vale es que
+> esto sea una placa con su panel y su bajada de bus.
+>
+> Manda: [spec del módulo de Voz total, §13, acta E-5](../../docs/superpowers/specs/2026-08-23-modulo-voz-total-design.md).
 
 
 > Documentación funcional: [`docs/modules/04-mixer.md`](../../docs/modules/04-mixer.md).

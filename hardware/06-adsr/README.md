@@ -1,11 +1,17 @@
 # Hardware — Módulo 6: ADSR
 
 > [!IMPORTANT]
-> **El SAM17 pasa a polifónico de 4 voces.** Es el módulo que más cambia:
-> pasa de un disparo a **cuatro envolventes que corren a la vez y sin relación entre
-> sí**, cada una con su propio gate, y un solo juego de mandos para las cuatro.
+> ## Este módulo DESAPARECE como placa separada — 2026-08-23
 >
-> Arquitectura completa: [`docs/architecture-poly.md`](../../docs/architecture-poly.md)
+> Las envolventes dejan de ser un circuito. Son **generadores que corren en los micros del módulo de Voz**, con sus perillas en el panel de mandos de la fila B.
+>
+> No queda ICM7555, ni capacitor de rampa, ni placa. Lo que se pierde con el circuito son sus failsafes — un ADSR analógico se cae a cero solo — y por eso el spec les pone watchdogs explícitos en firmware.
+>
+> Lo de abajo queda como **diseño de referencia del circuito**: sigue siendo de
+> donde sale el carácter, y el spec de Voz lo hereda. Lo que ya no vale es que
+> esto sea una placa con su panel y su bajada de bus.
+>
+> Manda: [spec del módulo de Voz total, §3.1](../../docs/superpowers/specs/2026-08-23-modulo-voz-total-design.md).
 
 
 > Documentación funcional: [`docs/modules/06-adsr.md`](../../docs/modules/06-adsr.md).

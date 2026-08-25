@@ -1,7 +1,7 @@
 # Constitución del SAM17
 
-Sintetizador analógico modular polifónico de 4 voces, reconstruido a partir de
-una tesis de grado y llevado más allá de ella.
+Sintetizador analógico modular polifónico de 16 canales, reconstruido a partir
+de una tesis de grado y llevado más allá de ella.
 
 Estos principios no son buenas intenciones: cada uno está aquí porque su
 ausencia ya costó trabajo perdido en este repositorio. Se citan los casos.
