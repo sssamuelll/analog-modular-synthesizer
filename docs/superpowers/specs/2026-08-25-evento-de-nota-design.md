@@ -264,10 +264,28 @@ exactamente esta clase de verdad — 50 ms el sondeo de jacks, 1 Hz la salud
 > **R-E11. La cadencia del estado de compuerta se declara aparte y se deriva de
 > la tolerancia a una nota clavada, nunca de la tasa del bloque de tono.**
 
-El orden de magnitud, contra el mismo modelo: a **20 Hz** (los 50 ms que el
-sondeo de jacks ya usa) son 320 bit/s, unas **400 veces menos** que a 8 kHz, y
-el término desaparece por debajo de la precisión del modelo. El déficit de mazo
-vuelve a ser el de antes de R-E10.
+El orden de magnitud, corrido contra el mismo modelo:
+
+| Cadencia | Caudal | Reloj exigido de más |
+|---|---|---|
+| 8 kHz — la del tono | 128 000 bit/s | **+0,2560 MHz** |
+| 20 Hz — 50 ms, la del sondeo de jacks | 320 bit/s | +0,0006 MHz |
+| 100 Hz — 10 ms | 1 600 bit/s | +0,0032 MHz |
+| 200 Hz — 5 ms | 3 200 bit/s | **+0,0064 MHz** |
+
+**Y aquí hay una segunda herencia que tampoco hay que aceptar.** Anclar a los
+50 ms del sondeo de jacks tiene el mérito de no inventar cadencias, pero **paga
+con lo único que dolía**: a 150 BPM, 50 ms es casi una fusa, y un `note on`
+reparado con ese retraso entra tarde y **se oye como error**. A 200 Hz —5 ms—
+entra tarde y **se oye como la nota**.
+
+Y el coste de esa mejora son 3 200 bit/s: **tres órdenes de magnitud por debajo
+de la precisión del modelo**, igual que los 320.
+
+> **Corolario de R-E11: a este precio, el presupuesto ya no elige la cadencia.
+> La elige el oído.** No se hereda la del tono ni la de los jacks; se deriva de
+> la tolerancia a una nota tardía, que es el caso que manda — el `note off`
+> perdido tolera de sobra cualquiera de las tres.
 
 Lo que se paga a cambio, dicho sin adornos: en el caso de fallo la nota tarda
 hasta una cadencia de estado en corregirse, no 125 µs. **Para un `note off`
@@ -287,6 +305,23 @@ posible.
 
 > **La frontera de D2, completada: el evento lleva el valor inicial, el flujo
 > lleva la evolución — y también la verdad.**
+
+### D7. Lo que no repite el flujo, no tiene red
+
+> **R-E12. Todo lo que viaje solo en el evento y no lo reafirme un flujo
+> periódico queda sin red.** Hoy el evento lleva el borde y R-E10 lo cubre. El
+> día que cargue algo más, ese algo **nace sin reparación** y hay que decidirlo
+> a propósito, no heredarlo.
+
+Se escribe como invariante y no como hallazgo por una razón concreta: dentro de
+seis meses alguien va a añadirle un campo al evento creyendo que la red ya lo
+cubre. Es el mismo animal de siempre — una propiedad que era verdad cuando se
+escribió.
+
+**Y ya tiene un caso vivo, que es el campo de fuerza de §3.** Si el evento lleva
+velocidad y se pierde, R-E10 repara **que la nota esté sonando**, no **con qué
+fuerza**. La nota reparada entra a un valor por defecto. Es degradación
+elegante y no fallo — pero es degradación, y va escrita en vez de descubierta.
 
 ---
 
@@ -309,6 +344,13 @@ un tambor necesita y lo que evita que la percusión invente un camino aparte.
 escalera, y su UMP lleva velocidad de 16 bits mientras MIDI 1.0 lleva 7. Elegir
 7 clavaría el instrumento a lo viejo; elegir 16 sin comprobar el resto de la
 cadena sería inventar. Se deriva en el plan, con el descriptor delante.
+
+> **Y hay algo más gordo que el ancho: la velocidad NO EXISTE en el modelo.**
+> `software/nucleo/core/src/partes.rs:87` es `nota_on(canal, nota)` — sin
+> velocidad, y no aparece en ningún sitio del núcleo. Así que este campo **no es
+> un ancho por decidir: es una capacidad nueva del instrumento**, y por §2.1 del
+> núcleo —*«si no está en el modelo, no existe»*— tiene que aterrizar en el
+> modelo antes que en el mensaje. Va como condición C10, no como campo dado.
 
 **Lo que el evento NO lleva**, y es tan parte del formato como lo que lleva:
 
@@ -510,6 +552,13 @@ lea como hechos.
    y su propio comentario dice dónde recortar. Recortarla es legítimo;
    **consumirla en silencio no**. Si hace falta, entra como decisión escrita con
    su cifra, no como un número que cambió.
+
+10. **C10 — La velocidad no está en el modelo.** `partes.rs:87` es
+    `nota_on(canal, nota)`, sin velocidad, y no aparece en ningún sitio del
+    núcleo. El campo de fuerza de §3 es una **capacidad nueva**, no un ancho por
+    elegir, y por núcleo §2.1 —*«si no está en el modelo, no existe»*— aterriza
+    primero en el modelo. Y por R-E12 nace **sin red**: una nota reparada suena,
+    pero a un valor por defecto.
 
 ---
 
