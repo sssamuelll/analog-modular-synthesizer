@@ -199,7 +199,13 @@ tiene que ser corto.
 ### D5. Direccionamiento: el evento no nombra micros
 
 > **R-E3. El destino de un evento es una ruta y una instancia, nunca una columna
-> ni un micro.**
+> ni un micro.** Acotado **al evento**, que vive en la ranura V y direcciona
+> osciladores.
+
+**Ojo con la generalización, que es falsa.** «La instancia jamás nombra una
+columna» **no** es propiedad del modelo: la junta del #201 encontró que el censo
+publica `estado de columna` con `instancia = columna`, ×2, en la ranura M. R-E3
+vale para el evento y no debe citarse como ley general.
 
 Sale de D4 del enlace sin jefe —*«ranuras lógicas funcionales, nunca por
 micro»*— y de su reparto de broadcast: los dos micros oyen todo y cada uno actúa
@@ -213,6 +219,45 @@ instancia, sin índice**: el evento no escribe un parámetro.
 
 Consecuencia gratis: un módulo de percusión es *ruta a su ranura, instancia 0*.
 **No es un caso especial** — que es justo lo que el #160 pedía comprobar.
+
+### D6. El borde va en el evento; la verdad va en el flujo
+
+**El problema que D1 crea y que hay que decir en voz alta.** Al morir el
+reenvío murió también todo mecanismo capaz de detectar que un evento se perdió
+en la columna B: no hay `MISO` desde B (R-S2 del enlace sin jefe), ni acuse, ni
+número de secuencia, ni CRC, ni comparación cruzada — y R-S5 prohíbe
+inventarlos. Lo cazó la junta adversarial del #201, y la formulación de Halberg
+es justa:
+
+> «Se optimizó el jitter de una entrega cuya fiabilidad ya no se puede
+> verificar.»
+
+**Y este papel lo empeoraba.** El tono se auto-repara porque es periódico: si
+una trama se pierde, la siguiente trae el valor otra vez, 125 µs después. Un
+evento sacado de la cadencia (D1) es un **disparo único**, sin repetición y sin
+vuelta. Un `note off` perdido en la columna B es **una nota clavada
+permanente**, y nadie en el sistema tiene forma de saberlo.
+
+La salida no es inventar un acuse — lo prohíbe R-S5, y además pediría el `MISO`
+que la columna B no tiene:
+
+> **R-E10. Todo evento tiene que ser recuperable por el flujo periódico.** El
+> evento lleva el **borde**, que es lo que necesita llegar rápido. El flujo
+> periódico lleva además el **estado de compuerta de los dieciséis canales**,
+> que es la verdad y se reafirma en cada vuelta. Un evento perdido se corrige
+> en la siguiente trama, sin acuse, sin retransmisión y sin canal de vuelta.
+
+Cuesta **16 bits por módulo** en un bloque que el cambio 1 ya está reescribiendo
+y que D3 ya toca. No es un mensaje nuevo, así que no roza R-S5.
+
+Lo que se gana, dicho con precisión: **el camino rápido sigue siendo el evento y
+el camino seguro es el flujo.** En el caso normal la nota llega en decenas de
+microsegundos. En el caso de fallo llega tarde —hasta una vuelta del lazo— pero
+llega, y sobre todo **se cierra**. Una nota clavada permanente deja de ser
+posible.
+
+> **La frontera de D2, completada: el evento lleva el valor inicial, el flujo
+> lleva la evolución — y también la verdad.**
 
 ---
 
@@ -287,7 +332,7 @@ instrucciones. Condición C1 de §9.
 
 | Guion | Qué asevera | Estado |
 |---|---|---|
-| `evento_budget.py` | R-E1 contra el largo de **todos** los mensajes declarados del J2, con D3 en su peor caso; y el sesgo residual entre columnas de §4.5 del enlace sin jefe, **aseverado, no compensado** | no existe |
+| `evento_budget.py` | R-E1 contra el largo de **todos** los mensajes declarados del J2, con D3 en su peor caso **y con los 16 bits de estado de compuerta de R-E10 dentro**; y el sesgo entre columnas **medido**, nunca supuesto (C5) | no existe |
 | `ataque_budget.py` | La cadena completa nota→VCA contra los ≤3 ms de Voz total §3.3, con sus huecos declarados | no existe |
 | `tiempo_budget.py` | **Arreglo**: su `BITS_TRAMA_J2 = 72` es la trama de tres AD5686R en cadena de la v1 del módulo 3, muerta desde el cambio 1 de orquestación. Puerta viva vigilando un número muerto | existe, con el número caduco |
 
@@ -337,6 +382,7 @@ nada.
 | **Sobrevive** | El bloque de tono agrupado, y su razón: `latencia_mano_budget.py` asevera que la versión suelta **rebasa** el techo del 50 % — 1408 bits por vuelta contra 544, el 112,6 % del bus |
 | **Nace** | R-E1, que acota el largo de todo lo que cruce el J2 |
 | **Nace** | El evento como mensaje de primera clase, con la percusión dentro sin caso especial (#160) |
+| **Nace** | R-E10: el flujo periódico pasa a llevar el estado de compuerta. Es lo que hace que sacar el evento de la cadencia no cueste fiabilidad |
 
 ---
 
@@ -392,10 +438,34 @@ lea como hechos.
 3. **C3 — El peor caso de D3 cumple R-E1** con la cabecera real. Lo asevera
    `evento_budget.py`.
 4. **C4 — El ancho de la fuerza** no estrangula MIDI 2.0 ni infla el mensaje.
-5. **C5 — El sesgo residual entre columnas** es de microsegundos, como predice
-   §4.5 del enlace sin jefe. Se mide en el bring-up con analizador lógico.
-6. **C6 — Este papel se escribe sobre el PR #201 sin mergear.** Si el #201
-   cambia, §1 y R-E3 se releen.
+5. **C5 — El sesgo entre columnas se MIDE, y el argumento que lo daba por
+   pequeño no vale.** §4.5 del enlace sin jefe lo justificaba como *«diferencia
+   de cómputo local entre dos copias del mismo binario»*. La junta del #201
+   demostró que es falso: el núcleo 0 de la cabecera lleva **además** la ventana
+   de `MISO` con su regla de no perderla, la consolidación de medidas y el
+   sondeo del bus interno — y un receptor de **clase distinta** (SPI de hardware
+   contra PIO). **La asimetría es estructural, no residual.** El número puede
+   seguir siendo bueno; el argumento no. `evento_budget.py` lo asevera contra
+   medida, nunca contra esa frase.
+6. **C6 — Este papel se escribe sobre el PR #201, que no está mergeado y que
+   NO pasó su junta adversarial de cinco agentes** (2026-08-25). Estado
+   comprobado con su autor, decisión por decisión:
+
+   | | |
+   |---|---|
+   | **D1** (los dos micros oyen, muere el reenvío) | **En pie.** Nadie propuso revertirla; es la parte menos frágil del papel. §1 de este documento se sostiene |
+   | **D4** (ranuras funcionales) | **Entra con otro argumento de cierre**: el suyo citaba «tres septetos de SysEx» y el núcleo §3.1 dice cinco. R-E3 sobrevive; su justificación no |
+   | **D3** (recuperación) | **Enmendada.** Tres de los cuatro agujeros están ahí. No toca a este papel |
+
+   **Deudas de D1 que este papel hereda y no resuelve**: el caso eléctrico
+   adoptado **no cierra hoy** —8,54 MHz disponibles contra 8,70 exigidos— y el
+   framing variable que R-E5 necesita está declarado **congelado** en núcleo
+   §597. Las dos aprietan R-E1, no la aflojan.
+
+7. **C7 — La pérdida de un evento no se detecta, y no se va a detectar.** R-E10
+   la hace recuperable, que es otra cosa. Si alguna vez alguien necesita
+   *saber* que se perdió, eso pide canal de vuelta desde la columna B y levanta
+   R-S2 y R-S5: es rediseño del enlace, no un añadido a este papel.
 
 ---
 
@@ -412,6 +482,7 @@ Mandadas, no hechas.
 | Núcleo §5.3 | Anotar que su camino de salida se cumplió por otra vía, y por qué |
 | Núcleo §4.1 | El evento **no** entra en la tabla de mensajes: aquella es la superficie cliente↔cerebro; ésta es cerebro↔módulo. Decirlo, para que la ausencia no se lea como olvido |
 | `tiempo_budget.py` | El arreglo de §5 |
+| El bloque periódico del cerebro | Gana los 16 bits de estado de compuerta de R-E10. No es mensaje nuevo: es campo en un bloque que el cambio 1 ya reescribe |
 | #160 | Su parte 2 queda cerrada aquí; la 1, 3 y 4 siguen abiertas |
 
 ---
@@ -431,6 +502,15 @@ Decisiones de Samuel, en orden:
 4. **El flujo continuo manda solo lo que cambió** (D3), que es lo que sí se
    puede dar de la idea 3.
 
+Y una decisión que salió de la junta adversarial del #201, no de la sesión:
+
+5. **El borde va en el evento; la verdad va en el flujo** (D6/R-E10). La junta
+   encontró que matar el reenvío mató también toda forma de saber que un evento
+   se perdió, y que este papel lo empeoraba al sacar el evento de la cadencia:
+   el tono se auto-repara por periódico, un disparo único no. Se resuelve sin
+   acuse y sin canal de vuelta — 16 bits de estado en el bloque que ya se estaba
+   reescribiendo.
+
 Correcciones hechas durante la sesión, anotadas porque el repo lleva seis del
 mismo animal en un día:
 
@@ -440,3 +520,8 @@ mismo animal en un día:
 - La frase de los gates es del **núcleo §5.3**; el cerebro §5 la cita y lo dice.
 - La cadena de LED **no** gasta PIO en el micro de la Voz: dieciséis §14 se la
   quitó, y una de sus tres razones fue justamente proteger ese presupuesto.
+- El sesgo entre columnas **no** es «diferencia entre dos copias del mismo
+  binario»: la cabecera lleva más trabajo y un receptor de clase distinta. La
+  asimetría es estructural (C5).
+- «La instancia jamás nombra una columna» **no** es propiedad del modelo: en la
+  ranura M sí la nombra. R-E3 queda acotada al evento.
