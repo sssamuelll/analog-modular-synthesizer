@@ -218,10 +218,12 @@ def _caja_remate(p: dict[str, float],
 
 def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
                         cr: list[tuple[float, float]]) -> list[tuple[float, float]]:
-    """5 centros de larguero de esqueleto, misma formula que
+    """4 centros de larguero de esqueleto, misma formula que
     centros_esqueleto() en sam17_case.scad. Fueron 7 (con un "zocalo superior"
-    que se retiro), luego 6, 7 otra vez, y 8 al entrar el remate trasero. Desde
-    el 2026-08-21 son 5: junto al plano trasero quedan DOS y no cinco.
+    que se retiro), luego 6, 7 otra vez, y 8 al entrar el remate trasero. El
+    2026-08-21 bajaron a 5 -- junto al plano trasero quedan DOS y no cinco -- y
+    el 2026-08-25 a CUATRO, al retirarse el entrepiso delantero: era el unico
+    que no sostenia ninguna plancha, y a su misma altura ya ata el del valle.
     Entrepiso trasero, repisa y remate superior nacieron cada uno por una pieza
     -- la bandeja de entrepiso, la piel superior y la tira de remate pegada de
     canto -- y ninguna de las tres existe ya. Seguian ahi solo como filas de
@@ -244,7 +246,6 @@ def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
     # superior a 49 el solape se hizo real (0.11 mm contra el larguero, 5 mm
     # contra la bandeja de entrepiso) y solapes() lo canto. El cambio de
     # angulo no rompio nada: destapo algo que llevaba roto desde Task 5.
-    x_ed = cr[2][0] + _he_er(p, p["angulo_superior"])[0] + p["holgura_rail"] + r
     y_ep = P[3][1] - p["t_acrilico"] - r
     # Los dos largueros de la base ya NO viven en el canto de abajo. Desde que
     # la bandeja es el suelo (t_base) montan ENCIMA de ella, con su centro en
@@ -273,7 +274,6 @@ def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
     x_tr = fondo(p) - r - p["t_piel"]
     return [(x_bd, y_bd),
             (x_tr, y_bd),
-            (x_ed, y_ep),
             # valle: el cuarto, y el unico que existe por una plancha y no por
             # una union. Centrado bajo la tapa del valle para que los dos vuelos
             # sean iguales, y de paso ata los costados por la cintura.
@@ -300,8 +300,7 @@ NOMBRES_CR = ["cara_inf frente", "cara_inf valle",
               "cara_sup valle", "cara_sup remate"]
 ANGS_CR = ["angulo_inferior", "angulo_inferior",
            "angulo_superior", "angulo_superior"]
-NOMBRES_CE = ["base delantera", "base trasera", "entrepiso delantero",
-              "valle", "remate trasero"]
+NOMBRES_CE = ["base delantera", "base trasera", "valle", "remate trasero"]
 
 
 # Caja = (nombre, x0, x1, y0, y1, z0, z1)
@@ -372,11 +371,14 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # acrilico. Lo que si se fue con ella son sus 3 pasacables de 40 x 12 -- el
     # cable entre pisos se queda sin paso definido, y eso es del #103.
     #
-    # De sus DOS largueros se queda UNO, el delantero: ata los costados a media
-    # altura en un vano de 528 sin bulkhead central. El trasero se fue el
+    # Y NO SE QUEDA NINGUNO DE SUS DOS LARGUEROS. El trasero se fue el
     # 2026-08-21 con los otros dos de en medio -- ya solo daba una fila de
     # tornillo de la trasera, y esa fila no compra rigidez que la propia
-    # plancha de 8 no de ya.
+    # plancha de 8 no de ya. El delantero aguanto hasta el 2026-08-25: era el
+    # unico larguero del case sin plancha encima, o sea el unico que ninguna
+    # puerta de anclaje miraba, y su papel -- atar los costados a media altura
+    # -- ya lo hace el del valle a la MISMA altura. Lo que costo se mide en
+    # guarda_costado(), en check_dxf.py.
     # tapa_valle: a ras del plano del valle, igual que la de entrepiso, y con
     # una sola fila de M3 -- la del larguero del valle, que va centrado bajo
     # ella. Lo que la coloca en Y es lo mismo que obligo a subir
@@ -385,7 +387,7 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     x0_tv, x1_tv = _x_valle(p, P, cr)
     planchas.append(("tapa_valle", x0_tv, x1_tv,
                      P[3][1] - t_acr, P[3][1], t_cheek, ancho_total - t_cheek))
-    filas += [("tapa_valle", "unica", "x", ce[3][0], "valle")]
+    filas += [("tapa_valle", "unica", "x", ce[2][0], "valle")]
     # piel_trasera: UNA sola plancha desde el 2026-08-21. Fueron dos, partidas
     # a la altura del entrepiso porque cada una se atornillaba a los dos
     # largueros de su piso; muerta esa bandeja la frontera dejo de existir. Va
@@ -400,8 +402,8 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
                      y0_pt, y0_pt + alto_pt, t_cheek + hol,
                      ancho_total - t_cheek - hol))
     filas += [("piel_trasera", "base", "y", ce[1][1], "base trasera"),
-              ("piel_trasera", "remate", "y", ce[4][1], "remate trasero"),
-              ("remate_sup", "unica", "x", ce[4][0], "remate trasero")]
+              ("piel_trasera", "remate", "y", ce[3][1], "remate trasero"),
+              ("remate_sup", "unica", "x", ce[3][0], "remate trasero")]
     return railes, planchas, filas
 
 
@@ -748,7 +750,7 @@ def _rejilla_valle(p: dict[str, float]) -> tuple[int, float, float]:
     ce = _centros_esqueleto(p, P, cr)
     xv = _x_valle(p, P, cr)
     largo = xv[1] - xv[0]
-    y_esp = ce[3][0] - xv[0]
+    y_esp = ce[2][0] - xv[0]
     campos = ((p["valle_margen"], y_esp - p["valle_espina"] / 2),
               (y_esp + p["valle_espina"] / 2, largo - p["valle_margen"]))
     paso = int(p["valle_paso_hp"])
@@ -773,7 +775,7 @@ def _banda_libre_trasera(p: dict[str, float]) -> tuple[float, float]:
     salieron 12."""
     P = _vertices(p)
     ce = _centros_esqueleto(p, P, _centros_rail(p, P))
-    f_base, f_tras = ce[1][1], ce[4][1]
+    f_base, f_tras = ce[1][1], ce[3][1]
     y_bajas = f_base + 0.37 * (f_tras - f_base)
     y0 = f_base + p["valle_espina"] / 2 + p["vent_puente_min"]
     y1 = (y_bajas - p["vent_periodo"] * 0.35 - p["vent_ancho_ranura"] / 2
@@ -869,7 +871,7 @@ def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
     # sumar al devolver el centroide, asi que se cancela -- pero tiene que
     # decir lo mismo que el .scad o el dia que deje de cancelarse miente.
     y0_pl = 0.0
-    f_base, f_tras = ce[1][1] - y0_pl, ce[4][1] - y0_pl
+    f_base, f_tras = ce[1][1] - y0_pl, ce[3][1] - y0_pl
     y_bajas = f_base + 0.37 * (f_tras - f_base)
     # La sierra iba aqui con (_onda_area(p, "sierra", au * 0.70), y_sierra) y
     # y_sierra = f_base + 0.74 * (f_tras - f_base). Se cae con el cajeado: el
@@ -961,6 +963,12 @@ def guarda_aire(p: dict[str, float]) -> None:
 # 30% mas de precarga -- y sobre acrilico eso fisura. Los M3 van secos, y va
 # dicho en el pliego y en el orden de ensamblaje, no solo aqui.
 K_PAR = 0.20
+# Umbral de fluencia del PMMA. SUPUESTO DECLARADO (#106): nadie lo ha medido
+# sobre el acrilico que se va a comprar. Vive aqui y no dentro de una guarda
+# porque tiene DOS clientes -- guarda_apriete() y guarda_costado(), que esta en
+# check_dxf.py e importa este modulo. Copiarlo seria el patron del `- 15`
+# copiado en cinco sitios que ya costo una tanda en este repo.
+SIGMA_PMMA = 10.0
 
 
 def guarda_paticas(p: dict[str, float]) -> None:
@@ -1018,7 +1026,6 @@ def guarda_apriete(p: dict[str, float]) -> None:
     volveria a apretarse a tacto, que es lo que este cambio vino a quitar.
     Lo que compra par es subir la arandela, no bajar el apriete.
     """
-    SIGMA_PMMA = 10.0                      # #106
     area = math.pi * (p["d_arandela"] ** 2 - p["d_M3_paso"] ** 2) / 4
     par_max = K_PAR * (SIGMA_PMMA * area) * 0.003
     sigma = p["par_m3"] / (K_PAR * 0.003 * area)
@@ -1484,7 +1491,7 @@ def guarda_escalon(p: dict[str, float]) -> None:
     # equivocada y se come la holgura del larguero sin enterarse.
     r = p["rail"] / 2
     ce = _centros_esqueleto(p, P, cr)
-    x_valle = ce[3][0]
+    x_valle = ce[2][0]
     lo = cr[1][0] + _he_er(p, p["angulo_inferior"])[0] + p["holgura_rail"] + r
     hi = cr[2][0] - _he_er(p, p["angulo_superior"])[0] - p["holgura_rail"] - r
     assert lo <= x_valle <= hi, (
