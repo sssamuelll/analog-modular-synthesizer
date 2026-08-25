@@ -54,9 +54,11 @@ LO QUE **NO** ESTA EN EL DATASHEET, y por eso se BARRE en vez de suponerse
 La **capacidad de entrada** del TL074H no aparece en ninguna tabla (buscado:
 "capacitance" sale una sola vez, y es un consejo de layout). Tampoco esta
 publicada la capacidad de salida del pin 25 del SSI2130. Asi que la capacidad
-total del nodo MIXO_n es desconocida y aqui se barre de 5 a 100 pF -- el
-mismo criterio que usa run_sim.py con la regulacion del transformador, que el
-BOM tampoco fija.
+total del nodo MIXO_n es desconocida y aqui se barre de 5 a 100 pF: lo que el
+datasheet no fija se barre, no se supone. (`simulations/power/run_sim.py`
+barria asi la regulacion del transformador hasta el issue #128, porque el BOM
+tampoco la fijaba entonces -- ahora la fija la hoja de Nuvotem y ya no hace
+falta barrerla.)
 
 LO QUE ESTE CALCULO **NO** CUBRE
 -------------------------------------------------------------------------
