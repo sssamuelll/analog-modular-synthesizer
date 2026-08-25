@@ -295,7 +295,7 @@ instrucciones. Condición C1 de §9.
 
 | Término | Cuánto | De dónde |
 |---|---|---|
-| Reacción del cerebro | **HUECO** | #150, `censo_cerebro_budget.py`, en curso |
+| Reacción del cerebro | **HUECO**, y no por falta de guion | Ver C2: depende de en qué núcleo viva el host USB, que nadie ha decidido |
 | Espera del turno | 28,8 µs (54,4 si la ronda fuera indivisible) | §1.1 |
 | Aire del evento | derivado del formato de §3 | 10 MHz |
 | Parse en el micro | **HUECO** | #205 |
@@ -354,6 +354,8 @@ nada.
   el censo delante.
 - **Si el secuenciador (#94) trata a los tambores como caso especial.** R-E3 dice
   que no hace falta; confirmarlo es de aquel papel.
+- **En qué núcleo del cerebro vive el host USB.** Es la condición C2 y es de
+  Samuel. Este papel la nombra y se declara dependiente de ella; no la cierra.
 
 ---
 
@@ -366,7 +368,27 @@ lea como hechos.
    si el códec cede sitio. Se cierra escribiendo el programa y contando
    instrucciones. **#205.**
 2. **C2 — El planificador del cerebro puede emitir fuera de cadencia** sin
-   romper la tasa del lazo ni la ventana de `MISO`. **#150.**
+   romper la tasa del lazo ni la ventana de `MISO`.
+
+   El censo del cerebro (#150, PR #208) ya despejó la mitad fácil: **7 de 12
+   máquinas de PIO y 7 de 16 canales de DMA**, y los cronómetros de afinación
+   cuentan por hardware —*«with little or no CPU overhead»*, datasheet del
+   RP2350— así que no hay carga por flanco compitiendo con la decisión de
+   emitir. *(Cifras con instrucciones **ESTIMADO** hasta que alguien pase
+   `pioasm`: el cerebro respira, no le sobra sitio. Si Pico-PIO-USB pidiera una
+   máquina más, caen a 8 de 12.)*
+
+   **Lo que queda abierto no es un cálculo, es una decisión**: en qué núcleo
+   vive el host USB. Hoy el núcleo 0 es tiempo real y el 1 atribución, y el host
+   no tiene sitio declarado en ninguno.
+
+   > **Este papel se escribe condicionado a que el host USB viva en el
+   > núcleo 1.** Con esa condición, la reacción del cerebro queda acotada por el
+   > núcleo 0 y es pequeña. **Si se decidiera al revés, esta condición cae y el
+   > término empeora**: un host USB bit-bangeado tiene ráfagas duras, y
+   > compartirían núcleo con lo que decide emitir el evento.
+
+   Decisión de Samuel, no de este papel ni del #150.
 3. **C3 — El peor caso de D3 cumple R-E1** con la cabecera real. Lo asevera
    `evento_budget.py`.
 4. **C4 — El ancho de la fuerza** no estrangula MIDI 2.0 ni infla el mensaje.
