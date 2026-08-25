@@ -250,6 +250,35 @@ que la columna B no tiene:
 Cuesta **16 bits por módulo** en un bloque que el cambio 1 ya está reescribiendo
 y que D3 ya toca. No es un mensaje nuevo, así que no roza R-S5.
 
+**Pero la cadencia de ese estado NO es la del tono, y esto es media decisión.**
+Corrido por el autor del #201 contra sus guiones: 16 bits **a la tasa del lazo**
+(8 kHz) son 128 kbit/s, que empujan el reloj exigido de 8,70 a 8,96 MHz y
+multiplican por 2,4 el déficit de mazo — de 18 mm a 44.
+
+Y no hacen falta. El estado de compuerta es una **red de reparación**, no un
+flujo: su cadencia no la fija la música, la fija **cuánto tiempo se tolera una
+nota clavada**. Este instrumento ya tiene cadencias lentas declaradas para
+exactamente esta clase de verdad — 50 ms el sondeo de jacks, 1 Hz la salud
+(orquestación §7.1).
+
+> **R-E11. La cadencia del estado de compuerta se declara aparte y se deriva de
+> la tolerancia a una nota clavada, nunca de la tasa del bloque de tono.**
+
+El orden de magnitud, contra el mismo modelo: a **20 Hz** (los 50 ms que el
+sondeo de jacks ya usa) son 320 bit/s, unas **400 veces menos** que a 8 kHz, y
+el término desaparece por debajo de la precisión del modelo. El déficit de mazo
+vuelve a ser el de antes de R-E10.
+
+Lo que se paga a cambio, dicho sin adornos: en el caso de fallo la nota tarda
+hasta una cadencia de estado en corregirse, no 125 µs. **Para un `note off`
+perdido eso es intachable** —50 ms de nota de más no es un fallo, es un
+suspiro—. Para un `note on` perdido es una nota que entra tarde y se oye. Las
+dos son el caso de fallo de un mensaje perdido, y las dos son incomparablemente
+mejores que el permanente.
+
+El número exacto no se fija aquí: se deriva en el plan contra esa tolerancia,
+con `evento_budget.py` delante.
+
 Lo que se gana, dicho con precisión: **el camino rápido sigue siendo el evento y
 el camino seguro es el flujo.** En el caso normal la nota llega en decenas de
 microsegundos. En el caso de fallo llega tarde —hasta una vuelta del lazo— pero
@@ -466,6 +495,21 @@ lea como hechos.
    la hace recuperable, que es otra cosa. Si alguna vez alguien necesita
    *saber* que se perdió, eso pide canal de vuelta desde la columna B y levanta
    R-S2 y R-S5: es rediseño del enlace, no un añadido a este papel.
+
+8. **C8 — El piso contra el que se mide R-E11 es optimista, y hay que decirlo.**
+   Los 8,70 MHz exigidos cuentan **un** sondeo de panel y **un** bloque de tono.
+   No cuentan los demás módulos, ni la telemetría de 1 Hz, ni el sondeo de
+   jacks. Cada módulo que declare su tasa mínima suma ~0,58 MHz, y **tres
+   módulos más se pasan del contrato de 10 MHz antes de que este campo exista**.
+   El árbitro que sumaría todo eso, `trama_j2_budget.py`, **no existe**.
+
+   > **R-E11 nace con su línea reservada en ese guion.** No se descubre sumando.
+
+9. **C9 — Si R-E11 acabara costando margen de mazo, se paga de un sitio con
+   nombre.** `HOLGURA_SERVICIO = 0,150 m` es holgura **declarada, no derivada**,
+   y su propio comentario dice dónde recortar. Recortarla es legítimo;
+   **consumirla en silencio no**. Si hace falta, entra como decisión escrita con
+   su cifra, no como un número que cambió.
 
 ---
 
