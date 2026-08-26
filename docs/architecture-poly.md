@@ -226,10 +226,36 @@ que es ejecutable:
 
 | | |
 |---|---|
-| Barrido completo 84 notas × 4 voces | **3.5 s** — las cuatro en paralelo |
-| Lo mismo de una en una, como exigía el mux | 14.1 s |
-| Precisión de la medida | **0.5 cents** peor caso |
-| Coste en pines del cerebro | **4 GPIO**, uno por oscilador |
+| Barrido completo 84 notas × **16 voces** | **2.7 s** — las dieciséis en paralelo |
+| Lo mismo de una en una, como exigía el mux | **44.0 s** |
+| Precisión de la medida | **0.5 cents** peor caso (el guion da 0.018 medidos) |
+| Coste en pines del módulo | **16 capturas**, una por oscilador |
+
+> **Enmienda del 2026-08-26 — esta tabla se copiaba a mano y había dejado de
+> ser cierta por dos vías a la vez.** Fila mandada del mapa de motor-digital
+> §9: *«el barrido adopta la salida del guion recorrido (no un número a
+> mano)»*. Los números de arriba **se leen ahora de la salida del guion**, que
+> es ejecutable y está enlazado.
+>
+> Las dos derivas, dichas:
+>
+> 1. **El número estaba mal desde antes del cambio de chip.** La tabla decía
+>    3.5 s y 14.1 s; el guion, con las mismas 4 voces, ya imprimía **2.7 s** y
+>    11.0 s. Nadie lo volvió a correr después de escribirlo.
+> 2. **Y el instrumento dejó de tener 4 voces.** Son dieciséis (voz-total §1),
+>    y el guion se recorre ahora con `N_VOCES = 16`.
+>
+> **El resultado tiene una gracia que conviene no pasar por alto: el barrido
+> NO se alarga al cuadruplicar las voces.** Sigue en 2.7 s, porque el N657
+> trae 16 canales de captura y **las dieciséis se sellan a la vez**. Lo que se
+> cuadruplica es lo que costaría de una en una: de 11 s a **44 s**. Esa
+> distancia es exactamente lo que compró el paralelismo, y por eso el número
+> de canales de captura fue el criterio que eligió el chip.
+>
+> **Y el sellado mejoró de paso**: la captura de TIM corre a 200 MHz contra
+> los 150 MHz del PIO del RP2350, así que el tick baja de 6,67 a **5 ns** y el
+> presupuesto que le queda al 74HC14 sube de 131 a **133 ns**. Nadie tocó el
+> 74HC14: lo regaló el chip nuevo.
 
 ### Lo que esto le hace al presupuesto de afinación
 
