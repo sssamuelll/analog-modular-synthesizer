@@ -759,6 +759,13 @@ n_bulkheads      = 2;    // costados exteriores (3 si el vano flexa, spec §11)
 // el LOGARITMO del vano. Lo que se nota con la mano es la flecha, que crece
 // con el CUADRADO. Un costado que se hunde al empujarlo se siente barato
 // aunque no rompa nunca, y este case se mide por acabado.
+// Modulo elastico del aluminio. Comun a todas las aleaciones -- el limite
+// elastico SI depende de cual, pero el modulo no. Vive AQUI y no solo en
+// clearance_budget.py desde el 2026-08-26 porque el .scad tambien lo necesita:
+// es quien deriva que tramos de la costilla llevan ala doblada, y esa
+// derivacion tiene que dar lo MISMO en los dos lados o el DXF y el modelo se
+// separan. clearance_budget lo comprueba al arrancar.
+E_aluminio       = 69000;
 carga_mano       = 200;  // N. Alguien apoyandose, el mismo caso de carga con
                          // el que ya se acoto la trasera (rev. 9: 0.6 mm)
 flecha_costado_max = 0.6;// mm bajo carga_mano. El techo NO es nuevo: es el

@@ -1249,6 +1249,47 @@ def _tramos_costilla(p: dict[str, float]) -> list[tuple[str, float, bool, bool]]
     return out
 
 
+def plegado_costilla(p: dict[str, float]) -> tuple[float, float, float]:
+    """Setback, bend allowance y vuelo del desarrollo, para 90 grados.
+
+    Misma formula que ch_ba() del chasis, con los parametros de ESTA chapa:
+    aluminio de 3 mm, no acero de 1.5. SB es lo que la linea de plegado se mete
+    hacia DENTRO del contorno; el borde del desarrollo acaba sobresaliendo
+    (ala_doblez - BD) del contorno de la pieza doblada."""
+    sb = p["radio_doblez_costilla"] + p["t_costilla"]
+    ba = math.pi / 2 * (p["radio_doblez_costilla"]
+                        + p["k_factor"] * p["t_costilla"])
+    return sb, ba, p["ala_doblez"] - (2 * sb - ba)
+
+
+def bbox_desarrollo_costilla(p: dict[str, float]) -> tuple[float, float]:
+    """Envolvente del DESARROLLO PLANO, derivada y no escrita a mano.
+
+    El desarrollo es mas grande que la pieza doblada: cada tramo con ala saca
+    un rectangulo por su normal EXTERIOR, y cuanto crece la envolvente depende
+    de hacia donde mire ese tramo -- el suelo empuja en Y, la trasera en X, y
+    las dos caras inclinadas reparten segun su angulo.
+
+    GEMELA de costilla_ala() en el .scad. Si las dos se separan, revisar() lo
+    canta como bbox fuera del sobre, que es justo para lo que sirve."""
+    P = _vertices(p)
+    n = len(P)
+    _, _, vuelo = plegado_costilla(p)
+    pts = list(P)
+    for i, (_, _, ala, _) in enumerate(_tramos_costilla(p)):
+        if not ala:
+            continue
+        a, b = P[i], P[(i + 1) % n]
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        L = math.hypot(dx, dy)
+        nx, ny = -dy / L, dx / L
+        pts += [(a[0] + nx * vuelo, a[1] + ny * vuelo),
+                (b[0] + nx * vuelo, b[1] + ny * vuelo)]
+    xs = [q[0] for q in pts]
+    ys = [q[1] for q in pts]
+    return max(xs) - min(xs), max(ys) - min(ys)
+
+
 def guarda_costilla(p: dict[str, float]) -> None:
     """La costilla aguanta que empujen el case de lado, tramo por tramo.
 
@@ -1302,9 +1343,21 @@ def guarda_costilla(p: dict[str, float]) -> None:
             f"'{siguiente[0]}': ahi las dos alas divergen y queda hueco, o sea "
             f"que no se puede plegar. Hay que interrumpir el ala en uno de los "
             f"dos, o esa esquina pide solape o soldadura.")
+    sb, ba, vuelo = plegado_costilla(p)
+    w, h = bbox_desarrollo_costilla(p)
     print(f"costilla: CHAPA PLEGADA de {p['t_costilla']:g}, ala de "
           f"{p['ala_doblez']:g} doblada a 90 en {con_ala} de {len(tramos)} "
           f"tramos (los otros {len(tramos)-con_ala} no la necesitan)")
+    # ESTO ES LO QUE EL DXF NO SABE DECIR, y sin ello la pieza vuelve del
+    # taller PLANA. Mismo caso que el chasis, que viaja con su plano de
+    # plegado porque un corte no dice de donde doblar.
+    print(f"  desarrollo {w:.2f} x {h:.2f} (la pieza doblada mide "
+          f"{fondo(p):.2f} x {perfil(p)['alto_total']:.2f}); r interior "
+          f"{p['radio_doblez_costilla']:g}, BA {ba:.3f}, BD {2*sb-ba:.3f}")
+    print(f"  linea de plegado a {sb:.3f} mm HACIA DENTRO del contorno de la "
+          f"pieza, y el desarrollo sobresale {vuelo:.3f} por fuera")
+    print(f"  alivio cuadrado de {sb:.0f} x {sb:.0f} donde concurren dos alas "
+          f"-- solo en P6, entre la trasera y el suelo")
     for nombre, largo, ala, concavo in tramos:
         I, ymax = (I_L, ymax_L) if ala else (I_p, ymax_p)
         f = p["carga_mano"] * largo ** 3 / (192 * E_ALUMINIO * I)
@@ -2093,6 +2146,14 @@ def main() -> int:
     p = leer_params()
     autocomprobacion(p)
     autocomprobacion_L()
+    # El .scad tiene su propia copia de E porque deriva alli que tramos de la
+    # costilla llevan ala. Si las dos se separan, el DXF deja de ser la pieza
+    # que este presupuesto verifica -- y el sintoma seria un desarrollo con el
+    # ala en el tramo equivocado, que nadie mira a ojo.
+    assert abs(p["E_aluminio"] - E_ALUMINIO) < 1, (
+        f"params.scad dice E_aluminio = {p['E_aluminio']:.0f} y este modulo "
+        f"usa {E_ALUMINIO:.0f}: la costilla se derivaria distinta en el .scad "
+        f"que aqui.")
     canario_solapes(p)
     canario_alineacion(p)
     guarda_piso(p)

@@ -72,12 +72,7 @@ TOL = 4.0
 # se imprime en cada corrida, asi que el hueco se ve. La alternativa era emitir
 # un DXF de contorno sin taladros, y eso es peor -- un fichero que parece
 # completo y se manda a cortar (constitucion, Principio V).
-SIN_DXF: dict[str, str] = {
-    "costilla_2d": "es CHAPA PLEGADA desde el 2026-08-26 y su DXF tiene que "
-                   "ser el DESARROLLO plano con los cortes de alivio, no el "
-                   "contorno. Hasta que se dibuje NO se exporta: cortar el "
-                   "contorno da una pieza que al plegarse no llega a la cota",
-}
+SIN_DXF: dict[str, str] = {}
 
 # Piezas que van GIRADAS con una cara, o sea que su caja en el mundo NO es su
 # DXF. Esta vacio desde el 2026-08-21: la unica que estaba era la pestana de
@@ -99,6 +94,12 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
         # el costado no es una plancha del cuerpo: es la mejilla, y su DXF es
         # la silueta lateral entera.
         "costado_2d": (cb.fondo(p), g["alto_total"]),
+        # LA COSTILLA NO COMPARTE ENVOLVENTE CON EL COSTADO, y es a proposito:
+        # su DXF es el DESARROLLO PLANO, no el contorno de la pieza doblada.
+        # Sale mas grande porque cada tramo con ala saca su rectangulo por la
+        # normal exterior. Derivado, no escrito a mano -- si el .scad y esta
+        # cuenta se separan, el bbox se sale del sobre y aqui se entera.
+        "costilla_2d": cb.bbox_desarrollo_costilla(p),
         # cupon: 2*margen + (n-1)*paso de la escalera, x 62 de alto. No sale
         # de _cajas_solidas porque no es una pieza del case.
         "coupon": (136.0, 62.0),

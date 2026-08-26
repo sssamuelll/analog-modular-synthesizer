@@ -421,28 +421,71 @@ module costado_2d() {
 
 module costado() { linear_extrude(t_cheek) costado_2d(); }
 
-// LA COSTILLA: el contorno del costado con el centro vaciado, o sea un marco de
-// cuadro. Es LA PIEZA PORTANTE desde el 2026-08-26 -- el costado de acrilico
-// paso a piel y no lleva un solo tornillo estructural.
+// --- LA COSTILLA: chapa de aluminio PLEGADA -------------------------------
+// Es LA PIEZA PORTANTE desde el 2026-08-26 -- el costado de acrilico paso a
+// piel y no lleva un solo tornillo estructural.
 //
-// Reusa perfil_lateral() y NO una copia del contorno: la costilla y el costado
-// tienen que ser el MISMO perfil o el marco no abraza la plancha. Dos copias se
-// separan al primer cambio de angulo.
+// LO QUE SALE DE AQUI ES EL DESARROLLO PLANO, no el contorno de la pieza. Igual
+// que las tres del chasis: un DXF de corte no dice de donde doblar, asi que la
+// pieza viaja con su plano de plegado. Cortar el contorno daria una chapa que
+// al doblarse se queda corta -- el material que el radio se lleva.
+
+// Que tramo lleva ala se DERIVA, no se elige: la lleva si como pletina plana no
+// pasa el techo de flecha. GEMELA de _tramos_costilla() en clearance_budget.py,
+// y las dos tienen que dar lo mismo -- por eso E_aluminio vive en params.scad y
+// no suelto en cada lado.
+function costilla_largo_tramo(i) =
+    let (P = pts_perfil()) norm(P[(i+1) % len(P)] - P[i]);
+function costilla_lleva_ala(i) =
+    carga_mano * pow(costilla_largo_tramo(i), 3)
+      / (192 * E_aluminio * ala_costilla * pow(t_costilla, 3) / 12)
+    > flecha_costado_max;
+
+// Plegado a 90 grados. SB es lo que la linea de plegado se mete hacia DENTRO
+// del contorno, y BA el arco de la fibra neutra; el borde del desarrollo acaba
+// sobresaliendo (ala_doblez - BD) del contorno. Misma formula que ch_ba() del
+// chasis, con los parametros de ESTA chapa: aluminio de 3, no acero de 1.5.
+function cost_sb() = radio_doblez_costilla + t_costilla;
+function cost_ba() = PI/2 * (radio_doblez_costilla + k_factor*t_costilla);
+function cost_bd() = 2*cost_sb() - cost_ba();
+function cost_vuelo() = ala_doblez - cost_bd();
+
+// El ala desplegada de un tramo: un rectangulo que sale por la normal EXTERIOR.
+// Para el contorno horario de pts_perfil() esa normal es (-dy, dx).
 //
-// ES PLANA, y por eso sale en DXF como todo lo demas de este repo. La que no
-// era plana es la tira de canto, y dejo de serlo el 2026-08-26 al cerrar la
-// SS8.1 de la spec: la L va atornillada, asi que la tira es una pletina.
-//
-// EL VACIADO NO ES ESTETICA: lo que queda es el ala que agarra la cara interior
-// del costado, y su ancho (ala_costilla) es lo que guarda_costilla() mete en el
-// calculo de la seccion en L. Vaciar de mas adelgaza la viga.
+// EL ALIVIO VA AQUI Y NO COMO CORTE APARTE: el ala se RETIRA cost_sb() del
+// vertice en el extremo donde concurre con otra ala, y ese hueco cuadrado ES el
+// alivio. Sin el, al doblar las dos alas se solapan en la esquina y la chapa no
+// cierra. Solo pasa en UNA esquina de las siete -- P6, entre la trasera y el
+// suelo --; en las demas el ala termina al aire y llega hasta el vertice.
+module costilla_ala(i) {
+    P = pts_perfil();
+    n = len(P);
+    a = P[i];
+    b = P[(i+1) % n];
+    d = b - a;
+    L = norm(d);
+    u = d / L;
+    nx = [-u.y, u.x];                       // normal exterior
+    r0 = costilla_lleva_ala((i-1+n) % n) ? cost_sb() : 0;
+    r1 = costilla_lleva_ala((i+1) % n)   ? cost_sb() : 0;
+    p0 = a + u*r0;
+    p1 = b - u*r1;
+    polygon([p0, p1, p1 + nx*cost_vuelo(), p0 + nx*cost_vuelo()]);
+}
+
 module costilla_2d() {
-    difference() {
-        perfil_lateral();
-        offset(delta = -ala_costilla) perfil_lateral();
+    P = pts_perfil();
+    union() {
+        difference() {
+            perfil_lateral();
+            offset(delta = -ala_costilla) perfil_lateral();
+        }
+        for (i = [0 : len(P)-1]) if (costilla_lleva_ala(i)) costilla_ala(i);
     }
 }
 
+// El SOLIDO plegado, para el render y para solapes(). No es lo que se corta.
 module costilla() { linear_extrude(t_costilla) costilla_2d(); }
 
 module rail_2020(largo) { cube([rail, largo, rail], center = true); }
