@@ -10,6 +10,61 @@
 > [el enlace sin jefe](2026-08-25-enlace-sin-jefe-design.md) —**PR #201, sin
 > mergear**, así que este enlace no resuelve hasta que entre— al matar el reenvío
 > maestro→esclavo, y este papel se escribe encima de ese estado.
+
+---
+
+> # ⚠️ Enmienda del 2026-08-26: **la premisa que este papel esperaba ya llegó, por otra puerta**
+>
+> Este papel quedó frenado esperando al PR #201. **Ya no hace falta esperarlo
+> para esa premisa.**
+>
+> Lo que este documento necesitaba de aquel era una sola cosa: **que el reenvío
+> maestro→esclavo estuviera muerto.** El #201 lo mataba haciendo que los dos
+> micros oyeran el mismo bus. `main` lo mató más fuerte y por otra vía: el
+> módulo de Voz pasa a **un solo STM32N657** (motor-digital, acta A-1). **No hay
+> reenvío porque no hay a quién reenviar.** La premisa está entregada, y viene
+> de un papel que sí está en `main`.
+>
+> ## Lo que eso disuelve, condición por condición
+>
+> | | Estado |
+> |---|---|
+> | **C1** — «el receptor cabe en PIO» | **DISUELTA.** El oyente del J2 es hoy **esclavo SPI de hardware** (motor-digital §7), no un programa de PIO. No hay programa que escribir ni instrucciones que contar. **Y con ella se suelta el #205**, que era su dependencia entera |
+> | **C5** — «el sesgo entre columnas se mide» | **DISUELTA.** No hay columnas: hay un micro. Y su otro término —*«un receptor de clase distinta, SPI de hardware contra PIO»*— muere con la misma frase: los dos extremos son ahora de la misma clase |
+> | **C2** — el planificador del cerebro | **EN PIE, y con más aire.** Ver abajo |
+> | **C3**, **C4** | **En pie, intactas.** No dependían del chip de la Voz |
+> | **C6** — el estado del #201 | **En pie**, reducida. Ver abajo |
+>
+> ## C2 mejora, y conviene saber por qué
+>
+> C2 se apoyaba en el censo del cerebro: *«7 de 12 máquinas de PIO»*. Ese número
+> **sobrecuenta desde hoy**: los cronómetros de afinación se mudaron al N657 de
+> la Voz, así que las 4 máquinas que gastaban en el cerebro **quedaron libres**.
+> El cerebro va por **3 de 12**, no 7. El miedo que C2 declaraba —*«si
+> Pico-PIO-USB pidiera una máquina más, caen a 8 de 12»*— se aleja mucho.
+>
+> (El censo lo declara como HUECO en `pio_budget.py`; la fila no se quitó
+> todavía porque tocarla obliga a tocar `pinout.rs`.)
+>
+> **Lo que NO mejora, y sigue siendo lo mismo:** *«en qué núcleo vive el host
+> USB»* sigue sin decidirse, y este papel sigue escrito condicionado a que viva
+> en el núcleo 1. Eso es decisión de Samuel y el cambio de chip no la toca — el
+> cerebro es otro zócalo.
+>
+> ## Lo que este papel SIGUE necesitando, dicho sin maquillaje
+>
+> 1. **Rehacer su aritmética de bus contra el enlace privado.** No es opcional:
+>    lo manda `main` por su nombre. El J2 punto a punto §9 dice de este PR que
+>    *«R-E10/R-E11 sobreviven; su aritmética de bus se rehace contra el enlace
+>    privado cuando este papel entre»* — **y ese papel ya entró**.
+> 2. **`evento_budget.py` no existe.** C3 dice «lo asevera `evento_budget.py`» y
+>    ese guion no está escrito. C5 lo citaba también; al disolverse C5, queda
+>    C3 sosteniéndolo solo.
+> 3. **El #201 sigue sin decidirse** (C6), pero ya **no bloquea la premisa de
+>    §1** — solo las deudas que este papel declara heredar de su D1.
+>
+> **Traducido: este PR deja de estar bloqueado por otro PR y pasa a estar
+> bloqueado por trabajo propio identificado.** Es un sitio mucho mejor.
 >
 > Y cierra la parte 2 del **#160**, que pedía *«diseñar el evento con sello de
 > tiempo dentro de la trama SPI una vez, sirviendo a los gates del #158 y a la
@@ -379,8 +434,41 @@ decirlo porque no es gratis.
 > viene y cuánto.
 
 Las dos caen sobre el riesgo 5 del enlace sin jefe —*«el oyente de PIO, firmware
-nuevo»*— y **lo agravan**. Eso tiene su sitio: el **#205**, que este papel no
-resuelve y del que depende. Su tabla, con la cuenta corrida:
+nuevo»*— y **lo agravan**.
+
+> ### Enmienda del 2026-08-26: **esta pelea se acabó, y este papel suelta al #205**
+>
+> Lo de abajo era una pelea por las máquinas de PIO de un RP2350B. **En el
+> módulo de Voz no hay RP2350B**: hay un N657 (motor-digital, acta A-1). Los
+> tres consumidores de la tabla dejaron de competir, cada uno por su lado:
+>
+> | Consumidor | Qué le pasó |
+> |---|---|
+> | **Cronómetros de afinación** (8 máquinas) | pasan a **capturas de TIM en hardware** — 14 en TIM2-5 de 32 bits + 2 en TIM1 de 16 con desbordes contados. Y son **16**, no 8, porque ya no hay que partir el módulo en dos |
+> | **Oyente del J2** (1-2 máquinas) | pasa a **esclavo SPI de hardware**, full duplex, D8 real 34,5 MHz |
+> | **I²S del códec** (1-2 máquinas) | pasa a **SAI** — el N657 trae dos, y el censo de pines ya le tiene los suyos sentados en verde |
+>
+> Los dos candidatos que el **#205** decía que nadie había contado **están
+> contados** en `micro_budget.py` SITIO 1: 16 cronómetros + oyente (1-2) +
+> códec (1-2) = **18 a 20 canales**, contra los 12 que daba el RP2350B. Esa
+> cuenta es exactamente la que este papel dejaba pendiente.
+>
+> **Así que este documento deja de depender del #205**, y su condición C1
+> queda disuelta (§9).
+>
+> **Lo que NO se disuelve, porque no era un problema de PIO:** R-E4 (el
+> receptor no está sincronizado a la cadencia) y R-E5 (acepta largo variable)
+> **siguen siendo requisitos del receptor**. Un esclavo SPI de hardware los
+> cumple sin pelear máquinas, pero el trabajo de firmware sigue ahí, y su
+> término nuevo tiene nombre en `main`: **el gap mínimo entre tramas pasa a
+> cláusula del contrato del enlace** (motor-digital §7, hallazgo de su junta).
+> Cambió la unidad en que se mide, no la exigencia.
+
+<details>
+<summary><b>La cuenta original</b> (histórica — sobre el RP2350B que ya no está en esa placa)</summary>
+
+Eso tiene su sitio: el **#205**, que este papel no resuelve y del que depende.
+Su tabla, con la cuenta corrida:
 
 | Consumidor del PIO del micro de la Voz | Máquinas |
 |---|---|
@@ -396,6 +484,8 @@ receptor de R-E4/R-E5, que puede pedir dos máquinas en vez de una.
 **Si pide dos y el códec pide dos, la cabecera cierra en 12 de 12.** Eso no se
 despeja con aritmética: se despeja escribiendo el programa de PIO y contando
 instrucciones. Condición C1 de §9.
+
+</details>
 
 ---
 
@@ -414,7 +504,7 @@ instrucciones. Condición C1 de §9.
 | Reacción del cerebro | **HUECO**, y no por falta de guion | Ver C2: depende de en qué núcleo viva el host USB, que nadie ha decidido |
 | Espera del turno | 28,8 µs (54,4 si la ronda fuera indivisible) | §1.1 |
 | Aire del evento | derivado del formato de §3 | 10 MHz |
-| Parse en el micro | **HUECO** | #205 |
+| Parse en el micro | **HUECO** | ~~#205~~ → bring-up del N657 *(enmienda 2026-08-26: dejó de ser «cuántas instrucciones de PIO» y pasa a ser tiempo de ISR del esclavo SPI, medido bajo carga plena — motor-digital §7)* |
 | Escritura y asentamiento del DAC | **HUECO** | hoja del AD5686R + bring-up |
 | Render de la envolvente | 100 µs | Voz total §3.1: 10 kHz por canal |
 
@@ -466,7 +556,10 @@ nada.
 - **El ancho del campo de fuerza** — §3, condición C4.
 - **El reparto de núcleos del micro de la Voz** — Voz total §3.4, que el enlace
   sin jefe reescribe y que nadie ha vuelto a fijar.
-- **El programa de PIO del receptor** — #205, condición C1.
+- ~~**El programa de PIO del receptor** — #205, condición C1.~~ **Ya no existe**
+  (enmienda 2026-08-26): el receptor es esclavo SPI de hardware. Lo que ocupa su
+  sitio en esta lista es **el gap mínimo entre tramas**, que este papel tampoco
+  decide — es cláusula del contrato del enlace (motor-digital §7).
 - **La cabecera concreta del bloque de deltas de D3** — se deriva en el plan con
   el censo delante.
 - **Si el secuenciador (#94) trata a los tambores como caso especial.** R-E3 dice
@@ -481,9 +574,21 @@ nada.
 Ninguna de estas está medida. Se escriben como condiciones para que nadie las
 lea como hechos.
 
-1. **C1 — El receptor cabe en PIO.** R-E4 y R-E5 en una máquina de estado, o dos
+1. ~~**C1 — El receptor cabe en PIO.**~~ **DISUELTA el 2026-08-26.** El oyente
+   del J2 es esclavo SPI de hardware (motor-digital §7), no un programa de PIO:
+   no hay programa que escribir ni instrucciones que contar, y **el #205 queda
+   suelto**. Lo que no se disuelve es el requisito: R-E4/R-E5 siguen pidiendo un
+   receptor asíncrono de largo variable, y su término nuevo es **el gap mínimo
+   entre tramas**, cláusula del contrato del enlace. Se cierra fijando ese gap,
+   no contando máquinas.
+
+   <details><summary>texto original</summary>
+
+   **C1 — El receptor cabe en PIO.** R-E4 y R-E5 en una máquina de estado, o dos
    si el códec cede sitio. Se cierra escribiendo el programa y contando
    instrucciones. **#205.**
+
+   </details>
 2. **C2 — El planificador del cerebro puede emitir fuera de cadencia** sin
    romper la tasa del lazo ni la ventana de `MISO`.
 
@@ -494,6 +599,24 @@ lea como hechos.
    emitir. *(Cifras con instrucciones **ESTIMADO** hasta que alguien pase
    `pioasm`: el cerebro respira, no le sobra sitio. Si Pico-PIO-USB pidiera una
    máquina más, caen a 8 de 12.)*
+
+   > **Enmienda del 2026-08-26 — esta condición respira mucho mejor.** Ese
+   > «7 de 12» **sobrecuenta**: los cronómetros de afinación se mudaron al N657
+   > de la Voz, así que **las 4 máquinas que gastaban en el cerebro quedaron
+   > libres**. Va por **3 de 12**, y el miedo declarado arriba —«si Pico-PIO-USB
+   > pidiera una máquina más, caen a 8 de 12»— se aleja mucho. El propio
+   > `pio_budget.py` lo declara como HUECO: la fila no se quitó porque tocarla
+   > obliga a tocar `pinout.rs`, así que el censo **sobrecuenta a propósito**,
+   > que es el lado conservador.
+   >
+   > Y va más allá del conteo: con el afinado fuera del cerebro, **ya no hay ni
+   > siquiera cronómetros contando flancos ahí**. El argumento de esta condición
+   > deja de necesitar la cita del datasheet — no hay carga porque no hay
+   > cronómetros.
+   >
+   > **Lo que no cambia:** en qué núcleo vive el host USB sigue sin decidirse, y
+   > este papel sigue condicionado a que viva en el núcleo 1. El cerebro es otro
+   > zócalo y el cambio de chip de la Voz no lo toca.
 
    **Lo que queda abierto no es un cálculo, es una decisión**: en qué núcleo
    vive el host USB. Hoy el núcleo 0 es tiempo real y el 1 atribución, y el host
@@ -509,7 +632,24 @@ lea como hechos.
 3. **C3 — El peor caso de D3 cumple R-E1** con la cabecera real. Lo asevera
    `evento_budget.py`.
 4. **C4 — El ancho de la fuerza** no estrangula MIDI 2.0 ni infla el mensaje.
-5. **C5 — El sesgo entre columnas se MIDE, y el argumento que lo daba por
+5. ~~**C5 — El sesgo entre columnas se MIDE.**~~ **DISUELTA el 2026-08-26: no
+   hay columnas.** El módulo de Voz es un solo N657, así que no existe el sesgo
+   entre dos micros que esta condición mandaba medir. Y su otro término muere
+   con la misma frase: hablaba de *«un receptor de clase distinta, SPI de
+   hardware contra PIO»* — hoy los dos extremos son de la misma clase.
+
+   **Lo que sí sobrevive, y merece rescatarse porque era la parte buena:** la
+   junta del #201 tenía razón en que *«la asimetría es estructural, no
+   residual»*, y esa lección se hereda aunque su caso muera. Donde antes se
+   comparaban dos micros, hoy se compara **una CPU contra sus propios plazos**,
+   y el sitio donde eso se asevera es el libro bilateral de `carga_motor` más
+   el presupuesto de latencia de interrupción que motor-digital §7 manda medir
+   en bring-up **bajo carga plena**. La regla no cambia: se mide, no se
+   argumenta.
+
+   <details><summary>texto original</summary>
+
+   **C5 — El sesgo entre columnas se MIDE, y el argumento que lo daba por
    pequeño no vale.** §4.5 del enlace sin jefe lo justificaba como *«diferencia
    de cómputo local entre dos copias del mismo binario»*. La junta del #201
    demostró que es falso: el núcleo 0 de la cabecera lleva **además** la ventana
@@ -518,6 +658,8 @@ lea como hechos.
    contra PIO). **La asimetría es estructural, no residual.** El número puede
    seguir siendo bueno; el argumento no. `evento_budget.py` lo asevera contra
    medida, nunca contra esa frase.
+
+   </details>
 6. **C6 — Este papel se escribe sobre el PR #201, que no está mergeado y que
    NO pasó su junta adversarial de cinco agentes** (2026-08-25). Estado
    comprobado con su autor, decisión por decisión:
