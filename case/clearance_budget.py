@@ -1097,6 +1097,91 @@ E_ALUMINIO, RP02_ALUMINIO = 69000.0, 130.0
 # MANDA en esta puerta -- con 50 mm la tension se dobla contra los 100 -- y por
 # eso va conservador: el canto de la mano, no la palma abierta.
 B_MANO = 50.0
+# Junta de la costilla con su tira de canto (spec 2026-08-26 SS8.1). El area de
+# tension de un M3 son 5.03 mm2 (ISO 898-1). Tau admisible de un A2-70: Rm 700
+# MPa, y se toma 0.6*Rm con factor 2 -> 210.
+#
+# MU VA DELIBERADAMENTE POR DEBAJO DEL RANGO. La literatura da 0.3-0.6 para
+# aluminio contra aluminio en seco, y aqui va 0.2: de este numero no cuelga la
+# resistencia -- que sobra por un factor de tres -- sino la RIGIDEZ, y una
+# costilla que desliza deja de ser una L sin romperse ni avisar. SUPUESTO
+# DECLARADO: se cierra midiendo la junta real, no buscando otra tabla.
+AS_M3, TAU_M3, MU_ALU_SECO = 5.03, 210.0, 0.2
+
+
+def _seccion_L(t: float, b: float, c: float) -> tuple[float, float, float]:
+    """Inercia, fibra mas alejada y momento estatico del ala separada.
+
+    Seccion en L flexionando FUERA del plano de la costilla, que es su
+    direccion floja: el ala 1 es la plancha (ancho b DENTRO del plano, espesor
+    t fuera) y el ala 2 es la tira de canto (ancho c fuera del plano, espesor
+    t). Q es el momento estatico de la TIRA respecto al eje neutro, o sea
+    exactamente lo que la junta entre las dos tiene que transmitir para que
+    trabajen como una sola seccion en vez de como dos pletinas sueltas.
+
+    NO VALE PARA FLEXION EN EL PLANO. En su plano la costilla es un marco y
+    trabaja a traccion y compresion en los tramos, que es un orden de magnitud
+    mas rigido; quien llame a esto para ese modo saca un numero pesimista y no
+    se entera."""
+    A1, y1 = b * t, t / 2.0
+    A2, y2 = c * t, t + c / 2.0
+    A = A1 + A2
+    yc = (A1 * y1 + A2 * y2) / A
+    I = (b * t ** 3 / 12 + A1 * (y1 - yc) ** 2) + (t * c ** 3 / 12 + A2 * (y2 - yc) ** 2)
+    return I, max(yc, (t + c) - yc), A2 * (y2 - yc)
+
+
+def autocomprobacion_L() -> None:
+    """La seccion en L de la costilla, verificada a mano antes de escribirla.
+
+    Para t=3, b=20, c=12 -- los valores de la spec 2026-08-26 SS4.1:
+
+        ala 1 (la plancha): A1 = 20*3 = 60      y1 = 1.5
+        ala 2 (la tira):    A2 = 12*3 = 36      y2 = 3 + 6 = 9
+        A = 96 ; yc = (60*1.5 + 36*9)/96 = 414/96 = 4.3125
+        I = (20*27/12   + 60*2.8125^2) + (3*1728/12 + 36*4.6875^2)
+          = (45         + 474.609375)  + (432       + 791.015625)
+          = 1742.625
+        Q = A2*(y2 - yc) = 36*4.6875 = 168.75
+        ymax = max(4.3125, 15 - 4.3125) = 10.6875
+
+    LA CUENTA DE ARRIBA SE HIZO MAL LA PRIMERA VEZ y esta puerta la caza: el
+    termino 36*4.6875^2 se escribio 790.92 cuando son 791.015625, y de ahi un I
+    de 1742.53 que no existe. Es exactamente para esto que la autocomprobacion
+    va ANTES que la funcion -- si se escribe despues, uno copia la salida del
+    codigo y la puerta deja de verificar nada.
+    """
+    I, ymax, Q = _seccion_L(3.0, 20.0, 12.0)
+    assert abs(I - 1742.625) < 0.001, I
+    assert abs(Q - 168.75) < 0.01, Q
+    assert abs(ymax - 10.6875) < 0.001, ymax
+
+
+def paso_junta_L(p: dict[str, float], t: float, b: float,
+                 c: float) -> tuple[float, float]:
+    """Paso maximo de tornillo en la junta costilla-tira, por dos criterios.
+
+    EL QUE MANDA ES EL SEGUNDO, y esa es toda la trampa de este calculo. Quien
+    dimensione la junta por RESISTENCIA pone tornillos cada 109 mm; a ese paso
+    la junta desliza en la holgura del agujero antes de que el tornillo llegue
+    a trabajar, las dos alas flexan por separado y la costilla deja de ser una
+    L. O sea que el error no da una costilla un poco peor: da la fila "sin
+    tira" de la spec SS4.1, la que no pasa a NINGUN espesor y a 3 mm ademas
+    fluye a 257 MPa. Y no avisa -- una junta que desliza no se rompe.
+
+        q = V*Q/I     flujo de cortante en la junta, N/mm
+        V = P/2       cortante de una biempotrada con la carga al centro
+
+    Criterio 1, RESISTENCIA: el M3 a cortante, AS_M3 * TAU_M3.
+    Criterio 2, NO DESLIZAMIENTO: friccion mu*N, con N la precarga del par.
+    N ~ T/(0.2*d) es la relacion par-precarga de manual, con 0.2 de factor de
+    apriete para ROSCA SECA -- y seca es como va: engrasarla mete un 30 % mas
+    de precarga con el mismo par, que en par_m3 es un peligro y aqui seria un
+    regalo. No se cuenta ese regalo."""
+    I, _, Q = _seccion_L(t, b, c)
+    q = (p["carga_mano"] / 2.0) * Q / I
+    precarga = p["par_m3"] * 1000.0 / (0.2 * 3.0)      # N*m -> N*mm, d = 3
+    return AS_M3 * TAU_M3 / q, MU_ALU_SECO * precarga / q
 
 
 def guarda_valle(p: dict[str, float]) -> None:
@@ -1879,6 +1964,7 @@ def _vuelo_bandeja(p: dict[str, float]) -> float:
 def main() -> int:
     p = leer_params()
     autocomprobacion(p)
+    autocomprobacion_L()
     canario_solapes(p)
     canario_alineacion(p)
     guarda_piso(p)

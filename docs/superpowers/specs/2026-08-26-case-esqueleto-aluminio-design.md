@@ -303,11 +303,56 @@ Las dos salidas, y no están decididas:
    paso largo cada ala trabaja sola, que es exactamente la fila «sin tira» de
    §4.1 — la que no pasa a ningún espesor.
 
-**No se elige aquí**: la salida 2 solo es admisible si se calcula el paso de
-tornillo que hace falta para que la junta transmita el cortante, y ese cálculo
-es del plan de implementación, no de esta spec. Lo que sí queda decidido es
-que **la costilla y la tira no se pueden describir con el mismo tipo de
-entregable**, y que el modelo actual no produce el de la tira.
+### CERRADO el 2026-08-26 — gana la salida 2, la L atornillada
+
+Calculado con `paso_junta_L()`, con el criterio de corte escrito **antes** de
+mirar el resultado: si el paso salía por debajo de 20 mm, la L atornillada se
+caía y había que volver al perfil de sección constante.
+
+| criterio | paso máximo |
+|---|---|
+| resistencia del M3 a cortante | 109 mm |
+| **que la junta no deslice** | **34 mm** |
+
+**Manda el segundo, y ahí está toda la trampa.** Quien dimensione por
+resistencia pone tornillos cada 109 mm; a ese paso la junta desliza en la
+holgura del agujero antes de que el tornillo llegue a trabajar, las dos alas
+flexan por separado y la costilla deja de ser una L. El error no da una
+costilla un poco peor: da la fila «sin tira» de §4.1, la que no pasa a ningún
+espesor y a 3 mm fluye a 257 MPa. **Y no avisa** — una junta que desliza no se
+rompe.
+
+Se adopta **`paso_tira` = 30 mm**, por debajo del límite de 34.
+
+**Lo que cuesta, y no estaba contado en ningún sitio:**
+
+| tramo | largo | M3 |
+|---|---|---|
+| frente bajo | 19.00 | 2 |
+| cara inferior 35° | 155.75 | 6 |
+| el valle | 60.00 | 3 |
+| cara superior 45° | 155.00 | 6 |
+| meseta de remate | 50.00 | 2 |
+| la trasera | 256.18 | 9 |
+| el suelo | 308.94 | 11 |
+| | **por costado** | **39** |
+| | **los dos** | **78** |
+
+**78 M3 solo para coser las tiras**, contra los 30 de plancha que lista el BOM
+hoy: casi triplica la tornillería del case. Encaja con el lenguaje declarado
+—§5 de la spec del case dice que «la retícula visible y regular de puntos de
+unión es el ornamento permitido»— pero **tiene que entrar en el BOM y en el
+tiempo de montaje**, no aparecer como sorpresa el día del ensamblaje.
+
+La palanca que subiría el paso es el par o el `mu`, y `MU_ALU_SECO` = 0.2 está
+deliberadamente por debajo del rango de literatura (0.3-0.6). **Eso se cierra
+midiendo la junta real, no eligiendo otro número de otra tabla.** Con mu = 0.3
+el paso sube a 52 mm y los tornillos bajan a unos 50.
+
+Y con esta salida **la tira deja de ser una pieza no plana**: es una pletina, y
+sale en DXF como todo lo demás. Lo que no puede quedar implícito es su
+taladrería — **la posición de esos agujeros es lo que hace que la L funcione**,
+así que va acotada en el plano y no «a ojo del taller».
 
 Lo que **sale** del pliego de acrílico: el costado pierde «canto visible
 completo, diamantado» en el perímetro que la tira tapa — el acabado más caro
@@ -357,13 +402,15 @@ Convención del repo (Principio I): lo no verificado no se suaviza.
 - **La aleación del aluminio fresado**: las cuentas van contra Rp0.2 = 130
   MPa, que es un 5754 H22. Un 6082-T6 da ~250 y sobra. Pedir la aleación
   exacta es cosa del pliego.
-- **El alabeo de las tiras de canto**: la costilla plana no se tuerce, pero
-  las tiras son barras. La más larga mide 308.94 mm. Hay que exigir rectitud
-  por escrito o medirla al recibir.
+- ~~**El alabeo de las tiras**~~ — **se cayó solo el 2026-08-26** al cerrar
+  §8.1: con la L atornillada la tira es una **pletina plana** cortada de
+  plancha, no una barra fresada, así que no tiene el alabeo de un perfil largo.
+  Sigue habiendo que exigir planitud de plancha, que es otra cosa y más barata.
 - **Especie, espesor y fijación del zócalo** (§9).
-- **Cómo se describe la tira de canto para el taller** (§8.1), y si la L es
-  maciza o atornillada. De esto depende que el cálculo de §4.1 siga valiendo
-  tal como está escrito.
+- ~~**Cómo se describe la tira de canto**~~ — **CERRADO el 2026-08-26** (§8.1):
+  L atornillada a `paso_tira` = 30 mm contra un límite de deslizamiento de 34.
+  Lo que hereda de abierto es **`MU_ALU_SECO` = 0.2**, conservador a propósito:
+  se cierra midiendo la junta real, y de ese número cuelgan 78 M3.
 
 ## 11. Fuera de alcance
 
