@@ -120,6 +120,46 @@ Un plugin propio (CLAP + VST3) que vive dentro de tu DAW:
   voz por voz
 - **Botón de afinar**: dispara el autoafinado sin salir de la sesión
 - **El agente de IA**
+- **Motor invitado** ⟵ *rol nuevo, 2026-08-26*
+
+> ### Enmienda del 2026-08-26: el VST gana un cuarto rol — **motor invitado**
+>
+> Fila mandada del mapa de motor-digital §9. Hasta hoy el VST era **editor,
+> disparador y agente**: tres oficios que hablan *sobre* el sonido. Gana uno
+> que hace sonido.
+>
+> **Qué es.** El motor digital del instrumento (el N657) tiene un presupuesto
+> declarado —la mitad del núcleo por muestra— y ese presupuesto es un **techo
+> con válvula**: lo que no quepa, lo toca la computadora. El VST deja de ser
+> solo la ventana y pasa a ser **el desahogo**: audio **bidireccional** por
+> USB, con el instrumento mezclando lo que llega de vuelta.
+>
+> **Por qué esto NO contradice el §1** («la computadora se queda FUERA»), que
+> es la pregunta obvia y merece respuesta directa: **la doctrina queda
+> intacta, y motor-digital la refrenda por D-P6.** El instrumento **no
+> depende** del invitado — esa es toda la diferencia entre un desahogo y una
+> dependencia:
+>
+> - **Sin computadora, el instrumento suena entero.** El invitado añade voces
+>   que no caben; no habilita ninguna que haga falta.
+> - **Su ausencia se degrada con elegancia, y está cronometrada** (R-M1): el
+>   instrumento detecta que el invitado calló —por *timeout de datos*, ~1 ms
+>   desde el último paquete válido, **no** por el evento de desconexión,
+>   porque una DAW colgada sigue mandando SOFs— y rampa en ≥336 muestras
+>   (7 ms), cerrando el total en ≤10 ms.
+> - **Y nada queda pegado** (R-M4): si el invitado muere mientras escribe un
+>   destino garantizado, ese destino **vuelve a su valor de preset** en el
+>   mismo plazo. El audio se desvanece, el CV vuelve a casa.
+> - **La regla de cesión, dicha entera:** al desbordar, **cede el motor** —su
+>   válvula es justamente el invitado—; la mitad heredada, que carga las
+>   garantías de tiempo real, **no cede jamás**.
+>
+> Dicho en una línea: **la computadora sigue fuera de la ruta crítica; lo que
+> entra por USB es un lujo con fecha de caducidad de 10 ms.**
+>
+> **El precio físico, que no se esconde:** el invitado necesita su conector, y
+> ese conector es **aislado** — D-P6, la doctrina de masa como puerta. Vive en
+> la tarjeta de E/S trasera (#183), donde pasa a ser el inquilino principal.
 
 ### Por qué plugin y no aplicación aparte
 

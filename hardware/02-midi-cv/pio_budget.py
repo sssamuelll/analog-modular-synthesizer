@@ -28,6 +28,24 @@ POR QUE ESTE GUION EXISTE
 
   Issue #150. La spec del cerebro lo declara en su sec.11 con este nombre.
 
+  ENMIENDA 2026-08-26 -- Y PASO ALGO QUE NADIE HABIA PREVISTO: el assert salto,
+  pero no porque el host cambiara el reloj. Salto porque **el afinado se fue a
+  otro chip**. Los dieciseis cronometros son hoy capturas de TIM del STM32N657
+  del modulo de Voz (motor-digital §7), no PIO del cerebro.
+
+  Asi que la colision del #150 no se resolvio: **se disolvio**. Dos relojes en
+  dos silicios distintos no pelean por nada. El guion sigue vivo y sigue
+  midiendo el cerebro, pero esa comparacion concreta pasa a HUECO declarado —
+  aseverar los 150 MHz del host contra si mismos seria un verde de mentira
+  (Principio VIII). Lo que sobrevive del #150 esta escrito en el bloque del
+  reloj, mas abajo, y no es poco: el requisito real de Pico-PIO-USB sigue sin
+  leerse.
+
+  Y hay una moraleja para el repo, porque el import hizo su trabajo: la spec
+  del cerebro sec.11 exigio "ninguno reescribe autotune_budget.py: lo importa,
+  para que los 131 ns se enteren si algo se mueve". Se movio algo MAS GRANDE
+  que un numero, y el import lo caso igual.
+
 POR QUE LOS PINES ESTAN AQUI Y NO EN SU PROPIO GUION
 
   Porque **la ventana de 32 GPIO ata las dos cosas a la vez**. Un programa de
@@ -121,10 +139,23 @@ GPIO_TOTALES = 48
 # que nadie lo note. Aqui solo vive el COSTE de cada programa.
 COSTES_PIO = {
     # nombre (tiene que coincidir con pinout.rs): (sm, instr, dma, fuente)
+    #
+    # ENMIENDA 2026-08-26 -- ESTA FILA SOBRECUENTA Y SE DEJA A PROPOSITO.
+    #   El autoafinado se mudo al N657 del modulo de Voz (ver el bloque del
+    #   reloj, mas abajo): estas 4 maquinas, 8 instrucciones y 4 canales de DMA
+    #   **ya no los gasta el cerebro**. Quitarla de aqui obliga a tocar
+    #   pinout.rs, que es firmware recien mergeado (#208) y cuyo nombre este
+    #   guion cruza con un assert. Eso es cascada, y la cascada se propone,
+    #   no se cuela en una enmienda de papel.
+    #   Se deja porque sobrecontar es CONSERVADOR -- el censo se cree con menos
+    #   sitio del que tiene, nunca con mas -- y porque un numero inflado con su
+    #   cartel puesto es mejor que un censo que cambia sin que nadie lo revise.
+    #   Al retirarla, el cerebro RECUPERA 4 de sus 12 maquinas de PIO.
     "cronometros de afinacion": (
         4, 8, 4,
         "nucleo sec.5.1 + autotune_budget.py; conteo reciproco, uno por "
-        "oscilador. instr ESTIMADO"),
+        "oscilador. instr ESTIMADO. **SOBRECUENTA desde 2026-08-26: se mudo "
+        "al N657 de la Voz**"),
     "host USB (Pico-PIO-USB)": (
         2, 24, 2,
         "nucleo sec.5.3; issue #77 (la pila es C). sm e instr ESTIMADO: el "
@@ -145,6 +176,42 @@ COSTES_PIO = {
 # "Ninguno reescribe autotune_budget.py: lo importa, para que los 131 ns del
 # 74HC14 se enteren si algo se mueve."
 F_PIO_AFINADO = ab.F_PIO
+#
+# ENMIENDA 2026-08-26 -- LA COLISION DEL #150 NO SE RESOLVIO: SE DISOLVIO,
+# PORQUE UNO DE LOS DOS DUENOS SE MUDO DE CHIP.
+#
+#   El import de arriba hizo EXACTAMENTE lo que se le pidio. El dia que
+#   autotune_budget.py se movio, este assert salto -- y al mirarlo de cerca,
+#   lo que habia cambiado no era un numero: era el silicio.
+#
+#   El autoafinado YA NO CORRE EN EL CEREBRO. Los dieciseis cronometros son
+#   ahora capturas de TIM del STM32N657 del modulo de Voz (motor-digital §7:
+#   "16 cronometros | 14 en TIM2-5 + 2 en TIM1 ... sellado <= ~13 ns (assert
+#   de autotune_budget.py)"). Los pulsos del Schmitt van al micro local, que
+#   esta en la misma placa que los VCO, en vez de cruzar hasta el cerebro.
+#
+#   Consecuencia para ESTE guion, que es su motivo de existir: **clk_sys del
+#   cerebro ya no tiene dos duenos. Tiene uno.** El afinado se fue de la casa.
+#
+#   Por eso el assert de abajo NO se puede mantener como estaba: comparaba dos
+#   relojes que hoy viven en silicios distintos. Un N657 a 200 MHz y un RP2350
+#   a 150 MHz no colisionan -- no comparten nada.
+#
+#   Y NO se sustituye por un assert nuevo, porque el unico que cabria seria
+#   F_CLK_HOST_USB contra si mismo: una asercion que no puede fallar por
+#   construccion, que es justo lo que el Principio VIII prohibe. Lo que queda
+#   es un HUECO honesto, y esta escrito abajo.
+#
+#   LO QUE SOBREVIVE INTACTO DEL #150, y conviene no perderlo en la mudanza:
+#     * punto 2 -- el reloj que Pico-PIO-USB exige DE VERDAD sigue sin leerse
+#       contra su fuente. Que el afinado se fuera no lo contesta.
+#     * punto 3 -- el reparto de nucleos del cerebro sigue sin decidirse.
+#     * y nace uno: el censo de PIO de abajo AHORA SOBRECUENTA (ver COSTES_PIO).
+COLISION_150_DISUELTA = True
+
+# Huecos declarados en tiempo de ejecucion. Si queda alguno, el guion sale con
+# codigo 2: HUECO visible, no fallo invisible (Principio V). No rompe el CI.
+_HUECOS: list[str] = []
 
 # Lo que Pico-PIO-USB exige del reloj de sistema. **SIN CONFIRMAR** — es
 # exactamente el hueco que abrio el #150. Se declara igual al del afinado para
@@ -345,33 +412,41 @@ def demo() -> None:
         print("   El artefacto contradice a su spec. La cuenta de arriba usa "
               "la spec, no el fichero.\n")
 
-    # --- la colision de clk_sys, que es el motivo del #150 -----------------
-    print("el reloj de sistema, y sus dos duenos:")
-    print(f"   el afinado supone   {F_PIO_AFINADO/1e6:>6.1f} MHz  "
-          f"(importado de autotune_budget.py, no copiado)")
+    # --- la colision de clk_sys: DISUELTA, no resuelta (enmienda 2026-08-26)
+    print("el reloj de sistema, y sus duenos:")
     print(f"   el host USB exige   {F_CLK_HOST_USB/1e6:>6.1f} MHz  "
-          f"(SIN CONFIRMAR)")
-    sellado = 1.0 / F_CLK_HOST_USB
-    sellado_hoy = 1.0 / F_PIO_AFINADO
-    print(f"   sellado del PIO: {sellado_hoy*1e9:.2f} ns hoy, "
-          f"{sellado*1e9:.2f} ns con el reloj del host")
+          f"(SIN CONFIRMAR -- #150 punto 2, sigue abierto)")
+    print(f"   el afinado suponia  {F_PIO_AFINADO/1e6:>6.1f} MHz  "
+          f"**y YA NO ES DE ESTA CASA**")
+    print("   el autoafinado se mudo al STM32N657 del modulo de Voz: son")
+    print("   capturas de TIM en la placa de los VCO, no PIO del cerebro")
+    print("   (motor-digital §7). Dos relojes en dos silicios NO colisionan.")
+    print(f"   sellado del afinado alla: {1e9/F_PIO_AFINADO:.2f} ns "
+          f"-- lo asevera autotune_budget.py, no este guion\n")
 
-    assert F_CLK_HOST_USB == F_PIO_AFINADO, (
-        f"el host USB exige {F_CLK_HOST_USB/1e6:.1f} MHz de clk_sys y el "
-        f"afinado supone {F_PIO_AFINADO/1e6:.1f} MHz. NO son dos presupuestos "
-        f"independientes: hay un solo clk_sys. El sellado del PIO pasa de "
-        f"{sellado_hoy*1e9:.2f} a {sellado*1e9:.2f} ns y los 131 ns que "
-        f"autotune_budget.py le concede al 74HC14 se mueven en la misma "
-        f"proporcion, sin que nadie haya tocado el afinado. Hay que "
-        f"recalcular autotune_budget.py o subir el reloj")
-    print("OK: los dos duenos de clk_sys estan de acuerdo.\n")
+    print("HUECO: la colision del #150 se DISOLVIO (un dueno se mudo de chip),")
+    print("       pero no se resolvio nada de lo que la hacia peligrosa:")
+    print(f"       * los {F_CLK_HOST_USB/1e6:.0f} MHz del host USB siguen sin "
+          f"leerse contra su fuente;")
+    print("       * aseverarlos contra si mismos seria un verde de mentira "
+          "(Principio VIII);")
+    print("       * y el censo de PIO de arriba SOBRECUENTA: los cronometros "
+          "de afinacion")
+    print("         ya no viven aqui. Ver COSTES_PIO.")
+    print("       Se cierra leyendo el requisito real de Pico-PIO-USB, o "
+          "muriendo entero")
+    print("       si el cerebro no acaba siendo un RP2350 (su chip sigue "
+          "dirigido, no sellado).\n")
+    _HUECOS.append("clk_sys: colision disuelta, requisito del host sin leer")
 
     # --- lo que este calculo NO cubre --------------------------------------
     print("lo que NO esta confirmado:")
     print(f"  * **el reloj que Pico-PIO-USB exige de verdad**. Los "
-          f"{F_CLK_HOST_USB/1e6:.0f} MHz de arriba estan puestos IGUALES a los")
-    print("    del afinado para que el assert pase hoy. Nadie ha leido el "
-          "requisito contra su fuente.")
+          f"{F_CLK_HOST_USB/1e6:.0f} MHz de arriba se pusieron iguales a los")
+    print("    del afinado cuando el afinado vivia aqui. Ya no vive, asi que "
+          "hoy no los sostiene")
+    print("    ni esa coincidencia: nadie ha leido el requisito contra su "
+          "fuente.")
     print("    Es el punto 2 del #150 y es lo unico que puede tumbar este "
           "presupuesto entero.")
     print("  * **las instrucciones de PIO de los tres programas son "
@@ -397,9 +472,16 @@ def demo() -> None:
     print("    capacidad y ventana, no identidad de funcion.")
     print("  * **el micro del modulo de Voz es OTRO censo** y no esta aqui: "
           "issue #205. Este guion")
-    print("    cubre el cerebro y solo el cerebro, aunque el chip sea el "
-          "mismo.")
+    print("    cubre el cerebro y solo el cerebro. Y desde el 2026-08-26 **ya "
+          "ni siquiera es el mismo")
+    print("    chip**: la Voz lleva un N657 y este censo sigue siendo de un "
+          "RP2350 sin sellar.")
 
 
 if __name__ == "__main__":
+    import sys
     demo()
+    if _HUECOS:
+        print(f"HUECO: {_HUECOS[0]}; el censo del cerebro sobrecuenta 4 "
+              f"maquinas de PIO desde que el afinado se mudo al N657")
+        sys.exit(2)
