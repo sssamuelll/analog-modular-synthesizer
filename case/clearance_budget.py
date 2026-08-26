@@ -1131,18 +1131,18 @@ E_ALUMINIO, RP02_ALUMINIO = 69000.0, 130.0
 # MANDA en esta puerta -- con 50 mm la tension se dobla contra los 100 -- y por
 # eso va conservador: el canto de la mano, no la palma abierta.
 B_MANO = 50.0
-# Junta de la costilla con su tira de canto (spec 2026-08-26 SS8.1). El area de
-# tension de un M3 son 5.03 mm2 (ISO 898-1). Tau admisible de un A2-70: Rm 700
-# MPa, y se toma 0.6*Rm con factor 2 -> 210.
+# paso_junta_L() y sus constantes (AS_M3, TAU_M3, MU_ALU_SECO) vivieron aqui
+# unas horas el 2026-08-26. Calculaban el paso de los M3 que cosian una tira de
+# canto a la costilla, y su hallazgo era bueno: mandaba el DESLIZAMIENTO de la
+# junta (34 mm) y no la resistencia del tornillo (109), porque una junta que
+# desliza deja de trabajar como seccion sin romperse ni avisar.
 #
-# MU VA DELIBERADAMENTE POR DEBAJO DEL RANGO. La literatura da 0.3-0.6 para
-# aluminio contra aluminio en seco, y aqui va 0.2: de este numero no cuelga la
-# resistencia -- que sobra por un factor de tres -- sino la RIGIDEZ, y una
-# costilla que desliza deja de ser una L sin romperse ni avisar. SUPUESTO
-# DECLARADO: se cierra midiendo la junta real, no buscando otra tabla.
-AS_M3, TAU_M3, MU_ALU_SECO = 5.03, 210.0, 0.2
-
-
+# Se los llevo el plegado. La tira iba atornillada al CANTO de la costilla, y
+# ese canto mide 3 mm mientras el agujero de paso de un M3 mide 3.4: el agujero
+# era mas ancho que la pieza. Al pasar la costilla a chapa plegada el ala sale
+# del propio material, y sin junta no hay cortante que transmitir, ni paso que
+# calcular, ni 78 M3 que comprar. La cuenta queda en la spec del 2026-08-26 por
+# si alguna vez vuelve una junta atornillada a este case.
 def _seccion_L(t: float, b: float, c: float) -> tuple[float, float, float]:
     """Inercia, fibra mas alejada y momento estatico del ala separada.
 
@@ -1218,55 +1218,98 @@ def paso_junta_L(p: dict[str, float], t: float, b: float,
     return AS_M3 * TAU_M3 / q, MU_ALU_SECO * precarga / q
 
 
+def _tramos_costilla(p: dict[str, float]) -> list[tuple[str, float, bool, bool]]:
+    """Los 7 tramos del contorno: largo, si llevan ala, y si su vertice gira mal.
+
+    QUE UN TRAMO LLEVE ALA SE DERIVA, no se elige: la lleva si como pletina
+    plana no pasa el techo de flecha. Salen cuatro -- las dos caras inclinadas,
+    la trasera y el suelo -- y se quedan sin ella el frente (19 mm), el valle
+    (60) y la meseta (50), que sobran de largo para necesitarla.
+
+    El bool de vertice marca si el giro EN EL FINAL de ese tramo es CONCAVO. En
+    un contorno plegado, una esquina convexa se resuelve con corte de alivio en
+    V -- practica normal de chapa, se dibuja en el desarrollo --, pero una
+    CONCAVA hace que las dos alas vecinas diverjan y quede hueco. El perfil
+    tiene seis convexas y una concava: P3, el fin del valle."""
+    P = _vertices(p)
+    n = len(P)
+    nombres = ["frente bajo", "cara inferior", "el valle", "cara superior",
+               "meseta de remate", "la trasera", "el suelo"]
+    I_pletina = p["ala_costilla"] * p["t_costilla"] ** 3 / 12
+    out = []
+    for i in range(n):
+        a, b, c = P[i], P[(i + 1) % n], P[(i + 2) % n]
+        largo = math.hypot(b[0] - a[0], b[1] - a[1])
+        f_pletina = p["carga_mano"] * largo ** 3 / (192 * E_ALUMINIO * I_pletina)
+        ux, uy = b[0] - a[0], b[1] - a[1]
+        vx, vy = c[0] - b[0], c[1] - b[1]
+        concavo = (ux * vy - uy * vx) > 0
+        out.append((nombres[i], largo, f_pletina > p["flecha_costado_max"],
+                    concavo))
+    return out
+
+
 def guarda_costilla(p: dict[str, float]) -> None:
-    """La costilla aguanta que empujen el case de lado.
+    """La costilla aguanta que empujen el case de lado, tramo por tramo.
 
     ES LA PIEZA PORTANTE desde el 2026-08-26: el costado de acrilico paso a
     piel y no sostiene nada. El modo critico es fuera del plano de la costilla,
     que es su direccion floja -- en su plano es un marco y trabaja a traccion y
     compresion, un orden de magnitud mas rigido. Viga biempotrada porque las
-    esquinas de un marco continuo lo son, con carga_mano al centro del tramo
-    mas largo.
+    esquinas de un marco continuo lo son, con carga_mano al centro del tramo.
 
-    LO QUE ESTA PUERTA EXISTE PARA IMPEDIR son dos cosas, y las dos son
-    silenciosas:
+    ES CHAPA PLEGADA, y el ala sale del propio material. Fue a estar
+    atornillada media hora: la tira iba al CANTO de la costilla, y ese canto
+    mide 3 mm mientras el agujero de paso de un M3 mide 3.4. El agujero era mas
+    ancho que la pieza.
 
-    1. QUE ALGUIEN QUITE LA TIRA DE CANTO por estetica. Sin tira la seccion es
-       una pletina plana y NO PASA A NINGUN ESPESOR -- ni la de 6 mm; la de 3
-       ademas fluye, a 257 MPa contra un Rp0.2 de 130. La tira no tapa un
-       canto: es el ala que convierte la plancha en viga.
-    2. QUE ALGUIEN SUBA EL PASO de los tornillos que la cosen. Por resistencia
-       cabrian cada 109 mm, y a ese paso la junta DESLIZA antes de que el
-       tornillo trabaje: las dos alas flexan por separado y vuelve el caso 1
-       sin que nada se rompa ni avise."""
-    P = _vertices(p)
-    n = len(P)
-    tramo = max(math.hypot(P[(i + 1) % n][0] - P[i][0],
-                           P[(i + 1) % n][1] - P[i][1]) for i in range(n))
-    I, ymax, _ = _seccion_L(p["t_costilla"], p["ala_costilla"], p["tira_canto"])
-    flecha = p["carga_mano"] * tramo ** 3 / (192 * E_ALUMINIO * I)
-    sigma = (p["carga_mano"] * tramo / 8) * ymax / I
-    assert flecha <= p["flecha_costado_max"], (
-        f"la costilla cede {flecha:.3f} mm en su tramo de {tramo:.2f} mm con "
-        f"{p['carga_mano']:.0f} N, y el techo son {p['flecha_costado_max']:.2f}. "
-        f"Si acabas de tocar tira_canto: sin ella NINGUN espesor pasa, ni el "
-        f"de 6 mm.")
-    assert sigma <= RP02_ALUMINIO, (
-        f"la costilla trabaja a {sigma:.1f} MPa y el Rp0.2 del aluminio de "
-        f"chapa son {RP02_ALUMINIO:.0f}.")
-    _, paso_max = paso_junta_L(p, p["t_costilla"], p["ala_costilla"],
-                               p["tira_canto"])
-    assert p["paso_tira"] <= paso_max, (
-        f"los M3 de la tira van cada {p['paso_tira']:.0f} mm y la junta deja "
-        f"de transmitir el cortante por encima de {paso_max:.0f}. Por encima "
-        f"de ese paso la junta DESLIZA, las dos alas flexan por separado y la "
-        f"costilla deja de ser una L. OJO: el criterio de RESISTENCIA daria "
-        f"mucho mas paso y es el numero equivocado.")
-    print(f"costilla: L de {p['t_costilla']:g} con ala {p['ala_costilla']:g} y "
-          f"tira {p['tira_canto']:g}; tramo mayor {tramo:.2f} mm, cede "
-          f"{flecha:.3f} mm y trabaja a {sigma:.1f} MPa")
-    print(f"  la tira se cose cada {p['paso_tira']:g} mm y la junta aguanta "
-          f"hasta {paso_max:.0f} (por resistencia darian 109: no es ese)")
+    LO QUE ESTA PUERTA IMPIDE son tres cosas, y las tres callan:
+
+    1. QUE ALGUIEN QUITE EL ALA por estetica. Sin ella la seccion es una
+       pletina plana y no pasa a NINGUN espesor -- ni la de 6 mm; la de 3
+       ademas fluye a 257 MPa.
+    2. QUE UN TRAMO LARGO SE QUEDE SIN ALA. Que un tramo la lleve se DERIVA de
+       si la necesita, no se elige a mano, y esta puerta comprueba las dos
+       familias: los que la llevan como seccion en L, los que no como pletina.
+    3. QUE UN ALA CRUCE UNA ESQUINA CONCAVA. Ahi las dos alas vecinas divergen
+       y queda hueco -- no se puede plegar. El perfil tiene una sola esquina
+       concava, P3 (fin del valle), y sale bien PORQUE el valle no lleva ala:
+       pero eso es una coincidencia afortunada del calculo, no una garantia, y
+       si un dia el valle se alarga hasta necesitarla habria que enterarse
+       AQUI y no en el taller de plegado."""
+    I_L, ymax_L, _ = _seccion_L(p["t_costilla"], p["ala_costilla"],
+                                p["ala_doblez"])
+    I_p = p["ala_costilla"] * p["t_costilla"] ** 3 / 12
+    ymax_p = p["t_costilla"] / 2
+    tramos = _tramos_costilla(p)
+    con_ala = sum(1 for _, _, a, _ in tramos if a)
+    for nombre, largo, ala, _ in tramos:
+        I, ymax = (I_L, ymax_L) if ala else (I_p, ymax_p)
+        flecha = p["carga_mano"] * largo ** 3 / (192 * E_ALUMINIO * I)
+        sigma = (p["carga_mano"] * largo / 8) * ymax / I
+        assert flecha <= p["flecha_costado_max"], (
+            f"la costilla cede {flecha:.3f} mm en el tramo '{nombre}' de "
+            f"{largo:.2f} mm {'CON' if ala else 'sin'} ala, y el techo son "
+            f"{p['flecha_costado_max']:.2f}. Si acabas de tocar ala_doblez: "
+            f"sin ella NINGUN espesor pasa en los tramos largos, ni el de 6 mm.")
+        assert sigma <= RP02_ALUMINIO, (
+            f"la costilla trabaja a {sigma:.1f} MPa en '{nombre}' y el Rp0.2 "
+            f"del aluminio de chapa son {RP02_ALUMINIO:.0f}.")
+    for i, (nombre, _, ala, concavo) in enumerate(tramos):
+        siguiente = tramos[(i + 1) % len(tramos)]
+        assert not (concavo and ala and siguiente[2]), (
+            f"el ala cruza una esquina CONCAVA entre '{nombre}' y "
+            f"'{siguiente[0]}': ahi las dos alas divergen y queda hueco, o sea "
+            f"que no se puede plegar. Hay que interrumpir el ala en uno de los "
+            f"dos, o esa esquina pide solape o soldadura.")
+    print(f"costilla: CHAPA PLEGADA de {p['t_costilla']:g}, ala de "
+          f"{p['ala_doblez']:g} doblada a 90 en {con_ala} de {len(tramos)} "
+          f"tramos (los otros {len(tramos)-con_ala} no la necesitan)")
+    for nombre, largo, ala, concavo in tramos:
+        I, ymax = (I_L, ymax_L) if ala else (I_p, ymax_p)
+        f = p["carga_mano"] * largo ** 3 / (192 * E_ALUMINIO * I)
+        print(f"  {nombre:<18} {largo:7.2f} mm  {'con ala' if ala else 'plana '}"
+              f"  cede {f:.3f}{'   (su vertice gira CONCAVO)' if concavo else ''}")
 
 
 def guarda_valle(p: dict[str, float]) -> None:

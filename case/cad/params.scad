@@ -39,28 +39,44 @@
 // LA COSTILLA ES LA PIEZA PORTANTE. El costado de acrilico paso a piel y ya no
 // sostiene nada: no lleva un solo tornillo estructural.
 //
+// ES CHAPA PLEGADA, no plancha fresada, desde el 2026-08-26. Fue lo segundo:
+// la L iba a formarse atornillando una tira al CANTO de la costilla, y ese
+// canto mide 3 mm mientras el agujero de paso de un M3 mide 3.4 -- el agujero
+// era mas ancho que la pieza. No quedaba justo: no cabia. Plegando, el ala
+// sale del propio material y no hay junta que atornillar, ni paso de tornillo
+// que calcular, ni 78 M3 que comprar.
+//
 // 3 mm y no mas, y el numero no lo fija la rigidez sino el ancho del case: el
-// ala interior se mete en el hueco donde va el Z-Rail, asi que ancho_total
-// crece 2*t_costilla. A 3 el case crece 6 mm; a 4, ocho. Y con la tira puesta,
-// 3 pasa con 2.4x de margen -- la rigidez la da la FORMA en L, no el espesor.
+// ala se mete en el hueco donde va el Z-Rail, asi que ancho_total crece
+// 2*t_costilla. A 3 el case crece 6 mm; a 4, ocho. Con el ala doblada, 3 pasa
+// con 2.4x -- la rigidez la da la FORMA en L, no el espesor.
 t_costilla      = 3;
 // Ala que agarra la cara interior del costado. SUPUESTO DECLARADO: 20 es lo
 // que medía el 2020 que este marco jubila. La cota definitiva sale de que le
 // quepa el M4 del Z-Rail y de cuanto puede robarle al vaciado.
 ala_costilla    = 20;
-// LA TIRA DE CANTO NO ES UN EMBELLECEDOR, y quien la borre por estetica tumba
-// la estructura. Tapa el canto del acrilico, si, pero su trabajo es ser el ala
-// que convierte la plancha en viga: sin ella la costilla es una pletina y no
-// pasa a NINGUN espesor, ni a 6 mm; a 3 ademas fluye. Lo vigila
+// EL ALA DEL DOBLEZ. No es una pieza: es el propio material de la costilla
+// doblado 90 grados a lo largo del canto. Se llamo tira_canto mientras iba a
+// ser una pletina atornillada, y ese nombre habria mentido sobre como se
+// fabrica.
+//
+// NO ES UN EMBELLECEDOR, y quien lo borre por estetica tumba la estructura.
+// Tapa el canto del acrilico, si, pero su trabajo es ser el ala que convierte
+// la chapa en viga: sin ella la costilla es una pletina plana y NO PASA a
+// ningun espesor, ni a 6 mm; a 3 ademas fluye a 257 MPa. Lo vigila
 // guarda_costilla(), que lo dice en su mensaje de error.
-tira_canto      = 12;
-// Paso de los M3 que cosen la tira a la costilla. NO lo fija la resistencia
-// del tornillo -- por resistencia cabrian cada 109 mm -- sino que la junta NO
-// DESLICE, que con mu = 0.2 y 1.0 N*m da 34. Hasta que no desliza, las dos
-// alas trabajan como una sola seccion; en cuanto desliza, la costilla deja de
-// ser una L y no se rompe nada, que es lo peligroso. Ver paso_junta_L().
-// CUESTA 78 M3 en los dos costados: eso va en el BOM, no de sorpresa.
-paso_tira       = 30;
+ala_doblez      = 12;
+// Radio interior del plegado de la costilla. Misma regla que el chasis de
+// acero -- r = t, plegado al aire -- pero con SU espesor, que es otro: la
+// costilla es aluminio de 3 y el chasis acero de 1.5. SUPUESTO, lo confirma el
+// taller de plegado igual que los tres del chasis.
+radio_doblez_costilla = 3;
+// paso_tira MURIO el 2026-08-26, el mismo dia que nacio. Era el paso de los
+// M3 que cosian la tira a la costilla, calculado contra el deslizamiento de la
+// junta (34 mm) y no contra la resistencia del tornillo (109). Todo ese
+// calculo se lo llevo el plegado: no hay junta, asi que no hay cortante que
+// transmitir ni 78 M3 que comprar. La cuenta se conserva en la spec por si
+// alguna vez vuelve una junta atornillada a este case.
 // Holgura de montaje del Z-Rail. NACE CON LA COSTILLA y no antes: hasta el
 // 2026-08-26 ancho_util no era un hueco sino una CONSECUENCIA -- los costados
 // se separaban lo que midieran las piezas que van de cara a cara --, asi que

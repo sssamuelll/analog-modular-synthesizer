@@ -31,10 +31,63 @@ estructura sea un esqueleto de aluminio».
 | 2 | **El marco es un perfil en L**: un ala agarra la cara interior del costado, la otra le tapa el canto | Ranura en U (canto dentro del marco): es **exactamente la geometría que falló en el intento anterior** — ver §3. Pletina plana sin ala: no tapa el canto y, medido, no aguanta (§4) |
 | 3 | **Las cuatro barras internas se van** al canto | Dejar `base delantera` dentro era mi recomendación por lo que cuesta (§4.2); Samuel decidió que se fueran las cuatro |
 | 4 | **Los Z-Rails atornillan a la costilla**, no al acrílico | Dejarlos en el costado significaba llamar «relleno» a una pieza que sigue sosteniendo paneles, tapas y ejes de giro. Jubilar los Z-Rails y meter la ranura de panel en el marco tiraba 4 rieles comprados (2026-08-18) y sacaba el case del estándar Eurorack de la rev. 4 |
-| 5 | **Fresado a medida** | Perfil de catálogo: la sección la mandaría el catálogo. Extrusión con matriz propia: no se amortiza en una unidad |
-| 6 | **Costilla plana fresada + tiras de canto** | Barras rectas con escuadras: 14 barras y 12 esquinas solo en los laterales, y cada junta acumula tolerancia. L continuo fresado de bloque: lo más limpio y lo más caro con diferencia |
+| 5 | ~~Fresado a medida~~ → **CHAPA PLEGADA** (corregido el 2026-08-26, ver §2.1) | Perfil de catálogo: la sección la mandaría el catálogo. Extrusión con matriz propia: no se amortiza en una unidad. **Fresado: se cayó al descubrirse que la L no se podía atornillar** |
+| 6 | ~~Costilla plana + tiras de canto~~ → **una sola pieza plegada** (§2.1) | Barras rectas con escuadras: 14 barras y 12 esquinas solo en los laterales. L continuo fresado de bloque: lo más caro con diferencia. **Tiras atornilladas: imposible, ver §2.1** |
 | 7 | **Bandeja de base en aluminio de 5 mm** | Acrílico de 12: pasa, pero resucita una segunda línea de espesor justo después de que la rev. 20 matara la de 5 mm. Aluminio de 4: pasa con 1.26× en vez de 2.5× |
 | 8 | **Los ejes de giro se quedan escondidos** dentro del Z-Rail | Bisagra vista sobre la costilla —el detalle de la foto— movía el eje fuera del riel, y con él el radio de giro: las 180° de apertura son lo primero que se pierde, y costaron 16 mm de fondo |
+
+### 2.1 CORRECCIÓN del 2026-08-26 — la costilla es chapa plegada
+
+Las decisiones 5 y 6 se cayeron al ir a dibujar los taladros de la tira, y el
+motivo es de una línea: **para formar una L, la tira tiene que ser
+perpendicular a la costilla, así que el tornillo cruza la junta por el CANTO —
+y el agujero de paso de un M3 mide 3.4 mm contra un canto de 3.0.** No quedaba
+justo: el agujero era más ancho que la pieza. Roscar tampoco: deja 0.25 mm de
+pared por lado, y con 1.5 D de agarre harían falta 4.5 mm de canto.
+
+Se midieron tres salidas. **Costilla más gruesa** (5 mm, para que el M3 rosque
+con 1.67 D): cuesta 4 mm más de ancho de case y deja los 78 M3 en pie.
+**Tira de chapa plegada** atornillada a la cara: la costilla se queda en 3, pero
+la tira vuelve a no ser plana. **La costilla misma plegada**: el ala sale del
+propio material y no hay junta.
+
+**Gana la tercera, y no por gusto: hace desaparecer el problema en vez de
+pagarlo.** Se lleva por delante `paso_tira`, `paso_junta_L`, los 78 M3 y §8.1
+entera. Y devuelve un proceso: la costilla va al taller de CHAPA con el chasis,
+no a uno de fresado nuevo.
+
+**Lo que había que verificar, y es lo único que hacía peligroso el plegado:**
+las esquinas. Plegar un ala a lo largo de un contorno cerrado necesita corte de
+alivio en cada esquina convexa —práctica normal de chapa, se dibuja en el
+desarrollo— pero una esquina **cóncava** hace que las dos alas vecinas diverjan
+y deje hueco: eso no se pliega. Medido sobre el perfil real:
+
+**Seis convexas y una cóncava** — P3, el fin del valle. Y sale bien, porque el
+ala **no va en los siete tramos**: va solo donde hace falta, y eso se deriva de
+si el tramo pasa como pletina plana:
+
+| tramo | largo | sin ala | ¿la necesita? |
+|---|---|---|---|
+| frente bajo | 19.00 | 0.002 | no |
+| cara inferior 35° | 155.75 | 1.268 | **sí** |
+| **el valle** | 60.00 | **0.072** | **no — y es el cóncavo** |
+| cara superior 45° | 155.00 | 1.249 | **sí** |
+| meseta de remate | 50.00 | 0.042 | no |
+| la trasera | 256.18 | 5.641 | **sí** |
+| el suelo | 308.94 | 9.892 | **sí** |
+
+El ala se interrumpe en el valle porque ese tramo no la necesita, así que en la
+única esquina cóncava no hay dos alas que diverjan. **Eso es una coincidencia
+afortunada del cálculo, no una garantía**, y por eso `guarda_costilla()` lo
+exige explícitamente: si el valle se alargara hasta necesitar ala, la puerta
+canta aquí y no en el taller de plegado. Probado subiendo `paso_horizontal` a
+140.
+
+Su DXF pasa a ser el **desarrollo plano** con los cortes de alivio, no el
+contorno — el mismo caso del chasis, cuyo corte no dice de dónde doblar. Hasta
+que se dibuje, la pieza **no se exporta**: está declarada en `SIN_DXF` con su
+motivo, porque cortar el contorno daría una pieza que al plegarse no llega a la
+cota.
 
 ## 3. Por qué el perfil en L, y no la ranura
 
@@ -171,8 +224,8 @@ crecimiento en 6 mm y no en 8 o 12.**
 
 | pieza | papel | material y proceso | cantidad |
 |---|---|---|---|
-| **Costilla** | La estructura. Todo atornilla aquí | aluminio fresado de plancha, contorno del costado con el centro vaciado, cabe en 308.94 × 256.18 | 2 |
-| **Tira de canto** | El ala en L. Tapa el canto del acrílico **y da la rigidez fuera de plano** (§4.1) | aluminio fresado, barra recta por tramo | 7 por costado |
+| **Costilla** | La estructura. Todo atornilla aquí | **chapa de aluminio de 3 mm PLEGADA** (§2.1), contorno del costado con el centro vaciado y ala de 12 doblada a 90° en 4 de los 7 tramos | 2 |
+| ~~Tira de canto~~ | **Ya no es una pieza** (§2.1): el ala sale del propio material al plegar la costilla. Sigue siendo lo que da la rigidez fuera de plano (§4.1) | — | 0 |
 | **Costado** | Piel. No sostiene nada | acrílico 8 mm — el `costado_2d` de hoy, con otra taladrería | 2 |
 | **Transversales** | Atan las dos costillas y reciben las filas de M3 de las planchas | aluminio | ver §5.1 |
 | **Z-Rails** | Paneles, tapas y ejes de giro | Tiptop 104 HP, los ya comprados, ahora atornillados a la costilla | 4 |
@@ -271,7 +324,7 @@ mismo motivo por el que no van las tres piezas de acero ni la tapa del valle.
 |---|---|---|
 | PMMA colado GS naranja, 8 mm | fresado CNC | costados ×2, tapa de remate, trasera |
 | Aluminio | **chapa**: bandeja de base (5 mm), tapa del valle (3 mm) | 2 |
-| Aluminio | **fresado**: costillas ×2, tiras de canto | ver §5 |
+| Aluminio | **chapa plegada**: costillas ×2 — al taller del chasis, no a uno nuevo (§2.1) | 2 |
 | Acero | corte + plegado | chasis ×3 |
 | Madera | ver §9 | zócalo |
 
@@ -303,7 +356,19 @@ Las dos salidas, y no están decididas:
    paso largo cada ala trabaja sola, que es exactamente la fila «sin tira» de
    §4.1 — la que no pasa a ningún espesor.
 
-### CERRADO el 2026-08-26 — gana la salida 2, la L atornillada
+### CERRADO y luego SUPERADO el mismo día — la pregunta dejó de existir
+
+> **La sección de abajo ya no manda.** Se cerró eligiendo la L atornillada, y
+> horas después esa salida resultó **imposible de fabricar**: el tornillo
+> cruzaría la junta por el canto de la costilla, y el agujero de paso de un M3
+> mide 3.4 mm contra un canto de 3.0 (§2.1). Al pasar la costilla a chapa
+> plegada el ala sale del propio material, así que **no hay junta, no hay paso
+> de tornillo y no hay 78 M3**. Se conserva entera porque el hallazgo sigue
+> siendo bueno el día que vuelva una junta atornillada a este case: **una junta
+> se dimensiona por deslizamiento, no por resistencia**, y a 109 mm de paso
+> deja de trabajar como sección sin romperse ni avisar.
+
+### Lo que se decidió (superado por §2.1) — la L atornillada
 
 Calculado con `paso_junta_L()`, con el criterio de corte escrito **antes** de
 mirar el resultado: si el paso salía por debajo de 20 mm, la L atornillada se
@@ -407,10 +472,18 @@ Convención del repo (Principio I): lo no verificado no se suaviza.
   plancha, no una barra fresada, así que no tiene el alabeo de un perfil largo.
   Sigue habiendo que exigir planitud de plancha, que es otra cosa y más barata.
 - **Especie, espesor y fijación del zócalo** (§9).
-- ~~**Cómo se describe la tira de canto**~~ — **CERRADO el 2026-08-26** (§8.1):
-  L atornillada a `paso_tira` = 30 mm contra un límite de deslizamiento de 34.
-  Lo que hereda de abierto es **`MU_ALU_SECO` = 0.2**, conservador a propósito:
-  se cierra midiendo la junta real, y de ese número cuelgan 78 M3.
+- ~~**Cómo se describe la tira de canto**~~ — **la pregunta dejó de existir**
+  el 2026-08-26 (§2.1): no hay tira. Con ella se fue `MU_ALU_SECO`, que era el
+  supuesto del que colgaban 78 tornillos.
+- **Los tres supuestos del plegado de la costilla**: `t_costilla` = 3 de
+  aluminio, `radio_doblez_costilla` = 3 (regla r = t, la misma que usa el
+  chasis) y el `k_factor` = 0.42 que ya arrastraba el chasis. **El desarrollo
+  plano depende de los tres** y los fija el taller de plegado, no nosotros — es
+  exactamente el mismo pendiente que el chasis de acero ya tenía, ahora con una
+  segunda pieza colgando de él.
+- **El desarrollo plano de la costilla no está dibujado**, y hasta que lo esté
+  la pieza no se exporta (`SIN_DXF`). Necesita los cortes de alivio de las seis
+  esquinas convexas y su plano de plegado, como el chasis.
 
 ## 11. Fuera de alcance
 
