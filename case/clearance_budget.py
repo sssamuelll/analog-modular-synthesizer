@@ -31,7 +31,25 @@ def leer_params() -> dict[str, float]:
     pares = re.findall(r"^\s*(\w+)\s*=\s*(-?[0-9.]+)\s*;", texto, re.M)
     if len(pares) < 20:
         raise SystemExit(f"params.scad: solo {len(pares)} parametros parseados")
-    return {k: float(v) for k, v in pares}
+    p = {k: float(v) for k, v in pares}
+    # ancho_total es DERIVADO desde el 2026-08-26 y por eso la regex de arriba
+    # -- que solo lee literales -- no lo encuentra. Se calcula aqui con la
+    # MISMA formula que usa el .scad.
+    #
+    # POR QUE DEJO DE SER LITERAL: estuvo en 544.32 escrito a mano mientras el
+    # comentario de al lado daba la formula, asi que ancho_util coincidia con
+    # el largo del riel por casualidad aritmetica. Con la holgura de montaje
+    # metida en ese hueco, un literal se desincroniza al primer cambio y el
+    # sintoma es un riel que no entra.
+    derivado = p["largo_riel"] + 2 * p["t_cheek"]
+    if "ancho_total" in p:
+        raise SystemExit(
+            f"params.scad: ancho_total volvio a ser un literal ({p['ancho_total']:.2f}). "
+            f"Es DERIVADO desde el 2026-08-26: largo_riel + 2*t_cheek "
+            f"= {derivado:.2f}. Un literal aqui vuelve a esconder si el riel "
+            f"cabe o no.")
+    p["ancho_total"] = derivado
+    return p
 
 
 def fondo(p: dict[str, float]) -> float:

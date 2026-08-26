@@ -28,7 +28,14 @@
 // de pandeo con el mismo espesor. n_bulkheads sigue en 2; si la bandeja del PSU
 // cede al cargarla, el remedio es el tercer costado interior que ya contempla
 // la spec §11, no engordar el acrilico.
-ancho_total     = 544.32;
+// DERIVADO desde el 2026-08-26, y que lo sea NO es cosmetico. Estuvo escrito a
+// mano (544.32) mientras el comentario de arriba daba la formula, asi que la
+// igualdad con el riel salia por CASUALIDAD ARITMETICA y no por derivacion --
+// justo la clase de cota que parece verificada y nunca se comprobo. Ahora hay
+// mas de una cosa metida en ese hueco y a mano se desincroniza al primer
+// cambio. clearance_budget.py calcula esta MISMA formula y se niega a arrancar
+// si alguien la devuelve a literal.
+ancho_total     = largo_riel + 2*t_cheek;
 // CARA vs PANEL. Hasta el 2026-08-17 eran el mismo numero y por eso la puerta
 // de EUROrack estaba en rojo: con la cara valiendo 128.5 y los railes a 27 de
 // cada punta, los railes quedaban a 74.5 y un modulo 3U NO atornilla.

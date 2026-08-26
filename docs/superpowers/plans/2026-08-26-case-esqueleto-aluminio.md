@@ -186,94 +186,45 @@ git commit -m "La junta de la L no se dimensiona por resistencia sino por desliz
 
 ---
 
-### Tarea 2: El Z-Rail entra a presión y ninguna puerta lo mira
+### Tarea 2: El Z-Rail y el hueco — REPLANTEADA el 2026-08-26 al ejecutarla
 
-Independiente del resto y valiosa por sí sola: hoy `ancho_util` = 528.32 y
-`largo_riel` = 528.32, **0.00 mm de holgura**, y no lo verifica nadie.
+**Esta tarea estaba mal razonada y se descubrió al correrla.** Se deja escrita
+en vez de borrarla, porque el error es instructivo y porque alguien va a
+volver a tenerlo.
 
-**Files:**
-- Modify: `case/clearance_budget.py` (`guarda_riel_cabe()` + registro en `main()`)
-- Modify: `case/cad/params.scad` (`hol_riel`)
+**Lo que decía:** que la holgura entre el Z-Rail y las caras internas es 0.00
+mm y ninguna puerta lo mira, así que hacía falta `hol_riel` y una
+`guarda_riel_cabe()`.
 
-**Interfaces:**
-- Produces: `hol_riel` como parámetro, y `ancho_total` pasa a derivarse de él.
+**Lo que pasó al escribirla:** salió en rojo, pero por otra puerta. Ya existía
+una regla —`clearance_budget.py`, en el bloque de `exige()` de `main()`— que
+pide `abs(ancho_util - largo_riel) < 0.01`, o sea la **igualdad exacta**. La
+holgura cero no estaba olvidada: estaba decidida.
 
-- [ ] **Paso 1: escribir la puerta primero**
+**Y la regla vieja tiene razón, en el mundo de hoy.** Su argumento escrito es
+que los Z-Rails son de catálogo y desincronizar significa o rieles que no
+llegan de costado a costado o rieles que hay que cortar por la punta donde se
+fijan. Pero el fondo es más fuerte: **hoy `ancho_util` no es un hueco, es una
+consecuencia.** Los costados se separan lo que midan las piezas que van de
+cara a cara —largueros y rieles—, así que no existe un vano preexistente que
+pueda quedarse corto. Pedir «holgura de montaje» ahí es una regla sin sujeto.
 
-```python
-def guarda_riel_cabe(p: dict[str, float]) -> None:
-    """El Z-Rail comprado tiene que ENTRAR entre las caras internas.
+**El problema sí existe, pero en el diseño nuevo**, y por eso se muda a la
+Tarea 3: la costilla es una pieza rígida cuyo ala interior es un plano, y las
+transversales fijan la separación entre las dos. Ahí el riel pasa a tener que
+caber en lo que quede, y la igualdad deja de ser cierta por construcción.
 
-    NACE EN ROJO A PROPOSITO. Hasta el 2026-08-26 el hueco medía 528.32 y el
-    riel 528.32: cero. Eso no es un ajuste fino, es una pieza que no entra sin
-    forzar -- y forzando entre dos planchas de PMMA se raja la plancha, no el
-    riel. Nadie lo miraba porque ancho_util se DERIVABA del riel, asi que la
-    igualdad salia sola y parecia intencion.
+**Lo único que sobrevivió, y va commiteado aparte:** `ancho_total` era un
+**literal escrito a mano** (544.32) con la fórmula solo en el comentario de al
+lado, así que la igualdad con el riel salía por casualidad aritmética. Ahora se
+deriva en los dos lados y `leer_params()` se niega a arrancar si alguien lo
+devuelve a literal. El valor no cambia; lo que cambia es que ya no puede
+desincronizarse en silencio.
 
-    Deja de salir sola en cuanto algo se meta en ese hueco, que es justo lo que
-    hace el ala de la costilla (spec §4.3). Por eso esta puerta entra ANTES que
-    la costilla: para que el dia que el marco se coma esos milimetros haya algo
-    rojo y no un montaje imposible descubierto con las piezas en la mesa."""
-    hueco = perfil(p)["ancho_util"]
-    holgura = hueco - p["largo_riel"]
-    assert holgura >= p["hol_riel"], (
-        f"entre las caras internas quedan {hueco:.2f} mm y el Z-Rail mide "
-        f"{p['largo_riel']:.2f}: {holgura:.2f} mm de holgura, y el minimo de "
-        f"montaje son {p['hol_riel']:.2f}. El riel es una pieza COMPRADA y no "
-        f"se lima: lo que sube es ancho_total.")
-    print(f"riel: {hueco:.2f} de hueco para {p['largo_riel']:.2f} de riel -- "
-          f"{holgura:.2f} mm de holgura (minimo {p['hol_riel']:.2f})")
-```
-
-Y registrarla en `main()`, junto a las demás `guarda_*`.
-
-- [ ] **Paso 2: correrla y verla en ROJO**
-
-Run: `python case/clearance_budget.py`
-Esperado: `AssertionError` diciendo `0.00 mm de holgura`.
-
-- [ ] **Paso 3: añadir `hol_riel` y re-derivar `ancho_total`**
-
-En `params.scad`, junto a `hol_piel`:
-
-```openscad
-// Holgura de montaje del Z-Rail entre las caras internas. El riel es una
-// pieza COMPRADA de 528.32 y no se lima; lo que se mueve es el case.
-// Estuvo en CERO hasta el 2026-08-26 y no por decision: ancho_util se
-// derivaba del riel, asi que la igualdad salia sola. Cero no es ajuste fino
-// -- es una pieza que hay que forzar, y forzando entre dos planchas de PMMA
-// se raja la plancha. 0.30 total (0.15 por lado) es la misma cifra que
-// hol_piel, y por la misma razon: entra sin forzar y se lee como junta.
-hol_riel = 0.30;
-```
-
-Y `ancho_total` pasa a incluirlo: `largo_riel + hol_riel + 2*t_cheek`.
-
-- [ ] **Paso 4: correr y verla en VERDE**
-
-Run: `python case/clearance_budget.py`
-Esperado: VERDE, con `ancho_total` = **544.62** y la línea
-`riel: 528.62 de hueco para 528.32 de riel -- 0.30 mm de holgura`.
-
-- [ ] **Paso 5: probar que muerde por los dos lados**
-
-Poner `hol_riel = 0.5` temporalmente sin tocar `ancho_total` (o bajar
-`ancho_total` 1 mm a mano) y comprobar que la puerta canta. Revertir.
-
-- [ ] **Paso 6: exportar y comprobar que solo se mueve lo que debe**
-
-Run: `powershell -File case/cad/export.ps1`
-Esperado: VERDE. `ancho_total` cambió, así que cambian los DXF que dependen del
-ancho útil — `bandeja_base_2d`, `tapa_valle_2d`, `remate_sup_2d`,
-`piel_trasera_2d`. `costado_2d` **no** debe moverse: su contorno es el perfil,
-que no depende del ancho. Si se mueve, hay un acoplamiento no declarado.
-
-- [ ] **Paso 7: commit**
-
-```bash
-git add case/clearance_budget.py case/cad/params.scad case/plans/
-git commit -m "El Z-Rail entraba a presion y ninguna puerta lo miraba: 0.00 mm de holgura"
-```
+**LECCIÓN PARA EL RESTO DEL PLAN:** antes de escribir una puerta nueva, buscar
+si el `exige()` de `main()` ya dice algo del mismo tema. Las `guarda_*` son
+fáciles de encontrar por nombre; las líneas sueltas de `exige()` no, y ahí es
+donde vive media docena de reglas del case.
 
 ---
 
