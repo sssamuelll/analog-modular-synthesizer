@@ -116,7 +116,7 @@ function x_valle() =
      cr[2].x - he_er_x(angulo_superior) - holgura_rail];
 
 // largueros del esqueleto (2020) que no son railes de panel:
-// base delantera, base trasera, entrepiso delantero, valle, remate trasero.
+// base delantera, base trasera, valle, remate trasero.
 // Centros [x, y]:
 //
 // JUNTO AL PLANO TRASERO QUEDAN DOS, no cinco (2026-08-21). Fueron creciendo
@@ -130,13 +130,38 @@ function x_valle() =
 // con 50 N en el centro. Quedan el de abajo (base trasera) y el de arriba
 // (remate trasero).
 //
-// entrepiso delantero reubicado (fix de solape, ronda de revision 1): el
-// original P[3].x+r invadia el rail de panel de la cara superior
-// (17.6x12.6 mm de solape, verificado). Ahora se apoya holgura_rail detras
-// del borde trasero de ESE rail. Y de ambos railes de entrepiso baja a
-// P3.y-t_acrilico-r para que la bandeja apoye con el CANTO SUPERIOR a ras
-// de P3.y (antes apoyaba con el canto inferior ahi, dejando la tapa 5 mm
-// por encima del plano de entrepiso).
+// Y EL ENTREPISO DELANTERO SE RETIRA (2026-08-25). Era el CUARTO larguero
+// -- centro [200.32, 131.58], holgura_rail detras de la esquina girada del
+// riel del valle de la cara de arriba -- y el unico del case que no sostenia
+// ninguna plancha: las seis filas de M3 van a base delantera, base trasera,
+// valle y remate trasero. Su unico trabajo era atar los costados a media
+// altura, y a esa MISMA altura (y = 131.58) ya esta el del valle, 75.14 mm
+// por delante y encima con su tapa.
+//
+// Cruzaba el centro del volumen y se veia por el acrilico traslucido desde
+// las dos ondas y desde el valle. Es lo mismo que ya tumbo tres largueros el
+// 2026-08-21, aplicado al que quedaba: una barra que no es alma de nada.
+//
+// LO QUE CUESTA, medido sobre el contorno real de costado_2d y no estimado
+// (placa circular empotrada de radio a, a = distancia del punto mas
+// desasistido a su ancla mas cercana; D = E t^3/12(1-v^2), E = 3 GPa,
+// v = 0.37, t = 8):
+//
+//   vano libre del costado      107.9 -> 119.2 mm  (solo M5; 111.3 contando
+//                                                   los 4 M4 de riel)
+//   flecha con 200 N             0.31 ->   0.38 mm
+//   tension bajo la mano         6.35 ->   6.56 MPa   (fluencia 10, #106)
+//   abrir los costados donde
+//     estaba, con 200 N                     0.303 mm de separacion total
+//
+// El punto mas desasistido del costado NO era el suyo ni antes ni despues:
+// esta en el canto trasero a media altura, donde ademas apoya la trasera.
+// Se llevan 228 g y dos M5. Lo vigila guarda_costado() en clearance_budget.
+//
+// LO QUE ESTE CALCULO NO CUBRE, y hay que decirlo: el racking del cajon
+// entero. La spec §11 ya lista la rigidez del vano de 528 sin bulkhead
+// central como HEURISTICA sin cerrar, y esto le quita una barra. Se cierra
+// cargando el prototipo, no aqui.
 //
 // El SEPTIMO larguero, "zocalo superior", se retiro el 2026-08-17: Samuel
 // pidio DOS nodos en la esquina de abajo y no tres -- uno para amarrar la
@@ -160,7 +185,6 @@ function centros_esqueleto() =
          // x_tr -> chasis -> base delantera. Ver la nota de abajo.
          x_ch_frente = (x_tr - r) - chasis_holgura_larguero - ch_tapa_ext().y,
          x_bd = x_ch_frente - chasis_holgura_larguero - r,
-         x_ed = cr[2].x + he_er_x(angulo_superior) + holgura_rail + r,
          y_ep = P[3].y - t_acrilico - r)
     // Los dos largueros de la base ya NO viven en el canto de abajo. Desde que
     // la bandeja es el suelo (t_base) montan encima de ella, o sea con su centro
@@ -198,7 +222,6 @@ function centros_esqueleto() =
     //     trasero esta en x=289.87 y la esquina del riel movido en 286.22.
     [[x_bd,          t_base + r],               // base delantera
      [x_tr,          t_base + r],               // base trasera
-     [x_ed,                y_ep],                     // entrepiso delantero
      // valle: el cuarto, y el unico que existe por una plancha y no por una
      // union. Va CENTRADO bajo la tapa del valle para que los dos vuelos sean
      // iguales; a la vez ata los dos costados por la cintura, que es donde el
@@ -533,7 +556,7 @@ KONDOR_FONT = "Franklin Gothic Medium";
 function trasera_au() = ancho_total - 2*t_cheek - 2*hol_piel;
 function trasera_y_relieve() =
     let (ce = centros_esqueleto())
-    ce[1].y + 0.74*(ce[4].y - ce[1].y);   // y0 = 0, ver piel_trasera_2d()
+    ce[1].y + 0.74*(ce[3].y - ce[1].y);   // y0 = 0, ver piel_trasera_2d()
 
 // OJO CON EL ESPEJO -- ESTO NO ES UN DESCUIDO, ES LA CORRECCION.
 //
@@ -600,7 +623,7 @@ module piel_trasera_2d() {
     // plancha continua de 8 atornillada arriba y abajo trabaja de alma de
     // cortante en esa cara mejor que cinco barras sueltas.
     f_base = ce[1].y - y0;
-    f_tras = ce[4].y - y0;
+    f_tras = ce[3].y - y0;
     // Las ondas van derivadas de las dos filas que las rodean: asi no se acercan
     // a un tornillo si un larguero se mueve.
     //
@@ -713,7 +736,7 @@ module tapa_valle_2d() {
     ce = centros_esqueleto();
     xv = x_valle();
     largo = xv[1] - xv[0];
-    y_esp = ce[3].x - xv[0];                 // linea del larguero, en local
+    y_esp = ce[2].x - xv[0];                 // linea del larguero, en local
     campos = [[valle_margen,               y_esp - valle_espina/2],
               [y_esp + valle_espina/2,     largo - valle_margen]];
     n_hp  = round(largo_riel/hp);            // 104
@@ -1255,7 +1278,7 @@ module remate_sup_2d() {
         plancha(au, prof_sup);
         // la fila cae en la centerline del larguero nuevo, medida desde el
         // canto DELANTERO de la plancha (el que remata el canto del panel).
-        fila_agujeros(au, ce[4].x - P[4].x - inset_remate_frente);
+        fila_agujeros(au, ce[3].x - P[4].x - inset_remate_frente);
     }
 }
 
@@ -1419,7 +1442,15 @@ module bom() {
     echo("     de hacer falta: el case ya no lleva ninguna junta irreversible.");
     echo(str("     Se retira ", inset_remate_frente, " mm del pico, y eso NO es"));
     echo("     estetica: es lo unico que deja abrir la tapa de la fila de arriba.");
-    echo(str("BOM: patica metalica torneada x4, d=", d_pie, " x ", alto_pie, " mm"));
+    // Decia "metalica torneada" y se quedo asi cuando las paticas pasaron a
+    // GOMA el 2026-08-24 (spec rev. 18): el BOM del README y el PLIEGO ya
+    // dicen goma con casquillo roscado, y este echo seguia mandando a comprar
+    // otra pieza. La cota de compra no es el material sino la FLECHA -- una
+    // goma dura no aisla menos, AMPLIFICA los 100 Hz del toroide.
+    echo(str("BOM: patica de GOMA (EPDM/NBR, Shore 45-55 A) con casquillo",
+             " roscado x4, d=", d_pie, " x ", alto_pie, " mm -- se atornilla,",
+             " NO se pega. Se exige la curva carga-deformacion: >= ", flecha_pie,
+             " mm de flecha con 22.8 N (flecha_pie)"));
     echo(str("BOM: plancha t=", t_acrilico, ": SOLO la tapa del valle -- ojo, un",
              " espesor entero para UNA pieza, cosa del pliego"));
     echo(str("BOM: plancha t=", t_cheek, ": costados x2, suelo (bandeja de base,",

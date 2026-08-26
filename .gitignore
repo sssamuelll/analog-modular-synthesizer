@@ -85,6 +85,20 @@ case/renders/oldest/
 # El sentido del riesgo esta escogido: por defecto NO entra, y meter uno exige
 # escribirlo aqui. Asi el que entra es siempre una decision, nunca un descuido.
 # Es la #195.
+#
+# ESTA REGLA ESTUVO ESCRITA Y NO APLICADA. El commit siguiente al que la
+# introdujo (92d896e, "Las doce vistas con la cara nueva") metio los doce PNG
+# a la fuerza, saltandose el ignore, y desde entonces el arbol decia doce y
+# este fichero decia cuatro. Medido el 2026-08-25: 61 blobs PNG en el
+# historial, 105.5 MB de los 251 que pesaba el .git -- el 42 % del repositorio
+# eran renders, y ninguno de los diez de mas estaba enlazado desde un solo
+# .md. Los diez salieron del indice y se purgaron del historial con
+# git filter-repo; los cuatro de abajo se conservaron enteros.
+#
+# Los diez SIGUEN EN DISCO y se regeneran con los cuatro guiones de
+# case/renders/. Que no esten versionados no es que no existan: es que su
+# copia buena es el modelo, igual que pasa con los STL de aqui arriba y con
+# el lienzo de abajo.
 case/renders/*.png
 !case/renders/chasis-plano-plegado.png
 !case/renders/propuesta-diseno-2026-08-16.png
