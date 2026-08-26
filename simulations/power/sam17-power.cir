@@ -1,31 +1,35 @@
-sam17 modulo 1 - rectificacion y filtrado (caso nominal)
+sam17 modulo 1 - rectificacion y filtrado (caso nominal, fuente v3)
 *
 * Secundario 12-0-12 con toma central a masa, puente y bulk por riel.
-* Este fichero es el caso NOMINAL (230 V, transformador con 12% de regulacion,
-* plena carga de diseno). Los barridos de red, regulacion y carga los hace
-* run_sim.py, que genera este mismo circuito con otros valores.
+* Este fichero es el caso NOMINAL (230 V, envolvente de diseno de 650 mA/riel).
+* Los escenarios de red y carga los hace run_sim.py, que genera este mismo
+* circuito con otros valores -- issue #128: este .cir modelaba la v1 (7812,
+* trafo de 2 A) y ahora modela la v3 (LM2941/LM2991, trafo real Talema).
 *
 * Correr:  ngspice -b sam17-power.cir      (o abrirlo en LTspice)
 *
-* Lo que hay que mirar: el MINIMO INSTANTANEO de v(vp). Si baja de 14 V el
-* 7812 deja de regular y el rizado de 100 Hz se cuela en el riel de +12 V.
+* Lo que hay que mirar: el MINIMO INSTANTANEO de v(vp). Si baja de 14.1 V el
+* LM2941 (U1) deja de regular sus 13.1 V de salida (design-notes.md §16.8) y
+* el rizado de 100 Hz se cuela en la cascada de +12 V.
 *
-* Modelo del transformador: fuente ideal + resistencia serie. El dato de placa
-* (12 V) es a PLENA carga, asi que en vacio da mas; aqui se modela con
-* v_vacio = 12 * 1.12 y r_dev = 0.12 * 12 / 2 A = 0.72 ohm por semidevanado.
+* Modelo del transformador: fuente ideal + resistencia serie, con los datos
+* REALES de la hoja Nuvotem 0120P1-2-012 (design-notes.md §16.4): 13.42 V en
+* vacio / 12 V a 5 A -> v_vacio = 12 * 1.11833, r_dev = (13.42-12)/5 =
+* 0.284 ohm por semidevanado.
 *
 * Las cargas son fuentes de corriente y no resistencias A PROPOSITO: un
 * regulador lineal en regulacion consume corriente casi constante pase lo que
 * pase con el rizado de su entrada. Con resistencias saldria un rizado
 * optimista.
 *
-* I1 = 450 mA: 300 mA del 7812 MAS 150 mA que se lleva el 7805, que cuelga del
-* mismo VRAW+. I2 = 300 mA: solo el 7912. Los dos rieles NO van igual cargados.
+* I1 = 950 mA: 650 mA de LT3045 x2 (bus +12 V) MAS 300 mA del techo de U3/7805,
+* que cuelga del mismo VRAW+ (design-notes.md §16.12). I2 = 650 mA: solo
+* LT3094 x2 -- no hay equivalente de U3 en el riel negativo.
 
-V1 a 0 SIN(0 19.0071 50)
-V2 0 b SIN(0 19.0071 50)
-Rw1 a a1 0.72
-Rw2 b b1 0.72
+V1 a 0 SIN(0 18.9787 50)
+V2 0 b SIN(0 18.9787 50)
+Rw1 a a1 0.284
+Rw2 b b1 0.284
 
 D1 a1 vp DMOD
 D2 b1 vp DMOD
@@ -34,11 +38,11 @@ D4 vn b1 DMOD
 
 * Vmc a 0 V solo para poder medir la corriente de rizado de C1
 Vmc vp cp 0
-C1 cp 0 4700u
-C2 0 vn 4700u
+C1 cp 0 9400u
+C2 0 vn 9400u
 
-I1 vp 0 0.450
-I2 0 vn 0.300
+I1 vp 0 0.950
+I2 0 vn 0.650
 
 .model DMOD D(IS=1e-8 N=1.9 RS=0.025 BV=1000)
 .ic v(vp)=15 v(vn)=-15
@@ -46,9 +50,10 @@ I2 0 vn 0.300
 
 .control
 run
-let margen = vecmin(v(vp)) - 14
-print vecmin(v(vp)) vecmax(v(vp)) margen
-print vecmax(v(vn)) vecmin(v(vn))
+let margen_u1 = vecmin(v(vp)) - 14.1
+let margen_u2 = abs(vecmax(v(vn))) - 13.9
+print vecmin(v(vp)) vecmax(v(vp)) margen_u1
+print vecmax(v(vn)) vecmin(v(vn)) margen_u2
 print rms(i(vmc))
 .endc
 
