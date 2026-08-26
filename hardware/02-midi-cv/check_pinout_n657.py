@@ -153,20 +153,33 @@ def extraer_filas() -> list[dict]:
 
 
 def _tolerante(senal: str) -> re.Pattern:
-    """El PDF parte nombres con espacios/saltos: busqueda tolerante."""
+    """El PDF parte nombres con espacios/saltos: busqueda tolerante.
+
+    La cola exige ademas que tras el nombre no venga un digito NI SIQUIERA
+    separado por espacios: la junta de la pantalla demostro que sin eso,
+    sobre una fila explotada sin reparar ("IO 1 1"), XSPIM_P1_IO1 matchea
+    dentro de XSPIM_P1_IO11 -- hoy lo tapaba solo la reparacion manual de
+    PP11, y una revision futura del PDF no tendria esa defensa."""
     return re.compile(r"(?<![A-Z0-9_])" + r"\s*".join(map(re.escape, senal))
-                      + r"(?![0-9A-Z])")
+                      + r"(?![0-9A-Z])(?!\s+[0-9])")
 
 
 ADC_RX = re.compile(r"ADC\s*\d\s*_\s*INP\s*\d+")
+
+
+RESERVADOS = {"PA13", "PA14", "PH0", "PH1", "PC14", "PC15"} | \
+    {f"PN{i}" for i in range(13)}
 
 
 def main() -> int:
     filas = extraer_filas()
     fallos: list[str] = []
 
-    # 1. Las senales que el censo demanda, re-derivadas del PDF.
-    demandadas = set(mb.CAPTURAS) | set(mb.RGMII) | set(mb.PSRAM)
+    # 1. Las senales que el censo demanda, re-derivadas del PDF. CAPTURAS
+    #    trae ya las dos mudadas a TIM1, y PANTALLA las 28 del LTDC (acta
+    #    camino A).
+    demandadas = set(mb.CAPTURAS) | set(mb.RGMII) | set(mb.PSRAM) \
+        | set(mb.PANTALLA)
     demandadas |= {f"SAI{i}_{s}" for i in (1, 2)
                    for s in ("MCLK_A", "SCK_A", "FS_A", "SD_A", "SD_B")}
     demandadas |= {f"SPI{i}_{s}" for i in (1, 2, 3, 4, 5, 6)
@@ -180,6 +193,12 @@ def main() -> int:
     for row in filas:
         nombre = row["name"].split("(")[0].split("-")[0]
         if not gpio_rx.match(nombre):
+            continue
+        # Las reservas fijas (SWD/HSE/LSE/XSPI2) no son candidatos del
+        # censo POR DISENO, asi que tampoco se cotejan como tales: el DS
+        # saca LCD_B4/LCD_B6 tambien por PN10/PN11, pero el puerto PN
+        # entero es del arranque y la biblioteca.
+        if nombre in RESERVADOS:
             continue
         pres = "".join("x" if row["balls"][p] else "." for p in PKGS)
         for s in demandadas:

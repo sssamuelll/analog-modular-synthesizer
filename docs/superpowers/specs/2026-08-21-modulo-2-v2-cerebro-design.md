@@ -436,6 +436,24 @@ alimentación, hablando por el UART del puente (§6.6). La arquitectura de «un
 modelo, N pieles» ya la admite sin tocar esta placa, y esa es la respuesta que
 esta spec da a esa petición cuando vuelva a aparecer.
 
+> **Nota 2026-08-26 (acta de Samuel, camino A):** la petición volvió y la
+> respuesta de arriba se ejecutó a medias, a propósito. «No va en este
+> módulo» sigue en pie — esta placa no se toca y la 2,8" no cambia. Pero
+> «con su propio micro» quedó superado: la 7" táctil cuelga del **LTDC del
+> N657** del motor de Voz, un chip que no existía en el instrumento cuando
+> se escribió este párrafo (un segundo micro dedicado hoy sería la
+> enfermedad del #201). «Con su propia alimentación» sigue en pie. Y
+> «otro cliente del protocolo, hablando por el UART del puente» — la
+> cuarta parte de la prescripción, que la primera versión de esta nota
+> dejó sin sentencia (hallazgo de la junta) — **se cumple en espíritu y
+> cambia de transporte**: la pantalla sigue siendo cliente del modelo
+> (nada existe fuera de él), pero sus propuestas suben por el **J2** del
+> motor, no por el UART del puente — con fila mandada en el presupuesto
+> de trama del enlace, y solo-lectura hasta que esa fila corra (spec
+> pantalla §4). El diseño, su censo de pines y la frontera de filosofía
+> (la confirmación física sigue siendo el encoder de ESTE módulo) viven
+> en `2026-08-26-pantalla-motor-design.md`.
+
 **Bus propio, no J2.** El RP2350 trae dos periféricos SPI; el J2 es contrato
 congelado a 10 MHz con ocho stubs colgando y no admite un cliente más (§4). La
 pantalla va en el segundo SPI, a su ritmo, y **no usa PIO** — o sea que no entra

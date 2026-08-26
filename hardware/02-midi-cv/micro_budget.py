@@ -16,7 +16,7 @@ POR QUE EXISTE ESTE GUION
        mitades y la historia entera de recuperacion entre columnas.
 
     2. El cerebro se quedo con una pantalla de 2,8" porque el framebuffer de la
-       grande no cabe en su SRAM (cerebro S9.1). O sea que el tamano de la
+       grande no cabe en su SRAM (cerebro S7). O sea que el tamano de la
        pantalla del instrumento lo decidio el chip, no el instrumento.
 
   Este guion pone los dos sitios y los dos candidatos en la misma tabla, con los
@@ -77,7 +77,7 @@ CODEC_MAX = 2
 
 # --- lo que pide el cerebro ----------------------------------------------
 #
-# La pantalla que la spec del cerebro rechazo, con su cuenta (cerebro S9.1).
+# La pantalla que la spec del cerebro rechazo, con su cuenta (cerebro S7).
 PANTALLA_ANCHO = 800
 PANTALLA_ALTO = 480
 PANTALLA_BPP = 16
@@ -120,9 +120,11 @@ H7_TIENE_LTDC = True          # p2, "LCD-TFT controller up to XGA resolution"
 
 # --- el presupuesto de afinacion que gobierna la medida --------------------
 #
-# IMPORTADOS de autotune_budget.py, que es su fuente viva. No se re-derivan
-# aqui: si aquel cambia, este tiene que romperse, y para eso esta la
-# autocomprobacion de abajo.
+# COPIADOS A MANO de lo que autotune_budget.py deriva; verificados contra
+# su recalculo el 2026-08-26 (61.16 ms / 477.8 us / 131.3 ns). La junta de
+# la pantalla cazo que la version anterior de esta nota juraba un
+# acoplamiento automatico que no existe: nada grita si autotune cambia.
+# Importarlos de verdad exige exponer las formulas alla -- fila del #214.
 VENTANA_LARGA_S = 61.2e-3     # la nota mas grave del barrido (C1)
 VENTANA_CORTA_S = 478e-6      # la mas aguda (C8), la que menos perdona
 JITTER_MAX_S = 131e-9         # lo que puede temblar el 74HC14 y aun cumplir
@@ -236,7 +238,7 @@ def demo() -> None:
     print("\n\nSITIO 2 -- EL CEREBRO\n")
     fb = framebuffer_b(PANTALLA_ANCHO, PANTALLA_ALTO, PANTALLA_BPP)
     fbc = framebuffer_b(PANTALLA_CHICA_ANCHO, PANTALLA_CHICA_ALTO, PANTALLA_BPP)
-    # En bytes y no en "KB": cerebro S9.1 dice 768 KB contando 1 KB = 1000 B, y
+    # En bytes y no en "KB": cerebro S7 dice 768 KB contando 1 KB = 1000 B, y
     # esta seccion dice 520 KB contando 1 KB = 1024. Comparar las dos cifras tal
     # como estan escritas alli es comparar dos unidades distintas.
     print(f"  framebuffer de {PANTALLA_ANCHO}x{PANTALLA_ALTO} a {PANTALLA_BPP} bits"
@@ -279,7 +281,9 @@ def demo() -> None:
 #          volcado crudo. Ningun modelo de lenguaje toco estos datos.
 #
 # QUE SE SIENTA A LA MESA (spec S1.2 punto 2 y S11 riesgo 1):
-#   1. Las 16 entradas de captura TIM2..TIM5 x CH1..CH4 (el autoafinado).
+#   1. Las 16 entradas de captura del autoafinado: TIM2..TIM5 x CH1..CH4,
+#      MENOS dos canales que el acta de la pantalla muda a TIM1 (punto 10
+#      y el comentario de CAPTURAS).
 #   2. El SAI full-duplex del codec: MCLK+SCK+FS del subbloque A (boca) y
 #      SD del A mas SD del B en sincrono (oidos). 5 pines.
 #   3. Los 3 buses SPI maestros del CV con NSS por hardware (spec S5):
@@ -314,6 +318,20 @@ def demo() -> None:
 #      encapsulados), USB con pines dedicados (OTG1/OTG2
 #      HSDM/HSDP/ID/TXRTUNE, fuera del conteo GPIO), BOOT0 y NRST
 #      dedicados.
+#  10. La pantalla del motor (acta de Samuel 2026-08-26, noche: "Vamos
+#      con A" -- 7" tactil directa al LTDC). El bus RGB paralelo de
+#      24 bits: LCD_R0..R7 + G0..G7 + B0..B7 + HSYNC + VSYNC + DE + CLK =
+#      28 pines. Entrar le costo a las capturas dos mudanzas de timer,
+#      porque el VERDE del panel es el color apretado: LCD_G2 solo sale
+#      por PA1 (que era el unico pin de TIM5_CH2 -- dos demandas y un
+#      pin no tienen reparto) y LCD_G6 solo por PB11 (adonde la cadena
+#      TIM5_CH4->PF6 forzaba a TIM2_CH4). La mudanza y su precio, en el
+#      comentario de CAPTURAS. El tactil capacitivo comparte el I2C del
+#      codec (control lento ambos, direcciones distintas); su INT/RST y
+#      el PWM de retroiluminacion van en N6_GPIO_VARIOS. LCD_B4/LCD_B6
+#      tambien salen por PN10/PN11 en el DS, pero el puerto PN entero es
+#      reserva XSPI2 y no compite (igual se filtra en la puerta de
+#      reproducibilidad).
 #
 # LO QUE EL VERDE NO DICE (y donde se cierra):
 #   * Que el reloj kernel de CADA instancia SPI alcance los 50 MHz: la
@@ -333,6 +351,25 @@ def demo() -> None:
 #     spi_privado_budget.py sigue modelando los dos RP2350B viejos; su
 #     recorrido con la ley de dos tasas y la trama real es fila del #214
 #     (tanda 2). Este censo reparte PINES, no ancho de banda.
+#   * TIM1 y el RM0486, partido en dos (junta de la pantalla): el reloj
+#     kernel es cola HEREDADA (la misma de las instancias SPI); el DMA de
+#     captura de tim1_cc2/tim1_cc4 es pendiente NUEVO -- reabre en dos
+#     lineas la clausula 1 del sello del motor, que solo verifico
+#     tim2_cc1..tim5_cc4 (RM0486 Tablas 86/98). Y el desenlace honesto si
+#     el RM0486 los negara NO es "re-repartir": TIM5_CH2 y LCD_G2 siguen
+#     compartiendo {PA1}, asi que la salida real seria recortar verde al
+#     panel o caer al camino B (controlador con framebuffer propio, spec
+#     pantalla S1). "El encapsulado no se mueve" sigue siendo verdad,
+#     pero por su razon vieja: el censo SIN pantalla ya elegia VFBGA264.
+#   * Donde VIVE el framebuffer (768 000 B a 2 B/px; 1 152 000 B a 3; el
+#     doble con doble buffer) dentro de los 4.2 MB de SRAM, y su CAUDAL
+#     de refresco sostenido por AXI (800x480x60 = 23.04 Mpx/s: 46, 69 o
+#     92 MB/s segun el formato del framebuffer -- la salida es RGB888 de
+#     24 bits para este panel; el LTDC tambien saca YUV422-16, que aqui
+#     no aplica, y el formato de ENTRADA lo elige cada capa, DS 3.29) contra
+#     los grains del sampler: filas nuevas del censo de SRAM (spec S8.5)
+#     y de carga_motor (#214 tanda 2). Este censo reparte PINES, no
+#     memoria ni ancho de banda.
 #   * Dominios VDDIO, zonas analogicas y EMI (riesgo 11), ruteo, LDAC/CLR
 #     del DAC, errata: cada uno tiene su fila en el spec S11.
 
@@ -350,119 +387,139 @@ N6_GPIO_TOTAL = {"VFBGA142": 75, "VFBGA169": 90, "VFBGA178": 106,
 N6_RESERVA_GPIO = 4 + 2 + 13
 
 # Cuantos GPIO libres exige el resto del diseno tras el reparto:
-#   la inhibicion de estado seguro R-M5 (1) y la carga del crosspoint (1,
-#   ESTIMADO: AD75019 en cadena; si cuelga de un bus CV es solo el strobe).
-N6_GPIO_VARIOS = 2
+#   la inhibicion de estado seguro R-M5 (1), la carga del crosspoint (1,
+#   ESTIMADO: AD75019 en cadena; si cuelga de un bus CV es solo el strobe)
+#   y la pantalla (3, ESTIMADO hasta nombrar las piezas: INT y RST del
+#   tactil capacitivo + PWM de retroiluminacion -- el tactil comparte el
+#   I2C del codec, asi que no pide bus propio). OJO del ESTIMADO (junta):
+#   el PWM del backlight NO es "cualquier GPIO" -- exige un pin con canal
+#   de timer de salida; cuando la pieza tenga nombre (R-M3) se sienta a
+#   la mesa como senal TIMx_CHy concreta. Hoy sobran candidatos (TIM1
+#   CH1/CH3, TIM8 en PQ, TIM12-17 y LPTIM no estan demandados).
+N6_GPIO_VARIOS = 2 + 3
 
 # pin -> (presencia "142 169 178 198 223 264", senales demandadas que puede
 # llevar). Destilado de la Tabla 16; "ADC_IN" marca funcion adicional
 # ADCx_INPn. Solo pines que llevan al menos una senal demandada.
 N6_PINES = {
-    "PA0": ("xxxxxx", ("ADC_IN", "SAI2_SD_B", "SPI6_NSS", "TIM2_CH1", "TIM5_CH1")),
-    "PA1": ("xxxxxx", ("ADC_IN", "TIM2_CH2", "TIM5_CH2")),
-    "PA2": ("xxxxxx", ("ADC_IN", "TIM2_CH3", "TIM5_CH3")),
+    "PA0": ("xxxxxx", ("ADC_IN", "LCD_G3", "SAI2_SD_B", "SPI6_NSS", "TIM2_CH1", "TIM5_CH1")),
+    "PA1": ("xxxxxx", ("ADC_IN", "LCD_G2", "TIM2_CH2")),
+    "PA2": ("xxxxxx", ("ADC_IN", "LCD_B7", "TIM2_CH3", "TIM5_CH3")),
     "PA3": (".xxxxx", ("SAI1_SD_B", "SPI5_NSS")),
     "PA4": ("....xx", ("SPI5_MOSI",)),
-    "PA5": ("xxxxxx", ("ADC_IN", "SPI1_SCK", "SPI6_SCK", "TIM2_CH1")),
-    "PA6": ("xxxxxx", ("ADC_IN", "SPI1_MISO", "SPI6_MISO", "TIM3_CH1")),
-    "PA7": ("..xxxx", ("ADC_IN", "SPI1_MOSI", "SPI6_MOSI", "TIM3_CH2")),
-    "PA8": ("xxxxxx", ("ADC_IN", "I2C3_SCL")),
-    "PA9": ("xxxxxx", ("ADC_IN", "I2C3_SDA", "SPI2_SCK")),
-    "PA10": ("xxxxxx", ("ADC_IN",)),
-    "PA11": ("xxxxxx", ("ADC_IN", "SPI2_NSS")),
-    "PA12": ("xxxxxx", ("ADC_IN", "SPI2_SCK")),
-    "PA15": ("xxxxxx", ("SPI1_NSS", "SPI3_NSS", "SPI6_NSS", "TIM2_CH1")),
-    "PB0": ("xxxxxx", ("SAI1_FS_A", "SPI4_NSS")),
-    "PB1": ("....xx", ("TIM3_CH4",)),
-    "PB2": ("..x.xx", ("SAI1_SD_A", "SPI3_MOSI")),
-    "PB4": ("xxxxxx", ("SPI1_MISO", "SPI2_NSS", "SPI3_MISO", "SPI6_MISO", "TIM3_CH1")),
-    "PB5": ("xxxxxx", ("SPI1_MOSI", "SPI3_MOSI", "SPI6_MOSI", "TIM3_CH2")),
+    "PA5": ("xxxxxx", ("ADC_IN", "LCD_CLK", "SPI1_SCK", "SPI6_SCK", "TIM2_CH1")),
+    "PA6": ("xxxxxx", ("ADC_IN", "LCD_B7", "LCD_HSYNC", "SPI1_MISO", "SPI6_MISO", "TIM3_CH1")),
+    "PA7": ("..xxxx", ("ADC_IN", "LCD_B1", "LCD_R4", "SPI1_MOSI", "SPI6_MOSI", "TIM3_CH2")),
+    "PA8": ("xxxxxx", ("ADC_IN", "I2C3_SCL", "LCD_B6")),
+    "PA9": ("xxxxxx", ("ADC_IN", "I2C3_SDA", "LCD_B5", "SPI2_SCK", "TIM1_CH2")),
+    "PA10": ("xxxxxx", ("ADC_IN", "LCD_B4")),
+    "PA11": ("xxxxxx", ("ADC_IN", "LCD_B3", "SPI2_NSS", "TIM1_CH4")),
+    "PA12": ("xxxxxx", ("ADC_IN", "LCD_B2", "SPI2_SCK")),
+    "PA15": ("xxxxxx", ("LCD_R5", "SPI1_NSS", "SPI3_NSS", "SPI6_NSS", "TIM2_CH1")),
+    "PB0": ("xxxxxx", ("SAI1_FS_A", "SPI4_NSS", "TIM1_CH4")),
+    "PB1": ("....xx", ("LCD_R1", "TIM3_CH4")),
+    "PB2": ("..x.xx", ("LCD_B2", "SAI1_SD_A", "SPI3_MOSI")),
+    "PB4": ("xxxxxx", ("LCD_R3", "SPI1_MISO", "SPI2_NSS", "SPI3_MISO", "SPI6_MISO", "TIM3_CH1")),
+    "PB5": ("xxxxxx", ("LCD_R2", "SPI1_MOSI", "SPI3_MOSI", "SPI6_MOSI", "TIM3_CH2")),
     "PB6": ("xxxxxx", ("SAI1_SCK_A", "SPI4_MISO")),
     "PB7": ("xxxxxx", ("SAI1_SD_A", "SPI4_MOSI")),
     "PB8": ("....xx", ("SPI1_MISO",)),
     "PB9": ("....xx", ("SPI1_SCK",)),
-    "PB10": ("xxxxxx", ("ADC_IN", "I2C2_SCL", "SPI2_SCK", "TIM2_CH3")),
-    "PB11": ("xxxxxx", ("ADC_IN", "I2C2_SDA", "TIM2_CH4")),
-    "PB12": ("xxxxxx", ("SPI2_NSS",)),
-    "PB13": ("....xx", ("SPI6_SCK",)),
-    "PB15": ("....xx", ("SPI6_NSS",)),
-    "PC0": (".....x", ("SPI1_SCK", "SPI3_SCK", "SPI6_SCK", "TIM2_CH2")),
+    "PB10": ("xxxxxx", ("ADC_IN", "I2C2_SCL", "LCD_G7", "SPI2_SCK", "TIM2_CH3")),
+    "PB11": ("xxxxxx", ("ADC_IN", "I2C2_SDA", "LCD_G6")),
+    "PB12": ("xxxxxx", ("LCD_G5", "SPI2_NSS")),
+    "PB13": ("....xx", ("LCD_CLK", "SPI6_SCK")),
+    "PB14": ("....xx", ("LCD_HSYNC",)),
+    "PB15": ("....xx", ("LCD_G4", "SPI6_NSS")),
+    "PC0": (".....x", ("LCD_R4", "SPI1_SCK", "SPI3_SCK", "SPI6_SCK", "TIM2_CH2")),
     "PC1": ("..xxxx", ("I2C1_SDA", "SPI2_NSS", "TIM4_CH4")),
     "PC2": (".....x", ("SAI1_SCK_A", "SPI3_MOSI")),
     "PC3": (".....x", ("SPI1_MOSI",)),
-    "PC4": (".....x", ("SPI2_MISO",)),
+    "PC4": (".....x", ("LCD_DE", "LCD_VSYNC", "SPI2_MISO")),
     "PC5": (".....x", ("SAI2_SD_B", "SPI1_NSS")),
     "PC6": ("..xxxx", ("TIM3_CH1",)),
     "PC7": ("..xxxx", ("TIM3_CH2",)),
-    "PC8": ("xxxxxx", ("TIM3_CH3",)),
-    "PC9": ("xxxxxx", ("I2C3_SDA", "TIM3_CH4")),
+    "PC8": ("xxxxxx", ("LCD_B0", "TIM3_CH3")),
+    "PC9": ("xxxxxx", ("I2C3_SDA", "LCD_B3", "TIM3_CH4")),
     "PC10": ("xxxxxx", ("I2C4_SCL", "SPI3_SCK")),
     "PC11": ("xxxxxx", ("I2C4_SDA", "SPI3_MISO")),
-    "PC12": ("xxxxxx", ("SPI3_MOSI", "SPI6_SCK")),
+    "PC12": ("xxxxxx", ("SPI3_MOSI", "SPI6_SCK", "TIM1_CH4")),
     "PD1": ("xxxxxx", ("ETH1_MDC",)),
     "PD2": (".xxxxx", ("SAI1_SD_A", "SPI2_MOSI")),
     "PD4": (".xxxxx", ("I2C2_SDA", "SPI5_MISO")),
     "PD6": (".xxxxx", ("SPI2_MISO",)),
-    "PD7": (".xxxxx", ("SPI2_MOSI", "SPI3_NSS")),
+    "PD7": (".xxxxx", ("SPI2_MOSI", "SPI3_NSS", "TIM1_CH2")),
+    "PD8": ("xxxxxx", ("LCD_R7",)),
+    "PD9": ("..xxxx", ("LCD_R1",)),
     "PD11": (".xxxxx", ("I2C4_SDA", "SPI2_MISO")),
     "PD12": (".xxxxx", ("ETH1_MDIO",)),
-    "PD13": ("..xxxx", ("SAI2_SCK_A", "TIM4_CH2")),
+    "PD13": ("..xxxx", ("LCD_R6", "SAI2_SCK_A", "TIM4_CH2")),
     "PD14": (".xxxxx", ("I2C2_SCL",)),
-    "PD15": (".xxxxx", ("I2C2_SDA",)),
+    "PD15": (".xxxxx", ("I2C2_SDA", "LCD_R2")),
     "PE0": ("xxxxxx", ("SAI2_MCLK_A",)),
     "PE2": ("xxxxxx", ("SAI1_MCLK_A", "SPI4_SCK")),
     "PE3": ("xxxxxx", ("SAI1_SD_B",)),
-    "PE4": (".....x", ("SPI6_MISO",)),
+    "PE4": (".....x", ("LCD_G1", "SPI6_MISO")),
     "PE5": (".xxxxx", ("I2C1_SCL", "TIM4_CH1")),
     "PE6": ("..xxxx", ("I2C1_SDA", "TIM4_CH2")),
     "PE7": ("xxxxxx", ("SAI2_SD_B",)),
-    "PE11": (".xxxxx", ("SAI2_SD_B", "SPI4_NSS")),
+    "PE11": (".xxxxx", ("LCD_VSYNC", "SAI2_SD_B", "SPI4_NSS", "TIM1_CH2")),
     "PE12": ("xxxxxx", ("SPI4_SCK",)),
     "PE13": ("xxxxxx", ("I2C4_SCL", "SPI4_MISO")),
-    "PE14": ("xxxxxx", ("I2C4_SDA", "SPI4_MOSI")),
+    "PE14": ("xxxxxx", ("I2C4_SDA", "SPI4_MOSI", "TIM1_CH4")),
     "PE15": ("xxxxxx", ("SPI5_SCK",)),
     "PF0": ("...xxx", ("ETH1_RGMII_GTX_CLK", "TIM4_CH4")),
     "PF1": ("...xxx", ("TIM4_CH3",)),
-    "PF2": ("xxxxxx", ("ETH1_RGMII_CLK125", "SPI2_SCK")),
-    "PF3": ("xxxxxx", ("ADC_IN",)),
-    "PF4": ("xxxxxx", ("ADC_IN", "ETH1_MDIO", "SPI1_NSS", "SPI3_NSS", "SPI6_NSS")),
-    "PF5": ("xxxxxx", ("SAI2_SD_A",)),
-    "PF6": ("..xxxx", ("ADC_IN", "TIM2_CH4", "TIM5_CH4")),
-    "PF7": ("xxxxxx", ("ADC_IN", "ETH1_RGMII_RX_CLK", "SPI1_SCK", "TIM3_CH3")),
-    "PF8": ("xxxxxx", ("ETH1_RGMII_RXD2",)),
-    "PF9": ("...xxx", ("ETH1_RGMII_RXD3",)),
-    "PF10": ("xxxxxx", ("ETH1_RGMII_RX_CTL",)),
-    "PF11": ("xxxxxx", ("ADC_IN", "ETH1_RGMII_TX_CTL", "SAI2_SD_B", "SPI5_MOSI")),
+    "PF2": ("xxxxxx", ("ETH1_RGMII_CLK125", "LCD_B1", "SPI2_SCK")),
+    "PF3": ("xxxxxx", ("ADC_IN", "LCD_R4")),
+    "PF4": ("xxxxxx", ("ADC_IN", "ETH1_MDIO", "LCD_R3", "SPI1_NSS", "SPI3_NSS", "SPI6_NSS")),
+    "PF5": ("xxxxxx", ("LCD_G0", "SAI2_SD_A")),
+    "PF6": ("..xxxx", ("ADC_IN", "LCD_DE", "TIM5_CH4")),
+    "PF7": ("xxxxxx", ("ADC_IN", "ETH1_RGMII_RX_CLK", "LCD_VSYNC", "SPI1_SCK", "TIM3_CH3")),
+    "PF8": ("xxxxxx", ("ETH1_RGMII_RXD2", "LCD_R6")),
+    "PF9": ("...xxx", ("ETH1_RGMII_RXD3", "LCD_HSYNC")),
+    "PF10": ("xxxxxx", ("ETH1_RGMII_RX_CTL", "LCD_R1")),
+    "PF11": ("xxxxxx", ("ADC_IN", "ETH1_RGMII_TX_CTL", "LCD_B0", "SAI2_SD_B", "SPI5_MOSI")),
     "PF12": ("xxxxxx", ("ADC_IN", "ETH1_RGMII_TXD0", "SPI5_MISO")),
     "PF13": ("xxxxxx", ("ADC_IN", "ETH1_RGMII_TXD1", "SPI5_NSS")),
-    "PF14": ("xxxxxx", ("ADC_IN", "ETH1_RGMII_RXD0", "SPI5_MOSI", "TIM2_CH2")),
-    "PF15": ("xxxxxx", ("ETH1_RGMII_RXD1", "SPI5_SCK")),
-    "PG1": ("..xxxx", ("SPI5_MISO",)),
-    "PG2": ("xxxxxx", ("SPI5_MOSI",)),
+    "PF14": ("xxxxxx", ("ADC_IN", "ETH1_RGMII_RXD0", "LCD_G0", "SPI5_MOSI", "TIM2_CH2")),
+    "PF15": ("xxxxxx", ("ETH1_RGMII_RXD1", "LCD_G1", "SPI5_SCK")),
+    "PG0": ("..xxxx", ("LCD_R0", "LCD_VSYNC")),
+    "PG1": ("..xxxx", ("LCD_G1", "SPI5_MISO")),
+    "PG2": ("xxxxxx", ("LCD_R0", "SPI5_MOSI")),
     "PG3": ("...xxx", ("ETH1_RGMII_TXD2",)),
-    "PG4": ("...xxx", ("ETH1_RGMII_TXD3",)),
+    "PG4": ("...xxx", ("ETH1_RGMII_TXD3", "LCD_B0")),
+    "PG5": ("...xxx", ("LCD_B1",)),
+    "PG6": ("...xxx", ("LCD_B3",)),
     "PG7": (".....x", ("SAI1_MCLK_A",)),
-    "PG8": ("..xxxx", ("SPI2_MOSI",)),
-    "PG10": ("xxxxxx", ("SPI2_SCK",)),
-    "PG11": ("...xxx", ("ETH1_MDC",)),
-    "PG12": ("..xxxx", ("SPI5_SCK",)),
-    "PG13": ("xxxxxx", ("SAI2_FS_A", "TIM4_CH1")),
-    "PG14": ("xxxxxx", ("SPI6_MOSI",)),
-    "PG15": ("..xxxx", ("ADC_IN",)),
+    "PG8": ("..xxxx", ("LCD_G7", "SPI2_MOSI")),
+    "PG9": ("...xxx", ("LCD_R7",)),
+    "PG10": ("xxxxxx", ("LCD_G4", "SPI2_SCK")),
+    "PG11": ("...xxx", ("ETH1_MDC", "LCD_R6")),
+    "PG12": ("..xxxx", ("LCD_G0", "SPI5_SCK")),
+    "PG13": ("xxxxxx", ("LCD_DE", "SAI2_FS_A", "TIM4_CH1")),
+    "PG14": ("xxxxxx", ("LCD_B1", "SPI6_MOSI")),
+    "PG15": ("..xxxx", ("ADC_IN", "LCD_B0", "TIM1_CH4")),
+    "PH3": (".....x", ("LCD_B4",)),
+    "PH4": (".....x", ("LCD_R4",)),
     "PH5": (".....x", ("ETH1_MDC", "SPI5_SCK")),
-    "PH6": (".....x", ("SPI5_NSS",)),
+    "PH6": (".....x", ("LCD_B5", "SPI5_NSS")),
     "PH7": (".....x", ("SPI5_MOSI",)),
     "PH8": (".....x", ("SPI5_MISO",)),
     "PH9": ("..xxxx", ("I2C1_SCL", "TIM4_CH3")),
     "PP8": ("....xx", ("SPI2_MISO",)),
     "PP9": ("....xx", ("SPI2_MOSI",)),
     "PP10": ("....xx", ("ETH1_MDC",)),
+    "PP15": ("....xx", ("LCD_B5",)),
     "PQ6": (".....x", ("SAI2_SD_B",)),
     # XSPI1 -- la PSRAM del sampler (acta 2026-08-26). Senales de un solo
-    # pin cada una: el puerto es dedicado y nace en VFBGA198.
+    # pin cada una: el puerto es dedicado y nace en VFBGA198. PO2/PO3/PO4
+    # llevan ademas suplencias LCD_* segun el DS: la mesa arbitra, y la
+    # PSRAM (senales de pin unico) siempre gana la suya.
     "PO0": ("...xxx", ("XSPIM_P1_NCS1",)),
-    "PO2": ("...xxx", ("XSPIM_P1_DQS0",)),
-    "PO4": ("...xxx", ("XSPIM_P1_CLK",)),
+    "PO2": ("...xxx", ("LCD_B7", "XSPIM_P1_DQS0")),
+    "PO3": ("....xx", ("LCD_G3",)),
+    "PO4": ("...xxx", ("LCD_B4", "XSPIM_P1_CLK")),
     "PP0": ("...xxx", ("XSPIM_P1_IO0",)),
     "PP1": ("...xxx", ("XSPIM_P1_IO1",)),
     "PP2": ("...xxx", ("XSPIM_P1_IO2",)),
@@ -478,7 +535,34 @@ PSRAM = ("XSPIM_P1_NCS1", "XSPIM_P1_DQS0", "XSPIM_P1_CLK", "XSPIM_P1_IO0",
          "XSPIM_P1_IO1", "XSPIM_P1_IO2", "XSPIM_P1_IO3", "XSPIM_P1_IO4",
          "XSPIM_P1_IO5", "XSPIM_P1_IO6", "XSPIM_P1_IO7")
 
-CAPTURAS = tuple(f"TIM{t}_CH{c}" for t in (2, 3, 4, 5) for c in (1, 2, 3, 4))
+# Las 16 capturas del autoafinado. La base es TIM2..TIM5 (contadores de
+# 32 bits, DS Tabla 97) -- pero el acta de la pantalla (2026-08-26,
+# noche) muda DOS canales a TIM1, de 16 bits, porque sus pines eran los
+# unicos del verde del panel (punto 10 del encabezado). El precio, con su
+# fuente: un contador de 16 bits a 200 MHz (techo de reloj kernel, DS
+# Tabla 97) da la vuelta cada 327.68 us -- menos que la ventana MAS CORTA
+# del barrido (C8, 478 us), asi que los dos canales mudados llevan la
+# cuenta de desbordes en firmware EN LAS 84 NOTAS, no solo en las graves
+# (la junta cazo la causal subdeclarada: la larga de C1, 61.2 ms, da ~187
+# vueltas; la corta da al menos una). Ese
+# analisis NO es nuevo: es el de la seccion H750 de este mismo archivo,
+# que lo declaro "tecnica conocida, pero trabajo por canal" -- y alla
+# eran OCHO canales asi; aqui son dos. La resolucion de sello no se toca
+# (1/200 MHz = 5 ns << 131 ns de jitter presupuestado) porque el reloj no
+# se divide: se cuenta.
+CAPTURAS = (
+    "TIM2_CH1", "TIM2_CH2", "TIM2_CH3", "TIM1_CH4",   # TIM2_CH4 -> TIM1_CH4
+    "TIM3_CH1", "TIM3_CH2", "TIM3_CH3", "TIM3_CH4",
+    "TIM4_CH1", "TIM4_CH2", "TIM4_CH3", "TIM4_CH4",
+    "TIM5_CH1", "TIM1_CH2", "TIM5_CH3", "TIM5_CH4",   # TIM5_CH2 -> TIM1_CH2
+)
+
+# La pantalla del motor (acta 2026-08-26, camino A): el bus RGB paralelo
+# del LTDC a 24 bits mas sus cuatro senales de sincronia. El repliegue a
+# 16 bits (RGB565: R3..R7 + G2..G7 + B3..B7, 20 pines) queda documentado
+# como salida de apuro, no como plan.
+PANTALLA = tuple(f"LCD_{c}{i}" for c in "RGB" for i in range(8)) + (
+    "LCD_HSYNC", "LCD_VSYNC", "LCD_DE", "LCD_CLK")
 RGMII = ("ETH1_RGMII_GTX_CLK", "ETH1_RGMII_CLK125", "ETH1_RGMII_TX_CTL",
          "ETH1_RGMII_TXD0", "ETH1_RGMII_TXD1", "ETH1_RGMII_TXD2",
          "ETH1_RGMII_TXD3", "ETH1_RGMII_RX_CLK", "ETH1_RGMII_RX_CTL",
@@ -514,6 +598,9 @@ def _demandas(ipaq: int, sai: str, cvs: tuple, j2: str, i2c: str,
             mesa.append((f"TDM:{s}", _candidatos(s, ipaq)))
     for s in PSRAM:
         mesa.append((f"PSRAM:{s}", _candidatos(s, ipaq)))
+    for s in PANTALLA:
+        # sin prefijo: el nombre LCD_* ya agrupa solo (acta camino A)
+        mesa.append((s, _candidatos(s, ipaq)))
     for n, spi in enumerate(cvs, 1):
         for rol in ("SCK", "MOSI", "NSS"):
             s = f"{spi}_{rol}"
@@ -642,7 +729,7 @@ def censo_paquete(ipaq: int, spis_cv: tuple, con_rgmii: bool = True):
     # invitaba a creer que con un pin se salvaba el 142, y le faltaban 8),
     # o el estrangulamiento del primer escenario
     rgmii_demanda = RGMII if con_rgmii else ()
-    huerfanas = [s for s in CAPTURAS + rgmii_demanda + PSRAM
+    huerfanas = [s for s in CAPTURAS + rgmii_demanda + PSRAM + PANTALLA
                  if not _candidatos(s, ipaq)]
     if huerfanas:
         resto = f" (+{len(huerfanas) - 1} senales mas sin pin)" \
@@ -669,21 +756,46 @@ def _autocomprobacion_censo() -> None:
     assert _candidatos("ETH1_RGMII_GTX_CLK", 2) == frozenset()
     assert _candidatos("SAI2_FS_A", 5) == {"PG13"}
     # A mano, pin por pin -- y se compara la LISTA, no solo el numero (la
-    # junta cazo que contar 28 deja pasar un pin cambiado por otro):
+    # junta cazo que contar 28 deja pasar un pin cambiado por otro). Tras
+    # la mudanza de la pantalla: sale PB11 (solo llevaba TIM2_CH4, que ya
+    # no se demanda) y entran los pines de TIM1_CH2/TIM1_CH4.
     con_captura = {p for p, (_, ss) in N6_PINES.items()
                    if any(s in ss for s in CAPTURAS)}
     assert con_captura == {
-        "PA0", "PA1", "PA2", "PA5", "PA6", "PA7", "PA15",
-        "PB1", "PB4", "PB5", "PB10", "PB11",
-        "PC0", "PC1", "PC6", "PC7", "PC8", "PC9",
-        "PD13", "PE5", "PE6",
+        "PA0", "PA1", "PA2", "PA5", "PA6", "PA7", "PA9", "PA11", "PA15",
+        "PB0", "PB1", "PB4", "PB5", "PB10",
+        "PC0", "PC1", "PC6", "PC7", "PC8", "PC9", "PC12",
+        "PD7", "PD13", "PE5", "PE6", "PE11", "PE14",
         "PF0", "PF1", "PF6", "PF7", "PF14",
-        "PG13", "PH9"}, sorted(con_captura)
+        "PG13", "PG15", "PH9"}, sorted(con_captura)
+    # A mano contra el DS, para la pantalla (acta camino A): el verde del
+    # panel es el color apretado -- G2/G5/G6 y el R5 son de pin unico, y
+    # de ahi salio la mudanza de capturas.
+    assert _candidatos("LCD_G2", 5) == {"PA1"}
+    assert _candidatos("LCD_G5", 5) == {"PB12"}
+    assert _candidatos("LCD_G6", 5) == {"PB11"}
+    assert _candidatos("LCD_R5", 5) == {"PA15"}
+    # El piso sin RGMII lo pone ahora la pantalla: LCD_G3 solo sale por
+    # PA0 (que es el unico pin de TIM5_CH1) o por PO3, y PO3 nace en el
+    # VFBGA223.
+    assert _candidatos("TIM5_CH1", 5) == {"PA0"}
+    assert _candidatos("LCD_G3", 3) == {"PA0"}
+    assert _candidatos("LCD_G3", 4) == {"PA0", "PO3"}
+    # Las dos capturas mudadas, contra la Tabla 16. OJO heredado de la
+    # primera pasada: PB14 y PF1 llevan LPTIM1_CH2, no TIM1_CH2 -- la
+    # puerta de reproducibilidad cazo la extraccion sin frontera
+    # izquierda que los colaba.
+    assert _candidatos("TIM1_CH2", 5) == {"PA9", "PD7", "PE11"}
+    assert _candidatos("TIM1_CH4", 5) == {"PA11", "PB0", "PC12", "PE14",
+                                          "PG15"}
+    assert "TIM5_CH2" not in CAPTURAS and "TIM2_CH4" not in CAPTURAS
+    assert len(CAPTURAS) == 16 and len(set(CAPTURAS)) == 16
+    assert len(PANTALLA) == 28 and len(set(PANTALLA)) == 28
     # La escalera de GPIO del DS crece monotona con el encapsulado.
     escalera = [N6_GPIO_TOTAL[p] for p in N6_PAQUETES]
     assert escalera == sorted(escalera) and escalera[0] == 75 and escalera[-1] == 165
     # En el encapsulado grande ninguna senal demandada queda sin candidato.
-    todas = set(CAPTURAS) | set(RGMII) | set(PSRAM) | {"ADC_IN"}
+    todas = set(CAPTURAS) | set(RGMII) | set(PSRAM) | set(PANTALLA) | {"ADC_IN"}
     todas |= {f"SAI{i}_{s}" for i in (1, 2)
               for s in ("MCLK_A", "SCK_A", "FS_A", "SD_A", "SD_B")}
     todas |= {f"SPI{i}_{s}" for i in (1, 2, 3, 4, 5, 6)
@@ -698,7 +810,9 @@ def demo_censo() -> tuple[str, dict, dict, str | None]:
     Devuelve (paquete elegido, reparto, escenario, minimo sin RGMII)."""
     print("\n\nEL CENSO DE PINES DEL N657 (puerta 2 -- issue #213)\n")
     print("  escenario impreso: CV en SPI1-3; RGMII reservado aunque D9 siga")
-    print("  en cuarentena; PSRAM del sampler sentada (acta 2026-08-26).\n")
+    print("  en cuarentena; PSRAM del sampler sentada (acta 2026-08-26);")
+    print("  pantalla de 7\" al LTDC en 24 bits (acta camino A, misma fecha,")
+    print("  noche) con dos capturas mudadas a TIM1.\n")
 
     elegido = None
     for ipaq, paq in enumerate(N6_PAQUETES):
@@ -744,7 +858,8 @@ def demo_censo() -> tuple[str, dict, dict, str | None]:
               ("codec", lambda e: e.startswith("CODEC")),
               ("RGMII", lambda e: e.startswith("ETH")),
               ("ADC", lambda e: e.startswith("ADC")),
-              ("PSRAM (XSPI1)", lambda e: e.startswith("PSRAM")))
+              ("PSRAM (XSPI1)", lambda e: e.startswith("PSRAM")),
+              ("pantalla (LTDC)", lambda e: e.startswith("LCD")))
     for titulo, filtro in grupos:
         pares = [f"{e}={p}" for e, p in sorted(reparto.items()) if filtro(e)]
         print(f"    {titulo:18s}: " + ", ".join(pares))
@@ -772,44 +887,81 @@ def demo_censo() -> tuple[str, dict, dict, str | None]:
             break
 
     # Crecimiento: los 4 subbloques de SAI a la mesa a la vez (la boca
-    # multicanal TDM que el spec S10 difiere). Informativo, no bloquea.
-    crece, combo_c = None, None
-    for j2c in ("SPI4", "SPI5", "SPI6"):
-        for i2cc in ("I2C1", "I2C2", "I2C3", "I2C4"):
-            mesa_c = _demandas(len(N6_PAQUETES) - 1, "SAI1",
-                               ("SPI1", "SPI2", "SPI3"), j2c, i2cc, True,
-                               sai2_extra=True)
-            if mesa_c is not None:
-                crece = _asignar(mesa_c)
-                if crece:
-                    _verificar_reparto(mesa_c, crece, len(N6_PAQUETES) - 1)
-                    combo_c = (j2c, i2cc)
-            if crece:
+    # multicanal TDM que el spec S10 difiere). Informativo, no bloquea --
+    # pero el barrido es COMPLETO (junta de la pantalla): se prueban las
+    # CUATRO instancias I2C del codec y se publica el conjunto que
+    # cierra, porque "fuera de I2C1" era caracterizacion incompleta (I2C3
+    # tambien mata el crecimiento) y el tactil de la pantalla comparte
+    # ese mismo bus: la instancia equivocada rompe dos cosas.
+    ult = len(N6_PAQUETES) - 1
+    i2c_que_cierran = []
+    for i2cc in ("I2C1", "I2C2", "I2C3", "I2C4"):
+        for j2c in ("SPI4", "SPI5", "SPI6"):
+            mesa_c = _demandas(ult, "SAI1", ("SPI1", "SPI2", "SPI3"),
+                               j2c, i2cc, True, sai2_extra=True)
+            if mesa_c is None:
+                continue
+            r_c = _asignar(mesa_c)
+            if r_c:
+                _verificar_reparto(mesa_c, r_c, ult)
+                i2c_que_cierran.append(i2cc)
                 break
-        if crece:
-            break
-    if crece:
+    if i2c_que_cierran:
         print(f"\n  crecimiento (v1 + SAI2 entero A+B, boca multicanal TDM) "
-              f"en {N6_PAQUETES[-1]}: VERDE con J2={combo_c[0]}, "
-              f"codec={combo_c[1]}")
-        if combo_c[1] != escenario["i2c"]:
-            print(f"    OJO (hallazgo de la junta): el crecimiento NO cierra "
-                  f"con codec={escenario['i2c']} -- el esquematico elige la "
-                  f"instancia I2C del codec con el crecimiento en mente")
+              f"en {N6_PAQUETES[-1]}: VERDE")
+        muertas = [i for i in ("I2C1", "I2C2", "I2C3", "I2C4")
+                   if i not in i2c_que_cierran]
+        print(f"    el codec (y el tactil, que comparte su bus) solo puede "
+              f"vivir en {{{', '.join(i2c_que_cierran)}}}: las otras "
+              f"({', '.join(muertas)}) entierran la boca TDM sin que "
+              f"ninguna puerta grite. El esquematico elige DE ESTA LISTA.")
+        if escenario["i2c"] not in i2c_que_cierran:
+            print(f"    OJO: el reparto de muestra de arriba usa "
+                  f"codec={escenario['i2c']}, que NO esta en la lista -- es "
+                  f"reparto de v1, no eleccion de esquematico")
+        # Robustez del crecimiento a instancias (junta de la pantalla: el
+        # 20/20 de v1 no vigilaba al crecimiento). Un bucle sobre codigo
+        # que ya existe.
+        crecen = 0
+        for t in tercetos:
+            libres_c = [s for s in ("SPI1", "SPI2", "SPI3", "SPI4",
+                                    "SPI5", "SPI6") if s not in t]
+            ok = False
+            for j2c in libres_c:
+                for i2cc in ("I2C1", "I2C2", "I2C3", "I2C4"):
+                    mesa_c = _demandas(ult, "SAI1", t, j2c, i2cc, True,
+                                       sai2_extra=True)
+                    if mesa_c is not None and _asignar(mesa_c):
+                        ok = True
+                        break
+                if ok:
+                    break
+            crecen += ok
+        print(f"    robustez del crecimiento: {crecen}/{len(tercetos)} "
+              f"tercetos de CV cierran con la boca TDM y la pantalla")
     else:
         print(f"\n  crecimiento (v1 + SAI2 entero A+B) en "
               f"{N6_PAQUETES[-1]}: ROJO")
 
-    print("\n  la cuenta que ata el encapsulado a D9: PF14 es el UNICO pin")
-    print("  del RXD0 del RGMII (y del RMII) y a la vez el suplente de")
-    print("  TIM2_CH2 -- PA1 se lo lleva TIM5_CH2, y el tercer candidato")
-    print("  (PC0) solo existe en VFBGA264. Ethernet por el GMAC interno =")
+    print("\n  la cuenta que ata el encapsulado a D9: PF14 sigue siendo el")
+    print("  UNICO pin del RXD0 del RGMII (y del RMII). Con la pantalla")
+    print("  sentada, PA1 se lo lleva LCD_G2 (su unico pin en todo el DS),")
+    print("  asi que TIM2_CH2 queda entre PC0 -- que solo existe en el")
+    print("  VFBGA264 -- y PF14. Ethernet por el GMAC interno + pantalla =")
     print("  VFBGA264 (un MAC externo por SPI no toca PF14, pero esa clase")
     print("  no da el ancho que D9 discute -- decision de D9, no de aqui).")
-    print("  D9 = LVDS baja el minimo al de arriba, con su ESTIMADO: la")
-    print("  huella del transceptor LVDS no esta elegida (#210 D9). Y la")
-    print("  PSRAM del sampler (acta 2026-08-26) pone su propio piso: el")
-    print("  puerto XSPI1 nace en VFBGA198.")
+    print("  PREMISA DECLARADA de esta cuenta (junta de la pantalla): no se")
+    print("  muda una TERCERA captura. Con TIM2_CH2->TIM1_CH3 el VFBGA223")
+    print("  cerraria hasta con RGMII completo -- al precio de un tercer")
+    print("  canal de 16 bits con cuenta de desbordes. La cuenta INFORMA la")
+    print("  economia de D9; no la decide, y la compra del 264 ya esta")
+    print("  sellada por la asercion inversa de abajo. D9 = LVDS baja el")
+    print("  minimo al de arriba, con su ESTIMADO de siempre (la huella del")
+    print("  transceptor no esta elegida, #210 D9) -- y ese piso ya no lo")
+    print("  pone la PSRAM en el 198: lo sube la pantalla al VFBGA223, por")
+    print("  dos cadenas independientes: LCD_G3 solo sale por PA0 (unico")
+    print("  pin de TIM5_CH1) o por PO3, y LCD_CLK solo por PA5 o PB13 --")
+    print("  y PO3 y PB13 nacen los dos en el 223.")
 
     return paq, reparto, escenario, minimo_sin_rgmii
 
@@ -861,7 +1013,7 @@ def main() -> int:
     #    encogio la pantalla del instrumento.
     assert fb > RP_SRAM_B, (
         "el framebuffer de 800x480 ya cabe en la SRAM del RP2350: releer el "
-        "rechazo de la pantalla grande en cerebro S9.1")
+        "rechazo de la pantalla grande en cerebro S7")
     assert fb < H7_SRAM_B, "el framebuffer no cabe ni en el H750"
 
     # 6. El USB del cerebro: hoy es un controlador y un truco.
@@ -869,7 +1021,8 @@ def main() -> int:
         "el reparto de controladores USB cambio: releer por que el host va "
         "por PIO en el cerebro")
 
-    # 7. EL CENSO DE PINES DEL N657 (puerta 2 del sello, issue #213).
+    # 7. EL CENSO DE PINES DEL N657 (puerta 2 del sello, issue #213 --
+    #    con la pantalla del acta camino A sentada al LTDC).
     _autocomprobacion_censo()
     paq, reparto, _escenario, minimo_sin_rgmii = demo_censo()
 
@@ -880,7 +1033,8 @@ def main() -> int:
     # Principio VIII de este mismo archivo.
 
     # Tras el reparto y las reservas fijas quedan GPIO para lo vario
-    # (R-M5 + crosspoint) -- y se exige holgura, no empate.
+    # (R-M5 + crosspoint + INT/RST del tactil y PWM del backlight de la
+    # pantalla) -- y se exige holgura, no empate.
     libres = N6_GPIO_TOTAL[paq] - N6_RESERVA_GPIO - len(reparto)
     assert libres >= N6_GPIO_VARIOS + 4, (
         f"la variante {paq} deja {libres} GPIO libres; lo vario pide "
@@ -894,10 +1048,11 @@ def main() -> int:
     assert paq == "VFBGA264", (
         f"el censo con RGMII ya no elige VFBGA264 (elige {paq}): releer la "
         "cuenta de PF14/TIM2_CH2 y el acoplamiento con D9")
-    assert minimo_sin_rgmii == "VFBGA198", (
+    assert minimo_sin_rgmii == "VFBGA223", (
         f"el minimo sin RGMII cambio a {minimo_sin_rgmii}: releer la "
-        "clausula de D9 del issue #213 y el piso de la PSRAM (acta "
-        "2026-08-26)")
+        "clausula de D9 del issue #213 y el piso de la pantalla (acta "
+        "camino A: LCD_G3 vive en PO3, que nace en el 223 -- antes el "
+        "piso era la PSRAM en el 198)")
 
     print("\n  VERDE: el censo cierra. Se levanta el bloqueo de compra "
           f"del issue #213 con la variante {paq}.")
