@@ -385,7 +385,7 @@ libro bilateral y el bring-up lo mide bajo carga plena.
 | voz-total §9.2 | el camino de silencio → sucedido por R-M5 (watchdog + estado seguro hardware) |
 | voz-total E-5 | el códec gana boca además de oídos |
 | núcleo §7.1 | los tres lazos ganan un cuarto: **el lazo de muestra** (CV rápido, 20,8 µs) |
-| #210 §0.1 / §4 | «clase H750» → clase N657; D8 34,5 MHz; peldaño 1 ~23-26 MHz |
+| ~~#210 §0.1 / §4~~ | ✅ **APLICADA el 2026-08-26.** «clase H750» → clase N657; D8 **34,5 MHz** (verificado contra DS14791 Rev 2 Tabla 99 + su nota 2, no transcrito); peldaño 1 **22,9 MHz** al peor mazo — **no ~23-26**: recalculado con la disciplina de máx-gobierna que el propio #210 §4.1 declara, el rango de esta fila resultó optimista por arriba y queda señalado allá. Se enmendaron además cinco sitios que este mandato no nombraba pero que la enmienda arrastra: D8, la tabla de peldaños de §3, las tres lecturas de §4.2, la tabla de tráfico y el riesgo 2 de §8 |
 | #209 | eco histórico + corrección del framebuffer contiguo |
 | architecture-poly §5 | el barrido adopta la salida del guion recorrido (no un número a mano) |
 | architecture-compute §5 | el VST compañero gana el rol de **motor invitado** (audio bidireccional); la doctrina «la computadora queda fuera» intacta — refrendada por D-P6 |

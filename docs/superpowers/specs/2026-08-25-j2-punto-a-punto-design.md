@@ -44,13 +44,36 @@ sellar, y lo dice en voz alta para que nadie las herede como hechos:
 | Premisa | Estado | Dónde se decide |
 |---|---|---|
 | El cerebro lleva un micro con maestros serie independientes de sobra (candidato STM32H750) | **dirigida, no sellada** | `micro_budget.py` (PR #209) + el guion de pines del cerebro (§7) |
-| El módulo de Voz pasa a UN micro clase H750 (decisión de Samuel: los 16 cronómetros a la vez, y «nada de chips baratos») | **dirigida, no sellada** | PR #209 y la spec que reemplace al #201 |
+| ~~El módulo de Voz pasa a UN micro clase H750~~ → **el N657** (decisión de Samuel: los 16 cronómetros a la vez, y «nada de chips baratos») | **CAÍDA Y REEMPLAZADA** — ver la enmienda de abajo | benchmark del motor digital (2026-08-26) + `micro_budget.py` |
 
 Las dos premisas son **anclas de los números**: todo el techo de la clase
 rápida (§4) — el esclavo a 31 MHz, el `tv(SO)`, la cadena del viaje — está
 leído de la hoja del H750. Si el chip de la Voz cambiara, §4 se recalcula
 contra las filas del chip que sea, y este papel lo dice aquí y no en letra
 chica.
+
+> ### Enmienda del 2026-08-26: **el chip de la Voz cambió, y esta sección lo dijo antes que nadie**
+>
+> La segunda premisa **cayó**. El benchmark del motor digital
+> (`2026-08-26-motor-digital-benchmark.md`, v2 post-junta de cinco lentes)
+> selló el **STM32N657** para el módulo de Voz y **retiró al H750 como clase**
+> (motor-digital §1). Sus palabras: *«el veredicto del #209 sobrevive como
+> historia — H750 > RP2350B con la vara vieja — pero la premisa "un micro
+> clase H750" de #210 §0.1 queda»* enmendada. Esta es esa enmienda, aplicada
+> el 2026-08-26 durante la sesión de merges; venía **mandada con cifras** en
+> el mapa de motor-digital §9 (fila `#210 §0.1 / §4`) y llevaba un día sin
+> aplicarse.
+>
+> El párrafo de arriba **acertó su propia invalidación**: dijo *«si el chip de
+> la Voz cambiara, §4 se recalcula contra las filas del chip que sea»*. Cambió.
+> §4.1 y §4.2 quedan recalculadas abajo contra la Tabla 99 del N657, y las
+> filas del H750 se conservan **como historia rotulada**, no como contrato.
+>
+> **Lo que NO cambia con esta enmienda:** la primera premisa (el micro del
+> cerebro) sigue dirigida y sin sellar, y con ella el aviso de que si cae, este
+> papel cae entero. Las decisiones D1-D7 y D9 no dependen de qué chip esté en
+> la Voz: dependen de la topología, y la topología no se tocó. **La única
+> decisión con número movido es D8** (§4.1).
 
 Si la primera premisa cae, este papel cae entero: el RP2350 del cerebro
 tiene 2 SPI y **2 GPIO libres de 48** (PR #208). No hay versión de este
@@ -292,13 +315,15 @@ Y la cumple mejor de lo que el bus podía, con dos verdades:
 El techo del enlace rápido de hoy lo fija el **viaje de ida y vuelta dentro
 del mismo medio ciclo** (§4.2): el flanco baja al módulo, el esclavo tarda
 `tv(SO)` en soltar su bit, y el bit tiene que volver antes del flanco de
-muestreo. Con los máximos de la hoja, eso topa en **≈19,7 MHz** al peor mazo.
+muestreo. Con los máximos de la hoja, eso topa en **≈22,9 MHz** al peor mazo
+(≈19,7 MHz cuando esta sección se escribió, con el H750; §4.2).
 
 La decisión: **el dato de vuelta se registra en el esclavo y sale al ciclo
 siguiente; el maestro lee la subida corrida un ciclo.** El viaje deja de
 competir con el medio ciclo — solo la ida (reloj→dato del maestro) gobierna
 el flanco, y el techo del enlace sube al **límite eléctrico del esclavo:
-31 MHz** (fila «slave full-duplex», Tabla 193).
+34,5 MHz** (fila «target mode transmitter/full duplex» leída **con su nota
+(2)**, Tabla 99 del N657 — enmienda del 2026-08-26; eran 31 MHz con el H750).
 
 Precio, dicho entero: un ciclo muerto por trama (despreciable — 1 bit sobre
 cientos), firmware en los dos extremos, y **el dialecto legado no lo habla**
@@ -384,9 +409,12 @@ Los tres peldaños, juntos:
 
 | Peldaño | Techo del enlace de la Voz | Qué lo fija |
 |---|---|---|
-| 1 — punto a punto | ≈19,7 MHz (peor mazo, máximos de hoja) | el viaje de ida y vuelta (§4.2) |
-| 2 — respuesta al ciclo siguiente | **31 MHz** | la fila eléctrica del esclavo |
+| 1 — punto a punto | ≈**22,9 MHz** (peor mazo, máximos de hoja) | el viaje de ida y vuelta (§4.2) |
+| 2 — respuesta al ciclo siguiente | **34,5 MHz** | la fila eléctrica del esclavo, **con su nota (2)** |
 | 3 — autopista diferencial | **clase 100 Mb/s** → control a velocidad de audio | el transceptor y su medida |
+
+*(Peldaños 1 y 2 recalculados contra el N657 el 2026-08-26 — §0.1. Eran 19,7
+y 31 MHz con el H750. El peldaño 3 no depende del chip y no se movió.)*
 
 ---
 
@@ -431,27 +459,114 @@ Los tres peldaños, juntos:
 
 ### 4.1 Los extremos
 
+**Las filas que gobiernan hoy — el N657 de la Voz** (enmienda del 2026-08-26;
+todas de **DS14791 Rev 2, Tabla 99 «SPI characteristics», p. 205**, leídas en
+la hoja que está en el árbol):
+
+| Número | Valor | Fuente |
+|---|---|---|
+| N657 maestro (3,00-3,6 V) | 105 MHz | Tabla 99, fila `fSCK` |
+| N657 maestro (1,65-1,98 V) | 115 MHz | ídem |
+| N657 esclavo solo-receptor | 100 MHz | ídem, `Target receiver mode` |
+| N657 **esclavo full-duplex, nominal** | 50 MHz **con nota (2)** | ídem, `Target mode transmitter/full duplex` |
+| N657 **esclavo full-duplex, real** | **34,5 MHz** | derivado de la nota (2) — ver abajo. **La fila que manda en la Voz con D8** |
+| N657 esclavo, `tv(SO)` | **típ 8,5 / máx 10 ns** | Tabla 99 — **gobierna el máx**, no el típico |
+| N657, `tsu(MI)` maestro / `tsu(SI)` esclavo | **4,5 ns** los dos | ídem |
+| N657 esclavo, `th(SO)` | mín 7,5 ns | ídem |
+
+**Por qué el 50 nominal no es el 50 real, dicho con la nota en la mano.** La
+nota (2) de la Tabla 99 dice, literal: *«Maximum frequency in target
+transmitter mode is determined by the sum of tv(SO) and tsu(MI) which has to
+fit into SCK low or high phase preceding the SCK sampling edge. This value can
+be achieved when the SPI communicates with a controller having tsu(MI) = 0
+while Duty(SCK) = 50%»*. Un maestro con `tsu(MI) = 0` no existe: el propio
+N657 como maestro pide 4,5 ns. Con un maestro real de clase STM32:
+
+```
+medio periodo ≥ tv(SO)máx + tsu(MI) = 10 + 4,5 = 14,5 ns
+f_max = 1/(2 × 14,5 ns) = 34,5 MHz
+```
+
+Es el mismo patrón #206 que este repo lleva cazando: **la cifra de portada
+condicionada por una nota que nadie lee**. El D8 pasa de los **31 MHz** del
+H750 a **34,5 MHz** — sube, pero no a 50.
+
+<details>
+<summary><b>Historia: las filas del H750, el titular saliente</b> (ya no son contrato)</summary>
+
 | Número | Valor | Fuente |
 |---|---|---|
 | H750 maestro SPI1/2/3 (2,7-3,6 V, **rev V**) | 100 MHz | DS12556 Rev 8, Tabla 193 (p. 291) |
 | H750 maestro SPI4/5/6 (rev V) | 50 MHz | ídem |
-| H750 **esclavo full-duplex** (2,7-3,6 V, rev V) | **31 MHz** | ídem — la fila que manda en la Voz con D8 |
+| H750 **esclavo full-duplex** (2,7-3,6 V, rev V) | **31 MHz** | ídem — era la fila que mandaba en la Voz con D8 |
 | H750 esclavo solo-receptor (rev V) | 100 MHz | ídem |
 | H750 esclavo, `tv(SO)` | **típ 12,5 / máx 16 ns** | ídem — **gobierna el máx**, no el típico |
 | H750 maestro, `tsu(MI)` | mín 2 ns | ídem, misma tabla |
 | H750 USART síncrono maestro | 12,5 MHz de CK | DS12556 Tabla 192 (p. 289) |
+
+El aviso de la revisión de silicio (rev V contra rev Y) muere con estas filas:
+era una propiedad del H750. El N657 no lo hereda.
+
+</details>
+
+| Número | Valor | Fuente |
+|---|---|---|
+| N657 USART/UART, caudal | «up to 12.5 Mbit/s» | DS14791 Rev 2, **p. 2** (lista de características) |
+
+**Cuidado con esa última fila, y se dice aquí para que nadie la cruce mal.** La
+fila del H750 que ocupaba este sitio era **12,5 MHz de CK en modo síncrono**,
+leída de una tabla de tiempos (DS12556 Tabla 192). La del N657 es un caudal
+**de la lista de características de portada**, no de una tabla eléctrica: no
+son la misma magnitud aunque coincida el número. Si algún día el USART
+síncrono vuelve a ser candidato a transporte, **su fila de tiempos hay que
+buscarla** — este papel no la trae, y ese es un hueco declarado, no un
+descuido. Hoy no molesta: D3 mandó todas las ranuras activas a SPI de
+hardware, y el USART no es candidato de nada.
 | RP2350 esclavo por periférico PL022 | 12,5 Mb/s (= clk_peri/12) | hoja RP2350 §12.3.4.4 — **referencia de chip barato, no clase del diseño (D3)** |
 | RP2350 esclavo por PIO | sin cifra en la hoja | derivación propia ~37-50 MHz; NO sella nada |
 
-Aviso que va aquí y no en letra chica: los números eléctricos del H750
-**dependen de la revisión del silicio** — la rev V (la de 480 MHz) es más
-lenta que la rev Y en varias filas. La revisión comprada se confirma contra
-su tabla antes de sellar (§8, riesgo 2).
+Aviso que va aquí y no en letra chica, **reescrito por la enmienda del
+2026-08-26**: el viejo decía que los números eléctricos dependían de la
+revisión del silicio del H750 (rev V contra rev Y). Eso murió con el H750. Lo
+que ocupa su sitio es de la misma familia y **sigue vivo**: la Tabla 99 del
+N657 lleva la marca *«Evaluated by characterization. Not tested in
+production»* (nota 1). Son cifras caracterizadas, no garantizadas lote a lote
+— el riesgo 2 de §8 sobrevive con dueño nuevo, y el criterio de cierre no
+cambia: se mide en la placa antes de sellar el reloj.
 
 ### 4.2 La cadena que fija el techo del peldaño 1
 
 Full duplex en modo 1, respuesta en el mismo ciclo: medio periodo ≥
 `tv(SO)máx` + vuelo de SCLK (ida) + vuelo de MISO (vuelta) + `tsu(MI)`:
+
+**Recalculado el 2026-08-26 contra el N657** (`tv(SO)` = **10 ns máx** y
+`tsu(MI)` = **4,5 ns**, los dos de la Tabla 99; base = 14,5 ns):
+
+```
+rama (mm)   vuelo i/v      medio periodo    f_max mismo-ciclo
+  738        7,38 ns         21,88 ns          22,9 MHz
+  400        4,00 ns         18,50 ns          27,0 MHz
+  200        2,00 ns         16,50 ns          30,3 MHz
+```
+
+Propagación 5 ns/m **POR CONFIRMAR** contra la cinta real — esa deuda no la
+salda el cambio de chip. Con el `tv(SO)` **típico** de 8,5 ns saldrían
+24,5/29,4/33,3; se anota, como antes, para que nadie «recupere» ese margen sin
+saber qué está comprando. **Manda el máx**, que es la doctrina que este papel
+ya declaraba en §4.1 y que el cambio de chip no toca.
+
+> **Una discrepancia que se declara en vez de taparse.** El benchmark del
+> motor digital escribió *«el peldaño 1 (~23-26 MHz a 738 mm)»* al dar por
+> consistente esta cadena. Recalculada aquí con la misma disciplina de
+> máx-gobierna, a 738 mm sale **22,9 MHz** — el borde inferior de ese rango, y
+> el `26` no se reproduce ni usando el típico (que da 24,5). La diferencia es
+> chica y no mueve ninguna decisión: el peldaño 1 sigue por encima del tráfico
+> declarado y D8 lo jubila igual. Pero **la cifra que gobierna es la de aquí**,
+> que trae su aritmética a la vista, y el `~23-26` del benchmark queda
+> señalado para que no se herede como si fuera medido.
+
+<details>
+<summary><b>Historia: la misma cadena sobre el H750</b></summary>
 
 ```
 rama (mm)   vuelo i/v      medio periodo    f_max mismo-ciclo
@@ -460,20 +575,24 @@ rama (mm)   vuelo i/v      medio periodo    f_max mismo-ciclo
   200        2,00 ns         20,00 ns          25,0 MHz
 ```
 
-(con `tv(SO)` = **16 ns máx** y `tsu(MI)` = 2 ns, los dos de la Tabla 193;
-propagación 5 ns/m **POR CONFIRMAR** contra la cinta real. Con el típico de
-12,5 ns saldrían 22,9/27,0/30,3 — se anota para que nadie «recupere» ese
-margen sin saber qué está comprando.)
+(con `tv(SO)` = 16 ns máx y `tsu(MI)` = 2 ns, los dos de la Tabla 193.)
+
+El N657 es **más rápido en el peldaño 1** por una sola razón: su `tv(SO)` máx
+es de 10 ns contra los 16 del H750. Gana 6 ns de los 25,38, y los pierde a
+medias contra un `tsu(MI)` que sube de 2 a 4,5.
+
+</details>
 
 Tres lecturas obligatorias:
 
-1. **El techo del peldaño 1 no lo pone ni el maestro (100) ni el esclavo
-   (31): lo pone el viaje del dato por el mazo.**
+1. **El techo del peldaño 1 no lo pone ni el maestro (105) ni el esclavo
+   (34,5): lo pone el viaje del dato por el mazo.** La lección sobrevive
+   entera al cambio de chip — solo cambian los dos números entre paréntesis.
 2. **El largo de la rama es una palanca por enlace.** El heredero del #199:
    la ranura de la Voz se elige por longitud de mazo. Acortarla compra
    megahercios con una decisión de layout.
 3. **D8 jubila esta cadena entera**: con la respuesta al ciclo siguiente, el
-   techo pasa a la fila eléctrica del esclavo (31 MHz) y el largo deja de
+   techo pasa a la fila eléctrica del esclavo (34,5 MHz) y el largo deja de
    fijar el reloj.
 
 El tráfico declarado de hoy del instrumento entero son **4,35 Mb/s** (544
@@ -482,9 +601,13 @@ del 50 % que usa la cuenta de §0 — y en crudo entre paréntesis:
 
 | Enlace de la Voz a | lleva | (crudo) |
 |---|---|---|
-| 19,7 MHz (peldaño 1) | **2,3×** el instrumento de hoy, por dirección | (4,5×) |
-| 31 MHz (peldaño 2) | **3,6×** | (7,1×) |
+| 22,9 MHz (peldaño 1) | **2,6×** el instrumento de hoy, por dirección | (5,3×) |
+| 34,5 MHz (peldaño 2) | **4,0×** | (7,9×) |
 | clase 100 Mb/s (peldaño 3) | **11,5×** — control a velocidad de audio (49 Mb/s) incluido | (23×) |
+
+*(Recalculado el 2026-08-26 contra el N657: eran 2,3×/4,5× y 3,6×/7,1×. El
+cambio de chip **ensancha** el margen; ninguna conclusión de este papel
+dependía de que fuera estrecho.)*
 
 …y los demás módulos ni se enteran.
 
@@ -592,8 +715,16 @@ guion la lee, no la duplica.
    terminación elegida, al reloj propuesto, por cada ranura activa — en el
    bring-up del cerebro nuevo. El resultado puebla la tabla de sanción (D2).
    Hasta entonces, piso legado (R-P4).
-2. **Los números eléctricos del H750 son de la rev V.** *Cierre:* releer
-   Tabla 193/94 contra el marcado del chip comprado.
+2. **Los números eléctricos del esclavo son caracterizados, no garantizados.**
+   *(Riesgo reescrito el 2026-08-26 por el cambio de chip — §0.1. El viejo
+   decía «son de la rev V del H750» y se cerraba releyendo la Tabla 193
+   contra el marcado; con el N657 la revisión de silicio deja de ser la
+   pregunta.)* La Tabla 99 del N657 lleva la nota 1: *«Evaluated by
+   characterization. Not tested in production»*, y el 34,5 MHz de D8 sale de
+   una **nota**, no de una fila de portada. *Cierre:* ojo de datos al reloj
+   propuesto en el bring-up, con el maestro real y su `tsu(MI)` medido — no
+   el de la hoja. Si el maestro elegido pide más de 4,5 ns, **D8 baja**, y la
+   aritmética de §4.1 es la que dice cuánto.
 3. **La hoja no garantiza N DMAs serie sin contención** (da los 16 canales
    del MDMA y la frase del router; el desglose 8+8 de DMA1/DMA2 es del
    manual de referencia, no de la hoja). *Cierre:* medir el sesgo de fin de

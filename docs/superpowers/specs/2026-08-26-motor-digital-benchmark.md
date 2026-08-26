@@ -259,8 +259,29 @@ Elegir el N657 es una puerta con bisagra cara, y se declara:
 ## 8. Ecos a los papeles abiertos
 
 - **#210**: §0.1 «clase H750» → clase nueva (enmienda); §4 el peldaño 1 queda
-  ~23-26 MHz (consistente), el D8 pasa a **34,5 MHz** (no 50); D9 sigue en
-  cuarentena; TSN de punta a punta no existe con el maestro de hoy — anotado.
+  ~~~23-26 MHz (consistente)~~ **22,9 MHz — ver la corrección de abajo**, el
+  D8 pasa a **34,5 MHz** (no 50); D9 sigue en cuarentena; TSN de punta a punta
+  no existe con el maestro de hoy — anotado.
+
+  > **Corrección del 2026-08-26 (sesión de merges), contra mi propio número.**
+  > Al aplicar esta enmienda en el #210 hubo que correr la cadena de §4.2 en
+  > vez de darla por «consistente», y el rango de arriba **no se reproduce**.
+  > Con las filas de la Tabla 99 (`tv(SO)` máx **10 ns**, `tsu(MI)` **4,5 ns**)
+  > y la propagación de 5 ns/m que el #210 ya usaba:
+  >
+  > ```
+  > 738 mm:  10 + 7,38 + 4,5 = 21,88 ns  ->  22,9 MHz
+  > ```
+  >
+  > El borde bajo del rango se sostiene raspando; **el 26 no sale ni con el
+  > típico** de 8,5 ns, que da 24,5. Escribí «~23-26 (consistente)» sin correr
+  > la cuenta — es el mismo patrón #206 que este documento cazó dos veces en
+  > otros, cometido aquí. **La cifra que gobierna es 22,9 MHz**, y vive en el
+  > #210 §4.2 con su aritmética a la vista.
+  >
+  > No mueve ninguna conclusión de este benchmark: el peldaño 1 seguía y sigue
+  > holgado contra el tráfico declarado, y D8 lo jubila igual. Se corrige
+  > porque un número sin correr no se hereda como medido.
 - **#209**: sobrevive como historia. Corrección al sitio-cerebro: el «framebuffer
   cabe (73 %)» del H750 era contra RAM total — la región contigua mayor es la
   AXI de 512 KB; con la pantalla sellada del cerebro (2,8" SPI, framebuffer en
