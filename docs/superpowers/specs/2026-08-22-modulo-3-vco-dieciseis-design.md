@@ -200,6 +200,36 @@ razón de que el módulo se parta en columnas y no de otra forma. **Uno es el
 maestro** —el único que habla por el `MISO` del J2— y el otro cuelga de su SPI
 privado como un periférico más.
 
+> ### ⚠️ Enmienda del 2026-08-26: **esta tabla dejó de tener sujeto**
+>
+> Fila mandada del mapa de motor-digital §9 (*«las máquinas PIO libres del
+> RP2350B dejan de existir como recurso»*).
+>
+> El módulo de Voz pasa a **un solo STM32N657** (motor-digital, acta A-1). No
+> hay RP2350B en esta placa, así que **la columna «Da un RP2350B» y la columna
+> «Con dos» no describen nada** — y con ellas se cae la partición en columnas
+> que esta sección justifica.
+>
+> **Lo notable es que el argumento de arriba era correcto, y por eso resultó
+> letal.** La v2 tenía dos razones para dos micros; la decisión 18 mató una, y
+> esta sección dejó la otra al desnudo con una honestidad que se paga sola:
+> *«lo que sostiene los dos micros es solo el PIO»*. Un diseño que se apoya en
+> un solo recurso se cae entero el día que aparece un chip que da ese recurso
+> de sobra. **Apareció**: el N657 trae los dieciséis cronómetros en timers de
+> hardware, no doce máquinas de PIO. Muerta la escasez, muere la partición.
+>
+> Lo que hay que leer de esta tabla hoy es **solo su primera columna** — «16
+> osciladores piden 16 cronómetros» —, que sigue siendo verdad y sigue siendo
+> el requisito que eligió el chip nuevo.
+>
+> **Consecuencia para el #205**, que censaba las tres máquinas de PIO libres
+> de este micro: su sujeto ya no existe. La decisión de cerrarlo o reescribirlo
+> está mandada y **no la toma este papel**.
+>
+> Lo que **no** toca esta enmienda: la decisión 18 y su multiplexor, el
+> convertidor pegado a cada oscilador, la tabla del conector, y todo lo
+> analógico. Cambió quién cuenta los flancos, no cómo se generan.
+
 **Una sola referencia para los dieciséis**, en la placa maestra, distribuida y
 **bufferizada en cada placa** (§12). Es lo que hace que los errores escalen
 juntos y, sobre todo, lo que hace que **desafinar dos osciladores entre sí sea

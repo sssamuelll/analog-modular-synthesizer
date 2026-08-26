@@ -167,6 +167,29 @@ lenguaje visual).
 > puertas nuevas — `guarda_chaflan()`, `guarda_apriete()`, `guarda_paticas()`
 > y `guarda_kondor()`.
 >
+> **rev. 19** (2026-08-25): **se retira el larguero de entrepiso delantero** y
+> el case baja de 5 largueros a **4** y de 52 tornillos a **50**. Era el único
+> del case que no sostenía ninguna plancha —las seis filas de M3 van a base
+> delantera, base trasera, valle y remate trasero—, así que ninguna puerta de
+> anclaje lo miraba: se podía retirar y quedarse todo en verde. Su trabajo era
+> atar los costados a media altura, y a esa **misma altura** (y = 131.58) ya
+> está el del valle, 75.14 mm por delante y encima con su tapa. Mismo argumento
+> que la rev. 9, aplicado al que quedaba: una barra que no es alma de nada.
+> Medido sobre el contorno real de `costado_2d.dxf` como placa circular
+> empotrada: el vano libre del costado pasa de 107.9 a **118.9 mm**, la flecha
+> con 200 N de 0.31 a **0.38 mm** (techo 0.60, el mismo que la rev. 9 aceptó
+> para la trasera) y la tensión bajo la mano de 6.35 a **6.56 MPa** contra los
+> 10 de fluencia. **Se acota por flecha y no por tensión**: para agotar los
+> 10 MPa el vano tendría que valer 642 mm, más que la pieza entera, porque la
+> tensión de una placa empotrada crece con el logaritmo del vano y la flecha
+> con el cuadrado — y lo que se nota con la mano es la flecha. Entran
+> `carga_mano`, `flecha_costado_max` y la puerta **`guarda_costado()`**, que
+> vive en `check_dxf.py` y no en el budget porque mide sobre el contorno y los
+> taladros **reales del DXF**. Se corrige de paso un `echo` del BOM que seguía
+> pidiendo «patica metálica torneada» ocho meses después de que la rev. 18 las
+> pasara a goma. **Lo que NO cubre**: el racking del cajón, que sigue siendo la
+> heurística abierta de §11 — y ahora con una barra menos.
+>
 > **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
 > visual y proporciones *relativas*, pero **sus cotas están superadas**. Se
 > dibujó para paneles de 190 mm y un case de 500 × 380 × 350; el case real
@@ -461,7 +484,11 @@ con qué habría que medir para cerrarlo.
   promesa.
 - **Rigidez del vano a ~500 mm sin costado central**: heurística. Si el
   prototipo flexa, `n_bulkheads` pasa a 3 y se re-exporta; se cierra cargando
-  el prototipo real.
+  el prototipo real. **Y la rev. 19 le quitó una barra**: al retirarse el
+  larguero de entrepiso delantero el cajón pasa a 4 travesaños. Lo que sí está
+  acotado es la pieza plana —`guarda_costado()` mide el vano libre del costado
+  y su flecha bajo `carga_mano`—, pero eso es UNA placa, no el racking del
+  conjunto. Es la misma medición pendiente de antes, con menos margen.
 - **Comportamiento del acrílico bajo apriete de standoffs**: el diseño manda
   arandela y agujero con holgura, pero el par máximo antes de fisura no está
   medido; se cierra con la probeta del cupón.

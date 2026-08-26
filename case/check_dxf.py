@@ -560,6 +560,120 @@ def guarda_kondor() -> list[str]:
     return fallos
 
 
+# Paso del barrido con que se busca el punto mas desasistido del costado. 2 mm
+# sobre una pieza de 309 x 256 son ~10 mil puntos dentro del contorno: el vano
+# sale con +-1 mm, que sobra para una cota que hoy vale 119 y tiene el techo en
+# 173. Bajarlo a 1 cuadruplica el tiempo y mueve el resultado 0.3 mm.
+PASO_BARRIDO = 2.0
+# Radio de contacto de la carga. Es el canto de una mano o la base de un pulgar
+# apoyado, no una punta: con carga estrictamente puntual la teoria de placas da
+# tension infinita y no dice nada util.
+R_CONTACTO = 10.0
+NU_PMMA = 0.37      # Poisson del PMMA colado
+E_PMMA = 3000.0     # MPa. El mismo modulo con el que se acoto la trasera
+
+
+def guarda_costado() -> list[str]:
+    """El costado no se hunde con la mano entre sus anclajes.
+
+    NACE EL 2026-08-25, con el retiro del entrepiso delantero. Ese larguero era
+    el unico del case que no sostenia ninguna plancha -- las seis filas de M3
+    van a base delantera, base trasera, valle y remate trasero -- asi que
+    ninguna de las puertas de anclaje lo miraba: alineacion() y apoyo() solo
+    ven filas de agujeros, y solapes() solo verifica disyuncion. Se podia
+    retirar sin que nada se pusiera rojo, y eso es justo lo que hace peligroso
+    el cambio, no el cambio.
+
+    Lo que se pierde al quitar un larguero no es una fila de tornillos: es un
+    ANCLAJE DEL COSTADO. El costado deja de tener cinco M5 y pasa a tener
+    cuatro, y el parche de acrilico que queda sin apoyo crece.
+
+    EL MODELO, declarado entero porque es la mitad del resultado: el parche
+    desasistido se trata como PLACA CIRCULAR EMPOTRADA de radio a, donde a es
+    la distancia del punto interior mas lejano a su ancla mas cercana.
+
+        D = E t^3 / (12 (1 - v^2))
+        flecha central   = P a^2 / (16 pi D)
+        tension bajo la carga = 3P/(2 pi t^2) * [(1+v) ln(a/r0) + 1]
+
+    Y SE MIDE SOBRE EL FICHERO: el contorno y los taladros salen de
+    costado_2d.dxf, no de una copia de la geometria en Python. Por eso la
+    puerta vive aqui y no en clearance_budget -- misma razon que
+    _contorno_costado().
+
+    ANCLAS: solo los M5 de larguero. Los cuatro M4 de riel NO cuentan, y es
+    deliberado: dos de ellos son los ejes de giro de las tapas y los otros dos
+    son tornillos DE MANO que se quitan para abrir. Un anclaje que el usuario
+    desmonta no es estructura. Contandolos el vano sale 111.3 en vez de 119.2,
+    o sea que la puerta se queda con el caso malo.
+
+    LO QUE NO CUBRE: el racking del cajon entero. Esta puerta mira UNA pieza
+    plana. La rigidez del vano de 528 sin costado central sigue siendo la
+    heuristica que la spec §11 no ha cerrado, y este cambio le quita una barra:
+    se cierra cargando el prototipo."""
+    import clearance_budget as cb
+    p = cb.leer_params()
+    contorno = _contorno_costado()
+    if not contorno:
+        return ["costado_2d: sin contorno, no se puede medir el vano"]
+
+    # Los M5 del DXF, por diametro: el paso M5 es el mayor de los redondos del
+    # costado (los otros son M4 de riel). Se leen del fichero a proposito.
+    d_m5 = p["d_M5_paso"] + p["kerf"]
+    anclas = [(x, y) for x, y, d in _redondos("costado_2d")
+              if abs(d - d_m5) < 0.3]
+    n_larg = len(cb.NOMBRES_CE)
+    if len(anclas) != n_larg:
+        return [f"costado_2d: {len(anclas)} taladros M5 de d{d_m5:.1f} en el "
+                f"DXF y {n_larg} largueros de esqueleto en el modelo — o el "
+                f"DXF esta viejo o alguien movio un larguero sin re-exportar"]
+
+    xs = [q[0] for a in contorno for q in a]
+    ys = [q[1] for a in contorno for q in a]
+    vano, donde = 0.0, (0.0, 0.0)
+    y = min(ys)
+    while y <= max(ys):
+        x = min(xs)
+        while x <= max(xs):
+            if _dentro(contorno, (x, y)):
+                d = min(math.hypot(x - ax, y - ay) for ax, ay in anclas)
+                if d > vano:
+                    vano, donde = d, (x, y)
+            x += PASO_BARRIDO
+        y += PASO_BARRIDO
+
+    t = p["t_cheek"]
+    D = E_PMMA * t ** 3 / (12 * (1 - NU_PMMA ** 2))
+    P = p["carga_mano"]
+    flecha = P * vano ** 2 / (16 * math.pi * D)
+    sigma = (3 * P / (2 * math.pi * t ** 2)
+             * ((1 + NU_PMMA) * math.log(vano / R_CONTACTO) + 1))
+    # Vano que agotaria el techo de flecha, para que el mensaje diga cuanto
+    # margen queda en la cota que de verdad se mueve.
+    vano_max = math.sqrt(p["flecha_costado_max"] * 16 * math.pi * D / P)
+
+    fallos = []
+    if flecha > p["flecha_costado_max"]:
+        fallos.append(
+            f"costado_2d: con {P:.0f} N el costado se hunde {flecha:.2f} mm y "
+            f"el techo son {p['flecha_costado_max']:.2f} (flecha_costado_max). "
+            f"El vano sin apoyo vale {vano:.1f} mm en (x={donde[0]:.0f}, "
+            f"y={donde[1]:.0f}) y el maximo que cabe son {vano_max:.1f} — hace "
+            f"falta otro anclaje de larguero cerca de ese punto, o subir "
+            f"t_cheek (la flecha va con t^3)")
+    if sigma > cb.SIGMA_PMMA:
+        fallos.append(
+            f"costado_2d: {sigma:.1f} MPa bajo la mano contra el umbral de "
+            f"{cb.SIGMA_PMMA} (#106) — esto no deberia pasar antes que la "
+            f"flecha, asi que revisa t_cheek y carga_mano antes de creerlo")
+    print(f"costado: {len(anclas)} anclas M5, vano libre {vano:.1f} mm "
+          f"(x={donde[0]:.0f}, y={donde[1]:.0f}); con {P:.0f} N se hunde "
+          f"{flecha:.2f} mm (techo {p['flecha_costado_max']:.2f}, vano maximo "
+          f"{vano_max:.0f}) y trabaja a {sigma:.1f} MPa (fluencia "
+          f"{cb.SIGMA_PMMA})")
+    return fallos
+
+
 def railes_dentro_del_costado() -> list[str]:
     """Cada larguero 2020 tiene que caber DENTRO del acrilico del costado.
 
@@ -689,6 +803,7 @@ def main() -> int:
     fallos += railes_dentro_del_costado()
     fallos += guarda_kondor()
     fallos += taladros_con_material()
+    fallos += guarda_costado()
     fallos += agujeros_donde_toca()
     fallos += chasis_agujeros()
     for nombre, motivo in SIN_DXF.items():

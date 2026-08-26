@@ -393,12 +393,102 @@ confirmación del agente sea física— así que se diseña como tal:
 
 ### 6.6 El puente inalámbrico
 
-Módulo pre-certificado con **U.FL**, alimentado a 3V3, por UART. Su pico de
-corriente al transmitir entra en `power_budget.py` tomado de su hoja, no
-estimado.
+Módulo pre-certificado con **U.FL**, alimentado a 3V3, por UART. Se le exponen
+`EN` y el pin de arranque para poder resetearlo y reprogramarlo sin sacarlo
+(§12, nota de `pinout.rs`).
 
-Se le exponen `EN` y el pin de arranque para poder resetearlo y reprogramarlo
-sin sacarlo (§12, nota de `pinout.rs`).
+**Ojo con el nombre:** el «puente MCP ↔ Property Exchange» del núcleo §4.5 es
+una invención **distinta** y no tiene nada que ver con esta pieza. El propio
+núcleo lo advierte. Aquí «el puente» es siempre el módulo de radio.
+
+#### Los siete trabajos, reunidos
+
+Hasta el 2026-08-25 esta pieza acumulaba encargos desde cuatro documentos y
+**ninguno tenía la lista entera** (#162), así que nadie podía decir qué pieza
+servía. La lista vive aquí, y solo aquí:
+
+| # | Trabajo | De dónde sale la obligación | Estado |
+|---|---|---|---|
+| 1 | Servir la UI web al teléfono | Núcleo §4.2 | **Comprometido** |
+| 2 | Expandir el descriptor binario a JSON | Núcleo §3.3 | **Comprometido** |
+| 3 | Hablar el protocolo por UART con el RP2350 | Núcleo §4.2 | **Comprometido** |
+| 4 | Ableton Link, y con él la **fase** del instrumento | `tiempo-musical` §3.2 | **Comprometido** (licencia resuelta, abajo) |
+| 5 | Portal de configuración de red en modo punto de acceso | #161, regla 4 | **Comprometido** |
+| 6 | Ser su propia red en escenario | #161 | **Comprometido** |
+| 7 | HID inalámbrico, si algún día hay mando | Sesión 2026-08-22 | **Opcional** — nace fuera |
+
+El trabajo 6 trae una consecuencia que hay que decir en voz alta: **punto de
+acceso y estación no valen a la vez con buena mano** — comparten una radio y un
+canal. Para configurar da igual; en escenario, o isla o red ajena.
+
+#### La licencia de Link, resuelta
+
+Link es **GPLv2+ o propietaria**; para lo propietario hay que escribir a
+`link-devs@ableton.com`, sin precio ni proceso publicados. Decisión de Samuel
+(2026-08-25): **GPL, y el firmware del puente se publica.**
+
+Lo que hace barata esa decisión es una frontera que este diseño ya tenía puesta
+por otra razón. El núcleo §10 pide que *«el núcleo de tiempo real nunca vea una
+pila TCP»*, así que Link corre en **otro chip, con su propio firmware, hablando
+por UART**. Publicar el firmware del puente **no arrastra al del cerebro**: son
+binarios separados en silicio separado. Y la GPL se dispara al **distribuir**,
+no al usar: un instrumento que se queda en casa no publica nada.
+
+*(No es asesoría legal — es la misma clase de nota que la patente de Lafayette
+en el núcleo §6.3: se anota para que la decisión sea consciente.)*
+
+#### Lo que la lista le exige a la pieza
+
+- **Programable de verdad.** «Pre-certificado» se refiere a la certificación de
+  radio, **no al firmware**. Una pieza cerrada no sirve: los trabajos 1, 2, 4 y
+  5 son código propio corriendo dentro.
+- **Operaciones atómicas sin bloqueo.** Es requisito de Link, y descarta piezas
+  por una razón que no es la memoria: los ports de Link a ESP32 declaran
+  incompatibles al **ESP32-S2 y al ESP32-C3** por esto.
+- **Memoria y flash** para servidor web, la app servida, el expansor de
+  descriptor y Link a la vez.
+- **Modos de radio**: punto de acceso y estación, con la salvedad de arriba.
+- **Bluetooth**: solo si entra el trabajo 7. Un mando moderno es BLE, que la
+  pieza elegida trae de serie, así que el trabajo 7 **no cambia la pieza**.
+- **`EN` y pin de arranque expuestos**, y **U.FL, no antena en placa** (§2.4).
+
+#### La pieza
+
+**ESP32-S3-WROOM-1U-N16R2**, sujeta a verificar stock con la disciplina del #81.
+
+La **U** es lo que cumple §2.4: el 1U trae conector de antena externa,
+compatible con U.FL de Hirose, MHF I de I-PEX y AMC de Amphenol (datasheet
+v1.8, §10.2, p. 43). El 1 a secas trae antena en placa y no sirve. 512 KB de
+SRAM en el chip, 16 MB de flash y 2 MB de PSRAM.
+
+**Por qué la R2 y no la R8:** las variantes con 8 MB de PSRAM octal bajan su
+rango a **–40…65 °C**, contra los 85 °C de las demás (Tabla 1-2). El case sube
+7,1 K sobre ambiente, así que sobraría margen — pero se elige el rango ancho
+porque no cuesta nada y esta caja ya tiene una SMPS derateándose por calor.
+
+Y la advertencia que va también al README: **la certificación de un módulo
+pre-certificado está atada a las antenas de su certificado.** Cambiar la antena
+la invalida formalmente. Para un instrumento propio es irrelevante; el día que
+salga de casa, no.
+
+#### Lo que consume, y quién lo paga
+
+De su hoja (v1.8, Tablas 6-4 y 6-5, p. 28), a 3,3 V: **Wi-Fi TX 355 mA de
+pico**, BLE TX 344 mA a 20 dBm, RX ~95 mA. El pico está medido **al 100 % de
+ciclo de trabajo**, y eso obliga a repartirlo en tres, porque son tres
+problemas con tres dueños distintos:
+
+| Nivel | Quién lo paga |
+|---|---|
+| El transitorio, microsegundos | El desacoplo local del módulo |
+| El pico sostenido de TX | **El regulador del 3V3**, que tiene que poder darlo |
+| La media del peor caso musical | **La fuente** — es lo único que suma en `power_budget.py` |
+
+Esto **corrige el criterio del #162**, que mandaba meter «el pico» en el
+presupuesto de la fuente: metido crudo, hace fallar el guion por la razón
+equivocada y empuja a comprar vatios para un problema que resuelven un
+condensador y un buck bien elegido. Los números y sus puertas están en
+`power_budget.py` (§11).
 
 **Advertencia que va a la spec y al README:** la certificación de un módulo
 pre-certificado **está atada a las antenas de su certificado**. Cambiar la
@@ -435,6 +525,24 @@ case como **otro cliente del protocolo**, con su propio micro y su propia
 alimentación, hablando por el UART del puente (§6.6). La arquitectura de «un
 modelo, N pieles» ya la admite sin tocar esta placa, y esa es la respuesta que
 esta spec da a esa petición cuando vuelva a aparecer.
+
+> **Nota 2026-08-26 (acta de Samuel, camino A):** la petición volvió y la
+> respuesta de arriba se ejecutó a medias, a propósito. «No va en este
+> módulo» sigue en pie — esta placa no se toca y la 2,8" no cambia. Pero
+> «con su propio micro» quedó superado: la 7" táctil cuelga del **LTDC del
+> N657** del motor de Voz, un chip que no existía en el instrumento cuando
+> se escribió este párrafo (un segundo micro dedicado hoy sería la
+> enfermedad del #201). «Con su propia alimentación» sigue en pie. Y
+> «otro cliente del protocolo, hablando por el UART del puente» — la
+> cuarta parte de la prescripción, que la primera versión de esta nota
+> dejó sin sentencia (hallazgo de la junta) — **se cumple en espíritu y
+> cambia de transporte**: la pantalla sigue siendo cliente del modelo
+> (nada existe fuera de él), pero sus propuestas suben por el **J2** del
+> motor, no por el UART del puente — con fila mandada en el presupuesto
+> de trama del enlace, y solo-lectura hasta que esa fila corra (spec
+> pantalla §4). El diseño, su censo de pines y la frontera de filosofía
+> (la confirmación física sigue siendo el encoder de ESTE módulo) viven
+> en `2026-08-26-pantalla-motor-design.md`.
 
 **Bus propio, no J2.** El RP2350 trae dos periféricos SPI; el J2 es contrato
 congelado a 10 MHz con ocho stubs colgando y no admite un cliente más (§4). La
@@ -520,7 +628,7 @@ Patrón de instrumento, estrenado en el módulo 3 y aplicado aquí sin excepció
 |---|---|---|
 | **+5 V digital** | **IRM-15-5** (5 V/3 A), por cable directo — no pasa por la placa de la fuente | Lógica de 5 V, la cadena WS2812, VBUS del USB host, lado no aislado del aislador |
 | **+12 V** | Bus board, peine Eurorack (650 mA por riel) | **Solo** el riel local de 10 V de los gates |
-| **+3V3** | Regulador local desde +5 V | Micro, puente RF, y todo lo digital |
+| **+3V3** | Regulador local **conmutado** desde +5 V | Micro, puente RF, y todo lo digital. Buck y no LDO: con lineal el puente en TX le costaría al +5 V su corriente entera en vez de su potencia (§6.6, `power_budget.py`) |
 | **+10 V** | Local desde +12 V | Los cuatro gates, y nada más |
 | **−12 V** | Llega por el peine | **Sin usar.** Se declara así, no se deja ambiguo |
 
@@ -584,10 +692,30 @@ aislarlo.
 > **El tope del #104 son 2,50 A, no 2,80.** Bajó el 2026-08-19 al leerse la
 > curva de derating. `power_budget.py` **lo importa** de la spec de la fuente en
 > vez de transcribirlo — la misma disciplina que §11 exige para
-> `autotune_budget.py`. Y a ese tope, el margen de la IRM-15-5 es de **+1,58 a
-> +2,01 W** contra los **2,50 W** que pide el host USB en su límite: **la suma
-> no cierra hoy.** Es un bloqueante del plan, no de la spec, y lo lleva el
-> issue #151.
+> `autotune_budget.py`.
+
+**Y la suma sí cierra, con el árbitro puesto** (2026-08-25, `power_budget.py`).
+Una versión anterior de esta sección decía que no cerraba: el margen de la
+IRM-15-5 es de +1,58 a +2,01 W y el host USB en su límite pide 2,50 W. Eso es
+cierto **solo si el tope de la cadena se trata como carga fija** — y el #104
+existe precisamente para que no lo sea. Corrido el reparto contra el techo
+pesimista:
+
+- **Solo, con la pantalla encendida**, el instrumento paga sus cargas duras y
+  le sobran **2,38 A** para la cadena, contra los **2,04 A** del brillo que de
+  verdad usa (el caso del #104: diez parejas de jack al 100 % y el farol al
+  50 %). Cabe con 338 mA de sobra.
+- **Con un controlador USB chupando sus 500 mA**, sobran 1,88 A y el árbitro
+  tiene que quitar **162 mA de cadena** — un 8 % del brillo real — o apagar la
+  pantalla, o repartir entre las dos.
+
+O sea que el #151 **no pide una fuente más grande: pide que el árbitro exista**,
+que es exactamente lo que el #104 llevaba pidiendo. La fila que faltaba en su
+tabla —la del host USB frente a la retroiluminación— es esta.
+
+Blanco pleno son 9,60 A y no caben en ningún escenario: el tope no es
+cosmético, es estructural. `power_budget.py` lo asevera para que no se relaje
+sin recontar los LED.
 
 **Masas.** Esta placa es digital entera, así que la masa principal es `GNDD`
 —que se une a `GNDA` solo en la estrella del módulo 1, como todas—. Hay tres
@@ -669,7 +797,7 @@ cálculo NO cubre):
 |---|---|
 | `panel_budget.py` | Que los once elementos de panel de §10 quepan, y que el ancho quepa en la fila del case |
 | `sync_budget.py` | El divisor y los umbrales de clock/reset contra fuentes de 5 V **y** de 10 V |
-| `power_budget.py` | Corriente **y margen de caída** por riel: micro, puente RF en pico, host USB en su límite, **retroiluminación de la pantalla** (§7) **y la cadena WS2812 entera** — contra lo que da la IRM-15-5 con el tope del #104 **importado** de la spec de la fuente, y contra los 650 mA del +12 |
+| `power_budget.py` | **Escrito el 2026-08-25.** El reparto del +5 V digital: cargas duras (micro, puente RF **en media**, host USB en su límite) contra las atenuables que el árbitro del #104 puede bajar (**retroiluminación de la pantalla** §7 **y la cadena WS2812**), con el techo derateado **importado** de la spec de la fuente. El **pico** del puente se asevera contra el regulador del 3V3, no contra la fuente (§6.6). Pendiente: el margen de caída por riel y los 650 mA del +12 |
 | `enlace_budget.py` | El flanco de 10 MHz por cinta plana con ocho stubs, la resistencia de serie con sus **dos** restricciones opuestas, el `V_IH` resultante, y el tiempo de subida de las ocho ramas de I²C contra la longitud declarada del mazo |
 | `pio_budget.py` | Máquinas de estado, memoria de instrucciones, canales de DMA y reparto de núcleos — y el conflicto de `clk_sys` entre el host USB y el afinado (issue #150) |
 
