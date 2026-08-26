@@ -110,6 +110,15 @@ El acta A-3 como contrato:
   - Wavetable con unísono (clase Serum): hasta 256 osciladores ≈ 2 000-4 600
     ciclos (ESTIMADO).
   - Espectral (FFT/iFFT amortizada): ≈ 400 ciclos las 16 voces (ESTIMADO).
+  - **Granular** (acta 2026-08-26, tarde): granos = lecturas interpoladas
+    con ventana, la misma clase de trabajo por muestra que el wavetable —
+    **sin cifra hasta que su fila corra en `carga_motor`** (§8.1). No se
+    publica número de granos sin correr el modelo.
+  - **Sampler** (misma acta): voces de reproducción desde SRAM y **PSRAM
+    en XSPI1** — la RAM externa deja de ser crecimiento y pasa a **pieza
+    v1** (pieza concreta por nombrar, hoja en árbol antes de dibujar,
+    R-M3). Streaming y latencia de grano contra la PSRAM: fila nueva del
+    guion (§8.7).
 - **Memoria:** una tabla clase Serum ≈ 1 MB en f16. Cuántas caben residentes
   lo dice el **censo de SRAM con el binario adentro** (§8.5 — sin flash
   interna, el firmware entero comparte los 4,2 MB con tablas, colas y
@@ -297,9 +306,14 @@ libro bilateral y el bring-up lo mide bajo carga plena.
    destino hacia los oídos**, sin quitarle jack a nadie — enmienda a
    voz-total §5.
 5. **Censo de SRAM** con el binario adentro (§3): cuántas tablas residentes
-   caben de verdad.
+   caben de verdad — **y ahora también los buffers de sample y granos**
+   (acta 2026-08-26, tarde).
 6. **Censo de parámetros del motor** contra `MAX_PARAMS` (#172): el motor
    entra al modelo o no existe.
+7. **Presupuesto de la PSRAM** (nace con el acta 2026-08-26, tarde): caudal
+   y latencia del XSPI1 contra la demanda de granos/sampler (techo
+   eléctrico: DS Tablas 75-76, 140 MHz a 3,3 V / 180 MHz a 1,8 V en DTR),
+   y las filas de ciclos de granular y sampler en `carga_motor`.
 
 ---
 
@@ -329,6 +343,8 @@ libro bilateral y el bring-up lo mide bajo carga plena.
 - La forma de la autopista (D9 del #210 — decisión de Samuel, en cuarentena).
 - El contrato de percusión (#160) y el formato del evento (#207).
 - La variante (N647/N657) y la compra — bloqueadas por la puerta 2.
+- **La PSRAM concreta** (fabricante, densidad, SDR/DTR): pieza v1 por acta,
+  parte por nombrar con su hoja en árbol (R-M3).
 - **El ancho de la boca multicanal** (el crecimiento del ojo de la cerradura)
   y el número exacto de la etapa de acople — filas del censo y el esquemático.
 - El firmware (Rust + núcleos C): la profundidad del PAC/Embassy se audita al
@@ -374,6 +390,19 @@ recorta; se entrega por etapas con las cuentas a la vista.
 ---
 
 ## 13. Acta
+
+**Adenda del 2026-08-26 (tarde), acta de Samuel:** «van a v1 de una vez…
+escoger el motor es el fundamento… lo que sea necesario pero debemos
+resolver esto a lo mega pro». Consecuencias, todas ya ejecutadas o
+mandadas: **granular y sampler entran a la lista v1 de motores** (§3, sin
+cifras hasta correr el modelo); **la PSRAM en XSPI1 pasa de crecimiento a
+pieza v1** (§8.7, R-M3); el censo de pines la sienta a la mesa (11 pines,
+puerto XSPI1 — y con ella el piso del encapsulado sin RGMII sube a
+VFBGA198, `micro_budget.py`); el censo de SRAM (§8.5) suma los buffers de
+sample. La revalidación del chip bajo el alcance nuevo: el N657 se
+**fortalece** (4,2 MB de SRAM + dos XSPI independientes: arranque+biblioteca
+en PN, PSRAM en PO/PP); «dos motores» queda descartado — es la enfermedad
+del #201, y la válvula del diseño ya es el invitado (§6).
 
 Diseño aprobado por Samuel en conversación (siete secciones); la v1 escrita
 pasó su junta de cuatro lentes **antes del PR** y salió reescrita:

@@ -286,34 +286,55 @@ def demo() -> None:
 #      SCK+MOSI+NSS por bus. El MISO no se reserva: el DAC no se lee en v1
 #      (si R-M3 trae lectura, es un pin mas por bus y el censo se recorre).
 #   4. El J2 esclavo full-duplex: SCK+MOSI+MISO+NSS (#210).
-#   5. RGMII del GMAC completo (14 senales) + MDC/MDIO -- reservado AUNQUE
-#      D9 siga en cuarentena: el censo prueba el peor caso. Si D9 elige
-#      LVDS, estos pines se liberan (escenario aparte, abajo).
+#   5. RGMII del GMAC: 13 senales (las 12 del estandar mas CLK125, reserva
+#      prudente cuya necesidad depende del arbol de relojes del PHY) +
+#      MDC/MDIO = 15 lineas -- reservado AUNQUE D9 siga en cuarentena: el
+#      censo prueba el peor caso. La junta verifico que soltar CLK125 (y
+#      hasta MDC/MDIO) NO salva a los encapsulados menores: el
+#      estrangulamiento es RXD0/PF14, no la reserva prudente.
 #   6. El control del codec: I2C (SCL+SDA). ESTIMADO: el codec no esta
 #      nombrado (R-M3); si su control fuera SPI, es un CS mas y se recorre.
-#   7. Dos entradas de ADC: el camino rapido a los oidos (D-P4) y la
-#      telemetria del puente (S4).
-#   8. Reservas fijas fuera de la mesa: SWD (PA13/PA14), HSE (PH0/PH1),
-#      XSPI2 completo en el puerto PN (PN0..PN12: arranque + biblioteca por
-#      NCS2 -- presente en LOS SEIS encapsulados), USB con pines dedicados
-#      (OTG1/OTG2 HSDM/HSDP/ID/TXRTUNE, fuera del conteo GPIO), BOOT0 y
-#      NRST dedicados.
+#   7. Dos entradas de ADC. La primera es el camino rapido a los oidos
+#      (D-P4, spec S4). La segunda la pide el issue #213 como "telemetria
+#      del puente (S4)" -- la junta verifico que NINGUN papel vigente la
+#      respalda (el S4 no contiene la palabra telemetria; la unica
+#      telemetria del repo es la de la fuente, otro modulo y otro chip).
+#      Se sienta igual como RESERVA barata y la cita huerfana queda
+#      anotada aqui para que nadie la herede como hecho.
+#   8. La PSRAM del sampler en XSPI1 (acta de Samuel 2026-08-26: granular y
+#      sampler van a v1, la RAM externa deja de ser crecimiento). Octal:
+#      NCS1 (PO0) + DQS0 (PO2) + CLK (PO4) + IO0..IO7 (PP0..PP7) = 11
+#      pines, que solo existen desde VFBGA198. El ancho de 16 bits
+#      (PP8..PP15 + DQS1/PO3) queda de crecimiento, 223+. La pieza concreta
+#      se nombra con su hoja en el arbol antes de dibujar (R-M3).
+#   9. Reservas fijas fuera de la mesa: SWD (PA13/PA14), HSE (PH0/PH1),
+#      LSE del RTC (PC14/PC15 -- nada decide hoy que no haya cristal de
+#      32 kHz, asi que se reservan), XSPI2 completo en el puerto PN
+#      (PN0..PN12: arranque + biblioteca por NCS2 -- presente en LOS SEIS
+#      encapsulados), USB con pines dedicados (OTG1/OTG2
+#      HSDM/HSDP/ID/TXRTUNE, fuera del conteo GPIO), BOOT0 y NRST
+#      dedicados.
 #
 # LO QUE EL VERDE NO DICE (y donde se cierra):
 #   * Que el reloj kernel de CADA instancia SPI alcance los 50 MHz: la
 #     Tabla 99 (105 MHz en maestro, 3.0-3.6 V) es el techo ELECTRICO del
 #     kit; el arbol de relojes POR INSTANCIA es del RM0486 y NO se ha
-#     verificado -- se verifica al escribir el arranque. Por eso el
-#     veredicto de compra usa el escenario mas restringido (los 3 CV en
-#     SPI1-3): restringir instancias solo puede QUITAR repartos, nunca
-#     regalar uno -- si aun asi hay verde, el verde no depende de esa
-#     verificacion pendiente. Si solo el escenario amplio (CV en cualquier
-#     SPI) diera verde, la compra queda AMBAR hasta abrir el RM0486.
+#     verificado -- se verifica al escribir el arranque. La junta dejo
+#     claro lo que ese pendiente puede y no puede mover: si el RM0486
+#     descartara instancias, el reparto SE MUDA de instancias y el censo
+#     se recorre -- lo que no se mueve es el encapsulado, porque el barrido
+#     de abajo prueba TODOS los tercetos de CV posibles y el veredicto por
+#     paquete no depende de cual gane. El escenario impreso (CV en SPI1-3)
+#     es solo el reparto de muestra.
+#   * El minimo "sin RGMII" asume que la opcion LVDS de D9 no pide pines
+#     propios del N657 -- ESTIMADO: el transceptor no esta elegido (#210
+#     D9, "la parte concreta NO esta elegida y este papel no la inventa").
+#   * El CAUDAL de los 3 buses de CV (y si el crosspoint cuelga de uno):
+#     spi_privado_budget.py sigue modelando los dos RP2350B viejos; su
+#     recorrido con la ley de dos tasas y la trama real es fila del #214
+#     (tanda 2). Este censo reparte PINES, no ancho de banda.
 #   * Dominios VDDIO, zonas analogicas y EMI (riesgo 11), ruteo, LDAC/CLR
 #     del DAC, errata: cada uno tiene su fila en el spec S11.
-#   * XSPI1 (puerto PO/PP, la RAM externa de crecimiento) NO se reserva:
-#     existe desde VFBGA198 (8 bits) y 223 (16 bits); queda anotado como
-#     techo de crecimiento, no como demanda v1.
 
 N6_PAQUETES = ("VFBGA142", "VFBGA169", "VFBGA178", "VFBGA198", "VFBGA223",
                "VFBGA264")
@@ -323,9 +344,10 @@ N6_GPIO_TOTAL = {"VFBGA142": 75, "VFBGA169": 90, "VFBGA178": 106,
                  "VFBGA198": 127, "VFBGA223": 144, "VFBGA264": 165}
 
 # Reservas fijas que salen del pool GPIO antes de repartir:
-#   SWD PA13/PA14 + HSE PH0/PH1 + XSPI2 PN0..PN12 (13, presentes en los 6
-#   encapsulados -- verificado en la extraccion).
-N6_RESERVA_GPIO = 4 + 13
+#   SWD PA13/PA14 + HSE PH0/PH1 + LSE PC14/PC15 (hallazgo de la junta: son
+#   filas P[A-Q]x del pool y nadie las restaba) + XSPI2 PN0..PN12 (13,
+#   presentes en los 6 encapsulados -- verificado en la extraccion).
+N6_RESERVA_GPIO = 4 + 2 + 13
 
 # Cuantos GPIO libres exige el resto del diseno tras el reparto:
 #   la inhibicion de estado seguro R-M5 (1) y la carga del crosspoint (1,
@@ -422,6 +444,7 @@ N6_PINES = {
     "PG7": (".....x", ("SAI1_MCLK_A",)),
     "PG8": ("..xxxx", ("SPI2_MOSI",)),
     "PG10": ("xxxxxx", ("SPI2_SCK",)),
+    "PG11": ("...xxx", ("ETH1_MDC",)),
     "PG12": ("..xxxx", ("SPI5_SCK",)),
     "PG13": ("xxxxxx", ("SAI2_FS_A", "TIM4_CH1")),
     "PG14": ("xxxxxx", ("SPI6_MOSI",)),
@@ -435,7 +458,25 @@ N6_PINES = {
     "PP9": ("....xx", ("SPI2_MOSI",)),
     "PP10": ("....xx", ("ETH1_MDC",)),
     "PQ6": (".....x", ("SAI2_SD_B",)),
+    # XSPI1 -- la PSRAM del sampler (acta 2026-08-26). Senales de un solo
+    # pin cada una: el puerto es dedicado y nace en VFBGA198.
+    "PO0": ("...xxx", ("XSPIM_P1_NCS1",)),
+    "PO2": ("...xxx", ("XSPIM_P1_DQS0",)),
+    "PO4": ("...xxx", ("XSPIM_P1_CLK",)),
+    "PP0": ("...xxx", ("XSPIM_P1_IO0",)),
+    "PP1": ("...xxx", ("XSPIM_P1_IO1",)),
+    "PP2": ("...xxx", ("XSPIM_P1_IO2",)),
+    "PP3": ("...xxx", ("XSPIM_P1_IO3",)),
+    "PP4": ("...xxx", ("XSPIM_P1_IO4",)),
+    "PP5": ("...xxx", ("XSPIM_P1_IO5",)),
+    "PP6": ("...xxx", ("XSPIM_P1_IO6",)),
+    "PP7": ("...xxx", ("XSPIM_P1_IO7",)),
 }
+
+# La PSRAM octal del sampler: 11 senales, cada una con su unico pin.
+PSRAM = ("XSPIM_P1_NCS1", "XSPIM_P1_DQS0", "XSPIM_P1_CLK", "XSPIM_P1_IO0",
+         "XSPIM_P1_IO1", "XSPIM_P1_IO2", "XSPIM_P1_IO3", "XSPIM_P1_IO4",
+         "XSPIM_P1_IO5", "XSPIM_P1_IO6", "XSPIM_P1_IO7")
 
 CAPTURAS = tuple(f"TIM{t}_CH{c}" for t in (2, 3, 4, 5) for c in (1, 2, 3, 4))
 RGMII = ("ETH1_RGMII_GTX_CLK", "ETH1_RGMII_CLK125", "ETH1_RGMII_TX_CTL",
@@ -455,9 +496,11 @@ def _demandas(ipaq: int, sai: str, cvs: tuple, j2: str, i2c: str,
               con_rgmii: bool, sai2_extra: bool = False) -> list | None:
     """La mesa completa: [(etiqueta, candidatos)]. None si una senal ya no
     tiene NINGUN pin en este encapsulado (rojo inmediato, sin buscar).
-    `sai2_extra` sienta ademas el subbloque A del otro SAI (la boca
-    multicanal TDM del crecimiento, spec S10) -- los 4 subbloques del chip
-    a la mesa, como pide el issue #213."""
+    `sai2_extra` sienta ademas el otro SAI entero -- su subbloque A completo
+    y el SD de su B en sincrono, igual que el titular (la boca multicanal
+    TDM del crecimiento, spec S10): los 4 subbloques del chip a la mesa,
+    como pide el issue #213. (La junta cazo la v1 de este parametro
+    sentando 3 de 4: le faltaba el SD_B del segundo SAI.)"""
     mesa = []
     for s in CAPTURAS:
         mesa.append((s, _candidatos(s, ipaq)))
@@ -466,9 +509,11 @@ def _demandas(ipaq: int, sai: str, cvs: tuple, j2: str, i2c: str,
         mesa.append((s, _candidatos(s, ipaq)))
     if sai2_extra:
         otro = "SAI2" if sai == "SAI1" else "SAI1"
-        for sub in ("MCLK_A", "SCK_A", "FS_A", "SD_A"):
+        for sub in ("MCLK_A", "SCK_A", "FS_A", "SD_A", "SD_B"):
             s = f"{otro}_{sub}"
             mesa.append((f"TDM:{s}", _candidatos(s, ipaq)))
+    for s in PSRAM:
+        mesa.append((f"PSRAM:{s}", _candidatos(s, ipaq)))
     for n, spi in enumerate(cvs, 1):
         for rol in ("SCK", "MOSI", "NSS"):
             s = f"{spi}_{rol}"
@@ -484,7 +529,9 @@ def _demandas(ipaq: int, sai: str, cvs: tuple, j2: str, i2c: str,
             mesa.append((s, _candidatos(s, ipaq)))
     adc = _candidatos("ADC_IN", ipaq)
     mesa.append(("ADC:oidos-rapidos", adc))
-    mesa.append(("ADC:telemetria", adc))
+    # la segunda entrada: cita huerfana del issue #213 (ver punto 7 del
+    # encabezado) -- se sienta como reserva, no como hecho de papel
+    mesa.append(("ADC:reserva-issue213", adc))
     if any(not c for _, c in mesa):
         return None
     return mesa
@@ -513,9 +560,43 @@ def _asignar(mesa: list) -> dict | None:
     return dict(asignado) if paso(mesa) else None
 
 
+def _senal_de(etiqueta: str) -> str:
+    """La senal del DS detras de una etiqueta de demanda."""
+    if etiqueta.startswith("ADC:"):
+        return "ADC_IN"
+    for prefijo in ("CV1:", "CV2:", "CV3:", "J2:", "CODEC:", "TDM:", "PSRAM:"):
+        if etiqueta.startswith(prefijo):
+            return etiqueta[len(prefijo):]
+    return etiqueta
+
+
+def _verificar_reparto(mesa: list, reparto: dict, ipaq: int) -> None:
+    """El testigo se verifica contra las restricciones, NO contra el
+    buscador que lo produjo. (La junta cazo la version anterior: una
+    asercion de inyectividad sobre la salida de _asignar es inalcanzable
+    por construccion -- Principio VIII, el mismo que este archivo invoca.)
+    Aqui se re-deriva todo desde N6_PINES: cobertura, pertenencia, senal
+    y presencia."""
+    assert len(reparto) == len(mesa), (
+        f"el reparto cubre {len(reparto)} de {len(mesa)} demandas")
+    vistos: set = set()
+    for etiqueta, _ in mesa:
+        pin = reparto.get(etiqueta)
+        assert pin is not None, f"{etiqueta} quedo sin asignar"
+        assert pin not in vistos, f"{pin} tiene dos duenos"
+        vistos.add(pin)
+        pres, senales = N6_PINES[pin]
+        assert pres[ipaq] == "x", f"{etiqueta}={pin} no existe en el paquete"
+        assert _senal_de(etiqueta) in senales, (
+            f"{pin} no lleva {_senal_de(etiqueta)} segun la Tabla 16")
+
+
 def _estrangulamiento(mesa: list) -> str:
-    """Nombra al culpable de un reparto imposible: propaga las demandas de
-    candidato unico y dice cual se queda sin pin y quien se los llevo."""
+    """DIAGNOSTICO, no veredicto: nombra UNA cadena de forzados que mata el
+    reparto del PRIMER escenario. La junta lo dejo escrito: el "culpable"
+    es un eslabon de esa cadena (el orden puede nombrar a otro), y un
+    conflicto sin singletons (violacion de Hall pura) cae al mensaje
+    generico. El rojo lo decide la busqueda exhaustiva, nunca esto."""
     duenos: dict = {}
     pend = {et: set(c) for et, c in mesa}
     while True:
@@ -529,7 +610,8 @@ def _estrangulamiento(mesa: list) -> str:
             if not c:
                 fuentes = [f"{p} es de {duenos[p]}" for p in
                            dict(mesa)[et] if p in duenos]
-                return f"{et} se queda sin pin ({'; '.join(fuentes)})"
+                return (f"una cadena que mata el reparto: {et} sin pin "
+                        f"({'; '.join(fuentes)})")
 
 
 def censo_paquete(ipaq: int, spis_cv: tuple, con_rgmii: bool = True):
@@ -552,14 +634,20 @@ def censo_paquete(ipaq: int, spis_cv: tuple, con_rgmii: bool = True):
                         primera_mesa = mesa
                     reparto = _asignar(mesa)
                     if reparto is not None:
+                        _verificar_reparto(mesa, reparto, ipaq)
                         return reparto, {"sai": sai, "cv": cvs, "j2": j2,
                                          "i2c": i2c}
-    # el mensaje del rojo: o una senal sin pin en el encapsulado, o el
-    # estrangulamiento del primer escenario
+    # el mensaje del rojo: las senales sin pin en el encapsulado (todas,
+    # no solo la primera -- hallazgo de la junta: "sin pin para TIM4_CH2"
+    # invitaba a creer que con un pin se salvaba el 142, y le faltaban 8),
+    # o el estrangulamiento del primer escenario
     rgmii_demanda = RGMII if con_rgmii else ()
-    for s in CAPTURAS + rgmii_demanda:
-        if not _candidatos(s, ipaq):
-            return None, f"sin pin para {s}"
+    huerfanas = [s for s in CAPTURAS + rgmii_demanda + PSRAM
+                 if not _candidatos(s, ipaq)]
+    if huerfanas:
+        resto = f" (+{len(huerfanas) - 1} senales mas sin pin)" \
+            if len(huerfanas) > 1 else ""
+        return None, f"sin pin para {huerfanas[0]}{resto}"
     if primera_mesa is not None:
         return None, _estrangulamiento(primera_mesa)
     return None, "ninguna combinacion de instancias tiene mesa completa"
@@ -580,16 +668,22 @@ def _autocomprobacion_censo() -> None:
     assert _candidatos("ETH1_RGMII_GTX_CLK", 5) == {"PF0"}
     assert _candidatos("ETH1_RGMII_GTX_CLK", 2) == frozenset()
     assert _candidatos("SAI2_FS_A", 5) == {"PG13"}
-    # A mano, pin por pin: PA0/1/2/5/6/7/15, PB1/4/5/10/11, PC0/1/6/7/8/9,
-    # PD13, PE5/6, PF0/1/6/7/14, PG13, PH9 = 28 pines llevan captura TIM2-5.
-    con_captura = sum(1 for _, (_, ss) in N6_PINES.items()
-                      if any(s in ss for s in CAPTURAS))
-    assert con_captura == 28, con_captura
+    # A mano, pin por pin -- y se compara la LISTA, no solo el numero (la
+    # junta cazo que contar 28 deja pasar un pin cambiado por otro):
+    con_captura = {p for p, (_, ss) in N6_PINES.items()
+                   if any(s in ss for s in CAPTURAS)}
+    assert con_captura == {
+        "PA0", "PA1", "PA2", "PA5", "PA6", "PA7", "PA15",
+        "PB1", "PB4", "PB5", "PB10", "PB11",
+        "PC0", "PC1", "PC6", "PC7", "PC8", "PC9",
+        "PD13", "PE5", "PE6",
+        "PF0", "PF1", "PF6", "PF7", "PF14",
+        "PG13", "PH9"}, sorted(con_captura)
     # La escalera de GPIO del DS crece monotona con el encapsulado.
     escalera = [N6_GPIO_TOTAL[p] for p in N6_PAQUETES]
     assert escalera == sorted(escalera) and escalera[0] == 75 and escalera[-1] == 165
     # En el encapsulado grande ninguna senal demandada queda sin candidato.
-    todas = set(CAPTURAS) | set(RGMII) | {"ADC_IN"}
+    todas = set(CAPTURAS) | set(RGMII) | set(PSRAM) | {"ADC_IN"}
     todas |= {f"SAI{i}_{s}" for i in (1, 2)
               for s in ("MCLK_A", "SCK_A", "FS_A", "SD_A", "SD_B")}
     todas |= {f"SPI{i}_{s}" for i in (1, 2, 3, 4, 5, 6)
@@ -599,12 +693,12 @@ def _autocomprobacion_censo() -> None:
         assert _candidatos(s, 5), f"{s} sin candidato en VFBGA264"
 
 
-def demo_censo() -> tuple[str, dict, dict]:
+def demo_censo() -> tuple[str, dict, dict, str | None]:
     """Corre el censo entero e imprime el veredicto por encapsulado.
-    Devuelve (paquete elegido, reparto, escenario)."""
+    Devuelve (paquete elegido, reparto, escenario, minimo sin RGMII)."""
     print("\n\nEL CENSO DE PINES DEL N657 (puerta 2 -- issue #213)\n")
-    print("  escenario de compra: CV en SPI1-3 (reloj kernel conservador),")
-    print("  RGMII reservado aunque D9 siga en cuarentena.\n")
+    print("  escenario impreso: CV en SPI1-3; RGMII reservado aunque D9 siga")
+    print("  en cuarentena; PSRAM del sampler sentada (acta 2026-08-26).\n")
 
     elegido = None
     for ipaq, paq in enumerate(N6_PAQUETES):
@@ -649,10 +743,21 @@ def demo_censo() -> tuple[str, dict, dict]:
               ("J2", lambda e: e.startswith("J2")),
               ("codec", lambda e: e.startswith("CODEC")),
               ("RGMII", lambda e: e.startswith("ETH")),
-              ("ADC", lambda e: e.startswith("ADC")))
+              ("ADC", lambda e: e.startswith("ADC")),
+              ("PSRAM (XSPI1)", lambda e: e.startswith("PSRAM")))
     for titulo, filtro in grupos:
         pares = [f"{e}={p}" for e, p in sorted(reparto.items()) if filtro(e)]
         print(f"    {titulo:18s}: " + ", ".join(pares))
+
+    # Robustez a instancias (hallazgo de la junta): el arbol de relojes del
+    # RM0486 sigue sin abrirse, asi que se prueba que el veredicto del
+    # paquete NO depende del terceto de CV elegido -- se barren los 20.
+    from itertools import combinations as _comb
+    tercetos = list(_comb(("SPI1", "SPI2", "SPI3", "SPI4", "SPI5", "SPI6"), 3))
+    cierran = sum(1 for t in tercetos if censo_paquete(ipaq, t)[0] is not None)
+    print(f"\n  robustez a instancias: {cierran}/{len(tercetos)} tercetos "
+          f"de CV cierran en {paq} -- si el RM0486 descarta instancias, "
+          f"el reparto se muda, el encapsulado no")
 
     # El mismo censo sin RGMII: cuanto compra la decision LVDS de D9.
     print("\n  sin RGMII (si D9 eligiera LVDS):")
@@ -668,7 +773,7 @@ def demo_censo() -> tuple[str, dict, dict]:
 
     # Crecimiento: los 4 subbloques de SAI a la mesa a la vez (la boca
     # multicanal TDM que el spec S10 difiere). Informativo, no bloquea.
-    crece = None
+    crece, combo_c = None, None
     for j2c in ("SPI4", "SPI5", "SPI6"):
         for i2cc in ("I2C1", "I2C2", "I2C3", "I2C4"):
             mesa_c = _demandas(len(N6_PAQUETES) - 1, "SAI1",
@@ -676,18 +781,35 @@ def demo_censo() -> tuple[str, dict, dict]:
                                sai2_extra=True)
             if mesa_c is not None:
                 crece = _asignar(mesa_c)
+                if crece:
+                    _verificar_reparto(mesa_c, crece, len(N6_PAQUETES) - 1)
+                    combo_c = (j2c, i2cc)
             if crece:
                 break
         if crece:
             break
-    print("\n  crecimiento (v1 + SAI2 entero, boca multicanal TDM) en "
-          f"{N6_PAQUETES[-1]}: {'VERDE' if crece else 'ROJO'}")
+    if crece:
+        print(f"\n  crecimiento (v1 + SAI2 entero A+B, boca multicanal TDM) "
+              f"en {N6_PAQUETES[-1]}: VERDE con J2={combo_c[0]}, "
+              f"codec={combo_c[1]}")
+        if combo_c[1] != escenario["i2c"]:
+            print(f"    OJO (hallazgo de la junta): el crecimiento NO cierra "
+                  f"con codec={escenario['i2c']} -- el esquematico elige la "
+                  f"instancia I2C del codec con el crecimiento en mente")
+    else:
+        print(f"\n  crecimiento (v1 + SAI2 entero A+B) en "
+              f"{N6_PAQUETES[-1]}: ROJO")
 
     print("\n  la cuenta que ata el encapsulado a D9: PF14 es el UNICO pin")
     print("  del RXD0 del RGMII (y del RMII) y a la vez el suplente de")
     print("  TIM2_CH2 -- PA1 se lo lleva TIM5_CH2, y el tercer candidato")
-    print("  (PC0) solo existe en VFBGA264. Ethernet en la Voz = VFBGA264;")
-    print("  D9 = LVDS libera el paquete hasta el minimo de arriba.")
+    print("  (PC0) solo existe en VFBGA264. Ethernet por el GMAC interno =")
+    print("  VFBGA264 (un MAC externo por SPI no toca PF14, pero esa clase")
+    print("  no da el ancho que D9 discute -- decision de D9, no de aqui).")
+    print("  D9 = LVDS baja el minimo al de arriba, con su ESTIMADO: la")
+    print("  huella del transceptor LVDS no esta elegida (#210 D9). Y la")
+    print("  PSRAM del sampler (acta 2026-08-26) pone su propio piso: el")
+    print("  puerto XSPI1 nace en VFBGA198.")
 
     return paq, reparto, escenario, minimo_sin_rgmii
 
@@ -751,15 +873,11 @@ def main() -> int:
     _autocomprobacion_censo()
     paq, reparto, _escenario, minimo_sin_rgmii = demo_censo()
 
-    # La asercion del issue #213: ningun pin con dos duenos.
-    pines = list(reparto.values())
-    assert len(pines) == len(set(pines)), "dos funciones piden el mismo pin"
-
-    # Todo pin repartido existe en la variante elegida.
-    ipaq = N6_PAQUETES.index(paq)
-    for etiqueta, pin in reparto.items():
-        assert N6_PINES[pin][0][ipaq] == "x", (
-            f"{etiqueta} quedo en {pin}, que no existe en {paq}")
+    # La asercion del issue #213 ("ningun pin con dos duenos") vive en
+    # _verificar_reparto: el testigo se comprueba contra N6_PINES, no
+    # contra el buscador que lo produjo. La version anterior de esta
+    # guarda era inalcanzable por construccion y la junta la tumbo con el
+    # Principio VIII de este mismo archivo.
 
     # Tras el reparto y las reservas fijas quedan GPIO para lo vario
     # (R-M5 + crosspoint) -- y se exige holgura, no empate.
@@ -770,13 +888,16 @@ def main() -> int:
 
     # El resultado del censo, congelado como asercion INVERSA: si una nueva
     # revision del DS (o una edicion de la tabla) moviera estos veredictos,
-    # este guion tiene que gritar y la compra se relee.
+    # este guion tiene que gritar y la compra se relee. OJO: tambien salta
+    # si la noticia es BUENA (un encapsulado mas chico que empieza a
+    # cerrar) -- se relee y se actualiza, no se borra.
     assert paq == "VFBGA264", (
         f"el censo con RGMII ya no elige VFBGA264 (elige {paq}): releer la "
         "cuenta de PF14/TIM2_CH2 y el acoplamiento con D9")
-    assert minimo_sin_rgmii == "VFBGA178", (
+    assert minimo_sin_rgmii == "VFBGA198", (
         f"el minimo sin RGMII cambio a {minimo_sin_rgmii}: releer la "
-        "clausula de D9 en el issue #213")
+        "clausula de D9 del issue #213 y el piso de la PSRAM (acta "
+        "2026-08-26)")
 
     print("\n  VERDE: el censo cierra. Se levanta el bloqueo de compra "
           f"del issue #213 con la variante {paq}.")
