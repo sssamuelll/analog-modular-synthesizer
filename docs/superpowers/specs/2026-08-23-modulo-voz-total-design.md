@@ -14,6 +14,34 @@
 
 ---
 
+> ## ⚠️ Enmienda del 2026-08-26: **el micro de este módulo cambió**
+>
+> **Los dos RP2350B mueren. El N657 hereda el módulo entero.** Lo selló el
+> benchmark del motor digital (`2026-08-26-motor-digital-benchmark.md`) y lo
+> desarrolla `2026-08-26-motor-digital-design.md`. Este bloque aplica las
+> **cinco filas** que ese papel mandó sobre este (su §9), y que llevaban un
+> día escritas sin ejecutar.
+>
+> Léelo antes que nada de abajo: **cinco secciones de este spec están
+> enmendadas o sucedidas**, y cada una lleva su marca en su sitio.
+>
+> | Sección | Qué le pasa | Sucesor |
+> |---|---|---|
+> | **§1** | muere «la partición en dos columnas con dos micros RP2350B» | motor-digital §1 |
+> | **§3.1** | la tasa única de 10 kHz gana una **ley de dos tasas** | motor-digital §5 (acta A-4) |
+> | **§3.3** | sus cotas pierden la etapa maestro→esclavo, que ya no existe | motor-digital §7 |
+> | **§3.4** | **sucedida entera**: no hay dos núcleos que repartir | motor-digital §7 |
+> | **§5** | la bahía gana **fuente nueva** (la boca) y **destino nuevo** (los oídos) | motor-digital D-P1/D-P4 |
+> | **§9.2** | el camino de silencio deja de depender del software | motor-digital R-M5 |
+>
+> **Lo que NO toca esta enmienda, y conviene decirlo:** la cadena analógica
+> del canal (§2) queda intacta — el motor-digital la declara expresamente
+> fuera de lo que reabre. La doctrina de §0, la bahía como concepto, el
+> parámetro durmiente y las siete actas E siguen en pie. **Cambió quién
+> ejecuta, no qué instrumento es.**
+
+---
+
 ## 0. La doctrina
 
 La primera versión de esta sección se llamó «acta constitucional» y se
@@ -160,9 +188,27 @@ ociosos por error.
 
 **De #164 se conserva**: los dieciséis SSI2130 y sus tres correcciones de
 exactitud, la matriz de modulación analógica de 16 líneas y la digital de
-sync, la partición en dos columnas con dos micros RP2350B, la referencia
-única distribuida y bufferizada, el convertidor de tono pegado a cada
-oscilador, los juguetes, la telemetría y el J2.
+sync, ~~la partición en dos columnas con dos micros RP2350B~~ **(muere —
+enmienda del 2026-08-26)**, la referencia única distribuida y bufferizada, el
+convertidor de tono pegado a cada oscilador, los juguetes, la telemetría y el
+J2.
+
+> **Enmienda del 2026-08-26 — el micro del módulo.** La partición en dos
+> columnas con dos RP2350B era la última pieza de #164 que gobernaba
+> arquitectura, y **se cae entera**: el módulo pasa a **un solo STM32N657**
+> (motor-digital §1, *«los dos RP2350B mueren; el N657 hereda»*).
+>
+> Lo que se cae con ella, y hay que decirlo porque eran cimientos de otras
+> secciones: la **base de tiempo compartida** entre columnas, el **arranque
+> en dos mitades**, y **la historia entera de recuperación entre columnas**.
+> Ninguna de las tres tiene sentido con un micro: no hay dos relojes que
+> alinear, ni dos arranques que ordenar, ni una columna que rescate a la otra.
+>
+> La razón por la que #164 quiso dos micros era **una sola**: dieciséis
+> osciladores pedían dieciséis cronómetros y el RP2350 daba doce máquinas de
+> PIO. El N657 trae los dieciséis en sus timers de hardware (motor-digital §7:
+> 14 en TIM2-5 de 32 bits + 2 en TIM1 de 16 con desbordes contados). **Muerto
+> el motivo, muere la partición.**
 
 **De #164 se reabre**: la partición física de placas (§8), el panel de 32
 jacks (muere: §5), el **camino de silencio** (S-1: ya no basta el pull del
@@ -222,6 +268,25 @@ de fe. **`spi_privado_budget.py` es bloqueante e INVALIDANTE**: suma todos
 los flujos del SPI privado (tono 1 kHz, índices, envolventes, eventos) y
 si no cierra, esta sección cae — no «se ajusta en el plan».
 
+> **Enmienda del 2026-08-26 — la ley de dos tasas (acta A-4).** La tasa única
+> de arriba gana un segundo escalón. **No es derogación**: los 10 kHz siguen
+> siendo la tasa de la casa, con su presupuesto vigente intacto.
+>
+> - Los **destinos rápidos** rinden a **48 kHz**. En v1 son exactamente
+>   **los 16 CV de corte** (S-9) — el acta de Samuel pedía CV a velocidad de
+>   audio, y esa es la lista de hoy.
+> - **Todos los demás siguen a 10 kHz**, envolventes incluidas. Esta sección
+>   sigue gobernando la clase lenta.
+> - **Promover un destino a rápido es acta de Samuel + guion recorrido.** Ni
+>   criterio implícito ni censo fantasma: si mañana alguien quiere el índice
+>   FM a 48 kHz, hay que decidirlo y correrlo, no deducirlo.
+>
+> La aritmética entera —los 3 buses SPI a 50 MHz nominales, la palabra de
+> 16 bits viajando en trama de DAC, la eficiencia 0,60— vive en
+> motor-digital §5, no aquí. Y el aviso que la acompaña: **la v1 de aquel
+> papel escribió un «margen ≥2×» que su propio rango desmentía**, y la junta
+> lo cazó como patrón #206. La cuenta buena es la de allá.
+
 ### 3.2 El test de membresía de «generador» (cambio 17, con cerradura)
 
 La junta cazó que la categoría no tenía límite (V2-IV). Lo tiene:
@@ -257,7 +322,55 @@ y 2 de la orquestación, con estas cotas como criterio de aceptación:
 - `ataque_budget.py` asevera el camino completo **cuando el mensaje
   exista**, no antes.
 
+> **Enmienda del 2026-08-26 — dos tercios de esta cota se evaporaron.** Con
+> un solo N657 ya **no hay etapa maestro→esclavo** ni **columnas** entre las
+> que uniformar. Mueren, por dejar de tener referente:
+>
+> - el término *«incluyendo la etapa maestro→esclavo»* (no hay reenvío);
+> - el *«jitter maestro-vs-esclavo, sistemático y asimétrico»* (no hay dos);
+> - el *«uniforme entre columnas dentro de ±0,5 ms»* (hay una sola).
+>
+> **Lo que sobrevive intacto es lo que importa: el objetivo de ≤ 3 ms de
+> nota a VCA**, y la cláusula de que `ataque_budget.py` no asevera nada hasta
+> que el mensaje exista. El camino se acortó; la vara no se relaja.
+>
+> La arquitectura de tiempo real que ocupa el sitio de la vieja está en
+> motor-digital §7 (prioridades NVIC: capturas y J2 > DMA de audio > USB y
+> Ethernet > resto; ISR críticas en ITCM), y **el presupuesto de latencia de
+> interrupción se mide en bring-up bajo carga plena** — no se declara.
+>
+> **El formato del mensaje sigue sin estar en `main`.** Lo diseña el papel
+> del evento de nota (PR #207), que hoy está frenado — ver el comentario de
+> ese PR. Así que este prerrequisito **sigue bloqueante**: cambió su
+> aritmética, no su estado.
+
 ### 3.4 El reparto del micro, declarado
+
+> ### ⚠️ Sección SUCEDIDA ENTERA — enmienda del 2026-08-26
+>
+> **Su sucesor es motor-digital §7** («La arquitectura de tiempo real,
+> declarada», que se nombra a sí misma *«el sucesor de voz-total §3.4»*).
+>
+> Lo de abajo repartía trabajo entre **dos núcleos de un RP2350B**. El N657
+> es de **un solo núcleo** (Cortex-M55): no hay núcleo 0 ni núcleo 1 que
+> repartir, y el reparto de abajo no se «adapta» — desaparece.
+>
+> Lo que ocupa su sitio no es otro reparto entre núcleos, sino **un orden de
+> prioridades y una delegación en hardware**: capturas y J2 por encima del
+> DMA de audio, ese por encima de USB y Ethernet, y el resto detrás; ISR
+> críticas en ITCM; los dieciséis cronómetros en timers de hardware en vez de
+> PIO. El trabajo no se reparte entre manos: **se delega a periféricos que
+> corren solos**, y lo que queda de CPU vive en el libro bilateral
+> (`carga_motor_budget.py`).
+>
+> **Una regla de abajo sobrevive y hay que rescatarla, porque su motivo no
+> murió con el chip:** *«el esclavo J2 nunca pierde su ventana de MISO»*.
+> Sigue siendo cierta y sigue mandando — en motor-digital §7 vive como la
+> prioridad más alta junto a las capturas. Que cambie el micro no le quita
+> la razón.
+
+<details>
+<summary><b>Texto original de §3.4</b> (histórico — repartía dos núcleos que ya no existen)</summary>
 
 El micro del módulo es tiempo real duro por tres frentes (esclavo J2,
 render de envolventes, PIO de afinación) y la v1 no asignaba nada
@@ -268,6 +381,8 @@ render de envolventes, PIO de afinación) y la v1 no asignaba nada
   (caudal manda).
 - Prioridades NVIC y canales DMA: documento del plan, **bloqueante**, con
   la regla de que el esclavo J2 nunca pierde su ventana de MISO.
+
+</details>
 
 ## 4. Calibración: dos regímenes, y su ley de concurrencia
 
@@ -311,6 +426,36 @@ en color qué es. El recall del patch interior se recuerda solo; solo los
 cables hacia el mundo siguen siendo físicos.
 
 Módulo clase **relator**, con su bajada de J2 y su panel en la fila A.
+
+> **Enmienda del 2026-08-26 — la bahía gana una fuente y un destino que no
+> vienen de ningún jack.** El crosspoint dejó de ser solo la frontera con el
+> mundo físico: el códec entra por los dos lados (motor-digital D-P1 y D-P4).
+>
+> **Fuente nueva — la boca del códec (D-P1).** Las salidas del códec (estéreo
+> en v1) se conectan como **fuentes del crosspoint**. Consecuencia musical, y
+> es grande: el audio digital se patchea como cualquier señal — al nodo de
+> suma de un canal, **a través del MS-20 y el VCA de una voz real**, en
+> retroalimentación, a donde el preset diga. Un sample o un motor digital
+> pueden entrar por el filtro analógico.
+> - **Contrato eléctrico nuevo:** entre boca y crosspoint hace falta una
+>   **etapa de acople y ganancia** que lleve el nivel de línea del códec al
+>   nominal de la bahía (mundo ±12 V). El número exacto no lo fija este
+>   papel.
+>
+> **Destino nuevo — los oídos ruteables (D-P4).** Para que exista el patch
+> «señal → corte», los oídos ganan **entrada desde el crosspoint**. Dos vías,
+> y el guion las compara en vez de elegir a ciegas:
+> - **vía códec** — audio fiel, pero carga el retardo de grupo del códec
+>   (~ms, ESTIMADO): modulación a velocidad de audio con latencia de códec;
+> - **vía ADC rápido del micro** — 12 bits a 5 Msps: µs de lazo para la FM de
+>   corte apretada, con menos bits.
+>
+> La subida ya existía (los oídos de E-5). **Con esto el puente queda
+> bidireccional**, y por eso la fila lo dice completo: la bahía necesita
+> **censo** — fuentes nuevas y destinos nuevos contra las 16×16 de los dos
+> AD75019, que no son infinitas. El censo está mandado en motor-digital §8.4;
+> **no está hecho**, y hasta que corra nadie sabe si las dos vías caben a la
+> vez.
 
 ### 5.2 La derogación del anti-acotamiento, en voz alta
 
@@ -463,12 +608,37 @@ El gate con pull-down era el failsafe y la v1 lo borró sin sustituto:
 - **Watchdog de trama en el módulo**: sin trama válida en N ms (N del
   plan, ~50), todos los generadores van a **release** y el módulo afirma
   silencio localmente. Trama perdida ≠ sustain infinito.
-- **Heartbeat del esclavo dentro del SPI privado**: el maestro lo vigila;
-  esclavo muerto → `RESET_ESCLAVO` (los DACs vuelven a cero-escala, §9.1).
-- **El esclavo vigila al maestro**: SPI privado mudo en N ms → release
-  local. Maestro muerto ≠ ocho voces congeladas sonando.
+- ~~**Heartbeat del esclavo dentro del SPI privado**~~ **(muere: no hay
+  esclavo)**: el maestro lo vigila; esclavo muerto → `RESET_ESCLAVO` (los
+  DACs vuelven a cero-escala, §9.1).
+- ~~**El esclavo vigila al maestro**~~ **(muere: no hay maestro)**: SPI
+  privado mudo en N ms → release local. Maestro muerto ≠ ocho voces
+  congeladas sonando.
 - Mutaciones: matar cada micro a mitad de nota y medir que el silencio
   llega solo.
+
+> **Enmienda del 2026-08-26 — sucedida por R-M5, y el problema se puso PEOR,
+> no mejor.** Sucesor: motor-digital **R-M5**, *«el silencio no depende del
+> software»*.
+>
+> **Dos de los cuatro failsafes de arriba se caen solos**, porque eran micros
+> vigilándose entre sí y ahora hay uno. Y ahí está el punto que hay que decir
+> sin adornos: **la vigilancia mutua era la red de seguridad, y desapareció**.
+> Con dos micros, uno colgado dejaba al otro vivo para afirmar silencio. Con
+> uno solo, **el N657 es el único escritor de 48 VCAs**: colgado, dieciséis
+> voces quedan gobernadas por un muerto. Motor-digital lo llama *«la
+> enfermedad del #201, tercera función»* — y es el **riesgo 9** de aquel papel.
+>
+> Por eso el sustituto no es otro watchdog de software, que sería más de lo
+> mismo: es **watchdog independiente + estado seguro por hardware**. Los VCAs
+> y el crosspoint caen a silencio **sin CPU** — inhibición atada a reset, el
+> patrón H-OF4. *Cierre del riesgo 9:* R-M5 dibujado en el esquemático y
+> **demostrado matando la CPU en bring-up**, no argumentado.
+>
+> **El watchdog de trama (el primero de la lista) sobrevive entero** — no
+> dependía de haber dos micros — y la mutación de abajo también, con una
+> palabra menos: matar **el** micro a mitad de nota y medir que el silencio
+> llega solo.
 
 ### 9.3 El prototipo, con su alcance dicho (S-11)
 
@@ -651,6 +821,20 @@ tiene relación con esta suma.
 El motivo, dicho por Samuel: *un mixer solo tiene sentido si es independiente
 de su fuente y de sus salidas.* El de hoy estaba soldado a las voces, así que
 no era un módulo — era una parte.
+
+> **Enmienda del 2026-08-26 — el códec gana boca, no solo oídos.** Esta acta
+> trajo el códec a la placa como **oídos**: cómo el instrumento se escucha a
+> sí mismo. La enmienda le añade la otra mitad: **el códec también habla**.
+>
+> Sus salidas entran como **fuentes del crosspoint** (D-P1, enmendado en §5),
+> así que el códec deja de ser un sentido y pasa a ser **un puente
+> bidireccional** entre el dominio digital y el analógico. Lo que sube por
+> los oídos puede bajar por la boca, pasar por un MS-20 y un VCA de verdad, y
+> volver a subir.
+>
+> Consecuencia para el papel: donde E-5 dice «los oídos», hoy hay que leer
+> **«el códec»** — con sus dos direcciones. La derogación de §0.4 punto 2 y
+> todo lo demás de esta acta siguen intactos.
 
 ### E-6. La salida es ESTÉREO, con sitio por voz
 

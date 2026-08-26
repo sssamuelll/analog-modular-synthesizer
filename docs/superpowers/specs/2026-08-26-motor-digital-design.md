@@ -379,11 +379,11 @@ libro bilateral y el bring-up lo mide bajo carga plena.
 
 | Papel | Qué |
 |---|---|
-| voz-total §1/§3 | los dos RP2350B mueren; el N657 hereda; §3.3/§3.4 → sucedidos por este papel (§7) |
-| voz-total §3.1 | la **ley de dos tasas** (48 kHz los rápidos, 10 kHz el resto) — por acta A-4 |
-| voz-total §5 | la boca como fuente del crosspoint + el destino oídos (D-P1/D-P4); censo |
-| voz-total §9.2 | el camino de silencio → sucedido por R-M5 (watchdog + estado seguro hardware) |
-| voz-total E-5 | el códec gana boca además de oídos |
+| ~~voz-total §1/§3~~ | ✅ **APLICADA 2026-08-26.** §1: muere la particion en dos columnas, y con ella la base de tiempo compartida, el arranque en dos mitades y la recuperacion entre columnas (muerto el motivo —doce PIO para dieciseis cronometros—, muere la particion). §3.3: pierde la etapa maestro→esclavo, el jitter entre micros y el «uniforme entre columnas»; **sobrevive el ≤3 ms**. §3.4: sucedida entera, con el texto viejo conservado en `<details>`; se rescata su regla de la ventana de MISO |
+| ~~voz-total §3.1~~ | ✅ **APLICADA 2026-08-26.** Escrita como enmienda y no derogacion: los 10 kHz siguen gobernando la clase lenta (envolventes incluidas) y los 16 CV de corte suben a 48 kHz. Copiada tambien la cerradura: promover un destino es acta + guion recorrido |
+| ~~voz-total §5~~ | ✅ **APLICADA 2026-08-26.** Fuente nueva (boca, con su etapa de acople pendiente de numero) y destino nuevo (oidos ruteables, con las dos vias y su compromiso bits-contra-latencia). **El censo sigue mandado y sin hacer** (§8.4): hasta que corra, nadie sabe si las dos vias caben en las 16×16 |
+| ~~voz-total §9.2~~ | ✅ **APLICADA 2026-08-26.** Dos de sus cuatro failsafes eran micros vigilandose entre si y mueren; escrito de frente que **la red de seguridad empeoro** al perder la vigilancia mutua, que por eso el sustituto es hardware y no mas software, y que el watchdog de trama sobrevive entero |
+| ~~voz-total E-5~~ | ✅ **APLICADA 2026-08-26.** El codec deja de ser un sentido y pasa a puente bidireccional; donde el acta dice «los oidos» hoy se lee «el codec» |
 | núcleo §7.1 | los tres lazos ganan un cuarto: **el lazo de muestra** (CV rápido, 20,8 µs) |
 | ~~#210 §0.1 / §4~~ | ✅ **APLICADA el 2026-08-26.** «clase H750» → clase N657; D8 **34,5 MHz** (verificado contra DS14791 Rev 2 Tabla 99 + su nota 2, no transcrito); peldaño 1 **22,9 MHz** al peor mazo — **no ~23-26**: recalculado con la disciplina de máx-gobierna que el propio #210 §4.1 declara, el rango de esta fila resultó optimista por arriba y queda señalado allá. Se enmendaron además cinco sitios que este mandato no nombraba pero que la enmienda arrastra: D8, la tabla de peldaños de §3, las tres lecturas de §4.2, la tabla de tráfico y el riesgo 2 de §8 |
 | #209 | eco histórico + corrección del framebuffer contiguo |
