@@ -74,8 +74,27 @@ cierre (riesgo 5 del motor §11, soak con el refresco activo).
 **El camino B queda de suplente declarado, con puerta y no con retórica**
 (la junta cobró que «se cae a B si un presupuesto se pone rojo» era
 infalsificable con los presupuestos aún sin correr): **el conector del
-panel no se dibuja hasta que el censo de SRAM (motor §8.5) y la fila LTDC
-de `carga_motor` (motor §8.8) estén verdes.** La referencia que justifica
+panel no se dibuja hasta que el censo de SRAM (`sram_budget.py`) esté
+verde y el soak de contención con el refresco LTDC activo (riesgo 5 del
+motor §11) haya corrido.** — la junta de la tanda 2 corrigió la redacción
+anterior, que apuntaba a «la fila LTDC de `carga_motor`»: esa fila existe
+y ya está verde, pero mide el **pegamento de CPU** (componer la UI), no la
+contención de AXI que esta misma spec llama el costo real del camino A.
+Una puerta tiene que nombrar lo que de verdad la cierra.
+
+> **Estado 2026-08-26 (noche, tanda 2 del #214): la puerta está CERRADA y
+> con hallazgo.** Los tres guiones ya existen y corrieron. `carga_motor`
+> sale verde y dice que la CPU compra 129-289 granos según el motor base.
+> `psram_budget` cierra su caudal y dice que el bus compra 2 500 granos a
+> velocidad ×1 y 625 a ×4 — el cuello es la CPU, no el bus, y el
+> framebuffer mudado a PSRAM cabría de sobra (46-69 MB/s de 240
+> disponibles). **`sram_budget` sale HUECO**, y su
+> hallazgo cambia el foco: apilando el peor caso de los ESTIMADO, lo fijo
+> se come 3,2 de los 4,2 MB y **no cierra ni sin pantalla** — o sea que el
+> dato que decide esta puerta no es el framebuffer sino **el tamaño del
+> binario, hoy sin medir**. Las tres salidas (medir en bring-up / mudar el
+> framebuffer a la PSRAM / camino B) están en el guion; **ninguna se elige
+> sin acta de Samuel**. La referencia que justifica
 la puerta: un doble buffer RGB888 son 2 304 000 B — **~55 % de los 4,2 MB**
 antes de contar binario, tablas residentes y buffers de sample. El rojo no
 es hipótesis remota, y caerse a B después de dibujar es un respin. El
@@ -209,8 +228,14 @@ tanda 2):
   salida es RGB888 de 24 bits para este panel — el LTDC también saca
   YUV422-16, que aquí no aplica; el formato de entrada lo elige cada
   capa, con dithering de 2 bits si entra con menos — DS §3.29). Esa
-  demanda entra a `carga_motor` y al presupuesto de la PSRAM (motor §8.7)
-  en la misma cola que los granos.
+  demanda se reparte en tres sitios distintos, y conviene no confundirlos
+  (la junta de la tanda 2 corrigió la frase anterior, que los metía todos
+  en `carga_motor`): el **pegamento de CPU** es fila del libro bilateral
+  (motor §7); el **caudal**, solo si el framebuffer se muda a la PSRAM, lo
+  mide `psram_budget.py` (46 MB/s en RGB565, 69 en RGB888, de los 240
+  disponibles); y la **contención en SRAM** — el caso del camino A tal
+  como está hoy — no tiene modelo de escritorio: se mide en el soak del
+  riesgo 5.
 - **Reloj de píxel**: lo fija el datasheet del panel (clase ~33 MHz para
   800×480@60 — ESTIMADO hasta pieza); el techo del LTDC es 150 Mpx/s
   (DS §3.28), así que no es la variable apretada.

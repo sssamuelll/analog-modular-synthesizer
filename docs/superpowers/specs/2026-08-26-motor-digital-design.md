@@ -269,10 +269,21 @@ la mitad heredada (~8 333 ciclos/muestra disponibles), método del benchmark:
 | Mezcla digital + fade R-M1 + ISR/scheduler | ~650 |
 | USB invitado (UAC2 asíncrono, feedback) | ~100-300 |
 | Oyente J2 amortizado | ~20-50 |
-| **Central** | **~1 600-2 150 ≈ 20-26 %** |
+| **UI de la pantalla, amortizada** (acta camino A — ESTIMADO, sin fuente) | ~25-150 |
+| **Mapeo de gestos, amortizado** (acta de la cámara — ESTIMADO, sin fuente) | ~6-50 |
+| **Central** | **~1 641-2 340 ≈ 20-28 %** (las seis primeras: ~1 610-2 140) |
 
-Con error de 3× en todo: ~58-77 % — cabe. La aserción vive en `carga_motor`
-(R-M2 bilateral). **Regla de cesión:** al desbordar cualquiera de las dos
+> **Enmienda 2026-08-26 (noche), del guion y su junta:** las dos filas
+> nuevas entran como **filas**, no como «pegamento». El motivo es un número:
+> la UI amortizada llega a 150 ciclos — el triple de la fila entera del
+> oyente J2 e igual a la de los 16 ADSR. Llamarla pegamento y aseverarla
+> contra un umbral inventado era un verde disfrazado (hallazgo de la junta
+> de la tanda 2). Ni el LTDC ni la NPU gastan CPU: esto es solo el trabajo
+> de componer la UI y de convertir landmarks en señal.
+
+Con error de 3× en todo: **~59-84 % — cabe**, y las dos filas nuevas se
+comieron siete puntos de holgura (antes ~58-77 %). La aserción vive en
+`carga_motor_budget.py` (R-M2 bilateral) y es la dura del guion. **Regla de cesión:** al desbordar cualquiera de las dos
 mitades, **cede el motor** (su válvula es el invitado); la mitad heredada —
 que carga todas las garantías de §2 — no cede jamás.
 
@@ -303,8 +314,12 @@ libro bilateral y el bring-up lo mide bajo carga plena.
 ## 8. Los guiones (mandados, no hechos; sus criterios de cierre viven en §11)
 
 1. **`micro_budget.py` se expande** (declarado en #210 §7): vara v2 del
-   benchmark, **censo de pines** (puerta 2 — bloqueante de compra, ahora con
-   los 3 buses de CV adentro) y `carga_motor` **bilateral** (R-M2).
+   benchmark y **censo de pines** (puerta 2 — bloqueante de compra, ahora
+   con los 3 buses de CV, la PSRAM y la pantalla adentro) — ✅ hecho. El
+   `carga_motor` **bilateral** (R-M2) salió a guion propio: ✅ **existe,
+   `hardware/02-midi-cv/carga_motor_budget.py`** — VERDE, con las dos
+   mitades aseveradas y las filas de granular y sampler que el acta de la
+   tarde mandó, derivadas del ancla publicada del wavetable.
 2. **`spi_privado_budget.py` se recorre** con la ley de dos tasas, la trama
    del DAC real y la eficiencia 0,60 (R-M3).
 3. **`autotune_budget.py`**: `N_VOCES = 16`; architecture-poly adopta su
@@ -314,21 +329,49 @@ libro bilateral y el bring-up lo mide bajo carga plena.
    voz-total §5.
 5. **Censo de SRAM** con el binario adentro (§3): cuántas tablas residentes
    caben de verdad — **y ahora también los buffers de sample y granos**
-   (acta 2026-08-26, tarde).
+   (acta 2026-08-26, tarde). ✅ **Existe: `hardware/02-midi-cv/sram_budget.py`**
+   — y sale **HUECO con hallazgo**: apilando el peor caso de los ESTIMADO, lo
+   fijo se come 3,2 de los 4,2 MB y no cierra ni sin pantalla. El hallazgo no
+   es de pantalla: **el tamaño del binario es hoy el mayor desconocido del
+   motor** y decide más que cualquier elección de framebuffer. Sus tres
+   salidas (medir en bring-up / mudar el framebuffer a PSRAM / camino B)
+   están escritas en el guion; ninguna se elige sin acta.
 6. **Censo de parámetros del motor** contra `MAX_PARAMS` (#172): el motor
    entra al modelo o no existe.
 7. **Presupuesto de la PSRAM** (nace con el acta 2026-08-26, tarde): caudal
    y latencia del XSPI1 contra la demanda de granos/sampler (techo
    eléctrico: DS Tablas 75-76, 140 MHz a 3,3 V / 180 MHz a 1,8 V en DTR),
    y las filas de ciclos de granular y sampler en `carga_motor`.
+   ✅ **Existe: `hardware/02-midi-cv/psram_budget.py`** — caudal cerrado.
+   **Corrección de fuente que su junta obligó:** las Tablas 75-76 que este
+   punto citaba son la fuente **incompleta** para este diseño. El censo de
+   pines sienta `XSPIM_P1_DQS0`, así que la tabla aplicable es la **77**
+   (p182, «DTR mode with DQS or HyperBus»): **200 MHz a cualquier voltaje
+   entre 1,65 y 3,6 V** — o sea que en el modo del diseño **el voltaje no
+   decide el techo**. Con ella el bus compra 2 500 granos a velocidad ×1 y
+   625 a ×4 (granos transpuestos leen proporcional), contra los 129-289 que
+   compra la CPU: **manda la CPU, no el bus, en todo el rango modelado**.
+   La vara del EP-133 queda **medio cerrada, y así lo dice el guion**: la
+   mesa de trabajo está aseverada contra la mitad de la vara (criterio
+   propio del guion, y hoy pasa por igualdad exacta — margen cero); el
+   catálogo del XSPI2, que cubre la otra mitad, **no tiene pieza ni cifra
+   ni aserción** (R-M3). **La latencia sigue fuera** y está declarada en el
+   cierre del guion: sale de la hoja de la pieza, no del ancho de banda.
 8. **Presupuesto de la pantalla** (nace con el acta 2026-08-26, noche —
    spec pantalla-motor): el framebuffer entra al censo de SRAM (§8.5,
    junto a los buffers de sample) y su caudal de refresco (23,04 Mpx/s
    sostenidos por AXI: 46-92 MB/s según formato) entra a `carga_motor` y
-   al presupuesto del punto 7, en la misma cola que los granos. Su
-   criterio de cierre vive en la fila 5 de §11 (soak con el refresco
-   activo) — y hasta que este guion y el §8.5 estén verdes, **el conector
-   del panel no se dibuja** (la puerta del repliegue, spec pantalla §1).
+   al presupuesto del punto 7. **Dónde vive cada mitad, corregido por la
+   junta de la tanda 2** (la redacción anterior decía «entra a
+   `carga_motor`» de algo que `carga_motor` declara fuera): el **pegamento
+   de CPU** (componer la UI) es fila del libro bilateral — ya está, ~25-150
+   ciclos, §7; el **caudal en PSRAM** lo mide `psram_budget.py` en su
+   escenario de framebuffer mudado (46 MB/s en RGB565, 69 en RGB888); y la
+   **contención en SRAM**, que es el costo real del camino A, **no tiene
+   modelo de escritorio a propósito**: se mide en el soak de la fila 5 de
+   §11, con el refresco LTDC activo. Hasta que el §8.5 cierre y ese soak
+   corra, **el conector del panel no se dibuja** (puerta del repliegue,
+   spec pantalla §1).
 
 ---
 
