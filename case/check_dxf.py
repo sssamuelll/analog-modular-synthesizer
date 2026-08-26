@@ -394,7 +394,10 @@ def agujeros_donde_toca() -> list[str]:
 
     # --- planchas: filas, paso y separacion ---
     _, _, filas = cb._cajas_solidas(p)
-    au = p["ancho_total"] - 2 * p["t_cheek"]
+    # DEL PRESUPUESTO, no recalculado: desde el 2026-08-26 ancho_util resta
+    # tambien las dos alas de costilla, y una copia a mano de la formula aqui
+    # se desincroniza del original en cuanto se toque t_costilla.
+    au = cb.perfil(p)["ancho_util"]
     n = max(1, round(au / 100))
     e = au / n
     # DOS REJILLAS, no una. Las bandejas y la tapa del valle se atornillan a un

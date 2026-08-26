@@ -11,7 +11,17 @@ PART = "assembly";
 // Tenerlo aqui fue el bug del cupon pentagonal (ver nota en params.scad).
 
 // ancho interior entre costados; Tasks 4-5 lo consumen como ancho_util.
-ancho_util = ancho_total - 2*t_cheek;
+// EL HUECO ENTRE COSTILLAS, no entre acrilicos, desde el 2026-08-26. Todo lo
+// que vive dentro del case -- largueros, rieles, planchas -- va de cara interna
+// a cara interna, y esas caras dejaron de ser el acrilico: son el ala de la
+// costilla, que se le monta encima. Restar solo t_cheek dejaria 2*t_costilla de
+// hueco fantasma y las planchas crecerian 6.3 mm para llenar un sitio ocupado.
+//
+// Y SE USA ESTA VARIABLE, no la resta a mano. Estuvo repetida en nueve sitios
+// de este fichero, y con dos terminos la copia se desincroniza del original al
+// primer cambio -- que es como esta cota llego a existir sin que nadie la
+// mirara.
+ancho_util = ancho_total - 2*t_cheek - 2*t_costilla;
 
 // vertices del perfil lateral (X = fondo, Y = arriba) — misma numeracion
 // que clearance_budget.perfil(): p0..p8
@@ -445,7 +455,7 @@ module plancha(l, a) square([l, a]);   // l = ancho_util, a = fondo local
 // solapes() no lo vio nunca porque una placa flotando es disjunta —
 // alineacion() en clearance_budget.py es la puerta que si lo ve.
 module bandeja_base_2d() {
-    au = ancho_total - 2*t_cheek;
+    au = ancho_util;
     ce = centros_esqueleto();
     // EL SUELO CIERRA (2026-08-21). El canto delantero estuvo A RAS del larguero
     // de base delantera, y como ese larguero se retira por detras del riel de
@@ -553,7 +563,7 @@ module bandeja_base_2d() {
 // ignoraria en silencio -- que es peor que no ponerla.
 KONDOR_FONT = "Franklin Gothic Medium";
 
-function trasera_au() = ancho_total - 2*t_cheek - 2*hol_piel;
+function trasera_au() = ancho_util - 2*hol_piel;
 function trasera_y_relieve() =
     let (ce = centros_esqueleto())
     ce[1].y + 0.74*(ce[3].y - ce[1].y);   // y0 = 0, ver piel_trasera_2d()
@@ -587,7 +597,7 @@ module kondor_2d(espejo = false) {
 }
 
 module piel_trasera_2d() {
-    au = ancho_total - 2*t_cheek - 2*hol_piel;
+    au = ancho_util - 2*hol_piel;
     ce = centros_esqueleto();
     P  = pts_perfil();
     // UNA sola plancha desde el 2026-08-21: fueron dos (piel_inferior y
@@ -732,7 +742,7 @@ module ranura(largo, ancho) {
 // La plancha del valle. Ver la nota de params.scad: campo de ranuras registrado
 // a la malla HP, partido por la espina maciza donde va la fila de M3.
 module tapa_valle_2d() {
-    au = ancho_total - 2*t_cheek;
+    au = ancho_util;
     ce = centros_esqueleto();
     xv = x_valle();
     largo = xv[1] - xv[0];
@@ -1012,7 +1022,7 @@ function bandeja_base_vuelo() =
 // delante del larguero delantero. Como el larguero se planta a
 // chasis_holgura_larguero del chasis, la cuenta se cierra sola y no necesita
 // mirar donde acabo ce[0]: vuelo + rail + holgura.
-function ch_pos() = [ancho_total - 2*t_cheek - chasis_margen_bandeja
+function ch_pos() = [ancho_util - chasis_margen_bandeja
                        - ch_tapa_ext().x,
                      bandeja_base_vuelo() + rail + chasis_holgura_larguero];
 
@@ -1273,7 +1283,7 @@ module remate_sup() {
 // nadie. Fresando eso no es cosmetico: son cinco prestaciones que se pagan.
 // Si el calibrador encuentra material, volver a meterlos es una linea.
 module remate_sup_2d() {
-    au = ancho_total - 2*t_cheek;
+    au = ancho_util;
     P = pts_perfil();
     ce = centros_esqueleto();
     difference() {
@@ -1342,8 +1352,8 @@ module lienzo_2d() {
     P = pts_perfil();
     prof = max([for (pp = P) pp.x]);   // ancho real de costado_2d (fondo)
     alto = max([for (pp = P) pp.y]);   // alto real de costado_2d
-    au  = ancho_total - 2*t_cheek;
-    aup = ancho_total - 2*t_cheek - 2*hol_piel;
+    au  = ancho_util;
+    aup = ancho_util - 2*hol_piel;
     // fila 1: los 2 costados
     costado_2d();
     translate([prof + sep, 0]) costado_2d();
@@ -1369,7 +1379,7 @@ module lienzo_2d() {
 }
 
 module bom() {
-    au = ancho_total - 2*t_cheek;
+    au = ancho_util;
     echo(str("BOM: larguero 2020 x", len(centros_esqueleto()), " de ", au, " mm"));
     echo(str("BOM: Z-Rail de Tiptop x", len(centros_rail()), ", largo ", largo_riel,
              " (104 HP) -- seccion ", rail_er_fondo, " x ", rail_er_alto,
@@ -1404,7 +1414,7 @@ module bom() {
     echo("     la tuerca de insercion lateral se paga sola: con las de deslizar");
     echo("     hay que dejarlas dentro ANTES de cerrar el esqueleto.");
     echo(str("BOM: la TRASERA es UNA plancha empotrada de t=", t_piel, ", no dos:"));
-    echo(str("     ", ancho_total - 2*t_cheek - 2*hol_piel, " de ancho,",
+    echo(str("     ", ancho_util - 2*hol_piel, " de ancho,",
              " atornillada arriba y abajo y NADA en medio: 211.73 mm de vano"));
     echo("     libre, que en 8 mm de acrilico son 0.15 de flecha con 50 N en el");
     echo("     centro. Fueron dos pieles de 5 partidas a la altura del");

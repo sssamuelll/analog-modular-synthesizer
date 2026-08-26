@@ -41,11 +41,13 @@ def leer_params() -> dict[str, float]:
     # el largo del riel por casualidad aritmetica. Con la holgura de montaje
     # metida en ese hueco, un literal se desincroniza al primer cambio y el
     # sintoma es un riel que no entra.
-    derivado = p["largo_riel"] + 2 * p["t_cheek"]
+    derivado = (p["largo_riel"] + p["hol_riel"]
+                + 2 * p["t_costilla"] + 2 * p["t_cheek"])
     if "ancho_total" in p:
         raise SystemExit(
             f"params.scad: ancho_total volvio a ser un literal ({p['ancho_total']:.2f}). "
-            f"Es DERIVADO desde el 2026-08-26: largo_riel + 2*t_cheek "
+            f"Es DERIVADO desde el 2026-08-26: largo_riel + hol_riel + "
+            f"2*t_costilla + 2*t_cheek "
             f"= {derivado:.2f}. Un literal aqui vuelve a esconder si el riel "
             f"cabe o no.")
     p["ancho_total"] = derivado
@@ -86,7 +88,14 @@ def perfil(p: dict[str, float]) -> dict[str, float]:
         # proposito, que es el lado seguro.
         "alto_interior_inferior": (y_entrepiso - p["t_valle"]
                                     - p["t_base"]),
-        "ancho_util": p["ancho_total"] - 2 * p["t_cheek"],
+        # EL HUECO ENTRE COSTILLAS, no entre acrilicos, desde el 2026-08-26.
+        # Todo lo que vive dentro del case -- largueros, rieles, planchas -- va
+        # de cara interna a cara interna, y esas caras dejaron de ser el
+        # acrilico: son el ala de la costilla, que se le monta encima. Restar
+        # solo t_cheek dejaria 2*t_costilla de hueco fantasma, y las planchas
+        # crecerian 6.3 mm para llenar un sitio que ya esta ocupado.
+        "ancho_util": (p["ancho_total"] - 2 * p["t_cheek"]
+                       - 2 * p["t_costilla"]),
     }
 
 
@@ -345,6 +354,13 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     rail, t_cheek = p["rail"], p["t_cheek"]
     t_acr, hol = p["t_valle"], p["hol_piel"]
     ancho_total = p["ancho_total"]
+    # LAS CARAS INTERNAS DEL CASE dejaron de ser el acrilico el 2026-08-26: el
+    # ala de la costilla se le monta encima, y todo lo que vive dentro apoya
+    # contra ELLA. Sin este termino las planchas se dibujan 2*t_costilla mas
+    # anchas de lo que caben y solapes() no lo canta, porque una plancha que
+    # invade una costilla que el modelo no dibuja no solapa con nada.
+    z0 = t_cheek + p["t_costilla"]
+    z1 = ancho_total - t_cheek - p["t_costilla"]
 
     angs = [p[k] for k in ANGS_CR]
     railes: list[Caja] = []
@@ -353,18 +369,18 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
         # simetrico porque la seccion no es cuadrada (ver _he_er)
         hx, hy = _he_er(p, ang)
         railes.append((nm, c[0] - hx, c[0] + hx, c[1] - hy, c[1] + hy,
-                       t_cheek, ancho_total - t_cheek))
+                       z0, z1))
     # La PESTANA superior: banda de acrilico sobre los ultimos marco_sup mm de
     # la cara de arriba, a ras por fuera y engordando t_cheek hacia dentro.
     # Aqui interesa que no se pise con el riel de arriba ni con el larguero de
     # remate, que viven justo debajo.
     rx0, rx1, ry0, ry1 = _caja_remate(p, P)
     planchas_extra = ("remate_sup", rx0, rx1, ry0, ry1,
-                      t_cheek, ancho_total - t_cheek)
+                      z0, z1)
     for nm, c in zip(NOMBRES_CE, ce):
         railes.append((nm, c[0] - rail / 2, c[0] + rail / 2,
                        c[1] - rail / 2, c[1] + rail / 2,
-                       t_cheek, ancho_total - t_cheek))
+                       z0, z1))
 
     planchas: list[Caja] = [planchas_extra]
     filas: list[Fila] = []
@@ -379,7 +395,7 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     x0_bb = ce[0][0] - rail / 2 - _vuelo_bandeja(p)
     fondo_bb = ce[1][0] + rail / 2 - x0_bb
     planchas.append(("bandeja_base", x0_bb, x0_bb + fondo_bb,
-                     0.0, p["t_base"], t_cheek, ancho_total - t_cheek))
+                     0.0, p["t_base"], z0, z1))
     filas += [("bandeja_base", "delantera", "x", ce[0][0], "base delantera"),
               ("bandeja_base", "trasera", "x", ce[1][0], "base trasera")]
     # bandeja_entrepiso MURIO el 2026-08-21 ("vamos a evitar la complejidad").
@@ -404,7 +420,7 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # del riel del valle de la cara inferior.
     x0_tv, x1_tv = _x_valle(p, P, cr)
     planchas.append(("tapa_valle", x0_tv, x1_tv,
-                     P[3][1] - t_acr, P[3][1], t_cheek, ancho_total - t_cheek))
+                     P[3][1] - t_acr, P[3][1], z0, z1))
     filas += [("tapa_valle", "unica", "x", ce[2][0], "valle")]
     # piel_trasera: UNA sola plancha desde el 2026-08-21. Fueron dos, partidas
     # a la altura del entrepiso porque cada una se atornillaba a los dos
@@ -417,8 +433,8 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     y0_pt = 0.0
     alto_pt = (P[5][1] - p["marco_sup"]) - y0_pt
     planchas.append(("piel_trasera", P[6][0] - p["t_piel"], P[6][0],
-                     y0_pt, y0_pt + alto_pt, t_cheek + hol,
-                     ancho_total - t_cheek - hol))
+                     y0_pt, y0_pt + alto_pt, z0 + hol,
+                     z1 - hol))
     filas += [("piel_trasera", "base", "y", ce[1][1], "base trasera"),
               ("piel_trasera", "remate", "y", ce[3][1], "remate trasero"),
               ("remate_sup", "unica", "x", ce[3][0], "remate trasero")]
@@ -1200,6 +1216,57 @@ def paso_junta_L(p: dict[str, float], t: float, b: float,
     q = (p["carga_mano"] / 2.0) * Q / I
     precarga = p["par_m3"] * 1000.0 / (0.2 * 3.0)      # N*m -> N*mm, d = 3
     return AS_M3 * TAU_M3 / q, MU_ALU_SECO * precarga / q
+
+
+def guarda_costilla(p: dict[str, float]) -> None:
+    """La costilla aguanta que empujen el case de lado.
+
+    ES LA PIEZA PORTANTE desde el 2026-08-26: el costado de acrilico paso a
+    piel y no sostiene nada. El modo critico es fuera del plano de la costilla,
+    que es su direccion floja -- en su plano es un marco y trabaja a traccion y
+    compresion, un orden de magnitud mas rigido. Viga biempotrada porque las
+    esquinas de un marco continuo lo son, con carga_mano al centro del tramo
+    mas largo.
+
+    LO QUE ESTA PUERTA EXISTE PARA IMPEDIR son dos cosas, y las dos son
+    silenciosas:
+
+    1. QUE ALGUIEN QUITE LA TIRA DE CANTO por estetica. Sin tira la seccion es
+       una pletina plana y NO PASA A NINGUN ESPESOR -- ni la de 6 mm; la de 3
+       ademas fluye, a 257 MPa contra un Rp0.2 de 130. La tira no tapa un
+       canto: es el ala que convierte la plancha en viga.
+    2. QUE ALGUIEN SUBA EL PASO de los tornillos que la cosen. Por resistencia
+       cabrian cada 109 mm, y a ese paso la junta DESLIZA antes de que el
+       tornillo trabaje: las dos alas flexan por separado y vuelve el caso 1
+       sin que nada se rompa ni avise."""
+    P = _vertices(p)
+    n = len(P)
+    tramo = max(math.hypot(P[(i + 1) % n][0] - P[i][0],
+                           P[(i + 1) % n][1] - P[i][1]) for i in range(n))
+    I, ymax, _ = _seccion_L(p["t_costilla"], p["ala_costilla"], p["tira_canto"])
+    flecha = p["carga_mano"] * tramo ** 3 / (192 * E_ALUMINIO * I)
+    sigma = (p["carga_mano"] * tramo / 8) * ymax / I
+    assert flecha <= p["flecha_costado_max"], (
+        f"la costilla cede {flecha:.3f} mm en su tramo de {tramo:.2f} mm con "
+        f"{p['carga_mano']:.0f} N, y el techo son {p['flecha_costado_max']:.2f}. "
+        f"Si acabas de tocar tira_canto: sin ella NINGUN espesor pasa, ni el "
+        f"de 6 mm.")
+    assert sigma <= RP02_ALUMINIO, (
+        f"la costilla trabaja a {sigma:.1f} MPa y el Rp0.2 del aluminio de "
+        f"chapa son {RP02_ALUMINIO:.0f}.")
+    _, paso_max = paso_junta_L(p, p["t_costilla"], p["ala_costilla"],
+                               p["tira_canto"])
+    assert p["paso_tira"] <= paso_max, (
+        f"los M3 de la tira van cada {p['paso_tira']:.0f} mm y la junta deja "
+        f"de transmitir el cortante por encima de {paso_max:.0f}. Por encima "
+        f"de ese paso la junta DESLIZA, las dos alas flexan por separado y la "
+        f"costilla deja de ser una L. OJO: el criterio de RESISTENCIA daria "
+        f"mucho mas paso y es el numero equivocado.")
+    print(f"costilla: L de {p['t_costilla']:g} con ala {p['ala_costilla']:g} y "
+          f"tira {p['tira_canto']:g}; tramo mayor {tramo:.2f} mm, cede "
+          f"{flecha:.3f} mm y trabaja a {sigma:.1f} MPa")
+    print(f"  la tira se cose cada {p['paso_tira']:g} mm y la junta aguanta "
+          f"hasta {paso_max:.0f} (por resistencia darian 109: no es ese)")
 
 
 def guarda_valle(p: dict[str, float]) -> None:
@@ -1986,6 +2053,7 @@ def main() -> int:
     canario_solapes(p)
     canario_alineacion(p)
     guarda_piso(p)
+    guarda_costilla(p)
     guarda_aire(p)
     guarda_chaflan(p)
     guarda_valle(p)
@@ -2032,14 +2100,40 @@ def main() -> int:
     # largos de catalogo y el que se compro mide 528.32 (104 HP). Si esto se
     # desincroniza, o los rieles no llegan de costado a costado o hay que
     # cortarlos -- y cortar un extremo se lleva la punta por donde se fijan.
-    exige(abs(g["ancho_util"] - p["largo_riel"]) < 0.01,
-          f"ancho_util={g['ancho_util']:.2f} != largo_riel={p['largo_riel']}: "
-          f"ancho_total tiene que valer largo_riel + 2*t_cheek = "
-          f"{p['largo_riel'] + 2 * p['t_cheek']:.2f}")
-    exige(sum(ANCHOS_PISO_SUP.values()) + EXPANSION_MIN <= g["ancho_util"],
-          "el piso superior no cabe en el ancho util")
-    exige(sum(ANCHOS_PISO_INF.values()) + EXPANSION_MIN <= g["ancho_util"],
-          "el piso inferior no cabe en el ancho util")
+    # ESTO FUE UNA IGUALDAD EXACTA hasta el 2026-08-26, y tenia razon mientras
+    # ancho_util no era un hueco sino una CONSECUENCIA: los costados se
+    # separaban lo que midieran las piezas que van de cara a cara, asi que el
+    # riel no podia "no caber". Su argumento -- los Z-Rails son de catalogo, y
+    # desincronizar significa o rieles que no llegan o rieles que hay que
+    # cortar por la punta donde se fijan -- sigue vivo.
+    #
+    # AQUI SOLO SE COMPRUEBA QUE hol_riel SEA RAZONABLE, y conviene decir por
+    # que tan poco: ancho_total se DERIVA de hol_riel, asi que
+    # ancho_riel - largo_riel da hol_riel identicamente. Una banda sobre esa
+    # resta seria tautologica -- no puede fallar --, que es exactamente el
+    # vicio que este mismo bloque tenia antes con otra forma. Se probo: subir
+    # hol_riel a 30 o bajarlo a -1 no ponia nada en rojo.
+    #
+    # LA VERIFICACION DE VERDAD VIVE EN check_dxf.py, contra el contorno
+    # RELEIDO del DXF de la costilla, que es un artefacto independiente y por
+    # tanto si puede contradecir al modelo. Mismo motivo por el que
+    # guarda_costado() vive alli y no aqui.
+    exige(0.1 <= p["hol_riel"] <= p["rail"] / 2,
+          f"hol_riel = {p['hol_riel']}: por debajo de 0.1 el riel entra a "
+          f"presion contra el ala de la costilla, y por encima de "
+          f"{p['rail'] / 2:.0f} se queda corto de costado a costado y sus M4 "
+          f"de punta trabajan de mala manera")
+    # CONTRA largo_riel Y NO CONTRA ancho_util desde el 2026-08-26. Fueron el
+    # mismo numero mientras el riel iba de cara a cara del acrilico, y al
+    # separarse (2*t_costilla) medir contra el hueco AFLOJA estas dos reglas en
+    # silencio: daria 6 mm de panel que no existen. Los modulos se atornillan a
+    # la pletina roscada del RIEL, asi que el riel es quien manda cuanto panel
+    # cabe -- el hueco entre costados nunca fue el sujeto correcto, solo lo
+    # parecia por coincidir.
+    exige(sum(ANCHOS_PISO_SUP.values()) + EXPANSION_MIN <= p["largo_riel"],
+          "el piso superior no cabe a lo largo del riel")
+    exige(sum(ANCHOS_PISO_INF.values()) + EXPANSION_MIN <= p["largo_riel"],
+          "el piso inferior no cabe a lo largo del riel")
     # CARA y PANEL ya no son el mismo numero, asi que por cada fila hay DOS
     # derivaciones que tienen que dar lo mismo y no una: la separacion de
     # railes sale de la cara (por donde se atornillan al costado) y tambien del

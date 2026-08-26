@@ -35,7 +35,44 @@
 // mas de una cosa metida en ese hueco y a mano se desincroniza al primer
 // cambio. clearance_budget.py calcula esta MISMA formula y se niega a arrancar
 // si alguien la devuelve a literal.
-ancho_total     = largo_riel + 2*t_cheek;
+// --- EL ESQUELETO DE ALUMINIO (spec 2026-08-26) ---
+// LA COSTILLA ES LA PIEZA PORTANTE. El costado de acrilico paso a piel y ya no
+// sostiene nada: no lleva un solo tornillo estructural.
+//
+// 3 mm y no mas, y el numero no lo fija la rigidez sino el ancho del case: el
+// ala interior se mete en el hueco donde va el Z-Rail, asi que ancho_total
+// crece 2*t_costilla. A 3 el case crece 6 mm; a 4, ocho. Y con la tira puesta,
+// 3 pasa con 2.4x de margen -- la rigidez la da la FORMA en L, no el espesor.
+t_costilla      = 3;
+// Ala que agarra la cara interior del costado. SUPUESTO DECLARADO: 20 es lo
+// que medía el 2020 que este marco jubila. La cota definitiva sale de que le
+// quepa el M4 del Z-Rail y de cuanto puede robarle al vaciado.
+ala_costilla    = 20;
+// LA TIRA DE CANTO NO ES UN EMBELLECEDOR, y quien la borre por estetica tumba
+// la estructura. Tapa el canto del acrilico, si, pero su trabajo es ser el ala
+// que convierte la plancha en viga: sin ella la costilla es una pletina y no
+// pasa a NINGUN espesor, ni a 6 mm; a 3 ademas fluye. Lo vigila
+// guarda_costilla(), que lo dice en su mensaje de error.
+tira_canto      = 12;
+// Paso de los M3 que cosen la tira a la costilla. NO lo fija la resistencia
+// del tornillo -- por resistencia cabrian cada 109 mm -- sino que la junta NO
+// DESLICE, que con mu = 0.2 y 1.0 N*m da 34. Hasta que no desliza, las dos
+// alas trabajan como una sola seccion; en cuanto desliza, la costilla deja de
+// ser una L y no se rompe nada, que es lo peligroso. Ver paso_junta_L().
+// CUESTA 78 M3 en los dos costados: eso va en el BOM, no de sorpresa.
+paso_tira       = 30;
+// Holgura de montaje del Z-Rail. NACE CON LA COSTILLA y no antes: hasta el
+// 2026-08-26 ancho_util no era un hueco sino una CONSECUENCIA -- los costados
+// se separaban lo que midieran las piezas que van de cara a cara --, asi que
+// "holgura" no tenia sujeto. Con el marco si lo tiene: el ala de la costilla
+// es un plano y las transversales fijan la separacion, o sea que el riel tiene
+// que caber en lo que quede. 0.15 por lado, la misma cifra que hol_piel.
+hol_riel        = 0.30;
+// ancho_total NO VIVE AQUI: OpenSCAD evalua en orden textual y esta formula usa
+// largo_riel (linea ~604) y t_cheek (~515), que se declaran mas abajo. Aqui
+// daba "Ignoring unknown variable" y ancho_total salia undefined -- sin error
+// de export, solo geometria vacia. Esta al final del fichero, detras de sus
+// dependencias.
 // CARA vs PANEL. Hasta el 2026-08-17 eran el mismo numero y por eso la puerta
 // de EUROrack estaba en rojo: con la cara valiendo 128.5 y los railes a 27 de
 // cada punta, los railes quedaban a 74.5 y un modulo 3U NO atornilla.
@@ -569,6 +606,17 @@ rail            = 20;   // perfil 2020, SOLO esqueleto (base, entrepiso, remate,
 // ancho_total): 104 HP x 5.08 = 528.32. No se puede "ajustar" -- o se compra
 // otro largo o se corta el riel, y cortarlo se lleva la punta por donde se fija.
 largo_riel      = 528.32;
+
+// ANCHO TOTAL, DERIVADO. Va justo detras de largo_riel porque OpenSCAD evalua
+// en orden textual y esta formula necesita a los cuatro ya declarados.
+//
+// Estuvo escrito a mano (544.32) mientras el comentario de arriba daba la
+// formula, asi que ancho_util coincidia con el largo del riel por CASUALIDAD
+// ARITMETICA y no por derivacion -- la clase de cota que parece verificada y
+// nunca se comprobo. Hoy hay tres cosas metidas en ese hueco: el riel, su
+// holgura de montaje y las dos alas de costilla. clearance_budget.py calcula
+// esta misma formula y se niega a arrancar si vuelve a ser literal.
+ancho_total     = largo_riel + hol_riel + 2*t_costilla + 2*t_cheek;
 rail_er_alto    = 10;
 rail_er_fondo   = 23.8;
 rail_er_eje     = 14.3;
