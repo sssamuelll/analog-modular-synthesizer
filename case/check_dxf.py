@@ -37,7 +37,7 @@ PLANS = Path(__file__).parent / "plans"
 #     el peor final posible para una puerta.
 #
 # Derivar mata las dos. El espesor se descarta solo: de las tres aristas de
-# cada caja, las dos mayores son las del DXF y la menor es t_acrilico.
+# cada caja, las dos mayores son las del DXF y la menor es su espesor.
 #
 # QUE PUEDE Y QUE NO PUEDE CAZAR ESTE CHEQUEO, dicho claro: como la
 # expectativa sale de las mismas formulas con que el modelo dibuja, NO puede

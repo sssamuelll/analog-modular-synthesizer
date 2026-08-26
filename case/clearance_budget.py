@@ -66,7 +66,7 @@ def perfil(p: dict[str, float]) -> dict[str, float]:
         # solo cambio de dueno. Donde el chasis NO queda debajo de la tapa del
         # valle la altura real es mayor -- este numero se queda corto a
         # proposito, que es el lado seguro.
-        "alto_interior_inferior": (y_entrepiso - p["t_acrilico"]
+        "alto_interior_inferior": (y_entrepiso - p["t_valle"]
                                     - p["t_base"]),
         "ancho_util": p["ancho_total"] - 2 * p["t_cheek"],
     }
@@ -80,7 +80,7 @@ def autocomprobacion(p: dict[str, float]) -> None:
     g = perfil({**p, "angulo_inferior": 12, "angulo_superior": 35,
                 "alto_cara_inf": 190, "alto_cara_sup": 190,
                 "alto_frontal": 50, "paso_horizontal": 20,
-                "t_acrilico": 5, "ancho_total": 500, "t_cheek": 8})
+                "t_valle": 5, "ancho_total": 500, "t_cheek": 8})
     # A mano: 50 + 190*cos12 = 50 + 185.85 = 235.85
     assert abs(g["y_entrepiso"] - 235.85) < 0.05, g["y_entrepiso"]
     # A mano: 235.85 + 190*cos35 = 235.85 + 155.64 = 391.49
@@ -246,7 +246,7 @@ def _centros_esqueleto(p: dict[str, float], P: list[tuple[float, float]],
     # superior a 49 el solape se hizo real (0.11 mm contra el larguero, 5 mm
     # contra la bandeja de entrepiso) y solapes() lo canto. El cambio de
     # angulo no rompio nada: destapo algo que llevaba roto desde Task 5.
-    y_ep = P[3][1] - p["t_acrilico"] - r
+    y_ep = P[3][1] - p["t_valle"] - r
     # Los dos largueros de la base ya NO viven en el canto de abajo. Desde que
     # la bandeja es el suelo (t_base) montan ENCIMA de ella, con su centro en
     # t_base + r, y a esa altura el redondeo de las esquinas de abajo deja de
@@ -325,7 +325,7 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     cr = _centros_rail(p, P)
     ce = _centros_esqueleto(p, P, cr)
     rail, t_cheek = p["rail"], p["t_cheek"]
-    t_acr, hol = p["t_acrilico"], p["hol_piel"]
+    t_acr, hol = p["t_valle"], p["hol_piel"]
     ancho_total = p["ancho_total"]
 
     angs = [p[k] for k in ANGS_CR]
@@ -921,7 +921,7 @@ def guarda_aire(p: dict[str, float]) -> None:
     n_ent, largo_ent, a_ent, y_ent = _rejilla_entrada(p)
     n_val, largo_val, a_val = _rejilla_valle(p)
     P = _vertices(p)
-    y_val = P[3][1] - p["t_acrilico"] / 2
+    y_val = P[3][1] - p["t_valle"] / 2
     a_ond, y_ond = _ondas_trasera(p)
     a_sal = a_val + a_ond
     y_sal = (a_val * y_val + a_ond * y_ond) / a_sal
@@ -1062,10 +1062,19 @@ def guarda_chaflan(p: dict[str, float]) -> None:
         chaflan, se redondea solo. Pedir arista viva es otra cosa y se dice
         aparte.
       - por arriba, la plancha mas FINA: el chaflan se come material de las
-        DOS caras, y en la tapa del valle (5 mm) uno grande deja el canto en
-        filo otra vez, por el otro lado.
+        DOS caras, y en una plancha delgada uno grande deja el canto en filo
+        otra vez, por el otro lado.
+
+    LA TAPA DEL VALLE NO CUENTA AQUI desde el 2026-08-25, y es deliberado: es
+    de ALUMINIO (t_valle = 3), y este chaflan es una exigencia del PLIEGO DE
+    ACRILICO -- existe porque el PMMA con arista viva y canto diamantado se
+    desportilla al primer roce. El aluminio ni craquela ni se desportilla asi,
+    y su canto lo resuelve el taller de chapa con su propio desbarbado.
+    Dejarla dentro clavaba el techo del chaflan en 0.75 mm por una pieza a la
+    que la regla no le aplica, que es exactamente el vicio de la puerta que
+    grita en falso.
     """
-    t_min = min(p["t_acrilico"], p["t_base"], p["t_cheek"], p["t_piel"])
+    t_min = min(p["t_base"], p["t_cheek"], p["t_piel"])
     assert p["chaflan"] >= 0.3, (
         f"chaflan = {p['chaflan']} mm: por debajo de 0.3 el taller no lo "
         f"ejecuta como chaflan, lo redondea. Pedir 0 (arista viva) es otra "
@@ -1076,6 +1085,86 @@ def guarda_chaflan(p: dict[str, float]) -> None:
         f"vuelve a quedar en filo. Maximo {t_min/4:.2f}.")
     print(f"chaflan: {p['chaflan']} mm x 45 en toda arista vista "
           f"(techo por la plancha de {t_min:g} mm: {t_min/4:.2f})")
+
+
+# La tapa del valle es de ALUMINIO desde el 2026-08-25. Modulo elastico: 69 GPa,
+# que es comun a todos los aluminios y no depende de la aleacion. El limite
+# elastico SI depende, y va conservador: 130 MPa es el Rp0.2 de un 5754 H22, la
+# chapa corriente de corte. Un 6082-T6 da ~250 y aguantaria el doble; pedir la
+# aleacion exacta es cosa del pliego, no de esta puerta. SUPUESTO DECLARADO.
+E_ALUMINIO, RP02_ALUMINIO = 69000.0, 130.0
+# Ancho sobre el que reparte una mano apoyada de canto. Es EL SUPUESTO QUE MAS
+# MANDA en esta puerta -- con 50 mm la tension se dobla contra los 100 -- y por
+# eso va conservador: el canto de la mano, no la palma abierta.
+B_MANO = 50.0
+
+
+def guarda_valle(p: dict[str, float]) -> None:
+    """La tapa del valle aguanta que alguien se apoye en ella.
+
+    NACE CON EL CAMBIO DE MATERIAL, y el numero que la justifica es la
+    proporcion en voladizo: la tapa mide 66.5 mm de fondo y el larguero solo la
+    toca 20, asi que el 70 % de la pieza vuela -- 23.24 mm a cada lado de una
+    banda de apoyo continua.
+
+    OJO CON EL MODO DE CARGA, que es donde este calculo se hizo mal primero: el
+    larguero del valle corre los 528 mm ENTEROS, o sea que para carga hacia
+    ABAJO la tapa apoya en una LINEA CONTINUA y no sobre los 5 M3. El vano
+    entre tornillos no existe en este modo; los M3 solo trabajan cuando se tira
+    de la tapa hacia arriba. Lo que flexa es el VOLADIZO TRANSVERSAL:
+
+        flecha = P L^3 / (3 E I)        sigma = 6 P L / (b t^2)
+        I = b t^3 / 12,  L = voladizo,  b = B_MANO
+
+    EN ACRILICO DE 5 ESTO NO PASABA: 22.3 MPa con 200 N repartidos en 50, sobre
+    un umbral de 10 (#106), o sea que fluia a 90 N. Era la pieza mas floja del
+    case y ademas la unica superficie HORIZONTAL -- donde se apoya quien se
+    levanta, no donde se posa la mano al parchear.
+
+    POR QUE NO SE ARREGLO CON ESPESOR NI CON LARGUERO, y conviene que quede
+    escrito para que nadie lo reintente:
+      - acrilico de 6: BLOQUEADO. La tapa invade el barrido del riel y la fila
+        de abajo pasa de abrir 180 grados a 39.5. Lo canta guarda_tapa().
+      - larguero de 30 en vez de 20: entra por 0.24 mm, que esta por debajo de
+        la tolerancia de la propia extrusion. No es holgura, es suerte.
+      - larguero de 40: NO ENTRA. Se pasa 4.76 mm de su ventana, que la fijan
+        las esquinas giradas de los dos railes del valle. Lo canta
+        guarda_escalon().
+    El aluminio resuelve por rigidez especifica en vez de por espesor, y de
+    paso DEVUELVE 2 mm de barrido en vez de comerselos."""
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    ce = _centros_esqueleto(p, P, cr)
+    x0, x1 = _x_valle(p, P, cr)
+    xl = ce[NOMBRES_CE.index("valle")][0]
+    r = p["rail"] / 2
+    vol = max((xl - r) - x0, x1 - (xl + r))
+    t = p["t_valle"]
+
+    I = B_MANO * t ** 3 / 12
+    flecha = p["carga_mano"] * vol ** 3 / (3 * E_ALUMINIO * I)
+    sigma = 6 * p["carga_mano"] * vol / (B_MANO * t ** 2)
+    p_fluye = RP02_ALUMINIO * B_MANO * t ** 2 / (6 * vol)
+
+    assert sigma <= RP02_ALUMINIO, (
+        f"la tapa del valle trabaja a {sigma:.1f} MPa con {p['carga_mano']:.0f} N "
+        f"repartidos en {B_MANO:.0f} mm, y el limite elastico del aluminio de "
+        f"chapa son {RP02_ALUMINIO:.0f}. Vuela {vol:.2f} mm a cada lado del "
+        f"larguero: o sube t_valle, o hay que ensanchar el apoyo.")
+    assert flecha <= p["flecha_costado_max"], (
+        f"la tapa del valle cede {flecha:.2f} mm con {p['carga_mano']:.0f} N y "
+        f"el techo son {p['flecha_costado_max']:.2f}. Es la unica cara "
+        f"HORIZONTAL del case: la que se hunde bajo la mano se nota mas que "
+        f"ninguna.")
+    # El otro modo, que no rompe pero se siente: tirar de la tapa hacia arriba
+    # entre dos M3. Aqui SI hay vano.
+    paso = perfil(p)["ancho_util"] / 5
+    f_arr = p["carga_mano"] * paso ** 3 / (48 * E_ALUMINIO * I)
+    print(f"valle: tapa de ALUMINIO t={t:g}, vuela {vol:.2f} mm a cada lado del "
+          f"larguero ({100*2*vol/(x1-x0):.0f} % del fondo)")
+    print(f"  con {p['carga_mano']:.0f} N en {B_MANO:.0f} mm cede {flecha:.3f} mm "
+          f"y trabaja a {sigma:.1f} MPa (Rp0.2 {RP02_ALUMINIO:.0f}, fluye a "
+          f"{p_fluye:.0f} N); levantandola entre dos M3, {f_arr:.2f} mm")
 
 
 def guarda_red(p: dict[str, float]) -> None:
@@ -1795,6 +1884,7 @@ def main() -> int:
     guarda_piso(p)
     guarda_aire(p)
     guarda_chaflan(p)
+    guarda_valle(p)
     guarda_apriete(p)
     guarda_paticas(p)
     canario_red(p)
@@ -1893,7 +1983,7 @@ def main() -> int:
               f"de EUROrack: un modulo 3U NO atornilla en esa fila. La cara se "
               f"dimensiona DESDE esta cota (alto_cara_{piso} = sep + {ins_a} + "
               f"{ins_b}), no al reves.")
-    exige(p["vent_puente_min"] >= 0.8 * p["t_acrilico"],
+    exige(p["vent_puente_min"] >= 0.8 * p["t_valle"],
           "puente de ventilacion fragil para el espesor")
     fallos.extend(solapes(p))
     fallos.extend(alineacion(p))

@@ -174,8 +174,8 @@ function centros_esqueleto() =
     let (P = pts_perfil(), r = rail/2, cr = centros_rail(),
          // Los DOS largueros traseros comparten X, y por eso esto es UNA
          // cota y no dos copias: la cara donde apoya la trasera tiene que ser
-         // un plano, no dos planos parecidos. Se retiran t_piel (y no
-         // t_acrilico: la trasera tiene su propio espesor desde el 2026-08-21)
+         // un plano, no dos planos parecidos. Se retiran t_piel, que es el
+         // espesor de la trasera y solo suyo desde el 2026-08-21,
          // para que la plancha atornillada encima remate EXACTAMENTE en el
          // plano trasero -- empotrada y a ras, sin rebaje y sin dejar de ser
          // un DXF plano.
@@ -185,7 +185,7 @@ function centros_esqueleto() =
          // x_tr -> chasis -> base delantera. Ver la nota de abajo.
          x_ch_frente = (x_tr - r) - chasis_holgura_larguero - ch_tapa_ext().y,
          x_bd = x_ch_frente - chasis_holgura_larguero - r,
-         y_ep = P[3].y - t_acrilico - r)
+         y_ep = P[3].y - t_valle - r)
     // Los dos largueros de la base ya NO viven en el canto de abajo. Desde que
     // la bandeja es el suelo (t_base) montan encima de ella, o sea con su centro
     // en t_base + r, y a esa altura el redondeo de las esquinas de abajo deja de
@@ -419,7 +419,7 @@ module rail_2020(largo) { cube([rail, largo, rail], center = true); }
 // direccion de la cara (su alto). Verificado con las dos matrices a mano.
 module rail_er(largo) { cube([rail_er_fondo, largo, rail_er_alto], center = true); }
 
-// --- planchas rectangulares del cuerpo (todas t_acrilico) -------------
+// --- planchas rectangulares del cuerpo (cada una con SU espesor) ------
 // Agujeros M3 de tuerca T contra los largueros 2020, repartidos a ~paso.
 //
 // IBA DESCENTRADA y nadie la miraba: arrancaba en paso/2 y avanzaba de paso en
@@ -593,8 +593,8 @@ module piel_trasera_2d() {
     // UNA sola plancha desde el 2026-08-21: fueron dos (piel_inferior y
     // piel_superior) partidas a la altura del entrepiso, porque cada una se
     // atornillaba a los dos largueros de SU piso. Muerta la bandeja de
-    // entrepiso esa frontera dejo de existir. Va en t_piel (8), no en
-    // t_acrilico.
+    // entrepiso esa frontera dejo de existir. Va en t_piel (8), que es su
+    // propio espesor desde el 2026-08-21.
     // Canto de abajo EN EL PLANO DEL SUELO. Estuvo en ce[1].y - 15 (o sea
     // y=3), que no era una cota del case sino la distancia al canto de la fila
     // de M3 leida al reves: 15 mm por debajo del larguero de base trasera. Ese
@@ -1206,12 +1206,14 @@ module tapa_valle() {
     xv = x_valle();
     translate([xv[0], P[3].y, ancho_total - t_cheek])
         rotate([0, 90, 0]) rotate([90, 0, 0])
-            linear_extrude(t_acrilico) tapa_valle_2d();
+            linear_extrude(t_valle) tapa_valle_2d();
 }
 
+// SIN LA TAPA DEL VALLE desde el 2026-08-25: es de ALUMINIO (t_valle) y se
+// fue a assembly_aluminio(). Si vuelve aqui, el render la pinta translucida y
+// naranja y ensena una pieza que no existe -- que es peor que no renderizarla.
 module planchas_acrilico() {
     bandeja_base();
-    tapa_valle();
     piel_trasera();
     remate_sup();
 }
@@ -1325,9 +1327,14 @@ module assembly_acrilico() {           // STL separado para Blender (Task 8)
 module assembly_aluminio() {           // idem, perfiles 2020 + paneles solidos
     rails();
     paneles();
+    // La tapa del valle. Entra aqui el 2026-08-25 al dejar de ser acrilico de 5
+    // y pasar a aluminio de 3, y su sitio es este por la misma razon por la que
+    // el cambio no rompe el lenguaje visual: queda entre los paneles de las dos
+    // filas, que ya son PCB de aluminio.
+    tapa_valle();
 }
 
-// --- lienzo de corte: 7 piezas (2 costados + 5 planchas) en rejilla -----
+// --- lienzo de corte: 5 piezas (2 costados + 3 planchas) en rejilla -----
 // Separacion 8 mm; marco de 1000x600 es solo referencia visual de plancha,
 // las piezas pueden desbordarlo (nesting real lo hace el servicio de corte).
 module lienzo_2d() {
@@ -1340,8 +1347,13 @@ module lienzo_2d() {
     // fila 1: los 2 costados
     costado_2d();
     translate([prof + sep, 0]) costado_2d();
-    // fila 2: las 4 planchas del cuerpo. Fueron 6 hasta el 2026-08-21 (murio la
-    // bandeja de entrepiso y las dos pieles se fundieron en una).
+    // fila 2: las 3 planchas del cuerpo. Fueron 6 hasta el 2026-08-21 (murio
+    // la bandeja de entrepiso y las dos pieles se fundieron en una), y 4 hasta
+    // el 2026-08-25, cuando la tapa del valle paso a ALUMINIO.
+    //
+    // ESTE LIENZO ES DE ACRILICO Y SOLO DE ACRILICO, y es el mismo motivo por
+    // el que nunca llevo las tres piezas de acero: van a otro taller, y
+    // nestear junto lo que no se manda junto es mentir sobre el pedido.
     //
     // La cadena se renumero al quitarlas: antes cada x colgaba de la anterior
     // (x3 = x2 + ...) y al borrar las lineas de las piezas muertas se fueron
@@ -1352,8 +1364,7 @@ module lienzo_2d() {
     y2 = alto + sep;
     x1 = 0;               translate([x1, y2]) bandeja_base_2d();
     x2 = x1 + au + sep;   translate([x2, y2]) piel_trasera_2d();
-    x3 = x2 + aup + sep;  translate([x3, y2]) tapa_valle_2d();
-    x4 = x3 + au + sep;   translate([x4, y2]) remate_sup_2d();
+    x3 = x2 + aup + sep;  translate([x3, y2]) remate_sup_2d();
     %square([1000, 600]);
 }
 
@@ -1451,8 +1462,16 @@ module bom() {
              " roscado x4, d=", d_pie, " x ", alto_pie, " mm -- se atornilla,",
              " NO se pega. Se exige la curva carga-deformacion: >= ", flecha_pie,
              " mm de flecha con 22.8 N (flecha_pie)"));
-    echo(str("BOM: plancha t=", t_acrilico, ": SOLO la tapa del valle -- ojo, un",
-             " espesor entero para UNA pieza, cosa del pliego"));
-    echo(str("BOM: plancha t=", t_cheek, ": costados x2, suelo (bandeja de base,",
-             " portante), tapa de remate y TRASERA -- 5 piezas"));
+    echo(str("BOM: tapa del valle: chapa de ALUMINIO t=", t_valle,
+             ", 528.32 x 66.5. NO es acrilico desde el 2026-08-25."));
+    echo("     Va al taller de CHAPA con las tres piezas del chasis, no al de");
+    echo("     acrilico. Sin recocido, sin diamantado, sin chaflan de pliego:");
+    echo("     esas tres cosas son del PMMA. Canto desbarbado y basta.");
+    echo("     Aleacion: pedir 5754 o mejor. La puerta va contra Rp0.2 = 130");
+    echo("     MPa, que es lo que da un 5754 H22; un 6082-T6 da ~250 y sobra.");
+    echo(str("BOM: plancha de acrilico t=", t_cheek, ": costados x2, suelo (bandeja",
+             " de base, portante), tapa de remate y TRASERA -- 5 piezas."));
+    echo("     UN SOLO ESPESOR en todo el cuerpo. Hubo dos hasta el 2026-08-25:");
+    echo("     los 5 mm existian para UNA pieza, y esa pieza es ahora de");
+    echo("     aluminio. Media plancha de 5 que ya no hay que comprar.");
 }

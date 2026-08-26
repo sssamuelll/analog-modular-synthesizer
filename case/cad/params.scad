@@ -445,7 +445,33 @@ radio_trasero   = 0;
 chaflan         = 0.5;
 
 // --- materiales ---
-t_acrilico = 5;    // planchas del cuerpo; MEDIR con calibre (spec §11)
+// LA TAPA DEL VALLE ES DE ALUMINIO, Y ESTE PARAMETRO SE LLAMABA t_valle.
+// Cambio el 2026-08-25 y el nombre viejo mentia: era el espesor de UNA sola
+// pieza -- la tapa del valle -- y el README ya lo decia con incomodidad ("un
+// espesor entero para UNA pieza, cosa del pliego").
+//
+// POR QUE CAMBIA. Medido: la tapa apoya sobre una banda de rail (20 mm) y mide
+// 66.5 de fondo, o sea que el 70 % de la pieza vuela -- 23.24 mm a cada lado.
+// En acrilico de 5 eso da, con 200 N repartidos en 100 mm de mano, 11.2 MPa
+// contra los 10 de fluencia del PMMA (#106); y si la mano reparte solo 50 mm
+// (el canto, no la palma) fluye a 90 N. Era la pieza mas floja del case con
+// diferencia, y es la unica superficie HORIZONTAL, o sea donde se apoya quien
+// se levanta.
+//
+// POR QUE ALUMINIO Y NO ACRILICO MAS GRUESO: subir a 6 esta BLOQUEADO -- la
+// tapa invade el barrido del riel y la fila de abajo pasa de abrir 180 a 39.5
+// grados. Ensanchar el larguero tampoco: un perfil de 30 entra por 0.24 mm
+// (por debajo de la tolerancia de la propia extrusion) y uno de 40 no entra,
+// se pasa 4.76. El aluminio de 3 resuelve por rigidez especifica en vez de por
+// espesor, y ADEMAS devuelve 2 mm de barrido en vez de comerselo.
+//
+// Y NO ROMPE EL LENGUAJE: los paneles de modulo ya son PCB de ALUMINIO a los
+// dos lados de esta banda. Una tapa de aluminio entre dos filas de aluminio se
+// lee como que la banda central pertenece a los paneles, no como un parche.
+//
+// Lo que se lleva por delante, y es ganancia: la unica linea de BOM de 5 mm.
+// El cuerpo de acrilico queda con UN solo espesor, 8.
+t_valle    = 3;    // ALUMINIO. Ver guarda_valle(); el material va en el PLIEGO
 t_cheek    = 8;    // costados portantes
 // SUELO del case. La bandeja de base dejo de ser una plancha del cuerpo el
 // 2026-08-17: ya no se apoya ENCIMA de los dos largueros -- 20 + 5 = 25 mm de
@@ -457,7 +483,7 @@ t_cheek    = 8;    // costados portantes
 // 100 mm; lo unico que cambia es por que cara. Pero el techo que el riel tiene
 // que librar baja de 25 a 8, y con el baja el case entero 17 mm.
 //
-// Sube de t_acrilico a t_cheek porque ahora es cara vista y de apoyo: el mismo 8
+// Sube de t_valle a t_cheek porque ahora es cara vista y de apoyo: el mismo 8
 // del costado, de la pestana y del marco de remate. Es lo que pidio Samuel --
 // "el mismo grosor que todo el resto de la estructura".
 //
@@ -592,14 +618,14 @@ rail_er_eje     = 14.3;
 inset_inf_frente = 17.5;
 // (*) El del valle NO lo pone su curva desde el 2026-08-17: por la curva
 // bastarian 10, y lo que manda es LA TAPA DEL VALLE. Esa plancha va a ras del
-// plano del valle, o sea con su cara de abajo a t_acrilico por debajo, y justo
+// plano del valle, o sea con su cara de abajo a t_valle por debajo, y justo
 // ahi asoma la esquina de arriba del riel del valle de la cara de ABAJO.
 //
 // Fue 10 (0.013 mm de hueco: las dos piezas rozandose por casualidad aritmetica)
 // y luego 12.5, que daba 2.06 mm limpios PARADO. Y ahi estaba la trampa: Samuel
 // pidio que las DOS filas se abran, y esa cota hay que medirla GIRANDO.
 //
-//   parado:  hueco = cos(35)*i + sen(35)*(t_panel+rail_er_eje) - t_acrilico
+//   parado:  hueco = cos(35)*i + sen(35)*(t_panel+rail_er_eje) - t_valle
 //                    - he_er_y(35)          he_er_y = 11.95
 //   girando: lo mismo pero contra el RADIO DE GIRO del riel = 14.58
 //
@@ -716,14 +742,17 @@ par_m3      = 1.0;  // N*m. Techo por arandela: 1.15
 // aprieta, esto es lo que sube -- no el ancho de la piel.
 hol_piel    = 0.15;
 // Espesor de la TRASERA, y solo de ella. Samuel la pidio en 8 el 2026-08-21
-// -- misma plancha que los costados y el suelo -- mientras el resto del cuerpo
-// sigue en t_acrilico. No es lo mismo que t_acrilico y por eso es un parametro
-// aparte: de este numero cuelga cuanto se retiran los cuatro largueros
-// traseros para que la trasera enrase con el canto.
+// -- misma plancha que los costados y el suelo -- cuando el resto del cuerpo
+// todavia colgaba de un espesor generico de acrilico. Ese generico ya no
+// existe: desde el 2026-08-25 el PMMA del cuerpo es 8 entero (t_base, t_cheek,
+// t_piel) y lo unico distinto es t_valle, que ni siquiera es PMMA. Sigue
+// siendo parametro aparte porque de este numero cuelga cuanto se retiran los
+// cuatro largueros traseros para que la trasera enrase con el canto.
 //
-// Efecto secundario anotado y NO resuelto aqui: con la trasera en 8 y muerta la
-// bandeja de entrepiso, el unico cliente del acrilico de 5 mm es la tapa del
-// valle. Comprar una plancha entera para una pieza es cosa del pliego.
+// El efecto secundario que este bloque anotaba y NO resolvia -- que el unico
+// cliente del acrilico de 5 mm era la tapa del valle, y comprar una plancha
+// entera para una pieza es cosa del pliego -- lo cerro la rev. 20 por el otro
+// lado: la tapa paso a aluminio y la linea de 5 mm murio.
 t_piel      = 8;
 // PATICAS: DE GOMA. Samuel, 2026-08-24 -- "prefiero las gomas solamente,
 // pero unas gomas serias".

@@ -13,7 +13,9 @@ Para elegir taller antes de pedir, ver [`RFQ.md`](RFQ.md).
 
 - **PMMA COLADO (GS)**, naranja translúcido. **NO extruido (XT)**: el
   extruido trae tensión interna de fábrica y craquela solo.
-- Espesores: **8 mm** y **5 mm**. Ver §6 qué pieza en qué espesor.
+- Espesor: **8 mm**, y es el único. Hubo dos hasta el 2026-08-25: los 5 mm
+  existían para una sola pieza —la tapa del valle— y esa pieza pasó a
+  **chapa de aluminio**, así que no entra en este pliego (§6).
 - Tolerancia de espesor conocida y aceptada: **±(0.4 + 0.1 × espesor)**, o
   sea ±1.2 mm en 8. Confirmada por escrito por Schaeffer AG el 2026-08-18.
 - **Comunicar el espesor real medido del lote ANTES de cortar.** No es
@@ -96,16 +98,36 @@ Las demás piezas son indiferentes al lado.
 | `costado_2d` | 8 | **2** | canto visible completo, diamantado |
 | `bandeja_base_2d` | 8 | 1 | |
 | `piel_trasera_2d` | 8 | 1 | **+ `kondor_cajeado_2d` a 4 mm en la cara exterior** (§4, §5) |
-| `tapa_valle_2d` | **5** | 1 | única pieza en 5 mm |
 | `remate_sup_2d` | 8 | 1 | |
 | `coupon.dxf` | 8 | 1 | pieza de calibración — **sin acabado, sin recocer** |
 
 **`lienzo_2d.dxf` es solo previsualización de nesteado: NO SE CORTA.**
 
-Las tres piezas `chasis_*` son de **acero** y van a otro taller, con otro
-proceso (corte + plegado). Llevan su propio plano de plegado
+### Lo que NO va a este taller
+
+Cuatro DXF de `case/plans/` **no son de acrílico** y no entran aquí:
+
+| DXF | material | proceso |
+|---|---|---|
+| `chasis_cuerpo_2d`, `chasis_tapa_2d`, `chasis_refuerzo_2d` | acero | corte + **plegado** |
+| `tapa_valle_2d` | **aluminio, 3 mm** | corte plano |
+
+Las tres del chasis llevan su propio plano de plegado
 ([`renders/chasis-plano-plegado.png`](renders/chasis-plano-plegado.png)),
 porque un DXF de corte no dice de dónde doblar.
+
+**La tapa del valle** era acrílico de 5 mm hasta el 2026-08-25 y es la
+superficie horizontal entre las dos filas de módulos. Cambió de material
+porque el 70 % de su fondo está en voladizo —vuela 23.24 mm a cada lado de
+su larguero— y en PMMA de 5 fluía a 90 N, con lo que era la pieza más floja
+del case y a la vez donde se apoya quien se levanta.
+
+**No lleva nada de §3**: ni recocido, ni diamantado, ni el chaflán de 0.5.
+Esas tres cosas son del PMMA. Canto desbarbado y basta.
+
+**Aleación: 5754 o mejor.** La puerta del modelo va contra `Rp0.2` = 130 MPa,
+que es lo que da un 5754 H22; un 6082-T6 da ~250 y sobra. Si el taller
+suministra una aleación más blanda, **avisar antes de cortar**.
 
 ## 7. Manipulación y limpieza — para nosotros, no para el taller
 
@@ -138,3 +160,4 @@ contradicen, el equivocado es este documento.**
 | apriete 1.0 N·m / d16 | `par_m3`, `d_arandela` | `guarda_apriete()` |
 | flecha de patica 0.25 mm | `flecha_pie` | `guarda_paticas()` |
 | fresa ⌀3 mm | `fresa_d` | `guarda_fresado()` |
+| tapa del valle, aluminio 3 mm | `t_valle` | `guarda_valle()` |

@@ -266,6 +266,56 @@ UNA pieza plana. La rigidez del vano de 528 mm sin costado central sigue siendo
 la heurística que la spec §11 no ha cerrado (`n_bulkheads` = 2, «3 si el vano
 flexa»), y este cambio le quita una barra. Se cierra cargando el prototipo.
 
+**La tapa del valle pasa a aluminio** (2026-08-25). Era la plancha más floja
+del case y a la vez la **única cara horizontal** — o sea donde se apoya quien se
+levanta, no donde se posa la mano al parchear.
+
+El número que lo decide es la proporción en voladizo: la tapa mide 66.5 mm de
+fondo y el larguero solo la toca **20 mm**, así que **el 70 % de la pieza
+vuela** — 23.24 mm a cada lado.
+
+Ojo con el modo de carga, porque la primera cuenta salió mal: el larguero del
+valle corre los 528 mm enteros, así que hacia abajo la tapa apoya en una **línea
+continua**, no sobre los 5 M3. El vano entre tornillos no existe en ese modo;
+los M3 solo trabajan al tirar de la tapa hacia arriba. Lo que flexa es el
+voladizo transversal.
+
+| | acrílico 5 mm | **aluminio 3 mm** |
+|---|---|---|
+| flecha con 200 N en 50 mm | 0.535 mm | **0.108 mm** |
+| tensión | 22.3 MPa | **62.0 MPa** |
+| contra su límite | 10 (fluencia PMMA) — **lo pasa** | 130 (`Rp0.2` 5754 H22) — factor **2.1** |
+| fluye a | **90 N** | **420 N** |
+
+**Las otras tres salidas están cerradas, y conviene que quede escrito para que
+nadie las reintente:**
+
+- **Acrílico de 6 mm**: bloqueado. La tapa invade el barrido del riel y la fila
+  de abajo pasa de abrir 180° a 39.5°.
+- **Larguero de 30 mm** en vez de 20: entra por **0.24 mm**, que está por debajo
+  de la tolerancia de la propia extrusión. Eso no es holgura, es suerte.
+- **Larguero de 40 mm**: no entra. Se pasa **4.76 mm** de su ventana, que la
+  fijan las esquinas giradas de los dos raíles del valle.
+
+El aluminio resuelve por rigidez específica en vez de por espesor, y al ser más
+fino **devuelve 2 mm de barrido** en vez de comérselos.
+
+**Y no rompe el lenguaje visual**, que era la única objeción seria: los paneles
+de módulo ya son **PCB de aluminio** a los dos lados de esta banda. Una tapa de
+aluminio entre dos filas de aluminio se lee como que la banda central pertenece
+a los paneles. En el modelo también cambió de sitio — sale de
+`planchas_acrilico()` y entra en `assembly_aluminio()`, o si no el render la
+pintaría translúcida y naranja, que es peor que no dibujarla.
+
+Lo que se lleva por delante, y es ganancia: **la única línea de BOM de 5 mm**.
+El cuerpo de acrílico queda con **un solo espesor**. Y `t_acrilico` se llama
+ahora `t_valle`, porque el nombre viejo habría mentido sobre el material.
+
+Efecto colateral medido: al adelgazar la tapa, el larguero del valle sube 2 mm
+para seguir tocándola, y con él su M5 en el costado — que pasa de estar a 15.03
+mm del canto a **13.03 mm**, o sea de 2.73 D a **2.37 D**. Sigue muy por encima
+del mínimo de 1.5 D que exige `taladros_con_material()`.
+
 **El larguero del remate, y el fin del pegamento** (2026-08-21). La tapa que cierra
 la meseta del techo iba **pegada** al Z-Rail, y era la única junta irreversible
 del case: ahí arriba no había larguero al que atornillarla, y esa cara del riel
@@ -348,6 +398,24 @@ el del sistema, porque importa `pcbnew`):
 "C:/Program Files/KiCad/10.0/bin/python.exe" case/panels/build_template.py --ancho 100
 ```
 
+### El naranja del render, y por qué no es una cota
+
+`render.py` pinta el acrílico con `Base Color` **(1.0, 0.24, 0.04)**, que en
+sRGB es **#FF8638**. El valor se eligió **mirando el render**, no calculándolo:
+estuvo en (1.0, 0.35, 0.05) —#FFA03F, ámbar— y pasó unas horas por
+(1.0, 0.16, 0.04) —#FF6F38—, que Samuel descartó el 2026-08-26 por rojo.
+
+Se decide mirando y no con una muestra de color porque el material lleva
+`Transmission Weight` = 0.85: **el tono que se percibe no es el hex plano**. Un
+chip de color al lado de este render no se parecen, y el que manda es el
+render.
+
+**Y no es una cota del material.** El PMMA naranja todavía no está comprado y
+su tono lo fija el proveedor, no este archivo. El día que llegue la plancha,
+lo que se ajusta es el render para parecerse a ella — no al revés. Esto es
+intención visual, del mismo tipo que el board de 2026-08-16: manda sobre
+lenguaje, no sobre nada que se corte.
+
 ### Criterio de regeneración limpia — tres clases, no una
 
 `export.ps1` y `build_template.py` **no** producen los mismos bytes en cada
@@ -400,13 +468,16 @@ entregable — el DXF es plano y en el render del case queda detrás de los pane
 (se probó metiéndolo en `render.py`: dos PNG idénticos y minutos de Cycles).
 
 `case/plans/lienzo_2d.dxf` va por el mismo camino: es la preview de las piezas
-de acrílico en rejilla, no se manda a ningún sitio, y son otras 97.512 líneas de
-diff. **El lienzo no lleva las tres piezas de acero** y es a propósito: van a
-otro taller, con otro proceso (corte + plegado) y otro material, así que
-nestearlas con el acrílico sería mentir sobre lo que se manda junto.
+de acrílico en rejilla, no se manda a ningún sitio, y son otras 58.894 líneas de
+diff. **El lienzo no lleva las tres piezas de acero ni la tapa del valle** y es a
+propósito: van a otro taller y con otro proceso —las del chasis, corte y
+plegado; la del valle, corte de chapa—, así que nestearlas con el acrílico
+sería mentir sobre lo que se manda junto. La tapa salió el 2026-08-25, con el
+cambio de material: hasta entonces era la tercera plancha de la segunda fila.
 
-Lo que sí se versiona son los **nueve DXF sueltos** de `case/plans/` — cinco
-piezas de acrílico, tres de acero y el cupón. Son el entregable que va al taller, y su diff es la
+Lo que sí se versiona son los **diez DXF sueltos** de `case/plans/` — cuatro
+piezas de acrílico, **una de aluminio** (la tapa del valle), tres de acero, el
+cajeado de la marca y el cupón. Son el entregable que va al taller, y su diff es la
 prueba de qué se mandó a cortar y cuándo.
 
 ## Procedimiento del cupón — sólo si se vuelve al láser
@@ -481,7 +552,7 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Tornillo **M3 botón** + tuerca T M3 + **arandela ancha d16** | **30** | las planchas a los largueros: base 10, tapa del valle 5, tapa de remate 5, **trasera 10** (2 filas × 5). Entran por la RANURA, no por la punta. **Apriete 1.0 N·m con rosca SECA** — engrasarla mete un 30 % más de precarga con el mismo par y fisura. Ver `par_m3` |
 | Arandela ANCHA d16 | **34** | 30 bajo los M3 de plancha + 4 en los ejes de giro. **No opcional en ninguno de los dos sitios**, y es la misma pieza en ambos: la familia de herraje baja de dos arandelas a una. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 y aguanta. En los M3 además es la que sube el par utilizable de 0.33 a 1.15 N·m — por debajo de 1 N·m no hay llave dinamométrica de 1/4" que lo dé |
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa. **Sustituye al amortiguador**, que se eliminó |
-| Plancha acrílico t=5 mm | **1** | solo la tapa del valle. Un espesor entero para **una** pieza — a resolver en el pliego, no en el modelo |
+| **Chapa de aluminio t=3 mm** | **1** | la tapa del valle, 528.32 × 66.5. **No es acrílico desde el 2026-08-25**: era la pieza más floja del case y es la única cara horizontal. Aleación **5754 o mejor** (`Rp0.2` ≥ 130 MPa). Va al taller de CHAPA con las tres del chasis — sin recocido, sin diamantado, sin chaflán: eso es del PMMA. Ver `guarda_valle()` |
 | Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante, 528.32 × 291.4) + tapa de remate (528.32 × 37) + **trasera** (528.02 × 248.18, con las tres ondas y la rejilla de entrada de aire) |
 | Patica de goma con casquillo roscado | 4 | EPDM o NBR, Shore 45–55 A, **d20 × 10**. **Se exige la curva carga-deformación: ≥ 0.25 mm de flecha con 22.8 N** — por debajo la pata AMPLIFICA los 100 Hz del toroide en vez de aislarlos (`flecha_pie`). Casquillo roscado moldeado: se atornilla, **no se pega** — el case no lleva juntas irreversibles |
 
@@ -511,7 +582,7 @@ cerrado**: estos totales por panel cierran cuando cada panel esté dibujado.
 
 ## Anclaje de las placas — solo a largueros del esqueleto
 
-Las planchas de acrílico (bandeja de base, tapa del valle, tapa de remate y trasera) se atornillan
+Las planchas (bandeja de base, tapa de remate y trasera, de acrílico; tapa del valle, de aluminio) se atornillan
 **únicamente a largueros del esqueleto**, nunca a los 4 raíles de panel. Los
 raíles de panel van girados al ángulo de su cara (35° / 45° desde la vertical) para quedar a ras
 del panel: un tornillo contra esa cara entraría a 12° del eje de su agujero
@@ -580,7 +651,7 @@ un cable asumiendo continuidad por el riel es riesgo de choque eléctrico.
    porque después el valle y los paneles cierran el piso por arriba.
 4. **Los 4 Z-Rails** — M4 desde fuera, roscan en el propio riel. Comprobar
    antes que la pletina roscada corre por su canal.
-5. **Tapa del valle** — 5 M3 al larguero del valle.
+5. **Tapa del valle** — 5 M3 al larguero del valle. Es de **aluminio de 3 mm**, no de acrílico: no lleva film protector ni las precauciones del PMMA, y su apriete no está limitado por el craquelado.
 6. **Electricidad y bonding** — bloque IEC fijo, espárrago junto al PSU.
 7. **Trasera** — UNA plancha de 8 mm, EMPOTRADA, 10 M3 a tuerca T en las dos
    filas de los largueros traseros, **a 1.0 N·m con arandela d16 y rosca

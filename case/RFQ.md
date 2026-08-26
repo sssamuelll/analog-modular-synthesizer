@@ -20,7 +20,9 @@ Si alguna respuesta es «no», no es el taller. No se negocia por precio.
    ¿A qué temperatura y con qué rampa de enfriamiento?
 2. **¿Hacen PULIDO DIAMANTADO de canto en máquina?** (Pulido a llama **no**
    sirve: mete tensión y deshace el recocido.)
-3. **¿Trabajan PMMA COLADO (GS)** en 8 mm y 5 mm, en naranja translúcido?
+3. **¿Trabajan PMMA COLADO (GS)** en 8 mm, en naranja translúcido?
+   *(Un solo espesor desde el 2026-08-25: los 5 mm existían para una única
+   pieza —la tapa del valle— y esa pasó a chapa de aluminio.)*
 
 ### Por qué estas tres y no otras
 

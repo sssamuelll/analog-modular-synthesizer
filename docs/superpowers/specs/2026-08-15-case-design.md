@@ -190,6 +190,27 @@ lenguaje visual).
 > pasara a goma. **Lo que NO cubre**: el racking del cajón, que sigue siendo la
 > heurística abierta de §11 — y ahora con una barra menos.
 >
+> **rev. 20** (2026-08-25): **la tapa del valle pasa de acrílico de 5 mm a
+> chapa de ALUMINIO de 3**. Era la plancha más floja del case y a la vez la
+> única cara horizontal — donde se apoya quien se levanta, no donde se posa la
+> mano al parchear. El número que decide es la proporción en voladizo: mide
+> 66.5 mm de fondo y el larguero solo la toca 20, así que **el 70 % de la pieza
+> vuela**, 23.24 mm a cada lado. En PMMA de 5, con 200 N repartidos en 50 mm de
+> canto de mano, trabajaba a 22.3 MPa contra los 10 de fluencia (#106) y
+> **fluía a 90 N**; en aluminio da 62.0 contra un `Rp0.2` de 130 y **fluye a
+> 420**. Las otras tres salidas quedan cerradas por medición y no por gusto:
+> acrílico de 6 está BLOQUEADO (la tapa invade el barrido y la fila de abajo
+> pasa de abrir 180° a 39.5°), un larguero de 30 entra por 0.24 mm —bajo la
+> tolerancia de la propia extrusión— y uno de 40 no entra, se pasa 4.76.
+> **No rompe el lenguaje visual**, que era la objeción de la rev. 18: los
+> paneles ya son PCB de aluminio a los dos lados de esa banda. Entra
+> `guarda_valle()`, `t_acrilico` se renombra a **`t_valle`** porque el nombre
+> viejo habría mentido sobre el material, y la tapa sale de
+> `planchas_acrilico()` para entrar en `assembly_aluminio()`. Muere la única
+> línea de BOM de 5 mm: **el cuerpo de acrílico queda con un solo espesor**.
+> Y la tapa sale del pliego de acrílico — sin recocido, sin diamantado y sin
+> chaflán, que son exigencias del PMMA.
+>
 > **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
 > visual y proporciones *relativas*, pero **sus cotas están superadas**. Se
 > dibujó para paneles de 190 mm y un case de 500 × 380 × 350; el case real
@@ -253,8 +274,10 @@ La rev. 2+ no mitiga el problema: **lo elimina**. La arquitectura de sándwich
 con standoffs no tiene encajes — la geometría crítica son posiciones y
 diámetros de agujero, que no dependen del espesor de la plancha. Aun así:
 
-- `t_acrilico` y `kerf` siguen siendo parámetros del modelo (afectan agujeros,
-  largos de tornillo y estética de cantos).
+- Los espesores (`t_base`, `t_cheek`, `t_piel`) y `kerf` siguen siendo
+  parámetros del modelo (afectan agujeros, largos de tornillo y estética de
+  cantos). Hubo un `t_acrilico` hasta la rev. 20; hoy es `t_valle`, y ya no
+  es acrílico.
 - **Cupón de calibración** (`coupon.scad`) — **solo aplica si se vuelve al
   láser; con fresado `kerf = 0` y no hay nada que calibrar.** Pieza con una
   escalera de diámetros de agujero (ajuste deslizante y ajuste justo para
@@ -280,7 +303,7 @@ esta dirección).
 | `angulo_superior` | **45° desde la vertical** | Cara del piso de generación |
 | `alto_frontal` | **19 mm** | Canto delantero. **No es un zócalo**: el zócalo se eliminó. Fue 13 hasta rev. 10; subió para que el raíl de panel del frente librara la bandeja |
 | `fondo` / `alto_total` | derivados | **308.94 mm / 256.18 mm**. Ya NO cuadra con el board (350 × ~380): el board se dibujó para paneles de 190 |
-| `t_acrilico` / `t_piel` | 5 / **8 mm** | `t_acrilico` ya solo viste la tapa del valle; la trasera tiene su propio espesor de 8. MEDIR los dos con calibre (§11) |
+| `t_valle` / `t_piel` | **3** / **8 mm** | `t_valle` es la tapa del valle y desde la rev. 20 es **chapa de ALUMINIO**: no entra en la medición de espesor de §11 ni en el pliego de acrílico. Se llamó `t_acrilico` hasta esa rev., y el nombre mentía sobre el material. La trasera tiene su propio espesor de 8, y ese sí se MIDE con calibre (§11) |
 | `t_base` / `t_cheek` | 8 mm | Suelo portante y costados. La bandeja de base subió de 5 a 8 al pasar a ser el propio canto de abajo |
 | `kerf` | **0** | Correcto fresando: el CAM compensa el radio de herramienta. Solo vuelve a ser negativo si se regresa al láser |
 | `n_bulkheads` | 2 | Costados exteriores; el modelo admite uno central si el vano lo pide |
@@ -456,7 +479,9 @@ con qué habría que medir para cerrarlo.
   confirmado por escrito por Schaeffer AG el 2026-08-18: *«Die
   Herstellungstoleranzen können wir jedoch nicht beeinflussen»*. Nadie la
   mejora. Se cierra midiendo con calibre la plancha comprada y metiendo ese
-  valor en `t_acrilico` / `t_base` / `t_cheek`, **antes de cortar**. El
+  valor en `t_base` / `t_cheek` / `t_piel`, **antes de cortar** — los tres
+  espesores de PMMA que quedan, y desde la rev. 20 son **8 mm los tres**.
+  `t_valle` NO entra: dejó de ser acrílico. El
   taller debe medir y avisar; es una de las preguntas del RFQ. Issue #98.
 - ~~**Kerf**~~ — **CERRADO por cambio de proceso** (2026-08-17). Con fresado
   CNC el CAM compensa el radio de herramienta y la pieza sale a la cota del

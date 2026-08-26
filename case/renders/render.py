@@ -73,7 +73,7 @@ def mat(nombre, **bsdf):
 acr = importar("assembly_acrilico")
 acr.data.materials.append(mat(
     "acrilico_naranja", **{
-        "Base Color": (1.0, 0.35, 0.05, 1.0),
+        "Base Color": (1.0, 0.24, 0.04, 1.0),
         "Roughness": 0.08,
         "Transmission Weight": 0.85,
     }))
