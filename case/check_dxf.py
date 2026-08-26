@@ -94,6 +94,12 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
         # el costado no es una plancha del cuerpo: es la mejilla, y su DXF es
         # la silueta lateral entera.
         "costado_2d": (cb.fondo(p), g["alto_total"]),
+        # LA COSTILLA COMPARTE ENVOLVENTE CON EL COSTADO, y tiene que
+        # compartirla: es el mismo perfil_lateral() con el centro vaciado, o
+        # sea un marco de cuadro. Si estas dos dejan de medir lo mismo, el
+        # marco ha dejado de abrazar la plancha -- que es toda la geometria
+        # del esqueleto de aluminio (spec 2026-08-26).
+        "costilla_2d": (cb.fondo(p), g["alto_total"]),
         # cupon: 2*margen + (n-1)*paso de la escalera, x 62 de alto. No sale
         # de _cajas_solidas porque no es una pieza del case.
         "coupon": (136.0, 62.0),
@@ -795,6 +801,33 @@ def chasis_agujeros() -> list[str]:
     return f
 
 
+def todo_dxf_tiene_quien_lo_mire() -> list[str]:
+    """Ningun DXF sale al taller sin que una puerta lo mire.
+
+    EL BUCLE DE main() VA AL REVES QUE ESTA PUERTA, y por eso hacia falta:
+    recorre SOBRES buscando su DXF, o sea que caza la pieza que falta. La que
+    SOBRA no la caza nadie -- un DXF nuevo en plans/ se exporta, se manda a
+    cortar y no lo verifica nada, sin un solo mensaje.
+
+    Se descubrio el 2026-08-26 al anadir costilla_2d: la pieza portante del
+    case entero paso el gate en VERDE sin que nadie le mirara ni la envolvente.
+    Habia dos huerfanos mas de antes, los dos legitimos y ninguno declarado
+    como tal, que es justo lo que hacia el hueco invisible."""
+    import pathlib
+    exentos = {
+        "lienzo_2d": "preview de nesteado, NO SE CORTA (lo dice el PLIEGO)",
+        "kondor_cajeado_2d": "no es una pieza: es el cajeado ciego de la "
+                             "trasera, y lo mira guarda_kondor() entero",
+    }
+    en_disco = {q.stem for q in PLANS.glob("*.dxf")}
+    huerfanos = sorted(en_disco - set(SOBRES) - set(exentos))
+    for nombre, motivo in exentos.items():
+        if nombre in en_disco:
+            print(f"  sin envolvente A PROPOSITO: {nombre} -- {motivo}")
+    return [f"{n}.dxf se exporta y NINGUNA puerta lo mira: o entra en "
+            f"_sobres() o se declara exento con su motivo" for n in huerfanos]
+
+
 def main() -> int:
     fallos: list[str] = []
     for nombre, sobre in SOBRES.items():
@@ -809,6 +842,7 @@ def main() -> int:
     fallos += guarda_costado()
     fallos += agujeros_donde_toca()
     fallos += chasis_agujeros()
+    fallos += todo_dxf_tiene_quien_lo_mire()
     for nombre, motivo in SIN_DXF.items():
         print(f"  PENDIENTE (sin DXF, no bloquea): {nombre} -- {motivo}")
     for m in fallos:

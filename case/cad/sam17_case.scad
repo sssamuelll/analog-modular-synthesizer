@@ -421,6 +421,30 @@ module costado_2d() {
 
 module costado() { linear_extrude(t_cheek) costado_2d(); }
 
+// LA COSTILLA: el contorno del costado con el centro vaciado, o sea un marco de
+// cuadro. Es LA PIEZA PORTANTE desde el 2026-08-26 -- el costado de acrilico
+// paso a piel y no lleva un solo tornillo estructural.
+//
+// Reusa perfil_lateral() y NO una copia del contorno: la costilla y el costado
+// tienen que ser el MISMO perfil o el marco no abraza la plancha. Dos copias se
+// separan al primer cambio de angulo.
+//
+// ES PLANA, y por eso sale en DXF como todo lo demas de este repo. La que no
+// era plana es la tira de canto, y dejo de serlo el 2026-08-26 al cerrar la
+// SS8.1 de la spec: la L va atornillada, asi que la tira es una pletina.
+//
+// EL VACIADO NO ES ESTETICA: lo que queda es el ala que agarra la cara interior
+// del costado, y su ancho (ala_costilla) es lo que guarda_costilla() mete en el
+// calculo de la seccion en L. Vaciar de mas adelgaza la viga.
+module costilla_2d() {
+    difference() {
+        perfil_lateral();
+        offset(delta = -ala_costilla) perfil_lateral();
+    }
+}
+
+module costilla() { linear_extrude(t_costilla) costilla_2d(); }
+
 module rail_2020(largo) { cube([rail, largo, rail], center = true); }
 
 // Riel EUROrack. Los ejes locales no son intercambiables como en el 2020: tras
@@ -1102,6 +1126,7 @@ module chasis_abierto() {
 
 if (PART == "costado")             costado();
 else if (PART == "costado_2d")     costado_2d();
+else if (PART == "costilla_2d")    costilla_2d();
 else if (PART == "assembly")           assembly();
 else if (PART == "assembly_acrilico")  assembly_acrilico();
 else if (PART == "assembly_aluminio")  assembly_aluminio();
