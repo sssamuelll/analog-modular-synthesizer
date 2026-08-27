@@ -497,6 +497,27 @@ día que salga de casa, no.
 
 ## 7. La cabeza local
 
+> **DEROGADA el 2026-08-27** — `2026-08-27-panel-pantalla-al-centro-design.md`.
+> La pantalla de 7" del motor pasa al centro del panel de la fila superior y
+> **es la única cabeza del instrumento**. La 2,8" de esta sección **no se
+> monta**, y con ella se van sus 30 HP de la fila B y las líneas SPI que la
+> alimentaban. B2 («una sola cabeza») queda ratificada, no re-firmada.
+>
+> **Lo que esta sección tenía y hay que colocar en otro sitio, no perder:**
+> número de preset, canal MIDI, si el autoafinado corre, si una voz se salió
+> de rango, y **qué operación retenida está esperando el dedo**. Todo eso pasa
+> a la 7" — y por tanto **pasa a depender de que el motor esté vivo**, que es
+> el precio de la decisión y está escrito en §4.1 del papel que la toma.
+>
+> **Lo que NO se muda:** la cadena WS2812 sigue colgando de esta placa por
+> PIO, con su mazo propio de tres hilos, sin tocar el J2 ni el módulo 3 (§6.2
+> del núcleo). Es lo único que puede decir «el motor no arrancó», y por eso
+> **nace un requisito nuevo aquí**: ese estado tiene que ser decible en luz.
+>
+> **Y BOOTSEL y RUN se quedan físicos**, por la razón que esta misma spec ya
+> daba: sin ellos, recuperar una placa con firmware malo pide desarmar el
+> instrumento. Por el mismo argumento nace su gemelo para el motor.
+
 Una **pantalla SPI de 2,8 pulgadas** y un encoder con pulsador. Cubre lo único
 que no puede esperar a que aparezca un teléfono: número de preset, canal MIDI, y
 si el autoafinado corre o si una voz se salió de rango (núcleo §5.2). Y algo que

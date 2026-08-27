@@ -562,11 +562,28 @@ fondo de la bahía, §5.4). Sin cambios sobre la v1:
 | | mm |
 |---|---|
 | Módulo de Voz | 228,6 → **~305** (dos columnas de ~153; máx. 388, 27 % de holgura; el ruteo tendría que salir ×4,6 contra ×2,2 estimado) |
-| Fila A: Voz 305 + bahía 100 + reserva 40 | **445 de 528** ✓ |
-| Fila B: cerebro 150 + mandos 120 + mixer 100 + reserva 40 | **410 de 528** ✓ |
+| ~~Fila A: Voz 305 + bahía 100 + reserva 40~~ | ~~**445 de 528**~~ **ENMENDADA 2026-08-27** |
+| ~~Fila B: cerebro 150 + mandos 120 + mixer 100 + reserva 40~~ | ~~**410 de 528**~~ **ENMENDADA 2026-08-27** |
 | Fondo Voz: 5 + 1,6 + 2×10,6 + 2×h | **37,8 de 50** (h ≤ 11,1) |
 
 El primer reparto salió ROJO por 17 mm y el guion lo registra.
+
+> **ENMIENDA 2026-08-27** — `2026-08-27-panel-pantalla-al-centro-design.md`.
+> **El reparto por filas deja de ser una lista de módulos.** La fila A pasa a
+> ser **un solo módulo de 104 HP (528,32 mm)** con la pantalla de 7" en su
+> centro y los mandos en los dos flancos de 181,66 mm; la **bahía sale del
+> panel** (al valle, a resultas de un estudio). En la fila B **muere la cabeza
+> local de 2,8"** —la 7" es la única cabeza desde esa fecha— y se liberan sus
+> 30 HP.
+>
+> **Lo que NO cambia y conviene no perder en la mudanza:** el PCB de la Voz
+> sigue cerrando en 421,5 mm y **no crece**. Las perillas son sensores del
+> panel, así que el panel puede volar sobre el borde de la placa sin tocar el
+> factor de ruteo — que sigue siendo «el número menos medido de todo el
+> diseño» y por eso se deja quieto a propósito.
+>
+> `voz_total_budget.py` sigue presupuestando **PCB, no panel**: le falta
+> `ANCHO_PANEL_A`, que ahora vale 104 HP y no 83.
 
 **El consumo se re-suma entero, no en delta** (S-8: la v1 comparaba +90 mA
 contra los 650 totales como si fueran holgura libre). `consumo_total_budget.py`,
