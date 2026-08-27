@@ -165,8 +165,7 @@ COSTES_PIO = {
         "pinout.rs d(21) + nucleo sec.6.2. instr ESTIMADO"),
 }
 # NO son PIO y por eso no estan arriba, pero conviene decirlo para que nadie
-# los sume dos veces: el J2 va en el SPI0 de hardware y la pantalla en el SPI1
-# (cerebro sec.7, "Bus propio, no J2 [...] y no usa PIO"). El I2C del mux tambien
+# los sume dos veces: el J2 va en el SPI0 de hardware y el I2C del mux tambien
 # es periferico de hardware.
 
 # --- el reloj, que es el motivo de este guion ------------------------------
@@ -225,23 +224,23 @@ RUTA_PINOUT = os.path.join(_AQUI, "..", "..", "software", "nucleo", "core",
                            "src", "pinout.rs")
 
 # Lo que la placa del cerebro le va a anadir a pinout.rs, que hoy no esta
-# escrito alli. Cerebro sec.12.14 y sec.12.16, con su aritmetica textual:
-#   "39 hoy, +5 de sec.12.14, -3 de los digitos que se van, +5 de la pantalla
-#    = 46 de 48"
+# escrito alli. Cuenta vigente tras la derogacion de la cabeza local en sec.7:
+#   39 hoy, +5 de sec.12.14, -3 de los digitos retirados = 41 de 48
 PINES_NUEVOS_12_14 = 5      # bandera y EN del host (sec.6.2), EN y arranque del
                             # puente (sec.6.6), RESET del mux I2C (sec.8)
-# AVISO 2026-08-27: la pantalla de 2,8" que estos cinco pines alimentan quedo
-# DEROGADA -- la de 7" del motor es la unica cabeza del instrumento (spec del
-# cerebro sec.7, enmendada). Este censo sigue reservandolos. NO se pone a cero
-# aqui al vuelo porque bajar un censo de pines lo vuelve MAS facil, que es la
-# direccion en la que un error se esconde, y este guion cruza contra pinout.rs.
-# Se corrige con su verificacion propia -- issue abierto en la misma tanda.
-PINES_PANTALLA = 5          # LCD_SCLK, MOSI, CS, DC, BL (sec.7). Sin RST propio:
-                            # cuelga del reset del sistema, y ese ahorro es lo
-                            # que hace que quepa (sec.12.16: "sin ese ahorro
-                            # serian 47")
-PINES_DIGITOS = 3           # DIG_DATA, DIG_CLK, DIG_LATCH: se van con la
-                            # pantalla, y pinout.rs TODAVIA los declara (#180)
+# RETIRADA 2026-08-27: se eliminaron del censo los cinco GPIO de la pantalla
+# SPI de 2,8" porque sec.7 la deroga junto con toda la cabeza local. La pantalla
+# de 7" cuelga del STM32N657 del motor y no consume GPIO de este RP2350B.
+PINES_DIGITOS = 3           # DIG_DATA, DIG_CLK, DIG_LATCH: se retiraron con la
+                            # cabeza local y no vuelven; pinout.rs TODAVIA los
+                            # declara (#180)
+# La cabeza local esta DEROGADA (spec del cerebro sec.7, 2026-08-27): la
+# pantalla de 7" del motor es la unica del instrumento y cuelga de otro chip.
+# Su coste en pines se deja EXPLICITO y clavado a cero, en vez de borrado, por
+# la regla de mutacion de la constitucion: si alguien resucita los 5 GPIO de
+# la 2,8", la asercion de abajo canta en vez de dejar el censo pasar callado.
+PINES_CABEZA_LOCAL = 0
+
 MARGEN_PINES_MIN = 2        # sec.12.16: "A partir de aqui, cualquier funcion
                             # nueva que pida mas de dos pines no entra sin
                             # quitar otra cosa"
@@ -388,13 +387,17 @@ def demo() -> None:
 
     # --- los pines -----------------------------------------------------------
     hoy = len(pinout)
-    manana = hoy + PINES_NUEVOS_12_14 - PINES_DIGITOS + PINES_PANTALLA
+    assert PINES_CABEZA_LOCAL == 0, (
+        f"PINES_CABEZA_LOCAL vale {PINES_CABEZA_LOCAL} y la cabeza local esta "
+        f"derogada desde el 2026-08-27 (spec del cerebro sec.7). Si de verdad "
+        f"vuelve una pantalla al cerebro, esto no se sube: se reabre la "
+        f"seccion 7, porque la 7\" del motor es la unica cabeza")
+    manana = hoy + PINES_NUEVOS_12_14 - PINES_DIGITOS + PINES_CABEZA_LOCAL
     libres = GPIO_TOTALES - manana
     print(f"pines: {hoy} declarados hoy en pinout.rs")
     print(f"   +{PINES_NUEVOS_12_14} de sec.12.14 (bandera y EN del host, EN y "
           f"arranque del puente, RESET del mux)")
-    print(f"   -{PINES_DIGITOS} de los digitos, que la pantalla jubila (sec.7)")
-    print(f"   +{PINES_PANTALLA} de la pantalla, sin RST propio (sec.7)")
+    print(f"   -{PINES_DIGITOS} de los digitos retirados con la cabeza local (sec.7)")
     print(f"   = **{manana} de {GPIO_TOTALES}**, quedan {libres} libres\n")
 
     # El 39 no se escribe aqui: se cuenta del fichero. Si alguien anade un pin
@@ -413,8 +416,7 @@ def demo() -> None:
         print(f"AVISO (#180, hallazgo H-6): pinout.rs todavia declara "
               f"{len(digitos_vivos)} pines de digitos")
         print(f"   {digitos_vivos}")
-        print(f"   que la spec sec.7 dice haber devuelto, y no declara los "
-              f"{PINES_PANTALLA} de la pantalla.")
+        print("   que la spec sec.7 dice haber devuelto.")
         print("   El artefacto contradice a su spec. La cuenta de arriba usa "
               "la spec, no el fichero.\n")
 
