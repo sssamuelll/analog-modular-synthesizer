@@ -81,7 +81,7 @@ con `dur_s`, tokens del evento `turn.completed`, y `resultado` ∈ `exito` |
 | `case/cad/params.scad` | `L_casquillo`, `t_junta`, `marco_sup`, `chasis_int_z`, las cotas de los canales y de la retícula |
 | `case/cad/sam17_case.scad` | orden de capas, `miembro_bajo_2d()`, `miembro_alto_2d()`, `bahia_2d()`, la retícula, dispatch `PART` |
 | `case/clearance_budget.py` | `guarda_apilado()`, `guarda_casquillo()`, `guarda_reticula()`, `_centros_transversal()` reescrita |
-| `case/check_dxf.py` | tres sobres nuevos, `taladros_costilla()` ampliada, `taladros_costado()` resucitada |
+| `case/check_dxf.py` | tres sobres nuevos, `taladros_costilla()` re-apuntada en T4 (pierde `centros_transversal()`), `taladros_costado()` resucitada en T3 |
 | `case/cad/export.ps1` | las tres piezas nuevas en `$piezas` |
 | `case/README.md`, `case/PLIEGO.md`, `case/RFQ.md` | BOM, bonding, ensamblaje |
 | `docs/superpowers/specs/2026-08-15-case-design.md` | rev. 22 |
@@ -197,25 +197,29 @@ def guarda_apilado(p: dict[str, float]) -> None:
         f"z={z_costilla[0]:.2f}..{z_costilla[1]:.2f} y el acrilico arranca en "
         f"z={z_acrilico[0]:.2f}. Desde el 2026-08-27 el aluminio va POR FUERA "
         f"(spec 2, decision 1)")
-    hueco = p["L_casquillo"] - p["t_junta"]
-    t_max = p["t_cheek"] + (0.4 + 0.1 * p["t_cheek"])
+    tol = 0.4 + 0.1 * p["t_cheek"]        # Schaeffer AG, 2026-08-18
+    t_min, t_max = p["t_cheek"] - tol, p["t_cheek"] + tol
     assert p["L_casquillo"] >= t_max, (
         f"el casquillo mide {p['L_casquillo']:.2f} y el acrilico mas grueso del "
         f"lote mide {t_max:.2f} (tolerancia Schaeffer +-{0.4 + 0.1 * p['t_cheek']:.2f} "
         f"sobre {p['t_cheek']:.0f}). A ese espesor el acrilico quedaria PINZADO "
         f"entre dos caras de aluminio, y el PMMA fluye bajo carga sostenida: la "
         f"precarga que sujeta el riel se relaja sola en semanas. Ver spec 3.3")
-    assert hueco >= p["t_cheek"] - (0.4 + 0.1 * p["t_cheek"]), (
-        f"con el casquillo de {p['L_casquillo']:.2f} y la junta de "
-        f"{p['t_junta']:.2f} quedan {hueco:.2f} mm para el acrilico, y el mas "
-        f"DELGADO del lote mide "
-        f"{p['t_cheek'] - (0.4 + 0.1 * p['t_cheek']):.2f}: no llega a tocar la "
-        f"junta y baila")
+    # LA CONDICION ES SOBRE EL JUEGO, no sobre el hueco. La primera version de
+    # esta puerta comparaba (L - t_junta) contra t_min y HABRIA FALLADO con los
+    # valores correctos: 5.5 contra 6.8. Lo que hay que exigir es que el juego
+    # que deja el acrilico MAS DELGADO lo cubra la junta.
+    juego = p["L_casquillo"] - t_min
+    assert juego <= p["t_junta"], (
+        f"el acrilico mas delgado del lote mide {t_min:.2f} y el casquillo "
+        f"{p['L_casquillo']:.2f}: deja {juego:.2f} mm de juego y la junta solo "
+        f"mide {p['t_junta']:.2f}. No llega a tocarlo, y un panel suelto en un "
+        f"instrumento suena")
     print(f"apilado: costilla z 0..{p['t_costilla']:.0f} POR FUERA, junta de "
           f"{p['t_junta']:.0f}, acrilico hasta z={z_acrilico[1]:.2f}")
     print(f"  casquillo de {p['L_casquillo']:.2f} contra un acrilico de "
-          f"{p['t_cheek'] - (0.4 + 0.1 * p['t_cheek']):.2f}..{t_max:.2f}: "
-          f"nunca pinza, y la junta se come el juego")
+          f"{t_min:.2f}..{t_max:.2f}: nunca pinza, y la junta se come el juego "
+          f"({juego:.2f} mm en el peor caso, sobre {p['t_junta']:.2f} de junta)")
 ```
 
 Registrarla en `main()` junto a las demás `guarda_*`.
@@ -292,7 +296,8 @@ números se mueven, algo más cambió y hay que averiguar qué.
 
 - [ ] **Paso 7: probar que muerde**, dos veces:
   - `L_casquillo` a 8 → tiene que cantar «el acrílico quedaría PINZADO».
-  - `t_junta` a 0 → tiene que cantar que el acrílico delgado baila.
+  - `t_junta` a 2 → tiene que cantar que la junta no llega (2.7 de juego
+    contra 2 de junta).
 
 - [ ] **Paso 8: commit**
 
@@ -428,7 +433,11 @@ herederos: **mueren y nacen juntos o el modelo mide un estado a medias.**
 - Modify: `case/cad/export.ps1`
 
 **Interfaces:**
-- Consume: `p["t_costilla"]` = 3, `perfil(p)["ancho_util"]` = 528.62.
+- Consume: `p["t_costilla"]` = 3 · `perfil(p)["ancho_util"]` = 528.62 · **y
+  `z0`/`z1` de `_cajas_solidas` tal como los deja la Tarea 2** — son las caras
+  internas del case y cambiaron de dueño al invertir el apilado: antes salían de
+  `t_cheek + t_costilla`, ahora del alma de la costilla que está por fuera. Las
+  cajas de los tres miembros van entre esos dos.
 - Produce: `_seccion_canal(w, d, t) -> (I, area, ymax)` ·
   `_secciones_miembro(p) -> [(nombre, w, d), ...]` con los nombres exactos
   `"trasero bajo"`, `"trasero alto"` y `"bahia"` ·
@@ -600,6 +609,31 @@ la bahía**. Lo que cambia en la puerta es de dónde sale el vuelo:
 Y el `assert` de flecha no cambia de forma: cambia el número que le entra.
 **Tiene que bajar de 0.10 a algo menor**; si sube, el apoyo se puso peor y hay
 que averiguar por qué antes de seguir.
+
+- [ ] **Paso 6d (codex): lo que la muerte de `centros_transversal()` rompe.**
+Sale del escaneo previo: dos consumidores se quedan sin función y ninguna tarea
+los reclamaba. Contrato:
+
+```
+Al borrar centros_transversal() se rompen DOS cosas que hay que arreglar en el
+mismo commit, porque el modelo no puede quedar a medias:
+
+1. taladros_costilla() en case/check_dxf.py saca de ahi el censo de los M5 de
+   transversal. Ese censo pasa a ser el de los TORNILLOS DE MIEMBRO: los que
+   atornillan cada miembro de chapa a la costilla por su punta. Sigue siendo el
+   mismo criterio -- material alrededor, BORDE_MIN_D x D -- solo que la lista
+   viene de _secciones_miembro() en vez de centros_transversal().
+
+2. El modulo bom() de case/cad/sam17_case.scad llama a centros_transversal() en
+   cinco sitios: el conteo de transversales, los M5 de punta, los M4 de riel y
+   dos lineas de texto. Actualizalo para que hable de MIEMBROS DE CHAPA y no de
+   perfiles 2020, y para que el conteo salga de los tres desarrollos nuevos.
+
+El eco del BOM es un papel: si dice algo que ya no es cierto, el README lo copia
+y el error viaja al taller. Ya paso el 2026-08-27.
+
+Corre las dos puertas y `openscad -D 'PART="bom"'` para leer el eco.
+```
 
 - [ ] **Paso 7 (Claude): los tres sobres.** Los escribe Claude porque son el
 contrato de lo que va al taller. En `check_dxf.py`, `_sobres()`, después del
