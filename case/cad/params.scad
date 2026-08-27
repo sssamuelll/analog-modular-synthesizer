@@ -51,6 +51,29 @@
 // 2*t_costilla. A 3 el case crece 6 mm; a 4, ocho. Con el ala doblada, 3 pasa
 // con 2.4x -- la rigidez la da la FORMA en L, no el espesor.
 t_costilla      = 3;
+// LA PESTANA DE LA TAPA DEL VALLE. La tapa se dobla 90 grados en cada punta y
+// se atornilla a la costilla: deja de estar sujeta SOLO por su larguero -- una
+// sola linea de tornillos, que es una bisagra -- y pasa a atar las dos costillas
+// entre si. Eso la convierte en DIAFRAGMA a media altura, que es lo que la foto
+// de referencia hace con sus paneles y lo unico que le da algo al racking del
+// cajon (#203, sigue sin cerrar con numero).
+//
+// NO QUITA EL LARGUERO. Una tapa sujeta solo por sus dos puntas cruza los 528.62
+// entre costillas y cede 59.6 mm: la pestana es fijacion, el larguero es apoyo.
+//
+// 21 SALE DEL TORNILLO, y va apretado: el M3 tiene que caer 2t+r por debajo de
+// la tangente del doblez (13.70 mm bajo la cara de arriba) y aun asi dejar 1.5*D
+// hasta el canto libre. 13.70 + 1.7 + 5.1 = 20.5 -> 21.
+//
+// Y SOLO HAY UNA PESTANA POR PUNTA, detras del larguero. Delante no cabe: el
+// riel cara_inf valle llega hasta x=105.94 y el larguero empieza en 115.18, o
+// sea 3.24 mm de ventana. Lo mide guarda_pestana_valle().
+pestana_valle      = 21;
+// Radio interior del doblez de la tapa. Mismo material y mismo espesor que la
+// costilla (aluminio de 3), asi que mismo radio: 1xt es el minimo de manual
+// para aleacion blanda a 90 grados.
+radio_doblez_valle = 3;
+
 // Ancho de la banda: lo que queda de la costilla tras vaciarle la ventana, y
 // lo que agarra la cara interior del costado. YA NO ES SUPUESTO. Estuvo en 20
 // -- lo que medía el 2020 que este marco jubila -- y el 2026-08-27, al mudarle

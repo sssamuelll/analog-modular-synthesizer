@@ -380,9 +380,46 @@ midiendo un estado a medias — el larguero fuera y el costado todavía cargando
 **Las Tareas 7, 9 y 10 son un solo paso**: los largueros, la taladrería
 estructural del costado y las tres puertas se mueven juntos o no se mueven.
 
+### 5.4 La pestaña de la tapa del valle
+
+**Del 2026-08-27, pedida por Samuel sobre la foto de referencia:** la reja del
+valle se dobla 90° en cada punta y se atornilla a la costilla.
+
+**Lo que hace y lo que no.** No quita el larguero del valle: una tapa sujeta
+solo por sus dos puntas cruza los 528.62 mm entre costillas y cede **59.6 mm**.
+La pestaña es **fijación**; el larguero es **apoyo**. Lo que sí hace es dejar de
+sujetarla por una sola línea de tornillos —que es una bisagra— y atar las dos
+costillas entre sí: la tapa pasa a ser **diafragma a media altura**, que es lo
+que la foto hace con sus paneles y lo único que le da algo al racking del cajón
+(#203, que sigue sin cerrarse con número).
+
+**Una por punta, y detrás del larguero.** Delante no cabe:
+
+| ventana bajo la tapa | |
+|---|---|
+| delante del larguero | el riel `cara_inf valle` llega a x=105.94 y el larguero empieza en 115.18: **3.24 mm** |
+| detrás del larguero | x 139.18 .. 158.42 = **19.24 mm** |
+
+**M3, no M4.** El tornillo tiene que caer 2t+r por debajo de la tangente del
+doblez, o sea **13.70 mm** bajo la cara de arriba. A esa profundidad la costilla
+deja 7.0 mm de material — suficiente para el 5.10 que pide un M3 (1.5×D) y no
+para los 6.75 de un M4. Lo que se come el material es el **vértice cóncavo
+P[3]**: al vaciar la ventana, un cóncavo quita en vez de añadir.
+
+Por eso el tornillo va lo más lejos de P[3] que el larguero deja:
+`x = larguero + rail/2 + holgura_rail + 1.5·D` = **144.28**, con el M3 a
+y=132.88.
+
+**La tapa deja de ser plana.** Su DXF pasa a ser desarrollo: 560.00 × 66.48 en
+vez de 528.62 × 66.48. Con r = t = 3 y k = 0.42, BD = 5.3081 y cada pestaña
+vuela 15.6919 mm por fuera del contorno, con su M3 a −8.39.
+
 ## 6. Lo que NO se hace, y por qué — para que nadie lo reintente
 
 - **Mudar `base trasera` y `remate trasero` a P[5] y P[6]**: entran 8 mm por detrás del panel trasero. Ya están arrinconadas hasta donde la pared deja (§5.2).
+- **Quitar el larguero del valle poniéndole pestañas**: sujeta solo por sus dos puntas la tapa cruza 528.62 mm y cede 59.6 mm. La pestaña es fijación, no apoyo (§5.4).
+- **Pestaña delante del larguero del valle**: la ventana mide 3.24 mm — el riel `cara_inf valle` se la come (§5.4).
+- **M4 en la pestaña**: a la profundidad que pide el doblez la costilla deja 7.0 mm y un M4 necesita 6.75 contando desde el centro… pero es el vértice cóncavo P[3] y el margen se evapora en 2 mm de deriva. Va M3 (§5.4).
 - **Quitar el larguero del valle**: ningún riel llega a la tapa (el de arriba se queda 4 mm corto, el de abajo 8.1 mm bajo) y el tramo del valle de la costilla es el único sin ala, así que tampoco hay repisa (§5.2).
 - **Transversal en la arista P[0]**: no cabe. El riel de panel del frente deja 10.45 mm y una barra de 10×10 cede 5.35 mm a lo ancho (§4.2.1). Si vuelve a hacer falta apoyo delantero, el sitio es x=88.34 —donde estaba `base delantera`—, no el canto.
 - **Ranura en U**: resucita el fallo del postmortem (§3).

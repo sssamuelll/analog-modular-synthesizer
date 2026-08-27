@@ -122,6 +122,13 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
         aristas = sorted((x1 - x0, y1 - y0, z1 - z0), reverse=True)
         dims[f"{nombre}_2d"] = (aristas[0], aristas[1])   # se cae el espesor
 
+    # DESPUES del bucle, y por eso: la tapa del valle SI es una plancha del
+    # cuerpo, asi que el bucle le pone la caja de la pieza doblada -- y su DXF
+    # es el DESARROLLO, que sale 2*vuelo mas ancho por las dos pestanas. Es el
+    # mismo error que el sobre del chasis tiene que cazar: exportar el contorno
+    # de la pieza montada en vez del recorte da un DXF valido e inservible.
+    dims["tapa_valle_2d"] = cb.bbox_desarrollo_tapa(p)
+
     return {n: (w - TOL, w + TOL, h - TOL, h + TOL) for n, (w, h) in dims.items()}
 
 
@@ -414,6 +421,20 @@ def agujeros_donde_toca() -> list[str]:
             continue
         rejilla = GRIDS.get(placa, REJILLA_FILA)
         leidos = _redondos(nombre)
+        # LA TAPA DEL VALLE trae DOS agujeros que no son de fila: los M3 de sus
+        # pestanas, que viven FUERA del contorno de la plancha (en el
+        # desarrollo caen a BD - a del canto, o sea del lado de afuera). Se
+        # apartan por POSICION y no por conteo: si alguien mueve uno hacia
+        # dentro, deja de contar como pestana y la rejilla lo caza.
+        if placa == "tapa_valle":
+            ancho = cb.perfil(p)["ancho_util"]
+            fuera = [q for q in leidos if q[0] < 0 or q[0] > ancho]
+            if len(fuera) != 2:
+                f.append(f"{nombre}: {len(fuera)} agujeros fuera del contorno "
+                         f"de la plancha y las pestanas son 2. Un M3 de "
+                         f"pestana que cae DENTRO no se dobla: se queda en la "
+                         f"cara de arriba de la tapa")
+            leidos = [q for q in leidos if 0 <= q[0] <= ancho]
         if len(leidos) != len(rejilla) * len(coords):
             f.append(f"{nombre}: {len(leidos)} agujeros en el DXF y el modelo "
                      f"pone {len(rejilla) * len(coords)} ({len(coords)} filas de "
@@ -845,7 +866,14 @@ def taladros_costilla() -> list[str]:
     # acrilico, y se muda con los taladros.
     esperados = ([(nm, c, p["d_M4_paso"], "M4")
                   for nm, c in zip(cb.NOMBRES_CR, cr)]
-                 + [(nm, c, p["d_M5_paso"], "M5") for nm, c in ct.items()])
+                 + [(nm, c, p["d_M5_paso"], "M5") for nm, c in ct.items()]
+                 # el M3 de la pestana de la tapa del valle, que atraviesa esta
+                 # chapa y la pestana doblada. Es el mas apretado de los tres
+                 # diametros: cae cerca del vertice CONCAVO P[3], y un concavo
+                 # se come material al vaciar la ventana en vez de anadirlo.
+                 + [("pestana del valle",
+                     (cb._pv_x(p, ct), P[3][1] - cb._pv(p)["a"]),
+                     p["d_M3_paso"], "M3")])
 
     # 1. estan en la costilla, donde el modelo dice, y con material alrededor
     redondos = _redondos("costilla_2d")
@@ -888,7 +916,8 @@ def taladros_costilla() -> list[str]:
 
     if not f:
         print(f"  costilla_2d: los {len(esperados)} taladros (4 M4 de riel + "
-              f"{len(ct)} M5 de transversal) tienen material alrededor (el mas "
+              f"{len(ct)} M5 de transversal + 1 M3 de pestana) tienen material "
+              f"alrededor (el mas "
               f"justo, '{peor_nm}', a {peor:.2f} mm del canto = "
               f"{peor / peor_d:.2f} D), y el costado ya no lleva ninguno")
     return f

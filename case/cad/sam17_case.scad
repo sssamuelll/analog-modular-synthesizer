@@ -504,6 +504,12 @@ module costilla_2d() {
         // NO cabia era el de `base delantera`, a 6.00 -- y esa barra murio el
         // mismo dia por otro motivo. Lo vigila taladros_costilla().
         for (c = centros_transversal()) translate(c) circle(d = d_M5_paso + kerf);
+        // Y EL M3 DE LA PESTANA DE LA TAPA DEL VALLE, que atraviesa esta chapa
+        // y la pestana doblada. Lo coloca pv_x() -- lo mas lejos posible del
+        // vertice concavo P[3], que es quien se come el material al vaciar la
+        // ventana, sin echarse encima del larguero del valle.
+        translate([pv_x(), pts_perfil()[3].y - pv_a()])
+            circle(d = d_M3_paso + kerf);
     }
 }
 
@@ -849,6 +855,31 @@ module ranura(largo, ancho) {
 
 // La plancha del valle. Ver la nota de params.scad: campo de ranuras registrado
 // a la malla HP, partido por la espina maciza donde va la fila de M3.
+// --- LA PESTANA DE LA TAPA DEL VALLE ------------------------------------
+// Misma cuenta de plegado que la costilla y que el chasis, con los parametros
+// de ESTA chapa. Ver el bloque largo de ch_sb() para la derivacion.
+function pv_sb() = radio_doblez_valle + t_valle;
+function pv_ba() = PI/2 * (radio_doblez_valle + k_factor*t_valle);
+function pv_bd() = 2*pv_sb() - pv_ba();
+// Lo que la pestana desplegada sobresale del contorno de la tapa.
+function pv_vuelo() = pestana_valle - pv_bd();
+
+// Profundidad del M3 bajo la CARA DE ARRIBA de la tapa. La tangente del doblez
+// cae a SB de esa cara y desde ahi la regla de chapa pide 2t antes de taladrar;
+// sumado el radio del agujero, el centro va a SB + 2t + d/2.
+function pv_a() = pv_sb() + 2*t_valle + d_M3_paso/2;
+
+// Un punto a profundidad d bajo la cara de arriba cae, en el DESARROLLO, a
+// BD - d del contorno. Sale de que el tramo recto de la pestana empieza a
+// SB - BA del contorno y desde ahi se mide d - SB de chapa: BD - d.
+function pv_desarrollo(d) = pv_bd() - d;
+
+// Donde va el tornillo, en X del perfil. Lo mas lejos posible del vertice
+// concavo P[3] -- que es quien se come el material de la costilla al vaciar la
+// ventana -- sin echarse encima del larguero: su cara de atras, mas la holgura,
+// mas la distancia al canto que pide el propio M3.
+function pv_x() = ct_valle().x + rail/2 + holgura_rail + 1.5*d_M3_paso;
+
 module tapa_valle_2d() {
     au = ancho_util;
     ce = centros_transversal();
@@ -858,9 +889,25 @@ module tapa_valle_2d() {
     campos = [[valle_margen,               y_esp - valle_espina/2],
               [y_esp + valle_espina/2,     largo - valle_margen]];
     n_hp  = round(largo_riel/hp);            // 104
+    // LA PESTANA VA DETRAS DEL LARGUERO Y SOLO AHI. Delante la ventana mide
+    // 3.24 mm -- el riel cara_inf valle llega hasta x=105.94 -- y por ahi no
+    // pasa ni el doblez ni el tornillo.
+    py0 = y_esp + rail/2 + holgura_rail;
     difference() {
-        plancha(au, largo);
+        union() {
+            plancha(au, largo);
+            // las dos pestanas, desplegadas por fuera del contorno
+            for (lado = [0, 1])
+                translate([lado ? au : -pv_vuelo(), py0])
+                    square([pv_vuelo(), largo - py0]);
+        }
         fila_agujeros(au, y_esp);
+        // el M3 de cada pestana, en el desarrollo
+        for (lado = [0, 1])
+            translate([lado ? au - pv_desarrollo(pv_a())
+                            : pv_desarrollo(pv_a()),
+                       pv_x() - xv[0]])
+                circle(d = d_M3_paso + kerf);
         for (c = campos)
             for (n = [valle_paso_hp : valle_paso_hp : n_hp - valle_paso_hp])
                 translate([n*hp, (c[0] + c[1])/2])

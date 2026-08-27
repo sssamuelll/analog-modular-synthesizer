@@ -464,6 +464,18 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     x0_tv, x1_tv = _x_valle(p, P, cr)
     planchas.append(("tapa_valle", x0_tv, x1_tv,
                      P[3][1] - t_acr, P[3][1], z0, z1))
+    # LAS DOS PESTANAS de la tapa, dobladas hacia abajo contra la costilla.
+    # Van en `railes` y no en `planchas` a proposito: es la lista que solapes()
+    # cruza contra todo, y una pestana que se echa encima del larguero del valle
+    # o del riel de abajo no la caza nadie mas. (Y `planchas` la recorre
+    # _sobres() para sacar envolventes de DXF, que aqui no aplica.)
+    pv = _pv(p)
+    x0_pv = ce["valle"][0] + rail / 2 + p["holgura_rail"]
+    for lado, (za, zb) in enumerate(((z0, z0 + p["t_valle"]),
+                                     (z1 - p["t_valle"], z1))):
+        railes.append((f"pestana valle {lado}", x0_pv, x1_tv,
+                       P[3][1] - p["pestana_valle"], P[3][1] - t_acr,
+                       za, zb))
     filas += [("tapa_valle", "unica", "x", ce["valle"][0], "valle")]
     # piel_trasera: UNA sola plancha desde el 2026-08-21. Fueron dos, partidas
     # a la altura del entrepiso porque cada una se atornillaba a los dos
@@ -1484,6 +1496,61 @@ def guarda_valle(p: dict[str, float]) -> None:
           f"{p_fluye:.0f} N); levantandola entre dos M3, {f_arr:.2f} mm")
 
 
+# LA PESTANA DE LA TAPA DEL VALLE. GEMELAS de pv_*() en sam17_case.scad, y
+# tienen que dar lo mismo: el M3 atraviesa la pestana Y la costilla, asi que si
+# las dos cuentas se separan el agujero de una pieza no cae sobre el de la otra.
+def _pv(p: dict[str, float]) -> dict[str, float]:
+    """Plegado de la pestana: setback, bend allowance, deduction y vuelo."""
+    sb = p["radio_doblez_valle"] + p["t_valle"]
+    ba = math.pi / 2 * (p["radio_doblez_valle"] + p["k_factor"] * p["t_valle"])
+    return {"sb": sb, "ba": ba, "bd": 2 * sb - ba,
+            "vuelo": p["pestana_valle"] - (2 * sb - ba),
+            # profundidad del M3 bajo la cara de arriba: la tangente del doblez
+            # cae a SB y desde ahi la regla de chapa pide 2t antes de taladrar.
+            "a": sb + 2 * p["t_valle"] + p["d_M3_paso"] / 2}
+
+
+def _pv_x(p: dict[str, float], ce: dict) -> float:
+    """X del tornillo de la pestana. Lo mas lejos del vertice concavo P[3] que
+    el larguero del valle deja."""
+    return (ce["valle"][0] + p["rail"] / 2 + p["holgura_rail"]
+            + 1.5 * p["d_M3_paso"])
+
+
+def bbox_desarrollo_tapa(p: dict[str, float]) -> tuple[float, float]:
+    """Envolvente del DESARROLLO de la tapa del valle, no de la pieza doblada.
+
+    Crece 2*vuelo por el ancho: cada punta saca su pestana desplegada por fuera
+    del contorno. Derivado y no escrito a mano -- si el .scad y esta cuenta se
+    separan, el bbox se sale del sobre y check_dxf se entera."""
+    P = _vertices(p)
+    x0, x1 = _x_valle(p, P, _centros_rail(p, P))
+    return (perfil(p)["ancho_util"] + 2 * _pv(p)["vuelo"], x1 - x0)
+
+
+def autocomprobacion_pv() -> None:
+    """El desarrollo de la pestana, a mano.
+
+    Con r = t = 3 y k = 0.42: SB = 6, BA = (pi/2)(3 + 1.26) = 6.6919,
+    BD = 12 - 6.6919 = 5.3081. El M3 va a a = 6 + 6 + 1.7 = 13.7 bajo la cara de
+    arriba, y en el desarrollo eso cae a BD - a = -8.3919 del contorno, o sea
+    8.39 mm POR FUERA. El vuelo de la pestana desplegada son 21 - 5.3081 =
+    15.6919, asi que el agujero queda dentro con 7.30 mm de sobra hasta el canto
+    libre -- mas de los 5.10 que pide 1.5*D."""
+    q = {"radio_doblez_valle": 3.0, "t_valle": 3.0, "k_factor": 0.42,
+         "pestana_valle": 21.0, "d_M3_paso": 3.4}
+    v = _pv(q)
+    for nombre, sale, esperado in (("SB", v["sb"], 6.0),
+                                   ("BA", v["ba"], 6.6919),
+                                   ("BD", v["bd"], 5.3081),
+                                   ("vuelo", v["vuelo"], 15.6919),
+                                   ("a", v["a"], 13.7)):
+        assert abs(sale - esperado) < 1e-3, (
+            f"_pv: {nombre} sale {sale:.4f} y a mano da {esperado}")
+    libre = v["vuelo"] - (v["a"] - v["bd"])
+    assert abs(libre - 7.3) < 1e-3, f"canto libre {libre:.4f}, a mano 7.30"
+
+
 def guarda_red(p: dict[str, float]) -> None:
     """La ventana de la entrada de red: que quepa, y que se sepa que es provisional.
 
@@ -2228,6 +2295,7 @@ def main() -> int:
     p = leer_params()
     autocomprobacion(p)
     autocomprobacion_L()
+    autocomprobacion_pv()
     # El .scad tiene su propia copia de E porque deriva alli que tramos de la
     # costilla llevan ala. Si las dos se separan, el DXF deja de ser la pieza
     # que este presupuesto verifica -- y el sintoma seria un desarrollo con el

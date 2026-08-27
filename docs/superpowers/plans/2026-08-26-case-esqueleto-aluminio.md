@@ -596,6 +596,24 @@ costado, y ranura acortada a la mitad.
 
 ---
 
+### Tarea 10b: La pestaña de la tapa del valle — HECHA
+
+Fuera del plan original: la pidió Samuel el 2026-08-27 sobre la foto de
+referencia. Va entera en **spec §5.4**.
+
+- [x] La tapa se dobla 90° en cada punta y atornilla a la costilla con **un M3
+por punta, detrás del larguero**. Delante la ventana mide 3.24 mm.
+- [x] **No quita el larguero.** Sujeta solo por las puntas cede 59.6 mm.
+- [x] La tapa deja de ser plana: su DXF pasa a **desarrollo** (560.00 × 66.48) y
+su sobre se deriva, no se escribe.
+- [x] `autocomprobacion_pv()` con las cinco cotas del plegado a mano.
+- [x] **Probado que muerde**, cuatro veces: pestaña corta a 14 (el M3 cae dentro
+del contorno y no se dobla), M3 quitado de la costilla (lo cantan el sobre y el
+censo), `pv_x()` movido solo en el `.scad` (divergencia de gemelas), y movido en
+las dos a la vez hacia P[3] (4.21 mm de material contra los 5.10 exigidos).
+
+---
+
 ### Tarea 11: Los papeles
 
 **Files:**
