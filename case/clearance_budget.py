@@ -1531,6 +1531,18 @@ FILA_INFERIOR: dict[str, float] = {}
 ANCHO_PANTALLA_7 = 165.0        # mm. 2026-08-26-pantalla-motor-design.md sec.6
 ALTO_PANTALLA_7 = 102.0         # mm. idem -- clase de pieza Adafruit 7"
 
+# Lo que la fila A tenia que seguir albergando de mandos, DERIVADO y no
+# tecleado: el panel viejo eran 83 HP y la bahia se llevaba 4 columnas a paso
+# 17 (plan del panel sec.4). Lo que quede a los lados de la pantalla tiene que
+# dar al menos eso, o el reencuadre no se sostiene -- es la cuenta del +9.68
+# del papel, puesta como puerta en vez de como parrafo.
+HP_FILA_A_VIEJA = 83
+BAHIA_COLUMNAS, BAHIA_PASO = 4, 17.0
+
+# Huecos declarados en ejecucion. Si queda alguno, main() sale con 2: HUECO
+# visible, no fallo invisible. Constitucion, contrato de estados.
+_HUECOS: list[str] = []
+
 
 def flancos_fila_superior(p: dict[str, float]) -> dict[str, float]:
     """El lienzo de la fila de arriba con la pantalla al centro.
@@ -1560,16 +1572,26 @@ def guarda_fila_superior(p: dict[str, float]) -> list[str]:
         fallos.append(
             f"la pantalla de {ALTO_PANTALLA_7} mm no cabe de alto en un panel "
             f"de {p['alto_panel_sup']} mm")
-    if f["flanco"] <= 0:
+    mandos_min = HP_FILA_A_VIEJA * p["hp"] - BAHIA_COLUMNAS * BAHIA_PASO
+    mandos_hay = 2 * f["flanco"]
+    if mandos_hay < mandos_min:
         fallos.append(
-            f"la pantalla de {ANCHO_PANTALLA_7} mm no deja flanco en una fila "
-            f"de {f['ancho_fila']:.2f} mm")
+            f"los dos flancos dan {mandos_hay:.2f} mm de mando y el panel "
+            f"viejo albergaba {mandos_min:.2f} (83 HP menos la bahia): el "
+            f"reencuadre solo se sostiene si los flancos NO pierden sitio. "
+            f"Con una pantalla de {ANCHO_PANTALLA_7:.0f} mm sobran "
+            f"{mandos_hay - mandos_min:+.2f}")
 
-    # HUECO CITADO, no medido: el issue #179 habla de un «campo vertical de
-    # 112,5 mm» y su derivacion no esta ni en el plan del panel ni en
-    # params.scad. Si el campo util son 112.5 y no alto_panel_sup, la franja
-    # cae de 13.25 a 5.25 y esta guarda se vuelve mucho mas estrecha. No se
-    # asevera contra un numero sin derivar: se deja dicho y se cierra en #179.
+    # Estos dos no son fallos: son cosas que este fichero NO PUEDE comprobar
+    # todavia, y por eso salen como HUECO en vez de callarse. Mientras esten,
+    # main() sale con 2 aunque todo lo demas cierre.
+    _HUECOS.append(
+        f"campo vertical util de una fila 3U sin derivar (#179 lo cifra en "
+        f"112.5 y no dice de donde; con ese numero la franja cae de "
+        f"{f['franja']:.2f} a {(112.5 - ALTO_PANTALLA_7) / 2:.2f} mm)")
+    _HUECOS.append(
+        "fondo de la pantalla sin medir contra la fila A, que el plan del "
+        "panel declara al 100% con 0.6 mm de margen (E-C5)")
     return fallos
 
 
@@ -2022,17 +2044,9 @@ def main() -> int:
               f"aqui con el signo cambiado.")
     exige(-0.5 <= p["kerf"] <= 0.5,
           "kerf fuera de rango fisico [-0.5, +0.5] mm")
-    for f in fallos:
-        print(f"ROJO: {f}")
-    if fallos:
-        # ERA `return 2` hasta el 2026-08-27, y eso convertia TODO fallo real
-        # de este budget en un HUECO a ojos de gates.py, que lee 2 como
-        # "trabajo a medias, no rompe el resumen". O sea: la tanda cerraba con
-        # "GATES EN VERDE" con el case en rojo. Es el mismo pecado que gates.py
-        # ya se corrigio a si mismo en _dep_ausente, con su comentario al lado.
-        # Codigo 1 = ROJO de verdad; el 2 queda para el HUECO declarado de
-        # abajo, que es lo unico que este fichero deja a medias a proposito.
-        return 1
+    # El cierre (ROJO/HUECO/VERDE) esta UNA sola vez, al final: hasta el
+    # 2026-08-27 habia un `for fallos / return` aqui y otro abajo, y el de
+    # arriba cortocircuitaba la comprobacion de la fila de abajo.
     fl = flancos_fila_superior(p)
     print(f"fila superior: UN modulo de {fl['ancho_fila']:.2f} mm "
           f"({fl['ancho_fila'] / p['hp']:.0f} HP), pantalla de "
@@ -2042,15 +2056,35 @@ def main() -> int:
     print(f"  franja sobre y bajo la pantalla: {fl['franja']:.2f} mm -- "
           f"ahi NO cabe un potenciometro (#179 sigue abierto)")
     if not FILA_INFERIOR:
-        # La constitucion, punto III y el contrato de estados: lo que no se
-        # puede comprobar sale como HUECO con el motivo escrito -- no rompe el
-        # CI, pero tampoco se disfraza de verde. Aqui se borro la unica
-        # asercion que miraba la fila de abajo y no hay reemplazo todavia, asi
-        # que salir 0 seria justo el disfraz que ese contrato prohibe.
-        print("HUECO: la fila de abajo no tiene reparto en este fichero. No "
-              "es falta de dato: el plan del panel y la spec de la Voz la "
-              "describen distinto (ver 'NO cubre'). Se cierra al rellenar "
-              "FILA_INFERIOR")
+        _HUECOS.append(
+            "la fila de abajo no tiene reparto aqui. No es falta de dato: el "
+            "plan del panel y la spec de la Voz la describen distinto")
+    else:
+        # Rellenar el dict NO basta para dar verde: {'panel': 10000} tambien
+        # es truthy. Lo cazo codex el 2026-08-27. Se comprueba el reparto.
+        suma = sum(FILA_INFERIOR.values())
+        if suma > p["largo_riel"]:
+            fallos.append(
+                f"la fila de abajo pide {suma:.2f} mm y el riel da "
+                f"{p['largo_riel']:.2f}")
+        for nombre, ancho_mm in FILA_INFERIOR.items():
+            if ancho_mm <= 0:
+                fallos.append(f"'{nombre}' tiene ancho {ancho_mm} en la fila "
+                              f"de abajo")
+
+    for f_ in fallos:
+        print(f"ROJO: {f_}")
+    if fallos:
+        # ERA `return 2` hasta el 2026-08-27, y eso convertia TODO fallo real
+        # de este budget en un HUECO a ojos de gates.py, que lee 2 como
+        # "trabajo a medias, no rompe el resumen": la tanda cerraba con "GATES
+        # EN VERDE" con el case en rojo. Mismo pecado que gates.py ya se
+        # corrigio en _dep_ausente. Codigo 1 = ROJO; el 2 es solo para HUECO.
+        return 1
+    if _HUECOS:
+        for h in _HUECOS[:-1]:
+            print(f"  hueco: {h}")
+        print(f"HUECO: {_HUECOS[-1]}")
         return 2
     print("clearance_budget: VERDE")
     return 0
