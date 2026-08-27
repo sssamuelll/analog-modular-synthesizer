@@ -586,6 +586,42 @@ module costilla() {
                 linear_extrude(cost_vuelo()) costilla_ala_huella(i);
 }
 
+// --- LOS TRES MIEMBROS: desarrollos de chapa de aluminio ----------------
+//
+// El miembro bajo cruza entre las dos costillas en la trasera inferior. Recibe
+// el canto bajo de la piel trasera y la fijacion trasera del chasis del PSU.
+// Su DXF no es la seccion 20 x 20 ya montada: al tumbar las dos alas del canal
+// en U, el blank concatena ala + alma + ala y descuenta el BD de cada doblez.
+module miembro_bajo_2d() {
+    desarrollo = canal_fondo + canal_ancho + canal_fondo - 2*cost_bd();
+    square([ancho_util, desarrollo]);
+}
+
+// El miembro alto cruza entre las costillas en el remate trasero. Recibe el
+// canto alto de la piel trasera y la tapa horizontal del remate. Es un canal
+// ASIMETRICO: el ala larga de arriba es la propia MESETA de prof_sup; la de
+// abajo es un retorno corto de canal_fondo. Ese retorno no es adorno: un ala
+// libre de 528 mm en chapa de 3 ondula y, al ser una pieza vista, dejaria
+// ademas un canto vivo. El desarrollo vuelve a tumbar las tres caras en un
+// plano y por eso supera la envolvente de la pieza plegada, con dos BD menos.
+module miembro_alto_2d() {
+    desarrollo = canal_fondo + canal_ancho + prof_sup - 2*cost_bd();
+    square([ancho_util, desarrollo]);
+}
+
+// La bahia cruza el case entre los dos Z-Rails que miran al valle. Su suelo
+// ocupa la ventana libre entre las esquinas reales de esos rieles; las dos alas
+// forman las paredes de la bahia y reciben la tapa del valle en sus cantos.
+// El blank es mayor que ese suelo porque las dos paredes se cortan tumbadas en
+// el mismo plano: suelo + dos alas de bahia_alto, menos un BD por doblez.
+module bahia_2d() {
+    cr = centros_rail();
+    suelo = (cr[2].x - he_er_x(angulo_superior))
+          - (cr[1].x + he_er_x(angulo_inferior));
+    desarrollo = suelo + 2*bahia_alto - 2*cost_bd();
+    square([ancho_util, desarrollo]);
+}
+
 module rail_2020(largo) { cube([rail, largo, rail], center = true); }
 
 // Riel EUROrack. Los ejes locales no son intercambiables como en el 2020: tras
@@ -1341,6 +1377,9 @@ else if (PART == "assembly_esqueleto") assembly_esqueleto();
 else if (PART == "assembly_acero")     assembly_acero();
 else if (PART == "bandeja_base_2d")      bandeja_base_2d();
 else if (PART == "tapa_valle_2d")        tapa_valle_2d();
+else if (PART == "miembro_bajo_2d")      miembro_bajo_2d();
+else if (PART == "miembro_alto_2d")      miembro_alto_2d();
+else if (PART == "bahia_2d")             bahia_2d();
 else if (PART == "remate_sup_2d")        remate_sup_2d();
 else if (PART == "piel_trasera_2d")      piel_trasera_2d();
 // El relieve KONDOR en su propio fichero, y no es un extra: es la UNICA forma

@@ -52,6 +52,21 @@
 // con 2.4x -- la rigidez la da la FORMA en L, no el espesor.
 t_costilla      = 3;
 // Los tres miembros arrancan en 20 x 20: es la envolvente del 2020 que jubilan
+// ALTO DE LAS ALAS DE LA BAHIA, y con el su fondo util.
+//
+// La bahia es una BANDEJA: suelo perforado y dos alas dobladas hacia arriba.
+// Las alas hacen tres cosas a la vez -- son la pared de la bahia, son el canto
+// donde apoya la tapa del valle, y son lo que le da inercia a la pieza.
+//
+// 60 SALE DE DOS TOPES, uno por arriba y otro por abajo:
+//   - por arriba, el canto del ala tiene que llegar al plano de la tapa del
+//     valle (y = 143.58), que es donde apoya.
+//   - por abajo, el suelo de la bahia queda en 143.58 - 60 = 83.58, y el techo
+//     del chasis del PSU esta en 66.00: quedan 17.58 mm de aire para el
+//     cableado que baje de la bahia a la fuente.
+// Un jack de 6.35 pide unos 30 mm detras del panel y un minijack 20: los dos
+// entran en 60 con sitio de sobra.
+bahia_alto  = 60;
 // y la minima que ya le gana en inercia (6935 mm4 contra ~5600). La seccion
 // definitiva de cada uno sale de su carga.
 canal_ancho = 20;   // cota exterior perpendicular a la carga

@@ -1776,6 +1776,14 @@ def guarda_apilado(p: dict[str, float]) -> None:
           f"({juego:.2f} mm en el peor caso, sobre {p['t_junta']:.2f} de junta)")
 
 
+# Inercia de un 2020 ranurado de catalogo. SUPUESTO DECLARADO: cifra de oficio,
+# no de hoja de datos. Va aqui y no en params.scad porque es la pieza que se
+# JUBILA -- es el liston contra el que se mide su sustituto, no una cota del
+# case. Si el proveedor publica la suya y es otra, este numero se cambia y las
+# secciones de los miembros se recalculan solas.
+I_2020 = 5600.0
+
+
 def _seccion_canal(w: float, d: float,
                    t: float) -> tuple[float, float, float]:
     """Inercia, area y fibra mas alejada de un canal de cotas exteriores."""
@@ -1793,22 +1801,63 @@ def _seccion_canal(w: float, d: float,
     return I, A, max(yc, d - yc)
 
 
-def _secciones_miembro(
-        p: dict[str, float]) -> list[tuple[str, float, float]]:
-    """Secciones de partida de los tres miembros de chapa doblada."""
-    w, d = p["canal_ancho"], p["canal_fondo"]
-    return [("trasero bajo", w, d),
-            ("trasero alto", w, d),
-            ("bahia", w, d)]
+def _secciones_miembro(p: dict[str, float]) -> list[tuple[str, float, float]]:
+    """Los tres miembros de chapa con su seccion (nombre, w, d).
+
+    LOS TRES NO SON IGUALES, y las dos excepciones van declaradas aqui porque
+    cada una es un ruling y no una cota:
+
+    'trasero alto' ES UN CANAL ASIMETRICO. Su ala de arriba es la MESETA del
+    remate -- prof_sup, 37 mm -- y la de abajo es un retorno corto de
+    canal_fondo. Un ala larga y otra corta.
+      Se reclama la CORTA. La puerta compara contra el 2020 con la seccion que
+      el canal garantiza en su lado debil, no con la que le regala el ala larga.
+      La seccion real es mayor y ese margen no se cobra: es la diferencia entre
+      "esta pieza aguanta" y "esta pieza aguanta si nadie acorta la meseta".
+      Y el retorno de abajo NO es adorno: un ala libre de 528 mm en chapa de 3
+      ondula, y ademas seria canto vivo en una pieza vista.
+
+    'bahia' NO ES UN CANAL DE catalogo: es una bandeja, y su seccion sale de su
+    propia geometria -- el ancho del suelo lo fija la ventana entre los dos
+    rieles del valle, y el alto de las alas es bahia_alto. Sale enormemente mas
+    rigida que un 2020 (34.8x), y eso NO es sobredimensionar: es la consecuencia
+    de que la pieza tenga que ser tambien pared y tambien canto de apoyo. Es el
+    numero que la spec 5.3 dejo escrito como "sin medir"."""
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    hx_inf, _ = _he_er(p, p["angulo_inferior"])
+    hx_sup, _ = _he_er(p, p["angulo_superior"])
+    ancho_bahia = (cr[2][0] - hx_sup) - (cr[1][0] + hx_inf)
+    return [("trasero bajo", p["canal_ancho"], p["canal_fondo"]),
+            ("trasero alto", p["canal_ancho"], p["canal_fondo"]),
+            ("bahia", ancho_bahia, p["bahia_alto"])]
 
 
-# Inercia de un 2020 ranurado de catalogo. SUPUESTO DECLARADO: cifra de oficio,
-# no de hoja de datos. Va aqui y no en params.scad porque es la pieza que se
-# JUBILA -- es el liston contra el que se mide su sustituto, no una cota del
-# case. Si el proveedor publica la suya y es otra, este numero se cambia y las
-# secciones de los miembros se recalculan solas.
-I_2020 = 5600.0
+def _bd_miembro(p: dict[str, float]) -> float:
+    """Deduccion de un doblez a 90 para la chapa de los tres miembros."""
+    sb = p["radio_doblez_costilla"] + p["t_costilla"]
+    ba = math.pi / 2 * (p["radio_doblez_costilla"]
+                        + p["k_factor"] * p["t_costilla"])
+    return 2 * sb - ba
 
+
+def bbox_desarrollo_miembro(p: dict[str, float], cual: str) -> tuple[float, float]:
+    """Envolvente del blank de cada canal trasero, largo por desarrollo."""
+    secciones = {nombre: (w, d) for nombre, w, d in _secciones_miembro(p)}
+    if cual not in ("trasero bajo", "trasero alto"):
+        raise ValueError(f"miembro sin desarrollo de canal: {cual!r}")
+    w, d = secciones[cual]
+    ala_superior = p["prof_sup"] if cual == "trasero alto" else d
+    desarrollo = d + w + ala_superior - 2 * _bd_miembro(p)
+    return perfil(p)["ancho_util"], desarrollo
+
+
+def bbox_desarrollo_bahia(p: dict[str, float]) -> tuple[float, float]:
+    """Envolvente del blank de la bandeja: suelo mas dos alas hacia arriba."""
+    secciones = {nombre: (w, d) for nombre, w, d in _secciones_miembro(p)}
+    suelo, ala = secciones["bahia"]
+    desarrollo = suelo + 2 * ala - 2 * _bd_miembro(p)
+    return perfil(p)["ancho_util"], desarrollo
 
 def autocomprobacion_canal() -> None:
     """La seccion del canal, a mano, ANTES de escribir la funcion.

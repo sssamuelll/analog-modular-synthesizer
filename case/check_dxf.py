@@ -128,6 +128,15 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
     # mismo error que el sobre del chasis tiene que cazar: exportar el contorno
     # de la pieza montada en vez del recorte da un DXF valido e inservible.
     dims["tapa_valle_2d"] = cb.bbox_desarrollo_tapa(p)
+    # LOS TRES MIEMBROS DE CHAPA. Sus DXF son DESARROLLOS y salen mas grandes
+    # que la pieza doblada, igual que la costilla, la tapa del valle y las tres
+    # del chasis. Derivados, no escritos a mano: si el .scad y la cuenta de
+    # Python se separan, el bbox real del fichero se sale del sobre y revisar()
+    # lo canta. Es la unica forma de cruzar dos gemelas que viven en lenguajes
+    # distintos.
+    dims["miembro_bajo_2d"] = cb.bbox_desarrollo_miembro(p, "trasero bajo")
+    dims["miembro_alto_2d"] = cb.bbox_desarrollo_miembro(p, "trasero alto")
+    dims["bahia_2d"] = cb.bbox_desarrollo_bahia(p)
 
     return {n: (w - TOL, w + TOL, h - TOL, h + TOL) for n, (w, h) in dims.items()}
 
@@ -1121,5 +1130,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-
 
