@@ -7,7 +7,13 @@ $scad = "C:\Program Files\OpenSCAD\openscad.exe"
 if (-not (Test-Path $scad)) { $scad = (Get-Command openscad).Source }
 
 python (Join-Path $repo "case/clearance_budget.py")
-if ($LASTEXITCODE -ne 0) { Write-Error "budget en ROJO: no se exporta nada"; exit 1 }
+# El vocabulario de codigos es el de gates.py y hay que hablarlo entero:
+# 0 = verde, 2 = HUECO declarado (trabajo a medias a proposito, NO fallo),
+# cualquier otro = ROJO. Hasta el 2026-08-27 esto comparaba contra -ne 0, asi
+# que un HUECO abortaba el export con el mensaje "budget en ROJO" -- mentira
+# de estado, y en la direccion contraria a la que el codigo 2 existe.
+if ($LASTEXITCODE -eq 2) { Write-Host "budget con HUECO declarado: se exporta igual" }
+elseif ($LASTEXITCODE -ne 0) { Write-Error "budget en ROJO: no se exporta nada"; exit 1 }
 
 $plans = Join-Path $repo "case/plans"
 $build = Join-Path $repo "case/renders/build"
