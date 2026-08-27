@@ -260,6 +260,41 @@ function centros_transversal() =
      // vuela 211.73 mm sin apoyo intermedio -- a proposito.
      [x_tr,        P[5].y - marco_sup - r]];
 
+// --- referencias de los tres miembros de chapa -------------------------
+//
+// centros_transversal() conserva por ahora la geometria historica de los tres
+// 2020 para el eco del BOM. El modelo y los DXF ya no la consumen: sus herederos
+// son estas cotas, gemelas de _cajas_miembro() en clearance_budget.py.
+function radio_giro_riel() = norm([rail_er_fondo, rail_er_alto]) / 2;
+function miembro_x_trasera() = pts_perfil()[6].x - t_piel;
+function miembro_y_meseta() = pts_perfil()[5].y - marco_sup;
+
+// El barrido de la tapa inferior manda el ala delantera; el canto trasero lo
+// manda la propia tapa del valle. La resta es el suelo de 48.18 mm que usa el
+// contrato bbox_desarrollo_bahia().
+function bahia_x0() = centros_rail()[1].x + radio_giro_riel() + holgura_rail;
+function bahia_x1() = x_valle()[1];
+function bahia_y1() = pts_perfil()[3].y - t_valle;
+function bahia_y0() = bahia_y1() - bahia_alto;
+function bahia_centro() = [(bahia_x0() + bahia_x1()) / 2,
+                           (bahia_y0() + bahia_y1()) / 2];
+
+// Un M5 por miembro, atornillado por su punta al centro de la caja completa.
+// En la bahia eso significa su ENVOLVENTE TOTAL, no una de las dos alas.
+function centro_miembro_bajo() = [miembro_x_trasera() - canal_fondo/2,
+                                  canal_ancho/2];
+function centro_miembro_alto() = [miembro_x_trasera() - canal_ancho/2,
+                                  miembro_y_meseta() - canal_ancho/2];
+function centros_miembro_punta() = [centro_miembro_bajo(),
+                                    centro_miembro_alto(), bahia_centro()];
+
+// Filas de la piel: no coinciden todas con el centro de la envolvente. La de
+// arriba vive en el alma vertical, por debajo de la meseta de marco_sup.
+function anclaje_piel_base() = centro_miembro_bajo();
+function anclaje_piel_remate() = [miembro_x_trasera() - t_costilla/2,
+                                  miembro_y_meseta() - marco_sup
+                                                     - canal_ancho/2];
+
 // --- redondeo del contorno, radio POR VERTICE --------------------------
 //
 // Aqui estuvo un cierre morfologico global (`offset(-r) offset(2r) offset(-r)`)
@@ -503,6 +538,19 @@ module costilla_ala(i) {
     polygon([p0, p1, p1 + nx*cost_vuelo(), p0 + nx*cost_vuelo()]);
 }
 
+// El M5 de la bahia cae en el centro de su envolvente, dentro de la ventana de
+// la costilla. Esta lengua lleva material desde la banda del valle hasta ese
+// centro. Su ancho es 4 diametros: deja 2D de material desde el eje a cada lado,
+// por encima del minimo 1.5D que relee taladros_costilla().
+module costilla_apoyo_bahia() {
+    c = bahia_centro();
+    P = pts_perfil();
+    ancho = 4*d_M5_paso;
+    y0 = c.y - 2*d_M5_paso;
+    translate([c.x - ancho/2, y0])
+        square([ancho, P[2].y - y0]);
+}
+
 module costilla_2d() {
     P = pts_perfil();
     difference() {
@@ -512,6 +560,7 @@ module costilla_2d() {
                 offset(delta = -ala_costilla) perfil_lateral();
             }
             for (i = [0 : len(P)-1]) if (costilla_lleva_ala(i)) costilla_ala(i);
+            costilla_apoyo_bahia();
         }
         // LOS CUATRO M4 DEL Z-RAIL. Vinieron del costado el 2026-08-27: el
         // riel trae el taladro de punta ROSCADO M4 de fabrica (hoja Tiptop),
@@ -522,13 +571,11 @@ module costilla_2d() {
         // cara de punta mira hacia fuera, o sea contra este plano. El ala esta
         // doblada 90 grados y corre por el perimetro, al lado del riel.
         for (c = centros_rail()) translate(c) circle(d = d_M4_paso + kerf);
-        // Y LOS M5 DE LAS TRANSVERSALES, que vinieron del costado el mismo dia.
-        // Los 2020 se atornillan por su ranura de punta con M5 a tuerca T.
-        // Caen los tres sobre la banda con material de sobra (8.49, 10.97 y
-        // 8.49 mm al canto contra los 8.25 que pide BORDE_MIN_D); el unico que
-        // NO cabia era el de `base delantera`, a 6.00 -- y esa barra murio el
-        // mismo dia por otro motivo. Lo vigila taladros_costilla().
-        for (c = centros_transversal()) translate(c) circle(d = d_M5_paso + kerf);
+        // Y LOS M5 DE LOS TRES MIEMBROS. Cada pieza se atornilla por su punta
+        // en el centro de su caja; para la bahia manda la ENVOLVENTE TOTAL.
+        // Lo vigila taladros_costilla() releyendo este DXF.
+        for (c = centros_miembro_punta())
+            translate(c) circle(d = d_M5_paso + kerf);
         // Y EL M3 DE LA PESTANA DE LA TAPA DEL VALLE, que atraviesa esta chapa
         // y la pestana doblada. Lo coloca pv_x() -- lo mas lejos posible del
         // vertice concavo P[3], que es quien se come el material al vaciar la
@@ -550,10 +597,15 @@ module costilla_2d() {
 // porque las retracciones son las mismas que usa costilla_ala().
 module costilla_alma() {
     difference() {
-        perfil_lateral();
-        offset(delta = -ala_costilla) perfil_lateral();
+        union() {
+            difference() {
+                perfil_lateral();
+                offset(delta = -ala_costilla) perfil_lateral();
+            }
+            costilla_apoyo_bahia();
+        }
         for (c = centros_rail()) translate(c) circle(d = d_M4_paso + kerf);
-        for (c = centros_transversal()) translate(c) circle(d = d_M5_paso + kerf);
+        for (c = centros_miembro_punta()) translate(c) circle(d = d_M5_paso + kerf);
         translate([pv_x(), pts_perfil()[3].y - pv_a()])
             circle(d = d_M3_paso + kerf);
     }
@@ -615,11 +667,62 @@ module miembro_alto_2d() {
 // El blank es mayor que ese suelo porque las dos paredes se cortan tumbadas en
 // el mismo plano: suelo + dos alas de bahia_alto, menos un BD por doblez.
 module bahia_2d() {
-    cr = centros_rail();
-    suelo = (cr[2].x - he_er_x(angulo_superior))
-          - (cr[1].x + he_er_x(angulo_inferior));
+    // La cota delantera la manda el BARRIDO del riel inferior, no su esquina
+    // quieta. El contrato Python ya usa esta misma resta (48.18 mm).
+    suelo = bahia_x1() - bahia_x0();
     desarrollo = suelo + 2*bahia_alto - 2*cost_bd();
     square([ancho_util, desarrollo]);
+}
+
+// Solidos plegados de los tres miembros. Los desarrollos de arriba son para el
+// taller; estas caras son para colisiones visuales y para los STL de render.
+// Todos cruzan exactamente ancho_util, entre las puntas de los Z-Rails.
+function miembros_z0() = (ancho_total - ancho_util) / 2;
+
+module miembro_bajo() {
+    x1 = miembro_x_trasera();
+    z0 = miembros_z0();
+    // alma trasera + dos retornos del canal en U
+    translate([x1 - t_costilla, 0, z0])
+        cube([t_costilla, canal_ancho, ancho_util]);
+    for (y = [0, canal_ancho - t_costilla])
+        translate([x1 - canal_fondo, y, z0])
+            cube([canal_fondo, t_costilla, ancho_util]);
+}
+
+module miembro_alto() {
+    x1 = miembro_x_trasera();
+    y1 = miembro_y_meseta();
+    y0 = y1 - canal_ancho;
+    z0 = miembros_z0();
+    // alma y retorno corto de abajo
+    translate([x1 - t_costilla, y0, z0])
+        cube([t_costilla, canal_ancho, ancho_util]);
+    translate([x1 - canal_fondo, y0, z0])
+        cube([canal_fondo, t_costilla, ancho_util]);
+    // La meseta de prof_sup ES el ala superior de esta misma pieza: nace en
+    // el pliegue del alma y avanza hacia el frente, sin cruzar la propia alma.
+    translate([x1 - prof_sup, y1, z0])
+        cube([prof_sup, marco_sup, ancho_util]);
+}
+
+module bahia() {
+    x0 = bahia_x0();
+    x1 = bahia_x1();
+    y0 = bahia_y0();
+    y1 = bahia_y1();
+    z0 = miembros_z0();
+    translate([x0, y0, z0])
+        cube([x1 - x0, t_costilla, ancho_util]);
+    for (x = [x0, x1 - t_costilla])
+        translate([x, y0, z0])
+            cube([t_costilla, y1 - y0, ancho_util]);
+}
+
+module miembros() {
+    miembro_bajo();
+    miembro_alto();
+    bahia();
 }
 
 module rail_2020(largo) { cube([rail, largo, rail], center = true); }
@@ -785,8 +888,8 @@ KONDOR_FONT = "Franklin Gothic Medium";
 
 function trasera_au() = ancho_util - 2*hol_piel;
 function trasera_y_relieve() =
-    let (ce = centros_transversal())
-    ct_base().y + 0.74*(ct_remate().y - ct_base().y);   // y0 = 0, ver piel_trasera_2d()
+    anclaje_piel_base().y
+    + 0.74*(anclaje_piel_remate().y - anclaje_piel_base().y);
 
 // OJO CON EL ESPEJO -- ESTO NO ES UN DESCUIDO, ES LA CORRECCION.
 //
@@ -818,7 +921,6 @@ module kondor_2d(espejo = false) {
 
 module piel_trasera_2d() {
     au = ancho_util - 2*hol_piel;
-    ce = centros_transversal();
     P  = pts_perfil();
     // UNA sola plancha desde el 2026-08-21: fueron dos (piel_inferior y
     // piel_superior) partidas a la altura del entrepiso, porque cada una se
@@ -852,8 +954,8 @@ module piel_trasera_2d() {
     // largueros de en medio no sujetaban ya nada mas que estas filas, y una
     // plancha continua de 8 atornillada arriba y abajo trabaja de alma de
     // cortante en esa cara mejor que cinco barras sueltas.
-    f_base = ct_base().y - y0;
-    f_tras = ct_remate().y - y0;
+    f_base = anclaje_piel_base().y - y0;
+    f_tras = anclaje_piel_remate().y - y0;
     // Las ondas van derivadas de las dos filas que las rodean: asi no se acercan
     // a un tornillo si un larguero se mueve.
     //
@@ -982,32 +1084,48 @@ function pv_desarrollo(d) = pv_bd() - d;
 
 // Donde va el tornillo, en X del perfil. Lo mas lejos posible del vertice
 // concavo P[3] -- que es quien se come el material de la costilla al vaciar la
-// ventana -- sin echarse encima del larguero: su cara de atras, mas la holgura,
-// mas la distancia al canto que pide el propio M3.
-function pv_x() = ct_valle().x + rail/2 + holgura_rail + 1.5*d_M3_paso;
+// ventana -- sin echarse encima del ala delantera de la bahia: su cara interior,
+// mas la holgura y la distancia al canto que pide el propio M3.
+function pv_x() = bahia_x0() + t_costilla + holgura_rail + 1.5*d_M3_paso;
 
 module tapa_valle_2d() {
     au = ancho_util;
-    ce = centros_transversal();
     xv = x_valle();
     largo = xv[1] - xv[0];
-    y_esp = ct_valle().x - xv[0];                 // linea del larguero, en local
-    campos = [[valle_margen,               y_esp - valle_espina/2],
-              [y_esp + valle_espina/2,     largo - valle_margen]];
+    // DOS filas, centradas en las dos alas de la bahia. Las tres bandas de
+    // ventilacion quedan delimitadas por esas mismas lineas de tornillo.
+    // Un M3 de paso mide 3.4 y el ala 3: centrado en el ala trasera abriria el
+    // circulo 0.20 mm por el canto de la tapa. Las dos filas se retiran juntas
+    // el exceso diametral completo hacia delante: conservan su separacion y
+    // dejan otros 0.20 mm de material tras el circulo, sin convertir la fila
+    // trasera en cinco muescas.
+    retiro_fila = max(0, d_M3_paso - t_costilla);
+    filas_bahia = [bahia_x0() + t_costilla/2 - xv[0] - retiro_fila,
+                   bahia_x1() - t_costilla/2 - xv[0] - retiro_fila];
+    s = valle_espina/2;
+    candidatos = [[valle_margen,       filas_bahia[0] - s],
+                  [filas_bahia[0] + s, filas_bahia[1] - s],
+                  [filas_bahia[1] + s, largo - valle_margen]];
+    campos = [for (c = candidatos)
+                  if (c[1] - c[0] >= vent_ancho_ranura) c];
     n_hp  = round(largo_riel/hp);            // 104
-    // LA PESTANA VA DETRAS DEL LARGUERO Y SOLO AHI. Delante la ventana mide
-    // 3.24 mm -- el riel cara_inf valle llega hasta x=105.94 -- y por ahi no
-    // pasa ni el doblez ni el tornillo.
-    py0 = y_esp + rail/2 + holgura_rail;
+    // La pestana recorre el hueco libre ENTRE las dos alas, retirada de ambas
+    // por holgura_rail para que las chapas no compartan volumen.
+    py0 = bahia_x0() + t_costilla + holgura_rail - xv[0];
+    // El ala trasera de la bahia acaba en x1_valle y ocupa t_costilla hacia
+    // delante. La pestana se retira de SU cara delantera holgura_rail: asi las
+    // dos chapas no comparten volumen y la cota sigue a la geometria del ala.
+    cara_del_ala_trasera = bahia_x1() - t_costilla;
+    py1 = cara_del_ala_trasera - holgura_rail - xv[0];
     difference() {
         union() {
             plancha(au, largo);
             // las dos pestanas, desplegadas por fuera del contorno
             for (lado = [0, 1])
                 translate([lado ? au : -pv_vuelo(), py0])
-                    square([pv_vuelo(), largo - py0]);
+                    square([pv_vuelo(), py1 - py0]);
         }
-        fila_agujeros(au, y_esp);
+        for (y = filas_bahia) fila_agujeros(au, y);
         // el M3 de cada pestana, en el desarrollo
         for (lado = [0, 1])
             translate([lado ? au - pv_desarrollo(pv_a())
@@ -1285,7 +1403,8 @@ function bandeja_base_ancho() = ancho_total + 2*vuelo_zocalo;
 // cadena leida al reves desde el canto de la plancha -- y solo daba lo mismo
 // porque `base delantera` estaba justo ahi. GEMELA de _x_chasis_frente().
 function x_chasis_frente() =
-    (ct_base().x - rail/2) - chasis_holgura_larguero - ch_tapa_ext().y;
+    (centro_miembro_bajo().x - canal_fondo/2)
+    - chasis_holgura_larguero - ch_tapa_ext().y;
 
 // En coordenadas LOCALES de la tabla, cuyo origen esta vuelo_zocalo por delante
 // y por fuera del cuerpo.
@@ -1380,7 +1499,6 @@ else if (PART == "tapa_valle_2d")        tapa_valle_2d();
 else if (PART == "miembro_bajo_2d")      miembro_bajo_2d();
 else if (PART == "miembro_alto_2d")      miembro_alto_2d();
 else if (PART == "bahia_2d")             bahia_2d();
-else if (PART == "remate_sup_2d")        remate_sup_2d();
 else if (PART == "piel_trasera_2d")      piel_trasera_2d();
 // El relieve KONDOR en su propio fichero, y no es un extra: es la UNICA forma
 // de que llegue al taller. No se recorta en piel_trasera_2d (es ciego), asi que
@@ -1403,9 +1521,8 @@ else assert(false, str("PART desconocido: ", PART));
 // Desde la decision 1 de 2026-08-27-case-esqueleto-visible-design.md el aluminio
 // va POR FUERA y el acrilico por dentro, con la junta de EPDM entre el ala de
 // la costilla y la cara del acrilico. guarda_apilado() en clearance_budget.py
-// verifica este orden. Los 9 largueros 2020 (centros_rail() +
-// centros_transversal(), en ese orden — 5 de esqueleto desde que los tres
-// traseros de en medio se retiraron) cruzan entre sus caras internas.
+// verifica este orden. Los cuatro Z-Rails y los tres miembros plegados cruzan
+// entre sus caras internas.
 module costados() {
     translate([0, 0, t_costilla + t_junta]) costado();
     translate([0, 0, ancho_total - t_costilla - t_junta - t_cheek]) costado();
@@ -1437,10 +1554,6 @@ module rails() {
             rotate([0, 0, -angs[i]])
                 rotate([90, 0, 0])
                     rail_er(ancho_util);
-    for (c = centros_transversal())
-        translate([c.x, c.y, ancho_total/2])
-            rotate([90, 0, 0])
-                rail_2020(ancho_util);
 }
 
 // --- planchas del cuerpo colocadas en 3D --------------------------------
@@ -1484,7 +1597,6 @@ module bandeja_base() {
 // t_piel - kondor_prof.
 module piel_trasera() {
     P = pts_perfil();
-    ce = centros_transversal();
     translate([P[6].x, 0, t_cheek + hol_piel])
         rotate([0, -90, 0])
             difference() {
@@ -1509,7 +1621,6 @@ module tapa_valle() {
 // naranja y ensena una pieza que no existe -- que es peor que no renderizarla.
 module planchas_acrilico() {
     piel_trasera();
-    remate_sup();
 }
 
 // panel de modulo (PCB de aluminio, t_panel) sobre una cara del perfil
@@ -1588,7 +1699,7 @@ module paticas() {
     // el frente en voladizo justo donde se aprietan los mandos de abajo. Va donde
     // acaba el redondeo de la punta, que es lo mas adelante que se puede apoyar
     // con el disco entero sobre acrilico. El trasero sigue sobre su larguero.
-    for (x = [alto_frontal/2 + d_pie/2, ct_base().x])
+    for (x = [alto_frontal/2 + d_pie/2, centro_miembro_bajo().x])
         for (z = [d_pie/2, ancho_total - d_pie/2])
             translate([x, -t_base, z])
                 rotate([90, 0, 0])
@@ -1598,7 +1709,10 @@ module paticas() {
 module assembly() {
     costados();
     rails();
+    costillas();
+    miembros();
     planchas_acrilico();
+    tapa_valle();
     chasis();
     paticas();
     %paneles();                        // paneles de modulo: solo referencia
@@ -1619,7 +1733,7 @@ module assembly_madera() {
 
 // LA BAHIA DE ABAJO, para mirarla por dentro. Es el unico sitio del case cuyo
 // interior es una decision y no una consecuencia -- la tabla, el chasis del PSU
-// encima y las tres transversales -- y no se ve en ninguna de las dos vistas
+// encima y los tres miembros de chapa -- y no se ve en ninguna de las dos vistas
 // del conjunto: los paneles y la tapa del valle lo tapan entero.
 //
 // Son DOS ensamblados y no uno porque son DOS MATERIALES: el esqueleto va en
@@ -1628,6 +1742,7 @@ module assembly_madera() {
 module assembly_esqueleto() {          // aluminio, SIN paneles ni tapa
     rails();
     costillas();
+    miembros();
 }
 
 module assembly_acero() {              // el chasis del PSU, cerrado
@@ -1642,13 +1757,14 @@ module assembly_acero() {              // el chasis del PSU, cerrado
 // que lado caiga el redondeo de coma flotante, asi que aparece y desaparece al
 // mover el case (aparecio al bajar el suelo 17 mm, 2026-08-17). No afecta a
 // ningun DXF -- esto es el STL de referencia para Blender, y Blender lo carga.
-module assembly_aluminio() {           // idem, perfiles 2020 + paneles solidos
+module assembly_aluminio() {           // idem, Z-Rails + miembros + paneles solidos
     rails();
     paneles();
     // LAS DOS COSTILLAS. Entran aqui el 2026-08-27, y llegaban tarde: son la
     // pieza PORTANTE del case desde el 26 y el render llevaba un dia
     // ensenando un aparato sostenido por su propia piel.
     costillas();
+    miembros();
     // La tapa del valle. Entra aqui el 2026-08-25 al dejar de ser acrilico de 5
     // y pasar a aluminio de 3, y su sitio es este por la misma razon por la que
     // el cambio no rompe el lenguaje visual: queda entre los paneles de las dos
@@ -1669,7 +1785,7 @@ module lienzo_2d() {
     // fila 1: los 2 costados
     costado_2d();
     translate([prof + sep, 0]) costado_2d();
-    // fila 2: las 3 planchas del cuerpo. Fueron 6 hasta el 2026-08-21 (murio
+    // fila 2: las 2 planchas de acrilico. Fueron 6 hasta el 2026-08-21 (murio
     // la bandeja de entrepiso y las dos pieles se fundieron en una), y 4 hasta
     // el 2026-08-25, cuando la tapa del valle paso a ALUMINIO.
     //
@@ -1686,7 +1802,6 @@ module lienzo_2d() {
     y2 = alto + sep;
     x1 = 0;               translate([x1, y2]) bandeja_base_2d();
     x2 = x1 + au + sep;   translate([x2, y2]) piel_trasera_2d();
-    x3 = x2 + aup + sep;  translate([x3, y2]) remate_sup_2d();
     %square([1000, 600]);
 }
 

@@ -35,7 +35,7 @@ Remove-Item (Join-Path $build "*.stl") -ErrorAction SilentlyContinue
 # declara SIN_DXF en check_dxf.py.
 $piezas = "costado_2d","costilla_2d","bandeja_base_2d","tapa_valle_2d",
           "miembro_bajo_2d","miembro_alto_2d","bahia_2d",
-          "remate_sup_2d","piel_trasera_2d","kondor_cajeado_2d","lienzo_2d",
+          "piel_trasera_2d","kondor_cajeado_2d","lienzo_2d",
           "chasis_cuerpo_2d","chasis_tapa_2d","chasis_refuerzo_2d"
 # Piso de tamano del DXF. Es un SMOKE TEST -- "OpenSCAD escribio algo" --, no una
 # verificacion: de eso se encarga check_dxf.py, que relee cada fichero con ezdxf

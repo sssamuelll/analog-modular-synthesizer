@@ -356,15 +356,7 @@ def agujeros_donde_toca() -> list[str]:
     clearance_budget comparaba el modelo contra si mismo sin abrir un .dxf en
     ningun momento. Un fichero con los agujeros en otro sitio pasaba entero.
 
-    Se comprueban dos cosas distintas segun lo que se pueda comparar sin
-    duplicar formulas:
-
-    COSTADO: comparacion EXACTA. costado_2d se dibuja directamente en las
-    coordenadas de pts_perfil(), asi que los centros del DXF y los de
-    _centros_rail()/_centros_transversal() viven en el mismo sistema y se restan
-    sin traducir nada. Once agujeros, uno por larguero.
-
-    PLANCHAS: se comprueba lo que es invariante dentro de su propio plano --
+    Se comprueba lo que es invariante dentro del plano de cada plancha --
     cuantas filas hay, cuantos agujeros por fila, el paso en X, y la SEPARACION
     entre filas. Esa ultima es la que atrapa la reproduccion del issue: mover
     una fila +10 y otra -10 cambia su separacion en 20 mm. No se comprueba la
@@ -374,9 +366,6 @@ def agujeros_donde_toca() -> list[str]:
     import clearance_budget as cb
 
     p = cb.leer_params()
-    P = cb._vertices(p)
-    cr = cb._centros_rail(p, P)
-    ce = cb._centros_transversal(p, P, cr)
     f: list[str] = []
 
     # --- costado: CERO agujeros ---
@@ -700,7 +689,7 @@ def guarda_costado() -> list[str]:
 
 
 def railes_dentro_del_costado() -> list[str]:
-    """Cada larguero 2020 tiene que caber DENTRO del acrilico del costado.
+    """Cada riel y miembro tiene que caber DENTRO del acrilico del costado.
 
     Esto no lo miraba nadie. `solapes()` compara railes contra railes y contra
     planchas, o sea cuerpo contra cuerpo: un rail que se sale por el borde del
@@ -728,8 +717,7 @@ def railes_dentro_del_costado() -> list[str]:
     p = cb.leer_params()
     P = cb._vertices(p)
     cr = cb._centros_rail(p, P)
-    ce = cb._centros_transversal(p, P, cr)
-    r = p["rail"] / 2
+    miembros = cb._cajas_miembro(p, P, cr, 0.0, 0.0)
     # Los railes de PANEL van girados con su cara; los de esqueleto, a plomo.
     # El signo del giro es -angulo, igual que en el modulo rails() del .scad:
     # un cuadrado girado -49 grados deja un par de caras a +41 del eje X, que
@@ -737,10 +725,10 @@ def railes_dentro_del_costado() -> list[str]:
     # signo al reves la comprobacion acusaba a los cuatro railes de panel de
     # salirse -- eran falsos positivos, y con el signo bueno se ve que su cara
     # queda a 1.63 mm del plano del panel, o sea el t_panel de diseno.
-    # Cada elemento aporta sus CUATRO ESQUINAS ya en coordenadas del perfil, no
-    # un semilado: los rieles de panel son el EUROrack real (27.4 x 10, girado
-    # con su cara) y los de esqueleto son 2020 rectos, asi que no hay una sola
-    # cota que valga para todos.
+    # Cada elemento aporta sus CUATRO ESQUINAS ya en coordenadas del perfil. Los
+    # rieles de panel son el EUROrack real, girado con su cara; los miembros de
+    # chapa pasan sus cajas. La bahia pasa sus tres cajas fisicas por separado:
+    # rellenar su envolvente esconderia que el centro es aire.
     #
     # Aqui estan los CUATRO railes de panel, incluido el de arriba de la tapa:
     # cerrada, la tapa vive dentro del contorno como todo lo demas, y que ese
@@ -749,9 +737,9 @@ def railes_dentro_del_costado() -> list[str]:
     # por diseno ya no existe: el eje es el propio M5 del riel.
     cuerpos = [(n, cb._esquinas_er(p, c, p[a]))
                for n, c, a in zip(cb.NOMBRES_CR, cr, cb.ANGS_CR)]
-    cuerpos += [(n, [(c[0] + dx, c[1] + dy)
-                     for dx in (-r, r) for dy in (-r, r)])
-                for n, c in ce.items()]
+    cuerpos += [(n, [(c[x], c[y])
+                     for x in (1, 2) for y in (3, 4)])
+                for n, c in miembros.items()]
     # Varios largueros van A RAS del contorno por diseno (los de la cara
     # trasera tienen su centro en prof_inferior - r, o sea que su cara de atras
     # coincide con el plano trasero; los de la base apoyan en y=0). Un punto
@@ -767,12 +755,12 @@ def railes_dentro_del_costado() -> list[str]:
             esq = (cx + (ex - cx) * (largo - EPS) / largo,
                    cy + (ey - cy) * (largo - EPS) / largo)
             if not dentro(esq):
-                f.append(f"costado_2d: el larguero '{nombre}' se sale del "
+                f.append(f"costado_2d: el cuerpo '{nombre}' se sale del "
                          f"acrilico -- esquina ({ex:.1f}, {ey:.1f}) fuera del "
                          f"contorno (centro {cx:.1f}, {cy:.1f})")
                 break
     if not f:
-        print(f"  costado_2d: los {len(cuerpos)} largueros caben dentro del "
+        print(f"  costado_2d: los {len(cuerpos)} cuerpos caben dentro del "
               f"contorno ({len(contorno)} aristas de perimetro)")
     return f
 
@@ -877,20 +865,30 @@ def taladros_costilla() -> list[str]:
     p = cb.leer_params()
     P = cb._vertices(p)
     cr = cb._centros_rail(p, P)
-    ct = cb._centros_transversal(p, P, cr)
+    cajas = cb._cajas_miembro(p, P, cr, 0.0, 0.0)
+    bahia = cb._envolvente_bahia(cajas)
+    cajas_m5 = {nombre: cajas[nombre]
+                for nombre in ("trasero bajo", "trasero alto")}
+    cajas_m5["bahia"] = bahia
+    centros_m5 = {
+        nombre: ((caja[1] + caja[2]) / 2, (caja[3] + caja[4]) / 2)
+        for nombre, caja in cajas_m5.items()
+    }
     # DOS DIAMETROS, y el margen se exige en diametros: con un solo `d` el
     # criterio saldria 22 % duro en unos y 22 % blando en otros. Es la misma
     # leccion que traia taladros_con_material() cuando esto vivia en el
     # acrilico, y se muda con los taladros.
     esperados = ([(nm, c, p["d_M4_paso"], "M4")
                   for nm, c in zip(cb.NOMBRES_CR, cr)]
-                 + [(nm, c, p["d_M5_paso"], "M5") for nm, c in ct.items()]
+                 + [(nm, c, p["d_M5_paso"], "M5")
+                    for nm, c in centros_m5.items()]
                  # el M3 de la pestana de la tapa del valle, que atraviesa esta
                  # chapa y la pestana doblada. Es el mas apretado de los tres
                  # diametros: cae cerca del vertice CONCAVO P[3], y un concavo
                  # se come material al vaciar la ventana en vez de anadirlo.
                  + [("pestana del valle",
-                     (cb._pv_x(p, ct), P[3][1] - cb._pv(p)["a"]),
+                     (cb._pv_x(p, {"bahia": bahia}),
+                      P[3][1] - cb._pv(p)["a"]),
                      p["d_M3_paso"], "M3")])
 
     # 1. estan en la costilla, donde el modelo dice, y con material alrededor
@@ -902,7 +900,7 @@ def taladros_costilla() -> list[str]:
                  and abs(q[2] - (d + p["kerf"])) < 0.1]
         if not cerca:
             f.append(f"costilla_2d: falta el {rosca} de '{nm}' en ({c[0]:.2f}, "
-                     f"{c[1]:.2f}). Los Z-Rails y las transversales atornillan "
+                     f"{c[1]:.2f}). Los Z-Rails y los miembros atornillan "
                      f"a la costilla desde el 2026-08-27, no al acrilico")
             continue
         dist = _dist_al_contorno(cantos, c)
@@ -939,10 +937,10 @@ def taladros_costilla() -> list[str]:
 
     if not f:
         print(f"  costilla_2d: los {len(esperados)} taladros (4 M4 de riel + "
-              f"{len(ct)} M5 de transversal + 1 M3 de pestana) tienen material "
+              f"{len(centros_m5)} M5 de miembro + 1 M3 de pestana) tienen material "
               f"alrededor (el mas "
               f"justo, '{peor_nm}', a {peor:.2f} mm del canto = "
-              f"{peor / peor_d:.2f} D), y el costado ya no lleva ninguno")
+              f"{peor / peor_d:.2f} D)")
     return f
 
 
@@ -1130,4 +1128,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

@@ -179,8 +179,8 @@ hol_riel        = 0.30;
 // vertice frontal no baja tanto como el riel adelgaza.
 //
 // Bisel que sobra alrededor de cada panel (inset - inset_er)
-// (14.75 y 9.75 abajo, 16.75 y marco_sup = 8 arriba). Ese ultimo NO es
-// bisel de costado: es la pestana, que cruza de lado a lado.
+// (14.75 y 9.75 abajo, 16.75 y 8 arriba). Ese ultimo ya no es marco_sup:
+// desde el 2026-08-27 marco_sup es el espesor de la meseta de chapa.
 //
 // YA NO HAY SUPUESTO AQUI. Se asumia que el riel EUROrack iria atornillado
 // SOBRE un 2020; el plano de StudioRacks ensena que no hace falta: el riel se
@@ -343,10 +343,9 @@ alto_frontal    = 19;
 // repisa. De frente no cambia nada -- lo que se ve sigue siendo marco_sup.
 //
 // OJO, ESTE NO ES EL BORDE QUE SE VE DE FRENTE. marco_remate pertenece al
-// COSTADO, o sea que solo existe en los dos laterales y no cruza el ancho: por
-// eso ponerlo a 8 no hizo aparecer ninguna pestana en el render. La pestana que
-// tapa el canto del panel es marco_sup, una pieza aparte que si va de lado a
-// lado. Los dos valen 8 y juntos envuelven la punta de arriba en L.
+// COSTADO, o sea que solo existe en los dos laterales y no cruza el ancho. La
+// pieza que tapa la meseta va de lado a lado, pero desde el 2026-08-27 es la
+// cara horizontal del miembro trasero alto y no una pieza de acrilico.
 //
 // No es un valor libre: si cambia t_cheek hay que cambiar este a mano (aqui no
 // se pueden escribir expresiones, ver la cabecera del fichero). Y baja el
@@ -554,7 +553,7 @@ radio_trasero   = 0;
 // devolver el hueco contra la trasera, que es lo que costaba el radio.
 //
 // 0.5 y no menos: por debajo de 0.3 el taller no lo ejecuta como chaflan, lo
-// redondea. Y no mas: en la tapa del valle (5 mm) un chaflan grande deja el
+// redondea. Y no mas: en la tapa del valle (3 mm) un chaflan grande deja el
 // canto en filo otra vez por el otro lado, porque se come las DOS caras.
 // Lo vigila guarda_chaflan() por los dos extremos.
 chaflan         = 0.5;
@@ -1017,7 +1016,7 @@ d_pie       = 20;   // sube de 16: area para no aplastarse permanentemente   // 
 //
 // SIN CERRAR: el cierre del valle (la tapa no tiene nada que la sujete cerrada) y
 // el amortiguador que la deje abierta.
-// PESTANA SUPERIOR: la banda de acrilico que cruza de costado a costado por
+// HISTORICO, HASTA 2026-08-21. PESTANA SUPERIOR: la banda de acrilico que cruzaba por
 // encima del canto del panel de arriba, sobre la propia cara. Samuel la pidio
 // porque el panel remataba pelado ("no veo esa pestana ... quiero un top marco
 // acrilico"), y no la daba marco_remate: ese pertenece al COSTADO y solo existe
@@ -1062,9 +1061,11 @@ d_pie       = 20;   // sube de 16: area para no aplastarse permanentemente   // 
 // contorno, macizo solo en el nucleo por donde pasa el M4 de punta. Un M3 de 6
 // mm en esa cara atraviesa pared y sale al hueco. La union es JUNTA PEGADA, y
 // los cinco taladros que llevaba la pestana se quitaron (fresando cada uno se
-// paga). El apoyo a tope no cambia: lo que decide es que la junta exista, y de
-// eso se encarga la puerta de junta cero en clearance_budget.py.
-marco_sup   = 8;
+// paga). Esa pieza y su puerta de junta cero murieron el 2026-08-21. Desde el
+// 2026-08-27 marco_sup es la cara horizontal del miembro trasero alto: chapa de
+// 3 mm. Solo fija el espesor de la meseta, la Y del miembro y el canto superior
+// de la trasera.
+marco_sup   = 3;
 // Fondo de la pestana hacia dentro del case.
 //
 // OJO: ESTE NUMERO YA NO ESTA DERIVADO DE NADA. Fue t_cheek = 8 mientras la
@@ -1075,8 +1076,7 @@ marco_sup   = 8;
 // puerta se queje. Es de las pocas cotas libres que le quedan al case: si
 // alguien la toca, no esta rompiendo una derivacion.
 //
-// La pieza sale de plancha de marco_sup = 8 (la misma del costado) y su DXF mide
-// 528.32 x prof_sup, sin taladros.
+// La meseta sale de la misma chapa de 3 mm que el miembro trasero alto.
 // TIENE QUE VALER LO MISMO QUE marco_remate. Desde el 2026-08-21 la pestana no
 // es una tira de canto: es la PLANCHA HORIZONTAL que tapa la meseta del techo,
 // y esa meseta mide exactamente marco_remate. Aqui no se pueden escribir
@@ -1087,7 +1087,16 @@ marco_sup   = 8;
 // marco_remate, que es lo que mide la meseta: aqui no se pueden escribir
 // expresiones (ver la cabecera), asi que la relacion la vigila guarda_remate()
 // en clearance_budget.py.
-prof_sup    = 37;
+// BAJA DE 37 A 29 el 2026-08-27, y lo decide el BARRIDO de la tapa de arriba.
+// Fue 37 mientras la meseta era una plancha de acrilico apoyada ENCIMA del
+// larguero y de la trasera: se medía desde el plano trasero (308.94) hacia
+// delante, o sea llegaba a 271.94. Ahora la meseta es el ALA del miembro alto,
+// y un ala se mide desde su doblez -- que esta en la cara trasera del miembro,
+// 300.94 -- no desde el plano del case. Con 37 desde ahi llegaria a 263.94, 8
+// mm mas adelante que nunca, y la fila de arriba baja de 180 a 45 grados.
+// 29 la deja en 271.94 EXACTO: el mismo sitio donde la plancha de acrilico
+// llevaba meses sin estorbar. Geometria probada, no cota nueva.
+prof_sup    = 29;
 // Cuanto se RETIRA la tapa de remate del pico, y no es estetica: es la unica
 // razon por la que la tapa de la fila de arriba sigue abriendo.
 //
