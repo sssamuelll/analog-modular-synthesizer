@@ -14,8 +14,9 @@
 > —`2026-08-25-enlace-sin-jefe-design.md`— **no existe en `main`** y las siete
 > citas que este papel le hace apuntan al vacío; están marcadas una por una
 > abajo. La premisa que este papel le pedía llegó igual, por el chip: lo dice la
-> enmienda del 26. Lo que **no** llegó son sus requisitos R-S2, R-S4 y R-S5, que
-> este papel sigue usando como si existieran.
+> enmienda del 26. Lo que **no** llegó son sus requisitos R-S2, R-S4 y R-S5: este
+> papel los usaba como si existieran, y desde hoy cada uno de esos usos está
+> marcado **SIN SUJETO** en el sitio donde ocurre.
 
 ---
 
@@ -54,8 +55,16 @@
 >
 > **Lo que NO mejora, y sigue siendo lo mismo:** *«en qué núcleo vive el host
 > USB»* sigue sin decidirse, y este papel sigue escrito condicionado a que viva
-> en el núcleo 1. Eso es decisión de Samuel y el cambio de chip no la toca — el
-> cerebro es otro zócalo.
+> en el núcleo 1. Eso es decisión de Samuel y el cambio de chip **de la Voz** no
+> la toca — el cerebro es otro zócalo.
+>
+> **Añadido el 2026-08-27.** Ese «3 de 12» sigue siendo cierto **para un
+> RP2350B**, que es lo que `pio_budget.py` modela hoy. Lo que ya no es firme es
+> que el cerebro **siga siendo** un RP2350B: el J2 punto a punto (#210, decidido)
+> exige maestros serie de hardware independientes y deja el micro del cerebro
+> *dirigido, no sellado*, diciendo que no existe versión punto a punto sobre el
+> chip actual. Así que el censo vale, y la pregunta de qué chip lo hospeda está
+> abierta encima de él.
 >
 > ## Lo que este papel SIGUE necesitando, dicho sin maquillaje
 >
@@ -838,8 +847,18 @@ lea como hechos.
 8. **C8 — El piso contra el que se mide R-E11 es optimista, y hay que decirlo.**
    Los 8,70 MHz exigidos cuentan **un** sondeo de panel y **un** bloque de tono.
    No cuentan los demás módulos, ni la telemetría de 1 Hz, ni el sondeo de
-   jacks. Cada módulo que declare su tasa mínima suma ~0,58 MHz, y **tres
-   módulos más se pasan del contrato de 10 MHz antes de que este campo exista**.
+   jacks. ~~Cada módulo que declare su tasa mínima suma ~0,58 MHz, y **tres
+   módulos más se pasan del contrato de 10 MHz antes de que este campo
+   exista**.~~
+
+   > **Enmienda 2026-08-27: la cuenta de arriba está MUERTA por partida doble**
+   > (§0.1). Suma ocupaciones de **enlaces distintos** contra un techo común, que
+   > es justo lo que el J2 punto a punto prohíbe (R-P1); y generaliza a «cada
+   > módulo» una cifra que orquestación calcula **solo** para el bloque de Voz de
+   > 288 bits a 1 kHz. **Lo que sobrevive de C8 es su advertencia**, que no
+   > dependía de la aritmética: el piso contra el que se mide R-E11 sigue siendo
+   > optimista, porque sigue sin contar la telemetría ni el sondeo de jacks. El
+   > piso nuevo se calcula por enlace, y no aquí.
    El árbitro que sumaría todo eso, `trama_j2_budget.py`, **no existe**.
 
    > **R-E11 nace con su línea reservada en ese guion.** No se descubre sumando.
