@@ -427,7 +427,26 @@ module perfil_lateral() {
 // -- una agarra su cara interior y la otra le tapa el canto (spec 2). Sin
 // tornillo, y por eso guarda_costado() dejo de medir vanos entre anclas y pasa
 // a medir contra la ventana de la costilla, que es apoyo CONTINUO.
-module costado_2d() { perfil_lateral(); }
+//
+// Y EL 2026-08-27 LE VUELVEN CUATRO AGUJEROS, uno por Z-Rail. No son un paso
+// atras: no son agujeros de tornillo. Al pasar el marco POR FUERA, el M4 del
+// riel tiene que cruzar el acrilico antes de morder, y si apretara CONTRA el
+// acrilico el PMMA fluiria bajo carga sostenida y con el se relajaria la
+// precarga que sujeta el riel -- la misma cuenta de la arandela d16.
+//
+// El tornillo va dentro de un CASQUILLO de aluminio (L_casquillo) que se come
+// el apriete entero: el camino de carga es costilla -> casquillo -> riel y no
+// toca el PMMA en ningun punto. Por eso el agujero va HOLGADO alrededor del
+// casquillo, y un agujero a medida del tornillo no seria mas seguro: seria el
+// fallo. La holgura por lado es HOL_CASQUILLO y vive en check_dxf.py, junto a
+// taladros_costado(), que es la puerta que mide este diametro.
+module costado_2d() {
+    difference() {
+        perfil_lateral();
+        for (c = centros_rail())
+            translate(c) circle(d = d_M4_paso + 2*0.5 + kerf);
+    }
+}
 
 module costado() { linear_extrude(t_cheek) costado_2d(); }
 

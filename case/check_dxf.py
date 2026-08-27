@@ -912,16 +912,21 @@ def taladros_costilla() -> list[str]:
                  f"el modelo pone {len(esperados)}. Uno de mas tampoco vale: "
                  f"la banda solo mide {p['ala_costilla']:.0f} mm de ancho")
 
-    # 2. y el costado NO LLEVA NINGUNO. No se busca por diametro sino el censo
-    #    entero: desde el 2026-08-27 esa pieza es piel y no lleva un solo
-    #    tornillo, asi que cualquier redondo que aparezca ahi sobra.
-    quedan = _redondos("costado_2d")
-    if quedan:
-        f.append(f"costado_2d: quedan {len(quedan)} taladros en el acrilico "
-                 f"(p.ej. {quedan[0][0]:.1f}, {quedan[0][1]:.1f}, d"
-                 f"{quedan[0][2]:.1f}). El costado es PIEL: no sostiene nada y "
-                 f"un agujero que no recibe tornillo solo quita material donde "
-                 f"el radio de la esquina en punta ya anda corto")
+    # 2. EL CENSO DEL COSTADO YA NO ES ASUNTO DE ESTA PUERTA.
+    #
+    #    Aqui vivia un "y el costado NO LLEVA NINGUNO" que exigia cero redondos
+    #    en el acrilico. Duro un dia. Al pasar el marco POR FUERA el 2026-08-27,
+    #    el costado recupera CUATRO agujeros -- el paso de los casquillos -- y
+    #    esta puerta y taladros_costado() pasaron a pedir cosas incompatibles:
+    #    una exigia cero y la otra exactamente cuatro.
+    #
+    #    Lo canto el delegado al implementar la tarea, no el escaneo previo del
+    #    plan: el escaneo cruzaba tareas contra tareas y esto era puerta contra
+    #    puerta. Vale la pena tenerlo escrito.
+    #
+    #    El censo del costado lo lleva ahora taladros_costado(), que ademas mira
+    #    el DIAMETRO -- que es lo que de verdad decide si el tornillo muerde el
+    #    PMMA o no. Aqui solo queda la costilla.
 
     if not f:
         print(f"  costilla_2d: los {len(esperados)} taladros (4 M4 de riel + "
@@ -1015,6 +1020,75 @@ def guarda_zocalo() -> list[str]:
     return f
 
 
+# Holgura del agujero del acrilico ALREDEDOR del casquillo, por lado. NO es
+# holgura de montaje: es lo que garantiza que el apriete va costilla ->
+# casquillo -> riel y nunca toca el PMMA. Con 0 el casquillo hace de escariador
+# y vuelve el modo de fallo que la spec 3.2 evita: el acrilico pinzado entre dos
+# caras de aluminio, fluyendo bajo la precarga que sujeta el riel.
+HOL_CASQUILLO = 0.5
+
+
+def taladros_costado() -> list[str]:
+    """Los cuatro agujeros del costado son DE PASO y no de apriete.
+
+    ESTA PUERTA MURIO Y VUELVE EL MISMO DIA, con otro criterio. Se llamaba
+    taladros_con_material() y medía que cada taladro del costado tuviera
+    acrilico alrededor para poder APRETAR contra el; el 2026-08-27, cuando el
+    costado quedo sin un solo tornillo, se quedo sin sujeto y se borro.
+
+    Vuelve porque la inversion le devuelve cuatro agujeros, y lo que hay que
+    verificar ahora es lo contrario de antes: que el agujero sea lo bastante
+    GRANDE. El tornillo no muerde el acrilico -- lo cruza dentro de un casquillo
+    de aluminio que se come el apriete --, asi que un agujero a medida del
+    tornillo no es mas seguro: es el fallo.
+
+    Son exactamente cuatro, uno por Z-Rail. Cualquier otro redondo en esta pieza
+    sobra: el costado es PIEL."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    P = cb._vertices(p)
+    cr = cb._centros_rail(p, P)
+    d_esperado = p["d_M4_paso"] + 2 * HOL_CASQUILLO + p["kerf"]
+    leidos = _redondos("costado_2d")
+    f: list[str] = []
+    if len(leidos) != len(cr):
+        return [f"costado_2d: {len(leidos)} agujeros redondos y el modelo pone "
+                f"{len(cr)}, uno por Z-Rail. El costado es PIEL: no lleva mas, "
+                f"y desde la inversion (spec 3.2) tampoco menos -- por ahi pasa "
+                f"el casquillo"]
+    contorno = _contorno_costado()
+    if not contorno:
+        return ["costado_2d: sin LINEs, no se puede verificar el contorno"]
+    peor, peor_nm = float("inf"), ""
+    for nm, c in zip(cb.NOMBRES_CR, cr):
+        cerca = [q for q in leidos
+                 if math.hypot(q[0] - c[0], q[1] - c[1]) <= DESVIO_DXF_MAX]
+        if not cerca:
+            f.append(f"costado_2d: falta el paso de casquillo de '{nm}' en "
+                     f"({c[0]:.2f}, {c[1]:.2f})")
+            continue
+        if abs(cerca[0][2] - d_esperado) > 0.1:
+            f.append(f"costado_2d: el agujero de '{nm}' mide {cerca[0][2]:.2f} "
+                     f"y se exige {d_esperado:.2f} (paso M4 + 2 x "
+                     f"{HOL_CASQUILLO} de holgura de casquillo). A medida del "
+                     f"tornillo, el apriete muerde el PMMA y la precarga del "
+                     f"riel se relaja sola en semanas")
+        dist = _dist_al_contorno(contorno, c)
+        if dist < peor:
+            peor, peor_nm = dist, nm
+        if dist < BORDE_MIN_D * d_esperado:
+            f.append(f"costado_2d: el agujero de '{nm}' cae a {dist:.2f} mm del "
+                     f"canto y se exige {BORDE_MIN_D * d_esperado:.2f} "
+                     f"({BORDE_MIN_D} x D). Quedan {dist - d_esperado / 2:.2f} "
+                     f"mm de acrilico: eso se raja")
+    if not f:
+        print(f"  costado_2d: los 4 pasos de casquillo miden {d_esperado:.2f} "
+              f"(M4 + 2 x {HOL_CASQUILLO}) y tienen acrilico alrededor (el mas "
+              f"justo, '{peor_nm}', a {peor:.2f} mm del canto)")
+    return f
+
+
 def main() -> int:
     fallos: list[str] = []
     for nombre, sobre in SOBRES.items():
@@ -1025,6 +1099,7 @@ def main() -> int:
         fallos += revisar(nombre, sobre)
     fallos += railes_dentro_del_costado()
     fallos += taladros_costilla()
+    fallos += taladros_costado()
     fallos += guarda_zocalo()
     fallos += guarda_kondor()
     fallos += guarda_costado()
