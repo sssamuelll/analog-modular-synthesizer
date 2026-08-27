@@ -38,13 +38,15 @@ se ordenan. Cambia quién es el sujeto de la frase.
 Se dice antes que nada, porque la mitad del valor está en no fingir que se
 decidió:
 
-- **Las conexiones.** Samuel las dejó abiertas en voz alta («luego
-  decidiremos qué vamos a hacer con las conexiones»). §5 pone las dos
-  opciones que él nombró con lo que cada una cuesta, y **no elige**.
+- **Dónde acaban las conexiones.** El 2026-08-27 Samuel fijó la dirección
+  —el valle— y la condicionó: *«tendremos que hacer un estudio para ver si
+  quedan bien en el valle»*. §5.1 acota ese estudio; **este papel no lo
+  corre ni lo adelanta**, y la trasera queda de suplente declarado.
 - **Qué dibuja la pantalla.** Sigue siendo trabajo de diseño aparte, como ya
   decía `2026-08-26-pantalla-motor-design.md` §8.
 - **El diámetro del cap de las macros**, que es la medición 3 del #179 y la
   que decide cuántas perillas esenciales existen.
+- **Qué entra en los 30 HP** que la fila B libera al morir la cabeza local.
 - **La pieza concreta** de pantalla (R-M3: hoja en árbol antes de dibujar).
 
 ---
@@ -124,41 +126,108 @@ se da por hecho.
 | **BAHÍA** 4×4 al canto derecho | Se va del panel (§5) | Media: **resuelve la colisión E-C6**, que sigue abierta |
 | Fila B **CABEZA 30 HP** | Se libera si la 7" es la cabeza | Alta: son 152,4 mm que cambian de dueño |
 
-### 4.1 B2 es la decisión de verdad, y no es de layout
+### 4.1 B2 — DECIDIDA el 2026-08-27: la 7" sustituye todo
 
 El paquete firmado dice **una sola cabeza**, y el renglón sobrevivió sólo
 porque se argumentó que «es etiqueta, no cabeza». Una pantalla de 7" al
 centro del panel no admite ese argumento: es una cabeza, y de las grandes.
 
-Así que B2 fuerza una bifurcación, y hay que tomarla explícitamente:
+**Samuel decidió el camino 1 el 2026-08-27:** *«claro la 7 pulgadas sustituye
+todo»*. Consecuencias, en orden:
 
-**Camino 1 — la 7" es LA cabeza.** La 2,8" de la fila B desaparece y con ella
-los 30 HP de la zona CABEZA. B2 se mantiene intacta, sin re-firmar.
-**Consecuencia arquitectónica: la cabeza se muda del cerebro al motor.** Hoy
-la 2,8" cuelga del RP2350B por SPI (`2026-08-21-modulo-2-v2-cerebro-design`
-§7) y la 7" cuelga del LTDC del N657 (`2026-08-26-pantalla-motor-design` §1).
-Lo que la cabeza local hacía sin depender del motor —número de preset, canal
-MIDI, si el autoafinado corre, qué operación retenida espera el dedo— pasaría
-a depender de que el motor esté vivo. **Eso hay que presupuestarlo, no
-suponerlo**: si el motor cae, ¿el instrumento se queda mudo de cara?
+- **La 2,8" de la fila B desaparece**, y con ella el renglón de 216×18. **B2
+  se mantiene intacta y no hay que re-firmarla**: sigue habiendo una sola
+  cabeza, y ahora es más grande.
+- **Se liberan los 30 HP de la zona CABEZA** de la fila B (152,4 mm). Qué
+  entra ahí —si INVITADOS crece de 62 a 92 HP o si el sitio se reparte de
+  otra forma— **no lo decide este papel**.
+- **La cara del instrumento se muda del cerebro al motor.** Hoy la 2,8"
+  cuelga del RP2350B por SPI (`2026-08-21-modulo-2-v2-cerebro-design` §7); la
+  7" cuelga del LTDC del N657 (`2026-08-26-pantalla-motor-design` §1).
 
-**Camino 2 — conviven las dos.** Hay que **re-firmar B2** contra sus tres
-motivos originales (sobriedad, consumo, competencia visual). El de consumo no
-es retórico: el presupuesto de +5 V ya no cierra hoy (#151) y no tiene guion,
-y la 7" pide 450–550 mA con retorno dedicado.
+#### El riesgo de la mudanza, y por qué no es fatal
 
-**Recomiendo el camino 1**, y no por elegancia: porque el camino 2 pide
-re-abrir una firma y además carga la pantalla grande encima de un presupuesto
-de +5 V que ya está en rojo. Pero la consecuencia del camino 1 —la cara del
-instrumento depende del motor— es exactamente el tipo de cosa que R-M5 obliga
-a mirar de frente, y no la decido yo.
+El N657 **no tiene flash interna: arranca desde XSPI**. O sea que un arranque
+fallido del motor no da pantalla en negro — no da pantalla. Y lo que la
+cabeza local hacía sin depender de nadie (número de preset, canal MIDI, si el
+autoafinado corre, qué operación retenida espera el dedo) pasa a depender de
+que el motor esté vivo.
+
+**Lo que salva la decisión ya está construido y es de otro dueño.** La cadena
+WS2812 cuelga del cerebro por PIO, es **su propio mazo de tres hilos (+5 V,
+dato, `GNDD`)** y —textual de `2026-08-17-nucleo-digital-design` §6.2—
+**«nada de esto toca el J2 ni el módulo 3»**. El cerebro puede seguir
+hablando en luz con el motor muerto. El instrumento pierde las palabras, no
+la cara.
+
+**Requisito que nace aquí:** el estado «el motor no arrancó» tiene que ser
+**decible por la cadena de LED**, y hoy no está especificado. Es fila nueva
+del plan del panel, con dueño el cerebro.
+
+#### Lo que NO puede sustituir una pantalla
+
+«Sustituye todo» aplica a lo que **muestra**, no a lo que **recupera**. Tres
+cosas tienen que seguir siendo físicas, y por razones que no son de gusto:
+
+| Pieza | Por qué no puede vivir en la pantalla |
+|---|---|
+| **BOOTSEL y RUN** del cerebro | Ya está escrito: «sin eso, recuperar una placa con firmware malo pide desarmar el instrumento» |
+| **Acceso de recuperación del motor** | Es nuevo, y lo crea esta decisión: si el motor no arranca no hay pantalla desde donde recuperarlo |
+| **TUNE** (C6) | Decisión firmada aparte; se re-mira si se quiere táctil, no se disuelve por omisión |
+
+El encoder y los botones de programa (E1) **sí** pueden irse al táctil: son
+navegación, y la pantalla que navegan está viva cuando ellos hacen falta.
 
 ---
 
-## 5. Las conexiones: las dos opciones que Samuel nombró
+## 5. Las conexiones: el valle, a resultas de un estudio
 
-**No se elige aquí.** Se ponen los costos que ya están medidos, porque uno de
-los dos tiene un problema que el propio plan del panel ya documentó.
+**Dirección de Samuel, 2026-08-27:** *«las conexiones tendremos que hacer un
+estudio para ver si quedan bien en el valle»*. O sea: **el valle es el camino
+preferido y queda condicionado a un estudio**, no elegido a ciegas. §5.1 pone
+lo que ese estudio tiene que contestar; la opción trasera queda de suplente
+declarado, no descartada.
+
+### 5.1 El estudio del valle — qué tiene que contestar
+
+Samuel lo pidió y no lo hago aquí; lo dejo acotado para que quien lo corra no
+tenga que re-derivar el terreno.
+
+**El terreno, medido:** el valle mide 528,32 mm de largo, lleva **102 ranuras
+de salida a paso de 2 HP (10,16 mm)** y tiene una **espina de 16 mm sin
+ranurar** por el medio (`params.scad: valle_espina`). Esas ranuras son
+**7 499 de los 9 943 mm² de salida de aire — el 75 %**.
+
+**El candidato que el terreno sugiere:** 16 jacks en **una sola fila sobre la
+espina**. A paso 17 mm (el que el plan del panel ya fijó por acceso de llave
+de vaso) son 272 de los 528 mm, y **no toca ni una ranura**. Si eso se
+sostiene, la colisión térmica no llega a existir.
+
+**Las cinco preguntas, en orden de qué mata antes:**
+
+1. **¿Cabe un Thonkiconn en 16 mm de espina?** Es la primera y la más barata:
+   si la brida o la tuerca piden más de 16 mm, el candidato muere y cualquier
+   otra disposición se come ranuras. **Se mide con la pieza en la mano**, no
+   con una hoja.
+2. **¿Cuánta salida de aire se pierde de verdad?** Con el criterio de aprobado
+   **escrito antes de medir** — el plan del panel ya tiene el número contra el
+   que comparar: con el valle tapado el salto pasa de **6,6 a 8,8 K**, y el
+   techo del case son 15 K. No vale medir y luego decidir si gustó.
+3. **¿El cable enchufado tapa lo que el aire necesita, o lo que el ojo
+   necesita?** El valle es la superficie horizontal **entre las dos filas**:
+   un mazo ahí puede no tapar una ranura y aun así tapar la fila de abajo.
+4. **¿Aguanta el sitio donde la gente se apoya?** El `PLIEGO` dice que la tapa
+   del valle pasó a aluminio de 3 mm porque el 70 % de su fondo vuela y es
+   **«donde se apoya quien se levanta»**. Poner jacks ahí es poner tirones de
+   cable en la pieza que ya era la más solicitada.
+5. **¿Cómo se bonda?** `case/README.md` §13 dice «cada panel se bonda por su
+   cuenta, **sin excepción**». Una superficie del case con jacks encima entra
+   en esa regla, y hay que decir por dónde.
+
+Si la 1 sale que no, el estudio se acaba ahí y gana la opción B. Ese es el
+orden barato.
+
+---
 
 ### Opción A — el valle como patch bay
 
@@ -220,14 +289,15 @@ la nombra como **prerrequisito**, no como trabajo paralelo.
 Se listan con dueño y no se mandan al aire: en este repo las tablas de
 enmiendas mandadas y no ejecutadas ya son un patrón conocido.
 
-| Papel | Sección | Qué cambia | Dueño |
-|---|---|---|---|
-| `2026-08-23-panel-frontal-gramatica.md` | §4, §9 | Fila A a 104 HP; el renglón se disuelve; la bahía sale; B2 según §4.1 | este papel, al firmarse |
-| `2026-08-23-modulo-voz-total-design.md` | §8 | El reparto fila A / fila B deja de ser cierto | este papel, al firmarse |
-| `2026-08-26-pantalla-motor-design.md` | §6 | «Sitio en el case: fila mandada» **queda contestada**: centro del panel de la fila A | este papel, al firmarse |
-| `case/clearance_budget.py` | censo | `ANCHOS_PISO_*` deja de tener sentido: la fila A es un módulo, no una lista | PR #221, a rehacer |
-| `hardware/03-vco/voz_total_budget.py` | — | Le falta `ANCHO_PANEL_A`, ya señalado en el plan §8 | el plan del panel |
-| `case/README.md` | l.508, «BOM de herrajes» | Sigue diciendo «Censo actual de paneles: 8» | PR #221 |
+| Papel | Sección | Qué cambia | Dueño | Estado |
+|---|---|---|---|---|
+| `2026-08-23-panel-frontal-gramatica.md` | §4, §9 | Fila A a 104 HP; el renglón se disuelve; la bahía sale; la 2,8" muere | este papel | **APLICADA** |
+| `2026-08-23-modulo-voz-total-design.md` | §8 | El reparto fila A / fila B deja de ser cierto | este papel | **APLICADA** |
+| `2026-08-21-modulo-2-v2-cerebro-design.md` | §7 | La cabeza local de 2,8" **se deroga**; nace el requisito de decir «el motor no arrancó» en luz | este papel | **APLICADA** |
+| `2026-08-26-pantalla-motor-design.md` | §6 | «Sitio en el case: fila mandada» **queda contestada**: centro del panel de la fila A | este papel | **APLICADA** |
+| `case/clearance_budget.py` | censo | `ANCHOS_PISO_*` deja de tener sentido: la fila A es un módulo, no una lista | PR #221 | pendiente |
+| `hardware/03-vco/voz_total_budget.py` | — | `ANCHO_PANEL_A` pasa de 83 a 104 HP y sigue sin existir | el plan del panel | pendiente |
+| `case/README.md` | l.508, «BOM de herrajes» | Sigue diciendo «Censo actual de paneles: 8» | PR #221 | pendiente |
 
 ---
 

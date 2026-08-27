@@ -80,6 +80,26 @@ derogado; la libertad es real, pero no absoluta.
 Números CITADOS de `params.scad` y `voz_total_budget.py`; el resto ESTIMADO
 con su medición nombrada. Detalle completo en el dictamen de Elke (§10.4).
 
+> **ENMENDADO el 2026-08-27** — `2026-08-27-panel-pantalla-al-centro-design.md`.
+> Samuel reencuadró la fila superior: deja de ser un reparto y pasa a ser **un
+> solo módulo del ancho del riel con la pantalla de 7" en su centro**. Lo que
+> cambia de §4, fila por fila:
+>
+> | Zona | Antes | Ahora |
+> |---|---|---|
+> | (la fila) | **83 HP** = 421,64 mm | **104 HP** = 528,32 mm. El PCB sigue en 421,5: las perillas son sensores del panel, así que el panel vuela sobre el borde de la placa **sin tocar el factor de ruteo** |
+> | **RENGLÓN** | ventana de 216×18 | **se disuelve**: lo absorbe la pantalla, que hace ese trabajo mucho mejor |
+> | **BAHÍA** | 16 Thonkiconn 4×4 al canto derecho | **sale del panel** — al valle, a resultas de un estudio. **Mata la colisión E-C6** |
+> | MACROS, PERILLAS, FUENTES | a lo ancho de 83 HP | a los **dos flancos** de 181,66 mm que deja la pantalla |
+>
+> **La cota que manda pasa a ser la vertical.** La pantalla mide 102 de los
+> 128,5 de alto: quedan **13,25 mm** arriba y abajo, y ahí no cabe un
+> potenciómetro. Todo mando vive a izquierda o derecha, no encima ni debajo.
+>
+> Y la cuenta sale **por 9,68 mm**: hoy hay 353,64 mm de mandos (83 HP menos
+> la bahía) y quedarían 363,32 (104 HP menos la pantalla). **Sólo cierra con
+> las dos cosas a la vez** — el panel creciendo Y los jacks fuera.
+
 ### Fila A — panel de 83 HP = 421,64 × 128,5 mm
 
 El PCB cierra en 421,5 mm; el panel se redondea al múltiplo de HP: **83 HP**.
@@ -103,7 +123,7 @@ Densidad resultante: 68 % — los separadores hacen de gramática.
 
 | Zona | HP | Contenido |
 |---|---|---|
-| **CABEZA** | 30 | pantalla 2,8" (**IPS obligatoria**: a 55° una TN invierte) + encoder + botones de programa (E1) + TUNE (C6) |
+| ~~**CABEZA**~~ | ~~30~~ | ~~pantalla 2,8"~~ **MUERE el 2026-08-27**: la 7" del panel superior es la única cabeza. Se liberan **30 HP (152,4 mm)** y qué entra ahí no está decidido. El encoder y los botones de programa se van al táctil; **TUNE, BOOTSEL y RUN siguen físicos** — y nace uno nuevo: acceso de recuperación del motor, porque si el motor no arranca no hay pantalla desde donde recuperarlo |
 | **INVITADOS** | **62** | riel abierto. *El plan v1 decía 66: 4 HP son el precio del drapeado de la bahía, dicho antes del montaje y no el día del montaje* |
 | **SOMBRA** | 12 | panel ciego bajo la bahía — donde cae lo que aun así cuelgue |
 
@@ -286,7 +306,7 @@ cerebro ni se entera.
 | A2 | Puras perillas; sin sliders ni motores | — |
 | A3 | **Salto suave: la sensación firmada se sostiene; el mecanismo citado se deroga y se re-diseña con los requisitos de §5.2** | Enmienda de junta, en voz alta |
 | A4 | Discretos: botón ciclador + LEDs; on/off con botón | — |
-| B2 | Una sola cabeza | El renglón no la contradice: es etiqueta, no cabeza. La enmienda se re-firma contra sus TRES motivos (sobriedad ✓ apagado; consumo → al presupuesto de +5 V de §11.4; competencia visual → UNA ventana, no N) (S-14) |
+| B2 | Una sola cabeza | **RATIFICADA y resuelta el 2026-08-27**: la 7" sustituye a la 2,8" y al renglón, así que sigue habiendo una sola cabeza y no hay que re-firmar nada. Coste: la cara se muda del cerebro al motor, y el motor arranca desde XSPI — la cadena WS2812, que es mazo propio del cerebro y no toca el J2, es lo que sostiene el «el motor no arrancó». El renglón no la contradecía: era etiqueta, no cabeza. La enmienda se re-firma contra sus TRES motivos (sobriedad ✓ apagado; consumo → al presupuesto de +5 V de §11.4; competencia visual → UNA ventana, no N) (S-14) |
 | B4 | Luz sobria | — |
 | **Principio 4** | **Todo comportamiento es configurable, por modos de ejecución** | Exige autoría en el núcleo (§5.1, §11.1) |
 
