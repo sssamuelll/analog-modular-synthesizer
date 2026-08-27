@@ -305,9 +305,9 @@ los cuatro largueros de hoy le pasa una cosa distinta — decirlo en bloque
 
 | larguero de hoy | qué le pasa |
 |---|---|
-| `base trasera` | **se muda** a la arista P[6], 25.46 mm hacia atrás |
-| `remate trasero` | **se muda** a la arista P[5], 25.46 mm hacia atrás |
-| `valle` | **desaparece**: la arista P[3] ya tiene el riel `cara_sup valle` |
+| ~~`base trasera`~~ | ~~**se muda** a la arista P[6], 25.46 mm hacia atrás~~ — **no se muda: ya está, §5.2** |
+| ~~`remate trasero`~~ | ~~**se muda** a la arista P[5], 25.46 mm hacia atrás~~ — **no se muda: ya está, §5.2** |
+| ~~`valle`~~ | ~~**desaparece**: la arista P[3] ya tiene el riel `cara_sup valle`~~ — **ese riel no llega a la tapa, §5.2** |
 | `base delantera` | **desaparece sin heredero**. Iba a heredarla una transversal nueva en P[0], pero esa arista está ocupada por el riel de panel del frente y solo admite 10×10, que no es viga (§4.2.1). El suelo se salva subiendo a 10 mm, no con una barra |
 
 **SALVEDAD, y sale del propio README:** la cara del Z-Rail es **pared de 1.2
@@ -316,8 +316,73 @@ mm**, y esa es la razón por la que la tapa de remate estuvo pegada hasta el
 costillas, pero no es una viga a la que se le pueda pedir todo. **Eso hay que
 acotarlo con una puerta, no suponerlo** (§7).
 
+### 5.2 CORRECCIÓN del 2026-08-27 — de las cuatro barras se va UNA
+
+§5.1 repartía los cuatro largueros en dos mudanzas y dos muertes. Medido contra
+el modelo, **tres de las cuatro filas eran falsas**, y las tres por el mismo
+motivo: una arista del marco solo admite una transversal si sus dos caras están
+libres, y aquí ninguna lo está.
+
+**Las dos traseras no se mudan porque ya están.** La posición tangente a P[6] es
+(298.94, 10), o sea una caja de x 288.94..308.94. La `piel_trasera` ocupa
+300.94..308.94: la barra entraría **8 mm por detrás del panel trasero**. Lo
+mismo en P[5] contra la trasera y contra `remate_sup`. Y donde están hoy:
+
+| larguero | su caja | contra qué está a tope |
+|---|---|---|
+| `base trasera` | x 280.94..300.94, y 8..28 | cara interior de la trasera (300.94) **y** techo del suelo (8.00) |
+| `remate trasero` | x 280.94..300.94, y 228.18..248.18 | la trasera (300.94) **y** el canto bajo de `remate_sup` (248.18) |
+
+Están **tangentes a dos caras cada una, arrinconadas contra la esquina hasta
+donde las piezas dejan**. Eso ya es una transversal de marco. Los 25.46 mm que
+§5.1 les quería mover son exactamente `t_piel + rail/2 − rail/2`: la pared
+trasera tiene espesor, y una barra tangente al plano exterior está fuera de la
+caja. Un marco con pared se retira el espesor de la pared; no es una concesión,
+es lo que es.
+
+**El del valle no desaparece: nada llega a sustituirlo.** §5.1 decía que P[3] ya
+tiene el riel `cara_sup valle`. Medido:
+
+| | x | y |
+|---|---|---|
+| tapa del valle | 91.94..158.42 | 143.58..146.58 |
+| riel `cara_sup valle` | 162.42..186.32 | 137.18..161.08 |
+| riel `cara_inf valle` | 80.71..105.94 | 113.64..135.48 |
+| larguero `valle` | 115.18..135.18 | 123.58..143.58 |
+
+El riel de arriba empieza **4.00 mm más allá** del canto de la tapa y el de
+abajo muere **8.10 mm por debajo** de su plano: ninguno la toca. Y la costilla
+tampoco le da repisa — el tramo del valle es **el único de los siete sin ala**,
+que es justo la coincidencia afortunada que hace plegable la única esquina
+cóncava (§4.1). Sin su larguero la tapa pasa a volar los 528.62 mm entre
+costillas y cede decenas de milímetros. Un canto doblado hacia abajo la salvaría
+(25 mm de ala dan 0.360 mm) pero no cabe: a x=91.94 se mete dentro del riel
+`cara_inf valle`.
+
+**La que sí se va es `base delantera`**, y es la única que de verdad flotaba —
+x=88.34, en mitad del suelo, colocada por el chasis del PSU y no por ninguna
+cara del case. Es también la única que se ve al abrir.
+
+### 5.3 Y al irse arrastra las Tareas 9 y 10
+
+Quitar `base delantera` pone **roja** a `guarda_costado()`:
+
+| anclas M5 del costado | vano libre | flecha con 200 N |
+|---|---|---|
+| 4, hoy | 119.0 mm | 0.38 mm |
+| 3, sin `base delantera` | **178.9 mm** en (4, 2) | **0.86 mm** contra un techo de 0.60 |
+| 3, sin `valle` | 154.6 mm | 0.64 mm |
+
+Pero esa puerta modela el **acrílico como pieza portante**, y deja de serlo en
+la Tarea 9. El rojo no dice que el case se hunda: dice que el modelo estaría
+midiendo un estado a medias — el larguero fuera y el costado todavía cargando.
+**Las Tareas 7, 9 y 10 son un solo paso**: los largueros, la taladrería
+estructural del costado y las tres puertas se mueven juntos o no se mueven.
+
 ## 6. Lo que NO se hace, y por qué — para que nadie lo reintente
 
+- **Mudar `base trasera` y `remate trasero` a P[5] y P[6]**: entran 8 mm por detrás del panel trasero. Ya están arrinconadas hasta donde la pared deja (§5.2).
+- **Quitar el larguero del valle**: ningún riel llega a la tapa (el de arriba se queda 4 mm corto, el de abajo 8.1 mm bajo) y el tramo del valle de la costilla es el único sin ala, así que tampoco hay repisa (§5.2).
 - **Transversal en la arista P[0]**: no cabe. El riel de panel del frente deja 10.45 mm y una barra de 10×10 cede 5.35 mm a lo ancho (§4.2.1). Si vuelve a hacer falta apoyo delantero, el sitio es x=88.34 —donde estaba `base delantera`—, no el canto.
 - **Ranura en U**: resucita el fallo del postmortem (§3).
 - **Costilla sin tira de canto**: no pasa a ningún espesor, y a 3 mm fluye

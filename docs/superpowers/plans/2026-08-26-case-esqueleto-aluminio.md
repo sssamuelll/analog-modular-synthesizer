@@ -536,89 +536,27 @@ ningún tramo cae en medio.
 
 ---
 
-### Tarea 7: Se van los cuatro largueros — y la mudanza es el mismo paso
+### Tarea 7: BLOQUEADA el 2026-08-27 — de las cuatro se va una
 
-Absorbe lo que quedaba vivo de la Tarea 5. Los rieles ya no cuelgan del
-acrílico (6). **Esta es la tarea que Samuel pidió.** Mudar y matar van juntos:
-poner la transversal de P[6] con `base trasera` todavía puesta las deja con los
-centros a 15.46 mm y barras de 20, o sea solapando.
+Al medirla, **tres de las cuatro filas de la spec §5.1 eran falsas**. Va entero
+en **spec §5.2 y §5.3**; el resumen:
 
-**Files:**
-- Modify: `case/cad/sam17_case.scad` (`centros_esqueleto()`, `centros_transversal()`)
-- Modify: `case/clearance_budget.py` (`_centros_esqueleto()`, `NOMBRES_CE`,
-  `_centros_transversal()`, `alineacion()`, `apoyo()`)
+| larguero | lo que decía el plan | lo medido |
+|---|---|---|
+| `base trasera` | se muda a P[6] | **ya está**: tangente a la cara interior de la trasera (300.94) y al techo del suelo (8.00). Mudarla la mete 8 mm por detrás del panel |
+| `remate trasero` | se muda a P[5] | **ya está**, mismo caso contra la trasera y `remate_sup` |
+| `valle` | desaparece, P[3] ya tiene riel | **no**: ese riel empieza 4.00 mm más allá del canto de la tapa y el de abajo muere 8.10 mm por debajo. Y el tramo del valle es el único de la costilla **sin ala**, así que tampoco hay repisa |
+| `base delantera` | desaparece | **sí**, y es la única que de verdad flotaba en mitad del suelo |
 
-- [ ] **Paso 1: escribir primero la puerta que exige que no queden largueros**
+Y quitar `base delantera` pone **roja** a `guarda_costado()`: el vano del
+acrílico pasa de 119.0 a 178.9 mm y la flecha de 0.38 a 0.86 contra un techo de
+0.60. Esa puerta modela el acrílico como pieza portante, cosa que deja de ser
+en la Tarea 9 — o sea que **7, 9 y 10 son un solo paso** y este plan las tenía
+separadas.
 
-```python
-    assert not _centros_esqueleto(p, P, cr), (
-        "quedan largueros 2020 en el interior, y el 2026-08-26 se fueron los "
-        "cuatro: base trasera y remate trasero se MUDARON a las aristas P[6] "
-        "y P[5], valle desaparecio porque P[3] ya tiene riel, y base delantera "
-        "desaparecio SIN heredero -- su trabajo lo absorbe la bandeja subiendo "
-        "a 10 mm, porque la arista P[0] esta ocupada por el riel de panel del "
-        "frente y solo admite una barra de 10x10 (spec 4.2.1).")
-```
-
-- [ ] **Paso 2: correr y ver ROJO** — hay cuatro.
-
-- [ ] **Paso 3: escribir `_centros_transversal()` con la retracción correcta.**
-El centro NO se retira `r` sobre la bisectriz: eso lo deja a `r·sin(θ/2)` de
-cada cara (7.07 mm en una esquina recta) y saca media barra del case. La
-distancia sobre la bisectriz que deja la barra **tangente a las dos caras** es
-`r / sin(θ/2)`:
-
-```python
-IDX_TRANSVERSAL = [5, 6]      # P[0] NO: no cabe (spec 4.2.1)
-NOMBRES_CT = ["marco trasero alto", "marco trasero bajo"]
-
-
-def _centros_transversal(p, P):
-    """Las transversales del marco, tangentes a las DOS caras del vertice.
-
-    Retirar `r` sobre la bisectriz es la version facil y la equivocada: deja
-    la barra a r*sin(theta/2) de cada cara y en un vertice recto eso es 7.07
-    con media barra fuera. Lo que hace falta es r/sin(theta/2)."""
-    r, n, out = p["rail"] / 2, len(P), []
-    for i in IDX_TRANSVERSAL:
-        u = _unitario(P[i], P[(i - 1) % n])
-        v = _unitario(P[i], P[(i + 1) % n])
-        bx, by = u[0] + v[0], u[1] + v[1]
-        m = math.hypot(bx, by)
-        assert m > 1e-9, f"aristas colineales en P[{i}]: no hay bisectriz"
-        # m/2 = cos del semiangulo entre u y v; el seno sale del otro cateto.
-        # Se deriva, no se teclea.
-        sin_semi = math.sqrt(max(0.0, 1 - (m / 2) ** 2))
-        out.append((P[i][0] + (r / sin_semi) * bx / m,
-                    P[i][1] + (r / sin_semi) * by / m))
-    return out
-```
-
-**Autocomprobación obligatoria** — la fórmula vieja pasaba a ojo: en P[6], que
-es un vértice recto en (308.94, 0) con aristas hacia +Y y hacia −X, el centro
-tiene que caer en **(298.94, 10)** exactos, o sea la barra tangente al canto de
-abajo y al plano trasero. Si sale (301.87, 7.07), la retracción sigue mala.
-
-- [ ] **Paso 3b: vaciar `centros_esqueleto()`** en el `.scad` y su gemela, y
-re-apuntar `alineacion()` y `apoyo()` a `centros_transversal()`.
-
-- [ ] **Paso 3c: la transversal de P[6] contra la bandeja.** La barra ocupa
-y = 0..20 y la bandeja y = 0..t_base en ese mismo x: o la barra monta encima
-(como hace `base trasera` hoy, centro en `t_base + r`) o hay solape. Que lo
-cante `solapes()` antes de decidirlo a mano.
-
-- [ ] **Paso 4: correr las dos puertas y verlas en VERDE.**
-
-- [ ] **Paso 5: comprobar el BOM** — `openscad -D 'PART="bom"'` tiene que
-listar **0 largueros 2020** y las transversales nuevas. Si sigue diciendo
-cuatro, el eco quedó desincronizado del modelo, que es el fallo que ya pasó una
-vez con las paticas.
-
-- [ ] **Paso 6: commit**
-
-```bash
-git commit -am "Se van las cuatro barras del interior: el marco hace su trabajo"
-```
+**Bloqueada a la espera de decisión de Samuel**: la instrucción era «se van las
+cuatro» y se cumple en una. Las otras tres son transversales de marco o carga
+que nada más alcanza.
 
 ---
 
