@@ -742,6 +742,33 @@ de cabecera, SPI a 10 MHz saliendo a ocho cintas y una cadena de LED
 conmutando cerca no dejan mucho margen de discusión. Los jacks van soldados a
 la placa y el panel de aluminio delante — el patrón del módulo 3.
 
+> **ENMENDADO el 2026-08-27** — el contrato de esta sección quedó sin sujeto
+> por partida triple, y las tres son de otros papeles, no de este:
+>
+> 1. **Los nueve conectores ya no están en esta cara.** La decisión **D2, del
+>    2026-08-23**, los mudó a una tarjeta de E/S trasera (#183). La lista de
+>    abajo se cerró **dos días antes** de la decisión que la vació.
+> 2. **La cabeza local está derogada** desde el 2026-08-27 (§7): la pantalla
+>    de 7" es la única cabeza. El elemento 10 de la lista no se monta.
+> 3. **El censo del case ya no existe.** `ANCHOS_PISO_SUP`, `ANCHOS_PISO_INF`
+>    y `EXPANSION_MIN` se disolvieron el 2026-08-27: la fila de arriba es un
+>    módulo, no un reparto. Así que «importar de `clearance_budget.py`» y
+>    «**sustituir** la clave `"MIDI/CV"`» apuntan a cosas borradas.
+>
+> **Consecuencia práctica: `panel_budget.py` tal como está especificado aquí
+> NO se puede escribir**, y si alguien lo escribiera al pie de la letra
+> sumaría nueve piezas que ya no están en esa cara. Lo que queda por hacer
+> es distinto y más chico: decidir qué lleva el panel del cerebro **después**
+> de D2 y de la muerte de la cabeza local, y contra qué fila. Eso está
+> abierto y su sitio es el reparto de la fila de abajo, que hoy tiene dos
+> descripciones vivas que no coinciden (ver `clearance_budget.py`, «Lo que
+> este cálculo NO cubre»).
+>
+> Lo que sobrevive intacto de esta sección: **una placa, cuatro capas, jacks
+> soldados y panel de aluminio delante**, y **BOOTSEL y RUN accesibles desde
+> el panel** — esta última con más razón que antes, porque la pantalla desde
+> la que se recuperaría ahora cuelga de otro chip.
+
 **El ancho no se estima: se calcula.** Y la lista de entradas del cálculo va
 cerrada aquí, porque un presupuesto con una lista abierta es una estimación con
 otro nombre:

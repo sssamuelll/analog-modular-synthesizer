@@ -1500,69 +1500,100 @@ def guarda_escalon(p: dict[str, float]) -> None:
         f"Es lo que limita paso_horizontal, no el hueco SAT")
 
 
-# Censo de anchos minimos de panel por piso, mm. ESTIMADOS (spec §11):
-# cierran cuando cada panel este dibujado. Fuente: conteo de mandos/jacks
-# de los README de modulo + patch bay normalizado que anade jacks.
+# El censo de anchos de panel por piso MUERE aqui el 2026-08-27.
 #
-# ENMENDADO el 2026-08-27 (#152). Hasta hoy el piso superior era el de la
-# tesis: {"MIDI/CV": 80, "VCO1": 90, "VCO2": 90, "VCO3": 90}. Ninguna de las
-# dos entradas describia el instrumento:
+# Historia corta, porque la leccion vale mas que el diccionario: hasta hoy
+# habia un ANCHOS_PISO_SUP = {"MIDI/CV": 80, "VCO1": 90, "VCO2": 90,
+# "VCO3": 90} de la tesis. Se intento corregirlo entrada por entrada y salio
+# PEOR: el numero nuevo se saco de hardware/03-vco/README.md, que se declara
+# SUPERADO en su primera linea y trae los 114 mm en la columna «lo que esta
+# carpeta asume» de la tabla que los mata. Cambiar un dato muerto por otro.
 #
-#   * los TRES VCO independientes colapsaron en UNA placa. El modulo 3 mide
-#     114 mm -- hardware/03-vco/README.md: «114 x 124 mm, 4 capas», con la
-#     PCB ruteada y cerrada. El censo le daba 90 y lo contaba tres veces.
-#   * «MIDI/CV: 80» eran los 80 mm de cuando el modulo 2 era un Raspberry Pi
-#     con un LCD 16x2 y cuatro pulsadores. Ese diseno esta SUPERADO desde el
-#     2026-08-17 por su propio README. El cerebro v2 lleva NUEVE conectores
-#     de tamano completo (USB-B, USB-A, DIN-5 x2, Thonkiconn x4, jack de
-#     6,35) mas la cabeza local y dos botones.
+# Lo que lo disuelve no es un dato mejor sino una decision de Samuel del
+# 2026-08-27: **la fila de arriba es UN modulo del ancho del riel, con la
+# pantalla de 7" en su centro y todo lo demas ordenado a su alrededor**
+# (docs/superpowers/specs/2026-08-27-panel-pantalla-al-centro-design.md).
 #
-# Por que no era cosmetico: 270 mm de VCO fantasma le PRESTABAN sitio a un
-# cerebro censado corto, asi que la puerta de mas abajo salia verde con dos
-# entradas mal en direcciones opuestas. Verde por la razon equivocada.
-#
-# El ancho de PLACA no es el ancho de PANEL: los paneles EUROrack vienen en
-# HP enteros (1 HP = 5.08, params.scad), y con los jacks soldados a la placa
-# --el patron del modulo 3-- el panel no puede ser mas estrecho que ella. Asi
-# que la placa de 114 se lleva 23 HP = 116.84 mm de riel, no 114. Se deriva
-# aqui en vez de teclear el resultado para que no se desincronice de hp.
-ANCHO_PLACA_VOZ = 114           # hardware/03-vco/README.md: 114 x 124 mm
-HP_MM = 5.08                    # params.scad: hp
-HP_VOZ = math.ceil(ANCHO_PLACA_VOZ / HP_MM)          # 23
-ANCHOS_PISO_SUP = {"VOZ": HP_VOZ * HP_MM}            # 116.84
+# Con eso la fila superior deja de ser un reparto, asi que no hay nada que
+# sumar: no es un diccionario con una clave, es que la pregunta cambio. Y el
+# reparto que si sigue vivo -- el de la fila A entre PCB y bahia -- ya lo
+# lleva hardware/03-vco/voz_total_budget.py, que corre como puerta propia.
+# Duplicarlo aqui es lo que permitio que se desincronizara durante cuatro
+# dias sin que nadie se enterara.
 
-# El cerebro no entra aqui con un numero, y no es un olvido. Su spec §10 lo
-# dice con todas las letras: «El ancho no se estima: se calcula», lo calcula
-# panel_budget.py sumando las huellas reales de los once elementos de panel
-# (lista cerrada alli), y ese guion **SUSTITUYE** esta clave -- si sumara,
-# contaria el modulo 2 dos veces. panel_budget.py todavia no existe.
-#
-# Inventar aqui una cifra provisional seria repetir el pecado que se acaba de
-# corregir: un numero sin fuente que otra puerta importa como verdad. Se
-# declara el hueco y se publica el TECHO que el cerebro tiene que respetar
-# (ver techo_piso_sup y el aviso de main()).
-CEREBRO_SIN_CIFRA = True
-
-# La pantalla de 7" del motor mide ~165 x 102 mm de clase de pieza
-# (2026-08-26-pantalla-motor-design.md sec.6). NO entra en el censo todavia:
-# ese papel deja el sitio como «fila mandada, dueno: el diseno del case», y
-# elegir cara es una decision, no una cuenta. Vive aqui como constante para
-# que el aviso de main() pueda decir cuanto COSTARIA ponerla en la fila de
-# arriba, que es la pregunta que hoy no tiene numero.
-ANCHO_PANTALLA_7 = 165
-
-ANCHOS_PISO_INF = {"VCF": 100, "ADSR": 110, "VCA": 80, "MIXER": 100}
-EXPANSION_MIN = 40  # sitio reservado a crecer, por piso
+ANCHO_PANTALLA_7 = 165.0        # mm. 2026-08-26-pantalla-motor-design.md sec.6
+ALTO_PANTALLA_7 = 102.0         # mm. idem -- clase de pieza Adafruit 7"
 
 
-def techo_piso_sup(g: dict[str, float]) -> float:
-    """Lo que le queda al cerebro en la fila de arriba, en mm.
+def flancos_fila_superior(p: dict[str, float]) -> dict[str, float]:
+    """El lienzo de la fila de arriba con la pantalla al centro.
 
-    Es el numero contra el que panel_budget.py tendra que aseverar el dia que
-    exista. Se publica aqui, y no alli, porque el sitio es del case: quien
-    reparte el riel es este fichero.
+    Devuelve mm. El ancho de la fila es el RIEL, no el hueco entre costados:
+    los modulos se atornillan a la pletina roscada del riel.
     """
-    return g["ancho_util"] - sum(ANCHOS_PISO_SUP.values()) - EXPANSION_MIN
+    ancho = p["largo_riel"]
+    return {
+        "ancho_fila": ancho,
+        "flanco": (ancho - ANCHO_PANTALLA_7) / 2,
+        "franja": (p["alto_panel_sup"] - ALTO_PANTALLA_7) / 2,
+    }
+
+
+def guarda_fila_superior(p: dict[str, float]) -> list[str]:
+    """La pantalla al centro tiene que caber en el panel, y en los DOS ejes.
+
+    El eje que casi nadie mira es el vertical, y es el que aprieta: la
+    pantalla se lleva 102 de los 128.5 de un 3U. Lo horizontal sobra por
+    goleada y por eso no se asevera: seria una regla que no puede fallar.
+    """
+    fallos: list[str] = []
+    f = flancos_fila_superior(p)
+
+    if f["franja"] < 0:
+        fallos.append(
+            f"la pantalla de {ALTO_PANTALLA_7} mm no cabe de alto en un panel "
+            f"de {p['alto_panel_sup']} mm")
+    if f["flanco"] <= 0:
+        fallos.append(
+            f"la pantalla de {ANCHO_PANTALLA_7} mm no deja flanco en una fila "
+            f"de {f['ancho_fila']:.2f} mm")
+
+    # HUECO CITADO, no medido: el issue #179 habla de un «campo vertical de
+    # 112,5 mm» y su derivacion no esta ni en el plan del panel ni en
+    # params.scad. Si el campo util son 112.5 y no alto_panel_sup, la franja
+    # cae de 13.25 a 5.25 y esta guarda se vuelve mucho mas estrecha. No se
+    # asevera contra un numero sin derivar: se deja dicho y se cierra en #179.
+    return fallos
+
+
+def guarda_dos_puertas_un_riel(p: dict[str, float]) -> list[str]:
+    """Que voz_total_budget.py y este fichero repartan el MISMO riel.
+
+    Los dos dividen los 528.32 mm de una fila, viven en directorios distintos
+    y gates.py los corre en procesos separados, asi que nunca se ven. Aquel
+    tiene RIEL_HP y HP cableados por valor. Esta guarda es el unico sitio
+    donde los dos numeros se miran a la cara; sin ella, el dia que alguien
+    cambie el riel aqui, alla sigue repartiendo el viejo y las dos puertas
+    salen verdes contra realidades distintas.
+    """
+    fallos: list[str] = []
+    import importlib.util
+    ruta = Path(__file__).parent.parent / "hardware" / "03-vco" / "voz_total_budget.py"
+    if not ruta.exists():
+        return [f"voz_total_budget.py no esta en {ruta}: el reparto de la "
+                f"fila A no tiene puerta"]
+    spec = importlib.util.spec_from_file_location("_vtb", ruta)
+    vtb = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(vtb)
+
+    if abs(vtb.HP - p["hp"]) > 1e-9:
+        fallos.append(f"voz_total_budget.HP={vtb.HP} != params.scad hp="
+                      f"{p['hp']}")
+    if abs(vtb.ANCHO_FILA - p["largo_riel"]) > 1e-9:
+        fallos.append(f"voz_total_budget.ANCHO_FILA={vtb.ANCHO_FILA} != "
+                      f"params.scad largo_riel={p['largo_riel']}: dos puertas "
+                      f"reparten el mismo riel con numeros distintos")
+    return fallos
 
 
 def _chasis(p: dict[str, float]) -> dict[str, float]:
@@ -1899,24 +1930,6 @@ def main() -> int:
           f"ancho_util={g['ancho_util']:.2f} != largo_riel={p['largo_riel']}: "
           f"ancho_total tiene que valer largo_riel + 2*t_cheek = "
           f"{p['largo_riel'] + 2 * p['t_cheek']:.2f}")
-    # HP_MM esta duplicado del .scad porque el censo es de nivel de modulo y
-    # leer_params() no ha corrido todavia cuando se evalua. Que no se
-    # desincronice no se confia a un comentario: se asevera. Es la leccion del
-    # 2026-08-26 con ancho_total, que era un literal con la formula al lado.
-    exige(abs(HP_MM - p["hp"]) < 1e-9,
-          f"HP_MM={HP_MM} no es el hp de params.scad ({p['hp']}): el censo "
-          f"del piso superior esta redondeando a un paso que no existe")
-    # AVISO (2026-08-27): mientras CEREBRO_SIN_CIFRA siga en pie, ESTA regla no
-    # puede fallar -- 114 + 40 contra 528 sobra por goleada, y una asercion que
-    # no puede fallar no guarda nada (Principio VIII). No se borra porque
-    # vuelve a morder sola el dia que panel_budget.py meta el ancho del
-    # cerebro; hasta entonces quien sostiene la fila de arriba es el HUECO que
-    # imprime main(), no esta linea. Antes del 2026-08-27 tampoco guardaba:
-    # salia verde porque los VCO fantasma y el cerebro corto se compensaban.
-    exige(sum(ANCHOS_PISO_SUP.values()) + EXPANSION_MIN <= g["ancho_util"],
-          "el piso superior no cabe en el ancho util")
-    exige(sum(ANCHOS_PISO_INF.values()) + EXPANSION_MIN <= g["ancho_util"],
-          "el piso inferior no cabe en el ancho util")
     # CARA y PANEL ya no son el mismo numero, asi que por cada fila hay DOS
     # derivaciones que tienen que dar lo mismo y no una: la separacion de
     # railes sale de la cara (por donde se atornillan al costado) y tambien del
@@ -1969,6 +1982,8 @@ def main() -> int:
     fallos.extend(solapes(p))
     fallos.extend(alineacion(p))
     fallos.extend(apoyo(p))
+    fallos.extend(guarda_fila_superior(p))
+    fallos.extend(guarda_dos_puertas_un_riel(p))
 
     print(f"perfil: alto_total={g['alto_total']:.1f}  "
           f"entrepiso={g['y_entrepiso']:.1f}  ancho_util={g['ancho_util']:.0f}")
@@ -1999,21 +2014,14 @@ def main() -> int:
         # Codigo 1 = ROJO de verdad; el 2 queda para el HUECO declarado de
         # abajo, que es lo unico que este fichero deja a medias a proposito.
         return 1
-    if CEREBRO_SIN_CIFRA:
-        techo = techo_piso_sup(g)
-        print(f"censo del piso superior: VOZ {ANCHOS_PISO_SUP['VOZ']:.2f} "
-              f"({HP_VOZ} HP, placa de {ANCHO_PLACA_VOZ}) + expansion "
-              f"{EXPANSION_MIN} de {g['ancho_util']:.0f} -> al cerebro le "
-              f"quedan {techo:.0f} mm ({techo / p['hp']:.0f} HP)")
-        print(f"  si la PANTALLA de 7\" se sienta en esta fila "
-              f"({ANCHO_PANTALLA_7} mm, pantalla-motor sec.6), el techo del "
-              f"cerebro baja a {techo - ANCHO_PANTALLA_7:.0f} mm "
-              f"({(techo - ANCHO_PANTALLA_7) / p['hp']:.0f} HP). SIN DECIDIR: "
-              f"el sitio de la pantalla es fila mandada, dueno el case")
-        print(f"HUECO: el cerebro no tiene ancho censado (#152). Su spec "
-              f"sec.10 lo manda a panel_budget.py, que no existe; su techo "
-              f"son {techo:.0f} mm")
-        return 2
+    fl = flancos_fila_superior(p)
+    print(f"fila superior: UN modulo de {fl['ancho_fila']:.2f} mm "
+          f"({fl['ancho_fila'] / p['hp']:.0f} HP), pantalla de "
+          f"{ANCHO_PANTALLA_7:.0f}x{ALTO_PANTALLA_7:.0f} al centro")
+    print(f"  flancos de mando: 2 x {fl['flanco']:.2f} mm "
+          f"({fl['flanco'] / p['hp']:.1f} HP) a los {p['alto_panel_sup']} de alto")
+    print(f"  franja sobre y bajo la pantalla: {fl['franja']:.2f} mm -- "
+          f"ahi NO cabe un potenciometro (#179 sigue abierto)")
     print("clearance_budget: VERDE")
     return 0
 
@@ -2023,6 +2031,17 @@ def main() -> int:
 #   * par de apriete sobre acrilico       -> probeta del cupon (spec §11)
 #   * termica de la fuente v2             -> spec PSU v2 y su validacion
 #   * nesting de planchas en el stock     -> lienzo del Task 5, a ojo
+#   * el reparto de la FILA DE ABAJO. Abierto desde el 2026-08-27, y no por
+#     falta de dato sino porque hay DOS descripciones vivas que no coinciden:
+#       - el plan del panel (2026-08-23-panel-frontal-gramatica §4) la parte
+#         en CABEZA 30 HP + INVITADOS 62 + SOMBRA 12 = 104 HP;
+#       - la spec de la Voz (2026-08-23-modulo-voz-total §8) la parte en
+#         cerebro 150 + mandos 120 + mixer 100 + reserva 40 = 410 de 528.
+#     Mismo dia, misma fila, dos modelos. Y encima el 2026-08-27 se movieron
+#     dos piezas: la CABEZA muere (la 7" es la unica cabeza) y los mandos se
+#     suben a los flancos de la fila de arriba. Aqui NO se inventa un tercer
+#     modelo: se deja dicho que el sitio esta abierto y con quien resolverlo.
+#     Se cierra cuando el plan del panel y la spec de la Voz digan lo mismo.
 #   * (CERRADO el 2026-08-21) distancia perpendicular placa<->rail. Decia que
 #     alineacion() verifica que la fila caiga en la centerline de un rail pero
 #     no cuanto hay entre la placa y ese rail. Ahora lo verifica apoyo(): exige
