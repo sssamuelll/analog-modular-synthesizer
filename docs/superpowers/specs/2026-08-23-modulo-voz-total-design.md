@@ -547,8 +547,18 @@ Los cambios nuevos, y los viejos que ascienden a prerrequisito:
 > **PARCIALMENTE DESBLOQUEADO el 2026-08-27** — rescatado del PR #201 al
 > cerrarlo. El **cambio 2 (ranuras lógicas)** tenía su decisión abierta en
 > `2026-08-22-vco-orquestacion-design.md` §«Decisiones abiertas», punto 1, y
-> **ya está cerrada: UNA ranura, funcional y nunca por micro** (decisión de
-> Samuel). Lo que queda del cambio 2 es escribirlo, no decidirlo.
+> **ya está cerrada: DOS ranuras**, por espacio de direcciones — `MAX_INSTANCIAS
+> = 16` lo consumen exacto los dieciséis osciladores y las 72 entradas del censo
+> que no son voces necesitan la suya. Lo que queda del cambio 2 es escribirlo,
+> no decidirlo.
+>
+> **Corregido el mismo 2026-08-27, unas horas después.** Esta enmienda nació
+> diciendo «UNA ranura, funcional y nunca por micro» y era leer mal la pregunta:
+> la regla de Samuel —una ranura jamás refleja anatomía de hardware— prohíbe una
+> tercera opción (una por micro), no elige entre una y dos. Las dos que estaban
+> sobre la mesa eran funcionales las dos. El texto corregido y su razonamiento
+> completo viven en `2026-08-22-vco-orquestacion-design.md` §«Decisiones
+> abiertas», punto 1.
 >
 > **El cambio 12 (lotes) sigue bloqueante y sin tocar**, así que la frase de
 > abajo sigue siendo cierta por su segunda mitad: el modelo de la Voz total
