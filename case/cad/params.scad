@@ -51,6 +51,11 @@
 // 2*t_costilla. A 3 el case crece 6 mm; a 4, ocho. Con el ala doblada, 3 pasa
 // con 2.4x -- la rigidez la da la FORMA en L, no el espesor.
 t_costilla      = 3;
+// Los tres miembros arrancan en 20 x 20: es la envolvente del 2020 que jubilan
+// y la minima que ya le gana en inercia (6935 mm4 contra ~5600). La seccion
+// definitiva de cada uno sale de su carga.
+canal_ancho = 20;   // cota exterior perpendicular a la carga
+canal_fondo = 20;   // cota exterior en la direccion de la carga
 // LA PESTANA DE LA TAPA DEL VALLE. La tapa se dobla 90 grados en cada punta y
 // se atornilla a la costilla: deja de estar sujeta SOLO por su larguero -- una
 // sola linea de tornillos, que es una bisagra -- y pasa a atar las dos costillas

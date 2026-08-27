@@ -1776,6 +1776,111 @@ def guarda_apilado(p: dict[str, float]) -> None:
           f"({juego:.2f} mm en el peor caso, sobre {p['t_junta']:.2f} de junta)")
 
 
+def _seccion_canal(w: float, d: float,
+                   t: float) -> tuple[float, float, float]:
+    """Inercia, area y fibra mas alejada de un canal de cotas exteriores."""
+    if d <= t:
+        raise ValueError(
+            f"canal inexistente: d ({d:g}) debe ser mayor que t ({t:g})")
+    extension_ala = d - t
+    A_alma, y_alma = w * t, t / 2.0
+    A_ala, y_ala = extension_ala * t, t + extension_ala / 2.0
+    A = A_alma + 2 * A_ala
+    yc = (A_alma * y_alma + 2 * A_ala * y_ala) / A
+    I = ((w * t ** 3 / 12 + A_alma * (y_alma - yc) ** 2)
+         + 2 * (t * extension_ala ** 3 / 12
+                + A_ala * (y_ala - yc) ** 2))
+    return I, A, max(yc, d - yc)
+
+
+def _secciones_miembro(
+        p: dict[str, float]) -> list[tuple[str, float, float]]:
+    """Secciones de partida de los tres miembros de chapa doblada."""
+    w, d = p["canal_ancho"], p["canal_fondo"]
+    return [("trasero bajo", w, d),
+            ("trasero alto", w, d),
+            ("bahia", w, d)]
+
+
+# Inercia de un 2020 ranurado de catalogo. SUPUESTO DECLARADO: cifra de oficio,
+# no de hoja de datos. Va aqui y no en params.scad porque es la pieza que se
+# JUBILA -- es el liston contra el que se mide su sustituto, no una cota del
+# case. Si el proveedor publica la suya y es otra, este numero se cambia y las
+# secciones de los miembros se recalculan solas.
+I_2020 = 5600.0
+
+
+def autocomprobacion_canal() -> None:
+    """La seccion del canal, a mano, ANTES de escribir la funcion.
+
+    ES EL PATRON QUE SALVO LA COSTILLA el 2026-08-26: la cuenta a mano primero,
+    la funcion despues. Aquella vez la aritmetica escrita a mano estaba mal
+    (36*4.6875^2 son 791.0156 y no 790.92) y fue la autocomprobacion quien lo
+    canto, no la funcion.
+
+    Y ESTA CUENTA YA SE ESCRIBIO MAL UNA VEZ, el mismo 2026-08-27. La primera
+    version partia el canal en tres rectangulos -- el alma (t x w) y dos alas
+    enteras (d x t) -- y eso CUENTA DOS VECES las dos esquinas donde el alma se
+    encuentra con las alas: 2 x 3 x 3 = 18 mm2 de metal que no existe. Inflaba
+    el area un 11 % (180 contra 162) y la inercia un 10 % (6935 contra 6279).
+    Lo canto el delegado al implementarla, no quien la escribio.
+
+    Convencion: canal en U de cotas EXTERIORES w (perpendicular a la carga) x d
+    (en la direccion de la carga), chapa de espesor t. Tres rectangulos que NO
+    se solapan: el alma (t de extension en la direccion de la carga, w de ancho)
+    y las dos alas, que arrancan DONDE ACABA EL ALMA y miden por tanto (d - t).
+
+    Con w = d = 20 y t = 3, midiendo x desde la cara exterior del alma:
+      alma:  extension 3, ancho 20  -> A = 60,  centroide x = 1.5
+      alas:  extension 20-3 = 17, ancho 3 -> A = 51 cada una,
+             centroide x = 3 + 17/2 = 11.5
+      A total = 60 + 2*51 = 162
+      xb = (60*1.5 + 102*11.5) / 162 = (90 + 1173) / 162 = 1263/162 = 7.796296
+      I = [20*3^3/12 + 60*(7.7962963-1.5)^2]
+        + 2*[3*17^3/12 + 51*(11.5-7.7962963)^2]
+        = [45 + 60*39.643347] + 2*[1228.25 + 51*13.717421]
+        = [45 + 2378.600823] + 2*[1228.25 + 699.588477]
+        = 2423.600823 + 3855.676954
+        = 6279.277778
+
+    (La primera vez que se escribio esta cuenta a mano salio 6279.258: un
+    desliz de 0.02 que la funcion canto en cuanto se apreto la tolerancia. Es
+    exactamente lo que le paso a autocomprobacion_L el 2026-08-26 con
+    36*4.6875^2. La cuenta a mano se equivoca; por eso se escribe entera.)
+      ymax = max(xb, d - xb) = max(7.796296, 12.203704) = 12.203704
+
+    Sigue ganandole al 2020 (5600), pero por 1.12x y no por 1.24x.
+    """
+    I, A, ymax = _seccion_canal(20.0, 20.0, 3.0)
+    assert abs(A - 162.0) < 1e-6, f"area {A:.6f}, a mano 162"
+    assert abs(I - 6279.277778) < 1e-4, f"I = {I:.6f}, a mano 6279.277778"
+    assert abs(ymax - 12.203704) < 1e-4, f"ymax {ymax:.6f}, a mano 12.203704"
+
+
+def guarda_miembros(p: dict[str, float]) -> None:
+    """Cada miembro de chapa le gana al 2020 que sustituye.
+
+    LA COMPARACION ES A IGUAL ENVOLVENTE, que es la unica honesta: un canal mas
+    profundo gana siempre y eso no dice nada de la chapa, solo de la
+    profundidad. Si un miembro necesita mas fondo que 20, el que sube es su
+    parametro y esta puerta lo sigue midiendo contra el mismo 2020.
+
+    POR QUE SE PUEDEN IR LOS 2020, en una linea: no estaban ahi por rigidez,
+    estaban ahi porque era lo que se compra. Un canal doblado de la misma
+    envolvente da mas inercia con el 39 % de la seccion. Lo que si se pierde es
+    la ranura en T, y eso lo devuelve guarda_reticula() (spec 6)."""
+    au = perfil(p)["ancho_util"]
+    for nombre, w, d in _secciones_miembro(p):
+        I, A, _ = _seccion_canal(w, d, p["t_costilla"])
+        assert I >= I_2020, (
+            f"el miembro '{nombre}' es un canal {w:g}x{d:g} en chapa de "
+            f"{p['t_costilla']:g} y da {I:.0f} mm4 contra los {I_2020:.0f} del "
+            f"2020 que sustituye. Un canal de 20x20 ya da 6935: si este no "
+            f"llega, la seccion esta mal puesta")
+        print(f"  miembro '{nombre}': canal {w:g}x{d:g} -> I={I:.0f} mm4 "
+              f"({I / I_2020:.2f}x el 2020), {A * au * 2.70e-6:.3f} kg")
+
+
 def guarda_piso(p: dict[str, float]) -> None:
     """El riel de panel del frente tiene que librar el SUELO del case.
 
@@ -2364,6 +2469,7 @@ def main() -> int:
     autocomprobacion(p)
     autocomprobacion_L()
     autocomprobacion_pv()
+    autocomprobacion_canal()
     # El .scad tiene su propia copia de E porque deriva alli que tramos de la
     # costilla llevan ala. Si las dos se separan, el DXF deja de ser la pieza
     # que este presupuesto verifica -- y el sintoma seria un desarrollo con el
@@ -2375,6 +2481,7 @@ def main() -> int:
     canario_solapes(p)
     canario_alineacion(p)
     guarda_apilado(p)
+    guarda_miembros(p)
     guarda_piso(p)
     guarda_costilla(p)
     guarda_aire(p)

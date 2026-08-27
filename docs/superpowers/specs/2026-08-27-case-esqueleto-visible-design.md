@@ -163,23 +163,37 @@ pliego, y **bloquea el primer encendido**, no el corte de piezas.
 no lo era): «canal `w × d` en chapa de `t`» es un perfil en U de cotas
 **exteriores** `w` (perpendicular a la carga) por `d` (en la dirección de la
 carga), doblado de chapa de espesor `t`. La inercia es la del **eje neutro de la
-sección completa**, contra flexión en la dirección `d`, calculada por
-paralelas-a-ejes sobre tres rectángulos: el alma (`t × w`) y las dos alas
-(`d × t`). Con `w = d = 20` y `t = 3`: área 180 mm², centroide a 7.167 mm de la
-cara del alma, **I = 6 935 mm⁴**.
+sección completa**, contra flexión en la dirección `d`, por paralelas-a-ejes
+sobre tres rectángulos **que no se solapan**: el alma (`t` de extensión × `w` de
+ancho) y las dos alas, que arrancan **donde acaba el alma** y miden por tanto
+`(d − t)` de extensión × `t` de ancho.
+
+**CORRECCIÓN del 2026-08-27, al implementarla.** La primera versión de esta
+convención partía el canal en el alma más dos alas *enteras* (`d × t`), y eso
+**cuenta dos veces las dos esquinas** donde el alma se encuentra con las alas:
+2 × 3 × 3 = 18 mm² de metal que no existe. Inflaba el área un 11 % y la inercia
+un 10 %. Lo cantó el delegado al escribir la función, no quien escribió la
+convención.
+
+Con `w = d = 20` y `t = 3`: área **162 mm²**, centroide a 7.796 mm de la cara
+del alma, **I = 6 279.28 mm⁴**.
 
 | | inercia | sección | peso por miembro de 528.62 |
 |---|---|---|---|
 | 2020 de catálogo | ~5 600 mm⁴ *(SUPUESTO: cifra de oficio para un 20×20 ranurado; el catálogo del proveedor manda)* | ~460 mm² | 0.657 kg |
-| **canal doblado 20 × 20** | **6 935 mm⁴** | 180 mm² | **0.257 kg** |
-| canal 20 × 25 *(envolvente MAYOR: 5 mm más de fondo)* | 13 043 mm⁴ | 210 mm² | 0.300 kg |
+| **canal doblado 20 × 20** | **6 279 mm⁴** | 162 mm² | **0.231 kg** |
 
-A **igual envolvente** (20 × 20), el canal da 24 % más de inercia con el 39 % de
-la sección y menos de la mitad de peso. La fila de 20 × 25 no es comparable en
+A **igual envolvente** (20 × 20), el canal da **12 % más de inercia con el 35 %
+de la sección** y un tercio del peso. La fila de 20 × 25 que traía esta tabla se
+retira: comparaba envolventes distintas y además llevaba la misma esquina
+contada dos veces. La fila de 20 × 25 no es comparable en
 envolvente y está solo para enseñar cuánto compra profundizar 5 mm donde carga.
 
 **El perfil comprado no estaba ahí por rigidez: estaba ahí porque era lo que se
-compra.**
+compra.** El margen es más estrecho de lo que esta sección decía antes de
+corregirse —1.12× y no 1.24×— pero el signo no cambia, y lo que decide no es el
+margen sino que el agujero pase a colocarlo el DXF en vez de la ranura del
+perfil.
 
 La sección definitiva de cada miembro sale de su carga, **en el plan**. 20 × 20
 es el mínimo que ya gana al 2020, y es lo que el pliego (§10) cotiza mientras
