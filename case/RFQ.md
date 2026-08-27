@@ -1,8 +1,19 @@
-# RFQ — cuerpo de acrílico del SAM17
+# RFQ — el SAM17, taller por taller
 
 Documento para pedir presupuesto. Va **antes** que el pliego
 ([`PLIEGO.md`](PLIEGO.md)): el pliego dice qué hay que hacer, esto sirve
 para saber **quién puede hacerlo**.
+
+> **rev. 21 (2026-08-27).** Son **tres** pedidos, no uno. El case dejó de ser
+> «un cuerpo de acrílico» cuando la estructura pasó a aluminio: el acrílico
+> bajó a piel y **ya no lleva un solo taladro**. Cada bloque de preguntas es
+> eliminatorio para SU taller y no dice nada de los otros.
+>
+> | § | taller | qué se le pide |
+> |---|---|---|
+> | A | casa de acrílico | costados ×2, trasera, tapa de remate |
+> | B | chapa de aluminio plegada | costillas ×2, tapa del valle, chasis ×3 |
+> | C | carpintería | la tabla (suelo + zócalo) |
 
 **Lo que se busca no es «un CNC».** Es una **casa de acrílico** — de las que
 hacen vitrinas, expositores y museografía. Un CNC general fresa la forma y
@@ -12,7 +23,7 @@ presupuestos parecen el mismo trabajo y no lo son.
 
 ---
 
-## Preguntas eliminatorias
+## A. Casa de acrílico — preguntas eliminatorias
 
 Si alguna respuesta es «no», no es el taller. No se negocia por precio.
 
@@ -40,9 +51,15 @@ se ve como una línea blanca lechosa rodeando cada pieza.
 El **colado** ya está decidido en la spec §11 y no es negociable: el
 extruido trae tensión interna de fábrica y craquela solo.
 
+**Lo que ESTE taller ya no hace, desde el 2026-08-27:** taladrar. El costado
+tenía ocho agujeros —cuatro M4 de riel y cuatro M5 de larguero— y los ocho se
+fueron a la costilla de aluminio. La pieza es un contorno y nada más. Eso quita
+de un plumazo el sitio por donde el PMMA craquela primero, pero **no quita el
+recocido**: la tensión también la deja el fresado del canto.
+
 ---
 
-## Preguntas de cota
+## Preguntas de cota (acrílico)
 
 4. ¿Qué **tolerancia de espesor** tiene el material que suministran, por
    escrito? *(Schaeffer AG confirmó ±(0.4 + 0.1 × espesor) el 2026-08-18, o
@@ -97,3 +114,66 @@ Se rellena al recibir. Va aquí y no en un correo.
 | fecha | proveedor | recocido | diamantado | espesor medido | veredicto |
 |---|---|---|---|---|---|
 | (pendiente) | | | | | |
+
+---
+
+## B. Taller de chapa de aluminio — preguntas eliminatorias
+
+Es el taller que ya hace las tres piezas del chasis de acero. **No es un taller
+nuevo**: se le añaden tres piezas de aluminio. Y son las que sostienen el case.
+
+1. **¿Pliegan aluminio de 3 mm a 90°, y con qué radio interior mínimo?** El
+   modelo asume **r = 3** (1 × t) y de ahí cuelga todo el desarrollo. Si su
+   radio mínimo es otro, **decirlo antes de cortar**: el recorte cambia.
+2. **¿Qué factor K usan?** El modelo asume **k = 0.42**. Con r = t = 3 eso da
+   BA = 6.69 y BD = 5.31 mm por doblez. Si trabajan con otro, los DXF se
+   regeneran — pero hay que saberlo, no adivinarlo.
+3. **¿Qué aleación suministran, y su `Rp0.2`?** Las puertas del modelo van
+   contra **130 MPa**, que es un **5754 H22**. Un 6082-T6 da ~250 y sobra. Una
+   aleación más blanda **hay que avisarla antes de cortar**.
+
+**Los DXF que reciben son DESARROLLOS PLANOS, no contornos.** `costilla_2d` y
+`tapa_valle_2d` traen el recorte; la pieza doblada mide menos. Cortar el
+contorno de la pieza montada da un fichero válido e inservible — es el mismo
+error que el modelo vigila con un sobre por pieza.
+
+**La costilla lleva un alivio cuadrado de 6 × 6 mm** donde concurren dos alas
+(una sola esquina, entre la trasera y el suelo). No es un error del dibujo: sin
+él las dos alas se solapan al doblar y la chapa no cierra.
+
+### Preguntas de cota (aluminio)
+
+4. ¿Qué **tolerancia de posición** garantizan en taladros de chapa? La costilla
+   lleva los ocho tornillos estructurales del case y el más justo deja **1.54
+   diámetros** de material hasta el canto de la ventana.
+5. ¿**Desbarban** el canto? No lleva ni recocido, ni diamantado, ni chaflán:
+   esas tres cosas son del PMMA.
+
+---
+
+## C. Carpintería — preguntas eliminatorias
+
+Una sola pieza, pero **carga**: es el suelo del case y el zócalo a la vez, y el
+cuerpo entero se le apoya encima.
+
+1. **¿Qué especie y con qué contenido de humedad la entregan?** El modelo
+   calcula contra **E = 11 000 MPa** a favor de veta (nogal, arce). Roble da
+   ~12 000 y sobra; un contrachapado da ~8 000 y pediría 20 mm en vez de 18.
+   **Decir la especie antes de cortar.**
+2. **¿Pueden hacer ranuras alargadas de 10.5 × 5.5 mm** (agujero de paso M5 con
+   5 mm de carrera) en la posición del dibujo?
+3. ¿Qué **acabado** proponen para una pieza cuya cara de arriba se ve por dentro
+   del case a través del acrílico y cuyo canto se ve por fuera?
+
+**La cota que no se negocia:** el dibujo trae, en cada una de las dos filas,
+**un agujero redondo (el del medio) y dos ranuras**. No es un descuido ni una
+mezcla: es lo que deja que la tabla se mueva con la estación sin rajarse contra
+un marco de aluminio que no se mueve. **Con todos redondos la tabla se raja; con
+todos alargados se arrastra hacia un extremo.** Si el taller propone
+«homogeneizarlos», la respuesta es no.
+
+### Muestra que se pide
+
+Un retazo de la especie propuesta, 18 mm, con un canto acabado como se
+entregaría. Se compara contra el naranja del cuerpo — **la tabla y el acrílico
+se ven juntos y a la vez**, y eso no lo contesta ningún render.

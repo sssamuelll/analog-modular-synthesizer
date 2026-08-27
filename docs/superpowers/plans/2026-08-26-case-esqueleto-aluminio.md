@@ -614,49 +614,49 @@ las dos a la vez hacia P[3] (4.21 mm de material contra los 5.10 exigidos).
 
 ---
 
-### Tarea 11: Los papeles
+### Tarea 11: Los papeles — HECHA
 
-**Files:**
-- Modify: `case/PLIEGO.md`, `case/RFQ.md`, `case/README.md`
-- Modify: `docs/superpowers/specs/2026-08-15-case-design.md` (rev. 21)
+- [x] **El eco del BOM primero**, y ahí estaba el hallazgo. El plan decía
+«BOM recontado por el eco del modelo, no a mano» — y **el eco era un papel tan
+atrasado como los otros**: no mencionaba la costilla (la pieza portante),
+contaba 4 M5 para colgar un chasis que ahora cuelga de 2, listaba el suelo como
+acrílico, ponía «x6 fijos: los largueros» bajo un encabezado de M4 (son M5:
+contaba dos herrajes en la misma lista) y mandaba los M4 a atravesar 8 mm de
+acrílico cuando ahora muerden 3 de chapa. Recontar desde ahí habría propagado
+el error a los tres documentos.
 
-- [ ] **Paso 1: `PLIEGO.md`** — el cuarto proveedor, y **lo que SALE del pliego
-de acrílico**: el costado pierde «canto visible completo, diamantado» en el
-perímetro que la tira tapa. El recocido se queda, que es por tensión interna.
+- [x] **`PLIEGO.md`** — deja de ser «el pliego de acrílico». Cinco materiales y
+cinco talleres. `bandeja_base_2d` **sale** del pliego de acrílico y entra como
+tabla de madera (§6.2, con la regla de las ranuras alargadas escrita para que
+nadie las «homogeneice»). El costado pierde sus ocho taladros.
 
-- [ ] **Paso 2: `RFQ.md`** — las preguntas eliminatorias del taller de aluminio:
-aleación (Rp0.2 ≥ 130), y **rectitud de las tiras**, que son barras y la más
-larga mide 308.94 mm.
+- [x] **`RFQ.md`** — pasa de un pedido a **tres**, cada uno con sus
+eliminatorias: casa de acrílico (§A), chapa de aluminio plegada (§B: radio
+mínimo, factor K, aleación) y carpintería (§C: especie, humedad, ranuras).
 
-- [ ] **Paso 3: `README.md`** — BOM recontado **por el eco del modelo**, no a
-mano; orden de ensamblaje nuevo (el marco va primero); y el párrafo de por qué
-el acrílico dejó de cargar.
+- [x] **`README.md`** — BOM recontado contra el eco corregido (**44 tornillos,
+y ninguno atraviesa el costado**), orden de ensamblaje **dado la vuelta** —el
+acrílico pasa de ser lo primero a ser lo último—, y el paso de apriete nuevo:
+el redondo antes que las ranuras, y las ranuras sin pasarse.
 
-- [ ] **Paso 4: spec del case, rev. 21** — §2 (Estructura), §5, §6, §9, §10 y
-§11. En §11, bajar el **#98 de bloqueante a cosmético** con su razón: el
-espesor real ya no mueve ninguna cota funcional.
-
-- [ ] **Paso 5: verificar que las cotas del pliego coinciden con el modelo** —
-`openscad -D 'PART="bom"'` contra lo escrito. Es el paso que ya cazó una vez
-que el eco pedía «patica metálica torneada» después de pasar a goma.
-
-- [ ] **Paso 6: commit**
-
-```bash
-git commit -am "Los papeles alcanzan al marco: pliego, RFQ, README y rev. 21"
-```
+- [x] **Spec del case, rev. 21** — §5 reescrita entera (decía que los costados
+eran «las piezas portantes»), §10 con el orden nuevo, y **el #98 baja de
+bloqueante a cosmético**: las cotas funcionales que colgaban del espesor del
+acrílico se fueron con la carga.
 
 ---
 
 ## Lo que este plan NO hace
 
-- **El zócalo de madera** (spec §9). Plan aparte.
+- ~~**El zócalo de madera** (spec §9). Plan aparte.~~ — **se hizo aquí**: el
+  2026-08-27 dejó de ser una pieza aparte y pasó a ser la misma tabla que el
+  suelo. Lo que sigue abierto es la **especie y el acabado**, no la geometría.
 - **Cerrar el racking, #203.** Este diseño no lo cierra con número y la spec lo
   dice. Se cierra cargando el prototipo.
 - **Medir el peso del chasis del PSU**, que es lo que convertiría los 200 N
-  heredados en el modo de carga real del suelo (spec §4.2). Va como issue, y
-  desde el 2026-08-27 **pesa más que antes**: de ese supuesto cuelgan ahora los
-  10 mm de plancha del suelo y 2.7 kg de aparato (§4.2.1). Si el modo real es
-  más suave, el suelo baja de espesor.
+  heredados en el modo de carga real del suelo (spec §9.5). Va como issue, y
+  **pesa más que antes**: de ese supuesto cuelgan los 18 mm de tabla. Y hay una
+  segunda pregunta que solo se contesta con ese peso — si la tabla resuena bajo
+  los 100 Hz del toroide.
 - **El render.** `render.py` importa los assemblies; cuando la costilla entre en
   `assembly_aluminio()` el render la coge sola. Si no, es un hallazgo.

@@ -1538,36 +1538,62 @@ module lienzo_2d() {
 
 module bom() {
     au = ancho_util;
-    echo(str("BOM: larguero 2020 x", len(centros_transversal()), " de ", au, " mm"));
+    echo(str("BOM: COSTILLA x2 -- chapa de ALUMINIO de ", t_costilla,
+             " PLEGADA. El desarrollo lo saca y lo verifica el presupuesto:",
+             " bbox_desarrollo_costilla() contra el sobre del DXF."));
+    echo(str("     ES LA PIEZA PORTANTE del case desde el 2026-08-26. Banda de ",
+             ala_costilla, " mm siguiendo el contorno del costado, ventana"));
+    echo(str("     vaciada en el centro, y ala de ", ala_doblez,
+             " doblada a 90 grados en 4 de los 7 tramos -- los otros tres"));
+    echo("     pasan como pletina plana y no la necesitan. Va al taller de");
+    echo("     CHAPA PLEGADA, el mismo del chasis. Lleva TODOS los tornillos");
+    echo("     estructurales del case: los 4 M4 de riel, los M5 de transversal");
+    echo("     y el M3 de la pestana del valle.");
+    echo(str("     EL DXF ES EL DESARROLLO, no el contorno de la pieza doblada."));
+    echo(str("BOM: transversal 2020 x", len(centros_transversal()), " de ", au, " mm"));
+    echo("     Fueron CUATRO hasta el 2026-08-27. Se fue `base delantera`, la");
+    echo("     unica que flotaba en mitad del suelo; las tres que quedan estan");
+    echo("     arrinconadas contra dos caras cada una o sostienen una plancha");
+    echo("     que nada mas alcanza (el valle).");
     echo(str("BOM: Z-Rail de Tiptop x", len(centros_rail()), ", largo ", largo_riel,
              " (104 HP) -- seccion ", rail_er_fondo, " x ", rail_er_alto,
              ", hoja de datos oficial. NO es el riel de StudioRacks: ese media",
              " 27.4 de fondo y el case estuvo dibujado contra el hasta el",
              " 2026-08-17."));
-    echo(str("BOM: tornillo M4 x8 para los rieles -- entran de punta por el ",
-             "costado y ROSCAN EN EL PROPIO RIEL (viene con M4 taladrado a 3.3 ",
-             "de fabrica). Sin tuerca, sin inserto. Largo = ", t_cheek,
-             " de costado + arandela + 8..10 de rosca dentro del aluminio."));
+    echo(str("BOM: tornillo M4 x8 para los rieles -- entran de punta por la ",
+             "COSTILLA y ROSCAN EN EL PROPIO RIEL (viene con M4 taladrado a 3.3 ",
+             "de fabrica). Sin tuerca, sin inserto. Largo = ", t_costilla,
+             " de costilla + arandela + 8..10 de rosca dentro del aluminio."));
+    echo("     ATRAVESABAN EL ACRILICO hasta el 2026-08-26 y por eso pedian 8");
+    echo("     mm de agarre. Ahora muerden 3 de chapa: el tornillo se acorta.");
     echo(str("BOM: tornillo M5 boton x", 2*len(centros_transversal()),
-             " + tuerca T -- por la PUNTA de los largueros 2020, desde el costado"));
-    echo(str("BOM: tornillo M5 x", 2*chasis_anclajes, " + tuerca T + SEPARADOR de ",
+             " + tuerca T -- por la PUNTA de las transversales 2020, desde la",
+             " COSTILLA. Desde el 2026-08-27 no atraviesan el acrilico: el",
+             " costado quedo sin un solo tornillo estructural."));
+    echo(str("BOM: tornillo M5 x", chasis_anclajes, " + tuerca T + SEPARADOR de ",
              chasis_holgura_larguero, " -- cuelgan el chasis del PSU de la ranura"));
-    echo("     INTERIOR de los dos largueros de base (#106). El separador no es");
-    echo("     opcional: el tornillo cruza ese aire y sin el, apretar abolla la");
-    echo("     pared de 1.5 de chapa hacia dentro.");
+    echo("     INTERIOR de `base trasera` (#106). El separador no es opcional:");
+    echo("     el tornillo cruza ese aire y sin el, apretar abolla la pared de");
+    echo("     1.5 de chapa hacia dentro.");
+    echo("     FUERON CUATRO, dos por pared larga, hasta el 2026-08-27: la");
+    echo("     pared DELANTERA colgaba de `base delantera`, y esa barra ya no");
+    echo("     existe. Ahora esa pared APOYA en la tabla, que es un miembro");
+    echo("     estructural en cuatro paticas.");
     // Faltaban. Los M5 de arriba atan el larguero al COSTADO; estos atan la
     // PLANCHA al larguero, que es otra union y otro herraje. Salieron al montar
     // la guia de ensamblaje: las planchas tenian los taladros dibujados y el BOM
     // no tenia el tornillo.
     n_fila = max(1, round(au/100));
-    // SEIS filas de n_fila: dos de la bandeja de base, una de la tapa del
-    // valle, una de la tapa de remate y DOS de la trasera -- una por larguero
-    // trasero. Fueron nueve hasta el 2026-08-21, con cinco en la trasera; se
-    // fueron con los tres largueros traseros de en medio.
-    echo(str("BOM: tornillo M3 x", 6*n_fila, " + tuerca T M3 -- las planchas a",
-             " los largueros: base ", 2*n_fila,
-             ", tapa del valle ", n_fila, ", tapa de remate ", n_fila,
-             ", trasera ", 2*n_fila, "."));
+    // CUATRO filas de n_fila: una de la tapa del valle, una de la tapa de
+    // remate y DOS de la trasera. Fueron nueve hasta el 2026-08-21 (cinco en la
+    // trasera, se fueron con los tres largueros traseros de en medio) y seis
+    // hasta el 2026-08-27: las DOS de la bandeja de base desaparecieron cuando
+    // el suelo dejo de ser una plancha colgada de dos largueros y paso a ser
+    // una TABLA bajo el marco, con sus propios M5 y sus agujeros alargados.
+    echo(str("BOM: tornillo M3 x", 4*n_fila + 2, " + tuerca T M3 -- las planchas",
+             " a las transversales: tapa del valle ", n_fila,
+             ", tapa de remate ", n_fila, ", trasera ", 2*n_fila,
+             ", + 2 de las PESTANAS de la tapa del valle a la costilla."));
     echo("     Estos entran por la RANURA del 2020, no por su punta. Es donde");
     echo("     la tuerca de insercion lateral se paga sola: con las de deslizar");
     echo("     hay que dejarlas dentro ANTES de cerrar el esqueleto.");
@@ -1579,11 +1605,11 @@ module bom() {
     echo("     entrepiso, colgadas de 12 separadores M4 y con cinco filas de");
     echo("     tornillo. Separadores, junta de sombra, una plancha entera y");
     echo("     tres largueros murieron por el camino, todos el 2026-08-21.");
-    // LAS DOS FILAS SON TAPA. Cada una gira sobre el M5 de su riel de arriba y
-    // se cierra con el de su otro extremo. De los 48 tornillos del case (8 M4 de
-    // riel + 10 M5 de larguero + 30 M3 de plancha; los 24 M4 de separador se
-    // fueron con los separadores), solo CUATRO se tocan para abrirlo: dos por
-    // fila.
+    // LAS DOS FILAS SON TAPA. Cada una gira sobre el M4 de su riel de arriba y
+    // se cierra con el de su otro extremo. Del total de tornillos del case
+    // (8 M4 de riel + 6 M5 de transversal + 2 M5 del chasis + 6 M5 de la tabla
+    // + 22 M3 de plancha; los 24 M4 de separador se fueron con los separadores
+    // el 2026-08-21), solo CUATRO se tocan para abrirlo: dos por fila.
     echo("BOM: los M4 de riel no son todos iguales --");
     echo("     x4 EJES: tornillo de HOMBRO M4, espiga 4 mm (no M5 -- el riel");
     echo("        cambio de herraje al cambiar de fabricante). Riel del valle");
@@ -1592,7 +1618,12 @@ module bom() {
     echo("     x4 CIERRES: M4 de cabeza moleteada o palomilla -- se quitan a");
     echo("        mano y son los unicos que se tocan para abrir el case.");
     echo("        Riel del frente abajo, riel del valle arriba.");
-    echo(str("     x", 2*len(centros_transversal()), " fijos: los largueros de esqueleto"));
+    // Decia "x6 fijos: los largueros de esqueleto" bajo un encabezado que
+    // habla de M4 DE RIEL, y esos largueros van con M5. Contaba dos herrajes
+    // distintos en la misma lista. Los M4 de riel son OCHO y estan todos
+    // arriba: cuatro ejes y cuatro cierres.
+    echo("     Y no hay mas M4: los 8 son estos. Los tornillos de transversal");
+    echo("     son M5 y van en su propia linea.");
     echo("BOM: tuercas T DE INSERCION LATERAL (drop-in), NO de deslizar. Con las");
     echo("     de deslizar hay que enhebrarlas por la punta del larguero antes de");
     echo("     montar, o sea que anadir un tornillo mas tarde obliga a desarmar.");
@@ -1627,19 +1658,45 @@ module bom() {
     // otra pieza. La cota de compra no es el material sino la FLECHA -- una
     // goma dura no aisla menos, AMPLIFICA los 100 Hz del toroide.
     echo(str("BOM: patica de GOMA (EPDM/NBR, Shore 45-55 A) con casquillo",
-             " roscado x4, d=", d_pie, " x ", alto_pie, " mm -- se atornilla,",
-             " NO se pega. Se exige la curva carga-deformacion: >= ", flecha_pie,
+             " roscado x4, d=", d_pie, " x ", alto_pie, " mm -- se atornilla",
+             " A LA TABLA, no al acrilico, y NO se pega. Se exige la curva",
+             " carga-deformacion: >= ", flecha_pie,
              " mm de flecha con 22.8 N (flecha_pie)"));
     echo(str("BOM: tapa del valle: chapa de ALUMINIO t=", t_valle,
-             ", 528.32 x 66.5. NO es acrilico desde el 2026-08-25."));
+             " PLEGADA, desarrollo ", au + 2*pv_vuelo(), " x ",
+             x_valle()[1] - x_valle()[0], ". NO es acrilico desde el"));
+    echo("     2026-08-25 y no es PLANA desde el 2026-08-27: lleva una pestana");
+    echo(str("     de ", pestana_valle, " doblada a 90 grados en cada punta,",
+             " atornillada a la costilla con un M3."));
+    echo("     La pestana no sustituye al larguero del valle -- sujeta solo por");
+    echo("     sus dos puntas la tapa cede 59.6 mm. Lo que hace es atar las dos");
+    echo("     costillas: la tapa pasa de bisagra a DIAFRAGMA a media altura.");
     echo("     Va al taller de CHAPA con las tres piezas del chasis, no al de");
     echo("     acrilico. Sin recocido, sin diamantado, sin chaflan de pliego:");
     echo("     esas tres cosas son del PMMA. Canto desbarbado y basta.");
     echo("     Aleacion: pedir 5754 o mejor. La puerta va contra Rp0.2 = 130");
     echo("     MPa, que es lo que da un 5754 H22; un 6082-T6 da ~250 y sobra.");
-    echo(str("BOM: plancha de acrilico t=", t_cheek, ": costados x2, suelo (bandeja",
-             " de base, portante), tapa de remate y TRASERA -- 5 piezas."));
+    echo(str("BOM: TABLA de madera MACIZA t=", t_base, " x1, ",
+             ancho_total + 2*vuelo_zocalo, " x ", fondo() + 2*vuelo_zocalo,
+             " mm -- el suelo interior Y el zocalo, una sola pieza."));
+    echo(str("     Ocupa y = -", t_base, " a 0: su cara de arriba es el suelo y su"));
+    echo(str("     canto sobresale ", vuelo_zocalo,
+             " mm por los cuatro lados. El marco se le APOYA encima y las"));
+    echo("     cuatro paticas se le atornillan debajo.");
+    echo(str("     FIJACION CON AGUJERO ALARGADO: 2 filas de 3 M5, uno REDONDO"));
+    echo("     por fila (el del medio, el punto fijo) y los otros dos en ranura");
+    echo(str("     de ", d_M5_paso + 2*holgura_veta,
+             ". La madera se mueve ~3 mm a contraveta sobre los ", fondo(), " de"));
+    echo("     fondo y el aluminio no. Sin el redondo la tabla se arrastra");
+    echo("     hacia un extremo; con dos vuelve a estar clavada y se raja.");
+    echo("     Especie sin elegir: las cuentas van contra E = 11000 MPa (nogal");
+    echo("     o arce). Roble da 12000; contrachapado 8000 y pediria 20 mm.");
+    echo(str("BOM: plancha de acrilico t=", t_cheek, ": costados x2, tapa de remate",
+             " y TRASERA -- 4 piezas."));
     echo("     UN SOLO ESPESOR en todo el cuerpo. Hubo dos hasta el 2026-08-25:");
     echo("     los 5 mm existian para UNA pieza, y esa pieza es ahora de");
     echo("     aluminio. Media plancha de 5 que ya no hay que comprar.");
+    echo("     Y desde el 2026-08-27 el suelo tampoco es acrilico: es la tabla.");
+    echo("     LOS COSTADOS YA NO LLEVAN UN SOLO TALADRO. Son PIEL: quedan");
+    echo("     capturados entre las dos alas de la costilla, sin tornillo.");
 }

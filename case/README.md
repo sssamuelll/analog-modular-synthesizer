@@ -1,4 +1,12 @@
-# Case SAM17 — consola de dos pisos en acrílico naranja
+# Case SAM17 — consola de dos pisos, esqueleto de aluminio
+
+> **El acrílico dejó de cargar el 2026-08-26.** Este README decía «consola en
+> acrílico naranja» y la pieza que sostenía el aparato era el costado. Ya no:
+> la estructura son **dos costillas de chapa de aluminio plegada** que llevan
+> todos los tornillos, el acrílico bajó a **piel** y no tiene un solo taladro,
+> y el suelo es una **tabla de madera** que hace de zócalo a la vez. El diseño
+> entero está en
+> [`../docs/superpowers/specs/2026-08-26-case-esqueleto-aluminio-design.md`](../docs/superpowers/specs/2026-08-26-case-esqueleto-aluminio-design.md).
 
 Spec: [`docs/superpowers/specs/2026-08-15-case-design.md`](../docs/superpowers/specs/2026-08-15-case-design.md) (rev. 5)
 Board de intención: [`renders/propuesta-diseno-2026-08-16.png`](renders/propuesta-diseno-2026-08-16.png)
@@ -544,27 +552,37 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 
 | Pieza | Cantidad | Nota |
 |-------|----------|------|
-| Z-Rail de Tiptop | **4** | 104 HP (528.32 mm), sección 23.8 × 10. Se compran en pares: 2 unidades = 4 raíles |
-| Larguero perfil 2020 | **4** | de 528.32 mm cada uno: 2 de base, valle y **remate trasero**. Fueron 8 hasta el 2026-08-21 y 5 hasta el 2026-08-25, cuando se retira el de **entrepiso delantero** — el único que no sostenía ninguna plancha |
-| Tornillo **M4** | **8** | entran de punta por el costado y **roscan en el propio Z-Rail** (viene con M4 taladrado a 3.3 de fábrica). Sin tuerca, sin inserto. **No vienen con el raíl.** 4 de hombro (los ejes de giro) + 4 de mano (los cierres) |
-| Tornillo M5 botón + tuerca T | **8** | 2 por larguero 2020, por la punta, desde el costado |
-| Tornillo M5 + tuerca T + separador 3 mm | **4** | cuelgan el chasis del PSU de la ranura **interior** de los dos largueros de base (#106). El separador no es opcional |
-| Tornillo **M3 botón** + tuerca T M3 + **arandela ancha d16** | **30** | las planchas a los largueros: base 10, tapa del valle 5, tapa de remate 5, **trasera 10** (2 filas × 5). Entran por la RANURA, no por la punta. **Apriete 1.0 N·m con rosca SECA** — engrasarla mete un 30 % más de precarga con el mismo par y fisura. Ver `par_m3` |
-| Arandela ANCHA d16 | **34** | 30 bajo los M3 de plancha + 4 en los ejes de giro. **No opcional en ninguno de los dos sitios**, y es la misma pieza en ambos: la familia de herraje baja de dos arandelas a una. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 y aguanta. En los M3 además es la que sube el par utilizable de 0.33 a 1.15 N·m — por debajo de 1 N·m no hay llave dinamométrica de 1/4" que lo dé |
+| **COSTILLA** — chapa de aluminio t=3 **plegada** | **2** | **la pieza portante del case.** Banda de 24 mm siguiendo el contorno del costado, ventana vaciada, ala de 12 mm doblada a 90° en 4 de sus 7 tramos. Lleva **todos** los tornillos estructurales. Su DXF es el **desarrollo**, no el contorno. Alivio de 6 × 6 en la única esquina donde concurren dos alas |
+| Z-Rail de Tiptop | **4** | 104 HP (528.32 mm), sección 23.8 × 10. Se compran en pares: 2 unidades = 4 raíles. Atornillan a la **costilla** desde el 2026-08-26, no al acrílico |
+| Transversal perfil 2020 | **3** | de 528.62 mm: `base trasera`, `valle` y `remate trasero`. Fueron 8 el 2026-08-21, 5 el 25, 4 el 26 y **3 el 27**, cuando se va `base delantera` — la única que flotaba en mitad del suelo. Las tres que quedan están arrinconadas contra dos caras cada una, o sostienen una plancha que nada más alcanza |
+| Tornillo **M4** | **8** | entran de punta por la **costilla** y **roscan en el propio Z-Rail** (viene con M4 taladrado a 3.3 de fábrica). Sin tuerca, sin inserto. **No vienen con el raíl.** 4 de hombro (los ejes de giro) + 4 de mano (los cierres). Muerden 3 mm de chapa en vez de 8 de acrílico: **el tornillo se acorta** |
+| Tornillo M5 botón + tuerca T | **6** | 2 por transversal, por la punta, **desde la costilla** |
+| Tornillo M5 + tuerca T + separador 3 mm | **2** | cuelgan la pared **trasera** del chasis del PSU de la ranura interior de `base trasera` (#106). Fueron 4: la pared delantera colgaba de `base delantera` y ahora **apoya en la tabla** |
+| Tornillo **M5** para la tabla | **6** | 2 filas de 3, una bajo cada costilla. **Uno redondo por fila (el del medio) y dos en ranura de 10.5** — ver la tabla, más abajo |
+| Tornillo **M3 botón** + tuerca T M3 + **arandela ancha d16** | **22** | las planchas a las transversales: tapa del valle 5, tapa de remate 5, **trasera 10**, + **2 de las pestañas** de la tapa del valle a la costilla. Eran 30: las 2 filas de la bandeja se fueron con ella. Entran por la RANURA, no por la punta. **Apriete 1.0 N·m con rosca SECA** — engrasarla mete un 30 % más de precarga con el mismo par y fisura. Ver `par_m3` |
+| Arandela ANCHA d16 | **24** | 20 bajo los M3 que muerden acrílico + 4 en los ejes de giro. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 y aguanta. En los M3 además sube el par utilizable de 0.33 a 1.15 N·m — por debajo de 1 N·m no hay llave dinamométrica de 1/4" que lo dé. **Los 2 M3 de pestaña no la necesitan**: aprietan aluminio contra aluminio |
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa. **Sustituye al amortiguador**, que se eliminó |
-| **Chapa de aluminio t=3 mm** | **1** | la tapa del valle, 528.32 × 66.5. **No es acrílico desde el 2026-08-25**: era la pieza más floja del case y es la única cara horizontal. Aleación **5754 o mejor** (`Rp0.2` ≥ 130 MPa). Va al taller de CHAPA con las tres del chasis — sin recocido, sin diamantado, sin chaflán: eso es del PMMA. Ver `guarda_valle()` |
-| Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante, 528.32 × 291.4) + tapa de remate (528.32 × 37) + **trasera** (528.02 × 248.18, con las tres ondas y la rejilla de entrada de aire) |
-| Patica de goma con casquillo roscado | 4 | EPDM o NBR, Shore 45–55 A, **d20 × 10**. **Se exige la curva carga-deformación: ≥ 0.25 mm de flecha con 22.8 N** — por debajo la pata AMPLIFICA los 100 Hz del toroide en vez de aislarlos (`flecha_pie`). Casquillo roscado moldeado: se atornilla, **no se pega** — el case no lleva juntas irreversibles |
+| **Chapa de aluminio t=3 mm** | **1** | la tapa del valle, desarrollo 560.00 × 66.48. **No es acrílico desde el 2026-08-25 y no es plana desde el 27**: lleva una pestaña de 21 mm doblada en cada punta, atornillada a la costilla. Aleación **5754 o mejor** (`Rp0.2` ≥ 130 MPa). Va al taller de CHAPA — sin recocido, sin diamantado, sin chaflán: eso es del PMMA. Ver `guarda_valle()` |
+| **TABLA de madera maciza t=18 mm** | **1** | **el suelo interior Y el zócalo: una sola pieza**, 570.62 × 328.94. Ocupa y = −18 a 0; el marco se le apoya encima y las paticas van debajo. Veta a lo largo. Especie sin elegir: las cuentas van contra E = 11 000 MPa (nogal o arce) |
+| Plancha acrílico t=8 mm | **4** | 2 costados + tapa de remate (528.62 × 37) + **trasera** (528.02 × 248.18, con las ondas y la rejilla de entrada de aire). **El suelo salió de esta lista el 2026-08-27**, y los costados **ya no llevan un solo taladro** |
+| Patica de goma con casquillo roscado | 4 | EPDM o NBR, Shore 45–55 A, **d20 × 10**. Se atornillan **a la tabla**, no al acrílico. **Se exige la curva carga-deformación: ≥ 0.25 mm de flecha con 22.8 N** — por debajo la pata AMPLIFICA los 100 Hz del toroide en vez de aislarlos (`flecha_pie`). Casquillo roscado moldeado: se atornilla, **no se pega** |
 
-**Total de tornillos del case: 50** — 8 M4 de raíl + 8 M5 de esqueleto +
-4 M5 que cuelgan el chasis +
-30 M3 de plancha. Eran 71, y el 2026-08-21 perdió 23 de golpe: al empotrarse, la
-trasera se llevó por delante 12 separadores M4 y sus 24 tornillos de botón; al
-morir la bandeja de entrepiso se fueron 10 M3; volvieron 2 M5 y 5 M3 con el
-larguero del remate y su tapa; y al quedarse la pared trasera con dos largueros
-en vez de cinco se fueron 6 M5 y 15 M3 más; y el 2026-08-25 se van los 2 M5
-del entrepiso delantero. Lo que no volvió es el adhesivo:
-**el case ya no lleva ninguna junta irreversible.**
+**Total de tornillos del case: 44** — 8 M4 de raíl + 6 M5 de transversal +
+2 M5 que cuelgan el chasis + 6 M5 de la tabla + 22 M3 de plancha.
+
+Eran 71. El 2026-08-21 perdió 23 de golpe: al empotrarse, la trasera se llevó
+por delante 12 separadores M4 y sus 24 tornillos de botón; al morir la bandeja
+de entrepiso se fueron 10 M3; volvieron 2 M5 y 5 M3 con el larguero del remate y
+su tapa; y al quedarse la pared trasera con dos largueros en vez de cinco se
+fueron 6 M5 y 15 M3 más. El 2026-08-25 se van los 2 M5 del entrepiso delantero.
+Y el 2026-08-27, al irse `base delantera` y pasar el suelo a tabla: −2 M5 de
+transversal, −2 M5 del chasis y −10 M3 de bandeja, +6 M5 de la tabla y +2 M3 de
+las pestañas del valle.
+
+**Y el reparto cambió de sitio, que es lo que de verdad importa:** de esos 44,
+**ninguno atraviesa el costado**. Todos los estructurales entran en aluminio.
+Lo que no volvió es el adhesivo: **el case ya no lleva ninguna junta
+irreversible.**
 
 No calculados por el modelo (herrajes eléctricos y de panel; la cantidad
 depende de la cuenta final de módulos, no de la geometría del cajón):
@@ -580,10 +598,13 @@ Censo actual de paneles: 8 (MIDI/CV, VCO×3, VCF, ADSR, VCA, MIXER —
 `clearance_budget.py`, `ANCHOS_PISO_SUP`/`ANCHOS_PISO_INF`). **Estimado, no
 cerrado**: estos totales por panel cierran cuando cada panel esté dibujado.
 
-## Anclaje de las placas — solo a largueros del esqueleto
+## Anclaje de las placas — solo a transversales, nunca a raíles de panel
 
-Las planchas (bandeja de base, tapa de remate y trasera, de acrílico; tapa del valle, de aluminio) se atornillan
-**únicamente a largueros del esqueleto**, nunca a los 4 raíles de panel. Los
+Las planchas (tapa de remate y trasera, de acrílico; tapa del valle, de
+aluminio) se atornillan **únicamente a transversales 2020**, nunca a los 4
+raíles de panel. **La tabla no está en esta lista**: no cuelga de nada — el
+marco se le apoya encima y su fijación es otra cosa (ranuras alargadas, ver el
+BOM). Los
 raíles de panel van girados al ángulo de su cara (35° / 45° desde la vertical) para quedar a ras
 del panel: un tornillo contra esa cara entraría a 12° del eje de su agujero
 (≈1.05 mm de descentre en 5 mm de acrílico, contra 0.7–0.9 mm de holgura) y la
@@ -640,41 +661,62 @@ un cable asumiendo continuidad por el riel es riesgo de choque eléctrico.
 
 ## Orden de ensamblaje
 
-1. **Esqueleto** — costados + los 4 largueros 2020, M5 por la punta desde
-   fuera. Meter aquí las 30 tuercas T M3 de las planchas: con tuercas de
-   inserción lateral se pueden añadir después, con las de deslizar no.
-2. **Bandeja de base** — 8 mm, es el suelo, 2 filas de 5 M3. Era «bandejas» en
-   plural hasta el 2026-08-21: la de entrepiso murió.
-3. **Chasis del PSU** — **cuelga** de la ranura interior de los dos largueros
-   de base, 4 M5 con separador de 3 mm. No apoya en el acrílico: quedan 2 mm de
-   aire bajo su suelo, que es de lo que va el #106. Va aquí y no más tarde
-   porque después el valle y los paneles cierran el piso por arriba.
-4. **Los 4 Z-Rails** — M4 desde fuera, roscan en el propio riel. Comprobar
-   antes que la pletina roscada corre por su canal.
-5. **Tapa del valle** — 5 M3 al larguero del valle. Es de **aluminio de 3 mm**, no de acrílico: no lleva film protector ni las precauciones del PMMA, y su apriete no está limitado por el craquelado.
-6. **Electricidad y bonding** — bloque IEC fijo, espárrago junto al PSU.
-7. **Trasera** — UNA plancha de 8 mm, EMPOTRADA, 10 M3 a tuerca T en las dos
-   filas de los largueros traseros, **a 1.0 N·m con arandela d16 y rosca
+**EL ORDEN CAMBIÓ EL 2026-08-27, y el cambio es el primer paso.** El acrílico
+ya no es lo primero que se monta: ahora es lo último que se mete, porque no
+sostiene nada. La estructura se levanta entera en aluminio y el costado entra
+después, capturado entre las alas de la costilla.
+
+1. **La tabla** — apoyada plana sobre la mesa, cara buena arriba. Es la base de
+   todo lo demás. **No atornillar nada todavía.**
+2. **El marco** — las 2 costillas de pie sobre la tabla + las 3 transversales
+   2020, M5 por la punta desde fuera de cada costilla. Meter aquí las **22
+   tuercas T M3** de las planchas: con tuercas de inserción lateral se pueden
+   añadir después, con las de deslizar no.
+3. **El marco a la tabla** — 2 filas de 3 M5. **Empezar por el REDONDO del
+   medio de cada fila** y apretarlo a tope; los dos de ranura se aprietan
+   después y **no se pasan de apriete**: tienen que poder deslizar cuando la
+   madera se mueva. Un tornillo de ranura apretado a tope es un tornillo
+   redondo, y ahí se acabó la ranura.
+4. **Chasis del PSU** — su pared trasera **cuelga** de la ranura interior de
+   `base trasera`, 2 M5 con separador de 3 mm; la delantera **apoya en la
+   tabla**. Entre la chapa del toroide y la madera quedan 2 mm de aire, que es
+   de lo que va el #106. Va aquí y no más tarde porque después el valle y los
+   paneles cierran el piso por arriba.
+5. **Los 4 Z-Rails** — 8 M4 **a la costilla**, roscan en el propio riel.
+   Comprobar antes que la pletina roscada corre por su canal.
+6. **Tapa del valle** — 5 M3 a su transversal **y 1 M3 por punta** a la
+   costilla, por sus pestañas dobladas. Es de **aluminio de 3 mm**: no lleva
+   film protector ni las precauciones del PMMA, y su apriete no está limitado
+   por el craquelado.
+7. **Electricidad y bonding** — bloque IEC fijo, espárrago junto al PSU.
+8. **Trasera** — UNA plancha de 8 mm, EMPOTRADA, 10 M3 a tuerca T en las dos
+   filas de las transversales traseras, **a 1.0 N·m con arandela d16 y rosca
    SECA**. Va después de los largueros porque la tuerca T vive dentro de la
    ranura. **ATENCIÓN A LA CARA**: esta plancha dejó de ser simétrica el
    2026-08-24 — el cajeado de KONDOR va en la cara EXTERIOR. Montada al revés,
    el relieve queda mirando al interior y la palabra se lee invertida.
-8. **Tapa de remate** — 5 M3 al larguero de remate trasero. Va ATORNILLADA
-   desde el 2026-08-21; hasta entonces iba pegada al Z-Rail y era la única
-   pieza irreversible del case.
-9. **Paticas y paneles** — y paneles ciegos en todo hueco de las dos filas,
-   que con una tapa abierta son lo único que ata sus dos raíles.
-10. **Quitar el film protector** — al final, no al recibir. El acrílico llega
+9. **Tapa de remate** — 5 M3 a la transversal de remate trasero. Va
+   ATORNILLADA desde el 2026-08-21; hasta entonces iba pegada al Z-Rail y era
+   la única pieza irreversible del case.
+10. **Los costados** — los dos de acrílico, **sin un solo tornillo**: entran
+    capturados entre las dos alas de la costilla. Van los últimos porque no
+    sostienen nada y porque son la pieza que se raya.
+11. **Paticas y paneles** — las 4 paticas **a la tabla, por debajo**, y paneles
+    ciegos en todo hueco de las dos filas, que con una tapa abierta son lo
+    único que ata sus dos raíles.
+12. **Quitar el film protector** — al final, no al recibir. El acrílico llega
     con las dos caras protegidas de fábrica, y es durante el MONTAJE cuando se
     raya: al deslizarlo por la mesa, al apoyar una herramienta, al girar una
     pieza sobre otra. El film es lo único que lo evita, y solo sirve si sigue
     puesto.
 
-El orden importa en dos sitios: las bandejas no se pueden atornillar antes
-que sus largueros (la tuerca T vive en la ranura del perfil), y los raíles
-quieren estar antes que cualquier panel. Era en TRES: el tercero era que la
-pestaña quedaba irreversible una vez pegada, y ese ya no existe — todo el
-case se desmonta.
+El orden importa en cuatro sitios: las planchas no se pueden atornillar antes
+que sus transversales (la tuerca T vive en la ranura del perfil); los raíles
+quieren estar antes que cualquier panel; **el tornillo redondo del medio de la
+tabla va antes que los de ranura**, o el marco queda referido a una punta; y
+**los costados van los últimos**, que es lo que el 2026-08-27 dio la vuelta.
+Hubo un quinto que ya no existe: la pestaña de remate quedaba irreversible una
+vez pegada. Todo el case se desmonta.
 
 Guía ilustrada con renders del modelo:
 https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
@@ -691,6 +733,10 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
       doblar**: mandarlo solo es mandar media pieza
 - [x] Cupón de calibración
 - [x] `clearance_budget.py` en verde
+- [x] **Esqueleto de aluminio** (2026-08-26/27): las 2 costillas de chapa
+      plegada, el costado bajado a piel sin un solo taladro, `base delantera`
+      retirada y el suelo pasado a tabla de madera. Vano libre del costado de
+      119.0 a **65.2 mm**, flecha de 0.38 a **0.11**
 - [x] Plantilla de panel KiCad
 - [x] Render del conjunto — dos vistas: frontal
       ([`renders/sam17-case.png`](renders/sam17-case.png)) y trasera
@@ -698,5 +744,10 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
       La trasera es la que importa: muestra las tres ondas — sierra, triángulo
       y cuadrada, las tres formas del VCO — que son la firma visual del case, y
       por debajo la rejilla de entrada de aire con el IEC embebido.
+- [ ] **Especie y humedad de la tabla** — las cuentas van contra E = 11 000
+      MPa y es supuesto declarado (bloquea el pedido de carpintería)
+- [ ] **Pesar el chasis del PSU** — los 200 N del suelo son `carga_mano`
+      heredado del costado, y el modo real es el peso del chasis. De ese
+      supuesto cuelgan los 18 mm de tabla
 - [ ] Cupón cortado y kerf registrado (bloquea el corte de planchas)
 - [ ] Planchas cortadas y ensayo de ensamblaje

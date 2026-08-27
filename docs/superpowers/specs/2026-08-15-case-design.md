@@ -1,4 +1,4 @@
-# SAM17 — Diseño del case (consola de dos pisos en acrílico naranja)
+# SAM17 — Diseño del case (consola de dos pisos, esqueleto de aluminio)
 
 **Fecha:** 2026-08-15
 **Estado:** aprobado en diseño (rev. 3: pivote de cómputo, fuente v2 y
@@ -190,6 +190,20 @@ lenguaje visual).
 > pasara a goma. **Lo que NO cubre**: el racking del cajón, que sigue siendo la
 > heurística abierta de §11 — y ahora con una barra menos.
 >
+> **rev. 21** (2026-08-26/27): **el acrílico deja de cargar.** La estructura
+> pasa a **dos costillas de chapa de aluminio de 3 mm plegada** y el costado
+> baja a piel: se queda **sin un solo taladro**, capturado entre las dos alas de
+> la costilla. Todos los tornillos estructurales se mudan al aluminio. Se va
+> `base delantera` —la única barra que flotaba en mitad del suelo— y el case
+> baja de 4 transversales a 3; las otras tres no se pueden quitar, y por qué
+> está medido. El **suelo pasa a ser una tabla de madera maciza de 18 mm bajo el
+> marco**, que es a la vez el zócalo: una sola pieza en vez de dos, con
+> agujeros alargados porque la madera se mueve y el aluminio no. La tapa del
+> valle gana una **pestaña doblada por punta** que la atornilla a las costillas
+> y la convierte en diafragma. `ala_costilla` deja de ser supuesto y se fija en
+> 24 por lo que le cabe al M4 del Z-Rail. Medido: el vano libre del costado cae
+> de 119.0 a **65.2 mm** y su flecha de 0.38 a **0.11**. Diseño completo en
+> [`2026-08-26-case-esqueleto-aluminio-design.md`](2026-08-26-case-esqueleto-aluminio-design.md).
 > **rev. 20** (2026-08-25): **la tapa del valle pasa de acrílico de 5 mm a
 > chapa de ALUMINIO de 3**. Era la plancha más floja del case y a la vez la
 > única cara horizontal — donde se apoya quien se levanta, no donde se posa la
@@ -325,34 +339,55 @@ comprobación va antes del paso destructivo).
 
 ## 5. Estructura
 
-- **Costados (×2): acrílico naranja** de 8 mm (o laminado 2 × 4 mm), perfil
-  escalonado de dos pisos. Son las piezas portantes: reciben los
-  perfiles 2020 del esqueleto (raíles y largueros, tornillo M5 al alma) y
-  los standoffs de las pieles.
-- **Bandeja de base de acrílico** —la de entrepiso murió el 2026-08-21, su
-  papel de barrera lo hace el chasis de acero— atornillada con
-  tuercas T M3 a un **esqueleto de perfiles 2020** (los mismos del sistema de
-  paneles: 8 largueros de esqueleto —2 de base, 2 de entrepiso, remate
-  superior, repisa, valle y remate trasero— además de los 4 raíles de paneles; el
-  reparto exacto lo fija `centros_esqueleto()` en el modelo). Un solo sistema
-  de fijación para todo el instrumento; un standoff no puede sujetar una
-  bandeja de 528 mm de vano.
-- **Las placas de acrílico anclan solo a largueros de esqueleto**, nunca a los
-  4 raíles de panel: esos van girados al ángulo de su cara, y un tornillo
-  contra una cara inclinada entra descentrado y apoya la arandela de canto
-  sobre acrílico frágil. Verificado por `alineacion()` en el budget.
-- **Separadores (standoffs) de aluminio M4** (macho-hembra y hembra-hembra)
-  con tornillería inox de botón: reservados a las pieles flotantes (junta de
-  sombra de 5 mm) — la retícula visible y regular de puntos de unión es el
-  ornamento permitido.
-- **Trasera: UNA plancha de acrílico de 8 mm**, EMPOTRADA a ras del canto de
-  los costados y atornillada a los cuatro largueros traseros — desmontable,
-  lleva la ventilación (§7). Fueron dos pieles de 5 flotando sobre standoffs
-  con junta de sombra hasta el 2026-08-21; flotar y sellar son incompatibles.
+**REESCRITA EN LA REV. 21 (2026-08-27).** Hasta entonces esta sección decía que
+los costados de acrílico eran *«las piezas portantes»*. Ya no lo son. El diseño
+completo del cambio está en
+[`2026-08-26-case-esqueleto-aluminio-design.md`](2026-08-26-case-esqueleto-aluminio-design.md);
+aquí va lo que sustituye a lo anterior.
+
+- **Costillas (×2): chapa de aluminio de 3 mm PLEGADA.** Son **las piezas
+  portantes**. Cada una es una banda de 24 mm que sigue el contorno del costado,
+  con la ventana vaciada en el centro y un ala de 12 mm doblada a 90° en 4 de
+  sus 7 tramos — los otros tres pasan como pletina plana y no la necesitan, y
+  eso se **deriva** del techo de flecha, no se elige. Llevan **todos los
+  tornillos estructurales del case**. Su DXF es el **desarrollo plano**.
+- **Costados (×2): acrílico naranja de 8 mm.** Son **piel**: no sostienen nada
+  y **no llevan un solo taladro** desde el 2026-08-27. Quedan capturados entre
+  las dos alas de la costilla — un ala agarra la cara interior y la otra le tapa
+  el canto. Su silueta escalonada sigue siendo la del aparato.
+- **Tabla de madera maciza de 18 mm**: el **suelo interior y el zócalo**, una
+  sola pieza de 570.62 × 328.94 bajo el marco. Las dos costillas se le apoyan
+  encima y las cuatro paticas van atornilladas debajo, casi en la misma
+  vertical. **Su fijación va con agujero alargado** — un redondo por fila como
+  punto fijo y el resto en ranura —, porque la madera se mueve a contraveta y el
+  aluminio no. Sustituye a la bandeja de base de acrílico.
+- **3 transversales 2020** que atan las dos costillas: `base trasera`, `valle` y
+  `remate trasero`. Fueron 8. La cuarta, `base delantera`, se fue el 2026-08-27
+  por ser la única que flotaba en mitad del suelo; las tres que quedan están
+  arrinconadas contra dos caras cada una, o sostienen una plancha que nada más
+  alcanza. El reparto exacto lo fija `_centros_transversal()` en el modelo.
+- **Las placas anclan solo a transversales**, nunca a los 4 raíles de panel:
+  esos van girados al ángulo de su cara, y un tornillo contra una cara inclinada
+  entra descentrado y apoya la arandela de canto sobre acrílico frágil.
+  Verificado por `alineacion()` en el budget.
+- **Trasera: UNA plancha de acrílico de 8 mm**, EMPOTRADA a ras del canto y
+  atornillada a las dos transversales traseras — desmontable, lleva la
+  ventilación (§7). Fueron dos pieles de 5 flotando sobre standoffs con junta de
+  sombra hasta el 2026-08-21; flotar y sellar son incompatibles.
+- **Tapa del valle: chapa de aluminio de 3 mm plegada.** Apoya en su transversal
+  y se atornilla además a las dos costillas con una pestaña doblada por punta:
+  deja de ser una plancha sobre una bisagra y pasa a ser **diafragma** a media
+  altura.
 - **Paneles de módulo: PCB de aluminio** de ancho variable en múltiplos de
   1 HP (5.08 mm), **128.5 mm de alto**, cerrando las dos caras inclinadas.
-- **Pies de goma** bajo la base.
-- Sin pegamento estructural salvo la pestaña de remate (ver §2).
+- **Pies de goma** bajo la tabla.
+- **Sin pegamento estructural en ninguna junta.** La pestaña de remate, que era
+  la excepción, se atornilla desde el 2026-08-21.
+
+**Lo que el cambio compró, medido:** el vano libre del costado —el trozo de
+acrílico más lejos de cualquier apoyo— cae de **119.0 a 65.2 mm** y su flecha
+con 200 N de 0.38 a **0.11 mm**, porque el apoyo deja de ser cuatro tornillos y
+pasa a ser la ventana de la costilla en todo el perímetro.
 
 ## 6. Raíles y sistema de paneles
 
@@ -447,26 +482,43 @@ recuente después de tocar `params.scad` toma ese eco, no este párrafo.
 
 1. **Cupón antes que planchas** — el kerf y los diámetros de ajuste medidos
    se registran en `case/README.md` junto con proveedor, material y máquina.
-   **Con fresado esto se reduce a medir el espesor real de la plancha**, que
-   sigue siendo obligatorio: el PMMA colado llega con tolerancia de hasta
-   ±1.2 mm en 8 mm, y dos piezas están acotadas contra el espesor. Es la
+   **Y EN LA REV. 21 BAJA DE BLOQUEANTE A COSMÉTICO.** Medir el espesor sigue
+   valiendo la pena, pero ya no bloquea el corte: las cotas funcionales que
+   colgaban del espesor del acrílico se fueron con la carga. El costado no
+   lleva taladros, no recibe apriete y no sostiene nada — si llega a 7.2 o a
+   8.8 mm, lo que cambia es cómo se ve el canto, no si el case cierra. Lo que
+   sí sigue acotado contra un espesor es `marco_sup`, y esa plancha es la tapa
+   de remate.
+
+   El texto original, que sigue siendo cierto sobre el material: el PMMA colado
+   llega con tolerancia de hasta ±1.2 mm en 8 mm. Es la
    aplicación de los Principios III y V: la comprobación va antes del paso
    destructivo, y entre cortar a ciegas y no cortar, no se corta.
 2. `case/clearance_budget.py` **en verde**, con autocomprobación del cálculo,
    aserciones que fallan si el diseño se sale, y bloque de lo que no cubre.
 3. El script de export debe regenerar todos los DXF/STL sin errores desde un
    repo limpio, y **salir con código de error** si algo queda a medias.
-4. Checklist de ensamblaje en `case/README.md` con el orden: costados →
-   largueros 2020 → bandejas → raíles → tapa del valle → electricidad y
-   bonding → pieles y pestaña → paticas y paneles.
+4. Checklist de ensamblaje en `case/README.md` con el orden: **tabla →
+   costillas y transversales → marco a la tabla → chasis del PSU → raíles →
+   tapa del valle → electricidad y bonding → trasera y remate → costados →
+   paticas y paneles.**
 
-   Este punto decía antes «costados → bandejas y standoffs → raíles», y era
+   **EL ORDEN SE DIO LA VUELTA EN LA REV. 21**: el acrílico dejó de ser lo
+   primero que se monta y pasó a ser lo último que se mete. La estructura se
+   levanta entera en aluminio sobre la tabla, y el costado entra al final
+   porque no sostiene nada y porque es la pieza que se raya.
+
+   Y hay un paso nuevo que no es de orden sino de apriete: **el tornillo
+   redondo del medio de cada fila de la tabla va antes que los de ranura, y
+   los de ranura no se pasan de apriete.** Un tornillo de ranura apretado a
+   tope es un tornillo redondo, y ahí se acabó la ranura.
+
+   Este punto decía «costados → bandejas y standoffs → raíles», y era
    físicamente imposible según el §5 de esta misma spec: las bandejas se
    atornillan con tuercas T al esqueleto, y una tuerca T vive dentro de la
    ranura del perfil. Sin largueros no hay dónde atornillar la bandeja
    (issue #50). Además metía bandejas y pieles en el mismo paso, y no son el
-   mismo herraje: las bandejas van con tuerca T al esqueleto, las pieles
-   cuelgan de separadores M4 al final.
+   mismo herraje.
 
 ## 11. Lo que NO está confirmado
 
