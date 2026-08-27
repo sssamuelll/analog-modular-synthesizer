@@ -5,8 +5,8 @@
 > pasos van en casillas (`- [ ]`).
 
 **Goal:** el costado de acrílico deja de ser portante y la estructura pasa a
-dos costillas de aluminio fresado con tiras de canto en L, absorbiendo los
-cuatro largueros 2020 del interior.
+dos costillas de **chapa de aluminio plegada** —el ala en L sale del propio
+material, ver spec §2.1— que absorben los cuatro largueros 2020 del interior.
 
 **Architecture:** modelo paramétrico OpenSCAD (`params.scad` + `sam17_case.scad`)
 que exporta DXF planos, con dos presupuestos ejecutables en Python que se
@@ -32,9 +32,13 @@ Copiadas literalmente de la spec y del repo. Aplican a **todas** las tareas.
   a propósito y comprueba que canta.
 - **Ningún número sin fuente inline.** Constante nueva = comentario que dice de
   dónde sale. Lo no verificado se marca `SUPUESTO DECLARADO`, no se suaviza.
-- **Añadir antes de quitar.** El orden de tareas está elegido para que el
-  modelo nunca quede a medias: primero existen la costilla y las transversales,
-  y solo entonces se van los largueros.
+- **Añadir antes de quitar** — con una excepción medida. El orden está
+  elegido para que el modelo nunca quede a medias: primero existe la costilla,
+  luego los rieles se mudan, y solo entonces se van los largueros. **La
+  excepción es la Tarea 7**: las transversales de P[5] y P[6] son los largueros
+  `remate trasero` y `base trasera` mudados 25.46 mm, así que ponerlas antes de
+  quitarlos las hace solapar contra ellos mismos. Añadir y quitar son ahí un
+  solo paso, y se descubrió intentando lo contrario (Tarea 5).
 - Constantes del repo: `E_ALUMINIO` = 69 000 MPa · `RP02_ALUMINIO` = 130 MPa ·
   E del PMMA = 3 000 MPa · `SIGMA_PMMA` = 10 MPa · `carga_mano` = 200 N ·
   `flecha_costado_max` = 0.60 mm · `B_MANO` = 50 mm.
@@ -46,8 +50,8 @@ Copiadas literalmente de la spec y del repo. Aplican a **todas** las tareas.
 | fichero | responsabilidad en este plan |
 |---|---|
 | `case/cad/params.scad` | los parámetros nuevos, cada uno con su porqué |
-| `case/cad/sam17_case.scad` | `costilla_2d()`, `tira_canto_2d()`, transversales, dispatch `PART` |
-| `case/clearance_budget.py` | `guarda_riel_cabe()`, `guarda_costilla()`, `guarda_piso()` reescrita |
+| `case/cad/sam17_case.scad` | `costilla_2d()` (desarrollo plano), `centros_transversal()`, dispatch `PART` |
+| `case/clearance_budget.py` | `guarda_costilla()`, `_centros_transversal()`, `guarda_piso()` reescrita |
 | `case/check_dxf.py` | `guarda_costado()` → mide la costilla; `railes_dentro_del_costado()` |
 | `case/cad/export.ps1` | las piezas nuevas en `$piezas` |
 | `case/README.md`, `case/PLIEGO.md`, `case/RFQ.md` | BOM, ensamblaje, cuarto proveedor |
@@ -458,71 +462,35 @@ git commit -m "Las tiras de canto, cosidas al paso que impide que la junta desli
 
 ---
 
-### Tarea 5: Las transversales del marco (añadir, sin quitar nada)
+### Tarea 5: MUERTA — REPLANTEADA el 2026-08-27 al ejecutarla
 
-Tres barras nuevas: P[0] (arista que hoy está vacía), P[5] y P[6]. Los
-largueros de hoy **siguen ahí** al terminar esta tarea — se van en la 7.
+Decía «tres barras nuevas: P[0], P[5] y P[6]». **Ninguna de las tres es una
+tarea propia, y la de P[0] no existe.**
 
-**Files:**
-- Modify: `case/cad/sam17_case.scad` (`centros_transversal()`)
-- Modify: `case/clearance_budget.py` (`_centros_transversal()`, `solapes()`)
+**Lo que se hizo y por qué se tiró.** Se escribió `_centros_transversal()`, se
+metieron las barras en la misma lista de `railes` que recorre `solapes()` —eso
+sí era lo correcto— y la puerta salió ROJA con dos solapes reales contra el
+riel de panel del frente y contra la bandeja. La arista P[0] **ya está
+ocupada**: el riel bajó ahí el 2026-08-21 y costó 8.46 mm de alto de aparato.
+Deja 10.45 mm en X, o sea una barra de 10×10, que cediendo 5.352 mm a lo ancho
+de 528.62 mm no es una viga. Medido y escrito en **spec §4.2.1**.
 
-- [ ] **Paso 1: escribir el canario del solape primero**
+De paso, la fórmula del propio plan estaba **mal**: retirar el centro `r` sobre
+la bisectriz deja la barra a `r·sin(θ/2)` de cada cara —7.07 mm en una esquina
+recta, con media barra fuera del case— y no a `r`. Lo correcto es retirar
+`r / sin(θ/2)`. Va corregido en la Tarea 7, que es donde se escribe de verdad.
 
-Las transversales nuevas caen cerca de rieles y largueros existentes. Antes de
-dibujarlas, comprobar que `solapes()` las mira: añadirlas a `_cajas_solidas()`
-y correr `canario_solapes()`.
+**Lo que queda de esta tarea.** P[5] y P[6] no son barras nuevas: son los
+largueros `remate trasero` y `base trasera` **mudados** 25.46 mm. Escribirlas
+aquí, con los largueros todavía puestos, las hace solapar contra ellos mismos
+(centros a 15.46 mm con barras de 20). O sea que la mudanza y la muerte del
+larguero son **el mismo paso**, y ese paso es la Tarea 7.
 
-- [ ] **Paso 2: correr y ver ROJO** — `KeyError` de la función que falta.
+El trabajo de `base delantera` no lo hereda nadie: lo absorbe la bandeja
+subiendo a 10 mm (Tarea 8).
 
-- [ ] **Paso 3: implementar `centros_transversal()`**
-
-Cada centro sale de su vértice retirado hacia dentro por el radio de la barra,
-en la **bisectriz** de las dos aristas que concurren. Nunca una cota a mano:
-
-```python
-IDX_TRANSVERSAL = [0, 5, 6]   # P[0] es nueva; P[5] y P[6] heredan remate y base
-
-
-def _unitario(a: tuple[float, float], b: tuple[float, float]) -> tuple[float, float]:
-    d = math.hypot(b[0] - a[0], b[1] - a[1])
-    return ((b[0] - a[0]) / d, (b[1] - a[1]) / d)
-
-
-def _centros_transversal(p: dict[str, float], P: list[tuple[float, float]]
-                         ) -> list[tuple[float, float]]:
-    """Las tres barras propias del marco: las aristas que NO tienen riel.
-
-    Las otras cuatro ya llevan Z-Rail (spec §5.1) -- el case tenia medio
-    esqueleto perimetral montado sin estar dicho en ningun sitio. Cada centro
-    se retira del vertice por el radio de la barra en la BISECTRIZ de las dos
-    aristas que concurren, y no en x ni en y: retirarlo por un eje da una barra
-    que asoma por una de las dos caras, y en P[0] las dos caras son vistas."""
-    r, n, out = p["rail"] / 2, len(P), []
-    for i in IDX_TRANSVERSAL:
-        u = _unitario(P[i], P[(i - 1) % n])
-        v = _unitario(P[i], P[(i + 1) % n])
-        bx, by = u[0] + v[0], u[1] + v[1]
-        m = math.hypot(bx, by)
-        assert m > 1e-9, f"aristas colineales en P[{i}]: no hay bisectriz"
-        out.append((P[i][0] + r * bx / m, P[i][1] + r * by / m))
-    return out
-```
-
-Y su gemela en `sam17_case.scad` con la misma derivación. **Las dos tienen que
-dar lo mismo**: `check_dxf.py` compara el DXF contra el modelo, y una
-divergencia aquí sale como agujero fuera de sitio.
-
-- [ ] **Paso 4: correr y ver VERDE.** `solapes()` sin fallos.
-
-- [ ] **Paso 5: probar que muerde** — mover una transversal 20 mm dentro de un
-riel a propósito y ver que `solapes()` canta. Revertir.
-
-- [ ] **Paso 6: commit**
-
-```bash
-git commit -am "Las tres transversales del marco, y la de P[0] que no existia"
-```
+- [x] **Nada que hacer aquí.** El árbol quedó limpio; el hallazgo vive en la
+spec y en la Tarea 7.
 
 ---
 
@@ -556,31 +524,76 @@ git commit -m "Los cuatro Z-Rails dejan el acrilico y atornillan a la costilla"
 
 ---
 
-### Tarea 7: Se van los cuatro largueros
+### Tarea 7: Se van los cuatro largueros — y la mudanza es el mismo paso
 
-Ahora sí: existen las transversales (5) y los rieles ya no cuelgan del acrílico
-(6). **Esta es la tarea que Samuel pidió**, y llega la séptima porque antes el
-modelo quedaba a medias.
+Absorbe lo que quedaba vivo de la Tarea 5. Los rieles ya no cuelgan del
+acrílico (6). **Esta es la tarea que Samuel pidió.** Mudar y matar van juntos:
+poner la transversal de P[6] con `base trasera` todavía puesta las deja con los
+centros a 15.46 mm y barras de 20, o sea solapando.
 
 **Files:**
-- Modify: `case/cad/sam17_case.scad` (`centros_esqueleto()`)
+- Modify: `case/cad/sam17_case.scad` (`centros_esqueleto()`, `centros_transversal()`)
 - Modify: `case/clearance_budget.py` (`_centros_esqueleto()`, `NOMBRES_CE`,
-  `alineacion()`, `apoyo()`)
+  `_centros_transversal()`, `alineacion()`, `apoyo()`)
 
 - [ ] **Paso 1: escribir primero la puerta que exige que no queden largueros**
 
 ```python
     assert not _centros_esqueleto(p, P, cr), (
         "quedan largueros 2020 en el interior, y el 2026-08-26 se fueron los "
-        "cuatro: base trasera y remate trasero se mudaron a las aristas P[6] "
+        "cuatro: base trasera y remate trasero se MUDARON a las aristas P[6] "
         "y P[5], valle desaparecio porque P[3] ya tiene riel, y base delantera "
-        "desaparecio con su trabajo heredado por la transversal NUEVA de P[0].")
+        "desaparecio SIN heredero -- su trabajo lo absorbe la bandeja subiendo "
+        "a 10 mm, porque la arista P[0] esta ocupada por el riel de panel del "
+        "frente y solo admite una barra de 10x10 (spec 4.2.1).")
 ```
 
 - [ ] **Paso 2: correr y ver ROJO** — hay cuatro.
 
-- [ ] **Paso 3: vaciar `centros_esqueleto()`** en el `.scad` y su gemela, y
+- [ ] **Paso 3: escribir `_centros_transversal()` con la retracción correcta.**
+El centro NO se retira `r` sobre la bisectriz: eso lo deja a `r·sin(θ/2)` de
+cada cara (7.07 mm en una esquina recta) y saca media barra del case. La
+distancia sobre la bisectriz que deja la barra **tangente a las dos caras** es
+`r / sin(θ/2)`:
+
+```python
+IDX_TRANSVERSAL = [5, 6]      # P[0] NO: no cabe (spec 4.2.1)
+NOMBRES_CT = ["marco trasero alto", "marco trasero bajo"]
+
+
+def _centros_transversal(p, P):
+    """Las transversales del marco, tangentes a las DOS caras del vertice.
+
+    Retirar `r` sobre la bisectriz es la version facil y la equivocada: deja
+    la barra a r*sin(theta/2) de cada cara y en un vertice recto eso es 7.07
+    con media barra fuera. Lo que hace falta es r/sin(theta/2)."""
+    r, n, out = p["rail"] / 2, len(P), []
+    for i in IDX_TRANSVERSAL:
+        u = _unitario(P[i], P[(i - 1) % n])
+        v = _unitario(P[i], P[(i + 1) % n])
+        bx, by = u[0] + v[0], u[1] + v[1]
+        m = math.hypot(bx, by)
+        assert m > 1e-9, f"aristas colineales en P[{i}]: no hay bisectriz"
+        # m/2 = cos del semiangulo entre u y v; el seno sale del otro cateto.
+        # Se deriva, no se teclea.
+        sin_semi = math.sqrt(max(0.0, 1 - (m / 2) ** 2))
+        out.append((P[i][0] + (r / sin_semi) * bx / m,
+                    P[i][1] + (r / sin_semi) * by / m))
+    return out
+```
+
+**Autocomprobación obligatoria** — la fórmula vieja pasaba a ojo: en P[6], que
+es un vértice recto en (308.94, 0) con aristas hacia +Y y hacia −X, el centro
+tiene que caer en **(298.94, 10)** exactos, o sea la barra tangente al canto de
+abajo y al plano trasero. Si sale (301.87, 7.07), la retracción sigue mala.
+
+- [ ] **Paso 3b: vaciar `centros_esqueleto()`** en el `.scad` y su gemela, y
 re-apuntar `alineacion()` y `apoyo()` a `centros_transversal()`.
+
+- [ ] **Paso 3c: la transversal de P[6] contra la bandeja.** La barra ocupa
+y = 0..20 y la bandeja y = 0..t_base en ese mismo x: o la barra monta encima
+(como hace `base trasera` hoy, centro en `t_base + r`) o hay solape. Que lo
+cante `solapes()` antes de decidirlo a mano.
 
 - [ ] **Paso 4: correr las dos puertas y verlas en VERDE.**
 
@@ -597,35 +610,51 @@ git commit -am "Se van las cuatro barras del interior: el marco hace su trabajo"
 
 ---
 
-### Tarea 8: La bandeja de base pasa a aluminio de 5
+### Tarea 8: La bandeja de base pasa a aluminio de 10 — VOLADIZO
 
-Sin `base delantera`, el suelo apoya en P[0] y P[6]: vano de 280.94 mm. En
-acrílico de 8 cede 1.366 mm contra un techo de 0.60.
+**Replanteada el 2026-08-27.** Decía «aluminio de 5, vano biapoyado de 280.94
+entre P[0] y P[6]». La barra de P[0] no cabe (spec §4.2.1), así que no hay
+vano: hay **voladizo** desde la única línea trasera que queda, 271.45 mm hoy y
+279.45 tras la mudanza a P[6]. En acrílico de 8 cede 19.7 mm; en aluminio de 5,
+3.509. Samuel eligió que la bandeja aguante sola en vez de resucitar `base
+delantera`, y eso son 10 mm de plancha y +2.7 kg.
 
 **Files:**
-- Modify: `case/cad/params.scad` (`t_base` = 5, y deja de ser PMMA)
+- Modify: `case/cad/params.scad` (`t_base` = 10, y deja de ser PMMA)
 - Modify: `case/clearance_budget.py` (`guarda_piso()`)
 
 - [ ] **Paso 1: extender `guarda_piso()` con el vano nuevo**
 
+El apoyo **se lee de la geometría declarada**, no se teclea: es la cara
+delantera del cuerpo más adelantado que corre los 528 mm bajo la bandeja. Si
+alguien devuelve una barra al frente, `L` baja sola y la puerta deja de pedir
+10 mm — que es exactamente lo que tiene que pasar.
+
 ```python
-    L = _centros_transversal(p, P)[-1][0] - p["rail"] / 2
+    # MODO DE CARGA, igual que en guarda_tapa(): lo que corre los 528 mm
+    # enteros apoya en LINEA CONTINUA, asi que el vano entre M3 no existe
+    # para carga hacia abajo. Lo que flexa es el voladizo en X.
+    L = x_cara_apoyo - x0_bb
     I = perfil(p)["ancho_util"] * p["t_base"] ** 3 / 12
-    flecha = p["carga_mano"] * L ** 3 / (48 * E_ALUMINIO * I)
+    flecha = p["carga_mano"] * L ** 3 / (3 * E_ALUMINIO * I)
     assert flecha <= p["flecha_costado_max"], (
-        f"el suelo cede {flecha:.3f} mm en su vano de {L:.2f} y el techo son "
-        f"{p['flecha_costado_max']:.2f}. En acrilico de 8 daba 1.366 y por eso "
-        f"paso a aluminio: solo cerraba en PMMA a partir de 12 mm, que "
-        f"resucitaba una segunda linea de espesor.")
+        f"el suelo cede {flecha:.3f} mm volando {L:.2f} mm y el techo son "
+        f"{p['flecha_costado_max']:.2f}. NO se arregla con una barra delante: "
+        f"la arista P[0] la ocupa el riel de panel del frente y solo admite "
+        f"10x10, que cede 5.35 mm a lo ancho (spec 4.2.1). Se arregla con "
+        f"espesor, y por eso el suelo son 10 mm y no 5.")
 ```
 
 - [ ] **Paso 2: correr y ver ROJO** — con `t_base` = 8 de acrílico, E = 3000.
+**Ojo con el orden:** mientras `base delantera` siga puesta el voladizo es de
+68.85 mm y la puerta pasa sola. Esta tarea va **después de la 7** o mide una
+ficción.
 
-- [ ] **Paso 3: cambiar `t_base` a 5 y su material a aluminio**, con el
+- [ ] **Paso 3: cambiar `t_base` a 10 y su material a aluminio**, con el
 comentario que dice de dónde sale (spec §4.2) y que **la bandeja sale del
 `lienzo_2d`**, que es de acrílico y solo de acrílico.
 
-- [ ] **Paso 4: correr y ver VERDE** — flecha 0.243 mm.
+- [ ] **Paso 4: correr y ver VERDE** — flecha 0.439 mm, 6.16 MPa. Y de paso mirar lo que el espesor se come: `alto_interior_inferior` pierde 2 mm y `guarda_piso()` pide `y_bajo >= t_base + holgura_rail`.
 
 - [ ] **Paso 5: probar que muerde** — `t_base = 2` y ver que canta.
 
@@ -635,7 +664,7 @@ que se hizo con la tapa del valle el 2026-08-25.
 - [ ] **Paso 7: commit**
 
 ```bash
-git commit -am "El suelo pasa a aluminio de 5: en acrilico solo cerraba a 12"
+git commit -am "El suelo pasa a plancha de 10: vuela 271 mm y nadie lo apoya"
 ```
 
 ---
@@ -801,6 +830,9 @@ git commit -am "Los papeles alcanzan al marco: pliego, RFQ, README y rev. 21"
 - **Cerrar el racking, #203.** Este diseño no lo cierra con número y la spec lo
   dice. Se cierra cargando el prototipo.
 - **Medir el peso del chasis del PSU**, que es lo que convertiría los 200 N
-  heredados en el modo de carga real del suelo (spec §4.2). Va como issue.
+  heredados en el modo de carga real del suelo (spec §4.2). Va como issue, y
+  desde el 2026-08-27 **pesa más que antes**: de ese supuesto cuelgan ahora los
+  10 mm de plancha del suelo y 2.7 kg de aparato (§4.2.1). Si el modo real es
+  más suave, el suelo baja de espesor.
 - **El render.** `render.py` importa los assemblies; cuando la costilla entre en
   `assembly_aluminio()` el render la coge sola. Si no, es un hallazgo.

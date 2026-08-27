@@ -29,11 +29,11 @@ estructura sea un esqueleto de aluminio».
 |---|---|---|
 | 1 | **El costado sobrevive** con su perfil escalonado de acrílico de 8 mm, pero deja de cargar | Que el costado pasara a ser un relleno plano dentro de un marco —lo que literalmente muestra la foto— mataba `costado_2d.dxf`, `guarda_costado()` y la silueta entera |
 | 2 | **El marco es un perfil en L**: un ala agarra la cara interior del costado, la otra le tapa el canto | Ranura en U (canto dentro del marco): es **exactamente la geometría que falló en el intento anterior** — ver §3. Pletina plana sin ala: no tapa el canto y, medido, no aguanta (§4) |
-| 3 | **Las cuatro barras internas se van** al canto | Dejar `base delantera` dentro era mi recomendación por lo que cuesta (§4.2); Samuel decidió que se fueran las cuatro |
+| 3 | **Las cuatro barras internas se van** al canto | Dejar `base delantera` dentro era mi recomendación por lo que cuesta (§4.2); Samuel decidió que se fueran las cuatro. **La decisión se sostiene, pero su coste subió el 2026-08-27**: la transversal que iba a heredar su trabajo no cabe — §4.2.1 |
 | 4 | **Los Z-Rails atornillan a la costilla**, no al acrílico | Dejarlos en el costado significaba llamar «relleno» a una pieza que sigue sosteniendo paneles, tapas y ejes de giro. Jubilar los Z-Rails y meter la ranura de panel en el marco tiraba 4 rieles comprados (2026-08-18) y sacaba el case del estándar Eurorack de la rev. 4 |
 | 5 | ~~Fresado a medida~~ → **CHAPA PLEGADA** (corregido el 2026-08-26, ver §2.1) | Perfil de catálogo: la sección la mandaría el catálogo. Extrusión con matriz propia: no se amortiza en una unidad. **Fresado: se cayó al descubrirse que la L no se podía atornillar** |
 | 6 | ~~Costilla plana + tiras de canto~~ → **una sola pieza plegada** (§2.1) | Barras rectas con escuadras: 14 barras y 12 esquinas solo en los laterales. L continuo fresado de bloque: lo más caro con diferencia. **Tiras atornilladas: imposible, ver §2.1** |
-| 7 | **Bandeja de base en aluminio de 5 mm** | Acrílico de 12: pasa, pero resucita una segunda línea de espesor justo después de que la rev. 20 matara la de 5 mm. Aluminio de 4: pasa con 1.26× en vez de 2.5× |
+| 7 | ~~Bandeja de base en aluminio de 5 mm~~ → **aluminio de 10** (corregido el 2026-08-27, §4.2.1) | Acrílico de 12: pasa, pero resucita una segunda línea de espesor justo después de que la rev. 20 matara la de 5 mm. Los 5 mm salían de un vano biapoyado que ya no existe: sin apoyo delantero el suelo va **en voladizo** y a 5 mm cede 3.509 mm |
 | 8 | **Los ejes de giro se quedan escondidos** dentro del Z-Rail | Bisagra vista sobre la costilla —el detalle de la foto— movía el eje fuera del riel, y con él el radio de giro: las 180° de apertura son lo primero que se pierde, y costaron 16 mm de fondo |
 
 ### 2.1 CORRECCIÓN del 2026-08-26 — la costilla es chapa plegada
@@ -180,7 +180,7 @@ delantera de tornillos de la bandeja; sin él la plancha queda en voladizo de
 |---|---|---|---|
 | hoy, entre las dos filas de M3 | 202.60 mm | 0.512 mm | 1.80 MPa |
 | sin `base delantera`, sin nada nuevo | 271.45 mm en voladizo | **19.717 mm** | 9.63 MPa (fluencia 10) |
-| con la transversal del marco en P[0] | 280.94 mm biapoyado | 1.366 mm | 2.49 MPa |
+| ~~con la transversal del marco en P[0]~~ | ~~280.94 mm biapoyado~~ | ~~1.366 mm~~ | **esa barra NO CABE — §4.2.1** |
 
 La transversal que **aparece sola** en la esquina inferior delantera —arista
 P[0], que hoy no tiene barra ninguna— se come el 93 % del problema: de 19.7 mm
@@ -194,6 +194,10 @@ de 280.94 mm:
 | **aluminio 5** | **0.243 mm** | 6.38 MPa (Rp0.2 130) |
 | aluminio 4 | 0.475 mm | 9.97 MPa |
 
+**Todo este barrido murió el 2026-08-27**: mide un vano biapoyado que necesita
+la barra de P[0], y esa barra no cabe. El barrido vivo es el de §4.2.1, sobre
+el voladizo.
+
 **SUPUESTO HEREDADO, y hay que decirlo:** los 200 N vienen de `carga_mano`,
 que modela a alguien apoyándose. Para el costado y para la tapa del valle eso
 es correcto — son superficies que se tocan. Para el **suelo**, que va por
@@ -201,6 +205,51 @@ dentro, el modo real es el peso del chasis del PSU y el de la propia plancha
 al levantar el case, **y ese peso no está en ningún documento del repo**. Se
 usa el conservador que ya existe. Cuando el peso del PSU se mida, este número
 se revisa: puede que sobre bandeja.
+
+### 4.2.1 CORRECCIÓN del 2026-08-27 — la transversal de P[0] no cabe
+
+Al escribirla, `solapes()` la cantó contra dos cuerpos. **La esquina inferior
+delantera ya está ocupada**, y por algo que costó caro: el riel de panel del
+frente bajó ahí a propósito el 2026-08-21 y se llevó 8.46 mm de alto de
+aparato para que la bandeja le pasara por debajo. Medido contra su AABB real:
+
+| hueco libre en la arista P[0] | |
+|---|---|
+| hasta el morro del riel, en X | **10.45 mm** |
+| bajo su panza, en Y | 5.29 mm |
+
+Cabe una barra de 10×10 y no cabe nada mayor. Pero una barra de 10×10 cruzando
+los 528.62 mm **no es una viga**:
+
+| barra a lo ancho, 100 N (media carga) | flecha |
+|---|---|
+| 10×10 maciza — la que cabe | **5.352 mm** |
+| 20×20 maciza — la que serviría | 0.335 mm, y no cabe |
+
+Y el 2020 del BOM es **hueco**, así que su inercia real es menor todavía que la
+de ese macizo. La fila «con la transversal del marco en P[0]» de la tabla de
+§4.2 **es falsa**: esa barra no existe.
+
+**Lo que queda, y lo que se decidió.** Sin apoyo delantero el suelo vuela desde
+la única línea trasera que sobrevive a §5.1 —hoy `base trasera`, mañana la
+transversal de P[6]—, o sea 271.45 mm ahora y 279.45 después. Mismo modelo de
+§4.2 (`P L³/3EI`, `b = ancho_util`, 200 N):
+
+| bandeja de aluminio | flecha (271.45) | tensión | masa |
+|---|---|---|---|
+| 5 — lo que decía §4.2 | 3.509 mm | 24.65 MPa | 2.08 kg |
+| 8 | 0.857 mm | 9.63 MPa | 3.33 kg |
+| **10** | **0.439 mm** | **6.16 MPa** | **4.16 kg** |
+| 12 | 0.254 mm | 4.28 MPa | 4.99 kg |
+
+**Samuel eligió que la bandeja aguante sola** frente a resucitar `base
+delantera` en x=88.34, que es donde sí cabe una 2020 y era mi recomendación.
+El suelo pasa a **aluminio de 10**, y eso son **+2.7 kg** contra el acrílico de
+8 de hoy: el espesor no lo pide la resistencia (6.16 MPa contra 130 de Rp0.2,
+factor 21) sino el techo de flecha de 0.60 mm.
+
+Con 10 mm la pieza deja de ser chapa y pasa a ser **plancha**: sale de corte,
+no de plegado, y eso cambia la línea del pliego (§8).
 
 ### 4.3 El ancho del case crece 6 mm
 
@@ -229,7 +278,7 @@ crecimiento en 6 mm y no en 8 o 12.**
 | **Costado** | Piel. No sostiene nada | acrílico 8 mm — el `costado_2d` de hoy, con otra taladrería | 2 |
 | **Transversales** | Atan las dos costillas y reciben las filas de M3 de las planchas | aluminio | ver §5.1 |
 | **Z-Rails** | Paneles, tapas y ejes de giro | Tiptop 104 HP, los ya comprados, ahora atornillados a la costilla | 4 |
-| **Bandeja de base** | El suelo portante | aluminio 5 mm (§4.2) | 1 |
+| **Bandeja de base** | El suelo portante, **en voladizo** desde la transversal trasera | aluminio 10 mm (§4.2.1) | 1 |
 | **Zócalo** | Se ve y eleva. No carga | madera — ver §9 | 1 |
 
 ### 5.1 Cuántas transversales, y el hallazgo que ahorra la mitad del marco
@@ -259,7 +308,7 @@ los cuatro largueros de hoy le pasa una cosa distinta — decirlo en bloque
 | `base trasera` | **se muda** a la arista P[6], 25.46 mm hacia atrás |
 | `remate trasero` | **se muda** a la arista P[5], 25.46 mm hacia atrás |
 | `valle` | **desaparece**: la arista P[3] ya tiene el riel `cara_sup valle` |
-| `base delantera` | **desaparece**, y su trabajo lo hereda una transversal NUEVA en P[0] — que no es la misma barra en otro sitio, sino otra barra en una arista que hoy está vacía. Es la que salva la bandeja (§4.2) |
+| `base delantera` | **desaparece sin heredero**. Iba a heredarla una transversal nueva en P[0], pero esa arista está ocupada por el riel de panel del frente y solo admite 10×10, que no es viga (§4.2.1). El suelo se salva subiendo a 10 mm, no con una barra |
 
 **SALVEDAD, y sale del propio README:** la cara del Z-Rail es **pared de 1.2
 mm**, y esa es la razón por la que la tapa de remate estuvo pegada hasta el
@@ -269,6 +318,7 @@ acotarlo con una puerta, no suponerlo** (§7).
 
 ## 6. Lo que NO se hace, y por qué — para que nadie lo reintente
 
+- **Transversal en la arista P[0]**: no cabe. El riel de panel del frente deja 10.45 mm y una barra de 10×10 cede 5.35 mm a lo ancho (§4.2.1). Si vuelve a hacer falta apoyo delantero, el sitio es x=88.34 —donde estaba `base delantera`—, no el canto.
 - **Ranura en U**: resucita el fallo del postmortem (§3).
 - **Costilla sin tira de canto**: no pasa a ningún espesor, y a 3 mm fluye
   (§4.1).
@@ -323,7 +373,8 @@ mismo motivo por el que no van las tres piezas de acero ni la tapa del valle.
 | material | proceso | piezas |
 |---|---|---|
 | PMMA colado GS naranja, 8 mm | fresado CNC | costados ×2, tapa de remate, trasera |
-| Aluminio | **chapa**: bandeja de base (5 mm), tapa del valle (3 mm) | 2 |
+| Aluminio | **chapa**: tapa del valle (3 mm) | 1 |
+| Aluminio | **plancha, corte**: bandeja de base (10 mm) — ya no es chapa (§4.2.1) | 1 |
 | Aluminio | **chapa plegada**: costillas ×2 — al taller del chasis, no a uno nuevo (§2.1) | 2 |
 | Acero | corte + plegado | chasis ×3 |
 | Madera | ver §9 | zócalo |
