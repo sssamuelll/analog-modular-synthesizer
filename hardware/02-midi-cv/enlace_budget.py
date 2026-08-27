@@ -437,6 +437,31 @@ def demo() -> None:
                 superior = medio
         return (inferior + superior) / 2.0
 
+    # El umbral es AHORA el numero que decide si el mazo pasa, asi que no puede
+    # quedarse en un print: la constitucion pide autocomprobacion y asercion en
+    # los presupuestos que deciden. Lo cazo codex el 2026-08-27.
+    #
+    # Se comprueba lo que DEFINE un umbral, no su valor: que justo por debajo
+    # pasa y justo por encima no. No es tautologico -- `_pasa` se evalua aparte
+    # del bucle que devolvio el numero, asi que una biseccion rota canta aqui.
+    for _caso in CASOS:
+        _u = umbral_por_biseccion((_caso,))
+        if _u is None:
+            continue
+        _d = 2 * tolerancia_largo
+        _n, _oy, _st = _caso[1], _caso[2], _caso[3]
+
+        def _pasa(largo: float, _n=_n, _oy=_oy, _st=_st) -> bool:
+            return limite(capacidad_red(_n, largo, _oy, _st), r_total) >= f_min
+
+        assert _pasa(_u - _d), (
+            f"la biseccion de '{_caso[0]}' devolvio {_u*1e3:.1f} mm de umbral, "
+            f"pero {(_u-_d)*1e3:.1f} --por DEBAJO-- no pasa. No es un umbral")
+        assert not _pasa(_u + _d), (
+            f"la biseccion de '{_caso[0]}' devolvio {_u*1e3:.1f} mm de umbral, "
+            f"pero {(_u+_d)*1e3:.1f} --por ENCIMA-- tambien pasa. O el umbral "
+            f"esta bajo, o la comparacion se invirtio")
+
     print("\numbral continuo por biseccion (tolerancia 0.1 mm):")
     for caso in CASOS:
         nombre = caso[0]
