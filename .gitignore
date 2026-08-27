@@ -65,8 +65,11 @@ target/
 # STL nuevo fallara EN SILENCIO y pidiera -f sin que nadie supiera por que
 # (issue #48). Aqui esta escrito con su ruta y su motivo.
 case/renders/build/
-case/renders/olders/
-case/renders/oldest/
+# UNA sola carpeta de archivo desde el 2026-08-27. Habia dos, `olders` y
+# `oldest`, y la escalera no daba para una tercera: la de hoy habria tenido que
+# llamarse `oldests`. Ahora todas cuelgan de `viejos/`, la vieja por su nombre y
+# la nueva por su fecha.
+case/renders/viejos/
 # Los PNG de render no entran al historial, SALVO los que ilustran un documento.
 #
 # La regla no es "PNG si o no": es si alguien lo mira desde un .md. Medido el

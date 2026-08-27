@@ -738,7 +738,9 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
       retirada y el suelo pasado a tabla de madera. Vano libre del costado de
       119.0 a **65.2 mm**, flecha de 0.38 a **0.11**
 - [x] Plantilla de panel KiCad
-- [x] Render del conjunto — dos vistas: frontal
+- [x] **Render del conjunto rehecho** (2026-08-27) con la costilla, la tabla y
+      las alas dobladas. Los anteriores están en `renders/viejos/`, ordenados
+      por fecha. Dos vistas: frontal
       ([`renders/sam17-case.png`](renders/sam17-case.png)) y trasera
       ([`renders/sam17-case-trasera.png`](renders/sam17-case-trasera.png)).
       La trasera es la que importa: muestra las tres ondas — sierra, triángulo

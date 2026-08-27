@@ -81,6 +81,19 @@ alu = importar("assembly_aluminio")
 alu.data.materials.append(mat(
     "aluminio", **{"Base Color": (0.85, 0.86, 0.88, 1.0),
                    "Metallic": 1.0, "Roughness": 0.35}))
+# LA TABLA, en su propio STL desde el 2026-08-27. Estuvo dentro del ensamblado
+# de acrilico mientras el suelo era PMMA, y meterla ahi ahora la pintaria de
+# naranja translucido: un render que miente sobre una decision de material.
+#
+# EL COLOR ES DE MIRAR, NO UNA COTA -- igual que el naranja del acrilico (ver
+# README). La especie no esta elegida: las cuentas del modelo van contra
+# E = 11000 MPa, que es nogal o arce, y esto es un nogal de catalogo. Cuando
+# el pliego cierre la especie, este numero se cambia aqui y en ningun otro
+# sitio. Sin Metallic y con roughness alto: la madera no brilla.
+mad = importar("assembly_madera")
+mad.data.materials.append(mat(
+    "nogal", **{"Base Color": (0.28, 0.16, 0.09, 1.0),
+                "Roughness": 0.55, "Specular IOR Level": 0.35}))
 
 esc = bpy.context.scene
 esc.render.engine = "CYCLES"
@@ -116,7 +129,7 @@ nt.links.new(fondo_visible.outputs["Background"], mezcla.inputs[2])  # Fac=1 (ca
 nt.links.new(mezcla.outputs["Shader"], nt.nodes["World Output"].inputs["Surface"])
 esc.world = mundo
 
-# --- bbox real de las 2 mallas (Ruling B) --------------------------------
+# --- bbox real de las 3 mallas (Ruling B) --------------------------------
 # El chasis de acero del PSU (#107) NO se importa aqui, y se probo: se rendeo
 # con el dentro y no se ve en ninguna de las dos vistas -- vive en el piso
 # inferior, detras de los paneles y de la piel. Meterlo costaba minutos de
@@ -126,8 +139,11 @@ esc.world = mundo
 # linear_extrude sobre Z): X = profundidad, Y = altura (arriba),
 # Z = ancho. Confirmado con el bbox real: X en [-10, 360], Y en [-5, 396],
 # Z en [0, 500] -- coincide con el board.
+# LAS TRES MALLAS, no dos. La tabla sobresale 10 mm del cuerpo por los cuatro
+# lados y es lo mas bajo del case: dejarla fuera del bbox encuadra un aparato
+# que no es el que se ve, y el zocalo saldria cortado por abajo.
 esquinas = [obj.matrix_world @ Vector(c)
-            for obj in (acr, alu) for c in obj.bound_box]
+            for obj in (acr, alu, mad) for c in obj.bound_box]
 xs, ys, zs = ([p[i] for p in esquinas] for i in range(3))
 minv = Vector((min(xs), min(ys), min(zs)))
 maxv = Vector((max(xs), max(ys), max(zs)))

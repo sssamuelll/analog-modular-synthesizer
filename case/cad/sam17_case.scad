@@ -513,8 +513,53 @@ module costilla_2d() {
     }
 }
 
-// El SOLIDO plegado, para el render y para solapes(). No es lo que se corta.
-module costilla() { linear_extrude(t_costilla) costilla_2d(); }
+// EL SOLIDO PLEGADO, y ojo con la diferencia: NO es linear_extrude del 2D.
+// costilla_2d() es el DESARROLLO -- las alas salen tumbadas por fuera del
+// contorno --, asi que extruirlo tal cual da una pieza con aletas planas
+// asomando de la silueta del case. Se vio en el render del 2026-08-27 y parecia
+// un defecto del modelo; era el desarrollo hecho solido.
+//
+// Aqui las alas van DOBLADAS: el alma en su plano y cada ala levantada 90 sobre
+// su tramo, hacia DENTRO del case (spec 4.3 -- el ala interior se mete en el
+// hueco entre el Z-Rail y el costado). El alivio de 6 x 6 de P6 sale solo,
+// porque las retracciones son las mismas que usa costilla_ala().
+module costilla_alma() {
+    difference() {
+        perfil_lateral();
+        offset(delta = -ala_costilla) perfil_lateral();
+        for (c = centros_rail()) translate(c) circle(d = d_M4_paso + kerf);
+        for (c = centros_transversal()) translate(c) circle(d = d_M5_paso + kerf);
+        translate([pv_x(), pts_perfil()[3].y - pv_a()])
+            circle(d = d_M3_paso + kerf);
+    }
+}
+
+// La huella 2D de un ala YA DOBLADA: la banda de t_costilla de ancho pegada por
+// dentro al tramo i. Levantarla es extruirla en Z.
+module costilla_ala_huella(i) {
+    P = pts_perfil();
+    n = len(P);
+    a = P[i];
+    b = P[(i+1) % n];
+    d = b - a;
+    L = norm(d);
+    u = d / L;
+    nx = [-u.y, u.x];                       // normal exterior
+    r0 = costilla_lleva_ala((i-1+n) % n) ? cost_sb() : 0;
+    r1 = costilla_lleva_ala((i+1) % n)   ? cost_sb() : 0;
+    p0 = a + u*r0;
+    p1 = b - u*r1;
+    polygon([p0, p1, p1 - nx*t_costilla, p0 - nx*t_costilla]);
+}
+
+module costilla() {
+    P = pts_perfil();
+    linear_extrude(t_costilla) costilla_alma();
+    for (i = [0 : len(P)-1])
+        if (costilla_lleva_ala(i))
+            translate([0, 0, t_costilla])
+                linear_extrude(cost_vuelo()) costilla_ala_huella(i);
+}
 
 module rail_2020(largo) { cube([rail, largo, rail], center = true); }
 
@@ -1266,6 +1311,7 @@ else if (PART == "costilla_2d")    costilla_2d();
 else if (PART == "assembly")           assembly();
 else if (PART == "assembly_acrilico")  assembly_acrilico();
 else if (PART == "assembly_aluminio")  assembly_aluminio();
+else if (PART == "assembly_madera")    assembly_madera();
 else if (PART == "bandeja_base_2d")      bandeja_base_2d();
 else if (PART == "tapa_valle_2d")        tapa_valle_2d();
 else if (PART == "remate_sup_2d")        remate_sup_2d();
@@ -1294,6 +1340,16 @@ else assert(false, str("PART desconocido: ", PART));
 module costados() {
     costado();
     translate([0, 0, ancho_total - t_cheek]) costado();
+}
+
+// Las dos costillas, por dentro de los dos costados. Con las alas DOBLADAS
+// hacia dentro -- ver costilla(), que no es el desarrollo extruido.
+module costillas() {
+    translate([0, 0, t_cheek]) costilla();
+    // la del otro lado va ESPEJADA: sus alas tienen que doblar hacia dentro
+    // igual que las de esta, o sea hacia -Z desde su propio plano.
+    translate([0, 0, ancho_total - t_cheek])
+        mirror([0, 0, 1]) costilla();
 }
 
 // railes de panel (centros_rail(), 4) van a ras de su cara: giro extra
@@ -1382,7 +1438,6 @@ module tapa_valle() {
 // fue a assembly_aluminio(). Si vuelve aqui, el render la pinta translucida y
 // naranja y ensena una pieza que no existe -- que es peor que no renderizarla.
 module planchas_acrilico() {
-    bandeja_base();
     piel_trasera();
     remate_sup();
 }
@@ -1484,6 +1539,14 @@ module assembly_acrilico() {           // STL separado para Blender (Task 8)
     planchas_acrilico();
 }
 
+// LA TABLA, en su propio STL. Sale de assembly_acrilico() el 2026-08-27 porque
+// dejo de ser acrilico: es madera, y en el render tiene que verse como madera.
+// Meterla en el ensamblado naranja la pintaba de naranja translucido, que es
+// justo el tipo de render que miente sobre una decision de material.
+module assembly_madera() {
+    bandeja_base();
+}
+
 // OJO CON EL WARNING de 2-manifold que suelta este export: es INHERENTE y no un
 // defecto que arreglar. Aqui hay cuerpos que se tocan A PROPOSITO -- el dorso
 // del panel apoya EXACTAMENTE en la cara del riel (esa distancia ES t_panel) y
@@ -1495,6 +1558,10 @@ module assembly_acrilico() {           // STL separado para Blender (Task 8)
 module assembly_aluminio() {           // idem, perfiles 2020 + paneles solidos
     rails();
     paneles();
+    // LAS DOS COSTILLAS. Entran aqui el 2026-08-27, y llegaban tarde: son la
+    // pieza PORTANTE del case desde el 26 y el render llevaba un dia
+    // ensenando un aparato sostenido por su propia piel.
+    costillas();
     // La tapa del valle. Entra aqui el 2026-08-25 al dejar de ser acrilico de 5
     // y pasar a aluminio de 3, y su sitio es este por la misma razon por la que
     // el cambio no rompe el lenguaje visual: queda entre los paneles de las dos
