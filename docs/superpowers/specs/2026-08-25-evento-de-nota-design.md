@@ -6,10 +6,18 @@
 > [Voz total §3.3](2026-08-23-modulo-voz-total-design.md) —*«el formato del
 > mensaje, su sello de tiempo y la entrega al esclavo no están diseñados»*— y el
 > riesgo 2 de [orquestación §9](2026-08-22-vco-orquestacion-design.md). El
-> riesgo 1 de esa misma sección **ya no existe**: lo disolvió
-> [el enlace sin jefe](2026-08-25-enlace-sin-jefe-design.md) —**PR #201, sin
-> mergear**, así que este enlace no resuelve hasta que entre— al matar el reenvío
-> maestro→esclavo, y este papel se escribe encima de ese estado.
+> riesgo 1 de esa misma sección **ya no existe**: lo disolvió la muerte del
+> reenvío maestro→esclavo, y este papel se escribió encima de ese estado.
+>
+> **Enmienda del 2026-08-27.** Ese estado venía del PR #201 («el enlace sin
+> jefe»), que **se cerró sin mergear**: su premisa —dos RP2350B con un maestro
+> y un subordinado— murió cuando la Voz pasó a un solo STM32N657
+> ([motor digital §1](2026-08-26-motor-digital-design.md)). El documento que
+> este papel citaba **no existe y no va a existir**; sus hallazgos que
+> sobrevivían entraron a `main` por el PR #225, dentro de
+> [orquestación](2026-08-22-vco-orquestacion-design.md). Cada cita a «el enlace
+> sin jefe» que queda abajo está redirigida o marcada. Lo que este papel decide
+> sigue en pie; lo que este papel **cuenta** no — §0.1 dice cuál es cuál.
 >
 > Y cierra la parte 2 del **#160**, que pedía *«diseñar el evento con sello de
 > tiempo dentro de la trama SPI una vez, sirviendo a los gates del #158 y a la
@@ -28,6 +36,44 @@ tres tienen su sitio en §8 y §9.
 
 Nada de lo que hay aquí está medido. Son cuentas, contratos citados y una
 decisión de Samuel. Las condiciones están en §9, escritas como condiciones.
+
+### 0.1 Qué sigue en pie, qué murió, y qué está en suspenso (2026-08-27)
+
+Este papel se escribió el 25. Entre esa fecha y hoy el instrumento cambió de
+chip, y hay una propuesta de enlace sin sellar. Una auditoría de vigencia
+encontró veintitrés afirmaciones tocadas. **No todas están tocadas por lo
+mismo**, y la diferencia decide qué se puede usar:
+
+**A. Muerto por el chip — decidido, en `main`, no se recupera.** La Voz dejó de
+ser dos RP2350B en dos columnas y pasó a un solo STM32N657
+([motor digital §1](2026-08-26-motor-digital-design.md)). Con eso caen: la
+columna B y su falta de `MISO` (§D6), el sesgo *entre columnas* (C5), «el
+evento no viaja por el bus privado entre columnas» (R-E6), el reparto de
+instancias 0–7 / 8–15 (§D5), el reparto de núcleos entre dos micros (§8), y el
+caso «8 + T» del mazo con su umbral de 721 mm y sus 8,54 MHz, que
+`enlace_budget.py` marca hoy como topología muerta.
+
+**B. En suspenso por una decisión que no se ha tomado — ni vivo ni muerto.**
+Toda la aritmética de bus de este papel (el giro de lazo de 54,4 µs, la
+ocupación del 43,5 %, el techo del 50 %, los 9,19 kHz, el límite de 100 µs y
+1000 bits, el margen de 2,2 %, los +0,58 MHz por módulo) cuelga de que el J2
+sea **un bus compartido con un reloj común**. El
+[J2 punto a punto](2026-08-25-j2-punto-a-punto-design.md) propone justo lo
+contrario —un enlace privado por ranura, con reloj propio y `MISO` full duplex,
+y una regla que prohíbe sumar ocupaciones de enlaces distintos contra un techo
+común— pero está **propuesto, pendiente de Samuel**. Mientras no se decida:
+
+> **Ninguna cifra de bus de este papel se usa para autorizar nada.** Si el J2
+> punto a punto entra, hay que rehacerlas todas contra el enlace privado. Si se
+> rechaza, vuelven a valer tal cual. No se tocan hoy porque reescribirlas
+> contra una propuesta sin sellar sería fabricar autoridad.
+
+**C. Defectos propios de este papel, que no dependen de ninguna de las dos.**
+Tres guiones que cita no existen —`evento_budget.py`, `ataque_budget.py` y
+`trama_j2_budget.py`— y el papel llega a aseverar contra el primero como si
+corriera (C3, §7). El censo de PIO de §8 sobrecuenta: `pio_budget.py` mueve
+cuatro máquinas y cuatro DMA al N657. Y hay doce cifras de diseño sin fuente
+citable, listadas en el **#227**, que es donde se saldan.
 
 ---
 
@@ -207,11 +253,19 @@ columna» **no** es propiedad del modelo: la junta del #201 encontró que el cen
 publica `estado de columna` con `instancia = columna`, ×2, en la ranura M. R-E3
 vale para el evento y no debe citarse como ley general.
 
-Sale de D4 del enlace sin jefe —*«ranuras lógicas funcionales, nunca por
+Salía de D4 del enlace sin jefe —*«ranuras lógicas funcionales, nunca por
 micro»*— y de su reparto de broadcast: los dos micros oyen todo y cada uno actúa
 sobre las instancias que le tocan (0–7 la cabecera, 8–15 la columna B). **Desde
 fuera nadie sabe que hay dos cerebros**, y el evento no puede ser quien lo
 destape.
+
+> **Enmienda 2026-08-27 (cubo A).** El reparto de broadcast murió con el chip:
+> hay un micro, no dos, así que no hay nada que ocultar desde fuera. **La regla
+> sí sobrevive, y más ancha**: una ranura lógica jamás refleja anatomía de
+> hardware — vive hoy en
+> [orquestación §«Decisiones abiertas», punto 1](2026-08-22-vco-orquestacion-design.md),
+> donde además se cerró en **DOS ranuras**, por espacio de direcciones. R-E3 se
+> apoya en esa regla, no en el reparto muerto.
 
 La forma la da `ParamId` (`software/nucleo/core/src/param.rs`), que ya es una
 ruta de tres niveles de 4 bits más instancia de 4. Un evento usa **la ruta y la
@@ -378,8 +432,11 @@ decirlo porque no es gratis.
 > miden lo mismo, y con D3 dos bloques de tono tampoco. La cabecera dice qué
 > viene y cuánto.
 
-Las dos caen sobre el riesgo 5 del enlace sin jefe —*«el oyente de PIO, firmware
-nuevo»*— y **lo agravan**. Eso tiene su sitio: el **#205**, que este papel no
+Las dos caían sobre el riesgo 5 del enlace sin jefe —*«el oyente de PIO,
+firmware nuevo»*— y **lo agravaban**. *(Ese riesgo se quedó sin documento al
+cerrarse el #201 y **no** fue de los rescatados a `main`: hoy es una cita
+huérfana. El agravante sigue siendo real mientras el receptor sea de PIO, pero
+ya no tiene papel que lo sostenga.)* Eso tiene su sitio: el **#205**, que este papel no
 resuelve y del que depende. Su tabla, con la cuenta corrida:
 
 | Consumidor del PIO del micro de la Voz | Máquinas |
@@ -430,6 +487,11 @@ nada.
 > cerebro por el J2 y llega a las dos columnas por el mismo flanco. Si viajara
 > por dentro, la asimetría que el enlace sin jefe acaba de matar volvería por la
 > puerta de atrás. Es R-S4 aplicada al evento.
+>
+> **Enmienda 2026-08-27 (cubo A): SIN SUJETO.** No hay bus privado entre
+> columnas porque no hay columnas — un solo N657
+> ([motor digital §1](2026-08-26-motor-digital-design.md)). La regla no se
+> reescribe para el mundo nuevo aquí: eso le toca al J2 cuando se decida.
 
 > **R-E7. El módulo no genera eventos.** Sigue valiendo R-J3: *«el módulo nunca
 > habla sin que le pregunten»*. Un panel que se toca produce **medidas** que
@@ -506,11 +568,16 @@ lea como hechos.
    > compartirían núcleo con lo que decide emitir el evento.
 
    Decisión de Samuel, no de este papel ni del #150.
-3. **C3 — El peor caso de D3 cumple R-E1** con la cabecera real. Lo asevera
-   `evento_budget.py`.
+3. **C3 — El peor caso de D3 cumple R-E1** con la cabecera real. Lo aseveraría
+   `evento_budget.py` — **que no existe** (cubo C de §0.1). Hasta que se escriba,
+   C3 no está aseverada por nadie: es una condición declarada, no comprobada.
 4. **C4 — El ancho de la fuerza** no estrangula MIDI 2.0 ni infla el mensaje.
-5. **C5 — El sesgo entre columnas se MIDE, y el argumento que lo daba por
-   pequeño no vale.** §4.5 del enlace sin jefe lo justificaba como *«diferencia
+5. ~~**C5 — El sesgo entre columnas se MIDE, y el argumento que lo daba por
+   pequeño no vale.**~~ **SIN SUJETO desde el 2026-08-27 (cubo A de §0.1): no
+   hay columnas.** El razonamiento de abajo se conserva porque su conclusión
+   —una asimetría estructural no se puede dar por residual sin medirla— es la
+   que hay que reaplicar al sesgo que sí queda vivo: el que hay entre finales de
+   trama de **enlaces distintos**, si el J2 punto a punto entra. Texto original: §4.5 del enlace sin jefe lo justificaba como *«diferencia
    de cómputo local entre dos copias del mismo binario»*. La junta del #201
    demostró que es falso: el núcleo 0 de la cabecera lleva **además** la ventana
    de `MISO` con su regla de no perderla, la consolidación de medidas y el
@@ -518,8 +585,11 @@ lea como hechos.
    contra PIO). **La asimetría es estructural, no residual.** El número puede
    seguir siendo bueno; el argumento no. `evento_budget.py` lo asevera contra
    medida, nunca contra esa frase.
-6. **C6 — Este papel se escribe sobre el PR #201, que no está mergeado y que
-   NO pasó su junta adversarial de cinco agentes** (2026-08-25). Estado
+6. ~~**C6 — Este papel se escribe sobre el PR #201, que no está mergeado y que
+   NO pasó su junta adversarial de cinco agentes** (2026-08-25).~~
+   **CERRADA el 2026-08-27, en negativo: el #201 se cerró sin mergear** y su
+   premisa de doble micro murió con el chip. La condición ya no se puede
+   cumplir; lo que este papel heredaba de él está clasificado en §0.1. Estado
    comprobado con su autor, decisión por decisión:
 
    | | |
@@ -586,7 +656,8 @@ Decisiones de Samuel, en orden:
 
 1. **Destino direccionable, campo de borde abre/cierra/dispara, y solo lo
    instantáneo** — lo continuo por parámetros. *(Previas a esta sesión, citadas
-   por el enlace sin jefe §11.)*
+   por el enlace sin jefe §11 — documento cerrado sin mergear; la decisión es
+   de Samuel y no depende de ese papel.)*
 2. **El evento no espera turno.** *«Que las notas no viajen en un autobús, que
    viajen cada una en su ferrari.»*
 3. **Todo lo demás tampoco, si cabe.** Se comprobó que no cabe: 1408 bits por
