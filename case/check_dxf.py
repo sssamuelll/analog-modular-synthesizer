@@ -615,7 +615,16 @@ def guarda_costado() -> list[str]:
     Ahora el costado no lleva un solo tornillo: queda capturado entre las dos
     alas de la costilla, que lo agarran por TODO su perimetro. El vano deja de
     ser "distancia a un punto" y pasa a ser "distancia al canto de la ventana",
-    que es apoyo continuo. Se mide contra costilla_2d.dxf -- el fichero, no una
+    que es apoyo continuo.
+
+    Y EL 2026-08-27 EL APOYO LE LLEGA POR LA OTRA CARA. Con la inversion, la
+    costilla pasa a ser la capa de FUERA (z 0..t_costilla) y el acrilico queda
+    por dentro: el marco ya no lo sostiene desde atras, lo PISA desde delante, y
+    la junta de EPDM lo empuja contra las piezas interiores. La geometria del
+    barrido no cambia -- la ventana esta en el mismo sitio en X y en Y, que es
+    el plano donde esta puerta mide -- pero el modelo mental si, y el numero
+    tiene que salir igual: vano 65.2 mm, flecha 0.11. Si esos dos se mueven,
+    algo mas cambio y hay que averiguar que antes de seguir. Se mide contra costilla_2d.dxf -- el fichero, no una
     copia del offset en Python -- por la misma razon que el contorno.
 
     Lo que eso vale, y es el pago de todo el esqueleto: el vano cae de 119.0 a

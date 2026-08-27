@@ -568,6 +568,16 @@ chaflan         = 0.5;
 // El cuerpo de acrilico queda con UN solo espesor, 8.
 t_valle    = 3;    // ALUMINIO. Ver guarda_valle(); el material va en el PLIEGO
 t_cheek    = 8;    // costados portantes
+// Con el marco por fuera, el M4 tiene que cruzar el acrilico antes de morder el
+// Z-Rail, y al apretarlo lo dejaria pinzado entre dos caras de aluminio. El
+// PMMA fluye bajo carga sostenida, asi que el casquillo se come el apriete. Se
+// dimensiona contra el acrilico MAS GRUESO del lote: 8 + 1.2 de tolerancia =
+// 9.2, mas 0.3 de aire.
+L_casquillo = 9.5;
+// La junta de EPDM entre el ala de la costilla y la cara del acrilico lo empuja
+// contra las piezas interiores y se come el juego que deja el acrilico mas
+// delgado: 9.5 - 6.8 = 2.7 mm en el peor caso.
+t_junta = 4;
 // SUELO del case. La bandeja de base dejo de ser una plancha del cuerpo el
 // 2026-08-17: ya no se apoya ENCIMA de los dos largueros -- 20 + 5 = 25 mm de
 // sandwich justo debajo del riel del panel -- sino que pasa a ser el propio
@@ -700,10 +710,14 @@ largo_riel      = 528.32;
 // Estuvo escrito a mano (544.32) mientras el comentario de arriba daba la
 // formula, asi que ancho_util coincidia con el largo del riel por CASUALIDAD
 // ARITMETICA y no por derivacion -- la clase de cota que parece verificada y
-// nunca se comprobo. Hoy hay tres cosas metidas en ese hueco: el riel, su
+// nunca se comprobo. Antes de invertir las capas habia tres cosas metidas en
+// ese hueco: el riel, su
 // holgura de montaje y las dos alas de costilla. clearance_budget.py calcula
 // esta misma formula y se niega a arrancar si vuelve a ser literal.
-ancho_total     = largo_riel + hol_riel + 2*t_costilla + 2*t_cheek;
+// Con la inversion, ademas, cambia quien fija el hueco: el acrilico dejo de
+// fijarlo y ahora lo fija el casquillo que lo atraviesa. Por eso 2*t_cheek sale
+// de la derivacion y entra 2*L_casquillo.
+ancho_total     = largo_riel + hol_riel + 2*L_casquillo + 2*t_costilla;
 rail_er_alto    = 10;
 rail_er_fondo   = 23.8;
 rail_er_eje     = 14.3;

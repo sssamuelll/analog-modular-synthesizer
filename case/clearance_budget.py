@@ -38,16 +38,18 @@ def leer_params() -> dict[str, float]:
     #
     # POR QUE DEJO DE SER LITERAL: estuvo en 544.32 escrito a mano mientras el
     # comentario de al lado daba la formula, asi que ancho_util coincidia con
-    # el largo del riel por casualidad aritmetica. Con la holgura de montaje
-    # metida en ese hueco, un literal se desincroniza al primer cambio y el
-    # sintoma es un riel que no entra.
+    # el largo del riel por casualidad aritmetica. Desde que el marco va POR
+    # FUERA, el acrilico ya no fija el hueco entre marco y riel: lo fija el
+    # casquillo que atraviesa el acrilico y se come el apriete. Con la holgura
+    # de montaje metida en ese hueco, un literal se desincroniza al primer
+    # cambio y el sintoma es un riel que no entra.
     derivado = (p["largo_riel"] + p["hol_riel"]
-                + 2 * p["t_costilla"] + 2 * p["t_cheek"])
+                + 2 * p["L_casquillo"] + 2 * p["t_costilla"])
     if "ancho_total" in p:
         raise SystemExit(
             f"params.scad: ancho_total volvio a ser un literal ({p['ancho_total']:.2f}). "
             f"Es DERIVADO desde el 2026-08-26: largo_riel + hol_riel + "
-            f"2*t_costilla + 2*t_cheek "
+            f"2*L_casquillo + 2*t_costilla "
             f"= {derivado:.2f}. Un literal aqui vuelve a esconder si el riel "
             f"cabe o no.")
     p["ancho_total"] = derivado
@@ -91,13 +93,13 @@ def perfil(p: dict[str, float]) -> dict[str, float]:
         # datum del interior es y=0 y el case gana los 8 mm que ocupaba la
         # plancha de acrilico.
         "alto_interior_inferior": y_entrepiso - p["t_valle"],
-        # EL HUECO ENTRE COSTILLAS, no entre acrilicos, desde el 2026-08-26.
-        # Todo lo que vive dentro del case -- largueros, rieles, planchas -- va
-        # de cara interna a cara interna, y esas caras dejaron de ser el
-        # acrilico: son el ala de la costilla, que se le monta encima. Restar
-        # solo t_cheek dejaria 2*t_costilla de hueco fantasma, y las planchas
-        # crecerian 6.3 mm para llenar un sitio que ya esta ocupado.
-        "ancho_util": (p["ancho_total"] - 2 * p["t_cheek"]
+        # LA PUNTA A PUNTA DEL Z-RAIL, no el hueco entre acrilicos. Desde que
+        # el aluminio va por fuera, ancho_total suma a cada lado el casquillo
+        # que cruza el acrilico y el espesor de la costilla. Restar esas dos
+        # capas devuelve largo_riel + hol_riel: el acrilico queda por dentro y
+        # su espesor ya no fija esta cota. Cambiar el orden de las capas no
+        # puede cambiar el ancho util que se compro en el riel.
+        "ancho_util": (p["ancho_total"] - 2 * p["L_casquillo"]
                        - 2 * p["t_costilla"]),
     }
 
@@ -1723,6 +1725,57 @@ def guarda_fresado(p: dict[str, float]) -> None:
           f"(radio {r:.1f}) -- sin cambio de util")
 
 
+def guarda_apilado(p: dict[str, float]) -> None:
+    """El aluminio es la capa de FUERA y el acrilico la de dentro.
+
+    NACE EL 2026-08-27 CON LA INVERSION, y es una puerta de ORDEN, no de cota:
+    lo que verifica es cual pieza esta mas afuera, que hasta hoy era el acrilico
+    y a partir de hoy es la costilla. Sin ella el orden de las capas vive en dos
+    translate() del .scad y nadie los cruza con nada.
+
+    Y verifica una segunda cosa que la primera no implica: que entre el acrilico
+    y el marco quepa la JUNTA. El casquillo se dimensiona contra el peor caso
+    del lote (spec 3.3), asi que en el caso nominal sobra sitio -- y ese sitio
+    lo ocupa la junta, no el aire.
+
+    POR QUE HAY CASQUILLO. Con el marco por fuera, el M4 del riel tiene que
+    cruzar el acrilico antes de morder, y al apretarlo lo dejaria PINZADO entre
+    dos caras de aluminio. El PMMA fluye bajo carga sostenida -- es la cuenta de
+    la arandela d16 del README -- y lo que se relajaria es la precarga que
+    sujeta el riel. El casquillo se come el apriete y el acrilico no lo ve."""
+    tol = 0.4 + 0.1 * p["t_cheek"]        # Schaeffer AG, 2026-08-18
+    t_min, t_max = p["t_cheek"] - tol, p["t_cheek"] + tol
+    z_costilla = (0.0, p["t_costilla"])
+    z_acrilico = (p["t_costilla"] + p["t_junta"],
+                  p["t_costilla"] + p["L_casquillo"])
+    assert z_costilla[1] <= z_acrilico[0], (
+        f"el apilado esta al reves o sin junta: la costilla ocupa "
+        f"z={z_costilla[0]:.2f}..{z_costilla[1]:.2f} y el acrilico arranca en "
+        f"z={z_acrilico[0]:.2f}. Desde el 2026-08-27 el aluminio va POR FUERA "
+        f"(spec 2, decision 1)")
+    assert p["L_casquillo"] >= t_max, (
+        f"el casquillo mide {p['L_casquillo']:.2f} y el acrilico mas grueso del "
+        f"lote mide {t_max:.2f} (tolerancia +-{tol:.2f} sobre {p['t_cheek']:.0f}, "
+        f"Schaeffer AG 2026-08-18). A ese espesor el acrilico quedaria PINZADO "
+        f"entre dos caras de aluminio y la precarga del riel se relaja sola en "
+        f"semanas. Ver spec 3.3")
+    # LA CONDICION ES SOBRE EL JUEGO, no sobre el hueco. La primera version de
+    # esta puerta comparaba (L - t_junta) contra t_min y HABRIA FALLADO con los
+    # valores correctos: 5.5 contra 6.8. Lo que hay que exigir es que el juego
+    # que deja el acrilico MAS DELGADO lo cubra la junta.
+    juego = p["L_casquillo"] - t_min
+    assert juego <= p["t_junta"], (
+        f"el acrilico mas delgado del lote mide {t_min:.2f} y el casquillo "
+        f"{p['L_casquillo']:.2f}: deja {juego:.2f} mm de juego y la junta solo "
+        f"mide {p['t_junta']:.2f}. No llega a tocarlo, y un panel suelto en un "
+        f"instrumento suena")
+    print(f"apilado: costilla z 0..{p['t_costilla']:.0f} POR FUERA, junta de "
+          f"{p['t_junta']:.0f}, acrilico hasta z={z_acrilico[1]:.2f}")
+    print(f"  casquillo de {p['L_casquillo']:.2f} contra un acrilico de "
+          f"{t_min:.2f}..{t_max:.2f}: nunca pinza, y la junta se come el juego "
+          f"({juego:.2f} mm en el peor caso, sobre {p['t_junta']:.2f} de junta)")
+
+
 def guarda_piso(p: dict[str, float]) -> None:
     """El riel de panel del frente tiene que librar el SUELO del case.
 
@@ -2321,6 +2374,7 @@ def main() -> int:
         f"que aqui.")
     canario_solapes(p)
     canario_alineacion(p)
+    guarda_apilado(p)
     guarda_piso(p)
     guarda_costilla(p)
     guarda_aire(p)

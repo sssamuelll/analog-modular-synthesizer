@@ -21,7 +21,13 @@ PART = "assembly";
 // de este fichero, y con dos terminos la copia se desincroniza del original al
 // primer cambio -- que es como esta cota llego a existir sin que nadie la
 // mirara.
-ancho_util = ancho_total - 2*t_cheek - 2*t_costilla;
+// LA PUNTA A PUNTA DEL Z-RAIL, y desde el 2026-08-27 no se resta el
+// acrilico sino el CASQUILLO: con el marco por fuera es el casquillo el
+// que fija el hueco entre el marco y el riel, y el acrilico queda dentro
+// de ese hueco sin gobernar ninguna cota. GEMELA de perfil()['ancho_util']
+// en clearance_budget.py -- si las dos se separan, la rejilla de agujeros
+// del DXF se corre y lo canta agujeros_donde_toca().
+ancho_util = ancho_total - 2*L_casquillo - 2*t_costilla;
 
 // vertices del perfil lateral (X = fondo, Y = arriba) — misma numeracion
 // que clearance_budget.perfil(): p0..p8
@@ -1336,21 +1342,25 @@ else assert(false, str("PART desconocido: ", PART));
 
 // costado_2d vive en el plano XY del perfil (X = fondo, Y = altura);
 // costado() lo extruye en +Z por t_cheek, o sea Z pasa a ser el ancho.
-// Dos costados en los extremos de Z; 9 largueros 2020 (centros_rail() +
+// Desde la decision 1 de 2026-08-27-case-esqueleto-visible-design.md el aluminio
+// va POR FUERA y el acrilico por dentro, con la junta de EPDM entre el ala de
+// la costilla y la cara del acrilico. guarda_apilado() en clearance_budget.py
+// verifica este orden. Los 9 largueros 2020 (centros_rail() +
 // centros_transversal(), en ese orden — 5 de esqueleto desde que los tres
-// traseros de en medio se retiraron) cruzando entre sus caras internas.
+// traseros de en medio se retiraron) cruzan entre sus caras internas.
 module costados() {
-    costado();
-    translate([0, 0, ancho_total - t_cheek]) costado();
+    translate([0, 0, t_costilla + t_junta]) costado();
+    translate([0, 0, ancho_total - t_costilla - t_junta - t_cheek]) costado();
 }
 
-// Las dos costillas, por dentro de los dos costados. Con las alas DOBLADAS
-// hacia dentro -- ver costilla(), que no es el desarrollo extruido.
+// Las dos costillas forman las capas exteriores: sus almas ocupan
+// z=0..t_costilla y z=ancho_total-t_costilla..ancho_total. Las alas siguen
+// DOBLADAS hacia dentro -- ver costilla(), que no es el desarrollo extruido.
 module costillas() {
-    translate([0, 0, t_cheek]) costilla();
+    costilla();
     // la del otro lado va ESPEJADA: sus alas tienen que doblar hacia dentro
     // igual que las de esta, o sea hacia -Z desde su propio plano.
-    translate([0, 0, ancho_total - t_cheek])
+    translate([0, 0, ancho_total])
         mirror([0, 0, 1]) costilla();
 }
 
