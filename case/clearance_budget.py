@@ -1500,12 +1500,141 @@ def guarda_escalon(p: dict[str, float]) -> None:
         f"Es lo que limita paso_horizontal, no el hueco SAT")
 
 
-# Censo de anchos minimos de panel por piso, mm. ESTIMADOS (spec §11):
-# cierran cuando cada panel este dibujado. Fuente: conteo de mandos/jacks
-# de los README de modulo + patch bay normalizado que anade jacks.
-ANCHOS_PISO_SUP = {"MIDI/CV": 80, "VCO1": 90, "VCO2": 90, "VCO3": 90}
-ANCHOS_PISO_INF = {"VCF": 100, "ADSR": 110, "VCA": 80, "MIXER": 100}
-EXPANSION_MIN = 40  # sitio reservado a crecer, por piso
+# El censo de anchos de panel por piso MUERE aqui el 2026-08-27.
+#
+# Historia corta, porque la leccion vale mas que el diccionario: hasta hoy
+# habia un ANCHOS_PISO_SUP = {"MIDI/CV": 80, "VCO1": 90, "VCO2": 90,
+# "VCO3": 90} de la tesis. Se intento corregirlo entrada por entrada y salio
+# PEOR: el numero nuevo se saco de hardware/03-vco/README.md, que se declara
+# SUPERADO en su primera linea y trae los 114 mm en la columna «lo que esta
+# carpeta asume» de la tabla que los mata. Cambiar un dato muerto por otro.
+#
+# Lo que lo disuelve no es un dato mejor sino una decision de Samuel del
+# 2026-08-27: **la fila de arriba es UN modulo del ancho del riel, con la
+# pantalla de 7" en su centro y todo lo demas ordenado a su alrededor**
+# (docs/superpowers/specs/2026-08-27-panel-pantalla-al-centro-design.md).
+#
+# Con eso la fila superior deja de ser un reparto, asi que no hay nada que
+# sumar: no es un diccionario con una clave, es que la pregunta cambio. Y el
+# reparto que si sigue vivo -- el de la fila A entre PCB y bahia -- ya lo
+# lleva hardware/03-vco/voz_total_budget.py, que corre como puerta propia.
+# Duplicarlo aqui es lo que permitio que se desincronizara durante cuatro
+# dias sin que nadie se enterara.
+
+# La fila de ABAJO no tiene modelo aqui, y el diccionario vacio ES el hueco.
+# Se deja vacio a proposito y no como bandera booleana: rellenarlo cierra la
+# puerta sola, sin que nadie tenga que acordarse de apagar un flag. Por que
+# esta abierta -- dos descripciones vivas que no coinciden -- en «Lo que este
+# calculo NO cubre», al final del fichero.
+FILA_INFERIOR: dict[str, float] = {}
+
+ANCHO_PANTALLA_7 = 165.0        # mm. 2026-08-26-pantalla-motor-design.md sec.6
+ALTO_PANTALLA_7 = 102.0         # mm. idem -- clase de pieza Adafruit 7"
+
+# Lo que la fila A tenia que seguir albergando de mandos, DERIVADO y no
+# tecleado: el panel viejo eran 83 HP y la bahia se llevaba 4 columnas a paso
+# 17 (plan del panel sec.4). Lo que quede a los lados de la pantalla tiene que
+# dar al menos eso, o el reencuadre no se sostiene -- es la cuenta del +9.68
+# del papel, puesta como puerta en vez de como parrafo.
+HP_FILA_A_VIEJA = 83
+BAHIA_COLUMNAS, BAHIA_PASO = 4, 17.0
+
+# Huecos declarados en ejecucion. Si queda alguno, main() sale con 2: HUECO
+# visible, no fallo invisible. Constitucion, contrato de estados.
+_HUECOS: list[str] = []
+
+
+def flancos_fila_superior(p: dict[str, float]) -> dict[str, float]:
+    """El lienzo de la fila de arriba con la pantalla al centro.
+
+    Devuelve mm. El ancho de la fila es el RIEL, no el hueco entre costados:
+    los modulos se atornillan a la pletina roscada del riel.
+    """
+    ancho = p["largo_riel"]
+    return {
+        "ancho_fila": ancho,
+        "flanco": (ancho - ANCHO_PANTALLA_7) / 2,
+        "franja": (p["alto_panel_sup"] - ALTO_PANTALLA_7) / 2,
+    }
+
+
+def guarda_fila_superior(p: dict[str, float]) -> list[str]:
+    """La pantalla al centro tiene que caber en el panel, y en los DOS ejes.
+
+    El eje que casi nadie mira es el vertical, y es el que aprieta: la
+    pantalla se lleva 102 de los 128.5 de un 3U. Lo horizontal sobra por
+    goleada y por eso no se asevera: seria una regla que no puede fallar.
+    """
+    fallos: list[str] = []
+    f = flancos_fila_superior(p)
+
+    if f["franja"] < 0:
+        fallos.append(
+            f"la pantalla de {ALTO_PANTALLA_7} mm no cabe de alto en un panel "
+            f"de {p['alto_panel_sup']} mm")
+    mandos_min = HP_FILA_A_VIEJA * p["hp"] - BAHIA_COLUMNAS * BAHIA_PASO
+    mandos_hay = 2 * f["flanco"]
+    if mandos_hay < mandos_min:
+        fallos.append(
+            f"los dos flancos dan {mandos_hay:.2f} mm de mando y el panel "
+            f"viejo albergaba {mandos_min:.2f} (83 HP menos la bahia): el "
+            f"reencuadre solo se sostiene si los flancos NO pierden sitio. "
+            f"Con una pantalla de {ANCHO_PANTALLA_7:.0f} mm sobran "
+            f"{mandos_hay - mandos_min:+.2f}")
+
+    # Estos dos no son fallos: son cosas que este fichero NO PUEDE comprobar
+    # todavia, y por eso salen como HUECO en vez de callarse. Mientras esten,
+    # main() sale con 2 aunque todo lo demas cierre.
+    _HUECOS.append(
+        f"campo vertical util de una fila 3U sin derivar (#179 lo cifra en "
+        f"112.5 y no dice de donde; con ese numero la franja cae de "
+        f"{f['franja']:.2f} a {(112.5 - ALTO_PANTALLA_7) / 2:.2f} mm)")
+    _HUECOS.append(
+        "fondo de la pantalla sin medir contra la fila A, que el plan del "
+        "panel declara al 100% con 0.6 mm de margen (E-C5)")
+    return fallos
+
+
+def guarda_dos_puertas_un_riel(p: dict[str, float]) -> list[str]:
+    """Que voz_total_budget.py y este fichero repartan el MISMO riel.
+
+    Los dos dividen los 528.32 mm de una fila, viven en directorios distintos
+    y gates.py los corre en procesos separados, asi que nunca se ven. Aquel
+    tiene RIEL_HP y HP cableados por valor. Esta guarda es el unico sitio
+    donde los dos numeros se miran a la cara; sin ella, el dia que alguien
+    cambie el riel aqui, alla sigue repartiendo el viejo y las dos puertas
+    salen verdes contra realidades distintas.
+    """
+    fallos: list[str] = []
+    import importlib.util
+    ruta = Path(__file__).parent.parent / "hardware" / "03-vco" / "voz_total_budget.py"
+    if not ruta.exists():
+        return [f"voz_total_budget.py no esta en {ruta}: el reparto de la "
+                f"fila A no tiene puerta"]
+    spec = importlib.util.spec_from_file_location("_vtb", ruta)
+    vtb = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(vtb)
+
+    # Y CORRERLA. exec_module() la carga como `_vtb`, no como `__main__`, asi
+    # que su demo() -- donde viven los assert del reparto de la fila A -- no
+    # se ejecuta sola. Sin esto, delegar el reparto significaba dejar de
+    # comprobarlo: verde aqui con la puerta delegada en rojo, y export.ps1
+    # sacando DXF encima. Lo cazo codex en la revision del 2026-08-27.
+    with contextlib.redirect_stdout(io.StringIO()):
+        try:
+            vtb.demo()
+        except AssertionError as e:
+            fallos.append(f"voz_total_budget en ROJO (el reparto de la fila A "
+                          f"no cierra): {str(e).splitlines()[0][:120]}")
+
+    if abs(vtb.HP - p["hp"]) > 1e-9:
+        fallos.append(f"voz_total_budget.HP={vtb.HP} != params.scad hp="
+                      f"{p['hp']}")
+    if abs(vtb.ANCHO_FILA - p["largo_riel"]) > 1e-9:
+        fallos.append(f"voz_total_budget.ANCHO_FILA={vtb.ANCHO_FILA} != "
+                      f"params.scad largo_riel={p['largo_riel']}: dos puertas "
+                      f"reparten el mismo riel con numeros distintos")
+    return fallos
 
 
 def _chasis(p: dict[str, float]) -> dict[str, float]:
@@ -1842,10 +1971,6 @@ def main() -> int:
           f"ancho_util={g['ancho_util']:.2f} != largo_riel={p['largo_riel']}: "
           f"ancho_total tiene que valer largo_riel + 2*t_cheek = "
           f"{p['largo_riel'] + 2 * p['t_cheek']:.2f}")
-    exige(sum(ANCHOS_PISO_SUP.values()) + EXPANSION_MIN <= g["ancho_util"],
-          "el piso superior no cabe en el ancho util")
-    exige(sum(ANCHOS_PISO_INF.values()) + EXPANSION_MIN <= g["ancho_util"],
-          "el piso inferior no cabe en el ancho util")
     # CARA y PANEL ya no son el mismo numero, asi que por cada fila hay DOS
     # derivaciones que tienen que dar lo mismo y no una: la separacion de
     # railes sale de la cara (por donde se atornillan al costado) y tambien del
@@ -1898,6 +2023,8 @@ def main() -> int:
     fallos.extend(solapes(p))
     fallos.extend(alineacion(p))
     fallos.extend(apoyo(p))
+    fallos.extend(guarda_fila_superior(p))
+    fallos.extend(guarda_dos_puertas_un_riel(p))
 
     print(f"perfil: alto_total={g['alto_total']:.1f}  "
           f"entrepiso={g['y_entrepiso']:.1f}  ancho_util={g['ancho_util']:.0f}")
@@ -1917,9 +2044,47 @@ def main() -> int:
               f"aqui con el signo cambiado.")
     exige(-0.5 <= p["kerf"] <= 0.5,
           "kerf fuera de rango fisico [-0.5, +0.5] mm")
-    for f in fallos:
-        print(f"ROJO: {f}")
+    # El cierre (ROJO/HUECO/VERDE) esta UNA sola vez, al final: hasta el
+    # 2026-08-27 habia un `for fallos / return` aqui y otro abajo, y el de
+    # arriba cortocircuitaba la comprobacion de la fila de abajo.
+    fl = flancos_fila_superior(p)
+    print(f"fila superior: UN modulo de {fl['ancho_fila']:.2f} mm "
+          f"({fl['ancho_fila'] / p['hp']:.0f} HP), pantalla de "
+          f"{ANCHO_PANTALLA_7:.0f}x{ALTO_PANTALLA_7:.0f} al centro")
+    print(f"  flancos de mando: 2 x {fl['flanco']:.2f} mm "
+          f"({fl['flanco'] / p['hp']:.1f} HP) a los {p['alto_panel_sup']} de alto")
+    print(f"  franja sobre y bajo la pantalla: {fl['franja']:.2f} mm -- "
+          f"ahi NO cabe un potenciometro (#179 sigue abierto)")
+    if not FILA_INFERIOR:
+        _HUECOS.append(
+            "la fila de abajo no tiene reparto aqui. No es falta de dato: el "
+            "plan del panel y la spec de la Voz la describen distinto")
+    else:
+        # Rellenar el dict NO basta para dar verde: {'panel': 10000} tambien
+        # es truthy. Lo cazo codex el 2026-08-27. Se comprueba el reparto.
+        suma = sum(FILA_INFERIOR.values())
+        if suma > p["largo_riel"]:
+            fallos.append(
+                f"la fila de abajo pide {suma:.2f} mm y el riel da "
+                f"{p['largo_riel']:.2f}")
+        for nombre, ancho_mm in FILA_INFERIOR.items():
+            if ancho_mm <= 0:
+                fallos.append(f"'{nombre}' tiene ancho {ancho_mm} en la fila "
+                              f"de abajo")
+
+    for f_ in fallos:
+        print(f"ROJO: {f_}")
     if fallos:
+        # ERA `return 2` hasta el 2026-08-27, y eso convertia TODO fallo real
+        # de este budget en un HUECO a ojos de gates.py, que lee 2 como
+        # "trabajo a medias, no rompe el resumen": la tanda cerraba con "GATES
+        # EN VERDE" con el case en rojo. Mismo pecado que gates.py ya se
+        # corrigio en _dep_ausente. Codigo 1 = ROJO; el 2 es solo para HUECO.
+        return 1
+    if _HUECOS:
+        for h in _HUECOS[:-1]:
+            print(f"  hueco: {h}")
+        print(f"HUECO: {_HUECOS[-1]}")
         return 2
     print("clearance_budget: VERDE")
     return 0
@@ -1930,6 +2095,17 @@ def main() -> int:
 #   * par de apriete sobre acrilico       -> probeta del cupon (spec §11)
 #   * termica de la fuente v2             -> spec PSU v2 y su validacion
 #   * nesting de planchas en el stock     -> lienzo del Task 5, a ojo
+#   * el reparto de la FILA DE ABAJO. Abierto desde el 2026-08-27, y no por
+#     falta de dato sino porque hay DOS descripciones vivas que no coinciden:
+#       - el plan del panel (2026-08-23-panel-frontal-gramatica §4) la parte
+#         en CABEZA 30 HP + INVITADOS 62 + SOMBRA 12 = 104 HP;
+#       - la spec de la Voz (2026-08-23-modulo-voz-total §8) la parte en
+#         cerebro 150 + mandos 120 + mixer 100 + reserva 40 = 410 de 528.
+#     Mismo dia, misma fila, dos modelos. Y encima el 2026-08-27 se movieron
+#     dos piezas: la CABEZA muere (la 7" es la unica cabeza) y los mandos se
+#     suben a los flancos de la fila de arriba. Aqui NO se inventa un tercer
+#     modelo: se deja dicho que el sitio esta abierto y con quien resolverlo.
+#     Se cierra cuando el plan del panel y la spec de la Voz digan lo mismo.
 #   * (CERRADO el 2026-08-21) distancia perpendicular placa<->rail. Decia que
 #     alineacion() verifica que la fila caiga en la centerline de un rail pero
 #     no cuanto hay entre la placa y ese rail. Ahora lo verifica apoyo(): exige

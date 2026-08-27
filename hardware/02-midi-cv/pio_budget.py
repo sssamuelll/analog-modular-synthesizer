@@ -230,6 +230,12 @@ RUTA_PINOUT = os.path.join(_AQUI, "..", "..", "software", "nucleo", "core",
 #    = 46 de 48"
 PINES_NUEVOS_12_14 = 5      # bandera y EN del host (sec.6.2), EN y arranque del
                             # puente (sec.6.6), RESET del mux I2C (sec.8)
+# AVISO 2026-08-27: la pantalla de 2,8" que estos cinco pines alimentan quedo
+# DEROGADA -- la de 7" del motor es la unica cabeza del instrumento (spec del
+# cerebro sec.7, enmendada). Este censo sigue reservandolos. NO se pone a cero
+# aqui al vuelo porque bajar un censo de pines lo vuelve MAS facil, que es la
+# direccion en la que un error se esconde, y este guion cruza contra pinout.rs.
+# Se corrige con su verificacion propia -- issue abierto en la misma tanda.
 PINES_PANTALLA = 5          # LCD_SCLK, MOSI, CS, DC, BL (sec.7). Sin RST propio:
                             # cuelga del reset del sistema, y ese ahorro es lo
                             # que hace que quepa (sec.12.16: "sin ese ahorro
