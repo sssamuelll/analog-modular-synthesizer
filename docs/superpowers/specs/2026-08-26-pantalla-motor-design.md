@@ -263,6 +263,23 @@ tanda 2):
   La fila de `ground_budget.py` que lo asevere queda **mandada aquí**, con
   dueño: se escribe con la hoja de la pieza (R-M3), junto a la fila de la
   fuente.
+> **CONTESTADO el 2026-08-27** — `2026-08-27-panel-pantalla-al-centro-design.md`.
+> La fila mandada abajo ya tiene respuesta, y no es «dónde cabe» sino **qué
+> manda**: la pantalla va **al centro del panel de la fila superior**, que
+> pasa a ser un solo módulo de 104 HP, y **el resto del panel se ordena a su
+> alrededor**. Dirección de Samuel. Con eso la 7" además **sustituye a la
+> cabeza local de 2,8"** del cerebro y al renglón del panel: es la única
+> cabeza del instrumento (B2 ratificada, no re-firmada).
+>
+> Consecuencia que este papel hereda y tiene que presupuestar: **la cara del
+> instrumento pasa a depender del motor**, que arranca desde XSPI. Lo que
+> sostiene el estado «el motor no arrancó» es la cadena WS2812, que cuelga del
+> cerebro y no toca el J2.
+>
+> Y la cota que manda no es el ancho: son los **13,25 mm** que quedan arriba y
+> abajo de la pantalla en un panel 3U, y el **fondo** — el plan del panel
+> declara la fila A al 100 % con 0,6 mm de margen (E-C5).
+
 - **Sitio en el case**: la clase de pieza mide ~165×102 mm (Adafruit 7").
   Dónde vive lo decide el censo del case con el layout del panel — fila
   mandada, dueño: el diseño del case. Lo único que este papel fija es lo
