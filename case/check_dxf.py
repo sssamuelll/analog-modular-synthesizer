@@ -383,7 +383,11 @@ def agujeros_donde_toca() -> list[str]:
     # tambien las dos alas de costilla, y una copia a mano de la formula aqui
     # se desincroniza del original en cuanto se toque t_costilla.
     au = cb.perfil(p)["ancho_util"]
-    n = max(1, round(au / 100))
+    # EL PASO SE LEE, no se escribe. Fue un 100 a mano hasta el 2026-08-27 y
+    # era la tercera copia del mismo numero (las otras dos: fila_agujeros()
+    # y n_agujeros()). Con reticula_paso gobernando los agujeros de los
+    # miembros, una copia aqui desincroniza la puerta de la pieza.
+    n = max(1, round(au / p["reticula_paso"]))
     e = au / n
     # DOS REJILLAS, no una. Las bandejas y la tapa del valle se atornillan a un
     # larguero a lo largo y usan fila_agujeros() -- n agujeros repartidos con
@@ -989,7 +993,13 @@ def guarda_zocalo() -> list[str]:
         tornillos.append(((min(px) + max(px)) / 2, (min(py) + max(py)) / 2, h))
 
     f: list[str] = []
-    n = max(1, round((fondo_tabla := cb._fondo_bandeja(p)) / 100))
+    # LA QUINTA COPIA DEL PASO, y la ultima. Fue un 100 a mano hasta el
+    # 2026-08-27; la destapo el test de rotura de la reticula -- subir
+    # reticula_paso a 137 movia la fila de la tabla en el modelo y no
+    # aqui, y esta puerta cantaba "2 tornillos y el modelo pone 3".
+    # La tabla usa n_agujeros(), que desde hoy lee reticula_paso.
+    n = max(1, round((fondo_tabla := cb._fondo_bandeja(p))
+                     / p["reticula_paso"]))
     for xc in filas_x:
         fila = sorted((t for t in tornillos if abs(t[0] - xc) < 0.1),
                       key=lambda t: t[1])
@@ -1096,6 +1106,111 @@ def taladros_costado() -> list[str]:
     return f
 
 
+MIEMBROS_DXF = {"miembro_bajo_2d": "trasero bajo",
+                "miembro_alto_2d": "trasero alto",
+                "bahia_2d": "bahia"}
+
+
+def taladros_reticula() -> list[str]:
+    """Los tres miembros de chapa llevan su reticula, y nada se le pega encima.
+
+    ES LA PIEZA QUE SUSTITUYE A LA RANURA EN T, y por eso hay puerta. El 2020
+    traia una ranura corrida con tuercas de insercion lateral: un tornillo se
+    podia anadir DESPUES, con el case montado. Con canales de chapa eso se
+    acaba -- cada agujero se decide en el DXF y anadir uno mas tarde es taladrar
+    el aparato armado. Lo que se pierde en libertad se devuelve en RETICULA: una
+    fila de agujeros a paso regular a lo largo del alma de cada canal.
+
+    LOS TRES SALIERON DE LA TAREA 4 LISOS. `square([ancho_util, desarrollo])` y
+    nada mas: ni la reticula, ni los agujeros de las filas de plancha que ya
+    apoyan en ellos, ni los M5 de los que cuelga el chasis del PSU. Tres canales
+    sin un solo agujero pasaron las dos puertas en verde, porque las dos miraban
+    la ENVOLVENTE. Esta mira dentro.
+
+    DOS COSAS, y la segunda es la que cuesta una pieza:
+
+      1. la reticula esta COMPLETA -- los n agujeros de M3 a paso regular, con
+         el mismo reparto de medio paso en los margenes que usa fila_agujeros()
+         para las planchas. Ese reparto compartido es el motivo de que
+         reticula_paso valga lo que vale: las filas que ya existen caen en la
+         reticula por construccion, no por suerte.
+
+      2. todo agujero que NO sea de la reticula -- los M5 del chasis son los
+         unicos que quedan -- guarda BORDE_MIN_D x D de PUENTE contra su vecino
+         de reticula. Un M5 a 2 mm de un M3 en chapa de 3 no es un agujero de
+         mas: es una ranura, y se rasga al plegar. Es el modo de fallo que la
+         ranura en T no tenia, porque alli no habia vecinos.
+
+      3. la fila ES UNA FILA -- los n agujeros comparten una sola Y -- y esa Y
+         guarda BORDE_MIN_D x D contra los dos cantos del desarrollo.
+
+    LO QUE ESTA PUERTA NO CAZA, y va declarado: que la fila caiga en la BANDA
+    EQUIVOCADA del desarrollo -- sobre un ala en vez de sobre el alma. Verlo
+    exigiria saber donde estan las lineas de plegado, y eso es replicar aqui la
+    matematica de doblez de sam17_case.scad, que es justo la copia que este
+    fichero evita a proposito (lo dice agujeros_donde_toca() con todas sus
+    letras). De la banda responden los solidos plegados y solapes(); de aqui
+    para afuera, el censo, la fila y los puentes."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    au = cb.perfil(p)["ancho_util"]
+    paso = p["reticula_paso"]
+    n = max(1, round(au / paso))
+    rejilla = [au * (i + 0.5) / n for i in range(n)]
+    d_ret = p["d_M3_paso"] + p["kerf"]
+    f: list[str] = []
+    for dxf, miembro in MIEMBROS_DXF.items():
+        leidos = _redondos(dxf)
+        if not leidos:
+            f.append(f"{dxf}: CERO agujeros. El miembro '{miembro}' es un canal "
+                     f"de chapa, no un 2020: sin reticula no se le puede "
+                     f"atornillar nada, ni hoy ni despues de montado")
+            continue
+        sobra = list(leidos)
+        for x in rejilla:
+            cerca = [q for q in sobra
+                     if abs(q[0] - x) <= DESVIO_DXF_MAX
+                     and abs(q[2] - d_ret) <= 0.1]
+            if not cerca:
+                f.append(f"{dxf}: falta el agujero de reticula en x={x:.2f} "
+                         f"(paso {paso:.0f}, {n} sobre {au:.2f}). Con la ranura "
+                         f"en T daba igual donde cayera un tornillo; aqui no")
+                continue
+            sobra.remove(cerca[0])
+        ys = sorted(q[1] for q in leidos if abs(q[2] - d_ret) <= 0.1)
+        if ys and ys[-1] - ys[0] > DESVIO_DXF_MAX:
+            f.append(f"{dxf}: los agujeros de reticula se reparten entre "
+                     f"y={ys[0]:.2f} y y={ys[-1]:.2f}. Es una FILA a lo largo "
+                     f"del alma, no una nube: si no comparten Y, la plancha que "
+                     f"apoya encima no apoya en todos")
+        elif ys:
+            aristas, _ = _componentes(dxf)
+            todos = [pt[1] for a in aristas for pt in a]
+            canto = min(ys[0] - min(todos), max(todos) - ys[-1])
+            if canto < BORDE_MIN_D * d_ret:
+                f.append(f"{dxf}: la fila de reticula corre a {canto:.2f} mm "
+                         f"del canto mas cercano del desarrollo y se exigen "
+                         f"{BORDE_MIN_D * d_ret:.2f} ({BORDE_MIN_D} x D)")
+        for q in sobra:
+            d = min(abs(q[0] - x) for x in rejilla)
+            puente = d - (q[2] + d_ret) / 2
+            minimo = BORDE_MIN_D * max(q[2], d_ret)
+            if puente < minimo:
+                f.append(f"{dxf}: el agujero de {q[2]:.2f} en x={q[0]:.2f} deja "
+                         f"{puente:.2f} mm de puente contra el de reticula mas "
+                         f"cercano y se exigen {minimo:.2f} ({BORDE_MIN_D} x D). "
+                         f"Dos agujeros a esa distancia en chapa de "
+                         f"{p['t_costilla']:.0f} son una ranura: se rasga al "
+                         f"plegar")
+        if not f:
+            extra = len(leidos) - n
+            print(f"  {dxf}: reticula de {n} M3 a paso {paso:.0f} sobre "
+                  f"{au:.2f}" + (f", mas {extra} agujero(s) declarado(s) con "
+                                 f"puente" if extra else ""))
+    return f
+
+
 def main() -> int:
     fallos: list[str] = []
     for nombre, sobre in SOBRES.items():
@@ -1107,6 +1222,7 @@ def main() -> int:
     fallos += railes_dentro_del_costado()
     fallos += taladros_costilla()
     fallos += taladros_costado()
+    fallos += taladros_reticula()
     fallos += guarda_zocalo()
     fallos += guarda_kondor()
     fallos += guarda_costado()

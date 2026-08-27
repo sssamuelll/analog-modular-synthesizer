@@ -646,7 +646,11 @@ module costilla() {
 // en U, el blank concatena ala + alma + ala y descuenta el BD de cada doblez.
 module miembro_bajo_2d() {
     desarrollo = canal_fondo + canal_ancho + canal_fondo - 2*cost_bd();
-    square([ancho_util, desarrollo]);
+    y_alma = canal_fondo + canal_ancho/2 - cost_bd();
+    difference() {
+        square([ancho_util, desarrollo]);
+        fila_agujeros(ancho_util, y_alma);
+    }
 }
 
 // El miembro alto cruza entre las costillas en el remate trasero. Recibe el
@@ -658,7 +662,12 @@ module miembro_bajo_2d() {
 // plano y por eso supera la envolvente de la pieza plegada, con dos BD menos.
 module miembro_alto_2d() {
     desarrollo = canal_fondo + canal_ancho + prof_sup - 2*cost_bd();
-    square([ancho_util, desarrollo]);
+    // El solido manda el orden: retorno corto inferior, alma, meseta superior.
+    y_alma = canal_fondo + canal_ancho/2 - cost_bd();
+    difference() {
+        square([ancho_util, desarrollo]);
+        fila_agujeros(ancho_util, y_alma);
+    }
 }
 
 // La bahia cruza el case entre los dos Z-Rails que miran al valle. Su suelo
@@ -671,7 +680,11 @@ module bahia_2d() {
     // quieta. El contrato Python ya usa esta misma resta (48.18 mm).
     suelo = bahia_x1() - bahia_x0();
     desarrollo = suelo + 2*bahia_alto - 2*cost_bd();
-    square([ancho_util, desarrollo]);
+    y_suelo = bahia_alto + suelo/2 - cost_bd();
+    difference() {
+        square([ancho_util, desarrollo]);
+        fila_agujeros(ancho_util, y_suelo);
+    }
 }
 
 // Solidos plegados de los tres miembros. Los desarrollos de arriba son para el
@@ -734,7 +747,9 @@ module rail_2020(largo) { cube([rail, largo, rail], center = true); }
 module rail_er(largo) { cube([rail_er_fondo, largo, rail_er_alto], center = true); }
 
 // --- planchas rectangulares del cuerpo (cada una con SU espesor) ------
-// Agujeros M3 de tuerca T contra los largueros 2020, repartidos a ~paso.
+// Agujeros M3 contra la RETICULA de los miembros de chapa, repartidos a ~paso.
+// Fueron tuercas T en la ranura de los largueros 2020 hasta el 2026-08-27:
+// alli el reparto daba igual porque la ranura era corrida. Ahora no.
 //
 // IBA DESCENTRADA y nadie la miraba: arrancaba en paso/2 y avanzaba de paso en
 // paso hasta donde llegara, o sea que sobre 528.32 dejaba 50.00 de orilla a la
@@ -745,10 +760,10 @@ module rail_er(largo) { cube([rail_er_fondo, largo, rail_er_alto], center = true
 // Cuantos tornillos caben en un largo con el paso nominal. Se saca aparte
 // porque la tabla la necesita para su propia fila y no puede usar
 // fila_agujeros(): sus agujeros van ALARGADOS, no redondos.
-function n_agujeros(largo = 0, paso = 100) =
+function n_agujeros(largo = 0, paso = reticula_paso) =
     max(1, round((largo == 0 ? bandeja_base_fondo() : largo)/paso));
 
-module fila_agujeros(largo, y, paso = 100, d = d_M3_paso) {
+module fila_agujeros(largo, y, paso = reticula_paso, d = d_M3_paso) {
     n = max(1, round(largo/paso));
     e = largo/n;                       // paso real, <= paso pedido + pico
     for (i = [0 : n-1])

@@ -71,6 +71,10 @@ bahia_alto  = 60;
 // definitiva de cada uno sale de su carga.
 canal_ancho = 20;   // cota exterior perpendicular a la carga
 canal_fondo = 20;   // cota exterior en la direccion de la carga
+// Vale lo mismo que ya repartian las filas de las planchas de acrilico para
+// que sus tornillos caigan en la reticula por construccion, no por coincidencia.
+// Una sola cota gobierna ambos lados: repetir 100 los desincronizaria al cambiarla.
+reticula_paso = 100;
 // LA PESTANA DE LA TAPA DEL VALLE. La tapa se dobla 90 grados en cada punta y
 // se atornilla a la costilla: deja de estar sujeta SOLO por su larguero -- una
 // sola linea de tornillos, que es una bisagra -- y pasa a atar las dos costillas

@@ -267,10 +267,16 @@ bahía y lo que le da inercia a la pieza. La altura del ala sale del plan.
 Que ate las dos costillas en cortante mejor que una barra era cualitativamente
 cierto y **no estaba medido**.
 
-> **Medido al implementar (2026-08-27).** La bandeja de 56.47 × 60 en chapa de
-> 3 da **I = 189 737 mm⁴, 33.9× el 2020** que sustituye. Y ese factor no es
+> **Medido al implementar (2026-08-27).** La bandeja de 48.18 × 60 en chapa de
+> 3 da **I = 184 149 mm⁴, 32.88× el 2020** que sustituye. Y ese factor no es
 > sobredimensionar: es la consecuencia de que la pieza tenga que ser a la vez
 > pared de la bahía y canto de apoyo de la tapa. La sección le sale de balde.
+>
+> Estas dos cifras salen de `guarda_miembros()`. Una versión anterior de este
+> párrafo decía 56.47 × 60 y 189 737 / 33.9×: eran de memoria, no de la puerta,
+> y el ancho era el preliminar de antes de derivar el ala delantera del radio
+> de giro. **Los números de este documento se copian de la salida del
+> presupuesto, nunca se recuerdan.**
 
 Lo que sigue sin cerrarse es el **racking** del conjunto — la rigidez a torsión
 de la caja entera, no la de una pieza. Es la misma frase que la spec anterior
