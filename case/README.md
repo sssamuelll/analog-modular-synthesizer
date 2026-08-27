@@ -213,6 +213,59 @@ en `clearance_budget.py`, la puerta nueva que exige que **todas las filas de una
 placa apoyen a la misma distancia** de la cara de su larguero — porque el
 separador de una placa es uno solo. `alineacion()` solo miraba un eje.
 
+**Y la barra del medio se va** (2026-08-25). El larguero de **entrepiso
+delantero** cruzaba el centro del volumen —centro en x = 200.32, y = 131.58, o
+sea 25.95 mm por detrás y 17.55 por debajo del riel de abajo de la fila de
+arriba— y era **el único larguero del case que no sostenía ninguna plancha**:
+las seis filas de M3 van a base delantera, base trasera, valle y remate trasero.
+
+Por eso no lo miraba ninguna puerta. `alineacion()` y `apoyo()` solo ven filas
+de agujeros; `solapes()` solo verifica que las piezas no se atraviesen. Se podía
+retirar y quedarse todo en verde — que es lo que hace peligroso el cambio, no el
+cambio.
+
+Su único trabajo era atar los costados a media altura, y a **esa misma altura**
+(y = 131.58) ya está el del valle, 75.14 mm por delante y encima con su tapa. Es
+el mismo argumento que el 2026-08-21 tumbó tres largueros de la pared trasera,
+aplicado al que quedaba: una barra que no es alma de nada.
+
+**Lo que cuesta**, medido sobre el contorno real de `costado_2d.dxf` y no
+estimado. El parche de costado que queda sin apoyo se trata como placa circular
+empotrada de radio `a` = distancia del punto más desasistido a su ancla más
+cercana, con `D = E t³/12(1−ν²)`, E = 3 GPa, ν = 0.37, t = 8:
+
+| | con la barra | sin ella |
+|---|---|---|
+| vano libre del costado | 107.9 mm | **118.9 mm** |
+| flecha con 200 N | 0.31 mm | **0.38 mm** (techo 0.60) |
+| tensión bajo la mano | 6.35 MPa | **6.56 MPa** (fluencia 10, #106) |
+| abrir los costados donde estaba, 200 N | — | 0.303 mm en total |
+| masa | — | **−228 g** |
+
+El punto más desasistido del costado **no era el suyo, ni antes ni después**:
+está en el canto trasero a media altura (x = 244, y = 128), donde además apoya
+la trasera — que el modelo no cuenta, así que el número va por el lado seguro.
+Las anclas son solo los cuatro M5 de larguero: los cuatro M4 de riel no cuentan
+porque dos son ejes de giro y dos son tornillos **de mano** que se quitan para
+abrir, y un anclaje que el usuario desmonta no es estructura. Contándolos el
+vano sale 111.3 en vez de 118.9.
+
+**Se acota por flecha y no por tensión**, y la razón es que la tensión no es el
+limitante ni de lejos: para llegar a los 10 MPa el vano tendría que valer
+642 mm —más que la pieza entera—, porque en una placa empotrada la tensión crece
+con el **logaritmo** del vano y la flecha con el **cuadrado**. Lo que se nota con
+la mano es la flecha. Un costado que se hunde al empujarlo se siente barato
+aunque no rompa nunca.
+
+Lo vigila `guarda_costado()` en [`check_dxf.py`](check_dxf.py), y vive ahí y no
+en el budget porque mide sobre el **contorno y los taladros reales del DXF**, no
+sobre una copia de la geometría en Python.
+
+**Lo que este cálculo NO cubre**: el racking del cajón entero. La puerta mira
+UNA pieza plana. La rigidez del vano de 528 mm sin costado central sigue siendo
+la heurística que la spec §11 no ha cerrado (`n_bulkheads` = 2, «3 si el vano
+flexa»), y este cambio le quita una barra. Se cierra cargando el prototipo.
+
 **El larguero del remate, y el fin del pegamento** (2026-08-21). La tapa que cierra
 la meseta del techo iba **pegada** al Z-Rail, y era la única junta irreversible
 del case: ahí arriba no había larguero al que atornillarla, y esa cara del riel
@@ -421,9 +474,9 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Pieza | Cantidad | Nota |
 |-------|----------|------|
 | Z-Rail de Tiptop | **4** | 104 HP (528.32 mm), sección 23.8 × 10. Se compran en pares: 2 unidades = 4 raíles |
-| Larguero perfil 2020 | **5** | de 528.32 mm cada uno: 2 de base, entrepiso delantero, valle y **remate trasero**. Fueron 8 hasta el 2026-08-21 |
+| Larguero perfil 2020 | **4** | de 528.32 mm cada uno: 2 de base, valle y **remate trasero**. Fueron 8 hasta el 2026-08-21 y 5 hasta el 2026-08-25, cuando se retira el de **entrepiso delantero** — el único que no sostenía ninguna plancha |
 | Tornillo **M4** | **8** | entran de punta por el costado y **roscan en el propio Z-Rail** (viene con M4 taladrado a 3.3 de fábrica). Sin tuerca, sin inserto. **No vienen con el raíl.** 4 de hombro (los ejes de giro) + 4 de mano (los cierres) |
-| Tornillo M5 botón + tuerca T | **10** | 2 por larguero 2020, por la punta, desde el costado |
+| Tornillo M5 botón + tuerca T | **8** | 2 por larguero 2020, por la punta, desde el costado |
 | Tornillo M5 + tuerca T + separador 3 mm | **4** | cuelgan el chasis del PSU de la ranura **interior** de los dos largueros de base (#106). El separador no es opcional |
 | Tornillo **M3 botón** + tuerca T M3 + **arandela ancha d16** | **30** | las planchas a los largueros: base 10, tapa del valle 5, tapa de remate 5, **trasera 10** (2 filas × 5). Entran por la RANURA, no por la punta. **Apriete 1.0 N·m con rosca SECA** — engrasarla mete un 30 % más de precarga con el mismo par y fisura. Ver `par_m3` |
 | Arandela ANCHA d16 | **34** | 30 bajo los M3 de plancha + 4 en los ejes de giro. **No opcional en ninguno de los dos sitios**, y es la misma pieza en ambos: la familia de herraje baja de dos arandelas a una. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 y aguanta. En los M3 además es la que sube el par utilizable de 0.33 a 1.15 N·m — por debajo de 1 N·m no hay llave dinamométrica de 1/4" que lo dé |
@@ -432,13 +485,14 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Plancha acrílico t=8 mm | **5** | 2 costados + suelo (bandeja de base, portante, 528.32 × 291.4) + tapa de remate (528.32 × 37) + **trasera** (528.02 × 248.18, con las tres ondas y la rejilla de entrada de aire) |
 | Patica de goma con casquillo roscado | 4 | EPDM o NBR, Shore 45–55 A, **d20 × 10**. **Se exige la curva carga-deformación: ≥ 0.25 mm de flecha con 22.8 N** — por debajo la pata AMPLIFICA los 100 Hz del toroide en vez de aislarlos (`flecha_pie`). Casquillo roscado moldeado: se atornilla, **no se pega** — el case no lleva juntas irreversibles |
 
-**Total de tornillos del case: 52** — 8 M4 de raíl + 10 M5 de esqueleto +
+**Total de tornillos del case: 50** — 8 M4 de raíl + 8 M5 de esqueleto +
 4 M5 que cuelgan el chasis +
 30 M3 de plancha. Eran 71, y el 2026-08-21 perdió 23 de golpe: al empotrarse, la
 trasera se llevó por delante 12 separadores M4 y sus 24 tornillos de botón; al
 morir la bandeja de entrepiso se fueron 10 M3; volvieron 2 M5 y 5 M3 con el
 larguero del remate y su tapa; y al quedarse la pared trasera con dos largueros
-en vez de cinco se fueron 6 M5 y 15 M3 más. Lo que no volvió es el adhesivo:
+en vez de cinco se fueron 6 M5 y 15 M3 más; y el 2026-08-25 se van los 2 M5
+del entrepiso delantero. Lo que no volvió es el adhesivo:
 **el case ya no lleva ninguna junta irreversible.**
 
 No calculados por el modelo (herrajes eléctricos y de panel; la cantidad
@@ -451,9 +505,20 @@ depende de la cuenta final de módulos, no de la geometría del cajón):
 | Cable verde/amarillo + terminal de ojal | 1 por panel | al espárrago único, sin excepción |
 | Tuerca T M3 | 4 por panel | uno por taladro de `panels/build_template.py` |
 
-Censo actual de paneles: 8 (MIDI/CV, VCO×3, VCF, ADSR, VCA, MIXER —
-`clearance_budget.py`, `ANCHOS_PISO_SUP`/`ANCHOS_PISO_INF`). **Estimado, no
-cerrado**: estos totales por panel cierran cuando cada panel esté dibujado.
+Censo de paneles, **reescrito el 2026-08-27**. Los 8 que decía antes
+(MIDI/CV, VCO×3, VCF, ADSR, VCA, MIXER) eran de la tesis: los tres VCO
+colapsaron en un módulo y los módulos 4-7 **desaparecieron como placa**
+el 2026-08-23. `ANCHOS_PISO_SUP`/`ANCHOS_PISO_INF` ya no existen.
+
+- **Fila de arriba: UN panel** de 104 HP con la pantalla de 7" en su centro
+  y los mandos en los dos flancos de 181,66 mm
+  (`2026-08-27-panel-pantalla-al-centro-design.md`). Su reparto interno entre
+  PCB y bahía lo lleva `voz_total_budget.py`, no este fichero.
+- **Fila de abajo: SIN CERRAR**, y con dos descripciones vivas que no
+  coinciden — ver «Lo que este cálculo NO cubre» en `clearance_budget.py`.
+
+**Estimado, no cerrado**: los totales por panel cierran cuando cada panel
+esté dibujado.
 
 ## Anclaje de las placas — solo a largueros del esqueleto
 
@@ -515,7 +580,7 @@ un cable asumiendo continuidad por el riel es riesgo de choque eléctrico.
 
 ## Orden de ensamblaje
 
-1. **Esqueleto** — costados + los 5 largueros 2020, M5 por la punta desde
+1. **Esqueleto** — costados + los 4 largueros 2020, M5 por la punta desde
    fuera. Meter aquí las 30 tuercas T M3 de las planchas: con tuercas de
    inserción lateral se pueden añadir después, con las de deslizar no.
 2. **Bandeja de base** — 8 mm, es el suelo, 2 filas de 5 M3. Era «bandejas» en

@@ -646,6 +646,27 @@ holgura_rail    = 4;    // separacion minima entre railes vecinos (fix solapes)
 
 // --- esqueleto y herrajes ---
 n_bulkheads      = 2;    // costados exteriores (3 si el vano flexa, spec §11)
+// RIGIDEZ DEL COSTADO. Entran el 2026-08-25 con el retiro del entrepiso
+// delantero: el case baja de cinco largueros a cuatro y el costado se queda
+// con cuatro M5 en vez de cinco, asi que el vano sin apoyo crece y eso deja de
+// poder darse por bueno a ojo.
+//
+// La puerta es guarda_costado() en check_dxf.py -- y va ahi, y no en
+// clearance_budget, porque mide sobre el CONTORNO Y LOS TALADROS REALES de
+// costado_2d.dxf, no sobre una copia de la geometria en Python.
+//
+// POR QUE FLECHA Y NO TENSION: la tension no es el limitante ni de lejos. Con
+// 200 N sobre el vano actual el costado trabaja a 6.56 MPa contra los 10 de
+// fluencia (#106), y para llegar al umbral el vano tendria que valer 642 mm --
+// mas que la pieza entera, porque la tension de una placa empotrada crece con
+// el LOGARITMO del vano. Lo que se nota con la mano es la flecha, que crece
+// con el CUADRADO. Un costado que se hunde al empujarlo se siente barato
+// aunque no rompa nunca, y este case se mide por acabado.
+carga_mano       = 200;  // N. Alguien apoyandose, el mismo caso de carga con
+                         // el que ya se acoto la trasera (rev. 9: 0.6 mm)
+flecha_costado_max = 0.6;// mm bajo carga_mano. El techo NO es nuevo: es el
+                         // mismo que el proyecto ya acepto para la trasera en
+                         // su vano de 211.73. Hoy sale 0.38
 d_M3_paso   = 3.4;  // agujero paso M3 (ISO holgura media)
 d_M4_paso   = 4.5;  // agujero paso M4: standoffs de las pieles Y los cuatro
                     // rieles EUROrack, cuyo taladro de punta viene roscado M4

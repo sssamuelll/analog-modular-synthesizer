@@ -10,22 +10,27 @@ trimmer lo arregla. Contra ese umbral se compara un valle **simulado de
 14,12 V**, y ese numero vivia en una TABLA de markdown -- `design-notes.md`
 sec.16.4 y sec.16.5 -- sin un solo script que lo reprodujera.
 
-El unico simulador ejecutable de la fuente, `simulations/power/run_sim.py`,
-modela la **v1**: 12 V a 2 A de secundario, 4700 uF de bulk, 450 mA de carga y
-2 V de dropout de 78xx. Nada de eso esta en la v3. El propio script lo declara
-como HUECO desde el issue #128.
+Hasta el issue #128, `simulations/power/run_sim.py` modelaba la **v1**: 12 V a
+2 A de secundario, 4700 uF de bulk, 450 mA de carga y 2 V de dropout de 78xx.
+Nada de eso estaba en la v3, y el propio script lo declaraba como HUECO.
 
 O sea: el numero que decide la placa estaba simulado, pero no se podia volver
 a correr. Eso es exactamente lo que la constitucion llama un numero en prosa,
 y envejece en silencio.
 
-## Lo que este script hace distinto del de la v1
+**El #128 se cerro reapuntando `run_sim.py` a la v3** (transformador Nuvotem
+real, LM2941/LM2991 y su dropout garantizado). Ese script contesta si el
+pre-regulador sigue regulando su PROPIA salida (13,1 V / -12,9 V); este script
+sigue existiendo aparte porque contesta una pregunta mas cruda y mas abajo en
+la cadena -- el valle RECTIFICADO, antes de cualquier regulador, contra el
+umbral de aborto del bring-up (13,46 V). Son dos preguntas, no una duplicada.
 
-`run_sim.py` **barre** la regulacion del transformador (`reg`) en tres valores,
-porque la v1 no sabia cual era: el BOM no la fijaba. Aqui no hace falta barrer
-nada. La hoja de Nuvotem del `0120P1-2-012` da los dos extremos --13,42 V en
-vacio y 12 V a 5 A-- y de ahi sale la resistencia efectiva por semidevanado sin
-suponer nada:
+## Lo que este script hace distinto de `run_sim.py`
+
+Ninguno de los dos barre ya la regulacion del transformador (`reg`): la v1 no
+sabia cual era porque el BOM no la fijaba, y por eso se barria. La hoja de
+Nuvotem del `0120P1-2-012` da los dos extremos --13,42 V en vacio y 12 V a
+5 A-- y de ahi sale la resistencia efectiva por semidevanado sin suponer nada:
 
     R_SEC = (13,42 - 12) / 5 = 0,284 ohm
 

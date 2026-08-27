@@ -1,47 +1,74 @@
 # Módulo 1 — Alimentación
 
-> Referencia: tesis, *Módulo de Alimentación* (Gráficos 22, 23, 24).
+> Estado real: `hardware/01-power-supply/v3/README.md`. Diseño detallado:
+> `docs/superpowers/specs/2026-08-18-fuente-chasis-telemetria.md` (chasis y
+> telemetría) sobre `docs/superpowers/specs/2026-08-16-psu-v2-goat-design.md`
+> (topología de regulación). Este documento es el resumen de entrada; no
+> repite la aritmética, solo el estado.
 
 ## Objetivo
 
-Generar las tensiones reguladas requeridas por todo el sistema:
+Generar las tensiones reguladas requeridas por el bus SAM17:
 
-- **+5 V** — alimentación digital (Raspberry Pi, LCD, lógica).
-- **+12 V** — op-amps, OTAs, CEM3340.
-- **−12 V** — op-amps, OTAs.
+- **±12 V** — módulos analógicos (VCO, VCF, VCA, op-amps, OTAs), 650 mA/riel
+  de envolvente de diseño, **174 mA/riel** de censo real medido (#70).
+- **+5 V** (`U3`, local a esta placa) — solo el módulo 2 (RP2350), por `J6`.
+  El +5 V digital (Raspberry Pi/LCD/LEDs) **no pasa por esta placa**: lo pone
+  una SMPS externa (Mean Well IRM-15-5) y es responsabilidad del módulo 2.
 
 ## Entrada
 
-- Transformador externo **12 VAC / 2 A** conectado a 110 VAC 60 Hz.
-- Recomendado usar protector de voltaje upstream del transformador.
+- Transformador toroidal **120 VA** (Nuvotem Talema 0120P1-2-012), no el
+  transformador de 2 A de la tesis original — el censo real y el margen de
+  regulación lo exigen (ver spec v2 §16.5, §16.12).
+- `TR1` sin fusible térmico embebido no se compra: es criterio de aceptación
+  del BOM, no una mejora opcional.
 
-## Topología (a partir de la tesis)
+## Topología (v3, la única que se construye)
 
-Rectificador de onda completa (puente) → filtrado por condensadores
-electrolíticos → reguladores lineales **78xx / 79xx**.
+Cascada de dos etapas por riel — **no un solo 78xx/79xx**:
 
-| Riel | Regulador | Capacidad mínima sugerida |
-|------|-----------|---------------------------|
-| +12 V | 7812 | 1 A |
-| −12 V | 7912 | 0.5 A |
-| +5 V  | 7805 | 2 A (para Raspberry Pi) |
+| Riel | Pre-regulador | Post-regulador |
+|------|---------------|-----------------|
+| +12 V | LM2941 | LT3045 ×2 |
+| −12 V | LM2991 | LT3094 ×2 |
+| +5 V (`U3`, módulo 2) | 7805 | — |
 
-> El prototipo original usa un transformador independiente para alimentar el
-> Raspberry Pi por su consumo (≤ 2 A) y mantener limpio el riel analógico.
-> Se recomienda mantener esta separación o, alternativamente, dimensionar
-> filtros y disipadores adecuados en el módulo único.
+Objetivo de ruido: **0,8 µVrms (10 Hz–100 kHz)**. Sin crowbar en ningún
+riel — la cascada protege sola contra cualquier fallo simple del
+pre-regulador (§16.8, reescrita); lo que exige el análisis en su lugar es el
+fusible térmico de `TR1`.
+
+## El chasis
+
+**Acero, cerrado, sin ventilación** — decisión de 2026-08-18. El toroide, la
+PCB completa y la entrada de red viven dentro de un recinto de acero soldado
+al espárrago de PE; los tres TO-220 disipan contra su pared en vez de
+disipadores Fischer individuales (Tj de `U2`: 101 → 61 °C). Vive como
+parámetro en `case/cad/params.scad` / `case/cad/sam17_case.scad`, no como
+archivo suelto.
+
+## Telemetría
+
+Cinco chips I²C (~12 USD), aislados de GNDD por un ISO1541: 2× INA226
+(+12 V y +5 V, tensión y corriente), ADS1115 (−12 V, VRAW+, VRAW−, solo
+tensión) y TMP1075 (temperatura del recinto). Mide, por primera vez, el
+valle de VRAW que hasta ahora solo existía simulado.
 
 ## Distribución
 
-Las tres salidas se reparten por un **bus interno** del cajón, con pin
-headers o conector tipo Eurorack (ver `docs/architecture.md`).
+Bus de 4 hilos (+12/GND/GND/−12) por conector KK-254 (`J2`) hacia los
+módulos — **no lleva 5 V**. El bus de telemetría I²C es un conector JST-PH
+de 2,00 mm (`J8`) a propósito: con ese paso el cable de I²C no entra en
+ningún conector de potencia.
 
-## Mejoras propuestas
+## Qué falta
 
-- Sustituir reguladores lineales por DC-DC para mejor eficiencia (con
-  filtrado adecuado para no inyectar ruido en los rieles analógicos).
-- Añadir LEDs indicadores por riel.
-- Añadir fusibles térmicos en el primario del transformador.
-- Documentar cálculos de disipación térmica de los reguladores.
-- Considerar un rail bus tipo **Eurorack ±12 V / +5 V** estándar para
-  compatibilidad con módulos comerciales.
+- **Fase E (validación física).** Todo lo de arriba está diseñado, ruteado
+  (DRC en cero) y con gerbers listos para JLC — nada está pedido ni
+  montado. Bring-up, LNA de medida (#58) y la primera lectura real del
+  valle de VRAW son trabajo pendiente.
+- Presupuesto de la pantalla electrostática del toroide (Talema) — acción
+  de Samuel, no de análisis.
+- Hueco del IEC C14 en la chapa (#130) — pieza elegida, falta acotarlo en
+  `params.scad`.

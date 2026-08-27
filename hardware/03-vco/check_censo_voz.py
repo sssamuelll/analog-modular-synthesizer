@@ -149,6 +149,27 @@ def demo() -> None:
           f"{PANEO_POR_CANAL * CANALES:5d}")
     print(f"  = CON estereo                    {params(True):5d}")
 
+    # ENMIENDA 2026-08-26 -- FALTA UN INQUILINO ENTERO, Y SE DICE AQUI.
+    #
+    #   Fila mandada del mapa de motor-digital §9: "los parametros del motor
+    #   entran al censo contra el techo reventado". El motor digital del N657
+    #   (FM, wavetable, espectral, granular, sampler) pide "decenas de
+    #   parametros direccionables" -- palabras del papel, motor-digital §3 --
+    #   y a este censo NO HA ENTRADO NI UNO.
+    #
+    #   NO SE INVENTA LA CIFRA. "Decenas" no es un numero, y meter aqui un 40
+    #   o un 80 a ojo seria fabricar el dato que este guion existe para vigilar.
+    #   Lo que se hace es lo unico honesto: contarlo como AUSENTE y visible.
+    #
+    #   Y hay mas de un inquilino sin contar: el mapeo de gestos de la camara
+    #   (que destino mueve cada mano, con que profundidad, y si esta activo)
+    #   tiene fila mandada en el mismo #172 desde el acta de la camara.
+    #
+    #   Ojo con la lectura facil de la holgura de abajo: los 232 que "sobran"
+    #   son ANTES de meter al motor y a los gestos. No son margen: son la
+    #   habitacion de dos inquilinos que todavia no han llegado.
+    MOTOR_SIN_CENSAR = True
+
     n = params(True)
     necesario = n + RESERVA_RESTO_INSTRUMENTO
     holgura = MAX_PARAMS - necesario
@@ -277,8 +298,14 @@ def demo() -> None:
     print(f"    descriptor   la entrada mas grande, de {MAX_DESCRIPTOR_B} B   "
           f"POR_CONFIRMAR")
     print("                 (la mide core cuando existan, no este guion)")
+    print(f"    motor+gestos {'AUSENTES':>9}   {'?':>4} del techo   SIN CENSAR")
+    print("                 (motor-digital §9 y el acta de la camara los")
+    print("                  mandan al #172; 'decenas' no es una cifra y aqui")
+    print(f"                  no se inventa. Los {holgura} que sobran son ANTES")
+    print("                  de meterlos: no son margen, son su habitacion)")
     print()
-    print("OK: censo cerrado. Dos techos aseverados aqui, uno declarado pendiente.")
+    print("OK: censo cerrado para la Voz. Dos techos aseverados, uno pendiente "
+          "de medir, y DOS INQUILINOS SIN CENSAR (motor y gestos, #172).")
 
 
 if __name__ == "__main__":

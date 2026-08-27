@@ -945,10 +945,11 @@ En el cerebro, el reparto entre núcleos sigue en pie:
 Nada de eso le roba un ciclo a una nota, y ninguna de las dos cosas es pesada:
 lo caro —la FFT— ya vino resuelto y convertido en números.
 
-### 7.1 Tres lazos a tres velocidades
+### 7.1 ~~Tres~~ **Cuatro** lazos a ~~tres~~ **cuatro** velocidades
 
 | Lazo | Velocidad | Quién | Qué hace |
 |---|---|---|---|
+| **De muestra** ⟵ *nuevo, 2026-08-26* | **20,8 µs** (48 kHz) | El micro de la Voz, en DMA | Rinde el **CV rápido** (los 16 CV de corte). **Ni mide ni decide: ejecuta** |
 | **Análisis** | milisegundos | Núcleo 1, siempre | Mide y publica. **Nunca decide** |
 | **Automático** | ms – s | Firmware, reglas fijas | *«si esta banda pasa de X, haz Y»*. Determinista, sin IA |
 | **Agente** | segundos | El LLM | Razona, atribuye, diseña sonido |
@@ -956,6 +957,31 @@ lo caro —la FFT— ya vino resuelto y convertido en números.
 > **El agente jamás está en el camino de audio.** Si algo necesita responder en
 > milisegundos, eso es un compresor, no un LLM. Confundir esas dos capas es el
 > error clásico, y aquí queda cerrado por diseño.
+
+> **Enmienda del 2026-08-26 — el cuarto lazo, y por qué no rompe la doctrina.**
+> Lo añade motor-digital §2 (acta A-4: *el CV va a velocidad de audio*) y era
+> fila mandada de su §9.
+>
+> La tentación es leerlo como una grieta en la escalera: si ahora hay algo a
+> 20,8 µs, ¿no se está metiendo el instrumento en el camino de audio? **No, y
+> la razón es la que esta misma sección ya usaba para separar el análisis del
+> agente: lo que separa los lazos no es la velocidad, es la autoridad.**
+>
+> - El lazo de muestra **ejecuta** un valor que otro decidió. No mide, no
+>   razona, no elige. Es el brazo, no la cabeza.
+> - El de análisis **mide y publica, y nunca decide** (sigue igual).
+> - El automático **decide con reglas fijas** (sigue igual).
+> - El agente **razona** (sigue igual), y **sigue sin poder tocar el camino de
+>   audio**. El cuarto lazo no le abre ninguna puerta: corre por debajo de él,
+>   no a su lado.
+>
+> Que el brazo se mueva mil veces más rápido que antes no le da voto. **La
+> frase de arriba se mantiene intacta**, y el lazo nuevo es justamente lo que
+> permite mantenerla: el CV a velocidad de audio se rinde en DMA, sin que nada
+> que razone entre al camino.
+>
+> Su jitter no se declara aquí: se mide en el guion de la Voz (motor-digital
+> §5 y el libro bilateral).
 
 ### 7.2 Atribución: lo que ninguna herramienta de masterización puede hacer
 

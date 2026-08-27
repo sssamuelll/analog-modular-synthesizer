@@ -1,13 +1,24 @@
-# Simulación — Módulo 1: rectificación y filtrado
+# Simulación — Módulo 1: rectificación, filtrado y pre-regulador
 
-Responde a una pregunta que no se puede cerrar a mano: con la red al −10 % y el
-transformador cargado, **¿la tensión mínima instantánea sobre `C1` se queda por
-encima de lo que el 7812 necesita para seguir regulando?**
+Responde a una pregunta que no se puede cerrar a mano: con la red al −10 % y
+el transformador cargado, **¿el valle instantáneo de VRAW se queda por
+encima de lo que el pre-regulador necesita para seguir regulando su propia
+salida** (13,1 V en `U1` LM2941, −12,9 V en `U2` LM2991 — design-notes.md
+§16.8)?
 
-No se puede a mano porque con filtro de entrada capacitiva la corriente por el
-secundario no es senoidal — circula en picos estrechos de 2-3 veces la
-continua — así que la caída en la resistencia del devanado es bastante peor que
-corriente media × resistencia.
+No se puede a mano porque con filtro de entrada capacitiva la corriente por
+el secundario no es senoidal — circula en picos estrechos de 2-3 veces la
+continua — así que la caída en la resistencia del devanado es bastante peor
+que corriente media × resistencia.
+
+> **Hasta el issue #128 este fichero modelaba la v1** (7812, transformador de
+> 2 A, dropout de 2 V) — diseño abandonado el 2026-08-17 — y corría como
+> puerta en `main` contestando una pregunta que ya nadie hace. El análisis
+> histórico de esa versión (barrido de regulación, comparación de
+> arquitecturas 78xx vs. LDO, el secundario 15-0-15 descartado por térmica)
+> sigue en el historial de git de este archivo y en
+> `hardware/01-power-supply/notes/design-notes.md` §16.2-§16.4; no se repite
+> aquí para no mantener dos copias de la misma cuenta.
 
 ## Cómo correrlo
 
@@ -15,102 +26,83 @@ corriente media × resistencia.
 "C:\Program Files\KiCad\10.0\bin\python.exe" run_sim.py
 ```
 
-Usa `ngspice.dll` (la del simulador interno de KiCad) por `ctypes`, porque KiCad
-no trae binario de consola. [`sam17-power.cir`](sam17-power.cir) es el mismo
-circuito en formato estándar para repetirlo en LTspice o en un ngspice normal.
+Usa `ngspice.dll` (la del simulador interno de KiCad) por `ctypes`, porque
+KiCad no trae binario de consola. [`sam17-power.cir`](sam17-power.cir) es el
+mismo circuito en formato estándar para repetirlo en LTspice o en un ngspice
+normal.
 
 `run_sim.py` se autocomprueba antes de dar ningún número: en vacío la salida
-tiene que subir al pico menos una caída de diodo, el rizado tiene que escalar
-como 1/C, y tiene que quedar por debajo de la cota analítica `I/(f·C)`. Si algo
-de eso falla, aborta.
+tiene que subir al pico menos una caída de diodo, el rizado tiene que
+escalar como 1/C, y tiene que quedar por debajo de la cota analítica
+`I/(f·C)`. Si algo de eso falla, aborta.
 
-## Resultados
+## El transformador ya no se barre
 
-Plena carga de diseño: **450 mA en VRAW+** (300 mA del 7812 **más 150 mA que se
-lleva el 7805**, que cuelga del mismo riel) y 300 mA en VRAW−. El 7812 necesita
-**≥ 14 V** de entrada instantánea (12 V + 2 V de dropout, peor caso de
-datasheet).
+`12VAC 2A CT` (v1) se leía de dos maneras y el BOM no fijaba su regulación
+en vacío — por eso el fichero anterior barría `reg` entre 8, 12 y 20 %. La
+v3 usa el **Nuvotem Talema 0120P1-2-012**, y su hoja da los dos extremos de
+la recta sin nada que suponer: **13,42 V en vacío, 12 V a 5 A**
+(design-notes.md §16.4) → resistencia efectiva de **0,284 Ω** por
+semidevanado. Un solo número, no un rango.
 
-| Red | Regulación TR1 | VRAW+ mín | Rizado | Margen | |
-|---|---|---|---|---|---|
-| 253 V | 8 % | 17.42 V | 0.73 V | +3.42 V | OK |
-| 230 V | 8 % | 15.63 V | 0.72 V | +1.63 V | OK |
-| **207 V** | **8 %** | **13.85 V** | 0.71 V | **−0.15 V** | **NO REGULA** |
-| 253 V | 12 % | 17.75 V | 0.70 V | +3.75 V | OK |
-| 230 V | 12 % | 15.91 V | 0.69 V | +1.91 V | OK |
-| 207 V | 12 % | 14.08 V | 0.68 V | +0.08 V | OK, pelado |
-| 207 V | 20 % | 14.60 V | 0.65 V | +0.60 V | OK |
+## Los pre-reguladores: dropout garantizado, no típico
 
-**Umbral exacto: a 207 V y plena carga de diseño hace falta un transformador con
-regulación ≥ 10.7 %.**
+`U1` (LM2941) y `U2` (LM2991) no entregan 12,000 V — entregan el escalón que
+necesita el post-regulador (LT3045×2 / LT3094×2) para tener margen:
+**13,1 V** y **−12,9 V** respectivamente (design-notes.md §16.8). El VIN
+mínimo de cada uno es esa salida más su dropout garantizado — leído el
+2026-08-25 de la hoja primaria, no de un agregador:
 
-### Qué significa "regulación" aquí
+| Chip | Dropout MAX a 1 A, temp. completa | Fuente |
+|---|---|---|
+| LM2941 | 1,0 V | TI SNVS770I, rev. ene-2015, tabla 6.5/6.6 p.5-6 |
+| LM2991 | 1,0 V | TI SNVS099I, rev. oct-2016, tabla 6.5 p.5 |
 
-Cuánto sube la tensión del secundario en vacío respecto al dato de placa, que
-está medido **a plena carga**. Un transformador de 2 A trabajando a 450 mA está
-al 22 % de su capacidad, así que da bastante más de 12 V. **El BOM no fija ese
-dato**, y de él depende que el diseño pase o no a 207 V — por eso aquí se barre
-en vez de suponerlo.
+Ninguna hoja garantiza el dropout justo a 650 mA — solo hay fila a 100 mA y
+a 1 A — así que se usa la de 1 A como cota conservadora: el dropout crece
+con la corriente, y 650 mA < 1 A.
 
-### Con la carga real, no la de diseño
+**VIN mínimo real: 14,1 V para `U1`, 13,9 V para `U2`.**
 
-Los 300 mA por riel son el objetivo de diseño de §2, con margen para módulos
-futuros. La carga real de la tesis son ~80 mA analógicos por riel:
+## Resultado
 
-| Red | Regulación | VRAW+ mín | Margen |
-|---|---|---|---|
-| 207 V | 8 % | 14.54 V | **+0.54 V** |
-| 207 V | 12 % | 14.90 V | +0.90 V |
+```
+carga                              red |  VRAW+ min  margen U1 |  VRAW- min  margen U2 |  Irms C1 |
+----------------------------------------------------------------------------------------------------
+censo real, con margen (#70)       253 |     19.26V     +5.16V |     19.34V     +5.44V |    0.51A | OK
+censo real, con margen (#70)       230 |     17.38V     +3.28V |     17.46V     +3.56V |    0.50A | OK
+censo real, con margen (#70)       207 |     15.51V     +1.41V |     15.59V     +1.69V |    0.49A | OK
 
-O sea: **el caso que falla es el objetivo de diseño, no el instrumento tal como
-lo describe la tesis.**
+envolvente de diseno               253 |     17.81V     +3.71V |     18.32V     +4.42V |    1.78A | OK
+envolvente de diseno               230 |     15.97V     +1.87V |     16.47V     +2.57V |    1.74A | OK
+envolvente de diseno               207 |     14.13V     +0.03V |     14.62V     +0.72V |    1.70A | OK
+```
 
-## Tres conclusiones que no eran obvias
+(2026-08-25, salida real del script.)
 
-### 1. Subir el bulk casi no sirve
+**Con la carga que el instrumento pide de verdad (censo, 174 mA/riel + 30 mA
+de `U3`), el margen es cómodo: +1,41 V en el peor caso.** El problema es
+específicamente el "envolvente de diseño" de 650 mA/riel — un techo teórico
+que hoy nadie usa: ahí el margen de `U1` cae a **+0,03 V a 207 V**, al filo
+del redondeo. La puerta pasa (no hay ningún caso negativo), pero por el
+margen más fino posible.
 
-| C1 = C2 | VRAW+ mín | Rizado | Margen |
-|---|---|---|---|
-| 4700 µF | 13.85 V | 0.71 V | −0.15 V |
-| 6800 µF | 13.98 V | 0.49 V | −0.02 V |
-| 10000 µF | 14.07 V | 0.33 V | +0.07 V |
+Esto responde el ítem que la spec v2 §7 dejaba abierto: *"Dropout garantizado
+de LM2941/LM2991 a 650 mA: no leído aún. Los márgenes de §3 viven o mueren
+ahí."* No mueren, pero quedan al borde — si algún módulo futuro empuja algún
+riel cerca de los 650 mA de diseño, esta cuenta es la que hay que revisar
+primero.
 
-Más del doble de capacidad para ganar 0.22 V. Lo que limita no es el rizado sino
-el **nivel medio**: al subir C se estrecha el ángulo de conducción, sube el pico
-de corriente por el devanado y empeora la caída en su resistencia. Casi todo lo
-que ganas por un lado lo pierdes por el otro.
+## Lo que este modelo NO cubre
 
-### 2. Un secundario de 15-0-15 arregla el dropout y crea un problema térmico
-
-| Secundario | VRAW+ mín @207 V | Margen | P 7812 | **Tj 7812** |
-|---|---|---|---|---|
-| 12-0-12 | 13.85 V | −0.15 V | 1.73 W | 68 °C |
-| 15-0-15 | 17.66 V | +3.66 V | 3.14 W | **104 °C** |
-
-Con 15-0-15 sobra margen, pero la unión del 7812 se va a 104-113 °C con el
-disipador de 20 °C/W de §6, contra los < 70 °C que esa misma sección fija como
-objetivo. **Descartado**: cambia un dropout marginal por un problema térmico.
-
-### 3. Los dos rieles no están igual de cargados
-
-VRAW+ mueve 450 mA y VRAW− solo 300, porque el 7805 cuelga del positivo. El riel
-negativo tiene sistemáticamente ~0.5 V más de margen. No estaba dicho en ninguna
-nota y afecta a cuál de los dos hay que vigilar.
-
-## Lo que sí sale holgado
-
-- **Rizado en la salida.** Con ~0.7 Vpp de entrada y 60-70 dB de rechazo del
-  7812, salen ~0.2-0.7 mV. El objetivo de < 10 mVpp del checklist de bring-up
-  (§9) se cumple con dos órdenes de magnitud de sobra. **El riesgo era el
-  dropout, nunca el rizado.**
-- **Corriente de rizado en C1: 0.72-0.88 A RMS.** Un electrolítico de
-  4700 µF/25 V de 16 mm suele estar sobre 1.4-2 A a 105 °C/100 Hz, así que entra
-  — pero es un dato que hay que mirar al comprar, no algo que se pueda dar por
-  hecho.
-
-## Qué hacer con esto
-
-1. **Desambiguar y acotar el transformador en el BOM** — hecho, ver `bom.csv`.
-   `12VAC CT` se lee de dos maneras y solo una funciona.
-2. Medir la tensión sobre `C1` en el bring-up con la red baja si se puede, o al
-   menos anotar la tensión real en vacío del transformador que se compre.
+- **La cascada aguas abajo.** Aquí se simula hasta VRAW y el pre-regulador.
+  Que `LT3045`/`LT3094` conviertan ese escalón en ±12,000 V lo responde su
+  propio margen (design-notes.md §16.8), no este modelo.
+- **El valle "crudo" contra el umbral de aborto del bring-up (13,46 V).**
+  Esa es una pregunta más abajo en la cadena — antes de cualquier
+  regulador — y la responde
+  [`hardware/01-power-supply/v3/valle_budget.py`](../../hardware/01-power-supply/v3/valle_budget.py),
+  que además documenta una discrepancia sin cerrar con la tabla de
+  design-notes.md §16.5 (issue #141).
+- **El arranque, el ruido y la deriva térmica del devanado** — ver el
+  docstring de `run_sim.py`.
