@@ -2126,6 +2126,21 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
     exige(p["alto_transformador"] + p["margen_transformador"] <= p["chasis_int_z"],
           f"el toroide pide {p['alto_transformador'] + p['margen_transformador']:.0f} "
           f"mm de alto con margen y el interior da {p['chasis_int_z']:.0f}")
+    # Y QUE NO SOBRE. El assert de arriba pide que el toroide QUEPA; este pide
+    # que la caja no sea mas alta de lo que hace falta. Sin el, 19 mm de aire
+    # vivieron dentro del chasis sin que nadie los reclamara, y el volumen de la
+    # caja es lo que se ve al abrir el case -- fue el primer comentario de Samuel
+    # al mirar el render de la bahia: "parece de PSU de computadora".
+    #
+    # ES LA UNICA COTA DEL CHASIS QUE NO CUELGA DE OTRA PIEZA. El largo y el
+    # fondo los manda la PCB, que esta dibujada (200 x 150 de Edge.Cuts en las
+    # tres revisiones del repo); el alto solo lo manda el toroide.
+    holgura_alto = p["chasis_int_z"] - (p["alto_transformador"]
+                                        + p["margen_transformador"])
+    exige(0 <= holgura_alto <= 2,
+          f"el interior del chasis mide {p['chasis_int_z']:.0f} de alto y el "
+          f"toroide pide {p['alto_transformador'] + p['margen_transformador']:.0f} "
+          f"({holgura_alto:+.0f} mm de aire). Ver spec 8.1")
 
     # --- 4. los agujeros de pared, con material alrededor ------------------
     # Mismo criterio de borde que los taladros del acrilico (BORDE_MIN_D de

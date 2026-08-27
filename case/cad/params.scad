@@ -1323,7 +1323,10 @@ fondo_pcb_max       = 60;  // censo estimado de PCB mas honda, no confirmado
 // contra solo 150 de los 223 de fondo. Al reves no cabe.
 chasis_int_x = 332;
 chasis_int_y = 170;
-chasis_int_z = 80;
+// Es la unica cota del chasis que NO cuelga de otra pieza. El largo y el fondo
+// los manda la PCB, dibujada a 200 x 150; el alto solo lo manda el toroide:
+// 46 de la hoja Nuvotem RS0120P1 + 15 de margen = 61.
+chasis_int_z = 61;
 
 // --- la chapa, y los tres numeros que NO son nuestros ---
 // La spec lo dice en su propia lista de huecos: "1.5 mm es supuesto; lo decide
