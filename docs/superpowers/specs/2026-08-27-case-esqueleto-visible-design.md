@@ -247,7 +247,15 @@ esa chapa se sustituye por el panel del patch bay y no se toca nada más.
 Es lo que Samuel pidió con «fácil de preparar para abrir e instalar algo allí».
 
 De regalo, la tapa mejora: hoy vuela **23.24 mm** a cada lado de su barra;
-apoyada en los dos cantos de la bahía vuela **14.00**.
+apoyada en los dos cantos de la bahía vuela **18.30**.
+
+> **Corregido al implementar (2026-08-27).** Esta sección dijo **14.00**, que
+> salía de poner el ala delantera en el canto de la ventana entre los dos
+> rieles. Ahí no cabe: el ala se mete en el **barrido** de la fila de módulos
+> de abajo y le come 84 de los 180° que el diseño protege. La posición real se
+> deriva del radio de giro del riel, y el vuelo que sale de ella es 18.30 —
+> peor que los 14.00 prometidos, mejor que los 23.24 de hoy. Manda el barrido,
+> no el alcance de la esquina quieta.
 
 **Los «dos cantos» son las alas de la bandeja.** La bahía no es una chapa plana:
 es una bandeja con el fondo perforado y las dos alas largas dobladas hacia
@@ -256,9 +264,18 @@ bahía y lo que le da inercia a la pieza. La altura del ala sale del plan.
 
 ### 5.3 Lo que la bahía NO cierra
 
-Que ate las dos costillas en cortante mejor que una barra es cualitativamente
-cierto y **no está medido**. Es la misma frase que la spec anterior dejó abierta
-sobre el racking del cajón (#203), y se cierra igual: **cargando el prototipo**.
+Que ate las dos costillas en cortante mejor que una barra era cualitativamente
+cierto y **no estaba medido**.
+
+> **Medido al implementar (2026-08-27).** La bandeja de 56.47 × 60 en chapa de
+> 3 da **I = 189 737 mm⁴, 33.9× el 2020** que sustituye. Y ese factor no es
+> sobredimensionar: es la consecuencia de que la pieza tenga que ser a la vez
+> pared de la bahía y canto de apoyo de la tapa. La sección le sale de balde.
+
+Lo que sigue sin cerrarse es el **racking** del conjunto — la rigidez a torsión
+de la caja entera, no la de una pieza. Es la misma frase que la spec anterior
+dejó abierta sobre el cajón (#203), y se cierra igual: **cargando el
+prototipo**.
 
 ## 6. Lo que se pierde con el 2020: la ranura en T
 
@@ -355,7 +372,7 @@ case, dejando 25 mm. Se come el suelo entero.
 | `guarda_costado()` | el acrílico pasa a estar por dentro; su apoyo sigue siendo la ventana de la costilla, pero desde la otra cara |
 | **`costado_2d` vuelve a llevar taladros** | 4 agujeros de paso holgado por costado, para los casquillos de §3.2. Se le quitaron TODOS el 2026-08-27 y vuelven cuatro — **de paso, no de apriete**, que es la diferencia que importa. Las puertas que se re-apuntaron ese día (`taladros_con_material()` murió, la rama del costado de `agujeros_donde_toca()` murió) hay que **resucitarlas con el criterio nuevo** |
 | `taladros_costilla()` | cambia el censo entero: entran los casquillos, la bahía y la retícula |
-| `guarda_tapa()` | la tapa del valle deja de volar 23.24 y pasa a 14.00 sobre los cantos de la bahía |
+| `guarda_tapa()` | la tapa del valle deja de volar 23.24 y pasa a 18.30 sobre los cantos de la bahía |
 | `guarda_chasis()` | alto de 80 a 61, y la pared trasera cuelga de un canal **sin ranura en T** |
 | `alineacion()` y `apoyo()` | las filas cambian de dueño |
 | `guarda_remate()` | `marco_sup` de 8 a 3 |
