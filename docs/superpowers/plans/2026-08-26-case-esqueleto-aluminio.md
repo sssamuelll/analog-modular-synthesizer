@@ -494,33 +494,45 @@ spec y en la Tarea 7.
 
 ---
 
-### Tarea 6: Los Z-Rails se mudan del acrílico a la costilla
+### Tarea 6: Los Z-Rails se mudan del acrílico a la costilla — HECHA
 
 **Files:**
-- Modify: `case/cad/sam17_case.scad` (`taladros_costilla()`, `costado_2d()`)
-- Modify: `case/check_dxf.py` (`railes_dentro_del_costado()`)
+- Modify: `case/cad/sam17_case.scad` (`costilla_2d()`, `costado_2d()`)
+- Modify: `case/cad/params.scad` (`ala_costilla`)
+- Modify: `case/check_dxf.py` (`taladros_costilla()`, `_cantos()`,
+  `agujeros_donde_toca()`, `taladros_con_material()`)
 
-- [ ] **Paso 1: reescribir `railes_dentro_del_costado()` para que mida la costilla**
+- [x] **Paso 1: la puerta primero.** Salió `taladros_costilla()`, no un
+retoque de `railes_dentro_del_costado()` — esa mira si los CUERPOS caben, y lo
+que hacía falta mirar es si el TALADRO tiene material. Pide las dos cosas: que
+los cuatro M4 estén en `costilla_2d.dxf` donde el modelo los pone, y que ya no
+estén en `costado_2d.dxf`.
 
-Hoy lee `costado_2d.dxf`. Pasa a leer `costilla_2d.dxf`, y **además** exige que
-los 4 M4 de riel **ya no estén** en `costado_2d.dxf`.
+- [x] **Paso 2: ROJO** — los cuatro faltaban en la costilla y los cuatro
+seguían en el acrílico.
 
-- [ ] **Paso 2: correr `check_dxf.py` y verla en ROJO** — los M4 siguen en el
-costado.
+- [x] **Paso 3: mover los taladros.** `costilla_2d()` los recibe, `costado_2d()`
+los pierde. Van en el ALMA y no en el ala: el riel corre a lo ancho y su cara
+de punta mira contra este plano.
 
-- [ ] **Paso 3: mover los taladros**: `taladros_costilla()` recibe los 4 M4,
-`costado_2d()` los pierde.
+- [x] **Paso 4: seguía ROJO, y ese era el hallazgo.** La costilla es una BANDA,
+así que cada M4 tiene DOS cantos de los que apartarse. Los centros de riel caen
+a ~16 mm del contorno exterior —de sobra— y eso los dejaba a 4 mm de la
+ventana: **1.62 mm de aluminio** entre el agujero y el canto. `ala_costilla`
+sube de 20 a **24**, que es la cota que la spec §10 había dejado pendiente
+(«la cota definitiva sale de qué le cabe al tornillo del Z-Rail»). Ahora el más
+justo queda a 7.87 mm = 1.75 D. Cuesta ventana y 37 g por costilla, y el juego
+de alas no se mueve: el umbral de flecha pasa de 121.4 a 128.9 mm de tramo y
+ningún tramo cae en medio.
 
-- [ ] **Paso 4: exportar y ver VERDE** — `powershell -File case/cad/export.ps1`.
+- [x] **Paso 5: probar que muerde**, tres veces:
+  - `ala_costilla` de vuelta a 20 → canta los cuatro con su margen real.
+  - devolver un M4 al costado → lo cantan DOS puertas (`taladros_costilla()`
+    por sobrante y `agujeros_donde_toca()` por censo).
+  - mover los M4 de la costilla 1 mm → «falta el M4 de …», o sea que la
+    comparación es contra la posición del modelo y no contra un conteo.
 
-- [ ] **Paso 5: probar que muerde** — devolver un M4 al costado y ver que canta.
-
-- [ ] **Paso 6: commit**
-
-```bash
-git add case/cad/ case/check_dxf.py case/plans/
-git commit -m "Los cuatro Z-Rails dejan el acrilico y atornillan a la costilla"
-```
+- [x] **Paso 6: commit**
 
 ---
 

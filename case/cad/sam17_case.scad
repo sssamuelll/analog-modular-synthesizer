@@ -404,17 +404,13 @@ module perfil_lateral() {
 }
 
 module costado_2d() {
-    cr = centros_rail();
     difference() {
         perfil_lateral();
-        // DOS DIAMETROS, no uno. El costado los mezcla porque los dos
-        // herrajes que atraviesa son distintos:
-        //   - los cuatro railes EUROrack traen el taladro de punta ROSCADO M4
-        //     de fabrica (hoja Tiptop), asi que aqui va agujero de PASO M4 y el
-        //     tornillo muerde el aluminio. Sin tuerca, sin inserto.
-        //   - los siete largueros 2020 se atornillan con M5 a tuerca T.
-        // Estuvieron todos a M5 mientras la seccion se creia la de StudioRacks.
-        for (c = cr) translate(c) circle(d = d_M4_paso + kerf);
+        // LOS CUATRO M4 DE RIEL SE FUERON A LA COSTILLA el 2026-08-27. El
+        // costado dejo de ser portante y con el se fue lo que atornillaba: un
+        // agujero que ya no recibe tornillo no es neutro en acrilico, quita
+        // material justo donde el radio de la esquina en punta anda corto.
+        // Aqui quedan solo los M5 de larguero, y esos se van en la Tarea 9.
         for (c = centros_esqueleto()) translate(c) circle(d = d_M5_paso + kerf);
     }
 }
@@ -476,12 +472,23 @@ module costilla_ala(i) {
 
 module costilla_2d() {
     P = pts_perfil();
-    union() {
-        difference() {
-            perfil_lateral();
-            offset(delta = -ala_costilla) perfil_lateral();
+    difference() {
+        union() {
+            difference() {
+                perfil_lateral();
+                offset(delta = -ala_costilla) perfil_lateral();
+            }
+            for (i = [0 : len(P)-1]) if (costilla_lleva_ala(i)) costilla_ala(i);
         }
-        for (i = [0 : len(P)-1]) if (costilla_lleva_ala(i)) costilla_ala(i);
+        // LOS CUATRO M4 DEL Z-RAIL. Vinieron del costado el 2026-08-27: el
+        // riel trae el taladro de punta ROSCADO M4 de fabrica (hoja Tiptop),
+        // asi que aqui va agujero de PASO y el tornillo muerde el aluminio del
+        // riel. Sin tuerca, sin inserto.
+        //
+        // Van en el ALMA, no en el ala: el riel corre a lo ancho del case y su
+        // cara de punta mira hacia fuera, o sea contra este plano. El ala esta
+        // doblada 90 grados y corre por el perimetro, al lado del riel.
+        for (c = centros_rail()) translate(c) circle(d = d_M4_paso + kerf);
     }
 }
 

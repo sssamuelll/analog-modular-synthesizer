@@ -51,10 +51,16 @@
 // 2*t_costilla. A 3 el case crece 6 mm; a 4, ocho. Con el ala doblada, 3 pasa
 // con 2.4x -- la rigidez la da la FORMA en L, no el espesor.
 t_costilla      = 3;
-// Ala que agarra la cara interior del costado. SUPUESTO DECLARADO: 20 es lo
-// que medía el 2020 que este marco jubila. La cota definitiva sale de que le
-// quepa el M4 del Z-Rail y de cuanto puede robarle al vaciado.
-ala_costilla    = 20;
+// Ancho de la banda: lo que queda de la costilla tras vaciarle la ventana, y
+// lo que agarra la cara interior del costado. YA NO ES SUPUESTO. Estuvo en 20
+// -- lo que medía el 2020 que este marco jubila -- y el 2026-08-27, al mudarle
+// los cuatro M4 del Z-Rail, se vio que 20 no daba: los centros de riel caen a
+// ~16 mm del contorno exterior, o sea a 4 de la ventana, y dejaban 1.6 mm de
+// aluminio entre el agujero y el canto. La cota sale de ahi:
+//     16.13 (el centro mas alejado del contorno) + 1.5*4.5 (BORDE_MIN_D x D)
+//   = 22.88  ->  24, que deja 1.1 mm de margen.
+// Solo cuesta ventana y 37 g por costilla. Lo vigila taladros_costilla().
+ala_costilla    = 24;
 // EL ALA DEL DOBLEZ. No es una pieza: es el propio material de la costilla
 // doblado 90 grados a lo largo del canto. Se llamo tira_canto mientras iba a
 // ser una pletina atornillada, y ese nombre habria mentido sobre como se
