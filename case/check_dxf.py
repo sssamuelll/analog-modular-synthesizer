@@ -314,49 +314,14 @@ def _dist_al_contorno(contorno, pt) -> float:
 BORDE_MIN_D = 1.5
 
 
-def taladros_con_material() -> list[str]:
-    """Cada taladro del costado necesita acrilico alrededor.
-
-    Esto no lo miraba nadie, igual que no se miraba si los largueros CABEN
-    (railes_dentro_del_costado). Y son cosas distintas: un larguero puede caber
-    de sobra y su M5 caer a dos milimetros de una curva, porque el taladro esta
-    en el centro del larguero y las curvas del contorno se mueven solas cada vez
-    que cambia un radio o un angulo. Un M5 asi no falla al montarlo -- falla al
-    apretarlo, y raja el costado."""
-    import clearance_budget as cb
-
-    contorno = _contorno_costado()
-    if not contorno:
-        return ["costado_2d: sin LINEs, no se puede verificar el contorno"]
-    p = cb.leer_params()
-    P = cb._vertices(p)
-    cr = cb._centros_rail(p, P)
-    ce = cb._centros_esqueleto(p, P, cr)
-    # El costado mezclo DOS diametros mientras llevo los M4 de riel: el margen
-    # se exige en diametros, asi que habia que llevarle el suyo a cada taladro
-    # -- con un solo `d` el criterio salia 22% duro en unos y 22% blando en
-    # otros. Desde el 2026-08-27 los M4 estan en la costilla (los mira
-    # taladros_costilla(), que ademas les pide los DOS cantos) y aqui solo
-    # quedan los M5 de larguero. La lista sigue llevando la rosca porque los
-    # dos diametros vuelven en cuanto alguien atornille otra cosa al acrilico.
-    taladros = [(nm, c, p["d_M5_paso"], "M5") for nm, c in zip(cb.NOMBRES_CE, ce)]
-    f: list[str] = []
-    peor, peor_nm, peor_d = float("inf"), "", 1.0
-    for nm, c, d, rosca in taladros:
-        dist = _dist_al_contorno(contorno, c)
-        if dist / d < peor / peor_d:
-            peor, peor_nm, peor_d = dist, nm, d
-        if dist < BORDE_MIN_D * d:
-            f.append(f"costado_2d: el {rosca} de '{nm}' cae a {dist:.2f} mm del "
-                     f"canto (se exige {BORDE_MIN_D * d:.2f} = {BORDE_MIN_D} x D). "
-                     f"Quedan {dist - d/2:.2f} mm de acrilico entre el agujero y "
-                     f"el borde: eso se raja al apretar")
-    if not f:
-        print(f"  costado_2d: los {len(taladros)} M5 de larguero tienen "
-              f"material alrededor (el mas justo, '{peor_nm}', a {peor:.2f} mm "
-              f"del canto = {peor / peor_d:.2f} D)")
-    return f
-
+# taladros_con_material() MURIO el 2026-08-27, y conviene que quede dicho por
+# que en vez de dejar la funcion vacia. Medía que cada taladro del costado
+# tuviera acrilico alrededor -- 1.5 x D desde el centro al canto -- porque un M5
+# a dos milimetros de una curva no falla al montarlo, falla al APRETARLO, y raja
+# el costado. Esa puerta ya no tiene sujeto: el costado no lleva un solo
+# taladro. Su criterio no se perdio, se MUDO con los tornillos: vive en
+# taladros_costilla(), que ademas pide los dos cantos de la banda -- cosa que
+# aqui no hacia falta porque el acrilico es macizo.
 
 # Cuanto puede desviarse un agujero del DXF respecto de donde el modelo lo
 # pone. No es tolerancia de fabricacion -- es cuanto se permite que MIENTAN el
@@ -380,7 +345,7 @@ def agujeros_donde_toca() -> list[str]:
 
     COSTADO: comparacion EXACTA. costado_2d se dibuja directamente en las
     coordenadas de pts_perfil(), asi que los centros del DXF y los de
-    _centros_rail()/_centros_esqueleto() viven en el mismo sistema y se restan
+    _centros_rail()/_centros_transversal() viven en el mismo sistema y se restan
     sin traducir nada. Once agujeros, uno por larguero.
 
     PLANCHAS: se comprueba lo que es invariante dentro de su propio plano --
@@ -395,34 +360,17 @@ def agujeros_donde_toca() -> list[str]:
     p = cb.leer_params()
     P = cb._vertices(p)
     cr = cb._centros_rail(p, P)
-    ce = cb._centros_esqueleto(p, P, cr)
+    ce = cb._centros_transversal(p, P, cr)
     f: list[str] = []
 
-    # --- costado: exacto ---
-    # SOLO LOS M5 DE LARGUERO desde el 2026-08-27. Los cuatro M4 de riel se
-    # mudaron a la costilla y los mira taladros_costilla(), que ademas les pide
-    # material a los dos cantos de la banda -- cosa que aqui no se podia hacer
-    # porque esta puerta compara posiciones, no bordes.
-    esperados = list(ce)
-    leidos = _redondos("costado_2d")
-    if len(leidos) != len(esperados):
-        f.append(f"costado_2d: el DXF trae {len(leidos)} agujeros redondos y el "
-                 f"modelo pone {len(esperados)}")
-    else:
-        peor, peor_nm = 0.0, ""
-        for nm, (ex, ey) in zip(cb.NOMBRES_CE, esperados):
-            d, _ = min(((math.hypot(cx - ex, cy - ey), i)
-                        for i, (cx, cy, _) in enumerate(leidos)))
-            if d > peor:
-                peor, peor_nm = d, nm
-            if d > DESVIO_DXF_MAX:
-                f.append(f"costado_2d: el agujero de '{nm}' esta a {d:.3f} mm de "
-                         f"donde el modelo lo pone ({ex:.2f}, {ey:.2f}). El DXF y "
-                         f"el modelo dicen cosas distintas, y al taller va el DXF")
-        if not f:
-            print(f"  costado_2d: los {len(esperados)} agujeros del DXF caen "
-                  f"donde el modelo dice (desvio maximo {peor:.3f} mm en "
-                  f"'{peor_nm}')")
+    # --- costado: CERO agujeros ---
+    # Fue comparacion exacta de once centros contra el DXF, y era de las
+    # puertas mas utiles del fichero: costado_2d se dibuja en las coordenadas
+    # de pts_perfil(), asi que los centros del modelo y los del fichero se
+    # restaban sin traducir nada. El 2026-08-27 la pieza se quedo sin un solo
+    # tornillo y la comparacion se quedo sin nada que comparar. Lo que queda es
+    # el censo -- que siga sin ellos -- y eso lo pide taladros_costilla() con
+    # su mensaje, asi que aqui no se repite.
 
     # --- planchas: filas, paso y separacion ---
     _, _, filas = cb._cajas_solidas(p)
@@ -636,32 +584,33 @@ def guarda_costado() -> list[str]:
     puerta vive aqui y no en clearance_budget -- misma razon que
     _contorno_costado().
 
-    ANCLAS: solo los M5 de larguero. Los cuatro M4 de riel NO cuentan, y es
-    deliberado: dos de ellos son los ejes de giro de las tapas y los otros dos
-    son tornillos DE MANO que se quitan para abrir. Un anclaje que el usuario
-    desmonta no es estructura. Contandolos el vano sale 111.3 en vez de 119.2,
-    o sea que la puerta se queda con el caso malo.
+    EL APOYO CAMBIO DE NATURALEZA EL 2026-08-27, y con el esta puerta. Hasta
+    entonces el costado colgaba de ANCLAS -- los M5 de larguero, cuatro puntos
+    -- y el vano era la distancia al tornillo mas cercano. Se contaban solo los
+    M5: los cuatro M4 de riel quedaban fuera a proposito, porque dos son ejes de
+    giro y los otros dos tornillos DE MANO que el usuario quita para abrir, y un
+    anclaje desmontable no es estructura.
+
+    Ahora el costado no lleva un solo tornillo: queda capturado entre las dos
+    alas de la costilla, que lo agarran por TODO su perimetro. El vano deja de
+    ser "distancia a un punto" y pasa a ser "distancia al canto de la ventana",
+    que es apoyo continuo. Se mide contra costilla_2d.dxf -- el fichero, no una
+    copia del offset en Python -- por la misma razon que el contorno.
+
+    Lo que eso vale, y es el pago de todo el esqueleto: el vano cae de 119.0 a
+    65.2 mm y la flecha de 0.38 a 0.11.
 
     LO QUE NO CUBRE: el racking del cajon entero. Esta puerta mira UNA pieza
-    plana. La rigidez del vano de 528 sin costado central sigue siendo la
-    heuristica que la spec §11 no ha cerrado, y este cambio le quita una barra:
-    se cierra cargando el prototipo."""
+    plana. La rigidez del vano de 528 sigue siendo la heuristica que la spec
+    no ha cerrado, y se cierra cargando el prototipo."""
     import clearance_budget as cb
     p = cb.leer_params()
     contorno = _contorno_costado()
     if not contorno:
         return ["costado_2d: sin contorno, no se puede medir el vano"]
-
-    # Los M5 del DXF, por diametro: el paso M5 es el mayor de los redondos del
-    # costado (los otros son M4 de riel). Se leen del fichero a proposito.
-    d_m5 = p["d_M5_paso"] + p["kerf"]
-    anclas = [(x, y) for x, y, d in _redondos("costado_2d")
-              if abs(d - d_m5) < 0.3]
-    n_larg = len(cb.NOMBRES_CE)
-    if len(anclas) != n_larg:
-        return [f"costado_2d: {len(anclas)} taladros M5 de d{d_m5:.1f} en el "
-                f"DXF y {n_larg} largueros de esqueleto en el modelo — o el "
-                f"DXF esta viejo o alguien movio un larguero sin re-exportar"]
+    cantos = _cantos("costilla_2d")
+    if not cantos:
+        return ["costilla_2d: sin cantos, no se puede medir el apoyo del costado"]
 
     xs = [q[0] for a in contorno for q in a]
     ys = [q[1] for a in contorno for q in a]
@@ -671,7 +620,7 @@ def guarda_costado() -> list[str]:
         x = min(xs)
         while x <= max(xs):
             if _dentro(contorno, (x, y)):
-                d = min(math.hypot(x - ax, y - ay) for ax, ay in anclas)
+                d = _dist_al_contorno(cantos, (x, y))
                 if d > vano:
                     vano, donde = d, (x, y)
             x += PASO_BARRIDO
@@ -693,15 +642,17 @@ def guarda_costado() -> list[str]:
             f"costado_2d: con {P:.0f} N el costado se hunde {flecha:.2f} mm y "
             f"el techo son {p['flecha_costado_max']:.2f} (flecha_costado_max). "
             f"El vano sin apoyo vale {vano:.1f} mm en (x={donde[0]:.0f}, "
-            f"y={donde[1]:.0f}) y el maximo que cabe son {vano_max:.1f} — hace "
-            f"falta otro anclaje de larguero cerca de ese punto, o subir "
-            f"t_cheek (la flecha va con t^3)")
+            f"y={donde[1]:.0f}) y el maximo que cabe son {vano_max:.1f}. Ya no "
+            f"se arregla con un anclaje: el apoyo es la VENTANA de la costilla, "
+            f"asi que o se ensancha ala_costilla o sube t_cheek (la flecha va "
+            f"con t^3)")
     if sigma > cb.SIGMA_PMMA:
         fallos.append(
             f"costado_2d: {sigma:.1f} MPa bajo la mano contra el umbral de "
             f"{cb.SIGMA_PMMA} (#106) — esto no deberia pasar antes que la "
             f"flecha, asi que revisa t_cheek y carga_mano antes de creerlo")
-    print(f"costado: {len(anclas)} anclas M5, vano libre {vano:.1f} mm "
+    print(f"costado: PIEL sin tornillos, apoyada en la banda de la costilla; "
+          f"vano libre {vano:.1f} mm "
           f"(x={donde[0]:.0f}, y={donde[1]:.0f}); con {P:.0f} N se hunde "
           f"{flecha:.2f} mm (techo {p['flecha_costado_max']:.2f}, vano maximo "
           f"{vano_max:.0f}) y trabaja a {sigma:.1f} MPa (fluencia "
@@ -738,7 +689,7 @@ def railes_dentro_del_costado() -> list[str]:
     p = cb.leer_params()
     P = cb._vertices(p)
     cr = cb._centros_rail(p, P)
-    ce = cb._centros_esqueleto(p, P, cr)
+    ce = cb._centros_transversal(p, P, cr)
     r = p["rail"] / 2
     # Los railes de PANEL van girados con su cara; los de esqueleto, a plomo.
     # El signo del giro es -angulo, igual que en el modulo rails() del .scad:
@@ -761,7 +712,7 @@ def railes_dentro_del_costado() -> list[str]:
                for n, c, a in zip(cb.NOMBRES_CR, cr, cb.ANGS_CR)]
     cuerpos += [(n, [(c[0] + dx, c[1] + dy)
                      for dx in (-r, r) for dy in (-r, r)])
-                for n, c in zip(cb.NOMBRES_CE, ce)]
+                for n, c in ce.items()]
     # Varios largueros van A RAS del contorno por diseno (los de la cara
     # trasera tienen su centro en prof_inferior - r, o sea que su cara de atras
     # coincide con el plano trasero; los de la base apoyan en y=0). Un punto
@@ -855,21 +806,24 @@ def todo_dxf_tiene_quien_lo_mire() -> list[str]:
 
 
 def taladros_costilla() -> list[str]:
-    """Los cuatro M4 del Z-Rail viven en la COSTILLA, y no en el acrilico.
+    """Todos los tornillos del case viven en la COSTILLA, y no en el acrilico.
 
     Dos cosas, y hacen falta las dos. La primera es que esten AQUI con material
     alrededor; la segunda es que YA NO ESTEN ALLI. Sin la segunda, mover un
-    taladro es anadirlo: el costado saldria al taller con cuatro agujeros que
-    ya no sirven para nada y que le quitan material justo donde el radio de la
+    taladro es anadirlo: el costado saldria al taller con agujeros que ya no
+    sirven para nada y que le quitan material justo donde el radio de la
     esquina en punta ya andaba corto.
 
+    EMPEZO CON LOS 4 M4 DE RIEL el 2026-08-26 y el 27 recibio los M5 de las
+    transversales, cuando el costado quedo sin un solo tornillo estructural.
+
     EL CANTO QUE MANDA ES EL DE DENTRO. La costilla es una BANDA de
-    `ala_costilla` de ancho, asi que cada M4 tiene dos bordes de los que
+    `ala_costilla` de ancho, asi que cada taladro tiene dos bordes de los que
     apartarse y el critico es el de la ventana: los centros de riel caen a ~16
-    mm del contorno exterior -- de sobra -- y eso los deja a 4 mm de la ventana
-    con una banda de 20. La spec (§10) ya lo habia dejado escrito como cota
-    pendiente: «la cota definitiva sale de que le cabe al tornillo del Z-Rail».
-    Esta puerta es donde se cierra.
+    mm del contorno exterior -- de sobra -- y eso los dejaba a 4 mm de la
+    ventana con una banda de 20. La spec (10) ya lo habia dejado escrito como
+    cota pendiente: la cota definitiva sale de que le cabe al tornillo del
+    Z-Rail. Esta puerta es donde se cerro.
 
     Se mide contra el DXF releido, no contra `ala_costilla` en aritmetica: la
     banda sale de un `offset(delta=-ala_costilla)` de OpenSCAD sobre un contorno
@@ -884,51 +838,142 @@ def taladros_costilla() -> list[str]:
     p = cb.leer_params()
     P = cb._vertices(p)
     cr = cb._centros_rail(p, P)
-    d = p["d_M4_paso"]
-    minimo = BORDE_MIN_D * d
+    ct = cb._centros_transversal(p, P, cr)
+    # DOS DIAMETROS, y el margen se exige en diametros: con un solo `d` el
+    # criterio saldria 22 % duro en unos y 22 % blando en otros. Es la misma
+    # leccion que traia taladros_con_material() cuando esto vivia en el
+    # acrilico, y se muda con los taladros.
+    esperados = ([(nm, c, p["d_M4_paso"], "M4")
+                  for nm, c in zip(cb.NOMBRES_CR, cr)]
+                 + [(nm, c, p["d_M5_paso"], "M5") for nm, c in ct.items()])
 
     # 1. estan en la costilla, donde el modelo dice, y con material alrededor
     redondos = _redondos("costilla_2d")
-    peor, peor_nm = float("inf"), ""
-    for nm, c in zip(cb.NOMBRES_CR, cr):
+    peor, peor_nm, peor_d = float("inf"), "", 1.0
+    for nm, c, d, rosca in esperados:
         cerca = [q for q in redondos
                  if math.hypot(q[0] - c[0], q[1] - c[1]) <= DESVIO_DXF_MAX
                  and abs(q[2] - (d + p["kerf"])) < 0.1]
         if not cerca:
-            f.append(f"costilla_2d: falta el M4 de '{nm}' en ({c[0]:.2f}, "
-                     f"{c[1]:.2f}). Los Z-Rails atornillan a la costilla desde "
-                     f"el 2026-08-26, no al acrilico")
+            f.append(f"costilla_2d: falta el {rosca} de '{nm}' en ({c[0]:.2f}, "
+                     f"{c[1]:.2f}). Los Z-Rails y las transversales atornillan "
+                     f"a la costilla desde el 2026-08-27, no al acrilico")
             continue
         dist = _dist_al_contorno(cantos, c)
-        if dist < peor:
-            peor, peor_nm = dist, nm
-        if dist < minimo:
-            f.append(f"costilla_2d: el M4 de '{nm}' cae a {dist:.2f} mm del "
-                     f"canto mas cercano y se exige {minimo:.2f} "
+        if dist / d < peor / peor_d:
+            peor, peor_nm, peor_d = dist, nm, d
+        if dist < BORDE_MIN_D * d:
+            f.append(f"costilla_2d: el {rosca} de '{nm}' cae a {dist:.2f} mm "
+                     f"del canto mas cercano y se exige {BORDE_MIN_D * d:.2f} "
                      f"({BORDE_MIN_D} x D). Quedan {dist - d / 2:.2f} mm de "
                      f"aluminio: el canto que muerde es el de la VENTANA, no "
                      f"el de fuera, asi que lo que hay que subir es "
                      f"ala_costilla (hoy {p['ala_costilla']:.0f})")
 
-    if len(redondos) != len(cr):
+    if len(redondos) != len(esperados):
         f.append(f"costilla_2d: el DXF trae {len(redondos)} agujeros redondos y "
-                 f"el modelo pone {len(cr)}. Uno de mas tampoco vale: la banda "
-                 f"solo mide {p['ala_costilla']:.0f} mm de ancho")
+                 f"el modelo pone {len(esperados)}. Uno de mas tampoco vale: "
+                 f"la banda solo mide {p['ala_costilla']:.0f} mm de ancho")
 
-    # 2. y NO estan en el costado. Se busca por diametro y no por posicion: si
-    #    alguien los mueve ademas de dejarlos, siguen sobrando igual.
-    quedan = [q for q in _redondos("costado_2d")
-              if abs(q[2] - (d + p["kerf"])) < 0.1]
+    # 2. y el costado NO LLEVA NINGUNO. No se busca por diametro sino el censo
+    #    entero: desde el 2026-08-27 esa pieza es piel y no lleva un solo
+    #    tornillo, asi que cualquier redondo que aparezca ahi sobra.
+    quedan = _redondos("costado_2d")
     if quedan:
-        f.append(f"costado_2d: quedan {len(quedan)} taladros de M4 en el "
-                 f"acrilico (p.ej. {quedan[0][0]:.1f}, {quedan[0][1]:.1f}). "
-                 f"Los Z-Rails se mudaron a la costilla: aqui ya no hay nada "
-                 f"que atornillar y el agujero solo quita material")
+        f.append(f"costado_2d: quedan {len(quedan)} taladros en el acrilico "
+                 f"(p.ej. {quedan[0][0]:.1f}, {quedan[0][1]:.1f}, d"
+                 f"{quedan[0][2]:.1f}). El costado es PIEL: no sostiene nada y "
+                 f"un agujero que no recibe tornillo solo quita material donde "
+                 f"el radio de la esquina en punta ya anda corto")
 
     if not f:
-        print(f"  costilla_2d: los 4 M4 de riel tienen material alrededor (el "
-              f"mas justo, '{peor_nm}', a {peor:.2f} mm del canto = "
-              f"{peor / d:.2f} D), y el costado ya no lleva ninguno")
+        print(f"  costilla_2d: los {len(esperados)} taladros (4 M4 de riel + "
+              f"{len(ct)} M5 de transversal) tienen material alrededor (el mas "
+              f"justo, '{peor_nm}', a {peor:.2f} mm del canto = "
+              f"{peor / peor_d:.2f} D), y el costado ya no lleva ninguno")
+    return f
+
+
+def guarda_zocalo() -> list[str]:
+    """La tabla se puede mover, y por eso sus tornillos no son todos redondos.
+
+    ES LA UNICA PIEZA DE MADERA DEL CASE Y DESDE EL 2026-08-27 CARGA. Una tabla
+    maciza cambia de tamano con la humedad: a contraveta, del orden del 1 % entre
+    un invierno seco y un verano humedo, o sea 3 mm sobre los 329 de fondo. El
+    marco de aluminio no se mueve. Si los seis tornillos fueran redondos, en
+    diciembre la tabla tira de ellos y o se raja por la fila o se sueltan.
+
+    La solucion es de ebanisteria y tiene DOS mitades, y las dos hay que
+    verificarlas porque cada una sola no sirve:
+      1. Todos los tornillos menos uno van en RANURA, alargada en la direccion
+         en que la tabla se mueve -- que es su FONDO, porque la veta corre a lo
+         largo (los 570 mm del ancho del case, como en la foto de referencia).
+      2. UNO de cada fila va REDONDO. Es el punto fijo. Sin el, la tabla no se
+         queda quieta: se arrastra hacia un extremo y el vuelo deja de ser
+         simetrico. Con dos redondos vuelve el problema entero.
+
+    Se lee del DXF y no del modelo porque lo que va al carpintero es el DXF, y
+    una ranura que sale redonda de la exportacion no la nota nadie: el contorno
+    no cambia y la pieza parece correcta hasta que llega el invierno."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    d = p["d_M5_paso"] + p["kerf"]
+    viaje = 2 * p["holgura_veta"]
+    filas_x = [p["vuelo_zocalo"] + p["t_cheek"] + p["t_costilla"] / 2,
+               (p["vuelo_zocalo"] + p["ancho_total"] - p["t_cheek"]
+                - p["t_costilla"] / 2)]
+    aristas, comps = _componentes("bandeja_base_2d")
+    if not aristas:
+        return ["bandeja_base_2d: sin LINEs, no se puede verificar la tabla"]
+
+    # Todo lo que mide d de ancho es tornillo de fijacion: redondo si es
+    # cuadrado, ranura si es mas largo que ancho.
+    tornillos = []
+    for comp in comps:
+        px = [q[0] for j in comp for q in aristas[j]]
+        py = [q[1] for j in comp for q in aristas[j]]
+        w, h = max(px) - min(px), max(py) - min(py)
+        if abs(w - d) > 0.1 or h < d - 0.1:
+            continue
+        tornillos.append(((min(px) + max(px)) / 2, (min(py) + max(py)) / 2, h))
+
+    f: list[str] = []
+    n = max(1, round((fondo_tabla := cb._fondo_bandeja(p)) / 100))
+    for xc in filas_x:
+        fila = sorted((t for t in tornillos if abs(t[0] - xc) < 0.1),
+                      key=lambda t: t[1])
+        if len(fila) != n:
+            f.append(f"bandeja_base_2d: la fila de x={xc:.2f} trae "
+                     f"{len(fila)} tornillos y el modelo pone {n} sobre "
+                     f"{fondo_tabla:.2f} mm de fondo")
+            continue
+        redondos = [t for t in fila if abs(t[2] - d) < 0.1]
+        if len(redondos) != 1:
+            f.append(f"bandeja_base_2d: la fila de x={xc:.2f} tiene "
+                     f"{len(redondos)} tornillos REDONDOS y tiene que tener "
+                     f"exactamente 1. Ninguno: la tabla no tiene punto fijo y "
+                     f"se arrastra hacia un extremo. Dos o mas: vuelve a estar "
+                     f"clavada a un marco que no se mueve, y se raja")
+            continue
+        if abs(redondos[0][1] - fila[n // 2][1]) > 1e-6:
+            f.append(f"bandeja_base_2d: el tornillo redondo de la fila de "
+                     f"x={xc:.2f} no es el del MEDIO. Fijar por una punta deja "
+                     f"toda la carrera hacia el otro lado y el vuelo del "
+                     f"zocalo deja de ser simetrico")
+        for t in fila:
+            if abs(t[2] - d) < 0.1:
+                continue
+            if abs(t[2] - (d + viaje)) > 0.1:
+                f.append(f"bandeja_base_2d: la ranura de (x={t[0]:.1f}, "
+                         f"y={t[1]:.1f}) mide {t[2]:.2f} de largo y se exige "
+                         f"{d + viaje:.2f} (paso M5 + 2 x holgura_veta). La "
+                         f"carrera cubre lo que la madera se mueve a "
+                         f"contraveta: acortarla es volver a clavarla")
+    if not f:
+        print(f"  bandeja_base_2d: {len(tornillos)} tornillos en 2 filas, "
+              f"1 redondo y {n - 1} en ranura de {d + viaje:.1f} mm por fila "
+              f"-- la tabla puede moverse {viaje:.1f} mm a contraveta")
     return f
 
 
@@ -942,8 +987,8 @@ def main() -> int:
         fallos += revisar(nombre, sobre)
     fallos += railes_dentro_del_costado()
     fallos += taladros_costilla()
+    fallos += guarda_zocalo()
     fallos += guarda_kondor()
-    fallos += taladros_con_material()
     fallos += guarda_costado()
     fallos += agujeros_donde_toca()
     fallos += chasis_agujeros()

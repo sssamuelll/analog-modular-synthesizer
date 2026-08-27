@@ -180,7 +180,15 @@ function x_valle() =
 // colgando de una sola fila de tornillos. El larguero habia nacido para dar
 // a esa plancha un anclaje a rail DERECHO en vez de al de panel girado; sin
 // plancha, el problema que resolvia deja de existir.
-function centros_esqueleto() =
+// Accesores POR NOMBRE. El 2026-08-27, al morir `base delantera`, todos los
+// ce[i] de este fichero se habrian corrido uno a uno en silencio -- el budget
+// se paso a diccionario por lo mismo. Aqui no hay dict, asi que hay tres
+// funciones y ni un indice suelto fuera de ellas.
+function ct_base()   = centros_transversal()[0];    // base trasera
+function ct_valle()  = centros_transversal()[1];
+function ct_remate() = centros_transversal()[2];
+
+function centros_transversal() =
     let (P = pts_perfil(), r = rail/2, cr = centros_rail(),
          // Los DOS largueros traseros comparten X, y por eso esto es UNA
          // cota y no dos copias: la cara donde apoya la trasera tiene que ser
@@ -193,8 +201,6 @@ function centros_esqueleto() =
          // El chasis del PSU se pega al larguero TRASERO, y el larguero
          // delantero se pega al chasis. Una sola cadena y en un solo sentido:
          // x_tr -> chasis -> base delantera. Ver la nota de abajo.
-         x_ch_frente = (x_tr - r) - chasis_holgura_larguero - ch_tapa_ext().y,
-         x_bd = x_ch_frente - chasis_holgura_larguero - r,
          y_ep = P[3].y - t_valle - r)
     // Los dos largueros de la base ya NO viven en el canto de abajo. Desde que
     // la bandeja es el suelo (t_base) montan encima de ella, o sea con su centro
@@ -230,8 +236,7 @@ function centros_esqueleto() =
     //     14 mm de diferencia una de sus dos filas se atornillaba al aire.
     //     Lo canta apoyo() en clearance_budget. Cabe: a y=8 la curva del canto
     //     trasero esta en x=289.87 y la esquina del riel movido en 286.22.
-    [[x_bd,          t_base + r],               // base delantera
-     [x_tr,          t_base + r],               // base trasera
+    [[x_tr,          r],                        // base trasera
      // valle: el cuarto, y el unico que existe por una plancha y no por una
      // union. Va CENTRADO bajo la tapa del valle para que los dos vuelos sean
      // iguales; a la vez ata los dos costados por la cintura, que es donde el
@@ -403,17 +408,20 @@ module perfil_lateral() {
     polygon(redondear(pts_perfil(), radios_perfil(), [4, 5, 6]));
 }
 
-module costado_2d() {
-    difference() {
-        perfil_lateral();
-        // LOS CUATRO M4 DE RIEL SE FUERON A LA COSTILLA el 2026-08-27. El
-        // costado dejo de ser portante y con el se fue lo que atornillaba: un
-        // agujero que ya no recibe tornillo no es neutro en acrilico, quita
-        // material justo donde el radio de la esquina en punta anda corto.
-        // Aqui quedan solo los M5 de larguero, y esos se van en la Tarea 9.
-        for (c = centros_esqueleto()) translate(c) circle(d = d_M5_paso + kerf);
-    }
-}
+// EL COSTADO YA NO LLEVA UN SOLO TORNILLO. Es piel: un contorno de acrilico y
+// nada mas. Los cuatro M4 de riel y los M5 de transversal se fueron a la
+// costilla el 2026-08-27, y con ellos se fue lo ultimo que hacia de esta pieza
+// una pieza portante.
+//
+// UN AGUJERO QUE NO RECIBE TORNILLO NO ES NEUTRO EN ACRILICO: quita material
+// justo donde el radio de la esquina en punta ya andaba corto, y cada uno es un
+// concentrador de tension en una plancha que rompe por el canto.
+//
+// Como se sujeta entonces: queda capturada entre las dos alas de la costilla
+// -- una agarra su cara interior y la otra le tapa el canto (spec 2). Sin
+// tornillo, y por eso guarda_costado() dejo de medir vanos entre anclas y pasa
+// a medir contra la ventana de la costilla, que es apoyo CONTINUO.
+module costado_2d() { perfil_lateral(); }
 
 module costado() { linear_extrude(t_cheek) costado_2d(); }
 
@@ -489,6 +497,13 @@ module costilla_2d() {
         // cara de punta mira hacia fuera, o sea contra este plano. El ala esta
         // doblada 90 grados y corre por el perimetro, al lado del riel.
         for (c = centros_rail()) translate(c) circle(d = d_M4_paso + kerf);
+        // Y LOS M5 DE LAS TRANSVERSALES, que vinieron del costado el mismo dia.
+        // Los 2020 se atornillan por su ranura de punta con M5 a tuerca T.
+        // Caen los tres sobre la banda con material de sobra (8.49, 10.97 y
+        // 8.49 mm al canto contra los 8.25 que pide BORDE_MIN_D); el unico que
+        // NO cabia era el de `base delantera`, a 6.00 -- y esa barra murio el
+        // mismo dia por otro motivo. Lo vigila taladros_costilla().
+        for (c = centros_transversal()) translate(c) circle(d = d_M5_paso + kerf);
     }
 }
 
@@ -512,6 +527,12 @@ module rail_er(largo) { cube([rail_er_fondo, largo, rail_er_alto], center = true
 // transformador. El paso ahora se estira para caber un numero entero de veces,
 // que es lo que el codigo viejo QUERIA decir con ese paso/2 de arranque:
 // orillas iguales y valiendo medio paso.
+// Cuantos tornillos caben en un largo con el paso nominal. Se saca aparte
+// porque la tabla la necesita para su propia fila y no puede usar
+// fila_agujeros(): sus agujeros van ALARGADOS, no redondos.
+function n_agujeros(largo = 0, paso = 100) =
+    max(1, round((largo == 0 ? bandeja_base_fondo() : largo)/paso));
+
 module fila_agujeros(largo, y, paso = 100, d = d_M3_paso) {
     n = max(1, round(largo/paso));
     e = largo/n;                       // paso real, <= paso pedido + pico
@@ -529,8 +550,6 @@ module plancha(l, a) square([l, a]);   // l = ancho_util, a = fondo local
 // solapes() no lo vio nunca porque una placa flotando es disjunta —
 // alineacion() en clearance_budget.py es la puerta que si lo ve.
 module bandeja_base_2d() {
-    au = ancho_util;
-    ce = centros_esqueleto();
     // EL SUELO CIERRA (2026-08-21). El canto delantero estuvo A RAS del larguero
     // de base delantera, y como ese larguero se retira por detras del riel de
     // panel, el suelo del case tenia 37.96 mm abiertos por delante. Ahora la
@@ -545,13 +564,28 @@ module bandeja_base_2d() {
     // horas como rejilla dibujada en el vuelo y se le veia: el acrilico naranja
     // es TRASLUCIDO y el campo de ranuras se transparentaba a lo largo del canto
     // inferior. Ahora el vuelo es plancha maciza y el suelo cierra de verdad.
-    v  = bandeja_base_vuelo();
-    x0 = ce[0].x - rail/2 - v;
-    fondo = ce[1].x + rail/2 - x0;          // canto trasero a ras del rail
+    v = vuelo_zocalo;
     difference() {
-        plancha(au, fondo);
-        fila_agujeros(au, ce[0].x - x0);    // los dos largueros van ENCIMA
-        fila_agujeros(au, ce[1].x - x0);
+        plancha(bandeja_base_ancho(), bandeja_base_fondo());
+        // LAS DOS FILAS DE FIJACION A LAS COSTILLAS. Corren a lo largo de la
+        // tabla, una bajo cada costilla, y NO son agujeros redondos: la tabla
+        // es maciza y se mueve a contraveta. La veta va a lo LARGO (los 570 mm
+        // del ancho del case, como en la foto), asi que lo que crece y encoge
+        // es el FONDO -- la direccion en la que corre esta misma fila. De ahi
+        // que las ranuras sean alargadas en Y local.
+        //
+        // El del MEDIO va redondo a proposito: la tabla tiene que crecer hacia
+        // los dos lados desde un punto fijo. Si todos fueran ranura, la tabla
+        // se arrastra hacia un extremo y el vuelo deja de ser simetrico.
+        for (zc = [v + t_cheek + t_costilla/2,
+                   v + ancho_total - t_cheek - t_costilla/2])
+            for (i = [0 : n_agujeros() - 1])
+                let (y = bandeja_base_fondo()*(i + 0.5)/n_agujeros(),
+                     medio = (i == floor(n_agujeros()/2)))
+                    translate([zc, y])
+                        if (medio) circle(d = d_M5_paso + kerf);
+                        else hull() for (dy = [-holgura_veta, holgura_veta])
+                            translate([0, dy]) circle(d = d_M5_paso + kerf);
         // LA SALIDA DE CABLES DEL CHASIS. Era un campo de ondas de 104 x 32
         // dibujado como VENTILACION, y con la caja de acero encima ya no
         // ventila nada (spec §3.3). El cambio no es solo de nombre: una onda
@@ -639,8 +673,8 @@ KONDOR_FONT = "Franklin Gothic Medium";
 
 function trasera_au() = ancho_util - 2*hol_piel;
 function trasera_y_relieve() =
-    let (ce = centros_esqueleto())
-    ce[1].y + 0.74*(ce[3].y - ce[1].y);   // y0 = 0, ver piel_trasera_2d()
+    let (ce = centros_transversal())
+    ct_base().y + 0.74*(ct_remate().y - ct_base().y);   // y0 = 0, ver piel_trasera_2d()
 
 // OJO CON EL ESPEJO -- ESTO NO ES UN DESCUIDO, ES LA CORRECCION.
 //
@@ -672,14 +706,14 @@ module kondor_2d(espejo = false) {
 
 module piel_trasera_2d() {
     au = ancho_util - 2*hol_piel;
-    ce = centros_esqueleto();
+    ce = centros_transversal();
     P  = pts_perfil();
     // UNA sola plancha desde el 2026-08-21: fueron dos (piel_inferior y
     // piel_superior) partidas a la altura del entrepiso, porque cada una se
     // atornillaba a los dos largueros de SU piso. Muerta la bandeja de
     // entrepiso esa frontera dejo de existir. Va en t_piel (8), que es su
     // propio espesor desde el 2026-08-21.
-    // Canto de abajo EN EL PLANO DEL SUELO. Estuvo en ce[1].y - 15 (o sea
+    // Canto de abajo EN EL PLANO DEL SUELO. Estuvo en ct_base().y - 15 (o sea
     // y=3), que no era una cota del case sino la distancia al canto de la fila
     // de M3 leida al reves: 15 mm por debajo del larguero de base trasera. Ese
     // 15 no sabia donde estaba el suelo, y dejaba un rebaje corrido de
@@ -706,8 +740,8 @@ module piel_trasera_2d() {
     // largueros de en medio no sujetaban ya nada mas que estas filas, y una
     // plancha continua de 8 atornillada arriba y abajo trabaja de alma de
     // cortante en esa cara mejor que cinco barras sueltas.
-    f_base = ce[1].y - y0;
-    f_tras = ce[3].y - y0;
+    f_base = ct_base().y - y0;
+    f_tras = ct_remate().y - y0;
     // Las ondas van derivadas de las dos filas que las rodean: asi no se acercan
     // a un tornillo si un larguero se mueve.
     //
@@ -817,10 +851,10 @@ module ranura(largo, ancho) {
 // a la malla HP, partido por la espina maciza donde va la fila de M3.
 module tapa_valle_2d() {
     au = ancho_util;
-    ce = centros_esqueleto();
+    ce = centros_transversal();
     xv = x_valle();
     largo = xv[1] - xv[0];
-    y_esp = ce[2].x - xv[0];                 // linea del larguero, en local
+    y_esp = ct_valle().x - xv[0];                 // linea del larguero, en local
     campos = [[valle_margen,               y_esp - valle_espina/2],
               [y_esp + valle_espina/2,     largo - valle_margen]];
     n_hp  = round(largo_riel/hp);            // 104
@@ -1071,8 +1105,7 @@ module chasis_3d() {
 // mismo numero hasta el 2026-08-21, cuando la bandeja paso a volar por delante
 // del larguero delantero. Todo lo del chasis se mide contra ESTE, que es lo que
 // de verdad lo encierra; el fondo de la plancha es este mas el vuelo.
-function bandeja_base_fondo() =
-    let (ce = centros_esqueleto()) ce[1].x + rail/2 - (ce[0].x - rail/2);
+function bandeja_base_fondo() = fondo() + 2*vuelo_zocalo;
 
 // Lo que la plancha vuela por delante del larguero de base delantera. DERIVADO,
 // no parametro: llega hasta donde MUERE LA CURVA de la esquina inferior
@@ -1082,9 +1115,7 @@ function bandeja_base_fondo() =
 // larguero arranca en 78.34 desde que lo coloca el chasis, o sea 68.85 de
 // vuelo. Fueron 30.19 mientras el larguero se derivaba del riel de panel, y ese
 // crecimiento se lo lleva entero la rejilla de entrada de aire, que vive aqui.
-function bandeja_base_vuelo() =
-    let (P = pts_perfil(), ce = centros_esqueleto())
-    (ce[0].x - rail/2) - tangente(P[0], P[6]-P[0], P[1]-P[0], radio_punta);
+function bandeja_base_ancho() = ancho_total + 2*vuelo_zocalo;
 
 // El chasis YA NO VA CENTRADO entre los largueros (2026-08-21). Se pega al
 // TRASERO, a chasis_holgura_larguero, y el larguero delantero se pega a el: una
@@ -1096,9 +1127,18 @@ function bandeja_base_vuelo() =
 // delante del larguero delantero. Como el larguero se planta a
 // chasis_holgura_larguero del chasis, la cuenta se cierra sola y no necesita
 // mirar donde acabo ce[0]: vuelo + rail + holgura.
-function ch_pos() = [ancho_util - chasis_margen_bandeja
-                       - ch_tapa_ext().x,
-                     bandeja_base_vuelo() + rail + chasis_holgura_larguero];
+// Cara delantera del chasis: cuelga del larguero TRASERO y de ahi hacia
+// delante ya no hay nada. Estuvo escrito como vuelo + rail + holgura -- la
+// cadena leida al reves desde el canto de la plancha -- y solo daba lo mismo
+// porque `base delantera` estaba justo ahi. GEMELA de _x_chasis_frente().
+function x_chasis_frente() =
+    (ct_base().x - rail/2) - chasis_holgura_larguero - ch_tapa_ext().y;
+
+// En coordenadas LOCALES de la tabla, cuyo origen esta vuelo_zocalo por delante
+// y por fuera del cuerpo.
+function ch_pos() = [vuelo_zocalo + t_cheek + t_costilla
+                       + ancho_util - chasis_margen_bandeja - ch_tapa_ext().x,
+                     x_chasis_frente() + vuelo_zocalo];
 
 // Esquina de la salida de cables del chasis, en coordenadas locales de
 // bandeja_base_2d(). Una sola definicion: la consume el agujero del acrilico
@@ -1109,10 +1149,9 @@ function salida_cables_xy() =
      pc.y + d + chasis_salida_y - salida_holgura];
 
 module chasis() {
-    ce = centros_esqueleto();
     p  = ch_pos();
-    multmatrix([[0, 1, 0, ce[0].x - rail/2 + p.y],
-                [0, 0, 1, t_base + chasis_pie],
+    multmatrix([[0, 1, 0, -vuelo_zocalo + p.y],
+                [0, 0, 1, chasis_pie],
                 [-1, 0, 0, ancho_total - t_cheek - p.x],
                 [0, 0, 0, 1]])
         chasis_3d();
@@ -1203,7 +1242,7 @@ else assert(false, str("PART desconocido: ", PART));
 // costado_2d vive en el plano XY del perfil (X = fondo, Y = altura);
 // costado() lo extruye en +Z por t_cheek, o sea Z pasa a ser el ancho.
 // Dos costados en los extremos de Z; 9 largueros 2020 (centros_rail() +
-// centros_esqueleto(), en ese orden — 5 de esqueleto desde que los tres
+// centros_transversal(), en ese orden — 5 de esqueleto desde que los tres
 // traseros de en medio se retiraron) cruzando entre sus caras internas.
 module costados() {
     costado();
@@ -1225,7 +1264,7 @@ module rails() {
             rotate([0, 0, -angs[i]])
                 rotate([90, 0, 0])
                     rail_er(ancho_util);
-    for (c = centros_esqueleto())
+    for (c = centros_transversal())
         translate([c.x, c.y, ancho_total/2])
             rotate([90, 0, 0])
                 rail_2020(ancho_util);
@@ -1244,19 +1283,17 @@ module rails() {
 // bandeja_base_2d() para derivar su fondo (ronda final: antes iba en
 // x=rail, que no es donde esta el rail).
 module bandeja_base() {
-    // Ya no apoya en el lomo de nadie: ES el canto de abajo del case, de y = 0 a
-    // y = t_base, y los largueros montan sobre ella. El grosor crece hacia -Y
-    // desde el origen, asi que el origen va en t_base. Y desde el 2026-08-21 el
-    // origen se adelanta el VUELO: la plancha empieza por delante del larguero.
-    ce = centros_esqueleto();
-    translate([ce[0].x - rail/2 - bandeja_base_vuelo(), t_base,
-               ancho_total - t_cheek])
+    // LA TABLA, y desde el 2026-08-27 vive DEBAJO del marco: de y = -t_base a
+    // y = 0. Su cara de arriba ES el suelo interior y su canto sobresale
+    // vuelo_zocalo por los cuatro lados. Es la misma pieza que el "zocalo" de
+    // la spec 9, que hasta hoy eran dos.
+    translate([-vuelo_zocalo, 0, ancho_total + vuelo_zocalo])
         rotate([0, 90, 0]) rotate([90, 0, 0])
             linear_extrude(t_base) bandeja_base_2d();
 }
 
 // tope de bandeja a ras de P3.y (canto SUPERIOR, no inferior — ver
-// centros_esqueleto()); canto delantero a ras del rail reubicado.
+// centros_transversal()); canto delantero a ras del rail reubicado.
 
 // EMPOTRADA (2026-08-21): cara exterior EN el plano trasero, x = fondo(), y
 // crece hacia dentro. Estuvo volada sobre separadores, con la cara exterior 10
@@ -1274,7 +1311,7 @@ module bandeja_base() {
 // t_piel - kondor_prof.
 module piel_trasera() {
     P = pts_perfil();
-    ce = centros_esqueleto();
+    ce = centros_transversal();
     translate([P[6].x, 0, t_cheek + hol_piel])
         rotate([0, -90, 0])
             difference() {
@@ -1360,12 +1397,12 @@ module remate_sup() {
 module remate_sup_2d() {
     au = ancho_util;
     P = pts_perfil();
-    ce = centros_esqueleto();
+    ce = centros_transversal();
     difference() {
         plancha(au, prof_sup);
         // la fila cae en la centerline del larguero nuevo, medida desde el
         // canto DELANTERO de la plancha (el que remata el canto del panel).
-        fila_agujeros(au, ce[3].x - P[4].x - inset_remate_frente);
+        fila_agujeros(au, ct_remate().x - P[4].x - inset_remate_frente);
     }
 }
 
@@ -1374,15 +1411,14 @@ module remate_sup_2d() {
 // del canto del case (centro a d_pie/2) para que la carga del costado baje
 // recta al pie y no de canto.
 module paticas() {
-    ce = centros_esqueleto();
     // El pie delantero ya no cae sobre un larguero: la base delantera se retiro
     // 39 mm hacia dentro para librar el riel del panel, y un pie ahi dejaria todo
     // el frente en voladizo justo donde se aprietan los mandos de abajo. Va donde
     // acaba el redondeo de la punta, que es lo mas adelante que se puede apoyar
     // con el disco entero sobre acrilico. El trasero sigue sobre su larguero.
-    for (x = [alto_frontal/2 + d_pie/2, ce[1].x])
+    for (x = [alto_frontal/2 + d_pie/2, ct_base().x])
         for (z = [d_pie/2, ancho_total - d_pie/2])
-            translate([x, 0, z])
+            translate([x, -t_base, z])
                 rotate([90, 0, 0])
                     cylinder(h = alto_pie, d = d_pie);
 }
@@ -1455,7 +1491,7 @@ module lienzo_2d() {
 
 module bom() {
     au = ancho_util;
-    echo(str("BOM: larguero 2020 x", len(centros_esqueleto()), " de ", au, " mm"));
+    echo(str("BOM: larguero 2020 x", len(centros_transversal()), " de ", au, " mm"));
     echo(str("BOM: Z-Rail de Tiptop x", len(centros_rail()), ", largo ", largo_riel,
              " (104 HP) -- seccion ", rail_er_fondo, " x ", rail_er_alto,
              ", hoja de datos oficial. NO es el riel de StudioRacks: ese media",
@@ -1465,7 +1501,7 @@ module bom() {
              "costado y ROSCAN EN EL PROPIO RIEL (viene con M4 taladrado a 3.3 ",
              "de fabrica). Sin tuerca, sin inserto. Largo = ", t_cheek,
              " de costado + arandela + 8..10 de rosca dentro del aluminio."));
-    echo(str("BOM: tornillo M5 boton x", 2*len(centros_esqueleto()),
+    echo(str("BOM: tornillo M5 boton x", 2*len(centros_transversal()),
              " + tuerca T -- por la PUNTA de los largueros 2020, desde el costado"));
     echo(str("BOM: tornillo M5 x", 2*chasis_anclajes, " + tuerca T + SEPARADOR de ",
              chasis_holgura_larguero, " -- cuelgan el chasis del PSU de la ranura"));
@@ -1509,7 +1545,7 @@ module bom() {
     echo("     x4 CIERRES: M4 de cabeza moleteada o palomilla -- se quitan a");
     echo("        mano y son los unicos que se tocan para abrir el case.");
     echo("        Riel del frente abajo, riel del valle arriba.");
-    echo(str("     x", 2*len(centros_esqueleto()), " fijos: los largueros de esqueleto"));
+    echo(str("     x", 2*len(centros_transversal()), " fijos: los largueros de esqueleto"));
     echo("BOM: tuercas T DE INSERCION LATERAL (drop-in), NO de deslizar. Con las");
     echo("     de deslizar hay que enhebrarlas por la punta del larguero antes de");
     echo("     montar, o sea que anadir un tornillo mas tarde obliga a desarmar.");

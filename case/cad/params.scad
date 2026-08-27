@@ -253,6 +253,12 @@ angulo_superior = 45;    // 45 desde la horizontal, cara de generacion
 // la esquina de abajo del riel contra el tope de la bandeja. Derivarlo contra lo
 // que no toca costo 0.51 mm de solape en su dia -- se midio contra el lomo del
 // larguero y no contra la bandeja que iba encima.
+// SUBIO A 20 Y VOLVIO A 19 el mismo dia, y conviene que quede escrito por que.
+// Con la bandeja DENTRO del case (plancha de 10 a ras del canto de abajo) el
+// riel de panel del frente dejaba de librarla por 0.71 mm y habia que subir el
+// aparato. Al pasar el suelo a TABLA DE MADERA BAJO EL MARCO (spec 9.1) el
+// suelo interior es y=0: el riel solo tiene que librar holgura_rail y le sobran
+// 9.29 mm. Esta cota deja de estar atada al espesor del suelo.
 alto_frontal    = 19;
 // Fondo del case. UN SOLO plano trasero: el costado es un triangulo
 // rectangulo con el angulo recto atras y la hipotenusa quebrada en dos
@@ -555,7 +561,43 @@ t_cheek    = 8;    // costados portantes
 //
 // No es un valor libre: si cambia t_cheek hay que cambiar este a mano (aqui no
 // se pueden escribir expresiones, ver la cabecera del fichero).
-t_base     = 8;
+// LA TABLA. Dejo de ser una plancha DENTRO del case el 2026-08-27 y paso a ser
+// una TABLA DE MADERA MACIZA BAJO EL MARCO -- la misma pieza que el zocalo, que
+// hasta entonces eran dos (spec 9.1, decidido sobre la foto de referencia).
+// Ocupa y = -t_base .. 0: su cara de arriba ES el suelo interior y su canto
+// sobresale del cuerpo. Las dos costillas se le apoyan encima y las cuatro
+// paticas se le atornillan por debajo, o sea que el peso del case va de costilla
+// a pata casi en linea recta.
+//
+// 18 SALE DE LA FLECHA. Lo que la dobla no es el peso del case sino el chasis
+// del PSU sentado en medio del vano de 528.62 entre las dos costillas: con 200 N
+// y E = 11000 MPa, 16 da 0.562 (justo), 18 da 0.395 y 20 da 0.288, contra un
+// techo de 0.60. 18 es ademas espesor de tabla de catalogo.
+//
+// MACIZA, con AGUJEROS ALARGADOS en Z. Es la unica pieza de madera del case que
+// CARGA, y una tabla maciza de 528 mm a contraveta se mueve milimetros con la
+// estacion. El marco de aluminio no se mueve: si la fijacion es rigida, o se
+// raja la tabla o se sueltan los tornillos. Lo vigila guarda_zocalo().
+t_base     = 18;
+
+// Modulo de elasticidad de la madera A FAVOR DE VETA. 11000 MPa es nogal o arce
+// -- el rango de manual para frondosas de densidad media va de 10000 a 12000.
+// SUPUESTO DECLARADO hasta que la especie este elegida en el pliego: roble da
+// 12000 (mejor) y el contrachapado 8000 (peor, pediria 20 mm).
+E_madera   = 11000;
+
+// Lo que la tabla sobresale del cuerpo por los cuatro lados. Es cota de MIRAR,
+// no de calcular: nada cuelga de ella. Sale de la foto de referencia, donde el
+// zocalo asoma poco -- lo justo para leerse como base y no como bandeja.
+vuelo_zocalo = 10;
+
+// Carrera del agujero alargado, por lado, en Z. La tabla mide ancho_total +
+// 2*vuelo_zocalo a contraveta; una frondosa se mueve del orden del 0.25 % de su
+// ancho entre invierno y verano en interior, o sea ~1.4 mm sobre 570. Se dan 2.5
+// por lado (5 de carrera total) para cubrir un ambiente peor que el supuesto.
+// El tornillo del medio de cada costilla va REDONDO: la tabla tiene que crecer
+// hacia los dos lados desde un punto fijo, no arrastrarse hacia uno.
+holgura_veta = 2.5;
 t_panel    = 1.6;  // PCB de aluminio, espesor estandar JLCPCB
 // EL PROCESO ES FRESADO CNC, NO LASER (decidido el 2026-08-17). Y por eso
 // este numero vale CERO, que no es lo mismo que "sin calibrar":

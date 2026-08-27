@@ -536,207 +536,63 @@ ningún tramo cae en medio.
 
 ---
 
-### Tarea 7: BLOQUEADA el 2026-08-27 — de las cuatro se va una
+### Tareas 7, 8 y 9: HECHAS, y en un solo paso
 
-Al medirla, **tres de las cuatro filas de la spec §5.1 eran falsas**. Va entero
-en **spec §5.2 y §5.3**; el resumen:
+El plan las tenía separadas y no sobrevivió al contacto: quitar `base delantera`
+pone roja a `guarda_costado()` mientras el acrílico siga contando como portante,
+o sea que los largueros, el suelo y la taladrería del costado se mueven juntos o
+el modelo mide un estado a medias.
 
-| larguero | lo que decía el plan | lo medido |
-|---|---|---|
-| `base trasera` | se muda a P[6] | **ya está**: tangente a la cara interior de la trasera (300.94) y al techo del suelo (8.00). Mudarla la mete 8 mm por detrás del panel |
-| `remate trasero` | se muda a P[5] | **ya está**, mismo caso contra la trasera y `remate_sup` |
-| `valle` | desaparece, P[3] ya tiene riel | **no**: ese riel empieza 4.00 mm más allá del canto de la tapa y el de abajo muere 8.10 mm por debajo. Y el tramo del valle es el único de la costilla **sin ala**, así que tampoco hay repisa |
-| `base delantera` | desaparece | **sí**, y es la única que de verdad flotaba en mitad del suelo |
+**De las cuatro barras se fue UNA.** Las otras tres no eran «barras internas»:
 
-Y quitar `base delantera` pone **roja** a `guarda_costado()`: el vano del
-acrílico pasa de 119.0 a 178.9 mm y la flecha de 0.38 a 0.86 contra un techo de
-0.60. Esa puerta modela el acrílico como pieza portante, cosa que deja de ser
-en la Tarea 9 — o sea que **7, 9 y 10 son un solo paso** y este plan las tenía
-separadas.
+| larguero | qué pasó |
+|---|---|
+| `base trasera` | **se queda donde está.** Ya era transversal de marco: a tope contra la cara interior de la trasera (300.94) y contra el suelo. Mudarla a P[6] la metía 8 mm por detrás del panel |
+| `remate trasero` | **se queda**, mismo caso contra la trasera y `remate_sup` |
+| `valle` | **se queda.** Ningún riel llega a la tapa (el de arriba se queda 4.00 mm corto, el de abajo 8.10 por debajo) y el tramo del valle de la costilla es el único **sin ala**, así que tampoco hay repisa. Ver spec §5.2 |
+| `base delantera` | **se va.** La única que de verdad flotaba: x=88.34, en mitad del suelo, colocada por el chasis del PSU |
 
-**Bloqueada a la espera de decisión de Samuel**: la instrucción era «se van las
-cuatro» y se cumple en una. Las otras tres son transversales de marco o carga
-que nada más alcanza.
+**Y el suelo cambió de material a mitad de tarea.** Iba a ser aluminio de 10 en
+voladizo. Samuel, sobre la foto de referencia: la bandeja base **es la madera**,
+la misma pieza que el zócalo. Eso deshizo el voladizo, devolvió el milímetro de
+`alto_frontal` y le dio al chasis del PSU dónde apoyar la pared que se quedaba
+sin larguero. Va entero en **spec §9**.
 
----
+- [x] **Los largueros.** `_centros_esqueleto` → `_centros_transversal`, y pasa a
+devolver un **diccionario**: al morir `base delantera` doce índices numéricos
+(`ce[0]`, `ce[1]`…) se habrían corrido en silencio uno a uno. Con el dict, cada
+uno falló en voz alta. En el `.scad`, que no tiene dict, tres accesores por
+nombre (`ct_base()`, `ct_valle()`, `ct_remate()`) y ni un índice suelto fuera de
+ellos.
 
-### Tarea 8: La bandeja de base pasa a aluminio de 10 — VOLADIZO
+- [x] **La tabla.** `t_base` 8 → **18**, de acrílico a madera maciza, y de
+`y = 0..8` dentro a `y = -18..0` debajo. `guarda_piso()` cambia de sujeto entero:
+se le caen tres asserts (uno tautológico, uno sin sujeto y el del voladizo) y
+entra el único que manda, el chasis del PSU en medio del vano entre costillas.
 
-**Replanteada el 2026-08-27.** Decía «aluminio de 5, vano biapoyado de 280.94
-entre P[0] y P[6]». La barra de P[0] no cabe (spec §4.2.1), así que no hay
-vano: hay **voladizo** desde la única línea trasera que queda, 271.45 mm hoy y
-279.45 tras la mudanza a P[6]. En acrílico de 8 cede 19.7 mm; en aluminio de 5,
-3.509. Samuel eligió que la bandeja aguante sola en vez de resucitar `base
-delantera`, y eso son 10 mm de plancha y +2.7 kg.
+- [x] **El costado se queda sin un solo tornillo.** Los M5 de transversal se van
+a la costilla, donde los tres caben con material (8.49, 10.97 y 8.49 mm al canto
+contra los 8.25 exigidos). El único que **no** cabía era el de `base delantera`,
+a 6.00 — y esa barra murió el mismo día por otro motivo.
 
-**Files:**
-- Modify: `case/cad/params.scad` (`t_base` = 10, y deja de ser PMMA)
-- Modify: `case/clearance_budget.py` (`guarda_piso()`)
+- [x] **Las tres puertas re-apuntadas** (la Tarea 10):
+  - `guarda_costado()` deja de medir vanos entre anclas y mide contra la
+    **ventana de la costilla**, que es apoyo continuo. El vano cae de 119.0 a
+    **65.2 mm** y la flecha de 0.38 a **0.11**. Ese número es el pago de todo el
+    esqueleto.
+  - `taladros_con_material()` **muere**: su sujeto era el acrílico taladrado. Su
+    criterio no se pierde, se muda a `taladros_costilla()`, que ahora lleva los
+    dos diámetros.
+  - la rama del costado en `agujeros_donde_toca()` **muere** por lo mismo.
 
-- [ ] **Paso 1: extender `guarda_piso()` con el vano nuevo**
+- [x] **`guarda_zocalo()`, nueva.** La tabla es la única pieza de madera y ahora
+carga: dos filas de M5, uno redondo por fila (el punto fijo, el del medio) y los
+demás en ranura de 10.5 mm. Se lee del DXF porque una ranura que sale redonda de
+la exportación no la nota nadie hasta que llega el invierno.
 
-El apoyo **se lee de la geometría declarada**, no se teclea: es la cara
-delantera del cuerpo más adelantado que corre los 528 mm bajo la bandeja. Si
-alguien devuelve una barra al frente, `L` baja sola y la puerta deja de pedir
-10 mm — que es exactamente lo que tiene que pasar.
-
-```python
-    # MODO DE CARGA, igual que en guarda_tapa(): lo que corre los 528 mm
-    # enteros apoya en LINEA CONTINUA, asi que el vano entre M3 no existe
-    # para carga hacia abajo. Lo que flexa es el voladizo en X.
-    L = x_cara_apoyo - x0_bb
-    I = perfil(p)["ancho_util"] * p["t_base"] ** 3 / 12
-    flecha = p["carga_mano"] * L ** 3 / (3 * E_ALUMINIO * I)
-    assert flecha <= p["flecha_costado_max"], (
-        f"el suelo cede {flecha:.3f} mm volando {L:.2f} mm y el techo son "
-        f"{p['flecha_costado_max']:.2f}. NO se arregla con una barra delante: "
-        f"la arista P[0] la ocupa el riel de panel del frente y solo admite "
-        f"10x10, que cede 5.35 mm a lo ancho (spec 4.2.1). Se arregla con "
-        f"espesor, y por eso el suelo son 10 mm y no 5.")
-```
-
-- [ ] **Paso 2: correr y ver ROJO** — con `t_base` = 8 de acrílico, E = 3000.
-**Ojo con el orden:** mientras `base delantera` siga puesta el voladizo es de
-68.85 mm y la puerta pasa sola. Esta tarea va **después de la 7** o mide una
-ficción.
-
-- [ ] **Paso 3: cambiar `t_base` a 10 y su material a aluminio**, con el
-comentario que dice de dónde sale (spec §4.2) y que **la bandeja sale del
-`lienzo_2d`**, que es de acrílico y solo de acrílico.
-
-- [ ] **Paso 4: correr y ver VERDE** — flecha 0.439 mm, 6.16 MPa. Y de paso mirar lo que el espesor se come: `alto_interior_inferior` pierde 2 mm y `guarda_piso()` pide `y_bajo >= t_base + holgura_rail`.
-
-- [ ] **Paso 5: probar que muerde** — `t_base = 2` y ver que canta.
-
-- [ ] **Paso 6: sacar la bandeja del lienzo y del `planchas_acrilico()`**, igual
-que se hizo con la tapa del valle el 2026-08-25.
-
-- [ ] **Paso 7: commit**
-
-```bash
-git commit -am "El suelo pasa a plancha de 10: vuela 271 mm y nadie lo apoya"
-```
-
----
-
-### Tarea 9: El costado queda sin un solo tornillo estructural
-
-**Files:**
-- Modify: `case/check_dxf.py` (`guarda_costado()` → mide la costilla;
-  `taladros_con_material()`)
-
-- [ ] **Paso 1: reescribir `guarda_costado()`**
-
-Hoy modela el costado como placa de PMMA empotrada en sus 4 M5 de larguero. Ya
-no hay largueros ni carga. **No se borra**: se re-apunta a la costilla, y su
-docstring explica por qué cambió de sujeto — un `git blame` sobre una puerta
-borrada no cuenta esa historia.
-
-- [ ] **Paso 2: correr y ver ROJO.**
-
-- [ ] **Paso 3: implementar**, midiendo sobre `costilla_2d.dxf`.
-
-- [ ] **Paso 4: correr y ver VERDE.**
-
-- [ ] **Paso 5: comprobar que `costado_2d.dxf` no tiene taladros estructurales**
-— solo los del propio marco.
-
-- [ ] **Paso 6: commit**
-
-```bash
-git commit -am "guarda_costado() cambia de sujeto: mide la costilla, que es quien carga"
-```
-
----
-
-### Tarea 10: Las tres puertas que quedaron apuntando al sitio equivocado
-
-El cambio de material deja tres puertas midiendo cosas que ya no son lo que
-eran. Ninguna falla en rojo por sí sola — **siguen en verde midiendo mal**, que
-es peor, y por eso van en tarea propia y no de rebote en otra.
-
-**Files:**
-- Modify: `case/clearance_budget.py` (`guarda_chaflan()`, `guarda_apriete()`,
-  `guarda_transversal_riel()` nueva, `guarda_tapa()`)
-
-- [ ] **Paso 1: `guarda_transversal_riel()` — el Z-Rail no es una viga**
-
-La spec §5.1 apoya tres de las siete aristas en Z-Rails usados como
-transversal, y el README ya advierte que **su cara es pared de 1.2 mm**: es la
-razón por la que la tapa de remate estuvo pegada hasta el 2026-08-21.
-
-```python
-# Pared del Z-Rail de Tiptop. NO es una viga: es un extruido de pared fina, y
-# esta cifra es la razon por la que la tapa de remate estuvo PEGADA hasta el
-# 2026-08-21 -- un M3 en esa cara atraviesa pared.
-PARED_ZRAIL = 1.2
-
-
-def guarda_transversal_riel(p: dict[str, float]) -> None:
-    """A un Z-Rail usado de transversal no se le pide mas de lo que da.
-
-    Desde el 2026-08-26 el marco se apoya en que cuatro de las siete aristas ya
-    llevan riel (spec §5.1), y eso es cierto como GEOMETRIA. Como ESTRUCTURA
-    hay que acotarlo: el riel trabaja bien a traccion entre costillas, y mal a
-    todo lo demas, porque su pared son 1.2 mm.
-
-    Esta puerta existe para que el ahorro de §5.1 no se lea como que un riel
-    sustituye a un larguero en cualquier direccion."""
-    area = PARED_ZRAIL * p["rail_er_alto"]           # dos paredes en traccion
-    sigma = p["carga_mano"] / (2 * area)
-    assert sigma <= RP02_ALUMINIO, (
-        f"al Z-Rail se le piden {sigma:.1f} MPa de traccion entre costillas y "
-        f"su pared de {PARED_ZRAIL} mm da para {RP02_ALUMINIO:.0f}. Si esta "
-        f"arista necesita mas, lleva transversal propia y no riel.")
-    print(f"transversal: el Z-Rail trabaja a {sigma:.1f} MPa sobre "
-          f"{2*area:.1f} mm2 de pared (Rp0.2 {RP02_ALUMINIO:.0f})")
-```
-
-- [ ] **Paso 2: correrla y verla en ROJO** — `NameError` / `KeyError`.
-Registrarla en `main()`, implementar, y verla en VERDE.
-
-- [ ] **Paso 3: probar que muerde** — bajar `PARED_ZRAIL` a 0.05 y ver que canta.
-Revertir.
-
-- [ ] **Paso 4: `guarda_chaflan()` — el perímetro tapado sale del cómputo**
-
-Hoy toma `t_min = min(t_base, t_cheek, t_piel)` y de ahí saca el techo del
-chaflán. Con la tira de canto cubriendo el perímetro del costado, **ese canto
-deja de estar a la vista** y el chaflán deja de aplicarle. Es exactamente el
-mismo movimiento que ya se hizo con la tapa del valle el 2026-08-25, y el
-docstring de la puerta lo explica: dejar dentro una pieza a la que la regla no
-aplica «clava el techo por una pieza a la que la regla no le aplica, que es el
-vicio de la puerta que grita en falso».
-
-`t_base` además ya no es PMMA desde la Tarea 8, así que también sale.
-
-- [ ] **Paso 5: `guarda_apriete()` — decidir el par contra aluminio**
-
-**Cuidado, que la arandela d16 hace DOS trabajos y es fácil contar solo uno.**
-Uno es no aplastar el acrílico, que fluye a 10 MPa; ese desaparece en la
-bandeja y en el valle, ya de aluminio. El otro es **subir el par utilizable de
-0.33 a 1.15 N·m**, porque por debajo de 1 N·m no hay llave dinamométrica de
-1/4" que lo dé — y ese sigue vivo contra aluminio.
-
-Así que la d16 **no sobra**: lo que hay que hacer es que la puerta distinga los
-M3 que aprietan contra PMMA (remate, trasera) de los que aprietan contra
-aluminio (bandeja, valle), y que cada familia tenga su límite. Hoy los mete a
-todos en el mismo saco.
-
-- [ ] **Paso 6: `guarda_tapa()` — re-verificar las 180°**
-
-La decisión 8 de la spec deja los ejes escondidos dentro del Z-Rail, así que el
-radio de giro **no se mueve**. Pero el M4 ahora atraviesa la costilla en vez
-del acrílico, y `ancho_total` creció. Correr la puerta y **confirmar que sigue
-dando 180.0° en las dos filas**. Si bajó, algo del marco entró en el barrido y
-es un hallazgo, no un ajuste.
-
-- [ ] **Paso 7: commit**
-
-```bash
-git add case/clearance_budget.py
-git commit -m "Tres puertas seguian verdes midiendo lo que ya no era"
-```
+- [x] **Probado que muerde**, cuatro veces: tabla a 15 mm (cede 0.605 contra
+0.600), todos los tornillos redondos (canta las dos filas), M5 devueltos al
+costado, y ranura acortada a la mitad.
 
 ---
 

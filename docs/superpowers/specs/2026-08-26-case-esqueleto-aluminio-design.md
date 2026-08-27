@@ -244,12 +244,13 @@ transversal de P[6]—, o sea 271.45 mm ahora y 279.45 después. Mismo modelo de
 
 **Samuel eligió que la bandeja aguante sola** frente a resucitar `base
 delantera` en x=88.34, que es donde sí cabe una 2020 y era mi recomendación.
-El suelo pasa a **aluminio de 10**, y eso son **+2.7 kg** contra el acrílico de
-8 de hoy: el espesor no lo pide la resistencia (6.16 MPa contra 130 de Rp0.2,
-factor 21) sino el techo de flecha de 0.60 mm.
+El suelo pasaba a **aluminio de 10** con +2.7 kg.
 
-Con 10 mm la pieza deja de ser chapa y pasa a ser **plancha**: sale de corte,
-no de plegado, y eso cambia la línea del pliego (§8).
+**Y eso duró unas horas.** El mismo día el suelo pasó a ser **tabla de madera
+bajo el marco** (§9) y el voladizo dejó de existir: la tabla no cuelga de una
+barra, el marco se le apoya encima. Todo el barrido de espesores de arriba
+mide un modo de carga que ya no ocurre. **Lo que sigue vivo de esta sección
+es la medida de la esquina P[0]**, que es lo que mató la transversal.
 
 ### 4.3 El ancho del case crece 6 mm
 
@@ -278,8 +279,8 @@ crecimiento en 6 mm y no en 8 o 12.**
 | **Costado** | Piel. No sostiene nada | acrílico 8 mm — el `costado_2d` de hoy, con otra taladrería | 2 |
 | **Transversales** | Atan las dos costillas y reciben las filas de M3 de las planchas | aluminio | ver §5.1 |
 | **Z-Rails** | Paneles, tapas y ejes de giro | Tiptop 104 HP, los ya comprados, ahora atornillados a la costilla | 4 |
-| **Bandeja de base** | El suelo portante, **en voladizo** desde la transversal trasera | aluminio 10 mm (§4.2.1) | 1 |
-| **Zócalo** | Se ve y eleva. No carga | madera — ver §9 | 1 |
+| **Bandeja de base** | El suelo interior **y** el zócalo: una sola pieza bajo el marco | **madera maciza 18 mm** (§9) | 1 |
+| ~~**Zócalo**~~ | **Es la misma pieza que la bandeja de base** desde el 2026-08-27 (§9) | — | 0 |
 
 ### 5.1 Cuántas transversales, y el hallazgo que ahorra la mitad del marco
 
@@ -439,10 +440,9 @@ mismo motivo por el que no van las tres piezas de acero ni la tapa del valle.
 |---|---|---|
 | PMMA colado GS naranja, 8 mm | fresado CNC | costados ×2, tapa de remate, trasera |
 | Aluminio | **chapa**: tapa del valle (3 mm) | 1 |
-| Aluminio | **plancha, corte**: bandeja de base (10 mm) — ya no es chapa (§4.2.1) | 1 |
 | Aluminio | **chapa plegada**: costillas ×2 — al taller del chasis, no a uno nuevo (§2.1) | 2 |
 | Acero | corte + plegado | chasis ×3 |
-| Madera | ver §9 | zócalo |
+| Madera | **maciza 18 mm**, corte + ranuras alargadas | la tabla: suelo y zócalo en una pieza (§9) |
 
 ### 8.1 La tira de canto es la primera pieza NO PLANA del proyecto
 
@@ -541,28 +541,78 @@ y el de más riesgo de rechazo en un traslúcido — y pierde sus 8 taladros
 estructurales. El **recocido se queda**: ese es por tensión interna, no por
 estética.
 
-## 9. El zócalo de madera — SEPARABLE
+## 9. La tabla — el suelo y el zócalo son la misma pieza
 
-Esta sección se puede sacar sin tocar nada de lo anterior. No carga, no
-sostiene y no bloquea ninguna cota.
+**REESCRITA EL 2026-08-27.** Decía «una plancha de madera bajo el cuerpo» como
+sección **separable** que no cargaba nada. Samuel, sobre la foto de referencia:
+*«la bandeja base quiero que sea la madera»*. Son **una sola pieza**, y carga.
 
-Una plancha de madera bajo el cuerpo, que sobresale de él y sobre la que se
-atornillan las cuatro paticas. El case crece en alto lo que mida la tabla.
+### 9.1 Qué es
 
-**El problema real, y no es opcional resolverlo:** la madera maciza se mueve
-con la estación, y a lo ancho de 528 mm a contraveta eso son **milímetros, no
-décimas**. Atornillada rígida a un marco de aluminio, o se raja la tabla o se
-sueltan los tornillos. Las tres salidas conocidas:
+Una tabla de **madera maciza de 18 mm** que ocupa `y = −18 .. 0`. Su cara de
+arriba **es el suelo interior**; su canto sobresale 10 mm por los cuatro lados y
+**es el zócalo**. Las dos costillas se le apoyan encima; las cuatro paticas se
+le atornillan por debajo. Mide **570.62 × 328.94 mm**.
 
-1. **Agujeros alargados** en la dirección del movimiento — la solución de
-   ebanistería de toda la vida.
-2. **Botones de expansión** — más limpio, más pieza.
-3. **Un laminado** (contrachapado o listonado chapado), que es estable por
-   construcción y hace el problema desaparecer, a cambio de que el canto
-   enseñe las capas.
+Sustituye a `bandeja_base`, que era una plancha de acrílico de 8 mm **dentro**
+del case. Conserva el nombre en el modelo porque es como Samuel la llama.
 
-Ni la especie ni el espesor ni la fijación están elegidos. Va como decisión
-aparte.
+### 9.2 Lo que deshace
+
+| lo que había | por qué se cae |
+|---|---|
+| el suelo volaba 271.45 mm desde `base trasera` y pedía 10 mm de aluminio (§4.2.1) | la tabla no cuelga de una barra: el marco se le **apoya encima**, y las cuatro paticas están casi bajo las líneas de apoyo de las costillas (x=20 y 290.94, z=10 y 540.62). El peso del case va de costilla a pata sin cruzar el vano |
+| `alto_frontal` subía a 20 para que el riel del frente librara los 10 mm de suelo | con la tabla **debajo**, el suelo interior es y=0. El riel solo tiene que librar `holgura_rail` y le sobran **9.29 mm**. Esta cota se suelta del espesor del suelo — antes cada milímetro de plancha era uno de aparato, y la última vuelta costó 8.46 |
+| el chasis del PSU se quedaba sin la mitad de su colgado al morir `base delantera` | su pared trasera sigue colgando de `base trasera`; la delantera **apoya en la tabla**, que ahora es un miembro estructural en cuatro puntos |
+| la bandeja restaba 8 mm de altura interior | `alto_interior_inferior` los recupera |
+
+### 9.3 Los 18 mm, de dónde salen
+
+Lo que dobla la tabla **no es el peso del case** sino el chasis del PSU sentado
+en medio del vano de 528.62 mm entre las dos costillas:
+
+| espesor | flecha con 200 N |
+|---|---|
+| 15 mm | 0.683 mm |
+| 16 mm | 0.562 mm — pasa por 0.038 |
+| **18 mm** | **0.395 mm** |
+| 20 mm | 0.288 mm |
+
+Contra un techo de 0.60 y con `E_madera` = 11000 MPa. 18 es además espesor de
+tabla de catálogo. **Subirlo ya no cuesta alto de aparato**, así que si la
+especie sale más blanda hay sitio.
+
+### 9.4 Maciza, y por eso con agujeros alargados
+
+Es la única pieza de madera del case **y ahora carga**. Una tabla maciza cambia
+de tamaño con la humedad: a contraveta, del orden del 1 % entre un invierno seco
+y un verano húmedo, o sea **~3 mm sobre los 329 de fondo**. El marco de aluminio
+no se mueve. Seis tornillos redondos y la tabla se raja por la fila, o se
+sueltan.
+
+La veta corre **a lo largo** (los 570 mm, como en la foto), así que lo que crece
+y encoge es el **fondo**. Por eso:
+
+- Dos filas de 3 tornillos, una bajo cada costilla, M5.
+- **Uno de cada fila va REDONDO, y es el del medio.** Es el punto fijo. Sin él
+  la tabla se arrastra hacia un extremo y el vuelo del zócalo deja de ser
+  simétrico. Con dos, vuelve a estar clavada.
+- Los otros dos van en **ranura de 10.5 mm** (paso M5 + 2 × 2.5 de carrera),
+  alargada en el fondo.
+
+Lo vigila `guarda_zocalo()` en `check_dxf.py`, leyendo el DXF: una ranura que
+sale redonda de la exportación no la nota nadie hasta que llega el invierno.
+
+### 9.5 Lo que sigue abierto
+
+- **La especie.** `E_madera` = 11000 MPa es nogal o arce, y es **supuesto
+  declarado**. Roble da 12000; contrachapado 8000 y pediría 20 mm.
+- **El acabado y la fijación de las paticas** a la tabla.
+- **El vuelo de 10 mm** es cota de mirar, no de calcular. Sale de la foto.
+- **Si la tabla resuena bajo el toroide.** No se cierra aquí porque el **peso
+  del chasis no está itemizado en el repo** (§10). La madera amortigua un orden
+  de magnitud más que el aluminio y la tabla desnuda da del orden de 120 Hz
+  contra los 100 del toroide, pero eso es la tabla sola. Se cierra pesándolo.
 
 ## 10. Lo que NO está confirmado
 
