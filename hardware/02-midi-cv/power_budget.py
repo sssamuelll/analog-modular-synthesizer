@@ -92,6 +92,12 @@ PUENTE_TX_DUTY = 0.10
 # --- Cargas ATENUABLES: el arbitro del #104 las puede bajar ------------------
 # Retroiluminacion de la pantalla de 2.8": "~60-80 mA que el firmware SI puede
 # bajar" (cerebro S9.1). Clase atenuable, por debajo de la guia de patcheo.
+# AVISO 2026-08-27: la pantalla de 2,8" quedo DEROGADA (spec del cerebro
+# sec.7). Estos 80 mA salen del +5 V, que ya no cierra hoy (#151), asi que
+# quitarlos MUEVE EL VEREDICTO de este arbitro sobre un riel en disputa. No se
+# toca al vuelo: se corrige con su verificacion propia, y de paso entra la
+# pantalla de 7", que NO carga aqui -- lleva regulador local desde +12 V con
+# retorno dedicado (pantalla-motor sec.6). Issue abierto en la misma tanda.
 BACKLIGHT_A_MAX = 0.080
 BACKLIGHT_A_MIN = 0.0          # el firmware puede apagarla del todo
 # Cadena WS2812: 160 LEDs (100 de panel + 60 del farol del #42), 60 mA cada uno

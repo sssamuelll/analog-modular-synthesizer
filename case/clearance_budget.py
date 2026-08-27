@@ -1521,6 +1521,13 @@ def guarda_escalon(p: dict[str, float]) -> None:
 # Duplicarlo aqui es lo que permitio que se desincronizara durante cuatro
 # dias sin que nadie se enterara.
 
+# La fila de ABAJO no tiene modelo aqui, y el diccionario vacio ES el hueco.
+# Se deja vacio a proposito y no como bandera booleana: rellenarlo cierra la
+# puerta sola, sin que nadie tenga que acordarse de apagar un flag. Por que
+# esta abierta -- dos descripciones vivas que no coinciden -- en «Lo que este
+# calculo NO cubre», al final del fichero.
+FILA_INFERIOR: dict[str, float] = {}
+
 ANCHO_PANTALLA_7 = 165.0        # mm. 2026-08-26-pantalla-motor-design.md sec.6
 ALTO_PANTALLA_7 = 102.0         # mm. idem -- clase de pieza Adafruit 7"
 
@@ -1585,6 +1592,18 @@ def guarda_dos_puertas_un_riel(p: dict[str, float]) -> list[str]:
     spec = importlib.util.spec_from_file_location("_vtb", ruta)
     vtb = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(vtb)
+
+    # Y CORRERLA. exec_module() la carga como `_vtb`, no como `__main__`, asi
+    # que su demo() -- donde viven los assert del reparto de la fila A -- no
+    # se ejecuta sola. Sin esto, delegar el reparto significaba dejar de
+    # comprobarlo: verde aqui con la puerta delegada en rojo, y export.ps1
+    # sacando DXF encima. Lo cazo codex en la revision del 2026-08-27.
+    with contextlib.redirect_stdout(io.StringIO()):
+        try:
+            vtb.demo()
+        except AssertionError as e:
+            fallos.append(f"voz_total_budget en ROJO (el reparto de la fila A "
+                          f"no cierra): {str(e).splitlines()[0][:120]}")
 
     if abs(vtb.HP - p["hp"]) > 1e-9:
         fallos.append(f"voz_total_budget.HP={vtb.HP} != params.scad hp="
@@ -2022,6 +2041,17 @@ def main() -> int:
           f"({fl['flanco'] / p['hp']:.1f} HP) a los {p['alto_panel_sup']} de alto")
     print(f"  franja sobre y bajo la pantalla: {fl['franja']:.2f} mm -- "
           f"ahi NO cabe un potenciometro (#179 sigue abierto)")
+    if not FILA_INFERIOR:
+        # La constitucion, punto III y el contrato de estados: lo que no se
+        # puede comprobar sale como HUECO con el motivo escrito -- no rompe el
+        # CI, pero tampoco se disfraza de verde. Aqui se borro la unica
+        # asercion que miraba la fila de abajo y no hay reemplazo todavia, asi
+        # que salir 0 seria justo el disfraz que ese contrato prohibe.
+        print("HUECO: la fila de abajo no tiene reparto en este fichero. No "
+              "es falta de dato: el plan del panel y la spec de la Voz la "
+              "describen distinto (ver 'NO cubre'). Se cierra al rellenar "
+              "FILA_INFERIOR")
+        return 2
     print("clearance_budget: VERDE")
     return 0
 

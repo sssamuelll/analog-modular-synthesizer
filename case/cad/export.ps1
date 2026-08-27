@@ -12,7 +12,8 @@ python (Join-Path $repo "case/clearance_budget.py")
 # cualquier otro = ROJO. Hasta el 2026-08-27 esto comparaba contra -ne 0, asi
 # que un HUECO abortaba el export con el mensaje "budget en ROJO" -- mentira
 # de estado, y en la direccion contraria a la que el codigo 2 existe.
-if ($LASTEXITCODE -eq 2) { Write-Host "budget con HUECO declarado: se exporta igual" }
+$budgetHueco = ($LASTEXITCODE -eq 2)
+if ($budgetHueco) { Write-Host "budget con HUECO declarado: se exporta, pero este export NO es apto para fabricar" }
 elseif ($LASTEXITCODE -ne 0) { Write-Error "budget en ROJO: no se exporta nada"; exit 1 }
 
 $plans = Join-Path $repo "case/plans"
@@ -89,3 +90,14 @@ if ($LASTEXITCODE -ne 0) { Write-Error "check_dxf en ROJO: no se manda a cortar"
 python (Join-Path $repo "case/renders/plano_chasis.py")
 if ($LASTEXITCODE -ne 0) { Write-Error "plano de plegado en ROJO"; exit 1 }
 Write-Output "export completo: $($piezas.Count + 6) artefactos regenerados y releidos"
+
+# El 2 tiene que SOBREVIVIR hasta quien llama. La constitucion (punto III):
+# «un script que deja el trabajo a medias sale con codigo de error,
+# precisamente para que no se confunda con terminado». Si este guion saliera 0
+# con el budget en HUECO, nadie aguas arriba podria distinguir una prevision
+# de un export validado para taller. Se genera igual -- para mirar -- pero el
+# codigo dice la verdad. Lo cazo codex en la revision del 2026-08-27.
+if ($budgetHueco) {
+  Write-Host "AVISO: hay un HUECO declarado en el budget; este export sirve para revisar, no para mandar al taller."
+  exit 2
+}
