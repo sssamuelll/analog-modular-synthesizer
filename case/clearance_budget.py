@@ -1503,9 +1503,66 @@ def guarda_escalon(p: dict[str, float]) -> None:
 # Censo de anchos minimos de panel por piso, mm. ESTIMADOS (spec §11):
 # cierran cuando cada panel este dibujado. Fuente: conteo de mandos/jacks
 # de los README de modulo + patch bay normalizado que anade jacks.
-ANCHOS_PISO_SUP = {"MIDI/CV": 80, "VCO1": 90, "VCO2": 90, "VCO3": 90}
+#
+# ENMENDADO el 2026-08-27 (#152). Hasta hoy el piso superior era el de la
+# tesis: {"MIDI/CV": 80, "VCO1": 90, "VCO2": 90, "VCO3": 90}. Ninguna de las
+# dos entradas describia el instrumento:
+#
+#   * los TRES VCO independientes colapsaron en UNA placa. El modulo 3 mide
+#     114 mm -- hardware/03-vco/README.md: «114 x 124 mm, 4 capas», con la
+#     PCB ruteada y cerrada. El censo le daba 90 y lo contaba tres veces.
+#   * «MIDI/CV: 80» eran los 80 mm de cuando el modulo 2 era un Raspberry Pi
+#     con un LCD 16x2 y cuatro pulsadores. Ese diseno esta SUPERADO desde el
+#     2026-08-17 por su propio README. El cerebro v2 lleva NUEVE conectores
+#     de tamano completo (USB-B, USB-A, DIN-5 x2, Thonkiconn x4, jack de
+#     6,35) mas la cabeza local y dos botones.
+#
+# Por que no era cosmetico: 270 mm de VCO fantasma le PRESTABAN sitio a un
+# cerebro censado corto, asi que la puerta de mas abajo salia verde con dos
+# entradas mal en direcciones opuestas. Verde por la razon equivocada.
+#
+# El ancho de PLACA no es el ancho de PANEL: los paneles EUROrack vienen en
+# HP enteros (1 HP = 5.08, params.scad), y con los jacks soldados a la placa
+# --el patron del modulo 3-- el panel no puede ser mas estrecho que ella. Asi
+# que la placa de 114 se lleva 23 HP = 116.84 mm de riel, no 114. Se deriva
+# aqui en vez de teclear el resultado para que no se desincronice de hp.
+ANCHO_PLACA_VOZ = 114           # hardware/03-vco/README.md: 114 x 124 mm
+HP_MM = 5.08                    # params.scad: hp
+HP_VOZ = math.ceil(ANCHO_PLACA_VOZ / HP_MM)          # 23
+ANCHOS_PISO_SUP = {"VOZ": HP_VOZ * HP_MM}            # 116.84
+
+# El cerebro no entra aqui con un numero, y no es un olvido. Su spec §10 lo
+# dice con todas las letras: «El ancho no se estima: se calcula», lo calcula
+# panel_budget.py sumando las huellas reales de los once elementos de panel
+# (lista cerrada alli), y ese guion **SUSTITUYE** esta clave -- si sumara,
+# contaria el modulo 2 dos veces. panel_budget.py todavia no existe.
+#
+# Inventar aqui una cifra provisional seria repetir el pecado que se acaba de
+# corregir: un numero sin fuente que otra puerta importa como verdad. Se
+# declara el hueco y se publica el TECHO que el cerebro tiene que respetar
+# (ver techo_piso_sup y el aviso de main()).
+CEREBRO_SIN_CIFRA = True
+
+# La pantalla de 7" del motor mide ~165 x 102 mm de clase de pieza
+# (2026-08-26-pantalla-motor-design.md sec.6). NO entra en el censo todavia:
+# ese papel deja el sitio como «fila mandada, dueno: el diseno del case», y
+# elegir cara es una decision, no una cuenta. Vive aqui como constante para
+# que el aviso de main() pueda decir cuanto COSTARIA ponerla en la fila de
+# arriba, que es la pregunta que hoy no tiene numero.
+ANCHO_PANTALLA_7 = 165
+
 ANCHOS_PISO_INF = {"VCF": 100, "ADSR": 110, "VCA": 80, "MIXER": 100}
 EXPANSION_MIN = 40  # sitio reservado a crecer, por piso
+
+
+def techo_piso_sup(g: dict[str, float]) -> float:
+    """Lo que le queda al cerebro en la fila de arriba, en mm.
+
+    Es el numero contra el que panel_budget.py tendra que aseverar el dia que
+    exista. Se publica aqui, y no alli, porque el sitio es del case: quien
+    reparte el riel es este fichero.
+    """
+    return g["ancho_util"] - sum(ANCHOS_PISO_SUP.values()) - EXPANSION_MIN
 
 
 def _chasis(p: dict[str, float]) -> dict[str, float]:
@@ -1842,6 +1899,20 @@ def main() -> int:
           f"ancho_util={g['ancho_util']:.2f} != largo_riel={p['largo_riel']}: "
           f"ancho_total tiene que valer largo_riel + 2*t_cheek = "
           f"{p['largo_riel'] + 2 * p['t_cheek']:.2f}")
+    # HP_MM esta duplicado del .scad porque el censo es de nivel de modulo y
+    # leer_params() no ha corrido todavia cuando se evalua. Que no se
+    # desincronice no se confia a un comentario: se asevera. Es la leccion del
+    # 2026-08-26 con ancho_total, que era un literal con la formula al lado.
+    exige(abs(HP_MM - p["hp"]) < 1e-9,
+          f"HP_MM={HP_MM} no es el hp de params.scad ({p['hp']}): el censo "
+          f"del piso superior esta redondeando a un paso que no existe")
+    # AVISO (2026-08-27): mientras CEREBRO_SIN_CIFRA siga en pie, ESTA regla no
+    # puede fallar -- 114 + 40 contra 528 sobra por goleada, y una asercion que
+    # no puede fallar no guarda nada (Principio VIII). No se borra porque
+    # vuelve a morder sola el dia que panel_budget.py meta el ancho del
+    # cerebro; hasta entonces quien sostiene la fila de arriba es el HUECO que
+    # imprime main(), no esta linea. Antes del 2026-08-27 tampoco guardaba:
+    # salia verde porque los VCO fantasma y el cerebro corto se compensaban.
     exige(sum(ANCHOS_PISO_SUP.values()) + EXPANSION_MIN <= g["ancho_util"],
           "el piso superior no cabe en el ancho util")
     exige(sum(ANCHOS_PISO_INF.values()) + EXPANSION_MIN <= g["ancho_util"],
@@ -1920,6 +1991,28 @@ def main() -> int:
     for f in fallos:
         print(f"ROJO: {f}")
     if fallos:
+        # ERA `return 2` hasta el 2026-08-27, y eso convertia TODO fallo real
+        # de este budget en un HUECO a ojos de gates.py, que lee 2 como
+        # "trabajo a medias, no rompe el resumen". O sea: la tanda cerraba con
+        # "GATES EN VERDE" con el case en rojo. Es el mismo pecado que gates.py
+        # ya se corrigio a si mismo en _dep_ausente, con su comentario al lado.
+        # Codigo 1 = ROJO de verdad; el 2 queda para el HUECO declarado de
+        # abajo, que es lo unico que este fichero deja a medias a proposito.
+        return 1
+    if CEREBRO_SIN_CIFRA:
+        techo = techo_piso_sup(g)
+        print(f"censo del piso superior: VOZ {ANCHOS_PISO_SUP['VOZ']:.2f} "
+              f"({HP_VOZ} HP, placa de {ANCHO_PLACA_VOZ}) + expansion "
+              f"{EXPANSION_MIN} de {g['ancho_util']:.0f} -> al cerebro le "
+              f"quedan {techo:.0f} mm ({techo / p['hp']:.0f} HP)")
+        print(f"  si la PANTALLA de 7\" se sienta en esta fila "
+              f"({ANCHO_PANTALLA_7} mm, pantalla-motor sec.6), el techo del "
+              f"cerebro baja a {techo - ANCHO_PANTALLA_7:.0f} mm "
+              f"({(techo - ANCHO_PANTALLA_7) / p['hp']:.0f} HP). SIN DECIDIR: "
+              f"el sitio de la pantalla es fila mandada, dueno el case")
+        print(f"HUECO: el cerebro no tiene ancho censado (#152). Su spec "
+              f"sec.10 lo manda a panel_budget.py, que no existe; su techo "
+              f"son {techo:.0f} mm")
         return 2
     print("clearance_budget: VERDE")
     return 0
