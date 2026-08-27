@@ -383,28 +383,86 @@ def demo() -> None:
         f"{I_IOVDD_MAX*1e3:.0f} mA que la Tabla 1436 da para TODOS los GPIO "
         "juntos: no queda corriente para el resto del cerebro")
 
+    # AVISO 2026-08-27, rescatado del PR #201 al cerrarlo: los TRES casos de
+    # abajo se modelaron cuando la Voz llevaba DOS RP2350B en dos columnas.
+    #   * "8 + T"   -- la T repartia el bus a las dos columnas DENTRO del
+    #                  modulo. Con un solo N657 no hay a quien repartir.
+    #   * "9 ramas" -- la novena era para la columna B. Tampoco existe.
+    # Si los dos casos que no pasan son de una topologia muerta, el que manda
+    # hoy es "8 ramas" (umbral 758.2) y LARGO_RAMA = 738.3 PASA con 19.9 mm de
+    # sobra, en vez de necesitar recorte. Eso cambia el veredicto entero.
+    #
+    # NO se decide aqui, y por eso los tres siguen corriendo: hay un candidato
+    # NUEVO a novena rama --la tarjeta de E/S trasera del #183-- y nadie ha
+    # dicho si cuelga del J2. Mientras eso no se decida manda el conjunto.
     print("\nbarrido de longitud de rama -- LA palanca, y su precio:\n")
     print(f"  {'largo':>8s}   {'8 ramas':>14s}  {'8 + T':>14s}"
           f"  {'9 ramas':>14s}")
-    largo_ok = None
     for mm in (300, 400, 500, 600, 738, 900, 1100):
         largo = mm / 1000.0
-        fila, todos_ok = [], True
+        fila = []
         for _, n, oyentes, stub in CASOS:
             f_l = limite(capacidad_red(n, largo, oyentes, stub), r_total)
             ok = f_l >= f_min
-            todos_ok &= ok
             fila.append(f"{f_l/1e6:6.2f} MHz {'OK' if ok else 'NO'}")
-        if todos_ok:
-            largo_ok = mm          # el MAYOR que aguanta, no el primero
         marca = "  <- derivado hoy" if mm == 738 else ""
         print(f"  {mm:5d} mm   " + "  ".join(f"{c:>14s}" for c in fila)
               + marca)
-    print(f"\n  El mazo mas largo que deja pasar a los TRES casos:"
-          f" {largo_ok} mm."
-          if largo_ok else "\n  Ningun largo del barrido deja pasar a los tres.")
-    print(f"  Hoy la geometria del cajon da {LARGO_RAMA*1e3:.0f}."
-          f" Sobran {LARGO_RAMA*1e3 - largo_ok:.0f} mm que recortar.")
+
+    largo_minimo_razonable = 0.300
+    largo_superior_inicial = 1.100
+    tolerancia_largo = 0.1e-3
+
+    def umbral_por_biseccion(casos) -> float | None:
+        def pasan(largo: float) -> bool:
+            return all(
+                limite(capacidad_red(n, largo, oyentes, stub), r_total)
+                >= f_min
+                for _, n, oyentes, stub in casos
+            )
+
+        inferior = largo_minimo_razonable
+        if not pasan(inferior):
+            return None
+
+        superior = largo_superior_inicial
+        while pasan(superior):
+            superior *= 2.0
+
+        while superior - inferior > tolerancia_largo:
+            medio = (inferior + superior) / 2.0
+            if pasan(medio):
+                inferior = medio
+            else:
+                superior = medio
+        return (inferior + superior) / 2.0
+
+    print("\numbral continuo por biseccion (tolerancia 0.1 mm):")
+    for caso in CASOS:
+        nombre = caso[0]
+        umbral = umbral_por_biseccion((caso,))
+        if umbral is None:
+            print(f"  {nombre:34s} NO pasa ni con "
+                  f"{largo_minimo_razonable*1e3:.1f} mm")
+        else:
+            print(f"  {nombre:34s} {umbral*1e3:6.1f} mm")
+
+    umbral_todos = umbral_por_biseccion(CASOS)
+    if umbral_todos is None:
+        print("  LOS TRES no pasan ni con el largo minimo razonable de "
+              f"{largo_minimo_razonable*1e3:.1f} mm.")
+    else:
+        print(f"  {'LOS TRES (manda)':34s} {umbral_todos*1e3:6.1f} mm")
+        diferencia_mm = (LARGO_RAMA - umbral_todos) * 1e3
+        if diferencia_mm > 0:
+            print(f"  LARGO_RAMA es {LARGO_RAMA*1e3:.1f} mm: sobran "
+                  f"{diferencia_mm:.1f} mm que recortar.")
+        elif diferencia_mm < 0:
+            print(f"  LARGO_RAMA es {LARGO_RAMA*1e3:.1f} mm: faltan "
+                  f"{-diferencia_mm:.1f} mm para alcanzar el umbral.")
+        else:
+            print(f"  LARGO_RAMA es {LARGO_RAMA*1e3:.1f} mm y coincide "
+                  "con el umbral.")
 
     print("\nbarrido de CAP_PIN -- el numero que el datasheet no publica:\n")
     print(f"  {'CAP_PIN':>9s} {'8 ramas':>12s} {'8 + T':>12s}"
@@ -506,9 +564,11 @@ def demo() -> None:
     print("     El hallazgo es sobre el BUS, no un veto a la arquitectura:")
     print("     con este mazo, cualquier cosa que se le anada lo tumba.")
     print()
-    print(f"  3. LA SALIDA ESTA MEDIDA: a {largo_ok} mm de rama pasan los"
-          " tres casos." if largo_ok else
-          "  3. Ningun largo del barrido deja pasar a los tres casos.")
+    if umbral_todos is None:
+        print("  3. Ni el largo minimo razonable deja pasar a los tres casos.")
+    else:
+        print("  3. LA SALIDA ESTA MEDIDA: el umbral continuo de los tres"
+              f" casos es {umbral_todos*1e3:.1f} mm de rama.")
     print("     El peor caso geometrico supone cerebro y modulo en extremos")
     print("     OPUESTOS del riel. Colocarlos del mismo lado es gratis y es")
     print("     una decision de layout de fila, no de arquitectura.")

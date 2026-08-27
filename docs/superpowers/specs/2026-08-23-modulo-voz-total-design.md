@@ -544,6 +544,16 @@ Los cambios nuevos, y los viejos que ascienden a prerrequisito:
 - **Cambio 18**: el largo del descriptor pasa de u8 a u16 (H-CI2:
   `descubrimiento.rs:87` lee el largo como u8, techo 255 B — la identidad
   del módulo literalmente no cabe hasta este cambio).
+> **PARCIALMENTE DESBLOQUEADO el 2026-08-27** — rescatado del PR #201 al
+> cerrarlo. El **cambio 2 (ranuras lógicas)** tenía su decisión abierta en
+> `2026-08-22-vco-orquestacion-design.md` §«Decisiones abiertas», punto 1, y
+> **ya está cerrada: UNA ranura, funcional y nunca por micro** (decisión de
+> Samuel). Lo que queda del cambio 2 es escribirlo, no decidirlo.
+>
+> **El cambio 12 (lotes) sigue bloqueante y sin tocar**, así que la frase de
+> abajo sigue siendo cierta por su segunda mitad: el modelo de la Voz total
+> todavía no es direccionable, pero ya no por falta de una decisión.
+
 - **Los cambios 2 (ranuras lógicas) y 12 (lotes) ascienden a
   PRERREQUISITO BLOQUEANTE** (H-RC2/RC3, verificado en cobre:
   `MAX_INSTANCIAS = 16` está consumido y `MAX_RESPUESTAS = 4` contra ~520

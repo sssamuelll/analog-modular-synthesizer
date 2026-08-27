@@ -104,11 +104,62 @@ Y las reglas que hacen que eso valga de algo:
 > estado seguro. No hay ventana en la que ocho osciladores queden sonando con la
 > ruta a medio escribir.
 
+> **ENMENDADA el 2026-08-27** — rescatada del PR #201, que se cierra sin
+> mergear porque su premisa (dos micros en la Voz) murió con el N657. Este
+> hallazgo **no depende del chip** y se perdía con él.
+>
+> **No hay `RESET_ESCLAVO` y no hay maestro**: la Voz lleva un solo micro. Pero
+> lo que la regla tapaba sigue ahí, y es peor de lo que parecía: **el silencio
+> que R-A4 prometía era del ENCENDIDO, no de un reinicio en caliente.** El
+> cero-escala del DAC lo da `RSTSEL` al arrancar, y el cobre lo dice sin
+> ambigüedad — `hardware/03-vco/kicad/build_schematic.py` declara que `RESET`
+> está **permanentemente inactivo porque el J2 no lleva esa línea**, y
+> `notes/bring-up.md` comprueba el cero-escala «al arrancar» y confirma que
+> las únicas salidas son el comando `0110` o ciclar la alimentación.
+>
+> O sea: **un reinicio en caliente no vuelve a poner los DAC a cero**. Quien
+> sostiene el silencio es el camino de `OE`, y el arranque tiene que escribir
+> reposo **antes** de bajar `OE`, no después.
+>
+> El sucesor vigente es **R-M5** (`2026-08-26-motor-digital-design.md` §7):
+> «el silencio no depende del software», con inhibición atada a reset. Esta
+> enmienda no lo sustituye: le añade el caso que R-A4 daba por cubierto y no
+> lo estaba. **El «reset caliente» no existía como caso declarado en ningún
+> papel de `main` antes de hoy.**
+
 ### 2.3 Y el maestro, quién lo vigila
 
-Nadie desde dentro, y por eso el mecanismo es el mismo de R-A1: **si el maestro
-no arranca, no hay descriptor**, y el cerebro publica el módulo como identidad
-sin capacidades. Es un modo de fallo declarado, no silencioso.
+~~Nadie desde dentro, y por eso el mecanismo es el mismo de R-A1: **si el
+maestro no arranca, no hay descriptor**, y el cerebro publica el módulo como
+identidad sin capacidades. Es un modo de fallo declarado, no silencioso.~~
+
+> **DEROGADA el 2026-08-27** — rescatada del PR #201, que la cazó y se cierra
+> sin mergear.
+>
+> **Esa vigilancia nunca funcionó, y no por el cambio de chip.** El mecanismo
+> se apoyaba en «si el maestro no arranca, no hay descriptor», y el **cambio 4
+> de este mismo papel** (§8) ya había mudado el descriptor a la memoria del
+> módulo, que **el cerebro lee sin ayuda de ningún procesador** (§2.1 de aquí
+> mismo lo dice: lee la EEPROM aunque ningún procesador del módulo haya
+> arrancado). Así que un módulo con el micro muerto publicaba sus capacidades
+> igual: la ausencia de descriptor no era señal de nada.
+>
+> **Lo que hace falta en su lugar**, y hoy no existe en `main`: un detector de
+> **presente y mudo** visible para el cerebro — identidad que responde, EEPROM
+> que se lee, y micro que no habla. R-A1 ya nombra el estado; lo que falta es
+> quién lo declara y cómo.
+>
+> Y con él, la política que ningún papel tenía y el #201 escribió: **el cerebro
+> sigue emitiendo trama a un módulo presente y mudo mientras su identidad
+> responda.** Sin esa política, el silencio del cerebro mata de rebote a un
+> módulo que solo estaba callado.
+>
+> **Contradicción viva que este rescate deja señalada, no resuelta:** la spec
+> dice que el descriptor vive en la memoria del módulo (cambio 4), y
+> `software/nucleo/core/src/descubrimiento.rs` dice lo contrario — que la
+> EEPROM pequeña solo lleva identidad y calibración, y que el descriptor sale
+> del catálogo del firmware del cerebro. Dos artefactos vivos, dos respuestas.
+> Se abre como issue en esta misma tanda.
 
 ## 3. El barrido de afinado
 
@@ -701,11 +752,30 @@ en ella.
 
 ### Decisiones abiertas
 
-1. **Cuántas ranuras lógicas publica el módulo** (cambio 2 de §8): dos, o una con
-   el campo de índice repartido. Cierra: con el censo de §5.1 delante, al
-   escribir el descriptor. Criterio: que las 298 entradas queden direccionables
-   sin tocar los 16 bits del identificador de parámetro, porque esos 16 bits son
-   lo que hace que quepa en tres septetos de SysEx (núcleo §3.1).
+1. ~~**Cuántas ranuras lógicas publica el módulo** (cambio 2 de §8): dos, o una
+   con el campo de índice repartido.~~ **CERRADA el 2026-08-27: UNA.**
+
+   > Decisión de Samuel, tomada en la sesión del PR #201 y rescatada al
+   > cerrarlo: **las ranuras son funcionales, nunca por micro.** Desde fuera
+   > nadie sabe cuántos procesadores hay dentro de un módulo; una ranura por
+   > micro reintroduciría en el direccionamiento la anatomía que el protocolo
+   > saca de él.
+   >
+   > **El cambio de chip la refuerza en vez de tumbarla.** Cuando se decidió
+   > había dos RP2350B y la pregunta tenía dos respuestas posibles. Hoy la Voz
+   > lleva **un** N657, así que «dos ranuras» ni siquiera tendría a qué
+   > referirse — pero la regla no era sobre el conteo: era sobre **qué clase de
+   > cosa es una ranura**. Si mañana un módulo vuelve a llevar dos micros, sigue
+   > publicando una ranura.
+   >
+   > El criterio original se mantiene intacto y es lo que hay que verificar al
+   > escribir el descriptor: que las entradas queden direccionables **sin tocar
+   > los 16 bits** del identificador de parámetro, porque esos 16 bits son lo
+   > que hace que quepa en tres septetos de SysEx (núcleo §3.1).
+   >
+   > **Esto desbloquea un prerrequisito declarado bloqueante**: la spec de la
+   > Voz total dice que hasta que el cambio 2 aterrice, «el modelo de la Voz
+   > total no es direccionable».
 2. **Cota fija o mensaje en lote** para el camino de respuesta (cambio 12).
    Cierra: medir cuánta pila cuesta la cota derivada del censo. Si cabe sin
    apretar, gana la cota, que es menos código. Si no, gana el lote.
