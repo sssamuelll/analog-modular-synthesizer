@@ -90,6 +90,13 @@ PUENTE_TX_DUTY = 0.10
 # que oir a quien se asocie. Se cuenta RX continuo, que es conservador.
 
 # --- Cargas ATENUABLES: el arbitro del #104 las puede bajar ------------------
+# La retroiluminacion se deja EXPLICITA y clavada a cero en vez de borrada,
+# por la regla de mutacion de la constitucion: borrarla hace que restaurar los
+# 80 mA pase callado por todas las aserciones (cabe_con_host 1.878 < 2.04 y
+# cabe_solo 2.378 >= 2.04 siguen cumpliendo). Con la constante y su asercion,
+# esa mutacion canta.
+BACKLIGHT_A = 0.0
+
 # RETIRADA 2026-08-27: se eliminaron los 0-80 mA de retroiluminacion de la
 # pantalla SPI de 2,8" porque sec.7 del cerebro la deroga. La pantalla de 7" NO
 # se agrega aqui: lleva regulador local desde +12 V y retorno dedicado.
@@ -143,7 +150,7 @@ def arbitro(host_usb: bool, techo_w: float) -> float:
     # cargas duras) y vuelve a tener resta el dia que aparezca otra carga
     # atenuable. La retroiluminacion era la unica que habia, y murio con la
     # pantalla de 2,8". Borrar la funcion seria borrar el nombre del arbitro.
-    return sobra_para_atenuables(host_usb, techo_w)
+    return sobra_para_atenuables(host_usb, techo_w) - BACKLIGHT_A
 
 
 def pico_3v3_a() -> float:
@@ -259,6 +266,11 @@ def main() -> int:
     #    brillo real NO cabe sin arbitrar. Este aserto es al reves -- exige que
     #    el conflicto siga existiendo, porque el dia que deje de existir es que
     #    alguien movio un numero y el arbitro se quedo sin razon de ser.
+    assert BACKLIGHT_A == 0.0, (
+        f"BACKLIGHT_A vale {BACKLIGHT_A*1000:.0f} mA y la pantalla de 2,8 que "
+        f"la pedia esta derogada (spec del cerebro sec.7). La de 7 pulgadas NO "
+        f"carga este riel: lleva regulador local desde +12 V con retorno "
+        f"dedicado (pantalla-motor sec.6)")
     cabe_con_host = arbitro(True, TECHO_W_PESIMISTA)
     assert cabe_con_host < LED_A_CASO_REAL, (
         f"con el host USB a tope sobran {cabe_con_host:.2f} A para la cadena y "

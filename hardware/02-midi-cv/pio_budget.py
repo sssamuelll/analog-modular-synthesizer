@@ -234,6 +234,13 @@ PINES_NUEVOS_12_14 = 5      # bandera y EN del host (sec.6.2), EN y arranque del
 PINES_DIGITOS = 3           # DIG_DATA, DIG_CLK, DIG_LATCH: se retiraron con la
                             # cabeza local y no vuelven; pinout.rs TODAVIA los
                             # declara (#180)
+# La cabeza local esta DEROGADA (spec del cerebro sec.7, 2026-08-27): la
+# pantalla de 7" del motor es la unica del instrumento y cuelga de otro chip.
+# Su coste en pines se deja EXPLICITO y clavado a cero, en vez de borrado, por
+# la regla de mutacion de la constitucion: si alguien resucita los 5 GPIO de
+# la 2,8", la asercion de abajo canta en vez de dejar el censo pasar callado.
+PINES_CABEZA_LOCAL = 0
+
 MARGEN_PINES_MIN = 2        # sec.12.16: "A partir de aqui, cualquier funcion
                             # nueva que pida mas de dos pines no entra sin
                             # quitar otra cosa"
@@ -380,7 +387,12 @@ def demo() -> None:
 
     # --- los pines -----------------------------------------------------------
     hoy = len(pinout)
-    manana = hoy + PINES_NUEVOS_12_14 - PINES_DIGITOS
+    assert PINES_CABEZA_LOCAL == 0, (
+        f"PINES_CABEZA_LOCAL vale {PINES_CABEZA_LOCAL} y la cabeza local esta "
+        f"derogada desde el 2026-08-27 (spec del cerebro sec.7). Si de verdad "
+        f"vuelve una pantalla al cerebro, esto no se sube: se reabre la "
+        f"seccion 7, porque la 7\" del motor es la unica cabeza")
+    manana = hoy + PINES_NUEVOS_12_14 - PINES_DIGITOS + PINES_CABEZA_LOCAL
     libres = GPIO_TOTALES - manana
     print(f"pines: {hoy} declarados hoy en pinout.rs")
     print(f"   +{PINES_NUEVOS_12_14} de sec.12.14 (bandera y EN del host, EN y "
