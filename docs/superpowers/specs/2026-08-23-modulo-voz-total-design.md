@@ -558,7 +558,7 @@ Los cambios nuevos, y los viejos que ascienden a prerrequisito:
 > tercera opción (una por micro), no elige entre una y dos. Las dos que estaban
 > sobre la mesa eran funcionales las dos. El texto corregido y su razonamiento
 > completo viven en `2026-08-22-vco-orquestacion-design.md` §«Decisiones
-> abiertas», punto 1; si los dos papeles vuelven a discrepar, **manda aquel**.
+> abiertas», punto 1.
 >
 > **El cambio 12 (lotes) sigue bloqueante y sin tocar**, así que la frase de
 > abajo sigue siendo cierta por su segunda mitad: el modelo de la Voz total
