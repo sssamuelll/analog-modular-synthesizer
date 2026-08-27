@@ -90,16 +90,9 @@ PUENTE_TX_DUTY = 0.10
 # que oir a quien se asocie. Se cuenta RX continuo, que es conservador.
 
 # --- Cargas ATENUABLES: el arbitro del #104 las puede bajar ------------------
-# Retroiluminacion de la pantalla de 2.8": "~60-80 mA que el firmware SI puede
-# bajar" (cerebro S9.1). Clase atenuable, por debajo de la guia de patcheo.
-# AVISO 2026-08-27: la pantalla de 2,8" quedo DEROGADA (spec del cerebro
-# sec.7). Estos 80 mA salen del +5 V, que ya no cierra hoy (#151), asi que
-# quitarlos MUEVE EL VEREDICTO de este arbitro sobre un riel en disputa. No se
-# toca al vuelo: se corrige con su verificacion propia, y de paso entra la
-# pantalla de 7", que NO carga aqui -- lleva regulador local desde +12 V con
-# retorno dedicado (pantalla-motor sec.6). Issue abierto en la misma tanda.
-BACKLIGHT_A_MAX = 0.080
-BACKLIGHT_A_MIN = 0.0          # el firmware puede apagarla del todo
+# RETIRADA 2026-08-27: se eliminaron los 0-80 mA de retroiluminacion de la
+# pantalla SPI de 2,8" porque sec.7 del cerebro la deroga. La pantalla de 7" NO
+# se agrega aqui: lleva regulador local desde +12 V y retorno dedicado.
 # Cadena WS2812: 160 LEDs (100 de panel + 60 del farol del #42), 60 mA cada uno
 # a blanco pleno -> 9.60 A, que es el numero que el #104 declara imposible.
 # El caso que de verdad ocurre, del mismo issue: "10 parejas de jack al 100% +
@@ -143,9 +136,14 @@ def sobra_para_atenuables(host_usb: bool, techo_w: float) -> float:
     return techo_w / V_RIEL - duras_a(host_usb)
 
 
-def arbitro(host_usb: bool, techo_w: float, backlight_a: float) -> float:
+def arbitro(host_usb: bool, techo_w: float) -> float:
     """Techo de corriente que el arbitro del #104 puede darle a la cadena."""
-    return sobra_para_atenuables(host_usb, techo_w) - backlight_a
+    # Desde el 2026-08-27 esto es un paso directo, y NO sobra: el arbitro del
+    # #104 es un concepto del diseno (que le queda a la cadena despues de las
+    # cargas duras) y vuelve a tener resta el dia que aparezca otra carga
+    # atenuable. La retroiluminacion era la unica que habia, y murio con la
+    # pantalla de 2,8". Borrar la funcion seria borrar el nombre del arbitro.
+    return sobra_para_atenuables(host_usb, techo_w)
 
 
 def pico_3v3_a() -> float:
@@ -154,11 +152,10 @@ def pico_3v3_a() -> float:
 
 
 CASOS = (
-    # (nombre, host_usb, backlight_a, carga de cadena que se pretende)
-    ("solo, brillo bajo",            False, BACKLIGHT_A_MIN, LED_A_CASO_REAL),
-    ("solo, pantalla encendida",     False, BACKLIGHT_A_MAX, LED_A_CASO_REAL),
-    ("con controlador USB a tope",   True,  BACKLIGHT_A_MAX, LED_A_CASO_REAL),
-    ("con USB, al tope del #104",    True,  BACKLIGHT_A_MAX, LED_A_TOPE_104),
+    # (nombre, host_usb, carga de cadena que se pretende)
+    ("solo, caso real",              False, LED_A_CASO_REAL),
+    ("con controlador USB a tope",   True,  LED_A_CASO_REAL),
+    ("con USB, al tope del #104",    True,  LED_A_TOPE_104),
 )
 
 
@@ -187,10 +184,10 @@ def demo() -> None:
           "(techo pesimista):")
     print()
     print(f"  {'caso':<30} {'duras':>7} {'sobra':>7} {'cadena':>8}  veredicto")
-    for nombre, host, bl, pretende in CASOS:
+    for nombre, host, pretende in CASOS:
         d = duras_a(host)
         s = sobra_para_atenuables(host, TECHO_W_PESIMISTA)
-        cabe = arbitro(host, TECHO_W_PESIMISTA, bl)
+        cabe = arbitro(host, TECHO_W_PESIMISTA)
         ok = "OK" if cabe >= pretende else f"ARBITRA -{(pretende-cabe)*1000:.0f} mA"
         print(f"  {nombre:<30} {d:6.2f}A {s:6.2f}A {cabe:7.2f}A  {ok}")
     print()
@@ -203,23 +200,21 @@ def demo() -> None:
     print("  y el transitorio lo cubre el desacoplo local del modulo")
     print()
 
-    deficit_real = LED_A_CASO_REAL - arbitro(True, TECHO_W_PESIMISTA,
-                                             BACKLIGHT_A_MAX)
-    deficit_tope = LED_A_TOPE_104 - arbitro(True, TECHO_W_PESIMISTA,
-                                            BACKLIGHT_A_MAX)
+    deficit_real = LED_A_CASO_REAL - arbitro(True, TECHO_W_PESIMISTA)
+    deficit_tope = LED_A_TOPE_104 - arbitro(True, TECHO_W_PESIMISTA)
     print("VEREDICTO")
     print(f"  Solo, el instrumento cabe con {LED_A_CASO_REAL:.2f} A de cadena "
           f"-- el brillo que de")
     print("  verdad usa segun el #104 (diez parejas de jack al 100% y el "
           "farol")
-    print(f"  al 50%) -- y con la pantalla encendida. Le sobran "
-          f"{(arbitro(False, TECHO_W_PESIMISTA, BACKLIGHT_A_MAX)-LED_A_CASO_REAL)*1000:.0f} mA.")
+    print(f"  al 50%). Le sobran "
+          f"{(arbitro(False, TECHO_W_PESIMISTA)-LED_A_CASO_REAL)*1000:.0f} mA.")
     print()
     print(f"  Enchufa un controlador USB que chupe sus {HOST_USB_A*1000:.0f} mA "
           f"y el arbitro tiene")
     print(f"  que quitar {deficit_real*1000:.0f} mA de cadena "
-          f"({deficit_real/LED_A_CASO_REAL:.0%} del brillo real), o apagar la")
-    print("  pantalla, o repartir entre las dos. Contra el tope del #104 el")
+          f"({deficit_real/LED_A_CASO_REAL:.0%} del brillo real). Contra el")
+    print("  tope del #104 el")
     print(f"  recorte serian {deficit_tope*1000:.0f} mA.")
     print()
     print("  Eso es exactamente lo que el #104 pedia y el #151 echaba en")
@@ -264,16 +259,16 @@ def main() -> int:
     #    brillo real NO cabe sin arbitrar. Este aserto es al reves -- exige que
     #    el conflicto siga existiendo, porque el dia que deje de existir es que
     #    alguien movio un numero y el arbitro se quedo sin razon de ser.
-    cabe_con_host = arbitro(True, TECHO_W_PESIMISTA, BACKLIGHT_A_MAX)
+    cabe_con_host = arbitro(True, TECHO_W_PESIMISTA)
     assert cabe_con_host < LED_A_CASO_REAL, (
         f"con el host USB a tope sobran {cabe_con_host:.2f} A para la cadena y "
         f"el caso real pide {LED_A_CASO_REAL:.2f}: ya no hace falta arbitrar. "
         f"Si esto es verdad, el #104 se puede cerrar -- pero revisa que numero "
         f"cambio antes de creertelo.")
 
-    # 3. Sin host, el instrumento tiene que tocar con su brillo real y la
-    #    pantalla encendida. Si esto falla, el instrumento no funciona solo.
-    cabe_solo = arbitro(False, TECHO_W_PESIMISTA, BACKLIGHT_A_MAX)
+    # 3. Sin host, el instrumento tiene que tocar con su brillo real. Si esto
+    #    falla, el instrumento no funciona solo.
+    cabe_solo = arbitro(False, TECHO_W_PESIMISTA)
     assert cabe_solo >= LED_A_CASO_REAL, (
         f"solo, con la pantalla encendida, sobran {cabe_solo:.2f} A para la "
         f"cadena y el brillo real pide {LED_A_CASO_REAL:.2f}. El instrumento "
