@@ -75,24 +75,27 @@ canal_fondo = 20;   // cota exterior en la direccion de la carga
 // que sus tornillos caigan en la reticula por construccion, no por coincidencia.
 // Una sola cota gobierna ambos lados: repetir 100 los desincronizaria al cambiarla.
 reticula_paso = 100;
-// LA PESTANA DE LA TAPA DEL VALLE. La tapa se dobla 90 grados en cada punta y
-// se atornilla a la costilla: deja de estar sujeta SOLO por su larguero -- una
-// sola linea de tornillos, que es una bisagra -- y pasa a atar las dos costillas
-// entre si. Eso la convierte en DIAFRAGMA a media altura, que es lo que la foto
-// de referencia hace con sus paneles y lo unico que le da algo al racking del
-// cajon (#203, sigue sin cerrar con numero).
+// LA PESTANA DE LA BANDA DEL VALLE. La banda ranurada del vuelo delantero se
+// dobla 90 grados en cada punta y se atornilla a la costilla: asi no queda
+// sujeta SOLO por una linea longitudinal de tornillos, que seria una bisagra.
+// Las pestanas fijan la banda; no se les atribuye funcion de diafragma.
 //
-// NO QUITA EL LARGUERO. Una tapa sujeta solo por sus dos puntas cruza los 528.62
-// entre costillas y cede 59.6 mm: la pestana es fijacion, el larguero es apoyo.
+// La plancha central y sus diez M3 al canto ya no existen. guarda_valle() mide
+// la banda como voladizo hacia abajo y publica aparte el levantamiento entre
+// los dos M3 laterales, que es su caso estructural critico.
 //
 // 21 SALE DEL TORNILLO, y va apretado: el M3 tiene que caer 2t+r por debajo de
 // la tangente del doblez (13.70 mm bajo la cara de arriba) y aun asi dejar 1.5*D
 // hasta el canto libre. 13.70 + 1.7 + 5.1 = 20.5 -> 21.
 //
-// Y SOLO HAY UNA PESTANA POR PUNTA, detras del larguero. Delante no cabe: el
-// riel cara_inf valle llega hasta x=105.94 y el larguero empieza en 115.18, o
-// sea 3.24 mm de ventana. Lo mide guarda_pestana_valle().
+// Y SOLO HAY UNA PESTANA POR PUNTA. Ocupa los ultimos 3D del vuelo delantero:
+// es el minimo que conserva 1.5D a ambos lados del M3 y permite abrir mas de 60
+// grados. El alivio siguiente libra la esquina que alcanza el Z-Rail 3U.
 pestana_valle      = 21;
+// Alivio en la esquina libre DELANTERA de cada pestana. El Z-Rail 3U invade
+// 0.57 mm del rectangulo sin recortar; 1 mm lo libra y queda lejos del M3.
+// solapes() usa esta misma cota para refinar el falso positivo de su AABB.
+muesca_riel_valle  = 1;
 // Radio interior del doblez de la tapa. Mismo material y mismo espesor que la
 // costilla (aluminio de 3), asi que mismo radio: 1xt es el minimo de manual
 // para aleacion blanda a 90 grados.
@@ -106,8 +109,11 @@ radio_doblez_valle = 3;
 // aluminio entre el agujero y el canto. La cota sale de ahi:
 //     16.13 (el centro mas alejado del contorno) + 1.5*4.5 (BORDE_MIN_D x D)
 //   = 22.88  ->  24, que deja 1.1 mm de margen.
-// Solo cuesta ventana y 37 g por costilla. Lo vigila taladros_costilla().
-ala_costilla    = 24;
+// Solo cuesta ventana y 37 g por costilla. Con la fila 1U aparece un centro mas
+// adentro: a 24 queda a 4.26 mm del canto interior y necesita 6.75 (1.5D del
+// M4), asi que el minimo nuevo es 26.49. Se redondea a 27 y quedan 0.51 mm de
+// margen. Lo vigila taladros_costilla() contra el DXF, no contra esta cuenta.
+ala_costilla    = 27;
 // EL ALA DEL DOBLEZ. No es una pieza: es el propio material de la costilla
 // doblado 90 grados a lo largo del canto. Se llamo tira_canto mientras iba a
 // ser una pletina atornillada, y ese nombre habria mentido sobre como se
@@ -195,6 +201,11 @@ alto_cara_inf   = 155.75; // DERIVADO: 122.5 + inset_inf_frente + inset_inf_vall
 alto_cara_sup   = 155.0; // DERIVADO: 122.5 + inset_sup_valle + inset_sup_remate
 alto_panel_inf  = 128.5; // PCB 3U EUROrack
 alto_panel_sup  = 128.5; // PCB 3U EUROrack: la fila de arriba tambien
+// PANEL 1U DE INTELLIJEL. No es una altura elegida para llenar el valle: 39.65
+// es la cota del formato, y con inset_er = 3.0 obliga a que los dos Z-Rails
+// queden a 33.65 entre centros. guarda_fila_1u() cruza ambas cifras contra la
+// boca derivada de paso_horizontal para que ninguna se ajuste por separado.
+alto_panel_1u   = 39.65;
 // Angulos de cara. El fichero los guarda DESDE LA VERTICAL (convencion del
 // board), pero Samuel los especifica DESDE LA HORIZONTAL, que es como se
 // miran en el alzado. La traduccion es a = 90 - horizontal:
@@ -396,7 +407,7 @@ marco_remate    = 50;
 // Entrepiso: la franja horizontal entre el tope de la cara inferior y la base
 // de la superior -- el "valle del medio" de la silueta. Fue 25 (minimo tecnico
 // de R7: por debajo, los dos railes girados se solapaban 2.52 mm), luego 40,
-// luego 80 cuando Samuel lo pidio ancho, y ahora 60.
+// luego 80 cuando Samuel lo pidio ancho, y ahora 61.47.
 //
 // Baja porque era el UNICO sitio del case con holgura de verdad. Auditadas todas
 // las cotas derivadas, alto_frontal, inset_inf_frente, inset_sup_remate y
@@ -410,8 +421,14 @@ marco_remate    = 50;
 // ventana. Se tocan en paso_horizontal = 57. A 60 quedan 1.54 mm, que es margen
 // de verdad; a 57 quedan 0.04, que es una cota de cuchillo.
 //
+// Vuelve a subir 1.47 mm porque el valle pasa a alojar una fila Intellijel 1U:
+// su boca tiene que medir 33.65 entre centros + 10.00 de cada Z-Rail = 43.65 mm
+// libres entre sus caras, o 49.65 mm entre las caras exteriores de las dos alas
+// de chapa. Esa boca sale directamente de paso_horizontal, que ahora gobierna
+// guarda_fila_1u(); cada mm que entra aqui suma tambien uno al fondo del aparato.
+//
 // Lo vigila guarda_escalon(), que ya guardaba la otra holgura de este valle.
-paso_horizontal = 60;
+paso_horizontal = 61.47;
 // Acabado modernista. ESTE ENCABEZADO DECIA "ningun canto del costado es
 // esquina viva" Y DEJO DE SER CIERTO EL 2026-08-24: las dos esquinas
 // TRASERAS son vivas a peticion de Samuel, para que la trasera y la tapa de
@@ -880,16 +897,16 @@ flecha_costado_max = 0.6;// mm bajo carga_mano. El techo NO es nuevo: es el
                          // mismo que el proyecto ya acepto para la trasera en
                          // su vano de 211.73. Hoy sale 0.38
 d_M3_paso   = 3.4;  // agujero paso M3 (ISO holgura media)
-d_M4_paso   = 4.5;  // agujero paso M4: standoffs de las pieles Y los cuatro
+d_M4_paso   = 4.5;  // agujero paso M4: standoffs de las pieles Y los seis
                     // rieles EUROrack, cuyo taladro de punta viene roscado M4
                     // de fabrica (hoja Tiptop: "M4 Tapping To (/)3.3")
 d_M5_paso   = 5.5;  // agujero paso M5: SOLO el esqueleto 2020, roscado en el alma
-// APRIETE DE LOS 30 M3, y la arandela de la que sale.
+// APRIETE DE LOS 20 M3, y la arandela de la que sale.
 //
 // Hasta el 2026-08-24 la instruccion era "apretar hasta marcar, NO hasta
 // fisurar" (README, procedimiento del cupon) y la spec §11 admitia que "el
-// par maximo antes de fisura no esta medido". Treinta tornillos VISIBLES
-// apretados a tacto sobre acrilico son treinta puntos de craquelado.
+// par maximo antes de fisura no esta medido". Veinte tornillos VISIBLES
+// apretados a tacto sobre acrilico son veinte puntos de craquelado.
 //
 // EL NUMERO LO PONE LA ARANDELA, no el tornillo: lo que decide si el PMMA
 // craquela es cuanta area reparte la precarga. Con el umbral de 10 MPa del
@@ -1273,29 +1290,24 @@ iec_margen_der = 22;     // acrilico entre la ventana y el canto derecho.
                          // decir nada. Esto es una distancia al canto, que es
                          // lo que de verdad importa en una plancha de PMMA.
 
-// --- tapa del valle ---
-// La plancha que cierra el escalon entre las dos filas. Es la unica cara
-// HORIZONTAL que se ve de pie delante del aparato, asi que es la que pone el
-// tono. Samuel la pidio "modernista pero seria, como si fuera de Darmstadt", o
-// sea: nada figurativo. Las ondas de las pieles DIBUJAN una senal; esto no
-// dibuja nada -- es un campo de ranuras y punto.
+// --- banda delantera del valle ---
+// De la antigua tapa solo queda la banda ranurada del vuelo delantero. Es la
+// cara horizontal visible de pie delante del aparato. Samuel la pidio
+// "modernista pero seria, como si fuera de Darmstadt": nada figurativo. Las
+// ondas de las pieles DIBUJAN una senal; esto es un campo de ranuras y punto.
 //
 // Y no es un campo cualquiera: va REGISTRADO AL RACK. Una ranura en cada linea
 // HP par, o sea que cada una cae en un canto de modulo. El paso no es una
 // eleccion de dibujo, es la medida del instrumento; el adorno ES la regla.
 //
-// La ESPINA es la banda maciza del centro, donde va la fila de M3 contra el
-// larguero del valle. Por eso el campo sale partido en dos: la forma la pone la
-// estructura. Los margenes de delante y detras son iguales porque el larguero va
-// centrado bajo la plancha, no porque quedara bonito.
-valle_paso_hp   = 2;   // una ranura cada 2 HP -> 51 por campo, puente 6.16
-// La espina y las orillas se recortan al acortarse el valle (paso 80 -> 60): la
-// tapa pasa de 84.78 a 64.78 de fondo, y con los 20 + 8 + 8 de antes los dos
-// campos de ranuras quedaban en 14.4 mm -- las ranuras dejaban de leerse como
-// campo y pasaban a rayitas. Con 16 + 6 + 6 vuelven a 18.4. La espina sigue
-// dando 4.5 mm de acrilico a cada lado de la arandela del M3.
-valle_espina    = 16;  // banda maciza central (cabeza de M3 + arandela)
-valle_margen    = 6;   // orilla maciza delante y detras
+// Ahora hay UN solo campo, sin espina ni fila M3. valle_margen deja material en
+// ambos cantos de la banda; guarda_aire() decide si el area abierta alcanza.
+valle_paso_hp   = 2;   // una ranura cada 2 HP -> 51 en la banda, puente 6.16
+// Nombre historico: ya no dimensiona la banda del valle. Sigue gobernando el
+// retiro inferior de la rejilla de entrada trasera, cuyo contrato lo comparte
+// con el IEC; renombrarlo seria otro cambio independiente.
+valle_espina    = 16;
+valle_margen    = 6;   // material macizo en los dos cantos del unico campo
 
 // --- tiro de aire ---
 // El case se refrigera por CONVECCION NATURAL y nada mas: no hay ventilador y

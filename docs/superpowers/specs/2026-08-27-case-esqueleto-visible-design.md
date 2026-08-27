@@ -34,8 +34,11 @@ montaje a la vez.
 
 - **Las bisagras siguen escondidas** dentro del Z-Rail. En la referencia son el
   detalle más llamativo del aparato, y sacarlas fuera mueve el eje de giro y con
-  él el radio: las 180° de apertura de las dos filas son lo primero que se
-  pierde, y costaron 16 mm de fondo.
+  él el radio, y con el radio la apertura de las dos filas. **Enmienda del
+  2026-08-27:** las 180° dejaron de estar protegidas — el suelo es el de
+  `APERTURA_MIN`, 60°, y la fila de abajo abre 63.8° desde que el valle es una
+  fila 1U. La decisión de Samuel, literal: «lo de los 180 ya no es importante,
+  con 60 vamos más que bien». Las bisagras siguen escondidas por lo demás.
 - **La fila superior de módulos se queda.** «Tapa de aluminio arriba» significa
   la meseta más el marco visto por el borde, no convertir la cara de arriba en
   una tapa ciega.
@@ -401,9 +404,14 @@ case, dejando 25 mm. Se come el suelo entero.
 
 ### 9.3 Lo que NO se toca
 
-La tabla y su fijación de ranura alargada. Los 4 Z-Rails. La geometría del panel,
-el paso de 1 HP y **las 180° de apertura**. El perfil escalonado. El relieve
-KONDOR. La ventilación. Todo lo que costó milímetros de aparato sigue donde está.
+La tabla y su fijación de ranura alargada. Los 4 Z-Rails. La geometría del panel
+y el paso de 1 HP. El perfil escalonado. El relieve KONDOR. La ventilación.
+
+**Enmienda del 2026-08-27:** de esta lista salen **las 180° de apertura**.
+Estaban aquí porque costaron 16 mm de fondo, pero al montar la fila 1U en el
+valle Samuel las liberó — «con 60 vamos más que bien». Lo que las gobierna ahora
+es `APERTURA_MIN` en `clearance_budget.py`, y vale 60. Se anota en vez de
+borrarse: la cota no se perdió sola, se soltó a propósito.
 
 ## 10. El pliego
 

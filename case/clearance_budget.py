@@ -339,6 +339,15 @@ def _envolvente_bahia(cajas: dict[str, Caja]) -> Caja:
             min(c[5] for c in caras), max(c[6] for c in caras))
 
 
+def _centros_rail_1u(p: dict[str, float], P: list[tuple[float, float]],
+                      bahia: Caja) -> list[tuple[float, float]]:
+    """Dos Z-Rails 1U centrados en la boca, gemelos de centros_rail_1u()."""
+    xc = (bahia[1] + bahia[2]) / 2
+    sep = p["alto_panel_1u"] - 2 * p["inset_er"]
+    y = P[3][1] - p["t_panel"] - p["rail_er_eje"]
+    return [(xc - sep / 2, y), (xc + sep / 2, y)]
+
+
 def _anclajes_miembro(p: dict[str, float], cajas: dict[str, Caja]
                        ) -> dict[tuple[str, str], tuple[float, float]]:
     """Lineas de tornillo sobre las caras reales de los tres miembros.
@@ -392,7 +401,7 @@ def _caras_miembro(p: dict[str, float], cajas: dict[str, Caja]) -> list[Caja]:
 
 def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
                                                   list[Fila]]:
-    """AABB de los cuatro Z-Rails, tres miembros y planchas/pieles."""
+    """AABB de los seis Z-Rails, tres miembros y planchas/pieles."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
     t_cheek = p["t_cheek"]
@@ -415,6 +424,11 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
         railes.append((nm, c[0] - hx, c[0] + hx, c[1] - hy, c[1] + hy,
                        z0, z1))
     miembros = _cajas_miembro(p, P, cr, z0, z1)
+    bahia = _envolvente_bahia(miembros)
+    hx_1u, hy_1u = _he_er(p, 90.0)
+    for i, c in enumerate(_centros_rail_1u(p, P, bahia)):
+        railes.append((f"fila 1U {i}", c[0] - hx_1u, c[0] + hx_1u,
+                       c[1] - hy_1u, c[1] + hy_1u, z0, z1))
     railes.extend(miembros.values())
     anclajes = _anclajes_miembro(p, miembros)
 
@@ -460,12 +474,11 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # puerta de anclaje miraba, y su papel -- atar los costados a media altura
     # -- ya lo hace el del valle a la MISMA altura. Lo que costo se mide en
     # guarda_costado(), en check_dxf.py.
-    # tapa_valle: a ras del plano del valle, igual que la de entrepiso, y con
-    # una sola fila de M3 -- la del larguero del valle, que va centrado bajo
-    # ella. Lo que la coloca en Y es lo mismo que obligo a subir
-    # inset_inf_valle: su cara de abajo tiene que librar la esquina de arriba
-    # del riel del valle de la cara inferior.
-    x0_tv, x1_tv = _x_valle(p, P, cr)
+    # tapa_valle: solo la banda ranurada del vuelo delantero, a ras del plano
+    # del valle. Las diez M3 al canto de las alas murieron con el resto de la
+    # plancha; quedan unicamente las dos pestanas atornilladas a las costillas.
+    x0_tv, _ = _x_valle(p, P, cr)
+    x1_tv = bahia[1]
     planchas.append(("tapa_valle", x0_tv, x1_tv,
                      P[3][1] - t_acr, P[3][1], z0, z1))
     # LAS DOS PESTANAS de la tapa, dobladas hacia abajo contra la costilla.
@@ -473,15 +486,8 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # cruza contra todo, y una pestana que se echa encima del larguero del valle
     # o del riel de abajo no la caza nadie mas. (Y `planchas` la recorre
     # _sobres() para sacar envolventes de DXF, que aqui no aplica.)
-    pv = _pv(p)
-    x0_pv = (miembros["bahia ala delantera"][1]
-             + p["t_costilla"] + p["holgura_rail"])
-    # El ala trasera ocupa los ultimos t_costilla mm de la bahia. La pestana
-    # se retira de su cara delantera la misma holgura que cualquier otro canto:
-    # no es una cota copiada de x_valle, sino una cara fisica del miembro.
-    x1_pv = (miembros["bahia ala trasera"][1]
-             - p["holgura_rail"])
-    pv_x = _pv_x(p, {"bahia": _envolvente_bahia(miembros)})
+    x0_pv, x1_pv = x1_tv - 3 * p["d_M3_paso"], x1_tv
+    pv_x = _pv_x(p, {"bahia": bahia})
     radio_m3 = p["d_M3_paso"] / 2
     assert x0_pv <= pv_x - radio_m3 and pv_x + radio_m3 <= x1_pv, (
         f"el M3 de la pestana cae en x={pv_x:.2f}, fuera de la pestana "
@@ -492,10 +498,6 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
         railes.append((f"pestana valle {lado}", x0_pv, x1_pv,
                        P[3][1] - p["pestana_valle"], P[3][1] - t_acr,
                        za, zb))
-    filas += [("tapa_valle", "delantera", "x",
-               anclajes[("bahia", "delantera")][0], "bahia"),
-              ("tapa_valle", "trasera", "x",
-               anclajes[("bahia", "trasera")][0], "bahia")]
     # piel_trasera: UNA sola plancha desde el 2026-08-21. Fueron dos, partidas
     # a la altura del entrepiso porque cada una se atornillaba a los dos
     # largueros de su piso; muerta esa bandeja la frontera dejo de existir. Va
@@ -529,6 +531,59 @@ def _overlap(a: Caja, b: Caja) -> tuple[float, float, float] | None:
     oy = min(ay1, by1) - max(ay0, by0)
     oz = min(az1, bz1) - max(az0, bz0)
     return (ox, oy, oz) if (ox > 1e-9 and oy > 1e-9 and oz > 1e-9) else None
+
+
+def _sat_convexo(a: list[tuple[float, float]],
+                 b: list[tuple[float, float]]) -> bool:
+    """Solape estricto de dos poligonos convexos mediante ejes separadores."""
+    for pol in (a, b):
+        for p0, p1 in zip(pol, pol[1:] + pol[:1]):
+            eje = (-(p1[1] - p0[1]), p1[0] - p0[0])
+            pa = [x * eje[0] + y * eje[1] for x, y in a]
+            pb = [x * eje[0] + y * eje[1] for x, y in b]
+            if max(pa) <= min(pb) or max(pb) <= min(pa):
+                return False
+    return True
+
+
+def _rect_xy(c: Caja) -> list[tuple[float, float]]:
+    return [(c[1], c[3]), (c[2], c[3]), (c[2], c[4]), (c[1], c[4])]
+
+
+def _solape_riel_exacto(p: dict[str, float], a: Caja, b: Caja) -> bool:
+    """Refina el AABB de un Z-Rail inclinado contra la geometria real.
+
+    Solo refina el par Z-Rail inclinado/pestana que lo necesita; todos los demas
+    pares conservan el criterio AABB anterior. La muesca usa la misma cota que
+    tapa_valle_2d().
+    """
+    inclinados = set(NOMBRES_CR)
+    hay_inclinado = a[0] in inclinados or b[0] in inclinados
+    hay_pestana = (a[0].startswith("pestana valle")
+                   or b[0].startswith("pestana valle"))
+    if not (hay_inclinado and hay_pestana):
+        return True
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    datos = {nm: (c, p[ang])
+             for nm, c, ang in zip(NOMBRES_CR, cr, ANGS_CR)}
+
+    def poligonos(c: Caja) -> list[list[tuple[float, float]]]:
+        if c[0] in datos:
+            centro, ang = datos[c[0]]
+            q = _esquinas_er(p, centro, ang)
+            return [[q[i] for i in (0, 1, 3, 2)]]
+        if c[0].startswith("pestana valle"):
+            m = p["muesca_riel_valle"]
+            # Rectangulo menos la muesca inferior izquierda, como dos convexos.
+            return [[(c[1] + m, c[3]), (c[2], c[3]),
+                     (c[2], c[4]), (c[1] + m, c[4])],
+                    [(c[1], c[3] + m), (c[1] + m, c[3] + m),
+                     (c[1] + m, c[4]), (c[1], c[4])]]
+        return [_rect_xy(c)]
+
+    return any(_sat_convexo(pa, pb)
+               for pa in poligonos(a) for pb in poligonos(b))
 
 
 # Pares tolerados: ronda de revision 1 dejo 2 aqui (bandeja_entrepiso vs
@@ -756,6 +811,8 @@ def solapes(p: dict[str, float]) -> list[str]:
             ov = _overlap(a, b)
             if not ov:
                 continue
+            if not _solape_riel_exacto(p, a, b):
+                continue
             tol = TOLERADOS.get(frozenset({a[0], b[0]}))
             estrecho = min(ov[0], ov[1])
             if tol is not None and estrecho <= tol:
@@ -877,23 +934,18 @@ def _rejilla_valle(p: dict[str, float]) -> tuple[int, float, float]:
     P = _vertices(p)
     cr = _centros_rail(p, P)
     miembros = _cajas_miembro(p, P, cr, 0.0, 0.0)
-    anclajes = _anclajes_miembro(p, miembros)
     xv = _x_valle(p, P, cr)
-    largo = xv[1] - xv[0]
-    centros = sorted(anclajes[("bahia", fila)][0] - xv[0]
-                     for fila in ("delantera", "trasera"))
-    s = p["valle_espina"] / 2
-    candidatos = ((p["valle_margen"], centros[0] - s),
-                  (centros[0] + s, centros[1] - s),
-                  (centros[1] + s, largo - p["valle_margen"]))
-    campos = tuple(c for c in candidatos
-                   if c[1] - c[0] >= p["vent_ancho_ranura"])
+    bahia = _envolvente_bahia(miembros)
+    largo = bahia[1] - xv[0]
+    campo = (p["valle_margen"], largo - p["valle_margen"])
+    campos = (campo,) if campo[1] - campo[0] >= p["vent_ancho_ranura"] else ()
     paso = int(p["valle_paso_hp"])
     n_hp = round(p["largo_riel"] / p["hp"])
     ns = len(range(paso, int(n_hp) - paso + 1, paso))
     area = sum(_area_ranuras(ns, c[1] - c[0], p["vent_ancho_ranura"])
                for c in campos)
-    return 2 * ns, campos[0][1] - campos[0][0], area
+    largo_ranura = campos[0][1] - campos[0][0] if campos else 0.0
+    return len(campos) * ns, largo_ranura, area
 
 
 def _banda_libre_trasera(p: dict[str, float]) -> tuple[float, float]:
@@ -1151,8 +1203,8 @@ def guarda_apriete(p: dict[str, float]) -> None:
 
     Hasta el 2026-08-24 la instruccion era "apretar hasta marcar, NO hasta
     fisurar" (README, procedimiento del cupon) y la spec §11 admitia que "el
-    par maximo antes de fisura no esta medido". Treinta tornillos VISIBLES
-    apretados a tacto sobre acrilico son treinta puntos de craquelado.
+    par maximo antes de fisura no esta medido". Veinte tornillos VISIBLES
+    apretados a tacto sobre acrilico son veinte puntos de craquelado.
 
     Lo que decide si el PMMA craquela no es el tornillo sino cuanta area de
     acrilico reparte su precarga. Precedente en el propio BOM: con arandela
@@ -1178,7 +1230,7 @@ def guarda_apriete(p: dict[str, float]) -> None:
         f"dinamometrica de 1/4\" que lo de, asi que se volveria a apretar a "
         f"tacto. Sube la arandela hasta que el par quepa en una herramienta "
         f"que existe (d16 da {par_max:.2f} si ya la llevas).")
-    print(f"apriete: 30 M3 a {p['par_m3']} N*m con arandela d{p['d_arandela']:g} "
+    print(f"apriete: 20 M3 a {p['par_m3']} N*m con arandela d{p['d_arandela']:g} "
           f"-> {sigma:.1f} MPa sobre el acrilico (techo {SIGMA_PMMA}, "
           f"par maximo {par_max:.2f})")
 
@@ -1476,18 +1528,14 @@ def guarda_costilla(p: dict[str, float]) -> None:
 
 
 def guarda_valle(p: dict[str, float]) -> None:
-    """La tapa del valle aguanta que alguien se apoye en ella.
+    """La banda del vuelo delantero aguanta que alguien se apoye en ella.
 
-    NACE CON EL CAMBIO DE MATERIAL, y el numero que la justifica es la
-    proporcion en voladizo: la tapa mide 66.5 mm de fondo y el larguero solo la
-    toca 20, asi que el 70 % de la pieza vuela -- 23.24 mm a cada lado de una
-    banda de apoyo continua.
+    La tapa completa murio al entrar la fila 1U. Queda una banda de 18.30 mm,
+    apoyada en el ala delantera de la bahia por su canto trasero: el 100 % de su
+    fondo trabaja como un voladizo corto.
 
-    OJO CON EL MODO DE CARGA, que es donde este calculo se hizo mal primero: el
-    larguero del valle corre los 528 mm ENTEROS, o sea que para carga hacia
-    ABAJO la tapa apoya en una LINEA CONTINUA y no sobre los 5 M3. El vano
-    entre tornillos no existe en este modo; los M3 solo trabajan cuando se tira
-    de la tapa hacia arriba. Lo que flexa es el VOLADIZO TRANSVERSAL:
+    Para carga hacia ABAJO la banda apoya en una LINEA CONTINUA y no sobre los
+    dos M3 laterales. Lo que flexa es el VOLADIZO TRANSVERSAL:
 
         flecha = P L^3 / (3 E I)        sigma = 6 P L / (b t^2)
         I = b t^3 / 12,  L = voladizo,  b = B_MANO
@@ -1510,10 +1558,10 @@ def guarda_valle(p: dict[str, float]) -> None:
     paso DEVUELVE 2 mm de barrido en vez de comerselos."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
-    x0, x1 = _x_valle(p, P, cr)
+    x0 = _x_valle(p, P, cr)[0]
     bahia = _envolvente_bahia(_cajas_miembro(p, P, cr, 0.0, 0.0))
-    x0_b, x1_b = bahia[1], bahia[2]
-    vol = max(x0_b - x0, x1 - x1_b)
+    x1 = bahia[1]
+    vol = x1 - x0
     t = p["t_valle"]
 
     I = B_MANO * t ** 3 / 12
@@ -1531,15 +1579,23 @@ def guarda_valle(p: dict[str, float]) -> None:
         f"el techo son {p['flecha_costado_max']:.2f}. Es la unica cara "
         f"HORIZONTAL del case: la que se hunde bajo la mano se nota mas que "
         f"ninguna.")
-    # El otro modo, que no rompe pero se siente: tirar de la tapa hacia arriba
-    # entre dos M3. Aqui SI hay vano.
-    paso = perfil(p)["ancho_util"] / 5
-    f_arr = p["carga_mano"] * paso ** 3 / (48 * E_ALUMINIO * I)
-    print(f"valle: tapa de ALUMINIO t={t:g}, vuela {vol:.2f} mm sobre las dos "
-          f"alas de la bahia ({100*2*vol/(x1-x0):.0f} % del fondo)")
+    # Al tirar hacia ARRIBA ya no hay cinco M3 repartidos: solo los dos de las
+    # pestanas laterales. El vano es la distancia entre sus planos medios y la
+    # seccion resistente tiene el fondo de la banda, no B_MANO. Se imprime sin
+    # assert porque este caso de carga nunca fue puerta, pero ya no se falsea.
+    vano_arr = perfil(p)["ancho_util"] - t
+    I_arr = (x1 - x0) * t ** 3 / 12
+    f_arr = p["carga_mano"] * vano_arr ** 3 / (48 * E_ALUMINIO * I_arr)
+    sigma_arr = 3 * p["carga_mano"] * vano_arr / (2 * (x1 - x0) * t ** 2)
+    p_fluye_arr = RP02_ALUMINIO * 2 * (x1 - x0) * t ** 2 / (3 * vano_arr)
+    print(f"valle: banda de ALUMINIO t={t:g}, vuela {vol:.2f} mm desde el ala "
+          f"delantera de la bahia (100 % del fondo)")
     print(f"  con {p['carga_mano']:.0f} N en {B_MANO:.0f} mm cede {flecha:.3f} mm "
           f"y trabaja a {sigma:.1f} MPa (Rp0.2 {RP02_ALUMINIO:.0f}, fluye a "
-          f"{p_fluye:.0f} N); levantandola entre dos M3, {f_arr:.2f} mm")
+          f"{p_fluye:.0f} N)")
+    print(f"  levantandola entre los dos M3 laterales: vano {vano_arr:.2f} mm, "
+          f"calculo elastico {f_arr:.1f} mm y {sigma_arr:.0f} MPa (fluye a "
+          f"{p_fluye_arr:.0f} N; las ranuras no estan descontadas)")
 
 
 # LA PESTANA DE LA TAPA DEL VALLE. GEMELAS de pv_*() en sam17_case.scad, y
@@ -1557,10 +1613,8 @@ def _pv(p: dict[str, float]) -> dict[str, float]:
 
 
 def _pv_x(p: dict[str, float], cajas: dict[str, Caja]) -> float:
-    """X del tornillo de la pestana. Lo mas lejos del vertice concavo P[3] que
-    el miembro de la bahia deja."""
-    return (cajas["bahia"][1] + p["t_costilla"] + p["holgura_rail"]
-            + 1.5 * p["d_M3_paso"])
+    """X del M3, centrado en los 3D finales del vuelo delantero."""
+    return cajas["bahia"][1] - 1.5 * p["d_M3_paso"]
 
 
 def bbox_desarrollo_tapa(p: dict[str, float]) -> tuple[float, float]:
@@ -1570,8 +1624,10 @@ def bbox_desarrollo_tapa(p: dict[str, float]) -> tuple[float, float]:
     del contorno. Derivado y no escrito a mano -- si el .scad y esta cuenta se
     separan, el bbox se sale del sobre y check_dxf se entera."""
     P = _vertices(p)
-    x0, x1 = _x_valle(p, P, _centros_rail(p, P))
-    return (perfil(p)["ancho_util"] + 2 * _pv(p)["vuelo"], x1 - x0)
+    cr = _centros_rail(p, P)
+    x0 = _x_valle(p, P, cr)[0]
+    bahia = _envolvente_bahia(_cajas_miembro(p, P, cr, 0.0, 0.0))
+    return (perfil(p)["ancho_util"] + 2 * _pv(p)["vuelo"], bahia[1] - x0)
 
 
 def autocomprobacion_pv() -> None:
@@ -1986,6 +2042,132 @@ def guarda_miembros(p: dict[str, float]) -> None:
               f"({I / I_2020:.2f}x el 2020), {A * au * 2.70e-6:.3f} kg")
 
 
+# Material minimo alrededor de un taladro, en diametros de canto a centro. Es
+# el mismo criterio que check_dxf.py aplica a los cantos de las piezas planas;
+# vive aqui porque desde el 2026-08-27 tambien lo necesita el ESQUELETO, y no en
+# el canto de un contorno sino en el espesor de la chapa que recibe el tornillo.
+AGARRE_MIN_D = 1.5
+
+
+def guarda_agarre(p: dict[str, float]) -> None:
+    """Todo tornillo muerde material MAS ANCHO que su propio agujero.
+
+    ESTA PUERTA NACE DE UN DEFECTO QUE NINGUNA OTRA VIO. El 2026-08-26 murieron
+    los perfiles 2020 y la tapa del valle paso a apoyar en las dos alas de la
+    bahia. Sus diez M3 quedaron centrados en el ESPESOR del ala: agujero de paso
+    de 3.40 sobre una chapa de 3.00. El agujero es mas ancho que el canto que
+    tiene que morder -- no es una junta, es una ranura abierta por las dos caras
+    -- y el aparato entero paso las dos puertas en verde durante un dia.
+
+    Por que no lo vio nadie: alineacion() comprueba que la fila caiga en la
+    centerline de su miembro, y caia; apoyo() comprueba que las filas de una
+    placa apoyen a la misma distancia, y apoyaban; solapes() comprueba
+    disyuncion, y dos chapas que se tocan en un tornillo no solapan. Las tres
+    miraban DONDE cae el tornillo. Ninguna miraba EN QUE cae.
+
+    El 2020 no tenia este modo de fallo porque su ranura en T corria por una
+    cara de 20 mm: cualquier tornillo encontraba material. Un canal de chapa de
+    3 solo lo encuentra si entra por la CARA, nunca por el canto.
+
+    El criterio: la seccion del miembro medida sobre el eje que recorre la placa
+    tiene que valer al menos AGARRE_MIN_D x D a cada lado del centro, o sea 3 D
+    de ancho total. Es el mismo numero que check_dxf.py exige a los cantos, y
+    por la misma razon fisica: menos que eso y el material se rasga."""
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    cajas = _cajas_miembro(p, P, cr, 0.0, 0.0)
+    _, _, filas = _cajas_solidas(p)
+    d = p["d_M3_paso"]
+    minimo = 2 * AGARRE_MIN_D * d
+    peor, peor_nm = float("inf"), ""
+    for placa, fila, eje, coord, miembro in filas:
+        i = 1 if eje == "x" else 3
+        # de todas las sub-cajas de ese miembro, la que el tornillo atraviesa
+        propias = [(nm, c) for nm, c in cajas.items() if nm.startswith(miembro)]
+        assert propias, f"la fila [{placa}/{fila}] declara '{miembro}', que no tiene cajas"
+        nm, caja = min(propias,
+                       key=lambda t: abs((t[1][i] + t[1][i + 1]) / 2 - coord))
+        ancho = caja[i + 1] - caja[i]
+        if ancho < peor:
+            peor, peor_nm = ancho, f"{placa}/{fila} en '{nm}'"
+        assert ancho >= minimo, (
+            f"el tornillo de [{placa}/{fila}] entra en '{nm}', que sobre el eje "
+            f"{eje} mide {ancho:.2f} mm. Su agujero de paso mide {d:.2f} y se "
+            f"exigen {minimo:.2f} ({2 * AGARRE_MIN_D} D). "
+            + (f"El agujero es MAS ANCHO que el material: eso no es una junta, "
+               f"es una ranura abierta por las dos caras. " if ancho < d else "")
+            + f"Un tornillo entra por la CARA de una chapa, nunca por su canto")
+    print(f"agarre: {len(filas)} filas revisadas, la mas justa es {peor_nm} con "
+          f"{peor:.2f} mm de material (minimo {minimo:.2f} = {2 * AGARRE_MIN_D} D)")
+
+
+# Separacion entre centros de taladro que Intellijel PUBLICA para su 1U, en mm.
+# FUENTE: intellijel.com/support/1u-technical-specifications/ (consultada el
+# 2026-08-27). El diagrama de esa pagina vive dentro de una imagen y no se pudo
+# leer con la maquina: la cifra viene del hilo tecnico de MOD WIGGLER y de la
+# ficha del formato. PENDIENTE DE CONFIRMAR CONTRA EL DIAGRAMA.
+#
+# Vive aqui y no en params.scad a proposito: NO es una cota nuestra que se pueda
+# tocar. Es el numero de otro, y su unico trabajo es discutir con el nuestro.
+S_1U_INTELLIJEL = 33.65
+
+
+def guarda_fila_1u(p: dict[str, float]) -> None:
+    """La fila del valle es un 1U de Intellijel de verdad, no un parecido.
+
+    EL VALLE DEJA DE SER TAPA. Fue una plancha ranurada atornillada a un larguero
+    2020; al morir el 2020 quedo atornillada al CANTO de las alas de la bahia, y
+    eso no es una junta (lo canta guarda_agarre()). En vez de parchear ese
+    apoyo, la cara pasa a ser una TERCERA FILA DE MODULOS: los railes se
+    atornillan a la CARA del ala -- 60 mm de chapa -- y el defecto desaparece en
+    lugar de arreglarse.
+
+    POR QUE UN ESTANDAR Y NO UN FORMATO PROPIO. Se estudio hacer el nuestro y se
+    descarto: a la altura que la boca permite, un formato KONDOR habria medido
+    lo mismo que uno de mercado y habria costado dibujar cada tile a mano. El
+    aparato se vende entero, pero el dueño puede querer meter una utilidad
+    comprada, y a igual tamaño el catalogo sale gratis.
+
+    LAS DOS CIFRAS TIENEN QUE CUADRAR SOLAS, y esa es la comprobacion que de
+    verdad vale. La regla del repo para 3U -- S = H - 2*inset_er, con inset_er
+    de 3.0 sacado de Doepfer -- aplicada al panel de Intellijel tiene que dar
+    EXACTAMENTE la separacion de taladro que Intellijel publica. Si diera otra
+    cosa, o su panel no mide lo que creemos o su inset no es el de Doepfer, y en
+    cualquiera de los dos casos el modelo estaria inventando. Dos fuentes
+    independientes coincidiendo al centesimo es mejor evidencia que una hoja."""
+    H = p["alto_panel_1u"]
+    S = H - 2 * p["inset_er"]
+    assert abs(S - S_1U_INTELLIJEL) < 0.01, (
+        f"el panel de {H:.2f} con el inset_er de {p['inset_er']:.1f} da una "
+        f"separacion de taladro de {S:.2f}, y Intellijel publica "
+        f"{S_1U_INTELLIJEL:.2f}. O el alto del panel no es ese, o su inset no "
+        f"es el de Doepfer: el modelo no puede elegir cual de las dos")
+
+    ancho_bahia = {n: w for n, w, d in _secciones_miembro(p)}["bahia"]
+    boca = ancho_bahia - 2 * p["t_costilla"]
+    pide = S + p["rail_er_alto"]
+    assert abs(boca - pide) < 0.01, (
+        f"la boca de la bahia mide {boca:.2f} y la fila 1U pide {pide:.2f} "
+        f"(separacion {S:.2f} + el alto de un riel). La boca se gobierna con "
+        f"paso_horizontal, que es el largo del tramo plano del valle: cada mm "
+        f"de valle es un mm de boca y un mm de fondo de aparato")
+
+    hp_1u = round(p["largo_riel"] / p["hp"])
+    hp_3u = round(p["largo_riel"] / p["hp"])
+    assert hp_1u == hp_3u, (
+        f"la fila 1U trae {hp_1u} HP y las de 3U {hp_3u}: cruzan el mismo case "
+        f"entre las mismas dos costillas, asi que es el mismo numero")
+
+    fondo = p["bahia_alto"] - p["rail_er_fondo"]
+    assert fondo >= 0.0, (
+        f"la bahia tiene {p['bahia_alto']:.1f} mm de alto y el riel se come "
+        f"{p['rail_er_fondo']:.1f}: no queda fondo para el modulo")
+    print(f"fila 1U: panel {H:.2f} (Intellijel), railes a {S:.2f} entre centros "
+          f"-- cuadra al centesimo con los {S_1U_INTELLIJEL:.2f} publicados")
+    print(f"  {hp_1u} HP a paso {p['hp']:.2f}, boca de {boca:.2f}, "
+          f"{fondo:.1f} mm de fondo para el tile tras el riel")
+
+
 def guarda_piso(p: dict[str, float]) -> None:
     """El riel de panel del frente tiene que librar el SUELO del case.
 
@@ -2114,6 +2296,15 @@ TAPAS = (
 # Lo minimo que tiene que abrir una tapa para que sirva de algo. A 60 grados la
 # cara queda casi vertical y el interior a la vista; por debajo de 45 no cabe la
 # mano para cablear.
+#
+# ESTUVO EN 180 DURANTE UNA HORA el 2026-08-27 y se volvio a bajar, con permiso.
+# Al montar la fila 1U la de abajo cayo a 63.8 y el presupuesto salio VERDE,
+# porque la spec decia una cosa mas fuerte que la puerta: 9.3 listaba "las 180
+# grados de apertura" entre lo que NO se toca. Se apreto la puerta a 180 para
+# que el papel y el modelo dijeran lo mismo, se vio el rojo, y Samuel LIBERO la
+# cota: "lo de los 180 ya no es importante, con 60 vamos mas que bien". La spec
+# se enmendo en la misma tanda -- lo que no se podia dejar es una diciendo 180 y
+# la otra 60, que es como se pierde una cota sin que nadie se entere.
 APERTURA_MIN = 60.0
 # Linea de pegado maxima de la pestana. El metacrilato estructural de dos
 # componentes trabaja bien entre 0.1 y 0.3 mm; medio milimetro es el punto donde
@@ -2607,6 +2798,8 @@ def main() -> int:
     canario_alineacion(p)
     guarda_apilado(p)
     guarda_miembros(p)
+    guarda_agarre(p)
+    guarda_fila_1u(p)
     guarda_piso(p)
     guarda_costilla(p)
     guarda_aire(p)

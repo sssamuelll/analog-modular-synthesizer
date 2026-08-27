@@ -103,6 +103,17 @@ function centros_rail() =
              n = [d.y, -d.x])                       // normal hacia dentro
         c[0] + d*s + n*off];
 
+// Los dos Z-Rails de la fila Intellijel 1U. Cruzan ancho_util exactamente como
+// los cuatro 3U y se atornillan por sus puntas al ALMA de cada costilla; no hay
+// herraje ni taladros nuevos en las alas de la bahia. La separacion sale del
+// panel, y el par completo se centra en la boca de la bahia.
+function centros_rail_1u() =
+    let (P = pts_perfil(),
+         xc = (bahia_x0() + bahia_x1())/2,
+         sep = alto_panel_1u - 2*inset_er,
+         y = P[3].y - t_panel - rail_er_eje)
+    [[xc - sep/2, y], [xc + sep/2, y]];
+
 // El EJE DE LA TAPA no tiene funcion propia porque no es una pieza: es
 // centros_rail()[3], o sea el taladro del M5 con el que el riel de arriba se
 // fija de punta al costado. Ese tornillo entra a lo largo del ancho, que es la
@@ -562,7 +573,9 @@ module costilla_2d() {
             for (i = [0 : len(P)-1]) if (costilla_lleva_ala(i)) costilla_ala(i);
             costilla_apoyo_bahia();
         }
-        // LOS CUATRO M4 DEL Z-RAIL. Vinieron del costado el 2026-08-27: el
+        // LOS SEIS M4 DE LOS Z-RAILS. Los cuatro 3U vinieron del costado el
+        // 2026-08-27 y los dos 1U se montan por sus puntas con el mismo patron:
+        // cero herraje nuevo en las alas de la bahia. El
         // riel trae el taladro de punta ROSCADO M4 de fabrica (hoja Tiptop),
         // asi que aqui va agujero de PASO y el tornillo muerde el aluminio del
         // riel. Sin tuerca, sin inserto.
@@ -570,7 +583,8 @@ module costilla_2d() {
         // Van en el ALMA, no en el ala: el riel corre a lo ancho del case y su
         // cara de punta mira hacia fuera, o sea contra este plano. El ala esta
         // doblada 90 grados y corre por el perimetro, al lado del riel.
-        for (c = centros_rail()) translate(c) circle(d = d_M4_paso + kerf);
+        for (c = concat(centros_rail(), centros_rail_1u()))
+            translate(c) circle(d = d_M4_paso + kerf);
         // Y LOS M5 DE LOS TRES MIEMBROS. Cada pieza se atornilla por su punta
         // en el centro de su caja; para la bahia manda la ENVOLVENTE TOTAL.
         // Lo vigila taladros_costilla() releyendo este DXF.
@@ -604,7 +618,8 @@ module costilla_alma() {
             }
             costilla_apoyo_bahia();
         }
-        for (c = centros_rail()) translate(c) circle(d = d_M4_paso + kerf);
+        for (c = concat(centros_rail(), centros_rail_1u()))
+            translate(c) circle(d = d_M4_paso + kerf);
         for (c = centros_miembro_punta()) translate(c) circle(d = d_M5_paso + kerf);
         translate([pv_x(), pts_perfil()[3].y - pv_a()])
             circle(d = d_M3_paso + kerf);
@@ -1076,8 +1091,8 @@ module ranura(largo, ancho) {
         translate([0, s*(largo - ancho)/2]) circle(d = ancho + kerf);
 }
 
-// La plancha del valle. Ver la nota de params.scad: campo de ranuras registrado
-// a la malla HP, partido por la espina maciza donde va la fila de M3.
+// Banda delantera del valle: un solo campo de ranuras registrado a la malla HP,
+// sin plancha central, sin espina y sin fila M3 al canto.
 // --- LA PESTANA DE LA TAPA DEL VALLE ------------------------------------
 // Misma cuenta de plegado que la costilla y que el chasis, con los parametros
 // de ESTA chapa. Ver el bloque largo de ch_sb() para la derivacion.
@@ -1097,50 +1112,38 @@ function pv_a() = pv_sb() + 2*t_valle + d_M3_paso/2;
 // SB - BA del contorno y desde ahi se mide d - SB de chapa: BD - d.
 function pv_desarrollo(d) = pv_bd() - d;
 
-// Donde va el tornillo, en X del perfil. Lo mas lejos posible del vertice
-// concavo P[3] -- que es quien se come el material de la costilla al vaciar la
-// ventana -- sin echarse encima del ala delantera de la bahia: su cara interior,
-// mas la holgura y la distancia al canto que pide el propio M3.
-function pv_x() = bahia_x0() + t_costilla + holgura_rail + 1.5*d_M3_paso;
+// Donde va el tornillo, en X del perfil. La pestana ocupa los ultimos 3D del
+// vuelo delantero: es el minimo que deja 1.5D de material a cada lado del M3 y
+// abre 63.75 grados; con 11 mm se quedaria en 59.5 y guarda_tapa() la rechaza.
+function pv_ancho_x() = 3*d_M3_paso;
+function pv_x() = bahia_x0() - pv_ancho_x()/2;
 
 module tapa_valle_2d() {
     au = ancho_util;
     xv = x_valle();
-    largo = xv[1] - xv[0];
-    // DOS filas, centradas en las dos alas de la bahia. Las tres bandas de
-    // ventilacion quedan delimitadas por esas mismas lineas de tornillo.
-    // Un M3 de paso mide 3.4 y el ala 3: centrado en el ala trasera abriria el
-    // circulo 0.20 mm por el canto de la tapa. Las dos filas se retiran juntas
-    // el exceso diametral completo hacia delante: conservan su separacion y
-    // dejan otros 0.20 mm de material tras el circulo, sin convertir la fila
-    // trasera en cinco muescas.
-    retiro_fila = max(0, d_M3_paso - t_costilla);
-    filas_bahia = [bahia_x0() + t_costilla/2 - xv[0] - retiro_fila,
-                   bahia_x1() - t_costilla/2 - xv[0] - retiro_fila];
-    s = valle_espina/2;
-    candidatos = [[valle_margen,       filas_bahia[0] - s],
-                  [filas_bahia[0] + s, filas_bahia[1] - s],
-                  [filas_bahia[1] + s, largo - valle_margen]];
-    campos = [for (c = candidatos)
-                  if (c[1] - c[0] >= vent_ancho_ranura) c];
+    // Solo queda el vuelo DELANTERO: acaba antes del primer Z-Rail 1U. La
+    // ventilacion usa todo lo que dejan sus dos margenes, sin conservar area
+    // ficticia de la plancha que ya no existe; guarda_aire() decide si alcanza.
+    largo = bahia_x0() - xv[0];
+    campos = [[valle_margen, largo - valle_margen]];
+    // El Z-Rail 3U del valle roza 0.57 mm de la esquina libre de la pestana.
+    // Una muesca de 1 x 1 lo libra sin acercarse al M3 ni separar la pieza.
+    inicio_pestana = largo - pv_ancho_x();
     n_hp  = round(largo_riel/hp);            // 104
-    // La pestana recorre el hueco libre ENTRE las dos alas, retirada de ambas
-    // por holgura_rail para que las chapas no compartan volumen.
-    py0 = bahia_x0() + t_costilla + holgura_rail - xv[0];
-    // El ala trasera de la bahia acaba en x1_valle y ocupa t_costilla hacia
-    // delante. La pestana se retira de SU cara delantera holgura_rail: asi las
-    // dos chapas no comparten volumen y la cota sigue a la geometria del ala.
-    cara_del_ala_trasera = bahia_x1() - t_costilla;
-    py1 = cara_del_ala_trasera - holgura_rail - xv[0];
     difference() {
         union() {
             plancha(au, largo);
-            // las dos pestanas, desplegadas por fuera del contorno
+            // Las dos pestanas ocupan el extremo trasero del vuelo delantero.
+            // Al tocar el contorno de la banda, el DXF sigue siendo UNA pieza.
             for (lado = [0, 1])
-                translate([lado ? au : -pv_vuelo(), py0])
-                    square([pv_vuelo(), py1 - py0]);
+                translate([lado ? au : -pv_vuelo(), inicio_pestana])
+                    square([pv_vuelo(), pv_ancho_x()]);
         }
-        for (y = filas_bahia) fila_agujeros(au, y);
+        // Alivio gemelo en la esquina libre DELANTERA de cada pestana.
+        translate([-pv_vuelo(), inicio_pestana])
+            square([muesca_riel_valle, muesca_riel_valle]);
+        translate([au + pv_vuelo() - muesca_riel_valle, inicio_pestana])
+            square([muesca_riel_valle, muesca_riel_valle]);
         // el M3 de cada pestana, en el desarrollo
         for (lado = [0, 1])
             translate([lado ? au - pv_desarrollo(pv_a())
@@ -1536,7 +1539,7 @@ else assert(false, str("PART desconocido: ", PART));
 // Desde la decision 1 de 2026-08-27-case-esqueleto-visible-design.md el aluminio
 // va POR FUERA y el acrilico por dentro, con la junta de EPDM entre el ala de
 // la costilla y la cara del acrilico. guarda_apilado() en clearance_budget.py
-// verifica este orden. Los cuatro Z-Rails y los tres miembros plegados cruzan
+// verifica este orden. Los seis Z-Rails y los tres miembros plegados cruzan
 // entre sus caras internas.
 module costados() {
     translate([0, 0, t_costilla + t_junta]) costado();
@@ -1567,6 +1570,13 @@ module rails() {
     for (i = [0 : len(cr) - 1])
         translate([cr[i].x, cr[i].y, ancho_total/2])
             rotate([0, 0, -angs[i]])
+                rotate([90, 0, 0])
+                    rail_er(ancho_util);
+    // Fila horizontal 1U: mismo largo y la misma fijacion M4 de punta que los
+    // 3U. El giro de 90 deja rail_er_alto sobre X y rail_er_fondo hacia -Y.
+    for (c = centros_rail_1u())
+        translate([c.x, c.y, ancho_total/2])
+            rotate([0, 0, -90])
                 rotate([90, 0, 0])
                     rail_er(ancho_util);
 }
@@ -1831,7 +1841,7 @@ module bom() {
              " doblada a 90 grados en 4 de los 7 tramos -- los otros tres"));
     echo("     pasan como pletina plana y no la necesitan. Va al taller de");
     echo("     CHAPA PLEGADA, el mismo del chasis. Lleva TODOS los tornillos");
-    echo("     estructurales del case: los 4 M4 de riel, los M5 de transversal");
+    echo("     estructurales del case: los 6 M4 de riel, los M5 de transversal");
     echo("     y el M3 de la pestana del valle.");
     echo(str("     EL DXF ES EL DESARROLLO, no el contorno de la pieza doblada."));
     echo(str("BOM: transversal 2020 x", len(centros_transversal()), " de ", au, " mm"));
@@ -1839,12 +1849,14 @@ module bom() {
     echo("     unica que flotaba en mitad del suelo; las tres que quedan estan");
     echo("     arrinconadas contra dos caras cada una o sostienen una plancha");
     echo("     que nada mas alcanza (el valle).");
-    echo(str("BOM: Z-Rail de Tiptop x", len(centros_rail()), ", largo ", largo_riel,
+    echo(str("BOM: Z-Rail de Tiptop x", len(centros_rail()) + len(centros_rail_1u()),
+             ", largo ", largo_riel,
              " (104 HP) -- seccion ", rail_er_fondo, " x ", rail_er_alto,
              ", hoja de datos oficial. NO es el riel de StudioRacks: ese media",
              " 27.4 de fondo y el case estuvo dibujado contra el hasta el",
-             " 2026-08-17."));
-    echo(str("BOM: tornillo M4 x8 para los rieles -- entran de punta por la ",
+             " 2026-08-17. Cuatro forman las dos filas 3U y dos forman la fila",
+             " Intellijel 1U."));
+    echo(str("BOM: tornillo M4 x12 para los rieles -- entran de punta por la ",
              "COSTILLA y ROSCAN EN EL PROPIO RIEL (viene con M4 taladrado a 3.3 ",
              "de fabrica). Sin tuerca, sin inserto. Largo = ", t_costilla,
              " de costilla + arandela + 8..10 de rosca dentro del aluminio."));
@@ -1868,15 +1880,15 @@ module bom() {
     // la guia de ensamblaje: las planchas tenian los taladros dibujados y el BOM
     // no tenia el tornillo.
     n_fila = max(1, round(au/100));
-    // CUATRO filas de n_fila: una de la tapa del valle, una de la tapa de
-    // remate y DOS de la trasera. Fueron nueve hasta el 2026-08-21 (cinco en la
+    // TRES filas de n_fila: una de la tapa de remate y DOS de la trasera. La
+    // tapa del valle perdio sus dos filas al canto al quedar reducida a la banda
+    // ranurada; conserva solo sus dos pestanas. Fueron nueve hasta el 2026-08-21 (cinco en la
     // trasera, se fueron con los tres largueros traseros de en medio) y seis
     // hasta el 2026-08-27: las DOS de la bandeja de base desaparecieron cuando
     // el suelo dejo de ser una plancha colgada de dos largueros y paso a ser
     // una TABLA bajo el marco, con sus propios M5 y sus agujeros alargados.
-    echo(str("BOM: tornillo M3 x", 4*n_fila + 2, " + tuerca T M3 -- las planchas",
-             " a las transversales: tapa del valle ", n_fila,
-             ", tapa de remate ", n_fila, ", trasera ", 2*n_fila,
+    echo(str("BOM: tornillo M3 x", 3*n_fila + 2, " + tuerca T M3 -- las planchas",
+             " a las transversales: tapa de remate ", n_fila, ", trasera ", 2*n_fila,
              ", + 2 de las PESTANAS de la tapa del valle a la costilla."));
     echo("     Estos entran por la RANURA del 2020, no por su punta. Es donde");
     echo("     la tuerca de insercion lateral se paga sola: con las de deslizar");
@@ -1891,8 +1903,8 @@ module bom() {
     echo("     tres largueros murieron por el camino, todos el 2026-08-21.");
     // LAS DOS FILAS SON TAPA. Cada una gira sobre el M4 de su riel de arriba y
     // se cierra con el de su otro extremo. Del total de tornillos del case
-    // (8 M4 de riel + 6 M5 de transversal + 2 M5 del chasis + 6 M5 de la tabla
-    // + 22 M3 de plancha; los 24 M4 de separador se fueron con los separadores
+    // (12 M4 de riel + 6 M5 de transversal + 2 M5 del chasis + 6 M5 de la tabla
+    // + 17 M3 de plancha; los 24 M4 de separador se fueron con los separadores
     // el 2026-08-21), solo CUATRO se tocan para abrirlo: dos por fila.
     echo("BOM: los M4 de riel no son todos iguales --");
     echo("     x4 EJES: tornillo de HOMBRO M4, espiga 4 mm (no M5 -- el riel");
@@ -1902,11 +1914,13 @@ module bom() {
     echo("     x4 CIERRES: M4 de cabeza moleteada o palomilla -- se quitan a");
     echo("        mano y son los unicos que se tocan para abrir el case.");
     echo("        Riel del frente abajo, riel del valle arriba.");
+    echo("     x4 FIJOS: los dos Z-Rails 1U, atornillados por ambas puntas a");
+    echo("        las costillas. No son ejes ni cierres y no tocan las alas.");
     // Decia "x6 fijos: los largueros de esqueleto" bajo un encabezado que
     // habla de M4 DE RIEL, y esos largueros van con M5. Contaba dos herrajes
-    // distintos en la misma lista. Los M4 de riel son OCHO y estan todos
-    // arriba: cuatro ejes y cuatro cierres.
-    echo("     Y no hay mas M4: los 8 son estos. Los tornillos de transversal");
+    // distintos en la misma lista. Los M4 de riel son DOCE: cuatro ejes,
+    // cuatro cierres y cuatro fijaciones permanentes de la fila 1U.
+    echo("     Y no hay mas M4: los 12 son estos. Los tornillos de transversal");
     echo("     son M5 y van en su propia linea.");
     echo("BOM: tuercas T DE INSERCION LATERAL (drop-in), NO de deslizar. Con las");
     echo("     de deslizar hay que enhebrarlas por la punta del larguero antes de");
@@ -1946,15 +1960,16 @@ module bom() {
              " A LA TABLA, no al acrilico, y NO se pega. Se exige la curva",
              " carga-deformacion: >= ", flecha_pie,
              " mm de flecha con 22.8 N (flecha_pie)"));
-    echo(str("BOM: tapa del valle: chapa de ALUMINIO t=", t_valle,
+    echo(str("BOM: banda delantera del valle: chapa de ALUMINIO t=", t_valle,
              " PLEGADA, desarrollo ", au + 2*pv_vuelo(), " x ",
-             x_valle()[1] - x_valle()[0], ". NO es acrilico desde el"));
-    echo("     2026-08-25 y no es PLANA desde el 2026-08-27: lleva una pestana");
+             bahia_x0() - x_valle()[0], ". Es solo el vuelo delantero ranurado;"));
+    echo("     la plancha sobre la boca de la bahia y sus diez M3 ya no existen.");
+    echo("     No es acrilico desde el 2026-08-25; lleva una pestana");
     echo(str("     de ", pestana_valle, " doblada a 90 grados en cada punta,",
              " atornillada a la costilla con un M3."));
-    echo("     La pestana no sustituye al larguero del valle -- sujeta solo por");
-    echo("     sus dos puntas la tapa cede 59.6 mm. Lo que hace es atar las dos");
-    echo("     costillas: la tapa pasa de bisagra a DIAFRAGMA a media altura.");
+    echo("     Las pestanas impiden que la banda quede sujeta solo por una linea");
+    echo("     de tornillos. No forman un diafragma: guarda_valle() publica por");
+    echo("     separado la carga hacia abajo y el caso critico de levantamiento.");
     echo("     Va al taller de CHAPA con las tres piezas del chasis, no al de");
     echo("     acrilico. Sin recocido, sin diamantado, sin chaflan de pliego:");
     echo("     esas tres cosas son del PMMA. Canto desbarbado y basta.");

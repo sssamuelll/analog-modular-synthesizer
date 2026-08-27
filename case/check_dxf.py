@@ -306,6 +306,49 @@ def _dentro(contorno, pt) -> bool:
     return cruces % 2 == 1
 
 
+def tapa_valle_conectada() -> list[str]:
+    """Una isla de material y solo los dos M3 de sus pestanas.
+
+    El contorno principal es la componente de mayor bbox. Los agujeros y las
+    ranuras tienen su centro dentro de ese contorno; una pestana separada forma
+    otra componente cuyo centro queda fuera, aunque el bbox total siga igual.
+    """
+    import clearance_budget as cb
+
+    aristas, comps = _componentes("tapa_valle_2d")
+    if not aristas:
+        return ["tapa_valle_2d: sin LINEs, no se puede verificar conectividad"]
+
+    def datos(comp):
+        puntos = [p for i in comp for p in aristas[i]]
+        xs, ys = zip(*puntos)
+        area_bbox = (max(xs) - min(xs)) * (max(ys) - min(ys))
+        centro = (sum(xs) / len(xs), sum(ys) / len(ys))
+        return area_bbox, centro
+
+    principal = max(comps, key=lambda c: datos(c)[0])
+    contorno = [aristas[i] for i in principal]
+    sueltas = [c for c in comps if c is not principal and not _dentro(contorno, datos(c)[1])]
+    f = []
+    if sueltas:
+        f.append(f"tapa_valle_2d: {len(sueltas)} contornos de material separados "
+                 f"de la banda. La banda y sus dos pestanas tienen que salir de "
+                 f"UNA sola pieza conectada")
+
+    p = cb.leer_params()
+    au = cb.perfil(p)["ancho_util"]
+    redondos = _redondos("tapa_valle_2d")
+    interiores = [q for q in redondos if 0 <= q[0] <= au]
+    if len(redondos) != 2 or interiores:
+        f.append(f"tapa_valle_2d: trae {len(redondos)} M3 redondos, "
+                 f"{len(interiores)} dentro de la banda. Tienen que quedar "
+                 f"exactamente los 2 de las pestanas y CERO de los diez que "
+                 f"atornillaban al canto de las alas")
+    if not f:
+        print("  tapa_valle_2d: UNA pieza conectada, 2 M3 de pestana y CERO en la banda")
+    return f
+
+
 def _dist_al_contorno(contorno, pt) -> float:
     """Distancia del punto a la arista mas cercana del contorno."""
     x, y = pt
@@ -734,13 +777,17 @@ def railes_dentro_del_costado() -> list[str]:
     # chapa pasan sus cajas. La bahia pasa sus tres cajas fisicas por separado:
     # rellenar su envolvente esconderia que el centro es aire.
     #
-    # Aqui estan los CUATRO railes de panel, incluido el de arriba de la tapa:
+    # Aqui estan los SEIS railes de panel: los cuatro 3U y los dos horizontales
+    # de la fila 1U, todos fijados de punta a la costilla.
     # cerrada, la tapa vive dentro del contorno como todo lo demas, y que ese
     # riel quepa en el vertice es justo la cota que obligo a engordar
     # marco_remate a 16. No hay ningun cuerpo excluido -- la bisagra que asomaba
     # por diseno ya no existe: el eje es el propio M5 del riel.
     cuerpos = [(n, cb._esquinas_er(p, c, p[a]))
                for n, c, a in zip(cb.NOMBRES_CR, cr, cb.ANGS_CR)]
+    bahia = cb._envolvente_bahia(miembros)
+    cuerpos += [(f"fila 1U {i}", cb._esquinas_er(p, c, 90.0))
+                for i, c in enumerate(cb._centros_rail_1u(p, P, bahia))]
     cuerpos += [(n, [(c[x], c[y])
                      for x in (1, 2) for y in (3, 4)])
                 for n, c in miembros.items()]
@@ -882,8 +929,11 @@ def taladros_costilla() -> list[str]:
     # criterio saldria 22 % duro en unos y 22 % blando en otros. Es la misma
     # leccion que traia taladros_con_material() cuando esto vivia en el
     # acrilico, y se muda con los taladros.
+    centros_1u = cb._centros_rail_1u(p, P, bahia)
+    railes_m4 = list(zip(cb.NOMBRES_CR, cr))
+    railes_m4 += [(f"fila 1U {i}", c) for i, c in enumerate(centros_1u)]
     esperados = ([(nm, c, p["d_M4_paso"], "M4")
-                  for nm, c in zip(cb.NOMBRES_CR, cr)]
+                  for nm, c in railes_m4]
                  + [(nm, c, p["d_M5_paso"], "M5")
                     for nm, c in centros_m5.items()]
                  # el M3 de la pestana de la tapa del valle, que atraviesa esta
@@ -940,7 +990,7 @@ def taladros_costilla() -> list[str]:
     #    PMMA o no. Aqui solo queda la costilla.
 
     if not f:
-        print(f"  costilla_2d: los {len(esperados)} taladros (4 M4 de riel + "
+        print(f"  costilla_2d: los {len(esperados)} taladros (6 M4 de riel + "
               f"{len(centros_m5)} M5 de miembro + 1 M3 de pestana) tienen material "
               f"alrededor (el mas "
               f"justo, '{peor_nm}', a {peor:.2f} mm del canto = "
@@ -1220,6 +1270,7 @@ def main() -> int:
             continue
         fallos += revisar(nombre, sobre)
     fallos += railes_dentro_del_costado()
+    fallos += tapa_valle_conectada()
     fallos += taladros_costilla()
     fallos += taladros_costado()
     fallos += taladros_reticula()
