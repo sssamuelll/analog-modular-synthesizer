@@ -1312,6 +1312,8 @@ else if (PART == "assembly")           assembly();
 else if (PART == "assembly_acrilico")  assembly_acrilico();
 else if (PART == "assembly_aluminio")  assembly_aluminio();
 else if (PART == "assembly_madera")    assembly_madera();
+else if (PART == "assembly_esqueleto") assembly_esqueleto();
+else if (PART == "assembly_acero")     assembly_acero();
 else if (PART == "bandeja_base_2d")      bandeja_base_2d();
 else if (PART == "tapa_valle_2d")        tapa_valle_2d();
 else if (PART == "remate_sup_2d")        remate_sup_2d();
@@ -1545,6 +1547,23 @@ module assembly_acrilico() {           // STL separado para Blender (Task 8)
 // justo el tipo de render que miente sobre una decision de material.
 module assembly_madera() {
     bandeja_base();
+}
+
+// LA BAHIA DE ABAJO, para mirarla por dentro. Es el unico sitio del case cuyo
+// interior es una decision y no una consecuencia -- la tabla, el chasis del PSU
+// encima y las tres transversales -- y no se ve en ninguna de las dos vistas
+// del conjunto: los paneles y la tapa del valle lo tapan entero.
+//
+// Son DOS ensamblados y no uno porque son DOS MATERIALES: el esqueleto va en
+// aluminio y el chasis en acero, y pintarlos igual es perder justo lo que la
+// vista existe para enseñar.
+module assembly_esqueleto() {          // aluminio, SIN paneles ni tapa
+    rails();
+    costillas();
+}
+
+module assembly_acero() {              // el chasis del PSU, cerrado
+    chasis();
 }
 
 // OJO CON EL WARNING de 2-manifold que suelta este export: es INHERENTE y no un

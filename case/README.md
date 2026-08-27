@@ -738,6 +738,12 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
       retirada y el suelo pasado a tabla de madera. Vano libre del costado de
       119.0 a **65.2 mm**, flecha de 0.38 a **0.11**
 - [x] Plantilla de panel KiCad
+- [x] **Vistas de la BAHIA INFERIOR** (`renders/render_bahia.py`, 2026-08-27):
+      la tabla con el chasis del PSU encima, en planta, tres cuartos y rasante.
+      Es el único sitio del case cuyo interior es una **decisión** y no una
+      consecuencia, y no se ve en ninguna vista del conjunto: los paneles y la
+      tapa del valle lo tapan entero. Importa tres ensamblados —madera,
+      aluminio y acero— porque pintarlos igual pierde lo que la vista enseña
 - [x] **Render del conjunto rehecho** (2026-08-27) con la costilla, la tabla y
       las alas dobladas. Los anteriores están en `renders/viejos/`, ordenados
       por fecha. Dos vistas: frontal
