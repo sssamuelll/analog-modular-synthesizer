@@ -933,6 +933,130 @@ por fuera, seis clips por dentro"`.
 
 ---
 
+### Tarea 4b: La escuadra de la trasera — el tope del canto trasero del costado
+
+**Decisión de Samuel (2026-08-28), tras el hallazgo de la revisión de la Tarea 4:** el
+canto TRASERO del acrílico del costado corre 227 mm sin tope hacia dentro (los clips
+solo caben en el suelo; la franja trasera la ocupa `piel_trasera`), y la fórmula de
+parche empotrado de `guarda_costado()` no vale en un canto libre. Se pone una
+**escuadra de aluminio de 1.5 fijada a la trasera** cuya ala asoma sobre el canto del
+costado y hace de tope continuo.
+
+**Files:**
+- Modify: `case/cad/params.scad` (`escuadra_ala`, `escuadra_m3`; el vuelo se DERIVA)
+- Modify: `case/cad/sam17_case.scad` (`escuadra_trasera_2d()`, `escuadras_trasera()`, `centros_m3_escuadra()`, `piel_trasera_2d()` con sus M3, `assembly_aluminio()`, dispatch `PART`, `bom()`)
+- Modify: `case/clearance_budget.py` (`_escuadras_trasera(p)`, `_cajas_escuadra`, `_centros_m3_escuadra(p)`, `guarda_escuadra_trasera(p)`, `_cajas_solidas`)
+- Modify: `case/check_dxf.py` (`_sobres()` con `escuadra_trasera_2d`, `guarda_costado()` apoyos, `cuerpos_dentro_del_anillo()`, censo de M3 de la trasera en `agujeros_donde_toca()`)
+- Modify: `case/cad/export.ps1` (`$piezas`)
+
+**Interfaces:**
+- Consume: `_clips(p)`, `_placas(p)`/`_esquinas_placa` (los apoyos de la Tarea 4), la caja `piel_trasera` de `_cajas_solidas` (x = P6.x − t_piel .. P6.x, z = t_anillo + hol_piel .. espejo), `costado_2d()` (canto trasero en x = P6.x − 14.5, z = rehundido .. rehundido + t_cheek).
+- Produce: `guarda_escuadra_trasera(p)`, el DXF `escuadra_trasera_2d`, y el apoyo continuo del canto trasero en el modelo interior de `guarda_costado()`.
+
+**Geometría (derivada, no a mano):** un angular en L de chapa de aluminio de
+`t_costilla` (1.5, la misma chapa de los miembros; mismo `radio_doblez_costilla`),
+uno por lado:
+- **Ala A** (la que se atornilla): plana contra la cara INTERIOR de la trasera
+  (x = P6.x − t_piel), de `escuadra_ala` = 12 de ancho en z (desde z = t_anillo +
+  hol_piel hacia dentro) y de largo en y desde el borde superior de la brida del
+  miembro bajo + 10 hasta el borde inferior de la brida del miembro alto − 10
+  (`solapes()` los adjudica), con `escuadra_m3` = 3 M3 repartidos como
+  `fila_agujeros()` a lo largo de y, a 1.5 D del canto de la trasera y de sus dos
+  filas existentes.
+- **Ala B** (el tope): perpendicular, apuntando a −x desde la cara de la trasera, a
+  z = t_anillo .. t_anillo + t_costilla (justo encima de la cara interior del anillo,
+  sin tocarla: 0 de solape con el anillo y ≥ 0.8 sobre el acrílico más grueso), de
+  vuelo tal que su punta llegue a 4 mm por delante del canto trasero del costado:
+  `vuelo = t_piel + retiro_rebaje() + hol_costado + 4` medido desde la cara interior
+  de la trasera (con t_piel 8: 8 + 14 + 0.5 + 4 = 26.5, derivado en el código).
+- Los M3 atraviesan la trasera (8 de PMMA) y el ala A, con tuerca por dentro — el
+  mismo herraje que las dos filas que la trasera ya lleva a los miembros.
+
+- [ ] **Paso 1: escribir las puertas.** En `clearance_budget.py`, antes de `def guarda_piso(`:
+
+```python
+def guarda_escuadra_trasera(p: dict[str, float]) -> None:
+    """El canto trasero del costado tiene tope hacia dentro en casi todo su largo.
+
+    LO PIDIO LA REVISION DE LA TAREA 4 Y LO DECIDIO SAMUEL el 2026-08-28: el
+    punto peor del modelo interior de guarda_costado() caia a menos de 1 mm del
+    canto trasero del acrilico, que corria 227 mm sin un solo tope, y la formula
+    de parche empotrado no vale en un canto libre. Los clips no llegan: el mas
+    cercano legal se queda a 95.7 mm, y en la franja trasera no cabe ninguno
+    porque la ocupa piel_trasera. La escuadra va fijada a la TRASERA, no al
+    anillo, y su ala asoma sobre el canto como tope continuo.
+
+    Tres cosas, y la tercera es la que la hace tope y no adorno:
+      1. el ala B vuela hasta pasar el canto trasero del costado en >= 4 mm;
+      2. el ala B vive a z >= t_anillo (no toca el anillo) y a >= 0.8 mm del
+         acrilico mas grueso del lote (tope con carrera, como los clips: la
+         precarga la pone la junta del labio);
+      3. el ala A cubre al menos el 80 % del largo libre del canto trasero
+         (entre las bridas de los dos miembros), con sus M3 a 1.5 D de todo
+         canto y de las dos filas que la trasera ya lleva."""
+    P = _vertices(p)
+    x_canto = P[6][0] - (p["cara_anillo"] - p["rebaje_anillo"] + p["hol_costado"])
+    tol = 0.4 + 0.1 * p["t_cheek"]
+    z_pmma = p["rehundido_acrilico"] + p["t_cheek"] + tol + p["t_junta_asiento"]
+    escuadras = _escuadras_trasera(p)
+    for lado, esc in enumerate(escuadras):
+        assert x_canto - esc["x_punta"] >= 4.0, (
+            f"la escuadra {lado} vuela hasta x={esc['x_punta']:.2f} y el canto "
+            f"trasero del costado esta en x={x_canto:.2f}: solapa "
+            f"{x_canto - esc['x_punta']:.2f} mm y se exigen 4 para que haga de tope")
+        assert esc["z_ala_b"] >= p["t_anillo"] - 1e-9, (
+            f"el ala B de la escuadra {lado} arranca en z={esc['z_ala_b']:.2f} y la "
+            f"cara interior del anillo esta en {p['t_anillo']:g}: se monta encima")
+        assert esc["z_ala_b"] - z_pmma >= 0.8, (
+            f"el ala B de la escuadra {lado} queda a {esc['z_ala_b'] - z_pmma:.2f} mm "
+            f"del acrilico mas grueso (z={z_pmma:.2f}): pinza en vez de topar")
+        assert esc["cobertura"] >= 0.80, (
+            f"la escuadra {lado} cubre el {esc['cobertura'] * 100:.0f} % del canto "
+            f"trasero libre y se exige el 80 %")
+    e = escuadras[0]
+    print(f"escuadra trasera: ala B a z={e['z_ala_b']:.2f}, pasa el canto del costado "
+          f"en {x_canto - e['x_punta']:.2f} mm, cubre el {e['cobertura'] * 100:.0f} % "
+          f"del canto libre, {int(p['escuadra_m3'])} M3 a la trasera por lado")
+```
+
+`_escuadras_trasera(p)` devuelve por lado un dict con `x_punta`, `z_ala_b`, `y0`, `y1`,
+`cobertura` (largo del ala A entre bridas / largo libre del canto) y las cajas de las
+dos alas. `guarda_escuadra_trasera(p)` en `main()` tras `guarda_anclajes(p)`. En
+`check_dxf.py`: `_sobres()` gana `escuadra_trasera_2d` (desarrollo: ala A + ala B −
+BD, por `_bd_miembro`); `guarda_costado()` añade el rectángulo xy del ala B a
+`apoyos`; `cuerpos_dentro_del_anillo()` añade las escuadras; en `agujeros_donde_toca()`
+el censo de la trasera admite los `escuadra_m3` por lado fuera de sus dos filas
+(contarlos aparte con su nombre, no meterlos en las filas). Los taladros nuevos NO
+van en el anillo: no tocan `centros_rosca_ciega()`.
+
+- [ ] **Paso 2: ROJO.** `python case/clearance_budget.py` → `NameError: _escuadras_trasera`
+(o `KeyError: 'escuadra_ala'`). Escribir el stub que devuelve `[]` → la puerta imprime
+sin asertar; entonces el ROJO real: `agujeros_donde_toca` en check_dxf cuando la
+trasera traiga los 3 M3 nuevos y el censo no los espere — ver ese rojo ANTES de tocar
+el censo.
+
+- [ ] **Paso 3: el modelo.** Parámetros, `escuadra_trasera_2d()` (desarrollo con sus 3
+M3; el DXF es el desarrollo, como los miembros), `escuadras_trasera()` 3D (dos alas
+plegadas, espejo), los 3 M3 en `piel_trasera_2d()`, `assembly_aluminio()`, dispatch,
+`$piezas`, `bom()` (escuadra ×2, M3 ×6 + tuerca). Gemelas en Python. `solapes()`
+adjudica escuadra contra bridas, clips, piel_trasera y miembros; si choca, se acorta el
+ala A (nunca el vuelo del ala B) y se anota.
+
+- [ ] **Paso 4: VERDE.** Export completo. `guarda_costado` imprime el vano interior nuevo
+(anotar el salto desde 95.5) y `guarda_escuadra_trasera` su línea.
+
+- [ ] **Paso 5: romperla.** (a) vuelo derivado −5 (con `cp`) → ROJO `solapa ... se exigen 4`.
+(b) ala B en z = t_anillo − 1 → ROJO `se monta encima`. (c) quitar un M3 del DXF de la
+trasera (exportar solo `piel_trasera_2d`) → ROJO del censo.
+
+- [ ] **Paso 6: render y commit.** `"El canto trasero del costado gana su tope: una
+escuadra a la trasera"`. Mirar `sam17-case-trasera.png`: la escuadra no se ve desde
+fuera (va por dentro de la trasera); lo único nuevo visible son tres cabezas de M3 por
+lado en la trasera, en línea vertical cerca del canto. Decir en el reporte si se ven y
+cómo.
+
+---
+
 ### Tarea 5: Los papeles y el eco del BOM (sonnet)
 
 **Files:**
