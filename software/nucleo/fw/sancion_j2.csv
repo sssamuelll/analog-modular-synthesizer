@@ -1,0 +1,7 @@
+# La tabla de sancion del J2 (docs/superpowers/specs/2026-08-25-j2-punto-a-punto-design.md, D2).
+# Una fila por RANURA fisica del cerebro, no por modulo: la sancion es del mazo de esa
+# ranura (largo, terminacion), no de quien este enchufado. La escribe el bring-up del
+# cerebro con osciloscopio (ojo de datos y flanco monotono en el extremo del modulo,
+# R-P4), y se INVALIDA si el mazo de esa ranura cambia: por eso lleva el largo.
+# Una ranura sin fila corre al piso legado. hardware/02-midi-cv/trama_j2_budget.py la lee.
+ranura,largo_mazo_mm,reloj_sancionado_MHz,fecha,metodo
