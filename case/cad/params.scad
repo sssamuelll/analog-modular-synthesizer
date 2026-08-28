@@ -170,8 +170,10 @@ hol_costado        = 0.5;
 // profundidad va en el pliego: un DXF no sabe decir "a 10 mm".
 d_M4_rosca         = 3.3;
 d_M5_rosca         = 4.2;
-// El M3 lo trae la PESTANA de la banda del valle. Broca 2.5 de ISO 262, igual
-// que las otras dos: aqui no hay hoja de fabricante que consultar.
+// Broca del M3 con el que la PESTANA de la banda del valle se atornilla. Esa
+// rosca NO va en el anillo -- no cabe, la cuenta esta en guarda_anclajes() --
+// sino en los 6 mm de la PLACA DEL VALLE, igual que las de la bahia (R3).
+// 2.5 de ISO 262: aqui no hay hoja de fabricante que consultar.
 d_M3_rosca         = 2.5;
 // Clips de retencion del acrilico hacia dentro: pletina de 4 sobre la franja.
 t_clip             = 4;
@@ -192,22 +194,44 @@ t_clip             = 4;
 // Entre 6.75 y 9.05 hay sitio; 8.5 es el punto donde las dos reglas tienen el
 // mismo margen. Lo comprueba guarda_anclajes() rosca a rosca.
 dist_rosca_ciega   = 8.5;
-// LA PLACA DEL RIEL 3U. 28 a lo largo del tramo (dos M4 a +-7 del eje, con
-// 1.5 D de canto a cada lado: 7 + 1.5*4.5 = 13.75 <= 14) x 26 desde la
-// silueta hacia dentro (el cajeado del riel cae a 15.90 y su borde a 19.90:
-// quedan 6.1 de placa por detras).
-placa_largo        = 28;
+// LA PLACA ES EL MARCO DE LA FILA (Samuel, 2026-08-28, mirando el render).
+// UNA por TRAMO y por costado, no una por riel: corre el tramo entero entre
+// las esquinas del anillo y recoge sus dos rieles. Fueron placas sueltas de
+// 28 durante medio dia y dejaban una RANURA de 6.15 mm abierta en cada punta
+// de cada fila -- el hueco entre el riel de 104 HP y la cara interior del
+// anillo --, por la que se veia el interior. Con la placa corrida ese hueco
+// lo tapa su canto de 6 mm, que desde delante se lee como el borde de aluminio
+// de la fila. Donde acaba cada placa NO se escribe aqui: sale de la tangente
+// del redondeo de cada vertice y lo juzga cuerpos_dentro_del_anillo().
+//
+// El fondo si es una cota: 26 desde la silueta hacia dentro. El cajeado del
+// riel cae a 15.90 y su borde a 19.90, o sea 6.1 de placa por detras.
 placa_fondo        = 26;
-// Las DOS esquinas hondas van cortadas a 45. No es estetica: la placa de la
-// cara inferior choca de esquina con la pestana de la banda del valle, y la
-// de la cara superior con la placa de la fila 1U. Las dos son esquinas de
-// pletina fresada -- cortarlas es gratis --, y mover la placa a lo largo del
-// tramo no sirve: el cajeado del riel se sale por el otro lado. Lo adjudica
-// solapes() con la geometria REAL de la placa girada, no con su caja.
+// Cuanto se separan del eje del riel sus dos roscas ciegas, a lo largo del
+// tramo. 7 deja 10.19 mm entre cada rosca y el cajeado (que pide 6.25) y 14
+// entre las dos roscas (que piden 9 = 2 D).
+sep_rosca_riel     = 7;
+// Las esquinas HONDAS de la placa van cortadas a 45. No es estetica: la de
+// arriba de la cara superior choca con la brida del miembro trasero alto y la
+// del valle con la placa de al lado. Son esquinas de pletina fresada --
+// cortarlas es gratis --, y acortar la placa no sirve: es justo lo que abre
+// otra vez la ranura. Lo adjudica solapes() con la geometria REAL de la placa
+// girada, no con su caja.
 placa_chaflan      = 12;
-// LA PLACA DE LA FILA 1U es UNA para los dos rieles (ruling R2): 50 cubren el
-// par entero con sus dos cajeados. El fondo NO es 26 -- ver placa_1u_fondo.
-placa_1u_largo     = 50;
+// COMO SE REPARTE EL RINCON de P2 entre las dos placas que se encuentran ahi:
+// que fraccion del angulo interior se lleva la que LLEGA al vertice (la de la
+// cara inferior). 0.50 seria la bisectriz, el reparto justo, y no vale: el
+// riel del valle de abajo vive a 15.75 mm del pico y su cajeado se quedaba a
+// 5.96 mm del corte contra los 6.75 que pide. La ventana es estrecha -- por
+// encima de 0.53 el corte se come el canto del M3 de la pestana de la banda,
+// que vive en ese mismo rincon --, y por eso el numero lleva dos decimales.
+// Lo comprueban los dos asserts de guarda_anclajes().
+reparto_rincon     = 0.52;
+// Lo que la placa de la cara SUPERIOR cede en P3. Ahi no hay rincon que
+// repartir -- P3 es concavo y los dos fondos divergen -- pero la placa del
+// valle se pasa de largo para alcanzar el cajeado de su segundo riel, que cae
+// pasado el vertice (150.38 contra 147.80).
+retiro_placa_sup   = 12;
 // Cajeado de la cabeza del M4 del riel, por el lado del anillo. Boton ISO
 // 7380 M4: cabeza de 7.6 de diametro y 2.2 de alto.
 d_cajeado_riel     = 8;
@@ -223,7 +247,6 @@ prof_cajeado_riel  = 2.5;
 //   silueta serian la misma cota, 9.75 contra 9.05, y no hay agujero legal.
 //   Es el mismo choque que hoy deja sin anclaje a la pestana del valle.
 brida_largo        = 27;
-brida_vuelo        = 22;
 // La lengueta de la BAHIA no va al anillo (ruling R3): la boca esta ocupada
 // por la placa de la fila 1U. Cada ala acaba t_placa antes del anillo y dobla
 // una lengueta que apoya en la cara interior de esa placa, con un M4 roscado

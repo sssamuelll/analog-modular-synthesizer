@@ -547,64 +547,105 @@ module costilla_dorso_2d() {
 // franja interior y es la placa la que va al anillo, con dos M4 a rosca
 // ciega. Los miembros hacen lo mismo con una BRIDA doblada de su blank.
 //
+// LA PLACA ES EL MARCO DE LA FILA: una por TRAMO y por costado, corrida de
+// esquina a esquina, no una por riel. Lo decidio Samuel el 2026-08-28 mirando
+// el render -- con placas sueltas de 28 quedaba una ranura de 6.15 mm abierta
+// en cada punta de cada fila y por ahi se veia el interior. El canto de 6 mm
+// de la placa corrida la tapa y se lee como el borde de aluminio de la fila.
+//
 // TODO ESTO ES GEMELO de _placas(), _bridas() y _centros_rosca_ciega() en
 // clearance_budget.py, y quien las cruza es taladros_anillo() releyendo el
 // DXF del dorso. Si las dos lenguas se separan, el DXF lo canta.
 
-// Cuanto se corre cada placa a lo largo de su tramo respecto al pie del riel.
-// CERO salvo donde solapes() lo obligo; el porque de cada numero esta en
-// CORRIMIENTO_PLACA del presupuesto, que es quien lo adjudica.
-function corrimiento_placa(nm) =
-    nm == "cara_inf valle" ? -4 :
-    nm == "cara_sup valle" ?  6 :
-    nm == "fila 1U"        ?  2 : 0;
+// [nombre, vertice de arranque, vertice de fin, rieles 3U (vacio = la fila
+// 1U), modo de corte de cada esquina honda, retiro extra en cada extremo]
+function tramos_placa() = [
+    ["cara_inf", 1, 2, [0, 1], ["", "bisectriz"], [0, 0]],
+    ["valle",    2, 3, [],     ["bisectriz", ""], [0, 0]],
+    ["cara_sup", 3, 4, [2, 3], ["", "45"],        [retiro_placa_sup, 0]]];
+
+// Cuanto se retira la placa del vertice i: la TANGENTE de su redondeo si el
+// vertice es convexo -- ahi el contorno se mete hacia dentro y una esquina de
+// placa apoyada en la recta se saldria de la silueta -- y CERO si es concavo,
+// porque ahi el redondeo aparta el contorno y la placa puede pasar de largo.
+// El perfil se recorre en sentido HORARIO: convexo es producto vectorial < 0.
+function retiro_placa(i) =
+    let (P = pts_perfil(), m = len(P),
+         A = P[(i + m - 1) % m], V = P[i], B = P[(i + 1) % m],
+         cruz = (V.x - A.x)*(B.y - V.y) - (V.y - A.y)*(B.x - V.x))
+    cruz < 0 ? tangente(V, A - V, B - V, radios_perfil()[i]) : 0;
+
+function ang_vertice(i) =
+    let (P = pts_perfil(), m = len(P))
+    _ang(P[(i + m - 1) % m] - P[i], P[(i + 1) % m] - P[i]);
+
+// [ds, db] del corte de una esquina honda. Dos cortes distintos:
+//   "bisectriz"  reparte el rincon con la placa VECINA -- las dos quieren la
+//                misma cuna de material y hay que partirla. Un chaflan de 45
+//                no vale: con el pico a 125 grados y 26 de fondo pediria un
+//                corte de 30 sobre una placa de 26 de honda.
+//   "45"         libra una pieza concreta, la brida del miembro trasero alto.
+// El corte se mide desde el VERTICE y la placa ya arranca retirada de el.
+function corte_placa(i, fondo, retiro, modo, fin) =
+    modo == "45"        ? [placa_chaflan, placa_chaflan] :
+    modo != "bisectriz" ? [0, 0] :
+    let (parte = ang_vertice(i) * (fin ? reparto_rincon : 1 - reparto_rincon))
+    [max(0, fondo/tan(parte) - retiro), fondo];
 
 // El M4 de la lengueta de la bahia va por DEBAJO del riel 1U: es el unico
 // hueco de la boca (ruling R3, ver _y_brida_bahia en el presupuesto).
 function y_brida_bahia() =
     centros_rail_1u()[0].y - he_er_y(90) - 1 - 1.5*d_M4_paso;
 
-// La placa de la fila 1U es mas honda que las de 3U porque ademas recibe esas
-// dos lenguetas: llega 1.5 D por debajo de su M4.
+// La placa del valle es mas honda que las de 3U porque ademas recibe esas dos
+// lenguetas: llega 1.5 D por debajo de su M4.
 function placa_1u_fondo() =
     pts_perfil()[3].y - (y_brida_bahia() - 1.5*d_M4_paso);
 
-// [nombre, pie, u, n, largo, fondo, chaflan]. El pie es donde la placa toca
-// la silueta; u corre a lo largo del tramo y n entra hacia dentro, la misma
-// convencion de centros_rail().
+// [nombre, A, u, n, s0, s1, fondo, cortes, ejes]. A es el vertice de arranque
+// del tramo; un punto de la placa es A + u*s + n*b. `ejes` lleva, por cada
+// riel que recoge, [s del eje, punto, si lleva sus dos roscas ciegas].
 function placas() =
-    let (P = pts_perfil(),
-         cr = centros_rail(),
-         nombres = ["cara_inf frente", "cara_inf valle",
-                    "cara_sup valle", "cara_sup remate"],
-         tramos = [[P[1],P[2]], [P[1],P[2]], [P[3],P[4]], [P[3],P[4]]],
-         xc = (bahia_x0() + bahia_x1())/2 + corrimiento_placa("fila 1U"))
-    concat(
-        [for (i = [0:3])
-            let (a = tramos[i][0], b = tramos[i][1],
-                 d = (b - a)/norm(b - a), n = [d.y, -d.x],
-                 s = (cr[i] - a)*d + corrimiento_placa(nombres[i]))
-            [nombres[i], a + d*s, d, n, placa_largo, placa_fondo, placa_chaflan]],
-        // sin chaflan: esta no va girada y sus esquinas hondas no chocan
-        [["fila 1U", [xc, P[3].y], [1,0], [0,-1],
-          placa_1u_largo, placa_1u_fondo(), 0]]);
+    let (P = pts_perfil(), cr = centros_rail(), c1u = centros_rail_1u())
+    [for (t = tramos_placa())
+        let (A = P[t[1]], B = P[t[2]], L = norm(B - A),
+             u = (B - A)/L, n = [u.y, -u.x],
+             s0 = retiro_placa(t[1]) + t[5][0],
+             s1v = L - retiro_placa(t[2]) - t[5][1],
+             tres = len(t[3]) > 0,
+             centros = tres ? [for (i = t[3]) cr[i]] : c1u,
+             // LA SEGUNDA 1U NO LLEVA ROSCAS y no es un olvido: radio_valle
+             // vale 54 y curva la franja del valle -- su fondo util pasa de
+             // 8.51 en x=128 a 12.45 en x=148 --, asi que una broca puesta
+             // ahi sale por la pared del rebaje.
+             ejes = [for (k = [0 : len(centros) - 1])
+                        [(centros[k] - A)*u, centros[k], tres || k == 0]],
+             // la placa del valle se alarga hasta cubrir el cajeado de su
+             // segundo riel, que cae PASADO P3; puede pasarse porque ese
+             // vertice es concavo y el redondeo aparta ahi el contorno
+             s1 = tres ? s1v
+                       : max(s1v, max([for (e = ejes) e[0]]) + 2*d_M4_paso),
+             fondo = tres ? placa_fondo : placa_1u_fondo())
+        [t[0], A, u, n, s0, s1, fondo,
+         [corte_placa(t[1], fondo, s0, t[4][0], false),
+          corte_placa(t[2], fondo, L - s1, t[4][1], true)],
+         ejes]];
 
-// A que distancia del centro de la placa van sus dos M4 ciegos: un cuarto
-// del largo a cada lado, que deja 1.5 D de canto y reparte el apriete.
-// LA 1U NO, y la culpa es de radio_valle = 54: la franja del valle deja de
-// ser recta 20 mm antes de P3 y la curva se lleva la mitad de su fondo util
-// (8.51 a x=128, 12.45 a x=148, medido sobre el DXF). Sus dos M4 se quedan en
-// el tramo recto, a la separacion minima entre tornillos. Ver _esses_placa().
-function esses_placa(pl) =
-    pl[0] == "fila 1U" ? [-pl[4]/4, -pl[4]/4 + 2*d_M4_paso]
-                       : [-pl[4]/4,  pl[4]/4];
-
-// Las esquinas de la placa, con las dos hondas ya cortadas a 45.
+// Las esquinas de la placa con sus dos esquinas hondas ya cortadas. Un corte
+// de bisectriz se lleva el fondo entero (db = fondo) y entonces su vertice de
+// arriba coincide con el del canto: se omite, que una arista de largo cero
+// rompe el SAT del presupuesto y no le gusta a polygon().
 function esquinas_placa(pl) =
-    let (h = pl[4]/2, f = pl[5], c = pl[6],
-         ab = c > 0 ? [[-h,0], [h,0], [h,f-c], [h-c,f], [-h+c,f], [-h,f-c]]
-                    : [[-h,0], [h,0], [h,f], [-h,f]])
-    [for (q = ab) pl[1] + pl[2]*q[0] + pl[3]*q[1]];
+    let (A = pl[1], u = pl[2], n = pl[3], s0 = pl[4], s1 = pl[5], f = pl[6],
+         c0 = pl[7][0], c1 = pl[7][1],
+         ab = concat([[s0, 0]],
+                     c1[0] <= 0 ? [[s1, 0], [s1, f]] :
+                     c1[1] >= f ? [[s1, 0], [s1 - c1[0], f]]
+                                : [[s1, 0], [s1, f - c1[1]], [s1 - c1[0], f]],
+                     c0[0] <= 0 ? [[s0, f]] :
+                     c0[1] >= f ? [[s0 + c0[0], f]]
+                                : [[s0 + c0[0], f], [s0, f - c0[1]]]))
+    [for (q = ab) A + u*q[0] + n*q[1]];
 
 // La brida de extremo de los dos miembros traseros. Regla de chapa: el
 // agujero no entra en la zona del doblez (setback + 2t + radio).
@@ -617,48 +658,85 @@ function bridas_anillo() =
            [for (x = xs) [x, P[5].y - dist_rosca_ciega]]);
 
 // [centro, diametro de broca] de cada rosca ciega de la cara interior. Las de
-// la TABLA no estan: van en el canto inferior del anillo, no en el dorso, y
-// por eso no salen en ningun DXF (pliego, Tarea 5). La de la PESTANA de la
-// banda del valle tampoco, y esa no es un olvido: su M3 cae a 13.7 del plano
-// del valle -- setback 6 + 2t + d/2, y con t_valle = 3 esa cuenta no baja --
-// mientras la franja solo admite hasta 10.25. La broca saldria por la pared
-// del rebaje. Esta escrito en _centros_rosca_ciega() con todas sus letras.
+// la TABLA no estan: van en el CANTO inferior del anillo, no en el dorso, y
+// un DXF de la cara no sabe dibujar un taladro que entra por el canto (van en
+// el pliego, Tarea 5). Las de la bahia y la pestana del valle tampoco: esas
+// se roscan en los 6 mm de la placa del valle, no en el anillo (ruling R3).
 function centros_rosca_ciega() =
-    concat([for (pl = placas(), s = esses_placa(pl))
-                [pl[1] + pl[2]*s + pl[3]*dist_rosca_ciega, d_M4_rosca]],
+    concat([for (pl = placas(), c = roscas_placa(pl)) [c, d_M4_rosca]],
            [for (c = bridas_anillo()) [c, d_M4_rosca]]);
 
-// La placa, en 3D: sobre la cara interior del anillo, con los dos pasos M4 a
-// sus roscas ciegas y, por cada riel que recibe, el paso del M4 del riel con
-// su cajeado POR EL LADO DEL ANILLO -- ahi va la cabeza, y por eso la placa
-// mide 6: debajo de ella hay acrilico hasta z = 13.2 y una cabeza que asome
-// lo pinza. Orden de montaje: primero el riel a la placa, despues la placa al
+// Hasta donde llega una rosca a la profundidad de dist_rosca_ciega sin
+// acercarse a un extremo de la placa mas de 1.6 D. El margen NO es s1 - s
+// cuando ese extremo va cortado: el corte entra en diagonal y se come mas de
+// lo que parece -- 3.11 mm en la placa de la cara inferior, a esa altura.
+// 1.6 D y no 1.5 porque la puerta exige 1.5, y una cota puesta justo en el
+// limite de su propia puerta vive del redondeo de coma flotante.
+function limite_rosca(pl, ext, corte, signo) =
+    let (f = pl[6], d = dist_rosca_ciega, canto = 1.6*d_M4_paso,
+         ds = corte[0], db = corte[1])
+    (ds <= 0 || d <= f - db)
+        ? ext + signo*canto
+        : ext + signo*(ds*(d - (f - db))/db + canto*norm([ds, db])/db);
+
+// EL PAR SE ARRIMA A SU RIEL PERO NO SE SALE DE LA PLACA. La regla en crudo
+// -- eje +- sep_rosca_riel -- deja la rosca del riel del frente a 1.01 mm del
+// canto, porque ese riel arranca casi pegado al vertice P1.
+function centro_par_rosca(pl, e) =
+    let (lo = limite_rosca(pl, pl[4], pl[7][0],  1),
+         hi = limite_rosca(pl, pl[5], pl[7][1], -1))
+    min(max(e[0], lo + sep_rosca_riel), hi - sep_rosca_riel);
+
+function roscas_placa(pl) =
+    [for (e = pl[8], q = [-sep_rosca_riel, sep_rosca_riel]) if (e[2])
+        pl[1] + pl[2]*(centro_par_rosca(pl, e) + q) + pl[3]*dist_rosca_ciega];
+
+// El M3 con el que la pestana de la banda del valle se atornilla a la placa.
+function m3_pestana() = [pv_x(), pts_perfil()[3].y - pv_a()];
+
+// Lo que se rosca EN la placa del valle y no en el anillo (ruling R3): el M3
+// de cada pestana de la banda y el M4 de cada lengueta de la bahia. Van a
+// diametro de broca y de lado a lado -- 6 mm de pletina dan rosca de sobra
+// para un M3 y un M4, y roscar pasante es lo que el taller prefiere.
+function roscas_placa_valle() =
+    concat([[m3_pestana(), d_M3_rosca]],
+           [for (s = [0, 1])
+               [[s == 0 ? bahia_x0() + brida_raiz()
+                        : bahia_x1() - brida_raiz(), y_brida_bahia()],
+                d_M4_rosca]]);
+
+// La placa, en 3D: sobre la cara interior del anillo, con los pasos M4 a sus
+// roscas ciegas y, por cada riel que recoge, el paso del M4 del riel con su
+// cajeado POR EL LADO DEL ANILLO -- ahi va la cabeza, y por eso la placa mide
+// 6: debajo de ella hay acrilico hasta z = 13.2 y una cabeza que asome lo
+// pinza. Orden de montaje: primero el riel a la placa, despues la placa al
 // anillo. Al reves no se puede apretar.
-module placa_riel(pl, ejes) {
+module placa_riel(pl) {
     translate([0, 0, t_anillo]) difference() {
         linear_extrude(t_placa) polygon(esquinas_placa(pl));
-        for (s = esses_placa(pl))
-            translate(concat(pl[1] + pl[2]*s + pl[3]*dist_rosca_ciega, [-0.1]))
+        for (c = roscas_placa(pl))
+            translate(concat(c, [-0.1]))
                 cylinder(h = t_placa + 0.2, d = d_M4_paso + kerf);
-        for (e = ejes) {
-            translate(concat(e, [-0.1]))
+        for (e = pl[8]) {
+            translate(concat(e[1], [-0.1]))
                 cylinder(h = t_placa + 0.2, d = d_M4_paso + kerf);
-            translate(concat(e, [-0.1]))
+            translate(concat(e[1], [-0.1]))
                 cylinder(h = prof_cajeado_riel + 0.1, d = d_cajeado_riel);
         }
+        if (pl[0] == "valle")
+            for (r = roscas_placa_valle())
+                translate(concat(r[0], [-0.1]))
+                    cylinder(h = t_placa + 0.2, d = r[1]);
     }
 }
 
-// Diez placas: cuatro 3U y una 1U por anillo, espejadas. Los cuatro primeros
-// elementos de placas() son los 3U en el orden de centros_rail().
+// Seis placas: tres por costado, espejadas.
 module placas_riel() {
-    pls = placas();
-    for (i = [0 : len(pls) - 1])
+    for (pl = placas())
         for (m = [0, 1])
             translate([0, 0, m ? ancho_total : 0])
                 mirror([0, 0, m])
-                    placa_riel(pls[i],
-                               i < 4 ? [centros_rail()[i]] : centros_rail_1u());
+                    placa_riel(pl);
 }
 
 // El solido: cara vista en z=0, cara interior en z=t_anillo. El chaflan se
@@ -1284,8 +1362,19 @@ function pv_desarrollo(d) = pv_bd() - d;
 function pv_ancho_x() = 3*d_M3_paso;
 function pv_x() = bahia_x0() - pv_ancho_x()/2;
 
+// LA BANDA MUERE CONTRA LAS PLACAS DEL VALLE, no contra el anillo, desde el
+// 2026-08-28: mide lo mismo que un riel y sus dos pestanas apoyan planas
+// sobre la cara interior de esa placa, con un M3 roscado EN ella. Su rosca no
+// cabe en la franja del anillo -- el M3 cae a pv_a() = 13.7 por debajo del
+// plano del valle y la franja de 14 solo admite hasta 10.25 --, y en la boca
+// tampoco hay franja libre: la ocupa la propia placa. Es el mismo ruling R3
+// que cuelga la bahia de esa misma pletina.
+// Los 6 mm que la banda deja libres en cada punta NO son un hueco: ahi esta el
+// canto de la placa, a ras del plano del valle.
+function tapa_valle_au() = ancho_util - 2*t_placa;
+
 module tapa_valle_2d() {
-    au = ancho_util;
+    au = tapa_valle_au();
     xv = x_valle();
     // Solo queda el vuelo DELANTERO: acaba antes del primer Z-Rail 1U. La
     // banda queda maciza: Samuel no quiere ver ranuras en el valle.
@@ -1851,7 +1940,7 @@ module tapa_valle() {
     // el hueco entre costillas es ancho_util y arranca en t_anillo. Con
     // t_cheek la banda quedaba 6 mm corrida hacia un lado y no coincidia
     // con su caja gemela de _cajas_solidas(), que ya mide t_anillo..
-    translate([xv[0], P[3].y, ancho_total - t_anillo])
+    translate([xv[0], P[3].y, ancho_total - t_anillo - t_placa])
         rotate([0, 90, 0]) rotate([90, 0, 0])
             linear_extrude(t_valle) tapa_valle_2d();
 }
@@ -2084,14 +2173,17 @@ module bom() {
     echo("     anillo con roscas ciegas. Largo: lo fija la placa de anclaje,");
     echo("     Tarea 3. El detalle entero lo reescribe la Tarea 5.");
     echo(str("BOM: PLACA DE ANCLAJE x", 2*len(placas()), " -- pletina de ",
-             t_placa, ". Ocho de ", placa_largo, " x ", placa_fondo,
-             " (una por riel 3U y por punta) y dos de ", placa_1u_largo,
-             " x ", placa_1u_fondo(), " que recogen los DOS rieles 1U y las",
-             " dos lenguetas de la bahia. Cajeado de ", d_cajeado_riel, " x ",
-             prof_cajeado_riel, " por el lado del anillo."));
-    echo("     Las dos esquinas hondas van cortadas a 45: sin ese corte la");
-    echo("     placa de la cara inferior se mete en la pestana de la banda del");
-    echo("     valle y la de la cara superior en la placa de la fila 1U.");
+             t_placa, ", una por TRAMO y por costado. Es el MARCO DE LA FILA:",
+             " corre el tramo entero y su canto de ", t_placa,
+             " tapa la ranura que queda entre el riel de 104 HP y el anillo."));
+    echo(str("     Fondo ", placa_fondo, " las dos de 3U y ", placa_1u_fondo(),
+             " la del valle, que ademas recibe las dos lenguetas de la bahia.",
+             " Cajeado de ", d_cajeado_riel, " x ", prof_cajeado_riel,
+             " por el lado del anillo, uno por riel."));
+    echo("     Cortes: en el PICO las dos placas vecinas se reparten el rincon");
+    echo("     por una linea comun (no es un chaflan de 45: el angulo es 125);");
+    echo(str("     en el remate la de arriba lleva un chaflan de ", placa_chaflan,
+             " para librar la brida del miembro trasero alto."));
     echo("     ORDEN DE MONTAJE OBLIGADO: primero el riel a la placa (la");
     echo("     cabeza queda en el cajeado, del lado que despues mira al");
     echo("     anillo) y despues la placa al anillo, desde dentro. Al reves no");
@@ -2134,14 +2226,13 @@ module bom() {
     echo(str("BOM: tornillo M3 x", 3*n_fila + 2, " + tuerca T M3 -- las planchas",
              " a las transversales: tapa de remate ", n_fila, ", trasera ", 2*n_fila,
              ", + 2 de las PESTANAS de la tapa del valle."));
-    echo("     LOS DOS DE LA PESTANA NO TIENEN CONTRAPARTE, y eso esta abierto");
-    echo("     desde el 2026-08-28. Iban a la costilla de chapa; el anillo no");
-    echo("     lleva pasantes y su rosca ciega tendria que caer a 13.7 mm del");
-    echo("     plano del valle -- setback 6 + 2t + d/2, y con t_valle = 3 esa");
-    echo("     cuenta no baja de ahi --, mientras la franja de 14 solo admite");
-    echo("     hasta 10.25. La broca saldria por la pared del rebaje. Se");
-    echo("     resuelve tocando t_valle o cara_anillo, y las dos son decision");
-    echo("     de Samuel: por eso la banda sigue como estaba y esto se dice.");
+    echo("     LOS DOS DE LA PESTANA VAN A LA PLACA DEL VALLE, no al anillo:");
+    echo("     su rosca tendria que caer a 13.7 mm del plano del valle");
+    echo("     (setback 6 + 2t + d/2, y con t_valle = 3 esa cuenta no baja) y");
+    echo("     la franja de 14 solo admite hasta 10.25 -- la broca saldria por");
+    echo(str("     la pared del rebaje. En la placa hay ", t_placa,
+             " mm de pletina y se rosca pasante, igual que las lenguetas de la",
+             " bahia (ruling R3)."));
     echo("     Estos entran por la RANURA del 2020, no por su punta. Es donde");
     echo("     la tuerca de insercion lateral se paga sola: con las de deslizar");
     echo("     hay que dejarlas dentro ANTES de cerrar el esqueleto.");

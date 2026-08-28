@@ -374,7 +374,8 @@ def tapa_valle_conectada() -> list[str]:
                  f"UNA sola pieza conectada")
 
     p = cb.leer_params()
-    au = cb.perfil(p)["ancho_util"]
+    # la banda muere contra las placas del valle: su ancho no es el del hueco
+    au = cb._tapa_valle_au(p)
     redondos = _redondos("tapa_valle_2d")
     interiores = [q for q in redondos if 0 <= q[0] <= au]
     if len(redondos) != 2 or interiores:
@@ -516,7 +517,9 @@ def agujeros_donde_toca() -> list[str]:
         # apartan por POSICION y no por conteo: si alguien mueve uno hacia
         # dentro, deja de contar como pestana y la rejilla lo caza.
         if placa == "tapa_valle":
-            ancho = cb.perfil(p)["ancho_util"]
+            # SU ANCHO NO ES ancho_util desde el 2026-08-28: la banda muere
+            # contra las placas del valle, 2*t_placa mas estrecha.
+            ancho = cb._tapa_valle_au(p)
             fuera = [q for q in leidos if q[0] < 0 or q[0] > ancho]
             if len(fuera) != 2:
                 f.append(f"{nombre}: {len(fuera)} agujeros fuera del contorno "
@@ -989,6 +992,17 @@ def cuerpos_dentro_del_anillo() -> list[str]:
     cuerpos += [(n, [(c[x], c[y])
                      for x in (1, 2) for y in (3, 4)])
                 for n, c in miembros.items()]
+    # LAS PLACAS Y LAS BRIDAS entran el 2026-08-28, y esta es LA puerta que
+    # dice donde acaban. Una placa corre el tramo entero pegada a la silueta:
+    # si su extremo se pasa de la tangente del redondeo, la esquina se sale por
+    # fuera del contorno y no lo caza nadie mas -- solapes() compara cuerpo
+    # contra cuerpo y una placa que asoma por el borde no choca con nada. En
+    # HEAD dos esquinas de placa asomaban 0.59 y 0.71 mm y las dos puertas
+    # daban verde. Las placas pasan su POLIGONO REAL, chaflan incluido.
+    cuerpos += [(f"placa {pl[0]}", cb._esquinas_placa(pl))
+                for pl in cb._placas(p)]
+    cuerpos += [(f"brida {n}", [(x, y) for x in (x0, x1) for y in (y0, y1)])
+                for n, (x0, x1, y0, y1), _, _ in cb._bridas(p, miembros)]
     # Varios largueros van A RAS del contorno por diseno (los de la cara
     # trasera tienen su centro en prof_inferior - r, o sea que su cara de atras
     # coincide con el plano trasero; los de la base apoyan en y=0). Un punto
