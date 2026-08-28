@@ -11,6 +11,13 @@ zócalo de madera. Aportada por Samuel el 2026-08-27.
 
 ---
 
+> **Enmienda del 2026-08-28.** La inversión del apilado (§3: costilla de chapa
+> fuera → junta → acrílico, con casquillos) y la familia de chapa plegada para la
+> costilla (§4) quedan **superadas** por `2026-08-28-costilla-pletina-design.md`:
+> el anillo pasa a pletina mecanizada de 14 y el acrílico va coplanar dentro de su
+> ventana. Los tres miembros transversales, la bahía, la fila 1U y el bonding de PE
+> (§3.4) siguen vigentes. Se anota en vez de borrarse.
+
 ## 1. Qué cambia, en una frase
 
 El esqueleto de aluminio pasa **por fuera** y se ve; el acrílico pasa por dentro

@@ -8,6 +8,14 @@ pendientes
 
 ---
 
+> **Superada el 2026-08-27, el mismo día.** Samuel decidió ir al estándar
+> Intellijel 1U (39.65 de panel, 33.65 entre centros) alargando el valle 1.47 mm,
+> en vez de un formato propio: a la altura que la boca permitía, el KONDOR 1U
+> habría medido menos que el de mercado y costado dibujar cada tile. Lo que sigue
+> vivo de este documento: el defecto del canto de 3 mm (§1), el montaje de rieles y
+> los diez puntos sin verificar (§9). Implementado en el commit «El valle deja de
+> ser tapa y pasa a ser una fila 1U de Intellijel».
+
 ## 1. La decisión
 
 Samuel decide que la cara horizontal del valle sea una tercera fila de módulos
