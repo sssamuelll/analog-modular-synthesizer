@@ -2783,11 +2783,13 @@ def main() -> int:
     # de remate". La premisa caduco dos veces: primero el remate dejo de vivir
     # en el marco (su Y se derivaba y bajaba por debajo del rail girado del
     # panel), y desde el 2026-08-21 ese larguero ya no existe. El
-    # marco solo tiene que dar para que los largueros quepan DENTRO del
-    # acrilico, y eso ya no se estima con una cota a ojo -- lo comprueba
-    # `railes_dentro_del_costado()` en check_dxf.py, esquina por esquina y
-    # contra el contorno RELEIDO del DXF, que es el unico que sabe cuanto
-    # material se comio el redondeo en punta.
+    # marco solo tiene que dar para que los largueros quepan DENTRO de la
+    # SILUETA -- la del anillo desde el 2026-08-28, no la del acrilico, que va
+    # 14.5 mm mas adentro (Ruling R4) --, y eso ya no se estima con una cota a
+    # ojo: lo comprueba `cuerpos_dentro_del_anillo()` en check_dxf.py (se llamo
+    # `railes_dentro_del_costado()` mientras median contra el PMMA), esquina
+    # por esquina y contra el contorno RELEIDO del DXF, que es el unico que
+    # sabe cuanto material se comio el redondeo en punta.
     #
     # Se conserva solo el techo, que sigue siendo un criterio de FORMA y no de
     # ajuste: pasado ese ancho el remate deja de leerse como punta y vuelve la

@@ -875,7 +875,9 @@ rail_er_eje     = 14.3;
 //
 // Las tangentes NO son parametros: salen del radio y del angulo del vertice.
 // Si se mueve un radio hay que rehacer la columna, y el que avisa es
-// railes_dentro_del_costado() en check_dxf, que lee el contorno del DXF.
+// cuerpos_dentro_del_anillo() en check_dxf (railes_dentro_del_costado() hasta
+// el 2026-08-28), que lee el contorno del DXF -- desde esa fecha el de la
+// COSTILLA, que es quien lleva la silueta, y no el del acrilico.
 // Subio de 14.5 a 17.5 el 2026-08-21 y NO por su propia condicion: lo arrastro
 // alto_frontal. La regla es inset >= alto_frontal/2 + rail_er_alto/2 + 3, y con
 // el vertice en 19 eso da 17.5 clavado. Los 3 mm van dentro de alto_cara_inf,

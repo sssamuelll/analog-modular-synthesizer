@@ -1364,8 +1364,17 @@ function x_chasis_frente() =
     - chasis_holgura_larguero - ch_tapa_ext().y;
 
 // En coordenadas LOCALES de la tabla, cuyo origen esta vuelo_zocalo por delante
-// y por fuera del cuerpo.
-function ch_pos() = [vuelo_zocalo + t_cheek + t_costilla
+// y por fuera del cuerpo. O sea: x local = vuelo_zocalo + z del mundo, la misma
+// cadena con que bandeja_base_2d() coloca sus dos filas de tornillo.
+//
+// LA CARA INTERIOR ES t_anillo desde el 2026-08-28, no t_cheek + t_costilla.
+// guarda_chasis() mide este mismo hueco con el origen EN la cara interior
+// (`pos_x = au - chasis_margen_bandeja - tapa_x`, 192.02 mm) y un span de
+// ancho_util, asi que el termino de aqui es el unico sitio donde el plano se
+// nombra: con los 9.5 viejos el agujero de salida de cables se dibujaba 4.5 mm
+// corrido respecto a lo que el presupuesto verifica, y no lo cazaba nadie --
+// agujeros_donde_toca() relee las filas de tornillo de la tabla, no la ranura.
+function ch_pos() = [vuelo_zocalo + t_anillo
                        + ancho_util - chasis_margen_bandeja - ch_tapa_ext().x,
                      x_chasis_frente() + vuelo_zocalo];
 
@@ -1377,6 +1386,16 @@ function salida_cables_xy() =
     [pc.x + d + chasis_salida_x - salida_holgura,
      pc.y + d + chasis_salida_y - salida_holgura];
 
+// OJO: EL TERMINO EN Z DE ESTA MATRIZ NO ES UN PLANO, y por eso no se toco al
+// mover la cara interior a t_anillo el 2026-08-28. `ancho_total - t_cheek` con
+// el -1 deja el chasis en z = 10.50..349.10, mientras ch_pos() y guarda_chasis()
+// lo colocan en 206.02..544.62: no es un desfase de espesor, es un ESPEJO de
+// lado -- y ademas contradice a salida_cables_xy(), que saca el agujero de la
+// tabla del ch_pos() sin espejar. Sustituir t_cheek por t_anillo aqui lo
+// empeora (lo mete 6 mm mas dentro del anillo), asi que la cota se queda como
+// esta hasta que se decida de que lado vive el PSU. NO LO CAZA NINGUNA PUERTA:
+// el chasis no es un cuerpo de _cajas_solidas(), o sea que solapes() no lo mira,
+// y en el render queda detras de los paneles. Va al registro de pendientes.
 module chasis() {
     p  = ch_pos();
     multmatrix([[0, 1, 0, -vuelo_zocalo + p.y],
@@ -1809,17 +1828,19 @@ module bom() {
              " 27.4 de fondo y el case estuvo dibujado contra el hasta el",
              " 2026-08-17. Cuatro forman las dos filas 3U y dos forman la fila",
              " Intellijel 1U."));
-    echo(str("BOM: tornillo M4 x12 para los rieles -- entran de punta por la ",
-             "COSTILLA y ROSCAN EN EL PROPIO RIEL (viene con M4 taladrado a 3.3 ",
-             "de fabrica). Sin tuerca, sin inserto. Largo = ", t_costilla,
-             " de costilla + arandela + 8..10 de rosca dentro del aluminio."));
-    echo("     ATRAVESABAN EL ACRILICO hasta el 2026-08-26 y por eso pedian 8");
-    echo(str("     mm de agarre. Ahora muerden ", t_costilla,
-             " de chapa: el tornillo se acorta."));
+    echo(str("BOM: tornillo M4 x12 para los rieles -- ROSCAN EN EL PROPIO RIEL ",
+             "(viene con M4 taladrado a 3.3 de fabrica). Sin tuerca, sin inserto."));
+    echo("     YA NO ATRAVIESAN LA COSTILLA. Cruzaron el acrilico hasta el");
+    echo("     2026-08-26 y la chapa de la costilla hasta el 2026-08-28; el");
+    echo("     anillo de pletina no lleva un solo agujero pasante, asi que el");
+    echo("     riel se atornilla a una PLACA DE ANCLAJE interior que va al");
+    echo("     anillo con roscas ciegas. Largo: lo fija la placa de anclaje,");
+    echo("     Tarea 3. El detalle entero lo reescribe la Tarea 5.");
     echo(str("BOM: tornillo M5 boton x", 2*len(centros_transversal()),
-             " + tuerca T -- por la PUNTA de las transversales 2020, desde la",
-             " COSTILLA. Desde el 2026-08-27 no atraviesan el acrilico: el",
-             " costado quedo sin un solo tornillo estructural."));
+             " + tuerca T -- por la PUNTA de las transversales 2020. Desde el",
+             " 2026-08-27 no atraviesan el acrilico y desde el 28 tampoco la",
+             " costilla: van a una brida de extremo con roscas ciegas en la",
+             " franja interior del anillo (Tareas 3 y 5)."));
     echo(str("BOM: tornillo M5 x", chasis_anclajes, " + tuerca T + SEPARADOR de ",
              chasis_holgura_larguero, " -- cuelgan el chasis del PSU de la ranura"));
     echo("     INTERIOR de `base trasera` (#106). El separador no es opcional:");
