@@ -1687,9 +1687,15 @@ module bandeja_base() {
 // a kondor_prof deja el cajeado por fuera, que es donde se ve sin luz
 // interior. Para voltearlo a la cara de dentro seria translate a
 // t_piel - kondor_prof.
+// EMPOTRADA ENTRE LOS DOS ANILLOS, no entre los dos acrilicos: desde el
+// 2026-08-28 arranca en t_anillo + hol_piel y no en t_cheek + hol_piel. Con el
+// anillo por fuera la cara interior del case esta en t_anillo, y arrancar en
+// t_cheek dejaba la plancha DESCENTRADA -- 8.15 por un lado y 20.15 por el
+// otro sobre el mismo ancho_util --, que es una plancha torcida en el render y
+// una posicion que no coincide con la caja gemela de _cajas_solidas().
 module piel_trasera() {
     P = pts_perfil();
-    translate([P[6].x, 0, t_cheek + hol_piel])
+    translate([P[6].x, 0, t_anillo + hol_piel])
         rotate([0, -90, 0])
             difference() {
                 linear_extrude(t_piel) piel_trasera_2d();

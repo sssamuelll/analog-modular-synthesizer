@@ -405,13 +405,32 @@ def _caras_miembro(p: dict[str, float], cajas: dict[str, Caja]) -> list[Caja]:
     ]
 
 
+def _trasera_au(p: dict[str, float]) -> float:
+    """Ancho de la piel trasera: el hueco entre anillos menos su ajuste.
+
+    GEMELA de trasera_au() en sam17_case.scad. La resta estuvo escrita a mano
+    en TRES sitios con esta misma forma -- _rejilla_entrada(), _ondas_trasera()
+    y guarda_red() -- y en otros dos sin el hol_piel: guarda_chasis(), que la
+    usaba dentro de un exige() de verdad, y el mensaje de guarda_piso(). Todas
+    eran `ancho_total - 2*t_cheek [- 2*hol_piel]`, la cuenta de cuando las caras
+    interiores del case eran el acrilico.
+
+    Al pasar la costilla a anillo las cinco se quedaron 12 mm por encima de la
+    pieza real (552.32 contra 540.32) y ninguna lo cantaba, porque solo
+    alimentaban areas de ventilacion, margenes de ventana y texto de mensaje.
+    Se funden el 2026-08-28: aqui las tres que son la trasera; guarda_chasis()
+    lee ancho_util directo y guarda_piso() saca el ancho de la propia caja.
+    """
+    return perfil(p)["ancho_util"] - 2 * p["hol_piel"]
+
+
 def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
                                                   list[Fila]]:
     """AABB de los seis Z-Rails, tres miembros y planchas/pieles."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
     t_cheek = p["t_cheek"]
-    t_acr, hol = p["t_valle"], p["hol_piel"]
+    t_acr = p["t_valle"]
     ancho_total = p["ancho_total"]
     # LAS CARAS INTERNAS DEL CASE dejaron de ser el acrilico el 2026-08-26: el
     # ala de la costilla se le monta encima, y todo lo que vive dentro apoya
@@ -529,14 +548,17 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # LA TRASERA SE EMPOTRA ENTRE LOS DOS ANILLOS, y desde el 2026-08-28 eso ya
     # no es lo mismo que z0/z1: la cara interior del anillo esta en t_anillo y
     # z0/z1 siguen en la cara interior del apilado viejo (chapa + acrilico)
-    # hasta que la Tarea 2 los mueva. El .scad ya la dibuja sobre la cota nueva
-    # (trasera_au() = ancho_util - 2*hol_piel), asi que medirla aqui con z0/z1
-    # la hacia 9 mm mas ancha que su propio DXF -- lo canto el sobre de
-    # check_dxf, que es justo para lo que existe. Esta es la GEMELA de
-    # trasera_au(), y va derivada de ancho_util para que no se separen.
-    au = perfil(p)["ancho_util"]
-    z_pt0, z_pt1 = ((ancho_total - au) / 2 + hol,
-                    (ancho_total + au) / 2 - hol)
+    # hasta que la Tarea 2 los mueva. Medirla aqui con z0/z1 la hacia 9 mm mas
+    # ancha que su propio DXF -- lo canto el sobre de check_dxf, que es justo
+    # para lo que existe.
+    #
+    # ESTA CAJA ES LA GEMELA DE piel_trasera() EN EL .scad EN ANCHO Y EN
+    # POSICION, y las dos cosas importan: el ancho es trasera_au()
+    # (ancho_util - 2*hol_piel) y el arranque es t_anillo + hol_piel, o sea la
+    # cara interior del anillo. Centrada sobre ancho_total da lo mismo escrito
+    # de otra forma, y asi no hay dos maneras de decir donde empieza.
+    au = _trasera_au(p)
+    z_pt0, z_pt1 = (ancho_total - au) / 2, (ancho_total + au) / 2
     planchas.append(("piel_trasera", P[6][0] - p["t_piel"], P[6][0],
                      y0_pt, y0_pt + alto_pt, z_pt0, z_pt1))
     filas += [("piel_trasera", "base", "y",
@@ -1001,7 +1023,7 @@ def _rejilla_entrada(p: dict[str, float]) -> tuple[int, float, float, float]:
     ALTURA esta. Esta rejilla vive abajo del todo en la trasera; paso unas horas
     en el suelo (y=4, mas tiro y mas area) y volvio aqui porque en el vuelo de
     la bandeja se transparentaba por el canto inferior."""
-    au = p["ancho_total"] - 2 * p["t_cheek"] - 2 * p["hol_piel"]
+    au = _trasera_au(p)
     # y=0: el canto de abajo de la plancha, en el plano del suelo. Da igual
     # para el resultado -- se resta al formar f_base/f_tras y se vuelve a
     # sumar al devolver el centroide, asi que se cancela -- pero tiene que
@@ -1075,7 +1097,7 @@ def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
     cr = _centros_rail(p, P)
     anclajes = _anclajes_miembro(
         p, _cajas_miembro(p, P, cr, 0.0, 0.0))
-    au = p["ancho_total"] - 2 * p["t_cheek"] - 2 * p["hol_piel"]
+    au = _trasera_au(p)
     # y=0: el canto de abajo de la plancha, en el plano del suelo. Da igual
     # para el resultado -- se resta al formar f_base/f_tras y se vuelve a
     # sumar al devolver el centroide, asi que se cancela -- pero tiene que
@@ -1735,7 +1757,7 @@ def guarda_red(p: dict[str, float]) -> None:
     cr = _centros_rail(p, P)
     anclajes = _anclajes_miembro(
         p, _cajas_miembro(p, P, cr, 0.0, 0.0))
-    au = p["ancho_total"] - 2 * p["t_cheek"] - 2 * p["hol_piel"]
+    au = _trasera_au(p)
     f_base = anclajes[("trasero bajo", "base")][1]
     lib0, lib1 = _banda_libre_trasera(p)   # la misma que centra la rejilla
     puente = p["vent_puente_min"]
@@ -2303,7 +2325,9 @@ def guarda_rebaje(p: dict[str, float]) -> None:
          ciega con 1.5 D a cada lado: 3 x d_M4_paso = 13.5. Es lo que puso la
          cara vista en 20.
       3. el acrilico solapa el labio al menos 5 mm, para que lo retenga.
-      4. el labio tiene al menos 3 mm de cuerpo sobre el acrilico.
+      4. el labio tiene cuerpo sobre el acrilico: 3 mm de la spec, y nunca
+         menos del doble del chaflan -- la arista de la ventana se lo come por
+         la cara vista, y con rehundido = chaflan el labio se queda en filo.
 
     El canto del PMMA queda cubierto POR CONSTRUCCION: un anillo con ventana
     rodea al acrilico en todo su perimetro. Por eso esta puerta no recorre
@@ -2326,9 +2350,14 @@ def guarda_rebaje(p: dict[str, float]) -> None:
     assert p["rebaje_anillo"] >= 5, (
         f"el acrilico solo solapa el labio {p['rebaje_anillo']:g} mm; con menos de "
         f"5 el labio no lo retiene")
-    assert p["rehundido_acrilico"] >= 3, (
+    labio = max(3.0, 2 * p["chaflan_anillo"])
+    assert p["rehundido_acrilico"] >= labio, (
         f"el labio tiene {p['rehundido_acrilico']:g} mm de cuerpo sobre el "
-        f"acrilico; con menos de 3 el chaflan de {p['chaflan_anillo']:g} se lo come")
+        f"acrilico y pide {labio:g}, que es el mayor de dos minimos: los 3 de "
+        f"la spec (cuerpo del labio) y 2 x {p['chaflan_anillo']:g} de chaflan "
+        f"-- el de la arista de la ventana se come {p['chaflan_anillo']:g} mm "
+        f"de ese cuerpo por la cara vista, y se pide el doble para que quede "
+        f"al menos otro tanto de labio entero debajo")
     print(f"rebaje: anillo de {p['t_anillo']:g}, acrilico {p['rehundido_acrilico']:g} "
           f"atras en un rebaje de {hondo:.1f} (pide {pide:.1f}); franja de "
           f"{franja:.0f} para las roscas ciegas; cara vista {p['cara_anillo']:g}")
@@ -2429,11 +2458,12 @@ def guarda_piso(p: dict[str, float]) -> None:
     #    Se lee la caja DECLARADA, no se rehace la cuenta -- misma leccion que
     #    el assert 2.
     _, planchas, _ = _cajas_solidas(p)
-    y0_pt = next(c[3] for c in planchas if c[0] == "piel_trasera")
+    caja_pt = next(c for c in planchas if c[0] == "piel_trasera")
+    y0_pt = caja_pt[3]
     assert abs(y0_pt) < 1e-6, (
         f"la trasera no llega al suelo: su canto de abajo cae en "
         f"y={y0_pt:.2f} y el plano inferior del case es y=0, o sea un rebaje "
-        f"corrido de {p['ancho_total'] - 2 * p['t_cheek']:.0f} x {y0_pt:.2f} x "
+        f"corrido de {caja_pt[6] - caja_pt[5]:.0f} x {y0_pt:.2f} x "
         f"{p['t_piel']:.0f} mm a lo largo de todo el canto trasero. La "
         f"plancha tiene que bajar hasta 0: la distancia al canto bajo la fila "
         f"de M3 CRECE al hacerlo (mas material alrededor del tornillo, no "
@@ -2736,7 +2766,12 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
               f"las dos cuentas esta mal y la chapa se corta con la del modelo")
 
     # --- 2. la caja cabe en el piso inferior del case ----------------------
-    au = p["ancho_total"] - 2 * p["t_cheek"]
+    # EL HUECO ENTRE ANILLOS, no ancho_total - 2*t_cheek. Esa resta era la del
+    # case de cuando la cara interior era el acrilico, y desde el 2026-08-28
+    # daba 552.62 contra los 540.62 que hay de verdad: el chasis se comprobaba
+    # contra una bandeja 12 mm mas ancha que la suya. g ES perfil(p) -- llega
+    # calculado desde main(), no se rehace aqui.
+    au = g["ancho_util"]
     fondo_bandeja = _fondo_bandeja(p)
     exige(c["alto"] + p["chasis_pie"] < g["alto_interior_inferior"],
           f"el chasis mide {c['alto'] + p['chasis_pie']:.1f} mm con sus pies y "

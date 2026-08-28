@@ -732,9 +732,21 @@ t_junta = 4;
 // a pata casi en linea recta.
 //
 // 18 SALE DE LA FLECHA. Lo que la dobla no es el peso del case sino el chasis
-// del PSU sentado en medio del vano de 528.62 entre las dos costillas: con 200 N
-// y E = 11000 MPa, 16 da 0.562 (justo), 18 da 0.395 y 20 da 0.288, contra un
-// techo de 0.60. 18 es ademas espesor de tabla de catalogo.
+// del PSU sentado en medio del vano entre las dos costillas, que es ancho_util
+// y NO una constante: valia 528.62 y desde el 2026-08-28 son 540.62, un 2.3 %
+// mas de luz y un 7 % mas de flecha, porque va con L^3.
+//
+// Con la tabla de 327.41 de ancho, 200 N y E = 11000 MPa: 16 da 0.536, 18 da
+// 0.376 y 20 da 0.274, contra un techo de 0.60. Los tres pasan y 18 es ademas
+// espesor de tabla de catalogo, asi que se queda: el margen es lo que se
+// compra, no el aprobado justo.
+//
+// ESTA TABLA NO ES EL NUMERO VIVO -- se queda vieja en cuanto se mueva el
+// ancho, la especie o el fondo. El vivo lo imprime guarda_piso() en cada
+// corrida, con esta misma formula y con el vano de verdad:
+//   suelo: TABLA DE MADERA MACIZA t=18 bajo el marco, 327.41 x 588.62 ...
+//     con 200 N en medio del vano de 540.62 cede 0.376 mm (techo 0.60, E 11000
+//     MPa a favor de veta)
 //
 // MACIZA, con AGUJEROS ALARGADOS en Z. Es la unica pieza de madera del case que
 // CARGA, y una tabla maciza de 528 mm a contraveta se mueve milimetros con la
