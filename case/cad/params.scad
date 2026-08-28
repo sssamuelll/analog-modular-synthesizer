@@ -1213,6 +1213,14 @@ t_piel      = 8;
 flecha_pie  = 0.25; // mm bajo 22.8 N. DE HOJA DE DATOS, no estimado
 alto_pie    = 10;   // sube de 8: la flecha necesita material donde ocurrir
 d_pie       = 20;   // sube de 16: area para no aplastarse permanentemente   // diametro; pequeno a proposito
+// EL TORNILLO CON QUE LA PATICA SE ATORNILLA A LA TABLA (Tarea 6). El BOM
+// de arriba dice "casquillo roscado" sin metrica -- no hay hoja de la
+// patica citada con un diametro de rosca, y sin hoja no hay cota que leer.
+// SUPUESTO = d_M4_paso: mismo herraje que ya usa el resto del case (12 M4
+// de riel, 8 de brida, 4 de clip, 4 de lengueta de bahia), asi que no anade
+// una talla nueva al pedido. Si el catalogo real trae otra metrica, este es
+// el unico numero que hay que tocar.
+d_pie_tornillo = 4.5;  // SUPUESTO M4 paso (=d_M4_paso), sin hoja de la patica
 // EJE DE LA TAPA: NO HAY BISAGRA. El eje es EL PROPIO M5 con el que el riel de
 // arriba se fija de punta al costado. Samuel, viendo el render: "deberia ser el
 // mismo tornillo con el que se atornilla la barra del eurorack no? por que tanto

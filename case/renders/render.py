@@ -37,6 +37,10 @@ Nombres de la API de materiales (Principled BSDF) verificados a mano en
 Blender 5.0.1: "Base Color", "Metallic", "Roughness" y "Transmission
 Weight" existen tal cual (no ambiguos con otro Weight). Si esto cambia en
 otra version, listar con print([i.name for i in n.inputs]) y ajustar.
+
+Task 6: se anaden "Anisotropic" y "Anisotropic Rotation" para el aluminio
+cepillado -- RECONFIRMADOS igual a mano (mismo metodo, Blender 5.0) antes
+de tocar el material: existen tal cual, sin ambiguedad.
 """
 import math
 import os
@@ -78,9 +82,19 @@ acr.data.materials.append(mat(
         "Transmission Weight": 0.85,
     }))
 alu = importar("assembly_aluminio")
+# CEPILLADO, no pulido (Tarea 6). Roughness baja de 0.35 a 0.28 y gana
+# Anisotropic: un metal fresado/cepillado tiene microestrias direccionales
+# (la pasada de la herramienta), y eso es justo lo que el lobulo anisotropico
+# del Principled BSDF simula -- reflejo estirado en una direccion en vez del
+# circulo especular de un metal pulido isotropico. Anisotropic Rotation en
+# 0.0 porque no hay UV/tangente pintada a mano para orientar la estria por
+# pieza (placas, rieles y anillo tienen cada uno la suya en la realidad); es
+# SUPUESTO de partida, no medido -- subir Roughness o anadir un mapa de
+# tangente es el siguiente paso si hace falta que se lea MAS cepillado.
 alu.data.materials.append(mat(
-    "aluminio", **{"Base Color": (0.85, 0.86, 0.88, 1.0),
-                   "Metallic": 1.0, "Roughness": 0.35}))
+    "aluminio", **{"Base Color": (0.80, 0.81, 0.83, 1.0),
+                   "Metallic": 1.0, "Roughness": 0.28,
+                   "Anisotropic": 0.6, "Anisotropic Rotation": 0.0}))
 # LA TABLA, en su propio STL desde el 2026-08-27. Estuvo dentro del ensamblado
 # de acrilico mientras el suelo era PMMA, y meterla ahi ahora la pintaria de
 # naranja translucido: un render que miente sobre una decision de material.

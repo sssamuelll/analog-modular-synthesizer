@@ -740,6 +740,54 @@ module placas_riel() {
                     placa_riel(pl);
 }
 
+// --- LOS DXF DE LAS PLACAS (Tarea 6, item del controller) ---------------
+//
+// EL LADO ESPEJADO NO PIDE UN DXF PROPIO. mirror([0,0,1]) es una reflexion
+// en Z: no toca x ni y, y esquinas_placa() vive enteramente en el plano xy
+// del perfil. O sea que las placas de los dos costados comparten el MISMO
+// contorno -- una placa por TRAMO, no por costado -- y el pedido de corte va
+// "x2" en la linea del BOM en vez de duplicar el fichero.
+//
+// EN COORDENADAS DEL ANILLO, sin transformar a un marco local por placa: las
+// mismas x,y que esquinas_placa()/roscas_placa() ya usan. Se elige a
+// proposito para que taladros_placas() en check_dxf.py compare centro a
+// centro contra _esquinas_placa()/_roscas_placa() de clearance_budget.py sin
+// deshacer ningun giro ni desplazamiento -- la MISMA razon por la que
+// costilla_2d()/costilla_dorso_2d() tampoco usan un marco local.
+//
+// LOS TALADROS SON UN ESPEJO EXACTO de los que placa_riel() corta en 3D,
+// sin la Z: el par de M4 ciegos que atan la placa al anillo (roscas_placa(),
+// diametro de PASO) y el cajeado de cada riel que la placa recoge (pl[8],
+// diametro d_cajeado_riel). EL PASO M4 DEL PROPIO RIEL, que en 3D cae
+// CONCENTRICO con ese cajeado (mismo eje, radio menor), no se dibuja aparte:
+// en un difference() 2D el circulo mayor ya contiene al menor entero, asi
+// que dibujar los dos no cambia ni un mm2 del contorno cortado -- son la
+// misma resta.
+module placa_2d(pl) {
+    difference() {
+        polygon(esquinas_placa(pl));
+        for (c = roscas_placa(pl))
+            translate(c) circle(d = d_M4_paso + kerf);
+        for (e = pl[8])
+            translate(e[1]) circle(d = d_cajeado_riel);
+        // SOLO LA PLACA DEL VALLE: el M3 de la pestana de la banda y el M4
+        // de cada lengueta de la bahia, los DOS que roscas_placa_valle()
+        // rosca PASANTE en la propia placa (ruling R3) y no en el anillo.
+        if (pl[0] == "valle")
+            for (r = roscas_placa_valle())
+                translate(r[0]) circle(d = r[1]);
+    }
+}
+
+// Busca el tramo por nombre en vez de indexar placas()[i]: si algun dia
+// tramos_placa() cambia de orden, un indice fijo exportaria la placa
+// equivocada bajo el nombre equivocado sin que nada lo avise.
+function _placa(nombre) = [for (pl = placas()) if (pl[0] == nombre) pl][0];
+
+module placa_cara_inf_2d() { placa_2d(_placa("cara_inf")); }
+module placa_valle_2d()    { placa_2d(_placa("valle")); }
+module placa_cara_sup_2d() { placa_2d(_placa("cara_sup")); }
+
 // --- LOS CLIPS DE RETENCION DEL ACRILICO -------------------------------
 //
 // EL REBAJE SUJETA UNA SOLA CARA. El labio de 3 mm pisa el acrilico por
@@ -795,6 +843,24 @@ module clips_costado() {
                             translate(concat(c[2], [-0.1]))
                                 cylinder(h = t_clip + 0.2, d = d_M4_paso + kerf);
                         }
+}
+
+// El DXF del clip (Tarea 6, item del controller): pieza GENERICA, no una
+// por tramo ni por s -- clips() coloca CUATRO (dos tramos x dos costados
+// espejados) pero los cuatro son el mismo rectangulo de clip_largo x
+// clip_fondo con un M4 centrado a dist_rosca_ciega de un canto, asi que un
+// solo DXF basta y se corta x4 (BOM). Dibujado en su propio marco local
+// (0,0)-(clip_largo, clip_fondo), no en coordenadas del anillo como las
+// placas: al reves que ellas, este contorno no depende de en que tramo ni a
+// que s vaya el clip, asi que no hay un "clip()" concreto contra el que
+// comparar -- check_dxf.py lo verifica contra clip_largo/clip_fondo/
+// dist_rosca_ciega sueltos, los mismos parametros con que _clips() arma
+// cada instancia.
+module clip_2d() {
+    difference() {
+        square([clip_largo, clip_fondo]);
+        translate([clip_largo/2, dist_rosca_ciega]) circle(d = d_M4_paso + kerf);
+    }
 }
 
 // El solido: cara vista en z=0, cara interior en z=t_anillo. El chaflan se
@@ -1252,6 +1318,25 @@ module bandeja_base_2d() {
                         if (medio) circle(d = d_M5_paso + kerf);
                         else hull() for (dy = [-holgura_veta, holgura_veta])
                             translate([0, dy]) circle(d = d_M5_paso + kerf);
+        // LOS CUATRO TALADROS DE PIE (Tarea 6). paticas() atornilla las
+        // paticas de goma A LA TABLA, no al acrilico (BOM), asi que la tabla
+        // necesita su propio taladro por pata -- REDONDO y no ranura: la
+        // patica no la mueve la contraveta, la sostiene.
+        //
+        // MISMAS CUATRO POSICIONES QUE paticas(), pasadas por la MISMA
+        // conversion de coordenadas que las dos filas de arriba: local x =
+        // vuelo_zocalo + z del mundo, local y = vuelo_zocalo + x del mundo
+        // (ver la nota larga sobre bandeja_base_2d() mas abajo en este
+        // fichero, junto a ch_pos()). Repetir aqui la formula de paticas()
+        // en vez de llamarla es a proposito: paticas() dibuja un cilindro
+        // rotado en 3D y este agujero es 2D puro, asi que no hay una sola
+        // funcion que sirva a los dos -- pero las CUATRO coordenadas de
+        // mundo son las mismas literales, y por eso el comentario de
+        // paticas() vale tambien aqui.
+        for (wx = [alto_frontal/2 + d_pie/2, centro_miembro_bajo().x])
+            for (wz = [d_pie/2, ancho_total - d_pie/2])
+                translate([v + wz, v + wx])
+                    circle(d = d_pie_tornillo + kerf);
         // LA SALIDA DE CABLES DEL CHASIS. Era un campo de ondas de 104 x 32
         // dibujado como VENTILACION, y con la caja de acero encima ya no
         // ventila nada (spec §3.3). El cambio no es solo de nombre: una onda
@@ -2026,6 +2111,10 @@ else if (PART == "miembro_alto_2d")      miembro_alto_2d();
 else if (PART == "bahia_2d")             bahia_2d();
 else if (PART == "piel_trasera_2d")      piel_trasera_2d();
 else if (PART == "escuadra_trasera_2d")  escuadra_trasera_2d();
+else if (PART == "placa_cara_inf_2d")    placa_cara_inf_2d();
+else if (PART == "placa_valle_2d")       placa_valle_2d();
+else if (PART == "placa_cara_sup_2d")    placa_cara_sup_2d();
+else if (PART == "clip_2d")              clip_2d();
 // El relieve KONDOR en su propio fichero, y no es un extra: es la UNICA forma
 // de que llegue al taller. No se recorta en piel_trasera_2d (es ciego), asi que
 // el DXF de la trasera SIN esto es media pieza -- el mismo caso del chasis, que
@@ -2255,6 +2344,16 @@ module assembly_acrilico() {           // STL separado para Blender (Task 8)
 // justo el tipo de render que miente sobre una decision de material.
 module assembly_madera() {
     bandeja_base();
+    // LAS CUATRO PATICAS (Tarea 6). Van aqui, con la tabla, y no en
+    // assembly_aluminio(): se atornillan A ELLA (BOM: "se atornilla A LA
+    // TABLA, no al acrilico"), asi que este STL es el que las tiene que
+    // ensenar para que se vean en su sitio. SON DE GOMA y Blender pinta este
+    // STL entero de nogal -- una patica de goma con nogal encima es un
+    // desvio de color, no de geometria, y se acepta: separar un cuarto STL
+    // solo para cuatro cilindros de 20x10 no paga su peso. paticas() TAMBIEN
+    // sigue en assembly() (la vista de conjunto sin separar materiales) --
+    // esto la ANADE aqui, no la muda.
+    paticas();
 }
 
 // LA BAHIA DE ABAJO, para mirarla por dentro. Es el unico sitio del case cuyo
@@ -2411,6 +2510,11 @@ module bom() {
              " la del valle, que ademas recibe las dos lenguetas de la bahia.",
              " Cajeado de ", d_cajeado_riel, " x ", prof_cajeado_riel,
              " por el lado del anillo, uno por riel."));
+    echo("     DXF de corte: placa_cara_inf_2d, placa_valle_2d y");
+    echo(str("     placa_cara_sup_2d -- UNO por TRAMO, no por costado: el",
+             " lado espejado (z) comparte el mismo contorno xy. Cada",
+             " fichero se corta x2 (los ", 2*len(placas()),
+             " de la linea de arriba, entre los tres)."));
     echo("     Cortes: en el PICO las dos placas vecinas se reparten el rincon");
     echo("     por una linea comun (no es un chaflan de 45: el angulo es 125);");
     echo(str("     en el remate la de arriba lleva un chaflan de ", placa_chaflan,
@@ -2454,6 +2558,10 @@ module bom() {
              " mm de acrilico desde el canto de la ventana -- retiene el",
              " costado hacia DENTRO junto con las 3 placas y la escuadra",
              " de la trasera, por costado."));
+    echo(str("     DXF de corte: clip_2d -- UNA pieza generica (", clip_largo,
+             " x ", clip_fondo, " mm), se corta x", 2*len(clips()),
+             ": el mismo contorno sirve a los dos tramos del suelo y a los",
+             " dos costados."));
     echo(str("BOM: JUNTA DE ASIENTO EPDM x2 (una por anillo), ",
              t_junta_asiento, " mm -- perfil continuo en el rebaje, entre",
              " el labio y el costado. Nunca aluminio contra acrilico. No",
