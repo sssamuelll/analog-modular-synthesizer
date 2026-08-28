@@ -6,6 +6,7 @@
 //! `MAX_VOCES` es **capacidad, no conteo**. El repartidor se construye con el
 //! numero que dio el descubrimiento y no conoce ningun otro.
 
+use crate::fuerza::Fuerza;
 use heapless::Vec;
 
 pub const MAX_PARTES: usize = 16;
@@ -30,6 +31,7 @@ pub struct Asignacion {
     pub parte: u8,
     pub voz: u8,
     pub nota: u8,
+    pub fuerza: Fuerza,
     /// Que nota se tuvo que robar, si hubo que robar.
     pub robada: Option<u8>,
 }
@@ -38,6 +40,7 @@ pub struct Asignacion {
 struct EstadoVoz {
     nota: Option<u8>,
     canal: u8,
+    fuerza: Fuerza,
     /// Cuanto mas viejo, mas pequeño. Es a quien se le roba.
     sello: u32,
 }
@@ -76,6 +79,10 @@ impl Repartidor {
         self.voces.get(i as usize).and_then(|v| v.nota)
     }
 
+    pub fn fuerza(&self, i: u8) -> Option<Fuerza> {
+        self.voces.get(i as usize).map(|v| v.fuerza)
+    }
+
     /// El tramo del pool que le toca a esta parte, recortado a las voces que
     /// el instrumento realmente tiene.
     fn tramo(&self, p: &Parte) -> core::ops::Range<usize> {
@@ -84,7 +91,13 @@ impl Repartidor {
         ini..fin
     }
 
-    pub fn nota_on(&mut self, partes: &[Parte], canal: u8, nota: u8) -> Option<Asignacion> {
+    pub fn nota_on(
+        &mut self,
+        partes: &[Parte],
+        canal: u8,
+        nota: u8,
+        fuerza: Fuerza,
+    ) -> Option<Asignacion> {
         let i_parte = parte_de(partes, canal, nota)?;
         let p = partes[i_parte as usize];
         let tramo = self.tramo(&p);
@@ -110,21 +123,24 @@ impl Repartidor {
         self.voces[elegida] = EstadoVoz {
             nota: Some(nota),
             canal,
+            fuerza,
             sello: self.reloj,
         };
         Some(Asignacion {
             parte: i_parte,
             voz: elegida as u8,
             nota,
+            fuerza,
             robada,
         })
     }
 
-    pub fn nota_off(&mut self, canal: u8, nota: u8) -> Option<u8> {
+    pub fn nota_off(&mut self, canal: u8, nota: u8, fuerza: Fuerza) -> Option<u8> {
         let i = self
             .voces
             .iter()
             .position(|v| v.nota == Some(nota) && v.canal == canal)?;
+        self.voces[i].fuerza = fuerza;
         self.voces[i].nota = None;
         Some(i as u8)
     }
@@ -162,8 +178,8 @@ mod tests {
         let partes = dos_partes();
         let mut r = Repartidor::nueva(4);
 
-        let a = r.nota_on(&partes, 0, 60).unwrap(); // solapada, pero canal 0
-        let b = r.nota_on(&partes, 1, 60).unwrap(); // misma nota, canal 1
+        let a = r.nota_on(&partes, 0, 60, Fuerza::desde_midi1(100)).unwrap(); // solapada, pero canal 0
+        let b = r.nota_on(&partes, 1, 60, Fuerza::desde_midi1(100)).unwrap(); // misma nota, canal 1
         assert_eq!(a.parte, 0);
         assert_eq!(b.parte, 1);
         assert!(a.voz < 2, "la parte 0 tiene las voces 0 y 1");
@@ -173,18 +189,20 @@ mod tests {
     #[test]
     fn una_nota_fuera_de_todo_rango_no_asigna_nada() {
         assert!(Repartidor::nueva(4)
-            .nota_on(&dos_partes(), 0, 100)
+            .nota_on(&dos_partes(), 0, 100, Fuerza::desde_midi1(100))
             .is_none());
-        assert!(Repartidor::nueva(4).nota_on(&dos_partes(), 9, 60).is_none());
+        assert!(Repartidor::nueva(4)
+            .nota_on(&dos_partes(), 9, 60, Fuerza::desde_midi1(100))
+            .is_none());
     }
 
     #[test]
     fn cuando_se_acaban_las_voces_roba_la_mas_vieja() {
         let partes = dos_partes();
         let mut r = Repartidor::nueva(4);
-        let primera = r.nota_on(&partes, 0, 60).unwrap();
-        let _ = r.nota_on(&partes, 0, 62).unwrap();
-        let tercera = r.nota_on(&partes, 0, 64).unwrap();
+        let primera = r.nota_on(&partes, 0, 60, Fuerza::desde_midi1(100)).unwrap();
+        let _ = r.nota_on(&partes, 0, 62, Fuerza::desde_midi1(100)).unwrap();
+        let tercera = r.nota_on(&partes, 0, 64, Fuerza::desde_midi1(100)).unwrap();
         assert_eq!(tercera.voz, primera.voz, "roba la mas vieja");
         assert_eq!(tercera.robada, Some(60));
     }
@@ -193,9 +211,9 @@ mod tests {
     fn robar_no_cruza_de_una_parte_a_otra() {
         let partes = dos_partes();
         let mut r = Repartidor::nueva(4);
-        r.nota_on(&partes, 1, 60).unwrap();
-        r.nota_on(&partes, 1, 62).unwrap();
-        let tercera = r.nota_on(&partes, 1, 64).unwrap();
+        r.nota_on(&partes, 1, 60, Fuerza::desde_midi1(100)).unwrap();
+        r.nota_on(&partes, 1, 62, Fuerza::desde_midi1(100)).unwrap();
+        let tercera = r.nota_on(&partes, 1, 64, Fuerza::desde_midi1(100)).unwrap();
         assert!(
             (2..4).contains(&tercera.voz),
             "la parte 1 no puede tocar las voces de la 0"
@@ -208,9 +226,9 @@ mod tests {
     fn soltar_una_nota_libera_su_voz() {
         let partes = dos_partes();
         let mut r = Repartidor::nueva(4);
-        let a = r.nota_on(&partes, 0, 60).unwrap();
-        assert_eq!(r.nota_off(0, 60), Some(a.voz));
-        let b = r.nota_on(&partes, 0, 65).unwrap();
+        let a = r.nota_on(&partes, 0, 60, Fuerza::desde_midi1(100)).unwrap();
+        assert_eq!(r.nota_off(0, 60, Fuerza::desde_midi1(100)), Some(a.voz));
+        let b = r.nota_on(&partes, 0, 65, Fuerza::desde_midi1(100)).unwrap();
         assert_eq!(b.robada, None, "habia una voz libre: no hacia falta robar");
     }
 
@@ -218,9 +236,9 @@ mod tests {
     fn soltar_la_misma_nota_de_otro_canal_no_apaga_la_ajena() {
         let partes = dos_partes();
         let mut r = Repartidor::nueva(4);
-        let a = r.nota_on(&partes, 0, 60).unwrap();
-        r.nota_on(&partes, 1, 60).unwrap();
-        r.nota_off(1, 60);
+        let a = r.nota_on(&partes, 0, 60, Fuerza::desde_midi1(100)).unwrap();
+        r.nota_on(&partes, 1, 60, Fuerza::desde_midi1(100)).unwrap();
+        r.nota_off(1, 60, Fuerza::desde_midi1(100));
         assert_eq!(r.voz(a.voz), Some(60), "la del canal 0 sigue sonando");
     }
 
@@ -240,7 +258,9 @@ mod tests {
             assert_eq!(r.n_voces(), n);
             let mut vistas = Vec::<u8, MAX_VOCES>::new();
             for nota in 0..n {
-                let a = r.nota_on(&partes, 0, 60 + nota).unwrap();
+                let a = r
+                    .nota_on(&partes, 0, 60 + nota, Fuerza::desde_midi1(100))
+                    .unwrap();
                 assert!(
                     !vistas.contains(&a.voz),
                     "repitio la voz {} con n={n}",
@@ -251,7 +271,11 @@ mod tests {
                 assert!(a.voz < n);
             }
             // La siguiente ya no cabe: tiene que robar, no fallar.
-            assert!(r.nota_on(&partes, 0, 100).unwrap().robada.is_some());
+            assert!(r
+                .nota_on(&partes, 0, 100, Fuerza::desde_midi1(100))
+                .unwrap()
+                .robada
+                .is_some());
         }
     }
 
@@ -268,7 +292,11 @@ mod tests {
         }];
         let mut r = Repartidor::nueva(8);
         for nota in 0..2 {
-            assert!((6..8).contains(&r.nota_on(&partes, 0, 60 + nota).unwrap().voz));
+            assert!((6..8).contains(
+                &r.nota_on(&partes, 0, 60 + nota, Fuerza::desde_midi1(100))
+                    .unwrap()
+                    .voz
+            ));
         }
     }
 
@@ -285,9 +313,18 @@ mod tests {
         }];
         let mut r = Repartidor::nueva(4);
         for nota in 0..4 {
-            assert!(r.nota_on(&partes, 0, 60 + nota).unwrap().voz < 4);
+            assert!(
+                r.nota_on(&partes, 0, 60 + nota, Fuerza::desde_midi1(100))
+                    .unwrap()
+                    .voz
+                    < 4
+            );
         }
-        assert!(r.nota_on(&partes, 0, 70).unwrap().robada.is_some());
+        assert!(r
+            .nota_on(&partes, 0, 70, Fuerza::desde_midi1(100))
+            .unwrap()
+            .robada
+            .is_some());
     }
 
     #[test]
@@ -300,6 +337,8 @@ mod tests {
             primera_voz: 9,
             preset: 0,
         }];
-        assert!(Repartidor::nueva(4).nota_on(&partes, 0, 60).is_none());
+        assert!(Repartidor::nueva(4)
+            .nota_on(&partes, 0, 60, Fuerza::desde_midi1(100))
+            .is_none());
     }
 }

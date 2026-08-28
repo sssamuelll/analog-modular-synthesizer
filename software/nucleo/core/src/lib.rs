@@ -9,6 +9,7 @@
 pub mod atribucion;
 pub mod descriptor;
 pub mod descubrimiento;
+pub mod fuerza;
 pub mod j2;
 pub mod medidas;
 pub mod modelo;
