@@ -661,8 +661,8 @@ def _bridas(p: dict[str, float], cajas: dict[str, Caja]) -> list[tuple]:
     largo del canto: la distancia al doblez (9.75) y la distancia a la silueta
     (8.5) son cotas de ejes distintos y no compiten. Con el doblez paralelo al
     canto serian la MISMA cota y no habria agujero legal -- 9.75 pedido contra
-    9.05 disponible. Es exactamente lo que hoy deja sin anclaje a la pestana
-    de la banda del valle."""
+    9.05 disponible. Es exactamente lo que le pasa a la pestana de la banda del
+    valle, y por eso ella no rosca en el anillo sino en la PLACA del valle."""
     P = _vertices(p)
     t = p["t_costilla"]
     L = p["brida_largo"]
@@ -2900,12 +2900,22 @@ def guarda_tapa(p: dict[str, float]) -> None:
     # rebanadas que quedan fuera de ese hueco. En el plano se pisan; a lo ancho
     # no se tocan.
     #
-    # ESTO SUELTA LA TAPA DE ABAJO, y conviene que quede escrito: topaba a 63.8
-    # grados con la pestana de la banda del valle, que ocupa z = 14..17. Ese
-    # tope era real mientras el riel y el panel llegaban hasta el anillo; con
-    # la placa por medio ya no llegan, y la fila abre 180. No se ha aflojado
-    # ninguna cota -- APERTURA_MIN sigue en 60 --, se ha corregido el ancho de
-    # lo que gira, que estaba 12 mm largo y se metia dentro de la placa.
+    # LO QUE ESTE FILTRO NO SUELTA, y conviene que quede escrito porque estuvo
+    # mal escrito un dia: la pestana de la banda del valle SIGUE SIENDO EL TOPE
+    # de la fila de abajo, que abre 63.8 grados. La pestana ya no apoya contra
+    # el anillo sino ENCIMA de la placa del valle (z = 20..23), o sea dentro
+    # del mismo hueco que barren el riel y el panel: comparte su ancho y el
+    # filtro no la quita. Y esta bien que no la quite -- ese tope es real y se
+    # toca al abrir.
+    #
+    # 63.8 pasa porque APERTURA_MIN vale 60 desde el 2026-08-27, cuando Samuel
+    # solto la cota de 180 al montar la fila 1U ("con 60 vamos mas que bien",
+    # y la spec 9.3 se enmendo en la misma tanda). A 63.8 la cara queda casi
+    # vertical y se cablea con la mano dentro, que es lo que la cota protege.
+    # Lo que este filtro quita son las PLACAS y las BRIDAS traseras, que viven
+    # en las dos rebanadas de 6 mm que quedan FUERA de ese hueco: en el plano
+    # se pisan con el riel, a lo ancho no se tocan. Sin el, la placa del frente
+    # salia como tope a 0.2 grados.
     obstaculos = [c for c in obstaculos if min(c[6], zr1) - max(c[5], zr0) > 1e-9]
     for nombre, i_eje, propios, i_cara, k_ang, k_inset, k_panel in TAPAS:
         eje = cr[i_eje]

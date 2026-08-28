@@ -245,7 +245,8 @@ prof_cajeado_riel  = 2.5;
 //   asi que su largo corre A LO LARGO del canto y su vuelo lo cruza. Al reves
 //   -- doblez paralelo al canto -- la distancia al doblez y la distancia a la
 //   silueta serian la misma cota, 9.75 contra 9.05, y no hay agujero legal.
-//   Es el mismo choque que hoy deja sin anclaje a la pestana del valle.
+//   Es el mismo choque que tiene la pestana de la banda del valle, y por eso
+//   ella no rosca en el anillo sino en la placa del valle (ruling R3).
 brida_largo        = 27;
 // La lengueta de la BAHIA no va al anillo (ruling R3): la boca esta ocupada
 // por la placa de la fila 1U. Cada ala acaba t_placa antes del anillo y dobla
