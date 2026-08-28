@@ -21,13 +21,20 @@ PART = "assembly";
 // de este fichero, y con dos terminos la copia se desincroniza del original al
 // primer cambio -- que es como esta cota llego a existir sin que nadie la
 // mirara.
-// LA PUNTA A PUNTA DEL Z-RAIL, y desde el 2026-08-27 no se resta el
-// acrilico sino el CASQUILLO: con el marco por fuera es el casquillo el
-// que fija el hueco entre el marco y el riel, y el acrilico queda dentro
-// de ese hueco sin gobernar ninguna cota. GEMELA de perfil()['ancho_util']
-// en clearance_budget.py -- si las dos se separan, la rejilla de agujeros
-// del DXF se corre y lo canta agujeros_donde_toca().
-ancho_util = ancho_total - 2*L_casquillo - 2*t_costilla;
+// LO QUE SE RESTA CAMBIO TRES VECES: el acrilico y la costilla hasta el
+// 2026-08-27; el CASQUILLO y la costilla desde ese dia -- con el marco por
+// fuera era el casquillo el que fijaba el hueco entre marco y riel --; y desde
+// el 2026-08-28 SOLO EL ANILLO. El acrilico ya no aparece porque va DENTRO de
+// la ventana: la pared del anillo es la unica pieza entre este hueco y el
+// exterior.
+//
+// LA PLACA DE ANCLAJE SI ESTA DENTRO de este hueco, y por eso no se resta
+// aqui: el riel mide ancho_util - 2*t_placa y muere contra ella.
+//
+// GEMELA de perfil()['ancho_util'] en clearance_budget.py -- si las dos se
+// separan, la rejilla de agujeros del DXF se corre y lo canta
+// agujeros_donde_toca().
+ancho_util = ancho_total - 2*t_anillo;
 
 // vertices del perfil lateral (X = fondo, Y = arriba) — misma numeracion
 // que clearance_budget.perfil(): p0..p8
@@ -1619,6 +1626,10 @@ module costillas() {
 // intactos (agujeros M5 del costado y todos los DXF, sin cambios).
 // rotate([0,0,-angulo]) alinea el lado +Y local del rail con el vector de
 // cara d=(sin,cos) — verificado con la matriz Rz(-angulo) a mano.
+// LOS RIELES NO CRUZAN ancho_util ENTERO desde el 2026-08-28: en cada punta
+// hay una placa de anclaje de t_placa entre el riel y la cara interior del
+// anillo, asi que miden ancho_util - 2*t_placa. Es el largo de catalogo que se
+// compro (528.32 + hol_riel), no un corte.
 module rails() {
     cr = centros_rail();   // [inf frente, inf valle, sup valle, sup remate]
     angs = [angulo_inferior, angulo_inferior,
@@ -1627,14 +1638,14 @@ module rails() {
         translate([cr[i].x, cr[i].y, ancho_total/2])
             rotate([0, 0, -angs[i]])
                 rotate([90, 0, 0])
-                    rail_er(ancho_util);
+                    rail_er(ancho_util - 2*t_placa);
     // Fila horizontal 1U: mismo largo y la misma fijacion M4 de punta que los
     // 3U. El giro de 90 deja rail_er_alto sobre X y rail_er_fondo hacia -Y.
     for (c = centros_rail_1u())
         translate([c.x, c.y, ancho_total/2])
             rotate([0, 0, -90])
                 rotate([90, 0, 0])
-                    rail_er(ancho_util);
+                    rail_er(ancho_util - 2*t_placa);
 }
 
 // --- planchas del cuerpo colocadas en 3D --------------------------------

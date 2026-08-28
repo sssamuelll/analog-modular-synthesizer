@@ -56,8 +56,15 @@ W = 20 sube. **La cifra que vale es la de `guarda_anillo()`**, no esta.
 
 **Anchura del case:** las placas de anclaje se meten entre el riel y el anillo (§5), y
 el anillo es más grueso que el apilado viejo:
-`ancho_util = largo_riel + hol_riel + 2·t_placa = 528.62 + 8 = 536.62` y
-`ancho_total = ancho_util + 2·t_anillo = 564.62`. Hoy 550.62: **+14 mm**.
+`ancho_util = largo_riel + hol_riel + 2·t_placa = 528.62 + 12 = 540.62` y
+`ancho_total = ancho_util + 2·t_anillo = 568.62`. Hoy 550.62: **+18 mm**.
+
+> **Enmienda de la Tarea 1 (2026-08-28), ruling R1 del plan.** Este párrafo decía
+> `2·t_placa = 8` → `ancho_util 536.62`, `ancho_total 564.62`, **+14 mm**, con la placa
+> de anclaje en 4. La placa sube a **6** (ver la enmienda de §5) y el case se ensancha
+> 4 mm más. El 4 no se borra: era la cota correcta mientras nadie había mirado la
+> cabeza del tornillo del riel. Las dos cifras vivas las imprime el budget:
+> `perfil: ... ancho_util=541` y `ancho_total = 568.62`.
 
 **`t_costilla` no muere: cambia de dueño.** El inventario encontró que lo comparten los
 tres miembros de chapa (canales trasero bajo, trasero alto y bahía) en ~140 sitios.
@@ -97,9 +104,15 @@ silueta. Para que ese tornillo atravesara la cara vista con canto, la cara tendr
 medir ≥ 15.90 + 1.5 × 4.5 = **22.65**, que es exactamente por qué la banda de chapa
 medía 27. Samuel decidió la otra vía: **nada atraviesa la cara**.
 
-**Placa de anclaje del riel** (×12): pletina de aluminio de 4 mm, ~40 × 22, con un
+**Placa de anclaje del riel** (×12): pletina de aluminio de **6 mm**, ~40 × 22, con un
 agujero **cajeado por el lado del anillo** para el M4 del riel y dos pasos para M4 a
 **roscas ciegas** en la franja interior del anillo (14 de pletina → 10 de rosca útil).
+
+> **Enmienda de la Tarea 1 (2026-08-28), ruling R1 del plan.** Decía **4 mm**, y a 4 no
+> cabía: la cabeza del M4 del riel (botón ISO 7380, 2.2 de alto) tiene que quedar
+> DENTRO de la placa, porque debajo hay acrílico hasta z = 13.2 y una cabeza que asome
+> lo pinza. Con un cajeado de 8 × 2.5 quedan 3.5 de placa bajo la cabeza. `t_placa = 6`,
+> y con él `ancho_total` sube 4 mm más de lo que decía §3.
 Orden de montaje obligado, y va al README: **primero el riel a la placa** (la cabeza
 queda en el cajeado, del lado que después mira al anillo), **después la placa al
 anillo** desde dentro. Al revés no se puede apretar.
@@ -184,8 +197,8 @@ de `E_aluminio` (el anillo sigue derivándose por flecha).
   M5 en el canto inferior, radio ≥ 3 en P3. Anodizado satinado con enmascarado del punto
   de bonding. **Pregunta eliminatoria nueva al RFQ:** planitud garantizada tras vaciar el
   centro de una pletina de 14 (el riesgo que Halberg marcó).
-- **Placas de anclaje ×12 y clips ×12:** pletina de 4, corte + roscado. Piezas nuevas de
-  BOM.
+- **Placas de anclaje ×12:** pletina de **6** (era 4; ver la enmienda de §5), corte +
+  roscado. **Clips ×12:** pletina de 4, que ahí sí vale. Piezas nuevas de BOM.
 - **Miembros:** mismo taller de chapa, con bridas de extremo.
 - **Acrílico:** el costado cambia de contorno (retranqueado 14) y vuelve a cero
   taladros. La trasera no cambia aquí.

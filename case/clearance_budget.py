@@ -39,19 +39,22 @@ def leer_params() -> dict[str, float]:
     # POR QUE DEJO DE SER LITERAL: estuvo en 544.32 escrito a mano mientras el
     # comentario de al lado daba la formula, asi que ancho_util coincidia con
     # el largo del riel por casualidad aritmetica. Desde que el marco va POR
-    # FUERA, el acrilico ya no fija el hueco entre marco y riel: lo fija el
-    # casquillo que atraviesa el acrilico y se come el apriete. Con la holgura
+    # FUERA, el acrilico ya no fija el hueco entre marco y riel. Con la holgura
     # de montaje metida en ese hueco, un literal se desincroniza al primer
     # cambio y el sintoma es un riel que no entra.
+    #
+    # QUIEN FIJA EL HUECO cambio otra vez el 2026-08-28. Fue el casquillo que
+    # atravesaba el acrilico mientras la costilla era chapa; muerto el apilado,
+    # a cada lado del riel quedan la PLACA de anclaje (t_placa) y la pared del
+    # anillo (t_anillo). El acrilico sale de la cuenta: va dentro de la ventana.
     derivado = (p["largo_riel"] + p["hol_riel"]
-                + 2 * p["L_casquillo"] + 2 * p["t_costilla"])
+                + 2 * p["t_placa"] + 2 * p["t_anillo"])
     if "ancho_total" in p:
         raise SystemExit(
             f"params.scad: ancho_total volvio a ser un literal ({p['ancho_total']:.2f}). "
             f"Es DERIVADO desde el 2026-08-26: largo_riel + hol_riel + "
-            f"2*L_casquillo + 2*t_costilla "
-            f"= {derivado:.2f}. Un literal aqui vuelve a esconder si el riel "
-            f"cabe o no.")
+            f"2*t_placa + 2*t_anillo = {derivado:.2f}. Un literal aqui vuelve a "
+            f"esconder si el riel cabe o no.")
     p["ancho_total"] = derivado
     return p
 
@@ -93,14 +96,17 @@ def perfil(p: dict[str, float]) -> dict[str, float]:
         # datum del interior es y=0 y el case gana los 8 mm que ocupaba la
         # plancha de acrilico.
         "alto_interior_inferior": y_entrepiso - p["t_valle"],
-        # LA PUNTA A PUNTA DEL Z-RAIL, no el hueco entre acrilicos. Desde que
-        # el aluminio va por fuera, ancho_total suma a cada lado el casquillo
-        # que cruza el acrilico y el espesor de la costilla. Restar esas dos
-        # capas devuelve largo_riel + hol_riel: el acrilico queda por dentro y
-        # su espesor ya no fija esta cota. Cambiar el orden de las capas no
-        # puede cambiar el ancho util que se compro en el riel.
-        "ancho_util": (p["ancho_total"] - 2 * p["L_casquillo"]
-                       - 2 * p["t_costilla"]),
+        # EL HUECO ENTRE LAS CARAS INTERIORES DE LOS DOS ANILLOS, no el hueco
+        # entre acrilicos: el acrilico va DENTRO de la ventana del anillo y su
+        # espesor ya no fija esta cota. Lo unico que ancho_total suma a cada
+        # lado es la pared del anillo, asi que restarla devuelve
+        # largo_riel + hol_riel + 2*t_placa.
+        #
+        # LA PLACA DE ANCLAJE ESTA DENTRO de este hueco y por eso no se resta
+        # aqui: el riel mide ancho_util - 2*t_placa y muere contra ella. Todo
+        # lo demas que cruza el case de cara a cara -- miembros, planchas --
+        # cruza ancho_util entero.
+        "ancho_util": p["ancho_total"] - 2 * p["t_anillo"],
     }
 
 
@@ -417,18 +423,24 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
 
     angs = [p[k] for k in ANGS_CR]
     railes: list[Caja] = []
+    # LOS SEIS RIELES SE QUEDAN t_placa CORTOS POR PUNTA desde el 2026-08-28:
+    # entre la punta del riel y la cara interior del anillo va la PLACA de
+    # anclaje, que es quien lleva los dos M4 a rosca ciega. Sin este termino el
+    # riel se dibuja invadiendo la placa y solapes() no lo canta, porque la
+    # placa todavia no es un cuerpo del modelo.
     for nm, c, ang in zip(NOMBRES_CR, cr, angs):
         # el riel gira -ang para calzar a ras de la cara, y su AABB no es
         # simetrico porque la seccion no es cuadrada (ver _he_er)
         hx, hy = _he_er(p, ang)
         railes.append((nm, c[0] - hx, c[0] + hx, c[1] - hy, c[1] + hy,
-                       z0, z1))
+                       z0 + p["t_placa"], z1 - p["t_placa"]))
     miembros = _cajas_miembro(p, P, cr, z0, z1)
     bahia = _envolvente_bahia(miembros)
     hx_1u, hy_1u = _he_er(p, 90.0)
     for i, c in enumerate(_centros_rail_1u(p, P, bahia)):
         railes.append((f"fila 1U {i}", c[0] - hx_1u, c[0] + hx_1u,
-                       c[1] - hy_1u, c[1] + hy_1u, z0, z1))
+                       c[1] - hy_1u, c[1] + hy_1u,
+                       z0 + p["t_placa"], z1 - p["t_placa"]))
     railes.extend(miembros.values())
     anclajes = _anclajes_miembro(p, miembros)
 
@@ -514,9 +526,19 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # hueco corrido de 8 x 3 mm a lo largo del canto superior trasero -- por ahi
     # entra polvo y se ve.
     alto_pt = P[5][1] - y0_pt
+    # LA TRASERA SE EMPOTRA ENTRE LOS DOS ANILLOS, y desde el 2026-08-28 eso ya
+    # no es lo mismo que z0/z1: la cara interior del anillo esta en t_anillo y
+    # z0/z1 siguen en la cara interior del apilado viejo (chapa + acrilico)
+    # hasta que la Tarea 2 los mueva. El .scad ya la dibuja sobre la cota nueva
+    # (trasera_au() = ancho_util - 2*hol_piel), asi que medirla aqui con z0/z1
+    # la hacia 9 mm mas ancha que su propio DXF -- lo canto el sobre de
+    # check_dxf, que es justo para lo que existe. Esta es la GEMELA de
+    # trasera_au(), y va derivada de ancho_util para que no se separen.
+    au = perfil(p)["ancho_util"]
+    z_pt0, z_pt1 = ((ancho_total - au) / 2 + hol,
+                    (ancho_total + au) / 2 - hol)
     planchas.append(("piel_trasera", P[6][0] - p["t_piel"], P[6][0],
-                     y0_pt, y0_pt + alto_pt, z0 + hol,
-                     z1 - hol))
+                     y0_pt, y0_pt + alto_pt, z_pt0, z_pt1))
     filas += [("piel_trasera", "base", "y",
                anclajes[("trasero bajo", "base")][1], "trasero bajo"),
               ("piel_trasera", "remate", "y",
@@ -2261,6 +2283,57 @@ def guarda_meseta_es_chapa(p: dict[str, float]) -> None:
         f"no puede tener otro espesor que la chapa de la que sale")
 
 
+def guarda_rebaje(p: dict[str, float]) -> None:
+    """El acrilico cabe en el rebaje del anillo, y el anillo lo cubre entero.
+
+    ES LA PUERTA QUE SUSTITUYE A guarda_apilado() Y A guarda_canto_visto() A LA
+    VEZ. Con la costilla de chapa el acrilico iba APILADO detras (chapa, junta,
+    PMMA) y un casquillo cruzaba las tres capas; con el anillo de pletina va
+    COPLANAR dentro de su ventana, asentado en un rebaje por detras. Ya no hay
+    orden de capas que verificar ni casquillo que dimensionar: hay un rebaje
+    que tiene que ser MAS HONDO que el acrilico mas grueso del lote.
+
+    Cuatro condiciones, y la primera es la que puso el espesor en 14:
+
+      1. la profundidad del rebaje (t_anillo - rehundido) alcanza para el PMMA
+         mas grueso del lote -- 8 + 1.2 de tolerancia Schaeffer -- mas la junta
+         de asiento y media decima de aire. Con 12 de anillo el rebaje quedaba
+         a -0.2: no cabia.
+      2. la franja interior (cara_anillo - rebaje_anillo) admite un M4 a rosca
+         ciega con 1.5 D a cada lado: 3 x d_M4_paso = 13.5. Es lo que puso la
+         cara vista en 20.
+      3. el acrilico solapa el labio al menos 5 mm, para que lo retenga.
+      4. el labio tiene al menos 3 mm de cuerpo sobre el acrilico.
+
+    El canto del PMMA queda cubierto POR CONSTRUCCION: un anillo con ventana
+    rodea al acrilico en todo su perimetro. Por eso esta puerta no recorre
+    tramos -- ya no hay 'tramo con ala' que decidir."""
+    tol = 0.4 + 0.1 * p["t_cheek"]            # Schaeffer AG, 2026-08-18
+    hondo = p["t_anillo"] - p["rehundido_acrilico"]
+    pide = p["t_cheek"] + tol + p["t_junta_asiento"] + 0.5
+    assert hondo >= pide, (
+        f"el rebaje del anillo tiene {hondo:.2f} mm de fondo (t_anillo "
+        f"{p['t_anillo']:g} - rehundido {p['rehundido_acrilico']:g}) y el "
+        f"acrilico mas grueso del lote pide {pide:.2f} ({p['t_cheek']:g} + "
+        f"{tol:.1f} de tolerancia + {p['t_junta_asiento']:g} de junta + 0.5 de "
+        f"aire). Con ese anillo el PMMA no entra: sube t_anillo, no bajes la "
+        f"junta")
+    franja = p["cara_anillo"] - p["rebaje_anillo"]
+    assert franja >= 3 * p["d_M4_paso"], (
+        f"la franja interior del anillo mide {franja:.2f} (cara {p['cara_anillo']:g} "
+        f"- rebaje {p['rebaje_anillo']:g}) y una rosca ciega M4 con 1.5 D a cada "
+        f"lado pide {3 * p['d_M4_paso']:.2f}. Ahi asientan las placas de anclaje")
+    assert p["rebaje_anillo"] >= 5, (
+        f"el acrilico solo solapa el labio {p['rebaje_anillo']:g} mm; con menos de "
+        f"5 el labio no lo retiene")
+    assert p["rehundido_acrilico"] >= 3, (
+        f"el labio tiene {p['rehundido_acrilico']:g} mm de cuerpo sobre el "
+        f"acrilico; con menos de 3 el chaflan de {p['chaflan_anillo']:g} se lo come")
+    print(f"rebaje: anillo de {p['t_anillo']:g}, acrilico {p['rehundido_acrilico']:g} "
+          f"atras en un rebaje de {hondo:.1f} (pide {pide:.1f}); franja de "
+          f"{franja:.0f} para las roscas ciegas; cara vista {p['cara_anillo']:g}")
+
+
 def guarda_piso(p: dict[str, float]) -> None:
     """El riel de panel del frente tiene que librar el SUELO del case.
 
@@ -2890,6 +2963,7 @@ def main() -> int:
     canario_solapes(p)
     canario_alineacion(p)
     guarda_apilado(p)
+    guarda_rebaje(p)
     guarda_miembros(p)
     guarda_agarre(p)
     guarda_fila_1u(p)

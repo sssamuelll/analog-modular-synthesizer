@@ -36,25 +36,42 @@
 // cambio. clearance_budget.py calcula esta MISMA formula y se niega a arrancar
 // si alguien la devuelve a literal.
 // --- EL ESQUELETO DE ALUMINIO (spec 2026-08-26) ---
-// LA COSTILLA ES LA PIEZA PORTANTE. El costado de acrilico paso a piel y ya no
-// sostiene nada: no lleva un solo tornillo estructural.
+// ESTE ESPESOR ES EL DE LA CHAPA DE LOS TRES MIEMBROS TRANSVERSALES desde el
+// 2026-08-28, y ya no el de la costilla. La costilla dejo de ser chapa ese
+// mismo dia: pasa a ser un anillo FRESADO de pletina (ver t_anillo, abajo).
+// De esta chapa se siguen plegando los tres miembros -- el canal trasero bajo,
+// el canal trasero alto (cuya ala de arriba es marco_sup, la meseta) y la
+// bandeja de la bahia --; su seccion la deriva guarda_miembros() con
+// _seccion_canal(w, d, t_costilla). La banda del valle NO sale de aqui: va en
+// t_valle, que es otro espesor y otro aluminio.
 //
-// ES CHAPA PLEGADA, no plancha fresada, desde el 2026-08-26. Fue lo segundo:
-// la L iba a formarse atornillando una tira al CANTO de la costilla, y ese
-// canto mide 3 mm mientras el agujero de paso de un M3 mide 3.4 -- el agujero
-// era mas ancho que la pieza. No quedaba justo: no cabia. Plegando, el ala
-// sale del propio material y no hay junta que atornillar, ni paso de tornillo
-// que calcular, ni 78 M3 que comprar.
+// LA COSTILLA SIGUE SIENDO LA PIEZA PORTANTE, solo que ahora de pletina. El
+// costado de acrilico paso a piel y ya no sostiene nada: no lleva un solo
+// tornillo estructural.
 //
-// FUE 3 mm, y el numero no lo fijaba la rigidez sino el ancho del case: el ala
-// se mete en el hueco donde va el Z-Rail, asi que ancho_total crece
-// 2*t_costilla. A 3 el case crecia 6 mm; a 4, ocho. Con el ala doblada, 3
-// pasaba con 2.4x -- la rigidez la daba la FORMA en L, no el espesor.
+// LA HISTORIA DEL NUMERO ES LA DE LA COSTILLA CUANDO ERA CHAPA, y se conserva
+// porque es la que explica por que hoy vale 1.5 y no otra cosa:
 //
-// BAJA A 1.5 el 2026-08-28: 50 % menos chapa y 3 mm menos de ancho exterior.
-// A ese espesor la costilla llega a 144.4 MPa, asi que ya no vale el 5754 H22
-// de 130 MPa: la pieza pasa obligatoriamente a 6082-T6 (Rp0.2 250 MPa), como
-// declara el pliego. La peor flecha queda en 0.397 mm contra el techo de 0.60.
+//   FUE CHAPA PLEGADA y no plancha fresada desde el 2026-08-26. La L iba a
+//   formarse atornillando una tira al CANTO de la costilla, y ese canto tenia
+//   3 mm mientras el agujero de paso de un M3 mide 3.4 -- el agujero era mas
+//   ancho que la pieza. No quedaba justo: no cabia. Plegando, el ala salia del
+//   propio material y no habia junta que atornillar, ni paso de tornillo que
+//   calcular, ni 78 M3 que comprar.
+//
+//   FUE 3 mm, y el numero no lo fijaba la rigidez sino el ancho del case: el
+//   ala se metia en el hueco donde va el Z-Rail, asi que ancho_total crecia
+//   2*t_costilla. A 3 el case crecia 6 mm; a 4, ocho. Con el ala doblada, 3
+//   pasaba con 2.4x -- la rigidez la daba la FORMA en L, no el espesor.
+//
+//   BAJO A 1.5 el 2026-08-28: 50 % menos chapa y 3 mm menos de ancho exterior.
+//   A ese espesor la costilla llegaba a 144.4 MPa, asi que ya no valia el 5754
+//   H22 de 130 MPa: la pieza pasaba obligatoriamente a 6082-T6 (Rp0.2 250
+//   MPa), como declara el pliego. La peor flecha quedaba en 0.397 mm contra el
+//   techo de 0.60.
+//
+// El 1.5 se queda tal cual al irse la costilla a pletina: es el espesor con el
+// que ya estan calculados los tres miembros, y ninguno de ellos cambio.
 t_costilla      = 1.5;
 // Los tres miembros arrancan en 20 x 20: es la envolvente del 2020 que jubilan
 // ALTO DE LAS ALAS DE LA BAHIA, y con el su fondo util.
@@ -109,6 +126,52 @@ muesca_riel_valle  = 1;
 // costilla haya bajado a 1.5, asi que r=3 conserva su relacion 1xt.
 radio_doblez_valle = 3;
 
+// EL ANILLO DE PLETINA. La costilla dejo de ser chapa plegada el 2026-08-28:
+// Samuel vio el render de la banda de 27 y lo llamo "sandwich", y la
+// referencia que quiere es un perfil estrecho y profundo con canto. Eso no
+// sale de un pliegue de 1.5 -- no hay arista que chaflanar ni esquina sin
+// alivio. Sale de un anillo fresado de pletina. Spec 2026-08-28.
+//
+// 14 LO MANDA EL ACRILICO, no el gusto. El PMMA de 8 viene +-1.2 (Schaeffer),
+// asi que el peor caso mide 9.2; tras el labio de 3 tienen que caber 9.2 mas
+// 1 de junta de asiento mas 0.5 de aire = 10.7. Con 12 el rebaje quedaba a
+// -0.2. Lo vigila guarda_rebaje().
+t_anillo           = 14;
+// Cara vista. La foto de referencia da 12-24 ESTIMADO; el minimo lo pone la
+// franja interior donde asientan las placas de anclaje: cara - rebaje >= 3 D
+// del M4 = 13.5, o sea cara >= 19.5.
+cara_anillo        = 20;
+// Cuanto solapa el acrilico bajo el labio (en el plano). Con menos de 5 el
+// labio no lo retiene.
+rebaje_anillo      = 6;
+// Cuanto queda atras la cara del PMMA respecto a la cara vista. Rango
+// ESTIMADO 3-7 de la foto; el minimo, para que el labio tenga cuerpo.
+rehundido_acrilico = 3;
+// Chaflan de las dos aristas de la cara vista, silueta y ventana. Rango
+// ESTIMADO 1-3 de la foto. Es lo que hace que la arista brille.
+chaflan_anillo     = 1.5;
+// LA PLACA DE ANCLAJE DEL RIEL. El eje del M4 de cada riel cae a 15.90 de la
+// silueta (medido), en la zona del rebaje donde el anillo solo tiene 3 mm de
+// labio: el tornillo no puede atravesar la cara vista. Va a una placa sobre
+// la franja interior, con dos M4 a rosca ciega en el anillo. Mide 6 y no 4
+// porque la cabeza del M4 del riel (boton ISO 7380, 2.2 de alto) tiene que
+// quedar DENTRO de la placa: debajo hay acrilico hasta z = 13.2. Cajeado
+// de 8 x 2.5 y quedan 3.5 de placa bajo la cabeza. Ruling R1 del plan.
+t_placa            = 6;
+// Junta de asiento entre el labio y la cara del PMMA: nunca aluminio contra
+// acrilico. NO absorbe la tolerancia del espesor -- eso lo hace la
+// profundidad del rebaje --, solo evita el contacto y precarga.
+t_junta_asiento    = 1;
+// Holgura del acrilico dentro de su rebaje, por lado.
+hol_costado        = 0.5;
+// Diametros de BROCA de las roscas ciegas. El M4 sale de la hoja de Tiptop
+// que ya citaba d_M4_paso ("M4 Tapping To 3.3"); el M5 es el de ISO 262.
+// Las roscas se dibujan a este diametro en costilla_dorso_2d y la
+// profundidad va en el pliego: un DXF no sabe decir "a 10 mm".
+d_M4_rosca         = 3.3;
+d_M5_rosca         = 4.2;
+// Clips de retencion del acrilico hacia dentro: pletina de 4 sobre la franja.
+t_clip             = 4;
 // Ancho de la banda: lo que queda de la costilla tras vaciarle la ventana, y
 // lo que agarra la cara interior del costado. YA NO ES SUPUESTO. Estuvo en 20
 // -- lo que medía el 2020 que este marco jubila -- y el 2026-08-27, al mudarle
@@ -137,11 +200,13 @@ ala_costilla    = 27;
 // apilado desde fuera es t_costilla + t_junta + t_cheek = 13.5 mm: 16 pasa de
 // largo y no deja asomar el canto de PMMA. Lo vigila guarda_canto_visto().
 ala_doblez      = 16;
-// Radio interior del plegado de la costilla. Misma regla que el chasis de
-// acero -- r = t, plegado al aire -- pero con SU espesor, que es otro: la
-// costilla fue aluminio de 3 y ahora es 6082-T6 de 1.5; el chasis sigue siendo
-// acero de 1.5. El radio 3 queda en 2t para no agrietar el T6. SUPUESTO, lo
-// confirma el taller de plegado igual que los tres del chasis.
+// Radio interior del plegado. Conserva el nombre pero desde el 2026-08-28 es
+// el de LOS TRES MIEMBROS y no el de la costilla: la costilla es pletina
+// fresada y ya no se pliega. Misma regla que el chasis de acero -- r = t,
+// plegado al aire -- pero con SU espesor, que es otro: la costilla fue
+// aluminio de 3 y esta chapa es 6082-T6 de 1.5; el chasis sigue siendo acero
+// de 1.5. El radio 3 queda en 2t para no agrietar el T6. SUPUESTO, lo confirma
+// el taller de plegado igual que los tres del chasis.
 radio_doblez_costilla = 3;
 // P3 es el unico vertice concavo. Sus dos alas se separan en el desarrollo con
 // un RIP recto sobre la bisectriz, se cierran a tope tras plegar y se sueldan.
@@ -778,10 +843,15 @@ largo_riel      = 528.32;
 // ese hueco: el riel, su
 // holgura de montaje y las dos alas de costilla. clearance_budget.py calcula
 // esta misma formula y se niega a arrancar si vuelve a ser literal.
-// Con la inversion, ademas, cambia quien fija el hueco: el acrilico dejo de
-// fijarlo y ahora lo fija el casquillo que lo atraviesa. Por eso 2*t_cheek sale
-// de la derivacion y entra 2*L_casquillo.
-ancho_total     = largo_riel + hol_riel + 2*L_casquillo + 2*t_costilla;
+// Con la inversion cambio quien fijaba el hueco: el acrilico dejo de fijarlo y
+// paso a fijarlo el casquillo que lo atraviesa, asi que 2*t_cheek salio de la
+// derivacion y entro 2*L_casquillo. Duro dos dias.
+//
+// DESDE EL 2026-08-28 el hueco entre anillos lo fijan las PLACAS de anclaje
+// (t_placa por lado, entre el riel y la cara interior del anillo) y el propio
+// anillo. El casquillo que cruzaba el acrilico murio con el apilado: el
+// acrilico ya no esta en esta cuenta porque va DENTRO de la ventana.
+ancho_total     = largo_riel + hol_riel + 2*t_placa + 2*t_anillo;
 rail_er_alto    = 10;
 rail_er_fondo   = 23.8;
 rail_er_eje     = 14.3;
