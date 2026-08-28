@@ -176,7 +176,23 @@ d_M5_rosca         = 4.2;
 // 2.5 de ISO 262: aqui no hay hoja de fabricante que consultar.
 d_M3_rosca         = 2.5;
 // Clips de retencion del acrilico hacia dentro: pletina de 4 sobre la franja.
+// EL LABIO SOLO SUJETA HACIA FUERA. El acrilico asienta en el rebaje y el
+// labio de 3 mm lo pisa por delante, asi que una mano que TIRE no lo mueve;
+// una mano que EMPUJE el costado hacia dentro no encuentra nada -- el hueco
+// entre la cara del PMMA (z = 11) y la cara interior del anillo (z = 14) esta
+// vacio y el acrilico se sale del rebaje por detras. Estos clips son ese tope.
 t_clip             = 4;
+// Cuanto se mete el clip desde la silueta. La franja llega a 14 y la ventana
+// empieza a cara_anillo = 20, o sea que con 24 el clip pisa 4 mm de VENTANA
+// (lo que pide la spec §4) y 9.5 mm de ACRILICO, que arranca a
+// retiro_rebaje + hol_costado = 14.5. Mas fondo no compra retencion y se ve
+// mas por la ventana; menos y el clip no llega a asomar sobre el hueco.
+clip_fondo         = 24;
+// Largo del clip a lo largo de su tramo. Su M4 va centrado, o sea a 10 mm de
+// cada punta, y el agujero de paso pide 1.5 D = 6.75 de canto: 20 es el
+// primer numero redondo que lo cumple con margen. Lo comprueba
+// guarda_anclajes() contra el poligono real del clip.
+clip_largo         = 20;
 
 // --- LOS ANCLAJES DE LA CARA INTERIOR (2026-08-28) ---------------------
 // TODA rosca ciega del anillo es M4 y cae a esta distancia de la silueta. Un

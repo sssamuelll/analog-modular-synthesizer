@@ -664,7 +664,8 @@ function bridas_anillo() =
 // se roscan en los 6 mm de la placa del valle, no en el anillo (ruling R3).
 function centros_rosca_ciega() =
     concat([for (pl = placas(), c = roscas_placa(pl)) [c, d_M4_rosca]],
-           [for (c = bridas_anillo()) [c, d_M4_rosca]]);
+           [for (c = bridas_anillo()) [c, d_M4_rosca]],
+           [for (c = roscas_clips()) [c, d_M4_rosca]]);
 
 // Hasta donde llega una rosca a la profundidad de dist_rosca_ciega sin
 // acercarse a un extremo de la placa mas de 1.6 D. El margen NO es s1 - s
@@ -737,6 +738,63 @@ module placas_riel() {
             translate([0, 0, m ? ancho_total : 0])
                 mirror([0, 0, m])
                     placa_riel(pl);
+}
+
+// --- LOS CLIPS DE RETENCION DEL ACRILICO -------------------------------
+//
+// EL REBAJE SUJETA UNA SOLA CARA. El labio de 3 mm pisa el acrilico por
+// DELANTE: tirar del costado no lo mueve. Empujarlo hacia DENTRO si -- entre
+// la cara del PMMA (z = rehundido + t_cheek = 11) y la cara interior del
+// anillo (z = t_anillo = 14) hay aire, y por ahi el costado se sale del
+// rebaje. Estos clips son el TOPE de ese lado.
+//
+// SON TOPE Y NO PRECARGA, y la diferencia importa al montarlo: la precarga la
+// da la junta de asiento contra el labio, que es lo que quita el traqueteo. El
+// clip se queda a 3 mm de la cara del PMMA en nominal y a 0.8 en el peor
+// apilado de tolerancias (z = 13.2, la cuenta esta en guarda_anclajes). O sea
+// que en reposo NO toca el acrilico: solo aparece cuando alguien empuja.
+//
+// LOS CUATRO TRAMOS SIN PLACA son el frente bajo, la meseta, la trasera y el
+// suelo -- en los otros tres la placa de anclaje corre el tramo entero y ya
+// hace de tope --, y de esos cuatro SOLO EL SUELO tiene franja libre donde
+// atornillar. El por que de cada uno esta en TRAMOS_CLIP, en
+// clearance_budget.py, con los milimetros que quedan en cada sitio.
+//
+// GEMELO de _clips(), _cajas_clip() y _roscas_clips() en clearance_budget.py;
+// los cruza taladros_anillo() releyendo el DXF del dorso.
+
+// [nombre del tramo, vertice de arranque, vertice de fin, s del centro sobre
+// el tramo]. Quien decide la lista es guarda_costado() en check_dxf.py.
+function tramos_clip() = [["suelo", 6, 0, 50], ["suelo", 6, 0, 150]];
+
+// [nombre, esquinas, centro de la rosca ciega]. Misma convencion que
+// placas(): A el vertice de arranque, u a lo largo del tramo y n hacia dentro.
+function clips() =
+    let (P = pts_perfil())
+    [for (t = tramos_clip())
+        let (A = P[t[1]], B = P[t[2]], L = norm(B - A),
+             u = (B - A)/L, n = [u.y, -u.x],
+             s0 = t[3] - clip_largo/2, s1 = t[3] + clip_largo/2)
+        [str(t[0], " ", t[3]),
+         [A + u*s0, A + u*s1, A + u*s1 + n*clip_fondo, A + u*s0 + n*clip_fondo],
+         A + u*t[3] + n*dist_rosca_ciega]];
+
+function roscas_clips() = [for (c = clips()) c[2]];
+
+// El clip, en 3D: sobre la cara interior del anillo, con el paso de su M4. La
+// cabeza queda a la vista por dentro y no estorba a nadie -- aqui no hay nada
+// apoyado encima, al reves que en la placa del riel.
+module clips_costado() {
+    for (c = clips())
+        for (m = [0, 1])
+            translate([0, 0, m ? ancho_total : 0])
+                mirror([0, 0, m])
+                    translate([0, 0, t_anillo])
+                        difference() {
+                            linear_extrude(t_clip) polygon(c[1]);
+                            translate(concat(c[2], [-0.1]))
+                                cylinder(h = t_clip + 0.2, d = d_M4_paso + kerf);
+                        }
 }
 
 // El solido: cara vista en z=0, cara interior en z=t_anillo. El chaflan se
@@ -2104,6 +2162,10 @@ module assembly_aluminio() {           // idem, Z-Rails + miembros + paneles sol
     // ventana, que es exactamente lo que se busca. Si alguna se viera por
     // fuera, el anclaje estaria mal puesto.
     placas_riel();
+    // LOS CUATRO CLIPS DE RETENCION, dos por costado sobre el canto de abajo.
+    // Van en la cara INTERIOR igual que las placas y por la misma razon:
+    // desde fuera no se ve ninguno, y si se viera es que esta mal puesto.
+    clips_costado();
     // LAS DOS COSTILLAS. Entran aqui el 2026-08-27, y llegaban tarde: son la
     // pieza PORTANTE del case desde el 26 y el render llevaba un dia
     // ensenando un aparato sostenido por su propia piel.

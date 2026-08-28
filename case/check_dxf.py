@@ -401,6 +401,21 @@ def _dist_al_contorno(contorno, pt) -> float:
     return mejor
 
 
+def _dist_al_apoyo(q, pt) -> float:
+    """Distancia del punto al apoyo, y CERO si cae encima de el.
+
+    `_dist_al_contorno()` mide al canto y por eso no sirve sola aqui: un punto
+    del acrilico que este justo debajo de una placa tiene apoyo, y esa funcion
+    le devolveria hasta 13 mm de "vano". Lo que se mide es cuanto le falta al
+    punto para llegar al apoyo mas cercano, no cuanto le sobra.
+
+    `q` son los VERTICES del apoyo (poligono cerrado), no sus aristas: los
+    clips son rectangulos y las placas van giradas con su tramo y con las dos
+    esquinas hondas cortadas."""
+    aristas = [(q[i], q[(i + 1) % len(q)]) for i in range(len(q))]
+    return 0.0 if _dentro(aristas, pt) else _dist_al_contorno(aristas, pt)
+
+
 # Distancia MINIMA del centro de un taladro al canto, en diametros. La regla de
 # oficio para plastico es 2xD y lo ideal seria exigir eso, pero los tres
 # largueros del plano trasero viven entre 1.94 y 2.0 D por geometria -- ponerlo
@@ -723,6 +738,28 @@ def guarda_costado() -> list[str]:
     libre crece. Ese numero se anota en cada corrida y su techo lo sigue
     poniendo la flecha, no el gusto.
 
+    Y EL 2026-08-28 LA PUERTA MIDE DOS VECES, porque el costado no se sujeta
+    igual por las dos caras y hasta hoy solo se miraba una:
+
+      HACIA FUERA  el labio del rebaje lo pisa por TODO el perimetro de la
+                   ventana. Apoyo continuo, y el vano es la distancia al canto
+                   de la ventana. Es el barrido de siempre.
+      HACIA DENTRO no hay labio: entre la cara del PMMA y la cara interior del
+                   anillo quedan 3 mm de aire, y por ahi el acrilico se sale
+                   del rebaje. Lo unico que lo para son APOYOS PUNTUALES sobre
+                   la cara interior -- las placas de anclaje, que corren tres
+                   tramos enteros, y los clips de la Tarea 4 --, asi que el
+                   vano es la distancia al apoyo mas cercano, no a un canto.
+
+    Es la misma formula de placa circular con dos vanos distintos, y el
+    segundo es el que manda: hoy vale 95 contra 69 el de fuera.
+
+    LO QUE LA PUERTA NO SABE, y conviene no leerla de mas: el modelo de placa
+    empotrada de radio a mide la FLECHA de un parche, no si el canto del
+    acrilico se levanta del rebaje. Con 5.5 mm de solape en el labio y flechas
+    de decimas de milimetro no hay caso, pero el dia que alguien estreche
+    rebaje_anillo esa es la cuenta que falta.
+
     Lo que el esqueleto vale sigue siendo enorme contra el costado atornillado:
     el vano era 119.0 mm con cuatro anclas y la flecha 0.38.
 
@@ -756,6 +793,32 @@ def guarda_costado() -> list[str]:
     D = E_PMMA * t ** 3 / (12 * (1 - NU_PMMA ** 2))
     P = p["carga_mano"]
     flecha = P * vano ** 2 / (16 * math.pi * D)
+
+    # HACIA DENTRO el apoyo es PUNTUAL: placas y clips sobre la cara interior
+    # del anillo, en los sitios donde asoman sobre la ventana. La mano empuja
+    # hacia dentro y ahi el labio no ayuda -- pisa la cara de fuera del PMMA,
+    # que es justo la que se separa de el.
+    #
+    # LOS APOYOS PASAN SU POLIGONO REAL y no su caja. Las tres placas van
+    # giradas con su tramo (35 y 45 grados) y con una esquina honda cortada:
+    # su AABB se mete hasta 20 mm de mas en el rincon del valle y en la punta
+    # de la cara superior, o sea que el vano interior saldria optimista justo
+    # donde el acrilico esta mas suelto. Los clips son rectangulos a plomo y
+    # ahi caja y poligono son la misma cosa.
+    apoyos = ([cb._esquinas_placa(pl) for pl in cb._placas(p)]
+              + [cb._rect_xy(c) for c in cb._cajas_clip(p, 0.0, 0.0)])
+    vano_in, donde_in = 0.0, (0.0, 0.0)
+    y = min(ys)
+    while y <= max(ys):
+        x = min(xs)
+        while x <= max(xs):
+            if _dentro(contorno, (x, y)):
+                d = min(_dist_al_apoyo(q, (x, y)) for q in apoyos)
+                if d > vano_in:
+                    vano_in, donde_in = d, (x, y)
+            x += PASO_BARRIDO
+        y += PASO_BARRIDO
+    flecha_in = P * vano_in ** 2 / (16 * math.pi * D)
     sigma = (3 * P / (2 * math.pi * t ** 2)
              * ((1 + NU_PMMA) * math.log(vano / R_CONTACTO) + 1))
     # Vano que agotaria el techo de flecha, para que el mensaje diga cuanto
@@ -772,6 +835,12 @@ def guarda_costado() -> list[str]:
             f"se arregla con un anclaje: el apoyo es la VENTANA del anillo, "
             f"asi que o se ensancha cara_anillo o sube t_cheek (la flecha va "
             f"con t^3)")
+    if flecha_in > p["flecha_costado_max"]:
+        fallos.append(
+            f"costado_2d: empujado hacia DENTRO se hunde {flecha_in:.2f} mm "
+            f"(vano {vano_in:.1f} en x={donde_in[0]:.0f}, y={donde_in[1]:.0f}) "
+            f"contra {p['flecha_costado_max']:.2f}. Hacia dentro lo paran las "
+            f"placas y los clips: falta un clip cerca de ese punto")
     if sigma > cb.SIGMA_PMMA:
         fallos.append(
             f"costado_2d: {sigma:.1f} MPa bajo la mano contra el umbral de "
@@ -783,6 +852,11 @@ def guarda_costado() -> list[str]:
           f"{flecha:.2f} mm (techo {p['flecha_costado_max']:.2f}, vano maximo "
           f"{vano_max:.0f}) y trabaja a {sigma:.1f} MPa (fluencia "
           f"{cb.SIGMA_PMMA})")
+    print(f"  hacia DENTRO lo paran {len(apoyos)} apoyos puntuales "
+          f"({len(cb._placas(p))} placas + {len(cb.TRAMOS_CLIP)} clips por "
+          f"costado): vano interior {vano_in:.1f} mm (x={donde_in[0]:.0f}, "
+          f"y={donde_in[1]:.0f}) y se hunde {flecha_in:.2f} mm (techo "
+          f"{p['flecha_costado_max']:.2f}, vano maximo {vano_max:.0f})")
     return fallos
 
 
@@ -1003,6 +1077,13 @@ def cuerpos_dentro_del_anillo() -> list[str]:
                 for pl in cb._placas(p)]
     cuerpos += [(f"brida {n}", [(x, y) for x in (x0, x1) for y in (y0, y1)])
                 for n, (x0, x1, y0, y1), _, _ in cb._bridas(p, miembros)]
+    # LOS CLIPS, por lo mismo que las placas: van pegados a la silueta y su
+    # sitio a lo largo del tramo es un numero escrito a mano en TRAMOS_CLIP.
+    # Correr uno hacia una esquina para librar una brida -- que es justo lo que
+    # pide su vecindario -- lo mete en el redondeo y se sale por el borde, y
+    # solapes() no lo ve porque un cuerpo que asoma por fuera no choca con
+    # nada.
+    cuerpos += [(f"clip {n}", q) for n, q, _ in cb._clips(p)]
     # Varios largueros van A RAS del contorno por diseno (los de la cara
     # trasera tienen su centro en prof_inferior - r, o sea que su cara de atras
     # coincide con el plano trasero; los de la base apoyan en y=0). Un punto

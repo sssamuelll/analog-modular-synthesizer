@@ -709,6 +709,103 @@ def _cajas_brida(p: dict[str, float], cajas_miembro: dict[str, Caja],
     return out
 
 
+# LOS CLIPS DE RETENCION, por tramo del perfil y por s del centro sobre ese
+# tramo, medido desde el vertice de arranque. GEMELA de tramos_clip() en el
+# .scad, y quien decide la lista es guarda_costado() en check_dxf: el acrilico
+# empujado HACIA DENTRO se apoya en placas y clips, y donde no llega ninguno
+# la flecha se dispara.
+#
+# SOLO EL SUELO, y no es lo que pedia la spec (§4 parte de seis por costado:
+# dos suelo, dos trasera, uno frente, uno meseta). Los otros tres tramos NO
+# TIENEN FRANJA LIBRE donde atornillar un clip, y eso lo dice la geometria, no
+# el gusto:
+#   trasera  la piel trasera se empotra entre los dos anillos y su canto apoya
+#            en los 8 mm exteriores de la franja (x 299.41..307.41). Quedan 6
+#            de los 14, y un clip que arrancara ahi dejaria su M4 a 0.35 mm
+#            del propio canto del clip contra los 6.75 que pide el paso M4.
+#   meseta   entre el chaflan de 45 de la placa cara_sup (x 266.72) y la brida
+#            del miembro trasero alto (x 272.41) quedan 5.69 mm libres, y el
+#            clip mide clip_largo = 20.
+#   frente   el tramo entero mide alto_frontal = 19 -- menos que el clip -- y
+#            ademas la punta de la placa cara_inf ya cruza por encima.
+# Lo comprueba solapes(): meter un clip en cualquiera de los tres sale ROJO
+# contra piel_trasera, brida trasero alto o placa cara_inf.
+#
+# Y NO HACEN FALTA ALLI: con estos dos el punto peor del acrilico se queda en
+# el medio del canto trasero, a 95 mm de la placa cara_sup, y el techo del
+# vano son 149. Los numeros los imprime guarda_costado() en cada corrida.
+# DONDE CAEN LOS DOS, y ninguno de los dos numeros es a ojo. El suelo admite el
+# centro del clip entre s = 45 y s = 262 (barrido de 1 mm contra los cuerpos de
+# _cajas_solidas): por debajo de 45 el clip pisa la brida del miembro trasero
+# bajo, y por encima de 262 la punta de la placa cara_inf, que baja hasta
+# y = 11.86.
+#   s = 50   lo pide la puerta. Es el rincon de atras del acrilico -- el punto
+#            (291, 14) -- el que sale rojo sin el: 159.6 mm de vano y 0.68 de
+#            flecha. Va lo mas arrimado al rincon que deja la brida.
+#   s = 150  no mueve el numero global (ese lo fija el medio del canto trasero,
+#            a 95.5 de la placa cara_sup) pero si el canto de abajo, que es el
+#            unico que este clip puede cubrir: con el en 150 el peor punto de la
+#            banda de abajo se queda a 53 mm de un apoyo, y con el arrimado al
+#            frente -- s = 255, que es donde se probo primero -- a 89.8.
+#   (tramo, vertice de arranque, vertice de fin, s del centro)
+TRAMOS_CLIP: list[tuple[str, int, int, float]] = [("suelo", 6, 0, 50.0),
+                                                  ("suelo", 6, 0, 150.0)]
+
+
+def _clips(p: dict[str, float]
+            ) -> list[tuple[str, list[tuple[float, float]], tuple[float, float]]]:
+    """(nombre, esquinas en el plano del perfil, centro de su rosca ciega).
+
+    Pletina de t_clip apoyada en la cara INTERIOR del anillo, de clip_largo a
+    lo largo del tramo y clip_fondo hacia dentro desde la silueta, con un M4 a
+    rosca ciega centrado a lo largo y a dist_rosca_ciega de la silueta -- la
+    misma cota que placas y bridas, que es la unica que cabe en la franja.
+
+    Misma convencion que _placas(): A el vertice de arranque, u el unitario a
+    lo largo del tramo y n = (u.y, -u.x) la normal hacia dentro.
+
+    GEMELA de clips() en sam17_case.scad."""
+    P = _vertices(p)
+    out = []
+    for nombre, i0, i1, s in TRAMOS_CLIP:
+        A, B = P[i0], P[i1]
+        L = math.hypot(B[0] - A[0], B[1] - A[1])
+        u = ((B[0] - A[0]) / L, (B[1] - A[1]) / L)
+        n = (u[1], -u[0])
+        pt = lambda a, b: (A[0] + u[0] * a + n[0] * b,
+                           A[1] + u[1] * a + n[1] * b)
+        s0, s1 = s - p["clip_largo"] / 2, s + p["clip_largo"] / 2
+        f = p["clip_fondo"]
+        out.append((f"{nombre} {s:g}",
+                    [pt(s0, 0.0), pt(s1, 0.0), pt(s1, f), pt(s0, f)],
+                    pt(s, p["dist_rosca_ciega"])))
+    return out
+
+
+def _cajas_clip(p: dict[str, float], z0: float, z1: float) -> list[Caja]:
+    """Los clips como cuerpos, t_clip contra la cara interior de cada anillo.
+
+    La caja es la AABB del rectangulo, y aqui eso es exacto y no una
+    aproximacion: los cuatro tramos que admiten clip -- frente, meseta,
+    trasera y suelo -- son los cuatro que corren a plomo o a nivel. Si algun
+    dia entra un clip en un tramo inclinado habra que refinarlo con las
+    esquinas reales en _solape_riel_exacto(), igual que las placas."""
+    out: list[Caja] = []
+    for nombre, q, _ in _clips(p):
+        xs, ys = [e[0] for e in q], [e[1] for e in q]
+        for lado, (za, zb) in enumerate(((z0, z0 + p["t_clip"]),
+                                          (z1 - p["t_clip"], z1))):
+            out.append((f"clip {nombre} {lado}", min(xs), max(xs),
+                        min(ys), max(ys), za, zb))
+    return out
+
+
+def _roscas_clips(p: dict[str, float]
+                   ) -> list[tuple[str, tuple[float, float]]]:
+    """(nombre, centro) del M4 a rosca ciega de cada clip."""
+    return [(f"clip {nombre}", c) for nombre, _, c in _clips(p)]
+
+
 def _centros_rosca_ciega(p: dict[str, float]
                           ) -> list[tuple[str, tuple[float, float], float]]:
     """(nombre, centro, diametro de broca) de cada rosca ciega de la cara
@@ -716,7 +813,8 @@ def _centros_rosca_ciega(p: dict[str, float]
     taladros_anillo() releyendo costilla_dorso_2d.dxf.
 
     TODAS SON M4 y todas caen a dist_rosca_ciega de la silueta: dos por riel
-    3U, dos sobre el primer riel 1U y dos por brida de miembro trasero.
+    3U, dos sobre el primer riel 1U, dos por brida de miembro trasero y una
+    por clip de retencion.
 
     LO QUE NO ESTA AQUI, y no por olvido: las seis de la TABLA van en el CANTO
     inferior del anillo, no en el dorso, y un DXF de la cara no sabe dibujar
@@ -734,6 +832,8 @@ def _centros_rosca_ciega(p: dict[str, float]
             continue
         for i, c in enumerate(centros):
             out.append((f"brida {nm} {i}", c, p["d_M4_rosca"]))
+    for nm, c in _roscas_clips(p):
+        out.append((nm, c, p["d_M4_rosca"]))
     return out
 
 
@@ -840,6 +940,20 @@ def guarda_anclajes(p: dict[str, float]) -> None:
                 f"{minimo:.2f}. Ojo: el canto de la brida NO es la silueta -- la "
                 f"del miembro alto acaba {p['t_costilla']:g} mm mas aca, que es "
                 f"donde empieza la meseta")
+    # EL CLIP CONTRA SU PROPIO CANTO. Por construccion su M4 cae a
+    # clip_largo/2 de las puntas y a dist_rosca_ciega del canto que apoya en la
+    # silueta, o sea holgado; se comprueba igual porque los dos numeros son
+    # parametros y el dia que alguien acorte el clip para que quepa en un tramo
+    # estrecho, el agujero se sale por el canto sin que ninguna otra puerta lo
+    # vea.
+    for nm, q, c in _clips(p):
+        dist = _dist_al_poligono(q, c)
+        assert dist >= minimo, (
+            f"el M4 del clip '{nm}' en ({c[0]:.2f}, {c[1]:.2f}) cae a "
+            f"{dist:.2f} mm del canto del propio clip y se exigen "
+            f"{minimo:.2f} (1.5 D del paso M4). Es clip_largo/2 = "
+            f"{p['clip_largo'] / 2:g} contra dist_rosca_ciega = "
+            f"{p['dist_rosca_ciega']:g}: manda el menor de los dos")
     # EL M3 DE LA PESTANA de la banda del valle se rosca en la PLACA del valle
     # y no en el anillo: en la franja no cabe (su M3 cae a pv_a por debajo del
     # plano del valle y la franja solo admite hasta franja - 1.5 D de broca).
@@ -1007,6 +1121,11 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # del valle, que es donde de verdad se pelean.
     railes.extend(_cajas_placa(p, z0, z1))
     railes.extend(_cajas_brida(p, miembros, z0, z1))
+    # LOS CLIPS TAMBIEN SON CUERPOS, y en esta lista es donde se pelean: viven
+    # en la misma franja de 14 mm que las bridas y a la misma altura que el
+    # canto de la piel trasera, o sea entre las dos piezas con las que de
+    # verdad pueden chocar. Sin esto el clip se dibujaria encima de ellas.
+    railes.extend(_cajas_clip(p, z0, z1))
     anclajes = _anclajes_miembro(p, miembros)
 
     planchas: list[Caja] = []
