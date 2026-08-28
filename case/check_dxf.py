@@ -88,6 +88,24 @@ def _retiro_costado(p: dict[str, float]) -> float:
     return p["cara_anillo"] - p["rebaje_anillo"] + p["hol_costado"]
 
 
+def _sobre_dorso(cb, p: dict[str, float],
+                  g: dict[str, float]) -> tuple[float, float]:
+    """Envolvente del DXF del dorso: el contorno del rebaje MAS los circulos
+    de las roscas ciegas, que caen fuera de el.
+
+    El rebaje es la silueta retirada cara - rebaje por los cuatro lados; las
+    roscas viven entre esa linea y la silueta, o sea que asoman. Sin sumarlas
+    el sobre se queda 14 mm corto en Y y el fichero sale rojo por una razon
+    que no es un defecto."""
+    retiro = p["cara_anillo"] - p["rebaje_anillo"]
+    x0, x1 = retiro, cb.fondo(p) - retiro
+    y0, y1 = retiro, g["alto_total"] - retiro
+    for _, c, d in cb._centros_rosca_ciega(p):
+        x0, x1 = min(x0, c[0] - d / 2), max(x1, c[0] + d / 2)
+        y0, y1 = min(y0, c[1] - d / 2), max(y1, c[1] + d / 2)
+    return x1 - x0, y1 - y0
+
+
 def _sobres() -> dict[str, tuple[float, float, float, float]]:
     import clearance_budget as cb
 
@@ -106,8 +124,12 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
         # El dorso: lo que se fresa POR DETRAS -- el contorno del rebaje y los
         # centros de las roscas ciegas. Es otro DXF porque un 2D no sabe decir
         # "a 11 de profundidad": mismo caso que kondor_cajeado_2d.
-        "costilla_dorso_2d": (cb.fondo(p) - 2 * (p["cara_anillo"] - p["rebaje_anillo"]),
-                              g["alto_total"] - 2 * (p["cara_anillo"] - p["rebaje_anillo"])),
+        # SU BBOX NO ES LA DEL REBAJE desde el 2026-08-28: las roscas ciegas
+        # viven en la FRANJA, o sea POR FUERA del contorno del rebaje, asi que
+        # la envolvente del fichero es la union de los dos. Derivada, no a
+        # mano: si una rosca se sale de la franja, el sobre crece con ella y no
+        # canta nada -- de eso responden guarda_anclajes() y taladros_anillo().
+        "costilla_dorso_2d": _sobre_dorso(cb, p, g),
         # cupon: 2*margen + (n-1)*paso de la escalera, x 62 de alto. No sale
         # de _cajas_solidas porque no es una pieza del case.
         "coupon": (136.0, 62.0),
@@ -819,6 +841,91 @@ def anillo_tiene_ventana() -> list[str]:
     return []
 
 
+def anillo_tiene_rebaje() -> list[str]:
+    """El DXF del DORSO es el contorno del REBAJE, retirado lo que dice params.
+
+    HERMANA DE anillo_tiene_ventana(), y nace del mismo agujero. El dorso solo
+    lo miraba su SOBRE, con TOL = 4 mm: eso deja pasar un retiro entre 12 y 16
+    sin decir nada, y sobre todo deja pasar que alguien exporte ahi la silueta
+    entera o la ventana en vez del rebaje -- las tres son contornos parecidos y
+    ninguna caja las distingue. Un DXF valido e inservible otra vez.
+
+    Se mide la DISTANCIA, no la caja, por lo mismo que alli: offset() es
+    exacto en la distancia y no en el bbox, porque los vertices en punta se
+    resuelven a inglete. Y la silueta contra la que se mide se relee del OTRO
+    fichero, costilla_2d.dxf, que es donde vive: el dorso no la lleva dibujada
+    -- si la llevara, la fresa se comeria el contorno de la pieza."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    rebaje = _contorno_exterior("costilla_dorso_2d")
+    silueta = _contorno_exterior("costilla_2d")
+    if not rebaje or not silueta:
+        return ["costilla_dorso_2d: sin LINEs en el dorso o en la cara, no se "
+                "puede medir el retiro del rebaje"]
+    retiro = p["cara_anillo"] - p["rebaje_anillo"]
+    ds = [_dist_al_contorno(silueta, q) for a in rebaje for q in a]
+    peor = max(ds, key=lambda d: abs(d - retiro))
+    if abs(peor - retiro) > CARA_DXF_MAX:
+        return [f"costilla_dorso_2d: el contorno del rebaje corre a {peor:.2f} mm "
+                f"de la silueta en su punto peor y cara - rebaje dice "
+                f"{retiro:g}. O no es el rebaje lo que se exporto ahi, o el "
+                f"offset cambio: la franja donde asientan las placas es "
+                f"justamente esta distancia"]
+    print(f"  costilla_dorso_2d: rebaje a {min(ds):.2f}..{max(ds):.2f} mm de la "
+          f"silueta (cara {p['cara_anillo']:g} - rebaje {p['rebaje_anillo']:g} "
+          f"= {retiro:g})")
+    return []
+
+
+def taladros_anillo() -> list[str]:
+    """Las roscas ciegas del anillo estan en el dorso, donde el modelo dice,
+    con material alrededor y dentro de la FRANJA.
+
+    NADA ATRAVIESA LA CARA VISTA desde el 2026-08-28. Rieles, miembros y clips
+    se atornillan por la cara interior a roscas ciegas de 10 mm en la pletina
+    de 14. Los centros salen en costilla_dorso_2d a diametro de BROCA (M4 3.3;
+    todas son M4) y la profundidad va en el pliego.
+
+    Dos cantos mandan, y solo UNO esta en este fichero: el contorno del
+    REBAJE, porque mas adentro de el solo quedan 3 mm de labio y una rosca
+    ahi sale por la cara vista. El otro -- la silueta -- no se dibuja en el
+    dorso (dibujarla seria mandar fresar el contorno de la pieza), asi que de
+    ese lado responde guarda_anclajes() contra el perfil, y de que el rebaje
+    este donde toca responde anillo_tiene_rebaje() releyendo la otra hoja.
+    Entre las tres queda cubierto el sandwich entero."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    esperados = cb._centros_rosca_ciega(p)
+    leidos = _redondos("costilla_dorso_2d")
+    cantos = _cantos("costilla_dorso_2d")
+    if not cantos:
+        return ["costilla_dorso_2d: sin LINEs, no se pueden verificar las roscas"]
+    f: list[str] = []
+    for nm, c, d in esperados:
+        cerca = [q for q in leidos
+                 if math.hypot(q[0] - c[0], q[1] - c[1]) <= DESVIO_DXF_MAX
+                 and abs(q[2] - d) < 0.1]
+        if not cerca:
+            f.append(f"costilla_dorso_2d: falta la rosca ciega de '{nm}' "
+                     f"(broca {d:.1f}) en ({c[0]:.2f}, {c[1]:.2f})")
+            continue
+        dist = _dist_al_contorno(cantos, c)
+        if dist < BORDE_MIN_D * d:
+            f.append(f"costilla_dorso_2d: la rosca de '{nm}' cae a {dist:.2f} mm "
+                     f"del contorno del rebaje y se exige "
+                     f"{BORDE_MIN_D * d:.2f}. Fuera de la franja solo hay labio "
+                     f"de 3: por ahi la rosca sale por la cara vista")
+    if len(leidos) != len(esperados):
+        f.append(f"costilla_dorso_2d: {len(leidos)} circulos y el modelo pone "
+                 f"{len(esperados)} roscas ciegas")
+    if not f:
+        print(f"  costilla_dorso_2d: {len(esperados)} roscas ciegas en la franja, "
+              f"todas con 1.5 D al rebaje")
+    return f
+
+
 def cuerpos_dentro_del_anillo() -> list[str]:
     """Cada riel y miembro tiene que caber DENTRO de la silueta del anillo.
 
@@ -1002,9 +1109,12 @@ def guarda_zocalo() -> list[str]:
     p = cb.leer_params()
     d = p["d_M5_paso"] + p["kerf"]
     viaje = 2 * p["holgura_veta"]
-    filas_x = [p["vuelo_zocalo"] + p["t_cheek"] + p["t_costilla"] / 2,
-               (p["vuelo_zocalo"] + p["ancho_total"] - p["t_cheek"]
-                - p["t_costilla"] / 2)]
+    # AL MEDIO DEL CANTO INFERIOR DEL ANILLO desde el 2026-08-28, gemela de
+    # bandeja_base_2d(). Fue t_cheek + t_costilla/2 mientras la costilla era
+    # chapa apoyada detras del acrilico; hoy el canto ES el anillo, 14 mm de
+    # pletina, y el M5 va a una rosca ciega en su centro.
+    filas_x = [p["vuelo_zocalo"] + p["t_anillo"] / 2,
+               p["vuelo_zocalo"] + p["ancho_total"] - p["t_anillo"] / 2]
     aristas, comps = _componentes("bandeja_base_2d")
     if not aristas:
         return ["bandeja_base_2d: sin LINEs, no se puede verificar la tabla"]
@@ -1181,6 +1291,8 @@ def main() -> int:
             continue
         fallos += revisar(nombre, sobre)
     fallos += anillo_tiene_ventana()
+    fallos += anillo_tiene_rebaje()
+    fallos += taladros_anillo()
     fallos += cuerpos_dentro_del_anillo()
     fallos += tapa_valle_conectada()
     fallos += taladros_reticula()

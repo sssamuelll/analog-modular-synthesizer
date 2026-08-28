@@ -170,8 +170,65 @@ hol_costado        = 0.5;
 // profundidad va en el pliego: un DXF no sabe decir "a 10 mm".
 d_M4_rosca         = 3.3;
 d_M5_rosca         = 4.2;
+// El M3 lo trae la PESTANA de la banda del valle. Broca 2.5 de ISO 262, igual
+// que las otras dos: aqui no hay hoja de fabricante que consultar.
+d_M3_rosca         = 2.5;
 // Clips de retencion del acrilico hacia dentro: pletina de 4 sobre la franja.
 t_clip             = 4;
+
+// --- LOS ANCLAJES DE LA CARA INTERIOR (2026-08-28) ---------------------
+// TODA rosca ciega del anillo es M4 y cae a esta distancia de la silueta. Un
+// solo tornillo y una sola cota, y las dos las manda la franja de 14:
+//
+//   por dentro  la pared del rebaje pide 1.5 D de la BROCA: 8.5 deja 5.5 y el
+//               M4 pide 4.95. Un M5 pediria 6.3 y no cabe -- por eso los
+//               miembros bajan de M5 a M4 (ver la nota de bom()).
+//   por fuera   la placa y la brida apoyan con su canto EN la silueta, asi
+//               que su propio agujero de paso (4.5) necesita 1.5 D = 6.75 de
+//               ese canto. Con 7 la brida del miembro alto se quedaba en 5.5,
+//               porque acaba t_costilla por debajo del canto (la meseta ocupa
+//               ese milimetro y medio). 8.5 da 7.0 a la peor de todas.
+//
+// Entre 6.75 y 9.05 hay sitio; 8.5 es el punto donde las dos reglas tienen el
+// mismo margen. Lo comprueba guarda_anclajes() rosca a rosca.
+dist_rosca_ciega   = 8.5;
+// LA PLACA DEL RIEL 3U. 28 a lo largo del tramo (dos M4 a +-7 del eje, con
+// 1.5 D de canto a cada lado: 7 + 1.5*4.5 = 13.75 <= 14) x 26 desde la
+// silueta hacia dentro (el cajeado del riel cae a 15.90 y su borde a 19.90:
+// quedan 6.1 de placa por detras).
+placa_largo        = 28;
+placa_fondo        = 26;
+// Las DOS esquinas hondas van cortadas a 45. No es estetica: la placa de la
+// cara inferior choca de esquina con la pestana de la banda del valle, y la
+// de la cara superior con la placa de la fila 1U. Las dos son esquinas de
+// pletina fresada -- cortarlas es gratis --, y mover la placa a lo largo del
+// tramo no sirve: el cajeado del riel se sale por el otro lado. Lo adjudica
+// solapes() con la geometria REAL de la placa girada, no con su caja.
+placa_chaflan      = 12;
+// LA PLACA DE LA FILA 1U es UNA para los dos rieles (ruling R2): 50 cubren el
+// par entero con sus dos cajeados. El fondo NO es 26 -- ver placa_1u_fondo.
+placa_1u_largo     = 50;
+// Cajeado de la cabeza del M4 del riel, por el lado del anillo. Boton ISO
+// 7380 M4: cabeza de 7.6 de diametro y 2.2 de alto.
+d_cajeado_riel     = 8;
+prof_cajeado_riel  = 2.5;
+// LA BRIDA DE EXTREMO de los miembros de chapa. Sale del mismo blank, doblada
+// 90 en cada punta con relieve en las dos esquinas, y apoya plana contra la
+// franja del anillo. 27 = 6 x d_M4_paso es lo minimo que reparte sus dos M4:
+// el de dentro a SB + 2t + d/2 = 9.75 del propio doblez (regla de chapa), el
+// de fuera a 1.5 D del canto libre, y 10.5 entre ellos.
+//   OJO AL EJE: la brida se dobla sobre una linea PERPENDICULAR a la silueta,
+//   asi que su largo corre A LO LARGO del canto y su vuelo lo cruza. Al reves
+//   -- doblez paralelo al canto -- la distancia al doblez y la distancia a la
+//   silueta serian la misma cota, 9.75 contra 9.05, y no hay agujero legal.
+//   Es el mismo choque que hoy deja sin anclaje a la pestana del valle.
+brida_largo        = 27;
+brida_vuelo        = 22;
+// La lengueta de la BAHIA no va al anillo (ruling R3): la boca esta ocupada
+// por la placa de la fila 1U. Cada ala acaba t_placa antes del anillo y dobla
+// una lengueta que apoya en la cara interior de esa placa, con un M4 roscado
+// EN LA PLACA. Su ancho es 3 D del M4 -- 1.5 a cada lado del agujero.
+brida_bahia_vuelo  = 22;
 // LO QUE ESTE BLOQUE SUSTITUYE, y va escrito porque cada cota tenia su cuenta:
 // fueron ala_costilla = 27 (la banda de chapa, derivada del M4 de la fila 1U a
 // 1.5 D del canto de la ventana), ala_doblez = 16 (el ala que tapaba el canto

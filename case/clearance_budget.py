@@ -354,6 +354,318 @@ def _centros_rail_1u(p: dict[str, float], P: list[tuple[float, float]],
     return [(xc - sep / 2, y), (xc + sep / 2, y)]
 
 
+# --- LOS ANCLAJES DE LA CARA INTERIOR (2026-08-28) ---------------------
+#
+# NADA ATRAVIESA LA CARA VISTA. El eje del M4 de cada riel cae a 15.90 de la
+# silueta, o sea dentro del rebaje, donde el anillo solo tiene 3 mm de labio:
+# un tornillo ahi sale por fuera. Asi que el riel muere contra una PLACA de
+# t_placa apoyada en la franja interior, y es la placa la que va al anillo con
+# dos M4 a rosca ciega. Los miembros hacen lo mismo con una BRIDA doblada de
+# su propio blank.
+#
+# Cuanto se corre cada placa a lo largo de su tramo respecto al pie del riel.
+# CERO salvo donde solapes() lo obligo, y las dos excepciones llevan su numero
+# porque son ADJUDICACIONES y no gustos:
+CORRIMIENTO_PLACA = {
+    # La placa del valle de ABAJO se baja 4 mm por su cara. Con el chaflan
+    # sola no basta: su esquina honda se metia 2.7 mm dentro de la PESTANA de
+    # la banda del valle, que cuelga 21 mm justo en ese rincon. Bajarla no le
+    # cuesta nada al cajeado del riel -- queda a 10 mm del canto -- y la
+    # pestana no se toca.
+    "cara_inf valle": -4.0,
+    # La esquina honda de la placa del valle de arriba entraba 4.7 mm dentro
+    # de la placa de la fila 1U, que llega a x=160.56 sobre el mismo rincon
+    # P3. Se sube 6 mm por su cara -- la placa, nunca la brida ni la pestana
+    # -- y el cajeado del riel se queda a 8 mm del canto de la placa, con 4 de
+    # material por detras de su borde.
+    "cara_sup valle": 6.0,
+    # La placa de la fila 1U se corre 2 mm hacia el fondo del valle para
+    # librar la PESTANA de la banda, que ocupa los ultimos 10.2 mm antes de la
+    # boca de la bahia. Sus dos cajeados siguen dentro, a 8.2 y 6.2 del canto.
+    "fila 1U": 2.0,
+}
+
+
+def _y_brida_bahia(p: dict[str, float]) -> float:
+    """Y del M4 con el que cada ala de la bahia se cuelga de la placa 1U.
+
+    LA BOCA DE LA BAHIA ESTA LLENA, y por eso la bahia no ancla al anillo
+    (ruling R3): la franja del valle la ocupa entera la placa de la fila 1U, y
+    encima de esa placa los dos Z-Rails 1U calzan A RAS de las dos alas
+    (guarda_fila_1u exige justamente esa igualdad: boca = separacion + un alto
+    de riel). No queda ni un milimetro entre ala y riel.
+
+    Lo unico libre es POR DEBAJO del riel, que baja rail_er_fondo/2 desde su
+    eje. La lengueta se para 1 mm antes y su M4 va 1.5 D mas abajo."""
+    P = _vertices(p)
+    bahia = _envolvente_bahia(_cajas_miembro(p, P, _centros_rail(p, P), 0.0, 0.0))
+    c1u = _centros_rail_1u(p, P, bahia)[0]
+    return c1u[1] - _he_er(p, 90.0)[1] - 1.0 - 1.5 * p["d_M4_paso"]
+
+
+def _placa_1u_fondo(p: dict[str, float]) -> float:
+    """La placa de la fila 1U es MAS HONDA que las de 3U, y no por gusto.
+
+    Las de 3U miden placa_fondo porque solo tienen que llegar al cajeado del
+    riel (15.90 + el radio del cajeado). Esta ademas RECIBE LAS DOS LENGUETAS
+    de la bahia, y esas tienen que caer por debajo del riel 1U: el fondo sale
+    de donde cae su M4 mas 1.5 D de canto. Sube de 26 a 42.30, y eso es un
+    desvio consciente del R2 del plan -- que dio 26 dimensionando solo los
+    cajeados, antes de que el R3 le colgara la bahia encima."""
+    return _vertices(p)[3][1] - (_y_brida_bahia(p) - 1.5 * p["d_M4_paso"])
+
+
+def _placas(p: dict[str, float]) -> list[tuple]:
+    """(nombre, pie, u, n, largo, fondo, chaflan) de cada placa de anclaje.
+
+    Una placa por riel 3U sobre su tramo; UNA para los dos 1U sobre el valle
+    (plan, R2). El pie es donde la placa toca la silueta, u el unitario a lo
+    largo del tramo y n la normal hacia dentro -- la misma convencion de
+    _centros_rail() (n = (d.y, -d.x)). Las roscas van a +-largo/4 a lo largo y
+    a dist_rosca_ciega hacia dentro.
+
+    GEMELA de placas_riel() en sam17_case.scad."""
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    tramo_de = {0: (P[1], P[2]), 1: (P[1], P[2]), 2: (P[3], P[4]), 3: (P[3], P[4])}
+    out = []
+    for i, (nm, c) in enumerate(zip(NOMBRES_CR, cr)):
+        a, b = tramo_de[i]
+        L = math.hypot(b[0] - a[0], b[1] - a[1])
+        u = ((b[0] - a[0]) / L, (b[1] - a[1]) / L)
+        n = (u[1], -u[0])
+        s = ((c[0] - a[0]) * u[0] + (c[1] - a[1]) * u[1]
+             + CORRIMIENTO_PLACA.get(nm, 0.0))
+        out.append((nm, (a[0] + u[0] * s, a[1] + u[1] * s), u, n,
+                    p["placa_largo"], p["placa_fondo"], p["placa_chaflan"]))
+    bahia = _envolvente_bahia(_cajas_miembro(p, P, cr, 0.0, 0.0))
+    xc = (bahia[1] + bahia[2]) / 2 + CORRIMIENTO_PLACA.get("fila 1U", 0.0)
+    # sin chaflan: esta placa no va girada, y sus dos esquinas hondas no
+    # chocan con nada (la de delante muere antes de la pestana, la de detras
+    # se aparta subiendo la placa del valle de arriba).
+    out.append(("fila 1U", (xc, P[3][1]), (1.0, 0.0), (0.0, -1.0),
+                p["placa_1u_largo"], _placa_1u_fondo(p), 0.0))
+    return out
+
+
+def _esses_placa(p: dict[str, float], pl: tuple) -> tuple[float, float]:
+    """A que distancia del centro de la placa, a lo largo del tramo, van sus
+    dos M4 ciegos. Un cuarto del largo a cada lado: deja 1.5 D de canto y
+    reparte el apriete. Salvo la 1U.
+
+    LA PLACA 1U NO PUEDE REPARTIRLOS ASI, y la culpa es de radio_valle = 54:
+    la franja del valle deja de ser recta unos 20 mm antes de P3 y la curva se
+    lleva la mitad de su fondo util. Medido sobre costilla_2d.dxf a la altura
+    de la fila: a x=128 quedan 8.51 mm y a x=148 ya son 12.45, o sea que la
+    broca de una rosca puesta ahi sale por la pared del rebaje. Los dos M4 se
+    quedan en el tramo recto, a la separacion MINIMA entre tornillos (2 D);
+    la mitad trasera de la placa la sujetan sus propios cajeados contra el
+    riel. Esto lo caza taladros_anillo() releyendo el DXF y no esta puerta:
+    _distancia_a_silueta() mide contra el poligono SIN redondear."""
+    largo = pl[4]
+    if pl[0] != "fila 1U":
+        return (-largo / 4, largo / 4)
+    return (-largo / 4, -largo / 4 + 2 * p["d_M4_paso"])
+
+
+def _esquinas_placa(pl: tuple) -> list[tuple[float, float]]:
+    """Las esquinas REALES de la placa ya girada con su tramo, con las dos
+    esquinas hondas cortadas a 45.
+
+    Hacen falta de verdad y no vale su caja: una placa de 28 x 26 girada 35 o
+    45 grados tiene una AABB de 37 x 38, o sea casi el doble de area, y en el
+    rincon del valle -- donde viven cinco cuerpos en 60 mm -- esa caja acusa
+    de chocar a piezas que no se tocan. Es la misma cuenta que _esquinas_er()
+    hace con los rieles inclinados y por el mismo motivo."""
+    _, pie, u, n, largo, fondo, ch = pl
+    h = largo / 2
+    ab = [(-h, 0.0), (h, 0.0)]
+    ab += ([(h, fondo - ch), (h - ch, fondo), (-h + ch, fondo), (-h, fondo - ch)]
+           if ch > 0 else [(h, fondo), (-h, fondo)])
+    return [(pie[0] + u[0] * a + n[0] * b, pie[1] + u[1] * a + n[1] * b)
+            for a, b in ab]
+
+
+def _cajas_placa(p: dict[str, float], z0: float, z1: float) -> list[Caja]:
+    """Placa de placa_largo (a lo largo) x placa_fondo (desde la silueta hacia
+    dentro) x t_placa, pegada a la cara interior del anillo en cada extremo
+    del riel. La de la fila 1U mide placa_1u_largo y es mas honda. Es tambien
+    la que retiene el acrilico hacia dentro donde hay riel.
+
+    La caja es la AABB de la placa girada; el solape fino lo resuelve
+    _solape_riel_exacto() con las esquinas reales."""
+    out: list[Caja] = []
+    for pl in _placas(p):
+        q = _esquinas_placa(pl)
+        xs, ys = [e[0] for e in q], [e[1] for e in q]
+        for za, zb in ((z0, z0 + p["t_placa"]), (z1 - p["t_placa"], z1)):
+            out.append((f"placa {pl[0]}", min(xs), max(xs), min(ys), max(ys),
+                        za, zb))
+    return out
+
+
+def _bridas(p: dict[str, float], cajas: dict[str, Caja]) -> list[tuple]:
+    """(nombre, rectangulo en el plano del perfil, centros M4, a que ancla).
+
+    Lengueta de chapa de t_costilla doblada del extremo de cada miembro,
+    plana contra la cara que la recibe, con relieve en las dos esquinas para
+    que el doblez no muerda el ala vecina.
+
+    LOS DOS TRASEROS doblan del ALMA y apoyan en la franja del anillo, dentro
+    de sus 14 mm. La BAHIA (ruling R3) no: su boca esta ocupada por la placa
+    de la fila 1U, asi que sus alas acaban t_placa antes del anillo y cada una
+    dobla su lengueta contra esa placa, con un M4 roscado EN LA PLACA -- ese
+    no entra en _centros_rosca_ciega().
+
+    EL EJE DEL DOBLEZ ES LO QUE HACE LEGAL EL AGUJERO. La brida se dobla sobre
+    una linea PERPENDICULAR al canto del anillo, asi que su largo corre a lo
+    largo del canto: la distancia al doblez (9.75) y la distancia a la silueta
+    (8.5) son cotas de ejes distintos y no compiten. Con el doblez paralelo al
+    canto serian la MISMA cota y no habria agujero legal -- 9.75 pedido contra
+    9.05 disponible. Es exactamente lo que hoy deja sin anclaje a la pestana
+    de la banda del valle."""
+    P = _vertices(p)
+    t = p["t_costilla"]
+    L, V = p["brida_largo"], p["brida_vuelo"]
+    # Regla de chapa: el agujero no entra en la zona del doblez. Setback mas
+    # 2t mas el radio del agujero, la misma cuenta que pv_a() hace en la
+    # pestana del valle.
+    raiz = p["radio_doblez_costilla"] + t + 2 * t + p["d_M4_paso"] / 2
+    libre = 1.5 * p["d_M4_paso"]
+    bajo, alto = cajas["trasero bajo"], cajas["trasero alto"]
+    x_alma = bajo[2]                        # cara trasera del alma, comun
+    xs = (x_alma - raiz, x_alma - L + libre)
+    out = [
+        # el canto INFERIOR del anillo (y = 0) es el que recibe esta brida
+        ("trasero bajo", (x_alma - L, x_alma, bajo[3], bajo[4]),
+         [(x, P[0][1] + p["dist_rosca_ciega"]) for x in xs], "anillo"),
+        # y la MESETA (y = P5.y) la de arriba. La brida acaba t_costilla por
+        # debajo de ese canto -- ahi va la meseta, que es el otro ala -- y por
+        # eso dist_rosca_ciega vale 8.5 y no 7: es esta la que se quedaba sin
+        # canto libre.
+        ("trasero alto", (x_alma - L, x_alma, alto[3], alto[4]),
+         [(x, P[5][1] - p["dist_rosca_ciega"]) for x in xs], "anillo"),
+    ]
+    y_b = _y_brida_bahia(p)
+    for nm, signo in (("bahia ala delantera", +1), ("bahia ala trasera", -1)):
+        ala = cajas[nm]
+        raiz_x = ala[1] if signo > 0 else ala[2]
+        x0, x1 = sorted((raiz_x, raiz_x + signo * p["brida_bahia_vuelo"]))
+        out.append((nm, (x0, x1, y_b - libre, y_b + libre),
+                    [(raiz_x + signo * raiz, y_b)], "placa"))
+    return out
+
+
+def _cajas_brida(p: dict[str, float], cajas_miembro: dict[str, Caja],
+                  z0: float, z1: float) -> list[Caja]:
+    """Las bridas como cuerpos: t_costilla de espesor contra la cara que las
+    recibe -- el anillo en las dos traseras, la placa 1U en las de la bahia."""
+    out: list[Caja] = []
+    t = p["t_costilla"]
+    for nm, (x0, x1, y0, y1), _, ancla in _bridas(p, cajas_miembro):
+        base = z0 + (p["t_placa"] if ancla == "placa" else 0.0)
+        techo = z1 - (p["t_placa"] if ancla == "placa" else 0.0)
+        for lado, (za, zb) in enumerate(((base, base + t), (techo - t, techo))):
+            out.append((f"brida {nm} {lado}", x0, x1, y0, y1, za, zb))
+    return out
+
+
+def _centros_rosca_ciega(p: dict[str, float]
+                          ) -> list[tuple[str, tuple[float, float], float]]:
+    """(nombre, centro, diametro de broca) de cada rosca ciega de la cara
+    interior del anillo. GEMELA de centros_rosca_ciega() en el .scad; las cruza
+    taladros_anillo() releyendo costilla_dorso_2d.dxf.
+
+    TODAS SON M4 y todas caen a dist_rosca_ciega de la silueta. Las de la
+    tabla NO estan aqui: van en el CANTO inferior del anillo, no en el dorso,
+    y por eso no salen en ningun DXF (van en el pliego, Tarea 5).
+
+    LO QUE FALTA Y POR QUE, escrito aqui y no escondido: la PESTANA de la
+    banda del valle no tiene rosca. Su M3 cae a pv_a() = 13.7 mm por debajo
+    del plano del valle -- setback 6 + 2t + d/2, y esa cuenta no se puede
+    bajar con t_valle = 3 --, y la franja del anillo solo admite hasta 10.25.
+    O sea que la broca saldria por la pared del rebaje. No es un olvido: es un
+    choque entre el plegado de la banda y el ancho de la cara del anillo, y
+    arreglarlo pide tocar t_valle o cara_anillo, que son decisiones de Samuel.
+    Hasta entonces la banda sigue como estaba, sin contraparte."""
+    out = []
+    for pl in _placas(p):
+        nm, pie, u, n, largo, _, _ = pl
+        d = p["dist_rosca_ciega"]
+        for s in _esses_placa(p, pl):
+            out.append((f"placa {nm} {s:+.0f}",
+                        (pie[0] + u[0] * s + n[0] * d,
+                         pie[1] + u[1] * s + n[1] * d),
+                        p["d_M4_rosca"]))
+    P = _vertices(p)
+    cajas = _cajas_miembro(p, P, _centros_rail(p, P), 0.0, 0.0)
+    for nm, _, centros, ancla in _bridas(p, cajas):
+        if ancla != "anillo":
+            continue
+        for i, c in enumerate(centros):
+            out.append((f"brida {nm} {i}", c, p["d_M4_rosca"]))
+    return out
+
+
+def _distancia_a_silueta(P: list[tuple[float, float]],
+                          c: tuple[float, float]) -> float:
+    """Distancia del punto al tramo mas cercano de la silueta SIN redondear.
+
+    Es la cota que decide si una rosca ciega cae en la franja. Se mide contra
+    el poligono de pts_perfil() y no contra el DXF a proposito: aqui manda el
+    modelo, y el DXF lo cruza taladros_anillo() en check_dxf.py."""
+    def d_seg(a, b):
+        ax, ay = a; bx, by = b; px, py = c
+        dx, dy = bx - ax, by - ay
+        L2 = dx * dx + dy * dy
+        t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / L2)) if L2 else 0.0
+        return math.hypot(px - (ax + t * dx), py - (ay + t * dy))
+    return min(d_seg(P[i], P[(i + 1) % len(P)]) for i in range(len(P)))
+
+
+def guarda_anclajes(p: dict[str, float]) -> None:
+    """Cada anclaje asienta en la franja del anillo, y la cabeza del M4 del
+    riel cabe dentro de su placa sin tocar el acrilico.
+
+    La cabeza va del lado del anillo (el tornillo entra en el riel por su eje)
+    y debajo de la placa, a z < t_anillo, hay acrilico hasta rehundido +
+    t_cheek + tolerancia + junta. Por eso la placa mide 6 y no 4 (plan, R1).
+
+    Y LA FRANJA MANDA DOS VECES: por fuera la silueta, por dentro la pared del
+    rebaje. Una rosca que se acerque a la primera raja el canto vista al
+    apretar; una que se acerque a la segunda sale por el rebaje, donde solo
+    quedan 3 mm de labio. 1.5 D de broca a cada una."""
+    cabeza = 2.2                                   # ISO 7380 boton M4
+    tol = 0.4 + 0.1 * p["t_cheek"]
+    techo_pmma = p["rehundido_acrilico"] + p["t_cheek"] + tol + p["t_junta_asiento"]
+    assert techo_pmma <= p["t_anillo"], (
+        f"el acrilico llega a z={techo_pmma:.2f} y la cara interior del anillo "
+        f"esta en {p['t_anillo']:g}: el PMMA asoma por detras del anillo")
+    assert p["t_placa"] - (cabeza + 0.3) >= 3.0, (
+        f"la placa de {p['t_placa']:g} con un cajeado de {cabeza + 0.3:.1f} para "
+        f"la cabeza deja {p['t_placa'] - cabeza - 0.3:.1f} mm bajo ella; hacen "
+        f"falta 3. Ruling R1: 6 mm")
+    P = _vertices(p)
+    franja = p["cara_anillo"] - p["rebaje_anillo"]
+    centros = _centros_rosca_ciega(p)
+    for nm, c, d in centros:
+        dist = _distancia_a_silueta(P, c)
+        assert 1.5 * d <= dist <= franja - 1.5 * d, (
+            f"la rosca ciega '{nm}' cae a {dist:.2f} de la silueta; la franja va "
+            f"de {1.5 * d:.2f} a {franja - 1.5 * d:.2f}")
+    # el agujero de PASO de la pieza que apoya tiene su propia regla, y es mas
+    # exigente que la de la broca: 1.5 D de 4.5 contra 1.5 D de 3.3
+    canto = p["dist_rosca_ciega"] - 1.5 * p["d_M4_paso"]
+    assert canto >= 0, (
+        f"la rosca va a {p['dist_rosca_ciega']:g} de la silueta y el agujero de "
+        f"paso M4 de la placa pide {1.5 * p['d_M4_paso']:.2f} de canto: la placa "
+        f"apoya CON su canto en la silueta, no hay mas material que ese")
+    print(f"anclajes: {len(centros)} roscas ciegas M4 por anillo en la franja "
+          f"de {franja:g} (a {p['dist_rosca_ciega']:g} de la silueta, {canto:.2f} "
+          f"de sobra de canto); placas de {p['t_placa']:g} con la cabeza dentro "
+          f"(PMMA hasta z={techo_pmma:.2f})")
+
+
 def _anclajes_miembro(p: dict[str, float], cajas: dict[str, Caja]
                        ) -> dict[tuple[str, str], tuple[float, float]]:
     """Lineas de tornillo sobre las caras reales de los tres miembros.
@@ -458,6 +770,17 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
         railes.append((nm, c[0] - hx, c[0] + hx, c[1] - hy, c[1] + hy,
                        z0 + p["t_placa"], z1 - p["t_placa"]))
     miembros = _cajas_miembro(p, P, cr, z0, z1)
+    # LAS DOS ALAS DE LA BAHIA SE QUEDAN t_placa CORTAS POR PUNTA (ruling R3):
+    # en su boca la franja del anillo la ocupa la placa de la fila 1U, y las
+    # alas la tienen justo delante. Mueren contra ella y cada una dobla su
+    # lengueta encima.
+    #   EL SUELO NO. Corre 62 mm por debajo del valle, o sea muy lejos de la
+    #   franja y de la placa, y ahi no hay nada entre el y el anillo: cruza
+    #   ancho_util entero, que ademas es lo que mantiene su reticula alineada
+    #   con la de los otros dos miembros (la mira taladros_reticula()).
+    for nm in ("bahia ala delantera", "bahia ala trasera"):
+        c = miembros[nm]
+        miembros[nm] = c[:5] + (z0 + p["t_placa"], z1 - p["t_placa"])
     bahia = _envolvente_bahia(miembros)
     hx_1u, hy_1u = _he_er(p, 90.0)
     for i, c in enumerate(_centros_rail_1u(p, P, bahia)):
@@ -465,6 +788,12 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
                        c[1] - hy_1u, c[1] + hy_1u,
                        z0 + p["t_placa"], z1 - p["t_placa"]))
     railes.extend(miembros.values())
+    # LAS PLACAS Y LAS BRIDAS SON CUERPOS y van en `railes`, que es la lista
+    # que solapes() cruza contra todo. Sin esto son dibujo: el modelo las
+    # ensena en el render y ninguna puerta comprueba que quepan en el rincon
+    # del valle, que es donde de verdad se pelean.
+    railes.extend(_cajas_placa(p, z0, z1))
+    railes.extend(_cajas_brida(p, miembros, z0, z1))
     anclajes = _anclajes_miembro(p, miembros)
 
     planchas: list[Caja] = []
@@ -599,24 +928,35 @@ def _rect_xy(c: Caja) -> list[tuple[float, float]]:
 
 
 def _solape_riel_exacto(p: dict[str, float], a: Caja, b: Caja) -> bool:
-    """Refina el AABB de un Z-Rail inclinado contra la geometria real.
+    """Refina contra la geometria real los cuerpos que van GIRADOS con su cara.
 
-    Solo refina el par Z-Rail inclinado/pestana que lo necesita; todos los demas
-    pares conservan el criterio AABB anterior. La muesca usa la misma cota que
-    tapa_valle_2d().
-    """
+    Un rectangulo girado 35 o 45 grados tiene una caja de casi el doble de
+    area, y en el rincon del valle -- donde en 60 mm conviven dos rieles, la
+    banda, su pestana, un ala de la bahia y dos placas -- esa caja acusa de
+    chocar a piezas que ni se rozan. Se refina lo que va girado: los Z-Rails
+    inclinados (que ya se refinaban contra la pestana) y, desde el 2026-08-28,
+    LAS PLACAS DE ANCLAJE, que son rectangulos girados con su tramo y ademas
+    con las dos esquinas hondas cortadas.
+
+    No es aflojar la puerta: es medir la pieza en vez de su envolvente. Lo que
+    se afloja es la caja, no el criterio -- un solape real sigue en rojo.
+    La muesca de la pestana usa la misma cota que tapa_valle_2d()."""
     inclinados = set(NOMBRES_CR)
     hay_inclinado = a[0] in inclinados or b[0] in inclinados
     hay_pestana = (a[0].startswith("pestana valle")
                    or b[0].startswith("pestana valle"))
-    if not (hay_inclinado and hay_pestana):
+    hay_placa = a[0].startswith("placa ") or b[0].startswith("placa ")
+    if not ((hay_inclinado and hay_pestana) or hay_placa):
         return True
     P = _vertices(p)
     cr = _centros_rail(p, P)
     datos = {nm: (c, p[ang])
              for nm, c, ang in zip(NOMBRES_CR, cr, ANGS_CR)}
+    placas = {f"placa {pl[0]}": pl for pl in _placas(p)}
 
     def poligonos(c: Caja) -> list[list[tuple[float, float]]]:
+        if c[0] in placas:
+            return [_esquinas_placa(placas[c[0]])]
         if c[0] in datos:
             centro, ang = datos[c[0]]
             q = _esquinas_er(p, centro, ang)
@@ -840,6 +1180,22 @@ def canario_alineacion(p: dict[str, float]) -> None:
             f"en la centerline de '{rail_decl}' sale a {d0:+.3f} mm")
 
 
+def _misma_chapa(na: str, nb: str) -> bool:
+    """Una brida y el miembro del que se dobla son LA MISMA pieza.
+
+    Mismo caso que suelo y alas de la bahia: se cruzan en el doblez porque
+    salen del mismo blank. Lo que si tiene que seguir mirandose es la brida
+    contra TODO lo demas -- ahi esta el valor -- y contra la brida de enfrente.
+    """
+    for x, y in ((na, nb), (nb, na)):
+        if not x.startswith("brida "):
+            continue
+        duena = x[len("brida "):].rsplit(" ", 1)[0]
+        if y == duena or (duena in CAJAS_BAHIA and y in CAJAS_BAHIA):
+            return True
+    return False
+
+
 def solapes(p: dict[str, float]) -> list[str]:
     """9 railes + 4 planchas: ningun par se pisa en 3D, salvo los
     TOLERADOS de arriba (impresos igual, nunca silenciados) — vacio ahora
@@ -855,6 +1211,8 @@ def solapes(p: dict[str, float]) -> list[str]:
             # Suelo y alas son caras de UNA MISMA bandeja y se intersectan en
             # los dos dobleces. No son dos piezas chocando entre si.
             if a[0] in CAJAS_BAHIA and b[0] in CAJAS_BAHIA:
+                continue
+            if _misma_chapa(a[0], b[0]):
                 continue
             ov = _overlap(a, b)
             if not ov:
@@ -1745,15 +2103,26 @@ def bbox_desarrollo_miembro(p: dict[str, float], cual: str) -> tuple[float, floa
     w, d = secciones[cual]
     ala_superior = p["prof_sup"] if cual == "trasero alto" else d
     desarrollo = d + w + ala_superior - 2 * _bd_miembro(p)
-    return perfil(p)["ancho_util"], desarrollo
+    # EL BLANK CRECE POR LAS DOS BRIDAS desde el 2026-08-28: la lengueta que
+    # ata cada punta al anillo sale del mismo recorte, tumbada, y descuenta un
+    # BD como cualquier otro doblez.
+    largo = (perfil(p)["ancho_util"]
+             + 2 * (p["brida_largo"] - _bd_miembro(p)))
+    return largo, desarrollo
 
 
 def bbox_desarrollo_bahia(p: dict[str, float]) -> tuple[float, float]:
-    """Envolvente del blank de la bandeja: suelo mas dos alas hacia arriba."""
+    """Envolvente del blank de la bandeja: suelo mas dos alas hacia arriba.
+
+    Con sus dos lenguetas, que aqui no suman lo mismo que en los traseros: la
+    bahia acaba t_placa antes del anillo (ruling R3), asi que el doblez cae
+    t_placa DENTRO del recorte y la lengueta solo sobresale lo que le queda."""
     secciones = {nombre: (w, d) for nombre, w, d in _secciones_miembro(p)}
     suelo, ala = secciones["bahia"]
     desarrollo = suelo + 2 * ala - 2 * _bd_miembro(p)
-    return perfil(p)["ancho_util"], desarrollo
+    largo = (perfil(p)["ancho_util"]
+             + 2 * (p["brida_bahia_vuelo"] - _bd_miembro(p) - p["t_placa"]))
+    return largo, desarrollo
 
 def autocomprobacion_canal() -> None:
     """La seccion del canal, a mano, ANTES de escribir la funcion.
@@ -2286,10 +2655,27 @@ def guarda_tapa(p: dict[str, float]) -> None:
     P = _vertices(p)
     cr = _centros_rail(p, P)
     railes, planchas, _ = _cajas_solidas(p)
-    miembros = _cajas_miembro(p, P, cr, railes[0][5], railes[0][6])
+    zr0, zr1 = railes[0][5], railes[0][6]
+    miembros = _cajas_miembro(p, P, cr, zr0, zr1)
     nombres_miembro = set(miembros)
     obstaculos = ([c for c in railes if c[0] not in nombres_miembro]
                   + _caras_miembro(p, miembros) + planchas)
+    # EL BARRIDO ES PLANO -- gira esquinas en XY -- y eso vale mientras todo lo
+    # que estorba cruce el mismo ancho que lo que gira. Desde el 2026-08-28 hay
+    # que decirlo aparte: TODO LO QUE GIRA vive entre z0 + t_placa y
+    # z1 - t_placa (el riel mide ancho_util - 2*t_placa y muere contra su
+    # placa; el panel se atornilla al riel y no puede ser mas largo que el),
+    # mientras las PLACAS y las BRIDAS traseras viven justo en las dos
+    # rebanadas que quedan fuera de ese hueco. En el plano se pisan; a lo ancho
+    # no se tocan.
+    #
+    # ESTO SUELTA LA TAPA DE ABAJO, y conviene que quede escrito: topaba a 63.8
+    # grados con la pestana de la banda del valle, que ocupa z = 14..17. Ese
+    # tope era real mientras el riel y el panel llegaban hasta el anillo; con
+    # la placa por medio ya no llegan, y la fila abre 180. No se ha aflojado
+    # ninguna cota -- APERTURA_MIN sigue en 60 --, se ha corregido el ancho de
+    # lo que gira, que estaba 12 mm largo y se metia dentro de la placa.
+    obstaculos = [c for c in obstaculos if min(c[6], zr1) - max(c[5], zr0) > 1e-9]
     for nombre, i_eje, propios, i_cara, k_ang, k_inset, k_panel in TAPAS:
         eje = cr[i_eje]
         ar = math.radians(p[k_ang])
@@ -2750,6 +3136,7 @@ def main() -> int:
     canario_solapes(p)
     canario_alineacion(p)
     guarda_rebaje(p)
+    guarda_anclajes(p)
     guarda_miembros(p)
     guarda_agarre(p)
     guarda_fila_1u(p)
