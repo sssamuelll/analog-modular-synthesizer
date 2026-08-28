@@ -108,8 +108,15 @@ Las demás piezas son indiferentes al lado.
 |---|---|---|---|
 | `costado_2d` | 8 | **2** | canto visible completo, diamantado. **Sin un solo taladro** desde el 2026-08-27 |
 | `piel_trasera_2d` | 8 | 1 | **+ `kondor_cajeado_2d` a 4 mm en la cara exterior** (§4, §5) |
-| `remate_sup_2d` | 8 | 1 | |
 | `coupon.dxf` | 8 | 1 | pieza de calibración — **sin acabado, sin recocer** |
+
+**`remate_sup_2d` NO EXISTE.** Hasta el 2026-08-27 era la tapa de remate en
+acrílico, atornillada de canto al larguero de remate trasero; ese día la
+meseta del techo pasó a ser el ala del propio miembro trasero alto (doblada
+de su blank, `marco_sup`), no una plancha aparte. `remate_sup()` y
+`remate_sup_2d()` se borraron del `.scad` en el fix round 1 de esta tarea
+(2026-08-28, sin llamador confirmado por grep). No es un pendiente de
+`export.ps1`: la pieza no está en el diseño.
 
 **`bandeja_base_2d` SALIÓ de este pliego el 2026-08-27.** Era el suelo, de
 acrílico de 8. Ahora es una **tabla de madera maciza de 18 mm** que va bajo el
@@ -127,7 +134,7 @@ nada más — menos operaciones y menos sitios por donde el PMMA raja.
 
 ### Lo que NO va a este taller
 
-Nueve DXF de `case/plans/` **no son de acrílico** y no entran aquí. Se reparten
+Once DXF de `case/plans/` **no son de acrílico** y no entran aquí. Se reparten
 entre DOS talleres — chapa y mecanizado (§6.1) — que **no son el mismo** desde
 el 2026-08-28:
 
@@ -212,10 +219,12 @@ maciza, vaciada por el centro con fresadora CNC.
 - **Chaflán 1.5 × 45°** (`chaflan_anillo`) en las DOS aristas de la cara
   vista: la exterior (silueta) y la de la ventana. Es lo que lee como
   «perfil» en vez de «banda plana» — la razón entera del cambio de diseño.
-- **Radio ≥ 3 mm** (fresa de 6) en la esquina interior de P3, el único
-  vértice cóncavo del contorno. Es esquina fresada, no esquina de plegado:
-  no lleva alivio en V ni cierre soldado — esas dos cosas mueren con la
-  chapa plegada.
+- **Radio ≥ 3 mm** en la esquina interior de P3, el único vértice cóncavo
+  del contorno — pide una fresa de **⌀6 mm** para ESA esquina puntual, más
+  gruesa que la de contorno general (`fresa_d` = ⌀3 mm, §8): dos útiles
+  distintos para dos operaciones distintas, no una contradicción. Es
+  esquina fresada, no esquina de plegado: no lleva alivio en V ni cierre
+  soldado — esas dos cosas mueren con la chapa plegada.
 - **Roscas ciegas M4/M5** en la cara interior (el dorso), a diámetro de
   broca según `costilla_dorso_2d.dxf`: broca **3.3 mm para M4**, broca
   **4.2 mm para M5**, **10 mm de profundidad útil** (14 mm de pletina menos
@@ -246,7 +255,7 @@ maciza, vaciada por el centro con fresadora CNC.
   centro — el riesgo técnico real de esta pieza, no la resistencia — pero no
   es un requisito de cálculo.
 
-**Pregunta eliminatoria para este taller** (va también al RFQ, §B):
+**Pregunta eliminatoria para este taller** (va también al RFQ, §D):
 **planitud garantizada después de vaciar el centro de una pletina de 14 mm.**
 Vaciar el centro de una placa gruesa libera tensión interna del material y
 puede alabearla; si el taller no puede darla plana, no es el taller.

@@ -94,12 +94,15 @@ La tercera murió por una razón que no sale en ningún número: el acrílico na
 es **traslúcido**, y el campo de ranuras se transparentaba a lo largo del canto
 inferior. Se ve en el render oficial, no en la geometría.
 
-Son 45 ranuras del mismo lenguaje —mismo ancho y registradas al HP— en la banda
-que dejan libre la fila de tornillos por abajo y la onda por arriba. El hueco del
-IEC vive **dentro** de esa banda, así que queda embebido en el campo en vez de al
-lado: se saltan sus columnas enteras, con 6.98 mm de material alrededor. Partir
-una ranura con el recorte dejaría un diente de acrílico colgando de un lado, que
-es justo donde el PMMA rompe.
+Eran 45 ranuras del mismo lenguaje —mismo ancho y registradas al HP— en la banda
+que dejan libre la fila de tornillos por abajo y la onda por arriba (cifra de
+2026-08-21; **hoy son 44**: la escuadra de la trasera, Tarea 4b, tapa la
+primera columna con su ala A y la puerta pasó a saltarla entera en vez de
+contarla — `clearance_budget.py` imprime «entrada 7642 mm2 en 44 ranuras»).
+El hueco del IEC vive **dentro** de esa banda, así que queda embebido en el
+campo en vez de al lado: se saltan sus columnas enteras, con 6.98 mm de
+material alrededor. Partir una ranura con el recorte dejaría un diente de
+acrílico colgando de un lado, que es justo donde el PMMA rompe.
 
 La rejilla y las ondas se separan **14.00 mm**. Eran 4 —`vent_puente_min`, el
 mínimo por fragilidad— y los dos campos se leían como uno. Subir la onda sola no
@@ -343,12 +346,16 @@ para seguir tocándola, y con él su M5 en el costado — que pasa de estar a 15
 mm del canto a **13.03 mm**, o sea de 2.73 D a **2.37 D**. Sigue muy por encima
 del mínimo de 1.5 D que exige `taladros_con_material()`.
 
-**El larguero del remate, y el fin del pegamento** (2026-08-21). La tapa que cierra
+**El larguero del remate, y el fin del pegamento** (2026-08-21, histórico). La tapa que cierra
 la meseta del techo iba **pegada** al Z-Rail, y era la única junta irreversible
 del case: ahí arriba no había larguero al que atornillarla, y esa cara del riel
 es pared de 1.2 mm. Ahora hay uno — un 2020 en la arista trasera-superior, a ras
 del plano trasero y con su cara de arriba a `marco_sup` del techo. **El case
-entero se desatornilla.**
+entero se desatornilla.** Ese larguero es el mismo que hoy se llama **miembro
+trasero alto** (perfil 2020 comprado hasta el 2026-08-27; canal de chapa
+propio desde entonces) — y la tapa que ata no existe: la meseta pasó a ser
+su propia ala el 2026-08-27, así que la «junta pegada, ahora desatornillable»
+de este párrafo describe una pieza que ya no está, aunque el larguero sigue.
 
 No cabía más adelante: el **barrido del Z-Rail al abrir la tapa** de la fila de
 arriba obliga a que su centro esté en x ≥ 286.17, y por eso el fondo creció de
@@ -505,12 +512,15 @@ cambio de material: hasta entonces era la tercera plancha de la segunda fila.
 Lo que sí se versiona son los **quince DXF que se mandan a cortar** de
 `case/plans/` (más `lienzo_2d`, la preview de arriba que no se manda —
 dieciséis ficheros en total, contados el 2026-08-28): dos de acrílico
-(costado, trasera — **la tapa de remate no tiene DXF propio hoy**, pendiente
-de export.ps1, no de este cambio), **dos del anillo mecanizado** (cara vista
-y dorso, §6.1 del pliego), cinco de chapa de aluminio (los tres miembros con
-brida, la escuadra de la trasera y la tapa del valle), tres de acero, una de
-madera y el cajeado de la marca. Son el entregable que va al taller, y su
-diff es la prueba de qué se mandó a cortar y cuándo.
+(costado, trasera — **la tapa de remate NO EXISTE**: no es un pendiente de
+`export.ps1`, es una pieza que se borró del diseño el 2026-08-27, y
+`remate_sup()`/`remate_sup_2d()` se borraron del `.scad` en el fix round 1
+de esta tarea por no tener llamador), **dos del anillo mecanizado** (cara
+vista y dorso, §6.1 del pliego), cinco de chapa de aluminio (los tres
+miembros con brida, la escuadra de la trasera y la tapa del valle), tres de
+acero, una de madera, el cajeado de la marca y **el cupón** (calibración de
+kerf del acrílico, §"Procedimiento del cupón" abajo). Son el entregable que
+va al taller, y su diff es la prueba de qué se mandó a cortar y cuándo.
 
 ## Procedimiento del cupón — sólo si se vuelve al láser
 
@@ -588,21 +598,23 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | **JUNTA DE ASIENTO EPDM** t=1 mm | **2** | una por anillo, perfil continuo en el rebaje entre el labio y el costado. Nunca aluminio contra acrílico — no es la junta de 4 mm del apilado viejo, muerta el 2026-08-28 |
 | Tornillo M4 (lengüetas de bahía) | **4** | las dos lengüetas de la bahía a la placa de la fila 1U, roscadas **en la placa** (6 mm de pletina), no en el anillo |
 | Tornillo M5 + tuerca T + separador 3 mm | **2** | cuelgan la pared **trasera** del chasis del PSU de la ranura interior de `base trasera` (#106). La pared delantera **apoya en la tabla** |
-| Tornillo **M3 botón** + tuerca T M3 + **arandela ancha d16** | **17** | las planchas a los miembros: tapa de remate 5, trasera 10, + **2 de las pestañas** de la tapa del valle **a la placa del valle** (no al anillo, ruling R3). Entran por la RANURA del miembro, no por la punta. **Apriete 1.0 N·m con rosca SECA**. Ver `par_m3` |
+| Tornillo **M3 botón** + tuerca T M3 + **arandela ancha d16** | **17** | las planchas a la retícula del miembro: trasera 10 (trasero bajo + trasero alto, 5 cada uno), tapa del valle 5 a la **bahía** (`check_dxf`: `bahia_2d` trae su propia retícula de 5 M3), + **2 de las pestañas** de la tapa del valle **a la placa del valle** (no al anillo, ruling R3). Entran por la RANURA del miembro, no por la punta. **Apriete 1.0 N·m con rosca SECA**. Ver `par_m3` |
 | Arandela ANCHA d16 | **24** | 20 bajo los M3 que muerden acrílico (8.7 MPa, techo 10) + 4 en los ejes de giro. **Los 2 M3 de pestaña no la necesitan**: aprietan aluminio contra aluminio |
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa |
 | **Chapa de aluminio t=3 mm** — banda delantera del valle | **1** | vuelo delantero liso, desarrollo 572.00 × 18.30, con pestaña de 21 mm doblada en cada punta, atornillada a la **placa del valle** con un M3 (no al anillo desde el 2026-08-28). Aleación recomendada, no obligatoria: 5754 H22 pasa a 130 MPa con margen (48.8 MPa real, `guarda_valle()`). Va al taller de CHAPA — sin recocido, sin diamantado, sin chaflán: eso es del PMMA |
 | **TABLA de madera maciza t=18 mm** | **1** | el suelo interior y el zócalo, una sola pieza, **588.62 × 327.41** (creció desde 570.62 × 328.94: el anillo es más grueso que la vieja costilla de chapa). 2 filas de 3 M5 a **rosca ciega en el canto inferior del anillo** (una fila por anillo), uno redondo por fila (punto fijo) y dos en ranura de 10.5 |
-| Plancha acrílico t=8 mm | **4** | 2 costados + tapa de remate (540.62 × 29) + **trasera** (540.32 de ancho, con las ondas y la rejilla de entrada de aire). **Sin un solo taladro**: asientan en el rebaje del anillo, retenidas por el labio, las placas, los clips y la escuadra — nunca por un tornillo propio |
+| Plancha acrílico t=8 mm | **3** | 2 costados + **trasera** (540.32 de ancho, con las ondas y la rejilla de entrada de aire). **Sin un solo taladro**: asientan en el rebaje del anillo, retenidas por el labio, las placas, los clips y la escuadra — nunca por un tornillo propio. Eran 4 hasta el 2026-08-27, con la tapa de remate; esa pieza no existe (ver más arriba) |
 | Patica de goma con casquillo roscado | 4 | EPDM o NBR, Shore 45–55 A, **d20 × 10**. Se atornillan **a la tabla**, no al acrílico. **Se exige la curva carga-deformación: ≥ 0.25 mm de flecha con 22.8 N** — por debajo la pata AMPLIFICA los 100 Hz del toroide en vez de aislarlos (`flecha_pie`). Casquillo roscado moldeado: se atornilla, **no se pega** |
 
 **Total de tornillos itemizados en el BOM: 59** — 12 M4 de raíl + 8 M4 de
 brida + 6 M3 de escuadra + 4 M4 de clip + 4 M4 de lengüeta de bahía + 2 M5
 del chasis + 17 M3 de plancha + 6 M5 de la tabla. **No incluye los M4 de la
-placa al anillo** (los que sostienen las 6 placas de anclaje contra las 20
-roscas ciegas que les corresponden de las 16 por anillo): esa cuenta no está
-itemizada como herraje a comprar en ningún `echo` todavía — es un pendiente
-real, no un olvido, y queda anotado para no mandar a montar de memoria.
+placa al anillo**: son **10 por anillo** (20 en total), el resto de las 16
+roscas ciegas por anillo que imprime `taladros_anillo()` — las otras 6 por
+anillo ya están en la cuenta de arriba: 4 de brida (2 bridas × 2) + 2 de
+clip (2 clips × 1). Esos 20 M4 de placa no están itemizados como herraje a
+comprar en ningún `echo` todavía — es un pendiente real, no un olvido, y
+queda anotado para no mandar a montar de memoria.
 
 Eran 44 el 2026-08-27 (antes de esta tanda) y 71 antes del 2026-08-21: el
 historial completo de qué entró y qué salió, tornillo a tornillo, vive en
@@ -629,14 +641,18 @@ Censo actual de paneles: 8 (MIDI/CV, VCO×3, VCF, ADSR, VCA, MIXER —
 `clearance_budget.py`, `ANCHOS_PISO_SUP`/`ANCHOS_PISO_INF`). **Estimado, no
 cerrado**: estos totales por panel cierran cuando cada panel esté dibujado.
 
-## Anclaje de las placas — solo a transversales, nunca a raíles de panel
+## Anclaje de las placas — solo a los miembros del esqueleto, nunca a raíles de panel
 
-Las planchas (tapa de remate y trasera, de acrílico; tapa del valle, de
-aluminio) se atornillan **únicamente a los miembros del esqueleto**
-(trasero bajo, trasero alto — la tapa del valle va a su propia placa, no a
-un miembro), nunca a los 4 raíles de panel. Los miembros dejaron de ser
-perfil 2020 comprado el 2026-08-27; son canal de chapa propio con brida de
-extremo. **La tabla no está en esta lista**: no cuelga de nada — el
+Las planchas (trasera, de acrílico; tapa del valle, de aluminio) se
+atornillan **a la retícula de un miembro del esqueleto**, nunca a los 6
+raíles de panel: la trasera a trasero bajo y trasero alto (5 M3 cada uno),
+la tapa del valle a la bahía (5 M3 a su propia retícula) **y además** con
+sus dos pestañas a la placa del valle (2 M3 más, ruling R3 — la banda no
+depende solo de la retícula). La tapa de remate está en esta lista hasta el
+2026-08-27; no existe desde entonces (la meseta pasó a ser el ala del
+miembro trasero alto). Los miembros dejaron de ser perfil 2020 comprado el
+2026-08-27; son canal de chapa propio con brida de extremo. **La tabla no
+está en esta lista**: no cuelga de nada — el
 marco se le apoya encima y su fijación es otra cosa (ranuras alargadas, ver el
 BOM). Los
 raíles de panel van girados al ángulo de su cara (35° / 45° desde la vertical) para quedar a ras
@@ -756,25 +772,30 @@ sostener nada — pero ahora entra ANTES que los clips, no después de nada.
     a qué atornillarse hasta que la trasera está puesta, y van aquí y no
     después porque su ala tiene que estar lista para topar el costado
     cuando entre.
-11. **Tapa de remate** — 5 M3 a la reja del miembro de remate trasero.
-12. **Los costados** — los dos de acrílico, **sin un solo tornillo**: entran
+11. **Los costados** — los dos de acrílico, **sin un solo tornillo**: entran
     por detrás y asientan en el rebaje del anillo, sobre la junta de EPDM de
     asiento. El labio del anillo los sostiene hacia fuera por todo el
     perímetro; hacia dentro, por ahora, quedan sueltos de las placas, los
     miembros y la escuadra — **todavía no hay clip**.
-13. **Los clips de retención — AL FINAL, tras el acrílico, nunca antes.** Dos
+12. **Los clips de retención — AL FINAL, tras el acrílico, nunca antes.** Dos
     por costado, en el tramo del suelo, un M4 ciego al anillo por clip. Es el
     único apoyo hacia dentro que se monta DESPUÉS del costado en vez de
     antes: el clip muerde el acrílico por delante, así que si va antes no
     hay hueco donde meter el costado.
-14. **Paticas y paneles** — las 4 paticas **a la tabla, por debajo**, y paneles
+13. **Paticas y paneles** — las 4 paticas **a la tabla, por debajo**, y paneles
     ciegos en todo hueco de las dos filas, que con una tapa abierta son lo
     único que ata sus dos raíles.
-15. **Quitar el film protector** — al final, no al recibir. El acrílico llega
+14. **Quitar el film protector** — al final, no al recibir. El acrílico llega
     con las dos caras protegidas de fábrica, y es durante el MONTAJE cuando se
     raya: al deslizarlo por la mesa, al apoyar una herramienta, al girar una
     pieza sobre otra. El film es lo único que lo evita, y solo sirve si sigue
     puesto.
+
+**Ya no hay «Tapa de remate».** Hasta el 2026-08-27 era el paso 11: 5 M3 a
+la retícula del miembro de remate trasero. Esa pieza (`remate_sup`,
+`remate_sup_2d`) no existe desde entonces — la meseta del techo es el ala
+del propio miembro trasero alto — y se borró del `.scad` en el fix round 1
+de esta tarea.
 
 El orden importa en **seis** sitios, dos de ellos nuevos el 2026-08-28:
 **el riel va a la placa antes que la placa al anillo (R1)**, porque la cabeza
@@ -812,9 +833,13 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
       una pieza por lado, con rebaje coplanar para el costado, chaflán 1.5 × 45°
       y roscas ciegas en vez de tornillo pasante. El acrílico sigue **sin un
       solo taladro**, ahora retenido por el labio del rebaje, 3 placas, 2 clips
-      y la escuadra de la trasera por costado. Vano libre del costado de 119.0
-      (chapa) a 95.5 (pletina sin escuadra) a **65.0 mm** (con la escuadra,
-      2026-08-28), flecha de 0.38 a 0.24 a **0.11 mm**
+      y la escuadra de la trasera por costado. Vano libre del costado: de
+      **119.0 mm** (acrílico portante, sin esqueleto) a 65.2 mm con la
+      costilla de chapa plegada (rev. 21) a 95.5 mm al pasar a pletina sola
+      (rev. 22 — el anillo es más grueso pero pierde el canto trasero que
+      antes cubría el vano de otra forma) y de vuelta a **65.0 mm** con la
+      escuadra de la trasera puesta. Flecha con 200 N: 0.38 → 0.11 → 0.24 →
+      **0.11 mm**
 - [x] Plantilla de panel KiCad
 - [x] **Vistas de la BAHIA INFERIOR** (`renders/render_bahia.py`, 2026-08-27):
       la tabla con el chasis del PSU encima, en planta, tres cuartos y rasante.

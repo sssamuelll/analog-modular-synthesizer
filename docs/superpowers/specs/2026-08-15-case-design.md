@@ -417,11 +417,18 @@ aquí va lo que sustituye a lo anterior.
   nueva de la rev. 22, atornillada a la TRASERA (nunca al anillo) con 3
   M3 por costado: tope hacia dentro del canto trasero del costado, que
   hasta entonces quedaba con 227 mm sin ningún apoyo.
-- **Las placas de módulo anclan solo a los miembros**, nunca a los 4
-  raíles de panel: esos van girados al ángulo de su cara, y un tornillo
-  contra una cara inclinada entra descentrado y apoya la arandela de
-  canto sobre acrílico frágil. Verificado por `alineacion()` en el
-  budget.
+- **Las planchas (trasera; banda del valle) anclan a la retícula de un
+  miembro, nunca a los 6 raíles de panel** — regresión corregida en el fix
+  round 1 de la Tarea 5: esta viñeta llegó a decir lo contrario, que los
+  PANELES DE MÓDULO anclan a los miembros, y eso es falso: los paneles sí
+  van a los raíles, es la razón de ser del formato Eurorack. Lo cierto es
+  de las PLANCHAS: la trasera a trasero bajo y trasero alto (5 M3 cada
+  uno), la banda del valle a la bahía (5 M3 a su propia retícula) y además
+  con sus dos pestañas a la placa del valle (ruling R3). Las planchas no
+  comparten anclaje con los paneles porque los raíles van girados al
+  ángulo de su cara, y un tornillo de plancha contra una cara inclinada
+  entraría descentrado y apoyaría la arandela de canto sobre acrílico
+  frágil. Verificado por `alineacion()` en el budget.
 - **Trasera: UNA plancha de acrílico de 8 mm**, EMPOTRADA a ras del canto
   y atornillada a los dos miembros traseros — desmontable, lleva la
   ventilación (§7). Fueron dos pieles de 5 flotando sobre standoffs con
@@ -539,8 +546,10 @@ tabla de madera maciza de 18 mm; paticas de **goma** EPDM/NBR con
 casquillo roscado (no metálicas desde la rev. 18); entrada IEC C14 con
 fusible, espárrago M4 + cable verde/amarillo + terminales de ojal (bonding,
 uno por panel de módulo) — más un segundo punto de bonding, enmascarado
-antes de anodizar, uno por anillo. **Sin adhesivo**: la tapa de remate dejó
-de ir pegada el 2026-08-21.
+antes de anodizar, uno por anillo. **Sin adhesivo en ninguna junta** — la única que lo llevó,
+la tapa de remate (pegada hasta el 2026-08-21, atornillada después), no
+existe desde el 2026-08-27: la meseta pasó a ser el ala del miembro trasero
+alto.
 
 Los Z-Rails van entre las caras interiores de las placas de anclaje, así
 que su largo es `largo_riel` (**528.32 mm**), no `ancho_util`
@@ -559,8 +568,11 @@ exactos: salida real de `openscad -D 'PART=\"bom\"' case/cad/sam17_case.scad`
    colgaban del espesor del acrílico se fueron con la carga. El costado no
    lleva taladros, no recibe apriete y no sostiene nada — si llega a 7.2 o a
    8.8 mm, lo que cambia es cómo se ve el canto, no si el case cierra. Lo que
-   sí sigue acotado contra un espesor es `marco_sup`, y esa plancha es la tapa
-   de remate.
+   sí sigue acotado contra un espesor es `marco_sup` — que desde el
+   2026-08-27 ya NO es una plancha aparte: es el ala del miembro trasero
+   alto, doblada de su propio blank. La «tapa de remate» que este punto
+   citaba no existe (`remate_sup`/`remate_sup_2d`, sin llamador, borradas
+   del `.scad` en el fix round 1 de la Tarea 5).
 
    El texto original, que sigue siendo cierto sobre el material: el PMMA colado
    llega con tolerancia de hasta ±1.2 mm en 8 mm. Es la
@@ -570,15 +582,26 @@ exactos: salida real de `openscad -D 'PART=\"bom\"' case/cad/sam17_case.scad`
    aserciones que fallan si el diseño se sale, y bloque de lo que no cubre.
 3. El script de export debe regenerar todos los DXF/STL sin errores desde un
    repo limpio, y **salir con código de error** si algo queda a medias.
-4. Checklist de ensamblaje en `case/README.md` con el orden: **tabla →
-   costillas y transversales → marco a la tabla → chasis del PSU → raíles →
-   tapa del valle → electricidad y bonding → trasera y remate → costados →
-   paticas y paneles.**
+4. Checklist de ensamblaje en `case/README.md` con el orden: **tabla → riel
+   a la placa → placa al anillo → miembros → marco a la tabla → chasis del
+   PSU → tapa del valle → electricidad y bonding → trasera → escuadras de
+   la trasera → costados → clips de retención → paticas y paneles.**
 
    **EL ORDEN SE DIO LA VUELTA EN LA REV. 21**: el acrílico dejó de ser lo
    primero que se monta y pasó a ser lo último que se mete. La estructura se
-   levanta entera en aluminio sobre la tabla, y el costado entra al final
-   porque no sostiene nada y porque es la pieza que se raya.
+   levanta entera en aluminio sobre la tabla, y el costado entra casi al
+   final porque no sostiene nada y porque es la pieza que se raya.
+
+   **Y GANA TRES PASOS PROPIOS EN LA REV. 22** (alineado con README en el
+   fix round 1 de la Tarea 5, que hasta entonces contradecía este punto):
+   (a) «riel a la placa» y «placa al anillo» se separan en dos pasos por
+   R1 — la cabeza del M4 del riel se tapa desde fuera antes de que la
+   placa entre al anillo, y al revés no se puede apretar; (b) las
+   **escuadras de la trasera** van justo después de montar la trasera,
+   porque se atornillan a ella y no al anillo; (c) los **clips de
+   retención** son el único apoyo hacia dentro que va DESPUÉS del costado,
+   no antes — muerden el acrílico por delante y sin el costado puesto no
+   tienen qué morder.
 
    Y hay un paso nuevo que no es de orden sino de apriete: **el tornillo
    redondo del medio de cada fila de la tabla va antes que los de ranura, y

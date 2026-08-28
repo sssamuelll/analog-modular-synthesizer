@@ -12,7 +12,7 @@ para saber **quién puede hacerlo**.
 >
 > | § | taller | qué se le pide |
 > |---|---|---|
-> | A | casa de acrílico | costados ×2, trasera, tapa de remate |
+> | A | casa de acrílico | costados ×2, trasera |
 > | B | chapa de aluminio (y acero) | miembros ×3 (con bridas), placas ×6, clips ×4, escuadras ×2, tapa del valle, chasis ×3 |
 > | C | carpintería | la tabla (suelo + zócalo) |
 > | D | mecanizado de aluminio | el anillo ×2 — NUEVO desde el 2026-08-28 |

@@ -2206,48 +2206,14 @@ module paneles() {
     panel_cara(P[3], P[4], inset_sup_valle  - inset_er, alto_panel_sup);
 }
 
-// Pestana superior: la banda de acrilico que tapa el canto de arriba del panel
-// y cruza de costado a costado. Ocupa los ultimos marco_sup mm de la cara, con
-// su cara exterior EN EL PLANO DE LA CARA -- igual que el panel, o sea a ras y
-// no en resalte. Engorda hacia dentro t_cheek, que es el mismo grosor del
-// costado, de modo que por fuera el remate se lee como un canto continuo de
-// acrilico que da la vuelta del lateral al techo. Sin ella el panel remataba
-// pelado contra el aire, que es lo que Samuel vio en el render.
-//
-// ES PIEZA DE TAPA (2026-08-17): viaja con el panel al abrir.
-//
-// YA SE FIJA (ver params.scad): APOYA DE CANTO en la cara de arriba del riel --
-// la que mira al vertice, 27.4 x 528 de aluminio plano -- y se atornilla a ella
-// con M3 que entran por su canto, a lo largo de la cara. Por delante no habia
-// manera: el riel solo asoma 2.25 mm por encima del panel y ahi no cabe una
-// cabeza. marco_sup es el ESPESOR de su plancha, prof_sup su fondo.
-//
-// El solido va con cube() y el DXF con remate_sup_2d(); los dos leen los mismos
-// dos parametros, asi que no pueden separarse sin que se note en params.
-module remate_sup() {
-    P = pts_perfil();
-    // misma cara interior que el panel: t_anillo, no t_cheek
-    translate([P[4].x + inset_remate_frente, P[5].y - marco_sup, t_anillo])
-        cube([prof_sup, marco_sup, ancho_util]);
-}
-
-// La pestana vista de canto: 528.32 x prof_sup en plancha de marco_sup.
-// SIN TALADROS. Llevo cinco M3 mientras el plan era atornillarla al riel; la
-// hoja de datos del Z-Rail enseno que esa cara es pared de 1.2 mm, asi que la
-// union pasa a ser junta pegada y esos cinco agujeros dejaron de servir a
-// nadie. Fresando eso no es cosmetico: son cinco prestaciones que se pagan.
-// Si el calibrador encuentra material, volver a meterlos es una linea.
-module remate_sup_2d() {
-    au = ancho_util;
-    P = pts_perfil();
-    ce = centros_transversal();
-    difference() {
-        plancha(au, prof_sup);
-        // la fila cae en la centerline del larguero nuevo, medida desde el
-        // canto DELANTERO de la plancha (el que remata el canto del panel).
-        fila_agujeros(au, ct_remate().x - P[4].x - inset_remate_frente);
-    }
-}
+// remate_sup()/remate_sup_2d() MURIERON el 2026-08-28 (fix round 1, Tarea 5):
+// eran la tapa de remate en acrilico, apoyada de canto en el riel. Desde el
+// 2026-08-27 la meseta del techo (marco_sup) es el ALA del miembro trasero
+// alto, doblada de su propio blank -- no una plancha aparte -- y estas dos
+// funciones se quedaron sin llamador (grep confirmo cero callers antes de
+// borrarlas: ni aqui, ni en check_dxf.py, ni en export.ps1 $piezas). El BOM
+// y los papeles seguian vendiendo una pieza que no existia; corregido en la
+// misma tanda.
 
 // Paticas torneadas bajo los costados. En X caen sobre los dos rieles de
 // base, que es donde esta la estructura; en Z su cara exterior queda a ras
@@ -2320,7 +2286,7 @@ module assembly_acero() {              // el chasis del PSU, cerrado
 module assembly_aluminio() {           // idem, Z-Rails + miembros + paneles solidos
     rails();
     paneles();
-    // LAS DIEZ PLACAS DE ANCLAJE. Entran el 2026-08-28 con el anillo fresado:
+    // LAS SEIS PLACAS DE ANCLAJE. Entran el 2026-08-28 con el anillo fresado:
     // son lo unico que ata los seis rieles al case, y van por la cara
     // INTERIOR -- en el render apenas se ven asomar por el canto de la
     // ventana, que es exactamente lo que se busca. Si alguna se viera por
@@ -2512,16 +2478,18 @@ module bom() {
     // la guia de ensamblaje: las planchas tenian los taladros dibujados y el BOM
     // no tenia el tornillo.
     n_fila = max(1, round(au/100));
-    // TRES filas de n_fila: una de la tapa de remate y DOS de la trasera. La
-    // tapa del valle perdio sus dos filas al canto al quedar reducida a la banda
-    // ranurada; conserva solo sus dos pestanas. Fueron nueve hasta el 2026-08-21 (cinco en la
-    // trasera, se fueron con los tres largueros traseros de en medio) y seis
-    // hasta el 2026-08-27: las DOS de la bandeja de base desaparecieron cuando
-    // el suelo dejo de ser una plancha colgada de dos largueros y paso a ser
-    // una TABLA bajo el marco, con sus propios M5 y sus agujeros alargados.
+    // TRES filas de n_fila: dos de la TRASERA (trasero bajo + trasero alto,
+    // cada miembro con su propia reticula) y una de la banda del valle, que
+    // usa la reticula de la BAHIA (check_dxf: bahia_2d trae reticula de 5 M3
+    // a paso 100, igual que los otros dos miembros). Mas 2 pestanas de la
+    // misma banda, que van aparte a la placa del valle (ruling R3, no a la
+    // bahia). Decia "tapa de remate" hasta el fix round 1 de la Tarea 5
+    // (2026-08-28): esa pieza (`remate_sup`/`remate_sup_2d`) murio el
+    // 2026-08-27 -- la meseta del techo paso a ser el ala del miembro
+    // trasero alto -- y el eco la seguia contando de puro heredado.
     echo(str("BOM: tornillo M3 x", 3*n_fila + 2, " + tuerca T M3 -- las planchas",
-             " a las transversales: tapa de remate ", n_fila, ", trasera ", 2*n_fila,
-             ", + 2 de las PESTANAS de la tapa del valle."));
+             " a la reticula del miembro: trasera ", 2*n_fila, " (trasero bajo + alto), tapa del valle ",
+             n_fila, " (a la bahia), + 2 de las PESTANAS de la tapa del valle."));
     echo("     LOS DOS DE LA PESTANA VAN A LA PLACA DEL VALLE, no al anillo:");
     echo("     su rosca tendria que caer a 13.7 mm del plano del valle");
     echo("     (setback 6 + 2t + d/2, y con t_valle = 3 esa cuenta no baja) y");
@@ -2554,13 +2522,24 @@ module bom() {
     echo("        mano y son los unicos que se tocan para abrir el case.");
     echo("        Riel del frente abajo, riel del valle arriba.");
     echo("     x4 FIJOS: los dos Z-Rails 1U, atornillados por ambas puntas a");
-    echo("        las costillas. No son ejes ni cierres y no tocan las alas.");
+    echo("        la PLACA DEL VALLE (la misma que reciben las lenguetas de");
+    echo("        la bahia), no a la costilla. No son ejes ni cierres: no");
+    echo("        giran, no se quitan a mano.");
     // Decia "x6 fijos: los largueros de esqueleto" bajo un encabezado que
     // habla de M4 DE RIEL, y esos largueros van con M5. Contaba dos herrajes
     // distintos en la misma lista. Los M4 de riel son DOCE: cuatro ejes,
     // cuatro cierres y cuatro fijaciones permanentes de la fila 1U.
-    echo("     Y no hay mas M4: los 12 son estos. Los tornillos de transversal");
-    echo("     son M5 y van en su propia linea.");
+    //
+    // ESTOS DOCE NO SON TODOS LOS M4 DEL CASE -- fix round 1, Tarea 5: la
+    // frase de aqui decia "no hay mas M4" a seis lineas de la brida (x8) y
+    // el clip (x4), y se contradecia sola. Los de brida roscan al anillo y
+    // ERAN M5 en el plan; bajaron a M4 el 2026-08-28 porque la franja de
+    // 14 mm no admite a la vez el paso M5 y la broca M5 (ver esa linea).
+    echo("     Estos 12 son los M4 DE RIEL. El case lleva mas M4 en otras");
+    echo("     lineas de este BOM: brida de miembro x8, clip x4, lengueta de");
+    echo("     bahia x4, placa a anillo x20 (ver README, BOM de herrajes).");
+    echo("     Los tornillos de transversal y de la tabla son M5 y van");
+    echo("     aparte.");
     echo("BOM: tuercas T DE INSERCION LATERAL (drop-in), NO de deslizar. Con las");
     echo("     de deslizar hay que enhebrarlas por la punta del larguero antes de");
     echo("     montar, o sea que anadir un tornillo mas tarde obliga a desarmar.");
@@ -2580,15 +2559,12 @@ module bom() {
     echo("     tapa deja de quedarse abierta.");
     echo("       arandela M4 normal (d9)  -> 16.3 MPa   se relaja");
     echo("       arandela ANCHA   (d16)   ->  4.3 MPa   aguanta");
-    echo(str("BOM: tapa de remate x1, ", au, " x ", prof_sup, " en acrilico ",
-             "t=", marco_sup, " -- plancha HORIZONTAL sobre la meseta del techo,"));
-    echo(str("     atornillada con ", n_fila, " M3 al larguero de remate trasero."));
-    echo("     SIN ADHESIVO. Hasta el 2026-08-21 era una tira de canto PEGADA al");
-    echo("     Z-Rail, porque ahi arriba no habia larguero al que atornillarla y");
-    echo("     esa cara del riel es pared de 1.2 mm. Con el octavo larguero deja");
-    echo("     de hacer falta: el case ya no lleva ninguna junta irreversible.");
-    echo(str("     Se retira ", inset_remate_frente, " mm del pico, y eso NO es"));
-    echo("     estetica: es lo unico que deja abrir la tapa de la fila de arriba.");
+    // La tapa de remate (plancha acrilica horizontal atornillada al larguero
+    // de remate trasero) murio el 2026-08-27: `remate_sup`/`remate_sup_2d`
+    // sin llamador, borradas del .scad en el fix round 1 de la Tarea 5. La
+    // meseta del techo es hoy el ala del miembro trasero alto (marco_sup,
+    // ver params.scad), no una plancha aparte -- este echo la vendia sin
+    // que existiera.
     // Decia "metalica torneada" y se quedo asi cuando las paticas pasaron a
     // GOMA el 2026-08-24 (spec rev. 18): el BOM del README y el PLIEGO ya
     // dicen goma con casquillo roscado, y este echo seguia mandando a comprar
@@ -2638,12 +2614,15 @@ module bom() {
     echo("     hacia un extremo; con dos vuelve a estar clavada y se raja.");
     echo("     Especie sin elegir: las cuentas van contra E = 11000 MPa (nogal");
     echo("     o arce). Roble da 12000; contrachapado 8000 y pediria 20 mm.");
-    echo(str("BOM: plancha de acrilico t=", t_cheek, ": costados x2, tapa de remate",
-             " y TRASERA -- 4 piezas."));
+    echo(str("BOM: plancha de acrilico t=", t_cheek, ": costados x2 y",
+             " TRASERA -- 3 piezas."));
     echo("     UN SOLO ESPESOR en todo el cuerpo. Hubo dos hasta el 2026-08-25:");
     echo("     los 5 mm existian para UNA pieza, y esa pieza es ahora de");
     echo("     aluminio. Media plancha de 5 que ya no hay que comprar.");
     echo("     Y desde el 2026-08-27 el suelo tampoco es acrilico: es la tabla.");
+    echo("     Y desde el 2026-08-27 la tapa de remate tampoco existe: la");
+    echo("     meseta del techo es el ala del miembro trasero alto (4 piezas");
+    echo("     hasta esa fecha, corregido en el fix round 1 de la Tarea 5).");
     echo("     LOS COSTADOS YA NO LLEVAN UN SOLO TALADRO. Son PIEL: asientan");
     echo("     en el rebaje del anillo, sin tornillo -- el labio los sostiene");
     echo("     hacia fuera y las placas/clips/escuadra hacia dentro.");
