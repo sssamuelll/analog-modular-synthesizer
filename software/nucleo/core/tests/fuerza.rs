@@ -82,8 +82,21 @@ fn bajar_de_nuevo_a_siete_bits_devuelve_el_original() {
 /// que su precondicion no cubre.
 #[test]
 fn el_octavo_bit_de_un_byte_ajeno_no_se_cuela() {
-    assert_eq!(Fuerza::desde_midi1(0xFF), Fuerza::desde_midi1(0x7F));
-    assert_eq!(Fuerza::desde_midi1(0x80), Fuerza::desde_midi1(0x00));
+    // Barrido entero, no dos casos sueltos. Probar solo 0xFF y 0x80 NO sirve:
+    // los dos coinciden con su version enmascarada por accidente del truncado
+    // a u16, y dejan pasar una implementacion sin mascara. Medido con una
+    // mutacion: quitar el `& 0x7F` dejaba los once tests en verde.
+    //
+    // Quien lo caza es 0xA0. Enmascarado es 32, que es <= centro y sale por el
+    // desplazamiento simple: 0x4000. Sin enmascarar es 160, que es > centro,
+    // entra por el esquema de repeticion y da 0x4104.
+    for v in 0u8..=127 {
+        assert_eq!(
+            Fuerza::desde_midi1(v | 0x80),
+            Fuerza::desde_midi1(v),
+            "el octavo bit cambio el resultado en {v}"
+        );
+    }
 }
 
 fn una_parte() -> [Parte; 1] {
