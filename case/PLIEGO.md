@@ -146,6 +146,8 @@ el 2026-08-28:
 | `tapa_valle_2d` | aluminio, 3 mm | chapa | corte + **plegado** |
 | `costilla_2d`, `costilla_dorso_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **fresado CNC**, sin plegar, sin soldar |
 | `bandeja_base_2d` | madera maciza, 18 mm | carpintería | corte + ranuras alargadas |
+| `placa_cara_inf_2d`, `placa_valle_2d`, `placa_cara_sup_2d` | aluminio, `t_placa` = 6 mm | chapa | corte + cajeado Ø8 × `prof_cajeado_riel` = 2.5 por cara (nota de mecanizado, no en el DXF — ver abajo) — 2 uds cada uno |
+| `clip_2d` | aluminio, `t_clip` = 4 mm | chapa | corte — 4 uds, pieza genérica |
 
 **`costilla_2d` y `costilla_dorso_2d` son CONTORNOS REALES, no desarrollos** —
 al revés de como era hasta el 2026-08-27. La pieza ya no se dobla: lo que corta
@@ -160,16 +162,40 @@ del chasis: el DXF trae el recorte, y la pieza doblada mide menos. Cortar el
 contorno de la pieza montada da un fichero válido e inservible.
 
 **Las placas de anclaje (×6, una por tramo y por costado) y los clips de
-retención (×4, dos por costado) son piezas de este mismo taller de chapa y
-NO TIENEN DXF PROPIO todavía** — el modelo las dibuja en 3D
-(`placas_riel()`, `clips_costado()`) pero `export.ps1` no las exporta como
-plancha aparte. Hasta que exista ese DXF, el taller trabaja del plano de
-`params.scad`/`clearance_budget.py`: placa de pletina de `t_placa` = 6 mm
-(fondo 26 las de 3U, 42.3 la del valle, cajeado de 8 × 2.5 por el lado del
-anillo, un M4 de paso por riel + dos M4 a rosca ciega); clip de pletina de
-`t_clip` = 4 mm × `clip_largo` = 20 mm, un M4 a rosca ciega, muerde
-`clip_fondo` = 24 mm de acrílico. Es un pendiente real, no un olvido: queda
-anotado para no mandar a cortar de memoria.
+retención (×4, dos por costado) TIENEN DXF PROPIO desde el 2026-08-28**
+(Tarea 6): `placa_cara_inf_2d`, `placa_valle_2d`, `placa_cara_sup_2d` y
+`clip_2d`, en la tabla de arriba junto con el resto de este taller de chapa.
+Hasta esa fecha el modelo solo las dibujaba en 3D (`placas_riel()`,
+`clips_costado()`) y `export.ps1` no las exportaba como plancha aparte —
+esta misma nota lo daba como pendiente real.
+
+Una placa por TRAMO, no por costado: el lado espejado (z) comparte el mismo
+contorno xy (`esquinas_placa()` no cambia con `mirror([0,0,1])`), así que
+cada uno de los tres ficheros se corta ×2 para completar las seis de la
+tabla. El clip es una pieza genérica — no depende de tramo ni de `s` — y un
+solo fichero cubre las cuatro.
+
+Cada DXF de placa trae el agujero de **PASO M4** por riel (el que sujeta de
+verdad el tornillo del riel — no el cajeado) y el par de M4 a rosca ciega
+que sujeta la placa al anillo; la del valle además trae el M3 de la pestaña
+de la banda y los dos M4 de las lengüetas de la bahía — los tres **a
+diámetro de rosca** (pasante en la propia pletina, igual que las roscas
+ciegas del dorso del anillo, §6.1 — no de paso). **El DXF NO lleva el
+cajeado de Ø8 × `prof_cajeado_riel` = 2.5 mm por el lado del anillo**: un
+DXF 2D no sabe decir profundidad, el mismo caso que el rebaje de
+`costilla_dorso_2d` y el cajeado KONDOR (§4). Es **NOTA DE MECANIZADO**, no
+corte: centrado en cada agujero de paso M4 de riel, por la cara que mira al
+anillo — ahí aloja la cabeza del tornillo del riel; sin este cajeado la
+cabeza no tiene dónde meterse y la placa no cierra contra el anillo. El
+clip no lleva cajeado, solo su M4 de paso.
+
+*Fix round 1 (Tarea 6):* la primera versión del DXF de placa dibujaba el
+cajeado (Ø8) en el eje del riel **en vez de** el paso M4 — pieza
+inservible, la cabeza del tornillo caía dentro sin nada que la sujetara.
+Corregido antes de mandar a cortar; queda dicho porque un sobre de tamaño no
+lo cazaba (el bbox de la placa no cambia si un círculo interior mide 8 en
+vez de 4.5 — lo cazó `taladros_placas()` en `check_dxf.py`, que sí compara
+diámetros).
 
 Las tres del chasis llevan su propio plano de plegado
 ([`renders/chasis-plano-plegado.png`](renders/chasis-plano-plegado.png)),

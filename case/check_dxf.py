@@ -452,6 +452,12 @@ def _dist_al_apoyo(q, pt) -> float:
 # una curva y no enterarse. Y el aplastamiento real no es el limite: el eje de
 # la tapa, que es el M5 mas cargado del case, trabaja a 0.33 MPa sobre acrilico
 # que aguanta ~100.
+#
+# LA REUSA taladros_placas() (Tarea 6) para las placas y el clip de ALUMINIO,
+# no solo para el acrilico de esta nota: es la misma regla de oficio -- 1.5 D
+# al canto -- aplicada por reutilizacion conservadora, no porque se haya
+# recalculado para pletina de 6/4 mm. RFQ.md la confirma como el minimo que
+# el taller ya trabaja sin margen de sobra (6.75 mm en el M4 de brida).
 BORDE_MIN_D = 1.5
 
 
@@ -475,6 +481,13 @@ BORDE_MIN_D = 1.5
 # pone. No es tolerancia de fabricacion -- es cuanto se permite que MIENTAN el
 # uno sobre el otro, y la respuesta es casi nada: son el mismo numero pasado
 # por OpenSCAD.
+#
+# TAMBIEN HACE DE HOLGURA DE CANTO en taladros_placas() (Tarea 6): las dos
+# lenguetas de bahia de placa_valle_2d viven EXACTO en el limite de
+# BORDE_MIN_D por diseno (placa_1u_fondo() en clearance_budget.py), asi que
+# el ruido de tessellation del viaje OpenSCAD -> DXF -> ezdxf cae del lado
+# equivocado de un `<` estricto sin esta rebaja. Prestamo, no una tolerancia
+# nueva: mismo numero, dos usos.
 DESVIO_DXF_MAX = 0.02
 
 
@@ -1097,11 +1110,15 @@ def taladros_placas() -> list[str]:
     CADA PLACA LLEVA TRES CLASES DE TALADRO, y las tres se comprueban:
       1. el par de M4 CIEGOS a la placa la ata al anillo -- roscas_placa(),
          diametro de PASO (d_M4_paso).
-      2. el CAJEADO de cada riel que la placa recoge -- pl[8], diametro del
-         cajeado (d_cajeado_riel). El paso M4 del propio riel cae CONCENTRICO
-         con este circulo (mismo centro, radio menor) y por eso no se dibuja
-         aparte: en el DXF de la cara el cajeado ya lo contiene entero, y
-         dibujar los dos no cambia un solo mm2 del contorno cortado.
+      2. el PASO M4 de cada riel que la placa recoge -- pl[8], diametro
+         d_M4_paso. FIX ROUND 1 (Tarea 6): esta puerta pidio primero
+         d_cajeado_riel (8) aqui, porque la primera version de placa_2d()
+         en el .scad dibujaba el CAJEADO en vez del agujero que de verdad
+         sujeta el tornillo del riel -- una pieza que habria salido del
+         taller sin donde meter el tornillo. El cajeado (Ø8 x
+         prof_cajeado_riel, por el lado del anillo) sigue existiendo en la
+         pieza real, pero es NOTA DE MECANIZADO en PLIEGO.md, no un circulo
+         en este DXF: un DXF 2D no sabe decir profundidad.
       3. SOLO LA DEL VALLE: el M3 de la pestana de la banda
          (roscas_placa_valle()/_m3_pestana) y el M4 de cada lengueta de la
          bahia (_bridas() con ancla == "placa") -- DOS, una por ala
@@ -1139,21 +1156,18 @@ def taladros_placas() -> list[str]:
             continue
         # (etiqueta, centro, d_leido, d_canto). d_leido es lo que _redondos()
         # tiene que encontrar dibujado; d_canto es CON QUE D se multiplica
-        # BORDE_MIN_D, y las dos NO siempre son la misma cota. guarda_anclajes()
-        # en clearance_budget.py, la puerta gemela en 3D, ya lo hace asi para
-        # el cajeado del riel: exige 1.5 x d_M4_paso (6.75) al canto, no 1.5 x
-        # d_cajeado_riel (12) -- verificado corriendo esa puerta, que hoy
-        # imprime "cajeado de riel de 'cara_inf' ... a 6.88 del canto" y sigue
-        # en VERDE. El cajeado es un CAJEADO (bolsillo), no un corte pasante:
-        # lo que protege el margen de canto es el AGUJERO DE PASO M4 que cae
-        # en su mismo eje, no el diametro del bolsillo que lo rodea. Copiar
-        # aqui "1.5 x el diametro que se dibuja" habria sido una regla mas
-        # estricta que la que el propio modelo ya exige y aprueba en 3D --
-        # justo el fallo que taladros_placas() existe para NO inventar.
+        # BORDE_MIN_D, y las dos NO siempre son la misma cota -- el caso que
+        # queda es el M3 de pestana (dibujado a d_M3_rosca, canto a
+        # d_M3_paso, mas abajo). Para el paso M4 de riel las dos coinciden:
+        # el DXF dibuja el agujero de PASO (FIX ROUND 1: no el cajeado, ver
+        # el .scad), y el canto que le exige guarda_anclajes() en 3D -- y
+        # RFQ.md (S "Preguntas de cota", el M4 de brida a 6.75 mm, "el minimo
+        # exigido, 1.5 diametros del M4 de paso, sin margen de sobra") -- es
+        # el de ese mismo diametro: 1.5 x d_M4_paso, 6.75 mm.
         esperados = [(f"M4 ciego '{nm}'", c, p["d_M4_paso"], p["d_M4_paso"])
                      for nm, c in cb._roscas_placa(p, pl)]
-        esperados += [(f"cajeado de riel @ s={e[0]:.1f}", e[1],
-                       p["d_cajeado_riel"], p["d_M4_paso"])
+        esperados += [(f"paso M4 de riel @ s={e[0]:.1f}", e[1],
+                       p["d_M4_paso"], p["d_M4_paso"])
                       for e in pl[8]]
         if nombre == "valle":
             # MISMA COTA DE CANTO QUE guarda_anclajes(): d_M3_paso (3.4), no

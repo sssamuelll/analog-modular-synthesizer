@@ -82,19 +82,28 @@ acr.data.materials.append(mat(
         "Transmission Weight": 0.85,
     }))
 alu = importar("assembly_aluminio")
-# CEPILLADO, no pulido (Tarea 6). Roughness baja de 0.35 a 0.28 y gana
-# Anisotropic: un metal fresado/cepillado tiene microestrias direccionales
-# (la pasada de la herramienta), y eso es justo lo que el lobulo anisotropico
-# del Principled BSDF simula -- reflejo estirado en una direccion en vez del
-# circulo especular de un metal pulido isotropico. Anisotropic Rotation en
-# 0.0 porque no hay UV/tangente pintada a mano para orientar la estria por
-# pieza (placas, rieles y anillo tienen cada uno la suya en la realidad); es
-# SUPUESTO de partida, no medido -- subir Roughness o anadir un mapa de
-# tangente es el siguiente paso si hace falta que se lea MAS cepillado.
+# CEPILLADO, no pulido (Tarea 6). FIX ROUND 1: el primer intento subia
+# Anisotropic a 0.6 para simular la microestria del cepillado -- y en el
+# render salia PLASTICO MATE BLANCO, sin grano y casi sin contraste
+# especular. La causa no era el valor: es que las mallas vienen de STL SIN
+# UV NI TANGENTE. Sin un mapa de tangente por cara, Cycles arma una base
+# tangente ARBITRARIA por triangulo para el lobulo anisotropico -- cada
+# triangulo "cepilla" en una direccion distinta y sin relacion con la pasada
+# real de la herramienta, asi que lo que deberia leerse como grano se
+# promedia a RUIDO, no a brillo estirado. Anisotropic vuelve a 0.0: es la
+# opcion honesta mientras no haya geometria con tangente real por pieza (un
+# mapa de tangente por UV es el siguiente paso si hace falta el grano de
+# verdad, no antes).
+#
+# LO QUE SI LEE COMO METAL sin mentir sobre un grano que no esta modelado:
+# Roughness mas bajo (0.28 -> 0.25, un pelo mas especular) y Base Color mas
+# oscuro/neutro (0.80,0.81,0.83 -> 0.72,0.73,0.75, menos "blanco lavado") --
+# y la luz KEY mas chica y mas fuerte (ver poner_luces()), para que la
+# arista tenga un highlight definido en vez de un degradado ancho y suave.
 alu.data.materials.append(mat(
-    "aluminio", **{"Base Color": (0.80, 0.81, 0.83, 1.0),
-                   "Metallic": 1.0, "Roughness": 0.28,
-                   "Anisotropic": 0.6, "Anisotropic Rotation": 0.0}))
+    "aluminio", **{"Base Color": (0.72, 0.73, 0.75, 1.0),
+                   "Metallic": 1.0, "Roughness": 0.25,
+                   "Anisotropic": 0.0, "Anisotropic Rotation": 0.0}))
 # LA TABLA, en su propio STL desde el 2026-08-27. Estuvo dentro del ensamblado
 # de acrilico mientras el suelo era PMMA, y meterla ahi ahora la pintaria de
 # naranja translucido: un render que miente sobre una decision de material.
@@ -223,20 +232,33 @@ def poner_luces(derecha: Vector, arriba_cam: Vector, adelante: Vector, distancia
     de mundo fijas) y escaladas con el cuadrado de la distancia (inverso
     del cuadrado: si el ensamblado crece y la camara se aleja
     proporcionalmente, hay que subir energia con distancia^2 para mantener
-    la misma iluminancia sobre la pieza). Constantes (4e6, 1.5e6, 600, 400)
+    la misma iluminancia sobre la pieza). Constantes de FILL (1.5e6, 400)
     calibradas a ojo a distancia de referencia 700 mm -- probado que
-    subirlas x4 no mueve el brillo casi nada (Fix round 1, ronda de
-    diagnostico 1): la palanca real es el relleno GI del mundo, no esto.
-    Quita las luces de la vista anterior antes de poner las nuevas -- si
-    no, se suman e iluminan la vista siguiente desde el lado equivocado."""
+    subirlas x4 no mueve el brillo casi nada (Fix round 1 de otra tarea,
+    ronda de diagnostico 1): la palanca real ahi era el relleno GI del
+    mundo, no esto. Quita las luces de la vista anterior antes de poner las
+    nuevas -- si no, se suman e iluminan la vista siguiente desde el lado
+    equivocado.
+
+    LA KEY CAMBIA EN Fix round 1 DE LA TAREA 6: tamano a la mitad (600 ->
+    300 * esc_luz) y energia al doble (4e6 -> 8e6 * esc_luz^2). Con el
+    aluminio en Roughness bajo y SIN anisotropico (ver el material en el
+    bloque de arriba -- sin UV/tangente por pieza, el lobulo anisotropico
+    solo anadia ruido), una luz de area grande y suave da un degradado
+    ancho sin punto de brillo: una fuente mas chica y mas intensa concentra
+    el highlight especular en la arista real -- que es lo que un ojo lee
+    como "metal", no el tono de gris de fondo. La energia sube con el
+    cuadrado del tamano para que el area bajo la curva de luz (y por tanto
+    el brillo medio que mide medir()) no caiga: una fuente 1/2 de tamano
+    necesita ~4x la radiancia para verter la misma potencia total."""
     for o in [o for o in bpy.data.objects if o.type == "LIGHT"]:
         bpy.data.objects.remove(o, do_unlink=True)
     esc_luz = distancia / 700.0
     bpy.ops.object.light_add(type="AREA", location=centro + arriba_cam * radio * 1.3
                               + derecha * radio * 0.7 + adelante * distancia * 0.4)
     key = bpy.context.object
-    key.data.energy = 4e6 * esc_luz ** 2
-    key.data.size = 600 * esc_luz
+    key.data.energy = 8e6 * esc_luz ** 2
+    key.data.size = 300 * esc_luz
     bpy.ops.object.light_add(type="AREA", location=centro - derecha * radio * 1.1
                               + arriba_cam * radio * 0.4 + adelante * distancia * 0.25)
     fill = bpy.context.object

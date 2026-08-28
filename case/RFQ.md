@@ -154,9 +154,13 @@ error que el modelo vigila con un sobre por pieza. **`costilla_2d` YA NO ES
 DE ESTE TALLER**: desde el 2026-08-28 es un contorno real (sin plegar, sin
 soldar) que se manda a mecanizado, §D.
 
-**Las placas de anclaje y los clips no tienen DXF propio todavía** (ver
-`PLIEGO.md` §6, «Lo que NO va a este taller»): mientras no exista, este
-taller trabaja de las cotas de `params.scad` — confirmarlas antes de cortar.
+**Las placas de anclaje y los clips tienen DXF propio desde el 2026-08-28**
+(ver `PLIEGO.md` §6, tabla de «Lo que NO va a este taller»): `placa_cara_inf_2d`,
+`placa_valle_2d`, `placa_cara_sup_2d`, `clip_2d`. El DXF trae el agujero
+FUNCIONAL de paso M4 por riel (no el cajeado); el cajeado de Ø8 × 2.5 por el
+lado del anillo va como nota de mecanizado en el mismo §6 — un DXF 2D no
+dice profundidad — y hay que confirmarlo antes de cortar, como cualquier
+otra cota que no está en el fichero.
 
 ### Preguntas de cota (aluminio)
 

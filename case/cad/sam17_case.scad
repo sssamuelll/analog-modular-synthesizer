@@ -755,21 +755,30 @@ module placas_riel() {
 // deshacer ningun giro ni desplazamiento -- la MISMA razon por la que
 // costilla_2d()/costilla_dorso_2d() tampoco usan un marco local.
 //
-// LOS TALADROS SON UN ESPEJO EXACTO de los que placa_riel() corta en 3D,
-// sin la Z: el par de M4 ciegos que atan la placa al anillo (roscas_placa(),
-// diametro de PASO) y el cajeado de cada riel que la placa recoge (pl[8],
-// diametro d_cajeado_riel). EL PASO M4 DEL PROPIO RIEL, que en 3D cae
-// CONCENTRICO con ese cajeado (mismo eje, radio menor), no se dibuja aparte:
-// en un difference() 2D el circulo mayor ya contiene al menor entero, asi
-// que dibujar los dos no cambia ni un mm2 del contorno cortado -- son la
-// misma resta.
+// EL DXF LLEVA EL AGUJERO QUE FUNCIONA, no el mayor de los dos que
+// placa_riel() corta en 3D. FIX ROUND 1 (Tarea 6): la primera version de
+// este modulo dibujaba aqui el CAJEADO (d_cajeado_riel = 8, bolsillo de
+// prof_cajeado_riel = 2.5 por el lado del anillo) en el eje de cada riel, y
+// se dejaba fuera el agujero de PASO M4 que de verdad atraviesa la placa y
+// por donde entra el tornillo del riel. Cortada tal cual, la cabeza del
+// tornillo cae dentro de un agujero de 8 mm sin nada que la tope y el riel
+// no queda atornillado a nada -- pieza inservible, no una pieza distinta.
+// Lo caza taladros_placas() en check_dxf.py y lo dice PLIEGO.md (S6): "un
+// M4 de paso por riel + cajeado de 8 x 2.5 por el lado del anillo" -- las
+// DOS cosas, y la version anterior solo dibujaba la segunda.
+//
+// EL CAJEADO NO SE DIBUJA AQUI, y no es un descuido: un DXF 2D no sabe
+// decir "a 2.5 mm de profundidad" -- el mismo caso que el rebaje de
+// costilla_dorso_2d y el cajeado KONDOR (ver esos modulos). Va como NOTA DE
+// MECANIZADO en el pliego (Ø8 x prof_cajeado_riel, centrado en cada paso M4
+// de riel, por la cara que mira al anillo), no como corte en este fichero.
 module placa_2d(pl) {
     difference() {
         polygon(esquinas_placa(pl));
         for (c = roscas_placa(pl))
             translate(c) circle(d = d_M4_paso + kerf);
         for (e = pl[8])
-            translate(e[1]) circle(d = d_cajeado_riel);
+            translate(e[1]) circle(d = d_M4_paso + kerf);
         // SOLO LA PLACA DEL VALLE: el M3 de la pestana de la banda y el M4
         // de cada lengueta de la bahia, los DOS que roscas_placa_valle()
         // rosca PASANTE en la propia placa (ruling R3) y no en el anillo.
