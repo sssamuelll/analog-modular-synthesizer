@@ -474,7 +474,7 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # puerta de anclaje miraba, y su papel -- atar los costados a media altura
     # -- ya lo hace el del valle a la MISMA altura. Lo que costo se mide en
     # guarda_costado(), en check_dxf.py.
-    # tapa_valle: solo la banda ranurada del vuelo delantero, a ras del plano
+    # tapa_valle: solo la banda lisa del vuelo delantero, a ras del plano
     # del valle. Las diez M3 al canto de las alas murieron con el resto de la
     # plancha; quedan unicamente las dos pestanas atornilladas a las costillas.
     x0_tv, _ = _x_valle(p, P, cr)
@@ -929,23 +929,21 @@ def _area_ranuras(n: int, largo: float, ancho: float) -> float:
     return n * ((largo - ancho) * ancho + math.pi * (ancho / 2) ** 2)
 
 
-def _rejilla_valle(p: dict[str, float]) -> tuple[int, float, float]:
-    """Las ranuras de SALIDA, mismas cuentas que tapa_valle_2d()."""
+def _rejilla_valle(p: dict[str, float]) -> tuple[int, float, float, float]:
+    """La rejilla de SALIDA de la MESETA, gemela de miembro_alto_2d().
+
+    Conserva el nombre historico porque guarda_aire() lleva llamandola asi
+    desde que la salida estaba en tapa_valle_2d(). Devuelve tambien el
+    centroide en Y: mover la misma area de y~145 a y~253 cambia el tiro, y
+    contar solo milimetros cuadrados falsearia justo el efecto buscado."""
     P = _vertices(p)
-    cr = _centros_rail(p, P)
-    miembros = _cajas_miembro(p, P, cr, 0.0, 0.0)
-    xv = _x_valle(p, P, cr)
-    bahia = _envolvente_bahia(miembros)
-    largo = bahia[1] - xv[0]
-    campo = (p["valle_margen"], largo - p["valle_margen"])
-    campos = (campo,) if campo[1] - campo[0] >= p["vent_ancho_ranura"] else ()
-    paso = int(p["valle_paso_hp"])
+    largo = p["meseta_largo_ranura"]
+    paso = int(p["meseta_paso_hp"])
     n_hp = round(p["largo_riel"] / p["hp"])
     ns = len(range(paso, int(n_hp) - paso + 1, paso))
-    area = sum(_area_ranuras(ns, c[1] - c[0], p["vent_ancho_ranura"])
-               for c in campos)
-    largo_ranura = campos[0][1] - campos[0][0] if campos else 0.0
-    return len(campos) * ns, largo_ranura, area
+    area = _area_ranuras(ns, largo, p["vent_ancho_ranura"])
+    y = P[5][1] - p["marco_sup"] / 2
+    return ns, largo, area, y
 
 
 def _banda_libre_trasera(p: dict[str, float]) -> tuple[float, float]:
@@ -1110,12 +1108,10 @@ def guarda_aire(p: dict[str, float]) -> None:
     K y no pegado al resultado. Sirve para ordenes de magnitud y para que un
     cambio de geometria no empeore el tiro sin que nadie se entere."""
     n_ent, largo_ent, a_ent, y_ent = _rejilla_entrada(p)
-    n_val, largo_val, a_val = _rejilla_valle(p)
-    P = _vertices(p)
-    y_val = P[3][1] - p["t_valle"] / 2
+    n_mes, largo_mes, a_mes, y_mes = _rejilla_valle(p)
     a_ond, y_ond = _ondas_trasera(p)
-    a_sal = a_val + a_ond
-    y_sal = (a_val * y_val + a_ond * y_ond) / a_sal
+    a_sal = a_mes + a_ond
+    y_sal = (a_mes * y_mes + a_ond * y_ond) / a_sal
 
     assert largo_ent >= 4 * p["vent_ancho_ranura"], (
         f"la rejilla de entrada mide {largo_ent:.1f} mm de largo con ranuras "
@@ -1140,7 +1136,9 @@ def guarda_aire(p: dict[str, float]) -> None:
 
     print(f"aire: entrada {a_ent:.0f} mm2 en {n_ent} ranuras de "
           f"{largo_ent:.1f} x {p['vent_ancho_ranura']:.0f} (trasera, y={y_ent:.0f})")
-    print(f"  salida {a_sal:.0f} mm2 = {a_val:.0f} del valle ({n_val} ranuras) + "
+    print(f"  salida {a_sal:.0f} mm2 = {a_mes:.0f} de la meseta "
+          f"({n_mes} ranuras de {largo_mes:.1f} x "
+          f"{p['vent_ancho_ranura']:.0f}, y={y_mes:.0f}) + "
           f"{a_ond:.0f} de las DOS ondas abiertas (el relieve KONDOR es cajeado "
           f"ciego y no ventila), centroide y={y_sal:.0f}")
     print(f"  tiro {h*1000:.0f} mm, area efectiva {a_ef:.0f} mm2 -> "
@@ -1283,11 +1281,25 @@ def guarda_chaflan(p: dict[str, float]) -> None:
           f"{t_min/4:.2f})")
 
 
-# La tapa del valle es de ALUMINIO desde el 2026-08-25. Modulo elastico: 69 GPa,
-# que es comun a todos los aluminios y no depende de la aleacion. El limite
-# elastico SI depende, y va conservador: 130 MPa es el Rp0.2 de un 5754 H22, la
-# chapa corriente de corte. Un 6082-T6 da ~250 y aguantaria el doble; pedir la
-# aleacion exacta es cosa del pliego, no de esta puerta. SUPUESTO DECLARADO.
+# La tapa del valle y el esqueleto son de ALUMINIO. Modulo elastico: 69 GPa,
+# comun a las aleaciones y por eso no cambia. El limite elastico SI, y va
+# CONSERVADOR: 130 MPa es el Rp0.2 de un 5754 H22, la chapa corriente de corte.
+#
+# SUBIO A 250 Y VOLVIO A BAJAR EL MISMO DIA (2026-08-27), y la vuelta atras es
+# el dato bueno. Al pasar la chapa de 3 a 1.5 medi que la costilla llegaba a
+# 144.4 MPa en el tramo del valle y conclui que hacia falta un 6082-T6. Estaba
+# mal: esa medicion se tomo con el ala en CUATRO de los siete tramos. En la
+# misma tanda el ala paso a los SIETE -- pedido por estetica, para que ningun
+# canto de acrilico se vea -- y el tramo del valle dejo de ser pletina plana.
+# Con el ala puesta trabaja a ~62 MPa y pasa de sobra con los 130. El cambio
+# que se pidio por como se VE arreglo solo el problema de como AGUANTA.
+#
+# Lo cazo codex, que noto que mis cifras no salian de la formulacion actual de
+# guarda_costilla() y lo dijo en vez de escribirlas igual.
+#
+# O sea: el 6082-T6 se puede pedir por margen, pero NO lo exige el calculo.
+# Un cambio de material que ninguna puerta pide es sobreespecificar y lo paga
+# el pliego. SUPUESTO DECLARADO: los 130 siguen sin medirse.
 E_ALUMINIO, RP02_ALUMINIO = 69000.0, 130.0
 # Ancho sobre el que reparte una mano apoyada de canto. Es EL SUPUESTO QUE MAS
 # MANDA en esta puerta -- con 50 mm la tension se dobla contra los 100 -- y por
@@ -1383,10 +1395,11 @@ def paso_junta_L(p: dict[str, float], t: float, b: float,
 def _tramos_costilla(p: dict[str, float]) -> list[tuple[str, float, bool, bool]]:
     """Los 7 tramos del contorno: largo, si llevan ala, y si su vertice gira mal.
 
-    QUE UN TRAMO LLEVE ALA SE DERIVA, no se elige: la lleva si como pletina
-    plana no pasa el techo de flecha. Salen cuatro -- las dos caras inclinadas,
-    la trasera y el suelo -- y se quedan sin ella el frente (19 mm), el valle
-    (60) y la meseta (50), que sobran de largo para necesitarla.
+    QUE UN TRAMO LLEVE ALA SE DERIVA de DOS condiciones. La primera sigue
+    siendo estructural: si como pletina plana no pasa el techo de flecha. La
+    segunda manda siempre desde el 2026-08-28: todos llevan ala para que el
+    aluminio tape el canto del acrilico. Antes salian cuatro y quedaban fuera
+    frente, valle y meseta; esos 130.47 mm de PMMA visto son el fallo contractual.
 
     El bool de vertice marca si el giro EN EL FINAL de ese tramo es CONCAVO. En
     un contorno plegado, una esquina convexa se resuelve con corte de alivio en
@@ -1406,8 +1419,9 @@ def _tramos_costilla(p: dict[str, float]) -> list[tuple[str, float, bool, bool]]
         ux, uy = b[0] - a[0], b[1] - a[1]
         vx, vy = c[0] - b[0], c[1] - b[1]
         concavo = (ux * vy - uy * vx) > 0
-        out.append((nombres[i], largo, f_pletina > p["flecha_costado_max"],
-                    concavo))
+        necesita_rigidez = f_pletina > p["flecha_costado_max"]
+        tapa_canto = True
+        out.append((nombres[i], largo, necesita_rigidez or tapa_canto, concavo))
     return out
 
 
@@ -1415,7 +1429,7 @@ def plegado_costilla(p: dict[str, float]) -> tuple[float, float, float]:
     """Setback, bend allowance y vuelo del desarrollo, para 90 grados.
 
     Misma formula que ch_ba() del chasis, con los parametros de ESTA chapa:
-    aluminio de 3 mm, no acero de 1.5. SB es lo que la linea de plegado se mete
+    aluminio 6082-T6 de 1.5 mm. SB es lo que la linea de plegado se mete
     hacia DENTRO del contorno; el borde del desarrollo acaba sobresaliendo
     (ala_doblez - BD) del contorno de la pieza doblada."""
     sb = p["radio_doblez_costilla"] + p["t_costilla"]
@@ -1471,15 +1485,13 @@ def guarda_costilla(p: dict[str, float]) -> None:
     1. QUE ALGUIEN QUITE EL ALA por estetica. Sin ella la seccion es una
        pletina plana y no pasa a NINGUN espesor -- ni la de 6 mm; la de 3
        ademas fluye a 257 MPa.
-    2. QUE UN TRAMO LARGO SE QUEDE SIN ALA. Que un tramo la lleve se DERIVA de
-       si la necesita, no se elige a mano, y esta puerta comprueba las dos
-       familias: los que la llevan como seccion en L, los que no como pletina.
-    3. QUE UN ALA CRUCE UNA ESQUINA CONCAVA. Ahi las dos alas vecinas divergen
-       y queda hueco -- no se puede plegar. El perfil tiene una sola esquina
-       concava, P3 (fin del valle), y sale bien PORQUE el valle no lleva ala:
-       pero eso es una coincidencia afortunada del calculo, no una garantia, y
-       si un dia el valle se alarga hasta necesitarla habria que enterarse
-       AQUI y no en el taller de plegado."""
+    2. QUE UN TRAMO SE QUEDE SIN ALA. Desde el 2026-08-28 la rigidez ya no es
+       el unico motivo: los siete la llevan porque el aluminio tapa el canto.
+    3. QUE P3 SE MANDE AL TALLER COMO UN ALIVIO EN V NORMAL. Es el unico giro
+       concavo; las alas del valle y la cara superior divergen al doblarse. El
+       cierre se especifica como esquina cerrada para soldadura lineal: sin
+       retirar SB en P3, doblar, cerrar a tope y soldar el encuentro. No se le
+       atribuye resistencia a esa soldadura; solo continuidad visual del canto."""
     I_L, ymax_L, _ = _seccion_L(p["t_costilla"], p["ala_costilla"],
                                 p["ala_doblez"])
     I_p = p["ala_costilla"] * p["t_costilla"] ** 3 / 12
@@ -1498,18 +1510,27 @@ def guarda_costilla(p: dict[str, float]) -> None:
         assert sigma <= RP02_ALUMINIO, (
             f"la costilla trabaja a {sigma:.1f} MPa en '{nombre}' y el Rp0.2 "
             f"del aluminio de chapa son {RP02_ALUMINIO:.0f}.")
+    cierres = []
     for i, (nombre, _, ala, concavo) in enumerate(tramos):
         siguiente = tramos[(i + 1) % len(tramos)]
-        assert not (concavo and ala and siguiente[2]), (
-            f"el ala cruza una esquina CONCAVA entre '{nombre}' y "
-            f"'{siguiente[0]}': ahi las dos alas divergen y queda hueco, o sea "
-            f"que no se puede plegar. Hay que interrumpir el ala en uno de los "
-            f"dos, o esa esquina pide solape o soldadura.")
+        if concavo and ala and siguiente[2]:
+            cierres.append((i, nombre, siguiente[0]))
+    assert cierres == [(2, "el valle", "cara superior")], (
+        "las alas que concurren en esquina concava ya no son solo las de P3: "
+        + ", ".join(f"P{i+1} entre '{a}' y '{b}'" for i, a, b in cierres)
+        + ". El desarrollo solo declara cierre soldado para P3; otra esquina "
+          "concava necesita su propia solucion de fabricacion")
     sb, ba, vuelo = plegado_costilla(p)
+    medio_giro_p3 = math.radians(p["angulo_superior"]) / 2
+    largo_rip_p3 = vuelo / math.cos(medio_giro_p3)
+    assert 0 < p["cierre_p3_gap"] <= p["t_costilla"], (
+        f"el rip de P3 deja {p['cierre_p3_gap']:.2f} mm de luz sobre chapa de "
+        f"{p['t_costilla']:.2f}: tiene que separar las alas sin abrir un V mayor "
+        "que el propio espesor")
     w, h = bbox_desarrollo_costilla(p)
     print(f"costilla: CHAPA PLEGADA de {p['t_costilla']:g}, ala de "
           f"{p['ala_doblez']:g} doblada a 90 en {con_ala} de {len(tramos)} "
-          f"tramos (los otros {len(tramos)-con_ala} no la necesitan)")
+          "tramos (rigidez donde manda y tapa de canto en TODOS)")
     # ESTO ES LO QUE EL DXF NO SABE DECIR, y sin ello la pieza vuelve del
     # taller PLANA. Mismo caso que el chasis, que viaja con su plano de
     # plegado porque un corte no dice de donde doblar.
@@ -1518,8 +1539,10 @@ def guarda_costilla(p: dict[str, float]) -> None:
           f"{p['radio_doblez_costilla']:g}, BA {ba:.3f}, BD {2*sb-ba:.3f}")
     print(f"  linea de plegado a {sb:.3f} mm HACIA DENTRO del contorno de la "
           f"pieza, y el desarrollo sobresale {vuelo:.3f} por fuera")
-    print(f"  alivio cuadrado de {sb:.0f} x {sb:.0f} donde concurren dos alas "
-          f"-- solo en P6, entre la trasera y el suelo")
+    print(f"  alivio de {sb:.1f} mm en los 6 vertices CONVEXOS; P3 es CONCAVO: "
+          f"rip bisector de {largo_rip_p3:.2f} x {p['cierre_p3_gap']:.2f} mm, "
+          f"cierre a tope y soldadura lineal de "
+          f"{p['ala_doblez'] - p['t_costilla']:.1f} mm por costilla (2 uniones)")
     for nombre, largo, ala, concavo in tramos:
         I, ymax = (I_L, ymax_L) if ala else (I_p, ymax_p)
         f = p["carga_mano"] * largo ** 3 / (192 * E_ALUMINIO * I)
@@ -1916,7 +1939,7 @@ def _secciones_miembro(p: dict[str, float]) -> list[tuple[str, float, float]]:
       el canal garantiza en su lado debil, no con la que le regala el ala larga.
       La seccion real es mayor y ese margen no se cobra: es la diferencia entre
       "esta pieza aguanta" y "esta pieza aguanta si nadie acorta la meseta".
-      Y el retorno de abajo NO es adorno: un ala libre de 528 mm en chapa de 3
+      Y el retorno de abajo NO es adorno: un ala libre de 528 mm en chapa de 1.5
       ondula, y ademas seria canto vivo en una pieza vista.
 
     'bahia' NO ES UN CANAL DE catalogo: es una bandeja, y su seccion sale de su
@@ -2166,6 +2189,76 @@ def guarda_fila_1u(p: dict[str, float]) -> None:
           f"-- cuadra al centesimo con los {S_1U_INTELLIJEL:.2f} publicados")
     print(f"  {hp_1u} HP a paso {p['hp']:.2f}, boca de {boca:.2f}, "
           f"{fondo:.1f} mm de fondo para el tile tras el riel")
+
+
+def guarda_canto_visto(p: dict[str, float]) -> None:
+    """Ningun canto de acrilico se ve desde fuera: el aluminio es el borde.
+
+    LO PIDIO SAMUEL EL 2026-08-27 mirando el render, y es la consecuencia final
+    de la inversion: "quiero que el aluminio sea el borde del acrilico, no quiero
+    que se vea el canto por ningun lado -- el acrilico solamente rellena el
+    cuerpo del esqueleto. Lo que se ve en todos los filos debe ser metal".
+
+    EL ALA NUNCA SE PENSO PARA TAPAR. Se deriva en _tramos_costilla() de UNA sola
+    condicion: si el tramo como pletina plana no pasa el techo de flecha, lleva
+    ala. Por eso salian cuatro de siete, y los tres que sobraban de rigidez --
+    el frente, el valle y la meseta -- se quedaban sin ella y dejaban 130 mm de
+    contorno con los 8 mm de canto de PMMA al aire. Y donde SI habia ala tampoco
+    bastaba: bajaba 12 y el acrilico llega a 15.
+
+    Asi que el ala gana un segundo motivo de existir, y el nuevo manda siempre:
+    rigidez donde hace falta, TAPA EN TODAS PARTES.
+
+    Dos condiciones, y las dos son de aspecto antes que de estructura:
+
+      1. los SIETE tramos llevan ala. No hay tramo corto que se libre: un canto
+         visto de 19 mm se ve igual que uno de 300.
+      2. el ala baja MAS que la cara interior del acrilico. El apilado desde
+         fuera es costilla + junta + acrilico, asi que el ala tiene que pasar de
+         t_costilla + t_junta + t_cheek o el canto asoma por el ultimo tramo.
+
+    NO es una puerta estructural y no pretende serlo: la rigidez la siguen
+    midiendo la flecha y la tension de guarda_costilla(). Esta mide lo que se
+    VE, que en un instrumento que se vende entero es tan contractual como lo
+    que aguanta."""
+    fondo_acrilico = p["t_costilla"] + p["t_junta"] + p["t_cheek"]
+    tramos = _tramos_costilla(p)
+    sin_ala = [(n, l) for n, l, ala, _ in tramos if not ala]
+    assert not sin_ala, (
+        "estos tramos del contorno no llevan ala, asi que ensenan el canto del "
+        "acrilico: "
+        + ", ".join(f"'{n}' ({l:.2f} mm)" for n, l in sin_ala)
+        + f" -- {sum(l for _, l in sin_ala):.2f} mm de filo con {p['t_cheek']:.0f} "
+          f"mm de PMMA a la vista. El ala se deriva de la flecha y estos tres "
+          f"sobran de rigidez, pero tapar no es una cuestion de rigidez")
+    assert p["ala_doblez"] >= fondo_acrilico, (
+        f"el ala baja {p['ala_doblez']:.2f} mm y la cara interior del acrilico "
+        f"esta a {fondo_acrilico:.2f} ({p['t_costilla']:g} de chapa + "
+        f"{p['t_junta']:g} de junta + {p['t_cheek']:g} de PMMA): asoman "
+        f"{fondo_acrilico - p['ala_doblez']:.2f} mm de canto por el filo. El "
+        f"aluminio tiene que pasar de largo, no quedarse a la mitad")
+    print(f"canto visto: los {len(tramos)} tramos llevan ala y baja "
+          f"{p['ala_doblez']:.0f} mm sobre un acrilico que acaba en "
+          f"{fondo_acrilico:.2f} -- ningun filo ensena PMMA")
+
+
+def guarda_meseta_es_chapa(p: dict[str, float]) -> None:
+    """La meseta del remate tiene el espesor de la chapa, porque ES la chapa.
+
+    marco_sup dejo de ser una plancha de acrilico el 2026-08-27 y paso a ser la
+    cara horizontal del miembro trasero alto -- un ALA doblada del mismo blank.
+    Un ala no puede tener otro espesor que su chapa, pero marco_sup se quedo en
+    el 3 que valia cuando t_costilla valia 3, y al bajar la chapa a 1.5 el
+    modelo dibujaba una meseta de 3 pegada a un alma de 1.5.
+
+    params.scad no admite expresiones, asi que el valor va a mano y esta puerta
+    es lo que impide que se separen otra vez. Es el patron del repo: un literal
+    con la formula solo en el comentario ya costo una tanda con ancho_total; un
+    literal con PUERTA no se desincroniza en silencio."""
+    assert abs(p["marco_sup"] - p["t_costilla"]) < 1e-9, (
+        f"marco_sup vale {p['marco_sup']:g} y t_costilla {p['t_costilla']:g}. La "
+        f"meseta es un ALA del miembro trasero alto, doblada de su mismo blank: "
+        f"no puede tener otro espesor que la chapa de la que sale")
 
 
 def guarda_piso(p: dict[str, float]) -> None:
@@ -2800,6 +2893,8 @@ def main() -> int:
     guarda_miembros(p)
     guarda_agarre(p)
     guarda_fila_1u(p)
+    guarda_canto_visto(p)
+    guarda_meseta_es_chapa(p)
     guarda_piso(p)
     guarda_costilla(p)
     guarda_aire(p)

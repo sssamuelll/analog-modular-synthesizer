@@ -85,7 +85,7 @@ La tercera murió por una razón que no sale en ningún número: el acrílico na
 es **traslúcido**, y el campo de ranuras se transparentaba a lo largo del canto
 inferior. Se ve en el render oficial, no en la geometría.
 
-Son 45 ranuras iguales a las del valle —mismo ancho, mismo paso HP— en la banda
+Son 45 ranuras del mismo lenguaje —mismo ancho y registradas al HP— en la banda
 que dejan libre la fila de tornillos por abajo y la onda por arriba. El hueco del
 IEC vive **dentro** de esa banda, así que queda embebido en el campo en vez de al
 lado: se saltan sus columnas enteras, con 6.98 mm de material alrededor. Partir
@@ -105,9 +105,13 @@ La primera versión se olvidó ese término y los 14 salieron 12.
 
 | | área abierta | altura | ranuras |
 |---|---|---|---|
-| entrada (trasera, abajo) | **6 950 mm²** | y = 50 | 45 de 39.5 × 4 |
-| salida — valle | 7 499 mm² | y = 144 | 102 de 19.2 × 4 |
-| salida — las tres ondas | 5 110 mm² | y ≈ 137 | — |
+| entrada (trasera, abajo) | **7 616 mm²** | y = 44 | 45 de 43.2 × 4 |
+| salida — meseta | **905 mm²** | y = 255 | 16 de 15 × 4 |
+| salida — las dos ondas abiertas | 2 443 mm² | y ≈ 95 | — |
+
+La banda del valle queda **lisa** desde el 2026-08-28. Su antigua salida sube
+a la meseta del miembro trasero alto: menos área a mucha más altura mantiene el
+tiro y deja esa cara horizontal sin ranuras.
 
 **`guarda_aire()` dejó de medir área y pasa a medir salto térmico.** Nació
 exigiendo «entrada ≥ salida», que valía mientras la entrada estaba en la
@@ -552,7 +556,7 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 
 | Pieza | Cantidad | Nota |
 |-------|----------|------|
-| **COSTILLA** — chapa de aluminio t=3 **plegada** | **2** | **la pieza portante del case.** Banda de 24 mm siguiendo el contorno del costado, ventana vaciada, ala de 12 mm doblada a 90° en 4 de sus 7 tramos. Lleva **todos** los tornillos estructurales. Su DXF es el **desarrollo**, no el contorno. Alivio de 6 × 6 en la única esquina donde concurren dos alas |
+| **COSTILLA** — aluminio 6082-T6 t=1.5 **plegado** | **2** | **la pieza portante del case.** Banda de 27 mm, ala de 16 mm en sus 7 tramos: el metal tapa todo el canto de PMMA. Su DXF es el **desarrollo**. Seis alivios convexos de 4.5 mm; P3 lleva rip bisector de 13.75 × 0.50, cierre y soldadura lineal de 14.5 mm por costilla |
 | Z-Rail de Tiptop | **4** | 104 HP (528.32 mm), sección 23.8 × 10. Se compran en pares: 2 unidades = 4 raíles. Atornillan a la **costilla** desde el 2026-08-26, no al acrílico |
 | Transversal perfil 2020 | **3** | de 528.62 mm: `base trasera`, `valle` y `remate trasero`. Fueron 8 el 2026-08-21, 5 el 25, 4 el 26 y **3 el 27**, cuando se va `base delantera` — la única que flotaba en mitad del suelo. Las tres que quedan están arrinconadas contra dos caras cada una, o sostienen una plancha que nada más alcanza |
 | Tornillo **M4** | **8** | entran de punta por la **costilla** y **roscan en el propio Z-Rail** (viene con M4 taladrado a 3.3 de fábrica). Sin tuerca, sin inserto. **No vienen con el raíl.** 4 de hombro (los ejes de giro) + 4 de mano (los cierres). Muerden 3 mm de chapa en vez de 8 de acrílico: **el tornillo se acorta** |
@@ -562,7 +566,7 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Tornillo **M3 botón** + tuerca T M3 + **arandela ancha d16** | **22** | las planchas a las transversales: tapa del valle 5, tapa de remate 5, **trasera 10**, + **2 de las pestañas** de la tapa del valle a la costilla. Eran 30: las 2 filas de la bandeja se fueron con ella. Entran por la RANURA, no por la punta. **Apriete 1.0 N·m con rosca SECA** — engrasarla mete un 30 % más de precarga con el mismo par y fisura. Ver `par_m3` |
 | Arandela ANCHA d16 | **24** | 20 bajo los M3 que muerden acrílico + 4 en los ejes de giro. Con arandela M4 normal (d9) el apoyo sobre el acrílico da 16.3 MPa y el PMMA fluye en semanas; con d16 da 4.3 y aguanta. En los M3 además sube el par utilizable de 0.33 a 1.15 N·m — por debajo de 1 N·m no hay llave dinamométrica de 1/4" que lo dé. **Los 2 M3 de pestaña no la necesitan**: aprietan aluminio contra aluminio |
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa. **Sustituye al amortiguador**, que se eliminó |
-| **Chapa de aluminio t=3 mm** | **1** | la tapa del valle, desarrollo 560.00 × 66.48. **No es acrílico desde el 2026-08-25 y no es plana desde el 27**: lleva una pestaña de 21 mm doblada en cada punta, atornillada a la costilla. Aleación **5754 o mejor** (`Rp0.2` ≥ 130 MPa). Va al taller de CHAPA — sin recocido, sin diamantado, sin chaflán: eso es del PMMA. Ver `guarda_valle()` |
+| **Chapa de aluminio 6082-T6 t=3 mm** | **1** | la tapa lisa del valle, desarrollo 560.00 × 18.30 más sus pestañas. **No es acrílico desde el 2026-08-25 y no es plana desde el 27**: lleva una pestaña de 21 mm doblada en cada punta, atornillada a la costilla. Va al taller de CHAPA — sin recocido, sin diamantado, sin chaflán: eso es del PMMA. Ver `guarda_valle()` |
 | **TABLA de madera maciza t=18 mm** | **1** | **el suelo interior Y el zócalo: una sola pieza**, 570.62 × 328.94. Ocupa y = −18 a 0; el marco se le apoya encima y las paticas van debajo. Veta a lo largo. Especie sin elegir: las cuentas van contra E = 11 000 MPa (nogal o arce) |
 | Plancha acrílico t=8 mm | **4** | 2 costados + tapa de remate (528.62 × 37) + **trasera** (528.02 × 248.18, con las ondas y la rejilla de entrada de aire). **El suelo salió de esta lista el 2026-08-27**, y los costados **ya no llevan un solo taladro** |
 | Patica de goma con casquillo roscado | 4 | EPDM o NBR, Shore 45–55 A, **d20 × 10**. Se atornillan **a la tabla**, no al acrílico. **Se exige la curva carga-deformación: ≥ 0.25 mm de flecha con 22.8 N** — por debajo la pata AMPLIFICA los 100 Hz del toroide en vez de aislarlos (`flecha_pie`). Casquillo roscado moldeado: se atornilla, **no se pega** |

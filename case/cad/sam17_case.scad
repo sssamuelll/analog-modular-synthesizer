@@ -505,21 +505,35 @@ module costado() { linear_extrude(t_cheek) costado_2d(); }
 // pieza viaja con su plano de plegado. Cortar el contorno daria una chapa que
 // al doblarse se queda corta -- el material que el radio se lleva.
 
-// Que tramo lleva ala se DERIVA, no se elige: la lleva si como pletina plana no
-// pasa el techo de flecha. GEMELA de _tramos_costilla() en clearance_budget.py,
-// y las dos tienen que dar lo mismo -- por eso E_aluminio vive en params.scad y
-// no suelto en cada lado.
+// Que tramo lleva ala se DERIVA de DOS condiciones. La primera sigue siendo
+// estructural: la necesita si como pletina plana no pasa el techo de flecha. La
+// segunda manda siempre desde el 2026-08-28: TODOS la llevan para tapar el canto
+// del acrilico. GEMELA de _tramos_costilla() en clearance_budget.py.
 function costilla_largo_tramo(i) =
     let (P = pts_perfil()) norm(P[(i+1) % len(P)] - P[i]);
-function costilla_lleva_ala(i) =
+function costilla_necesita_ala_rigidez(i) =
     carga_mano * pow(costilla_largo_tramo(i), 3)
       / (192 * E_aluminio * ala_costilla * pow(t_costilla, 3) / 12)
     > flecha_costado_max;
+function costilla_tapa_canto(i) = true;
+function costilla_lleva_ala(i) =
+    costilla_necesita_ala_rigidez(i) || costilla_tapa_canto(i);
+
+// El bool marca el giro EN el vertice i. Para este contorno horario, positivo
+// es concavo. P3 es el unico: ahi un alivio en V abre el encuentro al doblar.
+function costilla_vertice_concavo(i) =
+    let (P = pts_perfil(), n = len(P),
+         a = P[i] - P[(i-1+n) % n], b = P[(i+1) % n] - P[i])
+    a.x*b.y - a.y*b.x > 0;
+function costilla_alivio_vertice(i) =
+    let (n = len(pts_perfil()))
+    costilla_lleva_ala((i-1+n) % n) && costilla_lleva_ala(i)
+      && !costilla_vertice_concavo(i);
 
 // Plegado a 90 grados. SB es lo que la linea de plegado se mete hacia DENTRO
 // del contorno, y BA el arco de la fibra neutra; el borde del desarrollo acaba
 // sobresaliendo (ala_doblez - BD) del contorno. Misma formula que ch_ba() del
-// chasis, con los parametros de ESTA chapa: aluminio de 3, no acero de 1.5.
+// chasis, con los parametros de ESTA chapa: aluminio 6082-T6 de 1.5.
 function cost_sb() = radio_doblez_costilla + t_costilla;
 function cost_ba() = PI/2 * (radio_doblez_costilla + k_factor*t_costilla);
 function cost_bd() = 2*cost_sb() - cost_ba();
@@ -528,11 +542,11 @@ function cost_vuelo() = ala_doblez - cost_bd();
 // El ala desplegada de un tramo: un rectangulo que sale por la normal EXTERIOR.
 // Para el contorno horario de pts_perfil() esa normal es (-dy, dx).
 //
-// EL ALIVIO VA AQUI Y NO COMO CORTE APARTE: el ala se RETIRA cost_sb() del
-// vertice en el extremo donde concurre con otra ala, y ese hueco cuadrado ES el
-// alivio. Sin el, al doblar las dos alas se solapan en la esquina y la chapa no
-// cierra. Solo pasa en UNA esquina de las siete -- P6, entre la trasera y el
-// suelo --; en las demas el ala termina al aire y llega hasta el vertice.
+// EL ALIVIO VA AQUI Y NO COMO CORTE APARTE: en los SEIS vertices convexos cada
+// ala se RETIRA cost_sb() y el hueco resultante evita el solape al doblar. P3
+// es la excepcion concava: un V haria divergir las dos alas y dejaria el PMMA a
+// la vista. Se deja cerrado, se pliega a tope y se suelda linealmente el
+// encuentro; son dos soldaduras de 14.5 mm en el aparato, una por costilla.
 module costilla_ala(i) {
     P = pts_perfil();
     n = len(P);
@@ -542,11 +556,33 @@ module costilla_ala(i) {
     L = norm(d);
     u = d / L;
     nx = [-u.y, u.x];                       // normal exterior
-    r0 = costilla_lleva_ala((i-1+n) % n) ? cost_sb() : 0;
-    r1 = costilla_lleva_ala((i+1) % n)   ? cost_sb() : 0;
+    r0 = costilla_alivio_vertice(i)         ? cost_sb() : 0;
+    r1 = costilla_alivio_vertice((i+1) % n) ? cost_sb() : 0;
     p0 = a + u*r0;
     p1 = b - u*r1;
     polygon([p0, p1, p1 + nx*cost_vuelo(), p0 + nx*cost_vuelo()]);
+}
+
+// RIP DE P3 PARA LA ESQUINA CERRADA SOLDADA. Las alas del valle y de la cara
+// superior se solapan en el desarrollo plano; un corte por la bisectriz las
+// independiza sin retirar la V que dejaria el canto abierto. La longitud sale
+// del vuelo dividida por cos(la mitad del giro concavo): 12.702/cos(22.5) =
+// 13.75 mm. Tras plegar, los dos labios cierran a tope y forman la junta de
+// 14.5 mm que se suelda. El solido 3D ya representa el estado SOLDADO.
+module costilla_rip_p3() {
+    P = pts_perfil();
+    v0 = (P[3] - P[2]) / norm(P[3] - P[2]);
+    v1 = (P[4] - P[3]) / norm(P[4] - P[3]);
+    n0 = [-v0.y, v0.x];
+    n1 = [-v1.y, v1.x];
+    u = (n0 + n1) / norm(n0 + n1);
+    q = [-u.y, u.x];
+    medio_giro = _ang(n0, n1) / 2;
+    largo = cost_vuelo() / cos(medio_giro);
+    a = P[3];
+    b = P[3] + u*largo;
+    polygon([a - q*cierre_p3_gap/2, b - q*cierre_p3_gap/2,
+             b + q*cierre_p3_gap/2, a + q*cierre_p3_gap/2]);
 }
 
 // El M5 de la bahia cae en el centro de su envolvente, dentro de la ventana de
@@ -596,6 +632,7 @@ module costilla_2d() {
         // ventana, sin echarse encima del larguero del valle.
         translate([pv_x(), pts_perfil()[3].y - pv_a()])
             circle(d = d_M3_paso + kerf);
+        costilla_rip_p3();
     }
 }
 
@@ -607,8 +644,8 @@ module costilla_2d() {
 //
 // Aqui las alas van DOBLADAS: el alma en su plano y cada ala levantada 90 sobre
 // su tramo, hacia DENTRO del case (spec 4.3 -- el ala interior se mete en el
-// hueco entre el Z-Rail y el costado). El alivio de 6 x 6 de P6 sale solo,
-// porque las retracciones son las mismas que usa costilla_ala().
+// hueco entre el Z-Rail y el costado). Los seis alivios convexos salen de las
+// mismas retracciones de costilla_ala(); P3 queda cerrado para soldadura.
 module costilla_alma() {
     difference() {
         union() {
@@ -637,8 +674,8 @@ module costilla_ala_huella(i) {
     L = norm(d);
     u = d / L;
     nx = [-u.y, u.x];                       // normal exterior
-    r0 = costilla_lleva_ala((i-1+n) % n) ? cost_sb() : 0;
-    r1 = costilla_lleva_ala((i+1) % n)   ? cost_sb() : 0;
+    r0 = costilla_alivio_vertice(i)         ? cost_sb() : 0;
+    r1 = costilla_alivio_vertice((i+1) % n) ? cost_sb() : 0;
     p0 = a + u*r0;
     p1 = b - u*r1;
     polygon([p0, p1, p1 - nx*t_costilla, p0 - nx*t_costilla]);
@@ -650,7 +687,11 @@ module costilla() {
     for (i = [0 : len(P)-1])
         if (costilla_lleva_ala(i))
             translate([0, 0, t_costilla])
-                linear_extrude(cost_vuelo()) costilla_ala_huella(i);
+                // ala_doblez es la cota DESDE la cara exterior: el ala empieza
+                // tras el alma y acaba en z=ala_doblez. cost_vuelo() pertenece
+                // solo al desarrollo plano; usarlo aqui dejaba corto el render.
+                linear_extrude(ala_doblez - t_costilla)
+                    costilla_ala_huella(i);
 }
 
 // --- LOS TRES MIEMBROS: desarrollos de chapa de aluminio ----------------
@@ -679,9 +720,18 @@ module miembro_alto_2d() {
     desarrollo = canal_fondo + canal_ancho + prof_sup - 2*cost_bd();
     // El solido manda el orden: retorno corto inferior, alma, meseta superior.
     y_alma = canal_fondo + canal_ancho/2 - cost_bd();
+    largo_meseta_plana = prof_sup - cost_bd();
+    y_rejilla = desarrollo - largo_meseta_plana/2;
+    n_hp = round(largo_riel/hp);
     difference() {
         square([ancho_util, desarrollo]);
         fila_agujeros(ancho_util, y_alma);
+        // La salida de aire deja la banda del valle LISA y sube a esta cara.
+        // Una fila registrada al HP, misma ranura oblonga que el resto: 16 de
+        // 15 x 4 dan ~905 mm2. guarda_aire() usa ademas su altura real.
+        for (n = [meseta_paso_hp : meseta_paso_hp : n_hp - meseta_paso_hp])
+            translate([n*hp, y_rejilla])
+                ranura(meseta_largo_ranura, vent_ancho_ranura);
     }
 }
 
@@ -718,6 +768,14 @@ module miembro_bajo() {
             cube([canal_fondo, t_costilla, ancho_util]);
 }
 
+module ranura_meseta_3d(xc, y0, zc) {
+    hull() for (s = [-1, 1])
+        translate([xc + s*(meseta_largo_ranura - vent_ancho_ranura)/2,
+                   y0 - 0.1, zc])
+            rotate([-90, 0, 0])
+                cylinder(d = vent_ancho_ranura, h = marco_sup + 0.2);
+}
+
 module miembro_alto() {
     x1 = miembro_x_trasera();
     y1 = miembro_y_meseta();
@@ -730,8 +788,13 @@ module miembro_alto() {
         cube([canal_fondo, t_costilla, ancho_util]);
     // La meseta de prof_sup ES el ala superior de esta misma pieza: nace en
     // el pliegue del alma y avanza hacia el frente, sin cruzar la propia alma.
-    translate([x1 - prof_sup, y1, z0])
-        cube([prof_sup, marco_sup, ancho_util]);
+    difference() {
+        translate([x1 - prof_sup, y1, z0])
+            cube([prof_sup, marco_sup, ancho_util]);
+        n_hp = round(largo_riel/hp);
+        for (n = [meseta_paso_hp : meseta_paso_hp : n_hp - meseta_paso_hp])
+            ranura_meseta_3d(x1 - prof_sup/2, y1, z0 + n*hp);
+    }
 }
 
 module bahia() {
@@ -1050,8 +1113,8 @@ module piel_trasera_2d() {
 //                                         transparentaba por el canto de abajo
 //
 // Va ABAJO a proposito. El aire frio entra por lo mas bajo del piso de la
-// fuente -- que es donde estan el toroide y los reguladores -- y sale por las
-// ranuras del valle y por las ondas, 90 mm mas arriba. Es tiro natural, no
+// fuente -- que es donde estan el toroide y los reguladores -- y sale por la
+// meseta y por las ondas. Es tiro natural, no
 // adorno; entrar por arriba lo mataria.
 //
 // Ranuras IGUALES a las del valle: mismo ancho, mismo paso HP, misma malla. No
@@ -1091,8 +1154,8 @@ module ranura(largo, ancho) {
         translate([0, s*(largo - ancho)/2]) circle(d = ancho + kerf);
 }
 
-// Banda delantera del valle: un solo campo de ranuras registrado a la malla HP,
-// sin plancha central, sin espina y sin fila M3 al canto.
+// Banda delantera del valle: LISA desde el 2026-08-28. La salida de aire sube a
+// la meseta del miembro alto, donde la misma area compra mas tiro.
 // --- LA PESTANA DE LA TAPA DEL VALLE ------------------------------------
 // Misma cuenta de plegado que la costilla y que el chasis, con los parametros
 // de ESTA chapa. Ver el bloque largo de ch_sb() para la derivacion.
@@ -1122,14 +1185,11 @@ module tapa_valle_2d() {
     au = ancho_util;
     xv = x_valle();
     // Solo queda el vuelo DELANTERO: acaba antes del primer Z-Rail 1U. La
-    // ventilacion usa todo lo que dejan sus dos margenes, sin conservar area
-    // ficticia de la plancha que ya no existe; guarda_aire() decide si alcanza.
+    // banda queda maciza: Samuel no quiere ver ranuras en el valle.
     largo = bahia_x0() - xv[0];
-    campos = [[valle_margen, largo - valle_margen]];
     // El Z-Rail 3U del valle roza 0.57 mm de la esquina libre de la pestana.
     // Una muesca de 1 x 1 lo libra sin acercarse al M3 ni separar la pieza.
     inicio_pestana = largo - pv_ancho_x();
-    n_hp  = round(largo_riel/hp);            // 104
     difference() {
         union() {
             plancha(au, largo);
@@ -1150,10 +1210,6 @@ module tapa_valle_2d() {
                             : pv_desarrollo(pv_a()),
                        pv_x() - xv[0]])
                 circle(d = d_M3_paso + kerf);
-        for (c = campos)
-            for (n = [valle_paso_hp : valle_paso_hp : n_hp - valle_paso_hp])
-                translate([n*hp, (c[0] + c[1])/2])
-                    ranura(c[1] - c[0], vent_ancho_ranura);
     }
 }
 
@@ -1838,8 +1894,12 @@ module bom() {
     echo(str("     ES LA PIEZA PORTANTE del case desde el 2026-08-26. Banda de ",
              ala_costilla, " mm siguiendo el contorno del costado, ventana"));
     echo(str("     vaciada en el centro, y ala de ", ala_doblez,
-             " doblada a 90 grados en 4 de los 7 tramos -- los otros tres"));
-    echo("     pasan como pletina plana y no la necesitan. Va al taller de");
+             " doblada a 90 grados en los 7 tramos: rigidez donde manda y"));
+    echo("     aluminio tapando el canto de PMMA en todo el perimetro.");
+    echo(str("     Seis vertices convexos llevan alivio de ", cost_sb(),
+             " mm. P3 es concavo: cierre a tope y soldadura lineal de ",
+             ala_doblez - t_costilla, " mm; una union por costilla."));
+    echo("     Va al taller de");
     echo("     CHAPA PLEGADA, el mismo del chasis. Lleva TODOS los tornillos");
     echo("     estructurales del case: los 6 M4 de riel, los M5 de transversal");
     echo("     y el M3 de la pestana del valle.");
@@ -1861,7 +1921,8 @@ module bom() {
              "de fabrica). Sin tuerca, sin inserto. Largo = ", t_costilla,
              " de costilla + arandela + 8..10 de rosca dentro del aluminio."));
     echo("     ATRAVESABAN EL ACRILICO hasta el 2026-08-26 y por eso pedian 8");
-    echo("     mm de agarre. Ahora muerden 3 de chapa: el tornillo se acorta.");
+    echo(str("     mm de agarre. Ahora muerden ", t_costilla,
+             " de chapa: el tornillo se acorta."));
     echo(str("BOM: tornillo M5 boton x", 2*len(centros_transversal()),
              " + tuerca T -- por la PUNTA de las transversales 2020, desde la",
              " COSTILLA. Desde el 2026-08-27 no atraviesan el acrilico: el",
@@ -1962,7 +2023,7 @@ module bom() {
              " mm de flecha con 22.8 N (flecha_pie)"));
     echo(str("BOM: banda delantera del valle: chapa de ALUMINIO t=", t_valle,
              " PLEGADA, desarrollo ", au + 2*pv_vuelo(), " x ",
-             bahia_x0() - x_valle()[0], ". Es solo el vuelo delantero ranurado;"));
+             bahia_x0() - x_valle()[0], ". Es el vuelo delantero LISO;"));
     echo("     la plancha sobre la boca de la bahia y sus diez M3 ya no existen.");
     echo("     No es acrilico desde el 2026-08-25; lleva una pestana");
     echo(str("     de ", pestana_valle, " doblada a 90 grados en cada punta,",
@@ -1973,8 +2034,8 @@ module bom() {
     echo("     Va al taller de CHAPA con las tres piezas del chasis, no al de");
     echo("     acrilico. Sin recocido, sin diamantado, sin chaflan de pliego:");
     echo("     esas tres cosas son del PMMA. Canto desbarbado y basta.");
-    echo("     Aleacion: pedir 5754 o mejor. La puerta va contra Rp0.2 = 130");
-    echo("     MPa, que es lo que da un 5754 H22; un 6082-T6 da ~250 y sobra.");
+    echo("     Aleacion obligatoria: 6082-T6. La puerta va contra Rp0.2 = 250");
+    echo("     MPa; 5754 H22 ya no pasa con los miembros de 1.5 mm.");
     echo(str("BOM: TABLA de madera MACIZA t=", t_base, " x1, ",
              ancho_total + 2*vuelo_zocalo, " x ", fondo() + 2*vuelo_zocalo,
              " mm -- el suelo interior Y el zocalo, una sola pieza."));

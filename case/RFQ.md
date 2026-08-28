@@ -122,24 +122,26 @@ Se rellena al recibir. Va aquí y no en un correo.
 Es el taller que ya hace las tres piezas del chasis de acero. **No es un taller
 nuevo**: se le añaden tres piezas de aluminio. Y son las que sostienen el case.
 
-1. **¿Pliegan aluminio de 3 mm a 90°, y con qué radio interior mínimo?** El
-   modelo asume **r = 3** (1 × t) y de ahí cuelga todo el desarrollo. Si su
+1. **¿Pliegan aluminio 6082-T6 de 1.5 mm a 90°, y con qué radio interior
+   mínimo?** El modelo asume **r = 3** (2 × t) y de ahí cuelga todo el desarrollo. Si su
    radio mínimo es otro, **decirlo antes de cortar**: el recorte cambia.
-2. **¿Qué factor K usan?** El modelo asume **k = 0.42**. Con r = t = 3 eso da
-   BA = 6.69 y BD = 5.31 mm por doblez. Si trabajan con otro, los DXF se
+2. **¿Qué factor K usan?** El modelo asume **k = 0.42**. Con r = 3 y t = 1.5
+   eso da BA = 5.70 y BD = 3.30 mm por doblez. Si trabajan con otro, los DXF se
    regeneran — pero hay que saberlo, no adivinarlo.
-3. **¿Qué aleación suministran, y su `Rp0.2`?** Las puertas del modelo van
-   contra **130 MPa**, que es un **5754 H22**. Un 6082-T6 da ~250 y sobra. Una
-   aleación más blanda **hay que avisarla antes de cortar**.
+3. **¿Qué aleación y temple suministran, y con qué `Rp0.2`?** No es eliminatoria: con 130 MPa el diseño pasa. Lo que sí hace falta es que la digan. La nota vieja decía que el
+   5754 H22 de 130 MPa pasa igual con la chapa de 1.5 mm. Una aleación distinta
+   **hay que aprobarla antes de cortar**, regenerando las puertas si cambia.
 
 **Los DXF que reciben son DESARROLLOS PLANOS, no contornos.** `costilla_2d` y
 `tapa_valle_2d` traen el recorte; la pieza doblada mide menos. Cortar el
 contorno de la pieza montada da un fichero válido e inservible — es el mismo
 error que el modelo vigila con un sobre por pieza.
 
-**La costilla lleva un alivio cuadrado de 6 × 6 mm** donde concurren dos alas
-(una sola esquina, entre la trasera y el suelo). No es un error del dibujo: sin
-él las dos alas se solapan al doblar y la chapa no cierra.
+**La costilla lleva alivio de 4.5 mm en sus seis vértices convexos.** P3 es el
+único cóncavo y no acepta ese V: el DXF trae un rip bisector de 13.75 × 0.50
+mm. Cerrar las dos alas a tope y hacer una
+**soldadura lineal de 14.5 mm**, una por costilla. Sin ese cierre queda visible
+el canto del PMMA; no sustituirlo por el alivio convexo del resto.
 
 ### Preguntas de cota (aluminio)
 

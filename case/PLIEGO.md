@@ -124,7 +124,7 @@ Seis DXF de `case/plans/` **no son de acrílico** y no entran aquí:
 | DXF | material | proceso |
 |---|---|---|
 | `chasis_cuerpo_2d`, `chasis_tapa_2d`, `chasis_refuerzo_2d` | acero | corte + **plegado** |
-| `costilla_2d` | **aluminio, 3 mm** | corte + **plegado** |
+| `costilla_2d` | **aluminio 6082-T6, 1.5 mm** | corte + **plegado** + cierre soldado P3 |
 | `tapa_valle_2d` | **aluminio, 3 mm** | corte + **plegado** |
 | `bandeja_base_2d` | **madera maciza, 18 mm** | corte + ranuras alargadas |
 
@@ -137,9 +137,13 @@ Las tres del chasis llevan su propio plano de plegado
 porque un DXF de corte no dice de dónde doblar.
 
 **La costilla es la pieza portante del case** desde el 2026-08-26. Es una banda
-de 24 mm que sigue el contorno del costado, con la ventana vaciada en el centro
-y un ala de 12 mm doblada a 90° en 4 de sus 7 tramos. Lleva **todos los
-tornillos estructurales**: los 4 M4 de riel, los 6 M5 de transversal y el M3 de
+de 27 mm que sigue el contorno del costado, con la ventana vaciada en el centro
+y un ala de 16 mm doblada a 90° en sus 7 tramos. Los seis vértices convexos
+llevan alivio de 4.5 mm. P3, fin del valle, es cóncavo: **no lleva alivio en V**;
+el desarrollo trae un rip de 13.75 × 0.50 mm por la bisectriz del solape. Se
+cierra a tope y se suelda linealmente el encuentro durante 14.5 mm. Son dos
+soldaduras en el aparato, una por costilla. Lleva **todos los tornillos
+estructurales**: los 6 M4 de riel, los 3 M5 de transversal y el M3 de
 la pestaña del valle. El acrílico que va detrás no sostiene nada.
 
 **La tapa del valle** era acrílico de 5 mm hasta el 2026-08-25 y es la
@@ -156,9 +160,11 @@ costillas entre sí y convierte la tapa en diafragma a media altura.
 diamantado, ni el chaflán de 0.5. Esas tres cosas son del PMMA. Canto
 desbarbado y basta.
 
-**Aleación: 5754 o mejor.** La puerta del modelo va contra `Rp0.2` = 130 MPa,
-que es lo que da un 5754 H22; un 6082-T6 da ~250 y sobra. Si el taller
-suministra una aleación más blanda, **avisar antes de cortar**.
+**Aleación recomendada, no obligatoria: 6082-T6.** **Corregido el 2026-08-27:** el 6082-T6 **no lo exige el cálculo**. La cifra que lo justificaba (144.4 MPa) se midió con el ala en cuatro de los siete tramos; al pasar el ala a los siete —pedido por estética, para que ningún canto de PMMA se vea— el tramo del valle dejó de ser pletina plana y trabaja a ~62 MPa. Con **5754 H22 de 130 MPa el diseño pasa**. El 6082-T6 se puede pedir por margen, pero es una decisión de compra, no un requisito.
+
+Lo que sigue era la justificación vieja y no se borra
+del taller ni vale "5754 o mejor": al bajar costilla y miembros a 1.5 mm, el
+5754 H22 de 130 MPa **sí cumple** — ver la corrección de arriba.
 
 ### 6.2 La tabla — al carpintero
 
