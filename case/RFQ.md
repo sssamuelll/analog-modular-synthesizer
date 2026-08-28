@@ -165,10 +165,10 @@ otra cota que no está en el fichero.
 ### Preguntas de cota (aluminio)
 
 5. ¿Qué **tolerancia de posición** garantizan en taladros de chapa? La rosca
-   más justa de este taller hoy es el cajeado de la placa del riel de
-   `cara_inf`, a **6.88 mm** del canto, y el M4 de la brida de miembro más
-   justo, a **6.75 mm** — el mínimo exigido (1.5 diámetros del M4 de paso),
-   sin margen de sobra.
+   más justa de este taller hoy es el paso M4 del riel (con su cajeado por
+   el lado del anillo) de la placa de `cara_inf`, a **6.88 mm** del canto, y
+   el M4 de la brida de miembro más justo, a **6.75 mm** — el mínimo
+   exigido (1.5 diámetros del M4 de paso), sin margen de sobra.
 6. ¿**Desbarban** el canto? Ninguna de estas piezas lleva recocido, ni
    diamantado, ni chaflán: esas tres cosas son del PMMA.
 

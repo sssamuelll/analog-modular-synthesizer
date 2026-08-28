@@ -676,11 +676,14 @@ con qué habría que medir para cerrarlo.
   técnico real de esta pieza — la resistencia sobra por 2× (I = 3714 mm⁴
   contra 1673 mm⁴ de la chapa que sustituye, `guarda_anillo()`). Se cierra
   cuando un taller lo garantice por escrito.
-- **Las placas de anclaje y los clips no tienen DXF propio** (rev. 22): el
-  modelo las dibuja en 3D (`placas_riel()`, `clips_costado()`) pero
-  `export.ps1` no las exporta como pieza aparte todavía (PLIEGO §6). El
-  taller de chapa trabaja de las cotas de `params.scad` mientras tanto —
-  pendiente real, no bloqueante para el resto del pedido.
+- ~~**Las placas de anclaje y los clips no tienen DXF propio**~~ — **CERRADO
+  el 2026-08-28** (Tarea 6, rev. 22): cuatro DXF nuevos en `case/plans/` —
+  `placa_cara_inf_2d`, `placa_valle_2d`, `placa_cara_sup_2d`, `clip_2d` —
+  traen el paso M4 funcional por riel (el cajeado de Ø8 × 2.5 por el lado
+  del anillo queda como nota de mecanizado, no como corte — `PLIEGO.md` §6).
+  Hasta esa fecha el modelo solo las dibujaba en 3D (`placas_riel()`,
+  `clips_costado()`) y `export.ps1` no las exportaba como pieza aparte —
+  este mismo punto lo daba como pendiente real, no bloqueante.
 
 ## 12. Fuera de alcance (el diseño no los bloquea)
 

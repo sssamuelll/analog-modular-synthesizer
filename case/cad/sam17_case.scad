@@ -763,9 +763,11 @@ module placas_riel() {
 // por donde entra el tornillo del riel. Cortada tal cual, la cabeza del
 // tornillo cae dentro de un agujero de 8 mm sin nada que la tope y el riel
 // no queda atornillado a nada -- pieza inservible, no una pieza distinta.
-// Lo caza taladros_placas() en check_dxf.py y lo dice PLIEGO.md (S6): "un
-// M4 de paso por riel + cajeado de 8 x 2.5 por el lado del anillo" -- las
-// DOS cosas, y la version anterior solo dibujaba la segunda.
+// Lo caza taladros_placas() en check_dxf.py. PLIEGO.md (S6) documenta las
+// DOS mitades del agujero: el paso M4 funcional, que el DXF SI dibuja, y el
+// cajeado de Ø8 x 2.5 por el lado del anillo, que el DXF NO dibuja (va como
+// NOTA DE MECANIZADO) -- la version anterior de este modulo dibujaba
+// exactamente al reves: el cajeado si, el paso M4 no.
 //
 // EL CAJEADO NO SE DIBUJA AQUI, y no es un descuido: un DXF 2D no sabe
 // decir "a 2.5 mm de profundidad" -- el mismo caso que el rebaje de

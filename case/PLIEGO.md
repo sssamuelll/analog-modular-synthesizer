@@ -134,7 +134,7 @@ nada más — menos operaciones y menos sitios por donde el PMMA raja.
 
 ### Lo que NO va a este taller
 
-Once DXF de `case/plans/` **no son de acrílico** y no entran aquí. Se reparten
+Quince DXF de `case/plans/` **no son de acrílico** y no entran aquí. Se reparten
 entre DOS talleres — chapa y mecanizado (§6.1) — que **no son el mismo** desde
 el 2026-08-28:
 

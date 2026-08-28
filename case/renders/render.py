@@ -295,11 +295,11 @@ def medir(ruta_png: str) -> tuple[float, float]:
 #   - el render SUBEXPUESTO de la Task 8 original (antes de este fix):
 #     cobertura 0.1229, brillo 0.0509 -- tiene que dar ROJO con la metrica
 #     de brillo nueva (antes no existia).
-#   - el render corregido de mas abajo: cobertura ~0.34, brillo ~0.60-0.64.
+#   - el render corregido de mas abajo (trasera): cobertura ~0.34, brillo ~0.377.
 # COBERTURA_MINIMA se deja en 0.05 (ya mordia bien, sigue mordiendo -- ver
 # prueba en rojo del reporte). BRILLO_MINIMO en 0.20: por encima del 0.0509
 # del render viejo (para que ESE caso de verdad falle si se repite) y
-# comodo por debajo del ~0.60 del render bueno.
+# comodo por debajo del ~0.377 del render bueno (margen ~1.9x, no 3x).
 COBERTURA_MINIMA = 0.05
 BRILLO_MINIMO = 0.20
 
