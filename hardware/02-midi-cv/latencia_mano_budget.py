@@ -153,7 +153,29 @@ def holgura_barrido(f_barrido: float, n_muxes: int) -> float:
     return (1e6 / f_barrido) / t_barrido_necesario_us(n_muxes)
 
 
+def autocomprobacion() -> None:
+    """Que la puerta mire cada enlace y NO la suma (R-P1).
+
+    Con las cifras de hoy (23 % + 20,5 %) sumar y no sumar dan el mismo
+    veredicto, asi que ninguna aseveracion de main() distinguiria una
+    version que volviera a sumar. Este testigo si: una cadencia que deja el
+    enlace mas apretado al 45 % cabe enlace por enlace, y la suma de los dos
+    pasa del 50 % siempre que el otro enlace no sea >9x mas rapido. Barrido
+    en vez de valor a mano, para que no coincida por accidente.
+    """
+    f_voz, f_man = VOZ.reloj_operacion_hz(), MANDOS.reloj_operacion_hz()
+    f_w = 0.45 * min(f_voz / BITS_ESCRITURA, f_man / BITS_SONDEO_PANEL)
+    assert cabe_en_los_enlaces(f_w), (
+        f"a {f_w:.0f} Hz ningun enlace pasa del 45 % y la puerta dice que no "
+        "cabe: alguien volvio a sumar ocupaciones de enlaces distintos (R-P1)")
+    for f in (0.5 * f_w, f_w, 1.2 * f_w):
+        assert cabe_en_los_enlaces(f) == (
+            ocupacion_voz(f) <= TECHO_OCUPACION
+            and ocupacion_mandos(f) <= TECHO_OCUPACION)
+
+
 def main() -> None:
+    autocomprobacion()
     f_voz, f_man = VOZ.reloj_operacion_hz(), MANDOS.reloj_operacion_hz()
     print("LATENCIA MANO -> DAC")
     print()

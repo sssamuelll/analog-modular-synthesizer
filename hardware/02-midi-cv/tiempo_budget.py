@@ -117,6 +117,13 @@ def demo() -> None:
     # mensaje declarado. Que no se desincronicen:
     assert abs(tj.T_MENSAJE_MAX_S - 0.1 * OBJETIVO_S) < 1e-12, (
         "R-E1 en trama_j2_budget.py ya no es el 10 % del objetivo musical")
+    # Y que lo que se toma sea la trama MAS LARGA: el bloque de tono viaja
+    # por este enlace, asi que ninguna cota puede ser mas corta que el. Sin
+    # esto, tomar la mas corta (el evento, 50 bits) pasaria el 10 % igual y
+    # nadie se enteraria.
+    assert BITS_TRAMA_J2 >= tj.BITS_BLOQUE_TONO, (
+        f"la trama mas larga del enlace mide {BITS_TRAMA_J2} bits y el bloque "
+        f"de tono que viaja por el mide {tj.BITS_BLOQUE_TONO}: no es la mas larga")
     print(f"  la trama se lleva el {T_TRAMA_J2/OBJETIVO_S*100:.1f} % del presupuesto")
     print()
 
