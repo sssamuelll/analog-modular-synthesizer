@@ -806,6 +806,97 @@ def _roscas_clips(p: dict[str, float]
     return [(f"clip {nombre}", c) for nombre, _, c in _clips(p)]
 
 
+# LA ESCUADRA DE LA TRASERA. Es el tercer tipo de retencion del acrilico y el
+# unico que NO ancla en el anillo: los clips y el labio son del anillo, esta va
+# atornillada a la piel trasera y por eso no aparece en _centros_rosca_ciega().
+# Su razon entera esta en params.scad (bloque de escuadra_ala) y su puerta es
+# guarda_escuadra_trasera(). GEMELAS de escuadra_vuelo(), escuadra_raiz(),
+# escuadra_m3_y() y escuadras_trasera() en sam17_case.scad.
+def _escuadra_vuelo(p: dict[str, float]) -> float:
+    """Vuelo del ala B desde la cara interior de la trasera: su punta muere en
+    la linea de la ventana del anillo."""
+    return p["cara_anillo"] - p["t_piel"]
+
+
+def _escuadra_raiz(p: dict[str, float]) -> float:
+    """Regla de chapa: el M3 no entra en la zona del doblez. La misma cuenta
+    que _bridas() hace con el M4, con el diametro del M3."""
+    return (p["radio_doblez_costilla"] + 3 * p["t_costilla"]
+            + p["d_M3_paso"] / 2)
+
+
+def _escuadras_trasera(p: dict[str, float]) -> list[dict]:
+    """Una escuadra por costado: donde vuela, donde vive y sus dos cajas.
+
+    Devuelve por lado x_punta, z_ala_b (profundidad desde SU cara de anillo,
+    leida de la caja y no del parametro, para que un cambio en el modelo mueva
+    lo que la puerta mide), y0/y1, cobertura del canto libre, los M3 y las dos
+    cajas.
+
+    EL RINCON DEL DOBLEZ ES DEL ALA A. Las dos cajas se reparten la L sin
+    solaparse -- el ala B acaba en la cara interior del ala A -- porque
+    solapes() no sabe que son la misma pieza y una pieza que se pisa a si misma
+    seria un falso rojo. El solido de escuadras_trasera() hace el mismo corte."""
+    P = _vertices(p)
+    cajas = _cajas_miembro(p, P, _centros_rail(p, P), 0.0, 0.0)
+    x_int = P[6][0] - p["t_piel"]              # cara interior de la trasera
+    t = p["t_costilla"]
+    vuelo = _escuadra_vuelo(p)
+    # El canto trasero LIBRE es lo que queda entre las dos bridas de los
+    # miembros: por debajo y por encima de ellas el acrilico ya tiene el rincon
+    # de dos cantos, y ademas ahi no hay sitio.
+    libre0, libre1 = cajas["trasero bajo"][4], cajas["trasero alto"][3]
+    y0, y1 = libre0 + p["escuadra_retiro"], libre1 - p["escuadra_retiro"]
+    # LOS M3, solo por encima de la banda de la rejilla de entrada. El por que
+    # esta en el .scad, en escuadra_m3_y(), y lo comprueba la puerta.
+    ym0 = max(y0, _banda_libre_trasera(p)[1] + 1.5 * p["d_M3_paso"])
+    n = int(p["escuadra_m3"])
+    e = (y1 - ym0) / n
+    ys = [ym0 + e * (i + 0.5) for i in range(n)]
+    out: list[dict] = []
+    for lado in (0, 1):
+        z = ((lambda w: w) if lado == 0
+             else (lambda w: p["ancho_total"] - w))
+        za, zb = sorted((z(p["t_anillo"]), z(p["t_anillo"] + t)))
+        aa, ab = sorted((z(p["t_anillo"]),
+                         z(p["t_anillo"] + p["escuadra_ala"])))
+        caja_a = (f"escuadra ala A {lado}", x_int - t, x_int, y0, y1, aa, ab)
+        caja_b = (f"escuadra ala B {lado}", x_int - vuelo, x_int - t,
+                  y0, y1, za, zb)
+        out.append({
+            "x_punta": caja_b[1],
+            "z_ala_b": min(z(caja_b[5]), z(caja_b[6])),
+            "y0": y0, "y1": y1,
+            "cobertura": (y1 - y0) / (libre1 - libre0),
+            "m3": [(y, z(p["t_anillo"] + _escuadra_raiz(p))) for y in ys],
+            "cajas": [caja_a, caja_b],
+        })
+    return out
+
+
+def _cajas_escuadra(p: dict[str, float]) -> list[Caja]:
+    """Las dos alas de cada escuadra como cuerpos, para solapes()."""
+    return [c for esc in _escuadras_trasera(p) for c in esc["cajas"]]
+
+
+def _centros_m3_escuadra(p: dict[str, float]) -> list[tuple[float, float]]:
+    """Los M3 de las dos escuadras EN EL PLANO DE piel_trasera_2d.
+
+    Es la coordenada que lee el DXF de la trasera: local x = z del case menos
+    donde arranca la plancha, local y = y del case. GEMELA del bucle de
+    escuadra_m3_x()/escuadra_m3_y() en piel_trasera_2d()."""
+    z0 = (p["ancho_total"] - _trasera_au(p)) / 2
+    return [(z - z0, y) for esc in _escuadras_trasera(p) for y, z in esc["m3"]]
+
+
+def bbox_desarrollo_escuadra(p: dict[str, float]) -> tuple[float, float]:
+    """Envolvente del blank de la escuadra: largo por desarrollo de las dos
+    alas menos un BD, la misma cuenta que la brida y la pestana del valle."""
+    esc = _escuadras_trasera(p)[0]
+    return (esc["y1"] - esc["y0"],
+            p["escuadra_ala"] + _escuadra_vuelo(p) - _bd_miembro(p))
+
+
 def _centros_rosca_ciega(p: dict[str, float]
                           ) -> list[tuple[str, tuple[float, float], float]]:
     """(nombre, centro, diametro de broca) de cada rosca ciega de la cara
@@ -1129,6 +1220,12 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # canto de la piel trasera, o sea entre las dos piezas con las que de
     # verdad pueden chocar. Sin esto el clip se dibujaria encima de ellas.
     railes.extend(_cajas_clip(p, z0, z1))
+    # LAS DOS ESCUADRAS, por lo mismo que los clips y con mas motivo: su ala B
+    # vive en la MISMA rebanada de z (t_anillo .. t_anillo + t_costilla) y en
+    # el mismo rincon trasero que las bridas de los dos miembros, y su ala A
+    # esta pegada a la cara interior de piel_trasera. Es aqui donde se decide
+    # si escuadra_retiro basta -- ninguna otra puerta cruza esos tres cuerpos.
+    railes.extend(_cajas_escuadra(p))
     anclajes = _anclajes_miembro(p, miembros)
 
     planchas: list[Caja] = []
@@ -2829,6 +2926,81 @@ def guarda_anillo(p: dict[str, float]) -> None:
         print(f"  {nombres[i]:<18} {largo:7.2f} mm  cede {flecha:.3f}")
 
 
+def guarda_escuadra_trasera(p: dict[str, float]) -> None:
+    """El canto trasero del costado tiene tope hacia dentro en casi todo su largo.
+
+    LO PIDIO LA REVISION DE LA TAREA 4 Y LO DECIDIO SAMUEL el 2026-08-28: el
+    punto peor del modelo interior de guarda_costado() caia a menos de 1 mm del
+    canto trasero del acrilico, que corria 227 mm sin un solo tope, y la formula
+    de parche empotrado no vale en un canto libre. Los clips no llegan: el mas
+    cercano legal se queda a 95.7 mm, y en la franja trasera no cabe ninguno
+    porque la ocupa piel_trasera. La escuadra va fijada a la TRASERA, no al
+    anillo, y su ala asoma sobre el canto como tope continuo.
+
+    Tres cosas, y la tercera es la que la hace tope y no adorno:
+      1. el ala B vuela hasta pasar el canto trasero del costado en >= 4 mm;
+      2. el ala B vive a z >= t_anillo (no toca el anillo) y a >= 0.8 mm del
+         acrilico mas grueso del lote (tope con carrera, como los clips: la
+         precarga la pone la junta del labio);
+      3. el ala A cubre al menos el 80 % del largo libre del canto trasero
+         (entre las bridas de los dos miembros), con sus M3 a 1.5 D de todo
+         canto y de las dos filas que la trasera ya lleva."""
+    P = _vertices(p)
+    x_canto = P[6][0] - (p["cara_anillo"] - p["rebaje_anillo"] + p["hol_costado"])
+    tol = 0.4 + 0.1 * p["t_cheek"]
+    z_pmma = p["rehundido_acrilico"] + p["t_cheek"] + tol + p["t_junta_asiento"]
+    escuadras = _escuadras_trasera(p)
+    for lado, esc in enumerate(escuadras):
+        assert x_canto - esc["x_punta"] >= 4.0, (
+            f"la escuadra {lado} vuela hasta x={esc['x_punta']:.2f} y el canto "
+            f"trasero del costado esta en x={x_canto:.2f}: solapa "
+            f"{x_canto - esc['x_punta']:.2f} mm y se exigen 4 para que haga de tope")
+        assert esc["z_ala_b"] >= p["t_anillo"] - 1e-9, (
+            f"el ala B de la escuadra {lado} arranca en z={esc['z_ala_b']:.2f} y la "
+            f"cara interior del anillo esta en {p['t_anillo']:g}: se monta encima")
+        assert esc["z_ala_b"] - z_pmma >= 0.8, (
+            f"el ala B de la escuadra {lado} queda a {esc['z_ala_b'] - z_pmma:.2f} mm "
+            f"del acrilico mas grueso (z={z_pmma:.2f}): pinza en vez de topar")
+        assert esc["cobertura"] >= 0.80, (
+            f"la escuadra {lado} cubre el {esc['cobertura'] * 100:.0f} % del canto "
+            f"trasero libre y se exige el 80 %")
+    # LA TERCERA PROMESA DEL DOCSTRING, que los tres asserts de arriba no
+    # cumplen: los M3. No es celo -- es el unico choque real que aparecio al
+    # dibujarla. El ala A vive en los primeros escuadra_ala mm de la trasera
+    # medidos desde su canto, y ahi cae la PRIMERA COLUMNA de la rejilla de
+    # entrada (a 10.16 del canto, o sea 2 HP). Dentro de la banda de la rejilla
+    # NINGUNA x es legal, y no por poco: entre dos columnas quedan 6.16 mm de
+    # acrilico y dos margenes de 1.5 D piden 10.2. Por eso los M3 se reparten
+    # solo por encima de la banda, y por eso esto se comprueba: el dia que la
+    # rejilla crezca o que el ala se alargue hacia abajo, un tornillo cae
+    # dentro de una ranura y no lo canta nadie mas -- solapes() mira cuerpos,
+    # no recortes, y el censo de check_dxf cuenta agujeros, no vecindarios.
+    borde = 1.5 * p["d_M3_paso"]
+    rej0, rej1 = _banda_libre_trasera(p)
+    filas_trasera = [c[1] for c in _anclajes_miembro(
+        p, _cajas_miembro(p, P, _centros_rail(p, P), 0.0, 0.0)).values()]
+    au = _trasera_au(p)
+    for x_local, y in _centros_m3_escuadra(p):
+        canto = min(x_local, au - x_local)
+        assert canto >= borde, (
+            f"un M3 de escuadra cae a {canto:.2f} mm del canto de la trasera "
+            f"y se exigen {borde:.2f} (1.5 D del paso M3)")
+        assert not (rej0 - borde <= y <= rej1 + borde), (
+            f"un M3 de escuadra cae en y={y:.2f}, dentro de la banda de la "
+            f"rejilla de entrada ({rej0:.2f} a {rej1:.2f}) con {borde:.2f} de "
+            f"margen: ahi no hay x legal, las columnas dejan huecos de "
+            f"{p['valle_paso_hp'] * p['hp'] - p['vent_ancho_ranura']:.2f} mm")
+        for y_fila in filas_trasera:
+            assert abs(y - y_fila) >= borde, (
+                f"un M3 de escuadra cae en y={y:.2f} y una fila de la trasera "
+                f"va por y={y_fila:.2f}: {abs(y - y_fila):.2f} mm entre ejes, "
+                f"se exigen {borde:.2f}")
+    e = escuadras[0]
+    print(f"escuadra trasera: ala B a z={e['z_ala_b']:.2f}, pasa el canto del costado "
+          f"en {x_canto - e['x_punta']:.2f} mm, cubre el {e['cobertura'] * 100:.0f} % "
+          f"del canto libre, {int(p['escuadra_m3'])} M3 a la trasera por lado")
+
+
 def _perimetro(P: list[tuple[float, float]]) -> float:
     return sum(math.hypot(P[(i + 1) % len(P)][0] - P[i][0],
                           P[(i + 1) % len(P)][1] - P[i][1]) for i in range(len(P)))
@@ -3500,6 +3672,7 @@ def main() -> int:
     canario_alineacion(p)
     guarda_rebaje(p)
     guarda_anclajes(p)
+    guarda_escuadra_trasera(p)
     guarda_miembros(p)
     guarda_agarre(p)
     guarda_fila_1u(p)

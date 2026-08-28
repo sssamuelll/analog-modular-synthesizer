@@ -167,6 +167,11 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
     dims["miembro_bajo_2d"] = cb.bbox_desarrollo_miembro(p, "trasero bajo")
     dims["miembro_alto_2d"] = cb.bbox_desarrollo_miembro(p, "trasero alto")
     dims["bahia_2d"] = cb.bbox_desarrollo_bahia(p)
+    # LA ESCUADRA DE LA TRASERA es de la misma chapa y por eso su DXF es otro
+    # DESARROLLO: las dos alas por su cota exterior menos un BD. Sale 3.3 mm
+    # mas estrecho que la suma de las dos alas montadas, y esa diferencia ES la
+    # pieza -- exportar la L ya doblada da un fichero valido e inservible.
+    dims["escuadra_trasera_2d"] = cb.bbox_desarrollo_escuadra(p)
 
     return {n: (w - TOL, w + TOL, h - TOL, h + TOL) for n, (w, h) in dims.items()}
 
@@ -542,6 +547,30 @@ def agujeros_donde_toca() -> list[str]:
                          f"pestana que cae DENTRO no se dobla: se queda en la "
                          f"cara de arriba de la tapa")
             leidos = [q for q in leidos if 0 <= q[0] <= ancho]
+        # LA TRASERA trae SEIS M3 que no son de fila desde el 2026-08-28: los
+        # de las dos ESCUADRAS, tres por costado, en columna a 9.05 mm de cada
+        # canto. Se apartan por POSICION y no por conteo, igual que los M3 de
+        # pestana de la tapa del valle: si alguien mueve uno, deja de contar
+        # como escuadra y la rejilla de la pieza lo caza como intruso.
+        #
+        # Y SE CUENTAN APARTE, no dentro de las filas: meterlos en la rejilla
+        # habria sido decir que la trasera tiene tres filas de cinco y media,
+        # que es justo la clase de censo que pasa en verde con un agujero
+        # menos. Aqui el numero que se exige es el del modelo, escuadra por
+        # escuadra.
+        if placa == "piel_trasera":
+            esperados = cb._centros_m3_escuadra(p)
+            de_escuadra = [q for q in leidos
+                           if any(math.hypot(q[0] - ex, q[1] - ey)
+                                  <= DESVIO_DXF_MAX for ex, ey in esperados)]
+            if len(de_escuadra) != len(esperados):
+                f.append(f"{nombre}: {len(de_escuadra)} M3 de escuadra en el "
+                         f"DXF y el modelo pone {len(esperados)} "
+                         f"({int(p['escuadra_m3'])} por costado, a "
+                         f"{esperados[0][0]:.2f} mm del canto). Sin ellos la "
+                         f"escuadra no tiene por donde atornillarse y el canto "
+                         f"trasero del costado se queda otra vez sin tope")
+            leidos = [q for q in leidos if q not in de_escuadra]
         if len(leidos) != len(rejilla) * len(coords):
             f.append(f"{nombre}: {len(leidos)} agujeros en el DXF y el modelo "
                      f"pone {len(rejilla) * len(coords)} ({len(coords)} filas de "
@@ -822,9 +851,24 @@ def guarda_costado() -> list[str]:
     # donde salen sus esquinas -- y no a _cajas_clip(): esa devuelve una caja
     # POR CARA, o sea el doble de apoyos con el mismo contorno, y con ella la
     # cuenta de esta lista no cuadraba con la que se imprime abajo.
+    #
+    # Y DESDE EL 2026-08-28 HAY UN APOYO MAS, que no es puntual: el ala B de la
+    # ESCUADRA DE LA TRASERA. Corre 194.68 mm a lo largo del canto trasero del
+    # acrilico y lo pisa 5.5 mm hacia dentro -- exactamente el trozo que el
+    # labio pisa por fuera --, o sea que ese canto pasa de no tener nada a
+    # estar cogido por las dos caras. Es LA pieza que la Tarea 4b existe para
+    # poner, y este barrido es el numero que la juzga: antes de ella el peor
+    # punto de dentro caia en (291, 116), a menos de 1 mm de ese canto libre,
+    # que es donde la formula de placa empotrada no vale.
+    #
+    # Se pasa UNA por costado y solo su ala B: el ala A vive detras del canto
+    # del acrilico (x >= 297.9) y no pisa un solo milimetro de PMMA.
     clips = cb._clips(p)
+    ala_b = cb._escuadras_trasera(p)[0]["cajas"][1]
+    escuadra = [(ala_b[1], ala_b[3]), (ala_b[2], ala_b[3]),
+                (ala_b[2], ala_b[4]), (ala_b[1], ala_b[4])]
     apoyos = ([cb._esquinas_placa(pl) for pl in cb._placas(p)]
-              + [q for _, q, _ in clips])
+              + [q for _, q, _ in clips] + [escuadra])
     vano_in, donde_in = 0.0, (0.0, 0.0)
     y = min(ys)
     while y <= max(ys):
@@ -870,11 +914,12 @@ def guarda_costado() -> list[str]:
           f"{flecha:.2f} mm (techo {p['flecha_costado_max']:.2f}, vano maximo "
           f"{vano_max:.0f}) y trabaja a {sigma:.1f} MPa (fluencia "
           f"{cb.SIGMA_PMMA})")
-    print(f"  hacia DENTRO lo paran {len(apoyos)} apoyos puntuales "
-          f"({len(apoyos) - len(clips)} placas + {len(clips)} clips por "
-          f"costado): vano interior {vano_in:.1f} mm (x={donde_in[0]:.0f}, "
-          f"y={donde_in[1]:.0f}) y se hunde {flecha_in:.2f} mm (techo "
-          f"{p['flecha_costado_max']:.2f}, vano maximo {vano_max:.0f})")
+    print(f"  hacia DENTRO lo paran {len(apoyos)} apoyos "
+          f"({len(apoyos) - len(clips) - 1} placas + {len(clips)} clips + la "
+          f"escuadra de la trasera, por costado): vano interior {vano_in:.1f} "
+          f"mm (x={donde_in[0]:.0f}, y={donde_in[1]:.0f}) y se hunde "
+          f"{flecha_in:.2f} mm (techo {p['flecha_costado_max']:.2f}, vano "
+          f"maximo {vano_max:.0f})")
     return fallos
 
 
@@ -1102,6 +1147,13 @@ def cuerpos_dentro_del_anillo() -> list[str]:
     # solapes() no lo ve porque un cuerpo que asoma por fuera no choca con
     # nada.
     cuerpos += [(f"clip {n}", q) for n, q, _ in cb._clips(p)]
+    # LAS DOS ALAS DE LA ESCUADRA, por lo mismo: van pegadas al canto trasero
+    # -- el ala A a 8 mm de la silueta, que es el espesor de la trasera -- y su
+    # largo lo fijan las bridas de los miembros, o sea que crece hacia las dos
+    # esquinas donde el redondeo se come material. Se pasa la del lado 0: la
+    # del 1 es su espejo en z y en el plano del perfil son la misma.
+    cuerpos += [(c[0], [(c[1], c[3]), (c[2], c[3]), (c[2], c[4]), (c[1], c[4])])
+                for c in cb._escuadras_trasera(p)[0]["cajas"]]
     # Varios largueros van A RAS del contorno por diseno (los de la cara
     # trasera tienen su centro en prof_inferior - r, o sea que su cara de atras
     # coincide con el plano trasero; los de la base apoyan en y=0). Un punto

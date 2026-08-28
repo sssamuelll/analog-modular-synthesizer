@@ -200,6 +200,51 @@ clip_fondo         = 24;
 // primer numero redondo que lo cumple con margen. Lo comprueba
 // guarda_anclajes() contra el poligono real del clip.
 clip_largo         = 20;
+// LA ESCUADRA DE LA TRASERA: el tope del canto TRASERO del acrilico.
+//
+// LOS CLIPS NO LLEGAN AHI, y no es que falten: no caben. La franja trasera de
+// los 14 mm la ocupa el canto de piel_trasera con sus 8 mm exteriores, y un
+// clip que arrancara en los 6 que quedan dejaria su M4 a 0.35 mm de su propio
+// canto contra los 6.75 que pide el paso M4 (la cuenta esta en TRAMOS_CLIP).
+// El clip del suelo mas cercano que la ley permite se queda a 95.7 mm. O sea
+// 227 mm de canto de acrilico sin un solo tope hacia dentro, y encima la
+// formula de placa EMPOTRADA con la que guarda_costado() lo aprueba no vale
+// justo ahi: supone material sujeto alrededor del punto, y un canto libre no
+// lo esta. Lo canto la revision de la Tarea 4 y lo decidio Samuel el
+// 2026-08-28 -- salida (a) de las tres que la spec §10 dejaba abiertas.
+//
+// LA ESCUADRA VA A LA TRASERA, NO AL ANILLO. Es un angular de la misma chapa
+// que los miembros (t_costilla), plegado a 90: un ala atornillada por dentro a
+// la trasera y otra que asoma sobre el canto del costado y hace de tope
+// corrido. En el anillo no hay rosca ciega nueva -- sus M3 son pasantes por
+// los 8 mm de PMMA de la trasera, con tuerca por dentro, el mismo herraje que
+// las dos filas que esa plancha ya lleva a los miembros.
+//
+// EL ALA QUE ASOMA (el vuelo) NO ES UN NUMERO LIBRE y por eso no esta aqui: lo
+// deriva escuadra_vuelo() = cara_anillo - t_piel. Su punta muere justo en la
+// linea de la VENTANA del anillo, o sea que por dentro pisa exactamente el
+// acrilico que el labio pisa por fuera (rebaje_anillo - hol_costado = 5.5 mm)
+// y ni un milimetro del que se ve. Que no asome mas importa: el acrilico es
+// traslucido y lo que quede por detras se transparenta -- es lo que ya paso
+// con la rejilla de entrada en el vuelo de la bandeja.
+//
+// 16 ES EL MINIMO QUE ADMITE SU PROPIO TORNILLO, y esa es toda la cuenta. El
+// M3 tiene que caer 2t+r por debajo de la tangente del doblez -- la regla de
+// chapa de brida_raiz(), que aqui vale 3 + 3*1.5 + 3.4/2 = 9.20 -- y aun asi
+// dejar 1.5 D hasta el canto libre del ala (5.10). 9.20 + 5.10 = 14.30, y 16
+// es el numero redondo que lo cumple con 1.7 de sobra. Con 12 no hay agujero
+// legal: es el mismo choque que tiene la pestana de la banda del valle.
+escuadra_ala       = 16;
+// Cuantos M3 por escuadra. Tres reparten los 153 mm de ala que quedan por
+// encima de la rejilla de entrada a 51 mm de paso.
+escuadra_m3        = 3;
+// Lo que la escuadra se retira de la BRIDA de cada miembro trasero, por punta.
+// Las bridas viven en la misma franja y en la MISMA rebanada de z que el ala
+// que asoma (t_anillo .. t_anillo + t_costilla), asi que sin este aire se
+// pisan: lo adjudica solapes(). 10 mm es aire de montaje, no una cota critica
+// -- lo que se paga por el son 20 mm de cobertura del canto, y la puerta exige
+// el 80 %.
+escuadra_retiro    = 10;
 
 // --- LOS ANCLAJES DE LA CARA INTERIOR (2026-08-28) ---------------------
 // TODA rosca ciega del anillo es M4 y cae a esta distancia de la silueta. Un

@@ -865,6 +865,109 @@ module brida_3d(x0, y0, ancho_x, ancho_y, z0, largo) {
         translate([x0, y0, z]) cube([ancho_x, ancho_y, t_costilla]);
 }
 
+// --- LA ESCUADRA DE LA TRASERA: el tope del canto trasero del costado ---
+//
+// El por que entero esta en params.scad, en el bloque de escuadra_ala. En
+// corto: el canto TRASERO del acrilico corria 227 mm sin un solo tope hacia
+// dentro -- ahi no cabe clip -- y este angular se lo pone. Va atornillado a la
+// TRASERA, no al anillo.
+//
+// LAS DOS ALAS, y cual es cual:
+//   ala A  la que se atornilla. Plana contra la cara interior de la trasera
+//          (x = miembro_x_trasera()), de escuadra_ala de ancho en z desde la
+//          cara interior del anillo hacia dentro, con sus M3 pasantes.
+//   ala B  el TOPE. Perpendicular, tumbada sobre el plano de la cara interior
+//          del anillo (z = t_anillo .. t_anillo + t_costilla), volando hacia
+//          -x hasta la linea de la ventana.
+//
+// ES TOPE CON CARRERA, como los clips, y por la misma razon: la precarga la
+// pone la junta de asiento contra el labio. El ala B se queda a 3 mm de la
+// cara del PMMA en nominal y a 0.8 en el peor apilado de tolerancias
+// (z = 13.2); en reposo NO toca el acrilico, solo aparece cuando alguien
+// empuja el costado hacia dentro. Y no toca el anillo: arranca exactamente en
+// su cara interior, con cero solape.
+//
+// GEMELA de _escuadras_trasera(), _cajas_escuadra() y _centros_m3_escuadra()
+// en clearance_budget.py; la puerta es guarda_escuadra_trasera().
+
+// El vuelo del ala B, medido desde la cara interior de la trasera. DERIVADO:
+// su punta muere en la linea de la ventana del anillo (silueta - cara_anillo),
+// asi que por dentro pisa exactamente el acrilico que el labio pisa por fuera
+// y nada de lo que se ve. Con cara_anillo 20 y t_piel 8 son 12 mm, que pasan
+// el canto del acrilico en rebaje_anillo - hol_costado = 5.5.
+function escuadra_vuelo() = cara_anillo - t_piel;
+// Regla de chapa, la misma de brida_raiz() con el diametro del M3: el agujero
+// no entra en la zona del doblez. Setback + 2t + radio del agujero.
+function escuadra_raiz() = radio_doblez_costilla + 3*t_costilla + d_M3_paso/2;
+// Y donde cae ese mismo M3 en el DXF de la TRASERA, medido desde su canto: la
+// plancha arranca hol_piel mas adentro que la cara interior del anillo, que es
+// el origen desde el que se mide la raiz.
+function escuadra_m3_x() = escuadra_raiz() - hol_piel;
+
+// El largo corre entre las dos BRIDAS de los miembros traseros, retirado
+// escuadra_retiro de cada una: viven en la misma rebanada de z que el ala B.
+function escuadra_y0() = canal_ancho + escuadra_retiro;
+function escuadra_y1() = miembro_y_meseta() - canal_ancho - escuadra_retiro;
+function escuadra_largo() = escuadra_y1() - escuadra_y0();
+
+// LOS M3 NO SE REPARTEN POR TODA EL ALA, y esto es lo unico de esta pieza que
+// no sale de una regla de chapa. El ala A ocupa los primeros escuadra_ala mm
+// de la trasera contados desde su canto, y justo ahi cae la PRIMERA COLUMNA de
+// la rejilla de entrada (2 HP = 10.16 del canto). Dentro de la banda de la
+// rejilla no hay x legal para un M3: entre dos columnas quedan 6.16 mm de
+// acrilico y dos margenes de 1.5 D piden 10.2. Asi que el ala cruza la banda
+// -- tiene que cruzarla, la cobertura del canto lo exige -- pero sus tornillos
+// se reparten solo por encima, con 1.5 D de aire a la ranura mas alta. Lo
+// comprueba guarda_escuadra_trasera() tornillo a tornillo.
+function escuadra_m3_y() =
+    let (y0 = max(escuadra_y0(),
+                  banda_libre_trasera()[1] + 1.5*d_M3_paso),
+         e  = (escuadra_y1() - y0)/escuadra_m3)
+    [for (i = [0 : escuadra_m3 - 1]) y0 + e*(i + 0.5)];
+
+// El desarrollo: las dos alas por su cota EXTERIOR menos un BD, la misma
+// cuenta que la brida y que la pestana del valle.
+function escuadra_desarrollo() = escuadra_ala + escuadra_vuelo() - miembro_bd();
+
+// El DXF es el DESARROLLO, como el de los tres miembros. La linea de doblez es
+// y = 0: por encima queda el ala A con su cota exterior entera, por debajo el
+// ala B ya descontado su BD.
+module escuadra_trasera_2d() {
+    translate([0, -(escuadra_vuelo() - miembro_bd())])
+        difference() {
+            square([escuadra_largo(), escuadra_desarrollo()]);
+            for (y = escuadra_m3_y())
+                translate([y - escuadra_y0(),
+                           escuadra_vuelo() - miembro_bd() + escuadra_raiz()])
+                    circle(d = d_M3_paso + kerf);
+        }
+}
+
+// Las dos escuadras dobladas y puestas. El ala B se dibuja hasta la cara
+// INTERIOR del ala A y no hasta la trasera: el rincon del doblez es material
+// del ala A, y contarlo dos veces haria que la pieza se solapara consigo misma
+// en el censo de solapes().
+module escuadras_trasera() {
+    x_int = miembro_x_trasera();
+    for (m = [0, 1])
+        translate([0, 0, m ? ancho_total : 0])
+            mirror([0, 0, m]) {
+                difference() {
+                    translate([x_int - t_costilla, escuadra_y0(), t_anillo])
+                        cube([t_costilla, escuadra_largo(), escuadra_ala]);
+                    for (y = escuadra_m3_y())
+                        translate([x_int - t_costilla - 0.1, y,
+                                   t_anillo + escuadra_raiz()])
+                            rotate([0, 90, 0])
+                                cylinder(h = t_costilla + 0.2,
+                                         d = d_M3_paso + kerf);
+                }
+                translate([x_int - escuadra_vuelo(), escuadra_y0(), t_anillo])
+                    cube([escuadra_vuelo() - t_costilla, escuadra_largo(),
+                          t_costilla]);
+            }
+}
+
 // --- LOS TRES MIEMBROS: desarrollos de chapa de aluminio ----------------
 //
 // El miembro bajo cruza entre las dos costillas en la trasera inferior. Recibe
@@ -1223,6 +1326,27 @@ function trasera_y_relieve() =
     anclaje_piel_base().y
     + 0.74*(anclaje_piel_remate().y - anclaje_piel_base().y);
 
+// La onda de abajo, que es la frontera de arriba de la banda libre.
+function trasera_y_bajas() =
+    anclaje_piel_base().y
+    + 0.37*(anclaje_piel_remate().y - anclaje_piel_base().y);
+
+// LA BANDA LIBRE entre la fila de M3 de abajo y esa onda. Sale de
+// piel_trasera_2d() -- donde vivio como dos locales -- el 2026-08-28, cuando
+// la ESCUADRA se convirtio en su cuarto consumidor: la comparten la rejilla de
+// entrada, la ventana de la red, el hueco que las centra y ahora el reparto de
+// los M3 de la escuadra, que tienen que caer FUERA de ella. Copiarla habria
+// sido la cuarta version del mismo numero. Gemela de _banda_libre_trasera().
+//
+// El termino vent_ancho_ranura/2 no es decorativo: la onda es un hull de
+// circulos, asi que su borde de MATERIAL cae medio ancho de ranura por debajo
+// de la polilinea. Sin ese termino el parametro medía 2 mm menos de lo que
+// decia.
+function banda_libre_trasera() =
+    [anclaje_piel_base().y + valle_espina/2 + vent_puente_min,
+     trasera_y_bajas() - vent_periodo*0.35 - vent_ancho_ranura/2
+                       - vent_separacion];
+
 // OJO CON EL ESPEJO -- ESTO NO ES UN DESCUIDO, ES LA CORRECCION.
 //
 // piel_trasera() extruye desde el plano trasero HACIA DENTRO del case, asi que
@@ -1297,8 +1421,8 @@ module piel_trasera_2d() {
     // arreglaba nada, porque la rejilla subia con ella. Lo que separa de verdad
     // es vent_separacion, y la onda sube para que la rejilla no encoja al
     // hacerle sitio: la banda pasa de 40.46 a 41.47 mm.
-    y_bajas  = f_base + 0.37*(f_tras - f_base);
-    y_sierra = f_base + 0.74*(f_tras - f_base);
+    y_bajas  = trasera_y_bajas();
+    y_sierra = trasera_y_relieve();
     // El IEC va CENTRADO en la banda libre que dejan la fila de tornillos por
     // abajo y la onda por arriba. Estuvo en y=22 fijo, a 7 mm de la fila -- y
     // uno de los cinco M3 cae justo dentro de su franja de X (x=475.2), asi que
@@ -1313,14 +1437,24 @@ module piel_trasera_2d() {
     // el canto izquierdo contado desde la derecha -- un numero que no queria
     // decir nada y que ya no sabia si lo que protegia era el canto o el campo.
     x_iec0 = au - iec_margen_der - iec_ancho;
-    lib0 = f_base + valle_espina/2 + vent_puente_min;
-    // vent_ancho_ranura/2 y no solo la amplitud: la onda es un hull de circulos,
-    // asi que su borde de MATERIAL cae medio ancho de ranura por debajo de la
-    // polilinea. Sin ese termino el parametro medía 2 mm menos de lo que decia.
-    lib1 = y_bajas - vent_periodo*0.35 - vent_ancho_ranura/2 - vent_separacion;
+    // LA BANDA LIBRE vive en banda_libre_trasera() desde el 2026-08-28. Fueron
+    // dos locales aqui mientras solo la usaban la rejilla y la ventana de red;
+    // la escuadra es el cuarto consumidor y necesita SU frontera de arriba
+    // desde fuera de este modulo, asi que la cuenta se mudo a una funcion.
+    lib0 = banda_libre_trasera()[0];
+    lib1 = banda_libre_trasera()[1];
     difference() {
         plancha(au, alto);
         for (y = [f_base, f_tras]) fila_agujeros(au, y);
+        // LOS SEIS M3 DE LAS DOS ESCUADRAS, tres por costado. No son de fila:
+        // van en columna a escuadra_m3_x() del canto de la plancha, que es la
+        // raiz del doblez de la escuadra menos el aire con que esta plancha se
+        // empotra. Son PASANTES con tuerca por dentro -- la escuadra no rosca
+        // en el anillo -- y por eso salen aqui, en el DXF de la trasera, y no
+        // en el del dorso del anillo.
+        for (lado = [0, 1], y = escuadra_m3_y())
+            translate([lado ? au - escuadra_m3_x() : escuadra_m3_x(), y])
+                circle(d = d_M3_paso + kerf);
         rejilla_entrada(au, lib0, lib1, x_iec0);
         translate([au*0.10, y_bajas])  onda("triangulo", au*0.35);
         translate([au*0.55, y_bajas])  onda("cuadrada",  au*0.35);
@@ -1862,6 +1996,7 @@ else if (PART == "miembro_bajo_2d")      miembro_bajo_2d();
 else if (PART == "miembro_alto_2d")      miembro_alto_2d();
 else if (PART == "bahia_2d")             bahia_2d();
 else if (PART == "piel_trasera_2d")      piel_trasera_2d();
+else if (PART == "escuadra_trasera_2d")  escuadra_trasera_2d();
 // El relieve KONDOR en su propio fichero, y no es un extra: es la UNICA forma
 // de que llegue al taller. No se recorta en piel_trasera_2d (es ciego), asi que
 // el DXF de la trasera SIN esto es media pieza -- el mismo caso del chasis, que
@@ -2166,6 +2301,12 @@ module assembly_aluminio() {           // idem, Z-Rails + miembros + paneles sol
     // Van en la cara INTERIOR igual que las placas y por la misma razon:
     // desde fuera no se ve ninguno, y si se viera es que esta mal puesto.
     clips_costado();
+    // LAS DOS ESCUADRAS DE LA TRASERA. Entran el 2026-08-28 y son el tope del
+    // canto TRASERO del acrilico, que hasta hoy corria 227 mm sin ninguno.
+    // Tampoco se ven desde fuera -- van por dentro de la trasera --: lo unico
+    // que la vista de atras ensena de ellas son sus tres M3 por costado, en
+    // linea vertical cerca del canto.
+    escuadras_trasera();
     // LAS DOS COSTILLAS. Entran aqui el 2026-08-27, y llegaban tarde: son la
     // pieza PORTANTE del case desde el 26 y el render llevaba un dia
     // ensenando un aparato sostenido por su propia piel.
@@ -2260,6 +2401,23 @@ module bom() {
     echo("     al canto de la brida y 1.5 D de su broca (6.3) a la pared del");
     echo("     rebaje, y las dos no caben a la vez en 14. El M4 si: 6.75 y");
     echo("     4.95. La brida es chapa de 1.5 -- un M5 ahi estaba sobrado.");
+    echo(str("BOM: ESCUADRA DE LA TRASERA x2 -- angular de la MISMA chapa que",
+             " los miembros (6082-T6 de ", t_costilla, ", radio ",
+             radio_doblez_costilla, "), desarrollo ", escuadra_largo(), " x ",
+             escuadra_desarrollo(), ". Un ala de ", escuadra_ala,
+             " atornillada a la cara interior de la TRASERA y otra de ",
+             escuadra_vuelo(), " tumbada sobre la cara interior del anillo,",
+             " que asoma sobre el canto trasero del costado y hace de tope."));
+    echo("     Es lo que le faltaba a ese canto: 227 mm de acrilico sin nada");
+    echo("     que lo parara hacia dentro. Va al taller de CHAPA con los tres");
+    echo("     miembros y la banda del valle, no al de acrilico.");
+    echo(str("BOM: tornillo M3 x", 2*escuadra_m3, " + tuerca -- las dos",
+             " escuadras a la trasera, PASANTES por sus ", t_piel,
+             " mm de PMMA, cabeza fuera y tuerca dentro. Mismo herraje que las",
+             " dos filas que esa plancha ya lleva a los miembros."));
+    echo("     NO HAY ROSCA CIEGA NUEVA EN EL ANILLO. La escuadra ancla en la");
+    echo("     trasera a proposito: en la franja de 14 no cabe -- es la misma");
+    echo("     cuenta que deja sin clip a ese tramo (ver TRAMOS_CLIP).");
     echo("BOM: tornillo M4 x4 -- las dos lenguetas de la BAHIA a la placa de");
     echo("     la fila 1U, roscados EN LA PLACA (6 mm de pletina). La bahia no");
     echo("     ancla al anillo: en su boca la franja la ocupa esa placa y los");
