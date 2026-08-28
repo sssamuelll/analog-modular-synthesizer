@@ -754,11 +754,25 @@ def guarda_costado() -> list[str]:
     Es la misma formula de placa circular con dos vanos distintos, y el
     segundo es el que manda: hoy vale 95 contra 69 el de fuera.
 
-    LO QUE LA PUERTA NO SABE, y conviene no leerla de mas: el modelo de placa
-    empotrada de radio a mide la FLECHA de un parche, no si el canto del
-    acrilico se levanta del rebaje. Con 5.5 mm de solape en el labio y flechas
-    de decimas de milimetro no hay caso, pero el dia que alguien estreche
-    rebaje_anillo esa es la cuenta que falta.
+    LO QUE LA PUERTA NO SABE, dicho con los numeros porque es la limitacion
+    real y no una cautela de manual: EL PUNTO PEOR CAE EN UN CANTO LIBRE. Con
+    la geometria de hoy sale en (292.8, 117.5), a menos de 1 mm del canto
+    TRASERO del acrilico -- 227 mm de canto que no tiene ni un apoyo hacia
+    dentro, porque en la franja trasera no cabe clip (la ocupa el canto de
+    piel_trasera) y el clip del suelo mas cercano que la ley permite se queda a
+    95.7 mm.
+
+    Y la formula de placa circular EMPOTRADA supone material sujeto ALREDEDOR
+    del punto. En un canto libre eso no se cumple: el parche no esta empotrado
+    por ese lado y la flecha real es mayor que la que sale aqui, en un factor
+    del mismo orden que el margen que hoy la salva (0.24 contra 0.60, o sea
+    2.45x). O sea que el numero verde de esta puerta se apoya en ese margen, no
+    en que el modelo sea valido en ese punto.
+
+    NO SE CIERRA AQUI: es decision de diseno y esta abierta en la spec §10 con
+    las tres salidas (escuadra atornillada a la trasera, recortar piel_trasera
+    para hacerle sitio a un clip, o aceptarlo). Lo que esta puerta hace es
+    medir siempre lo mismo y dejar el numero escrito en cada corrida.
 
     Lo que el esqueleto vale sigue siendo enorme contra el costado atornillado:
     el vano era 119.0 mm con cuatro anclas y la flecha 0.38.
@@ -803,10 +817,14 @@ def guarda_costado() -> list[str]:
     # giradas con su tramo (35 y 45 grados) y con una esquina honda cortada:
     # su AABB se mete hasta 20 mm de mas en el rincon del valle y en la punta
     # de la cara superior, o sea que el vano interior saldria optimista justo
-    # donde el acrilico esta mas suelto. Los clips son rectangulos a plomo y
-    # ahi caja y poligono son la misma cosa.
+    # donde el acrilico esta mas suelto. Los clips van a plomo y hoy su caja y
+    # su poligono son la misma cosa, pero se piden a _clips() -- que es de
+    # donde salen sus esquinas -- y no a _cajas_clip(): esa devuelve una caja
+    # POR CARA, o sea el doble de apoyos con el mismo contorno, y con ella la
+    # cuenta de esta lista no cuadraba con la que se imprime abajo.
+    clips = cb._clips(p)
     apoyos = ([cb._esquinas_placa(pl) for pl in cb._placas(p)]
-              + [cb._rect_xy(c) for c in cb._cajas_clip(p, 0.0, 0.0)])
+              + [q for _, q, _ in clips])
     vano_in, donde_in = 0.0, (0.0, 0.0)
     y = min(ys)
     while y <= max(ys):
@@ -853,7 +871,7 @@ def guarda_costado() -> list[str]:
           f"{vano_max:.0f}) y trabaja a {sigma:.1f} MPa (fluencia "
           f"{cb.SIGMA_PMMA})")
     print(f"  hacia DENTRO lo paran {len(apoyos)} apoyos puntuales "
-          f"({len(cb._placas(p))} placas + {len(cb.TRAMOS_CLIP)} clips por "
+          f"({len(apoyos) - len(clips)} placas + {len(clips)} clips por "
           f"costado): vano interior {vano_in:.1f} mm (x={donde_in[0]:.0f}, "
           f"y={donde_in[1]:.0f}) y se hunde {flecha_in:.2f} mm (techo "
           f"{p['flecha_costado_max']:.2f}, vano maximo {vano_max:.0f})")

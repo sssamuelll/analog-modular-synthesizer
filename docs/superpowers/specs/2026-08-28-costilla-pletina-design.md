@@ -91,6 +91,12 @@ apilado desaparece:
 - Hacia dentro lo retienen **clips de retención**: pletinas de 4 mm atornilladas a la
   franja interior del anillo con M4 a rosca ciega, solapando 4 mm sobre el acrílico. La
   cantidad la decide `guarda_costado()` por vano libre; se parte de 6 por costado.
+  - *Enmienda (Tarea 4, 2026-08-28):* esos 4 mm sobre el acrílico serían `clip_fondo`
+    = 18.5, y ahí el clip muere **dentro del rebaje**, pisando sólo la ceja que ya está
+    encajonada entre el labio y la pared. Se fija `clip_fondo` = **24** — ruling de la
+    tarea, no de esta spec —: pasa el canto de la ventana (20) y muerde 4 mm de acrílico
+    **volado**, 9.5 mm de acrílico en total. Y la cantidad la decidió la puerta:
+    **2 por costado**, no 6 (§9).
 - **El costado vuelve a cero agujeros.** Es piel. Los cuatro pasos de casquillo de la
   Tarea 3 se van, `taladros_costado()` muere por segunda vez y `agujeros_donde_toca()`
   recupera su censo de «costado CERO».
@@ -198,7 +204,10 @@ de `E_aluminio` (el anillo sigue derivándose por flecha).
   de bonding. **Pregunta eliminatoria nueva al RFQ:** planitud garantizada tras vaciar el
   centro de una pletina de 14 (el riesgo que Halberg marcó).
 - **Placas de anclaje ×12:** pletina de **6** (era 4; ver la enmienda de §5), corte +
-  roscado. **Clips ×12:** pletina de 4, que ahí sí vale. Piezas nuevas de BOM.
+  roscado. **Clips ×4:** pletina de 4, que ahí sí vale — eran ×12 en la propuesta y la
+  puerta dejó 4 (2 por costado, los dos en el canto del suelo): de los cuatro tramos sin
+  placa, sólo el suelo tiene franja libre donde atornillar, y con esos dos
+  `guarda_costado()` da verde. Piezas nuevas de BOM.
 - **Miembros:** mismo taller de chapa, con bridas de extremo.
 - **Acrílico:** el costado cambia de contorno (retranqueado 14) y vuelve a cero
   taladros. La trasera no cambia aquí.
@@ -210,6 +219,17 @@ de `E_aluminio` (el anillo sigue derivándose por flecha).
 - **La trasera sigue enseñando canto**: el 25.6 % del contorno medido el 28-08 está en
   sus cantos superior e inferior, 528 mm sin metal encima. Es otra pieza y otro papel:
   los dos miembros traseros como marco de la trasera. Va después de esta.
+- **El canto trasero del acrílico no tiene retención hacia dentro, y el modelo que lo
+  aprueba no es válido justo ahí.** Son **227 mm** de canto libre (x = 292.91, y de 14.5
+  a 241.68): en la franja trasera no cabe clip — la ocupa el canto de `piel_trasera`, que
+  apoya en sus 8 mm exteriores de los 14 — y el clip del suelo más cercano que la
+  geometría permite se queda a **95.7 mm**. El punto peor del barrido cae en **(292.8,
+  117.5)**, a menos de 1 mm de ese canto, y la fórmula de placa circular **empotrada**
+  supone material sujeto alrededor del punto: en un canto libre la flecha real es mayor,
+  en un factor del mismo orden que el margen que hoy la salva (**0.24 contra 0.60, 2.45×**).
+  Tres salidas, sin elegir: **(a)** una escuadra de aluminio fijada a la trasera que asome
+  sobre el canto; **(b)** recortar `piel_trasera` para que quepa un clip en la franja
+  trasera; **(c)** aceptarlo y cerrarlo cargando el prototipo. Decisión de Samuel.
 - **La meseta se lee como repisa** (Iris): 29 mm de chapa horizontal perforada. Se
   juzga en render con el anillo puesto.
 - **La banda del valle fluye a ~27 N si se levanta el case por ahí** y la puerta lo

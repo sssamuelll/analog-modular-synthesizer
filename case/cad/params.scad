@@ -182,11 +182,18 @@ d_M3_rosca         = 2.5;
 // entre la cara del PMMA (z = 11) y la cara interior del anillo (z = 14) esta
 // vacio y el acrilico se sale del rebaje por detras. Estos clips son ese tope.
 t_clip             = 4;
-// Cuanto se mete el clip desde la silueta. La franja llega a 14 y la ventana
-// empieza a cara_anillo = 20, o sea que con 24 el clip pisa 4 mm de VENTANA
-// (lo que pide la spec §4) y 9.5 mm de ACRILICO, que arranca a
-// retiro_rebaje + hol_costado = 14.5. Mas fondo no compra retencion y se ve
-// mas por la ventana; menos y el clip no llega a asomar sobre el hueco.
+// Cuanto se mete el clip desde la silueta.
+//
+// LA SPEC PIDE OTRA COSA y conviene no confundirlas. §4 dice "solapando 4 mm
+// sobre el ACRILICO", y el acrilico arranca a retiro_rebaje + hol_costado =
+// 14.5: eso serian 18.5, no 24. Los 24 son RULING DE LA TAREA 4, no la spec.
+//
+// Por que 24 y no 18.5: con 18.5 el clip muere DENTRO del rebaje -- pisa solo
+// la ceja de 4 mm de acrilico que ya esta encajonada entre el labio y la pared
+// del rebaje, que es el trozo que menos se mueve. Con 24 pasa el canto de la
+// ventana (cara_anillo = 20) y muerde 4 mm de acrilico VOLADO, que es donde el
+// panel de verdad se separa: pisa 9.5 mm de acrilico en total. Mas fondo no
+// compra retencion y se ve mas por la ventana.
 clip_fondo         = 24;
 // Largo del clip a lo largo de su tramo. Su M4 va centrado, o sea a 10 mm de
 // cada punta, y el agujero de paso pide 1.5 D = 6.75 de canto: 20 es el

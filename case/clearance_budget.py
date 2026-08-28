@@ -946,8 +946,10 @@ def guarda_anclajes(p: dict[str, float]) -> None:
     # parametros y el dia que alguien acorte el clip para que quepa en un tramo
     # estrecho, el agujero se sale por el canto sin que ninguna otra puerta lo
     # vea.
+    peor_clip = (float("inf"), "")
     for nm, q, c in _clips(p):
         dist = _dist_al_poligono(q, c)
+        peor_clip = min(peor_clip, (dist, nm))
         assert dist >= minimo, (
             f"el M4 del clip '{nm}' en ({c[0]:.2f}, {c[1]:.2f}) cae a "
             f"{dist:.2f} mm del canto del propio clip y se exigen "
@@ -979,7 +981,8 @@ def guarda_anclajes(p: dict[str, float]) -> None:
     print(f"  el agujero de placa mas justo es el {peor_eje[1]} a "
           f"{peor_eje[0]:.2f} del canto; el M4 de brida mas justo, '{peor_brida[1]}' a "
           f"{peor_brida[0]:.2f} (minimo {minimo:.2f}); el M3 de la pestana a "
-          f"{d_m3:.2f} del canto de la placa del valle")
+          f"{d_m3:.2f} del canto de la placa del valle; el M4 de clip mas "
+          f"justo, '{peor_clip[1]}' a {peor_clip[0]:.2f}")
 
 
 def _m3_pestana(p: dict[str, float]) -> tuple[float, float]:
