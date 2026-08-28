@@ -30,10 +30,18 @@ contra los **2 ms** — y con la mitad de margen, porque diseñar justo en el
 umbral significa que el oyente mas fino si lo nota.
 """
 
-# --- Lo que sale del contrato congelado del modulo 3 ---
-BITS_TRAMA_J2 = 72          # 3 chips x 24 bits (hardware/03-vco/README.md)
-F_SPI = 10e6                # tope del mismo contrato
-T_TRAMA_J2 = BITS_TRAMA_J2 / F_SPI
+# --- La trama del J2: por el enlace que la lleva (#210 D2/D5, S7: "patch") ---
+#
+# Era «72 bits a 10 MHz», el contrato congelado del modulo 3. Ese contrato
+# paso a dialecto legado: el evento viaja por el enlace privado de la Voz, y
+# lo que puede tener delante en ese enlace es su trama mas larga declarada
+# (hoy el bloque de tono de 288 bits) al reloj al que ESE enlace corre. Las
+# dos cosas las da trama_j2_budget.py; aqui no se declara ninguna.
+import trama_j2_budget as tj
+
+_VOZ = tj.enlace("Voz total")
+BITS_TRAMA_J2 = _VOZ.trama_mas_larga_bits()
+T_TRAMA_J2 = _VOZ.t_trama_mas_larga_s()
 
 # --- Lo que sale del reloj del RP2350 ---
 F_SYS = 150e6
@@ -91,17 +99,24 @@ def demo() -> None:
     print(f"  umbral de asincronia (literatura) : {UMBRAL_ASINCRONIA_S*1e3:.1f} ms")
     print(f"  objetivo de diseño (mitad)        : {OBJETIVO_S*1e3:.1f} ms")
     print()
-    print(f"  trama del J2 (derivada)           : {T_TRAMA_J2*1e6:.1f} us")
+    print(f"  trama mas larga del enlace Voz    : {BITS_TRAMA_J2} bits a "
+          f"{_VOZ.reloj_operacion_hz()/1e6:.0f} MHz = {T_TRAMA_J2*1e6:.1f} us")
     print(f"  deteccion del flanco (despejada)  : {deteccion_max()*1e6:.0f} us maximo")
     print()
 
-    # El micro no puede ser un termino real del presupuesto: si lo fuera, el
-    # cuello de botella habria vuelto al enlace y habria que subir F_SPI.
+    # El enlace no puede ser un termino real del presupuesto: si lo fuera, el
+    # cuello de botella habria vuelto al cable y habria que sancionar mas
+    # reloj en ese enlace (R-P4) o partir la trama.
     assert T_TRAMA_J2 < 0.1 * OBJETIVO_S, (
         "la trama del J2 tiene que ser despreciable frente al objetivo musical. "
-        "Si no lo es, el cuello volvio a ser el enlace: hay que subir F_SPI o "
-        "aflojar el objetivo"
+        "Si no lo es, el cuello volvio a ser el enlace: hay que sancionar mas "
+        "reloj en el enlace de la Voz o aflojar el objetivo"
     )
+    # R-E1 (evento D4) es este mismo 10 %, y vive como constante en
+    # trama_j2_budget.py para que el arbitro por enlace la aplique a todo
+    # mensaje declarado. Que no se desincronicen:
+    assert abs(tj.T_MENSAJE_MAX_S - 0.1 * OBJETIVO_S) < 1e-12, (
+        "R-E1 en trama_j2_budget.py ya no es el 10 % del objetivo musical")
     print(f"  la trama se lleva el {T_TRAMA_J2/OBJETIVO_S*100:.1f} % del presupuesto")
     print()
 
