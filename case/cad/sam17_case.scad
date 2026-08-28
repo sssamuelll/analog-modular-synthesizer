@@ -1386,21 +1386,36 @@ function salida_cables_xy() =
     [pc.x + d + chasis_salida_x - salida_holgura,
      pc.y + d + chasis_salida_y - salida_holgura];
 
-// OJO: EL TERMINO EN Z DE ESTA MATRIZ NO ES UN PLANO, y por eso no se toco al
-// mover la cara interior a t_anillo el 2026-08-28. `ancho_total - t_cheek` con
-// el -1 deja el chasis en z = 10.50..349.10, mientras ch_pos() y guarda_chasis()
-// lo colocan en 206.02..544.62: no es un desfase de espesor, es un ESPEJO de
-// lado -- y ademas contradice a salida_cables_xy(), que saca el agujero de la
-// tabla del ch_pos() sin espejar. Sustituir t_cheek por t_anillo aqui lo
-// empeora (lo mete 6 mm mas dentro del anillo), asi que la cota se queda como
-// esta hasta que se decida de que lado vive el PSU. NO LO CAZA NINGUNA PUERTA:
-// el chasis no es un cuerpo de _cajas_solidas(), o sea que solapes() no lo mira,
-// y en el render queda detras de los paneles. Va al registro de pendientes.
+// EL TERMINO EN Z ESPEJABA EL CHASIS, y se arregla el 2026-08-28. Decia
+// `ancho_total - t_cheek` con un -1 delante, y eso hacia dos cosas malas a la
+// vez: dejaba la caja en z = 10.50..349.10 -- casi 200 mm del sitio, o sea al
+// OTRO EXTREMO del case -- y, por el signo, la dibujaba como imagen especular
+// (el 3x3 tenia determinante -1). Un chasis de chapa no se puede fabricar
+// espejado: al voltearlo, la boca de salida y la entrada IEC cambian de pared.
+//
+// QUIEN MANDA SON LAS DOS GEMELAS QUE YA SE PONIAN DE ACUERDO, y son dos contra
+// una: ch_pos() -- lo que guarda_chasis() verifica, pos_x = ancho_util -
+// chasis_margen_bandeja - tapa_x desde la cara interior -- y salida_cables_xy(),
+// que saca del MISMO ch_pos() la ranura de cables que se recorta en
+// bandeja_base_2d, sin espejar. Las dos dicen z = 206.02..544.62, contra el
+// canto de arriba del case, que es ademas donde vive la ventana de la IEC en la
+// trasera. Con el espejo puesto, la boca del chasis y su agujero en la tabla
+// quedaban en lados opuestos del aparato.
+//
+// La conversion es la de siempre en este fichero: x local de la tabla =
+// vuelo_zocalo + z del mundo (la misma con que bandeja_base_2d() coloca sus dos
+// filas de tornillo), asi que el termino es p.x - vuelo_zocalo y el signo, +1.
+// Con eso el 3x3 vuelve a ser un giro propio.
+//
+// SIGUE SIN ADJUDICARLO NINGUNA PUERTA: el chasis no es un cuerpo de
+// _cajas_solidas(), o sea que solapes() no lo mira. Meterlo ahi esta aplazado a
+// proposito -- puede chocar con el miembro del que cuelga, y eso es otra
+// decision.
 module chasis() {
     p  = ch_pos();
     multmatrix([[0, 1, 0, -vuelo_zocalo + p.y],
                 [0, 0, 1, chasis_pie],
-                [-1, 0, 0, ancho_total - t_cheek - p.x],
+                [1, 0, 0, p.x - vuelo_zocalo],
                 [0, 0, 0, 1]])
         chasis_3d();
 }
