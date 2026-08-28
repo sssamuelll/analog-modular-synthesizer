@@ -825,6 +825,16 @@ def _escuadra_raiz(p: dict[str, float]) -> float:
             + p["d_M3_paso"] / 2)
 
 
+def _escuadra_tapa(p: dict[str, float]) -> float:
+    """Hasta donde tapa el ala A EN EL PLANO DE LA TRASERA, desde su canto.
+
+    GEMELA de escuadra_tapa(). La plancha arranca hol_piel mas adentro que la
+    cara interior del anillo, que es el origen desde el que se mide el ala. La
+    consume _rejilla_entrada(), que se salta las columnas que caigan aqui
+    debajo."""
+    return p["escuadra_ala"] - p["hol_piel"]
+
+
 def _escuadras_trasera(p: dict[str, float]) -> list[dict]:
     """Una escuadra por costado: donde vuela, donde vive y sus dos cajas.
 
@@ -1847,8 +1857,17 @@ def _rejilla_entrada(p: dict[str, float]) -> tuple[int, float, float, float]:
     # de red se elija no haya que acordarse de tres sitios.
     x_iec = au - p["iec_margen_der"] - p["iec_ancho"] / 2
     hueco = (p["iec_ancho"] + p["vent_ancho_ranura"]) / 2 + p["vent_puente_min"]
+    # Y LAS QUE TAPA EL ALA A DE LA ESCUADRA, desde el 2026-08-28. La primera
+    # columna (2 HP = 10.16) quedaba un 82 % de su largo debajo de 1.5 mm de
+    # aluminio y esta puerta la contaba entera: 7816 mm2 de entrada que no
+    # existian. Se salta ENTERA -- el .scad hace lo mismo y con la misma cuenta
+    # --, o sea que el DXF deja de cortarla y lo que aqui se suma es area de
+    # verdad abierta. El por que largo esta en rejilla_entrada().
+    tapa = _escuadra_tapa(p)
     ns = [n for n in range(paso, int(n_hp) - paso + 1, paso)
-          if abs(n * p["hp"] - x_iec) >= hueco]
+          if abs(n * p["hp"] - x_iec) >= hueco
+          and n * p["hp"] - p["vent_ancho_ranura"] / 2 >= tapa
+          and n * p["hp"] + p["vent_ancho_ranura"] / 2 <= au - tapa]
     return (len(ns), y1 - y0,
             _area_ranuras(len(ns), y1 - y0, p["vent_ancho_ranura"]),
             y0_pl + (y0 + y1) / 2)
@@ -2958,27 +2977,55 @@ def guarda_escuadra_trasera(p: dict[str, float]) -> None:
         assert esc["z_ala_b"] >= p["t_anillo"] - 1e-9, (
             f"el ala B de la escuadra {lado} arranca en z={esc['z_ala_b']:.2f} y la "
             f"cara interior del anillo esta en {p['t_anillo']:g}: se monta encima")
-        assert esc["z_ala_b"] - z_pmma >= 0.8, (
+        # El -1e-9 no es aflojar la cota: los 0.8 salen exactos de restar
+        # 3 + 8 + 1.2 + 1 a t_anillo y el float los devuelve 7e-16 por debajo
+        # tan pronto como alguien reordene un sumando. Es la misma tolerancia
+        # que llevan los otros asserts geometricos de este fichero.
+        assert esc["z_ala_b"] - z_pmma >= 0.8 - 1e-9, (
             f"el ala B de la escuadra {lado} queda a {esc['z_ala_b'] - z_pmma:.2f} mm "
             f"del acrilico mas grueso (z={z_pmma:.2f}): pinza en vez de topar")
+        # EL TECHO DEL VUELO, que hasta hoy no tenia puerta y del que depende
+        # todo lo que se decidio sobre esta pieza: la punta muere EN la linea
+        # de la ventana del anillo y no un milimetro por delante. Si la pasa,
+        # el ala B asoma por el hueco que se ve y el acrilico traslucido la
+        # ensena -- es lo que ya paso con la rejilla de entrada en el vuelo de
+        # la bandeja. Hoy se cumple con igualdad exacta porque escuadra_vuelo()
+        # se deriva de esa misma linea; el 1e-9 es por eso.
+        assert esc["x_punta"] >= P[6][0] - p["cara_anillo"] - 1e-9, (
+            f"la punta del ala B de la escuadra {lado} llega a "
+            f"x={esc['x_punta']:.2f} y la ventana del anillo empieza en "
+            f"x={P[6][0] - p['cara_anillo']:.2f}: se mete "
+            f"{P[6][0] - p['cara_anillo'] - esc['x_punta']:.2f} mm en el campo "
+            f"que se ve, y el PMMA la transparenta")
         assert esc["cobertura"] >= 0.80, (
             f"la escuadra {lado} cubre el {esc['cobertura'] * 100:.0f} % del canto "
             f"trasero libre y se exige el 80 %")
     # LA TERCERA PROMESA DEL DOCSTRING, que los tres asserts de arriba no
     # cumplen: los M3. No es celo -- es el unico choque real que aparecio al
     # dibujarla. El ala A vive en los primeros escuadra_ala mm de la trasera
-    # medidos desde su canto, y ahi cae la PRIMERA COLUMNA de la rejilla de
-    # entrada (a 10.16 del canto, o sea 2 HP). Dentro de la banda de la rejilla
-    # NINGUNA x es legal, y no por poco: entre dos columnas quedan 6.16 mm de
-    # acrilico y dos margenes de 1.5 D piden 10.2. Por eso los M3 se reparten
-    # solo por encima de la banda, y por eso esto se comprueba: el dia que la
-    # rejilla crezca o que el ala se alargue hacia abajo, un tornillo cae
-    # dentro de una ranura y no lo canta nadie mas -- solapes() mira cuerpos,
-    # no recortes, y el censo de check_dxf cuenta agujeros, no vecindarios.
+    # medidos desde su canto, y ahi CAIA la primera columna de la rejilla de
+    # entrada (a 10.16 del canto, o sea 2 HP), sin dejar ninguna x legal dentro
+    # de la banda: entre dos columnas quedan 6.16 mm de acrilico y dos margenes
+    # de 1.5 D piden 10.2.
+    #
+    # ESA COLUMNA YA NO SE CORTA desde la revision de la Tarea 4b -- la tapaba
+    # el ala y esta misma corrida la contaba como area de entrada --, asi que
+    # hoy si cabria un tornillo ahi. Se quedan igual por encima de la banda: la
+    # columna solo falta MIENTRAS el ala la tape, y un tornillo apoyado en esa
+    # condicion vuelve a caer dentro de una ranura el dia que escuadra_ala baje
+    # de 14.3, sin que nadie lo cante -- solapes() mira cuerpos, no recortes, y
+    # el censo de check_dxf cuenta agujeros, no vecindarios. Por eso esto se
+    # comprueba tornillo a tornillo y por eso la regla no se relaja.
     borde = 1.5 * p["d_M3_paso"]
     rej0, rej1 = _banda_libre_trasera(p)
-    filas_trasera = [c[1] for c in _anclajes_miembro(
-        p, _cajas_miembro(p, P, _centros_rail(p, P), 0.0, 0.0)).values()]
+    # SOLO LAS FILAS QUE ESTAN EN LA TRASERA. _anclajes_miembro() devuelve
+    # tambien las dos alas de la bahia, que atornillan al SUELO y no a esta
+    # plancha: colarlas aqui era pedirle aire a un M3 de la trasera contra una
+    # fila que no comparte pieza con el, o sea una puerta que puede ponerse
+    # roja por una coincidencia de y entre dos planos distintos.
+    filas_trasera = [c[1] for k, c in _anclajes_miembro(
+        p, _cajas_miembro(p, P, _centros_rail(p, P), 0.0, 0.0)).items()
+        if k[0] in ("trasero bajo", "trasero alto")]
     au = _trasera_au(p)
     for x_local, y in _centros_m3_escuadra(p):
         canto = min(x_local, au - x_local)
@@ -2988,17 +3035,81 @@ def guarda_escuadra_trasera(p: dict[str, float]) -> None:
         assert not (rej0 - borde <= y <= rej1 + borde), (
             f"un M3 de escuadra cae en y={y:.2f}, dentro de la banda de la "
             f"rejilla de entrada ({rej0:.2f} a {rej1:.2f}) con {borde:.2f} de "
-            f"margen: ahi no hay x legal, las columnas dejan huecos de "
-            f"{p['valle_paso_hp'] * p['hp'] - p['vent_ancho_ranura']:.2f} mm")
+            f"margen: el hueco que hoy hay ahi lo abre el propio ala al tapar "
+            f"su primera columna, y en cuanto el ala encoja vuelve a haber "
+            f"ranura -- entre columnas quedan "
+            f"{p['valle_paso_hp'] * p['hp'] - p['vent_ancho_ranura']:.2f} mm y "
+            f"dos margenes piden {2 * borde:.2f}")
         for y_fila in filas_trasera:
             assert abs(y - y_fila) >= borde, (
                 f"un M3 de escuadra cae en y={y:.2f} y una fila de la trasera "
                 f"va por y={y_fila:.2f}: {abs(y - y_fila):.2f} mm entre ejes, "
                 f"se exigen {borde:.2f}")
+    # LA ESCUADRA COMO VIGA, y no como recorte. Lo pidio la revision de la
+    # Tarea 4b y es el unico hueco que la puerta tenia: por debajo del M3 mas
+    # bajo el ala VUELA. Ahi no baja ningun tornillo, por lo que dice el bloque
+    # de arriba, asi que ese tramo trabaja en voladizo -- y es justo el tramo
+    # que pisa la esquina de abajo del acrilico, que es por donde se agarra el
+    # case para moverlo.
+    #
+    # QUE FLEXA Y EN QUE DIRECCION: la mano empuja el costado hacia DENTRO, o
+    # sea en +z, y el ala A no tiene nada que la sujete en z salvo sus propios
+    # M3 -- apoya plana contra la trasera, y una cara plana no retiene en su
+    # propio plano. La seccion resistente es la L entera (ala A de canto, ala B
+    # tumbada) y el eje neutro es el X. La misma cuenta que guarda_valle() y el
+    # mismo supuesto: los carga_mano repartidos en B_MANO, aqui puestos en el
+    # peor sitio posible -- pegados a la punta libre.
+    #
+    # CON LA CARGA EN UN PUNTO en la punta salen 143 MPa, o sea 1.1 veces el
+    # limite elastico, y hay que decirlo aunque no sea el modelo que se usa:
+    # este numero verde depende ENTERO de que 200 N no se apliquen sobre un
+    # milimetro. B_MANO ya lleva la version conservadora de ese supuesto (el
+    # canto de la mano, 50 mm, no la palma), y aqui manda igual que en el valle.
     e = escuadras[0]
+    caja_a, caja_b = e["cajas"]
+    t = caja_b[6] - caja_b[5]              # la chapa
+    h = caja_a[6] - caja_a[5]              # ala A, de canto (a lo alto en z)
+    b = caja_b[2] - caja_b[1]              # ala B, tumbada (a lo ancho en x)
+    a_a, a_b = h * t, b * t
+    z_c = (a_a * h / 2 + a_b * t / 2) / (a_a + a_b)
+    I = (t * h ** 3 / 12 + a_a * (h / 2 - z_c) ** 2
+         + b * t ** 3 / 12 + a_b * (t / 2 - z_c) ** 2)
+    c_max = max(h - z_c, z_c)
+    vol = e["m3"][0][0] - e["y0"]
+    # La banda de la mano, recortada si el voladizo fuera mas corto que ella.
+    banda = min(B_MANO, vol)
+    momento = p["carga_mano"] * (vol - banda / 2)
+    sigma = momento * c_max / I
+    # Flecha en la punta con la banda repartida entre a1 y el extremo: la
+    # integral de dP a^2 (3L - a) / (6 E I), cuya primitiva es L a^3 - a^4/4
+    # (en a = L vale 3/4 L^4).
+    a1 = vol - banda
+    w = p["carga_mano"] / banda
+    flecha = (w * (0.75 * vol ** 4 - (vol * a1 ** 3 - a1 ** 4 / 4))
+              / (6 * E_ALUMINIO * I))
+    p_fluye = RP02_ALUMINIO * I / (c_max * (vol - banda / 2))
+    assert sigma <= RP02_ALUMINIO, (
+        f"el voladizo de la escuadra trabaja a {sigma:.1f} MPa con "
+        f"{p['carga_mano']:.0f} N repartidos en {banda:.0f} mm y el limite "
+        f"elastico de la chapa son {RP02_ALUMINIO:.0f}. Vuela {vol:.2f} mm por "
+        f"debajo del M3 mas bajo, que no puede bajar mas porque ahi esta la "
+        f"banda de la rejilla de entrada: o sube el espesor de ESTA chapa con "
+        f"su propio parametro, o hay que recortar columnas de rejilla junto al "
+        f"canto para que quepa un cuarto M3 mas abajo")
+    assert flecha <= p["flecha_costado_max"], (
+        f"el voladizo de la escuadra cede {flecha:.2f} mm con "
+        f"{p['carga_mano']:.0f} N y el techo son {p['flecha_costado_max']:.2f}. "
+        f"Esta flecha se SUMA a la del acrilico: guarda_costado() cuenta esta "
+        f"ala como apoyo rigido, y si el apoyo se mueve el costado se mueve con "
+        f"el")
     print(f"escuadra trasera: ala B a z={e['z_ala_b']:.2f}, pasa el canto del costado "
           f"en {x_canto - e['x_punta']:.2f} mm, cubre el {e['cobertura'] * 100:.0f} % "
           f"del canto libre, {int(p['escuadra_m3'])} M3 a la trasera por lado")
+    print(f"  vuela {vol:.2f} mm bajo el M3 mas bajo: seccion en L de "
+          f"{h:g} x {b:g} x {t:g}, I={I:.0f} mm4, c={c_max:.2f}; con "
+          f"{p['carga_mano']:.0f} N en {banda:.0f} mm cede {flecha:.3f} mm y "
+          f"trabaja a {sigma:.1f} MPa (Rp0.2 {RP02_ALUMINIO:.0f}, fluye a "
+          f"{p_fluye:.0f} N; en un punto serian {p['carga_mano'] * vol * c_max / I:.0f})")
 
 
 def _perimetro(P: list[tuple[float, float]]) -> float:

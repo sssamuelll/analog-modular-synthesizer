@@ -903,6 +903,13 @@ function escuadra_raiz() = radio_doblez_costilla + 3*t_costilla + d_M3_paso/2;
 // plancha arranca hol_piel mas adentro que la cara interior del anillo, que es
 // el origen desde el que se mide la raiz.
 function escuadra_m3_x() = escuadra_raiz() - hol_piel;
+// Y HASTA DONDE TAPA ESA ALA, en el plano de la trasera y medido desde su
+// canto. Mismo cambio de origen que escuadra_m3_x(): la plancha arranca
+// hol_piel mas adentro que la cara interior del anillo. Lo consume
+// rejilla_entrada(), que se salta las columnas que caigan aqui debajo -- una
+// ranura con 1.5 mm de aluminio encima no ventila, y guarda_aire() no puede
+// seguir contandola como area abierta.
+function escuadra_tapa() = escuadra_ala - hol_piel;
 
 // El largo corre entre las dos BRIDAS de los miembros traseros, retirado
 // escuadra_retiro de cada una: viven en la misma rebanada de z que el ala B.
@@ -912,13 +919,22 @@ function escuadra_largo() = escuadra_y1() - escuadra_y0();
 
 // LOS M3 NO SE REPARTEN POR TODA EL ALA, y esto es lo unico de esta pieza que
 // no sale de una regla de chapa. El ala A ocupa los primeros escuadra_ala mm
-// de la trasera contados desde su canto, y justo ahi cae la PRIMERA COLUMNA de
-// la rejilla de entrada (2 HP = 10.16 del canto). Dentro de la banda de la
-// rejilla no hay x legal para un M3: entre dos columnas quedan 6.16 mm de
-// acrilico y dos margenes de 1.5 D piden 10.2. Asi que el ala cruza la banda
-// -- tiene que cruzarla, la cobertura del canto lo exige -- pero sus tornillos
-// se reparten solo por encima, con 1.5 D de aire a la ranura mas alta. Lo
-// comprueba guarda_escuadra_trasera() tornillo a tornillo.
+// de la trasera contados desde su canto, y ahi CAIA la primera columna de la
+// rejilla de entrada (2 HP = 10.16 del canto): dentro de la banda no quedaba x
+// legal, porque entre dos columnas hay 6.16 mm de acrilico y dos margenes de
+// 1.5 D piden 10.2.
+//
+// DESDE LA REVISION DE LA TAREA 4b ESA COLUMNA YA NO SE CORTA -- la tapaba el
+// ala y guarda_aire() la estaba contando como area abierta --, o sea que hoy
+// SI cabria un M3 ahi: la ranura mas cercana pasa a estar a 20.32 del canto y
+// deja 9.27 mm de aire. Los tornillos se quedan igual por encima de la banda, y
+// no por inercia: la columna solo desaparece MIENTRAS el ala la tape, asi que
+// bajar un tornillo a ese hueco ataria la escuadra a su propia sombra -- el dia
+// que escuadra_ala baje de 14.3 la columna vuelve y el tornillo queda dentro de
+// una ranura sin que nada lo cante. Con tres por encima el voladizo de abajo
+// trabaja a 89.8 MPa contra los 130 del aluminio, asi que no hace falta.
+// Lo comprueba guarda_escuadra_trasera() tornillo a tornillo, y ademas mide
+// ese voladizo como viga.
 function escuadra_m3_y() =
     let (y0 = max(escuadra_y0(),
                   banda_libre_trasera()[1] + 1.5*d_M3_paso),
@@ -1514,8 +1530,21 @@ module rejilla_entrada(au, y0, y1, x_iec0) {
     // el otro no.
     x_iec = x_iec0 + iec_ancho/2;
     hueco = (iec_ancho + vent_ancho_ranura)/2 + vent_puente_min;
+    // Y SE SALTAN TAMBIEN LAS COLUMNAS QUE EL ALA A DE LA ESCUADRA TAPARIA,
+    // desde el 2026-08-28. La escuadra ocupa los primeros escuadra_tapa() mm
+    // de la plancha contados desde cada canto, y ahi caia la primera columna
+    // (2 HP = 10.16, ranura de 8.16 a 12.16): el 82 % de su largo quedaba
+    // debajo de 1.5 mm de aluminio. Cortarla era lo peor de las dos cosas --
+    // no ventilaba, pero guarda_aire() la contaba como area abierta y ademas
+    // dejaba entrar polvo por el sobrante. Se salta ENTERA y no a medias: una
+    // ranura tapada en cuatro quintos no es un campo de ventilacion, es un
+    // hueco debil en el acrilico. La cuenta sale del ala, no de un indice a
+    // mano: el dia que escuadra_ala crezca, la siguiente columna se cae sola.
+    tapa = escuadra_tapa();
     for (n = [valle_paso_hp : valle_paso_hp : n_hp - valle_paso_hp])
-        if (abs(n*hp - x_iec) >= hueco)
+        if (abs(n*hp - x_iec) >= hueco
+            && n*hp - vent_ancho_ranura/2 >= tapa
+            && n*hp + vent_ancho_ranura/2 <= au - tapa)
             translate([n*hp, (y0 + y1)/2]) ranura(y1 - y0, vent_ancho_ranura);
 }
 

@@ -219,17 +219,19 @@ de `E_aluminio` (el anillo sigue derivándose por flecha).
 - **La trasera sigue enseñando canto**: el 25.6 % del contorno medido el 28-08 está en
   sus cantos superior e inferior, 528 mm sin metal encima. Es otra pieza y otro papel:
   los dos miembros traseros como marco de la trasera. Va después de esta.
-- **El canto trasero del acrílico no tiene retención hacia dentro, y el modelo que lo
-  aprueba no es válido justo ahí.** Son **227 mm** de canto libre (x = 292.91, y de 14.5
-  a 241.68): en la franja trasera no cabe clip — la ocupa el canto de `piel_trasera`, que
-  apoya en sus 8 mm exteriores de los 14 — y el clip del suelo más cercano que la
-  geometría permite se queda a **95.7 mm**. El punto peor del barrido cae en **(292.8,
-  117.5)**, a menos de 1 mm de ese canto, y la fórmula de placa circular **empotrada**
-  supone material sujeto alrededor del punto: en un canto libre la flecha real es mayor,
-  en un factor del mismo orden que el margen que hoy la salva (**0.24 contra 0.60, 2.45×**).
-  Tres salidas, sin elegir: **(a)** una escuadra de aluminio fijada a la trasera que asome
-  sobre el canto; **(b)** recortar `piel_trasera` para que quepa un clip en la franja
-  trasera; **(c)** aceptarlo y cerrarlo cargando el prototipo. Decisión de Samuel.
+- ~~**El canto trasero del acrílico no tiene retención hacia dentro**~~ — **CERRADO el
+  28-08 con la salida (a): la escuadra de la trasera (Tarea 4b, commit `2e46ff8`).** Eran
+  **227 mm** de canto libre (x = 292.91, y de 14.5 a 241.68) sin un solo apoyo hacia
+  dentro — en la franja trasera no cabe clip, la ocupa el canto de `piel_trasera` — y el
+  punto peor del barrido caía en **(292.8, 117.5)**, a menos de 1 mm de ese canto, donde
+  la fórmula de placa **empotrada** no vale. Samuel eligió (a) y está construida: un
+  angular de chapa de 1.5 atornillado a la trasera con 3 M3 por costado, cuya ala asoma
+  5.5 mm sobre el canto y lo pisa por dentro en el **91 %** de su largo libre. El punto
+  peor se mudó a **(221, 84)** — centro del panel, donde el modelo sí vale — y el vano
+  de dentro bajó de 95.5 a **65.0 mm**, con lo que ahora manda el de fuera (69.4). Las
+  otras dos salidas quedan como historia de la decisión: **(b)** recortar `piel_trasera`
+  para que quepa un clip en la franja trasera; **(c)** aceptarlo y cerrarlo cargando el
+  prototipo.
 - **La meseta se lee como repisa** (Iris): 29 mm de chapa horizontal perforada. Se
   juzga en render con el anillo puesto.
 - **La banda del valle fluye a ~27 N si se levanta el case por ahí** y la puerta lo

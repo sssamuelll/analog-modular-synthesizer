@@ -780,28 +780,22 @@ def guarda_costado() -> list[str]:
                    tramos enteros, y los clips de la Tarea 4 --, asi que el
                    vano es la distancia al apoyo mas cercano, no a un canto.
 
-    Es la misma formula de placa circular con dos vanos distintos, y el
-    segundo es el que manda: hoy vale 95 contra 69 el de fuera.
+    Es la misma formula de placa circular con dos vanos distintos, y hoy manda
+    el de FUERA: 69.4 mm contra 65.0 el de dentro.
 
-    LO QUE LA PUERTA NO SABE, dicho con los numeros porque es la limitacion
-    real y no una cautela de manual: EL PUNTO PEOR CAE EN UN CANTO LIBRE. Con
-    la geometria de hoy sale en (292.8, 117.5), a menos de 1 mm del canto
-    TRASERO del acrilico -- 227 mm de canto que no tiene ni un apoyo hacia
-    dentro, porque en la franja trasera no cabe clip (la ocupa el canto de
-    piel_trasera) y el clip del suelo mas cercano que la ley permite se queda a
-    95.7 mm.
+    NO SIEMPRE FUE ASI, Y EL CAMBIO ES LA TAREA 4b. Del 27 al 28-08 el vano de
+    dentro valia 95.5 mm y su punto peor caia en (292.8, 117.5), a menos de 1
+    mm del canto TRASERO del acrilico -- 227 mm de canto sin un solo apoyo
+    hacia dentro --, y ahi la formula de placa EMPOTRADA no vale: supone
+    material sujeto alrededor del punto, y un canto libre no lo esta. Samuel
+    eligio la salida (a) de las tres que la spec §10 dejaba abiertas y la
+    ESCUADRA DE LA TRASERA se construyo: el canto trasero esta cogido por las
+    dos caras en el 91 % de su largo libre, el punto peor se mudo a (221, 84)
+    -- centro del panel, con material alrededor por los cuatro lados, que es
+    donde el modelo SI vale -- y el vano de dentro bajo a 65.0.
 
-    Y la formula de placa circular EMPOTRADA supone material sujeto ALREDEDOR
-    del punto. En un canto libre eso no se cumple: el parche no esta empotrado
-    por ese lado y la flecha real es mayor que la que sale aqui, en un factor
-    del mismo orden que el margen que hoy la salva (0.24 contra 0.60, o sea
-    2.45x). O sea que el numero verde de esta puerta se apoya en ese margen, no
-    en que el modelo sea valido en ese punto.
-
-    NO SE CIERRA AQUI: es decision de diseno y esta abierta en la spec §10 con
-    las tres salidas (escuadra atornillada a la trasera, recortar piel_trasera
-    para hacerle sitio a un clip, o aceptarlo). Lo que esta puerta hace es
-    medir siempre lo mismo y dejar el numero escrito en cada corrida.
+    Lo que esta puerta hace es medir siempre los dos y dejar los numeros
+    escritos en cada corrida.
 
     Lo que el esqueleto vale sigue siendo enorme contra el costado atornillado:
     el vano era 119.0 mm con cuatro anclas y la flecha 0.38.
