@@ -29,9 +29,11 @@ rulings/fixes de la Task 8 que no vienen del brief original:
   camara sigue viendo el fondo oscuro, pero el resto de los rayos
   (rebotes, transmision, reflejos) ven un fondo mucho mas brillante que
   ilumina la pieza sin aclarar el fondo visible. Medido en el Fix round 1:
-  esto solo subio el brillo de 0.051 a ~0.60-0.64 Y la cobertura de 0.123 a
-  ~0.34 (pixeles que antes eran indistinguibles del fondo casi negro ahora
-  se distinguen -- ver comentario de MARGEN mas abajo).
+  esto solo subio el brillo de 0.051 a ~0.377 en la trasera Y la cobertura
+  de 0.123 a ~0.34 (pixeles que antes eran indistinguibles del fondo casi
+  negro ahora se distinguen -- ver comentario de MARGEN mas abajo). El brillo
+  decia "~0.60-0.64", de una version anterior de la metrica; el numero bueno
+  es el mismo que sostiene BRILLO_MINIMO mas abajo, y lo imprime cada corrida.
 
 Nombres de la API de materiales (Principled BSDF) verificados a mano en
 Blender 5.0.1: "Base Color", "Metallic", "Roughness" y "Transmission

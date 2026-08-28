@@ -51,8 +51,11 @@ hipótesis de `guarda_costilla()`): tramo macizo de (20 − 6) × 14 más el lab
 A mano, con W = 18 y T = 14 dio I = 3 249 mm⁴ contra 1 673 de la L plegada (1.9×); con
 W = 20 sube. **La cifra que vale es la de `guarda_anillo()`**, no esta.
 
-**Peso:** 186 mm² × ~1.10 m de perímetro × 2.70 g/cm³ ≈ **0.55 kg por costilla**, contra
-0.04 de la chapa. +1 kg al aparato. Se asume.
+**Peso:** 214 mm² × ~1.10 m de perímetro × 2.70 g/cm³ ≈ **0.58 kg por costilla**, contra
+0.04 de la chapa. +1.2 kg al aparato. Se asume. (Decía 186 mm² y 0.55 kg, de cuando la
+sección se estimó a mano con el rebaje de 6 × 3; el rebaje real es 6 × 11. Aquí vale lo
+mismo que arriba: **la cifra que manda es la que imprime `guarda_anillo()`** en cada
+corrida — hoy `I = 3714 mm⁴, 214 mm², 0.58 kg por costilla` —, no la de este papel.)
 
 **Anchura del case:** las placas de anclaje se meten entre el riel y el anillo (§5), y
 el anillo es más grueso que el apilado viejo:
@@ -110,9 +113,15 @@ silueta. Para que ese tornillo atravesara la cara vista con canto, la cara tendr
 medir ≥ 15.90 + 1.5 × 4.5 = **22.65**, que es exactamente por qué la banda de chapa
 medía 27. Samuel decidió la otra vía: **nada atraviesa la cara**.
 
-**Placa de anclaje del riel** (×12): pletina de aluminio de **6 mm**, ~40 × 22, con un
+**Placa de anclaje del riel** (×6): pletina de aluminio de **6 mm**, ~40 × 22, con un
 agujero **cajeado por el lado del anillo** para el M4 del riel y dos pasos para M4 a
 **roscas ciegas** en la franja interior del anillo (14 de pletina → 10 de rosca útil).
+
+> **Enmienda (2026-08-28), decisión A del dueño.** Decía **×12**, una placa por punta de
+> riel. Son **6: tres por costado**, y cada una es el marco de UNA FILA — recoge las dos
+> puntas de riel de su tramo (`cara_inf`, `valle`, `cara_sup`) en una sola pieza. Por eso
+> los DXF son tres contornos distintos y no doce iguales: `placa_cara_inf_2d`,
+> `placa_valle_2d` y `placa_cara_sup_2d`. Lo cuenta `check_dxf` en cada corrida.
 
 > **Enmienda de la Tarea 1 (2026-08-28), ruling R1 del plan.** Decía **4 mm**, y a 4 no
 > cabía: la cabeza del M4 del riel (botón ISO 7380, 2.2 de alto) tiene que quedar
@@ -124,16 +133,27 @@ queda en el cajeado, del lado que después mira al anillo), **después la placa 
 anillo** desde dentro. Al revés no se puede apretar.
 
 **Miembros** (×3): el alma del canal se prolonga y se dobla 90° en cada punta como
-**brida de extremo** de la misma chapa de 1.5, con dos M5 a roscas ciegas en la franja.
-Resuelve el bloqueo que Halberg encontró: hoy el M5 axial entra en un canal **abierto**
-y no muerde en nada.
+**brida de extremo** de la misma chapa de 1.5, con dos **M4** a roscas ciegas en la
+franja. Resuelve el bloqueo que Halberg encontró: hoy el M5 axial entra en un canal
+**abierto** y no muerde en nada.
+
+> **Enmienda (2026-08-28), ruling de la Tarea 3.** Decía **dos M5**. Bajaron a **M4**:
+> la franja de 14 mm no admite a la vez el paso M5 en la brida y la broca de rosca M5 en
+> el anillo con 1.5 D de margen. Son 8 M4 de brida en total (2 por punta × 2 puntas × 2
+> miembros traseros); el tercer miembro, la bahía, ancla a la placa del valle (ruling
+> R3), no al anillo.
 
 **Tabla** (×6): sus M5 suben a **roscas ciegas en el canto inferior del anillo** (14 mm
 de canto, rosca de 10). Resuelve el otro bloqueo: la tabla tiene seis agujeros y la
 costilla de chapa no tenía contraparte.
 
-Cuenta de roscas ciegas por anillo: 24 (rieles) + 6 (miembros) + 6 (tabla, en el canto)
-+ clips. Todas M4/M5 en aluminio de 14, sin insertos.
+Cuenta de roscas ciegas por anillo, la que `check_dxf` imprime hoy: **16 en la cara
+interior** — 10 de placa (2 por punta de riel 3U y 2 sobre el primer riel 1U) + 4 de
+brida de miembro + 2 de clip — **más 3 M5 en el CANTO inferior** para la tabla, que no
+salen en el mismo DXF porque entran por el canto y un dibujo de la cara no sabe
+dibujarlos. Todas M4 en la cara y M5 en el canto, en aluminio de 14, sin insertos.
+(Decía «24 (rieles) + 6 (miembros) + 6 (tabla) + clips», de cuando cada punta de riel
+llevaba su propia placa y las bridas eran M5.)
 
 ## 6. Cantos, esquinas, acabado
 
@@ -189,8 +209,9 @@ de `E_aluminio` (el anillo sigue derivándose por flecha).
   el perímetro, y esta puerta es lo que garantiza que el rebaje sea más hondo que el
   PMMA más grueso.
 - **`taladros_anillo()`** (check_dxf): los centros de rosca ciega de la cara interior
-  salen en el DXF como círculos (la profundidad va en el pliego); se cuentan (24 + 6 +
-  clips) y se exige 1.5 D contra la ventana y contra la silueta, dentro de la franja.
+  salen en el DXF como círculos (la profundidad va en el pliego); se cuentan — **16 por
+  anillo**: 10 de placa + 4 de brida + 2 de clip — y se exige 1.5 D contra la ventana y
+  contra la silueta, dentro de la franja.
 - **`agujeros_donde_toca()`**: vuelve la sección «costado: CERO agujeros».
 - Cada tarea del plan termina con **los dos renders** regenerados: es como Samuel
   decide.
@@ -236,8 +257,11 @@ de `E_aluminio` (el anillo sigue derivándose por flecha).
   juzga en render con el anillo puesto.
 - **La banda del valle fluye a ~27 N si se levanta el case por ahí** y la puerta lo
   imprime sin fallar. Hay que apoyarla o convertirlo en assert.
-- **Pies sin taladro en la tabla, secuencia de montaje sin demostrar, racking sin
-  medir (#203)** — los bloqueos de Halberg que no dependen de la pletina.
+- ~~**Pies sin taladro en la tabla**~~ — **CERRADO en la Tarea 6 (2026-08-28)**: la
+  tabla lleva sus cuatro taladros y `check_dxf` los cuenta en cada corrida
+  («`bandeja_base_2d`: 4 taladros de pie d=4.50 mm en las posiciones de `paticas()`»).
+- **Secuencia de montaje sin demostrar, racking sin medir (#203)** — los bloqueos de
+  Halberg que no dependen de la pletina, y estos siguen abiertos.
 - Los rangos de la foto son ESTIMADOS: **un cupón** de 100 mm del perfil del anillo,
   chaflanado y anodizado, antes de cortar los dos anillos.
 - Desincronizaciones de papel que la revisión encontró: el BOM aún dice «transversal

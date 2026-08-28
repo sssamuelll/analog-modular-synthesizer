@@ -142,24 +142,51 @@ el 2026-08-28:
 |---|---|---|---|
 | `chasis_cuerpo_2d`, `chasis_tapa_2d`, `chasis_refuerzo_2d` | acero | chapa | corte + **plegado** |
 | `miembro_bajo_2d`, `miembro_alto_2d`, `bahia_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado** + brida de extremo |
-| `escuadra_trasera_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado** |
+| `escuadra_trasera_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: UN doblez a 90°, la línea a **8.70 mm** del canto SIN taladros — **2 uds, PAR ESPEJADO** (ver nota) |
 | `tapa_valle_2d` | aluminio, 3 mm | chapa | corte + **plegado** |
 | `costilla_2d`, `costilla_dorso_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **fresado CNC**, sin plegar, sin soldar |
 | `bandeja_base_2d` | madera maciza, 18 mm | carpintería | corte + ranuras alargadas |
-| `placa_cara_inf_2d`, `placa_valle_2d`, `placa_cara_sup_2d` | aluminio, `t_placa` = 6 mm | chapa | corte + cajeado Ø8 × `prof_cajeado_riel` = 2.5 por cara (nota de mecanizado, no en el DXF — ver abajo) — 2 uds cada uno |
+| `placa_cara_inf_2d`, `placa_valle_2d`, `placa_cara_sup_2d` | aluminio, `t_placa` = 6 mm | chapa | corte + cajeado Ø8 × `prof_cajeado_riel` = 2.5 **por el lado del anillo, una sola vez** (no «por cara»: es UN bolsillo ciego en UNA de las dos caras, y deja 3.5 mm de placa bajo la cabeza del M4). Nota de mecanizado, no va en el DXF — ver abajo — **2 uds cada uno, PAR ESPEJADO** |
 | `clip_2d` | aluminio, `t_clip` = 4 mm | chapa | corte — 4 uds, pieza genérica |
 
 **`costilla_2d` y `costilla_dorso_2d` son CONTORNOS REALES, no desarrollos** —
 al revés de como era hasta el 2026-08-27. La pieza ya no se dobla: lo que corta
-la fresa es lo que sale. `costilla_2d` trae la silueta, la ventana y el
-contorno del rebaje (cara vista); `costilla_dorso_2d` trae la misma silueta
-vista desde la cara interior, con los centros de las roscas ciegas a diámetro
-de broca (§6.1).
+la fresa es lo que sale.
+
+**Qué trae cada hoja, exactamente** (es lo que verifica `check_dxf.py`, y la
+descripción de antes estaba cambiada — decía que el rebaje iba en la hoja de la
+cara):
+
+- **`costilla_2d` — LA CARA VISTA.** Silueta exterior y ventana central, y
+  **nada más**: la ventana sale de retirar `cara_anillo` = **20 mm** de la
+  silueta, que es el ancho de la cara vista. **NO trae el contorno del rebaje.**
+  Es la hoja del corte del blank.
+- **`costilla_dorso_2d` — LA CARA INTERIOR.** Trae el **contorno del REBAJE**, a
+  `cara_anillo − rebaje_anillo` = 20 − 6 = **14 mm** de la silueta, más los **16
+  círculos** de rosca ciega a diámetro de broca. La silueta NO se repite aquí a
+  propósito: dibujarla sería mandar cortar el contorno dos veces.
+
+**El dorso está dibujado EN LAS MISMAS COORDENADAS que la cara, no espejado.**
+Léase como *la cara de atrás de la misma pieza, mirada desde el mismo lado*:
+`taladros_anillo()` compara los centros del DXF contra los del modelo **sin
+ninguna transformación**, así que si alguien «arregla» el fichero espejándolo,
+las roscas se van al otro extremo del anillo y la puerta lo canta. Quien se
+voltea es **la PIEZA en la máquina**, no el dibujo.
 
 **`miembro_bajo_2d`, `miembro_alto_2d`, `bahia_2d`, `escuadra_trasera_2d` y
 `tapa_valle_2d` SÍ son DESARROLLOS PLANOS, no contornos** — igual que las tres
 del chasis: el DXF trae el recorte, y la pieza doblada mide menos. Cortar el
 contorno de la pieza montada da un fichero válido e inservible.
+
+**LOS DOS ANILLOS SON PIEZAS ESPEJADAS, no dos iguales.** Mismo contorno y
+misma ventana, pero **el rebaje, el chaflán de la ventana y las 16 roscas
+ciegas van en la cara OPUESTA de cada uno**: la cara vista de cada anillo mira
+hacia FUERA del case, así que el dorso de uno es el lado que en el otro queda
+por delante (`costillas()` en `sam17_case.scad` monta el segundo con
+`mirror([0,0,1])` justo por esto). Cortar los dos con las operaciones del mismo
+lado da un case con un anillo del revés: el rebaje del segundo abriría hacia
+fuera y el acrílico no tendría dónde entrar. **Un anillo derecho y uno
+izquierdo.**
 
 **Las placas de anclaje (×6, una por tramo y por costado) y los clips de
 retención (×4, dos por costado) TIENEN DXF PROPIO desde el 2026-08-28**
@@ -170,10 +197,38 @@ Hasta esa fecha el modelo solo las dibujaba en 3D (`placas_riel()`,
 esta misma nota lo daba como pendiente real.
 
 Una placa por TRAMO, no por costado: el lado espejado (z) comparte el mismo
-contorno xy (`esquinas_placa()` no cambia con `mirror([0,0,1])`), así que
-cada uno de los tres ficheros se corta ×2 para completar las seis de la
-tabla. El clip es una pieza genérica — no depende de tramo ni de `s` — y un
-solo fichero cubre las cuatro.
+**contorno** xy (`esquinas_placa()` no cambia con `mirror([0,0,1])`), así que
+cada uno de los tres ficheros se corta ×2 para completar las seis de la tabla.
+
+**PERO LAS SEIS NO SON IGUALES: son tres PARES ESPEJADOS, tres y tres.** El
+contorno se comparte; el **cajeado Ø8 × 2.5 va en la cara OPUESTA** en la placa
+de un costado y en la del otro, porque cada cajeado tiene que mirar al anillo de
+SU lado. Y los tres contornos son **asimétricos**, así que voltear la pieza para
+sacar el par NO vale — manda el chaflán al canto equivocado:
+
+| DXF | esquina cortada | dónde |
+|---|---|---|
+| `placa_cara_inf_2d` | **9.52 × 26.0** | solo en el extremo `s1` (el canto interior) |
+| `placa_valle_2d` | **21.82 × 42.30** | solo en el extremo `s0` |
+| `placa_cara_sup_2d` | **12 × 12** | solo en el extremo `s1` |
+
+O sea: **se cortan seis piezas con el mismo contorno y se cajean tres por una
+cara y tres por la otra.** No se voltea ninguna.
+
+El clip es una pieza genérica — no depende de tramo ni de `s`, y su contorno es
+simétrico — y un solo fichero cubre las cuatro.
+
+**Las dos escuadras traseras también son un par espejado**, y por la misma
+razón: sus tres M3 van en **y = 97.03, 148.09 y 199.15** sobre un ala que va de
+**y = 30.0 a 224.68**, o sea que **no están centrados** — el primero se aparta
+para librar la banda de la rejilla de entrada. Voltear una escuadra para hacer
+la otra sube los tres tornillos al extremo equivocado del canto. El doblez es
+**uno solo, a 90°**, con la línea a `escuadra_vuelo() − miembro_bd()` = 12 −
+3.30 = **8.70 mm** del canto que NO lleva taladros; el ala B (la corta, la que
+vuela hacia el interior) mide **12 mm** = `cara_anillo − t_piel`, y el ala A (la
+que atornilla contra la trasera) mide **16 mm** = `escuadra_ala`. Blank del
+desarrollo: **194.68 × 24.70 mm**. Los cuatro números salen de `params.scad` y
+de `bbox_desarrollo_escuadra()`, no están escritos a mano.
 
 Cada DXF de placa trae el agujero de **PASO M4** por riel (el que sujeta de
 verdad el tornillo del riel — no el cajeado) y el par de M4 a rosca ciega
@@ -235,6 +290,12 @@ maciza, vaciada por el centro con fresadora CNC.
   (`t_anillo`). Blank aproximado **330 × 270 mm** (spec de diseño §9; el
   contorno real mide 307.4 × 256.2 mm, `costilla_2d`, con margen de sujeción
   y desbaste).
+- **SON DOS PIEZAS ESPEJADAS, uno derecho y uno izquierdo.** Mismo contorno y
+  misma ventana; el **rebaje, el chaflán de la ventana y las 16 roscas ciegas
+  van en la cara OPUESTA de cada anillo**, porque la cara vista de cada uno
+  mira hacia FUERA del case. Mecanizar los dos por el mismo lado da un anillo
+  del revés, con el rebaje abriendo hacia fuera y el acrílico sin sitio donde
+  entrar. En el modelo esto es el `mirror([0,0,1])` de `costillas()`.
 - **Contorno + ventana.** Corte de la silueta exterior y de la ventana
   central — láser o agua y luego fresa, o todo fresa: lo decide el taller,
   siempre que el acabado final sea el fresado de §6.1.
@@ -251,8 +312,9 @@ maciza, vaciada por el centro con fresadora CNC.
   distintos para dos operaciones distintas, no una contradicción. Es
   esquina fresada, no esquina de plegado: no lleva alivio en V ni cierre
   soldado — esas dos cosas mueren con la chapa plegada.
-- **Roscas ciegas M4/M5** en la cara interior (el dorso), a diámetro de
-  broca según `costilla_dorso_2d.dxf`: broca **3.3 mm para M4**, broca
+- **Roscas ciegas M4 en la cara interior (el dorso); las M5 NO van ahí, van
+  en el CANTO INFERIOR** — a diámetro de broca, las del dorso según
+  `costilla_dorso_2d.dxf`: broca **3.3 mm para M4**, broca
   **4.2 mm para M5**, **10 mm de profundidad útil** (14 mm de pletina menos
   el margen que deja la puerta de anclajes). Son **16 roscas M4 por anillo**
   — la cuenta que imprime `taladros_anillo()` sobre este mismo DXF: dos por

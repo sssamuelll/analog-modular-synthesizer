@@ -204,85 +204,37 @@ function x_valle() =
 // colgando de una sola fila de tornillos. El larguero habia nacido para dar
 // a esa plancha un anclaje a rail DERECHO en vez de al de panel girado; sin
 // plancha, el problema que resolvia deja de existir.
-// Accesores POR NOMBRE. El 2026-08-27, al morir `base delantera`, todos los
-// ce[i] de este fichero se habrian corrido uno a uno en silencio -- el budget
-// se paso a diccionario por lo mismo. Aqui no hay dict, asi que hay tres
-// funciones y ni un indice suelto fuera de ellas.
-function ct_base()   = centros_transversal()[0];    // base trasera
-function ct_valle()  = centros_transversal()[1];
-function ct_remate() = centros_transversal()[2];
-
-function centros_transversal() =
-    let (P = pts_perfil(), r = rail/2, cr = centros_rail(),
-         // Los DOS largueros traseros comparten X, y por eso esto es UNA
-         // cota y no dos copias: la cara donde apoya la trasera tiene que ser
-         // un plano, no dos planos parecidos. Se retiran t_piel, que es el
-         // espesor de la trasera y solo suyo desde el 2026-08-21,
-         // para que la plancha atornillada encima remate EXACTAMENTE en el
-         // plano trasero -- empotrada y a ras, sin rebaje y sin dejar de ser
-         // un DXF plano.
-         x_tr = fondo() - r - t_piel,
-         // El chasis del PSU se pega al larguero TRASERO, y el larguero
-         // delantero se pega al chasis. Una sola cadena y en un solo sentido:
-         // x_tr -> chasis -> base delantera. Ver la nota de abajo.
-         y_ep = P[3].y - t_valle - r)
-    // Los dos largueros de la base ya NO viven en el canto de abajo. Desde que
-    // la bandeja es el suelo (t_base) montan encima de ella, o sea con su centro
-    // en t_base + r, y a esa altura el redondeo de las esquinas de abajo deja de
-    // afectarles -- ahi ya hay acrilico de sobra.
-    //   - Frente: LO QUE MANDA ES EL CHASIS DEL PSU, no el riel de panel
-    //     (2026-08-21). Estuvo derivado del riel -- se plantaba holgura_rail
-    //     detras de su esquina girada, x=49.68 -- y ahi hacia dos cosas malas a
-    //     la vez: se leia pegado al riel (4.00 mm, la holgura clavada) y se
-    //     metia en el envolvente de los modulos de la fila de abajo, que dejaba
-    //     en 25.7 mm de fondo el tramo bajo del panel.
-    //
-    //     Lo que se midio al ir a retirarlo: el limitante de verdad NO era el,
-    //     era el CHASIS. Sus 176.6 x 93 sentados en medio del piso dejaban el
-    //     fondo de modulo en 18.6 mm a media altura del panel, y quitar el
-    //     larguero solo subia el panel util de 11 % a 20 % con 60 mm de fondo.
-    //     Lo que mueve la aguja es correr el chasis contra el larguero trasero
-    //     -- nadie decidio que fuera centrado, ch_pos() simplemente lo centraba.
-    //
-    //     Asi que ahora los dos se apartan: el chasis se pega al trasero y este
-    //     se pega al chasis, los dos a chasis_holgura_larguero. El larguero
-    //     acaba en x=88.34, o sea a 42.7 mm del riel de panel en vez de a 4.00,
-    //     y el fondo de modulo sube de 18.6 a 34.4 mm (68 % del panel util con
-    //     50 mm de fondo, contra el 27 % de antes).
-    //
-    //     No se retira: sostiene la fila delantera de tornillos de la bandeja.
-    //     Sin el la plancha queda en voladizo de 280 mm bajo el chasis, y los
-    //     4 puntos de panel que se ganarian a 60 mm no pagan eso.
-    //   - Fondo: comparte X con el de arriba (x_tr). Estuvo en
-    //     fondo - r - radio_perfil, 14 mm mas adelante que ellos, con la nota
-    //     de que "adelantarlo solo compra fondo de bandeja y no hace falta".
-    //     Si hacia falta: la trasera apoya en EL y en el de arriba, y con
-    //     14 mm de diferencia una de sus dos filas se atornillaba al aire.
-    //     Lo canta apoyo() en clearance_budget. Cabe: a y=8 la curva del canto
-    //     trasero esta en x=289.87 y la esquina del riel movido en 286.22.
-    [[x_tr,          r],                        // base trasera
-     // valle: el cuarto, y el unico que existe por una plancha y no por una
-     // union. Va CENTRADO bajo la tapa del valle para que los dos vuelos sean
-     // iguales; a la vez ata los dos costados por la cintura, que es donde el
-     // perfil es mas estrecho. Su ventana es corta -- entre las esquinas
-     // giradas de los dos railes del valle -- y clearance_budget la vigila.
-     [(x_valle()[0] + x_valle()[1])/2, y_ep],
-     // remate trasero: el QUINTO, del 2026-08-21. Existe para que la tapa del
-     // techo tenga a que atornillarse -- antes iba pegada al Z-Rail porque ahi
-     // arriba no habia nada mas, y esa era la unica junta irreversible del case.
-     // Va a ras del plano trasero y con su cara de arriba a marco_sup del techo,
-     // de modo que la plancha apoye encima y remate a ras. No puede acercarse
-     // mas al frente: el barrido del Z-Rail al abrir la tapa se lo come.
-     // Comparte X con el de base desde que la trasera le pasa por delante:
-     // los DOS largueros traseros son una sola cota, y entre ellos la plancha
-     // vuela 211.73 mm sin apoyo intermedio -- a proposito.
-     [x_tr,        P[5].y - marco_sup - r]];
+// centros_transversal() y sus tres accesores por nombre -- ct_base(),
+// ct_valle() y ct_remate() -- MURIERON el 2026-08-28. Eran la lista de los
+// TRES CENTROS de los 2020 comprados: un punto por larguero y nada mas. Los
+// 2020 se sustituyeron por miembros de chapa el 2026-08-27, y desde ese dia la
+// lista no la consumia ni el modelo ni un solo DXF -- solo sobrevivia porque
+// bom() contaba sus elementos para decir "x3". Contar los miembros por el largo
+// de una lista que ya no los describe es como contar sillas por las facturas
+// viejas: el dia que entre o salga un miembro, el eco miente y nadie lo cantaba.
+// Ahora los cuenta miembros_lista(), que son ellos mismos.
+//
+// LO QUE LLEVABA DENTRO Y NO SE PIERDE, porque sigue vivo unas lineas mas
+// abajo: los DOS largueros traseros comparten X (miembro_x_trasera(), el plano
+// trasero retirado t_piel) para que la trasera atornillada encima apoye en UN
+// plano y no en dos parecidos -- si se separan, una de sus dos filas de M3 se
+// atornilla al aire, y lo canta apoyo() en clearance_budget. La cadena del
+// chasis del PSU (x_tr -> chasis -> lo que venga por delante) vive en
+// _x_chasis_frente() del budget, con su propia nota. Y el larguero de `base
+// delantera`, que era el cuarto punto de esta lista, se retiro el 2026-08-27.
 
 // --- referencias de los tres miembros de chapa -------------------------
 //
-// centros_transversal() conserva por ahora la geometria historica de los tres
-// 2020 para el eco del BOM. El modelo y los DXF ya no la consumen: sus herederos
-// son estas cotas, gemelas de _cajas_miembro() en clearance_budget.py.
+// Las cotas de los tres miembros de chapa, gemelas de _cajas_miembro() en
+// clearance_budget.py. Sustituyeron a la geometria de los 2020 el 2026-08-27.
+//
+// Y LA LISTA DE LOS MIEMBROS, que es lo unico que puede contarlos. La consume
+// bom() para decir cuantos hay: los nombres son los mismos que usan
+// _cajas_miembro() en el budget y miembros() unas lineas mas abajo, o sea que
+// anadir un cuarto miembro sin tocar esta lista deja los tres sitios en
+// desacuerdo y el eco corto -- que es exactamente lo que pasaba mientras el
+// numero salia de centros_transversal().
+function miembros_lista() = ["trasero bajo", "trasero alto", "bahia"];
 function radio_giro_riel() = norm([rail_er_fondo, rail_er_alto]) / 2;
 function miembro_x_trasera() = pts_perfil()[6].x - t_piel;
 function miembro_y_meseta() = pts_perfil()[5].y - marco_sup;
@@ -419,8 +371,11 @@ function redondear(P, R, sin_bombeo = []) =
 // que ensanchar el techo lo volvia MAS redondo. Con radio_remate se pide un
 // radio y sale ese: la punta de arriba se lee cuadrada a cualquier marco.
 // Los vertices 5 y 6 -- los DOS del plano trasero -- pasan a radio_trasero = 0
-// el 2026-08-24: esquina viva, para que la trasera y la tapa de remate
-// empotren a ras. Antes eran radio_remate (2) y radio_perfil (14), y ese 14 le
+// el 2026-08-24: esquina viva, para que la trasera y el remate del techo
+// empotren a ras. OJO CON EL NOMBRE: desde el 2026-08-27 no hay tapa de remate
+// -- esa plancha se integro como MESETA del miembro trasero alto --, asi que lo
+// que empotra a ras contra esta esquina es esa meseta de chapa.
+// Antes eran radio_remate (2) y radio_perfil (14), y ese 14 le
 // dejaba a la trasera 14 mm de esquina colgando fuera de la silueta del
 // costado. radio_perfil se quedo sin clientes y se borro. El porque completo,
 // y que parte de la regla anti-fisura se sostiene y cual no, en params.scad.
@@ -1004,12 +959,22 @@ function escuadra_largo() = escuadra_y1() - escuadra_y0();
 // DESDE LA REVISION DE LA TAREA 4b ESA COLUMNA YA NO SE CORTA -- la tapaba el
 // ala y guarda_aire() la estaba contando como area abierta --, o sea que hoy
 // SI cabria un M3 ahi: la ranura mas cercana pasa a estar a 20.32 del canto y
-// deja 9.27 mm de aire. Los tornillos se quedan igual por encima de la banda, y
+// deja aire de sobra. Los tornillos se quedan igual por encima de la banda, y
 // no por inercia: la columna solo desaparece MIENTRAS el ala la tape, asi que
-// bajar un tornillo a ese hueco ataria la escuadra a su propia sombra -- el dia
-// que escuadra_ala baje de 14.3 la columna vuelve y el tornillo queda dentro de
-// una ranura sin que nada lo cante. Con tres por encima el voladizo de abajo
-// trabaja a 89.8 MPa contra los 130 del aluminio, asi que no hace falta.
+// bajar un tornillo a ese hueco ataria la escuadra a su propia sombra.
+//
+// A QUE COTA VUELVE LA COLUMNA, que hasta el 2026-08-28 estaba mal escrito
+// aqui. Se cortaria de nuevo cuando escuadra_tapa() baje del borde de la
+// ranura, o sea cuando 2*hp - vent_ancho_ranura/2 >= escuadra_ala - hol_piel:
+// con hp = 5.08, vent_ancho_ranura = 3.75 y hol_piel = 0.15 eso da
+// escuadra_ala <= 8.44. Ese es el numero, y no el 14.3 que decia antes. 14.3 es
+// OTRA cota de esta misma ala -- escuadra_raiz + 1.5*d_M3_paso = 9.2 + 5.1, el
+// ancho minimo para que el M3 conserve 1.5 D hasta el canto libre --, y las dos
+// se habian confundido en una sola frase. Como 14.3 > 8.44, al encoger el ala
+// se pierde antes el M3 legal que la sombra sobre la columna: son dos cotas
+// vivas y se comprueban aparte. Con tres tornillos por encima el voladizo de
+// abajo trabaja a 89.8 MPa contra los 130 del aluminio, asi que no hace falta
+// bajar ninguno.
 // Lo comprueba guarda_escuadra_trasera() tornillo a tornillo, y ademas mide
 // ese voladizo como viga.
 function escuadra_m3_y() =
@@ -1108,7 +1073,7 @@ module miembro_alto_2d() {
                           marco_sup + canal_ancho/2 - dist_rosca_ciega);
         // La salida de aire deja la banda del valle LISA y sube a esta cara.
         // Una fila registrada al HP, misma ranura oblonga que el resto: 16 de
-        // 15 x 4 dan ~905 mm2. guarda_aire() usa ademas su altura real.
+        // 15 x 3.75 dan 852 mm2. guarda_aire() usa ademas su altura real.
         for (n = [meseta_paso_hp : meseta_paso_hp : n_hp - meseta_paso_hp])
             translate([n*hp, y_rejilla])
                 ranura(meseta_largo_ranura, vent_ancho_ranura);
@@ -1495,27 +1460,33 @@ module piel_trasera_2d() {
     // atornillaba a los dos largueros de SU piso. Muerta la bandeja de
     // entrepiso esa frontera dejo de existir. Va en t_piel (8), que es su
     // propio espesor desde el 2026-08-21.
-    // Canto de abajo EN EL PLANO DEL SUELO. Estuvo en ct_base().y - 15 (o sea
-    // y=3), que no era una cota del case sino la distancia al canto de la fila
-    // de M3 leida al reves: 15 mm por debajo del larguero de base trasera. Ese
+    // Canto de abajo EN EL PLANO DEL SUELO. Estuvo 15 mm por debajo del centro
+    // del larguero de base trasera, o sea en y=3 -- se escribia ct_base().y - 15,
+    // con la lista de los 2020 que murio el 2026-08-28 --, y eso no era una cota
+    // del case sino la distancia al canto de la fila de M3 leida al reves. Ese
     // 15 no sabia donde estaba el suelo, y dejaba un rebaje corrido de
     // 528 x 3 x 8 a lo largo de todo el canto trasero -- una junta de sombra,
     // que es el lenguaje que esta pieza enterro al empotrarse. Ahora la cara
-    // trasera es continua desde el piso hasta la tapa de remate.
+    // trasera es continua desde el piso hasta la MESETA del miembro trasero
+    // alto (decia "tapa de remate": esa plancha suelta dejo de existir el
+    // 2026-08-27, cuando se integro en el miembro como una cara mas).
     //
     // El 0 no es un numero libre: es el plano inferior del case, el mismo
     // datum del que cuelga la bandeja de base (y=0 a t_base) y donde muere el
-    // canto de los costados. Lo vigila guarda_piso(), assert 4.
+    // canto de los costados. Lo vigila guarda_piso(), assert 3 (era el 4 hasta
+    // el 2026-08-28: esa puerta tiene tres asserts y el ultimo conservaba el
+    // numero de una version con cuatro).
     //
     // La fila de M3 de abajo se aleja del canto al bajarlo: 15 -> 18 mm, o sea
     // MAS material alrededor del tornillo. Y las ondas y la rejilla no se
     // mueven: van derivadas de f_base/f_tras, que son diferencias contra
     // ce[].y y por tanto no dependen de y0.
     y0   = 0;                               // canto de abajo = plano del suelo
-    // Hasta la cara de ABAJO DE LA TAPA DE REMATE. Antes se frenaba en el
-    // larguero de remate, que vivia a ras del plano trasero y le tapaba la
-    // banda; desde que ese larguero se retiro t_piel, la trasera le pasa por
-    // delante y llega arriba del todo.
+    // Hasta la cara de ABAJO DE LA MESETA del miembro trasero alto (era "la
+    // tapa de remate" hasta el 2026-08-27, cuando esa plancha se integro en el
+    // miembro). Antes se frenaba en el larguero de remate, que vivia a ras del
+    // plano trasero y le tapaba la banda; desde que ese larguero se retiro
+    // t_piel, la trasera le pasa por delante y llega arriba del todo.
     alto = (P[5].y - marco_sup) - y0;
     // DOS filas, una por larguero trasero, y las dos caen en SU centerline y
     // no a una distancia del canto. Fueron CINCO hasta el 2026-08-21: los tres
@@ -1629,7 +1600,8 @@ module rejilla_entrada(au, y0, y1, x_iec0) {
     // Y SE SALTAN TAMBIEN LAS COLUMNAS QUE EL ALA A DE LA ESCUADRA TAPARIA,
     // desde el 2026-08-28. La escuadra ocupa los primeros escuadra_tapa() mm
     // de la plancha contados desde cada canto, y ahi caia la primera columna
-    // (2 HP = 10.16, ranura de 8.16 a 12.16): el 82 % de su largo quedaba
+    // (2 HP = 10.16, ranura de 8.29 a 12.04 con el ancho de 3.75 que fijo el
+    // puente de fragilidad): el 87 % de su largo quedaba
     // debajo de 1.5 mm de aluminio. Cortarla era lo peor de las dos cosas --
     // no ventilaba, pero guarda_aire() la contaba como area abierta y ademas
     // dejaba entrar polvo por el sobrante. Se salta ENTERA y no a medias: una
@@ -2219,8 +2191,9 @@ module bandeja_base() {
             linear_extrude(t_base) bandeja_base_2d();
 }
 
-// tope de bandeja a ras de P3.y (canto SUPERIOR, no inferior — ver
-// centros_transversal()); canto delantero a ras del rail reubicado.
+// tope de bandeja a ras de P3.y (canto SUPERIOR, no inferior — la cota la pone
+// hoy bahia_y1(), que es quien heredo el valle de la lista de los 2020);
+// canto delantero a ras del rail reubicado.
 
 // EMPOTRADA (2026-08-21): cara exterior EN el plano trasero, x = fondo(), y
 // crece hacia dentro. Estuvo volada sobre separadores, con la cara exterior 10
@@ -2485,7 +2458,7 @@ module bom() {
              " MPa (guarda_anillo, I=3714 mm4, 214 mm2); 6082-T6 o 5083 se",
              " piden por planitud tras el vaciado, no por calculo. ~0.58 kg",
              " por costilla."));
-    echo(str("BOM: MIEMBRO de chapa x", len(centros_transversal()),
+    echo(str("BOM: MIEMBRO de chapa x", len(miembros_lista()),
              " -- trasero bajo, trasero alto y bahia: canal de aluminio",
              " 6082-T6 de ", t_costilla, " mm, ", au,
              " mm de largo, con BRIDA de extremo doblada en cada punta y",
@@ -2523,9 +2496,14 @@ module bom() {
              " por el lado del anillo, uno por riel."));
     echo("     DXF de corte: placa_cara_inf_2d, placa_valle_2d y");
     echo(str("     placa_cara_sup_2d -- UNO por TRAMO, no por costado: el",
-             " lado espejado (z) comparte el mismo contorno xy. Cada",
+             " lado espejado (z) comparte el mismo CONTORNO xy. Cada",
              " fichero se corta x2 (los ", 2*len(placas()),
              " de la linea de arriba, entre los tres)."));
+    echo("     PERO SON PARES ESPEJADOS, no seis iguales: el cajeado va en la");
+    echo("     cara OPUESTA en la de un costado y en la del otro, y los tres");
+    echo("     contornos son ASIMETRICOS -- voltear la pieza manda el chaflan");
+    echo("     al canto equivocado. Se cortan seis con el mismo contorno y se");
+    echo("     cajean TRES por una cara y TRES por la otra (PLIEGO 6).");
     echo("     Cortes: en el PICO las dos placas vecinas se reparten el rincon");
     echo("     por una linea comun (no es un chaflan de 45: el angulo es 125);");
     echo(str("     en el remate la de arriba lleva un chaflan de ", placa_chaflan,
@@ -2629,9 +2607,19 @@ module bom() {
     echo("     tres largueros murieron por el camino, todos el 2026-08-21.");
     // LAS DOS FILAS SON TAPA. Cada una gira sobre el M4 de su riel de arriba y
     // se cierra con el de su otro extremo. Del total de tornillos del case
-    // (12 M4 de riel + 6 M5 de transversal + 2 M5 del chasis + 6 M5 de la tabla
-    // + 17 M3 de plancha; los 24 M4 de separador se fueron con los separadores
-    // el 2026-08-21), solo CUATRO se tocan para abrirlo: dos por fila.
+    // (12 M4 de riel + 8 M4 de brida de miembro + 6 M3 de escuadra + 4 M4 de
+    // clip + 4 M4 de lengueta de bahia + 2 M5 del chasis + 17 M3 de plancha +
+    // 6 M5 de la tabla = 59, la misma cuenta itemizada del README), solo CUATRO
+    // se tocan para abrirlo: dos por fila.
+    //
+    // DECIA "6 M5 de transversal" y sumaba 43. Los transversales eran los 2020
+    // comprados, que murieron el 2026-08-27: los miembros de chapa que los
+    // sustituyen NO cuelgan de un M5 axial por punta -- cuelgan de una BRIDA de
+    // extremo con dos M4 a rosca ciega, o sea 8 M4, y ese herraje no estaba en
+    // esta cuenta. Los 24 M4 de separador se habian ido antes, con los
+    // separadores, el 2026-08-21. Los 20 M4 de placa al anillo siguen SIN
+    // itemizar como herraje a comprar: es un pendiente declarado en el README,
+    // no un olvido, y por eso tampoco suman aqui.
     echo("BOM: los M4 de riel no son todos iguales --");
     echo("     x4 EJES: tornillo de HOMBRO M4, espiga 4 mm (no M5 -- el riel");
     echo("        cambio de herraje al cambiar de fabricante). Riel del valle");
@@ -2657,8 +2645,11 @@ module bom() {
     echo("     Estos 12 son los M4 DE RIEL. El case lleva mas M4 en otras");
     echo("     lineas de este BOM: brida de miembro x8, clip x4, lengueta de");
     echo("     bahia x4, placa a anillo x20 (ver README, BOM de herrajes).");
-    echo("     Los tornillos de transversal y de la tabla son M5 y van");
-    echo("     aparte.");
+    echo("     Los M5 del case son los de la TABLA (6, a rosca ciega en el");
+    echo("     canto inferior del anillo) y los 2 del chasis del PSU. Los");
+    echo("     miembros NO llevan M5: cuelgan de 8 M4 de brida desde el");
+    echo("     2026-08-28 -- decia aqui 'los tornillos de transversal son M5',");
+    echo("     y los transversales eran los 2020 que murieron el 2026-08-27.");
     echo("BOM: tuercas T DE INSERCION LATERAL (drop-in), NO de deslizar. Con las");
     echo("     de deslizar hay que enhebrarlas por la punta del larguero antes de");
     echo("     montar, o sea que anadir un tornillo mas tarde obliga a desarmar.");

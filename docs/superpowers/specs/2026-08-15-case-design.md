@@ -249,9 +249,13 @@ lenguaje visual).
 > son más gruesos que la chapa que sustituyen. El canto trasero libre del
 > costado —227 mm sin apoyo— gana una **escuadra** atornillada a la
 > TRASERA (×2, nunca al anillo) y **clips** de retención (×4, dos por
-> costado, solo en el tramo del suelo). Vano libre del costado: de 119.0
-> (chapa) a 95.5 (pletina sin escuadra) a **65.0 mm** con la escuadra;
-> flecha de 0.38 a 0.24 a **0.11 mm**. Diseño completo en
+> costado, solo en el tramo del suelo). Vano libre del costado, la misma
+> cadena de CUATRO escalones que cuenta la §5 (el resumen se había comido
+> uno y etiquetaba el primero como chapa): **119.0** mm con el acrílico
+> portante → **65.2** con la chapa plegada de la rev. 21 → **95.5** al pasar
+> a pletina sola en esta rev. 22 → **65.0 mm** con la escuadra de la trasera
+> puesta; la flecha con 200 N va de **0.38** a **0.11** a **0.24** y otra vez
+> a **0.11 mm**. Diseño completo en
 > [`2026-08-28-costilla-pletina-design.md`](2026-08-28-costilla-pletina-design.md).
 
 ## 1. Objetivo

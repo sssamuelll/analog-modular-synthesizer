@@ -1380,8 +1380,36 @@ inset_remate_frente = 13;
 // estandar -- pedir un radio mas cerrado obliga a cambio de util y se paga.
 // guarda_fresado() en clearance_budget.py lo comprueba contra la geometria.
 fresa_d           = 3;
-vent_ancho_ranura = 4;   // ancho de la ranura-onda. >= fresa_d por eso mismo
-vent_puente_min   = 4;   // puente minimo entre ranuras (fragilidad)
+// 3.75 DESDE EL 2026-08-28, y no es una cota de gusto: es una RESTA. El puente
+// que queda entre dos columnas de la rejilla trasera vale
+// valle_paso_hp*hp - vent_ancho_ranura = 10.16 - ancho, y sobre PMMA de
+// t_piel = 8 ese puente tiene que llegar a 0.8*8 = 6.40 (la regla de plancha
+// perforada de siempre; la asevera guarda_puentes_ventilacion). Despejando,
+// el ancho maximo es 10.16 - 6.40 = 3.76, y se redondea hacia ABAJO al cuarto
+// de milimetro para no dejar la cota clavada en el limite: 3.75 deja 6.41.
+//
+// CON 4 EL ACRILICO ESTABA POR DEBAJO DEL MINIMO -- 6.16 de puente contra 6.40
+// -- y ninguna puerta lo cantaba, porque la que existia comparaba vent_puente_min
+// contra t_valle, el espesor de la banda del valle, que desde el 2026-08-28 no
+// lleva NI UNA ranura. La regla estaba bien y apuntaba a la pieza equivocada.
+//
+// Sigue por encima de fresa_d (3.75 >= 3), que es la otra condicion que este
+// numero tiene que cumplir y la que vigila guarda_fresado().
+vent_ancho_ranura = 3.75; // 10.16 - 0.8*t_piel = 3.76, al cuarto por abajo
+// 6.5 DESDE EL 2026-08-28, por la MISMA regla y contra la MISMA pieza. Este no
+// es el puente entre columnas (ese sale de la resta de arriba y no tiene
+// parametro): es el aire que la rejilla le deja a cualquier OTRO hueco de su
+// plancha, y hoy ese otro hueco es la ventana de la entrada de red. Si no
+// aguanta 0.8*t_piel = 6.40, los dos recortes se comen el acrilico que queda
+// entre ellos. 6.5 y no 6.40 porque una cota redonda al medio milimetro se lee
+// en el plano y deja 0.1 de margen sobre el minimo.
+//
+// LO QUE CUESTA, que no es cero: sube el borde de abajo de la banda libre de la
+// trasera (_banda_libre_trasera lo forma con valle_espina/2 + vent_puente_min),
+// o sea que la rejilla de entrada se acorta y guarda_aire() lo cobra en salto
+// termico. Es el precio de que el puente aguante, y va escrito aqui para que
+// nadie lo devuelva a 4 buscando area.
+vent_puente_min   = 6.5;  // 0.8*t_piel = 6.40, subido al medio milimetro
 vent_periodo      = 40;  // periodo horizontal de cada onda
 // Separacion entre el CAMPO DE RANURAS de la trasera y la banda de ondas que
 // tiene encima. NO es vent_puente_min, y esa confusion es justo lo que se
@@ -1389,6 +1417,12 @@ vent_periodo      = 40;  // periodo horizontal de cada onda
 // para que dos huecos no se coman el acrilico que queda entre ellos -- y con 4
 // mm los dos campos se leian como uno solo. Esto es una cota de DIBUJO: lo que
 // hace falta para que la rejilla y las ondas se lean como DOS cosas.
+//
+// SIGUEN SIENDO DOS COTAS DISTINTAS aunque el puente subiera a 6.5 el
+// 2026-08-28: 14 > 6.5, asi que quien manda aqui sigue siendo el dibujo. El dia
+// que el puente de fragilidad pase de la separacion de dibujo, este 14 dejaria
+// de decidir nada y habria que subirlo -- pero eso mueve la onda con el, por lo
+// que dice el parrafo de abajo.
 //
 // Y por eso la onda subio a la vez (0.32 -> 0.37 del vano entre filas): con el
 // borde de la rejilla derivado de la onda, subir solo la onda arrastraba la
@@ -1422,7 +1456,7 @@ vent_separacion   = 14;  // rejilla <-> ondas. De dibujo, no de fragilidad
 // que hay detras.
 //
 // 4 = la mitad de t_piel. Deja 4 mm de alma, y la fresa estandar lo saca
-// (vent_ancho_ranura 4 >= fresa_d 3). Va desde la cara EXTERIOR: hoy no hay
+// (vent_ancho_ranura 3.75 >= fresa_d 3). Va desde la cara EXTERIOR: hoy no hay
 // iluminacion interior (spec §12 deja la WS2812 fuera de alcance), asi que un
 // cajeado por dentro seria casi invisible. Si algun dia entra esa luz, voltear
 // la cara es una linea en piel_trasera().
@@ -1450,7 +1484,9 @@ kondor_prof     = 4;    // cajeado ciego, desde la cara exterior
 // size es el cuerpo y lo que se mide en la plancha son las mayusculas.
 //
 // 32.44 cae casi clavado en la banda que ocupaba la sierra (su semialtura era
-// vent_periodo*0.35 + vent_ancho_ranura/2 = 16, o sea 32 de banda), asi que la
+// vent_periodo*0.35 + vent_ancho_ranura/2 = 15.88 con el ancho de 3.75 que fijo
+// el puente de fragilidad el 2026-08-28, o sea 31.75 de banda; con el 4 de antes
+// eran 16 y 32 clavados), asi que la
 // composicion de la trasera no se mueve al cambiar el dibujo por la palabra.
 // Con Bahnschrift esto medía 34.22; Franklin tiene la mayuscula mas corta al
 // mismo cuerpo.
@@ -1542,7 +1578,7 @@ iec_margen_der = 22;     // acrilico entre la ventana y el canto derecho.
 // 900 mm2; guarda_aire() decide el numero por salto termico, no por estetica.
 valle_paso_hp   = 2;   // nombre historico: malla de la ENTRADA trasera
 meseta_paso_hp  = 6;   // una ranura cada 6 HP -> 16, registradas al rack
-meseta_largo_ranura = 15; // 905 mm2 nominales con vent_ancho_ranura = 4
+meseta_largo_ranura = 15; // 852 mm2 con vent_ancho_ranura = 3.75 (era 905 con 4)
 // Nombre historico: ya no dimensiona la banda del valle. Sigue gobernando el
 // retiro inferior de la rejilla de entrada trasera, cuyo contrato lo comparte
 // con el IEC; renombrarlo seria otro cambio independiente.

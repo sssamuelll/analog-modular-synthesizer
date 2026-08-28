@@ -258,9 +258,13 @@ def _x_chasis_frente(p: dict[str, float]) -> float:
             - _chasis(p)["tapa_y"])
 
 
-# centros_transversal(), ct_base(), ct_valle() y ct_remate() MURIERON juntos
-# el 2026-08-27. Sus tres 2020 se sustituyeron en el mismo cambio por miembros
-# de chapa con volumen, caras de apoyo y mas de una linea de anclaje; reducirlos
+# _centros_transversal() murio aqui el 2026-08-27; sus gemelas del .scad --
+# centros_transversal(), ct_base(), ct_valle() y ct_remate() -- aguantaron un
+# dia mas, hasta el 2026-08-28, porque bom() todavia contaba esa lista para
+# decir "x3". Hoy los cuenta miembros_lista(), que son los miembros mismos.
+#
+# Los tres 2020 que aquella lista describia se sustituyeron por miembros de
+# chapa con volumen, caras de apoyo y mas de una linea de anclaje; reducirlos
 # otra vez a un punto central perderia justo la geometria que los distingue.
 
 
@@ -1697,15 +1701,26 @@ def canario_solapes(p: dict[str, float]) -> None:
     cr = _centros_rail(p, P)
     hx, hy = _he_er(p, p["angulo_superior"])
     c = cr[2]
+    # Z EN EL PLANO DEL ANILLO, no en el de la mejilla. Las dos cajas iban de
+    # t_cheek a ancho_total - t_cheek, que era donde acababa el hueco util
+    # cuando el costado de acrilico era la pieza portante. Desde el 2026-08-28
+    # el que cierra por los lados es el ANILLO, y el hueco va de t_anillo a
+    # ancho_total - t_anillo: es lo que usa _cajas_solidas() para las cajas de
+    # verdad. Aqui las dos comparten plano, asi que el canario disparaba igual;
+    # lo que no puede quedarse es una cota de una pieza que ya no manda, porque
+    # el dia que una de las dos cajas se derive del modelo real dejarian de
+    # estar en el mismo sitio y el canario se apagaria en silencio.
+    z0, z1 = p["t_anillo"], p["ancho_total"] - p["t_anillo"]
     vecino = ("cara_sup valle", c[0] - hx, c[0] + hx, c[1] - hy, c[1] + hy,
-              p["t_cheek"], p["ancho_total"] - p["t_cheek"])
+              z0, z1)
     viejo = ("entrepiso delantero VIEJO",
              old_ed[0] - r, old_ed[0] + r, old_ed[1] - r, old_ed[1] + r,
-             p["t_cheek"], p["ancho_total"] - p["t_cheek"])
+             z0, z1)
     ov = _overlap(viejo, vecino)
     assert ov is not None, (
         "canario de solapes no disparo: el checker no detecta un choque "
-        "conocido (17.6x12.6 mm) — no confiar en el resto de solapes()")
+        "conocido (6.92 x 9.40 mm en planta) — no confiar en el resto de "
+        "solapes()")
 
 
 def _sat_gap(p: dict[str, float], c1: tuple[float, float], ang1: float,
@@ -1754,7 +1769,10 @@ def guarda_parametros_vivos(p: dict[str, float]) -> None:
 
     n_bulkheads dice '2 (3 si el vano flexa)' y la spec §11 lo remata: 'si el
     prototipo flexa, n_bulkheads pasa a 3 y se re-exporta'. Pero costados()
-    dibuja DOS costados fijos, uno en z=0 y otro en z=ancho_total-t_cheek, sin
+    dibuja DOS costados fijos -- uno en z=rehundido_acrilico y otro en
+    z=ancho_total - rehundido_acrilico - t_cheek, o sea los dos ASENTADOS EN EL
+    REBAJE de su anillo desde el 2026-08-28; no en z=0 y ancho_total-t_cheek,
+    que era donde vivian cuando la mejilla era la pieza exterior --, sin
     ningun bucle sobre este parametro. Quien lo suba a 3 esperando un refuerzo
     central no recibe nada: ni costado, ni error, ni aviso. El .scad sigue
     sacando dos, y los DXF salen identicos.
@@ -1831,20 +1849,25 @@ def _banda_libre_trasera(p: dict[str, float]) -> tuple[float, float]:
     return y0, y1
 
 
-def _rejilla_entrada(p: dict[str, float]) -> tuple[int, float, float, float]:
-    """Las ranuras de ENTRADA, mismas cuentas que rejilla_entrada().
+def _columnas_rejilla_entrada(
+        p: dict[str, float]) -> tuple[list[float], float, float]:
+    """Las columnas de la rejilla de entrada QUE DE VERDAD SE CORTAN: (xs, y0, y1).
 
-    Devuelve (n, largo, area, y_centroide). El centroide va en coordenadas del
-    case porque lo que gobierna el tiro no es solo cuanta area hay sino a que
-    ALTURA esta. Esta rejilla vive abajo del todo en la trasera; paso unas horas
-    en el suelo (y=4, mas tiro y mas area) y volvio aqui porque en el vuelo de
-    la bandeja se transparentaba por el canto inferior."""
+    Mismas cuentas que rejilla_entrada() en el .scad, y la unica lista de esas
+    columnas que hay en este guion.
+
+    EXISTE PORQUE LA REGLA ESTABA EN TRES SITIOS Y UNO DE ELLOS LA TENIA A
+    MEDIAS. Que columnas se cortan lo deciden DOS filtros -- apartarse de la
+    ventana de la entrada de red, y saltarse las que el ala A de la escuadra
+    tapa desde el 2026-08-28 --, y hasta hoy estaban escritos enteros en el
+    .scad, enteros aqui, y en guarda_red() solo el primero. Consecuencia: el
+    margen "contra la ranura mas cercana" que guarda_red() imprime se media
+    contra una columna que el DXF ya no corta, o sea contra una ranura que no
+    existe. Con una sola lista los dos consumidores ven las mismas ranuras.
+
+    La copia del .scad sigue siendo copia -- son dos lenguajes --, y quien
+    comprueba que hizo lo mismo es check_dxf.py releyendo el DXF exportado."""
     au = _trasera_au(p)
-    # y=0: el canto de abajo de la plancha, en el plano del suelo. Da igual
-    # para el resultado -- se resta al formar f_base/f_tras y se vuelve a
-    # sumar al devolver el centroide, asi que se cancela -- pero tiene que
-    # decir lo mismo que el .scad o el dia que deje de cancelarse miente.
-    y0_pl = 0.0
     # La banda sale de _banda_libre_trasera(), que es la unica que la calcula.
     # Estuvo copiada aqui y en _ondas_trasera(); ahora tambien la lee la ventana
     # de la entrada de red, o sea tres consumidores de la misma cuenta.
@@ -1858,18 +1881,37 @@ def _rejilla_entrada(p: dict[str, float]) -> tuple[int, float, float, float]:
     x_iec = au - p["iec_margen_der"] - p["iec_ancho"] / 2
     hueco = (p["iec_ancho"] + p["vent_ancho_ranura"]) / 2 + p["vent_puente_min"]
     # Y LAS QUE TAPA EL ALA A DE LA ESCUADRA, desde el 2026-08-28. La primera
-    # columna (2 HP = 10.16) quedaba un 82 % de su largo debajo de 1.5 mm de
-    # aluminio y esta puerta la contaba entera: 7816 mm2 de entrada que no
+    # columna (2 HP = 10.16) queda con el 87 % de su largo debajo de 1.5 mm de
+    # aluminio y esta puerta la contaba entera. Hoy la cuenta cierra: 6935 mm2
+    # sin el filtro contra 6781 con el, o sea 154 mm2 de entrada que no
     # existian. Se salta ENTERA -- el .scad hace lo mismo y con la misma cuenta
     # --, o sea que el DXF deja de cortarla y lo que aqui se suma es area de
     # verdad abierta. El por que largo esta en rejilla_entrada().
     tapa = _escuadra_tapa(p)
-    ns = [n for n in range(paso, int(n_hp) - paso + 1, paso)
+    xs = [n * p["hp"] for n in range(paso, int(n_hp) - paso + 1, paso)
           if abs(n * p["hp"] - x_iec) >= hueco
           and n * p["hp"] - p["vent_ancho_ranura"] / 2 >= tapa
           and n * p["hp"] + p["vent_ancho_ranura"] / 2 <= au - tapa]
-    return (len(ns), y1 - y0,
-            _area_ranuras(len(ns), y1 - y0, p["vent_ancho_ranura"]),
+    return (xs, y0, y1)
+
+
+def _rejilla_entrada(p: dict[str, float]) -> tuple[int, float, float, float]:
+    """Cuanta entrada de aire hay y a que altura: (n, largo, area, y).
+
+    Le pone largo y area a las columnas que devuelve
+    _columnas_rejilla_entrada(). El centroide va en coordenadas del case porque
+    lo que gobierna el tiro no es solo cuanta area hay sino a que ALTURA esta.
+    Esta rejilla vive abajo del todo en la trasera; paso unas horas en el suelo
+    (y=4, mas tiro y mas area) y volvio aqui porque en el vuelo de la bandeja se
+    transparentaba por el canto inferior."""
+    xs, y0, y1 = _columnas_rejilla_entrada(p)
+    # y=0: el canto de abajo de la plancha, en el plano del suelo. Da igual
+    # para el resultado -- se resta al formar f_base/f_tras y se vuelve a
+    # sumar al devolver el centroide, asi que se cancela -- pero tiene que
+    # decir lo mismo que el .scad o el dia que deje de cancelarse miente.
+    y0_pl = 0.0
+    return (len(xs), y1 - y0,
+            _area_ranuras(len(xs), y1 - y0, p["vent_ancho_ranura"]),
             y0_pl + (y0 + y1) / 2)
 
 
@@ -1984,7 +2026,7 @@ def guarda_aire(p: dict[str, float]) -> None:
 
     assert largo_ent >= 4 * p["vent_ancho_ranura"], (
         f"la rejilla de entrada mide {largo_ent:.1f} mm de largo con ranuras "
-        f"de {p['vent_ancho_ranura']:.0f}: deja de leerse como campo y pasa a "
+        f"de {p['vent_ancho_ranura']:.2f}: deja de leerse como campo y pasa a "
         f"rayitas (es la misma cuenta que recorto la espina del valle)")
 
     a_ef = 1.0 / math.sqrt(1 / a_ent ** 2 + 1 / a_sal ** 2)
@@ -2004,10 +2046,10 @@ def guarda_aire(p: dict[str, float]) -> None:
         f"la altura, el area va lineal)")
 
     print(f"aire: entrada {a_ent:.0f} mm2 en {n_ent} ranuras de "
-          f"{largo_ent:.1f} x {p['vent_ancho_ranura']:.0f} (trasera, y={y_ent:.0f})")
+          f"{largo_ent:.1f} x {p['vent_ancho_ranura']:.2f} (trasera, y={y_ent:.0f})")
     print(f"  salida {a_sal:.0f} mm2 = {a_mes:.0f} de la meseta "
           f"({n_mes} ranuras de {largo_mes:.1f} x "
-          f"{p['vent_ancho_ranura']:.0f}, y={y_mes:.0f}) + "
+          f"{p['vent_ancho_ranura']:.2f}, y={y_mes:.0f}) + "
           f"{a_ond:.0f} de las DOS ondas abiertas (el relieve KONDOR es cajeado "
           f"ciego y no ventila), centroide y={y_sal:.0f}")
     print(f"  tiro {h*1000:.0f} mm, area efectiva {a_ef:.0f} mm2 -> "
@@ -2368,8 +2410,9 @@ def guarda_red(p: dict[str, float]) -> None:
         f"cota de dibujo, o la fila de M3, que es estructura")
 
     # 2. el puente contra la ranura mas cercana NO SE ASEVERA, y conviene decir
-    #    por que: seria un verde vacio. _rejilla_entrada() se salta columnas con
-    #    la condicion |x - x_iec| >= (iec_ancho + vent_ancho_ranura)/2 + puente,
+    #    por que: seria un verde vacio. _columnas_rejilla_entrada() se salta
+    #    columnas con la condicion
+    #    |x - x_iec| >= (iec_ancho + vent_ancho_ranura)/2 + puente,
     #    y "el puente que queda" es esa misma desigualdad despejada. Aseverarlo
     #    aqui es preguntarle a la regla si cumple la regla: sale verde SIEMPRE,
     #    con cualquier valor de cualquier parametro, incluso con la geometria
@@ -2382,12 +2425,13 @@ def guarda_red(p: dict[str, float]) -> None:
     #    de verdad protege ese puente es el propio salto de columnas del .scad,
     #    y quien comprueba que el .scad hizo lo que dice es check_dxf.py, que
     #    relee el DXF exportado -- no este guion.
+    #    Y SE MIDE CONTRA LA LISTA DE VERDAD desde el 2026-08-28. Aqui habia
+    #    una TERCERA copia del filtro de columnas, y le faltaba el de la
+    #    escuadra: el margen salia medido contra la primera columna, que el ala
+    #    A tapa y el DXF no corta. Ahora la lista la da
+    #    _columnas_rejilla_entrada(), la misma que cuenta el area.
     x_iec = au - p["iec_margen_der"] - p["iec_ancho"] / 2
-    paso = int(p["valle_paso_hp"])
-    n_hp = round(p["largo_riel"] / p["hp"])
-    hueco = (p["iec_ancho"] + p["vent_ancho_ranura"]) / 2 + puente
-    xs = [n * p["hp"] for n in range(paso, int(n_hp) - paso + 1, paso)
-          if abs(n * p["hp"] - x_iec) >= hueco]
+    xs, _, _ = _columnas_rejilla_entrada(p)
     borde = min(abs(x - x_iec) - (p["iec_ancho"] + p["vent_ancho_ranura"]) / 2
                 for x in xs)
 
@@ -2482,9 +2526,69 @@ def guarda_fresado(p: dict[str, float]) -> None:
     for k in ("d_M3_paso", "d_M4_paso", "d_M5_paso"):
         assert p[k] >= FRESA_MIN_D - 1e-9, (
             f"{k}={p[k]} por debajo de la fresa mas chica ({FRESA_MIN_D} mm)")
-    print(f"fresado: ranura {p['vent_ancho_ranura']:.1f} y concavo minimo "
+    print(f"fresado: ranura {p['vent_ancho_ranura']:.2f} y concavo minimo "
           f"{p['radio_valle']:.1f} contra fresa de {p['fresa_d']:.1f} "
           f"(radio {r:.1f}) -- sin cambio de util")
+
+
+def guarda_puentes_ventilacion(p: dict[str, float]) -> None:
+    """El puente que queda entre dos huecos aguanta el espesor de SU pieza.
+
+    LA REGLA es la de siempre en plancha perforada: un puente mas fino que 0.8
+    veces el espesor se dobla al manipular la pieza, y en PMMA es ademas por
+    donde arranca la fisura. Lo que cambio el 2026-08-28 no es la regla: es a
+    QUIEN se le aplica.
+
+    ESTUVO ESCRITA CONTRA UNA PIEZA SIN AGUJEROS. Era una sola linea suelta en
+    main() -- `vent_puente_min >= 0.8*t_valle` -- de cuando el campo de ranuras
+    vivia en la banda del valle. Esa banda es MACIZA desde que las ranuras se
+    mudaron a la meseta (ver valle_paso_hp en params.scad): hoy t_valle es el
+    espesor de una tapa que no se perfora, asi que la puerta comparaba un
+    puente contra un espesor que no tiene nada que ver con el.
+
+    Y mientras tanto las dos rejillas que SI existen no las miraba nadie:
+
+        trasera   PMMA de t_piel,      44 columnas a paso valle_paso_hp
+        meseta    chapa de t_costilla, 16 ranuras a paso meseta_paso_hp
+
+    Se mide donde hay ranuras, y con los puentes de verdad, que son DOS por
+    pieza y salen de sitios distintos:
+
+      * ENTRE COLUMNAS: paso menos ancho de ranura. Es GEOMETRIA -- no hay
+        parametro que lo diga --, y es el puente que rompe el manipulado.
+      * CONTRA CUALQUIER OTRO HUECO: vent_puente_min. Es la cota con la que
+        _rejilla_entrada() se salta columnas junto a la ventana de red y con
+        la que guarda_red() separa esa ventana de la onda; si no aguanta el
+        espesor, esos dos huecos se comen el material que queda entre ellos.
+
+    LO QUE COSTO PONERLA BIEN, para que no se deshaga por comodidad: con la
+    regla apuntando a la pieza correcta el diseno salio ROJO por los dos lados
+    de la trasera, y la fuente se movio en params.scad -- vent_ancho_ranura de
+    4 a 3.75 y vent_puente_min de 4 a 6.5 --, no el umbral. Eso encoge la
+    salida de aire y guarda_aire() lo cobra en salto termico."""
+    for pieza, paso_hp, t in (
+            ("trasera", p["valle_paso_hp"], p["t_piel"]),
+            ("meseta", p["meseta_paso_hp"], p["t_costilla"])):
+        minimo = 0.8 * t
+        entre = paso_hp * p["hp"] - p["vent_ancho_ranura"]
+        assert entre >= minimo - 1e-9, (
+            f"la rejilla de la {pieza} deja {entre:.2f} mm de puente entre "
+            f"columnas ({paso_hp:.0f} HP = {paso_hp * p['hp']:.2f} menos la "
+            f"ranura de {p['vent_ancho_ranura']:.2f}) sobre un espesor de "
+            f"{t:.1f}: el minimo son {minimo:.2f} (0.8 x espesor). O el paso "
+            f"sube, o la ranura adelgaza -- el umbral no se toca")
+        assert p["vent_puente_min"] >= minimo - 1e-9, (
+            f"vent_puente_min={p['vent_puente_min']:.2f} no aguanta el "
+            f"espesor de la {pieza} ({t:.1f}): el minimo son {minimo:.2f}. "
+            f"Es el aire que la rejilla le deja a los OTROS huecos de la "
+            f"pieza -- hoy la ventana de la entrada de red")
+    print(f"puentes de ventilacion: trasera "
+          f"{p['valle_paso_hp'] * p['hp'] - p['vent_ancho_ranura']:.2f} mm "
+          f"entre columnas sobre PMMA de {p['t_piel']:.0f} (minimo "
+          f"{0.8 * p['t_piel']:.2f}), meseta "
+          f"{p['meseta_paso_hp'] * p['hp'] - p['vent_ancho_ranura']:.2f} sobre "
+          f"chapa de {p['t_costilla']:.1f} (minimo {0.8 * p['t_costilla']:.2f}), "
+          f"vent_puente_min {p['vent_puente_min']:.2f}")
 
 
 
@@ -3013,7 +3117,11 @@ def guarda_escuadra_trasera(p: dict[str, float]) -> None:
     # hoy si cabria un tornillo ahi. Se quedan igual por encima de la banda: la
     # columna solo falta MIENTRAS el ala la tape, y un tornillo apoyado en esa
     # condicion vuelve a caer dentro de una ranura el dia que escuadra_ala baje
-    # de 14.3, sin que nadie lo cante -- solapes() mira cuerpos, no recortes, y
+    # de 8.44 (escuadra_tapa por debajo del borde de la ranura; el 14.3 que
+    # decia antes es OTRA cota de la misma ala -- escuadra_raiz + 1.5*d_M3_paso
+    # = 9.2 + 5.1, el ancho minimo para que el M3 conserve 1.5 D hasta el canto
+    # libre -- y las dos estaban confundidas en una frase), sin que nadie lo
+    # cante -- solapes() mira cuerpos, no recortes, y
     # el censo de check_dxf cuenta agujeros, no vecindarios. Por eso esto se
     # comprueba tornillo a tornillo y por eso la regla no se relaja.
     borde = 1.5 * p["d_M3_paso"]
@@ -3133,8 +3241,13 @@ def guarda_piso(p: dict[str, float]) -> None:
     donde muere la curva del costado y le pasa POR DEBAJO al riel.
 
     Cada version de esta cota valio milimetros de aparato, y la ultima vuelta
-    costo 8.46. Siguen siendo DOS asserts, pero la segunda cambio de signo: ya
-    no se exige que la bandeja se aparte del riel sino que LLEGUE al frente.
+    costo 8.46. La segunda cambio de signo por el camino: ya no se exige que la
+    bandeja se aparte del riel sino que LLEGUE al frente.
+
+    SON TRES ASSERTS, no dos. El tercero -- que la trasera baje hasta el mismo
+    plano del suelo -- entro el 2026-08-27 y nadie actualizo ni esta linea ni su
+    numero, que se quedo en '4' porque venia de una version con cuatro. Aqui van
+    numerados 1, 2 y 3, que es lo que hay.
 
     Se mide sobre el centro REAL del riel (el que sale de _centros_rail), no
     rehaciendo la formula: si el .scad y el budget se separan, esto lo nota."""
@@ -3196,7 +3309,7 @@ def guarda_piso(p: dict[str, float]) -> None:
     print(f"  con {p['carga_mano']:.0f} N en medio del vano de {vano:.2f} cede "
           f"{flecha_z:.3f} mm (techo {p['flecha_costado_max']:.2f}, "
           f"E {p['E_madera']:.0f} MPa a favor de veta)")
-    # 4. y la trasera TAMBIEN llega al suelo. El suelo no lo cierra solo la
+    # 3. y la trasera TAMBIEN llega al suelo. El suelo no lo cierra solo la
     #    bandeja: la cara trasera es la cuarta pared, y si su canto de abajo no
     #    baja hasta el mismo plano queda un rebaje corrido a lo largo de los
     #    528 mm. Eso es una JUNTA DE SOMBRA, que es justo el lenguaje que se
@@ -3798,6 +3911,7 @@ def main() -> int:
     canario_red(p)
     guarda_red(p)
     guarda_fresado(p)
+    guarda_puentes_ventilacion(p)
     guarda_parametros_vivos(p)
     guarda_escalon(p)
     guarda_tapa(p)
@@ -3919,8 +4033,6 @@ def main() -> int:
               f"de EUROrack: un modulo 3U NO atornilla en esa fila. La cara se "
               f"dimensiona DESDE esta cota (alto_cara_{piso} = sep + {ins_a} + "
               f"{ins_b}), no al reves.")
-    exige(p["vent_puente_min"] >= 0.8 * p["t_valle"],
-          "puente de ventilacion fragil para el espesor")
     fallos.extend(solapes(p))
     fallos.extend(alineacion(p))
     fallos.extend(apoyo(p))
