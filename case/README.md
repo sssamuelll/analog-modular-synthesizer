@@ -98,14 +98,20 @@ Eran 45 ranuras del mismo lenguaje —mismo ancho y registradas al HP— en la b
 que dejan libre la fila de tornillos por abajo y la onda por arriba (cifra de
 2026-08-21; **hoy son 44**: la escuadra de la trasera, Tarea 4b, tapa la
 primera columna con su ala A y la puerta pasó a saltarla entera en vez de
-contarla — `clearance_budget.py` imprime «entrada 7642 mm2 en 44 ranuras»).
+contarla — `clearance_budget.py` imprime «entrada 6781 mm2 en 44 ranuras de
+41.9 x 3.75»).
 El hueco del IEC vive **dentro** de esa banda, así que queda embebido en el
-campo en vez de al lado: se saltan sus columnas enteras, con 6.98 mm de
-material alrededor. Partir una ranura con el recorte dejaría un diente de
-acrílico colgando de un lado, que es justo donde el PMMA rompe.
+campo en vez de al lado: se saltan sus columnas enteras, con 11.25 mm de
+material contra la ranura más cercana. Partir una ranura con el recorte
+dejaría un diente de acrílico colgando de un lado, que es justo donde el PMMA
+rompe.
 
 La rejilla y las ondas se separan **14.00 mm**. Eran 4 —`vent_puente_min`, el
-mínimo por fragilidad— y los dos campos se leían como uno. Subir la onda sola no
+mínimo por fragilidad— y los dos campos se leían como uno. `vent_puente_min`
+ya no vale 4: aquel mínimo se medía contra la tapa del valle cuando era
+acrílico de 5 mm (0.8 × 5 = 4); desde `b799e8b` la regla mide 0.8·t contra la
+trasera de 8 mm de PMMA y subió a **6.5**, con la ranura de la rejilla
+bajando a 3.75 para pagar la diferencia. Subir la onda sola no
 lo arreglaba: el borde de la rejilla estaba *derivado* de la onda, así que subía
 con ella y la separación se quedaba clavada en el mínimo. Se movieron las dos:
 `y_bajas` 0.32 → **0.37** del vano entre filas, y la separación pasa a ser un
@@ -117,9 +123,9 @@ La primera versión se olvidó ese término y los 14 salieron 12.
 
 | | área abierta | altura | ranuras |
 |---|---|---|---|
-| entrada (trasera, abajo) | **7 616 mm²** | y = 44 | 45 de 43.2 × 4 |
-| salida — meseta | **905 mm²** | y = 255 | 16 de 15 × 4 |
-| salida — las dos ondas abiertas | 2 443 mm² | y ≈ 95 | — |
+| entrada (trasera, abajo) | **6 781 mm²** | y = 45 | 44 de 41.9 × 3.75 |
+| salida — meseta | **852 mm²** | y = 255 | 16 de 15 × 3.75 |
+| salida — las dos ondas abiertas | 2 289 mm² | y ≈ 95 | — |
 
 La banda del valle queda **lisa** desde el 2026-08-28. Su antigua salida sube
 a la meseta del miembro trasero alto: menos área a mucha más altura mantiene el

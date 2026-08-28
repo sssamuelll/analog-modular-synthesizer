@@ -967,10 +967,11 @@ function escuadra_largo() = escuadra_y1() - escuadra_y0();
 // aqui. Se cortaria de nuevo cuando escuadra_tapa() baje del borde de la
 // ranura, o sea cuando 2*hp - vent_ancho_ranura/2 >= escuadra_ala - hol_piel:
 // con hp = 5.08, vent_ancho_ranura = 3.75 y hol_piel = 0.15 eso da
-// escuadra_ala <= 8.44. Ese es el numero, y no el 14.3 que decia antes. 14.3 es
-// OTRA cota de esta misma ala -- escuadra_raiz + 1.5*d_M3_paso = 9.2 + 5.1, el
+// escuadra_ala <= 8.435. Ese es el numero exacto -- el 8.44 de antes redondeaba
+// al alza, el lado permisivo -- y no el 14.3 que decia antes. 14.3 es OTRA
+// cota de esta misma ala -- escuadra_raiz + 1.5*d_M3_paso = 9.2 + 5.1, el
 // ancho minimo para que el M3 conserve 1.5 D hasta el canto libre --, y las dos
-// se habian confundido en una sola frase. Como 14.3 > 8.44, al encoger el ala
+// se habian confundido en una sola frase. Como 14.3 > 8.435, al encoger el ala
 // se pierde antes el M3 legal que la sombra sobre la columna: son dos cotas
 // vivas y se comprueban aparte. Con tres tornillos por encima el voladizo de
 // abajo trabaja a 89.8 MPa contra los 130 del aluminio, asi que no hace falta

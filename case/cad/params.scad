@@ -1461,12 +1461,15 @@ vent_separacion   = 14;  // rejilla <-> ondas. De dibujo, no de fragilidad
 // cajeado por dentro seria casi invisible. Si algun dia entra esa luz, voltear
 // la cara es una linea en piel_trasera().
 //
-// LO QUE CUESTA: 0.5 K. La salida baja de 12609 a 9943 mm2 y el salto termico
-// sube de 6.6 a 7.1 K contra un techo de 15 -- lo dice guarda_aire() en cada
-// corrida. OJO con leer ese numero de mas: potencia_disipada son SOLO los
-// reguladores del PSU, y la disipacion de los modulos no esta en ningun
-// presupuesto de este repo. El 7.1 describe el camino del PSU, no la bahia de
-// arriba, que es justo lo que se sella.
+// LO QUE COSTO EL 2026-08-24: 0.5 K. La salida bajo de 12609 a 9943 mm2 y el
+// salto termico subio de 6.6 a 7.1 K contra un techo de 15 -- eso midio el A/B
+// de ese dia, no la corrida de hoy. HOY, con la rejilla y el puente de
+// fragilidad movidos el 2026-08-28, guarda_aire() imprime 3141 mm2 de salida
+// y 10.8 K en cada corrida. OJO con leer cualquiera de los dos numeros de mas:
+// potencia_disipada son SOLO los reguladores del PSU, y la disipacion de los
+// modulos no esta en ningun presupuesto de este repo. El salto termico
+// describe el camino del PSU, no la bahia de arriba, que es justo lo que se
+// sella.
 //
 // Y EL CAJEADO YA NO ES UNA SIERRA: es la palabra KONDOR (Samuel, 2026-08-24).
 // Eso arregla solo el problema que el render del cajeado habia destapado --

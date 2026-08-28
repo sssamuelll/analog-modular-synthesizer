@@ -1944,8 +1944,10 @@ def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
     SON DOS, NO TRES, DESDE EL 2026-08-24. La sierra dejo de existir: ese sitio
     lo ocupa ahora el CAJEADO CIEGO de la palabra KONDOR (kondor_prof), que no
     atraviesa la plancha y por tanto no ventila y no puede seguir sumando aqui.
-    La salida baja de 12609 a 9943 mm2 y el salto termico sube de 6.6 a 7.1 K
-    contra el techo de 15.
+    ESE DIA la salida bajo de 12609 a 9943 mm2 y el salto termico subio de 6.6
+    a 7.1 K contra el techo de 15 -- es lo que midio el A/B del 2026-08-24, no
+    la corrida de hoy. HOY, con la rejilla y el puente de fragilidad movidos el
+    2026-08-28, guarda_aire() imprime 3141 mm2 de salida y 10.8 K.
 
     El motivo no es termico sino de lo que hay DETRAS de cada onda, medido
     contra el envolvente de un modulo de fondo_pcb_max:
@@ -1957,7 +1959,7 @@ def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
 
     LO QUE ESTE NUMERO NO DICE, y hay que decirlo: potencia_disipada son SOLO
     los reguladores del PSU. La disipacion de los modulos no esta en ningun
-    presupuesto de este repo, asi que el 7.1 K describe el camino del PSU --
+    presupuesto de este repo, asi que el salto termico describe el camino del PSU --
     que sale por el valle y por estas dos ondas, las dos por debajo del
     entrepiso-- y NO la bahia de arriba, que es la que el cajeado sella."""
     P = _vertices(p)
@@ -2405,7 +2407,7 @@ def guarda_red(p: dict[str, float]) -> None:
         f"la ventana de la entrada de red mide {p['iec_alto']:.1f} mm de alto y "
         f"la banda libre entre la fila de M3 y la onda mide {lib1 - lib0:.2f} "
         f"(y={lib0:.2f}..{lib1:.2f}): quedan {holgura_v:.2f} mm de acrilico "
-        f"arriba y abajo y el puente minimo son {puente:.0f}. O baja iec_alto, o "
+        f"arriba y abajo y el puente minimo son {puente:.1f}. O baja iec_alto, o "
         f"la banda tiene que crecer -- y crecerla mueve vent_separacion, que es "
         f"cota de dibujo, o la fila de M3, que es estructura")
 
@@ -2439,7 +2441,7 @@ def guarda_red(p: dict[str, float]) -> None:
     #    canto libre en PMMA es el otro sitio donde arranca la fisura.
     assert p["iec_margen_der"] >= puente, (
         f"la ventana de la entrada de red deja {p['iec_margen_der']:.1f} mm "
-        f"hasta el canto derecho de la trasera y el minimo son {puente:.0f}")
+        f"hasta el canto derecho de la trasera y el minimo son {puente:.1f}")
 
     print(f"entrada de red: ventana de {p['iec_ancho']:.1f} x {p['iec_alto']:.1f} "
           f"en x={x_iec - p['iec_ancho'] / 2:.2f}..{x_iec + p['iec_ancho'] / 2:.2f}, "
@@ -3117,10 +3119,11 @@ def guarda_escuadra_trasera(p: dict[str, float]) -> None:
     # hoy si cabria un tornillo ahi. Se quedan igual por encima de la banda: la
     # columna solo falta MIENTRAS el ala la tape, y un tornillo apoyado en esa
     # condicion vuelve a caer dentro de una ranura el dia que escuadra_ala baje
-    # de 8.44 (escuadra_tapa por debajo del borde de la ranura; el 14.3 que
-    # decia antes es OTRA cota de la misma ala -- escuadra_raiz + 1.5*d_M3_paso
-    # = 9.2 + 5.1, el ancho minimo para que el M3 conserve 1.5 D hasta el canto
-    # libre -- y las dos estaban confundidas en una frase), sin que nadie lo
+    # de 8.435 (8.44 redondeaba al alza, el lado permisivo; escuadra_tapa por
+    # debajo del borde de la ranura; el 14.3 que decia antes es OTRA cota de la
+    # misma ala -- escuadra_raiz + 1.5*d_M3_paso = 9.2 + 5.1, el ancho minimo
+    # para que el M3 conserve 1.5 D hasta el canto libre -- y las dos estaban
+    # confundidas en una frase), sin que nadie lo
     # cante -- solapes() mira cuerpos, no recortes, y
     # el censo de check_dxf cuenta agujeros, no vecindarios. Por eso esto se
     # comprueba tornillo a tornillo y por eso la regla no se relaja.
@@ -3486,7 +3489,8 @@ def guarda_tapa(p: dict[str, float]) -> None:
 
 
 def guarda_remate(p: dict[str, float]) -> None:
-    """La tapa de remate cubre la meseta del techo, ni mas ni menos.
+    """La meseta del remate -- el ala del miembro trasero alto, no una tapa
+    aparte del techo -- se reparte entera entre tres piezas, ni mas ni menos.
 
     La meseta mide marco_remate y hay que repartirla ENTERA entre tres cosas.
     En params.scad no se pueden escribir expresiones, o sea que la relacion se
