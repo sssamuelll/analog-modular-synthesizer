@@ -303,8 +303,11 @@ function centro_miembro_bajo() = [miembro_x_trasera() - canal_fondo/2,
                                   canal_ancho/2];
 function centro_miembro_alto() = [miembro_x_trasera() - canal_ancho/2,
                                   miembro_y_meseta() - canal_ancho/2];
-function centros_miembro_punta() = [centro_miembro_bajo(),
-                                    centro_miembro_alto(), bahia_centro()];
+// centros_miembro_punta() murio el 2026-08-28. Era la lista de los tres M5 que
+// atravesaban la costilla de chapa por la punta de cada miembro; el anillo no
+// lleva agujeros pasantes -- los miembros se atornillan a roscas ciegas de la
+// franja interior, con una brida de extremo (spec 5) que es cosa de la Tarea 3.
+// Los dos centros sueltos se quedan: paticas() usa el bajo.
 
 // Filas de la piel: no coinciden todas con el centro de la envolvente. La de
 // arriba vive en el alma vertical, por debajo de la meseta de marco_sup.
@@ -476,230 +479,103 @@ module perfil_lateral() {
 // justo donde el radio de la esquina en punta ya andaba corto, y cada uno es un
 // concentrador de tension en una plancha que rompe por el canto.
 //
-// Como se sujeta entonces: queda capturada entre las dos alas de la costilla
-// -- una agarra su cara interior y la otra le tapa el canto (spec 2). Sin
-// tornillo, y por eso guarda_costado() dejo de medir vanos entre anclas y pasa
-// a medir contra la ventana de la costilla, que es apoyo CONTINUO.
+// Como se sujeta entonces: estuvo capturada entre las dos alas de la costilla
+// de chapa (spec 2) y desde el 2026-08-28 ASIENTA EN EL REBAJE DEL ANILLO --
+// el labio la sostiene hacia fuera por todo el perimetro y los clips la
+// retienen hacia dentro. Sin tornillo, y por eso guarda_costado() dejo de
+// medir vanos entre anclas y pasa a medir contra el canto de la ventana, que
+// es apoyo CONTINUO.
 //
-// Y EL 2026-08-27 LE VUELVEN CUATRO AGUJEROS, uno por Z-Rail. No son un paso
-// atras: no son agujeros de tornillo. Al pasar el marco POR FUERA, el M4 del
-// riel tiene que cruzar el acrilico antes de morder, y si apretara CONTRA el
-// acrilico el PMMA fluiria bajo carga sostenida y con el se relajaria la
-// precarga que sujeta el riel -- la misma cuenta de la arandela d16.
+// LE VOLVIERON CUATRO AGUJEROS EL 2026-08-27 Y SE VAN EL 28. Eran los pasos
+// de casquillo: con el marco POR FUERA y el acrilico APILADO detras, el M4 del
+// riel tenia que cruzar el PMMA antes de morder, y el casquillo de aluminio se
+// comia el apriete para que no lo pinzara. Ese apilado murio con el anillo --
+// el acrilico va DENTRO de la ventana, coplanar, y el tornillo del riel ni lo
+// roza: entra en una placa de anclaje por la cara interior. Vuelve a cero.
 //
-// El tornillo va dentro de un CASQUILLO de aluminio (L_casquillo) que se come
-// el apriete entero: el camino de carga es costilla -> casquillo -> riel y no
-// toca el PMMA en ningun punto. Por eso el agujero va HOLGADO alrededor del
-// casquillo, y un agujero a medida del tornillo no seria mas seguro: seria el
-// fallo. La holgura por lado es HOL_CASQUILLO y vive en check_dxf.py, junto a
-// taladros_costado(), que es la puerta que mide este diametro.
+// EL 2026-08-28 EL CONTORNO SE RETRANQUEA. Ya no es la silueta del case: es la
+// silueta menos retiro_rebaje() (lo que el anillo tapa por delante) menos la
+// holgura de montaje, porque la pieza entra POR DETRAS y asienta en el rebaje.
+// Los rebaje_anillo - hol_costado que sobresalen bajo el labio son justo lo que
+// lo retiene, y lo mide guarda_costado() en check_dxf como vano libre.
 module costado_2d() {
-    difference() {
-        perfil_lateral();
-        for (c = centros_rail())
-            translate(c) circle(d = d_M4_paso + 2*0.5 + kerf);
-    }
+    offset(delta = -(retiro_rebaje() + hol_costado)) perfil_lateral();
 }
 
 module costado() { linear_extrude(t_cheek) costado_2d(); }
 
-// --- LA COSTILLA: chapa de aluminio PLEGADA -------------------------------
-// Es LA PIEZA PORTANTE desde el 2026-08-26 -- el costado de acrilico paso a
-// piel y no lleva un solo tornillo estructural.
+// --- EL ANILLO DE PLETINA -------------------------------------------------
+// La costilla es un anillo FRESADO desde el 2026-08-28: silueta por fuera,
+// ventana por dentro, y por detras el rebaje donde asienta el acrilico. No
+// tiene desarrollo, no tiene alivios, no tiene P3 que soldar: es una pieza.
 //
-// LO QUE SALE DE AQUI ES EL DESARROLLO PLANO, no el contorno de la pieza. Igual
-// que las tres del chasis: un DXF de corte no dice de donde doblar, asi que la
-// pieza viaja con su plano de plegado. Cortar el contorno daria una chapa que
-// al doblarse se queda corta -- el material que el radio se lleva.
+// LO QUE SE FUE CON LA CHAPA, y conviene que quede escrito porque fueron dos
+// dias de trabajo: la banda de ala_costilla (27) con su ventana, el ala de
+// ala_doblez (16) doblada a 90 en los siete tramos, los seis alivios en V de
+// los vertices convexos, el rip bisector de P3 y su soldadura, y el
+// desarrollo plano que el DXF tenia que llevar porque un corte no dice de
+// donde doblar. Nada de eso sobrevive a una pieza maciza: la cara vista sale
+// del propio espesor y la esquina concava es un radio de fresa.
+function retiro_rebaje() = cara_anillo - rebaje_anillo;
 
-// Que tramo lleva ala se DERIVA de DOS condiciones. La primera sigue siendo
-// estructural: la necesita si como pletina plana no pasa el techo de flecha. La
-// segunda manda siempre desde el 2026-08-28: TODOS la llevan para tapar el canto
-// del acrilico. GEMELA de _tramos_costilla() en clearance_budget.py.
-function costilla_largo_tramo(i) =
-    let (P = pts_perfil()) norm(P[(i+1) % len(P)] - P[i]);
-function costilla_necesita_ala_rigidez(i) =
-    carga_mano * pow(costilla_largo_tramo(i), 3)
-      / (192 * E_aluminio * ala_costilla * pow(t_costilla, 3) / 12)
-    > flecha_costado_max;
-function costilla_tapa_canto(i) = true;
-function costilla_lleva_ala(i) =
-    costilla_necesita_ala_rigidez(i) || costilla_tapa_canto(i);
-
-// El bool marca el giro EN el vertice i. Para este contorno horario, positivo
-// es concavo. P3 es el unico: ahi un alivio en V abre el encuentro al doblar.
-function costilla_vertice_concavo(i) =
-    let (P = pts_perfil(), n = len(P),
-         a = P[i] - P[(i-1+n) % n], b = P[(i+1) % n] - P[i])
-    a.x*b.y - a.y*b.x > 0;
-function costilla_alivio_vertice(i) =
-    let (n = len(pts_perfil()))
-    costilla_lleva_ala((i-1+n) % n) && costilla_lleva_ala(i)
-      && !costilla_vertice_concavo(i);
-
-// Plegado a 90 grados. SB es lo que la linea de plegado se mete hacia DENTRO
-// del contorno, y BA el arco de la fibra neutra; el borde del desarrollo acaba
-// sobresaliendo (ala_doblez - BD) del contorno. Misma formula que ch_ba() del
-// chasis, con los parametros de ESTA chapa: aluminio 6082-T6 de 1.5.
-function cost_sb() = radio_doblez_costilla + t_costilla;
-function cost_ba() = PI/2 * (radio_doblez_costilla + k_factor*t_costilla);
-function cost_bd() = 2*cost_sb() - cost_ba();
-function cost_vuelo() = ala_doblez - cost_bd();
-
-// El ala desplegada de un tramo: un rectangulo que sale por la normal EXTERIOR.
-// Para el contorno horario de pts_perfil() esa normal es (-dy, dx).
-//
-// EL ALIVIO VA AQUI Y NO COMO CORTE APARTE: en los SEIS vertices convexos cada
-// ala se RETIRA cost_sb() y el hueco resultante evita el solape al doblar. P3
-// es la excepcion concava: un V haria divergir las dos alas y dejaria el PMMA a
-// la vista. Se deja cerrado, se pliega a tope y se suelda linealmente el
-// encuentro; son dos soldaduras de 14.5 mm en el aparato, una por costilla.
-module costilla_ala(i) {
-    P = pts_perfil();
-    n = len(P);
-    a = P[i];
-    b = P[(i+1) % n];
-    d = b - a;
-    L = norm(d);
-    u = d / L;
-    nx = [-u.y, u.x];                       // normal exterior
-    r0 = costilla_alivio_vertice(i)         ? cost_sb() : 0;
-    r1 = costilla_alivio_vertice((i+1) % n) ? cost_sb() : 0;
-    p0 = a + u*r0;
-    p1 = b - u*r1;
-    polygon([p0, p1, p1 + nx*cost_vuelo(), p0 + nx*cost_vuelo()]);
-}
-
-// RIP DE P3 PARA LA ESQUINA CERRADA SOLDADA. Las alas del valle y de la cara
-// superior se solapan en el desarrollo plano; un corte por la bisectriz las
-// independiza sin retirar la V que dejaria el canto abierto. La longitud sale
-// del vuelo dividida por cos(la mitad del giro concavo): 12.702/cos(22.5) =
-// 13.75 mm. Tras plegar, los dos labios cierran a tope y forman la junta de
-// 14.5 mm que se suelda. El solido 3D ya representa el estado SOLDADO.
-module costilla_rip_p3() {
-    P = pts_perfil();
-    v0 = (P[3] - P[2]) / norm(P[3] - P[2]);
-    v1 = (P[4] - P[3]) / norm(P[4] - P[3]);
-    n0 = [-v0.y, v0.x];
-    n1 = [-v1.y, v1.x];
-    u = (n0 + n1) / norm(n0 + n1);
-    q = [-u.y, u.x];
-    medio_giro = _ang(n0, n1) / 2;
-    largo = cost_vuelo() / cos(medio_giro);
-    a = P[3];
-    b = P[3] + u*largo;
-    polygon([a - q*cierre_p3_gap/2, b - q*cierre_p3_gap/2,
-             b + q*cierre_p3_gap/2, a + q*cierre_p3_gap/2]);
-}
-
-// El M5 de la bahia cae en el centro de su envolvente, dentro de la ventana de
-// la costilla. Esta lengua lleva material desde la banda del valle hasta ese
-// centro. Su ancho es 4 diametros: deja 2D de material desde el eje a cada lado,
-// por encima del minimo 1.5D que relee taladros_costilla().
-module costilla_apoyo_bahia() {
-    c = bahia_centro();
-    P = pts_perfil();
-    ancho = 4*d_M5_paso;
-    y0 = c.y - 2*d_M5_paso;
-    translate([c.x - ancho/2, y0])
-        square([ancho, P[2].y - y0]);
-}
-
-module costilla_2d() {
-    P = pts_perfil();
+module anillo_2d() {
     difference() {
-        union() {
-            difference() {
-                perfil_lateral();
-                offset(delta = -ala_costilla) perfil_lateral();
-            }
-            for (i = [0 : len(P)-1]) if (costilla_lleva_ala(i)) costilla_ala(i);
-            costilla_apoyo_bahia();
-        }
-        // LOS SEIS M4 DE LOS Z-RAILS. Los cuatro 3U vinieron del costado el
-        // 2026-08-27 y los dos 1U se montan por sus puntas con el mismo patron:
-        // cero herraje nuevo en las alas de la bahia. El
-        // riel trae el taladro de punta ROSCADO M4 de fabrica (hoja Tiptop),
-        // asi que aqui va agujero de PASO y el tornillo muerde el aluminio del
-        // riel. Sin tuerca, sin inserto.
-        //
-        // Van en el ALMA, no en el ala: el riel corre a lo ancho del case y su
-        // cara de punta mira hacia fuera, o sea contra este plano. El ala esta
-        // doblada 90 grados y corre por el perimetro, al lado del riel.
-        for (c = concat(centros_rail(), centros_rail_1u()))
-            translate(c) circle(d = d_M4_paso + kerf);
-        // Y LOS M5 DE LOS TRES MIEMBROS. Cada pieza se atornilla por su punta
-        // en el centro de su caja; para la bahia manda la ENVOLVENTE TOTAL.
-        // Lo vigila taladros_costilla() releyendo este DXF.
-        for (c = centros_miembro_punta())
-            translate(c) circle(d = d_M5_paso + kerf);
-        // Y EL M3 DE LA PESTANA DE LA TAPA DEL VALLE, que atraviesa esta chapa
-        // y la pestana doblada. Lo coloca pv_x() -- lo mas lejos posible del
-        // vertice concavo P[3], que es quien se come el material al vaciar la
-        // ventana, sin echarse encima del larguero del valle.
-        translate([pv_x(), pts_perfil()[3].y - pv_a()])
-            circle(d = d_M3_paso + kerf);
-        costilla_rip_p3();
+        perfil_lateral();
+        offset(delta = -cara_anillo) perfil_lateral();
     }
 }
 
-// EL SOLIDO PLEGADO, y ojo con la diferencia: NO es linear_extrude del 2D.
-// costilla_2d() es el DESARROLLO -- las alas salen tumbadas por fuera del
-// contorno --, asi que extruirlo tal cual da una pieza con aletas planas
-// asomando de la silueta del case. Se vio en el render del 2026-08-27 y parecia
-// un defecto del modelo; era el desarrollo hecho solido.
-//
-// Aqui las alas van DOBLADAS: el alma en su plano y cada ala levantada 90 sobre
-// su tramo, hacia DENTRO del case (spec 4.3 -- el ala interior se mete en el
-// hueco entre el Z-Rail y el costado). Los seis alivios convexos salen de las
-// mismas retracciones de costilla_ala(); P3 queda cerrado para soldadura.
-module costilla_alma() {
-    difference() {
-        union() {
-            difference() {
-                perfil_lateral();
-                offset(delta = -ala_costilla) perfil_lateral();
-            }
-            costilla_apoyo_bahia();
-        }
-        for (c = concat(centros_rail(), centros_rail_1u()))
-            translate(c) circle(d = d_M4_paso + kerf);
-        for (c = centros_miembro_punta()) translate(c) circle(d = d_M5_paso + kerf);
-        translate([pv_x(), pts_perfil()[3].y - pv_a()])
-            circle(d = d_M3_paso + kerf);
-    }
+// El DXF de la CARA: contorno de la pieza y ventana. Va al corte del blank.
+module costilla_2d() { anillo_2d(); }
+
+// El DXF del DORSO: lo que se fresa por detras. El contorno del rebaje
+// (profundidad t_anillo - rehundido, en el pliego) y los centros de las
+// roscas ciegas a diametro de broca (profundidad en el pliego). Otro fichero
+// porque un DXF 2D no sabe decir "a 11 mm" -- mismo caso que el cajeado
+// KONDOR de la trasera.
+module costilla_dorso_2d() {
+    offset(delta = -retiro_rebaje()) perfil_lateral();
+    for (c = centros_rosca_ciega())
+        translate(c[0]) circle(d = c[1]);
 }
 
-// La huella 2D de un ala YA DOBLADA: la banda de t_costilla de ancho pegada por
-// dentro al tramo i. Levantarla es extruirla en Z.
-module costilla_ala_huella(i) {
-    P = pts_perfil();
-    n = len(P);
-    a = P[i];
-    b = P[(i+1) % n];
-    d = b - a;
-    L = norm(d);
-    u = d / L;
-    nx = [-u.y, u.x];                       // normal exterior
-    r0 = costilla_alivio_vertice(i)         ? cost_sb() : 0;
-    r1 = costilla_alivio_vertice((i+1) % n) ? cost_sb() : 0;
-    p0 = a + u*r0;
-    p1 = b - u*r1;
-    polygon([p0, p1, p1 - nx*t_costilla, p0 - nx*t_costilla]);
-}
+// [centro, diametro de broca] de cada rosca ciega de la cara interior. Vacio
+// hasta que las placas de anclaje existan (plan, Tarea 3).
+function centros_rosca_ciega() = [];
 
+// El solido: cara vista en z=0, cara interior en z=t_anillo. El chaflan se
+// construye como laminas de offset() creciente -- seis de 0.25 -- porque un
+// chaflan exacto sobre un contorno concavo no sale de hull() ni barato de
+// minkowski(); para el render y para solapes() basta y es determinista.
 module costilla() {
-    P = pts_perfil();
-    linear_extrude(t_costilla) costilla_alma();
-    for (i = [0 : len(P)-1])
-        if (costilla_lleva_ala(i))
-            translate([0, 0, t_costilla])
-                // ala_doblez es la cota DESDE la cara exterior: el ala empieza
-                // tras el alma y acaba en z=ala_doblez. cost_vuelo() pertenece
-                // solo al desarrollo plano; usarlo aqui dejaba corto el render.
-                linear_extrude(ala_doblez - t_costilla)
-                    costilla_ala_huella(i);
+    n = 6;
+    difference() {
+        union() {
+            for (i = [0 : n-1])
+                let (f = chaflan_anillo * (1 - (i + 0.5)/n))
+                translate([0, 0, i*chaflan_anillo/n])
+                    linear_extrude(chaflan_anillo/n + 0.01)
+                        difference() {
+                            offset(delta = -f) perfil_lateral();
+                            offset(delta = -cara_anillo + f) perfil_lateral();
+                        }
+            translate([0, 0, chaflan_anillo])
+                linear_extrude(t_anillo - chaflan_anillo) anillo_2d();
+        }
+        // el rebaje, por detras
+        translate([0, 0, rehundido_acrilico])
+            linear_extrude(t_anillo)
+                offset(delta = -retiro_rebaje()) perfil_lateral();
+    }
 }
+
+// El plegado de la chapa de LOS TRES MIEMBROS. Se llamo cost_bd() hasta el
+// 2026-08-28 y la formula es la MISMA -- setback por dos menos el arco de la
+// fibra neutra --, con los mismos parametros: es el mismo material y el mismo
+// radio. Cambia el nombre y nada mas, porque la costilla dejo de plegarse y el
+// nombre viejo prometia una pieza que ya no se dobla.
+function miembro_bd() = 2*(radio_doblez_costilla + t_costilla)
+                        - PI/2*(radio_doblez_costilla + k_factor*t_costilla);
 
 // --- LOS TRES MIEMBROS: desarrollos de chapa de aluminio ----------------
 //
@@ -708,8 +584,8 @@ module costilla() {
 // Su DXF no es la seccion 20 x 20 ya montada: al tumbar las dos alas del canal
 // en U, el blank concatena ala + alma + ala y descuenta el BD de cada doblez.
 module miembro_bajo_2d() {
-    desarrollo = canal_fondo + canal_ancho + canal_fondo - 2*cost_bd();
-    y_alma = canal_fondo + canal_ancho/2 - cost_bd();
+    desarrollo = canal_fondo + canal_ancho + canal_fondo - 2*miembro_bd();
+    y_alma = canal_fondo + canal_ancho/2 - miembro_bd();
     difference() {
         square([ancho_util, desarrollo]);
         fila_agujeros(ancho_util, y_alma);
@@ -724,10 +600,10 @@ module miembro_bajo_2d() {
 // ademas un canto vivo. El desarrollo vuelve a tumbar las tres caras en un
 // plano y por eso supera la envolvente de la pieza plegada, con dos BD menos.
 module miembro_alto_2d() {
-    desarrollo = canal_fondo + canal_ancho + prof_sup - 2*cost_bd();
+    desarrollo = canal_fondo + canal_ancho + prof_sup - 2*miembro_bd();
     // El solido manda el orden: retorno corto inferior, alma, meseta superior.
-    y_alma = canal_fondo + canal_ancho/2 - cost_bd();
-    largo_meseta_plana = prof_sup - cost_bd();
+    y_alma = canal_fondo + canal_ancho/2 - miembro_bd();
+    largo_meseta_plana = prof_sup - miembro_bd();
     y_rejilla = desarrollo - largo_meseta_plana/2;
     n_hp = round(largo_riel/hp);
     difference() {
@@ -751,8 +627,8 @@ module bahia_2d() {
     // La cota delantera la manda el BARRIDO del riel inferior, no su esquina
     // quieta. El contrato Python ya usa esta misma resta (48.18 mm).
     suelo = bahia_x1() - bahia_x0();
-    desarrollo = suelo + 2*bahia_alto - 2*cost_bd();
-    y_suelo = bahia_alto + suelo/2 - cost_bd();
+    desarrollo = suelo + 2*bahia_alto - 2*miembro_bd();
+    y_suelo = bahia_alto + suelo/2 - miembro_bd();
     difference() {
         square([ancho_util, desarrollo]);
         fila_agujeros(ancho_util, y_suelo);
@@ -1569,6 +1445,10 @@ module chasis_abierto() {
 if (PART == "costado")             costado();
 else if (PART == "costado_2d")     costado_2d();
 else if (PART == "costilla_2d")    costilla_2d();
+// El dorso del anillo va en su propio fichero por lo mismo que el cajeado
+// KONDOR: un DXF 2D no sabe decir "a 11 mm de profundidad". Sin el, el anillo
+// vuelve del taller SIN REBAJE y el acrilico no entra.
+else if (PART == "costilla_dorso_2d") costilla_dorso_2d();
 else if (PART == "assembly")           assembly();
 else if (PART == "assembly_acrilico")  assembly_acrilico();
 else if (PART == "assembly_aluminio")  assembly_aluminio();
@@ -1599,23 +1479,27 @@ else assert(false, str("PART desconocido: ", PART));
 
 // costado_2d vive en el plano XY del perfil (X = fondo, Y = altura);
 // costado() lo extruye en +Z por t_cheek, o sea Z pasa a ser el ancho.
-// Desde la decision 1 de 2026-08-27-case-esqueleto-visible-design.md el aluminio
-// va POR FUERA y el acrilico por dentro, con la junta de EPDM entre el ala de
-// la costilla y la cara del acrilico. guarda_apilado() en clearance_budget.py
-// verifica este orden. Los seis Z-Rails y los tres miembros plegados cruzan
-// entre sus caras internas.
+//
+// EL ACRILICO VA DENTRO DE LA VENTANA desde el 2026-08-28, no apilado detras.
+// Su cara exterior queda rehundido_acrilico por detras de la cara del anillo
+// -- eso es lo que se ve desde fuera: metal, y el PMMA hundido 3 mm -- y su
+// cara interior a rehundido + t_cheek, o sea todavia dentro del rebaje, que es
+// mas hondo. Entre el labio y el PMMA va la junta de asiento; aqui no se
+// dibuja (1 mm de EPDM no cambia ninguna colision) y la mide guarda_rebaje().
+//
+// El apilado que esto sustituye era t_costilla + t_junta + t_cheek desde
+// fuera, con un casquillo cruzando las tres capas.
 module costados() {
-    translate([0, 0, t_costilla + t_junta]) costado();
-    translate([0, 0, ancho_total - t_costilla - t_junta - t_cheek]) costado();
+    translate([0, 0, rehundido_acrilico]) costado();
+    translate([0, 0, ancho_total - rehundido_acrilico - t_cheek]) costado();
 }
 
-// Las dos costillas forman las capas exteriores: sus almas ocupan
-// z=0..t_costilla y z=ancho_total-t_costilla..ancho_total. Las alas siguen
-// DOBLADAS hacia dentro -- ver costilla(), que no es el desarrollo extruido.
+// Los dos anillos son las capas exteriores: ocupan z=0..t_anillo y
+// z=ancho_total-t_anillo..ancho_total, y entre sus caras interiores cruza todo
+// lo demas. Ya no hay alas que doblar, pero el espejo se queda: el rebaje y el
+// chaflan NO son simetricos en Z -- la cara vista mira hacia fuera.
 module costillas() {
     costilla();
-    // la del otro lado va ESPEJADA: sus alas tienen que doblar hacia dentro
-    // igual que las de esta, o sea hacia -Z desde su propio plano.
     translate([0, 0, ancho_total])
         mirror([0, 0, 1]) costilla();
 }
@@ -1709,7 +1593,11 @@ module piel_trasera() {
 module tapa_valle() {
     P = pts_perfil();
     xv = x_valle();
-    translate([xv[0], P[3].y, ancho_total - t_cheek])
+    // La cara interior del anillo, no la del acrilico: desde el 2026-08-28
+    // el hueco entre costillas es ancho_util y arranca en t_anillo. Con
+    // t_cheek la banda quedaba 6 mm corrida hacia un lado y no coincidia
+    // con su caja gemela de _cajas_solidas(), que ya mide t_anillo..
+    translate([xv[0], P[3].y, ancho_total - t_anillo])
         rotate([0, 90, 0]) rotate([90, 0, 0])
             linear_extrude(t_valle) tapa_valle_2d();
 }
@@ -1727,7 +1615,9 @@ module planchas_acrilico() {
 // sobre la cara; el panel ya no tiene por que cubrirla entera.
 module panel_cara(A, B, s0, largo) {
     d = (B - A) / norm(B - A);
-    translate([A.x, A.y, t_cheek])
+    // arranca en la cara interior del anillo y cruza ancho_util: era
+    // t_cheek cuando la piel de acrilico era esa cara (hasta 2026-08-28)
+    translate([A.x, A.y, t_anillo])
         rotate([0, 0, atan2(d.y, d.x)])
             translate([s0, -t_panel, 0])
                 cube([largo, t_panel, ancho_util]);
@@ -1765,7 +1655,8 @@ module paneles() {
 // dos parametros, asi que no pueden separarse sin que se note en params.
 module remate_sup() {
     P = pts_perfil();
-    translate([P[4].x + inset_remate_frente, P[5].y - marco_sup, t_cheek])
+    // misma cara interior que el panel: t_anillo, no t_cheek
+    translate([P[4].x + inset_remate_frente, P[5].y - marco_sup, t_anillo])
         cube([prof_sup, marco_sup, ancho_util]);
 }
 
@@ -1905,22 +1796,7 @@ module lienzo_2d() {
 
 module bom() {
     au = ancho_util;
-    echo(str("BOM: COSTILLA x2 -- chapa de ALUMINIO de ", t_costilla,
-             " PLEGADA. El desarrollo lo saca y lo verifica el presupuesto:",
-             " bbox_desarrollo_costilla() contra el sobre del DXF."));
-    echo(str("     ES LA PIEZA PORTANTE del case desde el 2026-08-26. Banda de ",
-             ala_costilla, " mm siguiendo el contorno del costado, ventana"));
-    echo(str("     vaciada en el centro, y ala de ", ala_doblez,
-             " doblada a 90 grados en los 7 tramos: rigidez donde manda y"));
-    echo("     aluminio tapando el canto de PMMA en todo el perimetro.");
-    echo(str("     Seis vertices convexos llevan alivio de ", cost_sb(),
-             " mm. P3 es concavo: cierre a tope y soldadura lineal de ",
-             ala_doblez - t_costilla, " mm; una union por costilla."));
-    echo("     Va al taller de");
-    echo("     CHAPA PLEGADA, el mismo del chasis. Lleva TODOS los tornillos");
-    echo("     estructurales del case: los 6 M4 de riel, los M5 de transversal");
-    echo("     y el M3 de la pestana del valle.");
-    echo(str("     EL DXF ES EL DESARROLLO, no el contorno de la pieza doblada."));
+    echo(str("BOM: COSTILLA x2 -- anillo de PLETINA de ", t_anillo, " fresado. El detalle lo reescribe la Tarea 5."));
     echo(str("BOM: transversal 2020 x", len(centros_transversal()), " de ", au, " mm"));
     echo("     Fueron CUATRO hasta el 2026-08-27. Se fue `base delantera`, la");
     echo("     unica que flotaba en mitad del suelo; las tres que quedan estan");

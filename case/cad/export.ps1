@@ -26,14 +26,17 @@ Remove-Item (Join-Path $build "*.stl") -ErrorAction SilentlyContinue
 # -- el mismo caso del chasis, cuyo corte no dice de donde doblar. Sin este
 # fichero la trasera vuelve del taller SIN LA MARCA y nadie se entera hasta
 # desembalarla. Lo vigila guarda_kondor() en check_dxf.
-# costilla_2d SI SE EXPORTA desde el 2026-08-26 -- este parrafo describe por
-# que NO se exportaba, y se queda porque explica que es su DXF. Al pasar a chapa plegada
-# el 2026-08-26 su DXF dejo de ser el contorno de la pieza y tiene que ser el
-# DESARROLLO PLANO, con los cortes de alivio de las seis esquinas convexas --
-# el mismo caso del chasis, cuyo corte no dice de donde doblar. Exportar el
-# contorno mandaria a cortar una pieza que al plegarse no da la cota. Lo
-# declara SIN_DXF en check_dxf.py.
-$piezas = "costado_2d","costilla_2d","bandeja_base_2d","tapa_valle_2d",
+# LA COSTILLA VIAJA EN DOS FICHEROS desde el 2026-08-28, y hacen falta los dos.
+# Fue desarrollo plano mientras era chapa plegada (con los alivios de las seis
+# esquinas convexas, porque un corte no dice de donde doblar); al pasar a anillo
+# fresado su DXF vuelve a ser el CONTORNO de la pieza -- silueta y ventana --,
+# que es lo que se corta del blank.
+# El segundo, costilla_dorso_2d, es lo que se fresa POR DETRAS: el contorno del
+# rebaje donde asienta el acrilico y los centros de las roscas ciegas. Va aparte
+# porque un DXF 2D no sabe decir "a 11 mm de profundidad" -- el mismo caso que
+# kondor_cajeado_2d. Sin el, el anillo vuelve del taller SIN REBAJE, o sea con
+# el acrilico sin sitio, y no se ve hasta desembalarlo.
+$piezas = "costado_2d","costilla_2d","costilla_dorso_2d","bandeja_base_2d","tapa_valle_2d",
           "miembro_bajo_2d","miembro_alto_2d","bahia_2d",
           "piel_trasera_2d","kondor_cajeado_2d","lienzo_2d",
           "chasis_cuerpo_2d","chasis_tapa_2d","chasis_refuerzo_2d"

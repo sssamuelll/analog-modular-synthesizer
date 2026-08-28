@@ -172,34 +172,14 @@ d_M4_rosca         = 3.3;
 d_M5_rosca         = 4.2;
 // Clips de retencion del acrilico hacia dentro: pletina de 4 sobre la franja.
 t_clip             = 4;
-// Ancho de la banda: lo que queda de la costilla tras vaciarle la ventana, y
-// lo que agarra la cara interior del costado. YA NO ES SUPUESTO. Estuvo en 20
-// -- lo que medía el 2020 que este marco jubila -- y el 2026-08-27, al mudarle
-// los cuatro M4 del Z-Rail, se vio que 20 no daba: los centros de riel caen a
-// ~16 mm del contorno exterior, o sea a 4 de la ventana, y dejaban 1.6 mm de
-// aluminio entre el agujero y el canto. La cota sale de ahi:
-//     16.13 (el centro mas alejado del contorno) + 1.5*4.5 (BORDE_MIN_D x D)
-//   = 22.88  ->  24, que deja 1.1 mm de margen.
-// Solo cuesta ventana y 37 g por costilla. Con la fila 1U aparece un centro mas
-// adentro: a 24 queda a 4.26 mm del canto interior y necesita 6.75 (1.5D del
-// M4), asi que el minimo nuevo es 26.49. Se redondea a 27 y quedan 0.51 mm de
-// margen. Lo vigila taladros_costilla() contra el DXF, no contra esta cuenta.
-ala_costilla    = 27;
-// EL ALA DEL DOBLEZ. No es una pieza: es el propio material de la costilla
-// doblado 90 grados a lo largo del canto. Se llamo tira_canto mientras iba a
-// ser una pletina atornillada, y ese nombre habria mentido sobre como se
-// fabrica.
-//
-// NO ES UN EMBELLECEDOR, y quien lo borre por estetica tumba la estructura.
-// Su primer trabajo sigue siendo convertir la chapa en viga: sin ella la
-// costilla es una pletina plana y NO PASA a ningun espesor, ni a 6 mm; a 3
-// ademas fluia a 257 MPa. Lo vigila guarda_costilla().
-//
-// FUE 12 mientras solo mandaba esa rigidez. SUBE A 16 el 2026-08-28 porque el
-// aluminio tiene que ser el borde visible del acrilico en los siete tramos. El
-// apilado desde fuera es t_costilla + t_junta + t_cheek = 13.5 mm: 16 pasa de
-// largo y no deja asomar el canto de PMMA. Lo vigila guarda_canto_visto().
-ala_doblez      = 16;
+// LO QUE ESTE BLOQUE SUSTITUYE, y va escrito porque cada cota tenia su cuenta:
+// fueron ala_costilla = 27 (la banda de chapa, derivada del M4 de la fila 1U a
+// 1.5 D del canto de la ventana), ala_doblez = 16 (el ala que tapaba el canto
+// del PMMA sobre un apilado de 13.5), cierre_p3_gap = 0.5 (la luz de raiz del
+// rip soldado de P3), L_casquillo = 9.5 y t_junta = 4 (el casquillo que
+// cruzaba el acrilico y la junta que se comia su juego), todas hasta el
+// 2026-08-28. Se las llevo la pletina: no hay ala que doblar, ni esquina que
+// soldar, ni acrilico que atravesar.
 // Radio interior del plegado. Conserva el nombre pero desde el 2026-08-28 es
 // el de LOS TRES MIEMBROS y no el de la costilla: la costilla es pletina
 // fresada y ya no se pliega. Misma regla que el chasis de acero -- r = t,
@@ -208,12 +188,6 @@ ala_doblez      = 16;
 // de 1.5. El radio 3 queda en 2t para no agrietar el T6. SUPUESTO, lo confirma
 // el taller de plegado igual que los tres del chasis.
 radio_doblez_costilla = 3;
-// P3 es el unico vertice concavo. Sus dos alas se separan en el desarrollo con
-// un RIP recto sobre la bisectriz, se cierran a tope tras plegar y se sueldan.
-// 0.5 es la luz de raiz: 1/3 del espesor, suficiente para que las dos mitades
-// no se arrastren al doblar sin convertir el encuentro en un V visible. Es
-// SUPUESTO DE SOLDADURA y el taller lo confirma antes de cortar.
-cierre_p3_gap = 0.5;
 // paso_tira MURIO el 2026-08-26, el mismo dia que nacio. Era el paso de los
 // M3 que cosian la tira a la costilla, calculado contra el deslizamiento de la
 // junta (34 mm) y no contra la resistencia del tornillo (109). Todo ese
@@ -697,16 +671,6 @@ chaflan         = 0.5;
 // El cuerpo de acrilico queda con UN solo espesor, 8.
 t_valle    = 3;    // ALUMINIO. Ver guarda_valle(); el material va en el PLIEGO
 t_cheek    = 8;    // costados portantes
-// Con el marco por fuera, el M4 tiene que cruzar el acrilico antes de morder el
-// Z-Rail, y al apretarlo lo dejaria pinzado entre dos caras de aluminio. El
-// PMMA fluye bajo carga sostenida, asi que el casquillo se come el apriete. Se
-// dimensiona contra el acrilico MAS GRUESO del lote: 8 + 1.2 de tolerancia =
-// 9.2, mas 0.3 de aire.
-L_casquillo = 9.5;
-// La junta de EPDM entre el ala de la costilla y la cara del acrilico lo empuja
-// contra las piezas interiores y se come el juego que deja el acrilico mas
-// delgado: 9.5 - 6.8 = 2.7 mm en el peor caso.
-t_junta = 4;
 // SUELO del case. La bandeja de base dejo de ser una plancha del cuerpo el
 // 2026-08-17: ya no se apoya ENCIMA de los dos largueros -- 20 + 5 = 25 mm de
 // sandwich justo debajo del riel del panel -- sino que pasa a ser el propio
@@ -749,7 +713,7 @@ t_junta = 4;
 //     MPa a favor de veta)
 //
 // MACIZA, con AGUJEROS ALARGADOS en Z. Es la unica pieza de madera del case que
-// CARGA, y una tabla maciza de 528 mm a contraveta se mueve milimetros con la
+// CARGA, y una tabla maciza de 540.62 mm a contraveta se mueve milimetros con la
 // estacion. El marco de aluminio no se mueve: si la fijacion es rigida, o se
 // raja la tabla o se sueltan los tornillos. Lo vigila guarda_zocalo().
 t_base     = 18;
