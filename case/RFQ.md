@@ -4,16 +4,18 @@ Documento para pedir presupuesto. Va **antes** que el pliego
 ([`PLIEGO.md`](PLIEGO.md)): el pliego dice qué hay que hacer, esto sirve
 para saber **quién puede hacerlo**.
 
-> **rev. 21 (2026-08-27).** Son **tres** pedidos, no uno. El case dejó de ser
-> «un cuerpo de acrílico» cuando la estructura pasó a aluminio: el acrílico
-> bajó a piel y **ya no lleva un solo taladro**. Cada bloque de preguntas es
-> eliminatorio para SU taller y no dice nada de los otros.
+> **rev. 22 (2026-08-28).** Son **cuatro** pedidos, no tres. La costilla deja
+> de ser chapa plegada y pasa a **anillo de pletina mecanizada** — taller
+> nuevo, §D, que no es el de chapa. El acrílico sigue **sin un solo
+> taladro**. Cada bloque de preguntas es eliminatorio para SU taller y no
+> dice nada de los otros.
 >
 > | § | taller | qué se le pide |
 > |---|---|---|
 > | A | casa de acrílico | costados ×2, trasera, tapa de remate |
-> | B | chapa de aluminio plegada | costillas ×2, tapa del valle, chasis ×3 |
+> | B | chapa de aluminio (y acero) | miembros ×3 (con bridas), placas ×6, clips ×4, escuadras ×2, tapa del valle, chasis ×3 |
 > | C | carpintería | la tabla (suelo + zócalo) |
+> | D | mecanizado de aluminio | el anillo ×2 — NUEVO desde el 2026-08-28 |
 
 **Lo que se busca no es «un CNC».** Es una **casa de acrílico** — de las que
 hacen vitrinas, expositores y museografía. Un CNC general fresa la forma y
@@ -53,7 +55,7 @@ extruido trae tensión interna de fábrica y craquela solo.
 
 **Lo que ESTE taller ya no hace, desde el 2026-08-27:** taladrar. El costado
 tenía ocho agujeros —cuatro M4 de riel y cuatro M5 de larguero— y los ocho se
-fueron a la costilla de aluminio. La pieza es un contorno y nada más. Eso quita
+fueron al anillo de aluminio. La pieza es un contorno y nada más. Eso quita
 de un plumazo el sitio por donde el PMMA craquela primero, pero **no quita el
 recocido**: la tensión también la deja el fresado del canto.
 
@@ -117,39 +119,54 @@ Se rellena al recibir. Va aquí y no en un correo.
 
 ---
 
-## B. Taller de chapa de aluminio — preguntas eliminatorias
+## B. Taller de chapa de aluminio (y acero) — preguntas eliminatorias
 
-Es el taller que ya hace las tres piezas del chasis de acero. **No es un taller
-nuevo**: se le añaden tres piezas de aluminio. Y son las que sostienen el case.
+Es el taller que ya hace las tres piezas del chasis de acero. **No es un
+taller nuevo**, pero desde el 2026-08-28 **ya no hace la costilla** — esa
+pieza se mecaniza en un taller aparte (§D). Lo que sí hace: los tres
+miembros del esqueleto (trasero bajo, trasero alto, bahía — cada uno con
+brida de extremo doblada en cada punta), las dos escuadras de la trasera,
+las seis placas de anclaje de riel, los cuatro clips de retención y la tapa
+del valle. Son las piezas que llevan los rieles y sostienen el marco por
+dentro del anillo.
 
 1. **¿Pliegan aluminio 6082-T6 de 1.5 mm a 90°, y con qué radio interior
-   mínimo?** El modelo asume **r = 3** (2 × t) y de ahí cuelga todo el desarrollo. Si su
-   radio mínimo es otro, **decirlo antes de cortar**: el recorte cambia.
+   mínimo?** El modelo asume **r = 3** (2 × t) y de ahí cuelga el desarrollo
+   de los miembros, la escuadra y sus bridas. Si su radio mínimo es otro,
+   **decirlo antes de cortar**: el recorte cambia.
 2. **¿Qué factor K usan?** El modelo asume **k = 0.42**. Con r = 3 y t = 1.5
    eso da BA = 5.70 y BD = 3.30 mm por doblez. Si trabajan con otro, los DXF se
    regeneran — pero hay que saberlo, no adivinarlo.
-3. **¿Qué aleación y temple suministran, y con qué `Rp0.2`?** No es eliminatoria: con 130 MPa el diseño pasa. Lo que sí hace falta es que la digan. La nota vieja decía que el
-   5754 H22 de 130 MPa pasa igual con la chapa de 1.5 mm. Una aleación distinta
-   **hay que aprobarla antes de cortar**, regenerando las puertas si cambia.
+3. **¿Qué aleación y temple suministran, y con qué `Rp0.2`?** No es
+   eliminatoria: con 130 MPa el diseño pasa (miembros, escuadra y también el
+   anillo de §D, cada pieza con su propia puerta). Lo que sí hace falta es
+   que la digan. Una aleación distinta **hay que aprobarla antes de
+   cortar**, regenerando las puertas si cambia.
+4. **¿Cortan y roscan pletina de 4 y 6 mm sin plegar** (clips y placas de
+   anclaje)? No llevan doblez, solo contorno, cajeado y rosca ciega o de
+   paso.
 
-**Los DXF que reciben son DESARROLLOS PLANOS, no contornos.** `costilla_2d` y
+**Los DXF que reciben son DESARROLLOS PLANOS, no contornos.**
+`miembro_bajo_2d`, `miembro_alto_2d`, `bahia_2d`, `escuadra_trasera_2d` y
 `tapa_valle_2d` traen el recorte; la pieza doblada mide menos. Cortar el
 contorno de la pieza montada da un fichero válido e inservible — es el mismo
-error que el modelo vigila con un sobre por pieza.
+error que el modelo vigila con un sobre por pieza. **`costilla_2d` YA NO ES
+DE ESTE TALLER**: desde el 2026-08-28 es un contorno real (sin plegar, sin
+soldar) que se manda a mecanizado, §D.
 
-**La costilla lleva alivio de 4.5 mm en sus seis vértices convexos.** P3 es el
-único cóncavo y no acepta ese V: el DXF trae un rip bisector de 13.75 × 0.50
-mm. Cerrar las dos alas a tope y hacer una
-**soldadura lineal de 14.5 mm**, una por costilla. Sin ese cierre queda visible
-el canto del PMMA; no sustituirlo por el alivio convexo del resto.
+**Las placas de anclaje y los clips no tienen DXF propio todavía** (ver
+`PLIEGO.md` §6, «Lo que NO va a este taller»): mientras no exista, este
+taller trabaja de las cotas de `params.scad` — confirmarlas antes de cortar.
 
 ### Preguntas de cota (aluminio)
 
-4. ¿Qué **tolerancia de posición** garantizan en taladros de chapa? La costilla
-   lleva los ocho tornillos estructurales del case y el más justo deja **1.54
-   diámetros** de material hasta el canto de la ventana.
-5. ¿**Desbarban** el canto? No lleva ni recocido, ni diamantado, ni chaflán:
-   esas tres cosas son del PMMA.
+5. ¿Qué **tolerancia de posición** garantizan en taladros de chapa? La rosca
+   más justa de este taller hoy es el cajeado de la placa del riel de
+   `cara_inf`, a **6.88 mm** del canto, y el M4 de la brida de miembro más
+   justo, a **6.75 mm** — el mínimo exigido (1.5 diámetros del M4 de paso),
+   sin margen de sobra.
+6. ¿**Desbarban** el canto? Ninguna de estas piezas lleva recocido, ni
+   diamantado, ni chaflán: esas tres cosas son del PMMA.
 
 ---
 
@@ -179,3 +196,47 @@ todos alargados se arrastra hacia un extremo.** Si el taller propone
 Un retazo de la especie propuesta, 18 mm, con un canto acabado como se
 entregaría. Se compara contra el naranja del cuerpo — **la tabla y el acrílico
 se ven juntos y a la vez**, y eso no lo contesta ningún render.
+
+---
+
+## D. Taller de mecanizado — pregunta eliminatoria
+
+**Taller nuevo desde el 2026-08-28.** No es el de chapa (§B): la costilla deja
+de plegarse y pasa a ser un **anillo fresado de una pletina de aluminio
+maciza de 14 mm**, vaciada por el centro, una pieza por lado.
+
+1. **¿Garantizan la planitud de la pieza después de vaciar el centro de una
+   pletina de 14 mm?** Vaciar el centro de una placa gruesa libera tensión
+   interna del material y puede alabearla — es el riesgo técnico real de
+   esta pieza (la sección sobra: I = 3714 mm⁴ contra 1673 de la vieja L
+   plegada, así que la resistencia no es lo que preocupa). Si la respuesta
+   es «no» o «no lo garantizamos», no es el taller.
+
+### Preguntas de cota (mecanizado)
+
+2. ¿Trabajan a **fresado CNC** (3 ejes o mejor) sobre pletina de 14 mm de
+   aluminio?
+3. ¿Pueden dar **roscas ciegas M4/M5** a **10 mm de profundidad útil**, en
+   una franja de 14 mm de aluminio, con la tolerancia de posición que exige
+   `guarda_anclajes()` (roscas a 1.5 diámetros de broca de cada canto: la
+   silueta exterior y la pared del rebaje)?
+4. ¿Hacen **chaflán mecanizado de 1.5 × 45°** en dos aristas de la cara
+   vista, por pieza?
+5. ¿Anodizan en **satinado**, con **enmascarado de un punto** antes de
+   anodizar (para el bonding de tierra)? Si no lo hacen ellos, ¿trabajan con
+   un anodizador que sí?
+
+### Muestra que se pide con el presupuesto
+
+Un **cupón de 100 mm del perfil del anillo** — mismo espesor, mismo rebaje,
+mismo chaflán, mismo acabado — **antes de cortar los dos anillos
+completos**. Las cotas de la cara vista (chaflán, rebaje, rehundido) salieron
+de escalar una foto de referencia y están marcadas ESTIMADO en la spec de
+diseño; el cupón es lo que las cierra contra la pieza real, no contra el
+render.
+
+### Registro
+
+| fecha | proveedor | planitud confirmada | anodizado | cupón aprobado |
+|---|---|---|---|---|
+| (pendiente) | | | | |

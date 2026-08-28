@@ -2383,12 +2383,44 @@ module lienzo_2d() {
 
 module bom() {
     au = ancho_util;
-    echo(str("BOM: COSTILLA x2 -- anillo de PLETINA de ", t_anillo, " fresado. El detalle lo reescribe la Tarea 5."));
-    echo(str("BOM: transversal 2020 x", len(centros_transversal()), " de ", au, " mm"));
-    echo("     Fueron CUATRO hasta el 2026-08-27. Se fue `base delantera`, la");
-    echo("     unica que flotaba en mitad del suelo; las tres que quedan estan");
-    echo("     arrinconadas contra dos caras cada una o sostienen una plancha");
-    echo("     que nada mas alcanza (el valle).");
+    echo(str("BOM: COSTILLA x2 -- anillo de PLETINA de aluminio FRESADA, una",
+             " pieza por lado (sin soldar, sin doblar). Espesor ", t_anillo,
+             ", cara vista ", cara_anillo, ", rebaje de ", rebaje_anillo,
+             " x ", t_anillo - rehundido_acrilico, " por detras donde",
+             " asienta el costado, chaflan ", chaflan_anillo,
+             " x 45 grados en las dos aristas de la cara vista."));
+    echo(str("     NINGUN TORNILLO ATRAVIESA LA CARA VISTA: ",
+             len(centros_rosca_ciega()), " roscas ciegas M4 en la cara",
+             " interior (taladros_anillo, broca ", d_M4_rosca,
+             ") + 3 M5 por anillo en el CANTO inferior para la tabla (ver",
+             " esa linea, no salen en el mismo DXF). CERO casquillos, CERO",
+             " junta de 4 mm."));
+    echo(str("     El costado asienta en el rebaje sobre una junta de EPDM",
+             " de ", t_junta_asiento,
+             " mm (ver linea propia), nunca aluminio contra acrilico.",
+             " Hasta el 2026-08-28 era chapa plegada con casquillo de",
+             " aluminio y junta de EPDM de 4 mm entre costilla y acrilico;",
+             " ese dia Samuel vio el render y lo rechazo: 'parece que el",
+             " acrilico estuviera envuelto en un sandwich de aluminio'."));
+    echo("     Anodizado satinado tras mecanizar, con el punto de bonding");
+    echo("     de PE ENMASCARADO antes de anodizar -- uno por anillo, en la");
+    echo("     cara interior.");
+    echo(str("     Aleacion recomendada, no obligatoria: 5754 H22 pasa a 130",
+             " MPa (guarda_anillo, I=3714 mm4, 214 mm2); 6082-T6 o 5083 se",
+             " piden por planitud tras el vaciado, no por calculo. ~0.58 kg",
+             " por costilla."));
+    echo(str("BOM: MIEMBRO de chapa x", len(centros_transversal()),
+             " -- trasero bajo, trasero alto y bahia: canal de aluminio",
+             " 6082-T6 de ", t_costilla, " mm, ", au,
+             " mm de largo, con BRIDA de extremo doblada en cada punta y",
+             " roscada al anillo con M4 ciegos."));
+    echo("     Fueron perfil 2020 comprado hasta el 2026-08-27; el eco");
+    echo("     seguia llamandolos asi de puro heredado, corregido aqui. Son");
+    echo("     tres: trasero bajo, trasero alto y bahia (el valle). Fueron");
+    echo("     CUATRO hasta esa fecha -- se fue `base delantera`, la unica");
+    echo("     que flotaba en mitad del suelo. Los tres que quedan van");
+    echo("     arrinconados contra dos caras cada uno, o sostienen una");
+    echo("     plancha que nada mas alcanza (el valle).");
     echo(str("BOM: Z-Rail de Tiptop x", len(centros_rail()) + len(centros_rail_1u()),
              ", largo ", largo_riel,
              " (104 HP) -- seccion ", rail_er_fondo, " x ", rail_er_alto,
@@ -2402,8 +2434,9 @@ module bom() {
     echo("     2026-08-26 y la chapa de la costilla hasta el 2026-08-28; el");
     echo("     anillo de pletina no lleva un solo agujero pasante, asi que el");
     echo("     riel se atornilla a una PLACA DE ANCLAJE interior que va al");
-    echo("     anillo con roscas ciegas. Largo: lo fija la placa de anclaje,");
-    echo("     Tarea 3. El detalle entero lo reescribe la Tarea 5.");
+    echo("     anillo con roscas ciegas M4 (ver esa linea). Largo: no lo");
+    echo("     fija el modelo -- lo fija el pliego, contando el cajeado de");
+    echo("     la placa y la rosca util del anillo.");
     echo(str("BOM: PLACA DE ANCLAJE x", 2*len(placas()), " -- pletina de ",
              t_placa, ", una por TRAMO y por costado. Es el MARCO DE LA FILA:",
              " corre el tramo entero y su canto de ", t_placa,
@@ -2446,7 +2479,21 @@ module bom() {
              " dos filas que esa plancha ya lleva a los miembros."));
     echo("     NO HAY ROSCA CIEGA NUEVA EN EL ANILLO. La escuadra ancla en la");
     echo("     trasera a proposito: en la franja de 14 no cabe -- es la misma");
-    echo("     cuenta que deja sin clip a ese tramo (ver TRAMOS_CLIP).");
+    echo("     cuenta que deja sin clip a ese tramo (ver TRAMOS_CLIP,");
+    echo("     linea de abajo).");
+    echo(str("BOM: CLIP DE RETENCION x", 2*len(clips()), " -- pletina de ",
+             t_clip, " mm x ", clip_largo, " mm, un M4 ciego al anillo.",
+             " Solo en el tramo del SUELO (2 por costado): TRAMOS_CLIP es",
+             " el unico tramo sin placa de anclaje. Muerde ", clip_fondo,
+             " mm de acrilico desde el canto de la ventana -- retiene el",
+             " costado hacia DENTRO junto con las 3 placas y la escuadra",
+             " de la trasera, por costado."));
+    echo(str("BOM: JUNTA DE ASIENTO EPDM x2 (una por anillo), ",
+             t_junta_asiento, " mm -- perfil continuo en el rebaje, entre",
+             " el labio y el costado. Nunca aluminio contra acrilico. No",
+             " es la junta de 4 mm del apilado viejo (muerta el",
+             " 2026-08-28): esta va EN EL PLANO del rebaje, no atravesada",
+             " por ningun tornillo."));
     echo("BOM: tornillo M4 x4 -- las dos lenguetas de la BAHIA a la placa de");
     echo("     la fila 1U, roscados EN LA PLACA (6 mm de pletina). La bahia no");
     echo("     ancla al anillo: en su boca la franja la ocupa esa placa y los");
@@ -2482,7 +2529,7 @@ module bom() {
     echo(str("     la pared del rebaje. En la placa hay ", t_placa,
              " mm de pletina y se rosca pasante, igual que las lenguetas de la",
              " bahia (ruling R3)."));
-    echo("     Estos entran por la RANURA del 2020, no por su punta. Es donde");
+    echo("     Estos entran por la RANURA del miembro, no por su punta. Es donde");
     echo("     la tuerca de insercion lateral se paga sola: con las de deslizar");
     echo("     hay que dejarlas dentro ANTES de cerrar el esqueleto.");
     echo(str("BOM: la TRASERA es UNA plancha empotrada de t=", t_piel, ", no dos:"));
@@ -2558,15 +2605,19 @@ module bom() {
     echo("     la plancha sobre la boca de la bahia y sus diez M3 ya no existen.");
     echo("     No es acrilico desde el 2026-08-25; lleva una pestana");
     echo(str("     de ", pestana_valle, " doblada a 90 grados en cada punta,",
-             " atornillada a la costilla con un M3."));
+             " atornillada a la PLACA DEL VALLE con un M3 (no al anillo",
+             " -- ruling R3, ver la linea del M3 x17)."));
     echo("     Las pestanas impiden que la banda quede sujeta solo por una linea");
     echo("     de tornillos. No forman un diafragma: guarda_valle() publica por");
     echo("     separado la carga hacia abajo y el caso critico de levantamiento.");
     echo("     Va al taller de CHAPA con las tres piezas del chasis, no al de");
     echo("     acrilico. Sin recocido, sin diamantado, sin chaflan de pliego:");
     echo("     esas tres cosas son del PMMA. Canto desbarbado y basta.");
-    echo("     Aleacion obligatoria: 6082-T6. La puerta va contra Rp0.2 = 250");
-    echo("     MPa; 5754 H22 ya no pasa con los miembros de 1.5 mm.");
+    echo("     Aleacion recomendada, no obligatoria: 6082-T6. guarda_valle()");
+    echo("     calcula con Rp0.2 = 130 MPa (RP02_ALUMINIO) y a 48.8 MPa el");
+    echo("     5754 H22 pasa con margen -- fluye a 533 N. El eco decia");
+    echo("     'obligatoria' y Rp0.2 = 250: no es lo que la puerta exige");
+    echo("     hoy, corregido aqui.");
     echo(str("BOM: TABLA de madera MACIZA t=", t_base, " x1, ",
              ancho_total + 2*vuelo_zocalo, " x ", fondo() + 2*vuelo_zocalo,
              " mm -- el suelo interior Y el zocalo, una sola pieza."));
@@ -2593,6 +2644,7 @@ module bom() {
     echo("     los 5 mm existian para UNA pieza, y esa pieza es ahora de");
     echo("     aluminio. Media plancha de 5 que ya no hay que comprar.");
     echo("     Y desde el 2026-08-27 el suelo tampoco es acrilico: es la tabla.");
-    echo("     LOS COSTADOS YA NO LLEVAN UN SOLO TALADRO. Son PIEL: quedan");
-    echo("     capturados entre las dos alas de la costilla, sin tornillo.");
+    echo("     LOS COSTADOS YA NO LLEVAN UN SOLO TALADRO. Son PIEL: asientan");
+    echo("     en el rebaje del anillo, sin tornillo -- el labio los sostiene");
+    echo("     hacia fuera y las placas/clips/escuadra hacia dentro.");
 }

@@ -228,7 +228,31 @@ lenguaje visual).
 > **Aviso sobre el render de intención:** sigue mandando sobre lenguaje
 > visual y proporciones *relativas*, pero **sus cotas están superadas**. Se
 > dibujó para paneles de 190 mm y un case de 500 × 380 × 350; el case real
-> mide **544.32 × 256.18 × 308.94**.
+> mide **544.32 × 256.18 × 308.94** — superado otra vez en la rev. 22, ver
+> abajo.
+>
+> **rev. 22** (2026-08-28): **la costilla deja de ser chapa plegada y pasa a
+> ser un anillo de pletina de aluminio mecanizada** — 14 mm de espesor, cara
+> vista de 20, rebaje de 6 × 11 por detrás donde asienta el costado
+> COPLANAR sobre una junta de EPDM de asiento de 1 mm, chaflán 1.5 × 45° en
+> las dos aristas de la cara vista. Una pieza por lado, sin soldar: mueren
+> el alivio convexo de 4.5 mm, el rip de P3 y la soldadura lineal de
+> 14.5 mm de la rev. 21. Samuel rechazó el render de la chapa plegada por
+> leerse «como un sándwich de aluminio envolviendo el acrílico».
+> **Nada atraviesa la cara vista**: 16 roscas ciegas M4 por anillo en la
+> cara interior (`taladros_anillo`) más 3 M5 por anillo en el canto
+> inferior para la tabla, así que mueren los tornillos que cruzaban la
+> costilla, el casquillo de aluminio (`L_casquillo`) y la junta de 4 mm del
+> apilado de la rev. 21. El riel ancla ahora a una **placa** (×6, pletina
+> de 6, una por tramo y por costado) que aloja la cabeza del M4 del riel;
+> el ancho crece a **568.62 mm** (era 544.32) porque la placa y el anillo
+> son más gruesos que la chapa que sustituyen. El canto trasero libre del
+> costado —227 mm sin apoyo— gana una **escuadra** atornillada a la
+> TRASERA (×2, nunca al anillo) y **clips** de retención (×4, dos por
+> costado, solo en el tramo del suelo). Vano libre del costado: de 119.0
+> (chapa) a 95.5 (pletina sin escuadra) a **65.0 mm** con la escuadra;
+> flecha de 0.38 a 0.24 a **0.11 mm**. Diseño completo en
+> [`2026-08-28-costilla-pletina-design.md`](2026-08-28-costilla-pletina-design.md).
 
 ## 1. Objetivo
 
@@ -339,55 +363,90 @@ comprobación va antes del paso destructivo).
 
 ## 5. Estructura
 
-**REESCRITA EN LA REV. 21 (2026-08-27).** Hasta entonces esta sección decía que
-los costados de acrílico eran *«las piezas portantes»*. Ya no lo son. El diseño
-completo del cambio está en
-[`2026-08-26-case-esqueleto-aluminio-design.md`](2026-08-26-case-esqueleto-aluminio-design.md);
+**REESCRITA EN LA REV. 21 (2026-08-27) Y OTRA VEZ EN LA REV. 22 (2026-08-28).**
+Hasta la rev. 20 esta sección decía que los costados de acrílico eran *«las
+piezas portantes»*. Ya no lo son desde la rev. 21, y desde la rev. 22 la
+pieza portante tampoco es la chapa plegada que la rev. 21 puso en su lugar:
+es un anillo mecanizado. El diseño completo del cambio está en
+[`2026-08-28-costilla-pletina-design.md`](2026-08-28-costilla-pletina-design.md);
 aquí va lo que sustituye a lo anterior.
 
-- **Costillas (×2): chapa de aluminio de 3 mm PLEGADA.** Son **las piezas
-  portantes**. Cada una es una banda de 24 mm que sigue el contorno del costado,
-  con la ventana vaciada en el centro y un ala de 12 mm doblada a 90° en 4 de
-  sus 7 tramos — los otros tres pasan como pletina plana y no la necesitan, y
-  eso se **deriva** del techo de flecha, no se elige. Llevan **todos los
-  tornillos estructurales del case**. Su DXF es el **desarrollo plano**.
-- **Costados (×2): acrílico naranja de 8 mm.** Son **piel**: no sostienen nada
-  y **no llevan un solo taladro** desde el 2026-08-27. Quedan capturados entre
-  las dos alas de la costilla — un ala agarra la cara interior y la otra le tapa
-  el canto. Su silueta escalonada sigue siendo la del aparato.
-- **Tabla de madera maciza de 18 mm**: el **suelo interior y el zócalo**, una
-  sola pieza de 570.62 × 328.94 bajo el marco. Las dos costillas se le apoyan
-  encima y las cuatro paticas van atornilladas debajo, casi en la misma
-  vertical. **Su fijación va con agujero alargado** — un redondo por fila como
-  punto fijo y el resto en ranura —, porque la madera se mueve a contraveta y el
-  aluminio no. Sustituye a la bandeja de base de acrílico.
-- **3 transversales 2020** que atan las dos costillas: `base trasera`, `valle` y
-  `remate trasero`. Fueron 8. La cuarta, `base delantera`, se fue el 2026-08-27
-  por ser la única que flotaba en mitad del suelo; las tres que quedan están
-  arrinconadas contra dos caras cada una, o sostienen una plancha que nada más
-  alcanza. El reparto exacto lo fija `_centros_transversal()` en el modelo.
-- **Las placas anclan solo a transversales**, nunca a los 4 raíles de panel:
-  esos van girados al ángulo de su cara, y un tornillo contra una cara inclinada
-  entra descentrado y apoya la arandela de canto sobre acrílico frágil.
-  Verificado por `alineacion()` en el budget.
-- **Trasera: UNA plancha de acrílico de 8 mm**, EMPOTRADA a ras del canto y
-  atornillada a las dos transversales traseras — desmontable, lleva la
-  ventilación (§7). Fueron dos pieles de 5 flotando sobre standoffs con junta de
-  sombra hasta el 2026-08-21; flotar y sellar son incompatibles.
-- **Tapa del valle: chapa de aluminio de 3 mm plegada.** Apoya en su transversal
-  y se atornilla además a las dos costillas con una pestaña doblada por punta:
-  deja de ser una plancha sobre una bisagra y pasa a ser **diafragma** a media
-  altura.
+- **Costillas (×2): anillo de PLETINA de aluminio FRESADA, 14 mm.** Son
+  **las piezas portantes**, una pieza por lado, sin soldadura. Cara vista
+  de 20 mm, ventana vaciada en el centro, rebaje de 6 × 11 mm por detrás
+  donde asienta el costado, chaflán 1.5 × 45° en las dos aristas de la
+  cara vista. **Ningún tornillo atraviesa la cara vista**: 16 roscas
+  ciegas M4 por anillo en la cara interior (`taladros_anillo`), más 3 M5
+  por anillo en el canto inferior para la tabla. Su DXF (`costilla_2d`) es
+  ahora un **contorno real**, no un desarrollo — al revés que en la
+  rev. 21, porque la pieza ya no se dobla.
+- **Costados (×2): acrílico naranja de 8 mm.** Siguen siendo **piel**: no
+  sostienen nada y **no llevan un solo taladro** desde el 2026-08-27.
+  Desde la rev. 22 entran por detrás y asientan **coplanares** en el
+  rebaje del anillo, sobre una junta de EPDM de asiento de 1 mm — ya no
+  van «capturados entre dos alas» (eso era la rev. 21): el labio del
+  anillo los sostiene hacia fuera por todo el perímetro, y hacia dentro
+  los retienen las placas de anclaje, los clips y la escuadra de la
+  trasera. Su silueta escalonada sigue siendo la del aparato.
+- **Placas de anclaje del riel (×6): pletina de aluminio de 6 mm**, una
+  por tramo (cara inferior, cara superior, valle) y por costado. Alojan
+  la cabeza del M4 de cada Z-Rail en un cajeado y se roscan al anillo con
+  roscas ciegas M4 — pieza nueva de la rev. 22, porque el riel ya no
+  puede atornillarse directo a una cara sin canto que atravesar. Orden de
+  montaje obligado: primero el riel a la placa, después la placa al
+  anillo desde dentro.
+- **Clips de retención (×4): pletina de aluminio de 4 mm**, dos por
+  costado, solo en el tramo del suelo (el único de los cuatro tramos sin
+  placa de anclaje libre para atornillar). Muerden 24 mm de acrílico
+  desde el canto de la ventana. Pieza nueva de la rev. 22.
+- **Tabla de madera maciza de 18 mm**: el **suelo interior y el zócalo**,
+  una sola pieza de **588.62 × 327.41** (creció desde 570.62 × 328.94
+  porque el anillo es más grueso que la chapa que sustituye) bajo el
+  marco. Los dos anillos se le apoyan encima y las cuatro paticas van
+  atornilladas debajo. **Su fijación va con agujero alargado** — un
+  redondo por fila como punto fijo y el resto en ranura —, ahora a
+  **rosca ciega en el canto inferior de cada anillo** en vez de a un
+  larguero, porque la madera se mueve a contraveta y el aluminio no.
+- **3 miembros del esqueleto** que atan los dos anillos: trasero bajo,
+  trasero alto y bahía. Dejaron de ser perfil 2020 comprado el
+  2026-08-27 y pasaron a ser canal de chapa de aluminio de 1.5 mm propio;
+  desde la rev. 22 cada punta lleva una **brida** doblada del mismo
+  blank, roscada al anillo con M4 ciegos en vez de atravesar la costilla
+  de chapa. El reparto exacto lo fija el modelo.
+- **Escuadra de la trasera (×2): chapa de aluminio de 1.5 mm.** Pieza
+  nueva de la rev. 22, atornillada a la TRASERA (nunca al anillo) con 3
+  M3 por costado: tope hacia dentro del canto trasero del costado, que
+  hasta entonces quedaba con 227 mm sin ningún apoyo.
+- **Las placas de módulo anclan solo a los miembros**, nunca a los 4
+  raíles de panel: esos van girados al ángulo de su cara, y un tornillo
+  contra una cara inclinada entra descentrado y apoya la arandela de
+  canto sobre acrílico frágil. Verificado por `alineacion()` en el
+  budget.
+- **Trasera: UNA plancha de acrílico de 8 mm**, EMPOTRADA a ras del canto
+  y atornillada a los dos miembros traseros — desmontable, lleva la
+  ventilación (§7). Fueron dos pieles de 5 flotando sobre standoffs con
+  junta de sombra hasta el 2026-08-21; flotar y sellar son incompatibles.
+- **Tapa del valle: chapa de aluminio de 3 mm.** Apoya en los miembros y
+  se atornilla además a su propia **placa del valle** con una pestaña
+  doblada por punta (desde la rev. 22; hasta entonces iba a las
+  costillas): deja de ser una plancha sobre una bisagra y pasa a ser
+  **diafragma** a media altura.
 - **Paneles de módulo: PCB de aluminio** de ancho variable en múltiplos de
   1 HP (5.08 mm), **128.5 mm de alto**, cerrando las dos caras inclinadas.
 - **Pies de goma** bajo la tabla.
 - **Sin pegamento estructural en ninguna junta.** La pestaña de remate, que era
   la excepción, se atornilla desde el 2026-08-21.
 
-**Lo que el cambio compró, medido:** el vano libre del costado —el trozo de
-acrílico más lejos de cualquier apoyo— cae de **119.0 a 65.2 mm** y su flecha
-con 200 N de 0.38 a **0.11 mm**, porque el apoyo deja de ser cuatro tornillos y
-pasa a ser la ventana de la costilla en todo el perímetro.
+**Lo que cada cambio compró, medido:** el vano libre del costado —el trozo
+de acrílico más lejos de cualquier apoyo— cae de **119.0 mm** (acrílico
+portante) a **65.2 mm** con la chapa plegada de la rev. 21, sube a
+**95.5 mm** al pasar a pletina sola en la rev. 22 (el anillo es más grueso
+pero pierde el canto trasero que antes cubría el vano de otra forma) y
+vuelve a bajar a **65.0 mm** con la escuadra de la trasera puesta; la
+flecha con 200 N va de 0.38 a 0.11 a 0.24 y otra vez a **0.11 mm**, porque
+el apoyo deja de ser cuatro tornillos y pasa a ser la ventana del anillo en
+todo el perímetro, más la escuadra en el único tramo que quedaba sin
+cubrir.
 
 ## 6. Raíles y sistema de paneles
 
@@ -457,26 +516,39 @@ case/
   con el script de export y se commitean como artefactos de fabricación, igual
   que los gerbers en `hardware/*/fab/`.
 
-## 9. BOM mecánico (categorías; cantidades exactas en implementación)
+## 9. BOM mecánico (categorías; cantidades exactas en el eco)
 
-Standoffs de aluminio M4 de 5 mm (solo las pieles), tornillería inox M4 de
-botón + arandelas (siempre arandela contra acrílico; **arandela ANCHA d16 en
-los cuatro ejes de giro**, que con la d9 normal el acrílico fluye),
-**4 Z-Rails de Tiptop de 104 HP** (528.32 mm, sección 23.8 × 10) + **7
-largueros 2020 de 528.32 mm**, tuercas T M3 + tornillos M3 (25: las planchas
-a los largueros), entrada IEC C14 con fusible e interruptor, espárrago M4 +
-cable 1.5 mm² verde/amarillo + terminales de ojal (bonding), paticas
-metálicas torneadas d16 × 8, tornillería del transformador, pasacables del
-entrepiso, **16 tornillos M5 de botón** (2 por larguero 2020) y **8 M4** que
-roscan en el propio Z-Rail — 4 de hombro con Belleville para los ejes, 4 de
-mano para los cierres. **Sin adhesivo**: la tapa de remate dejó de ir pegada
-el 2026-08-21.
+**Este párrafo quedó revisiones enteras detrás de la implementación real**
+(pieles con standoffs, paticas torneadas, transversales 2020 pasantes) y se
+corrige aquí contra la salida real del modelo, el 2026-08-28. Categorías
+actuales: **anillo de pletina de aluminio mecanizada** (×2, la pieza
+portante — §5, 14 mm, sin soldadura); **placas de anclaje de riel** (×6,
+pletina de 6 mm) y **clips de retención** (×4, pletina de 4 mm), las dos
+piezas nuevas de la rev. 22; **3 miembros de chapa** con brida de extremo
+doblada (trasero bajo, trasero alto, bahía — perfil 2020 comprado hasta el
+2026-08-27, canal de chapa propio desde entonces); **2 escuadras de la
+trasera** (chapa de 1.5 mm, rev. 22, atornilladas a la trasera, nunca al
+anillo); **6 Z-Rails de Tiptop de 104 HP** (528.32 mm, sección 23.8 × 10 —
+4 para las dos filas 3U, 2 para la fila Intellijel 1U del valle);
+tornillería inox M3/M4/M5 de botón + arandelas (**arandela ANCHA d16**
+contra todo M3 que muerde acrílico y en los cuatro ejes de giro — con la d9
+normal el acrílico fluye); tuercas T de inserción lateral, no de deslizar;
+**junta de asiento EPDM de 1 mm** (×2, una por anillo, nueva de la rev. 22
+— sustituye al casquillo de aluminio y a la junta de 4 mm de la rev. 21);
+tabla de madera maciza de 18 mm; paticas de **goma** EPDM/NBR con
+casquillo roscado (no metálicas desde la rev. 18); entrada IEC C14 con
+fusible, espárrago M4 + cable verde/amarillo + terminales de ojal (bonding,
+uno por panel de módulo) — más un segundo punto de bonding, enmascarado
+antes de anodizar, uno por anillo. **Sin adhesivo**: la tapa de remate dejó
+de ir pegada el 2026-08-21.
 
-Los perfiles van entre las caras internas de los costados, así que su largo es
-el ancho útil (**528.32 mm**), **no `ancho_total`** (544.32 mm). Cantidades y largo:
-salida real de `openscad -D 'PART=\"bom\"' case/cad/sam17_case.scad` — el
-modelo las cuenta de `centros_rail()` + `centros_esqueleto()`, y quien las
-recuente después de tocar `params.scad` toma ese eco, no este párrafo.
+Los Z-Rails van entre las caras interiores de las placas de anclaje, así
+que su largo es `largo_riel` (**528.32 mm**), no `ancho_util`
+(**540.62 mm**) ni `ancho_total` (**568.62 mm**). Cantidades y largo
+exactos: salida real de `openscad -D 'PART=\"bom\"' case/cad/sam17_case.scad`
+— el modelo las cuenta desde `centros_rail()`, `placas()`, `clips()` y
+`centros_rosca_ciega()`, y quien las recuente después de tocar
+`params.scad` toma ese eco, no este párrafo.
 
 ## 10. Verificación
 
@@ -569,6 +641,23 @@ con qué habría que medir para cerrarlo.
 - **Comportamiento del acrílico bajo apriete de standoffs**: el diseño manda
   arandela y agujero con holgura, pero el par máximo antes de fisura no está
   medido; se cierra con la probeta del cupón.
+- **Las cotas de la cara vista del anillo son ESTIMADO** (rev. 22): chaflán
+  1–3 mm, rehundido 3–7 mm, cara vista 12–24 mm salieron de escalar una
+  foto de referencia, no de una medición. Se cierra con un **cupón de
+  100 mm del perfil**, mecanizado y anodizado igual que la pieza final,
+  comparado contra la referencia **antes de cortar los dos anillos
+  completos** (PLIEGO §6.1). Bloquea el corte del anillo, no el resto del
+  case.
+- **Planitud del anillo tras vaciar el centro de una pletina de 14 mm**
+  (rev. 22): es la pregunta eliminatoria del RFQ (§B/§D) y el riesgo
+  técnico real de esta pieza — la resistencia sobra por 2× (I = 3714 mm⁴
+  contra 1673 mm⁴ de la chapa que sustituye, `guarda_anillo()`). Se cierra
+  cuando un taller lo garantice por escrito.
+- **Las placas de anclaje y los clips no tienen DXF propio** (rev. 22): el
+  modelo las dibuja en 3D (`placas_riel()`, `clips_costado()`) pero
+  `export.ps1` no las exporta como pieza aparte todavía (PLIEGO §6). El
+  taller de chapa trabaja de las cotas de `params.scad` mientras tanto —
+  pendiente real, no bloqueante para el resto del pedido.
 
 ## 12. Fuera de alcance (el diseño no los bloquea)
 
