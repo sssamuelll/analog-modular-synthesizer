@@ -14,8 +14,8 @@
 > `talon`**, un ángulo sobre la tabla como la nariz, sin bridas; la trasera
 > va **dentro** de las dos bandas y sale por abajo; y el chasis del PSU se
 > atornilla **a la tabla** (sus dos M5 apuntaban a la ranura de un 2020
-> muerto el 27-08). 16 piezas → 4, 73 tornillos → 64, 16 cabezas atrás → 10
-> sobre metal, 12 roscas por anillo (eran 16). Lo que cuesta: 0.35 kg, la
+> muerto el 27-08). 16 piezas → 4, 73 tornillos → 68, 16 cabezas atrás → 10
+> sobre metal, 14 roscas por anillo (eran 16). Lo que cuesta: 0.28 kg, la
 > trasera ya no sale por atrás, la banda mide 24 y no 20 para que la L se
 > sostenga sola. Todo en
 > [`../docs/superpowers/specs/2026-08-29-marco-ventana-banda-estructural-design.md`](../docs/superpowers/specs/2026-08-29-marco-ventana-banda-estructural-design.md).
@@ -705,11 +705,11 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 
 | Pieza | Cantidad | Nota |
 |-------|----------|------|
-| **ANILLO** (costilla) — pletina de aluminio **FRESADA** t=14, cara vista 20 | **2** | **la pieza portante del case, mecanizada, no plegada** desde el 2026-08-28. Rebaje 6 × 11 por detrás donde asienta el costado, chaflán 1.5 × 45° en las dos aristas de la cara vista, las **seis esquinas a `radio_chapa` = 4.5** (en todas dobla chapa encima desde el 29-08 por la noche). **12 roscas ciegas M4 por anillo** en la cara interior (`taladros_anillo`: 10 del marco de la ventana + 2 de la brida del miembro alto; eran 16 con clips y miembro bajo) + 3 M5 por anillo en el canto inferior para la tabla. Anodizado satinado, punto de bonding enmascarado. Ni casquillo ni junta de 4 mm: el costado asienta en el rebaje sobre una junta de EPDM de 1 mm |
+| **ANILLO** (costilla) — pletina de aluminio **FRESADA** t=14, cara vista 20 | **2** | **la pieza portante del case, mecanizada, no plegada** desde el 2026-08-28. Rebaje 6 × 11 por detrás donde asienta el costado, chaflán 1.5 × 45° en las dos aristas de la cara vista, las **seis esquinas a `radio_chapa` = 4.5** (en todas dobla chapa encima desde el 29-08 por la noche). **14 roscas ciegas M4 por anillo** en la cara interior (`taladros_anillo`: 12 del marco de la ventana — 10 en las tres filas y 2 en la pata del suelo, donde estaban las de los clips — + 2 de la brida del miembro alto; eran 16 con clips y miembro bajo) + 3 M5 por anillo en el canto inferior para la tabla. Anodizado satinado, punto de bonding enmascarado. Ni casquillo ni junta de 4 mm: el costado asienta en el rebaje sobre una junta de EPDM de 1 mm |
 | **MARCO DE LA VENTANA** — pletina t=6, láser | **2** | **una por costado, espejadas** (mismo DXF, cajeado por caras opuestas). El contorno de la ventana del anillo corrido por los **siete tramos**, 26 hacia dentro desde la silueta: sobre las tres filas es exactamente la placa de anclaje de ayer (canto visto de 6, 6 cajeados Ø8 × 2.5 por el lado del anillo, 10 M4 ciegos); en el frente, el suelo, la meseta y la trasera es el tope del acrílico que daban los clips y la escuadra, unificado — pisa 6 mm de acrílico volado por todo el perímetro. Canto exterior retirado 1.65 bajo cada chapa y 11.2 en la trasera (nada fijo delante de un PMMA de ±1.2). Lleva la rosca M3 de la pestaña de la banda y una **muesca** en la esquina trasera-alta sobre la brida del miembro alto. **Orden obligado: el costado en el rebaje ANTES, después los rieles al marco (cabeza en el cajeado), después el marco al anillo desde dentro** |
-| Tornillo M4 botón (marco al anillo) | **20** | 10 por costado, a rosca ciega en la franja de 14. Eran los «20 de placa al anillo» que este README llevaba sin itemizar |
+| Tornillo M4 botón (marco al anillo) | **24** | 12 por costado — 10 en las tres filas + 2 en la pata del suelo, el trabajo que hacían los de los clips —, a rosca ciega en la franja de 14. Eran los «20 de placa al anillo» que este README llevaba sin itemizar, más los 4 de los clips. **Seis de los diez de las filas caen bajo la huella del riel (#242)** |
 | **MIEMBRO ALTO** — chapa 6082-T6 t=1.5 | **1** | **una L**: la **meseta** del techo (50, del pico al plano trasero, con su **retorno** de 4 en el pico) y la **banda vista** de 24 que baja a ras del plano trasero — el techo es una chapa del pico al canto, sin costura. Dos **bridas** de 27 × 14.5 dobladas de la banda, en la cara del anillo, con 2 M4 ciegos cada una. Fue canal de 20 × 24 con un marco de la trasera atornillado encima (mañana del 29-08). Sola, sin la trasera, cede 2.0 mm con 20 kg en el centro de la meseta a 110 MPa (`guarda_miembro_alto()`: por eso la banda mide 24 y no 20); atornillada a la trasera cada 100, décimas |
-| **TALÓN** — chapa 6082-T6 t=1.5 | **1** | la banda vista de 24 a ras del plano trasero por **abajo** y un pie de 20 sobre la tabla, con tres M4 a la tabla desde dentro: hace atrás lo que la nariz hace delante. Sustituye al miembro trasero bajo: sin bridas ni rosca en el anillo — su fijación es la tabla, que ya está atada a los dos anillos con seis M5. Desarrollo 540.32 × 40.70 |
+| **TALÓN** — chapa 6082-T6 t=1.5 | **1** | la banda vista de 24 a ras del plano trasero por **abajo** y un pie de 22 sobre la tabla, con tres M4 a la tabla desde dentro: hace atrás lo que la nariz hace delante. Sustituye al miembro trasero bajo: sin bridas ni rosca en el anillo — su fijación es la tabla, que ya está atada a los dos anillos con seis M5. Desarrollo 540.32 × 40.70 |
 | Tornillo M4 avellanado (talón) | **3** | el pie del talón a la **tabla**, desde dentro — mismo herraje que las paticas y la nariz |
 | **NARIZ** — chapa 6082-T6 t=1.5 | **1** | la banda del frente: pie de 18 sobre la tabla, chaflán a 45°, frente vertical y 10.27 subiendo por la cara de abajo. Desarrollo **540.32 × 47.38**, tres dobleces (45°, 45°, 35°). Cierra el frente que enseñaba el riel desnudo (2026-08-29) |
 | Tornillo M4 avellanado (nariz) | **3** | el pie de la nariz a la **tabla**, desde dentro — mismo herraje que las paticas. Ninguno en la cara vista |
@@ -726,7 +726,7 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Plancha acrílico t=8 mm | **3** | 2 costados + **trasera** (540.32 × 253.03, con las ondas, la rejilla de entrada de aire y KONDOR). Los **costados sin un solo taladro**: asientan en el rebaje del anillo, retenidos por el labio hacia fuera y por el marco de la ventana hacia dentro, por los siete tramos. La **trasera lleva 10 taladros M3** (eran 16 con las escuadras) **y dos muescas de esquina** de 2 × 15 arriba, por donde le pasa la brida del miembro alto; va DENTRO de las dos bandas y sale por abajo |
 | Patica de goma con casquillo roscado | 4 | EPDM o NBR, Shore 45–55 A, **d20 × 10**. Se atornillan **a la tabla**, no al acrílico. **Se exige la curva carga-deformación: ≥ 0.25 mm de flecha con 22.8 N** — por debajo la pata AMPLIFICA los 100 Hz del toroide en vez de aislarlos (`flecha_pie`). Casquillo roscado moldeado: se atornilla, **no se pega** |
 
-**Total de tornillos del case: 64** — 12 M4 de raíl + 20 M4 de marco al
+**Total de tornillos del case: 68** — 12 M4 de raíl + 24 M4 de marco al
 anillo + 4 M4 de brida + 3 M4 de la nariz + 3 M4 del talón + 4 M4 del chasis
 + 12 M3 de plancha + 6 M5 de la tabla. Eran 73 la mañana del 2026-08-29: −4
 de brida (el miembro bajo), −6 M3 de escuadra, −4 M4 de clip, −2 M5 del
@@ -861,6 +861,13 @@ es el único posible: **el costado en el rebaje ANTES que el marco**, porque
 el marco lo pisa. Y la trasera **entra por abajo** antes que la tabla y el
 talón, porque la banda que la tapa es estructura y no se quita.
 
+**Con una deuda escrita (#242):** seis de los diez M4 de las filas caen bajo
+la huella del riel — el par se arrima al riel y una cabeza de 7.6 a 7 del eje
+entra 1.8 bajo sus 10 de ancho —, y con el riel puesto no hay cómo apretarlos.
+Este orden es el que el cajeado obliga y no cierra hasta que esas roscas
+salgan de la huella; hasta entonces se escribe como es, con el hueco a la
+vista.
+
 1. **Los dos anillos, tumbados con la cara vista abajo, cada uno con su
    costado asentado en el rebaje** sobre la junta de EPDM. El costado sigue
    siendo la pieza que se raya: entra con el film puesto y no se le quita
@@ -871,12 +878,12 @@ talón, porque la banda que la tapa es estructura y no se quita.
    primer paso de R1**: sin el riel puesto, después no hay cómo apretar el
    marco contra el anillo — la cabeza tiene que quedar tapada primero.
 3. **El marco A al anillo A, desde dentro** — con el costado ya en su rebaje,
-   el marco baja sobre la cara interior con sus diez M4 a rosca ciega y pisa
+   el marco baja sobre la cara interior con sus doce M4 a rosca ciega y pisa
    6 mm de acrílico por los siete tramos. **Segundo paso de R1: al revés no
    se puede apretar, y con el marco puesto el costado no entra.**
 4. **El marco B a las otras puntas de los rieles** (seis M4 por su cara de
    anillo, con el marco todavía suelto), **el costado B en el anillo B**, y
-   el anillo B sobre el marco B: sus diez M4 se aprietan desde dentro por el
+   el anillo B sobre el marco B: sus doce M4 se aprietan desde dentro por el
    frente abierto. Los dos anillos quedan de pie, atados por los seis
    rieles.
 5. **El miembro alto** — la meseta del pico al plano trasero y la banda

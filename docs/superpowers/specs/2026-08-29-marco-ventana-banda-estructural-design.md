@@ -58,13 +58,13 @@ y el README «todo el case se desmonta». Se respeta y no se discute.
 |---|---|---|
 | piezas (las cinco + las placas) | 16 | **4** (`marco_ventana` ×2, `miembro_alto`, `talon`) |
 | DXF de corte de esas piezas | 9 | **3** |
-| tornillos del case | 73 (53 del eco + 20 de placa sin itemizar) | **64** |
+| tornillos del case | 73 (53 del eco + 20 de placa sin itemizar) | **68** |
 | cabezas vistas atrás | 16 (10 sobre metal + 6 sobre PMMA) | **10, todas sobre metal** |
 | taladros en la trasera | 16 | **10** + 2 muescas de esquina |
-| roscas ciegas por anillo (cara interior) | 16 | **12** |
+| roscas ciegas por anillo (cara interior) | 16 | **14** (10 en las filas, 2 en la pata del suelo, 2 de brida) |
 | costuras en el techo | 1 (a 9.5 del canto) | **0** |
 | bridas de miembro | 4 (8 M4) | 2 (4 M4) |
-| masa | — | **+0.35 kg** (los dos marcos pesan 358 g cada uno contra 182 g de placas + clips + escuadra por lado) |
+| masa | — | **+0.28 kg** (cada marco pesa 320 g — 19 764 mm² de DXF a 6 mm y 2.70 g/cm³ — contra 182 g de placas + clips + escuadra por lado) |
 
 Todo lo que no está en esta tabla — rieles, nariz, tabla, paticas, tapa del valle,
 costados — no cambia de pieza. El chasis cambia de fijación (§5).
@@ -81,7 +81,9 @@ siete tramos, 26 mm hacia dentro desde la silueta (`marco_fondo`, la misma cota
 que `placa_fondo`). Se atornilla en las **mismas diez roscas ciegas** que hoy usan
 las placas, lleva los **seis cajeados** de los rieles (cuatro 3U + dos 1U, Ø8 ×
 2.5 por el lado del anillo, como hoy), la rosca M3 de la pestaña de la banda del
-valle y dos pasos M4 para las bridas del miembro alto. **Nada más.**
+valle y, en la pata del suelo, **dos pasos M4 más** para sus dos roscas ciegas
+al anillo — el trabajo que hacían las de los clips (§3.2). **Nada más**: las
+bridas del miembro alto no lo atraviesan (§4.2, la muesca).
 
 Lo que compra, y es lo que se pidió:
 
@@ -128,17 +130,35 @@ hay una pieza que los tapa: en la cara de abajo a `retiro_placa_inf` = 9 de P1,
 justo donde muere la nariz (`nariz_s_top` = s0 − `hol_piel`); en la cara de
 arriba a 5 del pico (`retorno_meseta` + 1), bajo el retorno de la meseta.
 
-La pata trasera **no lleva tornillo** — en la franja trasera no cabe uno, como
-sabía la escuadra — y no le hace falta: es una viga de 14.8 × 6 empotrada abajo
-en la pata del suelo y apoyada arriba, donde la muesca de la brida (§4.2) deja un
-cuello de 9.5 en la esquina. Empujada con `carga_mano` (200 N) en el centro de
-sus 227 mm cede **0.86 mm**; el acrílico necesita 3 para salirse del rebaje.
+**Cada tramo aguanta el empujón del acrílico con lo que tiene**, y la puerta lo
+mide tramo a tramo (`guarda_marco_ventana()`): `carga_mano` = 200 N al centro,
+flexión en z, menos de 2 mm — el acrílico necesita 3 para salirse del rebaje —
+y por debajo de RP02.
+
+- **La pata del suelo lleva dos roscas**, a `rosca_suelo_retiro` = 60 de cada
+  extremo. No estaban en la primera versión de este papel y el revisor del PR
+  las hizo aparecer: es la pata más larga del marco (288.6 × 24.35) y sin
+  tornillo cedía **3.31 mm** — era el tramo que sustituyó a los clips, y los
+  clips llevaban tornillo. Con las dos, su vano mayor es 168.6 y cede 0.16.
+  Caen en x = 67.6 y 236.2, lejos de los tres M5 con que la tabla entra por el
+  canto inferior del anillo (44.6, 153.7, 262.8) — la puerta también lo mide,
+  porque un DXF de la cara no ve un taladro que entra por el canto.
+- **La pata trasera no lleva tornillo** — en la franja trasera no cabe uno,
+  como sabía la escuadra — y no le hace falta: es una viga de 14.8 × 6 de
+  **235.18** mm, **empotrada abajo** en la esquina de P6, porque la rosca del
+  suelo está a 71 por el contorno (`EMPOTRE_MAX` = 100: el momento entra en la
+  vecina como torsión de un tramo corto de pletina y no gira), y **apoyada
+  arriba**, donde la muesca de la brida (§4.2) deja un cuello de 9.5 que
+  sostiene pero no empotra. Cede **1.32 mm** y trabaja a 99 MPa; apoyada en
+  las dos puntas cedería 2.95, y eso es lo que las roscas del suelo compran.
+- Las tres filas, por su vano mayor entre dos roscas (≤ 108), ceden ≤ 0.05;
+  el chaflán, el frente y la meseta son cortos.
 
 ### 3.3 Montaje
 
 Es el mismo orden de hoy, con una pieza en vez de seis: **primero los seis rieles
 al marco** (la cabeza queda en el cajeado, del lado que después mira al anillo),
-**después el marco al anillo desde dentro** con sus diez M4 — con el costado YA
+**después el marco al anillo desde dentro** con sus doce M4 — con el costado YA
 asentado en el rebaje, porque el marco lo pisa. El README traía los costados
 DESPUÉS de las placas y los clips, y eso no se puede montar (§9); aquí se corrige.
 
@@ -192,7 +212,7 @@ tabla.
 | tramo | cota | nota |
 |---|---|---|
 | banda | `banda_trasera` = 24, de y = 0 al canto libre | el doblez de abajo va en la esquina P6, que pasa de radio 0 a `radio_chapa` = 4.5 por la misma regla que las otras cuatro esquinas con chapa encima |
-| pie | `talon_pie` = 20 hacia delante, sobre la tabla | la trasera se asienta encima (1.5 sobre la tabla); tres M4 desde dentro a 1.5 D del canto libre (x = 292.66), a z = ¼, ½ y ¾ del hueco entre anillos, mismo herraje que las paticas y la nariz (`d_pie_tornillo`) |
+| pie | `talon_pie` = 22 hacia delante, sobre la tabla | la trasera se asienta encima (1.5 sobre la tabla); tres M4 desde dentro a 1.5 D del canto libre (x = 292.66), a z = ¼, ½ y ¾ del hueco entre anillos, mismo herraje que las paticas y la nariz (`d_pie_tornillo`) |
 | fila de M3 de la trasera | 5 a paso 100, a **12** de la tabla | 12 ≥ 9.2 contra el doblez de abajo |
 
 No lleva bridas ni rosca en el anillo: **su fijación es la tabla**, que ya está
@@ -336,13 +356,13 @@ apunta, no lo dibuja.
 | puerta | qué hace |
 |---|---|
 | **muere** `guarda_escuadra_trasera`, `guarda_marco_trasera`, `TRAMOS_CLIP`/`_clips`/`_cajas_clip`/`_roscas_clips`, `_escuadras_trasera`/`_cajas_escuadra`/`bbox_desarrollo_escuadra`, `_marcos_trasera`/`_cajas_marco_trasera`/`bbox_desarrollo_marco`, `_secciones_miembro`/`guarda_miembros` (la comparación con el 2020), `PLACAS_DXF`/`taladros_placas` (las tres placas y el clip) | |
-| **nueva** `guarda_marco_ventana()` (budget) | el contorno es exactamente las tres placas de hoy en las filas (mismas esquinas, mismos cajeados, mismas roscas) más las cuatro patas; canto exterior retirado `retiro_marco` bajo cada chapa y a 0 en las filas; pata trasera con su flecha bajo `carga_mano` ≤ 1 mm; los dos pasos de brida a 1.5 D del canto del marco; los seis cajeados a 1.5 D; sombra de 6 sobre el acrílico en los siete tramos |
-| **nueva** `taladros_marco_ventana()` (check_dxf) | relee `marco_ventana_2d`: los diez M4 ciegos, los seis pasos de riel, la rosca M3 de la pestaña y los dos pasos de brida donde el modelo los pone, todos a 1.5 D del canto; el contorno releído pisa ≥ 6 de acrílico en los siete tramos |
+| **nueva** `guarda_marco_ventana()` (budget) | el contorno es exactamente las tres placas de hoy en las filas (mismas esquinas, mismos cajeados, mismas roscas) más las cuatro patas; canto exterior retirado `retiro_marco` bajo cada chapa y a 0 en las filas; cada pata bajo `carga_mano` ≤ 2 mm y ≤ RP02 — las que llevan rosca por su vano mayor, las que no (la trasera) enteras y empotradas solo por las esquinas con rosca vecina a ≤ `EMPOTRE_MAX` y sin cuello de muesca —; las dos roscas del suelo lejos de los M5 de la tabla; la muesca deja ≥ 8 de pata; sombra de 6 sobre el acrílico en los siete tramos. Los agujeros contra el canto de su pata (las del suelo a 6.85, piden 6.75) en `guarda_anclajes()` |
+| **nueva** `taladros_marco_ventana()` (check_dxf) | relee `marco_ventana_2d`: los doce M4 ciegos (diez de las filas, dos del suelo), los seis pasos de riel y la rosca M3 de la pestaña donde el modelo los pone, todos a 1.5 D del canto — sin pasos de brida: ahí va la muesca —; el contorno releído pasa por las ocho patas |
 | **nueva** `guarda_miembro_alto()` (budget) | sustituye a `guarda_miembros`: la L sola, con `carga_mano` en el centro, tensión ≤ `RP02_ALUMINIO` y flecha publicada; la fila de M3 a ≥ raíz del doblez y ≥ 1.5 D del canto libre; las pestañas: caben en la banda bajo la meseta, sus M4 a 2 D uno de otro y a 1.5 D del canto de arriba |
-| **nueva** `guarda_talon()` (budget) | banda a ras del plano trasero, pie sobre la tabla, sus tres M4 a 1.5 D y fuera de la huella de la trasera y del chasis, la fila de M3 a ≥ raíz del doblez de abajo; P6 = `radio_chapa` |
+| **nueva** `guarda_talon()` (budget) | banda a ras del plano trasero, pie sobre la tabla, sus tres M4 avellanados a 1.5 D del canto libre y **la boca del avellanado a ≥ tol + 0.5 = 1.70 de la cara de la trasera** (la regla de §4.3 vale para ella: con el pie de 20 quedaba a 0.77, por eso 22), la fila de M3 a ≥ raíz del doblez de abajo; P6 = `radio_chapa` |
 | **nueva** `guarda_trasera_dentro()` (budget) | §4.3: ningún cuerpo fijo en x ∈ [x_trasera_int − (tol + 0.5), x_trasera_int) dentro de la huella de la trasera — es la que retiró la pata trasera del marco a 11.2 —; la trasera cubierta arriba por la meseta y abajo por el pie; las muescas de esquina libran la pestaña con 0.5 |
 | **nueva** `taladros_talon()` (check_dxf) | relee `talon_2d` (fila de M3 + nada más) y cruza sus tres M4 con `bandeja_base_2d`, como `taladros_nariz` |
-| **cambia** `guarda_anclajes` | las roscas ciegas son 12 por anillo (10 del marco + 2 de brida); cada agujero del marco contra los cantos REALES de su pata (los extremos en las esquinas son ficticios: el marco sigue de largo); la brida contra su propio canto y contra la raíz del doblez; muere el bloque del clip y el del chaflán de placa |
+| **cambia** `guarda_anclajes` | las roscas ciegas son 14 por anillo (12 del marco + 2 de brida); cada agujero del marco contra los cantos REALES de su pata (los extremos en las esquinas son ficticios: el marco sigue de largo); la brida contra su propio canto y contra la raíz del doblez; muere el bloque del clip y el del chaflán de placa |
 | **cambia** `guarda_costado` (check_dxf) | el apoyo hacia dentro deja de ser una lista de placas + clips + escuadra y pasa a ser el contorno interior del marco: el vano interior se mide a un canto continuo, como el exterior |
 | **cambia** `cuerpos_dentro_del_anillo`, `solapes`, `_cajas_solidas` | el marco, las dos pestañas, el talón y la trasera nueva como cuerpos; fuera clips, escuadras, marcos, miembro bajo y sus bridas |
 | **cambia** `guarda_remate` | `prof_sup == marco_remate` (un sumando); la meseta llega al plano trasero |
@@ -359,14 +379,20 @@ viejo, el modelo después, VERDE, y romperla a propósito una vez.
 
 ## 8. Lo que cambia para el taller
 
-- **Mecanizado** (con los anillos): `marco_ventana` ×2, pletina de 6 cortada a
+- **Chapa (láser), no mecanizado**: `marco_ventana` ×2, pletina de 6 cortada a
   láser, seis cajeados Ø8 × 2.5 por el lado del anillo — tres por una cara y tres
-  por la otra, como las placas de hoy —, sin más operaciones. Se pide con planitud
-  como los anillos; se atornilla sobre una cara mecanizada y con diez M4 se
-  conforma.
+  por la otra, como las placas de hoy —, sin más operaciones. Va al lote B del
+  RFQ, como las placas de ayer, con una tolerancia que las placas no
+  necesitaban: **planitud ≤ 0.5 mm en 300** en el blank cortado (`PLIEGO.md`
+  §6). Apoya en la cara mecanizada del anillo y sus doce M4 la conforman
+  contra ella — aplanar 0.5 una pletina de 6 × 24 sobre 150 cuesta 200 N —,
+  pero un anillo de 294 × 253 con alma de 14.8 cortado a láser puede venir con
+  más, y con más el acrílico lo nota. (La primera versión de este papel lo
+  mandaba al mecanizado «con planitud como los anillos»; el pliego lo tenía en
+  chapa sin pedirle nada. Queda en chapa con la planitud escrita.)
 - **Chapa**: `miembro_alto_2d` cambia de desarrollo (banda + meseta + retorno,
   un doblez de 90°, uno de 45° y dos pestañas de la banda a 90°: blank 588.00 ×
-  73.83); entra `talon_2d` (un doblez de 90° a r = 3, blank 540.32 × 40.70);
+  73.83); entra `talon_2d` (un doblez de 90° a r = 3, blank 540.32 × 42.70);
   salen `miembro_bajo_2d`, `escuadra_trasera_2d`, `marco_trasera_sup_2d` y
   `marco_trasera_inf_2d`.
 - **Acrílico**: `piel_trasera_2d` con diez taladros (no dieciséis) y dos muescas
@@ -374,9 +400,12 @@ viejo, el modelo después, VERDE, y romperla a propósito una vez.
   viva).
 - **Carpintería**: la tabla gana **siete taladros pasantes Ø4.5**: tres del talón
   (como los de la nariz) y cuatro del chasis.
-- **Tornillería**: M4 avellanado × 3 para el talón; M4 × 4 para el chasis (a
-  tuerca remachable); los M3 de la trasera, 10 con tuerca y **arandela de nylon**
-  del lado del acrílico. Los cuatro M4 de las pestañas, como ayer.
+- **Tornillería**: M4 avellanado × 3 para el talón (avellanado conformado en
+  la chapa de 1.5; la cabeza a ras del pie, bajo la trasera no hay nada que
+  asome); M4 × 4 para el chasis (a tuerca remachable); los M3 de la trasera,
+  10 con tuerca y **arandela de nylon** del lado del acrílico. Los cuatro M4
+  de las pestañas, como ayer, y **cuatro M4 más de marco** (las dos roscas del
+  suelo por costado): 24 en vez de 20.
 
 ## 9. Lo que este documento NO cierra
 
@@ -401,6 +430,13 @@ viejo, el modelo después, VERDE, y romperla a propósito una vez.
   esta tanda.
 - **El cupón (#237)** sigue sin cortarse. El marco de la ventana es otra pieza que
   se atornilla sobre la cara mecanizada: su planitud entra en la misma pregunta.
+- **Seis de las diez cabezas del marco caen bajo la huella del riel (#242)**, y
+  el orden de montaje que el cajeado obliga — riel al marco, después el marco
+  al anillo — no se puede apretar para esas seis. Está igual en `main` (las
+  placas tenían las mismas roscas) y no lo trae este cambio; lo cazó el revisor
+  del PR. Arrastra dos cotas de `params.scad` sin puerta: las 14 entre las dos
+  roscas del par y los 10.19 al cajeado, que con el par arrimado son 7.40. Va
+  aparte: puerta roja sobre `main`, después el reparto de las roscas.
 
 ## 10. Enmiendas a otros papeles — ejecutadas en esta misma tanda
 
@@ -410,6 +446,6 @@ viejo, el modelo después, VERDE, y romperla a propósito una vez.
 | `2026-08-28-costilla-pletina-design.md` | §4 (los clips → el marco), §5 (las placas → el marco; las bridas del miembro alto con escalón; el miembro bajo → talón), §10 (la escuadra: superada) |
 | `2026-08-27-case-esqueleto-visible-design.md` | enmienda en cabecera: de tres miembros a uno más el talón; el chasis a la tabla |
 | `2026-08-29-nariz-recta-valle-limpio-design.md` | §2.3: la meseta llega al plano trasero, no al doblez del alma |
-| `case/README.md` | piezas, BOM, tornillería (73 → 64), orden de montaje corregido, roscas por anillo |
-| `case/PLIEGO.md` | rev. 25: `marco_ventana_2d` (cajeados por cara), `talon_2d`, `miembro_alto_2d` con el escalón, muescas de la trasera, taladros de la tabla; fuera siete DXF |
-| `case/RFQ.md` | rev. 24: al mecanizado le entra el marco; a la chapa el escalón; al acrílico las muescas; al carpintero siete taladros |
+| `case/README.md` | piezas, BOM, tornillería (73 → 68), orden de montaje corregido (con la deuda de #242 escrita), roscas por anillo |
+| `case/PLIEGO.md` | rev. 25: `marco_ventana_2d` (cajeados por cara, planitud), `talon_2d`, `miembro_alto_2d` con sus pestañas, muescas de la trasera, taladros de la tabla; fuera siete DXF |
+| `case/RFQ.md` | rev. 24: a la chapa le entran el marco (láser, con planitud) y el talón; al acrílico las muescas; al carpintero siete taladros; al mecanizado 14 roscas por anillo |

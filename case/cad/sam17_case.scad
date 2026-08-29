@@ -607,8 +607,23 @@ function patas_filas() =
         [t[0], A, u, n, s0, s1, ejes]];
 function pata(nombre) = [for (q = patas_filas()) if (q[0] == nombre) q][0];
 
+// La pata del suelo del marco, de P6 al chaflan: [A, u, n, s0, s1]. Arranca
+// donde manda la pata trasera (retiro_marco_trasera tras P6) y acaba en el
+// retiro del chaflan. Lleva DOS roscas ciegas, a rosca_suelo_retiro de cada
+// extremo: el trabajo que hacian las de los clips. GEMELA de la pata "suelo"
+// de _marco_ventana() y de las "marco suelo" de _roscas_marco().
+function pata_suelo() =
+    let (P = pts_perfil(), A = P[6], B = [chaflan_nariz, 0], L = norm(B - A),
+         u = (B - A)/L, n = [u.y, -u.x])
+    [A, u, n, max(retiro_vertice(6), retiro_marco_trasera()), L - retiro_marco()];
+function roscas_suelo() =
+    let (q = pata_suelo())
+    [for (s = [q[3] + rosca_suelo_retiro, q[4] - rosca_suelo_retiro])
+        q[0] + q[1]*s + q[2]*dist_rosca_ciega];
+
 // Las dos roscas ciegas de cada riel: eje +- sep_rosca_riel a lo largo del
-// tramo, a dist_rosca_ciega de la silueta. Diez por anillo. EL PAR SE ARRIMA
+// tramo, a dist_rosca_ciega de la silueta. Doce por anillo: diez de las filas
+// y dos en la pata del suelo (roscas_suelo). EL PAR SE ARRIMA
 // AL RIEL PERO NO SE SALE DE SU PATA: se corre lo justo para que las dos
 // queden a 1.6 D de los extremos de la pata -- el de la cara de arriba en P3
 // esta a retiro_placa_sup del vertice porque ahi el redondeo concavo
@@ -618,8 +633,9 @@ function centro_par_rosca(q, e) =
     min(max(e[0], q[4] + canto + sep_rosca_riel),
         q[5] - canto - sep_rosca_riel);
 function roscas_marco() =
-    [for (q = patas_filas(), e = q[6], s = [-sep_rosca_riel, sep_rosca_riel])
-        if (e[2]) q[1] + q[2]*(centro_par_rosca(q, e) + s) + q[3]*dist_rosca_ciega];
+    concat([for (q = patas_filas(), e = q[6], s = [-sep_rosca_riel, sep_rosca_riel])
+                if (e[2]) q[1] + q[2]*(centro_par_rosca(q, e) + s) + q[3]*dist_rosca_ciega],
+           roscas_suelo());
 // Los seis pasos M4 de riel (con cajeado por el lado del anillo).
 function ejes_marco() = [for (q = patas_filas(), e = q[6]) e[1]];
 
@@ -634,8 +650,8 @@ function brida_xs() = [brida_x_dob() - brida_raiz(),
 function bridas_anillo() =
     let (P = pts_perfil()) [for (x = brida_xs()) [x, P[5].y - dist_rosca_ciega]];
 
-// [centro, diametro de broca] de cada rosca ciega de la cara interior: DOCE
-// por anillo, diez del marco y dos de la brida. Las de la TABLA no estan: van
+// [centro, diametro de broca] de cada rosca ciega de la cara interior: CATORCE
+// por anillo, doce del marco y dos de la brida. Las de la TABLA no estan: van
 // en el CANTO inferior del anillo y un DXF de la cara no sabe dibujar un
 // taladro que entra por el canto (pliego). La de la pestana del valle
 // tampoco: se rosca en los 6 mm del marco (ruling R3).
@@ -2295,7 +2311,8 @@ module bom() {
     echo(str("     NINGUN TORNILLO ATRAVIESA LA CARA VISTA: ",
              len(centros_rosca_ciega()), " roscas ciegas M4 en la cara",
              " interior (taladros_anillo, broca ", d_M4_rosca,
-             ") -- 10 del marco de la ventana y 2 de la brida del miembro",
+             ") -- 12 del marco de la ventana (10 en las filas, 2 en el suelo)",
+             " y 2 de la brida del miembro",
              " alto; eran 16 con clips y miembro bajo -- + 3 M5 por anillo",
              " en el CANTO inferior para la tabla (ver esa linea, no salen",
              " en el mismo DXF). CERO casquillos, CERO junta de 4 mm."));
@@ -2327,7 +2344,8 @@ module bom() {
              " visto de ", t_placa, " a la silueta, cajeado de ", d_cajeado_riel,
              " x ", prof_cajeado_riel, " por el lado del anillo en cada uno de",
              " sus 6 pasos de riel (cuatro 3U y dos 1U), dos roscas ciegas M4",
-             " por riel 3U y dos sobre el primer 1U. En el frente, el suelo, la",
+             " por riel 3U, dos sobre el primer 1U y dos en la pata del suelo",
+             " (el trabajo de los clips). En el frente, el suelo, la",
              " meseta y la trasera el canto exterior va RETIRADO -- ",
              retiro_marco(), " bajo cada chapa (nariz, pies, meseta, retorno) y ",
              retiro_marco_trasera(), " en la trasera, que es banda + PMMA mas",

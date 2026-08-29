@@ -606,7 +606,10 @@ def _dist_a_cantos(cantos: list[tuple[tuple[float, float], tuple[float, float]]]
 def _roscas_marco(p: dict[str, float]) -> list[tuple[str, tuple[float, float]]]:
     """(nombre, centro) de las dos roscas ciegas que lleva cada riel en su
     pata: eje +- sep_rosca_riel a lo largo del tramo, a dist_rosca_ciega de la
-    silueta. Diez por anillo. GEMELA de roscas_marco() en el .scad.
+    silueta; y las dos de la pata del suelo, a rosca_suelo_retiro de cada
+    extremo -- el trabajo de las de los clips: sin ellas la pata mas larga del
+    marco cedia 3.31 mm bajo carga_mano. Doce por anillo. GEMELA de
+    roscas_marco() en el .scad.
 
     EL PAR SE ARRIMA AL RIEL PERO NO SE SALE DE SU PATA: se corre lo justo
     para que las dos queden a 1.6 D de los extremos de la pata (1.6 y no 1.5
@@ -632,6 +635,10 @@ def _roscas_marco(p: dict[str, float]) -> list[tuple[str, tuple[float, float]]]:
             for s in (c - sep, c + sep):
                 out.append((f"marco {q['nombre']} {s - s_eje:+.1f}",
                             q["_m"]((s, d))))
+    q = _pata(p, "suelo")
+    r = p["rosca_suelo_retiro"]
+    for i, s in enumerate((q["s0"] + r, q["s1"] - r)):
+        out.append((f"marco suelo {i}", q["_m"]((s, d))))
     return out
 
 
@@ -741,11 +748,12 @@ def _centros_rosca_ciega(p: dict[str, float]
     interior del anillo. GEMELA de centros_rosca_ciega() en el .scad; las cruza
     taladros_anillo() releyendo costilla_dorso_2d.dxf.
 
-    DOCE POR ANILLO desde el 2026-08-29 por la noche, todas M4 y todas a
-    dist_rosca_ciega de la silueta: diez del marco de la ventana -- dos por
-    riel 3U y dos sobre el primer riel 1U -- y dos de la brida del miembro
-    alto. Eran dieciseis: las dos de los clips murieron con ellos y las dos de
-    la brida del miembro bajo con el, que hoy es talon y va a la tabla.
+    CATORCE POR ANILLO desde el 2026-08-29 por la noche, todas M4 y todas a
+    dist_rosca_ciega de la silueta: doce del marco de la ventana -- dos por
+    riel 3U, dos sobre el primer riel 1U y dos en la pata del suelo, que hacen
+    el trabajo de las de los clips -- y dos de la brida del miembro alto. Eran
+    dieciseis: las dos de la brida del miembro bajo murieron con el, que hoy
+    es talon y va a la tabla.
 
     LO QUE NO ESTA AQUI, y no por olvido: las seis de la TABLA van en el CANTO
     inferior del anillo, no en el dorso, y un DXF de la cara no sabe dibujar
@@ -2549,12 +2557,19 @@ def guarda_talon(p: dict[str, float]) -> None:
         "el talon dobla ahi sobre la tabla y una esquina viva bajo un doblez a "
         "90 asoma 1.9 mm")
     x_tr = P[6][0] - t - p["t_piel"]
-    cabeza = 7.6                             # boton ISO 7380 M4
-    aire = x_tr - (tl["m4_x"] + cabeza / 2)
-    assert aire >= 0.5, (
-        f"la cabeza del M4 del pie del talon llega a x={tl['m4_x'] + cabeza / 2:.2f} "
-        f"y la trasera arranca en {x_tr:.2f}: se le mete {-aire:.2f} debajo. "
-        f"Sube talon_pie")
+    # LA BOCA DEL AVELLANADO ES UN CUERPO FIJO DELANTE DEL ACRILICO: la cabeza
+    # queda a ras del pie, pero su boca (d_cabeza_M4_avell) esta a distancia
+    # fija de la cara de la trasera, y vale para ella la regla de
+    # guarda_trasera_dentro igual que para la pata del marco: tol_pmma + 0.5,
+    # porque la plancha puede venir 1.2 mas gruesa. Con talon_pie = 20 quedaba
+    # a 0.77 (el revisor del PR la cazo con 1.45 para una cabeza de boton).
+    boca = tl["m4_x"] + p["d_cabeza_M4_avell"] / 2
+    aire = x_tr - boca
+    minimo = _tol_pmma(p) + 0.5
+    assert aire >= minimo - 1e-9, (
+        f"la boca del avellanado del M4 del talon llega a x={boca:.2f} y la cara "
+        f"interior de la trasera esta en {x_tr:.2f}: {aire:.2f} de aire, y delante "
+        f"de un PMMA de +-{_tol_pmma(p):.1f} se piden {minimo:.2f}. Sube talon_pie")
     assert tl["m4_x"] - tl["x_pie"] >= 1.5 * p["d_M4_paso"] - 1e-9, (
         f"el M4 del pie cae a {tl['m4_x'] - tl['x_pie']:.2f} de su canto libre")
     raiz = _raiz_m3(p)
@@ -2564,8 +2579,9 @@ def guarda_talon(p: dict[str, float]) -> None:
     assert tl["y_fila"] <= p["banda_trasera"] - 1.5 * p["d_M3_paso"], (
         f"la fila de M3 del talon se sale por el canto libre de la banda")
     print(f"talon: banda de {p['banda_trasera']:g} a ras del plano trasero y pie "
-          f"de {p['talon_pie']:g} sobre la tabla; 3 M4 en x={tl['m4_x']:.2f} "
-          f"({aire:.2f} de aire a la trasera); fila de M3 a {tl['y_fila']:g}; "
+          f"de {p['talon_pie']:g} sobre la tabla; 3 M4 avellanados en "
+          f"x={tl['m4_x']:.2f} ({aire:.2f} de aire de su boca a la trasera, piden "
+          f"{minimo:.2f}); fila de M3 a {tl['y_fila']:g}; "
           f"desarrollo {tl['largo']:.2f} x {tl['desarrollo']:.2f}")
 
 
@@ -2624,31 +2640,90 @@ def guarda_trasera_dentro(p: dict[str, float]) -> None:
         assert dentro_z, (
             f"la muesca de esquina de la trasera ({mz:g} de honda) no cubre la "
             f"brida '{b[0]}' (z={b[5]:.2f}..{b[6]:.2f})")
+        # ESTO NO ES UNA HOLGURA AJUSTABLE: _muesca_trasera deriva la muesca de
+        # brida_ancho + 0.5, asi que el 0.5 sale por construccion. Lo que este
+        # assert caza es un DESFASE entre gemelas -- la muesca del .scad y la
+        # del budget calculadas con distinta cota -- o una brida que se mueva
+        # sin mover la muesca.
         assert lado[4] <= b[3] - 0.5 + 1e-9, (
             f"la muesca de la trasera llega a y={lado[4]:.2f} y la brida "
-            f"arranca en {b[3]:.2f}: hacen falta 0.5 de aire")
+            f"arranca en {b[3]:.2f}: hacen falta 0.5 de aire. La muesca se deriva "
+            f"de brida_ancho: esto es un desfase entre muesca_trasera() y "
+            f"_muesca_trasera(), no una holgura que se ajuste aparte")
     print(f"trasera dentro: {x_tr - max(c[2] for c in railes + planchas if c[2] < x_tr and not c[0].startswith('piel_trasera')):.2f} "
           f"mm libres delante de su cara interior (piden {franja:.2f}); canto de "
           f"arriba bajo la meseta, canto de abajo sobre el pie del talon; muescas "
           f"de esquina de {mz:g} x {my:g}")
 
 
+# HASTA DONDE, a lo largo del contorno, tiene que haber una rosca en la pata
+# vecina para que una esquina EMPOTRE a la pata que no lleva tornillo. El
+# momento de la pata sin tornillo entra en la vecina como torsion de un tramo
+# corto de pletina (6 x 24: GJ/L ~ 1e6 N mm/rad a 100 mm), que bajo los 9 N m
+# de la pata trasera gira 0.01 rad, o sea nada; mas lejos no se cuenta y la
+# esquina es un apoyo. Es lo que justifica el 107 (empotrada-apoyada) de la
+# pata trasera en vez del 48 (apoyada-apoyada), que la dejaria en 2.95.
+EMPOTRE_MAX = 100.0
+
+# El contorno del marco en orden, tal como lo devuelve _marco_ventana(): las
+# distancias por el contorno se miden con este orden.
+CONTORNO_MARCO = ("chaflan", "frente", "cara_inf", "valle", "cara_sup",
+                  "meseta", "trasera", "suelo")
+
+# Las esquinas que NO empotran aunque la vecina lleve rosca cerca: la muesca
+# de la brida deja en P5 un cuello de marco_fondo - b_muesca que sostiene pero
+# no empotra. (pata, 0) es su esquina de arranque, (pata, 1) la del final.
+CUELLOS_MARCO = {("meseta", 1), ("trasera", 0)}
+
+
+def _m5_tabla_x(p: dict[str, float]) -> list[float]:
+    """x de los tres M5 con que la tabla se rosca al CANTO inferior de cada
+    anillo. GEMELA de la fila de bandeja_base_2d(): bandeja_base_fondo()
+    repartido en n_agujeros() con orillas de medio paso, y la tabla vuela
+    vuelo_zocalo por delante del perfil. Entran por el canto (y = 0) hacia
+    arriba, centrados en los 14 del anillo: una rosca ciega del dorso que
+    caiga en la misma x los cruza sin que ningun DXF lo ensene."""
+    fb = _vertices(p)[6][0] + 2 * p["vuelo_zocalo"]
+    n = max(1, math.floor(fb / p["reticula_paso"] + 0.5))
+    return [fb * (i + 0.5) / n - p["vuelo_zocalo"] for i in range(n)]
+
+
+def _flecha_pata(p: dict[str, float], L: float, b: float, empotres: int
+                 ) -> tuple[float, float]:
+    """Flecha y tension de un tramo del marco como viga de b x t_placa
+    flexando en z (el empujon del acrilico) con carga_mano al centro, segun
+    cuantos de sus dos extremos empotran: ninguno FL^3/48EI (M = FL/4), uno
+    FL^3/107EI (3FL/16), los dos FL^3/192EI (FL/8)."""
+    h = p["t_placa"]
+    I = b * h ** 3 / 12
+    W = b * h * h / 6
+    F = p["carga_mano"]
+    k, m = {0: (48.0, 0.25), 1: (107.0, 3.0 / 16.0), 2: (192.0, 0.125)}[empotres]
+    return F * L ** 3 / (k * E_ALUMINIO * I), m * F * L / W
+
+
 def guarda_marco_ventana(p: dict[str, float]) -> None:
-    """El marco de la ventana: ocho patas, el canto donde toca, y la trasera
-    aguanta sin tornillo.
+    """El marco de la ventana: ocho patas, el canto donde toca, y cada tramo
+    aguanta el empujon del acrilico con lo que tiene.
 
     Lo que mide, en orden: (1) el canto exterior de cada pata -- a la silueta
     en las tres filas, retirado t_costilla + hol_piel bajo cada chapa,
     retirado banda + trasera + tolerancia + 0.5 detras --; (2) que pise 6 de
-    acrilico mas alla de la ventana; (3) que la pata trasera, que no lleva
-    tornillo porque en la franja trasera no cabe uno, aguante el empujon de
-    carga_mano como viga empotrada entre las patas de arriba y de abajo con
-    menos de 1 mm de flecha (el acrilico necesita 3 para salirse del
-    rebaje); (4) que los dos pasos de la brida queden a 1.5 D del canto
-    retirado de la meseta -- es lo que puso el retiro en 1.65 y no en 2 --;
-    (5) que la muesca de la brida deje pata entera debajo -- es lo que puso
-    brida_ancho en 14.5. Los agujeros contra el canto de su pata van en
-    guarda_anclajes()."""
+    acrilico mas alla de la ventana; (3) que cada pata aguante carga_mano
+    (el acrilico empujado desde fuera contra el marco) con menos de 2 mm de
+    flecha -- el acrilico necesita 3 para salirse del rebaje -- y por debajo
+    de RP02: las patas CON roscas, por su vano mayor entre dos roscas como
+    viga biempotrada; las patas SIN rosca (chaflan, frente, meseta y la
+    trasera, que no puede llevarla porque en la franja trasera no cabe),
+    enteras, y empotradas solo por las esquinas que lo merecen -- vecina con
+    rosca a menos de EMPOTRE_MAX por el contorno y sin el cuello de la
+    muesca --. Es lo que puso las dos roscas en la pata del suelo: sin ellas
+    cedia 3.31 mm y era el tramo que sustituyo a los clips, que si llevaban;
+    (4) que esas dos roscas no crucen los M5 de la tabla, que entran por el
+    canto inferior del anillo en la misma franja; (5) que la muesca de la
+    brida deje pata entera debajo -- es lo que puso brida_ancho en 14.5. Los
+    agujeros contra el canto de su pata (las roscas del suelo a 6.85 del
+    canto retirado, que pide 6.75) van en guarda_anclajes()."""
     patas = _marco_ventana(p)
     por = {q["nombre"]: q for q in patas}
     rm, rmt = _retiro_marco(p), _retiro_marco_trasera(p)
@@ -2661,26 +2736,68 @@ def guarda_marco_ventana(p: dict[str, float]) -> None:
     assert sombra >= 6.0 - 1e-9, (
         f"el marco pisa {sombra:.2f} mm de acrilico mas alla de la ventana; el "
         f"tope pide 6 (era lo que pisaban las placas)")
-    # la pata trasera como viga: ancho fondo - retiro, canto t_placa, flexion
-    # en z. Empotrada abajo en la pata del suelo y APOYADA arriba: la muesca
-    # de la brida deja en la esquina trasera-alta un cuello de marco_fondo -
-    # b_muesca de ancho que no empotra, solo sostiene. Viga empotrada-apoyada
-    # con carga al centro: FL^3/(107 EI). El acrilico necesita 3 mm para
-    # salirse del rebaje; se piden menos de 2.
-    q = por["trasera"]
-    b, h, L = p["marco_fondo"] - rmt, p["t_placa"], q["s1"] - q["s0"]
-    I = b * h ** 3 / 12
-    flecha = p["carga_mano"] * L ** 3 / (107 * E_ALUMINIO * I)
-    assert flecha <= 2.0, (
-        f"la pata trasera del marco ({b:.2f} x {h:g}, {L:.1f} de largo, sin "
-        f"tornillo) cede {flecha:.2f} mm con {p['carga_mano']:.0f} N: mas de 2")
-    minimo = 1.5 * p["d_M4_paso"]
-    for c in _bridas(p)[0]["m4"]:
-        d_canto = p["dist_rosca_ciega"] - rm
-        assert d_canto >= minimo - 1e-9, (
-            f"el paso de la brida en el marco cae a {d_canto:.2f} del canto "
-            f"retirado de la meseta y pide {minimo:.2f}: baja el retiro o sube "
-            f"dist_rosca_ciega")
+    # (3) las roscas de cada pata, en s a lo largo de ella, y en S por el
+    # contorno cerrado
+    assert tuple(q["nombre"] for q in patas) == CONTORNO_MARCO
+    s_de: dict[str, list[float]] = {nm: [] for nm in por}
+    for nm, c in _roscas_marco(p):
+        q = por[nm.split(" ")[1]]
+        s_de[q["nombre"]].append((c[0] - q["A"][0]) * q["u"][0]
+                                 + (c[1] - q["A"][1]) * q["u"][1])
+    acum, S = {}, 0.0
+    for nm in CONTORNO_MARCO:
+        acum[nm] = S
+        S += por[nm]["L"]
+    total = S
+    S_roscas = sorted(acum[nm] + s for nm in CONTORNO_MARCO for s in s_de[nm])
+
+    def hasta_rosca(S_esq: float, sentido: int) -> float:
+        if sentido > 0:
+            c = [Sr - S_esq for Sr in S_roscas if Sr >= S_esq - 1e-9]
+            return min(c) if c else S_roscas[0] + total - S_esq
+        c = [S_esq - Sr for Sr in S_roscas if Sr <= S_esq + 1e-9]
+        return min(c) if c else S_esq + total - S_roscas[-1]
+
+    filas = []
+    for q in patas:
+        nm, b = q["nombre"], q["fondo"] - q["retiro"]
+        if s_de[nm]:
+            ss = sorted(s_de[nm])
+            vanos = [b2 - a2 for a2, b2 in zip(ss, ss[1:])]
+            L = max(vanos) if vanos else 0.0
+            flecha, sigma = _flecha_pata(p, L, b, 2)
+            modo = f"{len(ss)} roscas, vano mayor {L:.1f} entre dos"
+        else:
+            d0 = hasta_rosca(acum[nm], -1)
+            d1 = hasta_rosca(acum[nm] + q["L"], +1)
+            emp = sum(1 for d, k in ((d0, 0), (d1, 1))
+                      if d <= EMPOTRE_MAX and (nm, k) not in CUELLOS_MARCO)
+            L = q["s1"] - q["s0"]
+            flecha, sigma = _flecha_pata(p, L, b, emp)
+            modo = (f"sin tornillo, {L:.1f} de largo, {emp} esquina(s) "
+                    f"empotrada(s) (rosca vecina a {d0:.0f} y {d1:.0f} por el "
+                    f"contorno)")
+        assert flecha <= 2.0, (
+            f"la pata '{nm}' del marco ({b:.2f} x {p['t_placa']:g}, {modo}) cede "
+            f"{flecha:.2f} mm con {p['carga_mano']:.0f} N: mas de 2, y el "
+            f"acrilico se sale del rebaje con 3. Una rosca mas en esa pata, o "
+            f"una en la vecina a menos de {EMPOTRE_MAX:g} de la esquina")
+        assert sigma <= RP02_ALUMINIO, (
+            f"la pata '{nm}' del marco trabaja a {sigma:.0f} MPa con "
+            f"{p['carga_mano']:.0f} N ({modo}); RP02 = {RP02_ALUMINIO:g}")
+        filas.append((nm, b, flecha, sigma, modo))
+    # (4) las roscas del suelo contra los M5 de la tabla, en x
+    d_min = (p["d_M5_rosca"] + p["d_M4_rosca"]) / 2 + 2.0
+    for nm, c in _roscas_marco(p):
+        if not nm.startswith("marco suelo"):
+            continue
+        for xm in _m5_tabla_x(p):
+            assert abs(c[0] - xm) >= d_min, (
+                f"la rosca '{nm}' del marco cae en x={c[0]:.2f} y el M5 de la "
+                f"tabla entra por el canto inferior del anillo en x={xm:.2f}: "
+                f"a {abs(c[0] - xm):.2f}, y las dos brocas piden {d_min:.2f}. "
+                f"Mueve rosca_suelo_retiro")
+    # (5) la muesca de la brida deja pata entera
     s_mu, b_mu = por["meseta"]["muesca"]
     entera = p["marco_fondo"] - b_mu
     assert entera >= 8.0, (
@@ -2690,9 +2807,14 @@ def guarda_marco_ventana(p: dict[str, float]) -> None:
     print(f"marco de la ventana: {len(patas)} patas de {p['t_placa']:g} hasta "
           f"{p['marco_fondo']:g} de la silueta; canto a la silueta en las filas, "
           f"retirado {rm:.2f} bajo la chapa y {rmt:.2f} en la trasera; pisa "
-          f"{sombra:g} de acrilico en los siete tramos")
-    print(f"  pata trasera {b:.2f} x {h:g} sin tornillo: {flecha:.2f} mm con "
-          f"{p['carga_mano']:.0f} N; muesca de la brida de {b_mu:.2f} deja "
+          f"{sombra:g} de acrilico en los siete tramos; {len(S_roscas)} roscas")
+    for nm, b, flecha, sigma, modo in filas:
+        if flecha >= 0.05:
+            print(f"  pata {nm} {b:.2f} x {p['t_placa']:g}: {flecha:.2f} mm y "
+                  f"{sigma:.0f} MPa con {p['carga_mano']:.0f} N ({modo})")
+    xs = ", ".join(f"{x:.1f}" for x in _m5_tabla_x(p))
+    print(f"  roscas del suelo en x={', '.join(f'{c[0]:.1f}' for nm, c in _roscas_marco(p) if nm.startswith('marco suelo'))}, "
+          f"los M5 de la tabla en x={xs}; muesca de la brida de {b_mu:.2f} deja "
           f"{entera:.2f} de pata")
 
 
@@ -3246,41 +3368,33 @@ def guarda_tapa(p: dict[str, float]) -> None:
 
 def guarda_remate(p: dict[str, float]) -> None:
     """La meseta del remate -- el ala del miembro trasero alto, no una tapa
-    aparte del techo -- se reparte entera entre tres piezas, ni mas ni menos.
+    aparte del techo -- mide marco_remate entera, ni mas ni menos.
 
-    La meseta mide marco_remate y hay que repartirla ENTERA entre tres cosas.
-    En params.scad no se pueden escribir expresiones, o sea que la relacion se
-    mantiene A MANO y por eso hace falta una puerta: mover una sin mover las
-    otras deja la meseta abierta o una pieza asomando por el plano trasero, y
-    ninguna de las dos se ve en un DXF plano.
+    En params.scad no se pueden escribir expresiones, o sea que prof_sup y
+    marco_remate se mantienen iguales A MANO y por eso hace falta una puerta:
+    mover uno sin el otro deja el techo corto o la banda asomando por el plano
+    trasero, y ninguna de las dos se ve en un DXF plano.
 
-    ERAN DOS SUMANDOS HASTA EL 2026-08-27, CUATRO HASTA EL 29 Y TRES DESDE
-    ENTONCES, porque la meseta cambio de dueno dos veces. Antes era una plancha
-    de acrilico apoyada encima del larguero y de la trasera, medida desde el
-    plano trasero. Ahora es el ALA del miembro alto, y un ala se mide desde su
-    doblez -- la cara trasera del miembro --, asi que se queda t_piel corta por
-    detras. El reparto es:
+    ERAN DOS SUMANDOS HASTA EL 2026-08-27, CUATRO HASTA LA MANANA DEL 29, TRES
+    ESA TARDE Y UNO DESDE LA NOCHE, porque la meseta cambio de dueno tres
+    veces. Antes era una plancha de acrilico apoyada encima del larguero y de
+    la trasera, medida desde el plano trasero; despues el ala del miembro
+    alto, que se quedaba t_piel + t_costilla corta por detras para que la
+    trasera y su marco de chapa se metieran debajo (lo que abrio y cerro
+    #234). Desde la noche del 29 la meseta LLEGA AL PLANO TRASERO y dobla ahi
+    como banda -- la banda ES el miembro -- y la trasera va DENTRO de la
+    banda, sin quitarle nada al techo. El reparto es uno solo:
 
-        prof_sup              la meseta, o sea el ala del miembro alto, del
-                              doblez al PICO.
-        t_piel                lo que la trasera se mete por debajo del ala
-                              del marco. Fue el CANTO DE ARRIBA DE LA TRASERA
-                              hasta el 2026-08-29 -- 8 mm de acrilico visto en
-                              el pico del case, que es lo que abrio #234 -- y
-                              hoy es el ala B de marco_trasera_sup, que se lo
-                              tapa entero y muere contra el doblez de la
-                              meseta.
-        t_costilla            el espesor de ese marco: lo que la trasera se
-                              rehunde para que su cara vista quede a ras del
-                              plano trasero.
+        prof_sup              la meseta, del PICO al plano trasero, o sea
+                              marco_remate entero.
 
     EL INSET MURIO EL 2026-08-29. Llevaba escrito que era "lo unico que deja
     abrir la tapa de arriba" con una tabla (retiro 0 -> 13.2 grados) medida
     cuando la meseta era ACRILICO DE 8 apoyado en el riel. Con la chapa de 1.5
     la cara de abajo de la meseta queda a 18.9 mm del eje y nada de lo que
     gira pasa de 16.2: se corrio guarda_tapa() con la meseta en el pico y la
-    fila de arriba siguio abriendo 121.5 grados. Asi que la meseta LLEGA AL
-    PICO -- el reparto son tres sumandos -- y lo que asomaba en esos 13 mm, el
+    fila de arriba siguio abriendo 121.5 grados (180 desde que no hay canal).
+    Asi que la meseta LLEGA AL PICO y lo que asomaba en esos 13 mm, el
     riel-eje desnudo, queda tapado. El retorno que dobla en el pico es cosa de
     guarda_retorno_meseta()."""
     # UN SOLO SUMANDO DESDE EL 2026-08-29 POR LA NOCHE: la meseta llega al

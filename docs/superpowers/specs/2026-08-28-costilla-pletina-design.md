@@ -147,7 +147,8 @@ franja. Resuelve el bloqueo que Halberg encontró: hoy el M5 axial entra en un c
 > talón**: el alto pasa a ser una L cuya banda vista baja a ras del plano trasero
 > — sus bridas doblan de esa banda y apoyan en la cara del anillo, con el marco
 > muescado encima — y el bajo pasa a ser el talón, sin bridas, a la tabla por su
-> pie. Las roscas ciegas por anillo bajan de 16 a **12**.
+> pie. Las roscas ciegas por anillo bajan de 16 a **14** (las dos de los clips
+> siguen, en la pata del suelo del marco: hacen el mismo trabajo).
 
 > **Enmienda (2026-08-28), ruling de la Tarea 3.** Decía **dos M5**. Bajaron a **M4**:
 > la franja de 14 mm no admite a la vez el paso M5 en la brida y la broca de rosca M5 en

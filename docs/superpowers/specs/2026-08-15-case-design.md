@@ -245,16 +245,18 @@ lenguaje visual).
 > (`banda_trasera`): la banda vista ES el alma del miembro alto, una L con dos
 > bridas de 27 × 14.5 en la cara del anillo, y el techo es una chapa del pico
 > al canto sin costura. **El miembro bajo es el `talon`**: la misma banda con
-> un pie de 20 sobre la tabla, tres M4 desde dentro, sin bridas. **La trasera
+> un pie de 22 sobre la tabla, tres M4 desde dentro, sin bridas. **La trasera
 > va DENTRO de las dos bandas** (sobre el pie, bajo la meseta, 10 taladros y
 > dos muescas de esquina) y sale por abajo; delante de ella no hay nada a
 > distancia fija — la regla del postmortero (§3) que el marco de la rev. 23
 > rompía a 8.00 justos contra un PMMA de ±1.2 (`guarda_trasera_dentro()`).
 > **El chasis del PSU se atornilla a la tabla** por el suelo con 4 M4 (sus 2
 > M5 apuntaban a la ranura de un 2020 muerto el 27-08). La esquina de
-> abajo-atrás pasa a `radio_chapa`. 16 piezas → 4, 73 tornillos → 64, 16
-> cabezas atrás → 10 sobre metal, 12 roscas por anillo; la tapa de arriba
-> abre 180°. Lo que cuesta: +0.35 kg, la trasera sale por abajo, la banda
+> abajo-atrás pasa a `radio_chapa`. 16 piezas → 4, 73 tornillos → 68, 16
+> cabezas atrás → 10 sobre metal, 14 roscas por anillo (12 del marco — dos
+> de ellas en la pata del suelo, el trabajo de los clips — y 2 de brida); la
+> tapa de arriba abre 180°. Lo que cuesta: +0.28 kg, la trasera sale por
+> abajo, la banda
 > mide 24 y no 20 (con 20 la L sola trabaja a 158 MPa contra 130).
 >
 > **rev. 24** (2026-08-29, tarde): **nariz recta, meseta al pico, valle limpio**
@@ -471,7 +473,8 @@ aquí va lo que sustituye a lo anterior.
 - **Marco de la ventana (×2): pletina de aluminio de 6 mm** cortada a
   láser con el contorno de la ventana del anillo, una por costado,
   espejadas. Aloja la cabeza del M4 de cada Z-Rail en un cajeado, se
-  rosca al anillo con diez M4 ciegos y pisa 6 mm de acrílico volado por
+  rosca al anillo con doce M4 ciegos (diez en las filas, dos en
+  la pata del suelo) y pisa 6 mm de acrílico volado por
   todo el perímetro: es a la vez el anclaje de los seis rieles y el tope
   del costado hacia dentro. Sustituye (rev. 25) a las tres placas de
   anclaje, los dos clips y la escuadra de la trasera de cada costado — «la
@@ -491,7 +494,7 @@ aquí va lo que sustituye a lo anterior.
   techo, del pico al plano trasero, y la banda vista de 24 que baja a ras
   de ese plano, con dos bridas de extremo en la cara del anillo (2 M4
   ciegos cada una) — ata los dos anillos arriba y recibe la trasera. El
-  **talón** es la misma banda por abajo con un pie de 20 sobre la tabla,
+  **talón** es la misma banda por abajo con un pie de 22 sobre la tabla,
   atornillado a ella con tres M4: recibe la trasera y no ata nada, que
   para eso está la tabla. Fueron perfil 2020 comprado hasta el 2026-08-27,
   canales de chapa hasta la rev. 24 (tres con la bahía, dos sin ella), y

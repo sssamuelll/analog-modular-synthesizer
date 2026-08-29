@@ -93,11 +93,14 @@ t_costilla      = 1.5;
 // un parametro y se juzga en render.
 banda_trasera   = 24;
 // El pie del talon sobre la tabla, hacia delante desde la cara interior de la
-// banda. La trasera se asienta encima (1.5 sobre la tabla) y tres M4 lo
-// atornillan a la tabla desde dentro a 1.5 D de su canto libre, con la cabeza
-// fuera de la huella de la trasera. 20 y no 18 como la nariz: con 18 la cabeza
-// del boton (7.6) se metia 0.55 bajo el acrilico. Lo mide guarda_talon().
-talon_pie       = 20;
+// banda. La trasera se asienta encima (1.5 sobre la tabla) y tres M4
+// avellanados lo atornillan a la tabla desde dentro a 1.5 D de su canto
+// libre. 22 y no 18 como la nariz: la boca del avellanado (d_cabeza_M4_avell)
+// es un cuerpo fijo DELANTE del acrilico y vale para ella la misma regla que
+// para la pata del marco -- tol_pmma + 0.5 = 1.70 de aire a la cara de la
+// trasera, que puede venir 1.2 mas gruesa --; con 20 quedaba a 0.77 y con la
+// plancha gruesa del lote se metia debajo. Lo mide guarda_talon().
+talon_pie       = 22;
 // Vale lo mismo que ya repartian las filas de las planchas de acrilico para
 // que sus tornillos caigan en la reticula por construccion, no por coincidencia.
 // Una sola cota gobierna ambos lados: repetir 100 los desincronizaria al cambiarla.
@@ -225,9 +228,23 @@ dist_rosca_ciega   = 8.5;
 // detras; sobre la ventana (cara_anillo = 20) sobran 6 que pisan el acrilico.
 marco_fondo        = 26;
 // Cuanto se separan del eje del riel sus dos roscas ciegas, a lo largo del
-// tramo. 7 deja 10.19 mm entre cada rosca y el cajeado (que pide 6.25) y 14
-// entre las dos roscas (que piden 9 = 2 D).
+// tramo. 7 deja 14 entre las dos roscas del par (piden 9 = 2 D) y, con el par
+// centrado en el riel, 10.19 entre cada rosca y el cajeado. PERO el par
+// arrimado por centro_par_rosca deja 7.40 (1.15 de pared tras el cajeado de 8)
+// y mete 6 de las 10 cabezas bajo la huella del riel, donde no se aprietan
+// con el riel puesto: ninguna de las dos cotas tiene puerta todavia. Issue
+// #242.
 sep_rosca_riel     = 7;
+// LAS DOS ROSCAS DE LA PATA DEL SUELO. El marco sustituyo a los clips y los
+// clips llevaban tornillo: sin el, la pata del suelo (288 x 24.35 en pletina
+// de 6, la mas larga del marco) cedia 3.31 mm bajo carga_mano como viga
+// apoyada, y el acrilico se sale del rebaje con 3. Dos roscas ciegas M4 a
+// esta distancia de cada extremo de la pata (del retiro de 11.2 tras P6 y del
+// retiro del chaflan): dejan 168 entre ellas (0.16 mm) y 71 desde P6, que es
+// lo que EMPOTRA la pata trasera, la unica que no puede llevar tornillo.
+// Lejos de los tres M5 de la tabla, que entran por el canto inferior a 44.6,
+// 153.7 y 262.8 (guarda_marco_ventana lo mide).
+rosca_suelo_retiro = 60;
 // DONDE ARRANCA LA PATA DE LA CARA DE ARRIBA, medido desde P3. P3 es concavo
 // y su redondeo de 54 curva la franja: el fondo util pasa de 8.51 en x = 128 a
 // 12.45 en x = 148, o sea que una rosca a 8.5 de la silueta puesta en los
@@ -1061,6 +1078,10 @@ carga_mano       = 200;  // N. Alguien apoyandose, el mismo caso de carga con
 flecha_costado_max = 0.6;// mm bajo carga_mano. El techo NO es nuevo: es el
                          // mismo que el proyecto ya acepto para la trasera en
                          // su vano de 211.73. Hoy sale 0.38
+// Boca del avellanado de un M4 (ISO 10642, dk maximo). No es un agujero: es
+// el CUERPO FIJO que la cabeza a ras deja en el pie del talon, y guarda_talon
+// lo mide contra la cara de la trasera con la tolerancia del PMMA.
+d_cabeza_M4_avell = 8.96;
 d_M3_paso   = 3.4;  // agujero paso M3 (ISO holgura media)
 d_M4_paso   = 4.5;  // agujero paso M4: standoffs de las pieles Y los seis
                     // rieles EUROrack, cuyo taladro de punta viene roscado M4

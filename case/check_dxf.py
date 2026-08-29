@@ -1328,7 +1328,8 @@ def taladros_marco_ventana() -> list[str]:
     placas, el clip y la escuadra son hoy esta pieza.
 
     CUATRO CLASES DE TALADRO, y las cuatro se comprueban:
-      1. los diez M4 CIEGOS al anillo -- _roscas_marco(), diametro de PASO;
+      1. los doce M4 CIEGOS al anillo -- _roscas_marco(), diametro de PASO:
+         diez en las tres filas y dos en la pata del suelo;
       2. los seis pasos M4 de riel -- _pasos_riel_marco(). El cajeado (Ø8 x
          prof_cajeado_riel, por el lado del anillo) es NOTA DE MECANIZADO en
          el pliego, no un circulo aqui: un DXF 2D no sabe decir profundidad;

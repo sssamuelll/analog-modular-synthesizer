@@ -7,9 +7,9 @@
 > `marco_trasera_sup_2d` y `marco_trasera_inf_2d`. **`miembro_alto_2d` cambia
 > de desarrollo** (una L: banda de 24, meseta de 50 y retorno, con dos bridas
 > de la banda; sale el retorno de 24 del canal) y **entra `talon_2d`** (banda
-> de 24 + pie de 20, un doblez) en vez de `miembro_bajo_2d`. La trasera pierde
+> de 24 + pie de 22, un doblez) en vez de `miembro_bajo_2d`. La trasera pierde
 > seis taladros y gana dos muescas de esquina; la tabla lleva siete taladros
-> más; el anillo pasa de 16 a **12 roscas ciegas** y su esquina de abajo-atrás
+> más; el anillo pasa de 16 a **14 roscas ciegas** y su esquina de abajo-atrás
 > a radio 4.5. El chasis de acero pierde los dos M5 de pared y gana cuatro M4
 > en el suelo. `costilla_2d` y `costilla_dorso_2d` se regeneran; el cupón
 > (§6.1) no cambia.
@@ -175,12 +175,12 @@ el 2026-08-28:
 |---|---|---|---|
 | `chasis_cuerpo_2d`, `chasis_tapa_2d`, `chasis_refuerzo_2d` | acero | chapa | corte + **plegado** |
 | `miembro_alto_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: una L — banda de 24 a 90°, meseta de 50, **retorno a 45°** de 4 en el pico — con dos **bridas** dobladas a 90° de las puntas de la banda — **1 ud** |
-| `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: UN doblez a 90° (banda de 24 + pie de 20) — **1 ud** |
+| `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: UN doblez a 90° (banda de 24 + pie de 22) — **1 ud** |
 | `nariz_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: TRES dobleces (45°, 45° y 35°) — **1 ud**. Ver las líneas de plegado abajo |
 | `tapa_valle_2d` | aluminio, 3 mm | chapa | corte + **plegado** |
 | `costilla_2d`, `costilla_dorso_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **fresado CNC**, sin plegar, sin soldar |
 | `bandeja_base_2d` | madera maciza, 18 mm | carpintería | corte + ranuras alargadas |
-| `marco_ventana_2d` | aluminio, `t_placa` = 6 mm, **láser** | chapa | corte + **6 cajeados** Ø8 × `prof_cajeado_riel` = 2.5 **por el lado del anillo** (bolsillos ciegos en UNA cara: dejan 3.5 mm bajo la cabeza del M4 del riel). Nota de mecanizado, no va en el DXF — ver abajo — **2 uds, PAR ESPEJADO**: mismo contorno, cajeado por caras opuestas |
+| `marco_ventana_2d` | aluminio, `t_placa` = 6 mm, **láser** | chapa | corte + **6 cajeados** Ø8 × `prof_cajeado_riel` = 2.5 **por el lado del anillo** (bolsillos ciegos en UNA cara: dejan 3.5 mm bajo la cabeza del M4 del riel). Nota de mecanizado, no va en el DXF — ver abajo — **2 uds, PAR ESPEJADO**: mismo contorno, cajeado por caras opuestas. **Planitud ≤ 0.5 mm en 300** en el blank cortado: apoya en la cara mecanizada del anillo y doce M4 lo conforman contra ella (una pletina de 6 × 24 se aplana 0.5 con 200 N), pero con más de eso el acrílico lo nota |
 | `cupon_anillo_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **NO ES UNA PIEZA DEL CASE**: es la SECCIÓN del perfil del anillo, y de ella sale el **cupón de 100 mm** que hay que aprobar antes de cortar los dos anillos — ver el punto de parada en §6.1 |
 
 **`costilla_2d` y `costilla_dorso_2d` son CONTORNOS REALES, no desarrollos** —
@@ -196,7 +196,7 @@ cara):
   silueta, que es el ancho de la cara vista. **NO trae el contorno del rebaje.**
   Es la hoja del corte del blank.
 - **`costilla_dorso_2d` — LA CARA INTERIOR.** Trae el **contorno del REBAJE**, a
-  `cara_anillo − rebaje_anillo` = 20 − 6 = **14 mm** de la silueta, más los **16
+  `cara_anillo − rebaje_anillo` = 20 − 6 = **14 mm** de la silueta, más los **14
   círculos** de rosca ciega a diámetro de broca. La silueta NO se repite aquí a
   propósito: dibujarla sería mandar cortar el contorno dos veces.
 
@@ -213,7 +213,7 @@ del chasis: el DXF trae el recorte, y la pieza doblada mide menos. Cortar el
 contorno de la pieza montada da un fichero válido e inservible.
 
 **LOS DOS ANILLOS SON PIEZAS ESPEJADAS, no dos iguales.** Mismo contorno y
-misma ventana, pero **el rebaje, el chaflán de la ventana y las 12 roscas
+misma ventana, pero **el rebaje, el chaflán de la ventana y las 14 roscas
 ciegas van en la cara OPUESTA de cada uno**: la cara vista de cada anillo mira
 hacia FUERA del case, así que el dorso de uno es el lado que en el otro queda
 por delante (`costillas()` en `sam17_case.scad` monta el segundo con
@@ -236,8 +236,10 @@ SU lado. Los seis cajeados van centrados en los seis pasos M4 de riel
 del tornillo del riel; sin ellos la cabeza no tiene dónde meterse y el marco
 no cierra contra el anillo. **El DXF NO lleva el cajeado**: un DXF 2D no sabe
 decir profundidad, el mismo caso que el rebaje de `costilla_dorso_2d` y el
-cajeado KONDOR (§4). Trae **17 taladros**: los diez pasos M4 al anillo, los
-seis pasos M4 de riel y la rosca M3 de la pestaña de la banda del valle a
+cajeado KONDOR (§4). Trae **19 taladros**: los doce pasos M4 al anillo (diez
+en las tres filas y dos en la pata del suelo, a 60 de cada extremo de la pata:
+el trabajo que hacían los de los clips), los seis pasos M4 de riel y la rosca
+M3 de la pestaña de la banda del valle a
 **diámetro de broca** (pasante en la propia pletina). Y una **muesca** en la
 esquina trasera-alta, abierta al canto exterior, de 16.5 de honda: ahí apoya
 en la cara del anillo la brida del miembro alto, y el marco se aparta.
@@ -266,7 +268,7 @@ esquina viva.
 
 **EL TALÓN (`talon_2d`) ES UN ÁNGULO**: banda de **24** a ras del plano
 trasero por abajo y pie de **20** sobre la tabla, un doblez a 90° con r = 3.
-Blank **540.32 × 40.70**, con la fila de 5 M3 de la trasera a 12 del canto
+Blank **540.32 × 42.70**, con la fila de 5 M3 de la trasera a 12 del canto
 libre de la banda y tres M4 en el pie a 6.75 de su canto libre (a la tabla,
 desde dentro, como la nariz). Sustituye a `miembro_bajo_2d`: sin bridas ni
 rosca en el anillo. No se voltea.
@@ -351,7 +353,7 @@ maciza, vaciada por el centro con fresadora CNC.
   contorno real mide 307.4 × 256.2 mm, `costilla_2d`, con margen de sujeción
   y desbaste).
 - **SON DOS PIEZAS ESPEJADAS, uno derecho y uno izquierdo.** Mismo contorno y
-  misma ventana; el **rebaje, el chaflán de la ventana y las 12 roscas ciegas
+  misma ventana; el **rebaje, el chaflán de la ventana y las 14 roscas ciegas
   van en la cara OPUESTA de cada anillo**, porque la cara vista de cada uno
   mira hacia FUERA del case. Mecanizar los dos por el mismo lado da un anillo
   del revés, con el rebaje abriendo hacia fuera y el acrílico sin sitio donde
@@ -376,10 +378,13 @@ maciza, vaciada por el centro con fresadora CNC.
   en el CANTO INFERIOR** — a diámetro de broca, las del dorso según
   `costilla_dorso_2d.dxf`: broca **3.3 mm para M4**, broca
   **4.2 mm para M5**, **10 mm de profundidad útil** (14 mm de pletina menos
-  el margen que deja la puerta de anclajes). Son **12 roscas M4 por anillo**
+  el margen que deja la puerta de anclajes). Son **14 roscas M4 por anillo**
   — la cuenta que imprime `taladros_anillo()` sobre este mismo DXF: dos por
-  riel 3U, dos sobre el primer riel 1U (las diez del marco de la ventana) y
-  dos de la brida del miembro alto; eran 16 con los clips y la brida del
+  riel 3U, dos sobre el primer riel 1U y dos en la pata del suelo (las doce
+  del marco de la ventana; las del suelo caen en x = 67.6 y 236.2, lejos de
+  los tres M5 de la tabla que entran por el canto en 44.6, 153.7 y 262.8 —
+  `guarda_marco_ventana()` lo mide) y dos de la brida del miembro alto; eran
+  16 con los clips y la brida del
   miembro bajo, muertos el 29-08 por la noche — más **3 roscas M5 por anillo (6 en total, 2
   filas de 3) en el CANTO INFERIOR** para la tabla: esas NO salen en el DXF
   del dorso porque entran por el canto, no por la cara, así que van descritas

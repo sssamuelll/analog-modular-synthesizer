@@ -10,7 +10,7 @@ para saber **quién puede hacerlo**.
 > y los dos marcos de la trasera; el miembro bajo pasa a ser **el talón** y
 > el miembro alto una L. A la casa de acrílico (§A): la trasera con diez
 > taladros y dos muescas de esquina con radio. Al carpintero (§C): siete
-> taladros más. Al mecanizado (§D): 12 roscas por anillo, no 16, y la esquina
+> taladros más. Al mecanizado (§D): 14 roscas por anillo, no 16, y la esquina
 > de abajo-atrás a radio 4.5.
 >
 > **rev. 23 (2026-08-29).** Al taller de chapa (§B) le entra **la nariz**
@@ -166,7 +166,8 @@ la trasera, muertos esa misma noche, ya no existen.)
 4. **¿Cortan a láser pletina de 6 mm y le hacen bolsillos ciegos** (el marco
    de la ventana: Ø8 × 2.5 en seis puntos por el lado del anillo, una rosca
    M3 pasante)? No lleva doblez, solo contorno, cajeado y agujero de paso —
-   y **planitud**: apoya en una cara mecanizada y se atornilla con diez M4.
+   y **planitud**: apoya en una cara mecanizada y se atornilla con doce M4,
+   que la conforman si el blank viene a ≤ 0.5 mm en 300 (`PLIEGO.md` §6).
 
 **Los DXF que reciben son DESARROLLOS PLANOS, no contornos** (salvo el
 marco de la ventana, que no se dobla). `miembro_alto_2d`, `talon_2d`,
@@ -178,7 +179,7 @@ soldar) que se manda a mecanizado, §D.
 
 **El marco de la ventana (`marco_ventana_2d`) sustituye a placas, clips y
 escuadras desde el 2026-08-29 por la noche** (ver `PLIEGO.md` §6). El DXF
-trae los agujeros FUNCIONALES de paso M4 (diez al anillo, seis de riel) y la
+trae los agujeros FUNCIONALES de paso M4 (doce al anillo, seis de riel) y la
 rosca M3 de la pestaña; el cajeado de Ø8 × 2.5 por el lado del anillo va
 como nota de mecanizado en el mismo §6 — un DXF 2D no dice profundidad — y
 hay que confirmarlo antes de cortar, como cualquier otra cota que no está en
