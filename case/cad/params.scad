@@ -620,6 +620,15 @@ alto_frontal    = 19;
 // margen contra el barrido. El minimo absoluto son 47 (fondo 304.17) y ahi el
 // margen es 0.04 mm contra una pieza EN MOVIMIENTO.
 marco_remate    = 50;
+// EL ANCHO DE LAS DOS BANDAS DEL MARCO DE LA TRASERA (#234, 2026-08-29). Es
+// cara_anillo a proposito: vistas de atras, las dos patas del anillo se leen
+// de t_anillo (14) de ancho y estas bandas de 20 -- el marco no es uniforme y
+// no tiene por que serlo, pero el numero sale del anillo y no de la nada.
+// EL PISO NO ES ESTETICO y lo exige guarda_marco_trasera(): la banda tiene
+// que tragarse la fila de M3 de SU miembro con 1.5 D a los dos cantos. La de
+// arriba es la que aprieta -- su fila cae a 11.50 del canto del acrilico --,
+// asi que el minimo son 11.50 + 1.5*d_M3_paso = 16.60.
+marco_trasera_ancho = 20;
 // Entrepiso: la franja horizontal entre el tope de la cara inferior y la base
 // de la superior -- el "valle del medio" de la silueta. Fue 25 (minimo tecnico
 // de R7: por debajo, los dos railes girados se solapaban 2.52 mm), luego 40,
@@ -1362,7 +1371,18 @@ marco_sup   = 1.5;
 // mm mas adelante que nunca, y la fila de arriba baja de 180 a 45 grados.
 // 29 la deja en 271.94 EXACTO: el mismo sitio donde la plancha de acrilico
 // llevaba meses sin estorbar. Geometria probada, no cota nueva.
-prof_sup    = 29;
+//
+// BAJA A 27.5 el 2026-08-29 (#234) Y NO SE ELIGIO: la paga el marco de la
+// trasera. El pico de 50 se reparte entre cuatro, y el trozo de atras crece
+// de t_piel a t_piel + t_costilla porque los ultimos 9.5 mm de la meseta
+// dejan de ser el canto del acrilico y pasan a ser el ala del marco. Los 1.5
+// tenian que salir de la meseta o del inset, y el inset NO: su acantilado
+// esta en 12.8 (13 -> 180 grados de apertura, 12.8 -> 61) y bajarlo a 11.5
+// cierra la tapa de arriba. La meseta se queda donde estaba por delante
+// (271.94: el miembro se adelanto 1.5 y el ala se acorto 1.5), o sea que la
+// geometria probada del barrido no se toca, y sus ranuras de salida miden
+// meseta_largo_ranura = 15, que en 27.5 siguen cabiendo con 6.25 por lado.
+prof_sup    = 27.5;
 // Cuanto se RETIRA la tapa de remate del pico, y no es estetica: es la unica
 // razon por la que la tapa de la fila de arriba sigue abriendo.
 //

@@ -236,7 +236,12 @@ function x_valle() =
 // numero salia de centros_transversal().
 function miembros_lista() = ["trasero bajo", "trasero alto", "bahia"];
 function radio_giro_riel() = norm([rail_er_fondo, rail_er_alto]) / 2;
-function miembro_x_trasera() = pts_perfil()[6].x - t_piel;
+// RETIRADO TAMBIEN t_costilla desde el 2026-08-29 (#234): la trasera se
+// rehunde el espesor del MARCO que la enmarca, para que la cara vista de ese
+// marco quede a ras del plano trasero y no 1.5 mm por delante de la cara de
+// los anillos. El acrilico va DENTRO del metal tambien por detras, que es la
+// misma regla que el costado dentro de la ventana del anillo.
+function miembro_x_trasera() = pts_perfil()[6].x - t_piel - t_costilla;
 function miembro_y_meseta() = pts_perfil()[5].y - marco_sup;
 
 // El barrido de la tapa inferior manda el ala delantera; el canto trasero lo
@@ -833,6 +838,94 @@ module clip_2d() {
 // construye como laminas de offset() creciente -- seis de 0.25 -- porque un
 // chaflan exacto sobre un contorno concavo no sale de hull() ni barato de
 // minkowski(); para el render y para solapes() basta y es determinista.
+// --- EL MARCO DE LA TRASERA (#234, 2026-08-29) --------------------------
+// DOS PIEZAS DE LA MISMA CHAPA QUE LOS MIEMBROS, y no una porque no hacen lo
+// mismo. Hasta hoy la trasera era la pieza MAS EXTERIOR de la cara de atras:
+// su cara de PMMA quedaba a ras del plano trasero y sus dos cantos, el de
+// arriba y el de abajo, corrian los 540 mm sin un mm de metal encima. El de
+// arriba era ademas los ultimos 8 mm del PICO del case -- la meseta se queda
+// t_piel corta por detras y ese trozo lo cubria el canto del acrilico, escrito
+// negro sobre blanco en guarda_remate() --, o sea acrilico visto en la
+// superficie que se mira desde arriba. Es lo que abrio #234.
+//
+// La regla que ya gobierna el costado se aplica igual aqui: el acrilico va
+// DENTRO del metal. La trasera se rehunde t_costilla (ver miembro_x_trasera())
+// y lo que asoma al plano trasero es este marco.
+//
+//   marco_trasera_sup   una L. El ala A es la banda vista; el ala B dobla en
+//                       el canto de arriba del acrilico, corre hacia delante
+//                       t_piel + t_costilla y muere contra el doblez de la
+//                       meseta, con la que queda COPLANAR: el pico del case
+//                       pasa a ser metal de punta a punta.
+//   marco_trasera_inf   una pletina plana, sin ala B, y la razon es fisica: el
+//                       canto de abajo del acrilico esta EN EL PLANO DEL SUELO
+//                       (y = 0) y lo que tiene debajo es la tabla, no aire. Un
+//                       ala ahi no taparia un canto abierto: levantaria el case
+//                       1.5 mm de su propia base.
+//
+// Los dos se atornillan con la fila de M3 que la trasera YA lleva a su miembro
+// -- no hay taladro nuevo en el acrilico, solo tornillos mas largos --, y eso
+// tiene un segundo efecto: las dos filas de cabezas que se veian sobre el PMMA
+// pasan a verse sobre metal.
+//
+// GEMELOS de _marcos_trasera() y guarda_marco_trasera() en clearance_budget.py.
+
+// El canto de arriba del acrilico, que es donde dobla el ala B.
+function marco_trasera_yt() = miembro_y_meseta();
+// Lo que el ala B tiene que tapar: el canto del PMMA mas el rehundido. Muere
+// exactamente en el doblez de la meseta (miembro_x_trasera()).
+function marco_trasera_vuelo() = t_piel + t_costilla;
+// Donde cae la fila de M3 de cada banda MEDIDA DESDE SU CANTO LIBRE. La de
+// arriba cuelga del canto del acrilico hacia abajo; la de abajo nace en el
+// suelo. Las dos son la misma fila que ya lleva la trasera.
+function marco_trasera_m3_sup() = marco_trasera_ancho
+                                  - (marco_trasera_yt() - anclaje_piel_remate().y);
+function marco_trasera_m3_inf() = anclaje_piel_base().y;
+// Desarrollo de la L: las dos alas por su cota exterior menos un BD, igual que
+// la escuadra y que los tres miembros.
+function marco_trasera_desarrollo() = marco_trasera_ancho + marco_trasera_vuelo()
+                                      - miembro_bd();
+
+// El largo de las dos bandas es el MISMO de la trasera, y por eso sus M3 caen
+// en la misma x del dibujo sin recalcular nada: fila_agujeros() con el mismo
+// largo reparte los mismos centros.
+function marco_trasera_largo() = ancho_util - 2*hol_piel;
+
+// Desarrollo del de arriba. El origen en y es el CANTO LIBRE del ala A (el que
+// mira al centro del case), asi que el M3 cae donde lo pone marco_trasera_m3_sup()
+// sin que el doblez entre en la cuenta -- un canto libre no se mueve al plegar.
+module marco_trasera_sup_2d() {
+    difference() {
+        square([marco_trasera_largo(), marco_trasera_desarrollo()]);
+        fila_agujeros(marco_trasera_largo(), marco_trasera_m3_sup());
+    }
+}
+
+module marco_trasera_inf_2d() {
+    difference() {
+        square([marco_trasera_largo(), marco_trasera_ancho]);
+        fila_agujeros(marco_trasera_largo(), marco_trasera_m3_inf());
+    }
+}
+
+// Los dos puestos. El ala B se dibuja desde el doblez de la meseta hasta el
+// plano trasero y el ala A por debajo del canto del acrilico: se tocan en el
+// rincon sin pisarse, igual que las dos cajas de la escuadra.
+module marcos_trasera() {
+    P  = pts_perfil();
+    z0 = t_anillo + hol_piel;
+    az = marco_trasera_largo();
+    yt = marco_trasera_yt();
+    // el de arriba: ala A (la banda vista) + ala B (la que tapa el canto)
+    translate([P[6].x - t_costilla, yt - marco_trasera_ancho, z0])
+        cube([t_costilla, marco_trasera_ancho, az]);
+    translate([miembro_x_trasera(), yt, z0])
+        cube([marco_trasera_vuelo(), t_costilla, az]);
+    // el de abajo: solo banda
+    translate([P[6].x - t_costilla, 0, z0])
+        cube([t_costilla, marco_trasera_ancho, az]);
+}
+
 // --- LA SECCION DEL ANILLO, y el cupon que se corta de ella --------------
 // EL UNICO PLANO QUE DICE LAS PROFUNDIDADES (#237). Los dos ficheros del anillo
 // son vistas de planta: costilla_2d lleva la silueta y la ventana, y
@@ -951,9 +1044,10 @@ module brida_3d(x0, y0, ancho_x, ancho_y, z0, largo) {
 // El vuelo del ala B, medido desde la cara interior de la trasera. DERIVADO:
 // su punta muere en la linea de la ventana del anillo (silueta - cara_anillo),
 // asi que por dentro pisa exactamente el acrilico que el labio pisa por fuera
-// y nada de lo que se ve. Con cara_anillo 20 y t_piel 8 son 12 mm, que pasan
+// y nada de lo que se ve. Con cara_anillo 20, t_piel 8 y el marco de 1.5 son
+// 10.5 mm, que pasan
 // el canto del acrilico en rebaje_anillo - hol_costado = 5.5.
-function escuadra_vuelo() = cara_anillo - t_piel;
+function escuadra_vuelo() = cara_anillo - t_piel - t_costilla;
 // Regla de chapa, la misma de brida_raiz() con el diametro del M3: el agujero
 // no entra en la zona del doblez. Setback + 2t + radio del agujero.
 function escuadra_raiz() = radio_doblez_costilla + 3*t_costilla + d_M3_paso/2;
@@ -2109,6 +2203,8 @@ else if (PART == "costilla_2d")    costilla_2d();
 // vuelve del taller SIN REBAJE y el acrilico no entra.
 else if (PART == "costilla_dorso_2d") costilla_dorso_2d();
 else if (PART == "cupon_anillo_2d") seccion_anillo_2d();
+else if (PART == "marco_trasera_sup_2d") marco_trasera_sup_2d();
+else if (PART == "marco_trasera_inf_2d") marco_trasera_inf_2d();
 else if (PART == "assembly")           assembly();
 else if (PART == "assembly_acrilico")  assembly_acrilico();
 else if (PART == "assembly_aluminio")  assembly_aluminio();
@@ -2245,7 +2341,9 @@ module bandeja_base() {
 // una posicion que no coincide con la caja gemela de _cajas_solidas().
 module piel_trasera() {
     P = pts_perfil();
-    translate([P[6].x, 0, t_anillo + hol_piel])
+    // REHUNDIDA t_costilla desde el 2026-08-29 (#234): lo que asoma al plano
+    // trasero es el marco, no el acrilico.
+    translate([P[6].x - t_costilla, 0, t_anillo + hol_piel])
         rotate([0, -90, 0])
             difference() {
                 linear_extrude(t_piel) piel_trasera_2d();
@@ -2413,6 +2511,11 @@ module assembly_aluminio() {           // idem, Z-Rails + miembros + paneles sol
     // que la vista de atras ensena de ellas son sus tres M3 por costado, en
     // linea vertical cerca del canto.
     escuadras_trasera();
+    // EL MARCO DE LA TRASERA. Entra el 2026-08-29 y este SI se ve: es lo que
+    // asoma al plano trasero por arriba y por abajo, con el acrilico rehundido
+    // detras. Antes de el, esa cara la cerraba el PMMA y sus dos cantos corrian
+    // 540 mm cada uno sin metal (#234).
+    marcos_trasera();
     // LAS DOS COSTILLAS. Entran aqui el 2026-08-27, y llegaban tarde: son la
     // pieza PORTANTE del case desde el 26 y el render llevaba un dia
     // ensenando un aparato sostenido por su propia piel.
@@ -2564,6 +2667,26 @@ module bom() {
              " escuadras a la trasera, PASANTES por sus ", t_piel,
              " mm de PMMA, cabeza fuera y tuerca dentro. Mismo herraje que las",
              " dos filas que esa plancha ya lleva a los miembros."));
+    echo(str("BOM: MARCO DE LA TRASERA x2 -- de la MISMA chapa que los",
+             " miembros (6082-T6 de ", t_costilla, "). El de ARRIBA es un",
+             " angular, desarrollo ", marco_trasera_largo(), " x ",
+             marco_trasera_desarrollo(), ": banda vista de ",
+             marco_trasera_ancho, " y ala de ", marco_trasera_vuelo(),
+             " que dobla en el canto de arriba del acrilico y muere en el",
+             " doblez de la meseta. El de ABAJO es una pletina plana de ",
+             marco_trasera_largo(), " x ", marco_trasera_ancho, "."));
+    echo("     El de abajo no lleva ala y no es un olvido: ese canto esta en");
+    echo("     el plano del suelo y debajo tiene la TABLA, no aire. Un ala");
+    echo("     ahi levantaria el case de su propia base.");
+    echo("     Son lo que asoma al plano trasero por arriba y por abajo, con");
+    echo("     el acrilico rehundido 1.5 detras. Hasta el 2026-08-29 esa cara");
+    echo("     la cerraba el PMMA y sus dos cantos corrian 540 mm sin metal.");
+    echo(str("BOM: NINGUN TALADRO NUEVO EN LA TRASERA por el marco. Las dos",
+             " bandas se cuelgan de las filas de M3 que la plancha YA lleva a",
+             " sus dos miembros: los mismos ", 2*n_agujeros(ancho_util
+             - 2*hol_piel), " tornillos, ", t_costilla,
+             " mm mas largos. Y cambian de sitio las cabezas: se veian sobre",
+             " el PMMA y ahora se ven sobre metal."));
     echo("     NO HAY ROSCA CIEGA NUEVA EN EL ANILLO. La escuadra ancla en la");
     echo("     trasera a proposito: en la franja de 14 no cabe -- es la misma");
     echo("     cuenta que deja sin clip a ese tramo (ver TRAMOS_CLIP,");

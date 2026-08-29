@@ -184,6 +184,12 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
     # mas estrecho que la suma de las dos alas montadas, y esa diferencia ES la
     # pieza -- exportar la L ya doblada da un fichero valido e inservible.
     dims["escuadra_trasera_2d"] = cb.bbox_desarrollo_escuadra(p)
+    # LAS DOS BANDAS DEL MARCO DE LA TRASERA (#234). La de ARRIBA es otra L y
+    # su DXF es otro desarrollo -- las dos alas menos un BD --; la de ABAJO es
+    # plana y su blank ES la pieza, asi que las dos salen de la misma funcion y
+    # es ella la que sabe cual se dobla.
+    dims["marco_trasera_sup_2d"] = cb.bbox_desarrollo_marco(p, "marco trasera sup")
+    dims["marco_trasera_inf_2d"] = cb.bbox_desarrollo_marco(p, "marco trasera inf")
 
     # LAS TRES PLACAS DE ANCLAJE Y EL CLIP. Entran el 2026-08-28 (Tarea 6,
     # item del controller): hasta hoy placas()/clips() eran solidos del
@@ -633,9 +639,41 @@ def agujeros_donde_toca() -> list[str]:
                 f.append(f"{nombre}: las filas estan a {sep_dxf:.2f} mm en el DXF "
                          f"y a {sep_mod:.2f} en el modelo (difieren "
                          f"{sep_dxf - sep_mod:+.2f}) -- una de las dos se movio")
+    # --- el marco de la trasera: la misma fila, en otra chapa (#234) ---
+    # No sale del bucle de arriba porque las dos bandas no son planchas del
+    # cuerpo: viven en `railes` con los clips y las escuadras. Pero llevan
+    # tornillos, y un DXF con tornillos que nadie cuenta es exactamente el
+    # agujero del issue #51 -- la banda volveria del taller sin los suyos y no
+    # se sabria hasta ir a atornillarla a la trasera. Son LOS MISMOS M3 que ya
+    # cruzaban el acrilico, asi que la rejilla que se les exige es la de la
+    # piel y no la del case: el mismo ancho, los mismos cinco centros.
+    for m in cb._marcos_trasera(p):
+        nombre = m["dxf"]
+        if not (PLANS / f"{nombre}.dxf").exists():
+            f.append(f"{nombre}: FALTA el DXF de una banda del marco")
+            continue
+        leidos = _redondos(nombre)
+        if len(leidos) != len(REJILLA_PIEL):
+            f.append(f"{nombre}: {len(leidos)} M3 en el DXF y la banda lleva "
+                     f"{len(REJILLA_PIEL)}, los mismos de la fila que ya "
+                     f"cruzaba la trasera")
+            continue
+        for cx, cy, _ in leidos:
+            if min(abs(cx - r) for r in REJILLA_PIEL) > DESVIO_DXF_MAX:
+                f.append(f"{nombre}: un M3 en x={cx:.2f} se sale de la rejilla "
+                         f"de la trasera: si no coinciden, no entra el tornillo")
+                break
+            if abs(cy - m["m3_local"]) > DESVIO_DXF_MAX:
+                f.append(f"{nombre}: un M3 cae a y={cy:.2f} del canto libre de "
+                         f"la banda y el modelo lo pone en "
+                         f"{m['m3_local']:.2f}")
+                break
+
     if not f:
         print(f"  planchas: {sum(len(c) for c in por_placa.values())} filas de "
-              f"agujeros verificadas contra el DXF")
+              f"agujeros verificadas contra el DXF, mas "
+              f"{len(cb._marcos_trasera(p))} bandas de marco de "
+              f"{len(REJILLA_PIEL)} M3")
     return f
 
 
