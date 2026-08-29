@@ -327,14 +327,35 @@ maciza, vaciada por el centro con fresadora CNC.
   de PE va **enmascarado antes de anodizar**, en la cara interior, uno por
   anillo — el anodizado es aislante y ese punto tiene que quedar metal
   desnudo.
-- **Cupón antes de cortar los dos anillos.** Las cotas de la cara vista
-  (chaflán, rebaje, rehundido) salieron de escalar una foto de referencia y
-  están marcadas ESTIMADO en la spec de diseño. Mecanizar y anodizar un
-  **cupón de 100 mm del perfil** — mismo chaflán, mismo rebaje, mismo
-  acabado — y compararlo contra la referencia ANTES de cortar el material
-  para los dos anillos completos. Es la misma lógica que el cupón de kerf
-  del acrílico (§ «Procedimiento del cupón» en el README): medir sobre la
-  pieza real, no sobre el render.
+- **PUNTO DE PARADA: el cupón, antes de cortar los dos anillos.** Las cotas
+  de la cara vista (chaflán, rebaje, rehundido) salieron de escalar una foto
+  de referencia y están marcadas ESTIMADO en la spec de diseño. **No se corta
+  el material de los dos anillos hasta que este cupón esté aprobado.** Es la
+  misma lógica que el cupón de kerf del acrílico (§ «Procedimiento del cupón»
+  en el README): medir sobre la pieza real, no sobre el render.
+
+  **Qué se pide:** `plans/cupon_anillo_2d.dxf` es la **sección** — el único
+  plano del anillo que lleva las profundidades, porque los otros dos son
+  vistas de planta y ninguna sabe decir «14 de pletina» ni «1.5 × 45». Del
+  perfil de esa sección, **100 mm de largo**, con **una rosca ciega M4 (broca
+  3.3, 10 mm útiles) a media altura de la franja, a media longitud**, y
+  **anodizado satinado con un punto de bonding enmascarado** en la cara
+  interior. Mismo material, mismo mecanizado y mismo anodizador que van a
+  hacer los anillos: un cupón hecho de otra forma no mide nada.
+
+  **Qué se mira cuando vuelve, y qué pasa si falla:**
+
+  | # | Qué se comprueba | Criterio | Si falla |
+  |---|---|---|---|
+  | 1 | El chaflán se lee como en la foto de referencia | 1.5 ± 0.2 a 45°, continuo y sin escalones de faceta, mirado con la misma luz y al lado de la referencia impresa | Se cambia `chaflan_anillo` (rango ESTIMADO 1–3), se reexporta la sección y se pide otro cupón |
+  | 2 | El rebaje asienta el PMMA del lote | Con el recorte **más grueso** del lote (8 + 1.2 = 9.2) más la junta de 1 tiene que entrar en los 11 de fondo y **sobrar 0.3**; con el **más fino** (6.8) la junta todavía tiene que precargar | Se sube `t_anillo` — la puerta `guarda_rebaje()` ya dice que con 12 el rebaje quedaba a −0.2, o sea que no cabía |
+  | 3 | El anodizado no interrumpe el PE | **≤ 0.1 Ω** medido a cuatro hilos entre el punto enmascarado y un tornillo M4 apretado en la rosca ciega (spec 2026-08-27 §3.4) | El enmascarado no valió: se rehace el punto y se vuelve a medir antes de anodizar los anillos |
+
+  Las cotas **en el plano** (cara vista y ancho del rebaje) no hacen falta
+  medirlas aquí: las cruzan `anillo_tiene_ventana()` y `anillo_tiene_rebaje()`
+  contra los ficheros que se cortan, en cada corrida. Lo que el cupón cierra
+  son las **tres profundidades** y el **acabado**, que ningún DXF de planta
+  puede decir y ningún render puede decidir.
 - **Aleación: recomendada, no obligatoria.** La puerta (`guarda_anillo()`)
   calcula con **Rp0.2 = 130 MPa**, el conservador de siempre, y con la
   sección de este anillo (I = 3714 mm⁴, 214 mm², contra 1673 mm⁴ de la vieja

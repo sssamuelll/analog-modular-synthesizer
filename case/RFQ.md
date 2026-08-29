@@ -233,11 +233,17 @@ maciza de 14 mm**, vaciada por el centro, una pieza por lado.
 ### Muestra que se pide con el presupuesto
 
 Un **cupón de 100 mm del perfil del anillo** — mismo espesor, mismo rebaje,
-mismo chaflán, mismo acabado — **antes de cortar los dos anillos
-completos**. Las cotas de la cara vista (chaflán, rebaje, rehundido) salieron
-de escalar una foto de referencia y están marcadas ESTIMADO en la spec de
-diseño; el cupón es lo que las cierra contra la pieza real, no contra el
-render.
+mismo chaflán, mismo acabado, mismo anodizador — **antes de cortar los dos
+anillos completos**. Las cotas de la cara vista (chaflán, rebaje, rehundido)
+salieron de escalar una foto de referencia y están marcadas ESTIMADO en la
+spec de diseño; el cupón es lo que las cierra contra la pieza real, no contra
+el render.
+
+El plano es **`plans/cupon_anillo_2d.dxf`**: la sección del perfil, a 1:1 y en
+mm. Va con una rosca ciega M4 a media longitud y un punto de bonding
+enmascarado en la cara interior. El PLIEGO (§ anillo) lleva la tabla de lo que
+se mide cuando vuelve y qué se cambia si no pasa. **Es un punto de parada: sin
+cupón aprobado no se corta el material de los anillos.**
 
 ### Registro
 

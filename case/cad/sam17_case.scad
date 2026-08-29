@@ -833,6 +833,32 @@ module clip_2d() {
 // construye como laminas de offset() creciente -- seis de 0.25 -- porque un
 // chaflan exacto sobre un contorno concavo no sale de hull() ni barato de
 // minkowski(); para el render y para solapes() basta y es determinista.
+// --- LA SECCION DEL ANILLO, y el cupon que se corta de ella --------------
+// EL UNICO PLANO QUE DICE LAS PROFUNDIDADES (#237). Los dos ficheros del anillo
+// son vistas de planta: costilla_2d lleva la silueta y la ventana, y
+// costilla_dorso_2d el contorno del rebaje. Entre los dos cierran las cotas EN
+// EL PLANO -- cara_anillo y rebaje_anillo, y las cruzan anillo_tiene_ventana()
+// y anillo_tiene_rebaje() releyendo los ficheros --, pero ninguno de los dos
+// sabe decir "14 de pletina", "11 de profundidad de rebaje" ni "1.5 x 45": eso
+// es justamente lo que un DXF de planta no puede escribir. Hasta hoy esas tres
+// cotas solo vivian en params.scad y en la prosa del pliego.
+//
+// Se dibuja con la CARA VISTA ABAJO (y = 0) y la pletina creciendo hacia y+,
+// que es como se lee montada: lo que se ve del case es el canto de abajo.
+//
+// LAS DOS ARISTAS DE LA CARA VAN CHAFLANADAS, no una: costilla() aplica sus
+// seis rodajas con offset(-f) sobre la silueta Y offset(-cara + f) sobre la
+// ventana. Dibujar una sola aqui mandaria fresar un cupon que no es el perfil.
+module seccion_anillo_2d() {
+    c = chaflan_anillo;
+    W = cara_anillo;
+    T = t_anillo;
+    R = rehundido_acrilico;
+    B = rebaje_anillo;
+    polygon([[c, 0], [W - c, 0], [W, c], [W, R], [W - B, R],
+             [W - B, T], [0, T], [0, c]]);
+}
+
 module costilla() {
     n = 6;
     difference() {
@@ -2082,6 +2108,7 @@ else if (PART == "costilla_2d")    costilla_2d();
 // KONDOR: un DXF 2D no sabe decir "a 11 mm de profundidad". Sin el, el anillo
 // vuelve del taller SIN REBAJE y el acrilico no entra.
 else if (PART == "costilla_dorso_2d") costilla_dorso_2d();
+else if (PART == "cupon_anillo_2d") seccion_anillo_2d();
 else if (PART == "assembly")           assembly();
 else if (PART == "assembly_acrilico")  assembly_acrilico();
 else if (PART == "assembly_aluminio")  assembly_aluminio();

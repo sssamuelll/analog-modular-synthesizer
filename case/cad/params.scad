@@ -150,6 +150,15 @@ rehundido_acrilico = 3;
 // Chaflan de las dos aristas de la cara vista, silueta y ventana. Rango
 // ESTIMADO 1-3 de la foto. Es lo que hace que la arista brille.
 chaflan_anillo     = 1.5;
+// EL CUPON: un tramo recto del perfil del anillo que se corta, se chaflana, se
+// anodiza y se mira ANTES de mandar cortar los dos anillos enteros (#237). 100
+// mm es lo que pide la spec 2026-08-28 §9 y lo que ya prometia el PLIEGO: largo
+// suficiente para leer el chaflan a lo largo (no en una esquina), para meter el
+// PMMA de 8 +-1.2 con su junta en el rebaje y ver si asienta, y para dejar un
+// punto de bonding enmascarado con sitio de sobra alrededor. Vive aqui y no
+// suelto en el pliego para que la puerta lo imprima con las cotas de la seccion
+// del mismo sitio: el cupon no es una pieza del case y no entra en el BOM.
+cupon_largo = 100;
 // LA PLACA DE ANCLAJE DEL RIEL. El eje del M4 de cada riel cae a 15.90 de la
 // silueta (medido), en la zona del rebaje donde el anillo solo tiene 3 mm de
 // labio: el tornillo no puede atravesar la cara vista. Va a una placa sobre

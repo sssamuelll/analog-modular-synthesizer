@@ -140,6 +140,11 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
         # cupon: 2*margen + (n-1)*paso de la escalera, x 62 de alto. No sale
         # de _cajas_solidas porque no es una pieza del case.
         "coupon": (136.0, 62.0),
+        # LA SECCION DEL ANILLO, de la que se corta el cupon de 100 mm (#237).
+        # Es la seccion y no el cupon entero: el largo va en la nota del pliego
+        # porque un DXF de seccion no lo dice, igual que no dice profundidades
+        # el de planta. cara x pletina, tal cual.
+        "cupon_anillo_2d": (p["cara_anillo"], p["t_anillo"]),
     }
     # Las tres de ACERO. No salen de _cajas_solidas porque no son planchas del
     # cuerpo del case, y sobre todo porque su DXF NO es su caja: el desarrollo
@@ -1048,6 +1053,64 @@ def anillo_tiene_rebaje() -> list[str]:
     return []
 
 
+def seccion_del_cupon() -> list[str]:
+    """El DXF de la seccion del anillo dice las PROFUNDIDADES, y dice las del
+    anillo que se va a cortar.
+
+    ES EL UNICO PLANO QUE LAS PUEDE DECIR (#237). Los otros dos ficheros del
+    anillo son vistas de planta: anillo_tiene_ventana() cruza cara_anillo
+    releyendo costilla_2d y anillo_tiene_rebaje() cruza cara - rebaje
+    releyendo costilla_dorso_2d, o sea que las cotas EN EL PLANO ya estan
+    atadas al fichero que se corta. Las otras tres -- pletina de t_anillo,
+    labio de rehundido_acrilico, chaflan de chaflan_anillo -- no salen en
+    ninguna planta y hasta hoy vivian solo en params.scad y en la prosa del
+    PLIEGO. El cupon existe justamente para medirlas sobre metal, y sin un
+    plano de la seccion lo que llegaria al taller seria un parrafo.
+
+    Se comprueba la seccion ENTERA por sus ocho vertices y no dimension a
+    dimension: un poligono con los ocho puntos donde toca es la seccion, y
+    ademas caza los dos errores que una lista de cotas no caza -- el chaflan
+    dibujado en una sola arista (costilla() los pone en las DOS: offset(-f)
+    sobre la silueta y offset(-cara + f) sobre la ventana) y el rebaje
+    dibujado desde la cara vista en vez de desde el dorso, que da un fichero
+    valido, con las mismas cotas, y un perfil que es otro.
+
+    Lo que este fichero NO dice, y por eso va en la nota del pliego: el largo
+    del cupon (cupon_largo), la rosca ciega M4 a media altura y el punto de
+    bonding enmascarado. Un DXF de seccion no sabe decir cuanto mide la pieza
+    a lo largo, igual que uno de planta no sabe decir a que profundidad."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    c, W = p["chaflan_anillo"], p["cara_anillo"]
+    T, R, B = p["t_anillo"], p["rehundido_acrilico"], p["rebaje_anillo"]
+    esperados = [(c, 0.0), (W - c, 0.0), (W, c), (W, R),
+                 (W - B, R), (W - B, T), (0.0, T), (0.0, c)]
+    aristas, comps = _componentes("cupon_anillo_2d")
+    if len(comps) != 1:
+        return [f"cupon_anillo_2d: {len(comps)} contorno(s) y la seccion del "
+                f"anillo es UNO cerrado de ocho lados"]
+    pts = {(round(q[0], 3), round(q[1], 3)) for j in comps[0] for q in aristas[j]}
+    f: list[str] = []
+    nombres = ["arranque del chaflan de la silueta", "arranque del chaflan de "
+               "la ventana", "final del chaflan de la ventana",
+               "canto del labio", "asiento del rebaje", "fondo del rebaje",
+               "dorso en la silueta", "final del chaflan de la silueta"]
+    for (x, y), nm in zip(esperados, nombres):
+        if not any(math.hypot(q[0] - x, q[1] - y) <= DESVIO_DXF_MAX for q in pts):
+            f.append(f"cupon_anillo_2d: falta el vertice '{nm}' en "
+                     f"({x:.2f}, {y:.2f}): el perfil dibujado no es el que "
+                     f"fresa costilla()")
+    if len(pts) != len(esperados):
+        f.append(f"cupon_anillo_2d: {len(pts)} vertices y la seccion tiene "
+                 f"{len(esperados)}")
+    if not f:
+        print(f"  cupon_anillo_2d: seccion de {W:g} x {T:g}, labio de {R:g}, "
+              f"rebaje {B:g} x {T - R:g}, chaflan {c:g} x 45 en las dos "
+              f"aristas de la cara -- cupon de {p['cupon_largo']:g} mm")
+    return f
+
+
 def taladros_anillo() -> list[str]:
     """Las roscas ciegas del anillo estan en el dorso, donde el modelo dice,
     con material alrededor y dentro de la FRANJA.
@@ -1763,6 +1826,7 @@ def main() -> int:
         fallos += revisar(nombre, sobre)
     fallos += anillo_tiene_ventana()
     fallos += anillo_tiene_rebaje()
+    fallos += seccion_del_cupon()
     fallos += taladros_anillo()
     fallos += taladros_placas()
     fallos += ranuras_rejilla_entrada()
