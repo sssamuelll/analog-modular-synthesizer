@@ -1,8 +1,7 @@
 # SAM17 — Diseño del case (consola de dos pisos, esqueleto de aluminio)
 
 **Fecha:** 2026-08-15
-**Estado:** aprobado en diseño (rev. 3: pivote de cómputo, fuente v2 y
-geometría del board de diseño), pendiente de plan de implementación
+**Estado:** aprobado en diseño (rev. 23), pendiente de plan de implementación
 **Sustituye a:** formato de cajón de la tesis (madera 950 × 440 × 100–200 mm,
 paneles galvanizados pintados) descrito en
 [`docs/modules/08-case-panels.md`](../../modules/08-case-panels.md).
@@ -125,7 +124,8 @@ lenguaje visual).
 > esquina viva** (`radio_trasero` = 0). Medido sobre el DXF, el costado se metía
 > hacia dentro del plano trasero **14.004 mm en `y` = 0** (vértice fondo-abajo,
 > que llevaba `radio_perfil` = 14) y **2.004 mm arriba** (fondo-arriba,
-> `radio_remate` = 2). La trasera es un rectángulo de 528.020 × 248.184 **con
+> `radio_remate` = 2). La trasera es un rectángulo de **540.32 × 254.68** (rev. 23; fue
+> 528.020 × 248.184) **con
 > esquinas vivas** que baja hasta `y` = 0, así que su esquina inferior quedaba
 > colgando 14 mm por fuera de la silueta del costado. Ahora el desajuste es
 > **0.000 mm** en las dos, y la tapa de remate gana lo mismo arriba. El costado
@@ -230,6 +230,30 @@ lenguaje visual).
 > dibujó para paneles de 190 mm y un case de 500 × 380 × 350; el case real
 > mide **544.32 × 256.18 × 308.94** — superado otra vez en la rev. 22, ver
 > abajo.
+>
+> **rev. 23** (2026-08-29): **la trasera se rehunde y la enmarca el metal.**
+> Hasta hoy era la pieza más exterior de la cara de atrás y sus dos cantos
+> corrían **540 mm cada uno sin metal encima**; el de arriba eran además los
+> últimos 8 mm del **pico** del case — `guarda_remate()` repartía esa meseta
+> entre `inset_remate_frente` + `prof_sup` + `t_piel`, y ese `t_piel` era el
+> canto del acrílico haciendo de superficie vista. Se aplica por detrás la
+> misma regla que ya gobierna el costado: el acrílico va **dentro** del metal.
+> La plancha se rehunde `t_costilla` y asoman **dos bandas de chapa de 1.5** —
+> `marco_trasera_sup_2d` (angular: banda vista de 20 y ala de 9.5 que dobla
+> sobre el canto superior y muere en el doblez de la meseta) y
+> `marco_trasera_inf_2d` (pletina plana de 20, sin ala: ese canto apoya en la
+> tabla). Las dos cuelgan de las filas de M3 que la trasera ya llevaba a sus
+> miembros — **cero taladros nuevos en el acrílico** — y las diez cabezas que
+> se veían sobre el PMMA pasan a verse sobre metal. Lo paga **`prof_sup`, que
+> baja de 29 a 27.5**, no el inset (su acantilado está en 12.8: con 13 la tapa
+> de arriba abre 180°, con 12.8 abre 61); la meseta no se mueve por delante y
+> el barrido probado sigue intacto. El ala B de la escuadra trasera se acorta
+> la misma cantidad, de 12 a **10.5** — su punta sigue muriendo en la línea de
+> la ventana del anillo. Puerta: `guarda_marco_trasera()`. Entra también el
+> plano que le faltaba al anillo, **`cupon_anillo_2d`** (la sección, único
+> plano suyo con profundidades, `seccion_del_cupon()`), y una puerta para el
+> censo de la rejilla de entrada, `ranuras_rejilla_entrada()`, que hasta hoy
+> era gemela **por lectura** — un humano contando LINEs del DXF.
 >
 > **rev. 22** (2026-08-28): **la costilla deja de ser chapa plegada y pasa a
 > ser un anillo de pletina de aluminio mecanizada** — 14 mm de espesor, cara
@@ -675,6 +699,10 @@ con qué habría que medir para cerrarlo.
   comparado contra la referencia **antes de cortar los dos anillos
   completos** (PLIEGO §6.1). Bloquea el corte del anillo, no el resto del
   case.
+- ~~**La trasera enseña canto arriba y abajo**~~ — **CERRADO el 2026-08-29**
+  (rev. 23, #234): dos bandas de chapa la enmarcan y la plancha se rehunde
+  `t_costilla`. Los DXF nuevos son `marco_trasera_sup_2d` y
+  `marco_trasera_inf_2d`; la puerta, `guarda_marco_trasera()`.
 - **Planitud del anillo tras vaciar el centro de una pletina de 14 mm**
   (rev. 22): es la pregunta eliminatoria del RFQ (§B/§D) y el riesgo
   técnico real de esta pieza — la resistencia sobra por 2× (I = 3714 mm⁴
