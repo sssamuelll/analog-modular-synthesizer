@@ -13,7 +13,7 @@ para saber **quién puede hacerlo**.
 > | § | taller | qué se le pide |
 > |---|---|---|
 > | A | casa de acrílico | costados ×2, trasera |
-> | B | chapa de aluminio (y acero) | miembros ×3 (con bridas), placas ×6, clips ×4, escuadras ×2, tapa del valle, chasis ×3 |
+> | B | chapa de aluminio (y acero) | miembros ×3 (con bridas), placas ×6, clips ×4, escuadras ×2, **marco trasero ×2** (uno plegado, uno plano), tapa del valle, chasis ×3 |
 > | C | carpintería | la tabla (suelo + zócalo) |
 > | D | mecanizado de aluminio | el anillo ×2 — NUEVO desde el 2026-08-28 |
 
@@ -147,7 +147,8 @@ dentro del anillo.
    paso.
 
 **Los DXF que reciben son DESARROLLOS PLANOS, no contornos.**
-`miembro_bajo_2d`, `miembro_alto_2d`, `bahia_2d`, `escuadra_trasera_2d` y
+`miembro_bajo_2d`, `miembro_alto_2d`, `bahia_2d`, `escuadra_trasera_2d`,
+`marco_trasera_sup_2d` y
 `tapa_valle_2d` traen el recorte; la pieza doblada mide menos. Cortar el
 contorno de la pieza montada da un fichero válido e inservible — es el mismo
 error que el modelo vigila con un sobre por pieza. **`costilla_2d` YA NO ES

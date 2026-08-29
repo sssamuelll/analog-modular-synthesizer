@@ -159,6 +159,7 @@ el 2026-08-28:
 | `bandeja_base_2d` | madera maciza, 18 mm | carpintería | corte + ranuras alargadas |
 | `placa_cara_inf_2d`, `placa_valle_2d`, `placa_cara_sup_2d` | aluminio, `t_placa` = 6 mm | chapa | corte + cajeado Ø8 × `prof_cajeado_riel` = 2.5 **por el lado del anillo, una sola vez** (no «por cara»: es UN bolsillo ciego en UNA de las dos caras, y deja 3.5 mm de placa bajo la cabeza del M4). Nota de mecanizado, no va en el DXF — ver abajo — **2 uds cada uno, PAR ESPEJADO** |
 | `clip_2d` | aluminio, `t_clip` = 4 mm | chapa | corte — 4 uds, pieza genérica |
+| `cupon_anillo_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **NO ES UNA PIEZA DEL CASE**: es la SECCIÓN del perfil del anillo, y de ella sale el **cupón de 100 mm** que hay que aprobar antes de cortar los dos anillos — ver el punto de parada en §6.1 |
 
 **`costilla_2d` y `costilla_dorso_2d` son CONTORNOS REALES, no desarrollos** —
 al revés de como era hasta el 2026-08-27. La pieza ya no se dobla: lo que corta
