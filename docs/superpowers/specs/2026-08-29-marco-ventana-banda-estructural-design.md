@@ -394,8 +394,8 @@ viejo, el modelo después, VERDE, y romperla a propósito una vez.
 - **#130, la pieza fija del IEC**: su anclaje era el miembro bajo; pasa al talón o
   a la tabla cuando se dibuje.
 - **La fijación del chasis de hoy estaba muerta**: apuntaba a la ranura de un 2020
-  que murió el 27-08 y la puerta no lo veía. Se cierra aquí (§5); va como
-  hallazgo al issue del chasis.
+  que murió el 27-08 y la puerta no lo veía. Se cierra aquí (§5); el hallazgo
+  queda en el cuerpo del PR y en el §11 de la spec del 15-08.
 - **El orden de montaje del README** ponía los costados después de las placas y
   los clips, y así no entra un costado en su rebaje. Se corrige en el README con
   esta tanda.

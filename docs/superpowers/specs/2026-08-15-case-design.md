@@ -774,8 +774,8 @@ con qué habría que medir para cerrarlo.
 - **El chasis del PSU colgaba de un 2020 muerto** (rev. 25): sus dos M5 de
   pared apuntaban a la ranura interior de `base trasera`, que murió el
   27-08, y `guarda_chasis()` solo miraba que cayeran en la pared del chasis.
-  Cerrado por construcción — cuatro M4 por el suelo a la tabla —, y va como
-  hallazgo al issue del chasis.
+  Cerrado por construcción — cuatro M4 por el suelo a la tabla —; el
+  hallazgo queda aquí y en el cuerpo del PR.
 
 ## 12. Fuera de alcance (el diseño no los bloquea)
 
