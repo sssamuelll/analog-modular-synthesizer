@@ -73,17 +73,31 @@
 // El 1.5 se queda tal cual al irse la costilla a pletina: es el espesor con el
 // que ya estan calculados los tres miembros, y ninguno de ellos cambio.
 t_costilla      = 1.5;
-// --- LOS DOS MIEMBROS TRASEROS: canales de chapa ---
-// Arrancan en la envolvente del 2020 que sustituyen (20 x 20), que es la minima
-// que ya le gana en inercia (6935 mm4 contra ~5600). La seccion definitiva de
-// cada uno sale de su carga. Fueron TRES hasta el 2026-08-29: la bahia -- la
-// bandeja de 60 de fondo bajo la fila 1U -- se fue por decision de Samuel.
-canal_ancho = 20;   // cota exterior perpendicular a la carga
-// FUE 20, la envolvente del 2020 que estos miembros jubilan, y con chapa de
-// 3 mm daba I=6279 mm4: 1.12x el perfil. Al bajar la chapa a 1.5 pierde esa
-// ventaja; 24 mm es el fondo minimo que vuelve a ganarle al 2020. Lo deriva
-// guarda_miembros(), no una equivalencia nominal de cajas.
-canal_fondo = 24;   // cota exterior en la direccion de la carga
+// --- EL MIEMBRO ALTO Y EL TALON: la banda es el miembro (2026-08-29) ---
+// Fueron TRES canales de chapa (bahia, trasero bajo, trasero alto) hasta el
+// 2026-08-29 por la manana y dos por la tarde. Desde esa noche el miembro alto
+// es una L -- la meseta, del pico al plano trasero, y la BANDA que baja por el
+// plano trasero -- y el bajo es el TALON: la misma banda con un pie sobre la
+// tabla, como la nariz por delante. La trasera va DENTRO de las dos bandas y
+// los marcos de la trasera de la manana desaparecen: la banda vista ES el
+// alma. Spec 2026-08-29-marco-ventana-banda-estructural.
+//
+// LA BANDA VISTA, a ras del plano trasero, arriba y abajo. 24 y no 20: 20 era
+// el ancho del marco de la manana y lo ponia su fila de M3 (1.5 D a los dos
+// cantos); hoy lo pone la flexion de la L SOLA, sin la trasera, con carga_mano
+// en el centro de la meseta -- con 20 el canto libre de la banda trabaja a 158
+// MPa contra los 130 de RP02_ALUMINIO, con 22 a 131 y con 24 a 110. Lo mide
+// guarda_miembro_alto(). Con 20 pasaria solo obligando 6082-T6 (Rp0.2 240,
+// EN 485-2 para chapa hasta 3 mm) y la regla del repo es "aleacion
+// recomendada, no obligatoria". Se ve: 4 mm mas de metal arriba y abajo. Es
+// un parametro y se juzga en render.
+banda_trasera   = 24;
+// El pie del talon sobre la tabla, hacia delante desde la cara interior de la
+// banda. La trasera se asienta encima (1.5 sobre la tabla) y tres M4 lo
+// atornillan a la tabla desde dentro a 1.5 D de su canto libre, con la cabeza
+// fuera de la huella de la trasera. 20 y no 18 como la nariz: con 18 la cabeza
+// del boton (7.6) se metia 0.55 bajo el acrilico. Lo mide guarda_talon().
+talon_pie       = 20;
 // Vale lo mismo que ya repartian las filas de las planchas de acrilico para
 // que sus tornillos caigan en la reticula por construccion, no por coincidencia.
 // Una sola cota gobierna ambos lados: repetir 100 los desincronizaria al cambiarla.
@@ -171,76 +185,13 @@ d_M5_rosca         = 4.2;
 // sino en los 6 mm de la PLACA DEL VALLE, igual que las de la bahia (R3).
 // 2.5 de ISO 262: aqui no hay hoja de fabricante que consultar.
 d_M3_rosca         = 2.5;
-// Clips de retencion del acrilico hacia dentro: pletina de 4 sobre la franja.
-// EL LABIO SOLO SUJETA HACIA FUERA. El acrilico asienta en el rebaje y el
-// labio de 3 mm lo pisa por delante, asi que una mano que TIRE no lo mueve;
-// una mano que EMPUJE el costado hacia dentro no encuentra nada -- el hueco
-// entre la cara del PMMA (z = 11) y la cara interior del anillo (z = 14) esta
-// vacio y el acrilico se sale del rebaje por detras. Estos clips son ese tope.
-t_clip             = 4;
-// Cuanto se mete el clip desde la silueta.
-//
-// LA SPEC PIDE OTRA COSA y conviene no confundirlas. §4 dice "solapando 4 mm
-// sobre el ACRILICO", y el acrilico arranca a retiro_rebaje + hol_costado =
-// 14.5: eso serian 18.5, no 24. Los 24 son RULING DE LA TAREA 4, no la spec.
-//
-// Por que 24 y no 18.5: con 18.5 el clip muere DENTRO del rebaje -- pisa solo
-// la ceja de 4 mm de acrilico que ya esta encajonada entre el labio y la pared
-// del rebaje, que es el trozo que menos se mueve. Con 24 pasa el canto de la
-// ventana (cara_anillo = 20) y muerde 4 mm de acrilico VOLADO, que es donde el
-// panel de verdad se separa: pisa 9.5 mm de acrilico en total. Mas fondo no
-// compra retencion y se ve mas por la ventana.
-clip_fondo         = 24;
-// Largo del clip a lo largo de su tramo. Su M4 va centrado, o sea a 10 mm de
-// cada punta, y el agujero de paso pide 1.5 D = 6.75 de canto: 20 es el
-// primer numero redondo que lo cumple con margen. Lo comprueba
-// guarda_anclajes() contra el poligono real del clip.
-clip_largo         = 20;
-// LA ESCUADRA DE LA TRASERA: el tope del canto TRASERO del acrilico.
-//
-// LOS CLIPS NO LLEGAN AHI, y no es que falten: no caben. La franja trasera de
-// los 14 mm la ocupa el canto de piel_trasera con sus 8 mm exteriores, y un
-// clip que arrancara en los 6 que quedan dejaria su M4 a 0.35 mm de su propio
-// canto contra los 6.75 que pide el paso M4 (la cuenta esta en TRAMOS_CLIP).
-// El clip del suelo mas cercano que la ley permite se queda a 95.7 mm. O sea
-// 227 mm de canto de acrilico sin un solo tope hacia dentro, y encima la
-// formula de placa EMPOTRADA con la que guarda_costado() lo aprueba no vale
-// justo ahi: supone material sujeto alrededor del punto, y un canto libre no
-// lo esta. Lo canto la revision de la Tarea 4 y lo decidio Samuel el
-// 2026-08-28 -- salida (a) de las tres que la spec §10 dejaba abiertas.
-//
-// LA ESCUADRA VA A LA TRASERA, NO AL ANILLO. Es un angular de la misma chapa
-// que los miembros (t_costilla), plegado a 90: un ala atornillada por dentro a
-// la trasera y otra que asoma sobre el canto del costado y hace de tope
-// corrido. En el anillo no hay rosca ciega nueva -- sus M3 son pasantes por
-// los 8 mm de PMMA de la trasera, con tuerca por dentro, el mismo herraje que
-// las dos filas que esa plancha ya lleva a los miembros.
-//
-// EL ALA QUE ASOMA (el vuelo) NO ES UN NUMERO LIBRE y por eso no esta aqui: lo
-// deriva escuadra_vuelo() = cara_anillo - t_piel. Su punta muere justo en la
-// linea de la VENTANA del anillo, o sea que por dentro pisa exactamente el
-// acrilico que el labio pisa por fuera (rebaje_anillo - hol_costado = 5.5 mm)
-// y ni un milimetro del que se ve. Que no asome mas importa: el acrilico es
-// traslucido y lo que quede por detras se transparenta -- es lo que ya paso
-// con la rejilla de entrada en el vuelo de la bandeja.
-//
-// 16 ES EL MINIMO QUE ADMITE SU PROPIO TORNILLO, y esa es toda la cuenta. El
-// M3 tiene que caer 2t+r por debajo de la tangente del doblez -- la regla de
-// chapa de brida_raiz(), que aqui vale 3 + 3*1.5 + 3.4/2 = 9.20 -- y aun asi
-// dejar 1.5 D hasta el canto libre del ala (5.10). 9.20 + 5.10 = 14.30, y 16
-// es el numero redondo que lo cumple con 1.7 de sobra. Con 12 no hay agujero
-// legal: es el mismo choque que tiene la pestana de la banda del valle.
-escuadra_ala       = 16;
-// Cuantos M3 por escuadra. Tres reparten los 153 mm de ala que quedan por
-// encima de la rejilla de entrada a 51 mm de paso.
-escuadra_m3        = 3;
-// Lo que la escuadra se retira de la BRIDA de cada miembro trasero, por punta.
-// Las bridas viven en la misma franja y en la MISMA rebanada de z que el ala
-// que asoma (t_anillo .. t_anillo + t_costilla), asi que sin este aire se
-// pisan: lo adjudica solapes(). 10 mm es aire de montaje, no una cota critica
-// -- lo que se paga por el son 20 mm de cobertura del canto, y la puerta exige
-// el 80 %.
-escuadra_retiro    = 10;
+// LOS CLIPS DE RETENCION (t_clip 4, clip_fondo 24, clip_largo 20) Y LA ESCUADRA
+// DE LA TRASERA (escuadra_ala 16, escuadra_m3 3, escuadra_retiro 10) MURIERON
+// EL 2026-08-29 por la noche. Hacian un solo trabajo -- el tope hacia dentro
+// del costado en el suelo y en el canto trasero, los dos tramos sin placa de
+// anclaje -- y ese trabajo lo hace ahora el MARCO DE LA VENTANA (marco_fondo,
+// mas abajo), que corre los siete tramos. Con ellos se van dos roscas ciegas
+// por anillo y seis M3 sobre el acrilico de la trasera.
 
 // --- LOS ANCLAJES DE LA CARA INTERIOR (2026-08-28) ---------------------
 // TODA rosca ciega del anillo es M4 y cae a esta distancia de la silueta. Un
@@ -258,71 +209,76 @@ escuadra_retiro    = 10;
 // Entre 6.75 y 9.05 hay sitio; 8.5 es el punto donde las dos reglas tienen el
 // mismo margen. Lo comprueba guarda_anclajes() rosca a rosca.
 dist_rosca_ciega   = 8.5;
-// LA PLACA ES EL MARCO DE LA FILA (Samuel, 2026-08-28, mirando el render).
-// UNA por TRAMO y por costado, no una por riel: corre el tramo entero entre
-// las esquinas del anillo y recoge sus dos rieles. Fueron placas sueltas de
-// 28 durante medio dia y dejaban una RANURA de 6.15 mm abierta en cada punta
-// de cada fila -- el hueco entre el riel de 104 HP y la cara interior del
-// anillo --, por la que se veia el interior. Con la placa corrida ese hueco
-// lo tapa su canto de 6 mm, que desde delante se lee como el borde de aluminio
-// de la fila. Donde acaba cada placa NO se escribe aqui: sale de la tangente
-// del redondeo de cada vertice y lo juzga cuerpos_dentro_del_anillo().
+// EL MARCO DE LA VENTANA (2026-08-29, noche). Samuel dijo el 28 mirando el
+// render que "la placa es el marco de la fila"; esta cota lo lleva hasta el
+// final: las tres placas de anclaje, los dos clips y la escuadra de cada
+// costado son UNA pletina de t_placa cortada a laser con el contorno de la
+// ventana del anillo, corrida por los siete tramos. Sobre las tres filas es
+// EXACTAMENTE la placa de ayer -- mismo canto visto de 6, mismos cajeados,
+// mismas roscas --; en el frente, el suelo, la meseta y la trasera es el tope
+// del acrilico que daban los clips y la escuadra, unificado: pisa 6 mm de
+// acrilico volado por todo el perimetro y a traves del PMMA se lee una sombra
+// uniforme de 6, no retazos.
 //
-// El fondo si es una cota: 26 desde la silueta hacia dentro. El cajeado del
-// riel cae a 15.90 y su borde a 19.90, o sea 6.1 de placa por detras.
-placa_fondo        = 26;
+// Cuanto entra desde la silueta, en los siete tramos. Fue placa_fondo. El
+// cajeado del riel cae a 15.90 y su borde a 19.90, o sea 6.1 de pletina por
+// detras; sobre la ventana (cara_anillo = 20) sobran 6 que pisan el acrilico.
+marco_fondo        = 26;
 // Cuanto se separan del eje del riel sus dos roscas ciegas, a lo largo del
 // tramo. 7 deja 10.19 mm entre cada rosca y el cajeado (que pide 6.25) y 14
 // entre las dos roscas (que piden 9 = 2 D).
 sep_rosca_riel     = 7;
-// Las esquinas HONDAS de la placa van cortadas a 45. No es estetica: la de
-// arriba de la cara superior choca con la brida del miembro trasero alto y la
-// del valle con la placa de al lado. Son esquinas de pletina fresada --
-// cortarlas es gratis --, y acortar la placa no sirve: es justo lo que abre
-// otra vez la ranura. Lo adjudica solapes() con la geometria REAL de la placa
-// girada, no con su caja.
-// 11 DESDE EL 2026-08-29: el pico pasa de radio 2 a radio_chapa (4.5) y la placa
-// se retira 1.04 mm mas de el, con lo que el cajeado del riel-eje se quedaba a
-// 6.53 del corte contra los 6.75 que pide. Con 11 vuelve a 7.2 y la brida del
-// miembro alto sigue librada: lo comprueban guarda_anclajes() y solapes().
-placa_chaflan      = 11;
-// COMO SE REPARTE EL RINCON de P2 entre las dos placas que se encuentran ahi:
-// que fraccion del angulo interior se lleva la que LLEGA al vertice (la de la
-// cara inferior). 0.50 seria la bisectriz, el reparto justo, y no vale: el
-// riel del valle de abajo vive a 15.75 mm del pico y su cajeado se quedaba a
-// 5.96 mm del corte contra los 6.75 que pide. La ventana es estrecha -- por
-// encima de 0.53 el corte se come el canto del M3 de la pestana de la banda,
-// que vive en ese mismo rincon --, y por eso el numero lleva dos decimales.
-// Lo comprueban los dos asserts de guarda_anclajes().
-reparto_rincon     = 0.52;
-// Lo que la placa de la cara SUPERIOR cede en P3. Ahi no hay rincon que
-// repartir -- P3 es concavo y los dos fondos divergen -- pero la placa del
-// valle se pasa de largo para alcanzar el cajeado de su segundo riel, que cae
-// pasado el vertice (150.38 contra 147.80).
+// DONDE ARRANCA LA PATA DE LA CARA DE ARRIBA, medido desde P3. P3 es concavo
+// y su redondeo de 54 curva la franja: el fondo util pasa de 8.51 en x = 128 a
+// 12.45 en x = 148, o sea que una rosca a 8.5 de la silueta puesta en los
+// primeros 12 mm sale por la pared del rebaje (taladros_anillo la cazo a 4.72
+// contra 4.95). Las roscas de esa pata se arriman a su riel sin pasar de
+// aqui; la pata del valle cubre el rincon. Fue el retiro de la placa de la
+// cara superior, con el mismo numero y por la misma razon.
 retiro_placa_sup   = 12;
-// Lo que la placa de la cara INFERIOR cede en P1, delante. Ahi no hay rincon:
-// es para que la NARIZ -- la banda de chapa que cierra el frente -- pueda subir
-// por la cara de abajo hasta justo debajo de la placa sin pisarla, porque en
-// las puntas las dos viven en la misma rebanada de z. Su tope lo pone el
-// cajeado del riel del frente: la placa tiene que quedarse a 1.5 D de ese M4
-// (guarda_anclajes), y con 9 se queda en 7.08 contra los 6.75 que pide.
+// DONDE EL CANTO EXTERIOR DEL MARCO SALE A LA SILUETA en la cara de abajo,
+// medido desde la tangente del redondeo de P1. Antes de ese punto el marco va
+// retirado t_costilla + hol_piel (retiro_marco() en el .scad) porque encima
+// sube la NARIZ por la cara de abajo, y en las puntas las dos viven en la
+// misma rebanada de z. El tope lo pone el cajeado del riel del frente, que
+// tiene que quedarse a 1.5 D del escalon del canto (guarda_anclajes): con 9
+// se queda en 7.08 contra los 6.75 que pide. Fue el retiro de la placa de la
+// cara de abajo, con el mismo numero y por la misma razon.
 retiro_placa_inf   = 9;
 // Cajeado de la cabeza del M4 del riel, por el lado del anillo. Boton ISO
 // 7380 M4: cabeza de 7.6 de diametro y 2.2 de alto.
 d_cajeado_riel     = 8;
 prof_cajeado_riel  = 2.5;
-// LA BRIDA DE EXTREMO de los miembros de chapa. Sale del mismo blank, doblada
-// 90 en cada punta con relieve en las dos esquinas, y apoya plana contra la
-// franja del anillo. 27 = 6 x d_M4_paso es lo minimo que reparte sus dos M4:
-// el de dentro a SB + 2t + d/2 = 9.75 del propio doblez (regla de chapa), el
-// de fuera a 1.5 D del canto libre, y 10.5 entre ellos.
-//   OJO AL EJE: la brida se dobla sobre una linea PERPENDICULAR a la silueta,
-//   asi que su largo corre A LO LARGO del canto y su vuelo lo cruza. Al reves
-//   -- doblez paralelo al canto -- la distancia al doblez y la distancia a la
-//   silueta serian la misma cota, 9.75 contra 9.05, y no hay agujero legal.
-//   Es el mismo choque que tiene la pestana de la banda del valle, y por eso
-//   ella no rosca en el anillo sino en la placa del valle (ruling R3).
+// LA BRIDA DE EXTREMO del miembro alto. Sale del mismo blank, doblada 90 del
+// EXTREMO DE LA BANDA en cada punta -- sobre una linea PERPENDICULAR a la
+// silueta, que es lo que hace legal su agujero: la distancia al doblez y la
+// distancia a la silueta son cotas de ejes distintos --, con relieve en las
+// dos esquinas, y apoya plana sobre la franja de la MESETA del anillo. 27 =
+// 6 x d_M4_paso es lo minimo que reparte sus dos M4: el de dentro a SB + 2t +
+// d/2 = 9.75 del propio doblez (regla de chapa), el de fuera a 1.5 D del
+// canto libre, y 10.5 entre ellos.
+//   OJO AL EJE: con el doblez paralelo al canto la distancia al doblez y la
+//   distancia a la silueta serian la misma cota, 9.75 contra 9.05, y no hay
+//   agujero legal. Es el mismo choque que tiene la pestana de la banda del
+//   valle, y por eso ella no rosca en el anillo sino en el marco.
+//
+// VIVE EN LA CARA DEL ANILLO (z = t_anillo), fuera de la rebanada en la que
+// giran los paneles, y ESO NO ES NEGOCIABLE: se probo subirla t_placa con un
+// escalon para tumbarla ENCIMA del marco de la ventana y la tapa de arriba
+// pasaba de abrir 121.5 grados a 52 -- todo lo que vive a z >= t_anillo +
+// t_placa esta en el barrido del panel (guarda_tapa). Asi que es el MARCO el
+// que se aparta: lleva una muesca de brida_ancho + t_costilla + 0.5 de honda,
+// abierta a su canto exterior, sobre la huella de la brida. Y la trasera una
+// muesca de esquina de t_costilla + 0.5 por brida_ancho + 0.5, porque la
+// brida pasa por debajo de su esquina.
 brida_largo        = 27;
+// Lo que la brida mide a lo ancho, contado desde t_costilla por debajo de la
+// meseta (ahi va el otro ala, como siempre) hacia abajo. NO es toda la banda
+// (24): en la franja de la meseta el marco tiene 26 de ancho y la muesca se
+// come lo que la brida ocupa, asi que cuanto mas estrecha, mas marco queda
+// entero en la esquina trasera-alta -- con 14.5 quedan 9.5 de pata, y el M4
+// a 7.5 de su canto de abajo (a 7.0 del de arriba, el de siempre).
+brida_ancho        = 14.5;
 // LO QUE ESTE BLOQUE SUSTITUYE, y va escrito porque cada cota tenia su cuenta:
 // fueron ala_costilla = 27 (la banda de chapa, derivada del M4 de la fila 1U a
 // 1.5 D del canto de la ventana), ala_doblez = 16 (el ala que tapaba el canto
@@ -332,7 +288,7 @@ brida_largo        = 27;
 // 2026-08-28. Se las llevo la pletina: no hay ala que doblar, ni esquina que
 // soldar, ni acrilico que atravesar.
 // Radio interior del plegado. Conserva el nombre pero desde el 2026-08-28 es
-// el de LOS TRES MIEMBROS y no el de la costilla: la costilla es pletina
+// el de LAS PIEZAS DE CHAPA (miembro alto, talon, nariz) y no el de la costilla: la costilla es pletina
 // fresada y ya no se pliega. Misma regla que el chasis de acero -- r = t,
 // plegado al aire -- pero con SU espesor, que es otro: la costilla fue
 // aluminio de 3 y esta chapa es 6082-T6 de 1.5; el chasis sigue siendo acero
@@ -635,15 +591,6 @@ nariz_pie       = 18;
 // margen contra el barrido. El minimo absoluto son 47 (fondo 304.17) y ahi el
 // margen es 0.04 mm contra una pieza EN MOVIMIENTO.
 marco_remate    = 50;
-// EL ANCHO DE LAS DOS BANDAS DEL MARCO DE LA TRASERA (#234, 2026-08-29). Es
-// cara_anillo a proposito: vistas de atras, las dos patas del anillo se leen
-// de t_anillo (14) de ancho y estas bandas de 20 -- el marco no es uniforme y
-// no tiene por que serlo, pero el numero sale del anillo y no de la nada.
-// EL PISO NO ES ESTETICO y lo exige guarda_marco_trasera(): la banda tiene
-// que tragarse la fila de M3 de SU miembro con 1.5 D a los dos cantos. La de
-// arriba es la que aprieta -- su fila cae a 11.50 del canto del acrilico --,
-// asi que el minimo son 11.50 + 1.5*d_M3_paso = 16.60.
-marco_trasera_ancho = 20;
 // Entrepiso: la franja horizontal entre el tope de la cara inferior y la base
 // de la superior -- el "valle del medio" de la silueta. Fue 25 (minimo tecnico
 // de R7: por debajo, los dos railes girados se solapaban 2.52 mm), luego 40,
@@ -748,7 +695,10 @@ bombeo          = 0.5;
 // (radio_doblez_costilla + t_costilla = 4.5), y es el radio de TODA esquina del
 // anillo que lleva chapa doblada encima: las dos del chaflan de la nariz y el
 // arranque de la cara de abajo (la nariz), el pico del techo (el retorno de la
-// meseta) y la esquina trasera-alta (el marco de la trasera). Anillo y chapa
+// meseta), la esquina trasera-alta (la banda del miembro alto) y, desde la
+// noche del 29, la trasera-baja (la banda del talon, que dobla ahi sobre la
+// tabla). Es decir: las SEIS esquinas del anillo, porque la chapa las
+// recorre todas; radio_trasero (0) murio con eso. Anillo y chapa
 // tienen que compartir esquina: la chapa dobla con SU radio, no con el del
 // anillo, y una esquina viva del anillo bajo un doblez a 90 asoma 1.9 mm
 // (4.5 x (raiz(2) - 1)); bajo uno a 45, 0.4. Lo exige guarda_nariz().
@@ -766,46 +716,6 @@ bombeo          = 0.5;
 //                      y el marco de la trasera doblando en la otra esquina,
 //                      lo que remata ahi es chapa, y manda su doblez.
 radio_chapa     = 4.5;
-// radio_trasero = los DOS vertices del plano trasero -- fondo-arriba (5) y
-// fondo-abajo (6). CERO: esquina viva.
-//
-// Lo pidio Samuel el 2026-08-24: "quiero que sean cuadradas tambien para que
-// empotre perfectamente entre las piezas". Y era un desajuste medido, no una
-// impresion. Sobre el DXF que va al taller, el costado se metia hacia adentro
-// del plano trasero:
-//
-//   fondo-abajo (radio_perfil 14)  ->  14.004 mm en y = 0
-//   fondo-arriba (radio_remate 2)  ->   2.004 mm en y = 256.18
-//
-// La trasera es un rectangulo de 528.020 x 248.184 que baja hasta y = 0 y con
-// ESQUINAS VIVAS (medido: 2 puntos por esquina en el DXF). O sea que su esquina
-// de abajo quedaba colgando 14 mm por fuera de la silueta del costado. Con 0
-// el desajuste es 0.000 en las dos.
-//
-// SE DEROGA AQUI UNA REGLA ESCRITA, y por eso va con su porque en vez de
-// saltarsela en silencio. radio_remate decia "2 y no 0: una esquina viva en
-// acrilico colado de 8 mm es donde arranca una fisura". Lo que se sostiene de
-// esa regla y lo que no:
-//
-//   SE SOSTIENE en los vertices CONCAVOS y en las ranuras. Es donde el
-//   material tiene que rodear un rincon y donde el PMMA es notch-sensitive.
-//   Eso lo sigue vigilando guarda_fresado() (concavo minimo 54.0 contra la
-//   fresa de radio 1.5) y no lo toca este cambio.
-//
-//   NO SE SOSTENIA COMO REGLA GENERAL, y el propio repo ya lo demostraba: la
-//   TRASERA se corta con las cuatro esquinas vivas en acrilico de 8 mm desde
-//   que se empotro. La regla ya no se aplicaba pareja; lo unico nuevo es
-//   decirlo.
-//
-// LO QUE SI SE ACEPTA, dicho para que no sorprenda al desembalar: una esquina
-// viva CONVEXA en PMMA de 8 mm se DESPORTILLA si se golpea, y la de
-// fondo-abajo esta a ras del suelo, que es justo donde el case roza al
-// arrastrarlo por una mesa. Es riesgo de manipulacion, no de rotura en carga.
-// Si aparece en el prototipo, el remedio NO es volver al radio -- es un chaflan
-// de 0.5 x 45, que mata el filo sin devolver el hueco contra la trasera.
-// SOLO EL DE ABAJO (6) desde el 2026-08-29: el de arriba (5) recibe el doblez
-// del marco de la trasera y pasa a radio_chapa, ver arriba.
-radio_trasero   = 0;
 // CHAFLAN de toda arista VISTA. 0.5 x 45 grados.
 //
 // NO ES GEOMETRIA DE ESTE MODELO y por eso no aparece en ningun DXF: un
@@ -1355,60 +1265,20 @@ d_pie_tornillo = 4.5;  // SUPUESTO M4 paso (=d_M4_paso), sin hoja de la patica
 // codex y ahora lo vigila guarda_meseta_es_chapa(). Este fichero no admite
 // expresiones, asi que el valor va a mano y la puerta es lo que los ata.
 marco_sup   = 1.5;
-// Fondo de la pestana hacia dentro del case.
+// LA MESETA: el ala de arriba del miembro alto, medida del pico hacia atras.
+// Fue 37 (acrilico apoyado en el riel), 29 el 2026-08-27 (ala del miembro,
+// medida desde su doblez), 27.5 el 29-08 por la manana (#234: el marco de la
+// trasera se comia 1.5) y 40.5 por la tarde (la meseta LLEGA AL PICO: el
+// inset de 13 era un vestigio de la meseta de acrilico, guarda_tapa() con la
+// meseta en el pico sigue dando 121.5 grados).
 //
-// OJO: ESTE NUMERO YA NO ESTA DERIVADO DE NADA. Fue t_cheek = 8 mientras la
-// pestana no llevaba tornillos, subio a 16 cuando los llevo -- para dejar 6.3
-// mm de acrilico a cada lado del M3, contra los 2.3 de antes, que en acrilico
-// es donde arranca una fisura -- y al quitarse los tornillos esa razon murio.
-// Se queda en 16 por FORMA, no por calculo, y podria bajar a 8 sin que ninguna
-// puerta se queje. Es de las pocas cotas libres que le quedan al case: si
-// alguien la toca, no esta rompiendo una derivacion.
-//
-// La meseta sale de la misma pieza que el miembro trasero alto. marco_sup sigue
-// describiendo sus 3 mm visibles; el alma y el retorno ya bajaron a
-// t_costilla=1.5 (ver la incompatibilidad declarada en el cierre del cambio).
-// TIENE QUE VALER LO MISMO QUE marco_remate. Desde el 2026-08-21 la pestana no
-// es una tira de canto: es la PLANCHA HORIZONTAL que tapa la meseta del techo,
-// y esa meseta mide exactamente marco_remate. Aqui no se pueden escribir
-// expresiones (ver la cabecera del fichero), asi que la relacion la vigila
-// guarda_remate() en clearance_budget.py: si alguien mueve uno y no el otro,
-// sale en rojo antes de exportar.
-// FONDO de la tapa de remate. Con inset_remate_frente tiene que sumar
-// marco_remate, que es lo que mide la meseta: aqui no se pueden escribir
-// expresiones (ver la cabecera), asi que la relacion la vigila guarda_remate()
-// en clearance_budget.py.
-// BAJA DE 37 A 29 el 2026-08-27, y lo decide el BARRIDO de la tapa de arriba.
-// Fue 37 mientras la meseta era una plancha de acrilico apoyada ENCIMA del
-// larguero y de la trasera: se medía desde el plano trasero (308.94) hacia
-// delante, o sea llegaba a 271.94. Ahora la meseta es el ALA del miembro alto,
-// y un ala se mide desde su doblez -- que esta en la cara trasera del miembro,
-// 300.94 -- no desde el plano del case. Con 37 desde ahi llegaria a 263.94, 8
-// mm mas adelante que nunca, y la fila de arriba baja de 180 a 45 grados.
-// 29 la deja en 271.94 EXACTO: el mismo sitio donde la plancha de acrilico
-// llevaba meses sin estorbar. Geometria probada, no cota nueva.
-//
-// BAJA A 27.5 el 2026-08-29 (#234) Y NO SE ELIGIO: la paga el marco de la
-// trasera. El pico de 50 se reparte entre cuatro, y el trozo de atras crece
-// de t_piel a t_piel + t_costilla porque los ultimos 9.5 mm de la meseta
-// dejan de ser el canto del acrilico y pasan a ser el ala del marco. Los 1.5
-// tenian que salir de la meseta o del inset, y el inset NO: su acantilado
-// esta en 12.8 (13 -> 180 grados de apertura, 12.8 -> 61) y bajarlo a 11.5
-// cierra la tapa de arriba. La meseta se queda donde estaba por delante
-// (271.94: el miembro se adelanto 1.5 y el ala se acorto 1.5), o sea que la
-// geometria probada del barrido no se toca, y sus ranuras de salida miden
-// meseta_largo_ranura = 15, que en 27.5 siguen cabiendo con 6.25 por lado.
-// 40.5 DESDE EL 2026-08-29: LA MESETA LLEGA AL PICO. Todo lo de arriba sobre
-// los 27.5 y el acantilado de 12.8 es historia. Se retiraba
-// inset_remate_frente = 13 del pico "porque es lo unico que deja abrir la tapa
-// de arriba", y esos numeros (retiro 0 -> abre 13.2 grados) eran de cuando la
-// meseta era ACRILICO DE 8 apoyado EN el riel. Con la chapa de 1.5 la cara de
-// abajo de la meseta queda a 18.9 del eje y nada de lo que gira pasa de 16.2:
-// guarda_tapa() con la meseta en el pico sigue dando 121.5 grados, los mismos.
-// El inset era un vestigio y se borra. Lo que asomaba en esos 13 mm era el
-// riel-eje de la fila de arriba, desnudo (nota 3 de Samuel del 29-08).
-//   = marco_remate - t_piel - t_costilla; guarda_remate() lo exige.
-prof_sup    = 40.5;
+// 50 DESDE EL 2026-08-29 POR LA NOCHE: LA MESETA LLEGA AL PLANO TRASERO y
+// dobla ahi hacia abajo como banda_trasera. Ya no muere en el doblez de un
+// alma 9.5 mm antes del canto, con el marco de la trasera tapando esos 9.5 y
+// dejando una costura en el techo: el techo es una chapa del pico al canto.
+//   = marco_remate; guarda_remate() lo exige (era marco_remate - t_piel -
+//   t_costilla con el marco de la manana).
+prof_sup    = 50;
 // El RETORNO de la meseta: en el pico la chapa dobla hacia abajo por la cara
 // de arriba este tramo, medido por la cara exterior desde el pico. Es lo que
 // cierra el frente de la meseta sobre el riel-eje -- y de paso mata la ola del
@@ -1729,25 +1599,13 @@ k_factor     = 0.42;  // SUPUESTO -- fibra neutra; DIN 6935 varia con r/t
 // --- la tapa ---
 chasis_pestana  = 15;   // faldon de la tapa, por FUERA de la pared del cuerpo
 chasis_hol_tapa = 0.6;  // juego total para que la tapa entre sin forzar
-// YA NO SON SEPARADORES (2026-08-21, #106). Eran 10 mm de pata porque el
-// chasis SE APOYABA en la bandeja y bajo su suelo tenian que pasar la chapa de
-// refuerzo (1.5) y la cabeza del M6 del toroide (~5). Desde que el chasis
-// CUELGA de los dos largueros, nada suyo toca el acrilico y esos dos herrajes
-// se mudan al interior de la caja -- que es cambio del chasis, no del case.
-//
-// Lo que queda es AIRE: el hueco entre el suelo del chasis y la bandeja, para
-// que la plancha no sostenga el toroide y deje de resonar donde el #106 dice
-// que resuena. Dos milimetros y no cero: cero seria contacto, que es lo mismo
-// que apoyar. La pila de tolerancias (taladro de chapa +-0.5, larguero +-0.3,
-// espesor del acrilico +-0.4) se come 1.2 en el peor caso y aun queda hueco.
-//
-// Y no puede crecer mucho: el M5 que ancla al larguero entra por la RANURA
-// INTERIOR del 2020, cuyo eje esta en rail/2 sobre la bandeja. Cuanto mas sube
-// el suelo, menos pared queda por debajo de ese eje, y los primeros
-// radio_doblez + t_chapa milimetros de pared son curva y no admiten taladro.
-// Con 2 el tornillo sube 8 por la pared y sobran 2.25 tras el doblez y el radio
-// del taladro. Lo comprueba guarda_chasis.
-chasis_pie      = 2;    // AIRE bajo el suelo del chasis, no separadores
+// CERO DESDE EL 2026-08-29 POR LA NOCHE: el suelo del chasis APOYA en la tabla
+// y se atornilla a ella por debajo. Los 2 mm de aire eran para no apoyar el
+// toroide en una bandeja de ACRILICO que resonaba (#106); esa bandeja murio el
+// 27-08 y lo que hay debajo es la tabla de 18 de madera maciza, que se pidio
+// justamente para eso. El M5 de pared que ataba este numero por arriba
+// apuntaba a la ranura de un 2020 que murio el mismo 27-08.
+chasis_pie      = 0;
 
 // --- lo que la Task 6 tiene que casar, no al reves ---
 // Estos tres agujeros los DECLARA el chasis y la PCB se pliega a ellos. Va en
@@ -1803,22 +1661,27 @@ d_M6_paso = 6.5;
 
 // --- colocacion sobre la bandeja, y los tornillos de la tapa ---
 chasis_margen_bandeja = 10;  // orilla libre a la derecha de la bandeja
-// LA COTA MAS JUSTA DE TODO EL MONTAJE, y por eso es un parametro con nombre y
-// no un resultado. Los dos largueros 2020 van ENCIMA de la bandeja de base
-// desde el 2026-08-17, asi que el chasis va entre ellos con esto a cada lado.
-// Una caja doblada sale con +-1 mm facil, y la soldadura de las esquinas tira
 // mas; por eso el hueco existe y no se cierra a cero.
 //
-// DESDE EL 2026-08-21 ESTE HUECO ES ADEMAS LA LUZ QUE SALVA EL TORNILLO. El
-// chasis ya no pasa entre los largueros: cuelga de ellos, con 4 M5 que entran
-// por sus paredes largas y muerden la ranura interior del 2020. Cada tornillo
-// cruza estos 3 mm de aire, asi que lleva separador -- sin el, apretar
-// abollaria la pared de 1.5 hacia dentro.
+// DESDE EL 2026-08-29 POR LA NOCHE ES LA HOLGURA AL PIE DEL TALON: la pared
+// trasera del chasis se arrima al canto libre del pie (x_talon_pie), que es
+// lo que hay detras, y de ahi hacia delante no hay nada. Los 4 M5 de pared
+// que la nota de arriba describe apuntaban a la ranura interior de un 2020
+// muerto el 27-08 -- el modelo los siguio dibujando dos dias --; el chasis
+// se atornilla ahora a la TABLA por el suelo (chasis_tornillo_x/y).
 chasis_holgura_larguero = 3;
-// M5 por pared larga. Dos y no uno: con uno solo el cajon pivota sobre el, y
-// con tres el reparto deja de casar con ch_tornillos(). Son los mismos que
-// llevan la tapa, repartidos con la misma regla.
-chasis_anclajes = 2;
+// LOS CUATRO M4 DEL SUELO A LA TABLA, en coordenadas INTERIORES del chasis.
+// Desde abajo de la tabla, a tuerca remachable (clinch, PEM S-M4) en el suelo
+// de acero: cabezas bajo la tabla -- el case va sobre sus paticas de 10 -- y
+// nada visto por dentro. Van en las dos orillas libres de 10 mm que la PCB
+// (x = 10..210) y el toroide dejan a cada lado: x = 8.5 deja la cabeza de
+// 7.6 a 2.7 de la pared, fuera de la curva del doblez (r + t = 3), y y = 20
+// deja al de la derecha 2.75 de aire hasta el refuerzo del toroide (que
+// arranca en y = 25) y al de la izquierda 8.2 mm hasta el separador de la
+// esquina de la PCB. Lo comprueba guarda_chasis(); las posiciones en la tabla
+// las cruza guarda_zocalo() en check_dxf.
+chasis_tornillo_x = 8.5;
+chasis_tornillo_y = 20;
 chasis_tornillo_baja  = 8;   // cuanto por debajo del techo va la fila de M3
 chasis_tornillos_largo = 3;  // por faldon largo
 chasis_tornillos_corto = 2;  // por faldon corto
