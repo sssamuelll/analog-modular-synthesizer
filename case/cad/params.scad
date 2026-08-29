@@ -73,24 +73,11 @@
 // El 1.5 se queda tal cual al irse la costilla a pletina: es el espesor con el
 // que ya estan calculados los tres miembros, y ninguno de ellos cambio.
 t_costilla      = 1.5;
-// Los tres miembros arrancan en 20 x 20: es la envolvente del 2020 que jubilan
-// ALTO DE LAS ALAS DE LA BAHIA, y con el su fondo util.
-//
-// La bahia es una BANDEJA: suelo perforado y dos alas dobladas hacia arriba.
-// Las alas hacen tres cosas a la vez -- son la pared de la bahia, son el canto
-// donde apoya la tapa del valle, y son lo que le da inercia a la pieza.
-//
-// 60 SALE DE DOS TOPES, uno por arriba y otro por abajo:
-//   - por arriba, el canto del ala tiene que llegar al plano de la tapa del
-//     valle (y = 143.58), que es donde apoya.
-//   - por abajo, el suelo de la bahia queda en 143.58 - 60 = 83.58, y el techo
-//     del chasis del PSU esta en 66.00: quedan 17.58 mm de aire para el
-//     cableado que baje de la bahia a la fuente.
-// Un jack de 6.35 pide unos 30 mm detras del panel y un minijack 20: los dos
-// entran en 60 con sitio de sobra.
-bahia_alto  = 60;
-// y la minima que ya le gana en inercia (6935 mm4 contra ~5600). La seccion
-// definitiva de cada uno sale de su carga.
+// --- LOS DOS MIEMBROS TRASEROS: canales de chapa ---
+// Arrancan en la envolvente del 2020 que sustituyen (20 x 20), que es la minima
+// que ya le gana en inercia (6935 mm4 contra ~5600). La seccion definitiva de
+// cada uno sale de su carga. Fueron TRES hasta el 2026-08-29: la bahia -- la
+// bandeja de 60 de fondo bajo la fila 1U -- se fue por decision de Samuel.
 canal_ancho = 20;   // cota exterior perpendicular a la carga
 // FUE 20, la envolvente del 2020 que estos miembros jubilan, y con chapa de
 // 3 mm daba I=6279 mm4: 1.12x el perfil. Al bajar la chapa a 1.5 pierde esa
@@ -294,7 +281,11 @@ sep_rosca_riel     = 7;
 // cortarlas es gratis --, y acortar la placa no sirve: es justo lo que abre
 // otra vez la ranura. Lo adjudica solapes() con la geometria REAL de la placa
 // girada, no con su caja.
-placa_chaflan      = 12;
+// 11 DESDE EL 2026-08-29: el pico pasa de radio 2 a radio_chapa (4.5) y la placa
+// se retira 1.04 mm mas de el, con lo que el cajeado del riel-eje se quedaba a
+// 6.53 del corte contra los 6.75 que pide. Con 11 vuelve a 7.2 y la brida del
+// miembro alto sigue librada: lo comprueban guarda_anclajes() y solapes().
+placa_chaflan      = 11;
 // COMO SE REPARTE EL RINCON de P2 entre las dos placas que se encuentran ahi:
 // que fraccion del angulo interior se lleva la que LLEGA al vertice (la de la
 // cara inferior). 0.50 seria la bisectriz, el reparto justo, y no vale: el
@@ -309,6 +300,13 @@ reparto_rincon     = 0.52;
 // valle se pasa de largo para alcanzar el cajeado de su segundo riel, que cae
 // pasado el vertice (150.38 contra 147.80).
 retiro_placa_sup   = 12;
+// Lo que la placa de la cara INFERIOR cede en P1, delante. Ahi no hay rincon:
+// es para que la NARIZ -- la banda de chapa que cierra el frente -- pueda subir
+// por la cara de abajo hasta justo debajo de la placa sin pisarla, porque en
+// las puntas las dos viven en la misma rebanada de z. Su tope lo pone el
+// cajeado del riel del frente: la placa tiene que quedarse a 1.5 D de ese M4
+// (guarda_anclajes), y con 9 se queda en 7.08 contra los 6.75 que pide.
+retiro_placa_inf   = 9;
 // Cajeado de la cabeza del M4 del riel, por el lado del anillo. Boton ISO
 // 7380 M4: cabeza de 7.6 de diametro y 2.2 de alto.
 d_cajeado_riel     = 8;
@@ -325,11 +323,6 @@ prof_cajeado_riel  = 2.5;
 //   Es el mismo choque que tiene la pestana de la banda del valle, y por eso
 //   ella no rosca en el anillo sino en la placa del valle (ruling R3).
 brida_largo        = 27;
-// La lengueta de la BAHIA no va al anillo (ruling R3): la boca esta ocupada
-// por la placa de la fila 1U. Cada ala acaba t_placa antes del anillo y dobla
-// una lengueta que apoya en la cara interior de esa placa, con un M4 roscado
-// EN LA PLACA. Su ancho es 3 D del M4 -- 1.5 a cada lado del agujero.
-brida_bahia_vuelo  = 22;
 // LO QUE ESTE BLOQUE SUSTITUYE, y va escrito porque cada cota tenia su cuenta:
 // fueron ala_costilla = 27 (la banda de chapa, derivada del M4 de la fila 1U a
 // 1.5 D del canto de la ventana), ala_doblez = 16 (el ala que tapaba el canto
@@ -534,6 +527,28 @@ angulo_superior = 45;    // 45 desde la horizontal, cara de generacion
 // suelo interior es y=0: el riel solo tiene que librar holgura_rail y le sobran
 // 9.29 mm. Esta cota deja de estar atada al espesor del suelo.
 alto_frontal    = 19;
+// LO DE LA CURVA DE ARRIBA ES HISTORIA desde el 2026-08-29: la punta es RECTA
+// (chaflan_nariz + radio_chapa), asi que alto_frontal ya no paga tangente.
+//
+// chaflan_nariz = el corte a 45 de la esquina de abajo-delante (vertice 0 del
+// perfil), medido sobre cada arista: el contorno pasa de (0,0) a (c,0)-(0,c).
+// Es la esquina de la referencia de Samuel: marcos laterales con la punta de
+// abajo cortada a 45 y la banda de aluminio del frente siguiendo el corte.
+// Debajo no hay modulos que se coma, y lo midio el modelo antes de elegirlo:
+// la esquina mas baja del riel del frente esta a 13.3 del suelo y su esquina
+// mas cercana a la nariz a x+y = 37.4; el panel de abajo arranca a x+y = 39.2.
+// Con 6 quedan 13 mm de frente vertical. guarda_nariz() exige que quede frente
+// (>= 5) y que el corte libre el riel por 5 mm.
+chaflan_nariz   = 6;
+// --- LA NARIZ: la banda del frente (2026-08-29) ---
+// Chapa de t_costilla -- la misma de los marcos de la trasera -- doblada sobre
+// la nariz del anillo: pie sobre la tabla, chaflan, frente vertical y un tramo
+// subiendo por la cara de abajo hasta justo debajo de la placa de anclaje. Se
+// atornilla a la TABLA por el pie, desde dentro, con tres M4: en la cara vista
+// no hay tornillo, como en todo lo demas. El pie: 18 es lo minimo que reparte
+// un M4 entre la zona del doblez (SB + 2t + d/2 = 9.75 desde la linea del
+// chaflan) y 1.5 D del canto libre (6.75).
+nariz_pie       = 18;
 // Fondo del case. UN SOLO plano trasero: el costado es un triangulo
 // rectangulo con el angulo recto atras y la hipotenusa quebrada en dos
 // tramos (35 arriba, 12 abajo) con el entrepiso en medio (Samuel eligio esta
@@ -729,29 +744,28 @@ radio_valle     = 54;
 // eximir los tres, la flecha mayor que queda son 0.779 mm en la cara del panel
 // de abajo.
 bombeo          = 0.5;
-// radio_punta = las esquinas que tienen que leerse como PUNTA redondeada
-// (frente-abajo y remate de arriba, 2026-08-17). Va sobredimensionado a
-// proposito: la funcion lo recorta al maximo que permite la arista mas corta
-// del vertice, y ese maximo es justo la punta. Subirlo mas no cambia nada;
-// bajarlo devuelve la cara plana.
+// radio_chapa = el radio EXTERIOR del doblez de la chapa de 1.5 mm
+// (radio_doblez_costilla + t_costilla = 4.5), y es el radio de TODA esquina del
+// anillo que lleva chapa doblada encima: las dos del chaflan de la nariz y el
+// arranque de la cara de abajo (la nariz), el pico del techo (el retorno de la
+// meseta) y la esquina trasera-alta (el marco de la trasera). Anillo y chapa
+// tienen que compartir esquina: la chapa dobla con SU radio, no con el del
+// anillo, y una esquina viva del anillo bajo un doblez a 90 asoma 1.9 mm
+// (4.5 x (raiz(2) - 1)); bajo uno a 45, 0.4. Lo exige guarda_nariz().
 //
-// Desde el 2026-08-21 ya NO gobierna los dos vertices de arriba: esos pasaron a
-// radio_remate. Aqui quedan los dos de abajo -- frente-abajo y arranque de cara
-// --, que siguen leyendose como punta redondeada.
-radio_punta     = 400;
-// radio_remate = el vertice del APEX, el pico de arriba donde la cara superior
-// se encuentra con la meseta del techo. Desde el 2026-08-21 se lee CUADRADO y
-// no como punta. Es un radio de verdad y no un sobredimensionado: aqui lo que
-// se pide es lo que sale.
-//
-// GOBERNABA DOS VERTICES (apex y fondo-arriba) hasta el 2026-08-24. El de
-// fondo-arriba se fue a radio_trasero, asi que aqui queda uno solo.
-//
-// 2 y no 0 a proposito, y esta razon SI se sostiene para este vertice: es el
-// radio que el issue #45 pide para las esquinas de panel, asi que case y
-// paneles rematan con el mismo canto. Queda ademas por encima del minimo de la
-// fresa (radio 1.5 con la de 3), o sea que el taller lo saca sin cambiar util.
-radio_remate    = 2;
+// SUSTITUYE A DOS PARAMETROS el 2026-08-29:
+//   radio_punta (400)  iba sobredimensionado a proposito para que la nariz
+//                      saliera REDONDA -- _r_util lo recortaba al maximo de la
+//                      arista corta, 30.1 en el arranque de la cara y 9.5 en
+//                      la esquina de abajo. Samuel pidio lo contrario mirando
+//                      el .blend: "en vez de una nariz curva, una nariz recta",
+//                      como el marco lateral de su referencia. La nariz recta
+//                      es chaflan_nariz abajo y esta esquina arriba.
+//   radio_remate (2)   el radio de esquina de panel del #45, para que case y
+//                      paneles remataran igual. Con la meseta llegando al pico
+//                      y el marco de la trasera doblando en la otra esquina,
+//                      lo que remata ahi es chapa, y manda su doblez.
+radio_chapa     = 4.5;
 // radio_trasero = los DOS vertices del plano trasero -- fondo-arriba (5) y
 // fondo-abajo (6). CERO: esquina viva.
 //
@@ -789,6 +803,8 @@ radio_remate    = 2;
 // arrastrarlo por una mesa. Es riesgo de manipulacion, no de rotura en carga.
 // Si aparece en el prototipo, el remedio NO es volver al radio -- es un chaflan
 // de 0.5 x 45, que mata el filo sin devolver el hueco contra la trasera.
+// SOLO EL DE ABAJO (6) desde el 2026-08-29: el de arriba (5) recibe el doblez
+// del marco de la trasera y pasa a radio_chapa, ver arriba.
 radio_trasero   = 0;
 // CHAFLAN de toda arista VISTA. 0.5 x 45 grados.
 //
@@ -1382,24 +1398,28 @@ marco_sup   = 1.5;
 // (271.94: el miembro se adelanto 1.5 y el ala se acorto 1.5), o sea que la
 // geometria probada del barrido no se toca, y sus ranuras de salida miden
 // meseta_largo_ranura = 15, que en 27.5 siguen cabiendo con 6.25 por lado.
-prof_sup    = 27.5;
-// Cuanto se RETIRA la tapa de remate del pico, y no es estetica: es la unica
-// razon por la que la tapa de la fila de arriba sigue abriendo.
-//
-// Hasta el 2026-08-21 esta pieza iba PEGADA al Z-Rail, o sea que GIRABA CON LA
-// TAPA y nunca le estorbaba. Al atornillarla a un larguero fijo pasa a ser
-// obstaculo, y una plancha fija encima de una bisagra bloquea la bisagra:
-// llegando hasta el pico la tapa abria 13.2 grados. Medido barriendo el
-// conjunto giratorio contra la banda de la meseta:
-//
-//     retiro 0 mm  -> abre  13.2 grados
-//     retiro 9.3   -> abre  61.0
-//     retiro 12.8  -> abre 180.0
-//
-// 13 esta al otro lado de ese acantilado. Lo que queda descubierto por delante
-// NO es un agujero: debajo esta el propio Z-Rail de la tapa, que llega a
-// x=271.22, asi que es una linea de sombra entre la tapa y el marco fijo.
-inset_remate_frente = 13;
+// 40.5 DESDE EL 2026-08-29: LA MESETA LLEGA AL PICO. Todo lo de arriba sobre
+// los 27.5 y el acantilado de 12.8 es historia. Se retiraba
+// inset_remate_frente = 13 del pico "porque es lo unico que deja abrir la tapa
+// de arriba", y esos numeros (retiro 0 -> abre 13.2 grados) eran de cuando la
+// meseta era ACRILICO DE 8 apoyado EN el riel. Con la chapa de 1.5 la cara de
+// abajo de la meseta queda a 18.9 del eje y nada de lo que gira pasa de 16.2:
+// guarda_tapa() con la meseta en el pico sigue dando 121.5 grados, los mismos.
+// El inset era un vestigio y se borra. Lo que asomaba en esos 13 mm era el
+// riel-eje de la fila de arriba, desnudo (nota 3 de Samuel del 29-08).
+//   = marco_remate - t_piel - t_costilla; guarda_remate() lo exige.
+prof_sup    = 40.5;
+// El RETORNO de la meseta: en el pico la chapa dobla hacia abajo por la cara
+// de arriba este tramo, medido por la cara exterior desde el pico. Es lo que
+// cierra el frente de la meseta sobre el riel-eje -- y de paso mata la ola del
+// canto libre de 528 mm y el canto vivo que lo hacia leerse como REPISA.
+// NO PUEDE BAJAR MAS DE LO QUE DEJA EL BARRIDO: el canto alto del panel gira
+// sobre el M4 del riel con 16.18 de radio y, a 1.5 mm bajo la cara, llega
+// hasta s = 149.4 de los 155 de la cara. Con 4 el retorno acaba en s = 151 y
+// le sobran 0.80 mm radiales; lo mide guarda_retorno_meseta(). Queda una linea
+// de sombra de 6 mm sobre el panel (2 de labio del riel + 4 de aire): menos
+// que eso, el panel choca con el retorno al abrir.
+retorno_meseta  = 4;
 
 // --- ventilacion con firma (spec §7) ---
 // Diametro de la fresa estandar del taller. NO es decoracion del BOM: manda

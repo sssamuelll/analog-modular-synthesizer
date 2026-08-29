@@ -170,7 +170,7 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
     # mismo error que el sobre del chasis tiene que cazar: exportar el contorno
     # de la pieza montada en vez del recorte da un DXF valido e inservible.
     dims["tapa_valle_2d"] = cb.bbox_desarrollo_tapa(p)
-    # LOS TRES MIEMBROS DE CHAPA. Sus DXF son DESARROLLOS y salen mas grandes
+    # LOS DOS MIEMBROS DE CHAPA. Sus DXF son DESARROLLOS y salen mas grandes
     # que la pieza doblada, igual que la costilla, la tapa del valle y las tres
     # del chasis. Derivados, no escritos a mano: si el .scad y la cuenta de
     # Python se separan, el bbox real del fichero se sale del sobre y revisar()
@@ -178,7 +178,6 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
     # distintos.
     dims["miembro_bajo_2d"] = cb.bbox_desarrollo_miembro(p, "trasero bajo")
     dims["miembro_alto_2d"] = cb.bbox_desarrollo_miembro(p, "trasero alto")
-    dims["bahia_2d"] = cb.bbox_desarrollo_bahia(p)
     # LA ESCUADRA DE LA TRASERA es de la misma chapa y por eso su DXF es otro
     # DESARROLLO: las dos alas por su cota exterior menos un BD. Sale 3.3 mm
     # mas estrecho que la suma de las dos alas montadas, y esa diferencia ES la
@@ -190,6 +189,10 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
     # es ella la que sabe cual se dobla.
     dims["marco_trasera_sup_2d"] = cb.bbox_desarrollo_marco(p, "marco trasera sup")
     dims["marco_trasera_inf_2d"] = cb.bbox_desarrollo_marco(p, "marco trasera inf")
+    # LA NARIZ (2026-08-29): la banda del frente. Otro desarrollo de la misma
+    # chapa, con TRES dobleces (dos a 45 en el chaflan y uno de angulo_inferior
+    # en P1), y otra vez la cuenta vive en Python y el dibujo en el .scad.
+    dims["nariz_2d"] = cb.bbox_desarrollo_nariz(p)
 
     # LAS TRES PLACAS DE ANCLAJE Y EL CLIP. Entran el 2026-08-28 (Tarea 6,
     # item del controller): hasta hoy placas()/clips() eran solidos del
@@ -1091,6 +1094,107 @@ def anillo_tiene_rebaje() -> list[str]:
     return []
 
 
+def anillo_tiene_chaflan() -> list[str]:
+    """La nariz del anillo es RECTA: chaflan a 45 abajo y frente vertical.
+
+    ES LA PUERTA DE LA NOTA 2 DE SAMUEL (2026-08-29). La punta llevaba dos
+    arcos -- 9.5 de radio abajo y 30.1 arriba, lo que radio_punta = 400
+    sobredimensionado dejaba en cada arista -- y se leia como nariz curva. La
+    referencia que trajo tiene marcos laterales con la esquina de abajo
+    cortada a 45 y el frente a plomo, y eso es lo que se relee aqui del DXF que
+    va al taller, no de una copia de redondear() en Python (ver
+    _contorno_exterior): que el punto del contorno mas cercano al origen este
+    sobre la linea x + y = chaflan_nariz, que haya FRENTE VERTICAL (x = 0) hasta
+    donde arranca el radio de la esquina de arriba, y SUELO (y = 0) desde donde
+    acaba el radio del chaflan. Con los arcos viejos ninguna de las tres se
+    cumple: el contorno se acerca al origen 0.44 mm mas de lo que el chaflan
+    permite y el frente vertical mide cero."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    c, r = p["chaflan_nariz"], p["radio_chapa"]
+    aristas = _contorno_exterior("costilla_2d")
+    if not aristas:
+        return ["costilla_2d: sin contorno exterior, no se puede ver la nariz"]
+    pts = [q for a in aristas for q in a]
+    f: list[str] = []
+    diag = min(x + y for x, y in pts)
+    if abs(diag - c) > CARA_DXF_MAX:
+        f.append(f"costilla_2d: la nariz no lleva el chaflan de {c:g}: el punto "
+                 f"del contorno mas cercano a la esquina cae en x+y = {diag:.2f} "
+                 f"y el chaflan pide {c:.2f}. Con radio en vez de chaflan la "
+                 f"punta sale REDONDA, que es lo que Samuel rechazo el 29-08")
+    frente = [y for x, y in pts if abs(x) <= CARA_DXF_MAX]
+    suelo = [x for x, y in pts if abs(y) <= CARA_DXF_MAX]
+    if (not frente or min(frente) > c + r + CARA_DXF_MAX
+            or max(frente) < p["alto_frontal"] - r - CARA_DXF_MAX):
+        f.append(f"costilla_2d: el frente no es vertical: el contorno toca x = 0 "
+                 f"entre y = {min(frente) if frente else float('nan'):.2f} y "
+                 f"{max(frente) if frente else float('nan'):.2f}, y la nariz "
+                 f"recta pide un plomo desde el chaflan (y = {c + r:.2f}) hasta "
+                 f"el radio de arriba (y = {p['alto_frontal'] - r:.2f})")
+    if not suelo or min(suelo) > c + r + CARA_DXF_MAX:
+        f.append(f"costilla_2d: el suelo no llega al chaflan: el contorno toca "
+                 f"y = 0 desde x = {min(suelo) if suelo else float('nan'):.2f} "
+                 f"y el chaflan acaba en {c + r:.2f}")
+    if not f:
+        print(f"  costilla_2d: nariz recta -- chaflan de {c:g} a 45 (x+y = "
+              f"{diag:.2f}), frente a plomo de y = {min(frente):.2f} a "
+              f"{max(frente):.2f}")
+    return f
+
+
+def taladros_nariz() -> list[str]:
+    """La nariz trae sus tres M4 en el pie, y la tabla los mismos tres debajo.
+
+    Dos ficheros y un solo herraje: el M4 atraviesa el pie de la nariz
+    (nariz_2d, en el DESARROLLO, a 1.5 D del canto libre del pie -- un canto
+    libre no se mueve al plegar) y entra en la tabla (bandeja_base_2d, con el
+    mismo diametro que los pies, d_pie_tornillo, porque es el mismo herraje a
+    la misma madera). Si uno de los dos se mueve, el tornillo no cae."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    nz = cb._nariz(p)
+    dxf = "nariz_2d"
+    if not (PLANS / f"{dxf}.dxf").exists():
+        return []                      # de eso ya se queja el bucle de main()
+    f: list[str] = []
+    cantos = _cantos(dxf)
+    leidos = _redondos(dxf)
+    d = p["d_M4_paso"] + p["kerf"]
+    esperados = [(z - p["t_anillo"] - p["hol_piel"], 1.5 * p["d_M4_paso"])
+                 for z in nz["m4_z"]]
+    for ex, ey in esperados:
+        cerca = [q for q in leidos
+                 if math.hypot(q[0] - ex, q[1] - ey) <= DESVIO_DXF_MAX
+                 and abs(q[2] - d) < 0.1]
+        if not cerca:
+            f.append(f"{dxf}: falta el M4 del pie en ({ex:.2f}, {ey:.2f})")
+            continue
+        dist = _dist_al_contorno(cantos, (ex, ey))
+        if dist < BORDE_MIN_D * p["d_M4_paso"] - DESVIO_DXF_MAX:
+            f.append(f"{dxf}: el M4 de ({ex:.2f}, {ey:.2f}) cae a {dist:.2f} mm "
+                     f"del canto y se exigen {BORDE_MIN_D * p['d_M4_paso']:.2f}")
+    if len(leidos) != len(esperados):
+        f.append(f"{dxf}: {len(leidos)} agujeros en el DXF y el modelo pone "
+                 f"{len(esperados)}")
+    v = p["vuelo_zocalo"]
+    d_t = p["d_pie_tornillo"] + p["kerf"]
+    tabla = _redondos("bandeja_base_2d")
+    for z in nz["m4_z"]:
+        ex, ey = v + z, v + nz["m4_x"]
+        if not any(math.hypot(q[0] - ex, q[1] - ey) <= DESVIO_DXF_MAX
+                   and abs(q[2] - d_t) < 0.1 for q in tabla):
+            f.append(f"bandeja_base_2d: falta el taladro de la nariz en "
+                     f"({ex:.2f}, {ey:.2f}), d={d_t:.2f}")
+    if not f:
+        print(f"  {dxf}: {len(esperados)} M4 en el pie a "
+              f"{1.5 * p['d_M4_paso']:.2f} del canto libre, y los mismos "
+              f"{len(esperados)} en la tabla (d={d_t:.2f})")
+    return f
+
+
 def seccion_del_cupon() -> list[str]:
     """El DXF de la seccion del anillo dice las PROFUNDIDADES, y dice las del
     anillo que se va a cortar.
@@ -1365,20 +1469,8 @@ def taladros_placas() -> list[str]:
             # clearance_budget.py.
             esperados.append(("M3 pestana valle", cb._m3_pestana(p),
                               p["d_M3_rosca"], p["d_M3_paso"]))
-            if cajas_miembro is None:
-                P = cb._vertices(p)
-                cajas_miembro = cb._cajas_miembro(p, P, cb._centros_rail(p, P),
-                                                   0.0, 0.0)
-            # LAS DOS LENGUETAS DE LA BAHIA: guarda_anclajes() solo las mide
-            # contra el canto de su propia BRIDA (la chapa doblada), nunca
-            # contra el de esta placa -- son dos piezas de metal distintas y
-            # cada una puede rajarse por su lado. Esta puerta anade la mitad
-            # que faltaba, la de la placa, con el mismo d_M4_paso de canto
-            # que el resto de la familia M4.
-            esperados += [(nm_b, c, p["d_M4_rosca"], p["d_M4_paso"])
-                          for nm_b, _, centros, ancla
-                          in cb._bridas(p, cajas_miembro)
-                          if ancla == "placa" for c in centros]
+            # (Las dos lenguetas de la bahia se esperaban aqui hasta el
+            # 2026-08-29; la bahia murio ese dia.)
         leidos = _redondos(dxf)
         for etiqueta, c, d, d_canto in esperados:
             cerca = [q for q in leidos
@@ -1491,9 +1583,8 @@ def cuerpos_dentro_del_anillo() -> list[str]:
     # por diseno ya no existe: el eje es el propio M5 del riel.
     cuerpos = [(n, cb._esquinas_er(p, c, p[a]))
                for n, c, a in zip(cb.NOMBRES_CR, cr, cb.ANGS_CR)]
-    bahia = cb._envolvente_bahia(miembros)
     cuerpos += [(f"fila 1U {i}", cb._esquinas_er(p, c, 90.0))
-                for i, c in enumerate(cb._centros_rail_1u(p, P, bahia))]
+                for i, c in enumerate(cb._centros_rail_1u(p, P, cr))]
     cuerpos += [(n, [(c[x], c[y])
                      for x in (1, 2) for y in (3, 4)])
                 for n, c in miembros.items()]
@@ -1727,7 +1818,14 @@ def guarda_zocalo() -> list[str]:
                      for wx in (x_frente, x_trasero)
                      for wz in (p["d_pie"] / 2, p["ancho_total"] - p["d_pie"] / 2)]
     redondos = _redondos("bandeja_base_2d")
-    pies = [q for q in redondos if abs(q[2] - d_pie_taladro) < 0.1]
+    # LOS TRES DE LA NARIZ llevan el mismo diametro (mismo herraje a la misma
+    # tabla) y NO son pies: se apartan por posicion, y los cuenta
+    # taladros_nariz(). Sin esto, el censo de pies decia 7.
+    nz = cb._nariz(p)
+    de_nariz = [(v + z, v + nz["m4_x"]) for z in nz["m4_z"]]
+    pies = [q for q in redondos if abs(q[2] - d_pie_taladro) < 0.1
+            and not any(math.hypot(q[0] - ex, q[1] - ey) <= DESVIO_DXF_MAX
+                        for ex, ey in de_nariz)]
     if len(pies) != 4:
         f.append(f"bandeja_base_2d: faltan los 4 taladros de pie -- hay "
                  f"{len(pies)} de d={d_pie_taladro:.2f} mm (d_pie_tornillo) "
@@ -1750,8 +1848,7 @@ def guarda_zocalo() -> list[str]:
 
 
 MIEMBROS_DXF = {"miembro_bajo_2d": "trasero bajo",
-                "miembro_alto_2d": "trasero alto",
-                "bahia_2d": "bahia"}
+                "miembro_alto_2d": "trasero alto"}
 
 
 def taladros_reticula() -> list[str]:
@@ -1864,9 +1961,11 @@ def main() -> int:
         fallos += revisar(nombre, sobre)
     fallos += anillo_tiene_ventana()
     fallos += anillo_tiene_rebaje()
+    fallos += anillo_tiene_chaflan()
     fallos += seccion_del_cupon()
     fallos += taladros_anillo()
     fallos += taladros_placas()
+    fallos += taladros_nariz()
     fallos += ranuras_rejilla_entrada()
     fallos += cuerpos_dentro_del_anillo()
     fallos += tapa_valle_conectada()

@@ -17,6 +17,14 @@ zócalo de madera. Aportada por Samuel el 2026-08-27.
 > el anillo pasa a pletina mecanizada de 14 y el acrílico va coplanar dentro de su
 > ventana. Los tres miembros transversales, la bahía, la fila 1U y el bonding de PE
 > (§3.4) siguen vigentes. Se anota en vez de borrarse.
+>
+> **Enmienda del 2026-08-29.** **La bahía muere** (§2 decisión 4, §4.2 y §5
+> enteros): Samuel, mirando el case en Blender, pidió que en el valle solo
+> vayan los dos Z-Rails del 1U. Su papel estructural lo hacen los seis rieles
+> por sus placas, la tabla y la trasera (racking en #203, como siempre); el
+> patch bay que iba a alojar es hoy la fila 1U. Lo que sí sigue vivo de aquí:
+> los dos miembros traseros, la fila 1U y el bonding. Ver
+> `2026-08-29-nariz-recta-valle-limpio-design.md`.
 
 ## 1. Qué cambia, en una frase
 

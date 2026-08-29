@@ -1,7 +1,7 @@
 # SAM17 — Diseño del case (consola de dos pisos, esqueleto de aluminio)
 
 **Fecha:** 2026-08-15
-**Estado:** aprobado en diseño (rev. 23), pendiente de plan de implementación
+**Estado:** aprobado en diseño (rev. 24), pendiente de plan de implementación
 **Sustituye a:** formato de cajón de la tesis (madera 950 × 440 × 100–200 mm,
 paneles galvanizados pintados) descrito en
 [`docs/modules/08-case-panels.md`](../../modules/08-case-panels.md).
@@ -230,6 +230,31 @@ lenguaje visual).
 > dibujó para paneles de 190 mm y un case de 500 × 380 × 350; el case real
 > mide **544.32 × 256.18 × 308.94** — superado otra vez en la rev. 22, ver
 > abajo.
+>
+> **rev. 24** (2026-08-29, tarde): **nariz recta, meseta al pico, valle limpio**
+> — tres notas de Samuel mirando el case en Blender, en
+> [`2026-08-29-nariz-recta-valle-limpio-design.md`](2026-08-29-nariz-recta-valle-limpio-design.md).
+> **Muere la bahía** (la bandeja de 60 bajo la fila 1U, tercer miembro desde
+> el 27-08): en el valle solo van los dos Z-Rails 1U, arrimados al frente de su
+> ventana; la placa del valle vuelve a 26 de fondo y pierde sus dos roscas de
+> lengüeta; lo que ata los anillos a media altura son los seis rieles por sus
+> placas, la tabla y la trasera, y el racking sigue en #203. **La nariz es
+> recta**: `radio_punta` muere, la esquina de abajo-delante lleva un chaflán
+> de 6 a 45° y un frente vertical de 13, y una banda nueva de chapa de 1.5 —
+> la **`nariz`**, con pie sobre la tabla y tres M4 desde dentro — cierra el
+> frente que enseñaba el riel desnudo; se para 2.2 mm bajo la cara del riel
+> porque la fila de abajo es tapa y ese riel sale por la cara al abrir
+> (`guarda_nariz()`). **La meseta llega al pico**: `prof_sup` 27.5 → 40.5 e
+> `inset_remate_frente` muere — su «acantilado en 12.8» era de cuando la
+> meseta era acrílico de 8 apoyado en el riel; con chapa de 1.5 la tapa de
+> arriba sigue abriendo 121.5° —, y dobla un **retorno de 4** sobre la cara de
+> arriba con 0.80 mm radiales de margen al barrido (`guarda_retorno_meseta()`).
+> **Regla nueva:** toda esquina del anillo con chapa doblada encima mide
+> `radio_chapa` = 4.5, el radio exterior del doblez; `radio_remate` muere y
+> `placa_chaflan` baja de 12 a 11. Lo que quedó **abierto y declarado**: la
+> banda del valle no apoya en nada — nunca apoyó; la bahía la tocaba en una
+> arista — y `guarda_valle()` lo imprime como HUECO (fluye a 27 N) con sus
+> salidas. Tornillería 59 → 53.
 >
 > **rev. 23** (2026-08-29): **la trasera se rehunde y la enmarca el metal.**
 > Hasta hoy era la pieza más exterior de la cara de atrás y sus dos cantos

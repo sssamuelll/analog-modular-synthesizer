@@ -263,12 +263,16 @@ de `E_aluminio` (el anillo sigue derivándose por flecha).
   otras dos salidas quedan como historia de la decisión: **(b)** recortar `piel_trasera`
   para que quepa un clip en la franja trasera; **(c)** aceptarlo y cerrarlo cargando el
   prototipo.
-- **La meseta se lee como repisa** (Iris): 27.5 mm de chapa horizontal perforada
-  (eran 29 hasta la rev. 23). Se juzga en render con el anillo puesto — y desde el
-  29-08 no acaba en el canto del acrílico sino en el ala del marco trasero, o sea
-  que lo que se juzga es una repisa de metal entera.
-- **La banda del valle fluye a ~27 N si se levanta el case por ahí** y la puerta lo
-  imprime sin fallar. Hay que apoyarla o convertirlo en assert.
+- ~~**La meseta se lee como repisa** (Iris)~~ — **CERRADO el 2026-08-29 por
+  construcción** (`2026-08-29-nariz-recta-valle-limpio-design.md` §2.3): la meseta
+  llega al pico (40.5) y dobla un retorno de 4 sobre la cara de arriba. Sin canto
+  libre no hay repisa; se juzga igualmente en render.
+- **La banda del valle fluye a ~27 N** — **desde el 2026-08-29 es un HUECO de
+  `guarda_valle()`, no un párrafo.** La puerta medía un apoyo que no existía (el
+  ala de la bahía la tocaba en una arista); sin bahía el modelo honesto es la viga
+  biapoyada entre pestañas: 213 mm de flecha con 200 N, fluye a 27 N. Salidas en la
+  spec del 29-08 §7: rebaje del canto sobre el labio del riel 1U, retorno, o los
+  dos.
 - ~~**Pies sin taladro en la tabla**~~ — **CERRADO en la Tarea 6 (2026-08-28)**: la
   tabla lleva sus cuatro taladros y `check_dxf` los cuenta en cada corrida
   («`bandeja_base_2d`: 4 taladros de pie d=4.50 mm en las posiciones de `paticas()`»).

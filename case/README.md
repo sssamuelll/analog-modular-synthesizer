@@ -1,5 +1,25 @@
 # Case SAM17 — consola de dos pisos, esqueleto de aluminio
 
+> **2026-08-29, tres notas de Samuel sobre el aluminio, mirando el case en
+> Blender.** (1) **La bahía se va**: en el valle solo van los dos Z-Rails 1U,
+> arrimados al frente de su ventana; el interior queda abierto para los tiles.
+> (2) **La nariz es recta**: chaflán a 45° de 6 mm abajo, frente vertical de
+> 13, y una banda nueva de chapa de 1.5 — la **`nariz`** — que cierra el frente
+> de la tabla al panel, atornillada a la tabla desde dentro. (3) **La meseta
+> llega al pico** (`prof_sup` 27.5 → 40.5, muere `inset_remate_frente`) y dobla
+> 4 mm sobre la cara de arriba: el riel-eje deja de asomar. Y una regla nueva
+> para las esquinas del anillo que llevan chapa encima: `radio_chapa` = 4.5, el
+> radio exterior del doblez. Todo en
+> [`../docs/superpowers/specs/2026-08-29-nariz-recta-valle-limpio-design.md`](../docs/superpowers/specs/2026-08-29-nariz-recta-valle-limpio-design.md).
+> Lo que quedó abierto y declarado: la **banda del valle no tiene apoyo**
+> (`guarda_valle()` lo imprime como HUECO: fluye a 27 N) — lo tenía la spec del
+> 28-08 como párrafo y ahora es puerta.
+>
+> Para señalar una pieza sin adivinar: `renders/piezas.py` arma
+> `build/sam17-piezas.blend` con **cada pieza como objeto con el nombre del
+> repo** (`nariz`, `miembro_alto`, `tapa_valle`...). Clic en la pieza, nombre en
+> el Outliner.
+
 > **La costilla dejó de ser chapa plegada el 2026-08-28** y pasa a ser un
 > **anillo de pletina de aluminio mecanizada** (14 mm, fresado CNC, una
 > pieza por lado, sin soldadura) que sigue cargando todo el case. El
@@ -17,7 +37,7 @@
 > ([`...2026-08-26-case-esqueleto-aluminio-design.md`](../docs/superpowers/specs/2026-08-26-case-esqueleto-aluminio-design.md))
 > y de ahí, el 2026-08-28, a la pletina mecanizada de arriba.
 
-Spec: [`docs/superpowers/specs/2026-08-15-case-design.md`](../docs/superpowers/specs/2026-08-15-case-design.md) (rev. 22)
+Spec: [`docs/superpowers/specs/2026-08-15-case-design.md`](../docs/superpowers/specs/2026-08-15-case-design.md) (rev. 24)
 Board de intención: [`renders/propuesta-diseno-2026-08-16.png`](renders/propuesta-diseno-2026-08-16.png)
 — **manda sobre lenguaje visual, NO sobre cotas**: se dibujó para paneles de
 190 mm y un case de 500 × 380 × 350, y el case real mide 568.62 × 256.18 × 307.41.
@@ -200,6 +220,18 @@ Lo que dejó de salir solo: la holgura contra el raíl de panel. Estaba garantiz
 por construcción mientras el larguero se *derivaba* del raíl; ahora es una
 consecuencia, así que `guarda_piso()` la exige explícitamente.
 
+**Y desde el 2026-08-29 la punta ya no es redonda.** Lo de arriba sobre «la
+punta redondeada se come `alto_frontal/2`» es historia: `radio_punta` murió y la
+esquina de abajo-delante lleva un **chaflán a 45° de `chaflan_nariz` = 6** y un
+frente vertical de 13, con las esquinas al radio de la chapa (`radio_chapa` =
+4.5). Encima va la **`nariz`**: chapa de 1.5 doblada sobre esa esquina — pie de
+18 sobre la tabla, chaflán, frente y 10.27 mm subiendo por la cara de abajo
+hasta justo debajo de la placa de anclaje, que se retira 9 mm para dejarle
+sitio (`retiro_placa_inf`) — y atornillada a la **tabla** desde dentro con tres
+M4. Se para debajo de la cara del riel porque la fila de abajo es tapa y al
+abrir la esquina del riel del frente sale por la cara en s = 12.8: quedan 2.2
+mm de aire más los 2 del labio del riel bajo el panel. Lo mide `guarda_nariz()`.
+
 **La punta de arriba es cuadrada** (2026-08-21). El techo lleva una meseta de
 `marco_remate` = **50 mm** rematada por dos quiebres de 2 mm, en vez de la
 cúpula que salía antes. Fue 34 unas horas: subió a 42 cuando la meseta tuvo
@@ -208,6 +240,11 @@ dejaron de compartir `radio_punta` —que va sobredimensionado a propósito y se
 recorta a lo que quepa en la arista, o sea a `marco_remate/2`— y estrenan
 `radio_remate` = 2. Subir solo el marco **engorda** el round en vez de
 cuadrarlo: de 9 mm de tangente a 17.
+
+**`radio_remate` murió el 2026-08-29.** Las dos esquinas del techo llevan
+`radio_chapa` = 4.5, el radio exterior del doblez de la chapa que las cubre —
+el retorno de la meseta delante, el marco de la trasera detrás. Una esquina
+viva del anillo bajo un doblez a 90° asomaba 1.9 mm por fuera de la chapa.
 
 Los 16 mm de fondo que costó relajaron las tres cotas más apretadas del
 presupuesto, y ninguna se buscó: la tapa de la fila de arriba **abría 180°**
@@ -250,12 +287,19 @@ Las dos cuelgan de las filas de M3 que la plancha **ya** llevaba a sus dos
 miembros: cero taladros nuevos en el acrílico, tornillos 1.5 mm más largos, y
 las diez cabezas que se veían sobre el PMMA pasan a verse sobre metal.
 
-Lo que se pagó: `prof_sup` baja de 29 a **27.5**, porque el trozo de atrás del
-pico crece de `t_piel` a `t_piel + t_costilla` y los 1.5 no podían salir del
-inset — su acantilado está en 12.8 (con 13 la tapa de arriba abre 180°, con
-12.8 abre 61). La meseta no se mueve por delante: el miembro se adelantó 1.5 y
-el ala se acortó lo mismo, así que el barrido probado de la tapa sigue intacto,
-y sus 16 ranuras de salida (852 mm²) tampoco cambian.
+Lo que se pagó entonces: `prof_sup` bajó de 29 a 27.5 para no tocar el inset,
+«cuyo acantilado está en 12.8». **Superado el mismo día por la tarde:** ese
+acantilado era de cuando la meseta era acrílico de 8 apoyado en el riel. Con la
+chapa de 1.5 la cara de abajo de la meseta queda a 18.9 del eje y nada de lo
+que gira pasa de 16.2 — se corrió `guarda_tapa()` con la meseta en el pico y la
+tapa de arriba siguió abriendo 121.5°. Así que **la meseta llega al pico**
+(`prof_sup` = **40.5**), `inset_remate_frente` muere y el riel-eje que asomaba
+en esos 13 mm queda tapado. Y en el pico la chapa **dobla 4 mm hacia abajo**
+por la cara de arriba (`retorno_meseta`): el canto libre de 528 mm deja de
+ondular y de leerse como repisa. No puede bajar más: el canto alto del panel
+gira con 16.18 de radio y con 4 quedan 0.80 mm radiales de margen
+(`guarda_retorno_meseta()`). Línea de sombra sobre el panel: 6 mm (2 de labio
++ 4 de aire).
 
 Lo vigila `guarda_marco_trasera()`, y lo primero que exige es justo lo del
 issue: que el ala de arriba tape el canto **entero** y muera en el doblez, sin
@@ -431,8 +475,10 @@ El vano libre entre los dos es **211.73 mm**, sobre 528 de ancho y 8 de espesor:
 con 200 N. La cuenta es la de una viga ancha biapoyada, `δ = PL³/48EI` con
 E = 3 GPa e I = 528·8³/12.
 
-Y la tapa **no llega hasta el pico**: se retira `inset_remate_frente` = 13 mm.
-Eso no es estética — es lo único que la deja abrir. Hasta ahora esta pieza
+**HISTÓRICO — superado el 2026-08-29** (la meseta llega al pico, ver arriba):
+la tapa **no llegaba hasta el pico**: se retiraba `inset_remate_frente` = 13 mm.
+Eso no era estética — era lo único que la dejaba abrir **cuando la meseta era
+acrílico de 8 apoyado en el riel**. Hasta entonces esta pieza
 giraba CON la tapa (por eso iba pegada al riel, que es parte de la tapa); al
 fijarla pasa a ser obstáculo, y una plancha fija encima de una bisagra bloquea
 la bisagra. Medido barriendo el conjunto giratorio contra la banda de la meseta:
@@ -638,7 +684,9 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Pieza | Cantidad | Nota |
 |-------|----------|------|
 | **ANILLO** (costilla) — pletina de aluminio **FRESADA** t=14, cara vista 20 | **2** | **la pieza portante del case, mecanizada, no plegada** desde el 2026-08-28. Rebaje 6 × 11 por detrás donde asienta el costado, chaflán 1.5 × 45° en las dos aristas de la cara vista. **16 roscas ciegas M4 por anillo** en la cara interior (`taladros_anillo`) + 3 M5 por anillo en el canto inferior para la tabla. Anodizado satinado, punto de bonding enmascarado. Ni casquillo ni junta de 4 mm: el costado asienta en el rebaje sobre una junta de EPDM de 1 mm |
-| **MIEMBRO** de chapa — trasero bajo, trasero alto, bahía | **3** | aluminio 6082-T6 t=1.5, canal con **BRIDA de extremo** doblada en cada punta, roscada al anillo con M4 ciegos. Fueron perfil 2020 comprado hasta el 2026-08-27 |
+| **MIEMBRO** de chapa — trasero bajo, trasero alto | **2** | aluminio 6082-T6 t=1.5, canal con **BRIDA de extremo** doblada en cada punta, roscada al anillo con M4 ciegos. Fueron perfil 2020 comprado hasta el 2026-08-27, y **tres hasta el 2026-08-29**: la bahía (la bandeja bajo la fila 1U) se fue. El alto lleva la **meseta** del techo hasta el pico (40.5) y su **retorno** de 4 sobre la cara de arriba |
+| **NARIZ** — chapa 6082-T6 t=1.5 | **1** | la banda del frente: pie de 18 sobre la tabla, chaflán a 45°, frente vertical y 10.27 subiendo por la cara de abajo. Desarrollo **540.32 × 47.38**, tres dobleces (45°, 45°, 35°). Cierra el frente que enseñaba el riel desnudo (2026-08-29) |
+| Tornillo M4 avellanado (nariz) | **3** | el pie de la nariz a la **tabla**, desde dentro — mismo herraje que las paticas. Ninguno en la cara vista |
 | Z-Rail de Tiptop | **6** | 104 HP (528.32 mm), sección 23.8 × 10. Cuatro forman las dos filas 3U y dos la fila Intellijel 1U. Atornillan a una **placa de anclaje** interior, no directo al anillo |
 | Tornillo **M4** para los rieles | **12** | roscan en el propio Z-Rail (M4 taladrado a 3.3 de fábrica). Sin tuerca, sin inserto. 4 de hombro (ejes de giro) + 4 moleteados (cierres) + 4 fijos (fila 1U, no giran) |
 | **PLACA DE ANCLAJE** — pletina t=6 | **6** | una por tramo y por costado (3U × 2 + valle). Cajeado de 8 × 2.5 por el lado del anillo para la cabeza del M4 del riel. **Orden obligado: primero el riel a la placa (cabeza en el cajeado), después la placa al anillo desde dentro** — al revés no se puede apretar |
@@ -647,9 +695,8 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Tornillo M3 + tuerca (escuadras) | **6** | pasantes por los 8 mm de PMMA de la trasera, cabeza fuera y tuerca dentro. No hay rosca ciega nueva en el anillo |
 | **CLIP DE RETENCIÓN** — pletina t=4 | **4** | 2 por costado, solo en el tramo del SUELO (el único de los cuatro sin placa de anclaje). Un M4 ciego al anillo por clip, muerde 24 mm de acrílico desde el canto de la ventana |
 | **JUNTA DE ASIENTO EPDM** t=1 mm | **2** | una por anillo, perfil continuo en el rebaje entre el labio y el costado. Nunca aluminio contra acrílico — no es la junta de 4 mm del apilado viejo, muerta el 2026-08-28 |
-| Tornillo M4 (lengüetas de bahía) | **4** | las dos lengüetas de la bahía a la placa de la fila 1U, roscadas **en la placa** (6 mm de pletina), no en el anillo |
 | Tornillo M5 + tuerca T + separador 3 mm | **2** | cuelgan la pared **trasera** del chasis del PSU de la ranura interior de `base trasera` (#106). La pared delantera **apoya en la tabla** |
-| Tornillo **M3 botón** + tuerca T M3 + **arandela ancha d16** | **17** | las planchas a la retícula del miembro: trasera 10 (trasero bajo + trasero alto, 5 cada uno), tapa del valle 5 a la **bahía** (`check_dxf`: `bahia_2d` trae su propia retícula de 5 M3), + **2 de las pestañas** de la tapa del valle **a la placa del valle** (no al anillo, ruling R3). Entran por la RANURA del miembro, no por la punta. **Apriete 1.0 N·m con rosca SECA**. Ver `par_m3` |
+| Tornillo **M3 botón** + tuerca T M3 + **arandela ancha d16** | **12** | la trasera a la retícula de sus dos miembros (5 + 5) + **2 de las pestañas** de la banda del valle **a la placa del valle** (no al anillo, ruling R3). Decía 17 contando 5 de la banda «a la bahía» que la banda nunca llevó; sin bahía, tampoco. Entran por la RANURA del miembro, no por la punta. **Apriete 1.0 N·m con rosca SECA**. Ver `par_m3` |
 | Arandela ANCHA d16 | **24** | 20 bajo los M3 que muerden acrílico (8.7 MPa, techo 10) + 4 en los ejes de giro. **Los 2 M3 de pestaña no la necesitan**: aprietan aluminio contra aluminio |
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa |
 | **Chapa de aluminio t=3 mm** — banda delantera del valle | **1** | vuelo delantero liso, desarrollo 572.00 × 18.30, con pestaña de 21 mm doblada en cada punta, atornillada a la **placa del valle** con un M3 (no al anillo desde el 2026-08-28). Aleación recomendada, no obligatoria: 5754 H22 pasa a 130 MPa con margen (48.8 MPa real, `guarda_valle()`). Va al taller de CHAPA — sin recocido, sin diamantado, sin chaflán: eso es del PMMA |
@@ -657,9 +704,10 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Plancha acrílico t=8 mm | **3** | 2 costados + **trasera** (540.32 de ancho, con las ondas y la rejilla de entrada de aire). **Sin un solo taladro**: asientan en el rebaje del anillo, retenidas por el labio, las placas, los clips y la escuadra — nunca por un tornillo propio. Eran 4 hasta el 2026-08-27, con la tapa de remate; esa pieza no existe (ver más arriba) |
 | Patica de goma con casquillo roscado | 4 | EPDM o NBR, Shore 45–55 A, **d20 × 10**. Se atornillan **a la tabla**, no al acrílico. **Se exige la curva carga-deformación: ≥ 0.25 mm de flecha con 22.8 N** — por debajo la pata AMPLIFICA los 100 Hz del toroide en vez de aislarlos (`flecha_pie`). Casquillo roscado moldeado: se atornilla, **no se pega** |
 
-**Total de tornillos itemizados en el BOM: 59** — 12 M4 de raíl + 8 M4 de
-brida + 6 M3 de escuadra + 4 M4 de clip + 4 M4 de lengüeta de bahía + 2 M5
-del chasis + 17 M3 de plancha + 6 M5 de la tabla. **No incluye los M4 de la
+**Total de tornillos itemizados en el BOM: 53** — 12 M4 de raíl + 8 M4 de
+brida + 6 M3 de escuadra + 4 M4 de clip + 3 M4 de la nariz + 2 M5 del chasis
++ 12 M3 de plancha + 6 M5 de la tabla (eran 59: −4 de lengüeta de bahía y −5
+M3 fantasma de la banda, +3 de la nariz, 2026-08-29). **No incluye los M4 de la
 placa al anillo**: son **10 por anillo** (20 en total), el resto de las 16
 roscas ciegas por anillo que imprime `taladros_anillo()` — las otras 6 por
 anillo ya están en la cuenta de arriba: 4 de brida (2 bridas × 2) + 2 de
@@ -708,9 +756,10 @@ esté dibujado.
 Las planchas (trasera, de acrílico; tapa del valle, de aluminio) se
 atornillan **a la retícula de un miembro del esqueleto**, nunca a los 6
 raíles de panel: la trasera a trasero bajo y trasero alto (5 M3 cada uno),
-la tapa del valle a la bahía (5 M3 a su propia retícula) **y además** con
-sus dos pestañas a la placa del valle (2 M3 más, ruling R3 — la banda no
-depende solo de la retícula). La tapa de remate está en esta lista hasta el
+y la banda del valle **solo** con sus dos pestañas a la placa del valle (2 M3,
+ruling R3) — hasta el 2026-08-29 este párrafo le contaba 5 M3 «a la bahía» que
+no tenía, y la bahía ya no existe; por eso `guarda_valle()` la declara HUECO
+hasta que apoye en algo. La tapa de remate está en esta lista hasta el
 2026-08-27; no existe desde entonces (la meseta pasó a ser el ala del
 miembro trasero alto). Los miembros dejaron de ser perfil 2020 comprado el
 2026-08-27; son canal de chapa propio con brida de extremo. **La tabla no
