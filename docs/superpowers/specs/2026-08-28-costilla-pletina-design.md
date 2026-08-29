@@ -94,6 +94,10 @@ apilado desaparece:
 - Hacia dentro lo retienen **clips de retención**: pletinas de 4 mm atornilladas a la
   franja interior del anillo con M4 a rosca ciega, solapando 4 mm sobre el acrílico. La
   cantidad la decide `guarda_costado()` por vano libre; se parte de 6 por costado.
+  - *Enmienda (2026-08-29, noche):* **los clips murieron**, y con ellos la escuadra
+    de §10 y las tres placas de §5: hacia dentro lo retiene el **marco de la
+    ventana**, una pletina de 6 por costado con el contorno de la ventana, corrida
+    por los siete tramos (`2026-08-29-marco-ventana-banda-estructural-design.md`).
   - *Enmienda (Tarea 4, 2026-08-28):* esos 4 mm sobre el acrílico serían `clip_fondo`
     = 18.5, y ahí el clip muere **dentro del rebaje**, pisando sólo la ceja que ya está
     encajonada entre el labio y la pared. Se fija `clip_fondo` = **24** — ruling de la
@@ -136,6 +140,14 @@ anillo** desde dentro. Al revés no se puede apretar.
 **brida de extremo** de la misma chapa de 1.5, con dos **M4** a roscas ciegas en la
 franja. Resuelve el bloqueo que Halberg encontró: hoy el M5 axial entra en un canal
 **abierto** y no muerde en nada.
+
+> **Enmienda (2026-08-29, noche).** Las placas (×6) son desde esa noche **un
+> marco de la ventana por costado** (misma pletina de 6, mismos cajeados, mismas
+> diez roscas, corrido por los siete tramos); los miembros son **uno más el
+> talón**: el alto pasa a ser una L cuya banda vista baja a ras del plano trasero
+> — sus bridas doblan de esa banda y apoyan en la cara del anillo, con el marco
+> muescado encima — y el bajo pasa a ser el talón, sin bridas, a la tabla por su
+> pie. Las roscas ciegas por anillo bajan de 16 a **12**.
 
 > **Enmienda (2026-08-28), ruling de la Tarea 3.** Decía **dos M5**. Bajaron a **M4**:
 > la franja de 14 mm no admite a la vez el paso M5 en la brida y la broca de rosca M5 en
@@ -251,7 +263,10 @@ de `E_aluminio` (el anillo sigue derivándose por flecha).
   desde el 27-08: el `.scad` cortaba la plancha en la cara de abajo de la meseta y
   `clearance_budget` la declaraba llegando al pico.
 - ~~**El canto trasero del acrílico no tiene retención hacia dentro**~~ — **CERRADO el
-  28-08 con la salida (a): la escuadra de la trasera (Tarea 4b, commit `2e46ff8`).** Eran
+  28-08 con la salida (a): la escuadra de la trasera (Tarea 4b, commit `2e46ff8`)**, y
+  **superado el 29-08 por la noche**: la escuadra murió con clips y placas en el
+  marco de la ventana, cuya pata trasera hace de tope sin tornillo (viga de 14.8 × 6
+  empotrada-apoyada, 0.86 mm con 200 N). Eran
   **227 mm** de canto libre (x = 292.91, y de 14.5 a 241.68) sin un solo apoyo hacia
   dentro — en la franja trasera no cabe clip, la ocupa el canto de `piel_trasera` — y el
   punto peor del barrido caía en **(292.8, 117.5)**, a menos de 1 mm de ese canto, donde

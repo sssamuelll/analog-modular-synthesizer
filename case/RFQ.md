@@ -4,6 +4,15 @@ Documento para pedir presupuesto. Va **antes** que el pliego
 ([`PLIEGO.md`](PLIEGO.md)): el pliego dice qué hay que hacer, esto sirve
 para saber **quién puede hacerlo**.
 
+> **rev. 24 (2026-08-29, noche).** Al taller de chapa (§B) le entra **el
+> marco de la ventana** (pletina de 6 a láser con seis cajeados, ×2
+> espejados) y le salen las seis placas, los cuatro clips, las dos escuadras
+> y los dos marcos de la trasera; el miembro bajo pasa a ser **el talón** y
+> el miembro alto una L. A la casa de acrílico (§A): la trasera con diez
+> taladros y dos muescas de esquina con radio. Al carpintero (§C): siete
+> taladros más. Al mecanizado (§D): 12 roscas por anillo, no 16, y la esquina
+> de abajo-atrás a radio 4.5.
+>
 > **rev. 23 (2026-08-29).** Al taller de chapa (§B) le entra **la nariz**
 > (banda del frente, tres dobleces a 45°, 45° y 35°) y le sale **la bahía**;
 > el miembro alto gana un doblez a 45°. Pregunta nueva en §B: si pliegan a
@@ -18,7 +27,7 @@ para saber **quién puede hacerlo**.
 > | § | taller | qué se le pide |
 > |---|---|---|
 > | A | casa de acrílico | costados ×2, trasera |
-> | B | chapa de aluminio (y acero) | miembros ×2 (con bridas), **nariz**, placas ×6, clips ×4, escuadras ×2, **marco trasero ×2** (uno plegado, uno plano), tapa del valle, chasis ×3 |
+> | B | chapa de aluminio (y acero) | miembro alto (una L con bridas), **talón**, **nariz**, **marco de la ventana ×2** (pletina de 6, láser + cajeados), tapa del valle, chasis ×3 |
 > | C | carpintería | la tabla (suelo + zócalo) |
 > | D | mecanizado de aluminio | el anillo ×2 — NUEVO desde el 2026-08-28 |
 
@@ -128,18 +137,19 @@ Se rellena al recibir. Va aquí y no en un correo.
 
 Es el taller que ya hace las tres piezas del chasis de acero. **No es un
 taller nuevo**, pero desde el 2026-08-28 **ya no hace la costilla** — esa
-pieza se mecaniza en un taller aparte (§D). Lo que sí hace: los dos
-miembros del esqueleto (trasero bajo, trasero alto — cada uno con
-brida de extremo doblada en cada punta), la **nariz** (la banda del frente,
-tres dobleces), las dos bandas del marco de la trasera, las dos escuadras de
-la trasera, las seis placas de anclaje de riel, los cuatro clips de retención
-y la tapa del valle. Son las piezas que llevan los rieles y sostienen el
-marco por dentro del anillo. (La bahía, tercer miembro hasta el 2026-08-29,
-ya no existe.)
+pieza se mecaniza en un taller aparte (§D). Lo que sí hace: el **miembro
+alto** (una L — la meseta del techo y la banda vista de atrás — con una brida
+de extremo doblada en cada punta), el **talón** (la banda vista de abajo con
+su pie sobre la tabla), la **nariz** (la banda del frente, tres dobleces), los
+dos **marcos de la ventana** (pletina de 6 cortada a láser, con seis cajeados
+por el lado del anillo, un par espejado) y la tapa del valle. Son las piezas
+que llevan los rieles y sostienen el marco por dentro del anillo. (La bahía,
+tercer miembro hasta el 2026-08-29, y las placas, clips, escuadras y marcos de
+la trasera, muertos esa misma noche, ya no existen.)
 
 1. **¿Pliegan aluminio 6082-T6 de 1.5 mm a 90°, y con qué radio interior
    mínimo?** El modelo asume **r = 3** (2 × t) y de ahí cuelga el desarrollo
-   de los miembros, la escuadra y sus bridas. Si su radio mínimo es otro,
+   del miembro alto, el talón, la nariz y las bridas. Si su radio mínimo es otro,
    **decirlo antes de cortar**: el recorte cambia. **Y a 45° y a 35°, con el
    mismo radio?** La nariz lleva dos dobleces a 45° y uno a 35°, y el miembro
    alto uno a 45°: los BD (0.88 y 0.62) están calculados con ese mismo r = 3 y
@@ -148,37 +158,38 @@ ya no existe.)
    eso da BA = 5.70 y BD = 3.30 mm por doblez. Si trabajan con otro, los DXF se
    regeneran — pero hay que saberlo, no adivinarlo.
 3. **¿Qué aleación y temple suministran, y con qué `Rp0.2`?** No es
-   eliminatoria: con 130 MPa el diseño pasa (miembros, escuadra y también el
-   anillo de §D, cada pieza con su propia puerta). Lo que sí hace falta es
+   eliminatoria: con 130 MPa el diseño pasa (el miembro alto SOLO, sin la
+   trasera, trabaja a 110 en la banda de 24 con 20 kg en el centro de la
+   meseta; y también el anillo de §D, cada pieza con su propia puerta). Lo que sí hace falta es
    que la digan. Una aleación distinta **hay que aprobarla antes de
    cortar**, regenerando las puertas si cambia.
-4. **¿Cortan y roscan pletina de 4 y 6 mm sin plegar** (clips y placas de
-   anclaje)? No llevan doblez, solo contorno, cajeado y rosca ciega o de
-   paso.
+4. **¿Cortan a láser pletina de 6 mm y le hacen bolsillos ciegos** (el marco
+   de la ventana: Ø8 × 2.5 en seis puntos por el lado del anillo, una rosca
+   M3 pasante)? No lleva doblez, solo contorno, cajeado y agujero de paso —
+   y **planitud**: apoya en una cara mecanizada y se atornilla con diez M4.
 
-**Los DXF que reciben son DESARROLLOS PLANOS, no contornos.**
-`miembro_bajo_2d`, `miembro_alto_2d`, `nariz_2d`, `escuadra_trasera_2d`,
-`marco_trasera_sup_2d` y
-`tapa_valle_2d` traen el recorte; la pieza doblada mide menos. Cortar el
+**Los DXF que reciben son DESARROLLOS PLANOS, no contornos** (salvo el
+marco de la ventana, que no se dobla). `miembro_alto_2d`, `talon_2d`,
+`nariz_2d` y `tapa_valle_2d` traen el recorte; la pieza doblada mide menos. Cortar el
 contorno de la pieza montada da un fichero válido e inservible — es el mismo
 error que el modelo vigila con un sobre por pieza. **`costilla_2d` YA NO ES
 DE ESTE TALLER**: desde el 2026-08-28 es un contorno real (sin plegar, sin
 soldar) que se manda a mecanizado, §D.
 
-**Las placas de anclaje y los clips tienen DXF propio desde el 2026-08-28**
-(ver `PLIEGO.md` §6, tabla de «Lo que NO va a este taller»): `placa_cara_inf_2d`,
-`placa_valle_2d`, `placa_cara_sup_2d`, `clip_2d`. El DXF trae el agujero
-FUNCIONAL de paso M4 por riel (no el cajeado); el cajeado de Ø8 × 2.5 por el
-lado del anillo va como nota de mecanizado en el mismo §6 — un DXF 2D no
-dice profundidad — y hay que confirmarlo antes de cortar, como cualquier
-otra cota que no está en el fichero.
+**El marco de la ventana (`marco_ventana_2d`) sustituye a placas, clips y
+escuadras desde el 2026-08-29 por la noche** (ver `PLIEGO.md` §6). El DXF
+trae los agujeros FUNCIONALES de paso M4 (diez al anillo, seis de riel) y la
+rosca M3 de la pestaña; el cajeado de Ø8 × 2.5 por el lado del anillo va
+como nota de mecanizado en el mismo §6 — un DXF 2D no dice profundidad — y
+hay que confirmarlo antes de cortar, como cualquier otra cota que no está en
+el fichero. **Se cortan dos y se cajean por caras opuestas.**
 
 ### Preguntas de cota (aluminio)
 
 5. ¿Qué **tolerancia de posición** garantizan en taladros de chapa? La rosca
-   más justa de este taller hoy es el paso M4 del riel (con su cajeado por
-   el lado del anillo) de la placa de `cara_inf`, a **6.88 mm** del canto, y
-   el M4 de la brida de miembro más justo, a **6.75 mm** — el mínimo
+   más justa de este taller hoy es la del riel del frente en el marco de la
+   ventana, a **6.85 mm** del canto retirado bajo la nariz, y el M4 de la
+   brida del miembro alto, a **6.75 mm** de su canto de arriba — el mínimo
    exigido (1.5 diámetros del M4 de paso), sin margen de sobra.
 6. ¿**Desbarban** el canto? Ninguna de estas piezas lleva recocido, ni
    diamantado, ni chaflán: esas tres cosas son del PMMA.
@@ -195,7 +206,8 @@ cuerpo entero se le apoya encima.
    ~12 000 y sobra; un contrachapado da ~8 000 y pediría 20 mm en vez de 18.
    **Decir la especie antes de cortar.**
 2. **¿Pueden hacer ranuras alargadas de 10.5 × 5.5 mm** (agujero de paso M5 con
-   5 mm de carrera) en la posición del dibujo?
+   5 mm de carrera) en la posición del dibujo, y **catorce taladros pasantes de
+   Ø4.5** (paticas, nariz, talón y chasis)?
 3. ¿Qué **acabado** proponen para una pieza cuya cara de arriba se ve por dentro
    del case a través del acrílico y cuyo canto se ve por fuera?
 
@@ -234,7 +246,8 @@ maciza de 14 mm**, vaciada por el centro, una pieza por lado.
 3. ¿Pueden dar **roscas ciegas M4/M5** a **10 mm de profundidad útil**, en
    una franja de 14 mm de aluminio, con la tolerancia de posición que exige
    `guarda_anclajes()` (roscas a 1.5 diámetros de broca de cada canto: la
-   silueta exterior y la pared del rebaje)?
+   silueta exterior y la pared del rebaje)? Son 12 M4 en la cara interior y
+   3 M5 en el canto inferior, por anillo.
 4. ¿Hacen **chaflán mecanizado de 1.5 × 45°** en dos aristas de la cara
    vista, por pieza?
 5. ¿Anodizan en **satinado**, con **enmascarado de un punto** antes de

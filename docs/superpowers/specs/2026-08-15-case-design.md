@@ -1,7 +1,7 @@
 # SAM17 — Diseño del case (consola de dos pisos, esqueleto de aluminio)
 
 **Fecha:** 2026-08-15
-**Estado:** aprobado en diseño (rev. 24), pendiente de plan de implementación
+**Estado:** aprobado en diseño (rev. 25), pendiente de plan de implementación
 **Sustituye a:** formato de cajón de la tesis (madera 950 × 440 × 100–200 mm,
 paneles galvanizados pintados) descrito en
 [`docs/modules/08-case-panels.md`](../../modules/08-case-panels.md).
@@ -231,6 +231,32 @@ lenguaje visual).
 > mide **544.32 × 256.18 × 308.94** — superado otra vez en la rev. 22, ver
 > abajo.
 >
+> **rev. 25** (2026-08-29, noche): **el marco de la ventana y la banda
+> estructural** — cinco piezas puestas en cuestión por Samuel «al mejor estilo
+> japonés», en
+> [`2026-08-29-marco-ventana-banda-estructural-design.md`](2026-08-29-marco-ventana-banda-estructural-design.md).
+> **Las tres placas de anclaje, los dos clips y la escuadra de cada costado son
+> UN marco de la ventana** (`marco_ventana`, pletina de 6 con el contorno de la
+> ventana del anillo, corrida por los siete tramos: ata los seis rieles y
+> retiene el acrílico hacia dentro por todo el perímetro; canto a la silueta en
+> las filas, retirado 1.65 bajo cada chapa y 11.2 en la trasera). **Los dos
+> marcos de la trasera desaparecen**: la meseta llega al plano trasero
+> (`prof_sup` 40.5 → 50 = `marco_remate`) y dobla 24 hacia abajo
+> (`banda_trasera`): la banda vista ES el alma del miembro alto, una L con dos
+> bridas de 27 × 14.5 en la cara del anillo, y el techo es una chapa del pico
+> al canto sin costura. **El miembro bajo es el `talon`**: la misma banda con
+> un pie de 20 sobre la tabla, tres M4 desde dentro, sin bridas. **La trasera
+> va DENTRO de las dos bandas** (sobre el pie, bajo la meseta, 10 taladros y
+> dos muescas de esquina) y sale por abajo; delante de ella no hay nada a
+> distancia fija — la regla del postmortero (§3) que el marco de la rev. 23
+> rompía a 8.00 justos contra un PMMA de ±1.2 (`guarda_trasera_dentro()`).
+> **El chasis del PSU se atornilla a la tabla** por el suelo con 4 M4 (sus 2
+> M5 apuntaban a la ranura de un 2020 muerto el 27-08). La esquina de
+> abajo-atrás pasa a `radio_chapa`. 16 piezas → 4, 73 tornillos → 64, 16
+> cabezas atrás → 10 sobre metal, 12 roscas por anillo; la tapa de arriba
+> abre 180°. Lo que cuesta: +0.35 kg, la trasera sale por abajo, la banda
+> mide 24 y no 20 (con 20 la L sola trabaja a 158 MPa contra 130).
+>
 > **rev. 24** (2026-08-29, tarde): **nariz recta, meseta al pico, valle limpio**
 > — tres notas de Samuel mirando el case en Blender, en
 > [`2026-08-29-nariz-recta-valle-limpio-design.md`](2026-08-29-nariz-recta-valle-limpio-design.md).
@@ -439,19 +465,19 @@ aquí va lo que sustituye a lo anterior.
   rebaje del anillo, sobre una junta de EPDM de asiento de 1 mm — ya no
   van «capturados entre dos alas» (eso era la rev. 21): el labio del
   anillo los sostiene hacia fuera por todo el perímetro, y hacia dentro
-  los retienen las placas de anclaje, los clips y la escuadra de la
-  trasera. Su silueta escalonada sigue siendo la del aparato.
-- **Placas de anclaje del riel (×6): pletina de aluminio de 6 mm**, una
-  por tramo (cara inferior, cara superior, valle) y por costado. Alojan
-  la cabeza del M4 de cada Z-Rail en un cajeado y se roscan al anillo con
-  roscas ciegas M4 — pieza nueva de la rev. 22, porque el riel ya no
-  puede atornillarse directo a una cara sin canto que atravesar. Orden de
-  montaje obligado: primero el riel a la placa, después la placa al
-  anillo desde dentro.
-- **Clips de retención (×4): pletina de aluminio de 4 mm**, dos por
-  costado, solo en el tramo del suelo (el único de los cuatro tramos sin
-  placa de anclaje libre para atornillar). Muerden 24 mm de acrílico
-  desde el canto de la ventana. Pieza nueva de la rev. 22.
+  los retiene el **marco de la ventana** en los siete tramos (rev. 25;
+  placas, clips y escuadra hasta la rev. 24). Su silueta escalonada
+  sigue siendo la del aparato.
+- **Marco de la ventana (×2): pletina de aluminio de 6 mm** cortada a
+  láser con el contorno de la ventana del anillo, una por costado,
+  espejadas. Aloja la cabeza del M4 de cada Z-Rail en un cajeado, se
+  rosca al anillo con diez M4 ciegos y pisa 6 mm de acrílico volado por
+  todo el perímetro: es a la vez el anclaje de los seis rieles y el tope
+  del costado hacia dentro. Sustituye (rev. 25) a las tres placas de
+  anclaje, los dos clips y la escuadra de la trasera de cada costado — «la
+  placa es el marco de la fila» llevado hasta el final. Orden de montaje
+  obligado: el costado en el rebaje, después los rieles al marco, después
+  el marco al anillo desde dentro.
 - **Tabla de madera maciza de 18 mm**: el **suelo interior y el zócalo**,
   una sola pieza de **588.62 × 327.41** (creció desde 570.62 × 328.94
   porque el anillo es más grueso que la chapa que sustituye) bajo el
@@ -460,35 +486,38 @@ aquí va lo que sustituye a lo anterior.
   redondo por fila como punto fijo y el resto en ranura —, ahora a
   **rosca ciega en el canto inferior de cada anillo** en vez de a un
   larguero, porque la madera se mueve a contraveta y el aluminio no.
-- **3 miembros del esqueleto** que atan los dos anillos: trasero bajo,
-  trasero alto y bahía. Dejaron de ser perfil 2020 comprado el
-  2026-08-27 y pasaron a ser canal de chapa de aluminio de 1.5 mm propio;
-  desde la rev. 22 cada punta lleva una **brida** doblada del mismo
-  blank, roscada al anillo con M4 ciegos en vez de atravesar la costilla
-  de chapa. El reparto exacto lo fija el modelo.
-- **Escuadra de la trasera (×2): chapa de aluminio de 1.5 mm.** Pieza
-  nueva de la rev. 22, atornillada a la TRASERA (nunca al anillo) con 3
-  M3 por costado: tope hacia dentro del canto trasero del costado, que
-  hasta entonces quedaba con 227 mm sin ningún apoyo.
+- **El miembro alto y el talón**, las dos piezas de chapa de la trasera
+  (rev. 25). El **miembro alto** es una L de chapa de 1.5: la meseta del
+  techo, del pico al plano trasero, y la banda vista de 24 que baja a ras
+  de ese plano, con dos bridas de extremo en la cara del anillo (2 M4
+  ciegos cada una) — ata los dos anillos arriba y recibe la trasera. El
+  **talón** es la misma banda por abajo con un pie de 20 sobre la tabla,
+  atornillado a ella con tres M4: recibe la trasera y no ata nada, que
+  para eso está la tabla. Fueron perfil 2020 comprado hasta el 2026-08-27,
+  canales de chapa hasta la rev. 24 (tres con la bahía, dos sin ella), y
+  los dos marcos de la trasera de la rev. 23 se fundieron en sus bandas.
+  El reparto exacto lo fija el modelo.
 - **Las planchas (trasera; banda del valle) anclan a la retícula de un
   miembro, nunca a los 6 raíles de panel** — regresión corregida en el fix
   round 1 de la Tarea 5: esta viñeta llegó a decir lo contrario, que los
   PANELES DE MÓDULO anclan a los miembros, y eso es falso: los paneles sí
   van a los raíles, es la razón de ser del formato Eurorack. Lo cierto es
-  de las PLANCHAS: la trasera a trasero bajo y trasero alto (5 M3 cada
-  uno), la banda del valle a la bahía (5 M3 a su propia retícula) y además
-  con sus dos pestañas a la placa del valle (ruling R3). Las planchas no
+  de las PLANCHAS: la trasera a la banda del miembro alto y a la del
+  talón (5 M3 cada una, rev. 25) y la banda del valle con sus dos pestañas
+  al marco de la ventana (ruling R3). Las planchas no
   comparten anclaje con los paneles porque los raíles van girados al
   ángulo de su cara, y un tornillo de plancha contra una cara inclinada
   entraría descentrado y apoyaría la arandela de canto sobre acrílico
   frágil. Verificado por `alineacion()` en el budget.
-- **Trasera: UNA plancha de acrílico de 8 mm**, EMPOTRADA a ras del canto
-  y atornillada a los dos miembros traseros — desmontable, lleva la
-  ventilación (§7). Fueron dos pieles de 5 flotando sobre standoffs con
-  junta de sombra hasta el 2026-08-21; flotar y sellar son incompatibles.
-- **Tapa del valle: chapa de aluminio de 3 mm.** Apoya en los miembros y
-  se atornilla además a su propia **placa del valle** con una pestaña
-  doblada por punta (desde la rev. 22; hasta entonces iba a las
+- **Trasera: UNA plancha de acrílico de 8 mm**, DENTRO de las dos bandas
+  (rev. 25): sobre el pie del talón, bajo la meseta, rehundida 1.5 del
+  plano trasero, atornillada a las bandas con 10 M3 (cabezas sobre metal)
+  — desmontable por abajo, lleva la ventilación (§7). Fueron dos pieles de
+  5 flotando sobre standoffs con junta de sombra hasta el 2026-08-21;
+  flotar y sellar son incompatibles.
+- **Tapa del valle: chapa de aluminio de 3 mm.** Se atornilla al **marco
+  de la ventana** con una pestaña doblada por punta (desde la rev. 22 a la
+  placa del valle, desde la rev. 25 al marco; hasta entonces iba a las
   costillas): deja de ser una plancha sobre una bisagra y pasa a ser
   **diafragma** a media altura.
 - **Paneles de módulo: PCB de aluminio** de ancho variable en múltiplos de
@@ -501,12 +530,12 @@ aquí va lo que sustituye a lo anterior.
 de acrílico más lejos de cualquier apoyo— cae de **119.0 mm** (acrílico
 portante) a **65.2 mm** con la chapa plegada de la rev. 21, sube a
 **95.5 mm** al pasar a pletina sola en la rev. 22 (el anillo es más grueso
-pero pierde el canto trasero que antes cubría el vano de otra forma) y
-vuelve a bajar a **65.0 mm** con la escuadra de la trasera puesta; la
-flecha con 200 N va de 0.38 a 0.11 a 0.24 y otra vez a **0.11 mm**, porque
-el apoyo deja de ser cuatro tornillos y pasa a ser la ventana del anillo en
-todo el perímetro, más la escuadra en el único tramo que quedaba sin
-cubrir.
+pero pierde el canto trasero que antes cubría el vano de otra forma),
+vuelve a bajar a **65.0 mm** con la escuadra de la trasera puesta y a
+**62.9 mm** con el marco de la ventana (rev. 25); la flecha con 200 N va de
+0.38 a 0.11 a 0.24 a 0.11 y otra vez a **0.11 mm**, porque el apoyo deja de
+ser cuatro tornillos y pasa a ser la ventana del anillo en todo el
+perímetro, por las dos caras.
 
 ## 6. Raíles y sistema de paneles
 
@@ -582,13 +611,12 @@ case/
 (pieles con standoffs, paticas torneadas, transversales 2020 pasantes) y se
 corrige aquí contra la salida real del modelo, el 2026-08-28. Categorías
 actuales: **anillo de pletina de aluminio mecanizada** (×2, la pieza
-portante — §5, 14 mm, sin soldadura); **placas de anclaje de riel** (×6,
-pletina de 6 mm) y **clips de retención** (×4, pletina de 4 mm), las dos
-piezas nuevas de la rev. 22; **3 miembros de chapa** con brida de extremo
-doblada (trasero bajo, trasero alto, bahía — perfil 2020 comprado hasta el
-2026-08-27, canal de chapa propio desde entonces); **2 escuadras de la
-trasera** (chapa de 1.5 mm, rev. 22, atornilladas a la trasera, nunca al
-anillo); **6 Z-Rails de Tiptop de 104 HP** (528.32 mm, sección 23.8 × 10 —
+portante — §5, 14 mm, sin soldadura); **marco de la ventana** (×2, pletina
+de 6 mm a láser, rev. 25 — sustituye a las placas, los clips y las
+escuadras de la rev. 22); **miembro alto** (una L de chapa de 1.5 con
+brida de extremo, la meseta y la banda de atrás) y **talón** (chapa de
+1.5, la banda de abajo con su pie a la tabla) — perfil 2020 comprado hasta
+el 2026-08-27, canales de chapa hasta la rev. 24; **6 Z-Rails de Tiptop de 104 HP** (528.32 mm, sección 23.8 × 10 —
 4 para las dos filas 3U, 2 para la fila Intellijel 1U del valle);
 tornillería inox M3/M4/M5 de botón + arandelas (**arandela ANCHA d16**
 contra todo M3 que muerde acrílico y en los cuatro ejes de giro — con la d9
@@ -608,9 +636,9 @@ Los Z-Rails van entre las caras interiores de las placas de anclaje, así
 que su largo es `largo_riel` (**528.32 mm**), no `ancho_util`
 (**540.62 mm**) ni `ancho_total` (**568.62 mm**). Cantidades y largo
 exactos: salida real de `openscad -D 'PART=\"bom\"' case/cad/sam17_case.scad`
-— el modelo las cuenta desde `centros_rail()`, `placas()`, `clips()` y
-`centros_rosca_ciega()`, y quien las recuente después de tocar
-`params.scad` toma ese eco, no este párrafo.
+— el modelo las cuenta desde `centros_rail()`, `roscas_marco()`,
+`bridas_anillo()` y `centros_rosca_ciega()`, y quien las recuente después
+de tocar `params.scad` toma ese eco, no este párrafo.
 
 ## 10. Verificación
 
@@ -726,21 +754,28 @@ con qué habría que medir para cerrarlo.
   case.
 - ~~**La trasera enseña canto arriba y abajo**~~ — **CERRADO el 2026-08-29**
   (rev. 23, #234): dos bandas de chapa la enmarcan y la plancha se rehunde
-  `t_costilla`. Los DXF nuevos son `marco_trasera_sup_2d` y
-  `marco_trasera_inf_2d`; la puerta, `guarda_marco_trasera()`.
+  `t_costilla`. **Y superado la misma noche (rev. 25)**: esas dos bandas
+  pinzaban la trasera a 8.00 justos contra un PMMA de ±1.2; hoy son la
+  banda del miembro alto y la del talón, la trasera va dentro y la puerta
+  es `guarda_trasera_dentro()`.
 - **Planitud del anillo tras vaciar el centro de una pletina de 14 mm**
   (rev. 22): es la pregunta eliminatoria del RFQ (§B/§D) y el riesgo
   técnico real de esta pieza — la resistencia sobra por 2× (I = 3714 mm⁴
   contra 1673 mm⁴ de la chapa que sustituye, `guarda_anillo()`). Se cierra
   cuando un taller lo garantice por escrito.
 - ~~**Las placas de anclaje y los clips no tienen DXF propio**~~ — **CERRADO
-  el 2026-08-28** (Tarea 6, rev. 22): cuatro DXF nuevos en `case/plans/` —
-  `placa_cara_inf_2d`, `placa_valle_2d`, `placa_cara_sup_2d`, `clip_2d` —
-  traen el paso M4 funcional por riel (el cajeado de Ø8 × 2.5 por el lado
-  del anillo queda como nota de mecanizado, no como corte — `PLIEGO.md` §6).
-  Hasta esa fecha el modelo solo las dibujaba en 3D (`placas_riel()`,
-  `clips_costado()`) y `export.ps1` no las exportaba como pieza aparte —
-  este mismo punto lo daba como pendiente real, no bloqueante.
+  el 2026-08-28** (Tarea 6, rev. 22) con cuatro DXF, **y superado el 29-08
+  por la noche (rev. 25)**: placas, clips y escuadras son el marco de la
+  ventana, un DXF (`marco_ventana_2d`) que relee `taladros_marco_ventana()`.
+- **El racking del conjunto (#203)** sigue sin número, y la rev. 25 cambia
+  su camino de carga por abajo: el diafragma trasero (la trasera atornillada
+  a las dos bandas) se ata abajo a la tabla por el talón, no a un canal de
+  1.5 con dos bridas. Argumento de camino de carga, no de medida.
+- **El chasis del PSU colgaba de un 2020 muerto** (rev. 25): sus dos M5 de
+  pared apuntaban a la ranura interior de `base trasera`, que murió el
+  27-08, y `guarda_chasis()` solo miraba que cayeran en la pared del chasis.
+  Cerrado por construcción — cuatro M4 por el suelo a la tabla —, y va como
+  hallazgo al issue del chasis.
 
 ## 12. Fuera de alcance (el diseño no los bloquea)
 

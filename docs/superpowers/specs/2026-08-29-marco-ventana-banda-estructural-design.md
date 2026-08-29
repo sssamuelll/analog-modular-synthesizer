@@ -2,7 +2,9 @@
 
 **Fecha:** 2026-08-29 (noche) · **Estado:** aprobado por Samuel en conversación
 («dale vamos con furia»), con dos supuestos que él dejó abiertos y aquí se cierran
-(§1); se implementa en la rama `feat/case-marco-ventana` con sus puertas ·
+(§1); **implementado** en la rama `feat/case-marco-ventana` con sus puertas — y
+corregido contra lo que las puertas obligaron (§4.2: la brida no sube; §3.2: la
+pata trasera se retira 11.2; §5: los tornillos del chasis) ·
 **Enmienda:** [`2026-08-15-case-design.md`](2026-08-15-case-design.md) (rev. 25),
 [`2026-08-28-costilla-pletina-design.md`](2026-08-28-costilla-pletina-design.md) §4, §5
 y §10, [`2026-08-27-case-esqueleto-visible-design.md`](2026-08-27-case-esqueleto-visible-design.md)
@@ -107,22 +109,30 @@ lo que hay encima de cada uno:
 |---|---|---|
 | cara de abajo, valle, cara de arriba (las tres filas) | **a la silueta**, con los mismos retiros de hoy (`retiro_placa_inf` = 9 desde P1, `retiro_placa_sup` = 12 desde P3, tangentes de los radios) | es el marco de la fila que Samuel aprobó: el canto de 6 se lee como el borde de aluminio de la fila |
 | frente (el chaflán y los 13 verticales), suelo, meseta y los 10 mm de la cara de arriba bajo el retorno | **retirado `retiro_marco` = `t_costilla` + `hol_piel` = 1.65** | encima va chapa de 1.5 a ras de la silueta (nariz, pie de la nariz y del talón, meseta, retorno) y el marco pasa por debajo con 0.15 de aire; desde fuera no se ve |
-| trasera | canto exterior en **x = 297.76** (la cara interior de la trasera menos `hol_piel`) | la trasera y la banda ocupan los 9.5 mm exteriores de la franja; la pata queda de 16.35 de ancho y pisa 7 mm de acrílico |
+| trasera | canto exterior en **x = 296.21**: retirado `t_piel` + `t_costilla` + tol + 0.5 = **11.20** del plano trasero | la trasera y la banda ocupan los 9.5 mm exteriores de la franja, y delante de un PMMA de ±1.2 no puede haber nada fijo (§4.3): la pata queda de 14.8 de ancho, apoya 2.8 en la franja y pisa 11.5 mm de acrílico |
 
-El canto **interior** va a `marco_fondo` = 26 de la silueta en los siete tramos:
-sobre las filas es exactamente la placa de hoy (mismo cajeado, mismas roscas,
-mismo canto visto); en el frente, el suelo, la meseta y la trasera es el tope que
-hoy dan los clips (24) y la escuadra (25.5), unificado.
+El canto **interior** va a `marco_fondo` = 26 de las **aristas** del perfil en los
+siete tramos — recto, no el offset de la silueta redondeada: en P3, el rincón
+cóncavo de radio 54, ese offset subía en arco y dejaba el paso del segundo riel 1U
+a 6.26 del canto (`check_dxf` lo cazó). Sobre las filas es exactamente la placa de
+hoy (mismo cajeado, mismas roscas, mismo canto visto); en el frente, el suelo, la
+meseta y la trasera es el tope que hoy dan los clips (24) y la escuadra (25.5),
+unificado. Y las roscas de cada riel se arriman a él sin salirse de su pata: las
+de la cara de arriba no caben en los primeros 12 tras P3 (`retiro_placa_sup`
+vuelve, con la misma cota y por la misma razón que tenía la placa: ahí el
+redondeo cóncavo estrecha la franja y la broca sale por el rebaje, 4.72 contra
+4.95).
 
 **Las transiciones son escalones de 1.65 en el canto exterior**, y caen donde ya
 hay una pieza que los tapa: en la cara de abajo a `retiro_placa_inf` = 9 de P1,
 justo donde muere la nariz (`nariz_s_top` = s0 − `hol_piel`); en la cara de
-arriba a 10 del pico, bajo el retorno de la meseta (4 + el radio de 4.5).
+arriba a 5 del pico (`retorno_meseta` + 1), bajo el retorno de la meseta.
 
 La pata trasera **no lleva tornillo** — en la franja trasera no cabe uno, como
-sabía la escuadra — y no le hace falta: es una viga de 16.35 × 6 empotrada en las
-patas de arriba y de abajo. Empujada con `carga_mano` (200 N) en el centro de sus
-227 mm cede **0.33 mm**; el acrílico necesita 3 para salirse del rebaje.
+sabía la escuadra — y no le hace falta: es una viga de 14.8 × 6 empotrada abajo
+en la pata del suelo y apoyada arriba, donde la muesca de la brida (§4.2) deja un
+cuello de 9.5 en la esquina. Empujada con `carga_mano` (200 N) en el centro de
+sus 227 mm cede **0.86 mm**; el acrílico necesita 3 para salirse del rebaje.
 
 ### 3.3 Montaje
 
@@ -157,18 +167,24 @@ la `nariz` hace delante.
 | retorno | `retorno_meseta` = 4, a 45° (90 − `angulo_superior`) | como ayer; lo manda el barrido del panel (`guarda_retorno_meseta`) |
 | meseta | `prof_sup` = **50** (= `marco_remate`), del pico al plano trasero | era 40.5 y moría en el doblez del alma; sube al canto. `guarda_remate()` pasa a exigir `prof_sup == marco_remate`: dos sumandos mueren |
 | banda | `banda_trasera` = **24**, hacia abajo a ras del plano trasero | ver §4.5 por qué 24 y no 20 |
-| pestañas (2) | `brida_largo` = **40** desde la cara interior de la banda, hacia delante sobre la franja de la meseta, con un **escalón de `t_placa` = 6** hacia dentro en sus primeros 14 mm (`brida_escalon`) para subirse encima del marco de la ventana | los dos M4 caen en el tramo plano, a 22.25 y 32.75 del doblez (regla de chapa: 2t + r + d/2 = 8.25 desde la tangente del escalón, y 10.5 entre ellos), a `dist_rosca_ciega` = 8.5 de la silueta: x = **283.66 y 273.16**, y = 247.68. Atraviesan el marco (paso Ø4.5, a 6.85 de su canto retirado) y roscan en el anillo |
+| pestañas (2) | `brida_largo` = **27** desde la cara interior de la banda, hacia delante sobre la franja de la meseta, `brida_ancho` = **14.5** de alto desde `t_costilla` bajo la meseta, **en la cara del anillo** (z = `t_anillo`) | los dos M4 a 9.75 y 20.25 del doblez (regla de chapa y 1.5 D del canto libre), a `dist_rosca_ciega` = 8.5 de la silueta: x = **296.16 y 285.66**, y = 247.68, a rosca ciega en el anillo. **No atraviesan el marco**: en la franja de la meseta el marco lleva una **muesca** abierta a su canto exterior sobre la huella de la brida (16.5 de honda, hasta la punta de la brida menos `hol_piel`), y la brida se tumba en la cara del anillo como siempre |
 | ranuras de aire | las 16 de ayer, centradas en la meseta plana | `guarda_aire` sigue leyéndolas del DXF |
 | fila de M3 de la trasera | 5 a paso 100, a **12** del canto libre de la banda (y = 244.18) | 12 ≥ 9.2 de la regla de chapa contra el doblez de arriba, 12 ≥ 5.1 contra el canto libre |
 
 La pestaña ya no dobla del alma (que no existe) sino **del extremo de la banda**,
 y sigue doblando sobre una línea PERPENDICULAR a la silueta — es lo que hace legal
 su agujero (la nota de `brida_largo` en `params.scad` vale entera). Acaba
-`t_costilla` por debajo de la meseta, como hoy. El escalón es una operación
-estándar de plegadora; la alternativa — un cajeado de 2 mm y dos agujeros Ø8 en
-el marco para que la pestaña pase por DEBAJO — dejaba la esquina trasera-alta del
-marco con 2.5 mm de pared y se descartó: lo raro va en la chapa, que es barata, y
-la pletina se queda lisa.
+`t_costilla` por debajo de la meseta, como hoy.
+
+**Lo que se probó y NO vale, para que nadie lo reintente:** subir la pestaña
+`t_placa` con un escalón y tumbarla ENCIMA del marco. `guarda_tapa()` lo cantó
+en la primera corrida: todo lo que vive a z ≥ `t_anillo` + `t_placa` está en el
+barrido del panel de arriba, y la tapa pasaba de abrir 121.5° a **52°**. La
+pestaña tiene que quedarse en la cara del anillo, fuera de esa rebanada, y por
+eso es el marco el que se aparta con la muesca. Tampoco vale meterla por DEBAJO
+del marco con un cajeado y dos agujeros Ø8: dejaba la esquina trasera-alta del
+marco con 2.5 mm de pared. Y `brida_ancho` baja de 16 a 14.5 para que bajo la
+muesca queden 9.5 de pata entera (`guarda_marco_ventana()` exige 8).
 
 **`talon`** (una L sin pestañas): la banda en el plano trasero y el pie sobre la
 tabla.
@@ -191,8 +207,10 @@ de las dos bandas: su cara trasera contra la cara interior de las bandas (rehund
 su canto de abajo sobre el pie del talón. Mide **540.32 × 253.03** (era 254.68).
 Sus dos filas de M3 pasan a y = 12 y 244.18 (eran 10 y 243.18); las ondas y la
 rejilla, que se derivan de ellas, se mueven con ellas. **Pierde los seis M3 de las
-escuadras** y gana **dos muescas de esquina arriba**, de 5.5 (z) × 20.5 (y) —
-donde pasa el escalón de la pestaña, escondidas detrás de la banda.
+escuadras** y gana **dos muescas de esquina arriba**, de 2 (z) × 15 (y) con radio
+2 en el rincón — por donde le pasa por debajo la pestaña del miembro alto,
+escondidas detrás de la banda. Y su 2D se dibuja en y del mundo (arranca en 1.5,
+no en 0) para que ondas, rejilla, ventana de red y KONDOR no se muevan.
 
 ### 4.3 La regla que el marco de ayer rompía: nada a distancia fija delante del acrílico
 
@@ -241,6 +259,10 @@ sigue siendo 40.5 porque **la meseta apoya en el canto de arriba de la trasera**
 0.15 mm (x = 297.91), no en la banda a 50. Hoy tampoco tiene puerta; se declara en
 §9.
 
+**La tapa de arriba abre 180°.** Con el canal fuera no queda nada en su barrido:
+`guarda_tapa()` pasa de 121.5° (topaba con el retorno de 24 del canal) a 180° sin
+topar. La de abajo sigue en 63.8°.
+
 **El racking (#203)**: el diafragma trasero — la trasera atornillada arriba al
 miembro alto y abajo al talón — queda atado arriba a los anillos por las pestañas
 (como hoy) y abajo a la **tabla** por los tres M4 del talón. La tabla va a los
@@ -278,9 +300,11 @@ alrededor, no en qué mordían. Muerto el miembro bajo, no queda nada ahí.
 Se fija **a la tabla, por el suelo, con cuatro M4 desde abajo** a tuerca
 remachable (clinch, PEM S-M4) en el suelo del chasis: cabezas bajo la tabla — el
 case va sobre sus paticas de 10 —, nada visto por dentro. Van en las dos orillas
-libres de 10 mm que la PCB y el toroide dejan a cada lado del interior (x = 6.5 y
-325.5 interiores, y = 20 y 150), lejos de la ranura de salida de cables y del
-refuerzo del toroide; `guarda_chasis()` lo comprueba. El suelo del chasis apoya
+libres de 10 mm que la PCB y el toroide dejan a cada lado del interior (x = 8.5 y
+323.5 interiores, y = 20 y 150: a 6.75 de la curva del doblez, 2.75 fuera del
+refuerzo del toroide y 8.2 del separador de la esquina de la PCB), lejos de la
+ranura de salida de cables; `guarda_chasis()` lo comprueba y `taladros_talon()`
+los cruza con la tabla. El suelo del chasis apoya
 en la tabla (`chasis_pie` pasa de 2 a 0: el «aire para no resonar» era contra una
 bandeja de acrílico que ya no existe; la tabla de 18 es la que se pidió
 justamente para eso). La pared trasera se arrima al canto del pie del talón con
@@ -314,15 +338,15 @@ apunta, no lo dibuja.
 | **muere** `guarda_escuadra_trasera`, `guarda_marco_trasera`, `TRAMOS_CLIP`/`_clips`/`_cajas_clip`/`_roscas_clips`, `_escuadras_trasera`/`_cajas_escuadra`/`bbox_desarrollo_escuadra`, `_marcos_trasera`/`_cajas_marco_trasera`/`bbox_desarrollo_marco`, `_secciones_miembro`/`guarda_miembros` (la comparación con el 2020), `PLACAS_DXF`/`taladros_placas` (las tres placas y el clip) | |
 | **nueva** `guarda_marco_ventana()` (budget) | el contorno es exactamente las tres placas de hoy en las filas (mismas esquinas, mismos cajeados, mismas roscas) más las cuatro patas; canto exterior retirado `retiro_marco` bajo cada chapa y a 0 en las filas; pata trasera con su flecha bajo `carga_mano` ≤ 1 mm; los dos pasos de brida a 1.5 D del canto del marco; los seis cajeados a 1.5 D; sombra de 6 sobre el acrílico en los siete tramos |
 | **nueva** `taladros_marco_ventana()` (check_dxf) | relee `marco_ventana_2d`: los diez M4 ciegos, los seis pasos de riel, la rosca M3 de la pestaña y los dos pasos de brida donde el modelo los pone, todos a 1.5 D del canto; el contorno releído pisa ≥ 6 de acrílico en los siete tramos |
-| **nueva** `guarda_miembro_alto()` (budget) | sustituye a `guarda_miembros`: la L sola, con `carga_mano` en el centro, tensión ≤ `RP02_ALUMINIO` y flecha publicada; la fila de M3 a ≥ raíz del doblez y ≥ 1.5 D del canto libre; las pestañas con su escalón: M4 a ≥ 8.25 de la tangente del escalón, 1.5 D del canto libre, y el escalón = `t_placa` |
+| **nueva** `guarda_miembro_alto()` (budget) | sustituye a `guarda_miembros`: la L sola, con `carga_mano` en el centro, tensión ≤ `RP02_ALUMINIO` y flecha publicada; la fila de M3 a ≥ raíz del doblez y ≥ 1.5 D del canto libre; las pestañas: caben en la banda bajo la meseta, sus M4 a 2 D uno de otro y a 1.5 D del canto de arriba |
 | **nueva** `guarda_talon()` (budget) | banda a ras del plano trasero, pie sobre la tabla, sus tres M4 a 1.5 D y fuera de la huella de la trasera y del chasis, la fila de M3 a ≥ raíz del doblez de abajo; P6 = `radio_chapa` |
-| **nueva** `guarda_trasera_dentro()` (budget) | §4.3: ningún cuerpo fijo en x ∈ [x_trasera_int − (tol + 0.5), x_trasera_int) dentro de la huella de la trasera; la trasera cubierta arriba por la meseta y abajo por el pie; las muescas de esquina libran el escalón de la pestaña con 0.5 |
+| **nueva** `guarda_trasera_dentro()` (budget) | §4.3: ningún cuerpo fijo en x ∈ [x_trasera_int − (tol + 0.5), x_trasera_int) dentro de la huella de la trasera — es la que retiró la pata trasera del marco a 11.2 —; la trasera cubierta arriba por la meseta y abajo por el pie; las muescas de esquina libran la pestaña con 0.5 |
 | **nueva** `taladros_talon()` (check_dxf) | relee `talon_2d` (fila de M3 + nada más) y cruza sus tres M4 con `bandeja_base_2d`, como `taladros_nariz` |
-| **cambia** `guarda_anclajes` | las roscas ciegas son 12 por anillo (10 del marco + 2 de brida); el cajeado y las roscas contra el polígono del marco; la brida contra su propio canto y contra el escalón; muere el bloque del clip y el del chaflán de placa |
+| **cambia** `guarda_anclajes` | las roscas ciegas son 12 por anillo (10 del marco + 2 de brida); cada agujero del marco contra los cantos REALES de su pata (los extremos en las esquinas son ficticios: el marco sigue de largo); la brida contra su propio canto y contra la raíz del doblez; muere el bloque del clip y el del chaflán de placa |
 | **cambia** `guarda_costado` (check_dxf) | el apoyo hacia dentro deja de ser una lista de placas + clips + escuadra y pasa a ser el contorno interior del marco: el vano interior se mide a un canto continuo, como el exterior |
 | **cambia** `cuerpos_dentro_del_anillo`, `solapes`, `_cajas_solidas` | el marco, las dos pestañas, el talón y la trasera nueva como cuerpos; fuera clips, escuadras, marcos, miembro bajo y sus bridas |
 | **cambia** `guarda_remate` | `prof_sup == marco_remate` (un sumando); la meseta llega al plano trasero |
-| **cambia** `guarda_retorno_meseta`, `guarda_tapa` | el retorno como ayer; el obstáculo «miembro alto» es la L |
+| **cambia** `guarda_retorno_meseta`, `guarda_tapa` | el retorno como ayer; los obstáculos son la banda, la meseta y el retorno; la tapa de arriba abre 180°. Es la puerta que tumbó el escalón de la pestaña |
 | **cambia** `taladros_reticula` | `MIEMBROS_DXF` = {`miembro_alto_2d`, `talon_2d`}; la fila del alto en la banda, la del talón en su banda |
 | **cambia** `agujeros_donde_toca`, `alineacion`, `apoyo`, `guarda_agarre` | las filas de la trasera caen en las bandas (24 de material, no en un canto) |
 | **cambia** `guarda_chasis` | los cuatro M4 del suelo: en las orillas libres, fuera de la ranura y del refuerzo, cruzados con `bandeja_base_2d`; mueren los dos M5 de pared |
@@ -340,24 +364,27 @@ viejo, el modelo después, VERDE, y romperla a propósito una vez.
   por la otra, como las placas de hoy —, sin más operaciones. Se pide con planitud
   como los anillos; se atornilla sobre una cara mecanizada y con diez M4 se
   conforma.
-- **Chapa**: `miembro_alto_2d` cambia de desarrollo (retorno + meseta + banda, dos
-  dobleces de 90° y uno de 45°, y dos pestañas con **escalón de 6**); entra
-  `talon_2d` (un doblez de 90° a r = 3); salen `miembro_bajo_2d`,
-  `escuadra_trasera_2d`, `marco_trasera_sup_2d` y `marco_trasera_inf_2d`.
+- **Chapa**: `miembro_alto_2d` cambia de desarrollo (banda + meseta + retorno,
+  un doblez de 90°, uno de 45° y dos pestañas de la banda a 90°: blank 588.00 ×
+  73.83); entra `talon_2d` (un doblez de 90° a r = 3, blank 540.32 × 40.70);
+  salen `miembro_bajo_2d`, `escuadra_trasera_2d`, `marco_trasera_sup_2d` y
+  `marco_trasera_inf_2d`.
 - **Acrílico**: `piel_trasera_2d` con diez taladros (no dieciséis) y dos muescas
-  de esquina de 5.5 × 20.5, con radio en el rincón (el PMMA raja desde una esquina
+  de esquina de 2 × 15, con radio 2 en el rincón (el PMMA raja desde una esquina
   viva).
 - **Carpintería**: la tabla gana **siete taladros pasantes Ø4.5**: tres del talón
   (como los de la nariz) y cuatro del chasis.
-- **Tornillería**: M4 × 18 para las dos pestañas (cruzan el marco de 6 y la chapa
-  de 1.5 antes de la rosca); M4 avellanado × 3 para el talón; M4 × 4 para el
-  chasis; los M3 de la trasera, 10 con tuerca y **arandela de nylon** del lado del
-  acrílico.
+- **Tornillería**: M4 avellanado × 3 para el talón; M4 × 4 para el chasis (a
+  tuerca remachable); los M3 de la trasera, 10 con tuerca y **arandela de nylon**
+  del lado del acrílico. Los cuatro M4 de las pestañas, como ayer.
 
 ## 9. Lo que este documento NO cierra
 
 - **La banda de 24 contra 20** se juzga en render (§4.5). Con 20 hace falta
   obligar 6082-T6 en el pliego; el papel deja las dos cuentas.
+- **El marco de la ventana pisa 9 de acrílico en el rincón del valle** (P3) en
+  vez de 6, porque su canto interior es recto y el del anillo curva a 54. Se ve
+  a través del PMMA como una sombra un poco más ancha ahí; se juzga en render.
 - **El canto del pico bajo una mano puntual** no tiene puerta, hoy tampoco: una
   chapa de 1.5 en voladizo de 40.5 con un labio de 4. No empeora (§4.4), y una
   puerta honesta pide un modelo de placa que no se inventa aquí.
