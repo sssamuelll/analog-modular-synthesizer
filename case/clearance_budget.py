@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import functools
 import math
 import re
 import sys
@@ -400,9 +401,11 @@ def _trasera(p: dict[str, float]) -> dict:
             "aire_labios": b["u0"] + p["t_junta_asiento"] - t,
             # EL CHAFLAN DE SU ARISTA DE ABAJO-FUERA, a 45 por todo el largo: lo
             # que hace falta para librar con 0.5 el escalon del bolsillo bajo el
-            # chaflan del anillo. GEMELA de chaflan_trasera_bajo() en el .scad.
-            "chaflan_bajo": ((b["u_paso"] + 0.5 - (b["u0"] + p["t_junta_asiento"]))
-                             + (b["y_paso"] - t))}
+            # chaflan del anillo con la plancha en el fondo del bolsillo (donde
+            # descansa hasta que llega la tabla) y pegada al labio (junta
+            # aplastada). GEMELA de chaflan_trasera_bajo() en el .scad.
+            "chaflan_bajo": ((b["u_paso"] + 0.5 - b["u0"])
+                             + (b["y_paso"] - b["y_bot"]))}
 
 
 def _trasera_campo(p: dict[str, float]) -> tuple[float, float]:
@@ -2165,6 +2168,12 @@ def guarda_chaflan(p: dict[str, float]) -> None:
 # I = 3714 mm4 contra los 1673 de la L, o sea que el material manda aun menos
 # que cuando este parrafo se escribio.
 E_ALUMINIO, RP02_ALUMINIO = 69000.0, 130.0
+# El talon, el techo y la nariz van en 6082-T6 por pliego (PLIEGO.md, tabla de
+# chapa) desde que el techo necesito los 240 con el labio a 13 -- y aunque
+# volvio a 18 y pasa con 130, el pliego lo dejo escrito. Solo lo usa la
+# lengueta de la pestana del talon, que con la reaccion en su punta trabaja
+# a unos 200 MPa: es la UNICA cuenta del repo que exige ese material.
+RP02_6082_T6 = 240.0
 # Ancho sobre el que reparte una mano apoyada de canto. Es EL SUPUESTO QUE MAS
 # MANDA en esta puerta -- con 50 mm la tension se dobla contra los 100 -- y por
 # eso va conservador: el canto de la mano, no la palma abierta.
@@ -2570,8 +2579,8 @@ def _miembro_alto(p: dict[str, float]) -> dict:
 def _talon(p: dict[str, float]) -> dict:
     """El talon, la nariz de atras: pie sobre la tabla del canto libre al pie
     del chaflan, chaflan a 45 sobre P6 y labio vertical a ras del plano
-    trasero. Tres M4 en el pie y dos pestanas lanzadas detras del canto de
-    abajo de la trasera. GEMELA de talon_*() en el .scad."""
+    trasero. Tres M4 en el pie y talon_pestana_n pestanas lanzadas detras del
+    canto de abajo de la trasera. GEMELA de talon_*() en el .scad."""
     P = _vertices(p)
     c, t = p["chaflan_nariz"], p["t_costilla"]
     xp = P[6][0]
@@ -2682,14 +2691,15 @@ def guarda_miembro_alto(p: dict[str, float]) -> None:
           + (f"; relieve de {relieve:.2f} junto al chaflan" if relieve > 0 else ""))
 
 
-# Modulo del PMMA colado con el que esta acotada la trasera (E_PMMA en
-# check_dxf.py), su Poisson, y el techo de tension del acrilico bajo carga
-# sostenida: 10 MPa, un septimo de la fluencia del colado, por el crazing --
-# el mismo techo con el que guarda_costado() acota el costado.
-E_PMMA_TRASERA = 3000.0
-NU_PMMA_TRASERA = 0.37
-SIGMA_PMMA_MAX = 10.0
-R_CONTACTO_TRASERA = 10.0      # radio del disco de contacto de carga_mano (= R_CONTACTO de check_dxf)
+# El PMMA colado como material: modulo, Poisson y el radio del disco sobre el
+# que se reparte carga_mano (una mano apoyada, no una punta: con carga puntual
+# la teoria de placas da tension infinita). Viven aqui, junto a SIGMA_PMMA,
+# porque tienen DOS clientes: guarda_costado() en check_dxf.py (que importa
+# este modulo) y guarda_trasera_flexion() aqui. Hasta el 2026-08-30 estaban
+# dos veces, con dos nombres y dos justificaciones.
+E_PMMA = 3000.0       # MPa
+NU_PMMA = 0.37
+R_CONTACTO = 10.0     # mm
 
 
 def _levy_base(k: float, y, y0: float, y1: float):
@@ -2745,6 +2755,13 @@ def _levy_Y(k: float, eta: float, b: float, D: float, nu: float, ys):
     return Y, Y2
 
 
+@functools.lru_cache(maxsize=None)
+def _levy_Y_memo(k: float, eta: float, b: float, D: float, nu: float, ys: tuple):
+    """_levy_Y con memoria: en un barrido de manos las alturas eta se repiten
+    (la fila de manos comparte y), y la ODE es la misma para cada (modo, eta)."""
+    return _levy_Y(k, eta, b, D, nu, ys)
+
+
 def _levy_campo(a: float, b: float, D: float, nu: float, cargas, xs, ys,
                 modos: int = 60):
     """w, w_xx, w_yy en la malla xs x ys de una placa apoyada en x = 0 y
@@ -2767,7 +2784,7 @@ def _levy_campo(a: float, b: float, D: float, nu: float, cargas, xs, ys,
         for eta, qm in por_eta.items():
             if abs(qm) < 1e-15:
                 continue
-            Y, Y2 = _levy_Y(k, eta, b, D, nu, ys)
+            Y, Y2 = _levy_Y_memo(k, eta, b, D, nu, tuple(ys))
             W += qm * np.outer(sx, Y)
             Wyy += qm * np.outer(sx, Y2)
             Wxx += -k * k * qm * np.outer(sx, Y)
@@ -2775,160 +2792,254 @@ def _levy_campo(a: float, b: float, D: float, nu: float, cargas, xs, ys,
 
 
 def _placa_trasera(p: dict[str, float], apoyos_abajo: str = "pestanas",
-                   carga: tuple[float, float] | None = None) -> dict:
+                   carga: tuple[float, float] | None = None,
+                   aire: float | None = None) -> dict:
+    """Una mano sobre la trasera como PLACA: el caso `carga` = (x, y) -- el
+    centro si no se dice -- de _placa_trasera_barrido(). Ver alli."""
+    return _placa_trasera_barrido(p, [carga or (perfil(p)["ancho_util"] / 2,
+                                                _trasera(p)["alto"] / 2)],
+                                  apoyos_abajo, aire)[0]
+
+
+def _placa_trasera_barrido(p: dict[str, float], manos, apoyos_abajo: str = "pestanas",
+                           aire: float | None = None) -> list[dict]:
     """La trasera como PLACA, por Levy (exacta en y, serie de 60 modos en x):
     apoyada en los dos bolsillos (x = 0 y x = a: w = 0, momento libre), libre
-    por arriba, y por abajo libre salvo donde la sujetan las pestanas del talon
-    (apoyos por flexibilidad: w = 0 a media altura de la pestana, con la
-    reaccion repartida en el ancho de la lengueta; y SOLO EMPUJAN: una pestana
-    que tuviera que tirar se quita y se vuelve a resolver). carga_mano en
-    `carga` = (x, y) -- el centro si no se dice --, repartida en un disco de
-    R_CONTACTO (el mismo con el que guarda_costado acota el costado) como 19
-    puntos en dos anillos: la tension bajo la mano es la del contacto, no la
-    singular de una carga puntual.
+    por arriba, y por abajo libre salvo donde la sujetan las pestanas del
+    talon. LAS PESTANAS NO TOCAN LA PLANCHA: estan a talon_pestana_aire de su
+    cara interior (>= tol_pmma + 0.5, como todo lo fijo tras el acrilico), asi
+    que son un tope UNILATERAL a esa distancia -- la placa cede el aire antes
+    de apoyarse, y una pestana que tuviera que tirar no existe --: apoyos por
+    flexibilidad, w = aire en el centro de la lengueta (a media altura), con
+    la reaccion repartida en su ancho. La primera version de esta puerta las
+    ponia tocando (w = 0), y el revisor del PR #244 la cazo: con el aire, tres
+    de las cinco manos que barria pasaban del techo.
+
+    carga_mano en cada mano de `manos` = [(x, y)], repartida como presion
+    uniforme en un disco de R_CONTACTO (el mismo con el que guarda_costado
+    acota el costado): integrada en x en cerrado modo a modo y en y por
+    Gauss de seis nodos -- una carga suave, sin puntos singulares --, asi que
+    la tension bajo la mano es la del contacto. La reaccion de cada pestana
+    se reparte en su ancho y en su altura (tres lineas). Las funciones de
+    Green de las pestanas se calculan una vez y se reutilizan mano a mano.
 
     apoyos_abajo = "pestanas" (las del talon), "libre" (solo los bolsillos:
-    la cota de arriba) o "todo" (el canto entero apoyado: la de abajo).
-    Devuelve la flecha maxima (el canto libre de arriba, que bascula), la
-    flecha bajo la carga, la tension de flexion mayor sobre la malla y las
-    reacciones de las pestanas."""
+    la cota de arriba) o "todo" (el canto entero apoyado, sin aire: la de
+    abajo). `aire` sustituye a talon_pestana_aire si se da.
+    Devuelve por mano: flecha maxima (el canto libre de arriba, que bascula),
+    flecha bajo la carga, tension de flexion mayor sobre la malla, apoyos en
+    contacto y reacciones (N, positivas) de cada pestana."""
     import numpy as np
     tr = _trasera(p)
     tl = _talon(p)
     a = perfil(p)["ancho_util"]
     b = tr["alto"]
     t = p["t_piel"]
-    nu = NU_PMMA_TRASERA
-    D = E_PMMA_TRASERA * t ** 3 / (12 * (1 - nu ** 2))
+    nu = NU_PMMA
+    D = E_PMMA * t ** 3 / (12 * (1 - nu ** 2))
     F = p["carga_mano"]
-    R = R_CONTACTO_TRASERA
-    modos = 60
-    xc, yc = carga if carga else (a / 2, b / 2)
-
-    def punto(P, xi, eta):
-        return (lambda k, P=P, xi=xi: 2.0 * P * math.sin(k * xi) / a, eta)
+    R = R_CONTACTO
+    modos = 50
+    # Gauss-Legendre de seis nodos en [-1, 1], normalizados para que el disco
+    # sume exactamente F (la cuerda 2 sqrt(1 - xi^2) no es polinomio)
+    GL = ((0.2386191861, 0.4679139346), (0.6612093865, 0.3607615730),
+          (0.9324695142, 0.1713244924))
+    nodos = [(s * xi, w) for xi, w in GL for s in (-1.0, 1.0)]
+    norma = sum(w * 2 * math.sqrt(1 - xi * xi) for xi, w in nodos)
 
     def linea(P, xcl, L, eta):
+        """P repartida en [xcl - L/2, xcl + L/2] a la altura eta."""
         x1, x2 = xcl - L / 2, xcl + L / 2
         return (lambda k, P=P: 2.0 * P * (math.cos(k * x1) - math.cos(k * x2)) / (a * k * L), eta)
 
-    mano = [punto(F / 19.0, xc, yc)]
-    for r, n in ((R * 0.5, 6), (R * 0.85, 12)):
-        for j in range(n):
-            th = 2 * math.pi * (j + 0.5) / n
-            mano.append(punto(F / 19.0, xc + r * math.cos(th), yc + r * math.sin(th)))
-    # las pestanas: a (alto - t) / 2 sobre el canto de la plancha, que apoya en el pie
-    y_tab = (p["talon_pestana_alto"] - p["t_costilla"]) / 2.0
+    def disco(xc, yc):
+        """carga_mano como presion uniforme en el disco de radio R: en cada
+        nodo de Gauss, la cuerda del disco como linea con su peso."""
+        out = []
+        for xi, w in nodos:
+            h = R * math.sqrt(1 - xi * xi)
+            out.append(linea(F * w * 2 * math.sqrt(1 - xi * xi) / norma, xc, 2 * h, yc + R * xi))
+        return out
+
+    # las pestanas: tres lineas por su altura sobre el canto de la plancha, que
+    # apoya en el pie (la lengueta sube alto - t sobre ese canto)
+    h_tab = p["talon_pestana_alto"] - p["t_costilla"]
+    y_tab = h_tab / 2.0
+    ys_tab = [h_tab * f for f in (0.25, 0.5, 0.75)]
     L_tab = p["talon_pestana_ancho"]
     if apoyos_abajo == "pestanas":
         xs_ap = [zc - p["t_anillo"] for zc in tl["pestana_z"]]
+        gap = p["talon_pestana_aire"] if aire is None else aire
     elif apoyos_abajo == "todo":
         xs_ap = list(np.linspace(0.0, a, 41)[1:-1])
         L_tab = a / 40.0
+        gap = 0.0 if aire is None else aire
     else:
-        xs_ap = []
+        xs_ap, gap = [], 0.0
     n = len(xs_ap)
-    reac = np.zeros(n)
-    activas = list(range(n))
-    while activas:
-        xa = np.array([xs_ap[i] for i in activas])
-        g = _levy_campo(a, b, D, nu, mano, xa, [y_tab], modos)[0][:, 0]
-        G = np.zeros((len(activas), len(activas)))
-        for jj, j in enumerate(activas):
-            G[:, jj] = _levy_campo(a, b, D, nu, [linea(1.0, xs_ap[j], L_tab, y_tab)],
-                                   xa, [y_tab], modos)[0][:, 0]
-        r = -np.linalg.solve(G, g)
-        reac = np.zeros(n)
-        for jj, j in enumerate(activas):
-            reac[j] = r[jj]
-        # la mano empuja hacia dentro (g > 0); una pestana resiste con r < 0.
-        # La que saliera tirando (r > 0) no existe: fuera y otra vuelta.
-        tiran = [j for jj, j in enumerate(activas) if r[jj] > 1e-9]
-        if not tiran:
-            break
-        activas = [j for j in activas if j not in tiran]
-    cargas = list(mano) + [linea(reac[j], xs_ap[j], L_tab, y_tab) for j in range(n)]
     xs = np.linspace(0.0, a, 109)
     ys = np.linspace(0.0, b, 49)
-    Wm, Wxx, Wyy = _levy_campo(a, b, D, nu, cargas, xs, ys, modos)
-    sx = 6 * D * np.abs(Wxx + nu * Wyy) / t ** 2
-    sy = 6 * D * np.abs(Wyy + nu * Wxx) / t ** 2
-    w_carga = _levy_campo(a, b, D, nu, cargas, [xc], [yc], modos)[0][0, 0]
-    return {"flecha": float(np.abs(Wm).max()), "flecha_carga": float(abs(w_carga)),
-            "sigma": float(max(sx.max(), sy.max())), "a": a, "b": b, "D": D,
-            "apoyos": n, "reacciones": [float(abs(x)) for x in reac]}
+    xa = np.array(xs_ap)
+    # las funciones de Green de las pestanas, una vez: en las pestanas y en la malla
+    G = np.zeros((n, n))
+    campos_tab = []
+    for j in range(n):
+        tab = [linea(1.0 / 3, xs_ap[j], L_tab, yt) for yt in ys_tab]
+        G[:, j] = _levy_campo(a, b, D, nu, tab, xa, [y_tab], modos)[0][:, 0]
+        campos_tab.append(_levy_campo(a, b, D, nu, tab, xs, ys, modos))
+    out = []
+    for xc, yc in manos:
+        mano = disco(xc, yc)
+        reac = np.zeros(n)
+        if n:
+            g = _levy_campo(a, b, D, nu, mano, xa, [y_tab], modos)[0][:, 0]
+            # TOPE UNILATERAL: en contacto, w = gap con reaccion r < 0 (empuja
+            # contra la mano); sin contacto, w < gap y r = 0. Conjunto activo:
+            # fuera la que tire (r > 0), dentro la que atraviese el aire.
+            activas = [j for j in range(n) if g[j] > gap]
+            for _ in range(2 * n + 2):
+                reac = np.zeros(n)
+                if activas:
+                    A_ = np.ix_(activas, activas)
+                    r = np.linalg.solve(G[A_], gap - g[activas])
+                    for jj, j in enumerate(activas):
+                        reac[j] = r[jj]
+                tiran = [j for j in activas if reac[j] > 1e-9]
+                if tiran:
+                    activas = [j for j in activas if j not in tiran]
+                    continue
+                w_tab = g + G @ reac
+                entran = [j for j in range(n) if j not in activas and w_tab[j] > gap + 1e-9]
+                if not entran:
+                    break
+                activas = sorted(activas + entran)
+        Wm, Wxx, Wyy = _levy_campo(a, b, D, nu, mano, xs, ys, modos)
+        for j in range(n):
+            if reac[j]:
+                Wm = Wm + reac[j] * campos_tab[j][0]
+                Wxx = Wxx + reac[j] * campos_tab[j][1]
+                Wyy = Wyy + reac[j] * campos_tab[j][2]
+        sx = 6 * D * np.abs(Wxx + nu * Wyy) / t ** 2
+        sy = 6 * D * np.abs(Wyy + nu * Wxx) / t ** 2
+        s = np.maximum(sx, sy)
+        i, j = np.unravel_index(int(s.argmax()), s.shape)
+        # la flecha bajo la mano, interpolando la malla (la mano cae entre nodos)
+        ii = int(np.clip(np.searchsorted(xs, xc), 1, len(xs) - 1))
+        jj = int(np.clip(np.searchsorted(ys, yc), 1, len(ys) - 1))
+        w_carga = float(np.abs(Wm[ii - 1:ii + 1, jj - 1:jj + 1]).max())
+        out.append({"mano": (xc, yc), "flecha": float(np.abs(Wm).max()),
+                    "flecha_carga": w_carga, "sigma": float(s.max()),
+                    "sigma_en": (float(xs[i]), float(ys[j])), "a": a, "b": b, "D": D,
+                    "gap": gap, "apoyos": int(sum(1 for x in reac if x)),
+                    "reacciones": [float(abs(x)) for x in reac]})
+    return out
 
 
 def guarda_trasera_flexion(p: dict[str, float]) -> None:
     """La trasera, sin un tornillo, se comba y vuelve: ni se sale del
-    bolsillo ni pasa del techo del acrilico, la empujen donde la empujen.
+    bolsillo ni pasa del techo del acrilico en la mitad de abajo, la empujen
+    donde la empujen; y lo que pasa del techo arriba se publica con su
+    extension, como HUECO.
 
-    LA PUERTA QUE EL REVISOR DEL PR PIDIO. Con carga_mano al centro y solo
-    los dos bolsillos (los dos cantos), la placa de 8 x 541 x 237 cede 20 mm
-    bajo la carga (21 en el canto libre de arriba, que bascula) y trabaja a
-    14 MPa en el disco de contacto: sobre el techo del acrilico. Con el canto
-    de abajo sujeto por las pestanas del talon, 5 bajo la carga (9 arriba) y
-    8 MPa. Dos pestanas a 3/8 y 5/8 aguantan el centro igual que cuatro; las
-    cuatro son por el empujon bajo y descentrado (a 1/8 del ancho, junto al
-    pie: 12 MPa con dos, 3 con cuatro). Se barren cinco manos: el centro, el
-    pie al centro, a 1/4 y a 1/8, y media altura a 1/8; todas bajo
-    SIGMA_PMMA_MAX. La mano junto al canto de ARRIBA (a 12 del borde) no la
-    para nada hacia dentro -- el labio del techo solo la para hacia fuera --
-    y trabaja a 16 MPa: se declara HUECO con su numero, no se esconde.
-    Ademas, combada como cota de arriba (sin pestanas) no se sale de los
-    bolsillos: el acortamiento de cuerda 8w^2/3a queda por debajo del
-    embebido menos 0.5. Contrastada: 20.45 / 5.37 mm bajo la carga (dos y
-    tres cantos, puntual) contra 20.35 / 5.38 del revisor con otro codigo."""
+    LA PUERTA QUE EL REVISOR DEL PR #244 PIDIO, Y LUEGO CORRIGIO. Sola en sus
+    bolsillos (dos cantos), la placa de 8 x 541 x 237 cede 20 mm bajo
+    carga_mano al centro (21 en el canto libre de arriba, que bascula) y
+    trabaja a 14 MPa en el disco de contacto: sobre el techo. Con el canto de
+    abajo sujeto por las pestanas del talon -- A SU AIRE, que es un tope y
+    no un apoyo -- baja del techo, pero solo si hay pestanas bastantes: con
+    cuatro, la mano baja entre dos pestanas queda a 9.7 MPa (por un pelo);
+    con ocho (a 1/16, 3/16, ..., 15/16: las unicas cuentas que esquivan los
+    tres M4 son las potencias de dos), a 8.4.
+    Se BARRE la mano por lo que se ve de la placa (una rejilla de 8 x 8 entre
+    los dos labios, no cinco puntos a mano: el maximo real caia fuera de
+    ellos, y lo que tapan los labios no lo empuja una mano). Lo que se exige:
+    (1) toda mano en la mitad de abajo (y <= b/2, donde mandan las pestanas)
+    bajo SIGMA_PMMA; (2) la lengueta mas cargada, con la reaccion en su punta,
+    bajo el Rp0.2 del 6082-T6 que el pliego manda para el talon (unos 200 MPa:
+    con los 130 genericos no pasa ninguna lengueta de 1.5); (3) combada como
+    cota de arriba (sin pestanas) no se sale de los bolsillos: el acortamiento
+    de cuerda 8w^2/3a queda por debajo del embebido menos 0.5. Y lo que se
+    PUBLICA como hueco: la banda de arriba donde la mano pasa del techo -- el
+    labio del techo solo para la plancha hacia fuera y por dentro no la
+    sujeta nada entre los anillos --, con su altura: unos 65 mm bajo el labio.
+    Contrastada: 20.45 / 5.37 mm bajo la carga (dos y tres cantos, puntual,
+    sin aire) contra 20.35 / 5.38 del revisor."""
     tr = _trasera(p)
     a = perfil(p)["ancho_util"]
     b = tr["alto"]
-    R = R_CONTACTO_TRASERA
-    manos = [("el centro", (a / 2, b / 2)),
-             ("el pie al centro", (a / 2, R + 2)),
-             ("el pie a 1/4", (a / 4, R + 2)),
-             ("el pie a 1/8", (a / 8, R + 2)),
-             ("media altura a 1/8", (a / 8, b / 2))]
-    peor = None
-    for nombre, xy in manos:
-        r = _placa_trasera(p, "pestanas", xy)
-        assert r["sigma"] <= SIGMA_PMMA_MAX + 1e-9, (
-            f"la trasera con {p['carga_mano']:.0f} N en {nombre}, sujeta por los "
-            f"bolsillos y las {r['apoyos']} pestanas, trabaja a {r['sigma']:.1f} "
-            f"MPa contra {SIGMA_PMMA_MAX:g} del PMMA (cede {r['flecha_carga']:.1f} mm "
-            f"bajo la mano; pestanas a {', '.join(f'{x:.0f}' for x in r['reacciones'])} N). "
-            f"Mas pestanas, o mejor puestas")
-        if peor is None or r["sigma"] > peor[1]["sigma"]:
-            peor = (nombre, r)
-    con = _placa_trasera(p, "pestanas")
+    R = R_CONTACTO
+    t_ch = p["t_costilla"]
+    # la rejilla de manos: media placa (simetrica en x), y en alto SOLO LO QUE SE
+    # VE -- del labio del talon al del techo (_trasera_campo): lo que tapan los
+    # labios no lo puede empujar una mano, lo empuja la chapa --, con el disco
+    # entero dentro del campo
+    campo = _trasera_campo(p)
+    y_lo, y_hi = campo[0] - t_ch + R, campo[1] - t_ch - R
+    xs_m = [a * f for f in (1 / 16, 1 / 8, 3 / 16, 1 / 4, 5 / 16, 3 / 8, 7 / 16, 1 / 2)]
+    ys_m = [y_lo + (y_hi - y_lo) * i / 7 for i in range(8)]
+    manos = [(x, y) for y in ys_m for x in xs_m]
+    res = _placa_trasera_barrido(p, manos, "pestanas")
+    peor_abajo = max((r for r in res if r["mano"][1] <= b / 2), key=lambda r: r["sigma"])
+    assert peor_abajo["sigma"] <= SIGMA_PMMA + 1e-9, (
+        f"la trasera con {p['carga_mano']:.0f} N en ({peor_abajo['mano'][0]:.0f}, "
+        f"{peor_abajo['mano'][1]:.0f}), sujeta por los bolsillos y las pestanas del "
+        f"talon a {peor_abajo['gap']:g} de aire, trabaja a {peor_abajo['sigma']:.1f} "
+        f"MPa contra {SIGMA_PMMA:g} del PMMA ({peor_abajo['apoyos']} pestanas en "
+        f"contacto, a {', '.join(f'{x:.0f}' for x in peor_abajo['reacciones'])} N). "
+        f"Mas pestanas, menos aire, o mas espesor")
+    # la lengueta: chapa de ancho x t, empotrada en su doblez, con la reaccion en
+    # la punta (peor caso: la placa, inclinada, la toca arriba). Contra el
+    # 6082-T6 que el pliego manda para el talon, no contra los 130 genericos:
+    # a 200 MPa no hay lengueta de 1.5 que pase con 130 sin ser un peine.
+    r_max = max(max(r["reacciones"]) for r in res)
+    Z = p["talon_pestana_ancho"] * t_ch ** 2 / 6
+    brazo = p["talon_pestana_alto"] + p["radio_doblez_pestana"]
+    sigma_tab = r_max * brazo / Z
+    assert sigma_tab <= RP02_6082_T6 + 1e-9, (
+        f"la pestana mas cargada recibe {r_max:.0f} N y, como lengueta de "
+        f"{p['talon_pestana_ancho']:g} x {t_ch:g} con {brazo:g} de brazo, trabaja a "
+        f"{sigma_tab:.0f} MPa contra {RP02_6082_T6:.0f} del 6082-T6: mas ancha, o "
+        f"mas pestanas")
     sin = _placa_trasera(p, "libre")
     cuerda = 8 * sin["flecha"] ** 2 / (3 * a)
     assert cuerda <= tr["entra"] - 0.5 + 1e-9, (
         f"combada {sin['flecha']:.1f} mm (solo los bolsillos), la trasera acorta "
         f"{cuerda:.2f} mm por punta y entra {tr['entra']:.2f}: se sale del bolsillo")
-    arriba = _placa_trasera(p, "pestanas", (a / 2, b - R - 2))
-    print(f"trasera como placa ({a:.0f} x {b:.0f} x {p['t_piel']:g}, D={con['D']:.0f}, "
-          f"mano de {p['carga_mano']:.0f} N en un disco de R={R:g}): al centro cede "
-          f"{con['flecha_carga']:.1f} mm bajo la mano ({con['flecha']:.1f} en el canto "
-          f"de arriba) a {con['sigma']:.1f} MPa con las {con['apoyos']} pestanas "
-          f"(techo {SIGMA_PMMA_MAX:g}; la mas cargada aguanta "
-          f"{max(con['reacciones']):.0f} N); la peor de las {len(manos)} manos es "
-          f"{peor[0]}: {peor[1]['sigma']:.1f} MPa. Solo con los bolsillos, "
-          f"{sin['flecha_carga']:.1f} ({sin['flecha']:.1f}) a {sin['sigma']:.1f}, y "
-          f"acorta {cuerda:.2f} de los {tr['entra']:.2f} embebidos")
-    if arriba["sigma"] > SIGMA_PMMA_MAX:
+    centro = next(r for r in res if abs(r["mano"][0] - a / 2) < 1e-9
+                  and abs(r["mano"][1] - ys_m[min(range(len(ys_m)), key=lambda i: abs(ys_m[i] - b / 2))]) < 1e-9)
+    peor = max(res, key=lambda r: r["sigma"])
+    fallan = [r for r in res if r["sigma"] > SIGMA_PMMA]
+    print(f"trasera como placa ({a:.0f} x {b:.0f} x {p['t_piel']:g}, mano de "
+          f"{p['carga_mano']:.0f} N en un disco de R={R:g}, {len(manos)} manos en media "
+          f"placa; {len(tl_z := _talon(p)['pestana_z'])} pestanas a "
+          f"{p['talon_pestana_aire']:g} de aire): al centro cede "
+          f"{centro['flecha_carga']:.1f} mm bajo la mano a {centro['sigma']:.1f} MPa; "
+          f"la peor de la mitad de abajo, ({peor_abajo['mano'][0]:.0f}, "
+          f"{peor_abajo['mano'][1]:.0f}): {peor_abajo['sigma']:.1f} MPa (techo "
+          f"{SIGMA_PMMA:g}); la lengueta mas cargada, {r_max:.0f} N y {sigma_tab:.0f} "
+          f"MPa (6082-T6: {RP02_6082_T6:.0f}). Solo con los bolsillos, "
+          f"{sin['flecha_carga']:.1f} ({sin['flecha']:.1f}) "
+          f"mm a {sin['sigma']:.1f}, y acorta {cuerda:.2f} de los {tr['entra']:.2f} "
+          f"embebidos")
+    if fallan:
+        y_h = min(r["mano"][1] for r in fallan) + t_ch      # a coordenadas del case
+        y_top = campo[1]                                     # donde empieza el labio del techo
         _HUECOS.append(
-            f"la trasera empujada junto al canto de arriba ({p['carga_mano']:.0f} N a "
-            f"{R + 2:g} del borde, al centro) cede {arriba['flecha_carga']:.1f} mm y "
-            f"trabaja a {arriba['sigma']:.1f} MPa contra {SIGMA_PMMA_MAX:g}: el labio "
-            f"del techo solo la para hacia fuera y por dentro no la sujeta nada entre "
-            f"los anillos. Un tope interior desde el techo dejaria un hueco a la vista "
-            f"en la meseta; queda por decidir")
+            f"la trasera empujada por encima de y = {y_h:.0f} (una banda de "
+            f"{y_top - y_h:.0f} mm bajo el labio del techo, de lado a lado) pasa del "
+            f"techo del PMMA: {peor['sigma']:.1f} MPa y {peor['flecha_carga']:.1f} mm "
+            f"con {p['carga_mano']:.0f} N en ({peor['mano'][0]:.0f}, "
+            f"{peor['mano'][1] + t_ch:.0f}). El labio del techo solo la para hacia "
+            f"fuera y por dentro no la sujeta nada entre los anillos; un tope lanzado "
+            f"desde el techo dejaria una ventana a la vista en la meseta. Queda por "
+            f"decidir (spec 2026-08-29 trasera capturada, seccion 9)")
 
 
 def guarda_talon(p: dict[str, float]) -> None:
     """El talon es la nariz de atras: P6 a chaflan, el labio que tapa el canto
     de abajo de la trasera, tres M4 en el pie con la boca lejos del acrilico,
-    y dos pestanas que le hacen de tope por dentro.
+    y las pestanas que le hacen de tope por dentro (cuantas, lo dice
+    guarda_trasera_flexion).
 
     Es lo que Samuel pidio la noche del 2026-08-29 mirando el render de #241:
     "el mismo estilo y acabado que la nariz". Siete cosas, con su numero:
@@ -3099,13 +3210,16 @@ def guarda_trasera_capturada(p: dict[str, float]) -> None:
         f"la pared de u={bo['u0']:g} del bolsillo arranca en y={bo['y_paso']:g}, "
         f"dentro del chaflan de P6")
     c_p = tr["chaflan_bajo"]
-    u_cara = P[6][0] - tr["x1"]                       # la cara vista de la plancha, en u
-    # la plancha, en la altura del escalon, empieza en u_cara + c_p - (y_paso - y0)
-    u_plancha = u_cara + c_p - (bo["y_paso"] - tr["y0"])
+    # LA PLANCHA EN SU PEOR SITIO: descansando en el fondo del bolsillo (y_bot,
+    # antes de que la tabla la suba a y0) y pegada al labio (u = u0, la junta
+    # aplastada). Ahi, a la altura del escalon, su contorno empieza en
+    # u0 + c_p - (y_paso - y_bot), y tiene que quedar 0.5 dentro del escalon.
+    u_plancha = bo["u0"] + c_p - (bo["y_paso"] - bo["y_bot"])
     assert u_plancha >= bo["u_paso"] + 0.5 - 1e-9, (
-        f"a la altura del escalon del bolsillo (y={bo['y_paso']:g}) la plancha, "
-        f"con su chaflan de {c_p:.2f}, empieza en u={u_plancha:.2f} y el escalon "
-        f"esta en u={bo['u_paso']:g}: se piden 0.5")
+        f"con la plancha en el fondo del bolsillo (y={bo['y_bot']:g}) y pegada al "
+        f"labio, a la altura del escalon (y={bo['y_paso']:g}) su chaflan de "
+        f"{c_p:.2f} la deja en u={u_plancha:.2f} y el escalon esta en "
+        f"u={bo['u_paso']:g}: se piden 0.5")
     assert c_p <= p["t_piel"] - 2.0 + 1e-9, (
         f"el chaflan de la arista de abajo de la trasera mide {c_p:.2f} y deja "
         f"menos de 2 de canto plano sobre el pie")
@@ -3132,8 +3246,6 @@ def guarda_trasera_capturada(p: dict[str, float]) -> None:
                 f"dentro de los {franja:.2f} (tolerancia {_tol_pmma(p):.1f} + 0.5) "
                 f"que una plancha mas gruesa del lote necesita. Nada fijo "
                 f"detras del acrilico a distancia fija")
-    assert abs(tr["y0"] - t) < 1e-9, (
-        f"la trasera arranca en y={tr['y0']:.2f} y el pie del talon acaba en {t:g}")
     c_ch = p["chaflan_nariz"]
     if _chaflan_p5(p):
         # la cara interior del chaflan del techo, en la cara vista del acrilico
@@ -3573,14 +3685,18 @@ def guarda_anillo(p: dict[str, float]) -> None:
     que SI impide: que alguien adelgace el anillo o le coma la franja por
     estetica y lo deje por debajo de lo que la chapa plegada ya pasaba."""
     I, A, ymax = _seccion_anillo(p)
+    I5, A5, _ = _seccion_anillo(p, tramo=5)
     P = _vertices(p)
     n = len(P)
     nombres = ["frente bajo", "cara inferior", "el valle", "cara superior",
                "meseta de remate", "la trasera", "el suelo"]
+    largo5 = math.hypot(P[6][0] - P[5][0], P[6][1] - P[5][1])
+    masa = (A * (_perimetro(P) - largo5) + A5 * largo5) * 2.70e-6
     print(f"anillo: pletina de {p['t_anillo']:g}, cara vista {p['cara_anillo']:g}, "
           f"rebaje {p['rebaje_anillo']:g} x {p['t_anillo'] - p['rehundido_acrilico']:g}, "
-          f"chaflan {p['chaflan_anillo']:g} -> I={I:.0f} mm4, {A:.0f} mm2, "
-          f"{A * _perimetro(P) * 2.70e-6:.2f} kg por costilla")
+          f"chaflan {p['chaflan_anillo']:g} -> I={I:.0f} mm4, {A:.0f} mm2 (el tramo "
+          f"trasero, con sus dos bolsillos: I={I5:.0f}, {A5:.0f} mm2), "
+          f"{masa:.2f} kg por costilla")
     for i in range(n):
         a, b = P[i], P[(i + 1) % n]
         largo = math.hypot(b[0] - a[0], b[1] - a[1])

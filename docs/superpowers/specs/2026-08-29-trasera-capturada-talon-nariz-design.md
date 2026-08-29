@@ -7,8 +7,9 @@ puertas, el render y el revisor del PR obligaron (§3.5: sin canal; §5: el labi
 del techo a 18; §7: la pata trasera del marco a 28; §3.1 y §3.6: el bolsillo
 cerrado por los dos extremos y la trasera entra con el anillo B — la primera
 versión lo sacaba por arriba, la segunda por abajo, y por abajo la plancha no
-pasaba por la boca del chaflán; §4.3 y §7: cuatro pestañas que son estructura y
-la trasera como placa) · **Supersede en la trasera y el talón**
+pasaba por la boca del chaflán; §4.3 y §7: ocho pestañas que son estructura, a
+su aire, y la trasera como placa con la mano barrida por lo visible) ·
+**Supersede en la trasera y el talón**
 a `2026-08-29-marco-ventana-banda-estructural-design.md` §4 (la banda es el
 miembro), que se queda en lo demás · **Enmienda** a `2026-08-15-case-design.md`
 (rev. 26), a `2026-08-29-nariz-recta-valle-limpio-design.md` §2.3 y a
@@ -131,16 +132,20 @@ solo en z 0 … 8 (encima, el bolsillo de la trasera); u 14 … 17 macizo (la pa
 
 ### 3.4 La trasera
 
-Una plancha de 8 de **552.32 × 238.18**, la misma en las dos variantes, sin un
+Una plancha de 8 de **552.32 × 237.18**, la misma en las dos variantes, sin un
 taladro ni una muesca pasante. Sus puntas entran 5.85 en los bolsillos (6 menos
 `hol_piel`); su canto de abajo apoya en el pie del talón (y = 1.5), 0.5 sobre el
 fin de abajo del bolsillo; su canto de arriba muere **0.5 bajo el fin del
 bolsillo** (y = P5.y − 17.5), que a su vez queda 1.0 bajo la brida del techo: la
 brida se tumba en la cara del anillo de `t_costilla + brida_ancho` por debajo del
 canto de arriba, y una plancha que subiera más necesitaría las muescas de esquina
-de #241. Lleva un **chaflán de 4 × 45° en su arista de abajo-fuera**, por todo el
+de #241. Lleva un **chaflán de 5.5 × 45° en su arista de abajo-fuera**, por todo el
 largo: lo que hace falta para que su esquina libre con 0.5 el escalón del bolsillo
-bajo el chaflán del anillo (§3.1) — `chaflan_trasera_bajo()`, gemela en el
+bajo el chaflán del anillo (§3.1) **en el peor sitio donde la plancha puede estar**
+— descansando en el fondo del bolsillo, que es donde queda hasta que llega la
+tabla, y pegada al labio con la junta aplastada (3.0 + 2.5; con la plancha en su
+sitio nominal salían 4, y el revisor del PR cazó que ahí no está al montarla) —,
+y deja 2.5 de canto plano sobre el pie — `chaflan_trasera_bajo()`, gemela en el
 budget. No sale en el DXF (una arista no es un contorno): va en el pliego, como el
 diamantado. Invisible: detrás del labio del talón. Conserva
 la rejilla de entrada, las dos ondas, la ventana del IEC y KONDOR, ahora anclados a
@@ -222,7 +227,7 @@ Va entre los anillos con `hol_piel` a cada lado, como la nariz; sus puntas muere
 contra la cara interior del anillo, que ahí lleva el chaflán: chapa y anillo
 comparten esquina, como delante.
 
-### 4.3 El pie: tres M4 y cuatro pestañas
+### 4.3 El pie: tres M4 y ocho pestañas
 
 **Tres M4 avellanados desde dentro a la tabla** en u = 19.25 (1.5 D del canto libre
 del pie), en las mismas z que los de la nariz. La boca del avellanado (Ø8.96) llega a
@@ -230,22 +235,29 @@ u = 14.77: **2.77 del canto interior de la trasera**, más que los 1.7 de la reg
 es lo que pone el pie en 20 y no en 18 como la nariz. Y la regla de chapa contra el
 doblez del chaflán: 13.25 desde su línea, contra 9.75.
 
-**Cuatro pestañas** lanzadas del pie — cortadas por tres lados y dobladas 90° hacia
-arriba (r = 1.5, `radio_doblez_pestana`) — a z = 1/8, 3/8, 5/8 y 7/8 del hueco entre
-anillos (`talon_pestana_n`), de 20 de ancho y 8 de alto, con su cara hacia la
-trasera en **u = 15**: 3.0 del canto interior del acrílico. Son su tope hacia dentro
-en el canto de abajo, **y son estructura**: la trasera sola en sus dos bolsillos es
-una placa apoyada en dos cantos, y con `carga_mano` al centro cede 20 mm y trabaja
-a 14 MPa en el contacto, sobre el techo de 10 del PMMA; con el canto de abajo
-sujeto por las pestañas, 5 mm y 8 MPa (§7, `guarda_trasera_flexion()`). Dos
-pestañas a 3/8 y 5/8 aguantan el centro igual que cuatro (las dos del medio se
-llevan 74 N cada una); las cuatro son por el empujón bajo y descentrado — 200 N a
-1/8 del ancho, junto al pie: 12 MPa con dos, 3 con cuatro. Entre el doblez del
-chaflán y el de la pestaña quedan 4.1 de plano (dos tangentes a 7.9 y 12 del plano
-trasero); se exigen 2 t, y a la pestaña se le exige subir al menos lo que el
-bolsillo embebe (8 ≥ 6), ser más ancha que alta y doblar a ≥ 1 t. Los M4 quedan a
-67 mm en z de la pestaña más cercana. Cada pestaña deja en el pie una ventana de
-20 × 6.85 (su desarrollo), escondida bajo la trasera.
+**Ocho pestañas** lanzadas del pie — cortadas por tres lados y dobladas 90° hacia
+arriba (r = 1.5, `radio_doblez_pestana`) — a z = 1/16, 3/16 … 15/16 del hueco entre
+anillos (`talon_pestana_n`; solo las potencias de dos esquivan los tres M4, que van
+a 1/4, 1/2 y 3/4), de 20 de ancho y 8 de alto, con su cara hacia la trasera en
+**u = 15**: 3.0 del canto interior del acrílico. Son su tope hacia dentro en el
+canto de abajo, **y son estructura**: la trasera sola en sus dos bolsillos es una
+placa apoyada en dos cantos, y con `carga_mano` al centro cede 20 mm y trabaja a
+14 MPa en el contacto, sobre el techo de 10 del PMMA. Y son un **tope, no un
+apoyo**: están a 3 de la plancha (nada fijo a menos de tol + 0.5 de su cara
+interior), así que la plancha cede esos 3 antes de tocarlas — la primera versión
+de la puerta las ponía tocando, y el revisor del PR lo cazó. Con ese aire, y la
+mano barrida por todo lo que se ve de la plancha (entre los dos labios: lo que
+tapa un labio lo empuja la chapa, no la mano), cuatro pestañas dejan la mano baja
+entre dos de ellas a 9.7 MPa — por un pelo, y pasar por un pelo no es pasar —;
+ocho la dejan en 8.3 (§7, `guarda_trasera_flexion()`). La más cargada recibe
+155 N, y como lengüeta de 20 × 1.5 con la carga en la punta trabaja a 197 MPa: es
+lo que hace **obligatorio el 6082-T6** del talón (Rp0.2 240; con los 130 genéricos
+no pasa ninguna lengüeta de 1.5 sin ser un peine). Entre el doblez del chaflán y
+el de la pestaña quedan 4.1 de plano (dos tangentes a 7.9 y 12 del plano trasero);
+se exigen 2 t, y a la pestaña se le exige subir al menos lo que el bolsillo embebe
+(8 ≥ 6), ser más ancha que alta y doblar a ≥ 1 t. Los M4 quedan a 34 mm en z de la
+pestaña más cercana (24 del borde de su ventana). Cada pestaña deja en el pie una
+ventana de 20 × 6.85 (su desarrollo), escondida bajo la trasera.
 
 Por qué no bridas a los anillos, que era lo primero que salía: la brida del talón
 apoyaría en la cara del anillo justo en la esquina de abajo-atrás, donde vive la
@@ -297,7 +309,7 @@ Desde atrás: metal a ras por los cuatro lados (dos cantos de anillo de 14, dos
 labios de chapa), y la trasera dentro, rehundida 4, sin una cabeza. Las esquinas de
 abajo a chaflán en las dos puntas del case; en B, también las de arriba-atrás.
 
-Desde dentro: cuatro pestañas de 8 detrás del canto de abajo de la trasera; tres
+Desde dentro: ocho pestañas de 8 detrás del canto de abajo de la trasera; tres
 cabezas avellanadas a ras en el pie del talón, bajo la trasera. Los diez M3 con
 tuerca y arandela de nylon que se veían a través del acrílico, fuera.
 
@@ -316,11 +328,11 @@ tuerca y arandela de nylon que se veían a través del acrílico, fuera.
 | **nueva** `anillo_tiene_bolsillo_trasero()` (check_dxf) | relee del dorso el polígono del bolsillo: de u = 3 a 14, de y = 1 a P5.y − 17, cerrado, con el escalón bajo el chaflán (vértice en u = 5.5, y = 3.5) |
 | **cambia** `anillo_tiene_chaflan()` (check_dxf) | el chaflán de 6 en P0 y en P6 (y en P5 con la variante B) |
 | **cambia** `agujeros_donde_toca()` (check_dxf) | la trasera: cero agujeros, como el costado; el costado con su canto trasero a 17.15 |
-| **nueva** `guarda_trasera_flexion()` (budget) | §4.3: la trasera como PLACA por Lévy (exacta en y, 60 modos en x; apoyada en los bolsillos, libre arriba, pestañas como apoyos que solo empujan; la mano en un disco de R = 10): cinco posiciones de la mano bajo `SIGMA_PMMA_MAX` = 10 con las pestañas; combada sin ellas (21 mm) no se sale del bolsillo (acorta 2.2 de los 5.85); la mano junto al canto de arriba (16 MPa) se declara HUECO. Contrastada con el revisor: 20.45 / 5.37 mm contra sus 20.35 / 5.38 |
+| **nueva** `guarda_trasera_flexion()` (budget) | §4.3: la trasera como PLACA por Lévy (exacta en y, 50 modos en x; apoyada en los bolsillos, libre arriba, las pestañas como tope unilateral a su aire de 3; la mano como presión en un disco de R = 10, integrada, no como puntos): la mano **barrida** en una rejilla de 8 × 8 sobre lo que se ve de la placa, toda la mitad de abajo bajo `SIGMA_PMMA` = 10 (8.3 con ocho pestañas); la lengüeta más cargada, con la reacción en la punta, bajo el Rp0.2 del 6082-T6 (197 contra 240); combada sin pestañas (21 mm) no se sale del bolsillo (acorta 2.2 de los 5.85); la banda de arriba que pasa del techo se declara HUECO con su altura (65 mm bajo el labio, hasta 15 MPa). Contrastada con el revisor: 20.45 / 5.37 mm contra sus 20.35 / 5.38 (puntual, sin aire); las constantes del PMMA (E, ν, R) viven una sola vez, junto a `SIGMA_PMMA` |
 | **cambia** `guarda_anillo()` (budget) | `_seccion_anillo(tramo=5)`: el tramo trasero con sus dos bolsillos (−15 % de área, −36 % de inercia), no la sección genérica |
 | **cambia** `guarda_marco_ventana()` (budget) | `marco_fondo_trasera` ≥ `marco_fondo` (por debajo, el .scad dibujaría a `marco_fondo` y la gemela no) |
 | **nueva** `bridas_techo()` (check_dxf) | relee `miembro_alto_2d`: los cuatro M4 de brida donde el modelo los pone y, en B, el relieve de 0.5 y la esquina a 45° de cada brida — era la única chapa de la tanda sin puerta propia |
-| **cambia** `taladros_talon()`, **nueva** `pestanas_talon()` (check_dxf) | los tres M4 del pie y las mismas tres en la tabla; las cuatro ventanas de las pestañas donde el modelo las pone |
+| **cambia** `taladros_talon()`, **nueva** `pestanas_talon()` (check_dxf) | los tres M4 del pie y las mismas tres en la tabla; las ocho ventanas de las pestañas donde el modelo las pone |
 | **cambia** `cuerpos_dentro_del_anillo()` | los labios en vez de las bandas, sin recorte de radio donde hay chaflán |
 
 El orden de siempre: la puerta primero, en ROJO contra el modelo de esta tarde,
@@ -336,11 +348,12 @@ el modelo después, VERDE, y romper cada puerta nueva a propósito.
   rebaje) va en el pliego como la del rebaje. Las roscas ciegas siguen siendo 14
   por anillo, donde estaban.
 - **Chapa**: `talon_2d` cambia de desarrollo (540.32 × 39.73, dos dobleces a 45°,
-  tres M4, cuatro ventanas de pestaña en U con su línea de doblez sin cortar);
+  tres M4, ocho ventanas de pestaña en U con su línea de doblez sin cortar, y el
+  6082-T6 obligatorio por las lengüetas);
   `miembro_alto_2d`, en B, cambia el doblez a 90° de la banda por dos a 45° (el
   chaflán) con el relieve de las bridas.
-- **Acrílico**: `piel_trasera_2d` de 552.32 × 238.18, sin taladros ni muescas
-  pasantes, con un chaflán de 4 × 45° en la arista de abajo-fuera que el pliego
+- **Acrílico**: `piel_trasera_2d` de 552.32 × 237.18, sin taladros ni muescas
+  pasantes, con un chaflán de 5.5 × 45° en la arista de abajo-fuera que el pliego
   pide aparte (el DXF no lo sabe decir). El pliego deja de pedir arandelas de
   nylon ni tuercas para la trasera.
 - **Carpintería**: los tres taladros del talón se corren 2.5 hacia delante.
@@ -366,14 +379,17 @@ el modelo después, VERDE, y romper cada puerta nueva a propósito.
   no toca las roscas de las filas.
 - **#243** (el canto del pico) sigue sin puerta; en B el techo gana rigidez atrás,
   no en el pico.
-- **La mano junto al canto de arriba de la trasera.** El labio del techo solo la
-  para hacia fuera; hacia dentro, entre los anillos, no la sujeta nada: 200 N a
-  12 del borde la comban 18 mm y la ponen a 16 MPa (`guarda_trasera_flexion()`
-  lo publica como HUECO, no lo esconde). Un tope lanzado desde la meseta del
-  techo dejaría una ventana a la vista en la chapa de arriba; una pestaña del
-  labio hacia dentro no cabe en una chapa (§3.5). Queda por decidir si se acepta
-  como está — es un empujón raro y transitorio, y 16 MPa están lejos de romper
-  — o si se busca el tope.
+- **La banda de arriba de la trasera.** El labio del techo solo la para hacia
+  fuera; hacia dentro, entre los anillos, no la sujeta nada: la mano por encima
+  de y = 167 — una banda de 65 mm bajo el labio, de lado a lado, un tercio de lo
+  que se ve — la pone por encima del techo de 10 MPa, hasta 15 MPa y 19 mm junto
+  al labio (`guarda_trasera_flexion()` lo publica como HUECO con su altura, no lo
+  esconde; el techo de 10 es el de carga sostenida por crazing, el mismo con el
+  que se aprueba el resto, y aquí no se argumenta en contra). No hay tope en una
+  chapa: uno lanzado desde la meseta del techo dejaría una ventana a la vista en
+  la chapa de arriba, y una pestaña del labio hacia dentro atraviesa la plancha
+  (§3.5); un angular interior aparte es una pieza nueva contra la vara japonesa.
+  Queda por decidir si se acepta como está o si se paga la pieza.
 
 ## 10. Enmiendas que manda
 

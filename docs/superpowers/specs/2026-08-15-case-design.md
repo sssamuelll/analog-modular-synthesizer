@@ -238,14 +238,16 @@ lenguaje visual).
 > **La trasera va DENTRO de un bolsillo fresado en el tramo trasero de cada
 > anillo** — labio 3, 6 de hondo, 11 de ancho: los tres números del bolsillo
 > del costado, girados — con su cara rehundida 4 sobre junta de EPDM, **sin
-> un taladro** (552.32 × 238.18): el bolsillo cerrado por los dos extremos,
+> un taladro** (552.32 × 237.18): el bolsillo cerrado por los dos extremos,
 > y la plancha entra al montar el segundo anillo, como los costados, con su
-> arista de abajo a chaflán de 4. Para que quepan los dos bolsillos en la
+> arista de abajo a chaflán de 5.5. Para que quepan los dos bolsillos en la
 > franja de 20, en ese tramo el costado entra 3 en vez de 6 y queda una pared
 > de 3 entre ambos. **El talón es la nariz de atrás**: P6 a chaflán 6, pie
-> de 20, chaflán, labio de 13, tres M4 avellanados y cuatro pestañas
+> de 20, chaflán, labio de 13, tres M4 avellanados y ocho pestañas
 > lanzadas que le hacen de tope a la trasera por dentro y son estructura (la
-> plancha como placa: 20 mm y 14 MPa sin ellas, 5 y 8 con ellas). **El techo
+> plancha como placa: 14 MPa sin ellas con la mano al centro, 8.3 con ellas a
+> su aire y la mano barrida por lo visible; arriba, 65 mm que pasan de 10,
+> declarados). **El techo
 > baja con chaflán + labio de 18** (variante
 > B, recomendada; A es la banda de 24) y sin canal: en una sola chapa el
 > labio no puede tapar el canto Y tener retorno, y el bolsillo ya sujeta la
@@ -518,7 +520,7 @@ aquí va lo que sustituye a lo anterior.
   banda de 24), con dos bridas de extremo en la cara del anillo (2 M4 ciegos
   cada una) — ata los dos anillos arriba y tapa el canto de arriba de la
   trasera. El **talón** es la nariz de atrás: pie de 20 sobre la tabla (tres
-  M4 desde dentro), chaflán sobre el de P6 y labio de 13, con cuatro pestañas
+  M4 desde dentro), chaflán sobre el de P6 y labio de 13, con ocho pestañas
   lanzadas del pie detrás de la trasera; no ata nada, que para eso está la
   tabla. Fueron perfil 2020 comprado hasta el 2026-08-27, canales de chapa
   hasta la rev. 24, una L y un ángulo con la trasera atornillada durante la

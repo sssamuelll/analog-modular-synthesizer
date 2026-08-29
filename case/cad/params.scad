@@ -139,26 +139,27 @@ talon_labio     = 13;
 // plana de #241, y da 110. Si Samuel lo quiere a 13, es obligar 6082-T6 en el
 // pliego (Rp0.2 240), no bajar el numero aqui.
 techo_labio     = 18;
-// LAS DOS PESTANAS del pie: lanzadas de la chapa (cortadas por tres lados y
+// LAS PESTANAS del pie: lanzadas de la chapa (cortadas por tres lados y
 // dobladas 90 hacia arriba con radio_doblez_pestana) detras del canto de
 // abajo de la trasera: su tope hacia dentro entre los anillos, que a los
-// lados dan las paredes de los bolsillos. A 3/8 y 5/8 del hueco entre
-// anillos, lejos de los tres M4 (a 1/4, 1/2 y 3/4). alto = lo que suben sobre
-// el pie; ancho = a lo largo del talon; aire = de su cara a la cara interior
-// nominal de la trasera (>= tol_pmma + 0.5 = 1.70; 3 deja ademas 2 t de plano
-// entre el doblez del chaflan y el de la pestana, que con 2 no salia).
+// lados dan las paredes de los bolsillos. Lejos de los tres M4 (a 1/4, 1/2 y
+// 3/4). alto = lo que suben sobre el pie; ancho = a lo largo del talon; aire
+// = de su cara a la cara interior nominal de la trasera (>= tol_pmma + 0.5 =
+// 1.70; 3 deja ademas 2 t de plano entre el doblez del chaflan y el de la
+// pestana, y el radio del doblez fuera de donde apoya una plancha gruesa).
 talon_pestana_alto  = 8;
 talon_pestana_ancho = 20;
 talon_pestana_aire  = 3;
-// Cuantas pestanas, repartidas a (2i+1)/2n del hueco entre anillos: con 4 caen
-// a 1/8, 3/8, 5/8 y 7/8, a 67 mm de los tres M4 (1/4, 1/2, 3/4). SON
-// ESTRUCTURA, no adorno: la trasera capturada solo por los dos bolsillos se
-// comba 20 mm con carga_mano al centro y trabaja a 14 MPa en el contacto,
-// sobre el techo de 10 del PMMA; con el canto de abajo sujeto por las pestanas,
-// 5 mm y 8. Dos (a 3/8 y 5/8) aguantan el centro igual que cuatro; las cuatro
-// son por el empujon BAJO Y DESCENTRADO (200 N a 1/8 del ancho, junto al pie):
-// con dos, 12 MPa; con cuatro, 3 (guarda_trasera_flexion: placa por Levy).
-talon_pestana_n     = 4;
+// Cuantas pestanas, repartidas a (2i+1)/2n del hueco entre anillos. Solo las
+// potencias de dos esquivan los tres M4 (n = 4: 1/8..7/8; n = 8: 1/16..15/16).
+// SON ESTRUCTURA, no adorno: la trasera capturada solo por los dos bolsillos
+// se comba 20 mm con carga_mano al centro y trabaja a 14 MPa en el contacto,
+// sobre el techo de 10 del PMMA. Y son un TOPE, no un apoyo: estan a
+// talon_pestana_aire de la plancha, que cede eso antes de tocarlas. Con ese
+// aire y la mano barrida por todo lo visible, cuatro dejan la mano baja entre
+// dos pestanas a 9.7 MPa (pasar por un pelo no es pasar: la regla de la pata
+// del marco); OCHO la dejan en 8.4 (guarda_trasera_flexion: placa por Levy).
+talon_pestana_n     = 8;
 // Radio interior del doblez de una pestana lanzada: 1 t, no los 2 t de los
 // dobleces vistos (radio_doblez_costilla). Una pestana de 8 no se ve y se
 // dobla apretada; con 3 el plano entre dobleces no daba.

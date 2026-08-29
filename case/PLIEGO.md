@@ -11,10 +11,10 @@
 > a chaflán 6** como P0 (y **P5** con el techo en chaflán).
 > `costilla_dorso_2d` lleva el bolsillo como polígono aparte; su profundidad
 > va aquí (§6.1). **A la chapa**: `talon_2d` es la nariz en espejo (labio 13,
-> chaflán, pie 20; dos dobleces a 45°; **dos ventanas de pestaña en U**) y
+> chaflán, pie 20; dos dobleces a 45°; **ocho ventanas de pestaña en U**) y
 > `miembro_alto_2d` baja con chaflán + labio de 18 (variante B) en vez de la
 > banda, con un relieve en las bridas. **Al acrílico**: `piel_trasera_2d` de
-> 552.32 × 238.18 **sin un taladro**, con un **chaflán de 4 × 45° en su arista
+> 552.32 × 237.18 **sin un taladro**, con un **chaflán de 5.5 × 45° en su arista
 > de abajo-fuera** por todo el largo (§6: no está en el DXF); `kondor_cajeado_2d`
 > es solo la palabra. Mueren los 10 M3 con sus tuercas, arandelas de nylon y d16.
 > **Juntas**: EPDM de 1 en el bolsillo de la trasera (como en el del costado)
@@ -162,7 +162,7 @@ Las demás piezas son indiferentes al lado.
 | DXF | espesor | uds | notas |
 |---|---|---|---|
 | `costado_2d` | 8 | **2** | canto visible completo, diamantado. **Sin un solo taladro** desde el 2026-08-27 |
-| `piel_trasera_2d` | 8 | 1 | **+ `kondor_cajeado_2d` a 4 mm en la cara exterior** (§4, §5). **Sin un taladro** desde el 2026-08-29 (más noche): va CAPTURADA como el costado, con sus puntas en los bolsillos del tramo trasero de los anillos (5.85 por punta), sobre el pie del talón y bajo el fin del bolsillo. **Un chaflán de 4 × 45° en la arista de abajo por la cara exterior**, a lo largo de los 552.32 — cota que el DXF no sabe decir: se pide aquí, como el diamantado. Es lo que libra el escalón del bolsillo bajo el chaflán del anillo; queda escondido detrás del labio del talón. **552.32 × 238.18** |
+| `piel_trasera_2d` | 8 | 1 | **+ `kondor_cajeado_2d` a 4 mm en la cara exterior** (§4, §5). **Sin un taladro** desde el 2026-08-29 (más noche): va CAPTURADA como el costado, con sus puntas en los bolsillos del tramo trasero de los anillos (5.85 por punta), sobre el pie del talón y bajo el fin del bolsillo. **Un chaflán de 5.5 × 45° en la arista de abajo por la cara exterior**, a lo largo de los 552.32 — cota que el DXF no sabe decir: se pide aquí, como el diamantado. Es lo que libra el escalón del bolsillo bajo el chaflán del anillo con la plancha en el fondo del bolsillo y pegada al labio; deja 2.5 de canto plano sobre el pie y queda escondido detrás del labio del talón. **552.32 × 237.18** |
 | `coupon.dxf` | 8 | 1 | pieza de calibración — **sin acabado, sin recocer** |
 
 **`remate_sup_2d` NO EXISTE.** Hasta el 2026-08-27 era la tapa de remate en
@@ -197,8 +197,8 @@ el 2026-08-28:
 | DXF | material | taller | proceso |
 |---|---|---|---|
 | `chasis_cuerpo_2d`, `chasis_tapa_2d`, `chasis_refuerzo_2d` | acero | chapa | corte + **plegado** |
-| `miembro_alto_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: la meseta de 50 con **retorno a 45°** de 4 en el pico y, por detrás, **chaflán + labio de 18 (dos dobleces a 45°, variante B)** o la banda de 24 a 90° (variante A) — con dos **bridas** de 34 dobladas a 90° de las puntas del labio (en B con relieve y esquina a chaflán) — **1 ud** |
-| `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: DOS dobleces a 45° (labio de 13 → chaflán → pie de 20, la nariz en espejo) y **cuatro pestañas lanzadas** (corte en U de 0.5, doblez a 90° con r = 1.5 hacia arriba; son estructura: sujetan el canto de abajo de la trasera y cada una puede llevar 74 N) — **1 ud** |
+| `miembro_alto_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: la meseta de 50 con **retorno a 45°** de 4 en el pico y, por detrás, **chaflán + labio de 18 (dos dobleces a 45°, variante B)** o la banda de 24 a 90° (variante A) — con dos **bridas** de 27 dobladas a 90° de las puntas del labio (en B con relieve y esquina a chaflán) — **1 ud** |
+| `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: DOS dobleces a 45° (labio de 13 → chaflán → pie de 20, la nariz en espejo) y **ocho pestañas lanzadas** (corte en U de 0.5, doblez a 90° con r = 1.5 hacia arriba; son estructura: sujetan el canto de abajo de la trasera y la más cargada recibe 155 N en la punta — 197 MPa en la lengüeta: **el 6082-T6 aquí es obligatorio, no recomendado**) — **1 ud** |
 | `nariz_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: TRES dobleces (45°, 45° y 35°) — **1 ud**. Ver las líneas de plegado abajo |
 | `tapa_valle_2d` | aluminio, 3 mm | chapa | corte + **plegado** |
 | `costilla_2d`, `costilla_dorso_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **fresado CNC**, sin plegar, sin soldar |
@@ -303,7 +303,7 @@ el de P6 y pie de **20** sobre la tabla (su canto libre en y = 39.73), dos
 dobleces a 45° con r = 3 y BD 0.88 cada uno: líneas a **12.56** (labio →
 chaflán) y a **20.17** (chaflán → pie) del canto libre del labio. Blank
 **540.32 × 39.73**, con tres M4 en el pie a 6.75 de su canto libre (a la tabla,
-desde dentro, como la nariz) y **dos ventanas de pestaña**: un corte en U de
+desde dentro, como la nariz) y **ocho ventanas de pestaña**: un corte en U de
 0.5 de ancho alrededor de una lengüeta de 20 × 6.85 que arranca en y = 28.73
 hacia el canto libre del pie, **sin cortar la línea del doblez** (la de
 y = 28.73); la lengüeta se dobla 90° hacia arriba con r = 1.5 y queda de pie

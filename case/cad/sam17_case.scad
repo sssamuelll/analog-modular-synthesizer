@@ -278,8 +278,8 @@ function talon_x_chaflan() = pts_perfil()[6].x - chaflan_nariz; // pie del chafl
 function talon_x_pie()     = talon_x_chaflan() - talon_pie;     // canto libre del pie
 function talon_m4_x()      = talon_x_pie() + 1.5*d_M4_paso;
 function centro_talon()    = [talon_x_chaflan() - talon_pie/2, talon_labio/2];
-// Las dos pestanas lanzadas del pie: su cara hacia la trasera, y sus centros
-// en z, a 3/8 y 5/8 del hueco entre anillos (los M4 van a 1/4, 1/2 y 3/4).
+// Las pestanas lanzadas del pie: su cara hacia la trasera, y sus centros en
+// z, a (2i+1)/2n del hueco entre anillos (los M4 van a 1/4, 1/2 y 3/4).
 function talon_pestana_x() = x_trasera_int() - talon_pestana_aire;
 function talon_pestana_z() =
     [for (i = [0 : talon_pestana_n - 1]) t_anillo + ancho_util*(2*i + 1)/(2*talon_pestana_n)];
@@ -612,12 +612,16 @@ module bolsillo_trasero_2d() {
 
 // EL CHAFLAN DE LA ARISTA DE ABAJO-FUERA DE LA TRASERA, a 45, por todo su
 // largo: lo que hace falta para que su esquina libre el escalon del bolsillo
-// con 0.5 (la pared de u = rehundido..bolsillo_u_paso bajo bolsillo_y_paso).
+// con 0.5 (la pared de u = rehundido..bolsillo_u_paso bajo bolsillo_y_paso)
+// EN EL PEOR SITIO DONDE LA PLANCHA PUEDE ESTAR: en el fondo del bolsillo
+// (bolsillo_y_bot, donde descansa hasta que llega la tabla) y pegada al labio
+// (u = rehundido, con la junta aplastada). El revisor del PR #244 cazo que la
+// primera cuenta la media en su sitio nominal, donde no esta al montarla.
 // No sale en el DXF (es una arista, no un contorno): va en el pliego. Escondido
 // detras del labio del talon. GEMELO de la clave "chaflan_bajo" de _trasera().
 function chaflan_trasera_bajo() =
-    (bolsillo_u_paso() + 0.5 - (rehundido_acrilico + t_junta_asiento))
-    + (bolsillo_y_paso() - trasera_y0());
+    (bolsillo_u_paso() + 0.5 - rehundido_acrilico)
+    + (bolsillo_y_paso() - bolsillo_y_bot());
 
 module anillo_2d() {
     difference() {
@@ -1070,8 +1074,9 @@ module brida_3d(x0, y0, ancho_x, ancho_y, z0, largo) {
 //
 // El TALON es la nariz de atras: pie sobre la tabla (tres M4 desde dentro),
 // chaflan a 45 sobre P6 y labio vertical de talon_labio a ras del plano
-// trasero, que tapa el canto de abajo de la trasera. Y dos PESTANAS lanzadas
-// del pie, dobladas hacia arriba detras de la trasera: su tope hacia dentro.
+// trasero, que tapa el canto de abajo de la trasera. Y talon_pestana_n
+// PESTANAS lanzadas del pie, dobladas hacia arriba detras de la trasera: su
+// tope hacia dentro, y estructura (guarda_trasera_flexion).
 // Ni bridas ni rosca en el anillo. Lo mide guarda_talon().
 //
 // Los desarrollos son para el taller; los solidos, para colisiones y render.
@@ -1135,8 +1140,8 @@ function talon_desarrollo() =
 
 // Desarrollo del talon: el labio abajo (su canto libre en y = 0), el chaflan,
 // el pie arriba con su canto libre en y = desarrollo. Los tres M4 del pie a
-// 1.5 D de ese canto, en las mismas z que los de la nariz, y las dos ventanas
-// de las pestanas: un corte en U (tres lados de kerf) que deja la linea del
+// 1.5 D de ese canto, en las mismas z que los de la nariz, y las ventanas de
+// las pestanas: un corte en U (tres lados de kerf) que deja la linea del
 // doblez sin cortar, hacia el canto libre del pie.
 module talon_2d() {
     d = talon_desarrollo();
@@ -2601,9 +2606,10 @@ module bom() {
              " chaflan de ", chaflan_nariz, " de P6: pie de ", talon_pie,
              " sobre la tabla (tres M4 avellanados desde dentro), chaflan a 45",
              " y labio vertical de ", talon_labio, " a ras del plano trasero,",
-             " que tapa el canto de abajo de la trasera. Dos PESTANAS lanzadas",
-             " del pie, de ", talon_pestana_ancho, " x ", talon_pestana_alto,
-             ", detras de la trasera: su tope hacia dentro. Desarrollo ",
+             " que tapa el canto de abajo de la trasera. ", talon_pestana_n,
+             " PESTANAS lanzadas del pie, de ", talon_pestana_ancho, " x ",
+             talon_pestana_alto, ", a ", talon_pestana_aire, " detras de la",
+             " trasera: su tope hacia dentro, y estructura. Desarrollo ",
              entre_anillos(), " x ", talon_desarrollo(), ". Sin bridas ni",
              " rosca en el anillo."));
     echo(str("BOM: tornillo M4 avellanado x", len(nariz_m4_z()), " -- el pie del",
@@ -2697,7 +2703,8 @@ module bom() {
              " los del talon y el techo (tira de EPDM de ",
              rehundido_acrilico + t_junta_asiento - t_costilla,
              " tras cada uno); hacia dentro: las paredes de los bolsillos, la",
-             " pata trasera del marco y las dos pestanas del talon."));
+             " pata trasera del marco y las ", talon_pestana_n,
+             " pestanas del talon (a ", talon_pestana_aire, " de aire: un tope)."));
     echo("     Fueron dos pieles de 5 partidas a la altura del");
     echo("     entrepiso, colgadas de 12 separadores M4 y con cinco filas de");
     echo("     tornillo. Separadores, junta de sombra, una plancha entera y");

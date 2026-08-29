@@ -17,6 +17,8 @@ from pathlib import Path
 
 import ezdxf
 
+import clearance_budget as cb
+
 PLANS = Path(__file__).parent / "plans"
 
 # Sobre esperado por pieza, mm: (w_min, w_max, h_min, h_max).
@@ -737,9 +739,9 @@ PASO_BARRIDO = 2.0
 # Radio de contacto de la carga. Es el canto de una mano o la base de un pulgar
 # apoyado, no una punta: con carga estrictamente puntual la teoria de placas da
 # tension infinita y no dice nada util.
-R_CONTACTO = 10.0
-NU_PMMA = 0.37      # Poisson del PMMA colado
-E_PMMA = 3000.0     # MPa. El mismo modulo con el que se acoto la trasera
+# Viven en clearance_budget.py junto a SIGMA_PMMA (dos clientes: esta puerta
+# y guarda_trasera_flexion); aqui solo el alias.
+R_CONTACTO, NU_PMMA, E_PMMA = cb.R_CONTACTO, cb.NU_PMMA, cb.E_PMMA
 
 
 def guarda_costado() -> list[str]:
@@ -1653,9 +1655,9 @@ def bridas_techo() -> list[str]:
 
 
 def pestanas_talon() -> list[str]:
-    """El talon trae las dos ventanas de sus pestanas donde el modelo las
-    pone: un corte en U de tres lados, hacia el canto libre del pie, con la
-    linea del doblez sin cortar.
+    """El talon trae las ventanas de sus pestanas (talon_pestana_n) donde el
+    modelo las pone: un corte en U de tres lados, hacia el canto libre del
+    pie, con la linea del doblez sin cortar.
 
     Son la unica retencion hacia dentro del canto de abajo de la trasera
     entre los anillos (2026-08-29, noche, 2), y un DXF sin ellas es un talon
@@ -1697,8 +1699,8 @@ def pestanas_talon() -> list[str]:
                      f"{ym:.2f} a {ym + dv:.2f}, fondo en y = {ym + dv:.2f}): "
                      f"{lados} lados y fondo {'si' if fondo_ok else 'no'}")
     if not f:
-        print(f"  talon_2d: 2 ventanas de pestana de {w:g} x {dv:.2f} con el "
-              f"doblez en y = {ym:.2f}, hacia el canto libre del pie")
+        print(f"  talon_2d: {len(tl['pestana_z'])} ventanas de pestana de {w:g} x "
+              f"{dv:.2f} con el doblez en y = {ym:.2f}, hacia el canto libre del pie")
     return f
 
 

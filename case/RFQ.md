@@ -9,12 +9,13 @@ para saber **quién puede hacerlo**.
 > la cara interior de cada anillo (11 × 6, a lo largo del tramo trasero,
 > cerrado por los dos extremos, con un escalón bajo el chaflán) y el rebaje
 > del costado a 17 en ese tramo; P6 (y P5) a chaflán 6. **Al acrílico (§A)**:
-> un chaflán de 4 × 45° en la arista de abajo de la trasera, por la cara
+> un chaflán de 5.5 × 45° en la arista de abajo de la trasera, por la cara
 > exterior. **A la chapa
-> (§B)**: el talón pasa a ser la nariz en espejo (dos dobleces a 45° y cuatro
-> pestañas lanzadas) y el techo baja con chaflán + labio (dos a 45°) en vez de
+> (§B)**: el talón pasa a ser la nariz en espejo (dos dobleces a 45° y ocho
+> pestañas lanzadas, en 6082-T6 obligatorio: cada lengüeta puede llevar 155 N
+> en la punta) y el techo baja con chaflán + labio (dos a 45°) en vez de
 > banda a 90°. **A la casa de acrílico (§A)**: la trasera **sin un solo
-> taladro**, 552.32 × 238.18. Pregunta nueva en §B: pestañas lanzadas con
+> taladro**, 552.32 × 237.18. Pregunta nueva en §B: pestañas lanzadas con
 > r = 1 t.
 >
 > **rev. 24 (2026-08-29, noche).** Al taller de chapa (§B) le entra **el
@@ -40,7 +41,7 @@ para saber **quién puede hacerlo**.
 > | § | taller | qué se le pide |
 > |---|---|---|
 > | A | casa de acrílico | costados ×2, trasera — **ninguna con taladros** |
-> | B | chapa de aluminio (y acero) | **techo** (meseta + chaflán y labio, con bridas), **talón** (la nariz en espejo, con cuatro pestañas lanzadas), **nariz**, **marco de la ventana ×2** (pletina de 6, láser + cajeados), tapa del valle, chasis ×3 |
+> | B | chapa de aluminio (y acero) | **techo** (meseta + chaflán y labio, con bridas), **talón** (la nariz en espejo, con ocho pestañas lanzadas), **nariz**, **marco de la ventana ×2** (pletina de 6, láser + cajeados), tapa del valle, chasis ×3 |
 > | C | carpintería | la tabla (suelo + zócalo) |
 > | D | mecanizado de aluminio | el anillo ×2 — NUEVO desde el 2026-08-28 |
 
@@ -153,7 +154,7 @@ taller nuevo**, pero desde el 2026-08-28 **ya no hace la costilla** — esa
 pieza se mecaniza en un taller aparte (§D). Lo que sí hace: el **techo**
 (la meseta y, por detrás, chaflán y labio — o la banda —, con una brida de
 extremo doblada en cada punta), el **talón** (la nariz en espejo: labio,
-chaflán y pie sobre la tabla, con cuatro pestañas lanzadas del pie), la
+chaflán y pie sobre la tabla, con ocho pestañas lanzadas del pie), la
 **nariz** (la banda del frente, tres dobleces), los
 dos **marcos de la ventana** (pletina de 6 cortada a láser, con seis cajeados
 por el lado del anillo, un par espejado) y la tapa del valle. Son las piezas
