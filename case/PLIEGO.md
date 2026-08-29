@@ -198,7 +198,7 @@ el 2026-08-28:
 |---|---|---|---|
 | `chasis_cuerpo_2d`, `chasis_tapa_2d`, `chasis_refuerzo_2d` | acero | chapa | corte + **plegado** |
 | `miembro_alto_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: la meseta de 50 con **retorno a 45°** de 4 en el pico y, por detrás, **chaflán + labio de 18 (dos dobleces a 45°, variante B)** o la banda de 24 a 90° (variante A) — con dos **bridas** de 27 dobladas a 90° de las puntas del labio (en B con relieve y esquina a chaflán) — **1 ud** |
-| `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: DOS dobleces a 45° (labio de 13 → chaflán → pie de 20, la nariz en espejo) y **ocho pestañas lanzadas** (corte en U de 0.5, doblez a 90° con r = 1.5 hacia arriba; son estructura: sujetan el canto de abajo de la trasera y la más cargada recibe 155 N en la punta — 197 MPa en la lengüeta: **el 6082-T6 aquí es obligatorio, no recomendado**) — **1 ud** |
+| `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: DOS dobleces a 45° (labio de 13 → chaflán → pie de 20, la nariz en espejo) y **ocho pestañas lanzadas** de 25 × 8 (corte en U de 0.5 con un **taladro de alivio de Ø2** a caballo de la línea de doblez en cada esquina, doblez a 90° con **r = 3 = 2 t** hacia arriba, el mismo radio que el resto de la pieza; son estructura: sujetan el canto de abajo de la trasera y la más cargada recibe 154 N en la punta — 181 MPa en la lengüeta: **el 6082-T6 aquí es obligatorio, no recomendado**) — **1 ud** |
 | `nariz_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: TRES dobleces (45°, 45° y 35°) — **1 ud**. Ver las líneas de plegado abajo |
 | `tapa_valle_2d` | aluminio, 3 mm | chapa | corte + **plegado** |
 | `costilla_2d`, `costilla_dorso_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **fresado CNC**, sin plegar, sin soldar |
@@ -304,7 +304,7 @@ dobleces a 45° con r = 3 y BD 0.88 cada uno: líneas a **12.56** (labio →
 chaflán) y a **20.17** (chaflán → pie) del canto libre del labio. Blank
 **540.32 × 39.73**, con tres M4 en el pie a 6.75 de su canto libre (a la tabla,
 desde dentro, como la nariz) y **ocho ventanas de pestaña**: un corte en U de
-0.5 de ancho alrededor de una lengüeta de 20 × 6.85 que arranca en y = 28.73
+0.5 de ancho alrededor de una lengüeta de 25 × 6.20 que arranca en y = 29.23
 hacia el canto libre del pie, **sin cortar la línea del doblez** (la de
 y = 28.73); la lengüeta se dobla 90° hacia arriba con r = 1.5 y queda de pie
 detrás del canto de abajo de la trasera, a 3 de su cara. Los dos dobleces van

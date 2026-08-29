@@ -145,11 +145,17 @@ techo_labio     = 18;
 // lados dan las paredes de los bolsillos. Lejos de los tres M4 (a 1/4, 1/2 y
 // 3/4). alto = lo que suben sobre el pie; ancho = a lo largo del talon; aire
 // = de su cara a la cara interior nominal de la trasera (>= tol_pmma + 0.5 =
-// 1.70; 3 deja ademas 2 t de plano entre el doblez del chaflan y el de la
-// pestana, y el radio del doblez fuera de donde apoya una plancha gruesa).
+// 1.70; 3.5 deja ademas 2 t de plano entre el doblez del chaflan y el de la
+// pestana con el radio a 2 t: 3.14 por la cuenta de guarda_talon, que toma la
+// tangente EXTERIOR (r + t) de los dos dobleces; la pestana dobla con el radio
+// interior hacia la plancha, asi que el plano real es 1.5 mas (4.64). Con 4 de
+// aire el plano sube a 3.64 pero la mano baja entre pestanas pasa de 8.9 a 9.4
+// MPa: el aire manda mas en la placa que en el plano. Y el radio queda fuera
+// de donde apoya una plancha gruesa. ancho = 25 por la lengueta: con la reaccion en su punta trabaja a
+// unos 180 MPa contra los 240 del 6082-T6 (con 20, 225: por un pelo).
 talon_pestana_alto  = 8;
-talon_pestana_ancho = 20;
-talon_pestana_aire  = 3;
+talon_pestana_ancho = 25;
+talon_pestana_aire  = 3.5;
 // Cuantas pestanas, repartidas a (2i+1)/2n del hueco entre anillos. Solo las
 // potencias de dos esquivan los tres M4 (n = 4: 1/8..7/8; n = 8: 1/16..15/16).
 // SON ESTRUCTURA, no adorno: la trasera capturada solo por los dos bolsillos
@@ -157,13 +163,22 @@ talon_pestana_aire  = 3;
 // sobre el techo de 10 del PMMA. Y son un TOPE, no un apoyo: estan a
 // talon_pestana_aire de la plancha, que cede eso antes de tocarlas. Con ese
 // aire y la mano barrida por todo lo visible, cuatro dejan la mano baja entre
-// dos pestanas a 9.7 MPa (pasar por un pelo no es pasar: la regla de la pata
-// del marco); OCHO la dejan en 8.4 (guarda_trasera_flexion: placa por Levy).
+// dos pestanas a 9.8 MPa (pasar por un pelo no es pasar: la regla de la pata
+// del marco); OCHO la dejan en 8.9 (guarda_trasera_flexion: placa por Levy).
 talon_pestana_n     = 8;
-// Radio interior del doblez de una pestana lanzada: 1 t, no los 2 t de los
-// dobleces vistos (radio_doblez_costilla). Una pestana de 8 no se ve y se
-// dobla apretada; con 3 el plano entre dobleces no daba.
-radio_doblez_pestana = 1.5;
+// Radio interior del doblez de una pestana lanzada: 2 t, el mismo que los
+// demas dobleces de la chapa (radio_doblez_costilla) y el que el taller pliega
+// sin preguntar. Se probo 1 t la noche del talon: el RFQ lo dejaba como
+// pregunta abierta, y si el taller contestaba 2 t la lengueta se quedaba a
+// 234 MPa contra 240 y el plano tras el chaflan en 2.64 contra 3 -- un diseno
+// colgado de una respuesta. Con 2 t, 25 de ancho y 3.5 de aire no hay
+// pregunta. Y ALIVIO en las dos esquinas del corte en U, donde el corte
+// muere en la linea del doblez: un taladro de alivio_pestana a caballo de la
+// linea, para que el doblez no rasgue la esquina viva (a 180 MPa nominales,
+// con Kt ~2 en una esquina viva la chapa plastifica ahi y la pestana toma
+// deformacion permanente: el aire de 3.5 dejaria de ser 3.5).
+radio_doblez_pestana = 3;
+alivio_pestana = 2;
 // Ancho del CORTE en U que suelta una pestana lanzada por tres lados (y del
 // relieve de la brida del techo junto al chaflan). No es el kerf: un DXF de
 // contorno no sabe dibujar una linea suelta, y una pestana necesita aire a

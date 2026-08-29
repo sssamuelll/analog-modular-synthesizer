@@ -17,7 +17,7 @@
 > dentro), chaflán y labio de 13, más **ocho pestañas** lanzadas del pie que
 > le hacen de tope a la trasera por dentro — y son estructura: la plancha sola
 > en sus bolsillos cede 20 mm con la mano y trabaja a 14 MPa; con las pestañas
-> a su aire de 3, la mano barrida por todo lo visible queda en 8.3
+> a su aire de 3.5, la mano barrida por todo lo visible queda en 8.9
 > (`guarda_trasera_flexion()`). **El techo baja con chaflán + labio de 18** (variante B,
 > recomendada; la A es la banda de 24, y se escoge mirando los dos renders).
 > 68 tornillos → 58, 10 cabezas atrás → **0**, la tapa de arriba sigue en
@@ -29,8 +29,8 @@
 > del marco a 28 (129 MPa contra 130 con 26). Y lo que el revisor del PR cazó:
 > el bolsillo salía por abajo y la plancha no pasaba por la boca estrecha del
 > chaflán — de ahí el bolsillo cerrado y la entrada con el anillo. Queda un
-> hueco declarado: empujada en los 65 mm de arriba de su campo visible (por
-> encima de y = 167) nada la para hacia dentro y trabaja hasta a 15 MPa.
+> hueco declarado: empujada en los 75 mm de arriba de su campo visible (por
+> encima de y = 157) nada la para hacia dentro y trabaja hasta a 15 MPa.
 
 > **2026-08-29 por la noche: cinco piezas en cuestión, cuatro que quedan.**
 > Samuel puso en cuestión `clips_costado`, `escuadras_trasera`,
@@ -741,7 +741,7 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | **MARCO DE LA VENTANA** — pletina t=6, láser | **2** | **una por costado, espejadas** (mismo DXF, cajeado por caras opuestas). El contorno de la ventana del anillo corrido por los **siete tramos**, 26 hacia dentro desde la silueta: sobre las tres filas es exactamente la placa de anclaje de ayer (canto visto de 6, 6 cajeados Ø8 × 2.5 por el lado del anillo, 10 M4 ciegos); en el frente, el suelo, la meseta y la trasera es el tope del acrílico que daban los clips y la escuadra, unificado — pisa 6 mm de acrílico volado por todo el perímetro. Canto exterior retirado 1.65 bajo cada chapa y 11.2 en la trasera (nada fijo delante de un PMMA de ±1.2). Lleva la rosca M3 de la pestaña de la banda y una **muesca** en la esquina trasera-alta sobre la brida del miembro alto. **Orden obligado: el costado en el rebaje ANTES, después los rieles al marco (cabeza en el cajeado), después el marco al anillo desde dentro** |
 | Tornillo M4 botón (marco al anillo) | **24** | 12 por costado — 10 en las tres filas + 2 en la pata del suelo, el trabajo que hacían los de los clips —, a rosca ciega en la franja de 14. Eran los «20 de placa al anillo» que este README llevaba sin itemizar, más los 4 de los clips. **Seis de los diez de las filas caen bajo la huella del riel (#242)** |
 | **MIEMBRO ALTO** — chapa 6082-T6 t=1.5 | **1** | el **techo**: la **meseta** (50, del pico al canto, con su **retorno** de 4 en el pico) y, por detrás, **chaflán de 6 + labio vertical de 18** a ras del plano trasero (variante B, recomendada) o la **banda de 24** (variante A; se escoge mirando `renders/sam17-case-trasera.png` contra `sam17-case-trasera-A.png`). Dos **bridas** de 27 × 14.5 dobladas del labio, en la cara del anillo, con 2 M4 ciegos cada una (en B con un relieve junto al chaflán y la esquina a chaflán). **Sin canal**: la trasera ya no se atornilla a él ni él la sujeta por dentro. Solo, con 20 kg en el centro de la meseta, cede 2.0 mm a 111 MPa (`guarda_miembro_alto()`: es lo que puso el labio en 18 y no en 13). Desarrollo 588.00 × 71.85 (B) / 73.83 (A) |
-| **TALÓN** — chapa 6082-T6 t=1.5 | **1** | **la nariz de atrás**: pie de 20 sobre la tabla, chaflán a 45° sobre el chaflán de 6 de P6 y **labio vertical de 13** a ras del plano trasero, que tapa el canto de abajo de la trasera; tres M4 avellanados a la tabla desde dentro. Y **ocho pestañas** de 20 × 8 lanzadas del pie (a 1/16, 3/16 … 15/16 del hueco: solo las potencias de dos esquivan los tres M4), a 3 de aire de la trasera, dobladas hacia arriba: su tope hacia dentro entre los anillos, **y estructura** — sin ellas la plancha cede 20 mm con la mano y pasa del techo del PMMA; con ellas, la mano barrida por todo lo visible queda en 8.3 MPa (con cuatro, 9.7: por un pelo), y la más cargada recibe 155 N — 197 MPa como lengüeta con la carga en la punta, que es lo que **obliga el 6082-T6** del talón (`guarda_trasera_flexion()`). Sin bridas ni rosca en el anillo. Desarrollo **540.32 × 39.73**, dos dobleces a 45° |
+| **TALÓN** — chapa 6082-T6 t=1.5 | **1** | **la nariz de atrás**: pie de 20 sobre la tabla, chaflán a 45° sobre el chaflán de 6 de P6 y **labio vertical de 13** a ras del plano trasero, que tapa el canto de abajo de la trasera; tres M4 avellanados a la tabla desde dentro. Y **ocho pestañas** de 25 × 8 lanzadas del pie (a 1/16, 3/16 … 15/16 del hueco: solo las potencias de dos esquivan los tres M4), dobladas hacia arriba a r = 2 t con un alivio de Ø2 en cada esquina del corte, a 3.5 de aire de la trasera: su tope hacia dentro entre los anillos, **y estructura** — sin ellas la plancha cede 20 mm con la mano y pasa del techo del PMMA; con ellas, la mano barrida por todo lo visible queda en 8.9 MPa (con cuatro, 9.8: por un pelo), y la más cargada recibe 154 N — 181 MPa como lengüeta con la carga en la punta, que es lo que **obliga el 6082-T6** del talón (`guarda_trasera_flexion()`). Sin bridas ni rosca en el anillo. Desarrollo **540.32 × 39.73**, dos dobleces a 45° |
 | Tornillo M4 avellanado (talón) | **3** | el pie del talón a la **tabla**, desde dentro — mismo herraje que las paticas y la nariz |
 | **NARIZ** — chapa 6082-T6 t=1.5 | **1** | la banda del frente: pie de 18 sobre la tabla, chaflán a 45°, frente vertical y 10.27 subiendo por la cara de abajo. Desarrollo **540.32 × 47.38**, tres dobleces (45°, 45°, 35°). Cierra el frente que enseñaba el riel desnudo (2026-08-29) |
 | Tornillo M4 avellanado (nariz) | **3** | el pie de la nariz a la **tabla**, desde dentro — mismo herraje que las paticas. Ninguno en la cara vista |
@@ -1022,16 +1022,18 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
       bolsillo cerrado por los dos extremos y la trasera entra con el anillo
       B, con su arista de abajo a chaflán de 5.5 (la primera versión la metía
       por abajo y el revisor del PR cazó que no pasaba); el talón con chaflán,
-      labio de 13 y ocho pestañas que son estructura, a 3 de aire; el techo
-      con chaflán + labio de 18 (variante B) o banda (A), y sin canal. Puertas
-      nuevas: `guarda_trasera_capturada()`, `guarda_trasera_flexion()` (la
-      trasera como placa, por Levy, con la mano barrida por lo visible y las
-      pestañas como tope a su aire: 8.3 MPa con ocho, 14 sin ninguna),
+      labio de 13 y ocho pestañas de 25 × 8 a 2 t que son estructura, a 3.5
+      de aire; el techo con chaflán + labio de 18 (variante B) o banda (A), y
+      sin canal. Puertas nuevas: `guarda_trasera_capturada()`,
+      `guarda_trasera_flexion()` (la trasera como placa, por Levy, con la mano
+      barrida por lo visible en 16 × 16 y las pestañas como tope a su aire:
+      8.9 MPa con ocho, 14 sin ninguna; `canario_trasera()` la rompe a
+      propósito),
       `anillo_tiene_bolsillo_trasero()`, `pestanas_talon()`, `bridas_techo()`;
       reescritas `guarda_talon()`, `guarda_miembro_alto()`,
       `anillo_tiene_chaflan()`, `anillo_tiene_rebaje()`; `guarda_anillo()`
       con la sección real del tramo trasero (−36 % de inercia). 68 tornillos
-      → 58, cero cabezas atrás. Hueco declarado: la mano en los 65 mm de
+      → 58, cero cabezas atrás. Hueco declarado: la mano en los 75 mm de
       arriba del campo de la trasera (hasta 15 MPa; nada la para hacia dentro)
 - [x] Plantilla de panel KiCad
 - [x] **Vistas de la BAHIA INFERIOR** (`renders/render_bahia.py`, 2026-08-27):

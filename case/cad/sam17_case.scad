@@ -1142,7 +1142,8 @@ function talon_desarrollo() =
 // el pie arriba con su canto libre en y = desarrollo. Los tres M4 del pie a
 // 1.5 D de ese canto, en las mismas z que los de la nariz, y las ventanas de
 // las pestanas: un corte en U (tres lados de kerf) que deja la linea del
-// doblez sin cortar, hacia el canto libre del pie.
+// doblez sin cortar, hacia el canto libre del pie, con un taladro de alivio
+// en cada esquina del corte, a caballo de la linea del doblez.
 module talon_2d() {
     d = talon_desarrollo();
     difference() {
@@ -1162,6 +1163,11 @@ module talon_2d() {
             translate([zb - w/2 - k, ym]) square([k, dv + k]);
             translate([zb + w/2, ym]) square([k, dv + k]);
             translate([zb - w/2 - k, ym + dv]) square([w + 2*k, k]);
+            // el alivio: un taladro a caballo de la linea del doblez en cada
+            // esquina del corte, centrado en el propio corte
+            for (s = [-1, 1])
+                translate([zb + s*(w/2 + k/2), ym])
+                    circle(d = alivio_pestana + kerf, $fn = 24);
         }
     }
 }

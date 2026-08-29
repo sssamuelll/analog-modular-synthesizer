@@ -2386,6 +2386,49 @@ def guarda_red(p: dict[str, float]) -> None:
           f"abajo -- sin dibujar todavia (#130)")
 
 
+def canario_trasera(p: dict[str, float]) -> None:
+    """Autocomprobacion ROJA de guarda_trasera_flexion(), guarda_talon() y
+    guarda_trasera_capturada(): si esto no dispara, su VERDE no vale nada
+    (Principio VIII). El revisor del PR #244 (ronda 4) cazo que las mutaciones
+    que el PR citaba como prueba de la lengueta eran rojas por otra razon --
+    por eso cada caso dice QUE aserto tiene que saltar, y se comprueba por el
+    texto del error, no solo por el rojo."""
+    sordo = io.StringIO()
+    casos = (
+        (guarda_trasera_flexion, {"carga_mano": p["carga_mano"] * 1.3},
+         "del PMMA", "una mano un 30 % mas pesada pasa del techo del PMMA"),
+        (guarda_trasera_flexion, {"talon_pestana_ancho": 12.0, "talon_pestana_alto": 6.0},
+         "lengueta", "una lengueta de 12 x 6 fluye con su reaccion en la punta"),
+        (guarda_trasera_flexion, {"talon_pestana_n": 2},
+         "del PMMA", "dos pestanas dejan la mano baja sobre el techo"),
+        (guarda_trasera_capturada, {"t_piel": 7.0},
+         "canto plano", "una plancha de 7 no deja 2 de canto plano tras el chaflan de 5.5"),
+        (guarda_talon, {"talon_pestana_aire": 1.5},
+         "talon_pestana_aire", "una pestana a menos de tol + 0.5 de la plancha"),
+        (guarda_talon, {"radio_doblez_pestana": 4.5},
+         "de plano", "un doblez a 3 t se come el plano tras el chaflan"),
+    )
+    for guarda, cambios, clave, que in casos:
+        roto = dict(p)
+        roto.update(cambios)
+        try:
+            with contextlib.redirect_stdout(sordo):
+                guarda(roto)
+        except AssertionError as e:
+            assert clave in str(e), (
+                f"canario de la trasera: con {cambios} {guarda.__name__} salto, pero "
+                f"por otra razon ('{str(e)[:80]}...') y no por '{clave}'")
+            continue
+        raise AssertionError(
+            f"canario de la trasera NO disparo: con {cambios} hay {que} y "
+            f"{guarda.__name__}() lo deja pasar -- no confiar en su VERDE")
+    with contextlib.redirect_stdout(sordo):
+        guarda_talon(dict(p))
+        guarda_trasera_capturada(dict(p))
+        guarda_trasera_flexion(dict(p))     # y con los parametros buenos, verde
+    del _HUECOS[-1:]                         # el hueco de la banda lo publica la corrida real
+
+
 def canario_red(p: dict[str, float]) -> None:
     """Autocomprobacion ROJA de guarda_red(): si esto no dispara, su VERDE no
     vale nada (Principio VIII).
@@ -2638,8 +2681,9 @@ def guarda_miembro_alto(p: dict[str, float]) -> None:
     Y la brida: cabe en el labio (o la banda) con la meseta encima, sus dos
     M4 a 2 D uno de otro y a 1.5 D de su canto de arriba, y EL DE DENTRO A
     1.5 D DE BROCA DE LA PARED DEL BOLSILLO DE LA TRASERA (2026-08-29, noche,
-    2): es lo que llevo brida_largo de 27 a 34. En B la brida sube por
-    encima del labio, junto a la tira del chaflan: se publica el relieve."""
+    2): con el bolsillo saliendo por arriba obligo a brida_largo = 34; cerrado
+    8.5 por debajo de las roscas, pasa con 27. En B la brida sube por encima
+    del labio, junto a la tira del chaflan: se publica el relieve."""
     m = _miembro_alto(p)
     P = _vertices(p)
     t = p["t_costilla"]
@@ -2913,6 +2957,10 @@ def _placa_trasera_barrido(p: dict[str, float], manos, apoyos_abajo: str = "pest
                 if not entran:
                     break
                 activas = sorted(activas + entran)
+            else:
+                raise AssertionError(
+                    f"el conjunto activo de las pestanas no converge para la mano "
+                    f"({xc:.0f}, {yc:.0f}): {activas} tras {2 * n + 2} vueltas")
         Wm, Wxx, Wyy = _levy_campo(a, b, D, nu, mano, xs, ys, modos)
         for j in range(n):
             if reac[j]:
@@ -2923,7 +2971,7 @@ def _placa_trasera_barrido(p: dict[str, float], manos, apoyos_abajo: str = "pest
         sy = 6 * D * np.abs(Wyy + nu * Wxx) / t ** 2
         s = np.maximum(sx, sy)
         i, j = np.unravel_index(int(s.argmax()), s.shape)
-        # la flecha bajo la mano, interpolando la malla (la mano cae entre nodos)
+        # la flecha bajo la mano: el mayor de los cuatro nodos que la rodean
         ii = int(np.clip(np.searchsorted(xs, xc), 1, len(xs) - 1))
         jj = int(np.clip(np.searchsorted(ys, yc), 1, len(ys) - 1))
         w_carga = float(np.abs(Wm[ii - 1:ii + 1, jj - 1:jj + 1]).max())
@@ -2947,23 +2995,27 @@ def guarda_trasera_flexion(p: dict[str, float]) -> None:
     trabaja a 14 MPa en el disco de contacto: sobre el techo. Con el canto de
     abajo sujeto por las pestanas del talon -- A SU AIRE, que es un tope y
     no un apoyo -- baja del techo, pero solo si hay pestanas bastantes: con
-    cuatro, la mano baja entre dos pestanas queda a 9.7 MPa (por un pelo);
+    cuatro, la mano baja entre dos pestanas queda a 9.8 MPa (por un pelo);
     con ocho (a 1/16, 3/16, ..., 15/16: las unicas cuentas que esquivan los
-    tres M4 son las potencias de dos), a 8.4.
-    Se BARRE la mano por lo que se ve de la placa (una rejilla de 8 x 8 entre
-    los dos labios, no cinco puntos a mano: el maximo real caia fuera de
-    ellos, y lo que tapan los labios no lo empuja una mano). Lo que se exige:
+    tres M4 son las potencias de dos), a 8.9.
+    Se BARRE la mano por lo que se ve de la placa (una rejilla de 16 x 16
+    entre los dos labios mas la mano baja sobre cada pestana, no cinco puntos
+    a mano: el maximo real caia fuera de ellos, y lo que tapan los labios no
+    lo empuja una mano). Lo que se exige:
     (1) toda mano en la mitad de abajo (y <= b/2, donde mandan las pestanas)
     bajo SIGMA_PMMA; (2) la lengueta mas cargada, con la reaccion en su punta,
-    bajo el Rp0.2 del 6082-T6 que el pliego manda para el talon (unos 200 MPa:
-    con los 130 genericos no pasa ninguna lengueta de 1.5); (3) combada como
+    bajo el Rp0.2 del 6082-T6 que el pliego manda para el talon (unos 180 MPa
+    con 25 de ancho y el doblez a 2 t: con los 130 genericos no pasa ninguna
+    lengueta de 1.5); (3) combada como
     cota de arriba (sin pestanas) no se sale de los bolsillos: el acortamiento
     de cuerda 8w^2/3a queda por debajo del embebido menos 0.5. Y lo que se
     PUBLICA como hueco: la banda de arriba donde la mano pasa del techo -- el
     labio del techo solo para la plancha hacia fuera y por dentro no la
-    sujeta nada entre los anillos --, con su altura: unos 65 mm bajo el labio.
-    Contrastada: 20.45 / 5.37 mm bajo la carga (dos y tres cantos, puntual,
-    sin aire) contra 20.35 / 5.38 del revisor."""
+    sujeta nada entre los anillos --, con su altura por biseccion: unos 70 mm
+    bajo el labio. Contrastada: 20.45 / 5.37 mm bajo la carga (dos y tres
+    cantos, puntual, sin aire) contra 20.35 / 5.38 del revisor; y en la ronda
+    4, con 50/100/150/200 modos y mallas de 109 x 49 a 325 x 145 el maximo
+    se mueve entre 8.49 y 8.53: lo que la rejilla no ve no es la fisica."""
     tr = _trasera(p)
     a = perfil(p)["ancho_util"]
     b = tr["alto"]
@@ -2975,9 +3027,12 @@ def guarda_trasera_flexion(p: dict[str, float]) -> None:
     # entero dentro del campo
     campo = _trasera_campo(p)
     y_lo, y_hi = campo[0] - t_ch + R, campo[1] - t_ch - R
-    xs_m = [a * f for f in (1 / 16, 1 / 8, 3 / 16, 1 / 4, 5 / 16, 3 / 8, 7 / 16, 1 / 2)]
-    ys_m = [y_lo + (y_hi - y_lo) * i / 7 for i in range(8)]
+    xs_m = [a * (i + 1) / 32 for i in range(16)]
+    ys_m = [y_lo + (y_hi - y_lo) * i / 15 for i in range(16)]
     manos = [(x, y) for y in ys_m for x in xs_m]
+    # y la mano baja justo sobre cada pestana, que es la que mas la carga
+    manos += [(zc - p["t_anillo"], y_lo) for zc in _talon(p)["pestana_z"]
+              if zc - p["t_anillo"] <= a / 2 + 1e-9]
     res = _placa_trasera_barrido(p, manos, "pestanas")
     peor_abajo = max((r for r in res if r["mano"][1] <= b / 2), key=lambda r: r["sigma"])
     assert peor_abajo["sigma"] <= SIGMA_PMMA + 1e-9, (
@@ -3022,17 +3077,32 @@ def guarda_trasera_flexion(p: dict[str, float]) -> None:
           f"mm a {sin['sigma']:.1f}, y acorta {cuerda:.2f} de los {tr['entra']:.2f} "
           f"embebidos")
     if fallan:
-        y_h = min(r["mano"][1] for r in fallan) + t_ch      # a coordenadas del case
+        # LA FRONTERA DE LA BANDA, POR BISECCION en la columna de la peor mano:
+        # la rejilla solo la conoce a un paso de fila (13 mm), y publicarla
+        # como exacta era mentir por abajo (ronda 4 del revisor)
+        x_p = peor["mano"][0]
+        col = sorted((r for r in res if abs(r["mano"][0] - x_p) < 1e-9), key=lambda r: r["mano"][1])
+        y_ok = max((r["mano"][1] for r in col if r["sigma"] <= SIGMA_PMMA), default=y_lo)
+        y_no = min(r["mano"][1] for r in col if r["sigma"] > SIGMA_PMMA)
+        for _ in range(6):
+            y_m = (y_ok + y_no) / 2
+            if _placa_trasera(p, "pestanas", (x_p, y_m))["sigma"] > SIGMA_PMMA:
+                y_no = y_m
+            else:
+                y_ok = y_m
+        y_h = y_no + t_ch                                    # a coordenadas del case
         y_top = campo[1]                                     # donde empieza el labio del techo
         _HUECOS.append(
             f"la trasera empujada por encima de y = {y_h:.0f} (una banda de "
             f"{y_top - y_h:.0f} mm bajo el labio del techo, de lado a lado) pasa del "
             f"techo del PMMA: {peor['sigma']:.1f} MPa y {peor['flecha_carga']:.1f} mm "
             f"con {p['carga_mano']:.0f} N en ({peor['mano'][0]:.0f}, "
-            f"{peor['mano'][1] + t_ch:.0f}). El labio del techo solo la para hacia "
-            f"fuera y por dentro no la sujeta nada entre los anillos; un tope lanzado "
-            f"desde el techo dejaria una ventana a la vista en la meseta. Queda por "
-            f"decidir (spec 2026-08-29 trasera capturada, seccion 9)")
+            f"{peor['mano'][1] + t_ch:.0f}), la mano mas alta que cabe entera en lo "
+            f"visible (a R = {R:g} del labio; mas arriba empuja la chapa). El labio "
+            f"del techo solo la para hacia fuera y por dentro no la sujeta nada entre "
+            f"los anillos; un tope lanzado desde el techo dejaria una ventana a la "
+            f"vista en la meseta. Queda por decidir (spec 2026-08-29 trasera "
+            f"capturada, seccion 9)")
 
 
 def guarda_talon(p: dict[str, float]) -> None:
@@ -3092,6 +3162,9 @@ def guarda_talon(p: dict[str, float]) -> None:
         f"la pestana del talon queda a {aire_p:.2f} de la cara interior de la "
         f"trasera y se piden {franja:.2f} (talon_pestana_aire)")
     tang_ch = tl["x_chaflan"] - (p["radio_doblez_costilla"] + t) * math.tan(math.radians(22.5))
+    # r + t: la tangente EXTERIOR de los dos dobleces, la cuenta conservadora.
+    # La pestana dobla con su radio interior hacia la plancha (la cara que la
+    # toca es el interior del doblez), asi que el plano real es t mayor.
     tang_pe = tl["pestana_x"] + p["radio_doblez_pestana"] + t
     plano = tang_ch - tang_pe
     assert plano >= 2 * t - 1e-9, (
@@ -4763,6 +4836,7 @@ def main() -> int:
     guarda_apriete(p)
     guarda_paticas(p)
     canario_red(p)
+    canario_trasera(p)
     guarda_red(p)
     guarda_fresado(p)
     guarda_puentes_ventilacion(p)

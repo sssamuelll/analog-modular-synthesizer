@@ -1554,10 +1554,29 @@ def taladros_talon() -> list[str]:
                 f.append(f"{dxf}: el M4 de ({ex:.2f}, {ey:.2f}) cae a {dist:.2f} "
                          f"mm del canto y se exigen "
                          f"{BORDE_MIN_D * p['d_M4_paso']:.2f}")
+        # y los alivios de las pestanas: dos por pestana, de alivio_pestana, a
+        # caballo de la linea del doblez en el eje de cada corte. NO son
+        # agujeros aparte: el circulo se funde con el corte en U y sale como el
+        # fondo redondo de una ranura, asi que se buscan sus aristas -- las del
+        # poligono que caen en la circunferencia -- y no un CIRCLE.
+        r_al = (p["alivio_pestana"] + p["kerf"]) / 2
+        ym = tl["desarrollo"] - (tl["pestana_x"] - tl["x_pie"])
+        w, k = p["talon_pestana_ancho"], p["corte_pestana"]
+        aristas, _ = _componentes(dxf)
+        alivios = [(zc - p["t_anillo"] - p["hol_piel"] + s * (w / 2 + k / 2), ym)
+                   for zc in tl["pestana_z"] for s in (-1, 1)]
+        for ex, ey in alivios:
+            arco = sum(1 for a in aristas
+                       if abs(math.hypot(a[0][0] - ex, a[0][1] - ey) - r_al) <= 0.06
+                       and abs(math.hypot(a[1][0] - ex, a[1][1] - ey) - r_al) <= 0.06)
+            if arco < 6:
+                f.append(f"{dxf}: falta el alivio de {2 * r_al:g} de la pestana en "
+                         f"({ex:.2f}, {ey:.2f}): {arco} aristas sobre su circunferencia")
         if len(leidos) != len(esperados):
             f.append(f"{dxf}: {len(leidos)} agujeros redondos en el DXF y el modelo "
-                     f"pone {len(esperados)} (los tres M4; la fila de M3 murio "
-                     f"con la trasera capturada)")
+                     f"pone {len(esperados)} (los tres M4; los alivios de las pestanas "
+                     f"van fundidos con el corte en U, y la fila de M3 murio con la "
+                     f"trasera capturada)")
     v = p["vuelo_zocalo"]
     tabla = _redondos("bandeja_base_2d")
     d_t = p["d_pie_tornillo"] + p["kerf"]
@@ -1682,12 +1701,16 @@ def pestanas_talon() -> list[str]:
     # el corte va POR FUERA de la pestana: lo que se busca son las aristas
     # que la delimitan -- sus dos lados, de y = doblez a y = doblez +
     # desarrollo, y su fondo -- que son las caras interiores del corte en U
+    # el alivio de cada esquina se come el arranque del lado: el lado empieza
+    # donde el circulo cruza la cara del corte, a r_al*cos(asin(k/2r)) del doblez
+    r_al = (p["alivio_pestana"] + p["kerf"]) / 2
+    y_lado = ym + math.sqrt(max(r_al ** 2 - (p["corte_pestana"] / 2) ** 2, 0.0))
     for zc in tl["pestana_z"]:
         zb = zc - p["t_anillo"] - p["hol_piel"]
         lados = 0
         for x_esp in (zb - w / 2, zb + w / 2):
             if any(abs(a[0][0] - x_esp) <= tol and abs(a[1][0] - x_esp) <= tol
-                   and min(a[0][1], a[1][1]) <= ym + tol
+                   and min(a[0][1], a[1][1]) <= y_lado + 0.2
                    and max(a[0][1], a[1][1]) >= ym + dv - tol for a in aristas):
                 lados += 1
         fondo_ok = any(abs(a[0][1] - (ym + dv)) <= tol and abs(a[1][1] - (ym + dv)) <= tol
@@ -1700,7 +1723,8 @@ def pestanas_talon() -> list[str]:
                      f"{lados} lados y fondo {'si' if fondo_ok else 'no'}")
     if not f:
         print(f"  talon_2d: {len(tl['pestana_z'])} ventanas de pestana de {w:g} x "
-              f"{dv:.2f} con el doblez en y = {ym:.2f}, hacia el canto libre del pie")
+              f"{dv:.2f} con el doblez en y = {ym:.2f}, hacia el canto libre del pie, "
+              f"con alivio de {p['alivio_pestana']:g} en las esquinas")
     return f
 
 

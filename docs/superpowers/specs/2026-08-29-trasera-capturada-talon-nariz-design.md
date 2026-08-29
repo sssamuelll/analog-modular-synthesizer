@@ -236,28 +236,40 @@ es lo que pone el pie en 20 y no en 18 como la nariz. Y la regla de chapa contra
 doblez del chaflán: 13.25 desde su línea, contra 9.75.
 
 **Ocho pestañas** lanzadas del pie — cortadas por tres lados y dobladas 90° hacia
-arriba (r = 1.5, `radio_doblez_pestana`) — a z = 1/16, 3/16 … 15/16 del hueco entre
-anillos (`talon_pestana_n`; solo las potencias de dos esquivan los tres M4, que van
-a 1/4, 1/2 y 3/4), de 20 de ancho y 8 de alto, con su cara hacia la trasera en
-**u = 15**: 3.0 del canto interior del acrílico. Son su tope hacia dentro en el
+arriba con **r = 3 = 2 t** (`radio_doblez_pestana`, el mismo radio que el resto de
+la chapa) y un **taladro de alivio de Ø2** a caballo de la línea de doblez en cada
+esquina del corte — a z = 1/16, 3/16 … 15/16 del hueco entre anillos
+(`talon_pestana_n`; solo las potencias de dos esquivan los tres M4, que van a 1/4,
+1/2 y 3/4), de **25 de ancho y 8 de alto**, con su cara hacia la trasera en
+**u = 15.5**: 3.5 del canto interior del acrílico. Son su tope hacia dentro en el
 canto de abajo, **y son estructura**: la trasera sola en sus dos bolsillos es una
 placa apoyada en dos cantos, y con `carga_mano` al centro cede 20 mm y trabaja a
 14 MPa en el contacto, sobre el techo de 10 del PMMA. Y son un **tope, no un
-apoyo**: están a 3 de la plancha (nada fijo a menos de tol + 0.5 de su cara
-interior), así que la plancha cede esos 3 antes de tocarlas — la primera versión
-de la puerta las ponía tocando, y el revisor del PR lo cazó. Con ese aire, y la
-mano barrida por todo lo que se ve de la plancha (entre los dos labios: lo que
-tapa un labio lo empuja la chapa, no la mano), cuatro pestañas dejan la mano baja
-entre dos de ellas a 9.7 MPa — por un pelo, y pasar por un pelo no es pasar —;
-ocho la dejan en 8.3 (§7, `guarda_trasera_flexion()`). La más cargada recibe
-155 N, y como lengüeta de 20 × 1.5 con la carga en la punta trabaja a 197 MPa: es
-lo que hace **obligatorio el 6082-T6** del talón (Rp0.2 240; con los 130 genéricos
-no pasa ninguna lengüeta de 1.5 sin ser un peine). Entre el doblez del chaflán y
-el de la pestaña quedan 4.1 de plano (dos tangentes a 7.9 y 12 del plano trasero);
-se exigen 2 t, y a la pestaña se le exige subir al menos lo que el bolsillo embebe
-(8 ≥ 6), ser más ancha que alta y doblar a ≥ 1 t. Los M4 quedan a 34 mm en z de la
-pestaña más cercana (24 del borde de su ventana). Cada pestaña deja en el pie una
-ventana de 20 × 6.85 (su desarrollo), escondida bajo la trasera.
+apoyo**: están a 3.5 de la plancha (nada fijo a menos de tol + 0.5 de su cara
+interior), así que la plancha cede eso antes de tocarlas — la primera versión de
+la puerta las ponía tocando, y el revisor del PR lo cazó. Con ese aire, y la mano
+barrida por todo lo que se ve de la plancha (entre los dos labios: lo que tapa un
+labio lo empuja la chapa, no la mano; una rejilla de 16 × 16 más la mano baja sobre
+cada pestaña), cuatro pestañas dejan la mano baja entre dos de ellas a 9.8 MPa —
+por un pelo, y pasar por un pelo no es pasar —; ocho la dejan en 8.9 (§7,
+`guarda_trasera_flexion()`). La más cargada recibe 154 N, y como lengüeta de
+25 × 1.5 con la carga en la punta (brazo 8 + 3) trabaja a 181 MPa: es lo que hace
+**obligatorio el 6082-T6** del talón (Rp0.2 240; con los 130 genéricos no pasa
+ninguna lengüeta de 1.5 sin ser un peine). El radio: se pensó a 1 t y se deshizo en
+la ronda 4 del PR — el RFQ lo dejaba como pregunta abierta al taller, y si
+contestaban 2 t la lengüeta se quedaba a 234 contra 240 y el plano tras el
+chaflán en 2.64 contra 3: un diseño colgado de una respuesta. A 2 t, con 25 de
+ancho y 3.5 de aire, no hay pregunta; y el alivio es para que el doblez no rasgue
+la esquina viva del corte (a 181 MPa nominales, con Kt ≈ 2 en una esquina viva la
+chapa plastifica ahí y la pestaña tomaría deformación permanente: el aire dejaría
+de ser 3.5). Entre el doblez del chaflán y el de la pestaña quedan 3.14 de plano
+por la cuenta conservadora de `guarda_talon()` (tangentes exteriores a 7.9 y 11
+del plano trasero; la pestaña dobla con el radio interior hacia la plancha, así
+que el plano real es 4.64); se exigen 2 t, y a la pestaña se le exige subir al
+menos lo que el bolsillo embebe (8 ≥ 6), ser más ancha que alta y doblar a ≥ 1 t.
+Los M4 quedan a 34 mm en z de la pestaña más cercana (21.5 del borde de su
+ventana). Cada pestaña deja en el pie una ventana de 25 × 6.20 (su desarrollo a
+2 t), escondida bajo la trasera.
 
 Por qué no bridas a los anillos, que era lo primero que salía: la brida del talón
 apoyaría en la cara del anillo justo en la esquina de abajo-atrás, donde vive la
@@ -328,7 +340,7 @@ tuerca y arandela de nylon que se veían a través del acrílico, fuera.
 | **nueva** `anillo_tiene_bolsillo_trasero()` (check_dxf) | relee del dorso el polígono del bolsillo: de u = 3 a 14, de y = 1 a P5.y − 17, cerrado, con el escalón bajo el chaflán (vértice en u = 5.5, y = 3.5) |
 | **cambia** `anillo_tiene_chaflan()` (check_dxf) | el chaflán de 6 en P0 y en P6 (y en P5 con la variante B) |
 | **cambia** `agujeros_donde_toca()` (check_dxf) | la trasera: cero agujeros, como el costado; el costado con su canto trasero a 17.15 |
-| **nueva** `guarda_trasera_flexion()` (budget) | §4.3: la trasera como PLACA por Lévy (exacta en y, 50 modos en x; apoyada en los bolsillos, libre arriba, las pestañas como tope unilateral a su aire de 3; la mano como presión en un disco de R = 10, integrada, no como puntos): la mano **barrida** en una rejilla de 8 × 8 sobre lo que se ve de la placa, toda la mitad de abajo bajo `SIGMA_PMMA` = 10 (8.3 con ocho pestañas); la lengüeta más cargada, con la reacción en la punta, bajo el Rp0.2 del 6082-T6 (197 contra 240); combada sin pestañas (21 mm) no se sale del bolsillo (acorta 2.2 de los 5.85); la banda de arriba que pasa del techo se declara HUECO con su altura (65 mm bajo el labio, hasta 15 MPa). Contrastada con el revisor: 20.45 / 5.37 mm contra sus 20.35 / 5.38 (puntual, sin aire); las constantes del PMMA (E, ν, R) viven una sola vez, junto a `SIGMA_PMMA` |
+| **nueva** `guarda_trasera_flexion()` (budget) | §4.3: la trasera como PLACA por Lévy (exacta en y, 50 modos en x; apoyada en los bolsillos, libre arriba, las pestañas como tope unilateral a su aire de 3.5; la mano como presión en un disco de R = 10, integrada, no como puntos): la mano **barrida** en una rejilla de 16 × 16 sobre lo que se ve de la placa más la mano baja sobre cada pestaña, toda la mitad de abajo bajo `SIGMA_PMMA` = 10 (8.9 con ocho pestañas); la lengüeta más cargada, con la reacción en la punta, bajo el Rp0.2 del 6082-T6 (181 contra 240); combada sin pestañas (21 mm) no se sale del bolsillo (acorta 2.2 de los 5.85); la banda de arriba que pasa del techo se declara HUECO con su frontera **por bisección** (75 mm bajo el labio, desde y = 157, hasta 15 MPa en la mano más alta que cabe entera en lo visible). Contrastada con el revisor: 20.45 / 5.37 mm contra sus 20.35 / 5.38 (puntual, sin aire), y el 8.5 de la ronda 4 se mueve entre 8.49 y 8.53 de 50 a 200 modos y de 109 × 49 a 325 × 145 de malla; las constantes del PMMA (E, ν, R) viven una sola vez, junto a `SIGMA_PMMA`. `canario_trasera()` la rompe a propósito por seis lados y comprueba QUÉ aserto salta |
 | **cambia** `guarda_anillo()` (budget) | `_seccion_anillo(tramo=5)`: el tramo trasero con sus dos bolsillos (−15 % de área, −36 % de inercia), no la sección genérica |
 | **cambia** `guarda_marco_ventana()` (budget) | `marco_fondo_trasera` ≥ `marco_fondo` (por debajo, el .scad dibujaría a `marco_fondo` y la gemela no) |
 | **nueva** `bridas_techo()` (check_dxf) | relee `miembro_alto_2d`: los cuatro M4 de brida donde el modelo los pone y, en B, el relieve de 0.5 y la esquina a 45° de cada brida — era la única chapa de la tanda sin puerta propia |
@@ -348,8 +360,9 @@ el modelo después, VERDE, y romper cada puerta nueva a propósito.
   rebaje) va en el pliego como la del rebaje. Las roscas ciegas siguen siendo 14
   por anillo, donde estaban.
 - **Chapa**: `talon_2d` cambia de desarrollo (540.32 × 39.73, dos dobleces a 45°,
-  tres M4, ocho ventanas de pestaña en U con su línea de doblez sin cortar, y el
-  6082-T6 obligatorio por las lengüetas);
+  tres M4, ocho ventanas de pestaña en U de 25 × 6.20 con su línea de doblez sin
+  cortar y un alivio de Ø2 en cada esquina, doblez a 2 t, y el 6082-T6
+  obligatorio por las lengüetas);
   `miembro_alto_2d`, en B, cambia el doblez a 90° de la banda por dos a 45° (el
   chaflán) con el relieve de las bridas.
 - **Acrílico**: `piel_trasera_2d` de 552.32 × 237.18, sin taladros ni muescas
@@ -381,9 +394,11 @@ el modelo después, VERDE, y romper cada puerta nueva a propósito.
   no en el pico.
 - **La banda de arriba de la trasera.** El labio del techo solo la para hacia
   fuera; hacia dentro, entre los anillos, no la sujeta nada: la mano por encima
-  de y = 167 — una banda de 65 mm bajo el labio, de lado a lado, un tercio de lo
-  que se ve — la pone por encima del techo de 10 MPa, hasta 15 MPa y 19 mm junto
-  al labio (`guarda_trasera_flexion()` lo publica como HUECO con su altura, no lo
+  de y = 157 — una banda de 75 mm bajo el labio, de lado a lado, más de un tercio
+  de lo que se ve; la frontera se biseca, no se lee de la rejilla — la pone por
+  encima del techo de 10 MPa, hasta 15 MPa y 20 mm en la mano más alta que cabe
+  entera en lo visible (a R = 10 del labio; más arriba empuja la chapa)
+  (`guarda_trasera_flexion()` lo publica como HUECO con su altura, no lo
   esconde; el techo de 10 es el de carga sostenida por crazing, el mismo con el
   que se aprueba el resto, y aquí no se argumenta en contra). No hay tope en una
   chapa: uno lanzado desde la meseta del techo dejaría una ventana a la vista en

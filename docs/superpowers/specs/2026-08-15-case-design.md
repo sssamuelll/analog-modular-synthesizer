@@ -245,8 +245,8 @@ lenguaje visual).
 > de 3 entre ambos. **El talón es la nariz de atrás**: P6 a chaflán 6, pie
 > de 20, chaflán, labio de 13, tres M4 avellanados y ocho pestañas
 > lanzadas que le hacen de tope a la trasera por dentro y son estructura (la
-> plancha como placa: 14 MPa sin ellas con la mano al centro, 8.3 con ellas a
-> su aire y la mano barrida por lo visible; arriba, 65 mm que pasan de 10,
+> plancha como placa: 14 MPa sin ellas con la mano al centro, 8.9 con ellas a
+> su aire y la mano barrida por lo visible; arriba, 75 mm que pasan de 10,
 > declarados). **El techo
 > baja con chaflán + labio de 18** (variante
 > B, recomendada; A es la banda de 24) y sin canal: en una sola chapa el

@@ -12,8 +12,9 @@ para saber **quién puede hacerlo**.
 > un chaflán de 5.5 × 45° en la arista de abajo de la trasera, por la cara
 > exterior. **A la chapa
 > (§B)**: el talón pasa a ser la nariz en espejo (dos dobleces a 45° y ocho
-> pestañas lanzadas, en 6082-T6 obligatorio: cada lengüeta puede llevar 155 N
-> en la punta) y el techo baja con chaflán + labio (dos a 45°) en vez de
+> pestañas lanzadas a r = 2 t con alivio, en 6082-T6 obligatorio: cada lengüeta
+> puede llevar 154 N en la punta) y el techo baja con chaflán + labio (dos a
+> 45°) en vez de
 > banda a 90°. **A la casa de acrílico (§A)**: la trasera **sin un solo
 > taladro**, 552.32 × 237.18. Pregunta nueva en §B: pestañas lanzadas con
 > r = 1 t.
@@ -168,18 +169,23 @@ la trasera, muertos esa misma noche, ya no existen.)
    **decirlo antes de cortar**: el recorte cambia. **Y a 45° y a 35°, con el
    mismo radio?** La nariz lleva dos dobleces a 45° y uno a 35°, el talón dos
    a 45° y el techo uno a 45° (o tres, con el chaflán): los BD (0.88 y 0.62)
-   están calculados con ese mismo r = 3 y k = 0.42. **Y una pestaña lanzada
-   con r = 1 t** (las dos del talón: 20 × 8, cortadas en U de 0.5 y dobladas
-   90° hacia arriba con r = 1.5)?
+   están calculados con ese mismo r = 3 y k = 0.42. **Y una pestaña lanzada**
+   (las ocho del talón: 25 × 8, cortadas en U de 0.5 con un alivio de Ø2 en
+   cada esquina del corte y dobladas 90° hacia arriba con el mismo r = 3)?
+   Se pensó con r = 1 t y se deshizo: el diseño no puede colgar de una
+   respuesta del taller.
 2. **¿Qué factor K usan?** El modelo asume **k = 0.42**. Con r = 3 y t = 1.5
    eso da BA = 5.70 y BD = 3.30 mm por doblez. Si trabajan con otro, los DXF se
    regeneran — pero hay que saberlo, no adivinarlo.
-3. **¿Qué aleación y temple suministran, y con qué `Rp0.2`?** No es
-   eliminatoria: con 130 MPa el diseño pasa (el techo SOLO trabaja a 111 con
-   20 kg en el centro de la meseta; y también el anillo de §D, cada pieza con
-   su propia puerta). Lo que sí hace falta es
-   que la digan. Una aleación distinta **hay que aprobarla antes de
-   cortar**, regenerando las puertas si cambia.
+3. **¿Qué aleación y temple suministran, y con qué `Rp0.2`?** Para el techo
+   y la nariz no es eliminatoria: con 130 MPa pasan (el techo SOLO trabaja a
+   111 con 20 kg en el centro de la meseta; y también el anillo de §D, cada
+   pieza con su propia puerta). **Para el talón SÍ lo es: 6082-T6 (Rp0.2 ≥
+   240)**, porque sus ocho lengüetas sujetan el canto de abajo de la trasera
+   y la más cargada trabaja a 181 MPa con la carga en la punta — con 130 no
+   pasa ninguna lengüeta de 1.5 (`guarda_trasera_flexion()`). Una aleación
+   distinta **hay que aprobarla antes de cortar**, regenerando las puertas si
+   cambia.
 4. **¿Cortan a láser pletina de 6 mm y le hacen bolsillos ciegos** (el marco
    de la ventana: Ø8 × 2.5 en seis puntos por el lado del anillo, una rosca
    M3 pasante)? No lleva doblez, solo contorno, cajeado y agujero de paso —
