@@ -3188,6 +3188,28 @@ def guarda_marco_trasera(p: dict[str, float]) -> None:
         f"el canto de abajo de la trasera esta en y={panel[3]:.2f} y la tabla "
         f"ocupa y={tabla[3]:.2f}..{tabla[4]:.2f}: no lo tapa nadie, y esa "
         f"banda no lleva ala porque se supone que si")
+    # LAS BANDAS NO SE COMEN LA VENTILACION NI LA VENTANA DE RED, y esto hace
+    # falta comprobarlo porque NADIE MAS LO VE: guarda_aire() cuenta el area de
+    # las 44 ranuras leyendo el DXF de la trasera, y una banda de aluminio
+    # atornillada encima no aparece en ese fichero. La de abajo llega a y=20 y
+    # el campo libre arranca en 24.5: son 4.5 mm de sobra, o sea que subir
+    # marco_trasera_ancho tres milimetros tapa ranuras sin que el presupuesto
+    # termico se entere. Misma trampa que la escuadra tapando la primera
+    # columna el 28-08, con la diferencia de que aquella se resto y esta no
+    # tendria por que existir.
+    lib0, lib1 = _banda_libre_trasera(p)
+    for m in marcos:
+        assert m["y1"] <= lib0 or m["y0"] >= lib1, (
+            f"'{m['nombre']}' ocupa y={m['y0']:.2f}..{m['y1']:.2f} y el campo "
+            f"libre de la trasera -- la rejilla de entrada y la ventana de red "
+            f"-- va de {lib0:.2f} a {lib1:.2f}. La banda taparia area que "
+            f"guarda_aire() cuenta como abierta leyendo el DXF, donde la banda "
+            f"no sale")
+        for _, y in _centros_m3_escuadra(p):
+            assert not (m["y0"] - 1e-9 <= y <= m["y1"] + 1e-9), (
+                f"un M3 de escuadra cae en y={y:.2f}, dentro de "
+                f"'{m['nombre']}' ({m['y0']:.2f}..{m['y1']:.2f}): la banda le "
+                f"tapa la cabeza y esa escuadra deja de poder atornillarse")
     raiz = _escuadra_raiz(p)
     desde_esquina = sup["y1"] - sup["m3"]
     assert desde_esquina >= raiz, (

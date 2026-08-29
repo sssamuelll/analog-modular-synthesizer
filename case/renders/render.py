@@ -144,12 +144,55 @@ mundo.use_nodes = True
 nt = mundo.node_tree
 fondo_visible = nt.nodes["Background"]
 fondo_visible.inputs[0].default_value = (0.02, 0.02, 0.025, 1)  # lo que ve la camara
+# EL RELLENO GI DEJA DE SER PLANO el 2026-08-29 (#235). Era un gris uniforme de
+# 0.6, y un gris uniforme es exactamente lo que NO tiene el sitio donde se hizo
+# la foto de referencia. Un metal pulido no "brilla" por su material: ensena el
+# entorno que lo rodea, y si el entorno es una esfera de un solo color, la
+# arista chaflanada refleja ese color por igual en todo su largo -- que es el
+# gradiente ancho y sin acento que se vio en los dos intentos anteriores. Los
+# dos fueron de MATERIAL (rugosidad 0.28 -> 0.25, base mas oscura, anisotropico
+# a 0 por falta de UV) y por eso ninguno lo movio: la palanca no estaba ahi.
+#
+# Lo que se pone en su sitio es un entorno de estudio, hecho con nodos y sin
+# fichero HDRI -- un .hdr son megas de binario en un repo que ya carga 300 MB
+# de DXF y PNG, y aqui no hace falta uno: la referencia es una vitrina en una
+# sala, o sea suelo oscuro, una banda clara a la altura de la vista y techo
+# claro. Eso es un degradado con un acento, y un degradado con un acento es
+# una rampa de cinco paradas.
+#
+# EL EJE ES Y y no Z: el ensamblado viene de STL con la altura en Y (lo dice
+# construir_vista(), arriba_mundo = (0,1,0)). Con Z el degradado saldria
+# tumbado y el acento cruzaria el case de lado a lado.
+coord = nt.nodes.new("ShaderNodeTexCoord")
+sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+nt.links.new(coord.outputs["Generated"], sep.inputs["Vector"])
+# de [-1, 1] (mirando al suelo .. mirando al techo) a [0, 1]
+rango = nt.nodes.new("ShaderNodeMapRange")
+rango.inputs["From Min"].default_value = -1.0
+rango.inputs["From Max"].default_value = 1.0
+nt.links.new(sep.outputs["Y"], rango.inputs["Value"])
+rampa = nt.nodes.new("ShaderNodeValToRGB")
+nt.links.new(rango.outputs["Result"], rampa.inputs["Fac"])
+ramp = rampa.color_ramp
+# cinco paradas: suelo, sombra, LA BANDA, caida, techo
+ramp.elements[0].position = 0.00
+ramp.elements[0].color = (0.015, 0.015, 0.02, 1)
+ramp.elements[1].position = 0.46
+ramp.elements[1].color = (0.09, 0.09, 0.10, 1)
+for pos, col in ((0.53, (1.0, 1.0, 1.0, 1)),
+                 (0.62, (0.42, 0.43, 0.46, 1)),
+                 (1.00, (0.62, 0.63, 0.68, 1))):
+    e = ramp.elements.new(pos)
+    e.color = col
 fondo_gi = nt.nodes.new("ShaderNodeBackground")
-fondo_gi.inputs[0].default_value = (0.6, 0.6, 0.63, 1)          # relleno GI, invisible a camara
+nt.links.new(rampa.outputs["Color"], fondo_gi.inputs["Color"])
+# La rampa vive en 0..1 y la energia la pone la fuerza, que es donde puede
+# pasar de 1 sin que Blender la recorte al escribirla.
+fondo_gi.inputs["Strength"].default_value = 1.5
 ruta_luz = nt.nodes.new("ShaderNodeLightPath")
 mezcla = nt.nodes.new("ShaderNodeMixShader")
 nt.links.new(ruta_luz.outputs["Is Camera Ray"], mezcla.inputs[0])
-nt.links.new(fondo_gi.outputs["Background"], mezcla.inputs[1])       # Fac=0 (no camara) -> GI
+nt.links.new(fondo_gi.outputs["Background"], mezcla.inputs[1])       # Fac=0 (no camara) -> entorno
 nt.links.new(fondo_visible.outputs["Background"], mezcla.inputs[2])  # Fac=1 (camara)    -> oscuro
 nt.links.new(mezcla.outputs["Shader"], nt.nodes["World Output"].inputs["Surface"])
 esc.world = mundo
@@ -229,6 +272,19 @@ def construir_vista(azimut: float):
     return derecha, arriba_cam, adelante, distancia
 
 
+def _apuntar(obj, destino: Vector) -> None:
+    """Gira obj para que su -Z local mire a destino. Misma base a mano que
+    construir_vista() y por la misma razon: to_track_quat() referencia el +Z
+    de mundo para el roll, y aqui el arriba del ensamblado es Y."""
+    d = (destino - obj.location).normalized()
+    arriba = Vector((0.0, 1.0, 0.0))
+    if abs(d.dot(arriba)) > 0.999:
+        arriba = Vector((0.0, 0.0, 1.0))
+    der = d.cross(arriba).normalized()
+    arr = der.cross(d).normalized()
+    obj.rotation_euler = Matrix((der, arr, -d)).transposed().to_euler()
+
+
 def poner_luces(derecha: Vector, arriba_cam: Vector, adelante: Vector, distancia: float) -> None:
     """Key/fill ancladas a la base de camara de ESTA vista (no coordenadas
     de mundo fijas) y escaladas con el cuadrado de la distancia (inverso
@@ -266,6 +322,27 @@ def poner_luces(derecha: Vector, arriba_cam: Vector, adelante: Vector, distancia
     fill = bpy.context.object
     fill.data.energy = 1.5e6 * esc_luz ** 2
     fill.data.size = 400 * esc_luz
+    # LA TIRA, el 2026-08-29 (#235). Key y fill son cuadradas y grandes: una
+    # fuente cuadrada se refleja en un chaflan como una MANCHA, y la mancha
+    # empieza y acaba -- por eso la arista se encendia a trozos. Lo que hace
+    # brillar una arista de punta a punta es una fuente LARGA Y ESTRECHA
+    # paralela a ella, que es la razon por la que un estudio de producto usa
+    # strip softbox y no un paraguas. Aqui mide dos radios de largo por 40 de
+    # ancho, va por encima y al lado de la camara, y APUNTA AL CENTRO: es la
+    # primera luz de este fichero que se orienta. Las otras dos no tienen
+    # rotacion, o sea que emiten hacia el -Z de mundo, que en este ensamblado
+    # (Y arriba) es de canto; funcionan de rebote y por eso piden tanta
+    # energia. La tira no: pega donde se apunta.
+    bpy.ops.object.light_add(type="AREA",
+                             location=centro + arriba_cam * radio * 1.5
+                                      + derecha * radio * 0.5
+                                      + adelante * distancia * 0.15)
+    tira = bpy.context.object
+    tira.data.shape = "RECTANGLE"
+    tira.data.size = radio * 2.0
+    tira.data.size_y = 40 * esc_luz
+    tira.data.energy = 1.0e6 * esc_luz ** 2
+    _apuntar(tira, centro)
 
 
 def medir(ruta_png: str) -> tuple[float, float]:
