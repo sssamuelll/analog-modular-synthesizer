@@ -304,7 +304,10 @@ def _cajas_miembro(p: dict[str, float], P: list[tuple[float, float]],
     w_bajo, d_bajo = secciones["trasero bajo"]
     w_alto, _ = secciones["trasero alto"]
     w_bahia, d_bahia = secciones["bahia"]
-    x_trasera = P[6][0] - p["t_piel"]
+    # REHUNDIDA t_costilla desde el 2026-08-29 (#234): gemela de
+    # miembro_x_trasera() en el .scad. Lo que asoma al plano trasero es el
+    # marco, no el acrilico.
+    x_trasera = P[6][0] - p["t_piel"] - p["t_costilla"]
     y_meseta = P[5][1] - p["marco_sup"]
     # EL ALA DELANTERA DE LA BAHIA LA COLOCA EL BARRIDO, no la ventana.
     #
@@ -819,7 +822,7 @@ def _roscas_clips(p: dict[str, float]
 def _escuadra_vuelo(p: dict[str, float]) -> float:
     """Vuelo del ala B desde la cara interior de la trasera: su punta muere en
     la linea de la ventana del anillo."""
-    return p["cara_anillo"] - p["t_piel"]
+    return p["cara_anillo"] - p["t_piel"] - p["t_costilla"]
 
 
 def _escuadra_raiz(p: dict[str, float]) -> float:
@@ -853,7 +856,7 @@ def _escuadras_trasera(p: dict[str, float]) -> list[dict]:
     seria un falso rojo. El solido de escuadras_trasera() hace el mismo corte."""
     P = _vertices(p)
     cajas = _cajas_miembro(p, P, _centros_rail(p, P), 0.0, 0.0)
-    x_int = P[6][0] - p["t_piel"]              # cara interior de la trasera
+    x_int = P[6][0] - p["t_piel"] - p["t_costilla"]   # cara interior de la trasera
     t = p["t_costilla"]
     vuelo = _escuadra_vuelo(p)
     # El canto trasero LIBRE es lo que queda entre las dos bridas de los
@@ -1240,6 +1243,11 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # esta pegada a la cara interior de piel_trasera. Es aqui donde se decide
     # si escuadra_retiro basta -- ninguna otra puerta cruza esos tres cuerpos.
     railes.extend(_cajas_escuadra(p))
+    # LAS DOS BANDAS DEL MARCO DE LA TRASERA, por lo mismo: la de arriba lleva
+    # un ala en la MISMA rebanada de y que la meseta y en el mismo rincon que
+    # las bridas del miembro alto, y las dos bandas estan pegadas a la cara de
+    # fuera de piel_trasera. Es aqui donde se decide si chocan con algo.
+    railes.extend(_cajas_marco_trasera(p))
     anclajes = _anclajes_miembro(p, miembros)
 
     planchas: list[Caja] = []
@@ -1325,13 +1333,20 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # bandeja de base. Estuvo en ce[1][1] - 15 y dejaba 3 mm de rebaje
     # corrido bajo la trasera -- ver guarda_piso(), assert 4.
     y0_pt = 0.0
-    # LA TRASERA LLEGA AL PICO desde el 2026-08-27. Se quedaba marco_sup por
-    # debajo porque la meseta era una plancha que se le montaba ENCIMA. Ahora la
-    # meseta es el ala del miembro alto y acaba en la cara trasera del miembro
-    # (300.94), asi que sobre la trasera no hay nada: si no subiera, quedaria un
-    # hueco corrido de 8 x 3 mm a lo largo del canto superior trasero -- por ahi
-    # entra polvo y se ve.
-    alto_pt = P[5][1] - y0_pt
+    # SE QUEDA marco_sup POR DEBAJO DEL PICO, y esta gemela estuvo 1.5 mm
+    # desincronizada del 27-08 al 29-08. El .scad siempre corto la plancha en
+    # `P[5].y - marco_sup` -- la cara de abajo de la meseta -- y aqui se escribio
+    # `P[5][1]` con un comentario que decia que llegaba al pico. Nadie lo vio:
+    # el unico cruce era el sobre del DXF, y TOL vale 4 mm.
+    #
+    # Lo de fondo era que ninguna de las dos estaba bien. Con la plancha a
+    # 254.68 quedaba un hueco corrido de 8 x 1.5 a lo largo de los 540 mm del
+    # canto trasero de arriba, y subirla al pico lo cerraba con CANTO DE
+    # ACRILICO en la cara que se mira desde arriba -- que es la mitad de #234.
+    # Desde el 2026-08-29 esa rebanada la ocupa el ala B de marco_trasera_sup:
+    # metal, coplanar con la meseta, y la plancha se queda donde su .scad la
+    # tuvo siempre.
+    alto_pt = P[5][1] - p["marco_sup"] - y0_pt
     # LA TRASERA SE EMPOTRA ENTRE LOS DOS ANILLOS, y desde el 2026-08-28 eso ya
     # no es lo mismo que z0/z1: la cara interior del anillo esta en t_anillo y
     # z0/z1 siguen en la cara interior del apilado viejo (chapa + acrilico)
@@ -1346,7 +1361,9 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # de otra forma, y asi no hay dos maneras de decir donde empieza.
     au = _trasera_au(p)
     z_pt0, z_pt1 = (ancho_total - au) / 2, (ancho_total + au) / 2
-    planchas.append(("piel_trasera", P[6][0] - p["t_piel"], P[6][0],
+    planchas.append(("piel_trasera",
+                     P[6][0] - p["t_piel"] - p["t_costilla"],
+                     P[6][0] - p["t_costilla"],
                      y0_pt, y0_pt + alto_pt, z_pt0, z_pt1))
     filas += [("piel_trasera", "base", "y",
                anclajes[("trasero bajo", "base")][1], "trasero bajo"),
@@ -3051,6 +3068,160 @@ def guarda_anillo(p: dict[str, float]) -> None:
         print(f"  {nombres[i]:<18} {largo:7.2f} mm  cede {flecha:.3f}")
 
 
+def _marcos_trasera(p: dict[str, float]) -> list[dict]:
+    """Las dos bandas del marco de la trasera: donde viven y sus cajas.
+
+    GEMELO de marcos_trasera() y de las dos funciones marco_trasera_* en
+    sam17_case.scad. Devuelve por banda su nombre, la caja del ala vista
+    (`caja`), la del ala que tapa el canto (`ala_b`, solo la de arriba), la y
+    de su fila de M3 y los cantos de la banda.
+
+    LA DE ABAJO NO TIENE ALA B Y NO ES UN OLVIDO: el canto de abajo del
+    acrilico esta en el PLANO DEL SUELO y debajo tiene la tabla. Un ala ahi
+    levantaria el case de su propia base en vez de tapar un canto abierto. La
+    puerta lo comprueba contra la caja de bandeja_base, no contra este
+    comentario."""
+    P = _vertices(p)
+    x1 = P[6][0]                                   # el plano trasero
+    t = p["t_costilla"]
+    z0 = p["t_anillo"] + p["hol_piel"]
+    z1 = p["ancho_total"] - z0
+    yt = P[5][1] - p["marco_sup"]                  # canto de arriba del acrilico
+    a = p["marco_trasera_ancho"]
+    x_dob = x1 - p["t_piel"] - t                   # el doblez de la meseta
+    return [
+        {"nombre": "marco trasera sup",
+         "y0": yt - a, "y1": yt,
+         "m3": yt - p["marco_sup"] - p["canal_ancho"] / 2,
+         "m3_local": a - (p["marco_sup"] + p["canal_ancho"] / 2),
+         "dxf": "marco_trasera_sup_2d",
+         "caja": ("marco trasera sup", x1 - t, x1, yt - a, yt, z0, z1),
+         "ala_b": ("marco trasera sup ala B", x_dob, x1, yt, yt + t, z0, z1)},
+        {"nombre": "marco trasera inf",
+         "y0": 0.0, "y1": a,
+         "m3": p["canal_ancho"] / 2,
+         "m3_local": p["canal_ancho"] / 2,
+         "dxf": "marco_trasera_inf_2d",
+         "caja": ("marco trasera inf", x1 - t, x1, 0.0, a, z0, z1),
+         "ala_b": None},
+    ]
+
+
+def _cajas_marco_trasera(p: dict[str, float]) -> list[Caja]:
+    """Las bandas y el ala de arriba como cuerpos, para solapes()."""
+    return [c for m in _marcos_trasera(p)
+            for c in ([m["caja"]] + ([m["ala_b"]] if m["ala_b"] else []))]
+
+
+def bbox_desarrollo_marco(p: dict[str, float], nombre: str) -> tuple[float, float]:
+    """Envolvente del blank de una banda. La de arriba es una L y sale por la
+    misma cuenta que la escuadra -- las dos alas por su cota exterior menos un
+    BD --; la de abajo es plana y su blank ES la pieza."""
+    largo = _trasera_au(p)
+    if nombre == "marco trasera sup":
+        return (largo, p["marco_trasera_ancho"] + p["t_piel"] + p["t_costilla"]
+                - _bd_miembro(p))
+    return (largo, p["marco_trasera_ancho"])
+
+
+def guarda_marco_trasera(p: dict[str, float]) -> None:
+    """La trasera no ensena canto, y lo que asoma al plano trasero es metal.
+
+    ES LA PUERTA DE #234. El 2026-08-28, comparando la silueta del ensamblado
+    de aluminio contra la de acrilico al mismo angulo, el 25.6 % del contorno
+    del case seguia siendo PMMA y los 260 puntos estaban TODOS en la trasera:
+    sus cantos de arriba y de abajo corrian 540 mm cada uno sin metal. El de
+    arriba era ademas los ultimos 8 mm del PICO -- guarda_remate() lo decia con
+    todas sus letras, "t_piel: el canto de arriba de la trasera" --, o sea
+    acrilico visto en la cara que se mira desde arriba.
+
+    Cinco cosas, y la primera es la que cierra el issue:
+
+      1. el canto de ARRIBA del acrilico esta tapado de punta a punta: el ala B
+         de la banda de arriba cubre todo su espesor y muere EN EL DOBLEZ de la
+         meseta, sin dejar rendija entre las dos;
+      2. el canto de ABAJO tiene cuerpo debajo -- la tabla --, que es por lo
+         que esa banda no lleva ala;
+      3. la cara vista de las dos bandas esta A RAS del plano trasero, y el
+         acrilico t_costilla por detras: si la banda asomara, el marco se
+         leeria pegado encima del panel en vez de alrededor;
+      4. cada banda se traga la fila de M3 de su miembro con 1.5 D a los dos
+         cantos -- son los mismos tornillos que ya cruzaban la trasera, no hay
+         taladro nuevo en el acrilico --;
+      5. y en la de arriba, ese M3 no cae en la zona del doblez: la misma regla
+         de chapa que _escuadra_raiz() aplica a la escuadra.
+
+    Lo que esta puerta NO mira: que las bandas no pisen las bridas ni las
+    escuadras. De eso responde solapes(), que las ve porque _cajas_solidas()
+    las mete en la lista."""
+    P = _vertices(p)
+    _, planchas, _ = _cajas_solidas(p)
+    panel = next(c for c in planchas if c[0] == "piel_trasera")
+    tabla = next(c for c in planchas if c[0] == "bandeja_base")
+    marcos = _marcos_trasera(p)
+    x_dob = P[6][0] - p["t_piel"] - p["t_costilla"]
+    for m in marcos:
+        caja = m["caja"]
+        assert abs(caja[2] - P[6][0]) < 1e-9, (
+            f"la cara vista de '{m['nombre']}' esta en x={caja[2]:.2f} y el "
+            f"plano trasero en {P[6][0]:.2f}: el marco tiene que quedar a ras")
+        assert abs(panel[2] - (P[6][0] - p['t_costilla'])) < 1e-9, (
+            f"la trasera acaba en x={panel[2]:.2f} y tendria que estar "
+            f"rehundida t_costilla ({P[6][0] - p['t_costilla']:.2f}): con el "
+            f"acrilico a ras, el marco se le monta encima en vez de rodearlo")
+        holgura = min(m["m3"] - m["y0"], m["y1"] - m["m3"])
+        assert holgura >= 1.5 * p["d_M3_paso"], (
+            f"la fila de M3 de '{m['nombre']}' cae a {holgura:.2f} mm del canto "
+            f"mas cercano de su banda y se exigen {1.5 * p['d_M3_paso']:.2f}. "
+            f"Sube marco_trasera_ancho: hoy vale {p['marco_trasera_ancho']:g}")
+    sup = marcos[0]
+    ala = sup["ala_b"]
+    assert ala[1] <= panel[1] + 1e-9 and ala[2] >= panel[2] - 1e-9, (
+        f"el ala de arriba cubre x={ala[1]:.2f}..{ala[2]:.2f} y el canto del "
+        f"acrilico va de {panel[1]:.2f} a {panel[2]:.2f}: queda canto de PMMA "
+        f"a la vista en el pico del case, que es justo #234")
+    assert abs(ala[1] - x_dob) < 1e-9, (
+        f"el ala de arriba muere en x={ala[1]:.2f} y el doblez de la meseta "
+        f"esta en {x_dob:.2f}: sobra o falta {ala[1] - x_dob:+.2f} mm de "
+        f"rendija en la cara de arriba del case")
+    assert tabla[3] <= panel[3] + 1e-9 and tabla[4] >= panel[3] - 1e-9, (
+        f"el canto de abajo de la trasera esta en y={panel[3]:.2f} y la tabla "
+        f"ocupa y={tabla[3]:.2f}..{tabla[4]:.2f}: no lo tapa nadie, y esa "
+        f"banda no lleva ala porque se supone que si")
+    # LAS BANDAS NO SE COMEN LA VENTILACION NI LA VENTANA DE RED, y esto hace
+    # falta comprobarlo porque NADIE MAS LO VE: guarda_aire() cuenta el area de
+    # las 44 ranuras leyendo el DXF de la trasera, y una banda de aluminio
+    # atornillada encima no aparece en ese fichero. La de abajo llega a y=20 y
+    # el campo libre arranca en 24.5: son 4.5 mm de sobra, o sea que subir
+    # marco_trasera_ancho tres milimetros tapa ranuras sin que el presupuesto
+    # termico se entere. Misma trampa que la escuadra tapando la primera
+    # columna el 28-08, con la diferencia de que aquella se resto y esta no
+    # tendria por que existir.
+    lib0, lib1 = _banda_libre_trasera(p)
+    for m in marcos:
+        assert m["y1"] <= lib0 or m["y0"] >= lib1, (
+            f"'{m['nombre']}' ocupa y={m['y0']:.2f}..{m['y1']:.2f} y el campo "
+            f"libre de la trasera -- la rejilla de entrada y la ventana de red "
+            f"-- va de {lib0:.2f} a {lib1:.2f}. La banda taparia area que "
+            f"guarda_aire() cuenta como abierta leyendo el DXF, donde la banda "
+            f"no sale")
+        for _, y in _centros_m3_escuadra(p):
+            assert not (m["y0"] - 1e-9 <= y <= m["y1"] + 1e-9), (
+                f"un M3 de escuadra cae en y={y:.2f}, dentro de "
+                f"'{m['nombre']}' ({m['y0']:.2f}..{m['y1']:.2f}): la banda le "
+                f"tapa la cabeza y esa escuadra deja de poder atornillarse")
+    raiz = _escuadra_raiz(p)
+    desde_esquina = sup["y1"] - sup["m3"]
+    assert desde_esquina >= raiz, (
+        f"el M3 de la banda de arriba cae a {desde_esquina:.2f} mm de la "
+        f"esquina exterior del doblez y la regla de chapa pide {raiz:.2f}")
+    print(f"marco trasera: dos bandas de {p['marco_trasera_ancho']:g} x "
+          f"{p['t_costilla']:g} a ras del plano trasero, acrilico "
+          f"{p['t_costilla']:g} mm por detras; el ala de arriba tapa "
+          f"{ala[2] - ala[1]:.1f} mm de canto y muere en el doblez de la "
+          f"meseta; el de abajo apoya en la tabla")
+
+
 def guarda_escuadra_trasera(p: dict[str, float]) -> None:
     """El canto trasero del costado tiene tope hacia dentro en casi todo su largo.
 
@@ -3511,20 +3682,34 @@ def guarda_remate(p: dict[str, float]) -> None:
                               abrir, y con prof_sup a 37 medido desde el doblez
                               la apertura caia de 180 a 45 grados.
         prof_sup              la meseta, o sea el ala del miembro alto.
-        t_piel                el canto de arriba de la trasera.
+        t_piel                lo que la trasera se mete por debajo del ala
+                              del marco. Fue el CANTO DE ARRIBA DE LA TRASERA
+                              hasta el 2026-08-29 -- 8 mm de acrilico visto en
+                              el pico del case, que es lo que abrio #234 -- y
+                              hoy es el ala B de marco_trasera_sup, que se lo
+                              tapa entero y muere contra el doblez de la
+                              meseta.
+        t_costilla            el espesor de ese marco: lo que la trasera se
+                              rehunde para que su cara vista quede a ras del
+                              plano trasero.
 
     El inset NO se toca a la ligera. Ver su nota en params.scad."""
-    suma = p["prof_sup"] + p["inset_remate_frente"] + p["t_piel"]
+    suma = (p["prof_sup"] + p["inset_remate_frente"] + p["t_piel"]
+            + p["t_costilla"])
     assert abs(suma - p["marco_remate"]) < 1e-9, (
         f"la meseta no se reparte entera: inset_remate_frente "
         f"({p['inset_remate_frente']:.0f}, lo que queda abierto para que gire "
         f"la tapa) + prof_sup ({p['prof_sup']:.0f}, el ala del miembro alto) + "
-        f"t_piel ({p['t_piel']:.0f}, el canto de la trasera) = {suma:.2f}, y "
+        f"t_piel ({p['t_piel']:.0f}, lo que la trasera se mete bajo el ala "
+        f"del marco) + t_costilla ({p['t_costilla']:g}, el espesor del "
+        f"marco) = {suma:.2f}, y "
         f"marco_remate mide {p['marco_remate']:.2f}. Sobra o falta "
         f"{suma - p['marco_remate']:+.2f} mm. Los cuatro se mantienen a mano "
         f"porque params.scad no admite expresiones")
-    print(f"remate: meseta de {p['prof_sup']:.0f} mm integrada en el miembro "
-          f"trasero alto, retirada {p['inset_remate_frente']:.0f} del pico para que "
+    # :g y no :.0f -- prof_sup vale 27.5 desde el 2026-08-29 y un .0f lo
+    # imprimia como 28: una puerta que redondea la cota que vigila miente.
+    print(f"remate: meseta de {p['prof_sup']:g} mm integrada en el miembro "
+          f"trasero alto, retirada {p['inset_remate_frente']:g} del pico para que "
           f"la tapa de arriba abra")
 
 
@@ -3901,6 +4086,7 @@ def main() -> int:
     guarda_rebaje(p)
     guarda_anclajes(p)
     guarda_escuadra_trasera(p)
+    guarda_marco_trasera(p)
     guarda_miembros(p)
     guarda_agarre(p)
     guarda_fila_1u(p)

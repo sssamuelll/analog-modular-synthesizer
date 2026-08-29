@@ -1,11 +1,20 @@
 # Pliego de fabricación — cuerpo del SAM17
 
+> **rev. 23 (2026-08-29).** La trasera deja de ser la pieza más exterior de
+> la cara de atrás: se rehunde `t_costilla` y la enmarcan **dos bandas de
+> chapa** (`marco_trasera_sup_2d`, `marco_trasera_inf_2d`). Hasta hoy sus
+> cantos superior e inferior corrían 540 mm cada uno sin metal encima, y el
+> de arriba eran además los últimos 8 mm del pico del case. Entra también el
+> plano que faltaba del anillo: **`cupon_anillo_2d`**, la sección, con el
+> cupón convertido en **punto de parada** antes de cortar los dos anillos.
+>
 > **rev. 22 (2026-08-28).** La costilla deja de ser **chapa de aluminio
 > plegada** y pasa a **anillo de pletina mecanizada** (§6.1): una pieza
 > sólida por lado, sin soldadura ni ala doblada, con roscas ciegas donde
 > antes había tornillo pasante. Son **seis** talleres, no cinco — acrílico,
-> chapa de aluminio (miembros con bridas, placas, clips, escuadras y la
-> tapa del valle), **mecanizado de aluminio** (el anillo, taller nuevo),
+> chapa de aluminio (miembros con bridas, placas, clips, escuadras, las dos
+> bandas del marco trasero y la tapa del valle), **mecanizado de aluminio**
+> (el anillo y su cupón, taller nuevo),
 > acero, madera y los rieles comprados. Cada sección dice a cuál va.
 >
 > **rev. 21 (2026-08-27).** Dejó de ser «el pliego de acrílico»: el case
@@ -142,12 +151,15 @@ el 2026-08-28:
 |---|---|---|---|
 | `chasis_cuerpo_2d`, `chasis_tapa_2d`, `chasis_refuerzo_2d` | acero | chapa | corte + **plegado** |
 | `miembro_bajo_2d`, `miembro_alto_2d`, `bahia_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado** + brida de extremo |
-| `escuadra_trasera_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: UN doblez a 90°, la línea a **8.70 mm** del canto SIN taladros — **2 uds, PAR ESPEJADO** (ver nota) |
+| `escuadra_trasera_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: UN doblez a 90°, la línea a **7.20 mm** del canto SIN taladros — **2 uds, PAR ESPEJADO** (ver nota) |
+| `marco_trasera_sup_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: UN doblez a 90°, la línea a **6.20 mm** del canto SIN taladros — **1 ud** |
+| `marco_trasera_inf_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte, **sin plegar** — **1 ud** |
 | `tapa_valle_2d` | aluminio, 3 mm | chapa | corte + **plegado** |
 | `costilla_2d`, `costilla_dorso_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **fresado CNC**, sin plegar, sin soldar |
 | `bandeja_base_2d` | madera maciza, 18 mm | carpintería | corte + ranuras alargadas |
 | `placa_cara_inf_2d`, `placa_valle_2d`, `placa_cara_sup_2d` | aluminio, `t_placa` = 6 mm | chapa | corte + cajeado Ø8 × `prof_cajeado_riel` = 2.5 **por el lado del anillo, una sola vez** (no «por cara»: es UN bolsillo ciego en UNA de las dos caras, y deja 3.5 mm de placa bajo la cabeza del M4). Nota de mecanizado, no va en el DXF — ver abajo — **2 uds cada uno, PAR ESPEJADO** |
 | `clip_2d` | aluminio, `t_clip` = 4 mm | chapa | corte — 4 uds, pieza genérica |
+| `cupon_anillo_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **NO ES UNA PIEZA DEL CASE**: es la SECCIÓN del perfil del anillo, y de ella sale el **cupón de 100 mm** que hay que aprobar antes de cortar los dos anillos — ver el punto de parada en §6.1 |
 
 **`costilla_2d` y `costilla_dorso_2d` son CONTORNOS REALES, no desarrollos** —
 al revés de como era hasta el 2026-08-27. La pieza ya no se dobla: lo que corta
@@ -173,8 +185,9 @@ ninguna transformación**, así que si alguien «arregla» el fichero espejándo
 las roscas se van al otro extremo del anillo y la puerta lo canta. Quien se
 voltea es **la PIEZA en la máquina**, no el dibujo.
 
-**`miembro_bajo_2d`, `miembro_alto_2d`, `bahia_2d`, `escuadra_trasera_2d` y
-`tapa_valle_2d` SÍ son DESARROLLOS PLANOS, no contornos** — igual que las tres
+**`miembro_bajo_2d`, `miembro_alto_2d`, `bahia_2d`, `escuadra_trasera_2d`,
+`marco_trasera_sup_2d` y `tapa_valle_2d` SÍ son DESARROLLOS PLANOS, no
+contornos** — igual que las tres
 del chasis: el DXF trae el recorte, y la pieza doblada mide menos. Cortar el
 contorno de la pieza montada da un fichero válido e inservible.
 
@@ -223,12 +236,28 @@ razón: sus tres M3 van en **y = 97.03, 148.09 y 199.15** sobre un ala que va de
 **y = 30.0 a 224.68**, o sea que **no están centrados** — el primero se aparta
 para librar la banda de la rejilla de entrada. Voltear una escuadra para hacer
 la otra sube los tres tornillos al extremo equivocado del canto. El doblez es
-**uno solo, a 90°**, con la línea a `escuadra_vuelo() − miembro_bd()` = 12 −
-3.30 = **8.70 mm** del canto que NO lleva taladros; el ala B (la corta, la que
-vuela hacia el interior) mide **12 mm** = `cara_anillo − t_piel`, y el ala A (la
-que atornilla contra la trasera) mide **16 mm** = `escuadra_ala`. Blank del
-desarrollo: **194.68 × 24.70 mm**. Los cuatro números salen de `params.scad` y
-de `bbox_desarrollo_escuadra()`, no están escritos a mano.
+**uno solo, a 90°**, con la línea a `escuadra_vuelo() − miembro_bd()` = 10.5 −
+3.30 = **7.20 mm** del canto que NO lleva taladros; el ala B (la corta, la que
+vuela hacia el interior) mide **10.5 mm** = `cara_anillo − t_piel − t_costilla`,
+y el ala A (la que atornilla contra la trasera) mide **16 mm** = `escuadra_ala`.
+Blank del desarrollo: **194.68 × 23.20 mm**. Los cuatro números salen de
+`params.scad` y de `bbox_desarrollo_escuadra()`, no están escritos a mano.
+
+**El ala B se acortó 1.5 mm el 2026-08-29** y no por gusto: la trasera se
+rehundió `t_costilla` para que el marco quede a ras (#234), o sea que la cara
+interior desde la que se mide ese vuelo se adelantó lo mismo. La punta sigue
+muriendo donde moría — en la línea de la ventana del anillo.
+
+**LAS DOS BANDAS DEL MARCO DE LA TRASERA NO SON UN PAR: son dos piezas
+distintas.** La de arriba (`marco_trasera_sup_2d`) es un angular — blank
+**540.32 × 26.20**, ala vista de **20** y ala de **9.5** que dobla sobre el
+canto superior del acrílico y muere en el doblez de la meseta — y la de abajo
+(`marco_trasera_inf_2d`) es una pletina plana de **540.32 × 20**, sin doblez.
+La de abajo no lleva ala a propósito: ese canto está en el plano del suelo y lo
+que tiene debajo es la tabla, no aire; un ala ahí levantaría el case de su
+propia base. **Ninguna de las dos se voltea** — cada una va en su sitio y una
+sola vez. Las dos cuelgan de las cinco M3 que la trasera ya lleva a su miembro:
+no hay taladro nuevo en el acrílico, solo tornillos **1.5 mm más largos**.
 
 Cada DXF de placa trae el agujero de **PASO M4** por riel (el que sujeta de
 verdad el tornillo del riel — no el cajeado) y el par de M4 a rosca ciega
@@ -327,14 +356,35 @@ maciza, vaciada por el centro con fresadora CNC.
   de PE va **enmascarado antes de anodizar**, en la cara interior, uno por
   anillo — el anodizado es aislante y ese punto tiene que quedar metal
   desnudo.
-- **Cupón antes de cortar los dos anillos.** Las cotas de la cara vista
-  (chaflán, rebaje, rehundido) salieron de escalar una foto de referencia y
-  están marcadas ESTIMADO en la spec de diseño. Mecanizar y anodizar un
-  **cupón de 100 mm del perfil** — mismo chaflán, mismo rebaje, mismo
-  acabado — y compararlo contra la referencia ANTES de cortar el material
-  para los dos anillos completos. Es la misma lógica que el cupón de kerf
-  del acrílico (§ «Procedimiento del cupón» en el README): medir sobre la
-  pieza real, no sobre el render.
+- **PUNTO DE PARADA: el cupón, antes de cortar los dos anillos.** Las cotas
+  de la cara vista (chaflán, rebaje, rehundido) salieron de escalar una foto
+  de referencia y están marcadas ESTIMADO en la spec de diseño. **No se corta
+  el material de los dos anillos hasta que este cupón esté aprobado.** Es la
+  misma lógica que el cupón de kerf del acrílico (§ «Procedimiento del cupón»
+  en el README): medir sobre la pieza real, no sobre el render.
+
+  **Qué se pide:** `plans/cupon_anillo_2d.dxf` es la **sección** — el único
+  plano del anillo que lleva las profundidades, porque los otros dos son
+  vistas de planta y ninguna sabe decir «14 de pletina» ni «1.5 × 45». Del
+  perfil de esa sección, **100 mm de largo**, con **una rosca ciega M4 (broca
+  3.3, 10 mm útiles) a media altura de la franja, a media longitud**, y
+  **anodizado satinado con un punto de bonding enmascarado** en la cara
+  interior. Mismo material, mismo mecanizado y mismo anodizador que van a
+  hacer los anillos: un cupón hecho de otra forma no mide nada.
+
+  **Qué se mira cuando vuelve, y qué pasa si falla:**
+
+  | # | Qué se comprueba | Criterio | Si falla |
+  |---|---|---|---|
+  | 1 | El chaflán se lee como en la foto de referencia | 1.5 ± 0.2 a 45°, continuo y sin escalones de faceta, mirado con la misma luz y al lado de la referencia impresa | Se cambia `chaflan_anillo` (rango ESTIMADO 1–3), se reexporta la sección y se pide otro cupón |
+  | 2 | El rebaje asienta el PMMA del lote | Con el recorte **más grueso** del lote (8 + 1.2 = 9.2) más la junta de 1 tiene que entrar en los 11 de fondo y **sobrar 0.3**; con el **más fino** (6.8) la junta todavía tiene que precargar | Se sube `t_anillo` — la puerta `guarda_rebaje()` ya dice que con 12 el rebaje quedaba a −0.2, o sea que no cabía |
+  | 3 | El anodizado no interrumpe el PE | **≤ 0.1 Ω** medido a cuatro hilos entre el punto enmascarado y un tornillo M4 apretado en la rosca ciega (spec 2026-08-27 §3.4) | El enmascarado no valió: se rehace el punto y se vuelve a medir antes de anodizar los anillos |
+
+  Las cotas **en el plano** (cara vista y ancho del rebaje) no hacen falta
+  medirlas aquí: las cruzan `anillo_tiene_ventana()` y `anillo_tiene_rebaje()`
+  contra los ficheros que se cortan, en cada corrida. Lo que el cupón cierra
+  son las **tres profundidades** y el **acabado**, que ningún DXF de planta
+  puede decir y ningún render puede decidir.
 - **Aleación: recomendada, no obligatoria.** La puerta (`guarda_anillo()`)
   calcula con **Rp0.2 = 130 MPa**, el conservador de siempre, y con la
   sección de este anillo (I = 3714 mm⁴, 214 mm², contra 1673 mm⁴ de la vieja

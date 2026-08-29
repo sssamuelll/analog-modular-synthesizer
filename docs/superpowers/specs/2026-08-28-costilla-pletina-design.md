@@ -237,9 +237,19 @@ de `E_aluminio` (el anillo sigue derivándose por flecha).
 
 ## 10. Lo que este documento NO cierra
 
-- **La trasera sigue enseñando canto**: el 25.6 % del contorno medido el 28-08 está en
-  sus cantos superior e inferior, 528 mm sin metal encima. Es otra pieza y otro papel:
-  los dos miembros traseros como marco de la trasera. Va después de esta.
+- ~~**La trasera sigue enseñando canto**~~ — **CERRADO el 2026-08-29 (#234).** Era el
+  25.6 % del contorno medido el 28-08, y los 260 puntos estaban todos en la misma
+  pieza: sus cantos superior e inferior, 540 mm cada uno sin metal encima, y el de
+  arriba eran además los últimos 8 mm del pico. La salida no fue la que apuntaba esta
+  sección — los miembros traseros no pueden hacer de marco sin una T, y una T no se
+  pliega de un blank —, sino **dos bandas de la misma chapa**: `marco_trasera_sup_2d`
+  (angular, banda vista de 20 y ala de 9.5 que muere en el doblez de la meseta) y
+  `marco_trasera_inf_2d` (pletina plana de 20; sin ala porque ese canto apoya en la
+  tabla). La trasera se rehunde `t_costilla` para que el marco quede a ras. Lo paga
+  `prof_sup`, que baja de 29 a 27.5 — no el inset, cuyo acantilado está en 12.8. Lo
+  vigila `guarda_marco_trasera()`. De paso salió una gemela desincronizada 1.5 mm
+  desde el 27-08: el `.scad` cortaba la plancha en la cara de abajo de la meseta y
+  `clearance_budget` la declaraba llegando al pico.
 - ~~**El canto trasero del acrílico no tiene retención hacia dentro**~~ — **CERRADO el
   28-08 con la salida (a): la escuadra de la trasera (Tarea 4b, commit `2e46ff8`).** Eran
   **227 mm** de canto libre (x = 292.91, y de 14.5 a 241.68) sin un solo apoyo hacia
@@ -253,8 +263,10 @@ de `E_aluminio` (el anillo sigue derivándose por flecha).
   otras dos salidas quedan como historia de la decisión: **(b)** recortar `piel_trasera`
   para que quepa un clip en la franja trasera; **(c)** aceptarlo y cerrarlo cargando el
   prototipo.
-- **La meseta se lee como repisa** (Iris): 29 mm de chapa horizontal perforada. Se
-  juzga en render con el anillo puesto.
+- **La meseta se lee como repisa** (Iris): 27.5 mm de chapa horizontal perforada
+  (eran 29 hasta la rev. 23). Se juzga en render con el anillo puesto — y desde el
+  29-08 no acaba en el canto del acrílico sino en el ala del marco trasero, o sea
+  que lo que se juzga es una repisa de metal entera.
 - **La banda del valle fluye a ~27 N si se levanta el case por ahí** y la puerta lo
   imprime sin fallar. Hay que apoyarla o convertirlo en assert.
 - ~~**Pies sin taladro en la tabla**~~ — **CERRADO en la Tarea 6 (2026-08-28)**: la
@@ -262,8 +274,13 @@ de `E_aluminio` (el anillo sigue derivándose por flecha).
   («`bandeja_base_2d`: 4 taladros de pie d=4.50 mm en las posiciones de `paticas()`»).
 - **Secuencia de montaje sin demostrar, racking sin medir (#203)** — los bloqueos de
   Halberg que no dependen de la pletina, y estos siguen abiertos.
-- Los rangos de la foto son ESTIMADOS: **un cupón** de 100 mm del perfil del anillo,
-  chaflanado y anodizado, antes de cortar los dos anillos.
+- Los rangos de la foto siguen siendo ESTIMADOS y **el cupón sigue sin cortarse**
+  (#237) — eso no lo cierra ningún fichero. Lo que sí entró el 2026-08-29 es lo que
+  faltaba para poder pedirlo: **`cupon_anillo_2d`**, la sección del perfil, que es el
+  único plano del anillo con profundidades (los otros dos son vistas de planta y no
+  saben decir «14 de pletina» ni «1.5 × 45»), verificada por `seccion_del_cupon()`; y
+  el PLIEGO convertido en **punto de parada**, con la tabla de qué se mide cuando el
+  cupón vuelve y qué se cambia si no pasa.
 - Desincronizaciones de papel que la revisión encontró: el BOM aún dice «transversal
   2020», la spec del 27 dice chapa de 3, `params.scad` llama «portantes» a los costados.
   Van con la Tarea 6 de los papeles.

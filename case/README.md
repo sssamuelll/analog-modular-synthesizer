@@ -100,6 +100,16 @@ que dejan libre la fila de tornillos por abajo y la onda por arriba (cifra de
 primera columna con su ala A y la puerta pasó a saltarla entera en vez de
 contarla — `clearance_budget.py` imprime «entrada 6781 mm2 en 44 ranuras de
 41.9 x 3.75»).
+
+**Y desde el 2026-08-29 ese 44 lo cruza una puerta**, `ranuras_rejilla_entrada()`
+en `check_dxf.py` (#236). Hasta entonces era una gemela **por lectura**: el área
+la derivaba el presupuesto, el `.scad` rederivaba las columnas por su cuenta, y
+`check_dxf` solo censaba círculos — una ranura es obround y el censo la deja
+fuera a propósito. El único cruce entre los dos lenguajes fue un humano contando
+entidades `LINE` del fichero (3418 → 3368) el día que la escuadra se comió una
+columna. Ahora se exige una ranura por columna adjudicada y ninguna de más, el
+ancho, y la banda libre entera de alto: los 6 781 mm² dejan de ser un número de
+fe y pasan a ser área que **está cortada**.
 El hueco del IEC vive **dentro** de esa banda, así que queda embebido en el
 campo en vez de al lado: se saltan sus columnas enteras, con 11.25 mm de
 material contra la ranura más cercana. Partir una ranura con el recorte
@@ -215,8 +225,41 @@ montaje»— y el fondo libre de la bandeja sube de 46.7 a 62.7 mm.
 exterior 10 mm por detrás del canto de los costados y 5 mm de aire por los
 cuatro lados — la junta de sombra. Estaban partidas a la altura del entrepiso
 porque cada una se atornillaba a los dos largueros de su piso; al morir esa
-bandeja la frontera dejó de existir. Su cara exterior cae exactamente en el
-plano trasero, con `hol_piel` = 0.15 mm por lado de holgura de montaje.
+bandeja la frontera dejó de existir. Se empotra entre los dos anillos con
+`hol_piel` = 0.15 mm por lado de holgura de montaje.
+
+**Y desde el 2026-08-29 ya no es la pieza más exterior de esa cara: se rehunde
+`t_costilla` y la enmarca el metal** (#234). Su cara exterior caía exactamente
+en el plano trasero, y con ella caían sus dos cantos: el superior y el inferior
+corrían **540 mm cada uno sin un milímetro de metal encima**. El de arriba era
+además los últimos 8 mm del **pico** del case — `guarda_remate()` repartía esa
+meseta entre `inset_remate_frente` + `prof_sup` + `t_piel`, y ese `t_piel` era,
+con todas sus letras, el canto del acrílico haciendo de superficie vista.
+
+Lo que asoma ahora al plano trasero son **dos bandas de chapa de 1.5**, las
+mismas de los miembros:
+
+- **arriba**, un angular: banda vista de 20 mm y un ala de 9.5 que dobla sobre
+  el canto superior del acrílico y **muere en el doblez de la meseta**, con la
+  que queda coplanar. El pico pasa a ser metal de punta a punta.
+- **abajo**, una pletina plana de 20. Sin ala, y no es un olvido: ese canto
+  está en el plano del suelo y debajo tiene la tabla, no aire — un ala ahí
+  levantaría el case de su propia base.
+
+Las dos cuelgan de las filas de M3 que la plancha **ya** llevaba a sus dos
+miembros: cero taladros nuevos en el acrílico, tornillos 1.5 mm más largos, y
+las diez cabezas que se veían sobre el PMMA pasan a verse sobre metal.
+
+Lo que se pagó: `prof_sup` baja de 29 a **27.5**, porque el trozo de atrás del
+pico crece de `t_piel` a `t_piel + t_costilla` y los 1.5 no podían salir del
+inset — su acantilado está en 12.8 (con 13 la tapa de arriba abre 180°, con
+12.8 abre 61). La meseta no se mueve por delante: el miembro se adelantó 1.5 y
+el ala se acortó lo mismo, así que el barrido probado de la tapa sigue intacto,
+y sus 16 ranuras de salida (852 mm²) tampoco cambian.
+
+Lo vigila `guarda_marco_trasera()`, y lo primero que exige es justo lo del
+issue: que el ala de arriba tape el canto **entero** y muera en el doblez, sin
+rendija.
 
 **Y baja hasta el suelo** (2026-08-22). Su canto inferior estaba en y = 3 y el
 plano del piso es y = 0: quedaba un rebaje corrido de **528 × 3 × 8 mm** a lo
@@ -232,7 +275,9 @@ canto es **y = 0**, el mismo datum del que cuelga la bandeja de base, y lo exige
 no canta porque no hay solape, y `alineacion()`/`apoyo()` solo ven filas de
 agujeros.
 
-Lo que costó: la plancha pasa de 245.18 a **248.18 mm** de alto. Lo que NO se
+Lo que costó: la plancha pasó de 245.18 a **248.18 mm** de alto — ese número
+es de aquel día; hoy mide **540.32 × 254.68**, y lo que lo movió después fue la
+meseta integrándose en el miembro (27-08). Lo que NO se
 movió, y se verificó con la salida de la puerta byte a byte contra la de antes:
 las tres ondas, la rejilla de entrada, el área abierta y los 6.6 K. Van
 derivadas de `f_base` y `f_tras`, que son diferencias contra `ce[].y`, así que
