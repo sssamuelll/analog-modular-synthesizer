@@ -1,5 +1,19 @@
 # Pliego de fabricación — cuerpo del SAM17
 
+> **rev. 25 (2026-08-29, noche).** Cinco piezas en cuestión, cuatro que
+> quedan. **Entra `marco_ventana_2d`** — la pletina de 6 con el contorno de la
+> ventana del anillo, una por costado, espejadas por el cajeado — y **salen
+> siete DXF**: las tres placas, `clip_2d`, `escuadra_trasera_2d`,
+> `marco_trasera_sup_2d` y `marco_trasera_inf_2d`. **`miembro_alto_2d` cambia
+> de desarrollo** (una L: banda de 24, meseta de 50 y retorno, con dos bridas
+> de la banda; sale el retorno de 24 del canal) y **entra `talon_2d`** (banda
+> de 24 + pie de 22, un doblez) en vez de `miembro_bajo_2d`. La trasera pierde
+> seis taladros y gana dos muescas de esquina; la tabla lleva siete taladros
+> más; el anillo pasa de 16 a **14 roscas ciegas** y su esquina de abajo-atrás
+> a radio 4.5. El chasis de acero pierde los dos M5 de pared y gana cuatro M4
+> en el suelo. `costilla_2d` y `costilla_dorso_2d` se regeneran; el cupón
+> (§6.1) no cambia.
+>
 > **rev. 24 (2026-08-29, tarde).** Tres notas de Samuel sobre el aluminio.
 > **Entra `nariz_2d`** — la banda del frente, chapa de 1.5 con TRES dobleces
 > (45°, 45°, 35°) y tres M4 al pie —, **`miembro_alto_2d` crece** (la meseta
@@ -125,7 +139,7 @@ Las demás piezas son indiferentes al lado.
 | DXF | espesor | uds | notas |
 |---|---|---|---|
 | `costado_2d` | 8 | **2** | canto visible completo, diamantado. **Sin un solo taladro** desde el 2026-08-27 |
-| `piel_trasera_2d` | 8 | 1 | **+ `kondor_cajeado_2d` a 4 mm en la cara exterior** (§4, §5) |
+| `piel_trasera_2d` | 8 | 1 | **+ `kondor_cajeado_2d` a 4 mm en la cara exterior** (§4, §5). **10 taladros M3** (eran 16 con las escuadras) y **dos muescas de esquina** arriba, de 2 × 15 con radio 2 en el rincón: por ahí le pasa por debajo la brida del miembro alto. Va DENTRO de las dos bandas, sobre el pie del talón |
 | `coupon.dxf` | 8 | 1 | pieza de calibración — **sin acabado, sin recocer** |
 
 **`remate_sup_2d` NO EXISTE.** Hasta el 2026-08-27 era la tapa de remate en
@@ -144,31 +158,29 @@ marco y hace de suelo y de zócalo a la vez. Va al carpintero, §6.2.
 larguero; los ocho se fueron al anillo de aluminio. La pieza es ahora
 **piel**: entra por detrás y asienta en el rebaje del anillo (§6.1), sobre una
 junta de EPDM de 1 mm, sin tocarlo con ningún tornillo — la retención hacia
-dentro la hacen las placas, los clips y la escuadra de la trasera, todos
-atornillados al aluminio, nunca al acrílico. Al taller le llega un contorno y
-nada más — menos operaciones y menos sitios por donde el PMMA raja.
+dentro la hace el **marco de la ventana** (una pletina por costado, corrida
+por los siete tramos, desde el 2026-08-29 por la noche; antes placas, clips y
+escuadra), atornillado al aluminio, nunca al acrílico. Al taller le llega un
+contorno y nada más — menos operaciones y menos sitios por donde el PMMA raja.
 
 **`lienzo_2d.dxf` es solo previsualización de nesteado: NO SE CORTA.**
 
 ### Lo que NO va a este taller
 
-Quince DXF de `case/plans/` **no son de acrílico** y no entran aquí. Se reparten
+Diez DXF de `case/plans/` **no son de acrílico** y no entran aquí. Se reparten
 entre DOS talleres — chapa y mecanizado (§6.1) — que **no son el mismo** desde
 el 2026-08-28:
 
 | DXF | material | taller | proceso |
 |---|---|---|---|
 | `chasis_cuerpo_2d`, `chasis_tapa_2d`, `chasis_refuerzo_2d` | acero | chapa | corte + **plegado** |
-| `miembro_bajo_2d`, `miembro_alto_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado** + brida de extremo. El alto lleva un **cuarto doblez a 45°** en el pico (el retorno de la meseta, 4 mm) — **1 ud cada uno** |
+| `miembro_alto_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: una L — banda de 24 a 90°, meseta de 50, **retorno a 45°** de 4 en el pico — con dos **bridas** dobladas a 90° de las puntas de la banda — **1 ud** |
+| `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: UN doblez a 90° (banda de 24 + pie de 22) — **1 ud** |
 | `nariz_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: TRES dobleces (45°, 45° y 35°) — **1 ud**. Ver las líneas de plegado abajo |
-| `escuadra_trasera_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: UN doblez a 90°, la línea a **7.20 mm** del canto SIN taladros — **2 uds, PAR ESPEJADO** (ver nota) |
-| `marco_trasera_sup_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: UN doblez a 90°, la línea a **6.20 mm** del canto SIN taladros — **1 ud** |
-| `marco_trasera_inf_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte, **sin plegar** — **1 ud** |
 | `tapa_valle_2d` | aluminio, 3 mm | chapa | corte + **plegado** |
 | `costilla_2d`, `costilla_dorso_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **fresado CNC**, sin plegar, sin soldar |
 | `bandeja_base_2d` | madera maciza, 18 mm | carpintería | corte + ranuras alargadas |
-| `placa_cara_inf_2d`, `placa_valle_2d`, `placa_cara_sup_2d` | aluminio, `t_placa` = 6 mm | chapa | corte + cajeado Ø8 × `prof_cajeado_riel` = 2.5 **por el lado del anillo, una sola vez** (no «por cara»: es UN bolsillo ciego en UNA de las dos caras, y deja 3.5 mm de placa bajo la cabeza del M4). Nota de mecanizado, no va en el DXF — ver abajo — **2 uds cada uno, PAR ESPEJADO** |
-| `clip_2d` | aluminio, `t_clip` = 4 mm | chapa | corte — 4 uds, pieza genérica |
+| `marco_ventana_2d` | aluminio, `t_placa` = 6 mm, **láser** | chapa | corte + **6 cajeados** Ø8 × `prof_cajeado_riel` = 2.5 **por el lado del anillo** (bolsillos ciegos en UNA cara: dejan 3.5 mm bajo la cabeza del M4 del riel). Nota de mecanizado, no va en el DXF — ver abajo — **2 uds, PAR ESPEJADO**: mismo contorno, cajeado por caras opuestas. **Planitud ≤ 0.5 mm en 300** en el blank cortado: apoya en la cara mecanizada del anillo y doce M4 lo conforman contra ella (una pletina de 6 × 24 se aplana 0.5 con 200 N), pero con más de eso el acrílico lo nota |
 | `cupon_anillo_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **NO ES UNA PIEZA DEL CASE**: es la SECCIÓN del perfil del anillo, y de ella sale el **cupón de 100 mm** que hay que aprobar antes de cortar los dos anillos — ver el punto de parada en §6.1 |
 
 **`costilla_2d` y `costilla_dorso_2d` son CONTORNOS REALES, no desarrollos** —
@@ -184,7 +196,7 @@ cara):
   silueta, que es el ancho de la cara vista. **NO trae el contorno del rebaje.**
   Es la hoja del corte del blank.
 - **`costilla_dorso_2d` — LA CARA INTERIOR.** Trae el **contorno del REBAJE**, a
-  `cara_anillo − rebaje_anillo` = 20 − 6 = **14 mm** de la silueta, más los **16
+  `cara_anillo − rebaje_anillo` = 20 − 6 = **14 mm** de la silueta, más los **14
   círculos** de rosca ciega a diámetro de broca. La silueta NO se repite aquí a
   propósito: dibujarla sería mandar cortar el contorno dos veces.
 
@@ -195,14 +207,13 @@ ninguna transformación**, así que si alguien «arregla» el fichero espejándo
 las roscas se van al otro extremo del anillo y la puerta lo canta. Quien se
 voltea es **la PIEZA en la máquina**, no el dibujo.
 
-**`miembro_bajo_2d`, `miembro_alto_2d`, `nariz_2d`, `escuadra_trasera_2d`,
-`marco_trasera_sup_2d` y `tapa_valle_2d` SÍ son DESARROLLOS PLANOS, no
-contornos** — igual que las tres
+**`talon_2d`, `miembro_alto_2d`, `nariz_2d` y `tapa_valle_2d` SÍ son
+DESARROLLOS PLANOS, no contornos** — igual que las tres
 del chasis: el DXF trae el recorte, y la pieza doblada mide menos. Cortar el
 contorno de la pieza montada da un fichero válido e inservible.
 
 **LOS DOS ANILLOS SON PIEZAS ESPEJADAS, no dos iguales.** Mismo contorno y
-misma ventana, pero **el rebaje, el chaflán de la ventana y las 16 roscas
+misma ventana, pero **el rebaje, el chaflán de la ventana y las 14 roscas
 ciegas van en la cara OPUESTA de cada uno**: la cara vista de cada anillo mira
 hacia FUERA del case, así que el dorso de uno es el lado que en el otro queda
 por delante (`costillas()` en `sam17_case.scad` monta el segundo con
@@ -211,63 +222,56 @@ lado da un case con un anillo del revés: el rebaje del segundo abriría hacia
 fuera y el acrílico no tendría dónde entrar. **Un anillo derecho y uno
 izquierdo.**
 
-**Las placas de anclaje (×6, una por tramo y por costado) y los clips de
-retención (×4, dos por costado) TIENEN DXF PROPIO desde el 2026-08-28**
-(Tarea 6): `placa_cara_inf_2d`, `placa_valle_2d`, `placa_cara_sup_2d` y
-`clip_2d`, en la tabla de arriba junto con el resto de este taller de chapa.
-Hasta esa fecha el modelo solo las dibujaba en 3D (`placas_riel()`,
-`clips_costado()`) y `export.ps1` no las exportaba como plancha aparte —
-esta misma nota lo daba como pendiente real.
+**EL MARCO DE LA VENTANA (`marco_ventana_2d`) SUSTITUYE A PLACAS, CLIPS Y
+ESCUADRAS desde el 2026-08-29 por la noche.** Es la pletina de 6 con el
+contorno de la ventana del anillo, corrida por los siete tramos: sobre las
+tres filas es exactamente la placa de anclaje de la mañana (canto a la
+silueta, cajeado por riel, dos roscas por riel), y en el frente, el suelo,
+la meseta y la trasera es el tope del acrílico que daban los clips y la
+escuadra. Blank **294.56 × 252.88**. **Se cortan DOS con el mismo DXF y son
+un PAR ESPEJADO**: el cajeado Ø8 × 2.5 va en la cara OPUESTA en el de un
+costado y en el del otro, porque cada cajeado tiene que mirar al anillo de
+SU lado. Los seis cajeados van centrados en los seis pasos M4 de riel
+(cuatro 3U, dos 1U) por la cara que mira al anillo — ahí aloja la cabeza
+del tornillo del riel; sin ellos la cabeza no tiene dónde meterse y el marco
+no cierra contra el anillo. **El DXF NO lleva el cajeado**: un DXF 2D no sabe
+decir profundidad, el mismo caso que el rebaje de `costilla_dorso_2d` y el
+cajeado KONDOR (§4). Trae **19 taladros**: los doce pasos M4 al anillo (diez
+en las tres filas y dos en la pata del suelo, a 60 de cada extremo de la pata:
+el trabajo que hacían los de los clips), los seis pasos M4 de riel y la rosca
+M3 de la pestaña de la banda del valle a
+**diámetro de broca** (pasante en la propia pletina). Y una **muesca** en la
+esquina trasera-alta, abierta al canto exterior, de 16.5 de honda: ahí apoya
+en la cara del anillo la brida del miembro alto, y el marco se aparta.
 
-Una placa por TRAMO, no por costado: el lado espejado (z) comparte el mismo
-**contorno** xy (`esquinas_placa()` no cambia con `mirror([0,0,1])`), así que
-cada uno de los tres ficheros se corta ×2 para completar las seis de la tabla.
+**Su canto exterior no va a la silueta en todos los tramos**, y no es un
+error de corte: en las tres filas sí (es el borde de aluminio de la fila);
+en el frente, el suelo y la meseta va retirado **1.65** (encima va chapa a
+ras de la silueta: la nariz y su pie, el pie del talón, la meseta y su
+retorno); en la trasera va retirado **11.20** (la banda, la trasera más
+gruesa del lote y medio milímetro: delante de un acrílico de ±1.2 no puede
+haber nada fijo). El canto interior va a 26 de las aristas del perfil,
+recto, en los siete tramos. `taladros_marco_ventana()` en `check_dxf.py`
+relee todo esto del fichero.
 
-**PERO LAS SEIS NO SON IGUALES: son tres PARES ESPEJADOS, tres y tres.** El
-contorno se comparte; el **cajeado Ø8 × 2.5 va en la cara OPUESTA** en la placa
-de un costado y en la del otro, porque cada cajeado tiene que mirar al anillo de
-SU lado. Y los tres contornos son **asimétricos**, así que voltear la pieza para
-sacar el par NO vale — manda el chaflán al canto equivocado:
+**LA BRIDA DEL MIEMBRO ALTO Y LA MUESCA DE LA TRASERA.** Las dos bridas
+salen de las puntas de la BANDA del miembro alto, dobladas a 90° sobre una
+línea perpendicular a la silueta, y apoyan **en la cara del anillo** — no
+sobre el marco: se probó subirlas con un escalón y la tapa de arriba pasaba
+de abrir 121.5° a 52° (`guarda_tapa()`). Miden **27 × 14.5**, con sus dos M4
+a 9.75 y 20.25 del doblez, a 8.5 de la silueta. La trasera, que apoya su
+esquina en esa misma franja, lleva una **muesca de esquina de 2 (ancho) ×
+15 (alto) con radio 2** en cada esquina de arriba: la brida le pasa por
+debajo. Son las únicas dos operaciones del acrílico que no son contorno,
+taladro ni cajeado, y el radio no se negocia — el PMMA raja desde una
+esquina viva.
 
-| DXF | esquina cortada | dónde |
-|---|---|---|
-| `placa_cara_inf_2d` | **9.52 × 26.0** | solo en el extremo `s1` (el canto interior) |
-| `placa_valle_2d` | **21.82 × 42.30** | solo en el extremo `s0` |
-| `placa_cara_sup_2d` | **12 × 12** | solo en el extremo `s1` |
-
-O sea: **se cortan seis piezas con el mismo contorno y se cajean tres por una
-cara y tres por la otra.** No se voltea ninguna.
-
-El clip es una pieza genérica — no depende de tramo ni de `s`, y su contorno es
-simétrico — y un solo fichero cubre las cuatro.
-
-**Las dos escuadras traseras también son un par espejado**, y por la misma
-razón: sus tres M3 van en **y = 97.03, 148.09 y 199.15** sobre un ala que va de
-**y = 30.0 a 224.68**, o sea que **no están centrados** — el primero se aparta
-para librar la banda de la rejilla de entrada. Voltear una escuadra para hacer
-la otra sube los tres tornillos al extremo equivocado del canto. El doblez es
-**uno solo, a 90°**, con la línea a `escuadra_vuelo() − miembro_bd()` = 10.5 −
-3.30 = **7.20 mm** del canto que NO lleva taladros; el ala B (la corta, la que
-vuela hacia el interior) mide **10.5 mm** = `cara_anillo − t_piel − t_costilla`,
-y el ala A (la que atornilla contra la trasera) mide **16 mm** = `escuadra_ala`.
-Blank del desarrollo: **194.68 × 23.20 mm**. Los cuatro números salen de
-`params.scad` y de `bbox_desarrollo_escuadra()`, no están escritos a mano.
-
-**El ala B se acortó 1.5 mm el 2026-08-29** y no por gusto: la trasera se
-rehundió `t_costilla` para que el marco quede a ras (#234), o sea que la cara
-interior desde la que se mide ese vuelo se adelantó lo mismo. La punta sigue
-muriendo donde moría — en la línea de la ventana del anillo.
-
-**LAS DOS BANDAS DEL MARCO DE LA TRASERA NO SON UN PAR: son dos piezas
-distintas.** La de arriba (`marco_trasera_sup_2d`) es un angular — blank
-**540.32 × 26.20**, ala vista de **20** y ala de **9.5** que dobla sobre el
-canto superior del acrílico y muere en el doblez de la meseta — y la de abajo
-(`marco_trasera_inf_2d`) es una pletina plana de **540.32 × 20**, sin doblez.
-La de abajo no lleva ala a propósito: ese canto está en el plano del suelo y lo
-que tiene debajo es la tabla, no aire; un ala ahí levantaría el case de su
-propia base. **Ninguna de las dos se voltea** — cada una va en su sitio y una
-sola vez. Las dos cuelgan de las cinco M3 que la trasera ya lleva a su miembro:
-no hay taladro nuevo en el acrílico, solo tornillos **1.5 mm más largos**.
+**EL TALÓN (`talon_2d`) ES UN ÁNGULO**: banda de **24** a ras del plano
+trasero por abajo y pie de **20** sobre la tabla, un doblez a 90° con r = 3.
+Blank **540.32 × 42.70**, con la fila de 5 M3 de la trasera a 12 del canto
+libre de la banda y tres M4 en el pie a 6.75 de su canto libre (a la tabla,
+desde dentro, como la nariz). Sustituye a `miembro_bajo_2d`: sin bridas ni
+rosca en el anillo. No se voltea.
 
 **LA NARIZ (`nariz_2d`) LLEVA TRES DOBLECES, y ninguno es a 90°.** Blank
 **540.32 × 47.38** con el **canto libre del pie en y = 0** (los tres M4 van a
@@ -281,46 +285,36 @@ cada 45° y **0.62** para el de 35°; salen de `doblez_bd()` en el `.scad` y de
 dentro** del case, y la pieza no se voltea: el pie queda sobre la tabla y el
 chaflán mira al suelo.
 
-**Y `miembro_alto_2d` gana un cuarto doblez** (2026-08-29): la meseta llega al
-pico y el canto libre de la chapa dobla **4 mm a 45°** hacia abajo por la cara
-de arriba (`retorno_meseta`). Blank **588.00 × 81.02** (era 64.9). La línea del
-retorno va a **3.56** del canto libre de la meseta (4 − 0.88/2). El resto —
-alma, retorno bajo, bridas y las 16 ranuras de salida — no se mueve.
+**Y `miembro_alto_2d` ES UNA L desde el 2026-08-29 por la noche**: la banda
+de **24** (con su canto libre en y = 0 del blank y la fila de 5 M3 de la
+trasera a 12 de él), la meseta de **50** (del pico al plano trasero, con las
+16 ranuras de salida) y el retorno de **4 a 45°** en el pico. Blank **588.00 ×
+73.83**: dos dobleces a 90° (banda → meseta, y cada brida) y uno a 45°. La
+línea del retorno va a **3.56** del canto libre de la meseta (4 − 0.88/2); la
+de la banda a la meseta, a 24 − 3.30/2 = **22.35** del canto libre de la
+banda. Las dos bridas sobresalen **23.70** por cada punta de la banda (27 −
+BD), de 1.5 bajo la meseta hacia abajo, 14.5 de alto. Sale el retorno de 24
+del canal de la mañana: la trasera vive donde él iba.
 
-**LAS ESQUINAS DEL ANILLO QUE LLEVAN CHAPA ENCIMA MIDEN `radio_chapa` = 4.5**:
-el radio exterior de un doblez de r = 3 en chapa de 1.5. Son las dos del chaflán
-de la nariz y el arranque de la cara de abajo, el pico del techo y la esquina
-trasera-alta. No es gusto: una esquina viva del anillo bajo un doblez a 90°
-asoma 1.9 mm por fuera de la chapa. La esquina de abajo-delante es un **chaflán
-de 6 a 45°** (`chaflan_nariz`), y la trasera-baja sigue viva (`radio_trasero` =
-0): ahí no dobla nadie. Lo relee `anillo_tiene_chaflan()` del DXF.
+**LAS SEIS ESQUINAS DEL ANILLO MIDEN `radio_chapa` = 4.5**: el radio
+exterior de un doblez de r = 3 en chapa de 1.5, porque en todas dobla chapa
+encima — las dos del chaflán de la nariz y el arranque de la cara de abajo,
+el pico del techo (el retorno), la trasera-alta (la banda del miembro alto)
+y, desde el 29-08 por la noche, la trasera-baja (la banda del talón, que
+dobla ahí sobre la tabla; `radio_trasero` murió). No es gusto: una esquina
+viva del anillo bajo un doblez a 90° asoma 1.9 mm por fuera de la chapa. La
+esquina de abajo-delante es un **chaflán de 6 a 45°** (`chaflan_nariz`). Lo
+relee `anillo_tiene_chaflan()` del DXF.
 
-Cada DXF de placa trae el agujero de **PASO M4** por riel (el que sujeta de
-verdad el tornillo del riel — no el cajeado) y el par de M4 a rosca ciega
-que sujeta la placa al anillo; la del valle además trae el M3 de la pestaña
-de la banda y los dos M4 de las lengüetas de la bahía — los tres **a
-diámetro de rosca** (pasante en la propia pletina, igual que las roscas
-ciegas del dorso del anillo, §6.1 — no de paso). **El DXF NO lleva el
-cajeado de Ø8 × `prof_cajeado_riel` = 2.5 mm por el lado del anillo**: un
-DXF 2D no sabe decir profundidad, el mismo caso que el rebaje de
-`costilla_dorso_2d` y el cajeado KONDOR (§4). Es **NOTA DE MECANIZADO**, no
-corte: centrado en cada agujero de paso M4 de riel, por la cara que mira al
-anillo — ahí aloja la cabeza del tornillo del riel; sin este cajeado la
-cabeza no tiene dónde meterse y la placa no cierra contra el anillo. El
-clip no lleva cajeado, solo su M4 de paso.
-
-*Fix round 1 (Tarea 6):* la primera versión del DXF de placa dibujaba el
-cajeado (Ø8) en el eje del riel **en vez de** el paso M4 — pieza
-inservible, la cabeza del tornillo caía dentro sin nada que la sujetara.
-Corregido antes de mandar a cortar; queda dicho porque un sobre de tamaño no
-lo cazaba (el bbox de la placa no cambia si un círculo interior mide 8 en
-vez de 4.5 — lo cazó `taladros_placas()` en `check_dxf.py`, que sí compara
-diámetros).
+(Las notas sobre los DXF de placa y su fix round — el cajeado dibujado en
+vez del paso M4 — quedan en el historial: la pieza es hoy el marco de la
+ventana, con las mismas dos mitades por agujero de riel, el paso M4 en el
+DXF y el cajeado como nota.)
 
 Las tres del chasis llevan su propio plano de plegado
 ([`renders/chasis-plano-plegado.png`](renders/chasis-plano-plegado.png)),
-porque un DXF de corte no dice de dónde doblar. Los seis desarrollos de
-aluminio (miembros, nariz, escuadra, marco de arriba, tapa del valle) no tienen plano de
+porque un DXF de corte no dice de dónde doblar. Los cuatro desarrollos de
+aluminio (miembro alto, talón, nariz, tapa del valle) no tienen plano de
 plegado dedicado — `renders/plano_chasis.py` cubre solo el acero — y siguen
 sin necesitarlo si el taller ya trabaja de los mismos DXF que el chasis. Los
 que no son a 90° (la nariz, el retorno de la meseta) llevan sus líneas escritas
@@ -334,11 +328,12 @@ del case y a la vez donde se apoya quien se levanta.
 
 Desde el 2026-08-27 **tampoco es plana**: lleva una pestaña de 21 mm doblada a
 90° en cada punta. **Desde el 2026-08-28 esa pestaña ya NO se atornilla al
-anillo**: se rosca pasante en la PLACA del valle (6 mm de pletina, ruling
-R3), porque su rosca caería a 13.7 mm del plano del valle y la franja del
-anillo solo admite hasta 10.25 antes de salir por la pared del rebaje. Sigue
-atando la banda a las dos placas del valle y convirtiéndola en diafragma a
-media altura — el ancla cambió de pieza, no la función.
+anillo**: se rosca pasante en el MARCO DE LA VENTANA (6 mm de pletina, ruling
+R3; hasta el 29-08 por la noche, en la placa del valle), porque su rosca
+caería a 13.7 mm del plano del valle y la franja del anillo solo admite
+hasta 10.25 antes de salir por la pared del rebaje. Sigue atando la banda a
+los dos marcos y convirtiéndola en diafragma a media altura — el ancla
+cambió de pieza, no la función.
 
 **Ninguna pieza de aluminio o de acero lleva nada de §3**: ni recocido, ni
 diamantado, ni el chaflán de 0.5. Esas tres cosas son del PMMA. Canto
@@ -358,7 +353,7 @@ maciza, vaciada por el centro con fresadora CNC.
   contorno real mide 307.4 × 256.2 mm, `costilla_2d`, con margen de sujeción
   y desbaste).
 - **SON DOS PIEZAS ESPEJADAS, uno derecho y uno izquierdo.** Mismo contorno y
-  misma ventana; el **rebaje, el chaflán de la ventana y las 16 roscas ciegas
+  misma ventana; el **rebaje, el chaflán de la ventana y las 14 roscas ciegas
   van en la cara OPUESTA de cada anillo**, porque la cara vista de cada uno
   mira hacia FUERA del case. Mecanizar los dos por el mismo lado da un anillo
   del revés, con el rebaje abriendo hacia fuera y el acrílico sin sitio donde
@@ -383,10 +378,14 @@ maciza, vaciada por el centro con fresadora CNC.
   en el CANTO INFERIOR** — a diámetro de broca, las del dorso según
   `costilla_dorso_2d.dxf`: broca **3.3 mm para M4**, broca
   **4.2 mm para M5**, **10 mm de profundidad útil** (14 mm de pletina menos
-  el margen que deja la puerta de anclajes). Son **16 roscas M4 por anillo**
+  el margen que deja la puerta de anclajes). Son **14 roscas M4 por anillo**
   — la cuenta que imprime `taladros_anillo()` sobre este mismo DXF: dos por
-  riel 3U, dos sobre el primer riel 1U, dos por brida de miembro trasero y
-  una por clip de retención — más **3 roscas M5 por anillo (6 en total, 2
+  riel 3U, dos sobre el primer riel 1U y dos en la pata del suelo (las doce
+  del marco de la ventana; las del suelo caen en x = 67.6 y 236.2, lejos de
+  los tres M5 de la tabla que entran por el canto en 44.6, 153.7 y 262.8 —
+  `guarda_marco_ventana()` lo mide) y dos de la brida del miembro alto; eran
+  16 con los clips y la brida del
+  miembro bajo, muertos el 29-08 por la noche — más **3 roscas M5 por anillo (6 en total, 2
   filas de 3) en el CANTO INFERIOR** para la tabla: esas NO salen en el DXF
   del dorso porque entran por el canto, no por la cara, así que van descritas
   aquí y no en el plano: al medio de los 14 mm de espesor, broca 4.2.
@@ -465,6 +464,13 @@ en cada una de las dos filas (una por anillo, 3 tornillos cada una):
 Con todos redondos, la tabla se raja por la fila o suelta los tornillos. Con
 todos alargados, se arrastra hacia un extremo y el vuelo del zócalo deja de ser
 simétrico.
+
+**Y catorce taladros pasantes de Ø4.5, redondos**: cuatro de las paticas
+(por debajo), tres de la nariz y tres del talón (las dos bandas de chapa que
+se atornillan a la tabla por su pie, desde dentro) y, desde el 2026-08-29 por
+la noche, **cuatro del chasis del PSU**, que apoya en la tabla y se atornilla
+desde abajo a tuercas remachables de su suelo. `guarda_zocalo()` y
+`taladros_talon()` los censan por posición.
 
 **Especie sin elegir.** Las cuentas del modelo van contra E = 11 000 MPa a favor
 de veta (nogal o arce). Roble da ~12 000 y sobra; un contrachapado da ~8 000 y

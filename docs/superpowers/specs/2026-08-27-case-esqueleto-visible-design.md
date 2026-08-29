@@ -25,6 +25,15 @@ zócalo de madera. Aportada por Samuel el 2026-08-27.
 > patch bay que iba a alojar es hoy la fila 1U. Lo que sí sigue vivo de aquí:
 > los dos miembros traseros, la fila 1U y el bonding. Ver
 > `2026-08-29-nariz-recta-valle-limpio-design.md`.
+>
+> **Enmienda del 2026-08-29, noche.** De los dos miembros traseros queda **uno más
+> el talón** (§4.2): el alto es una L — la meseta y la banda vista de atrás,
+> con sus bridas — y el bajo es un ángulo sobre la tabla sin bridas, porque la
+> trasera va dentro de las dos bandas y el diafragma se ata abajo a la tabla. La
+> comparación de inercia con el 2020 (§4.1) deja de ser la puerta: lo es la carga
+> real (`guarda_miembro_alto()`). Y el chasis del PSU, que aquí colgaba del
+> miembro bajo, va a la tabla. Ver
+> `2026-08-29-marco-ventana-banda-estructural-design.md`.
 
 ## 1. Qué cambia, en una frase
 

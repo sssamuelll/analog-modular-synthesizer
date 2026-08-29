@@ -246,15 +246,15 @@ function x_valle() =
 // dos Z-rail del 1U"). Lo que ata los anillos a media altura son los seis
 // rieles por sus placas, la tabla debajo y la trasera detras; el racking del
 // conjunto sigue siendo #203 y se cierra cargando el prototipo.
-function miembros_lista() = ["trasero bajo", "trasero alto"];
+function miembros_lista() = ["trasero alto", "talon"];
 function radio_giro_riel() = norm([rail_er_fondo, rail_er_alto]) / 2;
-// RETIRADO TAMBIEN t_costilla desde el 2026-08-29 (#234): la trasera se
-// rehunde el espesor del MARCO que la enmarca, para que la cara vista de ese
-// marco quede a ras del plano trasero y no 1.5 mm por delante de la cara de
-// los anillos. El acrilico va DENTRO del metal tambien por detras, que es la
-// misma regla que el costado dentro de la ventana del anillo.
-function miembro_x_trasera() = pts_perfil()[6].x - t_piel - t_costilla;
-function miembro_y_meseta() = pts_perfil()[5].y - marco_sup;
+// LA CARA INTERIOR DE LA TRASERA. La trasera va DENTRO de las dos bandas
+// (la del miembro alto arriba, la del talon abajo): su cara trasera contra la
+// cara interior de las bandas, rehundida t_costilla del plano trasero -- como
+// con el marco de la manana del 29, que es lo que la banda sustituye -- y de
+// ahi t_piel hacia dentro. GEMELA de x_tr en clearance_budget.py.
+function x_trasera_int() = pts_perfil()[6].x - t_piel - t_costilla;
+function y_meseta() = pts_perfil()[5].y - marco_sup;
 
 // LA VENTANA DEL VALLE: lo que queda libre entre los dos rieles 3U que miran al
 // valle, y es donde vive la fila 1U. Delante la manda el BARRIDO del riel del
@@ -265,23 +265,22 @@ function miembro_y_meseta() = pts_perfil()[5].y - marco_sup;
 function ventana_valle() =
     [centros_rail()[1].x + radio_giro_riel() + holgura_rail, x_valle()[1]];
 
-// Un M5 por miembro, atornillado por su punta al centro de la caja completa.
-function centro_miembro_bajo() = [miembro_x_trasera() - canal_fondo/2,
-                                  canal_ancho/2];
-function centro_miembro_alto() = [miembro_x_trasera() - canal_ancho/2,
-                                  miembro_y_meseta() - canal_ancho/2];
-// centros_miembro_punta() murio el 2026-08-28. Era la lista de los tres M5 que
-// atravesaban la costilla de chapa por la punta de cada miembro; el anillo no
-// lleva agujeros pasantes -- los miembros se atornillan a roscas ciegas de la
-// franja interior, con una brida de extremo (spec 5) que es cosa de la Tarea 3.
-// Los dos centros sueltos se quedan: paticas() usa el bajo.
+// EL TALON (2026-08-29, noche): la banda de abajo del plano trasero y su pie
+// sobre la tabla. Sustituye al miembro trasero bajo: un angulo de la misma
+// chapa, sin bridas ni rosca en el anillo -- se atornilla a la TABLA por el
+// pie, como la nariz --, que recibe la trasera en su banda y la asienta en
+// su pie. GEMELO de _talon() en clearance_budget.py.
+function talon_x_band() = pts_perfil()[6].x - t_costilla;   // cara interior de la banda
+function talon_x_pie()  = talon_x_band() - talon_pie;        // canto libre del pie
+function talon_m4_x()   = talon_x_pie() + 1.5*d_M4_paso;
+function centro_talon() = [talon_x_band() - talon_pie/2, banda_trasera/2];
 
-// Filas de la piel: no coinciden todas con el centro de la envolvente. La de
-// arriba vive en el alma vertical, por debajo de la meseta de marco_sup.
-function anclaje_piel_base() = centro_miembro_bajo();
-function anclaje_piel_remate() = [miembro_x_trasera() - t_costilla/2,
-                                  miembro_y_meseta() - marco_sup
-                                                     - canal_ancho/2];
+// Las dos filas de la trasera: a media banda, en la cara interior de cada
+// banda. La de abajo en la del talon, la de arriba en la del miembro alto.
+function anclaje_piel_base()   = [pts_perfil()[6].x - t_costilla/2,
+                                  banda_trasera/2];
+function anclaje_piel_remate() = [pts_perfil()[6].x - t_costilla/2,
+                                  pts_perfil()[5].y - banda_trasera/2];
 
 // --- redondeo del contorno, radio POR VERTICE --------------------------
 //
@@ -400,13 +399,14 @@ function redondear(P, R, sin_bombeo = []) =
 // DESDE EL 2026-08-29 (nota 2 de Samuel: "en vez de una nariz curva, una nariz
 // recta"): el vertice 0 no lleva radio sino CHAFLAN -- ver pts_contorno() --, y
 // los tres vertices que llevan chapa doblada encima (1 la nariz, 4 el retorno
-// de la meseta, 5 el marco de la trasera) comparten radio_chapa, que es el
-// radio exterior del doblez de esa chapa. radio_punta y radio_remate murieron
-// con esto; radio_trasero se queda solo con el 6.
+// de la meseta, 5 la banda del miembro alto, 6 la del talon) comparten
+// radio_chapa, que es el radio exterior del doblez de esa chapa. radio_punta
+// y radio_remate murieron con esto; radio_trasero (0) murio la noche del 29,
+// cuando el talon paso a doblar en P6 sobre la tabla.
 function radios_perfil() = [0,            radio_chapa,
                             radio_pico,   radio_valle,
                             radio_chapa,  radio_chapa,
-                            radio_trasero];
+                            radio_chapa];
 
 // EL CONTORNO DEL ANILLO NO ES pts_perfil(): el vertice 0 (frente-abajo) va
 // CHAFLANADO a 45 -- chaflan_nariz sobre cada arista -- y un chaflan son dos
@@ -533,419 +533,221 @@ module costilla_dorso_2d() {
         translate(c[0]) circle(d = c[1]);
 }
 
-// --- LAS PLACAS DE ANCLAJE Y LAS ROSCAS CIEGAS --------------------------
+// --- EL MARCO DE LA VENTANA Y LAS ROSCAS CIEGAS (2026-08-29, noche) -------
 //
 // El eje del M4 de cada riel cae a 15.90 de la silueta, o sea DENTRO del
 // rebaje, donde el anillo solo tiene 3 mm de labio: por ahi el tornillo sale
-// por la cara vista. Asi que el riel muere contra una PLACA apoyada en la
-// franja interior y es la placa la que va al anillo, con dos M4 a rosca
-// ciega. Los miembros hacen lo mismo con una BRIDA doblada de su blank.
+// por la cara vista. Asi que el riel muere contra una pletina apoyada en la
+// franja interior y es la pletina la que va al anillo, con dos M4 a rosca
+// ciega por riel. Fueron TRES PLACAS por costado, una por fila -- "la placa
+// es el marco de la fila" (Samuel, 28-08) -- mas dos clips en el suelo y una
+// escuadra en la trasera para retener el acrilico hacia dentro donde no
+// habia placa. Desde esta noche son UNA pieza: el MARCO DE LA VENTANA, la
+// misma pletina de t_placa corrida por los siete tramos del anillo, con el
+// contorno de la ventana por dentro (marco_fondo desde la silueta) y el
+// canto exterior donde toca en cada tramo:
 //
-// LA PLACA ES EL MARCO DE LA FILA: una por TRAMO y por costado, corrida de
-// esquina a esquina, no una por riel. Lo decidio Samuel el 2026-08-28 mirando
-// el render -- con placas sueltas de 28 quedaba una ranura de 6.15 mm abierta
-// en cada punta de cada fila y por ahi se veia el interior. El canto de 6 mm
-// de la placa corrida la tapa y se lee como el borde de aluminio de la fila.
+//   las tres filas          a la silueta: el canto visto de 6 que se lee
+//                           como el borde de aluminio de la fila
+//   frente, suelo, meseta   retirado retiro_marco() = t_costilla + hol_piel:
+//   y la cola de la cara    encima va chapa a ras de la silueta (la nariz y
+//   de arriba (el retorno)  su pie, el pie del talon, la meseta, el retorno)
+//   trasera                 retirado t_piel + t_costilla + tol_pmma() + 0.5:
+//                           detras estan la banda y la trasera, y delante de
+//                           un acrilico de +-1.2 no puede haber NADA a
+//                           distancia fija (guarda_trasera_dentro)
 //
-// TODO ESTO ES GEMELO de _placas(), _bridas() y _centros_rosca_ciega() en
-// clearance_budget.py, y quien las cruza es taladros_anillo() releyendo el
-// DXF del dorso. Si las dos lenguas se separan, el DXF lo canta.
+// Y UNA MUESCA sobre la brida del miembro alto, en la esquina trasera-alta:
+// la brida apoya en la cara del anillo -- fuera del barrido del panel, que
+// es lo que decide -- y el marco vive en esa misma franja, asi que se aparta.
+//
+// TODO ESTO ES GEMELO de _marco_ventana(), _roscas_marco(), _bridas() y
+// _centros_rosca_ciega() en clearance_budget.py, y quien las cruza es
+// taladros_anillo() y taladros_marco_ventana() en check_dxf releyendo los DXF.
 
-// [nombre, vertice de arranque, vertice de fin, rieles 3U (vacio = la fila
-// 1U), modo de corte de cada esquina honda, retiro extra en cada extremo]
-function tramos_placa() = [
-    ["cara_inf", 1, 2, [0, 1], ["", "bisectriz"], [retiro_placa_inf, 0]],
-    ["valle",    2, 3, [],     ["bisectriz", ""], [0, 0]],
-    ["cara_sup", 3, 4, [2, 3], ["", "45"],        [retiro_placa_sup, 0]]];
+// Tolerancia de espesor del PMMA: +-(0.4 + 0.1 x t), Schaeffer AG (2026-08-18).
+function tol_pmma() = 0.4 + 0.1*t_cheek;
+function retiro_marco() = t_costilla + hol_piel;
+function retiro_marco_trasera() = t_piel + t_costilla + tol_pmma() + 0.5;
 
-// Cuanto se retira la placa del vertice i: la TANGENTE de su redondeo si el
-// vertice es convexo -- ahi el contorno se mete hacia dentro y una esquina de
-// placa apoyada en la recta se saldria de la silueta -- y CERO si es concavo,
-// porque ahi el redondeo aparta el contorno y la placa puede pasar de largo.
-// El perfil se recorre en sentido HORARIO: convexo es producto vectorial < 0.
-function retiro_placa(i) =
+// Cuanto se retira una pata del vertice i: la TANGENTE de su redondeo si el
+// vertice es convexo -- ahi el contorno se mete hacia dentro y una esquina
+// apoyada en la recta se saldria de la silueta -- y CERO si es concavo. El
+// perfil se recorre en sentido HORARIO: convexo es producto vectorial < 0.
+function retiro_vertice(i) =
     let (P = pts_perfil(), m = len(P),
          A = P[(i + m - 1) % m], V = P[i], B = P[(i + 1) % m],
          cruz = (V.x - A.x)*(B.y - V.y) - (V.y - A.y)*(B.x - V.x))
     cruz < 0 ? tangente(V, A - V, B - V, radios_perfil()[i]) : 0;
 
-function ang_vertice(i) =
-    let (P = pts_perfil(), m = len(P))
-    _ang(P[(i + m - 1) % m] - P[i], P[(i + 1) % m] - P[i]);
-
-// [ds, db] del corte de una esquina honda. Dos cortes distintos:
-//   "bisectriz"  reparte el rincon con la placa VECINA -- las dos quieren la
-//                misma cuna de material y hay que partirla. Un chaflan de 45
-//                no vale: con el pico a 125 grados y 26 de fondo pediria un
-//                corte de 30 sobre una placa de 26 de honda.
-//   "45"         libra una pieza concreta, la brida del miembro trasero alto.
-// El corte se mide desde el VERTICE y la placa ya arranca retirada de el.
-function corte_placa(i, fondo, retiro, modo, fin) =
-    modo == "45"        ? [placa_chaflan, placa_chaflan] :
-    modo != "bisectriz" ? [0, 0] :
-    let (parte = ang_vertice(i) * (fin ? reparto_rincon : 1 - reparto_rincon))
-    [max(0, fondo/tan(parte) - retiro), fondo];
-
-// [nombre, A, u, n, s0, s1, fondo, cortes, ejes]. A es el vertice de arranque
-// del tramo; un punto de la placa es A + u*s + n*b. `ejes` lleva, por cada
-// riel que recoge, [s del eje, punto, si lleva sus dos roscas ciegas].
-function placas() =
+// LAS TRES PATAS DE LAS FILAS, que son las que recogen rieles: [nombre, A, u,
+// n, s0, s1, ejes]. A es el vertice de arranque del tramo; un punto de la
+// pata es A + u*s + n*b. `ejes` lleva, por cada riel, [s del eje, punto, si
+// lleva sus dos roscas ciegas]. La cara de abajo cede retiro_placa_inf en P1
+// (ahi el canto exterior va retirado bajo la nariz y la pata sigue) y el
+// valle se alarga hasta cubrir el cajeado de su segundo riel, pasado P3.
+function patas_filas() =
     let (P = pts_perfil(), cr = centros_rail(), c1u = centros_rail_1u())
-    [for (t = tramos_placa())
+    [for (t = [["cara_inf", 1, 2, [0, 1], retiro_placa_inf],
+               ["valle",    2, 3, [],     0],
+               ["cara_sup", 3, 4, [2, 3], retiro_placa_sup]])
         let (A = P[t[1]], B = P[t[2]], L = norm(B - A),
              u = (B - A)/L, n = [u.y, -u.x],
-             s0 = retiro_placa(t[1]) + t[5][0],
-             s1v = L - retiro_placa(t[2]) - t[5][1],
              tres = len(t[3]) > 0,
              centros = tres ? [for (i = t[3]) cr[i]] : c1u,
              // LA SEGUNDA 1U NO LLEVA ROSCAS y no es un olvido: radio_valle
-             // vale 54 y curva la franja del valle -- su fondo util pasa de
-             // 8.51 en x=128 a 12.45 en x=148 --, asi que una broca puesta
-             // ahi sale por la pared del rebaje.
+             // vale 54 y curva la franja del valle, y una broca puesta ahi
+             // sale por la pared del rebaje.
              ejes = [for (k = [0 : len(centros) - 1])
                         [(centros[k] - A)*u, centros[k], tres || k == 0]],
-             // la placa del valle se alarga hasta cubrir el cajeado de su
-             // segundo riel, que cae PASADO P3; puede pasarse porque ese
-             // vertice es concavo y el redondeo aparta ahi el contorno
+             s0 = retiro_vertice(t[1]) + t[4],
+             s1v = L - retiro_vertice(t[2]),
              s1 = tres ? s1v
-                       : max(s1v, max([for (e = ejes) e[0]]) + 2*d_M4_paso),
-             // TODAS placa_fondo desde el 2026-08-29: la del valle era mas
-             // honda por las dos lenguetas de la bahia, y la bahia murio.
-             fondo = placa_fondo)
-        [t[0], A, u, n, s0, s1, fondo,
-         [corte_placa(t[1], fondo, s0, t[4][0], false),
-          corte_placa(t[2], fondo, L - s1, t[4][1], true)],
-         ejes]];
+                       : max(s1v, max([for (e = ejes) e[0]]) + 2*d_M4_paso))
+        [t[0], A, u, n, s0, s1, ejes]];
+function pata(nombre) = [for (q = patas_filas()) if (q[0] == nombre) q][0];
 
-// Las esquinas de la placa con sus dos esquinas hondas ya cortadas. Un corte
-// de bisectriz se lleva el fondo entero (db = fondo) y entonces su vertice de
-// arriba coincide con el del canto: se omite, que una arista de largo cero
-// rompe el SAT del presupuesto y no le gusta a polygon().
-function esquinas_placa(pl) =
-    let (A = pl[1], u = pl[2], n = pl[3], s0 = pl[4], s1 = pl[5], f = pl[6],
-         c0 = pl[7][0], c1 = pl[7][1],
-         ab = concat([[s0, 0]],
-                     c1[0] <= 0 ? [[s1, 0], [s1, f]] :
-                     c1[1] >= f ? [[s1, 0], [s1 - c1[0], f]]
-                                : [[s1, 0], [s1, f - c1[1]], [s1 - c1[0], f]],
-                     c0[0] <= 0 ? [[s0, f]] :
-                     c0[1] >= f ? [[s0 + c0[0], f]]
-                                : [[s0 + c0[0], f], [s0, f - c0[1]]]))
-    [for (q = ab) A + u*q[0] + n*q[1]];
+// La pata del suelo del marco, de P6 al chaflan: [A, u, n, s0, s1]. Arranca
+// donde manda la pata trasera (retiro_marco_trasera tras P6) y acaba en el
+// retiro del chaflan. Lleva DOS roscas ciegas, a rosca_suelo_retiro de cada
+// extremo: el trabajo que hacian las de los clips. GEMELA de la pata "suelo"
+// de _marco_ventana() y de las "marco suelo" de _roscas_marco().
+function pata_suelo() =
+    let (P = pts_perfil(), A = P[6], B = [chaflan_nariz, 0], L = norm(B - A),
+         u = (B - A)/L, n = [u.y, -u.x])
+    [A, u, n, max(retiro_vertice(6), retiro_marco_trasera()), L - retiro_marco()];
+function roscas_suelo() =
+    let (q = pata_suelo())
+    [for (s = [q[3] + rosca_suelo_retiro, q[4] - rosca_suelo_retiro])
+        q[0] + q[1]*s + q[2]*dist_rosca_ciega];
 
-// La brida de extremo de los dos miembros traseros. Regla de chapa: el
-// agujero no entra en la zona del doblez (setback + 2t + radio).
+// Las dos roscas ciegas de cada riel: eje +- sep_rosca_riel a lo largo del
+// tramo, a dist_rosca_ciega de la silueta. Doce por anillo: diez de las filas
+// y dos en la pata del suelo (roscas_suelo). EL PAR SE ARRIMA
+// AL RIEL PERO NO SE SALE DE SU PATA: se corre lo justo para que las dos
+// queden a 1.6 D de los extremos de la pata -- el de la cara de arriba en P3
+// esta a retiro_placa_sup del vertice porque ahi el redondeo concavo
+// estrecha la franja y la rosca sale por el rebaje. GEMELA de _roscas_marco().
+function centro_par_rosca(q, e) =
+    let (canto = 1.6*d_M4_paso)
+    min(max(e[0], q[4] + canto + sep_rosca_riel),
+        q[5] - canto - sep_rosca_riel);
+function roscas_marco() =
+    concat([for (q = patas_filas(), e = q[6], s = [-sep_rosca_riel, sep_rosca_riel])
+                if (e[2]) q[1] + q[2]*(centro_par_rosca(q, e) + s) + q[3]*dist_rosca_ciega],
+           roscas_suelo());
+// Los seis pasos M4 de riel (con cajeado por el lado del anillo).
+function ejes_marco() = [for (q = patas_filas(), e = q[6]) e[1]];
+
+// La brida de extremo del miembro alto: sus dos M4 en la franja de la meseta.
+// Regla de chapa: el agujero no entra en la zona del doblez (setback + 2t +
+// radio). Dobla del EXTREMO DE LA BANDA, en el plano trasero, y apoya en la
+// cara del anillo: fuera del barrido del panel, con el marco muescado encima.
 function brida_raiz() = radio_doblez_costilla + 3*t_costilla + d_M4_paso/2;
-function brida_xs() = [miembro_x_trasera() - brida_raiz(),
-                       miembro_x_trasera() - brida_largo + 1.5*d_M4_paso];
+function brida_x_dob() = pts_perfil()[6].x - t_costilla;
+function brida_xs() = [brida_x_dob() - brida_raiz(),
+                       brida_x_dob() - brida_largo + 1.5*d_M4_paso];
 function bridas_anillo() =
-    let (P = pts_perfil(), xs = brida_xs())
-    concat([for (x = xs) [x, P[0].y + dist_rosca_ciega]],
-           [for (x = xs) [x, P[5].y - dist_rosca_ciega]]);
+    let (P = pts_perfil()) [for (x = brida_xs()) [x, P[5].y - dist_rosca_ciega]];
 
-// [centro, diametro de broca] de cada rosca ciega de la cara interior. Las de
-// la TABLA no estan: van en el CANTO inferior del anillo, no en el dorso, y
-// un DXF de la cara no sabe dibujar un taladro que entra por el canto (van en
-// el pliego, Tarea 5). Las de la bahia y la pestana del valle tampoco: esas
-// se roscan en los 6 mm de la placa del valle, no en el anillo (ruling R3).
+// [centro, diametro de broca] de cada rosca ciega de la cara interior: CATORCE
+// por anillo, doce del marco y dos de la brida. Las de la TABLA no estan: van
+// en el CANTO inferior del anillo y un DXF de la cara no sabe dibujar un
+// taladro que entra por el canto (pliego). La de la pestana del valle
+// tampoco: se rosca en los 6 mm del marco (ruling R3).
 function centros_rosca_ciega() =
-    concat([for (pl = placas(), c = roscas_placa(pl)) [c, d_M4_rosca]],
-           [for (c = bridas_anillo()) [c, d_M4_rosca]],
-           [for (c = roscas_clips()) [c, d_M4_rosca]]);
+    concat([for (c = roscas_marco()) [c, d_M4_rosca]],
+           [for (c = bridas_anillo()) [c, d_M4_rosca]]);
 
-// Hasta donde llega una rosca a la profundidad de dist_rosca_ciega sin
-// acercarse a un extremo de la placa mas de 1.6 D. El margen NO es s1 - s
-// cuando ese extremo va cortado: el corte entra en diagonal y se come mas de
-// lo que parece -- 3.11 mm en la placa de la cara inferior, a esa altura.
-// 1.6 D y no 1.5 porque la puerta exige 1.5, y una cota puesta justo en el
-// limite de su propia puerta vive del redondeo de coma flotante.
-function limite_rosca(pl, ext, corte, signo) =
-    let (f = pl[6], d = dist_rosca_ciega, canto = 1.6*d_M4_paso,
-         ds = corte[0], db = corte[1])
-    (ds <= 0 || d <= f - db)
-        ? ext + signo*canto
-        : ext + signo*(ds*(d - (f - db))/db + canto*norm([ds, db])/db);
-
-// EL PAR SE ARRIMA A SU RIEL PERO NO SE SALE DE LA PLACA. La regla en crudo
-// -- eje +- sep_rosca_riel -- deja la rosca del riel del frente a 1.01 mm del
-// canto, porque ese riel arranca casi pegado al vertice P1.
-function centro_par_rosca(pl, e) =
-    let (lo = limite_rosca(pl, pl[4], pl[7][0],  1),
-         hi = limite_rosca(pl, pl[5], pl[7][1], -1))
-    min(max(e[0], lo + sep_rosca_riel), hi - sep_rosca_riel);
-
-function roscas_placa(pl) =
-    [for (e = pl[8], q = [-sep_rosca_riel, sep_rosca_riel]) if (e[2])
-        pl[1] + pl[2]*(centro_par_rosca(pl, e) + q) + pl[3]*dist_rosca_ciega];
-
-// El M3 con el que la pestana de la banda del valle se atornilla a la placa.
+// El M3 con el que la pestana de la banda del valle se atornilla al marco, a
+// diametro de broca y de lado a lado -- 6 mm de pletina dan rosca de sobra.
 function m3_pestana() = [pv_x(), pts_perfil()[3].y - pv_a()];
+function roscas_marco_m3() = [[m3_pestana(), d_M3_rosca]];
 
-// Lo que se rosca EN la placa del valle y no en el anillo (ruling R3): el M3
-// de cada pestana de la banda. Va a diametro de broca y de lado a lado -- 6 mm
-// de pletina dan rosca de sobra, y roscar pasante es lo que el taller
-// prefiere. Hasta el 2026-08-29 iban aqui tambien los dos M4 de las lenguetas
-// de la bahia; murieron con ella.
-function roscas_placa_valle() = [[m3_pestana(), d_M3_rosca]];
+// LA MUESCA DE LA BRIDA: [x_min, y_min]; todo lo que quede a x >= x_min e
+// y >= y_min se corta del marco. GEMELA de _muesca_brida().
+function muesca_brida() =
+    [brida_x_dob() - brida_largo - hol_piel,
+     pts_perfil()[5].y - t_costilla - brida_ancho - 0.5];
 
-// La placa, en 3D: sobre la cara interior del anillo, con los pasos M4 a sus
-// roscas ciegas y, por cada riel que recoge, el paso del M4 del riel con su
-// cajeado POR EL LADO DEL ANILLO -- ahi va la cabeza, y por eso la placa mide
-// 6: debajo de ella hay acrilico hasta z = 13.2 y una cabeza que asome lo
-// pinza. Orden de montaje: primero el riel a la placa, despues la placa al
-// anillo. Al reves no se puede apretar.
-module placa_riel(pl) {
+// Las bandas que retiran el canto exterior del marco de la silueta, una por
+// tramo bajo chapa: [A, B, s0, s1, retiro], con s en mm desde A. Pasarse de
+// largo por las puntas es a proposito: en una esquina entre dos tramos
+// retirados manda el retiro mayor, y la banda que se pasa se lo come.
+function bandas_marco() =
+    let (P = pts_perfil(), C = pts_contorno(), r = retiro_marco(),
+         s0_inf = retiro_vertice(1) + retiro_placa_inf,
+         L_sup = norm(P[4] - P[3]))
+    [[C[0], C[1], -5, norm(C[1] - C[0]) + 5, r],                 // chaflan
+     [C[1], P[1], -5, norm(P[1] - C[1]), r],                      // frente
+     [P[1], P[2], -5, s0_inf, r],                                 // cara de abajo, bajo la nariz
+     [P[3], P[4], L_sup - (retorno_meseta + 1), L_sup + 5, r],    // cola, bajo el retorno
+     [P[4], P[5], -5, norm(P[5] - P[4]) + 5, r],                  // meseta
+     [P[5], P[6], -5, norm(P[6] - P[5]) + 5, retiro_marco_trasera()],  // trasera
+     [P[6], C[0], -5, norm(C[0] - P[6]) + 5, r]];                 // suelo
+module banda_marco_2d(b) {
+    A = b[0]; B = b[1]; u = (B - A)/norm(B - A); n = [u.y, -u.x];
+    polygon([A + u*b[2] - n*5, A + u*b[3] - n*5,
+             A + u*b[3] + n*b[4], A + u*b[2] + n*b[4]]);
+}
+
+// La pletina sin taladros: la silueta menos las bandas de retiro, menos la
+// ventana a marco_fondo, menos la muesca de la brida.
+//
+// EL CANTO INTERIOR ES RECTO: marco_fondo desde las ARISTAS del perfil
+// (pts_perfil, sin redondear), no desde la silueta redondeada. Da lo mismo
+// en las esquinas convexas -- el offset hacia dentro de un redondeo convexo
+// es una esquina viva igual --, pero en P3, el rincon concavo de radio 54,
+// el offset de la silueta sube en arco y dejaba el paso del segundo riel 1U
+// a 6.26 del canto (check_dxf lo cazo). Con las aristas rectas el marco es
+// mas hondo en ese rincon -- pisa 9 de acrilico en vez de 6, sin
+// consecuencia -- y el paso se queda a 10.
+module marco_contorno_2d() {
+    difference() {
+        perfil_lateral();
+        for (b = bandas_marco()) banda_marco_2d(b);
+        offset(delta = -marco_fondo) polygon(pts_perfil());
+        translate(muesca_brida()) square([100, 100]);
+    }
+}
+
+// EL DXF DEL MARCO: contorno y taladros de PASO. Diez M4 al anillo, seis M4
+// de riel y la rosca M3 de la pestana. La brida del miembro alto NO lo
+// atraviesa: ahi el marco lleva la muesca y la brida va directa al anillo.
+// EL CAJEADO NO SE
+// DIBUJA: un DXF 2D no sabe decir "a 2.5 mm de profundidad" -- va como NOTA
+// DE MECANIZADO en el pliego (Ø8 x prof_cajeado_riel en cada paso M4 de
+// riel, por la cara que mira al anillo: el lado espejado comparte contorno y
+// se cajea por la otra cara). Lo relee taladros_marco_ventana() en check_dxf.
+module marco_ventana_2d() {
+    difference() {
+        marco_contorno_2d();
+        for (c = roscas_marco())  translate(c) circle(d = d_M4_paso + kerf);
+        for (c = ejes_marco())    translate(c) circle(d = d_M4_paso + kerf);
+        for (r = roscas_marco_m3()) translate(r[0]) circle(d = r[1]);
+    }
+}
+
+// El marco en 3D, sobre la cara interior del anillo, con el cajeado de cada
+// riel por el lado del anillo. ORDEN DE MONTAJE OBLIGADO: primero los seis
+// rieles al marco (la cabeza queda en el cajeado, del lado que despues mira
+// al anillo), despues el marco al anillo desde dentro -- con el costado YA
+// asentado en el rebaje, porque el marco lo pisa. Al reves no se puede.
+module marco_ventana() {
     translate([0, 0, t_anillo]) difference() {
-        linear_extrude(t_placa) polygon(esquinas_placa(pl));
-        for (c = roscas_placa(pl))
+        linear_extrude(t_placa) marco_ventana_2d();
+        for (c = ejes_marco())
             translate(concat(c, [-0.1]))
-                cylinder(h = t_placa + 0.2, d = d_M4_paso + kerf);
-        for (e = pl[8]) {
-            translate(concat(e[1], [-0.1]))
-                cylinder(h = t_placa + 0.2, d = d_M4_paso + kerf);
-            translate(concat(e[1], [-0.1]))
                 cylinder(h = prof_cajeado_riel + 0.1, d = d_cajeado_riel);
-        }
-        if (pl[0] == "valle")
-            for (r = roscas_placa_valle())
-                translate(concat(r[0], [-0.1]))
-                    cylinder(h = t_placa + 0.2, d = r[1]);
     }
 }
 
-// Seis placas: tres por costado, espejadas.
-module placas_riel() {
-    for (pl = placas())
-        for (m = [0, 1])
-            translate([0, 0, m ? ancho_total : 0])
-                mirror([0, 0, m])
-                    placa_riel(pl);
-}
-
-// --- LOS DXF DE LAS PLACAS (Tarea 6, item del controller) ---------------
-//
-// EL LADO ESPEJADO NO PIDE UN DXF PROPIO. mirror([0,0,1]) es una reflexion
-// en Z: no toca x ni y, y esquinas_placa() vive enteramente en el plano xy
-// del perfil. O sea que las placas de los dos costados comparten el MISMO
-// contorno -- una placa por TRAMO, no por costado -- y el pedido de corte va
-// "x2" en la linea del BOM en vez de duplicar el fichero.
-//
-// EN COORDENADAS DEL ANILLO, sin transformar a un marco local por placa: las
-// mismas x,y que esquinas_placa()/roscas_placa() ya usan. Se elige a
-// proposito para que taladros_placas() en check_dxf.py compare centro a
-// centro contra _esquinas_placa()/_roscas_placa() de clearance_budget.py sin
-// deshacer ningun giro ni desplazamiento -- la MISMA razon por la que
-// costilla_2d()/costilla_dorso_2d() tampoco usan un marco local.
-//
-// EL DXF LLEVA EL AGUJERO QUE FUNCIONA, no el mayor de los dos que
-// placa_riel() corta en 3D. FIX ROUND 1 (Tarea 6): la primera version de
-// este modulo dibujaba aqui el CAJEADO (d_cajeado_riel = 8, bolsillo de
-// prof_cajeado_riel = 2.5 por el lado del anillo) en el eje de cada riel, y
-// se dejaba fuera el agujero de PASO M4 que de verdad atraviesa la placa y
-// por donde entra el tornillo del riel. Cortada tal cual, la cabeza del
-// tornillo cae dentro de un agujero de 8 mm sin nada que la tope y el riel
-// no queda atornillado a nada -- pieza inservible, no una pieza distinta.
-// Lo caza taladros_placas() en check_dxf.py. PLIEGO.md (S6) documenta las
-// DOS mitades del agujero: el paso M4 funcional, que el DXF SI dibuja, y el
-// cajeado de Ø8 x 2.5 por el lado del anillo, que el DXF NO dibuja (va como
-// NOTA DE MECANIZADO) -- la version anterior de este modulo dibujaba
-// exactamente al reves: el cajeado si, el paso M4 no.
-//
-// EL CAJEADO NO SE DIBUJA AQUI, y no es un descuido: un DXF 2D no sabe
-// decir "a 2.5 mm de profundidad" -- el mismo caso que el rebaje de
-// costilla_dorso_2d y el cajeado KONDOR (ver esos modulos). Va como NOTA DE
-// MECANIZADO en el pliego (Ø8 x prof_cajeado_riel, centrado en cada paso M4
-// de riel, por la cara que mira al anillo), no como corte en este fichero.
-module placa_2d(pl) {
-    difference() {
-        polygon(esquinas_placa(pl));
-        for (c = roscas_placa(pl))
-            translate(c) circle(d = d_M4_paso + kerf);
-        for (e = pl[8])
-            translate(e[1]) circle(d = d_M4_paso + kerf);
-        // SOLO LA PLACA DEL VALLE: el M3 de la pestana de la banda y el M4
-        // de cada lengueta de la bahia, los DOS que roscas_placa_valle()
-        // rosca PASANTE en la propia placa (ruling R3) y no en el anillo.
-        if (pl[0] == "valle")
-            for (r = roscas_placa_valle())
-                translate(r[0]) circle(d = r[1]);
-    }
-}
-
-// Busca el tramo por nombre en vez de indexar placas()[i]: si algun dia
-// tramos_placa() cambia de orden, un indice fijo exportaria la placa
-// equivocada bajo el nombre equivocado sin que nada lo avise.
-function _placa(nombre) = [for (pl = placas()) if (pl[0] == nombre) pl][0];
-
-module placa_cara_inf_2d() { placa_2d(_placa("cara_inf")); }
-module placa_valle_2d()    { placa_2d(_placa("valle")); }
-module placa_cara_sup_2d() { placa_2d(_placa("cara_sup")); }
-
-// --- LOS CLIPS DE RETENCION DEL ACRILICO -------------------------------
-//
-// EL REBAJE SUJETA UNA SOLA CARA. El labio de 3 mm pisa el acrilico por
-// DELANTE: tirar del costado no lo mueve. Empujarlo hacia DENTRO si -- entre
-// la cara del PMMA (z = rehundido + t_cheek = 11) y la cara interior del
-// anillo (z = t_anillo = 14) hay aire, y por ahi el costado se sale del
-// rebaje. Estos clips son el TOPE de ese lado.
-//
-// SON TOPE Y NO PRECARGA, y la diferencia importa al montarlo: la precarga la
-// da la junta de asiento contra el labio, que es lo que quita el traqueteo. El
-// clip se queda a 3 mm de la cara del PMMA en nominal y a 0.8 en el peor
-// apilado de tolerancias (z = 13.2, la cuenta esta en guarda_anclajes). O sea
-// que en reposo NO toca el acrilico: solo aparece cuando alguien empuja.
-//
-// LOS CUATRO TRAMOS SIN PLACA son el frente bajo, la meseta, la trasera y el
-// suelo -- en los otros tres la placa de anclaje corre el tramo entero y ya
-// hace de tope --, y de esos cuatro SOLO EL SUELO tiene franja libre donde
-// atornillar. El por que de cada uno esta en TRAMOS_CLIP, en
-// clearance_budget.py, con los milimetros que quedan en cada sitio.
-//
-// GEMELO de _clips(), _cajas_clip() y _roscas_clips() en clearance_budget.py;
-// los cruza taladros_anillo() releyendo el DXF del dorso.
-
-// [nombre del tramo, vertice de arranque, vertice de fin, s del centro sobre
-// el tramo]. Quien decide la lista es guarda_costado() en check_dxf.py.
-function tramos_clip() = [["suelo", 6, 0, 50], ["suelo", 6, 0, 150]];
-
-// [nombre, esquinas, centro de la rosca ciega]. Misma convencion que
-// placas(): A el vertice de arranque, u a lo largo del tramo y n hacia dentro.
-function clips() =
-    let (P = pts_perfil())
-    [for (t = tramos_clip())
-        let (A = P[t[1]], B = P[t[2]], L = norm(B - A),
-             u = (B - A)/L, n = [u.y, -u.x],
-             s0 = t[3] - clip_largo/2, s1 = t[3] + clip_largo/2)
-        [str(t[0], " ", t[3]),
-         [A + u*s0, A + u*s1, A + u*s1 + n*clip_fondo, A + u*s0 + n*clip_fondo],
-         A + u*t[3] + n*dist_rosca_ciega]];
-
-function roscas_clips() = [for (c = clips()) c[2]];
-
-// El clip, en 3D: sobre la cara interior del anillo, con el paso de su M4. La
-// cabeza queda a la vista por dentro y no estorba a nadie -- aqui no hay nada
-// apoyado encima, al reves que en la placa del riel.
-module clips_costado() {
-    for (c = clips())
-        for (m = [0, 1])
-            translate([0, 0, m ? ancho_total : 0])
-                mirror([0, 0, m])
-                    translate([0, 0, t_anillo])
-                        difference() {
-                            linear_extrude(t_clip) polygon(c[1]);
-                            translate(concat(c[2], [-0.1]))
-                                cylinder(h = t_clip + 0.2, d = d_M4_paso + kerf);
-                        }
-}
-
-// El DXF del clip (Tarea 6, item del controller): pieza GENERICA, no una
-// por tramo ni por s -- clips() coloca CUATRO (dos tramos x dos costados
-// espejados) pero los cuatro son el mismo rectangulo de clip_largo x
-// clip_fondo con un M4 centrado a dist_rosca_ciega de un canto, asi que un
-// solo DXF basta y se corta x4 (BOM). Dibujado en su propio marco local
-// (0,0)-(clip_largo, clip_fondo), no en coordenadas del anillo como las
-// placas: al reves que ellas, este contorno no depende de en que tramo ni a
-// que s vaya el clip, asi que no hay un "clip()" concreto contra el que
-// comparar -- check_dxf.py lo verifica contra clip_largo/clip_fondo/
-// dist_rosca_ciega sueltos, los mismos parametros con que _clips() arma
-// cada instancia.
-module clip_2d() {
-    difference() {
-        square([clip_largo, clip_fondo]);
-        translate([clip_largo/2, dist_rosca_ciega]) circle(d = d_M4_paso + kerf);
-    }
-}
-
-// El solido: cara vista en z=0, cara interior en z=t_anillo. El chaflan se
-// construye como laminas de offset() creciente -- seis de 0.25 -- porque un
-// chaflan exacto sobre un contorno concavo no sale de hull() ni barato de
-// minkowski(); para el render y para solapes() basta y es determinista.
-// --- EL MARCO DE LA TRASERA (#234, 2026-08-29) --------------------------
-// DOS PIEZAS DE LA MISMA CHAPA QUE LOS MIEMBROS, y no una porque no hacen lo
-// mismo. Hasta hoy la trasera era la pieza MAS EXTERIOR de la cara de atras:
-// su cara de PMMA quedaba a ras del plano trasero y sus dos cantos, el de
-// arriba y el de abajo, corrian los 540 mm sin un mm de metal encima. El de
-// arriba era ademas los ultimos 8 mm del PICO del case -- la meseta se queda
-// t_piel corta por detras y ese trozo lo cubria el canto del acrilico, escrito
-// negro sobre blanco en guarda_remate() --, o sea acrilico visto en la
-// superficie que se mira desde arriba. Es lo que abrio #234.
-//
-// La regla que ya gobierna el costado se aplica igual aqui: el acrilico va
-// DENTRO del metal. La trasera se rehunde t_costilla (ver miembro_x_trasera())
-// y lo que asoma al plano trasero es este marco.
-//
-//   marco_trasera_sup   una L. El ala A es la banda vista; el ala B dobla en
-//                       el canto de arriba del acrilico, corre hacia delante
-//                       t_piel + t_costilla y muere contra el doblez de la
-//                       meseta, con la que queda COPLANAR: el pico del case
-//                       pasa a ser metal de punta a punta.
-//   marco_trasera_inf   una pletina plana, sin ala B, y la razon es fisica: el
-//                       canto de abajo del acrilico esta EN EL PLANO DEL SUELO
-//                       (y = 0) y lo que tiene debajo es la tabla, no aire. Un
-//                       ala ahi no taparia un canto abierto: levantaria el case
-//                       1.5 mm de su propia base.
-//
-// Los dos se atornillan con la fila de M3 que la trasera YA lleva a su miembro
-// -- no hay taladro nuevo en el acrilico, solo tornillos mas largos --, y eso
-// tiene un segundo efecto: las dos filas de cabezas que se veian sobre el PMMA
-// pasan a verse sobre metal.
-//
-// GEMELOS de _marcos_trasera() y guarda_marco_trasera() en clearance_budget.py.
-
-// El canto de arriba del acrilico, que es donde dobla el ala B.
-function marco_trasera_yt() = miembro_y_meseta();
-// Lo que el ala B tiene que tapar: el canto del PMMA mas el rehundido. Muere
-// exactamente en el doblez de la meseta (miembro_x_trasera()).
-function marco_trasera_vuelo() = t_piel + t_costilla;
-// Donde cae la fila de M3 de cada banda MEDIDA DESDE SU CANTO LIBRE. La de
-// arriba cuelga del canto del acrilico hacia abajo; la de abajo nace en el
-// suelo. Las dos son la misma fila que ya lleva la trasera.
-function marco_trasera_m3_sup() = marco_trasera_ancho
-                                  - (marco_trasera_yt() - anclaje_piel_remate().y);
-function marco_trasera_m3_inf() = anclaje_piel_base().y;
-// Desarrollo de la L: las dos alas por su cota exterior menos un BD, igual que
-// la escuadra y que los tres miembros.
-function marco_trasera_desarrollo() = marco_trasera_ancho + marco_trasera_vuelo()
-                                      - miembro_bd();
-
-// El largo de las dos bandas es el MISMO de la trasera, y por eso sus M3 caen
-// en la misma x del dibujo sin recalcular nada: fila_agujeros() con el mismo
-// largo reparte los mismos centros.
-function marco_trasera_largo() = ancho_util - 2*hol_piel;
-
-// Desarrollo del de arriba. El origen en y es el CANTO LIBRE del ala A (el que
-// mira al centro del case), asi que el M3 cae donde lo pone marco_trasera_m3_sup()
-// sin que el doblez entre en la cuenta -- un canto libre no se mueve al plegar.
-module marco_trasera_sup_2d() {
-    difference() {
-        square([marco_trasera_largo(), marco_trasera_desarrollo()]);
-        fila_agujeros(marco_trasera_largo(), marco_trasera_m3_sup());
-    }
-}
-
-module marco_trasera_inf_2d() {
-    difference() {
-        square([marco_trasera_largo(), marco_trasera_ancho]);
-        fila_agujeros(marco_trasera_largo(), marco_trasera_m3_inf());
-    }
-}
-
-// Los dos puestos. El ala B se dibuja desde el doblez de la meseta hasta el
-// plano trasero y el ala A por debajo del canto del acrilico: se tocan en el
-// rincon sin pisarse, igual que las dos cajas de la escuadra.
-module marcos_trasera() {
-    P  = pts_perfil();
-    z0 = t_anillo + hol_piel;
-    az = marco_trasera_largo();
-    yt = marco_trasera_yt();
-    // el de arriba: ala A (la banda vista) + ala B (la que tapa el canto)
-    translate([P[6].x - t_costilla, yt - marco_trasera_ancho, z0])
-        cube([t_costilla, marco_trasera_ancho, az]);
-    translate([miembro_x_trasera(), yt, z0])
-        cube([marco_trasera_vuelo(), t_costilla, az]);
-    // el de abajo: solo banda
-    translate([P[6].x - t_costilla, 0, z0])
-        cube([t_costilla, marco_trasera_ancho, az]);
+// Dos marcos: uno por costado, espejados.
+module marcos_ventana() {
+    for (m = [0, 1])
+        translate([0, 0, m ? ancho_total : 0])
+            mirror([0, 0, m])
+                marco_ventana();
 }
 
 // --- LA NARIZ: la banda del frente (2026-08-29) --------------------------
@@ -973,7 +775,7 @@ module marcos_trasera() {
 //
 // GEMELA de _nariz(), _cajas_nariz() y bbox_desarrollo_nariz() en
 // clearance_budget.py; los taladros los cruza taladros_nariz() en check_dxf.
-function nariz_s_top() = _placa("cara_inf")[4] - hol_piel;
+function nariz_s_top() = pata("cara_inf")[4] - hol_piel;
 function nariz_largo() = ancho_util - 2*hol_piel;
 // El contorno EXTERIOR en el plano del perfil, del pie hacia arriba: pie sobre
 // la tabla, chaflan, frente vertical y el tramo de cara de abajo.
@@ -1121,193 +923,49 @@ module brida_3d(x0, y0, ancho_x, ancho_y, z0, largo) {
         translate([x0, y0, z]) cube([ancho_x, ancho_y, t_costilla]);
 }
 
-// --- LA ESCUADRA DE LA TRASERA: el tope del canto trasero del costado ---
+// --- EL MIEMBRO ALTO Y EL TALON: la banda es el miembro (2026-08-29) ------
 //
-// El por que entero esta en params.scad, en el bloque de escuadra_ala. En
-// corto: el canto TRASERO del acrilico corria 227 mm sin un solo tope hacia
-// dentro -- ahi no cabe clip -- y este angular se lo pone. Va atornillado a la
-// TRASERA, no al anillo.
+// El miembro alto es una L: la MESETA, del pico al plano trasero (prof_sup =
+// marco_remate), y la BANDA que baja por el plano trasero (banda_trasera), a
+// ras de el. La trasera se atornilla a la banda por dentro. Y el retorno de
+// la meseta en el pico, como ayer por la tarde. Pierde el retorno de 24 que
+// tenia como canal: la trasera vive donde el iba, y lo que aguanta SOLA la L
+// lo mide guarda_miembro_alto() -- es lo que puso la banda en 24.
 //
-// LAS DOS ALAS, y cual es cual:
-//   ala A  la que se atornilla. Plana contra la cara interior de la trasera
-//          (x = miembro_x_trasera()), de escuadra_ala de ancho en z desde la
-//          cara interior del anillo hacia dentro, con sus M3 pasantes.
-//   ala B  el TOPE. Perpendicular, tumbada sobre el plano de la cara interior
-//          del anillo (z = t_anillo .. t_anillo + t_costilla), volando hacia
-//          -x hasta la linea de la ventana.
+// El talon hace abajo lo que la nariz hace delante: la misma banda a ras del
+// plano trasero y un pie sobre la tabla, atornillado a ella desde dentro con
+// tres M4. Sin bridas ni rosca en el anillo: su fijacion es la tabla.
 //
-// ES TOPE CON CARRERA, como los clips, y por la misma razon: la precarga la
-// pone la junta de asiento contra el labio. El ala B se queda a 3 mm de la
-// cara del PMMA en nominal y a 0.8 en el peor apilado de tolerancias
-// (z = 13.2); en reposo NO toca el acrilico, solo aparece cuando alguien
-// empuja el costado hacia dentro. Y no toca el anillo: arranca exactamente en
-// su cara interior, con cero solape.
+// Con los dos murieron los MARCOS DE LA TRASERA de la manana: la banda vista
+// ES el alma, y el techo es una chapa del pico al canto, sin costura.
 //
-// GEMELA de _escuadras_trasera(), _cajas_escuadra() y _centros_m3_escuadra()
-// en clearance_budget.py; la puerta es guarda_escuadra_trasera().
+// Los desarrollos son para el taller; los solidos, para colisiones y render.
+// El miembro alto cruza ancho_util entre las caras interiores de los anillos
+// (sus bridas doblan ahi); el talon va hol_piel por dentro, como la trasera.
 
-// El vuelo del ala B, medido desde la cara interior de la trasera. DERIVADO:
-// su punta muere en la linea de la ventana del anillo (silueta - cara_anillo),
-// asi que por dentro pisa exactamente el acrilico que el labio pisa por fuera
-// y nada de lo que se ve. Con cara_anillo 20, t_piel 8 y el marco de 1.5 son
-// 10.5 mm, que pasan
-// el canto del acrilico en rebaje_anillo - hol_costado = 5.5.
-function escuadra_vuelo() = cara_anillo - t_piel - t_costilla;
-// Regla de chapa, la misma de brida_raiz() con el diametro del M3: el agujero
-// no entra en la zona del doblez. Setback + 2t + radio del agujero.
-function escuadra_raiz() = radio_doblez_costilla + 3*t_costilla + d_M3_paso/2;
-// Y donde cae ese mismo M3 en el DXF de la TRASERA, medido desde su canto: la
-// plancha arranca hol_piel mas adentro que la cara interior del anillo, que es
-// el origen desde el que se mide la raiz.
-function escuadra_m3_x() = escuadra_raiz() - hol_piel;
-// Y HASTA DONDE TAPA ESA ALA, en el plano de la trasera y medido desde su
-// canto. Mismo cambio de origen que escuadra_m3_x(): la plancha arranca
-// hol_piel mas adentro que la cara interior del anillo. Lo consume
-// rejilla_entrada(), que se salta las columnas que caigan aqui debajo -- una
-// ranura con 1.5 mm de aluminio encima no ventila, y guarda_aire() no puede
-// seguir contandola como area abierta.
-function escuadra_tapa() = escuadra_ala - hol_piel;
-
-// El largo corre entre las dos BRIDAS de los miembros traseros, retirado
-// escuadra_retiro de cada una: viven en la misma rebanada de z que el ala B.
-function escuadra_y0() = canal_ancho + escuadra_retiro;
-function escuadra_y1() = miembro_y_meseta() - canal_ancho - escuadra_retiro;
-function escuadra_largo() = escuadra_y1() - escuadra_y0();
-
-// LOS M3 NO SE REPARTEN POR TODA EL ALA, y esto es lo unico de esta pieza que
-// no sale de una regla de chapa. El ala A ocupa los primeros escuadra_ala mm
-// de la trasera contados desde su canto, y ahi CAIA la primera columna de la
-// rejilla de entrada (2 HP = 10.16 del canto): dentro de la banda no quedaba x
-// legal, porque entre dos columnas hay 6.16 mm de acrilico y dos margenes de
-// 1.5 D piden 10.2.
-//
-// DESDE LA REVISION DE LA TAREA 4b ESA COLUMNA YA NO SE CORTA -- la tapaba el
-// ala y guarda_aire() la estaba contando como area abierta --, o sea que hoy
-// SI cabria un M3 ahi: la ranura mas cercana pasa a estar a 20.32 del canto y
-// deja aire de sobra. Los tornillos se quedan igual por encima de la banda, y
-// no por inercia: la columna solo desaparece MIENTRAS el ala la tape, asi que
-// bajar un tornillo a ese hueco ataria la escuadra a su propia sombra.
-//
-// A QUE COTA VUELVE LA COLUMNA, que hasta el 2026-08-28 estaba mal escrito
-// aqui. Se cortaria de nuevo cuando escuadra_tapa() baje del borde de la
-// ranura, o sea cuando 2*hp - vent_ancho_ranura/2 >= escuadra_ala - hol_piel:
-// con hp = 5.08, vent_ancho_ranura = 3.75 y hol_piel = 0.15 eso da
-// escuadra_ala <= 8.435. Ese es el numero exacto -- el 8.44 de antes redondeaba
-// al alza, el lado permisivo -- y no el 14.3 que decia antes. 14.3 es OTRA
-// cota de esta misma ala -- escuadra_raiz + 1.5*d_M3_paso = 9.2 + 5.1, el
-// ancho minimo para que el M3 conserve 1.5 D hasta el canto libre --, y las dos
-// se habian confundido en una sola frase. Como 14.3 > 8.435, al encoger el ala
-// se pierde antes el M3 legal que la sombra sobre la columna: son dos cotas
-// vivas y se comprueban aparte. Con tres tornillos por encima el voladizo de
-// abajo trabaja a 89.8 MPa contra los 130 del aluminio, asi que no hace falta
-// bajar ninguno.
-// Lo comprueba guarda_escuadra_trasera() tornillo a tornillo, y ademas mide
-// ese voladizo como viga.
-function escuadra_m3_y() =
-    let (y0 = max(escuadra_y0(),
-                  banda_libre_trasera()[1] + 1.5*d_M3_paso),
-         e  = (escuadra_y1() - y0)/escuadra_m3)
-    [for (i = [0 : escuadra_m3 - 1]) y0 + e*(i + 0.5)];
-
-// El desarrollo: las dos alas por su cota EXTERIOR menos un BD, la misma
-// cuenta que la brida y que la pestana del valle.
-function escuadra_desarrollo() = escuadra_ala + escuadra_vuelo() - miembro_bd();
-
-// El DXF es el DESARROLLO, como el de los tres miembros. La linea de doblez es
-// y = 0: por encima queda el ala A con su cota exterior entera, por debajo el
-// ala B ya descontado su BD.
-module escuadra_trasera_2d() {
-    translate([0, -(escuadra_vuelo() - miembro_bd())])
-        difference() {
-            square([escuadra_largo(), escuadra_desarrollo()]);
-            for (y = escuadra_m3_y())
-                translate([y - escuadra_y0(),
-                           escuadra_vuelo() - miembro_bd() + escuadra_raiz()])
-                    circle(d = d_M3_paso + kerf);
-        }
-}
-
-// Las dos escuadras dobladas y puestas. El ala B se dibuja hasta la cara
-// INTERIOR del ala A y no hasta la trasera: el rincon del doblez es material
-// del ala A, y contarlo dos veces haria que la pieza se solapara consigo misma
-// en el censo de solapes().
-module escuadras_trasera() {
-    x_int = miembro_x_trasera();
-    for (m = [0, 1])
-        translate([0, 0, m ? ancho_total : 0])
-            mirror([0, 0, m]) {
-                difference() {
-                    translate([x_int - t_costilla, escuadra_y0(), t_anillo])
-                        cube([t_costilla, escuadra_largo(), escuadra_ala]);
-                    for (y = escuadra_m3_y())
-                        translate([x_int - t_costilla - 0.1, y,
-                                   t_anillo + escuadra_raiz()])
-                            rotate([0, 90, 0])
-                                cylinder(h = t_costilla + 0.2,
-                                         d = d_M3_paso + kerf);
-                }
-                translate([x_int - escuadra_vuelo(), escuadra_y0(), t_anillo])
-                    cube([escuadra_vuelo() - t_costilla, escuadra_largo(),
-                          t_costilla]);
-            }
-}
-
-// --- LOS TRES MIEMBROS: desarrollos de chapa de aluminio ----------------
-//
-// El miembro bajo cruza entre las dos costillas en la trasera inferior. Recibe
-// el canto bajo de la piel trasera y la fijacion trasera del chasis del PSU.
-// Su DXF no es la seccion 20 x 20 ya montada: al tumbar las dos alas del canal
-// en U, el blank concatena ala + alma + ala y descuenta el BD de cada doblez.
-module miembro_bajo_2d() {
-    desarrollo = canal_fondo + canal_ancho + canal_fondo - 2*miembro_bd();
-    y_alma = canal_fondo + canal_ancho/2 - miembro_bd();
-    difference() {
-        union() {
-            square([ancho_util, desarrollo]);
-            // la brida sale del ALMA, que es la cara que llega al canto
-            // inferior del anillo (y = 0 del perfil)
-            brida_2d(y_alma, canal_ancho);
-        }
-        fila_agujeros(ancho_util, y_alma);
-        brida_agujeros_2d(y_alma, dist_rosca_ciega - canal_ancho/2);
-    }
-}
-
-// El miembro alto cruza entre las costillas en el remate trasero. Recibe el
-// canto alto de la piel trasera y la tapa horizontal del remate. Es un canal
-// ASIMETRICO: el ala larga de arriba es la propia MESETA de prof_sup; la de
-// abajo es un retorno corto de canal_fondo. Ese retorno no es adorno: un ala
-// libre de 528 mm en chapa de 3 ondula y, al ser una pieza vista, dejaria
-// ademas un canto vivo. El desarrollo vuelve a tumbar las tres caras en un
-// plano y por eso supera la envolvente de la pieza plegada, con dos BD menos.
-// Y DESDE EL 2026-08-29 LA MESETA LLEGA AL PICO Y DOBLA: prof_sup cubre
-// marco_remate entero menos la trasera y su marco, y en el pico la chapa gira
-// hacia abajo retorno_meseta por la cara de arriba (doblez de 90 -
-// angulo_superior). Es lo que tapa el riel-eje de la fila de arriba, que
-// asomaba desnudo en los 13 mm que la meseta se retiraba del pico, y de paso
-// el retorno mata la ola del canto libre de 528 mm y su canto vivo -- lo que
-// hacia que la meseta se leyera como REPISA. Cuanto puede bajar lo manda el
-// barrido del panel (guarda_retorno_meseta).
+// Desarrollo del miembro alto, tumbado: la banda abajo (su canto libre en
+// y = 0), la meseta en medio y el retorno arriba, con un BD por el doblez de
+// 90 y el del retorno a su angulo. Las bridas salen de las puntas de la
+// BANDA, con su relieve (el hueco que queda sobre ellas). La fila de M3 de la
+// trasera va a media banda, con los centros de la trasera, que es 2*hol_piel
+// mas estrecha que el blank.
 module miembro_alto_2d() {
     retorno = retorno_meseta - doblez_bd(90 - angulo_superior);
-    desarrollo = canal_fondo + canal_ancho + prof_sup - 2*miembro_bd() + retorno;
-    // El solido manda el orden: retorno corto inferior, alma, meseta, retorno.
-    y_alma = canal_fondo + canal_ancho/2 - miembro_bd();
-    largo_meseta_plana = prof_sup - miembro_bd();
-    y_rejilla = desarrollo - retorno - largo_meseta_plana/2;
+    y_meseta0 = banda_trasera - miembro_bd();
+    desarrollo = y_meseta0 + prof_sup + retorno;
+    y_rejilla = y_meseta0 + (prof_sup - doblez_bd(90 - angulo_superior))/2;
     n_hp = round(largo_riel/hp);
     difference() {
         union() {
             square([ancho_util, desarrollo]);
-            brida_2d(y_alma, canal_ancho);
+            for (lado = [0, 1])
+                translate([lado ? ancho_util : -brida_vuelo_dsr(),
+                           banda_trasera - t_costilla - brida_ancho])
+                    square([brida_vuelo_dsr(), brida_ancho]);
         }
-        fila_agujeros(ancho_util, y_alma);
-        // La brida de arriba ancla en la MESETA del perfil (y = P5.y), que
-        // pasa marco_sup por encima del canto del alma: de ahi el desfase.
-        brida_agujeros_2d(y_alma,
-                          marco_sup + canal_ancho/2 - dist_rosca_ciega);
-        // La salida de aire deja la banda del valle LISA y sube a esta cara.
-        // Una fila registrada al HP, misma ranura oblonga que el resto: 16 de
+        translate([hol_piel, 0]) fila_agujeros(trasera_au(), banda_trasera/2);
+        brida_agujeros_2d(banda_trasera, -dist_rosca_ciega);
+        // La salida de aire, una fila registrada al HP en la meseta: 16 de
         // 15 x 3.75 dan 852 mm2. guarda_aire() usa ademas su altura real.
         for (n = [meseta_paso_hp : meseta_paso_hp : n_hp - meseta_paso_hp])
             translate([n*hp, y_rejilla])
@@ -1315,23 +973,26 @@ module miembro_alto_2d() {
     }
 }
 
-// Solidos plegados de los dos miembros. Los desarrollos de arriba son para el
-// taller; estas caras son para colisiones visuales y para los STL de render.
-// Todos cruzan exactamente ancho_util, entre las puntas de los Z-Rails.
-function miembros_z0() = (ancho_total - ancho_util) / 2;
-
-module miembro_bajo() {
-    x1 = miembro_x_trasera();
-    z0 = miembros_z0();
-    // alma trasera + dos retornos del canal en U
-    translate([x1 - t_costilla, 0, z0])
-        cube([t_costilla, canal_ancho, ancho_util]);
-    for (y = [0, canal_ancho - t_costilla])
-        translate([x1 - canal_fondo, y, z0])
-            cube([canal_fondo, t_costilla, ancho_util]);
-    // las dos bridas, planas contra la franja del canto INFERIOR del anillo
-    brida_3d(x1 - brida_largo, 0, brida_largo, canal_ancho, z0, ancho_util);
+// Desarrollo del talon: la banda abajo (su canto libre en y = 0) y el pie
+// arriba, con su BD. Los tres M4 del pie a 1.5 D de su canto libre, en las
+// mismas z que los de la nariz.
+module talon_2d() {
+    desarrollo = banda_trasera + talon_pie - miembro_bd();
+    difference() {
+        square([trasera_au(), desarrollo]);
+        fila_agujeros(trasera_au(), banda_trasera/2);
+        for (z = nariz_m4_z())
+            translate([z - t_anillo - hol_piel, desarrollo - 1.5*d_M4_paso])
+                circle(d = d_M4_paso + kerf);
+    }
 }
+
+// Las dos muescas de esquina de la trasera, por donde le pasa la brida por
+// debajo: [honda en z desde el canto lateral, alta en y desde el de arriba].
+// GEMELA de _muesca_trasera().
+function muesca_trasera() = [t_costilla + 0.5, brida_ancho + 0.5];
+
+function miembros_z0() = (ancho_total - ancho_util) / 2;
 
 module ranura_meseta_3d(xc, y0, zc) {
     hull() for (s = [-1, 1])
@@ -1342,29 +1003,26 @@ module ranura_meseta_3d(xc, y0, zc) {
 }
 
 module miembro_alto() {
-    x1 = miembro_x_trasera();
-    y1 = miembro_y_meseta();
-    y0 = y1 - canal_ancho;
+    P = pts_perfil();
+    y1 = y_meseta();
     z0 = miembros_z0();
-    // alma y retorno corto de abajo
-    translate([x1 - t_costilla, y0, z0])
-        cube([t_costilla, canal_ancho, ancho_util]);
-    translate([x1 - canal_fondo, y0, z0])
-        cube([canal_fondo, t_costilla, ancho_util]);
-    // La meseta de prof_sup ES el ala superior de esta misma pieza: nace en
-    // el pliegue del alma y avanza hacia el frente, sin cruzar la propia alma.
+    // la banda, a ras del plano trasero
+    translate([P[6].x - t_costilla, P[5].y - banda_trasera, z0])
+        cube([t_costilla, banda_trasera, ancho_util]);
+    // la meseta, del pico al plano trasero, con sus ranuras
     difference() {
-        translate([x1 - prof_sup, y1, z0])
+        translate([P[4].x, y1, z0])
             cube([prof_sup, marco_sup, ancho_util]);
         n_hp = round(largo_riel/hp);
         for (n = [meseta_paso_hp : meseta_paso_hp : n_hp - meseta_paso_hp])
-            ranura_meseta_3d(x1 - prof_sup/2, y1, z0 + n*hp);
+            ranura_meseta_3d(P[4].x + prof_sup/2, y1, z0 + n*hp);
     }
-    // las dos bridas, planas contra la franja de la MESETA del anillo
-    brida_3d(x1 - brida_largo, y0, brida_largo, canal_ancho, z0, ancho_util);
+    // las dos bridas, planas contra la franja de la MESETA del anillo, de
+    // t_costilla bajo la meseta hacia abajo
+    brida_3d(brida_x_dob() - brida_largo, y1 - brida_ancho, brida_largo,
+             brida_ancho, z0, ancho_util);
     // EL RETORNO (2026-08-29): dobla en el pico y baja por la cara de arriba,
     // con el espesor hacia dentro. Gemelo de _retorno_meseta() en el budget.
-    P = pts_perfil();
     d = [sin(angulo_superior), cos(angulo_superior)];
     n = [d.y, -d.x];
     translate([0, 0, z0])
@@ -1374,9 +1032,24 @@ module miembro_alto() {
                      P[4] + n*t_costilla]);
 }
 
+module talon() {
+    P = pts_perfil();
+    z0 = t_anillo + hol_piel;
+    az = trasera_au();
+    translate([P[6].x - t_costilla, 0, z0])
+        cube([t_costilla, banda_trasera, az]);
+    difference() {
+        translate([talon_x_pie(), 0, z0]) cube([talon_pie, t_costilla, az]);
+        for (z = nariz_m4_z())
+            translate([talon_m4_x(), -0.1, z])
+                rotate([-90, 0, 0])
+                    cylinder(h = t_costilla + 0.2, d = d_M4_paso + kerf);
+    }
+}
+
 module miembros() {
-    miembro_bajo();
     miembro_alto();
+    talon();
 }
 
 module rail_2020(largo) { cube([rail, largo, rail], center = true); }
@@ -1479,7 +1152,7 @@ module bandeja_base_2d() {
         // funcion que sirva a los dos -- pero las CUATRO coordenadas de
         // mundo son las mismas literales, y por eso el comentario de
         // paticas() vale tambien aqui.
-        for (wx = [alto_frontal/2 + d_pie/2, centro_miembro_bajo().x])
+        for (wx = [alto_frontal/2 + d_pie/2, centro_talon().x])
             for (wz = [d_pie/2, ancho_total - d_pie/2])
                 translate([v + wz, v + wx])
                     circle(d = d_pie_tornillo + kerf);
@@ -1490,6 +1163,18 @@ module bandeja_base_2d() {
         for (wz = nariz_m4_z())
             translate([v + wz, v + nariz_m4_x()])
                 circle(d = d_pie_tornillo + kerf);
+        // LOS TRES M4 DEL TALON (2026-08-29, noche): la banda de abajo del
+        // plano trasero se atornilla a la tabla por su pie, como la nariz.
+        // Los cruza taladros_talon().
+        for (wz = nariz_m4_z())
+            translate([v + wz, v + talon_m4_x()])
+                circle(d = d_pie_tornillo + kerf);
+        // LOS CUATRO M4 DEL CHASIS DEL PSU (2026-08-29, noche): el chasis
+        // apoya en la tabla y se atornilla a ella por el suelo, desde abajo,
+        // a tuerca remachable en el acero. Los cruza taladros_talon() con
+        // chasis_cuerpo_2d, que lleva los mismos cuatro.
+        for (q = chasis_tornillos_tabla())
+            translate(q) circle(d = d_M4_paso + kerf);
         // LA SALIDA DE CABLES DEL CHASIS. Era un campo de ondas de 104 x 32
         // dibujado como VENTILACION, y con la caja de acero encima ya no
         // ventila nada (spec §3.3). El cambio no es solo de nombre: una onda
@@ -1658,20 +1343,21 @@ module piel_trasera_2d() {
     // MAS material alrededor del tornillo. Y las ondas y la rejilla no se
     // mueven: van derivadas de f_base/f_tras, que son diferencias contra
     // ce[].y y por tanto no dependen de y0.
-    y0   = 0;                               // canto de abajo = plano del suelo
-    // Hasta la cara de ABAJO DE LA MESETA del miembro trasero alto (era "la
-    // tapa de remate" hasta el 2026-08-27, cuando esa plancha se integro en el
-    // miembro). Antes se frenaba en el larguero de remate, que vivia a ras del
-    // plano trasero y le tapaba la banda; desde que ese larguero se retiro
-    // t_piel, la trasera le pasa por delante y llega arriba del todo.
-    alto = (P[5].y - marco_sup) - y0;
-    // DOS filas, una por larguero trasero, y las dos caen en SU centerline y
-    // no a una distancia del canto. Fueron CINCO hasta el 2026-08-21: los tres
-    // largueros de en medio no sujetaban ya nada mas que estas filas, y una
-    // plancha continua de 8 atornillada arriba y abajo trabaja de alma de
-    // cortante en esa cara mejor que cinco barras sueltas.
-    f_base = anclaje_piel_base().y - y0;
-    f_tras = anclaje_piel_remate().y - y0;
+    // SOBRE EL PIE DEL TALON desde el 2026-08-29 por la noche: el canto de
+    // abajo ya no esta en el plano del suelo sino t_costilla por encima, sobre
+    // el pie. Y OJO CON EL ORIGEN: este 2D se dibuja en y DEL MUNDO -- el
+    // canto de abajo cae en y = y0, no en 0 -- para que las ondas, la rejilla,
+    // la ventana de red y la palabra KONDOR, que se derivan en coordenadas del
+    // case, sigan cayendo donde caen sin restar nada. El DXF sale con su
+    // origen 1.5 por debajo de la pieza; al laser le da igual.
+    y0   = t_costilla;
+    // Hasta hol_piel por debajo de la MESETA del miembro alto, que la tapa
+    // hasta el plano trasero: el canto de arriba queda DENTRO del metal.
+    alto = (P[5].y - marco_sup - hol_piel) - y0;
+    // DOS filas, una por BANDA: la de abajo en la del talon, la de arriba en
+    // la del miembro alto, a media banda. En y del mundo, como todo aqui.
+    f_base = anclaje_piel_base().y;
+    f_tras = anclaje_piel_remate().y;
     // Las ondas van derivadas de las dos filas que las rodean: asi no se acercan
     // a un tornillo si un larguero se mueve.
     //
@@ -1703,18 +1389,21 @@ module piel_trasera_2d() {
     // desde fuera de este modulo, asi que la cuenta se mudo a una funcion.
     lib0 = banda_libre_trasera()[0];
     lib1 = banda_libre_trasera()[1];
+    mu = muesca_trasera();
     difference() {
-        plancha(au, alto);
+        translate([0, y0]) plancha(au, alto);
         for (y = [f_base, f_tras]) fila_agujeros(au, y);
-        // LOS SEIS M3 DE LAS DOS ESCUADRAS, tres por costado. No son de fila:
-        // van en columna a escuadra_m3_x() del canto de la plancha, que es la
-        // raiz del doblez de la escuadra menos el aire con que esta plancha se
-        // empotra. Son PASANTES con tuerca por dentro -- la escuadra no rosca
-        // en el anillo -- y por eso salen aqui, en el DXF de la trasera, y no
-        // en el del dorso del anillo.
-        for (lado = [0, 1], y = escuadra_m3_y())
-            translate([lado ? au - escuadra_m3_x() : escuadra_m3_x(), y])
-                circle(d = d_M3_paso + kerf);
+        // LAS DOS MUESCAS DE ESQUINA de arriba (2026-08-29, noche): la brida
+        // del miembro alto pasa por debajo de la esquina, tumbada en la cara
+        // del anillo, y la trasera le cede t_costilla + 0.5 en z por
+        // brida_ancho + 0.5 en y. Con radio de 2 en el rincon: el PMMA raja
+        // desde una esquina viva. (Los seis M3 de las escuadras vivieron
+        // aqui del 28-08 al 29-08; la escuadra murio con el marco de la
+        // ventana.)
+        for (lado = [0, 1])
+            translate([lado ? au - mu[0] : -1, y0 + alto - mu[1]])
+                offset(r = 2) offset(delta = -2)
+                    square([mu[0] + 1, mu[1] + 1]);
         rejilla_entrada(au, lib0, lib1, x_iec0);
         translate([au*0.10, y_bajas])  onda("triangulo", au*0.35);
         translate([au*0.55, y_bajas])  onda("cuadrada",  au*0.35);
@@ -1774,22 +1463,11 @@ module rejilla_entrada(au, y0, y1, x_iec0) {
     // el otro no.
     x_iec = x_iec0 + iec_ancho/2;
     hueco = (iec_ancho + vent_ancho_ranura)/2 + vent_puente_min;
-    // Y SE SALTAN TAMBIEN LAS COLUMNAS QUE EL ALA A DE LA ESCUADRA TAPARIA,
-    // desde el 2026-08-28. La escuadra ocupa los primeros escuadra_tapa() mm
-    // de la plancha contados desde cada canto, y ahi caia la primera columna
-    // (2 HP = 10.16, ranura de 8.29 a 12.04 con el ancho de 3.75 que fijo el
-    // puente de fragilidad): el 87 % de su largo quedaba
-    // debajo de 1.5 mm de aluminio. Cortarla era lo peor de las dos cosas --
-    // no ventilaba, pero guarda_aire() la contaba como area abierta y ademas
-    // dejaba entrar polvo por el sobrante. Se salta ENTERA y no a medias: una
-    // ranura tapada en cuatro quintos no es un campo de ventilacion, es un
-    // hueco debil en el acrilico. La cuenta sale del ala, no de un indice a
-    // mano: el dia que escuadra_ala crezca, la siguiente columna se cae sola.
-    tapa = escuadra_tapa();
+    // Las columnas que tapaba el ala A de la escuadra se saltaron del 28-08 al
+    // 29-08 por la noche; la escuadra murio con el marco de la ventana y la
+    // rejilla vuelve a cortar todas las que libran la ventana de red.
     for (n = [valle_paso_hp : valle_paso_hp : n_hp - valle_paso_hp])
-        if (abs(n*hp - x_iec) >= hueco
-            && n*hp - vent_ancho_ranura/2 >= tapa
-            && n*hp + vent_ancho_ranura/2 <= au - tapa)
+        if (abs(n*hp - x_iec) >= hueco)
             translate([n*hp, (y0 + y1)/2]) ranura(y1 - y0, vent_ancho_ranura);
 }
 
@@ -2002,18 +1680,14 @@ module chasis_cuerpo_2d() {
                 translate([abs(s*b.x - ch_desarrollo(d_torn, ch_ala(ext.z))),
                            off + y - ch_sb()])
                     circle(d = d_M3_paso + kerf);
-        // --- los 4 M5 que CUELGAN el chasis de los dos largueros (#106) ---
-        // Van en las dos paredes LARGAS, que son las que miran a los largueros:
-        // la matriz de chasis() manda su Y local al X del case. La altura sale
-        // del case y no del chasis -- es el eje de la ranura interior del 2020,
-        // que esta a rail/2 sobre la bandeja, menos lo que el suelo ya subio.
-        // Por eso chasis_pie no puede crecer: se come la pared que hay debajo.
-        for (x = ch_tornillos(ext.x, chasis_anclajes))
-            for (s = [0, 1])
-                translate([off + x - ch_sb(),
-                           abs(s*b.y - ch_desarrollo(rail/2 - chasis_pie,
-                                                     ch_ala(ext.z)))])
-                    circle(d = d_M5_paso + kerf);
+        // --- los cuatro M4 del suelo a la tabla (2026-08-29, noche) ---
+        // El chasis apoya en la tabla y se atornilla a ella desde abajo, a
+        // tuerca remachable en el suelo. Fueron 2 M5 de pared "a la ranura
+        // interior de base trasera", un 2020 muerto el 27-08 que el modelo
+        // siguio dibujando dos dias. Lo comprueba guarda_chasis().
+        for (q = chasis_tornillos_int())
+            translate([ch_suelo(q.x, off), ch_suelo(q.y, off)])
+                circle(d = d_M4_paso + kerf);
     }
 }
 
@@ -2133,9 +1807,23 @@ function bandeja_base_ancho() = ancho_total + 2*vuelo_zocalo;
 // delante ya no hay nada. Estuvo escrito como vuelo + rail + holgura -- la
 // cadena leida al reves desde el canto de la plancha -- y solo daba lo mismo
 // porque `base delantera` estaba justo ahi. GEMELA de _x_chasis_frente().
+// DESDE EL 2026-08-29 POR LA NOCHE SE ARRIMA AL PIE DEL TALON, que es lo que
+// hay detras (12 mm mas atras que el canal del miembro bajo: 12 mm mas de
+// fondo de modulo para la fila de abajo). GEMELA de _x_chasis_frente().
 function x_chasis_frente() =
-    (centro_miembro_bajo().x - canal_fondo/2)
-    - chasis_holgura_larguero - ch_tapa_ext().y;
+    talon_x_pie() - chasis_holgura_larguero - ch_tapa_ext().y;
+
+// Los cuatro M4 del suelo del chasis a la tabla, en coordenadas INTERIORES
+// del chasis (x a lo largo, y en el fondo). GEMELA de _chasis_tornillos().
+function chasis_tornillos_int() =
+    [for (sx = [0, 1], sy = [0, 1])
+        [sx ? chasis_int_x - chasis_tornillo_x : chasis_tornillo_x,
+         sy ? chasis_int_y - chasis_tornillo_y : chasis_tornillo_y]];
+// Los mismos en coordenadas locales de bandeja_base_2d: la cadena de
+// salida_cables_xy(). GEMELA de _chasis_tornillos_tabla().
+function chasis_tornillos_tabla() =
+    let (pc = ch_pos(), d = ch_desfase() + t_chapa)
+    [for (q = chasis_tornillos_int()) [pc.x + d + q.x, pc.y + d + q.y]];
 
 // En coordenadas LOCALES de la tabla, cuyo origen esta vuelo_zocalo por delante
 // y por fuera del cuerpo. O sea: x local = vuelo_zocalo + z del mundo, la misma
@@ -2258,8 +1946,8 @@ else if (PART == "costilla_2d")    costilla_2d();
 // vuelve del taller SIN REBAJE y el acrilico no entra.
 else if (PART == "costilla_dorso_2d") costilla_dorso_2d();
 else if (PART == "cupon_anillo_2d") seccion_anillo_2d();
-else if (PART == "marco_trasera_sup_2d") marco_trasera_sup_2d();
-else if (PART == "marco_trasera_inf_2d") marco_trasera_inf_2d();
+else if (PART == "marco_ventana_2d")     marco_ventana_2d();
+else if (PART == "talon_2d")             talon_2d();
 else if (PART == "nariz_2d")             nariz_2d();
 else if (PART == "assembly")           assembly();
 else if (PART == "assembly_acrilico")  assembly_acrilico();
@@ -2269,14 +1957,8 @@ else if (PART == "assembly_esqueleto") assembly_esqueleto();
 else if (PART == "assembly_acero")     assembly_acero();
 else if (PART == "bandeja_base_2d")      bandeja_base_2d();
 else if (PART == "tapa_valle_2d")        tapa_valle_2d();
-else if (PART == "miembro_bajo_2d")      miembro_bajo_2d();
 else if (PART == "miembro_alto_2d")      miembro_alto_2d();
 else if (PART == "piel_trasera_2d")      piel_trasera_2d();
-else if (PART == "escuadra_trasera_2d")  escuadra_trasera_2d();
-else if (PART == "placa_cara_inf_2d")    placa_cara_inf_2d();
-else if (PART == "placa_valle_2d")       placa_valle_2d();
-else if (PART == "placa_cara_sup_2d")    placa_cara_sup_2d();
-else if (PART == "clip_2d")              clip_2d();
 // El relieve KONDOR en su propio fichero, y no es un extra: es la UNICA forma
 // de que llegue al taller. No se recorta en piel_trasera_2d (es ciego), asi que
 // el DXF de la trasera SIN esto es media pieza -- el mismo caso del chasis, que
@@ -2398,6 +2080,8 @@ module piel_trasera() {
     P = pts_perfil();
     // REHUNDIDA t_costilla desde el 2026-08-29 (#234): lo que asoma al plano
     // trasero es el marco, no el acrilico.
+    // El 2D ya viene en y del mundo (arranca en t_costilla, sobre el pie del
+    // talon), asi que aqui no se le suma nada en y.
     translate([P[6].x - t_costilla, 0, t_anillo + hol_piel])
         rotate([0, -90, 0])
             difference() {
@@ -2487,7 +2171,7 @@ module paticas() {
     // el frente en voladizo justo donde se aprietan los mandos de abajo. Va donde
     // acaba el redondeo de la punta, que es lo mas adelante que se puede apoyar
     // con el disco entero sobre acrilico. El trasero sigue sobre su larguero.
-    for (x = [alto_frontal/2 + d_pie/2, centro_miembro_bajo().x])
+    for (x = [alto_frontal/2 + d_pie/2, centro_talon().x])
         for (z = [d_pie/2, ancho_total - d_pie/2])
             translate([x, -t_base, z])
                 rotate([90, 0, 0])
@@ -2558,27 +2242,14 @@ module assembly_acero() {              // el chasis del PSU, cerrado
 module assembly_aluminio() {           // idem, Z-Rails + miembros + paneles solidos
     rails();
     paneles();
-    // LAS SEIS PLACAS DE ANCLAJE. Entran el 2026-08-28 con el anillo fresado:
-    // son lo unico que ata los seis rieles al case, y van por la cara
-    // INTERIOR -- en el render apenas se ven asomar por el canto de la
-    // ventana, que es exactamente lo que se busca. Si alguna se viera por
-    // fuera, el anclaje estaria mal puesto.
-    placas_riel();
-    // LOS CUATRO CLIPS DE RETENCION, dos por costado sobre el canto de abajo.
-    // Van en la cara INTERIOR igual que las placas y por la misma razon:
-    // desde fuera no se ve ninguno, y si se viera es que esta mal puesto.
-    clips_costado();
-    // LAS DOS ESCUADRAS DE LA TRASERA. Entran el 2026-08-28 y son el tope del
-    // canto TRASERO del acrilico, que hasta hoy corria 227 mm sin ninguno.
-    // Tampoco se ven desde fuera -- van por dentro de la trasera --: lo unico
-    // que la vista de atras ensena de ellas son sus tres M3 por costado, en
-    // linea vertical cerca del canto.
-    escuadras_trasera();
-    // EL MARCO DE LA TRASERA. Entra el 2026-08-29 y este SI se ve: es lo que
-    // asoma al plano trasero por arriba y por abajo, con el acrilico rehundido
-    // detras. Antes de el, esa cara la cerraba el PMMA y sus dos cantos corrian
-    // 540 mm cada uno sin metal (#234).
-    marcos_trasera();
+    // LOS DOS MARCOS DE LA VENTANA (2026-08-29, noche): una pletina por
+    // costado que ata los seis rieles al case y retiene el acrilico hacia
+    // dentro por los siete tramos. Sustituyen a las seis placas de anclaje,
+    // los cuatro clips y las dos escuadras. Van por la cara INTERIOR: en el
+    // render se ven asomar 6 mm por el canto de la ventana -- el marco de
+    // cada fila, y a traves del acrilico una sombra uniforme --, y nada mas.
+    // Si algo mas se viera por fuera, estaria mal puesto.
+    marcos_ventana();
     // LA NARIZ. Entra el 2026-08-29 y se ve entera: es lo que cierra el
     // frente por delante y por abajo, con la fila de abajo apoyada encima.
     nariz();
@@ -2634,13 +2305,17 @@ module bom() {
              ", cara vista ", cara_anillo, ", rebaje de ", rebaje_anillo,
              " x ", t_anillo - rehundido_acrilico, " por detras donde",
              " asienta el costado, chaflan ", chaflan_anillo,
-             " x 45 grados en las dos aristas de la cara vista."));
+             " x 45 grados en las dos aristas de la cara vista. Las seis",
+             " esquinas a radio_chapa (", radio_chapa, "): en todas dobla",
+             " chapa encima."));
     echo(str("     NINGUN TORNILLO ATRAVIESA LA CARA VISTA: ",
              len(centros_rosca_ciega()), " roscas ciegas M4 en la cara",
              " interior (taladros_anillo, broca ", d_M4_rosca,
-             ") + 3 M5 por anillo en el CANTO inferior para la tabla (ver",
-             " esa linea, no salen en el mismo DXF). CERO casquillos, CERO",
-             " junta de 4 mm."));
+             ") -- 12 del marco de la ventana (10 en las filas, 2 en el suelo)",
+             " y 2 de la brida del miembro",
+             " alto; eran 16 con clips y miembro bajo -- + 3 M5 por anillo",
+             " en el CANTO inferior para la tabla (ver esa linea, no salen",
+             " en el mismo DXF). CERO casquillos, CERO junta de 4 mm."));
     echo(str("     El costado asienta en el rebaje sobre una junta de EPDM",
              " de ", t_junta_asiento,
              " mm (ver linea propia), nunca aluminio contra acrilico.",
@@ -2655,17 +2330,73 @@ module bom() {
              " MPa (guarda_anillo, I=3714 mm4, 214 mm2); 6082-T6 o 5083 se",
              " piden por planitud tras el vaciado, no por calculo. ~0.58 kg",
              " por costilla."));
-    echo(str("BOM: MIEMBRO de chapa x", len(miembros_lista()),
-             " -- trasero bajo y trasero alto: canal de aluminio",
-             " 6082-T6 de ", t_costilla, " mm, ", au,
-             " mm de largo, con BRIDA de extremo doblada en cada punta y",
-             " roscada al anillo con M4 ciegos. El alto lleva la MESETA del",
-             " techo (", prof_sup, " hasta el pico) y su RETORNO de ",
-             retorno_meseta, " por la cara de arriba."));
-    echo("     Fueron perfil 2020 comprado hasta el 2026-08-27 y TRES hasta el");
-    echo("     2026-08-29: la bahia -- la bandeja bajo la fila 1U -- se fue por");
-    echo("     decision de Samuel; en el valle solo van los dos Z-Rails 1U.");
-    echo("     Los dos que quedan van arrinconados contra dos caras cada uno.");
+    echo(str("BOM: MARCO DE LA VENTANA x2 -- pletina de aluminio de ", t_placa,
+             " cortada a laser con el contorno de la ventana del anillo,",
+             " corrida por los siete tramos, ", marco_fondo, " hacia dentro",
+             " desde la silueta. Una por costado, ESPEJADAS: el mismo",
+             " contorno se corta x2 y se cajea por caras opuestas."));
+    echo("     ES LO QUE ATA LOS SEIS RIELES AL CASE Y LO QUE RETIENE EL");
+    echo("     ACRILICO HACIA DENTRO por todo el perimetro. Sustituye desde el");
+    echo("     2026-08-29 por la noche a las tres placas de anclaje, los dos");
+    echo("     clips y la escuadra de la trasera de cada costado: 'la placa es");
+    echo("     el marco de la fila' (Samuel, 28-08) llevado hasta el final.");
+    echo(str("     Sobre las tres filas es EXACTAMENTE la placa de ayer: canto",
+             " visto de ", t_placa, " a la silueta, cajeado de ", d_cajeado_riel,
+             " x ", prof_cajeado_riel, " por el lado del anillo en cada uno de",
+             " sus 6 pasos de riel (cuatro 3U y dos 1U), dos roscas ciegas M4",
+             " por riel 3U, dos sobre el primer 1U y dos en la pata del suelo",
+             " (el trabajo de los clips). En el frente, el suelo, la",
+             " meseta y la trasera el canto exterior va RETIRADO -- ",
+             retiro_marco(), " bajo cada chapa (nariz, pies, meseta, retorno) y ",
+             retiro_marco_trasera(), " en la trasera, que es banda + PMMA mas",
+             " grueso del lote + 0.5: NADA fijo delante del acrilico --, y",
+             " pisa 6 de acrilico volado por los siete tramos: a traves del",
+             " PMMA se lee una sombra uniforme de 6, no retazos."));
+    echo("     Lleva ademas la rosca M3 pasante de la pestana de la banda del");
+    echo("     valle, dos pasos M4 para la brida del miembro alto y UNA MUESCA");
+    echo("     en la esquina trasera-alta, abierta al canto exterior, sobre la");
+    echo("     huella de esa brida (que apoya en la cara del anillo, fuera del");
+    echo("     barrido del panel de arriba: se probo subirla encima del marco");
+    echo("     y la tapa pasaba de abrir 121.5 grados a 52).");
+    echo("     DXF de corte: marco_ventana_2d, UNO para las dos. El cajeado no");
+    echo("     se dibuja: un DXF 2D no sabe decir 'a 2.5 de profundidad' y va");
+    echo("     como NOTA DE MECANIZADO en el pliego, tres por una cara y tres");
+    echo("     por la otra (PLIEGO 6).");
+    echo("     ORDEN DE MONTAJE OBLIGADO: el costado asentado en el rebaje,");
+    echo("     DESPUES los seis rieles al marco (la cabeza queda en el cajeado,");
+    echo("     del lado que despues mira al anillo) y DESPUES el marco al");
+    echo("     anillo, desde dentro, con sus diez M4. Al reves no se puede");
+    echo("     apretar, y el costado no entra con el marco puesto.");
+    echo(str("BOM: tornillo M4 boton x", 2*len(roscas_marco()), " -- el marco",
+             " de la ventana al anillo, a rosca ciega en la franja de ",
+             cara_anillo - rebaje_anillo, " (", len(roscas_marco()),
+             " por costado). Eran los 20 'de placa al anillo' que el README",
+             " llevaba sin itemizar."));
+    echo(str("BOM: MIEMBRO ALTO x1 -- chapa de aluminio 6082-T6 de ", t_costilla,
+             ", ", au, " de largo: una L cuya ala de arriba ES la MESETA del",
+             " techo (", prof_sup, ", del pico al plano trasero, con su",
+             " RETORNO de ", retorno_meseta, " en el pico) y cuya alma es la",
+             " BANDA VISTA de ", banda_trasera, " que baja a ras del plano",
+             " trasero. Dos BRIDAS de extremo dobladas de la banda, de ",
+             brida_largo, " x ", brida_ancho, ", roscadas al anillo con dos",
+             " M4 ciegos cada una."));
+    echo("     Fue canal de 20 x 24 con un marco de la trasera atornillado");
+    echo("     encima (2026-08-29 por la manana): la meseta moria 9.5 antes del");
+    echo("     canto y dejaba una costura en el techo. Desde esa noche la banda");
+    echo("     ES el alma y el techo es una chapa del pico al canto. Solo, sin");
+    echo(str("     la trasera, cede ", 2, " mm con 20 kg en el centro de la meseta",
+             " a 110 MPa (guarda_miembro_alto: es lo que puso la banda en ",
+             banda_trasera, " y no en 20); atornillado a la trasera cada 100, decimas."));
+    echo(str("BOM: TALON x1 -- la misma chapa 6082-T6 de ", t_costilla,
+             ", ", trasera_au(), " de largo: la banda vista de ", banda_trasera,
+             " a ras del plano trasero por ABAJO y un pie de ", talon_pie,
+             " sobre la tabla, atornillado a ella desde dentro con tres M4.",
+             " Hace atras lo que la nariz hace delante. Sustituye al miembro",
+             " trasero bajo: sin bridas ni rosca en el anillo -- su fijacion",
+             " es la tabla, que ya esta atada a los dos anillos con seis M5."));
+    echo(str("BOM: tornillo M4 avellanado x", len(nariz_m4_z()), " -- el pie del",
+             " talon a la TABLA, desde dentro, mismo herraje que las paticas y",
+             " la nariz (d_pie_tornillo). Ninguno en la cara vista."));
     echo(str("BOM: Z-Rail de Tiptop x", len(centros_rail()) + len(centros_rail_1u()),
              ", largo ", largo_riel,
              " (104 HP) -- seccion ", rail_er_fondo, " x ", rail_er_alto,
@@ -2678,88 +2409,27 @@ module bom() {
     echo("     YA NO ATRAVIESAN LA COSTILLA. Cruzaron el acrilico hasta el");
     echo("     2026-08-26 y la chapa de la costilla hasta el 2026-08-28; el");
     echo("     anillo de pletina no lleva un solo agujero pasante, asi que el");
-    echo("     riel se atornilla a una PLACA DE ANCLAJE interior que va al");
-    echo("     anillo con roscas ciegas M4 (ver esa linea). Largo: no lo");
-    echo("     fija el modelo -- lo fija el pliego, contando el cajeado de");
-    echo("     la placa y la rosca util del anillo.");
-    echo(str("BOM: PLACA DE ANCLAJE x", 2*len(placas()), " -- pletina de ",
-             t_placa, ", una por TRAMO y por costado. Es el MARCO DE LA FILA:",
-             " corre el tramo entero y su canto de ", t_placa,
-             " tapa la ranura que queda entre el riel de 104 HP y el anillo."));
-    echo(str("     Fondo ", placa_fondo, " las tres (la del valle fue mas honda",
-             " por las lenguetas de la bahia, hasta el 2026-08-29).",
-             " Cajeado de ", d_cajeado_riel, " x ", prof_cajeado_riel,
-             " por el lado del anillo, uno por riel."));
-    echo("     DXF de corte: placa_cara_inf_2d, placa_valle_2d y");
-    echo(str("     placa_cara_sup_2d -- UNO por TRAMO, no por costado: el",
-             " lado espejado (z) comparte el mismo CONTORNO xy. Cada",
-             " fichero se corta x2 (los ", 2*len(placas()),
-             " de la linea de arriba, entre los tres)."));
-    echo("     PERO SON PARES ESPEJADOS, no seis iguales: el cajeado va en la");
-    echo("     cara OPUESTA en la de un costado y en la del otro, y los tres");
-    echo("     contornos son ASIMETRICOS -- voltear la pieza manda el chaflan");
-    echo("     al canto equivocado. Se cortan seis con el mismo contorno y se");
-    echo("     cajean TRES por una cara y TRES por la otra (PLIEGO 6).");
-    echo("     Cortes: en el PICO las dos placas vecinas se reparten el rincon");
-    echo("     por una linea comun (no es un chaflan de 45: el angulo es 125);");
-    echo(str("     en el remate la de arriba lleva un chaflan de ", placa_chaflan,
-             " para librar la brida del miembro trasero alto."));
-    echo("     ORDEN DE MONTAJE OBLIGADO: primero el riel a la placa (la");
-    echo("     cabeza queda en el cajeado, del lado que despues mira al");
-    echo("     anillo) y despues la placa al anillo, desde dentro. Al reves no");
-    echo("     se puede apretar.");
+    echo("     riel se atornilla al MARCO DE LA VENTANA, que va al anillo con");
+    echo("     roscas ciegas M4 (ver esa linea). Largo: no lo fija el modelo --");
+    echo("     lo fija el pliego, contando el cajeado del marco y la rosca");
+    echo("     util del riel.");
     echo(str("BOM: tornillo M4 boton x", 2*len(bridas_anillo()),
-             " -- por la PUNTA de los dos miembros traseros, a una BRIDA de",
-             " extremo doblada de su propio blank y roscada al anillo. Desde el",
-             " 2026-08-27 no atraviesan el acrilico y desde el 28 tampoco la",
-             " costilla."));
+             " -- por la PUNTA del miembro alto, a una BRIDA de extremo doblada",
+             " de su propia banda y roscada al anillo. Eran 8 con la brida del",
+             " miembro bajo, que hoy es talon y va a la tabla."));
     echo("     ERAN M5 (spec 5) y bajan a M4 el 2026-08-28. La franja del");
     echo("     anillo mide 14: un M5 pide 1.5 D de su agujero de paso (8.25)");
     echo("     al canto de la brida y 1.5 D de su broca (6.3) a la pared del");
     echo("     rebaje, y las dos no caben a la vez en 14. El M4 si: 6.75 y");
     echo("     4.95. La brida es chapa de 1.5 -- un M5 ahi estaba sobrado.");
-    echo(str("BOM: ESCUADRA DE LA TRASERA x2 -- angular de la MISMA chapa que",
-             " los miembros (6082-T6 de ", t_costilla, ", radio ",
-             radio_doblez_costilla, "), desarrollo ", escuadra_largo(), " x ",
-             escuadra_desarrollo(), ". Un ala de ", escuadra_ala,
-             " atornillada a la cara interior de la TRASERA y otra de ",
-             escuadra_vuelo(), " tumbada sobre la cara interior del anillo,",
-             " que asoma sobre el canto trasero del costado y hace de tope."));
-    echo("     Es lo que le faltaba a ese canto: 227 mm de acrilico sin nada");
-    echo("     que lo parara hacia dentro. Va al taller de CHAPA con los tres");
-    echo("     miembros y la banda del valle, no al de acrilico.");
-    echo(str("BOM: tornillo M3 x", 2*escuadra_m3, " + tuerca -- las dos",
-             " escuadras a la trasera, PASANTES por sus ", t_piel,
-             " mm de PMMA, cabeza fuera y tuerca dentro. Mismo herraje que las",
-             " dos filas que esa plancha ya lleva a los miembros."));
-    echo(str("BOM: MARCO DE LA TRASERA x2 -- de la MISMA chapa que los",
-             " miembros (6082-T6 de ", t_costilla, "). El de ARRIBA es un",
-             " angular, desarrollo ", marco_trasera_largo(), " x ",
-             marco_trasera_desarrollo(), ": banda vista de ",
-             marco_trasera_ancho, " y ala de ", marco_trasera_vuelo(),
-             " que dobla en el canto de arriba del acrilico y muere en el",
-             " doblez de la meseta. El de ABAJO es una pletina plana de ",
-             marco_trasera_largo(), " x ", marco_trasera_ancho, "."));
-    echo("     El de abajo no lleva ala y no es un olvido: ese canto esta en");
-    echo("     el plano del suelo y debajo tiene la TABLA, no aire. Un ala");
-    echo("     ahi levantaria el case de su propia base.");
-    echo("     Son lo que asoma al plano trasero por arriba y por abajo, con");
-    echo("     el acrilico rehundido 1.5 detras. Hasta el 2026-08-29 esa cara");
-    echo("     la cerraba el PMMA y sus dos cantos corrian 540 mm sin metal.");
-    echo(str("BOM: NINGUN TALADRO NUEVO EN LA TRASERA por el marco. Las dos",
-             " bandas se cuelgan de las filas de M3 que la plancha YA lleva a",
-             " sus dos miembros: los mismos ", 2*n_agujeros(ancho_util
-             - 2*hol_piel), " tornillos, ", t_costilla,
-             " mm mas largos. Y cambian de sitio las cabezas: se veian sobre",
-             " el PMMA y ahora se ven sobre metal."));
-    echo(str("BOM: NARIZ x1 -- la banda del frente, de la MISMA chapa que los",
-             " marcos de la trasera (6082-T6 de ", t_costilla, ", radio ",
+    echo(str("BOM: NARIZ x1 -- la banda del frente, de la MISMA chapa que el",
+             " miembro alto y el talon (6082-T6 de ", t_costilla, ", radio ",
              radio_doblez_costilla, "). Desarrollo ", nariz_largo(), " x ",
              nariz_desarrollo(), ", tres dobleces (45, 45 y ", angulo_inferior,
              "): pie de ", nariz_pie, " sobre la tabla, chaflan de ",
              chaflan_nariz, ", frente vertical de ", alto_frontal - chaflan_nariz,
-             " y ", nariz_s_top(), " subiendo por la cara de abajo hasta la",
-             " placa de anclaje."));
+             " y ", nariz_s_top(), " subiendo por la cara de abajo hasta el",
+             " marco de la ventana."));
     echo("     Tapa el riel del frente y el hueco entre anillos que se veian");
     echo("     desnudos desde delante y desde abajo (2026-08-29). Se para");
     echo("     debajo de la cara del riel porque la fila de abajo es TAPA y ese");
@@ -2768,88 +2438,67 @@ module bom() {
     echo(str("BOM: tornillo M4 avellanado x", len(nariz_m4_z()), " -- el pie de",
              " la nariz a la TABLA, desde dentro, con el mismo herraje que las",
              " paticas (d_pie_tornillo). Ninguno en la cara vista."));
-    echo("     NO HAY ROSCA CIEGA NUEVA EN EL ANILLO. La escuadra ancla en la");
-    echo("     trasera a proposito: en la franja de 14 no cabe -- es la misma");
-    echo("     cuenta que deja sin clip a ese tramo (ver TRAMOS_CLIP,");
-    echo("     linea de abajo).");
-    echo(str("BOM: CLIP DE RETENCION x", 2*len(clips()), " -- pletina de ",
-             t_clip, " mm x ", clip_largo, " mm, un M4 ciego al anillo.",
-             " Solo en el tramo del SUELO (2 por costado): TRAMOS_CLIP es",
-             " el unico tramo sin placa de anclaje. Muerde ", clip_fondo,
-             " mm de acrilico desde el canto de la ventana -- retiene el",
-             " costado hacia DENTRO junto con las 3 placas y la escuadra",
-             " de la trasera, por costado."));
-    echo(str("     DXF de corte: clip_2d -- UNA pieza generica (", clip_largo,
-             " x ", clip_fondo, " mm), se corta x", 2*len(clips()),
-             ": el mismo contorno sirve a los dos tramos del suelo y a los",
-             " dos costados."));
     echo(str("BOM: JUNTA DE ASIENTO EPDM x2 (una por anillo), ",
              t_junta_asiento, " mm -- perfil continuo en el rebaje, entre",
              " el labio y el costado. Nunca aluminio contra acrilico. No",
              " es la junta de 4 mm del apilado viejo (muerta el",
              " 2026-08-28): esta va EN EL PLANO del rebaje, no atravesada",
              " por ningun tornillo."));
-    echo(str("BOM: tornillo M5 x", chasis_anclajes, " + tuerca T + SEPARADOR de ",
-             chasis_holgura_larguero, " -- cuelgan el chasis del PSU de la ranura"));
-    echo("     INTERIOR de `base trasera` (#106). El separador no es opcional:");
-    echo("     el tornillo cruza ese aire y sin el, apretar abolla la pared de");
-    echo("     1.5 de chapa hacia dentro.");
-    echo("     FUERON CUATRO, dos por pared larga, hasta el 2026-08-27: la");
-    echo("     pared DELANTERA colgaba de `base delantera`, y esa barra ya no");
-    echo("     existe. Ahora esa pared APOYA en la tabla, que es un miembro");
-    echo("     estructural en cuatro paticas.");
+    echo(str("BOM: tornillo M4 x", len(chasis_tornillos_int()), " + TUERCA",
+             " REMACHABLE (clinch, PEM S-M4) en el suelo del chasis -- el",
+             " chasis del PSU a la TABLA, desde abajo, por su suelo. Cabezas",
+             " bajo la tabla (el case va sobre sus paticas de ", alto_pie,
+             "), nada visto por dentro."));
+    echo("     COLGABA DE DOS M5 DE PARED 'a la ranura interior de base");
+    echo("     trasera' hasta el 2026-08-29 por la noche -- un 2020 que murio");
+    echo("     el 27-08 y que el modelo siguio dibujando dos dias --; muerto");
+    echo("     tambien el miembro bajo, ahi no queda nada. Apoya en la tabla:");
+    echo("     el aire de 2 mm era contra una bandeja de ACRILICO que resonaba,");
+    echo("     y esa bandeja murio el 27-08. Lo comprueba guarda_chasis().");
     // Faltaban. Los M5 de arriba atan el larguero al COSTADO; estos atan la
     // PLANCHA al larguero, que es otra union y otro herraje. Salieron al montar
     // la guia de ensamblaje: las planchas tenian los taladros dibujados y el BOM
     // no tenia el tornillo.
     n_fila = max(1, round(au/100));
-    // TRES filas de n_fila: dos de la TRASERA (trasero bajo + trasero alto,
-    // cada miembro con su propia reticula) y una de la banda del valle, que
-    // usa la reticula de la BAHIA (check_dxf: bahia_2d trae reticula de 5 M3
-    // a paso 100, igual que los otros dos miembros). Mas 2 pestanas de la
-    // misma banda, que van aparte a la placa del valle (ruling R3, no a la
-    // bahia). Decia "tapa de remate" hasta el fix round 1 de la Tarea 5
-    // (2026-08-28): esa pieza (`remate_sup`/`remate_sup_2d`) murio el
-    // 2026-08-27 -- la meseta del techo paso a ser el ala del miembro
-    // trasero alto -- y el eco la seguia contando de puro heredado.
-    echo(str("BOM: tornillo M3 x", 2*n_fila + 2, " + tuerca T M3 -- la trasera",
-             " a la reticula de sus dos miembros (", 2*n_fila,
-             ", trasero bajo + alto) + 2 de las PESTANAS de la banda del valle.",
-             " Decia ", 3*n_fila + 2, " contando una fila de la banda a la",
-             " reticula de la bahia que la banda no lleva; sin bahia, tampoco."));
-    echo("     LOS DOS DE LA PESTANA VAN A LA PLACA DEL VALLE, no al anillo:");
+    echo(str("BOM: tornillo M3 x", 2*n_fila + 2, " + tuerca -- la trasera",
+             " a las dos BANDAS (", n_fila, " a la del miembro alto + ", n_fila,
+             " a la del talon, cabeza fuera sobre metal y tuerca dentro con",
+             " arandela de nylon contra el PMMA) + 2 de las PESTANAS de la",
+             " banda del valle. Son las DIEZ cabezas que se ven atras, y",
+             " ninguna sobre acrilico: los seis M3 de las escuadras murieron",
+             " con ellas."));
+    echo("     LOS DOS DE LA PESTANA VAN AL MARCO DE LA VENTANA, no al anillo:");
     echo("     su rosca tendria que caer a 13.7 mm del plano del valle");
     echo("     (setback 6 + 2t + d/2, y con t_valle = 3 esa cuenta no baja) y");
     echo("     la franja de 14 solo admite hasta 10.25 -- la broca saldria por");
-    echo(str("     la pared del rebaje. En la placa hay ", t_placa,
+    echo(str("     la pared del rebaje. En el marco hay ", t_placa,
              " mm de pletina y se rosca pasante (ruling R3)."));
-    echo("     Estos entran por la RANURA del miembro, no por su punta. Es donde");
-    echo("     la tuerca de insercion lateral se paga sola: con las de deslizar");
-    echo("     hay que dejarlas dentro ANTES de cerrar el esqueleto.");
-    echo(str("BOM: la TRASERA es UNA plancha empotrada de t=", t_piel, ", no dos:"));
-    echo(str("     ", ancho_util - 2*hol_piel, " de ancho,",
+    echo(str("BOM: la TRASERA es UNA plancha de t=", t_piel, ", no dos, DENTRO",
+             " de las dos bandas: su cara trasera contra ellas, rehundida ",
+             t_costilla, " del plano trasero, el canto de abajo sobre el pie",
+             " del talon y el de arriba bajo la meseta."));
+    echo(str("     ", trasera_au(), " de ancho por ",
+             pts_perfil()[5].y - marco_sup - hol_piel - t_costilla, " de alto,",
              " atornillada arriba y abajo y NADA en medio: 211.73 mm de vano"));
     echo("     libre, que en 8 mm de acrilico son 0.15 de flecha con 50 N en el");
-    echo("     centro. Fueron dos pieles de 5 partidas a la altura del");
+    echo(str("     centro. Lleva ", 2*n_fila, " taladros M3 y DOS MUESCAS de",
+             " esquina arriba, de ", muesca_trasera()[0], " x ", muesca_trasera()[1],
+             " con radio 2 en el rincon: por ahi le pasa por debajo la brida",
+             " del miembro alto. Eran 16 taladros con las escuadras."));
+    echo("     Fueron dos pieles de 5 partidas a la altura del");
     echo("     entrepiso, colgadas de 12 separadores M4 y con cinco filas de");
     echo("     tornillo. Separadores, junta de sombra, una plancha entera y");
     echo("     tres largueros murieron por el camino, todos el 2026-08-21.");
+    echo("     SALE POR ABAJO, no por atras: la banda que la tapa es estructura.");
+    echo("     Tabla fuera, talon fuera, los cinco M3 de arriba, y baja de");
+    echo("     debajo de la meseta. Reversible entero y sin adhesivo.");
     // LAS DOS FILAS SON TAPA. Cada una gira sobre el M4 de su riel de arriba y
     // se cierra con el de su otro extremo. Del total de tornillos del case
-    // (12 M4 de riel + 8 M4 de brida de miembro + 6 M3 de escuadra + 4 M4 de
-    // clip + 3 M4 de la nariz + 2 M5 del chasis + 12 M3 de plancha + 6 M5 de
-    // la tabla = 53; eran 59 con 4 M4 de lengueta de bahia y 5 M3 de la banda
-    // a la bahia, muertos el 2026-08-29), solo CUATRO se tocan para abrirlo:
-    // dos por fila.
-    //
-    // DECIA "6 M5 de transversal" y sumaba 43. Los transversales eran los 2020
-    // comprados, que murieron el 2026-08-27: los miembros de chapa que los
-    // sustituyen NO cuelgan de un M5 axial por punta -- cuelgan de una BRIDA de
-    // extremo con dos M4 a rosca ciega, o sea 8 M4, y ese herraje no estaba en
-    // esta cuenta. Los 24 M4 de separador se habian ido antes, con los
-    // separadores, el 2026-08-21. Los 20 M4 de placa al anillo siguen SIN
-    // itemizar como herraje a comprar: es un pendiente declarado en el README,
-    // no un olvido, y por eso tampoco suman aqui.
+    // (12 M4 de riel + 20 M4 de marco al anillo + 4 M4 de brida + 3 M4 de la
+    // nariz + 3 M4 del talon + 4 M4 del chasis + 12 M3 de plancha + 6 M5 de
+    // la tabla = 64; eran 73 con 8 de brida, 6 M3 de escuadra, 4 M4 de clip y
+    // 2 M5 del chasis, la noche del 2026-08-29), solo CUATRO se tocan para
+    // abrirlo: dos por fila.
     echo("BOM: los M4 de riel no son todos iguales --");
     echo("     x4 EJES: tornillo de HOMBRO M4, espiga 4 mm (no M5 -- el riel");
     echo("        cambio de herraje al cambiar de fabricante). Riel del valle");
@@ -2858,30 +2507,15 @@ module bom() {
     echo("     x4 CIERRES: M4 de cabeza moleteada o palomilla -- se quitan a");
     echo("        mano y son los unicos que se tocan para abrir el case.");
     echo("        Riel del frente abajo, riel del valle arriba.");
-    echo("     x4 FIJOS: los dos Z-Rails 1U, atornillados por ambas puntas a");
-    echo("        la PLACA DEL VALLE, no a la costilla. No son ejes ni");
+    echo("     x4 FIJOS: los dos Z-Rails 1U, atornillados por ambas puntas al");
+    echo("        MARCO DE LA VENTANA, no a la costilla. No son ejes ni");
     echo("        cierres: no giran, no se quitan a mano.");
-    // Decia "x6 fijos: los largueros de esqueleto" bajo un encabezado que
-    // habla de M4 DE RIEL, y esos largueros van con M5. Contaba dos herrajes
-    // distintos en la misma lista. Los M4 de riel son DOCE: cuatro ejes,
-    // cuatro cierres y cuatro fijaciones permanentes de la fila 1U.
-    //
-    // ESTOS DOCE NO SON TODOS LOS M4 DEL CASE -- fix round 1, Tarea 5: la
-    // frase de aqui decia "no hay mas M4" a seis lineas de la brida (x8) y
-    // el clip (x4), y se contradecia sola. Los de brida roscan al anillo y
-    // ERAN M5 en el plan; bajaron a M4 el 2026-08-28 porque la franja de
-    // 14 mm no admite a la vez el paso M5 y la broca M5 (ver esa linea).
     echo("     Estos 12 son los M4 DE RIEL. El case lleva mas M4 en otras");
-    echo("     lineas de este BOM: brida de miembro x8, clip x4, nariz x3,");
-    echo("     placa a anillo x20 (ver README, BOM de herrajes).");
-    echo("     Los M5 del case son los de la TABLA (6, a rosca ciega en el");
-    echo("     canto inferior del anillo) y los 2 del chasis del PSU. Los");
-    echo("     miembros NO llevan M5: cuelgan de 8 M4 de brida desde el");
-    echo("     2026-08-28 -- decia aqui 'los tornillos de transversal son M5',");
-    echo("     y los transversales eran los 2020 que murieron el 2026-08-27.");
-    echo("BOM: tuercas T DE INSERCION LATERAL (drop-in), NO de deslizar. Con las");
-    echo("     de deslizar hay que enhebrarlas por la punta del larguero antes de");
-    echo("     montar, o sea que anadir un tornillo mas tarde obliga a desarmar.");
+    echo("     lineas de este BOM: marco al anillo x20, brida x4, nariz x3,");
+    echo("     talon x3, chasis x4.");
+    echo("     Los M5 del case son SOLO los de la TABLA (6, a rosca ciega en el");
+    echo("     canto inferior del anillo): los 2 del chasis murieron con el");
+    echo("     miembro bajo la noche del 2026-08-29.");
     echo("BOM: paneles ciegos en TODO hueco de LAS DOS filas -- no son estetica:");
     echo("     con la tapa abierta son lo unico que ata sus dos rieles entre si");
     // YA NO ES UN AMORTIGUADOR (2026-08-18). La tapa se queda abierta por
@@ -2898,12 +2532,6 @@ module bom() {
     echo("     tapa deja de quedarse abierta.");
     echo("       arandela M4 normal (d9)  -> 16.3 MPa   se relaja");
     echo("       arandela ANCHA   (d16)   ->  4.3 MPa   aguanta");
-    // La tapa de remate (plancha acrilica horizontal atornillada al larguero
-    // de remate trasero) murio el 2026-08-27: `remate_sup`/`remate_sup_2d`
-    // sin llamador, borradas del .scad en el fix round 1 de la Tarea 5. La
-    // meseta del techo es hoy el ala del miembro trasero alto (marco_sup,
-    // ver params.scad), no una plancha aparte -- este echo la vendia sin
-    // que existiera.
     // Decia "metalica torneada" y se quedo asi cuando las paticas pasaron a
     // GOMA el 2026-08-24 (spec rev. 18): el BOM del README y el PLIEGO ya
     // dicen goma con casquillo roscado, y este echo seguia mandando a comprar
@@ -2913,7 +2541,8 @@ module bom() {
              " roscado x4, d=", d_pie, " x ", alto_pie, " mm -- se atornilla",
              " A LA TABLA, no al acrilico, y NO se pega. Se exige la curva",
              " carga-deformacion: >= ", flecha_pie,
-             " mm de flecha con 22.8 N (flecha_pie)"));
+             " mm de flecha con 22.8 N (flecha_pie). Las dos traseras van bajo",
+             " el centro del pie del talon (x = ", centro_talon().x, ")."));
     echo(str("BOM: banda delantera del valle: chapa de ALUMINIO t=", t_valle,
              " PLEGADA, desarrollo ", au + 2*pv_vuelo(), " x ",
              ventana_valle()[0] - x_valle()[0], ". Es el vuelo delantero LISO,"));
@@ -2921,8 +2550,8 @@ module bom() {
     echo("     pestanas: guarda_valle() lo declara HUECO hasta que tenga apoyo.");
     echo("     No es acrilico desde el 2026-08-25; lleva una pestana");
     echo(str("     de ", pestana_valle, " doblada a 90 grados en cada punta,",
-             " atornillada a la PLACA DEL VALLE con un M3 (no al anillo",
-             " -- ruling R3, ver la linea del M3 x17)."));
+             " atornillada al MARCO DE LA VENTANA con un M3 (no al anillo",
+             " -- ruling R3, ver la linea del M3 x12)."));
     echo("     Las pestanas impiden que la banda quede sujeta solo por una linea");
     echo("     de tornillos. No forman un diafragma: guarda_valle() publica por");
     echo("     separado la carga hacia abajo y el caso critico de levantamiento.");
@@ -2954,6 +2583,9 @@ module bom() {
     echo("     hacia un extremo; con dos vuelve a estar clavada y se raja.");
     echo("     Especie sin elegir: las cuentas van contra E = 11000 MPa (nogal");
     echo("     o arce). Roble da 12000; contrachapado 8000 y pediria 20 mm.");
+    echo(str("     Y catorce taladros pasantes de ", d_pie_tornillo, ": 4 de",
+             " las paticas, 3 de la nariz, 3 del talon y 4 del chasis del PSU",
+             " (los siete ultimos desde el 2026-08-29). Los censa guarda_zocalo()."));
     echo(str("BOM: plancha de acrilico t=", t_cheek, ": costados x2 y",
              " TRASERA -- 3 piezas."));
     echo("     UN SOLO ESPESOR en todo el cuerpo. Hubo dos hasta el 2026-08-25:");
@@ -2961,9 +2593,9 @@ module bom() {
     echo("     aluminio. Media plancha de 5 que ya no hay que comprar.");
     echo("     Y desde el 2026-08-27 el suelo tampoco es acrilico: es la tabla.");
     echo("     Y desde el 2026-08-27 la tapa de remate tampoco existe: la");
-    echo("     meseta del techo es el ala del miembro trasero alto (4 piezas");
-    echo("     hasta esa fecha, corregido en el fix round 1 de la Tarea 5).");
+    echo("     meseta del techo es el ala del miembro alto.");
     echo("     LOS COSTADOS YA NO LLEVAN UN SOLO TALADRO. Son PIEL: asientan");
     echo("     en el rebaje del anillo, sin tornillo -- el labio los sostiene");
-    echo("     hacia fuera y las placas/clips/escuadra hacia dentro.");
+    echo("     hacia fuera y el marco de la ventana hacia dentro, por los");
+    echo("     siete tramos.");
 }

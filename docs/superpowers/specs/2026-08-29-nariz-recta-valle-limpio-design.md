@@ -79,6 +79,10 @@ No hay pieza nueva arriba: **la meseta del miembro trasero alto crece de 27.5 a
 40.5** y llega al pico, y en el pico **dobla hacia abajo un retorno de 4 mm** por la
 cara de arriba (`retorno_meseta`). `inset_remate_frente` muere.
 
+> *Enmienda (la misma noche):* la meseta sigue hasta el **plano trasero** (50) y
+> dobla ahí como banda; el marco de la trasera de la mañana desaparece y la tapa
+> de arriba abre 180°. Ver `2026-08-29-marco-ventana-banda-estructural-design.md`.
+
 El inset llevaba escrito que era *«lo único que deja abrir la tapa de arriba»* con
 una tabla medida (retiro 0 → abre 13.2°). Esos números son de cuando la meseta era
 **acrílico de 8 apoyado en el riel**. Con la chapa de 1.5 la cara de abajo de la

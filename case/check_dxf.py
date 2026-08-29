@@ -82,12 +82,9 @@ SIN_DXF: dict[str, str] = {}
 # sale sola de _cajas_solidas y no hay que declarar su sobre a mano.
 GIRADAS: set[str] = set()
 
-# Las tres placas de anclaje, nombre de tramo -> nombre de DXF. GEMELA de
-# TRAMOS_PLACA en clearance_budget.py y de tramos_placa() en el .scad: el
-# orden no importa aqui (se recorre por nombre), pero los TRES nombres si --
-# son los que placa_2d() usa para buscar su tramo en placas().
-PLACAS_DXF = {"cara_inf": "placa_cara_inf_2d", "valle": "placa_valle_2d",
-              "cara_sup": "placa_cara_sup_2d"}
+# Las tres placas de anclaje (PLACAS_DXF), el clip y la escuadra murieron el
+# 2026-08-29 por la noche: son el MARCO DE LA VENTANA, un DXF por costado,
+# que relee taladros_marco_ventana().
 
 
 def _retiro_costado(p: dict[str, float]) -> float:
@@ -159,7 +156,9 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
                                   p["chasis_refuerzo_lado"])
     for caja in planchas:
         nombre, x0, x1, y0, y1, z0, z1 = caja
-        if nombre in SIN_DXF or nombre in GIRADAS:
+        # las dos tiras laterales de la trasera (bajo sus muescas de esquina)
+        # son cajas para solapes(), no piezas: el DXF es el contorno entero
+        if nombre in SIN_DXF or nombre in GIRADAS or " lado " in nombre:
             continue
         aristas = sorted((x1 - x0, y1 - y0, z1 - z0), reverse=True)
         dims[f"{nombre}_2d"] = (aristas[0], aristas[1])   # se cae el espesor
@@ -176,39 +175,22 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
     # Python se separan, el bbox real del fichero se sale del sobre y revisar()
     # lo canta. Es la unica forma de cruzar dos gemelas que viven en lenguajes
     # distintos.
-    dims["miembro_bajo_2d"] = cb.bbox_desarrollo_miembro(p, "trasero bajo")
+    # EL MIEMBRO ALTO (una L con dos bridas) Y EL TALON (un angulo), desde el
+    # 2026-08-29 por la noche. El miembro bajo, la escuadra y los dos marcos
+    # de la trasera murieron esa noche: el marco de la ventana hace de tope y
+    # la banda de cada miembro hace de marco.
     dims["miembro_alto_2d"] = cb.bbox_desarrollo_miembro(p, "trasero alto")
-    # LA ESCUADRA DE LA TRASERA es de la misma chapa y por eso su DXF es otro
-    # DESARROLLO: las dos alas por su cota exterior menos un BD. Sale 3.3 mm
-    # mas estrecho que la suma de las dos alas montadas, y esa diferencia ES la
-    # pieza -- exportar la L ya doblada da un fichero valido e inservible.
-    dims["escuadra_trasera_2d"] = cb.bbox_desarrollo_escuadra(p)
-    # LAS DOS BANDAS DEL MARCO DE LA TRASERA (#234). La de ARRIBA es otra L y
-    # su DXF es otro desarrollo -- las dos alas menos un BD --; la de ABAJO es
-    # plana y su blank ES la pieza, asi que las dos salen de la misma funcion y
-    # es ella la que sabe cual se dobla.
-    dims["marco_trasera_sup_2d"] = cb.bbox_desarrollo_marco(p, "marco trasera sup")
-    dims["marco_trasera_inf_2d"] = cb.bbox_desarrollo_marco(p, "marco trasera inf")
+    dims["talon_2d"] = cb.bbox_desarrollo_miembro(p, "talon")
     # LA NARIZ (2026-08-29): la banda del frente. Otro desarrollo de la misma
     # chapa, con TRES dobleces (dos a 45 en el chaflan y uno de angulo_inferior
     # en P1), y otra vez la cuenta vive en Python y el dibujo en el .scad.
     dims["nariz_2d"] = cb.bbox_desarrollo_nariz(p)
 
-    # LAS TRES PLACAS DE ANCLAJE Y EL CLIP. Entran el 2026-08-28 (Tarea 6,
-    # item del controller): hasta hoy placas()/clips() eran solidos del
-    # modelo sin fichero de corte -- piezas que el render ensena pero que
-    # nadie manda a fresar. UN DXF POR TRAMO, no por costado: el lado
-    # espejado (z) comparte el mismo contorno xy (ver la nota de
-    # placa_cara_inf_2d() en el .scad), asi que el sobre sale del bbox de
-    # esquinas_placa(), sin doblar nada por la mitad.
-    for nombre, dxf in PLACAS_DXF.items():
-        pl = next(pl for pl in cb._placas(p) if pl[0] == nombre)
-        q = cb._esquinas_placa(pl)
-        xs, ys = [c[0] for c in q], [c[1] for c in q]
-        dims[dxf] = (max(xs) - min(xs), max(ys) - min(ys))
-    # El clip es una pieza GENERICA (no depende de a que tramo ni a que s se
-    # atornille): clip_largo x clip_fondo, igual que dibuja clip_2d().
-    dims["clip_2d"] = (p["clip_largo"], p["clip_fondo"])
+    # EL MARCO DE LA VENTANA (2026-08-29, noche): una pletina por costado con
+    # el contorno de la ventana del anillo, UN DXF para las dos (el lado
+    # espejado comparte contorno y se cajea por la otra cara). Su sobre es la
+    # silueta menos los retiros, derivado en el budget.
+    dims["marco_ventana_2d"] = cb.bbox_marco_ventana(p)
 
     return {n: (w - TOL, w + TOL, h - TOL, h + TOL) for n, (w, h) in dims.items()}
 
@@ -597,30 +579,6 @@ def agujeros_donde_toca() -> list[str]:
                          f"pestana que cae DENTRO no se dobla: se queda en la "
                          f"cara de arriba de la tapa")
             leidos = [q for q in leidos if 0 <= q[0] <= ancho]
-        # LA TRASERA trae SEIS M3 que no son de fila desde el 2026-08-28: los
-        # de las dos ESCUADRAS, tres por costado, en columna a 9.05 mm de cada
-        # canto. Se apartan por POSICION y no por conteo, igual que los M3 de
-        # pestana de la tapa del valle: si alguien mueve uno, deja de contar
-        # como escuadra y la rejilla de la pieza lo caza como intruso.
-        #
-        # Y SE CUENTAN APARTE, no dentro de las filas: meterlos en la rejilla
-        # habria sido decir que la trasera tiene tres filas de cinco y media,
-        # que es justo la clase de censo que pasa en verde con un agujero
-        # menos. Aqui el numero que se exige es el del modelo, escuadra por
-        # escuadra.
-        if placa == "piel_trasera":
-            esperados = cb._centros_m3_escuadra(p)
-            de_escuadra = [q for q in leidos
-                           if any(math.hypot(q[0] - ex, q[1] - ey)
-                                  <= DESVIO_DXF_MAX for ex, ey in esperados)]
-            if len(de_escuadra) != len(esperados):
-                f.append(f"{nombre}: {len(de_escuadra)} M3 de escuadra en el "
-                         f"DXF y el modelo pone {len(esperados)} "
-                         f"({int(p['escuadra_m3'])} por costado, a "
-                         f"{esperados[0][0]:.2f} mm del canto). Sin ellos la "
-                         f"escuadra no tiene por donde atornillarse y el canto "
-                         f"trasero del costado se queda otra vez sin tope")
-            leidos = [q for q in leidos if q not in de_escuadra]
         if len(leidos) != len(rejilla) * len(coords):
             f.append(f"{nombre}: {len(leidos)} agujeros en el DXF y el modelo "
                      f"pone {len(rejilla) * len(coords)} ({len(coords)} filas de "
@@ -642,41 +600,13 @@ def agujeros_donde_toca() -> list[str]:
                 f.append(f"{nombre}: las filas estan a {sep_dxf:.2f} mm en el DXF "
                          f"y a {sep_mod:.2f} en el modelo (difieren "
                          f"{sep_dxf - sep_mod:+.2f}) -- una de las dos se movio")
-    # --- el marco de la trasera: la misma fila, en otra chapa (#234) ---
-    # No sale del bucle de arriba porque las dos bandas no son planchas del
-    # cuerpo: viven en `railes` con los clips y las escuadras. Pero llevan
-    # tornillos, y un DXF con tornillos que nadie cuenta es exactamente el
-    # agujero del issue #51 -- la banda volveria del taller sin los suyos y no
-    # se sabria hasta ir a atornillarla a la trasera. Son LOS MISMOS M3 que ya
-    # cruzaban el acrilico, asi que la rejilla que se les exige es la de la
-    # piel y no la del case: el mismo ancho, los mismos cinco centros.
-    for m in cb._marcos_trasera(p):
-        nombre = m["dxf"]
-        if not (PLANS / f"{nombre}.dxf").exists():
-            f.append(f"{nombre}: FALTA el DXF de una banda del marco")
-            continue
-        leidos = _redondos(nombre)
-        if len(leidos) != len(REJILLA_PIEL):
-            f.append(f"{nombre}: {len(leidos)} M3 en el DXF y la banda lleva "
-                     f"{len(REJILLA_PIEL)}, los mismos de la fila que ya "
-                     f"cruzaba la trasera")
-            continue
-        for cx, cy, _ in leidos:
-            if min(abs(cx - r) for r in REJILLA_PIEL) > DESVIO_DXF_MAX:
-                f.append(f"{nombre}: un M3 en x={cx:.2f} se sale de la rejilla "
-                         f"de la trasera: si no coinciden, no entra el tornillo")
-                break
-            if abs(cy - m["m3_local"]) > DESVIO_DXF_MAX:
-                f.append(f"{nombre}: un M3 cae a y={cy:.2f} del canto libre de "
-                         f"la banda y el modelo lo pone en "
-                         f"{m['m3_local']:.2f}")
-                break
+    # (Las dos bandas del marco de la trasera se releian aqui del 29-08 por la
+    # manana a la noche; desde entonces la fila de la trasera vive en la banda
+    # del miembro alto y en la del talon, y la relee taladros_reticula().)
 
     if not f:
         print(f"  planchas: {sum(len(c) for c in por_placa.values())} filas de "
-              f"agujeros verificadas contra el DXF, mas "
-              f"{len(cb._marcos_trasera(p))} bandas de marco de "
-              f"{len(REJILLA_PIEL)} M3")
+              f"agujeros verificadas contra el DXF")
     return f
 
 
@@ -939,12 +869,14 @@ def guarda_costado() -> list[str]:
     #
     # Se pasa UNA por costado y solo su ala B: el ala A vive detras del canto
     # del acrilico (x >= 297.9) y no pisa un solo milimetro de PMMA.
-    clips = cb._clips(p)
-    ala_b = cb._escuadras_trasera(p)[0]["cajas"][1]
-    escuadra = [(ala_b[1], ala_b[3]), (ala_b[2], ala_b[3]),
-                (ala_b[2], ala_b[4]), (ala_b[1], ala_b[4])]
-    apoyos = ([cb._esquinas_placa(pl) for pl in cb._placas(p)]
-              + [q for _, q, _ in clips] + [escuadra])
+    # DESDE EL 2026-08-29 POR LA NOCHE EL APOYO HACIA DENTRO ES CONTINUO: el
+    # marco de la ventana, una pletina por costado que corre los siete tramos
+    # y pisa 6 mm de acrilico mas alla de la ventana. Placas, clips y escuadra
+    # murieron en el. Cada pata pasa su poligono real (con el escalon del
+    # canto exterior y la muesca de la brida); en las esquinas las patas se
+    # solapan o dejan un triangulo minimo, y el barrido lo trata como lo que
+    # es: el vano hasta el canto interior del marco.
+    apoyos = [q["poligono"] for q in cb._marco_ventana(p)]
     vano_in, donde_in = 0.0, (0.0, 0.0)
     y = min(ys)
     while y <= max(ys):
@@ -977,8 +909,8 @@ def guarda_costado() -> list[str]:
         fallos.append(
             f"costado_2d: empujado hacia DENTRO se hunde {flecha_in:.2f} mm "
             f"(vano {vano_in:.1f} en x={donde_in[0]:.0f}, y={donde_in[1]:.0f}) "
-            f"contra {p['flecha_costado_max']:.2f}. Hacia dentro lo paran las "
-            f"placas y los clips: falta un clip cerca de ese punto")
+            f"contra {p['flecha_costado_max']:.2f}. Hacia dentro lo para el "
+            f"marco de la ventana: sube marco_fondo")
     if sigma > cb.SIGMA_PMMA:
         fallos.append(
             f"costado_2d: {sigma:.1f} MPa bajo la mano contra el umbral de "
@@ -990,11 +922,10 @@ def guarda_costado() -> list[str]:
           f"{flecha:.2f} mm (techo {p['flecha_costado_max']:.2f}, vano maximo "
           f"{vano_max:.0f}) y trabaja a {sigma:.1f} MPa (fluencia "
           f"{cb.SIGMA_PMMA})")
-    print(f"  hacia DENTRO lo paran {len(apoyos)} apoyos "
-          f"({len(apoyos) - len(clips) - 1} placas + {len(clips)} clips + la "
-          f"escuadra de la trasera, por costado): vano interior {vano_in:.1f} "
-          f"mm (x={donde_in[0]:.0f}, y={donde_in[1]:.0f}) y se hunde "
-          f"{flecha_in:.2f} mm (techo {p['flecha_costado_max']:.2f}, vano "
+    print(f"  hacia DENTRO lo para el marco de la ventana ({len(apoyos)} patas "
+          f"por costado, {p['marco_fondo']:g} desde la silueta): vano interior "
+          f"{vano_in:.1f} mm (x={donde_in[0]:.0f}, y={donde_in[1]:.0f}) y se "
+          f"hunde {flecha_in:.2f} mm (techo {p['flecha_costado_max']:.2f}, vano "
           f"maximo {vano_max:.0f})")
     return fallos
 
@@ -1387,142 +1318,155 @@ def ranuras_rejilla_entrada() -> list[str]:
     return f
 
 
-def taladros_placas() -> list[str]:
-    """Las placas de anclaje y los clips traen sus taladros donde el modelo
-    dice, con material alrededor.
+def taladros_marco_ventana() -> list[str]:
+    """El marco de la ventana trae sus taladros donde el modelo dice, con
+    material alrededor, y su contorno es el de las patas del modelo.
 
-    HERMANA DE taladros_anillo() PERO DEL OTRO LADO: aquella releia el DORSO
-    del anillo -- las roscas ciegas donde placas y clips se atornillan. Esta
-    relee las PLACAS Y EL CLIP en si, que hasta la Tarea 6 (controller) eran
-    solidos del modelo sin DXF de corte: placas() y clips() dibujaban la
-    pieza que el render ensena, pero nadie mandaba fresar esa pieza -- salia
-    del taller como si no existiera.
+    HERMANA DE taladros_anillo() PERO DEL OTRO LADO: aquella relee el DORSO
+    del anillo -- las roscas ciegas donde el marco se atornilla. Esta relee el
+    MARCO en si. Sustituye a taladros_placas() (2026-08-29, noche): las tres
+    placas, el clip y la escuadra son hoy esta pieza.
 
-    CADA PLACA LLEVA TRES CLASES DE TALADRO, y las tres se comprueban:
-      1. el par de M4 CIEGOS a la placa la ata al anillo -- roscas_placa(),
-         diametro de PASO (d_M4_paso).
-      2. el PASO M4 de cada riel que la placa recoge -- pl[8], diametro
-         d_M4_paso. FIX ROUND 1 (Tarea 6): esta puerta pidio primero
-         d_cajeado_riel (8) aqui, porque la primera version de placa_2d()
-         en el .scad dibujaba el CAJEADO en vez del agujero que de verdad
-         sujeta el tornillo del riel -- una pieza que habria salido del
-         taller sin donde meter el tornillo. El cajeado (Ø8 x
-         prof_cajeado_riel, por el lado del anillo) sigue existiendo en la
-         pieza real, pero es NOTA DE MECANIZADO en PLIEGO.md, no un circulo
-         en este DXF: un DXF 2D no sabe decir profundidad.
-      3. SOLO LA DEL VALLE: el M3 de la pestana de la banda
-         (roscas_placa_valle()/_m3_pestana) y el M4 de cada lengueta de la
-         bahia (_bridas() con ancla == "placa") -- DOS, una por ala
-         (delantera y trasera), no cuatro: cada lengueta lleva un solo M4
-         roscado en la placa (ver la nota de _bridas() en clearance_budget.py
-         y el BOM, "tornillo M4 x4 -- las dos lenguetas de la BAHIA", que
-         cuenta las DOS placas del case, no los taladros de esta).
+    CUATRO CLASES DE TALADRO, y las cuatro se comprueban:
+      1. los doce M4 CIEGOS al anillo -- _roscas_marco(), diametro de PASO:
+         diez en las tres filas y dos en la pata del suelo;
+      2. los seis pasos M4 de riel -- _pasos_riel_marco(). El cajeado (Ø8 x
+         prof_cajeado_riel, por el lado del anillo) es NOTA DE MECANIZADO en
+         el pliego, no un circulo aqui: un DXF 2D no sabe decir profundidad;
+      3. la rosca M3 de la pestana de la banda del valle, dibujada a
+         d_M3_rosca (pasante) y medida al canto con d_M3_paso.
+    (La brida del miembro alto no lo atraviesa: ahi va la muesca.) Todos a
+    BORDE_MIN_D x D del contorno RELEIDO, no de la copia en Python.
 
-    LA REGLA DE CANTO ES LA MISMA QUE guarda_anclajes() YA APLICA EN 3D
-    (_dist_al_poligono contra las esquinas reales de la placa, minimo 1.5 D)
-    -- aqui se repite releyendo el FICHERO, con _cantos() en vez de la copia
-    en Python, por la misma razon que taladros_anillo() no confia en el
-    offset() de sam17_case.scad: la version que cuenta es la que el laser va
-    a ver.
-
-    EL CLIP ES MAS SIMPLE: una pieza generica (no depende de tramo ni de s),
-    un solo M4 de paso centrado, a 1.5 D de sus cuatro cantos.
-
-    CADA DXF SE GUARDA SI NO EXISTE TODAVIA: la puerta de _sobres()/main() ya
-    dice "FALTA el DXF" por su cuenta, y leer aqui un fichero que no esta en
-    disco seria un traceback (FileNotFoundError de ezdxf) en vez de un ROJO
-    legible -- justo lo que esta puerta existe para evitar."""
+    Y EL CONTORNO: por cada pata del modelo, el punto medio de su canto
+    exterior y el de su canto interior caen sobre el contorno del fichero.
+    Es lo que cruza las dos gemelas -- las bandas de retiro del .scad contra
+    los poligonos del budget -- en los ocho tramos, escalones incluidos. Con
+    dos salvedades que son de la pieza y no de la puerta: en las tres filas
+    la silueta va ABOMBADA (bombeo, hasta 0.78 en la cara de abajo) y las
+    patas del budget son rectas, asi que ahi se tolera 1 mm; y las dos patas
+    del frente (chaflan y frente) no tienen canto interior propio -- el
+    rincon de la nariz las rellena hasta (marco_fondo, marco_fondo) -- y solo
+    se mira su canto exterior."""
     import clearance_budget as cb
 
     p = cb.leer_params()
+    dxf = "marco_ventana_2d"
+    if not (PLANS / f"{dxf}.dxf").exists():
+        return []
     f: list[str] = []
-    cajas_miembro = None
-    for nombre, dxf in PLACAS_DXF.items():
-        if not (PLANS / f"{dxf}.dxf").exists():
+    cantos = _cantos(dxf)
+    if not cantos:
+        return [f"{dxf}: sin LINEs, no se puede verificar el marco"]
+    d4, d3 = p["d_M4_paso"], p["d_M3_paso"]
+    esperados = [(f"M4 ciego '{nm}'", c, d4, d4) for nm, c in cb._roscas_marco(p)]
+    esperados += [(f"paso M4 de {nm}", c, d4, d4)
+                  for nm, c in cb._pasos_riel_marco(p)]
+    esperados.append(("M3 pestana valle", cb._m3_pestana(p), p["d_M3_rosca"], d3))
+    leidos = _redondos(dxf)
+    for etiqueta, c, d, d_canto in esperados:
+        cerca = [q for q in leidos
+                 if math.hypot(q[0] - c[0], q[1] - c[1]) <= DESVIO_DXF_MAX
+                 and abs(q[2] - d) < 0.1]
+        if not cerca:
+            f.append(f"{dxf}: falta el taladro '{etiqueta}' (d={d:.2f}) en "
+                     f"({c[0]:.2f}, {c[1]:.2f})")
             continue
-        pl = next(pl for pl in cb._placas(p) if pl[0] == nombre)
-        cantos = _cantos(dxf)
-        if not cantos:
-            f.append(f"{dxf}: sin LINEs, no se puede verificar la placa")
-            continue
-        # (etiqueta, centro, d_leido, d_canto). d_leido es lo que _redondos()
-        # tiene que encontrar dibujado; d_canto es CON QUE D se multiplica
-        # BORDE_MIN_D, y las dos NO siempre son la misma cota -- el caso que
-        # queda es el M3 de pestana (dibujado a d_M3_rosca, canto a
-        # d_M3_paso, mas abajo). Para el paso M4 de riel las dos coinciden:
-        # el DXF dibuja el agujero de PASO (FIX ROUND 1: no el cajeado, ver
-        # el .scad), y el canto que le exige guarda_anclajes() en 3D -- y
-        # RFQ.md (S "Preguntas de cota", el M4 de brida a 6.75 mm, "el minimo
-        # exigido, 1.5 diametros del M4 de paso, sin margen de sobra") -- es
-        # el de ese mismo diametro: 1.5 x d_M4_paso, 6.75 mm.
-        esperados = [(f"M4 ciego '{nm}'", c, p["d_M4_paso"], p["d_M4_paso"])
-                     for nm, c in cb._roscas_placa(p, pl)]
-        esperados += [(f"paso M4 de riel @ s={e[0]:.1f}", e[1],
-                       p["d_M4_paso"], p["d_M4_paso"])
-                      for e in pl[8]]
-        if nombre == "valle":
-            # MISMA COTA DE CANTO QUE guarda_anclajes(): d_M3_paso (3.4), no
-            # d_M3_rosca (2.5) -- el diametro DIBUJADO en la placa si es
-            # d_M3_rosca (rosca pasante, ver roscas_placa_valle() en el
-            # .scad), pero el margen de canto se mide con el paso, otra vez
-            # por lo mismo: `assert d_m3 >= 1.5 * p["d_M3_paso"]` en
-            # clearance_budget.py.
-            esperados.append(("M3 pestana valle", cb._m3_pestana(p),
-                              p["d_M3_rosca"], p["d_M3_paso"]))
-            # (Las dos lenguetas de la bahia se esperaban aqui hasta el
-            # 2026-08-29; la bahia murio ese dia.)
-        leidos = _redondos(dxf)
-        for etiqueta, c, d, d_canto in esperados:
-            cerca = [q for q in leidos
-                     if math.hypot(q[0] - c[0], q[1] - c[1]) <= DESVIO_DXF_MAX
-                     and abs(q[2] - d) < 0.1]
-            if not cerca:
-                f.append(f"{dxf}: falta el taladro '{etiqueta}' (d={d:.2f}) "
-                         f"en ({c[0]:.2f}, {c[1]:.2f})")
+        dist = _dist_al_contorno(cantos, c)
+        if dist < BORDE_MIN_D * d_canto - DESVIO_DXF_MAX:
+            f.append(f"{dxf}: el taladro '{etiqueta}' cae a {dist:.2f} mm del "
+                     f"canto y se exigen {BORDE_MIN_D * d_canto:.2f} "
+                     f"({BORDE_MIN_D} x D)")
+    if len(leidos) != len(esperados):
+        f.append(f"{dxf}: {len(leidos)} agujeros en el DXF y el modelo pone "
+                 f"{len(esperados)}")
+    # el contorno, pata por pata: el punto medio de cada canto
+    for q in cb._marco_ventana(p):
+        sm = (q["s0"] + q["s1"]) / 2
+        filas = q["nombre"] in ("cara_inf", "valle", "cara_sup")
+        tol = 1.0 if filas else 0.05
+        for etiqueta, b in (("exterior", q["retiro"]), ("interior", q["fondo"])):
+            if etiqueta == "interior" and q["nombre"] in ("chaflan", "frente"):
                 continue
-            dist = _dist_al_contorno(cantos, c)
-            # - DESVIO_DXF_MAX: las dos lenguetas de la bahia viven EXACTO en
-            # el limite por diseno -- placa_1u_fondo() en clearance_budget.py
-            # se define como "donde cae su M4 mas 1.5 D de canto", o sea que
-            # el margen real es CERO a proposito, no un descuido. Medido:
-            # 6.749931 mm contra un umbral de 6.75 -- 69 NANOMETROS de sobra
-            # que el redondeo de $fn en el arco de la placa y el viaje por
-            # DXF/ezdxf se comen. Es el mismo fenomeno que ya vive en este
-            # fichero (EPS de cuerpos_dentro_del_anillo(), la nota de
-            # dist_rosca_ciega sobre "vive del redondeo de coma flotante") y
-            # se trata igual: una tolerancia, no un canto mas generoso.
-            if dist < BORDE_MIN_D * d_canto - DESVIO_DXF_MAX:
-                f.append(f"{dxf}: el taladro '{etiqueta}' cae a {dist:.2f} mm "
-                         f"del canto y se exigen {BORDE_MIN_D * d_canto:.2f} "
-                         f"({BORDE_MIN_D} x D)")
-        if len(leidos) != len(esperados):
-            f.append(f"{dxf}: {len(leidos)} agujeros en el DXF y el modelo "
-                     f"pone {len(esperados)}")
-        elif not any(m.startswith(dxf + ":") for m in f):
-            print(f"  {dxf}: {len(leidos)} taladros verificados, todos a "
-                  f">= {BORDE_MIN_D}xD del canto")
-    if (PLANS / "clip_2d.dxf").exists():
-        cantos = _cantos("clip_2d")
-        if not cantos:
-            f.append("clip_2d: sin LINEs, no se puede verificar el clip")
-        else:
-            leidos = _redondos("clip_2d")
-            if len(leidos) != 1:
-                f.append(f"clip_2d: {len(leidos)} agujeros en el DXF y el "
-                         f"modelo pone 1")
+            if etiqueta == "exterior" and "escalon" in q:
+                # en las patas con escalon el punto medio se mide en el tramo
+                # que va a la silueta (retiro 0)
+                sm_e = (q["escalon"] + (q["s1"] if q["nombre"] == "cara_inf"
+                                        else q["s0"])) / 2
+                pt = q["_m"]((sm_e, 0.0))
             else:
-                cx, cy, d = leidos[0]
-                if abs(d - p["d_M4_paso"]) > 0.1:
-                    f.append(f"clip_2d: el agujero mide d={d:.2f} y se "
-                             f"espera d_M4_paso={p['d_M4_paso']:.2f}")
-                dist = _dist_al_contorno(cantos, (cx, cy))
-                minimo = BORDE_MIN_D * p["d_M4_paso"]
-                if dist < minimo:
-                    f.append(f"clip_2d: el agujero cae a {dist:.2f} mm del "
-                             f"canto y se exigen {minimo:.2f} ({BORDE_MIN_D} x D)")
-                elif not any(m.startswith("clip_2d:") for m in f):
-                    print(f"  clip_2d: 1 taladro d_M4_paso a {dist:.2f} mm "
-                          f"del canto (>= {minimo:.2f})")
+                pt = q["_m"]((sm, b))
+            dist = _dist_al_contorno(cantos, pt)
+            if dist > tol:
+                f.append(f"{dxf}: el canto {etiqueta} de la pata '{q['nombre']}' "
+                         f"no pasa por ({pt[0]:.2f}, {pt[1]:.2f}) donde el modelo "
+                         f"lo pone: el contorno mas cercano queda a {dist:.2f}")
+    if not any(m.startswith(dxf + ":") for m in f):
+        print(f"  {dxf}: {len(leidos)} taladros verificados a >= {BORDE_MIN_D}xD "
+              f"del canto, y el contorno pasa por las {len(cb._marco_ventana(p))} "
+              f"patas del modelo")
+    return f
+
+
+def taladros_talon() -> list[str]:
+    """El talon trae su fila de M3 y sus tres M4, y la tabla lleva debajo los
+    tres del talon y los cuatro del chasis.
+
+    Como taladros_nariz(): dos ficheros y un solo herraje. Los M4 del pie
+    atraviesan el talon (talon_2d, en el desarrollo, a 1.5 D del canto libre
+    del pie) y entran en la tabla (bandeja_base_2d, con d_pie_tornillo, el
+    mismo herraje a la misma madera). Y los cuatro M4 del suelo del chasis --
+    que desde el 2026-08-29 por la noche va a la tabla y no a un miembro --
+    tienen que estar en la tabla donde chasis_cuerpo_2d los lleva."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    tl = cb._talon(p)
+    f: list[str] = []
+    dxf = "talon_2d"
+    if (PLANS / f"{dxf}.dxf").exists():
+        cantos = _cantos(dxf)
+        leidos = _redondos(dxf)
+        d4 = p["d_M4_paso"] + p["kerf"]
+        esperados = [(z - p["t_anillo"] - p["hol_piel"],
+                      tl["desarrollo"] - 1.5 * p["d_M4_paso"]) for z in tl["m4_z"]]
+        for ex, ey in esperados:
+            cerca = [q for q in leidos
+                     if math.hypot(q[0] - ex, q[1] - ey) <= DESVIO_DXF_MAX
+                     and abs(q[2] - d4) < 0.1]
+            if not cerca:
+                f.append(f"{dxf}: falta el M4 del pie en ({ex:.2f}, {ey:.2f})")
+                continue
+            dist = _dist_al_contorno(cantos, (ex, ey))
+            if dist < BORDE_MIN_D * p["d_M4_paso"] - DESVIO_DXF_MAX:
+                f.append(f"{dxf}: el M4 de ({ex:.2f}, {ey:.2f}) cae a {dist:.2f} "
+                         f"mm del canto y se exigen "
+                         f"{BORDE_MIN_D * p['d_M4_paso']:.2f}")
+        m3 = [q for q in leidos if abs(q[2] - (p["d_M3_paso"] + p["kerf"])) < 0.1]
+        n = max(1, round(cb.perfil(p)["ancho_util"] / p["reticula_paso"]))
+        if len(m3) != n:
+            f.append(f"{dxf}: {len(m3)} M3 en el DXF y la banda lleva {n}")
+        if len(leidos) != n + len(esperados):
+            f.append(f"{dxf}: {len(leidos)} agujeros en el DXF y el modelo pone "
+                     f"{n + len(esperados)}")
+    v = p["vuelo_zocalo"]
+    tabla = _redondos("bandeja_base_2d")
+    d_t = p["d_pie_tornillo"] + p["kerf"]
+    for z in tl["m4_z"]:
+        ex, ey = v + z, v + tl["m4_x"]
+        if not any(math.hypot(q[0] - ex, q[1] - ey) <= DESVIO_DXF_MAX
+                   and abs(q[2] - d_t) < 0.1 for q in tabla):
+            f.append(f"bandeja_base_2d: falta el taladro del talon en "
+                     f"({ex:.2f}, {ey:.2f}), d={d_t:.2f}")
+    d4t = p["d_M4_paso"] + p["kerf"]
+    for ex, ey in cb._chasis_tornillos_tabla(p):
+        if not any(math.hypot(q[0] - ex, q[1] - ey) <= DESVIO_DXF_MAX
+                   and abs(q[2] - d4t) < 0.1 for q in tabla):
+            f.append(f"bandeja_base_2d: falta el taladro del chasis en "
+                     f"({ex:.2f}, {ey:.2f}), d={d4t:.2f}")
+    if not f:
+        print(f"  talon_2d: fila de {n} M3 y 3 M4 en el pie; la tabla lleva los "
+              f"3 del talon (d={d_t:.2f}) y los 4 del chasis (d={d4t:.2f})")
     return f
 
 
@@ -1585,7 +1529,12 @@ def cuerpos_dentro_del_anillo() -> list[str]:
                for n, c, a in zip(cb.NOMBRES_CR, cr, cb.ANGS_CR)]
     cuerpos += [(f"fila 1U {i}", cb._esquinas_er(p, c, 90.0))
                 for i, c in enumerate(cb._centros_rail_1u(p, P, cr))]
-    cuerpos += [(n, [(c[x], c[y])
+    # LAS DOS BANDAS (miembro alto y talon) doblan en la esquina del anillo con
+    # radio_chapa, o sea que su caja llega al vertice vivo pero la chapa no:
+    # se recortan radio_chapa por el lado del doblez antes de mirar si caben.
+    r_ch = p["radio_chapa"]
+    recorte = {"trasero alto": (0.0, -r_ch), "talon": (r_ch, 0.0)}
+    cuerpos += [(n, [(c[x], c[y] + (recorte[n][0] if y == 3 else recorte[n][1]))
                      for x in (1, 2) for y in (3, 4)])
                 for n, c in miembros.items()]
     # LAS PLACAS Y LAS BRIDAS entran el 2026-08-28, y esta es LA puerta que
@@ -1595,24 +1544,17 @@ def cuerpos_dentro_del_anillo() -> list[str]:
     # contra cuerpo y una placa que asoma por el borde no choca con nada. En
     # HEAD dos esquinas de placa asomaban 0.59 y 0.71 mm y las dos puertas
     # daban verde. Las placas pasan su POLIGONO REAL, chaflan incluido.
-    cuerpos += [(f"placa {pl[0]}", cb._esquinas_placa(pl))
-                for pl in cb._placas(p)]
-    cuerpos += [(f"brida {n}", [(x, y) for x in (x0, x1) for y in (y0, y1)])
-                for n, (x0, x1, y0, y1), _, _ in cb._bridas(p, miembros)]
-    # LOS CLIPS, por lo mismo que las placas: van pegados a la silueta y su
-    # sitio a lo largo del tramo es un numero escrito a mano en TRAMOS_CLIP.
-    # Correr uno hacia una esquina para librar una brida -- que es justo lo que
-    # pide su vecindario -- lo mete en el redondeo y se sale por el borde, y
-    # solapes() no lo ve porque un cuerpo que asoma por fuera no choca con
-    # nada.
-    cuerpos += [(f"clip {n}", q) for n, q, _ in cb._clips(p)]
-    # LAS DOS ALAS DE LA ESCUADRA, por lo mismo: van pegadas al canto trasero
-    # -- el ala A a 8 mm de la silueta, que es el espesor de la trasera -- y su
-    # largo lo fijan las bridas de los miembros, o sea que crece hacia las dos
-    # esquinas donde el redondeo se come material. Se pasa la del lado 0: la
-    # del 1 es su espejo en z y en el plano del perfil son la misma.
-    cuerpos += [(c[0], [(c[1], c[3]), (c[2], c[3]), (c[2], c[4]), (c[1], c[4])])
-                for c in cb._escuadras_trasera(p)[0]["cajas"]]
+    # EL MARCO DE LA VENTANA, pata por pata con su poligono real (escalones y
+    # muesca incluidos): en las tres filas va pegado a la silueta y sus
+    # extremos se retiran la tangente del redondeo; en los demas tramos va
+    # retirado bajo la chapa. Una esquina que se pase del redondeo asoma por
+    # fuera y no la caza nadie mas. Y la brida del miembro alto, en la franja
+    # de la meseta.
+    cuerpos += [(f"marco {q['nombre']}", q["poligono"])
+                for q in cb._marco_ventana(p)]
+    cuerpos += [(f"brida {b['nombre']}",
+                 [(x, y) for x in b["rect"][:2] for y in b["rect"][2:]])
+                for b in cb._bridas(p)]
     # Varios largueros van A RAS del contorno por diseno (los de la cara
     # trasera tienen su centro en prof_inferior - r, o sea que su cara de atras
     # coincide con el plano trasero; los de la base apoyan en y=0). Un punto
@@ -1657,8 +1599,8 @@ def chasis_agujeros() -> list[str]:
 
     p = cb.leer_params()
     torn = 2 * (p["chasis_tornillos_largo"] + p["chasis_tornillos_corto"])
-    # los 4 M5 con que el chasis cuelga de los largueros, dos por pared larga
-    anclajes = 2 * int(p["chasis_anclajes"])
+    # los 4 M4 del suelo a la tabla (2026-08-29, noche; eran 2 M5 de pared)
+    anclajes = len(cb._chasis_tornillos(p))
     esperado = {
         # 1 M6 del toroide + los TO-220 + 1 M4 de PE + los de la tapa + anclajes
         "chasis_cuerpo_2d": int(1 + p["chasis_to220_n"] + 1 + torn + anclajes),
@@ -1810,9 +1752,9 @@ def guarda_zocalo() -> list[str]:
     # hace falta para plantar el cilindro y aqui no, porque esto es 2D.
     v = p["vuelo_zocalo"]
     P = cb._vertices(p)
-    bajo = cb._cajas_miembro(p, P, cb._centros_rail(p, P), 0.0, 0.0)["trasero bajo"]
+    tl = cb._talon(p)
     x_frente = p["alto_frontal"] / 2 + p["d_pie"] / 2
-    x_trasero = (bajo[1] + bajo[2]) / 2       # centro_miembro_bajo().x
+    x_trasero = tl["x_band"] - p["talon_pie"] / 2    # centro_talon().x
     d_pie_taladro = p["d_pie_tornillo"] + p["kerf"]
     esperados_pie = [(v + wz, v + wx)
                      for wx in (x_frente, x_trasero)
@@ -1821,11 +1763,16 @@ def guarda_zocalo() -> list[str]:
     # LOS TRES DE LA NARIZ llevan el mismo diametro (mismo herraje a la misma
     # tabla) y NO son pies: se apartan por posicion, y los cuenta
     # taladros_nariz(). Sin esto, el censo de pies decia 7.
+    # Y LOS TRES DEL TALON Y LOS CUATRO DEL CHASIS (2026-08-29, noche), por lo
+    # mismo: mismo diametro, se apartan por posicion y los cuenta
+    # taladros_talon().
     nz = cb._nariz(p)
-    de_nariz = [(v + z, v + nz["m4_x"]) for z in nz["m4_z"]]
+    de_otros = ([(v + z, v + nz["m4_x"]) for z in nz["m4_z"]]
+                + [(v + z, v + tl["m4_x"]) for z in tl["m4_z"]]
+                + cb._chasis_tornillos_tabla(p))
     pies = [q for q in redondos if abs(q[2] - d_pie_taladro) < 0.1
             and not any(math.hypot(q[0] - ex, q[1] - ey) <= DESVIO_DXF_MAX
-                        for ex, ey in de_nariz)]
+                        for ex, ey in de_otros)]
     if len(pies) != 4:
         f.append(f"bandeja_base_2d: faltan los 4 taladros de pie -- hay "
                  f"{len(pies)} de d={d_pie_taladro:.2f} mm (d_pie_tornillo) "
@@ -1847,8 +1794,15 @@ def guarda_zocalo() -> list[str]:
 
 
 
-MIEMBROS_DXF = {"miembro_bajo_2d": "trasero bajo",
-                "miembro_alto_2d": "trasero alto"}
+# Las dos chapas traseras con fila de M3, nombre de DXF -> (miembro, ancho
+# sobre el que se reparte la fila, desfase de la fila en el blank). LA FILA
+# ES LA DE LA TRASERA -- los mismos cinco centros --, y la trasera es
+# 2*hol_piel mas estrecha que el hueco entre anillos: el miembro alto cruza el
+# hueco entero y lleva la fila corrida hol_piel; el talon mide lo que la
+# trasera y la lleva a ras. (Era miembro_bajo/miembro_alto con la fila sobre
+# ancho_util hasta el 2026-08-29 por la noche.)
+MIEMBROS_DXF = {"miembro_alto_2d": ("trasero alto", "trasera", "hol_piel"),
+                "talon_2d": ("talon", "trasera", 0.0)}
 
 
 def taladros_reticula() -> list[str]:
@@ -1897,10 +1851,12 @@ def taladros_reticula() -> list[str]:
     au = cb.perfil(p)["ancho_util"]
     paso = p["reticula_paso"]
     n = max(1, round(au / paso))
-    rejilla = [au * (i + 0.5) / n for i in range(n)]
     d_ret = p["d_M3_paso"] + p["kerf"]
     f: list[str] = []
-    for dxf, miembro in MIEMBROS_DXF.items():
+    for dxf, (miembro, sobre, desfase) in MIEMBROS_DXF.items():
+        ancho = cb._trasera_au(p) if sobre == "trasera" else au
+        off = p[desfase] if isinstance(desfase, str) else desfase
+        rejilla = [off + ancho * (i + 0.5) / n for i in range(n)]
         leidos = _redondos(dxf)
         if not leidos:
             f.append(f"{dxf}: CERO agujeros. El miembro '{miembro}' es un canal "
@@ -1914,7 +1870,7 @@ def taladros_reticula() -> list[str]:
                      and abs(q[2] - d_ret) <= 0.1]
             if not cerca:
                 f.append(f"{dxf}: falta el agujero de reticula en x={x:.2f} "
-                         f"(paso {paso:.0f}, {n} sobre {au:.2f}). Con la ranura "
+                         f"(paso {paso:.0f}, {n} sobre {ancho:.2f}). Con la ranura "
                          f"en T daba igual donde cayera un tornillo; aqui no")
                 continue
             sobra.remove(cerca[0])
@@ -1933,7 +1889,11 @@ def taladros_reticula() -> list[str]:
                          f"del canto mas cercano del desarrollo y se exigen "
                          f"{BORDE_MIN_D * d_ret:.2f} ({BORDE_MIN_D} x D)")
         for q in sobra:
-            d = min(abs(q[0] - x) for x in rejilla)
+            # EN 2D desde el 2026-08-29 por la noche: el talon lleva sus M4 en
+            # el pie, a 28 mm de la fila en y y justo encima de una columna en
+            # x, y medir solo en x los daba por rasgados
+            d = min(math.hypot(q[0] - x, q[1] - ys[0]) for x in rejilla) if ys \
+                else min(abs(q[0] - x) for x in rejilla)
             puente = d - (q[2] + d_ret) / 2
             minimo = BORDE_MIN_D * max(q[2], d_ret)
             if puente < minimo:
@@ -1946,8 +1906,8 @@ def taladros_reticula() -> list[str]:
         if not f:
             extra = len(leidos) - n
             print(f"  {dxf}: reticula de {n} M3 a paso {paso:.0f} sobre "
-                  f"{au:.2f}" + (f", mas {extra} agujero(s) declarado(s) con "
-                                 f"puente" if extra else ""))
+                  f"{ancho:.2f}" + (f", mas {extra} agujero(s) declarado(s) con "
+                                    f"puente" if extra else ""))
     return f
 
 
@@ -1964,8 +1924,9 @@ def main() -> int:
     fallos += anillo_tiene_chaflan()
     fallos += seccion_del_cupon()
     fallos += taladros_anillo()
-    fallos += taladros_placas()
+    fallos += taladros_marco_ventana()
     fallos += taladros_nariz()
+    fallos += taladros_talon()
     fallos += ranuras_rejilla_entrada()
     fallos += cuerpos_dentro_del_anillo()
     fallos += tapa_valle_conectada()
