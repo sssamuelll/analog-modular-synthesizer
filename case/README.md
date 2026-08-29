@@ -688,9 +688,20 @@ depende de la cuenta final de módulos, no de la geometría del cajón):
 | Cable verde/amarillo + terminal de ojal | 1 por panel | al espárrago único, sin excepción |
 | Tuerca T M3 | 4 por panel | uno por taladro de `panels/build_template.py` |
 
-Censo actual de paneles: 8 (MIDI/CV, VCO×3, VCF, ADSR, VCA, MIXER —
-`clearance_budget.py`, `ANCHOS_PISO_SUP`/`ANCHOS_PISO_INF`). **Estimado, no
-cerrado**: estos totales por panel cierran cuando cada panel esté dibujado.
+Censo de paneles, **reescrito el 2026-08-27**. Los 8 que decía antes
+(MIDI/CV, VCO×3, VCF, ADSR, VCA, MIXER) eran de la tesis: los tres VCO
+colapsaron en un módulo y los módulos 4-7 **desaparecieron como placa**
+el 2026-08-23. `ANCHOS_PISO_SUP`/`ANCHOS_PISO_INF` ya no existen.
+
+- **Fila de arriba: UN panel** de 104 HP con la pantalla de 7" en su centro
+  y los mandos en los dos flancos de 181,66 mm
+  (`2026-08-27-panel-pantalla-al-centro-design.md`). Su reparto interno entre
+  PCB y bahía lo lleva `voz_total_budget.py`, no este fichero.
+- **Fila de abajo: SIN CERRAR**, y con dos descripciones vivas que no
+  coinciden — ver «Lo que este cálculo NO cubre» en `clearance_budget.py`.
+
+**Estimado, no cerrado**: los totales por panel cierran cuando cada panel
+esté dibujado.
 
 ## Anclaje de las placas — solo a los miembros del esqueleto, nunca a raíles de panel
 

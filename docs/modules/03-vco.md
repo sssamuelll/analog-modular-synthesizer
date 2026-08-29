@@ -1,6 +1,18 @@
-# Módulo 3 — VCO ×4 (SSI2130)
+# Módulo 3 — la Voz (SSI2130)
 
-> Diseño y decisiones: [spec del módulo](../superpowers/specs/2026-08-16-modulo-3-vco-design.md).
+> [!IMPORTANT]
+> **Esta página describe la v1, de cuatro osciladores, y está superada —
+> 2026-08-22/23.** El módulo pasa a **dieciséis canales completos** (oscilador →
+> filtro → VCA en el mismo cobre) más la bahía asignable, con dos RP2350B a
+> bordo y una matriz de modulación FM de 16 líneas. Dieciséis y no ocho porque
+> **en FM cada voz necesita dos osciladores**: una moduladora compartida entre
+> ocho notas no da FM tonal, da campanas disonantes.
+>
+> Lo de abajo sigue siendo la mejor descripción del canal individual. Mandan el
+> [spec de Voz total](../superpowers/specs/2026-08-23-modulo-voz-total-design.md)
+> y el [spec de los dieciséis](../superpowers/specs/2026-08-22-modulo-3-vco-dieciseis-design.md).
+
+> Diseño y decisiones de la v1: [spec del módulo](../superpowers/specs/2026-08-16-modulo-3-vco-design.md).
 > Hardware: [`hardware/03-vco/`](../../hardware/03-vco/).
 > Bring-up: [`hardware/03-vco/notes/bring-up.md`](../../hardware/03-vco/notes/bring-up.md).
 >

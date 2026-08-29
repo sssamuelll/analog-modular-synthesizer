@@ -1,8 +1,40 @@
-# Hardware — Módulo 3: VCO ×4 (SSI2130)
+# Hardware — Módulo 3: la Voz
+
+> [!IMPORTANT]
+> ## Esta carpeta documenta la v1 (VCO ×4), y está SUPERADA — 2026-08-22/23
+>
+> El módulo 3 **deja de ser «el VCO» y pasa a ser la Voz**: dieciséis canales
+> completos, cada uno oscilador → filtro → VCA soldado de punta a punta en la
+> misma placa, más la bahía asignable. Los módulos 4, 5, 6 y 7 se disuelven
+> dentro de él.
+>
+> | Lo que esta carpeta asume | Lo que se decidió después |
+> |---|---|
+> | 4 osciladores en una placa de 114 × 124 mm | **16 osciladores en un módulo**, en dos columnas de placas |
+> | Sólo VCO: el filtro y el VCA viven fuera | El **canal** es oscilador → filtro → VCA en el mismo cobre |
+> | Un micro fuera del módulo compone las palabras del DAC | **Dos RP2350B en el módulo**; del J2 cuelga un micro, no los chips |
+> | Panel de 32 jacks, entrada de CV por voz | Muere: en su sitio va la **bahía asignable** de 8 entradas + 8 salidas por dos AD75019 |
+> | Sin FM entre osciladores | **Matriz de modulación FM de 16 líneas**: cualquiera modula a cualquiera |
+>
+> **La v1 nunca se fabricó** — su `notes/medidas.csv` tiene 65 filas y cero
+> medidas. Lo que se conserva de ella no es una placa: es un layout validado
+> (reparto 2×2, plano de masa medido, escapes del QFN, DRC en 0) y cuatro
+> presupuestos ejecutables, y los dos se reutilizan. Por eso este rediseño es
+> papel contra papel y sale barato.
+>
+> **Lo de abajo sigue siendo la mejor documentación del canal individual** —
+> convertidor exponencial, referencia, escapes, `TUNE_OUT`— y el bring-up de
+> `notes/bring-up.md` sigue siendo válido para lo que describe. Lo que ya no
+> vale es el número de canales, el reparto de placas y el panel.
+>
+> Mandan, en este orden: el
+> [spec del módulo de Voz total](../../docs/superpowers/specs/2026-08-23-modulo-voz-total-design.md),
+> el [spec de los dieciséis](../../docs/superpowers/specs/2026-08-22-modulo-3-vco-dieciseis-design.md)
+> (acta de su junta) y el
+> [spec de orquestación](../../docs/superpowers/specs/2026-08-22-vco-orquestacion-design.md).
 
 > Documentación funcional: [`docs/modules/03-vco.md`](../../docs/modules/03-vco.md).
-> Diseño y decisiones: [spec del módulo](../../docs/superpowers/specs/2026-08-16-modulo-3-vco-design.md).
-> Arquitectura polifónica: [`docs/architecture-poly.md`](../../docs/architecture-poly.md).
+> Diseño y decisiones de la v1: [spec del módulo](../../docs/superpowers/specs/2026-08-16-modulo-3-vco-design.md).
 > **Bring-up de la placa física: [`notes/bring-up.md`](notes/bring-up.md).**
 
 ## Resumen

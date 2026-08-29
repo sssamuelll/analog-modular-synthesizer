@@ -90,6 +90,31 @@ pub static PINOUT: &[Pin] = &[
     a(40, "pedal"),
 ];
 
+/// Cuántos GPIO consecutivos ve una máquina de estado del PIO.
+///
+/// Datasheet del RP2350 (agosto 2024), pág. 877, Figura 44: *«GPIO mapping
+/// logic allows each state machine to observe and manipulate up to 32 GPIOs»*.
+pub const VENTANA_PIO: u8 = 32;
+
+/// Qué pines toca cada programa de PIO.
+///
+/// Vive aquí y no en el presupuesto porque es un dato **de pines**: cuál va con
+/// cuál. Cuántas máquinas, cuántas instrucciones y cuántos canales de DMA
+/// cuesta cada programa lo decide `hardware/02-midi-cv/pio_budget.py`, que lee
+/// esta tabla en vez de copiarla.
+///
+/// La restricción que obliga a declararlo: un programa cuyos pines caigan a los
+/// dos lados de la frontera de 32 **no se puede escribir**. No es que vaya
+/// lento — es que la máquina no alcanza el pin.
+pub static PROGRAMAS_PIO: &[(&str, &[&str])] = &[
+    (
+        "cronometros de afinacion",
+        &["TUNE_OUT 1", "TUNE_OUT 2", "TUNE_OUT 3", "TUNE_OUT 4"],
+    ),
+    ("host USB (Pico-PIO-USB)", &["PIO-USB D+", "PIO-USB D-"]),
+    ("cadena WS2812", &["WS2812 datos"]),
+];
+
 pub const N_PINES_USADOS: usize = PINOUT.len();
 
 // §5.3 cuenta ~37 GPIO y de ahi sale la obligacion del RP2350B, que da 48
@@ -170,5 +195,50 @@ mod tests {
     fn para_que_encuentra_lo_asignado_y_no_inventa_lo_libre() {
         assert_eq!(para_que(21), Some("WS2812 datos"));
         assert_eq!(para_que(47), None);
+    }
+
+    #[test]
+    fn cada_programa_de_pio_cabe_en_una_sola_ventana() {
+        // El fallo que este test caza no se parece a un fallo: el pinout sigue
+        // siendo válido —ningún pin repetido, todos existen— y aun así el
+        // programa de PIO es imposible de escribir, porque una máquina solo
+        // alcanza 32 GPIO consecutivos.
+        //
+        // Es justo el tipo de restricción que no se descubre leyendo la lista
+        // de pines: hay que saber qué pines van juntos, y eso es lo que
+        // `PROGRAMAS_PIO` declara.
+        for (programa, pines) in PROGRAMAS_PIO {
+            let mut ventanas = [false; 2];
+            for nombre in *pines {
+                let p = PINOUT
+                    .iter()
+                    .find(|p| p.para == *nombre)
+                    .unwrap_or_else(|| panic!("«{nombre}» está en PROGRAMAS_PIO y no en PINOUT"));
+                ventanas[(p.gpio / VENTANA_PIO) as usize] = true;
+            }
+            assert!(
+                !(ventanas[0] && ventanas[1]),
+                "«{programa}» reparte sus pines a los dos lados del GPIO{}: \
+                 una máquina de PIO solo ve {} GPIO consecutivos, así que ese \
+                 programa no se puede escribir tal como están los pines",
+                VENTANA_PIO,
+                VENTANA_PIO
+            );
+        }
+    }
+
+    #[test]
+    fn programas_pio_no_nombra_pines_que_no_existen() {
+        // Si alguien renombra un pin en PINOUT, esta tabla envejece en
+        // silencio y el test de arriba pasaría por no encontrar nada que
+        // comparar. Aquí se entera.
+        for (_programa, pines) in PROGRAMAS_PIO {
+            for nombre in *pines {
+                assert!(
+                    PINOUT.iter().any(|p| p.para == *nombre),
+                    "PROGRAMAS_PIO nombra «{nombre}», que no está en PINOUT"
+                );
+            }
+        }
     }
 }
