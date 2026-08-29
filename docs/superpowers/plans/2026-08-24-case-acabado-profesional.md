@@ -803,6 +803,17 @@ escribiendo. Van como issues al mergear, con la evidencia de esta sesión:
 
 ## La decisión que sigue abierta y no la cierra este plan
 
+> **CERRADA el 2026-08-25** (spec rev. 20): ganó la salida 1, **aluminio de
+> 3 mm**. Lo que este plan no tenía cuando escribió las tres salidas era el
+> número que las ordena — el **70 % del fondo de la tapa está en voladizo**, y
+> por eso el material manda más que el espesor. Se midieron además dos salidas
+> que aquí no estaban, y las dos fallan: un larguero de 30 mm entra por 0.24 mm
+> (bajo la tolerancia de la extrusión) y uno de 40 no entra. Y la objeción de
+> «cuesta el tono» resultó no sostenerse: los paneles ya son PCB de aluminio a
+> los dos lados de esa banda. Lo vigila `guarda_valle()`.
+
+
+
 **La tapa del valle.** Es la plancha más débil del case (fluye a ~100 N de
 mano contra 155 de la siguiente), es la superficie horizontal donde va la
 mano al parchear, y **subirla de espesor está bloqueado**: a 6 mm la fila de

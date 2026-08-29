@@ -29,14 +29,20 @@ rulings/fixes de la Task 8 que no vienen del brief original:
   camara sigue viendo el fondo oscuro, pero el resto de los rayos
   (rebotes, transmision, reflejos) ven un fondo mucho mas brillante que
   ilumina la pieza sin aclarar el fondo visible. Medido en el Fix round 1:
-  esto solo subio el brillo de 0.051 a ~0.60-0.64 Y la cobertura de 0.123 a
-  ~0.34 (pixeles que antes eran indistinguibles del fondo casi negro ahora
-  se distinguen -- ver comentario de MARGEN mas abajo).
+  esto solo subio el brillo de 0.051 a ~0.377 en la trasera Y la cobertura
+  de 0.123 a ~0.34 (pixeles que antes eran indistinguibles del fondo casi
+  negro ahora se distinguen -- ver comentario de MARGEN mas abajo). El brillo
+  decia "~0.60-0.64", de una version anterior de la metrica; el numero bueno
+  es el mismo que sostiene BRILLO_MINIMO mas abajo, y lo imprime cada corrida.
 
 Nombres de la API de materiales (Principled BSDF) verificados a mano en
 Blender 5.0.1: "Base Color", "Metallic", "Roughness" y "Transmission
 Weight" existen tal cual (no ambiguos con otro Weight). Si esto cambia en
 otra version, listar con print([i.name for i in n.inputs]) y ajustar.
+
+Task 6: se anaden "Anisotropic" y "Anisotropic Rotation" para el aluminio
+cepillado -- RECONFIRMADOS igual a mano (mismo metodo, Blender 5.0) antes
+de tocar el material: existen tal cual, sin ambiguedad.
 """
 import math
 import os
@@ -73,14 +79,46 @@ def mat(nombre, **bsdf):
 acr = importar("assembly_acrilico")
 acr.data.materials.append(mat(
     "acrilico_naranja", **{
-        "Base Color": (1.0, 0.35, 0.05, 1.0),
+        "Base Color": (1.0, 0.24, 0.04, 1.0),
         "Roughness": 0.08,
         "Transmission Weight": 0.85,
     }))
 alu = importar("assembly_aluminio")
+# CEPILLADO, no pulido (Tarea 6). FIX ROUND 1: el primer intento subia
+# Anisotropic a 0.6 para simular la microestria del cepillado -- y en el
+# render salia PLASTICO MATE BLANCO, sin grano y casi sin contraste
+# especular. La causa no era el valor: es que las mallas vienen de STL SIN
+# UV NI TANGENTE. Sin un mapa de tangente por cara, Cycles arma una base
+# tangente ARBITRARIA por triangulo para el lobulo anisotropico -- cada
+# triangulo "cepilla" en una direccion distinta y sin relacion con la pasada
+# real de la herramienta, asi que lo que deberia leerse como grano se
+# promedia a RUIDO, no a brillo estirado. Anisotropic vuelve a 0.0: es la
+# opcion honesta mientras no haya geometria con tangente real por pieza (un
+# mapa de tangente por UV es el siguiente paso si hace falta el grano de
+# verdad, no antes).
+#
+# LO QUE SI LEE COMO METAL sin mentir sobre un grano que no esta modelado:
+# Roughness mas bajo (0.28 -> 0.25, un pelo mas especular) y Base Color mas
+# oscuro/neutro (0.80,0.81,0.83 -> 0.72,0.73,0.75, menos "blanco lavado") --
+# y la luz KEY mas chica y mas fuerte (ver poner_luces()), para que la
+# arista tenga un highlight definido en vez de un degradado ancho y suave.
 alu.data.materials.append(mat(
-    "aluminio", **{"Base Color": (0.85, 0.86, 0.88, 1.0),
-                   "Metallic": 1.0, "Roughness": 0.35}))
+    "aluminio", **{"Base Color": (0.72, 0.73, 0.75, 1.0),
+                   "Metallic": 1.0, "Roughness": 0.25,
+                   "Anisotropic": 0.0, "Anisotropic Rotation": 0.0}))
+# LA TABLA, en su propio STL desde el 2026-08-27. Estuvo dentro del ensamblado
+# de acrilico mientras el suelo era PMMA, y meterla ahi ahora la pintaria de
+# naranja translucido: un render que miente sobre una decision de material.
+#
+# EL COLOR ES DE MIRAR, NO UNA COTA -- igual que el naranja del acrilico (ver
+# README). La especie no esta elegida: las cuentas del modelo van contra
+# E = 11000 MPa, que es nogal o arce, y esto es un nogal de catalogo. Cuando
+# el pliego cierre la especie, este numero se cambia aqui y en ningun otro
+# sitio. Sin Metallic y con roughness alto: la madera no brilla.
+mad = importar("assembly_madera")
+mad.data.materials.append(mat(
+    "nogal", **{"Base Color": (0.28, 0.16, 0.09, 1.0),
+                "Roughness": 0.55, "Specular IOR Level": 0.35}))
 
 esc = bpy.context.scene
 esc.render.engine = "CYCLES"
@@ -106,17 +144,60 @@ mundo.use_nodes = True
 nt = mundo.node_tree
 fondo_visible = nt.nodes["Background"]
 fondo_visible.inputs[0].default_value = (0.02, 0.02, 0.025, 1)  # lo que ve la camara
+# EL RELLENO GI DEJA DE SER PLANO el 2026-08-29 (#235). Era un gris uniforme de
+# 0.6, y un gris uniforme es exactamente lo que NO tiene el sitio donde se hizo
+# la foto de referencia. Un metal pulido no "brilla" por su material: ensena el
+# entorno que lo rodea, y si el entorno es una esfera de un solo color, la
+# arista chaflanada refleja ese color por igual en todo su largo -- que es el
+# gradiente ancho y sin acento que se vio en los dos intentos anteriores. Los
+# dos fueron de MATERIAL (rugosidad 0.28 -> 0.25, base mas oscura, anisotropico
+# a 0 por falta de UV) y por eso ninguno lo movio: la palanca no estaba ahi.
+#
+# Lo que se pone en su sitio es un entorno de estudio, hecho con nodos y sin
+# fichero HDRI -- un .hdr son megas de binario en un repo que ya carga 300 MB
+# de DXF y PNG, y aqui no hace falta uno: la referencia es una vitrina en una
+# sala, o sea suelo oscuro, una banda clara a la altura de la vista y techo
+# claro. Eso es un degradado con un acento, y un degradado con un acento es
+# una rampa de cinco paradas.
+#
+# EL EJE ES Y y no Z: el ensamblado viene de STL con la altura en Y (lo dice
+# construir_vista(), arriba_mundo = (0,1,0)). Con Z el degradado saldria
+# tumbado y el acento cruzaria el case de lado a lado.
+coord = nt.nodes.new("ShaderNodeTexCoord")
+sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+nt.links.new(coord.outputs["Generated"], sep.inputs["Vector"])
+# de [-1, 1] (mirando al suelo .. mirando al techo) a [0, 1]
+rango = nt.nodes.new("ShaderNodeMapRange")
+rango.inputs["From Min"].default_value = -1.0
+rango.inputs["From Max"].default_value = 1.0
+nt.links.new(sep.outputs["Y"], rango.inputs["Value"])
+rampa = nt.nodes.new("ShaderNodeValToRGB")
+nt.links.new(rango.outputs["Result"], rampa.inputs["Fac"])
+ramp = rampa.color_ramp
+# cinco paradas: suelo, sombra, LA BANDA, caida, techo
+ramp.elements[0].position = 0.00
+ramp.elements[0].color = (0.015, 0.015, 0.02, 1)
+ramp.elements[1].position = 0.46
+ramp.elements[1].color = (0.09, 0.09, 0.10, 1)
+for pos, col in ((0.53, (1.0, 1.0, 1.0, 1)),
+                 (0.62, (0.42, 0.43, 0.46, 1)),
+                 (1.00, (0.62, 0.63, 0.68, 1))):
+    e = ramp.elements.new(pos)
+    e.color = col
 fondo_gi = nt.nodes.new("ShaderNodeBackground")
-fondo_gi.inputs[0].default_value = (0.6, 0.6, 0.63, 1)          # relleno GI, invisible a camara
+nt.links.new(rampa.outputs["Color"], fondo_gi.inputs["Color"])
+# La rampa vive en 0..1 y la energia la pone la fuerza, que es donde puede
+# pasar de 1 sin que Blender la recorte al escribirla.
+fondo_gi.inputs["Strength"].default_value = 1.5
 ruta_luz = nt.nodes.new("ShaderNodeLightPath")
 mezcla = nt.nodes.new("ShaderNodeMixShader")
 nt.links.new(ruta_luz.outputs["Is Camera Ray"], mezcla.inputs[0])
-nt.links.new(fondo_gi.outputs["Background"], mezcla.inputs[1])       # Fac=0 (no camara) -> GI
+nt.links.new(fondo_gi.outputs["Background"], mezcla.inputs[1])       # Fac=0 (no camara) -> entorno
 nt.links.new(fondo_visible.outputs["Background"], mezcla.inputs[2])  # Fac=1 (camara)    -> oscuro
 nt.links.new(mezcla.outputs["Shader"], nt.nodes["World Output"].inputs["Surface"])
 esc.world = mundo
 
-# --- bbox real de las 2 mallas (Ruling B) --------------------------------
+# --- bbox real de las 3 mallas (Ruling B) --------------------------------
 # El chasis de acero del PSU (#107) NO se importa aqui, y se probo: se rendeo
 # con el dentro y no se ve en ninguna de las dos vistas -- vive en el piso
 # inferior, detras de los paneles y de la piel. Meterlo costaba minutos de
@@ -126,8 +207,11 @@ esc.world = mundo
 # linear_extrude sobre Z): X = profundidad, Y = altura (arriba),
 # Z = ancho. Confirmado con el bbox real: X en [-10, 360], Y en [-5, 396],
 # Z en [0, 500] -- coincide con el board.
+# LAS TRES MALLAS, no dos. La tabla sobresale 10 mm del cuerpo por los cuatro
+# lados y es lo mas bajo del case: dejarla fuera del bbox encuadra un aparato
+# que no es el que se ve, y el zocalo saldria cortado por abajo.
 esquinas = [obj.matrix_world @ Vector(c)
-            for obj in (acr, alu) for c in obj.bound_box]
+            for obj in (acr, alu, mad) for c in obj.bound_box]
 xs, ys, zs = ([p[i] for p in esquinas] for i in range(3))
 minv = Vector((min(xs), min(ys), min(zs)))
 maxv = Vector((max(xs), max(ys), max(zs)))
@@ -188,30 +272,77 @@ def construir_vista(azimut: float):
     return derecha, arriba_cam, adelante, distancia
 
 
+def _apuntar(obj, destino: Vector) -> None:
+    """Gira obj para que su -Z local mire a destino. Misma base a mano que
+    construir_vista() y por la misma razon: to_track_quat() referencia el +Z
+    de mundo para el roll, y aqui el arriba del ensamblado es Y."""
+    d = (destino - obj.location).normalized()
+    arriba = Vector((0.0, 1.0, 0.0))
+    if abs(d.dot(arriba)) > 0.999:
+        arriba = Vector((0.0, 0.0, 1.0))
+    der = d.cross(arriba).normalized()
+    arr = der.cross(d).normalized()
+    obj.rotation_euler = Matrix((der, arr, -d)).transposed().to_euler()
+
+
 def poner_luces(derecha: Vector, arriba_cam: Vector, adelante: Vector, distancia: float) -> None:
     """Key/fill ancladas a la base de camara de ESTA vista (no coordenadas
     de mundo fijas) y escaladas con el cuadrado de la distancia (inverso
     del cuadrado: si el ensamblado crece y la camara se aleja
     proporcionalmente, hay que subir energia con distancia^2 para mantener
-    la misma iluminancia sobre la pieza). Constantes (4e6, 1.5e6, 600, 400)
+    la misma iluminancia sobre la pieza). Constantes de FILL (1.5e6, 400)
     calibradas a ojo a distancia de referencia 700 mm -- probado que
-    subirlas x4 no mueve el brillo casi nada (Fix round 1, ronda de
-    diagnostico 1): la palanca real es el relleno GI del mundo, no esto.
-    Quita las luces de la vista anterior antes de poner las nuevas -- si
-    no, se suman e iluminan la vista siguiente desde el lado equivocado."""
+    subirlas x4 no mueve el brillo casi nada (Fix round 1 de otra tarea,
+    ronda de diagnostico 1): la palanca real ahi era el relleno GI del
+    mundo, no esto. Quita las luces de la vista anterior antes de poner las
+    nuevas -- si no, se suman e iluminan la vista siguiente desde el lado
+    equivocado.
+
+    LA KEY CAMBIA EN Fix round 1 DE LA TAREA 6: tamano a la mitad (600 ->
+    300 * esc_luz) y energia al doble (4e6 -> 8e6 * esc_luz^2). Con el
+    aluminio en Roughness bajo y SIN anisotropico (ver el material en el
+    bloque de arriba -- sin UV/tangente por pieza, el lobulo anisotropico
+    solo anadia ruido), una luz de area grande y suave da un degradado
+    ancho sin punto de brillo: una fuente mas chica y mas intensa concentra
+    el highlight especular en la arista real -- que es lo que un ojo lee
+    como "metal", no el tono de gris de fondo. La energia sube con el
+    cuadrado del tamano para que el area bajo la curva de luz (y por tanto
+    el brillo medio que mide medir()) no caiga: una fuente 1/2 de tamano
+    necesita ~4x la radiancia para verter la misma potencia total."""
     for o in [o for o in bpy.data.objects if o.type == "LIGHT"]:
         bpy.data.objects.remove(o, do_unlink=True)
     esc_luz = distancia / 700.0
     bpy.ops.object.light_add(type="AREA", location=centro + arriba_cam * radio * 1.3
                               + derecha * radio * 0.7 + adelante * distancia * 0.4)
     key = bpy.context.object
-    key.data.energy = 4e6 * esc_luz ** 2
-    key.data.size = 600 * esc_luz
+    key.data.energy = 8e6 * esc_luz ** 2
+    key.data.size = 300 * esc_luz
     bpy.ops.object.light_add(type="AREA", location=centro - derecha * radio * 1.1
                               + arriba_cam * radio * 0.4 + adelante * distancia * 0.25)
     fill = bpy.context.object
     fill.data.energy = 1.5e6 * esc_luz ** 2
     fill.data.size = 400 * esc_luz
+    # LA TIRA, el 2026-08-29 (#235). Key y fill son cuadradas y grandes: una
+    # fuente cuadrada se refleja en un chaflan como una MANCHA, y la mancha
+    # empieza y acaba -- por eso la arista se encendia a trozos. Lo que hace
+    # brillar una arista de punta a punta es una fuente LARGA Y ESTRECHA
+    # paralela a ella, que es la razon por la que un estudio de producto usa
+    # strip softbox y no un paraguas. Aqui mide dos radios de largo por 40 de
+    # ancho, va por encima y al lado de la camara, y APUNTA AL CENTRO: es la
+    # primera luz de este fichero que se orienta. Las otras dos no tienen
+    # rotacion, o sea que emiten hacia el -Z de mundo, que en este ensamblado
+    # (Y arriba) es de canto; funcionan de rebote y por eso piden tanta
+    # energia. La tira no: pega donde se apunta.
+    bpy.ops.object.light_add(type="AREA",
+                             location=centro + arriba_cam * radio * 1.5
+                                      + derecha * radio * 0.5
+                                      + adelante * distancia * 0.15)
+    tira = bpy.context.object
+    tira.data.shape = "RECTANGLE"
+    tira.data.size = radio * 2.0
+    tira.data.size_y = 40 * esc_luz
+    tira.data.energy = 1.0e6 * esc_luz ** 2
+    _apuntar(tira, centro)
 
 
 def medir(ruta_png: str) -> tuple[float, float]:
@@ -243,11 +374,11 @@ def medir(ruta_png: str) -> tuple[float, float]:
 #   - el render SUBEXPUESTO de la Task 8 original (antes de este fix):
 #     cobertura 0.1229, brillo 0.0509 -- tiene que dar ROJO con la metrica
 #     de brillo nueva (antes no existia).
-#   - el render corregido de mas abajo: cobertura ~0.34, brillo ~0.60-0.64.
+#   - el render corregido de mas abajo (trasera): cobertura ~0.34, brillo ~0.377.
 # COBERTURA_MINIMA se deja en 0.05 (ya mordia bien, sigue mordiendo -- ver
 # prueba en rojo del reporte). BRILLO_MINIMO en 0.20: por encima del 0.0509
 # del render viejo (para que ESE caso de verdad falle si se repite) y
-# comodo por debajo del ~0.60 del render bueno.
+# comodo por debajo del ~0.377 del render bueno (margen ~1.9x, no 3x).
 COBERTURA_MINIMA = 0.05
 BRILLO_MINIMO = 0.20
 

@@ -33,9 +33,22 @@ Remove-Item (Join-Path $build "*.stl") -ErrorAction SilentlyContinue
 # -- el mismo caso del chasis, cuyo corte no dice de donde doblar. Sin este
 # fichero la trasera vuelve del taller SIN LA MARCA y nadie se entera hasta
 # desembalarla. Lo vigila guarda_kondor() en check_dxf.
-$piezas = "costado_2d","bandeja_base_2d","tapa_valle_2d",
-          "remate_sup_2d","piel_trasera_2d","kondor_cajeado_2d","lienzo_2d",
-          "chasis_cuerpo_2d","chasis_tapa_2d","chasis_refuerzo_2d"
+# LA COSTILLA VIAJA EN DOS FICHEROS desde el 2026-08-28, y hacen falta los dos.
+# Fue desarrollo plano mientras era chapa plegada (con los alivios de las seis
+# esquinas convexas, porque un corte no dice de donde doblar); al pasar a anillo
+# fresado su DXF vuelve a ser el CONTORNO de la pieza -- silueta y ventana --,
+# que es lo que se corta del blank.
+# El segundo, costilla_dorso_2d, es lo que se fresa POR DETRAS: el contorno del
+# rebaje donde asienta el acrilico y los centros de las roscas ciegas. Va aparte
+# porque un DXF 2D no sabe decir "a 11 mm de profundidad" -- el mismo caso que
+# kondor_cajeado_2d. Sin el, el anillo vuelve del taller SIN REBAJE, o sea con
+# el acrilico sin sitio, y no se ve hasta desembalarlo.
+$piezas = "costado_2d","costilla_2d","costilla_dorso_2d","cupon_anillo_2d","bandeja_base_2d","tapa_valle_2d",
+          "miembro_bajo_2d","miembro_alto_2d","bahia_2d","escuadra_trasera_2d",
+          "piel_trasera_2d","marco_trasera_sup_2d","marco_trasera_inf_2d",
+          "kondor_cajeado_2d","lienzo_2d",
+          "chasis_cuerpo_2d","chasis_tapa_2d","chasis_refuerzo_2d",
+          "placa_cara_inf_2d","placa_valle_2d","placa_cara_sup_2d","clip_2d"
 # Piso de tamano del DXF. Es un SMOKE TEST -- "OpenSCAD escribio algo" --, no una
 # verificacion: de eso se encarga check_dxf.py, que relee cada fichero con ezdxf
 # y comprueba entidades y envolvente. Fue 1000 y era un piso a ojo: el dia que la
@@ -59,7 +72,8 @@ $coupon_out = Join-Path $plans "coupon.dxf"
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path $coupon_out) -or (Get-Item $coupon_out).Length -lt $dxf_min) {
   Write-Warning "FALLO: coupon"; $fallos++
 }
-foreach ($m in "assembly_acrilico","assembly_aluminio") {
+foreach ($m in "assembly_acrilico","assembly_aluminio","assembly_madera",
+                "assembly_esqueleto","assembly_acero") {
   $out = Join-Path $build "$m.stl"
   & $scad -o ($out.Replace('\', '/')) -D ('PART=\"' + $m + '\"') (Join-Path $PSScriptRoot "sam17_case.scad") | Out-Null
   if ($LASTEXITCODE -ne 0 -or -not (Test-Path $out) -or (Get-Item $out).Length -lt 10000) {
