@@ -253,7 +253,7 @@ function radio_giro_riel() = norm([rail_er_fondo, rail_er_alto]) / 2;
 // cara interior de las bandas, rehundida t_costilla del plano trasero -- como
 // con el marco de la manana del 29, que es lo que la banda sustituye -- y de
 // ahi t_piel hacia dentro. GEMELA de x_tr en clearance_budget.py.
-function x_trasera_int() = pts_perfil()[6].x - t_piel - t_costilla;
+function x_trasera_int() = trasera_x1() - t_piel;
 function y_meseta() = pts_perfil()[5].y - marco_sup;
 
 // LA VENTANA DEL VALLE: lo que queda libre entre los dos rieles 3U que miran al
@@ -270,17 +270,54 @@ function ventana_valle() =
 // chapa, sin bridas ni rosca en el anillo -- se atornilla a la TABLA por el
 // pie, como la nariz --, que recibe la trasera en su banda y la asienta en
 // su pie. GEMELO de _talon() en clearance_budget.py.
-function talon_x_band() = pts_perfil()[6].x - t_costilla;   // cara interior de la banda
-function talon_x_pie()  = talon_x_band() - talon_pie;        // canto libre del pie
-function talon_m4_x()   = talon_x_pie() + 1.5*d_M4_paso;
-function centro_talon() = [talon_x_band() - talon_pie/2, banda_trasera/2];
+// EL TALON, la nariz de atras (2026-08-29, noche, 2): pie sobre la tabla del
+// canto libre al pie del chaflan de P6, chaflan a 45 y labio vertical a ras
+// del plano trasero. GEMELAS de _talon() en clearance_budget.py.
+function talon_x_band()    = pts_perfil()[6].x - t_costilla;    // cara interior del labio
+function talon_x_chaflan() = pts_perfil()[6].x - chaflan_nariz; // pie del chaflan
+function talon_x_pie()     = talon_x_chaflan() - talon_pie;     // canto libre del pie
+function talon_m4_x()      = talon_x_pie() + 1.5*d_M4_paso;
+function centro_talon()    = [talon_x_chaflan() - talon_pie/2, talon_labio/2];
+// Las dos pestanas lanzadas del pie: su cara hacia la trasera, y sus centros
+// en z, a 3/8 y 5/8 del hueco entre anillos (los M4 van a 1/4, 1/2 y 3/4).
+function talon_pestana_x() = x_trasera_int() - talon_pestana_aire;
+function talon_pestana_z() = [for (f = [0.375, 0.625]) t_anillo + ancho_util*f];
+// Bend deduction del doblez apretado de una pestana, y lo que su ventana
+// mide en el desarrollo (alto + t - BD). GEMELAS de _bd_pestana().
+function pestana_bd() = 2*(radio_doblez_pestana + t_costilla)
+                        - PI/2*(radio_doblez_pestana + k_factor*t_costilla);
+function talon_pestana_dev() = talon_pestana_alto + t_costilla - pestana_bd();
+// Lo que mide una chapa que va entre las caras interiores de los anillos con
+// hol_piel a cada lado: la nariz, el talon, el techo.
+function entre_anillos() = ancho_util - 2*hol_piel;
 
-// Las dos filas de la trasera: a media banda, en la cara interior de cada
-// banda. La de abajo en la del talon, la de arriba en la del miembro alto.
-function anclaje_piel_base()   = [pts_perfil()[6].x - t_costilla/2,
-                                  banda_trasera/2];
-function anclaje_piel_remate() = [pts_perfil()[6].x - t_costilla/2,
-                                  pts_perfil()[5].y - banda_trasera/2];
+// LA TRASERA CAPTURADA (2026-08-29, noche, 2). Como las mejillas: sus puntas
+// dentro de un BOLSILLO fresado en la cara interior de cada anillo a lo largo
+// del tramo trasero -- labio de rehundido_acrilico en el canto, rebaje_anillo
+// de hondo, t_anillo - rehundido de ancho: los tres numeros del bolsillo del
+// costado, girados --, su cara vista rehundida labio + junta, el canto de
+// abajo sobre el pie del talon y el de arriba bajo la brida del techo. Sin un
+// taladro. GEMELAS de _bolsillo_trasero(), _trasera() y _trasera_campo().
+function trasera_x1() = pts_perfil()[6].x - rehundido_acrilico - t_junta_asiento;
+function trasera_z0() = t_anillo - rebaje_anillo + hol_piel;
+function trasera_au() = ancho_total - 2*trasera_z0();
+function trasera_y0() = t_costilla;
+function trasera_y1() = pts_perfil()[5].y - t_costilla - brida_ancho - 0.5;
+function trasera_alto() = trasera_y1() - trasera_y0();
+// El canto de abajo del labio (B) o de la banda (A) del techo: la coronacion
+// de lo que se ve de la trasera por arriba.
+function y_labio_techo() = remate_trasero_chaflan
+    ? pts_perfil()[5].y - chaflan_nariz - techo_labio
+    : pts_perfil()[5].y - banda_trasera;
+// Lo que de la trasera se VE entre los dos labios: a esto se anclan la
+// rejilla, las ondas, el IEC y KONDOR desde que no hay filas de M3.
+function trasera_campo() = [chaflan_nariz + talon_labio, y_labio_techo()];
+// El bolsillo, en x del mundo: [pared del fondo, cara interior del labio].
+function bolsillo_trasero_x() = [pts_perfil()[6].x - t_anillo,
+                                  pts_perfil()[6].x - rehundido_acrilico];
+// Donde retrocede el rebaje del costado en el tramo trasero: la pared entre
+// los dos bolsillos.
+function rebaje_costado_trasero() = t_anillo + pared_rebaje_trasera;
 
 // --- redondeo del contorno, radio POR VERTICE --------------------------
 //
@@ -405,8 +442,9 @@ function redondear(P, R, sin_bombeo = []) =
 // cuando el talon paso a doblar en P6 sobre la tabla.
 function radios_perfil() = [0,            radio_chapa,
                             radio_pico,   radio_valle,
-                            radio_chapa,  radio_chapa,
-                            radio_chapa];
+                            radio_chapa,
+                            remate_trasero_chaflan ? 0 : radio_chapa,
+                            0];
 
 // EL CONTORNO DEL ANILLO NO ES pts_perfil(): el vertice 0 (frente-abajo) va
 // CHAFLANADO a 45 -- chaflan_nariz sobre cada arista -- y un chaflan son dos
@@ -414,12 +452,23 @@ function radios_perfil() = [0,            radio_chapa,
 // y no en pts_perfil() porque medio fichero indexa P[1]..P[6] y correrlos uno
 // es el mismo bug que costo el P[8] -> P[6]. Solo perfil_lateral() lo consume.
 // GEMELO del chaflan que anillo_tiene_chaflan() relee del DXF en check_dxf.
+// Y DESDE LA TRASERA CAPTURADA (2026-08-29, noche, 2) el vertice 6 (abajo-
+// atras) va tambien a chaflan -- el talon es la nariz de atras -- y el 5
+// (arriba-atras) con remate_trasero_chaflan. Cada chaflan son dos vertices
+// con radio_chapa.
 function pts_contorno() =
-    let (P = pts_perfil(), c = chaflan_nariz)
-    concat([[c, 0], [0, c]], [for (i = [1 : len(P) - 1]) P[i]]);
+    let (P = pts_perfil(), c = chaflan_nariz, pf = P[6].x, yt = P[5].y)
+    concat([[c, 0], [0, c]], [for (i = [1 : 4]) P[i]],
+           remate_trasero_chaflan ? [[pf - c, yt], [pf, yt - c]] : [P[5]],
+           [[pf, c], [pf - c, 0]]);
 function radios_contorno() =
     concat([radio_chapa, radio_chapa],
-           [for (i = [1 : len(pts_perfil()) - 1]) radios_perfil()[i]]);
+           [for (i = [1 : 4]) radios_perfil()[i]],
+           remate_trasero_chaflan ? [radio_chapa, radio_chapa] : [radios_perfil()[5]],
+           [radio_chapa, radio_chapa]);
+// Los tramos del contorno que van RECTOS: todos menos las tres caras de las
+// filas ([2], [3], [4]), que conservan la entasis.
+function tramos_rectos() = [for (i = [0 : len(pts_contorno()) - 1]) if (i < 2 || i > 4) i];
 
 // Va DENTRO de perfil_lateral y no en costado_2d a proposito: costado_2d
 // resta los agujeros DESPUES, de modo que el redondeo no toca los taladros.
@@ -461,7 +510,7 @@ module perfil_lateral() {
     // vertice antes, asi que los tres de arriba son [5], [6] y [7]. Y entran
     // dos mas: [0] el chaflan y [1] el frente vertical, que llevan encima la
     // NARIZ -- chapa plana, o sea "algo plano".
-    polygon(redondear(pts_contorno(), radios_contorno(), [0, 1, 5, 6, 7]));
+    polygon(redondear(pts_contorno(), radios_contorno(), tramos_rectos()));
 }
 
 // EL COSTADO YA NO LLEVA UN SOLO TORNILLO. Es piel: un contorno de acrilico y
@@ -493,7 +542,15 @@ module perfil_lateral() {
 // Los rebaje_anillo - hol_costado que sobresalen bajo el labio son justo lo que
 // lo retiene, y lo mide guarda_costado() en check_dxf como vano libre.
 module costado_2d() {
-    offset(delta = -(retiro_rebaje() + hol_costado)) perfil_lateral();
+    // EL CANTO TRASERO ENTRA 3, NO 6 (2026-08-29, noche, 2): en el tramo
+    // trasero el rebaje retrocede a la pared entre su bolsillo y el de la
+    // trasera (rebaje_costado_trasero). Nadie lo ve: ese canto vive detras
+    // del labio y el marco lo sigue pisando.
+    difference() {
+        offset(delta = -(retiro_rebaje() + hol_costado)) perfil_lateral();
+        translate([pts_perfil()[6].x - rebaje_costado_trasero() - hol_costado, -1])
+            square([100, 400]);
+    }
 }
 
 module costado() { linear_extrude(t_cheek) costado_2d(); }
@@ -512,6 +569,53 @@ module costado() { linear_extrude(t_cheek) costado_2d(); }
 // del propio espesor y la esquina concava es un radio de fresa.
 function retiro_rebaje() = cara_anillo - rebaje_anillo;
 
+// EL REBAJE DEL COSTADO, en planta: la silueta retirada cara - rebaje por
+// los cuatro lados, salvo en el tramo trasero, donde retrocede a
+// rebaje_costado_trasero (la pared con el bolsillo de la trasera). GEMELO de
+// anillo_tiene_rebaje() en check_dxf.
+module rebaje_2d() {
+    difference() {
+        offset(delta = -retiro_rebaje()) perfil_lateral();
+        translate([pts_perfil()[6].x - rebaje_costado_trasero(), -1]) square([100, 400]);
+    }
+}
+
+// EL BOLSILLO DE LA TRASERA, en planta. SALE POR EL CANTO DE ABAJO y se
+// cierra arriba medio milimetro sobre el canto de la trasera (su tope al
+// entrar): salir por arriba dejaba un agujero de 11 x 6 a la vista en el
+// canto superior del anillo, junto al techo, y por abajo lo tapa la tabla.
+// Bajo la coronacion del chaflan de P6 (y < chaflan + 0.5) el bolsillo se
+// estrecha a u = chaflan..t_anillo para no morder la cara del chaflan; lo
+// que la trasera tiene ahi (u = 4..6) se lo quita su rebaje de esquina
+// (rebajes_esquina_trasera_2d). Se fresa rebaje_anillo hondo desde la cara
+// interior (profundidad en el pliego: la mitad de la del rebaje). GEMELO de
+// _bolsillo_trasero() y de anillo_tiene_bolsillo_trasero().
+function bolsillo_y_ch()  = chaflan_nariz + 0.5;
+function bolsillo_y_fin() = trasera_y1() + 0.5;
+module bolsillo_trasero_2d(salir = false) {
+    b = bolsillo_trasero_x();
+    pf = pts_perfil()[6].x;
+    y0 = salir ? -1 : 0;
+    polygon([[b[0], y0], [pf - chaflan_nariz, y0],
+             [pf - chaflan_nariz, bolsillo_y_ch()], [b[1], bolsillo_y_ch()],
+             [b[1], bolsillo_y_fin()], [b[0], bolsillo_y_fin()]]);
+}
+
+// LOS DOS REBAJES DE ESQUINA DE LA TRASERA, por su cara exterior, en las dos
+// esquinas de abajo: lo que el bolsillo no vacia bajo el chaflan del anillo
+// (u = chaflan..t_anillo en vez de rehundido..t_anillo) se lo quita la
+// plancha, para entrar por abajo sin morder la cara del chaflan. Misma
+// profundidad y mismo fichero que el cajeado de KONDOR (kondor_prof, cara
+// exterior). GEMELO de la clave "rebaje" de _trasera().
+function rebaje_esquina_trasera() =
+    [rebaje_anillo + 0.5,                       // largo, desde cada punta
+     bolsillo_y_ch() + 0.5 - trasera_y0()];     // alto, desde el canto de abajo
+module rebajes_esquina_trasera_2d() {
+    r = rebaje_esquina_trasera();
+    for (x0 = [0, trasera_au() - r[0]])
+        translate([x0, trasera_y0()]) square([r[0], r[1]]);
+}
+
 module anillo_2d() {
     difference() {
         perfil_lateral();
@@ -528,7 +632,8 @@ module costilla_2d() { anillo_2d(); }
 // porque un DXF 2D no sabe decir "a 11 mm" -- mismo caso que el cajeado
 // KONDOR de la trasera.
 module costilla_dorso_2d() {
-    offset(delta = -retiro_rebaje()) perfil_lateral();
+    rebaje_2d();
+    bolsillo_trasero_2d();
     for (c = centros_rosca_ciega())
         translate(c[0]) circle(d = c[1]);
 }
@@ -552,10 +657,11 @@ module costilla_dorso_2d() {
 //   frente, suelo, meseta   retirado retiro_marco() = t_costilla + hol_piel:
 //   y la cola de la cara    encima va chapa a ras de la silueta (la nariz y
 //   de arriba (el retorno)  su pie, el pie del talon, la meseta, el retorno)
-//   trasera                 retirado t_piel + t_costilla + tol_pmma() + 0.5:
-//                           detras estan la banda y la trasera, y delante de
-//                           un acrilico de +-1.2 no puede haber NADA a
-//                           distancia fija (guarda_trasera_dentro)
+//   trasera                 retirado t_anillo + 0.5: por debajo corre el
+//                           bolsillo de la trasera (2026-08-29, noche, 2) y
+//                           la pata apoya en la pared entre bolsillos; entra
+//                           marco_fondo_trasera, no marco_fondo
+//                           (guarda_trasera_capturada, guarda_marco_ventana)
 //
 // Y UNA MUESCA sobre la brida del miembro alto, en la esquina trasera-alta:
 // la brida apoya en la cara del anillo -- fuera del barrido del panel, que
@@ -568,7 +674,10 @@ module costilla_dorso_2d() {
 // Tolerancia de espesor del PMMA: +-(0.4 + 0.1 x t), Schaeffer AG (2026-08-18).
 function tol_pmma() = 0.4 + 0.1*t_cheek;
 function retiro_marco() = t_costilla + hol_piel;
-function retiro_marco_trasera() = t_piel + t_costilla + tol_pmma() + 0.5;
+// La pata trasera arranca sobre la pared entre bolsillos: t_anillo + 0.5
+// (2026-08-29, noche, 2). Fue t_piel + t_costilla + tol + 0.5 con la trasera
+// atornillada a la banda.
+function retiro_marco_trasera() = t_anillo + 0.5;
 
 // Cuanto se retira una pata del vertice i: la TANGENTE de su redondeo si el
 // vertice es convexo -- ahi el contorno se mete hacia dentro y una esquina
@@ -644,8 +753,15 @@ function ejes_marco() = [for (q = patas_filas(), e = q[6]) e[1]];
 // radio). Dobla del EXTREMO DE LA BANDA, en el plano trasero, y apoya en la
 // cara del anillo: fuera del barrido del panel, con el marco muescado encima.
 function brida_raiz() = radio_doblez_costilla + 3*t_costilla + d_M4_paso/2;
+// EL M4 DE DENTRO NO CAE SOBRE EL BOLSILLO DE LA TRASERA (2026-08-29, noche,
+// 2): el bolsillo corre por la cara interior hasta u = t_anillo y la rosca
+// quiere 1.6 D de broca de su pared (1.6 y no 1.5 para no vivir del
+// redondeo). Manda la mayor de las dos reglas. GEMELA de _bridas().
+// (Se probo max(raiz, t_anillo + 1.6 D - t) cuando el bolsillo pasaba por
+// debajo de la brida; con el bolsillo cerrado arriba vuelve a ser la raiz.)
+function brida_s_in() = brida_raiz();
 function brida_x_dob() = pts_perfil()[6].x - t_costilla;
-function brida_xs() = [brida_x_dob() - brida_raiz(),
+function brida_xs() = [brida_x_dob() - brida_s_in(),
                        brida_x_dob() - brida_largo + 1.5*d_M4_paso];
 function bridas_anillo() =
     let (P = pts_perfil()) [for (x = brida_xs()) [x, P[5].y - dist_rosca_ciega]];
@@ -706,7 +822,13 @@ module marco_contorno_2d() {
     difference() {
         perfil_lateral();
         for (b = bandas_marco()) banda_marco_2d(b);
-        offset(delta = -marco_fondo) polygon(pts_perfil());
+        // la ventana del marco: marco_fondo por dentro, salvo la pata trasera,
+        // que entra marco_fondo_trasera (sin tornillo y mas estrecha desde el
+        // bolsillo, necesita el ancho)
+        difference() {
+            offset(delta = -marco_fondo) polygon(pts_perfil());
+            translate([pts_perfil()[6].x - marco_fondo_trasera, -1]) square([100, 400]);
+        }
         translate(muesca_brida()) square([100, 100]);
     }
 }
@@ -871,8 +993,13 @@ module costilla() {
         }
         // el rebaje, por detras
         translate([0, 0, rehundido_acrilico])
-            linear_extrude(t_anillo)
-                offset(delta = -retiro_rebaje()) perfil_lateral();
+            linear_extrude(t_anillo) rebaje_2d();
+        // EL BOLSILLO DE LA TRASERA (2026-08-29, noche, 2), por detras, en el
+        // tramo trasero: rebaje_anillo de hondo desde la cara interior,
+        // saliendo por el canto de abajo (salir = true lo prolonga 1 mm).
+        translate([0, 0, t_anillo - rebaje_anillo])
+            linear_extrude(rebaje_anillo + 0.1)
+                bolsillo_trasero_2d(salir = true);
     }
 }
 
@@ -911,7 +1038,7 @@ module brida_2d(y_centro, ancho, vuelo = 0) {
 // Sus dos M4 de paso: uno a brida_raiz() del pliegue (regla de chapa) y otro
 // a 1.5 D del canto libre. dy desplaza la fila respecto al centro de la banda.
 module brida_agujeros_2d(y_centro, dy) {
-    for (lado = [0, 1], d = [brida_raiz(), brida_largo - 1.5*d_M4_paso])
+    for (lado = [0, 1], d = [brida_s_in(), brida_largo - 1.5*d_M4_paso])
         translate([lado ? ancho_util - brida_dsr(d) : brida_dsr(d),
                    y_centro + dy])
             circle(d = d_M4_paso + kerf);
@@ -923,74 +1050,113 @@ module brida_3d(x0, y0, ancho_x, ancho_y, z0, largo) {
         translate([x0, y0, z]) cube([ancho_x, ancho_y, t_costilla]);
 }
 
-// --- EL MIEMBRO ALTO Y EL TALON: la banda es el miembro (2026-08-29) ------
+// --- EL TECHO Y EL TALON (2026-08-29, noche, 2) -------------------------
 //
-// El miembro alto es una L: la MESETA, del pico al plano trasero (prof_sup =
-// marco_remate), y la BANDA que baja por el plano trasero (banda_trasera), a
-// ras de el. La trasera se atornilla a la banda por dentro. Y el retorno de
-// la meseta en el pico, como ayer por la tarde. Pierde el retorno de 24 que
-// tenia como canal: la trasera vive donde el iba, y lo que aguanta SOLA la L
-// lo mide guarda_miembro_alto() -- es lo que puso la banda en 24.
+// El TECHO (miembro alto) es la meseta del pico al canto con su retorno en
+// el pico, y por detras baja de dos maneras, que se escogen mirando
+// (remate_trasero_chaflan): A, la banda plana de banda_trasera sobre una
+// esquina de radio_chapa (la de #241); B, un chaflan de chaflan_nariz sobre
+// P6... sobre P5, a chaflan como P0 y P6, y un labio vertical de techo_labio.
+// Sin canal: en una sola chapa el labio no puede tapar el canto del
+// acrilico Y tener un retorno detras, y el bolsillo de los anillos ya
+// retiene la trasera en las dos direcciones por los lados. Sus dos bridas
+// doblan del extremo del labio (o de la banda) como siempre; en B suben junto
+// a la tira del chaflan y llevan un RELIEVE (un corte en la linea del
+// doblez). Lo que aguanta solo lo mide guarda_miembro_alto(): es lo que puso
+// techo_labio en 18.
 //
-// El talon hace abajo lo que la nariz hace delante: la misma banda a ras del
-// plano trasero y un pie sobre la tabla, atornillado a ella desde dentro con
-// tres M4. Sin bridas ni rosca en el anillo: su fijacion es la tabla.
-//
-// Con los dos murieron los MARCOS DE LA TRASERA de la manana: la banda vista
-// ES el alma, y el techo es una chapa del pico al canto, sin costura.
+// El TALON es la nariz de atras: pie sobre la tabla (tres M4 desde dentro),
+// chaflan a 45 sobre P6 y labio vertical de talon_labio a ras del plano
+// trasero, que tapa el canto de abajo de la trasera. Y dos PESTANAS lanzadas
+// del pie, dobladas hacia arriba detras de la trasera: su tope hacia dentro.
+// Ni bridas ni rosca en el anillo. Lo mide guarda_talon().
 //
 // Los desarrollos son para el taller; los solidos, para colisiones y render.
-// El miembro alto cruza ancho_util entre las caras interiores de los anillos
-// (sus bridas doblan ahi); el talon va hol_piel por dentro, como la trasera.
 
-// Desarrollo del miembro alto, tumbado: la banda abajo (su canto libre en
-// y = 0), la meseta en medio y el retorno arriba, con un BD por el doblez de
-// 90 y el del retorno a su angulo. Las bridas salen de las puntas de la
-// BANDA, con su relieve (el hueco que queda sobre ellas). La fila de M3 de la
-// trasera va a media banda, con los centros de la trasera, que es 2*hol_piel
-// mas estrecha que el blank.
+// Desarrollo del techo, tumbado: el labio (o la banda) abajo con su canto
+// libre en y = 0, el chaflan (B), la meseta y el retorno arriba, con un BD
+// por doblez. Las bridas salen de las puntas del labio, con su relieve. La
+// salida de aire, una fila registrada al HP en la meseta.
+function techo_cara_alto() = remate_trasero_chaflan ? techo_labio + chaflan_nariz
+                                                    : banda_trasera;
+function techo_y_meseta0() = remate_trasero_chaflan
+    ? techo_labio + chaflan_nariz*sqrt(2) - 2*doblez_bd(45)
+    : banda_trasera - miembro_bd();
+function techo_meseta_dev() = remate_trasero_chaflan ? prof_sup - chaflan_nariz : prof_sup;
 module miembro_alto_2d() {
     retorno = retorno_meseta - doblez_bd(90 - angulo_superior);
-    y_meseta0 = banda_trasera - miembro_bd();
-    desarrollo = y_meseta0 + prof_sup + retorno;
-    y_rejilla = y_meseta0 + (prof_sup - doblez_bd(90 - angulo_superior))/2;
+    y_meseta0 = techo_y_meseta0();
+    desarrollo = y_meseta0 + techo_meseta_dev() + retorno;
+    y_rejilla = y_meseta0 + (techo_meseta_dev() - doblez_bd(90 - angulo_superior))/2;
     n_hp = round(largo_riel/hp);
+    y_brida = techo_cara_alto() - t_costilla - brida_ancho;
     difference() {
         union() {
             square([ancho_util, desarrollo]);
             for (lado = [0, 1])
-                translate([lado ? ancho_util : -brida_vuelo_dsr(),
-                           banda_trasera - t_costilla - brida_ancho])
+                translate([lado ? ancho_util : -brida_vuelo_dsr(), y_brida])
                     square([brida_vuelo_dsr(), brida_ancho]);
         }
-        translate([hol_piel, 0]) fila_agujeros(trasera_au(), banda_trasera/2);
-        brida_agujeros_2d(banda_trasera, -dist_rosca_ciega);
-        // La salida de aire, una fila registrada al HP en la meseta: 16 de
-        // 15 x 3.75 dan 852 mm2. guarda_aire() usa ademas su altura real.
+        brida_agujeros_2d(techo_cara_alto(), -dist_rosca_ciega);
+        // EL RELIEVE de la brida (B): la brida sube por encima del labio, junto
+        // a la tira del chaflan, y un corte de corte_pestana en la linea del
+        // doblez la suelta de ella para que no la arrastre al plegar. Y SU
+        // ESQUINA DE ARRIBA VA A CHAFLAN: apoya en la cara del anillo, que en
+        // P5 esta cortada a 45 (u + v = chaflan), y lo que quede fuera de esa
+        // linea seria brida en el aire. Gemelo del poligono de _bridas().
+        if (remate_trasero_chaflan)
+            for (lado = [0, 1]) {
+                s = lado ? 1 : -1;
+                x0 = lado ? ancho_util : 0;
+                translate([x0 - (lado ? 0 : corte_pestana), techo_labio])
+                    square([corte_pestana, chaflan_nariz - t_costilla + corte_pestana]);
+                polygon([[x0, techo_cara_alto() - chaflan_nariz + t_costilla],
+                         [x0, techo_cara_alto() - t_costilla + 0.01],
+                         [x0 + s*(chaflan_nariz - 2*t_costilla), techo_cara_alto() - t_costilla + 0.01]]);
+            }
         for (n = [meseta_paso_hp : meseta_paso_hp : n_hp - meseta_paso_hp])
             translate([n*hp, y_rejilla])
                 ranura(meseta_largo_ranura, vent_ancho_ranura);
     }
 }
 
-// Desarrollo del talon: la banda abajo (su canto libre en y = 0) y el pie
-// arriba, con su BD. Los tres M4 del pie a 1.5 D de su canto libre, en las
-// mismas z que los de la nariz.
+// El contorno exterior del talon en el plano del perfil, del labio hacia el
+// pie -- en ese orden el interior queda a la derecha de cada tramo, que es
+// lo que tramo_chapa() necesita. GEMELO del contorno de _talon().
+function talon_contorno() =
+    let (c = chaflan_nariz, pf = pts_perfil()[6].x)
+    [[pf, c + talon_labio], [pf, c], [pf - c, 0], [pf - c - talon_pie, 0]];
+// Desarrollo: labio + chaflan + pie menos los dos dobleces a 45.
+function talon_desarrollo() =
+    talon_labio + chaflan_nariz*sqrt(2) + talon_pie - 2*doblez_bd(45);
+
+// Desarrollo del talon: el labio abajo (su canto libre en y = 0), el chaflan,
+// el pie arriba con su canto libre en y = desarrollo. Los tres M4 del pie a
+// 1.5 D de ese canto, en las mismas z que los de la nariz, y las dos ventanas
+// de las pestanas: un corte en U (tres lados de kerf) que deja la linea del
+// doblez sin cortar, hacia el canto libre del pie.
 module talon_2d() {
-    desarrollo = banda_trasera + talon_pie - miembro_bd();
+    d = talon_desarrollo();
     difference() {
-        square([trasera_au(), desarrollo]);
-        fila_agujeros(trasera_au(), banda_trasera/2);
+        square([entre_anillos(), d]);
         for (z = nariz_m4_z())
-            translate([z - t_anillo - hol_piel, desarrollo - 1.5*d_M4_paso])
+            translate([z - t_anillo - hol_piel, d - 1.5*d_M4_paso])
                 circle(d = d_M4_paso + kerf);
+        // el corte en U, de corte_pestana de ancho, POR FUERA de la pestana:
+        // la pestana mide talon_pestana_ancho x su desarrollo, y el corte la
+        // rodea por los dos lados y por el fondo, dejando el doblez sin cortar
+        for (zc = talon_pestana_z()) {
+            zb = zc - t_anillo - hol_piel;
+            ym = d - (talon_pestana_x() - talon_x_pie());
+            dv = talon_pestana_dev();
+            w  = talon_pestana_ancho;
+            k  = corte_pestana;
+            translate([zb - w/2 - k, ym]) square([k, dv + k]);
+            translate([zb + w/2, ym]) square([k, dv + k]);
+            translate([zb - w/2 - k, ym + dv]) square([w + 2*k, k]);
+        }
     }
 }
-
-// Las dos muescas de esquina de la trasera, por donde le pasa la brida por
-// debajo: [honda en z desde el canto lateral, alta en y desde el de arriba].
-// GEMELA de _muesca_trasera().
-function muesca_trasera() = [t_costilla + 0.5, brida_ancho + 0.5];
 
 function miembros_z0() = (ancho_total - ancho_util) / 2;
 
@@ -1006,21 +1172,44 @@ module miembro_alto() {
     P = pts_perfil();
     y1 = y_meseta();
     z0 = miembros_z0();
-    // la banda, a ras del plano trasero
-    translate([P[6].x - t_costilla, P[5].y - banda_trasera, z0])
-        cube([t_costilla, banda_trasera, ancho_util]);
-    // la meseta, del pico al plano trasero, con sus ranuras
+    pf = P[6].x;
+    yt = P[5].y;
+    c = chaflan_nariz;
+    // la meseta, del pico al plano trasero (A) o al pie del chaflan (B), con
+    // sus ranuras
+    x_mes1 = remate_trasero_chaflan ? pf - c : pf;
     difference() {
         translate([P[4].x, y1, z0])
-            cube([prof_sup, marco_sup, ancho_util]);
+            cube([x_mes1 - P[4].x, marco_sup, ancho_util]);
         n_hp = round(largo_riel/hp);
         for (n = [meseta_paso_hp : meseta_paso_hp : n_hp - meseta_paso_hp])
             ranura_meseta_3d(P[4].x + prof_sup/2, y1, z0 + n*hp);
     }
+    // por detras: chaflan + labio (B) o la banda (A), con el espesor hacia
+    // dentro
+    if (remate_trasero_chaflan)
+        translate([0, 0, z0])
+            linear_extrude(ancho_util)
+                for (tr = [[[pf - c, yt], [pf, yt - c]],
+                           [[pf, yt - c], [pf, y_labio_techo()]]])
+                    tramo_chapa(tr[0], tr[1]);
+    else
+        translate([pf - t_costilla, yt - banda_trasera, z0])
+            cube([t_costilla, banda_trasera, ancho_util]);
     // las dos bridas, planas contra la franja de la MESETA del anillo, de
-    // t_costilla bajo la meseta hacia abajo
-    brida_3d(brida_x_dob() - brida_largo, y1 - brida_ancho, brida_largo,
-             brida_ancho, z0, ancho_util);
+    // t_costilla bajo la meseta hacia abajo. Con el techo en chaflan (B) su
+    // esquina de arriba-atras va cortada a 45 como la del anillo: lo que
+    // quedara fuera de u + v = chaflan seria brida en el aire (y asomaba por
+    // el chaflan en el render). Gemelo del poligono de _bridas().
+    difference() {
+        brida_3d(brida_x_dob() - brida_largo, y1 - brida_ancho, brida_largo,
+                 brida_ancho, z0, ancho_util);
+        if (remate_trasero_chaflan)
+            translate([0, 0, -1])
+                linear_extrude(ancho_total + 2)
+                    polygon([[pf - c, yt], [pf, yt - c], [pf + 2, yt - c],
+                             [pf + 2, yt + 2], [pf - c, yt + 2]]);
+    }
     // EL RETORNO (2026-08-29): dobla en el pico y baja por la cara de arriba,
     // con el espesor hacia dentro. Gemelo de _retorno_meseta() en el budget.
     d = [sin(angulo_superior), cos(angulo_superior)];
@@ -1033,18 +1222,27 @@ module miembro_alto() {
 }
 
 module talon() {
-    P = pts_perfil();
+    C = talon_contorno();
     z0 = t_anillo + hol_piel;
-    az = trasera_au();
-    translate([P[6].x - t_costilla, 0, z0])
-        cube([t_costilla, banda_trasera, az]);
     difference() {
-        translate([talon_x_pie(), 0, z0]) cube([talon_pie, t_costilla, az]);
+        translate([0, 0, z0])
+            linear_extrude(entre_anillos())
+                for (i = [0 : len(C) - 2]) tramo_chapa(C[i], C[i + 1]);
         for (z = nariz_m4_z())
             translate([talon_m4_x(), -0.1, z])
                 rotate([-90, 0, 0])
                     cylinder(h = t_costilla + 0.2, d = d_M4_paso + kerf);
+        // las ventanas de las pestanas, en el pie
+        for (zc = talon_pestana_z())
+            translate([talon_pestana_x() - talon_pestana_dev(), -0.1,
+                       zc - talon_pestana_ancho/2])
+                cube([talon_pestana_dev(), t_costilla + 0.2, talon_pestana_ancho]);
     }
+    // las pestanas, de pie detras de la trasera
+    for (zc = talon_pestana_z())
+        translate([talon_pestana_x() - t_costilla, t_costilla,
+                   zc - talon_pestana_ancho/2])
+            cube([t_costilla, talon_pestana_alto, talon_pestana_ancho]);
 }
 
 module miembros() {
@@ -1260,15 +1458,14 @@ module bandeja_base_2d() {
 // ignoraria en silencio -- que es peor que no ponerla.
 KONDOR_FONT = "Franklin Gothic Medium";
 
-function trasera_au() = ancho_util - 2*hol_piel;
 function trasera_y_relieve() =
-    anclaje_piel_base().y
-    + 0.74*(anclaje_piel_remate().y - anclaje_piel_base().y);
+    trasera_campo()[0]
+    + 0.74*(trasera_campo()[1] - trasera_campo()[0]);
 
 // La onda de abajo, que es la frontera de arriba de la banda libre.
 function trasera_y_bajas() =
-    anclaje_piel_base().y
-    + 0.37*(anclaje_piel_remate().y - anclaje_piel_base().y);
+    trasera_campo()[0]
+    + 0.37*(trasera_campo()[1] - trasera_campo()[0]);
 
 // LA BANDA LIBRE entre la fila de M3 de abajo y esa onda. Sale de
 // piel_trasera_2d() -- donde vivio como dos locales -- el 2026-08-28, cuando
@@ -1281,8 +1478,11 @@ function trasera_y_bajas() =
 // circulos, asi que su borde de MATERIAL cae medio ancho de ranura por debajo
 // de la polilinea. Sin ese termino el parametro medía 2 mm menos de lo que
 // decia.
+// SIN ESPINA desde la trasera capturada: la fila de M3 que la rejilla tenia
+// que librar murio, y la rejilla arranca a un puente de la coronacion del
+// labio del talon.
 function banda_libre_trasera() =
-    [anclaje_piel_base().y + valle_espina/2 + vent_puente_min,
+    [trasera_campo()[0] + vent_puente_min,
      trasera_y_bajas() - vent_periodo*0.35 - vent_ancho_ranura/2
                        - vent_separacion];
 
@@ -1315,7 +1515,12 @@ module kondor_2d(espejo = false) {
 }
 
 module piel_trasera_2d() {
-    au = ancho_util - 2*hol_piel;
+    // CAPTURADA COMO LAS MEJILLAS desde el 2026-08-29 por la noche (2): sus
+    // puntas dentro de los bolsillos de los anillos, y NI UN TALADRO. Ni las
+    // dos filas de M3 ni las muescas de esquina: el canto de arriba muere bajo
+    // la brida del techo. Lo que queda son la rejilla, las ondas, la ventana
+    // de la red y KONDOR, anclados al campo visible (trasera_campo).
+    au = trasera_au();
     P  = pts_perfil();
     // UNA sola plancha desde el 2026-08-21: fueron dos (piel_inferior y
     // piel_superior) partidas a la altura del entrepiso, porque cada una se
@@ -1350,14 +1555,8 @@ module piel_trasera_2d() {
     // la ventana de red y la palabra KONDOR, que se derivan en coordenadas del
     // case, sigan cayendo donde caen sin restar nada. El DXF sale con su
     // origen 1.5 por debajo de la pieza; al laser le da igual.
-    y0   = t_costilla;
-    // Hasta hol_piel por debajo de la MESETA del miembro alto, que la tapa
-    // hasta el plano trasero: el canto de arriba queda DENTRO del metal.
-    alto = (P[5].y - marco_sup - hol_piel) - y0;
-    // DOS filas, una por BANDA: la de abajo en la del talon, la de arriba en
-    // la del miembro alto, a media banda. En y del mundo, como todo aqui.
-    f_base = anclaje_piel_base().y;
-    f_tras = anclaje_piel_remate().y;
+    y0   = trasera_y0();
+    alto = trasera_alto();
     // Las ondas van derivadas de las dos filas que las rodean: asi no se acercan
     // a un tornillo si un larguero se mueve.
     //
@@ -1389,21 +1588,8 @@ module piel_trasera_2d() {
     // desde fuera de este modulo, asi que la cuenta se mudo a una funcion.
     lib0 = banda_libre_trasera()[0];
     lib1 = banda_libre_trasera()[1];
-    mu = muesca_trasera();
     difference() {
         translate([0, y0]) plancha(au, alto);
-        for (y = [f_base, f_tras]) fila_agujeros(au, y);
-        // LAS DOS MUESCAS DE ESQUINA de arriba (2026-08-29, noche): la brida
-        // del miembro alto pasa por debajo de la esquina, tumbada en la cara
-        // del anillo, y la trasera le cede t_costilla + 0.5 en z por
-        // brida_ancho + 0.5 en y. Con radio de 2 en el rincon: el PMMA raja
-        // desde una esquina viva. (Los seis M3 de las escuadras vivieron
-        // aqui del 28-08 al 29-08; la escuadra murio con el marco de la
-        // ventana.)
-        for (lado = [0, 1])
-            translate([lado ? au - mu[0] : -1, y0 + alto - mu[1]])
-                offset(r = 2) offset(delta = -2)
-                    square([mu[0] + 1, mu[1] + 1]);
         rejilla_entrada(au, lib0, lib1, x_iec0);
         translate([au*0.10, y_bajas])  onda("triangulo", au*0.35);
         translate([au*0.55, y_bajas])  onda("cuadrada",  au*0.35);
@@ -1964,7 +2150,7 @@ else if (PART == "piel_trasera_2d")      piel_trasera_2d();
 // el DXF de la trasera SIN esto es media pieza -- el mismo caso del chasis, que
 // necesita su plano de plegado porque el corte no dice de donde doblar. Va con
 // su cota de profundidad (kondor_prof) escrita al lado, en el pliego.
-else if (PART == "kondor_cajeado_2d")    kondor_2d();
+else if (PART == "kondor_cajeado_2d")    { kondor_2d(); rebajes_esquina_trasera_2d(); }
 else if (PART == "chasis_cuerpo_2d")     chasis_cuerpo_2d();
 else if (PART == "chasis_tapa_2d")       chasis_tapa_2d();
 else if (PART == "chasis_refuerzo_2d")   chasis_refuerzo_2d();
@@ -2082,12 +2268,17 @@ module piel_trasera() {
     // trasero es el marco, no el acrilico.
     // El 2D ya viene en y del mundo (arranca en t_costilla, sobre el pie del
     // talon), asi que aqui no se le suma nada en y.
-    translate([P[6].x - t_costilla, 0, t_anillo + hol_piel])
+    // EN SU BOLSILLO desde la trasera capturada: la cara vista en trasera_x1()
+    // (rehundida labio + junta), las puntas en trasera_z0().
+    translate([trasera_x1(), 0, trasera_z0()])
         rotate([0, -90, 0])
             difference() {
                 linear_extrude(t_piel) piel_trasera_2d();
                 translate([0, 0, -0.1])
-                    linear_extrude(kondor_prof + 0.1) kondor_2d(espejo = true);
+                    linear_extrude(kondor_prof + 0.1) {
+                        kondor_2d(espejo = true);
+                        rebajes_esquina_trasera_2d();
+                    }
             }
 }
 
@@ -2387,13 +2578,16 @@ module bom() {
     echo(str("     la trasera, cede ", 2, " mm con 20 kg en el centro de la meseta",
              " a 110 MPa (guarda_miembro_alto: es lo que puso la banda en ",
              banda_trasera, " y no en 20); atornillado a la trasera cada 100, decimas."));
-    echo(str("BOM: TALON x1 -- la misma chapa 6082-T6 de ", t_costilla,
-             ", ", trasera_au(), " de largo: la banda vista de ", banda_trasera,
-             " a ras del plano trasero por ABAJO y un pie de ", talon_pie,
-             " sobre la tabla, atornillado a ella desde dentro con tres M4.",
-             " Hace atras lo que la nariz hace delante. Sustituye al miembro",
-             " trasero bajo: sin bridas ni rosca en el anillo -- su fijacion",
-             " es la tabla, que ya esta atada a los dos anillos con seis M5."));
+    echo(str("BOM: TALON x1 -- la nariz de atras: la misma chapa 6082-T6 de ",
+             t_costilla, ", ", entre_anillos(), " de largo, doblada sobre el",
+             " chaflan de ", chaflan_nariz, " de P6: pie de ", talon_pie,
+             " sobre la tabla (tres M4 avellanados desde dentro), chaflan a 45",
+             " y labio vertical de ", talon_labio, " a ras del plano trasero,",
+             " que tapa el canto de abajo de la trasera. Dos PESTANAS lanzadas",
+             " del pie, de ", talon_pestana_ancho, " x ", talon_pestana_alto,
+             ", detras de la trasera: su tope hacia dentro. Desarrollo ",
+             entre_anillos(), " x ", talon_desarrollo(), ". Sin bridas ni",
+             " rosca en el anillo."));
     echo(str("BOM: tornillo M4 avellanado x", len(nariz_m4_z()), " -- el pie del",
              " talon a la TABLA, desde dentro, mismo herraje que las paticas y",
              " la nariz (d_pie_tornillo). Ninguno en la cara vista."));
@@ -2460,44 +2654,51 @@ module bom() {
     // la guia de ensamblaje: las planchas tenian los taladros dibujados y el BOM
     // no tenia el tornillo.
     n_fila = max(1, round(au/100));
-    echo(str("BOM: tornillo M3 x", 2*n_fila + 2, " + tuerca -- la trasera",
-             " a las dos BANDAS (", n_fila, " a la del miembro alto + ", n_fila,
-             " a la del talon, cabeza fuera sobre metal y tuerca dentro con",
-             " arandela de nylon contra el PMMA) + 2 de las PESTANAS de la",
-             " banda del valle. Son las DIEZ cabezas que se ven atras, y",
-             " ninguna sobre acrilico: los seis M3 de las escuadras murieron",
-             " con ellas."));
+    echo(str("BOM: tornillo M3 x2 -- las dos PESTANAS de la banda del valle al",
+             " marco de la ventana. La trasera ya no lleva NINGUNO: va",
+             " capturada como las mejillas (2026-08-29, noche, 2); murieron los ",
+             2*n_fila, " M3 con sus tuercas y arandelas de nylon, y con ellos",
+             " las diez cabezas que se veian atras. Atras no se ve un tornillo."));
     echo("     LOS DOS DE LA PESTANA VAN AL MARCO DE LA VENTANA, no al anillo:");
     echo("     su rosca tendria que caer a 13.7 mm del plano del valle");
     echo("     (setback 6 + 2t + d/2, y con t_valle = 3 esa cuenta no baja) y");
     echo("     la franja de 14 solo admite hasta 10.25 -- la broca saldria por");
     echo(str("     la pared del rebaje. En el marco hay ", t_placa,
              " mm de pletina y se rosca pasante (ruling R3)."));
-    echo(str("BOM: la TRASERA es UNA plancha de t=", t_piel, ", no dos, DENTRO",
-             " de las dos bandas: su cara trasera contra ellas, rehundida ",
-             t_costilla, " del plano trasero, el canto de abajo sobre el pie",
-             " del talon y el de arriba bajo la meseta."));
-    echo(str("     ", trasera_au(), " de ancho por ",
-             pts_perfil()[5].y - marco_sup - hol_piel - t_costilla, " de alto,",
-             " atornillada arriba y abajo y NADA en medio: 211.73 mm de vano"));
-    echo("     libre, que en 8 mm de acrilico son 0.15 de flecha con 50 N en el");
-    echo(str("     centro. Lleva ", 2*n_fila, " taladros M3 y DOS MUESCAS de",
-             " esquina arriba, de ", muesca_trasera()[0], " x ", muesca_trasera()[1],
-             " con radio 2 en el rincon: por ahi le pasa por debajo la brida",
-             " del miembro alto. Eran 16 taladros con las escuadras."));
+    echo(str("BOM: la TRASERA es UNA plancha de t=", t_piel, ", CAPTURADA COMO",
+             " LAS MEJILLAS (2026-08-29, noche, 2): sus puntas dentro de un",
+             " bolsillo fresado en la cara interior de cada anillo a lo largo",
+             " del tramo trasero -- labio de ", rehundido_acrilico, ", ",
+             rebaje_anillo, " de hondo, ", t_anillo - rehundido_acrilico,
+             " de ancho: los numeros del bolsillo del costado --, la cara",
+             " vista rehundida ", rehundido_acrilico + t_junta_asiento,
+             " sobre junta de EPDM de ", t_junta_asiento, ", el canto de abajo",
+             " sobre el pie del talon y el de arriba bajo la brida del techo."));
+    echo(str("     ", trasera_au(), " de ancho por ", trasera_alto(), " de alto,",
+             " SIN UN TALADRO. Tope hacia fuera: los dos labios del anillo y",
+             " los del talon y el techo (tira de EPDM de ",
+             rehundido_acrilico + t_junta_asiento - t_costilla,
+             " tras cada uno); hacia dentro: las paredes de los bolsillos, la",
+             " pata trasera del marco y las dos pestanas del talon."));
     echo("     Fueron dos pieles de 5 partidas a la altura del");
     echo("     entrepiso, colgadas de 12 separadores M4 y con cinco filas de");
     echo("     tornillo. Separadores, junta de sombra, una plancha entera y");
-    echo("     tres largueros murieron por el camino, todos el 2026-08-21.");
-    echo("     SALE POR ABAJO, no por atras: la banda que la tapa es estructura.");
-    echo("     Tabla fuera, talon fuera, los cinco M3 de arriba, y baja de");
-    echo("     debajo de la meseta. Reversible entero y sin adhesivo.");
+    echo("     tres largueros murieron por el camino, todos el 2026-08-21; los");
+    echo("     diez M3 y las dos muescas de #241, la misma noche.");
+    echo("     ENTRA POR ABAJO, con la tabla fuera y el case boca abajo: sube por");
+    echo("     los dos bolsillos hasta que su canto de arriba topa con el fin del");
+    echo("     bolsillo (0.5 bajo la brida del techo), y la tabla -- con el talon");
+    echo("     encima -- la recoge por debajo. Los bolsillos salen por el canto");
+    echo("     de abajo del anillo, que lo tapa la tabla; sus dos esquinas de");
+    echo(str("     abajo llevan un rebaje de ", rebaje_esquina_trasera()[0], " x ",
+             rebaje_esquina_trasera()[1], " a ", kondor_prof, " por la cara"));
+    echo("     exterior para no morder el chaflan del anillo. Reversible y sin adhesivo.");
     // LAS DOS FILAS SON TAPA. Cada una gira sobre el M4 de su riel de arriba y
     // se cierra con el de su otro extremo. Del total de tornillos del case
-    // (12 M4 de riel + 20 M4 de marco al anillo + 4 M4 de brida + 3 M4 de la
-    // nariz + 3 M4 del talon + 4 M4 del chasis + 12 M3 de plancha + 6 M5 de
-    // la tabla = 64; eran 73 con 8 de brida, 6 M3 de escuadra, 4 M4 de clip y
-    // 2 M5 del chasis, la noche del 2026-08-29), solo CUATRO se tocan para
+    // (12 M4 de riel + 24 M4 de marco al anillo + 4 M4 de brida + 3 M4 de la
+    // nariz + 3 M4 del talon + 4 M4 del chasis + 2 M3 de pestana + 6 M5 de
+    // la tabla = 58; eran 68 con los 10 M3 de la trasera hasta que se capturo
+    // la noche del 2026-08-29), solo CUATRO se tocan para
     // abrirlo: dos por fila.
     echo("BOM: los M4 de riel no son todos iguales --");
     echo("     x4 EJES: tornillo de HOMBRO M4, espiga 4 mm (no M5 -- el riel");

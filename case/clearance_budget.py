@@ -310,25 +310,133 @@ Caja = tuple
 # una fila que cae por casualidad en la centerline de otro rail no esta
 # anclada donde el diseno dice, y ese acierto casual no debe pasar la puerta.
 Fila = tuple
+# --- LA TRASERA CAPTURADA (2026-08-29, noche, 2) ------------------------
+#
+# Samuel, mirando el render de #241: "preferiria que la relacion del acrilico
+# con el acero en la parte de atras fuera igual que en las mejillas (la forma
+# en que se unen)". La mejilla va DENTRO de un rebaje del anillo, rehundida
+# tras un labio de 3, con 6 de acrilico en el bolsillo sobre una junta de 1,
+# retenida hacia fuera por el labio y hacia dentro por el marco, sin un
+# taladro. La trasera hace ahora lo mismo con LOS MISMOS TRES NUMEROS,
+# girados: un BOLSILLO fresado en la cara interior de cada anillo a lo largo
+# del tramo trasero -- labio de rehundido_acrilico en el canto, rebaje_anillo
+# de hondo, t_anillo - rehundido de ancho --, sus puntas dentro, su cara vista
+# rehundida labio + junta, y arriba y abajo dos chapas con labio por fuera:
+# el talon (la nariz de atras) y el techo. Cero taladros, cero cabezas atras.
+# Entra deslizando desde ABAJO, con la tabla fuera: el bolsillo sale por el
+# canto de abajo y se cierra arriba. Spec
+# 2026-08-29-trasera-capturada-talon-nariz-design.md.
+#
+# GEMELO de bolsillo_trasero(), trasera_*() y trasera_campo() en el .scad; el
+# DXF lo cruzan anillo_tiene_bolsillo_trasero(), anillo_tiene_rebaje() y
+# agujeros_donde_toca() en check_dxf.
+
+
+def _bolsillo_trasero(p: dict[str, float]) -> dict:
+    """El bolsillo de la trasera en el tramo trasero de cada anillo, en u
+    (distancia al plano trasero) y z (desde la cara vista): labio u = 0..u0,
+    bolsillo u = u0..u1 por z = z0..t_anillo.
+
+    SALE POR EL CANTO DE ABAJO y se cierra arriba en y_fin, medio milimetro
+    sobre el canto de la trasera -- su tope al entrar --: salir por arriba
+    dejaba un agujero de 11 x 6 a la vista en el canto superior del anillo,
+    junto al techo, y por abajo lo tapa la tabla. Bajo y_ch (la coronacion
+    del chaflan de P6 mas 0.5) se estrecha a u_bajo..u1 para no morder la
+    cara del chaflan; lo que la trasera tiene ahi se lo quita su rebaje de
+    esquina. Y la pared con el bolsillo del costado, que en este tramo
+    retrocede a u1 + pared (rebaje_costado). GEMELA de bolsillo_trasero_2d()."""
+    u0 = p["rehundido_acrilico"]
+    u1 = p["t_anillo"]
+    c = p["chaflan_nariz"]
+    return {"u0": u0, "u1": u1, "ancho": u1 - u0,
+            "z0": p["t_anillo"] - p["rebaje_anillo"],
+            "hondo": p["rebaje_anillo"],
+            "pared": p["pared_rebaje_trasera"],
+            "rebaje_costado": u1 + p["pared_rebaje_trasera"],
+            "u_bajo": c, "y_ch": c + 0.5,
+            "y_fin": _vertices(p)[5][1] - p["t_costilla"] - p["brida_ancho"]}
+
+
+def _y_labio_techo(p: dict[str, float]) -> float:
+    """El canto de abajo del labio (B) o de la banda (A) del techo, en y del
+    mundo: la coronacion de lo que se ve de la trasera por arriba."""
+    P = _vertices(p)
+    if _chaflan_p5(p):
+        return P[5][1] - p["chaflan_nariz"] - p["techo_labio"]
+    return P[5][1] - p["banda_trasera"]
+
+
+def _trasera(p: dict[str, float]) -> dict:
+    """La trasera capturada: su caja y sus cotas. x1 es su cara vista
+    (rehundida labio + junta del plano trasero), x0 su cara interior; z0/z1
+    sus puntas, dentro de los bolsillos menos hol_piel; y0 sobre el pie del
+    talon; y1 medio milimetro bajo lo que el techo tiene encima en su cara
+    vista -- el chaflan (B) o el doblez de la banda (A)."""
+    P = _vertices(p)
+    b = _bolsillo_trasero(p)
+    t = p["t_costilla"]
+    x1 = P[6][0] - b["u0"] - p["t_junta_asiento"]
+    z0 = b["z0"] + p["hol_piel"]
+    # EL CANTO DE ARRIBA MUERE BAJO LA BRIDA DEL TECHO, con 0.5: la brida se
+    # tumba en la cara del anillo de t_costilla + brida_ancho por debajo del
+    # canto de arriba, y una trasera que subiera mas necesitaria las muescas de
+    # esquina de #241. Por debajo del labio (o la banda) quedan 7.5 tapados.
+    y1 = P[5][1] - t - p["brida_ancho"] - 0.5
+    return {"x0": x1 - p["t_piel"], "x1": x1,
+            "y0": t, "y1": y1,
+            "z0": z0, "z1": p["ancho_total"] - z0,
+            "au": p["ancho_total"] - 2 * z0,
+            "alto": y1 - t,
+            "entra": b["hondo"] - p["hol_piel"],
+            "aire_labios": b["u0"] + p["t_junta_asiento"] - t,
+            # LOS DOS REBAJES DE ESQUINA, por la cara exterior, abajo: (largo
+            # desde cada punta, alto desde el canto de abajo, hondo). Lo que el
+            # bolsillo no vacia bajo el chaflan del anillo se lo quita la
+            # plancha. GEMELA de rebaje_esquina_trasera() en el .scad.
+            "rebaje": (b["hondo"] + 0.5, b["y_ch"] + 0.5 - t, p["kondor_prof"])}
+
+
+def _trasera_campo(p: dict[str, float]) -> tuple[float, float]:
+    """Lo que de la trasera se VE entre los dos labios: de la coronacion del
+    labio del talon a la del techo. A esto se anclan la rejilla, las ondas,
+    el IEC y KONDOR desde que no hay filas de M3. GEMELA de trasera_campo()."""
+    return (p["chaflan_nariz"] + p["talon_labio"], _y_labio_techo(p))
+
+
+def _entre_anillos(p: dict[str, float]) -> float:
+    """Lo que mide una chapa que va entre las caras interiores de los
+    anillos con hol_piel a cada lado: la nariz, el talon, el techo."""
+    return perfil(p)["ancho_util"] - 2 * p["hol_piel"]
+
+
+def _bd_pestana(p: dict[str, float]) -> float:
+    """Bend deduction del doblez a 90 de una pestana lanzada, con su radio
+    apretado (radio_doblez_pestana). GEMELA de pestana_bd() en el .scad."""
+    r, t = p["radio_doblez_pestana"], p["t_costilla"]
+    return 2 * (r + t) - math.pi / 2 * (r + p["k_factor"] * t)
+
+
 def _cajas_miembro(p: dict[str, float], P: list[tuple[float, float]],
                     cr: list[tuple[float, float]], z0: float,
                     z1: float) -> dict[str, Caja]:
-    """Las BANDAS del miembro alto y del talon, que son la cara que recibe la
-    trasera: t_costilla de espesor a ras del plano trasero, banda_trasera de
-    alto, la del alto colgando de la meseta y la del talon subiendo del pie.
+    """Las CARAS VISTAS de atras: el labio (B) o la banda (A) del techo y el
+    labio del talon, t_costilla de espesor a ras del plano trasero.
 
-    Fueron tres canales hasta el 2026-08-29 por la manana y dos por la tarde;
-    desde esa noche el alto es una L y el bajo es el talon, y de cada uno la
-    caja que aqui importa es su banda -- es donde muerden los M3 de la
-    trasera (guarda_agarre) y donde caen sus filas (alineacion). La meseta, el
-    retorno y el pie van aparte como caras (_caras_miembro). El argumento cr
-    se queda por los llamadores; ya no lo usa nadie aqui."""
-    t, h = p["t_costilla"], p["banda_trasera"]
+    Fueron las bandas de 24 que recibian los M3 de la trasera (#241); desde la
+    trasera capturada no reciben nada: tapan. La meseta, el chaflan, el
+    retorno, el pie y las pestanas van aparte como caras (_caras_miembro).
+    El argumento cr se queda por los llamadores."""
+    t = p["t_costilla"]
     x1 = P[6][0]
-    return {
-        "trasero alto": ("trasero alto", x1 - t, x1, P[5][1] - h, P[5][1], z0, z1),
-        "talon": ("talon", x1 - t, x1, 0.0, h, z0, z1),
-    }
+    c, lab = p["chaflan_nariz"], p["talon_labio"]
+    if _chaflan_p5(p):
+        lt = p["techo_labio"]
+        alto = ("trasero alto", x1 - t, x1, P[5][1] - c - lt, P[5][1] - c, z0, z1)
+    else:
+        alto = ("trasero alto", x1 - t, x1, P[5][1] - p["banda_trasera"], P[5][1],
+                z0, z1)
+    return {"trasero alto": alto,
+            "talon": ("talon", x1 - t, x1, c, c + lab, z0, z1)}
 
 
 def _ventana_valle(p: dict[str, float], P: list[tuple[float, float]],
@@ -410,7 +518,24 @@ def _centros_rail_1u(p: dict[str, float], P: list[tuple[float, float]],
 # retorno en 4, la banda del miembro alto en 5, la del talon en 6 -- y
 # comparten radio_chapa (2026-08-29); el 2 y el 3 tienen los suyos.
 RADIOS_PERFIL = [None, "radio_chapa", "radio_pico", "radio_valle",
-                 "radio_chapa", "radio_chapa", "radio_chapa"]
+                 "radio_chapa", "radio_chapa", None]
+
+
+def _chaflan_p5(p: dict[str, float]) -> bool:
+    """El techo con chaflan (variante B, remate_trasero_chaflan = 1): P5 va a
+    chaflan como P0 y P6. Con 0, la banda plana de #241 y P5 a radio_chapa."""
+    return p["remate_trasero_chaflan"] >= 0.5
+
+
+def _radios_perfil(p: dict[str, float]) -> list:
+    """Radio por vertice con la variante del techo puesta. P6 no lleva radio
+    desde la trasera capturada (2026-08-29, noche, 2): va a chaflan como P0 y
+    el chaflan vive en el contorno, no en pts_perfil(). GEMELA de
+    radios_perfil() en el .scad."""
+    r = list(RADIOS_PERFIL)
+    if _chaflan_p5(p):
+        r[5] = None
+    return r
 
 
 def _retiro_vertice(p: dict[str, float], P: list[tuple[float, float]],
@@ -425,7 +550,7 @@ def _retiro_vertice(p: dict[str, float], P: list[tuple[float, float]],
     contra el fichero es cuerpos_dentro_del_anillo() en check_dxf."""
     A, V, B = P[(i - 1) % len(P)], P[i], P[(i + 1) % len(P)]
     cruz = (V[0] - A[0]) * (B[1] - V[1]) - (V[1] - A[1]) * (B[0] - V[0])
-    r = RADIOS_PERFIL[i]
+    r = _radios_perfil(p)[i]
     return _tangente(V, A, B, p[r]) if (cruz < 0 and r) else 0.0
 
 
@@ -443,10 +568,14 @@ def _retiro_marco(p: dict[str, float]) -> float:
 
 
 def _retiro_marco_trasera(p: dict[str, float]) -> float:
-    """Lo que la pata trasera se retira del plano trasero: la banda, la
-    trasera MAS GRUESA del lote y medio milimetro de aire. Es la regla de
-    guarda_trasera_dentro() escrita como cota."""
-    return p["t_piel"] + p["t_costilla"] + _tol_pmma(p) + 0.5
+    """Lo que la pata trasera del marco se retira del plano trasero desde la
+    trasera capturada (2026-08-29, noche, 2): el bolsillo de la trasera corre
+    por la cara interior del anillo hasta u = t_anillo (labio + ancho del
+    bolsillo) y el marco arranca medio milimetro mas alla, sobre la pared
+    entre bolsillos. Su canto queda a 2.5 de la cara interior nominal del
+    acrilico -- mas que los tol + 0.5 de la regla del postmortem -- y es su
+    tope hacia dentro en esa rebanada, como el marco lo es del costado."""
+    return p["t_anillo"] + 0.5
 
 
 def _muesca_brida(p: dict[str, float]) -> tuple[float, float]:
@@ -494,13 +623,14 @@ def _marco_ventana(p: dict[str, float]) -> list[dict]:
         return L - ini(i, otro)
 
     def pata(nombre, A, B, s0, s1, retiro, ejes_c=(), con=(),
-             puntos=None, convexos=None):
+             puntos=None, convexos=None, fondo=None):
         L = math.hypot(B[0] - A[0], B[1] - A[1])
         u = ((B[0] - A[0]) / L, (B[1] - A[1]) / L)
         n = (u[1], -u[0])
+        fo = f if fondo is None else fondo
         ejes = [((cc[0] - A[0]) * u[0] + (cc[1] - A[1]) * u[1], cc, k)
                 for cc, k in zip(ejes_c, con)]
-        pts = puntos or [(s0, retiro), (s1, retiro), (s1, f), (s0, f)]
+        pts = puntos or [(s0, retiro), (s1, retiro), (s1, fo), (s0, fo)]
         conv = convexos or [pts]
         m = lambda q: (A[0] + u[0] * q[0] + n[0] * q[1],
                        A[1] + u[1] * q[0] + n[1] * q[1])
@@ -514,7 +644,7 @@ def _marco_ventana(p: dict[str, float]) -> list[dict]:
         cantos = [(m(pts[i]), m(pts[(i + 1) % len(pts)])) for i in range(len(pts))
                   if not en_extremo(pts[i], pts[(i + 1) % len(pts)])]
         return {"nombre": nombre, "A": A, "u": u, "n": n, "L": L,
-                "s0": s0, "s1": s1, "retiro": retiro, "fondo": f, "ejes": ejes,
+                "s0": s0, "s1": s1, "retiro": retiro, "fondo": fo, "ejes": ejes,
                 "poligono": [m(q) for q in pts],
                 "convexos": [[m(q) for q in cv] for cv in conv],
                 "cantos": cantos, "_m": m}
@@ -568,19 +698,24 @@ def _marco_ventana(p: dict[str, float]) -> list[dict]:
     out[-1]["muesca"] = (s_mu, b_mu)
     # la trasera: retirada de la banda, la trasera y su tolerancia; la muesca
     # de la brida le come la esquina de arriba por fuera
+    # LA PATA TRASERA ENTRA marco_fondo_trasera, no marco_fondo (2026-08-29,
+    # noche, 2): arranca sobre la pared entre bolsillos (t_anillo + 0.5) y con
+    # 26 se quedaba en 11.5 de ancho, a 129 MPa bajo carga_mano contra 130.
     L = math.hypot(P[6][0] - P[5][0], P[6][1] - P[5][1])
     s0, s1 = ini(5, rm), fin(L, 6, rm)
     s_mu, b_mu = P[5][1] - y_mu, P[6][0] - x_mu
-    if b_mu >= f:
+    ft = p["marco_fondo_trasera"]
+    if b_mu >= ft:
         # la muesca alcanza la pata entera: se lleva la esquina de arriba
-        out.append(pata("trasera", P[5], P[6], s_mu, s1, rmt))
+        out.append(pata("trasera", P[5], P[6], s_mu, s1, rmt, fondo=ft))
     else:
         out.append(pata("trasera", P[5], P[6], s0, s1, rmt,
-                        puntos=[(s_mu, rmt), (s1, rmt), (s1, f), (s0, f),
+                        puntos=[(s_mu, rmt), (s1, rmt), (s1, ft), (s0, ft),
                                 (s0, b_mu), (s_mu, b_mu)],
-                        convexos=[[(s_mu, rmt), (s1, rmt), (s1, f), (s_mu, f)],
-                                  [(s0, b_mu), (s_mu, b_mu), (s_mu, f), (s0, f)]]))
-    out[-1]["muesca"] = (s_mu, min(b_mu, f))
+                        convexos=[[(s_mu, rmt), (s1, rmt), (s1, ft), (s_mu, ft)],
+                                  [(s0, b_mu), (s_mu, b_mu), (s_mu, ft), (s0, ft)]],
+                        fondo=ft))
+    out[-1]["muesca"] = (s_mu, min(b_mu, ft))
     # el suelo, bajo los pies de la nariz y del talon, hasta el chaflan
     L = P[6][0] - c
     out.append(pata("suelo", P[6], C0, ini(6, rmt), fin(L, None, rm), rm))
@@ -711,9 +846,10 @@ def _bridas(p: dict[str, float]) -> list[dict]:
     manda su geometria: en esa franja vive el marco de la ventana, y la brida
     NO se sube encima (a z >= t_anillo + t_placa esta el barrido del panel de
     arriba: la tapa pasaba de 121.5 a 52 grados). Es el marco el que lleva una
-    muesca sobre ella (_muesca_brida), y la trasera una muesca de esquina
-    porque la brida le pasa por debajo. Sus dos M4: el de dentro a la raiz
-    del doblez (r + 3t + d/2), el de fuera a 1.5 D del canto libre. GEMELA de
+    muesca sobre ella (_muesca_brida); la trasera capturada muere por debajo
+    de ella, sin muesca. Sus dos M4: el de dentro a la mayor de la raiz del
+    doblez (r + 3t + d/2) y de 1.5 D de broca de la pared del bolsillo de la
+    trasera (brida_s_in), el de fuera a 1.5 D del canto libre. GEMELA de
     bridas_anillo() y brida_*() en el .scad. El miembro bajo ya no tiene
     brida: es el talon, y va a la tabla."""
     P = _vertices(p)
@@ -722,10 +858,24 @@ def _bridas(p: dict[str, float]) -> list[dict]:
     y1 = P[5][1] - t
     y0 = y1 - p["brida_ancho"]
     raiz = p["radio_doblez_costilla"] + 3 * t + d / 2
-    s_in, s_out = raiz, p["brida_largo"] - 1.5 * d
+    # (Se probo max(raiz, t_anillo + 1.6 D - t) la noche de la trasera
+    # capturada, cuando el bolsillo salia por arriba y pasaba bajo la brida.
+    # Cerrado arriba, 7.5 por debajo de estas roscas, vuelve a ser la raiz.)
+    s_in = raiz
+    s_out = p["brida_largo"] - 1.5 * d
     y_m4 = P[5][1] - p["dist_rosca_ciega"]
+    x0, x1 = x_dob - p["brida_largo"], x_dob
+    # SU ESQUINA DE ARRIBA-ATRAS VA A CHAFLAN con el techo de chaflan (B): la
+    # brida apoya en la cara del anillo, y en P5 esa cara esta cortada por
+    # u + v = chaflan_nariz. Lo que quede fuera seria brida en el aire.
+    c = p["chaflan_nariz"]
+    if _chaflan_p5(p) and (P[6][0] - x1) + (P[5][1] - y1) < c:
+        k = c - (P[6][0] - x1) - (P[5][1] - y1)      # lo que sobresale, en diagonal
+        poligono = [(x0, y0), (x1, y0), (x1, y1 - k), (x1 - k, y1), (x0, y1)]
+    else:
+        poligono = [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
     return [{"nombre": "trasero alto", "x_dob": x_dob,
-             "rect": (x_dob - p["brida_largo"], x_dob, y0, y1),
+             "rect": (x0, x1, y0, y1), "poligono": poligono,
              "m4": [(x_dob - s_in, y_m4), (x_dob - s_out, y_m4)],
              "s_m4": (s_in, s_out), "raiz": raiz}]
 
@@ -924,41 +1074,39 @@ def _m3_pestana(p: dict[str, float]) -> tuple[float, float]:
     return (_pv_x(p, _ventana_valle(p, P, cr)[0]), P[3][1] - _pv(p)["a"])
 
 
-def _anclajes_miembro(p: dict[str, float], cajas: dict[str, Caja]
-                       ) -> dict[tuple[str, str], tuple[float, float]]:
-    """Lineas de tornillo de la trasera sobre las DOS BANDAS: a media banda,
-    en la cara interior de la banda. La fila de arriba va en la banda del
-    miembro alto, la de abajo en la del talon."""
-    alto, talon = cajas["trasero alto"], cajas["talon"]
-    t = p["t_costilla"]
-    return {
-        ("trasero alto", "remate"): (alto[2] - t / 2, (alto[3] + alto[4]) / 2),
-        ("talon", "base"): (talon[2] - t / 2, (talon[3] + talon[4]) / 2),
-    }
-
-
 def _caras_miembro(p: dict[str, float], cajas: dict[str, Caja]) -> list[Caja]:
-    """Cajas de las caras de chapa del miembro alto y del talon, sin rellenar
-    el vacio de cada plegado: la meseta, la banda y el retorno del alto; la
-    banda y el pie del talon."""
+    """Cajas de las caras de chapa del techo y del talon, sin rellenar el
+    vacio de cada plegado: labio o banda, meseta y retorno del techo; labio,
+    pie y pestanas del talon.
+
+    LOS DOS CHAFLANES NO VAN: son tramos a 45 y su AABB pisaria la trasera
+    sin tocarla (el de abajo, por la esquina del acrilico que descansa en el
+    pie). Su holgura la mide guarda_trasera_capturada() en el plano, con la
+    cara interior del chaflan de verdad."""
     t = p["t_costilla"]
     alto, talon = cajas["trasero alto"], cajas["talon"]
     z0, z1 = alto[5], alto[6]
     P = _vertices(p)
-    return [
-        ("trasero alto", alto[1], alto[2], alto[3], alto[4], z0, z1),
-        # LA MESETA: del pico al plano trasero, marco_sup (= t) de espesor
-        ("trasero alto meseta", P[4][0], P[6][0], P[5][1] - p["marco_sup"],
+    tl = _talon(p)
+    x_mes1 = P[6][0] - (p["chaflan_nariz"] if _chaflan_p5(p) else 0.0)
+    out = [
+        alto,
+        # LA MESETA: del pico al plano trasero (A) o al pie del chaflan (B),
+        # marco_sup (= t) de espesor
+        ("trasero alto meseta", P[4][0], x_mes1, P[5][1] - p["marco_sup"],
          P[5][1], z0, z1),
-        # EL RETORNO (2026-08-29): dobla en el pico y baja por la cara de
-        # arriba. Su caja es la AABB del tramo girado -- conservadora, y sin
-        # falso positivo: lo que gira pasa por debajo, lo mide
-        # guarda_retorno_meseta() con la distancia radial exacta.
+        # EL RETORNO del pico: la AABB del tramo girado, conservadora; lo que
+        # gira pasa por debajo y lo mide guarda_retorno_meseta().
         _retorno_meseta(p)["caja"] + (z0, z1),
-        ("talon", talon[1], talon[2], talon[3], talon[4], z0, z1),
-        ("talon pie", talon[2] - t - p["talon_pie"], talon[2] - t, 0.0, t,
-         z0, z1),
+        talon,
+        ("talon pie", tl["x_pie"], tl["x_chaflan"], 0.0, t, tl["z0"], tl["z1"]),
     ]
+    for i, zc in enumerate(tl["pestana_z"]):
+        out.append((f"talon pestana {i}", tl["pestana_x"] - t, tl["pestana_x"],
+                    t, t + p["talon_pestana_alto"],
+                    zc - p["talon_pestana_ancho"] / 2,
+                    zc + p["talon_pestana_ancho"] / 2))
+    return out
 
 
 def _trasera_au(p: dict[str, float]) -> float:
@@ -976,8 +1124,13 @@ def _trasera_au(p: dict[str, float]) -> float:
     alimentaban areas de ventilacion, margenes de ventana y texto de mensaje.
     Se funden el 2026-08-28: aqui las tres que son la trasera; guarda_chasis()
     lee ancho_util directo y guarda_piso() saca el ancho de la propia caja.
-    """
-    return perfil(p)["ancho_util"] - 2 * p["hol_piel"]
+
+    DESDE LA TRASERA CAPTURADA (2026-08-29, noche, 2) vuelve a medir 552.32,
+    y esta vez es verdad: sus puntas viven DENTRO de los anillos, en los
+    bolsillos del tramo trasero, a t_anillo - rebaje_anillo + hol_piel de cada
+    cara vista. Lo que va entre anillos (nariz, talon, techo) es
+    _entre_anillos()."""
+    return _trasera(p)["au"]
 
 
 def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
@@ -1037,7 +1190,6 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # EL PIE Y EL FRENTE DE LA NARIZ (2026-08-29): el pie va sobre la tabla,
     # donde viven los clips y el chasis, y aqui es donde se decide si caben.
     railes.extend(_cajas_nariz(p))
-    anclajes = _anclajes_miembro(p, miembros)
 
     planchas: list[Caja] = []
     filas: list[Fila] = []
@@ -1118,69 +1270,19 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # piel_trasera: UNA sola plancha desde el 2026-08-21. Fueron dos, partidas
     # a la altura del entrepiso porque cada una se atornillaba a los dos
     # largueros de su piso; muerta esa bandeja la frontera dejo de existir. Va
-    # en t_piel (8) y declara DOS filas, una por banda.
-    # DESDE EL 2026-08-29 POR LA NOCHE VA DENTRO DE LAS DOS BANDAS: su cara
-    # trasera contra la cara interior de las bandas (rehundida t_costilla del
-    # plano trasero, como con el marco de la manana), su canto de abajo SOBRE
-    # EL PIE DEL TALON (y = t_costilla, ya no el plano del suelo) y el de
-    # arriba hol_piel bajo la meseta. Ver guarda_piso(), assert 3.
-    y0_pt = p["t_costilla"]
-    # SE QUEDA marco_sup POR DEBAJO DEL PICO, y esta gemela estuvo 1.5 mm
-    # desincronizada del 27-08 al 29-08. El .scad siempre corto la plancha en
-    # `P[5].y - marco_sup` -- la cara de abajo de la meseta -- y aqui se escribio
-    # `P[5][1]` con un comentario que decia que llegaba al pico. Nadie lo vio:
-    # el unico cruce era el sobre del DXF, y TOL vale 4 mm.
+    # en t_piel (8).
     #
-    # Lo de fondo era que ninguna de las dos estaba bien. Con la plancha a
-    # 254.68 quedaba un hueco corrido de 8 x 1.5 a lo largo de los 540 mm del
-    # canto trasero de arriba, y subirla al pico lo cerraba con CANTO DE
-    # ACRILICO en la cara que se mira desde arriba -- que es la mitad de #234.
-    # Desde el 2026-08-29 esa rebanada la ocupa el ala B de marco_trasera_sup:
-    # metal, coplanar con la meseta, y la plancha se queda donde su .scad la
-    # tuvo siempre.
-    alto_pt = P[5][1] - p["marco_sup"] - p["hol_piel"] - y0_pt
-    # LA TRASERA SE EMPOTRA ENTRE LOS DOS ANILLOS, y desde el 2026-08-28 eso ya
-    # no es lo mismo que z0/z1: la cara interior del anillo esta en t_anillo y
-    # z0/z1 siguen en la cara interior del apilado viejo (chapa + acrilico)
-    # hasta que la Tarea 2 los mueva. Medirla aqui con z0/z1 la hacia 9 mm mas
-    # ancha que su propio DXF -- lo canto el sobre de check_dxf, que es justo
-    # para lo que existe.
-    #
-    # ESTA CAJA ES LA GEMELA DE piel_trasera() EN EL .scad EN ANCHO Y EN
-    # POSICION, y las dos cosas importan: el ancho es trasera_au()
-    # (ancho_util - 2*hol_piel) y el arranque es t_anillo + hol_piel, o sea la
-    # cara interior del anillo. Centrada sobre ancho_total da lo mismo escrito
-    # de otra forma, y asi no hay dos maneras de decir donde empieza.
-    au = _trasera_au(p)
-    z_pt0, z_pt1 = (ancho_total - au) / 2, (ancho_total + au) / 2
-    x0_pt, x1_pt = P[6][0] - p["t_piel"] - p["t_costilla"], P[6][0] - p["t_costilla"]
-    # LAS DOS MUESCAS DE ESQUINA de arriba (2026-08-29, noche): por ahi pasa la
-    # brida del miembro alto, tumbada en la cara del anillo justo donde la
-    # trasera apoya su esquina. La caja principal se queda entre las muescas y
-    # las dos tiras laterales llegan hasta debajo de ellas: tres cajas para que
-    # solapes() vea la muesca. Las tiras llevan "lado" en el nombre y
-    # _sobres() las salta -- el DXF es el contorno entero.
-    mz, my = _muesca_trasera(p)
-    planchas.append(("piel_trasera", x0_pt, x1_pt, y0_pt, y0_pt + alto_pt,
-                     z_pt0 + mz, z_pt1 - mz))
-    for lado, (za, zb) in enumerate(((z_pt0, z_pt0 + mz), (z_pt1 - mz, z_pt1))):
-        planchas.append((f"piel_trasera lado {lado}", x0_pt, x1_pt,
-                         y0_pt, y0_pt + alto_pt - my, za, zb))
-    filas += [("piel_trasera", "base", "y",
-               anclajes[("talon", "base")][1], "talon"),
-              ("piel_trasera", "remate", "y",
-               anclajes[("trasero alto", "remate")][1], "trasero alto")]
+    # CAPTURADA COMO LAS MEJILLAS desde el 2026-08-29 por la noche (2): sus
+    # puntas dentro de los bolsillos del tramo trasero de los anillos (z de
+    # t_anillo - rebaje + hol_piel a su espejo), su cara vista rehundida labio
+    # + junta del plano trasero, el canto de abajo sobre el pie del talon y el
+    # de arriba bajo el techo. SIN FILAS: no la atraviesa nada. Una caja, no
+    # tres: las muescas de esquina murieron con los M3 (la brida del techo
+    # queda 5 mm por encima de su canto). Ver guarda_trasera_capturada().
+    tr = _trasera(p)
+    planchas.append(("piel_trasera", tr["x0"], tr["x1"], tr["y0"], tr["y1"],
+                     tr["z0"], tr["z1"]))
     return railes, planchas, filas
-
-
-def _muesca_trasera(p: dict[str, float]) -> tuple[float, float]:
-    """(honda en z desde el canto lateral, alta en y desde el canto de arriba)
-    de cada muesca de esquina de la trasera: la brida del miembro alto le pasa
-    por debajo de la esquina, tumbada en la cara del anillo, asi que la
-    trasera cede t_costilla + 0.5 en z (arranca hol_piel por encima de la cara
-    y la brida sube t_costilla) por brida_ancho + 0.5 en y. GEMELA de
-    muesca_trasera() en el .scad."""
-    return (p["t_costilla"] + 0.5, p["brida_ancho"] + 0.5)
 
 
 def _overlap(a: Caja, b: Caja) -> tuple[float, float, float] | None:
@@ -1329,8 +1431,10 @@ def alineacion(p: dict[str, float]) -> list[str]:
     """
     P = _vertices(p)
     cr = _centros_rail(p, P)
-    miembros = _cajas_miembro(p, P, cr, 0.0, 0.0)
-    esqueleto = _anclajes_miembro(p, miembros)
+    # SIN ESQUELETO desde la trasera capturada (2026-08-29, noche, 2): no
+    # queda ninguna fila que apoye en un miembro. La puerta se queda por si
+    # vuelve una, y hoy revisa cero filas.
+    esqueleto: dict[tuple[str, str], tuple[float, float]] = {}
     panel = dict(zip(NOMBRES_CR, cr))
     _, _, filas = _cajas_solidas(p)
     fallos: list[str] = []
@@ -1433,10 +1537,17 @@ def canario_alineacion(p: dict[str, float]) -> None:
     no depende de la historia. Se prueban los dos lados del umbral: desvios
     gordos como los del bloqueante real, uno finito justo por encima de la
     tolerancia, y la fila bien puesta, que tiene que PASAR."""
+    # SIN FILAS REALES desde la trasera capturada (2026-08-29, noche, 2): el
+    # canario prueba el checker sobre dos anclajes sinteticos -- el centro del
+    # labio del talon y el del techo -- que es lo unico que necesita: un punto
+    # y un desvio.
     P = _vertices(p)
     cr = _centros_rail(p, P)
-    esqueleto = _anclajes_miembro(
-        p, _cajas_miembro(p, P, cr, 0.0, 0.0))
+    cajas = _cajas_miembro(p, P, cr, 0.0, 0.0)
+    esqueleto = {(nm, fila): ((c[1] + c[2]) / 2, (c[3] + c[4]) / 2)
+                 for (nm, fila), c in ((("talon", "base"), cajas["talon"]),
+                                       (("trasero alto", "remate"),
+                                        cajas["trasero alto"]))}
     casos = (("talon", "base", "y"),
              ("trasero alto", "remate", "y"))
     for rail_decl, fila, eje in casos:
@@ -1671,14 +1782,15 @@ def _banda_libre_trasera(p: dict[str, float]) -> tuple[float, float]:
     circulos y su borde de MATERIAL cae medio ancho de ranura por debajo de su
     polilinea. La primera version se lo olvido y los 14 mm de vent_separacion
     salieron 12."""
-    P = _vertices(p)
-    cr = _centros_rail(p, P)
-    anclajes = _anclajes_miembro(
-        p, _cajas_miembro(p, P, cr, 0.0, 0.0))
-    f_base = anclajes[("talon", "base")][1]
-    f_tras = anclajes[("trasero alto", "remate")][1]
+    # ANCLADA AL CAMPO VISIBLE desde la trasera capturada (2026-08-29, noche,
+    # 2): de la coronacion del labio del talon a la del techo. Fueron las dos
+    # filas de M3, que ya no existen.
+    f_base, f_tras = _trasera_campo(p)
     y_bajas = f_base + 0.37 * (f_tras - f_base)
-    y0 = f_base + p["valle_espina"] / 2 + p["vent_puente_min"]
+    # SIN ESPINA: la fila de M3 que la rejilla tenia que librar murio con la
+    # trasera capturada, y la rejilla arranca a un puente de la coronacion del
+    # labio del talon.
+    y0 = f_base + p["vent_puente_min"]
     y1 = (y_bajas - p["vent_periodo"] * 0.35 - p["vent_ancho_ranura"] / 2
           - p["vent_separacion"])
     return y0, y1
@@ -1792,16 +1904,12 @@ def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
     entrepiso-- y NO la bahia de arriba, que es la que el cajeado sella."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
-    anclajes = _anclajes_miembro(
-        p, _cajas_miembro(p, P, cr, 0.0, 0.0))
     au = _trasera_au(p)
-    # y=0: el canto de abajo de la plancha, en el plano del suelo. Da igual
-    # para el resultado -- se resta al formar f_base/f_tras y se vuelve a
-    # sumar al devolver el centroide, asi que se cancela -- pero tiene que
-    # decir lo mismo que el .scad o el dia que deje de cancelarse miente.
+    # ANCLADAS AL CAMPO VISIBLE desde la trasera capturada (2026-08-29, noche,
+    # 2): de la coronacion del labio del talon a la del techo, en y del mundo.
+    # Fueron las dos filas de M3, que ya no existen. y0_pl = 0 se cancela.
     y0_pl = 0.0
-    f_base = anclajes[("talon", "base")][1] - y0_pl
-    f_tras = anclajes[("trasero alto", "remate")][1] - y0_pl
+    f_base, f_tras = _trasera_campo(p)
     y_bajas = f_base + 0.37 * (f_tras - f_base)
     # La sierra iba aqui con (_onda_area(p, "sierra", au * 0.70), y_sierra) y
     # y_sierra = f_base + 0.74 * (f_tras - f_base). Se cae con el cajeado: el
@@ -2197,10 +2305,8 @@ def guarda_red(p: dict[str, float]) -> None:
     Su mutacion vive en canario_red(), como manda el Principio VIII."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
-    anclajes = _anclajes_miembro(
-        p, _cajas_miembro(p, P, cr, 0.0, 0.0))
     au = _trasera_au(p)
-    f_base = anclajes[("talon", "base")][1]
+    f_base = _trasera_campo(p)[0]          # la coronacion del labio del talon
     lib0, lib1 = _banda_libre_trasera(p)   # la misma que centra la rejilla
     puente = p["vent_puente_min"]
 
@@ -2210,7 +2316,7 @@ def guarda_red(p: dict[str, float]) -> None:
     holgura_v = (lib1 - lib0 - p["iec_alto"]) / 2
     assert holgura_v >= puente, (
         f"la ventana de la entrada de red mide {p['iec_alto']:.1f} mm de alto y "
-        f"la banda libre entre la fila de M3 y la onda mide {lib1 - lib0:.2f} "
+        f"la banda libre entre el labio del talon y la onda mide {lib1 - lib0:.2f} "
         f"(y={lib0:.2f}..{lib1:.2f}): quedan {holgura_v:.2f} mm de acrilico "
         f"arriba y abajo y el puente minimo son {puente:.1f}. O baja iec_alto, o "
         f"la banda tiene que crecer -- y crecerla mueve vent_separacion, que es "
@@ -2419,99 +2525,115 @@ def _bd_miembro(p: dict[str, float]) -> float:
 
 
 def _miembro_alto(p: dict[str, float]) -> dict:
-    """La L del miembro alto: la meseta (prof_sup) y la banda (banda_trasera)
-    en t_costilla, y lo que aguanta SOLA con carga_mano en el centro.
+    """El techo: meseta y, por detras, chaflan + labio (B) o banda (A), en
+    t_costilla, y lo que aguanta SOLO con carga_mano al centro.
 
-    Seccion: el ala horizontal arriba (prof_sup x t) y el alma vertical detras
-    (t x banda). Inercia por paralelas-a-ejes sobre dos rectangulos que no se
-    solapan -- el alma arranca donde acaba el ala --, la tension en el canto
-    libre de la banda (el punto mas lejos del eje neutro) y la flecha de viga
-    biapoyada de ancho_util. GEMELA de la cuenta de guarda_miembro_alto()."""
-    t, b, h = p["t_costilla"], p["prof_sup"], p["banda_trasera"]
-    A1, y1 = b * t, h - t / 2                # el ala, arriba
-    A2, y2 = t * (h - t), (h - t) / 2        # el alma, de abajo hasta el ala
-    yb = (A1 * y1 + A2 * y2) / (A1 + A2)
-    I = (b * t ** 3 / 12 + A1 * (y1 - yb) ** 2
-         + t * (h - t) ** 3 / 12 + A2 * (y2 - yb) ** 2)
+    Seccion por rectangulos en el plano del perfil (el chaflan como tira
+    vertical de su alto, que es conservador): inercia por paralelas-a-ejes,
+    tension en la fibra mas lejana del eje neutro, flecha biapoyada de
+    ancho_util. GEMELA de la cuenta de guarda_miembro_alto()."""
+    P = _vertices(p)
+    t = p["t_costilla"]
+    c, lab = p["chaflan_nariz"], p["techo_labio"]
+    yt = P[5][1]
+    # (ancho, alto, y del centro)
+    if _chaflan_p5(p):
+        rects = [(p["prof_sup"] - c, t, yt - t / 2),
+                 (t, c, yt - c / 2),
+                 (t, lab, yt - c - lab / 2)]
+    else:
+        rects = [(p["prof_sup"], t, yt - t / 2),
+                 (t, p["banda_trasera"], yt - p["banda_trasera"] / 2)]
+    A = sum(b * h for b, h, _ in rects)
+    yb = sum(b * h * y for b, h, y in rects) / A
+    I = sum(b * h ** 3 / 12 + b * h * (y - yb) ** 2 for b, h, y in rects)
+    y_max = max(max(abs(y + h / 2 - yb), abs(y - h / 2 - yb)) for _, h, y in rects)
     au = perfil(p)["ancho_util"]
     F = p["carga_mano"]
     M = F * au / 4
-    sigma = M * yb / I                       # el canto libre de la banda
-    flecha = F * au ** 3 / (48 * E_ALUMINIO * I)
-    P = _vertices(p)
-    return {"I": I, "yb": yb, "sigma": sigma, "flecha": flecha,
-            "y_fila": P[5][1] - h / 2, "x_dob": P[6][0] - t}
+    return {"I": I, "yb": yb, "sigma": M * y_max / I,
+            "flecha": F * au ** 3 / (48 * E_ALUMINIO * I),
+            "x_dob": P[6][0] - t, "rects": rects,
+            "y_labio": _y_labio_techo(p)}
 
 
 def _talon(p: dict[str, float]) -> dict:
-    """El talon: la banda de abajo del plano trasero y su pie sobre la tabla.
-    GEMELA de talon_*() en el .scad."""
+    """El talon, la nariz de atras: pie sobre la tabla del canto libre al pie
+    del chaflan, chaflan a 45 sobre P6 y labio vertical a ras del plano
+    trasero. Tres M4 en el pie y dos pestanas lanzadas detras del canto de
+    abajo de la trasera. GEMELA de talon_*() en el .scad."""
     P = _vertices(p)
-    t = p["t_costilla"]
-    x_band = P[6][0] - t
+    c, t = p["chaflan_nariz"], p["t_costilla"]
+    xp = P[6][0]
+    x_ch = xp - c
+    x_pie = x_ch - p["talon_pie"]
     au = perfil(p)["ancho_util"]
-    return {"x_band": x_band, "x_pie": x_band - p["talon_pie"],
-            "m4_x": x_band - p["talon_pie"] + 1.5 * p["d_M4_paso"],
+    tr = _trasera(p)
+    return {"x_band": xp - t, "x_chaflan": x_ch, "x_pie": x_pie,
+            "contorno": [(x_pie, 0.0), (x_ch, 0.0), (xp, c),
+                         (xp, c + p["talon_labio"])],
+            "m4_x": x_pie + 1.5 * p["d_M4_paso"],
             "m4_z": [p["t_anillo"] + au * f for f in (0.25, 0.5, 0.75)],
-            "y_fila": p["banda_trasera"] / 2,
-            "largo": _trasera_au(p),
-            "desarrollo": p["banda_trasera"] + p["talon_pie"] - _bd_miembro(p),
+            "pestana_x": tr["x0"] - p["talon_pestana_aire"],
+            "pestana_z": [p["t_anillo"] + au * f for f in (0.375, 0.625)],
+            "pestana_dev": p["talon_pestana_alto"] + t - _bd_pestana(p),
+            "largo": _entre_anillos(p),
+            "desarrollo": (p["talon_labio"] + c * math.sqrt(2) + p["talon_pie"]
+                           - 2 * _bd_angulo(p, 45.0)),
             "z0": p["t_anillo"] + p["hol_piel"],
             "z1": p["ancho_total"] - p["t_anillo"] - p["hol_piel"]}
 
 
 def bbox_desarrollo_miembro(p: dict[str, float], cual: str) -> tuple[float, float]:
-    """Envolvente del blank de cada pieza de chapa trasera, como la ve el
-    laser: mas grande que la pieza doblada.
+    """Envolvente del blank de cada chapa trasera, como la ve el laser: mas
+    grande que la pieza doblada.
 
-    El miembro alto tumba retorno, meseta y banda (un doblez de 45 y otro de
-    90) y saca sus dos bridas por las puntas (un doblez de 90 cada una); el
-    escalon de la brida se dibuja plano y lo descuenta el taller. El talon
-    tumba banda y pie (un doblez de 90) y mide lo que la trasera."""
-    bd = _bd_miembro(p)
+    El techo tumba retorno, meseta y -- en B -- chaflan y labio (un doblez de
+    45 - angulo, dos de 45), o -- en A -- la banda (uno de 90), y saca sus dos
+    bridas por las puntas. El talon tumba labio, chaflan y pie (dos de 45) y
+    mide lo que hay entre anillos."""
+    bd90, bd45 = _bd_miembro(p), _bd_angulo(p, 45.0)
     if cual == "trasero alto":
         au = perfil(p)["ancho_util"]
-        return (au + 2 * (p["brida_largo"] - bd),
-                p["retorno_meseta"] + p["prof_sup"] + p["banda_trasera"]
-                - bd - _bd_angulo(p, 90.0 - p["angulo_superior"]))
+        alto = p["retorno_meseta"] - _bd_angulo(p, 90.0 - p["angulo_superior"])
+        if _chaflan_p5(p):
+            alto += (p["prof_sup"] - p["chaflan_nariz"]
+                     + p["chaflan_nariz"] * math.sqrt(2) + p["techo_labio"]
+                     - 2 * bd45)
+        else:
+            alto += p["prof_sup"] + p["banda_trasera"] - bd90
+        return (au + 2 * (p["brida_largo"] - bd90), alto)
     return (_talon(p)["largo"], _talon(p)["desarrollo"])
 
 
 def guarda_miembro_alto(p: dict[str, float]) -> None:
-    """El miembro alto se sostiene SOLO, y su brida y su fila caen en chapa
-    plana.
+    """El techo se sostiene SOLO y sus bridas caen en macizo.
 
-    SUSTITUYE A guarda_miembros() (2026-08-29, noche), que comparaba la inercia
-    de cada canal con la del 2020 que jubilo -- un piso heredado, no una
-    carga. Aqui la carga es la de siempre, carga_mano en el centro de la
-    meseta, sobre la L SOLA: sin la trasera, que atornillada cada 100 es en
-    ese sentido una viga de canto 165 veces mas rigida y se lleva todo. Se
-    exige que la L no fluya sola (RP02_ALUMINIO, el conservador de siempre) y
-    se publica cuanto cede. Es lo que puso banda_trasera en 24: con 20 daba
-    158 MPa.
+    SUSTITUYE A guarda_miembros() (2026-08-29, noche), que comparaba la
+    inercia de cada canal con la del 2020 que jubilo. Aqui la carga es
+    carga_mano en el centro de la meseta sobre la chapa SOLA -- sin la
+    trasera, que ya no se atornilla a nada --, y se exige que no fluya
+    (RP02_ALUMINIO) y se publica cuanto cede.
 
-    Y la brida: cabe en la banda con la meseta encima, sus dos M4 a 2 D uno
-    de otro y a 1.5 D de su canto de arriba; la fila de M3 de la banda, a la
-    raiz del doblez de arriba y a 1.5 D del canto libre."""
+    Y la brida: cabe en el labio (o la banda) con la meseta encima, sus dos
+    M4 a 2 D uno de otro y a 1.5 D de su canto de arriba, y EL DE DENTRO A
+    1.5 D DE BROCA DE LA PARED DEL BOLSILLO DE LA TRASERA (2026-08-29, noche,
+    2): es lo que llevo brida_largo de 27 a 34. En B la brida sube por
+    encima del labio, junto a la tira del chaflan: se publica el relieve."""
     m = _miembro_alto(p)
+    P = _vertices(p)
+    t = p["t_costilla"]
+    como = ("chaflan de " + f"{p['chaflan_nariz']:g} + labio de {p['techo_labio']:g}"
+            if _chaflan_p5(p) else f"banda de {p['banda_trasera']:g}")
     assert m["sigma"] <= RP02_ALUMINIO, (
-        f"el miembro alto SOLO -- meseta {p['prof_sup']:g} x banda "
-        f"{p['banda_trasera']:g} en {p['t_costilla']:g} -- trabaja a "
-        f"{m['sigma']:.0f} MPa en el canto libre de la banda con {p['carga_mano']:.0f} "
-        f"N en el centro de la meseta, contra {RP02_ALUMINIO:.0f} de Rp0.2. Sube "
-        f"banda_trasera (22 da 131, 24 da 110) u obliga 6082-T6 en el pliego")
-    t, h = p["t_costilla"], p["banda_trasera"]
-    raiz = _raiz_m3(p)
-    assert h / 2 >= raiz, (
-        f"la fila de M3 de la banda cae a {h / 2:.2f} del doblez de la meseta y "
-        f"la regla de chapa pide {raiz:.2f} (r + 3t + d/2)")
-    assert h / 2 >= 1.5 * p["d_M3_paso"], (
-        f"la fila de M3 cae a {h / 2:.2f} del canto libre de la banda; 1.5 D son "
-        f"{1.5 * p['d_M3_paso']:.2f}")
+        f"el techo SOLO -- meseta {p['prof_sup']:g} y {como} en {t:g} -- trabaja "
+        f"a {m['sigma']:.0f} MPa con {p['carga_mano']:.0f} N en el centro de la "
+        f"meseta, contra {RP02_ALUMINIO:.0f} de Rp0.2")
     b = _bridas(p)[0]
-    assert p["brida_ancho"] + t <= h, (
-        f"la brida mide {p['brida_ancho']:g} mas los {t:g} de la meseta y la "
-        f"banda solo tiene {h:g}")
+    alto_cara = (P[5][1] - m["y_labio"])
+    assert p["brida_ancho"] + t <= alto_cara, (
+        f"la brida mide {p['brida_ancho']:g} mas los {t:g} de la meseta y por "
+        f"detras el techo solo tiene {alto_cara:g}")
     s_in, s_out = b["s_m4"]
     assert s_out - s_in >= 2 * p["d_M4_paso"], (
         f"los dos M4 de la brida estan a {s_out - s_in:.2f}; 2 D son "
@@ -2520,18 +2642,27 @@ def guarda_miembro_alto(p: dict[str, float]) -> None:
         f"el M4 de la brida cae a {p['dist_rosca_ciega'] - t:.2f} de su canto de "
         f"arriba (dist_rosca_ciega - t_costilla) y pide "
         f"{1.5 * p['d_M4_paso']:.2f}")
+    # EL BOLSILLO DE LA TRASERA SE CIERRA POR DEBAJO DE LAS ROSCAS DE LA
+    # BRIDA: corre por la misma franja de la cara interior, y una rosca que
+    # cayera sobre el o a menos de 1.5 D de su fin saldria por el.
+    bo = _bolsillo_trasero(p)
+    minimo = 1.5 * p["d_M4_rosca"]
+    for i, c in enumerate(b["m4"]):
+        assert c[1] - bo["y_fin"] >= minimo - 1e-9, (
+            f"el M4 {i} de la brida cae en y={c[1]:.2f} y el bolsillo de la "
+            f"trasera se cierra en y={bo['y_fin']:.2f}: a {c[1] - bo['y_fin']:.2f}, "
+            f"y la broca pide {minimo:.2f}")
+    relieve = (P[5][1] - t) - (m["y_labio"] + p["techo_labio"]) if _chaflan_p5(p) else 0.0
     au = perfil(p)["ancho_util"]
-    tr = _trasera_au(p)
-    alto_tr = _vertices(p)[5][1] - p["marco_sup"] - p["hol_piel"] - t
-    EI_tr = E_PMMA_TRASERA * p["t_piel"] * alto_tr ** 3 / 12
-    print(f"miembro alto: L de {p['prof_sup']:g} x {h:g} en {t:g}, I={m['I']:.0f} "
-          f"mm4; SOLA con {p['carga_mano']:.0f} N al centro de {au:.2f} cede "
+    print(f"techo: meseta {p['prof_sup']:g} y {como} en {t:g}, I={m['I']:.0f} mm4; "
+          f"SOLO con {p['carga_mano']:.0f} N al centro de {au:.2f} cede "
           f"{m['flecha']:.2f} mm y trabaja a {m['sigma']:.0f} MPa (Rp0.2 "
-          f"{RP02_ALUMINIO:.0f}); la trasera atornillada es {EI_tr / (E_ALUMINIO * m['I']):.0f}x "
-          f"mas rigida en ese sentido")
-    print(f"  brida de {p['brida_largo']:g} x {p['brida_ancho']:g} en la cara "
-          f"del anillo, bajo la muesca del marco; M4 a {s_in:.2f} y {s_out:.2f} "
-          f"del doblez; fila de M3 a {h / 2:g} del canto libre ({tr:.2f} de largo)")
+          f"{RP02_ALUMINIO:.0f}); sin canal, la tapa de arriba no pierde grados")
+    print(f"  brida de {p['brida_largo']:g} x {p['brida_ancho']:g} en la cara del "
+          f"anillo, bajo la muesca del marco; M4 a {s_in:.2f} y {s_out:.2f} del "
+          f"doblez, {b['m4'][0][1] - bo['y_fin']:.2f} por encima del fin del "
+          f"bolsillo de la trasera"
+          + (f"; relieve de {relieve:.2f} junto al chaflan" if relieve > 0 else ""))
 
 
 # Modulo del PMMA colado con el que esta acotada la trasera (E_PMMA en
@@ -2540,120 +2671,222 @@ E_PMMA_TRASERA = 3000.0
 
 
 def guarda_talon(p: dict[str, float]) -> None:
-    """El talon: la banda de abajo a ras del plano trasero, el pie sobre la
-    tabla, sus tres M4 lejos de todo y la esquina del anillo con su radio.
+    """El talon es la nariz de atras: P6 a chaflan, el labio que tapa el canto
+    de abajo de la trasera, tres M4 en el pie con la boca lejos del acrilico,
+    y dos pestanas que le hacen de tope por dentro.
 
-    Es lo que queda del miembro trasero bajo (2026-08-29, noche): un angulo
-    de la misma chapa que dobla en P6 sobre la tabla, como la nariz dobla en
-    el chaflan. No lleva bridas ni rosca en el anillo -- su fijacion es la
-    TABLA, que ya esta atada a los dos anillos con seis M5 -- y no carga nada
-    en vertical porque apoya en ella en toda su longitud. La trasera se
-    asienta en su pie y se atornilla a su banda cada 100."""
-    tl = _talon(p)
+    Es lo que Samuel pidio la noche del 2026-08-29 mirando el render de #241:
+    "el mismo estilo y acabado que la nariz". Siete cosas, con su numero:
+      1. P6 no lleva radio: el chaflan de chaflan_nariz, como P0.
+      2. el labio mide lo que el frente de la nariz (alto_frontal - chaflan):
+         las chapas del canto cierran igual.
+      3. el chaflan pasa POR DEBAJO de la esquina de abajo-fuera de la
+         trasera, que apoya en el pie: en la cara vista del acrilico la cara
+         interior del chaflan queda por debajo de y0.
+      4. los M4 del pie: fuera de la zona del doblez del chaflan (r + 3t +
+         d/2), a 1.5 D del canto libre, y su BOCA a tol + 0.5 de la cara
+         interior de la trasera -- es lo que pone el pie en 20.
+      5. las pestanas a tol + 0.5 de esa cara, con 2 t de plano entre el
+         doblez del chaflan y el suyo (las tangentes), su ventana dentro del
+         pie con 2 t al canto libre, y a 1.5 D + medio ancho de cada M4.
+      6. el labio tapa mas canto de trasera que el bolsillo del anillo (6).
+      7. la nariz y el talon comparten pie, chaflan y frente: mismo estilo."""
     P = _vertices(p)
-    t = p["t_costilla"]
-    assert RADIOS_PERFIL[6] == "radio_chapa", (
-        "la esquina de abajo-atras del anillo (P6) tiene que llevar radio_chapa: "
-        "el talon dobla ahi sobre la tabla y una esquina viva bajo un doblez a "
-        "90 asoma 1.9 mm")
-    x_tr = P[6][0] - t - p["t_piel"]
-    # LA BOCA DEL AVELLANADO ES UN CUERPO FIJO DELANTE DEL ACRILICO: la cabeza
-    # queda a ras del pie, pero su boca (d_cabeza_M4_avell) esta a distancia
-    # fija de la cara de la trasera, y vale para ella la regla de
-    # guarda_trasera_dentro igual que para la pata del marco: tol_pmma + 0.5,
-    # porque la plancha puede venir 1.2 mas gruesa. Con talon_pie = 20 quedaba
-    # a 0.77 (el revisor del PR la cazo con 1.45 para una cabeza de boton).
-    boca = tl["m4_x"] + p["d_cabeza_M4_avell"] / 2
-    aire = x_tr - boca
-    minimo = _tol_pmma(p) + 0.5
-    assert aire >= minimo - 1e-9, (
-        f"la boca del avellanado del M4 del talon llega a x={boca:.2f} y la cara "
-        f"interior de la trasera esta en {x_tr:.2f}: {aire:.2f} de aire, y delante "
-        f"de un PMMA de +-{_tol_pmma(p):.1f} se piden {minimo:.2f}. Sube talon_pie")
+    tl = _talon(p)
+    tr = _trasera(p)
+    c, t = p["chaflan_nariz"], p["t_costilla"]
+    assert _radios_perfil(p)[6] is None, (
+        "P6 va a chaflan como P0: la esquina de abajo-atras la corta "
+        "chaflan_nariz, no un radio")
+    assert abs(p["talon_labio"] - (p["alto_frontal"] - c)) < 1e-9, (
+        f"el labio del talon mide {p['talon_labio']:g} y el frente de la nariz "
+        f"{p['alto_frontal'] - c:g} (alto_frontal - chaflan_nariz): mismo estilo "
+        f"es el mismo numero")
+    y_ch = (tr["x1"] - tl["x_chaflan"]) - t * math.sqrt(2)
+    assert y_ch <= tr["y0"] - 1e-9, (
+        f"la cara interior del chaflan del talon pasa por y={y_ch:.2f} en la cara "
+        f"vista de la trasera (x={tr['x1']:.2f}) y la trasera apoya en y="
+        f"{tr['y0']:.2f}: se la come por la esquina")
+    raiz = p["radio_doblez_costilla"] + 3 * t + p["d_M4_paso"] / 2
+    assert tl["x_chaflan"] - tl["m4_x"] >= raiz - 1e-9, (
+        f"el M4 del pie cae a {tl['x_chaflan'] - tl['m4_x']:.2f} de la linea del "
+        f"chaflan y la regla de chapa pide {raiz:.2f}")
     assert tl["m4_x"] - tl["x_pie"] >= 1.5 * p["d_M4_paso"] - 1e-9, (
         f"el M4 del pie cae a {tl['m4_x'] - tl['x_pie']:.2f} de su canto libre")
-    raiz = _raiz_m3(p)
-    assert tl["y_fila"] >= raiz, (
-        f"la fila de M3 del talon cae a {tl['y_fila']:.2f} del doblez de abajo y "
-        f"la regla de chapa pide {raiz:.2f}")
-    assert tl["y_fila"] <= p["banda_trasera"] - 1.5 * p["d_M3_paso"], (
-        f"la fila de M3 del talon se sale por el canto libre de la banda")
-    print(f"talon: banda de {p['banda_trasera']:g} a ras del plano trasero y pie "
-          f"de {p['talon_pie']:g} sobre la tabla; 3 M4 avellanados en "
-          f"x={tl['m4_x']:.2f} ({aire:.2f} de aire de su boca a la trasera, piden "
-          f"{minimo:.2f}); fila de M3 a {tl['y_fila']:g}; "
+    boca = tl["m4_x"] + p["d_cabeza_M4_avell"] / 2
+    franja = _tol_pmma(p) + 0.5
+    aire = tr["x0"] - boca
+    assert aire >= franja - 1e-9, (
+        f"la boca del avellanado del M4 del talon llega a x={boca:.2f} y la cara "
+        f"interior de la trasera esta en {tr['x0']:.2f}: {aire:.2f} de aire, y "
+        f"detras de un PMMA de +-{_tol_pmma(p):.1f} se piden {franja:.2f}. Sube "
+        f"talon_pie")
+    aire_p = tr["x0"] - tl["pestana_x"]
+    assert aire_p >= franja - 1e-9, (
+        f"la pestana del talon queda a {aire_p:.2f} de la cara interior de la "
+        f"trasera y se piden {franja:.2f} (talon_pestana_aire)")
+    tang_ch = tl["x_chaflan"] - (p["radio_doblez_costilla"] + t) * math.tan(math.radians(22.5))
+    tang_pe = tl["pestana_x"] + p["radio_doblez_pestana"] + t
+    plano = tang_ch - tang_pe
+    assert plano >= 2 * t - 1e-9, (
+        f"entre la tangente del doblez del chaflan (x={tang_ch:.2f}) y la del "
+        f"doblez de la pestana ({tang_pe:.2f}) quedan {plano:.2f} de plano; se "
+        f"exigen 2 t = {2 * t:g}. Sube talon_pestana_aire o baja "
+        f"radio_doblez_pestana")
+    fin_ventana = tl["pestana_x"] - tl["pestana_dev"]
+    assert fin_ventana - tl["x_pie"] >= 2 * t - 1e-9, (
+        f"la ventana de la pestana llega a x={fin_ventana:.2f} y el canto libre "
+        f"del pie esta en {tl['x_pie']:.2f}: menos de 2 t de puente")
+    sep_min = 1.5 * p["d_M4_paso"] + p["talon_pestana_ancho"] / 2 + p["d_M4_paso"] / 2
+    for zc in tl["pestana_z"]:
+        for zm in tl["m4_z"]:
+            assert abs(zc - zm) >= sep_min - 1e-9, (
+                f"la pestana en z={zc:.1f} y el M4 en z={zm:.1f} estan a "
+                f"{abs(zc - zm):.1f}; piden {sep_min:.2f}")
+    tapa = c + p["talon_labio"] - tr["y0"]
+    assert tapa >= p["rebaje_anillo"] - 1e-9, (
+        f"el talon tapa {tapa:.2f} del canto de abajo de la trasera y el "
+        f"bolsillo del anillo tapa {p['rebaje_anillo']:g}")
+    assert abs(p["nariz_pie"] - p["talon_pie"]) <= 2.0 + 1e-9, (
+        f"pie de la nariz {p['nariz_pie']:g} y del talon {p['talon_pie']:g}: "
+        f"mismo estilo, y difieren mas de 2")
+    print(f"talon: la nariz de atras -- chaflan de {c:g} en P6, labio de "
+          f"{p['talon_labio']:g} a ras del plano trasero (tapa {tapa:.2f} de "
+          f"trasera), pie de {p['talon_pie']:g}; 3 M4 avellanados en "
+          f"x={tl['m4_x']:.2f} (boca a {aire:.2f} de la trasera, piden {franja:.2f}); "
+          f"2 pestanas de {p['talon_pestana_ancho']:g} x {p['talon_pestana_alto']:g} "
+          f"a {aire_p:.2f} de la trasera con {plano:.2f} de plano tras el chaflan; "
           f"desarrollo {tl['largo']:.2f} x {tl['desarrollo']:.2f}")
 
 
-def guarda_trasera_dentro(p: dict[str, float]) -> None:
-    """La trasera va DENTRO de las bandas y delante de ella no hay nada a
-    distancia fija.
+def guarda_trasera_capturada(p: dict[str, float]) -> None:
+    """La trasera va DENTRO de los anillos como las mejillas, y nada la toca
+    a distancia fija.
 
-    ES LA REGLA QUE EL MARCO DE LA MANANA ROMPIA. Schaeffer manda el PMMA de 8
-    a +-1.2, y el marco pinzaba la trasera entre dos chapas a 8.00 justos: con
-    una plancha de 9.2 la banda asomaba 1.2 del plano trasero, con una de 6.8
-    el M3 la hundia. Es la ranura de ancho fijo que el postmortem del case
-    prohibe (spec 26-08 s3). Con la banda estructural la trasera se atornilla
-    a la banda y la tolerancia se va hacia dentro, como en el costado -- si
-    no hay NADA fijo en la franja tol + 0.5 delante de su cara interior.
-
-    Cuatro cosas: (1) esa franja esta vacia dentro de la huella de la trasera
-    -- ahi cayo la pata trasera del marco, que se retiro por esto --; (2) la
-    meseta cubre su canto de arriba hasta el plano trasero; (3) el pie del
-    talon esta bajo su canto de abajo; (4) las dos muescas de esquina libran
-    la brida del miembro alto, que pasa por debajo, con medio milimetro."""
-    railes, planchas, _ = _cajas_solidas(p)
-    tr = next(c for c in planchas if c[0] == "piel_trasera")
-    lados = [c for c in planchas if c[0].startswith("piel_trasera lado")]
-    x_tr, y0, y1 = tr[1], tr[3], tr[4]
-    z0, z1 = lados[0][5], lados[1][6]
+    SUSTITUYE A guarda_trasera_dentro() (#241), que vigilaba la trasera
+    atornillada a las dos bandas. Lo que mide, con el numero de cada cosa:
+      1. el bolsillo del tramo trasero tiene LOS TRES NUMEROS del bolsillo
+         del costado (labio = rehundido_acrilico, hondo = rebaje_anillo,
+         ancho = t_anillo - rehundido) y sitio para la plancha mas gruesa del
+         lote mas la junta, con medio milimetro de sobra.
+      2. la pared entre los dos bolsillos mide >= 3, y el costado sigue
+         entrando >= 3 en el tramo trasero (cara_anillo - rebaje_costado).
+      3. las puntas de la trasera entran >= 5 en los bolsillos.
+      4. NADA FIJO a menos de tol + 0.5 de su cara interior nominal dentro
+         de su huella: la pared del bolsillo (en la rebanada del anillo), la
+         pata trasera del marco, las pestanas del talon, el chasis... Es la
+         regla del postmortem (spec 26-08 s3), la misma de #241.
+      5. el canto de abajo sobre el pie del talon (y0 = t_costilla) y el de
+         arriba bajo el techo con 0.5: en B bajo el chaflan (su cara interior
+         en la cara vista del acrilico), en A bajo el doblez de la banda.
+      6. los labios la tapan >= rebaje_anillo arriba y abajo, y el aire entre
+         el labio y su cara (labio + junta - t) se publica: es la tira de
+         EPDM del pliego.
+      7. cero filas: ninguna caja de fila apunta a la trasera."""
+    P = _vertices(p)
+    bo = _bolsillo_trasero(p)
+    tr = _trasera(p)
+    t = p["t_costilla"]
+    assert (abs(bo["u0"] - p["rehundido_acrilico"]) < 1e-9
+            and abs(bo["hondo"] - p["rebaje_anillo"]) < 1e-9
+            and abs(bo["ancho"] - (p["t_anillo"] - p["rehundido_acrilico"])) < 1e-9), (
+        "el bolsillo de la trasera tiene que llevar los numeros del bolsillo del "
+        "costado: labio rehundido_acrilico, hondo rebaje_anillo, ancho t_anillo - "
+        "rehundido")
+    sitio = bo["ancho"] - (p["t_piel"] + _tol_pmma(p) + p["t_junta_asiento"])
+    assert sitio >= 0.5 - 1e-9, (
+        f"el bolsillo de la trasera mide {bo['ancho']:g} y la plancha mas gruesa "
+        f"del lote ({p['t_piel']:g} + {_tol_pmma(p):.1f}) mas la junta "
+        f"({p['t_junta_asiento']:g}) dejan {sitio:.2f}; se piden 0.5")
+    assert bo["pared"] >= 3.0 - 1e-9, (
+        f"la pared entre los dos bolsillos mide {bo['pared']:g}; se piden 3")
+    entra_costado = p["cara_anillo"] - bo["rebaje_costado"]
+    assert entra_costado >= 3.0 - 1e-9, (
+        f"en el tramo trasero el costado entra {entra_costado:.2f} en su bolsillo "
+        f"(cara {p['cara_anillo']:g} - rebaje {bo['rebaje_costado']:g}); se piden 3")
+    assert tr["entra"] >= 5.0 - 1e-9, (
+        f"las puntas de la trasera entran {tr['entra']:.2f} en los bolsillos; se "
+        f"piden 5")
+    # EL BOLSILLO SE CIERRA 0.5 SOBRE EL CANTO DE LA TRASERA (su tope al entrar)
+    # y sale por el canto de abajo; bajo el chaflan de P6 se estrecha a
+    # u_bajo..u1 y la plancha, rebajada en esa esquina, sigue pasando con 0.5.
+    assert abs(bo["y_fin"] - (tr["y1"] + 0.5)) < 1e-9, (
+        f"el bolsillo se cierra en y={bo['y_fin']:.2f} y el canto de arriba de la "
+        f"trasera esta en {tr['y1']:.2f}: tienen que llevarse 0.5")
+    largo_r, alto_r, hondo_r = tr["rebaje"]
+    u_cara_rebajada = (P[6][0] - tr["x1"]) + hondo_r
+    assert u_cara_rebajada >= bo["u_bajo"] + 0.5 - 1e-9, (
+        f"bajo el chaflan el bolsillo empieza en u={bo['u_bajo']:g} y la trasera "
+        f"rebajada llega a u={u_cara_rebajada:.2f}: se piden 0.5 de aire")
+    assert alto_r >= bo["y_ch"] + 0.5 - tr["y0"] - 1e-9 and largo_r >= bo["hondo"] + 0.5 - 1e-9, (
+        f"el rebaje de esquina de la trasera ({largo_r:.2f} x {alto_r:.2f}) no "
+        f"cubre la zona estrecha del bolsillo (hasta y={bo['y_ch']:.2f}, "
+        f"{bo['hondo']:g} de hondo)")
+    assert bo["u1"] - bo["u_bajo"] >= p["t_piel"] - hondo_r + _tol_pmma(p) + 0.5 - 1e-9, (
+        f"la salida del bolsillo por el canto de abajo mide "
+        f"{bo['u1'] - bo['u_bajo']:g} y la punta rebajada de la trasera "
+        f"{p['t_piel'] - hondo_r:g} + tolerancia: no pasa")
     franja = _tol_pmma(p) + 0.5
+    x_pared = P[6][0] - bo["u1"]
+    assert tr["x0"] - x_pared >= franja - 1e-9, (
+        f"la pared del bolsillo (x={x_pared:.2f}) queda a {tr['x0'] - x_pared:.2f} "
+        f"de la cara interior nominal de la trasera; se piden {franja:.2f}")
+    railes, planchas, filas = _cajas_solidas(p)
     for c in railes + planchas:
-        if c[0].startswith("piel_trasera"):
+        if c[0] == "piel_trasera":
             continue
-        en_franja = c[2] > x_tr - franja + 1e-9 and c[1] < x_tr - 1e-9
-        en_huella = c[4] > y0 + 1e-9 and c[3] < y1 - 1e-9 \
-            and c[6] > z0 + 1e-9 and c[5] < z1 - 1e-9
-        if en_franja and en_huella and not c[0].startswith("brida "):
+        en_franja = c[2] > tr["x0"] - franja + 1e-9 and c[1] < tr["x0"] - 1e-9
+        en_huella = (c[4] > tr["y0"] + 1e-9 and c[3] < tr["y1"] - 1e-9
+                     and c[6] > tr["z0"] + 1e-9 and c[5] < tr["z1"] - 1e-9)
+        if en_franja and en_huella:
             raise AssertionError(
                 f"'{c[0]}' ocupa x={c[1]:.2f}..{c[2]:.2f} y la trasera acaba en "
-                f"x={x_tr:.2f}: esta a {x_tr - c[2]:.2f} de su cara interior, "
+                f"x={tr['x0']:.2f}: esta a {tr['x0'] - c[2]:.2f} de su cara interior, "
                 f"dentro de los {franja:.2f} (tolerancia {_tol_pmma(p):.1f} + 0.5) "
                 f"que una plancha mas gruesa del lote necesita. Nada fijo "
-                f"delante del acrilico")
-    P = _vertices(p)
-    meseta = next(c for c in railes if c[0] == "trasero alto meseta")
-    assert meseta[2] >= P[6][0] - 1e-9 and meseta[3] <= y1 + p["hol_piel"] + 1e-9, (
-        f"la meseta llega a x={meseta[2]:.2f} y la trasera acaba en y={y1:.2f}: "
-        f"queda canto de PMMA sin tapar arriba")
-    pie = next(c for c in railes if c[0] == "talon pie")
-    assert abs(pie[4] - y0) < 1e-9 and pie[2] >= tr[2] - p["t_costilla"] - 1e-9, (
-        f"la trasera arranca en y={y0:.2f} y el pie del talon acaba en "
-        f"{pie[4]:.2f}: no apoya en el")
-    mz, my = _muesca_trasera(p)
-    for b in _cajas_brida(p, z0 - p["hol_piel"], z1 + p["hol_piel"]):
-        L = int(b[0][-1])
-        lado = lados[L]
-        # la brida vive en la rebanada z0..z0+t junto a la cara del anillo y
-        # la muesca tiene que cubrirla en z y dejarle 0.5 en y
-        dentro_z = (b[6] <= lado[6] + 1e-9) if L == 0 else (b[5] >= lado[5] - 1e-9)
-        assert dentro_z, (
-            f"la muesca de esquina de la trasera ({mz:g} de honda) no cubre la "
-            f"brida '{b[0]}' (z={b[5]:.2f}..{b[6]:.2f})")
-        # ESTO NO ES UNA HOLGURA AJUSTABLE: _muesca_trasera deriva la muesca de
-        # brida_ancho + 0.5, asi que el 0.5 sale por construccion. Lo que este
-        # assert caza es un DESFASE entre gemelas -- la muesca del .scad y la
-        # del budget calculadas con distinta cota -- o una brida que se mueva
-        # sin mover la muesca.
-        assert lado[4] <= b[3] - 0.5 + 1e-9, (
-            f"la muesca de la trasera llega a y={lado[4]:.2f} y la brida "
-            f"arranca en {b[3]:.2f}: hacen falta 0.5 de aire. La muesca se deriva "
-            f"de brida_ancho: esto es un desfase entre muesca_trasera() y "
-            f"_muesca_trasera(), no una holgura que se ajuste aparte")
-    print(f"trasera dentro: {x_tr - max(c[2] for c in railes + planchas if c[2] < x_tr and not c[0].startswith('piel_trasera')):.2f} "
-          f"mm libres delante de su cara interior (piden {franja:.2f}); canto de "
-          f"arriba bajo la meseta, canto de abajo sobre el pie del talon; muescas "
-          f"de esquina de {mz:g} x {my:g}")
+                f"detras del acrilico a distancia fija")
+    assert abs(tr["y0"] - t) < 1e-9, (
+        f"la trasera arranca en y={tr['y0']:.2f} y el pie del talon acaba en {t:g}")
+    c_ch = p["chaflan_nariz"]
+    if _chaflan_p5(p):
+        # la cara interior del chaflan del techo, en la cara vista del acrilico
+        y_techo = (P[5][1] - (tr["x1"] - (P[6][0] - c_ch))) - t * math.sqrt(2)
+        que = "el chaflan del techo"
+    else:
+        # la cara interior del doblez de la banda (radio r sobre la esquina)
+        r = p["radio_doblez_costilla"]
+        cx, cy = P[6][0] - (r + t), P[5][1] - (r + t)
+        dx = tr["x1"] - cx
+        y_techo = cy + math.sqrt(max(r * r - dx * dx, 0.0)) if abs(dx) <= r else P[5][1] - t
+        que = "el doblez de la banda"
+    y_techo = min(y_techo, P[5][1] - p["marco_sup"] - p["hol_piel"])
+    assert tr["y1"] <= y_techo - 0.5 + 1e-9, (
+        f"el canto de arriba de la trasera (y={tr['y1']:.2f}) se mete en {que}, "
+        f"cuya cara interior pasa por y={y_techo:.2f} en la cara vista del "
+        f"acrilico; se piden 0.5 de aire")
+    tapa_arriba = tr["y1"] - _y_labio_techo(p)
+    tapa_abajo = (c_ch + p["talon_labio"]) - tr["y0"]
+    for nm, tapa in (("el techo", tapa_arriba), ("el talon", tapa_abajo)):
+        assert tapa >= p["rebaje_anillo"] - 1e-9, (
+            f"{nm} tapa {tapa:.2f} del canto de la trasera; el bolsillo del anillo "
+            f"tapa {p['rebaje_anillo']:g} y aqui no se tapa menos")
+    assert not any(f[0] == "piel_trasera" for f in filas), (
+        "la trasera capturada no lleva filas: nada la atraviesa")
+    print(f"trasera capturada: {tr['au']:.2f} x {tr['alto']:.2f} en {p['t_piel']:g}, "
+          f"sin un taladro; puntas {tr['entra']:.2f} dentro de los bolsillos "
+          f"(labio {bo['u0']:g}, hondo {bo['hondo']:g}, ancho {bo['ancho']:g}, "
+          f"{sitio:.2f} de sobra), cara vista rehundida "
+          f"{bo['u0'] + p['t_junta_asiento']:g}; pared entre bolsillos {bo['pared']:g}, "
+          f"el costado entra {entra_costado:g} atras")
+    print(f"  tope hacia dentro: la pared del bolsillo a {tr['x0'] - x_pared:.2f} y el "
+          f"marco a {tr['x0'] - (P[6][0] - _retiro_marco_trasera(p)):.2f} de su cara "
+          f"interior; el techo la tapa {tapa_arriba:.2f} y el talon {tapa_abajo:.2f}; "
+          f"tira de EPDM de {tr['aire_labios']:g} tras cada labio")
+    print(f"  entra por ABAJO con la tabla fuera: el bolsillo sale por el canto de "
+          f"abajo (u = {bo['u_bajo']:g}..{bo['u1']:g} bajo y = {bo['y_ch']:g}, "
+          f"{bo['u0']:g}..{bo['u1']:g} encima) y se cierra en y = {bo['y_fin']:.2f}; "
+          f"rebaje de esquina de la plancha {largo_r:.1f} x {alto_r:.1f} a "
+          f"{hondo_r:g} por la cara exterior")
 
 
 # HASTA DONDE, a lo largo del contorno, tiene que haber una rosca en la pata
@@ -2708,7 +2941,7 @@ def guarda_marco_ventana(p: dict[str, float]) -> None:
 
     Lo que mide, en orden: (1) el canto exterior de cada pata -- a la silueta
     en las tres filas, retirado t_costilla + hol_piel bajo cada chapa,
-    retirado banda + trasera + tolerancia + 0.5 detras --; (2) que pise 6 de
+    retirado t_anillo + 0.5 detras, sobre la pared entre bolsillos --; (2) que pise 6 de
     acrilico mas alla de la ventana; (3) que cada pata aguante carga_mano
     (el acrilico empujado desde fuera contra el marco) con menos de 2 mm de
     flecha -- el acrilico necesita 3 para salirse del rebaje -- y por debajo
@@ -2823,58 +3056,6 @@ def guarda_marco_ventana(p: dict[str, float]) -> None:
 # vive aqui porque desde el 2026-08-27 tambien lo necesita el ESQUELETO, y no en
 # el canto de un contorno sino en el espesor de la chapa que recibe el tornillo.
 AGARRE_MIN_D = 1.5
-
-
-def guarda_agarre(p: dict[str, float]) -> None:
-    """Todo tornillo muerde material MAS ANCHO que su propio agujero.
-
-    ESTA PUERTA NACE DE UN DEFECTO QUE NINGUNA OTRA VIO. El 2026-08-26 murieron
-    los perfiles 2020 y la tapa del valle paso a apoyar en las dos alas de la
-    bahia. Sus diez M3 quedaron centrados en el ESPESOR del ala: agujero de paso
-    de 3.40 sobre una chapa de 3.00. El agujero es mas ancho que el canto que
-    tiene que morder -- no es una junta, es una ranura abierta por las dos caras
-    -- y el aparato entero paso las dos puertas en verde durante un dia.
-
-    Por que no lo vio nadie: alineacion() comprueba que la fila caiga en la
-    centerline de su miembro, y caia; apoyo() comprueba que las filas de una
-    placa apoyen a la misma distancia, y apoyaban; solapes() comprueba
-    disyuncion, y dos chapas que se tocan en un tornillo no solapan. Las tres
-    miraban DONDE cae el tornillo. Ninguna miraba EN QUE cae.
-
-    El 2020 no tenia este modo de fallo porque su ranura en T corria por una
-    cara de 20 mm: cualquier tornillo encontraba material. Un canal de chapa de
-    3 solo lo encuentra si entra por la CARA, nunca por el canto.
-
-    El criterio: la seccion del miembro medida sobre el eje que recorre la placa
-    tiene que valer al menos AGARRE_MIN_D x D a cada lado del centro, o sea 3 D
-    de ancho total. Es el mismo numero que check_dxf.py exige a los cantos, y
-    por la misma razon fisica: menos que eso y el material se rasga."""
-    P = _vertices(p)
-    cr = _centros_rail(p, P)
-    cajas = _cajas_miembro(p, P, cr, 0.0, 0.0)
-    _, _, filas = _cajas_solidas(p)
-    d = p["d_M3_paso"]
-    minimo = 2 * AGARRE_MIN_D * d
-    peor, peor_nm = float("inf"), ""
-    for placa, fila, eje, coord, miembro in filas:
-        i = 1 if eje == "x" else 3
-        # de todas las sub-cajas de ese miembro, la que el tornillo atraviesa
-        propias = [(nm, c) for nm, c in cajas.items() if nm.startswith(miembro)]
-        assert propias, f"la fila [{placa}/{fila}] declara '{miembro}', que no tiene cajas"
-        nm, caja = min(propias,
-                       key=lambda t: abs((t[1][i] + t[1][i + 1]) / 2 - coord))
-        ancho = caja[i + 1] - caja[i]
-        if ancho < peor:
-            peor, peor_nm = ancho, f"{placa}/{fila} en '{nm}'"
-        assert ancho >= minimo, (
-            f"el tornillo de [{placa}/{fila}] entra en '{nm}', que sobre el eje "
-            f"{eje} mide {ancho:.2f} mm. Su agujero de paso mide {d:.2f} y se "
-            f"exigen {minimo:.2f} ({2 * AGARRE_MIN_D} D). "
-            + (f"El agujero es MAS ANCHO que el material: eso no es una junta, "
-               f"es una ranura abierta por las dos caras. " if ancho < d else "")
-            + f"Un tornillo entra por la CARA de una chapa, nunca por su canto")
-    print(f"agarre: {len(filas)} filas revisadas, la mas justa es {peor_nm} con "
-          f"{peor:.2f} mm de material (minimo {minimo:.2f} = {2 * AGARRE_MIN_D} D)")
 
 
 # Separacion entre centros de taladro que Intellijel PUBLICA para su 1U, en mm.
@@ -4141,8 +4322,7 @@ def main() -> int:
     guarda_marco_ventana(p)
     guarda_miembro_alto(p)
     guarda_talon(p)
-    guarda_trasera_dentro(p)
-    guarda_agarre(p)
+    guarda_trasera_capturada(p)
     guarda_fila_1u(p)
     guarda_meseta_es_chapa(p)
     guarda_piso(p)

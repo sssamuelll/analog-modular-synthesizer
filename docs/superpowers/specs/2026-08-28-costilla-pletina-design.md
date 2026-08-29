@@ -98,6 +98,11 @@ apilado desaparece:
     de §10 y las tres placas de §5: hacia dentro lo retiene el **marco de la
     ventana**, una pletina de 6 por costado con el contorno de la ventana, corrida
     por los siete tramos (`2026-08-29-marco-ventana-banda-estructural-design.md`).
+  - *Enmienda (2026-08-29, más noche):* **el anillo lleva un segundo bolsillo en el
+    tramo trasero**, para la trasera, con los mismos tres números que este (labio
+    3, 6 de hondo, 11 de ancho); en ese tramo el rebaje del costado retrocede a 17
+    y entre los dos bolsillos queda una pared de 3
+    (`2026-08-29-trasera-capturada-talon-nariz-design.md` §3).
   - *Enmienda (Tarea 4, 2026-08-28):* esos 4 mm sobre el acrílico serían `clip_fondo`
     = 18.5, y ahí el clip muere **dentro del rebaje**, pisando sólo la ceja que ya está
     encajonada entre el labio y la pared. Se fija `clip_fondo` = **24** — ruling de la

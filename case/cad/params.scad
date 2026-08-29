@@ -92,15 +92,73 @@ t_costilla      = 1.5;
 // recomendada, no obligatoria". Se ve: 4 mm mas de metal arriba y abajo. Es
 // un parametro y se juzga en render.
 banda_trasera   = 24;
-// El pie del talon sobre la tabla, hacia delante desde la cara interior de la
-// banda. La trasera se asienta encima (1.5 sobre la tabla) y tres M4
-// avellanados lo atornillan a la tabla desde dentro a 1.5 D de su canto
-// libre. 22 y no 18 como la nariz: la boca del avellanado (d_cabeza_M4_avell)
-// es un cuerpo fijo DELANTE del acrilico y vale para ella la misma regla que
-// para la pata del marco -- tol_pmma + 0.5 = 1.70 de aire a la cara de la
-// trasera, que puede venir 1.2 mas gruesa --; con 20 quedaba a 0.77 y con la
-// plancha gruesa del lote se metia debajo. Lo mide guarda_talon().
-talon_pie       = 22;
+// EL TECHO POR DETRAS, dos variantes que se escogen mirando (spec
+// 2026-08-29-trasera-capturada §5): 0 = la BANDA plana de banda_trasera con
+// P5 a radio_chapa (la de #241); 1 = el CHAFLAN: P5 a chaflan_nariz como P0 y
+// P6, la meseta dobla 45 al chaflan y otros 45 al labio vertical de
+// talon_labio -- atras se lee un marco simetrico, dos labios iguales arriba y
+// abajo, y las bridas suben junto a la tira del chaflan con un relieve. Las
+// puertas corren sobre las dos; el render de cada una lleva su nombre. Ninguna
+// lleva canal: en una sola chapa el labio no puede tapar el canto del acrilico
+// Y tener un retorno detras (es lo que la rev. 22 perdio al fundir la meseta),
+// y el bolsillo de los anillos ya retiene la plancha en las dos direcciones
+// por los lados. La tapa de arriba conserva sus 180.
+remate_trasero_chaflan = 1;
+// LA PARED ENTRE LOS DOS BOLSILLOS DEL TRAMO TRASERO (spec s3.2). El anillo
+// tiene 20 de franja atras; el bolsillo del costado ocupaba 6 (u = 14..20) y
+// el de la trasera ocupa 11 (u = 3..14): se tocaban sin pared. En el tramo
+// trasero, y solo ahi, el costado entra 3 en vez de 6 -- su canto vive detras
+// del labio y el marco lo sigue pisando -- y entre los dos bolsillos queda
+// esta pared, de toda la altura. 3 como el labio: lo que el costado tiene
+// delante lo tiene la trasera a los lados.
+pared_rebaje_trasera = 3;
+// EL TALON ES LA NARIZ DE ATRAS (2026-08-29, noche, 2). Samuel: "el talon
+// preferiria que tuviera el mismo estilo y acabado que la nariz". La esquina
+// de abajo-atras del anillo (P6) va a chaflan_nariz como la de delante, y el
+// talon la envuelve igual que la nariz: pie sobre la tabla, chaflan a 45 y un
+// LABIO vertical a ras del plano trasero que tapa el canto de abajo de la
+// trasera. Sin bridas: tres M4 avellanados por el pie, desde dentro, como la
+// nariz. GEMELO de _talon() en clearance_budget.py; lo mide guarda_talon().
+//
+// El pie, hacia delante desde el PIE DEL CHAFLAN. 20 y no 18 como la nariz:
+// la boca del avellanado (d_cabeza_M4_avell) es un cuerpo fijo detras de la
+// cara interior del acrilico -- que puede venir 1.2 mas gruesa -- y vale para
+// ella la regla de la trasera, tol_pmma + 0.5 = 1.70 de aire; con 20 quedan
+// 2.77, con 18 quedaban 0.77.
+talon_pie       = 20;
+// El labio vertical, desde la coronacion del chaflan hacia arriba. 13 es el
+// frente de la nariz (alto_frontal - chaflan_nariz): las chapas del canto
+// cierran igual, chaflan de 6 y 13 de plomo. Tapa 12.5 del canto de abajo de
+// la trasera, que apoya en el pie (el bolsillo del anillo tapa 6 a los lados).
+talon_labio     = 13;
+// EL LABIO DEL TECHO (variante B), del canto de abajo de su chaflan hacia
+// abajo. 18 y no los 13 del talon: la trasera ya no se atornilla al techo,
+// asi que el techo tiene que aguantar SOLO la mano de carga_mano en el centro
+// de la meseta, y con 13 trabaja a 176 MPa contra los 130 de la puerta
+// (guarda_miembro_alto). Con 18 la caida total es 24, la misma que la banda
+// plana de #241, y da 110. Si Samuel lo quiere a 13, es obligar 6082-T6 en el
+// pliego (Rp0.2 240), no bajar el numero aqui.
+techo_labio     = 18;
+// LAS DOS PESTANAS del pie: lanzadas de la chapa (cortadas por tres lados y
+// dobladas 90 hacia arriba con radio_doblez_pestana) detras del canto de
+// abajo de la trasera: su tope hacia dentro entre los anillos, que a los
+// lados dan las paredes de los bolsillos. A 3/8 y 5/8 del hueco entre
+// anillos, lejos de los tres M4 (a 1/4, 1/2 y 3/4). alto = lo que suben sobre
+// el pie; ancho = a lo largo del talon; aire = de su cara a la cara interior
+// nominal de la trasera (>= tol_pmma + 0.5 = 1.70; 3 deja ademas 2 t de plano
+// entre el doblez del chaflan y el de la pestana, que con 2 no salia).
+talon_pestana_alto  = 8;
+talon_pestana_ancho = 20;
+talon_pestana_aire  = 3;
+// Radio interior del doblez de una pestana lanzada: 1 t, no los 2 t de los
+// dobleces vistos (radio_doblez_costilla). Una pestana de 8 no se ve y se
+// dobla apretada; con 3 el plano entre dobleces no daba.
+radio_doblez_pestana = 1.5;
+// Ancho del CORTE en U que suelta una pestana lanzada por tres lados (y del
+// relieve de la brida del techo junto al chaflan). No es el kerf: un DXF de
+// contorno no sabe dibujar una linea suelta, y una pestana necesita aire a
+// los lados para doblar sin rozar. Medio milimetro.
+corte_pestana = 0.5;
 // Vale lo mismo que ya repartian las filas de las planchas de acrilico para
 // que sus tornillos caigan en la reticula por construccion, no por coincidencia.
 // Una sola cota gobierna ambos lados: repetir 100 los desincronizaria al cambiarla.
@@ -227,6 +285,14 @@ dist_rosca_ciega   = 8.5;
 // cajeado del riel cae a 15.90 y su borde a 19.90, o sea 6.1 de pletina por
 // detras; sobre la ventana (cara_anillo = 20) sobran 6 que pisan el acrilico.
 marco_fondo        = 26;
+// LA PATA TRASERA ENTRA 2 MAS (2026-08-29, noche, 2). Con la trasera capturada
+// esa pata arranca en t_anillo + 0.5 = 14.5 (sobre la pared entre bolsillos)
+// y con 26 se quedaba en 11.5 de ancho: sin tornillo -- en la franja trasera
+// no cabe --, como viga empotrada-apoyada bajo carga_mano trabajaba a 129 MPa
+// contra 130. A 28 son 13.5 de pata y 110 MPa. El tramo trasero ya es la
+// excepcion de la ventana (el costado entra 3 ahi): pisa 8 de acrilico en vez
+// de 6, detras de la plancha.
+marco_fondo_trasera = 28;
 // Cuanto se separan del eje del riel sus dos roscas ciegas, a lo largo del
 // tramo. 7 deja 14 entre las dos roscas del par (piden 9 = 2 D) y, con el par
 // centrado en el riel, 10.19 entre cada rosca y el cajeado. PERO el par
@@ -288,6 +354,11 @@ prof_cajeado_riel  = 2.5;
 // abierta a su canto exterior, sobre la huella de la brida. Y la trasera una
 // muesca de esquina de t_costilla + 0.5 por brida_ancho + 0.5, porque la
 // brida pasa por debajo de su esquina.
+// Se probo 34 la noche de la trasera capturada, cuando el bolsillo salia por
+// el canto de arriba y pasaba por debajo de la brida: el M4 de dentro tenia
+// que huir de su pared. El bolsillo sale por ABAJO y se cierra 0.5 sobre el
+// canto de la trasera, 7.5 por debajo de las roscas de la brida
+// (guarda_miembro_alto lo mide), y la brida se queda en 27.
 brida_largo        = 27;
 // Lo que la brida mide a lo ancho, contado desde t_costilla por debajo de la
 // meseta (ahi va el otro ala, como siempre) hacia abajo. NO es toda la banda
@@ -732,6 +803,9 @@ bombeo          = 0.5;
 //                      paneles remataran igual. Con la meseta llegando al pico
 //                      y el marco de la trasera doblando en la otra esquina,
 //                      lo que remata ahi es chapa, y manda su doblez.
+// Desde la trasera capturada (2026-08-29, noche, 2) P6 va a CHAFLAN como P0,
+// y P5 tambien con remate_trasero_chaflan = 1: este radio queda en P1 y P4 (y
+// en P5 con la banda plana).
 radio_chapa     = 4.5;
 // CHAFLAN de toda arista VISTA. 0.5 x 45 grados.
 //

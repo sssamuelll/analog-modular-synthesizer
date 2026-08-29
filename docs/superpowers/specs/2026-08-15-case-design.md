@@ -1,7 +1,7 @@
 # SAM17 — Diseño del case (consola de dos pisos, esqueleto de aluminio)
 
 **Fecha:** 2026-08-15
-**Estado:** aprobado en diseño (rev. 25), pendiente de plan de implementación
+**Estado:** aprobado en diseño (rev. 26), pendiente de plan de implementación
 **Sustituye a:** formato de cajón de la tesis (madera 950 × 440 × 100–200 mm,
 paneles galvanizados pintados) descrito en
 [`docs/modules/08-case-panels.md`](../../modules/08-case-panels.md).
@@ -230,6 +230,27 @@ lenguaje visual).
 > dibujó para paneles de 190 mm y un case de 500 × 380 × 350; el case real
 > mide **544.32 × 256.18 × 308.94** — superado otra vez en la rev. 22, ver
 > abajo.
+>
+> **rev. 26** (2026-08-29, más noche): **la trasera capturada como las
+> mejillas, y el talón como la nariz** — Samuel, mirando el render de la rev.
+> 25, en
+> [`2026-08-29-trasera-capturada-talon-nariz-design.md`](2026-08-29-trasera-capturada-talon-nariz-design.md).
+> **La trasera va DENTRO de un bolsillo fresado en el tramo trasero de cada
+> anillo** — labio 3, 6 de hondo, 11 de ancho: los tres números del bolsillo
+> del costado, girados — con su cara rehundida 4 sobre junta de EPDM, **sin
+> un taladro** (552.32 × 238.18): entra deslizando desde abajo con la tabla
+> fuera (el bolsillo sale por el canto de abajo, que la tabla tapa, y se
+> cierra arriba). Para que quepan los dos bolsillos en la franja de 20, en ese tramo
+> el costado entra 3 en vez de 6 y queda una pared de 3 entre ambos. **El
+> talón es la nariz de atrás**: P6 a chaflán 6, pie de 20, chaflán, labio de
+> 13, tres M4 avellanados y dos pestañas lanzadas que le hacen de tope a la
+> trasera por dentro. **El techo baja con chaflán + labio de 18** (variante
+> B, recomendada; A es la banda de 24) y sin canal: en una sola chapa el
+> labio no puede tapar el canto Y tener retorno, y el bolsillo ya sujeta la
+> plancha. 68 tornillos → 58, 10 cabezas atrás → 0, la tapa de arriba sigue
+> en 180°. Lo que cuesta: el segundo bolsillo en el mecanizado, la pata
+> trasera del marco a 28 (a 26 quedaba a 129 MPa contra 130), y que el
+> costado entre 3 atrás.
 >
 > **rev. 25** (2026-08-29, noche): **el marco de la ventana y la banda
 > estructural** — cinco piezas puestas en cuestión por Samuel «al mejor estilo
@@ -489,17 +510,17 @@ aquí va lo que sustituye a lo anterior.
   redondo por fila como punto fijo y el resto en ranura —, ahora a
   **rosca ciega en el canto inferior de cada anillo** en vez de a un
   larguero, porque la madera se mueve a contraveta y el aluminio no.
-- **El miembro alto y el talón**, las dos piezas de chapa de la trasera
-  (rev. 25). El **miembro alto** es una L de chapa de 1.5: la meseta del
-  techo, del pico al plano trasero, y la banda vista de 24 que baja a ras
-  de ese plano, con dos bridas de extremo en la cara del anillo (2 M4
-  ciegos cada una) — ata los dos anillos arriba y recibe la trasera. El
-  **talón** es la misma banda por abajo con un pie de 22 sobre la tabla,
-  atornillado a ella con tres M4: recibe la trasera y no ata nada, que
-  para eso está la tabla. Fueron perfil 2020 comprado hasta el 2026-08-27,
-  canales de chapa hasta la rev. 24 (tres con la bahía, dos sin ella), y
-  los dos marcos de la trasera de la rev. 23 se fundieron en sus bandas.
-  El reparto exacto lo fija el modelo.
+- **El techo y el talón**, las dos piezas de chapa de atrás (rev. 26). El
+  **techo** (miembro alto) es la meseta del pico al canto y, por detrás,
+  chaflán de 6 + labio de 18 a ras del plano trasero (variante B; la A es la
+  banda de 24), con dos bridas de extremo en la cara del anillo (2 M4 ciegos
+  cada una) — ata los dos anillos arriba y tapa el canto de arriba de la
+  trasera. El **talón** es la nariz de atrás: pie de 20 sobre la tabla (tres
+  M4 desde dentro), chaflán sobre el de P6 y labio de 13, con dos pestañas
+  lanzadas del pie detrás de la trasera; no ata nada, que para eso está la
+  tabla. Fueron perfil 2020 comprado hasta el 2026-08-27, canales de chapa
+  hasta la rev. 24, una L y un ángulo con la trasera atornillada durante la
+  rev. 25. El reparto exacto lo fija el modelo.
 - **Las planchas (trasera; banda del valle) anclan a la retícula de un
   miembro, nunca a los 6 raíles de panel** — regresión corregida en el fix
   round 1 de la Tarea 5: esta viñeta llegó a decir lo contrario, que los
@@ -512,12 +533,14 @@ aquí va lo que sustituye a lo anterior.
   ángulo de su cara, y un tornillo de plancha contra una cara inclinada
   entraría descentrado y apoyaría la arandela de canto sobre acrílico
   frágil. Verificado por `alineacion()` en el budget.
-- **Trasera: UNA plancha de acrílico de 8 mm**, DENTRO de las dos bandas
-  (rev. 25): sobre el pie del talón, bajo la meseta, rehundida 1.5 del
-  plano trasero, atornillada a las bandas con 10 M3 (cabezas sobre metal)
-  — desmontable por abajo, lleva la ventilación (§7). Fueron dos pieles de
-  5 flotando sobre standoffs con junta de sombra hasta el 2026-08-21;
-  flotar y sellar son incompatibles.
+- **Trasera: UNA plancha de acrílico de 8 mm**, CAPTURADA como las
+  mejillas (rev. 26): sus puntas en un bolsillo fresado en el tramo trasero
+  de cada anillo (labio 3, 6 de hondo), rehundida 4 sobre junta de EPDM,
+  apoyada en el pie del talón y muriendo bajo el fin del bolsillo, **sin un
+  taladro** — entra y sale por abajo con la tabla fuera; lleva la
+  ventilación (§7). Fue atornillada a dos bandas con 10 M3 durante una tarde
+  (rev. 25), y dos pieles de 5 flotando sobre standoffs con junta de sombra
+  hasta el 2026-08-21; flotar y sellar son incompatibles.
 - **Tapa del valle: chapa de aluminio de 3 mm.** Se atornilla al **marco
   de la ventana** con una pestaña doblada por punta (desde la rev. 22 a la
   placa del valle, desde la rev. 25 al marco; hasta entonces iba a las
