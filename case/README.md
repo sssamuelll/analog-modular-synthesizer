@@ -6,14 +6,18 @@
 > estilo de la nariz. Ahora **la trasera va DENTRO de un bolsillo fresado en
 > el tramo trasero de cada anillo** — labio 3, 6 de hondo, 11 de ancho: los
 > números del bolsillo del costado, girados — con su cara rehundida 4 sobre
-> junta de EPDM, **sin un taladro** (552.32 × 238.18); entra deslizando desde
-> abajo con la tabla fuera (el bolsillo sale por el canto de abajo, que la tabla
-> tapa, y se cierra arriba). Para que quepan los dos
-> bolsillos en los 20 de franja, en ese tramo el costado entra 3 y no 6 (queda
-> una pared de 3 entre ambos). **El talón es la nariz de atrás**: P6 a chaflán
-> 6, pie de 20 sobre la tabla (3 M4 avellanados desde dentro), chaflán y labio
-> de 13, más dos pestañas lanzadas del pie que le hacen de tope a la trasera
-> por dentro. **El techo baja con chaflán + labio de 18** (variante B,
+> junta de EPDM, **sin un taladro** (552.32 × 238.18); el bolsillo está
+> **cerrado por los dos extremos** (nada a la vista en ningún canto) y la
+> plancha **entra al montar el segundo anillo**, como los costados — las tres
+> planchas se montan una vez, con el case —; su arista de abajo-fuera va a
+> chaflán de 4 para librar el escalón del bolsillo bajo el chaflán de P6. Para
+> que quepan los dos bolsillos en los 20 de franja, en ese tramo el costado
+> entra 3 y no 6 (queda una pared de 3 entre ambos). **El talón es la nariz de
+> atrás**: P6 a chaflán 6, pie de 20 sobre la tabla (3 M4 avellanados desde
+> dentro), chaflán y labio de 13, más **cuatro pestañas** lanzadas del pie que
+> le hacen de tope a la trasera por dentro — y son estructura: la plancha sola
+> en sus bolsillos cede 20 mm con la mano y trabaja a 14 MPa; con las pestañas,
+> 5 y 8 (`guarda_trasera_flexion()`). **El techo baja con chaflán + labio de 18** (variante B,
 > recomendada; la A es la banda de 24, y se escoge mirando los dos renders).
 > 68 tornillos → 58, 10 cabezas atrás → **0**, la tapa de arriba sigue en
 > 180°. Todo en
@@ -21,7 +25,11 @@
 > Lo que las puertas obligaron y va escrito allí: sin canal en el techo (en
 > una chapa el labio no puede tapar el canto Y tener retorno), el labio del
 > techo a 18 porque solo aguanta la mano (176 MPa con 13), y la pata trasera
-> del marco a 28 (129 MPa contra 130 con 26).
+> del marco a 28 (129 MPa contra 130 con 26). Y lo que el revisor del PR cazó:
+> el bolsillo salía por abajo y la plancha no pasaba por la boca estrecha del
+> chaflán — de ahí el bolsillo cerrado y la entrada con el anillo. Queda un
+> hueco declarado: empujada junto al canto de arriba (200 N a 12 del borde)
+> nada la para hacia dentro y trabaja a 16 MPa.
 
 > **2026-08-29 por la noche: cinco piezas en cuestión, cuatro que quedan.**
 > Samuel puso en cuestión `clips_costado`, `escuadras_trasera`,
@@ -728,11 +736,11 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 
 | Pieza | Cantidad | Nota |
 |-------|----------|------|
-| **ANILLO** (costilla) — pletina de aluminio **FRESADA** t=14, cara vista 20 | **2** | **la pieza portante del case, mecanizada, no plegada** desde el 2026-08-28. Rebaje 6 × 11 por detrás donde asienta el costado, chaflán 1.5 × 45° en las dos aristas de la cara vista, **P0 y P6 a chaflán 6** (y P5 con el techo en chaflán), las demás esquinas a `radio_chapa` = 4.5; **en el tramo trasero, un bolsillo de 11 × 6 en la cara interior para la trasera** (labio de 3 al canto, como el del costado; sale por el canto de abajo y se cierra arriba) **y el rebaje del costado retirado a 17** — la pared de 3 entre los dos bolsillos. **14 roscas ciegas M4 por anillo** en la cara interior (`taladros_anillo`: 12 del marco de la ventana — 10 en las tres filas y 2 en la pata del suelo, donde estaban las de los clips — + 2 de la brida del miembro alto; eran 16 con clips y miembro bajo) + 3 M5 por anillo en el canto inferior para la tabla. Anodizado satinado, punto de bonding enmascarado. Ni casquillo ni junta de 4 mm: el costado asienta en el rebaje sobre una junta de EPDM de 1 mm |
+| **ANILLO** (costilla) — pletina de aluminio **FRESADA** t=14, cara vista 20 | **2** | **la pieza portante del case, mecanizada, no plegada** desde el 2026-08-28. Rebaje 6 × 11 por detrás donde asienta el costado, chaflán 1.5 × 45° en las dos aristas de la cara vista, **P0 y P6 a chaflán 6** (y P5 con el techo en chaflán), las demás esquinas a `radio_chapa` = 4.5; **en el tramo trasero, un bolsillo de 11 × 6 en la cara interior para la trasera** (labio de 3 al canto, como el del costado; cerrado por los dos extremos, de y = 1 a P5.y − 17, con un escalón bajo el chaflán de P6) **y el rebaje del costado retirado a 17** — la pared de 3 entre los dos bolsillos. **14 roscas ciegas M4 por anillo** en la cara interior (`taladros_anillo`: 12 del marco de la ventana — 10 en las tres filas y 2 en la pata del suelo, donde estaban las de los clips — + 2 de la brida del miembro alto; eran 16 con clips y miembro bajo) + 3 M5 por anillo en el canto inferior para la tabla. Anodizado satinado, punto de bonding enmascarado. Ni casquillo ni junta de 4 mm: el costado asienta en el rebaje sobre una junta de EPDM de 1 mm |
 | **MARCO DE LA VENTANA** — pletina t=6, láser | **2** | **una por costado, espejadas** (mismo DXF, cajeado por caras opuestas). El contorno de la ventana del anillo corrido por los **siete tramos**, 26 hacia dentro desde la silueta: sobre las tres filas es exactamente la placa de anclaje de ayer (canto visto de 6, 6 cajeados Ø8 × 2.5 por el lado del anillo, 10 M4 ciegos); en el frente, el suelo, la meseta y la trasera es el tope del acrílico que daban los clips y la escuadra, unificado — pisa 6 mm de acrílico volado por todo el perímetro. Canto exterior retirado 1.65 bajo cada chapa y 11.2 en la trasera (nada fijo delante de un PMMA de ±1.2). Lleva la rosca M3 de la pestaña de la banda y una **muesca** en la esquina trasera-alta sobre la brida del miembro alto. **Orden obligado: el costado en el rebaje ANTES, después los rieles al marco (cabeza en el cajeado), después el marco al anillo desde dentro** |
 | Tornillo M4 botón (marco al anillo) | **24** | 12 por costado — 10 en las tres filas + 2 en la pata del suelo, el trabajo que hacían los de los clips —, a rosca ciega en la franja de 14. Eran los «20 de placa al anillo» que este README llevaba sin itemizar, más los 4 de los clips. **Seis de los diez de las filas caen bajo la huella del riel (#242)** |
 | **MIEMBRO ALTO** — chapa 6082-T6 t=1.5 | **1** | el **techo**: la **meseta** (50, del pico al canto, con su **retorno** de 4 en el pico) y, por detrás, **chaflán de 6 + labio vertical de 18** a ras del plano trasero (variante B, recomendada) o la **banda de 24** (variante A; se escoge mirando `renders/sam17-case-trasera.png` contra `sam17-case-trasera-A.png`). Dos **bridas** de 27 × 14.5 dobladas del labio, en la cara del anillo, con 2 M4 ciegos cada una (en B con un relieve junto al chaflán y la esquina a chaflán). **Sin canal**: la trasera ya no se atornilla a él ni él la sujeta por dentro. Solo, con 20 kg en el centro de la meseta, cede 2.0 mm a 111 MPa (`guarda_miembro_alto()`: es lo que puso el labio en 18 y no en 13). Desarrollo 588.00 × 71.85 (B) / 73.83 (A) |
-| **TALÓN** — chapa 6082-T6 t=1.5 | **1** | **la nariz de atrás**: pie de 20 sobre la tabla, chaflán a 45° sobre el chaflán de 6 de P6 y **labio vertical de 13** a ras del plano trasero, que tapa el canto de abajo de la trasera; tres M4 avellanados a la tabla desde dentro. Y **dos pestañas** de 20 × 8 lanzadas del pie, dobladas hacia arriba detrás de la trasera: su tope hacia dentro entre los anillos. Sin bridas ni rosca en el anillo. Desarrollo **540.32 × 39.73**, dos dobleces a 45° |
+| **TALÓN** — chapa 6082-T6 t=1.5 | **1** | **la nariz de atrás**: pie de 20 sobre la tabla, chaflán a 45° sobre el chaflán de 6 de P6 y **labio vertical de 13** a ras del plano trasero, que tapa el canto de abajo de la trasera; tres M4 avellanados a la tabla desde dentro. Y **cuatro pestañas** de 20 × 8 lanzadas del pie (a 1/8, 3/8, 5/8 y 7/8 del hueco), dobladas hacia arriba detrás de la trasera: su tope hacia dentro entre los anillos, **y estructura** — sin ellas la plancha cede 20 mm con la mano y pasa del techo del PMMA; con ellas, 5 mm y 8 MPa, y las dos del medio se llevan 74 N cada una (`guarda_trasera_flexion()`). Cuatro y no dos por el empujón bajo y descentrado (12 MPa con dos, 3 con cuatro). Sin bridas ni rosca en el anillo. Desarrollo **540.32 × 39.73**, dos dobleces a 45° |
 | Tornillo M4 avellanado (talón) | **3** | el pie del talón a la **tabla**, desde dentro — mismo herraje que las paticas y la nariz |
 | **NARIZ** — chapa 6082-T6 t=1.5 | **1** | la banda del frente: pie de 18 sobre la tabla, chaflán a 45°, frente vertical y 10.27 subiendo por la cara de abajo. Desarrollo **540.32 × 47.38**, tres dobleces (45°, 45°, 35°). Cierra el frente que enseñaba el riel desnudo (2026-08-29) |
 | Tornillo M4 avellanado (nariz) | **3** | el pie de la nariz a la **tabla**, desde dentro — mismo herraje que las paticas. Ninguno en la cara vista |
@@ -746,7 +754,7 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa |
 | **Chapa de aluminio t=3 mm** — banda delantera del valle | **1** | vuelo delantero liso, desarrollo 572.00 × 18.30, con pestaña de 21 mm doblada en cada punta, atornillada al **marco de la ventana** con un M3 (no al anillo desde el 2026-08-28). Aleación recomendada, no obligatoria: 5754 H22 pasa a 130 MPa con margen (48.8 MPa real, `guarda_valle()`). Va al taller de CHAPA — sin recocido, sin diamantado, sin chaflán: eso es del PMMA |
 | **TABLA de madera maciza t=18 mm** | **1** | el suelo interior y el zócalo, una sola pieza, **588.62 × 327.41**. 2 filas de 3 M5 a **rosca ciega en el canto inferior del anillo** (una fila por anillo), uno redondo por fila (punto fijo) y dos en ranura de 10.5. Y **catorce taladros pasantes de 4.5**: 4 de las paticas, 3 de la nariz, 3 del talón y 4 del chasis (`guarda_zocalo()` los censa) |
-| Plancha acrílico t=8 mm | **3** | 2 costados + **trasera** (**552.32 × 238.18**, con las ondas, la rejilla de entrada de aire y KONDOR). **Ninguna lleva un taladro.** Los costados asientan en el rebaje del anillo, retenidos por el labio hacia fuera y por el marco de la ventana hacia dentro, por los siete tramos (en el tramo trasero entran 3 y no 6). La **trasera** entra en los **bolsillos del tramo trasero** de los dos anillos (5.85 por punta), rehundida 4 sobre junta de EPDM de 1, apoyada en el pie del talón y muriendo bajo el fin del bolsillo; la tapan el labio del talón (17.5) y el del techo (7.5) con una tira de EPDM de 2.5 detrás de cada uno. Lleva **dos rebajes de esquina** de 6.5 × 5.5 a 4 por la cara exterior, abajo (en el mismo cajeado que KONDOR): por ahí pasa por la salida de abajo del bolsillo |
+| Plancha acrílico t=8 mm | **3** | 2 costados + **trasera** (**552.32 × 238.18**, con las ondas, la rejilla de entrada de aire y KONDOR). **Ninguna lleva un taladro.** Los costados asientan en el rebaje del anillo, retenidos por el labio hacia fuera y por el marco de la ventana hacia dentro, por los siete tramos (en el tramo trasero entran 3 y no 6). La **trasera** entra en los **bolsillos del tramo trasero** de los dos anillos (5.85 por punta), rehundida 4 sobre junta de EPDM de 1, apoyada en el pie del talón y muriendo 0.5 bajo el fin del bolsillo; la tapan el labio del talón (17.5) y el del techo (6.5) con una tira de EPDM de 2.5 detrás de cada uno. Su **arista de abajo-fuera va a chaflán de 4 × 45°** por todo el largo (en el pliego, no en el DXF): libra el escalón del bolsillo bajo el chaflán del anillo. Entra con el anillo B; no sale sin quitar un anillo |
 | Patica de goma con casquillo roscado | 4 | EPDM o NBR, Shore 45–55 A, **d20 × 10**. Se atornillan **a la tabla**, no al acrílico. **Se exige la curva carga-deformación: ≥ 0.25 mm de flecha con 22.8 N** — por debajo la pata AMPLIFICA los 100 Hz del toroide en vez de aislarlos (`flecha_pie`). Casquillo roscado moldeado: se atornilla, **no se pega** |
 
 **Total de tornillos del case: 58** — 12 M4 de raíl + 24 M4 de marco al
@@ -882,9 +890,11 @@ uno que estaba mal escrito.** Hasta hoy este README metía los costados
 DESPUÉS de las placas y los clips, y así no entra un costado en su rebaje:
 las placas ya pisaban 6 mm de acrílico. Con el marco de la ventana el orden
 es el único posible: **el costado en el rebaje ANTES que el marco**, porque
-el marco lo pisa. Y la trasera **entra por abajo con la tabla fuera**: sube
-por los bolsillos de los anillos hasta su tope, y la tabla — con el talón
-encima — la recoge (29-08, más noche).
+el marco lo pisa. Y la trasera **entra con el anillo B**, como los costados:
+sus bolsillos están cerrados por los dos extremos, así que la plancha se mete
+de lado en el anillo A antes de que el B baje sobre los rieles y sobre su otra
+punta (29-08, más noche; el revisor del PR cazó que por abajo no pasaba por la
+boca estrecha del chaflán).
 
 **Con una deuda escrita (#242):** seis de los diez M4 de las filas caen bajo
 la huella del riel — el par se arrima al riel y una cabeza de 7.6 a 7 del eje
@@ -908,9 +918,15 @@ vista.
    se puede apretar, y con el marco puesto el costado no entra.**
 4. **El marco B a las otras puntas de los rieles** (seis M4 por su cara de
    anillo, con el marco todavía suelto), **el costado B en el anillo B**, y
-   el anillo B sobre el marco B: sus doce M4 se aprietan desde dentro por el
-   frente abierto. Los dos anillos quedan de pie, atados por los seis
-   rieles.
+   **la trasera en el anillo A**: con el film puesto y **la cara del cajeado
+   de KONDOR hacia fuera** (montada al revés, la palabra se lee invertida) y
+   **su arista a chaflán hacia fuera y hacia el pie**, una punta entra de lado
+   en el bolsillo del tramo trasero del anillo A, sobre la junta de EPDM de 1,
+   y se apoya en el fin de abajo del bolsillo. Después **el anillo B baja
+   sobre el marco B y sobre la otra punta de la trasera**: sus doce M4 se
+   aprietan desde dentro por el frente abierto. Los dos anillos quedan de
+   pie, atados por los seis rieles, con la trasera capturada entre ellos.
+   **Ningún tornillo en la trasera**: la retienen los bolsillos.
 5. **El techo** — apoya en los anillos y sus dos bridas van a las roscas
    ciegas de la franja de la meseta (2 M4 cada una), bajo las muescas del
    marco. Su tira de EPDM de 2.5, en la cara interior del labio.
@@ -920,30 +936,25 @@ vista.
    pie del talón (3 mm de aire), con sus **4 M4 desde debajo** a las tuercas
    remachables de su suelo. La tira de EPDM de 2.5 en la cara interior del
    labio del talón.
-7. **El case boca abajo, la trasera DESDE ABAJO** — con el film puesto y **la
-   cara del cajeado de KONDOR hacia fuera** (montada al revés, la palabra se
-   lee invertida; los dos rebajes de esquina van también por fuera y hacia el
-   pie), sus dos puntas entran por la salida de abajo de los bolsillos del
-   tramo trasero de los anillos, sobre la junta de EPDM de 1, y sube
-   deslizando hasta que su canto topa con el fin del bolsillo, 0.5 bajo la
-   brida del techo. **Ningún tornillo**: la retienen los bolsillos.
-8. **La tabla sobre el case boca abajo** — el labio del talón pasa por fuera
-   de la trasera y sus pestañas por dentro, y la plancha queda apoyada en el
-   pie; 2 filas de 3 M5 a rosca ciega en el canto inferior de cada anillo.
+7. **El case boca abajo, la tabla encima** — el labio del talón pasa por
+   fuera de la trasera y sus cuatro pestañas por dentro, y la plancha, que
+   hasta aquí descansaba en el fin de abajo de los bolsillos, queda apoyada
+   en el pie (sube 0.5); 2 filas de 3 M5 a rosca ciega en el canto inferior
+   de cada anillo.
    **Empezar por el REDONDO del medio de cada fila** y apretarlo a tope; los
    dos de ranura se aprietan después y **no se pasan de apriete**: tienen que
    poder deslizar cuando la madera se mueva. El talón queda entre los anillos
    con su chaflán sobre el de P6. De pie.
-9. **Tapa del valle** — las dos pestañas al marco de la ventana (2 M3, ruling
+8. **Tapa del valle** — las dos pestañas al marco de la ventana (2 M3, ruling
    R3). Es de **aluminio de 3 mm**: no lleva film ni las precauciones del
    PMMA.
-10. **Electricidad y bonding** — bloque IEC fijo (su pieza va a la tabla,
-    #130), espárrago junto al PSU.
-11. **Paticas y paneles** — las 4 paticas **a la tabla, por debajo** (las dos
+9. **Electricidad y bonding** — bloque IEC fijo (su pieza va a la tabla,
+   #130), espárrago junto al PSU.
+10. **Paticas y paneles** — las 4 paticas **a la tabla, por debajo** (las dos
     traseras bajo el centro del pie del talón), y paneles ciegos en todo
     hueco de las dos filas, que con una tapa abierta son lo único que ata sus
     dos raíles.
-12. **Quitar el film protector** — al final, no al recibir. El acrílico llega
+11. **Quitar el film protector** — al final, no al recibir. El acrílico llega
     con las dos caras protegidas de fábrica, y es durante el MONTAJE cuando se
     raya: al deslizarlo por la mesa, al apoyar una herramienta, al girar una
     pieza sobre otra. El film es lo único que lo evita, y solo sirve si sigue
@@ -952,19 +963,20 @@ vista.
 **Ya no hay «Tapa de remate», ni placas, ni clips, ni escuadras, ni marcos
 de la trasera, ni tornillos en la trasera.** Las placas, los clips y las
 escuadras son el marco de la ventana (paso 3); la trasera la sujetan los
-bolsillos de los anillos, el talón y el techo (pasos 7 y 8); la tapa de remate
+bolsillos de los anillos, el talón y el techo (pasos 4 y 7); la tapa de remate
 (`remate_sup`) no existe desde el 2026-08-27 — la meseta es el propio techo.
 
 El orden importa en **cinco** sitios: **el costado va antes que el marco**
 (el marco lo pisa — es el que este README tenía al revés); **el riel va al
 marco antes que el marco al anillo (R1)**, porque la cabeza del M4 se tapa
-desde fuera y después no hay acceso; **la trasera va antes que la tabla**,
-porque entra por abajo y es la tabla con el talón la que la recoge; **el
-tornillo redondo del medio de la tabla va antes que los de ranura**, o el
-marco queda referido a una punta; y **el chasis va a la tabla antes que la
-tabla al case**, porque sus tornillos entran por debajo. Todo el case se
-desmonta: la trasera, por abajo (seis M5 de la tabla y baja deslizando) — no
-lleva electrónica, así que no es pieza de servicio.
+desde fuera y después no hay acceso; **la trasera va antes que el anillo B**,
+porque sus bolsillos están cerrados por los dos extremos y solo entra de lado,
+como los costados; **el tornillo redondo del medio de la tabla va antes que
+los de ranura**, o el marco queda referido a una punta; y **el chasis va a la
+tabla antes que la tabla al case**, porque sus tornillos entran por debajo.
+Todo el case se desmonta: la trasera, quitando el anillo B (sus doce M4 del
+marco, los dos de la brida del techo y los tres M5 de la tabla) — no lleva
+electrónica, así que no es pieza de servicio.
 
 Guía ilustrada con renders del modelo:
 https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
@@ -1005,13 +1017,20 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
 - [x] **La trasera capturada y el talón como la nariz** (2026-08-29, más
       noche): la trasera en dos bolsillos fresados en los anillos (los tres
       números del bolsillo del costado, girados), sin un taladro; el costado
-      entra 3 en el tramo trasero para que quepan los dos bolsillos; el talón
-      con chaflán, labio de 13 y dos pestañas; el techo con chaflán + labio de
-      18 (variante B) o banda (A), y sin canal. Puertas nuevas:
-      `guarda_trasera_capturada()`, `anillo_tiene_bolsillo_trasero()`,
-      `pestanas_talon()`; reescritas `guarda_talon()`, `guarda_miembro_alto()`,
-      `anillo_tiene_chaflan()`, `anillo_tiene_rebaje()`. 68 tornillos → 58,
-      cero cabezas atrás
+      entra 3 en el tramo trasero para que quepan los dos bolsillos; el
+      bolsillo cerrado por los dos extremos y la trasera entra con el anillo
+      B, con su arista de abajo a chaflán de 4 (la primera versión la metía
+      por abajo y el revisor del PR cazó que no pasaba); el talón con chaflán,
+      labio de 13 y cuatro pestañas que son estructura; el techo con chaflán
+      + labio de 18 (variante B) o banda (A), y sin canal. Puertas nuevas:
+      `guarda_trasera_capturada()`, `guarda_trasera_flexion()` (la trasera
+      como placa, por Levy: 5 mm y 8 MPa con las pestañas, 20 y 14 sin ellas),
+      `anillo_tiene_bolsillo_trasero()`, `pestanas_talon()`, `bridas_techo()`;
+      reescritas `guarda_talon()`, `guarda_miembro_alto()`,
+      `anillo_tiene_chaflan()`, `anillo_tiene_rebaje()`; `guarda_anillo()`
+      con la sección real del tramo trasero (−36 % de inercia). 68 tornillos
+      → 58, cero cabezas atrás. Hueco declarado: la mano junto al canto de
+      arriba de la trasera (16 MPa; nada la para hacia dentro)
 - [x] Plantilla de panel KiCad
 - [x] **Vistas de la BAHIA INFERIOR** (`renders/render_bahia.py`, 2026-08-27):
       la tabla con el chasis del PSU encima, en planta, tres cuartos y rasante.

@@ -104,11 +104,11 @@ def _sobre_dorso(cb, p: dict[str, float],
     retiro = p["cara_anillo"] - p["rebaje_anillo"]
     x0, x1 = retiro, cb.fondo(p) - retiro
     y0, y1 = retiro, g["alto_total"] - retiro
-    # Y EL BOLSILLO DE LA TRASERA (2026-08-29, noche, 2): sale por el canto de
-    # abajo (y = 0), llega hasta la cara interior del labio y se cierra arriba
-    # por debajo de las roscas de la brida, que ya estaban en el sobre.
+    # Y EL BOLSILLO DE LA TRASERA (2026-08-29, noche, 2): arranca a y_bot, 1 mm
+    # del canto de abajo, llega hasta la cara interior del labio y se cierra
+    # arriba por debajo de las roscas de la brida, que ya estaban en el sobre.
     x1 = max(x1, cb.fondo(p) - p["rehundido_acrilico"])
-    y0 = min(y0, 0.0)
+    y0 = min(y0, cb._bolsillo_trasero(p)["y_bot"])
     for _, c, d in cb._centros_rosca_ciega(p):
         x0, x1 = min(x0, c[0] - d / 2), max(x1, c[0] + d / 2)
         y0, y1 = min(y0, c[1] - d / 2), max(y1, c[1] + d / 2)
@@ -684,31 +684,9 @@ def guarda_kondor() -> list[str]:
     fallos: list[str] = []
     p = cb.leer_params()
     aristas, comps = _componentes("kondor_cajeado_2d")
-    # LOS DOS REBAJES DE ESQUINA de la trasera viajan en este mismo fichero
-    # (misma cara, misma profundidad) desde que entra por abajo: son dos
-    # rectangulos en las esquinas de abajo, y se apartan por su caja antes de
-    # contar las letras.
-    tr = cb._trasera(p)
-    largo_r, alto_r, _ = tr["rebaje"]
-    letras, rebajes = [], []
-    for comp in comps:
-        px = [q[0] for j in comp for q in aristas[j]]
-        py = [q[1] for j in comp for q in aristas[j]]
-        if (abs(max(px) - min(px) - largo_r) <= 0.1
-                and abs(max(py) - min(py) - alto_r) <= 0.1
-                and abs(min(py) - tr["y0"]) <= 0.1
-                and (abs(min(px)) <= 0.1 or abs(max(px) - tr["au"]) <= 0.1)):
-            rebajes.append(comp)
-        else:
-            letras.append(comp)
-    if len(rebajes) != 2:
-        fallos.append(f"kondor_cajeado_2d: {len(rebajes)} rebajes de esquina y la "
-                      f"trasera lleva 2, de {largo_r:.2f} x {alto_r:.2f} en sus "
-                      f"esquinas de abajo")
-    comps = letras
     if len(comps) != 10:
-        return fallos + [f"kondor: {len(comps)} contornos y se esperan 10 "
-                         f"(K1 O2 N1 D2 O2 R2). La fuente se sustituyo."]
+        return [f"kondor: {len(comps)} contornos y se esperan 10 "
+                f"(K1 O2 N1 D2 O2 R2). La fuente se sustituyo."]
     anillos = [_anillo(aristas, c) for c in comps]
     xs = [q[0] for a in anillos for q in a]
     ys = [q[1] for a in anillos for q in a]
@@ -747,8 +725,7 @@ def guarda_kondor() -> list[str]:
     elif not fallos:
         print(f"  kondor_cajeado_2d: 10 contornos, {w:.2f} x {h:.2f} mm, y los "
               f"{antes} trozos sobreviven a la fresa de {p['fresa_d']:g} -- "
-              f"fuente correcta y fresable; mas los 2 rebajes de esquina de "
-              f"{largo_r:.2f} x {alto_r:.2f}")
+              f"fuente correcta y fresable")
     return fallos
 
 
@@ -1107,30 +1084,30 @@ def anillo_tiene_bolsillo_trasero() -> list[str]:
     bo = cb._bolsillo_trasero(p)
     fondo = cb.fondo(p)
     x0, x1 = fondo - bo["u1"], fondo - bo["u0"]
-    x_ch = fondo - bo["u_bajo"]
+    x_paso = fondo - bo["u_paso"]
     aristas, comps = _componentes("costilla_dorso_2d")
     for comp in comps:
         pts = [q for j in comp for q in aristas[j]]
         px = [q[0] for q in pts]
         py = [q[1] for q in pts]
         if (abs(min(px) - x0) <= CARA_DXF_MAX and abs(max(px) - x1) <= CARA_DXF_MAX
-                and abs(min(py)) <= CARA_DXF_MAX
+                and abs(min(py) - bo["y_bot"]) <= CARA_DXF_MAX
                 and abs(max(py) - bo["y_fin"]) <= CARA_DXF_MAX):
-            # el escalon bajo el chaflan: un vertice en (x_ch, y_ch)
-            if not any(abs(q[0] - x_ch) <= CARA_DXF_MAX
-                       and abs(q[1] - bo["y_ch"]) <= CARA_DXF_MAX for q in pts):
-                return [f"costilla_dorso_2d: el bolsillo de la trasera no se "
-                        f"estrecha bajo el chaflan: falta el vertice en "
-                        f"({x_ch:.2f}, {bo['y_ch']:.2f})"]
+            # el escalon bajo el chaflan: un vertice en (x_paso, y_paso)
+            if not any(abs(q[0] - x_paso) <= CARA_DXF_MAX
+                       and abs(q[1] - bo["y_paso"]) <= CARA_DXF_MAX for q in pts):
+                return [f"costilla_dorso_2d: el bolsillo de la trasera no lleva "
+                        f"el escalon bajo el chaflan: falta el vertice en "
+                        f"({x_paso:.2f}, {bo['y_paso']:.2f})"]
             print(f"  costilla_dorso_2d: bolsillo de la trasera en u = "
-                  f"{bo['u0']:g}..{bo['u1']:g} del plano trasero, del canto de "
-                  f"abajo (donde mide {bo['u1'] - bo['u_bajo']:g} bajo el chaflan) a "
-                  f"y = {bo['y_fin']:.2f}, cerrado arriba (hondo {bo['hondo']:g}, en "
-                  f"el pliego)")
+                  f"{bo['u0']:g}..{bo['u1']:g} del plano trasero, cerrado de y = "
+                  f"{bo['y_bot']:g} a {bo['y_fin']:.2f} (arranca en u = "
+                  f"{bo['u_paso']:g} bajo y = {bo['y_paso']:g}; hondo "
+                  f"{bo['hondo']:g}, en el pliego)")
             return []
     return [f"costilla_dorso_2d: falta el bolsillo de la trasera -- de x = "
-            f"{x0:.2f}..{x1:.2f} por y = 0..{bo['y_fin']:.2f}, estrecho bajo el "
-            f"chaflan. Sin el, la trasera no tiene donde meterse"]
+            f"{x0:.2f}..{x1:.2f} por y = {bo['y_bot']:g}..{bo['y_fin']:.2f}, con su "
+            f"escalon bajo el chaflan. Sin el, la trasera no tiene donde meterse"]
 
 
 def anillo_tiene_chaflan() -> list[str]:
@@ -1598,6 +1575,80 @@ def taladros_talon() -> list[str]:
         print(f"  talon_2d: 3 M4 en el pie a {1.5 * p['d_M4_paso']:.2f} del canto "
               f"libre; la tabla lleva los 3 del talon (d={d_t:.2f}) y los 4 del "
               f"chasis (d={d4t:.2f})")
+    return f
+
+
+def bridas_techo() -> list[str]:
+    """El desarrollo del techo trae sus cuatro M4 de brida donde el modelo los
+    pone y, con el chaflan (variante B), el relieve y la esquina cortada de
+    cada brida.
+
+    LA UNICA CHAPA DE ESTA TANDA SIN PUERTA PROPIA hasta que el revisor del PR
+    lo dijo: su sobre de +-4 mm dejaba pasar techo_labio 18 -> 20 y
+    corte_pestana 1.5 sin decir nada. Se relee: los cuatro M4 (a
+    brida_raiz y a 1.5 D del canto libre de cada lengueta, a dist_rosca_ciega
+    del canto de arriba de la cara trasera), y en B los dos relieves de
+    corte_pestana en la linea del doblez (de techo_labio a techo_labio +
+    chaflan - t) y las dos aristas a 45 de la esquina de arriba (3 x 3)."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    dxf = "miembro_alto_2d"
+    if not (PLANS / f"{dxf}.dxf").exists():
+        return []
+    f: list[str] = []
+    au = cb.perfil(p)["ancho_util"]
+    bd = cb._bd_miembro(p)
+    b = cb._bridas(p)[0]
+    t, c = p["t_costilla"], p["chaflan_nariz"]
+    cara_alto = (p["techo_labio"] + c) if cb._chaflan_p5(p) else p["banda_trasera"]
+    y_m4 = cara_alto - p["dist_rosca_ciega"]
+    leidos = _redondos(dxf)
+    d4 = p["d_M4_paso"] + p["kerf"]
+    esperados = []
+    for s in b["s_m4"]:
+        esperados += [(bd - s, y_m4), (au - bd + s, y_m4)]
+    for ex, ey in esperados:
+        if not any(math.hypot(q[0] - ex, q[1] - ey) <= DESVIO_DXF_MAX
+                   and abs(q[2] - d4) < 0.1 for q in leidos):
+            f.append(f"{dxf}: falta el M4 de brida en ({ex:.2f}, {ey:.2f})")
+    if len(leidos) != len(esperados):
+        f.append(f"{dxf}: {len(leidos)} agujeros redondos y el modelo pone "
+                 f"{len(esperados)} (los M4 de las dos bridas)")
+    if cb._chaflan_p5(p):
+        aristas, _ = _componentes(dxf)
+        k = p["corte_pestana"]
+        y_r0 = p["techo_labio"]
+        for lado, x0 in ((0, 0.0), (1, au)):
+            # el relieve: una arista vertical en la cara exterior del corte,
+            # desde la linea del doblez (techo_labio); la esquina a 45 le
+            # corta la punta, asi que se le pide al menos 1 mm de alto
+            x_rel = x0 - k if lado == 0 else x0 + k
+            relieve = any(abs(a[0][0] - x_rel) <= 0.05 and abs(a[1][0] - x_rel) <= 0.05
+                          and min(a[0][1], a[1][1]) <= y_r0 + 0.05
+                          and max(a[0][1], a[1][1]) >= y_r0 + 1.0 for a in aristas)
+            if not relieve:
+                f.append(f"{dxf}: falta el relieve de {k:g} de la brida {lado} "
+                         f"junto a la tira del chaflan (x = {x_rel:.2f}, desde y = "
+                         f"{y_r0:.2f})")
+            # la esquina: una arista a 45 sobre la recta v = (cara_alto - c + t)
+            # + |x - x0|, de al menos 2 mm, dentro del vuelo de c - 2t
+            v0 = cara_alto - c + t
+            def en_recta(q):
+                return (abs(q[1] - abs(q[0] - x0) - v0) <= 0.1
+                        and -0.1 <= (x0 - q[0] if lado == 0 else q[0] - x0) <= c - 2 * t + 0.1)
+            esquina = any(en_recta(a[0]) and en_recta(a[1])
+                          and abs(abs(a[1][0] - a[0][0]) - abs(a[1][1] - a[0][1])) <= 0.1
+                          and math.hypot(a[1][0] - a[0][0], a[1][1] - a[0][1]) >= 2.0
+                          for a in aristas)
+            if not esquina:
+                f.append(f"{dxf}: falta la esquina a 45 de la brida {lado} "
+                         f"(la recta v = {v0:.2f} + |x - {x0:.2f}|, hasta "
+                         f"{c - 2 * t:g} de vuelo)")
+    if not f:
+        print(f"  {dxf}: 4 M4 de brida a {b['s_m4'][0]:.2f} y {b['s_m4'][1]:.2f} "
+              f"del doblez" + (", con relieve y esquina a 45 en las dos bridas"
+                                if cb._chaflan_p5(p) else ""))
     return f
 
 
@@ -2118,6 +2169,7 @@ def main() -> int:
     fallos += taladros_nariz()
     fallos += taladros_talon()
     fallos += pestanas_talon()
+    fallos += bridas_techo()
     fallos += ranuras_rejilla_entrada()
     fallos += cuerpos_dentro_del_anillo()
     fallos += tapa_valle_conectada()

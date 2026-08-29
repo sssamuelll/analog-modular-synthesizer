@@ -1,11 +1,12 @@
 # Pliego de fabricación — cuerpo del SAM17
 
-> **rev. 26 (2026-08-29, más noche).** La trasera capturada como las
-> mejillas y el talón como la nariz. **Al mecanizado**: en la cara interior
+> **rev. 26 (2026-08-29, más noche; corregida tras el PR).** La trasera
+> capturada como las mejillas y el talón como la nariz. **Al mecanizado**: en la cara interior
 > de cada anillo, un **bolsillo de 11 × 6** a lo largo del tramo trasero
-> (para las puntas de la trasera: labio de 3 al canto, 6 de hondo), que
-> **sale por el canto de abajo** — estrecho a 8 bajo el chaflán — **y se
-> cierra arriba** a 16 del canto superior; y el **contorno del rebaje
+> (para las puntas de la trasera: labio de 3 al canto, 6 de hondo),
+> **cerrado por los dos extremos** — de 1 mm del canto de abajo a 17 del de
+> arriba, con un **escalón** bajo el chaflán de P6 (ahí arranca a 5.5 del
+> plano trasero, no a 3) —; y el **contorno del rebaje
 > retirado a 17** en ese tramo (la pared de 3 entre los dos bolsillos); **P6
 > a chaflán 6** como P0 (y **P5** con el techo en chaflán).
 > `costilla_dorso_2d` lleva el bolsillo como polígono aparte; su profundidad
@@ -13,9 +14,9 @@
 > chaflán, pie 20; dos dobleces a 45°; **dos ventanas de pestaña en U**) y
 > `miembro_alto_2d` baja con chaflán + labio de 18 (variante B) en vez de la
 > banda, con un relieve en las bridas. **Al acrílico**: `piel_trasera_2d` de
-> 552.32 × 238.18 **sin un taladro**, y `kondor_cajeado_2d` con **dos rebajes
-> de esquina** (6.5 × 5.5 a 4, abajo, cara exterior) además de la palabra.
-> Mueren los 10 M3 con sus tuercas, arandelas de nylon y d16.
+> 552.32 × 238.18 **sin un taladro**, con un **chaflán de 4 × 45° en su arista
+> de abajo-fuera** por todo el largo (§6: no está en el DXF); `kondor_cajeado_2d`
+> es solo la palabra. Mueren los 10 M3 con sus tuercas, arandelas de nylon y d16.
 > **Juntas**: EPDM de 1 en el bolsillo de la trasera (como en el del costado)
 > y tiras de 2.5 tras los labios. Spec
 > `2026-08-29-trasera-capturada-talon-nariz-design.md`.
@@ -137,10 +138,9 @@ canto pulido se desportilla al primer roce, y la de abajo va a ras del suelo.
 
 `kondor_cajeado_2d.dxf` **no es un recorte**: es un **vaciado a 4.0 mm de
 profundidad** en la **cara exterior** de `piel_trasera_2d`. **No atraviesa**
-la plancha de 8 mm. Trae la palabra y, desde el 2026-08-29 (más noche), **dos
-rectángulos de 6.5 × 5.5 en las esquinas de abajo**: los rebajes por donde la
-punta de la plancha pasa por la salida del bolsillo del anillo. Misma cara,
-misma profundidad, misma fresa.
+la plancha de 8 mm. Trae **solo la palabra** (los dos rebajes de esquina que
+llevó unas horas el 2026-08-29 murieron con la salida de abajo del bolsillo:
+la trasera ya no pasa por ninguna boca, entra con el anillo).
 
 - El fichero está dibujado **tal como debe verse desde fuera**: la palabra se
   lee del derecho.
@@ -162,7 +162,7 @@ Las demás piezas son indiferentes al lado.
 | DXF | espesor | uds | notas |
 |---|---|---|---|
 | `costado_2d` | 8 | **2** | canto visible completo, diamantado. **Sin un solo taladro** desde el 2026-08-27 |
-| `piel_trasera_2d` | 8 | 1 | **+ `kondor_cajeado_2d` a 4 mm en la cara exterior** (§4, §5): la palabra y **dos rebajes de esquina** de 6.5 × 5.5 en las esquinas de abajo (por ahí pasa por la salida del bolsillo). **Sin un taladro** desde el 2026-08-29 (más noche): va CAPTURADA como el costado, con sus puntas en los bolsillos del tramo trasero de los anillos (5.85 por punta), sobre el pie del talón y bajo el fin del bolsillo. **552.32 × 238.18** |
+| `piel_trasera_2d` | 8 | 1 | **+ `kondor_cajeado_2d` a 4 mm en la cara exterior** (§4, §5). **Sin un taladro** desde el 2026-08-29 (más noche): va CAPTURADA como el costado, con sus puntas en los bolsillos del tramo trasero de los anillos (5.85 por punta), sobre el pie del talón y bajo el fin del bolsillo. **Un chaflán de 4 × 45° en la arista de abajo por la cara exterior**, a lo largo de los 552.32 — cota que el DXF no sabe decir: se pide aquí, como el diamantado. Es lo que libra el escalón del bolsillo bajo el chaflán del anillo; queda escondido detrás del labio del talón. **552.32 × 238.18** |
 | `coupon.dxf` | 8 | 1 | pieza de calibración — **sin acabado, sin recocer** |
 
 **`remate_sup_2d` NO EXISTE.** Hasta el 2026-08-27 era la tapa de remate en
@@ -198,7 +198,7 @@ el 2026-08-28:
 |---|---|---|---|
 | `chasis_cuerpo_2d`, `chasis_tapa_2d`, `chasis_refuerzo_2d` | acero | chapa | corte + **plegado** |
 | `miembro_alto_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: la meseta de 50 con **retorno a 45°** de 4 en el pico y, por detrás, **chaflán + labio de 18 (dos dobleces a 45°, variante B)** o la banda de 24 a 90° (variante A) — con dos **bridas** de 34 dobladas a 90° de las puntas del labio (en B con relieve y esquina a chaflán) — **1 ud** |
-| `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: DOS dobleces a 45° (labio de 13 → chaflán → pie de 20, la nariz en espejo) y **dos pestañas lanzadas** (corte en U de 0.5, doblez a 90° con r = 1.5 hacia arriba) — **1 ud** |
+| `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: DOS dobleces a 45° (labio de 13 → chaflán → pie de 20, la nariz en espejo) y **cuatro pestañas lanzadas** (corte en U de 0.5, doblez a 90° con r = 1.5 hacia arriba; son estructura: sujetan el canto de abajo de la trasera y cada una puede llevar 74 N) — **1 ud** |
 | `nariz_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: TRES dobleces (45°, 45° y 35°) — **1 ud**. Ver las líneas de plegado abajo |
 | `tapa_valle_2d` | aluminio, 3 mm | chapa | corte + **plegado** |
 | `costilla_2d`, `costilla_dorso_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **fresado CNC**, sin plegar, sin soldar |
@@ -222,8 +222,10 @@ cara):
   `cara_anillo − rebaje_anillo` = 20 − 6 = **14 mm** de la silueta — **salvo en el
   tramo trasero, donde corre a 17** (`t_anillo + pared_rebaje_trasera`) —, más
   el **polígono del BOLSILLO DE LA TRASERA** (de 3 a 14 mm del plano trasero,
-  del canto de abajo — donde se estrecha a 6..14 bajo el chaflán — hasta 16 mm
-  del canto de arriba, cerrado: **6 mm de profundidad**, no los 11 del rebaje)
+  **cerrado por los dos extremos**: de 1 mm del canto de abajo a 17 del de
+  arriba, y bajo el chaflán — hasta 3.5 del canto de abajo — arranca a 5.5 en
+  vez de a 3: un escalón, para no morder la cara del chaflán; **6 mm de
+  profundidad**, no los 11 del rebaje)
   y los **14 círculos** de rosca ciega a diámetro de broca. La
   silueta NO se repite aquí a propósito: dibujarla sería mandar cortar el
   contorno dos veces. El bolsillo y el rebaje comparten la pared de 3 mm que

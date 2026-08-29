@@ -150,6 +150,15 @@ techo_labio     = 18;
 talon_pestana_alto  = 8;
 talon_pestana_ancho = 20;
 talon_pestana_aire  = 3;
+// Cuantas pestanas, repartidas a (2i+1)/2n del hueco entre anillos: con 4 caen
+// a 1/8, 3/8, 5/8 y 7/8, a 67 mm de los tres M4 (1/4, 1/2, 3/4). SON
+// ESTRUCTURA, no adorno: la trasera capturada solo por los dos bolsillos se
+// comba 20 mm con carga_mano al centro y trabaja a 14 MPa en el contacto,
+// sobre el techo de 10 del PMMA; con el canto de abajo sujeto por las pestanas,
+// 5 mm y 8. Dos (a 3/8 y 5/8) aguantan el centro igual que cuatro; las cuatro
+// son por el empujon BAJO Y DESCENTRADO (200 N a 1/8 del ancho, junto al pie):
+// con dos, 12 MPa; con cuatro, 3 (guarda_trasera_flexion: placa por Levy).
+talon_pestana_n     = 4;
 // Radio interior del doblez de una pestana lanzada: 1 t, no los 2 t de los
 // dobleces vistos (radio_doblez_costilla). Una pestana de 8 no se ve y se
 // dobla apretada; con 3 el plano entre dobleces no daba.
@@ -356,9 +365,10 @@ prof_cajeado_riel  = 2.5;
 // brida pasa por debajo de su esquina.
 // Se probo 34 la noche de la trasera capturada, cuando el bolsillo salia por
 // el canto de arriba y pasaba por debajo de la brida: el M4 de dentro tenia
-// que huir de su pared. El bolsillo sale por ABAJO y se cierra 0.5 sobre el
-// canto de la trasera, 7.5 por debajo de las roscas de la brida
-// (guarda_miembro_alto lo mide), y la brida se queda en 27.
+// que huir de su pared. El bolsillo esta CERRADO por los dos extremos y se
+// cierra 0.5 sobre el canto de la trasera, 8.5 por debajo de las roscas de la
+// brida y 1.0 por debajo de su canto (guarda_miembro_alto lo mide), y la
+// brida se queda en 27.
 brida_largo        = 27;
 // Lo que la brida mide a lo ancho, contado desde t_costilla por debajo de la
 // meseta (ahi va el otro ala, como siempre) hacia abajo. NO es toda la banda

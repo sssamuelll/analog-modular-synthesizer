@@ -4,13 +4,14 @@ Documento para pedir presupuesto. Va **antes** que el pliego
 ([`PLIEGO.md`](PLIEGO.md)): el pliego dice qué hay que hacer, esto sirve
 para saber **quién puede hacerlo**.
 
-> **rev. 25 (2026-08-29, más noche).** La trasera capturada como las
-> mejillas. **Al mecanizado (§D)**: un segundo bolsillo en la cara interior
-> de cada anillo (11 × 6, a lo largo del tramo trasero, saliendo por el canto
-> de abajo y cerrado arriba) y el rebaje del costado a 17 en ese tramo; P6 (y
-> P5) a chaflán 6. **Al acrílico (§A)**: dos rebajes de esquina más en el
-> cajeado de la trasera. **A la chapa
-> (§B)**: el talón pasa a ser la nariz en espejo (dos dobleces a 45° y dos
+> **rev. 25 (2026-08-29, más noche; corregida tras el PR).** La trasera
+> capturada como las mejillas. **Al mecanizado (§D)**: un segundo bolsillo en
+> la cara interior de cada anillo (11 × 6, a lo largo del tramo trasero,
+> cerrado por los dos extremos, con un escalón bajo el chaflán) y el rebaje
+> del costado a 17 en ese tramo; P6 (y P5) a chaflán 6. **Al acrílico (§A)**:
+> un chaflán de 4 × 45° en la arista de abajo de la trasera, por la cara
+> exterior. **A la chapa
+> (§B)**: el talón pasa a ser la nariz en espejo (dos dobleces a 45° y cuatro
 > pestañas lanzadas) y el techo baja con chaflán + labio (dos a 45°) en vez de
 > banda a 90°. **A la casa de acrílico (§A)**: la trasera **sin un solo
 > taladro**, 552.32 × 238.18. Pregunta nueva en §B: pestañas lanzadas con
@@ -39,7 +40,7 @@ para saber **quién puede hacerlo**.
 > | § | taller | qué se le pide |
 > |---|---|---|
 > | A | casa de acrílico | costados ×2, trasera — **ninguna con taladros** |
-> | B | chapa de aluminio (y acero) | **techo** (meseta + chaflán y labio, con bridas), **talón** (la nariz en espejo, con dos pestañas lanzadas), **nariz**, **marco de la ventana ×2** (pletina de 6, láser + cajeados), tapa del valle, chasis ×3 |
+> | B | chapa de aluminio (y acero) | **techo** (meseta + chaflán y labio, con bridas), **talón** (la nariz en espejo, con cuatro pestañas lanzadas), **nariz**, **marco de la ventana ×2** (pletina de 6, láser + cajeados), tapa del valle, chasis ×3 |
 > | C | carpintería | la tabla (suelo + zócalo) |
 > | D | mecanizado de aluminio | el anillo ×2 — NUEVO desde el 2026-08-28 |
 
@@ -152,7 +153,7 @@ taller nuevo**, pero desde el 2026-08-28 **ya no hace la costilla** — esa
 pieza se mecaniza en un taller aparte (§D). Lo que sí hace: el **techo**
 (la meseta y, por detrás, chaflán y labio — o la banda —, con una brida de
 extremo doblada en cada punta), el **talón** (la nariz en espejo: labio,
-chaflán y pie sobre la tabla, con dos pestañas lanzadas del pie), la
+chaflán y pie sobre la tabla, con cuatro pestañas lanzadas del pie), la
 **nariz** (la banda del frente, tres dobleces), los
 dos **marcos de la ventana** (pletina de 6 cortada a láser, con seis cajeados
 por el lado del anillo, un par espejado) y la tapa del valle. Son las piezas
@@ -265,9 +266,9 @@ maciza de 14 mm**, vaciada por el centro, una pieza por lado.
    silueta exterior, la pared del rebaje y la del bolsillo de la trasera)?
    Son 14 M4 en la cara interior y 3 M5 en el canto inferior, por anillo.
    **Y un segundo bolsillo por la misma cara**: 11 de ancho × 6 de hondo a lo
-   largo del tramo trasero, saliendo por el canto de abajo (ahí 8 de ancho) y
-   cerrado a 16 del de arriba, con una pared de 3 mm entre él y el rebaje del
-   costado.
+   largo del tramo trasero, cerrado por los dos extremos (de 1 mm del canto de
+   abajo a 17 del de arriba, con un escalón bajo el chaflán), con una pared de
+   3 mm entre él y el rebaje del costado.
 4. ¿Hacen **chaflán mecanizado de 1.5 × 45°** en dos aristas de la cara
    vista, por pieza?
 5. ¿Anodizan en **satinado**, con **enmascarado de un punto** antes de
