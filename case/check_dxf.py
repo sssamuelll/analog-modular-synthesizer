@@ -1096,6 +1096,92 @@ def taladros_anillo() -> list[str]:
     return f
 
 
+def ranuras_rejilla_entrada() -> list[str]:
+    """Las ranuras de la rejilla de entrada estan CORTADAS en la trasera, donde
+    el modelo las pone y con el largo con que guarda_aire() las cuenta.
+
+    LA GEMELA ESTABA POR LECTURA, Y ESO NO ES UNA GEMELA (#236). El area de
+    entrada de aire la calcula _rejilla_entrada() en Python a partir de una
+    lista de columnas que el .scad vuelve a derivar por su cuenta en
+    rejilla_entrada(); check_dxf solo censaba CIRCULOS (_redondos deja fuera
+    todo lo que no sea cuadrado dentro de una decima) y una ranura es obround.
+    O sea que el unico numero que cruzaba los dos lenguajes era el que un
+    humano contaba a mano: el 2026-08-28, al saltarse la rejilla la columna que
+    tapa el ala de la escuadra, se comprobo contando LINEs del fichero
+    (3418 -> 3368) y ahi se quedo. Un filtro nuevo en cualquiera de los dos
+    lados -- y ya van dos, el IEC y la escuadra -- se lleva por delante area de
+    ventilacion sin que nada lo cante.
+
+    Tres cosas, y las tres juntas cierran el area que usa guarda_aire():
+      1. hay una ranura por CADA columna que _columnas_rejilla_entrada()
+         adjudica, en su x, y ninguna de mas (las de mas serian columnas que
+         un filtro dice que no se cortan y el DXF corta igual);
+      2. cada una mide vent_ancho_ranura + kerf de ancho -- el ancho es la
+         mitad del area y ademas lo que fija vent_puente_min;
+      3. cada una mide la banda libre entera de alto y esta centrada en ella.
+    Con (1), (2) y (3) el area del presupuesto termico deja de ser un numero
+    de fe: es n x largo x ancho, y los tres salen del fichero que se corta.
+
+    La firma con que se reconoce una ranura es su caja: ancho estrecho y
+    fijo, alto de decenas de mm. En este DXF no la comparte nada -- los M3
+    son 3.4 x 3.4, las dos ondas pasan de 140 de ancho, la ventana del IEC es
+    48 x 27.5 y el contorno mide 540 x 255 --, asi que el filtro no puede
+    confundirse de pieza. Si algun dia se le pareciera algo, el assert de
+    cantidad lo cantaria por exceso antes que por defecto."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    xs, y0, y1 = cb._columnas_rejilla_entrada(p)
+    w_esp = p["vent_ancho_ranura"] + p["kerf"]
+    h_esp = y1 - y0
+    # y0 del DXF: plancha() arranca en el origen y rejilla_entrada() centra la
+    # ranura en (y0 + y1)/2 con la banda ya medida desde el canto de abajo de
+    # la plancha, que es y = 0 en las dos gemelas (ver _rejilla_entrada()).
+    yc_esp = (y0 + y1) / 2
+    aristas, comps = _componentes("piel_trasera_2d")
+    if not aristas:
+        return ["piel_trasera_2d: sin LINEs, no se pueden contar las ranuras"]
+    # LA FIRMA NO MIRA EL ANCHO, y no es descuido: si filtrara por ancho, una
+    # ranura mal dibujada dejaria de parecer ranura y el fallo saldria como
+    # "falta la ranura" en las 44 -- verdadero, pero apuntando al sitio
+    # equivocado. Reconocer por ALTO (que lo marcan los dos centros del hull y
+    # es exacto) y por "mas estrecha que 8" deja que el ancho lo juzgue un
+    # assert que sabe decir cuanto se desvio. En este fichero eso identifica la
+    # pieza sin ambiguedad: los M3 miden 3.4 de alto, las ondas 31.75, la
+    # ventana del IEC 27.5 y el contorno 254.68.
+    leidas = []
+    for comp in comps:
+        px = [q[0] for j in comp for q in aristas[j]]
+        py = [q[1] for j in comp for q in aristas[j]]
+        w, h = max(px) - min(px), max(py) - min(py)
+        if abs(h - h_esp) <= 0.1 and w < 8:
+            leidas.append(((min(px) + max(px)) / 2, (min(py) + max(py)) / 2, w, h))
+    f: list[str] = []
+    for x in xs:
+        cerca = [q for q in leidas if abs(q[0] - x) <= DESVIO_DXF_MAX]
+        if not cerca:
+            f.append(f"piel_trasera_2d: falta la ranura de entrada en x={x:.2f} "
+                     f"(la adjudica _columnas_rejilla_entrada y el DXF no la corta)")
+            continue
+        _, yc, w, h = cerca[0]
+        if abs(yc - yc_esp) > DESVIO_DXF_MAX:
+            f.append(f"piel_trasera_2d: la ranura de x={x:.2f} esta centrada en "
+                     f"y={yc:.2f} y la banda libre en y={yc_esp:.2f}")
+        if abs(w - w_esp) > 0.05:
+            f.append(f"piel_trasera_2d: la ranura de x={x:.2f} mide {w:.2f} de "
+                     f"ancho y vent_ancho_ranura + kerf es {w_esp:.2f}")
+    if len(leidas) != len(xs):
+        f.append(f"piel_trasera_2d: {len(leidas)} ranuras de entrada en el "
+                 f"fichero y el modelo adjudica {len(xs)}: guarda_aire() cuenta "
+                 f"area que no se corta (o se corta area que no cuenta)")
+    if not f:
+        area = cb._area_ranuras(len(xs), h_esp, w_esp)
+        print(f"  piel_trasera_2d: {len(xs)} ranuras de entrada de "
+              f"{h_esp:.1f} x {w_esp:.2f} mm en su sitio, {area:.0f} mm2 de "
+              f"entrada que SI estan cortados")
+    return f
+
+
 def taladros_placas() -> list[str]:
     """Las placas de anclaje y los clips traen sus taladros donde el modelo
     dice, con material alrededor.
@@ -1679,6 +1765,7 @@ def main() -> int:
     fallos += anillo_tiene_rebaje()
     fallos += taladros_anillo()
     fallos += taladros_placas()
+    fallos += ranuras_rejilla_entrada()
     fallos += cuerpos_dentro_del_anillo()
     fallos += tapa_valle_conectada()
     fallos += taladros_reticula()
