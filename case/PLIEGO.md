@@ -1,5 +1,14 @@
 # Pliego de fabricación — cuerpo del SAM17
 
+> **rev. 24 (2026-08-29, tarde).** Tres notas de Samuel sobre el aluminio.
+> **Entra `nariz_2d`** — la banda del frente, chapa de 1.5 con TRES dobleces
+> (45°, 45°, 35°) y tres M4 al pie —, **`miembro_alto_2d` crece** (la meseta
+> llega al pico y gana un cuarto doblez, el retorno a 45°), y **sale
+> `bahia_2d`** con sus dos roscas de la placa del valle. El anillo cambia de
+> contorno en la nariz (chaflán de 6 a 45° + radios 4.5) y en las dos esquinas
+> del techo (radio 4.5): `costilla_2d` y `costilla_dorso_2d` se regeneran, el
+> cupón (§6.1) no cambia. La tabla lleva tres taladros más.
+>
 > **rev. 23 (2026-08-29).** La trasera deja de ser la pieza más exterior de
 > la cara de atrás: se rehunde `t_costilla` y la enmarcan **dos bandas de
 > chapa** (`marco_trasera_sup_2d`, `marco_trasera_inf_2d`). Hasta hoy sus
@@ -150,7 +159,8 @@ el 2026-08-28:
 | DXF | material | taller | proceso |
 |---|---|---|---|
 | `chasis_cuerpo_2d`, `chasis_tapa_2d`, `chasis_refuerzo_2d` | acero | chapa | corte + **plegado** |
-| `miembro_bajo_2d`, `miembro_alto_2d`, `bahia_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado** + brida de extremo |
+| `miembro_bajo_2d`, `miembro_alto_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado** + brida de extremo. El alto lleva un **cuarto doblez a 45°** en el pico (el retorno de la meseta, 4 mm) — **1 ud cada uno** |
+| `nariz_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: TRES dobleces (45°, 45° y 35°) — **1 ud**. Ver las líneas de plegado abajo |
 | `escuadra_trasera_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: UN doblez a 90°, la línea a **7.20 mm** del canto SIN taladros — **2 uds, PAR ESPEJADO** (ver nota) |
 | `marco_trasera_sup_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: UN doblez a 90°, la línea a **6.20 mm** del canto SIN taladros — **1 ud** |
 | `marco_trasera_inf_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte, **sin plegar** — **1 ud** |
@@ -185,7 +195,7 @@ ninguna transformación**, así que si alguien «arregla» el fichero espejándo
 las roscas se van al otro extremo del anillo y la puerta lo canta. Quien se
 voltea es **la PIEZA en la máquina**, no el dibujo.
 
-**`miembro_bajo_2d`, `miembro_alto_2d`, `bahia_2d`, `escuadra_trasera_2d`,
+**`miembro_bajo_2d`, `miembro_alto_2d`, `nariz_2d`, `escuadra_trasera_2d`,
 `marco_trasera_sup_2d` y `tapa_valle_2d` SÍ son DESARROLLOS PLANOS, no
 contornos** — igual que las tres
 del chasis: el DXF trae el recorte, y la pieza doblada mide menos. Cortar el
@@ -259,6 +269,32 @@ propia base. **Ninguna de las dos se voltea** — cada una va en su sitio y una
 sola vez. Las dos cuelgan de las cinco M3 que la trasera ya lleva a su miembro:
 no hay taladro nuevo en el acrílico, solo tornillos **1.5 mm más largos**.
 
+**LA NARIZ (`nariz_2d`) LLEVA TRES DOBLECES, y ninguno es a 90°.** Blank
+**540.32 × 47.38** con el **canto libre del pie en y = 0** (los tres M4 van a
+6.75 de ese canto, que no se mueve al plegar). De abajo hacia arriba, con la
+línea en la mitad de cada zona de doblez y el mismo r = 3, k = 0.42: **doblez a
+45°** a **17.56** (pie de 18 → chaflán), **doblez a 45°** a **25.17** (chaflán →
+frente vertical), **doblez a 35°** a **37.42** (frente → cara de abajo, que se
+inclina `angulo_inferior` = 35° desde la vertical). Los BD son **0.88** para
+cada 45° y **0.62** para el de 35°; salen de `doblez_bd()` en el `.scad` y de
+`_bd_angulo()` en el budget, no de una tabla. Los tres dobleces van **hacia
+dentro** del case, y la pieza no se voltea: el pie queda sobre la tabla y el
+chaflán mira al suelo.
+
+**Y `miembro_alto_2d` gana un cuarto doblez** (2026-08-29): la meseta llega al
+pico y el canto libre de la chapa dobla **4 mm a 45°** hacia abajo por la cara
+de arriba (`retorno_meseta`). Blank **588.00 × 81.02** (era 64.9). La línea del
+retorno va a **3.56** del canto libre de la meseta (4 − 0.88/2). El resto —
+alma, retorno bajo, bridas y las 16 ranuras de salida — no se mueve.
+
+**LAS ESQUINAS DEL ANILLO QUE LLEVAN CHAPA ENCIMA MIDEN `radio_chapa` = 4.5**:
+el radio exterior de un doblez de r = 3 en chapa de 1.5. Son las dos del chaflán
+de la nariz y el arranque de la cara de abajo, el pico del techo y la esquina
+trasera-alta. No es gusto: una esquina viva del anillo bajo un doblez a 90°
+asoma 1.9 mm por fuera de la chapa. La esquina de abajo-delante es un **chaflán
+de 6 a 45°** (`chaflan_nariz`), y la trasera-baja sigue viva (`radio_trasero` =
+0): ahí no dobla nadie. Lo relee `anillo_tiene_chaflan()` del DXF.
+
 Cada DXF de placa trae el agujero de **PASO M4** por riel (el que sujeta de
 verdad el tornillo del riel — no el cajeado) y el par de M4 a rosca ciega
 que sujeta la placa al anillo; la del valle además trae el M3 de la pestaña
@@ -283,10 +319,12 @@ diámetros).
 
 Las tres del chasis llevan su propio plano de plegado
 ([`renders/chasis-plano-plegado.png`](renders/chasis-plano-plegado.png)),
-porque un DXF de corte no dice de dónde doblar. Los cinco desarrollos de
-aluminio (miembros, bahía, escuadra, tapa del valle) no tienen plano de
+porque un DXF de corte no dice de dónde doblar. Los seis desarrollos de
+aluminio (miembros, nariz, escuadra, marco de arriba, tapa del valle) no tienen plano de
 plegado dedicado — `renders/plano_chasis.py` cubre solo el acero — y siguen
-sin necesitarlo si el taller ya trabaja de los mismos DXF que el chasis.
+sin necesitarlo si el taller ya trabaja de los mismos DXF que el chasis. Los
+que no son a 90° (la nariz, el retorno de la meseta) llevan sus líneas escritas
+arriba.
 
 **La tapa del valle** era acrílico de 5 mm hasta el 2026-08-25 y es la
 superficie horizontal entre las dos filas de módulos. Cambió de material

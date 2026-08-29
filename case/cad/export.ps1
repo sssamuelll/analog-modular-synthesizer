@@ -44,7 +44,7 @@ Remove-Item (Join-Path $build "*.stl") -ErrorAction SilentlyContinue
 # kondor_cajeado_2d. Sin el, el anillo vuelve del taller SIN REBAJE, o sea con
 # el acrilico sin sitio, y no se ve hasta desembalarlo.
 $piezas = "costado_2d","costilla_2d","costilla_dorso_2d","cupon_anillo_2d","bandeja_base_2d","tapa_valle_2d",
-          "miembro_bajo_2d","miembro_alto_2d","bahia_2d","escuadra_trasera_2d",
+          "miembro_bajo_2d","miembro_alto_2d","escuadra_trasera_2d","nariz_2d",
           "piel_trasera_2d","marco_trasera_sup_2d","marco_trasera_inf_2d",
           "kondor_cajeado_2d","lienzo_2d",
           "chasis_cuerpo_2d","chasis_tapa_2d","chasis_refuerzo_2d",

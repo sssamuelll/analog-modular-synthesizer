@@ -4,6 +4,11 @@ Documento para pedir presupuesto. Va **antes** que el pliego
 ([`PLIEGO.md`](PLIEGO.md)): el pliego dice qué hay que hacer, esto sirve
 para saber **quién puede hacerlo**.
 
+> **rev. 23 (2026-08-29).** Al taller de chapa (§B) le entra **la nariz**
+> (banda del frente, tres dobleces a 45°, 45° y 35°) y le sale **la bahía**;
+> el miembro alto gana un doblez a 45°. Pregunta nueva en §B: si pliegan a
+> ángulos que no sean 90° con el mismo radio.
+>
 > **rev. 22 (2026-08-28).** Son **cuatro** pedidos, no tres. La costilla deja
 > de ser chapa plegada y pasa a **anillo de pletina mecanizada** — taller
 > nuevo, §D, que no es el de chapa. El acrílico sigue **sin un solo
@@ -13,7 +18,7 @@ para saber **quién puede hacerlo**.
 > | § | taller | qué se le pide |
 > |---|---|---|
 > | A | casa de acrílico | costados ×2, trasera |
-> | B | chapa de aluminio (y acero) | miembros ×3 (con bridas), placas ×6, clips ×4, escuadras ×2, **marco trasero ×2** (uno plegado, uno plano), tapa del valle, chasis ×3 |
+> | B | chapa de aluminio (y acero) | miembros ×2 (con bridas), **nariz**, placas ×6, clips ×4, escuadras ×2, **marco trasero ×2** (uno plegado, uno plano), tapa del valle, chasis ×3 |
 > | C | carpintería | la tabla (suelo + zócalo) |
 > | D | mecanizado de aluminio | el anillo ×2 — NUEVO desde el 2026-08-28 |
 
@@ -123,17 +128,22 @@ Se rellena al recibir. Va aquí y no en un correo.
 
 Es el taller que ya hace las tres piezas del chasis de acero. **No es un
 taller nuevo**, pero desde el 2026-08-28 **ya no hace la costilla** — esa
-pieza se mecaniza en un taller aparte (§D). Lo que sí hace: los tres
-miembros del esqueleto (trasero bajo, trasero alto, bahía — cada uno con
-brida de extremo doblada en cada punta), las dos escuadras de la trasera,
-las seis placas de anclaje de riel, los cuatro clips de retención y la tapa
-del valle. Son las piezas que llevan los rieles y sostienen el marco por
-dentro del anillo.
+pieza se mecaniza en un taller aparte (§D). Lo que sí hace: los dos
+miembros del esqueleto (trasero bajo, trasero alto — cada uno con
+brida de extremo doblada en cada punta), la **nariz** (la banda del frente,
+tres dobleces), las dos bandas del marco de la trasera, las dos escuadras de
+la trasera, las seis placas de anclaje de riel, los cuatro clips de retención
+y la tapa del valle. Son las piezas que llevan los rieles y sostienen el
+marco por dentro del anillo. (La bahía, tercer miembro hasta el 2026-08-29,
+ya no existe.)
 
 1. **¿Pliegan aluminio 6082-T6 de 1.5 mm a 90°, y con qué radio interior
    mínimo?** El modelo asume **r = 3** (2 × t) y de ahí cuelga el desarrollo
    de los miembros, la escuadra y sus bridas. Si su radio mínimo es otro,
-   **decirlo antes de cortar**: el recorte cambia.
+   **decirlo antes de cortar**: el recorte cambia. **Y a 45° y a 35°, con el
+   mismo radio?** La nariz lleva dos dobleces a 45° y uno a 35°, y el miembro
+   alto uno a 45°: los BD (0.88 y 0.62) están calculados con ese mismo r = 3 y
+   k = 0.42.
 2. **¿Qué factor K usan?** El modelo asume **k = 0.42**. Con r = 3 y t = 1.5
    eso da BA = 5.70 y BD = 3.30 mm por doblez. Si trabajan con otro, los DXF se
    regeneran — pero hay que saberlo, no adivinarlo.
@@ -147,7 +157,7 @@ dentro del anillo.
    paso.
 
 **Los DXF que reciben son DESARROLLOS PLANOS, no contornos.**
-`miembro_bajo_2d`, `miembro_alto_2d`, `bahia_2d`, `escuadra_trasera_2d`,
+`miembro_bajo_2d`, `miembro_alto_2d`, `nariz_2d`, `escuadra_trasera_2d`,
 `marco_trasera_sup_2d` y
 `tapa_valle_2d` traen el recorte; la pieza doblada mide menos. Cortar el
 contorno de la pieza montada da un fichero válido e inservible — es el mismo
