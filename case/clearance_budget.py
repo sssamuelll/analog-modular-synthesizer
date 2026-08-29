@@ -3706,8 +3706,10 @@ def guarda_remate(p: dict[str, float]) -> None:
         f"marco_remate mide {p['marco_remate']:.2f}. Sobra o falta "
         f"{suma - p['marco_remate']:+.2f} mm. Los cuatro se mantienen a mano "
         f"porque params.scad no admite expresiones")
-    print(f"remate: meseta de {p['prof_sup']:.0f} mm integrada en el miembro "
-          f"trasero alto, retirada {p['inset_remate_frente']:.0f} del pico para que "
+    # :g y no :.0f -- prof_sup vale 27.5 desde el 2026-08-29 y un .0f lo
+    # imprimia como 28: una puerta que redondea la cota que vigila miente.
+    print(f"remate: meseta de {p['prof_sup']:g} mm integrada en el miembro "
+          f"trasero alto, retirada {p['inset_remate_frente']:g} del pico para que "
           f"la tapa de arriba abra")
 
 
