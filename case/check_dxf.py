@@ -109,8 +109,18 @@ def _sobre_dorso(cb, p: dict[str, float],
     # Y EL BOLSILLO DE LA TRASERA (2026-08-29, noche, 2): arranca a y_bot, 1 mm
     # del canto de abajo, llega hasta la cara interior del labio y se cierra
     # arriba por debajo de las roscas de la brida, que ya estaban en el sobre.
-    x1 = max(x1, cb.fondo(p) - p["rehundido_acrilico"])
+    x1 = max(x1, cb.fondo(p) - cb._bolsillo_trasero(p)["u0"])
     y0 = min(y0, cb._bolsillo_trasero(p)["y_bot"])
+    # Y EL REBAJE DE CHAPA (2026-08-30): corre por el contorno de lo que se ve
+    # de las tres chapas, a rehundido_chapa de la silueta -- mas afuera que
+    # todo lo anterior, y por los cuatro lados. Con el reborde de 1, el dorso
+    # llega casi al canto de la pieza; el sobre lo tiene que saber o el
+    # fichero sale rojo por una razon que no es un defecto, que es justo lo
+    # que este helper existe para evitar.
+    x0 = min(x0, p["rehundido_chapa"])
+    x1 = max(x1, cb.fondo(p) - p["rehundido_chapa"])
+    y0 = min(y0, p["rehundido_chapa"])
+    y1 = max(y1, g["alto_total"] - p["rehundido_chapa"])
     for _, c, d in cb._centros_rosca_ciega(p):
         x0, x1 = min(x0, c[0] - d / 2), max(x1, c[0] + d / 2)
         y0, y1 = min(y0, c[1] - d / 2), max(y1, c[1] + d / 2)
@@ -497,6 +507,18 @@ BORDE_MIN_D = 1.5
 DESVIO_DXF_MAX = 0.02
 
 
+def _x_blank(p: dict[str, float], z: float) -> float:
+    """De z del mundo a x del desarrollo de la nariz o del talon.
+
+    EL ORIGEN DEL BLANK SE MOVIO EL 2026-08-30. Era la cara interior del anillo
+    (t_anillo + hol_piel): la chapa se apoyaba sobre ella. Con la chapa
+    empotrada el blank arranca DENTRO del rebaje, muesca_pie() antes, y todo lo
+    que el DXF coloca por z -- los M4 del pie, las ocho pestanas del talon y
+    sus alivios -- se corre con el. Estaba escrito cuatro veces con la formula
+    a mano, y las cuatro se quedaron viejas a la vez; ahora es una."""
+    return z - (p["t_anillo"] + p["hol_piel"] - cb._muesca_pie(p))
+
+
 def agujeros_donde_toca() -> list[str]:
     """Los agujeros del DXF caen donde el modelo dice. Leidos DEL FICHERO.
 
@@ -541,7 +563,11 @@ def agujeros_donde_toca() -> list[str]:
     # DEL PRESUPUESTO, no recalculado: desde el 2026-08-26 ancho_util resta
     # tambien las dos alas de costilla, y una copia a mano de la formula aqui
     # se desincroniza del original en cuanto se toque t_costilla.
-    au = cb.perfil(p)["ancho_util"]
+    # EL BLANK DEL TECHO CRECIO 5.0 EL 2026-08-30: ya no mide el vano entre
+    # caras sino lo que entra en rebaje, y las dos bridas doblan de SUS puntas,
+    # no de las de antes. Con ancho_util aqui, los cuatro M4 salian a 5 mm de
+    # donde estan y el fichero correcto daba rojo.
+    au = cb._chapa_largo_rebaje(p)
     # EL PASO SE LEE, no se escribe. Fue un 100 a mano hasta el 2026-08-27 y
     # era la tercera copia del mismo numero (las otras dos: fila_agujeros()
     # y n_agujeros()). Con reticula_paso gobernando los agujeros de los
@@ -1197,7 +1223,7 @@ def taladros_nariz() -> list[str]:
     cantos = _cantos(dxf)
     leidos = _redondos(dxf)
     d = p["d_M4_paso"] + p["kerf"]
-    esperados = [(z - p["t_anillo"] - p["hol_piel"], 1.5 * p["d_M4_paso"])
+    esperados = [(_x_blank(p, z), 1.5 * p["d_M4_paso"])
                  for z in nz["m4_z"]]
     for ex, ey in esperados:
         cerca = [q for q in leidos
@@ -1540,7 +1566,7 @@ def taladros_talon() -> list[str]:
         cantos = _cantos(dxf)
         leidos = _redondos(dxf)
         d4 = p["d_M4_paso"] + p["kerf"]
-        esperados = [(z - p["t_anillo"] - p["hol_piel"],
+        esperados = [(_x_blank(p, z),
                       tl["desarrollo"] - 1.5 * p["d_M4_paso"]) for z in tl["m4_z"]]
         for ex, ey in esperados:
             cerca = [q for q in leidos
@@ -1563,7 +1589,7 @@ def taladros_talon() -> list[str]:
         ym = tl["desarrollo"] - (tl["pestana_x"] - tl["x_pie"])
         w, k = p["talon_pestana_ancho"], p["corte_pestana"]
         aristas, _ = _componentes(dxf)
-        alivios = [(zc - p["t_anillo"] - p["hol_piel"] + s * (w / 2 + k / 2), ym)
+        alivios = [(_x_blank(p, zc) + s * (w / 2 + k / 2), ym)
                    for zc in tl["pestana_z"] for s in (-1, 1)]
         for ex, ey in alivios:
             arco = sum(1 for a in aristas
@@ -1618,7 +1644,11 @@ def bridas_techo() -> list[str]:
     if not (PLANS / f"{dxf}.dxf").exists():
         return []
     f: list[str] = []
-    au = cb.perfil(p)["ancho_util"]
+    # EL BLANK DEL TECHO CRECIO 5.0 EL 2026-08-30: ya no mide el vano entre
+    # caras sino lo que entra en rebaje, y las dos bridas doblan de SUS puntas,
+    # no de las de antes. Con ancho_util aqui, los cuatro M4 salian a 5 mm de
+    # donde estan y el fichero correcto daba rojo.
+    au = cb._chapa_largo_rebaje(p)
     bd = cb._bd_miembro(p)
     b = cb._bridas(p)[0]
     t, c = p["t_costilla"], p["chaflan_nariz"]
@@ -1706,7 +1736,7 @@ def pestanas_talon() -> list[str]:
     r_al = (p["alivio_pestana"] + p["kerf"]) / 2
     y_lado = ym + math.sqrt(max(r_al ** 2 - (p["corte_pestana"] / 2) ** 2, 0.0))
     for zc in tl["pestana_z"]:
-        zb = zc - p["t_anillo"] - p["hol_piel"]
+        zb = _x_blank(p, zc)
         lados = 0
         for x_esp in (zb - w / 2, zb + w / 2):
             if any(abs(a[0][0] - x_esp) <= tol and abs(a[1][0] - x_esp) <= tol
@@ -2114,7 +2144,11 @@ def taladros_reticula() -> list[str]:
     import clearance_budget as cb
 
     p = cb.leer_params()
-    au = cb.perfil(p)["ancho_util"]
+    # EL BLANK DEL TECHO CRECIO 5.0 EL 2026-08-30: ya no mide el vano entre
+    # caras sino lo que entra en rebaje, y las dos bridas doblan de SUS puntas,
+    # no de las de antes. Con ancho_util aqui, los cuatro M4 salian a 5 mm de
+    # donde estan y el fichero correcto daba rojo.
+    au = cb._chapa_largo_rebaje(p)
     paso = p["reticula_paso"]
     n = max(1, round(au / paso))
     d_ret = p["d_M3_paso"] + p["kerf"]

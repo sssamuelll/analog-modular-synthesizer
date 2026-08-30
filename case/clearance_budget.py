@@ -502,14 +502,21 @@ def _cajas_miembro(p: dict[str, float], P: list[tuple[float, float]],
                     cr: list[tuple[float, float]], z0: float,
                     z1: float) -> dict[str, Caja]:
     """Las CARAS VISTAS de atras: el labio (B) o la banda (A) del techo y el
-    labio del talon, t_costilla de espesor a ras del plano trasero.
+    labio del talon, t_costilla de espesor, REHUNDIDOS del plano trasero.
 
     Fueron las bandas de 24 que recibian los M3 de la trasera (#241); desde la
     trasera capturada no reciben nada: tapan. La meseta, el chaflan, el
     retorno, el pie y las pestanas van aparte como caras (_caras_miembro).
-    El argumento cr se queda por los llamadores."""
+    El argumento cr se queda por los llamadores.
+
+    ESTABAN A RAS DEL PLANO TRASERO hasta el 2026-08-30 y ahora entran
+    rehundido_chapa en el rebaje del anillo. No es cosmetico: estas cajas son
+    las que cuerpos_dentro_del_anillo() compara contra el contorno del DXF, y
+    con el contorno redondeado a radio_borde (5.5, mayor que antes) una caja a
+    ras se sale por la esquina -- que es exactamente lo que el fichero correcto
+    denunciaba."""
     t = p["t_costilla"]
-    x1 = P[6][0]
+    x1 = P[6][0] - p["rehundido_chapa"]
     c, lab = p["chaflan_nariz"], p["talon_labio"]
     if _chaflan_p5(p):
         lt = p["techo_labio"]
@@ -693,7 +700,7 @@ def _muesca_brida(p: dict[str, float]) -> tuple[float, float]:
     a x >= x_min y y >= y_min se corta. x_min es la punta de la brida menos
     el aire; y_min, su canto de abajo menos 0.5."""
     P = _vertices(p)
-    x_dob = P[6][0] - p["t_costilla"]
+    x_dob = P[6][0] - p["rehundido_chapa"] - p["t_costilla"]
     return (x_dob - p["brida_largo"] - p["hol_piel"],
             P[5][1] - p["t_costilla"] - p["brida_ancho"] - 0.5)
 
@@ -968,7 +975,11 @@ def _bridas(p: dict[str, float]) -> list[dict]:
     brida: es el talon, y va a la tabla."""
     P = _vertices(p)
     t, d = p["t_costilla"], p["d_M4_paso"]
-    x_dob = P[6][0] - t                     # la cara interior de la banda
+    # LA CARA INTERIOR DEL LABIO, que desde el 2026-08-30 esta rehundida:
+    # la brida dobla del labio, y el labio entra rehundido_chapa en el rebaje.
+    # Sin el rehundido aqui, sus dos M4 ciegos salian 1 mm fuera de donde el
+    # .scad los taladra y check_dxf los daba por ausentes.
+    x_dob = P[6][0] - p["rehundido_chapa"] - t
     y1 = P[5][1] - t
     y0 = y1 - p["brida_ancho"]
     raiz = p["radio_doblez_costilla"] + 3 * t + d / 2

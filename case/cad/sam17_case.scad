@@ -738,13 +738,26 @@ module costilla_2d() { anillo_2d(); }
 // roscas ciegas a diametro de broca (profundidad en el pliego). Otro fichero
 // porque un DXF 2D no sabe decir "a 11 mm" -- mismo caso que el cajeado
 // KONDOR de la trasera.
+// LAS DOS ROSCAS DE LA BRIDA VAN COMO AGUJERO, no como disco (2026-08-30). Las
+// otras doce caen en cara lisa y se dibujan sumando un circulo, que es como se
+// leen en una planta. Estas dos caen DENTRO del cajeado de la brida, y una
+// union 2D se las traga: circulo lleno dentro de rectangulo lleno es el mismo
+// rectangulo, y el DXF salia con doce agujeros donde el modelo pone catorce. Se
+// restan, que ademas es lo que son -- un taladro en el SUELO del cajeado --, y
+// asi su circunferencia queda dibujada y el taller la ve.
 module costilla_dorso_2d() {
-    rebaje_2d();
-    bolsillo_trasero_2d();
-    rebaje_chapa_2d();
-    cajeado_brida_2d();
-    for (c = centros_rosca_ciega())
-        translate(c[0]) circle(d = c[1]);
+    difference() {
+        union() {
+            rebaje_2d();
+            bolsillo_trasero_2d();
+            rebaje_chapa_2d();
+            cajeado_brida_2d();
+            for (c = centros_rosca_ciega())
+                translate(c[0]) circle(d = c[1]);
+        }
+        for (c = bridas_anillo())
+            translate(c) circle(d = d_M4_rosca);
+    }
 }
 
 // --- EL MARCO DE LA VENTANA Y LAS ROSCAS CIEGAS (2026-08-29, noche) -------
@@ -820,7 +833,18 @@ function patas_filas() =
              ejes = [for (k = [0 : len(centros) - 1])
                         [(centros[k] - A)*u, centros[k], tres || k == 0]],
              s0 = retiro_vertice(t[1]) + t[4],
-             s1v = L - retiro_vertice(t[2]),
+             // EN CADA ESQUINA LA PATA ACABA DONDE MANDA LA MAS RETIRADA DE
+             // LAS DOS: la tangente del redondeo, o el retiro de la pata
+             // VECINA si es mayor. Gemelo de ini()/fin() en el budget, que lo
+             // hacia desde siempre; aqui faltaba y no se notaba porque el
+             // retiro del marco (1.65) era menor que la tangente de P4
+             // (2.2782). Con la chapa empotrada el retiro sube a 2.65 y pasa a
+             // mandar: sin esto, la pata de la cara de arriba seguia 0.37 mas
+             // alla de donde empieza la franja retirada de la meseta, y las
+             // dos roscas de su riel de arriba salian 0.37 corridas respecto
+             // a lo que el presupuesto dice.
+             vecino = t[0] == "cara_sup" ? retiro_marco_chapa() : 0,
+             s1v = L - max(retiro_vertice(t[2]), vecino),
              s1 = tres ? s1v
                        : max(s1v, max([for (e = ejes) e[0]]) + 2*d_M4_paso))
         [t[0], A, u, n, s0, s1, ejes]];
