@@ -207,8 +207,9 @@ de hondo (derivada: `rebaje_chapa` − `hol_chapa` + `hol_piel`: la pared del
 rebaje está 3 dentro de la cara, lo rehundido se queda 0.5 antes y el pie 0.15
 después) desde el canto
 libre del pie hasta **la línea de doblez pie-chaflán del desarrollo**, que no
-está a «largo del pie» del canto sino a largo − BD/2 (el talón: 20 − 0.44 =
-19.56; la nariz: 18 − 0.44 = 17.56, las mismas líneas que ya cota el PLIEGO), con
+está a «largo del pie» del canto sino a largo − BD/2 (el talón: 21.5 − 0.44 =
+21.06; la nariz: 19.5 − 0.44 = 19.06 — las líneas que hoy cota el PLIEGO, 19.56 y
+17.56, se mueven con los pies de §4.6), con
 un **alivio de Ø2** centrado en la esquina, a caballo de esa línea, como el de
 las pestañas (`alivio_pestana`), para que el doblez no la rasgue. La pestaña
 más cercana del talón arranca a 20 mm de ahí y el primer M4 del pie conserva
@@ -276,7 +277,10 @@ negociable porque a z ≥ t_anillo + t_placa está el barrido del panel de arrib
 Aquí la brida cambia de plano **en la dirección segura**: como el labio entra 3
 en el rebaje, dobla en z = 11 y apoya en un **cajeado de `rebaje_chapa` = 3 de
 fondo** en la cara interior — queda de z = 11 a 12.5, **1.5 por debajo** de la
-cara, más lejos del barrido, no más cerca. El cajeado es la huella de la brida
+cara, más lejos del barrido, no más cerca. En y no se mueve: dobla del extremo
+del labio, que sigue muriendo en 230.18, y queda de 240.18 a 254.68 como hoy; su
+cajeado va de 239.68 a 255.18 — hasta u = 1, donde muere el reborde, que queda
+entero sobre él. El cajeado es la huella de la brida
 (27 × 14.5, con su esquina de arriba cortada a 45°) más 0.5 por lado: **28 ×
 15.5**, con esquinas interiores de R1.5 (la fresa); **la brida lleva sus
 esquinas redondeadas a R2** para asentar entera. Los dos M4 ciegos se roscan
@@ -307,9 +311,13 @@ regla — pero **el pie del talón crece lo mismo que retrocede la trasera: 20 �
 del avellanado del M4 es un cuerpo fijo detrás de la cara interior del
 acrílico y necesita `tol_pmma` + 0.5 = 1.70 de aire; con la trasera 1.5 más
 adentro y el pie en 20 quedaban **1.27** (`guarda_talon()` en rojo sin tocar
-nada), con 21.5 vuelven los 2.77 de hoy. El desarrollo del talón pasa de 39.73 a
-**41.23**, y el chasis del PSU, que se arrima al canto libre del pie con 3 de
-aire, se adelanta 1.5 con él. El chaflán de la arista de abajo-fuera de la trasera
+nada), con 21.5 vuelven los 2.77 de hoy. Y **el pie de la nariz lo sigue: 18 →
+19.5** (`nariz_pie`), porque la misma `guarda_talon()` exige que los dos pies
+difieran 2 o menos («mismo estilo», el punto 7 de su docstring) y con 18 y 21.5
+se pone roja sin tocar nada más; va bajo la tabla, no se ve, y sus M4, su muesca
+y sus taladros en la tabla se derivan igual. El desarrollo del talón pasa de
+39.73 a **41.23** (el de la nariz crece 1.5), y el chasis del PSU, que se arrima
+al canto libre del pie del talón con 3 de aire, se adelanta 1.5 con él. El chaflán de la arista de abajo-fuera de la trasera
 (5.5) se recalcula con la plancha 1.5 más adentro y el labio del bolsillo a 4.5
 (`chaflan_trasera_bajo()` y su gemela): es una cuenta, no una decisión.
 
