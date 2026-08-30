@@ -297,10 +297,29 @@ maciza de 14 mm**, vaciada por el centro, una pieza por lado.
    anodizar (para el bonding de tierra)? Si no lo hacen ellos, ¿trabajan con
    un anodizador que sí?
 
-**Única pregunta abierta de esta tanda:** «¿Un reborde de **1 × 3** a lo
-largo del contorno, a **+-0.1**: se puede? Si no, lo subimos a **1.5**.» No
-cambiarlo en máquina sin respuesta: esa cota mueve el rehundido de las tres
-chapas y sus desarrollos.
+**Única pregunta abierta de esta tanda:** «¿Un reborde de **1 mm de ancho por
+3 de alto** a lo largo del contorno, con tolerancia **+0.3 / −0**: se puede?
+Si no, lo subimos a **1.5**.» No cambiarlo en máquina sin respuesta: esa cota
+mueve el rehundido de las tres chapas y sus desarrollos.
+
+**La tolerancia es asimétrica a propósito, y no es un capricho.** La rev. 26
+pedía ±0.1, que es una contradicción: nuestra propia puerta
+(`guarda_rebaje_chapa`) rechaza cualquier reborde por debajo de 1 —a 0.9 deja
+de ser una junta de sombra fresable y pasa a ser una rebaba—, así que pedir
+±0.1 era aceptar por contrato una pieza que rechazamos por diseño. Por arriba
+sí hay sitio: el reborde puede engordar hasta 1.3 sin que nada se mueva, porque
+lo que la chapa pierde de rehundido lo gana de reborde y la junta sigue
+leyéndose. **Si sale por debajo de 1, la pieza no vale**; si sale por encima,
+vale hasta 1.3.
+
+**Y una cosa que el taller tiene que saber antes de cotizar:** en la esquina
+donde el bolsillo de la trasera pasa bajo el chaflán de abajo-atrás (P6), el
+escalón del bolsillo deja **0.5 mm en x de la cara del chaflán — 0.35
+perpendiculares — a lo largo de 6 mm de profundidad**. Es un filo. Viene del
+diseño de la trasera capturada (2026-08-29), no de esta tanda, y está declarado
+como deuda en `check_dxf.anillo_tiene_rebaje()`. **Si a su criterio ese filo no
+sobrevive al fresado, el desbarbado o el anodizado, dígalo con el presupuesto:
+preferimos moverlo antes de cortar que descubrirlo en la primera pieza.**
 
 ### Muestra que se pide con el presupuesto
 

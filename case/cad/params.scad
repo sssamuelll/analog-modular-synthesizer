@@ -134,11 +134,13 @@ entrada_costado_trasero = 3.5;
 // cara interior del acrilico -- que puede venir 1.2 mas gruesa -- y vale para
 // ella la regla de la trasera, tol_pmma + 0.5 = 1.70 de aire; con 20 quedan
 // 2.77, con 18 quedaban 0.77.
-// 21.5 DESDE EL TECHO MACIZO (2026-08-30): la trasera retrocede 1.5 al crecer
-// la rendija del alero (rehundido_trasera pasa de 3 a 4.5), y con el pie en 20
-// esos 2.77 caian a 1.27, por debajo de los 1.70 exigidos: guarda_talon() se
-// ponia roja sin mutar nada. El pie sigue a la plancha, mismo 1.5.
-talon_pie       = 21.5;
+// 22.5 DESDE EL TECHO MACIZO (2026-08-30): la trasera retrocede 2.5 en total
+// al crecer la rendija del alero (rehundido_trasera pasa de 3 a 5.5), y el pie
+// la sigue milimetro a milimetro para conservar el aire del avellanado. Fue
+// 21.5 con la rendija en 3.0; al subirla a 4.0 tras la revision, esos 2.77
+// caian a 1.77 -- verde por 0.07 mm, que no es margen -- y el pie sube otro
+// milimetro. La regla no cambia: el pie del talon acompana a la plancha.
+talon_pie       = 22.5;
 // El labio vertical, desde la coronacion del chaflan hacia arriba. 13 es el
 // frente de la nariz (alto_frontal - chaflan_nariz): las chapas del canto
 // cierran igual, chaflan de 6 y 13 de plomo. Tapa 12.5 del canto de abajo de
@@ -696,11 +698,11 @@ chaflan_nariz   = 6;
 // atornilla a la TABLA por el pie, desde dentro, con tres M4: en la cara vista
 // no hay tornillo, como en todo lo demas. El pie: 18 es lo minimo que reparte
 // un M4 entre la zona del doblez (SB + 2t + d/2 = 9.75 desde la linea del
-// chaflan) y 1.5 D del canto libre (6.75). 19.5 desde el techo macizo
-// (2026-08-30): sigue al pie del talon, que crecio a 21.5 con la trasera
+// chaflan) y 1.5 D del canto libre (6.75). 20.5 desde el techo macizo
+// (2026-08-30): sigue al pie del talon, que crecio a 22.5 con la trasera
 // retrocedida, porque guarda_talon() pide que los dos pies difieran 2 o
-// menos -- mismo estilo -- y con 18 y 21.5 se ponia roja.
-nariz_pie       = 19.5;
+// menos -- mismo estilo -- y con 18 se ponia roja. Va bajo la tabla: no se ve.
+nariz_pie       = 20.5;
 // Fondo del case. UN SOLO plano trasero: el costado es un triangulo
 // rectangulo con el angulo recto atras y la hipotenusa quebrada en dos
 // tramos (35 arriba, 12 abajo) con el entrepiso en medio (Samuel eligio esta
