@@ -1,11 +1,13 @@
 # El hub del SAM17: el cerebro pasa a N657, se lleva la cara, y las radios se reparten — propuesta
 
 **Fecha:** 2026-08-30
-**Estado:** PROPUESTA. No toca código, DXF ni cobre. Mezcla dos clases de
+**Estado:** PROPUESTA con tres decisiones firmadas. No toca DXF ni cobre;
+trae un guion (el censo de pines del hub, §10 fila 1). Mezcla dos clases de
 cosas y las rotula para que no se confundan: las **actas** de Samuel del
-2026-08-30 (§0, textuales) y las **decisiones que este papel recomienda y él no
-ha firmado** (marcadas PENDIENTE DE FIRMA). Nada de lo segundo entra hasta que
-lo firme o lo devuelva.
+2026-08-30 (§0, textuales) y las **decisiones que este papel recomienda**.
+El mismo día, Samuel firmó **D1, D2 y D7** («todas bien») y devolvió **D3**
+con una acta nueva (A-9): la cámara y la IA van a un **tercer N657**. D3 queda
+sustituida por D3' (§3.2), que es lo único que sigue PENDIENTE DE FIRMA.
 **Sujeto:** el zócalo del micro del cerebro (módulo 2 v2), y lo que cuelga de
 él: la cara del instrumento, las radios, la interfaz de audio y el asiento del
 procesador de aplicaciones.
@@ -54,10 +56,16 @@ Textuales, en el orden en que salieron:
   pulgadas del dev kit pero luego las otras si que las compro de 7 pulgadas».
   El primer instrumento lleva la 5" del kit; los siguientes, una 7" comprada.
   Las condiciones para que eso sea una versión y no dos diseños van en §3.1.
+- **A-9 — La IA entra de una, en un tercer N657.** Al firmar D1, D2 y D7
+  («todas bien pero en D3 un tema»): «yo quiero meterle ia de una. para eso
+  es que queremos la camara entonces tendriamos que usar tres stm32n657 para
+  dedicar uno netamente a ia. para poder hacer cosas tipo de mago como que se
+  controlen las cosas solo con mis manos (por medio de la camara) o con cada
+  dedo o moviendo mi cuerpo». Sustituye a D3; su forma va en §3.2.
 
-Lo que **no** es acta y este papel trata como pendiente: cuántos chips, de
-qué placa cuelga la pantalla, dónde vive la cámara, dónde vive la interfaz de
-audio, y el asiento del procesador de aplicaciones (§2, §3, §5, §6).
+**Firmado el 2026-08-30:** D1 (dos N657, hub y Voz), D2 (la cara al hub) y
+D7 (el asiento del procesador de aplicaciones). **Pendiente:** D3' (§3.2), y
+dónde vive la interfaz de audio (§6).
 
 ---
 
@@ -90,7 +98,7 @@ razones que sí son de hoy.
 
 ---
 
-## 2. Un cerebro aparte, y de la misma clase — PENDIENTE DE FIRMA
+## 2. Un cerebro aparte, y de la misma clase — FIRMADA (D1)
 
 ### 2.1 Por qué no se funden, con los números de hoy
 
@@ -145,7 +153,7 @@ ley gana un cuarto limpio más: los preamplificadores de micrófono (§6).
 
 ---
 
-## 3. La cara se muda al hub — PENDIENTE DE FIRMA
+## 3. La cara se muda al hub — D2 FIRMADA; D3' pendiente
 
 ### 3.1 La pantalla (D2)
 
@@ -170,13 +178,13 @@ retorno dedicado (pantalla-motor §6) no cambia.
 Lo que esto le hace a la SRAM de la Voz, con la tabla de `sram_budget.py`
 (peor caso de lo fijo, todo ESTIMADO y sin medir el binario):
 
-| Lo fijo en la Voz | Hoy (todo adentro) | Con cara y cámara en el hub |
+| Lo fijo en la Voz | Hoy (todo adentro) | Con la cara al hub y la cámara al mago |
 |---|---:|---:|
 | Binario del motor | 2 000 000 | 2 000 000 |
 | Colas de audio y retardos | 400 000 | 400 000 |
-| Activaciones de la NPU (gestos) | 800 000 | 0 |
-| Cuadros de cámara (DCMIPP, doble) | 600 000 | 0 |
-| Framebuffer 800×480 | 768 000 a 2 304 000 | 0 |
+| Activaciones de la NPU (gestos) | 800 000 | 0 (al mago, D3') |
+| Cuadros de cámara (DCMIPP, doble) | 600 000 | 0 (al mago, D3') |
+| Framebuffer 800×480 | 768 000 a 2 304 000 | 0 (al hub, D2) |
 | **Queda para tablas y samples** (4 200 000 − lo fijo) | **−368 000 a −1 904 000** | **1 800 000** |
 
 La puerta de la pantalla pedía 1 256 000 B libres. Hoy es rojo en las cuatro
@@ -236,31 +244,81 @@ pines, controlador táctil), y que se compre suelta y no solo pegada al kit.
 Es la fila 9 de §10. Y hace que la compra de #231 pague dos veces: el
 bring-up mide la pantalla exacta del instrumento, no una parecida.
 
-La SRAM del **hub** hereda el framebuffer y la cámara. Tiene la misma
-memoria (4,2 MB + 192 KB de TCM) y ningún sampler, así que su PSRAM por XSPI
-queda libre para el framebuffer sin la contención de caudal que
-`psram_budget.py` mide en la Voz contra los granos. Eso **se corre, no se
-afirma**: es la fila 2 de §10.
+La SRAM del **hub** hereda el framebuffer, y **solo** el framebuffer: con
+D3' la cámara y su NPU se van al tercer chip. Tiene la misma memoria
+(4,2 MB + 192 KB de TCM) y ningún sampler, así que su PSRAM por XSPI queda
+libre para el framebuffer sin la contención de caudal que `psram_budget.py`
+mide en la Voz contra los granos. Eso **se corre, no se afirma**: es la
+fila 2 de §10.
 
-### 3.2 La cámara (D3)
+**El censo de pines del hub ya corrió** (§10 fila 1, `micro_budget.py`, con
+su mutación): con las **seis ranuras J2 en SPI de hardware**, la pantalla al
+LTDC en 24 bits, la PSRAM del framebuffer, el tronco I²C y el pedal, el
+VFBGA264 reparte 66 pines y deja **80 GPIO libres tras las reservas** —
++53 después de cobrar los 27 estimados de lo vario (las dos ranuras por
+USART, MIDI DIN, el ESP32-S3, la radio ESB, la cadena WS2812, clock/reset,
+el táctil y el mux). Con la interfaz de audio sentada (A-6) quedan +48; con
+RGMII de D9, +38; con las dos, **+33**. El VFBGA223 también cierra en los
+cuatro escenarios, con menos aire. Los tres encapsulados chicos son rojo por
+la PSRAM, y el VFBGA198 por la pantalla, igual que en la Voz. **La puerta de
+D1 está en verde**: el hub cabe con todo lo que este papel le cuelga.
 
-El papel de gestos sentó la cámara en el motor para que el valor «no cruce
-el J2» (§3 de cámara-gestos: fuente local tipo LFO). Con el enlace a 34,5 MHz
-(D8) y una latencia de cámara de 30 a 80 ms, un flujo de gestos a 100 Hz
-ocupa una fracción despreciable del enlace; el argumento de no cruzar era
-bueno para un bus compartido al 87 % y deja de pesar en un enlace propio.
+### 3.2 La cámara y la IA: un tercer N657, como módulo (D3', sustituye a D3)
 
-**D3 — La cámara cuelga del CSI-2 del hub y la inferencia corre en la NPU
-del hub.** La NPU está ociosa por diseño en los dos chips (benchmark:
-«potencial declarado, no argumento»); lo que cambia es de quién es la SRAM
-que pagan las activaciones y los cuadros: 350 000 a 1 400 000 B que la Voz
-recupera (tabla de §3.1). El mapeo de gestos sigue siendo estado del modelo
-(cámara-gestos §3) y el valor instantáneo viaja por el J2 como cualquier
-sensor.
+La primera versión de este papel (D3) mudaba la cámara y su inferencia al
+hub. Samuel la devolvió con A-9: la IA entra de una, y para eso se dedica un
+**tercer N657 «netamente a IA»**. Este papel le da forma, y la forma es la
+que el instrumento ya tiene para todo lo demás: **un módulo**.
 
-Este papel **reabre** un papel con acta de Samuel («sí, la declaras»). Si
-Samuel prefiere que la cámara se quede en el motor, D3 se devuelve y la Voz
-paga esos bytes; D2 no depende de D3.
+**D3' — La cámara y la inferencia viven en un tercer N657 con placa propia,
+que cuelga del hub como un módulo más, por una ranura J2.** Se le llama aquí
+«el mago» por su trabajo, no como bautizo. Lo que eso significa, punto por
+punto:
+
+- **Un chip por cámara.** El N657 tiene un solo MIPI CSI-2 de dos carriles
+  (cámara-gestos §1). «Cada dedo» pide una cámara cerca, mirando las manos
+  sobre el panel; «moviendo mi cuerpo» pide otra, de frente al que toca.
+  Son dos sensores y por tanto dos CSI: el tercer chip no es un lujo, es la
+  cuenta. La segunda cámara es el mismo módulo otra vez, cableado o como el
+  satélite de camino C sobre la radio de D4 (con la inferencia allá, como
+  ese camino ya decía).
+- **Su memoria es suya.** Las activaciones de la NPU (200 000 a 800 000 B)
+  y los cuadros de cámara (150 000 a 600 000 B, ESTIMADOS de
+  `sram_budget.py`) dejan de competir con el framebuffer del hub por el
+  mismo AXI: la contención que el motor llamó riesgo 5 no se muda al hub,
+  desaparece. Los pesos del modelo viven en su propia XSPI.
+- **El tiempo real del hub no ve la cámara.** Los seis maestros del J2, el
+  evento de nota (≤100 µs) y el protocolo no comparten DMA ni bus con una
+  tubería de vídeo. Y por §4.3, un mago muerto es «un sensor que calla»: el
+  instrumento sigue sonando.
+- **Habla como cualquier módulo.** EEPROM de identidad y descriptor,
+  descubrimiento por I²C, y sus landmarks y gestos entran al modelo como
+  fuentes (decenas de floats a 30-60 Hz, cámara-gestos §4: kilobits por
+  segundo, nada para un enlace de 34,5 MHz). El mapeo sigue siendo estado
+  del modelo (cámara-gestos §3). Ocupa una de las dos reservas del censo
+  activo de D3 (el «módulo 8»).
+- **Puede fallar, crecer y reprogramarse sin tocar el hub.** «Cosas tipo de
+  mago» es trabajo de iterar modelos; un módulo se reflashea y se cambia
+  de sensor sin abrir la placa que manda.
+
+**Lo que el tercer chip NO compra, dicho antes de que se herede como si
+sí:** la frontera musical de cámara-gestos §2, «modulación sí, disparo no»,
+la puso la latencia (30 a 80 ms de cámara a landmark), no el chip. Controlar
+parámetros, escenas y gestos con las manos y los dedos es modulación y
+mando: sí. Tocar notas con los dedos en el aire es disparo, y a 50 ms se
+siente como tocar por videollamada. Si Samuel quiere gestos de clase disparo,
+eso reabre esa frontera con un presupuesto de latencia propio; A-9 no la
+mueve. Y «IA» aquí es inferencia de visión en la NPU (landmarks de mano,
+postura, clasificadores cuantizados: lo que ST publica para este chip); el
+agente de lenguaje sigue siendo D7.
+
+Lo que cuesta: un tercer N657 con su XSPI y su arranque, una placa más, y
+dos censos propios (pines: trivial, CSI dedicado más J2 esclavo, I²C y
+XSPI; SRAM: el que §10 fila 11 manda). Lo que devuelve: la Voz recupera los
+350 000 a 1 400 000 B de la tabla de §3.1 **y** el hub no los hereda.
+
+D3' sustituye a D3; D2 no depende de ella. Lo que sigue pendiente de firma
+es esta forma (módulo por J2), no el tercer chip, que es acta.
 
 ### 3.3 Los mandos
 
@@ -337,7 +395,7 @@ radio caída es un sensor que calla, no un instrumento que deja de sonar.
 
 ---
 
-## 5. El asiento del procesador de aplicaciones — PENDIENTE DE FIRMA
+## 5. El asiento del procesador de aplicaciones — FIRMADA (D7)
 
 A-3 pide cómputo superior. Los dos N657 dan el camino de nota más rápido que
 el silicio de hoy permite en bare-metal, y la NPU del hub para gestos. Lo que
@@ -428,8 +486,10 @@ prerrequisito de la fila 1 de §10.
   la pantalla.
 - **El nombre del módulo.** La fila de arriba entera se propuso llamar «la
   cabeza» (con la pantalla como «la cara») el 2026-08-30; Samuel no ha
-  contestado. Este papel usa «el hub» para el chip del cerebro y no bautiza
-  nada.
+  contestado. Este papel usa «el hub» para el chip del cerebro y «el mago»
+  para el tercero por su trabajo; no bautiza nada.
+- **La segunda cámara** (de cuerpo entero): D3' dice que es el mismo módulo
+  otra vez, cableado o por radio, y no decide cuál ni cuándo.
 - **El estudio del valle** (panel al centro §5): no cambia, pero §6.1 le
   añade conectores por contar.
 
@@ -463,7 +523,9 @@ manden al aire (patrón conocido: #214).
 | `2026-08-23-modulo-voz-total-design.md` | E-1 | Reescrita como en §2.3 | este papel | pendiente |
 | `2026-08-26-motor-digital-design.md` | §0, actas de la noche, §10 riesgo 5, D-P6 | La pantalla y la cámara salen del motor (D2, D3); riesgo 5 muere; «#209 sitio 2» sigue cierto; D-P6 se reconcilia con A-6 | este papel + papel de la interfaz | pendiente |
 | `2026-08-26-pantalla-motor-design.md` | §1, §6 | «Por qué cuelga del motor» → del hub; sitio contestado | este papel | pendiente |
-| `2026-08-26-camara-gestos-design.md` | §1, §3, §4 | NPU y CSI del hub; camino C → radio de D4 | este papel, con acta de Samuel | pendiente |
+| `2026-08-26-camara-gestos-design.md` | §1, §3, §4 | La cámara y la NPU salen del motor al **tercer N657** (D3'); camino C → radio de D4; §2 («modulación sí, disparo no») **sigue en pie y no la mueve A-9** | este papel, con acta de Samuel | pendiente |
+| **Papel nuevo: el mago (tercer N657)** | — | Placa, censo de pines y de SRAM, descriptor, dos cámaras y su reparto, modelos y su XSPI | papel propio | pendiente |
+| `2026-08-25-j2-punto-a-punto-design.md` | §1.1 censo | El mago ocupa una de las dos reservas del censo activo (el «módulo 8») | este papel | pendiente |
 | `2026-08-27-panel-pantalla-al-centro-design.md` | §4.1 | «La cara se muda del cerebro al motor» → se queda en el cerebro; el requisito «el motor no arrancó, en luz» lo cumple la pantalla | este papel | pendiente |
 | `2026-08-21-modulo-2-v2-cerebro-design.md` | §1, §6.6, §7, §12 | RP2350B → N657; lista de trabajos de §4.1; la cabeza local es la 7"; el margen de pines se recalcula | este papel | pendiente |
 | `2026-08-21-modulo-2-v2-cerebro.md` (plan) | entero | Reescribir contra el N657 (VFBGA264, no QFN-80; `pinout.rs` nuevo) | plan nuevo | pendiente |
@@ -483,10 +545,13 @@ manden al aire (patrón conocido: #214).
 
 ## 10. Lo que hay que correr o verificar antes de sellar
 
-1. **Censo de pines del hub** en `micro_budget.py`: 8 ranuras (32 pines) +
-   LTDC (24-28) + dos USB + I²C con mux + MIDI + cadena WS2812 + clock/reset
-   + pedal + dos UART (ESP32-S3 y radio ESB) + CSI + XSPI + lo que §6.2
-   sume (SAI y control de conversores). **Verde antes de firmar D1.**
+1. **Censo de pines del hub** — ✅ **CORRIDO Y VERDE** (`micro_budget.py`,
+   2026-08-30, con su mutación). Seis ranuras J2 en SPI1-6, pantalla al LTDC
+   en 24 bits, PSRAM del framebuffer, tronco I²C y pedal: **VFBGA264, 66
+   pines repartidos, 80 GPIO libres, +53 tras lo vario**; +48 con audio,
+   +38 con RGMII, +33 con los dos. El VFBGA223 también cierra. **Queda
+   mandado** destilar los USART de la Tabla 16 para sentar las dos ranuras
+   restantes de D3 con nombre de pin en vez de cobrarlas como GPIO varios.
 2. **Censo de SRAM del hub**: framebuffer en PSRAM propia (sin sampler),
    activaciones de la NPU, cuadros de cámara y colas de audio de §6.2. Con su
    mutación.
@@ -508,6 +573,12 @@ manden al aire (patrón conocido: #214).
     24 bits, táctil capacitivo por I²C, y cotejada pin a pin con la 5" del
     kit para decidir si el conector del hub sirve a las dos o hace falta un
     flex adaptador. El panel al centro corre sus números para las dos.
+11. **Los censos del mago** (D3'): pines (CSI dedicado + J2 esclavo + I²C +
+    XSPI) y SRAM (activaciones de la NPU, cuadros de cámara y pesos del
+    modelo), en su papel propio.
+12. **La latencia de cámara a landmark**, medida en bring-up (30-80 ms según
+    cámara-gestos §5): es lo que decide si la frontera «modulación sí,
+    disparo no» se puede reabrir.
 
 ---
 
@@ -515,10 +586,12 @@ manden al aire (patrón conocido: #214).
 
 | # | Riesgo | Se cierra cuando |
 |---|---|---|
-| 1 | El censo de pines del hub no cabe con las ocho ranuras, la cara y la interfaz de audio | §10.1 en verde, o D3 devuelta (la cámara se queda en el motor), o la interfaz cuelga de la Voz |
+| 1 | ~~El censo de pines del hub no cabe~~ | **CERRADO 2026-08-30**: §10.1 corrido, VFBGA264 con +33 GPIO en el peor escenario (audio y RGMII sentados) |
 | 2 | Dos N657 con dos arranques desde XSPI y dos binarios firmados | FSBL + Rust vivos en la Discovery (#231, riesgo 6 del motor) |
 | 3 | Dos radios de 2,4 GHz se pisan | §10.5 medido; suplente: ESP-NOW sobre el S3 (§4.2) |
-| 4 | Se reabren tres papeles con acta (pantalla, cámara, panel al centro) | Samuel firma o devuelve D2 y D3 |
+| 4 | Se reabren tres papeles con acta (pantalla, cámara, panel al centro) | **D2 firmada**; la cámara la reabre A-9 con acta nueva; falta la forma de D3' |
+| 8 | Tres N657 son tres arranques desde XSPI, tres binarios firmados y tres flashes externas | El bring-up del mago sale del mismo #231; su papel propio lo acota |
+| 9 | «Cosas tipo de mago» se lee como tocar notas en el aire, y la latencia no lo permite | §3.2 lo dice de frente; §10.12 lo mide antes de prometerlo |
 | 5 | La computadora ve dos dispositivos de audio (D-P6 y A-6) | El papel de la interfaz los reconcilia en uno compuesto |
 | 6 | La trasera y el valle recién dibujados no tienen sitio para los conectores de la interfaz | El papel de la interfaz cuenta conectores contra el estudio del valle (panel al centro §5) |
 | 7 | No hay plata para la Discovery | Decisión de Samuel; mientras tanto, todo lo de §10.1-10.3, 10.6 y 10.8 es papel y se puede correr |
