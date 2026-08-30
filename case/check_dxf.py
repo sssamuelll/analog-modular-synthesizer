@@ -1424,17 +1424,32 @@ def seccion_del_cupon() -> list[str]:
     p = cb.leer_params()
     c, W = p["chaflan_anillo"], p["cara_anillo"]
     T, R, B = p["t_anillo"], p["rehundido_acrilico"], p["rebaje_anillo"]
+    # EL REBAJE DE CHAPA Y SU REBORDE entran en el cupon el 2026-08-30, y son
+    # LA RAZON de que el cupon siga existiendo: el reborde es una pared de
+    # rehundido_chapa de ancho por rebaje_chapa de alto -- 1 x 3, en el limite
+    # de lo que la fresa hace -- y es la unica cota de toda la pieza que se ve.
+    # Ninguna planta la puede decir. Cuatro vertices mas: la muesca del rebaje,
+    # que deja el reborde entre ella y el canto de la silueta.
+    u0, u1 = p["rehundido_chapa"], cb._rehundido_trasera(p)
+    z0 = T - p["rebaje_chapa"]
     esperados = [(c, 0.0), (W - c, 0.0), (W, c), (W, R),
-                 (W - B, R), (W - B, T), (0.0, T), (0.0, c)]
+                 (W - B, R), (W - B, T),
+                 (u1, T), (u1, z0), (u0, z0), (u0, T),
+                 (0.0, T), (0.0, c)]
     aristas, comps = _componentes("cupon_anillo_2d")
     if len(comps) != 1:
         return [f"cupon_anillo_2d: {len(comps)} contorno(s) y la seccion del "
-                f"anillo es UNO cerrado de ocho lados"]
+                f"anillo es UNO cerrado"]
     pts = {(round(q[0], 3), round(q[1], 3)) for j in comps[0] for q in aristas[j]}
     f: list[str] = []
     nombres = ["arranque del chaflan de la silueta", "arranque del chaflan de "
                "la ventana", "final del chaflan de la ventana",
-               "canto del labio", "asiento del rebaje", "fondo del rebaje",
+               "canto del labio", "asiento del rebaje del costado",
+               "fondo del rebaje del costado",
+               "suelo del rebaje de chapa en el dorso",
+               "fondo del rebaje de chapa",
+               "cara interior del reborde",
+               "reborde en el dorso",
                "dorso en la silueta", "final del chaflan de la silueta"]
     for (x, y), nm in zip(esperados, nombres):
         if not any(math.hypot(q[0] - x, q[1] - y) <= DESVIO_DXF_MAX for q in pts):
@@ -1444,10 +1459,23 @@ def seccion_del_cupon() -> list[str]:
     if len(pts) != len(esperados):
         f.append(f"cupon_anillo_2d: {len(pts)} vertices y la seccion tiene "
                  f"{len(esperados)}")
+    # Y EL REBORDE POR SU ANCHO, no solo por sus vertices: es la cota que el
+    # RFQ pregunta, y la que decide si esta pieza se puede hacer. Se mide
+    # sobre el fichero, entre el canto de la silueta y la pared del rebaje.
+    if not f:
+        anchos = sorted(q[0] for q in pts if abs(q[1] - z0) <= DESVIO_DXF_MAX)
+        if len(anchos) < 2 or abs(anchos[0] - u0) > DESVIO_DXF_MAX:
+            f.append(f"cupon_anillo_2d: el reborde mide "
+                     f"{anchos[0] if anchos else float('nan'):.2f} de ancho en "
+                     f"el fichero y rehundido_chapa dice {u0:g}. Es LA cota "
+                     f"delicada de la pieza y la unica que se ve: el cupon "
+                     f"existe para medirla sobre metal")
     if not f:
         print(f"  cupon_anillo_2d: seccion de {W:g} x {T:g}, labio de {R:g}, "
-              f"rebaje {B:g} x {T - R:g}, chaflan {c:g} x 45 en las dos "
-              f"aristas de la cara -- cupon de {p['cupon_largo']:g} mm")
+              f"rebaje del costado {B:g} x {T - R:g}, rebaje de chapa "
+              f"{u1 - u0:g} x {p['rebaje_chapa']:g} con reborde de {u0:g} x "
+              f"{p['rebaje_chapa']:g}, chaflan {c:g} x 45 en las dos aristas "
+              f"de la cara -- cupon de {p['cupon_largo']:g} mm")
     return f
 
 
@@ -1821,6 +1849,76 @@ def techo_macizo() -> list[str]:
     print(f"  {dxf}: meseta MACIZA -- {len(m4)} taladros en el blank, los cuatro "
           f"M4 de las bridas, y ninguna ranura")
     return []
+
+
+def muescas_del_pie() -> list[str]:
+    """LA MUESCA DEL PIE en los desarrollos de la nariz y del talon.
+
+    Es la pieza que hace que las chapas se empotren SIN levantar los pies de la
+    tabla: el blank mide lo que entra en rebaje (mas ancho), y en cada punta se
+    corta muesca_pie() desde el canto libre del pie hasta la linea de doblez,
+    con un alivio de Ø2 a caballo de esa linea para que el pliegue no rasgue
+    desde la esquina.
+
+    Ninguna puerta la miraba (revisor del 2026-08-30). Y es la clase de cota
+    que se pierde callando: el sobre del DXF no cambia -- la muesca esta DENTRO
+    del blank --, los taladros siguen donde estaban, y una chapa sin muesca
+    entra igual en la maquina. Lo que pasa es que el pie no apoya: se queda
+    2.65 mm en el aire a cada lado, sobre el rebaje del anillo.
+
+    Se mide lo que de verdad hay que cortar: la profundidad de la muesca, y que
+    el alivio este SOBRE la linea de doblez -- no antes, donde no sirve, ni
+    despues, donde se come el pie."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    fallos: list[str] = []
+    m = cb._muesca_pie(p)
+    r_al = (p["alivio_pestana"] + p["kerf"]) / 2
+    bd = cb._bd_angulo(p, 45.0)
+    for dxf, pie, y_pie, s in (("nariz_2d", p["nariz_pie"], 0.0, +1),
+                               ("talon_2d", p["talon_pie"], None, -1)):
+        if not (PLANS / f"{dxf}.dxf").exists():
+            fallos.append(f"{dxf}: FALTA el DXF, no se puede medir la muesca")
+            continue
+        largo = cb._chapa_largo_rebaje(p)
+        if y_pie is None:                       # el talon lleva el pie arriba
+            y_pie = cb._talon(p)["desarrollo"]
+        y_dob = y_pie + s * (pie - bd / 2)
+        aristas, _ = _componentes(dxf)
+        # LA PARED DE LA MUESCA: una arista a plomo en x = m y en x = largo - m,
+        # entre el canto libre del pie y la linea de doblez.
+        for x_esp, lado in ((m, "izquierda"), (largo - m, "derecha")):
+            hay = any(abs(a[0][0] - x_esp) <= DESVIO_DXF_MAX
+                      and abs(a[1][0] - x_esp) <= DESVIO_DXF_MAX
+                      and abs(a[0][1] - a[1][1]) > 1.0
+                      and min(a[0][1], a[1][1]) >= min(y_pie, y_dob) - 1.0
+                      and max(a[0][1], a[1][1]) <= max(y_pie, y_dob) + 1.0
+                      for a in aristas)
+            if not hay:
+                fallos.append(
+                    f"{dxf}: falta la pared de la muesca {lado} del pie, a "
+                    f"plomo en x = {x_esp:.2f} entre y = {min(y_pie, y_dob):.2f} "
+                    f"y {max(y_pie, y_dob):.2f}. Sin ella el pie mide lo mismo "
+                    f"que lo que entra en rebaje y se queda {m:.2f} mm en el "
+                    f"aire a cada lado, sobre el rebaje del anillo")
+        # EL ALIVIO, centrado en la esquina interior y SOBRE la linea de doblez
+        for x_esp, lado in ((m, "izquierda"), (largo - m, "derecha")):
+            arco = sum(1 for a in aristas
+                       if abs(math.hypot(a[0][0] - x_esp, a[0][1] - y_dob) - r_al)
+                       <= 0.06)
+            if arco < 3:
+                fallos.append(
+                    f"{dxf}: falta el alivio de Ø{p['alivio_pestana']:g} en la "
+                    f"esquina {lado} de la muesca, centrado en ({x_esp:.2f}, "
+                    f"{y_dob:.2f}) -- sobre la linea de doblez, que esta a "
+                    f"largo - BD/2 del canto y no a largo. Sin el, el pliegue "
+                    f"rasga desde la esquina viva")
+    if not fallos:
+        print(f"  nariz_2d y talon_2d: muesca del pie de {m:.2f} en cada punta "
+              f"hasta la linea de doblez, con su alivio de "
+              f"Ø{p['alivio_pestana']:g} a caballo de ella")
+    return fallos
 
 
 def bridas_techo() -> list[str]:
@@ -2429,6 +2527,7 @@ def main() -> int:
     fallos += pestanas_talon()
     fallos += bridas_techo()
     fallos += techo_macizo()
+    fallos += muescas_del_pie()
     fallos += ranuras_rejilla_entrada()
     fallos += cuerpos_dentro_del_anillo()
     fallos += tapa_valle_conectada()

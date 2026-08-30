@@ -1155,14 +1155,26 @@ module nariz_2d() {
 // LAS DOS ARISTAS DE LA CARA VAN CHAFLANADAS, no una: costilla() aplica sus
 // seis rodajas con offset(-f) sobre la silueta Y offset(-cara + f) sobre la
 // ventana. Dibujar una sola aqui mandaria fresar un cupon que no es el perfil.
+// EL CUPON GANA EL REBAJE DE CHAPA Y SU REBORDE (2026-08-30). Hasta hoy la
+// seccion tenia ocho vertices y describia el anillo de antes; el PLIEGO y el
+// RFQ ya prometen que la muestra valida el rebaje de 4.5 x 3 y el reborde de
+// 1 x 3, que es LA COTA DELICADA de la pieza entera -- una pared de 1 mm de
+// ancho por 3 de alto, y la unica que se ve. Un hold point que no puede medir
+// lo que dice medir es peor que no tenerlo: aprueba una muestra que no prueba
+// nada. Doce vertices: los ocho de siempre mas la muesca del rebaje, que deja
+// el reborde entre ella y el canto.
 module seccion_anillo_2d() {
     c = chaflan_anillo;
     W = cara_anillo;
     T = t_anillo;
     R = rehundido_acrilico;
     B = rebaje_anillo;
-    polygon([[c, 0], [W - c, 0], [W, c], [W, R], [W - B, R],
-             [W - B, T], [0, T], [0, c]]);
+    u0 = rehundido_chapa;          // donde muere el reborde
+    u1 = rehundido_trasera();      // el suelo del rebaje
+    z0 = T - rebaje_chapa;         // el fondo del rebaje, desde la cara vista
+    polygon([[c, 0], [W - c, 0], [W, c], [W, R], [W - B, R], [W - B, T],
+             [u1, T], [u1, z0], [u0, z0], [u0, T],
+             [0, T], [0, c]]);
 }
 
 module costilla() {
