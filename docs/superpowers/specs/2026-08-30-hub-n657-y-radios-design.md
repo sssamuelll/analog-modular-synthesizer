@@ -38,15 +38,20 @@ Textuales, en el orden en que salieron:
   sintetizador) ahora tambien debe incorporar una interface de audio tipo
   claret++ 4pre» (Focusrite Clarett+ 4Pre: la clase, no la pieza).
 
-- **A-7 — La pantalla, dirigida y no sellada.** «creo que la pantalla va a
-  tener que ser de 5 pulgadas porque en todo caso creo que reutilizaria la del
-  kit de prueba». Es dirección («creo que»), no acta: va en §3.1 con lo que
-  cambia y lo que no.
+- **A-7 — La pantalla es de 5", la del kit de prueba.** Primero como
+  dirección («creo que la pantalla va a tener que ser de 5 pulgadas porque en
+  todo caso creo que reutilizaria la del kit de prueba») y luego como acta,
+  con su razón: «este es un instrumento de diseño de luthier, no de
+  reproduccion masiva, quizas el proximo sea de 7 pulgadas, este seria de 5
+  porque es lo que tenemos ahora a nuestro alcance ya que cuando haga la
+  inversion del dev kit podre aprovechar al maximo los recursos con los que
+  venga el kit». Va en §3.1 con lo que cambia y lo que no, y deja un
+  principio: **lo que el kit traiga y coincida exactamente con la clase que
+  un papel pide, se hereda; lo que solo se parezca, no.**
 
 Lo que **no** es acta y este papel trata como pendiente: cuántos chips, de
-qué placa cuelga la pantalla, el tamaño de la pantalla, dónde vive la cámara,
-dónde vive la interfaz de audio, y el asiento del procesador de aplicaciones
-(§2, §3, §5, §6).
+qué placa cuelga la pantalla, dónde vive la cámara, dónde vive la interfaz de
+audio, y el asiento del procesador de aplicaciones (§2, §3, §5, §6).
 
 ---
 
@@ -173,10 +178,25 @@ configuraciones; con la cara en el hub cierra en el peor caso, sin haber
 medido el binario. De paso mueren el riesgo 5 del motor (contención del LTDC
 con el audio) y el riesgo del 27 («si el motor no arranca no hay pantalla»).
 
-#### El tamaño: 5" si se reutiliza el panel del kit de prueba (A-7, dirigida)
+#### El tamaño: 5", el panel del kit de prueba (A-7, acta)
 
-Samuel apunta a reutilizar en el instrumento la pantalla de la placa de
-prueba del N657 (#231 la describe: 5", 800×480, táctil, en el LTDC). Lo que
+Samuel reutiliza en el instrumento la pantalla de la placa de prueba del
+N657 (#231 la describe: 5", 800×480, táctil, en el LTDC). Es lógica de
+luthier: el instrumento se construye con lo que hay en la mesa, y el kit es
+la mesa. Dos consecuencias que este papel fija:
+
+- **La geometría del panel se parametriza por el contorno de la pantalla**,
+  no se cota a mano. El panel al centro (§2) tiene que leer ancho, alto y
+  zona activa de un solo sitio, para que el próximo instrumento de la casa
+  con una 7" sea un cambio de número y no un rediseño. Es la misma
+  disciplina que el case ya usa con sus presupuestos.
+- **Lo que traiga el kit se censa antes de comprar nada más**: pantalla,
+  cámara, códec, PSRAM, lo que sea. Lo que coincida exactamente con la clase
+  que un papel pide (la pantalla lo hace: 800×480, RGB paralelo, táctil) se
+  hereda; lo que solo se parezca, no. El principio de «nada de chips
+  baratos» del J2 sigue intacto: se hereda por exactitud, no por ahorro.
+
+Lo que
 eso **no** cambia: D2 entero, porque el camino A es el mismo (LTDC, RGB
 paralelo, táctil por I²C); la tabla de SRAM de arriba, porque el framebuffer
 depende de la resolución y no de las pulgadas; y la cuenta de pines. Lo que
