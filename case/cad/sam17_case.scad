@@ -1393,11 +1393,19 @@ module miembro_alto() {
     // En y la brida NO se mueve con el rehundido: dobla del extremo del labio,
     // que sigue muriendo en y_labio_techo(), y su canto de arriba queda donde
     // hoy (y_meseta). Subirla hol_chapa metia el cajeado en el reborde.
+    // EN z LA BRIDA ARRANCA DONDE ARRANCA EL TECHO, no en el suelo del
+    // cajeado: es el MISMO BLANK -- la brida es el vuelo de la punta, doblado
+    // 90 sobre el canto --, asi que su cara exterior y el canto del techo son
+    // el mismo plano por construccion. Con z0 en el suelo del cajeado (11) y
+    // el canto del techo en 11.5, la brida asomaba 0.5 mm por fuera de su
+    // propia chapa, y se veia en el primer plano de la esquina. Dentro del
+    // cajeado sigue: 11.5..13 contra un cajeado de 11..14. No apoya en el
+    // suelo, y no tiene que hacerlo -- la posicionan sus dos M4, como el
+    // rebaje posiciona al techo (§4.1: "el suelo no posiciona").
     difference() {
         brida_3d(brida_x_dob() - brida_largo, y1 - brida_ancho,
                  brida_largo,
-                 brida_ancho, t_anillo - rebaje_chapa,
-                 ancho_total - 2*(t_anillo - rebaje_chapa));
+                 brida_ancho, chapa_z0(), chapa_largo_rebaje());
         // El corte a 45 sigue al chaflan de la CHAPA, no al del anillo: la
         // brida muere hol_chapa dentro de la pared del cajeado (u = 1.5). Con
         // el corte en el contorno del anillo asomaba una lasca en el chaflan.

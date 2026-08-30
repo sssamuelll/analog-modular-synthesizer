@@ -413,12 +413,86 @@ def renderizar_vista(nombre_archivo: str, azimut: float) -> bool:
     return ok
 
 
+def renderizar_esquina(nombre_archivo: str, azimut_deg: float,
+                       elev_deg: float, semi: float = 55.0) -> bool:
+    """PRIMER PLANO DE LA ESQUINA DE ARRIBA-ATRAS (P5), 2026-08-30.
+
+    Las dos vistas de arriba encuadran el case entero y a esa escala la junta
+    de sombra de 1 mm entre la chapa y el anillo son dos pixeles: no se puede
+    juzgar. Y lo que esta tanda decide ES una esquina -- Samuel: "el acabado
+    debe sentirse perfecto con respecto a la esquina, perfectamente alineado
+    con el del marco o si no se ve feo". Asi que la esquina tiene sus propios
+    renders, con lente larga (85 mm, poca perspectiva: los dos chaflanes se
+    comparan sin que la proyeccion los tuerza) y encuadre de +-55 mm.
+
+    Estos dos si se miran para decidir. En ellos se vio, el mismo dia, que el
+    cajeado de la brida se comia el reborde en el chaflan y que la brida
+    asomaba 1.5 mm: dos defectos que las dos puertas daban por buenos porque
+    ninguna mira una arista vista."""
+    az, el = math.radians(azimut_deg), math.radians(elev_deg)
+    horizontal = Vector((-math.cos(az), 0.0, math.sin(az)))
+    direccion = (horizontal * math.cos(el)
+                 + Vector((0.0, math.sin(el), 0.0))).normalized()
+    arriba_mundo = Vector((0.0, 1.0, 0.0))
+    adelante = -direccion
+    derecha = adelante.cross(arriba_mundo).normalized()
+    arriba_cam = derecha.cross(adelante).normalized()
+
+    cam_data = bpy.data.cameras.new("cam_esquina")
+    cam_data.lens = 85.0
+    cam_obj = bpy.data.objects.new("cam_esquina", cam_data)
+    esc.collection.objects.link(cam_obj)
+    esc.camera = cam_obj
+    # el centro del encuadre: la esquina de arriba-atras del bbox, metida un
+    # poco hacia dentro para que quepan el anillo, la chapa y la junta.
+    foco = Vector((max(p.x for p in esquinas) - 8.0,
+                   max(p.y for p in esquinas) - 10.0,
+                   max(p.z for p in esquinas) - 6.0))
+    distancia = semi / math.tan(cam_data.angle_x / 2)
+    cam_obj.location = foco + direccion * distancia
+    cam_obj.rotation_euler = Matrix(
+        (derecha, arriba_cam, -adelante)).transposed().to_euler()
+    cam_data.clip_start = 1.0
+    cam_data.clip_end = max(distancia * 3.0, 2000.0)
+    poner_luces(derecha, arriba_cam, adelante, distancia)
+
+    ruta = os.path.join(AQUI, nombre_archivo)
+    esc.render.filepath = ruta
+    resultado = bpy.ops.render.render(write_still=True)
+    if resultado != {"FINISHED"}:
+        print(f"ROJO [{nombre_archivo}]: bpy.ops.render.render no devolvio "
+              f"FINISHED: {resultado}")
+        return False
+    print(f"render escrito: {ruta}")
+    frac, brillo = medir(ruta)
+    print(f"{nombre_archivo}: cobertura={frac:.4f} brillo={brillo:.4f}")
+    # UN PRIMER PLANO NO SE MIDE COMO UNA VISTA GENERAL: aqui la pieza llena
+    # media pantalla y el resto es fondo, asi que el umbral de cobertura del
+    # case entero no aplica. Lo que se exige es que haya PIEZA en cuadro --
+    # una camara mal apuntada da un render vacio -- y que este iluminada.
+    ok = True
+    if frac < 0.15:
+        print(f"ROJO [{nombre_archivo}]: cobertura {frac:.4f} por debajo de "
+              f"0.15 -- la esquina no esta en cuadro")
+        ok = False
+    if brillo < BRILLO_MINIMO:
+        print(f"ROJO [{nombre_archivo}]: brillo {brillo:.4f} por debajo del "
+              f"minimo {BRILLO_MINIMO}")
+        ok = False
+    if ok:
+        print(f"VERDE [{nombre_archivo}]: cobertura {frac:.4f}, brillo {brillo:.4f}")
+    return ok
+
+
 # --- RENDER: vista frontal (brief original) + vista trasera (Fix round 1,
 # FIX 3 -- una vista tres cuartos frontal no puede mostrar, por geometria,
-# las ranuras de ventilacion en onda de las pieles traseras) -------------
+# las ranuras de ventilacion en onda de las pieles traseras) + los dos
+# primeros planos de la esquina de arriba-atras (2026-08-30) --------------
 ok_frente = renderizar_vista("sam17-case.png", AZIMUT_FRENTE)
 ok_trasera = renderizar_vista("sam17-case-trasera.png", AZIMUT_TRASERA)
+ok_esq_3q = renderizar_esquina("sam17-case-esquina.png", 145.0, 22.0)
+ok_esq_pf = renderizar_esquina("sam17-case-esquina-perfil.png", 90.0, 4.0)
 
-if not (ok_frente and ok_trasera):
+if not (ok_frente and ok_trasera and ok_esq_3q and ok_esq_pf):
     sys.exit(1)
 sys.exit(0)
