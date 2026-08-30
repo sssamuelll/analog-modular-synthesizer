@@ -38,9 +38,15 @@ Textuales, en el orden en que salieron:
   sintetizador) ahora tambien debe incorporar una interface de audio tipo
   claret++ 4pre» (Focusrite Clarett+ 4Pre: la clase, no la pieza).
 
+- **A-7 — La pantalla, dirigida y no sellada.** «creo que la pantalla va a
+  tener que ser de 5 pulgadas porque en todo caso creo que reutilizaria la del
+  kit de prueba». Es dirección («creo que»), no acta: va en §3.1 con lo que
+  cambia y lo que no.
+
 Lo que **no** es acta y este papel trata como pendiente: cuántos chips, de
-qué placa cuelga la pantalla, dónde vive la cámara, dónde vive la interfaz de
-audio, y el asiento del procesador de aplicaciones (§2, §3, §5, §6).
+qué placa cuelga la pantalla, el tamaño de la pantalla, dónde vive la cámara,
+dónde vive la interfaz de audio, y el asiento del procesador de aplicaciones
+(§2, §3, §5, §6).
 
 ---
 
@@ -166,6 +172,24 @@ La puerta de la pantalla pedía 1 256 000 B libres. Hoy es rojo en las cuatro
 configuraciones; con la cara en el hub cierra en el peor caso, sin haber
 medido el binario. De paso mueren el riesgo 5 del motor (contención del LTDC
 con el audio) y el riesgo del 27 («si el motor no arranca no hay pantalla»).
+
+#### El tamaño: 5" si se reutiliza el panel del kit de prueba (A-7, dirigida)
+
+Samuel apunta a reutilizar en el instrumento la pantalla de la placa de
+prueba del N657 (#231 la describe: 5", 800×480, táctil, en el LTDC). Lo que
+eso **no** cambia: D2 entero, porque el camino A es el mismo (LTDC, RGB
+paralelo, táctil por I²C); la tabla de SRAM de arriba, porque el framebuffer
+depende de la resolución y no de las pulgadas; y la cuenta de pines. Lo que
+**sí** cambia: el papel del panel al centro corrió sus números para 165 mm
+de ancho (flancos de 181,66 mm, franjas de 13,25 mm; su §2); con 5" los
+flancos crecen y el problema de profundidad que ese papel llamaba «el
+bloqueante de verdad» (§8, 0,6 mm de margen al fondo de la fila A) se alivia
+con un panel más chico. Las cotas nuevas **salen de la hoja del panel**, no
+de la pulgada: hay que verificar que la pantalla de la DK sea una pieza
+separable con hoja propia (fabricante, contorno, conector FPC y su cuenta de
+pines, controlador táctil), y que se compre suelta y no solo pegada al kit.
+Es la fila 9 de §10. Y hace que la compra de #231 pague dos veces: el
+bring-up mide la pantalla exacta del instrumento, no una parecida.
 
 La SRAM del **hub** hereda el framebuffer y la cámara. Tiene la misma
 memoria (4,2 MB + 192 KB de TCM) y ningún sampler, así que su PSRAM por XSPI
@@ -432,6 +456,9 @@ manden al aire (patrón conocido: #214).
    número que manda en ambos censos de SRAM.
 8. **Las cifras de la clase Clarett+ 4Pre**, contra la hoja del producto,
    antes del papel de la interfaz.
+9. **La hoja del panel de 5" de la DK** (A-7): pieza separable, contorno,
+   FPC y táctil; y que se venda suelta. Con ella, el panel al centro recorre
+   sus números de §2 y §8.
 
 ---
 
