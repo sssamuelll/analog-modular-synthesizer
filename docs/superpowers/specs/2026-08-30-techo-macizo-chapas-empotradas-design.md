@@ -10,7 +10,9 @@ las chapas a 545.62, el rebaje al DXF del dorso; ronda 2 — **los pies no se
 rehunden** (apoyan en la tabla), el tramo trasero por bandas de altura, el
 cajeado de la brida a 28 × 15.5, **la tabla entra con el anillo B** con nariz y
 talón ya atornillados en el banco, y una mutación por aserto que de verdad
-salta ahí · **Tanda A de dos**: la B (la fila 1U más alta con sus rieles, los
+salta ahí; ronda 3 — la muesca de los pies a 2.65 hasta la línea de doblez del
+desarrollo, el chasis entra al final por el frente, los umbrales contra
+constantes y los derivados sin doble fuente · **Tanda A de dos**: la B (la fila 1U más alta con sus rieles, los
 paneles empotrados y el apoyo de la banda del valle) tiene su propia spec ·
 **Supersede** en el techo, en la unión chapa-anillo, en la junta de los labios,
 en la ventilación y en el orden de montaje a la spec del 29-08 (trasera
@@ -197,11 +199,16 @@ con su cara de abajo en y = 0, a ras de la cara de abajo del anillo, y sus
 puntas mueren a `hol_piel` de la cara interior del anillo (z = 14.15) como hoy:
 rehundir un tramo horizontal es levantarlo 1 mm de la tabla, y ahí no hay nada
 que ver ni que empotrar (la tabla lo tapa). Así que el desarrollo de la nariz y
-el del talón lleva en cada punta una **muesca de 3 × (largo del pie)**: el pie
-mide 540.32 y lo demás 545.62, y la esquina de la muesca cae sobre la línea del
-doblez pie-chaflán, con un **alivio de Ø2** a caballo de esa línea como el de
-las pestañas (`alivio_pestana`), para que el doblez no la rasgue. Nada cambia en
-la tabla ni en los M4 de los pies.
+el del talón lleva en cada punta una **muesca de (545.62 − 540.32)/2 = 2.65**
+de hondo (derivada: `rebaje_chapa` − `hol_chapa` − `hol_piel`) desde el canto
+libre del pie hasta **la línea de doblez pie-chaflán del desarrollo**, que no
+está a «largo del pie» del canto sino a largo − BD/2 (el talón: 20 − 0.44 =
+19.56; la nariz: 18 − 0.44 = 17.56, las mismas líneas que ya cota el PLIEGO), con
+un **alivio de Ø2** centrado en la esquina, a caballo de esa línea, como el de
+las pestañas (`alivio_pestana`), para que el doblez no la rasgue. La pestaña
+más cercana del talón arranca a 20 mm de ahí y el primer M4 del pie conserva
+sus 1.5 D al canto libre: no chocan. Nada cambia en la tabla ni en los M4 de
+los pies.
 
 El acabado que Samuel pide sale de que ninguna de las dos cotas que se ven
 depende del taller de chapa: la junta de sombra de 1 mm la fresa el anillo, y el
@@ -303,9 +310,11 @@ une al anillo A antes de que baje el B**. El orden del README, pasos 4 a 7:
 
 4. Con el anillo A tumbado (cara vista abajo), su costado, los rieles y el marco
    A como hoy. **La trasera** en el bolsillo de A, de lado, apoyada en el fin de
-   abajo del bolsillo. **La tabla, preparada en el banco** con la nariz, el talón
-   (sus 3 + 3 M4 avellanados desde arriba, como hoy) y el chasis del PSU (sus 4
-   M4 desde debajo), **se pone de canto sobre el tramo de abajo de A**: el labio
+   abajo del bolsillo. **La tabla, preparada en el banco** con la nariz y el
+   talón (sus 3 + 3 M4 avellanados desde arriba, como hoy) — **sin el chasis**,
+   que entra al final (paso 6): con él puesto, el M4 del suelo del marco B más
+   cercano queda a 4 mm de su pared y no hay por dónde apretarlo —, **se pone de
+   canto sobre el tramo de abajo de A**: el labio
    del talón por fuera de la trasera y sus ocho pestañas por dentro, la nariz y
    el talón con sus puntas en los rebajes de A, y **sus 3 M5 al canto de A desde
    fuera de la tabla** (el redondo del medio primero). La trasera queda sujeta
@@ -319,36 +328,44 @@ une al anillo A antes de que baje el B**. El orden del README, pasos 4 a 7:
    sobre dos. Los doce M4 del marco B y los dos de la brida B **desde dentro por
    el frente abierto**; los 3 M5 de la tabla al canto de B **desde fuera**. De
    pie.
+6. **El chasis del PSU entra por el frente**, por la ventana de la fila de abajo
+   (su sección de 176 × 64 cabe en los 528 × 128.5 abiertos), se arrima al pie
+   del talón (3 mm de aire) y sus **4 M4 se aprietan desde debajo de la tabla**,
+   que es donde siempre estuvieron sus tuercas remachables.
 
 Lo demás (tapa del valle, electricidad, paticas, paneles, el film al final) no
-cambia. Ningún tornillo nuevo, ninguno que se apriete peor que hoy: los seis M4
-de los pies siguen en el banco, y el acceso a los del talón — dos de ellos detrás
-del chasis a 9.75 mm de su pared — no cambia porque no cambia su paso.
+cambia. Ningún tornillo nuevo: los seis M4 de los pies siguen en el banco, y el
+chasis es el único que cambia de momento, no de tornillos.
 
 ## 6. Puertas (la puerta primero, ROJA; el modelo; VERDE; romperla)
 
-Una puerta por cosa y una mutación por aserto, que salte por SU texto
-(`canario_techo()` lo comprueba como `canario_trasera()`). Los derivados
-(`rehundido_trasera`, `radio_borde`, los anchos, la profundidad del cajeado =
+Una puerta por cosa y una mutación por aserto, que salte por SU texto: como
+`canario_trasera()`, `canario_techo()` **llama a la puerta objetivo con el dict
+mutado y comprueba el texto del error** — no pasa por `main()`, así que lo que
+otra puerta diga de la misma mutación no importa; lo que se exige es que ESTA
+salte y por eso. Los derivados (`rehundido_trasera`, `radio_borde`,
+`cara_anillo_trasera`, los anchos y la muesca, la profundidad del cajeado =
 `rebaje_chapa`) no son parámetros: son funciones gemelas en el `.scad` y el
-budget, y `check_dxf` las cruza contra el DXF. **Orden en `main()`**: las de hoy
-como están (`guarda_rebaje` → marco → miembro alto → talón → trasera capturada →
-aire), y las nuevas **entre la trasera capturada y `guarda_aire`**:
-`guarda_rebaje_chapa` → `guarda_tramo_trasero` → `guarda_rendija`. Cada
-mutación se probó contra ese orden.
+budget, y `check_dxf` las cruza contra el DXF; los umbrales de pared son
+constantes (`PARED_MIN_ANILLO` = 3), no el propio parámetro. Orden en `main()`:
+las de hoy como están, y las nuevas entre la trasera capturada y `guarda_aire`:
+`guarda_rebaje_chapa` → `guarda_tramo_trasero` → `guarda_rendija`. Los casos
+heredados de `canario_trasera()` se recalibran (el chaflán de la plancha se
+recalcula con u0 = 4.5 y `t_piel` = 7 deja 4.5 de canto plano: el caso baja a
+`t_piel` = 5, o al valor que la cuenta diga).
 
-| puerta | asevera | mutación que la pone roja (y a ninguna anterior) |
+| puerta | asevera | mutación que la pone roja, por su texto |
 |---|---|---|
 | `guarda_aire()` (reescrita) | salida = rendija (`(ancho_util − n·largo_taco) × aire_labios`) + ondas; `potencia_disipada` = 9.22; ΔT ≤ 15; imprime ΔT con C_D 0.55 como aviso | `taco_largo` = 90 (tira continua: 20.5 K); `potencia_disipada` = 14 (16.4 K) |
 | **nueva** `guarda_rendija()` | subida capilar 2γ/(ρ g d) con d = `aire_labios` × (1 − `compresion_taco`), `compresion_taco` = 0.2, ≤ solape − 2; solape = `techo_labio` + `chaflan_nariz` − (P5.y − y1) | `techo_labio` = 18 (solape 6.5: 6.2 > 4.5; el «≥ 6» de siempre sigue verde); `compresion_taco` = 0.4 (luz 1.8: 8.3 > 6.5) |
-| **nueva** `guarda_rebaje_chapa()` | `rebaje_chapa` ≥ 2 t; ancho `rehundido_trasera` − `rehundido_chapa` = t + `aire_labios` − `t_junta_asiento` ≥ `fresa_d`; `rehundido_chapa` ≥ 1; `hol_chapa` ≥ 0.3; lo que entra en rebaje = luz − 2·`hol_chapa`; `radio_borde` = `radio_chapa` + `rehundido_chapa`; muesca de los pies = `rebaje_chapa` con su alivio | `rebaje_chapa` = 2 («menos de 2 t»); `aire_labios` = 2.4 (ancho 2.9: «la fresa no entra»; la rendija a 2.4 da 6.2 ≤ 6.5 y el aire 13.2 K: verdes); `rehundido_chapa` = 0.5 («reborde más fino que 1»); `hol_chapa` = 0.2 |
-| **nueva** `guarda_tramo_trasero()` | la tabla de §4.3: labio del bolsillo ≥ 3 de hondo bajo los labios de chapa y 6 en el resto; pared ≥ `pared_rebaje_trasera` (**el aserto de la pared se muda aquí** desde la capturada); el costado entra ≥ 3; `cara_anillo_trasera` = `rehundido_trasera` + 11 + pared + entrada; el bolsillo cerrado en y = 239.18 y el cajeado desde 240.18 | `cara_anillo_trasera` = 21 («el costado entra 2.5»); `pared_rebaje_trasera` = 2 |
+| **nueva** `guarda_rebaje_chapa()` | `rebaje_chapa` ≥ 2 t; ancho `rehundido_trasera` − `rehundido_chapa` = t + `aire_labios` − `t_junta_asiento` ≥ `fresa_d`; `rehundido_chapa` ≥ 1; `hol_chapa` ≥ 0.3; lo que entra en rebaje = luz − 2·`hol_chapa`; `radio_borde` = `radio_chapa` + `rehundido_chapa`; muesca de los pies = `rebaje_chapa` con su alivio | `rebaje_chapa` = 2 («menos de 2 t»); `aire_labios` = 2.4 (ancho 2.9: «la fresa no entra»; comprimida un 20 % la rendija también saltaría, 7.8 > 6.5, pero esta puerta se llama sola); `rehundido_chapa` = 0.5 («reborde más fino que 1»); `hol_chapa` = 0.2 |
+| **nueva** `guarda_tramo_trasero()` | la tabla de §4.3: labio del bolsillo ≥ 3 de hondo bajo los labios de chapa y 6 en el resto; `pared_rebaje_trasera` ≥ `PARED_MIN_ANILLO` = 3 (**el aserto de la pared se muda aquí** desde la capturada, y contra una constante, no contra sí mismo); `entrada_costado_trasero` ≥ 3 (parámetro, 3.5); `cara_anillo_trasera` = `rehundido_trasera` + 11 + pared + entrada (derivado, 22); el bolsillo cerrado en y = 239.18 y el cajeado desde 240.18 | `entrada_costado_trasero` = 2.5 («el costado entra 2.5»); `pared_rebaje_trasera` = 2 («pared de 2 contra 3») |
 | `guarda_trasera_capturada()` | como hoy menos la pared; con u0 = 4.5 derivado; el chaflán de la plancha recalculado | las de `canario_trasera()` de hoy (`t_piel` = 7, …) |
 | `guarda_miembro_alto()` | como hoy (200 N sola; con el labio de 20) con la brida en su cajeado: pletina bajo las roscas = `t_anillo` − `rebaje_chapa` ≥ 8; cajeado = huella + 0.5 por lado; R2 de la brida ≥ R1.5 del cajeado | `rebaje_chapa` = 6.5 («quedan 7.5 de pletina bajo la brida»; corre antes que `guarda_tramo_trasero`, que también saltaría) |
 | `guarda_marco_ventana()` | la pata trasera a 30 con el retiro en 16 | `marco_fondo_trasera` = 26 |
 | `check_dxf.techo_macizo()` (nueva) | `miembro_alto_2d.dxf`: ningún contorno cerrado dentro del blank salvo los cuatro M4 de las bridas; esquinas de brida a R2 | el DXF de hoy, con sus 16 ranuras |
 | `check_dxf.anillo_dorso_tiene_rebaje()` (nueva) | en `costilla_dorso_2d.dxf` (la cara mecanizada, no `costilla_2d`): el rebaje de 1..4.5 por el contorno de las chapas, fundido con el bolsillo de la trasera bajo los labios y con los cajeados de brida de 28 × 15.5; **las profundidades no se leen de una planta**: van al PLIEGO y al cupón (§7) | `rehundido_chapa` = 1.5 en params con el DXF a 1 |
-| `check_dxf.anillo_tiene_ventana()` (reescrita) | la cara mide `cara_anillo` en seis tramos y `cara_anillo_trasera` en el trasero (hoy exige 20 uniforme y pondría rojo el anillo correcto) | `cara_anillo_trasera` = 20 en params con el DXF a 22 |
+| `check_dxf.anillo_tiene_ventana()` (reescrita) | la cara mide `cara_anillo` en seis tramos y `cara_anillo_trasera` (derivado) en el trasero (hoy exige 20 uniforme y pondría rojo el anillo correcto) | `entrada_costado_trasero` = 2.5 en params (cara 21) con el DXF a 22 |
 | `check_dxf` sobres y radios | los desarrollos con lo que entra a 545.62, la muesca de los pies y su alivio; `costilla_2d` con radios de 5.5 donde hay chapa y 4.5 donde no | `hol_chapa` = 0.3 en params con el DXF a 0.5 |
 
 Renders: las dos vistas de siempre y **los dos primeros planos de la esquina de
@@ -366,8 +383,8 @@ renders del repo, porque lo que se juzga aquí es una esquina.
   en el **cupón** (§"El cupón" del PLIEGO), que gana el rebaje y su reborde.
 - **Chapa:** el techo **sin ranuras**, labio de 20 y esquinas de brida a R2
   (blank 593.00 × 73.85, era 588.00 × 71.85); talón y nariz con lo que entra a
-  545.62, los pies a 540.32, la muesca de 3 en cada punta y su alivio de Ø2.
-  Nada nuevo que plegar.
+  545.62, los pies a 540.32, la muesca de 2.65 en cada punta hasta la línea de
+  doblez y su alivio de Ø2. Nada nuevo que plegar.
 - **Acrílico:** la trasera igual (552.32 × 237.18), con el chaflán de abajo
   recalculado; la rejilla de entrada 2 mm más baja (7 065 mm²).
 - **Juntas:** 12 tacos de EPDM de 3.0 × 15 (adhesivo), en vez de dos tiras de 2.5.
@@ -377,10 +394,19 @@ renders del repo, porque lo que se juzga aquí es una esquina.
 
 ## 8. Lo que este documento NO cierra
 
-- **El gotero** (§3.5): con la primera pieza, y hacia fuera si entra.
+- **El gotero** (§3.5): con la primera pieza, y hacia fuera si entra. Y el
+  **ensayo de derrame** que decide si hace falta: 100 ml de agua vertidos sobre
+  el centro de la meseta con el aparato encendido y horizontal; se acepta si
+  a los diez minutos la cara interior de la trasera y el suelo están secos.
 - **El ensayo térmico** con la primera unidad: C_D, altura efectiva y pérdidas
-  no están medidos, y la puerta es de órdenes de magnitud; una sonda en el
-  chasis del PSU a plena carga durante una hora, contra los 12.4 K del papel.
+  no están medidos, y la puerta es de órdenes de magnitud. Protocolo: ambiente
+  entre 20 y 25 °C medido, fuente a plena carga (#104 con el LED al tope),
+  sonda en la pared del chasis del PSU, lectura cada 10 min hasta que dos
+  seguidas no cambien más de 0.2 K; se acepta si ΔT ≤ 15 K (la puerta), y se
+  anota contra los 12.4 K del papel para recalibrar C_D.
+- **La compresión de los tacos** (20 %) es un SUPUESTO sin puerta sobre el
+  espesor real ni el alabeo de la plancha; el ensayo de derrame es lo que lo
+  cubre.
 - **La rendija de abajo** como entrada: no se cuenta.
 - **Los vatios de la bahía**: ~4.2 W sin presupuesto en un recinto que el repo
   declara sellado; ~1.5 K por superficie, ESTIMADO. Es un presupuesto que falta,
