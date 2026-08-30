@@ -157,8 +157,10 @@ talon_labio     = 13;
 // TAPA la rendija por la que sale el aire, y lo que tiene que tapar lo manda
 // la capilaridad. Con el solape de 6.5 que daba 18, el agua subia 6.2 por la
 // rendija comprimida un 20 % -- 0.3 de margen. Con 20 el solape es 8.5 y
-// sobran 2.3 (guarda_rendija). El de rigidez sigue verde y con mas seccion:
-// 18 era el minimo por ahi, y este numero solo sube.
+// sobran 3.8 (guarda_rendija) desde que la rendija subio a 4.0: la subida va
+// con 1/d, asi que ensanchar la luz por lo termico mejoro tambien esto. El de
+// rigidez sigue verde y con mas seccion: 18 era el minimo por ahi, y este
+// numero solo sube.
 techo_labio     = 20;
 // LA RENDIJA DEL ALERO (2026-08-30). El aire de la caja sale por aqui: entre
 // la cara interior del labio del techo y la cara vista de la trasera, mirando
@@ -387,10 +389,12 @@ marco_fondo        = 26;
 // excepcion de la ventana (el costado entra 3 ahi): pisa 8 de acrilico en vez
 // de 6, detras de la plancha.
 // 30 DESDE EL TECHO MACIZO (2026-08-30): el bolsillo de la trasera se mueve a
-// u = 4.5..15.5 y su pared con el, asi que la pata arranca 1.5 mas adentro
-// (en 16) y con 28 perdia ese ancho justo donde no hay tornillo. Con 30 y el
-// retiro en 16 la formula de guarda_marco_ventana() da 1.45 mm y 106 MPa
-// (techos 2 mm y 130); con 28 quedaba por un pelo.
+// u = 5.5..16.5 y su pared con el, asi que la pata arranca 2.5 mas adentro
+// (en 17) y con 28 perdia ese ancho justo donde no hay tornillo. Con 30 y el
+// retiro en 17 la formula de guarda_marco_ventana() da 1.54 mm y 114 MPa
+// (techos 2 mm y 130); con 28 quedaba por un pelo. Los numeros son los de
+// despues de subir la rendija a 4.0 (revision del 30-08); con la rendija en
+// 3.0 eran retiro 16, 1.70 mm y 112 MPa.
 marco_fondo_trasera = 30;
 // Cuanto se separan del eje del riel sus dos roscas ciegas, a lo largo del
 // tramo. 7 deja 14 entre las dos roscas del par (piden 9 = 2 D) y, con el par

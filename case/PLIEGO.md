@@ -487,7 +487,9 @@ la huella, no el eje Z. No deducir la profundidad del ancho dibujado.
   ella y el canto. Así el cupón permite medir el reborde sobre metal. Ese
   reborde es la pared más delicada
   del anillo; probarlo en el cupón evita descubrir su límite después de vaciar
-  las dos piezas completas. Si el taller no acepta el reborde de 1 a ±0.1, se
+  las dos piezas completas. Si el taller no acepta el reborde de 1 con **+0.3 / −0** (asimétrica a
+  propósito: 0.9 es rojo para `guarda_rebaje_chapa`, y pedir ±0.1 sería
+  aceptar por contrato una pieza que rechazamos por diseño), se
   detiene el cupón y el diseño se regenera a 1.5 antes de cortar.
 
   **Qué se mira cuando vuelve, y qué pasa si falla:**

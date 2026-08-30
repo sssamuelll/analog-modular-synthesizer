@@ -302,7 +302,14 @@ maciza de 14 mm**, vaciada por el centro, una pieza por lado.
 Si no, lo subimos a **1.5**.» No cambiarlo en máquina sin respuesta: esa cota
 mueve el rehundido de las tres chapas y sus desarrollos.
 
-**La tolerancia es asimétrica a propósito, y no es un capricho.** La rev. 26
+**Y la profundidad del rebaje, 3 mm, va con `+0 / −0.4`** — también
+asimétrica, y por la razón inversa. Por arriba la limita la esbeltez del
+reborde (a 3.1 con un reborde de 1 ya son 3.1:1); por abajo solo gasta captura
+de la chapa, y hay de sobra: a 2.6 el canto todavía engancha 2.1 mm, más de un
+espesor. **Si su tolerancia normal en fondo de cajeado es mayor que 0.4,
+dígalo**: se sube el reborde y la banda se abre por arriba.
+
+**La tolerancia del reborde es asimétrica a propósito, y no es un capricho.** La rev. 26
 pedía ±0.1, que es una contradicción: nuestra propia puerta
 (`guarda_rebaje_chapa`) rechaza cualquier reborde por debajo de 1 —a 0.9 deja
 de ser una junta de sombra fresable y pasa a ser una rebaba—, así que pedir

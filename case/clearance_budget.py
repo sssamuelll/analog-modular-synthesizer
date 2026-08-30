@@ -2631,6 +2631,63 @@ def guarda_red(p: dict[str, float]) -> None:
           f"abajo -- sin dibujar todavia (#130)")
 
 
+def _borde_rojo(guarda, p: dict[str, float], clave: str, lo: float, hi: float,
+                texto: str, pasos: int = 24) -> float:
+    """El valor de `clave` con el que `guarda` salta POR `texto`, buscado.
+
+    NACE DE UNA CLASE ENTERA DE FALLOS (2026-08-30). Los canarios de este
+    fichero llevaban su mutacion escrita a mano, y en un solo dia CUATRO
+    dejaron de morder porque la geometria se movio debajo: t_piel, el radio del
+    doblez de la pestana, la compresion del taco y el labio del techo. Cada vez
+    se corregia el numero y a la siguiente tanda pasaba otra vez.
+
+    El problema no era el numero: era atarlo. Un canario dice "este aserto
+    muerde, y por SU texto"; para eso no hace falta saber DONDE muerde, solo
+    que hay un sitio. Asi que se busca por biseccion entre lo y hi, y si no lo
+    encuentra el canario falla -- que es exactamente lo que tiene que pasar si
+    un aserto se quedo sin dientes.
+
+    Devuelve el valor rojo; levanta AssertionError si en todo el rango no hay
+    ninguno que salte por ese texto."""
+    def salta(v: float) -> bool:
+        roto = dict(p)
+        roto[clave] = v
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                guarda(roto)
+        except AssertionError as e:
+            return texto in str(e)
+        except Exception:                       # noqa: BLE001
+            return False
+        return False
+
+    if salta(hi):
+        a, b = lo, hi
+    elif salta(lo):
+        a, b = hi, lo
+    else:
+        raise AssertionError(
+            f"canario: en {clave} entre {lo:g} y {hi:g} no hay ningun valor que "
+            f"haga saltar a {guarda.__name__}() por '{texto}'. O el aserto se "
+            f"quedo sin dientes, o su texto cambio y nadie actualizo el canario")
+    for _ in range(pasos):                      # b salta, a no
+        m = (a + b) / 2
+        if salta(m):
+            b = m
+        else:
+            a = m
+    # b es el lado ROJO, y a un pelo del borde. Se devuelve un 5 % MAS ADENTRO
+    # del rojo, no el borde: si no, el redondeo a tres decimales lo puede
+    # devolver al verde -- pasó al escribir esto -- y el canario denunciaría un
+    # aserto sano. Un canario tiene que caer dentro, no encima de la raya.
+    v = round(b + (b - a) * 0.05 + (0.001 if b > a else -0.001), 3)
+    assert salta(v), (
+        f"canario: el borde de {clave} para '{texto}' salio en {v:g} y ahi no "
+        f"salta. La biseccion encontro el sitio pero el valor devuelto se cayo "
+        f"al lado verde")
+    return v
+
+
 def canario_trasera(p: dict[str, float]) -> None:
     """Autocomprobacion ROJA de guarda_trasera_flexion(), guarda_talon() y
     guarda_trasera_capturada(): si esto no dispara, su VERDE no vale nada
@@ -2676,9 +2733,9 @@ def canario_trasera(p: dict[str, float]) -> None:
         # RECALIBRADO EL 2026-08-30. Fue t_piel = 7.0, y dejo de morder: con el
         # labio del bolsillo en 4.5 (lo manda la rendija) el chaflan de la
         # plancha se recalcula y una de 7 SI deja los 2 de canto plano. El
-        # barrido de ese dia dice donde muerde ahora: rojo hasta 4.4, verde de
-        # 4.5 a 8.3. Un canario que dejo de disparar no es un canario, es un
-        # adorno -- y este llevaba un dia siendolo sin que nadie lo viera.
+        # borde se recalcula solo. Un canario que dejo de disparar no es un
+        # canario, es un adorno -- y este llevaba un dia siendolo sin que nadie
+        # lo viera. Por eso ya no lleva numero: lo deriva de t_piel_rojo.
         (guarda_trasera_capturada, {"t_piel": t_piel_rojo},
          "canto plano", f"una plancha de {t_piel_rojo:g} no deja 2 de canto "
          f"plano tras su chaflan de {_trasera(p)['chaflan_bajo']:.2f}"),
@@ -2738,16 +2795,27 @@ def canario_techo(p: dict[str, float]) -> None:
     _solape = _trasera(p)["y1"] - _y_labio_techo(p)
     _d_crit = 2 * GAMMA_AGUA * 1e6 / (RHO_AGUA * G * (_solape - 2.0))
     compresion_roja = round(1.0 - _d_crit / p["aire_labios"] + 0.03, 3)
+    _subida = 2 * GAMMA_AGUA * 1e6 / (RHO_AGUA * G
+                                      * p["aire_labios"] * (1 - p["compresion_taco"]))
+    labio_rojo = round(p["techo_labio"] - (_solape - 2.0 - _subida) - 0.5, 2)
     sordo = io.StringIO()
     casos = (
-        (guarda_rebaje_chapa, {"rebaje_chapa": 2.0},
-         "menos de 2 t", "un rebaje de 2 no captura una chapa de 1.5"),
+        (guarda_rebaje_chapa, {"rebaje_chapa": _borde_rojo(
+            guarda_rebaje_chapa, p, "rebaje_chapa", p["rebaje_chapa"], 0.5,
+            "capturada")},
+         "capturada", "un rebaje poco hondo no captura el canto de la chapa"),
+        (guarda_rebaje_chapa, {"rebaje_chapa": _borde_rojo(
+            guarda_rebaje_chapa, p, "rebaje_chapa", p["rebaje_chapa"], 8.0,
+            "la fresa no pasa")},
+         "la fresa no pasa", "un rebaje muy hondo deja el reborde demasiado esbelto"),
         (guarda_rebaje_chapa, {"rehundido_chapa": 0.5},
          "por debajo de 1", "un reborde de 0.5 es una rebaba, no una junta"),
         (guarda_rebaje_chapa, {"hol_chapa": 0.2},
          "no entra si viene larga", "0.2 no deja entrar una chapa cortada a +-0.3"),
-        (guarda_rebaje_chapa, {"hol_chapa": 1.6},
-         "agarrada", "con 1.6 de holgura la chapa deja de estar capturada en z"),
+        (guarda_rebaje_chapa, {"hol_chapa": _borde_rojo(
+            guarda_rebaje_chapa, p, "hol_chapa", p["hol_chapa"], 4.0,
+            "capturada")},
+         "capturada", "pasada esa holgura la chapa deja de estar capturada en z"),
         (guarda_rebaje_chapa, {"aire_labios": 2.4},
          "la fresa", "con la rendija a 2.4 el rebaje mide 2.9 y la fresa es de 3"),
         (guarda_tramo_trasero, {"entrada_costado_trasero": 2.5},
@@ -2764,12 +2832,24 @@ def canario_techo(p: dict[str, float]) -> None:
         # el 30-08 lo hizo dos veces. Un canario que falla porque su propio
         # texto se movio no ha encontrado nada: se ata a la parte del mensaje
         # que identifica al aserto, no a su resultado.
-        (guarda_aire, {"taco_largo": 90.0},
-         "sobre ambiente", "una tira continua en vez de tacos ahoga la salida"),
-        (guarda_aire, {"potencia_disipada": 14.0},
-         "sobre ambiente", "14 W no caben en esta salida"),
-        (guarda_rendija, {"techo_labio": 18.0},
-         "el agua sube", "con el labio en 18 el solape baja a 6.5 y el agua sube 6.2"),
+        (guarda_aire, {"taco_largo": _borde_rojo(
+            guarda_aire, p, "taco_largo", 15.0, 89.0, "sobre ambiente")},
+         "sobre ambiente", "una tira casi continua en vez de tacos ahoga la salida"),
+        (guarda_aire, {"potencia_disipada": _borde_rojo(
+            guarda_aire, p, "potencia_disipada", 9.22, 40.0, "sobre ambiente")},
+         "sobre ambiente", "pasada esa potencia no cabe en esta salida"),
+        # DERIVADO TAMBIEN (2026-08-30, ronda 2 del revisor). Estaba fijo en 18
+        # y con solo subir aire_labios a 4.2 se quedaba verde: el labio que hace
+        # falta depende de cuanto sube el agua, y eso depende de la luz. El
+        # aserto es subida <= solape - 2, y solape = labio + chaflan - (P5.y -
+        # y1), asi que falla cuando el labio baja de labio_actual - (solape -
+        # 2 - subida). Medio milimetro por debajo.
+        (guarda_rendija, {"techo_labio": labio_rojo},
+         "el agua sube", f"con el labio en {labio_rojo:g} el solape no tapa lo "
+         f"que el agua sube por la rendija comprimida"),
+        # Y UNO PARA taco_n, que no tenia: sin tacos no hay rendija.
+        (guarda_aire, {"taco_n": 0.0},
+         "sin tacos NO HAY RENDIJA", "quitar los tacos no ensancha la salida, la elimina"),
         (guarda_rendija, {"compresion_taco": compresion_roja},
          "el agua sube", f"un taco que cede el {compresion_roja*100:.0f} % "
          f"estrecha la rendija por debajo de los {_d_crit:.2f} mm que el "
@@ -3873,10 +3953,25 @@ def guarda_rebaje_chapa(p: dict[str, float]) -> None:
     reb, reh, hol = p["rebaje_chapa"], p["rehundido_chapa"], p["hol_chapa"]
 
     # --- el fondo del rebaje, por los dos lados -----------------------------
-    assert reb >= 2 * t - 1e-9, (
-        f"el rebaje de chapa tiene {reb:g} de fondo, menos de 2 t ({2*t:g}): "
-        f"con menos de dos espesores la chapa no queda presa entre el suelo del "
-        f"rebaje y el reborde, y vuelve a posicionarla el doblez")
+    # EL SUELO ES FISICO, EL OBJETIVO ES PREFERENCIA (2026-08-30, ronda 2 del
+    # revisor). Habia aqui un `reb >= 2 t` que, con el techo de esbeltez
+    # (`reb <= 3 x reh`), dejaba el fondo SIN BANDA: 2.99 rojo, 3.00 verde,
+    # 3.01 rojo. Un diseno cuyo nominal es el unico valor legal no se puede
+    # fabricar: cualquier tolerancia de fresado lo saca.
+    #
+    # Y las dos reglas no pesan igual. Lo que la fisica pide es que la chapa
+    # quede CAPTURADA: su canto engancha reb - hol en z, y con menos de un
+    # espesor deja de estarlo -- ese aserto ya existe abajo y da el suelo real,
+    # t + hol = 2.0. Los 2 t eran holgura de mas que nos dimos, no una
+    # condicion. Asi que el suelo pasa a ser el fisico y el 2 t se queda como
+    # OBJETIVO declarado: el nominal se pone arriba de la banda y la tolerancia
+    # del taller baja, que es el lado seguro (mas fondo aprieta la esbeltez del
+    # reborde; menos fondo solo gasta captura, y sobra).
+    assert reb >= t + hol - 1e-9, (
+        f"el rebaje de chapa tiene {reb:g} de fondo y la chapa engancha "
+        f"{reb - hol:g} en z, menos de un espesor ({t:g}): deja de estar "
+        f"capturada entre el suelo y el reborde, y vuelve a posicionarla el "
+        f"doblez")
     # --- el reborde: lo unico que se ve ------------------------------------
     # ESTE VA ANTES QUE EL DE ESBELTEZ A PROPOSITO: un reborde de 0.5 falla los
     # dos (0.5 de ancho, y 6:1), y de los dos textos el accionable es este. El
@@ -3894,10 +3989,9 @@ def guarda_rebaje_chapa(p: dict[str, float]) -> None:
     assert hol >= 0.3 - 1e-9, (
         f"la holgura del canto de la chapa contra la pared del rebaje es "
         f"{hol:g}: una chapa cortada a +-0.3 no entra si viene larga")
-    assert reb - hol >= t - 1e-9, (
-        f"con holgura {hol:g} en un rebaje de {reb:g} la chapa solo queda "
-        f"agarrada {reb-hol:g} en z, menos de un espesor ({t:g}): deja de estar "
-        f"capturada y el reborde ya no tapa su canto")
+    # (el techo de hol_chapa lo pone el mismo aserto de captura de arriba:
+    #  reb >= t + hol y reb - hol >= t son la misma desigualdad, y tenerla dos
+    #  veces solo servia para que un canario saltara por el gemelo equivocado)
 
     # --- el ancho del rebaje: la fresa tiene que entrar ---------------------
     ancho = _rehundido_trasera(p) - reh
@@ -3942,11 +4036,15 @@ def guarda_rebaje_chapa(p: dict[str, float]) -> None:
     # tiene rango -- 2.9 y 3.1 son rojos por motivos opuestos. La salida es la
     # pregunta del RFQ: si el taller pide un reborde de 1.5, la ventana se abre
     # de 3 a 4.5. No es fragilidad de la puerta: es que el diseno vive ahi.
-    lo, hi = 2 * t, ESBELTEZ_MAX_PARED * reh
-    if hi - lo < 0.2:
-        print(f"  aviso: el fondo solo cabe entre {lo:g} y {hi:g} (2 t por "
-              f"abajo, {ESBELTEZ_MAX_PARED:g}:1 por arriba). Mover t_costilla o "
-              f"rehundido_chapa mueve las dos paredes de esa ventana")
+    lo, hi = t + hol, ESBELTEZ_MAX_PARED * reh
+    print(f"  el fondo puede ir de {lo:g} a {hi:g} (captura de un espesor por "
+          f"abajo, {ESBELTEZ_MAX_PARED:g}:1 del reborde por arriba) y el "
+          f"nominal es {reb:g}: la tolerancia del taller baja, que es el lado "
+          f"seguro. Objetivo de captura 2 t = {2*t:g}, que se cumple con "
+          f"{reb - hol:g} de enganche")
+    if hi - lo < 0.4:
+        print(f"  aviso: esa banda mide {hi - lo:g} y una fresa no la sostiene. "
+              f"Subir rehundido_chapa la ensancha por arriba")
 
 
 def guarda_tramo_trasero(p: dict[str, float]) -> None:

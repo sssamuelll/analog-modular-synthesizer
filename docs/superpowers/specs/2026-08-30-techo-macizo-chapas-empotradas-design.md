@@ -441,7 +441,9 @@ renders del repo, porque lo que se juzga aquí es una esquina.
   (7 065 mm²).
 - **Juntas:** 12 tacos de EPDM de 4.0 × 15 (adhesivo), en vez de dos tiras de 2.5.
 - **RFQ:** al mecanizado, el rebaje, los cajeados y **la pregunta del reborde**
-  («¿un reborde de 1 × 3 a lo largo del contorno, a ±0.1? si no, 1.5»); a la
+  («¿un reborde de 1 × 3 a lo largo del contorno, con **+0.3 / −0**? si no,
+  1.5» — la tolerancia es asimétrica desde la revisión del 30-08: ±0.1 aceptaba
+  un 0.9 que la propia puerta rechaza); a la
   chapa, nada nuevo que preguntar.
 
 ## 8. Lo que este documento NO cierra

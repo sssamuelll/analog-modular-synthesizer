@@ -1962,6 +1962,34 @@ def bridas_techo() -> list[str]:
     if len(leidos) != len(esperados):
         f.append(f"{dxf}: {len(leidos)} agujeros redondos y el modelo pone "
                  f"{len(esperados)} (los M4 de las dos bridas)")
+
+    # EL RADIO DE LAS ESQUINAS DE LA BRIDA (2026-08-30, ronda 2 del revisor).
+    # Ninguna puerta lo leia del fichero: radio_brida = 1 quedaba VERDE. Y no
+    # es cosmetico -- el cajeado donde la brida apoya lo fresa una Ø3, o sea
+    # que sus esquinas interiores salen a R1.5, y una brida de esquina mas
+    # cerrada no asienta: se monta sobre el radio y trabaja en voladizo.
+    # Se cuenta el arco: una esquina a R2 deja un cordon de segmentos a esa
+    # distancia de su centro, y una viva no deja ninguno.
+    aristas_b, _ = _componentes(dxf)
+    r_b = p["radio_brida"]
+    v_b = cb._bridas(p)[0]
+    y_v = techo_cara_alto = p["techo_labio"] + p["chaflan_nariz"]
+    for lado, x0 in ((0, 0.0), (1, au)):
+        # la esquina de ABAJO del vuelo, la que no toca ni el chaflan ni el
+        # relieve: su centro esta a r_b de las dos caras del vuelo.
+        vuelo = p["brida_largo"] - cb._bd_miembro(p)
+        xc = (x0 - vuelo + r_b) if lado == 0 else (x0 + vuelo - r_b)
+        yc = y_v - t - p["brida_ancho"] + r_b
+        arco = sum(1 for a in aristas_b
+                   if abs(math.hypot(a[0][0] - xc, a[0][1] - yc) - r_b) <= 0.08)
+        if arco < 3:
+            f.append(f"{dxf}: la esquina de abajo del vuelo de la brida {lado} "
+                     f"no lleva el radio R{r_b:g} que el modelo pide (centro "
+                     f"{xc:.2f}, {yc:.2f}): el cajeado lo fresa una "
+                     f"Ø{p['fresa_d']:g} y sus esquinas salen a "
+                     f"R{p['fresa_d']/2:g}; una brida mas cerrada se monta "
+                     f"sobre el radio y no asienta")
+
     if cb._chaflan_p5(p):
         aristas, _ = _componentes(dxf)
         k = p["corte_pestana"]
