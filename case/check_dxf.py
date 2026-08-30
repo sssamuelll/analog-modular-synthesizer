@@ -1155,17 +1155,45 @@ def anillo_tiene_rebaje() -> list[str]:
                 f"{retiro_tras:g} del plano trasero: tiene que retroceder a la "
                 f"pared entre bolsillos"]
 
-    # 4. Y LOS DOS CAJEADOS DE BRIDA, por su tamano (2026-08-30). No se miden
-    #    por distancia: entran hasta ~30 mm porque la brida mide 27 de largo, y
-    #    son la unica pieza del dorso que no corre paralela al contorno.
+    # 4. Y EL CAJEADO DE LA BRIDA, LEIDO DEL FICHERO (2026-08-30). No se mide
+    #    por distancia a la silueta: entra hasta ~30 mm porque la brida mide 27
+    #    de largo, y es la unica pieza del dorso que no corre paralela al
+    #    contorno. Se buscan SUS DOS CANTOS LIBRES -- el de la izquierda a
+    #    plomo y el de abajo a nivel --, que son los que fijan la huella; los
+    #    otros dos los recorta el contorno del anillo.
+    #
+    #    LA PRIMERA VERSION DE ESTO ERA UNA TAUTOLOGIA, y la caz~o el revisor
+    #    del 30-08: derivaba la caja de los parametros y la comparaba contra
+    #    los mismos parametros, asi que con brida_largo = 10 y el DXF intacto
+    #    devolvia verde ANUNCIANDO que habia leido un cajeado de 11 x 15.5. Una
+    #    puerta que no abre el fichero no es una puerta: es un comentario.
     caj = _caja_cajeado_brida(cb, p)
-    l_caj, a_caj = caj[1] - caj[0], caj[3] - caj[2]
+    y_med = (caj[2] + caj[3]) / 2
+    x_med = (caj[0] + caj[1]) / 2
+    izq = [a for a in rebaje
+           if abs(a[0][0] - a[1][0]) <= CARA_DXF_MAX
+           and min(a[0][1], a[1][1]) <= y_med <= max(a[0][1], a[1][1])
+           and caj[0] - 2.0 <= a[0][0] <= caj[0] + 2.0]
+    aba = [a for a in rebaje
+           if abs(a[0][1] - a[1][1]) <= CARA_DXF_MAX
+           and min(a[0][0], a[1][0]) <= x_med <= max(a[0][0], a[1][0])
+           and caj[2] - 2.0 <= a[0][1] <= caj[2] + 2.0]
+    if not izq or not aba:
+        return [f"costilla_dorso_2d: no encuentro el cajeado de la brida en el "
+                f"fichero. Se buscaba su canto izquierdo a plomo cerca de "
+                f"x = {caj[0]:.2f} y su canto de abajo a nivel cerca de "
+                f"y = {caj[2]:.2f} (la huella de la brida mas hol_chapa por "
+                f"lado). Sin cajeado la brida apoya en la cara del anillo y "
+                f"vuelve al barrido del panel"]
+    x_leido, y_leido = izq[0][0][0], aba[0][0][1]
+    if abs(x_leido - caj[0]) > CARA_DXF_MAX or abs(y_leido - caj[2]) > CARA_DXF_MAX:
+        return [f"costilla_dorso_2d: el cajeado de la brida arranca en el "
+                f"fichero en ({x_leido:.2f}, {y_leido:.2f}) y la huella de la "
+                f"brida ({p['brida_largo']:g} x {p['brida_ancho']:g}) mas "
+                f"hol_chapa ({p['hol_chapa']:g}) por lado lo pone en "
+                f"({caj[0]:.2f}, {caj[2]:.2f})"]
     esperado = (p["brida_largo"] + 2 * p["hol_chapa"],
                 p["brida_ancho"] + 2 * p["hol_chapa"])
-    if abs(l_caj - esperado[0]) > 0.01 or abs(a_caj - esperado[1]) > 0.01:
-        return [f"costilla_dorso_2d: el cajeado de la brida mide "
-                f"{l_caj:.2f} x {a_caj:.2f} y la huella de la brida mas "
-                f"hol_chapa por lado pide {esperado[0]:g} x {esperado[1]:g}"]
 
     print(f"  costilla_dorso_2d: cantos a {min(ds):.2f}..{max(ds):.2f} mm de la "
           f"silueta; estan el rebaje de chapa ({reh:g}) y el del costado "

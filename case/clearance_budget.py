@@ -701,8 +701,13 @@ def _muesca_brida(p: dict[str, float]) -> tuple[float, float]:
     el aire; y_min, su canto de abajo menos 0.5."""
     P = _vertices(p)
     x_dob = P[6][0] - p["rehundido_chapa"] - p["t_costilla"]
-    return (x_dob - p["brida_largo"] - p["hol_piel"],
-            P[5][1] - p["t_costilla"] - p["brida_ancho"] - 0.5)
+    # LA HOLGURA ES hol_chapa, NO hol_piel (2026-08-30). El marco se aparta de
+    # la BRIDA, y la brida es chapa metida en un cajeado: su holgura es la de
+    # la chapa. El gemelo del .scad se cambio a hol_chapa el mismo dia y este
+    # se quedo en hol_piel; los dos numeros diferian 0.35 mm y ninguna puerta
+    # lo veia, porque taladros_marco_ventana() muestrea lejos de esa frontera.
+    return (x_dob - p["brida_largo"] - p["hol_chapa"],
+            P[5][1] - p["marco_sup"] - p["brida_ancho"] - p["hol_chapa"])
 
 
 def _marco_ventana(p: dict[str, float]) -> list[dict]:
@@ -1006,10 +1011,19 @@ def _bridas(p: dict[str, float]) -> list[dict]:
 
 
 def _cajas_brida(p: dict[str, float], z0: float, z1: float) -> list[Caja]:
-    """Las bridas como cuerpos: t_costilla de espesor contra la cara del
-    anillo, por los dos costados."""
+    """Las bridas como cuerpos: t_costilla de espesor DENTRO DEL CAJEADO del
+    anillo, por los dos costados.
+
+    Los z0/z1 que recibe son el vano entre caras interiores, que es donde
+    vivian hasta el 2026-08-30 -- apoyadas contra la cara. Ya no: la brida es
+    el vuelo del techo doblado sobre su canto, asi que arranca donde arranca el
+    techo (chapa_z0), 2.5 mm mas afuera. Con los z0/z1 de fuera, esta puerta
+    analizaba las colisiones de un cuerpo que no esta donde lo pone el .scad,
+    y no las de la brida. Los argumentos se conservan por los llamadores."""
     out: list[Caja] = []
     t = p["t_costilla"]
+    z0 = p["t_anillo"] + p["hol_piel"] - _muesca_pie(p)     # = chapa_z0()
+    z1 = z0 + _chapa_largo_rebaje(p)
     for b in _bridas(p):
         x0, x1, y0, y1 = b["rect"]
         for lado, (za, zb) in enumerate(((z0, z0 + t), (z1 - t, z1))):
@@ -2080,10 +2094,25 @@ def _rendija(p: dict[str, float]) -> tuple[float, float]:
     aire_labios. La rendija de ABAJO (bajo el labio del talon) no se cuenta:
     si entra aire por ahi mejora el tiro, y lo que no se cuenta no puede
     empeorar el numero."""
+    assert p["taco_n"] >= 2 and p["taco_largo"] > 0, (
+        f"taco_n = {p['taco_n']:g} y taco_largo = {p['taco_largo']:g}: sin "
+        f"tacos NO HAY RENDIJA. Son ellos los que fijan la luz -- la plancha "
+        f"se pega al labio y la cierra --, asi que quitarlos no ensancha la "
+        f"salida: la elimina. Con menos de dos por labio la plancha se apoya "
+        f"en un punto y bascula")
     libre = perfil(p)["ancho_util"] - p["taco_n"] * p["taco_largo"]
+    assert libre > 0, (
+        f"los {p['taco_n']:.0f} tacos de {p['taco_largo']:g} ocupan mas que el "
+        f"vano ({perfil(p)['ancho_util']:.2f}): no queda rendija")
+    # LA LUZ ES LA COMPRIMIDA, no la nominal (2026-08-30, tras el revisor). El
+    # area se calculaba con aire_labios a secas mientras guarda_rendija() ya
+    # reconocia que los tacos ceden: dos puertas sobre la misma junta, cada una
+    # con su estado. El caudal tiene que salir por la rendija que existe cuando
+    # el aparato esta montado y apretado, que es la estrecha.
+    d = p["aire_labios"] * (1.0 - p["compresion_taco"])
     # a la altura del canto de arriba de la trasera, que es por donde el aire
     # pasa antes de salir: medio milimetro por debajo, donde la rendija empieza
-    return libre * p["aire_labios"], _trasera(p)["y1"] - 0.5
+    return libre * d, _trasera(p)["y1"] - 0.5
 
 
 def guarda_rendija(p: dict[str, float]) -> None:
@@ -2106,6 +2135,16 @@ def guarda_rendija(p: dict[str, float]) -> None:
     Lo que tapa el labio del canto de la trasera (el solape) es lo que hay que
     ganar: si el agua sube mas que eso, pasa el canto y cae dentro."""
     d_nom = p["aire_labios"]
+    # POR LOS DOS LADOS (2026-08-30, tras el revisor). Por arriba, un taco que
+    # cede del todo cierra la rendija; por ABAJO, una compresion negativa
+    # significaria un taco que CRECE al apretarlo, y con ella la puerta daba
+    # verde alegremente sobre una luz mayor que la nominal -- justo al reves de
+    # lo que hay que suponer. El peor caso es siempre el mas estrecho.
+    assert 0.0 <= p["compresion_taco"] < 1.0, (
+        f"compresion_taco = {p['compresion_taco']:g}: tiene que estar entre 0 "
+        f"(un taco que no cede) y 1 (uno que se aplasta del todo y cierra la "
+        f"rendija). Un valor negativo es un taco que crece al apretarlo, y "
+        f"haria que esta puerta midiera una luz mayor que la nominal")
     d = d_nom * (1.0 - p["compresion_taco"])
     assert d > 0, (
         f"con compresion_taco = {p['compresion_taco']:g} la rendija se cierra "
@@ -2192,7 +2231,8 @@ def guarda_aire(p: dict[str, float]) -> None:
           f"{largo_ent:.1f} x {p['vent_ancho_ranura']:.2f} (trasera, y={y_ent:.0f})")
     print(f"  salida {a_sal:.0f} mm2 = {a_ren:.0f} de la RENDIJA del alero "
           f"({perfil(p)['ancho_util'] - p['taco_n']*p['taco_largo']:.0f} libres x "
-          f"{p['aire_labios']:g}, y={y_ren:.0f}, mirando al suelo) + "
+          f"{p['aire_labios'] * (1 - p['compresion_taco']):.2f} COMPRIMIDA "
+          f"({p['aire_labios']:g} nominal), y={y_ren:.0f}, mirando al suelo) + "
           f"{a_ond:.0f} de las DOS ondas abiertas (el relieve KONDOR es cajeado "
           f"ciego y no ventila), centroide y={y_sal:.0f}")
     print(f"  tiro {h*1000:.0f} mm, area efectiva {a_ef:.0f} mm2 -> "
@@ -2597,8 +2637,31 @@ def canario_trasera(p: dict[str, float]) -> None:
     (Principio VIII). El revisor del PR #244 (ronda 4) cazo que las mutaciones
     que el PR citaba como prueba de la lengueta eran rojas por otra razon --
     por eso cada caso dice QUE aserto tiene que saltar, y se comprueba por el
-    texto del error, no solo por el rojo."""
+    texto del error, no solo por el rojo.
+
+    Y DESDE EL 2026-08-30, EL CASO DE LA PLANCHA SE DERIVA en vez de escribirse
+    a mano. Ese caso ya se recalibro dos veces en un dia -- t_piel 7 dejo de
+    morder al retroceder la trasera con la rendija, se bajo a 4, y volvio a
+    dejar de morder cuando la rendija paso de 3.0 a 4.0 --, y eso no es mala
+    suerte: su umbral es el chaflan de la plancha, que se recalcula con el
+    bolsillo cada vez que la trasera se mueve. Un canario atado a un numero
+    fijo sobre un borde movil se convierte en adorno sin avisar. Este se ata al
+    BORDE: la plancha mas gruesa que todavia falla."""
     sordo = io.StringIO()
+    # el aserto es c_p <= t_piel - 2, y c_p no depende de t_piel: falla con
+    # cualquier plancha por debajo de c_p + 2. Medio milimetro por dentro.
+    t_piel_rojo = round(_trasera(p)["chaflan_bajo"] + 2.0 - 0.5, 2)
+    # y el del doblez de la pestana, por lo mismo. Su aserto es
+    #   plano = tang_ch - (pestana_x + r + t) >= 2 t
+    # asi que falla en cuanto r pasa de tang_ch - pestana_x - 3 t. Un cuarto de
+    # milimetro por encima. pestana_x se deriva de la cara interior de la
+    # trasera, o sea que este borde se mueve cada vez que la plancha se mueve:
+    # el 30-08 lo hizo dos veces, y las dos dejaron el caso viejo en verde.
+    _tl = _talon(p)
+    _t = p["t_costilla"]
+    _tang_ch = (_tl["x_chaflan"]
+                - (p["radio_doblez_costilla"] + _t) * math.tan(math.radians(22.5)))
+    radio_rojo = round(_tang_ch - _tl["pestana_x"] - 3 * _t + 0.25, 2)
     casos = (
         (guarda_trasera_flexion, {"carga_mano": p["carga_mano"] * 1.3},
          "del PMMA", "una mano un 30 % mas pesada pasa del techo del PMMA"),
@@ -2616,16 +2679,17 @@ def canario_trasera(p: dict[str, float]) -> None:
         # barrido de ese dia dice donde muerde ahora: rojo hasta 4.4, verde de
         # 4.5 a 8.3. Un canario que dejo de disparar no es un canario, es un
         # adorno -- y este llevaba un dia siendolo sin que nadie lo viera.
-        (guarda_trasera_capturada, {"t_piel": 4.0},
-         "canto plano", "una plancha de 4 no deja 2 de canto plano tras su chaflan"),
+        (guarda_trasera_capturada, {"t_piel": t_piel_rojo},
+         "canto plano", f"una plancha de {t_piel_rojo:g} no deja 2 de canto "
+         f"plano tras su chaflan de {_trasera(p)['chaflan_bajo']:.2f}"),
         (guarda_talon, {"talon_pestana_aire": 1.5},
          "talon_pestana_aire", "una pestana a menos de tol + 0.5 de la plancha"),
         # RECALIBRADO EL 2026-08-30. Fue 4.5 y quedo verde: al retroceder la
         # trasera 1.5 (rehundido_trasera 3 -> 4.5) la tangente del doblez del
         # chaflan se aparta y sobra plano donde antes no. El barrido de ese dia
         # pone el borde en 4.75; el caso va a 5.0 para no vivir en el filo.
-        (guarda_talon, {"radio_doblez_pestana": 5.0},
-         "de plano", "un doblez de 5 se come el plano tras el chaflan"),
+        (guarda_talon, {"radio_doblez_pestana": radio_rojo},
+         "de plano", f"un doblez de {radio_rojo:g} se come el plano tras el chaflan"),
     )
     for guarda, cambios, clave, que in casos:
         roto = dict(p)
@@ -2665,6 +2729,15 @@ def canario_techo(p: dict[str, float]) -> None:
     legal (2 t por abajo, 3:1 por arriba, y las dos paredes en 3), y que un
     reborde de 0.5 disparaba el aserto de esbeltez en vez del suyo -- por eso
     los dos asertos estan hoy en el otro orden."""
+    # Y LA COMPRESION DEL TACO. El aserto es subida <= solape - 2 con
+    #   subida = 2*gamma/(rho*g*d),  d = aire_labios*(1 - c)
+    # asi que falla cuando la luz comprimida baja de d_crit = 2*gamma*1e6 /
+    # (rho*g*(solape-2)), o sea cuando c pasa de 1 - d_crit/aire_labios. Este
+    # borde se mueve con aire_labios Y con el solape: el 30-08, subir la
+    # rendija de 3.0 a 4.0 dejo el caso viejo (0.4) en verde.
+    _solape = _trasera(p)["y1"] - _y_labio_techo(p)
+    _d_crit = 2 * GAMMA_AGUA * 1e6 / (RHO_AGUA * G * (_solape - 2.0))
+    compresion_roja = round(1.0 - _d_crit / p["aire_labios"] + 0.03, 3)
     sordo = io.StringIO()
     casos = (
         (guarda_rebaje_chapa, {"rebaje_chapa": 2.0},
@@ -2686,14 +2759,21 @@ def canario_techo(p: dict[str, float]) -> None:
         # LA RENDIJA. El primero es el que prueba que los tacos son tacos: una
         # tira continua de 90 por labio deja la salida en nada y el case sube
         # 20.4 K. El segundo, que la potencia sigue mandando.
+        # LA CLAVE NO LLEVA EL NUMERO. Estos dos decian "sube 20.4 K" y "sube
+        # 16.4 K", y el numero cambia con cualquier cota que toque la salida --
+        # el 30-08 lo hizo dos veces. Un canario que falla porque su propio
+        # texto se movio no ha encontrado nada: se ata a la parte del mensaje
+        # que identifica al aserto, no a su resultado.
         (guarda_aire, {"taco_largo": 90.0},
-         "sube 20.4 K", "una tira continua en vez de tacos ahoga la salida"),
+         "sobre ambiente", "una tira continua en vez de tacos ahoga la salida"),
         (guarda_aire, {"potencia_disipada": 14.0},
-         "sube 16.4 K", "14 W no caben en esta salida"),
+         "sobre ambiente", "14 W no caben en esta salida"),
         (guarda_rendija, {"techo_labio": 18.0},
          "el agua sube", "con el labio en 18 el solape baja a 6.5 y el agua sube 6.2"),
-        (guarda_rendija, {"compresion_taco": 0.4},
-         "el agua sube", "un taco que cede el 40 % deja 1.8 de luz y el agua sube 8.3"),
+        (guarda_rendija, {"compresion_taco": compresion_roja},
+         "el agua sube", f"un taco que cede el {compresion_roja*100:.0f} % "
+         f"estrecha la rendija por debajo de los {_d_crit:.2f} mm que el "
+         f"solape de {_solape:.1f} aguanta"),
         # LA BRIDA EN SU CAJEADO. El primero es el que justifica que el fondo
         # del rebaje no pueda crecer "un poco mas" para tener holgura de
         # fresado: se come la pletina bajo las roscas ciegas. Que esta mutacion
@@ -3068,6 +3148,14 @@ def guarda_miembro_alto(p: dict[str, float]) -> None:
         f"la brida lleva esquinas de R{p['radio_brida']:g} y el cajeado, "
         f"fresado con Ø{p['fresa_d']:g}, las deja en R{p['fresa_d']/2:g}: la "
         f"brida se monta sobre el radio y no asienta")
+    # Y POR ARRIBA (2026-08-30, tras el revisor): un radio grande se come la
+    # esquina donde va el M4 de dentro, que esta a brida_raiz del doblez. Con
+    # el radio pasado de la mitad del ancho la brida deja de ser un rectangulo
+    # redondeado y pasa a ser un ovalo, y su huella ya no cubre el cajeado.
+    assert p["radio_brida"] <= p["brida_ancho"] / 2 - 1e-9, (
+        f"la brida lleva R{p['radio_brida']:g} sobre un ancho de "
+        f"{p['brida_ancho']:g}: pasado el medio ancho deja de ser un "
+        f"rectangulo redondeado, y su huella no cubre el cajeado")
 
     relieve = (P[5][1] - t) - (m["y_labio"] + p["techo_labio"]) if _chaflan_p5(p) else 0.0
     au = perfil(p)["ancho_util"]
@@ -3895,6 +3983,14 @@ def guarda_tramo_trasero(p: dict[str, float]) -> None:
         f"la pared entre el bolsillo de la trasera y el del costado mide "
         f"{bo['pared']:g} contra {PARED_MIN_ANILLO:g} de minimo: pared de "
         f"{bo['pared']:g} contra {PARED_MIN_ANILLO:g}")
+    # POR ARRIBA la manda la franja: la pared, el bolsillo y lo que entra el
+    # costado tienen que caber en cara_anillo_trasera, y esa franja es lo que
+    # se ve de aluminio desde el lado. Sin este lado, pared = 100 quedaba verde
+    # y el anillo salia con una franja trasera de 119 (revisor del 30-08).
+    assert _cara_anillo_trasera(p) <= p["cara_anillo"] + 6.0 + 1e-9, (
+        f"la franja del tramo trasero mide {_cara_anillo_trasera(p):g} y la de "
+        f"los otros seis tramos {p['cara_anillo']:g}: mas de 6 de diferencia "
+        f"deja de leerse como el mismo anillo y se ve un escalon desde el lado")
 
     # --- lo que entra el costado, contra la franja de ESTE tramo -----------
     entra = _cara_anillo_trasera(p) - bo["rebaje_costado"]
@@ -3903,6 +3999,14 @@ def guarda_tramo_trasero(p: dict[str, float]) -> None:
         f"en el tramo trasero el costado entra {entra:.2f} en su bolsillo "
         f"(franja {_cara_anillo_trasera(p):g} - rebaje {bo['rebaje_costado']:g}); "
         f"se piden 3: el costado entra {entra:.2f}")
+    # Y POR ARRIBA: lo que entra el costado sale de la franja, asi que pasado
+    # el rebaje del costado de los otros tramos ya no es "la excepcion del
+    # tramo trasero" sino otro anillo. El costado entra 6 en los seis tramos.
+    assert entra <= p["rebaje_anillo"] + 1e-9, (
+        f"el costado entra {entra:.2f} en el tramo trasero y {p['rebaje_anillo']:g} "
+        f"en los otros seis: aqui entra MENOS por diseno (la trasera ocupa el "
+        f"sitio), nunca mas -- si hace falta mas, lo que hay que mover es el "
+        f"bolsillo de la trasera")
 
     # --- el labio del bolsillo bajo los dos labios de chapa ----------------
     # Donde hay chapa, el rebaje (z = 11..14) se come los 3 de arriba del labio

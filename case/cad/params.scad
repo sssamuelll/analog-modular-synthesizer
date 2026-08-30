@@ -166,7 +166,18 @@ techo_labio     = 20;
 // la subida capilar va con 1/d: a 2.5 el agua sube 5.9 contra 6.5 de solape, y
 // a 1.5 de luz local -- una plancha alabeada -- sube 9.8 y se mete dentro.
 // Es tambien el grosor de los tacos: el taco ES la luz.
-aire_labios     = 3.0;
+// 4.0 DESDE LA REVISION DEL 30-08. Con 3.0 la cuenta capilar cerraba, pero la
+// TERMICA no: el area de salida se calculaba con la luz nominal mientras la
+// puerta capilar ya usaba la comprimida -- dos puertas sobre la misma junta,
+// cada una con su estado. Con la comprimida en las dos (2.4 de 3.0) el case
+// sube 14.8 K contra un techo de 15 con el C_D pesimista: 0.2 K, que no es
+// margen. Con 4.0 la luz comprimida es 3.2, el area sube de 1081 a 1442 mm2 y
+// quedan 13.6 K -- 1.4 de margen. Y la capilaridad MEJORA de paso, porque la
+// subida va con 1/d: baja de 6.2 a 4.7 mm contra 8.5 de solape.
+// Lo que cuesta: el rebaje se ensancha a 4.5 (la fresa de Ø3 sigue entrando),
+// la trasera retrocede 1 mas y la franja del tramo trasero pasa de 22 a 23 --
+// un milimetro mas de aluminio visto desde el lado.
+aire_labios     = 4.0;
 // LAS PESTANAS del pie: lanzadas de la chapa (cortadas por tres lados y
 // dobladas 90 hacia arriba con radio_doblez_pestana) detras del canto de
 // abajo de la trasera: su tope hacia dentro entre los anillos, que a los
