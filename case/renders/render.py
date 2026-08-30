@@ -57,8 +57,36 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
 
+OPENSCAD = r"C:\Program Files\OpenSCAD\openscad.exe"
+
+
+def _fuentes_mtime() -> float:
+    """La fecha del .scad mas nuevo del que cuelga la geometria."""
+    cad = os.path.join(AQUI, "..", "cad")
+    return max(os.path.getmtime(os.path.join(cad, f))
+               for f in ("sam17_case.scad", "params.scad"))
+
+
 def importar(nombre):
+    """Carga un ensamblado, EXPORTANDOLO ANTES si el .scad es mas nuevo.
+
+    HASTA EL 2026-08-30 ESTO SOLO CARGABA EL STL QUE HUBIERA, y es la clase de
+    fallo que no avisa: el render sale, sus dos metricas pasan, el fichero se
+    escribe... y ensena el modelo de hace tres horas. Ese dia estuve mirando
+    renders del techo VIEJO -- con la brida asomando 0.5 mm, ya corregida --
+    mientras el .blend de piezas, que si comprueba frescura, salia limpio. Una
+    imagen que dice ser del modelo y es de otro es peor que ninguna imagen,
+    porque se juzga mirando y aqui lo visual se decide asi.
+    """
+    import subprocess
+
     ruta = os.path.join(AQUI, "build", nombre + ".stl")
+    scad = os.path.join(AQUI, "..", "cad", "sam17_case.scad")
+    if not os.path.exists(ruta) or os.path.getmtime(ruta) < _fuentes_mtime():
+        print(f"exportando {nombre} (el STL estaba viejo o no estaba)")
+        os.makedirs(os.path.dirname(ruta), exist_ok=True)
+        subprocess.run([OPENSCAD, "-o", ruta, "-D", f'PART="{nombre}"', scad],
+                       check=True, capture_output=True)
     try:
         bpy.ops.wm.stl_import(filepath=ruta)          # Blender 4/5
     except AttributeError:
