@@ -649,10 +649,16 @@ module cajeado_brida_2d() {
     // hol_chapa alrededor de la huella: el canto de arriba del cajeado cae
     // en u = rehundido_chapa, justo donde muere el reborde, y el de abajo
     // 0.5 por encima del cierre del bolsillo (bolsillo_y_fin).
-    translate([brida_x_dob() - brida_largo - hol_chapa,
-               y_meseta() - brida_ancho - hol_chapa])
-        rect_redondeado_2d(cajeado_brida_largo(), cajeado_brida_ancho(),
-                           radio_cajeado_brida());
+    // Y como la huella de la brida lleva su esquina de arriba-atras cortada a
+    // 45 (paralela al chaflan de P5), el cajeado no pasa de u = rehundido_chapa
+    // tampoco ahi: un rectangulo sin cortar se comia el reborde en el chaflan.
+    intersection() {
+        translate([brida_x_dob() - brida_largo - hol_chapa,
+                   y_meseta() - brida_ancho - hol_chapa])
+            rect_redondeado_2d(cajeado_brida_largo(), cajeado_brida_ancho(),
+                               radio_cajeado_brida());
+        offset(delta = -rehundido_chapa) perfil_lateral();
+    }
 }
 
 // EL REBAJE DEL COSTADO, en planta: la silueta retirada cara - rebaje por
@@ -1340,11 +1346,17 @@ module miembro_alto() {
                  brida_largo,
                  brida_ancho, t_anillo - rebaje_chapa,
                  ancho_total - 2*(t_anillo - rebaje_chapa));
+        // El corte a 45 sigue al chaflan de la CHAPA, no al del anillo: la
+        // brida muere hol_chapa dentro de la pared del cajeado (u = 1.5). Con
+        // el corte en el contorno del anillo asomaba una lasca en el chaflan.
         if (remate_trasero_chaflan)
             translate([0, 0, -1])
                 linear_extrude(ancho_total + 2)
-                    polygon([[pf - c, yt], [pf, yt - c], [pf + 2, yt - c],
-                             [pf + 2, yt + 2], [pf - c, yt + 2]]);
+                    difference() {
+                        translate([-10, -10]) square([pf + 20, yt + 20]);
+                        offset(delta = -(rehundido_chapa + hol_chapa))
+                            perfil_lateral();
+                    }
     }
 }
 
