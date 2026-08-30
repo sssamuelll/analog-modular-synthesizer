@@ -105,11 +105,11 @@ apilado desaparece:
     (`2026-08-29-trasera-capturada-talon-nariz-design.md` §3).
   - *Enmienda (2026-08-30):* **sustituye la geometría operativa de la enmienda
     anterior en el tramo trasero y amplía el mecanizado del anillo.** La cara
-    interior lleva un rebaje de chapa de **3.5 × 3** y deja un reborde de
+    interior lleva un rebaje de chapa de **4.5 × 3** y deja un reborde de
     **1 × 3** a lo largo del contorno visible. Cada anillo lleva un cajeado de
     brida de **28 × 15.5 × 3**. Los radios pasan a **5.5** donde hay chapa y
     vuelven a 4.5 donde nariz o talón salen hacia el pie. La franja trasera
-    pasa a **22**: bolsillo u = 4.5..15.5, pared 3 y costado entrando 3.5; bajo
+    pasa a **23**: bolsillo u = 5.5..16.5, pared 3 y costado entrando 3.5; bajo
     los labios el labio del bolsillo queda con 3 de hondo y en el resto
     conserva 6. El cupón gana el rebaje de chapa y su reborde. El texto del
     29-08 queda como razón histórica del segundo bolsillo, no como cota de
@@ -322,7 +322,7 @@ de `E_aluminio` (el anillo sigue derivándose por flecha).
   el PLIEGO convertido en **punto de parada**, con la tabla de qué se mide cuando el
   cupón vuelve y qué se cambia si no pasa.
   **Corrección del 2026-08-30:** esa sección sustituye la sección anterior del
-  cupón y añade el rebaje de chapa de 3.5 × 3 con su reborde de 1 × 3. Las
+  cupón y añade el rebaje de chapa de 4.5 × 3 con su reborde de 1 × 3. Las
   plantas del anillo no llevan profundidades; el cupón y el PLIEGO sí.
 - Desincronizaciones de papel que la revisión encontró: el BOM aún dice «transversal
   2020», la spec del 27 dice chapa de 3, `params.scad` llama «portantes» a los costados.

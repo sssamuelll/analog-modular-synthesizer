@@ -233,9 +233,9 @@ lenguaje visual).
 >
 > **rev. 27** (2026-08-30): **techo macizo, salida por el alero y tres chapas
 > empotradas**. Techo, nariz y talón quedan rehundidos 1 en un rebaje de
-> 3.5 × 3 de la cara interior del anillo; los pies siguen a ras sobre la
+> 4.5 × 3 de la cara interior del anillo; los pies siguen a ras sobre la
 > tabla. El techo pierde las 16 ranuras, su labio pasa a 20 y la salida es la
-> rendija de 3.0 bajo el alero. El presupuesto térmico usa 9.22 W. La tabla,
+> rendija de 4.0 bajo el alero. El presupuesto térmico usa 9.22 W. La tabla,
 > con nariz y talón, entra con el anillo B; el chasis del PSU entra después por
 > el frente. Esta revisión sustituye la geometría y el montaje de la rev. 26
 > en esos puntos; conserva debajo el razonamiento que llevó a aquella.
@@ -480,9 +480,9 @@ comprobación va antes del paso destructivo).
 
 > **Enmienda rev. 27 — 2026-08-30.** Sustituye en esta sección los párrafos
 > operativos de «el techo y el talón» y «trasera» de la rev. 26. El techo queda
-> **macizo**, con labio de 20, y descarga por una rendija de 3.0 bajo el alero;
+> **macizo**, con labio de 20, y descarga por una rendija de 4.0 bajo el alero;
 > `guarda_aire()` cuenta 9.22 W. Las tres chapas —techo, nariz y talón— entran
-> rehundidas 1 en el rebaje de 3.5 × 3 del anillo, salvo los pies, que siguen a
+> rehundidas 1 en el rebaje de 4.5 × 3 del anillo, salvo los pies, que siguen a
 > ras sobre la tabla. La tabla se prepara con nariz y talón y **entra con el
 > anillo B**; el chasis del PSU se monta al final por el frente. El porqué de
 > la arquitectura sustituida se conserva en las viñetas siguientes.

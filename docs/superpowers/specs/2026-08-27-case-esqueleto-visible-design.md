@@ -439,7 +439,7 @@ borrarse: la cota no se perdió sola, se soltó a propósito.
 
 > **Enmienda del 2026-08-30.** La frase «La ventilación» dentro de «Lo que NO
 > se toca» queda **SUPERADA**. La salida ya cambió el 2026-08-28 y vuelve a
-> cambiar aquí: el techo queda macizo y la salida pasa a la rendija de 3.0 bajo
+> cambiar aquí: el techo queda macizo y la salida pasa a la rendija de 4.0 bajo
 > el alero. La geometría vigente la gobiernan `guarda_rendija()` y
 > `guarda_aire()`. Se conserva la frase vieja porque explica el límite que
 > tenía esta spec; ya no es una instrucción operativa.

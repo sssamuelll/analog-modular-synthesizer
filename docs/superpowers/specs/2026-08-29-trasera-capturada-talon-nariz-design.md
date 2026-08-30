@@ -67,8 +67,8 @@ hacia delante), tapa del valle, rieles.
 ### 3.1 El bolsillo del tramo trasero
 
 > **Corrección del 2026-08-30 — sustituye las cotas de este apartado.** El
-> bolsillo va en **u = 4.5..15.5**. Después quedan una pared de 3 y los 3.5 que
-> entra el costado; por eso la franja trasera pasa a 22. Bajo los labios del
+> bolsillo va en **u = 5.5..16.5**. Después quedan una pared de 3 y los 3.5 que
+> entra el costado; por eso la franja trasera pasa a 23. Bajo los labios del
 > techo y del talón, el labio del bolsillo queda con **3 de hondo**: los otros
 > 3 los ocupa el rebaje de chapa. En el resto conserva 6. El bolsillo sigue
 > cerrado por los dos extremos; cambia su sección, no el motivo de capturar la
@@ -149,8 +149,8 @@ solo en z 0 … 8 (encima, el bolsillo de la trasera); u 14 … 17 macizo (la pa
 
 > **Corrección del 2026-08-30 — sustituye el rehundido de 4 que sigue.** La
 > plancha conserva **552.32 × 237.18** en PMMA de 8 y sigue sin taladros. Su
-> cara vista queda a **5.5** del plano trasero. Retrocede 1.5 para dejar la
-> rendija de 3.0 entre la cara interior del labio empotrado y la plancha.
+> cara vista queda a **6.5** del plano trasero. Retrocede 2.5 para dejar la
+> rendija de 4.0 entre la cara interior del labio empotrado y la plancha.
 
 Una plancha de 8 de **552.32 × 237.18**, la misma en las dos variantes, sin un
 taladro ni una muesca pasante. Sus puntas entran 5.85 en los bolsillos (6 menos
@@ -177,8 +177,8 @@ mueven; KONDOR baja 7.
 ### 3.5 Arriba y abajo: labio por fuera, y por qué no hay canal
 
 > **Corrección del 2026-08-30 — sustituye las tiras continuas de 2.5.** Cada
-> labio lleva **seis tacos adhesivos de EPDM de 3.0 × 15**. Son doce en total.
-> Con 20 % de compresión dejan **2.40** de luz. En el techo, los vanos entre
+> labio lleva **seis tacos adhesivos de EPDM de 4.0 × 15**. Son doce en total.
+> Con 20 % de compresión dejan **3.20** de luz. En el techo, los vanos entre
 > tacos forman la **salida de aire por la rendija del alero**; una tira
 > continua la cerraría. El talón usa la misma junta para sostener la plancha,
 > aunque su rendija no entra en el presupuesto de salida.
@@ -374,7 +374,7 @@ tuerca y arandela de nylon que se veían a través del acrílico, fuera.
 
 > **Corrección del 2026-08-30 — sustituye la lectura operativa de las filas
 > antiguas que siguen debajo.** `guarda_trasera_capturada()` conserva la captura
-> de la plancha; la pared de 3, el bolsillo en u = 4.5..15.5 y el costado que
+> de la plancha; la pared de 3, el bolsillo en u = 5.5..16.5 y el costado que
 > entra 3.5 pasan a `guarda_tramo_trasero()`. Bajo los dos labios de chapa el
 > bolsillo tiene 3 de hondo; en el resto conserva 6. `guarda_aire()` ya no busca
 > ranuras en el techo: con 9.22 W cuenta la rendija del alero y las dos ondas.
@@ -407,13 +407,13 @@ el modelo después, VERDE, y romper cada puerta nueva a propósito.
 ## 8. Lo que cambia para el taller
 
 > **Corrección del 2026-08-30 — sustituye el alcance de taller de las viñetas
-> antiguas que siguen debajo.** El anillo lleva el rebaje de chapa de 3.5 × 3,
-> un cajeado de brida de 28 × 15.5 × 3 por anillo y la franja trasera de 22 con
-> el bolsillo en u = 4.5..15.5. Bajo los dos labios de chapa el bolsillo tiene
+> antiguas que siguen debajo.** El anillo lleva el rebaje de chapa de 4.5 × 3,
+> un cajeado de brida de 28 × 15.5 × 3 por anillo y la franja trasera de 23 con
+> el bolsillo en u = 5.5..16.5. Bajo los dos labios de chapa el bolsillo tiene
 > 3 de hondo; en el resto conserva 6. El techo queda macizo, con labio de 20 y
-> blank de 593.02 × 73.85. Los blanks vigentes son 545.62 × 41.23 para el talón
-> y 545.62 × 49.195 para la nariz; ambos llevan la muesca de 2.65 y el alivio
-> Ø2. La junta de los labios son doce tacos adhesivos de 3.0 × 15, seis por
+> blank de 593.02 × 73.85. Los blanks vigentes son 545.62 × 42.23 para el talón
+> y 545.62 × 50.20 para la nariz; ambos llevan la muesca de 2.65 y el alivio
+> Ø2. La junta de los labios son doce tacos adhesivos de 4.0 × 15, seis por
 > labio. El detalle ejecutable está en `case/PLIEGO.md`, rev. 27.
 
 - **Mecanizado**: en la cara interior de cada anillo, el bolsillo de 11 × 6 a lo
@@ -441,13 +441,13 @@ el modelo después, VERDE, y romper cada puerta nueva a propósito.
 ## 9. Lo que este documento NO cierra
 
 > **Corrección del 2026-08-30 — sustituye aquí la tira de EPDM y la lectura de
-> la junta como cierre.** La junta vigente son seis tacos de 3.0 × 15 por
-> labio. En el techo, la rendija nominal de 3.0 entre tacos es la salida de
+> la junta como cierre.** La junta vigente son seis tacos de 4.0 × 15 por
+> labio. En el techo, la rendija nominal de 4.0 entre tacos es la salida de
 > aire. Ya no queda abierta la elección entre tira y resalte: lo que sí queda
 > para la primera pieza es comprobar el derrame y la compresión real de los
 > tacos. Las viñetas antiguas se conservan para mostrar qué incertidumbre fue
 > cerrada. También quedan cerradas aquí las viñetas del labio de 18 y del
-> costado a 3: el techo vigente tiene labio de 20, la franja trasera mide 22 y
+> costado a 3: el techo vigente tiene labio de 20, la franja trasera mide 23 y
 > el costado entra 3.5. La variante vigente es B; A queda solo como razonamiento
 > histórico.
 

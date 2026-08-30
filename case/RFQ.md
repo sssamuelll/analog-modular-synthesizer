@@ -5,7 +5,7 @@ Documento para pedir presupuesto. Va **antes** que el pliego
 para saber **quién puede hacerlo**.
 
 > **rev. 26 (2026-08-30).** **Al mecanizado (§D):** en la cara interior de
-> cada anillo entra el rebaje de chapa de 3.5 × 3 y un cajeado de brida de
+> cada anillo entra el rebaje de chapa de 4.5 × 3 y un cajeado de brida de
 > 28 × 15.5 × 3; son dos cajeados en total. La única pregunta abierta de esta
 > tanda es si el taller sostiene el reborde de 1 × 3. **A la chapa (§B):** el
 > techo queda macizo, sin sus 16 ranuras. Son menos operaciones; no aparece
@@ -50,7 +50,7 @@ para saber **quién puede hacerlo**.
 > | § | taller | qué se le pide |
 > |---|---|---|
 > | A | casa de acrílico | costados ×2, trasera — **ninguna con taladros** |
-> | B | chapa de aluminio (y acero) | **techo macizo** (sin ranuras, labio de 20, bridas R2), **talón** (pie de 21.5 y muescas), **nariz** (pie de 19.5 y muescas), **marco de la ventana ×2**, tapa del valle, chasis ×3 |
+> | B | chapa de aluminio (y acero) | **techo macizo** (sin ranuras, labio de 20, bridas R2), **talón** (pie de 22.5 y muescas), **nariz** (pie de 20.5 y muescas), **marco de la ventana ×2**, tapa del valle, chasis ×3 |
 > | C | carpintería | la tabla (suelo + zócalo) |
 > | D | mecanizado de aluminio | el anillo ×2, con rebaje de chapa y cajeado de brida por la cara interior |
 
@@ -162,7 +162,7 @@ Es el taller que ya hace las tres piezas del chasis de acero. **No es un
 taller nuevo**, pero desde el 2026-08-28 **ya no hace la costilla** — esa
 pieza se mecaniza en un taller aparte (§D). Lo que sí hace: el **techo
 macizo** (blank 593.02 × 73.85, sin ranuras, labio de 20 y una brida R2 en
-cada punta), el **talón** (blank 545.62 × 41.23, pie de 21.5 con muescas y
+cada punta), el **talón** (blank 545.62 × 42.23, pie de 22.5 con muescas y
 ocho pestañas lanzadas), la
 **nariz** (la banda del frente, tres dobleces), los
 dos **marcos de la ventana** (pletina de 6 cortada a láser, con seis cajeados
@@ -286,10 +286,10 @@ maciza de 14 mm**, vaciada por el centro, una pieza por lado.
    silueta exterior, la pared del rebaje y la del bolsillo de la trasera)?
    Son 14 M4 en la cara interior y 3 M5 en el canto inferior, por anillo. En
    esa misma cara interior van tres operaciones nuevas de la rev. 26:
-   el **rebaje de chapa de 3.5 de ancho × 3 de fondo**, solo por el contorno
+   el **rebaje de chapa de 4.5 de ancho × 3 de fondo**, solo por el contorno
    donde se ve chapa; **un cajeado de brida por anillo, 28 × 15.5 × 3**, con
-   esquina interior R1.5; y el tramo trasero de 22, con bolsillo en
-   u = 4.5..15.5, pared de 3 y el costado entrando 3.5. Bajo los dos labios de
+   esquina interior R1.5; y el tramo trasero de 23, con bolsillo en
+   u = 5.5..16.5, pared de 3 y el costado entrando 3.5. Bajo los dos labios de
    chapa el labio del bolsillo queda con 3 de hondo; en el resto conserva 6.
 4. ¿Hacen **chaflán mecanizado de 1.5 × 45°** en dos aristas de la cara
    vista, por pieza?
@@ -331,7 +331,7 @@ spec de diseño; el cupón es lo que las cierra contra la pieza real, no contra
 el render.
 
 Desde la rev. 26, ese mismo cupón reproduce además el **rebaje de chapa de
-3.5 × 3 y el reborde de 1 × 3**. Es la pared delicada que se valida antes del
+4.5 × 3 y el reborde de 1 × 3**. Es la pared delicada que se valida antes del
 anillo completo.
 
 El plano es **`plans/cupon_anillo_2d.dxf`**: la sección del perfil, a 1:1 y en
