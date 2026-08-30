@@ -298,8 +298,11 @@ del marco arranca 0.5 más allá de la pared del bolsillo de la trasera
 (`_retiro_marco_trasera` = `t_anillo` + 0.5 = 14.5 hoy); con el bolsillo en u =
 4.5..15.5 arranca en **16**, 1.5 más adentro, y la pata de `marco_fondo_trasera`
 = 28 perdería ese ancho. **Pasa a 30**: con el retiro en 16 la fórmula vigente
-de `guarda_marco_ventana()` da **1.45 mm y 106 MPa** (techos 2 mm y 130); con 28
-quedaría por un pelo.
+de `guarda_marco_ventana()` da **1.70 mm y 112 MPa** (techos 2 mm y 130); con 28
+quedaría por un pelo (**123 MPa**, y a 26 se pone roja). Corregido el 30-08 al
+correr la puerta: este párrafo decía 1.45 mm y 106 MPa, que son los de un
+retiro de 14.5 — el viejo. La decisión (30, no 28) no cambia; el número con que
+se justificaba, sí.
 
 ### 4.6 Nariz y talón
 
@@ -410,7 +413,8 @@ renders del repo, porque lo que se juzga aquí es una esquina.
   fresa de Ø3 y los DXF a cota final, como hoy; las profundidades en el PLIEGO y
   en el **cupón** (§"El cupón" del PLIEGO), que gana el rebaje y su reborde.
 - **Chapa:** el techo **sin ranuras**, labio de 20 y esquinas de brida a R2
-  (blank 593.00 × 73.85, era 588.00 × 71.85); talón y nariz con lo que entra a
+  (blank **593.02** × 73.85, era 588.00 × 71.85; el 593.00 de la quinta versión
+  redondeaba el bend deduction, y el pliego va a cota); talón y nariz con lo que entra a
   545.62, los pies a 540.32, la muesca de 2.65 en cada punta hasta la línea de
   doblez y su alivio de Ø2; el talón con el pie a 21.5 (blank 545.62 × 41.23).
   Nada nuevo que plegar.

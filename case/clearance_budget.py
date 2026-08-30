@@ -481,8 +481,13 @@ def _trasera_campo(p: dict[str, float]) -> tuple[float, float]:
 
 
 def _entre_anillos(p: dict[str, float]) -> float:
-    """Lo que mide una chapa que va entre las caras interiores de los
-    anillos con hol_piel a cada lado: la nariz, el talon, el techo."""
+    """Lo que mide una chapa que va entre las CARAS interiores de los anillos
+    con hol_piel a cada lado.
+
+    Desde el 2026-08-30 esto solo vale para los tramos que NO entran en el
+    rebaje: los pies de la nariz y del talon, que apoyan a ras en la tabla. Lo
+    que entra en rebaje mide mas -- _chapa_largo_rebaje() -- y es lo que manda
+    el blank; la diferencia se corta como muesca en cada punta del pie."""
     return perfil(p)["ancho_util"] - 2 * p["hol_piel"]
 
 
@@ -2668,6 +2673,15 @@ def canario_techo(p: dict[str, float]) -> None:
          "el agua sube", "con el labio en 18 el solape baja a 6.5 y el agua sube 6.2"),
         (guarda_rendija, {"compresion_taco": 0.4},
          "el agua sube", "un taco que cede el 40 % deja 1.8 de luz y el agua sube 8.3"),
+        # LA BRIDA EN SU CAJEADO. El primero es el que justifica que el fondo
+        # del rebaje no pueda crecer "un poco mas" para tener holgura de
+        # fresado: se come la pletina bajo las roscas ciegas. Que esta mutacion
+        # tambien ponga roja a guarda_rebaje_chapa da igual -- el canario llama
+        # a guarda_miembro_alto DIRECTAMENTE, que es para lo que existe.
+        (guarda_miembro_alto, {"rebaje_chapa": 6.5},
+         "de pletina", "con un cajeado de 6.5 quedan 7.5 de pletina bajo los M4 ciegos"),
+        (guarda_miembro_alto, {"radio_brida": 1.0},
+         "no asienta", "una brida a R1 se monta sobre el R1.5 que deja la fresa"),
     )
     for guarda, cambios, clave, que in casos:
         roto = dict(p)
@@ -2917,7 +2931,12 @@ def _talon(p: dict[str, float]) -> dict:
             "pestana_z": [p["t_anillo"] + au * (2 * i + 1) / (2 * p["talon_pestana_n"])
                           for i in range(int(round(p["talon_pestana_n"])))],
             "pestana_dev": p["talon_pestana_alto"] + t - _bd_pestana(p),
-            "largo": _entre_anillos(p),
+            # EL BLANK MIDE LO QUE ENTRA EN REBAJE (2026-08-30), no lo que hay
+            # entre caras: el labio y el chaflan van empotrados y ganan 5.3.
+            # "largo_pie" es lo que queda tras la muesca, y es lo que apoya.
+            "largo": _chapa_largo_rebaje(p),
+            "largo_pie": _entre_anillos(p),
+            "muesca": _muesca_pie(p),
             "desarrollo": (p["talon_labio"] + c * math.sqrt(2) + p["talon_pie"]
                            - 2 * _bd_angulo(p, 45.0)),
             "z0": p["t_anillo"] + p["hol_piel"],
@@ -2934,7 +2953,10 @@ def bbox_desarrollo_miembro(p: dict[str, float], cual: str) -> tuple[float, floa
     mide lo que hay entre anillos."""
     bd90, bd45 = _bd_miembro(p), _bd_angulo(p, 45.0)
     if cual == "trasero alto":
-        au = perfil(p)["ancho_util"]
+        # LO QUE ENTRA EN REBAJE (2026-08-30): el techo tambien se empotra, y
+        # su blank crece 5.0 sobre el ancho_util de antes. Las bridas siguen
+        # saliendo de las puntas de ESE ancho.
+        au = _chapa_largo_rebaje(p)
         alto = p["retorno_meseta"] - _bd_angulo(p, 90.0 - p["angulo_superior"])
         if _chaflan_p5(p):
             alto += (p["prof_sup"] - p["chaflan_nariz"]
@@ -2999,14 +3021,44 @@ def guarda_miembro_alto(p: dict[str, float]) -> None:
         f"el canto de abajo de la brida (y={b['rect'][2]:.2f}) y el fin del "
         f"bolsillo de la trasera (y={bo['y_fin']:.2f}) se llevan "
         f"{b['rect'][2] - bo['y_fin']:.2f}; se pide 1.0 de cara entre los dos")
+    # --- LA BRIDA EN SU CAJEADO (2026-08-30) --------------------------------
+    # Dejo de apoyar en la cara del anillo y apoya en un cajeado de
+    # rebaje_chapa de fondo. El cambio va en la direccion segura -- se aleja del
+    # barrido del panel en vez de acercarse, ver el bloque de brida_largo en
+    # params.scad -- pero se paga en pletina bajo las roscas ciegas.
+    pletina = p["t_anillo"] - p["rebaje_chapa"]
+    assert pletina >= 8.0 - 1e-9, (
+        f"bajo el suelo del cajeado de la brida quedan {pletina:g} de pletina "
+        f"(t_anillo {p['t_anillo']:g} - rebaje_chapa {p['rebaje_chapa']:g}) y "
+        f"ahi van dos M4 ciegos: se piden 8 para que la rosca tenga hilos y el "
+        f"anillo no se abra por detras")
+    # El cajeado es la huella de la brida mas hol_chapa por lado, en las dos
+    # direcciones. Si fueran distintas, la brida se posicionaria por el lado
+    # apretado y el rebaje dejaria de ser el que manda.
+    caj_l = p["brida_largo"] + 2 * p["hol_chapa"]
+    caj_a = p["brida_ancho"] + 2 * p["hol_chapa"]
+    assert caj_l > p["brida_largo"] and caj_a > p["brida_ancho"], (
+        f"el cajeado de la brida ({caj_l:g} x {caj_a:g}) no deja holgura sobre "
+        f"su huella ({p['brida_largo']:g} x {p['brida_ancho']:g})")
+    # Y LA BRIDA VA REDONDEADA MAS QUE SU CAJEADO: la fresa deja las esquinas
+    # interiores a fresa_d/2, y una brida de esquina viva no asienta en ellas
+    # -- se queda montada sobre el radio y trabaja en voladizo.
+    assert p["radio_brida"] >= p["fresa_d"] / 2 - 1e-9, (
+        f"la brida lleva esquinas de R{p['radio_brida']:g} y el cajeado, "
+        f"fresado con Ø{p['fresa_d']:g}, las deja en R{p['fresa_d']/2:g}: la "
+        f"brida se monta sobre el radio y no asienta")
+
     relieve = (P[5][1] - t) - (m["y_labio"] + p["techo_labio"]) if _chaflan_p5(p) else 0.0
     au = perfil(p)["ancho_util"]
     print(f"techo: meseta {p['prof_sup']:g} y {como} en {t:g}, I={m['I']:.0f} mm4; "
           f"SOLO con {p['carga_mano']:.0f} N al centro de {au:.2f} cede "
           f"{m['flecha']:.2f} mm y trabaja a {m['sigma']:.0f} MPa (Rp0.2 "
           f"{RP02_ALUMINIO:.0f}); sin canal, la tapa de arriba no pierde grados")
-    print(f"  brida de {p['brida_largo']:g} x {p['brida_ancho']:g} en la cara del "
-          f"anillo, bajo la muesca del marco; M4 a {s_in:.2f} y {s_out:.2f} del "
+    print(f"  brida de {p['brida_largo']:g} x {p['brida_ancho']:g} (R"
+          f"{p['radio_brida']:g}) en un cajeado de {caj_l:g} x {caj_a:g} x "
+          f"{p['rebaje_chapa']:g} en la cara interior del anillo, con "
+          f"{pletina:g} de pletina bajo sus roscas, "
+          f"bajo la muesca del marco; M4 a {s_in:.2f} y {s_out:.2f} del "
           f"doblez, {b['m4'][0][1] - bo['y_fin']:.2f} por encima del fin del "
           f"bolsillo de la trasera"
           + (f"; relieve de {relieve:.2f} junto al chaflan" if relieve > 0 else ""))
@@ -4735,7 +4787,11 @@ def _nariz(p: dict[str, float]) -> dict:
     return {"contorno": contorno, "s_top": s_top, "cara": cara,
             "m4_x": c + p["nariz_pie"] - 1.5 * p["d_M4_paso"],
             "m4_z": [p["t_anillo"] + au * f for f in (0.25, 0.5, 0.75)],
-            "largo": au - 2 * p["hol_piel"], "desarrollo": desarrollo,
+            # Igual que el talon: el blank es lo que entra en rebaje (chaflan y
+            # frente empotrados), y el pie queda en largo_pie tras la muesca.
+            "largo": _chapa_largo_rebaje(p), "desarrollo": desarrollo,
+            "largo_pie": au - 2 * p["hol_piel"],
+            "muesca": _muesca_pie(p),
             "z0": z0, "z1": p["ancho_total"] - z0}
 
 
