@@ -1028,8 +1028,32 @@ def anillo_tiene_ventana() -> list[str]:
                 f"punto peor y cara_anillo dice {p['cara_anillo']:g}. O la "
                 f"ventana se dibujo con otro offset, o alguien le metio mano "
                 f"al contorno: lo que se ve del case es este ancho"]
+    # EL TRAMO TRASERO ES LA EXCEPCION, y hasta el 2026-08-30 esta puerta era
+    # CIEGA a el. Su canto de ventana esta a cara_anillo_trasera del plano
+    # trasero (22 desde que el bolsillo se corrio con la rendija; antes 20), y
+    # la medida de arriba no lo ve: para esos dos vertices el punto de silueta
+    # mas cercano no es el plano trasero sino el chaflan de arriba o el de
+    # abajo, que caen a 20 justos. O sea que el anillo podia salir con la
+    # franja trasera en cualquier ancho y esto seguia verde. Se mide aparte, y
+    # contra el DERIVADO: cara_anillo_trasera no es un parametro, sale del
+    # bolsillo mas su pared mas lo que entra el costado.
+    ct = cb._cara_anillo_trasera(p)
+    x_ct = cb.fondo(p) - ct
+    canto_tras = [a for j in ventana for a in [aristas[j]]
+                  if abs(a[0][0] - x_ct) <= CARA_DXF_MAX
+                  and abs(a[1][0] - x_ct) <= CARA_DXF_MAX
+                  and abs(a[0][1] - a[1][1]) > 100.0]
+    if not canto_tras:
+        xs = sorted({round(q[0], 2) for j in ventana for q in aristas[j]})
+        return [f"costilla_2d: la ventana no tiene canto trasero a plomo en "
+                f"x = {x_ct:.2f} (cara_anillo_trasera = {ct:g} del plano "
+                f"trasero, derivado del bolsillo + pared + entrada del "
+                f"costado). Su canto mas atrasado esta en x = {xs[-1]:.2f}, "
+                f"o sea a {cb.fondo(p) - xs[-1]:.2f} del plano trasero"]
+
     print(f"  costilla_2d: anillo de cara {min(ds):.2f}..{max(ds):.2f} mm "
-          f"(cara_anillo {p['cara_anillo']:g}) entre silueta y ventana")
+          f"(cara_anillo {p['cara_anillo']:g}) entre silueta y ventana, y "
+          f"{ct:g} en el tramo trasero (derivado)")
     return []
 
 
