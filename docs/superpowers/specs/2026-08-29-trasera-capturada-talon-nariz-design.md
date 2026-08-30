@@ -254,14 +254,14 @@ cada pestaña), cuatro pestañas dejan la mano baja entre dos de ellas a 9.8 MPa
 por un pelo, y pasar por un pelo no es pasar —; ocho la dejan en 8.9 (§7,
 `guarda_trasera_flexion()`). La más cargada recibe 159 N, y como lengüeta de
 23.5 × 1.5 en la raíz (los 25 menos lo que muerde el alivio, 0.75 por lado) con la
-carga en la punta (brazo 8 + 3) trabaja a 198 MPa: es lo que hace
+carga en la punta (brazo 8 + 3) trabaja a 199 MPa: es lo que hace
 **obligatorio el 6082-T6** del talón (Rp0.2 240; con los 130 genéricos no pasa
 ninguna lengüeta de 1.5 sin ser un peine). El radio: se pensó a 1 t y se deshizo en
 la ronda 4 del PR — el RFQ lo dejaba como pregunta abierta al taller, y si
 contestaban 2 t la lengüeta se quedaba a 234 contra 240 y el plano tras el
 chaflán en 2.64 contra 3: un diseño colgado de una respuesta. A 2 t, con 25 de
 ancho y 3.5 de aire, no hay pregunta; y el alivio es para que el doblez no rasgue
-la esquina viva del corte (a 198 MPa nominales, con Kt ≈ 2 en una esquina viva la
+la esquina viva del corte (a 199 MPa nominales, con Kt ≈ 2 en una esquina viva la
 chapa plastifica ahí y la pestaña tomaría deformación permanente: el aire dejaría
 de ser 3.5). Entre el doblez del chaflán y el de la pestaña quedan 3.14 de plano
 por la cuenta conservadora de `guarda_talon()` (tangentes exteriores a 7.9 y 11
@@ -341,7 +341,7 @@ tuerca y arandela de nylon que se veían a través del acrílico, fuera.
 | **nueva** `anillo_tiene_bolsillo_trasero()` (check_dxf) | relee del dorso el polígono del bolsillo: de u = 3 a 14, de y = 1 a P5.y − 17, cerrado, con el escalón bajo el chaflán (vértice en u = 5.5, y = 3.5) |
 | **cambia** `anillo_tiene_chaflan()` (check_dxf) | el chaflán de 6 en P0 y en P6 (y en P5 con la variante B) |
 | **cambia** `agujeros_donde_toca()` (check_dxf) | la trasera: cero agujeros, como el costado; el costado con su canto trasero a 17.15 |
-| **nueva** `guarda_trasera_flexion()` (budget) | §4.3: la trasera como PLACA por Lévy (exacta en y, 50 modos en x; apoyada en los bolsillos, libre arriba, las pestañas como tope unilateral a su aire de 3.5; la mano como presión en un disco de R = 10, integrada, no como puntos): la mano **barrida** en una rejilla de 16 × 16 sobre lo que se ve de la placa más la mano baja sobre cada pestaña, toda la mitad de abajo bajo `SIGMA_PMMA` = 10 (8.9 con ocho pestañas); la lengüeta más cargada, con la reacción en la punta, bajo el Rp0.2 del 6082-T6 (181 contra 240); combada sin pestañas (21 mm) no se sale del bolsillo (acorta 2.2 de los 5.85); la banda de arriba que pasa del techo se declara HUECO con su frontera **por bisección** (75 mm bajo el labio, desde y = 157, hasta 15 MPa en la mano más alta que cabe entera en lo visible). Contrastada con el revisor: 20.45 / 5.37 mm contra sus 20.35 / 5.38 (puntual, sin aire), y el 8.5 de la ronda 4 se mueve entre 8.49 y 8.53 de 50 a 200 modos y de 109 × 49 a 325 × 145 de malla; las constantes del PMMA (E, ν, R) viven una sola vez, junto a `SIGMA_PMMA`. `canario_trasera()` la rompe a propósito por seis lados y comprueba QUÉ aserto salta |
+| **nueva** `guarda_trasera_flexion()` (budget) | §4.3: la trasera como PLACA por Lévy (exacta en y, 50 modos en x; apoyada en los bolsillos, libre arriba, las pestañas como tope unilateral a su aire de 3.5; la mano como presión en un disco de R = 10, integrada, no como puntos): la mano **barrida** en una rejilla de 16 × 16 sobre lo que se ve de la placa, más la mano baja sobre cada pestaña y una rejilla fina a cuarto de paso alrededor de la que más carga una pestaña, toda la mitad de abajo bajo `SIGMA_PMMA` = 10 (8.9 con ocho pestañas); la lengüeta más cargada, con la reacción en la punta y la sección de su raíz (23.5: lo que deja el alivio), bajo el Rp0.2 del 6082-T6 (199 contra 240); combada sin pestañas (21 mm) no se sale del bolsillo (acorta 2.2 de los 5.85); la banda de arriba que pasa del techo se declara HUECO con su frontera **por bisección** (75 mm bajo el labio, desde y = 157, hasta 15 MPa en la mano más alta que cabe entera en lo visible). Contrastada con el revisor: 20.45 / 5.37 mm contra sus 20.35 / 5.38 (puntual, sin aire), y el 8.5 de la ronda 4 se mueve entre 8.49 y 8.53 de 50 a 200 modos y de 109 × 49 a 325 × 145 de malla; las constantes del PMMA (E, ν, R) viven una sola vez, junto a `SIGMA_PMMA`. `canario_trasera()` la rompe a propósito por ocho lados y comprueba QUÉ aserto salta |
 | **cambia** `guarda_anillo()` (budget) | `_seccion_anillo(tramo=5)`: el tramo trasero con sus dos bolsillos (−15 % de área, −36 % de inercia), no la sección genérica |
 | **cambia** `guarda_marco_ventana()` (budget) | `marco_fondo_trasera` ≥ `marco_fondo` (por debajo, el .scad dibujaría a `marco_fondo` y la gemela no) |
 | **nueva** `bridas_techo()` (check_dxf) | relee `miembro_alto_2d`: los cuatro M4 de brida donde el modelo los pone y, en B, el relieve de 0.5 y la esquina a 45° de cada brida — era la única chapa de la tanda sin puerta propia |

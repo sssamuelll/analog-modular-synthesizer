@@ -2636,10 +2636,14 @@ def _talon(p: dict[str, float]) -> dict:
     x_pie = x_ch - p["talon_pie"]
     au = perfil(p)["ancho_util"]
     tr = _trasera(p)
-    # el alivio va centrado en el corte (a w/2 + k/2 del eje de la pestana) con
-    # radio (alivio + kerf)/2: lo que pasa de medio corte lo muerde a la raiz de
-    # la pestana por dentro, y ensancha la ventana por fuera
-    k, r_al = p["corte_pestana"], (p["alivio_pestana"] + p["kerf"]) / 2
+    # el alivio va centrado en el corte (a w/2 + k/2 del eje de la pestana) y
+    # lo que pasa de medio corte lo muerde a la raiz de la pestana por dentro,
+    # y ensancha la ventana por fuera. Radio de la PIEZA, alivio/2: el .scad
+    # dibuja alivio + kerf para que el taladro SALGA a alivio (params.scad,
+    # kerf); la seccion que resiste es la cortada, no la dibujada. Con kerf
+    # distinto de 0 el corte en U, que no se compensa, tambien se lleva
+    # |kerf|/2 de cada canto de la pestana: lo avisa el AMARILLO del kerf
+    k, r_al = p["corte_pestana"], p["alivio_pestana"] / 2
     return {"x_band": xp - t, "x_chaflan": x_ch, "x_pie": x_pie,
             "pestana_raiz": p["talon_pestana_ancho"] - 2 * max(0.0, r_al - k / 2),
             "pestana_ventana": p["talon_pestana_ancho"] / 2 + max(k, k / 2 + r_al),
@@ -3045,15 +3049,19 @@ def guarda_trasera_flexion(p: dict[str, float]) -> None:
     manos += [(zc - p["t_anillo"], y_lo) for zc in _talon(p)["pestana_z"]
               if zc - p["t_anillo"] <= a / 2 + 1e-9]
     res = _placa_trasera_barrido(p, manos, "pestanas")
-    # y alrededor de la mano que mas carga una pestana, una rejilla de 5 x 5 a
-    # medio paso: el maximo de la rejilla gruesa iba un 3 % por debajo del real
+    # y alrededor de la mano que mas carga una pestana, una rejilla de 9 x 9 a
+    # cuarto de paso, recortada al campo (la mano que mas carga esta en el borde
+    # de abajo: por debajo no hay manos, no se pliegan) y sin repetir las que ya
+    # estan: el maximo de la rejilla gruesa iba un 3 % por debajo del real
     # (ronda 5 del revisor: 154 N contra 159 con 825 manos), y ese numero es el
     # que va al taller como justificacion del 6082-T6
     x_r, y_r = max(res, key=lambda r: max(r["reacciones"]))["mano"]
-    dx, dy = a / 32 / 2, (y_hi - y_lo) / 15 / 2
-    finas = [(min(x_r + i * dx, a / 2), min(max(y_r + j * dy, y_lo), y_hi))
-             for i in range(-2, 3) for j in range(-2, 3) if i or j]
-    res += _placa_trasera_barrido(p, [m for m in finas if m[0] > 0], "pestanas")
+    dx, dy = a / 32 / 4, (y_hi - y_lo) / 15 / 4
+    finas = sorted({(min(x_r + i * dx, a / 2), min(y_r + j * dy, y_hi))
+                    for i in range(-4, 5) for j in range(-4, 5)
+                    if x_r + i * dx > 0 and y_r + j * dy >= y_lo - 1e-9}
+                   - {r["mano"] for r in res})
+    res += _placa_trasera_barrido(p, finas, "pestanas")
     peor_abajo = max((r for r in res if r["mano"][1] <= b / 2), key=lambda r: r["sigma"])
     assert peor_abajo["sigma"] <= SIGMA_PMMA + 1e-9, (
         f"la trasera con {p['carga_mano']:.0f} N en ({peor_abajo['mano'][0]:.0f}, "
@@ -3090,7 +3098,7 @@ def guarda_trasera_flexion(p: dict[str, float]) -> None:
     peor = max(res, key=lambda r: r["sigma"])
     fallan = [r for r in res if r["sigma"] > SIGMA_PMMA]
     print(f"trasera como placa ({a:.0f} x {b:.0f} x {p['t_piel']:g}, mano de "
-          f"{p['carga_mano']:.0f} N en un disco de R={R:g}, {len(manos)} manos en media "
+          f"{p['carga_mano']:.0f} N en un disco de R={R:g}, {len(res)} manos en media "
           f"placa; {len(tl_z := _talon(p)['pestana_z'])} pestanas a "
           f"{p['talon_pestana_aire']:g} de aire): al centro cede "
           f"{centro['flecha_carga']:.1f} mm bajo la mano a {centro['sigma']:.1f} MPa; "

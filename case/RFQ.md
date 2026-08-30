@@ -182,7 +182,7 @@ la trasera, muertos esa misma noche, ya no existen.)
    111 con 20 kg en el centro de la meseta; y también el anillo de §D, cada
    pieza con su propia puerta). **Para el talón SÍ lo es: 6082-T6 (Rp0.2 ≥
    240)**, porque sus ocho lengüetas sujetan el canto de abajo de la trasera
-   y la más cargada trabaja a 198 MPa en la raíz (23.5: los 25 menos lo que
+   y la más cargada trabaja a 199 MPa en la raíz (23.5: los 25 menos lo que
    muerde el alivio) con la carga en la punta — con 130 no pasa ninguna
    lengüeta de 1.5 (`guarda_trasera_flexion()`). Una aleación
    distinta **hay que aprobarla antes de cortar**, regenerando las puertas si
