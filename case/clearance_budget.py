@@ -2026,6 +2026,85 @@ def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
 # perforada y ranurada, y es el numero que mas manda en el resultado.
 RHO_AIRE, CP_AIRE, G, T_AMB = 1.2, 1005.0, 9.81, 293.0
 CD_TIRO = 0.65
+# El extremo pesimista del rango, para publicar el resultado por los dos lados.
+# Una rendija larga y estrecha bajo un alero no descarga como chapa ranurada, y
+# nadie ha medido cual de los dos es. Se imprime, no se aseverea.
+CD_TIRO_PESIMISTA = 0.55
+
+# Tension superficial del agua y su densidad a 20 C. Van aqui y no dentro de
+# guarda_rendija() porque son fisica, como RHO_AIRE: el mojado TOTAL (angulo de
+# contacto cero) es el peor caso y es lo que se supone -- aluminio anodizado
+# limpio moja bastante, y un aluminio sucio moja mas todavia.
+GAMMA_AGUA, RHO_AGUA = 0.073, 1000.0
+
+
+def _rendija(p: dict[str, float]) -> tuple[float, float]:
+    """LA SALIDA DE AIRE desde el 2026-08-30: la rendija entre la cara interior
+    del labio del techo y la cara vista de la trasera, mirando al SUELO, tapada
+    por el vuelo del techo.
+
+    Sustituye a las 16 ranuras de la meseta (_rejilla_valle), que Samuel mato
+    mirando el .blend: "no me gustan los huecos, es una decision erratica del
+    diseno ya que esa parte es sensible a que le entren liquidos". Era la unica
+    cara horizontal de arriba, con agujeros mirando al cielo.
+
+    El area es lo que los tacos dejan libre por la luz. Los tacos NO son
+    relleno: son los que fijan la luz -- sin ellos la plancha se pega al labio
+    y cierra la salida --, asi que su huella se descuenta y su espesor ES
+    aire_labios. La rendija de ABAJO (bajo el labio del talon) no se cuenta:
+    si entra aire por ahi mejora el tiro, y lo que no se cuenta no puede
+    empeorar el numero."""
+    libre = perfil(p)["ancho_util"] - p["taco_n"] * p["taco_largo"]
+    # a la altura del canto de arriba de la trasera, que es por donde el aire
+    # pasa antes de salir: medio milimetro por debajo, donde la rendija empieza
+    return libre * p["aire_labios"], _trasera(p)["y1"] - 0.5
+
+
+def guarda_rendija(p: dict[str, float]) -> None:
+    """El agua no puede subir por la rendija hasta meterse dentro del case.
+
+    Es la puerta que paga el haber quitado las ranuras. Un derrame sobre la
+    meseta baja por el chaflan, por el labio, y gotea por el canto del labio
+    POR DELANTE de la plancha: eso lo arregla la geometria. Lo que la geometria
+    no arregla sola es que el agua SUBA por la rendija, porque entre dos planos
+    paralelos separados d el agua sube sola
+
+        h = 2*gamma / (rho * g * d)
+
+    y esa altura crece cuando d se estrecha. O sea que el peor caso NO es la
+    luz nominal: es la luz COMPRIMIDA, con los tacos aplastados. Y por encima
+    de eso, una plancha alabeada tiene luces locales menores que la nominal en
+    algun punto de sus 540 mm -- por eso no basta con que la subida quepa en el
+    solape, se exige margen.
+
+    Lo que tapa el labio del canto de la trasera (el solape) es lo que hay que
+    ganar: si el agua sube mas que eso, pasa el canto y cae dentro."""
+    d_nom = p["aire_labios"]
+    d = d_nom * (1.0 - p["compresion_taco"])
+    assert d > 0, (
+        f"con compresion_taco = {p['compresion_taco']:g} la rendija se cierra "
+        f"del todo: no hay salida de aire ni luz que medir")
+    subida = 2 * GAMMA_AGUA / (RHO_AGUA * G * (d / 1000.0)) * 1000.0
+    # Lo que el labio del techo tapa del canto de arriba de la trasera.
+    # _y_labio_techo() ya trae el chaflan y el labio; la resta ES el solape,
+    # sin recomponerlo de sus sumandos (que es como se cuela un error de signo).
+    solape = _trasera(p)["y1"] - _y_labio_techo(p)
+    assert solape > 0, (
+        f"el labio del techo muere en y = {_y_labio_techo(p):.2f} y el canto de "
+        f"la trasera esta en {_trasera(p)['y1']:.2f}: no la tapa, asi que la "
+        f"rendija no es una rendija sino una ranura abierta al cielo")
+    assert subida <= solape - 2.0 + 1e-9, (
+        f"el agua sube {subida:.1f} mm por la rendija comprimida ({d:.2f} de "
+        f"luz, {d_nom:g} nominal menos un {p['compresion_taco']*100:.0f} %) y el "
+        f"labio solo tapa {solape:.1f} del canto de la trasera: quedan "
+        f"{solape - subida:.1f} de margen y se piden 2, porque la plancha viene "
+        f"alabeada y la luz local no es la nominal. Sube aire_labios (la subida "
+        f"va con 1/d) o techo_labio (sube el solape)")
+
+    print(f"rendija: {d_nom:g} de luz nominal, {d:.2f} comprimida; el agua sube "
+          f"{subida:.1f} y el labio tapa {solape:.1f} del canto de la trasera "
+          f"({solape - subida:.1f} de margen, se piden 2). "
+          f"{p['taco_n']:.0f} tacos de {p['taco_largo']:g} por labio")
 
 
 def guarda_aire(p: dict[str, float]) -> None:
@@ -2057,10 +2136,10 @@ def guarda_aire(p: dict[str, float]) -> None:
     K y no pegado al resultado. Sirve para ordenes de magnitud y para que un
     cambio de geometria no empeore el tiro sin que nadie se entere."""
     n_ent, largo_ent, a_ent, y_ent = _rejilla_entrada(p)
-    n_mes, largo_mes, a_mes, y_mes = _rejilla_valle(p)
+    a_ren, y_ren = _rendija(p)
     a_ond, y_ond = _ondas_trasera(p)
-    a_sal = a_mes + a_ond
-    y_sal = (a_mes * y_mes + a_ond * y_ond) / a_sal
+    a_sal = a_ren + a_ond
+    y_sal = (a_ren * y_ren + a_ond * y_ond) / a_sal
 
     assert largo_ent >= 4 * p["vent_ancho_ranura"], (
         f"la rejilla de entrada mide {largo_ent:.1f} mm de largo con ranuras "
@@ -2085,15 +2164,28 @@ def guarda_aire(p: dict[str, float]) -> None:
 
     print(f"aire: entrada {a_ent:.0f} mm2 en {n_ent} ranuras de "
           f"{largo_ent:.1f} x {p['vent_ancho_ranura']:.2f} (trasera, y={y_ent:.0f})")
-    print(f"  salida {a_sal:.0f} mm2 = {a_mes:.0f} de la meseta "
-          f"({n_mes} ranuras de {largo_mes:.1f} x "
-          f"{p['vent_ancho_ranura']:.2f}, y={y_mes:.0f}) + "
+    print(f"  salida {a_sal:.0f} mm2 = {a_ren:.0f} de la RENDIJA del alero "
+          f"({perfil(p)['ancho_util'] - p['taco_n']*p['taco_largo']:.0f} libres x "
+          f"{p['aire_labios']:g}, y={y_ren:.0f}, mirando al suelo) + "
           f"{a_ond:.0f} de las DOS ondas abiertas (el relieve KONDOR es cajeado "
           f"ciego y no ventila), centroide y={y_sal:.0f}")
     print(f"  tiro {h*1000:.0f} mm, area efectiva {a_ef:.0f} mm2 -> "
           f"{dt:.1f} K sobre ambiente con {p['potencia_disipada']:.2f} W "
           f"(techo {p['salto_termico_max']:.0f}). SUPUESTO: C_D={CD_TIRO}, "
           f"sin perdidas de trafo")
+    # C_D ES EL NUMERO QUE MAS MANDA Y EL UNICO SIN MEDIR. Con una rendija
+    # larga y estrecha bajo un alero no es lo mismo que con chapa ranurada, asi
+    # que se publica el resultado con el extremo pesimista del rango. Es un
+    # AVISO, no un aserto: el ensayo termico de la primera unidad (§8 de la
+    # spec) es lo que lo cierra, y hasta entonces esta puerta es de ordenes de
+    # magnitud. Si este numero pasara del techo, la puerta seguiria verde --
+    # y es justo lo que hay que ver de un vistazo.
+    k_p = (RHO_AIRE * CP_AIRE * CD_TIRO_PESIMISTA * a_ef * 1e-6
+           * math.sqrt(2 * G * h / T_AMB))
+    dt_p = (p["potencia_disipada"] / k_p) ** (2.0 / 3.0)
+    print(f"  aviso: con C_D={CD_TIRO_PESIMISTA} (rendija bajo alero, no chapa "
+          f"ranurada) serian {dt_p:.1f} K -- {'PASA' if dt_p <= p['salto_termico_max'] else 'NO PASA'} "
+          f"el techo de {p['salto_termico_max']:.0f}. Sin medir hasta el ensayo")
 
 
 # Coeficiente par-precarga de un tornillo de acero SECO. 0.2 es valor de
@@ -2565,6 +2657,17 @@ def canario_techo(p: dict[str, float]) -> None:
          "pared de 2 contra 3", "una pared de 2 entre dos vaciados se rompe al fresar"),
         (guarda_tramo_trasero, {"rebaje_anillo": 5.0},
          "el labio del bolsillo queda", "con 5 de bolsillo el labio se queda en 2 bajo la chapa"),
+        # LA RENDIJA. El primero es el que prueba que los tacos son tacos: una
+        # tira continua de 90 por labio deja la salida en nada y el case sube
+        # 20.4 K. El segundo, que la potencia sigue mandando.
+        (guarda_aire, {"taco_largo": 90.0},
+         "sube 20.4 K", "una tira continua en vez de tacos ahoga la salida"),
+        (guarda_aire, {"potencia_disipada": 14.0},
+         "sube 16.4 K", "14 W no caben en esta salida"),
+        (guarda_rendija, {"techo_labio": 18.0},
+         "el agua sube", "con el labio en 18 el solape baja a 6.5 y el agua sube 6.2"),
+        (guarda_rendija, {"compresion_taco": 0.4},
+         "el agua sube", "un taco que cede el 40 % deja 1.8 de luz y el agua sube 8.3"),
     )
     for guarda, cambios, clave, que in casos:
         roto = dict(p)
@@ -2584,6 +2687,7 @@ def canario_techo(p: dict[str, float]) -> None:
     with contextlib.redirect_stdout(sordo):
         guarda_rebaje_chapa(dict(p))          # y con los parametros buenos, verde
         guarda_tramo_trasero(dict(p))
+        guarda_rendija(dict(p))
     del _HUECOS[n_huecos:]
 
 
@@ -2699,9 +2803,15 @@ def guarda_puentes_ventilacion(p: dict[str, float]) -> None:
     de la trasera, y la fuente se movio en params.scad -- vent_ancho_ranura de
     4 a 3.75 y vent_puente_min de 4 a 6.5 --, no el umbral. Eso encoge la
     salida de aire y guarda_aire() lo cobra en salto termico."""
+    # LA MESETA SALIO DE ESTA LISTA EL 2026-08-30, con sus ranuras. Queda UNA
+    # pieza ranurada, la trasera. Y esto es lo que hay que mirar cuando una
+    # puerta pierde un sujeto: no basta con que la regla siga siendo verdad --
+    # medir el puente entre 16 ranuras que ya no se cortan es una puerta verde
+    # sobre un muerto. meseta_paso_hp sigue en params.scad, pero como
+    # referencia del techo VIEJO (el test de rotura de check_dxf lo reconstruye
+    # con el), no como una cota que este presupuesto vigile.
     for pieza, paso_hp, t in (
-            ("trasera", p["valle_paso_hp"], p["t_piel"]),
-            ("meseta", p["meseta_paso_hp"], p["t_costilla"])):
+            ("trasera", p["valle_paso_hp"], p["t_piel"]),):
         minimo = 0.8 * t
         entre = paso_hp * p["hp"] - p["vent_ancho_ranura"]
         assert entre >= minimo - 1e-9, (
@@ -2718,10 +2828,9 @@ def guarda_puentes_ventilacion(p: dict[str, float]) -> None:
     print(f"puentes de ventilacion: trasera "
           f"{p['valle_paso_hp'] * p['hp'] - p['vent_ancho_ranura']:.2f} mm "
           f"entre columnas sobre PMMA de {p['t_piel']:.0f} (minimo "
-          f"{0.8 * p['t_piel']:.2f}), meseta "
-          f"{p['meseta_paso_hp'] * p['hp'] - p['vent_ancho_ranura']:.2f} sobre "
-          f"chapa de {p['t_costilla']:.1f} (minimo {0.8 * p['t_costilla']:.2f}), "
-          f"vent_puente_min {p['vent_puente_min']:.2f}")
+          f"{0.8 * p['t_piel']:.2f}), vent_puente_min "
+          f"{p['vent_puente_min']:.2f}. La meseta ya no lleva ranuras: su "
+          f"salida es la rendija del alero (guarda_rendija)")
 
 
 
@@ -5250,6 +5359,7 @@ def main() -> int:
     guarda_meseta_es_chapa(p)
     guarda_piso(p)
     guarda_anillo(p)
+    guarda_rendija(p)
     guarda_aire(p)
     guarda_chaflan(p)
     guarda_valle(p)
