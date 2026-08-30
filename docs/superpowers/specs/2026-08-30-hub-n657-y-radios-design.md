@@ -48,6 +48,12 @@ Textuales, en el orden en que salieron:
   venga el kit». Va en §3.1 con lo que cambia y lo que no, y deja un
   principio: **lo que el kit traiga y coincida exactamente con la clase que
   un papel pide, se hereda; lo que solo se parezca, no.**
+- **A-8 — Dos versiones, un cobre.** «hacemos una version para 5 pulgadas y
+  luego una version para 7 pulgadas, porque cuando imprima las placas pedire
+  varias placas, entonces la primera esta bien y es normal que tenga las 5
+  pulgadas del dev kit pero luego las otras si que las compro de 7 pulgadas».
+  El primer instrumento lleva la 5" del kit; los siguientes, una 7" comprada.
+  Las condiciones para que eso sea una versión y no dos diseños van en §3.1.
 
 Lo que **no** es acta y este papel trata como pendiente: cuántos chips, de
 qué placa cuelga la pantalla, dónde vive la cámara, dónde vive la interfaz de
@@ -195,6 +201,25 @@ la mesa. Dos consecuencias que este papel fija:
   que un papel pide (la pantalla lo hace: 800×480, RGB paralelo, táctil) se
   hereda; lo que solo se parezca, no. El principio de «nada de chips
   baratos» del J2 sigue intacto: se hereda por exactitud, no por ahorro.
+
+**Dos versiones, un cobre (A-8).** El primer instrumento lleva la 5" del
+kit; los siguientes, una 7" comprada. Para que eso sea una versión y no dos
+diseños, tres condiciones que este papel fija y el papel del panel ejecuta:
+
+1. **Misma resolución y mismo camino.** La 7" se elige de 800×480, RGB
+   paralelo de 24 bits y táctil capacitivo por I²C, como la 5" del kit. Así
+   el firmware, el framebuffer y el censo de pines son **uno**; lo que
+   cambia entre versiones es la pieza y la cara, no el hub.
+2. **Un conector de pantalla en el hub que sirva a las dos hojas.** Las dos
+   pantallas se compran con su hoja en el árbol y se cotejan pin a pin
+   (contorno, FPC, orden de señales, controlador táctil). Si sus FPC no
+   coinciden, la diferencia se absorbe en un **flex adaptador** por versión,
+   nunca en dos cobres del hub. Elegir la 7" con el mismo controlador táctil
+   que la 5" es lo que evita que el firmware se bifurque.
+3. **La cara es la que cambia de versión.** El DXF del panel de la fila A
+   sale de la misma parametrización con dos juegos de números (contorno de
+   la 5" y de la 7"), y el panel al centro corre sus §2 y §8 **para las
+   dos**: flancos, franjas y profundidad. El case no cambia.
 
 Lo que
 eso **no** cambia: D2 entero, porque el camino A es el mismo (LTDC, RGB
@@ -479,6 +504,10 @@ manden al aire (patrón conocido: #214).
 9. **La hoja del panel de 5" de la DK** (A-7): pieza separable, contorno,
    FPC y táctil; y que se venda suelta. Con ella, el panel al centro recorre
    sus números de §2 y §8.
+10. **La 7" de las versiones siguientes** (A-8): 800×480, RGB paralelo de
+    24 bits, táctil capacitivo por I²C, y cotejada pin a pin con la 5" del
+    kit para decidir si el conector del hub sirve a las dos o hace falta un
+    flex adaptador. El panel al centro corre sus números para las dos.
 
 ---
 
