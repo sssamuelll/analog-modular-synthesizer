@@ -1060,8 +1060,8 @@ module brida_3d(x0, y0, ancho_x, ancho_y, z0, largo) {
 // --- EL TECHO Y EL TALON (2026-08-29, noche, 2) -------------------------
 //
 // El TECHO (miembro alto) es la meseta del pico al canto con su retorno en
-// el pico, y por detras baja de dos maneras, que se escogen mirando
-// (remate_trasero_chaflan): A, la banda plana de banda_trasera sobre una
+// el pico, y por detras baja de dos maneras, que se escogieron mirando --
+// B, el 2026-08-30 -- (remate_trasero_chaflan): A, la banda plana de banda_trasera sobre una
 // esquina de radio_chapa (la de #241); B, un chaflan de chaflan_nariz sobre
 // P6... sobre P5, a chaflan como P0 y P6, y un labio vertical de techo_labio.
 // Sin canal: en una sola chapa el labio no puede tapar el canto del

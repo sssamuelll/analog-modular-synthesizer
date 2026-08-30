@@ -281,13 +281,14 @@ se sale del rebaje con 3. Y por qué no un canal doblado del propio pie: con la
 trasera a 12 del plano trasero el retorno cae a u = 14 y el pie entre el chaflán y
 el retorno mide 8, sin sitio para un M4 fuera de dos zonas de doblez.
 
-## 5. El techo por detrás: dos variantes, se escoge mirando
+## 5. El techo por detrás: dos variantes; se escogió B
 
 El miembro alto sigue siendo el techo del pico al canto, con su retorno de 4 en el
 pico y sus dos bridas a los anillos. Lo que cambia es cómo baja por detrás y que
-lleva canal (§3.5). Las dos variantes se renderean y Samuel escoge; el modelo las
-lleva bajo un parámetro (`remate_trasero_chaflan`, 0/1) y las puertas corren sobre
-las dos.
+lleva canal (§3.5). Las dos variantes se renderearon y **Samuel escogió B el
+2026-08-30** mirando los renders («el ángulo de 45° más pronunciado»); el modelo
+las lleva bajo un parámetro (`remate_trasero_chaflan`, 0/1, en 1) y las puertas
+corren sobre las dos hasta que la A se retire (§9).
 
 - **A — la banda de 24.** P5 con radio 4.5, la meseta dobla 90° y baja 24 a ras del
   plano trasero (la banda de #241). Las bridas doblan del extremo de la banda, como
@@ -377,8 +378,10 @@ el modelo después, VERDE, y romper cada puerta nueva a propósito.
 
 ## 9. Lo que este documento NO cierra
 
-- **A contra B** se decide mirando los dos renders. Lo que cuesta B: un doblez
-  más en el techo y el relieve en las bridas.
+- **A contra B**: decidido, **B** (2026-08-30, mirando los renders). Lo que cuesta:
+  un doblez más en el techo y el relieve en las bridas. Queda retirar la A del
+  modelo — `remate_trasero_chaflan`, `banda_trasera`, su render y la segunda
+  corrida de las puertas — en una tanda propia, no en esta.
 - **El labio del techo a 18 y el del talón a 13** (§5): si se quieren iguales a
   13, es obligar 6082-T6 en el pliego (176 MPa contra 240); a 18 los dos, es
   mover el talón sin más razón que la simetría. Se juzga en el render de B.

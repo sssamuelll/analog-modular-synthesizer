@@ -19,7 +19,8 @@
 > en sus bolsillos cede 20 mm con la mano y trabaja a 14 MPa; con las pestañas
 > a su aire de 3.5, la mano barrida por todo lo visible queda en 8.9
 > (`guarda_trasera_flexion()`). **El techo baja con chaflán + labio de 18** (variante B,
-> recomendada; la A es la banda de 24, y se escoge mirando los dos renders).
+> la que Samuel escogió el 2026-08-30 mirando los dos renders; la A era la
+> banda de 24 y sigue en el modelo hasta que se retire).
 > 68 tornillos → 58, 10 cabezas atrás → **0**, la tapa de arriba sigue en
 > 180°. Todo en
 > [`../docs/superpowers/specs/2026-08-29-trasera-capturada-talon-nariz-design.md`](../docs/superpowers/specs/2026-08-29-trasera-capturada-talon-nariz-design.md).

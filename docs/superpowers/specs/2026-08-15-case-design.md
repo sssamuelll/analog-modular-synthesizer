@@ -249,7 +249,7 @@ lenguaje visual).
 > su aire y la mano barrida por lo visible; arriba, 75 mm que pasan de 10,
 > declarados). **El techo
 > baja con chaflán + labio de 18** (variante
-> B, recomendada; A es la banda de 24) y sin canal: en una sola chapa el
+> B, la escogida el 2026-08-30; A era la banda de 24) y sin canal: en una sola chapa el
 > labio no puede tapar el canto Y tener retorno, y el bolsillo ya sujeta la
 > plancha. 68 tornillos → 58, 10 cabezas atrás → 0, la tapa de arriba sigue
 > en 180°. Lo que cuesta: el segundo bolsillo en el mecanizado, la pata
@@ -516,8 +516,8 @@ aquí va lo que sustituye a lo anterior.
   larguero, porque la madera se mueve a contraveta y el aluminio no.
 - **El techo y el talón**, las dos piezas de chapa de atrás (rev. 26). El
   **techo** (miembro alto) es la meseta del pico al canto y, por detrás,
-  chaflán de 6 + labio de 18 a ras del plano trasero (variante B; la A es la
-  banda de 24), con dos bridas de extremo en la cara del anillo (2 M4 ciegos
+  chaflán de 6 + labio de 18 a ras del plano trasero (variante B, escogida el
+  2026-08-30; la A era la banda de 24), con dos bridas de extremo en la cara del anillo (2 M4 ciegos
   cada una) — ata los dos anillos arriba y tapa el canto de arriba de la
   trasera. El **talón** es la nariz de atrás: pie de 20 sobre la tabla (tres
   M4 desde dentro), chaflán sobre el de P6 y labio de 13, con ocho pestañas

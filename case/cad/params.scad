@@ -92,8 +92,10 @@ t_costilla      = 1.5;
 // recomendada, no obligatoria". Se ve: 4 mm mas de metal arriba y abajo. Es
 // un parametro y se juzga en render.
 banda_trasera   = 24;
-// EL TECHO POR DETRAS, dos variantes que se escogen mirando (spec
-// 2026-08-29-trasera-capturada §5): 0 = la BANDA plana de banda_trasera con
+// EL TECHO POR DETRAS, dos variantes que se escogieron mirando (spec
+// 2026-08-29-trasera-capturada §5): SAMUEL ESCOGIO B (1) EL 2026-08-30, "el
+// angulo de 45 mas pronunciado"; la A queda hasta que se retire en una tanda
+// propia. 0 = la BANDA plana de banda_trasera con
 // P5 a radio_chapa (la de #241); 1 = el CHAFLAN: P5 a chaflan_nariz como P0 y
 // P6, la meseta dobla 45 al chaflan y otros 45 al labio vertical de
 // talon_labio -- atras se lee un marco simetrico, dos labios iguales arriba y
