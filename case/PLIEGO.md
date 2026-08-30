@@ -326,7 +326,8 @@ dentro** del case, y la pieza no se voltea: el pie queda sobre la tabla y el
 chaflán mira al suelo.
 
 **Y `miembro_alto_2d` ES EL TECHO, en dos variantes** (`remate_trasero_chaflan`
-en `params.scad`; los DXF de este pliego son de la **B**): el labio (o la banda)
+en `params.scad`; los DXF de este pliego son de la **B**, la escogida el
+2026-08-30): el labio (o la banda)
 con su canto libre en y = 0 del blank, la meseta (del pico al canto, con las 16
 ranuras de salida) y el retorno de **4 a 45°** en el pico. **Variante B
 (chaflán)**: labio de **18**, chaflán (dos dobleces a 45°, BD 0.88 cada uno:
