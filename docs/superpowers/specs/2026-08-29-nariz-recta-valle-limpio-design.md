@@ -82,6 +82,9 @@ cara de arriba (`retorno_meseta`). `inset_remate_frente` muere.
 > *Enmienda (la misma noche):* la meseta sigue hasta el **plano trasero** (50) y
 > dobla ahí como banda; el marco de la trasera de la mañana desaparece y la tapa
 > de arriba abre 180°. Ver `2026-08-29-marco-ventana-banda-estructural-design.md`.
+> *Y más noche:* con el techo en chaflán (variante B) la meseta acaba a 6 del
+> plano trasero y dobla 45° al chaflán y otros 45° a un labio de 18 — la nariz
+> arriba y atrás. Ver `2026-08-29-trasera-capturada-talon-nariz-design.md` §5.
 
 El inset llevaba escrito que era *«lo único que deja abrir la tapa de arriba»* con
 una tabla medida (retiro 0 → abre 13.2°). Esos números son de cuando la meseta era

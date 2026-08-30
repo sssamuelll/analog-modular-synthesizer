@@ -4,7 +4,13 @@
 («dale vamos con furia»), con dos supuestos que él dejó abiertos y aquí se cierran
 (§1); **implementado** en la rama `feat/case-marco-ventana` con sus puertas — y
 corregido contra lo que las puertas obligaron (§4.2: la brida no sube; §3.2: la
-pata trasera se retira 11.2; §5: los tornillos del chasis) ·
+pata trasera se retira 11.2; §5: los tornillos del chasis) · **Superado la misma
+noche en §4 (la banda es el miembro) por
+[`2026-08-29-trasera-capturada-talon-nariz-design.md`](2026-08-29-trasera-capturada-talon-nariz-design.md)**:
+Samuel no quiso la trasera atornillada a dos bandas ni el talón plano; la trasera
+va capturada en bolsillos de los anillos, el talón es la nariz en espejo y la pata
+trasera del marco (§3.2) arranca en `t_anillo` + 0.5 sobre la pared entre
+bolsillos. §3 (el marco) y §5 (el chasis a la tabla) siguen vivos ·
 **Enmienda:** [`2026-08-15-case-design.md`](2026-08-15-case-design.md) (rev. 25),
 [`2026-08-28-costilla-pletina-design.md`](2026-08-28-costilla-pletina-design.md) §4, §5
 y §10, [`2026-08-27-case-esqueleto-visible-design.md`](2026-08-27-case-esqueleto-visible-design.md)

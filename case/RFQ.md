@@ -4,6 +4,21 @@ Documento para pedir presupuesto. Va **antes** que el pliego
 ([`PLIEGO.md`](PLIEGO.md)): el pliego dice qué hay que hacer, esto sirve
 para saber **quién puede hacerlo**.
 
+> **rev. 25 (2026-08-29, más noche; corregida tras el PR).** La trasera
+> capturada como las mejillas. **Al mecanizado (§D)**: un segundo bolsillo en
+> la cara interior de cada anillo (11 × 6, a lo largo del tramo trasero,
+> cerrado por los dos extremos, con un escalón bajo el chaflán) y el rebaje
+> del costado a 17 en ese tramo; P6 (y P5) a chaflán 6. **Al acrílico (§A)**:
+> un chaflán de 5.5 × 45° en la arista de abajo de la trasera, por la cara
+> exterior. **A la chapa
+> (§B)**: el talón pasa a ser la nariz en espejo (dos dobleces a 45° y ocho
+> pestañas lanzadas a r = 2 t con alivio, en 6082-T6 obligatorio: cada lengüeta
+> puede llevar 159 N en la punta) y el techo baja con chaflán + labio (dos a
+> 45°) en vez de
+> banda a 90°. **A la casa de acrílico (§A)**: la trasera **sin un solo
+> taladro**, 552.32 × 237.18. §B ya no pregunta por el radio de la pestaña:
+> es el mismo r = 3 que el resto de la chapa.
+>
 > **rev. 24 (2026-08-29, noche).** Al taller de chapa (§B) le entra **el
 > marco de la ventana** (pletina de 6 a láser con seis cajeados, ×2
 > espejados) y le salen las seis placas, los cuatro clips, las dos escuadras
@@ -26,8 +41,8 @@ para saber **quién puede hacerlo**.
 >
 > | § | taller | qué se le pide |
 > |---|---|---|
-> | A | casa de acrílico | costados ×2, trasera |
-> | B | chapa de aluminio (y acero) | miembro alto (una L con bridas), **talón**, **nariz**, **marco de la ventana ×2** (pletina de 6, láser + cajeados), tapa del valle, chasis ×3 |
+> | A | casa de acrílico | costados ×2, trasera — **ninguna con taladros** |
+> | B | chapa de aluminio (y acero) | **techo** (meseta + chaflán y labio, con bridas), **talón** (la nariz en espejo, con ocho pestañas lanzadas), **nariz**, **marco de la ventana ×2** (pletina de 6, láser + cajeados), tapa del valle, chasis ×3 |
 > | C | carpintería | la tabla (suelo + zócalo) |
 > | D | mecanizado de aluminio | el anillo ×2 — NUEVO desde el 2026-08-28 |
 
@@ -137,10 +152,11 @@ Se rellena al recibir. Va aquí y no en un correo.
 
 Es el taller que ya hace las tres piezas del chasis de acero. **No es un
 taller nuevo**, pero desde el 2026-08-28 **ya no hace la costilla** — esa
-pieza se mecaniza en un taller aparte (§D). Lo que sí hace: el **miembro
-alto** (una L — la meseta del techo y la banda vista de atrás — con una brida
-de extremo doblada en cada punta), el **talón** (la banda vista de abajo con
-su pie sobre la tabla), la **nariz** (la banda del frente, tres dobleces), los
+pieza se mecaniza en un taller aparte (§D). Lo que sí hace: el **techo**
+(la meseta y, por detrás, chaflán y labio — o la banda —, con una brida de
+extremo doblada en cada punta), el **talón** (la nariz en espejo: labio,
+chaflán y pie sobre la tabla, con ocho pestañas lanzadas del pie), la
+**nariz** (la banda del frente, tres dobleces), los
 dos **marcos de la ventana** (pletina de 6 cortada a láser, con seis cajeados
 por el lado del anillo, un par espejado) y la tapa del valle. Son las piezas
 que llevan los rieles y sostienen el marco por dentro del anillo. (La bahía,
@@ -151,18 +167,26 @@ la trasera, muertos esa misma noche, ya no existen.)
    mínimo?** El modelo asume **r = 3** (2 × t) y de ahí cuelga el desarrollo
    del miembro alto, el talón, la nariz y las bridas. Si su radio mínimo es otro,
    **decirlo antes de cortar**: el recorte cambia. **Y a 45° y a 35°, con el
-   mismo radio?** La nariz lleva dos dobleces a 45° y uno a 35°, y el miembro
-   alto uno a 45°: los BD (0.88 y 0.62) están calculados con ese mismo r = 3 y
-   k = 0.42.
+   mismo radio?** La nariz lleva dos dobleces a 45° y uno a 35°, el talón dos
+   a 45° y el techo uno a 45° (o tres, con el chaflán): los BD (0.88 y 0.62)
+   están calculados con ese mismo r = 3 y k = 0.42. **Y una pestaña lanzada**
+   (las ocho del talón: 25 × 8, cortadas en U de 0.5 con un alivio de Ø2 en
+   cada esquina del corte y dobladas 90° hacia arriba con el mismo r = 3)?
+   Se pensó con r = 1 t y se deshizo: el diseño no puede colgar de una
+   respuesta del taller.
 2. **¿Qué factor K usan?** El modelo asume **k = 0.42**. Con r = 3 y t = 1.5
    eso da BA = 5.70 y BD = 3.30 mm por doblez. Si trabajan con otro, los DXF se
    regeneran — pero hay que saberlo, no adivinarlo.
-3. **¿Qué aleación y temple suministran, y con qué `Rp0.2`?** No es
-   eliminatoria: con 130 MPa el diseño pasa (el miembro alto SOLO, sin la
-   trasera, trabaja a 110 en la banda de 24 con 20 kg en el centro de la
-   meseta; y también el anillo de §D, cada pieza con su propia puerta). Lo que sí hace falta es
-   que la digan. Una aleación distinta **hay que aprobarla antes de
-   cortar**, regenerando las puertas si cambia.
+3. **¿Qué aleación y temple suministran, y con qué `Rp0.2`?** Para el techo
+   y la nariz no es eliminatoria: con 130 MPa pasan (el techo SOLO trabaja a
+   111 con 20 kg en el centro de la meseta; y también el anillo de §D, cada
+   pieza con su propia puerta). **Para el talón SÍ lo es: 6082-T6 (Rp0.2 ≥
+   240)**, porque sus ocho lengüetas sujetan el canto de abajo de la trasera
+   y la más cargada trabaja a 199 MPa en la raíz (23.5: los 25 menos lo que
+   muerde el alivio) con la carga en la punta — con 130 no pasa ninguna
+   lengüeta de 1.5 (`guarda_trasera_flexion()`). Una aleación
+   distinta **hay que aprobarla antes de cortar**, regenerando las puertas si
+   cambia.
 4. **¿Cortan a láser pletina de 6 mm y le hacen bolsillos ciegos** (el marco
    de la ventana: Ø8 × 2.5 en seis puntos por el lado del anillo, una rosca
    M3 pasante)? No lleva doblez, solo contorno, cajeado y agujero de paso —
@@ -247,8 +271,12 @@ maciza de 14 mm**, vaciada por el centro, una pieza por lado.
 3. ¿Pueden dar **roscas ciegas M4/M5** a **10 mm de profundidad útil**, en
    una franja de 14 mm de aluminio, con la tolerancia de posición que exige
    `guarda_anclajes()` (roscas a 1.5 diámetros de broca de cada canto: la
-   silueta exterior y la pared del rebaje)? Son 12 M4 en la cara interior y
-   3 M5 en el canto inferior, por anillo.
+   silueta exterior, la pared del rebaje y la del bolsillo de la trasera)?
+   Son 14 M4 en la cara interior y 3 M5 en el canto inferior, por anillo.
+   **Y un segundo bolsillo por la misma cara**: 11 de ancho × 6 de hondo a lo
+   largo del tramo trasero, cerrado por los dos extremos (de 1 mm del canto de
+   abajo a 17 del de arriba, con un escalón bajo el chaflán), con una pared de
+   3 mm entre él y el rebaje del costado.
 4. ¿Hacen **chaflán mecanizado de 1.5 × 45°** en dos aristas de la cara
    vista, por pieza?
 5. ¿Anodizan en **satinado**, con **enmascarado de un punto** antes de

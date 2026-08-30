@@ -17,6 +17,8 @@ from pathlib import Path
 
 import ezdxf
 
+import clearance_budget as cb
+
 PLANS = Path(__file__).parent / "plans"
 
 # Sobre esperado por pieza, mm: (w_min, w_max, h_min, h_max).
@@ -104,6 +106,11 @@ def _sobre_dorso(cb, p: dict[str, float],
     retiro = p["cara_anillo"] - p["rebaje_anillo"]
     x0, x1 = retiro, cb.fondo(p) - retiro
     y0, y1 = retiro, g["alto_total"] - retiro
+    # Y EL BOLSILLO DE LA TRASERA (2026-08-29, noche, 2): arranca a y_bot, 1 mm
+    # del canto de abajo, llega hasta la cara interior del labio y se cierra
+    # arriba por debajo de las roscas de la brida, que ya estaban en el sobre.
+    x1 = max(x1, cb.fondo(p) - p["rehundido_acrilico"])
+    y0 = min(y0, cb._bolsillo_trasero(p)["y_bot"])
     for _, c, d in cb._centros_rosca_ciega(p):
         x0, x1 = min(x0, c[0] - d / 2), max(x1, c[0] + d / 2)
         y0, y1 = min(y0, c[1] - d / 2), max(y1, c[1] + d / 2)
@@ -120,7 +127,10 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
     dims: dict[str, tuple[float, float]] = {
         # EL COSTADO VA DENTRO DE LA VENTANA DEL ANILLO desde el 2026-08-28:
         # su contorno es la silueta retranqueada (cara - rebaje + holgura).
-        "costado_2d": (cb.fondo(p) - 2 * _retiro_costado(p),
+        # Y SU CANTO TRASERO ENTRA 3, NO 6, desde la trasera capturada
+        # (2026-08-29, noche, 2): retrocede a la pared entre bolsillos.
+        "costado_2d": (cb.fondo(p) - _retiro_costado(p)
+                       - (p["t_anillo"] + p["pared_rebaje_trasera"] + p["hol_costado"]),
                        g["alto_total"] - 2 * _retiro_costado(p)),
         # LA COSTILLA VUELVE A SER EL CONTORNO DE LA PIEZA: un anillo fresado
         # no tiene desarrollo. Silueta entera, con la ventana dentro.
@@ -516,6 +526,15 @@ def agujeros_donde_toca() -> list[str]:
     if _redondos("costado_2d"):
         f.append(f"costado_2d: {len(_redondos('costado_2d'))} agujero(s) redondo(s) "
                  f"en el acrilico. El costado es PIEL dentro del anillo: cero")
+    # --- trasera: CERO agujeros de tornillo desde la trasera capturada ---
+    # (2026-08-29, noche, 2). Tuvo 16 con las escuadras y 10 con las bandas;
+    # va DENTRO de los bolsillos de los anillos como el costado, y nada la
+    # atraviesa. Lo que si lleva -- rejilla, ondas, ventana de la red -- no
+    # es redondo, y lo miran sus propias puertas.
+    if (PLANS / "piel_trasera_2d.dxf").exists() and _redondos("piel_trasera_2d"):
+        f.append(f"piel_trasera_2d: {len(_redondos('piel_trasera_2d'))} agujero(s) "
+                 f"redondo(s) en el acrilico. La trasera va CAPTURADA como el "
+                 f"costado: cero")
 
     # --- planchas: filas, paso y separacion ---
     _, _, filas = cb._cajas_solidas(p)
@@ -720,9 +739,9 @@ PASO_BARRIDO = 2.0
 # Radio de contacto de la carga. Es el canto de una mano o la base de un pulgar
 # apoyado, no una punta: con carga estrictamente puntual la teoria de placas da
 # tension infinita y no dice nada util.
-R_CONTACTO = 10.0
-NU_PMMA = 0.37      # Poisson del PMMA colado
-E_PMMA = 3000.0     # MPa. El mismo modulo con el que se acoto la trasera
+# Viven en clearance_budget.py junto a SIGMA_PMMA (dos clientes: esta puerta
+# y guarda_trasera_flexion); aqui solo el alias.
+R_CONTACTO, NU_PMMA, E_PMMA = cb.R_CONTACTO, cb.NU_PMMA, cb.E_PMMA
 
 
 def guarda_costado() -> list[str]:
@@ -1011,52 +1030,123 @@ def anillo_tiene_rebaje() -> list[str]:
         return ["costilla_dorso_2d: sin LINEs en el dorso o en la cara, no se "
                 "puede medir el retiro del rebaje"]
     retiro = p["cara_anillo"] - p["rebaje_anillo"]
-    ds = [_dist_al_contorno(silueta, q) for a in rebaje for q in a]
-    peor = max(ds, key=lambda d: abs(d - retiro))
-    if abs(peor - retiro) > CARA_DXF_MAX:
-        return [f"costilla_dorso_2d: el contorno del rebaje corre a {peor:.2f} mm "
-                f"de la silueta en su punto peor y cara - rebaje dice "
-                f"{retiro:g}. O no es el rebaje lo que se exporto ahi, o el "
-                f"offset cambio: la franja donde asientan las placas es "
-                f"justamente esta distancia"]
+    # EN EL TRAMO TRASERO EL REBAJE RETROCEDE a t_anillo + pared (2026-08-29,
+    # noche, 2): la pared con el bolsillo de la trasera. Un punto del canto
+    # trasero del rebaje esta a esa distancia del plano trasero, o a 14 de la
+    # tapa o del suelo si esta en una esquina: se admite lo que le toque.
+    retiro_tras = p["t_anillo"] + p["pared_rebaje_trasera"]
+    fondo = cb.fondo(p)
+    malos, ds = [], []
+    # el canto trasero es UNA ARISTA a plomo en x = fondo - retiro_tras: sus
+    # dos puntas miden 14 a la tapa y al suelo, asi que se busca la arista y
+    # no un punto a 17
+    atras = sum(1 for a in rebaje
+                if abs(a[0][0] - (fondo - retiro_tras)) <= CARA_DXF_MAX
+                and abs(a[1][0] - (fondo - retiro_tras)) <= CARA_DXF_MAX
+                and abs(a[0][1] - a[1][1]) > 100.0)
+    for a in rebaje:
+        for q in a:
+            d = _dist_al_contorno(silueta, q)
+            ds.append(d)
+            if abs(d - retiro) > CARA_DXF_MAX and q[0] < fondo - retiro_tras - CARA_DXF_MAX:
+                malos.append((q, d))
+            elif abs(d - retiro) > CARA_DXF_MAX and abs(d - retiro_tras) > CARA_DXF_MAX:
+                malos.append((q, d))
+    if malos:
+        q, d = max(malos, key=lambda m: abs(m[1] - retiro))
+        return [f"costilla_dorso_2d: el contorno del rebaje corre a {d:.2f} mm "
+                f"de la silueta en ({q[0]:.1f}, {q[1]:.1f}) y cara - rebaje dice "
+                f"{retiro:g} (o {retiro_tras:g} en el tramo trasero). O no es el "
+                f"rebaje lo que se exporto ahi, o el offset cambio: la franja "
+                f"donde asienta el marco es justamente esta distancia"]
+    if not atras:
+        return [f"costilla_dorso_2d: el rebaje no tiene canto trasero a plomo a "
+                f"{retiro_tras:g} del plano trasero: tiene que retroceder a la "
+                f"pared entre bolsillos"]
     print(f"  costilla_dorso_2d: rebaje a {min(ds):.2f}..{max(ds):.2f} mm de la "
           f"silueta (cara {p['cara_anillo']:g} - rebaje {p['rebaje_anillo']:g} "
-          f"= {retiro:g})")
+          f"= {retiro:g}), y su canto trasero a plomo a {retiro_tras:g}")
     return []
 
 
-def anillo_tiene_chaflan() -> list[str]:
-    """La nariz del anillo es RECTA: chaflan a 45 abajo y frente vertical.
+def anillo_tiene_bolsillo_trasero() -> list[str]:
+    """El dorso lleva el bolsillo de la trasera: de canto a canto del tramo
+    trasero, entre la pared del fondo (u = t_anillo) y la cara interior del
+    labio (u = rehundido_acrilico).
 
-    ES LA PUERTA DE LA NOTA 2 DE SAMUEL (2026-08-29). La punta llevaba dos
-    arcos -- 9.5 de radio abajo y 30.1 arriba, lo que radio_punta = 400
-    sobredimensionado dejaba en cada arista -- y se leia como nariz curva. La
-    referencia que trajo tiene marcos laterales con la esquina de abajo
-    cortada a 45 y el frente a plomo, y eso es lo que se relee aqui del DXF que
-    va al taller, no de una copia de redondear() en Python (ver
-    _contorno_exterior): que el punto del contorno mas cercano al origen este
-    sobre la linea x + y = chaflan_nariz, que haya FRENTE VERTICAL (x = 0) hasta
-    donde arranca el radio de la esquina de arriba, y SUELO (y = 0) desde donde
-    acaba el radio del chaflan. Con los arcos viejos ninguna de las tres se
-    cumple: el contorno se acerca al origen 0.44 mm mas de lo que el chaflan
-    permite y el frente vertical mide cero."""
+    ES LA MITAD DEL DORSO QUE NO ES EL REBAJE (2026-08-29, noche, 2). Se relee
+    como componente aparte -- un rectangulo estrecho de toda la altura -- y
+    se mide su caja contra el modelo: si alguien exporta el rebaje solo, el
+    anillo sale sin sitio para la trasera y ninguna otra puerta lo ve. La
+    profundidad (rebaje_anillo, no los t_anillo - rehundido del rebaje) va en
+    el pliego: un DXF de planta no la sabe decir."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    bo = cb._bolsillo_trasero(p)
+    fondo = cb.fondo(p)
+    x0, x1 = fondo - bo["u1"], fondo - bo["u0"]
+    x_paso = fondo - bo["u_paso"]
+    aristas, comps = _componentes("costilla_dorso_2d")
+    for comp in comps:
+        pts = [q for j in comp for q in aristas[j]]
+        px = [q[0] for q in pts]
+        py = [q[1] for q in pts]
+        if (abs(min(px) - x0) <= CARA_DXF_MAX and abs(max(px) - x1) <= CARA_DXF_MAX
+                and abs(min(py) - bo["y_bot"]) <= CARA_DXF_MAX
+                and abs(max(py) - bo["y_fin"]) <= CARA_DXF_MAX):
+            # el escalon bajo el chaflan: un vertice en (x_paso, y_paso)
+            if not any(abs(q[0] - x_paso) <= CARA_DXF_MAX
+                       and abs(q[1] - bo["y_paso"]) <= CARA_DXF_MAX for q in pts):
+                return [f"costilla_dorso_2d: el bolsillo de la trasera no lleva "
+                        f"el escalon bajo el chaflan: falta el vertice en "
+                        f"({x_paso:.2f}, {bo['y_paso']:.2f})"]
+            print(f"  costilla_dorso_2d: bolsillo de la trasera en u = "
+                  f"{bo['u0']:g}..{bo['u1']:g} del plano trasero, cerrado de y = "
+                  f"{bo['y_bot']:g} a {bo['y_fin']:.2f} (arranca en u = "
+                  f"{bo['u_paso']:g} bajo y = {bo['y_paso']:g}; hondo "
+                  f"{bo['hondo']:g}, en el pliego)")
+            return []
+    return [f"costilla_dorso_2d: falta el bolsillo de la trasera -- de x = "
+            f"{x0:.2f}..{x1:.2f} por y = {bo['y_bot']:g}..{bo['y_fin']:.2f}, con su "
+            f"escalon bajo el chaflan. Sin el, la trasera no tiene donde meterse"]
+
+
+def anillo_tiene_chaflan() -> list[str]:
+    """Las esquinas del anillo que llevan chapa doblada a 45 van a CHAFLAN, y
+    entre chaflanes los cantos van a plomo.
+
+    ES LA PUERTA DE LA NOTA 2 DE SAMUEL (2026-08-29): "en vez de una nariz
+    curva, una nariz recta", con la esquina de abajo cortada a 45 como en su
+    referencia. Desde la trasera capturada (misma noche, 2) la esquina de
+    abajo-atras va igual -- el talon es la nariz de atras -- y la de
+    arriba-atras tambien cuando el techo lleva chaflan. Se relee del DXF que
+    va al taller, no de una copia de redondear() en Python: que el punto del
+    contorno mas cercano a cada esquina viva este sobre su linea a 45 (|dx| +
+    |dy| = chaflan), que el frente y el canto trasero sean verticales entre
+    los chaflanes y los radios, y que el suelo llegue a los dos chaflanes."""
     import clearance_budget as cb
 
     p = cb.leer_params()
     c, r = p["chaflan_nariz"], p["radio_chapa"]
+    fondo, alto = cb.fondo(p), cb.perfil(p)["alto_total"]
     aristas = _contorno_exterior("costilla_2d")
     if not aristas:
         return ["costilla_2d: sin contorno exterior, no se puede ver la nariz"]
     pts = [q for a in aristas for q in a]
     f: list[str] = []
-    diag = min(x + y for x, y in pts)
-    if abs(diag - c) > CARA_DXF_MAX:
-        f.append(f"costilla_2d: la nariz no lleva el chaflan de {c:g}: el punto "
-                 f"del contorno mas cercano a la esquina cae en x+y = {diag:.2f} "
-                 f"y el chaflan pide {c:.2f}. Con radio en vez de chaflan la "
-                 f"punta sale REDONDA, que es lo que Samuel rechazo el 29-08")
+    esquinas = [("frente-abajo (la nariz)", (0.0, 0.0)),
+                ("atras-abajo (el talon)", (fondo, 0.0))]
+    if cb._chaflan_p5(p):
+        esquinas.append(("atras-arriba (el techo)", (fondo, alto)))
+    for nm, (ex, ey) in esquinas:
+        diag = min(abs(x - ex) + abs(y - ey) for x, y in pts)
+        if abs(diag - c) > CARA_DXF_MAX:
+            f.append(f"costilla_2d: la esquina {nm} no lleva el chaflan de {c:g}: "
+                     f"el punto del contorno mas cercano cae a |dx|+|dy| = "
+                     f"{diag:.2f} y el chaflan pide {c:.2f}. Con radio en vez de "
+                     f"chaflan la punta sale REDONDA")
     frente = [y for x, y in pts if abs(x) <= CARA_DXF_MAX]
-    suelo = [x for x, y in pts if abs(y) <= CARA_DXF_MAX]
     if (not frente or min(frente) > c + r + CARA_DXF_MAX
             or max(frente) < p["alto_frontal"] - r - CARA_DXF_MAX):
         f.append(f"costilla_2d: el frente no es vertical: el contorno toca x = 0 "
@@ -1064,14 +1154,27 @@ def anillo_tiene_chaflan() -> list[str]:
                  f"{max(frente) if frente else float('nan'):.2f}, y la nariz "
                  f"recta pide un plomo desde el chaflan (y = {c + r:.2f}) hasta "
                  f"el radio de arriba (y = {p['alto_frontal'] - r:.2f})")
-    if not suelo or min(suelo) > c + r + CARA_DXF_MAX:
-        f.append(f"costilla_2d: el suelo no llega al chaflan: el contorno toca "
-                 f"y = 0 desde x = {min(suelo) if suelo else float('nan'):.2f} "
-                 f"y el chaflan acaba en {c + r:.2f}")
+    tras = [y for x, y in pts if abs(x - fondo) <= CARA_DXF_MAX]
+    y_alto = alto - (c + r if cb._chaflan_p5(p) else r)
+    if (not tras or min(tras) > c + r + CARA_DXF_MAX
+            or max(tras) < y_alto - CARA_DXF_MAX):
+        f.append(f"costilla_2d: el canto trasero no es vertical: toca x = {fondo:.2f} "
+                 f"entre y = {min(tras) if tras else float('nan'):.2f} y "
+                 f"{max(tras) if tras else float('nan'):.2f}, y se pide un plomo "
+                 f"desde el chaflan del talon (y = {c + r:.2f}) hasta "
+                 f"{y_alto:.2f}")
+    suelo = [x for x, y in pts if abs(y) <= CARA_DXF_MAX]
+    if (not suelo or min(suelo) > c + r + CARA_DXF_MAX
+            or max(suelo) < fondo - c - r - CARA_DXF_MAX):
+        f.append(f"costilla_2d: el suelo no llega a los dos chaflanes: toca y = 0 "
+                 f"desde x = {min(suelo) if suelo else float('nan'):.2f} hasta "
+                 f"{max(suelo) if suelo else float('nan'):.2f}, y los chaflanes "
+                 f"acaban en {c + r:.2f} y {fondo - c - r:.2f}")
     if not f:
-        print(f"  costilla_2d: nariz recta -- chaflan de {c:g} a 45 (x+y = "
-              f"{diag:.2f}), frente a plomo de y = {min(frente):.2f} a "
-              f"{max(frente):.2f}")
+        print(f"  costilla_2d: {len(esquinas)} esquinas a chaflan de {c:g} a 45 "
+              f"({', '.join(nm.split(' ')[0] for nm, _ in esquinas)}), frente a "
+              f"plomo de y = {min(frente):.2f} a {max(frente):.2f}, canto trasero "
+              f"a plomo de {min(tras):.2f} a {max(tras):.2f}")
     return f
 
 
@@ -1394,6 +1497,13 @@ def taladros_marco_ventana() -> list[str]:
                 sm_e = (q["escalon"] + (q["s1"] if q["nombre"] == "cara_inf"
                                         else q["s0"])) / 2
                 pt = q["_m"]((sm_e, 0.0))
+            elif etiqueta == "exterior" and "muesca" in q:
+                # en las patas con muesca (la meseta por su final, la trasera
+                # por su arranque) el canto exterior solo existe fuera de ella
+                s_mu = q["muesca"][0]
+                sm_e = ((q["s0"] + s_mu) / 2 if q["nombre"] == "meseta"
+                        else (s_mu + q["s1"]) / 2)
+                pt = q["_m"]((sm_e, b))
             else:
                 pt = q["_m"]((sm, b))
             dist = _dist_al_contorno(cantos, pt)
@@ -1409,15 +1519,17 @@ def taladros_marco_ventana() -> list[str]:
 
 
 def taladros_talon() -> list[str]:
-    """El talon trae su fila de M3 y sus tres M4, y la tabla lleva debajo los
-    tres del talon y los cuatro del chasis.
+    """El talon trae sus tres M4 en el pie, y la tabla lleva debajo los tres
+    del talon y los cuatro del chasis.
 
     Como taladros_nariz(): dos ficheros y un solo herraje. Los M4 del pie
     atraviesan el talon (talon_2d, en el desarrollo, a 1.5 D del canto libre
     del pie) y entran en la tabla (bandeja_base_2d, con d_pie_tornillo, el
     mismo herraje a la misma madera). Y los cuatro M4 del suelo del chasis --
     que desde el 2026-08-29 por la noche va a la tabla y no a un miembro --
-    tienen que estar en la tabla donde chasis_cuerpo_2d los lleva."""
+    tienen que estar en la tabla donde chasis_cuerpo_2d los lleva. La fila
+    de M3 de la trasera murio con la trasera capturada: el talon no lleva
+    mas agujeros redondos que sus tres M4."""
     import clearance_budget as cb
 
     p = cb.leer_params()
@@ -1442,13 +1554,29 @@ def taladros_talon() -> list[str]:
                 f.append(f"{dxf}: el M4 de ({ex:.2f}, {ey:.2f}) cae a {dist:.2f} "
                          f"mm del canto y se exigen "
                          f"{BORDE_MIN_D * p['d_M4_paso']:.2f}")
-        m3 = [q for q in leidos if abs(q[2] - (p["d_M3_paso"] + p["kerf"])) < 0.1]
-        n = max(1, round(cb.perfil(p)["ancho_util"] / p["reticula_paso"]))
-        if len(m3) != n:
-            f.append(f"{dxf}: {len(m3)} M3 en el DXF y la banda lleva {n}")
-        if len(leidos) != n + len(esperados):
-            f.append(f"{dxf}: {len(leidos)} agujeros en el DXF y el modelo pone "
-                     f"{n + len(esperados)}")
+        # y los alivios de las pestanas: dos por pestana, de alivio_pestana, a
+        # caballo de la linea del doblez en el eje de cada corte. NO son
+        # agujeros aparte: el circulo se funde con el corte en U y sale como el
+        # fondo redondo de una ranura, asi que se buscan sus aristas -- las del
+        # poligono que caen en la circunferencia -- y no un CIRCLE.
+        r_al = (p["alivio_pestana"] + p["kerf"]) / 2
+        ym = tl["desarrollo"] - (tl["pestana_x"] - tl["x_pie"])
+        w, k = p["talon_pestana_ancho"], p["corte_pestana"]
+        aristas, _ = _componentes(dxf)
+        alivios = [(zc - p["t_anillo"] - p["hol_piel"] + s * (w / 2 + k / 2), ym)
+                   for zc in tl["pestana_z"] for s in (-1, 1)]
+        for ex, ey in alivios:
+            arco = sum(1 for a in aristas
+                       if abs(math.hypot(a[0][0] - ex, a[0][1] - ey) - r_al) <= 0.06
+                       and abs(math.hypot(a[1][0] - ex, a[1][1] - ey) - r_al) <= 0.06)
+            if arco < 6:
+                f.append(f"{dxf}: falta el alivio de {2 * r_al:g} de la pestana en "
+                         f"({ex:.2f}, {ey:.2f}): {arco} aristas sobre su circunferencia")
+        if len(leidos) != len(esperados):
+            f.append(f"{dxf}: {len(leidos)} agujeros redondos en el DXF y el modelo "
+                     f"pone {len(esperados)} (los tres M4; los alivios de las pestanas "
+                     f"van fundidos con el corte en U, y la fila de M3 murio con la "
+                     f"trasera capturada)")
     v = p["vuelo_zocalo"]
     tabla = _redondos("bandeja_base_2d")
     d_t = p["d_pie_tornillo"] + p["kerf"]
@@ -1465,8 +1593,138 @@ def taladros_talon() -> list[str]:
             f.append(f"bandeja_base_2d: falta el taladro del chasis en "
                      f"({ex:.2f}, {ey:.2f}), d={d4t:.2f}")
     if not f:
-        print(f"  talon_2d: fila de {n} M3 y 3 M4 en el pie; la tabla lleva los "
-              f"3 del talon (d={d_t:.2f}) y los 4 del chasis (d={d4t:.2f})")
+        print(f"  talon_2d: 3 M4 en el pie a {1.5 * p['d_M4_paso']:.2f} del canto "
+              f"libre; la tabla lleva los 3 del talon (d={d_t:.2f}) y los 4 del "
+              f"chasis (d={d4t:.2f})")
+    return f
+
+
+def bridas_techo() -> list[str]:
+    """El desarrollo del techo trae sus cuatro M4 de brida donde el modelo los
+    pone y, con el chaflan (variante B), el relieve y la esquina cortada de
+    cada brida.
+
+    LA UNICA CHAPA DE ESTA TANDA SIN PUERTA PROPIA hasta que el revisor del PR
+    lo dijo: su sobre de +-4 mm dejaba pasar techo_labio 18 -> 20 y
+    corte_pestana 1.5 sin decir nada. Se relee: los cuatro M4 (a
+    brida_raiz y a 1.5 D del canto libre de cada lengueta, a dist_rosca_ciega
+    del canto de arriba de la cara trasera), y en B los dos relieves de
+    corte_pestana en la linea del doblez (de techo_labio a techo_labio +
+    chaflan - t) y las dos aristas a 45 de la esquina de arriba (3 x 3)."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    dxf = "miembro_alto_2d"
+    if not (PLANS / f"{dxf}.dxf").exists():
+        return []
+    f: list[str] = []
+    au = cb.perfil(p)["ancho_util"]
+    bd = cb._bd_miembro(p)
+    b = cb._bridas(p)[0]
+    t, c = p["t_costilla"], p["chaflan_nariz"]
+    cara_alto = (p["techo_labio"] + c) if cb._chaflan_p5(p) else p["banda_trasera"]
+    y_m4 = cara_alto - p["dist_rosca_ciega"]
+    leidos = _redondos(dxf)
+    d4 = p["d_M4_paso"] + p["kerf"]
+    esperados = []
+    for s in b["s_m4"]:
+        esperados += [(bd - s, y_m4), (au - bd + s, y_m4)]
+    for ex, ey in esperados:
+        if not any(math.hypot(q[0] - ex, q[1] - ey) <= DESVIO_DXF_MAX
+                   and abs(q[2] - d4) < 0.1 for q in leidos):
+            f.append(f"{dxf}: falta el M4 de brida en ({ex:.2f}, {ey:.2f})")
+    if len(leidos) != len(esperados):
+        f.append(f"{dxf}: {len(leidos)} agujeros redondos y el modelo pone "
+                 f"{len(esperados)} (los M4 de las dos bridas)")
+    if cb._chaflan_p5(p):
+        aristas, _ = _componentes(dxf)
+        k = p["corte_pestana"]
+        y_r0 = p["techo_labio"]
+        for lado, x0 in ((0, 0.0), (1, au)):
+            # el relieve: una arista vertical en la cara exterior del corte,
+            # desde la linea del doblez (techo_labio); la esquina a 45 le
+            # corta la punta, asi que se le pide al menos 1 mm de alto
+            x_rel = x0 - k if lado == 0 else x0 + k
+            relieve = any(abs(a[0][0] - x_rel) <= 0.05 and abs(a[1][0] - x_rel) <= 0.05
+                          and min(a[0][1], a[1][1]) <= y_r0 + 0.05
+                          and max(a[0][1], a[1][1]) >= y_r0 + 1.0 for a in aristas)
+            if not relieve:
+                f.append(f"{dxf}: falta el relieve de {k:g} de la brida {lado} "
+                         f"junto a la tira del chaflan (x = {x_rel:.2f}, desde y = "
+                         f"{y_r0:.2f})")
+            # la esquina: una arista a 45 sobre la recta v = (cara_alto - c + t)
+            # + |x - x0|, de al menos 2 mm, dentro del vuelo de c - 2t
+            v0 = cara_alto - c + t
+            def en_recta(q):
+                return (abs(q[1] - abs(q[0] - x0) - v0) <= 0.1
+                        and -0.1 <= (x0 - q[0] if lado == 0 else q[0] - x0) <= c - 2 * t + 0.1)
+            esquina = any(en_recta(a[0]) and en_recta(a[1])
+                          and abs(abs(a[1][0] - a[0][0]) - abs(a[1][1] - a[0][1])) <= 0.1
+                          and math.hypot(a[1][0] - a[0][0], a[1][1] - a[0][1]) >= 2.0
+                          for a in aristas)
+            if not esquina:
+                f.append(f"{dxf}: falta la esquina a 45 de la brida {lado} "
+                         f"(la recta v = {v0:.2f} + |x - {x0:.2f}|, hasta "
+                         f"{c - 2 * t:g} de vuelo)")
+    if not f:
+        print(f"  {dxf}: 4 M4 de brida a {b['s_m4'][0]:.2f} y {b['s_m4'][1]:.2f} "
+              f"del doblez" + (", con relieve y esquina a 45 en las dos bridas"
+                                if cb._chaflan_p5(p) else ""))
+    return f
+
+
+def pestanas_talon() -> list[str]:
+    """El talon trae las ventanas de sus pestanas (talon_pestana_n) donde el
+    modelo las pone: un corte en U de tres lados, hacia el canto libre del
+    pie, con la linea del doblez sin cortar.
+
+    Son la unica retencion hacia dentro del canto de abajo de la trasera
+    entre los anillos (2026-08-29, noche, 2), y un DXF sin ellas es un talon
+    que se pliega igual y no sujeta nada. Se buscan las tres aristas de cada
+    U: las dos a lo largo del desarrollo, en x = centro +- ancho/2 y entre
+    y = doblez e y = doblez + desarrollo de la pestana, y la del fondo, en y
+    = doblez + desarrollo, de un lado al otro."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    tl = cb._talon(p)
+    dxf = "talon_2d"
+    if not (PLANS / f"{dxf}.dxf").exists():
+        return []
+    aristas, _ = _componentes(dxf)
+    d = tl["desarrollo"]
+    ym = d - (tl["pestana_x"] - tl["x_pie"])
+    dv = tl["pestana_dev"]
+    w = p["talon_pestana_ancho"]
+    tol = 0.05
+    f: list[str] = []
+    # el corte va POR FUERA de la pestana: lo que se busca son las aristas
+    # que la delimitan -- sus dos lados, de y = doblez a y = doblez +
+    # desarrollo, y su fondo -- que son las caras interiores del corte en U
+    # el alivio de cada esquina se come el arranque del lado: el lado empieza
+    # donde el circulo cruza la cara del corte, a r_al*cos(asin(k/2r)) del doblez
+    r_al = (p["alivio_pestana"] + p["kerf"]) / 2
+    y_lado = ym + math.sqrt(max(r_al ** 2 - (p["corte_pestana"] / 2) ** 2, 0.0))
+    for zc in tl["pestana_z"]:
+        zb = zc - p["t_anillo"] - p["hol_piel"]
+        lados = 0
+        for x_esp in (zb - w / 2, zb + w / 2):
+            if any(abs(a[0][0] - x_esp) <= tol and abs(a[1][0] - x_esp) <= tol
+                   and min(a[0][1], a[1][1]) <= y_lado + 0.2
+                   and max(a[0][1], a[1][1]) >= ym + dv - tol for a in aristas):
+                lados += 1
+        fondo_ok = any(abs(a[0][1] - (ym + dv)) <= tol and abs(a[1][1] - (ym + dv)) <= tol
+                       and min(a[0][0], a[1][0]) <= zb - w / 2 + tol
+                       and max(a[0][0], a[1][0]) >= zb + w / 2 - tol for a in aristas)
+        if lados < 2 or not fondo_ok:
+            f.append(f"{dxf}: falta la ventana de la pestana centrada en x={zb:.2f} "
+                     f"(lados en x = {zb - w / 2:.2f} y {zb + w / 2:.2f} de y = "
+                     f"{ym:.2f} a {ym + dv:.2f}, fondo en y = {ym + dv:.2f}): "
+                     f"{lados} lados y fondo {'si' if fondo_ok else 'no'}")
+    if not f:
+        print(f"  talon_2d: {len(tl['pestana_z'])} ventanas de pestana de {w:g} x "
+              f"{dv:.2f} con el doblez en y = {ym:.2f}, hacia el canto libre del pie, "
+              f"con alivio de {p['alivio_pestana']:g} en las esquinas")
     return f
 
 
@@ -1529,11 +1787,18 @@ def cuerpos_dentro_del_anillo() -> list[str]:
                for n, c, a in zip(cb.NOMBRES_CR, cr, cb.ANGS_CR)]
     cuerpos += [(f"fila 1U {i}", cb._esquinas_er(p, c, 90.0))
                 for i, c in enumerate(cb._centros_rail_1u(p, P, cr))]
-    # LAS DOS BANDAS (miembro alto y talon) doblan en la esquina del anillo con
-    # radio_chapa, o sea que su caja llega al vertice vivo pero la chapa no:
-    # se recortan radio_chapa por el lado del doblez antes de mirar si caben.
+    # LOS DOS LABIOS (techo y talon). El del talon arranca sobre el chaflan de
+    # P6 y no necesita recorte; el del techo, con la banda plana (A), dobla en
+    # la esquina de arriba con radio_chapa y su caja llega al vertice vivo
+    # pero la chapa no: se recorta radio_chapa por el lado del doblez. Con el
+    # chaflan (B) arranca bajo el chaflan de P5 y tampoco.
+    # Y DONDE EL LABIO MUERE CONTRA UN CHAFLAN, el contorno redondea la
+    # esquina del chaflan con radio_chapa: la tangente queda r x tan(22.5)
+    # dentro del vertice, y el labio empieza (o acaba) ahi.
     r_ch = p["radio_chapa"]
-    recorte = {"trasero alto": (0.0, -r_ch), "talon": (r_ch, 0.0)}
+    tg = r_ch * math.tan(math.radians(22.5)) + 0.05
+    recorte = {"trasero alto": (0.0, -tg if cb._chaflan_p5(p) else -r_ch),
+               "talon": (tg, 0.0)}
     cuerpos += [(n, [(c[x], c[y] + (recorte[n][0] if y == 3 else recorte[n][1]))
                      for x in (1, 2) for y in (3, 4)])
                 for n, c in miembros.items()]
@@ -1552,9 +1817,7 @@ def cuerpos_dentro_del_anillo() -> list[str]:
     # de la meseta.
     cuerpos += [(f"marco {q['nombre']}", q["poligono"])
                 for q in cb._marco_ventana(p)]
-    cuerpos += [(f"brida {b['nombre']}",
-                 [(x, y) for x in b["rect"][:2] for y in b["rect"][2:]])
-                for b in cb._bridas(p)]
+    cuerpos += [(f"brida {b['nombre']}", b["poligono"]) for b in cb._bridas(p)]
     # Varios largueros van A RAS del contorno por diseno (los de la cara
     # trasera tienen su centro en prof_inferior - r, o sea que su cara de atras
     # coincide con el plano trasero; los de la base apoyan en y=0). Un punto
@@ -1754,7 +2017,7 @@ def guarda_zocalo() -> list[str]:
     P = cb._vertices(p)
     tl = cb._talon(p)
     x_frente = p["alto_frontal"] / 2 + p["d_pie"] / 2
-    x_trasero = tl["x_band"] - p["talon_pie"] / 2    # centro_talon().x
+    x_trasero = tl["x_chaflan"] - p["talon_pie"] / 2  # centro_talon().x: el pie va del chaflan hacia dentro
     d_pie_taladro = p["d_pie_tornillo"] + p["kerf"]
     esperados_pie = [(v + wz, v + wx)
                      for wx in (x_frente, x_trasero)
@@ -1801,8 +2064,11 @@ def guarda_zocalo() -> list[str]:
 # hueco entero y lleva la fila corrida hol_piel; el talon mide lo que la
 # trasera y la lleva a ras. (Era miembro_bajo/miembro_alto con la fila sobre
 # ancho_util hasta el 2026-08-29 por la noche.)
-MIEMBROS_DXF = {"miembro_alto_2d": ("trasero alto", "trasera", "hol_piel"),
-                "talon_2d": ("talon", "trasera", 0.0)}
+# VACIO desde la trasera capturada (2026-08-29, noche, 2): las dos filas de
+# M3 de las bandas murieron con los tornillos de la trasera, y ni el techo ni
+# el talon llevan reticula. La puerta se queda por si vuelve un miembro con
+# fila; hoy no revisa nada.
+MIEMBROS_DXF: dict[str, tuple[str, str, object]] = {}
 
 
 def taladros_reticula() -> list[str]:
@@ -1921,12 +2187,15 @@ def main() -> int:
         fallos += revisar(nombre, sobre)
     fallos += anillo_tiene_ventana()
     fallos += anillo_tiene_rebaje()
+    fallos += anillo_tiene_bolsillo_trasero()
     fallos += anillo_tiene_chaflan()
     fallos += seccion_del_cupon()
     fallos += taladros_anillo()
     fallos += taladros_marco_ventana()
     fallos += taladros_nariz()
     fallos += taladros_talon()
+    fallos += pestanas_talon()
+    fallos += bridas_techo()
     fallos += ranuras_rejilla_entrada()
     fallos += cuerpos_dentro_del_anillo()
     fallos += tapa_valle_conectada()
