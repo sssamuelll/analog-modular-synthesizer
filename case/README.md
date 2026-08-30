@@ -178,7 +178,7 @@ La tercera murió por una razón que no sale en ningún número: el acrílico na
 es **traslúcido**, y el campo de ranuras se transparentaba a lo largo del canto
 inferior. Se ve en el render oficial, no en la geometría.
 
-Eran 45 ranuras en la primera rejilla y luego 44 al entrar la escuadra de la
+La rejilla tuvo otras cuentas y luego 44 ranuras al entrar la escuadra de la
 trasera. Esa cifra queda como historia. La tanda del 2026-08-30 recalcula el
 campo contra la trasera visible y deja **46 ranuras de 41.8 × 3.75**, con
 **7 065 mm² a y = 46**. `ranuras_rejilla_entrada()` cruza el presupuesto con el
@@ -207,7 +207,7 @@ La primera versión se olvidó ese término y los 14 salieron 12.
 |---|---|---|---|
 | entrada (trasera, abajo) | **7 065 mm²** | y = 46 | 46 de 41.8 × 3.75 |
 | salida — rendija bajo el alero | **1 352 mm²** | y = 238 | luz nominal 3.0, mirando al suelo |
-| salida — las dos ondas abiertas | 2 289 mm² | y ≈ 95 | — |
+| salida — las dos ondas abiertas | 2 289 mm² | — | — |
 
 La meseta queda **maciza**: se retiran sus 16 ranuras porque una cara sensible
 a derrames no puede ser la salida. La salida total es **3 641 mm²**: los
@@ -619,7 +619,7 @@ regeneraciones desde cero, Task 10) y comparando con SHA-256:
 
 | Clase | ¿Byte-idéntico? | Qué SÍ es estable | Mecanismo |
 |-------|:---:|---|---|
-| **DXF** (`case/plans/*.dxf`) | **SÍ** | Todo — 8/8 archivos con el mismo SHA-256 en las 3 corridas (medido con 8; hoy son 11, las 3 nuevas son de acero) | OpenSCAD 2021.01 emite R12 determinista para geometría 2D |
+| **DXF** (`case/plans/*.dxf`) | **SÍ** | Todo — 8/8 archivos con el mismo SHA-256 en las 3 corridas (medido con 8; hoy son 16) | OpenSCAD 2021.01 emite R12 determinista para geometría 2D |
 | **STL** (`case/renders/build/*.stl`) | **NO** | El tamaño en bytes: `assembly_aluminio.stl` midió 25457 B las 3 veces, `assembly_acrilico.stl` 2478678 B las 3 veces | CGAL no garantiza el orden de facetas al triangular. `assembly_aluminio.stl` cambió de SHA-256 en las 2 regeneraciones (3 hashes distintos en 3 corridas); `assembly_acrilico.stl` coincidió por azar en esta muestra — no asumir que un STL se mantiene solo porque coincidió una vez |
 | **`.kicad_pcb`** (`case/panels/panel-template.kicad_pcb`) | **NO** | El *conjunto* de bloques top-level (posiciones de footprint, geometría de taladros y contorno) una vez se descartan las líneas `(uuid ...)`: 17/17 bloques idénticos en las 3 corridas, verificado por comparación estructural (no diff lineal) | KiCad reacuña un UUID nuevo por objeto en cada guardado y además **rota cíclicamente** el orden de los bloques `(footprint ...)` — un `diff` de texto sobre dos corridas muestra decenas de líneas cambiadas sin que ninguna posición real se haya movido |
 
@@ -668,18 +668,13 @@ plegado; la del valle, corte de chapa—, así que nestearlas con el acrílico
 sería mentir sobre lo que se manda junto. La tapa salió el 2026-08-25, con el
 cambio de material: hasta entonces era la tercera plancha de la segunda fila.
 
-Lo que sí se versiona son los **quince DXF que se mandan a cortar** de
-`case/plans/` (más `lienzo_2d`, la preview de arriba que no se manda —
-dieciséis ficheros en total, contados el 2026-08-28): dos de acrílico
-(costado, trasera — **la tapa de remate NO EXISTE**: no es un pendiente de
-`export.ps1`, es una pieza que se borró del diseño el 2026-08-27, y
-`remate_sup()`/`remate_sup_2d()` se borraron del `.scad` en el fix round 1
-de esta tarea por no tener llamador), **dos del anillo mecanizado** (cara
-vista y dorso, §6.1 del pliego), cinco de chapa de aluminio (los tres
-miembros con brida, la escuadra de la trasera y la tapa del valle), tres de
-acero, una de madera, el cajeado de la marca y **el cupón** (calibración de
-kerf del acrílico, §"Procedimiento del cupón" abajo). Son el entregable que
-va al taller, y su diff es la prueba de qué se mandó a cortar y cuándo.
+Lo que sí se versiona son los **dieciséis DXF que se mandan a cortar** de
+`case/plans/`, contados el 2026-08-30: dos de acrílico (costado y trasera),
+dos operaciones del anillo mecanizado (cara vista y dorso, §6.1 del pliego),
+cinco de aluminio (marco de la ventana, techo, nariz, talón y tapa del valle),
+tres de acero, una de madera, el cajeado de la marca y dos cupones —el de
+kerf del acrílico y el del perfil del anillo—. Son el entregable que va al
+taller, y su diff es la prueba de qué se mandó a cortar y cuándo.
 
 ## Procedimiento del cupón — sólo si se vuelve al láser
 

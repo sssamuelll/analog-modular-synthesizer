@@ -110,6 +110,15 @@ Lo que compra, y es lo que se pidió:
 
 ### 3.2 La geometría, tramo por tramo
 
+> **Corrección del 2026-08-30 — sustituye las filas «frente, suelo, meseta» y
+> «trasera» de la tabla que sigue.** Bajo las chapas empotradas, el canto
+> exterior se retira **2.65** en vez de 1.65. En el **suelo** conserva 1.65,
+> porque los pies no se rehunden. En la trasera se retira **16.00** y
+> `marco_fondo_trasera` pasa a **30**. La pata resultante mide **14 × 6**; con
+> 200 N cede 1.70 mm y trabaja a 112 MPa, por debajo de los techos de 2 mm y
+> 130 MPa. Esta corrección sustituye también la justificación de la pata a 28:
+> cambió el plano de la trasera, no la función del marco.
+
 El canto exterior del marco NO va a la silueta en todos los tramos, y la razón es
 lo que hay encima de cada uno:
 
@@ -185,6 +194,12 @@ trasero y un pie sobre la tabla — y se llama **`talon`**, porque hace atrás l
 la `nariz` hace delante.
 
 ### 4.2 Las dos piezas
+
+> **Corrección del 2026-08-30 — sustituye la fila de ranuras de la tabla que
+> sigue.** El techo vigente es macizo. `guarda_aire()` nunca leyó las ranuras
+> del DXF: calcula la salida con 1 352 mm² de la rendija del alero y 2 289 mm²
+> de las dos ondas, para 3 641 mm² en total y 9.22 W. La fila vieja se conserva
+> como historia de la arquitectura que esta corrección reemplaza.
 
 **`miembro_alto`** (una L con pestañas): del pico al canto trasero y hacia abajo.
 

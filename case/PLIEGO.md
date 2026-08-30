@@ -2,7 +2,8 @@
 
 > **rev. 27 (2026-08-30). Tanda A: techo macizo y tres chapas empotradas.**
 > **Al mecanizado:** cada anillo gana el rebaje de chapa de 3.5 de ancho × 3
-> de fondo, los dos cajeados de brida de 28 × 15.5 × 3, los radios de 5.5
+> de fondo y un cajeado de brida de 28 × 15.5 × 3; son dos al fabricar el par.
+> También cambian los radios a 5.5
 > donde hay chapa y la franja trasera de 22. El cupón gana el rebaje y su
 > reborde de 1 × 3. **A la chapa:** el techo queda sin ranuras, con labio de
 > 20 y bridas con esquinas R2; techo, talón y nariz pasan a los blanks
@@ -240,8 +241,8 @@ cara):
   labios, ese contorno se funde con el bolsillo de la trasera. El bolsillo va
   en **u = 4.5..15.5**, con pared de 3 y el costado entrando 3.5; su labio
   queda con 3 de hondo bajo los labios de chapa y conserva 6 en el resto.
-  Trae también las plantas de los dos cajeados de brida de **28 × 15.5** y los
-  14 círculos de rosca ciega. La silueta no se repite: dibujarla sería mandar
+  Trae también la planta del cajeado de brida de cada anillo —dos al fabricar
+  el par—, de **28 × 15.5**, y los 14 círculos de rosca ciega. La silueta no se repite: dibujarla sería mandar
   cortar el contorno dos veces. **Las profundidades no viven en esta planta**;
   están escritas en §6.1.
 
@@ -327,8 +328,8 @@ rosca en el anillo.
 difieran más de 2: se mantienen como una familia. En cada punta se corta una
 **muesca de 2.65** desde el canto libre hasta la primera línea de doblez, a
 **19.06** (`largo − BD45/2`). Lleva un **alivio de Ø2 a caballo de la esquina
-interior**. Después siguen el segundo doblez a 45° y el tercero a 35° del
-perfil vigente. Los tres van hacia dentro; el pie queda sobre la tabla.
+interior**. Después siguen los dos dobleces restantes del perfil vigente. Los
+tres van hacia dentro; el pie queda sobre la tabla.
 
 **`miembro_alto_2d` ES EL TECHO MACIZO.** Hay una sola geometría operativa en
 esta revisión: blank **593.02 × 73.85**, meseta de 50 **sin ranuras**, retorno

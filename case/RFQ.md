@@ -298,19 +298,22 @@ maciza de 14 mm**, vaciada por el centro, una pieza por lado.
    un anodizador que sí?
 
 **Única pregunta abierta de esta tanda:** «¿Un reborde de **1 × 3** a lo
-largo del contorno, a **±0.1**: se puede? Si no, lo subimos a **1.5**.» No
+largo del contorno, a **+-0.1**: se puede? Si no, lo subimos a **1.5**.» No
 cambiarlo en máquina sin respuesta: esa cota mueve el rehundido de las tres
 chapas y sus desarrollos.
 
 ### Muestra que se pide con el presupuesto
 
-Un **cupón de 100 mm del perfil del anillo** — mismo espesor, mismo rebaje del
-costado, **rebaje de chapa de 3.5 × 3 y reborde de 1 × 3**, mismo chaflán,
-mismo acabado, mismo anodizador — **antes de cortar los dos
+Un **cupón de 100 mm del perfil del anillo** — mismo espesor, mismo rebaje,
+mismo chaflán, mismo acabado, mismo anodizador — **antes de cortar los dos
 anillos completos**. Las cotas de la cara vista (chaflán, rebaje, rehundido)
 salieron de escalar una foto de referencia y están marcadas ESTIMADO en la
 spec de diseño; el cupón es lo que las cierra contra la pieza real, no contra
 el render.
+
+Desde la rev. 26, ese mismo cupón reproduce además el **rebaje de chapa de
+3.5 × 3 y el reborde de 1 × 3**. Es la pared delicada que se valida antes del
+anillo completo.
 
 El plano es **`plans/cupon_anillo_2d.dxf`**: la sección del perfil, a 1:1 y en
 mm. Va con una rosca ciega M4 a media longitud y un punto de bonding
