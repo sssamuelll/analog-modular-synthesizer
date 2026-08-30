@@ -2401,6 +2401,10 @@ def canario_trasera(p: dict[str, float]) -> None:
          "lengueta", "una lengueta de 12 x 6 fluye con su reaccion en la punta"),
         (guarda_trasera_flexion, {"talon_pestana_n": 2},
          "del PMMA", "dos pestanas dejan la mano baja sobre el techo"),
+        (guarda_trasera_flexion, {"alivio_pestana": 12.0},
+         "lengueta", "un alivio de 12 deja la raiz de la lengueta en 13.5 y fluye"),
+        (guarda_trasera_flexion, {"rebaje_anillo": 2.0},
+         "se sale del bolsillo", "embebida 1.85, la cuerda de 2.2 de la plancha combada la saca"),
         (guarda_trasera_capturada, {"t_piel": 7.0},
          "canto plano", "una plancha de 7 no deja 2 de canto plano tras el chaflan de 5.5"),
         (guarda_talon, {"talon_pestana_aire": 1.5},
@@ -2422,11 +2426,12 @@ def canario_trasera(p: dict[str, float]) -> None:
         raise AssertionError(
             f"canario de la trasera NO disparo: con {cambios} hay {que} y "
             f"{guarda.__name__}() lo deja pasar -- no confiar en su VERDE")
+    n_huecos = len(_HUECOS)
     with contextlib.redirect_stdout(sordo):
         guarda_talon(dict(p))
         guarda_trasera_capturada(dict(p))
         guarda_trasera_flexion(dict(p))     # y con los parametros buenos, verde
-    del _HUECOS[-1:]                         # el hueco de la banda lo publica la corrida real
+    del _HUECOS[n_huecos:]                   # lo que publique aqui lo publica la corrida real
 
 
 def canario_red(p: dict[str, float]) -> None:
@@ -2631,7 +2636,13 @@ def _talon(p: dict[str, float]) -> dict:
     x_pie = x_ch - p["talon_pie"]
     au = perfil(p)["ancho_util"]
     tr = _trasera(p)
+    # el alivio va centrado en el corte (a w/2 + k/2 del eje de la pestana) con
+    # radio (alivio + kerf)/2: lo que pasa de medio corte lo muerde a la raiz de
+    # la pestana por dentro, y ensancha la ventana por fuera
+    k, r_al = p["corte_pestana"], (p["alivio_pestana"] + p["kerf"]) / 2
     return {"x_band": xp - t, "x_chaflan": x_ch, "x_pie": x_pie,
+            "pestana_raiz": p["talon_pestana_ancho"] - 2 * max(0.0, r_al - k / 2),
+            "pestana_ventana": p["talon_pestana_ancho"] / 2 + max(k, k / 2 + r_al),
             "contorno": [(x_pie, 0.0), (x_ch, 0.0), (xp, c),
                          (xp, c + p["talon_labio"])],
             "m4_x": x_pie + 1.5 * p["d_M4_paso"],
@@ -3004,9 +3015,9 @@ def guarda_trasera_flexion(p: dict[str, float]) -> None:
     lo empuja una mano). Lo que se exige:
     (1) toda mano en la mitad de abajo (y <= b/2, donde mandan las pestanas)
     bajo SIGMA_PMMA; (2) la lengueta mas cargada, con la reaccion en su punta,
-    bajo el Rp0.2 del 6082-T6 que el pliego manda para el talon (unos 180 MPa
-    con 25 de ancho y el doblez a 2 t: con los 130 genericos no pasa ninguna
-    lengueta de 1.5); (3) combada como
+    bajo el Rp0.2 del 6082-T6 que el pliego manda para el talon (unos 200 MPa
+    con 25 de ancho -- 23.5 en la raiz, tras el alivio -- y el doblez a 2 t:
+    con los 130 genericos no pasa ninguna lengueta de 1.5); (3) combada como
     cota de arriba (sin pestanas) no se sale de los bolsillos: el acortamiento
     de cuerda 8w^2/3a queda por debajo del embebido menos 0.5. Y lo que se
     PUBLICA como hueco: la banda de arriba donde la mano pasa del techo -- el
@@ -3034,6 +3045,15 @@ def guarda_trasera_flexion(p: dict[str, float]) -> None:
     manos += [(zc - p["t_anillo"], y_lo) for zc in _talon(p)["pestana_z"]
               if zc - p["t_anillo"] <= a / 2 + 1e-9]
     res = _placa_trasera_barrido(p, manos, "pestanas")
+    # y alrededor de la mano que mas carga una pestana, una rejilla de 5 x 5 a
+    # medio paso: el maximo de la rejilla gruesa iba un 3 % por debajo del real
+    # (ronda 5 del revisor: 154 N contra 159 con 825 manos), y ese numero es el
+    # que va al taller como justificacion del 6082-T6
+    x_r, y_r = max(res, key=lambda r: max(r["reacciones"]))["mano"]
+    dx, dy = a / 32 / 2, (y_hi - y_lo) / 15 / 2
+    finas = [(min(x_r + i * dx, a / 2), min(max(y_r + j * dy, y_lo), y_hi))
+             for i in range(-2, 3) for j in range(-2, 3) if i or j]
+    res += _placa_trasera_barrido(p, [m for m in finas if m[0] > 0], "pestanas")
     peor_abajo = max((r for r in res if r["mano"][1] <= b / 2), key=lambda r: r["sigma"])
     assert peor_abajo["sigma"] <= SIGMA_PMMA + 1e-9, (
         f"la trasera con {p['carga_mano']:.0f} N en ({peor_abajo['mano'][0]:.0f}, "
@@ -3047,14 +3067,19 @@ def guarda_trasera_flexion(p: dict[str, float]) -> None:
     # 6082-T6 que el pliego manda para el talon, no contra los 130 genericos:
     # a 200 MPa no hay lengueta de 1.5 que pase con 130 sin ser un peine.
     r_max = max(max(r["reacciones"]) for r in res)
-    Z = p["talon_pestana_ancho"] * t_ch ** 2 / 6
+    # la seccion que trabaja es LA RAIZ, en la linea del doblez, y ahi el alivio
+    # (centrado en el corte, de radio mayor que medio corte) muerde la pestana
+    # por los dos lados: 25 nominales son 23.5 de raiz (ronda 5 del revisor)
+    raiz = _talon(p)["pestana_raiz"]
+    Z = raiz * t_ch ** 2 / 6
     brazo = p["talon_pestana_alto"] + p["radio_doblez_pestana"]
     sigma_tab = r_max * brazo / Z
     assert sigma_tab <= RP02_6082_T6 + 1e-9, (
         f"la pestana mas cargada recibe {r_max:.0f} N y, como lengueta de "
-        f"{p['talon_pestana_ancho']:g} x {t_ch:g} con {brazo:g} de brazo, trabaja a "
-        f"{sigma_tab:.0f} MPa contra {RP02_6082_T6:.0f} del 6082-T6: mas ancha, o "
-        f"mas pestanas")
+        f"{raiz:g} x {t_ch:g} en la raiz ({p['talon_pestana_ancho']:g} menos lo que "
+        f"muerde el alivio) con {brazo:g} de brazo, trabaja a {sigma_tab:.0f} MPa "
+        f"contra {RP02_6082_T6:.0f} del 6082-T6: mas ancha, menos alivio, o mas "
+        f"pestanas")
     sin = _placa_trasera(p, "libre")
     cuerda = 8 * sin["flecha"] ** 2 / (3 * a)
     assert cuerda <= tr["entra"] - 0.5 + 1e-9, (
@@ -3072,7 +3097,7 @@ def guarda_trasera_flexion(p: dict[str, float]) -> None:
           f"la peor de la mitad de abajo, ({peor_abajo['mano'][0]:.0f}, "
           f"{peor_abajo['mano'][1]:.0f}): {peor_abajo['sigma']:.1f} MPa (techo "
           f"{SIGMA_PMMA:g}); la lengueta mas cargada, {r_max:.0f} N y {sigma_tab:.0f} "
-          f"MPa (6082-T6: {RP02_6082_T6:.0f}). Solo con los bolsillos, "
+          f"MPa en la raiz de {raiz:g} (6082-T6: {RP02_6082_T6:.0f}). Solo con los bolsillos, "
           f"{sin['flecha_carga']:.1f} ({sin['flecha']:.1f}) "
           f"mm a {sin['sigma']:.1f}, y acorta {cuerda:.2f} de los {tr['entra']:.2f} "
           f"embebidos")
@@ -3176,7 +3201,14 @@ def guarda_talon(p: dict[str, float]) -> None:
     assert fin_ventana - tl["x_pie"] >= 2 * t - 1e-9, (
         f"la ventana de la pestana llega a x={fin_ventana:.2f} y el canto libre "
         f"del pie esta en {tl['x_pie']:.2f}: menos de 2 t de puente")
-    sep_min = 1.5 * p["d_M4_paso"] + p["talon_pestana_ancho"] / 2 + p["d_M4_paso"] / 2
+    # el alivio: un taladro mas estrecho que la chapa no alivia nada (y mas
+    # ancho, se come la raiz: eso lo acota la lengueta en guarda_trasera_flexion)
+    assert p["alivio_pestana"] >= t - 1e-9, (
+        f"el alivio de la pestana mide {p['alivio_pestana']:g} y la chapa {t:g}: "
+        f"un alivio mas estrecho que el espesor no alivia el doblez")
+    # la ventana no acaba en el ancho de la pestana: el corte y el alivio la
+    # ensanchan (tl['pestana_ventana'] es el medio ancho real)
+    sep_min = 1.5 * p["d_M4_paso"] + tl["pestana_ventana"] + p["d_M4_paso"] / 2
     for zc in tl["pestana_z"]:
         for zm in tl["m4_z"]:
             assert abs(zc - zm) >= sep_min - 1e-9, (

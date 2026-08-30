@@ -151,8 +151,10 @@ techo_labio     = 18;
 // interior hacia la plancha, asi que el plano real es 1.5 mas (4.64). Con 4 de
 // aire el plano sube a 3.64 pero la mano baja entre pestanas pasa de 8.9 a 9.4
 // MPa: el aire manda mas en la placa que en el plano. Y el radio queda fuera
-// de donde apoya una plancha gruesa. ancho = 25 por la lengueta: con la reaccion en su punta trabaja a
-// unos 180 MPa contra los 240 del 6082-T6 (con 20, 225: por un pelo).
+// de donde apoya una plancha gruesa. ancho = 25 por la lengueta: su raiz mide
+// 23.5 (el alivio muerde 0.75 por lado en la linea del doblez) y con la
+// reaccion en su punta trabaja a unos 200 MPa contra los 240 del 6082-T6
+// (con 20, raiz de 18.5: unos 250, fluye).
 talon_pestana_alto  = 8;
 talon_pestana_ancho = 25;
 talon_pestana_aire  = 3.5;
@@ -174,7 +176,7 @@ talon_pestana_n     = 8;
 // colgado de una respuesta. Con 2 t, 25 de ancho y 3.5 de aire no hay
 // pregunta. Y ALIVIO en las dos esquinas del corte en U, donde el corte
 // muere en la linea del doblez: un taladro de alivio_pestana a caballo de la
-// linea, para que el doblez no rasgue la esquina viva (a 180 MPa nominales,
+// linea, para que el doblez no rasgue la esquina viva (a 200 MPa nominales,
 // con Kt ~2 en una esquina viva la chapa plastifica ahi y la pestana toma
 // deformacion permanente: el aire de 3.5 dejaria de ser 3.5).
 radio_doblez_pestana = 3;

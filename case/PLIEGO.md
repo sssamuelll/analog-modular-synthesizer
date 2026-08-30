@@ -198,7 +198,7 @@ el 2026-08-28:
 |---|---|---|---|
 | `chasis_cuerpo_2d`, `chasis_tapa_2d`, `chasis_refuerzo_2d` | acero | chapa | corte + **plegado** |
 | `miembro_alto_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: la meseta de 50 con **retorno a 45°** de 4 en el pico y, por detrás, **chaflán + labio de 18 (dos dobleces a 45°, variante B)** o la banda de 24 a 90° (variante A) — con dos **bridas** de 27 dobladas a 90° de las puntas del labio (en B con relieve y esquina a chaflán) — **1 ud** |
-| `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: DOS dobleces a 45° (labio de 13 → chaflán → pie de 20, la nariz en espejo) y **ocho pestañas lanzadas** de 25 × 8 (corte en U de 0.5 con un **taladro de alivio de Ø2** a caballo de la línea de doblez en cada esquina, doblez a 90° con **r = 3 = 2 t** hacia arriba, el mismo radio que el resto de la pieza; son estructura: sujetan el canto de abajo de la trasera y la más cargada recibe 154 N en la punta — 181 MPa en la lengüeta: **el 6082-T6 aquí es obligatorio, no recomendado**) — **1 ud** |
+| `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: DOS dobleces a 45° (labio de 13 → chaflán → pie de 20, la nariz en espejo) y **ocho pestañas lanzadas** de 25 × 8 (corte en U de 0.5 con un **taladro de alivio de Ø2** a caballo de la línea de doblez en cada esquina, doblez a 90° con **r = 3 = 2 t** hacia arriba, el mismo radio que el resto de la pieza; son estructura: sujetan el canto de abajo de la trasera y la más cargada recibe 159 N en la punta — 198 MPa en la raíz de la lengüeta, que mide 23.5 tras el alivio: **el 6082-T6 aquí es obligatorio, no recomendado**) — **1 ud** |
 | `nariz_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: TRES dobleces (45°, 45° y 35°) — **1 ud**. Ver las líneas de plegado abajo |
 | `tapa_valle_2d` | aluminio, 3 mm | chapa | corte + **plegado** |
 | `costilla_2d`, `costilla_dorso_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **fresado CNC**, sin plegar, sin soldar |
@@ -306,8 +306,10 @@ chaflán) y a **20.17** (chaflán → pie) del canto libre del labio. Blank
 desde dentro, como la nariz) y **ocho ventanas de pestaña**: un corte en U de
 0.5 de ancho alrededor de una lengüeta de 25 × 6.20 que arranca en y = 29.23
 hacia el canto libre del pie, **sin cortar la línea del doblez** (la de
-y = 28.73); la lengüeta se dobla 90° hacia arriba con r = 1.5 y queda de pie
-detrás del canto de abajo de la trasera, a 3 de su cara. Los dos dobleces van
+y = 28.73), con un **taladro de alivio de Ø2 a caballo de esa línea** en cada
+esquina del corte; la lengüeta se dobla 90° hacia arriba con **r = 3 (2 t, el
+mismo que el resto de la pieza)** y queda de pie detrás del canto de abajo de
+la trasera, a 3.5 de su cara. Los dos dobleces van
 hacia dentro; la pieza no se voltea: el pie sobre la tabla y el chaflán al
 suelo. Sin bridas ni rosca en el anillo.
 
@@ -558,5 +560,5 @@ contradicen, el equivocado es este documento.**
 | roscas ciegas del anillo, broca M4 3.3 / M5 4.2 | `d_M4_rosca`, `d_M5_rosca` | `guarda_anclajes()`, `taladros_anillo()` |
 | junta de asiento EPDM 1 mm (costado y trasera) | `t_junta_asiento` | `guarda_rebaje()`, `guarda_trasera_capturada()` |
 | bolsillo de la trasera 11 × 6, labio 3; rebaje a 17 atrás | `rehundido_acrilico`, `rebaje_anillo`, `t_anillo`, `pared_rebaje_trasera` | `guarda_trasera_capturada()`, `anillo_tiene_bolsillo_trasero()`, `anillo_tiene_rebaje()` |
-| talón: chaflán 6, labio 13, pie 20, pestañas 20 × 8 a 3 | `chaflan_nariz`, `talon_labio`, `talon_pie`, `talon_pestana_*` | `guarda_talon()`, `pestanas_talon()` |
+| talón: chaflán 6, labio 13, pie 20, ocho pestañas 25 × 8 a 3.5, r = 2 t, alivio Ø2 | `chaflan_nariz`, `talon_labio`, `talon_pie`, `talon_pestana_*` | `guarda_talon()`, `pestanas_talon()` |
 | techo: chaflán 6 + labio 18 (B) / banda 24 (A) | `remate_trasero_chaflan`, `techo_labio`, `banda_trasera` | `guarda_miembro_alto()` |

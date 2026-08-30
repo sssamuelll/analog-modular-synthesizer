@@ -252,15 +252,16 @@ barrida por todo lo que se ve de la plancha (entre los dos labios: lo que tapa u
 labio lo empuja la chapa, no la mano; una rejilla de 16 × 16 más la mano baja sobre
 cada pestaña), cuatro pestañas dejan la mano baja entre dos de ellas a 9.8 MPa —
 por un pelo, y pasar por un pelo no es pasar —; ocho la dejan en 8.9 (§7,
-`guarda_trasera_flexion()`). La más cargada recibe 154 N, y como lengüeta de
-25 × 1.5 con la carga en la punta (brazo 8 + 3) trabaja a 181 MPa: es lo que hace
+`guarda_trasera_flexion()`). La más cargada recibe 159 N, y como lengüeta de
+23.5 × 1.5 en la raíz (los 25 menos lo que muerde el alivio, 0.75 por lado) con la
+carga en la punta (brazo 8 + 3) trabaja a 198 MPa: es lo que hace
 **obligatorio el 6082-T6** del talón (Rp0.2 240; con los 130 genéricos no pasa
 ninguna lengüeta de 1.5 sin ser un peine). El radio: se pensó a 1 t y se deshizo en
 la ronda 4 del PR — el RFQ lo dejaba como pregunta abierta al taller, y si
 contestaban 2 t la lengüeta se quedaba a 234 contra 240 y el plano tras el
 chaflán en 2.64 contra 3: un diseño colgado de una respuesta. A 2 t, con 25 de
 ancho y 3.5 de aire, no hay pregunta; y el alivio es para que el doblez no rasgue
-la esquina viva del corte (a 181 MPa nominales, con Kt ≈ 2 en una esquina viva la
+la esquina viva del corte (a 198 MPa nominales, con Kt ≈ 2 en una esquina viva la
 chapa plastifica ahí y la pestaña tomaría deformación permanente: el aire dejaría
 de ser 3.5). Entre el doblez del chaflán y el de la pestaña quedan 3.14 de plano
 por la cuenta conservadora de `guarda_talon()` (tangentes exteriores a 7.9 y 11

@@ -13,11 +13,11 @@ para saber **quién puede hacerlo**.
 > exterior. **A la chapa
 > (§B)**: el talón pasa a ser la nariz en espejo (dos dobleces a 45° y ocho
 > pestañas lanzadas a r = 2 t con alivio, en 6082-T6 obligatorio: cada lengüeta
-> puede llevar 154 N en la punta) y el techo baja con chaflán + labio (dos a
+> puede llevar 159 N en la punta) y el techo baja con chaflán + labio (dos a
 > 45°) en vez de
 > banda a 90°. **A la casa de acrílico (§A)**: la trasera **sin un solo
-> taladro**, 552.32 × 237.18. Pregunta nueva en §B: pestañas lanzadas con
-> r = 1 t.
+> taladro**, 552.32 × 237.18. §B ya no pregunta por el radio de la pestaña:
+> es el mismo r = 3 que el resto de la chapa.
 >
 > **rev. 24 (2026-08-29, noche).** Al taller de chapa (§B) le entra **el
 > marco de la ventana** (pletina de 6 a láser con seis cajeados, ×2
@@ -182,8 +182,9 @@ la trasera, muertos esa misma noche, ya no existen.)
    111 con 20 kg en el centro de la meseta; y también el anillo de §D, cada
    pieza con su propia puerta). **Para el talón SÍ lo es: 6082-T6 (Rp0.2 ≥
    240)**, porque sus ocho lengüetas sujetan el canto de abajo de la trasera
-   y la más cargada trabaja a 181 MPa con la carga en la punta — con 130 no
-   pasa ninguna lengüeta de 1.5 (`guarda_trasera_flexion()`). Una aleación
+   y la más cargada trabaja a 198 MPa en la raíz (23.5: los 25 menos lo que
+   muerde el alivio) con la carga en la punta — con 130 no pasa ninguna
+   lengüeta de 1.5 (`guarda_trasera_flexion()`). Una aleación
    distinta **hay que aprobarla antes de cortar**, regenerando las puertas si
    cambia.
 4. **¿Cortan a láser pletina de 6 mm y le hacen bolsillos ciegos** (el marco
