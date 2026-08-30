@@ -3,15 +3,18 @@
 **Fecha:** 2026-08-30 · **Estado:** aprobado por Samuel en conversación («dale»)
 sobre la propuesta de esta mañana, con sus cuatro números (chapa rehundida 1,
 rebaje en las tres chapas; y para la tanda B, panel 1U de 55 y paneles 1.5
-abajo); **corregido contra la crítica adversarial de codex** (Serrano, Halberg,
-Rune) de la misma mañana: la ranura del rebaje a 3.5 (la fresa es Ø3), la
-rendija a 3.0 y el labio del techo a 20 (capilaridad), el tramo trasero a 22,
-las chapas a 545.62, el montaje escrito, y las puertas una por aserto ·
-**Tanda A de dos**: la B (la fila 1U más alta con sus rieles, los paneles
-empotrados y el apoyo de la banda del valle) tiene su propia spec ·
-**Supersede** en el techo, en la unión chapa-anillo, en la junta de los labios
-y en la ventilación a la spec del 29-08 (trasera capturada) y a la del 27-08
-(esqueleto visible) en lo que dicen de eso.
+abajo); **corregido contra dos rondas de crítica adversarial de codex**
+(Serrano, Halberg, Rune): ronda 1 — la ranura del rebaje a 3.5 (la fresa es Ø3),
+la rendija a 3.0 y el labio del techo a 20 (capilaridad), el tramo trasero a 22,
+las chapas a 545.62, el rebaje al DXF del dorso; ronda 2 — **los pies no se
+rehunden** (apoyan en la tabla), el tramo trasero por bandas de altura, el
+cajeado de la brida a 28 × 15.5, **la tabla entra con el anillo B** con nariz y
+talón ya atornillados en el banco, y una mutación por aserto que de verdad
+salta ahí · **Tanda A de dos**: la B (la fila 1U más alta con sus rieles, los
+paneles empotrados y el apoyo de la banda del valle) tiene su propia spec ·
+**Supersede** en el techo, en la unión chapa-anillo, en la junta de los labios,
+en la ventilación y en el orden de montaje a la spec del 29-08 (trasera
+capturada) y a la del 27-08 (esqueleto visible) en lo que dicen de eso.
 
 ## 1. De dónde sale
 
@@ -60,15 +63,17 @@ Tres hechos del repo que mandan aquí (trazados el 30-08):
 ## 2. La cuenta
 
 Fórmula de `guarda_aire()`, tal cual (tiro de chimenea laminar, entrada y salida
-en serie, C_D 0.65, 20 °C); la última columna repite la de 9.22 W con C_D 0.55,
-que es la sensibilidad que la crítica pidió ver.
+en serie, C_D 0.65, 20 °C), **con el labio del techo ya a 20** (§3.2): la rejilla
+de entrada y las ondas se anclan a lo que se ve de la trasera, así que bajan 2
+mm y la entrada queda en **7 065 mm² a y = 46** (hoy 7 193 a 47). La última
+columna repite la de 9.22 W con C_D 0.55, la sensibilidad que la crítica pidió.
 
 | escenario | salida (mm²) | tiro (mm) | 6.33 W | 9.22 W | 9.22 W, C_D 0.55 |
 |---|---|---|---|---|---|
 | hoy: meseta 852 + ondas 2 289 | 3 141 | 94 | 10.8 K | 13.9 K | 15.5 K |
-| techo macizo, nada más | 2 289 | 51 | **15.9 K** | 20.4 K | — |
-| techo macizo + rendija a 2.5, ocho tacos de 15 | 3 341 | 95 | 10.4 K | 13.3 K | 14.9 K |
-| **techo macizo + rendija a 3.0, seis tacos de 15** | 3 641 | 103 | **9.6 K** | **12.4 K** | **13.8 K** |
+| techo macizo, nada más | 2 289 | 51 | **15.9 K** | 20.5 K | — |
+| techo macizo + rendija a 2.5, ocho tacos de 15 | 3 341 | 95 | 10.4 K | 13.4 K | 14.9 K |
+| **techo macizo + rendija a 3.0, seis tacos de 15** | 3 641 | 103 | **9.7 K** | **12.4 K** | **13.9 K** |
 | ídem, rendija a 3.5 | 3 866 | 108 | 9.2 K | 11.8 K | 13.2 K |
 
 Se adopta la fila en negrita. La rendija del alero (§3.2) está más alta que el
@@ -105,12 +110,13 @@ total como peor caso) sube 2γ/(ρ g d) = **5.9 mm a d = 2.5**, contra 6.5 de
 solape — 0.6 de margen, y a 1.5 de luz local (una plancha alabeada) 9.8, por
 encima del canto. Por eso dos números cambian:
 
-- **`aire_labios` = 3.0** (subida capilar **4.95 mm**), que es también el grosor
+- **`aire_labios` = 3.0** (subida capilar **4.96 mm**), que es también el grosor
   de los tacos (§3.3);
 - **`techo_labio` = 20** (era 18): el labio baja a y = 230.18 y tapa **8.5** del
-  canto; el margen capilar queda en **3.5 mm** con la luz nominal y en 2.5 con
-  una luz local de 2.5. El techo gana sección (el labio de 18 ya era el mínimo
-  por rigidez, §5 de la spec del 29-08), y lo que se ve de la trasera pierde 2.
+  canto. La regla (§6, `guarda_rendija`): la subida con los tacos **comprimidos
+  un 20 %** (luz 2.4: 6.2 mm) queda por debajo del solape menos 2 (6.5). El techo
+  gana sección (el labio de 18 ya era el mínimo por rigidez, §5 de la spec del
+  29-08), y lo que se ve de la trasera pierde 2.
 
 Área: (540.62 − 6 × 15) × 3.0 = **1 352 mm²** a y ≈ 238.
 
@@ -128,10 +134,10 @@ se decide aquí: **tacos de EPDM de 3.0 × 15**, seis por labio (uno cada ~90 mm
 pegados a la cara interior del labio), en el labio del techo **y** en el del
 talón. Una sola regla para las dos juntas; sujetan la plancha sin que suene,
 fijan la luz (la plancha no puede pegarse al labio y cerrar la salida: el taco
-es la luz) y dejan la rendija libre entre ellos. Solo la de arriba se cuenta
-como salida. La de abajo (a y ≈ 6-19, bajo el labio del talón, mirando al suelo)
-es una entrada que no se cuenta: si entra aire por ahí mejora el tiro y no
-aparece en el número.
+es la luz, y la puerta la cuenta comprimida un 20 %) y dejan la rendija libre
+entre ellos. Solo la de arriba se cuenta como salida. La de abajo (a y ≈ 6-19,
+bajo el labio del talón, mirando al suelo) es una entrada que no se cuenta: si
+entra aire por ahí mejora el tiro y no aparece en el número.
 
 ### 3.4 Los vatios
 
@@ -145,8 +151,10 @@ el mismo método de superficie de la spec de la fuente (9 W/m²K): 2 raíles × 
 × 174 mA del censo ≈ **4.2 W** sobre ~0.3 m² de paneles y pieles ≈ **1.5 K**.
 Es un ESTIMADO y no cierra nada: queda en §8.
 
-El techo se queda en 15 K y no pegado al número: 12.4 K deja 2.6 K, y 13.8 con
-C_D 0.55 deja 1.2.
+El techo se queda en 15 K y no pegado al número: 12.4 K deja 2.6 K, y 13.9 con
+C_D 0.55 deja 1.1. C_D, la altura efectiva y las pérdidas siguen sin medir, como
+el propio `guarda_aire()` declara: por eso §8 pide el ensayo con la primera
+unidad.
 
 ### 3.5 El gotero
 
@@ -160,28 +168,40 @@ decide mirando (§8).
 
 ### 4.1 El rebaje de chapa
 
-En la cara interior de cada anillo, a lo largo del contorno **solo donde hay
-chapa** (nariz: pie, chaflán y frente hasta P1; techo: del retorno de P4 por la
-meseta, el chaflán de P5 y el labio hasta y = 230.18; talón: labio de y = 19 a 6,
-chaflán y pie), un **rebaje de `rebaje_chapa` = 3 de fondo** (z, 2 t, desde la
-cara interior: z = 11..14 contando desde la cara vista) y de u =
-`rehundido_chapa` a u = `rehundido_trasera` (de **1 a 4.5**: 3.5 de ancho, la
-fresa de Ø3 del pliego entra; a 2 de ancho no entraba). La chapa entra en él:
+En la cara interior de cada anillo, a lo largo del contorno **solo en los tramos
+que se ven** — nariz: chaflán y frente hasta P1; techo: del retorno de P4 por la
+meseta, el chaflán de P5 y el labio hasta y = 230.18; talón: labio de y = 19 a 6
+y chaflán —, un **rebaje de `rebaje_chapa` = 3 de fondo** (z, 2 t, desde la cara
+interior: z = 11..14 contando desde la cara vista) y de u = `rehundido_chapa` a
+u = `rehundido_trasera` (de **1 a 4.5**: 3.5 de ancho, la fresa de Ø3 del pliego
+entra; a 2 de ancho no entraba). La chapa entra en él:
 
 - su cara exterior queda a **`rehundido_chapa` = 1** por dentro del contorno del
   anillo, y su cara interior a 2.5; al suelo del rebaje le sobran 2: el suelo
   no posiciona, posicionan las bridas y los M4 de los pies;
 - su canto queda **debajo del anillo** con `hol_chapa` = 0.5 a la pared del
   rebaje (no los 0.15 de `hol_piel`: una chapa cortada a ±0.3 tiene que entrar
-  aunque venga larga, y aun larga queda 2.2 tapada): **las tres chapas miden
-  546.62 − 2 × 0.5 = 545.62** entre paredes (el techo crece 5.0 sobre sus
-  540.62, nariz y talón 5.3 sobre sus 540.32);
+  aunque venga larga, y aun larga queda 2.2 tapada): **lo que entra en rebaje
+  mide 546.62 − 2 × 0.5 = 545.62** entre paredes (el techo crece 5.0 sobre sus
+  540.62; el chaflán y el frente de la nariz, y el labio y el chaflán del talón,
+  5.3 sobre sus 540.32);
 - el borde del anillo es un **reborde de 1 × 3** (u = 0..1, z = 11..14) que
   recorre el contorno donde hay chapa: es lo que se ve como marco, y lo que
   tapa el canto. Una pared de 1 con 3 de alto se fresa (3:1) pero es la cota más
   delicada de la pieza: va al RFQ como pregunta con respuesta ya diseñada — si
   el taller pide 1.5, `rehundido_chapa` = 1.5 y todo lo derivado se mueve solo
   (§6, puerta «reborde»).
+
+**Los pies NO se rehunden.** El pie de la nariz y el del talón apoyan en la tabla
+con su cara de abajo en y = 0, a ras de la cara de abajo del anillo, y sus
+puntas mueren a `hol_piel` de la cara interior del anillo (z = 14.15) como hoy:
+rehundir un tramo horizontal es levantarlo 1 mm de la tabla, y ahí no hay nada
+que ver ni que empotrar (la tabla lo tapa). Así que el desarrollo de la nariz y
+el del talón lleva en cada punta una **muesca de 3 × (largo del pie)**: el pie
+mide 540.32 y lo demás 545.62, y la esquina de la muesca cae sobre la línea del
+doblez pie-chaflán, con un **alivio de Ø2** a caballo de esa línea como el de
+las pestañas (`alivio_pestana`), para que el doblez no la rasgue. Nada cambia en
+la tabla ni en los M4 de los pies.
 
 El acabado que Samuel pide sale de que ninguna de las dos cotas que se ven
 depende del taller de chapa: la junta de sombra de 1 mm la fresa el anillo, y el
@@ -199,121 +219,137 @@ rehundida 1, el contorno del anillo es la cara exterior de la chapa desplazada
 de 6 del anillo y el de la chapa quedan a 1 mm uno de otro y paralelos, con los
 vértices redondeados sobre el mismo centro que el doblez: se leen como el mismo
 plano aunque el taller doble a 2.9 o a 3.1, porque la diferencia cae dentro de
-la junta de sombra y no sobre una arista compartida.
+la junta de sombra y no sobre una arista compartida. Donde la chapa sale del
+rebaje hacia el pie (los vértices de abajo de los chaflanes de P0 y P6), el
+reborde muere en la cara de abajo del anillo y el radio del vértice vuelve a
+ser el de hoy.
 
 El sólido de la chapa se dibuja igual que hoy (cubos y polígonos, sin arcos); lo
 que cambia es que el anillo ya no pretende coincidir con un arco que el modelo
 no tiene.
 
-### 4.3 El tramo trasero: presupuesto de franja
+### 4.3 El tramo trasero, por bandas de altura
 
-En el tramo P5-P6 el anillo lleva, además, el bolsillo de la trasera (z = 8..14
-desde la cara vista, cerrado de y = 1 a 239.18) y el del costado (z = 3..14, el
-PMMA en 3..11). El rebaje de chapa se suma **solo en las alturas de los dos
-labios** — y = 230.18..250.18 (techo) e y = 6..19 (talón) —; entre 19 y 230.18 no
-hay chapa y el bolsillo de la trasera conserva su labio de 6 de hondo. De fuera
-a dentro (u desde el plano trasero; z desde la cara vista, cara interior en 14):
+En la cara vertical P5-P6 (x = 307.41, de y = 6 a 250.18) el anillo lleva el
+bolsillo de la trasera (z = 8..14 desde la cara vista; cerrado de y = 1 a
+239.18), el del costado (u = 18.5..22, z = 3..14, el PMMA en z = 3..11), y donde
+hay labio de chapa, el rebaje (u = 1..4.5, z = 11..14). Con `rehundido_trasera`
+= 4.5 el bolsillo de la trasera va en **u = 4.5..15.5**, su pared en 15.5..18.5
+(`pared_rebaje_trasera` = 3) y el costado entra 3.5 en 18.5..22: **la franja del
+tramo trasero pasa de 20 a 22** (`cara_anillo_trasera` = 4.5 + 11 + 3 + 3.5). Lo
+que hay en cada banda de altura, de fuera a dentro:
 
-| u | z = 11..14 (los 3 del rebaje) | z = 8..11 | z = 3..8 | z < 3 |
-|---|---|---|---|---|
-| 0..1 | **reborde** (donde hay labio de chapa) / labio del bolsillo (resto) | labio del bolsillo | macizo | macizo |
-| 1..4.5 | rebaje de chapa (chapa en 1..2.5, aire 2.5..4.5) / labio del bolsillo | labio del bolsillo | macizo | macizo |
-| 4.5..15.5 | **bolsillo de la trasera** (en las alturas de los labios, rebaje y bolsillo son un solo vaciado de u = 1 a 15.5) | bolsillo de la trasera | macizo | macizo |
-| 15.5..18.5 | pared (`pared_rebaje_trasera` = 3) | pared | macizo | macizo |
-| 18.5..22 | bolsillo del costado (entra 3.5) | ídem | ídem (el PMMA vive en z = 3..11) | labio del costado |
+| y | z = 11..14 | z = 8..11 | z = 3..8 |
+|---|---|---|---|
+| **6..19** (labio del talón) y **230.18..239.18** (labio del techo sobre el bolsillo) | reborde en u = 0..1; **un solo vaciado de u = 1 a 15.5** (rebaje + bolsillo: la chapa en 1..2.5, aire, la trasera en 5.5..13.5); pared; costado | labio del bolsillo en u = 0..4.5 (**3 de hondo**), bolsillo 4.5..15.5, pared, costado | macizo hasta 18.5; costado |
+| **19..230.18** (sin chapa) | labio del bolsillo en u = 0..4.5 (6 de hondo, como hoy), bolsillo, pared, costado | ídem | macizo; costado |
+| **239.18..240.18** (fin del bolsillo, bajo la brida) | reborde; rebaje en u = 1..4.5; macizo hasta 18.5; costado | macizo; costado | macizo; costado |
+| **240.18..250.18** (la brida, hasta el chaflán) | reborde; **rebaje y cajeado de la brida en un solo vaciado**, de u = 1 hasta el fondo del cajeado (~30); luego macizo hasta 18.5 si el cajeado no llega; costado | macizo; costado | macizo; costado |
 
-De la tabla salen tres cosas: en las alturas de los labios **el labio del
-bolsillo de la trasera queda con 3 de hondo** (z = 8..11; en z = 11..14 lo
-sustituyen el reborde y el propio labio de la chapa, que a 3.0 de aire y con los
-tacos sigue parando la plancha hacia fuera); **la franja del tramo trasero pasa
-de 20 a 22** (`cara_anillo_trasera`: 4.5 + 11 + 3 + 3.5) para que el costado
-siga entrando al menos 3 con su pared de 3; y **no queda ninguna aleta**: el
-suelo del rebaje es la pared exterior del bolsillo (u = 4.5) por construcción
-(§3.2, derivado). La alternativa que la spec del 29-08 ya dejaba a Samuel — el
-costado a 6 en los cuatro tramos — vale 24.5 aquí y se ve 4.5 más ancha desde
-el lado; no se toma en esta tanda.
+De la tabla salen tres cosas: **bajo los dos labios de chapa el labio del
+bolsillo queda con 3 de hondo** (z = 8..11; en z = 11..14 lo sustituyen el
+reborde y el propio labio de la chapa, que a 3.0 de aire con los tacos sigue
+parando la plancha hacia fuera); **no queda ninguna aleta**, porque el suelo
+del rebaje es la pared exterior del bolsillo por construcción (u = 4.5,
+derivado, §3.2); y **el bolsillo sigue cerrado en y = 239.18**: por encima solo
+hay rebaje y, desde 240.18, el cajeado de la brida, cuyas roscas quedan 8.5 por
+encima del cierre como hoy. La alternativa que la spec del 29-08 ya dejaba a
+Samuel — el costado a 6 en los cuatro tramos — vale 24.5 aquí y se ve 4.5 más
+ancha desde el lado; no se toma en esta tanda.
 
 ### 4.4 Las bridas del techo
 
 El repo fija la brida **en la cara del anillo** (z = 14) y lo llama no
 negociable porque a z ≥ t_anillo + t_placa está el barrido del panel de arriba.
 Aquí la brida cambia de plano **en la dirección segura**: como el labio entra 3
-en el rebaje, dobla en z = 11 y apoya en un **cajeado de 3 de fondo** en la cara
-interior — queda de z = 11 a 12.5, **1.5 por debajo** de la cara, más lejos del
-barrido, no más cerca. El cajeado mide la huella de la brida más 0.5 por lado
-(28 × 15) con esquinas de R1.5 (la fresa), y **la brida lleva sus esquinas
-redondeadas a R2** para asentar entera. Los dos M4 ciegos se roscan desde el
-suelo del cajeado (quedan 11 de pletina; hoy 14). La muesca del marco de la
-ventana sobre la huella se queda: las cabezas siguen asomando por encima de la
-cara.
+en el rebaje, dobla en z = 11 y apoya en un **cajeado de `rebaje_chapa` = 3 de
+fondo** en la cara interior — queda de z = 11 a 12.5, **1.5 por debajo** de la
+cara, más lejos del barrido, no más cerca. El cajeado es la huella de la brida
+(27 × 14.5, con su esquina de arriba cortada a 45°) más 0.5 por lado: **28 ×
+15.5**, con esquinas interiores de R1.5 (la fresa); **la brida lleva sus
+esquinas redondeadas a R2** para asentar entera. Los dos M4 ciegos se roscan
+desde el suelo del cajeado (quedan **11 de pletina**; hoy 14). La muesca del
+marco de la ventana sobre la huella se queda: las cabezas siguen asomando por
+encima de la cara.
 
 ### 4.5 El marco de la ventana
 
 Su canto exterior se retira bajo las chapas `t_costilla` + `hol_piel` = 1.65
 hoy (`_retiro_marco_chapa`); pasa a **`rehundido_chapa` + `t_costilla` +
-`hol_piel` = 2.65** en frente, suelo, meseta y cola bajo el retorno. En el tramo
-trasero la pata del marco arranca 0.5 más allá de la pared del bolsillo de la
-trasera (`_retiro_marco_trasera` = `t_anillo` + 0.5 = 14.5 hoy); con el bolsillo
-en u = 4.5..15.5 arranca en **16**, 1.5 más adentro, y la pata de
-`marco_fondo_trasera` = 28 pierde ese ancho: con 28 quedaría en unos 129 MPa
-contra 130 (con 1 menos el modelo da 119; con 1.5 menos, la cuenta del plan).
-**Pasa a 30** — 1.5 que se pierden y 0.5 de margen —, y `guarda_marco_ventana()`
-lo comprueba con la cuenta, no con la estimación.
+`hol_piel` = 2.65** en frente, meseta y cola bajo el retorno (en el suelo, bajo
+los pies, sigue en 1.65: los pies no se rehunden). En el tramo trasero la pata
+del marco arranca 0.5 más allá de la pared del bolsillo de la trasera
+(`_retiro_marco_trasera` = `t_anillo` + 0.5 = 14.5 hoy); con el bolsillo en u =
+4.5..15.5 arranca en **16**, 1.5 más adentro, y la pata de `marco_fondo_trasera`
+= 28 perdería ese ancho. **Pasa a 30**: con el retiro en 16 la fórmula vigente
+de `guarda_marco_ventana()` da **1.45 mm y 106 MPa** (techos 2 mm y 130); con 28
+quedaría por un pelo.
 
 ### 4.6 Nariz y talón
 
-Mismo rebaje, mismo reborde, mismos radios: sus pies siguen atornillados a la
-tabla con sus M4 (nada cambia en la tabla), y sus chaflanes y frentes entran en
-el rebaje por los dos lados. Sin bridas: no hay cajeados nuevos por ellas. El
-chaflán de la arista de abajo-fuera de la trasera (5.5) se recalcula con la
-plancha 1.5 más adentro y el labio del bolsillo a 4.5 (`chaflan_trasera_bajo()`
-y su gemela): es una cuenta, no una decisión.
+Mismo rebaje, mismo reborde, mismos radios en chaflanes y frentes; los pies a
+ras sobre la tabla con su muesca (§4.1). Sus M4 a la tabla, sus pestañas y sus
+avellanados no cambian. El chaflán de la arista de abajo-fuera de la trasera
+(5.5) se recalcula con la plancha 1.5 más adentro y el labio del bolsillo a 4.5
+(`chaflan_trasera_bajo()` y su gemela): es una cuenta, no una decisión.
 
-## 5. Montaje
+## 5. Montaje: la tabla entra con el anillo B
 
-Las tres chapas quedan capturadas por los rebajes de los dos anillos y miden más
-que el vano entre caras: **entran con el anillo B, como la trasera y los
-costados**, y el orden del README cambia en dos pasos:
+Las tres chapas quedan capturadas por los rebajes de los dos anillos en lo que
+entra en rebaje, y miden más que el vano entre caras: **entran con el anillo B,
+como la trasera y los costados**. Para que nada quede de pie sin sujeción y
+para que los seis M4 de los pies se sigan apretando en el banco, **la tabla se
+une al anillo A antes de que baje el B**. El orden del README, pasos 4 a 7:
 
-4. (como hoy, más) **la nariz y el talón de pie en el rebaje del anillo A**, en
-   sus tramos, y **el techo con su brida A ya roscada** a los dos M4 ciegos del
-   cajeado de A (con el anillo A tumbado el interior está abierto); la trasera en
-   su bolsillo; el marco B en las puntas de los rieles; el costado B en el
-   anillo B. **El anillo B baja** sobre cinco puntas a la vez — marco B, trasera,
-   techo, nariz, talón —, todas en z, como hoy baja sobre dos. Los doce M4 del
-   marco B y los dos de la brida B, desde dentro por el frente abierto.
-5. (era 6-7) **La tabla, sola en el banco, con el chasis del PSU** (sus 4 M4
-   desde debajo); nariz y talón ya no vienen con ella: **el case boca abajo, la
-   tabla encima**, sus M5 a los cantos de los anillos como hoy, y **los 3 + 3 M4
-   de los pies de la nariz y del talón se roscan a la tabla desde dentro, por el
-   frente abierto** (los del talón a 300 mm, con prolongador). Es el costo real
-   de empotrar: seis tornillos que se apretaban en el banco se aprietan en el
-   case.
+4. Con el anillo A tumbado (cara vista abajo), su costado, los rieles y el marco
+   A como hoy. **La trasera** en el bolsillo de A, de lado, apoyada en el fin de
+   abajo del bolsillo. **La tabla, preparada en el banco** con la nariz, el talón
+   (sus 3 + 3 M4 avellanados desde arriba, como hoy) y el chasis del PSU (sus 4
+   M4 desde debajo), **se pone de canto sobre el tramo de abajo de A**: el labio
+   del talón por fuera de la trasera y sus ocho pestañas por dentro, la nariz y
+   el talón con sus puntas en los rebajes de A, y **sus 3 M5 al canto de A desde
+   fuera de la tabla** (el redondo del medio primero). La trasera queda sujeta
+   entre el bolsillo y el pie del talón. **El techo**, con sus tacos pegados,
+   con la punta en el rebaje de A y **su brida A roscada** a los dos M4 del
+   cajeado de A (el interior está abierto). El marco B en las puntas de los
+   rieles; el costado B en el anillo B, sujeto con cinta hasta que el marco B lo
+   pise (como hoy).
+5. **El anillo B baja** sobre cinco puntas a la vez — marco B, trasera, techo,
+   nariz y talón — y sobre el canto de la tabla, todas en z, como hoy baja
+   sobre dos. Los doce M4 del marco B y los dos de la brida B **desde dentro por
+   el frente abierto**; los 3 M5 de la tabla al canto de B **desde fuera**. De
+   pie.
 
-Lo demás (rieles, marco A, tapa del valle, electricidad, paticas, paneles, el
-film al final) no cambia. Los tacos de EPDM van pegados a los labios antes del
-paso 4.
+Lo demás (tapa del valle, electricidad, paticas, paneles, el film al final) no
+cambia. Ningún tornillo nuevo, ninguno que se apriete peor que hoy: los seis M4
+de los pies siguen en el banco, y el acceso a los del talón — dos de ellos detrás
+del chasis a 9.75 mm de su pared — no cambia porque no cambia su paso.
 
 ## 6. Puertas (la puerta primero, ROJA; el modelo; VERDE; romperla)
 
 Una puerta por cosa y una mutación por aserto, que salte por SU texto
-(`canario_techo()` lo comprueba como `canario_trasera()`). Los valores derivados
-(`rehundido_trasera`, `radio_borde`, los anchos) no son parámetros: son funciones
-gemelas en el `.scad` y el budget, y `check_dxf` las cruza contra el DXF.
+(`canario_techo()` lo comprueba como `canario_trasera()`). Los derivados
+(`rehundido_trasera`, `radio_borde`, los anchos, la profundidad del cajeado =
+`rebaje_chapa`) no son parámetros: son funciones gemelas en el `.scad` y el
+budget, y `check_dxf` las cruza contra el DXF. **Orden en `main()`**: las de hoy
+como están (`guarda_rebaje` → marco → miembro alto → talón → trasera capturada →
+aire), y las nuevas **entre la trasera capturada y `guarda_aire`**:
+`guarda_rebaje_chapa` → `guarda_tramo_trasero` → `guarda_rendija`. Cada
+mutación se probó contra ese orden.
 
-| puerta | asevera | mutación que la pone roja (y solo a ella) |
+| puerta | asevera | mutación que la pone roja (y a ninguna anterior) |
 |---|---|---|
-| `guarda_aire()` (reescrita) | salida = rendija (`(ancho_util − n·largo_taco) × aire_labios`) + ondas; `potencia_disipada` = 9.22; ΔT ≤ 15; imprime ΔT con C_D 0.55 como aviso | `taco_largo` = 90 (tira continua: 20.4 K); `potencia_disipada` = 12 (16.7 K) |
-| **nueva** `guarda_rendija()` | subida capilar 2γ/(ρ g `aire_labios`) ≤ solape del labio − 2; el solape = `techo_labio` + `chaflan_nariz` − (P5.y − y1) ≥ 6; los tacos miden `aire_labios` (la plancha no toca el labio) | `techo_labio` = 17 (solape 5.5: 4.95 > 3.5); `aire_labios` = 1.5 (9.8 > 6.5) |
-| **nueva** `guarda_rebaje_chapa()` | `rebaje_chapa` ≥ 2 t; ancho (`rehundido_trasera` − `rehundido_chapa`) ≥ `fresa_d`; `rehundido_chapa` ≥ 1; las tres chapas = luz − 2·`hol_chapa` con `hol_chapa` ≥ 0.3; `radio_borde` = `radio_chapa` + `rehundido_chapa` | `rebaje_chapa` = 2 («menos de 2 t»); `rehundido_chapa` = 2.5 (ancho 2 < 3, «la fresa no entra»); `rehundido_chapa` = 0.5 («reborde más fino que 1») |
-| **nueva** `guarda_tramo_trasero()` | la tabla de §4.3: labio del bolsillo ≥ 3 de hondo bajo el rebaje; pared ≥ `pared_rebaje_trasera`; el costado entra ≥ 3; `cara_anillo_trasera` = 4.5 + 11 + pared + entrada del costado; rebaje y bolsillo comparten pared (sin aleta) | `cara_anillo_trasera` = 21 («el costado entra 2.5»); `pared_rebaje_trasera` = 2 |
-| `guarda_trasera_capturada()` | `aire_labios` = 3.0 con u0 = 4.5 (derivado); el chaflán de la plancha recalculado; y1 y el bolsillo como hoy | `t_junta_asiento` = 2 (aire 2.0 < 3.0: «la junta se come la rendija») |
-| `guarda_miembro_alto()` | como hoy (200 N sola; ahora con el labio de 20) con la brida en su cajeado: roscas desde z = 11 con ≥ 8 de pletina; cajeado = huella + 0.5 por lado; esquinas R2 en la brida ≥ R1.5 del cajeado | `rebaje_chapa` = 7 («quedan 7 de pletina bajo la brida») |
-| `guarda_marco_ventana()` | la pata trasera a 30 con el retiro en 16 | `marco_fondo_trasera` = 28 (la cuenta, no la estimación) |
-| `check_dxf.techo_macizo()` (nueva) | `miembro_alto_2d.dxf`: ningún contorno cerrado dentro del blank salvo los cuatro M4 de las bridas; esquinas de brida a R2 | un DXF con una ranura |
-| `check_dxf.anillo_dorso_tiene_rebaje()` (nueva) | en `costilla_dorso_2d.dxf` (la cara mecanizada, no `costilla_2d`): el rebaje de 1..4.5 por el contorno de las chapas, fundido con el bolsillo de la trasera en las alturas de los labios, y los dos cajeados de brida de 28 × 15; **las profundidades no se leen de una planta**: van al PLIEGO y al cupón (§7) | — |
+| `guarda_aire()` (reescrita) | salida = rendija (`(ancho_util − n·largo_taco) × aire_labios`) + ondas; `potencia_disipada` = 9.22; ΔT ≤ 15; imprime ΔT con C_D 0.55 como aviso | `taco_largo` = 90 (tira continua: 20.5 K); `potencia_disipada` = 14 (16.4 K) |
+| **nueva** `guarda_rendija()` | subida capilar 2γ/(ρ g d) con d = `aire_labios` × (1 − `compresion_taco`), `compresion_taco` = 0.2, ≤ solape − 2; solape = `techo_labio` + `chaflan_nariz` − (P5.y − y1) | `techo_labio` = 18 (solape 6.5: 6.2 > 4.5; el «≥ 6» de siempre sigue verde); `compresion_taco` = 0.4 (luz 1.8: 8.3 > 6.5) |
+| **nueva** `guarda_rebaje_chapa()` | `rebaje_chapa` ≥ 2 t; ancho `rehundido_trasera` − `rehundido_chapa` = t + `aire_labios` − `t_junta_asiento` ≥ `fresa_d`; `rehundido_chapa` ≥ 1; `hol_chapa` ≥ 0.3; lo que entra en rebaje = luz − 2·`hol_chapa`; `radio_borde` = `radio_chapa` + `rehundido_chapa`; muesca de los pies = `rebaje_chapa` con su alivio | `rebaje_chapa` = 2 («menos de 2 t»); `aire_labios` = 2.4 (ancho 2.9: «la fresa no entra»; la rendija a 2.4 da 6.2 ≤ 6.5 y el aire 13.2 K: verdes); `rehundido_chapa` = 0.5 («reborde más fino que 1»); `hol_chapa` = 0.2 |
+| **nueva** `guarda_tramo_trasero()` | la tabla de §4.3: labio del bolsillo ≥ 3 de hondo bajo los labios de chapa y 6 en el resto; pared ≥ `pared_rebaje_trasera` (**el aserto de la pared se muda aquí** desde la capturada); el costado entra ≥ 3; `cara_anillo_trasera` = `rehundido_trasera` + 11 + pared + entrada; el bolsillo cerrado en y = 239.18 y el cajeado desde 240.18 | `cara_anillo_trasera` = 21 («el costado entra 2.5»); `pared_rebaje_trasera` = 2 |
+| `guarda_trasera_capturada()` | como hoy menos la pared; con u0 = 4.5 derivado; el chaflán de la plancha recalculado | las de `canario_trasera()` de hoy (`t_piel` = 7, …) |
+| `guarda_miembro_alto()` | como hoy (200 N sola; con el labio de 20) con la brida en su cajeado: pletina bajo las roscas = `t_anillo` − `rebaje_chapa` ≥ 8; cajeado = huella + 0.5 por lado; R2 de la brida ≥ R1.5 del cajeado | `rebaje_chapa` = 6.5 («quedan 7.5 de pletina bajo la brida»; corre antes que `guarda_tramo_trasero`, que también saltaría) |
+| `guarda_marco_ventana()` | la pata trasera a 30 con el retiro en 16 | `marco_fondo_trasera` = 26 |
+| `check_dxf.techo_macizo()` (nueva) | `miembro_alto_2d.dxf`: ningún contorno cerrado dentro del blank salvo los cuatro M4 de las bridas; esquinas de brida a R2 | el DXF de hoy, con sus 16 ranuras |
+| `check_dxf.anillo_dorso_tiene_rebaje()` (nueva) | en `costilla_dorso_2d.dxf` (la cara mecanizada, no `costilla_2d`): el rebaje de 1..4.5 por el contorno de las chapas, fundido con el bolsillo de la trasera bajo los labios y con los cajeados de brida de 28 × 15.5; **las profundidades no se leen de una planta**: van al PLIEGO y al cupón (§7) | `rehundido_chapa` = 1.5 en params con el DXF a 1 |
 | `check_dxf.anillo_tiene_ventana()` (reescrita) | la cara mide `cara_anillo` en seis tramos y `cara_anillo_trasera` en el trasero (hoy exige 20 uniforme y pondría rojo el anillo correcto) | `cara_anillo_trasera` = 20 en params con el DXF a 22 |
-| `check_dxf` sobres y radios | los tres desarrollos a 545.62 (+ lo suyo por brida); `costilla_2d` con radios de 5.5 donde hay chapa y 4.5 donde no | — |
+| `check_dxf` sobres y radios | los desarrollos con lo que entra a 545.62, la muesca de los pies y su alivio; `costilla_2d` con radios de 5.5 donde hay chapa y 4.5 donde no | `hol_chapa` = 0.3 en params con el DXF a 0.5 |
 
 Renders: las dos vistas de siempre y **los dos primeros planos de la esquina de
 arriba-atrás** (tres cuartos y perfil, los del 30-08 en `build/`) pasan a ser
@@ -322,17 +358,18 @@ renders del repo, porque lo que se juzga aquí es una esquina.
 ## 7. Lo que cambia para el taller
 
 - **Mecanizado (anillos):** en la cara interior de cada anillo, el rebaje de
-  chapa de 3.5 × 3 por el contorno de las tres chapas (fundido con el bolsillo
-  de la trasera en las alturas de los labios), dos cajeados de brida de 28 × 15
-  × 3, radios de 5.5 (no 4.5) en las esquinas con chapa, y el tramo trasero a 22
-  de franja; el reborde de 1 × 3 es la cota delicada. Todo con la fresa de Ø3 y
-  los DXF a cota final, como hoy; las profundidades en el PLIEGO y en el
-  **cupón** (§"El cupón" del PLIEGO), que gana el rebaje y su reborde.
+  chapa de 3.5 × 3 por el contorno de lo que se ve de las tres chapas (fundido
+  con el bolsillo de la trasera bajo los dos labios), dos cajeados de brida de
+  28 × 15.5 × 3, radios de 5.5 (no 4.5) en las esquinas con chapa, y el tramo
+  trasero a 22 de franja; el reborde de 1 × 3 es la cota delicada. Todo con la
+  fresa de Ø3 y los DXF a cota final, como hoy; las profundidades en el PLIEGO y
+  en el **cupón** (§"El cupón" del PLIEGO), que gana el rebaje y su reborde.
 - **Chapa:** el techo **sin ranuras**, labio de 20 y esquinas de brida a R2
-  (blank 593.00 × 73.85, era 588.00 × 71.85); talón 545.62 × 39.73; nariz 5.3 más
-  ancha. Nada nuevo que plegar.
+  (blank 593.00 × 73.85, era 588.00 × 71.85); talón y nariz con lo que entra a
+  545.62, los pies a 540.32, la muesca de 3 en cada punta y su alivio de Ø2.
+  Nada nuevo que plegar.
 - **Acrílico:** la trasera igual (552.32 × 237.18), con el chaflán de abajo
-  recalculado.
+  recalculado; la rejilla de entrada 2 mm más baja (7 065 mm²).
 - **Juntas:** 12 tacos de EPDM de 3.0 × 15 (adhesivo), en vez de dos tiras de 2.5.
 - **RFQ:** al mecanizado, el rebaje, los cajeados y **la pregunta del reborde**
   («¿un reborde de 1 × 3 a lo largo del contorno, a ±0.1? si no, 1.5»); a la
@@ -341,6 +378,9 @@ renders del repo, porque lo que se juzga aquí es una esquina.
 ## 8. Lo que este documento NO cierra
 
 - **El gotero** (§3.5): con la primera pieza, y hacia fuera si entra.
+- **El ensayo térmico** con la primera unidad: C_D, altura efectiva y pérdidas
+  no están medidos, y la puerta es de órdenes de magnitud; una sonda en el
+  chasis del PSU a plena carga durante una hora, contra los 12.4 K del papel.
 - **La rendija de abajo** como entrada: no se cuenta.
 - **Los vatios de la bahía**: ~4.2 W sin presupuesto en un recinto que el repo
   declara sellado; ~1.5 K por superficie, ESTIMADO. Es un presupuesto que falta,
@@ -355,11 +395,11 @@ renders del repo, porque lo que se juzga aquí es una esquina.
 
 | papel | qué |
 |---|---|
-| `2026-08-15-case-design.md` | rev. 27 en el historial; §5: techo macizo, chapas empotradas 1 en rebaje de 3.5 × 3, salida por el alero a 3.0, labio 20, 9.22 W, montaje |
-| `2026-08-29-trasera-capturada-talon-nariz-design.md` | §3.1: el bolsillo de la trasera a u = 4.5..15.5 con labio de 3 de hondo bajo los labios de chapa; §3.4: cara vista a 5.5; §3.5 y §9: la junta es a tacos de 3.0 y la rendija es la salida; §3.6: el montaje; §5: el techo B sin ranuras y el labio a 20; §7: `guarda_aire` |
-| `2026-08-29-marco-ventana-banda-estructural-design.md` | §3.2: el retiro bajo las chapas 1.65 → 2.65, la pata trasera a 30; §4: `guarda_aire` nunca leyó ranuras del DXF |
+| `2026-08-15-case-design.md` | rev. 27 en el historial; §5: techo macizo, chapas empotradas 1 en rebaje de 3.5 × 3 (los pies a ras), salida por el alero a 3.0, labio 20, 9.22 W, la tabla entra con el anillo B |
+| `2026-08-29-trasera-capturada-talon-nariz-design.md` | §3.1: el bolsillo de la trasera a u = 4.5..15.5 con labio de 3 de hondo bajo los labios de chapa; §3.4: cara vista a 5.5; §3.5 y §9: la junta es a tacos de 3.0 y la rendija es la salida; §3.6: el montaje; §5: el techo B sin ranuras y el labio a 20; §7: `guarda_aire`, la pared a `guarda_tramo_trasero` |
+| `2026-08-29-marco-ventana-banda-estructural-design.md` | §3.2: el retiro bajo las chapas 1.65 → 2.65 (salvo el suelo), la pata trasera a 30; §4: `guarda_aire` nunca leyó ranuras del DXF |
 | `2026-08-27-case-esqueleto-visible-design.md` | «Lo que NO se toca: la ventilación» — superado: la salida cambió el 28-08 y aquí otra vez, con su puerta |
 | `2026-08-28-costilla-pletina-design.md` | §4: el anillo lleva el rebaje de chapa, los cajeados de brida, radios 5.5 y el tramo trasero a 22; el cupón gana el reborde |
-| `case/README.md` | piezas y BOM (techo sin ranuras, labio 20, blanks, tacos), térmico (9.22 W, 9.6/12.4 K, entrada 46 ranuras/7 193 mm² — hoy dice 44 y 6 781), **orden de ensamblaje** (pasos 4-7) |
-| `case/PLIEGO.md` | rev. 27: anillo (rebaje, cajeados, radios, franja trasera 22, cupón), techo macizo, desarrollos, juntas, esquinas de brida |
+| `case/README.md` | piezas y BOM (techo sin ranuras, labio 20, blanks, muescas, tacos), térmico (9.22 W, 9.7/12.4 K, entrada 46 ranuras/7 065 mm² — hoy dice 44 y 6 781), **orden de ensamblaje** (pasos 4-7 → 4-5) |
+| `case/PLIEGO.md` | rev. 27: anillo (rebaje, cajeados, radios, franja trasera 22, cupón), techo macizo, desarrollos con muesca y alivio, juntas, esquinas de brida |
 | `case/RFQ.md` | rev. 26: al mecanizado el rebaje, los cajeados y la pregunta del reborde; a la chapa el techo sin ranuras |
