@@ -673,14 +673,9 @@ module cajeado_brida_2d() {
 // anillo_tiene_rebaje() en check_dxf.
 module rebaje_2d() {
     P = pts_perfil();
-    union() {
-        difference() {
-            offset(delta = -retiro_rebaje()) perfil_lateral();
-            translate([P[6].x - rebaje_costado_trasero(), -1]) square([100, 400]);
-        }
-        // El offset redondea P5/P6; la entrada del costado debe cubrir toda la banda.
-        translate([P[6].x - cara_anillo_trasera(), chaflan_nariz])
-            square([entrada_costado_trasero, P[5].y - 2*chaflan_nariz]);
+    difference() {
+        offset(delta = -retiro_rebaje()) perfil_lateral();
+        translate([P[6].x - rebaje_costado_trasero(), -1]) square([100, 400]);
     }
 }
 

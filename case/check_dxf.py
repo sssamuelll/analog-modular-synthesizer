@@ -1033,20 +1033,41 @@ def anillo_tiene_ventana() -> list[str]:
     return []
 
 
+def _caja_cajeado_brida(cb, p: dict[str, float]) -> tuple[float, float, float, float]:
+    """La caja del cajeado de la brida del techo en el dorso, en coordenadas del
+    perfil: la huella de la brida mas hol_chapa por lado. Existe desde el
+    2026-08-30, cuando la brida dejo de apoyar en la cara del anillo y paso a
+    apoyar en un cajeado de rebaje_chapa de fondo."""
+    b = cb._bridas(p)[0]
+    h = p["hol_chapa"]
+    return (b["rect"][0] - h, b["rect"][1] + h,
+            b["rect"][2] - h, b["rect"][3] + h)
+
+
 def anillo_tiene_rebaje() -> list[str]:
-    """El DXF del DORSO es el contorno del REBAJE, retirado lo que dice params.
+    """El DXF del DORSO es el mapa de lo que se FRESA en la cara interior, y
+    cada canto suyo tiene que caer a una distancia LEGAL de la silueta.
 
     HERMANA DE anillo_tiene_ventana(), y nace del mismo agujero. El dorso solo
     lo miraba su SOBRE, con TOL = 4 mm: eso deja pasar un retiro entre 12 y 16
     sin decir nada, y sobre todo deja pasar que alguien exporte ahi la silueta
     entera o la ventana en vez del rebaje -- las tres son contornos parecidos y
-    ninguna caja las distingue. Un DXF valido e inservible otra vez.
+    ninguna caja las distingue. Un DXF valido e inservible.
 
-    Se mide la DISTANCIA, no la caja, por lo mismo que alli: offset() es
-    exacto en la distancia y no en el bbox, porque los vertices en punta se
-    resuelven a inglete. Y la silueta contra la que se mide se relee del OTRO
-    fichero, costilla_2d.dxf, que es donde vive: el dorso no la lleva dibujada
-    -- si la llevara, la fresa se comeria el contorno de la pieza."""
+    HASTA EL 2026-08-30 la regla era una sola distancia (cara - rebaje, o la
+    del tramo trasero) y el contorno exterior del dorso era el rebaje del
+    costado. Con la chapa empotrada ya no: el rebaje de chapa corre mucho mas
+    afuera, a rehundido_chapa de la silueta, y es EL el contorno exterior por
+    los tramos donde hay chapa. Asi que la regla pasa a ser una LISTA de
+    distancias legales, y se exige que las dos principales aparezcan de verdad
+    -- si el rebaje de chapa no esta, las chapas no se empotran y nadie mas lo
+    caza; si el del costado no esta, el marco no asienta.
+
+    Se mide la DISTANCIA, no la caja, porque offset() es exacto en la distancia
+    y no en el bbox: los vertices en punta se resuelven a inglete. Y la silueta
+    contra la que se mide se relee del OTRO fichero, costilla_2d.dxf, que es
+    donde vive: el dorso no la lleva dibujada -- si la llevara, la fresa se
+    comeria el contorno de la pieza."""
     import clearance_budget as cb
 
     p = cb.leer_params()
@@ -1056,56 +1077,96 @@ def anillo_tiene_rebaje() -> list[str]:
         return ["costilla_dorso_2d: sin LINEs en el dorso o en la cara, no se "
                 "puede medir el retiro del rebaje"]
     retiro = p["cara_anillo"] - p["rebaje_anillo"]
-    # EN EL TRAMO TRASERO EL REBAJE RETROCEDE a t_anillo + pared (2026-08-29,
-    # noche, 2): la pared con el bolsillo de la trasera. Un punto del canto
-    # trasero del rebaje esta a esa distancia del plano trasero, o a 14 de la
-    # tapa o del suelo si esta en una esquina: se admite lo que le toque.
-    retiro_tras = p["t_anillo"] + p["pared_rebaje_trasera"]
+    # EN EL TRAMO TRASERO EL REBAJE RETROCEDE a la pared con el bolsillo de la
+    # trasera (2026-08-29, noche, 2), que desde el 30-08 es un derivado: el
+    # bolsillo se corrio 1.5 hacia dentro con la rendija.
+    retiro_tras = cb._bolsillo_trasero(p)["rebaje_costado"]
+    reh = p["rehundido_chapa"]
     fondo = cb.fondo(p)
-    malos, ds = [], []
-    # el canto trasero es UNA ARISTA a plomo en x = fondo - retiro_tras: sus
-    # dos puntas miden 14 a la tapa y al suelo, asi que se busca la arista y
-    # no un punto a 17
+    bo = cb._bolsillo_trasero(p)
+
+    # LO MAS FINO QUE EL DISENO DEJA entre un vaciado y la cara de la pieza: la
+    # esquina del escalon del bolsillo bajo el chaflan de P6, que arranca a 0.5
+    # en x de esa cara. Es geometria ANTERIOR a la chapa empotrada (la formula
+    # trae su +0.5 desde el 2026-08-29) y nadie la medía, porque hasta hoy el
+    # bolsillo y el rebaje del costado se tocaban y esa esquina no salia al
+    # contorno exterior. Se toma como suelo, no como bendicion: 0.35 mm
+    # perpendiculares a lo largo de 6 de hondo es un filo, y queda anotado.
+    minimo = _dist_al_contorno(silueta, (fondo - bo["u_paso"], bo["y_bot"]))
+
+    ds = [_dist_al_contorno(silueta, q) for a in rebaje for q in a]
+    if not ds:
+        return ["costilla_dorso_2d: contorno exterior vacio"]
+
+    # 1. NO ES LA SILUETA NI LA VENTANA. Las tres son contornos parecidos y
+    #    ninguna caja las distingue; esto es lo que evita exportar el fichero
+    #    equivocado y mandarlo al taller.
+    if min(ds) < minimo - CARA_DXF_MAX:
+        q = min(((_dist_al_contorno(silueta, q), q) for a in rebaje for q in a),
+                key=lambda m: m[0])[1]
+        return [f"costilla_dorso_2d: un canto del dorso corre a "
+                f"{min(ds):.2f} mm de la silueta en ({q[0]:.1f}, {q[1]:.1f}), y "
+                f"lo mas fino que el diseno deja son {minimo:.2f} (la esquina "
+                f"del escalon del bolsillo). O el fichero no es el dorso, o hay "
+                f"un vaciado que se sale a la cara de la pieza"]
+
+    # 2. Y LAS DOS COSAS QUE EL TALLER TIENE QUE FRESAR ESTAN. Sin la primera
+    #    las chapas no se empotran; sin la segunda el marco no asienta. Que la
+    #    envolvente cuadre no dice nada de esto.
+    for v, que in ((reh, "el rebaje de chapa, a rehundido_chapa de la silueta"),
+                   (retiro, "el rebaje del costado, a cara - rebaje")):
+        if not any(abs(d - v) <= CARA_DXF_MAX for d in ds):
+            return [f"costilla_dorso_2d: ningun canto del dorso cae a {v:g} mm "
+                    f"de la silueta, o sea que {que} NO esta en el fichero. Es "
+                    f"lo que el taller fresa; sin el, la pieza sale lisa"]
+
+    # 3. El canto trasero del rebaje del costado, a plomo: es el que dice que en
+    #    ese tramo el costado retrocede sobre la pared entre bolsillos.
     atras = sum(1 for a in rebaje
                 if abs(a[0][0] - (fondo - retiro_tras)) <= CARA_DXF_MAX
                 and abs(a[1][0] - (fondo - retiro_tras)) <= CARA_DXF_MAX
                 and abs(a[0][1] - a[1][1]) > 100.0)
-    for a in rebaje:
-        for q in a:
-            d = _dist_al_contorno(silueta, q)
-            ds.append(d)
-            if abs(d - retiro) > CARA_DXF_MAX and q[0] < fondo - retiro_tras - CARA_DXF_MAX:
-                malos.append((q, d))
-            elif abs(d - retiro) > CARA_DXF_MAX and abs(d - retiro_tras) > CARA_DXF_MAX:
-                malos.append((q, d))
-    if malos:
-        q, d = max(malos, key=lambda m: abs(m[1] - retiro))
-        return [f"costilla_dorso_2d: el contorno del rebaje corre a {d:.2f} mm "
-                f"de la silueta en ({q[0]:.1f}, {q[1]:.1f}) y cara - rebaje dice "
-                f"{retiro:g} (o {retiro_tras:g} en el tramo trasero). O no es el "
-                f"rebaje lo que se exporto ahi, o el offset cambio: la franja "
-                f"donde asienta el marco es justamente esta distancia"]
     if not atras:
         return [f"costilla_dorso_2d: el rebaje no tiene canto trasero a plomo a "
                 f"{retiro_tras:g} del plano trasero: tiene que retroceder a la "
                 f"pared entre bolsillos"]
-    print(f"  costilla_dorso_2d: rebaje a {min(ds):.2f}..{max(ds):.2f} mm de la "
-          f"silueta (cara {p['cara_anillo']:g} - rebaje {p['rebaje_anillo']:g} "
-          f"= {retiro:g}), y su canto trasero a plomo a {retiro_tras:g}")
+
+    # 4. Y LOS DOS CAJEADOS DE BRIDA, por su tamano (2026-08-30). No se miden
+    #    por distancia: entran hasta ~30 mm porque la brida mide 27 de largo, y
+    #    son la unica pieza del dorso que no corre paralela al contorno.
+    caj = _caja_cajeado_brida(cb, p)
+    l_caj, a_caj = caj[1] - caj[0], caj[3] - caj[2]
+    esperado = (p["brida_largo"] + 2 * p["hol_chapa"],
+                p["brida_ancho"] + 2 * p["hol_chapa"])
+    if abs(l_caj - esperado[0]) > 0.01 or abs(a_caj - esperado[1]) > 0.01:
+        return [f"costilla_dorso_2d: el cajeado de la brida mide "
+                f"{l_caj:.2f} x {a_caj:.2f} y la huella de la brida mas "
+                f"hol_chapa por lado pide {esperado[0]:g} x {esperado[1]:g}"]
+
+    print(f"  costilla_dorso_2d: cantos a {min(ds):.2f}..{max(ds):.2f} mm de la "
+          f"silueta; estan el rebaje de chapa ({reh:g}) y el del costado "
+          f"({retiro:g}, {retiro_tras:g} atras), y los cajeados de brida de "
+          f"{esperado[0]:g} x {esperado[1]:g}")
     return []
+
 
 
 def anillo_tiene_bolsillo_trasero() -> list[str]:
     """El dorso lleva el bolsillo de la trasera: de canto a canto del tramo
-    trasero, entre la pared del fondo (u = t_anillo) y la cara interior del
-    labio (u = rehundido_acrilico).
+    trasero, entre la pared del fondo (u1) y la cara interior de su labio (u0).
 
-    ES LA MITAD DEL DORSO QUE NO ES EL REBAJE (2026-08-29, noche, 2). Se relee
-    como componente aparte -- un rectangulo estrecho de toda la altura -- y
-    se mide su caja contra el modelo: si alguien exporta el rebaje solo, el
-    anillo sale sin sitio para la trasera y ninguna otra puerta lo ve. La
-    profundidad (rebaje_anillo, no los t_anillo - rehundido del rebaje) va en
-    el pliego: un DXF de planta no la sabe decir."""
+    ES LA MITAD DEL DORSO QUE NO ES EL REBAJE (2026-08-29, noche, 2). Si alguien
+    exporta el rebaje solo, el anillo sale sin sitio para la trasera y ninguna
+    otra puerta lo ve. La profundidad (rebaje_anillo, no los t_anillo -
+    rehundido del rebaje) va en el pliego: un DXF de planta no la sabe decir.
+
+    HASTA EL 2026-08-30 se buscaba un COMPONENTE SUELTO con la caja exacta del
+    bolsillo. Ya no lo hay: bajo los dos labios de chapa -- el del techo arriba,
+    el del talon abajo -- el bolsillo y el rebaje de chapa se funden en un solo
+    vaciado de u = rehundido_chapa a u1, porque el suelo del rebaje ES la pared
+    exterior del bolsillo por construccion (§4.3 de la spec). Asi que ya no se
+    busca una caja: se buscan LAS DOS PAREDES del bolsillo, que es lo que de
+    verdad tiene que estar fresado, y el escalon bajo el chaflan."""
     import clearance_budget as cb
 
     p = cb.leer_params()
@@ -1114,28 +1175,53 @@ def anillo_tiene_bolsillo_trasero() -> list[str]:
     x0, x1 = fondo - bo["u1"], fondo - bo["u0"]
     x_paso = fondo - bo["u_paso"]
     aristas, comps = _componentes("costilla_dorso_2d")
-    for comp in comps:
-        pts = [q for j in comp for q in aristas[j]]
-        px = [q[0] for q in pts]
-        py = [q[1] for q in pts]
-        if (abs(min(px) - x0) <= CARA_DXF_MAX and abs(max(px) - x1) <= CARA_DXF_MAX
-                and abs(min(py) - bo["y_bot"]) <= CARA_DXF_MAX
-                and abs(max(py) - bo["y_fin"]) <= CARA_DXF_MAX):
-            # el escalon bajo el chaflan: un vertice en (x_paso, y_paso)
-            if not any(abs(q[0] - x_paso) <= CARA_DXF_MAX
-                       and abs(q[1] - bo["y_paso"]) <= CARA_DXF_MAX for q in pts):
-                return [f"costilla_dorso_2d: el bolsillo de la trasera no lleva "
-                        f"el escalon bajo el chaflan: falta el vertice en "
-                        f"({x_paso:.2f}, {bo['y_paso']:.2f})"]
-            print(f"  costilla_dorso_2d: bolsillo de la trasera en u = "
-                  f"{bo['u0']:g}..{bo['u1']:g} del plano trasero, cerrado de y = "
-                  f"{bo['y_bot']:g} a {bo['y_fin']:.2f} (arranca en u = "
-                  f"{bo['u_paso']:g} bajo y = {bo['y_paso']:g}; hondo "
-                  f"{bo['hondo']:g}, en el pliego)")
-            return []
-    return [f"costilla_dorso_2d: falta el bolsillo de la trasera -- de x = "
-            f"{x0:.2f}..{x1:.2f} por y = {bo['y_bot']:g}..{bo['y_fin']:.2f}, con su "
-            f"escalon bajo el chaflan. Sin el, la trasera no tiene donde meterse"]
+    if not comps:
+        return ["costilla_dorso_2d: sin componentes, no se puede buscar el "
+                "bolsillo de la trasera"]
+
+    def plomo(x, y_lo, y_hi, largo_min):
+        """Aristas verticales en x que caigan dentro de [y_lo, y_hi]."""
+        return [a for a in aristas
+                if abs(a[0][0] - x) <= CARA_DXF_MAX
+                and abs(a[1][0] - x) <= CARA_DXF_MAX
+                and abs(a[0][1] - a[1][1]) >= largo_min
+                and min(a[0][1], a[1][1]) >= y_lo - CARA_DXF_MAX
+                and max(a[0][1], a[1][1]) <= y_hi + CARA_DXF_MAX]
+
+    # 1. LA PARED DEL FONDO (u1). Corre de punta a punta del tramo trasero y es
+    #    la que fija cuanto entra la trasera: sin ella no hay bolsillo.
+    if not plomo(x0, bo["y_bot"], bo["y_fin"], 100.0):
+        return [f"costilla_dorso_2d: falta la pared del fondo del bolsillo de la "
+                f"trasera, a plomo en x = {x0:.2f} (u = {bo['u1']:g} del plano "
+                f"trasero). Sin ella la trasera no tiene donde meterse"]
+
+    # 2. LA PARED EXTERIOR (u0), en el tramo SIN chapa. Donde hay labio de chapa
+    #    esta pared no existe -- el rebaje se la come, que es el diseno --, asi
+    #    que se busca entre los dos labios, que es donde tiene que estar.
+    y_lo = p["chaflan_nariz"] + p["talon_labio"]
+    y_hi = cb._y_labio_techo(p)
+    if not plomo(x1, y_lo, y_hi, 50.0):
+        return [f"costilla_dorso_2d: falta la pared exterior del bolsillo (el "
+                f"labio), a plomo en x = {x1:.2f} (u = {bo['u0']:g}) entre y = "
+                f"{y_lo:g} y {y_hi:.2f}. Ahi no hay labio de chapa que la "
+                f"sustituya: el labio del bolsillo tiene que estar"]
+
+    # 3. EL ESCALON BAJO EL CHAFLAN de P6: bajo y_paso el bolsillo arranca en
+    #    u_paso para no morder la cara del chaflan.
+    if not any(abs(q[0] - x_paso) <= CARA_DXF_MAX
+               and abs(q[1] - bo["y_paso"]) <= CARA_DXF_MAX
+               for a in aristas for q in a):
+        return [f"costilla_dorso_2d: el bolsillo de la trasera no lleva el "
+                f"escalon bajo el chaflan: falta el vertice en ({x_paso:.2f}, "
+                f"{bo['y_paso']:.2f})"]
+
+    print(f"  costilla_dorso_2d: bolsillo de la trasera en u = "
+          f"{bo['u0']:g}..{bo['u1']:g} del plano trasero, cerrado de y = "
+          f"{bo['y_bot']:g} a {bo['y_fin']:.2f} (arranca en u = "
+          f"{bo['u_paso']:g} bajo y = {bo['y_paso']:g}; hondo {bo['hondo']:g}, "
+          f"en el pliego). Bajo los dos labios de chapa se funde con el rebaje "
+          f"en un solo vaciado, y ahi su labio lo hace el reborde")
+    return []
 
 
 def anillo_tiene_chaflan() -> list[str]:
@@ -1623,6 +1709,66 @@ def taladros_talon() -> list[str]:
               f"libre; la tabla lleva los 3 del talon (d={d_t:.2f}) y los 4 del "
               f"chasis (d={d4t:.2f})")
     return f
+
+
+def techo_macizo() -> list[str]:
+    """LA MESETA DEL TECHO NO TIENE UN AGUJERO (2026-08-30).
+
+    Samuel, mirando el .blend: "en la pieza miembro alto no me gustan los
+    huecos, es una decision erratica del diseno ya que esa parte es sensible a
+    que le entren liquidos". Tenia razon: era la unica cara horizontal de
+    arriba, y llevaba 16 ranuras mirando al cielo. La salida de aire se mudo a
+    la rendija del alero, que mira al SUELO.
+
+    Esta puerta existe porque el resto del fichero no lo dice. guarda_aire()
+    calcula un caudal y nunca leyo un DXF; los sobres miden la envolvente, que
+    no cambia si alguien vuelve a poner las ranuras dentro; y bridas_techo()
+    mira los cuatro M4 y las esquinas. Un techo con ranuras pasaria todo eso.
+
+    Asi que se cuenta: dentro del blank no puede haber NADA cerrado salvo los
+    cuatro M4 de las bridas. Si vuelven las ranuras -- por un merge, por
+    reactivar meseta_paso_hp, por copiar un modulo viejo -- esto se pone rojo y
+    dice cuantas."""
+    import clearance_budget as cb
+
+    p = cb.leer_params()
+    dxf = "miembro_alto_2d"
+    if not (PLANS / f"{dxf}.dxf").exists():
+        return [f"{dxf}: FALTA el DXF, no se puede comprobar que la meseta es maciza"]
+    leidos = _redondos(dxf)
+    d4 = p["d_M4_paso"] + p["kerf"]
+    m4 = [q for q in leidos if abs(q[2] - d4) < 0.1]
+    otros = [q for q in leidos if abs(q[2] - d4) >= 0.1]
+    if otros:
+        q = otros[0]
+        return [f"{dxf}: hay {len(otros)} agujero(s) que no son M4 de brida, el "
+                f"primero de Ø{q[2]:.2f} en ({q[0]:.1f}, {q[1]:.1f}). La meseta "
+                f"del techo va MACIZA desde el 2026-08-30: la salida de aire es "
+                f"la rendija del alero, no un agujero mirando al cielo"]
+    if len(m4) != 4:
+        return [f"{dxf}: {len(m4)} taladros de Ø{d4:.2f} y las dos bridas ponen "
+                f"4: o falta uno, o hay un agujero de mas en una pieza que tiene "
+                f"que ser maciza"]
+    # y ninguna ranura: una ranura es obround, no la caza _redondos(). Se cuenta
+    # por componentes cerrados dentro del blank, descontando los cuatro M4.
+    aristas, comps = _componentes(dxf)
+    largo = cb._chapa_largo_rebaje(p)
+    dentro = 0
+    for comp in comps:
+        pts = [q for j in comp for q in aristas[j]]
+        cx = sum(q[0] for q in pts) / len(pts)
+        cy = sum(q[1] for q in pts) / len(pts)
+        ancho = max(q[0] for q in pts) - min(q[0] for q in pts)
+        if 1.0 < cx < largo - 1.0 and cy > 1.0 and ancho < largo / 2:
+            dentro += 1
+    if dentro > len(m4):
+        return [f"{dxf}: {dentro} contornos cerrados dentro del blank y solo "
+                f"deberian estar los {len(m4)} M4 de las bridas. La meseta lleva "
+                f"algo cortado -- si son las ranuras de ventilacion, salieron el "
+                f"2026-08-30 y no vuelven: la salida es la rendija del alero"]
+    print(f"  {dxf}: meseta MACIZA -- {len(m4)} taladros en el blank, los cuatro "
+          f"M4 de las bridas, y ninguna ranura")
+    return []
 
 
 def bridas_techo() -> list[str]:
@@ -2230,6 +2376,7 @@ def main() -> int:
     fallos += taladros_talon()
     fallos += pestanas_talon()
     fallos += bridas_techo()
+    fallos += techo_macizo()
     fallos += ranuras_rejilla_entrada()
     fallos += cuerpos_dentro_del_anillo()
     fallos += tapa_valle_conectada()
