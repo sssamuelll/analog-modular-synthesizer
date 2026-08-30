@@ -310,10 +310,16 @@ function entre_anillos() = ancho_util - 2*hol_piel;
 
 // LA TRASERA CAPTURADA (2026-08-29, noche, 2). Como las mejillas: sus puntas
 // dentro de un BOLSILLO fresado en la cara interior de cada anillo a lo largo
-// del tramo trasero -- labio derivado de la rendija y bolsillo de 11 --,
-// su cara vista rehundida labio + junta, el canto de
+// del tramo trasero -- labio de rehundido_acrilico en el canto, rebaje_anillo
+// de hondo, t_anillo - rehundido de ancho: los tres numeros del bolsillo del
+// costado, girados --, su cara vista rehundida labio + junta, el canto de
 // abajo sobre el pie del talon y el de arriba bajo la brida del techo. Sin un
 // taladro. GEMELAS de _bolsillo_trasero(), _trasera() y _trasera_campo().
+// DESDE EL TECHO MACIZO (2026-08-30) el labio ya NO es rehundido_acrilico: es
+// rehundido_trasera(), derivado de la rendija del alero (4.5 contra 3). Es la
+// unica cota de la trasera que deja de ser "la del costado, girada", y lo es
+// porque la manda algo que el costado no tiene: por donde sale el aire. El
+// bolsillo sigue midiendo 11 de ancho y 6 de hondo; solo se corre 1.5.
 function trasera_x1() = pts_perfil()[6].x - rehundido_trasera() - t_junta_asiento;
 function trasera_z0() = t_anillo - rebaje_anillo + hol_piel;
 function trasera_au() = ancho_total - 2*trasera_z0();
@@ -855,8 +861,11 @@ function ejes_marco() = [for (q = patas_filas(), e = q[6]) e[1]];
 
 // La brida de extremo del miembro alto: sus dos M4 en el cajeado de la meseta.
 // Regla de chapa: el agujero no entra en la zona del doblez (setback + 2t +
-// radio). Dobla del EXTREMO DE LA BANDA, en el plano trasero, y apoya en la
-// suelo del cajeado: fuera del barrido del panel, con el marco muescado encima.
+// radio). Dobla del EXTREMO DE LA BANDA, en el plano trasero, y apoya en el
+// SUELO DEL CAJEADO (2026-08-30; apoyaba en la cara del anillo): sigue fuera
+// del barrido del panel -- mas lejos, no mas cerca --, con el marco muescado
+// encima. En y no se mueve: dobla del extremo del labio, que muere donde la
+// rendija manda, y su canto de arriba queda en y_meseta() como siempre.
 function brida_raiz() = radio_doblez_costilla + 3*t_costilla + d_M4_paso/2;
 // EL M4 DE DENTRO NO CAE SOBRE EL BOLSILLO DE LA TRASERA (2026-08-29, noche,
 // 2): el bolsillo corre por la cara interior hasta u = t_anillo y la rosca
