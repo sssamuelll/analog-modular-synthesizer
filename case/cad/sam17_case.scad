@@ -1087,12 +1087,35 @@ module nariz() {
 // El DXF: el desarrollo plano, con el CANTO LIBRE DEL PIE en y = 0 -- un canto
 // libre no se mueve al plegar, asi que los M4 caen a 1.5 D de el sin que los
 // dobleces entren en la cuenta. Las lineas de plegado van en el pliego.
+// LA MUESCA DEL PIE, en el desarrollo (2026-08-30). El blank mide lo que entra
+// en rebaje; el PIE tiene que salir de el mas estrecho, porque apoya a ras en
+// la tabla entre las caras de los anillos. Asi que se corta muesca_pie() en
+// cada punta, desde el canto libre del pie hasta la LINEA DE DOBLEZ -- que no
+// esta a "largo del pie" del canto sino a largo - BD/2, la misma linea que ya
+// cota el PLIEGO --, con un alivio de Ø2 a caballo de esa linea en la esquina
+// interior, como el de las pestanas: sin el, el doblez rasga desde la esquina.
+// El parametro s dice hacia donde crece el desarrollo desde el canto del pie:
+// +1 en la nariz (el pie en y = 0), -1 en el talon (el pie en y = d).
+module muesca_pie_2d(largo, y_pie, s, largo_pie_local) {
+    m = muesca_pie();
+    y_doblez = y_pie + s*(largo_pie_local - doblez_bd(45)/2);
+    for (x0 = [0, largo - m]) {
+        // el rectangulo, del canto libre a la linea de doblez
+        translate([x0, min(y_pie, y_doblez)]) square([m, abs(y_doblez - y_pie)]);
+        // y el alivio, centrado en la esquina interior sobre esa linea
+        translate([x0 == 0 ? m : largo - m, y_doblez])
+            circle(d = alivio_pestana + kerf, $fn = 24);
+    }
+}
+
 module nariz_2d() {
-    // VISTA PREVIA: el DXF conserva el pie actual; la muesca se valida en 3D.
+    largo = chapa_largo_rebaje();
     difference() {
-        square([nariz_largo(), nariz_desarrollo()]);
+        square([largo, nariz_desarrollo()]);
+        // el pie va en y = 0 y el desarrollo crece hacia +y
+        muesca_pie_2d(largo, 0, +1, nariz_pie);
         for (z = nariz_m4_z())
-            translate([z - t_anillo - hol_piel, 1.5*d_M4_paso])
+            translate([z - chapa_z0(), 1.5*d_M4_paso])
                 circle(d = d_M4_paso + kerf);
     }
 }
@@ -1291,19 +1314,20 @@ function talon_desarrollo() =
 // doblez sin cortar, hacia el canto libre del pie, con un taladro de alivio
 // en cada esquina del corte, a caballo de la linea del doblez.
 module talon_2d() {
-    // VISTA PREVIA: 19.56 usa el pie retirado de 20, pero talon_pie ahora es 21.5;
-    // el DXF queda sin la muesca hasta que se fije esa linea de doblez.
     d = talon_desarrollo();
+    largo = chapa_largo_rebaje();
     difference() {
-        square([entre_anillos(), d]);
+        square([largo, d]);
+        // el pie va en y = d y el desarrollo crece hacia -y
+        muesca_pie_2d(largo, d, -1, talon_pie);
         for (z = nariz_m4_z())
-            translate([z - t_anillo - hol_piel, d - 1.5*d_M4_paso])
+            translate([z - chapa_z0(), d - 1.5*d_M4_paso])
                 circle(d = d_M4_paso + kerf);
         // el corte en U, de corte_pestana de ancho, POR FUERA de la pestana:
         // la pestana mide talon_pestana_ancho x su desarrollo, y el corte la
         // rodea por los dos lados y por el fondo, dejando el doblez sin cortar
         for (zc = talon_pestana_z()) {
-            zb = zc - t_anillo - hol_piel;
+            zb = zc - chapa_z0();       // el blank arranca en el rebaje, no en la cara
             ym = d - (talon_pestana_x() - talon_x_pie());
             dv = talon_pestana_dev();
             w  = talon_pestana_ancho;

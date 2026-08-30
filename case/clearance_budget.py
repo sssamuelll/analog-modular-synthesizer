@@ -598,9 +598,15 @@ def _centros_rail_1u(p: dict[str, float], P: list[tuple[float, float]],
 # contorno (pts_contorno() en el .scad) y no en pts_perfil(); aqui va None. Los
 # SEIS vertices restantes llevan chapa doblada encima -- la nariz en 1, el
 # retorno en 4, la banda del miembro alto en 5, la del talon en 6 -- y
-# comparten radio_chapa (2026-08-29); el 2 y el 3 tienen los suyos.
-RADIOS_PERFIL = [None, "radio_chapa", "radio_pico", "radio_valle",
-                 "radio_chapa", "radio_chapa", None]
+# compartian radio_chapa (2026-08-29); el 2 y el 3 tienen los suyos.
+#
+# DESDE EL 2026-08-30 los que llevan chapa van a radio_borde, que es
+# radio_chapa + rehundido_chapa: el contorno del anillo es la cara exterior de
+# la chapa desplazada el rehundido hacia fuera, asi que su arco es CONCENTRICO
+# con el del pliegue, no el mismo. Es un DERIVADO, y por eso la lista guarda un
+# callable y no un nombre de parametro para esos vertices.
+RADIOS_PERFIL = [None, _radio_borde, "radio_pico", "radio_valle",
+                 _radio_borde, _radio_borde, None]
 
 
 def _chaflan_p5(p: dict[str, float]) -> bool:
@@ -633,7 +639,11 @@ def _retiro_vertice(p: dict[str, float], P: list[tuple[float, float]],
     A, V, B = P[(i - 1) % len(P)], P[i], P[(i + 1) % len(P)]
     cruz = (V[0] - A[0]) * (B[1] - V[1]) - (V[1] - A[1]) * (B[0] - V[0])
     r = _radios_perfil(p)[i]
-    return _tangente(V, A, B, p[r]) if (cruz < 0 and r) else 0.0
+    if not (cruz < 0 and r):
+        return 0.0
+    # Un vertice con chapa trae su radio como funcion derivada; los otros dos,
+    # como nombre de parametro.
+    return _tangente(V, A, B, r(p) if callable(r) else p[r])
 
 
 def _tol_pmma(p: dict[str, float]) -> float:
