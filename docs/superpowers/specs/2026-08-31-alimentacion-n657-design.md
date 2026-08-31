@@ -42,6 +42,28 @@ esta tanda está superado y **renumeró tablas**: ver §3.1.
 > vigentes. El riesgo 7 que este papel declaró ayer —«no se compra ninguna pieza
 > hasta cotejarlo»— **se cumplió**, y por eso no hay nada comprado.
 
+#### 1.1.1 La lista de compra, de AN5967 Rev 5, Tabla 6, p. 13
+
+La application note da lo que el datasheet no: **las piezas concretas**, con
+tolerancias. Esto satisface R-M3 por fuente primaria — ya se puede comprar.
+
+| Pin | Qué lleva |
+|---|---|
+| `VLXSMPS`/`VSSSMPS` | **bobina 1 µH ±20 %, 1 MHz, I\_sat > 3000 mA DC, DCR < 0,06 Ω** — ST nombra dos piezas: **`DFE201612P-1R0M`** y **`TFM322512ALVA1R0MTAA`** |
+| ídem | **snubber: 2,2 nF (MLCC 50 V X7R ±10 %) + resistencia de 2 Ω** |
+| ídem | **4 × 15 µF** (MLCC 6V3 X5R ±20 %) — los 60 µF de §1.1 |
+| `VDDSMPS`/`VSSSMPS` | 2 × 10 µF (4 V X5R) + 2 × 1 µF (6,3 V X5R) + 2 × 100 nF (10 V X5R) |
+| `VDDCORE`/`VSS` | n × 1 µF (6,3 V X5R), con n = número de pines `VDDCORE` |
+| `VDDA18PMU`/`VSSAPMU` | 100 nF (10 V X5R). **`VSSAPMU` va conectado a `VSS`** |
+| `V08CAP`/`VSS` | 4,7 µF (6V3 X5R) — salida del regulador de respaldo interno |
+
+**La discrepancia de la bobina se resuelve, y no era contradicción.** El
+datasheet da **0,9 µH típico** (el valor del circuito) y la AN da **1 µH ±20 %**
+(la pieza que se compra), cuyo rango es 0,8-1,2 µH. **El típico cae dentro.**
+
+**Y hay margen de sobra en la saturación**: se pide I\_sat > 3 A y el máximo
+publicado de `IDDSMPS` es 757 mA (§3.1) — un factor de 4.
+
 Y arranca solo (§3.4.3): al resetear, el conmutado se habilita a 0,81 V, *«hence
 the system can start up in any supply configuration»*.
 
@@ -198,6 +220,27 @@ escribió. **La regla que sale de ahí es de layout, no de topología:** cerrar
 cada lazo con el área mínima, sobre su propio plano, y que ninguno de los cuatro
 comparta retorno con el analógico.
 
+### 5.1 Y ST recomienda exactamente lo que §18 exigiría
+
+Lo bueno de haber leído AN5967 Rev 5 es que **las dos doctrinas coinciden**, así
+que no hay que elegir entre la del repo y la del fabricante:
+
+- **ST prevé un snubber en el nodo de conmutación**: `2,2 nF X7R + 2 Ω` sobre
+  `VLXSMPS` (Tabla 6, p. 13). Eso amortigua el *ringing*, que es la fuente de
+  emisión de alta frecuencia del lazo — o sea, **la contención que §18 pediría
+  viene de fábrica en la recomendación**, y no hay que inventarla.
+- **Y §14.3 (p. 38) manda, para encapsulados BGA, poner el desacoplo en la cara
+  opuesta del PCB**, justo debajo del chip, *«conectado al plano con pista y vía
+  anchas y cortas»* para reducir la inductancia serie y **minimizar el ground
+  bounce**. Nuestro encapsulado es **VFBGA264**: aplica directo, y es la
+  formulación de ST del mismo «área mínima» que §18 deriva del dipolo magnético.
+
+> **HUECO menor.** El «1 MHz» de la bobina es **la frecuencia a la que se
+> especifica su inductancia**, no necesariamente la de conmutación del SMPS.
+> **La frecuencia de conmutación no la he leído** en ninguno de los dos
+> documentos, y es la que fija el `dI/dt` que §18 modela. Hace falta para
+> calcular el acoplo en vez de solo acotarlo (§6.3).
+
 Los cuatro lazos existen **decida lo que se decida en D-R2**, salvo en los chips
 que vayan a bypass.
 
@@ -208,11 +251,11 @@ que vayan a bypass.
 1. ~~Bajar DS14791 Rev 4 y leer su Tabla 39~~ — ✅ **HECHO 2026-08-31.** Samuel
    bajó el **Rev 10** (en el árbol como `stm32n657-ds14791-rev10.pdf`). §3.1
    queda cerrada con `IDDSMPS` medido: **103,3 mA por chip, 413 mA los cuatro**.
-2. **Cotejar la Tabla 4 de AN5967** («Getting started with hardware development
-   for STM32N6»), que trae los componentes externos recomendados del SMPS.
-   Rev 10 ya da los valores (0,9 µH y 60 µF), pero **la AN da la pieza y sus
-   tolerancias**, que es lo que hace falta para comprar. **Los enlaces que probé
-   dan 404: hay que encontrar el bueno.**
+2. ~~Cotejar la Tabla 4 de AN5967~~ — ✅ **HECHO 2026-08-31.** Samuel bajó la
+   **AN5967 Rev 5** (en el árbol como `stm32n6-an5967-rev5.pdf`). Su **Tabla 6,
+   p. 13** da la lista de compra completa y **dos piezas de bobina con nombre**:
+   ver §1.1.1. La discrepancia de la bobina **no era contradicción** (0,9 µH
+   típico cae dentro de 1 µH ±20 %).
 3. **El máximo de `IDDSMPS` a 85 °C**, que Rev 10 **no da** (HUECO de §3.1):
    solo publica típico y máximo a 125 °C, y entre ambos hay 7,4×. Es lo que
    decide con cuánto margen se dimensiona el riel, y sale de ST o de medirlo.
@@ -253,4 +296,5 @@ que vayan a bypass.
 | 5 | El módulo 1 se reabre con la fuente ya dibujada | Es real; el papel lo declara en vez de descubrirlo en el taller |
 | 6 | ~~Trabajamos sobre una revisión superada del datasheet~~ | **CERRADO 2026-08-31**: Rev 10 en el árbol y citado. Confirmó la renumeración (`IDDCORE` era 28, es **33**) y que `IDDSMPS` (39) no existía en Rev 2 |
 | 7 | ~~Los valores del SMPS pueden haber cambiado de revisión~~ | **CERRADO 2026-08-31, y habían cambiado**: Rev 10 §3.4.4 dice **0,9 µH y 60 µF (4× 15)**, no los 1 µH y 88 µF de Rev 2. La regla «no se compra nada hasta cotejarlo» **evitó comprar la pieza equivocada** |
-| 8 | **El riel se dimensiona sin máximo a temperatura de trabajo** | §6.3. Entre el típico (103 mA/chip) y el máximo a 125 °C (761 mA/chip) hay 7,4×, y el punto de 85 °C no está publicado |
+| 8 | **El riel se dimensiona sin máximo a temperatura de trabajo** | §6.3. Entre el típico (103 mA/chip) y el máximo a 125 °C (761 mA/chip) hay 7,4×, y el punto de 85 °C no está publicado. **Es el único que queda bloqueando D-R1 y D-A1** |
+| 9 | La frecuencia de conmutación del SMPS interno no está leída | HUECO de §5.1: sin ella el acoplo del lazo se acota pero no se calcula |
