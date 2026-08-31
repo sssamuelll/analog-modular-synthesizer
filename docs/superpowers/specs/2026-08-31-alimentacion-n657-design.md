@@ -85,10 +85,26 @@ pero es mucho más pequeño de lo que #252 decía.
 El conmutado interno entrega **167,4 mW** por chip a `VCORE` (#251 §4.1: 206,7 mA
 × 0,81 V, típico a 85 °C).
 
-> **HUECO (Principio V).** **La eficiencia del conmutado interno no está en
-> DS14791.** Se buscó y no aparece: no hay tabla de rendimiento ni de corriente
-> de salida del SMPS. Sin ella **la corriente del riel de 1,8 V no se calcula,
-> solo se acota.**
+> **HUECO (Principio V), y con dirección exacta.** La eficiencia del conmutado
+> interno **no aparece en el DS14791 Rev 2 que tenemos** — y buscando por qué,
+> resulta que **la pregunta estaba mal planteada**: no hace falta la eficiencia.
+>
+> **ST publica `IDDSMPS` directamente**, o sea la corriente de entrada medida en
+> `VDDSMPS`. Lo confirmó un ingeniero de ST (RomainR) en el hilo *«Understanding
+> Power Consumption using SMPS on STM32N6»* de su comunidad:
+>
+> > *«In internal SMPS, IDDSMPS therefore depends on the IDDCore including the
+> > internal SMPS efficiency, the voltage ratio (VDDSMPS/VDDCore), and the
+> > different external losses. If you need to size the external regulator of the
+> > VDDSMPS, you should consider IDDSMPS which corresponds to the VDDCore
+> > condition of table 34.»*
+>
+> Y nombra las tablas: **`IDDSMPS` es la Tabla 39 e `IDDCORE` la Tabla 34, en
+> DS14791 Rev 4.** En **nuestra Rev 2** `IDDCORE` es la Tabla 28 y **`IDDSMPS`
+> no existe: verificado, cero apariciones en las 244 páginas.**
+>
+> **El hueco se cierra con una descarga, no con un cálculo.** Y hasta que se
+> baje, la corriente del riel solo se acota.
 
 Lo que sí se puede afirmar sin suponer nada, por conservación de energía: el
 conmutado **no puede consumir menos potencia de la que entrega**. Con
@@ -171,9 +187,14 @@ que vayan a bypass.
 
 ## 6. Verificaciones antes de sellar
 
-1. **La eficiencia del conmutado interno** (HUECO de §3.1) — a ST o medida en la
-   Discovery (#231). Sin ella el riel de 1,8 V se dimensiona a ojo.
-2. **La corriente máxima que el conmutado interno puede dar**, tampoco leída.
+1. **Bajar DS14791 Rev 4 y leer su Tabla 39 (`IDDSMPS`)** — cierra el HUECO de
+   §3.1 con un número medido en vez de una eficiencia estimada. Nuestro Rev 2 no
+   la trae. **Prerrequisito de D-R1**: es lo que dimensiona el riel de 1,8 V.
+2. **Cotejar la Tabla 4 de AN5967** («Getting started with hardware development
+   for STM32N6») — trae los componentes externos recomendados del SMPS, que es
+   lo que fija la pieza de la bobina y los cerámicos (§6.5).
+3. **La corriente máxima que el conmutado interno puede dar**, tampoco leída en
+   Rev 2. Decide si un solo chip puede con su carga en los picos.
 3. **El acoplo real del lazo de 1 µH** a una entrada analógica sensible, medido
    en la Discovery. Es lo que decide D-R2 y no se puede razonar en papel.
 4. **La pieza del LDO de 1,8 V**, con hoja en el árbol antes de nombrarla (R-M3),
@@ -209,3 +230,5 @@ que vayan a bypass.
 | 3 | El lazo del conmutado acopla en la Voz o en la interfaz | §6.3 medido; suplente: bypass (D-R2), pagando 205 mW por chip |
 | 4 | Cuatro lazos mal cerrados en el layout | Regla de §5 aplicada y verificada en el dibujo, con el veto de §18 |
 | 5 | El módulo 1 se reabre con la fuente ya dibujada | Es real; el papel lo declara en vez de descubrirlo en el taller |
+| 6 | **Trabajamos sobre una revisión superada del datasheet** | §6.1. Nuestro DS14791 es **Rev 2**; ST va por **Rev 4**, con tablas renumeradas (`IDDCORE` pasa de la 28 a la 34) y al menos una tabla nueva (`IDDSMPS`, la 39) |
+| 7 | **Los valores del SMPS externo pueden haber cambiado de revisión** | §6.2. Rev 2 dice **1 µH y 88 µF (4× 22)**; una fuente de ST posterior cita **0,9 µH y 60 µF (4× 15)**. Si el segundo es el vigente, §1.1 y §6.5 de este papel llevan cifras muertas. **No se compra ninguna pieza hasta cotejarlo** |
