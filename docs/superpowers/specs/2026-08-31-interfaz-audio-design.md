@@ -151,11 +151,8 @@ Ninguna de estas cuatro es motivo para no hacerlo. Las cuatro son motivo para
    con tres: el N657 no tiene flash interna, así que son cuatro flashes
    externas, cuatro binarios firmados y cuatro secuencias de FSBL. Esto crece
    lineal y no hay atajo.
-2. **El consumo, que no conocemos.** #249 lo dejó dicho: **la cifra de consumo
-   del N657 no está en ningún sitio del repo**. Los ~0,2 A que usa
-   `power_budget.py` eran del RP2350. Cuatro chips de clase aplicación es
-   exactamente donde la fuente v3 se rompe o no, y hoy **no podemos saber cuál
-   de las dos**.
+2. ~~**El consumo, que no conocemos.**~~ **CORRIDO el 2026-08-31, y el
+   resultado invierte el riesgo.** Ver §4.1.
 3. **El phantom de 48 V.** Es un riel que el módulo 1 no tiene y que el
    presupuesto de potencia no conoce. Cuatro preamplificadores con phantom
    simultáneo es corriente real, no un detalle de BOM.
@@ -164,6 +161,51 @@ Ninguna de estas cuatro es motivo para no hacerlo. Las cuatro son motivo para
    balanceadas, 2 de auriculares y el óptico. El estudio del valle y la trasera
    capturada se acaban de dibujar: hay que contarlos contra ese dibujo, no
    contra el aire.
+
+### 4.1 El consumo, corrido — y el riesgo estaba mal identificado
+
+`power_budget.py` se reescribió contra **DS14791 Rev 2** el 2026-08-31. Las
+cifras, en Run mode a 800 MHz con todos los periféricos habilitados:
+
+| Símbolo | Riel | Tabla | Típ 25 °C | Típ 85 °C | Máx 125 °C |
+|---|---|---|---|---|---|
+| `IDDCORE` | **0,81 V** | 28, p. 141 | 177,5 mA | **206,7 mA** | 839,0 mA |
+| `IDDA1V8` | 1,8 V | 29, p. 142 | 2,1 mA | 2,1 mA | 2,1 mA |
+| `IDD` | 1,8 V | 27, p. 140 | 0,3 mA | 0,3 mA | 0,4 mA |
+
+Caso de diseño a **85 °C**, que es lo realista en un case cerrado:
+**171,7 mW por chip**, o **40,4 mA reflejados al +5 V** con un convertidor al
+85 %. **Los cuatro juntos son 161,6 mA.**
+
+**El `~0,2 A` que arrastrábamos del RP2350 eran 200 mA de un solo chip.** O sea
+que los cuatro N657 piden **menos** del riel de +5 V que la cifra vieja de uno.
+Por consumo, D-A1 no está ni cerca del límite: las cargas duras caben con uno y
+con cuatro, y solo con el host USB a tope y la cadena de LED en su caso real
+hace falta que el árbitro del #104 recorte 44 mA — que es exactamente para lo
+que ese árbitro existe.
+
+**El riesgo real es otro, y es el que este papel tenía mal identificado.**
+
+**El N657 no corre a 3,3 V.** Quiere **0,81 V para el núcleo** y 1,8 V para las
+I/O y el analógico. El módulo 1 da +5 V y ±12 V, y el RP2350 vivía a 3,3 V:
+esos dos rieles **no existen en el instrumento**, y hacen falta **por chip**.
+Peor: la hoja da los máximos con la nota **«SMPS external»** — ST espera un
+conmutado para el núcleo, y un riel de 0,81 V con 207 mA típicos y picos a
+839 mA es un regulador de punto de carga de verdad, con transitorios rápidos.
+
+Ahí es donde esto choca de frente con la doctrina heredada de D-P6 (§5):
+**cuatro conmutadas dentro del mismo cajón donde 1 mV son 3,6 cents**, y ahora
+además con preamplificadores de micrófono al lado. El problema de D-A1 no es
+que la fuente no dé la corriente. Es que **la solución de alimentación del
+propio chip mete conmutación en el cuarto limpio**, y eso ningún presupuesto de
+potencia lo mide.
+
+> **HUECO (Principio V), y es grande.** Todas esas cifras son **con CoreMark**.
+> **No hay una sola cifra de consumo con la NPU trabajando** — ni en Run mode ni
+> en ningún sitio de la hoja. El mago vive de la NPU y §3.5 se la quiere dar
+> también a la interfaz: el consumo de los dos chips **en el modo en que los
+> pensamos usar** sigue sin número. `power_budget.py` lo imprime como HUECO y
+> sale con código 2 en vez de dar un verde falso.
 
 ---
 
@@ -219,8 +261,14 @@ Ninguna se ejecuta hasta que D-A1 se firme (patrón conocido: #214, #248).
 
 ## 8. Lo que hay que correr o verificar antes de sellar
 
-1. **El consumo del N657 contra su hoja**, y el presupuesto de la fuente con
-   **cuatro**. Es el prerrequisito duro: bloquea #249 y bloquea esto.
+1. ~~El consumo del N657 contra su hoja~~ — ✅ **CORRIDO Y VERDE**
+   (`power_budget.py`, 2026-08-31, §4.1): los cuatro piden 161,6 mA del +5 V,
+   menos que la cifra vieja de un solo RP2350. **Queda mandado en su lugar:**
+   el **convertidor de punto de carga** de 0,81 V y 1,8 V —pieza, hoja,
+   rendimiento real— y **dónde se pone su conmutación** para que no entre en
+   el cuarto limpio. Ése es el prerrequisito duro de verdad.
+1bis. **El consumo con la NPU activa**, que DS14791 no caracteriza (HUECO de
+   §4.1). Sin él, ni el mago ni §3.5 tienen presupuesto.
 2. **El ADAT a 192 kHz**: cuántos canales sobreviven al S/MUX, contra la
    norma. Cierra el HUECO de §2.
 3. **El presupuesto de trama del dispositivo compuesto** — lo que el motor
@@ -240,7 +288,9 @@ Ninguna se ejecuta hasta que D-A1 se firme (patrón conocido: #214, #248).
 
 | # | Riesgo | Se cierra cuando |
 |---|---|---|
-| 1 | Cuatro N657 no caben en el presupuesto de la fuente | §8.1 corrido; es el que puede tumbar el papel entero |
+| 1 | ~~Cuatro N657 no caben en el presupuesto de la fuente~~ | **CERRADO 2026-08-31**: 161,6 mA los cuatro, menos que la cifra vieja de uno (§4.1) |
+| 1b | **Cuatro conmutadas de punto de carga dentro del cuarto limpio** — el riesgo que sustituye al 1, y el que puede tumbar el papel | Pieza y hoja del DC/DC elegidas, y su sitio decidido contra la doctrina de D-P6 (§8.1) |
+| 1c | El consumo con la NPU activa no existe en la hoja | §8.1bis; hoy `power_budget.py` sale con código 2 por esto |
 | 2 | Cuatro arranques desde XSPI, cuatro binarios firmados | El bring-up sale del mismo #231 |
 | 3 | El dispositivo compuesto añade latencia al MIDI, que hoy es del cerebro | §8.3 medido con cota escrita antes |
 | 4 | La NPU se promete y la latencia no la permite | §8.4 antes de prometerlo; misma lección que hub §3.2 |
