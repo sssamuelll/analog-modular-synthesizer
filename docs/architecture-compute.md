@@ -12,7 +12,7 @@ El instrumento entero vive en un **microcontrolador**. La computadora es
 
 ```
    ┌────────────────────────────────┐         ┌───────────────────────┐
-   │  EL INSTRUMENTO — RP2350       │   USB   │ CUALQUIER COMPUTADORA │
+   │  EL INSTRUMENTO — STM32N657    │   USB   │ CUALQUIER COMPUTADORA │
    │  Rust bare-metal, sin SO       │◄───────►│ la tuya, con TU DAW   │
    │                                │  MIDI   │ y TUS plugins         │
    │  · reparto de 16 canales       │   DIN   │                       │
@@ -64,7 +64,7 @@ polifónico, y esa es literalmente la diferencia entre los dos.
 ## 3. El autoafinado, que corre por debajo
 
 Cada VCO lleva un **74HC14** que recorta su onda y manda un **pulso lógico** al
-micro. El **PIO del RP2350** mide el periodo **por hardware** de los cuatro a la
+micro. El **STM32N657** mide el periodo **por hardware** de los cuatro a la
 vez, compara con la frecuencia que debería tener esa nota y corrige la tabla.
 
 **84 notas × 4 voces en 3.5 s** medidos sobre la v1 del módulo 3, en silencio —
@@ -81,7 +81,7 @@ corrige solo.
 Como la computadora puede ser **cualquiera**, el enlace tiene que ser
 **class-compliant**: MIDI USB sin drivers, en Windows, Mac, Linux o un iPad.
 Igual que cualquier sinte de hardware, y por eso todos funcionan con la DAW de
-todo el mundo. El RP2350 hace USB nativo.
+todo el mundo. El STM32N657 hace USB nativo.
 
 **Y también hace de host, a la vez.** Sin eso, el «toca sin nada más» del §1
 sería mentira en 2026: casi todo controlador moderno es USB-only, así que un
@@ -257,14 +257,22 @@ cliente que no pregunte.
 
 **Una: la del instrumento.**
 
-**RP2350B** (QFN-80, 48 GPIO — el A de 30 no da: el conteo sale a ~37) con:
+**STM32N657** (VFBGA264) con:
+
+> **Enmienda del 2026-08-30 (D1).** Esta sección se escribió para un RP2350B
+> (QFN-80, 48 GPIO). El chip es hoy un STM32N657 y el encapsulado sale del
+> censo de pines del hub, corrido el 2026-08-30 (`hardware/02-midi-cv/micro_budget.py`,
+> #213): **VFBGA264, 66 pines repartidos y 80 GPIO libres** — el VFBGA223
+> también cierra. Las filas de abajo se conservan porque el **trabajo** que
+> describen no cambia; lo que cambia es **cómo** lo hace el chip, y eso está
+> marcado fila a fila.
 
 | | |
 |---|---|
 | Enlace serie | Un **J2 por módulo, en estrella** hacia sus DAC, digipots, mux de perillas y sensado de jacks (architecture-poly §8; direccionamiento cerrado en el issue #34) |
 | Mux I²C de 8 canales | Todas las EEPROM de identidad responden en 0x50 y chocarían en un bus compartido |
-| 4 gates · 4 entradas de afinado | Las voces. El afinado por **PIO**, las cuatro a la vez |
-| **USB de doble rol** | Puerto nativo como *device* hacia tu computadora, **y host por PIO-USB** para enchufarle un controlador. A la vez |
+| 4 gates · 4 entradas de afinado | Las voces. ~~El afinado por **PIO**, las cuatro a la vez~~ — el N657 no tiene PIO, y el autoafinado se mudó a la Voz el 2026-08-26 (capturas de temporizador; ver §4 y la enmienda de `autotune_budget.py`) |
+| **USB de doble rol** | Puerto nativo como *device* hacia tu computadora, y host para enchufarle un controlador. ~~por PIO-USB~~: el N657 no tiene PIO, así que **por qué camino se hace el host queda sin resolver** contra la hoja del chip |
 | **MIDI DIN in/out** | Con optoacoplador. Es el único aislado por norma |
 | **Clock y reset**, in/out | Sync analógico. Sin esto el secuenciador no toca con nadie |
 | **Jack de pedal** | Confirmación física del agente, y expresión |

@@ -33,7 +33,7 @@ viven en sus docstrings), [`pcb/README.md`](../pcb/README.md) (fabricación).
 | Fuente de banco | doble, ±12 V, **con límite de corriente ajustable** |
 | Frecuencímetro | o el propio cerebro contando `TUNE_OUT`. Entrada lógica 3.3 V |
 | Osciloscopio | para el Paso 5b (formas de onda) y el 8 (flancos). No hace falta antes |
-| Cerebro (RP2350) o un Pi | con SPI + I²C + 4 entradas de contaje, y el mazo IDC 2×6 |
+| Cerebro (STM32N657) o un Pi | con SPI + I²C + 4 entradas de contaje, y el mazo IDC 2×6 |
 | Soldador de punta fina | para los bodges de `R_PITCH` (0805) del Paso 5 |
 
 Y **un cuaderno**. El Paso 7 no es una medida de aprobado/suspenso: es el primer

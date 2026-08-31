@@ -1,3 +1,16 @@
+# ENMIENDA 2026-08-30 (D1) -- EL SUJETO DE ESTE GUION MURIO: EL CEREBRO
+# YA NO ES UN RP2350.
+#
+#   D1 (spec del hub N657, 2026-08-30) sello el chip del cerebro como
+#   STM32N657. Este guion mide maquinas de PIO, memoria de instrucciones,
+#   canales de DMA y pines de un RP2350B: el N657 no tiene PIO, asi que no
+#   hay a quien medir. Se cumple lo que su propia cabecera preveia
+#   ("muriendo entero si el cerebro no acaba siendo un RP2350", 2026-08-26).
+#
+#   No se toca su codigo ni sus constantes: se conserva como historia de un
+#   diseno dirigido que D1 cerro. El censo de pines del hub de hoy es el del
+#   N657 (micro_budget.py, #213).
+#
 """Que cabe en el cerebro: maquinas de PIO, memoria de instrucciones, canales
 de DMA, pines — y el reloj que el host USB le puede robar al afinado.
 

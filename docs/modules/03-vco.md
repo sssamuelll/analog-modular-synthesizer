@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > **Esta página describe la v1, de cuatro osciladores, y está superada —
 > 2026-08-22/23.** El módulo pasa a **dieciséis canales completos** (oscilador →
-> filtro → VCA en el mismo cobre) más la bahía asignable, con dos RP2350B a
+> filtro → VCA en el mismo cobre) más la bahía asignable, con un STM32N657 a
 > bordo y una matriz de modulación FM de 16 líneas. Dieciséis y no ocho porque
 > **en FM cada voz necesita dos osciladores**: una moduladora compartida entre
 > ocho notas no da FM tonal, da campanas disonantes.

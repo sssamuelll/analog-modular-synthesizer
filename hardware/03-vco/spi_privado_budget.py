@@ -1,3 +1,16 @@
+# ENMIENDA 2026-08-30 (D1) -- EL SUJETO DE ESTE GUION MURIO EL 26-08: LOS
+# DOS RP2350B DE LA VOZ.
+#
+#   Este guion modela el SPI privado de los dos RP2350B de la Voz. Su sujeto
+#   esta implicito, no escrito: MICROS = 2 y RELOJ_MICRO = 150e6 son los dos
+#   micros que la Voz dejo de tener el 26 de agosto (acta A-1, motor-digital)
+#   y que D1 (spec del hub N657, 2026-08-30) refrendo al fijar UN STM32N657
+#   por modulo. El guion no contiene la cadena "RP2350" y por eso seguia
+#   dando verde midiendo un muerto.
+#
+#   No se toca su codigo ni sus constantes: se conserva como historia de un
+#   diseno que el cambio de chip cerro, no el caudal.
+#
 """El SPI privado del modulo de Voz: cuanto caudal piden las envolventes.
 
     python spi_privado_budget.py
