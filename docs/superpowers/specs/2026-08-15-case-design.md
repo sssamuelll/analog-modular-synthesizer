@@ -399,6 +399,11 @@ de su zona de conexión trasera.
 | CAD | OpenSCAD paramétrico | Diseño-como-código versionable; exporta DXF (corte) y STL (render en Blender) |
 | Servicio | **Enteramente desatornillable** + paneles de módulo desmontables | Acceso total al interior, sin una sola junta irreversible. Tuvo una **excepción única** hasta el 2026-08-21: la pestaña de remate iba PEGADA, porque el Z-Rail es extruido de pared fina de 1.2 mm y un M3 en esa cara atraviesa pared. La resolvió el **octavo larguero** — un 2020 en la arista trasera-superior que le da a esa tapa a qué atornillarse |
 
+> **Enmienda del 2026-08-30 (D1):** la fila «Interfaz del módulo 2» decía
+> «autosuficiente en el RP2350»; el chip es hoy un **STM32N657** (spec del
+> hub N657, D1). La doctrina de la fila no cambia: el instrumento es
+> autosuficiente y la computadora sigue siendo externa y opcional.
+
 ## 3. Postmortem del intento anterior (y cómo este diseño lo elimina)
 
 El primer intento (adaptación del diseño de todbot, Thingiverse 3941263,
@@ -822,3 +827,8 @@ Al cerrar la tanda se abren como issues con evidencia (Principio VI):
   bandejas dejan paso de cableado.
 - Layouts individuales de cada panel de módulo (trabajo por módulo usando la
   plantilla de `case/panels/`).
+
+> **Enmienda del 2026-08-30 (D1):** el destinatario de la SMPS encapsulada
+> de la línea de WS2812 es hoy el **STM32N657**, no el RP2350 (spec del hub
+> N657, D1). La reserva de alimentación —+5 V digital para el módulo 2 más
+> la cadena WS2812— no cambia.

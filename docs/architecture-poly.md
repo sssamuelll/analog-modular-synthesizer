@@ -63,7 +63,7 @@ de 4 canales con un solo juego de controles**, no cuatro placas.
 El módulo 2 deja de ser "el conversor MIDI a CV" y pasa a ser el que reparte las
 voces. Es donde empieza la polifonía.
 
-> **El instrumento entero vive en un microcontrolador** (RP2350 en Rust
+> **El instrumento entero vive en un microcontrolador** (STM32N657 en Rust
 > bare-metal): reparto de voces, CV, gates, autoafinado, secuenciador. La
 > computadora es **opcional, externa y puede ser cualquiera** — se enchufa por
 > USB MIDI y trae tu DAW y tus plugins. El instrumento **toca sin ella**, y sigue
@@ -97,7 +97,7 @@ Lo que hace:
                    ▼
         ┌──────────────────────────────────┐
         │       MÓDULO 2 — EL CEREBRO      │
-        │  RP2350 (Rust bare-metal)        │
+        │  STM32N657 (Rust bare-metal)     │
         │  asignación de voces + autoafinado│
         └───────┬─────────────┬────────────┘
           SERIE │     GATE 1-4│              escucha

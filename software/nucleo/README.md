@@ -1,6 +1,6 @@
 # `nucleo` — el contrato del SAM17
 
-> **El binario ya existe**: `fw/` compila y enlaza para RP2350, con el
+> **El binario ya existe**: `fw/` compila y enlaza para STM32N657, con el
 > servidor del protocolo hablando por USB-MIDI. Lo que falta comprobar en
 > placa está en [`fw/EN-PLACA.md`](fw/EN-PLACA.md).
 
@@ -26,7 +26,7 @@ El alcance del firmware de validación (§8 de la spec) se parte solo:
 |---|---|---|
 | Qué es | El contrato y sus motores | El bring-up sobre placa |
 | Se verifica con | `cargo test`, hoy | Analizador lógico, EEPROM en protoboard, DAW |
-| Necesita | Nada | Una RP2350, y hierro que aún no existe |
+| Necesita | Nada | Un STM32N657, y hierro que aún no existe |
 
 §9 ya lo tenía escrito así: casi todas sus filas dicen *«tests en host, Rust
 puro»*. Las que dicen protoboard o analizador se van al siguiente.

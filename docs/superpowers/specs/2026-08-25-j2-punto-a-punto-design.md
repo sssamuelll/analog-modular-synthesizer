@@ -1,8 +1,8 @@
 # El J2 punto a punto: la estrella se queda, la juntura muere
 
-**Fecha**: 2026-08-25 · **Estado**: propuesto, corregido por junta de cuatro
-lentes, pendiente de Samuel · **Reabre**: el contrato congelado del J2
-(dieciséis, núcleo §5, `j2.rs`)
+**Fecha**: 2026-08-25 · **Estado**: **decidido y mergeado** (#210, 2026-08-26);
+su premisa 1 quedó sellada el 2026-08-30 (D1) · **Reabre**: el contrato
+congelado del J2 (dieciséis, núcleo §5, `j2.rs`)
 
 ---
 
@@ -69,15 +69,25 @@ chica.
 > §4.1 y §4.2 quedan recalculadas abajo contra la Tabla 99 del N657, y las
 > filas del H750 se conservan **como historia rotulada**, no como contrato.
 >
-> **Lo que NO cambia con esta enmienda:** la primera premisa (el micro del
+> **Lo que NO cambia con esta enmienda:** ~~la primera premisa (el micro del
 > cerebro) sigue dirigida y sin sellar, y con ella el aviso de que si cae, este
-> papel cae entero. Las decisiones D1-D7 y D9 no dependen de qué chip esté en
+> papel cae entero.~~ **Superado el 2026-08-30 (D1): la premisa 1 quedó
+> sellada en STM32N657.** Ver la enmienda al final de esta sección. Las decisiones D1-D7 y D9 no dependen de qué chip esté en
 > la Voz: dependen de la topología, y la topología no se tocó. **La única
 > decisión con número movido es D8** (§4.1).
 
 Si la primera premisa cae, este papel cae entero: el RP2350 del cerebro
 tiene 2 SPI y **2 GPIO libres de 48** (PR #208). No hay versión de este
 diseño sobre el chip de hoy.
+
+> **Enmienda del 2026-08-30 (D1): la premisa 1 ya no está dirigida, está
+> sellada.** El cerebro pasa a **STM32N657**, de la misma clase que el de la
+> Voz (spec del hub N657, D1, FIRMADA). Con eso el aviso de arriba deja de
+> colgar: el censo de pines del hub —corrido el 2026-08-30 con su mutación,
+> `hardware/02-midi-cv/micro_budget.py`, #213— sienta las **seis ranuras J2
+> en SPI1-6** y cierra en **VFBGA264 con 66 pines repartidos y 80 GPIO
+> libres**. El «2 SPI y 2 GPIO libres de 48» era del chip que se fue: es
+> historia rotulada, no el contrato de hoy.
 
 ---
 

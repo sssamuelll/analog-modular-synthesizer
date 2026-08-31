@@ -1370,7 +1370,7 @@ _PINES = [
     ((309.88, 246.38), [[317.50, 246.38]],                      ("lbl", "SCL_A")),
     ((309.88, 248.92), None,                                    ("nc",)),
     # U12 -- ISO1541. Girado 180 para que el LADO 2 (la isla, GNDA, 5 V) mire
-    # a la izquierda y el LADO 1 (el RP2350, GNDD, 3.3 V) mire a J8.
+    # a la izquierda y el LADO 1 (el micro del modulo 2 (N657), GNDD, 3.3 V) mire a J8.
     ((307.34, 276.86), [[294.64, 276.86], [294.64, 271.78]],    ("sym", "power:+5V", 0)),
     ((307.34, 274.32), [[302.26, 274.32]],                      ("lbl", "SDA_A")),
     ((307.34, 271.78), [[302.26, 271.78]],                      ("lbl", "SCL_A")),

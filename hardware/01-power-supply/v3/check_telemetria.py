@@ -57,8 +57,8 @@ ISO1541  TI SLLSEB6F rev. DEC-2022
   p.6 tabla 6.1 : VCC1/VCC2 de -0,5 a 6 V; SDA/SCL hasta VCCx+0,5 sin pasar de
                    6 V; corriente de salida lado 1 <= 20 mA, lado 2 <= 100 mA.
   p.1  : 3,0 a 5,5 V por lado, independientes. Lado 1 a 3,3 V (dominio del
-                   RP2350) y lado 2 a 5,0 V (dominio analogico) es su caso de
-                   uso publicado, no un apano.
+                   micro del modulo 2, el N657) y lado 2 a 5,0 V (dominio
+                   analogico) es su caso de uso publicado, no un apano.
 """
 from __future__ import annotations
 
