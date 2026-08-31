@@ -15,6 +15,13 @@ miembro), que se queda en lo demás · **Enmienda** a `2026-08-15-case-design.md
 (rev. 26), a `2026-08-29-nariz-recta-valle-limpio-design.md` §2.3 y a
 `2026-08-28-costilla-pletina-design.md` §4.
 
+> **Enmienda del 2026-08-30.** La spec
+> `2026-08-30-techo-macizo-chapas-empotradas-design.md` sustituye aquí las
+> cotas operativas del bolsillo, la cara vista de la trasera, las juntas de
+> los labios, el montaje y el techo. Las correcciones están junto a cada
+> sección. El texto del 29-08 se conserva como razonamiento histórico, no como
+> instrucción de taller.
+
 ## 1. De dónde sale
 
 Samuel, mirando el render de la noche: *«no me gusta el talón! preferiría que la
@@ -58,6 +65,14 @@ hacia delante), tapa del valle, rieles.
 ## 3. La trasera se captura como las mejillas
 
 ### 3.1 El bolsillo del tramo trasero
+
+> **Corrección del 2026-08-30 — sustituye las cotas de este apartado.** El
+> bolsillo va en **u = 5.5..16.5**. Después quedan una pared de 3 y los 3.5 que
+> entra el costado; por eso la franja trasera pasa a 23. Bajo los labios del
+> techo y del talón, el labio del bolsillo queda con **3 de hondo**: los otros
+> 3 los ocupa el rebaje de chapa. En el resto conserva 6. El bolsillo sigue
+> cerrado por los dos extremos; cambia su sección, no el motivo de capturar la
+> plancha.
 
 En la cara interior de cada anillo, a lo largo del tramo trasero (P5 → P6), se fresa
 un **bolsillo de 11 × 6**: 11 hacia dentro desde `u = 3` (u = distancia al plano
@@ -132,6 +147,11 @@ solo en z 0 … 8 (encima, el bolsillo de la trasera); u 14 … 17 macizo (la pa
 
 ### 3.4 La trasera
 
+> **Corrección del 2026-08-30 — sustituye el rehundido de 4 que sigue.** La
+> plancha conserva **552.32 × 237.18** en PMMA de 8 y sigue sin taladros. Su
+> cara vista queda a **6.5** del plano trasero. Retrocede 2.5 para dejar la
+> rendija de 4.0 entre la cara interior del labio empotrado y la plancha.
+
 Una plancha de 8 de **552.32 × 237.18**, la misma en las dos variantes, sin un
 taladro ni una muesca pasante. Sus puntas entran 5.85 en los bolsillos (6 menos
 `hol_piel`); su canto de abajo apoya en el pie del talón (y = 1.5), 0.5 sobre el
@@ -155,6 +175,13 @@ no existen. La rejilla arranca a un puente (6.5) del labio; las ondas apenas se
 mueven; KONDOR baja 7.
 
 ### 3.5 Arriba y abajo: labio por fuera, y por qué no hay canal
+
+> **Corrección del 2026-08-30 — sustituye las tiras continuas de 2.5.** Cada
+> labio lleva **seis tacos adhesivos de EPDM de 4.0 × 15**. Son doce en total.
+> Con 20 % de compresión dejan **3.20** de luz. En el techo, los vanos entre
+> tacos forman la **salida de aire por la rendija del alero**; una tira
+> continua la cerraría. El talón usa la misma junta para sostener la plancha,
+> aunque su rendija no entra en el presupuesto de salida.
 
 A los lados la retiene el anillo en las dos direcciones (§3.1: el labio hacia
 fuera, la pared del bolsillo hacia dentro). Arriba y abajo:
@@ -181,6 +208,16 @@ fuera, la pared del bolsillo hacia dentro). Arriba y abajo:
   su retorno de 24, la dejaba en 121.5°); sin él, **la tapa sigue abriendo 180°**.
 
 ### 3.6 Montaje y servicio
+
+> **Corrección del 2026-08-30 — sustituye el orden de montaje que sigue.** Con
+> el anillo A tumbado se ponen la trasera, el techo y la tabla preparada en el
+> banco con nariz y talón —3 + 3 M4 avellanados desde arriba—, pero **sin el
+> chasis**. La tabla se fija al canto de A con sus 3 M5 desde fuera y la brida A
+> del techo con sus dos M4. El anillo B baja sobre marco, trasera, techo, nariz, talón y
+> el canto de la tabla. Se aprietan desde dentro los doce M4 del marco B y los
+> dos de la brida B; desde fuera, los 3 M5 de la tabla. El chasis del PSU entra
+> al final por el frente y sus 4 M4 se aprietan desde debajo. Así los seis M4
+> de los pies se hacen en el banco y el chasis no tapa el acceso al marco B.
 
 **Entra con el anillo B, como los costados.** Con el anillo A de pie y los rieles
 en su marco, la trasera se mete de lado: una punta en el bolsillo del anillo A,
@@ -283,6 +320,12 @@ el retorno mide 8, sin sitio para un M4 fuera de dos zonas de doblez.
 
 ## 5. El techo por detrás: dos variantes; se escogió B
 
+> **Corrección del 2026-08-30 — sustituye la geometría operativa de A y B que
+> sigue.** Se conserva el chaflán escogido, pero el techo vigente es **macizo,
+> sin ranuras**, y el labio pasa de 18 a **20**. La salida deja la meseta y va
+> a la rendija bajo el alero. La letra B queda como historia de la comparación
+> visual; no autoriza a fabricar el blank anterior.
+
 El miembro alto sigue siendo el techo del pico al canto, con su retorno de 4 en el
 pico y sus dos bridas a los anillos. Lo que cambia es cómo baja por detrás y que
 lleva canal (§3.5). Las dos variantes se renderearon y **Samuel escogió B el
@@ -329,6 +372,15 @@ tuerca y arandela de nylon que se veían a través del acrílico, fuera.
 
 ## 7. Puertas
 
+> **Corrección del 2026-08-30 — sustituye la lectura operativa de las filas
+> antiguas que siguen debajo.** `guarda_trasera_capturada()` conserva la captura
+> de la plancha; la pared de 3, el bolsillo en u = 5.5..16.5 y el costado que
+> entra 3.5 pasan a `guarda_tramo_trasero()`. Bajo los dos labios de chapa el
+> bolsillo tiene 3 de hondo; en el resto conserva 6. `guarda_aire()` ya no busca
+> ranuras en el techo: con 9.22 W cuenta la rendija del alero y las dos ondas.
+> Las filas de la tabla conservan la arquitectura anterior para explicar qué
+> rompía cada puerta; no son instrucciones vigentes.
+
 | puerta | qué hace |
 |---|---|
 | **muere** `guarda_trasera_dentro`, `guarda_agarre` (mordida de los M3 en las bandas), `_anclajes_miembro`, `_muesca_trasera` y las tres cajas de la trasera con muescas; `MIEMBROS_DXF` (las filas de M3 de las bandas) | |
@@ -354,6 +406,16 @@ el modelo después, VERDE, y romper cada puerta nueva a propósito.
 
 ## 8. Lo que cambia para el taller
 
+> **Corrección del 2026-08-30 — sustituye el alcance de taller de las viñetas
+> antiguas que siguen debajo.** El anillo lleva el rebaje de chapa de 4.5 × 3,
+> un cajeado de brida de 28 × 15.5 × 3 por anillo y la franja trasera de 23 con
+> el bolsillo en u = 5.5..16.5. Bajo los dos labios de chapa el bolsillo tiene
+> 3 de hondo; en el resto conserva 6. El techo queda macizo, con labio de 20 y
+> blank de 593.02 × 73.85. Los blanks vigentes son 545.62 × 42.23 para el talón
+> y 545.62 × 50.20 para la nariz; ambos llevan la muesca de 2.65 y el alivio
+> Ø2. La junta de los labios son doce tacos adhesivos de 4.0 × 15, seis por
+> labio. El detalle ejecutable está en `case/PLIEGO.md`, rev. 27.
+
 - **Mecanizado**: en la cara interior de cada anillo, el bolsillo de 11 × 6 a lo
   largo del tramo trasero, cerrado por los dos extremos (de y = 1 a P5.y − 17,
   con el escalón bajo el chaflán); y el contorno del rebaje del costado a 17
@@ -377,6 +439,17 @@ el modelo después, VERDE, y romper cada puerta nueva a propósito.
 - **Tornillería**: −10 M3, −10 tuercas, −10 arandelas de nylon, −10 arandelas d16.
 
 ## 9. Lo que este documento NO cierra
+
+> **Corrección del 2026-08-30 — sustituye aquí la tira de EPDM y la lectura de
+> la junta como cierre.** La junta vigente son seis tacos de 4.0 × 15 por
+> labio. En el techo, la rendija nominal de 4.0 entre tacos es la salida de
+> aire. Ya no queda abierta la elección entre tira y resalte: lo que sí queda
+> para la primera pieza es comprobar el derrame y la compresión real de los
+> tacos. Las viñetas antiguas se conservan para mostrar qué incertidumbre fue
+> cerrada. También quedan cerradas aquí las viñetas del labio de 18 y del
+> costado a 3: el techo vigente tiene labio de 20, la franja trasera mide 23 y
+> el costado entra 3.5. La variante vigente es B; A queda solo como razonamiento
+> histórico.
 
 - **A contra B**: decidido, **B** (2026-08-30, mirando los renders). Lo que cuesta:
   un doblez más en el techo y el relieve en las bridas. Queda retirar la A del

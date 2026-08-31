@@ -1,5 +1,24 @@
 # Pliego de fabricación — cuerpo del SAM17
 
+> **rev. 27 (2026-08-30). Tanda A: techo macizo y tres chapas empotradas.**
+> **Al mecanizado:** cada anillo gana el rebaje de chapa de 4.5 de ancho × 3
+> de fondo y un cajeado de brida de 28 × 15.5 × 3; son dos al fabricar el par.
+> También cambian los radios a 5.5
+> donde hay chapa y la franja trasera de 23. El cupón gana el rebaje y su
+> reborde de 1 × 3. **A la chapa:** el techo queda sin ranuras, con labio de
+> 20 y bridas con esquinas R2; techo, talón y nariz pasan a los blanks
+> vigentes y los dos pies llevan muescas hasta su línea de doblez, con alivio.
+> **Juntas:** doce tacos adhesivos de EPDM de 4.0 × 15 sustituyen las dos
+> tiras continuas. Esta revisión sustituye las cotas operativas de la rev. 26;
+> su bloque se conserva debajo como historia.
+>
+> **Corrección térmica del 2026-08-30.** La primera versión fijó la rendija en
+> 3.0 por capilaridad. Después de hacer que las dos puertas usaran la luz
+> comprimida, quedaban 0.2 K contra el techo de 15. La luz sube a 4.0 nominal
+> y 3.20 comprimida: quedan 1.4 K en el aviso y la subida capilar baja a 4.7.
+> Esto mueve 1 mm la trasera, la franja, el marco y los dos pies. El razonamiento
+> anterior se conserva en la spec de diseño; esta es la cota de fabricación.
+>
 > **rev. 26 (2026-08-29, más noche; corregida tras el PR).** La trasera
 > capturada como las mejillas y el talón como la nariz. **Al mecanizado**: en la cara interior
 > de cada anillo, un **bolsillo de 11 × 6** a lo largo del tramo trasero
@@ -197,14 +216,19 @@ el 2026-08-28:
 | DXF | material | taller | proceso |
 |---|---|---|---|
 | `chasis_cuerpo_2d`, `chasis_tapa_2d`, `chasis_refuerzo_2d` | acero | chapa | corte + **plegado** |
-| `miembro_alto_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: la meseta de 50 con **retorno a 45°** de 4 en el pico y, por detrás, **chaflán + labio de 18 (dos dobleces a 45°, variante B)** o la banda de 24 a 90° (variante A) — con dos **bridas** de 27 dobladas a 90° de las puntas del labio (en B con relieve y esquina a chaflán) — **1 ud** |
-| `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: DOS dobleces a 45° (labio de 13 → chaflán → pie de 20, la nariz en espejo) y **ocho pestañas lanzadas** de 25 × 8 (corte en U de 0.5 con un **taladro de alivio de Ø2** a caballo de la línea de doblez en cada esquina, doblez a 90° con **r = 3 = 2 t** hacia arriba, el mismo radio que el resto de la pieza; son estructura: sujetan el canto de abajo de la trasera y la más cargada recibe 159 N en la punta — 199 MPa en la raíz de la lengüeta, que mide 23.5 tras el alivio: **el 6082-T6 aquí es obligatorio, no recomendado**) — **1 ud** |
-| `nariz_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: TRES dobleces (45°, 45° y 35°) — **1 ud**. Ver las líneas de plegado abajo |
+| `miembro_alto_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: techo **sin ranuras**, blank **593.02 × 73.85**, meseta de 50, retorno de 4, chaflán de 6 y labio de 20. Dos bridas de 27 × 14.5 con esquinas R2. Entran en los cajeados del anillo; no se dejan sobre la cara — **1 ud** |
+| `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: blank **545.62 × 42.23**, labio de 13, chaflán y pie de **22.5**. En cada punta del pie, muesca de 2.65 hasta la línea de doblez a 22.06, con alivio de Ø2 a caballo de la esquina interior. Conserva sus ocho pestañas lanzadas; el 6082-T6 sigue siendo obligatorio — **1 ud** |
+| `nariz_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: blank **545.62 × 50.20**, pie de **20.5** y tres dobleces. En cada punta del pie, muesca de 2.65 hasta la línea de doblez a 20.06, con alivio de Ø2 a caballo de la esquina interior — **1 ud** |
 | `tapa_valle_2d` | aluminio, 3 mm | chapa | corte + **plegado** |
 | `costilla_2d`, `costilla_dorso_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **fresado CNC**, sin plegar, sin soldar |
 | `bandeja_base_2d` | madera maciza, 18 mm | carpintería | corte + ranuras alargadas |
 | `marco_ventana_2d` | aluminio, `t_placa` = 6 mm, **láser** | chapa | corte + **6 cajeados** Ø8 × `prof_cajeado_riel` = 2.5 **por el lado del anillo** (bolsillos ciegos en UNA cara: dejan 3.5 mm bajo la cabeza del M4 del riel). Nota de mecanizado, no va en el DXF — ver abajo — **2 uds, PAR ESPEJADO**: mismo contorno, cajeado por caras opuestas. **Planitud ≤ 0.5 mm en 300** en el blank cortado: apoya en la cara mecanizada del anillo y doce M4 lo conforman contra ella (una pletina de 6 × 24 se aplana 0.5 con 200 N), pero con más de eso el acrílico lo nota |
 | `cupon_anillo_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **NO ES UNA PIEZA DEL CASE**: es la SECCIÓN del perfil del anillo, y de ella sale el **cupón de 100 mm** que hay que aprobar antes de cortar los dos anillos — ver el punto de parada en §6.1 |
+
+**Juntas de los dos labios:** suministrar y pegar **12 tacos de EPDM de
+4.0 × 15**, seis en el labio del techo y seis en el del talón. No sustituirlos
+por tiras continuas: el taco fija la luz y el vano entre tacos deja respirar la
+rendija.
 
 **`costilla_2d` y `costilla_dorso_2d` son CONTORNOS REALES, no desarrollos** —
 al revés de como era hasta el 2026-08-27. La pieza ya no se dobla: lo que corta
@@ -218,18 +242,16 @@ cara):
   **nada más**: la ventana sale de retirar `cara_anillo` = **20 mm** de la
   silueta, que es el ancho de la cara vista. **NO trae el contorno del rebaje.**
   Es la hoja del corte del blank.
-- **`costilla_dorso_2d` — LA CARA INTERIOR.** Trae el **contorno del REBAJE**, a
-  `cara_anillo − rebaje_anillo` = 20 − 6 = **14 mm** de la silueta — **salvo en el
-  tramo trasero, donde corre a 17** (`t_anillo + pared_rebaje_trasera`) —, más
-  el **polígono del BOLSILLO DE LA TRASERA** (de 3 a 14 mm del plano trasero,
-  **cerrado por los dos extremos**: de 1 mm del canto de abajo a 17 del de
-  arriba, y bajo el chaflán — hasta 3.5 del canto de abajo — arranca a 5.5 en
-  vez de a 3: un escalón, para no morder la cara del chaflán; **6 mm de
-  profundidad**, no los 11 del rebaje)
-  y los **14 círculos** de rosca ciega a diámetro de broca. La
-  silueta NO se repite aquí a propósito: dibujarla sería mandar cortar el
-  contorno dos veces. El bolsillo y el rebaje comparten la pared de 3 mm que
-  queda entre ellos, de toda la altura: ahí apoya la pata trasera del marco.
+- **`costilla_dorso_2d` — LA CARA INTERIOR.** Trae el contorno del rebaje del
+  costado y, desde la rev. 27, el **rebaje de chapa de 4.5 de ancho** a lo
+  largo del contorno solo donde se ve techo, nariz o talón. Bajo los dos
+  labios, ese contorno se funde con el bolsillo de la trasera. El bolsillo va
+  en **u = 5.5..16.5**, con pared de 3 y el costado entrando 3.5; su labio
+  queda con 3 de hondo bajo los labios de chapa y conserva 6 en el resto.
+  Trae también la planta del cajeado de brida de cada anillo —dos al fabricar
+  el par—, de **28 × 15.5**, y los 14 círculos de rosca ciega. La silueta no se repite: dibujarla sería mandar
+  cortar el contorno dos veces. **Las profundidades no viven en esta planta**;
+  están escritas en §6.1.
 
 **El dorso está dibujado EN LAS MISMAS COORDENADAS que la cara, no espejado.**
 Léase como *la cara de atrás de la misma pieza, mirada desde el mismo lado*:
@@ -275,82 +297,66 @@ M3 de la pestaña de la banda del valle a
 esquina trasera-alta, abierta al canto exterior, de 16.5 de honda: ahí apoya
 en la cara del anillo la brida del miembro alto, y el marco se aparta.
 
-**Su canto exterior no va a la silueta en todos los tramos**, y no es un
-error de corte: en las tres filas sí (es el borde de aluminio de la fila);
-en el frente, el suelo y la meseta va retirado **1.65** (encima va chapa a
-ras de la silueta: la nariz y su pie, el pie del talón, la meseta y su
-retorno); en la trasera va retirado **11.20** (la banda, la trasera más
-gruesa del lote y medio milímetro: delante de un acrílico de ±1.2 no puede
-haber nada fijo). El canto interior va a 26 de las aristas del perfil,
-recto, en los siete tramos. `taladros_marco_ventana()` en `check_dxf.py`
-relee todo esto del fichero.
+**Su canto exterior no va a la silueta en todos los tramos.** En las tres
+filas sí: es el borde de aluminio de la fila. Bajo las chapas empotradas se
+retira **2.65**, porque la cara de la chapa queda 1 por dentro del contorno.
+En el **suelo** se retira **1.65**: los pies apoyan a ras y no entran en el
+rebaje. En la trasera se retira **17.00**, medio milímetro después de la pared
+del bolsillo. El canto interior conserva 26 de fondo salvo en la pata
+trasera, donde `marco_fondo_trasera` vale **30**. Así queda una pata de
+**13 × 6**; con 200 N cede 1.54 mm y trabaja a 114 MPa, por debajo de los
+techos de 2 mm y 130 MPa. `taladros_marco_ventana()` relee el contorno del
+fichero.
 
-**LA BRIDA DEL MIEMBRO ALTO Y LA MUESCA DE LA TRASERA.** Las dos bridas
-salen de las puntas de la BANDA del miembro alto, dobladas a 90° sobre una
-línea perpendicular a la silueta, y apoyan **en la cara del anillo** — no
-sobre el marco: se probó subirlas con un escalón y la tapa de arriba pasaba
-de abrir 121.5° a 52° (`guarda_tapa()`). Miden **27 × 14.5**, con sus dos M4
-a 9.75 y 20.25 del doblez, a 8.5 de la silueta. La trasera, que apoya su
-esquina en esa misma franja, lleva una **muesca de esquina de 2 (ancho) ×
-15 (alto) con radio 2** en cada esquina de arriba: la brida le pasa por
-debajo. Son las únicas dos operaciones del acrílico que no son contorno,
-taladro ni cajeado, y el radio no se negocia — el PMMA raja desde una
-esquina viva.
+**LA BRIDA DEL TECHO VA EMPOTRADA.** Cada brida mide **27 × 14.5** y lleva
+sus esquinas a **R2**. Asienta entera en un cajeado de **28 × 15.5**, con
+esquinas interiores **R1.5** para la fresa de Ø3. El cajeado se hace en la
+cara interior del anillo, a **3 mm de profundidad**. Esa profundidad deja
+**11 mm de pletina** bajo los dos M4 ciegos: la brida queda más lejos del
+barrido de la tapa y la rosca conserva cuerpo. La muesca del marco sobre la
+brida se mantiene. La trasera no lleva muesca ni taladro.
 
-**EL TALÓN (`talon_2d`) ES LA NARIZ EN ESPEJO**: labio vertical de **13** a
-ras del plano trasero (su canto libre en y = 0 del blank), chaflán a 45° sobre
-el de P6 y pie de **20** sobre la tabla (su canto libre en y = 39.73), dos
-dobleces a 45° con r = 3 y BD 0.88 cada uno: líneas a **12.56** (labio →
-chaflán) y a **20.17** (chaflán → pie) del canto libre del labio. Blank
-**540.32 × 39.73**, con tres M4 en el pie a 6.75 de su canto libre (a la tabla,
-desde dentro, como la nariz) y **ocho ventanas de pestaña**: un corte en U de
-0.5 de ancho alrededor de una lengüeta de 25 × 6.20 que arranca en y = 29.23
-hacia el canto libre del pie, **sin cortar la línea del doblez** (la de
-y = 28.73), con un **taladro de alivio de Ø2 a caballo de esa línea** en cada
-esquina del corte; la lengüeta se dobla 90° hacia arriba con **r = 3 (2 t, el
-mismo que el resto de la pieza)** y queda de pie detrás del canto de abajo de
-la trasera, a 3.5 de su cara. Los dos dobleces van
-hacia dentro; la pieza no se voltea: el pie sobre la tabla y el chaflán al
-suelo. Sin bridas ni rosca en el anillo.
+**LO QUE ENTRA EN LOS REBAJES MIDE 545.62 ENTRE PAREDES.** Sale de la luz
+546.62 menos 0.5 por cada canto. En nariz y talón, el pie no entra: vuelve al
+ancho de apoyo mediante una muesca de 2.65 en cada punta. No recortar el pie a
+todo el ancho del blank, porque entonces dejaría de apoyar entre los anillos.
+
+**EL TALÓN (`talon_2d`) ES LA NARIZ EN ESPEJO**: labio vertical de 13,
+chaflán a 45° sobre P6 y pie de **22.5** sobre la tabla. Blank
+**545.62 × 42.23**. En cada punta del pie se corta una **muesca de 2.65** desde
+el canto libre hasta la línea de doblez pie-chaflán. Esa línea está a
+**22.06** del canto libre (`largo − BD45/2`), no en el largo nominal del pie.
+La esquina interior lleva un **alivio de Ø2 a caballo de la línea**: sin él,
+el pliegue arrancaría la muesca. Conserva los tres M4 del pie y las ocho
+ventanas de pestaña del DXF. Los dos dobleces van hacia dentro. Sin bridas ni
+rosca en el anillo.
 
 **LA NARIZ (`nariz_2d`) LLEVA TRES DOBLECES, y ninguno es a 90°.** Blank
-**540.32 × 47.38** con el **canto libre del pie en y = 0** (los tres M4 van a
-6.75 de ese canto, que no se mueve al plegar). De abajo hacia arriba, con la
-línea en la mitad de cada zona de doblez y el mismo r = 3, k = 0.42: **doblez a
-45°** a **17.56** (pie de 18 → chaflán), **doblez a 45°** a **25.17** (chaflán →
-frente vertical), **doblez a 35°** a **37.42** (frente → cara de abajo, que se
-inclina `angulo_inferior` = 35° desde la vertical). Los BD son **0.88** para
-cada 45° y **0.62** para el de 35°; salen de `doblez_bd()` en el `.scad` y de
-`_bd_angulo()` en el budget, no de una tabla. Los tres dobleces van **hacia
-dentro** del case, y la pieza no se voltea: el pie queda sobre la tabla y el
-chaflán mira al suelo.
+**545.62 × 50.20**, con pie de **20.5**. El pie crece para que los dos pies no
+difieran más de 2: se mantienen como una familia. En cada punta se corta una
+**muesca de 2.65** desde el canto libre hasta la primera línea de doblez, a
+**20.06** (`largo − BD45/2`). Lleva un **alivio de Ø2 a caballo de la esquina
+interior**. Después siguen los dos dobleces restantes del perfil vigente. Los
+tres van hacia dentro; el pie queda sobre la tabla.
 
-**Y `miembro_alto_2d` ES EL TECHO, en dos variantes** (`remate_trasero_chaflan`
-en `params.scad`; los DXF de este pliego son de la **B**, la escogida el
-2026-08-30): el labio (o la banda)
-con su canto libre en y = 0 del blank, la meseta (del pico al canto, con las 16
-ranuras de salida) y el retorno de **4 a 45°** en el pico. **Variante B
-(chaflán)**: labio de **18**, chaflán (dos dobleces a 45°, BD 0.88 cada uno:
-líneas a **17.56** y **25.17** del canto libre del labio) y meseta de 44; blank
-**588.00 × 71.85**. **Variante A (banda)**: banda de **24** a 90° (línea a 24 −
-3.30/2 = **22.35**) y meseta de 50; blank 588.00 × 73.83. La línea del retorno
-va a **3.56** del canto libre de la meseta (4 − 0.88/2). Las dos bridas
-sobresalen **23.70** por cada punta (27 − BD), de 1.5 bajo la meseta hacia
-abajo, 14.5 de alto; en B suben 4.5 por encima del labio junto a la tira del
-chaflán, con un **relieve** de 0.5 en la línea del doblez y la esquina de
-arriba cortada a 45° (3 × 3), que es donde el anillo ya no tiene cara. **Sin
-fila de M3** (la trasera no se atornilla) y **sin canal**.
+**Corrección del 2026-08-30.** La boca del avellanado M4 del talón es un cuerpo
+fijo detrás de la cara interior del acrílico y necesita 1.70 de aire. Con la
+trasera 1 mm más adentro y el pie en 21.5 quedaban 1.77: verde por 0.07 no es
+margen. El pie en 22.5 recupera 2.77. La nariz lo sigue a 20.5 porque los dos
+pies no pueden diferir más de 2. Va bajo la tabla y no se ve.
 
-**LAS ESQUINAS DEL ANILLO QUE LLEVAN CHAPA A 90° MIDEN `radio_chapa` = 4.5**:
-el radio exterior de un doblez de r = 3 en chapa de 1.5 — el arranque de la
-cara de abajo (P1), el pico del techo (P4, el retorno) y, con el techo en
-banda (variante A), la esquina de arriba-atrás (P5). No es gusto: una esquina
-viva del anillo bajo un doblez a 90° asoma 1.9 mm por fuera de la chapa. **Las
-esquinas que llevan chapa a 45° van a CHAFLÁN de 6** (`chaflan_nariz`): la de
-abajo-delante (la nariz), la de **abajo-atrás** (el talón, desde el 29-08 más
-noche) y, con el techo en chaflán (variante B), la de **arriba-atrás**. Cada
-chaflán lleva `radio_chapa` en sus dos vértices. Lo relee
-`anillo_tiene_chaflan()` del DXF, esquina por esquina.
+**`miembro_alto_2d` ES EL TECHO MACIZO.** Hay una sola geometría operativa en
+esta revisión: blank **593.02 × 73.85**, meseta de 50 **sin ranuras**, retorno
+de 4 a 45° en el pico, chaflán de 6 y labio de **20**. Las dos bridas de
+27 × 14.5 se doblan de las puntas del labio y llevan las esquinas a **R2** para
+entrar enteras en los cajeados R1.5 del anillo. Sin fila de M3 y sin canal: la
+trasera no se atornilla al techo.
+
+**LOS RADIOS DEL CONTORNO SIGUEN LA CHAPA.** Donde el anillo bordea una chapa
+empotrada, el radio es **5.5**: `radio_chapa` 4.5 más el rehundido de 1. Así el
+reborde sigue concéntrico al arco del pliegue. Donde nariz o talón salen del
+rebaje hacia el pie, vuelve a **4.5**: el reborde termina y el pie sigue a ras
+sobre la tabla. Las tres esquinas con chaflán conservan el chaflán de 6.
 
 (Las notas sobre los DXF de placa y su fix round — el cajeado dibujado en
 vez del paso M4 — quedan en el historial: la pieza es hoy el marco de la
@@ -399,8 +405,8 @@ maciza, vaciada por el centro con fresadora CNC.
   contorno real mide 307.4 × 256.2 mm, `costilla_2d`, con margen de sujeción
   y desbaste).
 - **SON DOS PIEZAS ESPEJADAS, uno derecho y uno izquierdo.** Mismo contorno y
-  misma ventana; el **rebaje, el chaflán de la ventana y las 14 roscas ciegas
-  van en la cara OPUESTA de cada anillo**, porque la cara vista de cada uno
+  misma ventana; los **rebajes, los cajeados, el chaflán de la ventana y las
+  14 roscas ciegas van en la cara OPUESTA de cada anillo**, porque la cara vista de cada uno
   mira hacia FUERA del case. Mecanizar los dos por el mismo lado da un anillo
   del revés, con el rebaje abriendo hacia fuera y el acrílico sin sitio donde
   entrar. En el modelo esto es el `mirror([0,0,1])` de `costillas()`.
@@ -411,6 +417,26 @@ maciza, vaciada por el centro con fresadora CNC.
   de ancho en el plano (`rebaje_anillo`) × **11 mm** de profundidad
   (`t_anillo − rehundido_acrilico`, 14 − 3). Sin él el acrílico no tiene
   dónde entrar y asoma por delante del anillo.
+- **Rebaje de chapa**, en la cara interior y solo a lo largo del contorno que
+  queda cubierto por techo, nariz o talón: **4.5 mm de ancho × 3 mm de
+  profundidad**, desde z = 11 hasta z = 14 contando desde la cara vista. Deja
+  un **reborde de 1 × 3**. La chapa queda 1 por dentro del contorno, con 0.5
+  de holgura al canto y 2.5 agarrados en z. El reborde tapa el canto; por eso
+  no se extiende bajo los pies.
+- **Un cajeado de brida por anillo, dos en total**, de **28 × 15.5 × 3 mm**,
+  en la cara interior. Esquinas interiores R1.5 para la fresa Ø3. Las bridas
+  van a R2. Quedan 11 mm de pletina bajo sus dos M4 ciegos.
+- **Tramo trasero de 23 mm de franja.** El bolsillo de la trasera ocupa
+  u = 5.5..16.5; después quedan la pared de 3 y los 3.5 que entra el costado.
+  Bajo los labios del techo y del talón, el labio del bolsillo tiene 3 de
+  hondo porque el rebaje de chapa ocupa los otros 3. En el resto conserva 6.
+- **Radios de contorno:** 5.5 donde se ve chapa empotrada; 4.5 donde la chapa
+  abandona el rebaje para formar el pie. Así el marco sigue el pliegue sin
+  levantar el apoyo de la tabla.
+
+**PROFUNDIDADES QUE NO ESTÁN EN EL DXF:** el rebaje de chapa tiene **3 mm** y
+cada cajeado de brida tiene **3 mm**. `costilla_dorso_2d` es una planta: marca
+la huella, no el eje Z. No deducir la profundidad del ancho dibujado.
 - **Chaflán 1.5 × 45°** (`chaflan_anillo`) en las DOS aristas de la cara
   vista: la exterior (silueta) y la de la ventana. Es lo que lee como
   «perfil» en vez de «banda plana» — la razón entera del cambio de diseño.
@@ -455,6 +481,17 @@ maciza, vaciada por el centro con fresadora CNC.
   interior. Mismo material, mismo mecanizado y mismo anodizador que van a
   hacer los anillos: un cupón hecho de otra forma no mide nada.
 
+  Desde la rev. 27, el cupón reproduce la **sección completa del anillo con
+  doce vértices**: los ocho anteriores más los cuatro de la muesca del
+  **rebaje de chapa de 4.5 × 3**. La muesca deja el **reborde de 1 × 3** entre
+  ella y el canto. Así el cupón permite medir el reborde sobre metal. Ese
+  reborde es la pared más delicada
+  del anillo; probarlo en el cupón evita descubrir su límite después de vaciar
+  las dos piezas completas. Si el taller no acepta el reborde de 1 con **+0.3 / −0** (asimétrica a
+  propósito: 0.9 es rojo para `guarda_rebaje_chapa`, y pedir ±0.1 sería
+  aceptar por contrato una pieza que rechazamos por diseño), se
+  detiene el cupón y el diseño se regenera a 1.5 antes de cortar.
+
   **Qué se mira cuando vuelve, y qué pasa si falla:**
 
   | # | Qué se comprueba | Criterio | Si falla |
@@ -462,11 +499,12 @@ maciza, vaciada por el centro con fresadora CNC.
   | 1 | El chaflán se lee como en la foto de referencia | 1.5 ± 0.2 a 45°, continuo y sin escalones de faceta, mirado con la misma luz y al lado de la referencia impresa | Se cambia `chaflan_anillo` (rango ESTIMADO 1–3), se reexporta la sección y se pide otro cupón |
   | 2 | El rebaje asienta el PMMA del lote | Con el recorte **más grueso** del lote (8 + 1.2 = 9.2) más la junta de 1 tiene que entrar en los 11 de fondo y **sobrar 0.3**; con el **más fino** (6.8) la junta todavía tiene que precargar | Se sube `t_anillo` — la puerta `guarda_rebaje()` ya dice que con 12 el rebaje quedaba a −0.2, o sea que no cabía |
   | 3 | El anodizado no interrumpe el PE | **≤ 0.1 Ω** medido a cuatro hilos entre el punto enmascarado y un tornillo M4 apretado en la rosca ciega (spec 2026-08-27 §3.4) | El enmascarado no valió: se rehace el punto y se vuelve a medir antes de anodizar los anillos |
+  | 4 | El rebaje de chapa deja un marco continuo | Rebaje de 4.5 × 3 y reborde de 1 × 3, sin mordidas ni pared abierta | No se cortan los anillos; se aplica la respuesta acordada en el RFQ y se pide otro cupón |
 
   Las cotas **en el plano** (cara vista y ancho del rebaje) no hacen falta
   medirlas aquí: las cruzan `anillo_tiene_ventana()` y `anillo_tiene_rebaje()`
   contra los ficheros que se cortan, en cada corrida. Lo que el cupón cierra
-  son las **tres profundidades** y el **acabado**, que ningún DXF de planta
+  son las **profundidades del perfil** y el **acabado**, que ningún DXF de planta
   puede decir y ningún render puede decidir.
 - **Aleación: recomendada, no obligatoria.** La puerta (`guarda_anillo()`)
   calcula con **Rp0.2 = 130 MPa**, el conservador de siempre, y con la
@@ -560,6 +598,11 @@ contradicen, el equivocado es este documento.**
 | anillo: espesor 14, cara 20, rebaje 6, rehundido 3, chaflán 1.5 × 45° | `t_anillo`, `cara_anillo`, `rebaje_anillo`, `rehundido_acrilico`, `chaflan_anillo` | `guarda_anillo()`, `guarda_rebaje()` |
 | roscas ciegas del anillo, broca M4 3.3 / M5 4.2 | `d_M4_rosca`, `d_M5_rosca` | `guarda_anclajes()`, `taladros_anillo()` |
 | junta de asiento EPDM 1 mm (costado y trasera) | `t_junta_asiento` | `guarda_rebaje()`, `guarda_trasera_capturada()` |
-| bolsillo de la trasera 11 × 6, labio 3; rebaje a 17 atrás | `rehundido_acrilico`, `rebaje_anillo`, `t_anillo`, `pared_rebaje_trasera` | `guarda_trasera_capturada()`, `anillo_tiene_bolsillo_trasero()`, `anillo_tiene_rebaje()` |
-| talón: chaflán 6, labio 13, pie 20, ocho pestañas 25 × 8 a 3.5, r = 2 t, alivio Ø2 | `chaflan_nariz`, `talon_labio`, `talon_pie`, `talon_pestana_*` | `guarda_talon()`, `pestanas_talon()` |
-| techo: chaflán 6 + labio 18 (B) / banda 24 (A) | `remate_trasero_chaflan`, `techo_labio`, `banda_trasera` | `guarda_miembro_alto()` |
+| rebaje de chapa 4.5 × 3, rehundido 1, holgura 0.5, reborde 1 × 3 | `rebaje_chapa`, `rehundido_chapa`, `hol_chapa` | `guarda_rebaje_chapa()`, `anillo_dorso_tiene_rebaje()` |
+| tramo trasero 23; bolsillo u = 5.5..16.5; pared 3; costado 3.5; labio 3 bajo las chapas y 6 en el resto | `cara_anillo_trasera`, `rehundido_trasera`, `pared_rebaje_trasera`, `entrada_costado_trasero` | `guarda_tramo_trasero()`, `anillo_tiene_bolsillo_trasero()` |
+| cajeado de brida 28 × 15.5 × 3, R1.5; brida R2; pletina restante 11 | `rebaje_chapa`, `brida_*` | `guarda_miembro_alto()`, `bridas_techo()` |
+| marco retirado 2.65 bajo chapa, 1.65 en el suelo y 17.00 atrás; fondo trasero 30 | `rehundido_chapa`, `marco_fondo_trasera` | `guarda_marco_ventana()`, `taladros_marco_ventana()` |
+| talón: pie 22.5, blank 545.62 × 42.23, muesca 2.65 hasta 22.06, alivio Ø2 | `talon_pie`, `muesca_pie` | `guarda_talon()`, `pestanas_talon()` |
+| nariz: pie 20.5, blank 545.62 × 50.20, muesca 2.65 hasta 20.06, alivio Ø2 | `nariz_pie`, `muesca_pie` | `guarda_talon()`, `check_dxf` |
+| techo macizo: labio 20, blank 593.02 × 73.85 | `techo_labio` | `guarda_miembro_alto()`, `techo_macizo()` |
+| doce tacos EPDM 4.0 × 15; rendija nominal 4.0, comprimida 3.20 | `aire_labios`, `taco_largo` | `guarda_rendija()`, `guarda_aire()` |

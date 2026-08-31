@@ -114,6 +114,13 @@ remate_trasero_chaflan = 1;
 // esta pared, de toda la altura. 3 como el labio: lo que el costado tiene
 // delante lo tiene la trasera a los lados.
 pared_rebaje_trasera = 3;
+// Cuanto entra el costado de PMMA en el tramo trasero (2026-08-30). Era un 3
+// implicito dentro de cara_anillo_trasera = 20; se saca a parametro porque
+// cara_anillo_trasera pasa a ser DERIVADO -- bolsillo + pared + esto -- y una
+// cota no puede tener dos fuentes. 3.5 y no 3: el bolsillo de la trasera se
+// mueve 1.5 hacia dentro con la rendija, y de los 2 que gana la franja, medio
+// se lo queda el costado para no perder agarre.
+entrada_costado_trasero = 3.5;
 // EL TALON ES LA NARIZ DE ATRAS (2026-08-29, noche, 2). Samuel: "el talon
 // preferiria que tuviera el mismo estilo y acabado que la nariz". La esquina
 // de abajo-atras del anillo (P6) va a chaflan_nariz como la de delante, y el
@@ -127,7 +134,13 @@ pared_rebaje_trasera = 3;
 // cara interior del acrilico -- que puede venir 1.2 mas gruesa -- y vale para
 // ella la regla de la trasera, tol_pmma + 0.5 = 1.70 de aire; con 20 quedan
 // 2.77, con 18 quedaban 0.77.
-talon_pie       = 20;
+// 22.5 DESDE EL TECHO MACIZO (2026-08-30): la trasera retrocede 2.5 en total
+// al crecer la rendija del alero (rehundido_trasera pasa de 3 a 5.5), y el pie
+// la sigue milimetro a milimetro para conservar el aire del avellanado. Fue
+// 21.5 con la rendija en 3.0; al subirla a 4.0 tras la revision, esos 2.77
+// caian a 1.77 -- verde por 0.07 mm, que no es margen -- y el pie sube otro
+// milimetro. La regla no cambia: el pie del talon acompana a la plancha.
+talon_pie       = 22.5;
 // El labio vertical, desde la coronacion del chaflan hacia arriba. 13 es el
 // frente de la nariz (alto_frontal - chaflan_nariz): las chapas del canto
 // cierran igual, chaflan de 6 y 13 de plomo. Tapa 12.5 del canto de abajo de
@@ -140,7 +153,35 @@ talon_labio     = 13;
 // (guarda_miembro_alto). Con 18 la caida total es 24, la misma que la banda
 // plana de #241, y da 110. Si Samuel lo quiere a 13, es obligar 6082-T6 en el
 // pliego (Rp0.2 240), no bajar el numero aqui.
-techo_labio     = 18;
+// 20 DESDE EL TECHO MACIZO (2026-08-30): el labio ya no solo aguanta la mano,
+// TAPA la rendija por la que sale el aire, y lo que tiene que tapar lo manda
+// la capilaridad. Con el solape de 6.5 que daba 18, el agua subia 6.2 por la
+// rendija comprimida un 20 % -- 0.3 de margen. Con 20 el solape es 8.5 y
+// sobran 3.8 (guarda_rendija) desde que la rendija subio a 4.0: la subida va
+// con 1/d, asi que ensanchar la luz por lo termico mejoro tambien esto. El de
+// rigidez sigue verde y con mas seccion: 18 era el minimo por ahi, y este
+// numero solo sube.
+techo_labio     = 20;
+// LA RENDIJA DEL ALERO (2026-08-30). El aire de la caja sale por aqui: entre
+// la cara interior del labio del techo y la cara vista de la trasera, mirando
+// al SUELO, tapada por el vuelo del techo. Sustituye a las 16 ranuras de la
+// meseta, que eran un agujero mirando al cielo en la cara que se moja.
+// 3.0 y no 2.5 (lo que dejaba la spec del 29-08 para una tira de EPDM) porque
+// la subida capilar va con 1/d: a 2.5 el agua sube 5.9 contra 6.5 de solape, y
+// a 1.5 de luz local -- una plancha alabeada -- sube 9.8 y se mete dentro.
+// Es tambien el grosor de los tacos: el taco ES la luz.
+// 4.0 DESDE LA REVISION DEL 30-08. Con 3.0 la cuenta capilar cerraba, pero la
+// TERMICA no: el area de salida se calculaba con la luz nominal mientras la
+// puerta capilar ya usaba la comprimida -- dos puertas sobre la misma junta,
+// cada una con su estado. Con la comprimida en las dos (2.4 de 3.0) el case
+// sube 14.8 K contra un techo de 15 con el C_D pesimista: 0.2 K, que no es
+// margen. Con 4.0 la luz comprimida es 3.2, el area sube de 1081 a 1442 mm2 y
+// quedan 13.6 K -- 1.4 de margen. Y la capilaridad MEJORA de paso, porque la
+// subida va con 1/d: baja de 6.2 a 4.7 mm contra 8.5 de solape.
+// Lo que cuesta: el rebaje se ensancha a 4.5 (la fresa de Ø3 sigue entrando),
+// la trasera retrocede 1 mas y la franja del tramo trasero pasa de 22 a 23 --
+// un milimetro mas de aluminio visto desde el lado.
+aire_labios     = 4.0;
 // LAS PESTANAS del pie: lanzadas de la chapa (cortadas por tres lados y
 // dobladas 90 hacia arriba con radio_doblez_pestana) detras del canto de
 // abajo de la trasera: su tope hacia dentro entre los anillos, que a los
@@ -238,6 +279,32 @@ rebaje_anillo      = 6;
 // Cuanto queda atras la cara del PMMA respecto a la cara vista. Rango
 // ESTIMADO 3-7 de la foto; el minimo, para que el labio tenga cuerpo.
 rehundido_acrilico = 3;
+// EL REBAJE DE CHAPA (2026-08-30). Samuel, mirando la esquina en Blender: "el
+// acabado debe sentirse perfecto con respecto a la esquina, perfectamente
+// alineado con el del marco o si no se ve feo -- tiene que ser una pieza que
+// se sienta empotrada". Hasta hoy la chapa se apoyaba EN la cara interior del
+// anillo, asi que la tolerancia del taller de chapa (+-0.3 en el desarrollo,
+// +-0.5 en el doblez) salia a la superficie como un escalon que se toca con
+// el dedo. Ahora el anillo lleva un rebaje fresado por dentro, la chapa se
+// mete en el, y las dos cotas que se ven las corta la FRESADORA, no la
+// plegadora: la junta de sombra de 1 y el reborde que tapa el canto.
+// Hermano del bolsillo del acrilico (rebaje_anillo / rehundido_acrilico), que
+// ya captura las mejillas y la trasera con el mismo truco.
+//
+// El fondo, en z desde la cara interior. 3 = 2 t de la chapa: menos y la
+// chapa no queda presa, y el suelo del rebaje es ademas la pared exterior del
+// bolsillo de la trasera por construccion.
+rebaje_chapa       = 3;
+// Cuanto queda la cara exterior de la chapa por dentro del contorno del
+// anillo: la JUNTA DE SOMBRA que se ve. 1 es lo minimo que deja un reborde
+// fresable (1 de pared por 3 de alto es 3:1) y es la cota mas delicada de la
+// pieza: va al RFQ como pregunta con respuesta ya disenada -- si el taller
+// pide 1.5, se cambia aqui y todo lo derivado se mueve solo.
+rehundido_chapa    = 1;
+// Holgura del canto de la chapa contra la pared del rebaje. 0.5 y no los 0.15
+// de hol_piel: una chapa cortada a +-0.3 tiene que entrar aunque venga larga,
+// y aun larga le quedan 2.2 tapados bajo el reborde. Nadie la ve.
+hol_chapa          = 0.5;
 // Chaflan de las dos aristas de la cara vista, silueta y ventana. Rango
 // ESTIMADO 1-3 de la foto. Es lo que hace que la arista brille.
 chaflan_anillo     = 1.5;
@@ -321,7 +388,14 @@ marco_fondo        = 26;
 // contra 130. A 28 son 13.5 de pata y 110 MPa. El tramo trasero ya es la
 // excepcion de la ventana (el costado entra 3 ahi): pisa 8 de acrilico en vez
 // de 6, detras de la plancha.
-marco_fondo_trasera = 28;
+// 30 DESDE EL TECHO MACIZO (2026-08-30): el bolsillo de la trasera se mueve a
+// u = 5.5..16.5 y su pared con el, asi que la pata arranca 2.5 mas adentro
+// (en 17) y con 28 perdia ese ancho justo donde no hay tornillo. Con 30 y el
+// retiro en 17 la formula de guarda_marco_ventana() da 1.54 mm y 114 MPa
+// (techos 2 mm y 130); con 28 quedaba por un pelo. Los numeros son los de
+// despues de subir la rendija a 4.0 (revision del 30-08); con la rendija en
+// 3.0 eran retiro 16, 1.70 mm y 112 MPa.
+marco_fondo_trasera = 30;
 // Cuanto se separan del eje del riel sus dos roscas ciegas, a lo largo del
 // tramo. 7 deja 14 entre las dos roscas del par (piden 9 = 2 D) y, con el par
 // centrado en el riel, 10.19 entre cada rosca y el cajeado. PERO el par
@@ -374,15 +448,20 @@ prof_cajeado_riel  = 2.5;
 //   agujero legal. Es el mismo choque que tiene la pestana de la banda del
 //   valle, y por eso ella no rosca en el anillo sino en el marco.
 //
-// VIVE EN LA CARA DEL ANILLO (z = t_anillo), fuera de la rebanada en la que
-// giran los paneles, y ESO NO ES NEGOCIABLE: se probo subirla t_placa con un
+// VIVIO EN LA CARA DEL ANILLO (z = t_anillo), fuera de la rebanada en la que
+// giran los paneles, y ESO NO ERA NEGOCIABLE: se probo subirla t_placa con un
 // escalon para tumbarla ENCIMA del marco de la ventana y la tapa de arriba
 // pasaba de abrir 121.5 grados a 52 -- todo lo que vive a z >= t_anillo +
-// t_placa esta en el barrido del panel (guarda_tapa). Asi que es el MARCO el
-// que se aparta: lleva una muesca de brida_ancho + t_costilla + 0.5 de honda,
-// abierta a su canto exterior, sobre la huella de la brida. Y la trasera una
-// muesca de esquina de t_costilla + 0.5 por brida_ancho + 0.5, porque la
-// brida pasa por debajo de su esquina.
+// t_placa esta en el barrido del panel (guarda_tapa). Asi que era el MARCO el
+// que se apartaba: lleva una muesca de brida_ancho + t_costilla + 0.5 de
+// honda, abierta a su canto exterior, sobre la huella de la brida. Y la
+// trasera una muesca de esquina, porque la brida pasa bajo su esquina.
+// DESDE EL TECHO MACIZO (2026-08-30) VIVE EN UN CAJEADO, y la prohibicion se
+// respeta igual porque el cambio va en la DIRECCION SEGURA: como el labio
+// entra 3 en el rebaje, la brida dobla en z = 11 y apoya en un cajeado de
+// rebaje_chapa de fondo, quedando de z = 11 a 12.5 -- 1.5 POR DEBAJO de la
+// cara, mas lejos del barrido, no mas cerca. La muesca del marco se queda:
+// las cabezas siguen asomando por encima de la cara.
 // Se probo 34 la noche de la trasera capturada, cuando el bolsillo salia por
 // el canto de arriba y pasaba por debajo de la brida: el M4 de dentro tenia
 // que huir de su pared. El bolsillo esta CERRADO por los dos extremos y se
@@ -397,6 +476,8 @@ brida_largo        = 27;
 // entero en la esquina trasera-alta -- con 14.5 quedan 9.5 de pata, y el M4
 // a 7.5 de su canto de abajo (a 7.0 del de arriba, el de siempre).
 brida_ancho        = 14.5;
+// La brida redondeada entra sin competir con el radio de la fresa.
+radio_brida        = 2;
 // LO QUE ESTE BLOQUE SUSTITUYE, y va escrito porque cada cota tenia su cuenta:
 // fueron ala_costilla = 27 (la banda de chapa, derivada del M4 de la fila 1U a
 // 1.5 D del canto de la ventana), ala_doblez = 16 (el ala que tapaba el canto
@@ -621,8 +702,11 @@ chaflan_nariz   = 6;
 // atornilla a la TABLA por el pie, desde dentro, con tres M4: en la cara vista
 // no hay tornillo, como en todo lo demas. El pie: 18 es lo minimo que reparte
 // un M4 entre la zona del doblez (SB + 2t + d/2 = 9.75 desde la linea del
-// chaflan) y 1.5 D del canto libre (6.75).
-nariz_pie       = 18;
+// chaflan) y 1.5 D del canto libre (6.75). 20.5 desde el techo macizo
+// (2026-08-30): sigue al pie del talon, que crecio a 22.5 con la trasera
+// retrocedida, porque guarda_talon() pide que los dos pies difieran 2 o
+// menos -- mismo estilo -- y con 18 se ponia roja. Va bajo la tabla: no se ve.
+nariz_pie       = 20.5;
 // Fondo del case. UN SOLO plano trasero: el costado es un triangulo
 // rectangulo con el angulo recto atras y la hipotenusa quebrada en dos
 // tramos (35 arriba, 12 abajo) con el entrepiso en medio (Samuel eligio esta
@@ -1609,7 +1693,7 @@ iec_margen_der = 22;     // acrilico entre la ventana y el canto derecho.
                          // decir nada. Esto es una distancia al canto, que es
                          // lo que de verdad importa en una plancha de PMMA.
 
-// --- banda delantera del valle y salida en la meseta ---
+// --- banda delantera del valle; la meseta queda maciza ---
 // De la antigua tapa solo queda la banda LISA del vuelo delantero. Es la
 // cara horizontal visible de pie delante del aparato. Samuel la pidio
 // "modernista pero seria, como si fuera de Darmstadt": nada figurativo. Las
@@ -1619,13 +1703,31 @@ iec_margen_der = 22;     // acrilico entre la ventana y el canto derecho.
 // HP par, o sea que cada una cae en un canto de modulo. El paso no es una
 // eleccion de dibujo, es la medida del instrumento; el adorno ES la regla.
 //
-// Las ranuras salieron del valle el 2026-08-28: esa cara queda maciza. La salida
-// equivalente sube a la meseta del miembro trasero alto, donde mas altura da
-// mas tiro. Sigue registrada al HP, pero con paso 6 HP y largo 15 salen unas
-// 900 mm2; guarda_aire() decide el numero por salto termico, no por estetica.
+// Las ranuras salieron tambien de la meseta: el alero toma ahora la salida.
 valle_paso_hp   = 2;   // nombre historico: malla de la ENTRADA trasera
-meseta_paso_hp  = 6;   // una ranura cada 6 HP -> 16, registradas al rack
-meseta_largo_ranura = 15; // 852 mm2 con vent_ancho_ranura = 3.75 (era 905 con 4)
+// RETIRADOS EL 2026-08-30, y quedan escritos para que no vuelvan por descuido.
+// Nacieron el 28-08 cuando las ranuras salieron del valle y subieron a la
+// meseta, donde mas altura da mas tiro: paso 6 HP -> 16 ranuras registradas al
+// rack, largo 15, 852 mm2. Samuel las mato mirando el .blend: "en la pieza
+// miembro alto no me gustan los huecos, es una decision erratica del diseno ya
+// que esa parte es sensible a que le entren liquidos". Y tenia razon: era la
+// unica cara horizontal de arriba, con un agujero mirando al cielo. La salida
+// equivalente es ahora la rendija del alero (aire_labios), que mira al suelo.
+// Siguen aqui porque guarda_puentes_ventilacion() y el test de rotura de
+// check_dxf.techo_macizo() los usan para reconstruir el techo viejo.
+meseta_paso_hp  = 6;
+meseta_largo_ranura = 15;
+// LOS TACOS DE LA JUNTA (2026-08-30). La spec del 29-08 dejaba "una tira
+// continua de EPDM con la primera pieza"; una tira cierra la rendija y mata la
+// salida de aire. Son tacos: sujetan la plancha sin que suene, FIJAN LA LUZ
+// (el taco es la luz) y dejan la rendija libre entre ellos. Misma regla en el
+// labio del techo y en el del talon; solo la de arriba cuenta como salida.
+taco_largo      = 15;    // mm, adhesivo, uno cada ~90 a lo largo del labio
+taco_n          = 6;     // por labio
+// Lo que cede el EPDM apretado. SUPUESTO sin puerta sobre el espesor real ni
+// el alabeo: lo cubre el ensayo de derrame (§8 de la spec). Manda porque la
+// capilaridad va con 1/d y el peor caso es la luz COMPRIMIDA, no la nominal.
+compresion_taco = 0.2;
 // Nombre historico: ya no dimensiona la banda del valle. Sigue gobernando el
 // retiro inferior de la rejilla de entrada trasera, cuyo contrato lo comparte
 // con el IEC; renombrarlo seria otro cambio independiente.
@@ -1643,11 +1745,17 @@ valle_margen    = 6;   // historico; la banda del valle ya no se perfora
 // tiro cambian. Mientras la entrada fue un hueco accidental de 20054 mm2 nadie
 // tenia que vigilar nada; una rejilla DIBUJADA si se puede quedar corta.
 //
-// La potencia sale de la spec de la fuente v2, §4, sumando los reguladores:
-// LM2941 ~2.7 + LM2991 ~2.9 + LT3045x2 ~0.4 + LT3094x2 ~0.33 = 6.33 W. NO
-// incluye las perdidas del transformador, que no estan itemizadas -- por eso el
-// techo de salto termico va holgado y no pegado al numero.
-potencia_disipada = 6.33; // W, SUPUESTO: spec PSU v2 §4, sin perdidas de trafo
+// Fue 6.33 W: la spec de la fuente v2, §4, sumando los reguladores (LM2941
+// ~2.7 + LM2991 ~2.9 + LT3045x2 ~0.4 + LT3094x2 ~0.33), SIN las perdidas del
+// transformador, que no estan itemizadas -- por eso el techo de salto termico
+// va holgado y no pegado al numero.
+// 9.22 DESDE EL TECHO MACIZO (2026-08-30): el peor caso del chasis del PSU
+// segun su propia spec, que NO es a plena carga sino a MEDIA -- el
+// prerregulador disipa su maximo con el rail a I ~ 0.50 A, no a 650 mA --, con
+// el LED del #104 al tope. Los modulos siguen fuera de esta formula: el repo
+// declara que la bahia de arriba esta sellada del camino del PSU. Sus ~4.2 W
+// son un presupuesto que falta, y no es de esta tanda.
+potencia_disipada = 9.22; // W, peor caso del chasis del PSU (a MEDIA carga)
 // Techo de salto sobre ambiente. 15 K es el criterio de siempre para caja de
 // electronica lineal con electroliticos dentro: a partir de ahi la vida del
 // condensador se parte por dos cada 10 K y deja de ser un detalle.

@@ -103,6 +103,17 @@ apilado desaparece:
     3, 6 de hondo, 11 de ancho); en ese tramo el rebaje del costado retrocede a 17
     y entre los dos bolsillos queda una pared de 3
     (`2026-08-29-trasera-capturada-talon-nariz-design.md` §3).
+  - *Enmienda (2026-08-30):* **sustituye la geometría operativa de la enmienda
+    anterior en el tramo trasero y amplía el mecanizado del anillo.** La cara
+    interior lleva un rebaje de chapa de **4.5 × 3** y deja un reborde de
+    **1 × 3** a lo largo del contorno visible. Cada anillo lleva un cajeado de
+    brida de **28 × 15.5 × 3**. Los radios pasan a **5.5** donde hay chapa y
+    vuelven a 4.5 donde nariz o talón salen hacia el pie. La franja trasera
+    pasa a **23**: bolsillo u = 5.5..16.5, pared 3 y costado entrando 3.5; bajo
+    los labios el labio del bolsillo queda con 3 de hondo y en el resto
+    conserva 6. El cupón gana el rebaje de chapa y su reborde. El texto del
+    29-08 queda como razón histórica del segundo bolsillo, no como cota de
+    fabricación.
   - *Enmienda (Tarea 4, 2026-08-28):* esos 4 mm sobre el acrílico serían `clip_fondo`
     = 18.5, y ahí el clip muere **dentro del rebaje**, pisando sólo la ceja que ya está
     encajonada entre el labio y la pared. Se fija `clip_fondo` = **24** — ruling de la
@@ -230,6 +241,10 @@ de `E_aluminio` (el anillo sigue derivándose por flecha).
   salen en el DXF como círculos (la profundidad va en el pliego); se cuentan — **16 por
   anillo**: 10 de placa + 4 de brida + 2 de clip — y se exige 1.5 D contra la ventana y
   contra la silueta, dentro de la franja.
+  **Corrección del 2026-08-30:** ese censo queda como historia y se sustituye
+  por **14 roscas ciegas M4 por anillo**: doce del marco de la ventana y dos de
+  la brida del techo. Las distancias se verifican contra el rebaje y el
+  cajeado vigentes.
 - **`agujeros_donde_toca()`**: vuelve la sección «costado: CERO agujeros».
 - Cada tarea del plan termina con **los dos renders** regenerados: es como Samuel
   decide.
@@ -306,6 +321,9 @@ de `E_aluminio` (el anillo sigue derivándose por flecha).
   saben decir «14 de pletina» ni «1.5 × 45»), verificada por `seccion_del_cupon()`; y
   el PLIEGO convertido en **punto de parada**, con la tabla de qué se mide cuando el
   cupón vuelve y qué se cambia si no pasa.
+  **Corrección del 2026-08-30:** esa sección sustituye la sección anterior del
+  cupón y añade el rebaje de chapa de 4.5 × 3 con su reborde de 1 × 3. Las
+  plantas del anillo no llevan profundidades; el cupón y el PLIEGO sí.
 - Desincronizaciones de papel que la revisión encontró: el BOM aún dice «transversal
   2020», la spec del 27 dice chapa de 3, `params.scad` llama «portantes» a los costados.
   Van con la Tarea 6 de los papeles.

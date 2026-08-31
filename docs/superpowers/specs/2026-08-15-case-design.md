@@ -1,7 +1,7 @@
 # SAM17 — Diseño del case (consola de dos pisos, esqueleto de aluminio)
 
 **Fecha:** 2026-08-15
-**Estado:** aprobado en diseño (rev. 26), pendiente de plan de implementación
+**Estado:** aprobado en diseño (rev. 27), pendiente de plan de implementación
 **Sustituye a:** formato de cajón de la tesis (madera 950 × 440 × 100–200 mm,
 paneles galvanizados pintados) descrito en
 [`docs/modules/08-case-panels.md`](../../modules/08-case-panels.md).
@@ -230,6 +230,15 @@ lenguaje visual).
 > dibujó para paneles de 190 mm y un case de 500 × 380 × 350; el case real
 > mide **544.32 × 256.18 × 308.94** — superado otra vez en la rev. 22, ver
 > abajo.
+>
+> **rev. 27** (2026-08-30): **techo macizo, salida por el alero y tres chapas
+> empotradas**. Techo, nariz y talón quedan rehundidos 1 en un rebaje de
+> 4.5 × 3 de la cara interior del anillo; los pies siguen a ras sobre la
+> tabla. El techo pierde las 16 ranuras, su labio pasa a 20 y la salida es la
+> rendija de 4.0 bajo el alero. El presupuesto térmico usa 9.22 W. La tabla,
+> con nariz y talón, entra con el anillo B; el chasis del PSU entra después por
+> el frente. Esta revisión sustituye la geometría y el montaje de la rev. 26
+> en esos puntos; conserva debajo el razonamiento que llevó a aquella.
 >
 > **rev. 26** (2026-08-29, más noche): **la trasera capturada como las
 > mejillas, y el talón como la nariz** — Samuel, mirando el render de la rev.
@@ -474,6 +483,15 @@ comprobación va antes del paso destructivo).
 
 ## 5. Estructura
 
+> **Enmienda rev. 27 — 2026-08-30.** Sustituye en esta sección los párrafos
+> operativos de «el techo y el talón» y «trasera» de la rev. 26. El techo queda
+> **macizo**, con labio de 20, y descarga por una rendija de 4.0 bajo el alero;
+> `guarda_aire()` cuenta 9.22 W. Las tres chapas —techo, nariz y talón— entran
+> rehundidas 1 en el rebaje de 4.5 × 3 del anillo, salvo los pies, que siguen a
+> ras sobre la tabla. La tabla se prepara con nariz y talón y **entra con el
+> anillo B**; el chasis del PSU se monta al final por el frente. El porqué de
+> la arquitectura sustituida se conserva en las viñetas siguientes.
+
 **REESCRITA EN LA REV. 21 (2026-08-27) Y OTRA VEZ EN LA REV. 22 (2026-08-28).**
 Hasta la rev. 20 esta sección decía que los costados de acrílico eran *«las
 piezas portantes»*. Ya no lo son desde la rev. 21, y desde la rev. 22 la
@@ -491,6 +509,9 @@ aquí va lo que sustituye a lo anterior.
   por anillo en el canto inferior para la tabla. Su DXF (`costilla_2d`) es
   ahora un **contorno real**, no un desarrollo — al revés que en la
   rev. 21, porque la pieza ya no se dobla.
+  **Corrección del 2026-08-30:** el censo de 16 queda como historia y se
+  sustituye por **14 roscas ciegas M4 por anillo**: doce para el marco de la
+  ventana y dos para la brida del techo. Las 3 M5 del canto no cambian.
 - **Costados (×2): acrílico naranja de 8 mm.** Siguen siendo **piel**: no
   sostienen nada y **no llevan un solo taladro** desde el 2026-08-27.
   Desde la rev. 22 entran por detrás y asientan **coplanares** en el
