@@ -141,9 +141,19 @@ todo»*. Consecuencias, en orden:
 - **Se liberan los 30 HP de la zona CABEZA** de la fila B (152,4 mm). Qué
   entra ahí —si INVITADOS crece de 62 a 92 HP o si el sitio se reparte de
   otra forma— **no lo decide este papel**.
-- **La cara del instrumento se muda del cerebro al motor.** Hoy la 2,8"
+- ~~**La cara del instrumento se muda del cerebro al motor.** Hoy la 2,8"
   cuelga del RP2350B por SPI (`2026-08-21-modulo-2-v2-cerebro-design` §7); la
-  7" cuelga del LTDC del N657 (`2026-08-26-pantalla-motor-design` §1).
+  7" cuelga del LTDC del N657 (`2026-08-26-pantalla-motor-design` §1).~~
+
+  > **Enmienda del 2026-08-30 (D2, FIRMADA): la cara se queda en el cerebro.**
+  > El cerebro pasa a STM32N657 (D1), así que la pantalla cuelga de **su**
+  > LTDC y no hace falta mudarla al motor — que además la quería en la misma
+  > SRAM que su audio. El requisito que motivaba la mudanza («que el
+  > instrumento diga algo aunque el motor no haya arrancado») lo cumple
+  > mejor así: la pantalla vive en el chip que arranca primero. Del tamaño
+  > decide A-7/A-8 — **5" en la primera placa** (la del kit de pruebas) y
+  > 7" en las siguientes, sobre el mismo cobre. Fuente: spec del hub N657,
+  > §3.1.
 
 #### El riesgo de la mudanza, y por qué no es fatal
 

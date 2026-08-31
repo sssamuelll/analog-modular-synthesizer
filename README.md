@@ -21,7 +21,7 @@ aportes de la comunidad.
   diseño vigente ya no tenga siete placas.
 - **Hardware y software por separado**: la electrónica analógica está en
   `hardware/`, las simulaciones SPICE en `simulations/`, y el firmware en
-  `software/nucleo/` (Rust, RP2350). `software/midi-cv/` es el firmware Python
+  `software/nucleo/` (Rust, STM32N657). `software/midi-cv/` es el firmware Python
   de la v1 de Raspberry Pi, superada.
 - **Reproducible**: todo lo necesario para construir el instrumento (BOM,
   planos, código, manual) está versionado.
@@ -40,8 +40,8 @@ tres placas era cablear dieciséis veces lo que cabe en una pista.
 | # | Módulo | Estado en el diseño vigente | Tecnología clave | Directorio |
 |---|--------|------|-----------------|-----------|
 | 1 | Alimentación | **Vigente**; la v1 queda como diseño cerrado que no se construye | LM7805 en +5 V, parejas LT3045/LT3094 en ±12 V | [`hardware/01-power-supply`](hardware/01-power-supply) |
-| 2 | Cerebro | **Vigente**; la v1 de Raspberry Pi está superada por la v2 sobre RP2350B | RP2350B (Rust bare-metal) | [`hardware/02-midi-cv`](hardware/02-midi-cv) + [`software/nucleo`](software/nucleo) |
-| 3 | **Voz** (era «VCO») | **Vigente, y creció**: 16 canales completos + la bahía asignable | 16× SSI2130, 16× LM13700, 8× SSI2164, 2× RP2350B, 2× AD75019 | [`hardware/03-vco`](hardware/03-vco) |
+| 2 | Cerebro | **Vigente**; la v1 de Raspberry Pi está superada por la v2 sobre STM32N657 | STM32N657 (Rust bare-metal) | [`hardware/02-midi-cv`](hardware/02-midi-cv) + [`software/nucleo`](software/nucleo) |
+| 3 | **Voz** (era «VCO») | **Vigente, y creció**: 16 canales completos + la bahía asignable | 16× SSI2130, 16× LM13700, 8× SSI2164, 1× STM32N657, 2× AD75019 | [`hardware/03-vco`](hardware/03-vco) |
 | 4 | Mixer | **Desaparece como placa**: suma, volumen, salida y los oídos se mudan al módulo de Voz | — | [`hardware/04-mixer`](hardware/04-mixer) |
 | 5 | VCF | **Desaparece como placa**: un filtro por canal, dentro del módulo de Voz | LM13700 (OTA tipo MS-20) | [`hardware/05-vcf`](hardware/05-vcf) |
 | 6 | ADSR | **Desaparece como circuito**: las envolventes son generadores en los micros del módulo de Voz | firmware | [`hardware/06-adsr`](hardware/06-adsr) |
@@ -95,7 +95,7 @@ analog-modular-synthesizer/
 │                      arquitectura y documentación detallada por módulo.
 ├── hardware/          Un subdirectorio por módulo con esquemáticos KiCad, PCB,
 │                      BOM y notas de diseño.
-├── software/          nucleo/  — contrato y firmware en Rust para RP2350.
+├── software/          nucleo/  — contrato y firmware en Rust para STM32N657.
 │                      midi-cv/ — firmware Python de la v1 (superada).
 ├── simulations/       Simulaciones SPICE / LTspice para validar diseños.
 ├── case/              Planos mecánicos del cajón y paneles frontales.

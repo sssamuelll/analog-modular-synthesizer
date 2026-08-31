@@ -33,6 +33,12 @@
 > **Qué muere con el Pi:** la PCB, y el firmware de
 > [`software/midi-cv/`](../../software/midi-cv), que es Python con `RPi.GPIO`,
 > `spidev` y `RPLCD`. Eso deja sin objeto la mitad del issue #18.
+>
+> **Enmienda del 2026-08-30 (D1):** el sucesor del recuadro ya no es un
+> RP2350B: el módulo 2 v2 se especifica sobre **STM32N657** (spec del hub
+> N657, D1). Lo demás de este recuadro —qué sobrevive y qué muere con el
+> Pi— no cambia; el «PIO del RP2350» del autoafinado quedó superado el
+> 2026-08-26 (capturas de TIM del N657, enmienda de `autotune_budget.py`).
 
 > Documentación funcional: [`docs/modules/02-midi-cv.md`](../../docs/modules/02-midi-cv.md).
 > Firmware: [`software/midi-cv/`](../../software/midi-cv).
@@ -108,7 +114,7 @@ del módulo — ver [`notes/design-notes.md`](notes/design-notes.md).
       verificada, las dos masas partidas con **4.00 mm de hueco medido**, plano
       analógico entero en una sola isla, DRC **0 infracciones**. `build_pcb.py`
       sale con error a propósito ([§10](notes/design-notes.md)).
-      **Ya no se va a cerrar**: la sustituye el respin en RP2350B
+      **Ya no se va a cerrar**: la sustituye el respin en STM32N657
 - [x] ~~Firmware: el cambio de rango a 0–7 V~~ — sin objeto, el firmware del Pi
       muere con el Pi (issue #18)
 - [x] ~~Diseño térmico del Raspberry Pi~~ — sin objeto, no hay Pi

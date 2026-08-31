@@ -12,7 +12,7 @@
 > |---|---|
 > | 4 osciladores en una placa de 114 × 124 mm | **16 osciladores en un módulo**, en dos columnas de placas |
 > | Sólo VCO: el filtro y el VCA viven fuera | El **canal** es oscilador → filtro → VCA en el mismo cobre |
-> | Un micro fuera del módulo compone las palabras del DAC | **Dos RP2350B en el módulo**; del J2 cuelga un micro, no los chips |
+> | Un micro fuera del módulo compone las palabras del DAC | **Un N657 en el módulo**; del J2 cuelga un micro, no los chips |
 > | Panel de 32 jacks, entrada de CV por voz | Muere: en su sitio va la **bahía asignable** de 8 entradas + 8 salidas por dos AD75019 |
 > | Sin FM entre osciladores | **Matriz de modulación FM de 16 líneas**: cualquiera modula a cualquiera |
 >

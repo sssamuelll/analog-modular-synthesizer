@@ -415,6 +415,13 @@ de ±12 V) y `J6` (+5 V) son KK-254 de 2.54 mm: con este paso, el cable del I²C
 mata el RP2350 y los cuatro chips de la isla a la vez, y la única protección que
 de verdad funciona contra eso es geométrica.
 
+> **Enmienda del 2026-08-30 (D1):** el micro de esta sección es hoy el
+> **STM32N657**, no el RP2350 (spec del hub N657, D1). No cambia nada de la
+> doctrina: el lado 1 del ISO1541 sigue a 3.3 V en GNDD, el J8 sigue siendo
+> JST-PH de 2.00 mm para que el cable del I²C no entre en el bus de ±12 V,
+> y un error de cableado ahí sigue matando el micro del módulo 2 y los
+> cuatro chips de la isla.
+
 El bus entra al mux I²C que `architecture-poly.md` §8 ya tiene previsto por las
 EEPROM de identidad, que responden todas en 0x50. La fuente toma un canal, y
 dentro de ese canal 0x40, 0x41, 0x48 y 0x49 no chocan ni entre sí ni con 0x50.
