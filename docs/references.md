@@ -51,7 +51,8 @@ presupuestos ejecutables citan sus tablas por número:
 | [`reference/datasheets/ssi2130-rev2.4-2020-12.pdf`](reference/datasheets/ssi2130-rev2.4-2020-12.pdf) | SSI2130 — VCO | Los 16 osciladores del módulo de Voz |
 | [`reference/datasheets/rp2350-datasheet-2024-08.pdf`](reference/datasheets/rp2350-datasheet-2024-08.pdf) | RP2350 (legado) | Cerebro y micros del módulo de Voz hasta D1 (2026-08-30) |
 | [`reference/datasheets/rp2350-product-brief-2024-08.pdf`](reference/datasheets/rp2350-product-brief-2024-08.pdf) | RP2350 (resumen, legado) | — |
-| [`reference/datasheets/stm32n657-ds14791-rev2.pdf`](reference/datasheets/stm32n657-ds14791-rev2.pdf) | STM32N657 | Cerebro (D1, 2026-08-30) y micro de la Voz |
+| [`reference/datasheets/stm32n657-ds14791-rev10.pdf`](reference/datasheets/stm32n657-ds14791-rev10.pdf) | **STM32N657 — DS14791 Rev 10, la vigente** | Cerebro (D1), micro de la Voz, mago e interfaz. **Es la que se cita** |
+| [`reference/datasheets/stm32n657-ds14791-rev2.pdf`](reference/datasheets/stm32n657-ds14791-rev2.pdf) | STM32N657 — Rev 2 **(superada, no citar)** | Se conserva porque hay citas históricas a sus tablas. **Renumeró**: `IDDCORE` era la 28 y es la 33; y añadió `IDDSMPS` (39), que en Rev 2 no existía |
 | [`reference/datasheets/ad5686r-revf-2024-11.pdf`](reference/datasheets/ad5686r-revf-2024-11.pdf) | AD5686R/85R/84R — DAC cuádruple 16 bits | CV de tono; el `RSTSEL` que sostiene el camino de silencio |
 
 ## Recursos complementarios recomendados

@@ -26,13 +26,21 @@ decisiones ya tomadas** —el hub (D1), la Voz (sellada el 26-08) y el mago
 
 ## 1. Lo que el chip pide, contra la hoja
 
-Todo de **DS14791 Rev 2**.
+Todo de **DS14791 Rev 10**, que es la vigente. El Rev 2 con el que se empezó
+esta tanda está superado y **renumeró tablas**: ver §3.1.
 
-### 1.1 El conmutado ya viene dentro (§3.4.4, p. 22)
+### 1.1 El conmutado ya viene dentro (§3.4.4, p. 26)
 
 > *«The devices embed an SMPS to provide the VCORE supply. The SMPS generates
-> this voltage on `VLXSMPS`, with a total external capacitor of **88 (4× 22) μF**
-> typical. The SMPS requires an **external coil of 1 μH** typical.»*
+> this voltage on `VLXSMPS`, with a total external capacitor of **60 (4× 15) μF**
+> (typical). The SMPS requires an **external coil of 0.9 μH** (typical).»*
+>
+> — DS14791 **Rev 10**, §3.4.4, p. 26.
+
+> **Aviso de revisión.** El Rev 2 con el que se empezó este papel decía **1 µH y
+> 88 µF (4× 22)**. **Son cifras muertas**: las de arriba, de Rev 10, son las
+> vigentes. El riesgo 7 que este papel declaró ayer —«no se compra ninguna pieza
+> hasta cotejarlo»— **se cumplió**, y por eso no hay nada comprado.
 
 Y arranca solo (§3.4.3): al resetear, el conmutado se habilita a 0,81 V, *«hence
 the system can start up in any supply configuration»*.
@@ -68,7 +76,7 @@ silenciosa.
 
 | Creíamos | Es |
 |---|---|
-| Cuatro convertidores de punto de carga que diseñar | Una bobina de 1 µH y 88 µF por chip |
+| Cuatro convertidores de punto de carga que diseñar | Una bobina de **0,9 µH** y **60 µF** por chip |
 | Cuatro conmutadas nuevas y sueltas en el cajón | Cuatro lazos **pequeños y pegados al chip** |
 | El problema es el consumo | El consumo sobra (#251 §4.1); el problema es el **riel que falta** y el **ruido** |
 | Un subsistema por chip | **Un** riel de 1,8 V para todo el instrumento |
@@ -80,41 +88,49 @@ pero es mucho más pequeño de lo que #252 decía.
 
 ## 3. El riel de 1,8 V (D-R1, PROPUESTA)
 
-### 3.1 Cuánta corriente pide, acotada y no inventada
+### 3.1 Cuánta corriente pide — CERRADO contra DS14791 Rev 10
 
-El conmutado interno entrega **167,4 mW** por chip a `VCORE` (#251 §4.1: 206,7 mA
-× 0,81 V, típico a 85 °C).
+**El hueco está cerrado, y con un número medido por ST en vez de una eficiencia
+estimada por mí.**
 
-> **HUECO (Principio V), y con dirección exacta.** La eficiencia del conmutado
-> interno **no aparece en el DS14791 Rev 2 que tenemos** — y buscando por qué,
-> resulta que **la pregunta estaba mal planteada**: no hace falta la eficiencia.
+Con el conmutado **interno** —que es lo que este papel propone— ST publica
+`IDDSMPS`: la corriente que el chip pide **en el riel de 1,8 V**, y **ya incluye
+el núcleo**. No hay que estimar ningún rendimiento ni sumar `IDDCORE` aparte.
+
+Rev 10 trae las tablas **pareadas**, una versión «SMPS external» y otra «SMPS
+internal». **Las que valen aquí son las internas**, condición ITCM/HSI, todos los
+periféricos habilitados, VOS high a 800 MHz:
+
+| Símbolo | Qué es | Tabla | Pág. | Típ | Máx (125 °C) |
+|---|---|---|---|---|---|
+| `IDDSMPS` | entrada del conmutado — **incluye el núcleo** | **39** | 154 | **99,93 mA** | **757,3 mA** |
+| `IDDA1V8` | analógico de 1,8 V | **36** | 151 | 2,67 mA | 3,12 mA |
+| `IDDA1V8AON` | dominio siempre encendido | **38** | 153 | 0,45 mA | 0,56 mA |
+| `IDD` | `VDD`/`VDDIO` | **32** | 147 | 0,27 mA | 0,40 mA |
+| | **Total por chip, del riel de 1,8 V** | | | **103,3 mA** | **761,4 mA** |
+
+**Los cuatro chips: 413 mA en típico.** La cota que este papel dio ayer sin el
+dato —«≥ 372 mA por conservación de energía»— **era correcta y estaba ajustada**:
+el real la supera en un 11 %. La eficiencia implícita del conmutado sale del 93 %.
+
+> **HUECO nuevo (Principio V).** Las cuatro tablas de «SMPS internal» dan **solo
+> `Típ` y `Máx` a 125 °C**. **No hay máximo a 85 °C**, que es la temperatura a la
+> que este instrumento vive. El salto entre los dos es de 7,4× —de 103 mA a
+> 761 mA por chip— así que **interpolar sería inventar**. El riel se dimensiona
+> con los dos extremos a la vista y la banda declarada, no con un punto medio
+> imaginado.
+
+> **Corrección propia (Principio VII): leí mal las columnas.** La versión
+> anterior de esta sección decía «206,7 mA típico a 85 °C» y de ahí sacaba
+> 167,4 mW. **Falso.** Las tablas son `Típ` seguido de **varios `Máx`** (a
+> 25/85/105/125 °C), no típicos por temperatura: aquel 206,7 era el **máximo a
+> 25 °C** de Rev 2. Se ve claro al comparar con la Tabla 39, que tiene `Típ` más
+> **un solo** `Máx` etiquetado 125 °C.
 >
-> **ST publica `IDDSMPS` directamente**, o sea la corriente de entrada medida en
-> `VDDSMPS`. Lo confirmó un ingeniero de ST (RomainR) en el hilo *«Understanding
-> Power Consumption using SMPS on STM32N6»* de su comunidad:
->
-> > *«In internal SMPS, IDDSMPS therefore depends on the IDDCore including the
-> > internal SMPS efficiency, the voltage ratio (VDDSMPS/VDDCore), and the
-> > different external losses. If you need to size the external regulator of the
-> > VDDSMPS, you should consider IDDSMPS which corresponds to the VDDCore
-> > condition of table 34.»*
->
-> Y nombra las tablas: **`IDDSMPS` es la Tabla 39 e `IDDCORE` la Tabla 34, en
-> DS14791 Rev 4.** En **nuestra Rev 2** `IDDCORE` es la Tabla 28 y **`IDDSMPS`
-> no existe: verificado, cero apariciones en las 244 páginas.**
->
-> **El hueco se cierra con una descarga, no con un cálculo.** Y hasta que se
-> baje, la corriente del riel solo se acota.
-
-Lo que sí se puede afirmar sin suponer nada, por conservación de energía: el
-conmutado **no puede consumir menos potencia de la que entrega**. Con
-rendimiento del 100 % —imposible, pero es la cota— serían
-
-    167,4 mW / 1,8 V = 93 mA por chip
-
-o sea **≥ 372 mA para los cuatro**, más `VDDA1V8`, `VDD18USB` y `VDD18ADC`. El
-número real está por encima, y cuánto depende de un dato que hay que pedir a ST
-o medir. **Se dimensiona con margen, no con la cota.**
+> El error está propagado a `power_budget.py`, a #251 §4.1 y a la versión previa
+> de este papel; los tres se corrigen en esta tanda. Para dejar la referencia:
+> la tabla «SMPS external» de `IDDCORE` (**Tabla 33, p. 148**) da **típico
+> 172 mA** y máximos de **211 / 423 / 586 / 855 mA** a 25/85/105/125 °C.
 
 ### 3.2 Cómo se fabrica, y el precio de cada camino
 
@@ -123,8 +139,8 @@ El instrumento tiene +5 V (de la SMPS de red) y un 3,3 V derivado por buck
 
 | Camino | A favor | En contra |
 |---|---|---|
-| **LDO desde 3,3 V** | **cero conmutación nueva**; §18 no tiene nada que vetar | disipa ≥ (3,3−1,8) × 0,372 = **558 mW** |
-| LDO desde 5 V | igual de silencioso | disipa ≥ 1,19 W: demasiado calor para el recinto de §3.1 de la fuente |
+| **LDO desde 3,3 V** | **cero conmutación nueva**; §18 no tiene nada que vetar | disipa (3,3−1,8) × 0,413 = **620 mW** en típico |
+| LDO desde 5 V | igual de silencioso | disipa **1,32 W** en típico: demasiado calor para el recinto de §3.1 de la fuente |
 | Buck a 1,8 V | eficiente | **una conmutada más en el cajón**, y §18 tiene veto |
 
 **Propuesta: LDO desde el 3,3 V que ya existe.** El instrumento acaba de gastar
@@ -134,8 +150,9 @@ no añadir un cuarto conmutado es el intercambio que este instrumento ya ha
 elegido dos veces.
 
 **Esto reabre el módulo 1**, y con él el lazo de calor de la fuente
-(`fuente-chasis-telemetria` §3.1): 558 mW más dentro del recinto entran en ese
-presupuesto térmico, que hoy no los conoce.
+(`fuente-chasis-telemetria` §3.1): **620 mW** más dentro del recinto entran en
+ese presupuesto térmico, que hoy no los conoce. Y eso es **en típico**: el HUECO
+de §3.1 —que no hay máximo a 85 °C— cae entero encima de esta cifra.
 
 ---
 
@@ -150,9 +167,10 @@ Aquí está la decisión fina, y §3.4.4 la permite por chip.
 | Voz | **a decidir** | Es la placa donde **1 mV son 3,6 cents** (voz-total E-1) |
 | Interfaz | **a decidir, si D-A1 se firma** | Preamplificadores de micrófono, aún más sensibles que el expo |
 
-**El precio del bypass**, calculado: alimentar `VCORE` desde 1,8 V con un LDO
-disipa (1,8 − 0,81) × 0,207 = **205 mW por chip** — **más que los 167 mW que el
-chip usa**. Se paga más del doble en calor a cambio de quitar un lazo de
+**El precio del bypass**, recalculado contra Rev 10: alimentar `VCORE` desde
+1,8 V con un LDO disipa (1,8 − 0,81) × 0,172 = **170 mW por chip** — **más que
+los 139 mW que el núcleo usa** (`IDDCORE` típico 172 mA × 0,81 V, Tabla 33).
+Se paga más calor del que el chip consume, a cambio de quitar un lazo de
 conmutación de la placa sensible.
 
 Que ese intercambio valga la pena **no se decide en papel**: depende de cuánto
@@ -187,14 +205,17 @@ que vayan a bypass.
 
 ## 6. Verificaciones antes de sellar
 
-1. **Bajar DS14791 Rev 4 y leer su Tabla 39 (`IDDSMPS`)** — cierra el HUECO de
-   §3.1 con un número medido en vez de una eficiencia estimada. Nuestro Rev 2 no
-   la trae. **Prerrequisito de D-R1**: es lo que dimensiona el riel de 1,8 V.
+1. ~~Bajar DS14791 Rev 4 y leer su Tabla 39~~ — ✅ **HECHO 2026-08-31.** Samuel
+   bajó el **Rev 10** (en el árbol como `stm32n657-ds14791-rev10.pdf`). §3.1
+   queda cerrada con `IDDSMPS` medido: **103,3 mA por chip, 413 mA los cuatro**.
 2. **Cotejar la Tabla 4 de AN5967** («Getting started with hardware development
-   for STM32N6») — trae los componentes externos recomendados del SMPS, que es
-   lo que fija la pieza de la bobina y los cerámicos (§6.5).
-3. **La corriente máxima que el conmutado interno puede dar**, tampoco leída en
-   Rev 2. Decide si un solo chip puede con su carga en los picos.
+   for STM32N6»), que trae los componentes externos recomendados del SMPS.
+   Rev 10 ya da los valores (0,9 µH y 60 µF), pero **la AN da la pieza y sus
+   tolerancias**, que es lo que hace falta para comprar. **Los enlaces que probé
+   dan 404: hay que encontrar el bueno.**
+3. **El máximo de `IDDSMPS` a 85 °C**, que Rev 10 **no da** (HUECO de §3.1):
+   solo publica típico y máximo a 125 °C, y entre ambos hay 7,4×. Es lo que
+   decide con cuánto margen se dimensiona el riel, y sale de ST o de medirlo.
 3. **El acoplo real del lazo de 1 µH** a una entrada analógica sensible, medido
    en la Discovery. Es lo que decide D-R2 y no se puede razonar en papel.
 4. **La pieza del LDO de 1,8 V**, con hoja en el árbol antes de nombrarla (R-M3),
@@ -230,5 +251,6 @@ que vayan a bypass.
 | 3 | El lazo del conmutado acopla en la Voz o en la interfaz | §6.3 medido; suplente: bypass (D-R2), pagando 205 mW por chip |
 | 4 | Cuatro lazos mal cerrados en el layout | Regla de §5 aplicada y verificada en el dibujo, con el veto de §18 |
 | 5 | El módulo 1 se reabre con la fuente ya dibujada | Es real; el papel lo declara en vez de descubrirlo en el taller |
-| 6 | **Trabajamos sobre una revisión superada del datasheet** | §6.1. Nuestro DS14791 es **Rev 2**; ST va por **Rev 4**, con tablas renumeradas (`IDDCORE` pasa de la 28 a la 34) y al menos una tabla nueva (`IDDSMPS`, la 39) |
-| 7 | **Los valores del SMPS externo pueden haber cambiado de revisión** | §6.2. Rev 2 dice **1 µH y 88 µF (4× 22)**; una fuente de ST posterior cita **0,9 µH y 60 µF (4× 15)**. Si el segundo es el vigente, §1.1 y §6.5 de este papel llevan cifras muertas. **No se compra ninguna pieza hasta cotejarlo** |
+| 6 | ~~Trabajamos sobre una revisión superada del datasheet~~ | **CERRADO 2026-08-31**: Rev 10 en el árbol y citado. Confirmó la renumeración (`IDDCORE` era 28, es **33**) y que `IDDSMPS` (39) no existía en Rev 2 |
+| 7 | ~~Los valores del SMPS pueden haber cambiado de revisión~~ | **CERRADO 2026-08-31, y habían cambiado**: Rev 10 §3.4.4 dice **0,9 µH y 60 µF (4× 15)**, no los 1 µH y 88 µF de Rev 2. La regla «no se compra nada hasta cotejarlo» **evitó comprar la pieza equivocada** |
+| 8 | **El riel se dimensiona sin máximo a temperatura de trabajo** | §6.3. Entre el típico (103 mA/chip) y el máximo a 125 °C (761 mA/chip) hay 7,4×, y el punto de 85 °C no está publicado |
