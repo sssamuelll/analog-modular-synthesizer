@@ -651,9 +651,11 @@ def _senal_de(etiqueta: str) -> str:
     """La senal del DS detras de una etiqueta de demanda."""
     if etiqueta.startswith("ADC:"):
         return "ADC_IN"
-    for prefijo in ("CV1:", "CV2:", "CV3:", "J2:", "CODEC:", "TDM:", "PSRAM:"):
-        if etiqueta.startswith(prefijo):
-            return etiqueta[len(prefijo):]
+    # Cualquier prefijo "ROL:" es de agrupacion (CV1:, J2:, CODEC:, TDM:,
+    # PSRAM:, y los del censo del hub R1:..R6:, MUX:, AUDIO:); la senal del
+    # DS es lo que va despues de los dos puntos.
+    if ":" in etiqueta:
+        return etiqueta.split(":", 1)[1]
     return etiqueta
 
 
@@ -1057,8 +1059,199 @@ def main() -> int:
     print("\n  VERDE: el censo cierra. Se levanta el bloqueo de compra "
           f"del issue #213 con la variante {paq}.")
 
+    # 8. EL CENSO DE PINES DEL HUB (spec 2026-08-30 S10 fila 1: "verde
+    #    antes de firmar D1"). El escenario base se asevera; audio (A-6) y
+    #    RGMII (D9) se imprimen porque donde viven sigue sin acta.
+    _mutacion_hub()
+    _reparto_hub, libres_hub = demo_censo_hub()
+    assert libres_hub - HUB_GPIO_VARIOS >= HUB_HOLGURA, (
+        f"el hub deja {libres_hub} GPIO libres en VFBGA264; lo vario pide "
+        f"{HUB_GPIO_VARIOS} y sin holgura de {HUB_HOLGURA} no se firma D1")
+    print(f"\n  VERDE: el hub cierra en VFBGA264 con {libres_hub} GPIO libres "
+          f"({libres_hub - HUB_GPIO_VARIOS:+d} tras lo vario). Queda mandado "
+          "destilar los USART de la Tabla 16 para sentar las dos ranuras "
+          "restantes con nombre de pin.")
+
     print("\nOK: presupuesto cerrado.")
     return 0
+
+
+# ===========================================================================
+# EL CENSO DE PINES DEL HUB (spec 2026-08-30-hub-n657-y-radios, S10 fila 1)
+#
+# El cerebro pasa a un segundo N657 (D1) y se lleva la cara (D2). Este censo
+# reparte SUS pines sobre la misma Tabla 16, con el mismo buscador y el mismo
+# testigo que el de la Voz. Lo que se sienta a la mesa, con su fuente:
+#
+#   * SEIS ranuras J2 en maestros SPI de hardware (J2 punto a punto D3: "6
+#     maestros SPI de hardware -- 4 activas + 2 de repuesto rapido"), cada
+#     una con SCK, MOSI, MISO y NSS (D4: full duplex, MISO privado).
+#   * La pantalla al LTDC en 24 bits (D2: el mismo camino A de la Voz).
+#   * La PSRAM por XSPI1 para el framebuffer (spec hub S3.1: "su PSRAM por
+#     XSPI queda libre para el framebuffer").
+#   * El tronco I2C del arbol de descubrimiento (nucleo S3.5). El tactil
+#     comparte ese I2C, como el tactil compartia el del codec en la Voz.
+#   * El pedal, a entrada analogica (nucleo S10: "para que sirva tambien de
+#     expresion").
+#   * Opcional: SAI para la interfaz de audio (acta A-6), si cuelga del hub.
+#   * Opcional: RGMII para la autopista (D9), si el hub es su maestro.
+#
+# Lo que NO se sienta porque no es GPIO del pool o no esta en N6_PINES, y
+# se cobra como "varios" contra los GPIO libres:
+#   * Las DOS ranuras restantes por USART sincrono (D3). Sus senales
+#     (USARTx_CK/TX/RX) no estan destiladas en N6_PINES -- la tabla solo
+#     trae senales que el censo de la Voz demandaba. Se cobran 4 GPIO por
+#     ranura (CK, TX, RX y el CS por GPIO que D3 declara) y queda mandado
+#     destilar los USART de la Tabla 16 antes de sellar D1.
+#   * USB OTG1/OTG2 (pines dedicados, DS), CSI (dedicado; y por D3' la
+#     camara ya no vive en el hub), XSPI2 del arranque (ya en la reserva).
+#   * MIDI DIN in/out por UART (2), el ESP32-S3 por UART + EN + boot (4),
+#     la radio ESB por SPI/UART + IRQ + EN (4, ESTIMADO sin pieza), la
+#     cadena WS2812 (1, exige canal de timer o MOSI), clock/reset in/out
+#     (4), INT/RST del tactil + PWM del backlight (3), RESET del mux (1).
+HUB_SPIS = ("SPI1", "SPI2", "SPI3", "SPI4", "SPI5", "SPI6")
+HUB_RANURAS_USART = 2
+HUB_GPIO_VARIOS = (HUB_RANURAS_USART * 4   # CK, TX, RX, CS-por-GPIO
+                   + 2                     # MIDI DIN in/out (UART)
+                   + 4                     # ESP32-S3: UART x2, EN, boot
+                   + 4                     # radio ESB: bus x2, IRQ, EN (ESTIMADO)
+                   + 1                     # WS2812
+                   + 4                     # clock/reset in/out
+                   + 3                     # tactil INT/RST + PWM backlight
+                   + 1)                    # RESET del mux I2C
+HUB_HOLGURA = 4                            # la misma que exige el censo de la Voz
+
+
+def _demandas_hub(ipaq: int, i2c: str, con_audio: str | None,
+                  con_rgmii: bool) -> list | None:
+    """La mesa del hub: [(etiqueta, candidatos)], o None si una senal no
+    tiene ningun pin en el encapsulado."""
+    mesa = []
+    for n, spi in enumerate(HUB_SPIS, 1):
+        for rol in ("SCK", "MOSI", "MISO", "NSS"):
+            s = f"{spi}_{rol}"
+            mesa.append((f"R{n}:{s}", _candidatos(s, ipaq)))
+    for s in PANTALLA:
+        mesa.append((s, _candidatos(s, ipaq)))
+    for s in PSRAM:
+        mesa.append((f"PSRAM:{s}", _candidatos(s, ipaq)))
+    for rol in ("SCL", "SDA"):
+        s = f"{i2c}_{rol}"
+        mesa.append((f"MUX:{s}", _candidatos(s, ipaq)))
+    mesa.append(("ADC:pedal", _candidatos("ADC_IN", ipaq)))
+    if con_audio:
+        for sub in ("MCLK_A", "SCK_A", "FS_A", "SD_A", "SD_B"):
+            s = f"{con_audio}_{sub}"
+            mesa.append((f"AUDIO:{s}", _candidatos(s, ipaq)))
+    if con_rgmii:
+        for s in RGMII:
+            mesa.append((s, _candidatos(s, ipaq)))
+    if any(not c for _, c in mesa):
+        return None
+    return mesa
+
+
+def censo_hub_paquete(ipaq: int, con_audio: bool, con_rgmii: bool):
+    """Un reparto valido del hub en el encapsulado `ipaq`, probando el I2C
+    del tronco y (si hay audio) el SAI. Devuelve (reparto, escenario) o
+    (None, diagnostico)."""
+    primera_mesa = None
+    sais = ("SAI1", "SAI2") if con_audio else (None,)
+    for sai in sais:
+        for i2c in ("I2C1", "I2C2", "I2C3", "I2C4"):
+            mesa = _demandas_hub(ipaq, i2c, sai, con_rgmii)
+            if mesa is None:
+                continue
+            if primera_mesa is None:
+                primera_mesa = mesa
+            reparto = _asignar(mesa)
+            if reparto is not None:
+                _verificar_reparto(mesa, reparto, ipaq)
+                return reparto, {"i2c": i2c, "sai": sai}
+    if primera_mesa is not None:
+        return None, _estrangulamiento(primera_mesa)
+    huerfanas = [s for s in PANTALLA + PSRAM
+                 + tuple(f"{spi}_{r}" for spi in HUB_SPIS
+                         for r in ("SCK", "MOSI", "MISO", "NSS"))
+                 if not _candidatos(s, ipaq)]
+    if huerfanas:
+        resto = f" (+{len(huerfanas) - 1} senales mas sin pin)" \
+            if len(huerfanas) > 1 else ""
+        return None, f"sin pin para {huerfanas[0]}{resto}"
+    return None, "ninguna combinacion de instancias tiene mesa completa"
+
+
+def _mutacion_hub() -> None:
+    """Principio VIII, tres mordidas:
+    1. El buscador sabe decir que NO: el VFBGA142 no puede sentar la mesa
+       del hub (75 GPIO menos 19 de reserva son 56, y solo los 6 SPI y la
+       pantalla piden 52 antes de la PSRAM).
+    2. Las instancias se cuentan POR CONSTRUCCION, no por pines. La primera
+       version de esta mutacion pedia SPI1 dos veces y el buscador ENCONTRO
+       reparto: la Tabla 16 da mas de un pin a cada senal de SPI1, y un
+       censo de pines no sabe que una instancia no puede ser dos maestros.
+       Lo que guarda "seis ranuras y no siete" es que HUB_SPIS sean
+       exactamente las instancias SPI que el DS destilado conoce.
+    3. El testigo muerde: un reparto corrompido (un pin que no lleva la
+       senal) tiene que tumbar _verificar_reparto."""
+    reparto, _ = censo_hub_paquete(0, con_audio=False, con_rgmii=False)
+    assert reparto is None, "el censo del hub cierra en VFBGA142: no vigila"
+
+    instancias = {s.split("_", 1)[0] for _, senales in N6_PINES.values()
+                  for s in senales if s.startswith("SPI")}
+    assert instancias == set(HUB_SPIS), (
+        f"las instancias SPI de la tabla son {sorted(instancias)} y el hub "
+        f"pide {HUB_SPIS}: una ranura sin instancia o una instancia sin ranura")
+
+    mesa = _demandas_hub(5, "I2C1", None, False)
+    assert mesa is not None
+    bueno = _asignar(mesa)
+    assert bueno is not None
+    etiqueta = next(et for et, _ in mesa if et.startswith("R1:"))
+    senal = _senal_de(etiqueta)
+    ajeno = next(p for p, (pres, senales) in N6_PINES.items()
+                 if pres[5] == "x" and senal not in senales
+                 and p not in bueno.values())
+    corrupto = dict(bueno, **{etiqueta: ajeno})
+    try:
+        _verificar_reparto(mesa, corrupto, 5)
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError(
+            f"{etiqueta}={ajeno} no lleva {senal} y el testigo lo dio por bueno")
+
+
+def demo_censo_hub() -> tuple[dict, int]:
+    """Corre el censo del hub e imprime el veredicto por encapsulado y por
+    escenario. Devuelve (reparto del escenario base en VFBGA264, libres)."""
+    print("\n\nEL CENSO DE PINES DEL HUB (spec 2026-08-30, S10 fila 1)\n")
+    print("  base: 6 ranuras J2 en SPI1-6, pantalla al LTDC en 24 bits,")
+    print("  PSRAM del framebuffer, tronco I2C del descubrimiento, pedal.")
+    print(f"  Lo vario se cobra aparte: {HUB_GPIO_VARIOS} GPIO (2 ranuras por")
+    print("  USART sincrono, MIDI, ESP32-S3, radio ESB, WS2812, clock/reset,")
+    print("  tactil, mux) mas holgura de", HUB_HOLGURA, "-- ESTIMADO sin piezas.\n")
+
+    escenarios = (("base", False, False), ("+ audio (A-6 en el hub)", True, False),
+                  ("+ RGMII (D9, el hub maestro)", False, True),
+                  ("+ audio + RGMII", True, True))
+    base = None
+    for nombre, audio, rgmii in escenarios:
+        print(f"  escenario {nombre}:")
+        for ipaq, paq in enumerate(N6_PAQUETES):
+            reparto, extra = censo_hub_paquete(ipaq, audio, rgmii)
+            if reparto is None:
+                print(f"    {paq}: ROJO   ({extra})")
+                continue
+            libres = N6_GPIO_TOTAL[paq] - N6_RESERVA_GPIO - len(reparto)
+            sobra = libres - HUB_GPIO_VARIOS
+            veredicto = "VERDE" if sobra >= HUB_HOLGURA else "ROJO "
+            print(f"    {paq}: {veredicto}  ({len(reparto)} repartidos, "
+                  f"{libres} libres, {sobra:+d} tras lo vario)")
+            if nombre == "base" and paq == "VFBGA264":
+                base = (reparto, libres)
+    assert base is not None, "el escenario base del hub no cierra en VFBGA264"
+    return base
 
 
 # ---------------------------------------------------------------------------
