@@ -134,6 +134,12 @@ alu.data.materials.append(mat(
     "aluminio", **{"Base Color": (0.72, 0.73, 0.75, 1.0),
                    "Metallic": 1.0, "Roughness": 0.25,
                    "Anisotropic": 0.0, "Anisotropic Rotation": 0.0}))
+# La tira comprimida completa el camino de carga del valle. Va en un STL y
+# material propios para que el render no la omita ni la pinte como aluminio.
+jun = importar("assembly_juntas")
+jun.data.materials.append(mat(
+    "anti_ruido", **{"Base Color": (0.025, 0.025, 0.03, 1.0),
+                     "Roughness": 0.8, "Metallic": 0.0}))
 # LA TABLA, en su propio STL desde el 2026-08-27. Estuvo dentro del ensamblado
 # de acrilico mientras el suelo era PMMA, y meterla ahi ahora la pintaria de
 # naranja translucido: un render que miente sobre una decision de material.

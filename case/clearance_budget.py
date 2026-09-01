@@ -154,13 +154,8 @@ def _centros_rail(p: dict[str, float],
     """4 centros de rail de panel [inf frente, inf valle, sup valle,
     sup remate], misma formula que centros_rail() en sam17_case.scad.
 
-    ESTUVIERON EN TRES hasta el 2026-08-17: la bisagra ocupaba la linea de
-    tornillo de arriba y ahi no habia riel, o sea que los modulos de la fila de
-    arriba no tenian donde atornillar por su canto superior. Un nudillo no es un
-    riel. La bisagra se mudo a la arista del techo.
-
-    OJO al leerlo contra costado_2d(): el costado solo perfora los DOS primeros.
-    Los de la cara de arriba son TAPA y giran con ella."""
+    Los cuatro rieles quedan fijos al marco por ambas puntas; ninguno funciona
+    como eje o cierre manual."""
     # cada punta lleva SU inset, gobernado por la curva que la remata (ver la
     # tabla de insets en params.scad)
     caras = [(P[1], P[2], (p["inset_inf_frente"],
@@ -169,7 +164,7 @@ def _centros_rail(p: dict[str, float],
                            p["alto_cara_sup"] - p["inset_sup_remate"]))]
     # el eje del M4 de punta esta a rail_er_eje del panel, no a rail/2: el riel
     # EUROrack es hondo (27.4) y su taladro cae en su centroide
-    off = p["t_panel"] + p["rail_er_eje"]
+    off = p["rehundido_panel"] + p["t_panel"] + p["rail_er_eje"]
     out = []
     for c0, c1, esses in caras:
         dx, dy = c1[0] - c0[0], c1[1] - c0[1]
@@ -229,17 +224,14 @@ def _x_valle(p: dict[str, float], P: list[tuple[float, float]],
     sam17_case.scad: delante donde muere el redondeo del pico, detras
     holgura_rail por delante de la ESQUINA girada del riel del valle de arriba
     (no de su centro -- ese atajo ya costo tres fallos en este case)."""
+    dx_inf = p["rehundido_panel"] * math.cos(
+        math.radians(p["angulo_inferior"]))
+    dx_sup = p["rehundido_panel"] * math.cos(
+        math.radians(p["angulo_superior"]))
     return (P[2][0] + _tangente(P[2], P[1], P[3], p["radio_pico"]),
-            cr[2][0] - _he_er(p, p["angulo_superior"])[0] - p["holgura_rail"])
+            cr[2][0] - _he_er(p, p["angulo_superior"])[0]
+            - p["holgura_rail"] + dx_inf - dx_sup)
 
-
-def _radio_giro_riel(p: dict[str, float]) -> float:
-    """Radio del barrido del riel de arriba al girar sobre su propio M4.
-
-    No hay eje de bisagra que calcular: el eje ES el taladro del riel, o sea
-    _centros_rail()[3]. Lo unico que hace falta derivar es cuanto barre el riel
-    al girar sobre el, que es la distancia de su centroide a su esquina."""
-    return math.hypot(p["rail_er_fondo"], p["rail_er_alto"]) / 2
 
 
 def _x_chasis_frente(p: dict[str, float]) -> float:
@@ -295,9 +287,7 @@ def _chasis_tornillos_tabla(p: dict[str, float]) -> list[tuple[float, float]]:
 CARAS = {"inf": ("inset_inf_frente", "inset_inf_valle"),
          "sup": ("inset_sup_valle", "inset_sup_remate")}
 
-# 4 railes de panel: dos por cara, como cualquier fila EUROrack. Los dos de la
-# cara superior son TAPA -- no llevan M4 al costado, que si lo llevaran la tapa
-# no abriria.
+# 4 railes de panel fijos: dos por cara, como cualquier fila EUROrack.
 NOMBRES_CR = ["cara_inf frente", "cara_inf valle",
               "cara_sup valle", "cara_sup remate"]
 ANGS_CR = ["angulo_inferior", "angulo_inferior",
@@ -531,26 +521,81 @@ def _cajas_miembro(p: dict[str, float], P: list[tuple[float, float]],
 def _ventana_valle(p: dict[str, float], P: list[tuple[float, float]],
                    cr: list[tuple[float, float]]) -> tuple[float, float]:
     """(x0, x1) de la ventana del valle: lo libre entre los dos rieles 3U que
-    miran al valle, donde vive la fila 1U. GEMELA de ventana_valle().
+    miran al valle, donde vive la fila auxiliar KONDOR. GEMELA de
+    ventana_valle().
 
-    Delante la manda el BARRIDO del riel del valle de la fila de abajo -- que
-    gira sobre su propio M4: radio de giro mas holgura, no su esquina quieta,
-    la misma leccion de guarda_tapa() --; detras, la esquina girada del riel de
-    arriba menos holgura_rail, que es donde acaba x_valle(). Era la boca de la
-    bahia hasta el 2026-08-29."""
-    return (cr[1][0] + _radio_giro_riel(p) + p["holgura_rail"],
+    Delante la manda la envolvente CERRADA del riel del valle de la fila de
+    abajo mas holgura. Los paneles se desmontan quitando tornillos: no giran
+    sobre esos tornillos y ningun radio de apertura gobierna esta ventana.
+    Detras manda la esquina cerrada del riel superior menos holgura_rail."""
+    return (cr[1][0] + _he_er(p, p["angulo_inferior"])[0]
+            + p["holgura_rail"],
             _x_valle(p, P, cr)[1])
+
+
+def _guarda_frente_panel_fijo(actual: float, esperado: float) -> None:
+    """La ventana usa la envolvente cerrada, nunca un barrido de apertura."""
+    assert abs(actual - esperado) < 0.001, (
+        f"el frente de la ventana queda en {actual:.6f}, pero con paneles "
+        f"fijos la envolvente cerrada exige {esperado:.6f}; queda activo un "
+        f"barrido heredado de tapa/bisagra")
+
+
+def guarda_paneles_fijos(p: dict[str, float]) -> None:
+    """Los paneles se desmontan por tornillos; no giran sobre los rieles."""
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    actual = _ventana_valle(p, P, cr)[0]
+    esperado = (cr[1][0] + _he_er(p, p["angulo_inferior"])[0]
+                + p["holgura_rail"])
+    _guarda_frente_panel_fijo(actual, esperado)
+    print("paneles fijos: la ventana usa la envolvente cerrada del Z-Rail; "
+          "sin ejes, barridos ni angulo minimo de apertura")
+
+
+def canario_paneles_fijos(p: dict[str, float]) -> None:
+    """Reintroducir el radio de giro heredado debe tumbar la puerta."""
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    esperado = (cr[1][0] + _he_er(p, p["angulo_inferior"])[0]
+                + p["holgura_rail"])
+    barrido_heredado = (cr[1][0]
+                        + math.hypot(p["rail_er_fondo"], p["rail_er_alto"]) / 2
+                        + p["holgura_rail"])
+    try:
+        _guarda_frente_panel_fijo(barrido_heredado, esperado)
+    except AssertionError as e:
+        assert "barrido heredado" in str(e), (
+            f"canario de panel fijo salto por '{str(e)}'")
+        return
+    raise AssertionError(
+        "canario de panel fijo NO detecto el radio de giro heredado")
+
+
+def _frente_kondor(p: dict[str, float], P: list[tuple[float, float]],
+                   cr: list[tuple[float, float]]) -> float:
+    """X invariante del primer KONDOR antes de rehundir los paneles.
+
+    El riel 3U inferior se desplaza por su normal y mueve lateralmente el borde
+    conservador de _ventana_valle(). KONDOR solo debe bajar: se descuenta esa
+    componente X para no arrastrar la fila, la tapa ni su camino de carga.
+    """
+    dx_rehundido_3u = p["rehundido_panel"] * math.cos(
+        math.radians(p["angulo_inferior"]))
+    return _ventana_valle(p, P, cr)[0] - dx_rehundido_3u
 
 
 def _centros_rail_1u(p: dict[str, float], P: list[tuple[float, float]],
                       cr: list[tuple[float, float]]) -> list[tuple[float, float]]:
-    """Dos Z-Rails 1U ARRIMADOS AL FRENTE de la ventana del valle, gemelos de
-    centros_rail_1u(): el primero arranca donde acaba la banda, y lo que sobre
-    de ventana queda detras, bajo el vuelo de la cara de arriba. Se centraban
-    en la boca de la bahia hasta el 2026-08-29."""
-    xa = _ventana_valle(p, P, cr)[0] + p["rail_er_alto"] / 2
+    """Dos Z-Rails KONDOR ARRIMADOS AL FRENTE de la ventana del valle, gemelos de
+    centros_rail_1u(): el primer riel recibe bajo su cara delantera los 2 mm de
+    prolongacion maciza y la tira anti-ruido, y lo que sobre de ventana queda
+    detras, bajo el vuelo de la cara de arriba. Se centraban en la boca de la
+    bahia hasta el 2026-08-29."""
+    xa = _frente_kondor(p, P, cr) + p["rail_er_alto"] / 2
     sep = p["alto_panel_1u"] - 2 * p["inset_er"]
-    y = P[3][1] - p["t_panel"] - p["rail_er_eje"]
+    y = (P[3][1] - p["rehundido_panel"] - p["t_panel"]
+         - p["rail_er_eje"])
     return [(xa, y), (xa + sep, y)]
 
 
@@ -594,8 +639,8 @@ def _centros_rail_1u(p: dict[str, float], P: list[tuple[float, float]],
 #
 # LA MUESCA DE LA BRIDA: en la franja de la meseta el marco vive justo donde
 # la brida del miembro alto apoya en la cara del anillo, y la brida NO puede
-# subirse encima del marco -- a z >= t_anillo + t_placa esta el barrido del
-# panel de arriba (se probo: la tapa pasaba de 121.5 a 52 grados). Asi que el
+# subirse encima del marco -- a z >= t_anillo + t_placa está la envolvente
+# estática del panel superior fijo. Asi que el
 # marco lleva una muesca abierta a su canto exterior sobre la huella de la
 # brida, de brida_ancho + t_costilla + 0.5 de honda, y la brida se tumba en
 # la cara del anillo como siempre.
@@ -788,8 +833,8 @@ def _marco_ventana(p: dict[str, float]) -> list[dict]:
                     convexos=[[(s0, rm), (s_esc, rm), (s_esc, f), (s0, f)],
                               [(s_esc, 0.0), (s1, 0.0), (s1, f), (s_esc, f)]]))
     out[-1]["escalon"] = s_esc
-    # el valle: recoge los dos rieles 1U y se pasa de P3 (concavo) hasta
-    # cubrir el cajeado del segundo con 1.5 D de canto. La segunda 1U NO lleva
+    # el valle: recoge los dos rieles KONDOR y se pasa de P3 (concavo) hasta
+    # cubrir el cajeado del segundo con 1.5 D de canto. El segundo KONDOR NO lleva
     # roscas: radio_valle curva la franja y una broca ahi sale por el rebaje.
     L = math.hypot(P[3][0] - P[2][0], P[3][1] - P[2][1])
     u = ((P[3][0] - P[2][0]) / L, (P[3][1] - P[2][1]) / L)
@@ -916,7 +961,7 @@ def bbox_marco_ventana(p: dict[str, float]) -> tuple[float, float]:
 
 def _pasos_riel_marco(p: dict[str, float]) -> list[tuple[str, tuple[float, float]]]:
     """Los seis pasos M4 de riel del marco (con su cajeado por el lado del
-    anillo): los cuatro 3U y los dos 1U."""
+    anillo): los cuatro 3U y los dos KONDOR."""
     return [(f"riel de '{q['nombre']}' @ s={e[0]:.1f}", e[1])
             for q in _marco_ventana(p) for e in q["ejes"]]
 
@@ -967,11 +1012,9 @@ def _bridas(p: dict[str, float]) -> list[dict]:
     t_costilla por debajo de la meseta, que es el otro ala del mismo blank, y
     mide brida_ancho hacia abajo desde ahi.
 
-    APOYA EN LA CARA DEL ANILLO, a z = t_anillo, fuera de la rebanada en la
-    que giran los paneles -- y desde el 2026-08-29 por la noche eso es lo que
-    manda su geometria: en esa franja vive el marco de la ventana, y la brida
-    NO se sube encima (a z >= t_anillo + t_placa esta el barrido del panel de
-    arriba: la tapa pasaba de 121.5 a 52 grados). Es el marco el que lleva una
+    APOYA EN LA CARA DEL ANILLO, a z = t_anillo. En esa franja vive el marco
+    de la ventana y la brida NO se sube encima: a z >= t_anillo + t_placa esta
+    la envolvente estatica del panel superior fijo. Es el marco el que lleva una
     muesca sobre ella (_muesca_brida); la trasera capturada muere por debajo
     de ella, sin muesca. Sus dos M4: el de dentro a la mayor de la raiz del
     doblez (r + 3t + d/2) y de 1.5 D de broca de la pared del bolsillo de la
@@ -1039,7 +1082,7 @@ def _centros_rosca_ciega(p: dict[str, float]
 
     CATORCE POR ANILLO desde el 2026-08-29 por la noche, todas M4 y todas a
     dist_rosca_ciega de la silueta: doce del marco de la ventana -- dos por
-    riel 3U, dos sobre el primer riel 1U y dos en la pata del suelo, que hacen
+    riel 3U, dos sobre el primer riel KONDOR y dos en la pata del suelo, que hacen
     el trabajo de las de los clips -- y dos de la brida del miembro alto. Eran
     dieciseis: las dos de la brida del miembro bajo murieron con el, que hoy
     es talon y va a la tabla.
@@ -1210,7 +1253,7 @@ def _m3_pestana(p: dict[str, float]) -> tuple[float, float]:
     finales del vuelo delantero, y a pv_a por debajo de la cara de arriba."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
-    return (_pv_x(p, _ventana_valle(p, P, cr)[0]), P[3][1] - _pv(p)["a"])
+    return (_pv_x(p, _frente_kondor(p, P, cr)), P[3][1] - _pv(p)["a"])
 
 
 def _caras_miembro(p: dict[str, float], cajas: dict[str, Caja]) -> list[Caja]:
@@ -1234,8 +1277,8 @@ def _caras_miembro(p: dict[str, float], cajas: dict[str, Caja]) -> list[Caja]:
         # marco_sup (= t) de espesor
         ("trasero alto meseta", P[4][0], x_mes1, P[5][1] - p["marco_sup"],
          P[5][1], z0, z1),
-        # EL RETORNO del pico: la AABB del tramo girado, conservadora; lo que
-        # gira pasa por debajo y lo mide guarda_retorno_meseta().
+        # EL RETORNO del pico: AABB conservadora del tramo inclinado; su
+        # separación estática del panel la mide guarda_retorno_meseta().
         _retorno_meseta(p)["caja"] + (z0, z1),
         talon,
         ("talon pie", tl["x_pie"], tl["x_chaflan"], 0.0, t, tl["z0"], tl["z1"]),
@@ -1308,13 +1351,18 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     miembros = _cajas_miembro(p, P, cr, z0, z1)
     hx_1u, hy_1u = _he_er(p, 90.0)
     for i, c in enumerate(_centros_rail_1u(p, P, cr)):
-        railes.append((f"fila 1U {i}", c[0] - hx_1u, c[0] + hx_1u,
-                       c[1] - hy_1u, c[1] + hy_1u,
+        # El eje M4 NO esta centrado en el fondo de la seccion. Para el KONDOR
+        # horizontal, la cara exterior queda rail_er_eje por encima del eje y
+        # la interior a rail_er_fondo - rail_er_eje por debajo. La caja
+        # simetrica anterior inventaba 2.4 mm de aire justo en este contacto.
+        railes.append((f"fila KONDOR {i}", c[0] - hx_1u, c[0] + hx_1u,
+                       c[1] - (p["rail_er_fondo"] - p["rail_er_eje"]),
+                       c[1] + p["rail_er_eje"],
                        z0 + p["t_placa"], z1 - p["t_placa"]))
     # LAS DOS BANDAS (miembro alto y talon) son las cajas de los miembros; la
     # meseta, el pie del talon y el retorno van aparte como caras, porque un
     # canal ya no existe y la AABB de la L entera seria un hueco enorme que
-    # acusaria de chocar al riel-eje de la fila de arriba.
+    # acusaria de chocar al Z-Rail superior fijo.
     railes.extend(miembros.values())
     caras = _caras_miembro(p, miembros)
     railes.extend(c for c in caras
@@ -1385,18 +1433,29 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # lenguetas de la bahia (ruling R3).
     z0_tv, z1_tv = z0 + p["t_placa"], z1 - p["t_placa"]
     x0_tv, _ = _x_valle(p, P, cr)
-    # acaba donde arranca la ventana del valle, o sea en la cara del primer
-    # Z-Rail 1U (desde el 2026-08-29; antes, en el ala de la bahia)
-    x1_tv = _ventana_valle(p, P, cr)[0]
-    planchas.append(("tapa_valle", x0_tv, x1_tv,
+    # La chapa de 3 mm se prolonga 2 mm ENTERA sobre el primer KONDOR. Entre su
+    # dorso y la cara del riel queda el gap que ocupa la tira anti-ruido.
+    x1_tv = _frente_kondor(p, P, cr)
+    x2_tv = x1_tv + p["apoyo_valle"]
+    planchas.append(("tapa_valle", x0_tv, x2_tv,
                      P[3][1] - t_acr, P[3][1], z0_tv, z1_tv))
+    y_rail = P[3][1] - p["rehundido_panel"] - p["t_panel"]
+    calce = p["tira_valle_nominal"] - p["compresion_tira_valle"]
+    # Con las pestanas terminando en la cara del riel, el calce vuelve a cubrir
+    # todo el ancho util sin muescas destinadas a movimiento.
+    planchas.append(("tira anti-ruido valle", x1_tv, x2_tv,
+                     y_rail, y_rail + calce,
+                     z0_tv, z1_tv))
     # LAS DOS PESTANAS de la tapa, dobladas hacia abajo contra la costilla.
     # Van en `railes` y no en `planchas` a proposito: es la lista que solapes()
     # cruza contra todo, y una pestana que se echa encima del larguero del valle
     # o del riel de abajo no la caza nadie mas. (Y `planchas` la recorre
     # _sobres() para sacar envolventes de DXF, que aqui no aplica.)
-    x0_pv, x1_pv = x1_tv - 3 * p["d_M3_paso"], x1_tv
-    pv_x = _pv_x(p, x1_tv)
+    # Las pestanas terminan en la cara del primer KONDOR. No se retrasan para
+    # acomodar un barrido: los paneles son fijos y se desmontan por tornillos.
+    x1_pv = _frente_kondor(p, P, cr)
+    x0_pv = x1_pv - 3 * p["d_M3_paso"]
+    pv_x = _pv_x(p, x1_pv)
     radio_m3 = p["d_M3_paso"] / 2
     assert x0_pv <= pv_x - radio_m3 and pv_x + radio_m3 <= x1_pv, (
         f"el M3 de la pestana cae en x={pv_x:.2f}, fuera de la pestana "
@@ -1491,7 +1550,7 @@ def _solape_riel_exacto(p: dict[str, float], a: Caja, b: Caja) -> bool:
             return [[q[i] for i in (0, 1, 3, 2)]]
         if c[0].startswith("pestana valle"):
             m = p["muesca_riel_valle"]
-            # Rectangulo menos la muesca inferior izquierda, como dos convexos.
+            # Rectangulo menos el alivio estatico, como dos convexos.
             return [[(c[1] + m, c[3]), (c[2], c[3]),
                      (c[2], c[4]), (c[1] + m, c[4])],
                     [(c[1], c[3] + m), (c[1] + m, c[3] + m),
@@ -1511,12 +1570,8 @@ def _solape_riel_exacto(p: dict[str, float], a: Caja, b: Caja) -> bool:
 # nuevo aparece y de verdad no se puede resolver sin tocar centros_rail()
 # fuera de las reglas autorizadas, se documenta aqui igual que antes.
 TOLERADOS: dict[frozenset[str], float] = {
-    # riel de arriba de la tapa <-> pestana: solape de CAJA, cero de solape real.
-    # Los dos van girados 45 con la cara y sobre ELLA se TOCAN a tope, sin
-    # penetrarse: la pestana apoya en la cara de arriba del riel, que es de donde
-    # cuelga su fijacion. Dos rectangulos girados que comparten una arista tienen
-    # cajas que se pisan de largo -- de ahi la tolerancia gorda. guarda_tapa()
-    # hace la cuenta exacta sobre la cara y exige que la junta valga CERO.
+    # El retorno y el miembro alto van girados 45 y comparten una arista sin
+    # penetrarse; sus AABB se pisan aunque los solidos fijos solo se tocan.
     # El solape de caja vale 10.18 mm con la seccion de hoy (marco_sup 8 x
     # prof_sup 16 girados 45); 12 deja aire para el ruido y sigue siendo un
     # numero, no un cheque en blanco.
@@ -2254,16 +2309,9 @@ def guarda_aire(p: dict[str, float]) -> None:
           f"el techo de {p['salto_termico_max']:.0f}. Sin medir hasta el ensayo")
 
 
-# Coeficiente par-precarga de un tornillo de acero SECO. 0.2 es valor de
-# manual. Con la rosca engrasada baja a ~0.15, o sea que el MISMO par mete un
-# 30% mas de precarga -- y sobre acrilico eso fisura. Los M3 van secos, y va
-# dicho en el pliego y en el orden de ensamblaje, no solo aqui.
-K_PAR = 0.20
 # Umbral de fluencia del PMMA. SUPUESTO DECLARADO (#106): nadie lo ha medido
-# sobre el acrilico que se va a comprar. Vive aqui y no dentro de una guarda
-# porque tiene DOS clientes -- guarda_apriete() y guarda_costado(), que esta en
-# check_dxf.py e importa este modulo. Copiarlo seria el patron del `- 15`
-# copiado en cinco sitios que ya costo una tanda en este repo.
+# sobre el acrilico que se va a comprar. Vive aqui porque guarda_costado(), en
+# check_dxf.py, importa este modulo.
 SIGMA_PMMA = 10.0
 
 
@@ -2302,42 +2350,6 @@ def guarda_paticas(p: dict[str, float]) -> None:
           f"-> f propia {f_propia:.1f} Hz, transmiten {transmision*100:.0f} % "
           f"de los {F_TOROIDE:.0f} Hz del toroide")
 
-
-def guarda_apriete(p: dict[str, float]) -> None:
-    """El par de los M3 sale de la ARANDELA, no del tornillo.
-
-    Hasta el 2026-08-24 la instruccion era "apretar hasta marcar, NO hasta
-    fisurar" (README, procedimiento del cupon) y la spec §11 admitia que "el
-    par maximo antes de fisura no esta medido". Veinte tornillos VISIBLES
-    apretados a tacto sobre acrilico son veinte puntos de craquelado.
-
-    Lo que decide si el PMMA craquela no es el tornillo sino cuanta area de
-    acrilico reparte su precarga. Precedente en el propio BOM: con arandela
-    M4 normal (d9) los ejes de giro daban 16.3 MPa y "el PMMA fluye en
-    semanas"; con d16 dan 4.3 y aguantan. Aqui se hace la cuenta al reves --
-    dada la arandela, cual es el par que no pasa del umbral.
-
-    El segundo assert es el que sorprende: exige un par MINIMO. Un par por
-    debajo de 1 N*m no lo da ninguna llave dinamometrica de 1/4", asi que
-    volveria a apretarse a tacto, que es lo que este cambio vino a quitar.
-    Lo que compra par es subir la arandela, no bajar el apriete.
-    """
-    area = math.pi * (p["d_arandela"] ** 2 - p["d_M3_paso"] ** 2) / 4
-    par_max = K_PAR * (SIGMA_PMMA * area) * 0.003
-    sigma = p["par_m3"] / (K_PAR * 0.003 * area)
-    assert p["par_m3"] <= par_max, (
-        f"par_m3 = {p['par_m3']} N*m con arandela d{p['d_arandela']:g} aplasta "
-        f"el acrilico a {sigma:.1f} MPa, y el umbral son {SIGMA_PMMA}. Maximo "
-        f"{par_max:.2f} N*m -- o sube la arandela, que es lo que de verdad "
-        f"compra par.")
-    assert p["par_m3"] >= 1.0, (
-        f"par_m3 = {p['par_m3']} N*m: por debajo de 1 N*m no hay llave "
-        f"dinamometrica de 1/4\" que lo de, asi que se volveria a apretar a "
-        f"tacto. Sube la arandela hasta que el par quepa en una herramienta "
-        f"que existe (d16 da {par_max:.2f} si ya la llevas).")
-    print(f"apriete: 20 M3 a {p['par_m3']} N*m con arandela d{p['d_arandela']:g} "
-          f"-> {sigma:.1f} MPa sobre el acrilico (techo {SIGMA_PMMA}, "
-          f"par maximo {par_max:.2f})")
 
 
 def guarda_chaflan(p: dict[str, float]) -> None:
@@ -2419,58 +2431,176 @@ E_ALUMINIO, RP02_ALUMINIO = 69000.0, 130.0
 # lengueta de la pestana del talon, que con la reaccion en su punta trabaja
 # a unos 200 MPa: es la UNICA cuenta del repo que exige ese material.
 RP02_6082_T6 = 240.0
-# Ancho sobre el que reparte una mano apoyada de canto. Es EL SUPUESTO QUE MAS
-# MANDA en esta puerta -- con 50 mm la tension se dobla contra los 100 -- y por
-# eso va conservador: el canto de la mano, no la palma abierta.
-B_MANO = 50.0
+def _geometria_apoyo_valle(p: dict[str, float]) -> dict[str, object]:
+    """Mide la cadena banda--tira--primer KONDOR--marco en cajas reales."""
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    ventana_x0 = _frente_kondor(p, P, cr)
+    centros = _centros_rail_1u(p, P, cr)
+    railes, planchas, _ = _cajas_solidas(p)
+    primer = next(c for c in railes if c[0] == "fila KONDOR 0")
+    tramos = [c for c in planchas if c[0].startswith("tapa_valle")]
+    apoyo = max(tramos, key=lambda c: c[2])
+    tira = next((c for c in planchas if c[0] == "tira anti-ruido valle"), None)
+    marcos = [c for c in railes if c[0].startswith("marco valle")]
+    x_fin = apoyo[2]
+    panel_x0 = centros[0][0] - p["inset_er"]
+    gap = apoyo[3] - primer[4]
+    tira_real = tira[4] - tira[3] if tira else 0.0
+    return {
+        "apoyo": x_fin - primer[1],
+        "espesor_apoyo": apoyo[4] - apoyo[3],
+        "gap": gap,
+        "tira_nominal": p.get("tira_valle_nominal", 0.0),
+        "compresion": p.get("compresion_tira_valle", 0.0),
+        "tira_real": tira_real,
+        "tira_x": (tira[1], tira[2]) if tira else (0.0, 0.0),
+        "apoyo_x": (primer[1], x_fin),
+        "cara_inferior_apoyo": apoyo[3],
+        "cara_exterior_rail": primer[4],
+        "contactos_marco": [
+            min(abs(primer[5] - m[6]), abs(primer[6] - m[5])) for m in marcos
+        ],
+        "primer_riel": centros[0],
+        "primer_riel_esperado": (
+            ventana_x0 + p["rail_er_alto"] / 2,
+            P[3][1] - p["rehundido_panel"] - p["t_panel"]
+            - p["rail_er_eje"],
+        ),
+        "x_fin": x_fin,
+        "panel_x0": panel_x0,
+        "z_apoyo": (apoyo[5], apoyo[6]),
+        "z_tira": (tira[5], tira[6]) if tira else (0.0, 0.0),
+        "z_rail": (primer[5], primer[6]),
+    }
+
+
+def _guarda_apoyo_valle(p: dict[str, float], g: dict[str, object]) -> None:
+    """Contrato geometrico del apoyo macizo y su calce anti-ruido."""
+    apoyo = float(g["apoyo"])
+    assert apoyo > 0, (
+        f"el apoyo horizontal del valle es {apoyo:.2f} mm: tiene que ser "
+        f"positivo y no una arista")
+    assert apoyo >= 2.00 - 0.001, (
+        f"el apoyo horizontal del valle es {apoyo:.2f} mm y se exigen al "
+        f"menos 2.00 mm sobre el primer Z-Rail KONDOR")
+    espesor = float(g["espesor_apoyo"])
+    assert abs(espesor - p["t_valle"]) < 0.001, (
+        f"la prolongacion del valle tiene {espesor:.2f} mm: tiene que conservar "
+        f"el espesor completo de {p['t_valle']:.2f} mm")
+    assert abs(apoyo - p["apoyo_valle"]) < 0.001, (
+        f"la prolongacion real es {apoyo:.2f} y apoyo_valle pide "
+        f"{p['apoyo_valle']:.2f} mm")
+    gap = float(g["gap"])
+    assert abs(gap - 0.10) < 0.001, (
+        f"el gap banda--primer KONDOR es {gap:.2f} mm y tiene que ser 0.10")
+    nominal, compresion = float(g["tira_nominal"]), float(g["compresion"])
+    assert abs(nominal - 0.20) < 0.001, (
+        f"la tira anti-ruido es {nominal:.2f} nominal y tiene que ser 0.20 mm")
+    assert abs(compresion - 0.10) < 0.001, (
+        f"la compresion de la tira es {compresion:.2f} y tiene que ser 0.10 mm")
+    calce = nominal - compresion
+    assert abs(calce - gap) < 0.001, (
+        f"el calce comprimido es {calce:.2f} y el gap mide {gap:.2f} mm")
+    tira_real = float(g["tira_real"])
+    assert tira_real > 0.0 and g["tira_x"] != (0.0, 0.0), (
+        "tira ausente: el camino banda -> tira -> KONDOR queda abierto")
+    assert abs(tira_real - calce) < 0.001, (
+        f"la tira 3D ocupa {tira_real:.2f} mm y el calce comprimido "
+        f"pide {calce:.2f} mm")
+    assert g["tira_x"] == g["apoyo_x"], (
+        f"la tira no cubre los 2.00 mm de apoyo: tira {g['tira_x']}, apoyo "
+        f"{g['apoyo_x']}")
+    assert float(g["x_fin"]) <= float(g["panel_x0"]) + 0.001, (
+        f"el apoyo del valle acaba en x={float(g['x_fin']):.2f} e invade el "
+        f"panel KONDOR, que empieza en x={float(g['panel_x0']):.2f}")
+    c = g["primer_riel"]
+    esperado = g["primer_riel_esperado"]
+    assert isinstance(c, tuple) and isinstance(esperado, tuple)
+    dx, dy = c[0] - esperado[0], c[1] - esperado[1]
+    assert math.hypot(dx, dy) < 0.001, (
+        f"el primer riel KONDOR se movio ({dx:+.3f}, {dy:+.3f}) mm al anadir "
+        f"el apoyo del valle; tiene que quedar invariante")
+    z_apoyo = g["z_apoyo"]
+    z_tira = g["z_tira"]
+    z_rail = g["z_rail"]
+    assert z_apoyo == z_tira == z_rail, (
+        f"la cadena no cubre todo el ancho util: apoyo z={z_apoyo}, "
+        f"tira z={z_tira}, KONDOR z={z_rail}")
+    assert len(g["contactos_marco"]) == 2 and all(
+        abs(float(v)) < 0.001 for v in g["contactos_marco"]), (
+        f"el primer KONDOR no entrega la carga a los dos lados del marco: "
+        f"gaps {g['contactos_marco']}")
 
 
 def guarda_valle(p: dict[str, float]) -> None:
-    """La banda del vuelo delantero: lo que aguanta y lo que no.
-
-    HASTA EL 2026-08-29 ESTA PUERTA MEDIA UN APOYO QUE NO EXISTIA. Decia que la
-    banda apoyaba "en el ala delantera de la bahia por su canto trasero" y
-    calculaba un voladizo corto desde esa linea (48.8 MPa, "pasa con margen").
-    Pero la banda acababa EN la cara exterior del ala y el ala arrancaba ahi
-    mismo: se tocaban en una arista, y una arista no es un apoyo. La bahia
-    murio ese dia (nota 1 de Samuel) y con ella la ficcion: la banda esta
-    sujeta SOLO por sus dos pestanas, en las puntas, y entre ellas cruza
-    ancho_util - 2 t_placa sin tocar nada -- el riel 1U arranca detras de su
-    canto y su cara queda 1.6 por debajo del plano del valle, con la banda de
-    3.
-
-    Asi que el unico modelo honesto es la viga biapoyada entre pestanas, y
-    vale igual para la mano que se apoya que para la que levanta: la misma
-    seccion, el mismo vano. Con esa cuenta la banda NO PASA: cede decenas de
-    milimetros y fluye a ~27 N. No es ROJO porque no es un fallo nuevo -- era
-    el punto abierto del §10 de la spec del 28-08 ("la banda del valle fluye a
-    ~27 N ... hay que apoyarla o convertirlo en assert"), solo que ahora el
-    numero es el de verdad -- sino HUECO declarado, con las salidas escritas
-    en la spec del 29-08: apoyar el canto trasero de la banda sobre el labio
-    del riel 1U (un rebaje de 1.4 en ese canto: es una pieza de 3 mm que va
-    al taller de mecanizado con los anillos), o un retorno hacia abajo, o
-    los dos. Se decide mirando el render, como todo lo que se ve."""
+    """Banda del valle como tira en voladizo apoyada en el primer KONDOR."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
     x0 = _x_valle(p, P, cr)[0]
-    x1 = _ventana_valle(p, P, cr)[0]
-    b, t = x1 - x0, p["t_valle"]
-    vano = _tapa_valle_au(p) - t
-    I = b * t ** 3 / 12
-    flecha = p["carga_mano"] * vano ** 3 / (48 * E_ALUMINIO * I)
-    sigma = 3 * p["carga_mano"] * vano / (2 * b * t ** 2)
-    p_fluye = RP02_ALUMINIO * 2 * b * t ** 2 / (3 * vano)
-    print(f"valle: banda de ALUMINIO {b:.2f} x {t:g}, del pico al primer "
-          f"Z-Rail 1U, sujeta SOLO por sus dos pestanas (vano {vano:.2f})")
-    print(f"  con {p['carga_mano']:.0f} N en el centro cede {flecha:.1f} mm y "
-          f"trabaja a {sigma:.0f} MPa (Rp0.2 {RP02_ALUMINIO:.0f}, fluye a "
-          f"{p_fluye:.0f} N)")
-    if sigma > RP02_ALUMINIO or flecha > p["flecha_costado_max"]:
-        _HUECOS.append(
-            f"la banda del valle ({b:.2f} x {t:g}) solo apoya en sus dos "
-            f"pestanas: con {p['carga_mano']:.0f} N en el centro cede "
-            f"{flecha:.1f} mm y fluye a {p_fluye:.0f} N. Le falta apoyo (spec "
-            f"2026-08-29, seccion 7): rebaje sobre el labio del riel 1U o retorno")
+    x_rail = _frente_kondor(p, P, cr)
+    vuelo, t = x_rail - x0, p["t_valle"]
+    b_mano = p["b_mano_valle"]
+    I = b_mano * t ** 3 / 12
+    flecha = p["carga_mano"] * vuelo ** 3 / (3 * E_ALUMINIO * I)
+    sigma = 6 * p["carga_mano"] * vuelo / (b_mano * t ** 2)
+    g = _geometria_apoyo_valle(p)
+    _guarda_apoyo_valle(p, g)
+    assert sigma <= RP02_ALUMINIO, (
+        f"la tira B_MANO={b_mano:.0f} del valle trabaja a {sigma:.1f} MPa "
+        f"con {p['carga_mano']:.0f} N y supera Rp0.2={RP02_ALUMINIO:.0f} MPa")
+    assert flecha <= p["flecha_costado_max"], (
+        f"la tira B_MANO={b_mano:.0f} del valle cede {flecha:.3f} mm con "
+        f"{p['carga_mano']:.0f} N y se admiten {p['flecha_costado_max']:.3f} mm")
+    print(f"valle: tira conservadora B_MANO={b_mano:.0f} x {t:g}, vuelo "
+          f"{vuelo:.2f} desde el pico al primer Z-Rail KONDOR")
+    print(f"  con {p['carga_mano']:.0f} N en el borde: flecha {flecha:.3f} mm, "
+          f"tension {sigma:.1f} MPa; apoyo macizo {float(g['apoyo']):.2f} mm")
+    print(f"  camino banda -> tira -> primer KONDOR -> marco: gap "
+          f"{float(g['gap']):.2f}, tira {float(g['tira_nominal']):.2f} nominal, "
+          f"compresion {float(g['compresion']):.2f}, calce "
+          f"{float(g['tira_real']):.2f} mm")
+
+
+def canario_valle(p: dict[str, float]) -> None:
+    """Mutaciones dirigidas del apoyo, gap, calce y cadena hasta el marco."""
+    g = {
+        "apoyo": 2.0, "espesor_apoyo": p["t_valle"], "gap": 0.10,
+        "tira_nominal": 0.20, "compresion": 0.10, "tira_real": 0.10,
+        "tira_x": (0.0, 2.0), "apoyo_x": (0.0, 2.0),
+        "cara_inferior_apoyo": 0.0, "cara_exterior_rail": -0.10,
+        "contactos_marco": [0.0, 0.0], "primer_riel": (0.0, 0.0),
+        "primer_riel_esperado": (0.0, 0.0), "x_fin": 2.0,
+        "panel_x0": 2.0, "z_apoyo": (0.0, 10.0),
+        "z_tira": (0.0, 10.0),
+        "z_rail": (0.0, 10.0),
+    }
+    casos = (
+        ({"apoyo": 0.0}, "positivo", "apoyo 0"),
+        ({"espesor_apoyo": p["t_valle"] - 0.1}, "espesor completo",
+         "prolongacion adelgazada"),
+        ({"gap": 0.2}, "gap banda", "gap incorrecto"),
+        ({"compresion": 0.0}, "compresion", "tira sin comprimir"),
+        ({"tira_real": 0.0, "tira_x": (0.0, 0.0)}, "tira ausente",
+         "tira ausente"),
+        ({"contactos_marco": [0.0, 0.1]}, "dos lados del marco",
+         "camino cortado antes del marco"),
+        ({"primer_riel": (g["primer_riel"][0] + 0.1,
+                           g["primer_riel"][1])},
+         "primer riel KONDOR se movio", "primer riel movido"),
+    )
+    for cambios, clave, que in casos:
+        roto = dict(g)
+        roto.update(cambios)
+        try:
+            _guarda_apoyo_valle(p, roto)
+        except AssertionError as e:
+            assert clave in str(e), (
+                f"canario del valle ({que}) salto por '{str(e)}' y no por "
+                f"'{clave}'")
+            continue
+        raise AssertionError(
+            f"canario del valle NO disparo con {que}; no confiar en su VERDE")
 
 
 # LA PESTANA DE LA TAPA DEL VALLE. GEMELAS de pv_*() en sam17_case.scad, y
@@ -2508,7 +2638,7 @@ def bbox_desarrollo_tapa(p: dict[str, float]) -> tuple[float, float]:
     cr = _centros_rail(p, P)
     x0 = _x_valle(p, P, cr)[0]
     return (_tapa_valle_au(p) + 2 * _pv(p)["vuelo"],
-            _ventana_valle(p, P, cr)[0] - x0)
+            _frente_kondor(p, P, cr) - x0 + p["apoyo_valle"])
 
 
 def autocomprobacion_pv() -> None:
@@ -3204,8 +3334,8 @@ def guarda_miembro_alto(p: dict[str, float]) -> None:
         f"{b['rect'][2] - bo['y_fin']:.2f}; se pide 1.0 de cara entre los dos")
     # --- LA BRIDA EN SU CAJEADO (2026-08-30) --------------------------------
     # Dejo de apoyar en la cara del anillo y apoya en un cajeado de
-    # rebaje_chapa de fondo. El cambio va en la direccion segura -- se aleja del
-    # barrido del panel en vez de acercarse, ver el bloque de brida_largo en
+    # rebaje_chapa de fondo. El cambio va en la direccion segura -- se aleja de
+    # la envolvente estatica del panel fijo, ver el bloque de brida_largo en
     # params.scad -- pero se paga en pletina bajo las roscas ciegas.
     pletina = p["t_anillo"] - p["rebaje_chapa"]
     assert pletina >= 8.0 - 1e-9, (
@@ -3242,7 +3372,7 @@ def guarda_miembro_alto(p: dict[str, float]) -> None:
     print(f"techo: meseta {p['prof_sup']:g} y {como} en {t:g}, I={m['I']:.0f} mm4; "
           f"SOLO con {p['carga_mano']:.0f} N al centro de {au:.2f} cede "
           f"{m['flecha']:.2f} mm y trabaja a {m['sigma']:.0f} MPa (Rp0.2 "
-          f"{RP02_ALUMINIO:.0f}); sin canal, la tapa de arriba no pierde grados")
+          f"{RP02_ALUMINIO:.0f}); meseta maciza, sin canal ni paso de agua")
     print(f"  brida de {p['brida_largo']:g} x {p['brida_ancho']:g} (R"
           f"{p['radio_brida']:g}) en un cajeado de {caj_l:g} x {caj_a:g} x "
           f"{p['rebaje_chapa']:g} en la cara interior del anillo, con "
@@ -4345,44 +4475,281 @@ AGARRE_MIN_D = 1.5
 # leer con la maquina: la cifra viene del hilo tecnico de MOD WIGGLER y de la
 # ficha del formato. PENDIENTE DE CONFIRMAR CONTRA EL DIAGRAMA.
 #
-# Vive aqui y no en params.scad a proposito: NO es una cota nuestra que se pueda
-# tocar. Es el numero de otro, y su unico trabajo es discutir con el nuestro.
+# Vive aqui y no en params.scad a proposito: NO es una cota nuestra ni define
+# compatibilidad. Es solo la referencia minima externa contra la que se compara
+# la separacion propia de KONDOR.
 S_1U_INTELLIJEL = 33.65
+ALTO_FILA_KONDOR = 55.00
+S_FILA_KONDOR = 49.00
+ALTO_FILA_AUX_ANTERIOR = 39.65
+PASO_HORIZONTAL_ANTERIOR = 58.47
+DESPLAZAMIENTO_SEGUNDO_RIEL_KONDOR = 15.35
+REHUNDIDO_PANEL_OBJETIVO = 1.50
+
+
+def _firma_marco_sin_ejes(p: dict[str, float]) -> tuple:
+    """Geometria material del marco, excluyendo centros y cajeados de riel."""
+    punto = lambda q: (round(q[0], 9), round(q[1], 9))
+    return tuple(
+        (q["nombre"], round(q["s0"], 9), round(q["s1"], 9),
+         round(q["retiro"], 9), round(q["fondo"], 9),
+         tuple(punto(v) for v in q["poligono"]),
+         tuple(tuple(punto(v) for v in c) for c in q["convexos"]))
+        for q in _marco_ventana(p)
+    )
+
+
+def _geometria_rehundido_panel(p: dict[str, float]) -> dict[str, object]:
+    """Desplazamiento de paneles, rieles y cajeados fijos en tres filas."""
+    ras = dict(p)
+    ras["rehundido_panel"] = 0.0
+    P0, P = _vertices(ras), _vertices(p)
+    cr0, cr = _centros_rail(ras, P0), _centros_rail(p, P)
+    ck0 = _centros_rail_1u(ras, P0, cr0)
+    ck = _centros_rail_1u(p, P, cr)
+    pasos0 = dict(_pasos_riel_marco(ras))
+    pasos = dict(_pasos_riel_marco(p))
+    rehundido_panel = p.get("rehundido_panel", 0.0)
+
+    def fila(nombre: str, centros0: list[tuple[float, float]],
+             centros: list[tuple[float, float]],
+             normal: tuple[float, float],
+             origen: tuple[float, float],
+             panel_sigue_primer_riel: bool = False) -> dict[str, object]:
+        desplazamientos = [
+            (c[0] - c0[0]) * normal[0] + (c[1] - c0[1]) * normal[1]
+            for c0, c in zip(centros0, centros)
+        ]
+        laterales = [
+            (c[0] - c0[0]) * -normal[1] + (c[1] - c0[1]) * normal[0]
+            for c0, c in zip(centros0, centros)
+        ]
+        tangente = (-normal[1], normal[0])
+        contactos = []
+        for c in centros:
+            s = ((c[0] - origen[0]) * tangente[0]
+                 + (c[1] - origen[1]) * tangente[1])
+            q = (origen[0] + tangente[0] * s,
+                 origen[1] + tangente[1] * s)
+            profundidad_eje = ((c[0] - q[0]) * normal[0]
+                               + (c[1] - q[1]) * normal[1])
+            cara_riel = profundidad_eje - p["rail_er_eje"]
+            cara_interior_panel = rehundido_panel + p["t_panel"]
+            contactos.append(cara_riel - cara_interior_panel)
+        desplazamientos_cajeado = []
+        laterales_cajeado = []
+        for c0, c in zip(centros0, centros):
+            nombre_paso0 = next(n for n, q in pasos0.items()
+                                if math.hypot(q[0] - c0[0], q[1] - c0[1]) < 0.001)
+            nombre_paso = next(n for n, q in pasos.items()
+                               if math.hypot(q[0] - c[0], q[1] - c[1]) < 0.001)
+            q0, q = pasos0[nombre_paso0], pasos[nombre_paso]
+            desplazamientos_cajeado.append(
+                (q[0] - q0[0]) * normal[0] + (q[1] - q0[1]) * normal[1])
+            laterales_cajeado.append(
+                (q[0] - q0[0]) * -normal[1] + (q[1] - q0[1]) * normal[0])
+        return {
+            "nombre": nombre,
+            "panel": rehundido_panel,
+            "panel_lateral": laterales[0] if panel_sigue_primer_riel else 0.0,
+            "rieles": desplazamientos,
+            "laterales": laterales,
+            "cajeados": desplazamientos_cajeado,
+            "laterales_cajeado": laterales_cajeado,
+            "contactos": contactos,
+        }
+
+    ai = math.radians(p["angulo_inferior"])
+    as_ = math.radians(p["angulo_superior"])
+    filas = [
+        fila("inferior", cr0[0:2], cr[0:2],
+             (math.cos(ai), -math.sin(ai)), P[1]),
+        fila("superior", cr0[2:4], cr[2:4],
+             (math.cos(as_), -math.sin(as_)), P[3]),
+        fila("KONDOR", ck0, ck, (0.0, -1.0), P[3], True),
+    ]
+    return {
+        "filas": filas,
+        "anillo_inmovil": P == P0,
+        "marco_inmovil": _firma_marco_sin_ejes(p) == _firma_marco_sin_ejes(ras),
+    }
+
+
+def _guarda_rehundido_panel(g: dict[str, object]) -> None:
+    """Contrato del rehundido conjunto, independiente de la formula que lo crea."""
+    filas = g["filas"]
+    assert isinstance(filas, list) and len(filas) == 3
+    todos = [v for f in filas
+             for k in ("panel", "rieles", "cajeados")
+             for v in ([f[k]] if isinstance(f[k], float) else f[k])]
+    assert any(abs(float(v)) > 0.001 for v in todos), (
+        "rehundido cero: la geometria sigue a ras")
+    for f in filas:
+        panel = float(f["panel"])
+        assert abs(panel - REHUNDIDO_PANEL_OBJETIVO) < 0.001, (
+            f"panel inmovil en la fila {f['nombre']}: rehundido real "
+            f"{panel:.2f}, se exigen {REHUNDIDO_PANEL_OBJETIVO:.2f} mm")
+        rieles = [float(v) for v in f["rieles"]]
+        assert max(rieles) - min(rieles) < 0.001, (
+            f"desplazamiento desigual de rieles en la fila {f['nombre']}: "
+            f"{rieles}")
+        assert all(abs(v - REHUNDIDO_PANEL_OBJETIVO) < 0.001 for v in rieles), (
+            f"riel inmovil en la fila {f['nombre']}: desplazamientos {rieles}, "
+            f"se exigen {REHUNDIDO_PANEL_OBJETIVO:.2f} mm")
+        cajeados = [float(v) for v in f["cajeados"]]
+        assert max(cajeados) - min(cajeados) < 0.001, (
+            f"desplazamiento desigual de ejes/cajeados en la fila "
+            f"{f['nombre']}: {cajeados}")
+        assert all(abs(v - REHUNDIDO_PANEL_OBJETIVO) < 0.001 for v in cajeados), (
+            f"los ejes/cajeados de la fila {f['nombre']} no acompanaron al "
+            f"riel: {cajeados}")
+        panel_lateral = float(f["panel_lateral"])
+        assert all(abs(float(v) - panel_lateral) < 0.001
+                   for v in f["laterales"]), (
+            f"desplazamiento desigual a lo largo de la fila {f['nombre']}: "
+            f"panel {panel_lateral:.3f}, rieles {f['laterales']}")
+        assert all(abs(float(v) - panel_lateral) < 0.001
+                   for v in f["laterales_cajeado"]), (
+            f"los ejes/cajeados de la fila {f['nombre']} no siguieron su "
+            f"desplazamiento lateral: {f['laterales_cajeado']}")
+        assert all(abs(float(v)) < 0.001 for v in f["contactos"]), (
+            f"se perdio el contacto panel-riel en la fila {f['nombre']}: "
+            f"gaps {f['contactos']}")
+    assert g["anillo_inmovil"], "el anillo se movio al rehundir los paneles"
+    assert g["marco_inmovil"], "el marco se movio al rehundir los paneles"
+
+
+def guarda_rehundido_panel(p: dict[str, float]) -> None:
+    g = _geometria_rehundido_panel(p)
+    _guarda_rehundido_panel(g)
+    print("rehundido panel: 1.50 mm reales en las tres filas; panel, riel y "
+          "cajeados fijos se mueven juntos; anillo y marco inmoviles")
+
+
+def canario_rehundido_panel() -> None:
+    """Panel/riel inmoviles, movimiento desigual y rehundido cero deben caer."""
+    def valida() -> dict[str, object]:
+        return {
+            "filas": [
+                {"nombre": nombre, "panel": REHUNDIDO_PANEL_OBJETIVO,
+                 "panel_lateral": 0.0,
+                 "rieles": [REHUNDIDO_PANEL_OBJETIVO] * 2,
+                 "laterales": [0.0, 0.0],
+                 "cajeados": [REHUNDIDO_PANEL_OBJETIVO] * 2,
+                 "laterales_cajeado": [0.0, 0.0],
+                 "contactos": [0.0, 0.0]}
+                for nombre in ("inferior", "superior", "KONDOR")
+            ],
+            "anillo_inmovil": True,
+            "marco_inmovil": True,
+        }
+
+    casos = []
+    g = valida()
+    g["filas"][0]["panel"] = 0.0
+    casos.append((g, "panel inmovil", "panel inmovil"))
+    g = valida()
+    g["filas"][0]["rieles"] = [0.0, 0.0]
+    casos.append((g, "riel inmovil", "riel inmovil"))
+    g = valida()
+    g["filas"][1]["rieles"] = [1.50, 1.40]
+    casos.append((g, "desplazamiento desigual", "desplazamiento desigual"))
+    g = valida()
+    for f in g["filas"]:
+        f["panel"] = 0.0
+        f["rieles"] = [0.0, 0.0]
+        f["cajeados"] = [0.0, 0.0]
+    casos.append((g, "rehundido cero", "rehundido cero"))
+
+    for roto, clave, que in casos:
+        try:
+            _guarda_rehundido_panel(roto)
+        except AssertionError as e:
+            assert clave in str(e), (
+                f"canario de rehundido ({que}) salto por '{str(e)}' y no por "
+                f"'{clave}'")
+            continue
+        raise AssertionError(
+            f"canario de rehundido NO disparo con {que}; no confiar en su VERDE")
+
+
+def _guarda_transicion_fila_kondor(
+        centros_anteriores: list[tuple[float, float]],
+        centros_kondor: list[tuple[float, float]]) -> None:
+    """Solo el segundo riel responde al cambio de alto de 39.65 a 55.00."""
+    dx0 = centros_kondor[0][0] - centros_anteriores[0][0]
+    dy0 = centros_kondor[0][1] - centros_anteriores[0][1]
+    assert math.hypot(dx0, dy0) < 0.001, (
+        f"el primer riel KONDOR se movio ({dx0:+.3f}, {dy0:+.3f}) mm al "
+        f"mutar el alto {ALTO_FILA_AUX_ANTERIOR:.2f} <-> "
+        f"{ALTO_FILA_KONDOR:.2f}; tiene que quedar invariante")
+
+    dx1 = centros_kondor[1][0] - centros_anteriores[1][0]
+    dy1 = centros_kondor[1][1] - centros_anteriores[1][1]
+    assert (abs(dx1 - DESPLAZAMIENTO_SEGUNDO_RIEL_KONDOR) < 0.001
+            and abs(dy1) < 0.001), (
+        f"el segundo riel KONDOR se movio ({dx1:+.3f}, {dy1:+.3f}) mm; "
+        f"solo el debe moverse exactamente "
+        f"{DESPLAZAMIENTO_SEGUNDO_RIEL_KONDOR:.2f} mm en X")
+
+
+def _guarda_transicion_tanda_b(
+        centros_anteriores: list[tuple[float, float]],
+        centros_kondor: list[tuple[float, float]]) -> None:
+    """Contrato completo desde la geometria anterior a la Tanda B.
+
+    El rehundido baja ambos rieles 1.50 mm. El cambio de alto conserva la X del
+    primero y desplaza solo el segundo 15.35 mm. Medir ambas decisiones juntas
+    evita que una referencia movil de la ventana esconda deriva lateral.
+    """
+    esperados = ((0.0, -REHUNDIDO_PANEL_OBJETIVO),
+                 (DESPLAZAMIENTO_SEGUNDO_RIEL_KONDOR,
+                  -REHUNDIDO_PANEL_OBJETIVO))
+    nombres = ("primer", "segundo")
+    for nombre, anterior, actual, esperado in zip(
+            nombres, centros_anteriores, centros_kondor, esperados):
+        dx, dy = actual[0] - anterior[0], actual[1] - anterior[1]
+        assert (abs(dx - esperado[0]) < 0.001
+                and abs(dy - esperado[1]) < 0.001), (
+            f"el {nombre} riel KONDOR deriva ({dx:+.6f}, {dy:+.6f}) mm "
+            f"desde la geometria anterior; se exige "
+            f"({esperado[0]:+.2f}, {esperado[1]:+.2f}) mm")
+
+
+def _guarda_ancho_hp_fila_kondor(ancho_kondor: float,
+                                  anchos_3u: list[float], hp: float) -> None:
+    """La fila propia cruza el mismo ancho y publica los mismos HP que 3U."""
+    hp_kondor = round(ancho_kondor / hp)
+    hp_3u = {round(ancho / hp) for ancho in anchos_3u}
+    assert hp_3u == {hp_kondor}, (
+        f"la fila KONDOR da {hp_kondor} HP y las filas 3U dan "
+        f"{sorted(hp_3u)} HP")
+    assert all(abs(ancho_kondor - ancho) < 0.001 for ancho in anchos_3u), (
+        f"la fila KONDOR mide {ancho_kondor:.2f} mm y los rieles 3U miden "
+        f"{', '.join(f'{ancho:.2f}' for ancho in anchos_3u)} mm")
 
 
 def guarda_fila_1u(p: dict[str, float]) -> None:
-    """La fila del valle es un 1U de Intellijel de verdad, no un parecido.
+    """La fila del valle es la fila auxiliar KONDOR de 55 mm.
 
-    EL VALLE DEJA DE SER TAPA. Fue una plancha ranurada atornillada a un larguero
-    2020; al morir el 2020 quedo atornillada al CANTO de las alas de la bahia, y
-    eso no es una junta (lo canta guarda_agarre()). En vez de parchear ese
-    apoyo, la cara pasa a ser una TERCERA FILA DE MODULOS: los railes se
-    atornillan a la CARA del ala -- 60 mm de chapa -- y el defecto desaparece en
-    lugar de arreglarse.
-
-    POR QUE UN ESTANDAR Y NO UN FORMATO PROPIO. Se estudio hacer el nuestro y se
-    descarto: a la altura que la boca permite, un formato KONDOR habria medido
-    lo mismo que uno de mercado y habria costado dibujar cada tile a mano. El
-    aparato se vende entero, pero el dueño puede querer meter una utilidad
-    comprada, y a igual tamaño el catalogo sale gratis.
-
-    LAS DOS CIFRAS TIENEN QUE CUADRAR SOLAS, y esa es la comprobacion que de
-    verdad vale. La regla del repo para 3U -- S = H - 2*inset_er, con inset_er
-    de 3.0 sacado de Doepfer -- aplicada al panel de Intellijel tiene que dar
-    EXACTAMENTE la separacion de taladro que Intellijel publica. Si diera otra
-    cosa, o su panel no mide lo que creemos o su inset no es el de Doepfer, y en
-    cualquiera de los dos casos el modelo estaria inventando. Dos fuentes
-    independientes coincidiendo al centesimo es mejor evidencia que una hoja."""
+    Conserva ancho, HP y herraje de las dos filas 3U, pero su alto y su
+    separacion vertical son propios. S_1U_INTELLIJEL no define la fila: queda
+    unicamente como referencia minima externa."""
     H = p["alto_panel_1u"]
     S = H - 2 * p["inset_er"]
-    assert abs(S - S_1U_INTELLIJEL) < 0.01, (
-        f"el panel de {H:.2f} con el inset_er de {p['inset_er']:.1f} da una "
-        f"separacion de taladro de {S:.2f}, y Intellijel publica "
-        f"{S_1U_INTELLIJEL:.2f}. O el alto del panel no es ese, o su inset no "
-        f"es el de Doepfer: el modelo no puede elegir cual de las dos")
+    assert abs(H - ALTO_FILA_KONDOR) < 0.01, (
+        f"el alto de la fila auxiliar KONDOR es {H:.2f} y tiene que ser "
+        f"{ALTO_FILA_KONDOR:.2f}")
+    assert S + 0.01 >= S_1U_INTELLIJEL, (
+        f"la separacion KONDOR de {S:.2f} queda por debajo de la referencia "
+        f"minima externa Intellijel de {S_1U_INTELLIJEL:.2f}; esto no afirma "
+        f"compatibilidad")
+    assert abs(S - S_FILA_KONDOR) < 0.01, (
+        f"la separacion KONDOR derivada de alto_panel_1u - 2*inset_er es "
+        f"{S:.2f} y tiene que ser {S_FILA_KONDOR:.2f}")
 
-    # LA VENTANA, no la boca (2026-08-29): sin bahia, la fila cabe o no cabe
-    # entre el barrido del riel del valle de abajo y la esquina del de arriba.
+    # LA VENTANA, no la boca: sin bahia, la fila cabe o no cabe entre las
+    # envolventes cerradas de los dos rieles fijos que limitan el valle.
     # Lo que sobre es paso_horizontal de mas: cada mm de valle es un mm de
     # fondo de aparato, y hoy sobran los 3 que ocupaban las dos alas.
     P = _vertices(p)
@@ -4391,25 +4758,169 @@ def guarda_fila_1u(p: dict[str, float]) -> None:
     pide = S + p["rail_er_alto"]
     sobra = (x1 - x0) - pide
     assert sobra >= -0.01, (
-        f"la ventana del valle mide {x1 - x0:.2f} y la fila 1U pide "
+        f"la ventana del valle mide {x1 - x0:.2f} y la fila KONDOR pide "
         f"{pide:.2f} (separacion {S:.2f} + el alto de un riel). Se gobierna "
         f"con paso_horizontal, el largo del tramo plano del valle")
 
-    hp_1u = round(p["largo_riel"] / p["hp"])
-    hp_3u = round(p["largo_riel"] / p["hp"])
-    assert hp_1u == hp_3u, (
-        f"la fila 1U trae {hp_1u} HP y las de 3U {hp_3u}: cruzan el mismo case "
-        f"entre las mismas dos costillas, asi que es el mismo numero")
+    anterior = dict(p)
+    anterior["alto_panel_1u"] = ALTO_FILA_AUX_ANTERIOR
+    anterior["paso_horizontal"] = PASO_HORIZONTAL_ANTERIOR
+    P_anterior = _vertices(anterior)
+    cr_anterior = _centros_rail(anterior, P_anterior)
+    x0_a, x1_a = _ventana_valle(anterior, P_anterior, cr_anterior)
+    S_anterior = ALTO_FILA_AUX_ANTERIOR - 2 * anterior["inset_er"]
+    # La ventana geometrica anterior tenia 3 mm que ocupaban las dos alas de
+    # t_costilla de la bahia. Su margen UTIL era por tanto el geometrico menos
+    # 2*t_costilla: 0.003 mm. La bahia ya no existe, pero este es el margen
+    # anterior que la cota 70.82 conserva.
+    margen_anterior = ((x1_a - x0_a)
+                       - (S_anterior + anterior["rail_er_alto"]
+                          + 2 * anterior["t_costilla"]))
+    assert abs(sobra - margen_anterior) < 0.01, (
+        f"la ventana KONDOR deja {sobra:.3f} mm de margen y la anterior dejaba "
+        f"{margen_anterior:.3f}; paso_horizontal tiene que conservar el margen "
+        f"anterior")
+
+    anterior_mismo_paso = dict(p)
+    anterior_mismo_paso["alto_panel_1u"] = ALTO_FILA_AUX_ANTERIOR
+    P_ant_paso = _vertices(anterior_mismo_paso)
+    cr_ant_paso = _centros_rail(anterior_mismo_paso, P_ant_paso)
+    c_anterior = _centros_rail_1u(anterior_mismo_paso, P_ant_paso, cr_ant_paso)
+    c_kondor = _centros_rail_1u(p, P, cr)
+    _guarda_transicion_fila_kondor(c_anterior, c_kondor)
+
+    historica = dict(p)
+    historica["alto_panel_1u"] = ALTO_FILA_AUX_ANTERIOR
+    historica["paso_horizontal"] = PASO_HORIZONTAL_ANTERIOR
+    historica["rehundido_panel"] = 0.0
+    P_historica = _vertices(historica)
+    cr_historica = _centros_rail(historica, P_historica)
+    c_historica = _centros_rail_1u(historica, P_historica, cr_historica)
+    _guarda_transicion_tanda_b(c_historica, c_kondor)
+
+    railes, _, _ = _cajas_solidas(p)
+    anchos_3u = [c[6] - c[5] for c in railes if c[0] in NOMBRES_CR]
+    anchos_kondor = [c[6] - c[5] for c in railes
+                     if c[0].startswith("fila KONDOR")]
+    assert len(anchos_3u) == 4 and len(anchos_kondor) == 2, (
+        f"se esperaban cuatro rieles 3U y dos KONDOR; aparecen "
+        f"{len(anchos_3u)} y {len(anchos_kondor)}")
+    _guarda_ancho_hp_fila_kondor(anchos_kondor[0], anchos_3u, p["hp"])
+    assert abs(anchos_kondor[1] - anchos_kondor[0]) < 0.001, (
+        f"los dos rieles KONDOR no tienen el mismo ancho: "
+        f"{anchos_kondor[0]:.2f} y {anchos_kondor[1]:.2f}")
 
     # Debajo del riel no hay bandeja: el tile cuelga en el interior, como los
     # modulos 3U. Lo que tiene debajo es la tabla, a esta altura.
-    c1u = _centros_rail_1u(p, P, cr)
-    y_riel = c1u[0][1] - _he_er(p, 90.0)[1]
-    print(f"fila 1U: panel {H:.2f} (Intellijel), railes a {S:.2f} entre centros "
-          f"-- cuadra al centesimo con los {S_1U_INTELLIJEL:.2f} publicados")
-    print(f"  {hp_1u} HP a paso {p['hp']:.2f}, ventana de {x1 - x0:.2f} para "
+    y_riel = c_kondor[0][1] - _he_er(p, 90.0)[1]
+    hp_kondor = round(anchos_kondor[0] / p["hp"])
+    print(f"fila auxiliar KONDOR: panel {H:.2f}, railes a {S:.2f} entre centros "
+          f"(referencia minima externa: {S_1U_INTELLIJEL:.2f})")
+    print(f"  {hp_kondor} HP a paso {p['hp']:.2f}, ventana de {x1 - x0:.2f} para "
           f"{pide:.2f} de fila (sobran {sobra:.2f}); el riel baja hasta "
           f"y = {y_riel:.1f} y debajo hay {y_riel:.0f} mm hasta la tabla")
+
+
+def canario_fila_kondor(p: dict[str, float]) -> None:
+    """Mutaciones dirigidas de cada regla propia de la fila KONDOR."""
+    sordo = io.StringIO()
+    casos = (
+        ({"alto_panel_1u": ALTO_FILA_AUX_ANTERIOR}, "alto de la fila auxiliar KONDOR",
+         "volver al alto anterior"),
+        ({"inset_er": 11.0}, "referencia minima externa",
+         "bajar la separacion por debajo de la referencia externa"),
+        ({"inset_er": 2.5}, "separacion KONDOR",
+         "separar los rieles 50 mm en vez de 49"),
+        ({"paso_horizontal": PASO_HORIZONTAL_ANTERIOR}, "ventana del valle",
+         "dejar la ventana anterior para la fila nueva"),
+        ({"paso_horizontal": p["paso_horizontal"] + 1.0}, "margen anterior",
+         "agrandar la ventana sin conservar su margen"),
+    )
+    for cambios, clave, que in casos:
+        roto = dict(p)
+        roto.update(cambios)
+        try:
+            with contextlib.redirect_stdout(sordo):
+                guarda_fila_1u(roto)
+        except AssertionError as e:
+            assert clave in str(e), (
+                f"canario KONDOR: con {cambios} la puerta salto por otra razon "
+                f"('{str(e)[:80]}...') y no por '{clave}'")
+            continue
+        raise AssertionError(
+            f"canario KONDOR NO disparo: {que} y guarda_fila_1u() lo deja "
+            f"pasar -- no confiar en su VERDE")
+
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    anterior = dict(p)
+    anterior["alto_panel_1u"] = ALTO_FILA_AUX_ANTERIOR
+    c_ant = _centros_rail_1u(anterior, _vertices(anterior),
+                             _centros_rail(anterior, _vertices(anterior)))
+    c_ok = _centros_rail_1u(p, P, cr)
+    transiciones_rotas = (
+        ([(c_ant[0][0] + 0.1, c_ant[0][1]), c_ok[1]], "primer riel KONDOR"),
+        ([c_ok[0], (c_ant[1][0] + 15.34, c_ant[1][1])], "segundo riel KONDOR"),
+    )
+    for centros_rotos, clave in transiciones_rotas:
+        try:
+            _guarda_transicion_fila_kondor(c_ant, centros_rotos)
+        except AssertionError as e:
+            assert clave in str(e), (
+                f"canario KONDOR de movimiento salto por '{str(e)}' y no por "
+                f"'{clave}'")
+            continue
+        raise AssertionError(
+            f"canario KONDOR NO disparo al mutar {clave.lower()}")
+
+    historica = dict(p)
+    historica["alto_panel_1u"] = ALTO_FILA_AUX_ANTERIOR
+    historica["paso_horizontal"] = PASO_HORIZONTAL_ANTERIOR
+    historica["rehundido_panel"] = 0.0
+    P_hist = _vertices(historica)
+    c_hist = _centros_rail_1u(
+        historica, P_hist, _centros_rail(historica, P_hist))
+    c_tanda_b = [
+        (c_hist[0][0], c_hist[0][1] - REHUNDIDO_PANEL_OBJETIVO),
+        (c_hist[1][0] + DESPLAZAMIENTO_SEGUNDO_RIEL_KONDOR,
+         c_hist[1][1] - REHUNDIDO_PANEL_OBJETIVO),
+    ]
+    _guarda_transicion_tanda_b(c_hist, c_tanda_b)
+    transiciones_tanda_b_rotas = (
+        ([(c_tanda_b[0][0] + 0.1, c_tanda_b[0][1]), c_tanda_b[1]],
+         "primer riel KONDOR"),
+        ([c_tanda_b[0], (c_tanda_b[1][0] - 0.1, c_tanda_b[1][1])],
+         "segundo riel KONDOR"),
+    )
+    for centros_rotos, clave in transiciones_tanda_b_rotas:
+        try:
+            _guarda_transicion_tanda_b(c_hist, centros_rotos)
+        except AssertionError as e:
+            assert clave in str(e), (
+                f"canario KONDOR Tanda B salto por '{str(e)}' y no por "
+                f"'{clave}'")
+            continue
+        raise AssertionError(
+            f"canario KONDOR Tanda B NO disparo al mutar {clave.lower()}")
+
+    railes, _, _ = _cajas_solidas(p)
+    anchos_3u = [c[6] - c[5] for c in railes if c[0] in NOMBRES_CR]
+    ancho = next(c[6] - c[5] for c in railes
+                 if c[0].startswith("fila KONDOR"))
+    for ancho_roto, clave in ((ancho + p["hp"], "HP"),
+                              (ancho + 0.1, "mide")):
+        try:
+            _guarda_ancho_hp_fila_kondor(ancho_roto, anchos_3u, p["hp"])
+        except AssertionError as e:
+            assert clave in str(e), (
+                f"canario KONDOR de ancho salto por '{str(e)}' y no por "
+                f"'{clave}'")
+            continue
+        raise AssertionError(
+            f"canario KONDOR NO disparo con ancho {ancho_roto:.2f}")
+
+    with contextlib.redirect_stdout(sordo):
+        guarda_fila_1u(dict(p))
 
 
 
@@ -4698,157 +5209,8 @@ def guarda_piso(p: dict[str, float]) -> None:
         f"2026-08-29 por la noche apoya EN el pie, no en el plano del suelo")
 
 
-# LAS DOS FILAS SE ABREN, cada una girando sobre el M4 de su riel de ARRIBA --
-# el mismo tornillo que la fija de punta al costado, que entra a lo largo del
-# ancho y por tanto ya es un eje. No hay bisagra en ningun sitio.
-#   (nombre, indice del riel-EJE, cuerpos que giran, vertice de arranque de la
-#    cara, angulo, inset del panel, alto del panel)
-TAPAS = (
-    ("fila de abajo", 1, frozenset({"cara_inf frente", "cara_inf valle"}),
-     1, "angulo_inferior", "inset_inf_frente", "alto_panel_inf"),
-    # remate_sup SALIO de este conjunto el 2026-08-21. Giraba con la tapa
-    # porque iba PEGADA al Z-Rail, que es parte de la tapa. Desde que se
-    # atornilla al larguero de remate trasero es pieza QUIETA, o sea un
-    # obstaculo que la tapa tiene que librar al abrir -- que es justo lo que
-    # esta puerta comprueba.
-    ("fila de arriba", 3,
-     frozenset({"cara_sup valle", "cara_sup remate"}),
-     3, "angulo_superior", "inset_sup_valle", "alto_panel_sup"),
-)
-
-# Lo minimo que tiene que abrir una tapa para que sirva de algo. A 60 grados la
-# cara queda casi vertical y el interior a la vista; por debajo de 45 no cabe la
-# mano para cablear.
-#
-# ESTUVO EN 180 DURANTE UNA HORA el 2026-08-27 y se volvio a bajar, con permiso.
-# Al montar la fila 1U la de abajo cayo a 63.8 y el presupuesto salio VERDE,
-# porque la spec decia una cosa mas fuerte que la puerta: 9.3 listaba "las 180
-# grados de apertura" entre lo que NO se toca. Se apreto la puerta a 180 para
-# que el papel y el modelo dijeran lo mismo, se vio el rojo, y Samuel LIBERO la
-# cota: "lo de los 180 ya no es importante, con 60 vamos mas que bien". La spec
-# se enmendo en la misma tanda -- lo que no se podia dejar es una diciendo 180 y
-# la otra 60, que es como se pierde una cota sin que nadie se entere.
-APERTURA_MIN = 60.0
-# Linea de pegado maxima de la pestana. El metacrilato estructural de dos
-# componentes trabaja bien entre 0.1 y 0.3 mm; medio milimetro es el punto donde
-# deja de pegar y empieza a rellenar.
-JUNTA_PEGADO_MAX = 0.5
 
 
-def guarda_tapa(p: dict[str, float]) -> None:
-    """Las dos caras de panel son TAPAS y las dos tienen que poder abrir.
-
-    Cada una gira sobre el M4 de su riel de arriba. La de abajo pivota en el riel
-    del valle y saca su canto delantero hacia arriba; la de arriba pivota en el
-    del vertice y saca el valle. No hay bisagra que verificar porque no hay
-    bisagra: es el propio tornillo de fijacion.
-
-    Dos comprobaciones, y solapes() no ve ninguna -- mira la posicion CERRADA y
-    con cajas alineadas a ejes:
-
-    1. EL BARRIDO. Se gira cada tapa grado a grado y se busca contra que topa. No
-       es una cota estimada: es el angulo real, y se imprime en cada corrida.
-       Aqui esta la razon de que exista: parada, la fila de abajo libraba la tapa
-       del valle por +2.06 mm; GIRANDO la perdia por -0.57, porque el riel barre
-       su radio de giro (14.58) y no el alcance de su esquina quieta (11.95). La
-       holgura estatica mentia y solo lo dijo el barrido.
-       Se comprueban las esquinas de lo que gira contra las cajas de lo que no --
-       o sea que caza el caso realista (una esquina entrando en un larguero) y no
-       el patologico. Tampoco entra el FONDO de los modulos, que no esta
-       modelado: eso lo vigila fondo_pcb_max por otro lado.
-
-    2. LA PESTANA APOYADA EN EL RIEL. De esa cara de aluminio cuelga su unica
-       fijacion (M3 por su canto), asi que no se comprueba que esten separadas
-       sino que se TOQUEN. En el AABB se pisan porque van giradas 45 -- por eso
-       siguen en TOLERADOS --, y esta es la cuenta buena, hecha sobre la cara."""
-    P = _vertices(p)
-    cr = _centros_rail(p, P)
-    railes, planchas, _ = _cajas_solidas(p)
-    zr0, zr1 = railes[0][5], railes[0][6]
-    miembros = _cajas_miembro(p, P, cr, zr0, zr1)
-    nombres_miembro = set(miembros)
-    obstaculos = ([c for c in railes if c[0] not in nombres_miembro]
-                  + _caras_miembro(p, miembros) + planchas
-                  # LA NARIZ ENTERA (2026-08-29): es fija y la fila de abajo
-                  # pasa por encima al abrir. Cajas conservadoras.
-                  + _cajas_nariz_barrido(p))
-    # EL BARRIDO ES PLANO -- gira esquinas en XY -- y eso vale mientras todo lo
-    # que estorba cruce el mismo ancho que lo que gira. Desde el 2026-08-28 hay
-    # que decirlo aparte: TODO LO QUE GIRA vive entre z0 + t_placa y
-    # z1 - t_placa (el riel mide ancho_util - 2*t_placa y muere contra su
-    # placa; el panel se atornilla al riel y no puede ser mas largo que el),
-    # mientras las PLACAS y las BRIDAS traseras viven justo en las dos
-    # rebanadas que quedan fuera de ese hueco. En el plano se pisan; a lo ancho
-    # no se tocan.
-    #
-    # LO QUE ESTE FILTRO NO SUELTA, y conviene que quede escrito porque estuvo
-    # mal escrito un dia: la pestana de la banda del valle SIGUE SIENDO EL TOPE
-    # de la fila de abajo, que abre 63.8 grados. La pestana ya no apoya contra
-    # el anillo sino ENCIMA de la placa del valle (z = 20..23), o sea dentro
-    # del mismo hueco que barren el riel y el panel: comparte su ancho y el
-    # filtro no la quita. Y esta bien que no la quite -- ese tope es real y se
-    # toca al abrir.
-    #
-    # 63.8 pasa porque APERTURA_MIN vale 60 desde el 2026-08-27, cuando Samuel
-    # solto la cota de 180 al montar la fila 1U ("con 60 vamos mas que bien",
-    # y la spec 9.3 se enmendo en la misma tanda). A 63.8 la cara queda casi
-    # vertical y se cablea con la mano dentro, que es lo que la cota protege.
-    # Lo que este filtro quita son las PLACAS y las BRIDAS traseras, que viven
-    # en las dos rebanadas de 6 mm que quedan FUERA de ese hueco: en el plano
-    # se pisan con el riel, a lo ancho no se tocan. Sin el, la placa del frente
-    # salia como tope a 0.2 grados.
-    obstaculos = [c for c in obstaculos if min(c[6], zr1) - max(c[5], zr0) > 1e-9]
-    # el pie y el frente de la nariz entran por railes Y por el barrido
-    vistos: set[tuple] = set()
-    obstaculos = [c for c in obstaculos if not (c in vistos or vistos.add(c))]
-    for nombre, i_eje, propios, i_cara, k_ang, k_inset, k_panel in TAPAS:
-        eje = cr[i_eje]
-        ar = math.radians(p[k_ang])
-        d, n = (math.sin(ar), math.cos(ar)), (math.cos(ar), -math.sin(ar))
-        A = P[i_cara]
-        s0 = p[k_inset] - p["inset_er"]
-        giran = [(A[0] + d[0] * s + n[0] * q, A[1] + d[1] * s + n[1] * q)
-                 for s in (s0, s0 + p[k_panel]) for q in (0.0, p["t_panel"])]
-        for j, nm in enumerate(NOMBRES_CR):
-            if nm in propios:
-                giran += _esquinas_er(p, cr[j], p[ANGS_CR[j]])
-        quietos = [c for c in obstaculos if c[0] not in propios]
-        tope, culpable = 180.0, ""
-        for i in range(1, 721):                   # 0.25 grados hasta 180
-            th = math.radians(i * 0.25)
-            co, si = math.cos(th), math.sin(th)
-            for x, y in giran:
-                dx, dy = x - eje[0], y - eje[1]
-                rx, ry = eje[0] + dx * co + dy * si, eje[1] - dx * si + dy * co
-                for c in quietos:
-                    if c[1] <= rx <= c[2] and c[3] <= ry <= c[4]:
-                        tope, culpable = i * 0.25, c[0]
-                        break
-                if culpable:
-                    break
-            if culpable:
-                break
-        print(f"tapa {nombre}: abre {tope:.1f} grados sobre el M4 de "
-              f"'{NOMBRES_CR[i_eje]}'"
-              + (f", topa con '{culpable}'" if culpable else " sin topar"))
-        assert tope >= APERTURA_MIN, (
-            f"la {nombre} solo abre {tope:.1f} grados antes de topar con "
-            f"'{culpable}' (se exige >= {APERTURA_MIN:.0f}). Ojo: puede estar "
-            f"holgada PARADA y no caber girando -- el riel barre su radio de "
-            f"giro ({_radio_giro_riel(p):.2f}), no el alcance de su esquina")
-
-    # LA JUNTA DE LA PESTANA vivio aqui hasta el 2026-08-21, y murio con su
-    # sujeto. Medía el hueco entre la tira de remate y el Z-Rail, primero
-    # exigiendo cero exacto (union atornillada) y despues una linea de pegado
-    # entre 0 y medio milimetro (union pegada, tras descubrir que esa cara del
-    # riel es pared de 1.2 mm). Desde que la pieza se atornilla al larguero de
-    # remate trasero no hay junta con el riel que medir: lo que la sujeta lo
-    # verifican alineacion() y apoyo() como a cualquier otra plancha, y que no
-    # estorbe a la tapa lo verifica el barrido de aqui arriba.
-    #
-    # Lo que si sigue sin poder derivarse en params.scad -- ese fichero no
-    # admite expresiones -- es que la tapa cubra la meseta entera, y eso es lo
-    # que exige guarda_remate().
 
 
 def guarda_remate(p: dict[str, float]) -> None:
@@ -4873,15 +5235,9 @@ def guarda_remate(p: dict[str, float]) -> None:
         prof_sup              la meseta, del PICO al plano trasero, o sea
                               marco_remate entero.
 
-    EL INSET MURIO EL 2026-08-29. Llevaba escrito que era "lo unico que deja
-    abrir la tapa de arriba" con una tabla (retiro 0 -> 13.2 grados) medida
-    cuando la meseta era ACRILICO DE 8 apoyado en el riel. Con la chapa de 1.5
-    la cara de abajo de la meseta queda a 18.9 mm del eje y nada de lo que
-    gira pasa de 16.2: se corrio guarda_tapa() con la meseta en el pico y la
-    fila de arriba siguio abriendo 121.5 grados (180 desde que no hay canal).
-    Asi que la meseta LLEGA AL PICO y lo que asomaba en esos 13 mm, el
-    riel-eje desnudo, queda tapado. El retorno que dobla en el pico es cosa de
-    guarda_retorno_meseta()."""
+    EL INSET MURIO EL 2026-08-29 al sustituir la meseta de acrilico apoyada por
+    chapa de 1.5. La meseta LLEGA AL PICO, tapa el riel fijo y su retorno se
+    verifica por holgura estatica en guarda_retorno_meseta()."""
     # UN SOLO SUMANDO DESDE EL 2026-08-29 POR LA NOCHE: la meseta llega al
     # plano trasero y dobla ahi como banda. Los otros dos (t_piel y
     # t_costilla, el ala del marco de la manana y su espesor) murieron con el
@@ -4899,12 +5255,6 @@ def guarda_remate(p: dict[str, float]) -> None:
     # :g y no :.0f -- una puerta que redondea la cota que vigila miente.
     print(f"remate: meseta de {p['prof_sup']:g} mm integrada en el miembro "
           f"trasero alto, hasta el pico (x = {P[4][0]:.2f})")
-
-
-# Margen radial entre lo que gira sobre el riel-eje de la fila de arriba (el
-# canto alto de su panel, a 16.18 del eje) y la esquina interior del retorno
-# de la meseta, que es fijo. Medio milimetro: la tolerancia de un doblez.
-MARGEN_BARRIDO_RETORNO = 0.5
 
 
 def _bd_angulo(p: dict[str, float], ang: float) -> float:
@@ -4938,46 +5288,23 @@ def _retorno_meseta(p: dict[str, float]) -> dict:
 
 
 def guarda_retorno_meseta(p: dict[str, float]) -> None:
-    """El retorno de la meseta tapa el riel-eje sin estorbar a la tapa.
+    """El retorno fijo deja libres el panel y el riel en posicion montada.
 
-    Lo que gira en la fila de arriba gira sobre el M4 de su riel de arriba
-    (guarda_tapa), y el punto que mas se aleja de ese eje cerca del pico es el
-    CANTO ALTO DEL PANEL: 16.18 mm. A 1.5 mm bajo la cara -- la cara interior
-    de una chapa de 1.5 puesta a ras -- ese circulo llega hasta s = 149.4 de
-    los 155 de la cara. El retorno es FIJO y tiene que quedarse fuera del
-    circulo con margen: se mide la distancia radial de su esquina interior al
-    eje contra el radio del canto del panel.
-
-    Y por eso queda una linea de sombra sobre el panel, y se imprime: el labio
-    del riel (2 mm, a 1.6 de profundidad) mas el aire hasta el retorno. Menos
-    que eso no lo permite el barrido, salvo con un liston mecanizado de cara
-    interior concava concentrica al eje -- que no es esta pieza."""
-    P = _vertices(p)
-    cr = _centros_rail(p, P)
-    a = math.radians(p["angulo_superior"])
-    d = (math.sin(a), math.cos(a))
+    No existe barrido radial: los paneles se desmontan quitando tornillos. La
+    puerta conserva solo la holgura estatica y la linea de sombra resultante."""
     L = p["alto_cara_sup"]
     s_panel = p["inset_sup_valle"] - p["inset_er"] + p["alto_panel_sup"]
-    canto = (P[3][0] + d[0] * s_panel, P[3][1] + d[1] * s_panel)
-    r_canto = math.dist(canto, cr[3])
     ret = _retorno_meseta(p)
-    r_esq = math.dist(ret["esquina_interior"], cr[3])
-    margen = r_esq - r_canto
-    assert margen >= MARGEN_BARRIDO_RETORNO, (
-        f"el retorno de la meseta baja {p['retorno_meseta']:g} mm por la cara "
-        f"de arriba y su esquina interior queda a {r_esq:.2f} del eje de la "
-        f"tapa; el canto alto del panel gira a {r_canto:.2f}. Margen "
-        f"{margen:+.2f} contra {MARGEN_BARRIDO_RETORNO:.2f}: el panel choca "
-        f"con el retorno al abrir. Acortar retorno_meseta")
     s_ret = L - p["retorno_meseta"]
     s_riel = L - p["inset_sup_remate"] + p["rail_er_alto"] / 2
-    assert s_ret > s_riel, (
-        f"el retorno acaba en s = {s_ret:.2f} y la cara del riel-eje llega "
-        f"hasta {s_riel:.2f}: una pieza fija encima de un riel que gira")
+    margen = s_ret - max(s_panel, s_riel)
+    assert margen >= p["holgura_rail"], (
+        f"el retorno acaba en s={s_ret:.2f}; panel/riel fijo llegan hasta "
+        f"{max(s_panel, s_riel):.2f}: quedan {margen:.2f} mm y se exigen "
+        f"{p['holgura_rail']:.2f}")
     print(f"retorno de la meseta: {p['retorno_meseta']:g} mm por la cara de "
-          f"arriba, doblez de {ret['doblez']:g}; esquina interior a "
-          f"{r_esq:.2f} del eje contra {r_canto:.2f} del canto del panel "
-          f"(margen {margen:.2f})")
+          f"arriba, doblez de {ret['doblez']:g}; margen estatico "
+          f"panel/riel {margen:.2f} mm")
     print(f"  linea de sombra sobre el panel: {s_ret - s_panel:.2f} mm "
           f"({s_riel - s_panel:.2f} de labio del riel + {s_ret - s_riel:.2f} "
           f"de aire)")
@@ -5028,18 +5355,6 @@ def _cajas_nariz(p: dict[str, float]) -> list[Caja]:
             ("nariz frente", 0.0, t, c, p["alto_frontal"], nz["z0"], nz["z1"])]
 
 
-def _cajas_nariz_barrido(p: dict[str, float]) -> list[Caja]:
-    """La nariz entera como obstaculos AABB del barrido de la fila de abajo:
-    conservador (la caja de un tramo girado es mayor que el tramo), y sin
-    falso positivo comprobado: lo que gira sale por la cara POR ENCIMA del
-    tramo de cara, no a traves de su caja."""
-    nz = _nariz(p)
-    c = p["chaflan_nariz"]
-    xs, ys = [q[0] for q in nz["cara"]], [q[1] for q in nz["cara"]]
-    return _cajas_nariz(p) + [
-        ("nariz chaflan", 0.0, c, 0.0, c, nz["z0"], nz["z1"]),
-        ("nariz cara", min(xs), max(xs), min(ys), max(ys), nz["z0"], nz["z1"])]
-
 
 def bbox_desarrollo_nariz(p: dict[str, float]) -> tuple[float, float]:
     """Envolvente del blank de la nariz: largo x desarrollo."""
@@ -5060,14 +5375,9 @@ def guarda_nariz(p: dict[str, float]) -> None:
       2. el chaflan deja frente vertical (>= 5) y no toca el riel del frente:
          la esquina del riel mas cercana a la nariz queda a x+y = 37.4 y el
          panel arranca a 39.2 -- debajo del riel hay aire, no modulos.
-      3. la banda se para DEBAJO de la cara del riel con al menos 1 mm de aire
-         (la linea de sombra): el riel se mueve y la nariz no.
-      4. EL BARRIDO: la fila de abajo gira sobre el riel del valle y al abrir
-         las esquinas del riel del frente salen por la cara de abajo. Se
-         calcula donde cruza cada una la cara interior de la nariz (a t de
-         profundidad) y se exige que sea 1.5 mm por encima de su canto alto.
-         Es la misma leccion de guarda_tapa(): holgado parado y no girando.
-      5. los M4 del pie: fuera de la zona del doblez del chaflan (setback +
+      3. la banda se para DEBAJO de la cara del riel fijo con al menos 1 mm de
+         aire (la linea de sombra).
+      4. los M4 del pie: fuera de la zona del doblez del chaflan (setback +
          2t + d/2) y a 1.5 D del canto libre."""
     P = _vertices(p)
     cr = _centros_rail(p, P)
@@ -5092,26 +5402,7 @@ def guarda_nariz(p: dict[str, float]) -> None:
     assert aire >= 1.0, (
         f"la nariz sube hasta s = {nz['s_top']:.2f} por la cara de abajo y la "
         f"cara del riel del frente arranca en {s_riel:.2f}: {aire:.2f} de aire "
-        f"contra 1.0. Una pieza fija encima de un riel que gira")
-    # EL BARRIDO. Cada esquina del riel del frente, girando sobre cr[1], cruza
-    # la cara interior de la nariz (profundidad t) en algun s: el de la
-    # esquina que cruza mas abajo es el que manda.
-    a = math.radians(p["angulo_inferior"])
-    d, n = (math.sin(a), math.cos(a)), (math.cos(a), -math.sin(a))
-    eje = cr[1]
-    se = (eje[0] - P[1][0]) * d[0] + (eje[1] - P[1][1]) * d[1]
-    qe = (eje[0] - P[1][0]) * n[0] + (eje[1] - P[1][1]) * n[1]
-    peor = float("inf")
-    for x, y in _esquinas_er(p, cr[0], p["angulo_inferior"]):
-        r = math.hypot(x - eje[0], y - eje[1])
-        dq = qe - t
-        if r > abs(dq):
-            peor = min(peor, se - math.sqrt(r * r - dq * dq))
-    margen = peor - nz["s_top"]
-    assert margen >= 1.5, (
-        f"al abrir la fila de abajo, una esquina del riel del frente sale por "
-        f"la cara en s = {peor:.2f} y la nariz llega hasta {nz['s_top']:.2f}: "
-        f"{margen:.2f} de margen contra 1.5. Holgada parada y no girando")
+        f"contra 1.0")
     raiz = p["radio_doblez_costilla"] + 3 * t + p["d_M4_paso"] / 2
     assert nz["m4_x"] - c >= raiz, (
         f"el M4 del pie cae a {nz['m4_x'] - c:.2f} de la linea del chaflan y "
@@ -5122,8 +5413,7 @@ def guarda_nariz(p: dict[str, float]) -> None:
         f"{1.5 * p['d_M4_paso']:.2f}")
     print(f"nariz: chaflan de {c:g} a 45 ({frente:.2f} de frente vertical, "
           f"{diag_riel - c:.2f} al riel), banda de {t:g} hasta s = "
-          f"{nz['s_top']:.2f} de la cara de abajo; el riel sale girando por "
-          f"s = {peor:.2f} (margen {margen:.2f})")
+          f"{nz['s_top']:.2f} de la cara de abajo; panel y riel fijos")
     print(f"  linea de sombra: {aire:.2f} de aire + "
           f"{p['inset_inf_frente'] - p['inset_er'] - s_riel:.2f} de labio del "
           f"riel bajo el panel; desarrollo {nz['largo']:.2f} x "
@@ -5145,7 +5435,7 @@ def guarda_escalon(p: dict[str, float]) -> None:
         f"valle) a {gap:.3f} mm de hueco real (SAT) — se exige >=1.0 mm; "
         f"subir paso_horizontal")
     # Y el que de verdad limita cuanto se puede acortar el valle no es este
-    # SAT (72 mm de margen) sino la FILA 1U dentro de su ventana, que lo mide
+    # SAT (72 mm de margen) sino la fila KONDOR dentro de su ventana, que lo mide
     # guarda_fila_1u() -- hasta el 2026-08-29 era la bahia centrada en ella.
 
 
@@ -5419,7 +5709,7 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
     # Y QUE NO SOBRE. El assert de arriba pide que el toroide QUEPA; este pide
     # que la caja no sea mas alta de lo que hace falta. Sin el, 19 mm de aire
     # vivieron dentro del chasis sin que nadie los reclamara, y el volumen de la
-    # caja es lo que se ve al abrir el case -- fue el primer comentario de Samuel
+    # caja es lo que se ve al desmontar los paneles -- fue el primer comentario de Samuel
     # al mirar el render de la bahia: "parece de PSU de computadora".
     #
     # ES LA UNICA COTA DEL CHASIS QUE NO CUELGA DE OTRA PIEZA. El largo y el
@@ -5634,15 +5924,21 @@ def main() -> int:
     guarda_rebaje_chapa(p)
     guarda_tramo_trasero(p)
     guarda_trasera_flexion(p)
+    canario_paneles_fijos(p)
+    guarda_paneles_fijos(p)
+    canario_fila_kondor(p)
     guarda_fila_1u(p)
+    canario_rehundido_panel()
+    guarda_rehundido_panel(p)
     guarda_meseta_es_chapa(p)
     guarda_piso(p)
     guarda_anillo(p)
     guarda_rendija(p)
     guarda_aire(p)
     guarda_chaflan(p)
+    canario_valle(p)
     guarda_valle(p)
-    guarda_apriete(p)
+
     guarda_paticas(p)
     canario_red(p)
     canario_trasera(p)
@@ -5652,7 +5948,6 @@ def main() -> int:
     guarda_puentes_ventilacion(p)
     guarda_parametros_vivos(p)
     guarda_escalon(p)
-    guarda_tapa(p)
     guarda_remate(p)
     guarda_retorno_meseta(p)
     guarda_nariz(p)
@@ -5747,8 +6042,8 @@ def main() -> int:
               f"(alto_panel_{piso} - 2*inset_er = {calc}): la cara y la PCB "
               f"discrepan y el modulo no atornilla")
         # el panel tiene que CABER en su cara. Bisel CERO es legal y es lo que
-        # pasa arriba a proposito: el panel remata a ras del vertice porque de
-        # ahi cuelga la bisagra. Negativo no: seria panel volando sobre el aire.
+        # pasa arriba a proposito: el panel fijo remata a ras del vertice.
+        # Negativo no: seria panel volando sobre el aire.
         for nombre in (ins_a, ins_b):
             exige(p[nombre] - p["inset_er"] >= -1e-9,
                   f"el panel 3U desborda su cara por {nombre}: bisel "

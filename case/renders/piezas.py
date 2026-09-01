@@ -19,6 +19,7 @@ import subprocess
 import sys
 
 import bpy
+from mathutils import Vector
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 CAD = os.path.join(AQUI, "..", "cad")
@@ -30,12 +31,25 @@ OPENSCAD = r"C:\Program Files\OpenSCAD\openscad.exe"
 GRUPOS = {
     "aluminio": ["anillos", "rieles_3u", "rieles_1u", "paneles", "marcos_ventana",
                  "nariz", "talon", "miembro_alto", "tapa_valle"],
+    "junta": ["tira_anti_ruido_valle"],
     "acrilico": ["costados", "piel_trasera"],
     "madera": ["tabla", "paticas"],
     "acero": ["chasis"],
 }
 MATERIAL = {"acrilico": "acrilico_naranja", "madera": "nogal",
-            "aluminio": "aluminio", "acero": "acero"}
+            "aluminio": "aluminio", "junta": "anti_ruido", "acero": "acero"}
+
+
+def verificar_apoyo_valle() -> None:
+    """El .blend nombrado conserva el contacto tira--primer KONDOR."""
+    rieles = bpy.data.objects["rieles_1u"]
+    tira = bpy.data.objects["tira_anti_ruido_valle"]
+    y_riel = max((rieles.matrix_world @ Vector(p)).y for p in rieles.bound_box)
+    y_tira = min((tira.matrix_world @ Vector(p)).y for p in tira.bound_box)
+    gap = y_tira - y_riel
+    if abs(gap) > 0.01:
+        raise RuntimeError(
+            f"el .blend rompe el apoyo valle--KONDOR: gap Y = {gap:.3f} mm")
 
 
 def exportar_piezas() -> None:
@@ -62,7 +76,7 @@ fuente = open(ruta_render, encoding="utf-8").read()
 ns = {"__file__": ruta_render, "__name__": "escena_case"}
 exec(compile(fuente[:fuente.index("# --- RENDER: vista frontal")], ruta_render, "exec"), ns)
 ns["poner_luces"](*ns["construir_vista"](ns["AZIMUT_FRENTE"]))
-for obj in (ns["acr"], ns["alu"], ns["mad"]):
+for obj in (ns["acr"], ns["alu"], ns["jun"], ns["mad"]):
     bpy.data.objects.remove(obj, do_unlink=True)
 
 acero = bpy.data.materials.new("acero")
@@ -85,7 +99,13 @@ for grupo, nombres in GRUPOS.items():
         col.objects.link(obj)
         obj.data.materials.append(bpy.data.materials[MATERIAL[grupo]])
 
-# que al abrir se vea algo: Material Preview con las luces y el mundo de la
+try:
+    verificar_apoyo_valle()
+except RuntimeError as exc:
+    print(f"ROJO: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+# que al abrir el archivo se vea algo: Material Preview con las luces y el mundo de la
 # escena, mirando por la camara, y el clip subido -- el de fabrica (1000)
 # recorta a esta escala.
 for pantalla in bpy.data.screens:

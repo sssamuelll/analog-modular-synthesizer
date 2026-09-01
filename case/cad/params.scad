@@ -235,7 +235,7 @@ corte_pestana = 0.5;
 reticula_paso = 100;
 // LA PESTANA DE LA BANDA DEL VALLE. La banda lisa del vuelo delantero se
 // dobla 90 grados en cada punta y se atornilla a la costilla: asi no queda
-// sujeta SOLO por una linea longitudinal de tornillos, que seria una bisagra.
+// sujeta solo por una linea longitudinal incapaz de inmovilizar su alabeo.
 // Las pestanas fijan la banda; no se les atribuye funcion de diafragma.
 //
 // La plancha central y sus diez M3 al canto ya no existen. guarda_valle() mide
@@ -247,12 +247,11 @@ reticula_paso = 100;
 // hasta el canto libre. 13.70 + 1.7 + 5.1 = 20.5 -> 21.
 //
 // Y SOLO HAY UNA PESTANA POR PUNTA. Ocupa los ultimos 3D del vuelo delantero:
-// es el minimo que conserva 1.5D a ambos lados del M3 y permite abrir mas de 60
-// grados. El alivio siguiente libra la esquina que alcanza el Z-Rail 3U.
+// es el minimo que conserva 1.5D a ambos lados del M3. Los paneles son fijos;
+// no existe alivio ni cota de apertura que gobierne esta pieza.
 pestana_valle      = 21;
-// Alivio en la esquina libre DELANTERA de cada pestana. El Z-Rail 3U invade
-// 0.57 mm del rectangulo sin recortar; 1 mm lo libra y queda lejos del M3.
-// solapes() usa esta misma cota para refinar el falso positivo de su AABB.
+// Alivio local de la esquina que comparte plano con el Z-Rail 3U fijo. No es
+// una holgura de giro: elimina la penetracion estatica sin acercarse al M3.
 muesca_riel_valle  = 1;
 // Radio interior del doblez de la tapa. Sigue en aluminio de 3 mm aunque la
 // costilla haya bajado a 1.5, asi que r=3 conserva su relacion 1xt.
@@ -448,19 +447,14 @@ prof_cajeado_riel  = 2.5;
 //   agujero legal. Es el mismo choque que tiene la pestana de la banda del
 //   valle, y por eso ella no rosca en el anillo sino en el marco.
 //
-// VIVIO EN LA CARA DEL ANILLO (z = t_anillo), fuera de la rebanada en la que
-// giran los paneles, y ESO NO ERA NEGOCIABLE: se probo subirla t_placa con un
-// escalon para tumbarla ENCIMA del marco de la ventana y la tapa de arriba
-// pasaba de abrir 121.5 grados a 52 -- todo lo que vive a z >= t_anillo +
-// t_placa esta en el barrido del panel (guarda_tapa). Asi que era el MARCO el
-// que se apartaba: lleva una muesca de brida_ancho + t_costilla + 0.5 de
-// honda, abierta a su canto exterior, sobre la huella de la brida. Y la
-// trasera una muesca de esquina, porque la brida pasa bajo su esquina.
+// El marco lleva una muesca de brida_ancho + t_costilla + 0.5 de honda,
+// abierta a su canto exterior, sobre la huella de la brida. La trasera lleva
+// una muesca de esquina porque la brida pasa bajo su esquina.
 // DESDE EL TECHO MACIZO (2026-08-30) VIVE EN UN CAJEADO, y la prohibicion se
 // respeta igual porque el cambio va en la DIRECCION SEGURA: como el labio
 // entra 3 en el rebaje, la brida dobla en z = 11 y apoya en un cajeado de
 // rebaje_chapa de fondo, quedando de z = 11 a 12.5 -- 1.5 POR DEBAJO de la
-// cara, mas lejos del barrido, no mas cerca. La muesca del marco se queda:
+// cara. La muesca del marco se queda:
 // las cabezas siguen asomando por encima de la cara.
 // Se probo 34 la noche de la trasera capturada, cuando el bolsillo salia por
 // el canto de arriba y pasaba por debajo de la brida: el M4 de dentro tenia
@@ -479,7 +473,8 @@ brida_ancho        = 14.5;
 // La brida redondeada entra sin competir con el radio de la fresa.
 radio_brida        = 2;
 // LO QUE ESTE BLOQUE SUSTITUYE, y va escrito porque cada cota tenia su cuenta:
-// fueron ala_costilla = 27 (la banda de chapa, derivada del M4 de la fila 1U a
+// fueron ala_costilla = 27 (la banda de chapa, derivada del M4 de la fila
+// auxiliar a
 // 1.5 D del canto de la ventana), ala_doblez = 16 (el ala que tapaba el canto
 // del PMMA sobre un apilado de 13.5), cierre_p3_gap = 0.5 (la luz de raiz del
 // rip soldado de P3), L_casquillo = 9.5 y t_junta = 4 (el casquillo que
@@ -537,10 +532,9 @@ hol_riel        = 0.30;
 //   alto_cara_inf = 122.5 + inset_inf_frente + inset_inf_valle  = 155.75
 //   alto_cara_sup = 122.5 + inset_sup_valle  + inset_sup_remate = 155.0
 //
-// El de arriba sale mas CORTO aunque lleve el mismo estandar dentro, y es por
-// la bisagra: su punta de arriba ya no la remata un 2020 sino el eje de giro.
-// Lo que hay entre el canto del panel y el vertice es la PESTANA (marco_sup),
-// no un perfil, y por eso caben 11 mm donde antes hacian falta 23.
+// El de arriba sale mas CORTO aunque lleve el mismo estandar dentro: entre el
+// canto del panel fijo y el vertice hay una PESTANA (marco_sup), no un perfil,
+// y por eso caben 11 mm donde antes hacian falta 23.
 //
 // Los 30.0 / 35.25 mm de acrilico que envuelven el estandar salen de cotas
 // fisicas, no de gusto. La fila de abajo bajo 6 mm el 2026-08-17 al voltearse la
@@ -565,11 +559,12 @@ alto_cara_inf   = 155.75; // DERIVADO: 122.5 + inset_inf_frente + inset_inf_vall
 alto_cara_sup   = 155.0; // DERIVADO: 122.5 + inset_sup_valle + inset_sup_remate
 alto_panel_inf  = 128.5; // PCB 3U EUROrack
 alto_panel_sup  = 128.5; // PCB 3U EUROrack: la fila de arriba tambien
-// PANEL 1U DE INTELLIJEL. No es una altura elegida para llenar el valle: 39.65
-// es la cota del formato, y con inset_er = 3.0 obliga a que los dos Z-Rails
-// queden a 33.65 entre centros. guarda_fila_1u() cruza ambas cifras contra la
-// boca derivada de paso_horizontal para que ninguna se ajuste por separado.
-alto_panel_1u   = 39.65;
+// FILA AUXILIAR KONDOR. `alto_panel_1u` conserva el nombre legado porque lo
+// consumen las interfaces de exportacion, pero ya no describe un formato 1U.
+// Con 55.00 e inset_er = 3.0, sus dos Z-Rails quedan a 49.00 entre centros.
+// guarda_fila_1u() exige la altura y la separacion propias, sin declarar
+// compatibilidad vertical con formatos externos.
+alto_panel_1u   = 55.00;
 // Angulos de cara. El fichero los guarda DESDE LA VERTICAL (convencion del
 // board), pero Samuel los especifica DESDE LA HORIZONTAL, que es como se
 // miran en el alzado. La traduccion es a = 90 - horizontal:
@@ -577,8 +572,8 @@ alto_panel_1u   = 39.65;
 //   cara de abajo   55 desde la horizontal  ->  35 desde la vertical
 // (los 45 coinciden en las dos convenciones; los 55 NO -- ojo con eso.)
 //
-// Historia, sobre renders sucesivos del 2026-08-17. Cada grado que se abre un
-// panel lo gana en FONDO y lo pierde en ALTO: avanza sen(a) y sube cos(a).
+// Historia, sobre renders sucesivos del 2026-08-17. Al variar el angulo fijo
+// de una cara, el perfil gana FONDO y pierde ALTO: avanza sen(a) y sube cos(a).
 //   12 / 35   -> 233 x 386  (0.60)  estrecho y empinado, no leia a triangulo
 //   26 / 49   -> 309 x 340  (0.91)  casi cuadrado, todavia chato
 //   49 / 58.8 -> 430 x 268  (1.60)  demasiado tumbado
@@ -603,11 +598,6 @@ angulo_superior = 45;    // 45 desde la horizontal, cara de generacion
 // ser tornillo base tambien". O sea: si la bandeja se RETIRA por detras del riel
 // en vez de pasarle por debajo, el riel deja de tener nada que librar y baja
 // hasta la propia esquina del case.
-//
-// OJO: ese M5 acabo siendo el CIERRE de la fila de abajo, no una fijacion fija
-// (las dos filas se abren, ver d_visagra). O sea que el nodo de la esquina es
-// intermitente. Con la tapa abierta, los costados los ata ahi la bandeja de base
-// y sus dos largueros, que sobran para eso.
 //
 // Las dos condiciones quedan asi:
 //
@@ -774,24 +764,9 @@ nariz_pie       = 20.5;
 // arista mas corta, o sea a marco_remate/2. Subir el marco sin tocar nada mas
 // convierte el techo en una cupula de 17 mm de tangente en vez de 9. Lo que
 // cuadra la punta es radio_remate. Los dos van juntos o no van.
-// SUBIO OTRA VEZ, a 42, el 2026-08-21, y esta vez NO lo pide la forma: lo pide
-// una pieza. La tapa de remate pasa a atornillarse a un larguero 2020 nuevo en
-// la arista trasera-superior (el octavo), y ese larguero no cabe en el fondo de
-// 34: el BARRIDO del Z-Rail al abrir la tapa de la fila de arriba obliga a que
-// su centro este en x >= 286.17. Con marco_remate = 42 el centro cae en 289.22 y
-// quedan 3.04 mm de margen -- la misma holgura que el presupuesto ya exige entre
-// el chasis y sus largueros. A 40 quedaria 1 mm contra una pieza EN MOVIMIENTO,
-// y a 39 cero.
-// Y SUBIO A 50 el mismo dia. La razon otra vez es una pieza, no la forma: el
-// acrilico de la trasera se frenaba en y=219.73 porque el larguero de remate
-// vivia A RAS del plano trasero y le tapaba la banda. Para que la trasera le
-// pase por delante, ese larguero tiene que retirarse t_piel -- y ahi vuelve a
-// meterse en el barrido del Z-Rail, que es lo que lo mando al plano trasero en
-// primer lugar. La unica salida es fondo.
-//
-// A 50 el larguero cae en x_tr = 289.22 y conserva los mismos 3.04 mm de
-// margen contra el barrido. El minimo absoluto son 47 (fondo 304.17) y ahi el
-// margen es 0.04 mm contra una pieza EN MOVIMIENTO.
+// El valor vigente, 50, da el fondo de la meseta maciza y deja pasar la trasera
+// capturada por delante del miembro alto. Los paneles y rieles son fijos: esta
+// cota se valida sólo contra sus envolventes cerradas.
 marco_remate    = 50;
 // Entrepiso: la franja horizontal entre el tope de la cara inferior y la base
 // de la superior -- el "valle del medio" de la silueta. Fue 25 (minimo tecnico
@@ -810,19 +785,25 @@ marco_remate    = 50;
 // ventana. Se tocan en paso_horizontal = 57. A 60 quedan 1.54 mm, que es margen
 // de verdad; a 57 quedan 0.04, que es una cota de cuchillo.
 //
-// Volvio a subir 1.47 mm porque el valle paso a alojar una fila Intellijel 1U:
-// su boca tiene que medir 33.65 entre centros + 10.00 de cada Z-Rail = 43.65 mm
+// Volvio a subir 1.47 mm porque el valle paso a alojar la fila auxiliar
+// anterior: su boca tenia que medir 33.65 entre centros + 10.00 de cada Z-Rail = 43.65 mm
 // libres entre sus caras, o 49.65 mm entre las caras exteriores de las dos alas
 // de chapa. Esa boca sale directamente de paso_horizontal, que ahora gobierna
 // guarda_fila_1u(); cada mm que entra aqui suma tambien uno al fondo del aparato.
 //
 // BAJA 3 mm el 2026-08-28, exactamente lo que las dos alas pierden al pasar de
 // t_costilla 3 a 1.5: la boca es paso_horizontal - 2*t_costilla. Sin devolver
-// esos 3 mm quedaria en 46.65; con 58.47 conserva los 43.65 de la fila 1U. El
+// esos 3 mm quedaria en 46.65; con 58.47 conservaba los 43.65 de aquella fila. El
 // aparato gana esos mismos 3 mm de fondo por la chapa mas fina.
 //
+// SUBE 12.35 mm el 2026-08-31 para la fila auxiliar KONDOR de 55.00: la
+// ventana crece de 46.653 a 59.003, aloja 49.00 entre centros + 10.00 de riel
+// y conserva los 0.003 mm de margen util anteriores (los otros 3.00 eran las
+// dos alas de t_costilla de la bahia). Cada mm anadido aqui suma un mm al
+// fondo; el fondo nominal resultante es 319.76, siempre derivado.
+//
 // Lo vigila guarda_escalon(), que ya guardaba la otra holgura de este valle.
-paso_horizontal = 58.47;
+paso_horizontal = 70.82;
 // Acabado modernista. ESTE ENCABEZADO DECIA "ningun canto del costado es
 // esquina viva" Y DEJO DE SER CIERTO EL 2026-08-24: las dos esquinas
 // TRASERAS son vivas a peticion de Samuel, para que la trasera y la tapa de
@@ -954,12 +935,11 @@ chaflan         = 0.5;
 // diferencia, y es la unica superficie HORIZONTAL, o sea donde se apoya quien
 // se levanta.
 //
-// POR QUE ALUMINIO Y NO ACRILICO MAS GRUESO: subir a 6 esta BLOQUEADO -- la
-// tapa invade el barrido del riel y la fila de abajo pasa de abrir 180 a 39.5
-// grados. Ensanchar el larguero tampoco: un perfil de 30 entra por 0.24 mm
+// POR QUE ALUMINIO Y NO ACRILICO MAS GRUESO: el aluminio de 3 resuelve la
+// rigidez sin engordar el apilado estático sobre el Z-Rail. Ensanchar el
+// larguero tampoco: un perfil de 30 entra por 0.24 mm
 // (por debajo de la tolerancia de la propia extrusion) y uno de 40 no entra,
-// se pasa 4.76. El aluminio de 3 resuelve por rigidez especifica en vez de por
-// espesor, y ADEMAS devuelve 2 mm de barrido en vez de comerselo.
+// se pasa 4.76.
 //
 // Y NO ROMPE EL LENGUAJE: los paneles de modulo ya son PCB de ALUMINIO a los
 // dos lados de esta banda. Una tapa de aluminio entre dos filas de aluminio se
@@ -968,6 +948,15 @@ chaflan         = 0.5;
 // Lo que se lleva por delante, y es ganancia: la unica linea de BOM de 5 mm.
 // El cuerpo de acrilico queda con UN solo espesor, 8.
 t_valle    = 3;    // ALUMINIO. Ver guarda_valle(); el material va en el PLIEGO
+// El borde trasero de la banda se prolonga a ESPESOR COMPLETO sobre el primer
+// Z-Rail KONDOR. El rehundido de panel deja 0.10 de gap bajo los 3 mm de chapa;
+// una tira oculta anti-ruido de 0.20 nominal cede 0.10 y entrega la carga.
+apoyo_valle = 2.00;
+tira_valle_nominal = 0.20;
+compresion_tira_valle = 0.10;
+// Ancho conservador de una mano apoyada de canto. Compartido por la puerta y
+// el BOM para que la tension publicada no sea un literal envejecido.
+b_mano_valle = 50.0;
 t_cheek    = 8;    // costados portantes
 // SUELO del case. La bandeja de base dejo de ser una plancha del cuerpo el
 // 2026-08-17: ya no se apoya ENCIMA de los dos largueros -- 20 + 5 = 25 mm de
@@ -1035,6 +1024,7 @@ vuelo_zocalo = 10;
 // hacia los dos lados desde un punto fijo, no arrastrarse hacia uno.
 holgura_veta = 2.5;
 t_panel    = 1.6;  // PCB de aluminio, espesor estandar JLCPCB
+rehundido_panel = 1.50; // las tres filas: panel, riel, ejes y cajeados juntos
 // EL PROCESO ES FRESADO CNC, NO LASER (decidido el 2026-08-17). Y por eso
 // este numero vale CERO, que no es lo mismo que "sin calibrar":
 //
@@ -1160,16 +1150,8 @@ rail_er_eje     = 14.3;
 // ella cuelga marco_remate, que tiene que dar para que el riel quepa detras del
 // vertice: >= 3 - 0.7071*(13 - 34) = 17.85.
 //
-// ESTA LINEA LLEVA RIEL, y hasta el 2026-08-17 no lo llevaba: la ocupaba el eje
-// de la bisagra. Samuel lo cazo preguntando lo obvio -- "el riel superior del
-// segundo row deberia ir en la punta de lo alto del triangulo". Y tenia razon
-// dos veces, porque ademas de faltar el riel, el otro extremo de esa cara
-// estaba atornillado con M5 a los costados: la tapa estaba empernada y no podia
-// abrir. Ver marco_remate y d_visagra.
-//
-// La junta de 5 era el barrido de la tapa y ya no lo es: la pestana viaja CON el
-// panel (las dos son tapa), asi que entre ellas no hay movimiento relativo. Se
-// queda de junta de sombra, la misma que llevan las pieles flotantes.
+// ESTA LINEA LLEVA RIEL. El panel y sus dos rieles permanecen fijos al marco;
+// la junta de 5 es una junta de sombra, no una holgura de movimiento.
 //
 // Las tangentes NO son parametros: salen del radio y del angulo del vertice.
 // Si se mueve un radio hay que rehacer la columna, y el que avisa es
@@ -1182,28 +1164,13 @@ rail_er_eje     = 14.3;
 // que es DERIVADO, asi que hay que recontarlo ahi tambien -- por eso el case
 // gano 1.72 de fondo ademas de los 6 de alto.
 inset_inf_frente = 17.5;
-// (*) El del valle NO lo pone su curva desde el 2026-08-17: por la curva
-// bastarian 10, y lo que manda es LA TAPA DEL VALLE. Esa plancha va a ras del
+// (*) El del valle NO lo pone su curva: por la curva bastarian 10, y lo que
+// manda es LA BANDA DEL VALLE. Esa plancha va a ras del
 // plano del valle, o sea con su cara de abajo a t_valle por debajo, y justo
 // ahi asoma la esquina de arriba del riel del valle de la cara de ABAJO.
 //
-// Fue 10 (0.013 mm de hueco: las dos piezas rozandose por casualidad aritmetica)
-// y luego 12.5, que daba 2.06 mm limpios PARADO. Y ahi estaba la trampa: Samuel
-// pidio que las DOS filas se abran, y esa cota hay que medirla GIRANDO.
-//
-//   parado:  hueco = cos(35)*i + sen(35)*(t_panel+rail_er_eje) - t_valle
-//                    - he_er_y(35)          he_er_y = 11.95
-//   girando: lo mismo pero contra el RADIO DE GIRO del riel = 14.58
-//
-// El riel gira sobre su propio M5, asi que lo que barre no es su esquina sino su
-// circulo. Con 12.5 el hueco parado era +2.06 y el de barrido -0.57: la fila de
-// abajo abria 24 grados y se comia la tapa del valle. La holgura estatica mentia
-// y solo lo dijo el barrido.
-//
-// 15.75 deja 2.09 mm de barrido y la fila abre entera. Cuesta 2.66 mm de alto y
-// 1.86 de fondo. La alternativa gratis era quitar la tapa del valle (5 tornillos)
-// antes de abrir abajo; se pagan los milimetros porque "que se abran las dos" fue
-// pedido explicito.
+// 15.75 conserva holgura entre la banda y la envolvente CERRADA del Z-Rail.
+// Ningun radio de giro ni estado de apertura gobierna esta cota.
 inset_inf_valle  = 15.75;
 inset_sup_valle  = 19.5;
 inset_sup_remate = 13;
@@ -1275,35 +1242,6 @@ d_M4_paso   = 4.5;  // agujero paso M4: standoffs de las pieles Y los seis
                     // rieles EUROrack, cuyo taladro de punta viene roscado M4
                     // de fabrica (hoja Tiptop: "M4 Tapping To (/)3.3")
 d_M5_paso   = 5.5;  // agujero paso M5: SOLO el esqueleto 2020, roscado en el alma
-// APRIETE DE LOS 20 M3, y la arandela de la que sale.
-//
-// Hasta el 2026-08-24 la instruccion era "apretar hasta marcar, NO hasta
-// fisurar" (README, procedimiento del cupon) y la spec §11 admitia que "el
-// par maximo antes de fisura no esta medido". Veinte tornillos VISIBLES
-// apretados a tacto sobre acrilico son veinte puntos de craquelado.
-//
-// EL NUMERO LO PONE LA ARANDELA, no el tornillo: lo que decide si el PMMA
-// craquela es cuanta area reparte la precarga. Con el umbral de 10 MPa del
-// #106 y T = 0.2*F*d:
-//
-//   arandela   area apoyo   precarga a 10 MPa   par maximo
-//   d9           54.5 mm2       545 N            0.33 N*m
-//   d12         104.0 mm2      1040 N            0.62 N*m
-//   d16         191.9 mm2      1919 N            1.15 N*m   <- esta
-//
-// SE ELIGE d16 POR DOS RAZONES QUE VAN JUNTAS. Es la unica que deja el par
-// por encima de 1 N*m, que es donde una llave dinamometrica de 1/4" empieza
-// a existir -- por debajo hace falta destornillador dinamometrico de
-// precision, y "apretar con cuidado" nos devuelve al tacto. Y YA ESTA EN EL
-// BOM: es la misma arandela ancha de los cuatro ejes de giro, asi que la
-// familia de herraje baja de dos arandelas a una. Consistencia de herraje es
-// justo lo que separa un producto de un montaje.
-//
-// OJO CON ENGRASAR LA ROSCA: el par se convierte en precarga con coeficiente
-// 0.2 en seco y ~0.15 engrasado, o sea que el MISMO par mete un 30% mas de
-// precarga y fisura. LOS M3 VAN SECOS.
-d_arandela  = 16;   // mm, arandela ancha bajo cada M3 visible
-par_m3      = 1.0;  // N*m. Techo por arandela: 1.15
 // hol_piel = holgura de AJUSTE de las pieles EMPOTRADAS, por lado.
 //
 // Sustituye a gap_sombra (5 mm), que era otra cosa: la junta de sombra de las
@@ -1374,51 +1312,6 @@ d_pie       = 20;   // sube de 16: area para no aplastarse permanentemente   // 
 // una talla nueva al pedido. Si el catalogo real trae otra metrica, este es
 // el unico numero que hay que tocar.
 d_pie_tornillo = 4.5;  // SUPUESTO M4 paso (=d_M4_paso), sin hoja de la patica
-// EJE DE LA TAPA: NO HAY BISAGRA. El eje es EL PROPIO M5 con el que el riel de
-// arriba se fija de punta al costado. Samuel, viendo el render: "deberia ser el
-// mismo tornillo con el que se atornilla la barra del eurorack no? por que tanto
-// rollo?".
-//
-// Pues si. Ese M5 entra por el costado A LO LARGO DEL ANCHO, que es exactamente
-// la direccion que necesita un eje de giro; el riel gira sobre su propio taladro
-// y con el toda la cara de arriba. La bisagra continua que hubo aqui hasta el
-// 2026-08-17 era una pieza ASUMIDA (nunca vimos una), con dos palas sin decidir,
-// que ademas pedia un cierre de techo entre costados que no existe y sacaba un
-// nudillo de 8 mm fuera del case. Todo eso se cae de golpe.
-//
-// Por eso no hay ningun parametro aqui: el eje no se elige, ES centros_rail()[3].
-//
-// QUE ES TAPA Y QUE ES CASE:
-//   tapa  = los 2 rieles de la cara de arriba + sus modulos + la pestana
-//   case  = todo lo demas
-//
-// LOS CUATRO RIELES LLEVAN SU M5 AL COSTADO. Hubo un rato en que el del valle de
-// arriba no lo llevaba, con el argumento de que con los dos extremos empernados
-// la tapa no gira. Es cierto y es media verdad: de ahi no se sigue dejar el riel
-// colgando de nada, se sigue que ese tornillo sea QUITABLE. Samuel lo cazo en el
-// render -- "donde esta el tornillo del riel de abajo de la row superior?".
-// Papeles:
-//   cara de abajo   x2  fijacion, y ya
-//   riel de arriba  x2  EJE. De hombro, con arandela, sin apretar
-//   riel del valle  x2  CIERRE. De mano: se quitan para abrir, se ponen para
-//                       cerrar. Misma geometria que un tornillo fijo, distinta
-//                       intencion -- y si lo quieres sin herramienta, en ese
-//                       mismo taladro entra un pasador de bola con muelle.
-//
-// OJO CON LOS PANELES CIEGOS de la fila de arriba: con la tapa CERRADA la sujetan
-// los 4 tornillos, pero ABIERTA sus dos rieles solo estan atados entre si por lo
-// que haya atornillado de uno a otro, o sea los modulos. Un hueco sin tapar es
-// una charnela. Los ciegos no son estetica aqui, son estructura.
-//
-// LO QUE SE PAGA -- y sale mas barato de lo que parecia. La tapa entera cuelga
-// de DOS M5 apoyando en acrilico de 8, pero echada la cuenta son 14.7 N por
-// tornillo con una fila llena de modulos (3 kg), o sea 0.33 MPa de aplastamiento
-// sobre el costado: el 0.3 % de lo que aguanta el acrilico a compresion. La carga
-// estatica no es el problema. Lo que hay que cuidar es el DESGASTE del giro, y
-// eso lo resuelve una arandela metalica y un tornillo de hombro, no mas seccion.
-//
-// SIN CERRAR: el cierre del valle (la tapa no tiene nada que la sujete cerrada) y
-// el amortiguador que la deje abierta.
 // HISTORICO, HASTA 2026-08-21. PESTANA SUPERIOR: la banda de acrilico que cruzaba por
 // encima del canto del panel de arriba, sobre la propia cara. Samuel la pidio
 // porque el panel remataba pelado ("no veo esa pestana ... quiero un top marco
@@ -1429,9 +1322,8 @@ d_pie_tornillo = 4.5;  // SUPUESTO M4 paso (=d_M4_paso), sin hoja de la patica
 // Se lleva su ancho de la cara: la cara crece marco_sup y el canto del panel
 // baja otro tanto, o sea que el case sube marco_sup*cos(45) = 5.7 mm.
 //
-// ES PIEZA DE TAPA, no de case (2026-08-17): viaja con el panel cuando se abre.
-// De ahi que gap_sombra dejara de ser holgura de barrido -- entre la pestana y
-// el canto del panel ya no hay movimiento relativo.
+// Es una pieza fijada al mismo conjunto estático que el panel. gap_sombra es
+// sólo una junta visual; no hay movimiento relativo.
 //
 // YA NO ESTA PENDIENTE COMO SE FIJA (2026-08-17). Samuel: "podemos hacer que
 // esta conectara al riel? (atornillada al riel)". Si, pero no por donde parece.
@@ -1477,9 +1369,8 @@ marco_sup   = 1.5;
 // LA MESETA: el ala de arriba del miembro alto, medida del pico hacia atras.
 // Fue 37 (acrilico apoyado en el riel), 29 el 2026-08-27 (ala del miembro,
 // medida desde su doblez), 27.5 el 29-08 por la manana (#234: el marco de la
-// trasera se comia 1.5) y 40.5 por la tarde (la meseta LLEGA AL PICO: el
-// inset de 13 era un vestigio de la meseta de acrilico, guarda_tapa() con la
-// meseta en el pico sigue dando 121.5 grados).
+// trasera se comia 1.5) y 40.5 por la tarde: la meseta de chapa LLEGA AL PICO
+// y elimina el inset heredado de la antigua pieza de acrilico.
 //
 // 50 DESDE EL 2026-08-29 POR LA NOCHE: LA MESETA LLEGA AL PLANO TRASERO y
 // dobla ahi hacia abajo como banda_trasera. Ya no muere en el doblez de un
@@ -1490,14 +1381,11 @@ marco_sup   = 1.5;
 prof_sup    = 50;
 // El RETORNO de la meseta: en el pico la chapa dobla hacia abajo por la cara
 // de arriba este tramo, medido por la cara exterior desde el pico. Es lo que
-// cierra el frente de la meseta sobre el riel-eje -- y de paso mata la ola del
+// cierra el frente de la meseta sobre el Z-Rail fijo -- y de paso mata la ola del
 // canto libre de 528 mm y el canto vivo que lo hacia leerse como REPISA.
-// NO PUEDE BAJAR MAS DE LO QUE DEJA EL BARRIDO: el canto alto del panel gira
-// sobre el M4 del riel con 16.18 de radio y, a 1.5 mm bajo la cara, llega
-// hasta s = 149.4 de los 155 de la cara. Con 4 el retorno acaba en s = 151 y
-// le sobran 0.80 mm radiales; lo mide guarda_retorno_meseta(). Queda una linea
-// de sombra de 6 mm sobre el panel (2 de labio del riel + 4 de aire): menos
-// que eso, el panel choca con el retorno al abrir.
+// Con 4 deja una linea de sombra estatica de 6 mm sobre el panel (2 de labio
+// del riel + 4 de aire). guarda_retorno_meseta() comprueba esa envolvente
+// cerrada; no existe estado de apertura.
 retorno_meseta  = 4;
 
 // --- ventilacion con firma (spec §7) ---

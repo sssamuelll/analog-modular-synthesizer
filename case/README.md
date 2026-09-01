@@ -75,9 +75,21 @@
 > para las esquinas del anillo que llevan chapa encima: `radio_chapa` = 4.5, el
 > radio exterior del doblez. Todo en
 > [`../docs/superpowers/specs/2026-08-29-nariz-recta-valle-limpio-design.md`](../docs/superpowers/specs/2026-08-29-nariz-recta-valle-limpio-design.md).
-> Lo que quedó abierto y declarado: la **banda del valle no tiene apoyo**
-> (`guarda_valle()` lo imprime como HUECO: fluye a 27 N) — lo tenía la spec del
-> 28-08 como párrafo y ahora es puerta.
+> Ese hueco se cierra en la Tanda B del 31-08: la banda se prolonga 2 mm sobre
+> el primer Z-Rail KONDOR y entrega la carga por una tira anti-ruido oculta de
+> 0.20 mm nominal, comprimida a 0.10. `guarda_valle()` ya es un assert: con una
+> mano de 200 N la tira conservadora de 50 mm queda por debajo de flecha y
+> fluencia; desaparecen los 213 mm / 27 N de la viga entre pestañas.
+>
+> **2026-08-31, Tanda B.** La fila del valle deja de fingir compatibilidad
+> Intellijel: es la **fila auxiliar KONDOR de 55 mm**, 49 mm entre centros. El
+> primer riel queda fijo y solo el segundo se mueve 15.35 mm; el valle crece
+> 12.35 y el fondo pasa a **319.76 mm**. Los paneles de las tres filas y sus
+> rieles se rehundieron juntos **1.50 mm**; anillo y marco no se mueven y forman
+> el borde visible. Las tres caras de panel son **fijas**: no hay bisagras,
+> barrido ni ángulo mínimo de apertura.
+> Diseño y mutaciones en
+> [`../docs/superpowers/specs/2026-08-31-case-tanda-b-design.md`](../docs/superpowers/specs/2026-08-31-case-tanda-b-design.md).
 >
 > Para señalar una pieza sin adivinar: `renders/piezas.py` arma
 > `build/sam17-piezas.blend` con **cada pieza como objeto con el nombre del
@@ -101,10 +113,10 @@
 > ([`...2026-08-26-case-esqueleto-aluminio-design.md`](../docs/superpowers/specs/2026-08-26-case-esqueleto-aluminio-design.md))
 > y de ahí, el 2026-08-28, a la pletina mecanizada de arriba.
 
-Spec: [`docs/superpowers/specs/2026-08-15-case-design.md`](../docs/superpowers/specs/2026-08-15-case-design.md) (rev. 27)
+Spec: [`docs/superpowers/specs/2026-08-15-case-design.md`](../docs/superpowers/specs/2026-08-15-case-design.md) (rev. 28)
 Board de intención: [`renders/propuesta-diseno-2026-08-16.png`](renders/propuesta-diseno-2026-08-16.png)
 — **manda sobre lenguaje visual, NO sobre cotas**: se dibujó para paneles de
-190 mm y un case de 500 × 380 × 350, y el case real mide 568.62 × 256.18 × 307.41.
+190 mm y un case de 500 × 380 × 350, y el case real mide 568.62 × 256.18 × 319.76.
 
 ## Formato: EUROrack 3U, las dos filas
 
@@ -119,6 +131,12 @@ Los raíles son **Z-Rails de Tiptop de 104 HP** (528.3 mm), comprados el
 2026-08-18. Llevan pletina roscada M3 continua, así que la separación la
 pone el costado al taladrarse, no el riel.
 
+La tercera fila, en el valle, es **KONDOR de 55 mm**. Usa los mismos Z-Rails,
+104 HP y `inset_er` de 3 mm, pero su separación vertical de **49 mm** es propia:
+no es Intellijel 1U ni se anuncia como compatible. Los tres paneles están
+rehundidos **1.50 mm** respecto del anillo y el marco; panel y riel se desplazan
+juntos para que el dorso siga apoyando en la cara del Z-Rail.
+
 Consecuencia: cualquier jack, perilla, panel ciego y módulo Eurorack
 comercial encaja. Lo que se perdió es la proporción del board de intención,
 que se dibujó para 190 mm.
@@ -129,7 +147,7 @@ que se dibujó para 190 mm.
 |---|---|
 | ancho total | **568.62 mm** = `ancho_util` + 2 × `t_anillo` (2026-08-28; era 544.32 con la costilla de chapa) |
 | alto total | **256.18 mm** |
-| fondo | **307.41 mm** (bbox de `costilla_2d`; era 308.94 con el contorno viejo) |
+| fondo | **319.76 mm** (bbox de `costilla_2d`; +12.35 por la fila KONDOR de 55) |
 | altura de entrepiso | **146.58 mm** |
 | ancho útil entre anillos | **540.62 mm** = `largo_riel` + `hol_riel` + 2 × `t_placa` (donde van rieles y miembros; era 528.32 antes del marco de la ventana, que hereda `t_placa`) |
 
@@ -298,9 +316,8 @@ frente vertical de 13, con las esquinas al radio de la chapa (`radio_chapa` =
 18 sobre la tabla, chaflán, frente y 10.27 mm subiendo por la cara de abajo
 hasta justo debajo de la placa de anclaje, que se retira 9 mm para dejarle
 sitio (`retiro_placa_inf`) — y atornillada a la **tabla** desde dentro con tres
-M4. Se para debajo de la cara del riel porque la fila de abajo es tapa y al
-abrir la esquina del riel del frente sale por la cara en s = 12.8: quedan 2.2
-mm de aire más los 2 del labio del riel bajo el panel. Lo mide `guarda_nariz()`.
+Se para debajo de la cara del riel fijo: quedan 2.2 mm de aire más los 2 del
+labio del riel bajo el panel. Lo mide `guarda_nariz()` como holgura estática.
 
 **La punta de arriba es cuadrada** (2026-08-21). El techo lleva una meseta de
 `marco_remate` = **50 mm** rematada por dos quiebres de 2 mm, en vez de la
@@ -316,14 +333,10 @@ cuadrarlo: de 9 mm de tangente a 17.
 el retorno de la meseta delante, el marco de la trasera detrás. Una esquina
 viva del anillo bajo un doblez a 90° asomaba 1.9 mm por fuera de la chapa.
 
-Los 16 mm de fondo que costó relajaron las tres cotas más apretadas del
-presupuesto, y ninguna se buscó: la tapa de la fila de arriba **abría 180°**
-en 2026-08-21 (venía de 151.2° y topaba con el remate) — **superado el
-2026-08-27**: con `APERTURA_MIN` = 60 la fila de arriba abre **123°** y la de
-abajo **63.8°** hoy (salida real de `clearance_budget.py`; los dos topan
-contra un miembro del esqueleto, no contra el remate). El resto de este
-párrafo describe el estado de 2026-08-21 y sigue siendo cierto sobre ESE
-punto en el tiempo. El chasis del PSU pasa de 3.33 a
+Los 16 mm de fondo que costó relajaron las cotas más apretadas del presupuesto.
+Las antiguas cifras de apertura de 2026-08-21/27 quedan anuladas por la decisión
+de paneles fijos y ya no salen de `clearance_budget.py`. El efecto dimensional
+que sí permanece es que el chasis del PSU pasa de 3.33 a
 **11.33 mm** contra los largueros de base —era «la cota más justa del
 montaje»— y el fondo libre de la bandeja sube de 46.7 a 62.7 mm.
 
@@ -357,19 +370,15 @@ Las dos cuelgan de las filas de M3 que la plancha **ya** llevaba a sus dos
 miembros: cero taladros nuevos en el acrílico, tornillos 1.5 mm más largos, y
 las diez cabezas que se veían sobre el PMMA pasan a verse sobre metal.
 
-Lo que se pagó entonces: `prof_sup` bajó de 29 a 27.5 para no tocar el inset,
-«cuyo acantilado está en 12.8». **Superado el mismo día por la tarde:** ese
-acantilado era de cuando la meseta era acrílico de 8 apoyado en el riel. Con la
-chapa de 1.5 la cara de abajo de la meseta queda a 18.9 del eje y nada de lo
-que gira pasa de 16.2 — se corrió `guarda_tapa()` con la meseta en el pico y la
-tapa de arriba siguió abriendo 121.5°. Así que **la meseta llega al pico**
-(`prof_sup` = **40.5**), `inset_remate_frente` muere y el riel-eje que asomaba
-en esos 13 mm queda tapado. Y en el pico la chapa **dobla 4 mm hacia abajo**
+Lo que se pagó entonces: `prof_sup` bajó de 29 a 27.5 para no tocar el inset.
+**Superado el mismo día por la tarde:** ese acantilado pertenecía a la meseta
+de acrílico de 8 apoyada en el riel. Con chapa de 1.5 la meseta **llega al pico**,
+`inset_remate_frente` muere y el riel fijo que asomaba queda tapado. En el pico
+la chapa **dobla 4 mm hacia abajo**
 por la cara de arriba (`retorno_meseta`): el canto libre de 528 mm deja de
-ondular y de leerse como repisa. No puede bajar más: el canto alto del panel
-gira con 16.18 de radio y con 4 quedan 0.80 mm radiales de margen
-(`guarda_retorno_meseta()`). Línea de sombra sobre el panel: 6 mm (2 de labio
-+ 4 de aire).
+ondular y de leerse como repisa. `guarda_retorno_meseta()` exige ahora **4 mm
+de margen estático** al panel/riel fijo. Línea de sombra: 6 mm (2 de labio + 4
+de aire).
 
 Lo vigila `guarda_marco_trasera()`, y lo primero que exige es justo lo del
 issue: que el ala de arriba tape el canto **entero** y muera en el doblez, sin
@@ -439,10 +448,10 @@ cercana, con `D = E t³/12(1−ν²)`, E = 3 GPa, ν = 0.37, t = 8:
 El punto más desasistido del costado **no era el suyo, ni antes ni después**:
 está en el canto trasero a media altura (x = 244, y = 128), donde además apoya
 la trasera — que el modelo no cuenta, así que el número va por el lado seguro.
-Las anclas son solo los cuatro M5 de larguero: los cuatro M4 de riel no cuentan
-porque dos son ejes de giro y dos son tornillos **de mano** que se quitan para
-abrir, y un anclaje que el usuario desmonta no es estructura. Contándolos el
-vano sale 111.3 en vez de 118.9.
+Las anclas acreditadas en esta cuenta conservadora son solo los cuatro M5 de
+larguero: los cuatro M4 fijos de riel cargan a través del marco y no se abonan
+como anclaje directo del costado. Contándolos, el vano saldría 111.3 en vez de
+118.9.
 
 **Se acota por flecha y no por tensión**, y la razón es que la tensión no es el
 limitante ni de lejos: para llegar a los 10 MPa el vano tendría que valer
@@ -484,16 +493,16 @@ voladizo transversal.
 **Las otras tres salidas están cerradas, y conviene que quede escrito para que
 nadie las reintente:**
 
-- **Acrílico de 6 mm**: bloqueado. La tapa invade el barrido del riel y la fila
-  de abajo pasa de abrir 180° (cifra de 2026-08-25; hoy abre 63.8°, ver
-  arriba) a 39.5°.
+- **Acrílico de 6 mm**: descartado en la revisión histórica por un barrido que
+  ya no aplica. No se reincorpora aquí: la solución vigente es aluminio de
+  3 mm por rigidez, camino de carga y unificación de materiales.
 - **Larguero de 30 mm** en vez de 20: entra por **0.24 mm**, que está por debajo
   de la tolerancia de la propia extrusión. Eso no es holgura, es suerte.
 - **Larguero de 40 mm**: no entra. Se pasa **4.76 mm** de su ventana, que la
   fijan las esquinas giradas de los dos raíles del valle.
 
-El aluminio resuelve por rigidez específica en vez de por espesor, y al ser más
-fino **devuelve 2 mm de barrido** en vez de comérselos.
+El aluminio resuelve por rigidez específica en vez de por espesor y devuelve
+2 mm de holgura estática.
 
 **Y no rompe el lenguaje visual**, que era la única objeción seria: los paneles
 de módulo ya son **PCB de aluminio** a los dos lados de esta banda. Una tapa de
@@ -522,11 +531,9 @@ propio desde entonces) — y la tapa que ata no existe: la meseta pasó a ser
 su propia ala el 2026-08-27, así que la «junta pegada, ahora desatornillable»
 de este párrafo describe una pieza que ya no está, aunque el larguero sigue.
 
-No cabía más adelante: el **barrido del Z-Rail al abrir la tapa** de la fila de
-arriba obliga a que su centro esté en x ≥ 286.17, y por eso el fondo creció de
-291.2 a 299.2, y luego a **307.2** cuando ese mismo larguero tuvo que retirarse
-otros 8 para que la trasera le pasara por delante. Con el centro en 289.22
-quedan 3.04 mm de margen — los mismos que tenía antes de moverse.
+La justificación histórica de esa X usaba el barrido de una tapa y queda
+superada. La geometría vigente se verifica con paneles y rieles fijos; el fondo
+actual es **319.76 mm** por la fila KONDOR y sus holguras estáticas.
 
 Y con eso **todos los largueros traseros comparten X**: una sola cota para todo
 el plano de apoyo de la trasera.
@@ -544,24 +551,6 @@ El vano libre entre los dos es **211.73 mm**, sobre 528 de ancho y 8 de espesor:
 0.15 mm de flecha con 50 N empujando en el centro, 0.6 mm si alguien se apoya
 con 200 N. La cuenta es la de una viga ancha biapoyada, `δ = PL³/48EI` con
 E = 3 GPa e I = 528·8³/12.
-
-**HISTÓRICO — superado el 2026-08-29** (la meseta llega al pico, ver arriba):
-la tapa **no llegaba hasta el pico**: se retiraba `inset_remate_frente` = 13 mm.
-Eso no era estética — era lo único que la dejaba abrir **cuando la meseta era
-acrílico de 8 apoyado en el riel**. Hasta entonces esta pieza
-giraba CON la tapa (por eso iba pegada al riel, que es parte de la tapa); al
-fijarla pasa a ser obstáculo, y una plancha fija encima de una bisagra bloquea
-la bisagra. Medido barriendo el conjunto giratorio contra la banda de la meseta:
-
-| retiro | la tapa abre |
-|---|---|
-| 0 mm | 13.2° |
-| 9.3 mm | 61.0° |
-| **13 mm** | **180°** (2026-08-21; hoy 123°, `APERTURA_MIN` desde el 2026-08-27) |
-
-Lo que queda descubierto por delante de la tapa no es un agujero: debajo está el
-propio Z-Rail, que llega a x=271.22. Es la línea de sombra entre la tapa que se
-abre y el marco que no.
 
 **Kerf: 0.** El proceso es **fresado CNC**, no láser (decidido el
 2026-08-17). El CAM del taller compensa el radio de herramienta como parte
@@ -756,17 +745,17 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Tornillo M4 avellanado (talón) | **3** | el pie del talón a la **tabla**, desde dentro — mismo herraje que las paticas y la nariz |
 | **NARIZ** — chapa 6082-T6 t=1.5 | **1** | la banda del frente: pie de **20.5** sobre la tabla, chaflán a 45° y frente vertical. El pie crece para no separarse más de 2 del talón: mismo estilo. Blank **545.62 × 50.20**. En cada punta, una muesca de **2.65** llega desde el canto libre del pie hasta la línea de doblez, a **20.06** (`largo − BD45/2`), con alivio de Ø2 a caballo de la esquina interior. Conserva sus tres dobleces |
 | Tornillo M4 avellanado (nariz) | **3** | el pie de la nariz a la **tabla**, desde dentro — mismo herraje que las paticas. Ninguno en la cara vista |
-| Z-Rail de Tiptop | **6** | 104 HP (528.32 mm), sección 23.8 × 10. Cuatro forman las dos filas 3U y dos la fila Intellijel 1U. Atornillan al **marco de la ventana**, no directo al anillo |
-| Tornillo **M4** para los rieles | **12** | roscan en el propio Z-Rail (M4 taladrado a 3.3 de fábrica). Sin tuerca, sin inserto. 4 de hombro (ejes de giro) + 4 moleteados (cierres) + 4 fijos (fila 1U, no giran) |
+| Z-Rail de Tiptop | **6** | 104 HP (528.32 mm), sección 23.8 × 10. Cuatro forman las dos filas 3U y dos la fila auxiliar **KONDOR de 55 mm**. Atornillan al **marco de la ventana**, no directo al anillo |
+| Tornillo **M4 fijo** para los rieles | **12** | roscan en el propio Z-Rail (M4 taladrado a 3.3 de fábrica). Sin tuerca, sin inserto, sin hombro, Belleville, palomilla ni cierre manual. Los seis rieles quedan fijos por ambas puntas |
+| **Tira anti-ruido del valle** | **1** | 0.20 mm nominal, oculta sobre el primer Z-Rail KONDOR; queda comprimida 0.10 mm en el gap de apoyo bajo la prolongación de 2 mm de la banda |
 | Tornillo M4 botón (brida del miembro alto) | **4** | por la punta del miembro alto, a rosca ciega en el anillo. Eran 8 con la brida del miembro bajo, que hoy es talón y va a la tabla. Eran M5 hasta el 2026-08-28: bajan a M4 porque la franja de 14 mm no admite las dos brocas (paso M5 + broca M5) a la vez |
 | **JUNTA DE ASIENTO EPDM** t=1 mm | **4** | dos por anillo: el perfil continuo del rebaje del costado y la tira del bolsillo de la trasera. Nunca aluminio contra acrílico |
 | **TACO DE EPDM adhesivo, 4.0 × 15** | **12** | seis en la cara interior del labio del techo y seis en la del talón. Sustituyen las dos tiras continuas de 2.5: fijan una luz nominal de 4.0 sin cerrar la salida entre tacos |
 | Tornillo M4 + **tuerca remachable** (clinch, PEM S-M4) | **4** | el chasis del PSU a la **tabla**, por el suelo, desde abajo. Se adelanta 1.5 con el pie del talón y entra al final por el frente; sus tornillos se aprietan después desde debajo de la tabla |
 | Tornillo **M3 botón** | **2** | **las pestañas** de la banda del valle **al marco de la ventana** (no al anillo, ruling R3). **La trasera ya no lleva ninguno**: va capturada como las mejillas (los 10 M3 con tuerca y arandela de nylon murieron el 29-08, más noche). **Atrás no se ve un tornillo** |
-| Arandela ANCHA d16 | **4** | en los ejes de giro. Eran 14 con las 10 tuercas de la trasera y 24 cuando las cabezas iban sobre el PMMA; hoy ningún tornillo toca acrílico |
-| Belleville M4 | 4 | precarga de los ejes: ~800 N dan 3.84 N·m de fricción, 1.5× el par de la tapa |
-| **Chapa de aluminio t=3 mm** — banda delantera del valle | **1** | vuelo delantero liso, desarrollo 572.00 × 18.30, con pestaña de 21 mm doblada en cada punta, atornillada al **marco de la ventana** con un M3 (no al anillo desde el 2026-08-28). Aleación recomendada, no obligatoria: 5754 H22 pasa a 130 MPa con margen (48.8 MPa real, `guarda_valle()`). Va al taller de CHAPA — sin recocido, sin diamantado, sin chaflán: eso es del PMMA |
-| **TABLA de madera maciza t=18 mm** | **1** | el suelo interior y el zócalo, una sola pieza, **588.62 × 327.41**. 2 filas de 3 M5 a **rosca ciega en el canto inferior del anillo** (una fila por anillo), uno redondo por fila (punto fijo) y dos en ranura de 10.5. Y **catorce taladros pasantes de 4.5**: 4 de las paticas, 3 de la nariz, 3 del talón y 4 del chasis (`guarda_zocalo()` los censa) |
+
+| **Chapa de aluminio t=3 mm** — banda delantera del valle | **1** | vuelo delantero liso, desarrollo **560.00 × 20.00**, con pestaña de 21 mm doblada en cada punta, atornillada al **marco de la ventana** con un M3 (no al anillo desde el 2026-08-28). Aleación recomendada, no obligatoria: 5754 H22 pasa a 130 MPa con margen (48.0 MPa real, `guarda_valle()`). Va al taller de CHAPA — sin recocido, sin diamantado, sin chaflán: eso es del PMMA |
+| **TABLA de madera maciza t=18 mm** | **1** | el suelo interior y el zócalo, una sola pieza, **588.62 × 339.76**. 2 filas de 3 M5 a **rosca ciega en el canto inferior del anillo** (una fila por anillo), uno redondo por fila (punto fijo) y dos en ranura de 10.5. Y **catorce taladros pasantes de 4.5**: 4 de las paticas, 3 de la nariz, 3 del talón y 4 del chasis (`guarda_zocalo()` los censa) |
 | Plancha acrílico t=8 mm | **3** | 2 costados + **trasera de 552.32 × 237.18**, con ondas, rejilla y KONDOR. **Ninguna lleva un taladro.** En el tramo trasero el costado entra 3.5. La trasera queda con su cara vista a **6.5** del plano trasero, dentro del bolsillo u = 5.5..16.5, y sus puntas entran 5.85. El labio del techo tapa 8.5 de su canto y los tacos conservan la rendija. Entra con el anillo B; no sale sin quitar un anillo |
 | Patica de goma con casquillo roscado | 4 | EPDM o NBR, Shore 45–55 A, **d20 × 10**. Se atornillan **a la tabla**, no al acrílico. **Se exige la curva carga-deformación: ≥ 0.25 mm de flecha con 22.8 N** — por debajo la pata AMPLIFICA los 100 Hz del toroide en vez de aislarlos (`flecha_pie`). Casquillo roscado moldeado: se atornilla, **no se pega** |
 
@@ -999,8 +988,8 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
       la banda del miembro alto y el talón; la trasera dentro de las bandas;
       el chasis a la tabla. Puertas nuevas: `guarda_marco_ventana()`,
       `guarda_miembro_alto()`, `guarda_talon()`, `guarda_trasera_dentro()`,
-      `taladros_marco_ventana()`, `taladros_talon()`. La tapa de arriba pasa
-      de abrir 121.5° a **180°**: el canal que la paraba ya no existe
+      `taladros_marco_ventana()`, `taladros_talon()`. Las tres caras de panel
+      quedan fijas; el canal de apertura y sus guardas ya no existen
 - [x] **La trasera capturada y el talón como la nariz** (2026-08-29, más
       noche): la trasera en dos bolsillos fresados en los anillos (los tres
       números del bolsillo del costado, girados), sin un taladro; el costado

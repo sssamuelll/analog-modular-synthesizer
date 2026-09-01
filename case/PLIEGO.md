@@ -219,7 +219,7 @@ el 2026-08-28:
 | `miembro_alto_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: techo **sin ranuras**, blank **593.02 × 73.85**, meseta de 50, retorno de 4, chaflán de 6 y labio de 20. Dos bridas de 27 × 14.5 con esquinas R2. Entran en los cajeados del anillo; no se dejan sobre la cara — **1 ud** |
 | `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: blank **545.62 × 42.23**, labio de 13, chaflán y pie de **22.5**. En cada punta del pie, muesca de 2.65 hasta la línea de doblez a 22.06, con alivio de Ø2 a caballo de la esquina interior. Conserva sus ocho pestañas lanzadas; el 6082-T6 sigue siendo obligatorio — **1 ud** |
 | `nariz_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: blank **545.62 × 50.20**, pie de **20.5** y tres dobleces. En cada punta del pie, muesca de 2.65 hasta la línea de doblez a 20.06, con alivio de Ø2 a caballo de la esquina interior — **1 ud** |
-| `tapa_valle_2d` | aluminio, 3 mm | chapa | corte + **plegado** |
+| `tapa_valle_2d` | aluminio, 3 mm | chapa | corte + **plegado**: blank **560.00 × 20.00**, dos pestañas de 21 mm y labio trasero de apoyo de 2.0 mm; sin taladros visibles en la banda |
 | `costilla_2d`, `costilla_dorso_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **fresado CNC**, sin plegar, sin soldar |
 | `bandeja_base_2d` | madera maciza, 18 mm | carpintería | corte + ranuras alargadas |
 | `marco_ventana_2d` | aluminio, `t_placa` = 6 mm, **láser** | chapa | corte + **6 cajeados** Ø8 × `prof_cajeado_riel` = 2.5 **por el lado del anillo** (bolsillos ciegos en UNA cara: dejan 3.5 mm bajo la cabeza del M4 del riel). Nota de mecanizado, no va en el DXF — ver abajo — **2 uds, PAR ESPEJADO**: mismo contorno, cajeado por caras opuestas. **Planitud ≤ 0.5 mm en 300** en el blank cortado: apoya en la cara mecanizada del anillo y doce M4 lo conforman contra ella (una pletina de 6 × 24 se aplana 0.5 con 200 N), pero con más de eso el acrílico lo nota |
@@ -373,10 +373,14 @@ que no son a 90° (la nariz, el retorno de la meseta) llevan sus líneas escrita
 arriba.
 
 **La tapa del valle** era acrílico de 5 mm hasta el 2026-08-25 y es la
-superficie horizontal entre las dos filas de módulos. Cambió de material
-porque el 70 % de su fondo está en voladizo —vuela 23.24 mm a cada lado de
-su larguero— y en PMMA de 5 fluía a 90 N, con lo que era la pieza más floja
-del case y a la vez donde se apoya quien se levanta.
+superficie horizontal entre las dos filas de módulos. Cambió a aluminio de
+3 mm porque en PMMA fluía a 90 N y era la pieza más floja del case. Desde la
+Tanda B ya **no trabaja como viga entre las pestañas**: el canto trasero se
+prolonga 2.0 mm sobre la cara del primer Z-Rail KONDOR y transmite ahí la
+carga de mano. Entre ambos se monta una tira anti-ruido adhesiva de
+**0.20 mm nominal, comprimida a 0.10 mm**; se compra en rollo y no tiene DXF.
+Con 200 N sobre una banda conservadora de 50 mm, `guarda_valle()` verifica
+flecha y tensión por debajo de sus techos.
 
 Desde el 2026-08-27 **tampoco es plana**: lleva una pestaña de 21 mm doblada a
 90° en cada punta. **Desde el 2026-08-28 esa pestaña ya NO se atornilla al
@@ -401,8 +405,8 @@ rechazó. El anillo que la sustituye no se pliega ni se suelda: es una pletina
 maciza, vaciada por el centro con fresadora CNC.
 
 - **Material y blank.** Pletina de aluminio de **14 mm** de espesor
-  (`t_anillo`). Blank aproximado **330 × 270 mm** (spec de diseño §9; el
-  contorno real mide 307.4 × 256.2 mm, `costilla_2d`, con margen de sujeción
+  (`t_anillo`). Blank aproximado **340 × 270 mm** (spec de diseño §9; el
+  contorno real mide 319.8 × 256.2 mm, `costilla_2d`, con margen de sujeción
   y desbaste).
 - **SON DOS PIEZAS ESPEJADAS, uno derecho y uno izquierdo.** Mismo contorno y
   misma ventana; los **rebajes, los cajeados, el chaflán de la ventana y las
@@ -525,7 +529,7 @@ por costilla — el anillo es una pieza, no siete tramos cerrados a soldadura.
 
 ### 6.2 La tabla — al carpintero
 
-`bandeja_base_2d`, **madera maciza de 18 mm, 588.62 × 327.41** (creció desde
+`bandeja_base_2d`, **madera maciza de 18 mm, 588.62 × 339.76** (creció desde
 570.62 × 328.94 el 2026-08-28: el anillo es más grueso que la vieja costilla
 de chapa y la tabla vuela `vuelo_zocalo` = 10 mm más allá de él por los cuatro
 lados). Es el suelo interior del case **y** el zócalo que sobresale: una sola
@@ -575,8 +579,8 @@ estropea un acabado que llegó bien.
   acrílico llega perfecto y se raya durante el ensamblaje: al deslizarlo por
   la mesa, al apoyar una herramienta, al girar una pieza sobre otra.
 - **Ningún tornillo toca acrílico** desde el 29-08 (más noche): los costados
-  y la trasera van capturados. (El apriete de 1.0 N·m con d16 y rosca seca de
-  `par_m3` queda para los ejes de giro; sobre PMMA ya no hay ninguno.)
+  y la trasera van capturados. Los paneles y sus seis Z-Rails quedan fijos;
+  no existen ejes de giro, cierres manuales ni tornillos de fricción.
 - **Paticas**: goma con casquillo roscado, **atornilladas, nunca pegadas**.
   El case no lleva ninguna junta irreversible desde el 2026-08-21.
 
@@ -594,7 +598,8 @@ contradicen, el equivocado es este documento.**
 | apriete 1.0 N·m / d16 | `par_m3`, `d_arandela` | `guarda_apriete()` |
 | flecha de patica 0.25 mm | `flecha_pie` | `guarda_paticas()` |
 | fresa ⌀3 mm | `fresa_d` | `guarda_fresado()` |
-| tapa del valle, aluminio 3 mm | `t_valle` | `guarda_valle()` |
+| tapa del valle, aluminio 3 mm; apoyo 2.0; tira 0.20 comprimida a 0.10 | `t_valle`, `apoyo_valle`, `tira_valle_nominal`, `compresion_tira_valle` | `guarda_valle()` |
+| fila auxiliar KONDOR 55 mm / centros 49 mm; paneles y rieles rehundidos 1.50 | `alto_panel_1u`, `inset_er`, `rehundido_panel` | `guarda_fila_1u()`, `guarda_rehundido_panel()` |
 | anillo: espesor 14, cara 20, rebaje 6, rehundido 3, chaflán 1.5 × 45° | `t_anillo`, `cara_anillo`, `rebaje_anillo`, `rehundido_acrilico`, `chaflan_anillo` | `guarda_anillo()`, `guarda_rebaje()` |
 | roscas ciegas del anillo, broca M4 3.3 / M5 4.2 | `d_M4_rosca`, `d_M5_rosca` | `guarda_anclajes()`, `taladros_anillo()` |
 | junta de asiento EPDM 1 mm (costado y trasera) | `t_junta_asiento` | `guarda_rebaje()`, `guarda_trasera_capturada()` |
