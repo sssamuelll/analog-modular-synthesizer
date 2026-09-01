@@ -76,6 +76,11 @@ TOL = 4.0
 # completo y se manda a cortar (constitucion, Principio V).
 SIN_DXF: dict[str, str] = {}
 
+# Consumibles modelados como caja para solapes/camino de carga, no piezas de
+# corte. No son un DXF pendiente y por eso no entran en SIN_DXF: la tira del
+# valle se compra en rollo y se corta al montar.
+SIN_ARTEFACTO = {"tira anti-ruido valle"}
+
 # Piezas que van GIRADAS con una cara, o sea que su caja en el mundo NO es su
 # DXF. Esta vacio desde el 2026-08-21: la unica que estaba era la pestana de
 # remate, que iba de canto sobre la cara de arriba y median 10.75 x 528 de caja
@@ -178,7 +183,8 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
         nombre, x0, x1, y0, y1, z0, z1 = caja
         # las dos tiras laterales de la trasera (bajo sus muescas de esquina)
         # son cajas para solapes(), no piezas: el DXF es el contorno entero
-        if nombre in SIN_DXF or nombre in GIRADAS or " lado " in nombre:
+        if (nombre in SIN_DXF or nombre in SIN_ARTEFACTO
+                or nombre in GIRADAS or " lado " in nombre):
             continue
         aristas = sorted((x1 - x0, y1 - y0, z1 - z0), reverse=True)
         dims[f"{nombre}_2d"] = (aristas[0], aristas[1])   # se cae el espesor
@@ -798,14 +804,7 @@ def guarda_costado() -> list[str]:
     puerta vive aqui y no en clearance_budget -- misma razon que
     _contorno_costado().
 
-    EL APOYO CAMBIO DE NATURALEZA EL 2026-08-27, y con el esta puerta. Hasta
-    entonces el costado colgaba de ANCLAS -- los M5 de larguero, cuatro puntos
-    -- y el vano era la distancia al tornillo mas cercano. Se contaban solo los
-    M5: los cuatro M4 de riel quedaban fuera a proposito, porque dos son ejes de
-    giro y los otros dos tornillos DE MANO que el usuario quita para abrir, y un
-    anclaje desmontable no es estructura.
-
-    Ahora el costado no lleva un solo tornillo: queda ASENTADO EN EL REBAJE DEL
+    El costado no lleva un solo tornillo: queda ASENTADO EN EL REBAJE DEL
     ANILLO, y el labio lo sostiene hacia fuera por todo el perimetro. El vano
     deja de ser "distancia a un punto" y pasa a ser "distancia al canto de la
     ventana", que es apoyo continuo.
@@ -829,7 +828,7 @@ def guarda_costado() -> list[str]:
 
       HACIA FUERA  el labio del rebaje lo pisa por TODO el perimetro de la
                    ventana. Apoyo continuo, y el vano es la distancia al canto
-                   de la ventana. Es el barrido de siempre.
+                   de la ventana. Es la medicion de apoyo de siempre.
       HACIA DENTRO no hay labio: entre la cara del PMMA y la cara interior del
                    anillo quedan 3 mm de aire, y por ahi el acrilico se sale
                    del rebaje. Lo unico que lo para son APOYOS PUNTUALES sobre
@@ -1183,8 +1182,8 @@ def anillo_tiene_rebaje() -> list[str]:
                 f"fichero. Se buscaba su canto izquierdo a plomo cerca de "
                 f"x = {caj[0]:.2f} y su canto de abajo a nivel cerca de "
                 f"y = {caj[2]:.2f} (la huella de la brida mas hol_chapa por "
-                f"lado). Sin cajeado la brida apoya en la cara del anillo y "
-                f"vuelve al barrido del panel"]
+                f"lado). Sin cajeado la brida invade la envolvente estatica "
+                f"del panel fijo"]
     x_leido, y_leido = izq[0][0][0], aba[0][0][1]
     if abs(x_leido - caj[0]) > CARA_DXF_MAX or abs(y_leido - caj[2]) > CARA_DXF_MAX:
         return [f"costilla_dorso_2d: el cajeado de la brida arranca en el "
@@ -2132,11 +2131,9 @@ def cuerpos_dentro_del_anillo() -> list[str]:
     # rellenar su envolvente esconderia que el centro es aire.
     #
     # Aqui estan los SEIS railes de panel: los cuatro 3U y los dos horizontales
-    # de la fila 1U, todos fijados de punta a la costilla.
-    # cerrada, la tapa vive dentro del contorno como todo lo demas, y que ese
-    # riel quepa en el vertice es justo la cota que obligo a engordar
-    # marco_remate a 16. No hay ningun cuerpo excluido -- la bisagra que asomaba
-    # por diseno ya no existe: el eje es el propio M5 del riel.
+    # de la fila 1U, todos fijados de punta al marco. Todos viven dentro del
+    # contorno estatico; que el superior quepa en el vertice es justo la cota
+    # que obligo a engordar marco_remate a 16. No hay cuerpos excluidos.
     cuerpos = [(n, cb._esquinas_er(p, c, p[a]))
                for n, c, a in zip(cb.NOMBRES_CR, cr, cb.ANGS_CR)]
     cuerpos += [(f"fila 1U {i}", cb._esquinas_er(p, c, 90.0))

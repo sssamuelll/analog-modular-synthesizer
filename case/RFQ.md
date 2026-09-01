@@ -166,7 +166,8 @@ cada punta), el **talón** (blank 545.62 × 42.23, pie de 22.5 con muescas y
 ocho pestañas lanzadas), la
 **nariz** (la banda del frente, tres dobleces), los
 dos **marcos de la ventana** (pletina de 6 cortada a láser, con seis cajeados
-por el lado del anillo, un par espejado) y la tapa del valle. Son las piezas
+por el lado del anillo, un par espejado) y la **tapa del valle** (aluminio de
+3 mm, blank 560.00 × 20.00, dos pestañas y labio de apoyo de 2.0 mm). Son las piezas
 que llevan los rieles y sostienen el marco por dentro del anillo. (La bahía,
 tercer miembro hasta el 2026-08-29, y las placas, clips, escuadras y marcos de
 la trasera, muertos esa misma noche, ya no existen.)
@@ -199,6 +200,12 @@ la trasera, muertos esa misma noche, ya no existen.)
 El techo de esta tanda **no lleva ranuras**. Se eliminan 16 operaciones del
 blank y no aparece ningún proceso nuevo de chapa. Por eso no se añade una
 pregunta: basta cotizar el desarrollo vigente y sus pliegues.
+
+La tapa del valle apoya sobre el primer Z-Rail de la fila auxiliar KONDOR.
+La tira anti-ruido de 0.20 mm nominal (0.10 mm montada) es consumible de
+montaje y **no se pide al taller ni tiene DXF**. La fila mide 55 mm, no sigue
+el estándar Intellijel 1U, y los tres planos de panel quedan rehundidos
+1.50 mm respecto del anillo; no cambiar estas cotas para acomodar otro riel.
 4. **¿Cortan a láser pletina de 6 mm y le hacen bolsillos ciegos** (el marco
    de la ventana: Ø8 × 2.5 en seis puntos por el lado del anillo, una rosca
    M3 pasante)? No lleva doblez, solo contorno, cajeado y agujero de paso —

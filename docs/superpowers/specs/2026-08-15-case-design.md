@@ -1,7 +1,7 @@
 # SAM17 — Diseño del case (consola de dos pisos, esqueleto de aluminio)
 
 **Fecha:** 2026-08-15
-**Estado:** aprobado en diseño (rev. 27), pendiente de plan de implementación
+**Estado:** aprobado en diseño (rev. 28), pendiente de plan de implementación
 **Sustituye a:** formato de cajón de la tesis (madera 950 × 440 × 100–200 mm,
 paneles galvanizados pintados) descrito en
 [`docs/modules/08-case-panels.md`](../../modules/08-case-panels.md).
@@ -16,6 +16,11 @@ RP2350, la computadora es externa y opcional); spec de la fuente v2
 (board del departamento de diseño, 2026-08-16 — manda sobre proporciones y
 lenguaje visual).
 **Gobernada por:** [`.specify/memory/constitution.md`](../../../.specify/memory/constitution.md).
+
+> **Decisión vigente:** las tres caras de panel son fijas y desmontables por
+> tornillos. No hay bisagras, ejes de fricción, barridos ni requisitos de
+> ángulo de apertura. Esta decisión prevalece sobre las referencias históricas
+> a tapas practicables que permanecen en la cronología de revisiones.
 
 > Historial de revisiones — **rev. 1**: consola inclinada de un piso, cheeks
 > de madera, finger joints cementados, pantalla táctil de 7". **rev. 2**: todo
@@ -240,6 +245,17 @@ lenguaje visual).
 > el frente. Esta revisión sustituye la geometría y el montaje de la rev. 26
 > en esos puntos; conserva debajo el razonamiento que llevó a aquella.
 >
+> **rev. 28** (2026-08-31): **Tanda B — fila KONDOR de 55, banda apoyada y
+> paneles rehundidos 1.5**. La tercera fila deja de anunciarse como Intellijel:
+> mide 55 mm y 49 entre centros; el primer riel queda fijo y el segundo se
+> desplaza 15.35. `paso_horizontal` sube 58.47 → 70.82 y el fondo derivado queda
+> en **319.76 mm**. La banda se prolonga 2 mm a espesor completo sobre el primer
+> KONDOR y apoya mediante una tira anti-ruido de 0.20 nominal comprimida a 0.10;
+> `guarda_valle()` deja de publicar el HUECO de 213 mm / 27 N. Los paneles y sus
+> rieles se mueven juntos 1.50 hacia dentro; anillo y marco permanecen fijos y
+> la tapa inferior abre 63.8° contra 60 mínimos. Diseño completo en
+> [`2026-08-31-case-tanda-b-design.md`](2026-08-31-case-tanda-b-design.md).
+>
 > **rev. 26** (2026-08-29, más noche): **la trasera capturada como las
 > mejillas, y el talón como la nariz** — Samuel, mirando el render de la rev.
 > 25, en
@@ -460,7 +476,7 @@ esta dirección).
 | `angulo_inferior` | **35° desde la vertical** | Cara del piso de procesamiento |
 | `angulo_superior` | **45° desde la vertical** | Cara del piso de generación |
 | `alto_frontal` | **19 mm** | Canto delantero. **No es un zócalo**: el zócalo se eliminó. Fue 13 hasta rev. 10; subió para que el raíl de panel del frente librara la bandeja |
-| `fondo` / `alto_total` | derivados | **308.94 mm / 256.18 mm**. Ya NO cuadra con el board (350 × ~380): el board se dibujó para paneles de 190 |
+| `fondo` / `alto_total` | derivados | **319.76 mm / 256.18 mm**. Ya NO cuadra con el board (350 × ~380): el board se dibujó para paneles de 190. El fondo subió 12.35 en la rev. 28 por la fila KONDOR de 55 |
 | `t_valle` / `t_piel` | **3** / **8 mm** | `t_valle` es la tapa del valle y desde la rev. 20 es **chapa de ALUMINIO**: no entra en la medición de espesor de §11 ni en el pliego de acrílico. Se llamó `t_acrilico` hasta esa rev., y el nombre mentía sobre el material. La trasera tiene su propio espesor de 8, y ese sí se MIDE con calibre (§11) |
 | `t_base` / `t_cheek` | 8 mm | Suelo portante y costados. La bandeja de base subió de 5 a 8 al pasar a ser el propio canto de abajo |
 | `kerf` | **0** | Correcto fresando: el CAM compensa el radio de herramienta. Solo vuelve a ser negativo si se regresa al láser |
@@ -533,7 +549,7 @@ aquí va lo que sustituye a lo anterior.
   obligado: el costado en el rebaje, después los rieles al marco, después
   el marco al anillo desde dentro.
 - **Tabla de madera maciza de 18 mm**: el **suelo interior y el zócalo**,
-  una sola pieza de **588.62 × 327.41** (creció desde 570.62 × 328.94
+  una sola pieza de **588.62 × 339.76** (creció desde 570.62 × 328.94
   porque el anillo es más grueso que la chapa que sustituye) bajo el
   marco. Los dos anillos se le apoyan encima y las cuatro paticas van
   atornilladas debajo. **Su fijación va con agujero alargado** — un
@@ -673,10 +689,10 @@ escuadras de la rev. 22); **miembro alto** (una L de chapa de 1.5 con
 brida de extremo, la meseta y la banda de atrás) y **talón** (chapa de
 1.5, la banda de abajo con su pie a la tabla) — perfil 2020 comprado hasta
 el 2026-08-27, canales de chapa hasta la rev. 24; **6 Z-Rails de Tiptop de 104 HP** (528.32 mm, sección 23.8 × 10 —
-4 para las dos filas 3U, 2 para la fila Intellijel 1U del valle);
-tornillería inox M3/M4/M5 de botón + arandelas (**arandela ANCHA d16**
-contra todo M3 que muerde acrílico y en los cuatro ejes de giro — con la d9
-normal el acrílico fluye); tuercas T de inserción lateral, no de deslizar;
+4 para las dos filas 3U, 2 para la fila auxiliar KONDOR de 55 mm del valle);
+tornillería inox M3/M4/M5 de botón; los 12 M4 de los seis Z-Rails son fijos,
+sin tornillos de hombro, cierres manuales, Belleville ni arandelas de fricción;
+ningún tornillo muerde acrílico; tuercas T de inserción lateral, no de deslizar;
 **junta de asiento EPDM de 1 mm** (×2, una por anillo, nueva de la rev. 22
 — sustituye al casquillo de aluminio y a la junta de 4 mm de la rev. 21);
 tabla de madera maciza de 18 mm; paticas de **goma** EPDM/NBR con

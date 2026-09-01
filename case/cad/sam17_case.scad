@@ -87,23 +87,8 @@ function pts_perfil() =
 // del valle solo 2.6, asi que exigir el mismo inset en los dos extremos
 // regalaria 12 mm de altura de piso sin comprar nada.
 //
-// SON CUATRO: dos por cara, como cualquier fila EUROrack. Estuvieron en TRES
-// hasta el 2026-08-17 porque la bisagra ocupaba la linea de tornillo de arriba,
-// y un nudillo no es un riel: no tiene ranura ni tuercas, no le atornillas un
-// modulo. Samuel lo cazo mirando el render. La bisagra se mudo a la arista del
-// techo (ver eje_visagra()).
-//
-// LOS CUATRO LLEVAN M5 AL COSTADO, pero no todos hacen lo mismo:
-//   cr[1]         EJE de la fila de abajo, que TAMBIEN es tapa (guarda_tapa).
-//   cr[0]         CIERRE de la fila de abajo: se quita para abrirla.
-//   cr[3]         EJE de la fila de arriba. Tornillo de hombro, no se aprieta.
-//   cr[2]         CIERRE de la fila de arriba.
-// (Decia "cr[0], cr[1] fijacion, la cara de abajo no se mueve" hasta el
-// 2026-08-29: llevaba dos dias desmentido por guarda_tapa() y por params.)
-// Aqui hubo un rato en que cr[2] no llevaba taladro, con el argumento de que
-// con los dos extremos empernados la tapa no gira. Cierto, pero de ahi no se
-// sigue dejar el riel sin nada: se sigue que ese tornillo sea QUITABLE. Samuel
-// lo cazo en el render preguntando donde estaba el tornillo de ese riel.
+// SON CUATRO: dos por cara, como cualquier fila EUROrack. Los cuatro quedan
+// fijos al marco por ambas puntas; ninguno funciona como eje o cierre manual.
 
 // Semiextension del riel EUROrack ya girado con su cara. NO es un cuadrado:
 // mide rail_er_alto a lo largo de la cara y rail_er_fondo hacia dentro, asi que
@@ -118,7 +103,7 @@ function centros_rail() =
     let (P = pts_perfil(),
          // el eje del M5 de punta esta a rail_er_eje del panel, no a rail/2:
          // el riel es hondo y su taladro cae en su centroide
-         off = t_panel + rail_er_eje,
+         off = rehundido_panel + t_panel + rail_er_eje,
          // [origen, fin, los s sobre la cara que llevan riel]
          caras = [[P[1], P[2], [inset_inf_frente,
                                 alto_cara_inf - inset_inf_valle]],
@@ -129,32 +114,20 @@ function centros_rail() =
              n = [d.y, -d.x])                       // normal hacia dentro
         c[0] + d*s + n*off];
 
-// Los dos Z-Rails de la fila Intellijel 1U. Cruzan ancho_util exactamente como
+// Los dos Z-Rails de la fila auxiliar KONDOR. Cruzan ancho_util exactamente como
 // los cuatro 3U y se atornillan por sus puntas a la placa del valle. La
 // separacion sale del panel, y el par va ARRIMADO AL FRENTE de la ventana del
-// valle (2026-08-29): el primer riel arranca donde acaba la banda, de modo que
-// entre la banda y el panel 1U queda el mismo labio de 2 mm que entre dos
-// filas cualesquiera, y lo que sobre de ventana queda detras, bajo el vuelo de
-// la cara de arriba, donde no se ve. Hasta hoy se centraban en la boca de la
-// bahia, y la bahia murio ese dia (nota 1 de Samuel).
+// valle (2026-08-29): el primer riel recibe bajo su cara delantera los 2 mm de
+// prolongacion maciza y la tira anti-ruido. Lo que sobre de ventana queda
+// detras, bajo el vuelo de la cara de arriba, donde no se ve. Hasta hoy se
+// centraban en la boca de la bahia, y la bahia murio ese dia (nota 1 de Samuel).
 function centros_rail_1u() =
     let (P = pts_perfil(),
-         xa = ventana_valle()[0] + rail_er_alto/2,
+         xa = frente_kondor() + rail_er_alto/2,
          sep = alto_panel_1u - 2*inset_er,
-         y = P[3].y - t_panel - rail_er_eje)
+         y = P[3].y - rehundido_panel - t_panel - rail_er_eje)
     [[xa, y], [xa + sep, y]];
 
-// El EJE DE LA TAPA no tiene funcion propia porque no es una pieza: es
-// centros_rail()[3], o sea el taladro del M5 con el que el riel de arriba se
-// fija de punta al costado. Ese tornillo entra a lo largo del ancho, que es la
-// direccion de un eje de giro, asi que el riel gira sobre el y arrastra la cara
-// entera. Ver la nota de params.scad donde estaba d_visagra.
-//
-// El radio de giro del riel (hypot(rail_er_fondo, rail_er_alto)/2 = 14.58 mm)
-// vivio aqui como funcion mientras el larguero de remate superior tenia que
-// librarlo. Ese larguero se retiro el 2026-08-21 y con el la unica llamada; la
-// cota sigue viva en _radio_giro_riel() de clearance_budget.py, que es donde de
-// verdad se usa: la guarda del barrido de la tapa.
 
 // Tangente de la curva de un vertice: cuanto acrilico se come el redondeo a lo
 // largo de cada arista. Es la misma cuenta que _arco hace por dentro, sacada
@@ -168,9 +141,11 @@ function tangente(V, a, b, r) = _r_util(V, a, b, r) / tan(_ang(a, b) / 2);
 //   detras   holgura_rail por delante del riel del valle de la cara de arriba,
 //            contra su ESQUINA girada (he_er_x), no contra su centro.
 function x_valle() =
-    let (P = pts_perfil(), cr = centros_rail())
+    let (P = pts_perfil(), cr = centros_rail(),
+         dx_inf = rehundido_panel*cos(angulo_inferior),
+         dx_sup = rehundido_panel*cos(angulo_superior))
     [P[2].x + tangente(P[2], P[1]-P[2], P[3]-P[2], radio_pico),
-     cr[2].x - he_er_x(angulo_superior) - holgura_rail];
+     cr[2].x - he_er_x(angulo_superior) - holgura_rail + dx_inf - dx_sup];
 
 // largueros del esqueleto (2020) que no son railes de panel:
 // base delantera, base trasera, valle, remate trasero.
@@ -257,13 +232,12 @@ function x_valle() =
 // anadir un cuarto miembro sin tocar esta lista deja los tres sitios en
 // desacuerdo y el eco corto -- que es exactamente lo que pasaba mientras el
 // numero salia de centros_transversal().
-// DOS desde el 2026-08-29: la bahia -- la bandeja bajo la fila 1U que hacia de
+// DOS desde el 2026-08-29: la bahia -- la bandeja bajo la fila auxiliar que hacia de
 // tercer miembro -- se fue por decision de Samuel ("en el valle solo irian los
-// dos Z-rail del 1U"). Lo que ata los anillos a media altura son los seis
+// dos Z-rail de la fila"). Lo que ata los anillos a media altura son los seis
 // rieles por sus placas, la tabla debajo y la trasera detras; el racking del
 // conjunto sigue siendo #203 y se cierra cargando el prototipo.
 function miembros_lista() = ["trasero alto", "talon"];
-function radio_giro_riel() = norm([rail_er_fondo, rail_er_alto]) / 2;
 // LA CARA INTERIOR DE LA TRASERA. La trasera va DENTRO de las dos bandas
 // (la del miembro alto arriba, la del talon abajo): su cara trasera contra la
 // cara interior de las bandas, rehundida t_costilla del plano trasero -- como
@@ -273,13 +247,19 @@ function x_trasera_int() = trasera_x1() - t_piel;
 function y_meseta() = pts_perfil()[5].y - marco_sup;
 
 // LA VENTANA DEL VALLE: lo que queda libre entre los dos rieles 3U que miran al
-// valle, y es donde vive la fila 1U. Delante la manda el BARRIDO del riel del
-// valle de la fila de abajo (que gira sobre su propio M4: radio de giro mas
-// holgura), no su esquina quieta; detras, la esquina girada del riel de arriba
-// menos holgura_rail, que es donde acaba x_valle(). Era la boca de la bahia
-// hasta el 2026-08-29. GEMELA de _ventana_valle() en clearance_budget.py.
+// valle, y es donde vive la fila auxiliar KONDOR. Delante manda la envolvente
+// CERRADA del riel inferior mas holgura: los paneles son fijos y se desmontan
+// quitando tornillos, no giran sobre ellos. Detras manda la esquina cerrada del
+// riel superior. GEMELA de _ventana_valle() en clearance_budget.py.
 function ventana_valle() =
-    [centros_rail()[1].x + radio_giro_riel() + holgura_rail, x_valle()[1]];
+    [centros_rail()[1].x + he_er_x(angulo_inferior) + holgura_rail,
+     x_valle()[1]];
+
+// X historica del primer KONDOR. Rehundir el riel 3U inferior mueve el borde
+// conservador de ventana_valle() en X, pero KONDOR solo baja: descontar esa
+// componente evita arrastrar la fila y su apoyo lateralmente.
+function frente_kondor() =
+    ventana_valle()[0] - rehundido_panel*cos(angulo_inferior);
 
 // EL TALON (2026-08-29, noche): la banda de abajo del plano trasero y su pie
 // sobre la tabla. Sustituye al miembro trasero bajo: un angulo de la misma
@@ -780,8 +760,8 @@ module costilla_dorso_2d() {
 //                           (guarda_trasera_capturada, guarda_marco_ventana)
 //
 // Y UNA MUESCA sobre la brida del miembro alto, en la esquina trasera-alta:
-// la brida apoya en la cara del anillo -- fuera del barrido del panel, que
-// es lo que decide -- y el marco vive en esa misma franja, asi que se aparta.
+// la brida apoya en la cara del anillo y el marco vive en esa misma franja,
+// asi que se aparta. Todo se comprueba en la envolvente estatica cerrada.
 //
 // TODO ESTO ES GEMELO de _marco_ventana(), _roscas_marco(), _bridas() y
 // _centros_rosca_ciega() en clearance_budget.py, y quien las cruza es
@@ -822,7 +802,7 @@ function patas_filas() =
              u = (B - A)/L, n = [u.y, -u.x],
              tres = len(t[3]) > 0,
              centros = tres ? [for (i = t[3]) cr[i]] : c1u,
-             // LA SEGUNDA 1U NO LLEVA ROSCAS y no es un olvido: radio_valle
+             // EL SEGUNDO KONDOR NO LLEVA ROSCAS y no es un olvido: radio_valle
              // vale 54 y curva la franja del valle, y una broca puesta ahi
              // sale por la pared del rebaje.
              ejes = [for (k = [0 : len(centros) - 1])
@@ -841,7 +821,8 @@ function patas_filas() =
              vecino = t[0] == "cara_sup" ? retiro_marco_chapa() : 0,
              s1v = L - max(retiro_vertice(t[2]), vecino),
              s1 = tres ? s1v
-                       : max(s1v, max([for (e = ejes) e[0]]) + 2*d_M4_paso))
+                       : max(s1v, max([for (e = ejes) e[0]])
+                                  + 2*d_M4_paso))
         [t[0], A, u, n, s0, s1, ejes]];
 function pata(nombre) = [for (q = patas_filas()) if (q[0] == nombre) q][0];
 
@@ -881,8 +862,8 @@ function ejes_marco() = [for (q = patas_filas(), e = q[6]) e[1]];
 // La brida de extremo del miembro alto: sus dos M4 en el cajeado de la meseta.
 // Regla de chapa: el agujero no entra en la zona del doblez (setback + 2t +
 // radio). Dobla del EXTREMO DE LA BANDA, en el plano trasero, y apoya en el
-// SUELO DEL CAJEADO (2026-08-30; apoyaba en la cara del anillo): sigue fuera
-// del barrido del panel -- mas lejos, no mas cerca --, con el marco muescado
+// SUELO DEL CAJEADO (2026-08-30; apoyaba en la cara del anillo): queda fuera
+// de la envolvente estática del panel fijo, con el marco muescado
 // encima. En y no se mueve: dobla del extremo del labio, que muere donde la
 // rendija manda, y su canto de arriba queda en y_meseta() como siempre.
 function brida_raiz() = radio_doblez_costilla + 3*t_costilla + d_M4_paso/2;
@@ -948,7 +929,7 @@ module banda_marco_2d(b) {
 // (pts_perfil, sin redondear), no desde la silueta redondeada. Da lo mismo
 // en las esquinas convexas -- el offset hacia dentro de un redondeo convexo
 // es una esquina viva igual --, pero en P3, el rincon concavo de radio 54,
-// el offset de la silueta sube en arco y dejaba el paso del segundo riel 1U
+// el offset de la silueta sube en arco y dejaba el paso del segundo riel KONDOR
 // a 6.26 del canto (check_dxf lo cazo). Con las aristas rectas el marco es
 // mas hondo en ese rincon -- pisa 9 de acrilico en vez de 6, sin
 // consecuencia -- y el paso se queda a 10.
@@ -1019,13 +1000,12 @@ module marcos_ventana() {
 // donde se atornilla desde dentro con tres M4. Ningun tornillo en la cara
 // vista.
 //
-// HASTA DONDE SUBE lo manda la placa de anclaje de la cara de abajo: en las
+// HASTA DONDE SUBE lo manda la envolvente fija de la cara de abajo: en las
 // puntas las dos viven en la misma rebanada de z, asi que la banda acaba
 // hol_piel por debajo del arranque de la placa (que a su vez se retira
 // retiro_placa_inf para dejarle sitio). Y NO PUEDE TAPAR LA CARA DEL RIEL: la
-// fila de abajo es tapa y gira sobre el riel del valle, y al abrir la esquina
-// honda del riel del frente sale por la cara en s = 13.0 -- la nariz es fija y
-// tiene que quedarse debajo. Queda una linea de sombra de ~2 mm mas los 2 de
+// nariz fija tiene que quedarse debajo del Z-Rail y del panel fijos. Queda una
+// linea de sombra de ~2 mm mas los 2 de
 // labio del riel bajo el panel, lo mismo que entre dos filas de cualquier
 // Eurorack. Lo mide guarda_nariz() en clearance_budget.py.
 //
@@ -1899,10 +1879,19 @@ function pv_a() = pv_sb() + 2*t_valle + d_M3_paso/2;
 function pv_desarrollo(d) = pv_bd() - d;
 
 // Donde va el tornillo, en X del perfil. La pestana ocupa los ultimos 3D del
-// vuelo delantero: es el minimo que deja 1.5D de material a cada lado del M3 y
-// abre 63.75 grados; con 11 mm se quedaria en 59.5 y guarda_tapa() la rechaza.
+// vuelo delantero: deja 1.5D de material a cada lado del M3. No hay requisito
+// de apertura: los paneles se desmontan quitando sus tornillos.
 function pv_ancho_x() = 3*d_M3_paso;
-function pv_x() = ventana_valle()[0] - pv_ancho_x()/2;
+function pv_x() = frente_kondor() - pv_ancho_x()/2;
+
+// Cotas publicadas del desarrollo y la cuenta estructural. Las mismas
+// expresiones alimentan el DXF/puerta; el BOM no conserva numeros a mano.
+function tapa_valle_desarrollo_ancho() = tapa_valle_au() + 2*pv_vuelo();
+function tapa_valle_desarrollo_fondo() =
+    frente_kondor() - x_valle()[0] + apoyo_valle;
+function tension_valle() =
+    6*carga_mano*(frente_kondor() - x_valle()[0])
+        /(b_mano_valle*t_valle*t_valle);
 
 // LA BANDA MUERE CONTRA LAS PLACAS DEL VALLE, no contra el anillo, desde el
 // 2026-08-28: mide lo mismo que un riel y sus dos pestanas apoyan planas
@@ -1917,12 +1906,12 @@ function tapa_valle_au() = ancho_util - 2*t_placa;
 module tapa_valle_2d() {
     au = tapa_valle_au();
     xv = x_valle();
-    // Solo queda el vuelo DELANTERO: acaba antes del primer Z-Rail 1U. La
-    // banda queda maciza: Samuel no quiere ver ranuras en el valle.
-    largo = ventana_valle()[0] - xv[0];
-    // El Z-Rail 3U del valle roza 0.57 mm de la esquina libre de la pestana.
-    // Una muesca de 1 x 1 lo libra sin acercarse al M3 ni separar la pieza.
-    inicio_pestana = largo - pv_ancho_x();
+    // El contorno incorpora la prolongacion maciza sobre el primer KONDOR.
+    largo_vuelo = frente_kondor() - xv[0];
+    largo = largo_vuelo + apoyo_valle;
+    // Los paneles son fijos: las pestanas terminan en la cara del primer
+    // KONDOR, sin desplazamiento destinado a un barrido de apertura.
+    inicio_pestana = largo_vuelo - pv_ancho_x();
     difference() {
         union() {
             plancha(au, largo);
@@ -1932,7 +1921,7 @@ module tapa_valle_2d() {
                 translate([lado ? au : -pv_vuelo(), inicio_pestana])
                     square([pv_vuelo(), pv_ancho_x()]);
         }
-        // Alivio gemelo en la esquina libre DELANTERA de cada pestana.
+        // Alivio gemelo para el contacto estatico con el Z-Rail 3U fijo.
         translate([-pv_vuelo(), inicio_pestana])
             square([muesca_riel_valle, muesca_riel_valle]);
         translate([au + pv_vuelo() - muesca_riel_valle, inicio_pestana])
@@ -2351,6 +2340,7 @@ else if (PART == "assembly")           assembly();
 else if (PART == "assembly_acrilico")  assembly_acrilico();
 else if (PART == "assembly_aluminio")  assembly_aluminio();
 else if (PART == "assembly_madera")    assembly_madera();
+else if (PART == "assembly_juntas")    assembly_juntas();
 else if (PART == "assembly_esqueleto") assembly_esqueleto();
 else if (PART == "assembly_acero")     assembly_acero();
 else if (PART == "bandeja_base_2d")      bandeja_base_2d();
@@ -2419,13 +2409,16 @@ module rails() {
             rotate([0, 0, -angs[i]])
                 rotate([90, 0, 0])
                     rail_er(ancho_util - 2*t_placa);
-    // Fila horizontal 1U: mismo largo y la misma fijacion M4 de punta que los
-    // 3U. El giro de 90 deja rail_er_alto sobre X y rail_er_fondo hacia -Y.
+    // Fila horizontal KONDOR: mismo largo y la misma fijacion M4 de punta que los
+    // 3U. El taladro no esta centrado en los 23.8 mm de fondo: la traslacion
+    // local deja la cara exterior exactamente a rail_er_eje del eje M4, donde
+    // apoyan el panel y el labio del valle.
     for (c = centros_rail_1u())
         translate([c.x, c.y, ancho_total/2])
             rotate([0, 0, -90])
                 rotate([90, 0, 0])
-                    rail_er(ancho_util - 2*t_placa);
+                    translate([rail_er_fondo/2 - rail_er_eje, 0, 0])
+                        rail_er(ancho_util - 2*t_placa);
 }
 
 // --- planchas del cuerpo colocadas en 3D --------------------------------
@@ -2514,6 +2507,19 @@ module tapa_valle() {
             linear_extrude(t_valle) tapa_valle_2d();
 }
 
+// Tira oculta entre la prolongacion maciza y el primer KONDOR. En el modelo se
+// dibuja ya comprimida: 0.20 nominal - 0.10 de compresion = gap 0.10.
+module tira_anti_ruido_valle() {
+    P = pts_perfil();
+    x0 = frente_kondor();
+    y0 = P[3].y - rehundido_panel - t_panel;
+    calce = tira_valle_nominal - compresion_tira_valle;
+    // Cubre todo el ancho util. Las pestanas terminan justo en la cara del
+    // riel y no necesitan muescas destinadas a movimiento.
+    translate([x0, y0, t_anillo + t_placa])
+        cube([apoyo_valle, calce, tapa_valle_au()]);
+}
+
 // SIN LA TAPA DEL VALLE desde el 2026-08-25: es de ALUMINIO (t_valle) y se
 // fue a assembly_aluminio(). Si vuelve aqui, el render la pinta translucida y
 // naranja y ensena una pieza que no existe -- que es peor que no renderizarla.
@@ -2532,12 +2538,11 @@ module panel_cara(A, B, s0, largo) {
     // puede ser mas larga que el riel: mide ancho_util - 2*t_placa igual que
     // el, desde t_anillo + t_placa. Cruzo ancho_util entero hasta el
     // 2026-08-28 y esos 6 mm de mas por punta se metian DENTRO de la placa de
-    // anclaje -- que solapes() no ve, porque los paneles no entran en su lista
-    // (un rectangulo largo y fino en diagonal no se deja meter en una AABB).
-    // Lo canto el barrido de guarda_tapa(), que si los gira.
+    // anclaje. La puerta geometrica comprueba ahora la envolvente estatica del
+    // panel y sus rieles fijos.
     translate([A.x, A.y, t_anillo + t_placa])
         rotate([0, 0, atan2(d.y, d.x)])
-            translate([s0, -t_panel, 0])
+            translate([s0, -rehundido_panel - t_panel, 0])
                 cube([largo, t_panel, ancho_util - 2*t_placa]);
 }
 
@@ -2551,13 +2556,14 @@ module paneles() {
     P = pts_perfil();
     panel_cara(P[1], P[2], inset_inf_frente - inset_er, alto_panel_inf);
     panel_cara(P[3], P[4], inset_sup_valle  - inset_er, alto_panel_sup);
-    // Y LA FILA 1U (2026-08-29): con la bahia muerta, sin este panel el render
+    // Y LA FILA KONDOR (2026-08-29): con la bahia muerta, sin este panel el render
     // ensena el interior del case por el valle -- la trasera por dentro y su
     // rejilla --, que es exactamente lo que los tiles tapan. Un panel de
     // alto_panel_1u a ras del plano del valle, de canto a canto de sus dos
     // rieles (taladros a inset_er de cada canto), como los dos de 3U.
     c = centros_rail_1u()[0];
-    translate([c.x - inset_er, P[3].y - t_panel, t_anillo + t_placa])
+    translate([c.x - inset_er, P[3].y - rehundido_panel - t_panel,
+               t_anillo + t_placa])
         cube([alto_panel_1u, t_panel, ancho_util - 2*t_placa]);
 }
 
@@ -2594,6 +2600,7 @@ module assembly() {
     miembros();
     planchas_acrilico();
     tapa_valle();
+    tira_anti_ruido_valle();
     chasis();
     paticas();
     %paneles();                        // paneles de modulo: solo referencia
@@ -2602,6 +2609,12 @@ module assembly() {
 module assembly_acrilico() {           // STL separado para Blender (Task 8)
     costados();
     planchas_acrilico();
+}
+
+// Consumibles elastomericos en STL propio: la tira es parte del camino de
+// carga y no puede desaparecer del render ni pintarse como aluminio/acrilico.
+module assembly_juntas() {
+    tira_anti_ruido_valle();
 }
 
 // LA TABLA, en su propio STL. Sale de assembly_acrilico() el 2026-08-27 porque
@@ -2643,7 +2656,7 @@ module assembly_acero() {              // el chasis del PSU, cerrado
 // OJO CON EL WARNING de 2-manifold que suelta este export: es INHERENTE y no un
 // defecto que arreglar. Aqui hay cuerpos que se tocan A PROPOSITO -- el dorso
 // del panel apoya EXACTAMENTE en la cara del riel (esa distancia ES t_panel) y
-// roza tangente el nudillo de la bisagra --, y una union de solidos que comparten
+// roza tangente la transicion redondeada del perfil --, y una union de solidos que comparten
 // cara no es un 2-manifold limpio. Que salga o no salga el aviso depende de por
 // que lado caiga el redondeo de coma flotante, asi que aparece y desaparece al
 // mover el case (aparecio al bajar el suelo 17 mm, 2026-08-17). No afecta a
@@ -2759,8 +2772,8 @@ module bom() {
     echo(str("     Sobre las tres filas es EXACTAMENTE la placa de ayer: canto",
              " visto de ", t_placa, " a la silueta, cajeado de ", d_cajeado_riel,
              " x ", prof_cajeado_riel, " por el lado del anillo en cada uno de",
-             " sus 6 pasos de riel (cuatro 3U y dos 1U), dos roscas ciegas M4",
-             " por riel 3U, dos sobre el primer 1U y dos en la pata del suelo",
+             " sus 6 pasos de riel (cuatro 3U y dos KONDOR), dos roscas ciegas M4",
+             " por riel 3U, dos sobre el primer KONDOR y dos en la pata del suelo",
              " (el trabajo de los clips). En el frente, el suelo, la",
              " meseta y la trasera el canto exterior va RETIRADO -- ",
              retiro_marco(), " bajo cada chapa (nariz, pies, meseta, retorno) y ",
@@ -2773,9 +2786,8 @@ module bom() {
     echo("     Lleva ademas la rosca M3 pasante de la pestana de la banda del");
     echo("     valle, dos pasos M4 para la brida del miembro alto y UNA MUESCA");
     echo("     en la esquina trasera-alta, abierta al canto exterior, sobre la");
-    echo("     huella de esa brida (que apoya en la cara del anillo, fuera del");
-    echo("     barrido del panel de arriba: se probo subirla encima del marco");
-    echo("     y la tapa pasaba de abrir 121.5 grados a 52).");
+    echo("     huella de esa brida. La brida queda en su cajeado bajo la cara");
+    echo("     y las cabezas conservan la muesca del marco.");
     echo("     DXF de corte: marco_ventana_2d, UNO para las dos. El cajeado no");
     echo("     se dibuja: un DXF 2D no sabe decir 'a 2.5 de profundidad' y va");
     echo("     como NOTA DE MECANIZADO en el pliego, tres por una cara y tres");
@@ -2825,7 +2837,7 @@ module bom() {
              ", hoja de datos oficial. NO es el riel de StudioRacks: ese media",
              " 27.4 de fondo y el case estuvo dibujado contra el hasta el",
              " 2026-08-17. Cuatro forman las dos filas 3U y dos forman la fila",
-             " Intellijel 1U."));
+             " auxiliar KONDOR de 55 mm."));
     echo(str("BOM: tornillo M4 x12 para los rieles -- ROSCAN EN EL PROPIO RIEL ",
              "(viene con M4 taladrado a 3.3 de fabrica). Sin tuerca, sin inserto."));
     echo("     YA NO ATRAVIESAN LA COSTILLA. Cruzaron el acrilico hasta el");
@@ -2854,8 +2866,7 @@ module bom() {
              " marco de la ventana."));
     echo("     Tapa el riel del frente y el hueco entre anillos que se veian");
     echo("     desnudos desde delante y desde abajo (2026-08-29). Se para");
-    echo("     debajo de la cara del riel porque la fila de abajo es TAPA y ese");
-    echo("     riel sale por la cara al abrir; queda la linea de sombra del");
+    echo("     debajo de la cara del riel fijo; queda la linea de sombra del");
     echo("     labio, como entre dos filas de cualquier Eurorack.");
     echo(str("BOM: tornillo M4 avellanado x", len(nariz_m4_z()), " -- el pie de",
              " la nariz a la TABLA, desde dentro, con el mismo herraje que las",
@@ -2921,46 +2932,23 @@ module bom() {
     echo("     montan una vez; sacar la trasera es sacar un anillo. Su arista de");
     echo(str("     abajo-fuera va a chaflan de ", chaflan_trasera_bajo(), " x 45 (en el"));
     echo("     pliego, no en el DXF) para librar el escalon del bolsillo bajo el chaflan.");
-    // LAS DOS FILAS SON TAPA. Cada una gira sobre el M4 de su riel de arriba y
-    // se cierra con el de su otro extremo. Del total de tornillos del case
+    // LAS TRES FILAS SON FIJAS. Los paneles se desmontan quitando tornillos;
+    // ningun M4 de riel trabaja como eje o cierre de apertura. Del total
     // (12 M4 de riel + 24 M4 de marco al anillo + 4 M4 de brida + 3 M4 de la
     // nariz + 3 M4 del talon + 4 M4 del chasis + 2 M3 de pestana + 6 M5 de
     // la tabla = 58; eran 68 con los 10 M3 de la trasera hasta que se capturo
-    // la noche del 2026-08-29), solo CUATRO se tocan para
-    // abrirlo: dos por fila.
-    echo("BOM: los M4 de riel no son todos iguales --");
-    echo("     x4 EJES: tornillo de HOMBRO M4, espiga 4 mm (no M5 -- el riel");
-    echo("        cambio de herraje al cambiar de fabricante). Riel del valle");
-    echo("        de la fila de abajo, riel del vertice de la de arriba.");
-    echo("        Pila: Belleville + ARANDELA ANCHA d16. Ver la nota de abajo.");
-    echo("     x4 CIERRES: M4 de cabeza moleteada o palomilla -- se quitan a");
-    echo("        mano y son los unicos que se tocan para abrir el case.");
-    echo("        Riel del frente abajo, riel del valle arriba.");
-    echo("     x4 FIJOS: los dos Z-Rails 1U, atornillados por ambas puntas al");
-    echo("        MARCO DE LA VENTANA, no a la costilla. No son ejes ni");
-    echo("        cierres: no giran, no se quitan a mano.");
+    // la noche del 2026-08-29).
+    echo("BOM: x12 M4 FIJOS para los seis Z-Rails, atornillados por ambas");
+    echo("     puntas al MARCO DE LA VENTANA. No son ejes, hombros, cierres ni");
+    echo("     palomillas; no llevan Belleville ni se dimensionan por friccion.");
     echo("     Estos 12 son los M4 DE RIEL. El case lleva mas M4 en otras");
-    echo("     lineas de este BOM: marco al anillo x20, brida x4, nariz x3,");
+    echo("     lineas de este BOM: marco al anillo x24, brida x4, nariz x3,");
     echo("     talon x3, chasis x4.");
     echo("     Los M5 del case son SOLO los de la TABLA (6, a rosca ciega en el");
     echo("     canto inferior del anillo): los 2 del chasis murieron con el");
     echo("     miembro bajo la noche del 2026-08-29.");
-    echo("BOM: paneles ciegos en TODO hueco de LAS DOS filas -- no son estetica:");
-    echo("     con la tapa abierta son lo unico que ata sus dos rieles entre si");
-    // YA NO ES UN AMORTIGUADOR (2026-08-18). La tapa se queda abierta por
-    // FRICCION en su propio eje, que es la solucion que no anade ninguna pieza
-    // al case ni ningun taladro al acrilico.
-    echo("BOM: la tapa se sostiene abierta por FRICCION en su eje. Sin");
-    echo("     amortiguador, sin compas, sin anclaje nuevo.");
-    echo("     Par a vencer con la tapa horizontal: 2.5 N.m por fila");
-    echo("       (3.3 kg -- 2 rieles mas una fila llena -- a 77 mm de brazo).");
-    echo("     Dos ejes por fila con Belleville a ~800 N dan 3.84 N.m: 1.5x.");
-    echo("     LA ARANDELA ANCHA NO ES OPCIONAL. La friccion apoya sobre el");
-    echo("     costado, y el PMMA FLUYE bajo carga sostenida: por encima de");
-    echo("     ~10 MPa mantenidos la precarga se relaja sola en semanas y la");
-    echo("     tapa deja de quedarse abierta.");
-    echo("       arandela M4 normal (d9)  -> 16.3 MPa   se relaja");
-    echo("       arandela ANCHA   (d16)   ->  4.3 MPa   aguanta");
+    echo("BOM: paneles ciegos en TODO hueco de las tres filas; atornillados,");
+    echo("     completan el cierre y atan cada pareja de rieles.");
     // Decia "metalica torneada" y se quedo asi cuando las paticas pasaron a
     // GOMA el 2026-08-24 (spec rev. 18): el BOM del README y el PLIEGO ya
     // dicen goma con casquillo roscado, y este echo seguia mandando a comprar
@@ -2973,10 +2961,15 @@ module bom() {
              " mm de flecha con 22.8 N (flecha_pie). Las dos traseras van bajo",
              " el centro del pie del talon (x = ", centro_talon().x, ")."));
     echo(str("BOM: banda delantera del valle: chapa de ALUMINIO t=", t_valle,
-             " PLEGADA, desarrollo ", au + 2*pv_vuelo(), " x ",
-             ventana_valle()[0] - x_valle()[0], ". Es el vuelo delantero LISO,"));
-    echo("     de la punta del pico al primer Z-Rail 1U, sujeto SOLO por sus dos");
-    echo("     pestanas: guarda_valle() lo declara HUECO hasta que tenga apoyo.");
+             " PLEGADA, desarrollo ", tapa_valle_desarrollo_ancho(), " x ",
+             tapa_valle_desarrollo_fondo(),
+             ". Es el vuelo delantero LISO,"));
+    echo(str("     con prolongacion maciza de ", apoyo_valle,
+             " mm sobre el primer Z-Rail KONDOR."));
+    echo(str("     Tira oculta anti-ruido de ", tira_valle_nominal,
+             " mm nominal en gap ", tira_valle_nominal - compresion_tira_valle,
+             ", con ", compresion_tira_valle,
+             " mm de compresion; camino banda -> tira -> KONDOR -> marco."));
     echo("     No es acrilico desde el 2026-08-25; lleva una pestana");
     echo(str("     de ", pestana_valle, " doblada a 90 grados en cada punta,",
              " atornillada al MARCO DE LA VENTANA con un M3 (no al anillo",
@@ -2988,7 +2981,8 @@ module bom() {
     echo("     acrilico. Sin recocido, sin diamantado, sin chaflan de pliego:");
     echo("     esas tres cosas son del PMMA. Canto desbarbado y basta.");
     echo("     Aleacion recomendada, no obligatoria: 6082-T6. guarda_valle()");
-    echo("     calcula con Rp0.2 = 130 MPa (RP02_ALUMINIO) y a 48.8 MPa el");
+    echo(str("     calcula con Rp0.2 = 130 MPa (RP02_ALUMINIO) y a ",
+             tension_valle(), " MPa el"));
     echo("     5754 H22 pasa con margen -- fluye a 533 N. El eco decia");
     echo("     'obligatoria' y Rp0.2 = 250: no es lo que la puerta exige");
     echo("     hoy, corregido aqui.");

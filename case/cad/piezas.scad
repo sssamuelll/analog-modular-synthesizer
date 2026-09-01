@@ -22,7 +22,9 @@ module rieles_3u() {
 module rieles_1u() {
     for (c = centros_rail_1u())
         translate([c.x, c.y, ancho_total/2])
-            rotate([0, 0, -90]) rotate([90, 0, 0]) rail_er(au - 2*t_placa);
+            rotate([0, 0, -90]) rotate([90, 0, 0])
+                translate([rail_er_fondo/2 - rail_er_eje, 0, 0])
+                    rail_er(au - 2*t_placa);
 }
 
 if      (PIEZA == "anillos")           costillas();
@@ -34,6 +36,7 @@ else if (PIEZA == "nariz")             nariz();
 else if (PIEZA == "talon")             talon();
 else if (PIEZA == "miembro_alto")      miembro_alto();
 else if (PIEZA == "tapa_valle")        tapa_valle();
+else if (PIEZA == "tira_anti_ruido_valle") tira_anti_ruido_valle();
 else if (PIEZA == "costados")          costados();
 else if (PIEZA == "piel_trasera")      piel_trasera();
 else if (PIEZA == "tabla")             bandeja_base();

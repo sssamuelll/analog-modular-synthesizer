@@ -54,15 +54,12 @@ montaje a la vez.
 | 4 | **La bahía del valle es ESTRUCTURA**, no solo superficie de montaje | Bandeja no portante: el marco tendría que cerrar los 528 mm de vano solo. Una chapa en cortante ata las dos costillas mucho mejor que una barra, y de paso es donde se atornilla el patch bay: **una pieza, dos trabajos** |
 | 5 | **La meseta de remate se funde con el miembro trasero alto** | Dos piezas separadas (tapa de aluminio + miembro) es una junta más y un DXF más para nada: la tapa horizontal y el ala que recibe la trasera son los dos lados del mismo doblez |
 
-### 2.1 Lo que Samuel decidió NO hacer, y conviene tenerlo escrito
+### 2.1 Decisión posterior que sustituye el comportamiento de apertura
 
-- **Las bisagras siguen escondidas** dentro del Z-Rail. En la referencia son el
-  detalle más llamativo del aparato, y sacarlas fuera mueve el eje de giro y con
-  él el radio, y con el radio la apertura de las dos filas. **Enmienda del
-  2026-08-27:** las 180° dejaron de estar protegidas — el suelo es el de
-  `APERTURA_MIN`, 60°, y la fila de abajo abre 63.8° desde que el valle es una
-  fila 1U. La decisión de Samuel, literal: «lo de los 180 ya no es importante,
-  con 60 vamos más que bien». Las bisagras siguen escondidas por lo demás.
+- **Enmienda del 2026-08-31:** las tres caras de panel son **fijas** y sólo se
+  desmontan quitando tornillos. Ningún Z-Rail trabaja como eje o cierre, y no
+  existe ángulo mínimo ni barrido de apertura. Esta decisión sustituye por
+  completo las alternativas de apertura evaluadas en revisiones anteriores.
 - **La fila superior de módulos se queda.** «Tapa de aluminio arriba» significa
   la meseta más el marco visto por el borde, no convertir la cara de arriba en
   una tapa ciega.
@@ -428,14 +425,12 @@ case, dejando 25 mm. Se come el suelo entero.
 
 ### 9.3 Lo que NO se toca
 
-La tabla y su fijación de ranura alargada. Los 4 Z-Rails. La geometría del panel
+La tabla y su fijación de ranura alargada. Los 6 Z-Rails. La geometría del panel
 y el paso de 1 HP. El perfil escalonado. El relieve KONDOR. La ventilación.
 
-**Enmienda del 2026-08-27:** de esta lista salen **las 180° de apertura**.
-Estaban aquí porque costaron 16 mm de fondo, pero al montar la fila 1U en el
-valle Samuel las liberó — «con 60 vamos más que bien». Lo que las gobierna ahora
-es `APERTURA_MIN` en `clearance_budget.py`, y vale 60. Se anota en vez de
-borrarse: la cota no se perdió sola, se soltó a propósito.
+**Enmienda del 2026-08-31:** toda condición de apertura queda superada por la
+decisión de paneles fijos. Las envolventes cerradas y sus colisiones estáticas
+son las únicas que gobiernan el diseño.
 
 > **Enmienda del 2026-08-30.** La frase «La ventilación» dentro de «Lo que NO
 > se toca» queda **SUPERADA**. La salida ya cambió el 2026-08-28 y vuelve a
