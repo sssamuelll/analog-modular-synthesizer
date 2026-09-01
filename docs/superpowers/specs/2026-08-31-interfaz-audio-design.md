@@ -162,27 +162,52 @@ Ninguna de estas cuatro es motivo para no hacerlo. Las cuatro son motivo para
    capturada se acaban de dibujar: hay que contarlos contra ese dibujo, no
    contra el aire.
 
-### 4.1 El consumo, corrido — y el riesgo estaba mal identificado
+### 4.1 El consumo — rehecho contra DS14791 Rev 10, y el veredicto no cierra
 
-`power_budget.py` se reescribió contra **DS14791 Rev 2** el 2026-08-31. Las
-cifras, en Run mode a 800 MHz con todos los periféricos habilitados:
+> **Corrección propia (Principio VII).** La primera versión de esta sección
+> (2026-08-31, temprano) daba «171,7 mW por chip» y «161,6 mA los cuatro», y
+> concluía que el consumo sobraba. **Las dos cifras eran malas**, por dos
+> razones que se corrigieron el mismo día:
+>
+> 1. **Se leyeron mal las columnas.** Las tablas son `Típ` seguido de varios
+>    `Máx` (25/85/105/125 °C), no típicos por temperatura. El «206,7 mA típico
+>    a 85 °C» era el **máximo a 25 °C**.
+> 2. **Se usaron las tablas equivocadas.** Rev 10 las trae pareadas, «SMPS
+>    external» y «SMPS internal», y este instrumento va con el **conmutado
+>    interno** del chip (papel de la alimentación, D-R1).
 
-| Símbolo | Riel | Tabla | Típ 25 °C | Típ 85 °C | Máx 125 °C |
-|---|---|---|---|---|---|
-| `IDDCORE` | **0,81 V** | 28, p. 141 | 177,5 mA | **206,7 mA** | 839,0 mA |
-| `IDDA1V8` | 1,8 V | 29, p. 142 | 2,1 mA | 2,1 mA | 2,1 mA |
-| `IDD` | 1,8 V | 27, p. 140 | 0,3 mA | 0,3 mA | 0,4 mA |
+Con el conmutado interno, ST publica `IDDSMPS`: lo que el chip pide **en el riel
+de 1,8 V**, y **ya incluye el núcleo**. No hay eficiencia que estimar.
 
-Caso de diseño a **85 °C**, que es lo realista en un case cerrado:
-**171,7 mW por chip**, o **40,4 mA reflejados al +5 V** con un convertidor al
-85 %. **Los cuatro juntos son 161,6 mA.**
+| Símbolo | Tabla (Rev 10) | Pág. | Típ | Máx (125 °C) |
+|---|---|---|---|---|
+| `IDDSMPS` | **39** | 154 | 99,93 mA | 757,3 mA |
+| `IDDA1V8` | **36** | 151 | 2,67 mA | 3,12 mA |
+| `IDDA1V8AON` | **38** | 153 | 0,45 mA | 0,56 mA |
+| `IDD` | **32** | 147 | 0,27 mA | 0,40 mA |
+| | **Total por chip** | | **103,3 mA** | **761,4 mA** |
 
-**El `~0,2 A` que arrastrábamos del RP2350 eran 200 mA de un solo chip.** O sea
-que los cuatro N657 piden **menos** del riel de +5 V que la cifra vieja de uno.
-Por consumo, D-A1 no está ni cerca del límite: las cargas duras caben con uno y
-con cuatro, y solo con el host USB a tope y la cadena de LED en su caso real
-hace falta que el árbitro del #104 recorte 44 mA — que es exactamente para lo
-que ese árbitro existe.
+**Y aquí está el problema: entre los dos extremos hay 7,4×**, y el punto que
+decide —el **máximo a 85 °C**, que es donde vive el instrumento— **no está
+publicado** para la configuración de SMPS interno.
+
+Corrido (`power_budget.py`, camino D-R1: +5 V → buck → 3,3 V → LDO → 1,8 V):
+
+| Caso | Duras + host USB | Techo | |
+|---|---|---|---|
+| **Típico**, 4 chips | 0,965 A | 2,82 A | cabe, con el árbitro recortando cadena |
+| **Máx 125 °C**, 4 chips | 2,895 A | 2,82 A | **no cabe ni apagando todos los LED** |
+
+**El presupuesto de la fuente con cuatro N657 no está cerrado.** El guion no da
+verde ni rojo: sale con código 2 (HUECO) e imprime los dos extremos, porque
+afirmar «no cabe» con el máximo de 125 °C sería afirmar más de lo que sabemos
+—supone los cuatro chips a temperatura de unión máxima a la vez, y ahí el
+problema sería térmico antes que eléctrico— y afirmar «cabe» con el típico sería
+usar un típico como cota, que es el error que acabamos de corregir.
+
+**Lo que esto le hace a D-A1:** el cuarto chip ya no es gratis. En el típico
+entra; en el peor caso publicado, no. **Firmar D-A1 sin el máximo a 85 °C es
+firmar contra un dato que no tenemos.**
 
 **El riesgo real es otro, y es el que este papel tenía mal identificado.**
 
@@ -261,9 +286,11 @@ Ninguna se ejecuta hasta que D-A1 se firme (patrón conocido: #214, #248).
 
 ## 8. Lo que hay que correr o verificar antes de sellar
 
-1. ~~El consumo del N657 contra su hoja~~ — ✅ **CORRIDO Y VERDE**
-   (`power_budget.py`, 2026-08-31, §4.1): los cuatro piden 161,6 mA del +5 V,
-   menos que la cifra vieja de un solo RP2350. **Queda mandado en su lugar:**
+1. **El máximo de `IDDSMPS` a 85 °C**, que Rev 10 no publica (§4.1). Es el
+   único número que cierra el presupuesto de la fuente con cuatro chips: hoy
+   entre típico y máximo hay 7,4× y el veredicto queda en HUECO. **Sale de ST o
+   de medirlo en la Discovery (#231), y es prerrequisito de firmar D-A1.**
+   Además, y en el mismo papel de la alimentación:
    el **convertidor de punto de carga** de 0,81 V y 1,8 V —pieza, hoja,
    rendimiento real— y **dónde se pone su conmutación** para que no entre en
    el cuarto limpio. Ése es el prerrequisito duro de verdad.
@@ -288,7 +315,7 @@ Ninguna se ejecuta hasta que D-A1 se firme (patrón conocido: #214, #248).
 
 | # | Riesgo | Se cierra cuando |
 |---|---|---|
-| 1 | ~~Cuatro N657 no caben en el presupuesto de la fuente~~ | **CERRADO 2026-08-31**: 161,6 mA los cuatro, menos que la cifra vieja de uno (§4.1) |
+| 1 | **Cuatro N657 no caben en el presupuesto de la fuente** — sigue ABIERTO | §4.1: en típico caben (0,965 A contra 2,82 A); en el máximo publicado **no** (2,895 A). Falta el máximo a 85 °C, que es el que decide |
 | 1b | **Cuatro conmutadas de punto de carga dentro del cuarto limpio** — el riesgo que sustituye al 1, y el que puede tumbar el papel | Pieza y hoja del DC/DC elegidas, y su sitio decidido contra la doctrina de D-P6 (§8.1) |
 | 1c | El consumo con la NPU activa no existe en la hoja | §8.1bis; hoy `power_budget.py` sale con código 2 por esto |
 | 2 | Cuatro arranques desde XSPI, cuatro binarios firmados | El bring-up sale del mismo #231 |
