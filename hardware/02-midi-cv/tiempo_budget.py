@@ -43,8 +43,7 @@ _VOZ = tj.enlace("Voz total")
 BITS_TRAMA_J2 = _VOZ.trama_mas_larga_bits()
 T_TRAMA_J2 = _VOZ.t_trama_mas_larga_s()
 
-# --- Lo que sale del reloj del RP2350 ---
-F_SYS = 150e6
+# F_SYS era el reloj del RP2350; se retiro al nivelar al N657 porque no se usaba.
 
 # --- El objetivo musical, con fuente ---
 UMBRAL_ASINCRONIA_S = 2e-3  # el extremo apretado del rango documentado

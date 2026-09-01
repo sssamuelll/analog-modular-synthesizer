@@ -193,8 +193,9 @@ def demo() -> None:
         f"por ranura (&'static Descriptor + Valor = i32), la busqueda es "
         f"binaria sobre el conteo REAL y no sobre la capacidad, asi que "
         f"subirlo NO cuesta tiempo de ejecucion -- solo "
-        f"{8 * (necesario - MAX_PARAMS)} B mas de SRAM de los 520 KB del "
-        f"RP2350B")
+        f"{8 * (necesario - MAX_PARAMS)} B mas de SRAM; el STM32N657 tiene "
+        f"4.2 Mbytes de SRAM de sistema (DS14791 Rev 10, Tabla 5, p. 21; "
+        f"sec. 3.1, p. 23)")
     print("  OJO: este censo es de UN modulo y el techo es del INSTRUMENTO.")
     print("  No existe censo a nivel de instrumento: la reserva de arriba es")
     print("  DECLARADA, y ese censo es el que la mata.")

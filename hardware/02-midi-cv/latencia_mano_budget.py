@@ -54,9 +54,9 @@ concretos queda POR_CONFIRMAR: se mide con osciloscopio, no se declara.
   * El enlace del modulo de mandos no tiene papel (#178): corre al piso legado
     y su ocupacion se evalua ahi. El canal de vuelta del panel NO EXISTE como
     contrato; aqui se dimensiona lo que costaria.
-  * El barrido sigue viviendo en el cerebro en esta cuenta (N_MUXES contra las
-    entradas de ADC del RP2350B). El #178 lo muda al modulo de mandos con su
-    ADC propio; cuando tenga papel, el barrido se recalcula contra ESE ADC.
+  * Esta cuenta mantiene el barrido en el cerebro. El #178 lo muda al modulo de
+    mandos con su ADC propio, pero esa pertenencia no esta sancionada en su
+    papel; este guion no toma esa decision de arquitectura.
 """
 from __future__ import annotations
 
@@ -80,8 +80,8 @@ BITS_ESCRITURA = BITS_BLOQUE_TONO           # el bloque agrupado hacia la Voz
 
 # --- por confirmar (con su valor de trabajo) ---------------------------------
 T_ASENTAMIENTO_US = 5.0     # POR_CONFIRMAR: mux + impedancia del pote + S/H
-T_CONVERSION_US = 2.0       # CITADO: hoja del RP2350, p. 1071 -- "96 clock
-                            # cycles (96 x 1/48 MHz) = 2 us per sample"
+T_CONVERSION_CICLOS_12B = 13.5  # DS14791 Rev 10, Tabla 97, p. 205: tC
+T_CONVERSION_US: float | None = None  # HUECO: faltan fADC, resolucion y tS
 TAU_RC_MS = 0.0             # POR_CONFIRMAR: no hay filtro de reconstruccion
                             # elegido. Cero no es una medida, es un HUECO: el
                             # "peor caso" de abajo son CUATRO etapas de cinco
@@ -174,7 +174,7 @@ def autocomprobacion() -> None:
             and ocupacion_mandos(f) <= TECHO_OCUPACION)
 
 
-def main() -> None:
+def main() -> int:
     autocomprobacion()
     f_voz, f_man = VOZ.reloj_operacion_hz(), MANDOS.reloj_operacion_hz()
     print("LATENCIA MANO -> DAC")
@@ -191,6 +191,19 @@ def main() -> None:
     print("  El bus no es el cuello: la cadencia del lazo lo es. Y la cadencia")
     print("  la acotan los extremos, no el bus (D6).")
     print()
+
+    print("AVISO (#178): esta cuenta mantiene el ADC en el cerebro; el papel")
+    print("  del modulo de mandos puede mudar el barrido y aun no esta sancionado.")
+    print("  Este guion no resuelve esa pertenencia.")
+    print()
+    if T_CONVERSION_US is None:
+        print("HUECO: DS14791 Rev 10, Tabla 97, p. 205 da "
+              f"tC = {T_CONVERSION_CICLOS_12B:g} / fADC para 12 bits, no us.")
+        print("  Faltan la frecuencia y resolucion configuradas, y el tiempo de")
+        print("  muestreo tS. No se conserva ni se reemplaza el 2 us del RP2350.")
+        print("  El presupuesto mano -> DAC no se puede cerrar con una cifra ADC.")
+        return 2
+
     print(f"  {'lazo':>8}  {'total':>9}  {'Voz':>7}  {'mandos':>7}  {'barrido':>9}  veredicto")
 
     for f in CANDIDATAS_HZ:
@@ -305,7 +318,8 @@ def main() -> None:
     print("NO cubre: nota -> VCA (evento_budget.py), el jitter del lazo, el")
     print("asentamiento del DAC, ni la comparacion contra instrumentos reales")
     print("-- esa se mide con osciloscopio o no se dice.")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
