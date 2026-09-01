@@ -208,10 +208,13 @@ pub async fn atender(
                 let Ok(paquete) = <&Paquete>::try_from(trozo) else {
                     continue;
                 };
-                let Some(Trozo::Sysex(bytes)) = desemp.empujar(paquete) else {
-                    // Notas y CC son del plan de los perifericos: todavia no
-                    // hay gates ni J2 a donde mandarlas.
-                    continue;
+                let bytes = match desemp.empujar(paquete) {
+                    Some(Trozo::Midi(bytes)) => {
+                        let _ = instrumento.midi(&bytes);
+                        continue;
+                    }
+                    Some(Trozo::Sysex(bytes)) => bytes,
+                    None => continue,
                 };
                 let Ok(largo) = desenvolver(bytes, &mut plano) else {
                     warn!("USB: sobre que no es nuestro, se ignora");

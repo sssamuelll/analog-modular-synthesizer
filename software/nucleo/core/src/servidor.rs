@@ -21,9 +21,11 @@
 // no con un `let _` que no se distingue de un olvido.
 #![deny(clippy::let_underscore_must_use)]
 
+use crate::fuerza::Fuerza;
 use crate::medidas;
 use crate::modelo::{ErrorSet, Modelo};
 use crate::param::{ParamId, Valor};
+use crate::partes::{Asignacion, Partes, Repartidor};
 use crate::politica::{Politica, Puerta, Regla};
 use crate::protocolo::{etiqueta_de, CodigoError, Mensaje};
 use crate::rampa::{Rampa, Rampas, MAX_RAMPAS};
@@ -161,8 +163,16 @@ pub type Respuestas = Vec<Respuesta, MAX_RESPUESTAS>;
 /// uno.
 pub const VENTANA_ATERRIZAJE: u32 = 0;
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum AccionNota {
+    Encender(Asignacion),
+    Apagar { voz: u8, fuerza: Fuerza },
+}
+
 pub struct Instrumento {
     modelo: Modelo,
+    partes: Partes,
+    repartidor: Repartidor,
     retenidas: Retenidas,
     rampas: Rampas,
     reloj: Reloj,
@@ -190,6 +200,8 @@ impl Instrumento {
     pub const fn nuevo() -> Self {
         Instrumento {
             modelo: Modelo::nuevo(),
+            partes: Partes::new(),
+            repartidor: Repartidor::vacia(),
             retenidas: Retenidas::nueva(),
             rampas: Rampas::nueva(),
             reloj: Reloj::nuevo(),
@@ -200,6 +212,14 @@ impl Instrumento {
             pulsos_perdidos: 0,
             politica: Politica::nueva(),
         }
+    }
+
+    /// Instala el reparto que eligio quien construye el instrumento. `core` no
+    /// trae tabla ni conteo implicitos: sin esta llamada ambos siguen vacios.
+    pub fn con_partes(mut self, partes: Partes, repartidor: Repartidor) -> Self {
+        self.partes = partes;
+        self.repartidor = repartidor;
+        self
     }
 
     /// Un instrumento con lo unico que hoy existe sin periféricos: las medidas
@@ -247,6 +267,43 @@ impl Instrumento {
 
     pub fn modelo(&self) -> &Modelo {
         &self.modelo
+    }
+
+    pub fn partes(&self) -> &Partes {
+        &self.partes
+    }
+
+    pub fn repartidor(&self) -> &Repartidor {
+        &self.repartidor
+    }
+
+    /// Decodifica MIDI 1.0 y aplica solo los dos bordes de nota. `wmidi`
+    /// valida los bytes de datos y convierte Note On con fuerza cero en
+    /// Note Off, como manda MIDI 1.0. Los demas mensajes se ignoran.
+    pub fn midi(&mut self, bytes: &[u8]) -> Option<AccionNota> {
+        use wmidi::MidiMessage;
+
+        let Ok(mensaje) = MidiMessage::try_from(bytes) else {
+            return None;
+        };
+        match mensaje {
+            MidiMessage::NoteOn(canal, nota, fuerza) => self
+                .repartidor
+                .nota_on(
+                    &self.partes,
+                    canal.index(),
+                    u8::from(nota),
+                    Fuerza::desde_midi1(u8::from(fuerza)),
+                )
+                .map(AccionNota::Encender),
+            MidiMessage::NoteOff(canal, nota, fuerza) => {
+                let fuerza = Fuerza::desde_midi1(u8::from(fuerza));
+                self.repartidor
+                    .nota_off(canal.index(), u8::from(nota), fuerza)
+                    .map(|voz| AccionNota::Apagar { voz, fuerza })
+            }
+            _ => None,
+        }
     }
     /// SOLO en tests (#182, fallo 6).
     ///
