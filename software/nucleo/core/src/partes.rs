@@ -33,6 +33,7 @@ pub struct Asignacion {
     pub parte: u8,
     pub voz: u8,
     pub nota: u8,
+    pub tono: u16,
     pub fuerza: Fuerza,
     /// Que nota se tuvo que robar, si hubo que robar.
     pub robada: Option<u8>,
@@ -139,6 +140,7 @@ impl Repartidor {
             parte: i_parte,
             voz: elegida as u8,
             nota,
+            tono: u16::from(nota) << 9,
             fuerza,
             robada,
         })
