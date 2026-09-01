@@ -2345,6 +2345,7 @@ else if (PART == "nariz_2d")             nariz_2d();
 else if (PART == "assembly")           assembly();
 else if (PART == "assembly_acrilico")  assembly_acrilico();
 else if (PART == "assembly_aluminio")  assembly_aluminio();
+else if (PART == "assembly_valle_boca_prototipo") assembly_valle_boca_prototipo();
 else if (PART == "assembly_madera")    assembly_madera();
 else if (PART == "assembly_juntas")    assembly_juntas();
 else if (PART == "assembly_esqueleto") assembly_esqueleto();
@@ -2419,6 +2420,31 @@ module rails() {
     // 3U. El taladro no esta centrado en los 23.8 mm de fondo: la traslacion
     // local deja la cara exterior exactamente a rail_er_eje del eje M4, donde
     // apoyan el panel y el labio del valle.
+    for (c = centros_rail_1u())
+        translate([c.x, c.y, ancho_total/2])
+            rotate([0, 0, -90])
+                rotate([90, 0, 0])
+                    translate([rail_er_fondo/2 - rail_er_eje, 0, 0])
+                        rail_er(ancho_util - 2*t_placa);
+}
+
+// Perfil de presentacion fiel para el spike del valle. La produccion conserva
+// rails() hasta cerrar toda su envolvente en clearance_budget; aqui el centro
+// del bloque se desplaza respecto al eje M4 exactamente igual que KONDOR.
+module rieles_3u_reales_prototipo() {
+    cr = centros_rail();
+    angs = [angulo_inferior, angulo_inferior,
+            angulo_superior, angulo_superior];
+    for (i = [0 : len(cr) - 1])
+        translate([cr[i].x, cr[i].y, ancho_total/2])
+            rotate([0, 0, -angs[i]])
+                rotate([90, 0, 0])
+                    translate([rail_er_fondo/2 - rail_er_eje, 0, 0])
+                        rail_er(ancho_util - 2*t_placa);
+}
+
+module rails_reales_prototipo() {
+    rieles_3u_reales_prototipo();
     for (c = centros_rail_1u())
         translate([c.x, c.y, ancho_total/2])
             rotate([0, 0, -90])
@@ -2513,6 +2539,184 @@ module tapa_valle() {
             linear_extrude(t_valle) tapa_valle_2d();
 }
 
+// PROTOTIPO DE DECISION, NO DXF DE PRODUCCION. Boca monolitica mecanizada o
+// impresa: umbral, dintel y retornos son de 3 mm y terminan A PLOMO del canto
+// de los paneles, sin solaparlos ni tapar sus cabezas M3. El apilado
+// rehundido_panel + t_panel - t_valle deja 0.10 mm entre cada zapato y su
+// Z-Rail; una tira de 0.20 comprimida a 0.10 elimina rattle. Las mejillas que
+// conectan umbral y dintel viven fuera del ancho activo z0..z0+au.
+
+module tramo_boca_valle(A, B, t, z0, largo) {
+    d = (B - A)/norm(B - A);
+    n = [d.y, -d.x];
+    translate([0, 0, z0])
+        linear_extrude(largo)
+            polygon([A, B, B + n*t, A + n*t]);
+}
+
+// Yugo de extremo extraible hacia +Y. Sus patas pasan por los corredores
+// reales entre rieles y la barra cruza 0.15 mm por delante del panel KONDOR;
+// no queda cautivo detras de los Z-Rails fijos.
+module puente_lateral_boca_prototipo(z) {
+    P = pts_perfil();
+    cr = centros_rail();
+    x_lower3u_max = cr[1].x
+        + rail_er_alto/2*sin(angulo_inferior)
+        + (rail_er_fondo - rail_er_eje)*cos(angulo_inferior);
+    x_upper3u_min = cr[2].x
+        - rail_er_alto/2*sin(angulo_superior)
+        - rail_er_eje*cos(angulo_superior);
+    x_rail_1u_izq = frente_kondor();
+    x_rail_1u_der = frente_kondor() + alto_panel_1u + 2*(rail_er_alto/2 - inset_er);
+    x_izq = (x_lower3u_max + x_rail_1u_izq - t_valle)/2;
+    x_der = (x_rail_1u_der + x_upper3u_min - t_valle)/2;
+    y_cross_min = P[3].y - rehundido_panel + hol_riel/2;
+    y_cross_max = P[3].y;
+    y_m3 = P[3].y - pv_a();
+    r_boss = 1.5*d_M3_paso;
+    x_flat = frente_kondor() - hol_riel/2;
+
+    union() {
+        intersection() {
+            translate([pv_x(), y_m3, z]) cylinder(r = r_boss, h = t_valle);
+            translate([pv_x() - r_boss, y_m3 - r_boss, z])
+                cube([x_flat - (pv_x() - r_boss), 2*r_boss, t_valle]);
+        }
+        translate([x_izq, y_m3, z])
+            cube([t_valle, y_cross_max - y_m3, t_valle]);
+        translate([x_der, P[3].y - t_valle, z])
+            cube([t_valle, y_cross_max - (P[3].y - t_valle), t_valle]);
+        translate([x_izq, y_cross_min, z])
+            cube([x_der + t_valle - x_izq, y_cross_max - y_cross_min, t_valle]);
+    }
+}
+
+module _cuerpo_boca_valle_bruto_prototipo() {
+    P = pts_perfil();
+    xv = x_valle();
+    c1 = centros_rail_1u()[0];
+    panel_x0 = c1.x - inset_er;
+    panel_x1 = panel_x0 + alto_panel_1u;
+    aire_panel = 0.10;
+    z0 = t_anillo + t_placa;
+    au = tapa_valle_au();
+    d_inf = (P[2] - P[1])/norm(P[2] - P[1]);
+    d_sup = (P[4] - P[3])/norm(P[4] - P[3]);
+    borde_inf = P[1] + d_inf*(inset_inf_frente - inset_er + alto_panel_inf
+                              + aire_panel);
+    borde_sup = P[3] + d_sup*(inset_sup_valle - inset_er - aire_panel);
+    banda = rail_er_alto/2 - inset_er;
+    // La transicion empieza holgura_rail mas alla del perfil comprado. Si
+    // arrancara justo en su esquina, el espesor normal de esa transicion
+    // diagonal cortaria la cara asimetrica del Z-Rail aunque su cara vista no.
+    exterior_inf = borde_inf + d_inf*(banda + holgura_rail);
+    exterior_sup = borde_sup - d_sup*(banda + holgura_rail);
+    translate([xv[0], P[3].y - t_valle, z0])
+        cube([panel_x0 - aire_panel - xv[0], t_valle, au]);
+    translate([panel_x1 + aire_panel, P[3].y - t_valle, z0])
+        cube([xv[1] - panel_x1 - aire_panel, t_valle, au]);
+    tramo_boca_valle(borde_inf, exterior_inf, t_valle, z0, au);
+    tramo_boca_valle(exterior_inf, [xv[0], P[3].y], t_valle, z0, au);
+    tramo_boca_valle([xv[1], P[3].y], exterior_sup, t_valle, z0, au);
+    tramo_boca_valle(exterior_sup, borde_sup, t_valle, z0, au);
+}
+
+module soportes_boca_valle_prototipo() {
+    P = pts_perfil();
+    z0 = t_anillo + t_placa;
+    au = tapa_valle_au();
+    difference() {
+        union()
+            for (z = [z0, z0 + au - t_valle])
+                puente_lateral_boca_prototipo(z);
+        for (z = [z0 - 0.1, z0 + au - t_valle - 0.1])
+            translate([pv_x(), P[3].y - pv_a(), z])
+                cylinder(d = d_M3_paso, h = t_valle + 0.2);
+    }
+}
+
+module alojamiento_extraccion_soportes_prototipo(recorrido = 20,
+                                                  holgura = 0.10) {
+    translate([-holgura, -holgura, -holgura])
+        minkowski() {
+            soportes_boca_valle_prototipo();
+            cube([2*holgura, recorrido + 2*holgura, 2*holgura]);
+        }
+}
+
+module boca_visual_valle_prototipo() {
+    difference() {
+        _cuerpo_boca_valle_bruto_prototipo();
+        alojamiento_extraccion_soportes_prototipo();
+    }
+}
+
+module tapa_valle_boca_prototipo() {
+    boca_visual_valle_prototipo();
+    soportes_boca_valle_prototipo();
+}
+
+// Envolvente continua conservadora tras retirar los modulos. La salida a 135°
+// en X-Y despeja simultaneamente los Z-Rails de las dos caras. Se recorta en Z
+// al ancho activo: la trayectoria no tiene componente Z y solo comparte plano
+// (sin volumen) con los marcos de extremo.
+module barrido_extraccion_boca_prototipo(recorrido = 26.9) {
+    eps = 0.001;
+    salida_inicial = 0.01;
+    u = [-sqrt(0.5), sqrt(0.5), 0];
+    z0 = t_anillo + t_placa;
+    au = tapa_valle_au();
+    intersection() {
+        translate([u.x*salida_inicial - eps/2,
+                   u.y*salida_inicial - eps/2, -eps/2])
+            minkowski() {
+                boca_visual_valle_prototipo();
+                hull() {
+                    cube([eps, eps, eps]);
+                    translate([u.x*(recorrido - salida_inicial),
+                               u.y*(recorrido - salida_inicial), 0])
+                        cube([eps, eps, eps]);
+                }
+            }
+        translate([-1000, -1000, z0]) cube([2000, 2000, au]);
+    }
+}
+
+module barrido_extraccion_soportes_prototipo(recorrido = 20) {
+    z0 = t_anillo + t_placa;
+    au = tapa_valle_au();
+    intersection() {
+        alojamiento_extraccion_soportes_prototipo(recorrido);
+        translate([-1000, -1000, z0]) cube([2000, 2000, au]);
+    }
+}
+
+// Herraje de prototipo especificado: M3 boton Allen, cabeza 5.7 x 1.65 mm,
+// accionada con llave de 2 mm. La envolvente usa el diametro completo de cabeza
+// para cubrir tambien su extraccion y entra desde el centro del valle.
+module cabezas_m3_boca_prototipo(d_cabeza = 5.7, alto_cabeza = 1.65) {
+    P = pts_perfil();
+    z0 = t_anillo + t_placa;
+    au = tapa_valle_au();
+    translate([pv_x(), P[3].y - pv_a(), z0 + t_valle])
+        cylinder(d = d_cabeza, h = alto_cabeza);
+    translate([pv_x(), P[3].y - pv_a(), z0 + au - t_valle])
+        rotate([180, 0, 0]) cylinder(d = d_cabeza, h = alto_cabeza);
+}
+
+module herramientas_m3_boca_prototipo(d_herramienta = 5.7) {
+    P = pts_perfil();
+    z0 = t_anillo + t_placa;
+    au = tapa_valle_au();
+    alto_cabeza = 1.65;
+    recorrido = au/2 - t_valle - alto_cabeza;
+    translate([pv_x(), P[3].y - pv_a(), z0 + t_valle + alto_cabeza])
+        cylinder(d = d_herramienta, h = recorrido);
+    translate([pv_x(), P[3].y - pv_a(),
+               z0 + au - t_valle - alto_cabeza])
+        rotate([180, 0, 0]) cylinder(d = d_herramienta, h = recorrido);
+}
+
 // Tira oculta entre la prolongacion maciza y el primer KONDOR. En el modelo se
 // dibuja ya comprimida: 0.20 nominal - 0.10 de compresion = gap 0.10.
 module tira_anti_ruido_valle() {
@@ -2524,6 +2728,37 @@ module tira_anti_ruido_valle() {
     // riel y no necesitan muescas destinadas a movimiento.
     translate([x0, y0, t_anillo + t_placa])
         cube([apoyo_valle, calce, tapa_valle_au()]);
+}
+
+// Las cuatro tiras del prototipo, dibujadas ya comprimidas a 0.10 mm. Cada
+// una ocupa solo la banda de riel que queda fuera del panel: 2 mm.
+module tiras_boca_valle_prototipo() {
+    P = pts_perfil();
+    cr1 = centros_rail_1u();
+    panel_x0 = cr1[0].x - inset_er;
+    panel_x1 = panel_x0 + alto_panel_1u;
+    z0 = t_anillo + t_placa;
+    au = tapa_valle_au();
+    calce = tira_valle_nominal - compresion_tira_valle;
+    banda = rail_er_alto/2 - inset_er;
+    margen_tira = 0.25;
+    cobertura = banda + margen_tira;
+    y0 = P[3].y - rehundido_panel - t_panel;
+    d_inf = (P[2] - P[1])/norm(P[2] - P[1]);
+    d_sup = (P[4] - P[3])/norm(P[4] - P[3]);
+    n_inf = [d_inf.y, -d_inf.x];
+    n_sup = [d_sup.y, -d_sup.x];
+    borde_inf = P[1] + d_inf*(inset_inf_frente - inset_er + alto_panel_inf);
+    borde_sup = P[3] + d_sup*(inset_sup_valle - inset_er);
+
+    translate([panel_x0 - cobertura, y0, z0]) cube([cobertura, calce, au]);
+    translate([panel_x1, y0, z0]) cube([cobertura, calce, au]);
+    tramo_boca_valle(borde_inf + n_inf*t_valle,
+                     borde_inf + d_inf*cobertura + n_inf*t_valle,
+                     calce, z0, au);
+    tramo_boca_valle(borde_sup - d_sup*cobertura + n_sup*t_valle,
+                     borde_sup + n_sup*t_valle,
+                     calce, z0, au);
 }
 
 // SIN LA TAPA DEL VALLE desde el 2026-08-25: es de ALUMINIO (t_valle) y se
@@ -2571,6 +2806,29 @@ module paneles() {
     translate([c.x - inset_er, P[3].y - rehundido_panel - t_panel,
                t_anillo + t_placa])
         cube([alto_panel_1u, t_panel, ancho_util - 2*t_placa]);
+}
+
+// Barridos continuos de retirada normal de las tres filas. Verifican que la
+// boca instalada no forma un labio que obligue a desmontarla para cambiar un
+// modulo.
+module panel_cara_barrido(A, B, s0, largo, recorrido = 20) {
+    d = (B - A) / norm(B - A);
+    translate([A.x, A.y, t_anillo + t_placa])
+        rotate([0, 0, atan2(d.y, d.x)])
+            translate([s0, -rehundido_panel - t_panel, 0])
+                cube([largo, t_panel + recorrido, ancho_util - 2*t_placa]);
+}
+
+module barrido_extraccion_paneles_prototipo(recorrido = 20) {
+    P = pts_perfil();
+    panel_cara_barrido(P[1], P[2], inset_inf_frente - inset_er,
+                       alto_panel_inf, recorrido);
+    panel_cara_barrido(P[3], P[4], inset_sup_valle - inset_er,
+                       alto_panel_sup, recorrido);
+    c = centros_rail_1u()[0];
+    translate([c.x - inset_er, P[3].y - rehundido_panel - t_panel,
+               t_anillo + t_placa])
+        cube([alto_panel_1u, t_panel + recorrido, ancho_util - 2*t_placa]);
 }
 
 // remate_sup()/remate_sup_2d() MURIERON el 2026-08-28 (fix round 1, Tarea 5):
@@ -2691,6 +2949,19 @@ module assembly_aluminio() {           // idem, Z-Rails + miembros + paneles sol
     // el cambio no rompe el lenguaje visual: queda entre los paneles de las dos
     // filas, que ya son PCB de aluminio.
     tapa_valle();
+}
+
+// Ensamblado aislado para revisar la decision sin alterar assembly_aluminio(),
+// tapa_valle_2d() ni los DXF que se mandan al taller.
+module assembly_valle_boca_prototipo() {
+    rails_reales_prototipo();
+    paneles();
+    marcos_ventana();
+    nariz();
+    costillas();
+    miembros();
+    tapa_valle_boca_prototipo();
+    tiras_boca_valle_prototipo();
 }
 
 // --- lienzo de corte: 5 piezas (2 costados + 3 planchas) en rejilla -----
