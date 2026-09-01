@@ -18,11 +18,11 @@ palanca de longitud por enlace de S4.2.
 --- Lo que sale de correr las cuentas ---------------------------------------
 
 1. EL ENLACE PUNTO A PUNTO ES UNA LINEA DE TRANSMISION DESDE EL PRIMER
-   MEGAHERCIO (R-P3). Con una rama sola (~42 pF) y el driver de referencia a
-   12 mA, el flanco que el propio modelo agrupado predice (~7 ns) es mas
+   MEGAHERCIO (R-P3). Con una rama sola (~42 pF), el maximo de flanco que la
+   hoja da para el N657 en Speed 11 y 50 pF (4,4 ns) es mas
    rapido que la frontera de vuelo del cable (6 x 3,7 ns = 22 ns) A CUALQUIER
    RELOJ -- el criterio ni siquiera lleva el reloj dentro. El modelo RC solo
-   valdria por debajo de unos 5 cm de rama. Consecuencia: NADIE sanciona un
+   valdria por debajo de unos 15 cm de rama. Consecuencia: NADIE sanciona un
    enlace con el modelo viejo. Se termina en la fuente y se MIDE (R-P4).
 
 2. EL TECHO DEL PELDANO 1 LO PONE EL VIAJE, no el maestro (105 MHz) ni el
@@ -40,26 +40,19 @@ palanca de longitud por enlace de S4.2.
   * V_PROP (5 ns/m) y Z0_CINTA: catalogo generico de cinta IDC 1,27 mm. "Esa
     deuda no la salda el cambio de chip" (S4.2). Se leen de la hoja del cable
     que se compre.
-  * CAP_PIN: la hoja del RP2350 no la publica (buscada en sus 1380 paginas).
-    DECLARADA. Y ya no decide nada: con una rama, la capacidad es del cable.
-  * EL DRIVER ES DE REFERENCIA. Las cifras de salida (VOH, drive strength) son
-    del RP2350 (Tabla 1436), que es el cerebro de HOY y NO el del J2 punto a
-    punto: #210 S0.1 dice que sobre el RP2350 "no hay version de este
-    diseno". El chip del cerebro esta dirigido y sin sellar (#209). Cuando se
-    selle, estas cuatro constantes se releen de su hoja; la conclusion 1 no
-    depende de ellas (un driver mas lento solo la acerca a la frontera, y le
-    faltan mas de 3x).
-  * Los numeros del esclavo (Tabla 99 del N657) llevan la nota 1: "Evaluated
+  * CAP_PIN es el CIO tipico de la hoja; no publica maximo. Con una rama, la
+    capacidad dominante es la del cable y el valor final se mide en bring-up.
+  * Las cifras de salida son las del STM32N657 en Speed 11, la configuracion
+    que condiciona la propia tabla SPI. VOL <= 0,4 V a la misma corriente; el
+    modelo usa VOH y no consume VOL.
+  * Los numeros del esclavo (Tabla 114 del N657) llevan la nota 1: "Evaluated
     by characterization. Not tested in production" (S8, riesgo 2). Se miden.
   * Nada de esto esta medido. Es aritmetica sobre hojas y geometria.
 """
 from __future__ import annotations
 
-import math
-
-# --- el esclavo: STM32N657, DS14791 Rev 2, Tabla 99 "SPI characteristics" ----
-# p. 205. Verificada contra el PDF del arbol (docs/reference/datasheets/
-# stm32n657-ds14791-rev2.pdf) el 2026-08-28: las cifras de #210 S4.1 cuadran.
+# --- el esclavo: STM32N657, DS14791 Rev 10, Tabla 114 "SPI characteristics" --
+# pp. 222-223. Las cifras de #210 S4.1 no cambian; la tabla si fue renumerada.
 TV_SO_MAX_S = 10e-9         # "tv(SO) Data output valid time, Target mode",
                             # tip 8,5 / MAX 10 ns. Gobierna el MAX (S4.1)
 TV_SO_TIP_S = 8.5e-9        # se anota para que nadie "recupere" ese margen
@@ -77,15 +70,16 @@ F_MAESTRO_N657_HZ = 105e6   # "Controller mode, 3.00 < VDD < 3.6 V" -- si el
 # high phase preceding the SCK sampling edge". Con un maestro real:
 F_PELDANO_2_HZ = 1.0 / (2.0 * (TV_SO_MAX_S + TSU_MI_S))     # 34,5 MHz (D8)
 
-# --- el driver DE REFERENCIA (RP2350, Tabla 1436; ver el aviso de arriba) ----
-IOVDD = 3.3                 # V
-VIH_MIN = 2.0               # V
-VOH_MIN = 2.62              # V, a la corriente nominal del modo
-DRIVE_A = 12e-3             # A. "12mA mode", S14.9.4.1
+# --- el driver del STM32N657, en el Speed 11 que usa la tabla SPI ------------
+IOVDD = 3.3                 # V tip. DS14791 Rev 10, Tabla 24, p. 140
+VOH_MIN = IOVDD - 0.4       # V min a 20 mA. DS14791 Rev 10, Tabla 65, p. 171
+DRIVE_A = 20e-3             # A, Speed 11. DS14791 Rev 10, Tabla 65, pp. 170-171
+C_FLANCO = 50e-12           # F. DS14791 Rev 10, Tabla 68, p. 173
+T_FLANCO_MAX_S = 4.4e-9     # s max, Speed 11. DS14791 Rev 10, Tabla 68, p. 173
 
 
 def r_driver(drive_a: float = DRIVE_A) -> float:
-    """Cota resistiva del driver: la pendiente entre (0, IOVDD) y (I, VOH)."""
+    """Equivalente estatico en el punto IIO/VOH publicado; no modela slew."""
     return (IOVDD - VOH_MIN) / drive_a
 
 
@@ -94,7 +88,7 @@ Z0_CINTA = 105.0            # ohm
 V_PROP = 5.0e-9             # s/m. ~0,67c en PVC. "POR CONFIRMAR contra la
                             # cinta real -- esa deuda no la salda el cambio de
                             # chip" (S4.2)
-CAP_PIN = 5.0e-12           # F. DECLARADA
+CAP_PIN = 5.0e-12           # F, CIO tip. DS14791 Rev 10, Tabla 66, p. 171
 CAP_CONECTOR = 2.0e-12      # F. DECLARADA, por contacto IDC
 CAP_POR_METRO = V_PROP / Z0_CINTA      # 47,6 pF/m; deriva, no se declara
 
@@ -130,13 +124,16 @@ def t_vuelo(largo_m: float) -> float:
 
 
 def t_flanco_modelo_viejo(largo_m: float) -> float:
-    """El flanco que el modelo AGRUPADO predice para una rama, con su peor
-    de los dos drivers (resistivo y limitado en corriente). Se usa solo para
-    demostrar que ese modelo esta fuera de regimen (R-P3)."""
+    """Maximo Tr/Tf publicado para Speed 11 con 50 pF, sin interpolar.
+
+    Se usa solo para demostrar que el modelo agrupado esta fuera de regimen
+    (R-P3). La rama tiene que caber en la carga de la fila publicada.
+    """
     c = cap_rama(largo_m)
-    t_res = -(r_driver() + R_SERIE) * c * math.log(1.0 - VIH_MIN / IOVDD)
-    t_cor = c * VIH_MIN / DRIVE_A
-    return max(t_res, t_cor)
+    assert c <= C_FLANCO, (
+        f"la rama carga {c*1e12:.1f} pF y la ultima fila publicada de "
+        f"Tr/Tf cubre {C_FLANCO*1e12:.0f} pF")
+    return T_FLANCO_MAX_S
 
 
 def es_electricamente_corta(largo_m: float) -> bool:
@@ -164,9 +161,7 @@ def f_peldano_1(largo_m: float, tv_so: float = TV_SO_MAX_S) -> float:
 def f_modelo_viejo(largo_m: float) -> float:
     """Lo que el modelo agrupado DIRIA de una rama. No sanciona nada (R-P3);
     se imprime para que se vea que numero seria y por que no vale."""
-    c = cap_rama(largo_m)
-    return min(1.0 / (2.0 * t_flanco_modelo_viejo(largo_m)),
-               DRIVE_A / (c * IOVDD))
+    return 1.0 / (2.0 * t_flanco_modelo_viejo(largo_m))
 
 
 def i_dinamica(largo_m: float, f_hz: float) -> float:
@@ -188,12 +183,11 @@ def autocomprobacion() -> None:
         assert abs(f - esperado) < 0.06e6, (mm, f)
     # Y con el TIPICO saldrian 24,5/29,4/33,3 -- se anota, no se usa.
     assert abs(f_peldano_1(0.738, TV_SO_TIP_S) - 24.5e6) < 0.06e6
-    # S4.3: 738 mm -> vuelo 3,69 ns; ~42 pF; flanco ~7 ns < 22 ns.
+    # S4.3: 738 mm -> vuelo 3,69 ns; ~42 pF; flanco max 4,4 ns < 22 ns.
     assert abs(t_vuelo(LARGO_RAMA) - 3.69e-9) < 0.01e-9
     assert abs(cap_rama(LARGO_RAMA) - 42.1e-12) < 0.2e-12
-    assert 6e-9 < t_flanco_modelo_viejo(LARGO_RAMA) < 8e-9
-    # Un caso a mano para el flanco por corriente: 42,1 pF x 2 V / 12 mA.
-    assert abs(cap_rama(LARGO_RAMA) * 2.0 / 12e-3 - 7.02e-9) < 0.05e-9
+    assert cap_rama(LARGO_RAMA) < C_FLANCO
+    assert t_flanco_modelo_viejo(LARGO_RAMA) == T_FLANCO_MAX_S
     # La frontera existe y esta por debajo de la rama: si no, R-P3 miente.
     assert not es_electricamente_corta(LARGO_RAMA)
     assert es_electricamente_corta(0.010)
@@ -204,7 +198,7 @@ def demo() -> None:
     r_drv = r_driver()
 
     print("ENLACE J2 PUNTO A PUNTO -- una rama, un maestro, un esclavo\n")
-    print("el esclavo, Tabla 99 del N657 (DS14791 Rev 2, p. 205):")
+    print("el esclavo, Tabla 114 del N657 (DS14791 Rev 10, pp. 222-223):")
     print(f"  tv(SO)                    tip {TV_SO_TIP_S*1e9:4.1f} / MAX {TV_SO_MAX_S*1e9:4.1f} ns"
           "   manda el MAX")
     print(f"  tsu(MI) del maestro           {TSU_MI_S*1e9:4.1f} ns"
@@ -222,8 +216,8 @@ def demo() -> None:
 
     print("R-P3 -- el modelo agrupado esta fuera de regimen, a cualquier reloj:")
     t_fl = t_flanco_modelo_viejo(LARGO_RAMA)
-    print(f"  flanco que el modelo viejo predice   {t_fl*1e9:5.2f} ns  "
-          f"(driver de referencia a {DRIVE_A*1e3:.0f} mA + {R_SERIE:.0f} ohm)")
+    print(f"  flanco maximo publicado              {t_fl*1e9:5.2f} ns  "
+          f"(max de Tabla 68 a {C_FLANCO*1e12:.0f} pF, Speed 11)")
     print(f"  frontera de linea corta, 6 x vuelo   {6*t_vuelo(LARGO_RAMA)*1e9:5.2f} ns")
     print(f"  flanco / frontera                    {t_fl/(6*t_vuelo(LARGO_RAMA)):5.2f}x  (linea corta pide > 1)")
     frontera = largo_frontera_m()
@@ -240,7 +234,7 @@ def demo() -> None:
 
     print("\nla terminacion en la fuente, como parametro:")
     r_ideal = Z0_CINTA - r_drv
-    print(f"  driver de referencia          {r_drv:5.1f} ohm   (IOVDD - VOH) / {DRIVE_A*1e3:.0f} mA")
+    print(f"  driver del N657               {r_drv:5.1f} ohm   (IOVDD - VOH) / {DRIVE_A*1e3:.0f} mA")
     print(f"  Z0 de la cinta                {Z0_CINTA:5.1f} ohm   POR_CONFIRMAR")
     print(f"  serie ideal = Z0 - driver     {r_ideal:5.1f} ohm")
     print(f"  serie de partida              {R_SERIE:5.1f} ohm   bring-up.md :343; el ojo la ajusta")
@@ -266,15 +260,15 @@ def demo() -> None:
     print(f"  compran ~{(f_peldano_1(0.638)-f_peldano_1(0.738))/1e6:.1f} MHz de peldano 1. Con D8 el largo deja de")
     print("  fijar el reloj de la Voz; sigue fijandolo para el dialecto legado.")
 
-    print("\nla corriente del pin, por enlace (driver de referencia):")
+    print("\nla corriente del pin, por enlace (STM32N657, Speed 11):")
     for nombre, f in (("piso legado 10 MHz", 10e6), ("peldano 2", F_PELDANO_2_HZ)):
         i = i_dinamica(LARGO_RAMA, f)
         print(f"  SCLK a {nombre:20} {i*1e3:5.2f} mA de {DRIVE_A*1e3:.0f}"
               f"   {'OK' if i < DRIVE_A else '<< POR ENCIMA'}")
     assert i_dinamica(LARGO_RAMA, F_PELDANO_2_HZ) < DRIVE_A, (
         "un solo enlace al peldano 2 pide mas corriente media que el drive")
-    print("  Ocho enlaces son ocho pines: la suma va contra la hoja del cerebro")
-    print("  que se selle (#209), no contra la Tabla 1436 del RP2350.")
+    print("  Ocho enlaces son ocho pines: la suma va contra los limites")
+    print("  acumulados de la hoja del STM32N657; 20 mA es por pin.")
 
     print("\nI2C -- canal propio por ranura (una rama, cerebro S4):")
     t = t_subida_i2c(LARGO_RAMA)
