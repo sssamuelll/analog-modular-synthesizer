@@ -841,20 +841,26 @@ function roscas_suelo() =
     [for (s = [q[3] + rosca_suelo_retiro, q[4] - rosca_suelo_retiro])
         q[0] + q[1]*s + q[2]*dist_rosca_ciega];
 
-// Las dos roscas ciegas de cada riel: eje +- sep_rosca_riel a lo largo del
-// tramo, a dist_rosca_ciega de la silueta. Doce por anillo: diez de las filas
-// y dos en la pata del suelo (roscas_suelo). EL PAR SE ARRIMA
-// AL RIEL PERO NO SE SALE DE SU PATA: se corre lo justo para que las dos
-// queden a 1.6 D de los extremos de la pata -- el de la cara de arriba en P3
-// esta a retiro_placa_sup del vertice porque ahi el redondeo concavo
-// estrecha la franja y la rosca sale por el rebaje. GEMELA de _roscas_marco().
-function centro_par_rosca(q, e) =
-    let (canto = 1.6*d_M4_paso)
-    min(max(e[0], q[4] + canto + sep_rosca_riel),
-        q[5] - canto - sep_rosca_riel);
+// Las dos roscas ciegas de cada riel quedan a no menos de sep_rosca_riel de su
+// eje, a lo largo del tramo, y a dist_rosca_ciega de la silueta. Doce por
+// anillo: diez de las filas y dos en la pata del suelo (roscas_suelo). Si el
+// par a +-sep_rosca_riel no cabe a 1.6 D de un extremo, LAS DOS ROSCAS pasan
+// al lado interior: la mas cercana conserva sep_rosca_riel y entre ambas
+// quedan 2 D. Nunca se arriman al riel para salvar el canto (#242). GEMELA de
+// _roscas_marco().
+function ss_roscas_riel(q, e) =
+    let (canto = 1.6*d_M4_paso,
+         paso_par = 2*d_M4_paso,
+         lo = q[4] + canto,
+         hi = q[5] - canto,
+         a = e[0] - sep_rosca_riel,
+         b = e[0] + sep_rosca_riel)
+    a < lo ? [b, b + paso_par]
+           : b > hi ? [a - paso_par, a]
+                    : [a, b];
 function roscas_marco() =
-    concat([for (q = patas_filas(), e = q[6], s = [-sep_rosca_riel, sep_rosca_riel])
-                if (e[2]) q[1] + q[2]*(centro_par_rosca(q, e) + s) + q[3]*dist_rosca_ciega],
+    concat([for (q = patas_filas(), e = q[6], s = ss_roscas_riel(q, e))
+                if (e[2]) q[1] + q[2]*s + q[3]*dist_rosca_ciega],
            roscas_suelo());
 // Los seis pasos M4 de riel (con cajeado por el lado del anillo).
 function ejes_marco() = [for (q = patas_filas(), e = q[6]) e[1]];
@@ -948,7 +954,7 @@ module marco_contorno_2d() {
     }
 }
 
-// EL DXF DEL MARCO: contorno y taladros de PASO. Diez M4 al anillo, seis M4
+// EL DXF DEL MARCO: contorno y taladros de PASO. Doce M4 al anillo, seis M4
 // de riel y la rosca M3 de la pestana. La brida del miembro alto NO lo
 // atraviesa: ahi el marco lleva la muesca y la brida va directa al anillo.
 // EL CAJEADO NO SE
@@ -2784,10 +2790,9 @@ module bom() {
              marco_fondo_trasera - cara_anillo, " por la trasera: a traves del",
              " PMMA se lee una sombra uniforme de 6, no retazos."));
     echo("     Lleva ademas la rosca M3 pasante de la pestana de la banda del");
-    echo("     valle, dos pasos M4 para la brida del miembro alto y UNA MUESCA");
-    echo("     en la esquina trasera-alta, abierta al canto exterior, sobre la");
-    echo("     huella de esa brida. La brida queda en su cajeado bajo la cara");
-    echo("     y las cabezas conservan la muesca del marco.");
+    echo("     valle y UNA MUESCA en la esquina trasera-alta, abierta al canto");
+    echo("     exterior, sobre la huella de la brida del miembro alto. Sus dos");
+    echo("     M4 van directos al anillo por la muesca: no atraviesan el marco.");
     echo("     DXF de corte: marco_ventana_2d, UNO para las dos. El cajeado no");
     echo("     se dibuja: un DXF 2D no sabe decir 'a 2.5 de profundidad' y va");
     echo("     como NOTA DE MECANIZADO en el pliego, tres por una cara y tres");
@@ -2795,8 +2800,10 @@ module bom() {
     echo("     ORDEN DE MONTAJE OBLIGADO: el costado asentado en el rebaje,");
     echo("     DESPUES los seis rieles al marco (la cabeza queda en el cajeado,");
     echo("     del lado que despues mira al anillo) y DESPUES el marco al");
-    echo("     anillo, desde dentro, con sus diez M4. Al reves no se puede");
-    echo("     apretar, y el costado no entra con el marco puesto.");
+    echo(str("     anillo, desde dentro, con sus ", len(roscas_marco()),
+             " M4. Las cabezas de los diez que viven en las filas quedan"));
+    echo("     fuera de la huella de los rieles (#242). Al reves no se puede");
+    echo("     montar el riel, y el costado no entra con el marco puesto.");
     echo(str("BOM: tornillo M4 boton x", 2*len(roscas_marco()), " -- el marco",
              " de la ventana al anillo, a rosca ciega en la franja de ",
              cara_anillo - rebaje_anillo, " (", len(roscas_marco()),
