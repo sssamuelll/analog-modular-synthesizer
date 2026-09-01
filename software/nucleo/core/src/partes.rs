@@ -26,6 +26,8 @@ pub struct Parte {
     pub preset: u8,
 }
 
+pub type Partes = Vec<Parte, MAX_PARTES>;
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Asignacion {
     pub parte: u8,
@@ -62,13 +64,20 @@ pub struct Repartidor {
 }
 
 impl Repartidor {
+    pub const fn vacia() -> Self {
+        Repartidor {
+            voces: Vec::new(),
+            reloj: 0,
+        }
+    }
+
     /// `n_voces` sale del descubrimiento (§3.6), nunca de una constante.
     pub fn nueva(n_voces: u8) -> Self {
-        let mut voces = Vec::new();
+        let mut repartidor = Self::vacia();
         for _ in 0..n_voces.min(MAX_VOCES as u8) {
-            let _ = voces.push(EstadoVoz::default());
+            let _ = repartidor.voces.push(EstadoVoz::default());
         }
-        Repartidor { voces, reloj: 0 }
+        repartidor
     }
 
     pub fn n_voces(&self) -> u8 {

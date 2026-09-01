@@ -19,7 +19,8 @@
 //! su §3.2 mas la monotonia, que es lo que se oye.
 
 use sam17_nucleo_core::fuerza::Fuerza;
-use sam17_nucleo_core::partes::{Parte, Repartidor};
+use sam17_nucleo_core::partes::{Parte, Partes, Repartidor};
+use sam17_nucleo_core::servidor::{AccionNota, Instrumento};
 
 /// §3.2, regla 1: *«Minimum/Lowest value is scaled to Minimum/Lowest»*.
 #[test]
@@ -169,4 +170,85 @@ fn al_robar_la_voz_manda_la_fuerza_de_la_nota_nueva() {
     let b = r.nota_on(&partes, 0, 67, Fuerza::desde_midi1(127)).unwrap();
     assert_eq!(b.robada, Some(60));
     assert_eq!(r.fuerza(b.voz), Some(Fuerza(0xFFFF)));
+}
+
+fn instrumento_midi() -> Instrumento {
+    let mut partes = Partes::new();
+    partes.push(una_parte()[0]).unwrap();
+    Instrumento::nuevo().con_partes(partes, Repartidor::nueva(2))
+}
+
+#[test]
+fn un_note_on_midi_asigna_voz_y_guarda_su_fuerza() {
+    let mut i = instrumento_midi();
+
+    let Some(AccionNota::Encender(a)) = i.midi(&[0x90, 60, 91]) else {
+        panic!("el note-on tenia que encender una voz");
+    };
+
+    assert_eq!(a.nota, 60);
+    assert_eq!(a.fuerza, Fuerza::desde_midi1(91));
+    assert_eq!(i.repartidor().voz(a.voz), Some(60));
+    assert_eq!(i.repartidor().fuerza(a.voz), Some(Fuerza::desde_midi1(91)));
+}
+
+#[test]
+fn note_on_con_fuerza_cero_es_note_off() {
+    let mut i = instrumento_midi();
+    let Some(AccionNota::Encender(a)) = i.midi(&[0x90, 60, 100]) else {
+        panic!("faltaba la voz que se va a soltar");
+    };
+
+    assert_eq!(
+        i.midi(&[0x90, 60, 0]),
+        Some(AccionNota::Apagar {
+            voz: a.voz,
+            fuerza: Fuerza::desde_midi1(0),
+        })
+    );
+    assert_eq!(i.repartidor().voz(a.voz), None);
+    assert_eq!(i.repartidor().fuerza(a.voz), Some(Fuerza::desde_midi1(0)));
+}
+
+#[test]
+fn note_off_midi_conserva_la_fuerza_de_suelta() {
+    let mut i = instrumento_midi();
+    let Some(AccionNota::Encender(a)) = i.midi(&[0x90, 64, 110]) else {
+        panic!("faltaba la voz que se va a soltar");
+    };
+    let fuerza = Fuerza::desde_midi1(37);
+
+    assert_eq!(
+        i.midi(&[0x80, 64, 37]),
+        Some(AccionNota::Apagar { voz: a.voz, fuerza })
+    );
+    assert_eq!(i.repartidor().voz(a.voz), None);
+    assert_eq!(i.repartidor().fuerza(a.voz), Some(fuerza));
+}
+
+#[test]
+fn un_control_change_no_asigna_ninguna_voz() {
+    let mut i = instrumento_midi();
+
+    assert_eq!(i.midi(&[0xB0, 1, 127]), None);
+    assert_eq!(i.repartidor().voz(0), None);
+    assert_eq!(i.repartidor().voz(1), None);
+}
+
+#[test]
+fn un_instrumento_sin_partes_no_inventa_voces_ni_asigna() {
+    let mut i = Instrumento::nuevo();
+
+    assert!(i.partes().is_empty());
+    assert_eq!(i.repartidor().n_voces(), 0);
+    assert_eq!(i.midi(&[0x90, 60, 100]), None);
+}
+
+#[test]
+fn el_octavo_bit_hace_invalido_al_byte_de_fuerza_midi() {
+    let mut i = instrumento_midi();
+
+    assert_eq!(i.midi(&[0x90, 60, 0x80]), None);
+    assert_eq!(i.repartidor().voz(0), None);
+    assert_eq!(i.repartidor().voz(1), None);
 }
