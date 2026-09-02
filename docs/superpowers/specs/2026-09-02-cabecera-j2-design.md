@@ -55,10 +55,16 @@ los lista uno por uno.
 | Sondeo del panel | sube | latencia_mano, #178 | *«deltas + cabecera»*, 256 bits a 8 kHz — del módulo de mandos, no de la Voz |
 
 Y una regla que los gobierna a todos, la ley del largo: **R-E1, ningún
-mensaje del J2 dura más de 100 µs**. Al piso legado de 10 MHz son 1000 bits,
-125 bytes; a los 34,5 MHz de D8 son 3450 bits. `trama_j2_budget.py` la
-asevera contra cada fila declarada, y hoy sus filas no llevan cabecera porque
-no había cabecera que sumar (`BITS_EVENTO` lleva el comentario *«SIN cabecera
+mensaje del J2 dura más de 100 µs**, y su compañera R-E9: *«Ningún mensaje
+nuevo del J2 se declara sin pasar por R-E1»*. Los 100 µs no son bits: el
+propio papel del evento declaró **muerta** la equivalencia *«1000 bits a 10
+MHz»* (§0.1, 2026-08-27: *«no hay reloj global de 10 MHz»*). Lo que hay es un
+reloj **por enlace** (D2 del J2), y hoy todo enlace corre al piso legado
+porque `sancion_j2.csv` no tiene una sola fila: al piso, 100 µs son 1000
+bits, 125 bytes; a los 34,5 MHz de D8 son 3450 bits. Este papel mide contra
+los dos y dice cuál manda en cada cifra. `trama_j2_budget.py` asevera R-E1
+contra cada fila declarada, y hoy sus filas no llevan cabecera porque no
+había cabecera que sumar (`BITS_EVENTO` lleva el comentario *«SIN cabecera
 declarada: la pone el códec del cambio 1 cuando exista»*). Este papel es ese
 códec.
 
@@ -82,6 +88,10 @@ qué viene y cuánto»*) tiene un solo «qué».
 Consecuencia que se declara: el largo que dice la cabecera y el largo que
 delimita `CS` **tienen que coincidir o sobrar por el lado de `CS`**; §5 dice
 qué pasa si no.
+
+Y vale en las dos direcciones, por R-J3 (*«El módulo nunca habla sin que le
+pregunten»*): la subida es lo que el módulo tiene puesto cuando el maestro
+cloca, un mensaje por giro (D6).
 
 ### D2. El sobre: cuatro bytes delante, dos detrás
 
@@ -139,7 +149,13 @@ Seis bytes de sobre. Cada campo tiene un porqué y ninguno es «por si acaso»:
 **Por qué CRC, cuando el evento decía «sin CRC».** El evento D6 escribió *«ni
 acuse, ni número de secuencia, ni CRC, ni comparación cruzada — y R-S5
 prohíbe inventarlos»*. Ese párrafo está tachado en el papel y su enmienda del
-2026-08-27 lo declara **SIN SUJETO**: R-S5 nunca entró a `main`. Lo que sí
+2026-08-27 lo declara **SIN SUJETO**: R-S5 nunca entró a `main`. Y el
+dialecto legado **sí** verificaba integridad, a su manera: *«El firmware
+verifica la integridad del enlace comparando lo que manda con lo que vuelve»*
+(`docs/modules/03-vco.md:162-165`, el passthrough de la cadena de tres
+AD5686R). Esa comparación muere con la cadena —en el dialecto nuevo lo que
+vuelve es la subida del módulo, no el eco de la bajada— y el CRC ocupa su
+sitio. Lo que sí
 sobrevive de aquel argumento es la doctrina, y este papel la respeta: **no hay
 acuse ni retransmisión**. El CRC no es un acuse: es la diferencia entre
 **rechazar** una trama corrupta y **ejecutarla**. Un `cierra` con un bit
@@ -213,6 +229,17 @@ Seis mensajes, que son los seis clientes de §1 que bajan. Sus bytes están en
   dieciséis, en una trama. La instancia es el canal, y es la ranura del canal
   donde el generador §3.5 dice que la escritura *«termina»*: *«los parámetros
   se empujan, no se buscan»*.
+
+  **Lo que cuesta el 16, dicho con el número.** El evento D1 mide su peor
+  caso contra *«lo que le quede al mensaje en curso»*, y el mensaje en curso
+  más largo del enlace de la Voz pasa de los 288 bits del bloque de tono
+  (28,8 µs al piso) a los 816 de un `SET` lleno: **81,6 µs al piso, 23,7 a
+  D8**. Cabe en R-E1 con el 18 % de margen al piso, y a D8 —que es donde la
+  Voz va a correr— queda por debajo del peor caso de hoy. Con `SET` de ocho
+  tuplas serían 54 bytes y 43,2 µs al piso, a cambio del doble de tramas para
+  reafirmar. Este papel elige 16 y lo deja marcado como el único número de
+  D4 que mueve una latencia declarada; `tiempo_budget.py` lo hereda solo
+  (§9).
 - **`SOLTAR_TODO`**: sin carga. Es `Entrada::SoltarTodo` del generador: todo a
   relajación, las compuertas a cero, y el módulo adopta el contador del
   primer `COMPUERTA` válido que llegue después (generador §3.4).
@@ -249,7 +276,9 @@ cuyo largo lo decide el otro extremo. Tres reglas:
 1. **La trama de subida tiene el mismo sobre** (D2), con el bit alto del tipo
    puesto, y el módulo la tiene lista en su búfer de transmisión **antes** de
    que el `CS` baje: el esclavo SPI la shiftea byte a byte al ritmo que el
-   maestro le dé. Su secuencia es la del módulo, aparte de la del cerebro.
+   maestro le dé. Su secuencia es la del módulo, aparte de la del cerebro. Y
+   lo que sube son **medidas y estado, nunca eventos**: R-E7 del evento (*«El
+   módulo no genera eventos… el evento que resulte lo emite el cerebro»*).
 2. **El módulo repite la misma trama de subida hasta que un giro la haya
    clocado entera.** El módulo sabe cuántos bytes tuvo cada giro (son los que
    recibió); si fueron menos que su trama de subida, la deja puesta para el
@@ -466,9 +495,19 @@ Sobre de 6 bytes en todo. Piso legado 10 MHz (`trama_j2_budget.py`,
 | `NADA` para clocar subida | 0 | 6 → 24 | 192 | 19,2 | 5,6 |
 
 Todos por debajo de los 100 µs al piso; el más largo, `SET` con dieciséis,
-usa el 82 %. **El techo de `largo` que R-E1 permite al piso es 119 bytes de
-carga**, y este papel lo declara como constante (`CARGA_MAX_PISO`) para que un
-mensaje futuro se tope con él en un test, no en la placa.
+usa el 82 %. **El techo de carga que R-E1 permite depende del reloj del
+enlace**, y este papel lo declara como función y no como número, para no
+resucitar la equivalencia que el evento §0.1 mató: `carga_max(reloj) =
+reloj × 100 µs / 8 − 6`, que al piso da **119 bytes** y a D8 daría 425, donde
+el `largo` de un byte recorta a 255. Un test la asevera en los dos relojes
+(§8), para que un mensaje futuro se tope con ella en el host, no en la placa.
+
+**Lo que se mueve en los guiones al pasar de 288 a 816 bits de trama más
+larga**: `tiempo_budget.py` ya deriva `BITS_TRAMA_J2` y `T_TRAMA_J2` del
+enlace de la Voz (`:43-44`: *«BITS_TRAMA_J2 = _VOZ.trama_mas_larga_bits()»*)
+y asevera `T_TRAMA_J2 < 0.1 × OBJETIVO_S` (`:109-113`); con `SET` pasa de
+28,8 a 81,6 µs al piso y sigue verde. Su otra aserción, `BITS_TRAMA_J2 >=
+BITS_BLOQUE_TONO` (`:123-125`), también.
 
 Ocupación del enlace de la Voz, bajada, con las cadencias declaradas:
 
@@ -576,6 +615,17 @@ al piso. La cifra de `trama_j2_budget.py` para el bloque de tono (288 bits, 23
    emite siempre que el módulo no haya recibido `HOLA`, en cada giro**, así
    el cerebro lo ve en el primer giro y reenvía el suyo. Queda marcado para
    la junta.
+10. **La cadencia del `SET` cuando la mano mueve un mando.** No tiene tope
+    propio: lo acotan R-E1 por trama y el 50 % por enlace. El plan del panel
+    (`2026-08-23-panel-frontal-gramatica.md:187-188`) ya avisó que *«la
+    entrega J2 de parámetros no-tono va a 100 Hz — tasa que el propio spec
+    declaró "se oyen como escalones"»*; a qué tasa el cerebro convierte
+    deltas del panel en `SET` es de la gramática del panel y del suavizado de
+    un tick del generador (§5 de aquel papel), no del sobre.
+11. **Los dialectos que vienen**: el «mago» (hub §D3', *«CSI dedicado más J2
+    esclavo»*) y el MIDI reenviado por J2 del dispositivo compuesto
+    (interfaz-audio :301-302, *«con su presupuesto de trama»*). El sobre les
+    sirve; sus tipos son suyos.
 
 ---
 
@@ -633,7 +683,7 @@ en el host, con la cita del papel en cada uno:
 | `hardware/02-midi-cv/trama_j2_budget.py` | `BITS_BLOQUE_TONO` 288 → **320** (máscara + 16 tonos + sobre), fuente este papel §4; `BITS_EVENTO` gana el sobre: **104**; `BITS_ESTADO_COMPUERTA` 16 → **192** (con sobre y relleno a la ventana); `BITS_CROSSPOINT` 256 → **560** (la imagen del modelo con sobre, no los bits del chip); filas nuevas: **reafirmación `SET`** (816 bits × 63 Hz) y **reafirmación `BAHIA`** (560 × 1 Hz); `SALUD` y `JACKS` con tamaño (**192** cada uno, la ventana) en la subida; y la aserción de R-C4: cada fila de bajada nombra su red o se declara sin ella | pendiente |
 | `hardware/02-midi-cv/latencia_mano_budget.py` | Hereda `BITS_BLOQUE_TONO` del anterior; nada más | se mueve solo |
 | `hardware/03-vco/ataque_budget.py` | La fila «Turno del J2 ≤ 100 µs» gana la cifra del `EVENTO` con sobre: **10,4 µs al piso, 3,0 a D8**, sin que la cota de R-E1 se mueva | pendiente |
-| `hardware/02-midi-cv/tiempo_budget.py` | Su `BITS_TRAMA_J2 = 72` está caduco desde el cambio 1 (evento §5 lo dice); pasa a leer el largo máximo del enlace de la Voz de `trama_j2_budget.py` | pendiente, y es deuda del #214 |
+| `hardware/02-midi-cv/tiempo_budget.py` | Ya lee la trama más larga del enlace de la Voz (`:43-44`); con `SET` pasa de 288 a 816 bits y sus dos aserciones siguen verdes (§4). El «72 caduco» que el evento §5 denunciaba ya no está: la fila de aquel papel es la que va atrasada | se mueve solo |
 
 ---
 
@@ -654,8 +704,16 @@ en el host, con la cita del papel en cada uno:
    regla propuesta ahí, sellada o sustituida por la junta.
 5. **La unidad CRC del N657 no reproduce CCITT-FALSE tal cual** (reflejo,
    init). *Cierre*: el test del vector canónico `"123456789" → 0x29B1` corrido
-   en la placa contra `descubrimiento::crc16`; si no cuadra, se computa en
-   software: 255 bytes son ~2 000 ciclos a 800 MHz, 2,5 µs, y el gap lo paga.
+   en la placa contra `descubrimiento::crc16`. Si no cuadra, el CRC en
+   software **no cabe en el libro del motor**: motor-digital §7 le da al
+   oyente del J2 *«~20-50»* ciclos por muestra amortizados (`:283`), que a
+   8 kHz de tramas y 48 kHz de muestras son 120-300 ciclos por trama, y el
+   CRC bit a bit de 100 bytes son ~2 000. Con la unidad (4 ciclos por palabra
+   de 32 bits, p. 42) son ~100 más el despacho, y cabe justo. Si la unidad no
+   sirve, la salida es una tabla de 256 entradas (unos 8 ciclos por byte,
+   ~800 por trama) y una fila nueva en el libro del motor, no un CRC más
+   débil. Es el riesgo 4 de motor-digital (*«El gap entre tramas del J2 no
+   alcanza para el giro D8»*) con la cuenta hecha.
 6. **`largo` de un byte se queda corto el día de la autopista.** *Cierre*:
    R-C6; es un dialecto nuevo, no una enmienda a este.
 
@@ -668,6 +726,10 @@ en el host, con la cita del papel en cada uno:
 | evento de nota | §3 (tabla del formato) | Expand | Los cuatro campos ganan sus bytes y su orden (§3.2 de aquí); la fuerza queda en 16 (`fuerza.rs`, #230) | pendiente |
 | evento de nota | §5 (`evento_budget.py`, «no existe») | Sync | R-E1 la asevera `trama_j2_budget.py` con el sobre; `evento_budget.py` sigue sin existir y se dice | pendiente |
 | evento de nota | §8 («la cabecera concreta del bloque de deltas de D3») | Sync | Decidida aquí: máscara + tonos (D4) | pendiente |
+| evento de nota | §10 («Gana los 16 bits de estado de compuerta… No es mensaje nuevo: es campo en un bloque») | Clarify | R-E11 lo sacó de la cadencia del tono, y `trama_j2_budget.py` y el generador ya lo tratan como flujo propio: aquí es **mensaje propio** (`COMPUERTA`), con su contador | pendiente |
+| voz-total | §3.3 («el formato del mensaje, su sello de tiempo y la entrega al esclavo no están diseñados… prerrequisito bloqueante») | Sync | Diseñado aquí; sin sello de tiempo (evento §3: *«Ni sello de hora»*) | pendiente |
+| voz-total | §5.4 (:552-553, «Pendiente: la cabecera del J2 por la que viaja la imagen (issue #267)») | Sync | Resuelto: `BAHIA`, 70 bytes con sobre | pendiente |
+| núcleo | §5 tabla de bloques :597 («72 bits… Congelado por el módulo 3, no se toca») y `software/nucleo/README.md:56` («j2 = la trama de 72 bits») | Rewrite | Deuda heredada del mapa del J2 punto a punto (§6 de aquel papel) y del #214; este papel la hereda, no la salda | pendiente (#214) |
 | generador de envolvente | §3.4, §9 (H-B2), §14 fila #267 | Sync | El `SET` y el contador tienen bytes; H-B2 cerrado | pendiente |
 | J2 punto a punto | D5 («la trama es lo que cabe entre bajada y subida de CS») | Clarify | Y lleva exactamente un mensaje con este sobre (D1 de aquí) | pendiente |
 | voz-total | §5.4 (acta del #171: «64 bytes, ~15 µs a 34,5 MHz») | Patch | Son 70 con sobre: 16,2 µs a D8, 56 al piso | pendiente |
