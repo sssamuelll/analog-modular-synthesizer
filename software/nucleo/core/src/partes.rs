@@ -44,7 +44,9 @@ struct EstadoVoz {
     nota: Option<u8>,
     canal: u8,
     fuerza: Fuerza,
-    /// Cuanto mas viejo, mas pequeño. Es a quien se le roba.
+    /// Cuando se toco esta voz por ultima vez: se sella al arrancar la nota y
+    /// **tambien al soltarla**. Cuanto mas viejo, mas pequeño — sonando, es a
+    /// quien se le roba; libre, es la cola de relajacion mas apagada.
     sello: u32,
 }
 
@@ -116,18 +118,19 @@ impl Repartidor {
         }
         self.reloj += 1;
 
-        // Primero una libre; si no hay, la mas vieja — pero SIEMPRE dentro del
+        // Primero las libres, y entre ellas la que se solto hace mas tiempo;
+        // si no queda ninguna, se roba la mas vieja — pero SIEMPRE dentro del
         // tramo de esta parte. Robar cruzando partes le comeria las voces a
         // otro canal.
+        //
+        // Sale de un solo criterio porque `false < true`: toda voz libre gana
+        // a toda voz sonando, y dentro de cada grupo manda el sello mas viejo.
+        // Tomar la libre de menor indice —lo que se hacia antes— le cortaba la
+        // cola siempre a la misma voz mientras las demas dormian.
         let elegida = tramo
             .clone()
-            .find(|i| self.voces[*i].nota.is_none())
-            .unwrap_or_else(|| {
-                tramo
-                    .clone()
-                    .min_by_key(|i| self.voces[*i].sello)
-                    .expect("el tramo no esta vacio")
-            });
+            .min_by_key(|i| (self.voces[*i].nota.is_some(), self.voces[*i].sello))
+            .expect("el tramo no esta vacio");
 
         let robada = self.voces[elegida].nota;
         self.voces[elegida] = EstadoVoz {
@@ -151,8 +154,13 @@ impl Repartidor {
             .voces
             .iter()
             .position(|v| v.nota == Some(nota) && v.canal == canal)?;
+        self.reloj += 1;
         self.voces[i].fuerza = fuerza;
         self.voces[i].nota = None;
+        // Sellar al soltar es lo que le deja saber a `nota_on` cual cola esta
+        // mas apagada: sin esto, el sello de una voz libre seria el de su
+        // arranque, que no dice nada de cuanto lleva relajandose.
+        self.voces[i].sello = self.reloj;
         Some(i as u8)
     }
 }
@@ -241,6 +249,26 @@ mod tests {
         assert_eq!(r.nota_off(0, 60, Fuerza::desde_midi1(100)), Some(a.voz));
         let b = r.nota_on(&partes, 0, 65, Fuerza::desde_midi1(100)).unwrap();
         assert_eq!(b.robada, None, "habia una voz libre: no hacia falta robar");
+    }
+
+    #[test]
+    fn entre_libres_toma_la_que_se_solto_hace_mas_tiempo() {
+        // Una voz suelta sigue sonando: le queda la cola de la relajacion.
+        // Tomar siempre la de menor indice le corta la cola a la misma voz una
+        // y otra vez mientras las demas duermen — se oye como notas que se
+        // truncan con un pad de relajacion larga. Se toma la mas apagada, que
+        // es la que se solto primero.
+        let partes = dos_partes();
+        let mut r = Repartidor::nueva(4);
+        let a = r.nota_on(&partes, 0, 60, Fuerza::desde_midi1(100)).unwrap();
+        let b = r.nota_on(&partes, 0, 62, Fuerza::desde_midi1(100)).unwrap();
+        // Se suelta PRIMERO la segunda: su cola es la mas vieja de las dos.
+        r.nota_off(0, 62, Fuerza::desde_midi1(100));
+        r.nota_off(0, 60, Fuerza::desde_midi1(100));
+        let c = r.nota_on(&partes, 0, 64, Fuerza::desde_midi1(100)).unwrap();
+        assert_eq!(c.voz, b.voz, "la cola mas apagada es la que se solto antes");
+        assert_ne!(c.voz, a.voz, "esa se solto despues: su cola sigue sonando");
+        assert_eq!(c.robada, None, "estaba libre: eso no es robar");
     }
 
     #[test]
