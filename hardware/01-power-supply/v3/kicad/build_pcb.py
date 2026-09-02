@@ -531,6 +531,26 @@ class Ruteo:
 # pad pasante. Cada pad baja a su costilla por su propia x. Raiz electrica en
 # J1.2, la toma central del secundario -- que es por donde vuelve la corriente
 # de rectificacion, la mas grande de la placa.
+# LA COSTILLA DE UN PAD SE ELIGE POR CERCANIA EN Y, SALVO ESTOS.
+#
+# El peine reparte bien lo que es corriente de retorno normal, pero hay una
+# corriente que no es normal: la de rectificacion. Va en picos de 2,5 A con
+# flancos de microsegundos, y vuelve del negativo del bulk a la toma central
+# del secundario. Es la mas grande de la placa y la que radia (sec.18.1).
+#
+# Por cercania, J1.2 caia en la costilla de y=66 y los bulk en la de y=99. Las
+# dos se tocan solo por el tronco en x=11, asi que ese pico se iba 379 mm hasta
+# el canto izquierdo y volvia: 57,49 cm2 de espira, medidos trazando el cobre
+# con simulations/power/hum_loop.py, contra un tope de 10,46 cm2 que sale del
+# propio modelo de acoplo. La v1 trazada da 1-4 cm2 porque tenia el punto de
+# estrella EN el bulk (sec.14.5).
+#
+# Poner J1.2 en la costilla de los bulk cierra ese lazo sobre si mismo, y de
+# paso saca el pico de rectificacion del tronco y de la costilla de y=99, o sea
+# que baja tambien la impedancia que comparte con todo lo que cuelga de ellos.
+# Sigue siendo un arbol: J1.2 cambia de rama, no gana una segunda.
+GND_COSTILLA_FORZADA = {("J1", "2"): 99.0}
+
 GND_TRONCO_X = 11.0
 GND_COSTILLAS = (11.0, 23.0, 44.0, 66.0, 84.0, 99.0, 117.0)
 ANCHO_GND = 1.0
@@ -808,7 +828,8 @@ def rutear_gnd(r: Ruteo) -> None:
             r.pista(F, [(x, y)] + camino, 0.3, red=(ref, pin))
         if smd:
             r.via((xv, yv), red=(ref, pin))
-        cost = min(GND_COSTILLAS, key=lambda c: abs(c - yv))
+        cost = GND_COSTILLA_FORZADA.get(
+            (ref, pin), min(GND_COSTILLAS, key=lambda c: abs(c - yv)))
         enganches[cost].add(round(xv, 3))
         if abs(yv - cost) > 0.01:
             r.pista(B, [(xv, yv), (xv, cost)], ANCHO_GND, red=(ref, pin))

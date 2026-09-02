@@ -7,7 +7,7 @@ regenerarlos, ver el final de este fichero.
 
 ```
 DRC (kicad-cli, --severity-all)   0 infracciones   0 sin conectar   0 paridad
-ruteo                             1008 segmentos, 174 vías, 2 capas
+ruteo                             999 segmentos, 172 vías, 2 capas
 placa                             200 × 150 mm, FR-4 1,6 mm, 1 oz
 barrera de red                    10,63 mm entre pads · 7,99 mm medidos sobre
                                   el COBRE del gerber (mínimo 6)

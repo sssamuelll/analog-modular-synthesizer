@@ -208,17 +208,26 @@ tabs están a VRAW+ y VRAW−.
 
 ## El ruteo
 
-**1008 segmentos, 174 vías, DRC de `kicad-cli` en cero infracciones y cero
+**999 segmentos, 172 vías, DRC de `kicad-cli` en cero infracciones y cero
 elementos sin conectar.** Al empezar la fase eran 48 infracciones y 126 sin
 conectar.
 
-> Las cifras bajaron de 1024 y 176 el 2026-09-02, al aprender la puerta de la
-> masa a mirar las vías (#139). El árbol tenía **dos espiras** que ninguna
-> regla veía: tres pads de GND de `U11` compartían su rabito en F.Cu —uno de
-> ellos cruza por encima de los otros dos— y cada uno bajaba con su propia
-> vía a la misma costilla. Sobran dos bajadas y el cobre que iba a buscarlas.
-> Quitar una arista que cierra un ciclo no desconecta nada: el ratsnest sigue
-> en cero y el DRC también.
+> Las cifras bajaron de 1024 y 176 el 2026-09-02, en dos pasos.
+>
+> **#139 — el árbol tenía dos espiras que ninguna regla veía.** Tres pads de
+> GND de `U11` comparten su rabito en F.Cu —uno cruza por encima de los otros
+> dos— y cada uno bajaba con su propia vía a la misma costilla. Sobran dos
+> bajadas y el cobre que iba a buscarlas. Quitar una arista que cierra un
+> ciclo no desconecta nada: el ratsnest sigue en cero y el DRC también.
+>
+> **#280 — la corriente de rectificación daba la vuelta a la placa.** `J1.2`,
+> la toma central del secundario, caía por cercanía en la costilla de `y=66` y
+> los dos bulk en la de `y=99`; las dos sólo se tocan por el tronco en `x=11`.
+> Cada pico de 2,5 A se iba 379 mm hasta el canto izquierdo y volvía,
+> encerrando **57,49 cm²** contra un tope de 10,46 que sale del propio modelo
+> de acoplo. Con `J1.2` en la costilla de los bulk el lazo queda en
+> **2,44 cm²** — mejor que la v1. Detalle en `design-notes.md` §18.2, y la
+> medida es ejecutable: `simulations/power/hum_loop.py`.
 
 El reparto no es por longitud sino por **quién define la forma de la pista**:
 
