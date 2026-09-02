@@ -459,6 +459,29 @@ posible.
 > **La frontera de D2, completada: el evento lleva el valor inicial, el flujo
 > lleva la evolución — y también la verdad.**
 
+> **Enmienda del 2026-09-02 — lo que el bloque de compuerta es, y lo que
+> lleva (papel del generador de envolvente, §3.4 y §14).** Tres precisiones
+> que R-E10 necesitaba para ser implementable, cazadas por la junta de aquel
+> papel:
+>
+> 1. **La máscara es de compuertas, nunca de disparos.** `abre` la pone a 1,
+>    `cierra` a 0, y **`dispara` no la toca**. Un tambor no tiene compuerta:
+>    reafirmarlo con un nivel lo truncaba o lo resucitaba, según el valor del
+>    bit. Consecuencia, dicha: **un `dispara` perdido es un golpe perdido**, sin
+>    red — cae en la clase de R-E12 y se declara irreparable. Es la primera
+>    vez que un borde se declara así.
+> 2. **El bloque lleva el contador de eventos emitidos** por el cerebro para
+>    ese módulo. Un bloque se arma con el estado de un instante y viaja en la
+>    cadencia; un evento emitido después (D1) puede llegar antes, y sin más el
+>    bloque viejo cerraría la nota que acaba de abrir o resucitaría la que
+>    acaba de cerrar. El módulo lleva su cuenta de eventos recibidos e
+>    **ignora los bloques con contador menor**; igual o mayor, los aplica.
+>    Cabe en la cabecera del J2 (#267), donde se declara.
+> 3. **El módulo compara el bit contra su propia compuerta, no contra su
+>    etapa**: bit alto y compuerta baja abre —también sobre una voz en
+>    relajación, que es el caso normal de reutilización—; bit bajo y compuerta
+>    alta cierra; lo demás no hace nada.
+
 ### D7. Lo que no repite el flujo, no tiene red
 
 > **R-E12. Todo lo que viaje solo en el evento y no lo reafirme un flujo
@@ -475,6 +498,16 @@ escribió.
 velocidad y se pierde, R-E10 repara **que la nota esté sonando**, no **con qué
 fuerza**. La nota reparada entra a un valor por defecto. Es degradación
 elegante y no fallo — pero es degradación, y va escrita en vez de descubierta.
+
+> **Enmienda del 2026-09-02 (papel del generador de envolvente, §3.4, decisión
+> 12).** El «valor por defecto» tiene nombre y valor: **`FUERZA_REPARACION =
+> u16::MAX`**, constante del modelo. No es una memoria: la v1 de aquel papel
+> abría la nota reparada «con la última fuerza que el canal tuvo» y su junta
+> cazó que era un estado por canal que el modelo no publica (núcleo §2.1) y
+> que discrepaba de la memoria que `partes.rs` ya guarda. Y la nota reparada
+> **tampoco lleva tono de arranque**: arranca en el último tono que trajo el
+> flujo, que R-M4 refresca a 1 kHz. Las dos son la degradación que esta
+> sección anuncia, escrita.
 
 ---
 

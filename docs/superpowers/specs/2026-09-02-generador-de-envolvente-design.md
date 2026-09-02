@@ -872,14 +872,14 @@ La v1 enmendaba tres papeles sin decirlo; la lente ontológica lo llamó
 
 | Papel o guion | Sección | Qué cambia | Dueño | Estado |
 |---|---|---|---|---|
-| `2026-08-23-modulo-voz-total-design.md` | §3.2 (a) | El generador se dispara por tres fuentes: evento, reafirmación de compuerta y watchdog de trama | el PR de este papel | pendiente |
-| ídem | §3.2 | Nace la categoría **escritor** al lado del generador: consume parámetros vivos por S-9 y no es un generador | el PR de este papel | pendiente |
-| `2026-08-26-motor-digital-design.md` | §5 | Cláusula del suavizado: una fuente lenta puede alimentar un destino rápido a través de un polo de un tick en el escritor; la fuente sigue lenta | el PR de este papel | pendiente |
-| ídem | §7 | El tick de envolventes entra al orden de NVIC en el escalón del DMA de audio y CV | el PR de este papel | pendiente |
-| `2026-08-25-evento-de-nota-design.md` | D6 / R-E10 | La máscara de compuerta es de compuertas (`abre`/`cierra`), nunca de disparos; lleva el contador de eventos emitidos; `dispara` queda sin red (R-E12) | el PR de este papel | pendiente |
-| ídem | D7 / R-E12 | La nota reparada entra con `FUERZA_REPARACION`, constante, y sin tono de arranque | el PR de este papel | pendiente |
+| `2026-08-23-modulo-voz-total-design.md` | §3.2 (a) | El generador se dispara por tres fuentes: evento, reafirmación de compuerta y watchdog de trama | el PR de este papel | **aplicada** 2026-09-02, mismo PR que el plan |
+| ídem | §3.2 | Nace la categoría **escritor** al lado del generador: consume parámetros vivos por S-9 y no es un generador | el PR de este papel | **aplicada** 2026-09-02, mismo PR que el plan |
+| `2026-08-26-motor-digital-design.md` | §5 | Cláusula del suavizado: una fuente lenta puede alimentar un destino rápido a través de un polo de un tick en el escritor; la fuente sigue lenta | el PR de este papel | **aplicada** 2026-09-02, mismo PR que el plan |
+| ídem | §7 | El tick de envolventes entra al orden de NVIC en el escalón del DMA de audio y CV | el PR de este papel | **aplicada** 2026-09-02, mismo PR que el plan |
+| `2026-08-25-evento-de-nota-design.md` | D6 / R-E10 | La máscara de compuerta es de compuertas (`abre`/`cierra`), nunca de disparos; lleva el contador de eventos emitidos; `dispara` queda sin red (R-E12) | el PR de este papel | **aplicada** 2026-09-02, mismo PR que el plan |
+| ídem | D7 / R-E12 | La nota reparada entra con `FUERZA_REPARACION`, constante, y sin tono de arranque | el PR de este papel | **aplicada** 2026-09-02, mismo PR que el plan |
 | `software/nucleo/core/src/bahia.rs` | `Commit`, `PoliticaDrones` | `Commit` gana `cambian`; `forzar` se documenta como no ejecutable en v1 | el PR de código | pendiente |
 | `hardware/03-vco/check_censo_voz.py` | censo | Fila `ENVOLVENTE_POR_CANAL = 10` | el PR de código | pendiente |
 | `hardware/02-midi-cv/trama_j2_budget.py` | flujos de bajada | Falta el flujo de `SET` de parámetros hacia la Voz | #267 | pendiente |
-| Issue #267 | — | La cabecera del J2 gana dos clientes: el `SET` de parámetros y el contador de eventos en el bloque de compuerta | comentario en el issue | pendiente |
+| Issue #267 | — | La cabecera del J2 gana dos clientes: el `SET` de parámetros y el contador de eventos en el bloque de compuerta | comentario en el issue | **aplicada** (comentario del 2026-09-02) |
 | `ataque_budget.py` | — | Nace con las filas de §9 | el PR de código | pendiente |

@@ -224,6 +224,18 @@ como #206); esta versión escribe la cuenta entera:
 - **El S-9 se conserva y se potencia:** el micro sigue siendo el único
   escritor del corte — ahora a velocidad de audio.
 
+> **Enmienda del 2026-09-02 — la cláusula del suavizado (papel del generador
+> de envolvente, §5 y §14).** La ley de dos tasas gana una frase que le
+> faltaba: **una fuente lenta puede alimentar un destino rápido a través de
+> un polo de un tick (100 µs) en el escritor; el polo es del escritor, que ya
+> es rápido, y la fuente sigue lenta.** Es la envolvente del filtro (10 kHz)
+> entrando al escritor de corte (48 kHz): retén de orden cero más un polo, el
+> gemelo digital de la RC que el DAC del VCA lleva en cobre. No es promover
+> la fuente —sigue rindiendo a 10 kHz— y por eso no pide acta por destino; la
+> junta cazó que sin esta frase la v1 de aquel papel creaba la categoría en
+> una subordinada, que es lo que esta sección prohíbe. El polo es causal y
+> no depende de que la razón de relojes sea entera.
+
 ---
 
 ## 6. El invitado
@@ -301,6 +313,15 @@ oración; es el sucesor de voz-total §3.4): prioridades NVIC en orden —
 **capturas y J2 > DMA de audio (SAI/CV) > USB/Ethernet > resto**; vectores e
 ISR críticas en ITCM; el presupuesto de latencia de interrupción entra al
 libro bilateral y el bring-up lo mide bajo carga plena.
+
+> **Enmienda del 2026-09-02 (papel del generador de envolvente, §3.5, §9 y
+> §14).** El **tick de 10 kHz de los generadores de envolvente** entra al
+> orden, que no lo nombraba: va **en el escalón del DMA de audio y CV** —debajo
+> de capturas y J2, encima de USB y Ethernet—, porque es quien alimenta ese
+> DMA. Y es el **único dueño del estado** de los generadores: la ISR del J2
+> no muta nada, encola (evento, reafirmación, `SET`, `soltar todo`) en una cola
+> SPSC que el tick drena entera y en orden antes de avanzar. La latencia real
+> de esa ISR es un hueco de `ataque_budget.py` hasta el bring-up.
 
 - **R-M5 — El silencio no depende del software.** El N657 es el único
   escritor de 48 VCAs: colgado, dieciséis voces quedarían gobernadas por un
