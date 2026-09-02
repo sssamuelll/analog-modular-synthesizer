@@ -12,11 +12,15 @@
 # Instalar:   git config core.hooksPath .githooks
 # Saltar:     git push --no-verify     (y decirlo en el PR)
 #
-# Tarda unos 58 s bajo carga; check_pcb.py ocupa 1.0 s.
+# Tarda unos 60 s con la maquina libre y hasta ~80 s con carga: 58-60 s son
+# gates.py y ~2 s las otras seis etapas con el target de cargo caliente
+# (medido 2026-09-02). Dentro de gates.py el que manda es clearance_budget.py
+# del case con 35 s; check_pcb.py de la fuente ocupa 1.0 s y sus canarios
+# 8.1 s.
 set -u
 
 # Un push de BORRADO no lleva codigo: git pasa el oid local en ceros. Correr
-# toda la tanda de puertas para borrar una rama YA mergeada no verifica
+# un minuto de puertas para borrar una rama YA mergeada no verifica
 # nada, y ensena a empujar con --no-verify -- que es justo el habito que estas
 # puertas existen para no crear.
 #
@@ -50,7 +54,7 @@ rojos=0
 sin_correr=0
 
 echo ""
-echo "puertas locales -- Actions esta apagado, esto ES la puerta (~58s)"
+echo "puertas locales -- Actions esta apagado, esto ES la puerta (~60s)"
 echo ""
 
 # corre <nombre> <comando-como-funcion>

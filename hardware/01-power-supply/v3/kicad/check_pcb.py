@@ -115,6 +115,7 @@ def revisar_ruteo(board) -> list[str]:
     fallos += [f'masa: {x}' for x in bp.revisar_estrella()]
     fallos += [f'pista sobre pad: {x}' for x in bp.revisar_pista_pad(board)]
     fallos += [f'via: {x}' for x in bp.revisar_vias(board)]
+    fallos += [f'munon: {x}' for x in bp.revisar_cobre_muerto(board)]
     return fallos
 
 
@@ -166,11 +167,27 @@ def main() -> int:
     fallos += bp.revisar_borde_ceramicos(board)
     fallos += bp.revisar_to220_coplanares(board)
 
-    # Las cuatro puertas de RUTEO miden el cobre que se fabrica: el guardado
-    # en la placa commiteada. El generador se comprueba cuando build_pcb.py
-    # construye la placa; regenerarlo aqui tardaba 154 s y, peor, juzgaba una
-    # intencion nueva en vez del artefacto que esta puerta dice vigilar.
-    fallos += revisar_ruteo(board)
+    # Las cinco puertas de RUTEO miden el cobre que se fabrica: el guardado
+    # en la placa commiteada. Regenerarlo aqui tardaba 228,8 s medidos (#139)
+    # y, peor, juzgaba una intencion nueva en vez del artefacto que esta
+    # puerta dice vigilar: una pista arrastrada a mano en la GUI no la veia
+    # NADIE, porque el ruteo que se comprobaba era el que el script acababa
+    # de calcular.
+    #
+    # El generador conserva su propia certificacion en build_pcb.py, que
+    # asevera lo mismo sobre lo que acaba de trazar. Pero build_pcb.py no lo
+    # corre ninguna puerta: si rutear() se rompe, no hay rojo hasta que
+    # alguien regenere. Queda escrito porque es el precio de este cambio.
+    # leer_ruteo() se planta cuando el cobre trae algo que no sabe
+    # representar (un arco, una zona de GND, una via no pasante). Eso NO es un
+    # fallo de la placa: es la puerta diciendo que no puede medir. Sale como
+    # HUECO -- codigo 2, con el motivo escrito, la convencion de gates.py --
+    # en vez de reventar con un traceback que el resumen no sabe clasificar.
+    try:
+        fallos += revisar_ruteo(board)
+    except AssertionError as exc:
+        print(f"HUECO: la puerta no sabe leer este cobre -- {exc}")
+        return 2
 
     peor, par, pads_red, pads_selv = bp.revisar_fuga(board)
     if peor < bp.FUGA_MIN:

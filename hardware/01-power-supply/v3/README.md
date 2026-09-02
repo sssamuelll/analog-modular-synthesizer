@@ -57,8 +57,8 @@ nunca ampliando un índice que alguien puede olvidar:
 | [`check_telemetria.py`](check_telemetria.py) | ¿el instrumento sobrevive a medir? Divisores, shunts, direcciones I²C y alimentaciones contra el límite garantizado de cada datasheet |
 | [`kicad/check_bom.py`](kicad/check_bom.py) | ¿el BOM y la hoja tienen los mismos designadores? |
 | [`kicad/check_netlist.py`](kicad/check_netlist.py) | ¿la isla está **cableada** como dice el contrato? Shunts en serie, divisores en el sentido correcto, masas sin un nodo común |
-| [`kicad/check_pcb.py`](kicad/check_pcb.py) | ¿la placa **commiteada** está colocada como dice el script y sus pistas y vías guardadas cumplen cruces, tramos GND sin bucles dentro de cada capa, cero conexiones abiertas, pista–pad y separación de vías? También vigila la barrera de red, la isla de referencia, la diagonal del lazo y los tres tabs contra la pared |
-| [`kicad/check_pcb_mutations.py`](kicad/check_pcb_mutations.py) | ¿las cinco mutaciones históricas —pieza movida, cruce, bucle GND, pista sobre pad y vía duplicada— siguen poniendo roja la puerta completa después de guardar y recargar el PCB, y una transición GND rota deja una conexión abierta? |
+| [`kicad/check_pcb.py`](kicad/check_pcb.py) | ¿la placa **commiteada** está colocada como dice el script, y su cobre guardado cumple cruces, **masa en árbol sin ni un bucle —vías incluidas—**, cero conexiones abiertas, cero muñones colgando, pista–pad y separación de vías? También vigila la barrera de red, la isla de referencia, la diagonal del lazo y los tres tabs contra la pared |
+| [`kicad/check_pcb_mutations.py`](kicad/check_pcb_mutations.py) | ¿las siete mutaciones históricas —pieza movida, cruce, bucle de masa en una capa, bucle que cruza de capa por una vía, muñón colgando, pista sobre pad y vía duplicada— siguen poniendo roja la puerta completa, **cada una por separado y con el número de líneas que su fila declara**? Más los umbrales del filtro de cajas, los rechazos de cobre que no sabe leer, y que una vía de masa quitada deja una conexión abierta |
 | [`check_fab.py`](check_fab.py) | ¿lo que se **manda a fábrica** dice lo mismo que la placa? A JLC no se le sube el `.kicad_pcb`: se le suben seis gerbers y un drill que ninguna otra puerta mira |
 | [`check_huellas.py`](check_huellas.py) | ¿las huellas dibujadas a mano son las de la **pieza real**? Es geometría, no conectividad: no la ve el ERC, ni el DRC, ni la netlist |
 | [`check_red_chasis.py`](check_red_chasis.py) | ¿la red entra por una pieza que **existe**, con un solo fusible, y el chasis tiene su recorte? |
@@ -208,9 +208,17 @@ tabs están a VRAW+ y VRAW−.
 
 ## El ruteo
 
-**1033 segmentos, 176 vías, DRC de `kicad-cli` en cero infracciones y cero
+**1008 segmentos, 174 vías, DRC de `kicad-cli` en cero infracciones y cero
 elementos sin conectar.** Al empezar la fase eran 48 infracciones y 126 sin
 conectar.
+
+> Las cifras bajaron de 1024 y 176 el 2026-09-02, al aprender la puerta de la
+> masa a mirar las vías (#139). El árbol tenía **dos espiras** que ninguna
+> regla veía: tres pads de GND de `U11` compartían su rabito en F.Cu —uno de
+> ellos cruza por encima de los otros dos— y cada uno bajaba con su propia
+> vía a la misma costilla. Sobran dos bajadas y el cobre que iba a buscarlas.
+> Quitar una arista que cierra un ciclo no desconecta nada: el ratsnest sigue
+> en cero y el DRC también.
 
 El reparto no es por longitud sino por **quién define la forma de la pista**:
 

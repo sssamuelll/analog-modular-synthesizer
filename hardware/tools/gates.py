@@ -71,10 +71,18 @@ EXCLUIR = ("__pycache__", ".venv", os.path.join(".claude", "worktrees"), "site-p
 # Cuanto se le da a UN guion antes de darlo por colgado.
 #
 # Estaba en 300 s y subio a 600 cuando check_pcb.py tardaba hasta 226 s bajo
-# carga. El #139 elimino aquel recalculo y lo dejo en 1.0 s (suite: 58.0 s,
-# incluidos sus canarios de mutacion).
-# No se baja aqui: este numero es el guardia de UN proceso colgado, no el
-# presupuesto de rendimiento de la tanda completa.
+# carga. El #139 elimino aquel recalculo y lo dejo en 1.0 s, asi que el sujeto
+# de aquella cuenta ya no existe y el 600 se quedaria sin derivacion.
+#
+# La cuenta NUEVA, para que no vuelva a quedarse huerfano: el guion mas lento
+# de la tanda es clearance_budget.py del case, 35.1 s medidos el 2026-09-02
+# (la tanda entera, 57.6-60.2 s en tres corridas). 600 s son 17x ese maximo.
+#
+# El numero no se baja porque lo que vigila es UN proceso colgado, no el
+# rendimiento de la tanda: una puerta que se pone roja por carga y no por la
+# placa ensena a empujar con --no-verify, que es el habito que estas puertas
+# existen para no crear. Si algun dia el mas lento se acerca a 60 s, esta
+# cuenta hay que rehacerla en vez de heredarla.
 TIMEOUT_S = 600
 
 def _python_kicad() -> str | None:
