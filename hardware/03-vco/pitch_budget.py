@@ -240,7 +240,7 @@ def demo() -> None:
          "eso ya no es una apuesta, es un trimmer que falta")
 
     # --- el span usable A, y por que no es la puerta ------------------------
-    print(f"\nspan usable A (lo que el instrumento toca de verdad)")
+    print("\nspan usable A (lo que el instrumento toca de verdad)")
     print("  razon I_lineal/I_expo(0) no esta confirmada -- se barre:\n")
     print(f"  {'razon':>8} | {'A':>7} | {'compresion frente a B':>21}")
     print("  " + "-" * 44)

@@ -87,7 +87,7 @@ def firma(canon: dict[str, frozenset[str]], nombre: str) -> str:
     """Forma canonica en texto, estable y diffeable."""
     nodos = sum(len(v) for v in canon.values())
     lineas = [f"# firma de conectividad de {nombre}",
-              f"# generado por hardware/tools/netdiff.py -- NO editar a mano",
+              "# generado por hardware/tools/netdiff.py -- NO editar a mano",
               f"# {len(canon)} redes, {nodos} nodos"]
     for red in sorted(canon):
         lineas.append(f"{red}: {' '.join(sorted(canon[red]))}")
@@ -152,10 +152,11 @@ def cmd_golden(escribir: bool) -> list[str]:
         d = list(difflib.unified_diff(
             vieja.splitlines(), nueva.splitlines(),
             fromfile="golden commiteado", tofile="netlist actual", lineterm=""))
-        cambios = [l for l in d if l[:1] in "+-" and l[:3] not in ("---", "+++")]
+        cambios = [linea for linea in d
+                   if linea[:1] in "+-" and linea[:3] not in ("---", "+++")]
         fallos.append(
             f"{m.rel}: la conectividad cambio ({len(cambios)} lineas).\n"
-            + "\n".join("    " + l for l in d[:60])
+            + "\n".join("    " + linea for linea in d[:60])
             + ("\n    ... (diff recortado)" if len(d) > 60 else "")
             + "\n    Si el cambio es intencional: netdiff.py --write y "
               "commitea el golden con el diseno.")

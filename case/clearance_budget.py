@@ -799,8 +799,9 @@ def _marco_ventana(p: dict[str, float]) -> list[dict]:
                 for cc, k in zip(ejes_c, con)]
         pts = puntos or [(s0, retiro), (s1, retiro), (s1, fo), (s0, fo)]
         conv = convexos or [pts]
-        m = lambda q: (A[0] + u[0] * q[0] + n[0] * q[1],
-                       A[1] + u[1] * q[0] + n[1] * q[1])
+        def m(q):
+            return (A[0] + u[0] * q[0] + n[0] * q[1],
+                    A[1] + u[1] * q[0] + n[1] * q[1])
         # LOS CANTOS REALES de la pata son los que no estan en s0 ni en s1:
         # el marco es un anillo cerrado y en las esquinas sigue de largo, asi
         # que los dos lados que cierran el poligono ahi son ficticios. Un
@@ -1112,7 +1113,9 @@ def _distancia_a_silueta(P: list[tuple[float, float]],
     el poligono de pts_perfil() y no contra el DXF a proposito: aqui manda el
     modelo, y el DXF lo cruza taladros_anillo() en check_dxf.py."""
     def d_seg(a, b):
-        ax, ay = a; bx, by = b; px, py = c
+        ax, ay = a
+        bx, by = b
+        px, py = c
         dx, dy = bx - ax, by - ay
         L2 = dx * dx + dy * dy
         t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / L2)) if L2 else 0.0
@@ -2176,8 +2179,6 @@ def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
     presupuesto de este repo, asi que el salto termico describe el camino del PSU --
     que sale por el valle y por estas dos ondas, las dos por debajo del
     entrepiso-- y NO la bahia de arriba, que es la que el cajeado sella."""
-    P = _vertices(p)
-    cr = _centros_rail(p, P)
     au = _trasera_au(p)
     # ANCLADAS AL CAMPO VISIBLE desde la trasera capturada (2026-08-29, noche,
     # 2): de la coronacion del labio del talon a la del techo, en y del mundo.
@@ -2620,8 +2621,8 @@ def guarda_valle(p: dict[str, float]) -> None:
     x_rail = _frente_kondor(p, P, cr)
     vuelo, t = x_rail - x0, p["t_valle"]
     b_mano = p["b_mano_valle"]
-    I = b_mano * t ** 3 / 12
-    flecha = p["carga_mano"] * vuelo ** 3 / (3 * E_ALUMINIO * I)
+    inercia = b_mano * t ** 3 / 12
+    flecha = p["carga_mano"] * vuelo ** 3 / (3 * E_ALUMINIO * inercia)
     sigma = 6 * p["carga_mano"] * vuelo / (b_mano * t ** 2)
     g = _geometria_apoyo_valle(p)
     _guarda_apoyo_valle(p, g)
@@ -2776,8 +2777,6 @@ def guarda_red(p: dict[str, float]) -> None:
     sino un paso, y su cota la decide la pieza fija que aun no existe (#130).
 
     Su mutacion vive en canario_red(), como manda el Principio VIII."""
-    P = _vertices(p)
-    cr = _centros_rail(p, P)
     au = _trasera_au(p)
     f_base = _trasera_campo(p)[0]          # la coronacion del labio del talon
     lib0, lib1 = _banda_libre_trasera(p)   # la misma que centra la rejilla
@@ -3279,13 +3278,13 @@ def _miembro_alto(p: dict[str, float]) -> dict:
                  (t, p["banda_trasera"], yt - p["banda_trasera"] / 2)]
     A = sum(b * h for b, h, _ in rects)
     yb = sum(b * h * y for b, h, y in rects) / A
-    I = sum(b * h ** 3 / 12 + b * h * (y - yb) ** 2 for b, h, y in rects)
+    inercia = sum(b * h ** 3 / 12 + b * h * (y - yb) ** 2 for b, h, y in rects)
     y_max = max(max(abs(y + h / 2 - yb), abs(y - h / 2 - yb)) for _, h, y in rects)
     au = perfil(p)["ancho_util"]
     F = p["carga_mano"]
     M = F * au / 4
-    return {"I": I, "yb": yb, "sigma": M * y_max / I,
-            "flecha": F * au ** 3 / (48 * E_ALUMINIO * I),
+    return {"I": inercia, "yb": yb, "sigma": M * y_max / inercia,
+            "flecha": F * au ** 3 / (48 * E_ALUMINIO * inercia),
             "x_dob": P[6][0] - t, "rects": rects,
             "y_labio": _y_labio_techo(p)}
 
@@ -3811,7 +3810,7 @@ def guarda_trasera_flexion(p: dict[str, float]) -> None:
     fallan = [r for r in res if r["sigma"] > SIGMA_PMMA]
     print(f"trasera como placa ({a:.0f} x {b:.0f} x {p['t_piel']:g}, mano de "
           f"{p['carga_mano']:.0f} N en un disco de R={R:g}, {len(res)} manos en media "
-          f"placa; {len(tl_z := _talon(p)['pestana_z'])} pestanas a "
+          f"placa; {len(_talon(p)['pestana_z'])} pestanas a "
           f"{p['talon_pestana_aire']:g} de aire): al centro cede "
           f"{centro['flecha_carga']:.1f} mm bajo la mano a {centro['sigma']:.1f} MPa; "
           f"la peor de la mitad de abajo, ({peor_abajo['mano'][0]:.0f}, "
@@ -3872,7 +3871,6 @@ def guarda_talon(p: dict[str, float]) -> None:
          pie con 2 t al canto libre, y a 1.5 D + medio ancho de cada M4.
       6. el labio tapa mas canto de trasera que el bolsillo del anillo (6).
       7. la nariz y el talon comparten pie, chaflan y frente: mismo estilo."""
-    P = _vertices(p)
     tl = _talon(p)
     tr = _trasera(p)
     c, t = p["chaflan_nariz"], p["t_costilla"]
@@ -4399,11 +4397,11 @@ def _flecha_pata(p: dict[str, float], L: float, b: float, empotres: int
     cuantos de sus dos extremos empotran: ninguno FL^3/48EI (M = FL/4), uno
     FL^3/107EI (3FL/16), los dos FL^3/192EI (FL/8)."""
     h = p["t_placa"]
-    I = b * h ** 3 / 12
+    inercia = b * h ** 3 / 12
     W = b * h * h / 6
     F = p["carga_mano"]
     k, m = {0: (48.0, 0.25), 1: (107.0, 3.0 / 16.0), 2: (192.0, 0.125)}[empotres]
-    return F * L ** 3 / (k * E_ALUMINIO * I), m * F * L / W
+    return F * L ** 3 / (k * E_ALUMINIO * inercia), m * F * L / W
 
 
 def guarda_marco_ventana(p: dict[str, float]) -> None:
@@ -4568,7 +4566,9 @@ REHUNDIDO_PANEL_OBJETIVO = 1.50
 
 def _firma_marco_sin_ejes(p: dict[str, float]) -> tuple:
     """Geometria material del marco, excluyendo centros y cajeados de riel."""
-    punto = lambda q: (round(q[0], 9), round(q[1], 9))
+    def punto(q):
+        return (round(q[0], 9), round(q[1], 9))
+
     return tuple(
         (q["nombre"], round(q["s0"], 9), round(q["s1"], 9),
          round(q["retiro"], 9), round(q["fondo"], 9),
@@ -5106,15 +5106,15 @@ def _seccion_anillo(p: dict[str, float], tramo: int | None = None
                  (bo["ancho"], bo["hondo"], bo["z0"] + bo["hondo"] / 2.0, -1)]
         A = sum(s * w * h for w, h, _, s in rects)
         yb = sum(s * w * h * y for w, h, y, s in rects) / A
-        I = sum(s * (w * h ** 3 / 12 + w * h * (y - yb) ** 2) for w, h, y, s in rects)
-        return I, A, max(yb, T - yb)
+        inercia = sum(s * (w * h ** 3 / 12 + w * h * (y - yb) ** 2) for w, h, y, s in rects)
+        return inercia, A, max(yb, T - yb)
     a1, y1 = (W - B) * T, T / 2.0
     a2, y2 = B * R, R / 2.0
     A = a1 + a2
     yb = (a1 * y1 + a2 * y2) / A
-    I = ((W - B) * T ** 3 / 12 + a1 * (y1 - yb) ** 2
-         + B * R ** 3 / 12 + a2 * (y2 - yb) ** 2)
-    return I, A, max(yb, T - yb)
+    inercia = ((W - B) * T ** 3 / 12 + a1 * (y1 - yb) ** 2
+               + B * R ** 3 / 12 + a2 * (y2 - yb) ** 2)
+    return inercia, A, max(yb, T - yb)
 
 
 def autocomprobacion_anillo() -> None:
@@ -5129,9 +5129,9 @@ def autocomprobacion_anillo() -> None:
       ymax = 14 - yb = 7.462617"""
     p = {"cara_anillo": 20.0, "t_anillo": 14.0, "rebaje_anillo": 6.0,
          "rehundido_acrilico": 3.0}
-    I, A, ymax = _seccion_anillo(p)
+    inercia, A, ymax = _seccion_anillo(p)
     assert abs(A - 214.0) < 1e-9, f"area {A}, a mano 214"
-    assert abs(I - 2384089 / 642) < 1e-6, f"I = {I:.6f}, a mano {2384089/642:.6f}"
+    assert abs(inercia - 2384089 / 642) < 1e-6, f"I = {inercia:.6f}, a mano {2384089/642:.6f}"
     assert abs(ymax - (14 - 1399 / 214)) < 1e-9, f"ymax {ymax:.6f}"
 
 
@@ -5149,8 +5149,8 @@ def guarda_anillo(p: dict[str, float]) -> None:
     P3 como alivio en V. No hay ala, no hay pliegue, no hay P3 que soldar. Lo
     que SI impide: que alguien adelgace el anillo o le coma la franja por
     estetica y lo deje por debajo de lo que la chapa plegada ya pasaba."""
-    I, A, ymax = _seccion_anillo(p)
-    I5, A5, _ = _seccion_anillo(p, tramo=5)
+    inercia, A, ymax = _seccion_anillo(p)
+    inercia5, A5, _ = _seccion_anillo(p, tramo=5)
     P = _vertices(p)
     n = len(P)
     nombres = ["frente bajo", "cara inferior", "el valle", "cara superior",
@@ -5159,16 +5159,16 @@ def guarda_anillo(p: dict[str, float]) -> None:
     masa = (A * (_perimetro(P) - largo5) + A5 * largo5) * 2.70e-6
     print(f"anillo: pletina de {p['t_anillo']:g}, cara vista {p['cara_anillo']:g}, "
           f"rebaje {p['rebaje_anillo']:g} x {p['t_anillo'] - p['rehundido_acrilico']:g}, "
-          f"chaflan {p['chaflan_anillo']:g} -> I={I:.0f} mm4, {A:.0f} mm2 (el tramo "
-          f"trasero, con sus dos bolsillos: I={I5:.0f}, {A5:.0f} mm2), "
+          f"chaflan {p['chaflan_anillo']:g} -> I={inercia:.0f} mm4, {A:.0f} mm2 (el tramo "
+          f"trasero, con sus dos bolsillos: I={inercia5:.0f}, {A5:.0f} mm2), "
           f"{masa:.2f} kg por costilla")
     for i in range(n):
         a, b = P[i], P[(i + 1) % n]
         largo = math.hypot(b[0] - a[0], b[1] - a[1])
         # el tramo trasero lleva su propia seccion, con los dos bolsillos
-        I, A, ymax = _seccion_anillo(p, tramo=5 if i == 5 else None)
-        flecha = p["carga_mano"] * largo ** 3 / (192 * E_ALUMINIO * I)
-        sigma = (p["carga_mano"] * largo / 8) * ymax / I
+        inercia, A, ymax = _seccion_anillo(p, tramo=5 if i == 5 else None)
+        flecha = p["carga_mano"] * largo ** 3 / (192 * E_ALUMINIO * inercia)
+        sigma = (p["carga_mano"] * largo / 8) * ymax / inercia
         assert flecha <= p["flecha_costado_max"], (
             f"el anillo cede {flecha:.3f} mm en el tramo '{nombres[i]}' de "
             f"{largo:.2f} mm y el techo son {p['flecha_costado_max']:.2f}. La "

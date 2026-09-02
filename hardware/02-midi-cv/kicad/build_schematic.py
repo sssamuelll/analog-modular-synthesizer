@@ -197,7 +197,6 @@ def canal_cv(idx: int, xc: float, yc: float) -> None:
     letra = "ABC"[idx]
     ref_u = "U2"
     pon("opamp", ref_u, "TL074H", xc, yc, 0, unidad=idx + 1)
-    u = idx + 1
     n_mas, n_menos, n_out = {0: ("3", "2", "1"), 1: ("5", "6", "7"),
                              2: ("10", "9", "8")}[idx]
     p_mas = P("opamp", n_mas, xc, yc)

@@ -117,7 +117,7 @@ def main() -> None:
     r = 0.15
     m_punto = area_real * 1e-6 * (I_PICO / T_FLANCO)
     v150 = MU0 / (4*3.141592653589793) * 2 * av * m_punto / r**3
-    print(f"\nreferencia: -100 dBu = 7.75 uV")
+    print("\nreferencia: -100 dBu = 7.75 uV")
     assert area_real < 10.0 * 100, \
         f"el lazo del rectificador se fue a {area_real/100:.1f} cm2"
     print(f"OK: cota del lazo por debajo de 10 cm2. A 150 mm quedan {v150*1e6:.1f} uV, "

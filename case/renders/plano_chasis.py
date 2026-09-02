@@ -21,7 +21,6 @@ con un calibre antes de soldar nada.
 """
 from __future__ import annotations
 
-import math
 import sys
 from pathlib import Path
 

@@ -1223,8 +1223,8 @@ def _pads_por_red(board) -> dict:
             if not red or red.startswith("unconnected-"):
                 continue
             ls = p.GetLayerSet()
-            capas = [c for c, l in ((0, pcbnew.F_Cu), (1, pcbnew.B_Cu))
-                     if ls.Contains(l)]
+            capas = [c for c, cu in ((0, pcbnew.F_Cu), (1, pcbnew.B_Cu))
+                     if ls.Contains(cu)]
             if not capas:            # sub-pad de solo pasta: no es cobre
                 continue
             bb = p.GetBoundingBox()
@@ -1259,8 +1259,8 @@ def _sembrar(rej, board, r: Ruteo, dar_id) -> None:
     for fp in board.GetFootprints():
         for p in fp.Pads():
             ls = p.GetLayerSet()
-            capas = [c for c, l in ((0, pcbnew.F_Cu), (1, pcbnew.B_Cu))
-                     if ls.Contains(l)]
+            capas = [c for c, cu in ((0, pcbnew.F_Cu), (1, pcbnew.B_Cu))
+                     if ls.Contains(cu)]
             if not capas:
                 continue
             bb = p.GetBoundingBox()

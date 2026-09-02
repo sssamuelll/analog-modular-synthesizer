@@ -195,7 +195,7 @@ def main() -> int:
     ng = Ng()
     autocomprobacion(ng)
 
-    print(f"\ntransformador Talema 0120P1-2-012 (hoja del fabricante):")
+    print("\ntransformador Talema 0120P1-2-012 (hoja del fabricante):")
     print(f"  {V_VACIO} V en vacio, {V_PLENA} V a {I_PLENA} A "
           f"-> R_SEC = {R_SEC:.4f} ohm por semidevanado")
     print(f"bulk {C_BULK*1e6:.0f} uF/riel, carga {I_CARGA*1000:.0f} mA/riel\n")

@@ -39,7 +39,6 @@ LO QUE **NO** CUBRE
 from __future__ import annotations
 
 import csv
-import filecmp
 import os
 import re
 import shutil
@@ -77,12 +76,12 @@ def canon(ruta: str) -> list[str]:
     fecha = re.compile(r"\d{4}-\d{2}-\d{2}|CreationDate|GenerationSoftware"
                        r"|KiCad|ProjectId")
     out = []
-    for linea in open(ruta, encoding="utf-8", errors="replace"):
-        l = linea.rstrip("\r\n")
-        if l.startswith("G04") or l.startswith(";"):
-            if fecha.search(l):
+    for cruda in open(ruta, encoding="utf-8", errors="replace"):
+        linea = cruda.rstrip("\r\n")
+        if linea.startswith("G04") or linea.startswith(";"):
+            if fecha.search(linea):
                 continue
-        out.append(l)
+        out.append(linea)
     return out
 
 

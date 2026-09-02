@@ -192,7 +192,7 @@ def demo() -> None:
     # --- 4. la fila, con la bahia ya dentro (acta E-3) --------------------
     techo_fila = ANCHO_FILA - RESERVA_BORDE
     fila = a_nuevo + ANCHO_BAHIA
-    print(f"\nfila A, con la bahia fundida dentro del modulo (E-3):\n")
+    print("\nfila A, con la bahia fundida dentro del modulo (E-3):\n")
     print(f"  Voz {a_nuevo:.1f} + bahia {ANCHO_BAHIA:.0f} = {fila:.1f} mm")
     print(f"  techo: riel de {RIEL_HP} HP = {ANCHO_FILA:.2f} - reserva "
           f"{RESERVA_BORDE:.0f} = {techo_fila:.2f} mm")

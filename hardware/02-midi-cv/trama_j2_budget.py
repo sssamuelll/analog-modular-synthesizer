@@ -417,7 +417,7 @@ def main() -> int:
         print(f"  {nombre:24}  {f/1e6:5.1f} MHz  ocupacion {voz.ocupacion(f):6.2%}"
               f"   techo del lazo con {BITS_BLOQUE_TONO} bits: "
               f"{TECHO_OCUPACION_ENLACE*f/BITS_BLOQUE_TONO/1e3:5.1f} kHz")
-    print(f"\n  El '9,19 kHz' del bus compartido esta muerto (D6). Con el enlace")
+    print("\n  El '9,19 kHz' del bus compartido esta muerto (D6). Con el enlace")
     print(f"  privado y {BITS_BLOQUE_TONO} bits por giro, el techo POR BUS del lazo es")
     print(f"  {voz.techo_lazo_hz(BITS_BLOQUE_TONO)/1e3:.1f} kHz al piso. Cual cadencia se adopta lo")
     print("  decide latencia_mano_budget.py contra los EXTREMOS, no este techo.")

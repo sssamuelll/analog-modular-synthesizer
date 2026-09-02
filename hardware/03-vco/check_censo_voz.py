@@ -168,7 +168,9 @@ def demo() -> None:
     #   Ojo con la lectura facil de la holgura de abajo: los 232 que "sobran"
     #   son ANTES de meter al motor y a los gestos. No son margen: son la
     #   habitacion de dos inquilinos que todavia no han llegado.
-    MOTOR_SIN_CENSAR = True
+    #
+    #   Quien lo dice en la SALIDA, sin bandera de por medio: la fila
+    #   "motor+gestos AUSENTES" del cierre y la ultima linea del veredicto.
 
     n = params(True)
     necesario = n + RESERVA_RESTO_INSTRUMENTO

@@ -236,7 +236,8 @@ def revisar(nombre: str, sobre) -> list[str]:
     ys: list[float] = []
 
     def punto(x, y):
-        xs.append(x); ys.append(y)
+        xs.append(x)
+        ys.append(y)
         return (round(x, 3), round(y, 3))
 
     for e in ents:
@@ -1016,8 +1017,9 @@ def anillo_tiene_ventana() -> list[str]:
                 f"tiene DOS, silueta y ventana. Con uno solo es una pletina "
                 f"maciza: el doble de aluminio, nada que ver y ningun sitio "
                 f"donde asiente el acrilico"]
-    ancho = lambda cm: (max(q[0] for j in cm for q in aristas[j])
-                        - min(q[0] for j in cm for q in aristas[j]))
+    def ancho(cm):
+        return (max(q[0] for j in cm for q in aristas[j])
+                - min(q[0] for j in cm for q in aristas[j]))
     ventana, silueta = sorted(comps, key=ancho)
     canto = [aristas[j] for j in silueta]
     ds = [_dist_al_contorno(canto, q) for j in ventana for q in aristas[j]]
@@ -1971,8 +1973,7 @@ def bridas_techo() -> list[str]:
     # distancia de su centro, y una viva no deja ninguno.
     aristas_b, _ = _componentes(dxf)
     r_b = p["radio_brida"]
-    v_b = cb._bridas(p)[0]
-    y_v = techo_cara_alto = p["techo_labio"] + p["chaflan_nariz"]
+    y_v = p["techo_labio"] + p["chaflan_nariz"]
     for lado, x0 in ((0, 0.0), (1, au)):
         # la esquina de ABAJO del vuelo, la que no toca ni el chaflan ni el
         # relieve: su centro esta a r_b de las dos caras del vuelo.
@@ -2246,7 +2247,6 @@ def todo_dxf_tiene_quien_lo_mire() -> list[str]:
     case entero paso el gate en VERDE sin que nadie le mirara ni la envolvente.
     Habia dos huerfanos mas de antes, los dos legitimos y ninguno declarado
     como tal, que es justo lo que hacia el hueco invisible."""
-    import pathlib
     exentos = {
         "lienzo_2d": "preview de nesteado, NO SE CORTA (lo dice el PLIEGO)",
         "kondor_cajeado_2d": "no es una pieza: es el cajeado ciego de la "
@@ -2365,7 +2365,6 @@ def guarda_zocalo() -> list[str]:
     # paticas(): mismos cuatro centros del .scad, sin la rotacion a Z que ahi
     # hace falta para plantar el cilindro y aqui no, porque esto es 2D.
     v = p["vuelo_zocalo"]
-    P = cb._vertices(p)
     tl = cb._talon(p)
     x_frente = p["alto_frontal"] / 2 + p["d_pie"] / 2
     x_trasero = tl["x_chaflan"] - p["talon_pie"] / 2  # centro_talon().x: el pie va del chaflan hacia dentro
