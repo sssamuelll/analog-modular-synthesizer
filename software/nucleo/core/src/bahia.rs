@@ -120,6 +120,11 @@ pub enum PoliticaDrones {
     /// eleccion del interprete, visible como «pendiente».
     Diferir,
     /// Al vencer el timeout, commit con mute breve de los que siguen sonando.
+    ///
+    /// **No ejecutable en v1**: el mute breve (`Commit::mutear`) no tiene
+    /// numero hasta que el bring-up mida el glitch del AD75019 (voz-total
+    /// §11.2). Un preset solo puede declarar `Diferir` hasta entonces (papel
+    /// del generador §6).
     Forzar { timeout_ms: u64 },
 }
 
@@ -145,6 +150,12 @@ pub struct Commit {
     /// **HUECO**: cuanto dura ese mute y como se mutea el VCA no se modela
     /// aqui. Es del generador de envolventes y del firmware.
     pub mutear: u16,
+    /// Los canales cuyos cruces cambian con este commit. El latch tarda mas de
+    /// un tick (512 bits a 5 MHz son 102 us, hoja del AD75019) y un `abre` en
+    /// esa ventana abriria un canal a medio conmutar: el firmware los pasa a
+    /// `Generadores::bloquear_apertura` antes de shiftear y los suelta con
+    /// `Entrada::Conmutado` tras `PCLK` (papel del generador §6).
+    pub cambian: u16,
 }
 
 /// La barrera de cambiados-en-silencio (§5.3).
@@ -197,8 +208,9 @@ impl Barrera {
     /// `Commit` dice a quien hay que mutear.
     pub fn tick(&mut self, canales_en_silencio: u16, ahora_ms: u64) -> Option<Commit> {
         let pendiente = self.pendiente?;
+        let cambian = self.activa.canales_que_cambian(&pendiente);
         // Los que no cambian no votan, suenen o no.
-        let estorban = self.activa.canales_que_cambian(&pendiente) & !canales_en_silencio;
+        let estorban = cambian & !canales_en_silencio;
         if estorban != 0 {
             match self.politica {
                 PoliticaDrones::Diferir => return None,
@@ -211,6 +223,9 @@ impl Barrera {
         }
         self.activa = pendiente;
         self.pendiente = None;
-        Some(Commit { mutear: estorban })
+        Some(Commit {
+            mutear: estorban,
+            cambian,
+        })
     }
 }
