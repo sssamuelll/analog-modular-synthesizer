@@ -12,6 +12,7 @@ pub mod descubrimiento;
 pub mod fuerza;
 pub mod j2;
 pub mod medidas;
+pub mod memoria;
 pub mod modelo;
 pub mod param;
 pub mod partes;
