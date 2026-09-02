@@ -7,6 +7,7 @@
 //! puede expresar con estos tipos y estos mensajes, no esta terminada.
 
 pub mod atribucion;
+pub mod bahia;
 pub mod descriptor;
 pub mod descubrimiento;
 pub mod fuerza;

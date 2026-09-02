@@ -290,6 +290,11 @@ def demo() -> None:
 #      SCK+MOSI+NSS por bus. El MISO no se reserva: el DAC no se lee en v1
 #      (si R-M3 trae lectura, es un pin mas por bus y el censo se recorre).
 #   4. El J2 esclavo full-duplex: SCK+MOSI+MISO+NSS (#210).
+#   4b. El crosspoint de la bahia (acta 2026-09-02, issue #171): los dos
+#      AD75019 en cadena por un SPI PROPIO, SCK+MOSI, distinto de los tres
+#      de CV (que son DMA puro con NSS por hardware y no se comparten) y del
+#      J2. Sin NSS (el chip no tiene chip select) ni MISO (el SOUT no se lee
+#      en v1). El strobe PCLK es un GPIO y sigue en N6_GPIO_VARIOS.
 #   5. RGMII del GMAC: 13 senales (las 12 del estandar mas CLK125, reserva
 #      prudente cuya necesidad depende del arbol de relojes del PHY) +
 #      MDC/MDIO = 15 lineas -- reservado AUNQUE D9 siga en cuarentena: el
@@ -347,10 +352,11 @@ def demo() -> None:
 #   * El minimo "sin RGMII" asume que la opcion LVDS de D9 no pide pines
 #     propios del N657 -- ESTIMADO: el transceptor no esta elegido (#210
 #     D9, "la parte concreta NO esta elegida y este papel no la inventa").
-#   * El CAUDAL de los 3 buses de CV (y si el crosspoint cuelga de uno):
-#     spi_privado_budget.py sigue modelando los dos RP2350B viejos; su
-#     recorrido con la ley de dos tasas y la trama real es fila del #214
-#     (tanda 2). Este censo reparte PINES, no ancho de banda.
+#   * El CAUDAL de los 3 buses de CV: spi_privado_budget.py sigue modelando
+#     los dos RP2350B viejos; su recorrido con la ley de dos tasas y la
+#     trama real es fila del #214 (tanda 2). Este censo reparte PINES, no
+#     ancho de banda. (Si el crosspoint colgaba de uno ya no es pregunta:
+#     desde el acta 2026-09-02 va en SPI propio, punto 4b de arriba.)
 #   * TIM1 y el RM0486, partido en dos (junta de la pantalla): el reloj
 #     kernel es cola HEREDADA (la misma de las instancias SPI); el DMA de
 #     captura de tim1_cc2/tim1_cc4 es pendiente NUEVO -- reabre en dos
@@ -387,8 +393,9 @@ N6_GPIO_TOTAL = {"VFBGA142": 75, "VFBGA169": 90, "VFBGA178": 106,
 N6_RESERVA_GPIO = 4 + 2 + 13
 
 # Cuantos GPIO libres exige el resto del diseno tras el reparto:
-#   la inhibicion de estado seguro R-M5 (1), la carga del crosspoint (1,
-#   ESTIMADO: AD75019 en cadena; si cuelga de un bus CV es solo el strobe)
+#   la inhibicion de estado seguro R-M5 (1), el strobe PCLK del crosspoint
+#   (1; su SCK y su MOSI ya no son "varios": se sientan a la mesa como SPI
+#   propio desde el acta 2026-09-02, #171 -- punto 4b del encabezado)
 #   y la pantalla (3, ESTIMADO hasta nombrar las piezas: INT y RST del
 #   tactil capacitivo + PWM de retroiluminacion -- el tactil comparte el
 #   I2C del codec, asi que no pide bus propio). OJO del ESTIMADO (junta):
@@ -577,14 +584,17 @@ def _candidatos(senal: str, ipaq: int) -> frozenset:
 
 
 def _demandas(ipaq: int, sai: str, cvs: tuple, j2: str, i2c: str,
-              con_rgmii: bool, sai2_extra: bool = False) -> list | None:
+              con_rgmii: bool, sai2_extra: bool = False,
+              xp: str | None = None) -> list | None:
     """La mesa completa: [(etiqueta, candidatos)]. None si una senal ya no
     tiene NINGUN pin en este encapsulado (rojo inmediato, sin buscar).
     `sai2_extra` sienta ademas el otro SAI entero -- su subbloque A completo
     y el SD de su B en sincrono, igual que el titular (la boca multicanal
     TDM del crecimiento, spec S10): los 4 subbloques del chip a la mesa,
     como pide el issue #213. (La junta cazo la v1 de este parametro
-    sentando 3 de 4: le faltaba el SD_B del segundo SAI.)"""
+    sentando 3 de 4: le faltaba el SD_B del segundo SAI.)
+    `xp` es la instancia SPI del crosspoint de la bahia (punto 4b del
+    encabezado): SCK + MOSI, sin NSS ni MISO."""
     mesa = []
     for s in CAPTURAS:
         mesa.append((s, _candidatos(s, ipaq)))
@@ -608,6 +618,10 @@ def _demandas(ipaq: int, sai: str, cvs: tuple, j2: str, i2c: str,
     for rol in ("SCK", "MOSI", "MISO", "NSS"):
         s = f"{j2}_{rol}"
         mesa.append((f"J2:{s}", _candidatos(s, ipaq)))
+    if xp is not None:
+        for rol in ("SCK", "MOSI"):
+            s = f"{xp}_{rol}"
+            mesa.append((f"XP:{s}", _candidatos(s, ipaq)))
     for rol in ("SCL", "SDA"):
         s = f"{i2c}_{rol}"
         mesa.append((f"CODEC:{s}", _candidatos(s, ipaq)))
@@ -651,7 +665,7 @@ def _senal_de(etiqueta: str) -> str:
     """La senal del DS detras de una etiqueta de demanda."""
     if etiqueta.startswith("ADC:"):
         return "ADC_IN"
-    # Cualquier prefijo "ROL:" es de agrupacion (CV1:, J2:, CODEC:, TDM:,
+    # Cualquier prefijo "ROL:" es de agrupacion (CV1:, J2:, XP:, CODEC:, TDM:,
     # PSRAM:, y los del censo del hub R1:..R6:, MUX:, AUDIO:); la senal del
     # DS es lo que va despues de los dos puntos.
     if ":" in etiqueta:
@@ -705,8 +719,9 @@ def _estrangulamiento(mesa: list) -> str:
 
 def censo_paquete(ipaq: int, spis_cv: tuple, con_rgmii: bool = True):
     """Busca UN reparto valido en el encapsulado `ipaq` probando las
-    combinaciones de instancias (SAI, 3 SPI de CV, SPI del J2, I2C del
-    codec). Devuelve (asignacion, escenario) o (None, senal_sin_pin)."""
+    combinaciones de instancias (SAI, 3 SPI de CV, SPI del J2, SPI del
+    crosspoint, I2C del codec). Devuelve (asignacion, escenario) o
+    (None, senal_sin_pin)."""
     from itertools import combinations
 
     primera_mesa = None
@@ -715,17 +730,20 @@ def censo_paquete(ipaq: int, spis_cv: tuple, con_rgmii: bool = True):
             libres_spi = [s for s in ("SPI1", "SPI2", "SPI3", "SPI4", "SPI5",
                                       "SPI6") if s not in cvs]
             for j2 in libres_spi:
-                for i2c in ("I2C1", "I2C2", "I2C3", "I2C4"):
-                    mesa = _demandas(ipaq, sai, cvs, j2, i2c, con_rgmii)
-                    if mesa is None:
-                        continue
-                    if primera_mesa is None:
-                        primera_mesa = mesa
-                    reparto = _asignar(mesa)
-                    if reparto is not None:
-                        _verificar_reparto(mesa, reparto, ipaq)
-                        return reparto, {"sai": sai, "cv": cvs, "j2": j2,
-                                         "i2c": i2c}
+                # el crosspoint en SPI propio (punto 4b): ni el J2 ni los CV
+                for xp in (s for s in libres_spi if s != j2):
+                    for i2c in ("I2C1", "I2C2", "I2C3", "I2C4"):
+                        mesa = _demandas(ipaq, sai, cvs, j2, i2c, con_rgmii,
+                                         xp=xp)
+                        if mesa is None:
+                            continue
+                        if primera_mesa is None:
+                            primera_mesa = mesa
+                        reparto = _asignar(mesa)
+                        if reparto is not None:
+                            _verificar_reparto(mesa, reparto, ipaq)
+                            return reparto, {"sai": sai, "cv": cvs, "j2": j2,
+                                             "xp": xp, "i2c": i2c}
     # el mensaje del rojo: las senales sin pin en el encapsulado (todas,
     # no solo la primera -- hallazgo de la junta: "sin pin para TIM4_CH2"
     # invitaba a creer que con un pin se salvaba el 142, y le faltaban 8),
@@ -848,7 +866,8 @@ def demo_censo() -> tuple[str, dict, dict, str | None]:
     libres = N6_GPIO_TOTAL[paq] - N6_RESERVA_GPIO - len(reparto)
     print(f"\n  LA VARIANTE ELEGIDA POR EL CENSO: {paq}")
     print(f"    instancias: SAI={escenario['sai']}, CV={'/'.join(escenario['cv'])}, "
-          f"J2={escenario['j2']}, codec={escenario['i2c']}")
+          f"J2={escenario['j2']}, crosspoint={escenario['xp']}, "
+          f"codec={escenario['i2c']}")
     print(f"    GPIO: {N6_GPIO_TOTAL[paq]} en el paquete - {N6_RESERVA_GPIO} "
           f"reservas fijas - {len(reparto)} repartidos = {libres} libres")
 
@@ -857,6 +876,7 @@ def demo_censo() -> tuple[str, dict, dict, str | None]:
               ("SAI (boca+oidos)", lambda e: e.startswith("SAI")),
               ("CV", lambda e: e.startswith("CV")),
               ("J2", lambda e: e.startswith("J2")),
+              ("crosspoint (SPI)", lambda e: e.startswith("XP")),
               ("codec", lambda e: e.startswith("CODEC")),
               ("RGMII", lambda e: e.startswith("ETH")),
               ("ADC", lambda e: e.startswith("ADC")),
@@ -898,15 +918,20 @@ def demo_censo() -> tuple[str, dict, dict, str | None]:
     ult = len(N6_PAQUETES) - 1
     i2c_que_cierran = []
     for i2cc in ("I2C1", "I2C2", "I2C3", "I2C4"):
+        cerro = False
         for j2c in ("SPI4", "SPI5", "SPI6"):
-            mesa_c = _demandas(ult, "SAI1", ("SPI1", "SPI2", "SPI3"),
-                               j2c, i2cc, True, sai2_extra=True)
-            if mesa_c is None:
-                continue
-            r_c = _asignar(mesa_c)
-            if r_c:
-                _verificar_reparto(mesa_c, r_c, ult)
-                i2c_que_cierran.append(i2cc)
+            for xpc in (s for s in ("SPI4", "SPI5", "SPI6") if s != j2c):
+                mesa_c = _demandas(ult, "SAI1", ("SPI1", "SPI2", "SPI3"),
+                                   j2c, i2cc, True, sai2_extra=True, xp=xpc)
+                if mesa_c is None:
+                    continue
+                r_c = _asignar(mesa_c)
+                if r_c:
+                    _verificar_reparto(mesa_c, r_c, ult)
+                    i2c_que_cierran.append(i2cc)
+                    cerro = True
+                    break
+            if cerro:
                 break
     if i2c_que_cierran:
         print(f"\n  crecimiento (v1 + SAI2 entero A+B, boca multicanal TDM) "
@@ -930,11 +955,14 @@ def demo_censo() -> tuple[str, dict, dict, str | None]:
                                     "SPI5", "SPI6") if s not in t]
             ok = False
             for j2c in libres_c:
-                for i2cc in ("I2C1", "I2C2", "I2C3", "I2C4"):
-                    mesa_c = _demandas(ult, "SAI1", t, j2c, i2cc, True,
-                                       sai2_extra=True)
-                    if mesa_c is not None and _asignar(mesa_c):
-                        ok = True
+                for xpc in (s for s in libres_c if s != j2c):
+                    for i2cc in ("I2C1", "I2C2", "I2C3", "I2C4"):
+                        mesa_c = _demandas(ult, "SAI1", t, j2c, i2cc, True,
+                                           sai2_extra=True, xp=xpc)
+                        if mesa_c is not None and _asignar(mesa_c):
+                            ok = True
+                            break
+                    if ok:
                         break
                 if ok:
                     break
