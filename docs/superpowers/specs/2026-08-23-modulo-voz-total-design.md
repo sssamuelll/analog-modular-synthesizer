@@ -307,6 +307,24 @@ corregiría lo que otro mueve) y este test. Huella anotada, no prometida.
 Los parámetros de un generador se capturan **al evento**: la próxima nota
 usa los valores nuevos; el sustain aplica en vivo (S-12).
 
+> **Enmienda del 2026-09-02 — del papel del generador de envolvente
+> (`2026-09-02-generador-de-envolvente-design.md`, §1, §3.3, §3.4, §14).** Tres
+> cosas que este test daba por sentadas y su junta obligó a escribir:
+>
+> 1. **La letra (a) tiene tres fuentes de borde, no una:** el evento de nota,
+>    la **reafirmación de compuerta** (R-E10 del evento: un borde reconstruido
+>    desde el flujo, no un flujo) y el **watchdog de trama** (§9.2: sin trama
+>    válida, todos a relajación). Las tres disparan; ninguna interpola.
+> 2. **Nace la categoría *escritor*, al lado del generador.** El generador es
+>    cerrado entre bordes (esta letra (b)); el escritor —el que convierte
+>    niveles en palabras de DAC, el «único escritor» de S-9— consume
+>    parámetros **vivos** del modelo (paneo, cantidad, base del corte) y **no es
+>    un generador**: no se dispara y no tiene etapas. Este test no lo gobierna.
+> 3. **Lo que se captura al evento es la forma de la nota —los tiempos— y su
+>    fuerza.** El sostenido no se captura (S-12 lo hizo vivo, y lo es sin
+>    filtro: R-M1 prohíbe suavizar dentro del módulo); el paneo y la cantidad
+>    tampoco, porque son del escritor.
+
 ### 3.3 El evento de nota: diseño pendiente, dicho sin maquillaje
 
 La v1 de este spec declaró «resuelto» el riesgo 2 de la orquestación. Era
