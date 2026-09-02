@@ -74,7 +74,8 @@ mismo orden:
 | `firmware` | `ruff check .` y `pytest` en `software/midi-cv` |
 | `nucleo` | `cargo test`, `cargo clippy -D warnings` y `cargo fmt --check` en `software/nucleo` |
 
-Tarda unos dos minutos y medio; casi todo es `check_pcb.py` de la fuente v3.
+Tarda unos 58 s bajo carga; `check_pcb.py` de la fuente v3 ocupa 1,0 s y sus
+canarios obligatorios, 1,8 s desde el #139.
 
 Y cubre **más** que el workflow: los dos guiones que necesitan el Python de
 KiCad salían HUECO en CI —instalar KiCad en el runner costaba más de lo que

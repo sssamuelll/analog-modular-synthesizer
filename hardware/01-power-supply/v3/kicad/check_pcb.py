@@ -1,4 +1,4 @@
-"""Puerta: la placa COMMITEADA cumple las reglas de colocacion.
+"""Puerta: la placa COMMITEADA cumple las reglas de colocacion y ruteo.
 
     python check_pcb.py        # sale != 0 si el .kicad_pcb no cumple
 
@@ -43,6 +43,88 @@ sys.path.insert(0, DIR)
 import build_pcb as bp                                # noqa: E402
 
 
+def leer_ruteo(board) -> tuple[list[tuple], list[tuple]]:
+    '''Traduce el cobre guardado al contrato TRACKS/VIAS de los revisores.
+
+    Cada segmento se conserva por separado. Un arco no se aproxima por su
+    cuerda: si aparece, la puerta se detiene hasta que exista una lectura que
+    preserve su geometria real.
+    '''
+    if board.GetCopperLayerCount() != 2:
+        raise AssertionError('leer_ruteo solo admite placas de dos capas')
+    for zona in board.Zones():
+        if not zona.GetIsRuleArea() and zona.GetNetname() == 'GND':
+            raise AssertionError('zona GND no soportada por la regla de tramos')
+    for dibujo in board.GetDrawings():
+        if dibujo.GetLayer() in {pcbnew.F_Cu, pcbnew.B_Cu}:
+            raise AssertionError('shape grafico en cobre no soportado')
+
+    tracks, vias = [], []
+    for cobre in board.GetTracks():
+        if isinstance(cobre, pcbnew.PCB_VIA):
+            if cobre.GetViaType() != pcbnew.VIATYPE_THROUGH:
+                raise AssertionError('via no pasante no soportada')
+            if (cobre.TopLayer() != pcbnew.F_Cu
+                    or cobre.BottomLayer() != pcbnew.B_Cu):
+                raise AssertionError('via fuera del par F.Cu-B.Cu')
+            if not cobre.HasValidLayerPair(board.GetCopperLayerCount()):
+                raise AssertionError('via con par de capas invalido')
+
+            padstack = cobre.Padstack()
+            capas = (pcbnew.F_Cu, pcbnew.B_Cu)
+            tamanos = [padstack.Size(capa) for capa in capas]
+            if any(
+                padstack.Shape(capa) != pcbnew.PAD_SHAPE_CIRCLE
+                or tamano.x != tamano.y
+                for capa, tamano in zip(capas, tamanos)
+            ):
+                raise AssertionError('via no circular no soportada')
+            if tamanos[0].x != tamanos[1].x:
+                raise AssertionError('via con diametro distinto por cara')
+
+            p = cobre.GetPosition()
+            vias.append((
+                p.x / 1e6,
+                p.y / 1e6,
+                cobre.GetNetname(),
+                tamanos[0].x / 1e6,
+                cobre.GetDrillValue() / 1e6,
+            ))
+            continue
+        if isinstance(cobre, pcbnew.PCB_ARC):
+            raise AssertionError(
+                'la placa trae un arco de cobre que leer_ruteo no aproxima'
+            )
+        capa = board.GetLayerName(cobre.GetLayer())
+        if capa not in {'F.Cu', 'B.Cu'}:
+            raise AssertionError(f'pista en capa de cobre no soportada: {capa}')
+        a, b = cobre.GetStart(), cobre.GetEnd()
+        tracks.append((
+            cobre.GetNetname(),
+            capa,
+            [(a.x / 1e6, a.y / 1e6), (b.x / 1e6, b.y / 1e6)],
+            cobre.GetWidth() / 1e6,
+        ))
+    return tracks, vias
+
+
+def revisar_ruteo(board) -> list[str]:
+    '''Las cuatro reglas de ruteo sobre el cobre que trae board.'''
+    bp.TRACKS, bp.VIAS = leer_ruteo(board)
+    fallos = [f'cruce: {x}' for x in bp.revisar_pistas()]
+    fallos += [f'masa: {x}' for x in bp.revisar_estrella()]
+    fallos += [f'pista sobre pad: {x}' for x in bp.revisar_pista_pad(board)]
+    fallos += [f'via: {x}' for x in bp.revisar_vias(board)]
+    return fallos
+
+
+def conexiones_sin_rutear(board) -> int:
+    '''Ratsnest real que queda en el PCB guardado.'''
+    conectividad = board.GetConnectivity()
+    conectividad.RecalculateRatsnest()
+    return conectividad.GetUnconnectedCount(False)
+
+
 def main() -> int:
     if not os.path.exists(PCB):
         print("HUECO: falta sam17-power-v3.kicad_pcb -- correr build_pcb.py")
@@ -84,16 +166,11 @@ def main() -> int:
     fallos += bp.revisar_borde_ceramicos(board)
     fallos += bp.revisar_to220_coplanares(board)
 
-    # Las tres puertas de RUTEO. Leen los globales TRACKS/VIAS, que solo
-    # existen cuando alguien genera el ruteo -- asi que se genera aqui, contra
-    # la placa commiteada, y se comprueba. Sin esto, `gates.py` daria verde
-    # sobre una placa con pistas cruzadas: las puertas existen desde la v1 y
-    # nunca han corrido fuera de build_pcb.py.
-    bp.TRACKS, bp.VIAS = (lambda r: (r.tracks, r.vias))(bp.rutear(board))
-    fallos += [f"cruce: {x}" for x in bp.revisar_pistas()]
-    fallos += [f"masa: {x}" for x in bp.revisar_estrella()]
-    fallos += [f"pista sobre pad: {x}" for x in bp.revisar_pista_pad(board)]
-    fallos += [f"via: {x}" for x in bp.revisar_vias(board)]
+    # Las cuatro puertas de RUTEO miden el cobre que se fabrica: el guardado
+    # en la placa commiteada. El generador se comprueba cuando build_pcb.py
+    # construye la placa; regenerarlo aqui tardaba 154 s y, peor, juzgaba una
+    # intencion nueva en vez del artefacto que esta puerta dice vigilar.
+    fallos += revisar_ruteo(board)
 
     peor, par, pads_red, pads_selv = bp.revisar_fuga(board)
     if peor < bp.FUGA_MIN:
@@ -116,19 +193,21 @@ def main() -> int:
           f"y {len(pads_selv)} SELV (minimo {bp.FUGA_MIN})")
     print(f"  los tres TO-220 en x={[round(v, 1) for v in bp.TO220_X]}, "
           f"leidos de case/cad/params.scad")
-    con = board.GetConnectivity()
-    con.RecalculateRatsnest()
+    sin_rutear = conexiones_sin_rutear(board)
     print(f"  ruteo: {sum(len(t[2]) - 1 for t in bp.TRACKS)} segmentos y "
-          f"{len(bp.VIAS)} vias; quedan {con.GetUnconnectedCount(False)} "
+          f"{len(bp.VIAS)} vias; quedan {sin_rutear} "
           f"conexiones sin rutear")
+    if sin_rutear:
+        fallos.append(f"ruteo: quedan {sin_rutear} conexiones sin rutear")
 
     if fallos:
         print(f"\nFALLO: {len(fallos)} en la placa")
         for f in fallos:
             print(f"  - {f}")
         return 1
-    print("\nOK: colocacion, barrera de red, isla de referencia, diagonal del "
-          "lazo\n    y los tres tabs contra la pared del chasis.")
+    print("\nOK: colocacion, ruteo guardado, barrera de red, isla de "
+          "referencia,\n    diagonal del lazo y los tres tabs contra la pared "
+          "del chasis.")
     return 0
 
 

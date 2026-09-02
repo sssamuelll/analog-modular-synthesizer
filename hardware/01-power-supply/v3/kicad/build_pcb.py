@@ -47,6 +47,7 @@ para esta fase -- y es exactamente lo que hizo la v2 entre sus Tareas 7 y 8.
 from __future__ import annotations
 
 import csv
+from functools import cache
 import json
 import math
 import os
@@ -132,6 +133,7 @@ FUGA_MIN = 6.0                  # cobre de red <-> cobre SELV (heredado v1)
 NETS_RED = {"L", "L_TR", "N", "PE", "L_SMPS", "N_SMPS"}
 
 
+@cache
 def es_red(net: str) -> bool:
     return net.lstrip("/") in NETS_RED
 
@@ -365,9 +367,9 @@ VIA_D, VIA_TALADRO = 0.6, 0.3
 VIA_A_VIA = VIA_D + CLEARANCE_MM
 # Y dos TALADROS tampoco, aunque sean de la misma red: eso ya no es electrico
 # sino de taladrado, y por eso revisar_vias() -- que salta el par cuando las
-# dos vias comparten red -- no lo veia. min_hole_clearance del proyecto.
+# dos vias comparten red -- no lo veia. El limite se calcula con los dos
+# diametros reales mas min_hole_clearance del proyecto.
 HOLE_CLEARANCE = 0.25
-TALADRO_A_TALADRO = VIA_TALADRO + HOLE_CLEARANCE
 ANCHO_POT, ANCHO_SEN, ANCHO_RED = 1.0, 0.4, 1.0
 # Anchos nuevos de la Tarea 8 (spec sec.6, brief):
 ANCHO_ISLA = 0.5     # +13V1/-12V9 locales, ILIM, OUT->ballast, fugas de GND
@@ -519,10 +521,9 @@ class Ruteo:
 # Y va como ARBOL, no como plano. Un plano de masa es la respuesta correcta en
 # casi cualquier placa digital y la equivocada aqui: un plano crea lazos, y un
 # lazo alrededor del puente rectificador es una espira de 100 Hz acoplada a
-# todo. revisar_estrella() lo comprueba con union-find sobre los extremos de
-# los tramos, asi que las costillas se parten en cada punto de enganche -- si
-# fueran un solo tramo de punta a punta, el union-find solo veria sus dos
-# extremos y un lazo de verdad pasaria sin que nadie lo viera.
+# todo. revisar_estrella() parte tambien los enganches interiores antes de su
+# union-find. Las costillas se emiten partidas igualmente: TRACKS conserva la
+# topologia explicita y el generador sigue siendo legible sin reconstruirla.
 #
 # Forma: un PEINE. Tronco vertical en x=11 (el canal libre del canto
 # izquierdo), y siete costillas horizontales en las bandas donde no hay ningun
@@ -1718,14 +1719,39 @@ def dist_seg(a, b, c, d) -> float:
                punto_seg(c, a, b), punto_seg(d, a, b))
 
 
-def revisar_estrella() -> list[str]:
-    """Que GND sea un ARBOL y no una malla (heredado v1, sec.7).
+def _aabb_descarta(caja1, caja2, limite: float) -> bool:
+    '''La distancia entre cajas ya garantiza que no hay infraccion.
 
-    Union-find sobre los extremos de los tramos de GND. Con TRACKS vacio (no
-    hay rutas todavia) esto es un no-op que devuelve [] — correcto: la
-    Tarea 8 es quien rutea y quien de verdad ejercita este check.
+    La caja es una cota inferior: solo evita el calculo exacto cuando hasta
+    los puntos mas cercanos cumplen el limite. La igualdad se descarta porque
+    todos los revisores marcan exclusivamente distancias menores.
+    '''
+    if caja1[2] < caja2[0]:
+        dx = caja2[0] - caja1[2]
+    elif caja2[2] < caja1[0]:
+        dx = caja1[0] - caja2[2]
+    else:
+        dx = 0.0
+    if caja1[3] < caja2[1]:
+        dy = caja2[1] - caja1[3]
+    elif caja2[3] < caja1[1]:
+        dy = caja1[1] - caja2[3]
+    else:
+        dy = 0.0
+    return dx * dx + dy * dy >= limite * limite
+
+
+def revisar_estrella() -> list[str]:
+    """Que los tramos GND no cierren un bucle en cada capa (v1, sec.7).
+
+    Los tramos se parten en cada cruce o enganche interior de su eje. La regla
+    conserva el alcance historico: comprueba el esqueleto ruteado por capa, no
+    prohibe los fanouts locales que usan varias vias. La conectividad completa
+    del PCB guardado la comprueba check_pcb.py con el ratsnest de KiCad.
     """
+    eps = 1e-7
     padre: dict = {}
+    aristas: set = set()
 
     def raiz(n):
         while padre[n] != n:
@@ -1733,20 +1759,90 @@ def revisar_estrella() -> list[str]:
             n = padre[n]
         return n
 
-    bucles = []
-    for net, _capa, pts, _a in TRACKS:
+    bucles: list[str] = []
+
+    def punto(p):
+        return (round(p[0], 6), round(p[1], 6))
+
+    def resta(p, q):
+        return (p[0] - q[0], p[1] - q[1])
+
+    def cruz(p, q):
+        return p[0] * q[1] - p[1] * q[0]
+
+    def en_segmento(p, a, b):
+        ab, ap = resta(b, a), resta(p, a)
+        if abs(cruz(ab, ap)) > eps * max(1.0, abs(ab[0]) + abs(ab[1])):
+            return False
+        return (min(a[0], b[0]) - eps <= p[0] <= max(a[0], b[0]) + eps
+                and min(a[1], b[1]) - eps <= p[1]
+                <= max(a[1], b[1]) + eps)
+
+    def intersecciones(a, b, c, d):
+        r, s = resta(b, a), resta(d, c)
+        r2 = r[0] ** 2 + r[1] ** 2
+        s2 = s[0] ** 2 + s[1] ** 2
+        if r2 <= eps ** 2:
+            return {a} if en_segmento(a, c, d) else set()
+        if s2 <= eps ** 2:
+            return {c} if en_segmento(c, a, b) else set()
+        den = cruz(r, s)
+        ca = resta(c, a)
+        if abs(den) > eps:
+            t, u = cruz(ca, s) / den, cruz(ca, r) / den
+            if -eps <= t <= 1 + eps and -eps <= u <= 1 + eps:
+                return {punto((a[0] + t * r[0], a[1] + t * r[1]))}
+            return set()
+        if abs(cruz(ca, r)) > eps * max(1.0, abs(r[0]) + abs(r[1])):
+            return set()
+        return {
+            p for p in (a, b, c, d)
+            if en_segmento(p, a, b) and en_segmento(p, c, d)
+        }
+
+    def unir(a, b, descripcion):
+        arista = tuple(sorted((a, b)))
+        if arista in aristas:
+            return
+        aristas.add(arista)
+        for n in (a, b):
+            padre.setdefault(n, n)
+        ra, rb = raiz(a), raiz(b)
+        if ra == rb:
+            bucles.append(f"bucle de GND al unir {descripcion}")
+        else:
+            padre[ra] = rb
+
+    segmentos = []
+    for net, capa, pts, _ancho in TRACKS:
         if net != "GND":
             continue
         for i in range(len(pts) - 1):
-            a = (round(pts[i][0], 2), round(pts[i][1], 2))
-            b = (round(pts[i + 1][0], 2), round(pts[i + 1][1], 2))
-            for n in (a, b):
-                padre.setdefault(n, n)
-            ra, rb = raiz(a), raiz(b)
-            if ra == rb:
-                bucles.append(f"bucle de GND al unir {a} con {b}")
-            else:
-                padre[ra] = rb
+            a, b = punto(pts[i]), punto(pts[i + 1])
+            segmentos.append([capa, a, b, {a, b}])
+
+    for i, s1 in enumerate(segmentos):
+        capa1, a, b, cortes1 = s1
+        for s2 in segmentos[i + 1:]:
+            capa2, c, d, cortes2 = s2
+            if capa1 != capa2:
+                continue
+            if (max(a[0], b[0]) + eps < min(c[0], d[0])
+                    or max(c[0], d[0]) + eps < min(a[0], b[0])
+                    or max(a[1], b[1]) + eps < min(c[1], d[1])
+                    or max(c[1], d[1]) + eps < min(a[1], b[1])):
+                continue
+            cruces = intersecciones(a, b, c, d)
+            cortes1.update(cruces)
+            cortes2.update(cruces)
+
+    for capa, a, b, cortes in segmentos:
+        ordenados = sorted(
+            cortes,
+            key=lambda p: (p[0] - a[0]) ** 2 + (p[1] - a[1]) ** 2,
+        )
+        for p, q in zip(ordenados, ordenados[1:]):
+            unir((*p, capa), (*q, capa), f"{(*p, capa)} con {(*q, capa)}")
     return bucles
 
 
@@ -1764,26 +1860,23 @@ def dist_seg_rect(a, b, cx, cy, hw, hh) -> float:
     espiritu que el recalibrado de reglas() (Tarea 8 ronda 1): la
     aproximacion heredada ahogaba el escape de los DFN sin motivo real.
     """
-    def clamp(v, lo, hi):
-        return max(lo, min(hi, v))
+    izquierda, derecha = cx - hw, cx + hw
+    arriba, abajo = cy - hh, cy + hh
 
-    def dist_punto_rect(p):
-        qx = clamp(p[0], cx - hw, cx + hw)
-        qy = clamp(p[1], cy - hh, cy + hh)
-        return ((p[0] - qx) ** 2 + (p[1] - qy) ** 2) ** 0.5
+    def dentro(p):
+        return izquierda <= p[0] <= derecha and arriba <= p[1] <= abajo
 
-    # Muestreo denso a lo largo del segmento (incluye los dos extremos) --
-    # suficiente para segmentos cortos como los de TRACKS; 0 en cuanto
-    # algun punto cae dentro del rectangulo.
-    n = 20
-    mejor = float("inf")
-    for i in range(n + 1):
-        t = i / n
-        p = (a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]))
-        if cx - hw <= p[0] <= cx + hw and cy - hh <= p[1] <= cy + hh:
-            return 0.0
-        mejor = min(mejor, dist_punto_rect(p))
-    return mejor
+    if dentro(a) or dentro(b):
+        return 0.0
+
+    esquinas = [
+        (izquierda, arriba),
+        (derecha, arriba),
+        (derecha, abajo),
+        (izquierda, abajo),
+    ]
+    aristas = zip(esquinas, esquinas[1:] + esquinas[:1])
+    return min(dist_seg(a, b, c, d) for c, d in aristas)
 
 
 def revisar_pista_pad(board) -> list[str]:
@@ -1808,13 +1901,19 @@ def revisar_pista_pad(board) -> list[str]:
     for net, capa, pts, ancho in TRACKS:
         for i in range(len(pts) - 1):
             a, b = pts[i], pts[i + 1]
+            caja_tramo = (min(a[0], b[0]), min(a[1], b[1]),
+                          max(a[0], b[0]), max(a[1], b[1]))
             for nom, pnet, px, py, hw, hh, enF, enB in pads:
                 if pnet == net:
                     continue
                 if not (enF if capa == "F.Cu" else enB):
                     continue
-                d = dist_seg_rect(a, b, px, py, hw, hh) - ancho / 2
                 minimo = 2.5 if (es_red(net) or es_red(pnet)) else CLEARANCE_MM
+                caja_pad = (px - hw, py - hh, px + hw, py + hh)
+                if _aabb_descarta(caja_tramo, caja_pad,
+                                  minimo + ancho / 2):
+                    continue
+                d = dist_seg_rect(a, b, px, py, hw, hh) - ancho / 2
                 if d < minimo:
                     malos.append(f"{net} en {capa} a {d:.2f}mm del pad "
                                  f"{nom}[{pnet}] ({a}-{b})")
@@ -1854,11 +1953,15 @@ def revisar_vias(board) -> list[str]:
                          pad.GetNetname(), cx, cy, hw, hh))
     for vx, vy, vnet, vancho, _ in VIAS:
         vr = vancho / 2
+        caja_via = (vx, vy, vx, vy)
         for nom, pnet, px, py, hw, hh in pads:
             if pnet == vnet:
                 continue
-            d = dist_seg_rect((vx, vy), (vx, vy), px, py, hw, hh) - vr
             minimo = 2.5 if (es_red(vnet) or es_red(pnet)) else CLEARANCE_MM
+            caja_pad = (px - hw, py - hh, px + hw, py + hh)
+            if _aabb_descarta(caja_via, caja_pad, minimo + vr):
+                continue
+            d = dist_seg_rect((vx, vy), (vx, vy), px, py, hw, hh) - vr
             if d < minimo:
                 malos.append(f"via {vnet} en ({vx},{vy}) a {d:.2f}mm "
                              f"del pad {nom}[{pnet}]")
@@ -1867,22 +1970,28 @@ def revisar_vias(board) -> list[str]:
                 continue
             for i in range(len(pts) - 1):
                 a, b = pts[i], pts[i + 1]
-                d = dist_seg(a, b, (vx, vy), (vx, vy)) - vr - ancho / 2
                 minimo = 2.5 if (es_red(net) or es_red(vnet)) else CLEARANCE_MM
+                caja_tramo = (min(a[0], b[0]), min(a[1], b[1]),
+                              max(a[0], b[0]), max(a[1], b[1]))
+                if _aabb_descarta(caja_via, caja_tramo,
+                                  minimo + vr + ancho / 2):
+                    continue
+                d = dist_seg(a, b, (vx, vy), (vx, vy)) - vr - ancho / 2
                 if d < minimo:
                     malos.append(f"via {vnet} en ({vx},{vy}) a {d:.2f}mm "
                                  f"de pista {net} ({a}-{b})")
-    for i, (x1, y1, n1, a1, _t1) in enumerate(VIAS):
-        for x2, y2, n2, a2, _t2 in VIAS[i + 1:]:
+    for i, (x1, y1, n1, a1, t1) in enumerate(VIAS):
+        for x2, y2, n2, a2, t2 in VIAS[i + 1:]:
             centros = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
             # Dos vias de la MISMA red pueden tocarse en cobre -- son el mismo
             # nodo -- pero sus TALADROS no: eso es una regla de fabricacion,
             # no electrica. El `continue` de aqui se comia justamente ese
             # caso, y el DRC real lo canto (dos vias de GND a 0.5 mm).
-            if centros < TALADRO_A_TALADRO:
+            minimo_taladros = t1 / 2 + t2 / 2 + HOLE_CLEARANCE
+            if centros < minimo_taladros:
                 malos.append(f"via {n1}({x1},{y1}) y via {n2}({x2},{y2}): "
                              f"taladros a {centros:.2f}mm de centro a centro "
-                             f"y hacen falta {TALADRO_A_TALADRO}")
+                             f"y hacen falta {minimo_taladros:.2f}")
             if n1 == n2:
                 continue
             d = centros - a1 / 2 - a2 / 2
@@ -1901,14 +2010,19 @@ def revisar_pistas() -> list[str]:
     segs = []
     for net, capa, pts, ancho in TRACKS:
         for i in range(len(pts) - 1):
-            segs.append((net, capa, pts[i], pts[i + 1], ancho))
+            a, b = pts[i], pts[i + 1]
+            caja = (min(a[0], b[0]), min(a[1], b[1]),
+                    max(a[0], b[0]), max(a[1], b[1]))
+            segs.append((net, capa, a, b, ancho, caja))
     malos = []
-    for i, (n1, c1, a, b, w1) in enumerate(segs):
-        for n2, c2, c, d, w2 in segs[i + 1:]:
+    for i, (n1, c1, a, b, w1, caja1) in enumerate(segs):
+        for n2, c2, c, d, w2, caja2 in segs[i + 1:]:
             if c1 != c2 or n1 == n2:
                 continue
-            hueco = dist_seg(a, b, c, d) - (w1 + w2) / 2
             minimo = 2.5 if (es_red(n1) or es_red(n2)) else CLEARANCE_MM
+            if _aabb_descarta(caja1, caja2, minimo + (w1 + w2) / 2):
+                continue
+            hueco = dist_seg(a, b, c, d) - (w1 + w2) / 2
             if hueco < minimo:
                 malos.append(f"{n1}~{n2} en {c1} a {hueco:.2f}mm "
                              f"({a}-{b} vs {c}-{d})")

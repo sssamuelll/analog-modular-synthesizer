@@ -70,17 +70,11 @@ EXCLUIR = ("__pycache__", ".venv", os.path.join(".claude", "worktrees"), "site-p
 
 # Cuanto se le da a UN guion antes de darlo por colgado.
 #
-# Estaba en 300 s y se puso rojo el 2026-08-24 con la maquina cargada.
-# check_pcb.py de la fuente v3 es el unico que se acerca: 141 s documentados
-# con la maquina libre, MEDIDO 226 s con renders y varios servidores KiCad
-# corriendo al lado. O sea que el margen real eran 74 s, y se lo come
-# cualquier otra cosa que este pasando en la maquina.
-#
-# Una puerta que se pone roja por carga y no por la placa es peor que no
-# tenerla: ensena a empujar con --no-verify. 600 s son 2.65x los 226 medidos
-# --  decia "el doble", y el doble de 226 son 452, no 600. El numero esta bien
-# y la cuenta estaba mal; se corrige la cuenta, no el numero: 2.65x sigue
-# cazando un cuelgue de verdad, que es lo que esto va a buscar.
+# Estaba en 300 s y subio a 600 cuando check_pcb.py tardaba hasta 226 s bajo
+# carga. El #139 elimino aquel recalculo y lo dejo en 1.0 s (suite: 58.0 s,
+# incluidos sus canarios de mutacion).
+# No se baja aqui: este numero es el guardia de UN proceso colgado, no el
+# presupuesto de rendimiento de la tanda completa.
 TIMEOUT_S = 600
 
 def _python_kicad() -> str | None:

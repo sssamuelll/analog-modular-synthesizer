@@ -7,7 +7,10 @@ python hardware/tools/gates.py
 ```
 
 Ejecuta **todos** los `check_*.py`, todos los `*_budget.py`, todo lo de
-`simulations/*/` y `netdiff.py`, y suma. Tarda ~2 s con KiCad instalado.
+`simulations/*/` y `netdiff.py`, y suma. Medido bajo carga el 2026-09-02:
+~58 s con KiCad instalado; `check_pcb.py` de la fuente v3 ocupa 1,0 s, sus
+canarios 1,8 s y el presupuesto de clearance del case concentra la mayor
+parte.
 
 > **Córrelo a mano antes de cada PR.** El job existe en
 > `.github/workflows/ci.yml`, pero **GitHub Actions está deshabilitado en este

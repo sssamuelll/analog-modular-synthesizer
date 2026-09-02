@@ -47,7 +47,7 @@ ni un crowbar cubren, y esto pasa dentro de un recinto cerrado.
 
 ## Las puertas
 
-Nueve, todas ejecutables, todas recogidas por `hardware/tools/gates.py` sin
+Once, todas ejecutables, todas recogidas por `hardware/tools/gates.py` sin
 tener que apuntarlas en ninguna lista — se añade una escribiendo el fichero,
 nunca ampliando un índice que alguien puede olvidar:
 
@@ -57,7 +57,8 @@ nunca ampliando un índice que alguien puede olvidar:
 | [`check_telemetria.py`](check_telemetria.py) | ¿el instrumento sobrevive a medir? Divisores, shunts, direcciones I²C y alimentaciones contra el límite garantizado de cada datasheet |
 | [`kicad/check_bom.py`](kicad/check_bom.py) | ¿el BOM y la hoja tienen los mismos designadores? |
 | [`kicad/check_netlist.py`](kicad/check_netlist.py) | ¿la isla está **cableada** como dice el contrato? Shunts en serie, divisores en el sentido correcto, masas sin un nodo común |
-| [`kicad/check_pcb.py`](kicad/check_pcb.py) | ¿la placa **commiteada** está colocada como dice el script? Y la barrera de red, la isla de referencia, la diagonal del lazo y los tres tabs contra la pared |
+| [`kicad/check_pcb.py`](kicad/check_pcb.py) | ¿la placa **commiteada** está colocada como dice el script y sus pistas y vías guardadas cumplen cruces, tramos GND sin bucles dentro de cada capa, cero conexiones abiertas, pista–pad y separación de vías? También vigila la barrera de red, la isla de referencia, la diagonal del lazo y los tres tabs contra la pared |
+| [`kicad/check_pcb_mutations.py`](kicad/check_pcb_mutations.py) | ¿las cinco mutaciones históricas —pieza movida, cruce, bucle GND, pista sobre pad y vía duplicada— siguen poniendo roja la puerta completa después de guardar y recargar el PCB, y una transición GND rota deja una conexión abierta? |
 | [`check_fab.py`](check_fab.py) | ¿lo que se **manda a fábrica** dice lo mismo que la placa? A JLC no se le sube el `.kicad_pcb`: se le suben seis gerbers y un drill que ninguna otra puerta mira |
 | [`check_huellas.py`](check_huellas.py) | ¿las huellas dibujadas a mano son las de la **pieza real**? Es geometría, no conectividad: no la ve el ERC, ni el DRC, ni la netlist |
 | [`check_red_chasis.py`](check_red_chasis.py) | ¿la red entra por una pieza que **existe**, con un solo fusible, y el chasis tiene su recorte? |
