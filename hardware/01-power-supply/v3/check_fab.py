@@ -9,6 +9,12 @@ el `.kicad_pcb`. Y a fabricar no se manda el `.kicad_pcb`: se manda un zip de
 gerberes y un Excellon. Entre uno y otro hay un paso, `kicad-cli pcb export`,
 que nadie comprueba.
 
+Esta puerta mira el paquete POR DENTRO, y eso es todo lo que mira: no lee el
+`.kicad_pcb` a proposito, para poder correr con un Python pelado sin `pcbnew`.
+Quien cruza el paquete con la placa es `check_paquete.py`, que si la carga.
+Las dos hacen falta y ninguna sustituye a la otra: en el #139 se podaron dos
+vias y esta puerta siguio en verde con los gerbers de antes (#281).
+
 Los fallos que viven EXACTAMENTE en ese hueco, y que el DRC no puede ver
 porque mira otro fichero:
 
@@ -379,7 +385,7 @@ def informe(fallos, capas, taladros, extra) -> int:
         for f in fallos:
             print(f"  - {f}")
         return 1
-    print("\nOK: las seis capas y el drill dicen lo mismo que la placa, el "
+    print("\nOK: las seis capas y el drill son coherentes entre si, el "
           "contorno\n    cierra, la zona llego al cobre y la barrera de 230 V "
           "se mide en el gerber.")
     return 0
