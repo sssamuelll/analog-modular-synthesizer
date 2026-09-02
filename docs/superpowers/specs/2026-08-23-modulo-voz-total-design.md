@@ -523,9 +523,18 @@ vez). Se rediseña:
 >   `software/nucleo/core/src/bahia.rs`, con sus tests.
 > - **Lo que no cambia:** este §5.4 y R-M5. El latch nace inhibido por hardware
 >   hasta que el micro shiftea ceros.
-> - **Pendiente:** la serialización a los 512 bits espera la hoja del AD75019
->   (orden de bits y flanco de `PCLK`), que no está en el árbol; y el censo de
->   qué línea es qué jack (motor-digital §8.4) sigue sin hacer.
+> - **La serialización** (mismo día, más tarde): la hoja del AD75019 (Rev. F,
+>   7/2026) entró a `docs/reference/datasheets/` y fija el orden: el primer bit
+>   que entra por `SIN` gobierna Y15/X15 y el último Y0/X0; `PCLK` es un pulso
+>   a bajo que hay que dar antes de 5 ms porque el registro es dinámico; y con
+>   `SOUT` en el `SIN` del siguiente, **el chip lejano va primero**. Vive en
+>   `core/src/bahia_serie.rs`. Lo que la hoja **no** fija y por eso es
+>   parámetro sin valor por defecto, hasta que el esquemático lo cablee: qué
+>   eje físico (X o Y) es el canal, y qué chip está lejos en la cadena.
+> - **Pendiente:** la cabecera del J2 por la que viaja la imagen (issue #267),
+>   y el censo de qué línea es qué jack (motor-digital §8.4), que sigue sin
+>   hacer. Y el supuesto de §11.2 —que el latch no glitchea los cruces que no
+>   cambian— **la hoja no lo dice**: sigue siendo de bring-up.
 
 ## 6. El parámetro durmiente
 

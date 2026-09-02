@@ -17,7 +17,7 @@
 //! jack, y si la boca del codec y los oidos caben en las 16x16, es el censo
 //! mandado en `2026-08-26-motor-digital-design.md` §8.4, que **no esta hecho**.
 //! Los ejes fisicos X/Y del chip y el orden de los 512 bits de la cadena
-//! tampoco estan aqui: van en la serializacion, que espera la hoja de datos.
+//! tampoco estan aqui: viven en `bahia_serie.rs`, contra la hoja del AD75019.
 
 /// Los canales del instrumento. Uno por fila del crosspoint.
 pub const CANALES: u8 = 16;

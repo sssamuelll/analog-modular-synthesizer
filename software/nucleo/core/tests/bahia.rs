@@ -9,8 +9,8 @@
 //! Estos tests hablan de **canal (0..15) x linea (0..15)**, nunca de jacks:
 //! el censo de que linea es que jack esta mandado en motor-digital §8.4 y
 //! **no esta hecho**. Los ejes fisicos X/Y del AD75019 y el orden de los 512
-//! bits de la cadena tampoco estan aqui: van en la serializacion, cuando baje
-//! la hoja de datos.
+//! bits de la cadena tampoco estan aqui: viven en `bahia_serie.rs` y sus
+//! tests, contra la hoja del AD75019.
 
 use sam17_nucleo_core::bahia::{Barrera, Chip, Estado, Imagen, PoliticaDrones, CANALES, LINEAS};
 
