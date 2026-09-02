@@ -105,7 +105,7 @@ class Ng:
     def corre(self, netlist: str) -> None:
         self.log.clear()
         self.lib.ngSpice_Command(b"remcirc")
-        buf = [l.encode() for l in netlist.strip().splitlines()] + [None]
+        buf = [linea.encode() for linea in netlist.strip().splitlines()] + [None]
         arr = (C.c_char_p * len(buf))(*buf)
         if self.lib.ngSpice_Circ(arr) != 0:
             raise RuntimeError("netlist rechazado:\n" + "\n".join(self.log[-8:]))

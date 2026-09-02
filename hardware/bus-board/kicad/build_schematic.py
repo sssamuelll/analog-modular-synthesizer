@@ -214,10 +214,12 @@ def construir() -> None:
     xj, yj = g(16), g(48)
     pon(SYMS["sam17"], "J7", "PSU +12/G/G/-12", xj, yj, 0)
     p = [pin(SYMS["sam17"], str(n), xj, yj, 0) for n in "1234"]
-    hilo(*p[0], g(40), p[0][1]); hilo(g(40), p[0][1], g(40), g(36))
+    hilo(*p[0], g(40), p[0][1])
+    hilo(g(40), p[0][1], g(40), g(36))
     pon("power:+12V", "#PWRIN+", "+12V", g(40), g(36), 0)
     gnd(p[1][0], [p[1][1], p[2][1]], g(33), g(5), "#PWRING")
-    hilo(*p[3], g(27), p[3][1]); hilo(g(27), p[3][1], g(27), g(60))
+    hilo(*p[3], g(27), p[3][1])
+    hilo(g(27), p[3][1], g(27), g(60))
     pon("power:-12V", "#PWRIN-", "-12V", g(27), g(60), 0)
     bandera("+12V", g(40), g(36), g(5), "#FLG+")
     bandera("GND", g(38), g(50), g(5), "#FLGG")
@@ -239,7 +241,8 @@ def construir() -> None:
             if destino is None:                       # +5V, CV, Gate
                 _ncs.extend([pi, pp])
             elif destino == "GND":
-                gnd_izq.append(pi[1]); gnd_der.append(pp[1])
+                gnd_izq.append(pi[1])
+                gnd_der.append(pp[1])
             else:
                 for px, hacia in ((pi, xc - g(10)), (pp, xc + g(12))):
                     hilo(*px, hacia, px[1])

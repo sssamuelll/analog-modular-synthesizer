@@ -56,7 +56,6 @@ y ninguna otra puerta del repo pide un `pip install`.
 """
 from __future__ import annotations
 
-import glob
 import math
 import os
 import re

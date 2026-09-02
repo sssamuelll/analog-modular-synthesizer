@@ -1,0 +1,12 @@
+# Reglas de la puerta de lint (.githooks/pre-push, g_ruff), que desde el #194
+# mira el repo entero. Son las que ruff trae por defecto, escritas aqui para que
+# un cambio de version de ruff no mueva la puerta sin que nadie lo vea.
+#
+# software/midi-cv/pyproject.toml lleva un juego mas estricto (I, N, UP, B, SIM,
+# RUF) y manda sobre sus 30 guiones: ruff aplica el config mas cercano al
+# archivo. Aplicar ese juego al resto del repo da hoy 421 errores, cinco de
+# ellos B023 (clausura que captura la variable del bucle): es el #263.
+#
+# .claude/worktrees/ queda fuera porque esta en .gitignore y ruff lo respeta.
+[lint]
+select = ["E4", "E7", "E9", "F"]

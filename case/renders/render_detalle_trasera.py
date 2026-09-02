@@ -13,7 +13,6 @@ import os
 import sys
 
 import bpy
-import numpy as np
 from mathutils import Matrix, Vector
 
 AQUI = os.path.dirname(os.path.abspath(__file__))

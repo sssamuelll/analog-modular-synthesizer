@@ -73,7 +73,13 @@ falta() {
 }
 
 g_hardware() { cd "$RAIZ" && python hardware/tools/gates.py; }
-g_ruff()     { cd "$RAIZ/software/midi-cv" && ruff check .; }
+# Hasta el #194 ruff solo miraba software/midi-cv: 30 de 113 guiones. Los 83
+# de fuera eran justo los *_budget.py y check_*.py que deciden hardware, y el
+# propio gates.py que los ejecuta. Ejecutar no es lintar: en diez dias la deuda
+# de fuera paso de 29 errores a 68 sin que nada la viera. Desde la raiz ruff
+# respeta .gitignore, asi que los worktrees de .claude/ no entran; las reglas
+# viven en ruff.toml.
+g_ruff()     { cd "$RAIZ" && ruff check .; }
 g_pytest()   { cd "$RAIZ/software/midi-cv" && python -m pytest -q; }
 g_cargo()    { cd "$RAIZ/software/nucleo" && cargo test --workspace --quiet; }
 g_clippy()   { cd "$RAIZ/software/nucleo" && cargo clippy --workspace --all-targets -- -D warnings; }

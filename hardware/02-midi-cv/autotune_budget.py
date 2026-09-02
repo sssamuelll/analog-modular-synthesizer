@@ -195,7 +195,7 @@ def demo() -> None:
     deriva_m2 = 0.47      # ../tuning_budget.py, lo que no es masa
     print(f"\nsin autoafinado: masa {masa} + deriva del modulo 2 {deriva_m2} "
           f"= {masa + deriva_m2:.2f} cents")
-    print(f"                 ...MAS lo que derive el VCO, que no esta acotado")
+    print("                 ...MAS lo que derive el VCO, que no esta acotado")
     print(f"con autoafinado: masa {masa} + medida {peor:.2f} "
           f"= {masa + peor:.2f} cents, y la deriva del VCO deja de contar")
     assert masa > peor, \
@@ -213,17 +213,17 @@ def demo() -> None:
     # La captura cuenta por hardware, asi que no hay "eventos que atender": el
     # micro lee dos registros al final. La carga por flanco desaparece y con
     # ella la necesidad del divisor 74HC4040 que hacia falta con el Pi.
-    print(f"\ncarga de CPU: ninguna por flanco. La captura de TIM cronometra")
-    print(f"   por hardware y el nucleo lee el resultado al final. El divisor")
-    print(f"   74HC4040 que hacia falta con el Pi sobra.")
-    print(f"   (los 2 canales de 16 bits de TIM1 SI cuentan desbordes en")
-    print(f"    firmware en las 84 notas: coste de codigo, no de jitter)")
+    print("\ncarga de CPU: ninguna por flanco. La captura de TIM cronometra")
+    print("   por hardware y el nucleo lee el resultado al final. El divisor")
+    print("   74HC4040 que hacia falta con el Pi sobra.")
+    print("   (los 2 canales de 16 bits de TIM1 SI cuentan desbordes en")
+    print("    firmware en las 84 notas: coste de codigo, no de jitter)")
 
     # --- el termino que queda, DESPEJADO en vez de supuesto ---------------
     # La ventana mas corta del barrido es la que menos perdona.
     T_corta = min(tiempo_medida(F_MIN * razon ** i) for i in range(N_NOTAS))
     j_comp = jitter_comparador_max(T_corta)
-    print(f"\nel termino que queda es el disparador Schmitt, y esta DESPEJADO:")
+    print("\nel termino que queda es el disparador Schmitt, y esta DESPEJADO:")
     print(f"   ventana mas corta del barrido: {T_corta*1e6:.0f} us")
     print(f"   el 74HC14 puede temblar hasta **{j_comp*1e9:.0f} ns** "
           f"y aun se cumple el objetivo")
@@ -243,7 +243,7 @@ def demo() -> None:
 
     # --- lo que este calculo NO cubre ------------------------------------
     print("\nlo que NO esta confirmado:")
-    print(f"  * el jitter real del 74HC14 sigue SIN MEDIR. Lo que cambia es")
+    print("  * el jitter real del 74HC14 sigue SIN MEDIR. Lo que cambia es")
     print(f"    que ahora hay contra que medirlo: {j_comp*1e9:.0f} ns.")
     print("  * el asentamiento de 20 ms tras cambiar el CV es una estimacion.")
     print("  * no cubre el error de UMBRAL del disparador Schmitt: desplaza la")

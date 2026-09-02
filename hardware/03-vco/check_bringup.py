@@ -260,7 +260,7 @@ def main(argv: list[str]) -> int:
 
     c_med = sum(1 for q in criterios if q.clave in medidas)
     r_med = sum(1 for q in registros if q.clave in medidas)
-    print(f"\nbring-up del modulo 3, contra notes/bring-up.md\n")
+    print("\nbring-up del modulo 3, contra notes/bring-up.md\n")
     print(f"  criterios (deciden):  {c_med:3}/{len(criterios):3} medidos, "
           f"{len(malas)} fuera de rango")
     print(f"  registros (anotar):   {r_med:3}/{len(registros):3} medidos")

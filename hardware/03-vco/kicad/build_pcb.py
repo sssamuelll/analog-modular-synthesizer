@@ -1456,7 +1456,7 @@ def _rondas(tmp: str) -> None:
         copia = os.path.join(tmp, "sam17-vco-relleno.kicad_pcb")
         pcbnew.SaveBoard(copia, pcbnew.LoadBoard(PCB))
         board = rellenar(copia)
-        antes, sueltos = sueltos, board.GetConnectivity().GetUnconnectedCount(True)
+        sueltos = board.GetConnectivity().GetUnconnectedCount(True)
         if record is None or sueltos < record:
             record = sueltos
             pcbnew.SaveBoard(mejor, pcbnew.LoadBoard(PCB))
