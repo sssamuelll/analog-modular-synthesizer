@@ -501,6 +501,32 @@ vez). Se rediseña:
   quitó al módulo de Voz — jack 13,0 + placa 1,6 + AD75019 y orilla — pila
   propia ≤ 50, en `voz_total_budget.py` ampliado.
 
+> **Acta del 2026-09-02 — quién shiftea el crosspoint (cierra la pregunta de
+> E-3, issue #171).** La pregunta se hizo sobre dos RP2350B apretados y un SPI
+> privado invalidante; ese mundo murió el 26-08 (A-1) y el guion que lo medía
+> está sin sujeto desde el 30-08. Con los números de hoy, **Samuel firma la
+> opción A**: **el N657 de la Voz shiftea los dos AD75019, en cadena (512
+> bits), por un SPI propio (SCK + MOSI) con el strobe `PCLK` en un GPIO**. No
+> cuelgan de un bus de CV (son DMA puro con NSS por hardware, motor-digital §5,
+> y el AD75019 no tiene chip select) ni del J2 (esclavo de hardware con un solo
+> `CS`; los cuatro pines muertos los quiere D9).
+>
+> - **Pines:** `micro_budget.py` sienta el SPI del crosspoint a la mesa además
+>   del strobe. El censo sigue VERDE en VFBGA264: 94 pines, 52 GPIO libres de
+>   los 9 que exige, 20/20 tercetos de CV cierran (reparto de muestra: SPI5,
+>   SCK en PE15, MOSI en PA4).
+> - **Caudal:** 512 bits a ≤10 Hz. Nada que presupuestar.
+> - **La imagen:** el cerebro sigue siendo su dueño (§5.3). La manda entera por
+>   el J2 (64 bytes: ~15 µs a 34,5 MHz, dentro de R-E1). El N657 la guarda como
+>   «ruta pendiente», aplica la barrera de cambiados-en-silencio y la política
+>   del preset, shiftea y latchea. El modelo que los dos comparten vive en
+>   `software/nucleo/core/src/bahia.rs`, con sus tests.
+> - **Lo que no cambia:** este §5.4 y R-M5. El latch nace inhibido por hardware
+>   hasta que el micro shiftea ceros.
+> - **Pendiente:** la serialización a los 512 bits espera la hoja del AD75019
+>   (orden de bits y flanco de `PCLK`), que no está en el árbol; y el censo de
+>   qué línea es qué jack (motor-digital §8.4) sigue sin hacer.
+
 ## 6. El parámetro durmiente
 
 Un parámetro cuyo rol lo silencia **no es nulo — está durmiente**: se
@@ -824,6 +850,9 @@ Gana una sola bajada de J2 en vez de dos, una sola identidad y una ranura
 libre. Queda por resolver: **quién shiftea los 256 bits del AD75019** ahora que
 la bahía no tiene bajada propia. Barato en pines, pero los micros de este
 módulo son justo los apretados.
+
+> **Resuelto el 2026-09-02** (acta al final de §5.4, issue #171): el N657 de la
+> Voz shiftea por un SPI propio. Los micros apretados ya no existen.
 
 ### E-4. Los demás módulos SÍ son modulares, y la fila de abajo es rack de verdad
 
