@@ -428,28 +428,51 @@ de modelo es la palabra clase AD5686R que `core/src/j2.rs` ya compone).
 
 **Y aquí la lente clínica encontró un supuesto de toda la v1:** que la
 palabra fuera **lineal en amplitud**. El VCA de voz es ¼ de SSI2164 (voz-total
-§2), un VCA de **control exponencial** (ganancia lineal en dB por voltio) de
-catálogo; su hoja **no está en el árbol** y ningún papel declara la ley
-palabra → ganancia. Si la palabra fuera lineal en dB, el RT60 de la decisión
-2, la sensibilidad de la 5 y el −3 dB de la 6 significarían otra cosa en
-cobre.
+§2), y ningún papel declaraba la ley palabra → ganancia. Si la palabra fuera
+lineal en dB, el RT60 de la decisión 2, la sensibilidad de la 5 y el −3 dB de
+la 6 significarían otra cosa en cobre.
 
 Se resuelve **separando el modelo del cobre**: el generador y las decisiones
 firmadas hablan de **amplitud**, que es lo que el oído y la tesis miden; la
 conversión de amplitud a palabra de control es **del escritor**, con la ley
-del VCA delante:
+del VCA delante. **Y la hoja ya está en el árbol**
+(`docs/reference/datasheets/ssi2164-rev3.4-2023-02.pdf`, Rev. 3.4, febrero
+2023), y la ley es esta, verbatim (p. 4, «Control Port»):
+
+> *«The SSI2164 provides exponential control with gain constant of −33mV/dB;
+> to realize the full gain range of +20dB to −100dB, control voltage should
+> span from −660mV to 3.3V, respectively. If only attenuation is desired, the
+> control port can be driven directly from a low impedance voltage-output
+> DAC.»* Y p. 6: *«a positive VC attenuates the input and a negative VC
+> amplifies the input. The VCA has unity gain for a control voltage of
+> 0.0V».*
+
+O sea, **control exponencial, referido a masa, −33 mV por dB**; unidad a
+0 V; +3,3 V son −100 dB; y para solo atenuar —que es el caso del VCA de
+voz— el puerto se puede colgar **directamente de un DAC de voltaje**. La ley
+del escritor, en amplitud:
 
 ```
-palabra = ley_vca(a)       HUECO: la fija la hoja del SSI2164, que hay que
-                           traer al árbol (R-M3) antes de escribir esta función
+V_C(a) = −0,033 V/dB · 20·log10(a)  =  −0,66 V · log10(a)      (a ≤ 1)
+V_C(1) = 0 V        V_C(2⁻¹⁶) = 3,18 V (−96 dB)        V_C(0) → tope: +3,3 V (−100 dB)
 ```
 
-Si el control es exponencial, `ley_vca` es un logaritmo por rama y por tick
-(32 × 10 kHz = 320 000 por segundo: una tabla de mil entradas con
-interpolación lo cubre) o una etapa lineal-a-exponencial en cobre; lo decide
-la hoja. **Lo que no se negocia**: `ley_vca(0)` tiene que ser **la palabra
-que cierra el VCA**, sea cual sea el sentido de su control, porque voz-total
-§9.1 ya legisló que cero-escala es VCA cerrado y se verifica en bring-up.
+Es un logaritmo por rama y por tick (32 × 10 kHz = 320 000 por segundo): una
+**tabla de mil entradas con interpolación** lo cubre en el escritor, y cabe en
+la fila del escritor de CV. **Lo que no se negocia**: `ley_vca(0)` es **la
+palabra que cierra el VCA** —el tope de +3,3 V, o más—, porque voz-total §9.1
+ya legisló que cero-escala es VCA cerrado y se verifica en bring-up. Y como
+el sentido del puerto es «más voltaje, menos ganancia», **la palabra cero del
+DAC no puede ir directa al puerto**: cero-escala tiene que ser el tope de
+atenuación, por escala y desplazamiento en cobre o por el mapa de la tabla.
+
+**Lo que sigue siendo HUECO, con la hoja delante:** (1) la **escala y el
+desplazamiento** entre la palabra del DAC y `V_C` —del esquemático, con el
+DAC que R-M3 nombre—; y (2) si el puerto se **compensa en temperatura**: la
+hoja dice que los −33 mV/dB son *«proportional to absolute temperature, or
+approximately 0.33%/°C»*, y su Figura 2 muestra un puerto compensado con NTC
+que sale a **−50 mV/dB**. La constante de la tabla depende de esa decisión
+de cobre; la forma de la ley, no.
 
 ---
 
@@ -749,8 +772,10 @@ v1 y no cambia una línea del modelo.
 
 ## 10. Lo que este papel NO decide
 
-- **La ley palabra → ganancia del VCA** (§4.3): la fija la hoja del SSI2164,
-  que no está en el árbol. `ley_vca` es un hueco con contrato.
+- **La escala palabra → `V_C` del VCA** (§4.3): la ley ya está (exponencial,
+  −33 mV/dB, hoja en el árbol); la escala y el desplazamiento del DAC al
+  puerto, y si el puerto se compensa en temperatura, son del esquemático.
+  `ley_vca` se escribe cuando eso exista.
 - **El DAC concreto** de los VCA (AD5686R o LTC2668-16): R-M3, hoja en árbol
   antes de dibujar.
 - **El escritor de corte a 48 kHz** —el que suma base + calibración +
@@ -778,7 +803,7 @@ v1 y no cambia una línea del modelo.
 | # | Riesgo | Se cierra cuando |
 |---|---|---|
 | 1 | El escalón de 10 kHz se oye en el VCA (RC corta) o en el corte (un polo insuficiente) | bring-up con el oído y un analizador: si se oye, acta para subir la tasa o segundo polo |
-| 2 | La ley del VCA resulta exponencial y `ley_vca` cuesta más de lo que la fila del escritor aguanta, o su tabla no da la resolución que el RT60 pide en −60 dB | hoja del SSI2164 en el árbol; `ley_vca` escrita y contada en `carga_motor`; la palabra a −60 dB medida en bring-up |
+| 2 | La ley del VCA **es** exponencial (hoja en el árbol): `ley_vca` es un logaritmo por rama y por tick, y su tabla tiene que dar la resolución que el RT60 pide en −60 dB con la escala del DAC que el esquemático fije; y la constante se mueve un 0,33 %/°C si el puerto no se compensa | escala y desplazamiento del DAC al puerto en el esquemático; `ley_vca` escrita y contada en `carga_motor`; la palabra a −60 dB medida en bring-up, en frío y en caliente |
 | 3 | Los 160 parámetros dejan al motor y a los gestos con 72 ranuras, o duplican perillas que los «+9/canal» ya contaban | `check_censo_voz.py` con la fila; el desglose de los 9 cuando el cambio 15 exista; si no cabe, `MAX_PARAMS` crece por acta |
 | 4 | La nota reparada a fuerza plena, o sin tono de arranque, se oye como error | es degradación declarada (R-E12); se documenta en el descriptor y el manual; si molesta, la constante cambia por acta |
 | 5 | Un `dispara` perdido no se repara | declarado irreparable; la cadencia de R-E11 y la fiabilidad del enlace medidas en bring-up dicen cuántos se pierden |
@@ -858,7 +883,7 @@ PR**.
 | 12 | La fuerza de una nota reparada | `FUERZA_REPARACION = u16::MAX` (plena): una nota reparada tiene que oírse (§3.4) |
 | 13 | `dispara` y la red | Un `dispara` perdido es un golpe perdido: irreparable, declarado (§3.4) |
 | 14 | Un solo dueño del estado | El tick muta; todo lo demás encola en una FIFO de 64 drenada en orden (§3.5) |
-| 15 | La ley del VCA | El modelo habla de amplitud; `ley_vca` es del escritor y espera la hoja del SSI2164; `ley_vca(0)` cierra el VCA (§4.3) |
+| 15 | La ley del VCA | El modelo habla de amplitud; `ley_vca` es del escritor; la hoja del SSI2164 entró el mismo día y fija la ley (exponencial, −33 mV/dB, unidad a 0 V, −100 dB a +3,3 V); lo que espera al esquemático es la escala del DAC al puerto; `ley_vca(0)` cierra el VCA (§4.3) |
 
 Y la decisión previa que las precede: **el generador vive en el N657 de la
 Voz**, no en un chip aparte (§0).
