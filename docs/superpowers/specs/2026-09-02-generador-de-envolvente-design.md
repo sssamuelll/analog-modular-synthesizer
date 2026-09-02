@@ -634,7 +634,9 @@ capacidad de `heapless::Vec` en `modelo.rs`, no una ley: si el censo del
 motor pide más, crece y se paga en RAM del cerebro. En memoria: 696 entradas
 a 100 B (E-7) son 69,6 KB, más 1,6 KB de curvas, 2,7 KB de calibración y
 3 KB de etiquetas: **76,9 KB, el 58,7 % de los 128 KB**, con el 30 % de
-margen que el guion exige. **La fila `ENVOLVENTE_POR_CANAL = 10` entra al
+margen que el guion exige. (A los 42 B por entrada que el descriptor ocupa
+hoy son 36,5 KB, el 28 %: el `TOTAL` que el guion imprime es ese; el 58,7 %
+está en su tabla de candidatas, a los 100 B del objetivo de E-7.) **La fila `ENVOLVENTE_POR_CANAL = 10` entra al
 guion en el PR de código** (§9).
 
 **Dos cosas que el censo no puede verificar, dichas:** los «+9/canal» de

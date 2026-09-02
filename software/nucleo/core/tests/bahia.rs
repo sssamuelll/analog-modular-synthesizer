@@ -294,6 +294,28 @@ fn una_propuesta_nueva_sustituye_a_la_pendiente_y_reinicia_el_reloj() {
     );
 }
 
+/// Papel del generador §6: la barrera decide con la mascara de un tick y el latch
+/// tarda mas de un tick (512 bits a 5 MHz son 102 us). `Commit` dice que canales
+/// cambian para que el firmware los bloquee hasta `Conmutado`. Es exactamente
+/// `canales_que_cambian(activa, pendiente)` en el instante del commit.
+#[test]
+fn el_commit_dice_que_canales_cambian_para_retener_sus_aperturas() {
+    let mut b = Barrera::nueva(PoliticaDrones::Diferir);
+    let mut propuesta = Imagen::vacia();
+    propuesta.poner(Chip::Entrada, 3, 1);
+    propuesta.poner(Chip::Salida, 11, 2);
+    b.proponer(propuesta, 0);
+    let c = b.tick(u16::MAX, 1).expect("todo callado");
+    assert_eq!(c.cambian, (1 << 3) | (1 << 11));
+    assert_eq!(c.mutear, 0);
+    // recargar la misma imagen: nadie cambia, nadie se retiene
+    b.proponer(propuesta, 2);
+    let c = b
+        .tick(0, 3)
+        .expect("nadie cambia: commit aunque todo suene");
+    assert_eq!(c.cambian, 0);
+}
+
 /// Sin pendiente no hay nada que conmutar, ni siquiera con un timeout de cero
 /// y todo el instrumento sonando. Un `tick` no puede fabricar una conmutacion.
 #[test]

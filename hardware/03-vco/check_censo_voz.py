@@ -105,6 +105,13 @@ BASE_V2 = 226               # voz-total S7: parametros escribibles de #164
 POR_CANAL = 9               # voz-total S7: "+9/canal x16"
 ARISTAS_Y_VINCULOS = 150    # DERIVADO: resto hasta los ~520 que S7 declara
 PANEO_POR_CANAL = 1         # acta E-6: el sitio de la voz en el estereo
+ENVOLVENTE_POR_CANAL = 10   # generador de envolvente S7: dos ADSR (3 tiempos
+                            # + sostenido) + sensibilidad a la fuerza +
+                            # cantidad del filtro, POR VOZ.
+                            # OJO: los "+9/canal" de voz-total S7 no estan
+                            # desglosados en ningun papel; si ya contenian
+                            # perillas de ADSR, esta fila duplica (riesgo 3
+                            # del papel; se sabe con el cambio 15).
 
 # --- el descriptor y la memoria (citados de dieciseis S13) ------------------
 B_POR_ENTRADA = 42          # "~300 entradas x ~42 B"
@@ -116,7 +123,9 @@ B_CURVAS_FILTRO = 1_600     # voz-total S7: "+ curvas (~1,6 KB)"
 
 
 def params(con_estereo: bool) -> int:
-    n = BASE_V2 + POR_CANAL * CANALES + ARISTAS_Y_VINCULOS
+    # La envolvente no depende del estereo: suma siempre.
+    n = (BASE_V2 + POR_CANAL * CANALES + ARISTAS_Y_VINCULOS
+         + ENVOLVENTE_POR_CANAL * CANALES)
     if con_estereo:
         n += PANEO_POR_CANAL * CANALES
     return n
@@ -144,6 +153,8 @@ def demo() -> None:
     print(f"  + {POR_CANAL} por canal x {CANALES}            "
           f"{POR_CANAL * CANALES:5d}")
     print(f"  + aristas y vinculos (DERIVADO)  {ARISTAS_Y_VINCULOS:5d}")
+    print(f"  + envolvente {ENVOLVENTE_POR_CANAL}/canal (gen. S7)  "
+          f"{ENVOLVENTE_POR_CANAL * CANALES:5d}")
     print(f"  = sin estereo                    {params(False):5d}")
     print(f"  + paneo, {PANEO_POR_CANAL} por canal (E-6)      "
           f"{PANEO_POR_CANAL * CANALES:5d}")
