@@ -739,7 +739,7 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 |-------|----------|------|
 | **ANILLO** (costilla) — pletina de aluminio **FRESADA** t=14, cara vista 20 | **2** | **la pieza portante del case, mecanizada, no plegada**. Conserva el rebaje de 6 × 11 del costado y el chaflán 1.5 × 45° de la cara vista. En la cara interior gana el **rebaje de chapa de 4.5 de ancho × 3 de fondo, z = 11..14**, solo donde se ve techo, nariz o talón. La chapa queda rehundida 1, con 0.5 contra la pared y 2.5 agarrados en z; el **reborde de 1 × 3** tapa el canto. El radio es 5.5 donde hay chapa y vuelve a 4.5 donde la chapa sale hacia el pie: así sigue el arco del pliegue sin levantar el pie de la tabla. El tramo trasero pasa a franja 23: bolsillo de la trasera en u = 5.5..16.5, pared 3 y costado entrando 3.5. Bajo los dos labios de chapa, el labio del bolsillo tiene 3 de hondo; en el resto conserva 6. Cada anillo lleva un cajeado de brida de **28 × 15.5 × 3**, dos en total, con esquina interior R1.5. Conserva 14 roscas ciegas M4 por anillo y 3 M5 en el canto inferior. Anodizado satinado, con el punto de bonding enmascarado |
 | **MARCO DE LA VENTANA** — pletina t=6, láser | **2** | **una por costado, espejadas**. Aloja las cabezas de los seis rieles y retiene el costado hacia dentro. El canto se retira **2.65 bajo las chapas empotradas**; en el suelo sigue en **1.65**, porque allí los pies no se rehunden. En la trasera arranca a **17.00** y `marco_fondo_trasera` pasa a **30**: queda una pata de **13 × 6**, que cede 1.54 mm y trabaja a 114 MPa con 200 N, por debajo de los techos de 2 mm y 130 MPa. Lleva la rosca M3 de la banda del valle y la muesca sobre la brida del techo. **Orden obligado: costado, rieles al marco, marco al anillo desde dentro** |
-| Tornillo M4 botón (marco al anillo) | **24** | 12 por costado — 10 en las tres filas + 2 en la pata del suelo, el trabajo que hacían los de los clips —, a rosca ciega en la franja de 14. Eran los «20 de placa al anillo» que este README llevaba sin itemizar, más los 4 de los clips. **Seis de los diez de las filas caen bajo la huella del riel (#242)** |
+| Tornillo M4 botón (marco al anillo) | **24** | 12 por costado — 10 en las tres filas + 2 en la pata del suelo, el trabajo que hacían los de los clips —, a rosca ciega en la franja de 14. Eran los «20 de placa al anillo» que este README llevaba sin itemizar, más los 4 de los clips. Las diez cabezas de las filas quedan fuera de la huella de los Z-Rails, con ≥0.5 mm libres para apretarlas después de montar los rieles (#242) |
 | **MIEMBRO ALTO** — chapa 6082-T6 t=1.5 | **1** | el **techo macizo**, sin ranuras: meseta de 50, retorno de 4, chaflán de 6 y **labio de 20**. Con 200 N en el centro del vano de 540.62 cede 1.62 mm y trabaja a 95 MPa, por debajo de Rp0.2 = 130. Blank **593.02 × 73.85**. Las dos bridas de 27 × 14.5 llevan esquinas R2 y entran en los cajeados de 28 × 15.5 × 3; quedan 11 de pletina bajo sus M4 ciegos. **Sin canal** y sin fila de tornillos para la trasera |
 | **TALÓN** — chapa 6082-T6 t=1.5 | **1** | **la nariz de atrás**: pie de **22.5** sobre la tabla, chaflán de 6 y labio vertical de 13. Blank **545.62 × 42.23**. En cada punta, una muesca de **2.65** va desde el canto libre del pie hasta la línea de doblez, a **22.06** (`largo − BD45/2`), con alivio de Ø2 a caballo de la esquina interior. Sus ocho pestañas siguen sujetando la trasera hacia dentro. Tres M4 avellanados a la tabla desde arriba. El chasis del PSU se adelanta 2.5 con este pie |
 | Tornillo M4 avellanado (talón) | **3** | el pie del talón a la **tabla**, desde dentro — mismo herraje que las paticas y la nariz |
@@ -890,12 +890,12 @@ los dos anillos. Por eso la tabla, con nariz y talón ya atornillados, entra
 antes que el anillo B. El chasis no puede estar sobre ella en ese momento:
 taparía el acceso al marco B. Entra al final por el frente.
 
-**Con una deuda escrita (#242):** seis de los diez M4 de las filas caen bajo
-la huella del riel — el par se arrima al riel y una cabeza de 7.6 a 7 del eje
-entra 1.8 bajo sus 10 de ancho —, y con el riel puesto no hay cómo apretarlos.
-Este orden es el que el cajeado obliga y no cierra hasta que esas roscas
-salgan de la huella; hasta entonces se escribe como es, con el hueco a la
-vista. **Esta tanda no crea ni cierra la deuda #242.**
+**Acceso cerrado (#242):** las diez cabezas M4 de las tres filas quedan fuera
+de la sección de cualquier Z-Rail, con ≥0.5 mm de aire. Cuando el extremo de
+una pata no admite una rosca a cada lado del riel, las dos pasan al lado
+interior sin acercarse a su huella. La misma puerta exige ≥1.5 D desde cada
+paso M4 hasta el borde de los cajeados Ø8. Por eso los marcos se pueden apretar
+al anillo con los rieles ya puestos, sin cambiar tornillos ni añadir piezas.
 
 1. **Los dos anillos, tumbados con la cara vista abajo, cada uno con su
    costado asentado en el rebaje** sobre la junta de EPDM. El film se queda
@@ -903,8 +903,8 @@ vista. **Esta tanda no crea ni cierra la deuda #242.**
 2. **Los seis Z-Rails al marco A, por su cara de anillo** — el M4 rosca en el
    propio riel (viene taladrado a 3.3 de fábrica) y su cabeza queda alojada
    en el cajeado del marco, del lado que después mira al anillo. **Es el
-   primer paso de R1**: sin el riel puesto, después no hay cómo apretar el
-   marco contra el anillo — la cabeza tiene que quedar tapada primero.
+   primer paso de R1**: después de montar el marco al anillo no hay acceso a
+   la cabeza del tornillo del riel, que queda tapada por el anillo.
 3. **El marco A al anillo A, desde dentro** — con el costado ya en su rebaje,
    el marco baja sobre la cara interior con sus doce M4 a rosca ciega y pisa
    6 mm de acrílico por los siete tramos. **Segundo paso de R1: al revés no
@@ -1013,8 +1013,10 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
 - [x] **Tanda A: techo macizo, salida por el alero y tres chapas empotradas**
       (2026-08-30): rebaje y cajeados en los anillos; techo sin ranuras;
       nariz, talón y techo dentro del rebaje; juntas de los labios a tacos;
-      tabla con el anillo B y chasis al final por el frente. La deuda #242
-      sigue abierta y no pertenece a esta tanda
+      tabla con el anillo B y chasis al final por el frente
+- [x] **Acceso de apriete del marco (#242)** (2026-09-01): las diez cabezas M4
+      de las filas quedan fuera de la huella de los Z-Rails; `guarda_anclajes()`
+      exige 0.5 mm libres y 1.5 D hasta el borde de cada cajeado Ø8
 - [x] Plantilla de panel KiCad
 - [x] **Vistas de la BAHIA INFERIOR** (`renders/render_bahia.py`, 2026-08-27):
       la tabla con el chasis del PSU encima, en planta, tres cuartos y rasante.

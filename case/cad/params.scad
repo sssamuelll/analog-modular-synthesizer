@@ -395,14 +395,13 @@ marco_fondo        = 26;
 // despues de subir la rendija a 4.0 (revision del 30-08); con la rendija en
 // 3.0 eran retiro 16, 1.70 mm y 112 MPa.
 marco_fondo_trasera = 30;
-// Cuanto se separan del eje del riel sus dos roscas ciegas, a lo largo del
-// tramo. 7 deja 14 entre las dos roscas del par (piden 9 = 2 D) y, con el par
-// centrado en el riel, 10.19 entre cada rosca y el cajeado. PERO el par
-// arrimado por centro_par_rosca deja 7.40 (1.15 de pared tras el cajeado de 8)
-// y mete 6 de las 10 cabezas bajo la huella del riel, donde no se aprietan
-// con el riel puesto: ninguna de las dos cotas tiene puerta todavia. Issue
-// #242.
-sep_rosca_riel     = 7;
+// Distancia MINIMA a lo largo del tramo entre el eje del riel y la rosca del
+// marco mas cercana. 9.5 saca la cabeza boton M4 Ø7.6 de la huella de 10 del
+// Z-Rail y deja 0.7 de aire. Si el extremo de una pata no permite abrazar el
+// riel a +-9.5, las dos roscas pasan al lado interior, separadas 2 D de paso
+// M4, sin acercar ninguna al riel. guarda_anclajes() comprueba tanto ese acceso
+// como 1.5 D desde cada paso M4 hasta el borde del cajeado Ø8 (#242).
+sep_rosca_riel     = 9.5;
 // LAS DOS ROSCAS DE LA PATA DEL SUELO. El marco sustituyo a los clips y los
 // clips llevaban tornillo: sin el, la pata del suelo (288 x 24.35 en pletina
 // de 6, la mas larga del marco) cedia 3.31 mm bajo carga_mano como viga
@@ -416,10 +415,11 @@ rosca_suelo_retiro = 60;
 // DONDE ARRANCA LA PATA DE LA CARA DE ARRIBA, medido desde P3. P3 es concavo
 // y su redondeo de 54 curva la franja: el fondo util pasa de 8.51 en x = 128 a
 // 12.45 en x = 148, o sea que una rosca a 8.5 de la silueta puesta en los
-// primeros 12 mm sale por la pared del rebaje (taladros_anillo la cazo a 4.72
-// contra 4.95). Las roscas de esa pata se arriman a su riel sin pasar de
-// aqui; la pata del valle cubre el rincon. Fue el retiro de la placa de la
-// cara superior, con el mismo numero y por la misma razon.
+// sale por la pared del rebaje (taladros_anillo la cazo a 4.72
+// contra 4.95). Las roscas de esa pata no pasan de aqui; cuando el par no cabe
+// alrededor del riel, ss_roscas_riel() pone las dos hacia el interior sin
+// acercarlas a su huella. La pata del valle cubre el rincon. Fue el retiro de
+// la placa de la cara superior, con el mismo numero y por la misma razon.
 retiro_placa_sup   = 12;
 // DONDE EL CANTO EXTERIOR DEL MARCO SALE A LA SILUETA en la cara de abajo,
 // medido desde la tangente del redondeo de P1. Antes de ese punto el marco va

@@ -911,22 +911,24 @@ def _dist_a_cantos(cantos: list[tuple[tuple[float, float], tuple[float, float]]]
 
 def _roscas_marco(p: dict[str, float]) -> list[tuple[str, tuple[float, float]]]:
     """(nombre, centro) de las dos roscas ciegas que lleva cada riel en su
-    pata: eje +- sep_rosca_riel a lo largo del tramo, a dist_rosca_ciega de la
-    silueta; y las dos de la pata del suelo, a rosca_suelo_retiro de cada
-    extremo -- el trabajo de las de los clips: sin ellas la pata mas larga del
-    marco cedia 3.31 mm bajo carga_mano. Doce por anillo. GEMELA de
-    roscas_marco() en el .scad.
+    pata, a no menos de sep_rosca_riel del eje a lo largo del tramo y a
+    dist_rosca_ciega de la silueta; y las dos de la pata del suelo, a
+    rosca_suelo_retiro de cada extremo -- el trabajo de las de los clips: sin
+    ellas la pata mas larga del marco cedia 3.31 mm bajo carga_mano. Doce por
+    anillo. GEMELA de roscas_marco() en el .scad.
 
-    EL PAR SE ARRIMA AL RIEL PERO NO SE SALE DE SU PATA: se corre lo justo
-    para que las dos queden a 1.6 D de los extremos de la pata (1.6 y no 1.5
-    para no vivir del redondeo de coma flotante). El marco sigue de largo por
-    las esquinas, pero los extremos de las patas de las filas no son
+    EL PAR NUNCA SE ARRIMA AL RIEL PARA LIBRAR EL EXTREMO DE LA PATA (#242).
+    Si cabe, lo abraza a +-sep_rosca_riel. Si una rosca caeria fuera del tramo
+    legal, las dos pasan al lado interior del riel: la cercana conserva
+    sep_rosca_riel y entre ambas quedan 2 D de paso M4. El marco sigue de largo
+    por las esquinas, pero los extremos de las patas de las filas no son
     arbitrarios: el de la cara de arriba en P3 esta a retiro_placa_sup del
     vertice porque ahi el redondeo concavo estrecha la franja y una rosca se
     sale por el rebaje, y el de la cara de abajo en P1 es el escalon bajo la
     nariz. Lo cruza taladros_anillo() contra el rebaje releido del DXF."""
     sep, d = p["sep_rosca_riel"], p["dist_rosca_ciega"]
     canto = 1.6 * p["d_M4_paso"]
+    paso_par = 2 * p["d_M4_paso"]
     out = []
     for q in _marco_ventana(p):
         # en la cara de abajo el par se mide desde el ESCALON (donde la pata
@@ -937,8 +939,12 @@ def _roscas_marco(p: dict[str, float]) -> list[tuple[str, tuple[float, float]]]:
         for s_eje, _, con in q["ejes"]:
             if not con:
                 continue
-            c = min(max(s_eje, lo + sep), hi - sep)
-            for s in (c - sep, c + sep):
+            ss = (s_eje - sep, s_eje + sep)
+            if ss[0] < lo:
+                ss = (s_eje + sep, s_eje + sep + paso_par)
+            elif ss[1] > hi:
+                ss = (s_eje - sep - paso_par, s_eje - sep)
+            for s in ss:
                 out.append((f"marco {q['nombre']} {s - s_eje:+.1f}",
                             q["_m"]((s, d))))
     q = _pata(p, "suelo")
@@ -1201,6 +1207,54 @@ def guarda_anclajes(p: dict[str, float]) -> None:
             f"{min_c:.2f} (1.5 D). Detras de un cajeado de "
             f"{p['d_cajeado_riel']:g} eso deja {dist - p['d_cajeado_riel'] / 2:.2f} "
             f"mm de pared")
+    # ACCESO DE MONTAJE (#242). La cabeza boton ISO 7380 M4 (Ø7.6) que fija
+    # el marco al anillo tiene que quedar fuera de la seccion del Z-Rail, con
+    # 0.5 mm para no diseñar a tangencia. Se comprueba contra el rectangulo real
+    # del riel en las coordenadas locales de cada pata, no solo contra su eje.
+    cabeza_r, hol_cabeza = 7.6 / 2, 0.5
+    cabezas_bajo_riel: list[str] = []
+    roscas_cerca_cajeado: list[str] = []
+    peor_libre_cabeza = (float("inf"), "")
+    peor_borde_cajeado = (float("inf"), "")
+    for nm, c in _roscas_marco(p):
+        pata_nm = nm.split(" ")[1]
+        q = por_pata[pata_nm]
+        s = ((c[0] - q["A"][0]) * q["u"][0]
+             + (c[1] - q["A"][1]) * q["u"][1])
+        n = ((c[0] - q["A"][0]) * q["n"][0]
+             + (c[1] - q["A"][1]) * q["n"][1])
+        for s_riel, c_riel, _ in q["ejes"]:
+            n_riel = ((c_riel[0] - q["A"][0]) * q["n"][0]
+                      + (c_riel[1] - q["A"][1]) * q["n"][1])
+            ds = max(abs(s - s_riel) - p["rail_er_alto"] / 2, 0.0)
+            n0 = n_riel - p["rail_er_eje"]
+            n1 = n_riel + p["rail_er_fondo"] - p["rail_er_eje"]
+            dn = max(n0 - n, n - n1, 0.0)
+            libre = math.hypot(ds, dn) - cabeza_r
+            peor_libre_cabeza = min(peor_libre_cabeza, (libre, nm))
+            if libre < hol_cabeza - 1e-9:
+                cabezas_bajo_riel.append(
+                    f"{nm} deja {libre:.2f} mm al riel de s={s_riel:.2f}")
+
+            # El cajeado Ø8 es un canto interior de la pletina: desde su borde
+            # hasta el eje del paso M4 se conserva la misma regla de 1.5 D que
+            # en el contorno exterior.
+            entre_centros = math.hypot(c[0] - c_riel[0], c[1] - c_riel[1])
+            al_borde_cajeado = entre_centros - p["d_cajeado_riel"] / 2
+            peor_borde_cajeado = min(peor_borde_cajeado,
+                                     (al_borde_cajeado, nm))
+            if al_borde_cajeado < minimo - 1e-9:
+                roscas_cerca_cajeado.append(
+                    f"{nm} deja {al_borde_cajeado:.2f} mm al cajeado de "
+                    f"s={s_riel:.2f}")
+    assert not roscas_cerca_cajeado, (
+        f"{len(roscas_cerca_cajeado)} pasos M4 quedan a menos de "
+        f"{minimo:.2f} mm (1.5 D) del borde de un cajeado Ø"
+        f"{p['d_cajeado_riel']:g}: " + "; ".join(roscas_cerca_cajeado))
+    assert not cabezas_bajo_riel, (
+        f"{len(cabezas_bajo_riel)} cabezas M4 quedan bajo la huella de un "
+        f"Z-Rail (se exigen {hol_cabeza:.2f} mm libres): "
+        + "; ".join(cabezas_bajo_riel))
     # LA BRIDA CONTRA SU PROPIO CANTO, que no es la silueta: acaba t_costilla
     # por debajo del canto del anillo -- ahi va la meseta, el otro ala del
     # mismo blank --, asi que su margen real es dist_rosca_ciega - t_costilla.
@@ -1244,6 +1298,31 @@ def guarda_anclajes(p: dict[str, float]) -> None:
           f"{peor_eje[0]:.2f} del canto; el M4 de brida mas justo, '{peor_brida[1]}' a "
           f"{peor_brida[0]:.2f} (minimo {minimo:.2f}); el M3 de la pestana a "
           f"{d_m3:.2f} del canto de la pata del valle")
+    print(f"  acceso #242: la cabeza mas justa, '{peor_libre_cabeza[1]}', deja "
+          f"{peor_libre_cabeza[0]:.2f} al Z-Rail (minimo {hol_cabeza:.2f}); "
+          f"el paso mas justo, '{peor_borde_cajeado[1]}', queda a "
+          f"{peor_borde_cajeado[0]:.2f} del cajeado (minimo {minimo:.2f})")
+
+
+def canario_acceso_marco(p: dict[str, float]) -> None:
+    """El reparto viejo y un cajeado crecido deben disparar las dos puertas."""
+    casos = (
+        ({"sep_rosca_riel": 7.0, "d_cajeado_riel": 0.0},
+         "cabezas M4", "reparto viejo bajo el riel"),
+        ({"sep_rosca_riel": 1.0},
+         "pasos M4", "roscas convertidas en una ranura junto al cajeado"),
+    )
+    for cambios, clave, que in casos:
+        roto = {**p, **cambios}
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                guarda_anclajes(roto)
+        except AssertionError as exc:
+            assert clave in str(exc), (
+                f"el canario de {que} cayo por otra razon: {exc}")
+        else:
+            raise AssertionError(
+                f"el canario de {que} no cayo: guarda_anclajes() ya no protege #242")
 
 
 def _m3_pestana(p: dict[str, float]) -> tuple[float, float]:
@@ -5916,6 +5995,7 @@ def main() -> int:
     canario_solapes(p)
     canario_alineacion(p)
     guarda_rebaje(p)
+    canario_acceso_marco(p)
     guarda_anclajes(p)
     guarda_marco_ventana(p)
     guarda_miembro_alto(p)
