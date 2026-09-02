@@ -11,6 +11,8 @@ pub mod bahia;
 pub mod bahia_serie;
 pub mod descriptor;
 pub mod descubrimiento;
+pub mod envolvente;
+pub mod escritor;
 pub mod fuerza;
 pub mod j2;
 pub mod medidas;
