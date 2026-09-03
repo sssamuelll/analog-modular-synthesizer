@@ -61,7 +61,8 @@ HERE = Path(__file__).resolve().parent
 for _ruta in (str(HERE), os.path.join(str(HERE), "..", "..", "tools")):
     if _ruta not in sys.path:
         sys.path.insert(0, _ruta)
-from calor_budget import MODULO_A  # noqa: E402
+from calor_budget import (MODULO_A, P_BASE, SOSTENIDO,  # noqa: E402
+                          aire_recinto_c, p_cajon_w, p_recinto_w)
 from canario import borde_rojo  # noqa: E402
 
 # --- lo que las hojas dicen de los OVP (meanwell-*, p. 2) ------------------
@@ -80,7 +81,12 @@ V_RIEL = {"rack+12": 12.0, "rack-12": 12.0, "rack+5": 5.0}
 # Tolerancia y deriva del riel sano, de la misma hoja (p. 2).
 TOL_FRAC = 0.025
 TEMPCO_PCT_C = 0.03
-T_AIRE_C = 68.91          # calor_budget.py, punto de diseno; se recalcula abajo
+# La temperatura del aire NO se escribe a mano: se resuelve. Es el punto
+# fijo de calor_budget.py con el venteo de D-F3 = A y las corrientes
+# sostenidas, y de ella depende cuanto sube el riel sano por deriva -- que
+# es la cota de abajo de la ventana del crowbar.
+T_AIRE_C = aire_recinto_c(p_recinto_w(SOSTENIDO), p_cajon_w(SOSTENIDO),
+                          area_venteo_mm2=P_BASE["area_venteo_mm2"])
 RIZADO_VPP = {"rack+12": 0.150, "rack-12": 0.150, "rack+5": 0.080}
 
 # --- el crowbar de D-F6: lo que se declara y lo que se exige --------------

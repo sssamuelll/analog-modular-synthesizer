@@ -18,9 +18,9 @@ una opinion.
 
 **1. La fuga no es "un orden de magnitud" por debajo del limite: es el 87 %.**
 Con la tension de ensayo de la norma (253 V, o sea 1,1 x 230) y 60 Hz, los seis
-modulos ponen 1,37 mA, los seis Y2 de D-F5 a 2,2 nF ponen 1,26, y los del
-filtro de red otro tanto. El margen que queda no da para subir el Y2 mucho mas:
-el guion despeja el maximo.
+modulos ponen 1,37 mA, los seis Y2 de D-F5 a 2,2 nF ponen 1,26 y los dos del
+filtro de red 0,42: **3,05 de 3,5 mA**. El margen que queda no da para subir
+el Y2 mucho mas, y el guion despeja el maximo: 2,99 nF por modulo.
 
 **2. D-F5 ES UN MECANISMO DE MEGAHERCIOS, NO DE 65 kHz.** El papel justifica el
 Y2 local diciendo que "el lazo de modo comun se cierre en centimetros ... y no

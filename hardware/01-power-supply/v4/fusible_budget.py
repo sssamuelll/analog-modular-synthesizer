@@ -70,7 +70,8 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 for _ruta in (DIR, os.path.join(DIR, "..", "..", "tools")):
     if _ruta not in sys.path:
         sys.path.insert(0, _ruta)
-from calor_budget import PLACA_A, SOSTENIDO  # noqa: E402
+from calor_budget import (P_BASE, PLACA_A, SOSTENIDO,  # noqa: E402
+                          aire_recinto_c, p_cajon_w, p_recinto_w)
 from canario import borde_rojo  # noqa: E402
 from margen_budget import I_CASCADA_A  # noqa: E402
 
@@ -313,7 +314,10 @@ def _guarda_rearranque(p: dict[str, float]) -> None:
         f"pon NTC con rele de bypass")
 
 
-T_RECINTO_C = 68.91          # calor_budget.py, punto de diseno
+# Tampoco a mano: el fusible vive en el recinto y su derratado depende de
+# la temperatura que resuelve calor_budget.py, no de una cifra copiada.
+T_RECINTO_C = aire_recinto_c(p_recinto_w(SOSTENIDO), p_cajon_w(SOSTENIDO),
+                             area_venteo_mm2=P_BASE["area_venteo_mm2"])
 
 P_BASE = {
     "i_fusible_a": I_FUSIBLE_A,
