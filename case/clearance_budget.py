@@ -2179,11 +2179,16 @@ def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
                                             arriba -- ranura que ensena cable
                                             y deja entrar polvo
 
-    LO QUE ESTE NUMERO NO DICE, y hay que decirlo: potencia_disipada son SOLO
-    los reguladores del PSU. La disipacion de los modulos no esta en ningun
-    presupuesto de este repo, asi que el salto termico describe el camino del PSU --
-    que sale por el valle y por estas dos ondas, las dos por debajo del
-    entrepiso-- y NO la bahia de arriba, que es la que el cajeado sella."""
+    LO QUE ESTE NUMERO CUENTA, desde el 2026-09-03: los reguladores de la
+    fuente (27,53 W a placa, papel de la fuente v4 sec.6 tras D-F7) MAS lo que
+    disipan la fila de invitados y el digital dentro del mismo cajon (95,6 +
+    24,7 = 120,3 W). Hasta hoy eran 9,22 --solo los TO-220 de la v3-- y con eso
+    el case se cerro el 18-08. El liston de la PSU3 (D-F1) y D-F3 = A cambiaron
+    las dos cosas: hay mas calor Y hay que dejarlo salir.
+
+    Lo que estas dos ondas siguen sin ser: salen por debajo del entrepiso, asi
+    que el camino que dibujan es el del valle y NO la bahia de arriba, que es
+    la que el cajeado sella."""
     au = _trasera_au(p)
     # ANCLADAS AL CAMPO VISIBLE desde la trasera capturada (2026-08-29, noche,
     # 2): de la coronacion del labio del talon a la del techo, en y del mundo.
@@ -2210,6 +2215,14 @@ CD_TIRO = 0.65
 # Una rendija larga y estrecha bajo un alero no descarga como chapa ranurada, y
 # nadie ha medido cual de los dos es. Se imprime, no se aseverea.
 CD_TIRO_PESIMISTA = 0.55
+# LA PARED EXTERIOR TAMBIEN EVACUA, y con 147.83 W dentro deja de ser un
+# detalle: medio metro cuadrado de envolvente mueve mas vatios que la chimenea.
+# U es el coeficiente global aire de dentro -> pared -> sala, o sea las dos
+# caras en serie: con h ~ 5-8 W/m2K por cara, U ~ 2.5-4. SUPUESTO, sin medir, y
+# por eso NO entra en el veredicto -- un termino sin medir que hace una puerta
+# MAS permisiva es como se quema un aparato. Se imprime para que el papel del
+# case sepa que el area que se le pide es una COTA SUPERIOR, y cuanto.
+U_PARED_W_M2K = 3.0
 
 # Tension superficial del agua y su densidad a 20 C. Van aqui y no dentro de
 # guarda_rendija() porque son fisica, como RHO_AIRE: el mojado TOTAL (angulo de
@@ -2312,6 +2325,58 @@ def guarda_rendija(p: dict[str, float]) -> None:
           f"{p['taco_n']:.0f} tacos de {p['taco_largo']:g} por labio")
 
 
+def _envolvente_m2(p: dict[str, float]) -> float:
+    """Envolvente exterior del case MENOS el suelo, que apoya en la mesa y no
+    convecta. DERIVADA del perfil (perimetro x ancho + las dos mejillas), no
+    parametro: hoy son 0.507 m2 de los 0.689 del envolvente entero."""
+    V = _vertices(p)
+    n = len(V)
+    per = sum(math.dist(V[i], V[(i + 1) % n]) for i in range(n))
+    mejilla = abs(sum(V[i][0] * V[(i + 1) % n][1] - V[(i + 1) % n][0] * V[i][1]
+                      for i in range(n))) / 2.0
+    return (per * p["ancho_total"] + 2 * mejilla
+            - fondo(p) * p["ancho_total"]) * 1e-6
+
+
+def _tiro(p: dict[str, float], cd: float = CD_TIRO) -> dict[str, float]:
+    """La chimenea del case: areas, desnivel, salto termico, y el area efectiva
+    que haria falta para quedarse en el techo.
+
+    SALE DE guarda_aire() EL 2026-09-03, cuando esa puerta dejo de aseverar el
+    techo y paso a publicarlo como HUECO. Un HUECO no se canaria leyendole el
+    mensaje --eso ata el canario al texto, que es el vicio que el 30-08 costo
+    dos falsos rojos--: el canario necesita los NUMEROS, y para eso tienen que
+    vivir fuera de la puerta."""
+    n_ent, largo_ent, a_ent, y_ent = _rejilla_entrada(p)
+    a_ren, y_ren = _rendija(p)
+    a_ond, y_ond = _ondas_trasera(p)
+    a_sal = a_ren + a_ond
+    y_sal = (a_ren * y_ren + a_ond * y_ond) / a_sal
+    a_ef = 1.0 / math.sqrt(1 / a_ent ** 2 + 1 / a_sal ** 2)
+    h = (y_sal - y_ent) / 1000.0
+    assert h > 0, (
+        f"la salida de aire ({y_sal:.1f} mm) no queda por encima de la entrada "
+        f"({y_ent:.1f} mm): sin desnivel no hay tiro y la conveccion natural no "
+        f"arranca")
+    k = (RHO_AIRE * CP_AIRE * cd * a_ef * 1e-6
+         * math.sqrt(2 * G * h / T_AMB))
+    techo = p["salto_termico_max"]
+    pot = p["potencia_disipada"]
+    # Lo que se lleva la pared a ESE techo (aviso, no veredicto: ver U_PARED).
+    p_pared = U_PARED_W_M2K * _envolvente_m2(p) * techo
+    # De P = k*dT^1.5 con dT = techo, y k lineal en el area: el area efectiva
+    # que hace falta escala con la potencia que la chimenea tenga que mover.
+    return {"n_ent": n_ent, "largo_ent": largo_ent, "a_ent": a_ent,
+            "y_ent": y_ent, "a_ren": a_ren, "y_ren": y_ren, "a_ond": a_ond,
+            "a_sal": a_sal, "y_sal": y_sal, "a_ef": a_ef, "h": h, "k": k,
+            "p_evacuada": k * techo ** 1.5,
+            "p_pared": p_pared,
+            "dt": (pot / k) ** (2.0 / 3.0),
+            "a_ef_techo": a_ef * pot / (k * techo ** 1.5),
+            "a_ef_techo_pared": a_ef * max(pot - p_pared, 0.0)
+            / (k * techo ** 1.5)}
+
+
 def guarda_aire(p: dict[str, float]) -> None:
     """El case no puede calentarse mas de salto_termico_max sobre ambiente.
 
@@ -2339,59 +2404,73 @@ def guarda_aire(p: dict[str, float]) -> None:
     distancia entre sus centroides. Nada de esto esta medido: C_D, la altura
     efectiva y las perdidas del trafo son supuestos, y por eso el techo va en 15
     K y no pegado al resultado. Sirve para ordenes de magnitud y para que un
-    cambio de geometria no empeore el tiro sin que nadie se entere."""
-    n_ent, largo_ent, a_ent, y_ent = _rejilla_entrada(p)
-    a_ren, y_ren = _rendija(p)
-    a_ond, y_ond = _ondas_trasera(p)
-    a_sal = a_ren + a_ond
-    y_sal = (a_ren * y_ren + a_ond * y_ond) / a_sal
+    cambio de geometria no empeore el tiro sin que nadie se entere.
 
-    assert largo_ent >= 4 * p["vent_ancho_ranura"], (
-        f"la rejilla de entrada mide {largo_ent:.1f} mm de largo con ranuras "
-        f"de {p['vent_ancho_ranura']:.2f}: deja de leerse como campo y pasa a "
-        f"rayitas (es la misma cuenta que recorto la espina del valle)")
+    Y EL 2026-09-03 DEJA DE SER UN ASERTO. No porque el criterio se ablande
+    --el techo sigue en 15 K-- sino porque la carga dejo de ser la del PSU
+    solo: son 147.83 W (27,53 del recinto de la fuente + 120,3 de la fila de
+    invitados y el digital, papel de la fuente v4 sec.6), y esta geometria
+    evacua 12.6. Un rojo permanente sobre un diseno que nadie ha rehecho
+    todavia no verifica nada: ensena a empujar con --no-verify, que es el
+    habito que estas puertas existen para no crear. Asi que el deficit se
+    PUBLICA como HUECO, con el area que hace falta y con quien lo cierra --
+    el papel del case, D-F3 = A firmada el 03-09, issue #289--, igual que
+    guarda_trasera_flexion() publica su banda de arriba. El dia que ese papel
+    dibuje el venteo, esta puerta se pone verde sola."""
+    t = _tiro(p)
+    assert t["largo_ent"] >= 4 * p["vent_ancho_ranura"], (
+        f"la rejilla de entrada mide {t['largo_ent']:.1f} mm de largo con "
+        f"ranuras de {p['vent_ancho_ranura']:.2f}: deja de leerse como campo y "
+        f"pasa a rayitas (es la misma cuenta que recorto la espina del valle)")
 
-    a_ef = 1.0 / math.sqrt(1 / a_ent ** 2 + 1 / a_sal ** 2)
-    h = (y_sal - y_ent) / 1000.0
-    assert h > 0, (
-        f"la salida de aire ({y_sal:.1f} mm) no queda por encima de la entrada "
-        f"({y_ent:.1f} mm): sin desnivel no hay tiro y la conveccion natural no "
-        f"arranca")
-    k = (RHO_AIRE * CP_AIRE * CD_TIRO * a_ef * 1e-6
-         * math.sqrt(2 * G * h / T_AMB))
-    dt = (p["potencia_disipada"] / k) ** (2.0 / 3.0)
-    assert dt <= p["salto_termico_max"] + 1e-9, (
-        f"el case sube {dt:.1f} K sobre ambiente con {p['potencia_disipada']:.2f} "
-        f"W y el techo son {p['salto_termico_max']:.0f}. Entrada {a_ent:.0f} mm2 "
-        f"a y={y_ent:.0f}, salida {a_sal:.0f} a y={y_sal:.0f}, tiro {h*1000:.0f} "
-        f"mm. Sube el area de la rejilla o bajala mas (el tiro va con la raiz de "
-        f"la altura, el area va lineal)")
-
-    print(f"aire: entrada {a_ent:.0f} mm2 en {n_ent} ranuras de "
-          f"{largo_ent:.1f} x {p['vent_ancho_ranura']:.2f} (trasera, y={y_ent:.0f})")
-    print(f"  salida {a_sal:.0f} mm2 = {a_ren:.0f} de la RENDIJA del alero "
-          f"({perfil(p)['ancho_util'] - p['taco_n']*p['taco_largo']:.0f} libres x "
-          f"{p['aire_labios'] * (1 - p['compresion_taco']):.2f} COMPRIMIDA "
-          f"({p['aire_labios']:g} nominal), y={y_ren:.0f}, mirando al suelo) + "
-          f"{a_ond:.0f} de las DOS ondas abiertas (el relieve KONDOR es cajeado "
-          f"ciego y no ventila), centroide y={y_sal:.0f}")
-    print(f"  tiro {h*1000:.0f} mm, area efectiva {a_ef:.0f} mm2 -> "
-          f"{dt:.1f} K sobre ambiente con {p['potencia_disipada']:.2f} W "
-          f"(techo {p['salto_termico_max']:.0f}). SUPUESTO: C_D={CD_TIRO}, "
+    print(f"aire: entrada {t['a_ent']:.0f} mm2 en {t['n_ent']} ranuras de "
+          f"{t['largo_ent']:.1f} x {p['vent_ancho_ranura']:.2f} "
+          f"(trasera, y={t['y_ent']:.0f})")
+    print(f"  salida {t['a_sal']:.0f} mm2 = {t['a_ren']:.0f} de la RENDIJA del "
+          f"alero ({perfil(p)['ancho_util'] - p['taco_n']*p['taco_largo']:.0f} "
+          f"libres x {p['aire_labios'] * (1 - p['compresion_taco']):.2f} "
+          f"COMPRIMIDA ({p['aire_labios']:g} nominal), y={t['y_ren']:.0f}, "
+          f"mirando al suelo) + {t['a_ond']:.0f} de las DOS ondas abiertas (el "
+          f"relieve KONDOR es cajeado ciego y no ventila), centroide "
+          f"y={t['y_sal']:.0f}")
+    print(f"  tiro {t['h']*1000:.0f} mm, area efectiva {t['a_ef']:.0f} mm2 -> "
+          f"{t['dt']:.1f} K sobre ambiente con {p['potencia_disipada']:.2f} W "
+          f"(techo {p['salto_termico_max']:.0f}; esta chimenea evacua "
+          f"{t['p_evacuada']:.1f} W a ese techo). SUPUESTO: C_D={CD_TIRO}, "
           f"sin perdidas de trafo")
     # C_D ES EL NUMERO QUE MAS MANDA Y EL UNICO SIN MEDIR. Con una rendija
     # larga y estrecha bajo un alero no es lo mismo que con chapa ranurada, asi
     # que se publica el resultado con el extremo pesimista del rango. Es un
     # AVISO, no un aserto: el ensayo termico de la primera unidad (§8 de la
     # spec) es lo que lo cierra, y hasta entonces esta puerta es de ordenes de
-    # magnitud. Si este numero pasara del techo, la puerta seguiria verde --
-    # y es justo lo que hay que ver de un vistazo.
-    k_p = (RHO_AIRE * CP_AIRE * CD_TIRO_PESIMISTA * a_ef * 1e-6
-           * math.sqrt(2 * G * h / T_AMB))
-    dt_p = (p["potencia_disipada"] / k_p) ** (2.0 / 3.0)
+    # magnitud.
+    t_p = _tiro(p, CD_TIRO_PESIMISTA)
     print(f"  aviso: con C_D={CD_TIRO_PESIMISTA} (rendija bajo alero, no chapa "
-          f"ranurada) serian {dt_p:.1f} K -- {'PASA' if dt_p <= p['salto_termico_max'] else 'NO PASA'} "
-          f"el techo de {p['salto_termico_max']:.0f}. Sin medir hasta el ensayo")
+          f"ranurada) serian {t_p['dt']:.1f} K y la falta subiria a "
+          f"{t_p['a_ef_techo'] - t_p['a_ef']:.0f} mm2. Sin medir hasta el ensayo")
+    # Y LA PARED, que este modelo no cuenta y a 147 W pesa mas que la chimenea.
+    # Va como aviso y no en la cuenta: ver U_PARED_W_M2K.
+    print(f"  aviso: la envolvente exterior ({_envolvente_m2(p):.3f} m2, sin el "
+          f"suelo) se lleva otros {t['p_pared']:.1f} W a ese techo con "
+          f"U={U_PARED_W_M2K} W/m2K (SUPUESTO). Contandola, la falta baja de "
+          f"{t['a_ef_techo'] - t['a_ef']:.0f} a "
+          f"{t['a_ef_techo_pared'] - t['a_ef']:.0f} mm2 -- es la cota de abajo "
+          f"del encargo, no el encargo")
+
+    if t["dt"] > p["salto_termico_max"] + 1e-9:
+        _HUECOS.append(
+            f"esta geometria evacua {t['p_evacuada']:.1f} W al techo de "
+            f"{p['salto_termico_max']:.0f} K y el instrumento le mete "
+            f"{p['potencia_disipada']:.2f} (27,53 del recinto de la fuente + "
+            f"120,3 de la fila de invitados y el digital, papel de la fuente "
+            f"v4 sec.6): sube {t['dt']:.0f} K. Hacen falta "
+            f"{t['a_ef_techo']:.0f} mm2 de venteo efectivo, "
+            f"{t['a_ef_techo'] - t['a_ef']:.0f} MAS que los {t['a_ef']:.0f} de "
+            f"hoy ({t['a_ef_techo_pared'] - t['a_ef']:.0f} si se cuenta la "
+            f"pared exterior); y menos si el venteo nuevo sube el TIRO, que va "
+            f"con la RAIZ de la altura y hoy son {t['h']*1000:.0f} mm en un "
+            f"case de {perfil(p)['alto_total']:.0f}. Lo cierra el papel del "
+            f"case con D-F3 = A (#289), no esta puerta")
 
 
 # Umbral de fluencia del PMMA. SUPUESTO DECLARADO (#106): nadie lo ha medido
@@ -2980,20 +3059,15 @@ def canario_techo(p: dict[str, float]) -> None:
          "pared de 2 contra 3", "una pared de 2 entre dos vaciados se rompe al fresar"),
         (guarda_tramo_trasero, {"rebaje_anillo": 5.0},
          "el labio del bolsillo queda", "con 5 de bolsillo el labio se queda en 2 bajo la chapa"),
-        # LA RENDIJA. El primero es el que prueba que los tacos son tacos: una
-        # tira continua de 90 por labio deja la salida en nada y el case sube
-        # 20.4 K. El segundo, que la potencia sigue mandando.
-        # LA CLAVE NO LLEVA EL NUMERO. Estos dos decian "sube 20.4 K" y "sube
-        # 16.4 K", y el numero cambia con cualquier cota que toque la salida --
-        # el 30-08 lo hizo dos veces. Un canario que falla porque su propio
-        # texto se movio no ha encontrado nada: se ata a la parte del mensaje
-        # que identifica al aserto, no a su resultado.
-        (guarda_aire, {"taco_largo": _borde_rojo(
-            guarda_aire, p, "taco_largo", 15.0, 89.0, "sobre ambiente")},
-         "sobre ambiente", "una tira casi continua en vez de tacos ahoga la salida"),
-        (guarda_aire, {"potencia_disipada": _borde_rojo(
-            guarda_aire, p, "potencia_disipada", 9.22, 40.0, "sobre ambiente")},
-         "sobre ambiente", "pasada esa potencia no cabe en esta salida"),
+        # LA RENDIJA TENIA AQUI DOS CANARIOS Y SE MUDAN ABAJO (2026-09-03). Los
+        # dos --taco_largo casi continuo, y potencia_disipada por encima de lo
+        # que cabe-- se colgaban del aserto "sobre ambiente" de guarda_aire(),
+        # y ese aserto ya no existe: con los 147.83 W del cajon el techo no se
+        # cumple y la puerta lo publica como HUECO. _borde_rojo() sobre un
+        # aserto que no muerde revienta con "el aserto no muerde", que es su
+        # trabajo. Su SUJETO sigue vivo --que ahogar la salida se note, que la
+        # potencia mande-- asi que se comprueba sobre los numeros de _tiro() y
+        # sobre el hueco, dos lados, mas abajo.
         # DERIVADO TAMBIEN (2026-08-30, ronda 2 del revisor). Estaba fijo en 18
         # y con solo subir aire_labios a 4.2 se quedaba verde: el labio que hace
         # falta depende de cuanto sube el agua, y eso depende de la luz. El
@@ -3039,6 +3113,30 @@ def canario_techo(p: dict[str, float]) -> None:
         guarda_rebaje_chapa(dict(p))          # y con los parametros buenos, verde
         guarda_tramo_trasero(dict(p))
         guarda_rendija(dict(p))
+        guarda_aire(dict(p))
+    # EL HUECO DEL VENTEO, POR LOS DOS LADOS. Con la carga de hoy tiene que
+    # publicarse; con una carga que si cabe, tiene que callarse. La segunda
+    # mitad es la que caza un hueco que se publica siempre, que no avisa de
+    # nada y ademas taparia el dia que el papel del case dibuje el venteo.
+    assert any("de venteo efectivo" in h for h in _HUECOS[n_huecos:]), (
+        f"canario del aire: con {p['potencia_disipada']:.2f} W dentro y "
+        f"{_tiro(p)['p_evacuada']:.1f} evacuables, guarda_aire() NO publico el "
+        f"hueco del venteo -- su silencio no vale")
+    n_verde = len(_HUECOS)
+    with contextlib.redirect_stdout(sordo):
+        guarda_aire({**p, "potencia_disipada": 1.0})
+    assert len(_HUECOS) == n_verde, (
+        f"canario del aire: con 1 W guarda_aire() sigue publicando "
+        f"'{_HUECOS[-1][:60]}...' -- un hueco que no mira la carga no avisa de "
+        f"nada y no se apagaria nunca")
+    # Y QUE AHOGAR LA SALIDA SE NOTE, que es lo que probaba el canario de
+    # taco_largo: una tira casi continua en vez de tacos pide mas venteo.
+    ahogado = _tiro({**p, "taco_largo": 89.0})
+    assert ahogado["a_ef_techo"] > _tiro(p)["a_ef_techo"] + 1.0, (
+        f"canario del aire: con los tacos vueltos una tira de 89 mm la salida "
+        f"se ahoga y el venteo que hace falta NO sube "
+        f"({ahogado['a_ef_techo']:.0f} contra {_tiro(p)['a_ef_techo']:.0f} "
+        f"mm2) -- _tiro() no esta mirando la rendija")
     del _HUECOS[n_huecos:]
 
 

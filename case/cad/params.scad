@@ -1481,11 +1481,12 @@ vent_separacion   = 14;  // rejilla <-> ondas. De dibujo, no de fragilidad
 // salto termico subio de 6.6 a 7.1 K contra un techo de 15 -- eso midio el A/B
 // de ese dia, no la corrida de hoy. HOY, con la rejilla y el puente de
 // fragilidad movidos el 2026-08-28, guarda_aire() imprime 3141 mm2 de salida
-// y 10.8 K en cada corrida. OJO con leer cualquiera de los dos numeros de mas:
-// potencia_disipada son SOLO los reguladores del PSU, y la disipacion de los
-// modulos no esta en ningun presupuesto de este repo. El salto termico
-// describe el camino del PSU, no la bahia de arriba, que es justo lo que se
-// sella.
+// y 10.8 K en cada corrida. LOS DOS SON DE CUANDO potencia_disipada eran 9.22:
+// desde el 2026-09-03 son los 147.83 W del cajon entero y el salto termico que
+// imprime esa puerta es otro (77 K, publicado como HUECO). Lo que sigue siendo
+// verdad de estas dos ondas es POR DONDE sacan el aire: por debajo del
+// entrepiso, o sea el camino del valle y no la bahia de arriba, que es justo
+// lo que este cajeado sella.
 //
 // Y EL CAJEADO YA NO ES UNA SIERRA: es la palabra KONDOR (Samuel, 2026-08-24).
 // Eso arregla solo el problema que el render del cajeado habia destapado --
@@ -1640,10 +1641,25 @@ valle_margen    = 6;   // historico; la banda del valle ya no se perfora
 // 9.22 DESDE EL TECHO MACIZO (2026-08-30): el peor caso del chasis del PSU
 // segun su propia spec, que NO es a plena carga sino a MEDIA -- el
 // prerregulador disipa su maximo con el rail a I ~ 0.50 A, no a 650 mA --, con
-// el LED del #104 al tope. Los modulos siguen fuera de esta formula: el repo
-// declara que la bahia de arriba esta sellada del camino del PSU. Sus ~4.2 W
-// son un presupuesto que falta, y no es de esta tanda.
-potencia_disipada = 9.22; // W, peor caso del chasis del PSU (a MEDIA carga)
+// el LED del #104 al tope. Los modulos seguian fuera de la formula: el repo
+// declaraba que la bahia de arriba esta sellada del camino del PSU, y sus
+// vatios eran "un presupuesto que falta".
+//
+// 147.83 DESDE LA FUENTE v4 (2026-09-03), que es ese presupuesto ya hecho.
+// Deja de ser el chasis del PSU y pasa a ser TODO lo que se enciende dentro
+// del cajon, con su desglose (papel de la fuente v4 sec.6, hardware/
+// 01-power-supply/v4/calor_budget.py):
+//
+//    27.53 W  el recinto de la fuente, todo a placa y ya con D-F7 (PS5 es
+//             una IRM-45-5, no una IRM-20-5: 3.95 W en vez de 5.32)
+//   120.30 W  la fila de invitados a placa (95.6) y el digital (24.7)
+//
+// El liston de la PSU3 (D-F1) puso el numero y D-F3 = A --ventilar por
+// conveccion natural, sin ventilador, firmada el 03-09-- dice que hay que
+// dejarlo salir. Esta geometria evacua 12.6 W al techo de 15 K, asi que
+// guarda_aire() ya NO asevera ese techo: publica el deficit como HUECO con
+// el area que hace falta. La obra que lo cierra es del papel del case (#289).
+potencia_disipada = 147.83; // W, TODO el cajon: 27.53 fuente + 120.3 modulos
 // Techo de salto sobre ambiente. 15 K es el criterio de siempre para caja de
 // electronica lineal con electroliticos dentro: a partir de ahi la vida del
 // condensador se parte por dos cada 10 K y deja de ser un detalle.
