@@ -43,8 +43,10 @@ descárgalos del fabricante.
 
 ## Hojas de datos en el repositorio
 
-Las de las piezas que el diseño vigente usa de verdad, versionadas porque los
-presupuestos ejecutables citan sus tablas por número:
+Las veinte versionadas, enteras. Están en el historial porque los presupuestos
+ejecutables y el código citan sus tablas por número, así que sin ellas una
+puerta no se puede rehacer. Algunas son de piezas **retiradas**: se quedan
+rotuladas como historia de la decisión, no como contrato vigente.
 
 | Fichero | Pieza | Dónde se usa |
 |---|---|---|
@@ -55,6 +57,43 @@ presupuestos ejecutables citan sus tablas por número:
 | [`reference/datasheets/stm32n6-an5967-rev5.pdf`](reference/datasheets/stm32n6-an5967-rev5.pdf) | **AN5967 Rev 5** — desarrollo hardware STM32N6 | Tabla 6 (p. 13): piezas y desacoplo por pin, con la bobina del SMPS y su snubber. §14.3: reglas de desacoplo en BGA |
 | [`reference/datasheets/stm32n657-ds14791-rev2.pdf`](reference/datasheets/stm32n657-ds14791-rev2.pdf) | STM32N657 — Rev 2 **(superada, no citar)** | Se conserva porque hay citas históricas a sus tablas. **Renumeró**: `IDDCORE` era la 28 y es la 33; y añadió `IDDSMPS` (39), que en Rev 2 no existía |
 | [`reference/datasheets/ad5686r-revf-2024-11.pdf`](reference/datasheets/ad5686r-revf-2024-11.pdf) | AD5686R/85R/84R — DAC cuádruple 16 bits | CV de tono; el `RSTSEL` que sostiene el camino de silencio |
+| [`reference/datasheets/ssi2164-rev3.4-2023-02.pdf`](reference/datasheets/ssi2164-rev3.4-2023-02.pdf) | **SSI2164 Rev 3.4** — VCA cuádruple exponencial | Los VCA de voz y de resonancia, 12 encapsulados. `consumo_total_budget.py:63` cita su p. 5 (±8,4 mA con 1,0 mA de mode current) y la ley de −33 mV/dB sale de su p. 4, «Control Port» |
+| [`reference/datasheets/ad75019-revf-2026-07.pdf`](reference/datasheets/ad75019-revf-2026-07.pdf) | **AD75019 Rev F** — crosspoint analógico 16×16 | Los dos en cadena de la bahía asignable. `core/src/bahia_serie.rs:30` cita su tabla 3 (p. 4) para el sentido del `PCLK` dentro de los 512 bits |
+| [`reference/datasheets/24aa1025-ds21941h-2011.pdf`](reference/datasheets/24aa1025-ds21941h-2011.pdf) | **24AA1025 — DS21941H** — EEPROM I²C de 128 KB | La memoria del módulo de Voz. `core/src/memoria.rs` existe por su **costura**: no es un chip de 128 KB, son dos de 64 con dos direcciones I²C |
+| [`reference/datasheets/lm2941-snvs770i-2015-01.pdf`](reference/datasheets/lm2941-snvs770i-2015-01.pdf) | **LM2941 — SNVS770I** — pre-regulador LDO ajustable positivo | El pre-regulador del +12 V de la cascada (`docs/modules/01-power-supply.md:33`). La v4 le añade trabajo: su `ON/OFF` **activo-bajo** (< 0,8 V habilita, p. 11) es medio secuenciador, sus 26 V de entrada máxima son quien aguanta el clamp de OVP de la SMPS, y su Fig. 9 «Ripple Rejection» es lo único que dice qué hace a 65 kHz |
+| [`reference/datasheets/lm2991-snvs099i-2016-10.pdf`](reference/datasheets/lm2991-snvs099i-2016-10.pdf) | **LM2991 — SNVS099I** — el espejo negativo | Pre-regulador del −12 V. Ojo con la asimetría que decide el circuito del secuenciador: su `ON/OFF` es **activo-alto y deshabilita** (> 2,4 V, p. 9), al revés que el LM2941. Su curva de rechazo es la Fig. 8 |
+| [`reference/datasheets/lt3045-rev-d.pdf`](reference/datasheets/lt3045-rev-d.pdf) | **LT3045 Rev D** — LDO ultra-bajo-ruido positivo | La pareja en paralelo que fija el +12,000 V. De aquí sale el 0,8 µVrms de la cascada y el PSRR de **76 dB a 1 MHz** de portada, **condicionado al headroom** de 1,1 V que no puede bajar |
+| [`reference/datasheets/lt3094-rev-b.pdf`](reference/datasheets/lt3094-rev-b.pdf) | **LT3094 Rev B** — el espejo negativo | La pareja del −12,000 V. **74 dB a 1 MHz**, con la misma condición de headroom |
+| [`reference/datasheets/meanwell-irm-20-spec-2025-11-21.pdf`](reference/datasheets/meanwell-irm-20-spec-2025-11-21.pdf) | **Mean Well IRM-20** (spec 2025-11-21) — SMPS encapsulada de 20 W | `PS1` y `PS2` (los ±15 V crudos que entran a la cascada) y `PS5` (+5 V de rack). Su p. 2 da rizado, rendimiento e inrush; su p. 3, la curva de derating —**100 % hasta 50 °C**— que gobierna la térmica del listón |
+| [`reference/datasheets/meanwell-irm-45-spec-2025-11-21.pdf`](reference/datasheets/meanwell-irm-45-spec-2025-11-21.pdf) | **Mean Well IRM-45** (spec 2025-11-21) — SMPS encapsulada de 45 W | `PS3`/`PS4` (±12 V de rack) y `PS6` (+5 V digital, 8 A). Es la que **gana** el puesto de `PS4`: entra en *hiccup* al 115 % y no al 105 % |
+| [`reference/datasheets/stm32h750-ds12556-rev8.pdf`](reference/datasheets/stm32h750-ds12556-rev8.pdf) | STM32H750 — DS12556 Rev 8 **(clase retirada, no citar como contrato)** | Historia rotulada de la decisión: `micro_budget.py:49-55` cita su Tabla 4 (pp. 39-40) y su p. 2. Cayó frente al N657 el 2026-08-26 |
+| [`reference/datasheets/ra8m1-r01ds0417-rev110.pdf`](reference/datasheets/ra8m1-r01ds0417-rev110.pdf) | Renesas RA8M1 — R01DS0417 Rev 1.10 | **El retorno declarado**, no una pieza del diseño vigente: si el N657 cayera en sus puertas, el motor digital vuelve aquí (`micro_budget.py:271`) |
+| [`reference/datasheets/meanwell-irm-15-spec-2025-11-21.pdf`](reference/datasheets/meanwell-irm-15-spec-2025-11-21.pdf) | Mean Well IRM-15 **(pierde su puesto en la v4)** | Era el +5 V digital «montada fuera de esta placa» (spec v2 §7) y la v4 lo pasa a la IRM-45-5. Se queda porque su codo de derating a **+50 °C** es una lectura que la spec del chasis ya citaba desde el 2026-08-19 |
+| [`reference/datasheets/meanwell-irm-30-spec-2026-04-03.pdf`](reference/datasheets/meanwell-irm-30-spec-2026-04-03.pdf) | Mean Well IRM-30 **(descartada, historia de la decisión)** | Era `PS4` en el primer borrador de la v4. Cayó por su p. 2: `OVERLOAD` «105 ~ 160 %» la mete en *hiccup* a **2,63 A** contra los 2,5 A declarados —menos que el arranque de un módulo digital— y la IRM-45 aguanta hasta el 115 % |
+
+Cinco de esas filas llevaban desde siempre sin entrar al índice aunque los
+ficheros sí estaban versionados, y las **ocho** de la fuente v4 entraron al
+historial el 2026-09-03, el mismo día que esta regla. Daba igual mientras la
+carpeta se clonara entera; deja de dar igual el día que se ignora, que es hoy.
+
+Desde el 2026-09-03 la carpeta está **ignorada por defecto** (`.gitignore`).
+Las de arriba siguen versionadas porque están declaradas una a una; cualquier
+hoja nueva se queda en disco y se anota abajo. Lo que forzó la regla fue el
+RM0486: 94 MB en un solo fichero, el 28 % de lo que pesa el repositorio entero.
+
+### En disco, no versionadas
+
+Se bajan del fabricante, y **la revisión es parte de la cita**: sin ella un
+número de tabla no significa nada. Esta tabla es el único registro de cuál es
+la buena, así que una entrada sin URL y sin revisión es una entrada rota.
+
+| Fichero | Documento | De dónde sale | Para qué |
+|---|---|---|---|
+| `reference/datasheets/stm32n6-rm0486-rev4.pdf` | **RM0486 Rev 4** (mayo 2026), 4.669 pp. — manual de referencia del STM32N6x5/x7xx | [st.com](https://www.st.com/resource/en/reference_manual/rm0486-stm32n647657xx-armbased-32bit-mcus-stmicroelectronics.pdf) | Los registros. Es la fuente de los bits de RCC y del PHY del USB del N657 — lo que le falta a `embassy-stm32` para que el cerebro tenga puerto (#250) |
+
+Ojo con la diferencia: la **DS14791** dice qué patillas y cuánta corriente; el
+**RM0486** dice qué bit de qué registro. Para escribir un driver hace falta el
+segundo, y es el que hasta hoy no estaba.
 
 ## Recursos complementarios recomendados
 

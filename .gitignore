@@ -111,3 +111,45 @@ case/renders/*.png
 # No se manda al taller (alli van los DXF sueltos) y lo regenera export.ps1.
 # Mismo criterio que los STL: 97.512 lineas de diff que no prueban nada.
 case/plans/lienzo_2d.dxf
+# Las hojas de datos: por defecto NO entran, y meter una exige escribirla aqui.
+#
+# Lo que forzo la regla, medido el 2026-09-03: el manual de referencia del
+# STM32N6 (RM0486 Rev 4, mayo 2026) son 94 MB y 4.669 paginas EN UN SOLO
+# FICHERO. El .git entero pesa hoy 338 MB, asi que esa hoja sola seria el 28 %
+# del repositorio -- mas que las doce versionadas juntas, que suman 36,9 MB.
+# Y no es una hoja rara: es LA que hay que leer para escribir un driver, o sea
+# justo la que mas veces se va a querer tener a mano.
+#
+# La diferencia con los renders de aqui arriba esta en donde vive el original.
+# Alli el origen es el modelo, y por eso se regeneran. Aqui el origen es el
+# fabricante: la copia buena esta en st.com, y lo que no se puede volver a
+# bajar no es el PDF sino SABER CUAL. Por eso `docs/references.md` guarda de
+# cada una la revision exacta y de donde sale -- una hoja sin su revision no
+# es una fuente, y la Rev 2 contra la Rev 10 del DS14791 ya nos renumero una
+# tabla entera.
+#
+# Las doce que ya estaban versionadas se quedan. Sacarlas del indice ahora no
+# devuelve un solo byte del historial y le rompe el clon a cualquiera que las
+# cite; si algun dia hay que recuperar esos 36,9 MB es una pasada de
+# git filter-repo como la de los renders, y se decide aparte.
+docs/reference/datasheets/*.pdf
+!docs/reference/datasheets/24aa1025-ds21941h-2011.pdf
+!docs/reference/datasheets/ad5686r-revf-2024-11.pdf
+!docs/reference/datasheets/ad75019-revf-2026-07.pdf
+!docs/reference/datasheets/lm2941-snvs770i-2015-01.pdf
+!docs/reference/datasheets/lm2991-snvs099i-2016-10.pdf
+!docs/reference/datasheets/lt3045-rev-d.pdf
+!docs/reference/datasheets/lt3094-rev-b.pdf
+!docs/reference/datasheets/meanwell-irm-15-spec-2025-11-21.pdf
+!docs/reference/datasheets/meanwell-irm-20-spec-2025-11-21.pdf
+!docs/reference/datasheets/meanwell-irm-30-spec-2026-04-03.pdf
+!docs/reference/datasheets/meanwell-irm-45-spec-2025-11-21.pdf
+!docs/reference/datasheets/ra8m1-r01ds0417-rev110.pdf
+!docs/reference/datasheets/rp2350-datasheet-2024-08.pdf
+!docs/reference/datasheets/rp2350-product-brief-2024-08.pdf
+!docs/reference/datasheets/ssi2130-rev2.4-2020-12.pdf
+!docs/reference/datasheets/ssi2164-rev3.4-2023-02.pdf
+!docs/reference/datasheets/stm32h750-ds12556-rev8.pdf
+!docs/reference/datasheets/stm32n6-an5967-rev5.pdf
+!docs/reference/datasheets/stm32n657-ds14791-rev10.pdf
+!docs/reference/datasheets/stm32n657-ds14791-rev2.pdf
