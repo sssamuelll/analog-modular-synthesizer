@@ -67,7 +67,7 @@ nunca ampliando un índice que alguien puede olvidar:
 | [`check_huellas.py`](check_huellas.py) | ¿las huellas dibujadas a mano son las de la **pieza real**? Es geometría, no conectividad: no la ve el ERC, ni el DRC, ni la netlist |
 | [`check_red_chasis.py`](check_red_chasis.py) | ¿la red entra por una pieza que **existe**, con un solo fusible, y el chasis tiene su recorte? |
 | [`check_bringup.py`](check_bringup.py) | ¿la placa física mide lo que el diseño predijo? 55 puntos con su criterio y su cita |
-| [`valle_budget.py`](valle_budget.py) | ¿el valle de VRAW aguanta el peor caso? ngspice, no una tabla |
+| ~~`valle_budget.py`~~ | **BORRADO el 2026-09-04.** Medía el valle de VRAW, y la fuente v4 no tiene rectificador ni condensador de bulto: sin ellos no hay valle que medir. Su sustituto es [`../v4/margen_budget.py`](../v4/margen_budget.py), que hace la misma pregunta —¿le llega a `U1`/`U2` bastante tensión para regular?— sobre una cadena de continua |
 
 `check_bom.py` y `check_netlist.py` se reparten huecos a propósito: el primero
 pasaría en verde con SDA y SCL cambiados —no falta ni sobra un componente, sobra un cable
