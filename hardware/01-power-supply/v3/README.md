@@ -10,12 +10,17 @@
 > bring-up de la cascada. La v4 la hereda entera menos `TR1`, `BR1`, `C_bulk`
 > y la franja de red, que se van a la placa R nueva.
 >
-> **La regla «nunca se fabrica una v2 habiendo una v3» sigue en pie una
-> versión más arriba, y lo que la sustituye es esto:** mientras la v4 no tenga
-> placa fabricada y medida, lo que hay es un diseño con sus presupuestos
-> corriendo, no una fuente. Dónde está, con número:
-> `../v4/check_bringup.py` — 75 puntos, ninguno medido todavía — y
-> `hardware/tools/gates.py`.
+> **La regla de esta carpeta —«lo que no quede decidido sale con huella y
+> `DNP`, nunca con una v4»— NO se reexpide, y el papel de la v4 dice por qué**
+> (§0): sus huecos «no son huellas —son chapa, fusible, una placa entera— y
+> una regla que no puede aplicarse a sí misma no gobierna». Lo que se impone
+> en su lugar es más duro y verificable: **nada de la v4 se manda a fabricar
+> con un ítem de §12 abierto**, y eso lo hacen cumplir las puertas de §9, no
+> una frase.
+>
+> Dónde está eso hoy, con número: `hardware/tools/gates.py` (45 en verde, 0 en
+> rojo) y `../v4/check_bringup.py` (75 puntos, ninguno medido, porque la placa
+> R no existe).
 >
 > `valle_budget.py` se borró el 2026-09-04: medía el valle de VRAW y la v4 no
 > tiene rectificador. Lo sustituye
