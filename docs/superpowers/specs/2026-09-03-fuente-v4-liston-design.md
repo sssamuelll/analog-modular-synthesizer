@@ -1,7 +1,7 @@
-# Fuente v4 — el listón de la PSU3, seis módulos encapsulados y la cascada intacta — propuesta (v2, tras la junta)
+# Fuente v4 — el listón de la PSU3, seis módulos encapsulados y la cascada intacta — firmada (v3, tras la junta y la firma)
 
-**Fecha**: 2026-09-03 · **Estado**: **propuesto, tras la junta del 03-09; pendiente de tres decisiones de Samuel (§14)** ·
-**Listón firmado**: 2026-09-03 («firmo el listón», Samuel) — firmado como **corriente de placa**; §6 enseña que en el recinto cerrado no se sostiene, y eso es lo primero que hay que volver a firmar ·
+**Fecha**: 2026-09-03 · **Estado**: **firmado — D-F1 a D-F6 decididas (§14). Lo único que queda por firmar es el listón sostenido, y su dueño es `calor_budget.py`** ·
+**Listón firmado**: 2026-09-03 («firmo el listón», Samuel) — firmado como **corriente de placa**; §6 enseña que en el recinto cerrado no se sostiene, y por eso **se vuelve a firmar como corriente sostenida** cuando `calor_budget.py` corra con el recinto ventilado de D-F3 = A ·
 **Cierra**: nada todavía. **Entrega**: los rieles de #169 (§4.3) ·
 **Mata por desaparición del sujeto** (cuando la v4 se adopte): #141, #280, #106, #56, #57 ·
 **Reabre**: `design-notes` §13 y §18, la spec del chasis (§3.1, §3.2, §3.3), `clearance_budget.py::guarda_aire()`, `consumo_total_budget.py`, `power_budget.py`, `ground_budget.py`, el papel de la bahía
@@ -19,6 +19,30 @@
 > el inrush de la IRM-30 son 45 A y no 4, y el rendimiento de la IRM-45 se lee
 > sin ambigüedad. Todo eso está corregido abajo; lo que la junta no pudo cerrar
 > es decisión de Samuel (§14).
+
+> **Lo que Samuel firmó (03-09).** Las seis, en el orden en que se toman:
+>
+> | | Qué | Dónde vive |
+> |---|---|---|
+> | **D-F1** | el listón, **como corriente de placa**: 3,8 / 2,5 / 4,0 A de rack, 8,0 A digital, 650 mA de ultra | §1 |
+> | **D-F3** | **A: ventilar** el recinto y el cajón por convección natural, **sin ventilador** | §6 |
+> | **D-F2** | telemetría de rack **poblada**: `U13` y `U14` montados en R, no `DNP` | §7 |
+> | **D-F4** | **secuenciador** por los pines ON/OFF, en la cascada y en el rack | §4.2, §4.3 |
+> | **D-F5** | **Y2 de modo común** por módulo, del borne de ★ al chasis | §5 |
+> | **D-F6** | **crowbar** en los rieles de rack, y solo ahí | §4.3 |
+>
+> Y una séptima que no es ninguna de esas seis: **cuando `calor_budget.py`
+> corra con el recinto ventilado, el listón se vuelve a firmar en corriente
+> sostenida**, que es la que el instrumento promete a quien le enchufa un
+> módulo. La columna «sostenido» de §1 sigue vacía a propósito hasta entonces:
+> se firma un número calculado y medido, no una intención.
+>
+> D-F4, D-F5 y D-F6 se firman **como consecuencia, no como mejora**. Los tres
+> son modos de falla que la v3 no tenía porque tenía un solo transformador, y
+> los tres se pagan en céntimos. Lo caro es no ponerlos: un riel crudo solo en
+> cada encendido y cada microcorte (D-F4), el modo común de seis conmutadores
+> volviendo por los hilos de la cascada (D-F5), y 16,2 V sobre una fila de
+> módulos ajenos (D-F6).
 
 ---
 
@@ -99,11 +123,11 @@ ahí baja a 3,3 y a 1,8. Por eso el riel que más crece contra la PSU3 es ese:
 | **Lo que ve la cascada** | VRAW ±20,54 V en vacío, ±15,70 V a 650 mA, rizado de 100 Hz | **±15 V DC ±2,5 % ±0,03 %/°C, rizado de 65 kHz ≤ 200 mVp-p** | §4.2 |
 | **El valle de VRAW** | el número del que dependía todo | **no existe** | no hay rectificador |
 | **`TR1` con fusible térmico** | condición de compra (#118) | **no hay `TR1`** | los 642 W de un corto del secundario ya no tienen dónde ocurrir |
-| **Crowbar** | ninguno (#118) | ninguno en el ultra; **propuesto en los rieles de rack** (§4.3) | #118 lo rechazó porque el fusible de red no abría; ahí el interruptor es el *hiccup* del IRM |
+| **Crowbar** | ninguno (#118) | ninguno en el ultra; **en los rieles de rack** (§4.3, D-F6 firmado) | #118 lo rechazó porque el fusible de red no abría; ahí el interruptor es el *hiccup* del IRM |
 | **Fusible de red** | 1,6 A T en el IEC (#130) | en el IEC; **sube** (§5) | 3,9 A rms típicos a nominal, no 0,72 |
 | **`NT1`, `L_F`** | 2 A; 0,2 A | **se redimensionan** (§5) | ídem |
 | **Disipación** | tres TO-220 contra la pared | los mismos tres contra la pared, con la mitad de calor | entran a 15 V, no a 20 |
-| **Chasis** | acero, cerrado, sin ventilación, para un toroide Ø93 × 46 | acero, sin toroide, **cerrado o ventilado: D-F3** | §6 |
+| **Chasis** | acero, cerrado, sin ventilación, para un toroide Ø93 × 46 | acero, sin toroide, **ventilado por convección natural, sin ventilador** (D-F3 = A) | §6 |
 | **Telemetría** | 5 chips, mide el valle | 5 chips (+2 opcionales, §7), mide los ±15 V y el −12 V de rack | |
 | **+5 V digital** | IRM-15-5 «montada fuera de esta placa» (spec v2 §7), 3 A | **IRM-45-5 en la placa de red, 8 A de placa** | #151 sigue abierto: §4.4 dice por qué |
 | **Fila de abajo** | 160 mA/riel prestados | **rieles propios** por un bus board de invitados | #169 |
@@ -284,7 +308,7 @@ el dropout es menor que a 1 A (Fig. 1 de cada hoja), así que el margen real es
 mayor; **el número lo pone `margen_budget.py`** (§9), que sustituye a
 `valle_budget.py` con un problema sin 100 Hz que integrar.
 
-**El secuenciador (D-F4, mecanismo nuevo).** Con el toroide, ±VRAW subían y
+**El secuenciador (D-F4, FIRMADO 2026-09-03).** Con el toroide, ±VRAW subían y
 caían juntos. Ahora son dos módulos con setup de 1000 ms **típico, sin
 máximo**, hold-up de 40 ms cada uno, y *hiccup* independiente: en cada
 encendido, cada apagado y cada microcorte hay una ventana de **un riel crudo
@@ -347,8 +371,8 @@ De ahí tres cosas que la v1 no tenía:
   PSRR no lo rechaza… llega como una corriente que circula por la masa»). La
   corriente de modo común de seis conmutadores a 65 kHz vuelve por ★ y por el
   propio espárrago, y **una estrella es un concepto de DC y 50 Hz: a 65 kHz el
-  retorno lo fija la inductancia**. El mecanismo propuesto (D-F5): **un
-  condensador Y2 del borne de ★ de cada módulo al chasis, junto al módulo**,
+  retorno lo fija la inductancia**. El mecanismo (D-F5, FIRMADO
+  2026-09-03): **un condensador Y2 del borne de ★ de cada módulo al chasis, junto al módulo**,
   para que el lazo de modo común se cierre en centímetros (módulo → Y2 →
   chasis → PE → primario) y no por los hilos de ★. No es un puente de masa:
   a 50 Hz son cientos de kΩ. Mean Well lo documenta en «EMI testing of
@@ -384,7 +408,7 @@ independientes y un bus ajeno sin límite de falta—:
 - **Secuenciador de ±12 V de rack**, mismo detector de ventana que §4.2, sobre
   interruptores de carga en +12 y −12: **los dos o ninguno**. Sin él, un
   *hiccup* de `PS4` deja la fila con +12 V fijo y −12 V ciclando a ~1 Hz.
-- **Crowbar en los rieles de rack (D-F6, propuesta).** Si `PS3` falla a su OVP
+- **Crowbar en los rieles de rack (D-F6, FIRMADO 2026-09-03).** Si `PS3` falla a su OVP
   clampa hasta **16,2 V** sobre una fila de módulos ajenos con máximos
   absolutos desconocidos. #118 rechazó el crowbar del ultra porque el fusible
   de red de un toroide no abría a tiempo; aquí el interruptor es el propio
@@ -557,9 +581,10 @@ de fuente en su presupuesto de aire.
 Las dos primeras filas son **por debajo de la PSU3**. La segunda es por debajo
 de la v3.
 
-**Esto no es un hueco: es la decisión (D-F3).** El listón se firmó como corriente
-de placa; sostenido, dentro de este recinto y este cajón, **no existe**. Tres
-caminos, y ninguno lo puede tomar este papel:
+**Esto no era un hueco: era la decisión (D-F3), y Samuel la tomó el 03-09.**
+El listón se firmó como corriente de placa; sostenido, dentro de un recinto
+cerrado y este cajón, **no existía**. De los tres caminos se firmó el **A:
+ventilar el recinto y el cajón por convección natural, sin ventilador**.
 
 | | A. Ventilar | B. Cerrado y honesto | C. Forzado |
 |---|---|---|---|
@@ -568,10 +593,27 @@ caminos, y ninguno lo puede tomar este papel:
 | **Precio** | revierte la decisión del 18-08 (cerrado); polvo; el papel del case rediseña techo y trasera con un presupuesto de aire nuevo | «superior a la PSU3» se queda en la caja, no en el rack | ruido en un instrumento; un motor que falla |
 | **Quién** | el papel del case, con `guarda_aire()` reescrito | este papel, con la columna «sostenido» de §1 rellena | — |
 
-**Recomendación: A.** El listón era el punto; el cerrado se decidió con 9 W
-dentro y se cae a 29 más 120 en el cajón. Y una anotación honesta: ni la PSU3
-vive en una caja cerrada. **Con A, además, hay que mirar si los módulos se
-montan con la cara contra la pared de acero**: son bloques encapsulados y la
+**FIRMADO: A** (Samuel, 2026-09-03). El listón era el punto: un rack que el
+calor recorta al 17 % no es «a la altura de la PSU3 o superior», es una cifra
+de catálogo. El cerrado se decidió el 18-08 con **9 W** de fuente dentro, y
+hoy son **29 W** en el recinto más **120 W** de fila y digital en el cajón: la
+decisión vieja se tomó sobre un número que ya no existe. Ni la PSU3 vive en
+una caja cerrada.
+
+**Por qué no B ni C.** **B** (cerrado y honesto) deja el listón firmado
+significando nivel PSU2 en el rack, que es la mitad de lo que este papel
+existe para comprar. **C** (forzado) mete un motor —ruido, y una pieza que
+falla— dentro de un instrumento que hasta hoy es silencioso por construcción;
+es un precio peor que el de abrir rejillas. Lo que **A** cuesta y se paga: el
+papel del case rediseña techo y trasera con un presupuesto de aire nuevo, y
+entra polvo. Esos dos se pagan una vez; un rack recortado se paga cada vez que
+se enchufa un módulo.
+
+**Lo que ventila y lo que no.** Respiran la zona de los módulos, la cascada y
+el cajón. **La franja de 230 V no**: su barrera de 6 mm y su tapa siguen
+cerradas, y ninguna abertura puede dar acceso con el dedo de prueba a nada de
+la franja de red — es aserción de `check_red_chasis.py` (§9), no una nota. **Con A firmado, además, hay que mirar si los
+módulos se montan con la cara contra la pared de acero**: son bloques encapsulados y la
 hoja solo habla de convección; conducir por el encapsulado a la chapa es lo
 que hoy hacen los TO-220 y podría valer para ellos (§12.7, pregunta a Mean
 Well o medida).
@@ -601,12 +643,19 @@ muere es la frase «mide por primera vez el valle de VRAW». Lo que nace es
 **medir los ±15 V con carga**, que es donde se ve un IRM saliéndose de su
 curva.
 
-**D-F2 (PROPUESTA, opcional): dos INA226 en los rieles de rack.** `U13` en
+**D-F2 (FIRMADO 2026-09-03): dos INA226 en los rieles de rack, poblados.** `U13` en
 +12 V y `U14` en +5 V de rack, 0x44 y 0x45 (`check_telemetria.py` vigila las
 colisiones), **en la placa R**, donde están los shunts. Dan lo que ningún case
 Eurorack da: el instrumento le dice al dueño cuánto come su rack. **Cuestan
 cuatro hilos más en el enlace R ↔ C** (SDA, SCL y la alimentación de 5 V del
-lado `GNDA` de la telemetría, §8). Samuel decide; si no, huella y `DNP`.
+lado `GNDA` de la telemetría, §8), y ese enlace ya los lleva.
+
+Lo que compran no es un adorno. Junto con `U11` (TMP1075), la corriente de
+rack es lo que convierte la curva de derating de §6 en algo que el instrumento
+**vigila en marcha**: el firmware puede avisar cuando el rack se acerca a su
+techo sostenido a la temperatura que hay dentro, en vez de que el dueño lo
+descubra por un módulo que se reinicia. Es la contrapartida en telemetría de
+haber firmado el listón en corriente sostenida.
 
 **El +5 V digital no se mide en la fuente** (§4.4). Sale flotante; lo mide
 quien lo reparte.
@@ -635,7 +684,7 @@ física. Las razones que quedan son otras, y son mejores:
 
 | Placa | Lleva | Hereda de |
 |---|---|---|
-| **R — red** | IEC en la pared, `RV1`, `NT1`, `L_F` + Y2 redimensionados, la franja de 230 V con su barrera, **`PS1`–`PS6`**, seis LC amortiguados, los Y2 de modo común (D-F5), el detector de ventana ×2 y los interruptores de rack, el crowbar de rack (D-F6), `U13`/`U14` si D-F2, el nodo ★ y `J5`; salidas: ±15 V a C, ±12/+5 al bus board de invitados, +5 V digital al módulo 2 | la franja de red de la v3 (`rutear_red`, `NETS_RED`, barrera de 6 mm), recalculada a 3,9 A |
+| **R — red** | IEC en la pared, `RV1`, `NT1`, `L_F` + Y2 redimensionados, la franja de 230 V con su barrera, **`PS1`–`PS6`**, seis LC amortiguados, los Y2 de modo común (D-F5), el detector de ventana ×2 y los interruptores de rack, el crowbar de rack (D-F6), `U13`/`U14` (D-F2), el nodo ★ y `J5`; salidas: ±15 V a C, ±12/+5 al bus board de invitados, +5 V digital al módulo 2 | la franja de red de la v3 (`rutear_red`, `NETS_RED`, barrera de 6 mm), recalculada a 3,9 A |
 | **C — cascada** | `U1`/`U2` con su ON/OFF cableado al detector, en fila contra la pared; la isla LT3045/LT3094 con `GNDREF`; ferritas de entrada; `U3`; la isla de telemetría; `J2`, `J6`, `J8`; entrada: ±15 V | **la v3 entera menos `TR1`, `BR1`, `C_bulk` y la franja de red** |
 | **Bus board de invitados** | #169: peines, PTC por slot, su sitio | el bus board del instrumento, con otro presupuesto de PTC |
 
@@ -645,7 +694,7 @@ cruzarse no caben en el mismo conector):
 
 | Enlace | Corriente | Hilos | Familia (a nombrar en el plan con hoja) |
 |---|---|---|---|
-| R → C, ±15 V | 1,4 A | +15, −15, `GNDA` ×2, **trenzados**; +4 si D-F2 (SDA, SCL, +5 V tele, retorno) | KK-396 o similar: distinto de los KK-254 de C |
+| R → C, ±15 V | 1,4 A | +15, −15, `GNDA` ×2, **trenzados**; +4 por D-F2 (SDA, SCL, +5 V tele, retorno) | KK-396 o similar: distinto de los KK-254 de C |
 | R → bus board de invitados | 3,8 / 3,8 / 4,0 A | +12, −12, +5, retorno ×2, en 2,5 mm² | Mini-Fit Jr o bornera; **no** KK-254 (4 A por contacto) |
 | R → módulo 2, +5 V digital | 8,0 A | +5, `GNDD`, en ≥ 16 AWG y corto | Mini-Fit Jr con dos contactos por polo; **no** el KK-254 de `J6` |
 | C → módulo 2, `J6` +5 V de `U3` | 30 mA | como hoy | KK-254, como hoy |
@@ -674,7 +723,7 @@ eso nacen verdes por vacías (Principio VIII)—:
 | Puerta | Estado | Qué pregunta, y con qué entrada |
 |---|---|---|
 | `check_absmax.py` | **se reescribe** | el sujeto ya no es VRAW = 20,54 V: es el **OVP máximo de `PS1`/`PS2` (20,25 V)** contra los 26 V de `U1`/`U2`, y el **OVP de `PS3`/`PS4` (16,2 V)** contra lo que el crowbar de rack deje pasar |
-| `check_telemetria.py` | hereda, crece | direcciones, divisores (el nuevo de AIN3), shunts; `U13`/`U14` si D-F2 |
+| `check_telemetria.py` | hereda, crece | direcciones, divisores (el nuevo de AIN3), shunts; `U13`/`U14` de D-F2 |
 | `kicad/check_bom.py`, `check_netlist.py`, `check_pcb.py`, `check_fab.py`, `check_huellas.py` | **una por placa** | R y C; `check_huellas.py` estrena **seis huellas IRM de la p. 3** (§12.3); `check_netlist.py` de R asevera que **ningún retorno de IRM comparte pista** hasta ★ y que **`GNDD` no toca ★** |
 | `check_netlist.py` de la bahía | **requisito** (§10) | **ningún casquillo de jack está en `GNDA`** |
 | `check_red_chasis.py` | hereda, crece | IEC con su recorte (#130), un fusible, y `NT1`/`L_F` con rating ≥ la fila «AC CURRENT» sumada |
@@ -829,18 +878,23 @@ lo que otro no hace** (#214, #206).
 
 ---
 
-## 14. Lo que decide Samuel
+## 14. Lo que Samuel decidió (2026-09-03)
 
-En orden, porque la primera cambia las otras:
+| | Decisión | Consecuencia inmediata |
+|---|---|---|
+| **D-F1** | el listón, como **corriente de placa** | §1; se **re-firma** en sostenida cuando corra `calor_budget.py` |
+| **D-F3** | **A: ventilar** recinto y cajón, convección natural, **sin ventilador** | el papel del case rediseña techo y trasera; `guarda_aire()` con los 120 W; la franja de 230 V sigue cerrada |
+| **D-F2** | telemetría de rack **poblada** (`U13`, `U14`) | +4 hilos en R ↔ C; 0x44 y 0x45 dejan de ser opcionales en `check_telemetria.py` |
+| **D-F4** | **secuenciador** por ON/OFF, cascada y rack | detector de ventana ×2 en R; `secuencia_budget.py`; paso 2b del bring-up |
+| **D-F5** | **Y2 de modo común** por módulo | seis Y2 al chasis en R; §12.4 por leer; entra en `fuga_budget.py` |
+| **D-F6** | **crowbar** en los rieles de rack, y solo ahí | SCR por riel de rack; `check_absmax.py` contra los 16,2 V; su prueba en el bring-up |
 
-1. **D-F3, el recinto**: A (ventilar recinto y cajón, sin ventilador), B
-   (cerrado, y el listón sostenido baja a nivel PSU2), o C (forzado).
-   **Recomendación: A.** Con eso `calor_budget.py` rellena la columna
-   «sostenido» de §1, y **el listón se vuelve a firmar como corriente
-   sostenida**, que es la que un instrumento promete.
-2. **D-F2, telemetría del rack**: dos INA226 y cuatro hilos más, o huella y
-   `DNP`.
-3. **Los mecanismos nuevos que la junta hizo nacer**, para firmarlos con
-   nombre: **D-F4** secuenciador por ON/OFF, **D-F5** Y2 de modo común por
-   módulo, **D-F6** crowbar en los rieles de rack. Los tres van en el plan con
-   hoja; ninguno se presume.
+**Lo que queda por firmar, y es una sola cosa:** la columna «sostenido» de §1
+—el listón que el instrumento **promete**, no el que compra—. Su dueño es
+`calor_budget.py` con el recinto ventilado, y su testigo es el paso 7 del
+bring-up. Hasta que los dos existan, este papel dice «de placa» en todas
+partes y no dice ninguna otra cosa.
+
+**Lo que sigue sin ser de este papel** (§11): D-R1 (el 1,8 V), el valor del
+fusible hasta `fusible_budget.py`, los peines y el PTC de #169, y el mecanismo
+del diferencial de la bahía.
