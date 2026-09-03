@@ -24,7 +24,6 @@ import sys
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, DIR)
-import curvas                                               # noqa: E402
 from curvas import derating, codo_c, psrr_db, DERATING, PSRR_DB, FUENTE  # noqa: E402
 
 PIEZAS = ("LM2941", "LM2991", "LT3045", "LT3094")
