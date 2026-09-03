@@ -79,8 +79,14 @@ pub enum Mensaje {
     TuneStart,
     PatchScan,
     Telemetry,
-    /// §2.1: enciende el LED de un parametro o de un jack. Señalar y el
-    /// patcheo guiado son el mismo mecanismo.
+    /// §2.1: el agente senala. El mensaje se queda y CAMBIO de destinatario
+    /// el 2026-09-04 (spec «el cerebro lee los voltajes», D7): ya no enciende
+    /// el LED de una perilla —esa cadena se retiro el 2026-09-03— sino que la
+    /// pantalla resalta el parametro en el mapa del panel. `color` sigue
+    /// siendo el mismo campo del mismo ancho; lo dibuja otro.
+    ///
+    /// Para un JACK de la bahia si hay luz (D6), asi que ahi `Point` puede
+    /// encender de verdad. El formato no cambia en ninguno de los dos casos.
     Point {
         id: ParamId,
         color: Rgb,

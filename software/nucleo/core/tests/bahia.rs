@@ -6,11 +6,17 @@
 //! cambiados-en-silencio, politica de drones, sin TTL) y §5.4 (la bahia nace
 //! desconectada).
 //!
-//! Estos tests hablan de **canal (0..15) x linea (0..15)**, nunca de jacks:
-//! el censo de que linea es que jack esta mandado en motor-digital §8.4 y
-//! **no esta hecho**. Los ejes fisicos X/Y del AD75019 y el orden de los 512
-//! bits de la cadena tampoco estan aqui: viven en `bahia_serie.rs` y sus
-//! tests, contra la hoja del AD75019.
+//! Estos tests hablan de **canal (0..15) x linea (0..15)**, nunca de jacks.
+//! El censo que motor-digital §8.4 mando **esta hecho** desde el 2026-09-04:
+//! `hardware/03-vco/bahia_budget.py`. Su veredicto: las dos enmiendas del
+//! 26-08 (la boca del codec como fuente, los oidos como destino) caben sin
+//! quitarle jack a nadie, y **los dos lados que dan a las voces estan llenos**
+//! (16/16), asi que por el crosspoint no entra un CV externo a gobernar un
+//! parametro. Lo que ese guion NO fija es que linea es que jack.
+//!
+//! Los ejes fisicos X/Y del AD75019 y el orden de los 512 bits de la cadena
+//! tampoco estan aqui: viven en `bahia_serie.rs` y sus tests, contra la hoja
+//! del AD75019.
 
 use sam17_nucleo_core::bahia::{Barrera, Chip, Estado, Imagen, PoliticaDrones, CANALES, LINEAS};
 
@@ -163,10 +169,19 @@ fn dos_imagenes_iguales_no_hacen_cambiar_a_nadie() {
 }
 
 /// §5.3, `diferir`: «espera al silencio; la interfaz y el LED del jack
-/// muestran pendiente». El LED del jack se retiro el 2026-09-03 (spec del
-/// instrumento entero, D8) y el acuse queda en el renglon — que es donde la
-/// junta del panel ya lo habia mandado: «eso se muestra donde ocurrio el
-/// gesto, no solo en el LED del jack».
+/// muestran pendiente». Esta frase ha cambiado de dueno dos veces en dos dias
+/// y conviene dejar las dos escritas:
+///
+/// * **2026-09-03** (#300 D8): la cadena WS2812 se retira entera, asi que el
+///   acuse queda solo en el renglon — que es donde la junta del panel ya lo
+///   habia mandado: «eso se muestra donde ocurrio el gesto, no solo en el LED
+///   del jack».
+/// * **2026-09-04** (spec «el cerebro lee los voltajes», D6): vuelve un LED
+///   por jack **solo en la bahia** (16, driver por bus serie, #297), asi que
+///   el jack recupera su mitad. **Las dos superficies, no una**: el LED dice
+///   *ese* jack esta pendiente (deixis, un bit) y la pantalla dice que ruta es
+///   y por que espera (estado). El «no solo en el LED» de la junta sigue
+///   valiendo entero.
 ///
 /// H-OF3: un drone bajo `diferir` nunca se corta solo — la starvation deja de
 /// ser un bug y pasa a ser una eleccion del interprete. **Y esa justificacion
