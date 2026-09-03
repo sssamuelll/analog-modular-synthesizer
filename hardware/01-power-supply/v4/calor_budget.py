@@ -58,6 +58,34 @@ los dos: la placa del modulo recortada por su curva, y nunca por encima de lo
 declarado. El -12 V ya venia asi sin decirlo (IRM-45-12 de 3,8 A declarada a
 2,5), y el digital tambien (8 A de placa, 8 declarados).
 
+## Lo que salio la segunda vez: el calor se cobraba mal (2026-09-03, tarde)
+
+El reparto de calor era UN cociente agregado --sum(corrientes)/sum(PLACA_A),
+en amperios-- aplicado a los dos totales. Las celdas del papel sec.6 estan en
+VATIOS y no pesan igual: el digital son 8,0 de los 18,3 A (44 %) y solo 24,7
+de los 120,3 W (20,5 %), y como ademas es el riel que mas se derratea, su
+recorte arrastraba hacia abajo el calor que se le cobra a la FILA DE
+INVITADOS, que no depende del digital para nada. En el punto fijo cobraba
+80,4 W donde habia 89,2: un 11 % de menos, y el liston pasaba por 5 mA.
+Ahora cada celda va a SU riel (V_RIEL, CAJON_DIGITAL_W, PERDIDA_RECINTO_W) y
+las dos potencias maximas se DERIVAN en vez de transcribirse. Consecuencias:
+
+  * el area minima sube de 16 803 a 20 525 mm2 (el papel sec.6 publicaba
+    16 900 redondeados; sigue muy por debajo de los 35 365 que pide el case
+    por su propio techo de 15 K, asi que el encargo a #289 no se mueve);
+  * el techo del digital casi no se mueve --21,10 -> 21,09 W-- porque en el
+    area minima el liston se cumple justo, y el digital lo sigue;
+  * la CAJA CERRADA deja de tener punto de trabajo. Antes publicaba
+    0,95 / 0,95 / 2,0 A "a 92,6 C", que era un artefacto: las corrientes de
+    la frontera de 85 C con la temperatura de otro punto. Una biseccion
+    converge igual de bien sobre una discontinuidad que sobre una raiz, y
+    derating() vale CERO por encima de 85 C. Con el calor bien cobrado el
+    punto fijo aterriza arriba del acantilado --86,7 C, rack a CERO-- y eso
+    si es consistente: sin venteo nuevo no opera ningun modulo del rack.
+    _fixed_point() lo COMPRUEBA ahora, en amperios y no en kelvin, y donde no
+    hay punto fijo devuelve CERO en vez de reventar: ver ahi por que un
+    aserto habria convertido un dato termico en un rojo de CI.
+
 ## Lo que este modelo NO cubre
 
   * El coeficiente de descarga (CD_TIRO) y h_conv (9 W/m2K) son supuestos,
@@ -81,8 +109,8 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 CASE_DIR = os.path.join(DIR, "..", "..", "..", "case")
 if CASE_DIR not in sys.path:
     sys.path.insert(0, CASE_DIR)
-from clearance_budget import CD_TIRO, CP_AIRE, G, RHO_AIRE  # noqa: E402
-
+from clearance_budget import (CD_TIRO, CD_TIRO_PESIMISTA,  # noqa: E402
+                              CP_AIRE, G, RHO_AIRE)
 from curvas import derating  # noqa: E402
 
 # Spec fuente-chasis-telemetria sec.3.1: ambiente peor caso.
@@ -94,11 +122,6 @@ H_CONV_W_M2K = 9.0
 # CONTRA: case/cad/params.scad:1707 fija interior z=61; la salida actual de
 # case/clearance_budget.py:5903-5905 deriva exterior z=64 mm.
 # DERIVADO: 2(.3386*.064)+2(.1766*.064)+.3386*.1766 ~= 0.1257 m2.
-# Papel sec.6: 28,9 W con PS5 = IRM-20-5 a placa (5,32 W). Con D-F7, PS5 es
-# una IRM-45-5 a los 4,0 A declarados: 20 W x (1/0,835 - 1) = 3,95 W, con el
-# rendimiento de la IRM-45-5 (hoja p. 2, 83,5 %; el papel lo usa para PS6).
-P_RECINTO_MAX = 28.9 - 5.32 + 3.95        # 27,53 W
-P_CAJON_MAX = 120.3                       # papel sec.6: 95,6 fila + 24,7 digital
 # Lo que cada MODULO puede dar: su corriente de placa, fila "RATED CURRENT"
 # de la hoja Mean Well, p. 2 (IRM-45, leida 2026-09-03).
 MODULO_A = {"rack+12": 3.8,      # PS3 = IRM-45-12
@@ -122,10 +145,40 @@ CURVA = {"rack+12": "IRM-45",
          "rack+5": "IRM-45",
          "digital+5": "IRM-45"}
 
-# Papel del liston sec.6: PS1+PS2, U1, U2, LT x4 y U3 tipicos.
-_CONSTANTE_RECINTO_W = 1.91 + 0.65 + 0.69 + 0.35 + 0.30
-# DERIVADO: resto del maximo de sec.6 que escala con corriente.
-_DEPENDIENTE_RECINTO_W = P_RECINTO_MAX - _CONSTANTE_RECINTO_W
+# --- el calor, CELDA POR CELDA del papel sec.6 -----------------------------
+# Hasta el 2026-09-03 esto era UN cociente agregado en amperios aplicado a los
+# dos totales. Estaba mal por una razon simple: las celdas del papel estan en
+# VATIOS y no pesan como los amperios. El digital son 8,0 de los 18,3 A de
+# PLACA_A (44 %) y solo 24,7 de los 120,3 W (20,5 %); como ademas es el riel
+# que mas se derratea, su recorte arrastraba hacia abajo el calor que se le
+# cobra a la FILA DE INVITADOS, que no depende del digital para nada. Cobraba
+# 80,4 W donde habia 89,2, un 11 % de menos, justo donde el liston pasaba por
+# 5 mA: con el reparto bueno el area minima sube de 16 803 a 20 525 mm2.
+
+# Lo que cada riel del RACK le cuesta al cajon: su tension. Todo lo que sale
+# del riel se lo gastan los modulos invitados y acaba en calor dentro de la
+# misma caja, asi que el calor es la potencia entregada, no una perdida.
+V_RIEL = {"rack+12": 12.0, "rack-12": 12.0, "rack+5": 5.0}
+# El digital NO entra por capacidad sino por CARGA: el modulo 2 pide lo que
+# pide y da igual que PS6 pueda dar 8 A. Su peor caso son los 24,7 W del papel
+# sec.6, que son los 4,935 A de la fila "Max TJ = 125 C, 4 N657, host a tope"
+# de sec.4.4 -- o sea la salida de power_budget.py. Es una CONSTANTE, y por lo
+# tanto conservadora: se cobra ese calor aunque el riel no pueda entregarlo.
+CAJON_DIGITAL_W = 24.7
+# DERIVADO, no transcrito (el papel publica 120,3 = 95,6 + 24,7).
+P_CAJON_MAX = sum(PLACA_A[r] * V_RIEL[r] for r in V_RIEL) + CAJON_DIGITAL_W
+
+# Perdidas DENTRO del recinto, celda por celda del maximo de sec.6. Las tres
+# de PS3/PS4/PS5 escalan con lo que entrega su riel; el resto no depende del
+# rack: PS1+PS2 alimentan la cascada ultra (3,71), PS6 sigue al digital que
+# acabamos de declarar constante (4,88), y U1/U2/LT x4/U3 son la cascada.
+PERDIDA_RECINTO_W = {"rack+12": 6.51,     # PS3, 45,6 x (1/0,875 - 1)
+                     "rack-12": 4.29,     # PS4, 30 x 0,143
+                     "rack+5": 3.95}      # PS5, 20 x (1/0,835 - 1), D-F7
+_CONSTANTE_RECINTO_W = 3.71 + 4.88 + 1.24 + 1.37 + 1.30 + 0.30
+# DERIVADO: el papel publica 27,5 W (28,9 antes de D-F7, con la IRM-20-5 de
+# 5,32 W en PS5 donde ahora hay una IRM-45-5 de 3,95).
+P_RECINTO_MAX = _CONSTANTE_RECINTO_W + sum(PERDIDA_RECINTO_W.values())
 # Salida de `python case/clearance_budget.py` el 2026-09-03, sin D-F3.
 A_EF_BASE_MM2 = 3299.0
 H_TIRO_CAJON_M = 0.105
@@ -135,6 +188,8 @@ T_ABS_AIRE_K = 318.0         # K; mandato T3 para sala 45 C, no 293 K del case.
 
 AREA_BUSQUEDA_MAX_MM2 = 200000.0  # mm2; mandato directo: buscar hasta aqui.
 PASOS_BISECCION_T = 60            # COTA: 200 K / 2^60, precision sobrada.
+TOLERANCIA_PUNTO_FIJO_A = 0.02    # fraccion de PLACA_A; la biseccion cierra
+                                  # con residuo 1e-14 en un punto fijo real.
 PASOS_BISECCION_AREA = 48         # COTA: resolucion mucho menor que 1 mm2.
 PASOS_BISECCION_DT = 80           # COTA: biseccion termica, precision sobrada.
 PASO_AREA_DISENO_MM2 = 100.0      # mm2; plan T3, redondear arriba a centena.
@@ -209,20 +264,26 @@ def _temperaturas(p_recinto_w: float, p_cajon_w: float, area_venteo_mm2: float,
     return t_sala_c + dc + dr, dc, dr
 
 
-def _ratio(corrientes: dict[str, float]) -> float:
+def _sin_negativas(corrientes: Mapping[str, float]) -> None:
     if any(v < 0.0 for v in corrientes.values()):
         raise ValueError("corriente no puede ser negativa")
-    return sum(corrientes.get(r, 0.0) for r in PLACA_A) / sum(PLACA_A.values())
 
 
-def p_cajon_w(corrientes: dict[str, float]) -> float:
-    """Calor del cajon: 120.3 W en PLACA_A, proporcional a corriente."""
-    return P_CAJON_MAX * _ratio(corrientes)
+def p_cajon_w(corrientes: Mapping[str, float]) -> float:
+    """Calor del cajon: cada riel del rack a SU tension, mas la carga fija del
+    digital. Con PLACA_A entera son los 120,3 W del papel sec.6."""
+    _sin_negativas(corrientes)
+    return (sum(corrientes.get(r, 0.0) * V_RIEL[r] for r in V_RIEL)
+            + CAJON_DIGITAL_W)
 
 
-def p_recinto_w(corrientes: dict[str, float]) -> float:
-    """Calor del recinto: cascada 3.90 W fija mas carga proporcional."""
-    return _CONSTANTE_RECINTO_W + _DEPENDIENTE_RECINTO_W * _ratio(corrientes)
+def p_recinto_w(corrientes: Mapping[str, float]) -> float:
+    """Calor del recinto: lo que no depende del rack (cascada, PS1/PS2, PS6)
+    mas la perdida de PS3/PS4/PS5 en proporcion a lo que entrega cada uno."""
+    _sin_negativas(corrientes)
+    return _CONSTANTE_RECINTO_W + sum(
+        PERDIDA_RECINTO_W[r] * corrientes.get(r, 0.0) / PLACA_A[r]
+        for r in PERDIDA_RECINTO_W)
 
 
 def sostenido_a(riel: str, t_aire_c: float) -> float:
@@ -244,16 +305,22 @@ def _fixed_point(p: Mapping[str, float], *,
     calor, y la T' que ese calor produce es no creciente en T: mas aire
     caliente, menos corriente, menos calor. Asi que T' - T tiene una sola
     raiz entre la sala y la sala + 200 K, y esa raiz es el punto fijo."""
+    # Las dos potencias del dict quedan como el MAXIMO declarado y ya no se
+    # escalan con un cociente: desde el 2026-09-03 cada celda de sec.6 se le
+    # cobra a su riel (ver p_cajon_w). Se comprueban para que nadie las toque
+    # creyendo que mueven algo.
+    assert abs(p["p_cajon_w"] - p_cajon_w(PLACA_A)) < 0.05, (
+        f"p_cajon_w={p['p_cajon_w']:.2f} no es el maximo del modelo "
+        f"({p_cajon_w(PLACA_A):.2f}): el calor sale de las celdas, no de esta clave")
+    assert abs(p["p_recinto_w"] - p_recinto_w(PLACA_A)) < 0.05, (
+        f"p_recinto_w={p['p_recinto_w']:.2f} no es el maximo del modelo "
+        f"({p_recinto_w(PLACA_A):.2f}): el calor sale de las celdas, no de esta clave")
+
     def t_desde(temp: float) -> float:
         corrientes = {r: sostenido_a(r, temp) for r in PLACA_A}
-        fraccion = _ratio(corrientes)
-        # Papel sec.6: los 3,90 W de la cascada no dependen del rack; el
-        # resto del recinto y todo el cajon escalan con la corriente.
-        calor_recinto = (_CONSTANTE_RECINTO_W
-                         + (p["p_recinto_w"] - _CONSTANTE_RECINTO_W) * fraccion)
-        calor_cajon = p["p_cajon_w"] * fraccion
-        return _temperaturas(calor_recinto, calor_cajon, p["area_venteo_mm2"],
-                             p["t_sala_c"], area_recinto_m2=area_recinto_m2,
+        return _temperaturas(p_recinto_w(corrientes), p_cajon_w(corrientes),
+                             p["area_venteo_mm2"], p["t_sala_c"],
+                             area_recinto_m2=area_recinto_m2,
                              h_conv=h_conv, cd=cd)[0]
 
     lo, hi = p["t_sala_c"], p["t_sala_c"] + 200.0
@@ -267,7 +334,36 @@ def _fixed_point(p: Mapping[str, float], *,
         else:
             hi = mid
     temp = (lo + hi) / 2.0
-    return {r: sostenido_a(r, temp) for r in PLACA_A}
+    # Y QUE SEA UN PUNTO FIJO DE VERDAD, comprobado SOBRE LAS CORRIENTES.
+    #
+    # La biseccion converge igual de bien sobre una DISCONTINUIDAD que sobre
+    # una raiz, y ahi devuelve un estado que no existe: hasta el 2026-09-03 la
+    # caja cerrada publicaba 0,95 / 0,95 / 2,0 A "a 92,6 C", que son las
+    # corrientes de la frontera de 85 C con la temperatura de otro punto.
+    #
+    # LA COMPROBACION VA EN AMPERIOS Y NO EN KELVIN, y la diferencia importa.
+    # Un residuo de temperatura pequeno no prueba nada donde la curva salta:
+    # entre 3716 y 3729 mm2 de venteo la biseccion aterriza en 85,0000 exacto,
+    # publica esos mismos 0,95 A, y el residuo termico es 0,001-0,048 K --
+    # dentro de cualquier tolerancia razonable. En corrientes no hay ventana:
+    # el estado dice 0,95 A y a la temperatura que ese estado produce la hoja
+    # da 0,00. El criterio es el mismo que usa test_SOSTENIDO_es_un_punto_fijo.
+    #
+    # Y NO ES UN ASERTO, es un RESULTADO. Que la curva salte donde el aparato
+    # trabajaria no es un fallo del guion: es que ahi no hay estado sostenido
+    # que prometer. Se devuelve cero --nada operativo-- y guarda_liston() dira
+    # "SIGUE sin existir", que es lo que _busca_area_minima() sabe leer para
+    # empujar el area hacia arriba. Un assert aqui reventaria el IMPORT del
+    # modulo, y con el la puerta de power_budget.py, convirtiendo un dato
+    # termico en un rojo de CI: la caja cerrada esta hoy a 1,7 K de eso, y lo
+    # dispararian cambios que son MEJORAS (una sala peor caso mas benigna, un
+    # censo digital mas ligero).
+    corrientes = {r: sostenido_a(r, temp) for r in PLACA_A}
+    reales = {r: sostenido_a(r, t_desde(temp)) for r in PLACA_A}
+    if any(abs(corrientes[r] - reales[r]) > TOLERANCIA_PUNTO_FIJO_A * PLACA_A[r]
+           for r in PLACA_A):
+        return {r: 0.0 for r in PLACA_A}
+    return corrientes
 
 
 def guarda_liston(p: dict[str, float]) -> None:
@@ -331,6 +427,13 @@ P_BASE = {
     "t_sala_c": T_SALA,            # C; chassis spec sec.3.1.
 }
 SOSTENIDO = _fixed_point(P_BASE)
+# El mismo punto fijo con el C_D pesimista del case (0,55 contra 0,65). No es
+# otro escenario: es LA SENSIBILIDAD del que hay, al coeficiente de descarga
+# del venteo -- la constante que mas manda de todo el modelo y la unica sin
+# medir (lo dice demo() en cada corrida). El case publica su salto termico con
+# estos mismos dos extremos, y quien importe un techo de aqui necesita el
+# rango por la misma razon: sin ensayo, un solo numero afirma de mas.
+SOSTENIDO_CD_PESIMISTA = _fixed_point(P_BASE, cd=CD_TIRO_PESIMISTA)
 
 
 def demo() -> None:
@@ -353,6 +456,10 @@ def demo() -> None:
                       ("PASA" if valores[riel] >= psu else "NO PASA"))
             print(f"    {riel}: {valores[riel]:.3f} / {PLACA_A[riel]:.3f} / "
                   f"{comparacion} ({100 * valores[riel] / PLACA_A[riel]:.1f}%, {estado})")
+        if not any(valores.values()):
+            print(f"    ^ CERO no es un redondeo: a {t:.1f} C se acabo la "
+                  f"curva de la hoja (85 C) y no opera ningun modulo. Sin el "
+                  f"venteo de D-F3 = A la caja no tiene punto de trabajo")
     tf, dcf, drf = _temperaturas(P_RECINTO_MAX, P_CAJON_MAX, 0.0)
     tp, dcp, drp = _temperaturas(P_RECINTO_MAX, P_CAJON_MAX,
                                  P_BASE["area_venteo_mm2"])

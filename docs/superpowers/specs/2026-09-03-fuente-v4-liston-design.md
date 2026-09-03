@@ -1,7 +1,7 @@
 # Fuente v4 — el listón de la PSU3, seis módulos encapsulados y la cascada intacta — firmada (v3, tras la junta y la firma)
 
 **Fecha**: 2026-09-03 · **Estado**: **firmado — D-F1 a D-F7 decididas (§14); `calor_budget.py` corrió y la columna «sostenido» de §1 está rellena. Lo que queda es de otros papeles: el venteo mínimo (#289) y la bahía (#290)** ·
-**Listón firmado**: 2026-09-03 («firmo el listón», Samuel) — como **corriente de placa**; y **re-firmado el mismo día como corriente sostenida** por `calor_budget.py` con D-F3 = A y D-F7: **2,0 / 2,0 / 4,0 A de rack y 4,2 A digital con 16 900 mm² de venteo nuevo**, el mínimo que el modelo despeja y el encargo a #289 ·
+**Listón firmado**: 2026-09-03 («firmo el listón», Samuel) — como **corriente de placa**; y **re-firmado el mismo día como corriente sostenida** por `calor_budget.py` con D-F3 = A y D-F7: **2,0 / 2,0 / 4,0 A de rack y 4,2 A digital con 20 600 mm² de venteo nuevo**, el mínimo que el modelo despeja (corregido de 16 900 el mismo día: §6) ·
 **Cierra**: nada todavía. **Entrega**: los rieles de #169 (§4.3) ·
 **Mata por desaparición del sujeto** (cuando la v4 se adopte): #141, #280, #106, #56, #57 ·
 **Reabre**: `design-notes` §13 y §18, la spec del chasis (§3.1, §3.2, §3.3), `clearance_budget.py::guarda_aire()`, `consumo_total_budget.py`, `power_budget.py`, `ground_budget.py`, el papel de la bahía
@@ -91,7 +91,7 @@ como está**, porque es de la cascada de donde sale el 0,8 µVrms, no del toroid
 | Riel | A-100PSU3 | SAM17 v4, **de placa** (firmado) | **Sostenido** en el recinto | Masa |
 |---|---|---|---|---|
 | **±12 V ultra** — Voz, VCF, VCA, envolventes, bahía | no tiene | **650 mA/riel, 0,8 µVrms**, cascada intacta | 650 mA: los IRM de 15 V van al 24 % de carga | `GNDA` |
-| **+12 V invitados** — fila de abajo, 104 HP | 2,0 A | **3,8 A** | **2,0 A** con el venteo mínimo (16 900 mm² nuevos, §6); es el riel que fija ese mínimo | rack |
+| **+12 V invitados** — fila de abajo, 104 HP | 2,0 A | **3,8 A** | **2,0 A** con el venteo mínimo (20 600 mm² nuevos, §6); es el riel que fija ese mínimo | rack |
 | **−12 V invitados** | 1,2 A | **2,5 A** (3,8 de placa del módulo) | **2,0 A** | rack |
 | **+5 V invitados** | 4,0 A | **4,0 A** declarados (8,0 de placa del módulo, D-F7) | **4,0 A**: la IRM-45-5 da 4,2 a esa temperatura y se declara 4,0 | rack |
 | **+5 V digital** — N657 ×4, pantalla, LEDs, host USB | (dentro de los 4 A) | **8,0 A** | **4,2 A** = 21 W: **el techo nuevo que `power_budget.py` importa** (era 14,1 W) | `GNDD` |
@@ -101,11 +101,11 @@ La columna «de placa» es lo que se compra. La columna «sostenido» es lo que 
 instrumento **promete**, y la rellenó `calor_budget.py` el 03-09 con D-F3 = A
 y D-F7: es la corriente en el **punto fijo** —la que el rack puede dar
 calienta el cajón, y el calor recorta la que puede dar— con el **venteo
-mínimo** que el modelo despeja, **16 900 mm² nuevos**; a esa abertura el aire
+mínimo** que el modelo despeja, **20 600 mm² nuevos**; a esa abertura el aire
 del recinto son 68,9 °C. Con más abertura, más corriente; con la caja de hoy,
-cerrada, 0,95 / 0,95 / 2,0 A —el 25 %— y 92,6 °C. El modelo es pesimista a
-sabiendas (§6): hereda de `guarda_aire()` que el cajón solo evacúa por
-chimenea. Lo que sí es cierto con cualquier venteo:
+cerrada, **cero**: a 86,7 °C se acabó la curva de la hoja y no opera ningún
+módulo del rack. El modelo es pesimista a sabiendas (§6): hereda de
+`guarda_aire()` que el cajón solo evacúa por chimenea. Lo que sí es cierto con cualquier venteo:
 
 **El instrumento y los invitados no se prestan un miliamperio de suministro.**
 El riel ultra sigue en 650 mA con su 30 % de margen (`consumo_total_budget.py`:
@@ -609,8 +609,8 @@ D-F3 = A y D-F7; **punto fijo**, no carga a placa):
 
 | Situación | Aire del recinto | Rack sostenido (+12 / −12 / +5) | Digital sostenido |
 |---|---|---|---|
-| Caja de hoy (cerrada), todo lo que el rack pueda dar | **92,6 °C** | **0,95 / 0,95 / 2,0 A** (25 %) | 2,0 A |
-| **Venteo mínimo: 16 900 mm² nuevos** (D-F3 = A, encargo a #289) | **68,9 °C** | **2,0 / 2,0 / 4,0 A** — el +12 fija el mínimo | **4,2 A** |
+| Caja de hoy (cerrada), todo lo que el rack pueda dar | **86,7 °C** | **0 / 0 / 0 A** — no hay punto de trabajo | 0 A |
+| **Venteo mínimo: 20 600 mm² nuevos** (D-F3 = A) | **68,9 °C** | **2,0 / 2,0 / 4,0 A** — el +12 fija el mínimo | **4,2 A** |
 | A placa sin derating, caja de hoy (no es un estado alcanzable) | 145,7 °C | — | — |
 
 Con la IRM-20-5 en `PS5` la segunda fila **no existía**: ningún venteo daba
@@ -618,7 +618,7 @@ Con la IRM-20-5 en `PS5` la segunda fila **no existía**: ningún venteo daba
 constante que más mueve el sostenido es **`CD_TIRO`** (el coeficiente de
 descarga del venteo, supuesto y no medido), y el modelo **hereda de
 `guarda_aire()` que el cajón solo evacúa por chimenea** —ignora la convección
-de las paredes exteriores—, así que los 16 900 mm² son **pesimistas**.
+de las paredes exteriores—, así que los 20 600 mm² son **pesimistas**.
 
 **Y NO SON EL ENCARGO (Tarea 4, 03-09).** Al meter los 147,83 W en
 `guarda_aire()` —27,53 del recinto + 120,3 de fila y digital— salió que el
@@ -627,10 +627,10 @@ el segundo:
 
 | Quién pregunta | Qué exige | Venteo efectivo nuevo |
 |---|---|---|
-| `calor_budget.py` | que los rieles den el listón con la sala a 45 °C | **16 900 mm²** |
+| `calor_budget.py` | que los rieles den el listón con la sala a 45 °C | **20 525 mm²** |
 | `guarda_aire()` | los **15 K sobre ambiente** de vida del electrolítico | **35 365 mm²** |
 
-Con los 16 900 el case sube **23 K**: los rieles llegan y el condensador no.
+Con los 20 525 el case sube **20,7 K**: los rieles llegan y el condensador no.
 El encargo a #289 es el **35 365**, y con dos cifras que lo acotan: la pared
 exterior (0,507 m² de envolvente sin el suelo) se lleva otros **22,8 W** a ese
 techo con `U = 3 W/m²K` supuesto —más que los 12,6 de la chimenea de hoy—, y
@@ -951,7 +951,7 @@ lo que otro no hace** (#214, #206).
 
 **La columna «sostenido» de §1 está rellena** (03-09, `calor_budget.py`, con
 D-F3 = A y D-F7): 2,0 / 2,0 / 4,0 A de rack y 4,2 A digital con el venteo
-mínimo de 16 900 mm². Es una **predicción de modelo**, pesimista a sabiendas
+mínimo de 20 600 mm². Es una **predicción de modelo**, pesimista a sabiendas
 (§6); su testigo es el paso 7 del bring-up, y hasta esa medida el papel dice
 «sostenido según modelo». Lo que ese número le exige a otros: el venteo
 mínimo al case (#289) y el techo nuevo del digital a `power_budget.py`

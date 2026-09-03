@@ -9,6 +9,11 @@ BLOQUEANTE (modulo-voz-total S8 y S9.4). Nace de dos hallazgos de la junta:
   * Acta E-4: la fila de abajo pasa a ser rack Eurorack de verdad, asi que
     el presupuesto deja de sumar "el instrumento" y pasa a sumar el
     instrumento MAS una reserva declarada para modulos invitados (#169).
+    RETIRADA EL 2026-09-03: con la fuente v4 (D-F1) la fila de abajo tiene
+    rieles PROPIOS y el instrumento no le presta suministro, asi que la
+    reserva vigilaba un compromiso muerto. Quien la vigila desde ahora es
+    invitados_budget.py, que todavia no existe: hasta entonces este guion
+    sale con codigo 2 y lo dice al final. Ver el bloque de la reserva.
 
 --- La regla de este guion ---------------------------------------------------
 
@@ -23,11 +28,21 @@ que no dice cuanto de si mismo es fe no es un presupuesto.
 
 --- Que rieles ---------------------------------------------------------------
 
-Los 650 mA/riel del modulo 1 son los de +-12 V. El +5 V viene de la IRM-15-5
-aparte (spec del cerebro S9), asi que los DAC, la referencia, los micros y los
-LED NO cargan este presupuesto: cuelgan de otra fuente. Aqui se suma +-12.
+Los 650 mA/riel del modulo 1 son los de +-12 V ULTRA, los del instrumento, que
+en la v4 salen de la cascada lineal alimentada por PS1/PS2 (eran el toroidal de
+la v3). El +5 V viene de PS6 aparte (spec del cerebro S9), asi que los DAC, la
+referencia, los micros y los LED NO cargan este presupuesto: cuelgan de otra
+fuente, y su techo lo lleva power_budget.py. Aqui se suma +-12.
 """
 from __future__ import annotations
+
+import os
+
+# El relevo de la reserva retirada: Tarea 6 del plan de la tanda de la v4.
+# Se MIRA si existe; no se afirma que no (ver el cierre de demo()).
+INVITADOS_BUDGET = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..", "01-power-supply", "v4", "invitados_budget.py")
 
 CITADO, DECLARADO, POR_CONFIRMAR = "CITADO", "DECLARADO", "POR_CONFIRMAR"
 
@@ -80,7 +95,8 @@ RESTO = [
 ]
 
 # El cerebro, los micros, los DAC, la referencia y los LED cuelgan del +5 V
-# de la IRM-15-5, no de este riel (spec del cerebro S9).
+# de PS6 (una IRM-45-5 desde la fuente v4; era la IRM-15-5), no de este riel
+# (spec del cerebro S9). Su techo lo lleva hardware/02-midi-cv/power_budget.py.
 
 
 def suma(cargas):
@@ -88,7 +104,7 @@ def suma(cargas):
             sum(c.total_menos for c in cargas))
 
 
-def demo() -> None:
+def demo() -> int:
     todo = VOZ + RESTO
     print("Consumo del instrumento en +-12 V\n")
     print(f"  {'carga':24s} {'n':>3s} {'+12 mA':>8s} {'-12 mA':>8s}  origen")
@@ -124,18 +140,28 @@ def demo() -> None:
     assert peor <= USABLE_MA, (
         f"el instrumento se pasa: {peor:.1f} contra {USABLE_MA:.0f} mA")
 
-    # --- lo que E-4 pedia: la reserva de invitados (#169) -----------------
+    # --- lo que E-4 pedia, y por que ya no se pide -------------------------
+    # Hasta la fuente v3 la fila de abajo se alimentaba del riel del
+    # INSTRUMENTO, y esta reserva era el unico sitio del arbol donde ese
+    # compromiso estaba escrito y vigilado. La v4 (D-F1, firmada 2026-09-03)
+    # le da rieles PROPIOS -- 3,8 / 2,5 / 4,0 A de placa desde PS3/PS4/PS5,
+    # papel sec.1 y sec.3 -- y el instrumento deja de prestar un miliamperio
+    # de suministro. Un aserto que vigila un compromiso que ya no existe es
+    # una puerta verde sobre un sujeto muerto: se retira, y se dice.
+    #
+    # LO QUE NO SE PUEDE HACER ES RETIRARLO Y CALLARSE. Quien tiene que
+    # vigilar la fila de abajo desde la v4 es invitados_budget.py, que es la
+    # Tarea 6 del plan de la tanda y TODAVIA NO EXISTE. Entre hoy y ese
+    # guion, la fila de abajo no la mide nadie: eso es un HUECO declarado, no
+    # un verde, y por eso este guion sale con codigo 2.
     reserva = USABLE_MA - peor
-    print(f"\nreserva para modulos invitados (acta E-4, #169): "
+    print("\nreserva para invitados: NO APLICA desde la fuente v4 (D-F1).")
+    print("  La fila de abajo tiene rieles propios: PS3/PS4/PS5, "
+          "3,8 / 2,5 / 4,0 A")
+    print("  de placa. El instrumento ya no le presta suministro, asi que su")
+    print("  margen deja de ser un compromiso con ella.")
+    print(f"  margen del instrumento sobre su propio techo: "
           f"{reserva:.0f} mA/riel")
-    print(f"  eso son {reserva/30:.0f} modulos de 30 mA, o "
-          f"{reserva/60:.0f} de 60.")
-    print("  Un delay analogico de BBD anda por ahi. NO es holgura del")
-    print("  instrumento: es un compromiso con la fila de abajo, y gastarlo")
-    print("  en el instrumento cierra el rack sin avisar.")
-    assert reserva >= 120.0, (
-        "por debajo de 120 mA/riel la fila de abajo deja de ser rack de "
-        "verdad y E-4 se vuelve una promesa vacia")
 
     # --- el que mas mueve la aguja ----------------------------------------
     print("\nsensibilidad -- que hoja de datos cambiaria mas el numero:\n")
@@ -146,8 +172,23 @@ def demo() -> None:
     print("  ALTA a proposito: el TL074H del BOM consume menos, asi que la")
     print("  hoja solo puede mejorar este numero, nunca empeorarlo.")
 
-    print("\nOK: presupuesto cerrado.")
+    print("\nOK: el instrumento cabe en su propio riel.")
+    # EL HUECO MIRA SI SU RELEVO EXISTE, no lo afirma. Un hueco constante es
+    # el espejo del aserto que este commit retira: una puerta que no verifica
+    # nada. Cuando la Tarea 6 aterrice, esta se pone verde sola.
+    if os.path.exists(INVITADOS_BUDGET):
+        print("  Y la fila de invitados la vigila invitados_budget.py, que ya")
+        print("  existe: el compromiso de E-4 tiene dueno propio (#169).")
+        return 0
+    print()
+    print("HUECO: la fila de invitados se quedo sin puerta. La reserva de")
+    print("  120 mA/riel (acta E-4, #169) se retiro hoy porque la fuente v4 le")
+    print("  da rieles propios, y quien la vigila desde ahora --")
+    print("  invitados_budget.py, Tarea 6 del plan de la tanda -- no existe")
+    print("  todavia. Hasta que exista, el #169 no se cierra: su criterio de")
+    print("  cierre pide una puerta, y ahora mismo no hay ninguna.")
+    return 2
 
 
 if __name__ == "__main__":
-    demo()
+    raise SystemExit(demo())
