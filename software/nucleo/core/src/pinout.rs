@@ -17,10 +17,15 @@
 //!
 //! Lo que se fue con el RP2350 (hub D1, 2026-08-30): el PIO y sus tres
 //! programas (los cronómetros de afinación son capturas de TIM en el N657 de
-//! la Voz desde el 26-08; el host USB va por el OTG nativo; el mecanismo de la
-//! cadena WS2812 lo decide su propio papel), y los dígitos de la cabeza local
-//! (derogada el 27-08). El bus del J2 se fue antes, con el punto a punto
-//! (25-08): eran un SPI y ocho CS, y son ocho enlaces.
+//! la Voz desde el 26-08; el host USB va por el OTG nativo), y los dígitos de
+//! la cabeza local (derogada el 27-08). El bus del J2 se fue antes, con el
+//! punto a punto (25-08): eran un SPI y ocho CS, y son ocho enlaces.
+//!
+//! La cadena WS2812 tenía aquí el gpio 34, y su papel ya se escribió: **no hay
+//! cadena** (`2026-09-03-instrumento-entero-design.md` D1). El pin se retira y
+//! no se reetiqueta: el LED testigo que la v1 de aquel papel proponía murió con
+//! su premisa (D5), y las cuatro coronas de MACRO que sobreviven cuelgan de un
+//! driver por bus serie que todavía no tiene pieza (#297).
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Pin {
@@ -90,9 +95,6 @@ pub static PINOUT: &[Pin] = &[
     // --- I²C hacia el mux de 8 canales (§3.5): el tronco del descubrimiento ---
     d(32, "I2C SDA"),
     d(33, "I2C SCL"),
-    // --- La cadena de LED direccionables: un solo pin de datos (cerebro §6.2).
-    //     Sin PIO, su mecanismo lo decide su propio papel. ---
-    d(34, "WS2812 datos"),
     // --- MIDI DIN, con su optoacoplador (§5.3) ---
     d(35, "DIN in"),
     d(36, "DIN out"),
@@ -223,6 +225,34 @@ mod tests {
                 assert!(
                     !p.para.contains(muerto),
                     "«{}» nombra «{muerto}», que se fue con el RP2350",
+                    p.para
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn no_queda_cadena_de_led_ni_testigo() {
+        // La cadena WS2812 se retiro el 2026-09-03 (spec del instrumento
+        // entero, D1): el instrumento se toca completo, y el patcheo guiado
+        // --que era quien la pedia-- se derogo con el. No se fue con el
+        // RP2350 como el PIO: se fue por decision propia, y por eso lleva su
+        // propia puerta en vez de una fila mas en el test de arriba.
+        //
+        // «testigo» tambien esta prohibido, y es lo que de verdad guarda este
+        // test: la v1 de aquel papel proponia dejar un LED en un GPIO para
+        // decir «el motor no arranco», y su premisa estaba derogada desde el
+        // 2026-08-30 (la pantalla vive en el chip que arranca primero). Un LED
+        // colgado del cerebro no puede atestiguar que el cerebro no arranco.
+        //
+        // De luz solo sobreviven las 4 coronas de los MACROS, y cuelgan de un
+        // driver por bus serie sin pieza (#297), no de un pin de aqui.
+        for p in PINOUT.iter() {
+            for muerto in ["WS2812", "LED", "testigo"] {
+                assert!(
+                    !p.para.contains(muerto),
+                    "«{}» nombra «{muerto}»: la cadena se retiro (D1) y el \
+                     testigo murio con su premisa (D5)",
                     p.para
                 );
             }

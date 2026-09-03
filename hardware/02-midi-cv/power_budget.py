@@ -151,13 +151,26 @@ BACKLIGHT_A = 0.0
 # RETIRADA 2026-08-27: se eliminaron los 0-80 mA de retroiluminacion de la
 # pantalla SPI de 2,8" porque sec.7 del cerebro la deroga. La pantalla de 7" NO
 # se agrega aqui: lleva regulador local desde +12 V y retorno dedicado.
-# Cadena WS2812: 160 LEDs (100 de panel + 60 del farol del #42), 60 mA cada uno
-# a blanco pleno -> 9.60 A, que es el numero que el #104 declara imposible.
-# El caso que de verdad ocurre, del mismo issue: "10 parejas de jack al 100% +
-# farol naranja al 50% = 2.04 A".
-LED_A_BLANCO_PLENO = 9.60
-LED_A_CASO_REAL = 2.04
-LED_A_TOPE_104 = 2.50          # el techo de arbitraje vigente (bajo de 2.80)
+#
+# RETIRADA 2026-09-03: la cadena WS2812 entera, y con ella el arbitro del #104.
+# Eran 160 LEDs (100 de panel + 60 del farol del #42) a 60 mA: 9.60 A a blanco
+# pleno, 2.04 A en el caso real, 2.50 A de tope de arbitraje vigente. Fuente:
+# docs/superpowers/specs/2026-09-03-instrumento-entero-design.md D1.
+#
+# Aqui NO se aplica la regla de "a cero con asercion" que sostiene BACKLIGHT_A
+# doce lineas mas arriba, y conviene decir por que, porque parece la misma
+# situacion y no lo es. Esa regla guarda una carga derogada de un riel que
+# SIGUE teniendo arbitro. Las tres constantes de la cadena tenian tres asertos
+# que exigian lo CONTRARIO -- que el conflicto siguiera existiendo -- y el de
+# LED_A_CASO_REAL dejaba escrita la instruccion: "Si esto es verdad, el #104 se
+# puede cerrar, pero revisa que numero cambio antes de creertelo". Puestos a
+# cero, dos de esos asertos revientan y el tercero pasa trivialmente, o sea que
+# la puerta dejaria de morder sin avisar. Lo que murio no es la carga: es el
+# arbitro. Un aserto se retira nombrando a su sujeto, no se relaja.
+#
+# De luz solo sobreviven las 4 coronas de los MACROS (spec D7), que no son
+# cadena y todavia no tienen pieza ni cifra. Cuando #297 elija driver vuelven
+# aqui como carga nueva, con su hoja.
 
 # --- El regulador del 3V3 ---------------------------------------------------
 # Decision de Samuel (2026-08-25): conmutado, no lineal. Con LDO la corriente
@@ -240,25 +253,12 @@ def sobra_para_atenuables(
     )
 
 
-def arbitro(
-    host_usb: bool,
-    techo_w: float,
-    cantidad_n657: int = N657_CANTIDAD,
-    *,
-    maximo_125: bool = True,
-) -> float:
-    """Techo de corriente que el arbitro del #104 puede darle a la cadena."""
-    # Desde el 2026-08-27 esto es un paso directo, y NO sobra: el arbitro del
-    # #104 es un concepto del diseno (que le queda a la cadena despues de las
-    # cargas duras) y vuelve a tener resta el dia que aparezca otra carga
-    # atenuable. La retroiluminacion era la unica que habia, y murio con la
-    # pantalla de 2,8". Borrar la funcion seria borrar el nombre del arbitro.
-    return sobra_para_atenuables(
-        host_usb,
-        techo_w,
-        cantidad_n657,
-        maximo_125=maximo_125,
-    ) - BACKLIGHT_A
+# arbitro() vivio aqui hasta el 2026-09-03. Su comentario avisaba de que
+# "borrar la funcion seria borrar el nombre del arbitro", y eso es exactamente
+# lo que decide D1 del papel del instrumento entero: sin cadena y sin farol, el
+# #104 se queda sin los dos consumidores que se repartian el riel, y no hay
+# nada que arbitrar. sobra_para_atenuables() se queda porque sigue diciendo
+# algo verdadero: cuanta holgura tiene el riel despues de las cargas duras.
 
 
 def pico_3v3_a() -> float:
@@ -267,10 +267,11 @@ def pico_3v3_a() -> float:
 
 
 CASOS = (
-    # (nombre, host_usb, carga de cadena que se pretende)
-    ("solo, caso real",              False, LED_A_CASO_REAL),
-    ("con controlador USB a tope",   True,  LED_A_CASO_REAL),
-    ("con USB, al tope del #104",    True,  LED_A_TOPE_104),
+    # (nombre, host_usb). La tercera columna era la carga de cadena que se
+    # pretendia; murio con la cadena (2026-09-03). Lo que queda es la holgura
+    # del riel, que sigue siendo la cifra que decide si la fuente cabe.
+    ("solo",                         False),
+    ("con controlador USB a tope",   True),
 )
 
 
@@ -322,21 +323,18 @@ def demo() -> None:
           f"{med*1000:.0f} mA")
     print()
 
-    print(f"que le queda al arbitro del #104 con {N657_CANTIDAD} STM32N657, "
+    print(f"holgura del riel con {N657_CANTIDAD} STM32N657, "
           "Max TJ=125 C (techo pesimista):")
     print()
-    print(f"  {'caso':<30} {'duras':>7} {'sobra':>7} {'cadena':>8}  veredicto")
-    for nombre, host, pretende in CASOS:
+    print(f"  {'caso':<30} {'duras':>7} {'sobra':>7}  veredicto")
+    for nombre, host in CASOS:
         d = duras_a(host)
         s = sobra_para_atenuables(host, TECHO_W_PESIMISTA)
-        cabe = arbitro(host, TECHO_W_PESIMISTA)
         if d > TECHO_W_PESIMISTA / V_RIEL:
             ok = f"ROJO: DURAS +{(d-TECHO_W_PESIMISTA/V_RIEL)*1000:.0f} mA"
-        elif cabe >= pretende:
-            ok = "OK"
         else:
-            ok = f"ARBITRA -{(pretende-cabe)*1000:.0f} mA"
-        print(f"  {nombre:<30} {d:6.2f}A {s:6.2f}A {cabe:7.2f}A  {ok}")
+            ok = "cabe"
+        print(f"  {nombre:<30} {d:6.2f}A {s:6.2f}A  {ok}")
     print()
 
     print("el pico NO es carga de la fuente:")
@@ -349,7 +347,7 @@ def demo() -> None:
 
     print("VEREDICTO")
     print(f"  El techo pesimista son {TECHO_W_PESIMISTA/V_RIEL:.2f} A del +5 V.")
-    print("  Caso comprobado: host USB a tope + 2.04 A de cadena.")
+    print("  Caso comprobado: host USB a tope, ya sin cadena de LED.")
     for nombre, maximo_125 in (("Typ", False), ("Max TJ=125 C", True)):
         for cantidad in (1, N657_CANTIDAD):
             duras_host = duras_a(
@@ -357,27 +355,26 @@ def demo() -> None:
                 cantidad,
                 maximo_125=maximo_125,
             )
-            total_real = duras_host + LED_A_CASO_REAL
-            margen = TECHO_W_PESIMISTA / V_RIEL - total_real
-            if duras_host > TECHO_W_PESIMISTA / V_RIEL:
-                exceso = duras_host - TECHO_W_PESIMISTA / V_RIEL
-                resultado = f"ROJO: duras exceden {exceso*1000:.0f} mA"
-            elif margen >= 0:
-                resultado = f"CABE, sobran {margen*1000:.0f} mA"
+            margen = TECHO_W_PESIMISTA / V_RIEL - duras_host
+            if margen < 0:
+                resultado = f"ROJO: duras exceden {-margen*1000:.0f} mA"
             else:
-                resultado = f"ARBITRA {-margen*1000:.0f} mA de cadena"
-            print(f"  {nombre:<12} {cantidad} N657: duras {duras_host:.3f} A; "
-                  f"total {total_real:.3f} A -- {resultado}")
+                resultado = f"CABE, sobran {margen*1000:.0f} mA"
+            print(f"  {nombre:<12} {cantidad} N657: duras {duras_host:.3f} A "
+                  f"-- {resultado}")
     print("  El presupuesto se decide con Max TJ=125 C. Con cuatro N657 y")
     print("  el host a tope, las cargas duras solas exceden el +5 V: ROJO.")
     print("  La NPU queda fuera: no hay cifra para extender el veredicto.")
     print()
-    print(f"  Blanco pleno son {LED_A_BLANCO_PLENO:.2f} A y no caben en ningun")
-    print("  escenario: el tope no es cosmetico, es estructural.")
+    print("  La cadena de LED se retiro el 2026-09-03 (spec del instrumento")
+    print("  entero, D1) y con ella el arbitro del #104: se fueron sus 9.60 A")
+    print("  de blanco pleno, los 2.04 A del caso real y el farol del #42.")
+    print("  Lo que el riel gana con eso NO reabre la fuente: el techo que")
+    print("  manda es termico (4.2 A / 21 W, fuente v4 sec.3), no de cadena.")
     print()
     print("Esto NO es una prueba: es una puerta. La medida que la cierra es la")
-    print("corriente real del riel con el sensor de S9.1, contra la estimacion")
-    print("que el arbitro hace antes de empujar cada cuadro.")
+    print("corriente real del riel con el sensor de S9.1, contra lo que este")
+    print("guion estima.")
     print()
     print("HUECO: las tablas SMPS internal dan Typ y Max a TJ=125 C, pero no")
     print("  publican Max a 85 C. No se interpola ese punto.")
@@ -455,26 +452,16 @@ def main() -> int:
         f"la pedia esta derogada (spec del cerebro sec.7). La de 7 pulgadas NO "
         f"carga este riel: lleva regulador local desde +12 V con retorno "
         f"dedicado (pantalla-motor sec.6)")
-    # En Typ EXPLICITO, por lo mismo que el aserto 1: el Max a 125 C no es el
-    # punto de trabajo y el de 85 C no existe. Lo que este aserto guarda es
-    # que el arbitro haga falta, y eso ya se ve en el tipico.
-    cabe_con_host = arbitro(True, TECHO_W_PESIMISTA, maximo_125=False)
-    assert cabe_con_host < LED_A_CASO_REAL, (
-        f"con el host USB a tope sobran {cabe_con_host:.2f} A para la cadena y "
-        f"el caso real pide {LED_A_CASO_REAL:.2f}: ya no hace falta arbitrar. "
-        f"Si esto es verdad, el #104 se puede cerrar -- pero revisa que numero "
-        f"cambio antes de creertelo.")
+    # Los dos asertos que aqui vigilaban a la cadena -- que al arbitro le
+    # faltara corriente con el host a tope, y que le sobrara sin el -- se
+    # retiraron el 2026-09-03 con su sujeto. El primero dejaba escrita su
+    # propia instruccion de salida: "si esto es verdad, el #104 se puede
+    # cerrar, pero revisa que numero cambio antes de creertelo". Revisado: el
+    # numero que cambio no fue ninguno de los suyos ni el techo del riel, fue
+    # que la cadena dejo de existir (spec del instrumento entero, D1). El #104
+    # se cierra por eso, no porque el riel diera mas de si.
 
-    # 3. Sin host, el instrumento tiene que tocar con su brillo real. Si esto
-    #    falla, el instrumento no funciona solo.
-    # Typ EXPLICITO, misma razon que arriba.
-    cabe_solo = arbitro(False, TECHO_W_PESIMISTA, maximo_125=False)
-    assert cabe_solo >= LED_A_CASO_REAL, (
-        f"solo, con la pantalla encendida, sobran {cabe_solo:.2f} A para la "
-        f"cadena y el brillo real pide {LED_A_CASO_REAL:.2f}. El instrumento "
-        f"no puede tocar sin arbitrar contra si mismo.")
-
-    # 4. La correccion al #162: el pico del puente es problema del REGULADOR
+    # 3. La correccion al #162: el pico del puente es problema del REGULADOR
     #    del 3V3, no de la fuente. Se asevera que el pico cabe holgado en lo
     #    que un buck de 3.3 V de catalogo entrega (1 A es el escalon comun),
     #    para que nadie lo meta en el presupuesto de la fuente.
@@ -483,12 +470,12 @@ def main() -> int:
         f"buck de 1 A: hay que elegir el regulador a proposito y decirlo en la "
         f"spec, no heredarlo.")
 
-    # 5. Blanco pleno no cabe ni sonando el instrumento solo. Es la razon de
-    #    que el tope exista, y se asevera para que no se pierda.
-    assert LED_A_BLANCO_PLENO > TECHO_W_OPTIMISTA / V_RIEL, (
-        f"blanco pleno son {LED_A_BLANCO_PLENO:.2f} A y el techo optimista da "
-        f"{TECHO_W_OPTIMISTA/V_RIEL:.2f}: cabria. Revisa el conteo de LED del "
-        f"#104 antes de relajar el tope.")
+    # 4. El aserto de "blanco pleno no cabe ni sonando el instrumento solo" se
+    #    retiro el 2026-09-03: sus 9.60 A eran el conteo de una cadena que ya
+    #    no existe. Guardaba la razon de que el tope de brillo existiera, y el
+    #    tope se fue con el arbitro. NO se reescribe contra las 4 coronas de
+    #    MACRO que sobreviven (spec D7) hasta que #297 elija pieza y traiga su
+    #    hoja: un aserto sin cifra de hoja es un comentario con sintaxis.
 
     # Codigo 2: los HUECO impresos por demo() son trabajo a medias, no un
     # verde. gates.py los cuenta sin convertirlos en un FALLO electrico.
