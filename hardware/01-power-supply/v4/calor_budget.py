@@ -107,8 +107,8 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 CASE_DIR = os.path.join(DIR, "..", "..", "..", "case")
 if CASE_DIR not in sys.path:
     sys.path.insert(0, CASE_DIR)
-from clearance_budget import CD_TIRO, CP_AIRE, G, RHO_AIRE  # noqa: E402
-
+from clearance_budget import (CD_TIRO, CD_TIRO_PESIMISTA,  # noqa: E402
+                              CP_AIRE, G, RHO_AIRE)
 from curvas import derating  # noqa: E402
 
 # Spec fuente-chasis-telemetria sec.3.1: ambiente peor caso.
@@ -406,6 +406,13 @@ P_BASE = {
     "t_sala_c": T_SALA,            # C; chassis spec sec.3.1.
 }
 SOSTENIDO = _fixed_point(P_BASE)
+# El mismo punto fijo con el C_D pesimista del case (0,55 contra 0,65). No es
+# otro escenario: es LA SENSIBILIDAD del que hay, al coeficiente de descarga
+# del venteo -- la constante que mas manda de todo el modelo y la unica sin
+# medir (lo dice demo() en cada corrida). El case publica su salto termico con
+# estos mismos dos extremos, y quien importe un techo de aqui necesita el
+# rango por la misma razon: sin ensayo, un solo numero afirma de mas.
+SOSTENIDO_CD_PESIMISTA = _fixed_point(P_BASE, cd=CD_TIRO_PESIMISTA)
 
 
 def demo() -> None:

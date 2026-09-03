@@ -12,16 +12,32 @@ Faltaba un numero para poder escribirlo: el consumo del puente inalambrico. El
 issue #162 lo pedia "de su hoja, no estimado", y la pieza no estaba elegida. Ya
 lo esta (sesion 2026-08-25) y la hoja esta leida: ver PUENTE_* abajo.
 
-EL RESULTADO, y esta vez no se pinta de verde.
+EL RESULTADO, y lo que la fuente v4 cambio de el (2026-09-03, Tarea 5).
 
 La cuenta anterior concluyo que el #151 solo pedia arbitrar brillo cuando se
 enchufara un host USB. Esa conclusion usaba como diseno una columna que no era
 un tipico a 85 C y, ademas, el modelo de alimentacion equivocado. Contra el Max
-publicado para SMPS interno, cuatro N657 mas el host ya exceden el +5 V con las
-cargas DURAS: el arbitro no puede salvarlo ni apagando cada LED. El guion queda
-ROJO y reabre honestamente el presupuesto de la fuente. Typ se imprime como
-referencia, no como cota de diseno. La NPU activa sigue sin cifra y se declara
-HUECO abajo.
+publicado para SMPS interno, cuatro N657 mas el host EXCEDIAN el +5 V con las
+cargas DURAS -- 2.895 A contra los 2.82 que daba la IRM-15-5 de la v3 --, el
+arbitro no podia salvarlo ni apagando cada LED, y el guion quedaba ROJO
+reabriendo el presupuesto de la fuente.
+
+Eso lo cierra la fuente v4, y por la via que el #151 pedia: PS6 pasa a ser una
+IRM-45-5 de 8 A de placa y el techo DEJA DE SER UN LITERAL. Lo importa este
+guion de calor_budget.py, que resuelve el punto fijo termico. Salen 19.4 -
+21.1 W contra los 14.1 - 14.5 de antes, y con eso las duras caben en LOS DOS
+extremos: el 7.4x de incertidumbre entre Typ y Max deja de voltear el
+veredicto. Lo que sigue abierto no es si caben, es con cuanto margen -- y para
+eso el punto de trabajo si manda, asi que la NPU y el Max a 85 C siguen siendo
+HUECO y este guion sigue saliendo con codigo 2.
+
+EL LAZO QUE ESTE IMPORT CIERRA, declarado porque nadie mas lo dice. En
+calor_budget.py el cajon paga 24.7 W de digital, y esos 24.7 W son 4.935 A x
+5 V: la fila "Max TJ = 125 C, 4 N657, host a tope" de este mismo guion. O sea
+carga -> calor -> aire -> derating -> techo -> carga. Hoy cierra por el lado
+bueno y con holgura --el techo publicado, 4.22 A, es MENOR que los 4.94 A de
+calor que se le cobran--, pero el dia que este censo suba de 4.94 A hay que
+subir esa celda del papel sec.6 antes de creerse el techo.
 
 LA CORRECCION CONTRA DS14791 REV 10, DICHA EN VOZ ALTA.
 
@@ -61,18 +77,22 @@ milisegundos NO lo paga la fuente. Son tres niveles con tres duenos:
 Confundir el 2 con el 3 empuja a comprar vatios de fuente para un problema que
 se resuelve con un condensador y un buck bien elegido.
 
-ALCANCE: el riel de +5 V digital de la IRM-15-5 -- el que la spec de la fuente
-S4.1 le asigna a este modulo y que S9.1 del cerebro acepta.
+ALCANCE: el riel de +5 V digital de PS6 -- una IRM-45-5 desde la fuente v4;
+era la IRM-15-5 de la v3 --, el que la spec de la fuente le asigna a este
+modulo y que S9.1 del cerebro acepta.
 
 LO QUE NO CUBRE:
-  - El lazo termico. El techo derateado depende del calor dentro, que depende
-    de la carga: la spec de la fuente lo resolvio para el tope de 2.50 A y este
-    guion USA ESE PUNTO. Si la carga total se mueve mucho, el punto se mueve y
-    hay que rehacer la tabla de derating, no este guion.
+  - El lazo termico ya NO se ignora: lo resuelve calor_budget.py como punto
+    fijo y este guion importa su resultado. Lo que sigue fuera es el VENTEO
+    del que ese resultado depende: el techo importado supone los 20 600 mm2
+    de abertura nueva que D-F3 = A le encarga al papel del case (#289) y que
+    nadie ha dibujado todavia. Con la caja de hoy, cerrada, el aire pasa de
+    los 85 C donde acaba la curva de la hoja y PS6 no opera.
   - Los +-12 V del peine, que tienen su propio presupuesto.
   - El J6 / 7805 heredado de la v1: es OTRO riel de 5 V, referenciado a GNDA
     (cerebro S9). No se mezcla aqui a proposito.
-  - La transitoria de arranque (inrush) de la IRM-15-5 y del host USB.
+  - La transitoria de arranque (inrush) de PS6 y del host USB. La de los
+    seis IRM la lleva fusible_budget.py de la v4, no este guion.
   - El consumo del STM32N657 con la NPU trabajando. DS14791 caracteriza el
     Run mode con CoreMark; mago e interfaz quieren usar la NPU y no hay una
     cifra publicada para sumarla. Es un HUECO, no se inventa aqui.
@@ -83,15 +103,40 @@ LO QUE NO CUBRE:
 
 from __future__ import annotations
 
+import os
+import sys
+
+_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(_DIR, "..", "01-power-supply", "v4"))
+from calor_budget import PLACA_A as _PLACA_FUENTE_A         # noqa: E402
+from calor_budget import (P_BASE, SOSTENIDO,                # noqa: E402
+                          SOSTENIDO_CD_PESIMISTA)
+
 # --- El techo, IMPORTADO de la fuente de verdad (#151, criterio de cierre) ---
-# spec de la fuente S3.1, tabla "La curva de derating, por fin leida", fila de
-# 2.50 A: "Puede dar 14.1 - 14.5 W" con el aire dentro a 52.3 C.
-# El rango sale de que la pendiente de la curva no se lee limpia del PDF de
-# Mean Well (IRM-15-SPEC 2025-11-21 p.3); se dan las dos lecturas y aqui manda
-# la pesimista.
-TECHO_W_PESIMISTA = 14.1
-TECHO_W_OPTIMISTA = 14.5
-V_RIEL = 5.0                    # V. IRM-15-5, 5 V / 3 A nominales
+# HASTA EL 2026-09-03 ESTO ERAN DOS LITERALES: 14.1 y 14.5 W, leidos a ojo de
+# la curva de derating de la IRM-15-5 "con el aire dentro a 52.3 C" (spec de
+# la fuente S3.1, fila de 2.50 A). Esa fuente ya no existe -- la v4 pone una
+# IRM-45-5 de 8 A de placa en PS6 -- y el criterio de cierre del #151 pedia
+# justamente esto: "importa el tope de la fuente de verdad" en vez de
+# transcribirlo. Ahora sale de calor_budget.py, que resuelve el punto fijo
+# corriente -> calor -> aire -> derating -> corriente con la sala a 45 C.
+#
+# EL RANGO YA NO ES LA DIFERENCIA DE DOS LECTURAS OCULARES de una curva que no
+# se leia limpia. Es la sensibilidad al COEFICIENTE DE DESCARGA del venteo
+# (C_D 0.55 contra 0.65), que es la constante que mas manda del modelo termico
+# y la unica sin medir. El case publica su propio salto termico con esos dos
+# mismos extremos; aqui, como antes, manda la pesimista.
+#
+# LO QUE ESTE NUMERO ARRASTRA, y hay que decirlo en voz alta: sale del punto
+# fijo evaluado en el VENTEO MINIMO que calor_budget despeja, o sea de una
+# obra que el papel del case todavia no ha dibujado (D-F3 = A, issue #289).
+# Con la caja de hoy, cerrada, no hay techo ninguno: el aire se va a 86.7 C,
+# por encima de donde acaba la curva de la hoja, y PS6 no opera. Este guion es
+# verde CON ESA OBRA HECHA, y lo imprime en cada corrida.
+V_RIEL = 5.0                    # V. PS6 = IRM-45-5, 5 V / 8 A de placa
+TECHO_W_PESIMISTA = SOSTENIDO_CD_PESIMISTA["digital+5"] * V_RIEL
+TECHO_W_OPTIMISTA = SOSTENIDO["digital+5"] * V_RIEL
+TECHO_VENTEO_MM2 = P_BASE["area_venteo_mm2"]
 
 # --- Cargas DURAS: presencia o ausencia, no se atenuan ----------------------
 # Los STM32N657 cuelgan del riel de 1.8 V propuesto por D-R1. Ese riel sale del
@@ -278,9 +323,13 @@ CASOS = (
 def demo() -> None:
     print("El riel de +5 V digital del SAM17")
     print()
-    print(f"  techo derateado a 52.3 C   {TECHO_W_PESIMISTA:.1f} - "
+    print(f"  techo IMPORTADO de calor_budget  {TECHO_W_PESIMISTA:.1f} - "
           f"{TECHO_W_OPTIMISTA:.1f} W   ({TECHO_W_PESIMISTA/V_RIEL:.2f} - "
           f"{TECHO_W_OPTIMISTA/V_RIEL:.2f} A)")
+    print(f"    punto fijo termico de PS6 con la sala a 45 C y "
+          f"{TECHO_VENTEO_MM2:.0f} mm2 de venteo nuevo (D-F3 = A, #289);")
+    print("    el rango es C_D 0.55 - 0.65. SIN ese venteo no hay techo: el "
+          "aire pasa de 85 C y PS6 no opera")
     print("  IMPORTADO de la spec de la fuente S3.1, fila de 2.50 A")
     print()
 
@@ -362,15 +411,21 @@ def demo() -> None:
                 resultado = f"CABE, sobran {margen*1000:.0f} mA"
             print(f"  {nombre:<12} {cantidad} N657: duras {duras_host:.3f} A "
                   f"-- {resultado}")
-    print("  El presupuesto se decide con Max TJ=125 C. Con cuatro N657 y")
-    print("  el host a tope, las cargas duras solas exceden el +5 V: ROJO.")
-    print("  La NPU queda fuera: no hay cifra para extender el veredicto.")
+    print("  El presupuesto se decide con Max TJ=125 C. Hasta la fuente v3 ahi")
+    print("  las cargas duras SOLAS excedian el +5 V -- 2.895 A contra los")
+    print("  2.82 de la IRM-15-5 --, y el guion quedaba ROJO. Con PS6 =")
+    print("  IRM-45-5 caben en LOS DOS extremos, asi que el 7.4x de")
+    print("  incertidumbre entre Typ y Max deja de voltear el veredicto de")
+    print("  las duras. La NPU sigue fuera: no hay cifra para extenderlo.")
     print()
     print("  La cadena de LED se retiro el 2026-09-03 (spec del instrumento")
     print("  entero, D1) y con ella el arbitro del #104: se fueron sus 9.60 A")
     print("  de blanco pleno, los 2.04 A del caso real y el farol del #42.")
     print("  Lo que el riel gana con eso NO reabre la fuente: el techo que")
-    print("  manda es termico (4.2 A / 21 W, fuente v4 sec.3), no de cadena.")
+    print(f"  manda es termico ({TECHO_W_OPTIMISTA/V_RIEL:.1f} A / "
+          f"{TECHO_W_OPTIMISTA:.0f} W, importados de calor_budget), no de")
+    print("  cadena. Esa frase estaba escrita a mano ese mismo dia; desde hoy")
+    print("  el numero lo pone el guion de la fuente.")
     print()
     print("Esto NO es una prueba: es una puerta. La medida que la cierra es la")
     print("corriente real del riel con el sensor de S9.1, contra lo que este")
@@ -401,6 +456,19 @@ def _autocomprobacion() -> None:
     assert abs(n657_al_5v_a(4, maximo_125=False) - 0.303072) < 1e-9
     assert abs(n657_al_5v_a(4) - 2.2333813333333333) < 1e-9
     assert abs(duras_a(True) - 2.895448) < 1e-9
+    # EL TECHO IMPORTADO, POR LOS DOS LADOS. Por abajo: la IRM-15-5 de la v3
+    # ya daba 14.1 W con menos modulo, asi que si el sostenido sale MENOS, o
+    # el derating se leyo mal o el recinto no ventila. Por arriba: no puede
+    # pasar de la placa de PS6, que son 40 W; un techo por encima de eso
+    # significa que el punto fijo dejo de recortar.
+    tope_placa_w = _PLACA_FUENTE_A["digital+5"] * V_RIEL
+    assert 14.1 < TECHO_W_PESIMISTA <= tope_placa_w, (
+        f"el techo del +5 V digital sale {TECHO_W_PESIMISTA:.1f} W. Por abajo "
+        f"la IRM-15-5 de la v3 ya daba 14.1 con menos modulo; por arriba la "
+        f"placa de PS6 son {tope_placa_w:.0f} W y nadie puede prometer mas")
+    assert TECHO_W_PESIMISTA < TECHO_W_OPTIMISTA <= tope_placa_w, (
+        f"el rango del techo esta al reves o se sale: {TECHO_W_PESIMISTA:.2f} "
+        f"W con C_D pesimista contra {TECHO_W_OPTIMISTA:.2f} con el nominal")
 
 
 def main() -> int:
@@ -437,8 +505,10 @@ def main() -> int:
     print(f"  duras + host, Max 125 C   {d_max:.3f} A  contra techo {techo:.2f} A"
           f"  -> {'cabe' if d_max < techo else 'NO CABE'}")
     print("  el punto de trabajo (Max a 85 C) NO ESTA PUBLICADO para SMPS")
-    print("  interno, y es el unico que decide. Hasta tenerlo, el presupuesto")
-    print("  de la fuente con cuatro N657 NO esta cerrado.")
+    print("  interno. Con la fuente v3 eso decidia el veredicto, porque los")
+    print("  dos extremos caian a lados distintos del techo. Con PS6 caben")
+    print("  los dos, asi que lo que sigue abierto NO es si las duras caben:")
+    print("  es con cuanto margen, y para eso el punto de trabajo si manda.")
     assert d_tip < techo, (
         f"ni siquiera en el tipico caben las duras con el host: {d_tip:.2f} A "
         f"contra {techo:.2f} A. Eso SI seria pedir otra fuente, sin discusion.")
