@@ -247,13 +247,24 @@ P = ρ · c_p · Q · ΔT                    calor que se lleva
 ```
 
 `A_ef` son entrada y salida **en serie**; `h`, la distancia entre sus
-centroides. Hoy el tiro es **105 mm** y el área efectiva, **3 299 mm²**. Con
-**9.22 W** de peor caso del chasis del PSU, el resultado es **12.2 K** sobre
-ambiente contra un techo de 15. Con `C_D = 0.55`, la sensibilidad da **13.6 K**;
-con la cuenta vieja de **6.33 W**, daría **9.5 K** y **10.6 K** con `C_D = 0.55`.
-El coeficiente y las pérdidas
+centroides. Hoy el tiro es **105 mm** y el área efectiva, **3 299 mm²**: esta
+chimenea evacúa **12.6 W** al techo de 15 K. El coeficiente y las pérdidas
 se validan en la primera unidad: la puerta cierra el orden de magnitud, no
 sustituye el ensayo.
+
+**Y desde el 2026-09-03 esa cuenta no cierra, a propósito.** `potencia_disipada`
+dejó de ser el chasis del PSU (**9.22 W**, que daban 12.2 K contra el techo) y
+pasa a ser todo lo que se enciende dentro del cajón: **147.83 W** = 27.53 del
+recinto de la fuente v4 + 120.3 de la fila de invitados y el digital (papel de
+la fuente v4 §6, tras D-F1 y D-F7). Con eso el case subiría **77 K**, así que
+`guarda_aire()` **ya no asevera el techo: publica el déficit como HUECO** —el
+mismo patrón de `guarda_trasera_flexion()`— con el área que hace falta:
+**38 664 mm² de venteo efectivo, 35 365 más que hoy** (29 395 si se descuenta
+lo que se lleva la pared exterior, 22.8 W con `U = 3 W/m²K` supuesto; 42 394
+con `C_D = 0.55`). Y menos si el venteo nuevo sube el tiro, que va con la
+**raíz** de la altura y hoy son 105 mm en un case de 256. La obra que lo cierra
+es del papel del case —**D-F3 = A**, ventilar por convección natural sin
+ventilador— y vive en **#289**, no en esta puerta.
 
 **Corrección del 2026-08-30, tras la revisión adversarial.** La primera cuenta
 escogía **3.0 mm** por capilaridad. Conservaba esa razón, pero `guarda_aire()`

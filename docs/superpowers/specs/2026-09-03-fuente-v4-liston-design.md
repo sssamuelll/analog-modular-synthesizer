@@ -618,9 +618,27 @@ Con la IRM-20-5 en `PS5` la segunda fila **no existía**: ningún venteo daba
 constante que más mueve el sostenido es **`CD_TIRO`** (el coeficiente de
 descarga del venteo, supuesto y no medido), y el modelo **hereda de
 `guarda_aire()` que el cajón solo evacúa por chimenea** —ignora la convección
-de las paredes exteriores, que a estas potencias es del mismo orden—, así que
-los 16 900 mm² son **pesimistas**. Afinarlo es de la Tarea 4 del plan y de
-#289, y lo que salga de ahí es lo que el case dibuja.
+de las paredes exteriores—, así que los 16 900 mm² son **pesimistas**.
+
+**Y NO SON EL ENCARGO (Tarea 4, 03-09).** Al meter los 147,83 W en
+`guarda_aire()` —27,53 del recinto + 120,3 de fila y digital— salió que el
+listón del rack y el criterio del propio case piden cosas distintas, y manda
+el segundo:
+
+| Quién pregunta | Qué exige | Venteo efectivo nuevo |
+|---|---|---|
+| `calor_budget.py` | que los rieles den el listón con la sala a 45 °C | **16 900 mm²** |
+| `guarda_aire()` | los **15 K sobre ambiente** de vida del electrolítico | **35 365 mm²** |
+
+Con los 16 900 el case sube **23 K**: los rieles llegan y el condensador no.
+El encargo a #289 es el **35 365**, y con dos cifras que lo acotan: la pared
+exterior (0,507 m² de envolvente sin el suelo) se lleva otros **22,8 W** a ese
+techo con `U = 3 W/m²K` supuesto —más que los 12,6 de la chimenea de hoy—, y
+contándola bajan a **29 395**; con `C_D = 0,55` suben a **42 394**. Y el
+**tiro** es la variable barata: `k` va con la **raíz** de la altura y hoy son
+105 mm en un case de 256, así que subir la salida vale más que ensanchar la
+rejilla. `guarda_aire()` ya no asevera ese techo —lo publica como HUECO— y se
+pone verde sola el día que el papel del case dibuje el venteo.
 
 **Esto no era un hueco: era la decisión (D-F3), y Samuel la tomó el 03-09.**
 El listón se firmó como corriente de placa; sostenido, dentro de un recinto
