@@ -47,6 +47,33 @@ Se gasta en esto.
 
 ### 3.1 Térmica: por qué va cerrado
 
+> **ENMIENDA 2026-09-04 (fuente v4, §10 de su papel): esta sección ya no decide
+> la térmica, y la conclusión «va cerrado» está REVOCADA.**
+>
+> Quien la decide es **`hardware/01-power-supply/v4/calor_budget.py`**, que
+> resuelve la cadena entera de la §6 del papel de la v4 —sala a 45 °C → cajón
+> → recinto → curva de derating de la hoja— como un **punto fijo**, no como
+> una evaluación: la corriente que el rack puede dar calienta el cajón, el
+> calor sube el aire, y el aire recorta la corriente.
+>
+> Lo que salió, y por qué esta sección no podía verlo: el recinto ya no lleva
+> tres TO-220, lleva **seis módulos conmutados** (27,5 W propios) y el cajón
+> **120,3 W** más de la fila de invitados y del digital. Con la caja cerrada
+> de hoy el aire llega a **86,7 °C** y **el rack no tiene punto de trabajo**:
+> por encima de 85 °C la curva de la hoja ya no dibuja. Samuel firmó **D-F3 =
+> A** el 2026-09-03 —ventilar recinto y cajón por convección natural, sin
+> ventilador— y el venteo mínimo son **20 600 mm²** nuevos, con los que el
+> aire baja a 68,9 °C.
+>
+> **La franja de 230 V no ventila**: su barrera de 6 mm y su tapa siguen
+> cerradas, y ninguna abertura puede dar acceso con el dedo de prueba a nada
+> de la franja de red. Es aserción de `check_red_chasis.py`, no una nota.
+>
+> Dos cargas que ni esta sección ni la tabla de la §6 del papel de la v4
+> cuentan todavía, y que sus guiones destaparon: la **NTC de arranque** disipa
+> ~2,75 W dentro del recinto (`v4/fusible_budget.py`), y el **1,8 V a máximo**
+> son 4,57 W más si vive dentro (D-R1, sin decidir).
+
 Contenido térmico del recinto, al censo real (174 mA/riel), escalado desde la
 tabla del §4 de la spec v2 (que está a 650 mA):
 
@@ -233,7 +260,30 @@ Dos cosas honestas sobre esto:
   sobre un coeficiente estimado y un ambiente supuesto, contra el **16 %** que da
   2.50 A. El tope se queda en 2.50 A.
 
-### 3.2 La regla: el chasis conduce calor, nunca corriente
+### 3.2 La regla: el chasis conduce la corriente DEL RACK, nunca la del instrumento
+
+> **REESCRITA el 2026-09-04** (fuente v4, §10 de su papel). El título de esta
+> sección era «el chasis conduce calor, nunca corriente», y era cierto para un
+> instrumento cerrado. **Con un rack Eurorack dentro deja de serlo**, y la
+> regla nueva es la del título.
+>
+> El motivo, del papel de la v4 §4.1: los jacks de la bahía viven en una isla
+> de masa **del rack**, y sus casquillos no tocan `GNDA`. El chasis es la masa
+> de ese rack y conduce sus amperios. Lo que **nunca** conduce es corriente
+> del instrumento, salvo fuga y falta: `GNDA` toca el chasis en **un** punto,
+> el espárrago, por `J5`.
+>
+> Y hay un número detrás. Sin la isla, con veinte cables de patch en paralelo
+> se van **1,66 A del rack por el plano de masa del instrumento**, y el
+> presupuesto de la cadena de tono se agota en 0,55 A
+> (`hardware/bus-board/ground_budget.py`, que lo asevera con su canario). Eso
+> no se arregla con cobre: para bajar el desfase a 2 cents haría falta un
+> retorno de 0,417 mΩ, que es una pletina.
+>
+> **Lo que NO cambia y sigue siendo innegociable:** los tres tabs de la tabla
+> de abajo. `U2` tiene el tab a un riel crudo negativo y la caja está bondada
+> a PE; su aislamiento es el paso 0 del bring-up y es lo que autoriza a
+> enchufar.
 
 Los tres reguladores tienen el tab conectado a algo, y la caja está bondada a
 tierra de protección:
@@ -254,6 +304,25 @@ Esto además cierra el §13.3 de `design-notes.md` tal como estaba escrito: el
 espárrago por fin tiene dónde ir.
 
 ### 3.3 Geometría
+
+> **ENMIENDA 2026-09-04 (fuente v4, §10 de su papel).** La geometría de abajo
+> tiene dentro un toroide que ya no existe, y le falta una placa.
+>
+> - **El toroide se va.** `chasis_toroide_x`, `chasis_toroide_*` y el Ø93 × 46
+>   de 1,20 kg desaparecen. Lo que ocupa su sitio son **seis módulos IRM**:
+>   209 cm² de huella entre los seis, ninguno de más de 29,5 mm de alto, y
+>   735 g en total contra los 1,20 kg del toroide solo.
+> - **Son DOS placas y no una:** **R** (red, los seis módulos, los filtros, el
+>   secuenciador, el crowbar y el nodo ★) y **C** (la cascada, que es la v3
+>   menos la red). Las dos van dentro del mismo recinto de acero, porque R
+>   lleva 230 V y C lleva los tres tabs contra la pared. La **distancia entre
+>   R y C** pasa a ser parámetro declarado y puerta del chasis: el campo de un
+>   IRM encapsulado no lo publica nadie y se fija al montar (papel de la v4
+>   §8).
+> - **Y gana aberturas.** D-F3 = A pide **20 600 mm²** de venteo efectivo
+>   nuevo para que el rack sostenga su listón, y el criterio propio del case
+>   —15 K sobre ambiente para la vida del electrolítico— pide **35 365**. El
+>   encargo a #289 es el segundo. La franja de 230 V no ventila (§3.1).
 
 Contenido y hueco disponible, medidos:
 
@@ -330,6 +399,33 @@ el párrafo anterior daba por hechas y no lo eran:
   condición para la Task 6: `J2` y `J6` miran a ese canto.
 
 ## 4. La telemetría
+
+> **ENMIENDA 2026-09-04 (fuente v4, §10 de su papel).** Los cinco chips se quedan
+> y **cambian de pregunta**; y se pueblan dos más.
+>
+> - `U10` (ADS1115) deja de medir «VRAW+ y VRAW−», que ya no existen, y pasa a
+>   medir **+15 V y −15 V con carga** —que es donde se ve un IRM saliéndose de
+>   su curva— y, en su cuarto canal, el **−12 V de rack**, que hoy está atado a
+>   `GNDA` y necesita su divisor y su clamp.
+> - `U11` (TMP1075) ya no es «el aire del recinto» a secas: es **el que vigila
+>   la curva de derating**. Es la medida contra la que se juzga
+>   `v4/calor_budget.py` en el paso 7 del bring-up.
+> - **D-F2 (firmada 2026-09-03): `U13` y `U14`, dos INA226 más, POBLADOS**, en
+>   +12 V y +5 V de rack, direcciones 0x44 y 0x45, en la placa R donde están
+>   los shunts. Dejan de ser opcionales en `check_telemetria.py`. Cuestan
+>   cuatro hilos en el enlace R ↔ C. Lo que compran: con `U11`, el firmware
+>   puede avisar cuando el rack se acerca a su techo sostenido a la
+>   temperatura que hay dentro, en vez de que el dueño lo descubra por un
+>   módulo que se reinicia.
+> - **El +5 V digital no se mide en la fuente.** Sale flotante; lo mide quien
+>   lo reparte. La v1 del papel de la v4 ponía un INA226 en `GNDD` para
+>   «contrastarlo» con el sensor del cerebro, y no miden lo mismo: uno mide la
+>   cadena y el otro el riel entero. Una puerta que exija que coincidan falla
+>   siempre o se arregla.
+>
+> Los divisores de §4.4 no cambian: 100 k / 20 k al 0,1 %, 1/6, y los canales
+> negativos referidos al +5 V porque el ADS1115 tiene −0,3 V de máximo
+> absoluto en el pin.
 
 ### 4.1 Qué se mide, y en qué dirección
 

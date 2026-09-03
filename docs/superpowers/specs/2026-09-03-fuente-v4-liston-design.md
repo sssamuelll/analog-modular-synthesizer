@@ -6,6 +6,47 @@
 **Mata por desaparición del sujeto** (cuando la v4 se adopte): #141, #280, #106, #56, #57 ·
 **Reabre**: `design-notes` §13 y §18, la spec del chasis (§3.1, §3.2, §3.3), `clearance_budget.py::guarda_aire()`, `consumo_total_budget.py`, `power_budget.py`, `ground_budget.py`, el papel de la bahía
 
+> ### ENMIENDAS DE LA TANDA A DE PRESUPUESTOS (2026-09-04)
+>
+> Los guiones de `hardware/01-power-supply/v4/` corrieron por primera vez y
+> **movieron ocho cosas de este papel**. Nada de esto invalida las decisiones
+> firmadas D-F1 a D-F7; lo que hace es ponerles cifra, y en dos sitios abrir
+> una decisión nueva. Cada punto dice qué guion lo sostiene y dónde cae.
+>
+> | # | Dónde | Qué decía | Qué dice el guion |
+> |---|---|---|---|
+> | 1 | §4.2 | el margen de entrada de `U1` es **+0,30 V** | **NEGATIVO: −97 mV en `U1` y −13 en `U2`.** El +0,30 es el margen de una placa cuyo setpoint cae exactamente en 13,1 V, y la ventana del setpoint sale de la **referencia del propio pre-regulador**: LM2941 ±3,0 % de dispersión y ±2,0 % más de deriva (p. 5). Aun ajustando placa a placa —el mejor caso— quedan ±267 mV en `U1` y ±384 en `U2`. `margen_budget.py`, HUECO, con cuatro salidas y su precio |
+> | 2 | §4.2 (D-F4) | el detector de ventana habilita entre 14,1 V y lo que el IRM da | **la ventana está VACÍA por 97 mV**, que es el punto 1 visto desde el secuenciador. Y cuando se cierre, el detector tiene que **sensar DESPUÉS del LC**: en el borne del módulo la histéresis mínima son 230 mV y ninguna ventana de este riel los aguanta. `secuencia_budget.py`, HUECO |
+> | 3 | §5 | la corriente de red son **3,9 A rms** y el inrush 285 A | **4,4 A y 320 A.** La fila AC CURRENT de la IRM-45 es una celda única para toda la serie (0,9 A/230 Vac también para la de 5 V), y D-F7 subió `PS5` de IRM-20-5 a IRM-45-5: §5 seguía sumando el 0,4 de la pieza retirada. A la carga del listón son 3,25 A. `fusible_budget.py` |
+> | 4 | §5, §11 | **4 A T** como hipótesis de fusible | **6,3 A T**, y no llega por ninguno de los dos caminos: ni el permanente (piden 5,34 A al 70 % del calibre y con el derratado del recinto) ni el rearranque en caliente (17,4 A²s contra 15,3 admisibles de un 4 A T). **Y la pieza la decide otra cosa: el PODER DE CORTE.** Un 5×20 de vidrio corta 63 A y en el enchufe hay ~490 A disponibles; hace falta cerámico de alto poder de corte. `fusible_budget.py`, HUECO por esa hoja |
+> | 5 | §4.1 | la fuga a PE es «el no-problema», un orden de magnitud bajo el límite | **el 87 % del límite de trabajo** (3,05 de 3,5 mA), con las condiciones de medida de la norma: 1,1 × la nominal y 60 Hz. El **Y2 máximo por módulo son 2,99 nF**. `fuga_budget.py`, HUECO por la cifra de IEC 62368-1, que es de pago |
+> | 6 | §4.2 (D-F5) | el Y2 local cierra el lazo de modo común **a 65 kHz** | **es un mecanismo de MEGAHERCIOS.** Los dos caminos van en paralelo y la corriente se reparte: a 65 kHz los 300 mm de hilo pesan 0,12 Ω contra 1113 del Y2 y sólo desvía 1,5 veces; a 20 MHz desvía 14,2. Y hay una banda, en la resonancia del hilo con los Y2 del filtro (~4,4 MHz), **donde no desvía nada**. La decisión es buena; el motivo escrito no es el que la sostiene |
+> | 7 | §4.2, §12.4 | la nota EMI de Mean Well documenta el mecanismo de D-F5 | **la nota no habla de condensadores Y.** Habla de montar el módulo sobre «a defined metal plate» y de que el cable de salida vaya «twisted and flatly placed on and within the range of the metal plate», y de que la EMC sólo se comprueba con el equipo entero. Son **dos requisitos de montaje** de los que depende la Clase B de la hoja, y no estaban escritos en ningún sitio. Ya está en el árbol: `meanwell-emi-statement-2023-12-20.pdf`. §12.4 hecho |
+> | 8 | §6 | la tabla de calor del recinto suma 27,5 W | **le faltan cargas.** La NTC de arranque disipa ~2,75 W dentro (un 10 % más) y la tabla no la lleva; tampoco al MOV ni al choke. `fusible_budget.py` lo avisa en cada corrida |
+>
+> **Dos cosas más que los guiones añadieron y el papel no tenía:**
+>
+> - **El rizado necesita amortiguar DOS veces, no una** (§4.2 pedía sólo el LC).
+>   El 22 µH / 47 µF sin amortiguar pica +21 dB en 4,9 kHz, dentro de la banda
+>   de 10 Hz–100 kHz en la que se mide el riel; con `Rd` = 0,68 Ω + `Cd` =
+>   220 µF queda en +2,6. **Y la receta «perla + cerámico» trae su propio LC**:
+>   955 nH con 100 nF resuenan en 516 kHz con Q ~ 300 y **amplifican +34 dB**.
+>   Se amortigua con 2,2 Ω + 2,2 µF y queda en +0,6. `rizado_budget.py`. Ese
+>   segundo hallazgo salió de barrer fino: con 241 puntos se veían 24 dB donde
+>   hay 34.
+> - **El crowbar que aprieta es el del +5 V de rack, no el de ±12** (§4.3 los
+>   trataba igual). El OVP de la IRM-45-5 llega a 6,75 V y un electrolítico de
+>   6,3 —el estándar de ese riel— está por debajo: la banda admisible para el
+>   disparo son **0,27 V**, contra 2,67 en ±12. Y el **+5 V digital no lleva
+>   crowbar**: que lo que reciba `PS6` aguante 6,75 V pasa a ser requisito al
+>   módulo 2. `check_absmax.py`, HUECO por la hoja del SCR.
+>
+> **Lo que la tanda A dejó cerrado y verde:** el sostenido (§1, §6), el censo
+> de invitados en cuatro columnas (`invitados_budget.py`), el desfase
+> rack↔instrumento con N patches (`ground_budget.py`), los 75 puntos del
+> bring-up con sus predicciones importadas (`check_bringup.py`) y el hueco de
+> `consumo_total_budget.py`, que se cerró solo al aterrizar su relevo.
+
 > **Lo que la junta cambió (Serrano, Halberg, Voronov, 03-09).** La v1 de este
 > papel tenía tres errores que movían decisiones, y los tres estaban en hojas
 > que ya estaban en el árbol: (1) las corrientes del listón son de placa, y las
@@ -513,8 +554,8 @@ potencia **0,25–0,30**; la fila lo lleva dentro: 0,4 A (IRM-20), 0,5 A (IRM-30
 0,9 A (IRM-45), a 230 V y carga nominal. Con los seis de §3:
 
 ```
-0,4 + 0,4 + 0,9 + 0,9 + 0,4 + 0,9  =  3,9 A rms      a placa, los seis a nominal
-escalado a la carga del listón      ≈  2,7–3,0 A rms  (junta: 2,73 A)
+0,4 + 0,4 + 0,9 + 0,9 + 0,9 + 0,9  =  4,4 A rms      a placa, los seis a nominal
+escalado a la carga del listón      =  3,25 A rms     (fusible_budget.py)
 caso típico (§6, ~30 W de entrada)  ≈  0,5 A rms
 ```
 
@@ -527,7 +568,7 @@ dimensionó para un toroide de 0,72 A y una IRM: **se va**.
   permanente de arriba, y el **I²t de rearranque en caliente**, que es el que
   manda y la v1 no tenía. En frío `NT1` limita: seis bancos de entrada (unos
   205 µF ESTIMADO por el hold-up, 10,9 J) a 5 Ω dan ~50 A de pico, τ 1,3 ms,
-  **1,66 A²s** —el inrush de placa (285 A sumados) no se ve nunca—. Pero un
+  **1,66 A²s** —el inrush de placa (320 A sumados, con la IRM-45-5 de D-F7) no se ve nunca—. Pero un
   microcorte con `NT1` caliente (~0,5 Ω) da **~159 A y 5,3 A²s**, el 18–53 % del
   I²t de fusión de un 1,6 A T (v2 §3.0.1): fatiga con cada microcorte.
   Hipótesis de trabajo, **ESTIMADO**: 4 A T, cuyo I²t escala con In² y deja el

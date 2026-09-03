@@ -1,5 +1,28 @@
 # PSU v3 — la primera que se construye
 
+> **ESTADO, 2026-09-04: la v3 NO se pide.** La que se construye es la **v4**
+> ([`../v4/`](../v4/)): seis módulos Mean Well IRM encapsulados en vez del
+> toroide, con la misma cascada lineal detrás. La gobierna
+> [`2026-09-03-fuente-v4-liston-design.md`](../../../docs/superpowers/specs/2026-09-03-fuente-v4-liston-design.md).
+>
+> Lo que esta carpeta conserva y sigue valiendo: **la cascada** (`U1`/`U2` y la
+> isla LT3045/LT3094) con sus puertas, el bus board, la telemetría y el
+> bring-up de la cascada. La v4 la hereda entera menos `TR1`, `BR1`, `C_bulk`
+> y la franja de red, que se van a la placa R nueva.
+>
+> **La regla «nunca se fabrica una v2 habiendo una v3» sigue en pie una
+> versión más arriba, y lo que la sustituye es esto:** mientras la v4 no tenga
+> placa fabricada y medida, lo que hay es un diseño con sus presupuestos
+> corriendo, no una fuente. Dónde está, con número:
+> `../v4/check_bringup.py` — 75 puntos, ninguno medido todavía — y
+> `hardware/tools/gates.py`.
+>
+> `valle_budget.py` se borró el 2026-09-04: medía el valle de VRAW y la v4 no
+> tiene rectificador. Lo sustituye
+> [`../v4/margen_budget.py`](../v4/margen_budget.py), que hoy declara un HUECO
+> —al riel ultra le faltan 97 mV de margen de entrada en su peor caso— y es
+> una decisión abierta, no un fallo de guion.
+
 **Estado:** Fases A (decisiones), B (esquemático), C (placa) y D (chasis)
 cerradas. La placa está **ruteada y con DRC en cero**; falta la validación —
 que empieza cuando exista la placa física.
