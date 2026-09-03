@@ -15,6 +15,7 @@ pub mod envolvente;
 pub mod escritor;
 pub mod fuerza;
 pub mod j2;
+pub mod maestro_j2;
 pub mod medidas;
 pub mod memoria;
 pub mod modelo;

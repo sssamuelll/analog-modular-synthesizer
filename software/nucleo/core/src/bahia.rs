@@ -13,9 +13,14 @@
 //! cerebro, que la mantiene y la manda por el J2, y el N657 de la Voz, que la
 //! guarda como pendiente, decide el commit con la barrera y shiftea.
 //!
-//! **Aqui solo se habla de canal (0..15) x linea (0..15).** Que linea es que
-//! jack, y si la boca del codec y los oidos caben en las 16x16, es el censo
-//! mandado en `2026-08-26-motor-digital-design.md` §8.4, que **no esta hecho**.
+//! **Aqui solo se habla de canal (0..15) x linea (0..15).**
+//!
+//! El censo que `2026-08-26-motor-digital-design.md` §8.4 mando **esta hecho**
+//! desde el 2026-09-04: `hardware/03-vco/bahia_budget.py`, que ademas LEE de
+//! aqui `CANALES` y `LINEAS` en vez de copiarlos. Su veredicto: la boca del
+//! codec y los oidos caben, y **los dos lados que dan a las voces estan llenos
+//! (16/16)**. Que linea es que jack sigue sin decidirse.
+//!
 //! Los ejes fisicos X/Y del chip y el orden de los 512 bits de la cadena
 //! tampoco estan aqui: viven en `bahia_serie.rs`, contra la hoja del AD75019.
 

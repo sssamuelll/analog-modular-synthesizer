@@ -633,6 +633,14 @@ def _demandas(ipaq: int, sai: str, cvs: tuple, j2: str, i2c: str,
     # la segunda entrada: cita huerfana del issue #213 (ver punto 7 del
     # encabezado) -- se sienta como reserva, no como hecho de papel
     mesa.append(("ADC:reserva-issue213", adc))
+    # La tercera: la SALIDA del mux de perillas, que el 2026-09-04 se muda del
+    # modulo al cerebro. Es una entrada de ADC de verdad y no estaba sentada:
+    # el unico "mux" que este censo contaba era el RESET del mux de bus I2C
+    # del descubrimiento (HUB_GPIO_VARIOS), que es otro objeto con el mismo
+    # nombre. Las lineas de direccion y los dos enables van en
+    # HUB_GPIO_VARIOS; aqui va el pin que de verdad escasea, porque ADC_IN no
+    # lo lleva cualquier pin.
+    mesa.append(("ADC:mux-perillas", adc))
     if any(not c for _, c in mesa):
         return None
     return mesa
@@ -1136,9 +1144,25 @@ def main() -> int:
 #   * MIDI DIN in/out por UART (2), el ESP32-S3 por UART + EN + boot (4),
 #     la radio ESB por SPI/UART + IRQ + EN (4, ESTIMADO sin pieza),
 #     clock/reset in/out (4), INT/RST del tactil + PWM del backlight (3),
-#     RESET del mux (1). La cadena WS2812 cobraba aqui 1 pin con canal de
+#     RESET del mux I2C del descubrimiento (1), y el direccionamiento del
+#     MUX DE PERILLAS (6). La cadena WS2812 cobraba aqui 1 pin con canal de
 #     timer o MOSI; se retiro el 2026-09-03 (spec del instrumento entero, D1)
-#     y el censo baja de 27 a 26.
+#     y el censo bajo de 27 a 26; el mux de perillas lo sube a 32.
+#
+#   OJO CON LA PALABRA "MUX": aqui viven DOS. El del descubrimiento es un
+#   multiplexor de BUS I2C y cobra 1 pin (su RESET). El de perillas es un
+#   multiplexor ANALOGICO y cobra 6 GPIO + 1 entrada de ADC (esta ultima en
+#   la mesa, no aqui). Confundirlos costo una cifra mala en el papel del
+#   2026-09-04: se leyo "mux" en la salida y se dio por contada una poblacion
+#   que no estaba sentada.
+#
+#   El mux de perillas, con su cuenta: 20 potes de la fila A (16 curadas +
+#   4 MACRO, panel-frontal-gramatica sec.4) no caben en un 16:1, asi que son
+#   DOS CD74HC4067 -- la pieza que el VCO-16 sec.11 ya nombra para el camino
+#   digital -- con las 4 lineas de direccion compartidas y un enable cada
+#   uno: 4 + 2 = 6 GPIO. Las dos salidas comparten la entrada de ADC porque
+#   solo uno esta habilitado a la vez. ESTIMADO: la pieza del panel no esta
+#   elegida y el reparto 16+4 puede cambiar si el censo de perillas crece.
 HUB_SPIS = ("SPI1", "SPI2", "SPI3", "SPI4", "SPI5", "SPI6")
 HUB_RANURAS_USART = 2
 HUB_GPIO_VARIOS = (HUB_RANURAS_USART * 4   # CK, TX, RX, CS-por-GPIO
@@ -1147,7 +1171,8 @@ HUB_GPIO_VARIOS = (HUB_RANURAS_USART * 4   # CK, TX, RX, CS-por-GPIO
                    + 4                     # radio ESB: bus x2, IRQ, EN (ESTIMADO)
                    + 4                     # clock/reset in/out
                    + 3                     # tactil INT/RST + PWM backlight
-                   + 1)                    # RESET del mux I2C
+                   + 1                     # RESET del mux I2C (bus)
+                   + 6)                    # mux de perillas: 4 dir + 2 EN
 HUB_HOLGURA = 4                            # la misma que exige el censo de la Voz
 
 
