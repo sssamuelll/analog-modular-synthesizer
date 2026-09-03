@@ -7,7 +7,22 @@ python hardware/tools/gates.py
 ```
 
 Ejecuta **todos** los `check_*.py`, todos los `*_budget.py`, todo lo de
-`simulations/*/` y `netdiff.py`, y suma. Tarda ~2 s con KiCad instalado.
+`simulations/*/` y `netdiff.py`, y suma. Medido el 2026-09-02 con KiCad
+instalado: **57,6 / 58,8 / 60,2 s** en tres corridas seguidas con la máquina
+libre, y **77 s** en una corrida con renders y otro KiCad al lado. La carga
+manda: el número que se cita es el de la máquina libre, y el de arriba es el
+techo visto. El reparto importa más que el total, porque casi todo es una sola
+puerta:
+
+| puerta | s |
+|---|---|
+| `case/clearance_budget.py` | 35,1 |
+| `hardware/01-power-supply/v3/kicad/check_pcb_mutations.py` | 8,1 |
+| `simulations/vco/iv_stage.py` | 4,4 |
+| `case/check_dxf.py` | 3,5 |
+| `hardware/01-power-supply/v3/kicad/check_pcb.py` | 1,0 |
+
+Las 43 restantes suman menos de 6 s entre todas.
 
 > **Córrelo a mano antes de cada PR.** El job existe en
 > `.github/workflows/ci.yml`, pero **GitHub Actions está deshabilitado en este

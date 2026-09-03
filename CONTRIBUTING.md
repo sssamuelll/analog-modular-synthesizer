@@ -74,7 +74,11 @@ mismo orden:
 | `firmware` | `ruff check .` y `pytest` en `software/midi-cv` |
 | `nucleo` | `cargo test`, `cargo clippy -D warnings` y `cargo fmt --check` en `software/nucleo` |
 
-Tarda unos dos minutos y medio; casi todo es `check_pcb.py` de la fuente v3.
+Tarda unos 60 s en total con la máquina libre, y hasta unos 80 s con carga:
+58-60 s son `gates.py` y unos 2 s las otras seis etapas de esta tabla, con el
+*target* de cargo caliente. Medido el 2026-09-02.
+Dentro de `gates.py` el que manda es `clearance_budget.py` del cajón, con 35 s;
+`check_pcb.py` de la fuente v3 ocupa 1,0 s y sus canarios 8,1 s desde el #139.
 
 Y cubre **más** que el workflow: los dos guiones que necesitan el Python de
 KiCad salían HUECO en CI —instalar KiCad en el runner costaba más de lo que

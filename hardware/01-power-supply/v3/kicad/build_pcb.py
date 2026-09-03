@@ -47,6 +47,8 @@ para esta fase -- y es exactamente lo que hizo la v2 entre sus Tareas 7 y 8.
 from __future__ import annotations
 
 import csv
+from functools import cache
+from itertools import pairwise
 import json
 import math
 import os
@@ -132,6 +134,7 @@ FUGA_MIN = 6.0                  # cobre de red <-> cobre SELV (heredado v1)
 NETS_RED = {"L", "L_TR", "N", "PE", "L_SMPS", "N_SMPS"}
 
 
+@cache
 def es_red(net: str) -> bool:
     return net.lstrip("/") in NETS_RED
 
@@ -365,9 +368,9 @@ VIA_D, VIA_TALADRO = 0.6, 0.3
 VIA_A_VIA = VIA_D + CLEARANCE_MM
 # Y dos TALADROS tampoco, aunque sean de la misma red: eso ya no es electrico
 # sino de taladrado, y por eso revisar_vias() -- que salta el par cuando las
-# dos vias comparten red -- no lo veia. min_hole_clearance del proyecto.
+# dos vias comparten red -- no lo veia. El limite se calcula con los dos
+# diametros reales mas min_hole_clearance del proyecto.
 HOLE_CLEARANCE = 0.25
-TALADRO_A_TALADRO = VIA_TALADRO + HOLE_CLEARANCE
 ANCHO_POT, ANCHO_SEN, ANCHO_RED = 1.0, 0.4, 1.0
 # Anchos nuevos de la Tarea 8 (spec sec.6, brief):
 ANCHO_ISLA = 0.5     # +13V1/-12V9 locales, ILIM, OUT->ballast, fugas de GND
@@ -519,10 +522,9 @@ class Ruteo:
 # Y va como ARBOL, no como plano. Un plano de masa es la respuesta correcta en
 # casi cualquier placa digital y la equivocada aqui: un plano crea lazos, y un
 # lazo alrededor del puente rectificador es una espira de 100 Hz acoplada a
-# todo. revisar_estrella() lo comprueba con union-find sobre los extremos de
-# los tramos, asi que las costillas se parten en cada punto de enganche -- si
-# fueran un solo tramo de punta a punta, el union-find solo veria sus dos
-# extremos y un lazo de verdad pasaria sin que nadie lo viera.
+# todo. revisar_estrella() parte tambien los enganches interiores antes de su
+# union-find. Las costillas se emiten partidas igualmente: TRACKS conserva la
+# topologia explicita y el generador sigue siendo legible sin reconstruirla.
 #
 # Forma: un PEINE. Tronco vertical en x=11 (el canal libre del canto
 # izquierdo), y siete costillas horizontales en las bandas donde no hay ningun
@@ -819,6 +821,178 @@ def rutear_gnd(r: Ruteo) -> None:
 
     for a, b in zip(GND_COSTILLAS, GND_COSTILLAS[1:]):
         r.pista(B, [(GND_TRONCO_X, a), (GND_TRONCO_X, b)], ANCHO_GND, red=ref_gnd)
+
+    _podar_vias_redundantes(r)
+
+
+def _podar_vias_redundantes(r: Ruteo) -> None:
+    """Quita las vias de GND que cierran un lazo. sec.14.5: «ni un bucle».
+
+    La FORMA del arbol la fijan las constantes, pero el fanout no. Cuando dos
+    pads vecinos escapan hacia el mismo pasillo, sus rabitos de F.Cu se
+    tocan; si despues cada uno baja con su propia via a la misma costilla, la
+    segunda bajada cierra una espira. Son tres pads de U11 los que lo hacian,
+    y ninguna regla lo veia porque el union-find no miraba las vias.
+
+    Quitar una arista que cierra un ciclo NUNCA desconecta: por definicion
+    sus dos extremos ya estaban unidos por otro camino. Por eso esto es poda
+    y no reruteo, y por eso el ratsnest sigue en cero despues.
+
+    Si el lazo lo cierra una PISTA no hay via que quitar -- eso es el arbol
+    mal trazado, no un fanout de mas -- y revienta aqui con los dos puntos.
+    """
+    _, cierres, _ = grafo_gnd(r.tracks, r.vias)
+    if not cierres:
+        return
+    fuera = []
+    for tipo, a, b in cierres:
+        if tipo != "via":
+            raise AssertionError(
+                f"el arbol de masa cierra un lazo por PISTA entre {a} y {b}: "
+                "no lo arregla quitar una via, esta mal trazado")
+        fuera.append((a[0], a[1]))
+    quedan, quitadas = [], 0
+    for v in r.vias:
+        if v[2].lstrip("/") == "GND" and any(
+                abs(v[0] - x) <= 0.001 and abs(v[1] - y) <= 0.001
+                for x, y in fuera):
+            quitadas += 1
+            continue
+        quedan.append(v)
+    assert quitadas == len(fuera), (
+        f"se iban a quitar {len(fuera)} vias de GND y casaron {quitadas}")
+    r.vias[:] = quedan
+    muertos = _recortar_cobre_muerto(r)
+    print(f"  poda del arbol de masa: {quitadas} vias de GND que cerraban "
+          f"lazo, y {muertos} tramos de cobre que se quedaron sin servir")
+
+
+def _malla_gnd(board, tracks, vias, red: str = "GND"):
+    """La malla de `red` con sus grados y sus anclajes.
+
+    Un nodo esta ANCLADO si hay un pad de la red encima o si hay una via.
+    Lo usan los dos que necesitan saber que cobre lleva a alguna parte: la
+    poda del generador, que recorta, y revisar_cobre_muerto(), que asevera.
+    """
+    _, _, tramos = grafo_gnd(tracks, vias, red)
+
+    anclas = [
+        (p.GetPosition().x / 1e6, p.GetPosition().y / 1e6)
+        for fp in board.GetFootprints() for p in fp.Pads()
+        if p.GetNetname().lstrip("/") == red
+    ] + [
+        (vx, vy) for vx, vy, vnet, _a, _t in vias
+        if vnet.lstrip("/") == red
+    ]
+
+    def anclado(nodo):
+        return any(abs(nodo[0] - a[0]) <= 0.001 and abs(nodo[1] - a[1]) <= 0.001
+                   for a in anclas)
+
+    aristas: dict = {}
+    grado: dict = {}
+    for idx, capa, nodos, ancho in tramos:
+        for p, q in pairwise(nodos):
+            clave = (min(p, q), max(p, q), capa)
+            if clave in aristas:
+                continue
+            aristas[clave] = (idx, ancho)
+            for n in ((*p, capa), (*q, capa)):
+                grado[n] = grado.get(n, 0) + 1
+    return tramos, aristas, grado, anclado
+
+
+def revisar_cobre_muerto(board, red: str = "GND") -> list[str]:
+    """Ni un munon: cobre de masa con una punta que no lleva a ningun sitio.
+
+    Electricamente no rompe nada -- el ratsnest sigue en cero -- y por eso
+    ninguna otra puerta lo ve. Pero es una antena colgada del arbol de masa,
+    y el DRC de KiCad lo llama `track_dangling`. La v3 declara CERO
+    infracciones de DRC, y ese DRC es un paso MANUAL del pipeline de fab: si
+    la unica puerta que corre sola no lo mira, el dia que alguien no lo corra
+    el munon se fabrica.
+
+    Salio de la poda del arbol (sec.14.5): quitar una via redundante deja
+    colgando su bajante y su rabito, y hubo que recortarlos. Esta regla es lo
+    que asevera que el recorte se hizo.
+    """
+    _tramos, _aristas, grado, anclado = _malla_gnd(board, TRACKS, VIAS, red)
+    return [
+        f"cobre de {red} sin servir: punta suelta en "
+        f"({n[0]:.4f}, {n[1]:.4f}) de {n[2]}"
+        for n, g in sorted(grado.items())
+        if g == 1 and not anclado(n[:2])
+    ]
+
+
+def _recortar_cobre_muerto(r: Ruteo, red: str = "GND") -> int:
+    """Quita el cobre de `red` que ya no lleva a ninguna parte.
+
+    Al quitar una via se quedan colgando su bajante de B.Cu y el rabito de
+    F.Cu que iba a buscarla. No es un fallo electrico -- el ratsnest sigue en
+    cero -- pero es una antena, y el DRC de KiCad lo canta como
+    `track_dangling`. La v3 declara cero infracciones: un munon de 8 mm en el
+    arbol de masa no entra por la puerta de atras.
+
+    Un nodo esta ANCLADO si hay un pad de la red encima o si hay una via que
+    sobrevivio. Lo demas se recorta: mientras haya un nodo de grado 1 sin
+    anclar, su arista se va. Es iterativo porque quitar un tramo puede dejar
+    colgando al de al lado, y lo hace por TRAMOS, no por pistas enteras: el
+    rabito vertical de U11 sujeta a tres pads en su primera mitad y solo
+    sobra la segunda.
+    """
+    board = r.board
+    tramos, aristas, grado, anclado = _malla_gnd(board, r.tracks, r.vias, red)
+    if not tramos:
+        return 0
+    quitadas: set = set()
+    while True:
+        hoja = None
+        for (a, b, capa), _ in aristas.items():
+            if (a, b, capa) in quitadas:
+                continue
+            for extremo, otro in (((*a, capa), (*b, capa)),
+                                  ((*b, capa), (*a, capa))):
+                if grado.get(extremo, 0) == 1 and not anclado(extremo[:2]):
+                    hoja = (a, b, capa, extremo, otro)
+                    break
+            if hoja:
+                break
+        if not hoja:
+            break
+        a, b, capa, extremo, otro = hoja
+        quitadas.add((a, b, capa))
+        del aristas[(a, b, capa)]
+        grado[extremo] -= 1
+        grado[otro] -= 1
+
+    if not quitadas:
+        return 0
+
+    # se reescriben SOLO las pistas de la red tocadas, uniendo los tramos que
+    # sobreviven en tiradas seguidas para no partir el cobre sin motivo
+    vivas: dict = {}
+    for idx, capa, nodos, ancho in tramos:
+        tirada = []
+        for p, q in pairwise(nodos):
+            if (min(p, q), max(p, q), capa) in quitadas:
+                if len(tirada) > 1:
+                    vivas.setdefault(idx, []).append((capa, tirada, ancho))
+                tirada = []
+            else:
+                tirada = (tirada or [p]) + [q]
+        if len(tirada) > 1:
+            vivas.setdefault(idx, []).append((capa, tirada, ancho))
+
+    nuevas = []
+    for idx, (net, capa, pts, ancho) in enumerate(r.tracks):
+        if net.lstrip("/") != red:
+            nuevas.append((net, capa, pts, ancho))
+            continue
+        for capa_v, tirada, ancho_v in vivas.get(idx, []):
+            nuevas.append((net, capa_v, list(tirada), ancho_v))
+    r.tracks[:] = nuevas
+    return len(quitadas)
 
 
 # --- la red, bajo la barrera -----------------------------------------------
@@ -1718,14 +1892,120 @@ def dist_seg(a, b, c, d) -> float:
                punto_seg(c, a, b), punto_seg(d, a, b))
 
 
-def revisar_estrella() -> list[str]:
-    """Que GND sea un ARBOL y no una malla (heredado v1, sec.7).
+def _aabb_descarta(caja1, caja2, limite: float) -> bool:
+    '''La distancia entre cajas ya garantiza que no hay infraccion.
 
-    Union-find sobre los extremos de los tramos de GND. Con TRACKS vacio (no
-    hay rutas todavia) esto es un no-op que devuelve [] — correcto: la
-    Tarea 8 es quien rutea y quien de verdad ejercita este check.
+    La caja es una cota inferior: solo evita el calculo exacto cuando hasta
+    los puntos mas cercanos cumplen el limite. La igualdad se descarta porque
+    todos los revisores marcan exclusivamente distancias menores.
+    '''
+    if caja1[2] < caja2[0]:
+        dx = caja2[0] - caja1[2]
+    elif caja2[2] < caja1[0]:
+        dx = caja1[0] - caja2[2]
+    else:
+        dx = 0.0
+    if caja1[3] < caja2[1]:
+        dy = caja2[1] - caja1[3]
+    elif caja2[3] < caja1[1]:
+        dy = caja1[1] - caja2[3]
+    else:
+        dy = 0.0
+    return dx * dx + dy * dy >= limite * limite
+
+
+def grafo_gnd(tracks, vias, red: str = "GND"):
+    """Grafo del cobre de `red`: nodos (x, y, capa), vias como aristas.
+
+    Un nodo es un punto DE UNA CAPA. Dos cobres que se cruzan en capas
+    distintas no son un nodo -- eso es un cruce, no una union -- y por eso la
+    transicion de capa tiene que entrar por su sitio: cada via de la red que
+    encuentre cobre en sus dos caras aporta UNA arista entre sus dos nodos.
+    Sin esa arista el grafo se parte por capas y una espira que sale por
+    arriba y vuelve por abajo queda invisible, que es justo la que sec.7
+    prohibe.
+
+    Los tramos se parten en cada cruce o enganche interior de su eje: si una
+    costilla fuera un solo tramo de punta a punta, el union-find solo veria
+    sus dos extremos y un lazo de verdad pasaria sin que nadie lo viera.
+
+    Las aristas de PISTA se procesan antes que las de VIA. Asi, cuando un
+    lazo se puede romper quitando una via redundante, la que sobra sale
+    marcada como `via` -- y quitarla nunca desconecta nada, porque una arista
+    que cierra un ciclo jamas es un puente.
+
+    Devuelve (aristas, cierres, tramos). `cierres` es la lista de
+    (tipo, a, b) de las aristas que encontraron sus dos extremos ya unidos:
+    una por cada lazo independiente. `tramos` es cada pista de la red partida
+    en sus nodos, que es lo que necesita la poda para recortar sin adivinar.
+
+    LIMITE DECLARADO: el grafo es de pistas y vias. Dos pads de la misma
+    huella unidos por su propio cobre no son una arista aqui; esa
+    conectividad la mide el ratsnest de KiCad en check_pcb.py.
     """
+    eps = 1e-7
+    # 1 um de tolerancia entre nodos, y se aplica AGRUPANDO, no redondeando.
+    # Redondear no sirve: dos puntos a 0.5 um pueden caer a los dos lados de
+    # la frontera de la rejilla y salir MAS separados que antes. Aqui el
+    # primer punto de cada grupo se queda de representante y los que caen a
+    # menos de TOL se le pegan.
+    #
+    # Hace falta porque dos cobres a media micra, con 1 mm de ancho, se
+    # solapan enteros: son un nodo. Si la regla los separa, el lazo que pasa
+    # por ahi deja de verse.
+    tol = 0.001
+    _celdas: dict = {}
+
+    def punto(p):
+        gx, gy = int(p[0] // tol), int(p[1] // tol)
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for q in _celdas.get((gx + dx, gy + dy), ()):
+                    if abs(q[0] - p[0]) <= tol and abs(q[1] - p[1]) <= tol:
+                        return q
+        q = (p[0], p[1])
+        _celdas.setdefault((gx, gy), []).append(q)
+        return q
+
+    def resta(p, q):
+        return (p[0] - q[0], p[1] - q[1])
+
+    def cruz(p, q):
+        return p[0] * q[1] - p[1] * q[0]
+
+    def en_segmento(p, a, b):
+        ab, ap = resta(b, a), resta(p, a)
+        if abs(cruz(ab, ap)) > eps * max(1.0, abs(ab[0]) + abs(ab[1])):
+            return False
+        return (min(a[0], b[0]) - eps <= p[0] <= max(a[0], b[0]) + eps
+                and min(a[1], b[1]) - eps <= p[1]
+                <= max(a[1], b[1]) + eps)
+
+    def intersecciones(a, b, c, d):
+        r, s = resta(b, a), resta(d, c)
+        r2 = r[0] ** 2 + r[1] ** 2
+        s2 = s[0] ** 2 + s[1] ** 2
+        if r2 <= eps ** 2:
+            return {a} if en_segmento(a, c, d) else set()
+        if s2 <= eps ** 2:
+            return {c} if en_segmento(c, a, b) else set()
+        den = cruz(r, s)
+        ca = resta(c, a)
+        if abs(den) > eps:
+            t, u = cruz(ca, s) / den, cruz(ca, r) / den
+            if -eps <= t <= 1 + eps and -eps <= u <= 1 + eps:
+                return {punto((a[0] + t * r[0], a[1] + t * r[1]))}
+            return set()
+        if abs(cruz(ca, r)) > eps * max(1.0, abs(r[0]) + abs(r[1])):
+            return set()
+        return {
+            p for p in (a, b, c, d)
+            if en_segmento(p, a, b) and en_segmento(p, c, d)
+        }
+
     padre: dict = {}
+    aristas: set = set()
+    cierres: list = []
 
     def raiz(n):
         while padre[n] != n:
@@ -1733,21 +2013,99 @@ def revisar_estrella() -> list[str]:
             n = padre[n]
         return n
 
-    bucles = []
-    for net, _capa, pts, _a in TRACKS:
-        if net != "GND":
+    def unir(a, b, tipo):
+        if a == b:
+            return
+        arista = tuple(sorted((a, b)))
+        if arista in aristas:
+            return
+        aristas.add(arista)
+        for n in (a, b):
+            padre.setdefault(n, n)
+        ra, rb = raiz(a), raiz(b)
+        if ra == rb:
+            cierres.append((tipo, a, b))
+        else:
+            padre[ra] = rb
+
+    segmentos = []
+    for idx, (net, capa, pts, ancho) in enumerate(tracks):
+        if net.lstrip("/") != red:
             continue
         for i in range(len(pts) - 1):
-            a = (round(pts[i][0], 2), round(pts[i][1], 2))
-            b = (round(pts[i + 1][0], 2), round(pts[i + 1][1], 2))
-            for n in (a, b):
-                padre.setdefault(n, n)
-            ra, rb = raiz(a), raiz(b)
-            if ra == rb:
-                bucles.append(f"bucle de GND al unir {a} con {b}")
-            else:
-                padre[ra] = rb
-    return bucles
+            a, b = punto(pts[i]), punto(pts[i + 1])
+            segmentos.append([capa, a, b, {a, b}, idx, ancho])
+
+    for i, s1 in enumerate(segmentos):
+        capa1, a, b, cortes1 = s1[:4]
+        for s2 in segmentos[i + 1:]:
+            capa2, c, d, cortes2 = s2[:4]
+            if capa1 != capa2:
+                continue
+            if (max(a[0], b[0]) + eps < min(c[0], d[0])
+                    or max(c[0], d[0]) + eps < min(a[0], b[0])
+                    or max(a[1], b[1]) + eps < min(c[1], d[1])
+                    or max(c[1], d[1]) + eps < min(a[1], b[1])):
+                continue
+            cruces = intersecciones(a, b, c, d)
+            cortes1.update(cruces)
+            cortes2.update(cruces)
+
+    # LAS VIAS TAMBIEN PARTEN. Una via no siempre cae en la punta de un
+    # tramo: puede posarse a mitad de recorrido, y ahi une igual. Si el tramo
+    # no se parte por ella, sus dos caras no tienen nodo en ese punto, la
+    # arista de via no se puede crear y el lazo que pasa por ahi se pierde.
+    # Lo destapo un canario: coser las dos caras en (16.525, 66.0) cerraba
+    # una espira que la regla no veia.
+    for vx, vy, vnet, _a, _t in vias:
+        if vnet.lstrip("/") != red:
+            continue
+        p = punto((vx, vy))
+        for seg in segmentos:
+            if en_segmento(p, seg[1], seg[2]):
+                seg[3].add(p)
+
+    tramos = []
+    for capa, a, b, cortes, idx, ancho in segmentos:
+        ordenados = sorted(
+            cortes,
+            key=lambda p: (p[0] - a[0]) ** 2 + (p[1] - a[1]) ** 2,
+        )
+        tramos.append((idx, capa, ordenados, ancho))
+        for p, q in pairwise(ordenados):
+            unir((*p, capa), (*q, capa), "pista")
+
+    # LAS VIAS, DESPUES. Una via solo une lo que ya existe: si en una de sus
+    # dos caras no hay cobre de la red, no hay nodo que unir y no aporta
+    # arista -- ahi la via toca un pad, y de los pads se encarga el ratsnest.
+    for vx, vy, vnet, _ancho, _taladro in vias:
+        if vnet.lstrip("/") != red:
+            continue
+        p = punto((vx, vy))
+        arriba, abajo = (*p, "F.Cu"), (*p, "B.Cu")
+        if arriba in padre and abajo in padre:
+            unir(arriba, abajo, "via")
+
+    return aristas, cierres, tramos
+
+
+def revisar_estrella() -> list[str]:
+    """Que GND sea un ARBOL y no una malla (heredado v1, sec.7).
+
+    «Aqui GND es un arbol: sale del punto de estrella, cada rama muere en su
+    grupo funcional, y no hay ni un bucle» (design-notes sec.14.5). Un plano
+    de masa une todo con todo por el camino mas corto, y un lazo alrededor
+    del puente rectificador es una espira de 100 Hz acoplada a todo.
+
+    Un bucle NO se ve mirando el dibujo -- se ve igual que una rama -- asi
+    que se comprueba con union-find sobre el grafo de grafo_gnd(), vias
+    incluidas. Cero bucles, sin tolerancia de area: el papel no la da.
+    """
+    _, cierres, _ = grafo_gnd(TRACKS, VIAS)
+    return [
+        f"bucle de GND al cerrar por {tipo} {a} con {b}"
+        for tipo, a, b in cierres
+    ]
 
 
 def dist_seg_rect(a, b, cx, cy, hw, hh) -> float:
@@ -1764,26 +2122,23 @@ def dist_seg_rect(a, b, cx, cy, hw, hh) -> float:
     espiritu que el recalibrado de reglas() (Tarea 8 ronda 1): la
     aproximacion heredada ahogaba el escape de los DFN sin motivo real.
     """
-    def clamp(v, lo, hi):
-        return max(lo, min(hi, v))
+    izquierda, derecha = cx - hw, cx + hw
+    arriba, abajo = cy - hh, cy + hh
 
-    def dist_punto_rect(p):
-        qx = clamp(p[0], cx - hw, cx + hw)
-        qy = clamp(p[1], cy - hh, cy + hh)
-        return ((p[0] - qx) ** 2 + (p[1] - qy) ** 2) ** 0.5
+    def dentro(p):
+        return izquierda <= p[0] <= derecha and arriba <= p[1] <= abajo
 
-    # Muestreo denso a lo largo del segmento (incluye los dos extremos) --
-    # suficiente para segmentos cortos como los de TRACKS; 0 en cuanto
-    # algun punto cae dentro del rectangulo.
-    n = 20
-    mejor = float("inf")
-    for i in range(n + 1):
-        t = i / n
-        p = (a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]))
-        if cx - hw <= p[0] <= cx + hw and cy - hh <= p[1] <= cy + hh:
-            return 0.0
-        mejor = min(mejor, dist_punto_rect(p))
-    return mejor
+    if dentro(a) or dentro(b):
+        return 0.0
+
+    esquinas = [
+        (izquierda, arriba),
+        (derecha, arriba),
+        (derecha, abajo),
+        (izquierda, abajo),
+    ]
+    aristas = zip(esquinas, esquinas[1:] + esquinas[:1])
+    return min(dist_seg(a, b, c, d) for c, d in aristas)
 
 
 def revisar_pista_pad(board) -> list[str]:
@@ -1808,13 +2163,19 @@ def revisar_pista_pad(board) -> list[str]:
     for net, capa, pts, ancho in TRACKS:
         for i in range(len(pts) - 1):
             a, b = pts[i], pts[i + 1]
+            caja_tramo = (min(a[0], b[0]), min(a[1], b[1]),
+                          max(a[0], b[0]), max(a[1], b[1]))
             for nom, pnet, px, py, hw, hh, enF, enB in pads:
                 if pnet == net:
                     continue
                 if not (enF if capa == "F.Cu" else enB):
                     continue
-                d = dist_seg_rect(a, b, px, py, hw, hh) - ancho / 2
                 minimo = 2.5 if (es_red(net) or es_red(pnet)) else CLEARANCE_MM
+                caja_pad = (px - hw, py - hh, px + hw, py + hh)
+                if _aabb_descarta(caja_tramo, caja_pad,
+                                  minimo + ancho / 2):
+                    continue
+                d = dist_seg_rect(a, b, px, py, hw, hh) - ancho / 2
                 if d < minimo:
                     malos.append(f"{net} en {capa} a {d:.2f}mm del pad "
                                  f"{nom}[{pnet}] ({a}-{b})")
@@ -1854,11 +2215,15 @@ def revisar_vias(board) -> list[str]:
                          pad.GetNetname(), cx, cy, hw, hh))
     for vx, vy, vnet, vancho, _ in VIAS:
         vr = vancho / 2
+        caja_via = (vx, vy, vx, vy)
         for nom, pnet, px, py, hw, hh in pads:
             if pnet == vnet:
                 continue
-            d = dist_seg_rect((vx, vy), (vx, vy), px, py, hw, hh) - vr
             minimo = 2.5 if (es_red(vnet) or es_red(pnet)) else CLEARANCE_MM
+            caja_pad = (px - hw, py - hh, px + hw, py + hh)
+            if _aabb_descarta(caja_via, caja_pad, minimo + vr):
+                continue
+            d = dist_seg_rect((vx, vy), (vx, vy), px, py, hw, hh) - vr
             if d < minimo:
                 malos.append(f"via {vnet} en ({vx},{vy}) a {d:.2f}mm "
                              f"del pad {nom}[{pnet}]")
@@ -1867,22 +2232,28 @@ def revisar_vias(board) -> list[str]:
                 continue
             for i in range(len(pts) - 1):
                 a, b = pts[i], pts[i + 1]
-                d = dist_seg(a, b, (vx, vy), (vx, vy)) - vr - ancho / 2
                 minimo = 2.5 if (es_red(net) or es_red(vnet)) else CLEARANCE_MM
+                caja_tramo = (min(a[0], b[0]), min(a[1], b[1]),
+                              max(a[0], b[0]), max(a[1], b[1]))
+                if _aabb_descarta(caja_via, caja_tramo,
+                                  minimo + vr + ancho / 2):
+                    continue
+                d = dist_seg(a, b, (vx, vy), (vx, vy)) - vr - ancho / 2
                 if d < minimo:
                     malos.append(f"via {vnet} en ({vx},{vy}) a {d:.2f}mm "
                                  f"de pista {net} ({a}-{b})")
-    for i, (x1, y1, n1, a1, _t1) in enumerate(VIAS):
-        for x2, y2, n2, a2, _t2 in VIAS[i + 1:]:
+    for i, (x1, y1, n1, a1, t1) in enumerate(VIAS):
+        for x2, y2, n2, a2, t2 in VIAS[i + 1:]:
             centros = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
             # Dos vias de la MISMA red pueden tocarse en cobre -- son el mismo
             # nodo -- pero sus TALADROS no: eso es una regla de fabricacion,
             # no electrica. El `continue` de aqui se comia justamente ese
             # caso, y el DRC real lo canto (dos vias de GND a 0.5 mm).
-            if centros < TALADRO_A_TALADRO:
+            minimo_taladros = t1 / 2 + t2 / 2 + HOLE_CLEARANCE
+            if centros < minimo_taladros:
                 malos.append(f"via {n1}({x1},{y1}) y via {n2}({x2},{y2}): "
                              f"taladros a {centros:.2f}mm de centro a centro "
-                             f"y hacen falta {TALADRO_A_TALADRO}")
+                             f"y hacen falta {minimo_taladros:.2f}")
             if n1 == n2:
                 continue
             d = centros - a1 / 2 - a2 / 2
@@ -1901,14 +2272,19 @@ def revisar_pistas() -> list[str]:
     segs = []
     for net, capa, pts, ancho in TRACKS:
         for i in range(len(pts) - 1):
-            segs.append((net, capa, pts[i], pts[i + 1], ancho))
+            a, b = pts[i], pts[i + 1]
+            caja = (min(a[0], b[0]), min(a[1], b[1]),
+                    max(a[0], b[0]), max(a[1], b[1]))
+            segs.append((net, capa, a, b, ancho, caja))
     malos = []
-    for i, (n1, c1, a, b, w1) in enumerate(segs):
-        for n2, c2, c, d, w2 in segs[i + 1:]:
+    for i, (n1, c1, a, b, w1, caja1) in enumerate(segs):
+        for n2, c2, c, d, w2, caja2 in segs[i + 1:]:
             if c1 != c2 or n1 == n2:
                 continue
-            hueco = dist_seg(a, b, c, d) - (w1 + w2) / 2
             minimo = 2.5 if (es_red(n1) or es_red(n2)) else CLEARANCE_MM
+            if _aabb_descarta(caja1, caja2, minimo + (w1 + w2) / 2):
+                continue
+            hueco = dist_seg(a, b, c, d) - (w1 + w2) / 2
             if hueco < minimo:
                 malos.append(f"{n1}~{n2} en {c1} a {hueco:.2f}mm "
                              f"({a}-{b} vs {c}-{d})")
@@ -2579,6 +2955,8 @@ def main() -> None:
     print(f"pistas encima de un pad ajeno: {len(contra_pad)}")
     for c in contra_pad[:8]:
         print(f"    {c}")
+    munones = revisar_cobre_muerto(board)
+    print(f"cobre de masa sin servir (munones): {len(munones)} {munones[:4]}")
     contra_via = revisar_vias(board)
     print(f"vias contra pad/pista/via ajena: {len(contra_via)}")
     for c in contra_via[:8]:
@@ -2621,6 +2999,7 @@ def main() -> None:
     assert not contra_pad, f"pistas sobre pads ajenos: {contra_pad}"
     assert not contra_via, f"vias contra pad/pista/via ajena: {contra_via}"
     assert not bucles, f"la masa tiene bucles, no es una estrella: {bucles}"
+    assert not munones, f"cobre de masa colgando sin servir: {munones}"
     assert not cerca, f"taladros demasiado cerca de la red: {cerca}"
     assert not smd_mal, f"SMD fuera de F.Cu: {smd_mal}"
     assert not isla_mal, f"isla GNDREF mal: {isla_mal}"

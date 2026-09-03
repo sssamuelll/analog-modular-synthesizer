@@ -669,8 +669,17 @@ camino más corto — justo lo contrario de la estrella de §7 y del retorno
 dedicado de §10.1. Aquí GND es un árbol: sale del punto de estrella (`C1.2`, en
 el bulk del riel positivo), cada rama muere en su grupo funcional, y no hay ni
 un bucle. Eso último **no se puede ver mirando el dibujo** — un bucle de masa se
-ve igual que una rama — así que `build_pcb.py` lo comprueba con union-find sobre
-los extremos de los tramos y aborta si encuentra uno.
+ve igual que una rama — así que `build_pcb.py` lo comprueba con union-find y
+aborta si encuentra uno.
+
+> **Corregido el 2026-09-02 (#139).** El union-find iba sobre los extremos de
+> los tramos y nada más, y eso deja fuera dos cosas: los enganches que caen a
+> mitad de una costilla, y **las vías**. Sin las vías el grafo se parte por
+> capas, y la espira que sale por una cara y vuelve por la otra —que en una
+> placa de dos capas con masa en las dos es *la* forma en que un lazo
+> aparece— quedaba invisible. Ahora los tramos se parten en cada cruce y en
+> cada vía, y cada vía de masa con cobre en sus dos caras es una arista. La
+> v3 tenía dos espiras así; se podaron.
 
 El **retorno dedicado del +5 V** (`J6.2`) sube por el canto derecho, la única
 columna libre de ramas, y entra a la estrella por su propia vía. No toca ninguna
