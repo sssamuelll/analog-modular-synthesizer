@@ -82,7 +82,9 @@ las dos potencias maximas se DERIVAN en vez de transcribirse. Consecuencias:
     derating() vale CERO por encima de 85 C. Con el calor bien cobrado el
     punto fijo aterriza arriba del acantilado --86,7 C, rack a CERO-- y eso
     si es consistente: sin venteo nuevo no opera ningun modulo del rack.
-    _fixed_point() lo asevera ahora (TOLERANCIA_PUNTO_FIJO_K).
+    _fixed_point() lo COMPRUEBA ahora, en amperios y no en kelvin, y donde no
+    hay punto fijo devuelve CERO en vez de reventar: ver ahi por que un
+    aserto habria convertido un dato termico en un rojo de CI.
 
 ## Lo que este modelo NO cubre
 
@@ -186,7 +188,8 @@ T_ABS_AIRE_K = 318.0         # K; mandato T3 para sala 45 C, no 293 K del case.
 
 AREA_BUSQUEDA_MAX_MM2 = 200000.0  # mm2; mandato directo: buscar hasta aqui.
 PASOS_BISECCION_T = 60            # COTA: 200 K / 2^60, precision sobrada.
-TOLERANCIA_PUNTO_FIJO_K = 0.05    # K; la biseccion cierra muy por debajo.
+TOLERANCIA_PUNTO_FIJO_A = 0.02    # fraccion de PLACA_A; la biseccion cierra
+                                  # con residuo 1e-14 en un punto fijo real.
 PASOS_BISECCION_AREA = 48         # COTA: resolucion mucho menor que 1 mm2.
 PASOS_BISECCION_DT = 80           # COTA: biseccion termica, precision sobrada.
 PASO_AREA_DISENO_MM2 = 100.0      # mm2; plan T3, redondear arriba a centena.
@@ -331,18 +334,36 @@ def _fixed_point(p: Mapping[str, float], *,
         else:
             hi = mid
     temp = (lo + hi) / 2.0
-    # Y QUE SEA UN PUNTO FIJO DE VERDAD. La biseccion converge igual de bien
-    # sobre una DISCONTINUIDAD, y ahi devuelve un estado que no existe: hasta
-    # el 2026-09-03 la caja cerrada publicaba 0,95 / 0,95 / 2,0 A "a 92,6 C",
-    # que son las corrientes de la frontera de 85 C con la temperatura de otro
-    # punto. Con el reparto de calor bueno la caja cerrada aterriza arriba del
-    # acantilado, con el rack a CERO, y eso si es consistente.
-    assert abs(t_desde(temp) - temp) < TOLERANCIA_PUNTO_FIJO_K, (
-        f"la biseccion aterrizo en {temp:.2f} C y el calor de ese estado da "
-        f"{t_desde(temp):.2f}: no es un punto fijo sino un salto de la curva "
-        f"(derating() vale 0 por encima de {85:.0f} C). Lo que salga de aqui "
-        f"no es un estado del aparato")
-    return {r: sostenido_a(r, temp) for r in PLACA_A}
+    # Y QUE SEA UN PUNTO FIJO DE VERDAD, comprobado SOBRE LAS CORRIENTES.
+    #
+    # La biseccion converge igual de bien sobre una DISCONTINUIDAD que sobre
+    # una raiz, y ahi devuelve un estado que no existe: hasta el 2026-09-03 la
+    # caja cerrada publicaba 0,95 / 0,95 / 2,0 A "a 92,6 C", que son las
+    # corrientes de la frontera de 85 C con la temperatura de otro punto.
+    #
+    # LA COMPROBACION VA EN AMPERIOS Y NO EN KELVIN, y la diferencia importa.
+    # Un residuo de temperatura pequeno no prueba nada donde la curva salta:
+    # entre 3716 y 3729 mm2 de venteo la biseccion aterriza en 85,0000 exacto,
+    # publica esos mismos 0,95 A, y el residuo termico es 0,001-0,048 K --
+    # dentro de cualquier tolerancia razonable. En corrientes no hay ventana:
+    # el estado dice 0,95 A y a la temperatura que ese estado produce la hoja
+    # da 0,00. El criterio es el mismo que usa test_SOSTENIDO_es_un_punto_fijo.
+    #
+    # Y NO ES UN ASERTO, es un RESULTADO. Que la curva salte donde el aparato
+    # trabajaria no es un fallo del guion: es que ahi no hay estado sostenido
+    # que prometer. Se devuelve cero --nada operativo-- y guarda_liston() dira
+    # "SIGUE sin existir", que es lo que _busca_area_minima() sabe leer para
+    # empujar el area hacia arriba. Un assert aqui reventaria el IMPORT del
+    # modulo, y con el la puerta de power_budget.py, convirtiendo un dato
+    # termico en un rojo de CI: la caja cerrada esta hoy a 1,7 K de eso, y lo
+    # dispararian cambios que son MEJORAS (una sala peor caso mas benigna, un
+    # censo digital mas ligero).
+    corrientes = {r: sostenido_a(r, temp) for r in PLACA_A}
+    reales = {r: sostenido_a(r, t_desde(temp)) for r in PLACA_A}
+    if any(abs(corrientes[r] - reales[r]) > TOLERANCIA_PUNTO_FIJO_A * PLACA_A[r]
+           for r in PLACA_A):
+        return {r: 0.0 for r in PLACA_A}
+    return corrientes
 
 
 def guarda_liston(p: dict[str, float]) -> None:

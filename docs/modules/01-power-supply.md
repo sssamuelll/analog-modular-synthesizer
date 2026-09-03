@@ -13,8 +13,11 @@ Generar las tensiones reguladas requeridas por el bus SAM17:
 - **±12 V** — módulos analógicos (VCO, VCF, VCA, op-amps, OTAs), 650 mA/riel
   de envolvente de diseño, **174 mA/riel** de censo real medido (#70).
 - **+5 V** (`U3`, local a esta placa) — solo el módulo 2 (STM32N657), por `J6`.
-  El +5 V digital (Raspberry Pi/LCD/LEDs) **no pasa por esta placa**: lo pone
-  una SMPS externa (Mean Well IRM-15-5) y es responsabilidad del módulo 2.
+  El +5 V digital **no pasa por esta placa**: lo pone una SMPS externa y es
+  responsabilidad del módulo 2. Era una **Mean Well IRM-15-5**; desde la
+  fuente v4 es `PS6`, una **IRM-45-5** de 8 A de placa (D-F7, 03-09), y su
+  techo lo importa `hardware/02-midi-cv/power_budget.py` de `calor_budget.py`
+  en vez de transcribirlo.
 
 ## Entrada
 

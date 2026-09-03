@@ -630,7 +630,7 @@ el segundo:
 | `calor_budget.py` | que los rieles den el listón con la sala a 45 °C | **20 525 mm²** |
 | `guarda_aire()` | los **15 K sobre ambiente** de vida del electrolítico | **35 365 mm²** |
 
-Con los 20 500 el case sube **20,7 K**: los rieles llegan y el condensador no.
+Con los 20 525 el case sube **20,7 K**: los rieles llegan y el condensador no.
 El encargo a #289 es el **35 365**, y con dos cifras que lo acotan: la pared
 exterior (0,507 m² de envolvente sin el suelo) se lleva otros **22,8 W** a ese
 techo con `U = 3 W/m²K` supuesto —más que los 12,6 de la chimenea de hoy—, y

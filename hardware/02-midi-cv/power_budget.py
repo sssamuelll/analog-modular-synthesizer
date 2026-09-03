@@ -19,8 +19,9 @@ enchufara un host USB. Esa conclusion usaba como diseno una columna que no era
 un tipico a 85 C y, ademas, el modelo de alimentacion equivocado. Contra el Max
 publicado para SMPS interno, cuatro N657 mas el host EXCEDIAN el +5 V con las
 cargas DURAS -- 2.895 A contra los 2.82 que daba la IRM-15-5 de la v3 --, el
-arbitro no podia salvarlo ni apagando cada LED, y el guion quedaba ROJO
-reabriendo el presupuesto de la fuente.
+arbitro no podia salvarlo ni apagando cada LED. El guion no llegaba a ROJO
+--salia en HUECO, codigo 2, porque el punto de trabajo no esta publicado--
+pero su veredicto reabria el presupuesto de la fuente.
 
 Eso lo cierra la fuente v4, y por la via que el #151 pedia: PS6 pasa a ser una
 IRM-45-5 de 8 A de placa y el techo DEJA DE SER UN LITERAL. Lo importa este
@@ -108,7 +109,9 @@ import sys
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_DIR, "..", "01-power-supply", "v4"))
+from calor_budget import MODULO_A as _MODULO_FUENTE_A       # noqa: E402
 from calor_budget import PLACA_A as _PLACA_FUENTE_A         # noqa: E402
+from calor_budget import PSU3_A as _PSU3_FUENTE_A           # noqa: E402
 from calor_budget import (P_BASE, SOSTENIDO,                # noqa: E402
                           SOSTENIDO_CD_PESIMISTA)
 
@@ -126,6 +129,23 @@ from calor_budget import (P_BASE, SOSTENIDO,                # noqa: E402
 # (C_D 0.55 contra 0.65), que es la constante que mas manda del modelo termico
 # y la unica sin medir. El case publica su propio salto termico con esos dos
 # mismos extremos; aqui, como antes, manda la pesimista.
+#
+# Y AHORA LO INCOMODO, QUE UNA REVISION ADVERSARIAL SACO EL MISMO DIA: el
+# extremo OPTIMISTA no mide lo que PS6 aguanta termicamente. P_BASE es, por
+# construccion, el area MINIMA que hace pasar el liston, asi que el punto fijo
+# aterriza siempre donde el +12 V de rack toca exactamente los 2,0 A de la
+# A-100PSU3. Como el digital lee la MISMA curva IRM-45 y su tope de placa (8 A)
+# no muerde ahi, el techo sale forzado a
+#
+#     MODULO_A["digital+5"] / MODULO_A["rack+12"] * PSU3_A["rack+12"] * V_RIEL
+#     =  8,0 / 3,8 * 2,0 * 5,0  =  21,05 W
+#
+# pase lo que pase con el calor. Se midio: subir la sala de 45 a 60 C mueve el
+# area minima un 5x y el techo un 0,2 %; cuatro repartos de calor distintos lo
+# mueven 0,13 %. O sea que lo que llega aqui es EL LISTON DOEPFER reescrito en
+# la moneda del digital, no una cifra de derating. Lo que SI lo mueve: MODULO_A
+# (que modulo se compra), PSU3_A (contra que se mide el liston) y PLACA_A. El
+# termico de verdad es el OTRO extremo, el pesimista: mismo venteo, peor C_D.
 #
 # LO QUE ESTE NUMERO ARRASTRA, y hay que decirlo en voz alta: sale del punto
 # fijo evaluado en el VENTEO MINIMO que calor_budget despeja, o sea de una
@@ -457,18 +477,36 @@ def _autocomprobacion() -> None:
     assert abs(n657_al_5v_a(4) - 2.2333813333333333) < 1e-9
     assert abs(duras_a(True) - 2.895448) < 1e-9
     # EL TECHO IMPORTADO, POR LOS DOS LADOS. Por abajo: la IRM-15-5 de la v3
-    # ya daba 14.1 W con menos modulo, asi que si el sostenido sale MENOS, o
-    # el derating se leyo mal o el recinto no ventila. Por arriba: no puede
-    # pasar de la placa de PS6, que son 40 W; un techo por encima de eso
-    # significa que el punto fijo dejo de recortar.
+    # ya daba 14.1 W con MENOS modulo, asi que menos que eso significa que
+    # alguien encogio lo declarado o cambio de pieza. Por arriba: no puede
+    # pasar de la placa de PS6, que son 40 W.
+    #
+    # OJO CON LO QUE ESTOS DOS ASERTOS *NO* VIGILAN, medido y no supuesto: el
+    # techo es el liston de la PSU3 reescrito (ver la nota de arriba), asi que
+    # NINGUNA constante termica lo mueve lo bastante para dispararlos --sala a
+    # 60 C lo deja en 20.15 W, h_conv a 2 en 19.34, el calor del digital x3 en
+    # 19.29--. Lo unico que los dispara es tocar lo DECLARADO: bajar
+    # PLACA_A["digital+5"] a 2.5 A da 6.1 W y salta. Son guardas del contrato
+    # con la fuente, no un termometro.
     tope_placa_w = _PLACA_FUENTE_A["digital+5"] * V_RIEL
     assert 14.1 < TECHO_W_PESIMISTA <= tope_placa_w, (
         f"el techo del +5 V digital sale {TECHO_W_PESIMISTA:.1f} W. Por abajo "
         f"la IRM-15-5 de la v3 ya daba 14.1 con menos modulo; por arriba la "
-        f"placa de PS6 son {tope_placa_w:.0f} W y nadie puede prometer mas")
+        f"placa de PS6 son {tope_placa_w:.0f} W y nadie puede prometer mas. "
+        f"Mira MODULO_A, PSU3_A y PLACA_A de calor_budget antes que el modelo "
+        f"termico: son ellos los que mueven este numero")
     assert TECHO_W_PESIMISTA < TECHO_W_OPTIMISTA <= tope_placa_w, (
         f"el rango del techo esta al reves o se sale: {TECHO_W_PESIMISTA:.2f} "
         f"W con C_D pesimista contra {TECHO_W_OPTIMISTA:.2f} con el nominal")
+    # Y LA IDENTIDAD QUE DE VERDAD DESCRIBE EL OPTIMISTA, para que se vea que
+    # es aritmetica del liston y no una casualidad del punto fijo.
+    pinado_w = (_MODULO_FUENTE_A["digital+5"] / _MODULO_FUENTE_A["rack+12"]
+                * _PSU3_FUENTE_A["rack+12"] * V_RIEL)
+    assert abs(TECHO_W_OPTIMISTA - pinado_w) < 0.05, (
+        f"el techo optimista son {TECHO_W_OPTIMISTA:.3f} W y el liston "
+        f"reescrito da {pinado_w:.3f}: si estos dos se separan es que en el "
+        f"area minima ya no manda el +12 V de rack, y entonces el techo SI "
+        f"pasa a ser termico. Buena noticia, pero hay que releer la nota")
 
 
 def main() -> int:

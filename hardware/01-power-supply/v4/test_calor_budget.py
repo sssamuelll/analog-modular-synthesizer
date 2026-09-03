@@ -206,18 +206,79 @@ def test_el_cajon_cobra_a_cada_riel_su_propia_corriente() -> None:
 
 def test_las_celdas_suman_lo_que_el_papel_publica() -> None:
     """Las dos potencias maximas dejan de transcribirse: se derivan de las
-    celdas de sec.6, y se comprueban contra el numero publicado."""
+    celdas de sec.6. Y las celdas se comprueban UNA A UNA, no solo su suma:
+    el modelo las usa por separado --cada riel paga la suya-- asi que dos
+    celdas intercambiadas darian la misma suma y otro punto fijo."""
+    # El cajon: cada riel del rack a su tension (papel sec.6, "la fila de
+    # invitados a placa disipa 95,6 W").
+    assert cb.V_RIEL == {"rack+12": 12.0, "rack-12": 12.0, "rack+5": 5.0}, (
+        "V_RIEL no son las tensiones del rack; el calor del cajon es la "
+        "potencia ENTREGADA y depende de a que tension va cada amperio")
+    for riel, celda in (("rack+12", 45.6), ("rack-12", 30.0), ("rack+5", 20.0)):
+        w = cb.PLACA_A[riel] * cb.V_RIEL[riel]
+        assert abs(w - celda) < 0.05, (
+            f"{riel} a placa da {w:.2f} W y la celda de sec.6 son {celda}")
     rack_w = sum(cb.PLACA_A[r] * cb.V_RIEL[r] for r in cb.V_RIEL)
-    assert abs(rack_w - 95.6) < 0.05, (
-        f"la fila de invitados a placa son {rack_w:.2f} W y el papel sec.6 "
-        f"publica 95,6")
+    assert abs(rack_w - 95.6) < 0.05, rack_w
     assert abs(cb.CAJON_DIGITAL_W - 24.7) < 0.05
     assert abs(cb.P_CAJON_MAX - (rack_w + cb.CAJON_DIGITAL_W)) < 1e-9
+    # El recinto: PS3/PS4/PS5 escalan con su riel, cada una con SU perdida.
+    for riel, celda in (("rack+12", 6.51), ("rack-12", 4.29), ("rack+5", 3.95)):
+        assert abs(cb.PERDIDA_RECINTO_W[riel] - celda) < 0.005, (
+            f"la perdida de {riel} en el recinto es "
+            f"{cb.PERDIDA_RECINTO_W[riel]} y la celda de sec.6 son {celda}")
+        # y esta EN SU SITIO: subirla tiene que calentar mas, no menos
+        mas = dict(cb.PERDIDA_RECINTO_W)
+        mas[riel] += 5.0
+        base = cb.p_recinto_w(cb.PLACA_A)
+        subido = (cb._CONSTANTE_RECINTO_W
+                  + sum(mas[r] * cb.PLACA_A[r] / cb.PLACA_A[r] for r in mas))
+        assert subido > base, riel
+    assert set(cb.PERDIDA_RECINTO_W) == set(RIELES_RACK), (
+        "el digital no lleva perdida proporcional: su carga es constante, "
+        "asi que PS6 tambien lo es y vive en _CONSTANTE_RECINTO_W")
     recinto_w = cb._CONSTANTE_RECINTO_W + sum(cb.PERDIDA_RECINTO_W.values())
     assert abs(cb.P_RECINTO_MAX - recinto_w) < 1e-9
-    assert abs(recinto_w - 27.53) < 0.05, (
+    assert abs(recinto_w - 27.55) < 0.05, (
         f"las celdas del recinto suman {recinto_w:.2f} W y el papel sec.6 "
         f"publica 27,5")
+
+
+def test_donde_no_hay_punto_fijo_se_devuelve_cero_y_no_se_revienta() -> None:
+    """LO QUE LA REVISION DEL 2026-09-03 CAZO, y por que no es un aserto.
+
+    La curva de la hoja acaba en 85 C. Por debajo el rack da corriente y su
+    calor empuja el aire por encima; por encima el rack esta a cero y el aire
+    baja. O sea que en una banda de venteo (230..3715 mm2 con los numeros de
+    hoy) la cadena T -> corrientes -> calor -> T' SALTA y no tiene raiz.
+
+    La primera version aseveraba ahi. Dos cosas malas: (1) el aserto sube por
+    _falla_por_liston(), que solo traga los que dicen "SIGUE sin existir", y
+    revienta el IMPORT del modulo -- y con el la puerta de power_budget.py,
+    que lo importa: un dato termico convertido en rojo de CI; (2) su criterio
+    era el residuo en KELVIN, y donde la curva salta ese residuo es diminuto:
+    entre 3716 y 3729 mm2 aterrizaba en 85,0000, publicaba 0,95 / 0,95 / 2,0
+    --el mismo artefacto que venia a cazar-- con 0,001-0,048 K de residuo.
+
+    Ahora se comprueba en AMPERIOS y se devuelve CERO, que es la respuesta
+    honesta: ahi no hay corriente sostenida que prometer."""
+    for area in list(range(0, 8001, 13)) + [3716.0, 3720.0, 3729.0, 3730.0]:
+        p = {**cb.P_BASE, "area_venteo_mm2": float(area)}
+        cor = cb._fixed_point(p)          # no puede lanzar NADA
+        t = cb.aire_recinto_c(cb.p_recinto_w(cor), cb.p_cajon_w(cor),
+                              area_venteo_mm2=float(area))
+        for riel in RIELES:
+            esperado = cb.sostenido_a(riel, t)
+            assert (cor[riel] == 0.0
+                    or abs(cor[riel] - esperado) <= 0.02 * cb.PLACA_A[riel]), (
+                f"con {area:.0f} mm2 el punto fijo publica {cor[riel]:.3f} A "
+                f"en {riel}, y a la T que ese estado produce ({t:.2f} C) la "
+                f"hoja da {esperado:.3f}: es un salto de la curva, no un estado")
+    # y el borde exacto que la version en kelvin dejaba pasar
+    assert cb._fixed_point({**cb.P_BASE, "area_venteo_mm2": 3720.0}) == {
+        r: 0.0 for r in RIELES}, (
+        "3720 mm2 es el centro de la ventana que la tolerancia en kelvin "
+        "dejaba pasar publicando 0,95 A: tiene que salir cero")
 
 
 def test_la_caja_cerrada_no_tiene_punto_de_trabajo() -> None:

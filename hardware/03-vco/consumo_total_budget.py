@@ -36,6 +36,14 @@ fuente, y su techo lo lleva power_budget.py. Aqui se suma +-12.
 """
 from __future__ import annotations
 
+import os
+
+# El relevo de la reserva retirada: Tarea 6 del plan de la tanda de la v4.
+# Se MIRA si existe; no se afirma que no (ver el cierre de demo()).
+INVITADOS_BUDGET = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..", "01-power-supply", "v4", "invitados_budget.py")
+
 CITADO, DECLARADO, POR_CONFIRMAR = "CITADO", "DECLARADO", "POR_CONFIRMAR"
 
 # --- el techo, y la puerta --------------------------------------------------
@@ -165,6 +173,13 @@ def demo() -> int:
     print("  hoja solo puede mejorar este numero, nunca empeorarlo.")
 
     print("\nOK: el instrumento cabe en su propio riel.")
+    # EL HUECO MIRA SI SU RELEVO EXISTE, no lo afirma. Un hueco constante es
+    # el espejo del aserto que este commit retira: una puerta que no verifica
+    # nada. Cuando la Tarea 6 aterrice, esta se pone verde sola.
+    if os.path.exists(INVITADOS_BUDGET):
+        print("  Y la fila de invitados la vigila invitados_budget.py, que ya")
+        print("  existe: el compromiso de E-4 tiene dueno propio (#169).")
+        return 0
     print()
     print("HUECO: la fila de invitados se quedo sin puerta. La reserva de")
     print("  120 mA/riel (acta E-4, #169) se retiro hoy porque la fuente v4 le")
