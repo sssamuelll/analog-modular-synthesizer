@@ -100,11 +100,27 @@ class LeerRuteoTests(unittest.TestCase):
 
         self.assertEqual(len(tracks), len(tracks_board))
         self.assertEqual(len(vias), len(vias_board))
-        self.assertIn(
-            ('/SEC_A', 'B.Cu', [(188.9, 97.5), (188.9, 100.3)], 1.0),
-            tracks,
-        )
-        self.assertIn((82.2, 88.0, 'GND', 0.6, 0.3), vias)
+
+        # Contar con el mismo predicado que leer_ruteo no prueba nada: si el
+        # downcast de pcbnew fallara, los dos lados darian cero y la igualdad
+        # se cumpliria. Asi que ademas se comprueba la GEOMETRIA pieza a
+        # pieza, reconstruida aqui desde el board, y un ancla concreta.
+        esperados = {
+            (t.GetNetname(), self.board.GetLayerName(t.GetLayer()),
+             (t.GetStart().x / 1e6, t.GetStart().y / 1e6),
+             (t.GetEnd().x / 1e6, t.GetEnd().y / 1e6),
+             t.GetWidth() / 1e6)
+            for t in tracks_board
+        }
+        leidos = {(net, capa, tuple(pts[0]), tuple(pts[1]), ancho)
+                  for net, capa, pts, ancho in tracks}
+        self.assertEqual(leidos, esperados)
+
+        # El ancla va sobre un carril de RED, que rutear_red traza a
+        # coordenadas literales escritas en el guion. Lo que se mueve al
+        # cambiar el arbol de masa o un fanout no sirve de ancla: ya paso.
+        self.assertIn(('/L', 'F.Cu', [(38.0, 123.0), (126.0, 123.0)], 1.0),
+                      tracks)
 
     def test_main_no_regenera_el_ruteo(self) -> None:
         '''Volver a llamar rutear(board) reintroduciria los 228,8 s.'''
@@ -443,10 +459,13 @@ MUTACIONES = [
         'TP1 esta en (94.10, 38.00)', 1,
     ),
     (
+        # Sale de una via de GND que existe y se mete por encima del carril de
+        # -12 V. Dos lineas: el cruce y la punta libre, que tambien es un
+        # defecto de verdad -- una pista anadida a mano siempre deja una.
         'cruce entre redes',
         lambda b: anadir_pista(
-            b, 'GND', 'B.Cu', (187.0, 74.0), (187.0, 76.1), 0.2),
-        'en B.Cu a -0.60mm', 2,
+            b, 'GND', 'F.Cu', (52.775, 89.7), (52.775, 83.4), 0.2),
+        'cruce: GND~-12V en F.Cu', 2,
     ),
     (
         'bucle de masa en una capa',

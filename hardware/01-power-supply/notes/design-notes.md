@@ -672,6 +672,16 @@ un bucle. Eso último **no se puede ver mirando el dibujo** — un bucle de masa
 ve igual que una rama — así que `build_pcb.py` lo comprueba con union-find y
 aborta si encuentra uno.
 
+> **Corregido otra vez el 2026-09-02 (#280).** «Cada rama muere en su grupo
+> funcional» no dice nada de **qué pads van juntos**, y el peine los repartía
+> por cercanía en `y`. Eso separó `J1.2` (la toma central) de los bulk, y la
+> corriente de rectificación —2,5 A en picos con flancos de microsegundos, la
+> más grande de la placa— acabó dando la vuelta entera por el tronco: 379 mm
+> de retorno y 57,49 cm² de espira. La v1 no lo tenía porque su punto de
+> estrella **era** el bulk. Ahora `J1.2` va forzado a la costilla de los bulk
+> (`GND_COSTILLA_FORZADA` en `build_pcb.py`) y el lazo baja a 2,44 cm² (§18.2).
+> Sigue siendo un árbol: `J1.2` cambia de rama, no gana una segunda.
+
 > **Corregido el 2026-09-02 (#139).** El union-find iba sobre los extremos de
 > los tramos y nada más, y eso deja fuera dos cosas: los enganches que caen a
 > mitad de una costilla, y **las vías**. Sin las vías el grafo se parte por
@@ -1276,27 +1286,48 @@ término distinto y que aquí resulta no ser el que manda.
 ### 18.2 Lo que sí se pudo medir: el lazo de la PCB
 
 [`simulations/power/hum_loop.py`](../../../simulations/power/hum_loop.py) lo
-mide **sobre la placa ya ruteada**, no sobre una intención:
+mide **sobre la placa ya ruteada**, no sobre una intención.
 
-| | |
+> **Reescrito el 2026-09-02 (#280).** Hasta esa fecha medía la **v1**, que no
+> se construye, y lo hacía con una **caja envolvente** alrededor de `J1`,
+> `BR1`, `C1` y `C12`. Las dos cosas estaban mal, y la segunda era la grave:
+> un rectángulo alrededor de cuatro piezas mide lo mismo **se vaya el retorno
+> por donde se vaya**, y lo que acopla es el área que *encierra* el camino.
+> Ahora el guion **traza el cobre**: sigue el recorrido eléctrico de verdad,
+> con las vías y los pads pasantes dentro del grafo, y firma el área con la
+> fórmula del cordón de zapato.
+
+El tope ya no se escribe a mano. Sale de despejar `A` en la fórmula del
+dipolo con la víctima de 10 cm², los 150 mm y el suelo de −100 dBu:
+**10,46 cm²**. De ahí venía el «10» que estaba puesto a ojo.
+
+| | v1 (trazada) | v3, antes de #280 | **v3, hoy** |
+|---|---|---|---|
+| Vuelta de masa, bulk → toma central | 60 / 102 mm | **379 mm** | **54 / 76 mm** |
+| Área encerrada, peor caso | 3.90 cm² | **57.49 cm²** | **2.44 cm²** |
+| Inducido a 150 mm | — | **42.6 µV** | **1.81 µV** |
+| Tope del modelo | 10.46 cm² | 10.46 cm² | 10.46 cm² |
+
+Los 57,49 cm² no eran un lazo mal dibujado: eran **el árbol de masa**. `J1.2`
+—la toma central, por donde vuelve toda la corriente de rectificación— caía
+por cercanía en la costilla de `y=66`, y los dos bulk en la de `y=99`. Las dos
+costillas sólo se tocan por el tronco en `x=11`, así que cada pico de 2,5 A se
+iba al canto izquierdo de la placa y volvía. Ver §14.5.
+
+Con `J1.2` puesto en la costilla de los bulk, el lazo queda en **2,44 cm²**:
+mejor que la v1, y con 4,3× de margen sobre la referencia. El barrido:
+
+| Distancia | Inducido (v3 hoy) |
 |---|---|
-| Caja envolvente de `J1`+`BR1`+`C1`+`C12` | 29.6 × 23.0 mm → **6.81 cm²** |
-| Separación media VRAW+ ↔ retorno de masa | 5.0 mm |
-| Inducido en un lazo víctima de 10 cm² a 150 mm | **5.0 µV** |
-| Referencia: −100 dBu | 7.75 µV |
-
-Pasa, con poco margen. El barrido completo:
-
-| Distancia | Inducido |
-|---|---|
-| 50 mm | 136 µV |
-| 100 mm | 17.0 µV |
-| **150 mm** | **5.0 µV** |
-| 200 mm | 2.1 µV |
-| 300 mm | 0.6 µV |
+| 50 mm | 48.8 µV |
+| 100 mm | 6.1 µV |
+| **150 mm** | **1.81 µV** |
+| 200 mm | 0.76 µV |
+| 300 mm | 0.23 µV |
 
 El 1/r³ es brutal: **duplicar la distancia divide por ocho**. Alejar 5 cm más
-vale más que cualquier apantallamiento.
+vale más que cualquier apantallamiento — pero eso es la segunda palanca, no la
+primera. La primera es el área, y es la única que está cerrada.
 
 Un aviso sobre este número, porque el primer intento estuvo mal: el script
 calculaba el área como "largo de la ida × separación media" y daba 7.82 cm²,

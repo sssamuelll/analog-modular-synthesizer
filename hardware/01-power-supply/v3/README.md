@@ -47,7 +47,7 @@ ni un crowbar cubren, y esto pasa dentro de un recinto cerrado.
 
 ## Las puertas
 
-Once, todas ejecutables, todas recogidas por `hardware/tools/gates.py` sin
+Quince, todas ejecutables, todas recogidas por `hardware/tools/gates.py` sin
 tener que apuntarlas en ninguna lista — se añade una escribiendo el fichero,
 nunca ampliando un índice que alguien puede olvidar:
 
@@ -59,6 +59,10 @@ nunca ampliando un índice que alguien puede olvidar:
 | [`kicad/check_netlist.py`](kicad/check_netlist.py) | ¿la isla está **cableada** como dice el contrato? Shunts en serie, divisores en el sentido correcto, masas sin un nodo común |
 | [`kicad/check_pcb.py`](kicad/check_pcb.py) | ¿la placa **commiteada** está colocada como dice el script, y su cobre guardado cumple cruces, **masa en árbol sin ni un bucle —vías incluidas—**, cero conexiones abiertas, cero muñones colgando, pista–pad y separación de vías? También vigila la barrera de red, la isla de referencia, la diagonal del lazo y los tres tabs contra la pared |
 | [`kicad/check_pcb_mutations.py`](kicad/check_pcb_mutations.py) | ¿las siete mutaciones históricas —pieza movida, cruce, bucle de masa en una capa, bucle que cruza de capa por una vía, muñón colgando, pista sobre pad y vía duplicada— siguen poniendo roja la puerta completa, **cada una por separado y con el número de líneas que su fila declara**? Más los umbrales del filtro de cajas, los rechazos de cobre que no sabe leer, y que una vía de masa quitada deja una conexión abierta |
+| [`check_paquete.py`](check_paquete.py) | ¿el paquete de fabricación commiteado es **el de esta placa**? Cruza los trazos de los dos gerbers de cobre contra las pistas, y los taladros del Excellon contra las vías más los pads pasantes. Uno a uno, no por conteo |
+| [`check_paquete_mutations.py`](check_paquete_mutations.py) | ¿tocar la placa y **no** regenerar el paquete pone roja esa puerta? Pista nueva, vía nueva, vía podada y pista movida a mano |
+| [`check_generador.py`](check_generador.py) | ¿el ruteador escrito a mano sigue corriendo, y produce el cobre que la placa lleva? Corre las cuatro rutas de forma fija en 0,8 s —el laberinto son 180 s y se queda fuera, declarado— y cruza cada tramo y cada vía contra el `.kicad_pcb` |
+| [`check_generador_mutations.py`](check_generador_mutations.py) | ¿una aserción rota del generador sale como FALLO con su texto, y un desfase entre guion y placa se ve por los dos lados? |
 | [`check_fab.py`](check_fab.py) | ¿lo que se **manda a fábrica** dice lo mismo que la placa? A JLC no se le sube el `.kicad_pcb`: se le suben seis gerbers y un drill que ninguna otra puerta mira |
 | [`check_huellas.py`](check_huellas.py) | ¿las huellas dibujadas a mano son las de la **pieza real**? Es geometría, no conectividad: no la ve el ERC, ni el DRC, ni la netlist |
 | [`check_red_chasis.py`](check_red_chasis.py) | ¿la red entra por una pieza que **existe**, con un solo fusible, y el chasis tiene su recorte? |
@@ -208,17 +212,26 @@ tabs están a VRAW+ y VRAW−.
 
 ## El ruteo
 
-**1008 segmentos, 174 vías, DRC de `kicad-cli` en cero infracciones y cero
+**999 segmentos, 172 vías, DRC de `kicad-cli` en cero infracciones y cero
 elementos sin conectar.** Al empezar la fase eran 48 infracciones y 126 sin
 conectar.
 
-> Las cifras bajaron de 1024 y 176 el 2026-09-02, al aprender la puerta de la
-> masa a mirar las vías (#139). El árbol tenía **dos espiras** que ninguna
-> regla veía: tres pads de GND de `U11` compartían su rabito en F.Cu —uno de
-> ellos cruza por encima de los otros dos— y cada uno bajaba con su propia
-> vía a la misma costilla. Sobran dos bajadas y el cobre que iba a buscarlas.
-> Quitar una arista que cierra un ciclo no desconecta nada: el ratsnest sigue
-> en cero y el DRC también.
+> Las cifras bajaron de 1024 y 176 el 2026-09-02, en dos pasos.
+>
+> **#139 — el árbol tenía dos espiras que ninguna regla veía.** Tres pads de
+> GND de `U11` comparten su rabito en F.Cu —uno cruza por encima de los otros
+> dos— y cada uno bajaba con su propia vía a la misma costilla. Sobran dos
+> bajadas y el cobre que iba a buscarlas. Quitar una arista que cierra un
+> ciclo no desconecta nada: el ratsnest sigue en cero y el DRC también.
+>
+> **#280 — la corriente de rectificación daba la vuelta a la placa.** `J1.2`,
+> la toma central del secundario, caía por cercanía en la costilla de `y=66` y
+> los dos bulk en la de `y=99`; las dos sólo se tocan por el tronco en `x=11`.
+> Cada pico de 2,5 A se iba 379 mm hasta el canto izquierdo y volvía,
+> encerrando **57,49 cm²** contra un tope de 10,46 que sale del propio modelo
+> de acoplo. Con `J1.2` en la costilla de los bulk el lazo queda en
+> **2,44 cm²** — mejor que la v1. Detalle en `design-notes.md` §18.2, y la
+> medida es ejecutable: `simulations/power/hum_loop.py`.
 
 El reparto no es por longitud sino por **quién define la forma de la pista**:
 
