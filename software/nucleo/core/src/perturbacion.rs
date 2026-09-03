@@ -1,7 +1,14 @@
-//! §7.6. Una sola pieza para dos problemas: la topologia del patch (§6.2) y la
-//! sonda causal de la atribucion (§7.2). Los dos preguntan lo mismo — observo
-//! un efecto, cual de las N causas que controlo lo produjo — y los dos se
-//! responden igual: **perturbar y correlacionar**.
+//! §7.6. La sonda causal de la atribucion (§7.2): observo un efecto, cual de
+//! las N causas que controlo lo produjo. Se responde **perturbando y
+//! correlacionando**.
+//!
+//! Nacio sirviendo a dos problemas —este y la topologia del patch (§6.2)—
+//! porque los dos preguntan lo mismo. **§6.2 se derogo el 2026-09-03** (spec
+//! del instrumento entero, D3): el patch interior lo recuerda el crosspoint
+//! desde el 23-08, asi que la guia que lo reconstruia a mano se quedo sin
+//! trabajo. La pieza se queda entera por el problema que sobrevive, que esta
+//! implementado y con tests, y `PATCH_SCAN` sigue congelado en el protocolo
+//! por si el otro vuelve por la puerta del exterior (D10).
 //!
 //! Correlacion, NO deteccion de escalon. El escalon se rompe con atenuadores,
 //! se ahoga en el ruido, y obliga a barrer las fuentes de una en una. Esto es

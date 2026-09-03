@@ -1134,16 +1134,17 @@ def main() -> int:
 #   * USB OTG1/OTG2 (pines dedicados, DS), CSI (dedicado; y por D3' la
 #     camara ya no vive en el hub), XSPI2 del arranque (ya en la reserva).
 #   * MIDI DIN in/out por UART (2), el ESP32-S3 por UART + EN + boot (4),
-#     la radio ESB por SPI/UART + IRQ + EN (4, ESTIMADO sin pieza), la
-#     cadena WS2812 (1, exige canal de timer o MOSI), clock/reset in/out
-#     (4), INT/RST del tactil + PWM del backlight (3), RESET del mux (1).
+#     la radio ESB por SPI/UART + IRQ + EN (4, ESTIMADO sin pieza),
+#     clock/reset in/out (4), INT/RST del tactil + PWM del backlight (3),
+#     RESET del mux (1). La cadena WS2812 cobraba aqui 1 pin con canal de
+#     timer o MOSI; se retiro el 2026-09-03 (spec del instrumento entero, D1)
+#     y el censo baja de 27 a 26.
 HUB_SPIS = ("SPI1", "SPI2", "SPI3", "SPI4", "SPI5", "SPI6")
 HUB_RANURAS_USART = 2
 HUB_GPIO_VARIOS = (HUB_RANURAS_USART * 4   # CK, TX, RX, CS-por-GPIO
                    + 2                     # MIDI DIN in/out (UART)
                    + 4                     # ESP32-S3: UART x2, EN, boot
                    + 4                     # radio ESB: bus x2, IRQ, EN (ESTIMADO)
-                   + 1                     # WS2812
                    + 4                     # clock/reset in/out
                    + 3                     # tactil INT/RST + PWM backlight
                    + 1)                    # RESET del mux I2C
@@ -1257,7 +1258,7 @@ def demo_censo_hub() -> tuple[dict, int]:
     print("  base: 6 ranuras J2 en SPI1-6, pantalla al LTDC en 24 bits,")
     print("  PSRAM del framebuffer, tronco I2C del descubrimiento, pedal.")
     print(f"  Lo vario se cobra aparte: {HUB_GPIO_VARIOS} GPIO (2 ranuras por")
-    print("  USART sincrono, MIDI, ESP32-S3, radio ESB, WS2812, clock/reset,")
+    print("  USART sincrono, MIDI, ESP32-S3, radio ESB, clock/reset,")
     print("  tactil, mux) mas holgura de", HUB_HOLGURA, "-- ESTIMADO sin piezas.\n")
 
     escenarios = (("base", False, False), ("+ audio (A-6 en el hub)", True, False),

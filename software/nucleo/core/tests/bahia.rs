@@ -163,9 +163,16 @@ fn dos_imagenes_iguales_no_hacen_cambiar_a_nadie() {
 }
 
 /// §5.3, `diferir`: «espera al silencio; la interfaz y el LED del jack
-/// muestran pendiente». H-OF3: un drone bajo `diferir` nunca se corta solo —
-/// la starvation deja de ser un bug y pasa a ser una eleccion del interprete.
-/// Mil ticks son la prueba de que la espera no tiene fondo: sin TTL (H-RC1).
+/// muestran pendiente». El LED del jack se retiro el 2026-09-03 (spec del
+/// instrumento entero, D8) y el acuse queda en el renglon — que es donde la
+/// junta del panel ya lo habia mandado: «eso se muestra donde ocurrio el
+/// gesto, no solo en el LED del jack».
+///
+/// H-OF3: un drone bajo `diferir` nunca se corta solo — la starvation deja de
+/// ser un bug y pasa a ser una eleccion del interprete. **Y esa justificacion
+/// se apoya en que sea visible**, asi que el acuse no es cosmetico: es lo que
+/// separa la eleccion del bug. Mil ticks son la prueba de que la espera no
+/// tiene fondo: sin TTL (H-RC1).
 #[test]
 fn diferir_espera_para_siempre_al_canal_que_cambia_y_suena() {
     let mut b = Barrera::nueva(PoliticaDrones::Diferir);
