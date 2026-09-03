@@ -98,8 +98,9 @@ def test_cerrado_reproduce_el_orden_de_magnitud_de_la_junta() -> None:
         f"codo de derating ({codo:.0f}): entonces D-F3 no hacia falta "
         f"y toda la sec.6 del papel esta mal")
     print(f"  cerrado y A PLACA sin derating: {t:.1f} C de aire (no es un "
-          f"estado alcanzable; el punto fijo cerrado lo imprime demo(), y ese "
-          f"es el comparable con los ~78 C de la junta)")
+          f"estado alcanzable). La junta estimo ~78 C con el rack al 17 %; el "
+          f"punto fijo dice que cerrado no hay 17 % ni nada: 86,7 C y el rack "
+          f"a CERO, porque a esa T la curva de la hoja ya no dibuja")
 
 
 def test_ventilar_baja_el_aire_y_es_para_lo_que_se_firmo_d_f3() -> None:
@@ -174,6 +175,71 @@ def test_el_calor_del_cajon_baja_con_el_sostenido() -> None:
     assert cb.p_recinto_w(mitad) < cb.P_RECINTO_MAX
     # y el minimo del recinto es el tipico del papel (instrumento a censo)
     assert cb.p_recinto_w({r: 0.0 for r in RIELES}) >= 0.0
+
+
+def test_el_cajon_cobra_a_cada_riel_su_propia_corriente() -> None:
+    """EL FALLO DEL 2026-09-03, y por que un cociente agregado no vale.
+
+    El calor del cajon se repartia con _ratio(): un solo cociente
+    sum(corrientes)/sum(PLACA_A), en AMPERIOS, aplicado a los 120,3 W. Pero
+    las celdas del papel sec.6 estan en VATIOS y no pesan igual: el digital
+    son 8,0 de los 18,3 A (44 %) y solo 24,7 de los 120,3 W (20,5 %). Como
+    ademas es el riel que mas se derratea, su recorte arrastraba hacia abajo
+    el calor que se le cobra a la FILA DE INVITADOS, que no depende del
+    digital para nada. Medido en el punto fijo: 80,4 W cobrados contra 89,2
+    reales, un 11 % de menos -- y el liston pasaba por 5 mA."""
+    for cor in (cb.SOSTENIDO, cb.PLACA_A, {r: 1.0 for r in RIELES}):
+        esperado = (sum(cor[r] * cb.V_RIEL[r] for r in cb.V_RIEL)
+                    + cb.CAJON_DIGITAL_W)
+        assert abs(cb.p_cajon_w(cor) - esperado) < 1e-9, (
+            f"con {cor} el cajon cobra {cb.p_cajon_w(cor):.2f} W y cada riel a "
+            f"su tension son {esperado:.2f}: vuelve a haber un cociente en medio")
+    # Y EL DIGITAL NO MUEVE EL CALOR DEL CAJON. Es CARGA, no capacidad: el
+    # modulo 2 pide lo que pide (24,7 W de peor caso, papel sec.4.4) y da
+    # igual que PS6 pueda dar 8 A. Cobrarle por su capacidad es lo que metia
+    # el 44 % de peso en amperios que rompia el reparto.
+    assert cb.p_cajon_w(cb.PLACA_A) == cb.p_cajon_w(
+        {**cb.PLACA_A, "digital+5": 0.0}), (
+        "cambiar la corriente del digital movio el calor del cajon: se le "
+        "esta cobrando por lo que PS6 puede dar y no por lo que el modulo 2 pide")
+
+
+def test_las_celdas_suman_lo_que_el_papel_publica() -> None:
+    """Las dos potencias maximas dejan de transcribirse: se derivan de las
+    celdas de sec.6, y se comprueban contra el numero publicado."""
+    rack_w = sum(cb.PLACA_A[r] * cb.V_RIEL[r] for r in cb.V_RIEL)
+    assert abs(rack_w - 95.6) < 0.05, (
+        f"la fila de invitados a placa son {rack_w:.2f} W y el papel sec.6 "
+        f"publica 95,6")
+    assert abs(cb.CAJON_DIGITAL_W - 24.7) < 0.05
+    assert abs(cb.P_CAJON_MAX - (rack_w + cb.CAJON_DIGITAL_W)) < 1e-9
+    recinto_w = cb._CONSTANTE_RECINTO_W + sum(cb.PERDIDA_RECINTO_W.values())
+    assert abs(cb.P_RECINTO_MAX - recinto_w) < 1e-9
+    assert abs(recinto_w - 27.53) < 0.05, (
+        f"las celdas del recinto suman {recinto_w:.2f} W y el papel sec.6 "
+        f"publica 27,5")
+
+
+def test_la_caja_cerrada_no_tiene_punto_de_trabajo() -> None:
+    """Sin venteo nuevo el aire pasa de los 85 C donde ACABAN las curvas de la
+    hoja, y ningun modulo opera: el sostenido del rack es CERO, no un 25 %.
+
+    Hasta el 2026-09-03 este escenario publicaba 0,95 / 0,95 / 2,0 A "a 92,6
+    C", que es un artefacto: son las corrientes de la frontera de 85 C con la
+    temperatura de OTRO punto. La biseccion converge igual de bien sobre una
+    discontinuidad que sobre una raiz, y ahi devuelve un estado que no
+    existe."""
+    cerrado = {**cb.P_BASE, "area_venteo_mm2": 0.0}
+    cor = cb._fixed_point(cerrado)
+    assert all(v == 0.0 for v in cor.values()), (
+        f"la caja cerrada publica {cor}: por encima de 85 C la hoja no dibuja "
+        f"nada y sostenido_a() vale 0, asi que un sostenido positivo ahi es un "
+        f"punto de la discontinuidad, no un estado")
+    t = cb.aire_recinto_c(cb.p_recinto_w(cor), cb.p_cajon_w(cor),
+                          area_venteo_mm2=0.0)
+    assert t > 85.0, (
+        f"con el rack a cero el aire de la caja cerrada se queda en {t:.1f} C: "
+        f"si bajara de 85 habria un punto de trabajo y este test sobra")
 
 
 # --- el aserto que decide, y su canario ----------------------------------
