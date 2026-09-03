@@ -1,7 +1,7 @@
 # Fuente v4 — el listón de la PSU3, seis módulos encapsulados y la cascada intacta — firmada (v3, tras la junta y la firma)
 
-**Fecha**: 2026-09-03 · **Estado**: **firmado — D-F1 a D-F6 decididas (§14). Lo único que queda por firmar es el listón sostenido, y su dueño es `calor_budget.py`** ·
-**Listón firmado**: 2026-09-03 («firmo el listón», Samuel) — firmado como **corriente de placa**; §6 enseña que en el recinto cerrado no se sostiene, y por eso **se vuelve a firmar como corriente sostenida** cuando `calor_budget.py` corra con el recinto ventilado de D-F3 = A ·
+**Fecha**: 2026-09-03 · **Estado**: **firmado — D-F1 a D-F7 decididas (§14); `calor_budget.py` corrió y la columna «sostenido» de §1 está rellena. Lo que queda es de otros papeles: el venteo mínimo (#289) y la bahía (#290)** ·
+**Listón firmado**: 2026-09-03 («firmo el listón», Samuel) — como **corriente de placa**; y **re-firmado el mismo día como corriente sostenida** por `calor_budget.py` con D-F3 = A y D-F7: **2,0 / 2,0 / 4,0 A de rack y 4,2 A digital con 16 900 mm² de venteo nuevo**, el mínimo que el modelo despeja y el encargo a #289 ·
 **Cierra**: nada todavía. **Entrega**: los rieles de #169 (§4.3) ·
 **Mata por desaparición del sujeto** (cuando la v4 se adopte): #141, #280, #106, #56, #57 ·
 **Reabre**: `design-notes` §13 y §18, la spec del chasis (§3.1, §3.2, §3.3), `clearance_budget.py::guarda_aire()`, `consumo_total_budget.py`, `power_budget.py`, `ground_budget.py`, el papel de la bahía
@@ -30,6 +30,7 @@
 > | **D-F4** | **secuenciador** por los pines ON/OFF, en la cascada y en el rack | §4.2, §4.3 |
 > | **D-F5** | **Y2 de modo común** por módulo, del borne de ★ al chasis | §5 |
 > | **D-F6** | **crowbar** en los rieles de rack, y solo ahí | §4.3 |
+> | **D-F7** | `PS5` pasa de IRM-20-5 a **IRM-45-5**; el listón del +5 V de rack sigue en 4,0 A declarados | §3, §6 |
 >
 > Y una séptima que no es ninguna de esas seis: **cuando `calor_budget.py`
 > corra con el recinto ventilado, el listón se vuelve a firmar en corriente
@@ -90,16 +91,21 @@ como está**, porque es de la cascada de donde sale el 0,8 µVrms, no del toroid
 | Riel | A-100PSU3 | SAM17 v4, **de placa** (firmado) | **Sostenido** en el recinto | Masa |
 |---|---|---|---|---|
 | **±12 V ultra** — Voz, VCF, VCA, envolventes, bahía | no tiene | **650 mA/riel, 0,8 µVrms**, cascada intacta | 650 mA: los IRM de 15 V van al 24 % de carga | `GNDA` |
-| **+12 V invitados** — fila de abajo, 104 HP | 2,0 A | **3,8 A** | **lo pone `calor_budget.py`** (§6) | rack |
-| **−12 V invitados** | 1,2 A | **2,5 A** | ídem | rack |
-| **+5 V invitados** | 4,0 A | **4,0 A** | ídem | rack |
-| **+5 V digital** — N657 ×4, pantalla, LEDs, host USB | (dentro de los 4 A) | **8,0 A** | ídem; es **el techo que `power_budget.py` importa** | `GNDD` |
+| **+12 V invitados** — fila de abajo, 104 HP | 2,0 A | **3,8 A** | **2,0 A** con el venteo mínimo (16 900 mm² nuevos, §6); es el riel que fija ese mínimo | rack |
+| **−12 V invitados** | 1,2 A | **2,5 A** (3,8 de placa del módulo) | **2,0 A** | rack |
+| **+5 V invitados** | 4,0 A | **4,0 A** declarados (8,0 de placa del módulo, D-F7) | **4,0 A**: la IRM-45-5 da 4,2 a esa temperatura y se declara 4,0 | rack |
+| **+5 V digital** — N657 ×4, pantalla, LEDs, host USB | (dentro de los 4 A) | **8,0 A** | **4,2 A** = 21 W: **el techo nuevo que `power_budget.py` importa** (era 14,1 W) | `GNDD` |
 | **1,8 V** de los N657 | — | del 3,3 V, aguas abajo del +5 V digital; **no se decide aquí** (§4.5) | | `GNDD` |
 
 La columna «de placa» es lo que se compra. La columna «sostenido» es lo que el
-instrumento **promete**, y hoy está vacía porque depende de una decisión que la
-junta dejó clara y que solo Samuel puede tomar: la del recinto (§6, §14). Lo
-que sí es cierto con cualquier decisión:
+instrumento **promete**, y la rellenó `calor_budget.py` el 03-09 con D-F3 = A
+y D-F7: es la corriente en el **punto fijo** —la que el rack puede dar
+calienta el cajón, y el calor recorta la que puede dar— con el **venteo
+mínimo** que el modelo despeja, **16 900 mm² nuevos**; a esa abertura el aire
+del recinto son 68,9 °C. Con más abertura, más corriente; con la caja de hoy,
+cerrada, 0,95 / 0,95 / 2,0 A —el 25 %— y 92,6 °C. El modelo es pesimista a
+sabiendas (§6): hereda de `guarda_aire()` que el cajón solo evacúa por
+chimenea. Lo que sí es cierto con cualquier venteo:
 
 **El instrumento y los invitados no se prestan un miliamperio de suministro.**
 El riel ultra sigue en 650 mA con su 30 % de margen (`consumo_total_budget.py`:
@@ -149,8 +155,21 @@ salvo donde se marca.
 | `PS2` | IRM-20-15 | −15 V → `U2` (apilada, §4.2) | 1,4 A | 200 mVp-p | 84 % (†) | 40 A | 0,4 A | 52,4 × 27,2 × 24 | 50 g |
 | `PS3` | IRM-45-12 | +12 V rack | 3,8 A | 150 mVp-p | 87,5 % | 60 A | 0,9 A | 87 × 52 × 29,5 | 195 g |
 | `PS4` | **IRM-45-12** | −12 V rack (apilada) | 3,8 A (2,5 declarados) | 150 mVp-p | 87,5 % | 60 A | 0,9 A | 87 × 52 × 29,5 | 195 g |
-| `PS5` | IRM-20-5 | +5 V rack | 4,0 A | 200 mVp-p | 79 % | 40 A | 0,4 A | 52,4 × 27,2 × 24 | 50 g |
+| `PS5` | **IRM-45-5** (D-F7) | +5 V rack | 8,0 A (**4,0 declarados**) | **80 mVp-p** | 83,5 % | 60 A | 0,9 A | 87 × 52 × 29,5 | 195 g |
 | `PS6` | IRM-45-5 | +5 V digital | 8,0 A | **80 mVp-p** | 83,5 % | 60 A | 0,9 A | 87 × 52 × 29,5 | 195 g |
+
+**`PS5` cambia de IRM-20-5 a IRM-45-5 (D-F7, firmada 2026-09-03).** Motivo:
+`calor_budget.py` corrió por primera vez con la IRM-20-5 y el listón del +5 V
+de rack **no existía con ningún venteo**: la IRM-20-5 son 20 W a 5 V = **4,0 A
+de placa, exactamente la PSU3**, cero margen de derating, y su curva «3.3V,5V»
+tiene el codo a **45 °C**, justo la sala de diseño. Con la IRM-45-5 —la misma
+pieza que `PS6`, una referencia menos— el riel tiene 8 A de placa y codo a
+50 °C; el listón declarado se queda en 4,0 A, y a esa carga la IRM-45-5
+disipa **menos** que la IRM-20-5 a placa (3,95 W contra 5,32). Cuesta ~13 €
+más y 87 × 52 en R en vez de 52 × 27. **Desde D-F7 el papel distingue dos
+números que mezclaba: la placa del módulo (lo que puede dar) y el listón
+declarado (lo que el instrumento promete); el sostenido es el menor de los
+dos.** El −12 V ya venía así sin decirlo (3,8 A de placa, 2,5 declarados).
 
 (†) La tabla de la IRM-20 da 84 % para 12 V y 15 V. La IRM-45 se lee sin
 ambigüedad ya (la v1 de este papel la tenía cruzada): 5 V 83,5 %, 12 V 87,5 %,
@@ -171,11 +190,15 @@ Lo que comparten los seis, de las mismas hojas:
   de las cuatro hojas («fosc : 65KHz»). El repo ya la usaba: `design-notes` v1
   §18.7 y el commit `fec315e`. La v1 de este papel la declaró HUECO por no
   haber leído la p. 3.
-- **Curva de derating (p. 3)**: **100 % hasta 50 °C**, y de ahí **−2,5 %/°C
-  hasta el 50 % a 70 °C**; las salidas de **5 V** de IRM-20 e IRM-30 quiebran
-  a **45 °C** (lectura de la junta del 03-09 sobre la curva; la spec del chasis
-  ya había leído el codo de la IRM-15 a +50 °C el 2026-08-19. **Se confirma con
-  los ojos antes de sellar**, §12.1). Es el número que gobierna §6.
+- **Curva de derating (p. 3), leída con los ojos el 03-09 (§12.1 hecho,
+  `curvas.py`)**: **100 % hasta 50 °C**, **50 % a 70 °C**, y **no acaba ahí**:
+  la IRM-45 sigue a 33 % a 80 °C y 25 % a 85; la IRM-20 a 20 % y 5 %. Por
+  encima de 85 °C el módulo no opera. Las salidas de **5 V** de la IRM-20 y la
+  IRM-30 quiebran a **45 °C** (y la IRM-20-5 está ya al 80 % a 50); **la
+  IRM-45 dibuja una sola curva para toda la serie**, también para su 5 V. La
+  lectura de la junta («hasta el 50 % a 70 °C», y «las de 5 V a 45 °C» sin
+  distinguir familia) era incompleta en los dos sentidos, y es lo que hizo
+  nacer D-F7 (§3, `PS5`). Es el número que gobierna §6.
 - **EMI Clase B conducida y radiada «sin componentes adicionales»** — para el
   módulo solo; la nota 5 manda re-verificar el equipo final. Aquí son seis
   compartiendo NTC, MOV, choke y PE, con un riel de 0,8 µV al lado: §4.2.
@@ -558,10 +581,10 @@ Las fuentes de calor, con los rendimientos ya corregidos de §3:
 | `PS6` | 5 × 3,005 × (1/0,835 − 1) = 2,97 W | 24,7 × 0,198 = 4,88 W |
 | `PS3` | < 0,15 W | 45,6 × (1/0,875 − 1) = 6,51 W |
 | `PS4` | < 0,15 W | 30 × 0,143 = 4,29 W |
-| `PS5` | < 0,1 W | 20 × (1/0,79 − 1) = 5,32 W |
+| `PS5` (IRM-45-5 desde D-F7, a los 4,0 A declarados) | < 0,1 W | 20 × (1/0,835 − 1) = **3,95 W** (era 5,32 con la IRM-20-5) |
 | `U1`, `U2` a 15 V de entrada | 0,65 + 0,69 W | 1,24 + 1,37 W |
 | LT ×4 + `U3` | 0,35 + 0,30 W | 1,30 + 0,30 W |
-| **Total en el recinto** | **7,2 W** | **28,9 W** |
+| **Total en el recinto** | **7,2 W** | **27,5 W** (28,9 con la IRM-20-5 en `PS5`, antes de D-F7) |
 | + el 1,8 V si vive dentro | +0,62 W | +4,57 W |
 
 Y **fuera del recinto pero dentro del cajón**, lo que el listón permite y
@@ -580,6 +603,24 @@ de fuente en su presupuesto de aire.
 
 Las dos primeras filas son **por debajo de la PSU3**. La segunda es por debajo
 de la v3.
+
+**Lo que da `calor_budget.py`** (03-09, con las curvas leídas con los ojos,
+D-F3 = A y D-F7; **punto fijo**, no carga a placa):
+
+| Situación | Aire del recinto | Rack sostenido (+12 / −12 / +5) | Digital sostenido |
+|---|---|---|---|
+| Caja de hoy (cerrada), todo lo que el rack pueda dar | **92,6 °C** | **0,95 / 0,95 / 2,0 A** (25 %) | 2,0 A |
+| **Venteo mínimo: 16 900 mm² nuevos** (D-F3 = A, encargo a #289) | **68,9 °C** | **2,0 / 2,0 / 4,0 A** — el +12 fija el mínimo | **4,2 A** |
+| A placa sin derating, caja de hoy (no es un estado alcanzable) | 145,7 °C | — | — |
+
+Con la IRM-20-5 en `PS5` la segunda fila **no existía**: ningún venteo daba
+4,0 A en el +5 V, y de ahí D-F7. Dos cosas del modelo que hay que decir: la
+constante que más mueve el sostenido es **`CD_TIRO`** (el coeficiente de
+descarga del venteo, supuesto y no medido), y el modelo **hereda de
+`guarda_aire()` que el cajón solo evacúa por chimenea** —ignora la convección
+de las paredes exteriores, que a estas potencias es del mismo orden—, así que
+los 16 900 mm² son **pesimistas**. Afinarlo es de la Tarea 4 del plan y de
+#289, y lo que salga de ahí es lo que el case dibuja.
 
 **Esto no era un hueco: era la decisión (D-F3), y Samuel la tomó el 03-09.**
 El listón se firmó como corriente de placa; sostenido, dentro de un recinto
@@ -703,7 +744,7 @@ Los dos 5 V que llegan al módulo 2 van en **familias distintas** por necesidad
 de corriente, y con eso la protección geométrica que la v1 de este papel
 abandonaba sin decirlo vuelve sola.
 
-**Tamaños**: los seis IRM ocupan 178 cm²; R con su franja de red, sus filtros y
+**Tamaños**: los seis IRM ocupan 209 cm² (178 antes de D-F7: la IRM-45-5 de `PS5` son 45 cm² donde la IRM-20-5 eran 14); R con su franja de red, sus filtros y
 sus interruptores anda por **200 × 150 (ESTIMADO)**; C, sin rectificador ni
 toroide, **por debajo de 200 × 100 (ESTIMADO)**. Los ponen los `build_pcb.py`.
 
@@ -888,12 +929,15 @@ lo que otro no hace** (#214, #206).
 | **D-F4** | **secuenciador** por ON/OFF, cascada y rack | detector de ventana ×2 en R; `secuencia_budget.py`; paso 2b del bring-up |
 | **D-F5** | **Y2 de modo común** por módulo | seis Y2 al chasis en R; §12.4 por leer; entra en `fuga_budget.py` |
 | **D-F6** | **crowbar** en los rieles de rack, y solo ahí | SCR por riel de rack; `check_absmax.py` contra los 16,2 V; su prueba en el bring-up |
+| **D-F7** | `PS5` = **IRM-45-5** (era IRM-20-5); +5 V de rack **4,0 A declarados** sobre 8 de placa | `calor_budget.py` lo hizo nacer: con la IRM-20-5 el listón del +5 V no existía con ningún venteo (§3). Una referencia menos en R; 87 × 52 mm donde había 52 × 27 |
 
-**Lo que queda por firmar, y es una sola cosa:** la columna «sostenido» de §1
-—el listón que el instrumento **promete**, no el que compra—. Su dueño es
-`calor_budget.py` con el recinto ventilado, y su testigo es el paso 7 del
-bring-up. Hasta que los dos existan, este papel dice «de placa» en todas
-partes y no dice ninguna otra cosa.
+**La columna «sostenido» de §1 está rellena** (03-09, `calor_budget.py`, con
+D-F3 = A y D-F7): 2,0 / 2,0 / 4,0 A de rack y 4,2 A digital con el venteo
+mínimo de 16 900 mm². Es una **predicción de modelo**, pesimista a sabiendas
+(§6); su testigo es el paso 7 del bring-up, y hasta esa medida el papel dice
+«sostenido según modelo». Lo que ese número le exige a otros: el venteo
+mínimo al case (#289) y el techo nuevo del digital a `power_budget.py`
+(Tarea 5 del plan).
 
 **Lo que sigue sin ser de este papel** (§11): D-R1 (el 1,8 V), el valor del
 fusible hasta `fusible_budget.py`, los peines y el PTC de #169, y el mecanismo
