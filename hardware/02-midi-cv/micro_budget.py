@@ -1285,10 +1285,13 @@ def demo_censo_hub() -> tuple[dict, int]:
 # ---------------------------------------------------------------------------
 # LO QUE ESTE CALCULO **NO** CUBRE
 #
-#   * EL REPARTO DE PINES DEL CEREBRO. El de la Voz ya lo cierra el censo
-#     del N657 de arriba (issue #213); el del cerebro (RP2350B: maquinas de
-#     PIO + pines) sigue abierto y es la herencia real de `pines_budget.py`
-#     (dieciseis S15) -- otra sesion lo trabaja en `pio_budget.py`.
+#   * EL PINOUT DEL CEREBRO CON NOMBRE DE PIN. El censo del hub de arriba
+#     demuestra que el reparto cabe y propone uno de muestra; el pinout real
+#     lo elige el esquematico del hub, que no existe, y `pinout.rs` lo
+#     declara como indices de propuesta hasta entonces. `pio_budget.py`
+#     (maquinas de PIO del RP2350B) se retiro a historia el 2026-09-03: su
+#     sujeto murio con el hub D1, y desde ese dia el NSS por hardware que
+#     este censo reparte es REQUISITO del maestro del J2 (D1), no reparto.
 #
 #   * EL SUBMODULO DE CLASE DAISY. El acta E-5 pone los oidos en la placa de
 #     Voz con un Daisy Patch Submodule (~£35, STM32H750 + codec + 64 MB SDRAM).

@@ -1,12 +1,26 @@
-//! La asignación de pines del cerebro (§5.3), en un solo sitio.
+//! La asignación de pines del cerebro, en un solo sitio.
 //!
-//! Está aquí y no en `fw` porque es un dato con invariantes que se prueban:
-//! que ningún pin esté asignado dos veces, y que todos existan en el chip.
-//! Probarlo en `fw` obligaría a correr tests en el micro.
+//! El cerebro es un STM32N657 (hub §S10, 2026-08-30; VFBGA264 por el censo,
+//! `hardware/02-midi-cv/micro_budget.py`). Está aquí y no en `fw` porque es un
+//! dato con invariantes que se prueban: que ningún pin esté asignado dos
+//! veces, que el J2 sean ocho enlaces y no un bus, y que no quede nada del
+//! chip que se fue. Probarlo en `fw` obligaría a correr tests en el micro.
 //!
-//! **Estos números son una propuesta.** No hay placa contra la que
-//! verificarlos; cuando la haya, se cambia este fichero y nada más. Esa es la
-//! razón de que exista.
+//! **Los `gpio` son índices de propuesta, no pines del N657.** El N657 no
+//! numera GPIO: tiene puertos y pines (`PA9`, `PO3`), y cuál va con qué señal
+//! lo decide el esquemático del hub, que hoy no existe. Cuando exista, este
+//! fichero pasa a puerto y pin y nada más cambia: esa es la razón de que
+//! exista. El censo (`micro_budget.py`) demuestra que el reparto cabe y
+//! propone uno de muestra; no se lee desde aquí, porque una puerta que compara
+//! la propuesta consigo misma no es una puerta (#139). La hoja que manda es la
+//! DS14791 Rev 10, y la lee el censo.
+//!
+//! Lo que se fue con el RP2350 (hub D1, 2026-08-30): el PIO y sus tres
+//! programas (los cronómetros de afinación son capturas de TIM en el N657 de
+//! la Voz desde el 26-08; el host USB va por el OTG nativo; el mecanismo de la
+//! cadena WS2812 lo decide su propio papel), y los dígitos de la cabeza local
+//! (derogada el 27-08). El bus del J2 se fue antes, con el punto a punto
+//! (25-08): eran un SPI y ocho CS, y son ocho enlaces.
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Pin {
@@ -31,96 +45,77 @@ const fn a(gpio: u8, para: &'static str) -> Pin {
     }
 }
 
-/// El RP2350B: 48 GPIO (§5.3). El A tiene 30 y por eso no daba.
-pub const GPIO_MAX: u8 = 48;
-/// Las entradas analógicas del B viven arriba del todo.
-pub const ANALOGICOS: core::ops::Range<u8> = 40..48;
-
 pub static PINOUT: &[Pin] = &[
-    // --- J2, el mazo digital. Contrato congelado por el módulo 3 ---
-    d(2, "J2 SCLK"),
-    d(3, "J2 MOSI"),
-    d(4, "J2 MISO"),
-    // Un CS por ranura: módulos 3, 4, 5, 6, 7 y los futuros 8 y 9, más repuesto.
-    d(5, "J2 CS ranura 1"),
-    d(6, "J2 CS ranura 2"),
-    d(7, "J2 CS ranura 3"),
-    d(8, "J2 CS ranura 4"),
-    d(9, "J2 CS ranura 5"),
-    d(10, "J2 CS ranura 6"),
-    d(11, "J2 CS ranura 7"),
-    d(12, "J2 CS ranura 8"),
-    // --- I²C hacia el mux de 8 canales (§3.5) ---
-    d(0, "I2C SDA"),
-    d(1, "I2C SCL"),
-    // --- Afinado: los cuatro TUNE_OUT al PIO (§5.1) ---
-    d(13, "TUNE_OUT 1"),
-    d(14, "TUNE_OUT 2"),
-    d(15, "TUNE_OUT 3"),
-    d(16, "TUNE_OUT 4"),
-    // --- Gates al ADSR ---
-    d(17, "GATE 1"),
-    d(18, "GATE 2"),
-    d(19, "GATE 3"),
-    d(20, "GATE 4"),
-    // --- La cadena de LED direccionables: un solo pin de datos (§6.2) ---
-    d(21, "WS2812 datos"),
+    // --- J2: ocho enlaces punto a punto (2026-08-25, D1 y D3) ---
+    //
+    // Seis en SPI de hardware con el NSS del periférico. El maestro del J2
+    // (2026-09-03, D1) lo exige: el NSS por hardware no funciona sin TSIZE, y
+    // viceversa (RM0486 p. 3437). Cada ranura es un enlace con su propio
+    // maestro, su propio reloj sancionado y su propia tarea.
+    d(0, "J2 r1 SCK"),
+    d(1, "J2 r1 MOSI"),
+    d(2, "J2 r1 MISO"),
+    d(3, "J2 r1 NSS"),
+    d(4, "J2 r2 SCK"),
+    d(5, "J2 r2 MOSI"),
+    d(6, "J2 r2 MISO"),
+    d(7, "J2 r2 NSS"),
+    d(8, "J2 r3 SCK"),
+    d(9, "J2 r3 MOSI"),
+    d(10, "J2 r3 MISO"),
+    d(11, "J2 r3 NSS"),
+    d(12, "J2 r4 SCK"),
+    d(13, "J2 r4 MOSI"),
+    d(14, "J2 r4 MISO"),
+    d(15, "J2 r4 NSS"),
+    d(16, "J2 r5 SCK"),
+    d(17, "J2 r5 MOSI"),
+    d(18, "J2 r5 MISO"),
+    d(19, "J2 r5 NSS"),
+    d(20, "J2 r6 SCK"),
+    d(21, "J2 r6 MOSI"),
+    d(22, "J2 r6 MISO"),
+    d(23, "J2 r6 NSS"),
+    // Dos más en USART síncrono, con el CS por GPIO: el USART como maestro no
+    // trae NSS por hardware (punto a punto D3). Son repuesto sin módulo hasta
+    // que tengan su propio papel (maestro del J2, riesgo 7).
+    d(24, "J2 r7 CK"),
+    d(25, "J2 r7 TX"),
+    d(26, "J2 r7 RX"),
+    d(27, "J2 r7 CS"),
+    d(28, "J2 r8 CK"),
+    d(29, "J2 r8 TX"),
+    d(30, "J2 r8 RX"),
+    d(31, "J2 r8 CS"),
+    // --- I²C hacia el mux de 8 canales (§3.5): el tronco del descubrimiento ---
+    d(32, "I2C SDA"),
+    d(33, "I2C SCL"),
+    // --- La cadena de LED direccionables: un solo pin de datos (cerebro §6.2).
+    //     Sin PIO, su mecanismo lo decide su propio papel. ---
+    d(34, "WS2812 datos"),
     // --- MIDI DIN, con su optoacoplador (§5.3) ---
-    d(22, "DIN in"),
-    d(23, "DIN out"),
+    d(35, "DIN in"),
+    d(36, "DIN out"),
     // --- Sync analógico. El reset va como parámetro, no cableado (§5.3) ---
-    d(24, "CLOCK in"),
-    d(25, "CLOCK out"),
-    d(26, "RESET in"),
-    d(27, "RESET out"),
+    d(37, "CLOCK in"),
+    d(38, "CLOCK out"),
+    d(39, "RESET in"),
+    d(40, "RESET out"),
     // --- El zócalo del puente inalámbrico (§4.2) ---
-    d(28, "UART puente TX"),
-    d(29, "UART puente RX"),
-    // --- La cabeza local (§5.2). Su pulsador ES la confirmación física ---
-    d(30, "encoder A"),
-    d(31, "encoder B"),
-    d(32, "encoder pulsador"),
-    d(33, "digitos: datos"),
-    d(34, "digitos: reloj"),
-    d(35, "digitos: latch"),
-    // --- USB host sobre PIO (§5.3). Los dos van juntos y consecutivos ---
-    d(36, "PIO-USB D+"),
-    d(37, "PIO-USB D-"),
+    d(41, "UART puente TX"),
+    d(42, "UART puente RX"),
+    // --- El encoder de la cabeza local (§5.2). La cabeza está DEROGADA desde
+    //     el 27-08 (cerebro §7): sus dígitos se fueron. El encoder se queda
+    //     porque ningún papel lo retira y su pulsador es la confirmación física
+    //     (#143, #144). HUECO: sin cabeza, no tiene sitio decidido. ---
+    d(43, "encoder A"),
+    d(44, "encoder B"),
+    d(45, "encoder pulsador"),
     // --- El pedal. Analógico para que sirva también de expresión (§5.3) ---
-    a(40, "pedal"),
-];
-
-/// Cuántos GPIO consecutivos ve una máquina de estado del PIO.
-///
-/// Datasheet del RP2350 (agosto 2024), pág. 877, Figura 44: *«GPIO mapping
-/// logic allows each state machine to observe and manipulate up to 32 GPIOs»*.
-pub const VENTANA_PIO: u8 = 32;
-
-/// Qué pines toca cada programa de PIO.
-///
-/// Vive aquí y no en el presupuesto porque es un dato **de pines**: cuál va con
-/// cuál. Cuántas máquinas, cuántas instrucciones y cuántos canales de DMA
-/// cuesta cada programa lo decide `hardware/02-midi-cv/pio_budget.py`, que lee
-/// esta tabla en vez de copiarla.
-///
-/// La restricción que obliga a declararlo: un programa cuyos pines caigan a los
-/// dos lados de la frontera de 32 **no se puede escribir**. No es que vaya
-/// lento — es que la máquina no alcanza el pin.
-pub static PROGRAMAS_PIO: &[(&str, &[&str])] = &[
-    (
-        "cronometros de afinacion",
-        &["TUNE_OUT 1", "TUNE_OUT 2", "TUNE_OUT 3", "TUNE_OUT 4"],
-    ),
-    ("host USB (Pico-PIO-USB)", &["PIO-USB D+", "PIO-USB D-"]),
-    ("cadena WS2812", &["WS2812 datos"]),
+    a(46, "pedal"),
 ];
 
 pub const N_PINES_USADOS: usize = PINOUT.len();
-
-// §5.3 cuenta ~37 GPIO y de ahi sale la obligacion del RP2350B, que da 48
-// contra los 30 del A. Si este numero bajara de 31 la obligacion dejaria de
-// sostenerse y habria que revisar la spec. Falla al COMPILAR, no al testear.
-const _: () = assert!(N_PINES_USADOS > 30);
 
 /// Para qué sirve un GPIO, si es que se usa. Lo consume `fw` al inicializar.
 pub fn para_que(gpio: u8) -> Option<&'static str> {
@@ -147,32 +142,6 @@ mod tests {
     }
 
     #[test]
-    fn todos_caben_en_el_rp2350b() {
-        // §5.3: el B da 48 GPIO. El A da 30 y por eso no sirve.
-        for p in PINOUT.iter() {
-            assert!(
-                p.gpio < GPIO_MAX,
-                "{} pide GPIO{} y el B llega a 47",
-                p.para,
-                p.gpio
-            );
-        }
-    }
-
-    #[test]
-    fn las_entradas_analogicas_son_de_las_que_existen() {
-        // El B trae 8 (GPIO40..47). Pedir una que no existe no compila en
-        // `fw`, pero falla aqui antes y con un mensaje que se entiende.
-        for p in PINOUT.iter().filter(|p| p.analogico) {
-            assert!(
-                ANALOGICOS.contains(&p.gpio),
-                "{} no es una entrada analogica",
-                p.para
-            );
-        }
-    }
-
-    #[test]
     fn ningun_nombre_se_repite() {
         // Dos pines con el mismo nombre hacen inutil el mensaje de error del
         // primer test, que es el que de verdad importa.
@@ -183,62 +152,104 @@ mod tests {
         }
     }
 
+    /// Las seis ranuras SPI, con sus cuatro señales cada una.
+    const J2_SPI: &[&str] = &[
+        "J2 r1 SCK",
+        "J2 r1 MOSI",
+        "J2 r1 MISO",
+        "J2 r1 NSS",
+        "J2 r2 SCK",
+        "J2 r2 MOSI",
+        "J2 r2 MISO",
+        "J2 r2 NSS",
+        "J2 r3 SCK",
+        "J2 r3 MOSI",
+        "J2 r3 MISO",
+        "J2 r3 NSS",
+        "J2 r4 SCK",
+        "J2 r4 MOSI",
+        "J2 r4 MISO",
+        "J2 r4 NSS",
+        "J2 r5 SCK",
+        "J2 r5 MOSI",
+        "J2 r5 MISO",
+        "J2 r5 NSS",
+        "J2 r6 SCK",
+        "J2 r6 MOSI",
+        "J2 r6 MISO",
+        "J2 r6 NSS",
+    ];
+    /// Las dos ranuras por USART sincrono, con su CS por GPIO.
+    const J2_USART: &[&str] = &[
+        "J2 r7 CK", "J2 r7 TX", "J2 r7 RX", "J2 r7 CS", "J2 r8 CK", "J2 r8 TX", "J2 r8 RX",
+        "J2 r8 CS",
+    ];
+
     #[test]
-    fn los_dos_pines_del_pio_usb_van_consecutivos() {
-        // Pico-PIO-USB los quiere asi: D+ y D- adyacentes.
-        let mas = PINOUT.iter().find(|p| p.para == "PIO-USB D+").unwrap();
-        let menos = PINOUT.iter().find(|p| p.para == "PIO-USB D-").unwrap();
-        assert_eq!(menos.gpio, mas.gpio + 1, "PIO-USB los quiere adyacentes");
+    fn el_j2_son_ocho_enlaces_punto_a_punto() {
+        // El J2 punto a punto (2026-08-25, D1 y D3) mato el bus de un SPI mas
+        // ocho CS: cada ranura es un enlace con su propio maestro. Seis van en
+        // SPI de hardware con NSS del periferico (el maestro del J2, D1, lo
+        // exige: el NSS por hardware no funciona sin TSIZE, y viceversa), y
+        // las dos restantes en USART sincrono con CS por GPIO (punto a punto
+        // D3: «el USART sincrono como maestro no trae NSS por hardware»).
+        let tiene = |n: &str| PINOUT.iter().any(|p| p.para == n);
+        for n in J2_SPI.iter().chain(J2_USART) {
+            assert!(
+                tiene(n),
+                "falta «{n}»: cada ranura del J2 lleva sus cuatro señales"
+            );
+        }
+        // Y el bus viejo no vuelve por la puerta de atras.
+        assert!(
+            !tiene("J2 SCLK"),
+            "«J2 SCLK» es el bus compartido que el punto a punto mato"
+        );
+        assert!(
+            !PINOUT.iter().any(|p| p.para.starts_with("J2 CS ranura")),
+            "«J2 CS ranura N» era el CS del bus compartido; hoy cada ranura tiene su NSS o su CS"
+        );
+    }
+
+    #[test]
+    fn no_queda_nada_del_chip_que_se_fue() {
+        // El cerebro es un STM32N657 desde el 2026-08-30 (hub, D1). Lo que
+        // solo tenia sentido en el RP2350 se fue con el: el PIO (no existe en
+        // el N657), los cronometros de afinacion (capturas de TIM en el N657
+        // de la Voz desde el 26-08), el host USB por PIO (el N657 trae dos OTG
+        // nativos), y los digitos de la cabeza local (derogada el 27-08).
+        for p in PINOUT.iter() {
+            for muerto in ["PIO", "TUNE_OUT", "digitos"] {
+                assert!(
+                    !p.para.contains(muerto),
+                    "«{}» nombra «{muerto}», que se fue con el RP2350",
+                    p.para
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn el_pedal_es_la_unica_entrada_analogica() {
+        // Si alguien anade otra entrada analogica tiene que venir a decirlo
+        // aqui: el pedal (§5.3) es hoy la unica, y el ADC del N657 va por
+        // pines concretos que el esquematico del hub elige.
+        let n = PINOUT.iter().filter(|p| p.analogico).count();
+        assert_eq!(
+            n, 1,
+            "hay {n} entradas analogicas y se esperaba solo el pedal"
+        );
+        let unica = PINOUT.iter().find(|p| p.analogico).unwrap();
+        assert_eq!(unica.para, "pedal");
     }
 
     #[test]
     fn para_que_encuentra_lo_asignado_y_no_inventa_lo_libre() {
-        assert_eq!(para_que(21), Some("WS2812 datos"));
-        assert_eq!(para_que(47), None);
-    }
-
-    #[test]
-    fn cada_programa_de_pio_cabe_en_una_sola_ventana() {
-        // El fallo que este test caza no se parece a un fallo: el pinout sigue
-        // siendo válido —ningún pin repetido, todos existen— y aun así el
-        // programa de PIO es imposible de escribir, porque una máquina solo
-        // alcanza 32 GPIO consecutivos.
-        //
-        // Es justo el tipo de restricción que no se descubre leyendo la lista
-        // de pines: hay que saber qué pines van juntos, y eso es lo que
-        // `PROGRAMAS_PIO` declara.
-        for (programa, pines) in PROGRAMAS_PIO {
-            let mut ventanas = [false; 2];
-            for nombre in *pines {
-                let p = PINOUT
-                    .iter()
-                    .find(|p| p.para == *nombre)
-                    .unwrap_or_else(|| panic!("«{nombre}» está en PROGRAMAS_PIO y no en PINOUT"));
-                ventanas[(p.gpio / VENTANA_PIO) as usize] = true;
-            }
-            assert!(
-                !(ventanas[0] && ventanas[1]),
-                "«{programa}» reparte sus pines a los dos lados del GPIO{}: \
-                 una máquina de PIO solo ve {} GPIO consecutivos, así que ese \
-                 programa no se puede escribir tal como están los pines",
-                VENTANA_PIO,
-                VENTANA_PIO
-            );
-        }
-    }
-
-    #[test]
-    fn programas_pio_no_nombra_pines_que_no_existen() {
-        // Si alguien renombra un pin en PINOUT, esta tabla envejece en
-        // silencio y el test de arriba pasaría por no encontrar nada que
-        // comparar. Aquí se entera.
-        for (_programa, pines) in PROGRAMAS_PIO {
-            for nombre in *pines {
-                assert!(
-                    PINOUT.iter().any(|p| p.para == *nombre),
-                    "PROGRAMAS_PIO nombra «{nombre}», que no está en PINOUT"
-                );
-            }
-        }
+        let sck_r1 = PINOUT
+            .iter()
+            .find(|p| p.para == "J2 r1 SCK")
+            .expect("J2 r1 SCK existe");
+        assert_eq!(para_que(sck_r1.gpio), Some("J2 r1 SCK"));
+        assert_eq!(para_que(u8::MAX), None);
     }
 }
