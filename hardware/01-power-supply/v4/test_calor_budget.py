@@ -13,7 +13,11 @@ Lo que fija este test:
     elegidos a mano.
 
 Este test puede quedar ROJO por el aserto del liston aun con el guion bien
-escrito: eso no se arregla bajando el aserto, se lleva a Samuel.
+escrito: eso no se arregla bajando el aserto, se lleva a Samuel. Paso el
+2026-09-03: con PS5 = IRM-20-5 el +5 V de rack no llegaba con ningun venteo
+(4,0 A de placa = 4,0 A de PSU3, codo a 45 C), y Samuel firmo D-F7: PS5 pasa
+a IRM-45-5. El contrato distingue desde entonces lo que el modulo puede dar
+(MODULO_A) de lo que el instrumento declara (PLACA_A).
 """
 from __future__ import annotations
 
@@ -37,16 +41,27 @@ def test_constantes_del_papel() -> None:
     assert cb.T_SALA == 45.0, "spec del chasis sec.3.1: 45 C de sala, NO 25"
     assert cb.AREA_RECINTO_M2 == 0.1453
     assert cb.H_CONV_W_M2K == 9.0
-    assert abs(cb.P_RECINTO_MAX - 28.9) < 0.05, cb.P_RECINTO_MAX
+    # 28,9 W del papel sec.6 con PS5 = IRM-20-5 (5,32 W a placa), menos esa
+    # PS5, mas la IRM-45-5 de D-F7 a los 4,0 A declarados (3,95 W)
+    assert abs(cb.P_RECINTO_MAX - 27.53) < 0.05, cb.P_RECINTO_MAX
     assert abs(cb.P_CAJON_MAX - 120.3) < 0.05, cb.P_CAJON_MAX
+    # lo que el instrumento DECLARA (D-F1) y lo que cada modulo PUEDE dar
+    # (su placa, hoja p. 2): son dos numeros, y el primero nunca supera al
+    # segundo. D-F7 (2026-09-03): PS5 pasa de IRM-20-5 (4 A) a IRM-45-5 (8 A)
     assert cb.PLACA_A == {"rack+12": 3.8, "rack-12": 2.5, "rack+5": 4.0,
                           "digital+5": 8.0}
+    assert cb.MODULO_A == {"rack+12": 3.8, "rack-12": 3.8, "rack+5": 8.0,
+                           "digital+5": 8.0}
+    for riel in RIELES:
+        assert cb.PLACA_A[riel] <= cb.MODULO_A[riel], (
+            f"{riel}: se declaran {cb.PLACA_A[riel]} A y el modulo da "
+            f"{cb.MODULO_A[riel]}: no se puede prometer mas de lo que hay")
     assert cb.PSU3_A == {"rack+12": 2.0, "rack-12": 1.2, "rack+5": 4.0}
     # que modulo alimenta cada riel, y por tanto que curva de derating lee:
-    # PS3/PS4 = IRM-45-12, PS5 = IRM-20-5 (curva "3.3V,5V"), PS6 = IRM-45-5
-    # (la IRM-45 no distingue la salida de 5 V: codo a 50, no a 45)
+    # PS3/PS4 = IRM-45-12, PS5 = IRM-45-5 (D-F7), PS6 = IRM-45-5. La IRM-45
+    # dibuja una sola curva para toda la serie (codo a 50, no a 45)
     assert cb.CURVA == {"rack+12": "IRM-45", "rack-12": "IRM-45",
-                        "rack+5": "IRM-20/5V", "digital+5": "IRM-45"}
+                        "rack+5": "IRM-45", "digital+5": "IRM-45"}
 
 
 # --- la cadena: forma ------------------------------------------------------
@@ -82,7 +97,9 @@ def test_cerrado_reproduce_el_orden_de_magnitud_de_la_junta() -> None:
         f"cerrado y con el cajon cargado el aire da {t:.1f} C, por debajo del "
         f"codo de derating ({codo:.0f}): entonces D-F3 no hacia falta "
         f"y toda la sec.6 del papel esta mal")
-    print(f"  cerrado: {t:.1f} C de aire (la junta estimo ~78)")
+    print(f"  cerrado y A PLACA sin derating: {t:.1f} C de aire (no es un "
+          f"estado alcanzable; el punto fijo cerrado lo imprime demo(), y ese "
+          f"es el comparable con los ~78 C de la junta)")
 
 
 def test_ventilar_baja_el_aire_y_es_para_lo_que_se_firmo_d_f3() -> None:
@@ -112,11 +129,16 @@ def test_sostenido_entre_cero_y_placa() -> None:
             assert 0.0 < s <= placa + 1e-9, (riel, t, s)
 
 
-def test_sostenido_es_placa_por_derating() -> None:
+def test_sostenido_es_el_modulo_recortado_y_nunca_mas_que_lo_declarado() -> None:
     for riel, placa in cb.PLACA_A.items():
         for t in (25.0, 45.0, 55.0, 65.0, 80.0):
-            esperado = placa * derating(t, cb.CURVA[riel])
+            esperado = min(placa, cb.MODULO_A[riel] * derating(t, cb.CURVA[riel]))
             assert abs(cb.sostenido_a(riel, t) - esperado) < 1e-9, (riel, t)
+    # y el caso que D-F7 compra: un modulo con el doble de placa que lo
+    # declarado sigue dando lo declarado aunque la curva ya lo recorte
+    assert cb.sostenido_a("rack+5", 60.0) == cb.PLACA_A["rack+5"], (
+        "a 60 C la IRM-45 esta al 75 %: 8 A x 0,75 = 6 A, mas que los 4,0 "
+        "declarados. El riel tiene que seguir dando 4,0, no 6")
 
 
 def test_por_encima_de_85_el_rack_no_existe() -> None:

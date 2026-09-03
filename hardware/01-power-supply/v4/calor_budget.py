@@ -33,21 +33,30 @@ ventilador-- y este guion es el que dice cuanto compro esa decision.
 
 SOSTENIDO es un PUNTO FIJO, no una evaluacion: la corriente que el rack puede
 dar calienta el cajon, el calor sube el aire, el aire recorta la corriente.
-Se itera desde PLACA_A hasta que el residuo baja de 1 mA en todos los rieles;
-guarda_liston() y el escenario cerrado relajan a 1/4 porque la iteracion
-directa oscila con poco venteo (un estado caliente y flojo alterna con uno
-frio y fuerte); SOSTENIDO en P_BASE converge a paso entero.
+Se resuelve por biseccion sobre la temperatura del aire del recinto: la
+cadena T -> corrientes(T) -> calor -> T' es no creciente en T (mas aire
+caliente, menos corriente, menos calor), asi que T' - T tiene una sola raiz.
+(La primera version iteraba sobre las corrientes con relajacion y oscilaba
+con poco venteo entre un estado caliente y flojo y uno frio y fuerte; con el
+min() de D-F7 dejo de converger. La biseccion no amortigua nada.)
 
-## Lo que salio, y por que el rojo no se rebaja
+## Lo que salio la primera vez, y la decision que provoco (D-F7)
 
 La busqueda de area prueba primero la guarda con 200 000 mm2 y, si ahi ya
 salta, publica infinito: no hay venteo que arregle un margen que no existe.
-Y no existe: rack+5 tiene 4,0 A en PLACA_A y 4,0 A en PSU3_A --la IRM-20-5
-son 20 W a 5 V, o sea la placa entera-- y la curva IRM-20/5V solo conserva el
-100 % hasta 45 C, que es justo la sala de diseno. Con cualquier potencia
-positiva el aire queda por encima de 45 y el sostenido por debajo de 4,0.
-Es una decision de liston (talla de PS5, o liston del +5 V de rack), no un
-aserto que se baje.
+Con PS5 = IRM-20-5, como el papel la traia, salio INFINITO: la IRM-20-5 son
+20 W a 5 V = 4,0 A de placa, exactamente el liston del +5 V de rack, y su
+curva "3.3V,5V" tiene el codo a 45 C, justo la sala de diseno. Cero margen.
+Los otros tres rieles pasaban holgados.
+
+Samuel firmo el 2026-09-03 (D-F7) que PS5 pasa a **IRM-45-5** --8 A de placa,
+codo a 50 C, la misma pieza que PS6-- y que el liston del +5 V de rack se
+queda en 4,0 A declarados. Por eso este guion distingue dos numeros que el
+papel mezclaba: MODULO_A, lo que el modulo puede dar (su placa, hoja p. 2), y
+PLACA_A, lo que el instrumento declara (D-F1). El sostenido es el menor de
+los dos: la placa del modulo recortada por su curva, y nunca por encima de lo
+declarado. El -12 V ya venia asi sin decirlo (IRM-45-12 de 3,8 A declarada a
+2,5), y el digital tambien (8 A de placa, 8 declarados).
 
 ## Lo que este modelo NO cubre
 
@@ -85,23 +94,32 @@ H_CONV_W_M2K = 9.0
 # CONTRA: case/cad/params.scad:1707 fija interior z=61; la salida actual de
 # case/clearance_budget.py:5903-5905 deriva exterior z=64 mm.
 # DERIVADO: 2(.3386*.064)+2(.1766*.064)+.3386*.1766 ~= 0.1257 m2.
-# docs/superpowers/specs/2026-09-03-fuente-v4-liston-design.md sec.6.
-P_RECINTO_MAX = 28.9
-P_CAJON_MAX = 120.3
-# Papel sec.1, D-F1 firmada 2026-09-03: corriente DE PLACA por riel.
-PLACA_A = {"rack+12": 3.8,       # PS3 = IRM-45-12
-           "rack-12": 2.5,       # PS4 = IRM-45-12
-           "rack+5": 4.0,        # PS5 = IRM-20-5: 20 W / 5 V, la placa ENTERA
-           "digital+5": 8.0}     # PS6 = IRM-45-5
+# Papel sec.6: 28,9 W con PS5 = IRM-20-5 a placa (5,32 W). Con D-F7, PS5 es
+# una IRM-45-5 a los 4,0 A declarados: 20 W x (1/0,835 - 1) = 3,95 W, con el
+# rendimiento de la IRM-45-5 (hoja p. 2, 83,5 %; el papel lo usa para PS6).
+P_RECINTO_MAX = 28.9 - 5.32 + 3.95        # 27,53 W
+P_CAJON_MAX = 120.3                       # papel sec.6: 95,6 fila + 24,7 digital
+# Lo que cada MODULO puede dar: su corriente de placa, fila "RATED CURRENT"
+# de la hoja Mean Well, p. 2 (IRM-45, leida 2026-09-03).
+MODULO_A = {"rack+12": 3.8,      # PS3 = IRM-45-12
+            "rack-12": 3.8,      # PS4 = IRM-45-12
+            "rack+5": 8.0,       # PS5 = IRM-45-5 (D-F7, 2026-09-03)
+            "digital+5": 8.0}    # PS6 = IRM-45-5
+# Lo que el instrumento DECLARA por riel: papel sec.1, D-F1 firmada
+# 2026-09-03. Nunca por encima de MODULO_A.
+PLACA_A = {"rack+12": 3.8,
+           "rack-12": 2.5,
+           "rack+5": 4.0,
+           "digital+5": 8.0}
 # doepfer.de/a100_man/a100t_e.htm, leido 2026-09-03 (papel sec.0).
 PSU3_A = {"rack+12": 2.0,
           "rack-12": 1.2,
           "rack+5": 4.0}
 # Que curva de derating lee cada riel (curvas.py). La IRM-45 dibuja UNA
-# curva para toda la serie; la IRM-20 dibuja aparte la de "3.3V,5V".
+# curva para toda la serie, tambien para su salida de 5 V.
 CURVA = {"rack+12": "IRM-45",
          "rack-12": "IRM-45",
-         "rack+5": "IRM-20/5V",
+         "rack+5": "IRM-45",
          "digital+5": "IRM-45"}
 
 # Papel del liston sec.6: PS1+PS2, U1, U2, LT x4 y U3 tipicos.
@@ -116,10 +134,7 @@ H_TIRO_RECINTO_M = 0.083
 T_ABS_AIRE_K = 318.0         # K; mandato T3 para sala 45 C, no 293 K del case.
 
 AREA_BUSQUEDA_MAX_MM2 = 200000.0  # mm2; mandato directo: buscar hasta aqui.
-TOL_PUNTO_FIJO_A = 0.001          # A; mandato: menos de 1 mA en cada riel.
-# DERIVADO en RED: paso directo y 1/2 oscilan a area baja; 1/4 converge.
-RELAJACION_PUNTO_FIJO = 0.25
-MAX_ITERACIONES_PUNTO_FIJO = 512  # COTA: >20 veces las 24 cerradas observadas.
+PASOS_BISECCION_T = 60            # COTA: 200 K / 2^60, precision sobrada.
 PASOS_BISECCION_AREA = 48         # COTA: resolucion mucho menor que 1 mm2.
 PASOS_BISECCION_DT = 80           # COTA: biseccion termica, precision sobrada.
 PASO_AREA_DISENO_MM2 = 100.0      # mm2; plan T3, redondear arriba a centena.
@@ -211,48 +226,53 @@ def p_recinto_w(corrientes: dict[str, float]) -> float:
 
 
 def sostenido_a(riel: str, t_aire_c: float) -> float:
+    """Lo que el riel puede dar SOSTENIDO a esa temperatura de aire: la placa
+    del modulo recortada por su curva, y nunca por encima de lo declarado."""
     if riel not in PLACA_A:
         raise KeyError(riel)
-    return PLACA_A[riel] * derating(t_aire_c, CURVA[riel])
+    return min(PLACA_A[riel],
+               MODULO_A[riel] * derating(t_aire_c, CURVA[riel]))
 
 
-def _fixed_point(p: Mapping[str, float], *, damping: float = 1.0,
+def _fixed_point(p: Mapping[str, float], *,
                  area_recinto_m2: float = AREA_RECINTO_M2,
                  h_conv: float = H_CONV_W_M2K, cd: float = CD_TIRO) -> dict[str, float]:
-    """Iterate I->heat->air->derating from PLACA_A to a <1 mA residual.
+    """El punto fijo corriente -> calor -> aire -> derating -> corriente.
 
-    Relaxation 1/4 is necessary: the direct map oscillates at low vent area
-    between a hot low-current state and a cool high-current state. It does not
-    change the fixed point and converges at both ends of the search interval.
-    """
-    corrientes = dict(PLACA_A)  # Mandato: comenzar exactamente en PLACA_A.
-    for _ in range(MAX_ITERACIONES_PUNTO_FIJO):
+    Se busca por biseccion sobre la temperatura del aire del recinto. Para
+    una T dada las corrientes son sostenido_a(riel, T), de ellas sale el
+    calor, y la T' que ese calor produce es no creciente en T: mas aire
+    caliente, menos corriente, menos calor. Asi que T' - T tiene una sola
+    raiz entre la sala y la sala + 200 K, y esa raiz es el punto fijo."""
+    def t_desde(temp: float) -> float:
+        corrientes = {r: sostenido_a(r, temp) for r in PLACA_A}
         fraccion = _ratio(corrientes)
-        # Sec.6/direct order: 3.90 W stays fixed; remaining heat scales with I.
+        # Papel sec.6: los 3,90 W de la cascada no dependen del rack; el
+        # resto del recinto y todo el cajon escalan con la corriente.
         calor_recinto = (_CONSTANTE_RECINTO_W
-                          + (p["p_recinto_w"] - _CONSTANTE_RECINTO_W) * fraccion)
+                         + (p["p_recinto_w"] - _CONSTANTE_RECINTO_W) * fraccion)
         calor_cajon = p["p_cajon_w"] * fraccion
-        temp = _temperaturas(
-            calor_recinto, calor_cajon,
-            p["area_venteo_mm2"], p["t_sala_c"],
-            area_recinto_m2=area_recinto_m2, h_conv=h_conv, cd=cd)[0]
-        objetivo = {r: sostenido_a(r, temp) for r in PLACA_A}
-        residuo = {r: objetivo[r] - corrientes[r] for r in PLACA_A}
-        if all(abs(residuo[r]) < TOL_PUNTO_FIJO_A for r in PLACA_A):
-            return objetivo
-        corrientes = {
-            r: corrientes[r] + damping * residuo[r]
-            for r in PLACA_A
-        }
-    mayor = max(abs(residuo[r]) for r in PLACA_A)
-    raise RuntimeError(
-        f"punto fijo no converge en {MAX_ITERACIONES_PUNTO_FIJO}; "
-        f"residuo {mayor:.6f} A")
+        return _temperaturas(calor_recinto, calor_cajon, p["area_venteo_mm2"],
+                             p["t_sala_c"], area_recinto_m2=area_recinto_m2,
+                             h_conv=h_conv, cd=cd)[0]
+
+    lo, hi = p["t_sala_c"], p["t_sala_c"] + 200.0
+    assert t_desde(hi) < hi, (
+        "a 200 K sobre la sala ningun modulo da corriente y el aire no puede "
+        "seguir ahi: el modelo del recinto esta roto")
+    for _ in range(PASOS_BISECCION_T):
+        mid = (lo + hi) / 2.0
+        if t_desde(mid) > mid:      # el calor a esta T la empuja mas arriba
+            lo = mid
+        else:
+            hi = mid
+    temp = (lo + hi) / 2.0
+    return {r: sostenido_a(r, temp) for r in PLACA_A}
 
 
 def guarda_liston(p: dict[str, float]) -> None:
     """Puerta rack contra PSU3; su texto estable alimenta el canario."""
-    valores = _fixed_point(p, damping=RELAJACION_PUNTO_FIJO)
+    valores = _fixed_point(p)
     for riel in PSU3_A:
         assert valores[riel] >= PSU3_A[riel], (
             f"SIGUE sin existir: {riel} sostenido {valores[riel]:.3f} A < "
@@ -310,7 +330,7 @@ P_BASE = {
     "p_cajon_w": P_CAJON_MAX,      # W; papel sec.6.
     "t_sala_c": T_SALA,            # C; chassis spec sec.3.1.
 }
-SOSTENIDO = _fixed_point(P_BASE, damping=1.0)
+SOSTENIDO = _fixed_point(P_BASE)
 
 
 def demo() -> None:
@@ -319,7 +339,7 @@ def demo() -> None:
     print("  tabla: escenario | dT cajon | dT recinto | T | riel / placa / PSU3")
     for area, etiqueta in escenarios:
         p = {**P_BASE, "area_venteo_mm2": area}
-        valores = _fixed_point(p, damping=RELAJACION_PUNTO_FIJO)
+        valores = _fixed_point(p)
         # Scenario rows are fixed points: recompute heat from those currents,
         # rather than displaying the full-load P_BASE heat beside them.
         p_rec = p_recinto_w(valores)
