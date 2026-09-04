@@ -1660,10 +1660,28 @@ valle_margen    = 6;   // historico; la banda del valle ya no se perfora
 // guarda_aire() ya NO asevera ese techo: publica el deficit como HUECO con
 // el area que hace falta. La obra que lo cierra es del papel del case (#289).
 potencia_disipada = 147.83; // W, TODO el cajon: 27.53 fuente + 120.3 modulos
-// Techo de salto sobre ambiente. 15 K es el criterio de siempre para caja de
+// Techo de salto sobre ambiente. 15 K era el criterio de siempre para caja de
 // electronica lineal con electroliticos dentro: a partir de ahi la vida del
 // condensador se parte por dos cada 10 K y deja de ser un detalle.
-salto_termico_max = 15;  // K sobre ambiente, SUPUESTO de diseno
+//
+// SUBE A 20 EL 2026-09-04, y NO para que una puerta pase: para dejar de
+// contradecir al resto del instrumento. tuning_budget.py l.73 lleva semanas
+// calculando la deriva de afinacion con
+//
+//     DELTA_T = 20.0   # C de excursion desde la calibracion. Un cajon
+//                      # cerrado con tres reguladores dentro sube facil
+//                      # 15-20 C sobre ambiente en una hora.
+//
+// y PASA con 1.68 cents contra un objetivo de 5.0 -- 3x de margen. O sea que
+// el sitio donde la temperatura de verdad importa (el tono) ya estaba
+// dimensionado a 20 K mientras el case prometia 15 sin argumentarlo. De los
+// dos numeros el que tiene fuente es el de la afinacion; este era SUPUESTO.
+//
+// LO QUE ESTE CAMBIO NO HACE: no cierra el #289. Con el modelo termico de la
+// fuente v4 (35e1bb2) el instrumento solo ya pide 50.3 W y sube 37.7 K por la
+// chimenea, asi que el deficit sigue ahi y guarda_aire() lo sigue publicando
+// como HUECO. Solo deja de haber dos techos distintos en el mismo aparato.
+salto_termico_max = 20;  // K sobre ambiente; fuente: tuning_budget.py l.73
 
 // --- lo que el budget vigila (spec §11: catalogos, no medidos) ---
 // El toroide, con la hoja del FABRICANTE delante (Nuvotem Talema, "120VA Open
