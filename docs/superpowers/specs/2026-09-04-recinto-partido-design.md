@@ -111,19 +111,29 @@ pasan a disipar al aire del cajón, que es lo que el #289 está dimensionando de
 todas formas. Si esto se firma, **el encargo del #289 hay que recalcularlo**: no
 baja por arte de magia, se reparte distinto entre los dos lazos convectivos.
 
-### 3.3 Lo que desbloquea, y es lo que más me sirve a mí
+### 3.3 Lo que desbloquea — RETIRADO EL MISMO DÍA, y hay que decirlo
 
-Si C sale del chasis, **sus TO-220 dejan de atornillarse a la pared**. Se caen
-los cuatro `chasis_to220_*` de `params.scad` (l.1777-1782) y la puerta
-`revisar_to220_coplanares()` (`build_pcb.py:2614`) se queda sin sujeto.
+**Esta sección se escribió como el argumento que más me servía a mí, y unas
+horas después dejó de ser cierta. Se queda escrita, tachada, porque una
+propuesta que borra sus razones caídas se lee mejor de lo que es.**
 
-Y con ellos **se cae la restricción de encapsulado sobre la opción (b)**: hoy el
-pre-regulador tiene que ser un TO-220 con tab coplanar con otros dos. Sin esa
-atadura, puede ser el que mejor regule.
+Lo que decía: si C sale del chasis, sus TO-220 dejan de atornillarse a la
+pared, se caen los cuatro `chasis_to220_*` de `params.scad` (l.1777-1782) y
+`revisar_to220_coplanares()` (`build_pcb.py:2614`) se queda sin sujeto — y con
+ellos **la restricción de encapsulado sobre la opción (b)**, porque *«las
+referencias buenas viven en encapsulados que no tienen tab»*.
 
-Eso importa porque la (b) es el bloqueo real de la placa C, y hoy está entre la
-espada y la pared: las referencias buenas viven en encapsulados que no tienen
-tab.
+**Esa última frase era una suposición, y es falsa.** El **LT1963A Rev G** —
+declarado en `docs/references.md` el 2026-09-04, PR #317 — es **5-lead TO-220
+con tab**, tiene `ADJ` de 1,174–1,246 V sobre temperatura y 0,55 V de dropout
+garantizado, y **da +330 mV de margen en `U1` sin mover un solo parámetro del
+chasis**. La (b) se resuelve dentro de la restricción que esta sección quería
+levantar.
+
+Lo que sobrevive es más pequeño y más honesto: la partición **amplía el
+catálogo** de piezas elegibles para `U1` y `U2`, y eso vale sobre todo para
+`U2`, que sigue **sin sustituto y en −170 mV** con los candidatos de hoy. Pero
+**no es un desbloqueo, y esta propuesta ya no puede apoyarse en él.**
 
 ---
 
