@@ -254,7 +254,7 @@ sustituye el ensayo.
 
 **Y desde el 2026-09-03 esa cuenta no cierra, a propósito.** `potencia_disipada`
 dejó de ser el chasis del PSU (**9.22 W**, que daban 12.2 K contra el techo) y
-pasa a ser todo lo que se enciende dentro del cajón: **151.53 W** = 31.25 del
+pasa a ser todo lo que se enciende dentro del cajón: **151.55 W** = 31.25 del
 recinto de la fuente v4 + 120.3 de la fila de invitados y el digital (papel de
 la fuente v4 §6, tras D-F1 y D-F7). Con eso el case subiría **77 K**, así que
 `guarda_aire()` **ya no asevera el techo: publica el déficit como HUECO** —el

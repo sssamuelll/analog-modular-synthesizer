@@ -1645,7 +1645,7 @@ valle_margen    = 6;   // historico; la banda del valle ya no se perfora
 // declaraba que la bahia de arriba esta sellada del camino del PSU, y sus
 // vatios eran "un presupuesto que falta".
 //
-// 151.53 DESDE LA FUENTE v4 (2026-09-04), que es ese presupuesto ya hecho.
+// 151.55 DESDE LA FUENTE v4 (2026-09-04), que es ese presupuesto ya hecho.
 // Deja de ser el chasis del PSU y pasa a ser TODO lo que se enciende dentro
 // del cajon, con su desglose (papel de la fuente v4 sec.6, hardware/
 // 01-power-supply/v4/calor_budget.py):
@@ -1665,7 +1665,7 @@ valle_margen    = 6;   // historico; la banda del valle ya no se perfora
 // dejarlo salir. Esta geometria evacua 12.6 W al techo de 15 K, asi que
 // guarda_aire() ya NO asevera ese techo: publica el deficit como HUECO con
 // el area que hace falta. La obra que lo cierra es del papel del case (#289).
-potencia_disipada = 151.53; // W, TODO el cajon: 31.25 fuente + 120.3 modulos
+potencia_disipada = 151.55; // W, TODO el cajon: 31.25 fuente + 120.3 modulos
 // Techo de salto sobre ambiente. 15 K era el criterio de siempre para caja de
 // electronica lineal con electroliticos dentro: a partir de ahi la vida del
 // condensador se parte por dos cada 10 K y deja de ser un detalle.
