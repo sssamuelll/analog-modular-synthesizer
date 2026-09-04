@@ -73,8 +73,8 @@ from calor_budget import (P_BASE, PLACA_A, SOSTENIDO,  # noqa: E402
                           aire_recinto_c, p_cajon_w, p_recinto_w)
 
 CSV_PATH = os.path.join(DIR, "medidas.csv")
-COLS = ["paso", "magnitud", "unidad", "predicho", "tolerancia", "medido",
-        "placa", "fecha", "fuente"]
+COLS = ["paso", "magnitud", "unidad", "criterio", "predicho", "tolerancia",
+        "medido", "placa", "fecha", "fuente"]
 
 # Los pasos que el papel sec.9.1 enumera. Si falta uno en el CSV, el bring-up
 # no falla: PASA, y por eso los pasos 6, 7 y 8 de la v3 se habian perdido en
@@ -297,12 +297,28 @@ def _puntos() -> list[Punto]:
                    lo=SOSTENIDO[riel] * 0.9))
 
     # --- Paso 8: lo nuevo de la v4 ----------------------------------------
-    mv = ground_budget.desfase_mv(ground_budget.I_RACK_SOSTENIDO_A, 10)
-    p.append(P("8", "desfase_masa_rack_a_GNDREF", "mV",
-               "ground_budget.desfase_mv() con 2 A de carga ficticia en el "
-               "+12 de rack. El numero es GRANDE a proposito: lo que se "
-               "verifica no es que sea pequeno",
-               predicho=mv, tol=0.5 * mv))
+    # DOS puntos, y no uno, porque son DOS medidas distintas y la primera
+    # version de este guion las confundio: predecia el desfase del NETO de los
+    # tres rieles (4,00 A) con una instruccion que manda cargar SOLO el +12
+    # con 2 A, que produce la mitad. Y con +-50 % la cota inferior caia
+    # EXACTAMENTE encima del valor del procedimiento escrito: cualquier
+    # lectura redondeada a dos decimales salia roja.
+    i_un_riel = 2.0
+    mv1 = ground_budget.desfase_mv(i_un_riel, 10)
+    p.append(P("8", "desfase_masa_rack_a_GNDREF_con_2A_en_mas12", "mV",
+               f"ground_budget.desfase_mv({i_un_riel:.0f}) : cargando SOLO el "
+               f"+12 de rack con {i_un_riel:.0f} A de carga ficticia, que es "
+               f"lo que dice el papel sec.9.1. Por masa vuelven esos mismos "
+               f"{i_un_riel:.0f} A",
+               predicho=mv1, tol=0.6 * mv1))
+    mv2 = ground_budget.desfase_mv(ground_budget.I_RACK_SOSTENIDO_A, 10)
+    p.append(P("8", "desfase_masa_rack_a_GNDREF_a_carga_sostenida", "mV",
+               f"ground_budget.desfase_mv() con el rack ENTERO a su carga "
+               f"sostenida: por masa vuelve el NETO, "
+               f"{ground_budget.I_RACK_SOSTENIDO_A:.2f} A (+12 y +5 menos el "
+               f"-12). El numero es GRANDE a proposito: lo que se verifica no "
+               f"es que sea pequeno",
+               predicho=mv2, tol=0.6 * mv2))
     p.append(P("8", "desafinacion_1Voct_por_la_bahia", "cents",
                "LA MEDIDA QUE DE VERDAD IMPORTA: un CV de 1 V entrando por la "
                "bahia desde un jack cargado. Si la bahia recibe en "
@@ -343,15 +359,44 @@ def _lee() -> dict[str, dict]:
 
 
 def _plantilla(puntos: list[Punto]) -> None:
+    """Reescribe la hoja de campo CONSERVANDO lo que ya se midio.
+
+    La primera version la reescribia en blanco, y eso era una trampa: el
+    aserto de "predicciones viejas" de _contrato() manda correr --plantilla
+    por su nombre, asi que el dia que un presupuesto se moviera con medidas ya
+    tomadas, el unico remedio que el propio mensaje prescribe habria borrado
+    los datos de banco. Lo medido no lo genera nadie otra vez."""
+    previo = _lee()
+    guardadas = sum(1 for r in previo.values() if r.get("medido", "").strip())
+    huerfanas = [k for k, r in previo.items()
+                 if r.get("medido", "").strip()
+                 and k not in {pt.clave for pt in puntos}]
     with open(CSV_PATH, "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
         w.writerow(COLS)
         for pt in puntos:
             pred = "" if pt.predicho is None else f"{pt.predicho:g}"
             tol = "" if pt.tol is None else f"{pt.tol:g}"
-            w.writerow([pt.paso, pt.magnitud, pt.unidad, pred, tol, "",
-                        "", "", pt.fuente])
-    print(f"escrita la hoja de campo: {CSV_PATH} ({len(puntos)} puntos)")
+            v = previo.get(pt.clave, {})
+            # La columna `criterio` lleva el rango ESCRITO, no solo el par
+            # predicho/tolerancia: 33 de los 71 criterios tienen cota unica
+            # (>= o <=) y salian con las dos columnas vacias, o sea que quien
+            # esta en el banco no tenia contra que juzgar.
+            w.writerow([pt.paso, pt.magnitud, pt.unidad, pt.rango(), pred, tol,
+                        v.get("medido", ""), v.get("placa", ""),
+                        v.get("fecha", ""), pt.fuente])
+    print(f"escrita la hoja de campo: {CSV_PATH} ({len(puntos)} puntos, "
+          f"{guardadas} medidas conservadas)")
+    # Y SI ALGUNA MEDIDA SE QUEDA SIN SITIO, SE DICE. Renombrar una magnitud
+    # deja su fila huerfana; sin este aviso la medida desaparece y el punto
+    # nuevo se cuenta como "sin medir", que no es lo mismo.
+    if huerfanas:
+        print(f"  ATENCION: {len(huerfanas)} medida(s) sin punto que las "
+              f"reciba, y NO estan en la hoja nueva:")
+        for k in huerfanas:
+            print(f"    {k} = {previo[k]['medido']}")
+        print("  Alguien renombro una magnitud. Recuperalas del git antes de "
+              "commitear.")
 
 
 def _contrato(puntos: list[Punto], filas: dict[str, dict]) -> None:

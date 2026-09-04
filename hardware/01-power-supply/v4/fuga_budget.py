@@ -33,11 +33,21 @@ contra los 1113 del Y2: la corriente se parte por la mitad y el Y2 local desvia
 1,5 veces. A 20 MHz desvia 14,2. Lo que sostiene la decision son los flancos,
 no la fundamental.
 
-Y hay una banda, alrededor de la resonancia serie del hilo con los Y2 del
-filtro (~4,4 MHz), donde el camino LARGO es de baja impedancia y D-F5 casi no
-desvia nada: el peor punto desvia 1,00 veces. No es una mejora uniforme, y
-donde cae esa banda depende de parasitos ESTIMADO. Va aseverado para que no se
-pueda leer al reves, y quien lo arbitra es la medida con los seis encendidos.
+**Y ENTRE MEDIAS HAY UNA ANTIRRESONANCIA, donde D-F5 EMPEORA por 62.** Pasada
+la resonancia serie del hilo con los Y2 del filtro (~4,4 MHz) la rama larga es
+INDUCTIVA y la local sigue capacitiva. Donde las dos reactancias se cancelan
+--7,48 MHz-- la suma tiende a cero, la corriente CIRCULA entre las dos ramas y
+por la estrella pasan **62 veces** las que entran. Lo unico que lo limita son
+las partes reales, que aqui son dos ESTIMADO. No se arregla amortiguando el Y2
+(harian falta 9 ohm en serie, y eso mata su trabajo a 20 MHz): se arregla
+ACORTANDO el hilo de la estrella, que es quien pone la inductancia, y se MIDE.
+
+Esto no lo veia la primera version de este guion, que hacia el divisor con
+MAGNITUDES en vez de con impedancias complejas. Dos magnitudes no negativas
+obligan a que `zl/(zl+ze)` caiga en (0,1] y a que "D-F5 nunca empeora" salga
+cierto POR CONSTRUCCION del modelo -- y el guion publicaba ese artefacto como
+hallazgo, con un "el peor punto desvia 1,00 veces" que era el borde del
+artefacto y no una medida de nada.
 
 **3. LA NOTA DEL FABRICANTE NO DICE LO QUE EL PAPEL LE ATRIBUYE.** El papel
 sec.4.2 cita "EMI testing of component power supplies" de Mean Well como la
@@ -112,6 +122,12 @@ N_Y2_FILTRO = 2
 # conductor suelto sobre un plano.
 L_HILO_ESTRELLA_NH = 300.0
 L_LAYOUT_LOCAL_NH = 5.0    # ESTIMADO: el Y2 pegado al modulo
+# Las partes REALES de las dos ramas. No son un detalle: son lo unico que
+# limita la antirresonancia de mas abajo, y sin ellas el modelo la manda a
+# infinito. ESTIMADO las dos: ESR del Y2 con su via, y el hilo de 30 cm con
+# sus terminaciones y su efecto pelicular en los MHz.
+R_Y2_LOCAL_OHM = 0.05
+R_HILO_OHM = 0.10
 F_CONMUTACION_HZ = 65e3
 F_FLANCOS_HZ = 20e6
 
@@ -126,6 +142,10 @@ F_FLANCOS_HZ = 20e6
 MODULOS_SOBRE_PLACA_METALICA = True
 SALIDAS_TRENZADAS_SOBRE_LA_PLACA = True
 EMC_SE_VERIFICA_EN_EL_EQUIPO = True
+# Y el requisito que sale de la antirresonancia de mas abajo: la banda donde
+# D-F5 empeora hay que MIRARLA, no razonarla. Va al paso 1 del bring-up, que
+# ya mide la fuga con los seis encendidos.
+D_F5_PIDE_MEDIRSE_EN_ESA_BANDA = True
 
 ESTIMADOS = (
     f"C_Y2_FILTRO_NF={C_Y2_FILTRO_NF}: los Y2 del choke de red no tienen hoja "
@@ -133,6 +153,9 @@ ESTIMADOS = (
     f"ESL_Y2_NH={ESL_Y2_NH} y L_LAYOUT_LOCAL_NH={L_LAYOUT_LOCAL_NH}: "
     f"parasitos de montaje",
     f"L_HILO_ESTRELLA_NH={L_HILO_ESTRELLA_NH}: 1 nH/mm sobre 30 cm de hilo",
+    f"R_Y2_LOCAL_OHM={R_Y2_LOCAL_OHM} y R_HILO_OHM={R_HILO_OHM}: son lo unico "
+    f"que limita la antirresonancia, asi que su profundidad es tan ESTIMADA "
+    f"como ellas. Lo que NO depende de ellas es que exista",
 )
 HUECOS = (
     f"la cifra de IEC 62368-1. Se trabaja con {LIMITE_NORMA_MA} mA: "
@@ -174,19 +197,36 @@ def c_y2_maximo_nf() -> float:
                        * V_ENSAYO * 1e-9 * 1000.0)
 
 
-def z_local_ohm(f_hz: float, c_nf: float = C_Y2_NF) -> float:
-    """El Y2 de D-F5 pegado al modulo: su capacidad y su montaje."""
+def z_local(f_hz: float, c_nf: float = C_Y2_NF) -> complex:
+    """El Y2 de D-F5 pegado al modulo: su capacidad y su montaje.
+
+    COMPLEJA, no en magnitud. La primera version de este guion devolvia
+    |wL - 1/wC| y con eso el divisor de abajo NO PODIA dar nunca menos de 1:
+    dos magnitudes no negativas hacen que zl/(zl+ze) caiga siempre en (0,1].
+    O sea que "D-F5 nunca empeora" era cierto POR CONSTRUCCION del modelo, y
+    este guion lo publicaba como hallazgo. Con las reactancias con su signo,
+    la conclusion se da la vuelta: ver ANTIRRESONANCIA."""
     w = 2.0 * math.pi * f_hz
-    return abs(w * (L_LAYOUT_LOCAL_NH + ESL_Y2_NH) * 1e-9
-               - 1.0 / (w * c_nf * 1e-9))
+    return complex(R_Y2_LOCAL_OHM,
+                   w * (L_LAYOUT_LOCAL_NH + ESL_Y2_NH) * 1e-9
+                   - 1.0 / (w * c_nf * 1e-9))
 
 
-def z_estrella_ohm(f_hz: float) -> float:
+def z_estrella(f_hz: float) -> complex:
     """El camino largo: 30 cm de hilo hasta la estrella y de ahi al chasis
     por los Y2 del filtro de red."""
     w = 2.0 * math.pi * f_hz
-    return abs(w * (L_HILO_ESTRELLA_NH + ESL_Y2_NH) * 1e-9
-               - 1.0 / (w * C_Y2_FILTRO_NF * N_Y2_FILTRO * 1e-9))
+    return complex(R_HILO_OHM,
+                   w * (L_HILO_ESTRELLA_NH + ESL_Y2_NH) * 1e-9
+                   - 1.0 / (w * C_Y2_FILTRO_NF * N_Y2_FILTRO * 1e-9))
+
+
+def z_local_ohm(f_hz: float, c_nf: float = C_Y2_NF) -> float:
+    return abs(z_local(f_hz, c_nf))
+
+
+def z_estrella_ohm(f_hz: float) -> float:
+    return abs(z_estrella(f_hz))
 
 
 def fraccion_por_la_estrella(f_hz: float, c_nf: float = C_Y2_NF) -> float:
@@ -195,15 +235,41 @@ def fraccion_por_la_estrella(f_hz: float, c_nf: float = C_Y2_NF) -> float:
     LOS DOS CAMINOS ESTAN EN PARALELO, no compiten: la corriente se reparte
     por impedancia, igual que los retornos de ground_budget.py. Lo que D-F5
     compra no es "un camino mejor" sino DESVIAR corriente del camino que pasa
-    por donde vive la cadena de tono. Sin Y2 local, la fraccion es 1."""
-    zl = z_local_ohm(f_hz, c_nf)
-    ze = z_estrella_ohm(f_hz)
-    return zl / (zl + ze)
+    por donde vive la cadena de tono. Sin Y2 local, la fraccion es 1.
+
+    Y PUEDE PASAR DE 1. Donde una rama es capacitiva y la otra inductiva, su
+    suma se acerca a cero y la corriente CIRCULA entre las dos: por la
+    estrella pasa mas de la que entra. Eso es la antirresonancia de abajo, y
+    con magnitudes en vez de complejos no se ve."""
+    zl = z_local(f_hz, c_nf)
+    ze = z_estrella(f_hz)
+    return abs(zl / (zl + ze))
 
 
 def reduccion_df5(f_hz: float, **kw) -> float:
-    """Cuantas veces baja la corriente por la estrella al poner el Y2 local."""
+    """Cuantas veces baja la corriente por la estrella al poner el Y2 local.
+
+    Por debajo de 1 significa que la SUBE."""
     return 1.0 / fraccion_por_la_estrella(f_hz, **kw)
+
+
+def _barrido(lo_dec: float = 4.0, ancho: float = 4.0, n: int = 4000):
+    paso = ancho / n
+    return [10.0 ** (lo_dec + i * paso) for i in range(n + 1)]
+
+
+def antirresonancia(**kw) -> tuple[float, float]:
+    """(frecuencia, reduccion) del punto donde D-F5 EMPEORA mas las cosas.
+
+    Las dos ramas estan en paralelo entre el borne del modulo y el chasis. Por
+    encima de la resonancia serie del hilo con los Y2 del filtro (~4,4 MHz) la
+    rama larga es INDUCTIVA, y la local sigue siendo CAPACITIVA hasta su propia
+    resonancia. Donde las dos reactancias se cancelan, la suma tiende a cero y
+    la corriente circula entre ellas: por la estrella pasa MUCHA MAS de la que
+    entra. Lo unico que lo limita son las partes reales."""
+    fs = _barrido(**kw)
+    f = min(fs, key=lambda x: reduccion_df5(x))
+    return f, reduccion_df5(f)
 
 
 def _guarda_fuga(p: dict[str, float]) -> None:
@@ -272,20 +338,32 @@ def _autocomprobacion() -> None:
         f"D-F5 tiene que comprar en los MHz mucho mas que en la fundamental "
         f"({g20:.1f} contra {g65:.2f}): si no, no es un mecanismo de flancos y "
         f"su sitio en el papel es otro")
-    # Y LO QUE NO SE PUEDE CALLAR: hay una banda, alrededor de la resonancia
-    # serie del propio hilo con los Y2 del filtro, en la que el camino largo
-    # es de BAJA impedancia y el Y2 local casi no desvia nada. Se busca, se
-    # publica y se asevera que existe: taparla seria vender D-F5 como una
-    # mejora uniforme, y no lo es.
-    peor_f, peor_g = min(
-        ((10.0 ** (4.0 + 4.0 * i / 400.0),
-          reduccion_df5(10.0 ** (4.0 + 4.0 * i / 400.0))) for i in range(401)),
-        key=lambda x: x[1])
-    assert peor_g < 2.0, (
-        f"el peor punto de la banda desvia {peor_g:.2f} veces en "
-        f"{peor_f / 1e6:.2f} MHz: si D-F5 mejorara en TODA la banda, esta "
-        f"advertencia sobraria y el modelo no estaria viendo la resonancia "
-        f"del hilo con los Y2 del filtro")
+    # Y LO QUE NO SE PUEDE CALLAR: LA ANTIRRESONANCIA. Por encima de la
+    # resonancia serie del hilo con los Y2 del filtro la rama larga es
+    # INDUCTIVA y la local sigue capacitiva; donde las dos reactancias se
+    # cancelan, la corriente circula entre ellas y por la estrella pasa MUCHA
+    # MAS de la que entra. D-F5 empeora ahi, y por bastante.
+    peor_f, peor_g = antirresonancia()
+    assert peor_g < 1.0, (
+        f"el peor punto de la banda desvia {peor_g:.3f} veces en "
+        f"{peor_f / 1e6:.2f} MHz. Si saliera >= 1, el divisor estaria hecho "
+        f"con MAGNITUDES en vez de con impedancias complejas: dos magnitudes "
+        f"no negativas hacen que la fraccion caiga siempre en (0,1] y que "
+        f"'D-F5 nunca empeora' sea cierto por construccion del modelo. Esta "
+        f"version del guion publicaba exactamente ese artefacto como hallazgo")
+    assert peor_g < 0.5, (
+        f"la antirresonancia solo multiplica por {1 / peor_g:.1f} la corriente "
+        f"por la estrella: si fuera tan floja, el requisito de abajo sobraria")
+    assert D_F5_PIDE_MEDIRSE_EN_ESA_BANDA, (
+        f"D-F5 tiene una antirresonancia en {peor_f / 1e6:.2f} MHz donde "
+        f"MULTIPLICA POR {1 / peor_g:.0f} la corriente de modo comun que se "
+        f"vuelve por la estrella, y lo unico que la limita en este modelo son "
+        f"dos partes reales ESTIMADO ({R_Y2_LOCAL_OHM} y {R_HILO_OHM} ohm). No "
+        f"se arregla amortiguando el Y2 --harian falta {z_local_ohm(peor_f):.0f}"
+        f" ohm en serie y eso mata su trabajo a 20 MHz--: se arregla acortando "
+        f"el hilo de la estrella, que es quien pone la inductancia, y SE MIDE "
+        f"con los seis encendidos (paso 1 del bring-up). Poner esta constante "
+        f"en False es prometer que la banda esta limpia sin haberla mirado")
 
     # 5. El hallazgo 3: lo que la nota del fabricante SI exige. Van como
     #    requisitos aseverados porque este es el unico sitio del arbol donde
@@ -357,7 +435,8 @@ def demo() -> int:
     print("   impedancia, igual que los retornos de ground_budget.py)")
     print(f"  {'f':>10s} {'Y2 local':>10s} {'por estrella':>13s} "
           f"{'% estrella':>11s} {'veces':>8s}")
-    for f in (F_CONMUTACION_HZ, 200e3, 1e6, 5e6, F_FLANCOS_HZ):
+    for f in (F_CONMUTACION_HZ, 200e3, 1e6, 5e6, antirresonancia()[0],
+              10e6, F_FLANCOS_HZ):
         etiqueta = f"{f / 1e3:.0f}k" if f < 1e6 else f"{f / 1e6:g}M"
         print(f"  {etiqueta:>10s} {z_local_ohm(f):9.2f}o "
               f"{z_estrella_ohm(f):12.2f}o "
@@ -365,30 +444,38 @@ def demo() -> int:
     f_res = 1.0 / (2 * math.pi * math.sqrt(
         (L_HILO_ESTRELLA_NH + ESL_Y2_NH) * 1e-9
         * C_Y2_FILTRO_NF * N_Y2_FILTRO * 1e-9))
-    peor_f, peor_g = min(
-        ((10.0 ** (4.0 + 4.0 * i / 400.0),
-          reduccion_df5(10.0 ** (4.0 + 4.0 * i / 400.0))) for i in range(401)),
-        key=lambda x: x[1])
+    peor_f, peor_g = antirresonancia()
     print(f"  A {F_CONMUTACION_HZ / 1e3:.0f} kHz los dos caminos acaban en un "
-          f"condensador parecido y el hilo")
-    print(f"  no pesa ({2 * math.pi * F_CONMUTACION_HZ * L_HILO_ESTRELLA_NH * 1e-9:.2f}"
+          f"condensador parecido y el")
+    print(f"  hilo no pesa "
+          f"({2 * math.pi * F_CONMUTACION_HZ * L_HILO_ESTRELLA_NH * 1e-9:.2f}"
           f" ohm de 30 cm contra {z_local_ohm(F_CONMUTACION_HZ):.0f} del Y2): "
-          f"la corriente se")
-    print("  parte por la mitad. Arriba, pasada la resonancia del hilo con "
-          "los Y2 del")
-    print(f"  filtro (~{f_res / 1e6:.1f} MHz), el hilo manda y el Y2 local se "
-          f"la lleva.")
-    print("  Y LO QUE NO SE PUEDE CALLAR: alrededor de esa resonancia el "
-          "camino largo")
-    print("  es de BAJA impedancia y D-F5 casi no desvia nada: el peor punto "
-          "esta en")
-    print(f"  {peor_f / 1e6:.2f} MHz y solo desvia {peor_g:.2f} veces. D-F5 no "
-          f"es una mejora uniforme, y")
-    print("  donde cae esa banda depende de parasitos ESTIMADO: quien lo")
-    print("  arbitra es la medida con los seis encendidos del bring-up.")
-    print("  La decision D-F5 es buena; el motivo que el papel escribe --'que")
-    print("  el lazo se cierre en centimetros' a 65 kHz-- no es el que la")
-    print("  sostiene. Lo que la sostiene son los flancos.")
+          f"la corriente")
+    print("  se parte por la mitad. A 20 MHz el hilo manda y el Y2 se la lleva.")
+    print("\n  Y ENTRE MEDIAS, LO QUE NO SE PUEDE CALLAR: LA ANTIRRESONANCIA.")
+    print(f"  Pasada la resonancia serie del hilo con los Y2 del filtro "
+          f"(~{f_res / 1e6:.1f} MHz)")
+    print("  la rama larga es INDUCTIVA y la local sigue capacitiva. Donde las")
+    print(f"  dos reactancias se cancelan --{peor_f / 1e6:.2f} MHz-- la suma "
+          f"tiende a cero, la")
+    print(f"  corriente CIRCULA entre las dos ramas y por la estrella pasan "
+          f"{1 / peor_g:.0f} VECES")
+    print("  las que entran. D-F5 no es una mejora uniforme: ahi EMPEORA, y por")
+    print("  mucho. Lo unico que la limita en este modelo son dos partes "
+          "reales")
+    print(f"  ESTIMADO ({R_Y2_LOCAL_OHM} y {R_HILO_OHM} ohm). No se arregla "
+          f"amortiguando el Y2: harian")
+    print(f"  falta {z_local_ohm(peor_f):.0f} ohm en serie y eso mata su "
+          f"trabajo a 20 MHz. Se arregla")
+    print("  ACORTANDO EL HILO de la estrella, que es quien pone la")
+    print("  inductancia, y se MIDE con los seis encendidos (paso 1).")
+    print("\n  Esto no lo veia la primera version de este guion, que hacia el")
+    print("  divisor con MAGNITUDES: dos magnitudes no negativas obligan a que")
+    print("  la fraccion caiga en (0,1] y a que 'D-F5 nunca empeora' salga")
+    print("  cierto POR CONSTRUCCION. Publicaba ese artefacto como hallazgo.")
+    print("  La decision D-F5 sigue siendo buena; el motivo que el papel")
+    print("  escribe --el lazo corto a 65 kHz-- no es el que la sostiene, y")
+    print("  ademas tiene una banda con letra pequena.")
 
     print("\n  lo que la nota del fabricante SI exige (y el papel no recogia):")
     print("    meanwell-emi-statement-2023-12-20.pdf, leida 2026-09-04")

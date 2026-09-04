@@ -62,7 +62,7 @@ Se gasta en esto.
 > de hoy el aire llega a **86,7 °C** y **el rack no tiene punto de trabajo**:
 > por encima de 85 °C la curva de la hoja ya no dibuja. Samuel firmó **D-F3 =
 > A** el 2026-09-03 —ventilar recinto y cajón por convección natural, sin
-> ventilador— y el venteo mínimo son **20 600 mm²** nuevos, con los que el
+> ventilador— y el venteo mínimo son **22 200 mm²** nuevos, con los que el
 > aire baja a 68,9 °C.
 >
 > **La franja de 230 V no ventila**: su barrera de 6 mm y su tapa siguen
@@ -319,7 +319,7 @@ espárrago por fin tiene dónde ir.
 >   R y C** pasa a ser parámetro declarado y puerta del chasis: el campo de un
 >   IRM encapsulado no lo publica nadie y se fija al montar (papel de la v4
 >   §8).
-> - **Y gana aberturas.** D-F3 = A pide **20 600 mm²** de venteo efectivo
+> - **Y gana aberturas.** D-F3 = A pide **22 200 mm²** de venteo efectivo
 >   nuevo para que el rack sostenga su listón, y el criterio propio del case
 >   —15 K sobre ambiente para la vida del electrolítico— pide **35 365**. El
 >   encargo a #289 es el segundo. La franja de 230 V no ventila (§3.1).

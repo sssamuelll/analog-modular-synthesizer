@@ -1,7 +1,7 @@
 # Fuente v4 — el listón de la PSU3, seis módulos encapsulados y la cascada intacta — firmada (v3, tras la junta y la firma)
 
 **Fecha**: 2026-09-03 · **Estado**: **firmado — D-F1 a D-F7 decididas (§14); `calor_budget.py` corrió y la columna «sostenido» de §1 está rellena. Lo que queda es de otros papeles: el venteo mínimo (#289) y la bahía (#290)** ·
-**Listón firmado**: 2026-09-03 («firmo el listón», Samuel) — como **corriente de placa**; y **re-firmado el mismo día como corriente sostenida** por `calor_budget.py` con D-F3 = A y D-F7: **2,0 / 2,0 / 4,0 A de rack y 4,2 A digital con 20 600 mm² de venteo nuevo**, el mínimo que el modelo despeja (corregido de 16 900 el mismo día: §6) ·
+**Listón firmado**: 2026-09-03 («firmo el listón», Samuel) — como **corriente de placa**; y **re-firmado el mismo día como corriente sostenida** por `calor_budget.py` con D-F3 = A y D-F7: **2,0 / 2,0 / 4,0 A de rack y 4,2 A digital con 22 200 mm² de venteo nuevo**, el mínimo que el modelo despeja (16 900 → 20 600 el 03-09; → 22 200 el 04-09, al contar la franja de red: §6 y el bloque de enmiendas de la tanda A) ·
 **Cierra**: nada todavía. **Entrega**: los rieles de #169 (§4.3) ·
 **Mata por desaparición del sujeto** (cuando la v4 se adopte): #141, #280, #106, #56, #57 ·
 **Reabre**: `design-notes` §13 y §18, la spec del chasis (§3.1, §3.2, §3.3), `clearance_budget.py::guarda_aire()`, `consumo_total_budget.py`, `power_budget.py`, `ground_budget.py`, el papel de la bahía
@@ -15,14 +15,14 @@
 >
 > | # | Dónde | Qué decía | Qué dice el guion |
 > |---|---|---|---|
-> | 1 | §4.2 | el margen de entrada de `U1` es **+0,30 V** | **NEGATIVO: −97 mV en `U1` y −13 en `U2`.** El +0,30 es el margen de una placa cuyo setpoint cae exactamente en 13,1 V, y la ventana del setpoint sale de la **referencia del propio pre-regulador**: LM2941 ±3,0 % de dispersión y ±2,0 % más de deriva (p. 5). Aun ajustando placa a placa —el mejor caso— quedan ±267 mV en `U1` y ±384 en `U2`. `margen_budget.py`, HUECO, con cuatro salidas y su precio |
-> | 2 | §4.2 (D-F4) | el detector de ventana habilita entre 14,1 V y lo que el IRM da | **la ventana está VACÍA por 97 mV**, que es el punto 1 visto desde el secuenciador. Y cuando se cierre, el detector tiene que **sensar DESPUÉS del LC**: en el borne del módulo la histéresis mínima son 230 mV y ninguna ventana de este riel los aguanta. `secuencia_budget.py`, HUECO |
+> | 1 | §4.2 | el margen de entrada de `U1` es **+0,30 V** | **NO HAY MARGEN: −388 mV en `U1` y −170 en `U2`** con lo que la hoja GARANTIZA, y **+2,8 mV** en el mejor caso imaginable (ajustar placa a placa Y suponer que la unidad conserva su sitio en la ventana de Vref al calentarse, cosa que la hoja no promete). Y la incertidumbre del propio modelo son 127 mV: un margen más pequeño que su barra de error no es un margen. El +0,30 es el margen de una placa cuyo setpoint cae exactamente en 13,1 V, y la ventana del setpoint sale de la **referencia del propio pre-regulador**: LM2941 ±3,0 % de dispersión y ±2,0 % más de deriva (p. 5). Aun ajustando placa a placa —el mejor caso— quedan ±267 mV en `U1` y ±384 en `U2`. `margen_budget.py`, HUECO, con cuatro salidas y su precio |
+> | 2 | §4.2 (D-F4) | el detector de ventana habilita entre 14,1 V y lo que el IRM da | **el umbral no cabe**: entre lo que `U1` necesita (14,758 V) y lo que un IRM de tolerancia mala da (14,370) hay **−388 mV**, contra ±132 de tolerancia del comparador y 31 de histéresis mínima. que es el punto 1 visto desde el secuenciador. Y cuando se cierre, el detector tiene que **sensar DESPUÉS del LC**: en el borne del módulo la histéresis mínima son 230 mV y ninguna ventana de este riel los aguanta. `secuencia_budget.py`, HUECO |
 > | 3 | §5 | la corriente de red son **3,9 A rms** y el inrush 285 A | **4,4 A y 320 A.** La fila AC CURRENT de la IRM-45 es una celda única para toda la serie (0,9 A/230 Vac también para la de 5 V), y D-F7 subió `PS5` de IRM-20-5 a IRM-45-5: §5 seguía sumando el 0,4 de la pieza retirada. A la carga del listón son 3,25 A. `fusible_budget.py` |
 > | 4 | §5, §11 | **4 A T** como hipótesis de fusible | **6,3 A T**, y no llega por ninguno de los dos caminos: ni el permanente (piden 5,34 A al 70 % del calibre y con el derratado del recinto) ni el rearranque en caliente (17,4 A²s contra 15,3 admisibles de un 4 A T). **Y la pieza la decide otra cosa: el PODER DE CORTE.** Un 5×20 de vidrio corta 63 A y en el enchufe hay ~490 A disponibles; hace falta cerámico de alto poder de corte. `fusible_budget.py`, HUECO por esa hoja |
 > | 5 | §4.1 | la fuga a PE es «el no-problema», un orden de magnitud bajo el límite | **el 87 % del límite de trabajo** (3,05 de 3,5 mA), con las condiciones de medida de la norma: 1,1 × la nominal y 60 Hz. El **Y2 máximo por módulo son 2,99 nF**. `fuga_budget.py`, HUECO por la cifra de IEC 62368-1, que es de pago |
-> | 6 | §4.2 (D-F5) | el Y2 local cierra el lazo de modo común **a 65 kHz** | **es un mecanismo de MEGAHERCIOS.** Los dos caminos van en paralelo y la corriente se reparte: a 65 kHz los 300 mm de hilo pesan 0,12 Ω contra 1113 del Y2 y sólo desvía 1,5 veces; a 20 MHz desvía 14,2. Y hay una banda, en la resonancia del hilo con los Y2 del filtro (~4,4 MHz), **donde no desvía nada**. La decisión es buena; el motivo escrito no es el que la sostiene |
+> | 6 | §4.2 (D-F5) | el Y2 local cierra el lazo de modo común **a 65 kHz** | **es un mecanismo de MEGAHERCIOS, y con letra pequeña.** Los dos caminos van en paralelo y la corriente se reparte: a 65 kHz los 300 mm de hilo pesan 0,12 Ω contra 1113 del Y2 y sólo desvía 1,5 veces; a 20 MHz desvía 14,2. **Y en 7,48 MHz hay una ANTIRRESONANCIA donde el Y2 local MULTIPLICA POR 62 la corriente que se vuelve por la estrella**: la rama larga ya es inductiva, la local sigue capacitiva, y donde las dos reactancias se cancelan la corriente circula entre ellas. No se arregla amortiguando el Y2 (harían falta 9 Ω y eso mata su trabajo a 20 MHz): se arregla **acortando el hilo de la estrella**, y se mide. La decisión sigue siendo buena; el motivo escrito no es el que la sostiene |
 > | 7 | §4.2, §12.4 | la nota EMI de Mean Well documenta el mecanismo de D-F5 | **la nota no habla de condensadores Y.** Habla de montar el módulo sobre «a defined metal plate» y de que el cable de salida vaya «twisted and flatly placed on and within the range of the metal plate», y de que la EMC sólo se comprueba con el equipo entero. Son **dos requisitos de montaje** de los que depende la Clase B de la hoja, y no estaban escritos en ningún sitio. Ya está en el árbol: `meanwell-emi-statement-2023-12-20.pdf`. §12.4 hecho |
-> | 8 | §6 | la tabla de calor del recinto suma 27,5 W | **le faltan cargas.** La NTC de arranque disipa ~2,75 W dentro (un 10 % más) y la tabla no la lleva; tampoco al MOV ni al choke. `fusible_budget.py` lo avisa en cada corrida |
+> | 8 | §6 | la tabla de calor del recinto suma 27,5 W | **le falta la franja de red, y no es un detalle: son 31,25 W.** La NTC de arranque disipa 2,75 W dentro y el choke 0,95 (ESTIMADO); el MOV no, porque en marcha normal conduce microamperios. Con esos 3,70 W **el venteo mínimo sube de 20 525 a 22 148 mm²** — sin ellos el listón del rack se cumplía por 3,5 mA. Ya están dentro de `calor_budget.py`, y `fusible_budget.py` asevera la cifra de la NTC contra la suya |
 >
 > **Dos cosas más que los guiones añadieron y el papel no tenía:**
 >
@@ -132,7 +132,7 @@ como está**, porque es de la cascada de donde sale el 0,8 µVrms, no del toroid
 | Riel | A-100PSU3 | SAM17 v4, **de placa** (firmado) | **Sostenido** en el recinto | Masa |
 |---|---|---|---|---|
 | **±12 V ultra** — Voz, VCF, VCA, envolventes, bahía | no tiene | **650 mA/riel, 0,8 µVrms**, cascada intacta | 650 mA: los IRM de 15 V van al 24 % de carga | `GNDA` |
-| **+12 V invitados** — fila de abajo, 104 HP | 2,0 A | **3,8 A** | **2,0 A** con el venteo mínimo (20 600 mm² nuevos, §6); es el riel que fija ese mínimo | rack |
+| **+12 V invitados** — fila de abajo, 104 HP | 2,0 A | **3,8 A** | **2,0 A** con el venteo mínimo (22 200 mm² nuevos, §6); es el riel que fija ese mínimo | rack |
 | **−12 V invitados** | 1,2 A | **2,5 A** (3,8 de placa del módulo) | **2,0 A** | rack |
 | **+5 V invitados** | 4,0 A | **4,0 A** declarados (8,0 de placa del módulo, D-F7) | **4,0 A**: la IRM-45-5 da 4,2 a esa temperatura y se declara 4,0 | rack |
 | **+5 V digital** — N657 ×4, pantalla, LEDs, host USB | (dentro de los 4 A) | **8,0 A** | **4,2 A** = 21 W: **el techo nuevo que `power_budget.py` importa** (era 14,1 W) | `GNDD` |
@@ -142,7 +142,7 @@ La columna «de placa» es lo que se compra. La columna «sostenido» es lo que 
 instrumento **promete**, y la rellenó `calor_budget.py` el 03-09 con D-F3 = A
 y D-F7: es la corriente en el **punto fijo** —la que el rack puede dar
 calienta el cajón, y el calor recorta la que puede dar— con el **venteo
-mínimo** que el modelo despeja, **20 600 mm² nuevos**; a esa abertura el aire
+mínimo** que el modelo despeja, **22 200 mm² nuevos**; a esa abertura el aire
 del recinto son 68,9 °C. Con más abertura, más corriente; con la caja de hoy,
 cerrada, **cero**: a 86,7 °C se acabó la curva de la hoja y no opera ningún
 módulo del rack. El modelo es pesimista a sabiendas (§6): hereda de
@@ -569,10 +569,24 @@ dimensionó para un toroide de 0,72 A y una IRM: **se va**.
   manda y la v1 no tenía. En frío `NT1` limita: seis bancos de entrada (unos
   205 µF ESTIMADO por el hold-up, 10,9 J) a 5 Ω dan ~50 A de pico, τ 1,3 ms,
   **1,66 A²s** —el inrush de placa (320 A sumados, con la IRM-45-5 de D-F7) no se ve nunca—. Pero un
-  microcorte con `NT1` caliente (~0,5 Ω) da **~159 A y 5,3 A²s**, el 18–53 % del
-  I²t de fusión de un 1,6 A T (v2 §3.0.1): fatiga con cada microcorte.
-  Hipótesis de trabajo, **ESTIMADO**: 4 A T, cuyo I²t escala con In² y deja el
-  rearranque por debajo del 10 %. Lo confirma el guion con la hoja del fusible.
+  microcorte con `NT1` caliente da un pico enorme, y **ése es el que
+  dimensiona**.
+
+  > **CORREGIDO el 2026-09-04 por `fusible_budget.py`.** Las cifras del
+  > párrafo de arriba son las de la v1 y **no** las del modelo: con la NTC
+  > real (Ametherm SL22 5R012, 5 Ω ±20 % en frío y 0,05 al 100 % de su
+  > corriente máxima) y la I²t exacta del RC (`Vpico²·C/2R`), el arranque
+  > frío da **71 A y 2,37 A²s** y el rearranque caliente **523 A y
+  > 17,44 A²s**. Y el **4 A T de hipótesis no llega por ninguno de los dos
+  > caminos**: ni el permanente (3,25 A rms al 70 % del calibre y con el
+  > derratado del recinto piden **5,34 A**) ni el rearranque (17,4 A²s
+  > contra 15,3 admisibles de sus 77 de fusión). **Sale 6,3 A T.**
+  >
+  > Y la PIEZA la decide otra cosa: el **poder de corte**. Un 5×20 de
+  > vidrio corta 63 A y en el enchufe hay ~490 disponibles (230 V sobre la
+  > impedancia de referencia de IEC 61000-3-3). Hace falta uno **cerámico
+  > de alto poder de corte**, y esa hoja no está: es el HUECO de
+  > `fusible_budget.py`.
 - **`NT1`**: el SL10 5R002 está a 2 A de régimen y aquí son 2,7–3,9. Pasa a la
   talla de **≥ 4 A** de la misma familia (Ametherm SL22, hoja por leer, §12.6),
   y con dos números que hoy no están en ningún papel: **la energía que absorbe
@@ -651,7 +665,7 @@ D-F3 = A y D-F7; **punto fijo**, no carga a placa):
 | Situación | Aire del recinto | Rack sostenido (+12 / −12 / +5) | Digital sostenido |
 |---|---|---|---|
 | Caja de hoy (cerrada), todo lo que el rack pueda dar | **86,7 °C** | **0 / 0 / 0 A** — no hay punto de trabajo | 0 A |
-| **Venteo mínimo: 20 600 mm² nuevos** (D-F3 = A) | **68,9 °C** | **2,0 / 2,0 / 4,0 A** — el +12 fija el mínimo | **4,2 A** |
+| **Venteo mínimo: 22 200 mm² nuevos** (D-F3 = A; 20 600 antes de contar la franja de red) | **68,9 °C** | **2,0 / 2,0 / 4,0 A** — el +12 fija el mínimo | **4,2 A** |
 | A placa sin derating, caja de hoy (no es un estado alcanzable) | 145,7 °C | — | — |
 
 Con la IRM-20-5 en `PS5` la segunda fila **no existía**: ningún venteo daba
@@ -659,7 +673,7 @@ Con la IRM-20-5 en `PS5` la segunda fila **no existía**: ningún venteo daba
 constante que más mueve el sostenido es **`CD_TIRO`** (el coeficiente de
 descarga del venteo, supuesto y no medido), y el modelo **hereda de
 `guarda_aire()` que el cajón solo evacúa por chimenea** —ignora la convección
-de las paredes exteriores—, así que los 20 600 mm² son **pesimistas**.
+de las paredes exteriores—, así que los 22 200 mm² son **pesimistas**.
 
 **Y NO SON EL ENCARGO (Tarea 4, 03-09).** Al meter los 147,83 W en
 `guarda_aire()` —27,53 del recinto + 120,3 de fila y digital— salió que el
@@ -668,10 +682,10 @@ el segundo:
 
 | Quién pregunta | Qué exige | Venteo efectivo nuevo |
 |---|---|---|
-| `calor_budget.py` | que los rieles den el listón con la sala a 45 °C | **20 525 mm²** |
+| `calor_budget.py` | que los rieles den el listón con la sala a 45 °C | **22 148 mm²** |
 | `guarda_aire()` | los **15 K sobre ambiente** de vida del electrolítico | **35 365 mm²** |
 
-Con los 20 525 el case sube **20,7 K**: los rieles llegan y el condensador no.
+Con los 22 148 el case sube **20,0 K**: los rieles llegan y el condensador no.
 El encargo a #289 es el **35 365**, y con dos cifras que lo acotan: la pared
 exterior (0,507 m² de envolvente sin el suelo) se lleva otros **22,8 W** a ese
 techo con `U = 3 W/m²K` supuesto —más que los 12,6 de la chimenea de hoy—, y
@@ -926,7 +940,10 @@ lo que otro no hace** (#214, #206).
 - **El bus board de invitados** (#169): peines, PTC (valor), sitio. Aquí sus
   rieles y sus requisitos.
 - **La bahía**: aquí sus dos requisitos; el mecanismo del diferencial es suyo.
-- **El valor del fusible**: 4 A T es hipótesis hasta `fusible_budget.py`.
+- **El valor del fusible**: ya no es hipótesis. `fusible_budget.py` corrió
+  el 2026-09-04 y da **6,3 A T**; lo que sigue abierto es la **pieza**, que
+  la decide el poder de corte y necesita una hoja de fusible cerámico que
+  no está en el árbol.
 - **Ninguna pieza que no esté en §3 con su hoja** (R-M3): LC, ferritas, Y2,
   detector de ventana, interruptores, SCR, conectores, `NT1` y `L_F` nuevos, se
   nombran en el plan con hoja en el árbol.
@@ -969,7 +986,7 @@ lo que otro no hace** (#214, #206).
 | 4 | El retorno de un invitado desafina el instrumento | la isla y el diferencial de la bahía (requisitos de §10); `ground_budget.py` extendido; la medida en cents del bring-up |
 | 5 | Un riel crudo solo, en cada encendido, apagado y microcorte | D-F4 (secuenciador), paso 2b |
 | 6 | Un IRM de 12 V en OVP pone 16,2 V en una fila ajena | D-F6 (crowbar de rack), su prueba en el bring-up |
-| 7 | El fusible se fatiga con los rearranques en caliente | `fusible_budget.py` con el término de rearranque; 4 A T como hipótesis |
+| 7 | El fusible se fatiga con los rearranques en caliente | **Cerrado en el cálculo el 04-09**: `fusible_budget.py` da 6,3 A T y el rearranque gasta el 9,2 % de su I²t. Abierto el **poder de corte**: el 5×20 de vidrio corta 63 A contra ~490 disponibles |
 | 8 | El calor del 1,8 V a máximo (4,57 W) cae dentro del recinto y nadie lo contó | §4.5 declarado; D-R1 decide con los dos números |
 | 9 | El módulo 2 recibe 4,4 V por el cable y el host USB no arranca | conector y cable de §8; el VBUS regulado en el módulo 2 (requisito de §10) |
 | 10 | Una huella IRM equivocada llega a fábrica | §12.3, `check_huellas.py` por placa |
@@ -992,7 +1009,7 @@ lo que otro no hace** (#214, #206).
 
 **La columna «sostenido» de §1 está rellena** (03-09, `calor_budget.py`, con
 D-F3 = A y D-F7): 2,0 / 2,0 / 4,0 A de rack y 4,2 A digital con el venteo
-mínimo de 20 600 mm². Es una **predicción de modelo**, pesimista a sabiendas
+mínimo de 22 200 mm². Es una **predicción de modelo**, pesimista a sabiendas
 (§6); su testigo es el paso 7 del bring-up, y hasta esa medida el papel dice
 «sostenido según modelo». Lo que ese número le exige a otros: el venteo
 mínimo al case (#289) y el techo nuevo del digital a `power_budget.py`

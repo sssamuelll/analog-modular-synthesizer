@@ -37,14 +37,15 @@ que un modulo de tolerancia mala garantiza-- **no llega a 200 mV**. O sea que
 midiendo el riel crudo de verdad, el detector de D-F4 no existe: pide mas
 histeresis que ventana hay.
 
-**3. Y aun midiendo despues del LC, la ventana esta VACIA.** Ese es el hueco, y
-no es de este guion: es el mismo de `margen_budget.py` visto desde el otro
-lado. El umbral tiene que estar por encima de lo que U1 necesita para regular
-(14,37 V con la deriva de su referencia) y por debajo de lo que un IRM de
-tolerancia mala entrega (14,27 V). Lo primero es mayor que lo segundo, asi que
-no hay umbral posible: cualquiera que se ponga, o habilita una cascada que no
-regula, o no deja arrancar a una unidad legal. Su dueno es `margen_budget.py`,
-que publica las salidas con su precio; aqui se mide cuanto falta y se declara.
+**3. Y aun midiendo despues del LC, EL UMBRAL NO CABE.** Ese es el hueco, y no
+es de este guion: es el mismo de `margen_budget.py` visto desde el otro lado.
+El umbral tiene que estar por encima de lo que `U1` necesita para regular
+(14,367 V, con la deriva de su referencia dentro) y por debajo de lo que un IRM
+de tolerancia mala entrega (14,370). **Entre las dos hay 3 mV**, y el
+comparador se come +-131 de tolerancia y pide 30 de histeresis minima: quedan
+-290 mV. Cualquiera que se ponga, o habilita una cascada que no regula, o no
+deja arrancar a una unidad legal. Su dueno es `margen_budget.py`, que publica
+las salidas con su precio; aqui se mide cuanto falta y se declara.
 
 ## Lo que este guion NO cubre
 
@@ -425,10 +426,17 @@ def demo() -> int:
     print(f"  tiene que estar por ENCIMA de {lo:.3f} V (lo que U1 necesita")
     print("  para regular, con la deriva de su referencia dentro) y por")
     print(f"  DEBAJO de {hi:.3f} V (lo que un IRM de tolerancia mala da).")
-    print(f"  La primera cota es {(lo - hi) * 1000:.0f} mV MAYOR que la "
-          f"segunda: la ventana esta vacia")
-    print("  antes de pagar un solo milivoltio de histeresis o de tolerancia")
-    print("  del comparador.")
+    if ancho_ventana_v() <= 0.0:
+        print(f"  La primera cota es {(lo - hi) * 1000:.0f} mV MAYOR que la "
+              f"segunda: la ventana esta VACIA")
+        print("  antes de pagar un milivoltio de histeresis o de tolerancia.")
+    else:
+        print(f"  Entre las dos hay {ancho_ventana_v() * 1000:.0f} mV. El "
+              f"comparador se come "
+              f"+-{error_umbral_v((lo + hi) / 2.0) * 1000:.0f} mV")
+        print(f"  de tolerancia y pide {hist_min_v() * 1000:.0f} de histeresis "
+              f"minima: queda {ventana_util_v() * 1000:+.0f} mV. El umbral no")
+        print("  cabe con ninguna pieza razonable, y no por poco.")
     print()
     print("  Es el mismo hueco que publica margen_budget.py, visto desde el")
     print("  secuenciador, y su dueno es aquel guion: alli estan las cuatro")
@@ -440,14 +448,16 @@ def demo() -> int:
     print("    razonable de este riel los aguanta.")
     print("=" * 72)
     print()
-    print("HUECO: la ventana del detector de D-F4 esta vacia por "
-          f"{(lo - hi) * 1000:.0f} mV. El umbral tiene que caber entre lo que "
-          f"U1 necesita para regular ({lo:.3f} V) y lo que un IRM de "
-          f"tolerancia mala entrega ({hi:.3f} V), y hoy la primera cota es la "
-          f"mayor. Dueno del hueco: margen_budget.py. Lo que este guion si "
-          f"deja dimensionado: un solo hilo para los dos ON/OFF, sensado "
-          f"DESPUES del LC, y la maquina de estados sin ningun riel solo "
-          f"estable.")
+    print("HUECO: el umbral de D-F4 no cabe. Tiene que estar entre lo que U1 "
+          f"necesita para regular ({lo:.3f} V) y lo que un IRM de tolerancia "
+          f"mala entrega ({hi:.3f} V), y entre las dos hay "
+          f"{ancho_ventana_v() * 1000:.0f} mV contra "
+          f"+-{error_umbral_v((lo + hi) / 2.0) * 1000:.0f} de tolerancia del "
+          f"comparador y {hist_min_v() * 1000:.0f} de histeresis minima: "
+          f"quedan {ventana_util_v() * 1000:.0f} mV. Dueno del hueco: "
+          f"margen_budget.py. Lo que este guion si deja dimensionado: un solo "
+          f"hilo para los dos ON/OFF, sensado DESPUES del LC, y la maquina de "
+          f"estados sin ningun riel solo estable.")
     return 2
 
 

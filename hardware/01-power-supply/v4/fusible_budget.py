@@ -70,8 +70,8 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 for _ruta in (DIR, os.path.join(DIR, "..", "..", "tools")):
     if _ruta not in sys.path:
         sys.path.insert(0, _ruta)
-from calor_budget import (P_BASE, PLACA_A, SOSTENIDO,  # noqa: E402
-                          aire_recinto_c, p_cajon_w, p_recinto_w)
+from calor_budget import (NTC_ARRANQUE_W, P_BASE, PLACA_A,  # noqa: E402
+                          SOSTENIDO, aire_recinto_c, p_cajon_w, p_recinto_w)
 from canario import borde_rojo  # noqa: E402
 from margen_budget import I_CASCADA_A  # noqa: E402
 
@@ -182,6 +182,8 @@ ESTIMADOS = (
     f"R_CABLE_Y_FILTRO_OHM={R_CABLE_Y_FILTRO_OHM}: cordon, IEC, choke y pistas",
     f"FRAC_I2T_ADMISIBLE={FRAC_I2T_ADMISIBLE}: practica de aplicacion para que "
     f"el fusible no envejezca con los ciclos",
+    f"K_CONTINUO={K_CONTINUO} y DERATE_TEMP_POR_C={DERATE_TEMP_POR_C}: los dos que FIJAN el calibre, y los dos de practica de aplicacion. La tabla de la hoja garantiza 60 min sin abrir a 1,5 x In, y eso no es 'para siempre'",
+    f"la resistencia caliente de la NTC a la corriente real ({R_NTC_A_MEDIA_IMAX_OHM} y {R_NTC_A_IMAX_OHM} ohm son los DOS puntos que la hoja publica, y se trabaja por debajo de los dos: es extrapolacion declarada)",
 )
 HUECOS = (
     "la hoja del fusible CERAMICO de alto poder de corte. La que esta en el "
@@ -368,6 +370,17 @@ def _autocomprobacion() -> None:
     assert i_red_rms_a() > 2.0, (
         "si la corriente de red cupiera en los 2 A del SL10 5R002 de la v3, "
         "cambiar de NTC no haria falta y el papel sec.5 sobraria")
+
+    # 4b. Y EL CALOR DE LA NTC, QUE VIVE EN calor_budget. Aquel guion lleva la
+    #     constante --el punto fijo termico la necesita-- y este la CALCULA;
+    #     el aserto es el que impide que se separen. Se descubrio el 2026-09-04
+    #     que la tabla de calor del papel sec.6 no la llevaba, y no era un
+    #     detalle: con ella el venteo minimo sube de 20 525 a 22 147 mm2.
+    assert abs(calor_ntc_w() - NTC_ARRANQUE_W) < 0.06, (
+        f"la NTC disipa {calor_ntc_w():.3f} W y calor_budget.NTC_ARRANQUE_W "
+        f"dice {NTC_ARRANQUE_W:.2f}. Esa constante es la que entra en el punto "
+        f"fijo termico: si se separan, el sostenido del rack sale de un calor "
+        f"que esta fuente ya no produce")
 
     # 5. EL PODER DE CORTE. La pieza de la hoja del arbol no sirve, y es el
     #    aserto mas importante de este guion: un fusible que no interrumpe no

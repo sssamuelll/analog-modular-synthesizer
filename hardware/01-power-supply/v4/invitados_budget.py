@@ -209,6 +209,19 @@ def _autocomprobacion() -> None:
             f"{riel}: una fila de {FILA_HP} HP del modulo mas glotron pide "
             f"{peor[riel]:.2f} A y se declaran {PLACA_A[riel]:.2f}: el liston "
             f"se compro contra un censo que no se miro")
+    # Y EL DE +5 V NO PUEDE FALLAR, porque el censo de ese riel es CERO: las
+    # cuatro fichas publican dos rieles y ninguna publica +5. Aseverar 0,00
+    # contra 4,00 no vigila nada, asi que lo que se asevera es la CAUSA --que
+    # el censo de +5 es una ausencia declarada y no una lectura-- para que
+    # nadie lea ese verde como si midiera algo. El dia que un invitado declare
+    # +5, esta comprobacion salta y el aserto de arriba pasa a tener dientes.
+    assert all(m.origen_5 == AUSENTE and m.ma_5 == 0.0 for m in CENSO), (
+        "algun modulo del censo declara +5 V. Entonces el aserto de la fila en "
+        "+5 deja de comparar 0,00 contra 4,00 y empieza a medir: quita esta "
+        "comprobacion, que solo existe para decir que hoy no mide nada")
+    assert peor["rack+5"] == 0.0, (
+        f"la fila peor en +5 V pide {peor['rack+5']:.2f} A y el censo de ese "
+        f"riel es cero: una de las dos cosas es mentira")
 
     # 4. El liston, traducido a las unidades de la fila. LOS DOS LADOS: por
     #    abajo no puede quedar por debajo de lo que da la PSU3 en esa misma

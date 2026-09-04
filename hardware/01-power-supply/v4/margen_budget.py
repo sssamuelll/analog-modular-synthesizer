@@ -9,8 +9,7 @@ Es el sustituto de `valle_budget.py` de la v3, que muere con el rectificador
 que regulen?-- y el problema ya no tiene 100 Hz que integrar: sin puente ni
 condensador de bulto no hay valle. Lo que hay es una CADENA DE CONTINUA.
 
-## EL HALLAZGO: al papel le faltan dos terminos, y con ellos el margen es
-## NEGATIVO
+## EL HALLAZGO: al papel le faltan dos terminos, y con ellos NO QUEDA MARGEN
 
 El papel sec.4.2 escribe la cadena asi y le salen +0,30 V:
 
@@ -35,12 +34,43 @@ No hay ninguna que lo haga. Los dos terminos que faltan:
      +-3,0 % = +-0,38 V para U2 (LM2991, Vref -1,186/-1,234 a 25 C y
      -1,15/-1,27 sobre temperatura).
 
-Con el setpoint ajustado --el mejor caso posible-- los margenes salen
-NEGATIVOS en los dos rieles. El guion publica cuanto, y sale en HUECO.
+Con lo que la hoja GARANTIZA --la Vref de la unidad en todo su rango de
+temperatura, sobre un divisor fijo disenado con la tipica-- el margen sale
+**-388 mV en `U1` y -170 en `U2`**.
+
+Y si se ajusta placa a placa **y ademas** se supone que la unidad conserva su
+sitio dentro de la ventana al calentarse --cosa que la hoja NO promete, porque
+da las dos ventanas como filas independientes-- lo mejor que puede pasar son
+**+2,8 mV**. Ese 2,8 hay que leerlo contra otra cosa que este guion tambien
+calcula: **la incertidumbre de su propio modelo son 127 mV**, que es lo que se
+mueve la cadena si los dos ESTIMADO --la deriva termica extrapolada por encima
+de los 50 C que la hoja garantiza, y la resistencia serie de dos piezas sin
+elegir-- se van un 50 %. Un margen mas pequeno que la barra de error de su
+propio modelo no es un margen, y ese es el aserto que decide el veredicto.
+
+O sea que por los dos caminos, el garantizado y el optimista, la respuesta es
+la misma: **no hay margen**. Y es la misma doctrina que este guion aplica al
+dropout, donde usa el garantizado a 1 A y no el tipico de la curva.
 
 **Esto no se arregla bajando el aserto.** Es una decision de arquitectura de la
 cascada y le toca a Samuel; el guion la deja escrita con sus numeros al final,
 para que la decision se tome sobre cifras y no sobre una impresion.
+
+### Y una coherencia que la primera version de este guion no tenia
+
+La primera version restaba los 200 mVp-p ENTEROS del rizado en la entrada de
+`U1` **y a la vez** restaba la caida de continua en el DCR de ese mismo LC: le
+cobraba al filtro su perdida y le negaba su trabajo, en el mismo nodo. Con esa
+incoherencia el margen salia -97 mV en vez de +2,9, o sea que el titular
+colgaba de ella. El LC esta entre el IRM y `U1`, asi que lo que `U1` ve es el
+rizado FILTRADO: 1,2 mVp-p a 65 kHz.
+
+Lo que el LC NO quita --rizado por debajo de su codo de 4,9 kHz-- queda como
+`RIZADO_LF_VPP`, parametro con canario en vez de suposicion enterrada. La hoja
+no publica el reparto en frecuencia; lo poco que se sabe apunta a cero, porque
+line y load regulation estan DENTRO de la tolerancia de +-2,5 % por su Note.3 y
+esa ya se resta entera. **Bastan 5,8 mVp-p ahi para acabar con el margen**, y
+la hoja no dice si los hay: eso es parte del hueco.
 
 ## El otro hallazgo, mas pequeno: la deriva se usa fuera de su rango
 
@@ -73,14 +103,22 @@ OVP del propio IRM, y lo lleva `check_absmax.py` (Tarea 12), que es su dueno.
 """
 from __future__ import annotations
 
+import math
 import os
 import sys
 
 DIR = os.path.dirname(os.path.abspath(__file__))
-for _ruta in (DIR, os.path.join(DIR, "..", "..", "tools"),
-              os.path.join(DIR, "..", "..", "03-vco")):
+for _ruta in (DIR, os.path.join(DIR, "..", "..", "tools")):
     if _ruta not in sys.path:
         sys.path.insert(0, _ruta)
+# hardware/03-vco va POR DETRAS, con append y no con insert(0): alli vive otro
+# check_bringup.py y de aqui solo hace falta consumo_total_budget. Con insert(0)
+# el directorio del VCO quedaba delante del propio, y "import margen_budget;
+# import check_bringup" cargaba el del VCO en silencio -- sin ImportError y con
+# otras predicciones.
+_VCO = os.path.join(DIR, "..", "..", "03-vco")
+if _VCO not in sys.path:
+    sys.path.append(_VCO)
 from calor_budget import (P_BASE, SOSTENIDO, aire_recinto_c,  # noqa: E402
                           p_cajon_w, p_recinto_w)
 from canario import borde_rojo  # noqa: E402
@@ -102,6 +140,14 @@ TEMPCO_PCT_C = 0.03
 T_REF_TEMPCO_C = 25.0    # Note.1: todo medido a 230 Vac, carga nominal, 25 C
 T_TOPE_HOJA_C = 50.0     # hasta aqui la hoja garantiza el coeficiente
 RIZADO_VPP = RIZADO_IRM_VPP   # fila RIPPLE & NOISE (max.), Note.2, 20 MHz
+# Lo que el LC NO quita: rizado por debajo de su codo de 4,9 kHz. La hoja da
+# los 200 mVp-p a 20 MHz de ancho de banda y NO publica como se reparten en
+# frecuencia. Lo que se sabe apunta a cero: line regulation (+-0,3 %) y load
+# regulation (+-0,5 %) estan DENTRO de la tolerancia de +-2,5 % por la Note.3
+# de la hoja, y esa ya se resta entera. Queda como PARAMETRO CON CANARIO --no
+# como suposicion enterrada-- porque el margen de este riel es tan fino que
+# unos pocos milivoltios aqui lo deciden.
+RIZADO_LF_VPP = 0.0
 # El IRM-20 NO tiene ajuste de tension de salida: la p. 2 solo trae VOLTAGE
 # RANGE en el bloque de ENTRADA (85~305 Vac). Los 15 V son los que son.
 HAY_AJUSTE_DE_SALIDA = False
@@ -163,8 +209,8 @@ ESTIMADOS = (
     f"hasta donde la hoja la garantiza (0 ~ {T_TOPE_HOJA_C:.0f} C)",
     f"ESR declarada del COUT de U1 ({ESR_COUT_U1_OHM} ohm): de catalogo, sin "
     f"hoja de la pieza concreta",
-    "el rizado se cuenta SIN filtrar porque la hoja no publica donde cae en "
-    "frecuencia; si fuera todo de 65 kHz el LC lo dejaria en microvoltios",
+    "RIZADO_LF_VPP=0: la hoja no publica donde cae en frecuencia su rizado, y "
+    "el LC solo quita lo que esta por encima de su codo de 4,9 kHz",
 )
 
 
@@ -177,14 +223,22 @@ def t_aire_diseno_c() -> float:
                           area_venteo_mm2=P_BASE["area_venteo_mm2"])
 
 
-def tol_setpoint_v(reg: str, *, ajustado: bool = True) -> float:
+def tol_setpoint_v(reg: str, *, ajustado: bool = False) -> float:
     """Cuanto se puede ir el setpoint de su valor nominal, en voltios.
 
-    `ajustado=True` es el mejor caso posible: la placa se lleva a su setpoint
-    en el bring-up y solo queda la DERIVA de la referencia con la
-    temperatura, que es la diferencia entre la ventana de 25 C y la de todo
-    el rango. `ajustado=False` es un divisor fijo sin ajustar, donde entra la
-    dispersion inicial entera."""
+    POR DEFECTO, LO GARANTIZADO. Con un divisor fijo disenado sobre la Vref
+    tipica, el setpoint cae donde caiga la Vref de esa unidad EN TODO SU RANGO
+    DE TEMPERATURA: la hoja publica esa ventana entera y no promete nada mas.
+    Es la misma doctrina que este guion aplica al dropout --el garantizado, no
+    el de la curva tipica-- y da +-5,0 % en `U1`.
+
+    `ajustado=True` es el mejor caso posible Y NO ESTA GARANTIZADO: supone que
+    la placa se lleva a su setpoint en el bring-up y que la unidad conserva su
+    sitio DENTRO de la ventana al calentarse, con lo que solo queda la deriva
+    --la diferencia entre la ventana de 25 C y la de todo el rango, +-2,0 %--.
+    La hoja da las dos ventanas como filas independientes y no dice que una
+    unidad del borde bajo a 25 C no pueda estar en el alto a 85. Se calcula y
+    se imprime para ver cuanto compraria ajustar, y no decide."""
     v = VREF[reg]
     typ = v["typ"]
     if ajustado:
@@ -203,27 +257,55 @@ def deriva_tempco_v(t_c: float, tempco_pct_c: float = TEMPCO_PCT_C) -> float:
     return V_NOM * (tempco_pct_c / 100.0) * abs(t_c - T_REF_TEMPCO_C)
 
 
-def rizado_en_u1_vpp(*, filtrado: bool = False) -> float:
+def rizado_en_u1_vpp(*, filtrado: bool = True,
+                     lf_vpp: float = RIZADO_LF_VPP) -> float:
     """El rizado que ve la entrada del pre-regulador.
 
-    Sin filtrar es el peor caso de colocacion en frecuencia; filtrado es lo
-    que quedaria si todo estuviera en la fundamental de 65 kHz."""
+    EL LC ESTA ENTRE EL IRM Y U1, asi que lo que U1 ve es el rizado FILTRADO.
+    La primera version de este guion restaba los 200 mVp-p enteros aqui y a la
+    vez restaba la caida de continua en el DCR de ese mismo LC: le cobraba al
+    filtro su perdida y le negaba su trabajo, en el mismo nodo. Con eso el
+    margen salia -97 mV y sin eso +3, o sea que el titular de todo el
+    presupuesto colgaba de una incoherencia.
+
+    Lo que queda declarado es la parte que el LC de verdad NO quita: el rizado
+    por debajo de su codo de 4,9 kHz. La hoja no publica el reparto en
+    frecuencia, y lo poco que se sabe apunta a que ahi no hay casi nada --
+    line y load regulation estan DENTRO de la tolerancia de +-2,5 % por su
+    Note.3, y ya se restan--. Se deja como parametro con canario en vez de
+    como suposicion enterrada: ver RIZADO_LF_VPP."""
     if not filtrado:
         return RIZADO_VPP
-    return RIZADO_VPP * h_lc(F_CONMUTACION_HZ)
+    return RIZADO_VPP * h_lc(F_CONMUTACION_HZ) + lf_vpp
 
 
 def v_entrada_minima_v(*, t_c: float | None = None,
                        tempco_pct_c: float = TEMPCO_PCT_C,
                        r_serie_ohm: float = R_SERIE_OHM,
                        i_a: float = I_CASCADA_A,
-                       filtrado: bool = False) -> float:
+                       filtrado: bool = True,
+                       lf_vpp: float = RIZADO_LF_VPP) -> float:
     """El peor caso apilado de lo que le llega a un pre-regulador."""
     t = t_aire_diseno_c() if t_c is None else t_c
     return (V_NOM * (1.0 - TOL_FRAC)
             - deriva_tempco_v(t, tempco_pct_c)
-            - rizado_en_u1_vpp(filtrado=filtrado) / 2.0
+            - rizado_en_u1_vpp(filtrado=filtrado, lf_vpp=lf_vpp) / 2.0
             - i_a * r_serie_ohm)
+
+
+def incertidumbre_estimados_v(*, factor: float = 1.5) -> float:
+    """Cuanto se mueve la cadena si los ESTIMADO se van un `factor`.
+
+    DERIVADA, no elegida: es la barra de error del propio modelo. Los dos
+    terminos que no salen de una hoja son la deriva termica --extrapolada por
+    encima de los 50 C hasta donde la hoja la garantiza-- y la resistencia
+    serie del LC y la perla, que son piezas sin elegir. Sirve para el unico
+    veredicto honesto que este guion puede dar: un margen mas pequeno que la
+    barra de error de su propio modelo no es un margen."""
+    base = v_entrada_minima_v()
+    peor = v_entrada_minima_v(tempco_pct_c=TEMPCO_PCT_C * factor,
+                              r_serie_ohm=R_SERIE_OHM * factor)
+    return base - peor
 
 
 def v_entrada_maxima_v(*, t_c: float | None = None,
@@ -270,7 +352,8 @@ def _guarda_margen(p: dict[str, float]) -> None:
         f"contra los {V_ABSMAX_ENTRADA:.1f} de U1/U2")
     v_min = v_entrada_minima_v(tempco_pct_c=p["tempco_pct_c"],
                                r_serie_ohm=p["r_serie_ohm"],
-                               i_a=p["i_cascada_a"])
+                               i_a=p["i_cascada_a"],
+                               lf_vpp=p["rizado_lf_vpp"])
     for reg in V_SET:
         necesita = v_necesaria_v(reg, tol_set=p["tol_set_v"])
         assert v_min >= necesita, (
@@ -287,6 +370,7 @@ P_BASE_MARGEN = {
     "r_serie_ohm": R_SERIE_OHM,
     "i_cascada_a": I_CASCADA_A,
     "tol_set_v": 0.0,        # el supuesto del papel: setpoint exacto
+    "rizado_lf_vpp": RIZADO_LF_VPP,
 }
 
 
@@ -304,8 +388,9 @@ def _autocomprobacion() -> None:
     # 2. El modelo reproduce la cuenta del papel sec.4.2 en SU escenario:
     #    setpoint exacto, sin filtro, a 75 C. Si no cayera cerca, la
     #    discrepancia seria del modelo y no un hallazgo.
-    papel = (v_entrada_minima_v(t_c=75.0, r_serie_ohm=0.0, i_a=0.0)
-             + RIZADO_VPP / 2.0)
+    # El papel no resta rizado ninguno en ese punto de su cadena, y con el LC
+    # puesto el rizado que llega son 0,6 mV: cae dentro de su propio redondeo.
+    papel = v_entrada_minima_v(t_c=75.0, r_serie_ohm=0.0, i_a=0.0, lf_vpp=0.0)
     assert abs(papel - 14.40) < 0.03, (
         f"el papel sec.4.2 publica 14,40 V antes del rizado y este modelo da "
         f"{papel:.3f} en su mismo escenario: la discrepancia no seria un "
@@ -327,15 +412,18 @@ def _autocomprobacion() -> None:
     # 4. Que la ventana de setpoint de la v3 no es un capricho: sale de la
     #    referencia del pre-regulador y es del mismo orden.
     for reg in V_SET:
-        sin_ajustar = tol_setpoint_v(reg, ajustado=False)
-        ajustado = tol_setpoint_v(reg)
-        assert ajustado < sin_ajustar, (
-            f"{reg}: ajustar la placa tiene que estrechar la ventana "
-            f"({ajustado:.3f} contra {sin_ajustar:.3f})")
-        assert sin_ajustar > TOL_SET_V3_V, (
-            f"{reg}: con divisor fijo la referencia da +-{sin_ajustar:.3f} V "
-            f"de setpoint, y el bring-up de la v3 acepta +-{TOL_SET_V3_V:.1f}: "
-            f"si cupiera sin ajustar, esa ventana no diria nada")
+        garantizado = tol_setpoint_v(reg)
+        optimista = tol_setpoint_v(reg, ajustado=True)
+        assert optimista < garantizado, (
+            f"{reg}: el supuesto optimista --ajustar y que la unidad conserve "
+            f"su sitio en la ventana-- tiene que estrechar el numero "
+            f"({optimista:.3f} contra {garantizado:.3f}); si no, no seria "
+            f"optimista y no habria dos lecturas que distinguir")
+        assert garantizado > TOL_SET_V3_V, (
+            f"{reg}: la referencia garantiza +-{garantizado:.3f} V de setpoint "
+            f"y el bring-up de la v3 acepta +-{TOL_SET_V3_V:.1f}: si cupiera "
+            f"con un divisor fijo, esa ventana no diria nada y no habria que "
+            f"ajustar placa a placa")
 
     # 5. El requisito de estabilidad de U1, de su propia hoja.
     lo, hi = ESR_COUT_U1_VENTANA_OHM
@@ -358,16 +446,38 @@ def _autocomprobacion() -> None:
                    0.0, 1.0, "deja de regular")
     y = borde_rojo(_guarda_margen, dict(P_BASE_MARGEN), "tempco_pct_c",
                    0.0, 20.0, "maximo absoluto")
+    z = borde_rojo(_guarda_margen, dict(P_BASE_MARGEN), "rizado_lf_vpp",
+                   0.0, 5.0, "deja de regular")
     print(f"  canario: con el setpoint mas de {v * 1000:.0f} mV por encima de "
           f"su nominal, no regula")
     print(f"  canario: con mas de {w:.3f} ohm de serie (LC + perla), no regula")
     print(f"  canario: con mas de {x:.4f} %/C de deriva del IRM, no regula "
           f"({x / TEMPCO_PCT_C:.1f} veces la publicada)")
     print(f"  canario: con mas de {y:.1f} %/C se pasaria del maximo absoluto")
+    print(f"  canario: con mas de {z * 1000:.0f} mVp-p de rizado por DEBAJO "
+          f"del codo del LC, no regula")
+    print("           (ese borde se busca con el setpoint EXACTO, que es el "
+          "supuesto del papel;")
+    print(f"            con la deriva real de la referencia bastan "
+          f"{2000 * min(margen_v(r) for r in V_SET):.1f} mVp-p)")
     peor = min(tol_set_admisible_v(reg) for reg in V_SET)
     assert abs(v - peor) < 0.005, (
         f"el canario encuentra el borde en {v:.4f} V y la cuenta directa da "
         f"{peor:.4f}: la guarda y el modelo no miden lo mismo")
+
+    # 7. Y EL ASERTO QUE DECIDE EL VEREDICTO: un margen mas pequeno que la
+    #    barra de error del propio modelo no es un margen. La barra se DERIVA
+    #    de los dos ESTIMADO de la cadena --la deriva extrapolada por encima
+    #    de los 50 C que la hoja garantiza, y la resistencia serie de dos
+    #    piezas sin elegir-- y no se escoge.
+    banda = incertidumbre_estimados_v()
+    assert banda > 0.0, (
+        "si mover los ESTIMADO un 50 % no moviera la cadena, no serian los "
+        "terminos que este guion dice que son")
+    assert min(margen_v(r) for r in V_SET) < banda, (
+        f"si el margen ({min(margen_v(r) for r in V_SET) * 1000:.1f} mV) "
+        f"superara la incertidumbre del modelo ({banda * 1000:.0f} mV), este "
+        f"guion podria salir en verde y el HUECO de abajo sobraria")
 
 
 def demo() -> int:
@@ -390,13 +500,14 @@ def demo() -> int:
     print(f"   -{deriva_tempco_v(t):.3f}   deriva {TEMPCO_PCT_C}%/C x "
           f"{t - T_REF_TEMPCO_C:.1f} K   (EXTRAPOLADA por encima de "
           f"{T_TOPE_HOJA_C:.0f} C)")
-    print(f"   -{RIZADO_VPP / 2:.3f}   medio rizado                 "
-          f"(sin filtrar: peor colocacion)")
+    print(f"   -{rizado_en_u1_vpp() / 2:.4f}  medio rizado DESPUES del LC   "
+          f"({RIZADO_VPP * 1000:.0f} mVp-p / {-20 * math.log10(h_lc(F_CONMUTACION_HZ)):.0f} dB)")
     print(f"   -{I_CASCADA_A * R_SERIE_OHM:.3f}   {I_CASCADA_A * 1000:.0f} mA x "
           f"{R_SERIE_OHM * 1000:.0f} mohm         (LC + perla)")
     print(f"    {v_entrada_minima_v():.3f} V le llegan a U1/U2 en el peor caso")
-    print(f"    ({v_entrada_minima_v(filtrado=True):.3f} si todo el rizado "
-          f"fuera de 65 kHz y lo filtrara el LC)")
+    print(f"    ({v_entrada_minima_v(filtrado=False):.3f} si TODO el rizado "
+          f"cayera por debajo del codo del LC")
+    print("     y este no quitara nada; ver el canario de rizado_lf_vpp)")
 
     print(f"\n  {'reg':4s} {'setpoint':>9s} {'ventana':>8s} {'dropout':>8s} "
           f"{'necesita':>9s} {'llega':>7s} {'margen':>8s}")
@@ -408,11 +519,15 @@ def demo() -> int:
               f"{tol_setpoint_v(reg):+7.3f}V {V_DROPOUT_MAX_1A[reg]:7.2f}V "
               f"{v_necesaria_v(reg):8.3f}V {v_entrada_minima_v():6.3f}V "
               f"{m * 1000:+7.0f}mV")
-    print("  (la ventana es la DERIVA de la referencia del pre-regulador con")
-    print("   la placa YA AJUSTADA en el bring-up: el mejor caso posible. Sin")
-    print("   ajustar, con divisor fijo, son "
-          f"{tol_setpoint_v('U1', ajustado=False):.3f} V en U1 y "
-          f"{tol_setpoint_v('U2', ajustado=False):.3f} en U2.)")
+    print("  (la ventana es lo que la hoja GARANTIZA: la Vref de la unidad en")
+    print("   todo su rango de temperatura, sobre un divisor fijo disenado")
+    print("   con la tipica. Si se ajusta placa a placa Y se supone que la")
+    print("   unidad conserva su sitio dentro de la ventana al calentarse")
+    print(f"   --que la hoja NO promete-- bajarian a "
+          f"{tol_setpoint_v('U1', ajustado=True):.3f} V en U1 y "
+          f"{tol_setpoint_v('U2', ajustado=True):.3f} en U2, y el margen")
+    print(f"   seria {margen_v('U1', tol_set=tol_setpoint_v('U1', ajustado=True)) * 1000:+.1f}"
+          f" mV en U1: sigue sin haber margen.)")
 
     print("\n  con el dropout TIPICO de la curva a 650 mA (que no es una "
           "garantia y no decide):")
@@ -443,19 +558,35 @@ def demo() -> int:
     _autocomprobacion()
 
     peor_reg = min(deficit, key=lambda r: deficit[r])
-    if deficit[peor_reg] > 0.0:
+    banda = incertidumbre_estimados_v()
+    if deficit[peor_reg] >= banda:
         print(f"\nOK: margen_budget.py (el peor es {peor_reg} con "
-              f"{deficit[peor_reg] * 1000:+.0f} mV)")
+              f"{deficit[peor_reg] * 1000:+.0f} mV sobre una incertidumbre de "
+              f"{banda * 1000:.0f})")
         return 0
 
     admisible = min(tol_set_admisible_v(reg) for reg in V_SET)
     print()
     print("=" * 72)
-    print("La cadena NO cierra, y no es un fallo de este guion:")
+    print("La cadena no tiene MARGEN, y no es un fallo de este guion:")
     for reg in V_SET:
-        print(f"  {reg}: {deficit[reg] * 1000:+.0f} mV de margen "
+        print(f"  {reg}: {deficit[reg] * 1000:+.1f} mV de margen "
               f"(necesita {v_necesaria_v(reg):.3f} V, le llegan "
               f"{v_entrada_minima_v():.3f})")
+    print(f"  Y la INCERTIDUMBRE del propio modelo son {banda * 1000:.0f} mV: "
+          f"lo que se mueve la")
+    print("  cadena si los dos ESTIMADO --la deriva termica, extrapolada por")
+    print(f"  encima de los {T_TOPE_HOJA_C:.0f} C hasta donde la hoja la "
+          f"garantiza, y la resistencia")
+    print("  serie de dos piezas sin elegir-- se van un 50 %. Un margen mas")
+    print("  pequeno que la barra de error de su propio modelo no es un margen.")
+    print()
+    print("  Y con la eleccion contraria sobre el rizado --que la hoja no")
+    print("  publica-- el margen se va a "
+          f"{margen_v(peor_reg, filtrado=False) * 1000:+.0f} mV. Bastan "
+          f"{2000 * deficit[peor_reg]:.1f} mVp-p de rizado")
+    print("  por debajo del codo del LC para acabar con el, sobre los 200 que")
+    print("  la hoja publica sin decir donde caen.")
     print("  La ventana de setpoint mas ancha que dejaria regular a los dos")
     print(f"  son +-{admisible * 1000:.0f} mV. La deriva de la referencia del "
           f"pre-regulador,")
@@ -480,11 +611,12 @@ def demo() -> int:
     print("      catalogo, no un presupuesto.")
     print("=" * 72)
     print()
-    print("HUECO: al riel ultra le faltan "
-          f"{-deficit[peor_reg] * 1000:.0f} mV de margen de entrada en su peor "
-          "caso. El papel sec.4.2 publica +0,30 V porque cuenta el setpoint "
-          "exacto; con la deriva de la referencia del pre-regulador el margen "
-          "es negativo. Es una decision de arquitectura de la cascada, no un "
+    print("HUECO: el riel ultra se queda con "
+          f"{deficit[peor_reg] * 1000:+.1f} mV de margen de entrada en su peor "
+          f"caso, y la incertidumbre del propio modelo son {banda * 1000:.0f}. "
+          "El papel sec.4.2 publica +0,30 V porque cuenta el setpoint exacto; "
+          "con la deriva de la referencia del pre-regulador ese margen "
+          "desaparece. Es una decision de arquitectura de la cascada, no un "
           "aserto que se baje: hasta que se tome, este guion sale en codigo 2.")
     return 2
 

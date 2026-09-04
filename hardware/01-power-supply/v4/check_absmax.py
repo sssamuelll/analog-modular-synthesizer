@@ -252,6 +252,34 @@ def main() -> int:
     print(f"  {(hi12 - TOL_DISPARO_V) - (lo12 + TOL_DISPARO_V):.2f} V. Diez "
           f"veces mas sitio para la misma pieza.\n")
 
+    # --- 2b. EL RIEL SANO CONTRA EL OVP DE SU PROPIO MODULO --------------
+    # El OVP no es un numero: es un RANGO, y su extremo BAJO es lo que el
+    # modulo garantiza que NO disparara por debajo. Si el riel sano llega
+    # cerca de ese extremo, una unidad con el OVP en su borde bajo y un riel
+    # en su tolerancia alta se apagan solos con el instrumento entero bien.
+    print("=== 2b. El riel SANO contra el OVP MINIMO de su propio modulo ===\n")
+    apretado = None
+    for riel in ("rack+12", "rack-12", "rack+5"):
+        ovp_min = (OVP_V["PS5/PS6 (IRM-45-5)"][0] if riel == "rack+5"
+                   else OVP_V["PS3/PS4 (IRM-45-12)"][0])
+        sep = ovp_min - v_riel_sano_max(riel)
+        print(f"  {riel:9s} sano max {v_riel_sano_max(riel):5.3f} V contra OVP "
+              f"minimo {ovp_min:5.2f} -> {sep * 1000:+6.0f} mV")
+        assert sep > 0.0, (
+            f"{riel}: el riel sano llega a {v_riel_sano_max(riel):.3f} V y el "
+            f"OVP de su modulo puede disparar desde {ovp_min:.2f}: el modulo "
+            f"se apaga solo con el instrumento bien")
+        if apretado is None or sep < apretado[1]:
+            apretado = (riel, sep)
+    print(f"\n  El mas apretado es {apretado[0]} con {apretado[1] * 1000:.0f} "
+          f"mV. En +5 V el rango del")
+    print("  OVP empieza en 5,25 y el riel sano llega a 5,23: **son 19 mV**, y")
+    print("  dentro de ellos caben la tolerancia del propio umbral de OVP (que")
+    print("  la hoja no publica aparte: el rango ES la tolerancia) y cualquier")
+    print("  transitorio de carga. No es un fallo del modelo: es que el +5 V de")
+    print("  la IRM-45-5 tiene el OVP pegado a su propia tolerancia de salida.")
+    print("  Va al paso 1 del bring-up, midiendo cada modulo a su nominal.\n")
+
     # --- 3. Que el lazo de D-F6 cierra -----------------------------------
     print("=== 3. Por que el lazo cierra aqui y en el #118 no ===\n")
     for riel in ("rack+12", "rack-12", "rack+5"):

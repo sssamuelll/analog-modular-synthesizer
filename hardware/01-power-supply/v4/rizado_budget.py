@@ -45,9 +45,11 @@ La segunda decision es la AMORTIGUACION, y hace falta DOS VECES.
     este guion vigila y una decada y media por debajo de donde uno buscaria el
     problema. Se amortigua con Rd2 = 2,2 ohm + Cd2 = 2,2 uF: el pico queda en
     +0,6 dB y a 20 MHz sigue atenuando 68 dB, que es para lo que la perla
-    esta. El hallazgo salio de BARRER FINO: con los 241 puntos del barrido de
-    la banda se veian 24 dB donde hay 34, y el criterio se habria puesto a la
-    medida del barrido en vez de a la del filtro.
+    esta. El pico es ESTRECHO y hay que barrerlo fino: con los 241 puntos
+    del barrido de la banda se leen 32,1 dB y con 1601 se leen 34,0. La
+    diferencia no cambia el veredicto --32 dB tambien se salen de
+    cualquier criterio-- pero si el numero que se publica, y un pico
+    estrecho medido con paso grueso siempre sale mas bajo de lo que es.
 
 ## Lo que este guion NO cubre, dicho como asercion y no como nota al pie
 
@@ -312,9 +314,9 @@ def pico_perla(z100: float = Z_FERRITA_100MHZ_OHM, **kw) -> tuple[float, float]:
     """(frecuencia, dB) del pico de la resonancia perla-ceramico.
 
     Positivo en dB significa que AMPLIFICA. Se barre toda la banda con paso
-    fino porque el pico es estrecho: con 241 puntos entre 65 kHz y 20 MHz se
-    veian 24 dB donde hay 34, y el criterio se habria puesto a la medida de
-    un barrido grueso en vez de a la del filtro."""
+    fino porque el pico es estrecho: con 241 puntos entre 65 kHz y 20 MHz
+    se leen 32,1 dB y con 1601 se leen 34,0. Un pico estrecho medido con
+    paso grueso siempre sale mas bajo de lo que es."""
     fs = [10.0 ** (4.0 + 4.0 * i / 1600.0) for i in range(1601)]  # 10 kHz-100 MHz
     f, h = max(((f, h_ferrita(f, z100=z100, **kw)) for f in fs),
                key=lambda x: x[1])
@@ -534,8 +536,9 @@ def demo() -> None:
     print(f"  y a {F_BANDA_MAX_HZ / 1e6:.0f} MHz sigue atenuando "
           f"{_db(h_ferrita(F_BANDA_MAX_HZ)):.0f} dB, que es para lo que esta.")
     print("  Es el mismo fallo que el LC sin amortiguar, una escala mas abajo,")
-    print("  y salio de barrer fino: con 241 puntos se veian 24 dB donde hay")
-    print(f"  {pico_sa:.0f}.")
+    print("  y hay que barrerlo fino: con los 241 puntos de la banda se leen")
+    print(f"  {20 * math.log10(max(h_ferrita(f, cd=0.0) for f in BANDA_HZ)):.1f} dB y con 1601 se leen")
+    print(f"  {pico_sa:.1f}.")
 
     print(f"\nlo que este presupuesto NO cubre: el modo comun "
           f"(CUBRE_MODO_COMUN={CUBRE_MODO_COMUN}).")

@@ -225,6 +225,29 @@ N_PATCHES_PEOR = 20
 # comprueban; el papel de la bahia (#166 sec.5, #183) las implementa.
 BAHIA_JACKS_EN_ISLA_DE_RACK = True
 BAHIA_RECIBE_EN_DIFERENCIAL = True
+# Y AQUI ESTA LA TRAMPA QUE HAY QUE DECIR EN VOZ ALTA: las dos de arriba son
+# constantes de ESTE fichero, asi que `assert BAHIA_RECIBE_EN_DIFERENCIAL`
+# solo puede saltar si alguien edita esta linea. Aseverarlas y salir en verde
+# seria una puerta que no vigila nada --el patron del aserto que no puede
+# fallar-- justo encima de una tabla que dice 20,29 cents contra un objetivo
+# de 2. Lo que las convierte en algo es MIRAR SI SU DUENO EXISTE: el papel de
+# la bahia (#166 sec.5, #183), que es quien tiene que implementarlas. Mientras
+# no exista, este guion sale en HUECO y lo dice, igual que
+# consumo_total_budget.py hizo con invitados_budget.py.
+_ESPECIFICACIONES = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                 "..", "..", "docs", "superpowers", "specs")
+
+
+def papel_de_la_bahia() -> str | None:
+    """La ruta del papel de la bahia, si ya existe. No se afirma que no."""
+    try:
+        nombres = os.listdir(_ESPECIFICACIONES)
+    except OSError:
+        return None
+    for n in sorted(nombres):
+        if "bahia" in n.lower() and n.endswith(".md"):
+            return os.path.join(_ESPECIFICACIONES, n)
+    return None
 
 
 def r_retorno_rack(r_contacto: float = R_BORNE) -> float:
@@ -478,7 +501,7 @@ def _autocomprobacion_plano() -> None:
         assert abs(e - o) < 1e-9, f"perfil_plano mal: {o*1e6:.1f} != {e*1e6:.1f} uV"
 
 
-def demo() -> None:
+def demo() -> int:
     _autocomprobacion_plano()
     print(f"cobre a {T_OP:.0f} C: {R_CUADRO:.3f} mohm/cuadro\n")
 
@@ -544,8 +567,31 @@ def demo() -> None:
     # ---- 5. el rack de invitados (fuente v4, sec.4.1) -------------------
     _rack_e_instrumento()
 
-    print("\nOK: presupuesto cerrado.")
+    # ---- 6. y si los dos requisitos de la bahia tienen dueno ------------
+    papel = papel_de_la_bahia()
+    if papel is not None:
+        print()
+        print("  los dos requisitos de la bahia tienen papel: "
+              + os.path.basename(papel))
+        print("")
+        print("OK: presupuesto cerrado.")
+        return 0
+    print()
+    print("  " + REGLA_ISLA_BAHIA)
+    print("  " + REGLA_DIFERENCIAL_BAHIA)
+    print()
+    print("HUECO: el presupuesto de masa del INSTRUMENTO cierra en 1,21 "
+          "cents, pero el del RACK no cierra por cobre: con la carga "
+          "sostenida el desfase son 20,29 cents contra un objetivo de 2, "
+          "y lo que lo arregla son dos requisitos que este guion NO puede "
+          "verificar --la isla de masa del rack bajo los jacks y la "
+          "recepcion diferencial de cada CV--. Aqui viven como "
+          "constantes, y aseverarlas contra si mismas seria una puerta "
+          "que no vigila nada. Su dueno es el papel de la bahia (#166 "
+          "sec.5, #183), que todavia no existe en docs/superpowers/"
+          "specs/. Cuando exista, esta puerta se pone verde sola.")
+    return 2
 
 
 if __name__ == "__main__":
-    demo()
+    raise SystemExit(demo())
