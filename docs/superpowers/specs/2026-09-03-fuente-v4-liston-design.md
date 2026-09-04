@@ -69,6 +69,15 @@
 >   riel negativo sigue en **−170 mV** y ninguno de los dos candidatos es una
 >   pieza negativa. Firmar «vamos con (b)» **cierra media cadena**: la otra
 >   mitad necesita su propia respuesta, y son 170 mV, no 388.
+>
+>   **Lo que hay que comprar para `U2`, dicho como especificación y no como
+>   queja:** su presupuesto de ventana + dropout son **1,470 V** y el LM2991
+>   gasta 1,640. Para que el margen valga más que la incertidumbre del modelo
+>   hay que **bajar de 1,343 V**. O sea que no hace falta un LDO negativo
+>   excepcional: hace falta uno **300 mV mejor que el LM2991** en la suma de
+>   las dos cifras. Y el reparto importa — todo el desajuste de hoy sale del
+>   dropout **sobre temperatura** (0,8 V a 25 °C, 1,0 V garantizado), no de la
+>   referencia.
 > - **Ninguna de las tres garantiza el dropout a los 710 mA de la cascada.**
 >   El LT1963A salta de 500 mA (0,35 V) a 1,5 A (0,55); el MIC29152 publica el
 >   típico a 750 mA y el máximo sólo a 1,5 A. La tabla toma **la cota de la
