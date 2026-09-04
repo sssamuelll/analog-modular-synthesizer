@@ -90,6 +90,28 @@ la buena, así que una entrada sin URL y sin revisión es una entrada rota.
 | Fichero | Documento | De dónde sale | Para qué |
 |---|---|---|---|
 | `reference/datasheets/stm32n6-rm0486-rev4.pdf` | **RM0486 Rev 4** (mayo 2026), 4.669 pp. — manual de referencia del STM32N6x5/x7xx | [st.com](https://www.st.com/resource/en/reference_manual/rm0486-stm32n647657xx-armbased-32bit-mcus-stmicroelectronics.pdf) | Los registros. Es la fuente de los bits de RCC y del PHY del USB del N657 — lo que le falta a `embassy-stm32` para que el cerebro tenga puerto (#250) |
+| `reference/datasheets/lt1963a-rev-g-2021-02.pdf` | **LT1963A Rev. G** (02/21, pie de la p. 28) — LDO 1,5 A ajustable, bajo ruido | [analog.com](https://www.analog.com/media/en/technical-documentation/data-sheets/1963aff.pdf) | Candidato a sustituir al **LM2941** en `U1` (opción **b** del §4.2 de la fuente v4). Lo que decide: `ADJ Pin Voltage` **1,174–1,246 V sobre temperatura** y `Dropout Voltage` **0,55 V máx a 1,5 A** — las dos cifras que el LM2941 no puede batir. Su `SHDN` sirve al secuenciador de D-F4 y sus ±20 V de `IN` cubren los 15,67 V del peor caso alto. **5-lead TO-220**, o sea que el tab sigue contra la pared y `chasis_to220_*` no se mueve |
+| `reference/datasheets/mic29152-ds20005685a-2016.pdf` | **MIC29152 — DS20005685A** (2016) — LDO 1,5 A ajustable de alta precisión | [microchip.com](https://ww1.microchip.com/downloads/en/devicedoc/20005685a.pdf) | El otro candidato para `U1`. `Reference Voltage` **1,203–1,277 V** (Note 8) y `Dropout Voltage` **600 mV máx a 1,5 A** (220 mV típico a 750 mA, sin máximo publicado ahí). Trae `EN` y un **`FLG`** que avisa de salida fuera de regulación — telemetría gratis que el LT1963A no da |
+
+**Dos avisos sobre estas dos, y los dos son de los que renumeran tablas:**
+
+1. **La DS20005685A no es la última.** Existe una **DS20005685B** (2016–2019),
+   y esta tabla existe precisamente porque *«la Rev 2 contra la Rev 10 del
+   DS14791 ya nos renumeró una tabla entera»*. Ningún número del MIC29152 debe
+   entrar en un papel sin comprobar antes si la B lo mueve.
+2. **La DS20005685A se contradice consigo misma sobre el encapsulado.** Su
+   p. 1 dice *«The 1.5A, adjustable output MIC29152 is available in a 5-pin
+   power D-Pak (TO-252) package»* y el diagrama de la p. 2 dibuja
+   *«MIC29152/302/502 5-Lead TO-220 Adjustable Voltage (T)»* con TAB y el
+   pinout entero (`1 EN`, `2 IN`, `TAB 3 GND`, `4 OUT`, `5 ADJ`). **Mientras el
+   disipador sea la pared del chasis, sin TO-220 con TAB la pieza no sirve**, y
+   eso se cierra con el sufijo de pedido, no leyendo la hoja.
+
+Y una que **ninguna de las dos garantiza**: el dropout a los **710 mA** de la
+cascada. El LT1963A salta de 500 mA (0,35 V) a 1,5 A (0,55); el MIC29152
+publica el típico a 750 mA y el máximo sólo a 1,5 A; el LM2991 da 0,1 A y 1 A y
+nada en medio. Quien las use toma la cota de la corriente **mayor**, que es la
+única honesta.
 
 Ojo con la diferencia: la **DS14791** dice qué patillas y cuánta corriente; el
 **RM0486** dice qué bit de qué registro. Para escribir un driver hace falta el
