@@ -2216,7 +2216,7 @@ CD_TIRO = 0.65
 # Una rendija larga y estrecha bajo un alero no descarga como chapa ranurada, y
 # nadie ha medido cual de los dos es. Se imprime, no se aseverea.
 CD_TIRO_PESIMISTA = 0.55
-# LA PARED EXTERIOR TAMBIEN EVACUA, y con 151.53 W dentro deja de ser un
+# LA PARED EXTERIOR TAMBIEN EVACUA, y con 151.55 W dentro deja de ser un
 # detalle: medio metro cuadrado de envolvente mueve mas vatios que la chimenea.
 # U es el coeficiente global aire de dentro -> pared -> sala, o sea las dos
 # caras en serie: con h ~ 5-8 W/m2K por cara, U ~ 2.5-4. SUPUESTO, sin medir, y
@@ -2339,6 +2339,39 @@ def _envolvente_m2(p: dict[str, float]) -> float:
             - fondo(p) * p["ancho_total"]) * 1e-6
 
 
+def _potencia_del_cajon() -> float:
+    """Los W que el case tiene que evacuar, LEIDOS DE DONDE SE CALCULAN.
+
+    `potencia_disipada` de params.scad es una COPIA. El numero se deriva en
+    hardware/01-power-supply/v4/calor_budget.py de las celdas de la fuente y
+    del censo digital, y aqui se transcribe porque el .scad es OpenSCAD y no
+    puede importar nada. La copia no es el defecto -- el CAD la necesita --;
+    el defecto es que nadie la mirara.
+
+    EL 2026-09-04 ESA COPIA LLEVABA UN DIA MINTIENDO. Decia 147.83 cuando la
+    franja de red (2.75 W de la NTC de arranque y 0.95 del choke) ya la habia
+    subido a 151.55, y con ella se le publico al #289 un encargo de 25113 mm2
+    de venteo cuando eran 25742. Nadie hizo nada mal: el numero cambio en la
+    fuente y aqui no habia nada que lo notara.
+
+    EL IMPORT ES DIFERIDO A PROPOSITO. calor_budget.py importa de este modulo
+    (CD_TIRO, CD_TIRO_PESIMISTA, CP_AIRE, G, RHO_AIRE), asi que a nivel de
+    modulo esto seria un ciclo. Y el aserto vive dentro de guarda_aire() por
+    la misma razon que la puerta simetrica de la fuente --el test que ata su
+    A_EF_BASE_MM2 a este params.scad-- vive en su contrato: un aserto al
+    importar dejaria rojos tambien a power_budget, margen_budget,
+    secuencia_budget, fusible_budget, invitados_budget y check_bringup, que no
+    tienen la culpa de un numero descuadrado aqui."""
+    import os
+    import sys
+    v4 = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                      "..", "hardware", "01-power-supply", "v4")
+    if v4 not in sys.path:
+        sys.path.insert(0, v4)
+    from calor_budget import PLACA_A, p_cajon_w, p_recinto_w
+    return p_cajon_w(PLACA_A) + p_recinto_w(PLACA_A)
+
+
 def _tiro(p: dict[str, float], cd: float = CD_TIRO) -> dict[str, float]:
     """La chimenea del case: areas, desnivel, salto termico, y el area efectiva
     que haria falta para quedarse en el techo.
@@ -2378,6 +2411,33 @@ def _tiro(p: dict[str, float], cd: float = CD_TIRO) -> dict[str, float]:
             / (k * techo ** 1.5)}
 
 
+def guarda_potencia_vigente(p: dict[str, float]) -> None:
+    """El calor que este budget reparte tiene que ser el que la fuente calcula.
+
+    Es ROJO y no HUECO a proposito: un desfase aqui no pide rediseñar nada --se
+    arregla copiando un literal-- y mientras no se arregle sale mal TODO lo que
+    guarda_aire() publica: el salto, el deficit y el encargo del #289. Fue
+    exactamente lo que paso el 04-09 (ver _potencia_del_cajon()).
+
+    VIVE APARTE DE guarda_aire() Y NO DENTRO, y no es cuestion de gusto:
+    canario_techo() llama a guarda_aire() con potencia_disipada = 1.0 W a
+    proposito, para probar que con carga de juguete la puerta NO publica el
+    HUECO. Un cruce metido ahi dentro mataria ese canario -- una puerta nueva
+    que rompe la prueba de otra puerta vieja. Una guarda, una cosa."""
+    pot = _potencia_del_cajon()
+    assert abs(p["potencia_disipada"] - pot) < 0.01, (
+        f"potencia_disipada dice {p['potencia_disipada']:.2f} W y "
+        f"calor_budget.py, que es donde se calcula, da {pot:.2f} a placa "
+        f"(p_cajon_w + p_recinto_w sobre PLACA_A): "
+        f"{abs(p['potencia_disipada'] - pot):.2f} W de desfase. Este numero NO "
+        f"se toca aqui para que la puerta calle: si la fuente lo cambio, copia "
+        f"el suyo a params.scad y vuelve a correr -- el salto, el deficit y el "
+        f"encargo del #289 se recalculan solos. Si el que esta mal es el de la "
+        f"fuente, arreglalo alli y no aqui")
+    print(f"potencia del cajon: {pot:.2f} W, y params.scad dice lo mismo "
+          f"(la copia se cruza contra calor_budget.py de la fuente v4)")
+
+
 def guarda_aire(p: dict[str, float]) -> None:
     """El case no puede calentarse mas de salto_termico_max sobre ambiente.
 
@@ -2403,13 +2463,15 @@ def guarda_aire(p: dict[str, float]) -> None:
 
     A_ef son entrada y salida EN SERIE (1/A_ef^2 = 1/A_in^2 + 1/A_out^2), y h la
     distancia entre sus centroides. Nada de esto esta medido: C_D, la altura
-    efectiva y las perdidas del trafo son supuestos, y por eso el techo va en 15
-    K y no pegado al resultado. Sirve para ordenes de magnitud y para que un
-    cambio de geometria no empeore el tiro sin que nadie se entere.
+    efectiva y las perdidas del trafo son supuestos, y por eso el techo va
+    holgado y no pegado al resultado. Sirve para ordenes de magnitud y para que
+    un cambio de geometria no empeore el tiro sin que nadie se entere.
 
     Y EL 2026-09-03 DEJA DE SER UN ASERTO. No porque el criterio se ablande
-    --el techo sigue en 15 K-- sino porque la carga dejo de ser la del PSU
-    solo: son 151.53 W (31,25 del recinto de la fuente + 120,3 de la fila de
+    --el techo no se toco ese dia; subio a 20 el 04-09 y por la razon contraria,
+    para dejar de contradecir el DELTA_T = 20.0 con el que tuning_budget.py ya
+    calculaba la deriva de afinacion-- sino porque la carga dejo de ser la del PSU
+    solo: son 151.55 W (31,25 del recinto de la fuente + 120,3 de la fila de
     invitados y el digital, papel de la fuente v4 sec.6), y esta geometria
     evacua 12.6. Un rojo permanente sobre un diseno que nadie ha rehecho
     todavia no verifica nada: ensena a empujar con --no-verify, que es el
@@ -3063,7 +3125,7 @@ def canario_techo(p: dict[str, float]) -> None:
         # LA RENDIJA TENIA AQUI DOS CANARIOS Y SE MUDAN ABAJO (2026-09-03). Los
         # dos --taco_largo casi continuo, y potencia_disipada por encima de lo
         # que cabe-- se colgaban del aserto "sobre ambiente" de guarda_aire(),
-        # y ese aserto ya no existe: con los 151.53 W del cajon el techo no se
+        # y ese aserto ya no existe: con los 151.55 W del cajon el techo no se
         # cumple y la puerta lo publica como HUECO. _borde_rojo() sobre un
         # aserto que no muerde revienta con "el aserto no muerde", que es su
         # trabajo. Su SUJETO sigue vivo --que ahogar la salida se note, que la
@@ -6061,6 +6123,7 @@ def main() -> int:
     guarda_piso(p)
     guarda_anillo(p)
     guarda_rendija(p)
+    guarda_potencia_vigente(p)
     guarda_aire(p)
     guarda_chaflan(p)
     canario_valle(p)
