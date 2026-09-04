@@ -681,10 +681,16 @@ de las paredes exteriores—, así que los 22 200 mm² son **pesimistas**.
 listón del rack y el criterio del propio case piden cosas distintas, y manda
 el segundo:
 
-| Quién pregunta | Qué exige | Venteo efectivo nuevo |
-|---|---|---|
-| `calor_budget.py` | que los rieles den el listón con la sala a 45 °C | **22 148 mm²** |
-| `guarda_aire()` | los **20 K sobre ambiente** que la afinación ya suponía | **25 742 mm²** |
+| Quién pregunta | Qué exige | Venteo **nuevo** | Venteo **total** |
+|---|---|---|---|
+| `calor_budget.py` | que los rieles den el listón con la sala a 45 °C | **22 148 mm²** | 25 447 mm² |
+| `guarda_aire()` | los **20 K sobre ambiente** que la afinación ya suponía | **22 442 mm²** | 25 742 mm² |
+
+**Las dos columnas están porque la confusión entre ellas es fácil y ya se
+cometió dos veces el 04-09.** `calor_budget.py` toma `area_venteo_mm2` como
+área ADICIONAL —la suma a los 3 299 mm² efectivos que el case ya tiene, ver
+`_k(A_EF_BASE_MM2 + area_venteo_mm2, …)`— y `guarda_aire()` publica el TOTAL.
+Comparar una con otra da un 14 % de diferencia que no existe.
 
 **Y desde el 04-09 los dos criterios casi coinciden.** Dos cosas se movieron el
 mismo día y en sentidos contrarios: el techo del case pasó de 15 a **20 K**
@@ -694,11 +700,22 @@ fuente, y de los dos techos el que tenía argumento era el de la afinación), y
 la potencia del cajón subió de 147,83 a **151,53 W** al contar la franja de red
 que la tabla de arriba no llevaba. Resultado:
 
-Con los **22 148** que pide la fuente, el case sube **20,2 K** contra un techo
-de 20: los rieles llegan y el condensador se queda a un 1 % de su criterio.
-Ayer esas dos cifras estaban a 15 000 mm² una de otra; hoy están a un 14 %.
-El encargo a #289 sigue siendo el mayor, **25 742 mm²**, y con dos cifras que
-lo acotan: la pared exterior (0,507 m² de envolvente sin el suelo) se lleva
+En la misma unidad, **los dos criterios piden lo mismo dentro del 1,3 %**:
+22 148 mm² nuevos la fuente y 22 442 el case, **294 mm² de diferencia**. Con
+los 22 148, el case sube **20,2 K** contra un techo de 20: los rieles llegan y
+el condensador se queda a un 1 % de su criterio.
+
+Eso no es una coincidencia cómoda, es evidencia. Son **dos criterios físicos
+independientes** —«el aire no sube de 20 K», que sale de la deriva de
+afinación de `tuning_budget.py`, y «el listón se sostiene», que sale de las
+curvas de derating de las hojas Mean Well— resueltos por dos modelos que sólo
+comparten la ecuación de tiro. Que pidan la misma abertura dentro de un 1 %
+dice que los dos están bien. Y para **#289** significa que quien dibuje el
+venteo tiene **un solo número** que satisface a los dos, no dos encargos que
+negociar.
+
+El encargo sigue siendo el mayor de los dos, **25 742 mm² totales**, y con dos
+cifras que lo acotan: la pared exterior (0,507 m² de envolvente sin el suelo) se lleva
 otros **30,4 W** a ese techo con `U = 3 W/m²K` supuesto —más que los 19,4 de
 la chimenea de hoy—, y contándola bajan a **20 572**; con `C_D = 0,55` suben a
 **30 422**. Y el

@@ -460,6 +460,12 @@ def _busca_area_minima() -> tuple[float, float, str]:
     return hi, area_base, ""
 
 
+# OJO CON LA UNIDAD: es area ADICIONAL, no total. Se le SUMA a los
+# A_EF_BASE_MM2 = 3299 mm2 efectivos que el case ya tiene (ver _k() en
+# aire_recinto_c). guarda_aire() del case publica el TOTAL, asi que las dos
+# cifras NO se comparan tal cual: el 2026-09-04 dos sesiones distintas se
+# equivocaron con eso el mismo dia, una en cada sentido, y salio un 14 % de
+# desacuerdo entre los dos modelos donde hay un 1,3 %.
 AREA_VENTEO_MIN_MM2, _AREA_BASE_MM2, _FALLO_AREA_MAX = _busca_area_minima()
 P_BASE = {
     # ESTIMADO - hipotesis para #289, el papel del case fija la real.
