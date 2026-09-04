@@ -12,8 +12,11 @@ BLOQUEANTE (modulo-voz-total S8 y S9.4). Nace de dos hallazgos de la junta:
     RETIRADA EL 2026-09-03: con la fuente v4 (D-F1) la fila de abajo tiene
     rieles PROPIOS y el instrumento no le presta suministro, asi que la
     reserva vigilaba un compromiso muerto. Quien la vigila desde ahora es
-    invitados_budget.py, que todavia no existe: hasta entonces este guion
-    sale con codigo 2 y lo dice al final. Ver el bloque de la reserva.
+    invitados_budget.py. Mientras ese guion no existia, este salia en HUECO
+    y lo decia al final; aterrizo el 2026-09-04 (PR #310) y desde entonces
+    sale en verde. El bloque de la reserva MIRA si el relevo existe en vez
+    de afirmarlo, asi que esta frase no vuelve a caducar: no dice que codigo
+    sale, dice de que depende. Ver el bloque de la reserva.
 
 --- La regla de este guion ---------------------------------------------------
 
