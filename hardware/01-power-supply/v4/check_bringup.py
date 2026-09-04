@@ -211,7 +211,9 @@ def _puntos() -> list[Punto]:
     p.append(P("2", "mas15_necesario_para_regular", "V",
                "margen_budget.v_necesaria_v('U1'): REGISTRO del criterio, "
                "para que la hoja de campo lleve el numero contra el que se "
-               "compara. Hoy el margen es NEGATIVO (HUECO de margen_budget)"))
+               "compara. U1 es un LT1963A desde el 2026-09-04 y su margen es "
+               "POSITIVO; el que sigue en negativo es U2 (HUECO de "
+               "margen_budget)"))
     p.append(P("2", "rizado_tras_LC_20MHz", "Vpp",
                "rizado_budget: los 200 mVp-p del IRM por la transferencia del "
                "LC amortiguado a 65 kHz",
@@ -235,6 +237,19 @@ def _puntos() -> list[Punto]:
     p.append(P("2b", "ventana_riel_solo_medida", "ms",
                "secuencia_budget: el transitorio en el que la cascada sigue "
                "habilitada con un riel solo", hi=10.0))
+    # NUEVO CON EL LT1963A: sus polaridades de habilitacion son OPUESTAS a las
+    # del LM2991, asi que ya no hay un hilo unico cuyo corte apague los dos.
+    # El inversor que las reconcilia es un punto de fallo cuyo modo prohibido
+    # es dejar UN riel vivo. Se mide, no se supone.
+    p.append(P("2b", "cortar_la_senal_del_secuenciador_apaga_LOS_DOS", "si/no",
+               "secuencia_budget, AVISO DE POLARIDAD: el LT1963A habilita en "
+               "ALTO y el LM2991 en BAJO. Con el LM2941 un hilo roto apagaba "
+               "los dos por construccion; ahora hay que DEMOSTRARLO",
+               literal="si"))
+    p.append(P("2b", "quitar_alimentacion_al_inversor_apaga_LOS_DOS", "si/no",
+               "el mismo fallo por el otro lado: si el inversor se queda sin "
+               "alimentacion, su salida no puede dejar vivo a uno solo",
+               literal="si"))
 
     # --- Pasos 3 a 5: la cascada, como en la v3 ---------------------------
     for tp, senal, nom, tol in (("TP7", "+13V1", 13.1, 0.3),
@@ -244,7 +259,8 @@ def _puntos() -> list[Punto]:
                                 ("TP5", "+5V", 5.00, 0.25)):
         p.append(P("3", f"{tp}_{senal}_sin_carga", "V",
                    f"como la v3: {nom:+g} +-{tol}. La ventana de TP7/TP8 la "
-                   f"vigila margen_budget, que hoy dice que no cabe",
+                   f"vigila margen_budget: TP7 cabe con el LT1963A, TP8 "
+                   f"todavia no",
                    predicho=nom, tol=tol))
     for pin, nom in ((1, -12.0), (2, 0.0), (3, 0.0), (4, 12.0)):
         p.append(P("4", f"J2_pin{pin}", "V",

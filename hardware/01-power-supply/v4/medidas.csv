@@ -33,18 +33,20 @@ paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
 1,inrush_pico_rearranque_100ms,A,<= 784.791,,,,,,fusible_budget: el caso que dimensiona el fusible. Cortar y volver a los 100 ms
 1,fuga_a_PE_seis_encendidos,mA,<= 3.5,,,,,,"fuga_budget.fuga_total_ma(), con los seis en marcha. Es tambien la medida que arbitra D-F5"
 2,mas15_minimo_con_carga,V,>= 14.3699,,,,,,margen_budget.v_entrada_minima_v(): lo que le tiene que llegar a U1 en el peor caso
-2,mas15_necesario_para_regular,V,registro,,,,,,"margen_budget.v_necesaria_v('U1'): REGISTRO del criterio, para que la hoja de campo lleve el numero contra el que se compara. Hoy el margen es NEGATIVO (HUECO de margen_budget)"
+2,mas15_necesario_para_regular,V,registro,,,,,,"margen_budget.v_necesaria_v('U1'): REGISTRO del criterio, para que la hoja de campo lleve el numero contra el que se compara. U1 es un LT1963A desde el 2026-09-04 y su margen es POSITIVO; el que sigue en negativo es U2 (HUECO de margen_budget)"
 2,rizado_tras_LC_20MHz,Vpp,<= 0.00365059,,,,,,rizado_budget: los 200 mVp-p del IRM por la transferencia del LC amortiguado a 65 kHz
 2,pico_del_LC_en_resonancia,dB,<= 3,,,,,,rizado_budget.pico_lc_db(): el LC amortiguado no puede amplificar dentro de la banda de 10 Hz-100 kHz
 2b,quitar_red_a_PS1_caen_los_dos,si/no,= si,,,,,,"papel sec.9.1 paso 2b: con PS2 viva, los dos rieles de la cascada caen juntos. Sin este paso, D-F4 es una promesa"
 2b,quitar_red_a_PS2_caen_los_dos,si/no,= si,,,,,,"papel sec.9.1 paso 2b, el otro sentido"
 2b,quitar_red_a_PS3_cae_el_rack_entero,si/no,= si,,,,,,"papel sec.4.3: el mismo detector, replicado en el rack"
 2b,ventana_riel_solo_medida,ms,<= 10,,,,,,secuencia_budget: el transitorio en el que la cascada sigue habilitada con un riel solo
-3,TP7_+13V1_sin_carga,V,12.8 .. 13.4,13.1,0.3,,,,"como la v3: +13.1 +-0.3. La ventana de TP7/TP8 la vigila margen_budget, que hoy dice que no cabe"
-3,TP8_-12V9_sin_carga,V,-13.2 .. -12.6,-12.9,0.3,,,,"como la v3: -12.9 +-0.3. La ventana de TP7/TP8 la vigila margen_budget, que hoy dice que no cabe"
-3,TP3_+12V_sin_carga,V,11.95 .. 12.05,12,0.05,,,,"como la v3: +12 +-0.05. La ventana de TP7/TP8 la vigila margen_budget, que hoy dice que no cabe"
-3,TP4_-12V_sin_carga,V,-12.05 .. -11.95,-12,0.05,,,,"como la v3: -12 +-0.05. La ventana de TP7/TP8 la vigila margen_budget, que hoy dice que no cabe"
-3,TP5_+5V_sin_carga,V,4.75 .. 5.25,5,0.25,,,,"como la v3: +5 +-0.25. La ventana de TP7/TP8 la vigila margen_budget, que hoy dice que no cabe"
+2b,cortar_la_senal_del_secuenciador_apaga_LOS_DOS,si/no,= si,,,,,,"secuencia_budget, AVISO DE POLARIDAD: el LT1963A habilita en ALTO y el LM2991 en BAJO. Con el LM2941 un hilo roto apagaba los dos por construccion; ahora hay que DEMOSTRARLO"
+2b,quitar_alimentacion_al_inversor_apaga_LOS_DOS,si/no,= si,,,,,,"el mismo fallo por el otro lado: si el inversor se queda sin alimentacion, su salida no puede dejar vivo a uno solo"
+3,TP7_+13V1_sin_carga,V,12.8 .. 13.4,13.1,0.3,,,,"como la v3: +13.1 +-0.3. La ventana de TP7/TP8 la vigila margen_budget: TP7 cabe con el LT1963A, TP8 todavia no"
+3,TP8_-12V9_sin_carga,V,-13.2 .. -12.6,-12.9,0.3,,,,"como la v3: -12.9 +-0.3. La ventana de TP7/TP8 la vigila margen_budget: TP7 cabe con el LT1963A, TP8 todavia no"
+3,TP3_+12V_sin_carga,V,11.95 .. 12.05,12,0.05,,,,"como la v3: +12 +-0.05. La ventana de TP7/TP8 la vigila margen_budget: TP7 cabe con el LT1963A, TP8 todavia no"
+3,TP4_-12V_sin_carga,V,-12.05 .. -11.95,-12,0.05,,,,"como la v3: -12 +-0.05. La ventana de TP7/TP8 la vigila margen_budget: TP7 cabe con el LT1963A, TP8 todavia no"
+3,TP5_+5V_sin_carga,V,4.75 .. 5.25,5,0.25,,,,"como la v3: +5 +-0.25. La ventana de TP7/TP8 la vigila margen_budget: TP7 cabe con el LT1963A, TP8 todavia no"
 4,J2_pin1,V,-12.5 .. -11.5,-12,0.5,,,,"como la v3 (#121): -12 V MEDIDO, no leido del rotulo"
 4,J2_pin2,V,-0.5 .. 0.5,0,0.5,,,,"como la v3 (#121): +0 V MEDIDO, no leido del rotulo"
 4,J2_pin3,V,-0.5 .. 0.5,0,0.5,,,,"como la v3 (#121): +0 V MEDIDO, no leido del rotulo"
