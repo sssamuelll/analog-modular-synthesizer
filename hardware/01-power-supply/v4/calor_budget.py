@@ -221,7 +221,14 @@ _CONSTANTE_RECINTO_W = (3.71 + 4.88 + 1.24 + 1.37 + 1.30 + 0.30
 # DERIVADO: el papel publica 27,5 W (28,9 antes de D-F7, con la IRM-20-5 de
 # 5,32 W en PS5 donde ahora hay una IRM-45-5 de 3,95).
 P_RECINTO_MAX = _CONSTANTE_RECINTO_W + sum(PERDIDA_RECINTO_W.values())
-# Salida de `python case/clearance_budget.py` el 2026-09-03, sin D-F3.
+# Area efectiva de venteo QUE EL CASE YA TIENE, sin las aberturas de D-F3.
+# Es una copia de la salida de case/clearance_budget.py, y por lo tanto se
+# puede quedar vieja el dia que el case cambie sus rejillas o su rendija.
+# La vigila test_calor_budget.py, que la recalcula desde params.scad y
+# compara. NO va aseverada aqui a proposito: un assert a nivel de modulo
+# reventaria el import de este fichero --y con el los de power_budget.py,
+# margen_budget.py y todo lo que cuelga-- por un cambio de geometria del
+# case, que es un dato y no un defecto.
 A_EF_BASE_MM2 = 3299.0
 H_TIRO_CAJON_M = 0.105
 # Spec del chasis sec.3.3: exterior derivado 338.6 x 176.6 x 83 mm.

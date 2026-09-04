@@ -37,6 +37,25 @@ RIELES = RIELES_RACK + ("digital+5",)
 
 # --- las constantes del papel sec.6, con su valor ---------------------------
 
+def test_el_area_base_es_la_que_el_case_tiene_hoy() -> None:
+    """A_EF_BASE_MM2 es una COPIA de la salida del case, y aqui se recalcula.
+
+    calor_budget suma su `area_venteo_mm2` a esta base, asi que si el case
+    cambia sus rejillas o su rendija y nadie mueve esta constante, el area
+    minima que publica la fuente sale de una geometria que ya no existe.
+    Vive en el contrato y no en el modulo a proposito: un assert a nivel de
+    modulo convertiria un cambio de geometria del case en un rojo del import
+    de media tanda."""
+    import clearance_budget as cl  # noqa: PLC0415
+
+    a_ef = cl._tiro(cl.leer_params())["a_ef"]
+    assert abs(a_ef - cb.A_EF_BASE_MM2) < 1.0, (
+        f"el case tiene hoy {a_ef:.1f} mm2 de venteo efectivo y "
+        f"calor_budget.A_EF_BASE_MM2 dice {cb.A_EF_BASE_MM2:.1f}. Esa base es "
+        f"a la que la fuente le SUMA su area_venteo_mm2: con ella vieja, el "
+        f"venteo minimo que publica sale de una geometria que ya no existe")
+
+
 def test_constantes_del_papel() -> None:
     assert cb.T_SALA == 45.0, "spec del chasis sec.3.1: 45 C de sala, NO 25"
     assert cb.AREA_RECINTO_M2 == 0.1453
