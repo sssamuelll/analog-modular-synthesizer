@@ -1,6 +1,6 @@
 # Fuente v4 — el listón de la PSU3, seis módulos encapsulados y la cascada intacta — firmada (v3, tras la junta y la firma)
 
-**Fecha**: 2026-09-03 · **Estado**: **firmado — D-F1 a D-F7 decididas (§14); `calor_budget.py` corrió y la columna «sostenido» de §1 está rellena. Lo que queda es de otros papeles: el venteo mínimo (#289) y la bahía (#290)** ·
+**Fecha**: 2026-09-03 · **Estado**: **firmado — D-F1 a D-F8 decididas (§14 y el bloque de D-F8 de 2026-09-04); `calor_budget.py` corrió y la columna «sostenido» de §1 está rellena. Lo que queda es de otros papeles: el venteo mínimo (#289) y la bahía (#290)** ·
 **Listón firmado**: 2026-09-03 («firmo el listón», Samuel) — como **corriente de placa**; y **re-firmado el mismo día como corriente sostenida** por `calor_budget.py` con D-F3 = A y D-F7: **2,0 / 2,0 / 4,0 A de rack y 4,2 A digital con 22 200 mm² de venteo nuevo**, el mínimo que el modelo despeja (16 900 → 20 600 el 03-09; → 22 200 el 04-09, al contar la franja de red: §6 y el bloque de enmiendas de la tanda A) ·
 **Cierra**: nada todavía. **Entrega**: los rieles de #169 (§4.3) ·
 **Mata por desaparición del sujeto** (cuando la v4 se adopte): #141, #280, #106, #56, #57 ·
@@ -40,6 +40,54 @@
 >   disparo son **0,27 V**, contra 2,67 en ±12. Y el **+5 V digital no lleva
 >   crowbar**: que lo que reciba `PS6` aguante 6,75 V pasa a ser requisito al
 >   módulo 2. `check_absmax.py`, HUECO por la hoja del SCR.
+>
+> ### D-F8 — `U1` PASA A LT1963A. FIRMADA POR SAMUEL EL 2026-09-04
+>
+> Sobre la tabla del bloque siguiente, y con ella delante. **`U1` deja de ser
+> un LM2941 y pasa a ser un LT1963A Rev G.** El riel ultra recupera margen de
+> entrada: **de −388 mV a +330**, que son 2,6× la incertidumbre del propio
+> modelo.
+>
+> Ya está en el árbol: `margen_budget.py` lleva la referencia
+> (1,174–1,246 V sobre temperatura, p. 5) y el dropout (0,55 V garantizado a
+> 1,5 A, p. 5) leídos de tabla.
+>
+> **Y trajo un coste que no estaba en su precio, que es lo que hay que leer
+> antes de dar esto por cerrado:**
+>
+> **La polaridad de habilitación es la contraria.** El `SHDN` del LT1963A
+> **habilita en ALTO** (p. 5: *Off to On* con ≤ 2 V, *On to Off* con ≥ 0,25 V);
+> el ON/OFF del LM2991 habilita en BAJO. Hasta hoy los dos habilitaban en bajo
+> y **un solo hilo gobernaba los dos** — y eso no era una comodidad de
+> cableado:
+>
+> > **era la razón por la que ningún fallo simple dejaba un riel solo**, que es
+> > exactamente lo que D-F4 existe para impedir. Un hilo roto los apagaba a los
+> > dos, por construcción.
+>
+> Ahora hay que **invertir una de las dos señales**, y el inversor es un punto
+> de fallo nuevo **cuyo modo de fallo es el prohibido**. Requisito que este
+> papel le pasa a la tanda B, escrito antes de elegir la pieza y no después:
+> **el inversor tiene que fallar hacia AMBOS APAGADOS.** Y se mide: el
+> bring-up gana dos puntos nuevos en el paso 2b (`check_bringup.py`),
+> *cortar la señal del secuenciador apaga LOS DOS* y *quitar alimentación al
+> inversor apaga LOS DOS*.
+>
+> **Lo demás que arrastra, y es menos:**
+>
+> - **La ventana de ESR del `COUT` cambia de dueño.** El LM2941 exigía ESR de
+>   **al menos** 100 mΩ (p. 12) — la trampa clásica: un cerámico X7R moderno lo
+>   hacía oscilar. El LT1963A no tiene cota inferior y sube el techo a **3 Ω**
+>   (Rev G p. 14). El aserto se reescribió con cuidado de no dejar una
+>   comparación que no puede fallar: `lo == 0.0` se comprueba **aparte**, para
+>   que si algún día vuelve una pieza con ESR mínima, la puerta lo diga en vez
+>   de ignorarlo.
+> - **No mueve el chasis.** El LT1963A es 5-lead TO-220 con tab, así que
+>   `chasis_to220_*` y `revisar_to220_coplanares()` siguen igual.
+> - **`U2` no cambia** y sigue en −170 mV. Ver el bloque siguiente: lo que
+>   necesita es una pieza 300 mV mejor que el LM2991 en la suma de ventana y
+>   dropout, y **`margen_budget.py` sigue saliendo en HUECO por ella** — un
+>   hueco que ya no se cierra decidiendo, se cierra con una hoja de datos.
 >
 > ### LA OPCIÓN (b) YA TIENE CIFRAS, Y SÓLO ARREGLA MEDIA CADENA (2026-09-04)
 >

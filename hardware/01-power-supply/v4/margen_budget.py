@@ -160,19 +160,31 @@ V_SET = {"U1": 13.1, "U2": -12.9}
 # La ventana con la que el bring-up de la v3 acepta esos setpoints.
 TOL_SET_V3_V = 0.3
 # LA REFERENCIA DE CADA PRE-REGULADOR, que es de donde sale esa ventana.
-#   LM2941 SNVS770I p. 5: 1,275 V tipicos; 1,237-1,313 a 25 C;
-#                         1,211-1,339 sobre el rango de temperatura
+#   LT1963A Rev G p. 5, "ADJ Pin Voltage (Notas 4, 5)": 1,210 V tipicos;
+#                       1,192-1,228 a 25 C; 1,174-1,246 sobre temperatura
 #   LM2991 SNVS099I p. 5: -1,210 tipicos; -1,186/-1,234 a 25 C;
 #                         -1,15/-1,27 sobre temperatura
-VREF = {"U1": {"typ": 1.275, "25c": (1.237, 1.313), "temp": (1.211, 1.339)},
+#
+# U1 ERA UN LM2941 (1,211-1,339 sobre temperatura, 0,658 V de ventana sobre el
+# setpoint) y con el la cadena salia a -388 mV: sin margen. Samuel firmo el
+# cambio el 2026-09-04, con la tabla del bloque de enmiendas del papel delante.
+# La ventana baja a 0,390 V y el margen pasa a +330 mV.
+VREF = {"U1": {"typ": 1.210, "25c": (1.192, 1.228), "temp": (1.174, 1.246)},
         "U2": {"typ": 1.210, "25c": (1.186, 1.234), "temp": (1.150, 1.270)}}
-# Dropout GARANTIZADO a 1 A sobre el rango de temperatura de operacion:
-#   LM2941 p. 5: "Dropout voltage | IOUT = 1 A | | 0.5 | 1 | V"
-#   LM2991 p. 5: 0,8 V max a TJ = 25 C, y 1 V sobre temperatura
-V_DROPOUT_MAX_1A = {"U1": 1.0, "U2": 1.0}
-# El TIPICO leido en la curva de cada hoja a 650 mA. NO decide: se imprime.
-#   LM2941 p. 7 ~0,32 V; LM2991 p. 6 ~0,42 V
-V_DROPOUT_TIP_650MA = {"U1": 0.32, "U2": 0.42}
+# Dropout GARANTIZADO sobre el rango de temperatura, con LA CORRIENTE A LA QUE
+# LA HOJA LO GARANTIZA -- que no es la nuestra en ninguno de los dos casos:
+#   LT1963A Rev G p. 5: "Dropout Voltage ... ILOAD = 1.5A ... 0.34 0.45 0.55"
+#   LM2991 SNVS099I p. 5: 0,8 V max a TJ = 25 C, y 1 V sobre temperatura a 1 A
+#
+# NINGUNA DE LAS DOS PUBLICA UN MAXIMO A LOS 710 mA REALES de la cascada, asi
+# que se toma la cota de la corriente MAYOR. Es pesimista a proposito y por
+# igual para los dos: el LT1963A salta de 500 mA (0,35 V) a 1,5 A (0,55) y
+# entre medias no hay nada garantizado.
+V_DROPOUT_MAX = {"U1": 0.55, "U2": 1.0}
+I_DROPOUT_GARANTIZADO_A = {"U1": 1.5, "U2": 1.0}
+# El TIPICO de tabla mas cercano por debajo. NO decide: se imprime.
+#   LT1963A p. 5 a 500 mA: 0,19 V; LM2991 p. 6 ~0,42 V a 650 mA
+V_DROPOUT_TIP = {"U1": 0.19, "U2": 0.42}
 # Maximo absoluto de entrada (LM2941 p. 5, LM2991 p. 4) y el umbral al que el
 # LM2941 se apaga solo por sobretension (p. 10).
 V_ABSMAX_ENTRADA = 26.0
@@ -192,16 +204,17 @@ I_PLACA_PS1_A = 1.4      # hoja p. 2, RATED CURRENT del IRM-20-15
 R_SERIE_OHM = DCR_OHM + R_FERRITA_DC_OHM
 
 # --- requisito de estabilidad de U1, de su propia hoja --------------------
-# LM2941 SNVS770I p. 12, sec.8.1: "The output capacitor, COUT, must have a
-# capacitance value of at least 22 uF with an equivalent series resistance
-# (ESR) of at least 100 mOhm, but no more than 1 Ohm."
+# LT1963A Rev G p. 14, "Output Capacitors and Stability": "In all cases, a
+# minimum of 10uF is required while the maximum ESR allowable is 3 Ohm."
 #
-# Es un REQUISITO DE LAZO, no una recomendacion, y es la trampa clasica: un
-# ceramico X7R moderno de 22 uF tiene 5 mOhm de ESR y deja al LM2941 fuera de
-# su ventana de estabilidad.
-COUT_U1_MIN_F = 22e-6
-ESR_COUT_U1_VENTANA_OHM = (0.100, 1.0)
-COUT_U1_F = 47e-6            # DECLARADO: con margen sobre el minimo
+# ESTA VENTANA NO ES LA DEL LM2941, Y LA DIFERENCIA ES LA MITAD DE LA HISTORIA.
+# El LM2941 exigia ESR de AL MENOS 100 mohm (p. 12, sec.8.1): un ceramico X7R
+# moderno de 22 uF tiene 5 mohm y lo hacia oscilar. El LT1963A NO tiene cota
+# inferior --acepta ceramico-- y sube el techo a 3 ohm. La cota de abajo
+# desaparece porque desaparecio la pieza que la pedia, no porque se relaje nada.
+COUT_U1_MIN_F = 10e-6
+ESR_COUT_U1_VENTANA_OHM = (0.0, 3.0)
+COUT_U1_F = 47e-6            # DECLARADO: se queda el de la v3, y sobra
 ESR_COUT_U1_OHM = 0.30       # DECLARADO: electrolitico, dentro de la ventana
 
 ESTIMADOS = (
@@ -323,7 +336,7 @@ def v_entrada_maxima_v(*, t_c: float | None = None,
 def v_necesaria_v(reg: str, *, tol_set: float | None = None) -> float:
     """Lo que el pre-regulador necesita en su entrada para seguir regulando."""
     t = tol_setpoint_v(reg) if tol_set is None else tol_set
-    return abs(V_SET[reg]) + t + V_DROPOUT_MAX_1A[reg]
+    return abs(V_SET[reg]) + t + V_DROPOUT_MAX[reg]
 
 
 def margen_v(reg: str, *, tol_set: float | None = None, **kw) -> float:
@@ -335,7 +348,7 @@ def tol_set_admisible_v(reg: str, **kw) -> float:
 
     Es LA cifra que este presupuesto le entrega a la tanda B y al bring-up."""
     return (v_entrada_minima_v(**kw) - abs(V_SET[reg])
-            - V_DROPOUT_MAX_1A[reg])
+            - V_DROPOUT_MAX[reg])
 
 
 def _guarda_margen(p: dict[str, float]) -> None:
@@ -360,7 +373,8 @@ def _guarda_margen(p: dict[str, float]) -> None:
             f"{reg} deja de regular: le llegan {v_min:.3f} V en el peor caso "
             f"y necesita {necesita:.3f} (setpoint {abs(V_SET[reg]):.1f} + "
             f"{p['tol_set_v']:.3f} de ventana de setpoint + "
-            f"{V_DROPOUT_MAX_1A[reg]:.1f} de dropout garantizado). Por debajo "
+            f"{V_DROPOUT_MAX[reg]:.2f} de dropout garantizado a "
+            f"{I_DROPOUT_GARANTIZADO_A[reg]:.1f} A). Por debajo "
             f"el pre-regulador deja de regular y el ruido del IRM pasa entero "
             f"a la isla LT")
 
@@ -426,15 +440,25 @@ def _autocomprobacion() -> None:
             f"ajustar placa a placa")
 
     # 5. El requisito de estabilidad de U1, de su propia hoja.
+    #
+    # OJO CON LA COTA DE ABAJO. Con el LM2941 la ventana era (0,100 - 1,0) y
+    # el aserto mordia por los dos lados. La del LT1963A es (0 - 3,0): un
+    # "lo <= ESR" con lo = 0 es un ASERTO QUE NO PUEDE FALLAR, porque una ESR
+    # negativa no existe. Escribirlo asi daria una puerta que parece vigilar
+    # dos cosas y vigila una. Se comprueba lo que la hoja dice y nada mas.
     lo, hi = ESR_COUT_U1_VENTANA_OHM
+    assert lo == 0.0, (
+        f"la ventana de ESR de U1 tiene cota inferior ({lo} ohm): el aserto "
+        f"de abajo la esta ignorando. Si vuelve a haber una pieza que exija "
+        f"ESR MINIMA --como el LM2941, que pedia 100 mohm-- hay que volver a "
+        f"comprobar los dos lados")
     assert COUT_U1_F >= COUT_U1_MIN_F, (
         f"COUT de U1 son {COUT_U1_F * 1e6:.0f} uF y la hoja exige al menos "
         f"{COUT_U1_MIN_F * 1e6:.0f}")
-    assert lo <= ESR_COUT_U1_OHM <= hi, (
-        f"la ESR declarada del COUT de U1 ({ESR_COUT_U1_OHM} ohm) esta fuera "
-        f"de la ventana {lo}-{hi} que la hoja exige (p. 12, sec.8.1). Es "
-        f"requisito de estabilidad del lazo, no una recomendacion: un "
-        f"ceramico X7R de 22 uF tiene 5 mohm y lo hace oscilar")
+    assert ESR_COUT_U1_OHM <= hi, (
+        f"la ESR declarada del COUT de U1 ({ESR_COUT_U1_OHM} ohm) pasa del "
+        f"maximo de {hi} que la hoja del LT1963A exige (Rev G p. 14). Es "
+        f"requisito de estabilidad del lazo, no una recomendacion")
 
     # 6. Los canarios. El de tol_set_v es EL numero de esta tarea: la ventana
     #    de setpoint mas ancha que todavia deja regular.
@@ -516,7 +540,7 @@ def demo() -> int:
         m = margen_v(reg)
         deficit[reg] = m
         print(f"  {reg:4s} {abs(V_SET[reg]):8.2f}V "
-              f"{tol_setpoint_v(reg):+7.3f}V {V_DROPOUT_MAX_1A[reg]:7.2f}V "
+              f"{tol_setpoint_v(reg):+7.3f}V {V_DROPOUT_MAX[reg]:7.2f}V "
               f"{v_necesaria_v(reg):8.3f}V {v_entrada_minima_v():6.3f}V "
               f"{m * 1000:+7.0f}mV")
     print("  (la ventana es lo que la hoja GARANTIZA: la Vref de la unidad en")
@@ -533,9 +557,9 @@ def demo() -> int:
           "garantia y no decide):")
     for reg in V_SET:
         m_tip = (v_entrada_minima_v() - abs(V_SET[reg])
-                 - tol_setpoint_v(reg) - V_DROPOUT_TIP_650MA[reg])
+                 - tol_setpoint_v(reg) - V_DROPOUT_TIP[reg])
         print(f"    {reg}: {m_tip * 1000:+.0f} mV con "
-              f"{V_DROPOUT_TIP_650MA[reg]:.2f} V de dropout")
+              f"{V_DROPOUT_TIP[reg]:.2f} V de dropout")
 
     print(f"\n  por arriba: {v_entrada_maxima_v():.2f} V en vacio y a "
           f"tolerancia alta, contra {V_ABSMAX_ENTRADA:.0f} de maximo")
@@ -593,31 +617,49 @@ def demo() -> int:
     print(f"  con la placa YA AJUSTADA, son +-{tol_setpoint_v('U1') * 1000:.0f}"
           f" mV en U1 y +-{tol_setpoint_v('U2') * 1000:.0f} en U2.")
     print()
-    print("  Lo que se puede mover, con su precio, para que Samuel decida:")
-    coste = (24.0 - abs(V_SET["U1"])) * I_CASCADA_A * 2
-    hoy = (V_NOM - abs(V_SET["U1"])) * I_CASCADA_A * 2
-    print("   a) PS1/PS2 a IRM-20-24 en vez de -15: sobra margen, y U1+U2")
-    print(f"      pasan de disipar {hoy:.1f} W a {coste:.1f} W dentro del "
-          f"recinto")
-    print(f"      (+{coste - hoy:.1f} W sobre los 27,5 de sec.6: mueve "
-          f"calor_budget.py y el venteo).")
-    print("   b) Otro pre-regulador con referencia mejor y menos dropout. El")
-    print("      margen se lo comen la deriva de Vref (+-2 a 3 %) y el "
-          "dropout")
-    print("      garantizado de 1,0 V a 1 A, que son los dos del LM2941/91.")
-    print("   c) Bajar el setpoint de 13,1 V. PROHIBIDO por v2 sec.1.5.1: el")
-    print("      headroom del LT3045 son 1,1 V y no puede bajar.")
-    print("   d) Aceptar el tipico en vez del garantizado. Es lo que hace un")
+    print("  LO QUE FALTA ES UNA PIEZA, Y SE SABE CUAL HACE FALTA:")
+    pres = v_entrada_minima_v() - abs(V_SET[peor_reg])
+    gasta = tol_setpoint_v(peor_reg) + V_DROPOUT_MAX[peor_reg]
+    print(f"   {peor_reg} tiene un presupuesto de ventana+dropout de "
+          f"{pres:.3f} V")
+    print(f"   y la pieza de hoy gasta {gasta:.3f}. Para que el margen valga "
+          f"mas que")
+    print(f"   la incertidumbre del modelo hay que bajar de {pres - banda:.3f} "
+          f"V, o sea")
+    print(f"   {(gasta - pres + banda) * 1000:.0f} mV mejor que la de hoy en "
+          f"la SUMA de las dos.")
+    print("   Y el reparto importa: TODO el desajuste sale del dropout SOBRE")
+    print("   TEMPERATURA (0,8 V a 25 C contra 1,0 garantizado), no de la")
+    print("   referencia. Dicho asi es una busqueda acotada; dicho como 'el")
+    print("   mercado casi no fabrica LDO negativos' es una excusa.")
+    print()
+    print("   Lo que NO sirve, y esta medido:")
+    print("    - Enfriar el recinto. El equilibrio de U2 esta en aire a 25 C,")
+    print("      o sea un recinto sin calor dentro: vaciarlo entero da 6 mV")
+    print("      de los 170. La temperatura del aire la manda el cajon.")
+    print("    - Bajar el setpoint. PROHIBIDO por v2 sec.1.5.1: el headroom")
+    print("      del LT3045/94 son 1,1 V y no puede bajar.")
+    print("    - Aceptar el tipico en vez del garantizado. Es lo que hace un")
     print("      catalogo, no un presupuesto.")
+    print()
+    print("   Y una via que EXISTE y tiene precio: un regulador POSITIVO")
+    print("   referenciado al nodo negativo, que se puede porque PS2 flota")
+    print("   (sec.4.2). Funciona y no cuesta un vatio, pero deja el ON/OFF")
+    print("   referenciado a -12,9 V y mete un semiconductor en el retorno de")
+    print("   la carga negativa, en serie con GNDA. Cambiar la pieza es una")
+    print("   decision de BOM; cambiar la topologia de masa es de arquitectura.")
     print("=" * 72)
     print()
-    print("HUECO: el riel ultra se queda con "
-          f"{deficit[peor_reg] * 1000:+.1f} mV de margen de entrada en su peor "
-          f"caso, y la incertidumbre del propio modelo son {banda * 1000:.0f}. "
-          "El papel sec.4.2 publica +0,30 V porque cuenta el setpoint exacto; "
-          "con la deriva de la referencia del pre-regulador ese margen "
-          "desaparece. Es una decision de arquitectura de la cascada, no un "
-          "aserto que se baje: hasta que se tome, este guion sale en codigo 2.")
+    buenos = [r for r in V_SET if deficit[r] >= banda]
+    print(f"HUECO: {peor_reg} se queda con {deficit[peor_reg] * 1000:+.1f} mV "
+          f"de margen de entrada en su peor caso, y la incertidumbre del "
+          f"propio modelo son {banda * 1000:.0f}. "
+          + (f"{', '.join(buenos)} ya esta resuelto (LT1963A, firmado el "
+             f"2026-09-04). " if buenos else "")
+          + "Lo que falta es la pieza de arriba: mientras no exista en el "
+            "arbol una hoja que la cumpla, este guion sale en HUECO. NO es un "
+            "aserto que se baje, y NO se cierra decidiendo: se cierra con una "
+            "hoja de datos.")
     return 2
 
 
