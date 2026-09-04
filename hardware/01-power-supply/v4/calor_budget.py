@@ -71,8 +71,8 @@ Ahora cada celda va a SU riel (V_RIEL, CAJON_DIGITAL_W, PERDIDA_RECINTO_W) y
 las dos potencias maximas se DERIVAN en vez de transcribirse. Consecuencias:
 
   * el area minima sube de 16 803 a 20 525 mm2 (el papel sec.6 publicaba
-    16 900 redondeados; sigue muy por debajo de los 35 365 que pide el case
-    por su propio techo de 15 K, asi que el encargo a #289 no se mueve);
+    16 900 redondeados; el case pedia entonces 35 365 por su propio techo de
+    15 K, asi que el encargo a #289 no se movia);
     y el 2026-09-04 sube otra vez a 22 148 al contar la franja de red, ver
     abajo;
   * el techo del digital casi no se mueve --21,10 -> 21,09 W-- porque en el

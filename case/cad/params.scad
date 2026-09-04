@@ -1645,13 +1645,19 @@ valle_margen    = 6;   // historico; la banda del valle ya no se perfora
 // declaraba que la bahia de arriba esta sellada del camino del PSU, y sus
 // vatios eran "un presupuesto que falta".
 //
-// 147.83 DESDE LA FUENTE v4 (2026-09-03), que es ese presupuesto ya hecho.
+// 151.53 DESDE LA FUENTE v4 (2026-09-04), que es ese presupuesto ya hecho.
 // Deja de ser el chasis del PSU y pasa a ser TODO lo que se enciende dentro
 // del cajon, con su desglose (papel de la fuente v4 sec.6, hardware/
 // 01-power-supply/v4/calor_budget.py):
 //
-//    27.53 W  el recinto de la fuente, todo a placa y ya con D-F7 (PS5 es
-//             una IRM-45-5, no una IRM-20-5: 3.95 W en vez de 5.32)
+//    31.25 W  el recinto de la fuente, todo a placa y ya con D-F7 (PS5 es
+//             una IRM-45-5, no una IRM-20-5: 3.95 W en vez de 5.32).
+//             Eran 27.53 hasta el 2026-09-04: a la tabla del papel sec.6
+//             le faltaba la FRANJA DE RED, que tambien vive dentro del
+//             recinto -- la NTC de arranque disipa 2.75 W a los 3.25 A rms
+//             del liston y el choke otros 0.95 (ESTIMADO). Lo destapo
+//             v4/fusible_budget.py, que asevera la cifra de la NTC contra
+//             la constante de v4/calor_budget.py
 //   120.30 W  la fila de invitados a placa (95.6) y el digital (24.7)
 //
 // El liston de la PSU3 (D-F1) puso el numero y D-F3 = A --ventilar por
@@ -1659,7 +1665,7 @@ valle_margen    = 6;   // historico; la banda del valle ya no se perfora
 // dejarlo salir. Esta geometria evacua 12.6 W al techo de 15 K, asi que
 // guarda_aire() ya NO asevera ese techo: publica el deficit como HUECO con
 // el area que hace falta. La obra que lo cierra es del papel del case (#289).
-potencia_disipada = 147.83; // W, TODO el cajon: 27.53 fuente + 120.3 modulos
+potencia_disipada = 151.53; // W, TODO el cajon: 31.25 fuente + 120.3 modulos
 // Techo de salto sobre ambiente. 15 K era el criterio de siempre para caja de
 // electronica lineal con electroliticos dentro: a partir de ahi la vida del
 // condensador se parte por dos cada 10 K y deja de ser un detalle.
