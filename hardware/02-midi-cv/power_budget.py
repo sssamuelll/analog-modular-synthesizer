@@ -85,7 +85,7 @@ modulo y que S9.1 del cerebro acepta.
 LO QUE NO CUBRE:
   - El lazo termico ya NO se ignora: lo resuelve calor_budget.py como punto
     fijo y este guion importa su resultado. Lo que sigue fuera es el VENTEO
-    del que ese resultado depende: el techo importado supone los 20 600 mm2
+    del que ese resultado depende: el techo importado supone los 22 200 mm2
     de abertura nueva que D-F3 = A le encarga al papel del case (#289) y que
     nadie ha dibujado todavia. Con la caja de hoy, cerrada, el aire pasa de
     los 85 C donde acaba la curva de la hoja y PS6 no opera.

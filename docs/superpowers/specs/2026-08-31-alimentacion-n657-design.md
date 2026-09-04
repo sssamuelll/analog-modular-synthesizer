@@ -156,6 +156,32 @@ el real la supera en un 11 %. La eficiencia implícita del conmutado sale del 93
 
 ### 3.2 Cómo se fabrica, y el precio de cada camino
 
+> **ENMIENDA 2026-09-04 (fuente v4, §10 de su papel): la tabla de abajo compara
+> con el consumo TÍPICO, y D-R1 se decide con el máximo.** Los 0,413 A que
+> multiplican son el típico de un chip; el listón se dimensiona a máximo, y a
+> máximo son 4 × 761,4 mA = **3,046 A**:
+>
+> ```
+> LDO desde 3,3 V:  (3,3 − 1,8) × 3,046 = 4,57 W
+> LDO desde 5 V:    (5,0 − 1,8) × 3,046 = 9,75 W
+> ```
+>
+> **Siete veces más que los 620 mW de la tabla, y más que todo lo que disipa
+> la cascada de la fuente a 650 mA.** Los 4,57 W caen dentro del recinto, que
+> con la v4 ya lleva 27,5 W propios (papel de la v4 §6): un 17 % más de calor
+> en la caja que `v4/calor_budget.py` resuelve por punto fijo, y ese modelo
+> dice que el sostenido del rack se decide en el margen.
+>
+> **D-R1 sigue abierta, y ahora con las dos cifras en la mesa:** 0,62 W en
+> típico y 4,57 W a máximo. Ese salto puede voltear la decisión hacia un buck
+> contenido, y es de este papel, no del de la fuente. El de la fuente carga
+> con el calor en §6 y no elige (§11 y §4.5).
+>
+> Lo que sí cambió debajo: «el instrumento tiene +5 V de la SMPS de red» ahora
+> es **`PS6`, una IRM-45-5 de 8 A de placa dentro de la placa R**, y su techo
+> no es la placa sino el sostenido de `v4/calor_budget.py`, que
+> `hardware/02-midi-cv/power_budget.py` importa.
+
 El instrumento tiene +5 V (de la SMPS de red) y un 3,3 V derivado por buck
 (`power_budget.py`, `BUCK_EFICIENCIA = 0.90`).
 

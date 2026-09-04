@@ -42,8 +42,10 @@ def test_constantes_del_papel() -> None:
     assert cb.AREA_RECINTO_M2 == 0.1453
     assert cb.H_CONV_W_M2K == 9.0
     # 28,9 W del papel sec.6 con PS5 = IRM-20-5 (5,32 W a placa), menos esa
-    # PS5, mas la IRM-45-5 de D-F7 a los 4,0 A declarados (3,95 W)
-    assert abs(cb.P_RECINTO_MAX - 27.53) < 0.05, cb.P_RECINTO_MAX
+    # PS5, mas la IRM-45-5 de D-F7 a los 4,0 A declarados (3,95 W) = 27,53. Y
+    # desde el 2026-09-04, mas los 3,70 W de la franja de red que la tabla de
+    # sec.6 no llevaba (NTC + choke): 31,25.
+    assert abs(cb.P_RECINTO_MAX - 31.25) < 0.05, cb.P_RECINTO_MAX
     assert abs(cb.P_CAJON_MAX - 120.3) < 0.05, cb.P_CAJON_MAX
     # lo que el instrumento DECLARA (D-F1) y lo que cada modulo PUEDE dar
     # (su placa, hoja p. 2): son dos numeros, y el primero nunca supera al
@@ -239,9 +241,21 @@ def test_las_celdas_suman_lo_que_el_papel_publica() -> None:
         "asi que PS6 tambien lo es y vive en _CONSTANTE_RECINTO_W")
     recinto_w = cb._CONSTANTE_RECINTO_W + sum(cb.PERDIDA_RECINTO_W.values())
     assert abs(cb.P_RECINTO_MAX - recinto_w) < 1e-9
-    assert abs(recinto_w - 27.55) < 0.05, (
-        f"las celdas del recinto suman {recinto_w:.2f} W y el papel sec.6 "
-        f"publica 27,5")
+    # LA TABLA DE sec.6 NO SUMA LO QUE HAY EN EL RECINTO, Y ESO ES EL HALLAZGO:
+    # lista PS1..PS6, U1/U2, los LT y U3, y se olvida de la franja de red. La
+    # NTC y el choke suman 3,70 W mas, y con ellos el venteo minimo sube de
+    # 20 525 a 22 148 mm2. El test comprueba las dos cosas: que las celdas del
+    # papel siguen siendo las suyas, y que lo que el modelo anade es
+    # exactamente lo declarado.
+    franja_red = cb.NTC_ARRANQUE_W + cb.CHOKE_RED_W + cb.MOV_RED_W
+    assert abs(franja_red - 3.70) < 0.05, franja_red
+    assert abs((recinto_w - franja_red) - 27.55) < 0.05, (
+        f"sin la franja de red las celdas del recinto suman "
+        f"{recinto_w - franja_red:.2f} W y el papel sec.6 publica 27,5")
+    assert abs(recinto_w - 31.25) < 0.05, (
+        f"con la franja de red suman {recinto_w:.2f} W. Si este numero baja a "
+        f"27,5, alguien quito el calor que el papel sec.6 no contaba y el "
+        f"venteo minimo vuelve a salir 1 600 mm2 corto")
 
 
 def test_donde_no_hay_punto_fijo_se_devuelve_cero_y_no_se_revienta() -> None:

@@ -127,7 +127,7 @@ no hay dominio de máquina, ni SMPS de 60 W, ni DC jack de cómputo.
 |---|---|---|---|
 | ±12 V analógico | lineal GOAT (esta spec) | 650 mA/riel | GNDA |
 | +5 V analógico | 7805 de la v1, se hereda | 300 mA (DACs ×5 ≈ decenas de mA) | GNDA |
-| **+5 V digital** (nuevo) | **SMPS encapsulada** clase Mean Well IRM-15-5 (5 V/3 A) | RP2350 ~0.2 A + WS2812 con **tope de brillo por firmware**; peor caso bruto 40-100 LEDs × 60 mA = 2.4-6 A → el tope es de diseño, no cosmético | GNDD |
+| **+5 V digital** (nuevo) | **SMPS encapsulada**. Era «clase Mean Well IRM-15-5 (5 V/3 A), fuera de la placa»; desde la fuente v4 (2026-09-04) es **`PS6`, una IRM-45-5 de 8 A DENTRO de la placa R** (papel de la v4 §3 y §8), y su techo no es la placa sino el sostenido que da `v4/calor_budget.py` | RP2350 ~0.2 A + WS2812 con **tope de brillo por firmware**; peor caso bruto 40-100 LEDs × 60 mA = 2.4-6 A → el tope es de diseño, no cosmético | GNDD |
 | Gates 10 V | drivers desde +12 V (módulo 3) | mA | GNDA |
 
 - La SMPS digital cuelga de la red **tras el mismo fusible y MOV**, sobre masa

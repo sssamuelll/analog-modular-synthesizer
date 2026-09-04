@@ -461,6 +461,30 @@ bloqueaba dibujar el pin, no el pin en sí.
 
 ## 13. Tierra de protección (PE) y puente de chasis
 
+> **ENMIENDA 2026-09-04 (fuente v4, §10 de su papel).** Esta sección se escribió
+> para un instrumento cerrado alimentado por un toroide, y con la v4 hay un
+> **rack de invitados dentro del mismo chasis**. Tres cosas cambian y el resto
+> de la sección se lee con ellas puestas:
+>
+> 1. **★ ya no es «el punto de estrella de la placa C»: es un nodo de cobre en
+>    la placa R**, donde aterrizan por pista corta los retornos de `PS1`–`PS5`
+>    y el retorno del rack, y de donde sale `J5` al espárrago M4. La `GNDA` de
+>    C llega a ★ por su propio par grueso. El espárrago sigue recibiendo dos
+>    anillos —el de PE y el de `J5`— exactamente como dice §13.3.
+> 2. **`GNDD` NO toca ★.** El +5 V digital de `PS6` sale flotante y `GNDD` se
+>    une a `GNDA` donde el papel del cerebro decida, en un punto. El bring-up
+>    sigue aseverando > 1 MΩ entre las dos dentro de la fuente.
+> 3. **El chasis es la masa del rack.** Conduce corriente del rack —a
+>    amperios— y nunca la del instrumento, salvo fuga y falta. La regla de la
+>    spec del chasis §3.2 («conduce calor, nunca corriente») se reescribe con
+>    ese sujeto; ver su propia enmienda de la misma fecha.
+>
+> Lo que NO cambia: el puente duro en vez de una red de *lift* (§13.1) sigue
+> siendo la decisión, y por el mismo motivo mecánico. La v4 le añade un dato:
+> con seis módulos Clase II sin pin de tierra, la fuga a PE que ese puente
+> tiene que llevar la mide `hardware/01-power-supply/v4/fuga_budget.py`, y no
+> es despreciable —ocupa el 87 % del límite de trabajo—.
+
 Cierra lo que §7 dejó a medias («retorno de la masa del chasis, sólo si se
 quiere blindar EMI; con cuidado ante ground loops») y el pendiente que
 arrastraba §12.
@@ -1258,6 +1282,39 @@ con una resistencia serie. **Mídelas con osciloscopio en el valle**, a plena ca
 y en caliente, antes de dar el diseño por bueno.
 
 ## 18. Zumbido: qué radia de verdad, y dónde va el transformador
+
+> **ENMIENDA 2026-09-04 — el sujeto de esta sección se retira, y sus medidas se
+> quedan** (fuente v4, §10 de su papel, que la marcaba como *Rewrite*).
+>
+> **Lo que sigue siendo cierto y por eso no se borra:** todo lo medido aquí
+> sobre el lazo de la PCB de la v3, la fórmula del dipolo, el orden de los
+> emisores y la conclusión de que el toroide no es lo que más radia. Son
+> medidas sobre cobre real y no se tiran; lo que cambia es **de qué placa
+> hablan**.
+>
+> **Lo que ya no aplica:** la v4 no tiene transformador, ni puente, ni
+> condensador de bulto. **No hay lazo rectificador**, así que el emisor mayor
+> que esta sección identifica —los picos de 100 Hz del lazo de carga—
+> desaparece con la pieza. `revisar_diagonal()` se retira de C por lo mismo
+> (papel de la v4 §8): su ≥ 80 mm se derivó para un lazo de 6,81 cm² a 100 Hz,
+> y transplantarlo a seis conmutadores encapsulados es conservar la cifra y
+> cambiar la física.
+>
+> **Lo que lo sustituye, y ya tiene guiones:** seis módulos conmutando a
+> **65 kHz** (diagrama de bloques de sus hojas, p. 3) con 200 mVp-p medidos a
+> 20 MHz de ancho de banda. El problema deja de ser un campo magnético a
+> 100 Hz y pasa a ser (a) **rizado diferencial** hasta 20 MHz, que mide
+> `v4/rizado_budget.py` —y que obliga a un LC amortiguado y a una ferrita con
+> su propia amortiguación, porque las dos resuenan—; y (b) **modo común**, que
+> ningún PSRR rechaza (§18.7 lo decía ya) y que mide `v4/fuga_budget.py` con
+> los Y2 de D-F5. Ese guion añade dos cosas que esta sección no podía saber:
+> que D-F5 es un mecanismo de **megahercios** y no de 65 kHz, y que la nota
+> EMI del fabricante condiciona su Clase B a montar los módulos **sobre chapa**
+> y a llevar las salidas **trenzadas y apoyadas en ella**.
+>
+> **Y una puerta nueva:** el LNA del #58 mira 10 Hz–100 kHz y con esta fuente
+> no basta. El riel ultra se mira además **con 20 MHz de ancho de banda**
+> (paso 8 del bring-up de la v4).
 
 Frente abierto junto con el bus board. La pregunta de partida era "cómo oriento
 el toroide y a qué distancia lo pongo". La respuesta empieza antes: **el

@@ -1,0 +1,77 @@
+paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
+0,aislamiento_tab_U1_a_chasis,Mohm,>= 10,,,,,,papel sec.9.1 paso 0: el tab esta a un riel crudo y la pared es acero a PE. ESTA medida autoriza a enchufar
+0,aislamiento_tab_U2_a_chasis,Mohm,>= 10,,,,,,papel sec.9.1 paso 0: el tab esta a un riel crudo y la pared es acero a PE. ESTA medida autoriza a enchufar
+0,aislamiento_tab_U3_a_chasis,Mohm,>= 10,,,,,,papel sec.9.1 paso 0: el tab esta a un riel crudo y la pared es acero a PE. ESTA medida autoriza a enchufar
+0,continuidad_PE_a_chasis,mohm,<= 100,,,,,,papel sec.9.1 paso 0: continuidad de tierra
+0,continuidad_borne_estrella_PS1,mohm,<= 20,,,,,,"papel sec.9.1 paso 0 (nuevo): cada borne de estrella con el nodo. En PS2 y PS4, apiladas, el borne que toca la estrella es el POSITIVO"
+0,continuidad_borne_estrella_PS2,mohm,<= 20,,,,,,"papel sec.9.1 paso 0 (nuevo): cada borne de estrella con el nodo. En PS2 y PS4, apiladas, el borne que toca la estrella es el POSITIVO"
+0,continuidad_borne_estrella_PS3,mohm,<= 20,,,,,,"papel sec.9.1 paso 0 (nuevo): cada borne de estrella con el nodo. En PS2 y PS4, apiladas, el borne que toca la estrella es el POSITIVO"
+0,continuidad_borne_estrella_PS4,mohm,<= 20,,,,,,"papel sec.9.1 paso 0 (nuevo): cada borne de estrella con el nodo. En PS2 y PS4, apiladas, el borne que toca la estrella es el POSITIVO"
+0,continuidad_borne_estrella_PS5,mohm,<= 20,,,,,,"papel sec.9.1 paso 0 (nuevo): cada borne de estrella con el nodo. En PS2 y PS4, apiladas, el borne que toca la estrella es el POSITIVO"
+0,aislamiento_entre_bornes_estrella_sin_nodo,Mohm,>= 1,,,,,,"papel sec.9.1 paso 0 (nuevo): con la estrella DESCONECTADA, entre el borne de un modulo y el de otro. No 'abierto': > 1 Mohm"
+0,aislamiento_GNDA_a_GNDD,Mohm,>= 1,,,,,,papel sec.4.1: PS6 sale flotante y GNDD se une donde el papel del cerebro decida. La v3 ya lo aseveraba (paso 6.2)
+1,PS1_vacio,V,14.625 .. 15.375,15,0.375,,,,"papel sec.9.1 paso 1: cada IRM uno por uno, en vacio"
+1,PS1_a_nominal,V,14.625 .. 15.375,15,0.375,,,,papel sec.9.1 paso 1: con carga ficticia a su nominal
+1,PS1_rizado_20MHz,Vpp,<= 0.2,,,,,,"hoja p. 2, RIPPLE & NOISE (max.), con el metodo de su Note.2: par trenzado de 12 pulgadas terminado con 0,1 uF || 47 uF, y 20 MHz de ancho de banda"
+1,PS2_vacio,V,-15.375 .. -14.625,-15,0.375,,,,"papel sec.9.1 paso 1: cada IRM uno por uno, en vacio"
+1,PS2_a_nominal,V,-15.375 .. -14.625,-15,0.375,,,,papel sec.9.1 paso 1: con carga ficticia a su nominal
+1,PS2_rizado_20MHz,Vpp,<= 0.2,,,,,,"hoja p. 2, RIPPLE & NOISE (max.), con el metodo de su Note.2: par trenzado de 12 pulgadas terminado con 0,1 uF || 47 uF, y 20 MHz de ancho de banda"
+1,PS3_vacio,V,11.7 .. 12.3,12,0.3,,,,"papel sec.9.1 paso 1: cada IRM uno por uno, en vacio"
+1,PS3_a_nominal,V,11.7 .. 12.3,12,0.3,,,,papel sec.9.1 paso 1: con carga ficticia a su nominal
+1,PS3_rizado_20MHz,Vpp,<= 0.15,,,,,,"hoja p. 2, RIPPLE & NOISE (max.), con el metodo de su Note.2: par trenzado de 12 pulgadas terminado con 0,1 uF || 47 uF, y 20 MHz de ancho de banda"
+1,PS4_vacio,V,-12.3 .. -11.7,-12,0.3,,,,"papel sec.9.1 paso 1: cada IRM uno por uno, en vacio"
+1,PS4_a_nominal,V,-12.3 .. -11.7,-12,0.3,,,,papel sec.9.1 paso 1: con carga ficticia a su nominal
+1,PS4_rizado_20MHz,Vpp,<= 0.15,,,,,,"hoja p. 2, RIPPLE & NOISE (max.), con el metodo de su Note.2: par trenzado de 12 pulgadas terminado con 0,1 uF || 47 uF, y 20 MHz de ancho de banda"
+1,PS5_vacio,V,4.875 .. 5.125,5,0.125,,,,"papel sec.9.1 paso 1: cada IRM uno por uno, en vacio"
+1,PS5_a_nominal,V,4.875 .. 5.125,5,0.125,,,,papel sec.9.1 paso 1: con carga ficticia a su nominal
+1,PS5_rizado_20MHz,Vpp,<= 0.08,,,,,,"hoja p. 2, RIPPLE & NOISE (max.), con el metodo de su Note.2: par trenzado de 12 pulgadas terminado con 0,1 uF || 47 uF, y 20 MHz de ancho de banda"
+1,PS6_vacio,V,4.875 .. 5.125,5,0.125,,,,"papel sec.9.1 paso 1: cada IRM uno por uno, en vacio"
+1,PS6_a_nominal,V,4.875 .. 5.125,5,0.125,,,,papel sec.9.1 paso 1: con carga ficticia a su nominal
+1,PS6_rizado_20MHz,Vpp,<= 0.08,,,,,,"hoja p. 2, RIPPLE & NOISE (max.), con el metodo de su Note.2: par trenzado de 12 pulgadas terminado con 0,1 uF || 47 uF, y 20 MHz de ancho de banda"
+1,corriente_red_rms_a_liston,A,2.27347 .. 4.22217,3.24782,0.974346,,,,"fusible_budget.i_red_rms_a('liston'), con pinza"
+1,inrush_pico_arranque_frio,A,<= 106.723,,,,,,fusible_budget: Vpico sobre la NTC fria mas la red
+1,inrush_pico_rearranque_100ms,A,<= 784.791,,,,,,fusible_budget: el caso que dimensiona el fusible. Cortar y volver a los 100 ms
+1,fuga_a_PE_seis_encendidos,mA,<= 3.5,,,,,,"fuga_budget.fuga_total_ma(), con los seis en marcha. Es tambien la medida que arbitra D-F5"
+2,mas15_minimo_con_carga,V,>= 14.3699,,,,,,margen_budget.v_entrada_minima_v(): lo que le tiene que llegar a U1 en el peor caso
+2,mas15_necesario_para_regular,V,registro,,,,,,"margen_budget.v_necesaria_v('U1'): REGISTRO del criterio, para que la hoja de campo lleve el numero contra el que se compara. Hoy el margen es NEGATIVO (HUECO de margen_budget)"
+2,rizado_tras_LC_20MHz,Vpp,<= 0.00365059,,,,,,rizado_budget: los 200 mVp-p del IRM por la transferencia del LC amortiguado a 65 kHz
+2,pico_del_LC_en_resonancia,dB,<= 3,,,,,,rizado_budget.pico_lc_db(): el LC amortiguado no puede amplificar dentro de la banda de 10 Hz-100 kHz
+2b,quitar_red_a_PS1_caen_los_dos,si/no,= si,,,,,,"papel sec.9.1 paso 2b: con PS2 viva, los dos rieles de la cascada caen juntos. Sin este paso, D-F4 es una promesa"
+2b,quitar_red_a_PS2_caen_los_dos,si/no,= si,,,,,,"papel sec.9.1 paso 2b, el otro sentido"
+2b,quitar_red_a_PS3_cae_el_rack_entero,si/no,= si,,,,,,"papel sec.4.3: el mismo detector, replicado en el rack"
+2b,ventana_riel_solo_medida,ms,<= 10,,,,,,secuencia_budget: el transitorio en el que la cascada sigue habilitada con un riel solo
+3,TP7_+13V1_sin_carga,V,12.8 .. 13.4,13.1,0.3,,,,"como la v3: +13.1 +-0.3. La ventana de TP7/TP8 la vigila margen_budget, que hoy dice que no cabe"
+3,TP8_-12V9_sin_carga,V,-13.2 .. -12.6,-12.9,0.3,,,,"como la v3: -12.9 +-0.3. La ventana de TP7/TP8 la vigila margen_budget, que hoy dice que no cabe"
+3,TP3_+12V_sin_carga,V,11.95 .. 12.05,12,0.05,,,,"como la v3: +12 +-0.05. La ventana de TP7/TP8 la vigila margen_budget, que hoy dice que no cabe"
+3,TP4_-12V_sin_carga,V,-12.05 .. -11.95,-12,0.05,,,,"como la v3: -12 +-0.05. La ventana de TP7/TP8 la vigila margen_budget, que hoy dice que no cabe"
+3,TP5_+5V_sin_carga,V,4.75 .. 5.25,5,0.25,,,,"como la v3: +5 +-0.25. La ventana de TP7/TP8 la vigila margen_budget, que hoy dice que no cabe"
+4,J2_pin1,V,-12.5 .. -11.5,-12,0.5,,,,"como la v3 (#121): -12 V MEDIDO, no leido del rotulo"
+4,J2_pin2,V,-0.5 .. 0.5,0,0.5,,,,"como la v3 (#121): +0 V MEDIDO, no leido del rotulo"
+4,J2_pin3,V,-0.5 .. 0.5,0,0.5,,,,"como la v3 (#121): +0 V MEDIDO, no leido del rotulo"
+4,J2_pin4,V,11.5 .. 12.5,12,0.5,,,,"como la v3 (#121): +12 V MEDIDO, no leido del rotulo"
+5,TP3_con_carga_650mA,V,11.95 .. 12.05,12,0.05,,,,como la v3: la cascada entregando su riel
+5,TP4_con_carga_650mA,V,-12.05 .. -11.95,-12,0.05,,,,como la v3: la cascada entregando su riel
+6,telemetria_U8_mas12_vs_multimetro,V,11.88 .. 12.12,12,0.12,,,,"papel sec.7: la telemetria contra un multimetro. Los +-15 V con carga son nuevos de la v4, y el cuarto canal del ADS1115 va al -12 de rack"
+6,telemetria_U9_mas5_vs_multimetro,V,4.95 .. 5.05,5,0.05,,,,"papel sec.7: la telemetria contra un multimetro. Los +-15 V con carga son nuevos de la v4, y el cuarto canal del ADS1115 va al -12 de rack"
+6,telemetria_U10_menos12_vs_multimetro,V,-12.12 .. -11.88,-12,0.12,,,,"papel sec.7: la telemetria contra un multimetro. Los +-15 V con carga son nuevos de la v4, y el cuarto canal del ADS1115 va al -12 de rack"
+6,telemetria_U10_mas15_vs_multimetro,V,14.85 .. 15.15,15,0.15,,,,"papel sec.7: la telemetria contra un multimetro. Los +-15 V con carga son nuevos de la v4, y el cuarto canal del ADS1115 va al -12 de rack"
+6,telemetria_U10_menos15_vs_multimetro,V,-15.15 .. -14.85,-15,0.15,,,,"papel sec.7: la telemetria contra un multimetro. Los +-15 V con carga son nuevos de la v4, y el cuarto canal del ADS1115 va al -12 de rack"
+6,telemetria_U10_menos12_rack_vs_multimetro,V,-12.12 .. -11.88,-12,0.12,,,,"papel sec.7: la telemetria contra un multimetro. Los +-15 V con carga son nuevos de la v4, y el cuarto canal del ADS1115 va al -12 de rack"
+6,U13_corriente_rack+12_vs_pinza,A,3.61 .. 3.99,3.8,0.19,,,,"D-F2: los dos INA226 de rack, poblados. Con la carga ficticia del liston (3.8 A)"
+6,U14_corriente_rack+5_vs_pinza,A,3.8 .. 4.2,4,0.2,,,,"D-F2: los dos INA226 de rack, poblados. Con la carga ficticia del liston (4.0 A)"
+7,aire_recinto_a_carga_sostenida,C,60.9233 .. 76.9233,68.9233,8,,,,"calor_budget.py, punto fijo con D-F3 = A y el venteo minimo. ES LA MEDIDA QUE DECIDE si la columna 'sostenido' de sec.1 es cierta"
+7,area_venteo_construida,mm2,>= 22200,,,,,,"el venteo que el papel del case acabe dibujando (#289). Por debajo del que calor_budget pide, el sostenido no vale"
+7,carcasa_PS3_termopar,C,registro,,,,,,REGISTRO: la hoja publica la temperatura del AIRE (-30 a +85 C) y no la de la carcasa. Solo significa algo comparado con la placa siguiente
+7,carcasa_PS6_termopar,C,registro,,,,,,REGISTRO: la hoja publica la temperatura del AIRE (-30 a +85 C) y no la de la carcasa. Solo significa algo comparado con la placa siguiente
+7,NTC_carcasa,C,registro,,,,,,"REGISTRO: fusible_budget la estima disipando 2.75 W dentro del recinto, y la tabla de calor del papel sec.6 no la lleva"
+7,sostenido_rack+12_medido,A,>= 1.80205,,,,,,calor_budget.SOSTENIDO['rack+12']: la carga que el riel aguanta sin salirse de su curva a la T de arriba
+7,sostenido_rack-12_medido,A,>= 1.80205,,,,,,calor_budget.SOSTENIDO['rack-12']: la carga que el riel aguanta sin salirse de su curva a la T de arriba
+7,sostenido_rack+5_medido,A,>= 3.6,,,,,,calor_budget.SOSTENIDO['rack+5']: la carga que el riel aguanta sin salirse de su curva a la T de arriba
+8,desfase_masa_rack_a_GNDREF_con_2A_en_mas12,mV,3.38098 .. 13.5239,8.45246,5.07148,,,,"ground_budget.desfase_mv(2) : cargando SOLO el +12 de rack con 2 A de carga ficticia, que es lo que dice el papel sec.9.1. Por masa vuelven esos mismos 2 A"
+8,desfase_masa_rack_a_GNDREF_a_carga_sostenida,mV,6.76197 .. 27.0479,16.9049,10.143,,,,"ground_budget.desfase_mv() con el rack ENTERO a su carga sostenida: por masa vuelve el NETO, 4.00 A (+12 y +5 menos el -12). El numero es GRANDE a proposito: lo que se verifica no es que sea pequeno"
+8,desafinacion_1Voct_por_la_bahia,cents,<= 2,,,,,,"LA MEDIDA QUE DE VERDAD IMPORTA: un CV de 1 V entrando por la bahia desde un jack cargado. Si la bahia recibe en diferencial, el desfase se resta y esto tiene que salir PEQUENO aunque el de arriba salga grande"
+8,disparo_crowbar_rack_mas12,V,13.6 .. 14.4,14,0.4,,,,check_absmax.V_DISPARO_V: forzar el disparo con PS3 cargada
+8,disparo_crowbar_rack_mas5,V,5.4 .. 6.2,5.8,0.4,,,,"check_absmax: el del +5, que es el que tiene la ventana estrecha (0,27 V con la dispersion supuesta)"
+8,tras_disparo_PS3_en_hiccup_PS4_apagada,si/no,= si,,,,,,"D-F6: el lazo cierra porque el IRM entra en hiccup, y el secuenciador apaga el otro riel. Nada humea"
+8,ruido_riel_ultra_20MHz_ancho_de_banda,uV,<= 0.3,,,,,,rizado_budget: el peor punto de la banda cae en 20 MHz. El LNA del #58 mira 10 Hz-100 kHz y puede dar verde con RF entrando por otro lado
+8,ruido_riel_ultra_LNA_10Hz_100kHz,uV,<= 0.8,,,,,,"#58: la puerta de siempre del riel ultra, que sigue estando y ya no basta sola"

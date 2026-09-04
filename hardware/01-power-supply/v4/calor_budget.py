@@ -73,6 +73,8 @@ las dos potencias maximas se DERIVAN en vez de transcribirse. Consecuencias:
   * el area minima sube de 16 803 a 20 525 mm2 (el papel sec.6 publicaba
     16 900 redondeados; sigue muy por debajo de los 35 365 que pide el case
     por su propio techo de 15 K, asi que el encargo a #289 no se mueve);
+    y el 2026-09-04 sube otra vez a 22 148 al contar la franja de red, ver
+    abajo;
   * el techo del digital casi no se mueve --21,10 -> 21,09 W-- porque en el
     area minima el liston se cumple justo, y el digital lo sigue;
   * la CAJA CERRADA deja de tener punto de trabajo. Antes publicaba
@@ -85,6 +87,25 @@ las dos potencias maximas se DERIVAN en vez de transcribirse. Consecuencias:
     _fixed_point() lo COMPRUEBA ahora, en amperios y no en kelvin, y donde no
     hay punto fijo devuelve CERO en vez de reventar: ver ahi por que un
     aserto habria convertido un dato termico en un rojo de CI.
+
+## Lo que salio la tercera vez: a la tabla de calor le faltaba la franja de red
+
+Escribiendo fusible_budget.py (2026-09-04) salio que la tabla de sec.6 lista
+PS1..PS6, U1/U2, los LT y U3 -- y se olvida de lo que hay ANTES de los modulos.
+La NTC de arranque disipa 2,75 W dentro del recinto a los 3,25 A rms de red del
+liston, y el choke de modo comun otros 0,95 (ESTIMADO). El MOV no: en marcha
+normal conduce microamperios.
+
+No era un detalle. Con esos 3,70 W el recinto pasa de 27,55 a 31,25 W y el
+venteo minimo de 20 525 a 22 148 mm2. Y sin ellos el liston del rack se cumplia
+por 3,5 mA: metiendo el calor al area vieja, rack+12 cae a 1,948 A, por debajo
+de los 2,0 de la A-100PSU3. El sostenido apenas se mueve --2,002 contra
+2,003-- porque la busqueda de area lo vuelve a fijar ahi, que es justo lo que
+esa busqueda hace.
+
+fusible_budget.py CALCULA la cifra de la NTC y la asevera contra la constante
+de aqui: la que entra en el punto fijo es esta, y el aserto es lo que impide
+que se separen.
 
 ## Lo que este modelo NO cubre
 
@@ -175,7 +196,28 @@ P_CAJON_MAX = sum(PLACA_A[r] * V_RIEL[r] for r in V_RIEL) + CAJON_DIGITAL_W
 PERDIDA_RECINTO_W = {"rack+12": 6.51,     # PS3, 45,6 x (1/0,875 - 1)
                      "rack-12": 4.29,     # PS4, 30 x 0,143
                      "rack+5": 3.95}      # PS5, 20 x (1/0,835 - 1), D-F7
-_CONSTANTE_RECINTO_W = 3.71 + 4.88 + 1.24 + 1.37 + 1.30 + 0.30
+# LA FRANJA DE RED TAMBIEN DISIPA, Y LA TABLA DEL PAPEL sec.6 NO LA LLEVA.
+# Se descubrio el 2026-09-04, escribiendo fusible_budget.py: la tabla lista
+# PS1..PS6, U1/U2, los LT y U3, y se olvida de lo que hay ANTES de los modulos.
+# No es un detalle: con estos 3,7 W el venteo minimo sube de 20 525 a 22 147
+# mm2, y sin ellos el liston del rack se cumple por 3,5 mA.
+#
+#   NTC de arranque: Ametherm SL22 5R012 a los 3,25 A rms de red del liston.
+#   Su resistencia caliente a esa corriente son 0,261 ohm (extrapolados de los
+#   dos puntos que la hoja publica, 0,12 al 50 % de Imax y 0,05 al 100 %).
+#   Lo CALCULA fusible_budget.calor_ntc_w() y lo asevera contra esta constante,
+#   que es la que el punto fijo usa: si la NTC o la corriente cambian, aquel
+#   guion salta.
+NTC_ARRANQUE_W = 2.75
+#   Choke de modo comun de la red, redimensionado a >= 4 A (papel sec.5). Su
+#   DCR pasa dos veces por la corriente de red. ESTIMADO: 0,09 ohm entre los
+#   dos devanados, de catalogo para esa talla; no hay hoja de la pieza.
+CHOKE_RED_W = 0.95
+#   El MOV no entra: en marcha normal conduce microamperios. Solo disipa
+#   durante una sobretension, que es un transitorio y no un punto de operacion.
+MOV_RED_W = 0.0
+_CONSTANTE_RECINTO_W = (3.71 + 4.88 + 1.24 + 1.37 + 1.30 + 0.30
+                        + NTC_ARRANQUE_W + CHOKE_RED_W + MOV_RED_W)
 # DERIVADO: el papel publica 27,5 W (28,9 antes de D-F7, con la IRM-20-5 de
 # 5,32 W en PS5 donde ahora hay una IRM-45-5 de 3,95).
 P_RECINTO_MAX = _CONSTANTE_RECINTO_W + sum(PERDIDA_RECINTO_W.values())
@@ -199,6 +241,7 @@ ESTIMADOS = (
     "H_CONV_W_M2K=9.0: manual, no medido (chassis spec sec.3.1)",
     "CD_TIRO=0.65: SUPUESTO de rejilla (clearance_budget.py)",
     "P_BASE area: hipotesis para #289; el papel del case fija la real",
+    f"CHOKE_RED_W={CHOKE_RED_W}: DCR de catalogo de un choke de >=4 A, sin hoja",
 )
 HUECOS = ()
 

@@ -1,10 +1,27 @@
 # Módulo 1 — Alimentación
 
-> Estado real: `hardware/01-power-supply/v3/README.md`. Diseño detallado:
+> **Estado real desde el 2026-09-04: se construye la v4.**
+> `hardware/01-power-supply/v4/` con
+> `docs/superpowers/specs/2026-09-03-fuente-v4-liston-design.md`: seis módulos
+> Mean Well IRM encapsulados sustituyen al toroide, la cascada lineal se queda
+> igual, y el instrumento estrena **rieles de rack propios** para una fila
+> Eurorack de invitados. La v3 (`v3/README.md`) conserva la cascada y sus
+> puertas y **no se pide**.
+>
+> Diseño detallado de lo que la v4 hereda:
 > `docs/superpowers/specs/2026-08-18-fuente-chasis-telemetria.md` (chasis y
-> telemetría) sobre `docs/superpowers/specs/2026-08-16-psu-v2-goat-design.md`
-> (topología de regulación). Este documento es el resumen de entrada; no
-> repite la aritmética, solo el estado.
+> telemetría, con su enmienda de la misma fecha) sobre
+> `docs/superpowers/specs/2026-08-16-psu-v2-goat-design.md` (topología de
+> regulación). Este documento es el resumen de entrada; no repite la
+> aritmética, solo el estado.
+>
+> **Lo que hoy está abierto y decide**, con su guion: el margen de entrada de
+> la cascada (`v4/margen_budget.py`, HUECO), el umbral del secuenciador de
+> D-F4 que depende de él (`v4/secuencia_budget.py`, HUECO), la pieza del SCR
+> del crowbar (`v4/check_absmax.py`, HUECO), la hoja del fusible cerámico
+> (`v4/fusible_budget.py`, HUECO) y la cifra de fuga de IEC 62368-1
+> (`v4/fuga_budget.py`, HUECO). Ninguno bloquea la puerta; los cinco están
+> declarados.
 
 ## Objetivo
 

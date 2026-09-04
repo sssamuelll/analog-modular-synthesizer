@@ -101,8 +101,11 @@ primero.
 - **El valle "crudo" contra el umbral de aborto del bring-up (13,46 V).**
   Esa es una pregunta más abajo en la cadena — antes de cualquier
   regulador — y la responde
-  [`hardware/01-power-supply/v3/valle_budget.py`](../../hardware/01-power-supply/v3/valle_budget.py),
-  que además documenta una discrepancia sin cerrar con la tabla de
-  design-notes.md §16.5 (issue #141).
+  `hardware/01-power-supply/v3/valle_budget.py` **hasta el 2026-09-04**, cuando
+  se borró: la fuente v4 no tiene rectificador, así que no hay valle. La
+  pregunta equivalente de la v4 la contesta
+  [`hardware/01-power-supply/v4/margen_budget.py`](../../hardware/01-power-supply/v4/margen_budget.py),
+  sobre una cadena de continua y sin 100 Hz que integrar. La discrepancia con
+  design-notes.md §16.5 (issue #141) se cierra con el toroide, no aquí.
 - **El arranque, el ruido y la deriva térmica del devanado** — ver el
   docstring de `run_sim.py`.
