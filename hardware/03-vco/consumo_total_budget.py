@@ -150,18 +150,26 @@ def demo() -> int:
     # una puerta verde sobre un sujeto muerto: se retira, y se dice.
     #
     # LO QUE NO SE PUEDE HACER ES RETIRARLO Y CALLARSE. Quien tiene que
-    # vigilar la fila de abajo desde la v4 es invitados_budget.py, que es la
-    # Tarea 6 del plan de la tanda y TODAVIA NO EXISTE. Entre hoy y ese
-    # guion, la fila de abajo no la mide nadie: eso es un HUECO declarado, no
-    # un verde, y por eso este guion sale con codigo 2.
+    # vigilar la fila de abajo desde la v4 es invitados_budget.py. Mientras
+    # no existia, la fila de abajo no la media nadie y este guion salia con
+    # codigo 2. Aterrizo en la tanda del 2026-09-04 (Tarea 6, PR #310), asi
+    # que la salida de abajo la busca y sale con 0: el HUECO se cerro solo,
+    # como estaba escrito que se cerraria.
     reserva = USABLE_MA - peor
     print("\nreserva para invitados: NO APLICA desde la fuente v4 (D-F1).")
     print("  La fila de abajo tiene rieles propios: PS3/PS4/PS5, "
           "3,8 / 2,5 / 4,0 A")
     print("  de placa. El instrumento ya no le presta suministro, asi que su")
     print("  margen deja de ser un compromiso con ella.")
+    # El denominador de esta linea NO es el mismo que el de la fraccion
+    # POR_CONFIRMAR de arriba: aquella se mide contra lo que el instrumento
+    # PIDE, esta contra lo que la puerta le CONCEDE. Dos numeros del mismo
+    # listado contra el mismo riel se dividen solos si no se dice cual con
+    # cual, y ya paso una vez (2026-09-04: 160/340 = 47% publicado como si
+    # fuera la fraccion dudosa, que es 41%). Por eso van los dos operandos.
     print(f"  margen del instrumento sobre su propio techo: "
-          f"{reserva:.0f} mA/riel")
+          f"{reserva:.0f} mA/riel  ({USABLE_MA:.0f} utiles menos los "
+          f"{peor:.0f} que pide, {reserva / USABLE_MA:.0%} de los utiles)")
 
     # --- el que mas mueve la aguja ----------------------------------------
     print("\nsensibilidad -- que hoja de datos cambiaria mas el numero:\n")
