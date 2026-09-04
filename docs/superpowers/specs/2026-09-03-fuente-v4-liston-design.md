@@ -3,7 +3,7 @@
 **Fecha**: 2026-09-03 · **Estado**: **firmado — D-F1 a D-F8 decididas (§14 y el bloque de D-F8 de 2026-09-04); `calor_budget.py` corrió y la columna «sostenido» de §1 está rellena. Lo que queda es de otros papeles: el venteo mínimo (#289) y la bahía (#290)** ·
 **Listón firmado**: 2026-09-03 («firmo el listón», Samuel) — como **corriente de placa**; y **re-firmado el mismo día como corriente sostenida** por `calor_budget.py` con D-F3 = A y D-F7: **2,0 / 2,0 / 4,0 A de rack y 4,2 A digital con 22 200 mm² de venteo nuevo**, el mínimo que el modelo despeja (16 900 → 20 600 el 03-09; → 22 200 el 04-09, al contar la franja de red: §6 y el bloque de enmiendas de la tanda A) ·
 **Cierra**: nada todavía. **Entrega**: los rieles de #169 (§4.3) ·
-**Mata por desaparición del sujeto** (cuando la v4 se adopte): #141, #280, #106, #56, #57 ·
+**Mata por desaparición del sujeto**: #141, #280, #106, #56, #57. **Ejecutado el 2026-09-04**, antes de la adopción: Samuel decidió cerrarlos ya tomando este papel firmado como certificado, en vez de esperar a que la v4 se fabrique. Los cuatro abiertos (#141, #106, #56, #57) se cerraron *not planned* con previsto/encontrado y cita a esta línea; #280 ya estaba cerrado como completado. **Esta es la única lista de defunción del árbol**: nada más muere por parecerse a la v3 ·
 **Reabre**: `design-notes` §13 y §18, la spec del chasis (§3.1, §3.2, §3.3), `clearance_budget.py::guarda_aire()`, `consumo_total_budget.py`, `power_budget.py`, `ground_budget.py`, el papel de la bahía
 
 > ### ENMIENDAS DE LA TANDA A DE PRESUPUESTOS (2026-09-04)
