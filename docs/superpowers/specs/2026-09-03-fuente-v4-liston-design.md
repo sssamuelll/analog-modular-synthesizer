@@ -41,6 +41,61 @@
 >   crowbar**: que lo que reciba `PS6` aguante 6,75 V pasa a ser requisito al
 >   módulo 2. `check_absmax.py`, HUECO por la hoja del SCR.
 >
+> ### LA OPCIÓN (b) YA TIENE CIFRAS, Y SÓLO ARREGLA MEDIA CADENA (2026-09-04)
+>
+> El punto 1 de arriba dejaba la (b) como un adjetivo — *«otro pre-regulador
+> con referencia mejor y menos dropout»*. Ya tiene candidatos con hoja
+> declarada (`docs/references.md`, PR #317) y **leída de tabla**, y con eso la
+> decisión deja de ser de gusto.
+>
+> El requisito, dicho al revés: con `V_SET` = 13,100 V y los 14,370 V que le
+> llegan a `U1` en el peor caso, **ventana de referencia + dropout garantizado
+> no pueden pasar de 1,270 V**.
+>
+> | pieza | ventana | dropout gar. | pide | margen en `U1` |
+> |---|---|---|---|---|
+> | **LM2941** (hoy) | 0,658 V | 1,00 V a 1 A | 14,758 V | **−388 mV** |
+> | **LT1963A** Rev G | 0,390 V | 0,55 V a 1,5 A | 14,040 V | **+330 mV** |
+> | **MIC29152** DS20005685A | 0,391 V | 0,60 V a 1,5 A | 14,091 V | **+279 mV** |
+>
+> Calculado con `margen_budget.py` — **el mismo apilamiento que ya está en
+> verde**, cambiando sólo las dos entradas que la (b) cambia. Y los dos
+> márgenes pasan la prueba que este papel puso en el punto 1: son **2,6× y 2,2×
+> la incertidumbre del propio modelo** (127 mV), no más pequeños que ella.
+>
+> **Tres cosas que la tabla no dice y deciden igual:**
+>
+> - **`U2` se queda sin arreglo.** La (b) cierra `U1` con holgura, pero el
+>   riel negativo sigue en **−170 mV** y ninguno de los dos candidatos es una
+>   pieza negativa. Firmar «vamos con (b)» **cierra media cadena**: la otra
+>   mitad necesita su propia respuesta, y son 170 mV, no 388.
+>
+>   **Lo que hay que comprar para `U2`, dicho como especificación y no como
+>   queja:** su presupuesto de ventana + dropout son **1,470 V** y el LM2991
+>   gasta 1,640. Para que el margen valga más que la incertidumbre del modelo
+>   hay que **bajar de 1,343 V**. O sea que no hace falta un LDO negativo
+>   excepcional: hace falta uno **300 mV mejor que el LM2991** en la suma de
+>   las dos cifras. Y el reparto importa — todo el desajuste de hoy sale del
+>   dropout **sobre temperatura** (0,8 V a 25 °C, 1,0 V garantizado), no de la
+>   referencia.
+> - **Ninguna de las tres garantiza el dropout a los 710 mA de la cascada.**
+>   El LT1963A salta de 500 mA (0,35 V) a 1,5 A (0,55); el MIC29152 publica el
+>   típico a 750 mA y el máximo sólo a 1,5 A. La tabla toma **la cota de la
+>   corriente mayor**, que es la única honesta y la que deja la comparación
+>   pesimista para los dos candidatos por igual.
+> - **La DS20005685A no es la última** (existe una **B**, 2016–2019, sin ver) y
+>   **se contradice consigo misma sobre el encapsulado**. Mientras el disipador
+>   sea la pared del chasis, sin TO-220 con TAB la pieza no sirve, y eso se
+>   cierra con el sufijo de pedido. El LT1963A **sí** es 5-lead TO-220 con tab
+>   confirmado, así que **no hace falta mover `chasis_to220_*` para resolver la
+>   (b)** — y eso retira una de las razones que la propuesta del recinto
+>   partido (PR #316) se apuntaba.
+>
+> **El aserto de la ventana de ESR del `COUT` muere con el LM2941.** Es de su
+> hoja (p. 12, 0,1–1,0 Ω) y no es transferible: la pieza que entre trae la suya,
+> y hay que volver a escribirlo. Hoy `margen_budget.py` lo asevera y **daría
+> verde sobre un sujeto muerto** el día que se cambie el chip.
+
 > **Lo que la tanda A dejó cerrado y verde:** el sostenido (§1, §6), el censo
 > de invitados en cuatro columnas (`invitados_budget.py`), el desfase
 > rack↔instrumento con N patches (`ground_budget.py`), los 75 puntos del
