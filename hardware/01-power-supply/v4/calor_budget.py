@@ -71,8 +71,8 @@ Ahora cada celda va a SU riel (V_RIEL, CAJON_DIGITAL_W, PERDIDA_RECINTO_W) y
 las dos potencias maximas se DERIVAN en vez de transcribirse. Consecuencias:
 
   * el area minima sube de 16 803 a 20 525 mm2 (el papel sec.6 publicaba
-    16 900 redondeados; sigue muy por debajo de los 35 365 que pide el case
-    por su propio techo de 15 K, asi que el encargo a #289 no se mueve);
+    16 900 redondeados; el case pedia entonces 35 365 por su propio techo de
+    15 K, asi que el encargo a #289 no se movia);
     y el 2026-09-04 sube otra vez a 22 148 al contar la franja de red, ver
     abajo;
   * el techo del digital casi no se mueve --21,10 -> 21,09 W-- porque en el
@@ -221,7 +221,14 @@ _CONSTANTE_RECINTO_W = (3.71 + 4.88 + 1.24 + 1.37 + 1.30 + 0.30
 # DERIVADO: el papel publica 27,5 W (28,9 antes de D-F7, con la IRM-20-5 de
 # 5,32 W en PS5 donde ahora hay una IRM-45-5 de 3,95).
 P_RECINTO_MAX = _CONSTANTE_RECINTO_W + sum(PERDIDA_RECINTO_W.values())
-# Salida de `python case/clearance_budget.py` el 2026-09-03, sin D-F3.
+# Area efectiva de venteo QUE EL CASE YA TIENE, sin las aberturas de D-F3.
+# Es una copia de la salida de case/clearance_budget.py, y por lo tanto se
+# puede quedar vieja el dia que el case cambie sus rejillas o su rendija.
+# La vigila test_calor_budget.py, que la recalcula desde params.scad y
+# compara. NO va aseverada aqui a proposito: un assert a nivel de modulo
+# reventaria el import de este fichero --y con el los de power_budget.py,
+# margen_budget.py y todo lo que cuelga-- por un cambio de geometria del
+# case, que es un dato y no un defecto.
 A_EF_BASE_MM2 = 3299.0
 H_TIRO_CAJON_M = 0.105
 # Spec del chasis sec.3.3: exterior derivado 338.6 x 176.6 x 83 mm.
@@ -460,6 +467,12 @@ def _busca_area_minima() -> tuple[float, float, str]:
     return hi, area_base, ""
 
 
+# OJO CON LA UNIDAD: es area ADICIONAL, no total. Se le SUMA a los
+# A_EF_BASE_MM2 = 3299 mm2 efectivos que el case ya tiene (ver _k() en
+# aire_recinto_c). guarda_aire() del case publica el TOTAL, asi que las dos
+# cifras NO se comparan tal cual: el 2026-09-04 dos sesiones distintas se
+# equivocaron con eso el mismo dia, una en cada sentido, y salio un 14 % de
+# desacuerdo entre los dos modelos donde hay un 1,3 %.
 AREA_VENTEO_MIN_MM2, _AREA_BASE_MM2, _FALLO_AREA_MAX = _busca_area_minima()
 P_BASE = {
     # ESTIMADO - hipotesis para #289, el papel del case fija la real.

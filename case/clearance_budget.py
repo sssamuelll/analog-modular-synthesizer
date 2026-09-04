@@ -2180,7 +2180,8 @@ def _ondas_trasera(p: dict[str, float]) -> tuple[float, float]:
                                             y deja entrar polvo
 
     LO QUE ESTE NUMERO CUENTA, desde el 2026-09-03: los reguladores de la
-    fuente (27,53 W a placa, papel de la fuente v4 sec.6 tras D-F7) MAS lo que
+    fuente (31,25 W a placa: los 27,53 del papel sec.6 tras D-F7 mas los 3,70
+    de la franja de red que esa tabla no llevaba) MAS lo que
     disipan la fila de invitados y el digital dentro del mismo cajon (95,6 +
     24,7 = 120,3 W). Hasta hoy eran 9,22 --solo los TO-220 de la v3-- y con eso
     el case se cerro el 18-08. El liston de la PSU3 (D-F1) y D-F3 = A cambiaron
@@ -2215,7 +2216,7 @@ CD_TIRO = 0.65
 # Una rendija larga y estrecha bajo un alero no descarga como chapa ranurada, y
 # nadie ha medido cual de los dos es. Se imprime, no se aseverea.
 CD_TIRO_PESIMISTA = 0.55
-# LA PARED EXTERIOR TAMBIEN EVACUA, y con 147.83 W dentro deja de ser un
+# LA PARED EXTERIOR TAMBIEN EVACUA, y con 151.53 W dentro deja de ser un
 # detalle: medio metro cuadrado de envolvente mueve mas vatios que la chimenea.
 # U es el coeficiente global aire de dentro -> pared -> sala, o sea las dos
 # caras en serie: con h ~ 5-8 W/m2K por cara, U ~ 2.5-4. SUPUESTO, sin medir, y
@@ -2408,7 +2409,7 @@ def guarda_aire(p: dict[str, float]) -> None:
 
     Y EL 2026-09-03 DEJA DE SER UN ASERTO. No porque el criterio se ablande
     --el techo sigue en 15 K-- sino porque la carga dejo de ser la del PSU
-    solo: son 147.83 W (27,53 del recinto de la fuente + 120,3 de la fila de
+    solo: son 151.53 W (31,25 del recinto de la fuente + 120,3 de la fila de
     invitados y el digital, papel de la fuente v4 sec.6), y esta geometria
     evacua 12.6. Un rojo permanente sobre un diseno que nadie ha rehecho
     todavia no verifica nada: ensena a empujar con --no-verify, que es el
@@ -2461,7 +2462,7 @@ def guarda_aire(p: dict[str, float]) -> None:
         _HUECOS.append(
             f"esta geometria evacua {t['p_evacuada']:.1f} W al techo de "
             f"{p['salto_termico_max']:.0f} K y el instrumento le mete "
-            f"{p['potencia_disipada']:.2f} (27,53 del recinto de la fuente + "
+            f"{p['potencia_disipada']:.2f} (31,25 del recinto de la fuente + "
             f"120,3 de la fila de invitados y el digital, papel de la fuente "
             f"v4 sec.6): sube {t['dt']:.0f} K. Hacen falta "
             f"{t['a_ef_techo']:.0f} mm2 de venteo efectivo, "
@@ -3062,7 +3063,7 @@ def canario_techo(p: dict[str, float]) -> None:
         # LA RENDIJA TENIA AQUI DOS CANARIOS Y SE MUDAN ABAJO (2026-09-03). Los
         # dos --taco_largo casi continuo, y potencia_disipada por encima de lo
         # que cabe-- se colgaban del aserto "sobre ambiente" de guarda_aire(),
-        # y ese aserto ya no existe: con los 147.83 W del cajon el techo no se
+        # y ese aserto ya no existe: con los 151.53 W del cajon el techo no se
         # cumple y la puerta lo publica como HUECO. _borde_rojo() sobre un
         # aserto que no muerde revienta con "el aserto no muerde", que es su
         # trabajo. Su SUJETO sigue vivo --que ahogar la salida se note, que la
