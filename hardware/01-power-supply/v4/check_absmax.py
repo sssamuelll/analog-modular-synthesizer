@@ -336,12 +336,22 @@ def main() -> int:
         return 1
     print("\nverde: ningun OVP simple saca a nadie de rango, y el crowbar de")
     print("       D-F6 tiene ventana en los tres rieles de rack.")
+    # EL HUECO SE MIRA, NO SE AFIRMA. Un "return 2" fijo promete un codigo
+    # que este guion seguiria dando el dia que la hoja del SCR baje y alguien
+    # vacie HUECOS: la frase de abajo diria que falta una hoja que ya esta en
+    # el arbol. Se cierra solo, como el de consumo_total_budget.py con su
+    # relevo. La condicion, no el resultado.
+    if not HUECOS:
+        print()
+        print("D-F6 ya no esta en cotas: la hoja del SCR bajo y sus cifras "
+              "son leidas.")
+        return 0
     print()
     print("HUECO: D-F6 esta dimensionada en COTAS y no en una pieza. No hay "
           "hoja de ningun SCR en el arbol, asi que su corriente de "
           "mantenimiento (<= 100 mA), su I2t y su dv/dt son requisitos que "
           "este guion publica, no cifras leidas. Se cierra bajando la hoja del "
-          "SCR que se elija y volviendo a correr.")
+          "SCR que se elija, poniendo sus cifras aqui y vaciando HUECOS.")
     return 2
 
 
