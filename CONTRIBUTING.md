@@ -18,7 +18,16 @@ hardware, código del firmware MIDI/CV o ideas nuevas para módulos adicionales.
    externa y opcional, VST compañero y agente de IA). [`architecture.md`](docs/architecture.md) es la referencia
    monofónica de la tesis.
 3. Revisa los *issues* abiertos para ver si tu idea ya está en discusión.
-4. Si vas a hacer un cambio grande, abre primero un *issue* para conversarlo.
+   **El mapa del proyecto son los hitos** (pestaña *Milestones*, o
+   `gh api 'repos/{owner}/{repo}/milestones'`): ocho etapas, de
+   «1 · Fuente v4: papel cerrado» a «7 · El primer SAM17 que suena», más
+   «8 · Aparcado: no traba que suene». Cada hito dice en su descripción
+   cuándo está hecho y qué lo traba hoy. Los epics #2, #25 y #29 son de
+   arquitecturas anteriores: no son el mapa.
+4. **Todo *issue* lleva hito al crearse** (`gh issue create --milestone "…"`).
+   Si no cabe en ninguno va al 8, y se dice por qué. Un *issue* sin hito es un
+   *issue* que el mapa no ve — así murieron los tres epics.
+5. Si vas a hacer un cambio grande, abre primero un *issue* para conversarlo.
 
 ## Flujo de trabajo
 
