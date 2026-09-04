@@ -135,6 +135,30 @@ catálogo** de piezas elegibles para `U1` y `U2`, y eso vale sobre todo para
 `U2`, que sigue **sin sustituto y en −170 mV** con los candidatos de hoy. Pero
 **no es un desbloqueo, y esta propuesta ya no puede apoyarse en él.**
 
+### 3.4 Y tampoco arregla `U2` — segundo argumento retirado el mismo día
+
+Quedaba una vía plausible: si todo el desajuste de `U2` sale del **dropout
+sobre temperatura**, bajar 12,80 W de la caja debería enfriar el aire y
+devolver margen. **No llega, y no por poco:**
+
+| aire | margen de `U2` |
+|---|---|
+| 68,9 °C (hoy) | −169,7 mV |
+| 67,6 °C (recinto casi vacío) | −163,8 mV |
+| 50 °C | −84,6 mV |
+| **25 °C** | **+27,9 mV** |
+
+**Seis milivoltios** por vaciar medio recinto, y el punto de equilibrio está en
+**aire a temperatura ambiente** — o sea, un recinto sin calor dentro. La razón
+es estructural y no de magnitud: la temperatura del aire la domina **el cajón**
+(120,3 W), y lo que se quite de la caja sólo mueve el término que se suma
+encima.
+
+**Con esto la propuesta ha perdido dos argumentos en el mismo día y no ha
+ganado ninguno.** Quedan el volumen, el calor encerrado y la estética de la
+referencia — que son razones legítimas, pero son las que había al principio.
+Ninguna de las dos cosas que la hacían *técnicamente necesaria* ha resistido.
+
 ---
 
 ## 4. Lo que esta propuesta NO propone
