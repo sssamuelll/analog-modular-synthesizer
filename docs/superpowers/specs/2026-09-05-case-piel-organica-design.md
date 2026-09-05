@@ -1,32 +1,35 @@
-# La piel orgánica: cinco pieles a una, y las mejillas que respiran
+# La piel orgánica: un árbol sobre el hueso — el tronco y las dos ramas
 
-**Fecha**: 2026-09-05 · **Estado**: **propuesta**; **D-P2 firmada en conversación el 05-09** (*«todo el acabado se hace con impresión 3D»*), y el lenguaje de la piel dicho por Samuel el mismo día mirando el primer render: *«la piel con esa forma orgánica que parece modernista y parecen ramas de árbol»* (§4.1); D-P1, D-P3, D-P4 y D-P5 sin firmar (§12) ·
+**Fecha**: 2026-09-05 · **Estado**: **propuesta**; **D-P2 firmada en conversación el 05-09** (*«todo el acabado se hace con impresión 3D»*); **la filosofía dicha por Samuel la misma noche**, mirando la tercera celosía ya impresa en STL: *«toda esta pieza simula un árbol. los cachetes son como ramas (las ramas deberían tener una estructura natural de rama) [...] se interpreta como una rama con extensiones, todo lo que envuelve al aluminio se comporta como un tronco. hasta que no entiendas esto no lograremos el acabado que queremos para la piel 3d»*; y el origen de la rama: *«quiero que el punto del que salen todas las ramificaciones sea la punta inferior delantera»*. D-P1, D-P3, D-P4, D-P5, D-P6 y D-P7 sin firmar (§12) ·
 **Sucede a**: nada; **se apoya en** `2026-08-28-costilla-pletina` (el anillo), `2026-08-29-trasera-capturada-talon-nariz` (la trasera, que se queda), `2026-08-30-techo-macizo-chapas-empotradas` (el techo, que se va), `2026-08-31-case-tanda-b` (las tres filas, que no se tocan) y `2026-09-05-fuente-v5-ladrillo` (la fuente afuera, que este papel reabre en §7.1) ·
 **No toca**: la silueta, los ángulos, las tres filas, los Z-Rails, el marco de la ventana, los paneles rehundidos, la tabla, el ámbar ·
-**Referencia visual**: tres renders de concepto generados por Samuel el 05-09, en `docs/images/case-piel-organica/`. **Mandan sobre lenguaje, no sobre cotas** — la misma regla que el board del 16-08 y la foto del 26-08. Samuel, sobre ellos: *«lo que está en los paneles es conceptual pero se entiende que va con el diseño que estamos haciendo, lo del valle seguimos trabajándolo como veníamos [...] son módulos de la fila B»* ·
-**Modelo**: `case/cad/piel_organica.scad` (al lado de `sam17_case.scad`, sin tocarlo), `case/cad/celosia.py` → `celosia_ramas.scad`, `case/renders/render_piel.py` → `sam17-piel*.png`.
+**Referencia visual**: seis imágenes generadas por Samuel el 05-09, en `docs/images/case-piel-organica/`. **Mandan sobre lenguaje, no sobre cotas** — la misma regla que el board del 16-08 y la foto del 26-08. Samuel, sobre las tres primeras: *«lo que está en los paneles es conceptual pero se entiende que va con el diseño que estamos haciendo, lo del valle seguimos trabajándolo como veníamos [...] son módulos de la fila B»*; sobre la sexta: *«ahí tienes más o menos la idea de las formas de las ramificaciones en los cachetes»* ·
+**Modelo**: `case/cad/celosia.py` → `celosia_rama.json` (la rama), `case/renders/imprimir_piel.py` (las piezas en 3D, listas para imprimir, en `case/print/piel/`), `case/cad/piel_organica.scad` (la lámina base de la cubierta y lo que sigue igual), `case/cad/piel_termica.py` (la chimenea), `case/renders/render_piel.py` → `sam17-piel*.png`.
 
 ---
 
 ## 0. En una línea
 
-El case de hoy es **dos anillos de aluminio fresado** —el hueso— con **seis pieles** encima: el techo de chapa, la nariz, el talón, las dos mejillas de acrílico en bolsillo, y la trasera de PMMA. Esto cambia **cinco de esas seis pieles por una** —una piel orgánica impresa que envuelve el canto y forma las mejillas como celosía abierta— y deja el hueso y la trasera donde están.
+El case de hoy es **dos anillos de aluminio fresado** —el hueso— con **seis pieles** encima: el techo de chapa, la nariz, el talón, las dos mejillas de acrílico en bolsillo, y la trasera de PMMA. Esto cambia **cinco de esas seis pieles por un árbol impreso**: la **cubierta es el tronco** —una masa con corteza, de una pieza, que envuelve el canto— y **cada cachete es una rama** que sale de él por la punta inferior delantera y abre sus extensiones sobre el costado. El hueso y la trasera se quedan donde están.
 
-Lo que compra no es estética: **la ventilación deja de ser un agujero que esconder y pasa a ser la identidad del aparato.** Con las mejillas en celosía, el case pasa el techo de 20 K con el `C_D` pesimista — la primera geometría que lo hace en tres días de barridos — y lo hace con el suelo macizo, el techo macizo y **la fuente dentro o fuera, las dos** (§4.3).
+Lo que compra no es estética: **la ventilación deja de ser un agujero que esconder y pasa a ser la identidad del aparato.** Con los cachetes abiertos, el case pasa el techo de 20 K con el `C_D` de la puerta y la fuente afuera; **con el pesimista se queda a 0,9 K**, y ese margen es un parámetro de la rama, no una pared (§4.3).
 
 ---
 
 ## 1. El concepto, leído como plano
 
-Tres renders. Lo que en ellos es decisión y lo que es ruido del generador lo dijo Samuel, y se transcribe arriba.
+Seis imágenes. Lo que en ellas es decisión y lo que es ruido del generador lo dijo Samuel, y se transcribe arriba.
 
-| render | lo que enseña | lo que de ahí se toma |
+| imagen | lo que enseña | lo que de ahí se toma |
 |---|---|---|
-| `concepto-1-ambar.jpg` | piel blanca orgánica, mejillas en celosía abierta, dos caras de acrílico ámbar, base de madera, una barra entre los dos pisos | la piel, la celosía, la madera. El ámbar en las caras **no**: el render 2 lo mueve |
-| `concepto-2-paneles.jpg` | las caras pasan a **paneles de aluminio oscuro** con los controles reales —perillas, faders, la pantalla de 7"—; el ámbar queda **dentro**, como luz por la celosía; tres bloques separados en el panel de abajo | los paneles de aluminio; el ámbar como interior; **los tres bloques son módulos de la fila B** (Samuel). La barra: es el valle, y el valle sigue como venía — y en `sam17-piel.png` la tapa de aluminio del valle entre dos paneles oscuros se lee exactamente así, sin haberla dibujado |
-| `concepto-3-trasera.jpg` | atrás: acrílico ámbar con el KONDOR en relieve y las ondas; debajo, una franja de metal con los conectores; debajo, la rejilla de ranuras a todo lo ancho; un IEC a la derecha | **la trasera se queda** —es la del 29-08, en ámbar—; la franja de conectores en metal (§5); las ranuras se quedan (§7.3). **El IEC es una decisión, no un detalle** (§7.1) |
+| `concepto-1-ambar.jpg` | piel blanca orgánica, mejillas en celosía abierta, dos caras de acrílico ámbar, base de madera, una barra entre los dos pisos | la piel, la celosía, la madera. El ámbar en las caras **no**: la imagen 2 lo mueve |
+| `concepto-2-paneles.jpg` | las caras pasan a **paneles de aluminio oscuro** con los controles reales; el ámbar queda **dentro**, como luz por la celosía; tres bloques separados en el panel de abajo | los paneles de aluminio; el ámbar como interior; **los tres bloques son módulos de la fila B** (Samuel). La barra: es el valle, y el valle sigue como venía |
+| `concepto-3-trasera.jpg` | atrás: acrílico ámbar con el KONDOR en relieve y las ondas; debajo, una franja de metal con los conectores; debajo, la rejilla de ranuras; un IEC a la derecha. **La cubierta con pliegues, como una manta gruesa** | **la trasera se queda** —es la del 29-08, en ámbar—; la franja de conectores en metal (§5); las ranuras se quedan (§7.3). **El IEC es una decisión, no un detalle** (§7.1). Y la cubierta es masa, no lámina |
+| `concepto-4-despiece.jpg` | el despiece: **el cachete lateral esquelético** como pieza suelta con orificios de montaje y puntos de enganche; **la cubierta superior envolvente** drapeada, aparte; el hueso en dorado | el cachete como pieza atornillada al anillo (§9.1); la cubierta como pieza aparte (§8). Samuel: *«esto es lo que necesitamos [...] queremos tener las piezas listas para mandarlas a imprimir en 3D»* |
+| `concepto-5-cachete-2d.jpg` | **el perfil 2D del cachete**, vista interior y exterior: un nudo del que sale todo, una vena principal en diagonal, extensiones largas hacia la cumbre y cortas hacia el suelo, marco grueso y redondo, **cuatro fijaciones en las esquinas**, todo de sección redonda con unas pasando sobre otras | **la estructura de la rama** (§4.1), el marco de almohada, las cuatro fijaciones (§9.1). El nudo lo movió Samuel a la nariz al ver el primer render 3D |
+| `concepto-6-celosia-2d.jpg` | **la geometría de la celosía**: «variable core thickness», «filament bifurcation point», «integrated nodal point», «irregular void shape», «interwoven flow path», y el cruce entretejido | **el lenguaje de cada fibra**: grosor variable a lo largo, haces que se juntan y se separan, lentes con punta, cruces con una fibra por encima (§4.1). Su escala daría filamentos de 2 mm: no manda sobre cotas |
 
-La piel, en los tres, hace lo mismo: envuelve el canto de arriba, forma la nariz y el talón, y en los extremos se abre en celosía. Es «el marco es perfil, no banda», hecho en otro material.
+**Lo que las seis dicen juntas es una sola cosa, y hasta la cuarta celosía no la entendí**: la piel es un **organismo**, no un patrón. El tronco es masa con corteza y de una pieza; la rama entra gruesa por un punto, se parte y se afina hacia las puntas, y tiene relieve. Tres celosías en un día —celdas, ramas dibujadas, fibras— eran tres dibujos planos del mismo sitio.
 
 ---
 
@@ -34,19 +37,19 @@ La piel, en los tres, hace lo mismo: envuelve el canto de arriba, forma la nariz
 
 | | pieza | papel | qué le pasa |
 |---|---|---|---|
-| **se va** | techo de chapa + rendija del alero | 30-08 | la piel es el techo. La salida de aire son las mejillas |
-| | nariz y talón | 29-08 | la piel es la nariz y el talón |
-| | mejillas de acrílico en bolsillo | 28/29-08 | la piel es la mejilla, y respira |
-| | **todo el venteo del #289** | 03/04-09 | lo pagan las celosías solas, con margen (§4.3) |
+| **se va** | techo de chapa + rendija del alero | 30-08 | la cubierta es el techo. La salida de aire son los cachetes |
+| | nariz y talón | 29-08 | la cubierta es la nariz y el talón |
+| | mejillas de acrílico en bolsillo | 28/29-08 | la rama es la mejilla, y respira |
+| | **todo el venteo del #289** | 03/04-09 | lo pagan las ramas (§4.3) |
 | **se queda** | la silueta de dos pisos, las tres filas, el valle de 55 | 31-08 | igual |
 | | Z-Rails, marco de la ventana, paneles rehundidos 1,5 | 29/31-08 | igual |
 | | **la trasera**: PMMA, KONDOR, ondas, ranuras, capturada en bolsillo | 29-08 | igual, con la franja de conectores debajo (§5) |
-| | la tabla del carpintero, con su vuelo de 10 | 27-08 | igual; sigue asomando 4 mm por fuera de la piel |
-| | el ámbar | 27-08 | se queda, pero **dentro**: es la trasera y lo que se ve por la celosía |
-| **cambia** | los dos anillos | 28-08 | siguen siendo el hueso. Hoy son pletina de 14 fresada con cara vista de 20 y chaflán **porque se ven**; bajo la piel no se ven, y pasan a **pletina cortada y listo** (§6) |
+| | la tabla del carpintero, con su vuelo de 10 | 27-08 | igual; **los cachetes asoman ahora 6 mm por fuera de ella** |
+| | el ámbar | 27-08 | se queda, pero **dentro**: es la trasera y lo que se ve por la rama |
+| **cambia** | los dos anillos | 28-08 | siguen siendo el hueso. Bajo la piel no se ven, y pasan a **pletina cortada y listo** (§6) |
 | | el chasis del PSU | 18-08 | con la fuente afuera (v5) no hay chasis. Si se queda dentro, entra como hoy, por el frente |
 
-El case crece **12 mm de ancho** (6 de piel por lado: 568,62 → 580,62) y nada en alto ni en fondo. La tabla, con su vuelo de 10, sigue siendo lo más ancho del aparato.
+El case crece **32 mm de ancho** (16 de rama por lado: 568,62 → ~601) y la cubierta con su corteza es 590 de ancho por 341 de fondo; en alto, los pliegues (hasta +7) y nada más.
 
 ---
 
@@ -54,92 +57,82 @@ El case crece **12 mm de ancho** (6 de piel por lado: 568,62 → 580,62) y nada 
 
 ### 3.1 Geometría (lo que está en el modelo)
 
-- **Espesor 6 mm** (`piel_e`). Para nylon MJF, 4–8 es lo normal; 6 deja nervios de 4 en la celosía con carne.
-- **Envuelve el canto**: la banda sigue el contorno del anillo (`perfil_lateral()`, con sus chaflanes y radios) 6 mm por fuera, de nariz a talón pasando por el techo. Por debajo no hay piel: ahí está la tabla (`piel_aire` = 0,3 sobre y = 0).
-- **Los labios de los extremos** pisan cada panel hasta la placa de anclaje y **no más** (`piel_solape` = `t_placa` = 6): 20 mm de piel sobre cada extremo de cada fila. Más allá estorbaría al módulo al salir — las dos filas son tapa, y nada fijo junto a un riel puede taparle el barrido. Entre los labios la banda se abre entera sobre las tres filas: entre filas no hay piel, como hoy no hay chapa; ahí están la tapa del valle y los rieles.
-- **La ventana de la trasera**: el campo visible de hoy (`trasera_campo()`, del labio del talón al del techo), entre los anillos. La piel hace de marco arriba y abajo, como hoy lo hacen las chapas.
-- Los paneles quedan **7,5 mm** dentro del plano de la piel (6 de piel + 1,5 de rehundido). En el concepto se leen así: paneles duros dentro de un marco blando.
+**La cubierta, el tronco** (`piel_organica.scad` → `imprimir_piel.py`):
+
+- **Lámina de 6 mm** (`piel_e`) que sigue el contorno del anillo (`perfil_lateral()`) 6 mm por fuera, de nariz a talón pasando por el techo, **de una pieza**. Por debajo no hay piel: ahí está la tabla (`piel_aire` = 0,3 sobre y = 0). Es una **C abierta por abajo**: se pone y se quita cayendo desde arriba (§8).
+- **Los labios de los extremos** pisan cada panel hasta la placa de anclaje y **no más** (`piel_solape` = `t_placa` = 6): 20 mm sobre cada extremo de cada fila. Entre los labios la banda se abre entera sobre las tres filas; entre filas están la tapa del valle y los rieles. **La ventana de la trasera**: el campo visible de hoy (`trasera_campo()`).
+- **La corteza**, puesta en Blender solo sobre la cara exterior (la interior sigue lisa contra el hueso): tres capas de ruido desplazando la malla — **pliegues** anchos como una manta (escala 58 mm, de −3 a +7), **vetas** largas a lo largo del perfil (estiradas ×4 en el plano del perfil) y **grano** fino. Es lo que hace que lea a tronco y no a lámina; ±3 (el primer intento) era piel de naranja.
+- Los paneles quedan **7,5 mm** dentro del plano de la lámina (6 de piel + 1,5 de rehundido).
+
+**El cachete, la rama** (`celosia.py` → `celosia_rama.json` → `imprimir_piel.py`):
+
+- **El marco**: sección de **almohada** —plana contra el anillo, abombada hacia fuera— de 28 de ancho por 11 de alto, barrida por el contorno: **6 mm por fuera del perfil**, pisando el canto de la cubierta como en el despiece, y **22 por dentro**, tapando la cara del anillo (20) y casi el marco de la ventana (26). Las fibras nacen del marco, sin franja de aluminio entre medias.
+- **Cuatro pasantes Ø4,5 para M4** en las esquinas, a 12 mm de los dos cantos (la imagen 5), sobre la cara del anillo.
+- **Las fibras**: tubos de sección redonda y **diámetro variable** — 8 junto al nudo, 3,6 en las puntas, la vena ×1,5 —, ondulando **en profundidad** (±1,8, la vena +2,6 por encima) para que en cada cruce una pase por encima de la otra. Todo fundido con el marco por remallado (vóxel 0,6): las uniones salen con garganta.
+- **Dos piezas espejo** (`cachete_der`, `cachete_izq`): la cara plana va contra el anillo y la abombada fuera, así que la otra mano es la pieza reflejada, no la misma.
 
 ### 3.2 Material: la única pregunta de estructura (D-P2 — firmada)
 
-> **Firmada el 05-09, en conversación:** *«eso toca decidirlo, todo el acabado se hace con impresión 3D»*. Es **A**. La piel se imprime, y **la pieza impresa es el acabado**: no hay fundición, no hay mecanizado de la piel, y lo que salga de la máquina es lo que se ve. Eso convierte el material en el siguiente parámetro —blanco de impresión (PA12 W) o teñido, resina o nylon— y hace de las dos preguntas de §8 (la costura de la banda, la sujeción al hueso) ingeniería con proceso conocido en vez de opciones. B se queda escrita abajo como lo que se descartó y por qué, no como alternativa viva.
+> **Firmada el 05-09, en conversación:** *«eso toca decidirlo, todo el acabado se hace con impresión 3D»*. Es **A**. La piel se imprime, y **la pieza impresa es el acabado**: no hay fundición, no hay mecanizado de la piel, y lo que salga de la máquina es lo que se ve. Eso convierte el material en el siguiente parámetro —blanco de impresión (PA12 W) o teñido, resina o nylon— y hace de las preguntas de §8 ingeniería con proceso conocido en vez de opciones. B se queda escrita abajo como lo que se descartó y por qué, no como alternativa viva.
 
-**A. La piel es piel.** Nylon impreso (MJF PA12, o resina) sobre los anillos de hoy, que se esconden. La estructura no cambia: los anillos cargan, el marco de la ventana ata los rieles, la piel se cuelga de ellos. Riesgo cero en lo que ya está calculado. Los paneles de aluminio hacen de disipador (§4.4).
+**A. La piel es piel.** Nylon impreso (SLS/MJF PA12, o resina) sobre los anillos de hoy, que se esconden. La estructura no cambia: los anillos cargan, el marco de la ventana ata los rieles, la piel se cuelga de ellos. Riesgo cero en lo que ya está calculado. Los paneles de aluminio hacen de disipador (§4.4).
 
 **B. La piel es aluminio fundido** y hace de hueso y de disipador a la vez. Más pesada, molde, más cara — y la versión de serie si algún día hay serie.
 
-**Recomendación: A**, para la pieza de concepto y como base. B se decide con una unidad vendida, no antes. Y con A hay una cosa que no se puede olvidar: **a 45 °C de sala más 14–17 K dentro, un nylon impreso aguanta como piel y no como estructura**. Por eso A exige que el hueso siga.
+**Recomendación: A**, para la pieza de concepto y como base. B se decide con una unidad vendida, no antes. Y con A hay una cosa que no se puede olvidar: **a 45 °C de sala más 15–20 K dentro, un nylon impreso aguanta como piel y no como estructura**. Por eso A exige que el hueso siga.
 
 ---
 
-## 4. La celosía
+## 4. La rama
 
-### 4.1 Por qué por guion y no a mano
+### 4.1 Cuatro versiones en un día, y por qué la cuarta es otra cosa
 
 Del dibujo orgánico importan tres números —cuánto abre, cuánto nervio le queda, cuánto borde macizo la enmarca— y los tres tienen que ser **parámetros**, porque el primero lo lee el modelo térmico y los otros dos los leerá la rigidez. Un dibujo no tiene parámetros.
 
-**Tres versiones en un día, y las tres por mirar el render con Samuel.**
-
 1. **Celdas de Voronoi** (`2bce743`): parametrizable, medible, y **leía a panal**.
-2. **Ramas por colonización de espacio** (`d78c592`), tras *«parece modernista y parecen ramas de árbol»*: salió un árbol — ramas sueltas que se cruzan. *«No está ni cerca.»*
-3. **Fibras de un campo de flujo** — la de ahora. La referencia es el cuarto render de Samuel, el despiece: el cachete son **nervios largos que nacen del rincón de abajo-delante, se abanican hacia arriba-atrás, se parten y se vuelven a juntar dejando huecos en forma de lente**, escalonados en hiladas. Eso no es un árbol ni un teselado: es un campo de flujo, y `celosia.py` lo genera como tal:
+2. **Ramas por colonización de espacio** (`d78c592`): un árbol dibujado, ramas sueltas que se cruzan. *«No está ni cerca.»*
+3. **Fibras de un campo de flujo** (`73a9bf1`): el tejido bueno —nervios largos que se abanican, se parten y se juntan en lentes— pero **fibras todas iguales, planas, sin nudo y sin tronco**. Samuel, con el STL delante: *«le hace falta mucho detalle de relieve tanto a los cachetes como a las bandas y el problema más grave empieza por una falta de conexión con la filosofía»*.
+4. **La rama** — ésta. El mismo motor de líneas de flujo (Jobard & Lefer, 1997) pero con lo que un organismo tiene y un patrón no:
 
-- un **campo de direcciones** sobre el perfil: abanico desde un foco por delante y por debajo del case, ondulado para que las fibras se curven, y enderezándose hacia arriba con la altura;
-- **líneas de flujo espaciadas** (Jobard & Lefer, 1997): se integra una fibra por el campo, se siembran vecinas a `SEPARACION` a cada lado, y una fibra muere cuando se acerca a otra. Donde el abanico se abre nacen fibras entre las viejas; donde se cierra, mueren;
-- **las lentes con punta** no salen de peldaños: salen de fibras vecinas que convergen y luego se separan. Se modula la dirección con una onda a lo largo del flujo por otra a través de él (período `2 × SEPARACION`): fibras contiguas giran en sentidos opuestos, se acercan hasta que una muere **soldada** en la otra, y más adelante nace otra entre las dos;
-- **ninguna punta suelta**: cada extremo que no muere en el marco se suelda a la vecina con una curva tangente al flujo; y **puentes** en S cada `LENTE` mm donde dos fibras corren paralelas mucho rato, que es lo que atiranta la celosía de través.
+- **Un nudo en la nariz, tres ramas de él, y el resto brota más arriba.** El campo es **radial desde la punta inferior delantera** (`NUDO` = (56, 38), a ~10 mm del marco en la esquina de la nariz), ligeramente torcido y ondulado. Del nudo salen **tres primarias** (`PRIMARIAS`: el suelo a 2°, la vena a la cumbre a 39°, la cara baja a 54°), gruesas (×1,3; la vena ×1,5), fundidas en el nudo y el nudo con la esquina del marco: por ahí la rama sale del tronco. **Las demás nacen de una rama que ya pasa por la banda de la fila de abajo** (`BROTE_Y` = 28–150 mm de alto): hacia atrás, una fibra nueva muere al acercarse a su madre (`MUERE_ATRAS` = 0,6 del espaciado) y la punta se funde en ella con una Y tendida a lo largo de la madre (`SOLDADURA_L` = 2,5 huecos). Samuel, al ver el primer render con todo saliendo del nudo: *«mejor que salgan varias de ese nodo, unas tres, y luego otras nazcan de algún punto más arriba, cada una en donde va el primer row del rack»*.
+- **Jerarquía de grosor**: el diámetro cae con la distancia al nudo (8 → 3,6 mm, `LAMBDA` = 95) y sube y baja a lo largo de cada fibra (`GROSOR_ONDA` = 0,18: gruesa a media carrera, fina donde se parte — «variable core thickness»). La **vena** —la diagonal larga, de la nariz a la cumbre trasera, `VENA_ANG` = 39°— va ×1,5 y por encima del plano.
+- **Haces y bifurcaciones**: las fibras **no mueren por acercarse a otra** (`MUERE` = 0). Se funden en un haz y, cuando la modulación las separa, se abren: eso es la bifurcación de la imagen 6, y hacia el nudo hace que todas se junten en pocos brazos gordos sin dibujarlos. La densidad la gobierna solo el sembrado: una semilla vale si no hay fibra a menos de `NACE` = 0,62 del espaciado local (`SEPARACION` = 12 junto al nudo, creciendo un 25 % a 250 mm).
+- **Lentes por pellizcos**: dos fibras que corren vecinas se acercan hasta tocarse cada `LENTE` (95 mm, local) y se vuelven a abrir, con ventana coseno y sin tocar las puntas. Deja huecos con las dos puntas tangentes. Antes eran puentes en S entre fibras, y salían como rayos en zigzag.
+- **La pared**: cerca del marco el flujo se hace tangente (`PARED_D` = 40, `PARED_K` = 0,9), y las fibras corren pegadas al marco antes de fundirse en él **de refilón**, con una curva tangente que termina medio marco dentro. Sin esto, las que salen del nudo hacia el hombro chocaban de frente a 20 mm y morían cortas.
+- **Relieve en Z**: cada fibra ondula ±1,8 mm en profundidad (`Z_L` = 90), así que en cada cruce una pasa por encima de la otra — el «interweave intersection» de la imagen 6.
 
-Los números de arranque salen de la referencia, medidos a ojo sobre la imagen (está en perspectiva: son proporciones, no cotas): nervio ~1/60 del alto del cachete, separación ~1/16, lentes de 3 a 6 separaciones, marco ~1/15. Sobre 256 mm de alto: nervio ~4, separación ~15, lentes 50–90, marco ~17.
-
-| parámetro | valor | qué es |
-|---|---|---|
-| `MARCO` | 17 mm | marco macizo alrededor de la celosía, desde el perfil |
-| `SEPARACION` | 13 mm | entre ejes de fibras vecinas |
-| `NERVIO` | 4,2 mm | grosor de la fibra |
-| `FOCO` | (−140, −160) | de dónde sale el abanico; lejos, o abajo son rendijas y arriba huecos |
-| `ONDA_A` / `ONDA_L` | 11° / 150, 110 mm | ondulación de las fibras |
-| `GIRO_ARRIBA` | 14° | las fibras se enderezan al subir |
-| `LENTE_MOD` / `LENTE_L` | 11° / 80 mm | la modulación que hace las lentes |
-| `LENTE` | 110 mm | entre puentes |
-| `CIERRE` | 2 mm | radio del cierre que suelda uniones (`.scad`) |
-| `SEMILLA` | 17 | |
-
-Salen **27 fibras, 131 soldaduras, 6 puentes**. Cuatro pasadas en preview 2D de segundos cada una (`celosia.py --preview`): la primera tenía el foco cerca y abanicaba de más; la segunda, lentes tímidas y puntas sueltas. Lo que se afina mirando, con Samuel delante: separación y nervio (la densidad del tejido), `LENTE_MOD` (cuánta punta tienen las lentes) y el marco.
+Salen **19 fibras —3 primarias y 16 brotes—, 13 uniones en Y y 16 pellizcos**. Todo esto se itera en un **preview 2D de segundos** (`celosia.py --preview`) y en 3D con EEVEE en un minuto (`PIEL_MOTOR=eevee`); Cycles solo para el render que se mira para decidir. Lo que se afina mirando, con Samuel delante: `NACE` y `SEPARACION` (cuántas fibras), `NERVIO_NUDO`/`NERVIO_PUNTA` (cuánta carne), `LENTE` (cuánto miden las lentes), `Z_AMP` (cuánto relieve).
 
 ### 4.2 Dos áreas, y por qué no son la misma
 
-La celosía abre desde 17 mm del perfil hacia dentro: eso es **lo que se ve**. Pero detrás de la mejilla está el anillo (20 de cara) y el marco de la ventana (hasta `marco_fondo` = 26 del perfil), y las celdas que caen sobre ese metal no respiran: enseñan aluminio. **Lo que respira es lo abierto sobre la ventana del anillo.**
+La rama abre desde 28 mm del perfil hacia dentro: eso es **lo que se ve**. Detrás del cachete está el anillo (20 de cara) y el marco de la ventana (hasta `marco_fondo` = 26 del perfil); con el marco de la rama a 22 por dentro del perfil, lo que se ve y lo que respira es casi lo mismo.
 
-| por mejilla | mm² | del perfil (52 658) |
+| por cachete | mm² | del perfil (52 658) |
 |---|---|---|
-| región de la celosía (a ≥ 17 del perfil) | 36 266 | 69 % |
-| **abierto, lo que se ve** (nervios descontados) | **24 504** | **46,5 %** |
-| **abierto sobre la ventana, lo que respira** (a ≥ 26) | **19 367** | **36,8 %** |
+| **abierto, lo que se ve** (marco y fibras descontados) | **12 654** | **24,0 %** |
+| **abierto sobre la ventana y fuera del marco, lo que respira** | **12 654** | **24,0 %** |
 
-Medido por muestreo (120 000 puntos), con cada nervio como cápsula de su grosor. (Las celdas de Voronoi respiraban 22 021 y las ramas 23 809: las fibras son un tejido más cerrado, y se nota abajo.) Dos cosas que el número no lleva y se declaran: el cierre morfológico del `.scad` rellena horquillas y quita algo más (< 2 %), y `marco_fondo_trasera` es 30 y no 26 — se usa 26 en todo el contorno, 4 mm optimista en el tramo trasero.
-
-Visualmente, el anillo detrás de los huecos del borde **no es un defecto**: es la opción A hecha visible — ramas blancas sobre aluminio en la orilla, sobre el ámbar del interior en el centro.
+Medido por muestreo (120 000 puntos), con cada tramo como cápsula de su diámetro. Las fibras del 73a9bf1 respiraban 19 367: **la rama es un tejido mucho más cerrado**, y eso se paga abajo. (Una versión de este guion contaba como aire la franja entre 26 y 28 del perfil, que la tapa el marco: corregido con `max(ventana, marco)`.)
 
 ### 4.3 Lo que le pasa al calor
 
-Con `clearance_budget._tiro()` —el modelo de `guarda_aire()`— y las dos mejillas como chimenea: la mitad baja de cada una entra, la mitad alta sale, centroides a un cuarto y tres cuartos del alto; más la rejilla baja de la trasera, que el concepto conserva. Techo, 20 K sobre una sala de 45 °C. `C_D` = 0,65 el de la puerta, 0,55 el pesimista.
+`case/cad/piel_termica.py` — la misma física que `clearance_budget._tiro()`, con las dos mejillas como chimenea: la mitad baja de cada una entra, la mitad alta sale, centroides a un cuarto y tres cuartos del alto; más la rejilla baja de la trasera. Techo, 20 K sobre una sala de 45 °C. `C_D` = 0,65 el de la puerta, 0,55 el pesimista. **La tabla la imprime el guion; no se copia a mano** (el 05-09 la misma resta de dos columnas se hizo mal tres veces).
 
 | escenario | W | salto | pesimista | sin la rejilla trasera |
 |---|---|---|---|---|
-| **v5 declarada, fuente afuera** | 64,2 | **14,9 K** | **16,6 K** | 16,4 K |
-| v5 a censo | 35,1 | 9,9 K | 11,1 K | 11,0 K |
-| **fuente ADENTRO** (v5 + los 25,02 que se irían) | 89,2 | **18,5 K** | **20,7 K** | 20,4 K |
-| *hoy, para comparar* | 64,2 | 45,6 K | 51,0 K | — |
+| **v5 declarada, fuente afuera** | 64,2 | **18,7 K** | **20,9 K** | 21,4 K |
+| v5 a censo | 35,1 | 12,5 K | 14,0 K | 14,3 K |
+| **fuente ADENTRO** (v5 + los 25,02 que se irían) | 89,2 | **23,3 K** | **26,1 K** | 26,6 K |
 
-Área efectiva **16 752 mm²** (hoy 3 299), tiro **118 mm** (hoy 105).
+Área efectiva **10 650 mm²**, tiro **134 mm**. Para pasar el pesimista con la fuente afuera hacen falta **13 678 mm² respirando por cachete**: un 8 % más que ahora.
 
 Tres lecturas:
 
-1. **Es la primera geometría que pasa con el `C_D` pesimista.** Ni la trasera agrandada, ni el suelo ranurado, ni la rendija ancha lo conseguían (v5 §6): la mejor daba 21,0 K. Ésta da 16,6, y con el suelo y el techo macizos.
-2. **La rejilla baja de la trasera vale 1,5 K** (14,9 con ella, 16,4 sin ella, mismo `C_D`). Poco, pero no nada: se queda o se va por identidad (§7.3), y si se va, se sabe lo que cuesta. *(La primera versión de este papel decía 0,3 K: restaba la columna pesimista con rejilla a la columna normal sin rejilla — dos corners distintos, el error de siempre. Corregido.)*
-3. **Con la fuente adentro ya NO pasa en pesimista**: 18,5 K con el `C_D` de la puerta, **20,7 con el exigente**, contra 20. Con las ramas pasaba (18,3); el tejido de fibras respira 4 400 mm² menos por cachete y ese margen se fue. Ver §7.1.
+1. **Pasa con el `C_D` de la puerta y no con el pesimista**, por 0,9 K. Las fibras del 73a9bf1 pasaban las dos (14,6 / 16,3 con este mismo guion): la rama cambió margen térmico por leer a rama. **Es un parámetro, no una pared**: con `NACE` = 0,62 en vez de 0,55 salen 12 fibras, respiran 15 557 y da 16,6 / 18,5 K — pasa las dos con un 14 % de margen. Se decide mirando, porque también cambia cómo se ve: 12 fibras es más rama y menos tejido.
+2. **La rejilla baja de la trasera vale 2,7 K** (18,7 con ella, 21,4 sin ella, mismo `C_D`). Se queda o se va por identidad (§7.3), sabiendo lo que cuesta.
+3. **Con la fuente adentro no pasa ni con el `C_D` de la puerta** (23,3 K). Ver §7.1: con esta rama, la fuente afuera deja de ser una opción y pasa a ser condición.
 
-Lo que el modelo NO cuenta y se declara: la pared exterior (`U_PARED` = 3, sin medir, fuera del veredicto); el `C_D` de una celosía de nylon de 6 mm con celdas de ~25 × 40 (no es el de una ranura en PMMA de 8; probablemente **mejor**, porque la celda es ancha respecto a su profundidad — pero sin medir); y la resistencia de un camino de aire que entra por un extremo, cruza 540 mm de módulos y sale por el otro. Con dos mejillas simétricas el aire entra y sale por la misma, y ese camino es corto; el modelo lo trata como una chimenea y es una aproximación de orden de magnitud. **Se mide en el paso 7 del bring-up, como todo lo demás.**
+Lo que el modelo NO cuenta y se declara: la pared exterior (`U_PARED` = 3, sin medir, fuera del veredicto); el `C_D` de un hueco entre tubos redondos de nylon (no es el de una ranura en PMMA; probablemente **mejor**, porque la celda es ancha respecto a su profundidad — pero sin medir); y la resistencia de un camino de aire que entra por un extremo, cruza 540 mm de módulos y sale por el otro. Es una aproximación de orden de magnitud. **Se mide en el paso 7 del bring-up, como todo lo demás.**
 
 ### 4.4 Y los paneles de aluminio, de regalo
 
@@ -161,9 +154,7 @@ Lo que el concepto añade y tiene sentido: **una franja de metal con los conecto
 
 **Sigue.** Los dos anillos cargan; el marco de la ventana ata los seis rieles y retiene hacia dentro; los Z-Rails llevan los paneles. Nada de eso lo toca la piel.
 
-Lo que sí cambia es **lo que el anillo tiene que ser**. Hoy es pletina de 14 fresada —cara vista de 20, rebaje de 6 donde asienta el acrílico coplanar, chaflán de 1,5 × 45° en las dos aristas, bolsillos cerrados para las tres planchas— porque **se ve** y porque **sujeta piel de acrílico**. Bajo la piel no se ve, y el acrílico de las mejillas ya no existe. Se queda con dos trabajos: cargar, y sujetar la trasera en su bolsillo. Para eso basta **pletina cortada** —láser o agua— con el bolsillo trasero y las roscas; sin chaflán, sin rebaje perimetral, sin cara vista. El hueso se abarata justo cuando la piel se encarece, y el taller de mecanizado del §6.1 del PLIEGO pasa a ser un corte.
-
-Cómo se cuelga la piel del hueso no está dibujado (HUECO 1). Lo natural: la mejilla atornillada al anillo desde dentro por la cara del anillo que hoy es el rebaje, y la banda encajada entre mejillas.
+Lo que sí cambia es **lo que el anillo tiene que ser**. Hoy es pletina de 14 fresada —cara vista de 20, rebaje de 6 donde asienta el acrílico coplanar, chaflán de 1,5 × 45° en las dos aristas, bolsillos cerrados para las tres planchas— porque **se ve** y porque **sujeta piel de acrílico**. Bajo la piel no se ve, y el acrílico de las mejillas ya no existe. Se queda con dos trabajos: cargar, y sujetar la trasera en su bolsillo. Para eso basta **pletina cortada** —láser o agua— con el bolsillo trasero y **las cuatro roscas M4 por esquina** para el cachete; sin chaflán, sin rebaje perimetral, sin cara vista. El hueso se abarata justo cuando la piel se encarece, y el taller de mecanizado del §6.1 del PLIEGO pasa a ser un corte.
 
 ---
 
@@ -173,25 +164,25 @@ Cómo se cuelga la piel del hueso no está dibujado (HUECO 1). Lo natural: la me
 
 La v5 sacó la fuente por cuatro razones, y esta piel **toca una**:
 
-| razón | con la piel |
+| razón | con la rama |
 |---|---|
-| térmica: la caja no evacuaba | **se debilita, pero sigue**: con la fuente adentro da 18,5 K con el `C_D` de la puerta y **20,7 con el pesimista** — no pasa el peor caso por 0,7 K. Abriendo el tejido (separación 15 en vez de 13) pasaría; es una palanca, no un dato |
+| térmica: la caja no evacuaba | **con la fuente adentro no pasa**: 23,3 K con el `C_D` de la puerta, 26,1 con el pesimista, contra 20. Abriendo la rama un 8 % pasa el pesimista **con la fuente afuera**; para pasarlo con la fuente adentro haría falta respirar del orden del doble, y eso ya no es la misma rama |
 | el recinto de acero ocupa el 30 % del suelo | entera |
 | la red de 230 V fuera de una caja de madera **y ahora de nylon** | entera, y más |
 | el margen de U2 que se regala solo con el crudo a 15,5 | entera |
 | un ladrillo de catálogo es lo práctico de fabricar | entera |
 
-Así que el IEC del render **es una decisión que Samuel toma sabiendo el número**: si la fuente sale, ahí va un jack de DC; si se queda, este case la aguanta con el `C_D` de la puerta y **no** con el pesimista, salvo que la celosía abra más — y con un recinto de acero dentro de una piel de nylon, que es la clase de cosa que hay que decir en voz alta. Es D-P4, y no la decide este papel.
+Así que el IEC del render **es una decisión que Samuel toma sabiendo el número**: con esta rama, la fuente afuera (jack de DC) es lo único que pasa el techo. Es D-P4, y no la decide este papel.
 
 ### 7.2 Tres papeles del case pierden su sujeto
 
-- **30-08, el techo macizo con la salida por el alero**: el techo, la rendija, el labio de 18, los tacos, `guarda_rendija()` y la capilaridad — todo era de una chapa que ya no está. Mueren por desaparición del sujeto. El *criterio* sobrevive: el techo sigue macizo y sigue sin ranuras, porque la piel lo es.
+- **30-08, el techo macizo con la salida por el alero**: el techo, la rendija, el labio de 18, los tacos, `guarda_rendija()` y la capilaridad — todo era de una chapa que ya no está. Mueren por desaparición del sujeto. El *criterio* sobrevive: el techo sigue macizo y sigue sin ranuras, porque la cubierta lo es.
 - **28-08, la costilla de pletina**: el anillo sigue, el acabado no (§6).
 - **29-08, las mejillas coplanares en el rebaje**: no hay mejillas de acrílico. `guarda_costado()`, el vano libre bajo el labio, `hol_costado` — sin sujeto.
 
 ### 7.3 El #289 muere, y las ranuras de la trasera cambian de razón
 
-El encargo del #289 —22 244 mm² de venteo nuevo, o 7 610 con la v5— lo paga la celosía sola con 16 752 efectivos. **Se cierra por desaparición del sujeto** cuando esto se firme. Y las 46 ranuras de la trasera, que eran *la entrada*, valen 1,5 K: se quedan si Samuel las quiere como lenguaje —el concepto las conserva— y se van si no, sabiendo que cuestan eso. Es D-P5.
+El encargo del #289 —22 244 mm² de venteo nuevo, o 7 610 con la v5— lo paga la rama sola con 10 650 efectivos, y con el `C_D` de la puerta. **Se cierra por desaparición del sujeto** cuando esto se firme. Y las 46 ranuras de la trasera, que eran *la entrada*, valen 2,7 K: se quedan si Samuel las quiere como lenguaje —el concepto las conserva— y se van si no, sabiendo que cuestan eso. Es D-P5.
 
 ### 7.4 Los papeles del case, hacia atrás
 
@@ -199,13 +190,17 @@ La spec del chasis (`2026-08-15`) lleva 25 revisiones y este papel sería la 26.
 
 ---
 
-## 8. Montaje y apertura — HUECO
+## 8. Montaje y apertura
 
-Hoy la trasera entra con el anillo B, las tres planchas se montan una vez con el case, y el chasis del PSU entra al final por el frente. Con la piel en tres piezas (dos mejillas y la banda) ese orden se rediseña, y no está dibujado. Las preguntas, en el orden en que muerden:
+Samuel, el 05-09: *«no estoy convencido de partir la banda por la mitad. me gustaría que sea fácil de poner y quitar toda la piel»*. Las dos cosas se contestan con la misma geometría:
 
-1. ¿La banda es una pieza o dos mitades? Una pieza de 580 × 320 × 256 no entra en una MJF de serie (la HP 4200/5200 anda en ~380 × 284 × 380 — cifra de catálogo de memoria, sin hoja en el repo). **Dos mitades**, o resina de gran formato. Con D-P2 firmada esto deja de ser una opción y pasa a ser **la primera cota que hay que dibujar: dónde va la costura**. Una forma orgánica puede esconderla en un pliegue —el concepto tiene varios en el techo— y ahí es donde debería ir, no en el medio de una cara lisa.
-2. ¿Por dónde se abre para llegar a la fila de abajo? Hoy por los paneles; sigue igual — la piel no los tapa.
-3. ¿La mejilla se quita sin quitar la banda? Debería: es la pieza que se rompe.
+1. **La cubierta es una C abierta por abajo y cae desde arriba.** El perfil no tiene voladizo: la cara baja se echa atrás al subir (x₂ = 89 en el entrepiso), el hombro sigue atrás (x₃ = 160), la cara alta más (x₄ = 270) y la trasera es un plomo. Una C rígida que copia ese contorno 6 mm por fuera baja en vertical sin tocar nada hasta asentar, y sube igual. No hay que abrirla, ni flexarla, ni deslizarla por el ancho.
+2. **La cubierta no lleva tornillos: la sujetan los cachetes.** El marco de cada rama pisa 6 mm el canto de la cubierta (`SOLAPE_CUBIERTA`), así que con los dos cachetes puestos la cubierta queda **capturada** entre ellos. Quitar la piel entera son los ocho M4 de los cachetes y levantar. Poner: cubierta, cachetes, ocho tornillos.
+3. **Los cachetes van al anillo con cuatro M4 en las esquinas**, como la imagen 5. Con tornillos de cabeza moleteada no hace falta herramienta: es D-P7.
+4. **De una pieza no entra en una MJF de serie.** 590 × 341 × 268 no cabe en 380 × 284 × 380 (HP 5200); cabe en una SLS de gran formato —EOS P 770, 700 × 380 × 580— y sobra en estereolitografía de gran formato (Materialise Mammoth, 2 100 × 700 × 800). Cifras de catálogo, sin hoja en el repo. **Es D-P6**: qué máquina, o si al final se parte y dónde (en un pliegue de la corteza, no en el medio de una cara).
+5. ¿Por dónde se abre para llegar a la fila de abajo? Hoy por los paneles; sigue igual — la piel no los tapa.
+
+Lo que no está dibujado: los **puntos de enganche** cubierta–cachete del despiece (bossas en la cara interior del marco que entren en la cubierta y la centren), y el **cuello** de la cubierta en el canto donde asienta el marco. Son la siguiente pasada, con los STL de esta en la mano (HUECO 1).
 
 ---
 
@@ -213,9 +208,10 @@ Hoy la trasera entra con el anillo B, las tres planchas se montan una vez con el
 
 | pieza | quién | proceso |
 |---|---|---|
-| **la piel** (dos mejillas, banda) | servicio de impresión (**D-P2, firmada**) | MJF PA12 W o resina blanca: la pieza impresa **es** el acabado, sin pintura ni fundición |
+| **los dos cachetes** | servicio de impresión (**D-P2, firmada**) | MJF o SLS PA12 W: la pieza impresa **es** el acabado |
+| **la cubierta**, de una pieza | servicio de impresión de gran formato (**D-P6**) | SLS PA12 en P 770 o Mammoth SLA |
 | **paneles de aluminio** | taller de mecanizado | como siempre se ha querido: tolerancia y canto |
-| **anillos** | corte | láser o agua, pletina de 14, con bolsillo trasero y roscas. **Ya no fresados** |
+| **anillos** | corte | láser o agua, pletina de 14, con bolsillo trasero y las cuatro roscas M4 por cara. **Ya no fresados** |
 | **trasera** | corte láser de PMMA | como hoy |
 | **tabla** | el carpintero | como hoy |
 | rieles, marco de ventana, tapa del valle | como hoy | |
@@ -224,43 +220,44 @@ Hace unas horas se preguntó qué era práctico para un luthier, y la respuesta 
 
 ### 9.1 Las piezas para imprimir
 
-Samuel, la misma tarde: *«queremos tener las piezas listas para mandarlas a imprimir en 3D»*. `case/renders/imprimir_piel.py` las saca de `piel_organica.scad` y las deja en `case/print/piel/`, en tres pasos que son los que un servicio mira:
+Samuel: *«queremos tener las piezas listas para mandarlas a imprimir en 3D»*. `case/renders/imprimir_piel.py` las levanta en Blender y las deja en `case/print/piel/`:
 
-1. **El acabado de la referencia.** El extruido de OpenSCAD tiene todas las aristas a 90°; el despiece tiene los nervios como tubos blandos y el marco redondeado. Un **remallado por vóxeles** (0,7 mm) seguido de un **suavizado** convierte cada nervio de sección rectangular en sección casi redonda y funde las uniones. Es lo que hace que lea a hueso y no a recorte de tabla. Adelgaza un poco el nervio: se mide y se imprime.
-2. **Malla cerrada**: cero aristas no-manifold en las tres piezas. **Tamaño** contra la bandeja MJF (380 × 284 × 380, catálogo). **Volumen** → gramos en PA12.
-3. Tres STL: **el cachete** (una pieza, se imprime dos veces: el patrón se ve espejado de un lado al otro, como en el despiece) y **la cubierta en dos mitades**.
+1. **La rama**: cada fibra del JSON es un tubo (curva con bisel y radio por punto); el marco es la almohada barrida por su eje con los cuatro pasantes restados (solver *manifold*: el *exact* devolvía un disco con esta barrida); todo se **funde** con un remallado por vóxeles de 0,6 y se suaviza. Y la mano izquierda es la pieza reflejada.
+2. **El tronco**: la lámina de OpenSCAD, remallada fina, con las tres capas de corteza sobre la cara exterior, remallada a 0,8 y suavizada.
+3. **Comprobado como lo mira un servicio**: cero aristas no-manifold, tamaño contra dos bandejas, volumen → gramos en PA12 (1,01 g/cm³).
 
-| pieza | mm | g en PA12 | cerrada | cabe |
+| pieza | mm | g en PA12 | cerrada | cabe en |
 |---|---|---|---|---|
-| `cachete.stl` (×2) | 332 × 262 × 6 | ~195 | sí | sí |
-| `banda_A.stl` | 332 × 262 × 296 | ~296 | sí | sí |
-| `banda_B.stl` | 332 × 262 × 296 | ~297 | sí | sí |
+| `cachete_der.stl` | 331 × 268 × 17 | ~322 | sí | MJF 5200, SLS P 770 |
+| `cachete_izq.stl` (espejo) | 331 × 268 × 17 | ~322 | sí | MJF 5200, SLS P 770 |
+| `cubierta.stl` | 590 × 341 × 268 | ~876 | sí | **solo SLS P 770** (D-P6) |
 
-**Lo que llevan y lo que no.** El cachete lleva **siete pasantes de Ø4,5 para M4** a 9 mm del canto, sobre la cara vista del anillo y dentro del marco macizo: dos abajo, uno en cada cara inclinada, uno en el techo, dos atrás — como los «orificios de montaje» del despiece. **El anillo necesita las siete roscas M4 en su cara exterior**: enmienda a `sam17_case.scad` cuando esto se firme. La cubierta va partida por el medio con un **solape de 12 mm a medio espesor** (A lleva la cara interior, B la exterior); la costura cae en el medio del techo y se mueve a un pliegue cuando la cubierta tenga su forma drapeada. **No llevan todavía**: los «puntos de enganche» cubierta-cachete del despiece (bossas con rosca en la cara interior del cachete), la forma drapeada de la cubierta, ni tolerancias de ajuste en el solape. Los tres son de la siguiente pasada, con los cachetes en la mano.
+**No llevan todavía**: los puntos de enganche cubierta–cachete, el cuello de la cubierta, ni tolerancias de ajuste marco–cubierta. Los tres son de la siguiente pasada, con los cachetes en la mano (HUECO 1).
 
-Los STL **no se versionan hasta la firma** (pesan ~10 MB cada uno y cambian con cada pasada de la celosía): los regenera el guion en segundos, y cuando D-P1 se firme el juego que se manda entra con su commit, como los DXF del láser.
+Los STL **no se versionan hasta la firma** (pesan 8–15 MB cada uno y cambian con cada pasada de la rama): los regenera el guion en unos minutos, y cuando D-P1 se firme el juego que se manda entra con su commit, como los DXF del láser.
 
 ---
 
 ## 10. Los renders
 
-`case/renders/render_piel.py` reutiliza la escena de `render.py` entera y hace tres vistas: las dos de siempre y una **casi de lado** (`sam17-piel-lado.png`), que es la única desde la que se juzga la celosía.
+`case/renders/render_piel.py` reutiliza la escena de `render.py` entera y hace cuatro vistas: las dos de siempre, una **casi de lado** (`sam17-piel-lado.png`) y una **de lado puro** (`sam17-piel-cachete.png`), en la que el cachete llena el cuadro y se juzga la rama. Importa **la piel tal como se imprime** (`case/print/piel/`), no un extruido: lo que se ve es lo que sale de la máquina. `PIEL_MOTOR=eevee` para iterar en un minuto; `PIEL_BLEND=1` guarda `build/sam17-piel.blend` con cada pieza nombrada para girarla en Blender.
 
-Lo que enseñan: la piel blanca sobre el hueso, la celosía con el anillo asomando detrás en la orilla y el interior en el centro, los paneles de aluminio de las tres filas 7,5 dentro de la piel, la trasera en ámbar en su ventana, la tabla asomando 4 mm.
+Lo que enseñan: la cubierta blanca con su corteza sobre el hueso, la rama saliendo de la nariz con el anillo asomando detrás en la orilla y el interior en el centro, los paneles oscuros de las tres filas 7,5 dentro de la piel, la trasera en ámbar en su ventana, la tabla asomando.
 
-Lo que **no** enseñan, a propósito: la franja de conectores (§5, no modelada), la fuente (fuera), la sujeción de la piel al hueso (HUECO 1), y ningún control en los paneles — los paneles son placas lisas, como en `render.py`.
+Lo que **no** enseñan, a propósito: la franja de conectores (§5, no modelada), la fuente (fuera), los puntos de enganche (HUECO 1), y ningún control en los paneles — los paneles son placas lisas, como en `render.py`.
 
 ---
 
 ## 11. HUECOS
 
-1. **Cómo se cuelga la piel del hueso.** No dibujado (§6, §8).
-2. **La rigidez de la celosía.** Ramas de 2,6 a 7 mm en nylon de 6, huecos de 15 a 60 mm, puntas soldadas: sin calcular. Es lo que fija `W_PUNTA`, `W_MAX` y `BORDE` de verdad, y hoy son números de mirar. Y una rama sin soldar (queda una de 90) es un voladizo: o se suelda a mano o se poda.
-3. **El `C_D` de un hueco entre ramas** en nylon de 6 mm: sin medir, como todo el `C_D`. Los huecos son alargados e irregulares, no ranuras.
-4. **El polvo.** Dos mejillas abiertas al 45 % dejan entrar más que 46 ranuras. Ya se aceptó para la trasera; aquí es más, y se dice.
+1. **Los puntos de enganche y el cuello.** Cómo la cubierta se centra en los cachetes y cómo el marco asienta en su canto: no dibujado (§8).
+2. **La rigidez de la rama.** Tubos de 3,6 a 12 mm en nylon, lentes de 15 a 60 mm, un marco de 28 × 11: sin calcular. Es lo que fija `NERVIO_PUNTA`, `NERVIO_NUDO` y el marco de verdad, y hoy son números de mirar. Y un cachete de 322 g colgado de cuatro M4 en un anillo de pletina: sin calcular el arranque.
+3. **El `C_D` de un hueco entre tubos redondos** de nylon: sin medir, como todo el `C_D`. Los huecos son lentes, no ranuras.
+4. **El polvo.** Dos cachetes abiertos al 24 % dejan entrar más que 46 ranuras. Ya se aceptó para la trasera; aquí es más, y se dice.
 5. **El camino del aire por dentro**: el modelo es una chimenea y esto son dos. Orden de magnitud.
-6. **La temperatura de la piel**: nylon a 45 + 17 = 62 °C como estructura secundaria (A). El PA12 de MJF tiene el HDT muy por encima de eso en la hoja de HP, pero **la cifra no está citada aquí a propósito**: va con página cuando la hoja esté en `docs/reference/datasheets/`, no de memoria. Y un HDT no es fluencia: lo que hay que mirar es el creep a 62 °C sostenidos con la piel colgada del hueso, que es carga baja y continua.
+6. **La temperatura de la piel**: nylon a 45 + 20 = 65 °C como estructura secundaria (A). El PA12 de SLS/MJF tiene el HDT muy por encima de eso en las hojas, pero **la cifra no está citada aquí a propósito**: va con página cuando la hoja esté en `docs/reference/datasheets/`, no de memoria. Y un HDT no es fluencia: lo que hay que mirar es el creep a 65 °C sostenidos con la piel colgada del hueso, que es carga baja y continua.
 7. **La franja de conectores** de la trasera: sin modelar; enmienda al papel del 29-08.
+8. **El peso de la corteza.** 876 g de cubierta salen de una lámina de 6 con hasta +7 de pliegue; si la corteza se hace más honda, la cubierta engorda. Es una cuenta del guion, no una cota firmada.
 
 ---
 
@@ -268,10 +265,12 @@ Lo que **no** enseñan, a propósito: la franja de conectores (§5, no modelada)
 
 | | decisión | estado |
 |---|---|---|
-| **D-P1** | **la piel sustituye a techo, nariz, talón y las dos mejillas** (cinco pieles a una); la trasera se queda | pendiente |
+| **D-P1** | **la piel sustituye a techo, nariz, talón y las dos mejillas** (cinco pieles a un árbol); la trasera se queda | pendiente |
 | **D-P2** | material: **A**, piel impresa sobre el hueso de hoy; la pieza impresa es el acabado | **firmada 05-09** — *«todo el acabado se hace con impresión 3D»* |
-| **D-P3** | la celosía abre sobre la ventana del anillo, interior a la vista (lo modelado) — o lleva el ámbar detrás como panel flotante con paso de aire arriba y abajo | pendiente |
-| **D-P4** | la fuente: afuera (v5, D-V1) o adentro con esta piel — §7.1 | pendiente |
-| **D-P5** | las 46 ranuras de la trasera: se quedan por lenguaje, o se van (valen 1,5 K) | pendiente |
+| **D-P3** | la rama abre sobre la ventana del anillo, interior a la vista (lo modelado) — o lleva el ámbar detrás como panel flotante con paso de aire arriba y abajo | pendiente |
+| **D-P4** | la fuente: afuera (v5, D-V1) o adentro con esta piel — §7.1: **adentro no pasa el techo con esta rama** | pendiente |
+| **D-P5** | las 46 ranuras de la trasera: se quedan por lenguaje, o se van (valen 2,7 K) | pendiente |
+| **D-P6** | la cubierta de una pieza: **qué máquina** (SLS P 770, Mammoth SLA) — o partirla, y dónde | pendiente |
+| **D-P7** | cómo se pone y se quita: cubierta capturada por los cachetes, cuatro M4 moleteados por cachete (§8) — o enganches sin tornillo | pendiente |
 
-Orden: mirar los renders → junta (Serrano sobre lo no verificado; Halberg sobre el nylon a 62 °C; Elke sobre la piel, el labio y cómo se cuelga) → firma → enmiendas de §7.4 en su orden, cada una con su issue.
+Orden: mirar los renders y girar el `.blend` → afinar la rama mirando (cuántos brotes, carne, relieve; y el 8 % que le falta al pesimista) → junta (Serrano sobre lo no verificado; Halberg sobre el nylon a 65 °C; Elke sobre el marco, el labio y cómo se cuelga) → firma → enmiendas de §7.4 en su orden, cada una con su issue.
