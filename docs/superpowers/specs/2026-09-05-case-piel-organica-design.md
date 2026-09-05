@@ -1,6 +1,6 @@
 # La piel orgánica: cinco pieles a una, y las mejillas que respiran
 
-**Fecha**: 2026-09-05 · **Estado**: **propuesta — sin firmar** (D-P1 a D-P5 en §12) ·
+**Fecha**: 2026-09-05 · **Estado**: **propuesta**; **D-P2 firmada en conversación el 05-09** (*«todo el acabado se hace con impresión 3D»*), D-P1, D-P3, D-P4 y D-P5 sin firmar (§12) ·
 **Sucede a**: nada; **se apoya en** `2026-08-28-costilla-pletina` (el anillo), `2026-08-29-trasera-capturada-talon-nariz` (la trasera, que se queda), `2026-08-30-techo-macizo-chapas-empotradas` (el techo, que se va), `2026-08-31-case-tanda-b` (las tres filas, que no se tocan) y `2026-09-05-fuente-v5-ladrillo` (la fuente afuera, que este papel reabre en §7.1) ·
 **No toca**: la silueta, los ángulos, las tres filas, los Z-Rails, el marco de la ventana, los paneles rehundidos, la tabla, el ámbar ·
 **Referencia visual**: tres renders de concepto generados por Samuel el 05-09, en `docs/images/case-piel-organica/`. **Mandan sobre lenguaje, no sobre cotas** — la misma regla que el board del 16-08 y la foto del 26-08. Samuel, sobre ellos: *«lo que está en los paneles es conceptual pero se entiende que va con el diseño que estamos haciendo, lo del valle seguimos trabajándolo como veníamos [...] son módulos de la fila B»* ·
@@ -60,7 +60,9 @@ El case crece **12 mm de ancho** (6 de piel por lado: 568,62 → 580,62) y nada 
 - **La ventana de la trasera**: el campo visible de hoy (`trasera_campo()`, del labio del talón al del techo), entre los anillos. La piel hace de marco arriba y abajo, como hoy lo hacen las chapas.
 - Los paneles quedan **7,5 mm** dentro del plano de la piel (6 de piel + 1,5 de rehundido). En el concepto se leen así: paneles duros dentro de un marco blando.
 
-### 3.2 Material: la única pregunta de estructura (D-P2)
+### 3.2 Material: la única pregunta de estructura (D-P2 — firmada)
+
+> **Firmada el 05-09, en conversación:** *«eso toca decidirlo, todo el acabado se hace con impresión 3D»*. Es **A**. La piel se imprime, y **la pieza impresa es el acabado**: no hay fundición, no hay mecanizado de la piel, y lo que salga de la máquina es lo que se ve. Eso convierte el material en el siguiente parámetro —blanco de impresión (PA12 W) o teñido, resina o nylon— y hace de las dos preguntas de §8 (la costura de la banda, la sujeción al hueso) ingeniería con proceso conocido en vez de opciones. B se queda escrita abajo como lo que se descartó y por qué, no como alternativa viva.
 
 **A. La piel es piel.** Nylon impreso (MJF PA12, o resina) sobre los anillos de hoy, que se esconden. La estructura no cambia: los anillos cargan, el marco de la ventana ata los rieles, la piel se cuelga de ellos. Riesgo cero en lo que ya está calculado. Los paneles de aluminio hacen de disipador (§4.4).
 
@@ -184,7 +186,7 @@ La spec del chasis (`2026-08-15`) lleva 25 revisiones y este papel sería la 26.
 
 Hoy la trasera entra con el anillo B, las tres planchas se montan una vez con el case, y el chasis del PSU entra al final por el frente. Con la piel en tres piezas (dos mejillas y la banda) ese orden se rediseña, y no está dibujado. Las preguntas, en el orden en que muerden:
 
-1. ¿La banda es una pieza o dos mitades? Una pieza de 580 × 320 × 256 no entra en una MJF de serie (la HP 4200/5200 anda en ~380 × 284 × 380 — cifra de catálogo de memoria, sin hoja en el repo). **Dos mitades**, o resina.
+1. ¿La banda es una pieza o dos mitades? Una pieza de 580 × 320 × 256 no entra en una MJF de serie (la HP 4200/5200 anda en ~380 × 284 × 380 — cifra de catálogo de memoria, sin hoja en el repo). **Dos mitades**, o resina de gran formato. Con D-P2 firmada esto deja de ser una opción y pasa a ser **la primera cota que hay que dibujar: dónde va la costura**. Una forma orgánica puede esconderla en un pliegue —el concepto tiene varios en el techo— y ahí es donde debería ir, no en el medio de una cara lisa.
 2. ¿Por dónde se abre para llegar a la fila de abajo? Hoy por los paneles; sigue igual — la piel no los tapa.
 3. ¿La mejilla se quita sin quitar la banda? Debería: es la pieza que se rompe.
 
@@ -194,7 +196,7 @@ Hoy la trasera entra con el anillo B, las tres planchas se montan una vez con el
 
 | pieza | quién | proceso |
 |---|---|---|
-| **la piel** (dos mejillas, banda) | servicio de impresión | MJF PA12 (natural/teñido; el blanco del concepto pide PA12 W o resina y pintura) — o fundición (B) |
+| **la piel** (dos mejillas, banda) | servicio de impresión (**D-P2, firmada**) | MJF PA12 W o resina blanca: la pieza impresa **es** el acabado, sin pintura ni fundición |
 | **paneles de aluminio** | taller de mecanizado | como siempre se ha querido: tolerancia y canto |
 | **anillos** | corte | láser o agua, pletina de 14, con bolsillo trasero y roscas. **Ya no fresados** |
 | **trasera** | corte láser de PMMA | como hoy |
@@ -232,7 +234,7 @@ Lo que **no** enseñan, a propósito: la franja de conectores (§5, no modelada)
 | | decisión | estado |
 |---|---|---|
 | **D-P1** | **la piel sustituye a techo, nariz, talón y las dos mejillas** (cinco pieles a una); la trasera se queda | pendiente |
-| **D-P2** | material: **A**, piel impresa sobre el hueso de hoy (recomendada) — o B, fundida y portante | pendiente |
+| **D-P2** | material: **A**, piel impresa sobre el hueso de hoy; la pieza impresa es el acabado | **firmada 05-09** — *«todo el acabado se hace con impresión 3D»* |
 | **D-P3** | la celosía abre sobre la ventana del anillo, interior a la vista (lo modelado) — o lleva el ámbar detrás como panel flotante con paso de aire arriba y abajo | pendiente |
 | **D-P4** | la fuente: afuera (v5, D-V1) o adentro con esta piel — §7.1 | pendiente |
 | **D-P5** | las 46 ranuras de la trasera: se quedan por lenguaje, o se van (valen 0,3 K) | pendiente |
