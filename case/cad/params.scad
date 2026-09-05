@@ -1658,14 +1658,22 @@ valle_margen    = 6;   // historico; la banda del valle ya no se perfora
 //             del liston y el choke otros 0.95 (ESTIMADO). Lo destapo
 //             v4/fusible_budget.py, que asevera la cifra de la NTC contra
 //             la constante de v4/calor_budget.py
-//   120.30 W  la fila de invitados a placa (95.6) y el digital (24.7)
+//   110.08 W  la fila de invitados a placa (95.6) y el digital (14.475)
 //
 // El liston de la PSU3 (D-F1) puso el numero y D-F3 = A --ventilar por
 // conveccion natural, sin ventilador, firmada el 03-09-- dice que hay que
 // dejarlo salir. Esta geometria evacua 12.6 W al techo de 15 K, asi que
 // guarda_aire() ya NO asevera ese techo: publica el deficit como HUECO con
 // el area que hace falta. La obra que lo cierra es del papel del case (#289).
-potencia_disipada = 151.55; // W, TODO el cajon: 31.25 fuente + 120.3 modulos
+//
+// BAJA DE 151.55 A 139.31 EL 2026-09-05, Y NO PARA QUE UNA PUERTA PASE. Los
+// 151.55 llevaban dentro 12.24 W de una pieza retirada: el digital se cobraba
+// 24.7 W = 4.935 A x 5 V, y esos 4.935 son 2.895 de cargas duras MAS 2.04 de
+// la cadena de LED que D1 retiro entera el 03-09 (instrumento-entero l.106).
+// La enmienda E16 de aquel papel lo mandaba y nadie la aplico. Los otros 2.02
+// son PS6, que sigue al digital y arrastraba la misma cifra. Se arreglo en el
+// origen --v4/calor_budget.py-- que es lo que esta misma guarda pide.
+potencia_disipada = 139.31; // W, TODO el cajon: 29.23 fuente + 110.08 modulos
 // Techo de salto sobre ambiente. 15 K era el criterio de siempre para caja de
 // electronica lineal con electroliticos dentro: a partir de ahi la vida del
 // condensador se parte por dos cada 10 K y deja de ser un detalle.

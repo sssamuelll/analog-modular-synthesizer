@@ -181,21 +181,52 @@ CURVA = {"rack+12": "IRM-45",
 # misma caja, asi que el calor es la potencia entregada, no una perdida.
 V_RIEL = {"rack+12": 12.0, "rack-12": 12.0, "rack+5": 5.0}
 # El digital NO entra por capacidad sino por CARGA: el modulo 2 pide lo que
-# pide y da igual que PS6 pueda dar 8 A. Su peor caso son los 24,7 W del papel
-# sec.6, que son los 4,935 A de la fila "Max TJ = 125 C, 4 N657, host a tope"
-# de sec.4.4 -- o sea la salida de power_budget.py. Es una CONSTANTE, y por lo
-# tanto conservadora: se cobra ese calor aunque el riel no pueda entregarlo.
-CAJON_DIGITAL_W = 24.7
-# DERIVADO, no transcrito (el papel publica 120,3 = 95,6 + 24,7).
+# pide y da igual que PS6 pueda dar 8 A. Es una CONSTANTE, y por lo tanto
+# conservadora: se cobra ese calor aunque el riel no pueda entregarlo.
+#
+# ERA 24,7 W HASTA EL 2026-09-05, Y ESO ERA CALOR DE UNA PIEZA QUE YA NO EXISTE.
+# Los 24,7 son 4,935 A x 5 V, y esa fila de sec.4.4 se lee en dos sumandos:
+#
+#   | Max TJ = 125 C, 4 N657, host a tope | 2,895 A | 2,04 A | 4,935 A |
+#                                            duras    cadena
+#
+# La cadena de LED se retiro ENTERA el 2026-09-03 --instrumento-entero D1, que
+# nombra LED_A_CASO_REAL = 2.04 entre lo que se va-- y la enmienda E16 de ese
+# mismo papel manda reescribir la fuente. NO SE APLICO: sec.4.4 sigue con la
+# columna "Cadena" y esta constante seguia cobrando sus 2,04 A. Son 10,22 W de
+# calor de unos LED que no se van a montar, y ademas arrastraban la celda de
+# PS6 de mas abajo, que sigue al digital. Se aplica aqui, en el origen, que es
+# lo que pide guarda_potencia_vigente() del case: "si el que esta mal es el de
+# la fuente, arreglalo alli y no aqui".
+#
+# No se deriva importando power_budget.py: aquel importa a este (el techo del
+# +5 V sale del punto fijo termico) y seria un ciclo. Lo cruza su test.
+CAJON_DIGITAL_A = 2.895      # power_budget.py, "Max TJ=125 C 4 N657: duras"
+CAJON_DIGITAL_W = CAJON_DIGITAL_A * 5.0
+# DERIVADO, no transcrito (el papel publicaba 120,3 = 95,6 + 24,7; con el
+# digital ya sin la cadena retirada son 95,6 + 14,475).
 P_CAJON_MAX = sum(PLACA_A[r] * V_RIEL[r] for r in V_RIEL) + CAJON_DIGITAL_W
 
 # Perdidas DENTRO del recinto, celda por celda del maximo de sec.6. Las tres
 # de PS3/PS4/PS5 escalan con lo que entrega su riel; el resto no depende del
-# rack: PS1+PS2 alimentan la cascada ultra (3,71), PS6 sigue al digital que
-# acabamos de declarar constante (4,88), y U1/U2/LT x4/U3 son la cascada.
+# rack: PS1+PS2 alimentan la cascada ultra (3,71), PS6 sigue al digital, y
+# U1/U2/LT x4/U3 son la cascada.
 PERDIDA_RECINTO_W = {"rack+12": 6.51,     # PS3, 45,6 x (1/0,875 - 1)
                      "rack-12": 4.29,     # PS4, 30 x 0,143
                      "rack+5": 3.95}      # PS5, 20 x (1/0,835 - 1), D-F7
+# HUECO, y de los que deciden. Estas tres celdas son la perdida a PLENA CARGA:
+# el rendimiento de placa de la IRM-45 aplicado a lo que el riel entrega a
+# PLACA_A. p_recinto_w() las prorratea por PLACA_A, asi que a carga parcial
+# devuelve "la misma fraccion de la perdida de plena carga", y eso NO es como
+# se comporta un conmutado: a 500 mA/riel el modelo cobra 14,75 W donde el
+# rendimiento de placa daria 2,21. La hoja de la IRM-45 (Rev 2025-11-21,
+# leida el 2026-09-05) publica UN solo rendimiento por tension --83,5 % el de
+# 5 V, 87,5 % el de 12-- y no trae ni curva a carga parcial ni consumo en
+# vacio. Asi que la perdida real del recinto a carga parcial esta ACOTADA
+# entre esos dos extremos y no se puede fijar: son 12,5 W de horquilla, mas
+# que cualquier geometria de venteo discutida hasta hoy. Se cierra pidiendole
+# la curva a Mean Well o midiendola. Mientras tanto manda el extremo
+# pesimista, que es el que ya esta programado. Va en HUECOS, mas abajo.
 # LA FRANJA DE RED TAMBIEN DISIPA, Y LA TABLA DEL PAPEL sec.6 NO LA LLEVA.
 # Se descubrio el 2026-09-04, escribiendo fusible_budget.py: la tabla lista
 # PS1..PS6, U1/U2, los LT y U3, y se olvida de lo que hay ANTES de los modulos.
@@ -216,10 +247,18 @@ CHOKE_RED_W = 0.95
 #   El MOV no entra: en marcha normal conduce microamperios. Solo disipa
 #   durante una sobretension, que es un transitorio y no un punto de operacion.
 MOV_RED_W = 0.0
-_CONSTANTE_RECINTO_W = (3.71 + 4.88 + 1.24 + 1.37 + 1.30 + 0.30
-                        + NTC_ARRANQUE_W + CHOKE_RED_W + MOV_RED_W)
-# DERIVADO: el papel publica 27,5 W (28,9 antes de D-F7, con la IRM-20-5 de
-# 5,32 W en PS5 donde ahora hay una IRM-45-5 de 3,95).
+#   PS6 (IRM-45-5) SIGUE AL DIGITAL: su perdida es lo que entrega el riel por
+#   (1/rendimiento - 1), con el 83,5 % de placa de la IRM-45-5. El papel sec.6
+#   la publica como "24,7 x 0,198 = 4,88 W", y por eso llevaba la cadena de LED
+#   retirada dentro. Se DERIVA de CAJON_DIGITAL_W para que no vuelva a quedarse
+#   pegada cuando aquel cambie: 14,475 x 0,1976 = 2,86 W.
+RENDIMIENTO_PS6 = 0.835      # IRM-45-5, hoja Rev 2025-11-21, a plena carga
+PS6_SIGUE_AL_DIGITAL_W = CAJON_DIGITAL_W * (1.0 / RENDIMIENTO_PS6 - 1.0)
+_CONSTANTE_RECINTO_W = (3.71 + PS6_SIGUE_AL_DIGITAL_W + 1.24 + 1.37 + 1.30
+                        + 0.30 + NTC_ARRANQUE_W + CHOKE_RED_W + MOV_RED_W)
+# DERIVADO: el papel publicaba 27,5 W (28,9 antes de D-F7, con la IRM-20-5 de
+# 5,32 W en PS5 donde ahora hay una IRM-45-5 de 3,95). Con PS6 ya sin la
+# cadena retirada son 2,02 W menos.
 P_RECINTO_MAX = _CONSTANTE_RECINTO_W + sum(PERDIDA_RECINTO_W.values())
 # Area efectiva de venteo QUE EL CASE YA TIENE, sin las aberturas de D-F3.
 # Es una copia de la salida de case/clearance_budget.py, y por lo tanto se
@@ -250,7 +289,18 @@ ESTIMADOS = (
     "P_BASE area: hipotesis para #289; el papel del case fija la real",
     f"CHOKE_RED_W={CHOKE_RED_W}: DCR de catalogo de un choke de >=4 A, sin hoja",
 )
-HUECOS = ()
+HUECOS = (
+    "PERDIDA_RECINTO_W es la perdida a PLENA CARGA prorrateada por PLACA_A. La "
+    "hoja de la IRM-45 no publica curva a carga parcial ni consumo en vacio, "
+    "asi que a 500 mA/riel la perdida real esta entre 2,21 W (rendimiento de "
+    "placa sobre lo entregado) y los 14,75 que este modelo cobra. Manda el "
+    "pesimista. Se cierra con la curva de Mean Well o midiendola",
+    "LA PANTALLA DE 7\" NO ESTA EN NINGUNA CELDA. pantalla-motor l.250-256 manda "
+    "su fila al presupuesto de la fuente \"cuando la pieza tenga nombre\", y la "
+    "pieza sigue sin nombre. Son 450-550 mA (600 el backpack de Adafruit) de "
+    "+12 V con regulador local, DENTRO de la caja: entre 3,1 W si el regulador "
+    "es un buck al 90 % y 6,6 si es lineal. Falta por defecto, no por sobra",
+)
 
 
 def _k(area_mm2: float, altura_m: float, cd: float = CD_TIRO) -> float:
