@@ -190,6 +190,16 @@ Con la trasera agrandada a 20 000 mm², **sin tocar el suelo**:
 de 20 K incluso con el `C_D` pesimista, y el suelo no se toca.** Esa era la
 faena difícil: ranurar 18 mm de madera con puentes de 14,4.
 
+> **Los 20 000 mm² de trasera caben, pero solo lo he comprobado en el plano.**
+> El campo útil de la trasera va de y = 19,0 a y = 230,2, y la rejilla de hoy
+> ocupa 41,8 mm de esos 211: 46 ranuras de 41,8 × 3,75, 7 065 mm². Llegar a
+> 20 000 pide ranuras de ~118 mm de alto, que terminarían en y ≈ 143 y por
+> tanto **por debajo del y = 157** donde `guarda_trasera_flexion()` ya declara
+> su HUECO. Geométricamente entra. **Lo que NO he verificado es qué le hace a
+> la rigidez del PMMA quitarle esa área**, y esa comprobación es del papel del
+> case, no de éste. Hasta que se haga, la cifra de 20 000 es una hipótesis de
+> trabajo y no un encargo.
+
 Lo que la v5 **no** arregla: la rendija de 25-30 mm sigue arrastrando la franja
 del anillo trasero de 23 a ~44 mm, que es el precio estético que Elke identificó
 y que choca con «el marco es perfil, no banda». Eso sigue siendo una decisión
