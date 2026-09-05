@@ -2372,6 +2372,26 @@ def _potencia_del_cajon() -> float:
     return p_cajon_w(PLACA_A) + p_recinto_w(PLACA_A)
 
 
+def _reparto_del_cajon() -> tuple[float, float]:
+    """Los dos sumandos del anterior, para poder NOMBRARLOS en el HUECO.
+
+    Hasta el 2026-09-05 el mensaje del HUECO decia "31,25 del recinto + 120,3
+    de la fila de invitados y el digital" con esos dos numeros escritos a mano
+    dentro de la f-string, al lado de un total que si venia de la fuente. Al
+    corregir el digital el total bajo a 139.31 y el desglose siguio diciendo
+    151,55: la etiqueta se quedo pegada mientras la cifra se movia, que es la
+    forma mas facil de publicarle al #289 un encargo que no cuadra consigo
+    mismo. Ahora los tres salen del mismo sitio."""
+    import os
+    import sys
+    v4 = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                      "..", "hardware", "01-power-supply", "v4")
+    if v4 not in sys.path:
+        sys.path.insert(0, v4)
+    from calor_budget import PLACA_A, p_cajon_w, p_recinto_w
+    return p_recinto_w(PLACA_A), p_cajon_w(PLACA_A)
+
+
 def _tiro(p: dict[str, float], cd: float = CD_TIRO) -> dict[str, float]:
     """La chimenea del case: areas, desnivel, salto termico, y el area efectiva
     que haria falta para quedarse en el techo.
@@ -2471,9 +2491,11 @@ def guarda_aire(p: dict[str, float]) -> None:
     --el techo no se toco ese dia; subio a 20 el 04-09 y por la razon contraria,
     para dejar de contradecir el DELTA_T = 20.0 con el que tuning_budget.py ya
     calculaba la deriva de afinacion-- sino porque la carga dejo de ser la del PSU
-    solo: son 151.55 W (31,25 del recinto de la fuente + 120,3 de la fila de
+    solo: son 139.31 W (29,23 del recinto de la fuente + 110,08 de la fila de
     invitados y el digital, papel de la fuente v4 sec.6), y esta geometria
-    evacua 12.6. Un rojo permanente sobre un diseno que nadie ha rehecho
+    evacua 12.6. Eran 151.55 hasta el 2026-09-05: 12,24 de ellos eran calor de
+    la cadena de LED que D1 retiro el 03-09 y que el digital seguia cobrando.
+    Un rojo permanente sobre un diseno que nadie ha rehecho
     todavia no verifica nada: ensena a empujar con --no-verify, que es el
     habito que estas puertas existen para no crear. Asi que el deficit se
     PUBLICA como HUECO, con el area que hace falta y con quien lo cierra --
@@ -2521,12 +2543,13 @@ def guarda_aire(p: dict[str, float]) -> None:
           f"del encargo, no el encargo")
 
     if t["dt"] > p["salto_termico_max"] + 1e-9:
+        w_recinto, w_cajon = _reparto_del_cajon()
         _HUECOS.append(
             f"esta geometria evacua {t['p_evacuada']:.1f} W al techo de "
             f"{p['salto_termico_max']:.0f} K y el instrumento le mete "
-            f"{p['potencia_disipada']:.2f} (31,25 del recinto de la fuente + "
-            f"120,3 de la fila de invitados y el digital, papel de la fuente "
-            f"v4 sec.6): sube {t['dt']:.0f} K. Hacen falta "
+            f"{p['potencia_disipada']:.2f} ({w_recinto:.2f} del recinto de la "
+            f"fuente + {w_cajon:.2f} de la fila de invitados y el digital, "
+            f"papel de la fuente v4 sec.6): sube {t['dt']:.0f} K. Hacen falta "
             f"{t['a_ef_techo']:.0f} mm2 de venteo efectivo, "
             f"{t['a_ef_techo'] - t['a_ef']:.0f} MAS que los {t['a_ef']:.0f} de "
             f"hoy ({t['a_ef_techo_pared'] - t['a_ef']:.0f} si se cuenta la "
