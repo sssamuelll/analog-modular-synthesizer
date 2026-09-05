@@ -11,7 +11,7 @@
 // esas pieles por UNA, y deja el hueso y la trasera donde estan.
 //
 // Que es cada parte:
-//   mejillas   las dos, con la celosia de celosia_celdas.scad (celosia.py)
+//   mejillas   las dos, con la celosia de celosia_ramas.scad (celosia.py)
 //   banda      la piel que envuelve el canto: nariz, techo, chaflanes y
 //              talon, con las ventanas de las tres filas y de la trasera
 //   aluminio   lo que sigue igual: rieles, paneles, marcos de ventana, los
@@ -29,7 +29,7 @@
 // CGAL; unir esa malla con la banda tarda minutos y no compra nada, Blender
 // las carga por separado con el mismo material.
 include <params.scad>
-include <celosia_celdas.scad>
+include <celosia_ramas.scad>
 use <sam17_case.scad>
 
 PART = "mejillas";
@@ -51,16 +51,29 @@ module perfil_ext() offset(r = piel_e) perfil_lateral();
 piel_aire = 0.3;
 module sobre_suelo_2d() intersection() { children(); translate([-100, piel_aire]) square([700, 500]); }
 
-// cada celda: encogida nervio/2, esquinas a radio celosia_redondeo
-module celda_2d(c)
-    offset(r = celosia_redondeo)
-        offset(delta = -(celosia_nervio/2 + celosia_redondeo))
-            polygon(c);
+// LA CELOSIA SON RAMAS, no celdas (desde el segundo render del 05-09: Samuel
+// pidio "esa forma organica que parece modernista y parecen ramas de arbol").
+// celosia.py las hace crecer desde el marco y las escribe como segmentos
+// [x0, y0, x1, y1, w]; aqui cada uno es una capsula de grosor w, y el cierre
+// morfologico (dilatar r, erosionar r) suelda las horquillas y redondea las
+// uniones, que es lo que hace que lean a rama y no a alambre. Lo abierto es
+// el hueco del marco MENOS las ramas.
+module rama_2d(s) {
+    $fn = 24;
+    hull() {
+        translate([s[0], s[1]]) circle(d = s[4]);
+        translate([s[2], s[3]]) circle(d = s[4]);
+    }
+}
+
+module ramas_2d()
+    offset(r = -celosia_cierre) offset(r = celosia_cierre)
+        union() for (s = celosia_ramas) rama_2d(s);
 
 module celosia_2d()
-    intersection() {
+    difference() {
         offset(delta = -celosia_borde) perfil_lateral();
-        union() for (c = celosia_celdas) celda_2d(c);
+        ramas_2d();
     }
 
 module mejilla_2d() sobre_suelo_2d() difference() { perfil_ext(); celosia_2d(); }
@@ -124,6 +137,6 @@ else if (PART == "madera")   madera();
 else if (PART == "todo")     { mejillas(); banda(); aluminio(); paneles(); acrilico(); madera(); }
 else assert(false, str("PART desconocida: ", PART));
 
-echo(str("PIEL: espesor ", piel_e, ", celosia ", celosia_n, " celdas, nervio ",
-         celosia_nervio, ", borde ", celosia_borde, ", abierto ",
-         celosia_abierto_mm2, " mm2 por mejilla (", 100*celosia_abierto, " % del perfil)"));
+echo(str("PIEL: espesor ", piel_e, ", celosia de ", celosia_n, " ramas, borde ",
+         celosia_borde, ", abierto ", celosia_abierto_mm2, " mm2 por mejilla (",
+         100*celosia_abierto, " % del perfil), respira ", celosia_abierto_ventana_mm2));

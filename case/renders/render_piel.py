@@ -38,7 +38,7 @@ PARTES = {"mejillas": "piel", "banda": "piel", "aluminio": "aluminio",
 def exportar() -> None:
     os.makedirs(DIR, exist_ok=True)
     fuentes = max(os.path.getmtime(os.path.join(CAD, f)) for f in
-                  ("piel_organica.scad", "celosia_celdas.scad",
+                  ("piel_organica.scad", "celosia_ramas.scad",
                    "sam17_case.scad", "params.scad"))
     for parte in PARTES:
         stl = os.path.join(DIR, parte + ".stl")
@@ -95,9 +95,15 @@ ns["esquinas"] = esquinas
 ns["centro"] = (minv + maxv) / 2
 ns["radio"] = (maxv - minv).length / 2
 
+# PIEL_VISTAS=lado para iterar la celosia con una sola vista (~4 min) en vez
+# de tres; sin la variable salen las tres.
+VISTAS = {"frente": ("sam17-piel.png", ns["AZIMUT_FRENTE"]),
+          "trasera": ("sam17-piel-trasera.png", ns["AZIMUT_TRASERA"]),
+          # casi de lado y un poco por encima: la celosia entera y el canto
+          "lado": ("sam17-piel-lado.png", math.radians(78))}
+pedidas = os.environ.get("PIEL_VISTAS", "frente,trasera,lado").split(",")
 ok = True
-ok &= ns["renderizar_vista"]("sam17-piel.png", ns["AZIMUT_FRENTE"])
-ok &= ns["renderizar_vista"]("sam17-piel-trasera.png", ns["AZIMUT_TRASERA"])
-# casi de lado y un poco por encima: la celosia entera y el canto de la piel
-ok &= ns["renderizar_vista"]("sam17-piel-lado.png", math.radians(78))
+for v in pedidas:
+    nombre, azimut = VISTAS[v.strip()]
+    ok &= ns["renderizar_vista"](nombre, azimut)
 sys.exit(0 if ok else 1)
