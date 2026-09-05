@@ -95,6 +95,32 @@ ns["esquinas"] = esquinas
 ns["centro"] = (minv + maxv) / 2
 ns["radio"] = (maxv - minv).length / 2
 
+# PIEL_BLEND=1: en vez de renderizar, guarda la escena en build/sam17-piel.blend
+# con cada pieza como objeto con su nombre --mejillas, banda, aluminio,
+# paneles, acrilico, madera-- para abrirla en Blender y girarla. Es lo que
+# Samuel pidio el 05-09 ("necesito ver el render para decidir"): un PNG es
+# una vista, el .blend son todas. Mismo mecanismo que piezas.py; build/ esta
+# ignorado y esto no es un artefacto del repo.
+if os.environ.get("PIEL_BLEND"):
+    ns["poner_luces"](*ns["construir_vista"](ns["AZIMUT_FRENTE"]))
+    for pantalla in bpy.data.screens:
+        for area in pantalla.areas:
+            if area.type != "VIEW_3D":
+                continue
+            for space in area.spaces:
+                if space.type != "VIEW_3D":
+                    continue
+                space.shading.type = "MATERIAL"
+                space.shading.use_scene_lights = True
+                space.shading.use_scene_world = True
+                space.clip_start = 1.0
+                space.clip_end = 20000.0
+                space.region_3d.view_perspective = "CAMERA"
+    salida = os.path.join(AQUI, "build", "sam17-piel.blend")
+    bpy.ops.wm.save_as_mainfile(filepath=salida)
+    print("blend escrito:", salida)
+    sys.exit(0)
+
 # PIEL_VISTAS=lado para iterar la celosia con una sola vista (~4 min) en vez
 # de tres; sin la variable salen las tres.
 VISTAS = {"frente": ("sam17-piel.png", ns["AZIMUT_FRENTE"]),
