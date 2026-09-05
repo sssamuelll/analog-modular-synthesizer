@@ -82,7 +82,7 @@ las dos potencias maximas se DERIVAN en vez de transcribirse. Consecuencias:
     la frontera de 85 C con la temperatura de otro punto. Una biseccion
     converge igual de bien sobre una discontinuidad que sobre una raiz, y
     derating() vale CERO por encima de 85 C. Con el calor bien cobrado el
-    punto fijo aterriza arriba del acantilado --86,7 C, rack a CERO-- y eso
+    punto fijo aterriza arriba del acantilado --87,7 C, rack a CERO-- y eso
     si es consistente: sin venteo nuevo no opera ningun modulo del rack.
     _fixed_point() lo COMPRUEBA ahora, en amperios y no en kelvin, y donde no
     hay punto fijo devuelve CERO en vez de reventar: ver ahi por que un
@@ -203,9 +203,45 @@ V_RIEL = {"rack+12": 12.0, "rack-12": 12.0, "rack+5": 5.0}
 # +5 V sale del punto fijo termico) y seria un ciclo. Lo cruza su test.
 CAJON_DIGITAL_A = 2.895      # power_budget.py, "Max TJ=125 C 4 N657: duras"
 CAJON_DIGITAL_W = CAJON_DIGITAL_A * 5.0
+
+# La CARGA ULTRA: el instrumento, que tambien vive en el cajon.
+#
+# FALTABA ENTERA HASTA EL 2026-09-05. El cajon sumaba los rieles de RACK y el
+# digital, y nada mas. Los +-12 V ultra que la cascada entrega a la Voz --16
+# voces, filtros, VCA, envolventes-- se disipan EN LA VOZ, dentro del cajon.
+# El recinto si contaba la perdida de FABRICARLOS (PS1+PS2 = 3,71 W y la
+# cascada U1/U2/LT x4/U3 = 4,21 W, ambas en PERDIDA_RECINTO_W de mas abajo);
+# lo ENTREGADO no lo cobraba nadie, ni aqui ni alli.
+#
+# Lo encontro el papel de la fila B (2026-09-04, sec.7.1) y quedo sin
+# aplicar, como la E16 de la cadena de LED. Es el mismo defecto por el otro
+# lado: alli se cobraba el calor de una pieza retirada, aqui no se cobraba el
+# de la unica carga que seguro existe. Una sola regla explica las dos:
+#
+#     todo lo que baja por un riel acaba en calor donde vive la carga.
+#
+# Por CARGA y no por capacidad, igual que el digital: el censo de
+# consumo_total_budget.py, no los 650 mA/riel a los que esta ruteada la placa
+# (RIEL_MA) ni los 500 utiles de su puerta. Ese censo ya es cota alta --el
+# TL074 esta puesto por el clasico y el BOM pide el TL074H, que consume
+# menos-- asi que sobra en la direccion segura.
+#
+# Se DERIVA importando el censo, no se transcribe: aqui no hay ciclo, porque
+# consumo_total_budget solo mira invitados_budget por os.path y no lo importa.
+V_ULTRA = 12.0
+VCO_DIR = os.path.join(DIR, "..", "..", "03-vco")
+if VCO_DIR not in sys.path:
+    sys.path.insert(0, VCO_DIR)
+from consumo_total_budget import RESTO, VOZ, suma  # noqa: E402
+
+_ULTRA_MAS_MA, _ULTRA_MENOS_MA = suma(VOZ + RESTO)
+CAJON_ULTRA_W = (_ULTRA_MAS_MA + _ULTRA_MENOS_MA) / 1000.0 * V_ULTRA
+
 # DERIVADO, no transcrito (el papel publicaba 120,3 = 95,6 + 24,7; con el
-# digital ya sin la cadena retirada son 95,6 + 14,475).
-P_CAJON_MAX = sum(PLACA_A[r] * V_RIEL[r] for r in V_RIEL) + CAJON_DIGITAL_W
+# digital ya sin la cadena retirada son 95,6 + 14,475, y desde el 2026-09-05
+# mas los 8,0 de la carga ultra que faltaba).
+P_CAJON_MAX = (sum(PLACA_A[r] * V_RIEL[r] for r in V_RIEL)
+               + CAJON_DIGITAL_W + CAJON_ULTRA_W)
 
 # Perdidas DENTRO del recinto, celda por celda del maximo de sec.6. Las tres
 # de PS3/PS4/PS5 escalan con lo que entrega su riel; el resto no depende del
@@ -370,11 +406,12 @@ def _sin_negativas(corrientes: Mapping[str, float]) -> None:
 
 
 def p_cajon_w(corrientes: Mapping[str, float]) -> float:
-    """Calor del cajon: cada riel del rack a SU tension, mas la carga fija del
-    digital. Con PLACA_A entera son los 120,3 W del papel sec.6."""
+    """Calor del cajon: cada riel del rack a SU tension, mas las dos cargas
+    fijas que no dependen de la fila --el digital y la Voz--. Los rieles del
+    rack los mueve quien llene la fila; el instrumento esta siempre."""
     _sin_negativas(corrientes)
     return (sum(corrientes.get(r, 0.0) * V_RIEL[r] for r in V_RIEL)
-            + CAJON_DIGITAL_W)
+            + CAJON_DIGITAL_W + CAJON_ULTRA_W)
 
 
 def p_recinto_w(corrientes: Mapping[str, float]) -> float:

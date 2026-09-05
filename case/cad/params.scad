@@ -1658,7 +1658,11 @@ valle_margen    = 6;   // historico; la banda del valle ya no se perfora
 //             del liston y el choke otros 0.95 (ESTIMADO). Lo destapo
 //             v4/fusible_budget.py, que asevera la cifra de la NTC contra
 //             la constante de v4/calor_budget.py
-//   110.08 W  la fila de invitados a placa (95.6) y el digital (14.475)
+//   118.08 W  la fila de invitados a placa (95.6), el digital (14.475) y la
+//             VOZ (8.00): los +-12 V ultra que la cascada le entrega y que
+//             ella disipa aqui dentro. Eran 110.08 hasta el 2026-09-05: la
+//             carga ultra no estaba en ninguna celda, ni en el cajon ni en
+//             el recinto. Lo encontro el papel de la fila B (04-09, sec.7.1)
 //
 // El liston de la PSU3 (D-F1) puso el numero y D-F3 = A --ventilar por
 // conveccion natural, sin ventilador, firmada el 03-09-- dice que hay que
@@ -1666,14 +1670,26 @@ valle_margen    = 6;   // historico; la banda del valle ya no se perfora
 // guarda_aire() ya NO asevera ese techo: publica el deficit como HUECO con
 // el area que hace falta. La obra que lo cierra es del papel del case (#289).
 //
-// BAJA DE 151.55 A 139.31 EL 2026-09-05, Y NO PARA QUE UNA PUERTA PASE. Los
-// 151.55 llevaban dentro 12.24 W de una pieza retirada: el digital se cobraba
-// 24.7 W = 4.935 A x 5 V, y esos 4.935 son 2.895 de cargas duras MAS 2.04 de
-// la cadena de LED que D1 retiro entera el 03-09 (instrumento-entero l.106).
-// La enmienda E16 de aquel papel lo mandaba y nadie la aplico. Los otros 2.02
-// son PS6, que sigue al digital y arrastraba la misma cifra. Se arreglo en el
-// origen --v4/calor_budget.py-- que es lo que esta misma guarda pide.
-potencia_disipada = 139.31; // W, TODO el cajon: 29.23 fuente + 110.08 modulos
+// DE 151.55 A 147.31 EL 2026-09-05, EN DOS CORRECCIONES DE SIGNO CONTRARIO, y
+// ninguna para que una puerta pase. Las dos son la misma regla mal aplicada:
+// todo lo que baja por un riel acaba en calor donde vive la carga.
+//
+//   -12.24  el digital cobraba 24.7 W = 4.935 A x 5 V, y esos 4.935 son
+//           2.895 de cargas duras MAS 2.04 de la cadena de LED que D1 retiro
+//           entera el 03-09 (instrumento-entero l.106). La enmienda E16 de
+//           aquel papel lo mandaba y nadie la aplico. Los otros 2.02 son PS6,
+//           que sigue al digital y arrastraba la misma cifra. Calor de una
+//           pieza que no se monta.
+//    +8.00  la VOZ no estaba. Los +-12 V ultra que la cascada le entrega
+//           --12 V x (340 + 327) mA, el censo de 03-vco/consumo_total_budget--
+//           se disipan en la Voz, dentro del cajon, y no los contaba ni el
+//           cajon ni el recinto. El recinto si contaba la perdida de
+//           FABRICARLOS. Lo encontro el papel de la fila B (04-09, sec.7.1) y
+//           tambien quedo sin aplicar.
+//
+// Las dos se arreglaron en el origen --v4/calor_budget.py, y la de la Voz
+// derivada del censo, no transcrita-- que es lo que esta misma guarda pide.
+potencia_disipada = 147.31; // W, TODO el cajon: 29.23 fuente + 118.08 modulos
 // Techo de salto sobre ambiente. 15 K era el criterio de siempre para caja de
 // electronica lineal con electroliticos dentro: a partir de ahi la vida del
 // condensador se parte por dos cada 10 K y deja de ser un detalle.
