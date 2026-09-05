@@ -78,41 +78,45 @@ El case crece **12 mm de ancho** (6 de piel por lado: 568,62 → 580,62) y nada 
 
 Del dibujo orgánico importan tres números —cuánto abre, cuánto nervio le queda, cuánto borde macizo la enmarca— y los tres tienen que ser **parámetros**, porque el primero lo lee el modelo térmico y los otros dos los leerá la rigidez. Un dibujo no tiene parámetros.
 
-**Son ramas, no celdas.** La primera versión (commit `2bce743`) repartía el hueco en celdas de Voronoi: parametrizable, medible, y **leía a panal**. Samuel, mirando ese render: *«la piel con esa forma orgánica que parece modernista y parecen ramas de árbol»*. Ramas nacen del marco, suben, se abren, se afinan hacia la punta y se curvan: eso no es un teselado, es un **crecimiento**, y `celosia.py` lo genera como tal — colonización de espacio (Runions et al., 2007; el algoritmo con que se simulan árboles y venas). Se siembra una nube de puntos de atracción por el hueco; desde raíces repartidas por todo el marco, cada nodo crece un paso hacia la media de los atractores que lo tienen por vecino más cercano; un atractor alcanzado se consume. Sale un árbol por raíz, y encima dos cosas, porque una celosía no es un árbol:
+**Tres versiones en un día, y las tres por mirar el render con Samuel.**
 
-- **grosor de tronco a punta** (modelo de tubería: `w_padre² = Σ w_hijos²`, con tope), para que lea a rama y no a alambre;
-- **las puntas se sueldan a la rama vecina** (anastomosis, como la venación cerrada de una hoja). Sin eso cada rama es un voladizo de 100 mm en nylon de 6; con eso la red cierra lazos y se sostiene. Y una punta que no encuentra vecina y es más corta que cuatro pasos **se poda**: lee a espina.
+1. **Celdas de Voronoi** (`2bce743`): parametrizable, medible, y **leía a panal**.
+2. **Ramas por colonización de espacio** (`d78c592`), tras *«parece modernista y parecen ramas de árbol»*: salió un árbol — ramas sueltas que se cruzan. *«No está ni cerca.»*
+3. **Fibras de un campo de flujo** — la de ahora. La referencia es el cuarto render de Samuel, el despiece: el cachete son **nervios largos que nacen del rincón de abajo-delante, se abanican hacia arriba-atrás, se parten y se vuelven a juntar dejando huecos en forma de lente**, escalonados en hiladas. Eso no es un árbol ni un teselado: es un campo de flujo, y `celosia.py` lo genera como tal:
 
-Después, un suavizado laplaciano por rama —zigzag a curva—, con raíces y puntas quietas (moverlas las retrae y deja vacío lo ya crecido; se midió). Determinista: misma semilla, mismas ramas. Sobre el perfil del case (`clearance_budget._vertices()`, la misma fórmula que `pts_perfil()`), escritas en `celosia_ramas.scad` como segmentos `[x0, y0, x1, y1, w]` que el `.scad` dibuja como cápsulas y cuyas horquillas rellena con un cierre morfológico.
+- un **campo de direcciones** sobre el perfil: abanico desde un foco por delante y por debajo del case, ondulado para que las fibras se curven, y enderezándose hacia arriba con la altura;
+- **líneas de flujo espaciadas** (Jobard & Lefer, 1997): se integra una fibra por el campo, se siembran vecinas a `SEPARACION` a cada lado, y una fibra muere cuando se acerca a otra. Donde el abanico se abre nacen fibras entre las viejas; donde se cierra, mueren;
+- **las lentes con punta** no salen de peldaños: salen de fibras vecinas que convergen y luego se separan. Se modula la dirección con una onda a lo largo del flujo por otra a través de él (período `2 × SEPARACION`): fibras contiguas giran en sentidos opuestos, se acercan hasta que una muere **soldada** en la otra, y más adelante nace otra entre las dos;
+- **ninguna punta suelta**: cada extremo que no muere en el marco se suelda a la vecina con una curva tangente al flujo; y **puentes** en S cada `LENTE` mm donde dos fibras corren paralelas mucho rato, que es lo que atiranta la celosía de través.
+
+Los números de arranque salen de la referencia, medidos a ojo sobre la imagen (está en perspectiva: son proporciones, no cotas): nervio ~1/60 del alto del cachete, separación ~1/16, lentes de 3 a 6 separaciones, marco ~1/15. Sobre 256 mm de alto: nervio ~4, separación ~15, lentes 50–90, marco ~17.
 
 | parámetro | valor | qué es |
 |---|---|---|
-| `BORDE` | 12 mm | marco macizo alrededor de la celosía, desde el perfil |
-| `DENSIDAD` | 70 mm² | hueco por atractor: cuánto pide una rama |
-| `PASO` | 5 mm | lo que crece un nodo por iteración |
-| `R_INFLUENCIA` | 55 mm | hasta dónde tira un atractor; corto ramifica, largo va recto. Crece solo (×1,5) si nadie alcanza y quedan atractores |
-| `R_CONSUMO` | 9 mm | a esa distancia el atractor se da por alcanzado |
-| `RAIZ_CADA` | 40 mm | separación de las raíces a lo largo de todo el marco |
-| `W_PUNTA` / `W_MAX` | 2,6 / 7,0 mm | grosor en la punta / tope en el tronco |
-| `R_SOLDADURA` | 18 mm | una punta a menos de esto de otra rama se suelda a ella |
-| `PODA` | 4 pasos | punta sin soldar más corta que esto se va |
-| `SUAVIZADO` / `JITTER` | 4 / 0,12 | pasadas de suavizado; ruido de dirección |
-| `CIERRE` | 2 mm | radio del cierre que rellena las horquillas (`.scad`) |
+| `MARCO` | 17 mm | marco macizo alrededor de la celosía, desde el perfil |
+| `SEPARACION` | 13 mm | entre ejes de fibras vecinas |
+| `NERVIO` | 4,2 mm | grosor de la fibra |
+| `FOCO` | (−140, −160) | de dónde sale el abanico; lejos, o abajo son rendijas y arriba huecos |
+| `ONDA_A` / `ONDA_L` | 11° / 150, 110 mm | ondulación de las fibras |
+| `GIRO_ARRIBA` | 14° | las fibras se enderezan al subir |
+| `LENTE_MOD` / `LENTE_L` | 11° / 80 mm | la modulación que hace las lentes |
+| `LENTE` | 110 mm | entre puentes |
+| `CIERRE` | 2 mm | radio del cierre que suelda uniones (`.scad`) |
 | `SEMILLA` | 17 | |
 
-Salen **489 segmentos desde 25 raíces; 90 puntas, 89 soldadas** a una vecina. Se afinó en preview 2D, no en render: el primer intento eran cinco palos aislados (atractores escasos, raíces solo abajo), el segundo dejaba huecos de 80 mm (el suavizado retraía las puntas). Cuatro iteraciones de segundos cada una, y el render de Cycles solo al final. Lo que queda por afinar mirando: un hueco de ~70 mm bajo el escalón del valle donde las ramas de abajo y las de arriba no se encuentran — `DENSIDAD` más baja o una raíz más en ese tramo lo cierran; se decide con Samuel delante, no solo.
+Salen **27 fibras, 131 soldaduras, 6 puentes**. Cuatro pasadas en preview 2D de segundos cada una (`celosia.py --preview`): la primera tenía el foco cerca y abanicaba de más; la segunda, lentes tímidas y puntas sueltas. Lo que se afina mirando, con Samuel delante: separación y nervio (la densidad del tejido), `LENTE_MOD` (cuánta punta tienen las lentes) y el marco.
 
 ### 4.2 Dos áreas, y por qué no son la misma
 
-La celosía abre desde 12 mm del perfil hacia dentro: eso es **lo que se ve**. Pero detrás de la mejilla está el anillo (20 de cara) y el marco de la ventana (hasta `marco_fondo` = 26 del perfil), y las celdas que caen sobre ese metal no respiran: enseñan aluminio. **Lo que respira es lo abierto sobre la ventana del anillo.**
+La celosía abre desde 17 mm del perfil hacia dentro: eso es **lo que se ve**. Pero detrás de la mejilla está el anillo (20 de cara) y el marco de la ventana (hasta `marco_fondo` = 26 del perfil), y las celdas que caen sobre ese metal no respiran: enseñan aluminio. **Lo que respira es lo abierto sobre la ventana del anillo.**
 
 | por mejilla | mm² | del perfil (52 658) |
 |---|---|---|
-| región de la celosía (a ≥ 12 del perfil) | 40 793 | 77 % |
-| **abierto, lo que se ve** (ramas descontadas) | **33 365** | **63,4 %** |
-| **abierto sobre la ventana, lo que respira** (a ≥ 26) | **23 809** | **45,2 %** |
+| región de la celosía (a ≥ 17 del perfil) | 36 266 | 69 % |
+| **abierto, lo que se ve** (nervios descontados) | **24 504** | **46,5 %** |
+| **abierto sobre la ventana, lo que respira** (a ≥ 26) | **19 367** | **36,8 %** |
 
-Medido por muestreo (150 000 puntos), con cada rama como cápsula de su grosor. Dos cosas que el número no lleva y se declaran: el cierre morfológico del `.scad` rellena horquillas y quita algo más (< 2 %), y `marco_fondo_trasera` es 30 y no 26 — se usa 26 en todo el contorno, 4 mm optimista en el tramo trasero.
+Medido por muestreo (120 000 puntos), con cada nervio como cápsula de su grosor. (Las celdas de Voronoi respiraban 22 021 y las ramas 23 809: las fibras son un tejido más cerrado, y se nota abajo.) Dos cosas que el número no lleva y se declaran: el cierre morfológico del `.scad` rellena horquillas y quita algo más (< 2 %), y `marco_fondo_trasera` es 30 y no 26 — se usa 26 en todo el contorno, 4 mm optimista en el tramo trasero.
 
 Visualmente, el anillo detrás de los huecos del borde **no es un defecto**: es la opción A hecha visible — ramas blancas sobre aluminio en la orilla, sobre el ámbar del interior en el centro.
 
@@ -122,18 +126,18 @@ Con `clearance_budget._tiro()` —el modelo de `guarda_aire()`— y las dos meji
 
 | escenario | W | salto | pesimista | sin la rejilla trasera |
 |---|---|---|---|---|
-| **v5 declarada, fuente afuera** | 64,2 | **13,2 K** | **14,7 K** | 14,3 K |
-| v5 a censo | 35,1 | 8,8 K | 9,8 K | 9,6 K |
-| **fuente ADENTRO** (v5 + los 25,02 que se irían) | 89,2 | **16,4 K** | **18,3 K** | 17,8 K |
+| **v5 declarada, fuente afuera** | 64,2 | **14,9 K** | **16,6 K** | 16,4 K |
+| v5 a censo | 35,1 | 9,9 K | 11,1 K | 11,0 K |
+| **fuente ADENTRO** (v5 + los 25,02 que se irían) | 89,2 | **18,5 K** | **20,7 K** | 20,4 K |
 | *hoy, para comparar* | 64,2 | 45,6 K | 51,0 K | — |
 
-Área efectiva **19 931 mm²** (hoy 3 299), tiro **120 mm** (hoy 105).
+Área efectiva **16 752 mm²** (hoy 3 299), tiro **118 mm** (hoy 105).
 
 Tres lecturas:
 
-1. **Es la primera geometría que pasa con el `C_D` pesimista.** Ni la trasera agrandada, ni el suelo ranurado, ni la rendija ancha lo conseguían (v5 §6): la mejor daba 21,0 K. Ésta da 14,7, y con el suelo y el techo macizos.
-2. **La rejilla baja de la trasera vale 1,1 K** (13,2 con ella, 14,3 sin ella, mismo `C_D`). Poco, pero no nada: se queda o se va por identidad (§7.3), y si se va, se sabe lo que cuesta. *(La primera versión de este papel decía 0,3 K: restaba la columna pesimista con rejilla a la columna normal sin rejilla — dos corners distintos, el error de siempre. Corregido.)*
-3. **Con la fuente adentro también pasa**, 18,3 K pesimista contra 20. Con 1,7 K de margen — poco, y eso reabre D-V1 — ver §7.1.
+1. **Es la primera geometría que pasa con el `C_D` pesimista.** Ni la trasera agrandada, ni el suelo ranurado, ni la rendija ancha lo conseguían (v5 §6): la mejor daba 21,0 K. Ésta da 16,6, y con el suelo y el techo macizos.
+2. **La rejilla baja de la trasera vale 1,5 K** (14,9 con ella, 16,4 sin ella, mismo `C_D`). Poco, pero no nada: se queda o se va por identidad (§7.3), y si se va, se sabe lo que cuesta. *(La primera versión de este papel decía 0,3 K: restaba la columna pesimista con rejilla a la columna normal sin rejilla — dos corners distintos, el error de siempre. Corregido.)*
+3. **Con la fuente adentro ya NO pasa en pesimista**: 18,5 K con el `C_D` de la puerta, **20,7 con el exigente**, contra 20. Con las ramas pasaba (18,3); el tejido de fibras respira 4 400 mm² menos por cachete y ese margen se fue. Ver §7.1.
 
 Lo que el modelo NO cuenta y se declara: la pared exterior (`U_PARED` = 3, sin medir, fuera del veredicto); el `C_D` de una celosía de nylon de 6 mm con celdas de ~25 × 40 (no es el de una ranura en PMMA de 8; probablemente **mejor**, porque la celda es ancha respecto a su profundidad — pero sin medir); y la resistencia de un camino de aire que entra por un extremo, cruza 540 mm de módulos y sale por el otro. Con dos mejillas simétricas el aire entra y sale por la misma, y ese camino es corto; el modelo lo trata como una chimenea y es una aproximación de orden de magnitud. **Se mide en el paso 7 del bring-up, como todo lo demás.**
 
@@ -171,13 +175,13 @@ La v5 sacó la fuente por cuatro razones, y esta piel **toca una**:
 
 | razón | con la piel |
 |---|---|
-| térmica: la caja no evacuaba | **se debilita**: con la fuente adentro da 16,4 K, 18,3 pesimista. Pasa, con 1,7 K de margen |
+| térmica: la caja no evacuaba | **se debilita, pero sigue**: con la fuente adentro da 18,5 K con el `C_D` de la puerta y **20,7 con el pesimista** — no pasa el peor caso por 0,7 K. Abriendo el tejido (separación 15 en vez de 13) pasaría; es una palanca, no un dato |
 | el recinto de acero ocupa el 30 % del suelo | entera |
 | la red de 230 V fuera de una caja de madera **y ahora de nylon** | entera, y más |
 | el margen de U2 que se regala solo con el crudo a 15,5 | entera |
 | un ladrillo de catálogo es lo práctico de fabricar | entera |
 
-Así que el IEC del render **es una decisión que Samuel toma sabiendo el número**: si la fuente sale, ahí va un jack de DC; si se queda, este case la aguanta — a menos de dos kelvin del techo en el peor caso, y con un recinto de acero dentro de una piel de nylon, que es la clase de cosa que hay que decir en voz alta. Es D-P4, y no la decide este papel.
+Así que el IEC del render **es una decisión que Samuel toma sabiendo el número**: si la fuente sale, ahí va un jack de DC; si se queda, este case la aguanta con el `C_D` de la puerta y **no** con el pesimista, salvo que la celosía abra más — y con un recinto de acero dentro de una piel de nylon, que es la clase de cosa que hay que decir en voz alta. Es D-P4, y no la decide este papel.
 
 ### 7.2 Tres papeles del case pierden su sujeto
 
@@ -187,7 +191,7 @@ Así que el IEC del render **es una decisión que Samuel toma sabiendo el númer
 
 ### 7.3 El #289 muere, y las ranuras de la trasera cambian de razón
 
-El encargo del #289 —22 244 mm² de venteo nuevo, o 7 610 con la v5— lo paga la celosía sola con 19 931 efectivos. **Se cierra por desaparición del sujeto** cuando esto se firme. Y las 46 ranuras de la trasera, que eran *la entrada*, valen 1,1 K: se quedan si Samuel las quiere como lenguaje —el concepto las conserva— y se van si no, sabiendo que cuestan eso. Es D-P5.
+El encargo del #289 —22 244 mm² de venteo nuevo, o 7 610 con la v5— lo paga la celosía sola con 16 752 efectivos. **Se cierra por desaparición del sujeto** cuando esto se firme. Y las 46 ranuras de la trasera, que eran *la entrada*, valen 1,5 K: se quedan si Samuel las quiere como lenguaje —el concepto las conserva— y se van si no, sabiendo que cuestan eso. Es D-P5.
 
 ### 7.4 Los papeles del case, hacia atrás
 
@@ -217,6 +221,24 @@ Hoy la trasera entra con el anillo B, las tres planchas se montan una vez con el
 | rieles, marco de ventana, tapa del valle | como hoy | |
 
 Hace unas horas se preguntó qué era práctico para un luthier, y la respuesta fue el ladrillo. Esto es la respuesta contraria en la piel y la misma en todo lo demás — y es legítima: **una pieza de concepto para Superbooth se hace justo así**, una piel impresa sobre un hueso de corte y una base de madera.
+
+### 9.1 Las piezas para imprimir
+
+Samuel, la misma tarde: *«queremos tener las piezas listas para mandarlas a imprimir en 3D»*. `case/renders/imprimir_piel.py` las saca de `piel_organica.scad` y las deja en `case/print/piel/`, en tres pasos que son los que un servicio mira:
+
+1. **El acabado de la referencia.** El extruido de OpenSCAD tiene todas las aristas a 90°; el despiece tiene los nervios como tubos blandos y el marco redondeado. Un **remallado por vóxeles** (0,7 mm) seguido de un **suavizado** convierte cada nervio de sección rectangular en sección casi redonda y funde las uniones. Es lo que hace que lea a hueso y no a recorte de tabla. Adelgaza un poco el nervio: se mide y se imprime.
+2. **Malla cerrada**: cero aristas no-manifold en las tres piezas. **Tamaño** contra la bandeja MJF (380 × 284 × 380, catálogo). **Volumen** → gramos en PA12.
+3. Tres STL: **el cachete** (una pieza, se imprime dos veces: el patrón se ve espejado de un lado al otro, como en el despiece) y **la cubierta en dos mitades**.
+
+| pieza | mm | g en PA12 | cerrada | cabe |
+|---|---|---|---|---|
+| `cachete.stl` (×2) | 332 × 262 × 6 | ~195 | sí | sí |
+| `banda_A.stl` | 332 × 262 × 296 | ~296 | sí | sí |
+| `banda_B.stl` | 332 × 262 × 296 | ~297 | sí | sí |
+
+**Lo que llevan y lo que no.** El cachete lleva **siete pasantes de Ø4,5 para M4** a 9 mm del canto, sobre la cara vista del anillo y dentro del marco macizo: dos abajo, uno en cada cara inclinada, uno en el techo, dos atrás — como los «orificios de montaje» del despiece. **El anillo necesita las siete roscas M4 en su cara exterior**: enmienda a `sam17_case.scad` cuando esto se firme. La cubierta va partida por el medio con un **solape de 12 mm a medio espesor** (A lleva la cara interior, B la exterior); la costura cae en el medio del techo y se mueve a un pliegue cuando la cubierta tenga su forma drapeada. **No llevan todavía**: los «puntos de enganche» cubierta-cachete del despiece (bossas con rosca en la cara interior del cachete), la forma drapeada de la cubierta, ni tolerancias de ajuste en el solape. Los tres son de la siguiente pasada, con los cachetes en la mano.
+
+Los STL **no se versionan hasta la firma** (pesan ~10 MB cada uno y cambian con cada pasada de la celosía): los regenera el guion en segundos, y cuando D-P1 se firme el juego que se manda entra con su commit, como los DXF del láser.
 
 ---
 
@@ -250,6 +272,6 @@ Lo que **no** enseñan, a propósito: la franja de conectores (§5, no modelada)
 | **D-P2** | material: **A**, piel impresa sobre el hueso de hoy; la pieza impresa es el acabado | **firmada 05-09** — *«todo el acabado se hace con impresión 3D»* |
 | **D-P3** | la celosía abre sobre la ventana del anillo, interior a la vista (lo modelado) — o lleva el ámbar detrás como panel flotante con paso de aire arriba y abajo | pendiente |
 | **D-P4** | la fuente: afuera (v5, D-V1) o adentro con esta piel — §7.1 | pendiente |
-| **D-P5** | las 46 ranuras de la trasera: se quedan por lenguaje, o se van (valen 1,1 K) | pendiente |
+| **D-P5** | las 46 ranuras de la trasera: se quedan por lenguaje, o se van (valen 1,5 K) | pendiente |
 
 Orden: mirar los renders → junta (Serrano sobre lo no verificado; Halberg sobre el nylon a 62 °C; Elke sobre la piel, el labio y cómo se cuelga) → firma → enmiendas de §7.4 en su orden, cada una con su issue.

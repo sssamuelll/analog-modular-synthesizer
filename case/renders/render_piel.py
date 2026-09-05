@@ -38,7 +38,7 @@ PARTES = {"mejillas": "piel", "banda": "piel", "aluminio": "aluminio",
 def exportar() -> None:
     os.makedirs(DIR, exist_ok=True)
     fuentes = max(os.path.getmtime(os.path.join(CAD, f)) for f in
-                  ("piel_organica.scad", "celosia_ramas.scad",
+                  ("piel_organica.scad", "celosia_nervios.scad",
                    "sam17_case.scad", "params.scad"))
     for parte in PARTES:
         stl = os.path.join(DIR, parte + ".stl")
@@ -78,13 +78,32 @@ except KeyError:
 ns["mat"]("panel_oscuro", **{"Base Color": (0.10, 0.105, 0.115, 1.0),
                              "Metallic": 0.9, "Roughness": 0.38})
 
+def _importar(ruta, nombre, material, dz=0.0):
+    bpy.ops.wm.stl_import(filepath=ruta)
+    obj = bpy.context.selected_objects[0]
+    obj.name = nombre
+    obj.location.z += dz
+    obj.data.materials.append(bpy.data.materials[material])
+    return obj
+
+
+PRINT = os.path.join(AQUI, "..", "print", "piel")
 objetos = []
 for parte, material in PARTES.items():
-    bpy.ops.wm.stl_import(filepath=os.path.join(DIR, parte + ".stl"))
-    obj = bpy.context.selected_objects[0]
-    obj.name = parte
-    obj.data.materials.append(bpy.data.materials[material])
-    objetos.append(obj)
+    # PIEL_IMPRESA=1: la piel se importa de case/print/piel --lo que sale de
+    # imprimir_piel.py, remallado y suavizado-- y no del extruido crudo. Es lo
+    # que se imprime, asi que es lo que se mira. El cachete es UNA pieza que
+    # va dos veces: a la izquierda (z = -piel_e) y a la derecha (z = ancho).
+    if os.environ.get("PIEL_IMPRESA") and parte == "mejillas":
+        ruta = os.path.join(PRINT, "cachete.stl")
+        objetos.append(_importar(ruta, "cachete_izq", material, dz=-6.0))
+        objetos.append(_importar(ruta, "cachete_der", material, dz=568.62))
+        continue
+    if os.environ.get("PIEL_IMPRESA") and parte == "banda":
+        for mitad in ("banda_A", "banda_B"):
+            objetos.append(_importar(os.path.join(PRINT, mitad + ".stl"), mitad, material))
+        continue
+    objetos.append(_importar(os.path.join(DIR, parte + ".stl"), parte, material))
 
 # el bbox real de TODO lo importado: construir_vista() y las luces leen
 # `esquinas` y `centro` de este mismo espacio de nombres

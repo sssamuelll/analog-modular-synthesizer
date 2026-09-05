@@ -112,6 +112,12 @@ case/renders/*.png
 !case/renders/sam17-piel.png
 !case/renders/sam17-piel-trasera.png
 !case/renders/sam17-piel-lado.png
+# Los STL para imprimir la piel (case/renders/imprimir_piel.py) pesan ~10 MB
+# cada uno y cambian con cada pasada de la celosia. Mientras la piel no este
+# firmada NO se versionan: los regenera el guion en segundos. Cuando D-P1 se
+# firme, el juego que se manda al servicio entra aqui con su commit, como los
+# DXF del laser.
+case/print/piel/*.stl
 # El lienzo es una PREVIEW: las 6 piezas en rejilla para mirarlas de un vistazo.
 # No se manda al taller (alli van los DXF sueltos) y lo regenera export.ps1.
 # Mismo criterio que los STL: 97.512 lineas de diff que no prueban nada.
