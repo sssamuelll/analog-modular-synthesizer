@@ -1,6 +1,6 @@
 """Lo que le llega a U1/U2, contra lo que necesitan para regular.
 
-    python margen_budget.py          (sale con codigo 2: HUECO declarado)
+    python margen_budget.py          (verde desde D-F9, 2026-09-06)
 
 ## Por que existe, y a quien sustituye
 
@@ -9,7 +9,25 @@ Es el sustituto de `valle_budget.py` de la v3, que muere con el rectificador
 que regulen?-- y el problema ya no tiene 100 Hz que integrar: sin puente ni
 condensador de bulto no hay valle. Lo que hay es una CADENA DE CONTINUA.
 
-## EL HALLAZGO: al papel le faltan dos terminos, y con ellos NO QUEDA MARGEN
+## EL ESTADO, PRIMERO: verde, y lo cerraron DOS PIEZAS
+
+Margen de entrada garantizado: **+330 mV en `U1` y +536 en `U2`**, sobre una
+incertidumbre de modelo de 127 mV. El peor de los dos es hoy `U1`.
+
+Este guion estuvo en HUECO del 2026-09-04 al 06 y **no se cerro decidiendo
+nada**: se cerro cambiando las dos piezas de la cascada, cada una con su firma
+y su hoja de datos en el arbol.
+
+| | era | es | ventana + dropout | margen |
+|---|---|---|---|---|
+| `U1` | LM2941 | **LT1963A** (D-F8, 04-09) | 1,658 -> 0,940 V | -388 -> **+330 mV** |
+| `U2` | LM2991 | **LT3015** (D-F9, 06-09) | 1,640 -> 0,934 V | -170 -> **+536 mV** |
+
+Lo que sigue es POR QUE el hueco existio, y se conserva entero porque es el
+razonamiento que hay que rehacer si alguna de las dos piezas vuelve a cambiar.
+
+## EL HALLAZGO (2026-09-04): al papel le faltaban dos terminos, y sin ellos
+## el margen no existia
 
 El papel sec.4.2 escribe la cadena asi y le salen +0,30 V:
 
@@ -35,8 +53,8 @@ No hay ninguna que lo haga. Los dos terminos que faltan:
      -1,15/-1,27 sobre temperatura).
 
 Con lo que la hoja GARANTIZA --la Vref de la unidad en todo su rango de
-temperatura, sobre un divisor fijo disenado con la tipica-- el margen sale
-**-388 mV en `U1` y -170 en `U2`**.
+temperatura, sobre un divisor fijo disenado con la tipica-- el margen salia
+**-388 mV en `U1` y -170 en `U2`** con las piezas de entonces.
 
 Y si se ajusta placa a placa **y ademas** se supone que la unidad conserva su
 sitio dentro de la ventana al calentarse --cosa que la hoja NO promete, porque
@@ -48,13 +66,18 @@ de los 50 C que la hoja garantiza, y la resistencia serie de dos piezas sin
 elegir-- se van un 50 %. Un margen mas pequeno que la barra de error de su
 propio modelo no es un margen, y ese es el aserto que decide el veredicto.
 
-O sea que por los dos caminos, el garantizado y el optimista, la respuesta es
-la misma: **no hay margen**. Y es la misma doctrina que este guion aplica al
-dropout, donde usa el garantizado a 1 A y no el tipico de la curva.
+O sea que por los dos caminos, el garantizado y el optimista, la respuesta era
+la misma: **no habia margen**. Y es la misma doctrina que este guion aplica al
+dropout, donde usa el garantizado a la corriente MAYOR y no el tipico de la
+curva.
 
-**Esto no se arregla bajando el aserto.** Es una decision de arquitectura de la
-cascada y le toca a Samuel; el guion la deja escrita con sus numeros al final,
-para que la decision se tome sobre cifras y no sobre una impresion.
+**Eso no se arreglaba bajando el aserto**, y no se bajo. Con el LT1963A y el
+LT3015 los dos rieles pasan **con lo garantizado**, sin recurrir al supuesto
+optimista y sin ajustar placa a placa. De hecho la ventana del LT3015 (0,254 V)
+es MAS ESTRECHA que los +-0,3 V con los que el bring-up de la v3 acepta el
+setpoint: el -12,9 V cabe con divisor fijo. Eso rompio un aserto que daba por
+sentado lo contrario --ver el punto 4 de `_autocomprobacion`-- y romperlo era
+lo correcto: exigia que la pieza nueva fuera tan mala como la vieja.
 
 ### Y una coherencia que la primera version de este guion no tenia
 
@@ -82,20 +105,27 @@ cuenta como ESTIMADO y lleva canario.
 
 ## Los dos lados de la puerta
 
-Por abajo manda el dropout; por arriba, el maximo absoluto de entrada de U1/U2
-(26 V continuos, hojas p. 4-5). En marcha normal el maximo ni se acerca --15,7
-contra 26-- y ese lado pasa holgado. El caso que si aprieta por arriba es el
-OVP del propio IRM, y lo lleva `check_absmax.py` (Tarea 12), que es su dueno.
+Por abajo manda el dropout; por arriba, el maximo absoluto de entrada. Desde
+D-F9 los dos ya no se parecen: **LT1963A +-20 V** (Rev G p. 2) y **LT3015
++-33 V** (rev B p. 2), asi que la cota de este guion es la del LT1963A. En
+marcha normal el maximo ni se acerca --15,7 contra 20-- y ese lado pasa.
+
+**El caso que si aprieta por arriba es el OVP del propio IRM, y ahi NO cabe:**
+la hoja del IRM-20 (p. 2) clampa hasta **20,25 V sostenidos** contra los 20,00
+del LT1963A. Eso lo lleva `check_absmax.py`, que es su dueno, y esta abierto
+como la **#334** -- junto con el aserto de `V_OVSD_U1`, que vigila una
+prestacion del LM2941 que el LT1963A no tiene.
 
 ## Lo que este guion NO cubre
 
   * El transitorio de arranque y el microcorte. Los IRM tienen setup de 1000 ms
     tipico sin maximo y hold-up de 40 ms, y durante esas ventanas la tension no
     esta en un punto de operacion. Es de `secuencia_budget.py` (D-F4).
-  * El dropout GARANTIZADO a 650 mA. La hoja solo lo garantiza a 1 A y a
-    100 mA; interpolar entre dos garantias no da una garantia. El veredicto usa
-    el de 1 A --que es peor y por lo tanto valido-- y se imprime el tipico de
-    la curva al lado, que NO decide.
+  * El dropout GARANTIZADO a los 710 mA de la cascada. NINGUNA de las dos
+    hojas lo publica ahi: el LT1963A salta de 500 mA (0,35 V) a 1,5 A (0,55) y
+    el LT3015 de 500 mA (0,39) a 1,5 A (0,68). Interpolar entre dos garantias
+    no da una garantia. El veredicto usa el de 1,5 A --que es peor y por lo
+    tanto valido-- y se imprime el tipico de la tabla al lado, que NO decide.
   * Donde cae en frecuencia el rizado del IRM. La hoja da 200 mVp-p a 20 MHz de
     ancho de banda y no publica su reparto, asi que el veredicto supone la
     colocacion PEOR: todo por debajo del codo del LC, o sea sin filtrar. Se
@@ -162,32 +192,63 @@ TOL_SET_V3_V = 0.3
 # LA REFERENCIA DE CADA PRE-REGULADOR, que es de donde sale esa ventana.
 #   LT1963A Rev G p. 5, "ADJ Pin Voltage (Notas 4, 5)": 1,210 V tipicos;
 #                       1,192-1,228 a 25 C; 1,174-1,246 sobre temperatura
-#   LM2991 SNVS099I p. 5: -1,210 tipicos; -1,186/-1,234 a 25 C;
-#                         -1,15/-1,27 sobre temperatura
+#   LT3015 rev B p. 5, "ADJ Pin Voltage (Notas 2, 3)": -1,22 V tipicos;
+#                      -1,208/-1,232 a 25 C; -1,196/-1,244 en la fila marcada
+#                      con `l`, que en las hojas de Linear es la que vale
+#                      SOBRE TODO EL RANGO DE TEMPERATURA. Y esa fila lleva
+#                      ademas las condiciones -30V < VIN < -2,3V y
+#                      -1,5A < ILOAD < -1mA: o sea que dentro de esos 48 mV
+#                      YA ESTAN la regulacion de linea y la de carga. Es una
+#                      garantia mas inclusiva que la del LM2991, no solo mas
+#                      estrecha.
 #
-# U1 ERA UN LM2941 (1,211-1,339 sobre temperatura, 0,658 V de ventana sobre el
-# setpoint) y con el la cadena salia a -388 mV: sin margen. Samuel firmo el
-# cambio el 2026-09-04, con la tabla del bloque de enmiendas del papel delante.
-# La ventana baja a 0,390 V y el margen pasa a +330 mV.
+# LOS DOS SUJETOS CAMBIARON, Y CADA UNO CON SU FIRMA:
+#   U1 ERA UN LM2941 (1,211-1,339 sobre temperatura, 0,658 V de ventana sobre
+#   el setpoint) y con el la cadena salia a -388 mV. D-F8, 2026-09-04.
+#   La ventana baja a 0,390 V y el margen pasa a +330 mV.
+#   U2 ERA UN LM2991 (-1,15/-1,27 sobre temperatura, 0,640 V de ventana) y con
+#   el la cadena salia a -170 mV: este guion estuvo en HUECO por el desde el
+#   2026-09-04 hasta el 06. D-F9, 2026-09-06. La ventana baja a 0,254 V,
+#   el dropout de 1,00 a 0,68, y el margen pasa a +536 mV.
 VREF = {"U1": {"typ": 1.210, "25c": (1.192, 1.228), "temp": (1.174, 1.246)},
-        "U2": {"typ": 1.210, "25c": (1.186, 1.234), "temp": (1.150, 1.270)}}
+        "U2": {"typ": 1.220, "25c": (1.208, 1.232), "temp": (1.196, 1.244)}}
 # Dropout GARANTIZADO sobre el rango de temperatura, con LA CORRIENTE A LA QUE
 # LA HOJA LO GARANTIZA -- que no es la nuestra en ninguno de los dos casos:
 #   LT1963A Rev G p. 5: "Dropout Voltage ... ILOAD = 1.5A ... 0.34 0.45 0.55"
-#   LM2991 SNVS099I p. 5: 0,8 V max a TJ = 25 C, y 1 V sobre temperatura a 1 A
+#   LT3015 rev B p. 5: "Dropout Voltage ... ILOAD = -1.5A (DD-PAK/TO-220)",
+#     fila `l`: 0,68 V max. OJO CON EL ENCAPSULADO: la misma tabla da 0,50 V
+#     para el DFN/MSOP a la misma corriente, y el que va contra la pared del
+#     chasis es el TO-220. Se toma SU fila, que es la peor de las dos.
 #
 # NINGUNA DE LAS DOS PUBLICA UN MAXIMO A LOS 710 mA REALES de la cascada, asi
 # que se toma la cota de la corriente MAYOR. Es pesimista a proposito y por
 # igual para los dos: el LT1963A salta de 500 mA (0,35 V) a 1,5 A (0,55) y
-# entre medias no hay nada garantizado.
-V_DROPOUT_MAX = {"U1": 0.55, "U2": 1.0}
-I_DROPOUT_GARANTIZADO_A = {"U1": 1.5, "U2": 1.0}
+# entre medias no hay nada garantizado; el LT3015 salta de 500 mA (0,39) a
+# 1,5 A (0,68).
+V_DROPOUT_MAX = {"U1": 0.55, "U2": 0.68}
+I_DROPOUT_GARANTIZADO_A = {"U1": 1.5, "U2": 1.5}
 # El TIPICO de tabla mas cercano por debajo. NO decide: se imprime.
-#   LT1963A p. 5 a 500 mA: 0,19 V; LM2991 p. 6 ~0,42 V a 650 mA
-V_DROPOUT_TIP = {"U1": 0.19, "U2": 0.42}
-# Maximo absoluto de entrada (LM2941 p. 5, LM2991 p. 4) y el umbral al que el
-# LM2941 se apaga solo por sobretension (p. 10).
-V_ABSMAX_ENTRADA = 26.0
+#   LT1963A p. 5 a 500 mA: 0,19 V; LT3015 p. 5 a 500 mA (DD-PAK/TO-220): 0,20
+V_DROPOUT_TIP = {"U1": 0.19, "U2": 0.20}
+# Maximo absoluto de entrada. ES EL MENOR DE LOS DOS, y desde D-F9 los dos ya
+# no se parecen:
+#   U1 LT1963A Rev G p. 2: "IN Pin Voltage ... +-20V"
+#   U2 LT3015 rev B p. 2:  "IN Pin Voltage ... +-33V"
+# Citaba 26,0 de "(LM2941 p. 5, LM2991 p. 4)" y ninguna de las dos piezas
+# sigue en la placa. Aqui se corrige la mitad que D-F9 toca (U2) y de paso la
+# otra, porque dejar el numero de un muerto es como se llega a una puerta
+# verde sobre nadie.
+#
+# ESTE GUION SIGUE PASANDO POR ARRIBA: en marcha normal llegan 15,67 V. Lo que
+# NO cabe es el OVP de PS1 --20,25 V sostenidos, hoja del IRM-20 p. 2-- contra
+# los 20,00 del LT1963A, y ESO es la #334: vive en check_absmax.py, que es su
+# dueno, y no se decide aqui.
+V_ABSMAX_ENTRADA = 20.0
+# El umbral al que el LM2941 se apagaba solo por sobretension (su p. 10).
+# SUJETO MUERTO DESDE D-F8: el LT1963A no tiene esa prestacion, asi que el
+# aserto que lo usa pasa siempre y por el motivo equivocado. Se deja tal cual
+# a proposito --arreglarlo es decidir que pone el LT1963A en su lugar-- y esta
+# contado en la #334.
 V_OVSD_U1 = 30.0
 
 # --- la corriente real de la cascada --------------------------------------
@@ -433,11 +494,26 @@ def _autocomprobacion() -> None:
             f"su sitio en la ventana-- tiene que estrechar el numero "
             f"({optimista:.3f} contra {garantizado:.3f}); si no, no seria "
             f"optimista y no habria dos lecturas que distinguir")
-        assert garantizado > TOL_SET_V3_V, (
-            f"{reg}: la referencia garantiza +-{garantizado:.3f} V de setpoint "
-            f"y el bring-up de la v3 acepta +-{TOL_SET_V3_V:.1f}: si cupiera "
-            f"con un divisor fijo, esa ventana no diria nada y no habria que "
-            f"ajustar placa a placa")
+        # ESTE ASERTO CAMBIO DE SUJETO CON D-F9, y el cambio es la noticia.
+        #
+        # Decia: "la ventana garantizada tiene que ser MAS ANCHA que los
+        # +-0,3 V del bring-up, porque si cupiera con un divisor fijo esa
+        # ventana no diria nada y no habria que ajustar placa a placa".
+        # Con el LT3015 ya NO es verdad, y no es un fallo: su ventana son
+        # 0,254 V, o sea MENOS que los 0,3 del bring-up. El -12,9 V cabe con
+        # divisor fijo y sin ajustar. Dejar el aserto viejo habria sido
+        # exigirle a la pieza nueva que fuera tan mala como la vieja --y
+        # habria puesto la puerta roja por MEJORAR el diseno.
+        #
+        # Lo que si vale siempre, y es lo que se asevera ahora: la ventana con
+        # la que el bring-up ACEPTA una placa tiene que caber dentro de la que
+        # todavia deja regular. Si no, el paso 2 da por buena una placa que en
+        # el peor caso se sale de regulacion.
+        assert TOL_SET_V3_V <= tol_set_admisible_v(reg), (
+            f"{reg}: el bring-up de la v3 acepta +-{TOL_SET_V3_V:.1f} V de "
+            f"setpoint y la cadena solo aguanta "
+            f"+-{tol_set_admisible_v(reg):.3f}: el paso 2 daria por buena una "
+            f"placa que no regula")
 
     # 5. El requisito de estabilidad de U1, de su propia hoja.
     #
@@ -466,8 +542,17 @@ def _autocomprobacion() -> None:
                    0.0, 5.0, "deja de regular")
     w = borde_rojo(_guarda_margen, dict(P_BASE_MARGEN), "r_serie_ohm",
                    0.0, 5.0, "deja de regular")
+    # EL TECHO DE ESTE BARRIDO BAJO DE 1,0 A 0,5 CON D-F9, y no por gusto.
+    # `_guarda_margen` tiene DOS asertos y el del maximo absoluto va primero.
+    # Mientras V_ABSMAX_ENTRADA valia los 26 V del LM2941 --una pieza que ya
+    # no esta-- ese lado no saltaba hasta 1,60 %/C y el barrido hasta 1,0
+    # solo podia morir por "deja de regular". Con los 20,0 V reales del
+    # LT1963A el maximo absoluto salta en 0,69 %/C, o sea DENTRO del barrido
+    # viejo: en el extremo el canario moria por el otro aserto y no
+    # encontraba su borde. El borde que busca esta en ~0,14 %/C, asi que
+    # 0,5 lo deja holgado y por debajo del otro.
     x = borde_rojo(_guarda_margen, dict(P_BASE_MARGEN), "tempco_pct_c",
-                   0.0, 1.0, "deja de regular")
+                   0.0, 0.5, "deja de regular")
     y = borde_rojo(_guarda_margen, dict(P_BASE_MARGEN), "tempco_pct_c",
                    0.0, 20.0, "maximo absoluto")
     z = borde_rojo(_guarda_margen, dict(P_BASE_MARGEN), "rizado_lf_vpp",
@@ -498,10 +583,20 @@ def _autocomprobacion() -> None:
     assert banda > 0.0, (
         "si mover los ESTIMADO un 50 % no moviera la cadena, no serian los "
         "terminos que este guion dice que son")
-    assert min(margen_v(r) for r in V_SET) < banda, (
-        f"si el margen ({min(margen_v(r) for r in V_SET) * 1000:.1f} mV) "
-        f"superara la incertidumbre del modelo ({banda * 1000:.0f} mV), este "
-        f"guion podria salir en verde y el HUECO de abajo sobraria")
+    # Y EL ASERTO SE DIO LA VUELTA CON D-F9. Hasta el 2026-09-06 decia "el
+    # margen tiene que ser MENOR que la banda, porque si no el HUECO sobraria":
+    # era la guarda de un hueco declarado, y con el LM2991 en U2 se cumplia
+    # sola. Con el LT3015 el margen pasa a +536 mV sobre una banda de 127, o
+    # sea que el hueco se cerro y lo que hay que vigilar es lo contrario.
+    peor = min(margen_v(r) for r in V_SET)
+    peor_reg = min(V_SET, key=margen_v)
+    assert peor >= banda, (
+        f"{peor_reg} se queda con {peor * 1000:+.1f} mV de margen y la "
+        f"incertidumbre del propio modelo son {banda * 1000:.0f}: un margen "
+        f"mas pequeno que la barra de error de su propio modelo NO ES UN "
+        f"MARGEN. Antes de tocar este aserto, mirar que se movio -- la "
+        f"cadena la resuelven piezas, no cotas: asi se cerro el hueco de U2 "
+        f"(D-F9, LM2991 -> LT3015) y el de U1 (D-F8, LM2941 -> LT1963A)")
 
 
 def demo() -> int:
@@ -551,7 +646,8 @@ def demo() -> int:
           f"{tol_setpoint_v('U1', ajustado=True):.3f} V en U1 y "
           f"{tol_setpoint_v('U2', ajustado=True):.3f} en U2, y el margen")
     print(f"   seria {margen_v('U1', tol_set=tol_setpoint_v('U1', ajustado=True)) * 1000:+.1f}"
-          f" mV en U1: sigue sin haber margen.)")
+          f" mV en U1. Pero NO HACE FALTA ese supuesto: la")
+    print("   cadena ya pasa con lo garantizado, que es lo que decide.)")
 
     print("\n  con el dropout TIPICO de la curva a 650 mA (que no es una "
           "garantia y no decide):")
@@ -563,10 +659,17 @@ def demo() -> int:
 
     print(f"\n  por arriba: {v_entrada_maxima_v():.2f} V en vacio y a "
           f"tolerancia alta, contra {V_ABSMAX_ENTRADA:.0f} de maximo")
-    print(f"  absoluto y {V_OVSD_U1:.0f} de apagado por sobretension del "
-          f"LM2941: ese lado pasa holgado. El")
-    print("  caso que si aprieta por arriba es el OVP del IRM, y es de")
-    print("  check_absmax.py.")
+    print("  absoluto (el menor de los dos: LT1963A +-20 V, LT3015 +-33). "
+          "En marcha")
+    print("  normal ese lado pasa holgado. El caso que SI aprieta por arriba "
+          "es el")
+    print("  OVP del IRM --20,25 V sostenidos-- y es de check_absmax.py, no "
+          "de aqui:")
+    print("  contra los 20,00 del LT1963A no cabe, y eso es la #334.")
+    print(f"  ({V_OVSD_U1:.0f} V era el apagado por sobretension del LM2941, "
+          f"que ya no esta:")
+    print("   su aserto pasa siempre y por el motivo equivocado. Tambien "
+          "es la #334.)")
 
     print(f"\n  requisito de la hoja de U1 (p. 12): COUT >= "
           f"{COUT_U1_MIN_F * 1e6:.0f} uF con ESR entre "
@@ -589,77 +692,27 @@ def demo() -> int:
               f"{banda * 1000:.0f})")
         return 0
 
-    admisible = min(tol_set_admisible_v(reg) for reg in V_SET)
+    # LA RAMA DEL HUECO. Hasta el 2026-09-06 esto eran setenta lineas
+    # explicando que la cadena no tenia margen, cual era la pieza que hacia
+    # falta y las cuatro salidas con su precio. Ya no hace falta: la pieza
+    # existe, esta en el arbol y es el LT3015 (D-F9). Lo que se guarda es la
+    # capacidad de VOLVER a declarar el hueco, no la prosa de uno cerrado --
+    # esa vive en el papel de la v4 y en el docstring de aqui arriba.
+    #
+    # En la practica esta rama no se alcanza: el aserto 7 de
+    # _autocomprobacion() salta antes y con el diagnostico dentro. Si algun
+    # dia alguien quita ese aserto, esto sigue diciendo la verdad en vez de
+    # devolver 0 en silencio.
     print()
-    print("=" * 72)
-    print("La cadena no tiene MARGEN, y no es un fallo de este guion:")
-    for reg in V_SET:
-        print(f"  {reg}: {deficit[reg] * 1000:+.1f} mV de margen "
-              f"(necesita {v_necesaria_v(reg):.3f} V, le llegan "
-              f"{v_entrada_minima_v():.3f})")
-    print(f"  Y la INCERTIDUMBRE del propio modelo son {banda * 1000:.0f} mV: "
-          f"lo que se mueve la")
-    print("  cadena si los dos ESTIMADO --la deriva termica, extrapolada por")
-    print(f"  encima de los {T_TOPE_HOJA_C:.0f} C hasta donde la hoja la "
-          f"garantiza, y la resistencia")
-    print("  serie de dos piezas sin elegir-- se van un 50 %. Un margen mas")
-    print("  pequeno que la barra de error de su propio modelo no es un margen.")
-    print()
-    print("  Y con la eleccion contraria sobre el rizado --que la hoja no")
-    print("  publica-- el margen se va a "
-          f"{margen_v(peor_reg, filtrado=False) * 1000:+.0f} mV. Bastan "
-          f"{2000 * deficit[peor_reg]:.1f} mVp-p de rizado")
-    print("  por debajo del codo del LC para acabar con el, sobre los 200 que")
-    print("  la hoja publica sin decir donde caen.")
-    print("  La ventana de setpoint mas ancha que dejaria regular a los dos")
-    print(f"  son +-{admisible * 1000:.0f} mV. La deriva de la referencia del "
-          f"pre-regulador,")
-    print(f"  con la placa YA AJUSTADA, son +-{tol_setpoint_v('U1') * 1000:.0f}"
-          f" mV en U1 y +-{tol_setpoint_v('U2') * 1000:.0f} en U2.")
-    print()
-    print("  LO QUE FALTA ES UNA PIEZA, Y SE SABE CUAL HACE FALTA:")
-    pres = v_entrada_minima_v() - abs(V_SET[peor_reg])
-    gasta = tol_setpoint_v(peor_reg) + V_DROPOUT_MAX[peor_reg]
-    print(f"   {peor_reg} tiene un presupuesto de ventana+dropout de "
-          f"{pres:.3f} V")
-    print(f"   y la pieza de hoy gasta {gasta:.3f}. Para que el margen valga "
-          f"mas que")
-    print(f"   la incertidumbre del modelo hay que bajar de {pres - banda:.3f} "
-          f"V, o sea")
-    print(f"   {(gasta - pres + banda) * 1000:.0f} mV mejor que la de hoy en "
-          f"la SUMA de las dos.")
-    print("   Y el reparto importa: TODO el desajuste sale del dropout SOBRE")
-    print("   TEMPERATURA (0,8 V a 25 C contra 1,0 garantizado), no de la")
-    print("   referencia. Dicho asi es una busqueda acotada; dicho como 'el")
-    print("   mercado casi no fabrica LDO negativos' es una excusa.")
-    print()
-    print("   Lo que NO sirve, y esta medido:")
-    print("    - Enfriar el recinto. El equilibrio de U2 esta en aire a 25 C,")
-    print("      o sea un recinto sin calor dentro: vaciarlo entero da 6 mV")
-    print("      de los 170. La temperatura del aire la manda el cajon.")
-    print("    - Bajar el setpoint. PROHIBIDO por v2 sec.1.5.1: el headroom")
-    print("      del LT3045/94 son 1,1 V y no puede bajar.")
-    print("    - Aceptar el tipico en vez del garantizado. Es lo que hace un")
-    print("      catalogo, no un presupuesto.")
-    print()
-    print("   Y una via que EXISTE y tiene precio: un regulador POSITIVO")
-    print("   referenciado al nodo negativo, que se puede porque PS2 flota")
-    print("   (sec.4.2). Funciona y no cuesta un vatio, pero deja el ON/OFF")
-    print("   referenciado a -12,9 V y mete un semiconductor en el retorno de")
-    print("   la carga negativa, en serie con GNDA. Cambiar la pieza es una")
-    print("   decision de BOM; cambiar la topologia de masa es de arquitectura.")
-    print("=" * 72)
-    print()
-    buenos = [r for r in V_SET if deficit[r] >= banda]
     print(f"HUECO: {peor_reg} se queda con {deficit[peor_reg] * 1000:+.1f} mV "
           f"de margen de entrada en su peor caso, y la incertidumbre del "
-          f"propio modelo son {banda * 1000:.0f}. "
-          + (f"{', '.join(buenos)} ya esta resuelto (LT1963A, firmado el "
-             f"2026-09-04). " if buenos else "")
-          + "Lo que falta es la pieza de arriba: mientras no exista en el "
-            "arbol una hoja que la cumpla, este guion sale en HUECO. NO es un "
-            "aserto que se baje, y NO se cierra decidiendo: se cierra con una "
-            "hoja de datos.")
+          f"propio modelo son {banda * 1000:.0f}: un margen mas pequeno que "
+          f"la barra de error de su propio modelo no es un margen. La ventana "
+          f"de setpoint mas ancha que dejaria regular a los dos son "
+          f"+-{min(tol_set_admisible_v(r) for r in V_SET) * 1000:.0f} mV. "
+          f"Esto NO se cierra bajando el aserto ni aceptando el tipico: se "
+          f"cierra con una hoja de datos, que es como se cerraron D-F8 y "
+          f"D-F9.")
     return 2
 
 

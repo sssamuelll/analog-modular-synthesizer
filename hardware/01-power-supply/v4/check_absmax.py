@@ -196,7 +196,7 @@ def main() -> int:
     # --- 1. La cascada ultra --------------------------------------------
     print("=== 1. El OVP de PS1/PS2 contra la cascada ultra ===\n")
     ovp = OVP_V["PS1/PS2 (IRM-20-15)"][1]
-    for nombre, riel in (("U1 LM2941", "+15 crudo"), ("U2 LM2991", "-15 crudo")):
+    for nombre, riel in (("U1 LM2941", "+15 crudo"), ("U2 LT3015", "-15 crudo")):
         fila = next(f for f in filas if f["victima"] == nombre)
         lim = float(fila["v_absmax"])
         ok = ovp < lim
@@ -205,6 +205,16 @@ def main() -> int:
               f"OVP contra {lim:.1f} de maximo -> margen {lim - ovp:+.2f} V")
         assert ok, (f"{nombre} no aguanta el OVP de su propio modulo: "
                     f"{ovp:.2f} contra {lim:.1f}")
+    print()
+    print("  AVISO -- LA FILA DE U1 MIRA A UNA PIEZA QUE YA NO ESTA (#334).")
+    print("  Dice 'U1 LM2941, 26,0 V' y U1 es un LT1963A desde D-F8, cuyo")
+    print("  maximo absoluto de entrada son +-20 V (Rev G p. 2). Contra los")
+    print(f"  {ovp:.2f} V de este OVP eso no es +5,75 V de margen: son -0,25.")
+    print("  El verde de arriba es del LM2941 y no de nadie que este en la")
+    print("  placa. NO SE ARREGLA AQUI a proposito: cambiar el numero pone")
+    print("  esta puerta en rojo, y que hacer con eso --otra pieza, atajar el")
+    print("  OVP, o aceptarlo por escrito-- es la decision que la #334 abre.")
+    print("  D-F9 si arreglo su mitad: U2 pasa de LM2991 a LT3015 y de 26 a 33.")
     print("\n  Y el fallo DOBLE (PS1 en OVP y U1 en corto), que se documenta y")
     print("  no bloquea porque son dos causas independientes:")
     for nombre in ("LT3045", "LT3094"):

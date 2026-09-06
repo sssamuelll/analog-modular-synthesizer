@@ -43,7 +43,10 @@ descárgalos del fabricante.
 
 ## Hojas de datos en el repositorio
 
-Las veinte versionadas, enteras. Están en el historial porque los presupuestos
+Las versionadas, enteras. (Decía «las veinte» y con D-F9 entraron tres más;
+el número se quita en vez de corregirse, porque una cuenta a mano en la
+cabecera de una tabla se desincroniza en la siguiente hoja que baje.) Están en
+el historial porque los presupuestos
 ejecutables y el código citan sus tablas por número, así que sin ellas una
 puerta no se puede rehacer. Algunas son de piezas **retiradas**: se quedan
 rotuladas como historia de la decisión, no como contrato vigente.
@@ -61,7 +64,10 @@ rotuladas como historia de la decisión, no como contrato vigente.
 | [`reference/datasheets/ad75019-revf-2026-07.pdf`](reference/datasheets/ad75019-revf-2026-07.pdf) | **AD75019 Rev F** — crosspoint analógico 16×16 | Los dos en cadena de la bahía asignable. `core/src/bahia_serie.rs:30` cita su tabla 3 (p. 4) para el sentido del `PCLK` dentro de los 512 bits |
 | [`reference/datasheets/24aa1025-ds21941h-2011.pdf`](reference/datasheets/24aa1025-ds21941h-2011.pdf) | **24AA1025 — DS21941H** — EEPROM I²C de 128 KB | La memoria del módulo de Voz. `core/src/memoria.rs` existe por su **costura**: no es un chip de 128 KB, son dos de 64 con dos direcciones I²C |
 | [`reference/datasheets/lm2941-snvs770i-2015-01.pdf`](reference/datasheets/lm2941-snvs770i-2015-01.pdf) | **LM2941 — SNVS770I** — pre-regulador LDO ajustable positivo | El pre-regulador del +12 V de la cascada (`docs/modules/01-power-supply.md:33`). La v4 le añade trabajo: su `ON/OFF` **activo-bajo** (< 0,8 V habilita, p. 11) es medio secuenciador, sus 26 V de entrada máxima son quien aguanta el clamp de OVP de la SMPS, y su Fig. 9 «Ripple Rejection» es lo único que dice qué hace a 65 kHz |
-| [`reference/datasheets/lm2991-snvs099i-2016-10.pdf`](reference/datasheets/lm2991-snvs099i-2016-10.pdf) | **LM2991 — SNVS099I** — el espejo negativo | Pre-regulador del −12 V. Ojo con la asimetría que decide el circuito del secuenciador: su `ON/OFF` es **activo-alto y deshabilita** (> 2,4 V, p. 9), al revés que el LM2941. Su curva de rechazo es la Fig. 8 |
+| [`reference/datasheets/lm2991-snvs099i-2016-10.pdf`](reference/datasheets/lm2991-snvs099i-2016-10.pdf) | LM2991 — SNVS099I **(retirado con D-F9, 2026-09-06; no citar como pieza viva)** | Fue el pre-regulador del −12 V hasta que `margen_budget.py` lo dejó en **−170 mV de margen** y no había forma de arreglarlo sin cambiarlo: su ventana de referencia (0,640 V) más su dropout garantizado (1,00 V a 1 A) suman 1,640 y el presupuesto son 1,470. Se conserva porque la historia del hueco lo cita por página, y porque su Fig. 8 es la que se comparó contra la G41 del LT3015 |
+| [`reference/datasheets/lt1963a-rev-g-2021-02.pdf`](reference/datasheets/lt1963a-rev-g-2021-02.pdf) | **LT1963A Rev. G** (02/21) — LDO 1,5 A ajustable positivo | `U1` desde **D-F8**. Lo que decide: `ADJ Pin Voltage` **1,174–1,246 V sobre temperatura** y `Dropout Voltage` **0,55 V máx a 1,5 A** (p. 5) — margen **+330 mV**. **Y lo que hay que mirar antes de usarlo:** su `IN Pin Voltage` es **±20 V** (p. 2) y el OVP de PS1 clampa a 20,25 sostenidos. Es la **#334**. Estuvo enlazada aquí desde el 04-09 **sin estar versionada**; entró al árbol con D-F9 |
+| [`reference/datasheets/lt3015-rev-b.pdf`](reference/datasheets/lt3015-rev-b.pdf) | **LT3015 rev B** — LDO 1,5 A ajustable negativo, bajo ruido | `U2` desde **D-F9**. Las cuatro cifras que lo eligieron, todas de tabla: `ADJ Pin Voltage` **−1,196/−1,244 V** en la fila `l` —que en Linear es todo el rango de temperatura, y aquí trae dentro línea y carga—, `Dropout Voltage` **0,68 V máx a 1,5 A en DD-PAK/TO-220** (p. 5), `IN Pin Voltage` **±33 V** (p. 2) y un `SHDN` que **habilita en ALTO** como el del LT1963A (p. 6), con lo que vuelve el hilo único y muere el inversor del #323. Margen **+536 mV**. **Pedir el grado `I`** (`LT3015IT#PBF`): la Nota 9 sólo garantiza al `E` de 0 a 125 °C. Su curva de rechazo es la **G41 de la p. 11**, y la traza que vale exige `COUT` = 47 µF **y** `CFF` = 10 nF |
+| [`reference/datasheets/mic29152-ds20005685b-2019.pdf`](reference/datasheets/mic29152-ds20005685b-2019.pdf) | **MIC29152 — DS20005685B** (2016–2019) — LDO 1,5 A ajustable de alta precisión | **No está en la placa**: es el candidato vivo para `U1` en la **#334**, y está aquí porque su `Maximum Operating Input Voltage` de **+26 V** (p. 4) es lo que al LT1963A le falta contra el OVP de PS1. `Reference Voltage` **1,203–1,277 V** con Note 8 —que cubre línea, carga y temperatura— y `Dropout Voltage` **600 mV máx a 1,5 A**. Baja la B y no la A: la A se contradecía sobre el encapsulado |
 | [`reference/datasheets/lt3045-rev-d.pdf`](reference/datasheets/lt3045-rev-d.pdf) | **LT3045 Rev D** — LDO ultra-bajo-ruido positivo | La pareja en paralelo que fija el +12,000 V. De aquí sale el 0,8 µVrms de la cascada y el PSRR de **76 dB a 1 MHz** de portada, **condicionado al headroom** de 1,1 V que no puede bajar |
 | [`reference/datasheets/lt3094-rev-b.pdf`](reference/datasheets/lt3094-rev-b.pdf) | **LT3094 Rev B** — el espejo negativo | La pareja del −12,000 V. **74 dB a 1 MHz**, con la misma condición de headroom |
 | [`reference/datasheets/meanwell-irm-20-spec-2025-11-21.pdf`](reference/datasheets/meanwell-irm-20-spec-2025-11-21.pdf) | **Mean Well IRM-20** (spec 2025-11-21) — SMPS encapsulada de 20 W | `PS1` y `PS2` (los ±15 V crudos que entran a la cascada) y `PS5` (+5 V de rack). Su p. 2 da rizado, rendimiento e inrush; su p. 3, la curva de derating —**100 % hasta 50 °C**— que gobierna la térmica del listón |
@@ -90,22 +96,30 @@ la buena, así que una entrada sin URL y sin revisión es una entrada rota.
 | Fichero | Documento | De dónde sale | Para qué |
 |---|---|---|---|
 | `reference/datasheets/stm32n6-rm0486-rev4.pdf` | **RM0486 Rev 4** (mayo 2026), 4.669 pp. — manual de referencia del STM32N6x5/x7xx | [st.com](https://www.st.com/resource/en/reference_manual/rm0486-stm32n647657xx-armbased-32bit-mcus-stmicroelectronics.pdf) | Los registros. Es la fuente de los bits de RCC y del PHY del USB del N657 — lo que le falta a `embassy-stm32` para que el cerebro tenga puerto (#250) |
-| `reference/datasheets/lt1963a-rev-g-2021-02.pdf` | **LT1963A Rev. G** (02/21, pie de la p. 28) — LDO 1,5 A ajustable, bajo ruido | [analog.com](https://www.analog.com/media/en/technical-documentation/data-sheets/1963aff.pdf) | Candidato a sustituir al **LM2941** en `U1` (opción **b** del §4.2 de la fuente v4). Lo que decide: `ADJ Pin Voltage` **1,174–1,246 V sobre temperatura** y `Dropout Voltage` **0,55 V máx a 1,5 A** — las dos cifras que el LM2941 no puede batir. Su `SHDN` sirve al secuenciador de D-F4 y sus ±20 V de `IN` cubren los 15,67 V del peor caso alto. **5-lead TO-220**, o sea que el tab sigue contra la pared y `chasis_to220_*` no se mueve |
-| `reference/datasheets/mic29152-ds20005685a-2016.pdf` | **MIC29152 — DS20005685A** (2016) — LDO 1,5 A ajustable de alta precisión | [microchip.com](https://ww1.microchip.com/downloads/en/devicedoc/20005685a.pdf) | El otro candidato para `U1`. `Reference Voltage` **1,203–1,277 V** (Note 8) y `Dropout Voltage` **600 mV máx a 1,5 A** (220 mV típico a 750 mA, sin máximo publicado ahí). Trae `EN` y un **`FLG`** que avisa de salida fuera de regulación — telemetría gratis que el LT1963A no da |
+| `reference/datasheets/mic29152-ds20005685a-2016.pdf` | MIC29152 — DS20005685A (2016) **(superada por la B, que sí está versionada arriba; no citar)** | [microchip.com](https://ww1.microchip.com/downloads/en/devicedoc/20005685a.pdf) | El otro candidato para `U1`. `Reference Voltage` **1,203–1,277 V** (Note 8) y `Dropout Voltage` **600 mV máx a 1,5 A** (220 mV típico a 750 mA, sin máximo publicado ahí). Trae `EN` y un **`FLG`** que avisa de salida fuera de regulación — telemetría gratis que el LT1963A no da |
 
-**Dos avisos sobre estas dos, y los dos son de los que renumeran tablas:**
+**Los dos avisos de esta pareja, y los dos están resueltos desde el
+2026-09-06** — la **DS20005685B** bajó al árbol con D-F9
+([`reference/datasheets/mic29152-ds20005685b-2019.pdf`](reference/datasheets/mic29152-ds20005685b-2019.pdf)),
+que es lo que este aviso llevaba pidiendo desde el 04-09:
 
-1. **La DS20005685A no es la última.** Existe una **DS20005685B** (2016–2019),
-   y esta tabla existe precisamente porque *«la Rev 2 contra la Rev 10 del
-   DS14791 ya nos renumeró una tabla entera»*. Ningún número del MIC29152 debe
-   entrar en un papel sin comprobar antes si la B lo mueve.
-2. **La DS20005685A se contradice consigo misma sobre el encapsulado.** Su
-   p. 1 dice *«The 1.5A, adjustable output MIC29152 is available in a 5-pin
-   power D-Pak (TO-252) package»* y el diagrama de la p. 2 dibuja
-   *«MIC29152/302/502 5-Lead TO-220 Adjustable Voltage (T)»* con TAB y el
-   pinout entero (`1 EN`, `2 IN`, `TAB 3 GND`, `4 OUT`, `5 ADJ`). **Mientras el
-   disipador sea la pared del chasis, sin TO-220 con TAB la pieza no sirve**, y
-   eso se cierra con el sufijo de pedido, no leyendo la hoja.
+1. **La B no mueve los números que citamos.** `Reference Voltage` sigue siendo
+   **1,203–1,277 V** con la misma Note 8 —que ahora se puede leer entera:
+   *«VREF ≤ VOUT ≤ (VIN – 1V), 2.3V ≤ VIN ≤ 26V, 10 mA < IL ≤ IFL,
+   TJ ≤ TJMAX»*, o sea que esos 74 mV **incluyen línea, carga y
+   temperatura**— y `Maximum Operating Input Voltage` sigue en **+26 V**
+   (p. 4). Comprobado contra la A, no supuesto.
+2. **La B ya no se contradice sobre el encapsulado.** Donde la A decía sólo
+   *«5-pin power D-Pak (TO-252)»* en su p. 1 mientras dibujaba un TO-220 en la
+   p. 2, la B dice **«5-pin TO-220 and surface mount TO-263»** y trae los
+   diagramas de *5-Lead TO-220 Adjustable Voltage (T)* y *Adjustable with
+   Flag (T)*. Mientras el disipador sea la pared del chasis eso importa, y
+   sigue cerrándose con el sufijo de pedido.
+
+**Y por qué esta pareja vuelve a estar viva:** el `Maximum Operating Input
+Voltage` de **+26 V** del MIC29152 es exactamente lo que el LT1963A no tiene
+(±20 V contra los 20,25 del OVP de PS1), así que el otro candidato de aquella
+búsqueda es hoy la salida más obvia de la **#334**. La decisión no está tomada.
 
 Y una que **ninguna de las dos garantiza**: el dropout a los **710 mA** de la
 cascada. El LT1963A salta de 500 mA (0,35 V) a 1,5 A (0,55); el MIC29152

@@ -1,6 +1,6 @@
 # Fuente v4 — el listón de la PSU3, seis módulos encapsulados y la cascada intacta — firmada (v3, tras la junta y la firma)
 
-**Fecha**: 2026-09-03 · **Estado**: **firmado — D-F1 a D-F8 decididas (§14 y el bloque de D-F8 de 2026-09-04); `calor_budget.py` corrió y la columna «sostenido» de §1 está rellena. Lo que queda es de otros papeles: el venteo mínimo (#289) y la bahía (#290)** ·
+**Fecha**: 2026-09-03 · **Estado**: **firmado — D-F1 a D-F9 decididas (§14, el bloque de D-F8 de 2026-09-04 y el de D-F9 de 2026-09-06); `calor_budget.py` corrió y la columna «sostenido» de §1 está rellena; `margen_budget.py` salió de HUECO al firmarse D-F9. Lo que queda abierto en este papel es el máximo absoluto de entrada de `U1` (#334); lo que queda de otros papeles, el venteo mínimo (#289) y la bahía (#290)** ·
 **Listón firmado**: 2026-09-03 («firmo el listón», Samuel) — como **corriente de placa**; y **re-firmado el mismo día como corriente sostenida** por `calor_budget.py` con D-F3 = A y D-F7: **2,0 / 2,0 / 4,0 A de rack y 4,2 A digital con 22 200 mm² de venteo nuevo**, el mínimo que el modelo despeja (16 900 → 20 600 el 03-09; → 22 200 el 04-09, al contar la franja de red: §6 y el bloque de enmiendas de la tanda A) ·
 **Cierra**: nada todavía. **Entrega**: los rieles de #169 (§4.3) ·
 **Mata por desaparición del sujeto**: #141, #280, #106, #56, #57. **Ejecutado el 2026-09-04**, antes de la adopción: Samuel decidió cerrarlos ya tomando este papel firmado como certificado, en vez de esperar a que la v4 se fabrique. Los cuatro abiertos (#141, #106, #56, #57) se cerraron *not planned* con previsto/encontrado y cita a esta línea; #280 ya estaba cerrado como completado. **Esta es la única lista de defunción del árbol**: nada más muere por parecerse a la v3 ·
@@ -117,6 +117,9 @@
 >   riel negativo sigue en **−170 mV** y ninguno de los dos candidatos es una
 >   pieza negativa. Firmar «vamos con (b)» **cierra media cadena**: la otra
 >   mitad necesita su propia respuesta, y son 170 mV, no 388.
+>   *(Cerrada dos días después: D-F9, LT3015, +536 mV. La especificación que
+>   este párrafo dejó escrita —bajar de 1,343 V en la suma— fue exactamente lo
+>   que la búsqueda usó de filtro.)*
 >
 >   **Lo que hay que comprar para `U2`, dicho como especificación y no como
 >   queja:** su presupuesto de ventana + dropout son **1,470 V** y el LM2991
@@ -143,6 +146,87 @@
 > hoja (p. 12, 0,1–1,0 Ω) y no es transferible: la pieza que entre trae la suya,
 > y hay que volver a escribirlo. Hoy `margen_budget.py` lo asevera y **daría
 > verde sobre un sujeto muerto** el día que se cambie el chip.
+
+> ### D-F9: `U2` PASA A LT3015, Y CON ELLO CIERRAN TRES COSAS (2026-09-06)
+>
+> El bloque de arriba dejaba `U2` en **−170 mV** con un requisito escrito como
+> especificación y no como queja: *ventana de referencia + dropout garantizado
+> por debajo de 1,343 V*. **La pieza existe y estaba a dos hojas de distancia.**
+>
+> **`U2` = LT3015 (`LT3015IT#PBF`), LDO negativo ajustable de 1,5 A en TO-220
+> de 5 patas.** Firmado por Samuel el 2026-09-06 con esta tabla delante:
+>
+> | pieza | ventana | dropout gar. | suma (tope 1,343) | margen en `U2` |
+> |---|---|---|---|---|
+> | **LM2991** (hasta hoy) | 0,640 V | 1,00 V a 1 A | 1,640 | **−170 mV** |
+> | TPS7A3301 | 0,322 V | 0,80 V a 1 A | 1,122 | +347 mV |
+> | **LT3015** | **0,254 V** | **0,68 V a 1,5 A** | **0,934** | **+536 mV** |
+>
+> Calculado con `margen_budget.py`, el mismo apilamiento de siempre, cambiando
+> sólo lo que la pieza cambia. **El guion pasa de HUECO a verde** y su peor
+> riel vuelve a ser `U1` (+330 mV). El margen es **4,2×** la incertidumbre del
+> propio modelo (127 mV).
+>
+> **Por qué el LT3015 y no el TPS7A3301, que también pasaba:** el TI dibuja un
+> TO-220 en su hoja pero **su *Package Option Addendum* (p. 27) sólo lista
+> VQFN-20**. No hay part number en TO-220 que pedir, así que `U2` habría dejado
+> de ser un tab contra la pared del chasis — y eso mueve `chasis_to220_*` en
+> `clearance_budget.py`, `check_dxf.py` y el pliego. El LT3015 no mueve nada.
+>
+> **Las cuatro cifras, todas de tabla y ninguna de curva** (`lt3015-rev-b.pdf`):
+> `ADJ Pin Voltage` −1,196/−1,244 V en la fila marcada con `l` —que en Linear
+> es todo el rango de temperatura, y cuyas condiciones incluyen −30 V < VIN <
+> −2,3 V y −1,5 A < ILOAD < −1 mA, o sea que **línea y carga ya están dentro**
+> de esos 48 mV—; `Dropout Voltage` 0,68 V máx a −1,5 A **en la fila del
+> DD-PAK/TO-220**, que es peor que la del DFN (0,50) y es la nuestra;
+> `IN Pin Voltage` ±33 V; y `Shutdown Threshold` *Off-to-On (Positive)* 1,35 V
+> máx. **Pedir el grado `I`**: la Nota 9 sólo garantiza el rango entero al `I`
+> y al `MP`, no al `E`.
+>
+> **Lo que cierra, y es más que su propio issue:**
+>
+> - **El inversor del ON/OFF se queda sin motivo (#323).** El `SHDN` del LT3015
+>   **habilita en ALTO**, igual que el del LT1963A. Vuelve el hilo único, y con
+>   un pulldown al común **cortar el hilo apaga los DOS por construcción** —que
+>   era exactamente la propiedad que D-F4 necesita y que D-F8 había roto sin
+>   querer. No hay inversor que pueda quedarse sin alimentación. El punto del
+>   bring-up que medía eso (*quitar alimentación al inversor apaga LOS DOS*)
+>   **se retira por falta de sujeto**; el otro (*cortar la señal apaga LOS DOS*)
+>   se queda, porque «por construcción» es un argumento y no una medida.
+> - **El umbral del detector de ventana vuelve a tener dónde vivir (#324).**
+>   Era el mismo −170 mV visto desde el secuenciador: entre lo que el peor riel
+>   necesitaba y lo que un IRM de tolerancia mala entrega no había hueco.
+>   Ahora `secuencia_budget.py` publica **+330 mV de ventana** y, después de
+>   pagar histéresis y error de umbral, **+40 mV útiles**. Es estrecho y hay
+>   que dibujar el circuito con eso delante, pero existe.
+> - **`U2` deja de necesitar ajuste placa a placa.** Su ventana de referencia
+>   (0,254 V) es **más estrecha** que los ±0,3 V con los que el bring-up de la
+>   v3 acepta TP8: el −12,9 V cabe con divisor fijo. Eso rompió un aserto de
+>   `margen_budget.py` que daba por sentado lo contrario, y romperlo era lo
+>   correcto — exigía que la pieza nueva fuera tan mala como la vieja.
+>
+> **Lo que arrastra, y hay que respetar:**
+>
+> - **La `CFF` de 10 nF de `ADJ` a `OUT` NO es opcional.** La G41 de la p. 11
+>   dibuja tres trazas y a 65 kHz —la conmutación del IRM, o sea la frecuencia
+>   que decide `rizado_budget.py`— valen ~41 dB (47 µF + CFF), ~38 (10 µF +
+>   CFF) y ~15 (10 µF **sin** CFF). **Sin ese condensador el LT3015 rechaza
+>   menos que el LM2991 al que sustituye** (24,5 dB) y el cambio de pieza
+>   saldría al revés. Las dos piezas se declaran en `rizado_budget.py` y un
+>   aserto comprueba que la cita de la curva sigue siendo la de esos valores.
+> - **La lectura de 41 dB a 65 kHz es la más floja de la tabla de curvas.**
+>   Cae en una pendiente fuerte, entre un pico de ~46,5 dB a 41 kHz y un mínimo
+>   de ~39 a 110 kHz: ahí 10 kHz de error de lectura mueven 3 dB. Declarada
+>   como duda en `curvas.py`.
+>
+> **Lo que NO cierra, y sale de aquí:** el máximo absoluto de entrada de `U1`.
+> El LT1963A aguanta **±20 V** (Rev G p. 2) y el OVP de `PS1` clampa a **20,25 V
+> sostenidos** (IRM-20 p. 2). Faltan 250 mV, y tres sitios seguían en verde
+> porque nombraban al LM2941. Es la **#334**, y **no se decide en esta tanda**:
+> cambiar el número pone `check_absmax.py` en rojo, y qué hacer con eso —otra
+> pieza, atajar el OVP, o aceptarlo por escrito— es una decisión, no una
+> corrección. El **MIC29152** (rev B ya en el árbol) admite **+26 V** de
+> entrada operacional y es la salida más obvia.
 
 > **Lo que la tanda A dejó cerrado y verde:** el sostenido (§1, §6), el censo
 > de invitados en cuatro columnas (`invitados_budget.py`), el desfase
@@ -1138,6 +1222,12 @@ lo que otro no hace** (#214, #206).
 | **D-F5** | **Y2 de modo común** por módulo | seis Y2 al chasis en R; §12.4 por leer; entra en `fuga_budget.py` |
 | **D-F6** | **crowbar** en los rieles de rack, y solo ahí | SCR por riel de rack; `check_absmax.py` contra los 16,2 V; su prueba en el bring-up |
 | **D-F7** | `PS5` = **IRM-45-5** (era IRM-20-5); +5 V de rack **4,0 A declarados** sobre 8 de placa | `calor_budget.py` lo hizo nacer: con la IRM-20-5 el listón del +5 V no existía con ningún venteo (§3). Una referencia menos en R; 87 × 52 mm donde había 52 × 27 |
+| **D-F8** (04-09) | `U1` = **LT1963A** (era LM2941) | `margen_budget.py` pasa de −388 a **+330 mV**. Trae la ventana de ESR nueva (0–3 Ω, acepta cerámico) y **se llevó por delante el hilo único del ON/OFF**, que D-F9 devuelve. Deja abierto su máximo absoluto de entrada: **#334** |
+| **D-F9** (06-09) | `U2` = **LT3015** `LT3015IT#PBF` (era LM2991) | `margen_budget.py` pasa de −170 a **+536 mV** y sale de HUECO. Cierra el inversor del ON/OFF (**#323**) y abre la ventana del umbral de D-F4 (**#324**, +330 mV). Exige `COUT` = 47 µF **y** `CFF` = 10 nF, y el grado `I`. No mueve `chasis_to220_*` |
+
+**Estas dos filas faltaban.** D-F8 se firmó el 04-09 y vivió sólo en su bloque
+de enmiendas: la cabecera decía «D-F1 a D-F8 decididas (§14)» y §14 se paraba
+en la D-F7. Se añaden las dos juntas al escribir D-F9.
 
 **La columna «sostenido» de §1 está rellena** (03-09, `calor_budget.py`, con
 D-F3 = A y D-F7): 2,0 / 2,0 / 4,0 A de rack y 4,2 A digital con el venteo

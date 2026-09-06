@@ -1,6 +1,6 @@
 victima,riel,v_absmax,estado,fuente
 U1 LM2941,+15 crudo,26.0,confirmado,"lm2941-snvs770i-2015-01.pdf p. 5: entrada maxima operacional 26 V (MIN de la especificacion; TYP 31). El absoluto transitorio de la p. 4 son 60 V, y no se usa: un OVP no es un transitorio de red"
-U2 LM2991,-15 crudo,26.0,confirmado,"lm2991-snvs099i-2016-10.pdf p. 4: 'Input voltage -26 0.3 V'. Se toma el modulo"
+U2 LT3015,-15 crudo,33.0,confirmado,"lt3015-rev-b.pdf p. 2, ABSOLUTE MAXIMUM RATINGS: 'IN Pin Voltage ... +-33V'. Sustituye al LM2991 (26,0 V) con D-F9. Se toma el modulo"
 LT3045,salida de U1,22.0,confirmado,"lt3045-rev-d.pdf p. 2, IN Pin Voltage: +-22 V. Solo lo ve si U1 se pone en corto Y PS1 esta en su OVP: fallo doble, se documenta"
 LT3094,salida de U2,22.0,confirmado,"lt3094-rev-b.pdf p. 3: -22 V. Mismo fallo doble que el LT3045"
 modulo invitado +-12,rack +-12,16.0,ESTIMADO,"NO hay hoja: son modulos de terceros y el papel sec.4.3 lo dice ('maximos absolutos desconocidos'). 16,0 V es el electrolitico de 16 V que un modulo Eurorack lleva en sus rieles de +-12: es la pieza que revienta primero y la mas comun. Los chips aguantan mas (LM13700 +-18 V, TL074 42 V totales, ver el absmax.csv de la v3)"
