@@ -87,6 +87,7 @@ for _ruta in (DIR, os.path.join(DIR, "..", "..", "tools")):
     if _ruta not in sys.path:
         sys.path.insert(0, _ruta)
 from canario import borde_rojo  # noqa: E402
+import curvas  # noqa: E402
 from curvas import psrr_db  # noqa: E402
 
 # --- la fuente de rizado ---------------------------------------------------
@@ -189,9 +190,24 @@ ESL_D_CER_H = 3.0e-9         # ESTIMADO: 0805 + la resistencia en serie
 # convierte en 0 dB y lo dice en voz alta.
 PSRR_FUERA_DE_GRAFICA_DB = 0.0
 
+# LO QUE HAY QUE PONERLE AL LT3015 PARA QUE SU CURVA SEA LA QUE SE LEYO.
+#
+# La G41 de su hoja (p. 11) dibuja TRES trazas y a 65 kHz --la conmutacion del
+# IRM, o sea justo la frecuencia que decide este presupuesto-- valen ~41 dB
+# (COUT 47 uF + CFF 10 nF), ~38 (10 uF + CFF) y ~15 (10 uF SIN CFF). Sin el
+# condensador de avance el LT3015 rechaza MENOS que el LM2991 al que
+# sustituye (24,5 dB), o sea que el cambio de pieza saldria al reves.
+#
+# Por eso las dos piezas se DECLARAN aqui y no se dan por supuestas, y el
+# aserto de mas abajo comprueba que la cita de la curva sigue siendo la de
+# estos dos valores. Si algun dia se relee la G41 en otras condiciones, la
+# puerta lo dice en vez de dejar la lectura vieja con el BOM nuevo.
+COUT_U2_F = 47e-6            # DECLARADO: la traza roja de la G41
+CFF_U2_F = 10e-9             # DECLARADO: de ADJ a OUT. NO es opcional
+
 # Las dos ramas de la cascada, con su pareja de reguladores.
 RAMAS = {"+15 -> U1 -> LT3045": ("LM2941", "LT3045"),
-         "-15 -> U2 -> LT3094": ("LM2991", "LT3094")}
+         "-15 -> U2 -> LT3094": ("LT3015", "LT3094")}
 
 # LO QUE ESTE PRESUPUESTO NO CUBRE. Aseverado, no anotado.
 CUBRE_MODO_COMUN = False
@@ -362,6 +378,20 @@ P_BASE = {
 
 
 def _autocomprobacion() -> None:
+    # 0. LA CURVA DEL LT3015 ES LA DE SUS DOS CONDENSADORES, y este aserto es
+    #    el unico sitio donde el BOM y la lectura de la figura se tocan.
+    #    Sin la CFF la traza buena de la G41 no aplica --y sin ella el LT3015
+    #    rechaza menos que el LM2991 al que sustituye-- asi que declararla en
+    #    un comentario no basta: si alguien relee la figura en otras
+    #    condiciones, aqui salta.
+    cita_u2 = curvas.FUENTE["LT3015"]
+    for texto in (f"COUT = {COUT_U2_F * 1e6:.0f} uF",
+                  f"CFF = {CFF_U2_F * 1e9:.0f} nF"):
+        assert texto in cita_u2, (
+            f"la curva de PSRR del LT3015 se leyo en otras condiciones que "
+            f"las que este presupuesto declara: falta '{texto}' en la cita "
+            f"{cita_u2!r}. O se cambia el BOM o se vuelve a leer la figura")
+
     # 1. A 65 kHz, el fundamental. Es la cuenta que el papel sec.4.2 ya
     #    publica (107 dB de necesidad) y aqui se comprueba con la cadena.
     v65 = v_ruido_riel_v(F_CONMUTACION_HZ)
