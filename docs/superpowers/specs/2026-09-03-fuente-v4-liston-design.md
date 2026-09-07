@@ -227,6 +227,29 @@
 > pieza, atajar el OVP, o aceptarlo por escrito— es una decisión, no una
 > corrección. El **MIC29152** (rev B ya en el árbol) admite **+26 V** de
 > entrada operacional y es la salida más obvia.
+>
+> **HABÍA OTRO CAMINO EN EL ÁRBOL, Y NO SE PUSO SOBRE LA MESA (2026-09-07).**
+> El papel de la **fuente v5** (`2026-09-05-…-ladrillo-design.md`, §5), mergeado
+> el 05-09 y presente en el árbol de esta misma rama, proponía cerrar `U2`
+> **sin cambiar la pieza**: con un DC-DC propio la tensión cruda se elige, y a
+> 15,5 V el LM2991 llega a +311 mV. Su §7.1 daba el **#322** por muerto «por
+> desaparición del sujeto». Cuando se buscó la pieza no se leyó ese papel, así
+> que D-F9 se firmó sin esa alternativa delante. **La firma se sostiene igual, y
+> por tres razones que no dependen de cuál se prefiera:**
+>
+> 1. **La v5 no está firmada** («ninguno de los tres se toca aquí: este papel no
+>    está firmado»). Mientras no lo esté, el crudo es el de un IRM de catálogo y
+>    D-F9 es la única salida vigente.
+> 2. **La v5 no reabre la cascada** (§7), así que con el LM2991 el `ON/OFF`
+>    seguiría habilitando al revés que el LT1963A y el **#323 seguiría abierto**.
+>    Ninguna tensión cruda compra eso.
+> 3. **Las dos se suman en la dirección buena.** Con el LT3015 dentro, D-V3 deja
+>    de comprar un cierre y pasa a comprar holgura en `U1` (+330 → +811 mV), y
+>    sus **+0,33 W** se vuelven negociables en un papel que va de bajar calor.
+>
+> Lo que sí hizo D-F9 fue moverle las cifras al papel de la v5 sin avisar:
+> `ladrillo_budget.py` importa `margen_budget.py` entero, así que su tabla de §5
+> **cambió sola**. Enmendada allí con esta misma fecha.
 
 > **Lo que la tanda A dejó cerrado y verde:** el sostenido (§1, §6), el censo
 > de invitados en cuatro columnas (`invitados_budget.py`), el desfase

@@ -129,6 +129,31 @@ eligiendo las piezas.
 
 ## 5. El regalo: la tensión cruda cierra `U2` (D-V3)
 
+> **ENMIENDA (2026-09-07, D-F9 · #335). El regalo llegó por otro lado, y esta
+> sección publica cifras que su propio guion ya no produce.**
+>
+> El 06-09 —un día después de escribirse este papel, y con este papel sin
+> firmar— se firmó **D-F9: `U2` pasa de LM2991 a LT3015**. La tabla de abajo la
+> genera `ladrillo_budget.py`, que reusa `margen_budget.py` entero; al cambiar
+> la pieza, su columna `margen U2` cambió sola:
+>
+> | crudo | margen `U2` publicado aquí | margen `U2` que da hoy el guion |
+> |---|---|---|
+> | 15,0 V | −170 mV | **+536 mV** |
+> | 15,5 V | +311 mV | **+1017 mV** |
+> | 16,0 V | +792 mV | **+1498 mV** |
+>
+> **Lo que esto le hace a D-V3: le quita el sujeto, no la razón.** `U2` ya no es
+> el rojo que hay que cerrar —ya está cerrado a 15,0 V, sin tocar el crudo—, así
+> que subirlo a 15,5 deja de comprar un cierre. Lo que sigue comprando es
+> holgura en **`U1`**, que a 15,0 V es el peor riel con **+330 mV** sobre una
+> incertidumbre de modelo de 127, y a 15,5 se va a +811.
+>
+> Y eso **cambia la pregunta**, porque este papel entero va de bajar calor: los
+> **+0,33 W** de D-V3 se pagaban por necesidad y ahora se pagarían por margen.
+> Decidir si valen sigue siendo trabajo de la firma de esta v5; lo que ya no se
+> puede es justificarlos con `U2`.
+
 `U2`, el pre-regulador negativo, lleva desde el 2026-09-03 con **−170 mV** de
 margen de entrada, y no tiene salida por piezas: ninguno de los candidatos de
 D-F8 es una pieza negativa. El problema nunca fue `U2`. Es que un IRM de
@@ -236,6 +261,13 @@ Cruzado contra los issues abiertos, no contra la memoria:
   pieza porque `U2` no llegaba con 15,0 V de crudo. **Con D-V3 llega con el
   LM2991 de hoy**: +311 mV. La búsqueda de pieza sobra. Muere por desaparición
   del sujeto, no por haberse resuelto.
+  > **ENMIENDA (2026-09-07).** No murió: **se resolvió con pieza** el 06-09
+  > (D-F9 · #335, LT3015), mientras este papel seguía sin firmar. La búsqueda no
+  > sobró, y la pieza **sigue haciendo falta aunque se firme esta v5**: el §7
+  > dice «no se reabre la cascada», así que con el LM2991 el `ON/OFF` seguiría
+  > habilitando al revés que el LT1963A de D-F8 y el **#323** quedaría abierto.
+  > El LT3015 lo cierra por construcción, y eso D-V3 no lo compra a ningún
+  > precio de crudo.
 - **#130** — «*la entrada de red del chasis no tiene pieza*». No hay entrada de
   red en el chasis. Muere entero.
 
