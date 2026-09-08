@@ -23,6 +23,19 @@
 > (`v4/fuga_budget.py`, HUECO). Ninguno bloquea la puerta; los cinco están
 > declarados.
 
+> ### ENMIENDA E16 — PRESUPUESTO TÉRMICO (#331, 2026-09-08)
+>
+> D1 retiró la cadena WS2812. `calor_budget.py`, ejecutado en este worktree,
+> da **2,895 A / 14,475 W** de carga digital, **2,86 W** de pérdida en
+> `PS6` y **29,23 W** en el recinto, incluida la franja de red.
+> Las constantes se imprimieron importando el guion, sin modificarlo;
+> el papel firmado conserva tachados los valores anteriores.
+>
+> **E16 queda parcial:** el guion aún no incluye la carga ultra de la Voz
+> en el cajón y no reproduce la temperatura cerrada solicitada. Esas celdas
+> y el total del cajón quedan pendientes, con evidencia en `REPORTE.md`
+> en la raíz. Los rieles de rack se declaran según D-B2 **si se firma**.
+
 ## Objetivo
 
 Generar las tensiones reguladas requeridas por el bus SAM17:

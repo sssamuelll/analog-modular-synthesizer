@@ -6,6 +6,22 @@
 **Mata por desaparición del sujeto**: #141, #280, #106, #56, #57. **Ejecutado el 2026-09-04**, antes de la adopción: Samuel decidió cerrarlos ya tomando este papel firmado como certificado, en vez de esperar a que la v4 se fabrique. Los cuatro abiertos (#141, #106, #56, #57) se cerraron *not planned* con previsto/encontrado y cita a esta línea; #280 ya estaba cerrado como completado. **Esta es la única lista de defunción del árbol**: nada más muere por parecerse a la v3 ·
 **Reabre**: `design-notes` §13 y §18, la spec del chasis (§3.1, §3.2, §3.3), `clearance_budget.py::guarda_aire()`, `consumo_total_budget.py`, `power_budget.py`, `ground_budget.py`, el papel de la bahía
 
+> ### ENMIENDA E16 — RETIRADA DE LA CADENA WS2812 (#331, 2026-09-08)
+>
+> D1 de `instrumento-entero` retiró la cadena entera. Se corrigen §4.4 y §6
+> con los valores de `calor_budget.py`, ejecutado el 2026-09-08; las constantes
+> que su salida principal no muestra se imprimieron importando el mismo guion,
+> sin modificarlo. Cada sustitución conserva tachado el valor anterior.
+>
+> **Aplicación parcial por discrepancias con el issue.** El guion todavía no
+> incluye la carga ultra de la Voz en el cajón y no reproduce la temperatura
+> cerrada pedida. Quedan sin tocar esa fila solicitada, el total del cajón y
+> las dos temperaturas cerradas; la evidencia está en `REPORTE.md`, en la raíz.
+> La nota bajo D-F1 conserva la condición de firma de D-B2.
+>
+> Las cifras de los bloques anteriores a esta fecha conservan su contexto
+> histórico; esta enmienda no vuelve a dimensionar el encargo de venteo.
+
 > ### ENMIENDAS DE LA TANDA A DE PRESUPUESTOS (2026-09-04)
 >
 > Los guiones de `hardware/01-power-supply/v4/` corrieron por primera vez y
@@ -22,7 +38,7 @@
 > | 5 | §4.1 | la fuga a PE es «el no-problema», un orden de magnitud bajo el límite | **el 87 % del límite de trabajo** (3,05 de 3,5 mA), con las condiciones de medida de la norma: 1,1 × la nominal y 60 Hz. El **Y2 máximo por módulo son 2,99 nF**. `fuga_budget.py`, HUECO por la cifra de IEC 62368-1, que es de pago |
 > | 6 | §4.2 (D-F5) | el Y2 local cierra el lazo de modo común **a 65 kHz** | **es un mecanismo de MEGAHERCIOS, y con letra pequeña.** Los dos caminos van en paralelo y la corriente se reparte: a 65 kHz los 300 mm de hilo pesan 0,12 Ω contra 1113 del Y2 y sólo desvía 1,5 veces; a 20 MHz desvía 14,2. **Y en 7,48 MHz hay una ANTIRRESONANCIA donde el Y2 local MULTIPLICA POR 62 la corriente que se vuelve por la estrella**: la rama larga ya es inductiva, la local sigue capacitiva, y donde las dos reactancias se cancelan la corriente circula entre ellas. No se arregla amortiguando el Y2 (harían falta 9 Ω y eso mata su trabajo a 20 MHz): se arregla **acortando el hilo de la estrella**, y se mide. La decisión sigue siendo buena; el motivo escrito no es el que la sostiene |
 > | 7 | §4.2, §12.4 | la nota EMI de Mean Well documenta el mecanismo de D-F5 | **la nota no habla de condensadores Y.** Habla de montar el módulo sobre «a defined metal plate» y de que el cable de salida vaya «twisted and flatly placed on and within the range of the metal plate», y de que la EMC sólo se comprueba con el equipo entero. Son **dos requisitos de montaje** de los que depende la Clase B de la hoja, y no estaban escritos en ningún sitio. Ya está en el árbol: `meanwell-emi-statement-2023-12-20.pdf`. §12.4 hecho |
-> | 8 | §6 | la tabla de calor del recinto suma 27,5 W | **le falta la franja de red, y no es un detalle: son 31,25 W.** La NTC de arranque disipa 2,75 W dentro y el choke 0,95 (ESTIMADO); el MOV no, porque en marcha normal conduce microamperios. Con esos 3,70 W **el venteo mínimo sube de 20 525 a 22 148 mm²** — sin ellos el listón del rack se cumplía por 3,5 mA. Ya están dentro de `calor_budget.py`, y `fusible_budget.py` asevera la cifra de la NTC contra la suya |
+> | 8 | §6 | la tabla de calor del recinto suma 27,5 W | **le falta la franja de red, y no es un detalle: son ~~31,25 W~~ 29,23 W** (E16, 2026-09-08: `P_RECINTO_MAX`, con `PS6` sin la cadena retirada). La NTC de arranque disipa 2,75 W dentro y el choke 0,95 (ESTIMADO); el MOV no, porque en marcha normal conduce microamperios. Con esos 3,70 W **el venteo mínimo sube de 20 525 a 22 148 mm²** — sin ellos el listón del rack se cumplía por 3,5 mA. Ya están dentro de `calor_budget.py`, y `fusible_budget.py` asevera la cifra de la NTC contra la suya. **El cálculo de venteo de este punto es el histórico del 04-09; E16 no lo recalcula.** |
 >
 > **Dos cosas más que los guiones añadieron y el papel no tenía:**
 >
@@ -703,11 +719,19 @@ familia** (80 mVp-p). Sale **flotante** hacia el módulo 2, como hoy.
 
 Contra `power_budget.py`, corrido el 2026-09-03:
 
-| Escenario | Duras | Cadena | Total | Contra 8 A de placa |
+| Escenario | Duras | ~~Cadena~~ Retirada (E16, 2026-09-08: D1) | Total | Contra 8 A de placa |
 |---|---|---|---|---|
 | Typ, 4 N657, host USB a tope | 0,965 A | 2,04 A | 3,005 A | sobran 5,0 A |
-| Max TJ = 125 °C, 4 N657, host a tope | 2,895 A | 2,04 A | 4,935 A | sobran 3,1 A |
+| Max TJ = 125 °C, 4 N657, host a tope | 2,895 A | ~~2,04 A~~ retirada (E16, 2026-09-08: D1) | ~~4,935 A~~ **2,895 A** (E16, 2026-09-08: `CAJON_DIGITAL_A`, sin cadena) | ~~sobran 3,1 A~~ **sobran 5,105 A** (E16, 2026-09-08: placa menos `CAJON_DIGITAL_A`) |
 | Blanco pleno de la cadena | — | 9,60 A | — | **no cabe** |
+
+> ### ENMIENDA E16 — ALCANCE DE LA TABLA DIGITAL (2026-09-08)
+>
+> La fila máxima se lee con la cadena retirada por D1. Las filas «Typ» y
+> «Blanco pleno de la cadena» quedan **como antecedentes del 03-09, sin
+> vigencia tras D1**: `calor_budget.py` no calcula un típico sustituto.
+> Sus cifras se conservan sin retocarlas. La capacidad de placa de `PS6`
+> y el listón firmado no cambian por esta corrección de carga.
 
 Tres cosas que la junta corrigió:
 
@@ -844,18 +868,37 @@ Las fuentes de calor, con los rendimientos ya corregidos de §3:
 | | Típico (instrumento a censo, digital a 3,0 A, rack vacío) | Máximo (todo a placa a la vez) |
 |---|---|---|
 | `PS1` + `PS2` | (15 × 0,340 + 15 × 0,327) × (1/0,84 − 1) = 1,91 W | 19,5 × 0,19 = 3,71 W |
-| `PS6` | 5 × 3,005 × (1/0,835 − 1) = 2,97 W | 24,7 × 0,198 = 4,88 W |
+| `PS6` | 5 × 3,005 × (1/0,835 − 1) = 2,97 W | ~~24,7 × 0,198 = 4,88 W~~ **14,475 × (1/0,835 − 1) = 2,86 W** (E16, 2026-09-08: `PS6_SIGUE_AL_DIGITAL_W`, sin cadena) |
 | `PS3` | < 0,15 W | 45,6 × (1/0,875 − 1) = 6,51 W |
 | `PS4` | < 0,15 W | 30 × 0,143 = 4,29 W |
 | `PS5` (IRM-45-5 desde D-F7, a los 4,0 A declarados) | < 0,1 W | 20 × (1/0,835 − 1) = **3,95 W** (era 5,32 con la IRM-20-5) |
 | `U1`, `U2` a 15 V de entrada | 0,65 + 0,69 W | 1,24 + 1,37 W |
 | LT ×4 + `U3` | 0,35 + 0,30 W | 1,30 + 0,30 W |
-| **Total en el recinto** | **7,2 W** | **27,5 W** (28,9 con la IRM-20-5 en `PS5`, antes de D-F7) |
+| NTC de arranque | — | **2,75 W** (E16, 2026-09-08: `NTC_ARRANQUE_W`, franja de red omitida en esta tabla) |
+| Choke de red | — | **0,95 W** (E16, 2026-09-08: `CHOKE_RED_W`, franja de red omitida; ESTIMADO) |
+| **Total en el recinto** | **7,2 W** | ~~**27,5 W**~~ **29,23 W** (E16, 2026-09-08: `P_RECINTO_MAX`, `PS6` sin cadena y franja de red incluida; 28,9 con la IRM-20-5 en `PS5`, antes de D-F7) |
 | + el 1,8 V si vive dentro | +0,62 W | +4,57 W |
+
+> ### ENMIENDA E16 — SUMA DEL RECINTO Y CARGA DIGITAL (2026-09-08)
+>
+> El máximo incluye ahora la franja de red que ya llevaba el guion. Los
+> sumandos publicados dan **29,23 W**, redondeando al final; el MOV no
+> añade pérdida en régimen. La fila opcional del regulador de 1,8 V sigue
+> aparte. `U1`, `U2` y sus pérdidas se conservan juntos tal como los carga
+> `calor_budget.py`.
+>
+> **La columna típica entera es histórica, anterior a D1**, incluido su
+> total: aún cuenta la cadena en `PS6` y no contiene la franja de red.
+> El guion no publica un típico actualizado; «—» no significa pérdida nula.
+>
+> La carga ultra solicitada por #331 **no se añade**: falta en el guion
+> ejecutado. El total del cajón y las temperaturas cerradas del texto se
+> conservan pendientes de conciliación; no son resultados de esta enmienda.
 
 Y **fuera del recinto pero dentro del cajón**, lo que el listón permite y
 `guarda_aire()` no tiene: la fila de invitados a placa disipa **95,6 W** y el
-digital **24,7 W**. El case se cerró (techo macizo, trasera capturada) con 9 W
+digital ~~**24,7 W**~~ **14,475 W** (E16, 2026-09-08:
+`CAJON_DIGITAL_W`, retirada de la cadena por D1). El case se cerró (techo macizo, trasera capturada) con 9 W
 de fuente en su presupuesto de aire.
 
 **Lo que da el lazo** (junta, sobre el modelo del case y del recinto de hoy;
@@ -1247,6 +1290,12 @@ lo que otro no hace** (#214, #206).
 | **D-F7** | `PS5` = **IRM-45-5** (era IRM-20-5); +5 V de rack **4,0 A declarados** sobre 8 de placa | `calor_budget.py` lo hizo nacer: con la IRM-20-5 el listón del +5 V no existía con ningún venteo (§3). Una referencia menos en R; 87 × 52 mm donde había 52 × 27 |
 | **D-F8** (04-09) | `U1` = **LT1963A** (era LM2941) | `margen_budget.py` pasa de −388 a **+330 mV**. Trae la ventana de ESR nueva (0–3 Ω, acepta cerámico) y **se llevó por delante el hilo único del ON/OFF**, que D-F9 devuelve. Deja abierto su máximo absoluto de entrada: **#334** |
 | **D-F9** (06-09) | `U2` = **LT3015** `LT3015IT#PBF` (era LM2991) | `margen_budget.py` pasa de −170 a **+536 mV** y sale de HUECO. Cierra el inversor del ON/OFF (**#323**) y abre la ventana del umbral de D-F4 (**#324**, +330 mV). Exige `COUT` = 47 µF **y** `CFF` = 10 nF, y el grado `I`. No mueve `chasis_to220_*` |
+
+> ### ENMIENDA E16 — NOTA BAJO D-F1 (2026-09-08)
+>
+> Los rieles de rack se declaran según D-B2 **si se firma**. Esta nota deja
+> explícita la dependencia solicitada por #331; no sustituye las decisiones
+> D-F* firmadas ni adopta otro listón.
 
 **Estas dos filas faltaban.** D-F8 se firmó el 04-09 y vivió sólo en su bloque
 de enmiendas: la cabecera decía «D-F1 a D-F8 decididas (§14)» y §14 se paraba
