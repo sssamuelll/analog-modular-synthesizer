@@ -47,6 +47,23 @@ Este papel lo arregla desde el marco de un fabricante, no desde el de un proyect
 | Los dos reportantes usan `SPI5`; nadie probó otra instancia | Seis enlaces en `SPI1-6` | Pregunta upstream (§9, acción 1) |
 | Escribir a `TXDR` desatasca el caso bloqueante; en DMA no | — | El reinicio es el del manual, no el paliativo |
 
+> **Enmienda del 2026-09-08 (§1.1, alcance):** la premisa «nadie probó otra
+> instancia» queda refutada. En [embassy-rs/embassy#5607](https://github.com/embassy-rs/embassy/issues/5607),
+> jake-taf, uno de los reportantes originales, respondió el 2026-09-03:
+> *«I have observed this problem on SPI1 as well»*. Hay cuelgues reportados en
+> **dos instancias, SPI5 y SPI1**. El defecto no es exclusivo de SPI5; esta
+> respuesta no demuestra que fallen todas las instancias del bloque ni
+> identifica la causa. La pregunta de la fila ya tiene respuesta con ese alcance.
+
+> **Enmienda del 2026-09-08 (§1.1, consecuencia de diseño):** cambiar de
+> instancia no es una salida de esquemático acreditada por la evidencia. La
+> recuperación es **obligatoria para las seis ranuras SPI**: el plazo de D3,
+> los ocho pasos de D4 en su orden, la ventana deslizante y las dos marcas de
+> salud de D7. La política vive en `software/nucleo/core/src/maestro_j2.rs` y
+> el driver ejecuta la recuperación en `software/nucleo/fw/src/j2_spi.rs`
+> (D8). Es un requisito del diseño aun sin diagnóstico, y ninguna ranura queda
+> exenta por llevar una instancia distinta de SPI5.
+
 ### 1.2 Lo que embassy hace, leído en el código *(⚠ corregido por S-2)*
 
 `embassy-stm32/src/spi/mod.rs`, `main` al 2026-09-03 (copia en el scratchpad de la sesión, 2130 líneas):
@@ -84,6 +101,15 @@ O sea: el NSS por hardware que el censo ya reparte **no funciona sin `TSIZE`**. 
 **El CRC es el del sobre, y solo ese.** La cabecera D2 lo decidió: CRC-16/CCITT-FALSE sobre los primeros `4 + largo` bytes, dentro del sobre, computado con la unidad CRC del chip sobre el búfer, precisamente porque *«un receptor de largo variable no conoce `TSIZE`»*. El CRC del periférico SPI (`CRCEN`) viaja como trama aparte **después** de los `TSIZE` datos y se compara en el maestro contra lo que el esclavo shiftee en ese momento, que no es un CRC (§67.5.3, p. 3456: *«The length of the transfer must be defined by TSIZE. When the desired number of data is transferred, the TXCRC is transmitted and the data received on the line are compared to the RXCRC value.»*). Activarlo daría `CRCE` en cada giro y dos CRC en el cable. **`CRCEN = 0`.**
 
 **Por qué importa contra el #5607, dicho sin exagerar:** el montaje del hilo mueve el `CS` con un GPIO. El nuestro lo mueve el periférico. Eso es lo único que separa los dos montajes, porque `TSIZE > 0` ya lo usa el `read` de embassy y también se cuelga (§1.1). No es prueba de nada; es una variable que el bring-up mueve (§9, riesgo 1).
+
+> **Enmienda del 2026-09-08 (D1, NSS por hardware):** jake-taf respondió el
+> 2026-09-03 en [#5607](https://github.com/embassy-rs/embassy/issues/5607):
+> *«I haven't tried that mode.»*, sobre `SSM = 0, SSOE = 1`. No hay una prueba
+> de ese modo documentada en la evidencia disponible. El bring-up (#231)
+> aportará nuestro primer dato: si no se cuelga, será un hallazgo propio bajo
+> las condiciones ensayadas; si se cuelga igual, el modo de NSS dejará de
+> separar los casos con cuelgue. Sigue siendo **HUECO** el resultado con NSS
+> por hardware; la recuperación de D4 sigue siendo requisito en ambos casos.
 
 **Lo que trae de regalo:** con `TSIZE > 0` y `SSOM = 0`, el fin de la trama es un flanco de NSS generado por hardware al `EOT`, exacto al reloj. La cuenta de bytes en el flanco del esclavo (cabecera D6.4, H-14) recibe un flanco limpio.
 
@@ -163,6 +189,13 @@ Un plazo vencido no se reintenta: se reinicia. La receta es la del RM0486, compl
 **La `secuencia` de la trama abortada se consumió.** El planificador la asignó y el módulo no la aceptó, así que el módulo verá un hueco y lo contará en `perdidas` (cabecera §3.3, R-C3). Es correcto y esperable: en el bring-up, `perdidas` del módulo se cruza con `plazos_vencidos + eot_tardios` del cerebro (D2 regla 1), y la diferencia es lo que de verdad se perdió por el cable.
 
 **Lo que NO se hace:** escribir a `TXDR` para desatascar. Es el paliativo del hilo para el caso bloqueante, no funciona en DMA, y meter un byte en el bus a mitad de un estado desconocido es peor que apagar.
+
+> **Enmienda del 2026-09-08 (D4, dato del mecanismo):** jake-taf confirmó el
+> 2026-09-03 en [#5607](https://github.com/embassy-rs/embassy/issues/5607):
+> *«Interesting. I stuck with blocking since I have a workaround when it gets stuck (`SPI1.txdr8().write_value(0)`), but both have the problem»*.
+> Confirma que usa ese paliativo en el camino bloqueante y que el cuelgue
+> ocurre tanto en el bloqueante como con DMA. La prohibición de escribir a
+> `TXDR` para desatascar sigue en pie, tal cual (R-MJ3).
 
 ### D5. El J2 corre en su propio ejecutor, con una tarea por ranura; el IWDG es del hub *(⚠ reescrita entera: la v1 tenía un vigía y alimentaba el IWDG desde el J2 — V-4, V-5, V-6, S-7, S-8, H-1, H-2, H-6, H-9)*
 
@@ -287,6 +320,15 @@ Todo lo de esta sección lo asevera `recuperacion_j2_budget.py` (§8). Aquí, en
 | Región MPU no cacheable o invalidación explícita para los búferes | El plan de implementación |
 | La contribución upstream de las esperas cancelables | Su propio PR, cuando haya Discovery |
 
+> **Enmienda del 2026-09-08 (§6, fila del alcance):** **cerrada por upstream
+> el 2026-09-03 la pregunta de si el cuelgue es exclusivo de SPI5**. jake-taf
+> respondió en [#5607](https://github.com/embassy-rs/embassy/issues/5607):
+> *«I have observed this problem on SPI1 as well»*. El alcance observado ya
+> abarca SPI5 y SPI1 (§1.1). Lo que sigue abierto es la **causa: silicio o
+> driver**. Este cierre no acredita una reproducción en las seis instancias;
+> el resultado en nuestro montaje con NSS por hardware sigue siendo HUECO
+> de #231 (D1, §9 riesgo 1).
+
 ---
 
 ## 7. Los tests *(⚠ reescritos: la máquina de la v2 es más chica)*
@@ -343,6 +385,15 @@ Sale con `2` (HUECO) mientras `resistencia_j2.csv` no tenga fila o el hub no dec
 1. **Comentar en #5607** con el borrador de D8.1. Sale con la cuenta de Samuel; se pide en la conversación.
 2. **Añadir a #231** la prueba de resistencia y el osciloscopio de D3 como cuarta y quinta razón de la Discovery.
 3. **Cerrar #287** cuando este papel se firme: sus puntos 1 a 3 quedan decididos aquí.
+
+> **Enmienda del 2026-09-08 (§9, acción 1; D8.1):** **hecha el 2026-09-03**.
+> Samuel publicó la pregunta en [#5607](https://github.com/embassy-rs/embassy/issues/5607)
+> y jake-taf respondió ese mismo día. Este intercambio también supera el
+> corte de actividad del 2026-06-24 citado en §0. Sobre C, la respuesta fue:
+> *«We wrote some small test firmware for C, but had issues getting probe-rs working on C.»*
+> No aporta un resultado de la comparación contra el HAL de C; ese resultado
+> sigue siendo **HUECO**, y **silicio contra driver sigue sin dirimir**. La
+> hipótesis del `EOT` releído (punto 3 de la pregunta, D8.1) no fue contestada.
 
 ---
 
