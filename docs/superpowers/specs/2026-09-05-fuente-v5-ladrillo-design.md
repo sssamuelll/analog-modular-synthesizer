@@ -87,8 +87,9 @@ chasis, panel, acabado, entrada de red, certificación — y su única ventaja s
 esta opción es térmica, de **0 W**.
 
 **D-V2: 24 V.** Los 19 V de portátil también bucan bien a los 15,5 de la
-cascada, pero a 24 el cordón lleva menos corriente y queda más margen para el
-arranque.
+cascada, pero a 24 el cordón lleva menos corriente y ~~queda más margen para el
+arranque~~ **la reserva de arranque queda por demostrar** (enmienda de D-V2 del
+2026-09-08, abajo).
 
 | | |
 |---|---|
@@ -98,8 +99,103 @@ arranque.
 | lo que le pide a la red | 72,98 W |
 | **se disipa fuera de la caja** | **8,76 W** |
 
-El cordón es de **dos hilos**, no de siete. Su caída no cae encima de ningún
-margen: la absorbe el convertidor de dentro.
+> **ENMIENDA (2026-09-08, D-V2 · `2026-09-08-junta-fuente-v5-dv1-dv5.md` §2). Contrato de entrada, fallo y
+> arranque por completar.** Se escribe qué hay que acreditar; D-V2 sigue sin
+> firmar. Las preguntas siguientes no tienen valores elegidos en el árbol.
+>
+> **Los nodos no son intercambiables.** Se distingue la salida del ladrillo,
+> la entrada del chasis después del cordón, la entrada de los DC-DC después
+> de las protecciones que se elijan, y el pin `IN` de `U1` referido a su masa
+> local. El nominal de transporte propuesto es **24 V**
+> (`hardware/01-power-supply/v5/ladrillo_budget.py:93`); **24 V en el cordón no
+> son 24 V en `U1`**. Entre esos nodos está la conversión DC-DC a crudo y la
+> cadena de entrada de la cascada, que incluye el filtro LC
+> (`ladrillo_budget.py:136`, `:178`). El presupuesto no elige su realización
+> ni demuestra una barrera de aislamiento (`ladrillo_budget.py:49`).
+>
+> **El límite firmado sigue después del DC-DC.** `U1` es el LT1963A de D-F8:
+> su entrada tiene máximo absoluto **±20 V**, no un rango de funcionamiento
+> ni un objetivo de disparo (`hardware/01-power-supply/v4/check_absmax.py:209`,
+> que cita `docs/reference/datasheets/lt1963a-rev-g-2021-02.pdf` p. 2).
+> **Si el DC-DC falla con un corto entre entrada y salida**, y no hay una
+> barrera o protección independiente que lo impida, puede trasladar la
+> tensión de transporte al nodo de `U1` y superar ese máximo. Ni el nominal
+> del crudo ni el apagado del convertidor averiado demuestran supervivencia.
+> Hay que acotar la tensión que alcanza `IN`, su duración y la energía hasta
+> el corte, contra los límites de las piezas que permanecen expuestas.
+>
+> **Es el cruce con #334:** la v4 ya enfrentaba **20,25 V sostenidos** de OVP
+> de `PS1` con los **±20 V** de `U1` (papel
+> `2026-09-03-fuente-v4-liston-design.md`, bloque D-F9, «Lo que NO cierra»;
+> `check_absmax.py:209`). Cambiar la fuente de ese nodo cambia el origen del
+> fallo, pero no cierra el issue. La protección de `U1` ante el DC-DC nuevo
+> queda pendiente de decisión y prueba; este contrato no cambia la pieza.
+>
+> **H-V2-ENTRADA — HUECO: ventana garantizada.** La ventana de entrada del
+> DC-DC tiene que contener la que resulte del ladrillo, menos las caídas del
+> cordón, contactos y protecciones, en todas las condiciones admitidas. El
+> nominal citado no proporciona ninguno de esos extremos. **Pregunta exacta
+> al fabricante del ladrillo y de los DC-DC:** «¿Qué mínimos y máximos de
+> salida garantiza el ladrillo bajo línea, carga y temperatura, qué ventana
+> admiten los DC-DC para arrancar y para seguir regulando, y qué caídas máximas
+> de cordón, contactos y protecciones permite compatibilizar ambas?»
+>
+> **H-V2-SUBTENSION — HUECO: límites de arranque y parada.** Deben quedar
+> declarados por separado el encendido, la inhibición por subtensión, la
+> histéresis, las tolerancias y el punto donde se miden. **Pregunta exacta:**
+> «¿Qué tensión mínima permite arrancar, cuál obliga a inhibir la conversión,
+> con qué histéresis, tolerancia y tiempos, en qué nodo se detectan y cómo se
+> coordinan esas señales con la habilitación de la cascada de D-F4?»
+>
+> **H-V2-TRANSITORIOS — HUECO: envolvente admisible.** Se necesitan límites
+> de funcionamiento y supervivencia en los nodos anteriores, incluyendo
+> cambios de carga y maniobras del cordón de D-V5. **Pregunta exacta:** «¿Qué
+> tolerancia del crudo en régimen y qué amplitud, polaridad, duración y
+> repetición de transitorios garantiza o admite cada interfaz, bajo qué carga
+> y temperatura, y qué elemento limita lo que finalmente alcanza los
+> pre-reguladores?»
+>
+> **H-V2-RESERVA — HUECO: arranque con las cargas conectadas.** El guion
+> entrega **64,22 W** y **2,68 A** al nominal propuesto
+> (`ladrillo_budget.py:151`, `:169`); son presupuesto estacionario, no reserva
+> de arranque ni corriente máxima de fallo. **Pregunta exacta al fabricante:**
+> «¿Qué carga capacitiva y perfil de corriente de arranque admite el ladrillo,
+> qué corriente y energía exige la cadena completa con sus cargas, qué
+> tensión mínima conserva durante ese arranque y qué reserva garantizada
+> evita que su limitación y el arranque de los DC-DC se impidan mutuamente?»
+>
+> **H-V2-RECUPERACION — HUECO: salida de subtensión o protección.** Falta
+> elegir la política, además de acreditar que las piezas pueden cumplirla.
+> **Pregunta exacta a Samuel y al fabricante:** «¿La cadena debe recuperarse
+> automáticamente, reintentar o esperar una intervención, bajo qué condición
+> de tensión y tiempo se autoriza, y en qué estado deben quedar sus rieles y
+> habilitaciones durante la caída, la espera y el rearranque?»
+>
+> **H-V2-CORTO-DCDC — HUECO: supervivencia de `U1`, #334.** **Pregunta exacta:**
+> «¿Qué recorrido eléctrico deja un corto entre entrada y salida del DC-DC,
+> qué tensión, duración y energía alcanzan `IN` de `U1`, y qué elemento
+> independiente limita o interrumpe ese recorrido dentro de los límites
+> documentados, incluidos sus tiempos y tolerancias?»
+>
+> **H-V2-AISLAMIENTO — HUECO: evidencia del ladrillo.** La firma de D-V1
+> remite aquí clase, aislamiento y fuga; no se eligen por inferencia del
+> rendimiento del guion. **Pregunta exacta al fabricante:** «¿Qué clase de
+> protección, aislamiento, corriente de fuga, relación entre salida DC y PE,
+> y protecciones con su modo de recuperación acredita la referencia propuesta,
+> en qué hoja o certificado y bajo qué condiciones?» La carga capacitiva está
+> en H-V2-RESERVA y la relación con el chasis en H-V5-PE.
+>
+> **DECISIONES PENDIENTES:** adoptar la ventana y los límites de entrada;
+> elegir las políticas de arranque, inhibición y recuperación; asignar el
+> mecanismo que protege `U1` frente al fallo del DC-DC (#334). Para cerrar
+> cada HUECO hace falta una respuesta con fuente local, condiciones y criterio
+> de aceptación de la cadena completa. No hay todavía piezas ni ensayos que
+> permitan dar esas respuestas por satisfechas.
+
+El cordón es de **dos hilos**, no de siete. ~~Su caída no cae encima de ningún
+margen: la absorbe el convertidor de dentro.~~ La conversión puede absorberla
+**mientras su entrada permanezca dentro de la ventana que garantiza regulación**;
+esa ventana es H-V2-ENTRADA (enmienda del 2026-09-08).
 
 | calibre | 1 m | 2 m |
 |---|---|---|
@@ -109,6 +205,91 @@ margen: la absorbe el convertidor de dentro.
 Con 16 AWG y 2 m son el **0,6 %** de 24 V. Esta es la diferencia de fondo con
 bajar los rieles ya hechos, donde esa misma caída caería justo sobre el margen
 de `U1`/`U2` — que es el problema que este papel viene a cerrar, no a empeorar.
+
+> **ENMIENDA (2026-09-08, D-V5 · `2026-09-08-junta-fuente-v5-dv1-dv5.md` §2). Contrato del cordón y relevo de
+> retorno/chasis/PE por completar.** D-V5 sigue sin firmar. «Dos hilos» no
+> elige conector, protección ni referencia de masa.
+>
+> **Lo calculado no es todavía un calibre vinculante.** Se conserva el
+> resultado del guion: **141 mV con 16 AWG y 2 m**, a **2,68 A**, equivalentes
+> al **0,6 %** del nominal de **24 V** (`ladrillo_budget.py:173`, escenario
+> `:339`, corriente `:169` y nominal `:93`). No se recalcula ni se convierte
+> ese escenario en una elección de cable. La función no incluye resistencia
+> de contactos; tampoco demuestra el comportamiento durante arranque o fallo.
+>
+> **El retorno DC no hereda el PE por llamarse retorno.** La v4 lleva ★ por
+> `J5` al espárrago, con anillos separados para `J5` y el PE de red (papel
+> `2026-09-03-fuente-v4-liston-design.md` §4.1). D-F5 cerraba el modo común por
+> **módulo → Y2 → chasis → PE → primario** (mismo papel §4.2, «EMI»).
+> **Dos hilos de alimentación y retorno no transportan ese PE separado.**
+> **No hay todavía un heredero identificado de ese camino.** No queda por
+> ello decidido que el retorno DC sea PE, que se una al chasis o que el
+> chasis quede flotante. El PE del propio ladrillo, si lo tiene, tampoco
+> demuestra un camino hasta el chasis a través del cordón.
+>
+> El relevo debe declarar las relaciones entre retorno DC, ★, `J5`, chasis
+> y PE, y acreditar el camino de modo común del conjunto. No puede dar por
+> heredado el resultado de D-F5 con las piezas retiradas. Sigue vigente la
+> separación de `GNDD`, fuera de ★, y la aceptación **>1 MΩ entre GNDA y
+> GNDD** dentro de la fuente (v4 §4.1 y §9.1). Esta obligación limita las
+> respuestas posibles; no elige las barreras ni los retornos de D-V4.
+>
+> **H-V5-CONECTOR — HUECO: pareja y polaridad.** **Pregunta exacta:** «¿Qué
+> pareja de conectores se elige para ladrillo y chasis, qué contacto lleva
+> alimentación y cuál retorno, cómo se identifica esa polaridad y qué hoja
+> local acredita sus límites eléctricos y su resistencia de contacto?»
+>
+> **H-V5-RETENCION — HUECO: sujeción del conjunto.** **Pregunta exacta:**
+> «¿Qué retención y alivio de tracción se exigen al conjunto, bajo qué esfuerzo
+> se verifican y qué condición de aceptación debe cumplir?»
+>
+> **H-V5-CALIBRE — HUECO: cordón vinculante.** **Pregunta exacta:** «¿Qué
+> calibre, longitud máxima y resistencia total admisible se adoptan para el
+> cordón completo, incluidos conectores y terminaciones, y qué corriente y
+> temperatura debe soportar en uso, arranque y hasta el corte por fallo?»
+>
+> **H-V5-INVERSION — HUECO: polaridad inversa.** **Pregunta exacta:** «¿Qué
+> debe ocurrir al aplicar polaridad inversa, qué tensión y duración debe
+> soportar el conjunto, qué elemento responde y cómo se recupera al corregirla?»
+>
+> **H-V5-CALIENTE — HUECO: conexión en caliente.** **Pregunta exacta:** «¿Se
+> admite conectar el cordón con el ladrillo energizado y, si se admite, cuáles
+> son los límites garantizados de corriente de entrada y transitorio, qué
+> carga capacitiva admite el ladrillo y cómo deben comportarse los rieles
+> durante la conexión?» La respuesta tiene que coincidir con
+> H-V2-TRANSITORIOS y H-V2-RESERVA; no se presume que el conector lo permita.
+>
+> **H-V5-RECONEXION — HUECO: energía residual y rearranque.** **Pregunta
+> exacta:** «¿Qué debe ocurrir al desconectar y reconectar con energía residual
+> en la caja o rebote de contactos, qué condiciones habilitan el rearranque
+> y qué límites temporales y eléctricos lo verifican?» La política es la de
+> H-V2-RECUPERACION, pendiente de elección.
+>
+> **H-V5-CORTO — HUECO: fallo del cordón.** **Pregunta exacta:** «¿Qué debe
+> ocurrir ante un corto entre los conductores o hacia el chasis, qué elemento
+> limita o interrumpe, cuáles son sus límites de corriente y duración y cómo
+> se recupera después del corto?» La evidencia debe incluir el tramo de cable
+> expuesto al fallo; una protección situada después de ese tramo no demuestra
+> por sí sola que lo proteja.
+>
+> **H-V5-INCOMPATIBLE — HUECO: adaptador ajeno al contrato.** **Pregunta
+> exacta:** «¿Qué adaptadores incompatibles debe cubrir el contrato y, para
+> cada incompatibilidad de tensión, polaridad o capacidad de entrega, qué
+> comportamiento y límites de supervivencia se exigen, y quién los garantiza?»
+> Que un adaptador pueda enchufarse no demuestra compatibilidad eléctrica.
+>
+> **H-V5-PE — HUECO: relevo de D-F5.** **Pregunta exacta:** «¿Qué relación
+> tendrán el retorno DC del cordón, ★, `J5`, el chasis y PE, quién proporcionará
+> el camino de modo común que D-F5 cerraba por chasis → PE → primario, y qué
+> evidencia y ensayo del conjunto lo acreditarán preservando la separación
+> de GNDD?» H-V2-AISLAMIENTO aporta la evidencia del ladrillo; por sí sola
+> no contesta la relación con el chasis.
+>
+> **DECISIONES PENDIENTES:** elegir conector, polaridad, retención y cordón
+> vinculante; decidir qué maniobras y adaptadores quedan admitidos o cubiertos,
+> con su comportamiento de fallo y recuperación; definir retorno/chasis/PE y
+> asignar el relevo de D-F5. Cada respuesta debe nombrar responsable físico,
+> límites con fuente local y prueba de aceptación. Ninguna queda tomada aquí.
 
 ## 4. Los rieles de dentro
 
@@ -130,7 +311,7 @@ el convertidor y separadas en el cableado.
 término de este presupuesto que no está anclado a una hoja, y se cierra
 eligiendo las piezas.
 
-## 5. El regalo: la tensión cruda cierra `U2` (D-V3)
+## 5. ~~El regalo: la tensión cruda cierra `U2`~~ Holgura para `U1` y D-F4 (D-V3)
 
 > **ENMIENDA (2026-09-07, D-F9 · #335). El regalo llegó por otro lado, y esta
 > sección publica cifras que su propio guion ya no produce.**
@@ -153,27 +334,66 @@ eligiendo las piezas.
 > incertidumbre de modelo de 127, y a 15,5 se va a +811.
 >
 > Y eso **cambia la pregunta**, porque este papel entero va de bajar calor: los
-> **+0,33 W** de D-V3 se pagaban por necesidad y ahora se pagarían por margen.
+> ~~**+0,33 W** de D-V3 se pagaban por necesidad y ahora se pagarían por margen~~
+> **+0,33 W publicados sólo contaban `U2`; el coste completo se precisa en la
+> continuación del 2026-09-08**.
 > Decidir si valen sigue siendo trabajo de la firma de esta v5; lo que ya no se
 > puede es justificarlos con `U2`.
+>
+> **ENMIENDA (2026-09-08, D-V3 · `2026-09-08-junta-fuente-v5-dv1-dv5.md` §2). Continuación de la del 07-09:
+> razón vigente y coste completo.** La corrección anterior de D-F9 se mantiene:
+> `U2` es LT3015 y ya cerraba a **15,0 V con +536 mV**; a **15,5 V da +1017 mV**
+> (`ladrillo_budget.py:178`, salida `:326`). No se necesita elevar el crudo
+> para cerrar `U2`, ni se vuelve al LM2991.
+>
+> **Lo que compra ahora la propuesta:** holgura en `U1`, de **+330 a +811 mV**
+> al pasar de **15,0 a 15,5 V** (`ladrillo_budget.py:178`, salida `:325`), y
+> holgura para el detector de ventana de D-F4. Este tenía **+40 mV útiles**
+> después de histéresis y error de umbral (papel v4, bloque D-F9, «Lo que
+> cierra»; `hardware/01-power-supply/v4/secuencia_budget.py:198`). Esa cifra
+> describe la v4; no fija ni garantiza un nuevo umbral para la v5. El aumento
+> del margen de entrada alivia esa restricción en el modelo; su realización
+> sigue necesitando la entrada y los transitorios de D-V2.
+>
+> **Lo que cuesta dentro de la caja, comparando el mismo extremo alto:**
+> **+0,33 W en `U1` y +0,33 W en `U2`** (`ladrillo_budget.py:197`, `:211`),
+> más **+0,12 W de conversión** (`:126`, `:136`, `:138`, `:147`) =
+> **+0,78 W en total** (`:151`, `:160`). El presupuesto pasa de **63,43 a
+> 64,22 W**; la diferencia se calcula antes de redondear, no restando esos
+> extremos ya impresos. El coste usa el rendimiento **0,85 ESTIMADO** del
+> crudo (`:103`) y la tolerancia **±2,5 % supuesta** (`:108`, `:115`): es el
+> resultado del modelo, no una garantía de piezas aún sin elegir.
+>
+> **DECISIÓN PENDIENTE:** Samuel debe decidir si esa holgura para `U1` y D-F4
+> vale el coste completo. D-V3 sigue sin firmar. Su nominal no acota el crudo
+> durante un fallo: #334 sigue abierto y su pregunta está en H-V2-CORTO-DCDC.
+> Las tachas del título, texto y tabla siguientes retiran la razón caduca y
+> conservan su rastro; esta continuación amplía, no reemplaza, la del 07-09.
 
-`U2`, el pre-regulador negativo, lleva desde el 2026-09-03 con **−170 mV** de
+~~`U2`, el pre-regulador negativo, lleva desde el 2026-09-03 con **−170 mV** de
 margen de entrada, y no tiene salida por piezas: ninguno de los candidatos de
 D-F8 es una pieza negativa. El problema nunca fue `U2`. Es que un IRM de
-catálogo entrega 15,0 V con ±2,5 %, y eso no alcanza.
+catálogo entrega 15,0 V con ±2,5 %, y eso no alcanza.~~ El sujeto cambió con
+D-F9; rige la razón de la enmienda anterior (2026-09-08).
 
 Con un DC-DC nuestro, **la tensión cruda deja de ser un dato de catálogo y pasa
 a ser una decisión**:
 
 | crudo | le llega a U1/U2 | margen `U1` | margen `U2` | quema `U2` | |
 |---|---|---|---|---|---|
-| 15,0 V | 14,370 V | +330 mV | **−170 mV** | 1,61 W | la v4, y su rojo |
-| **15,5 V** | 14,851 V | +811 mV | **+311 mV** | 1,94 W | **D-V3** |
-| 16,0 V | 15,332 V | +1292 mV | +792 mV | 2,27 W | |
+| 15,0 V | 14,370 V | +330 mV | ~~**−170 mV**~~ **+536 mV** | 1,61 W | ~~la v4, y su rojo~~ v4 con D-F9 |
+| **15,5 V** | 14,851 V | +811 mV | ~~**+311 mV**~~ **+1017 mV** | 1,94 W | **D-V3** |
+| 16,0 V | 15,332 V | +1292 mV | ~~+792 mV~~ +1498 mV | 2,27 W | |
 
-**D-V3: el crudo de la cascada son 15,5 V.** Cuesta **+0,33 W** en `U2`. Un
+Corrección de la tabla, **2026-09-08**, por D-F9: cifras de la ejecución de
+`ladrillo_budget.py:319`. «Quema `U2`» conserva su alcance local; no es el
+coste térmico total de D-V3, desglosado en la enmienda.
+
+**D-V3: el crudo de la cascada son 15,5 V.** ~~Cuesta **+0,33 W** en `U2`. Un
 tercio de vatio por cerrar el único rojo que le queda a la fuente, y **con la
-misma pieza**: el LM2991 que el #322 daba por insuficiente.
+misma pieza**: el LM2991 que el #322 daba por insuficiente.~~ La propuesta
+compra la holgura de `U1` y D-F4 descrita arriba, con el coste completo de la
+enmienda del 2026-09-08, pendiente de aceptación.
 
 Tres honestidades sobre esta tabla:
 
@@ -183,8 +403,11 @@ Tres honestidades sobre esta tabla:
   papel puse «1,94 W contra los 0,96 de hoy», que son **+0,98 W**: el corner
   alto del nuevo contra el bajo del viejo. En el mismo corner son **+0,33**.
   Por eso la columna de la derecha existe y se calcula con la misma función.
-- La tolerancia de ±2,5 % es la de un IRM. Un DC-DC nuestro debería hacerlo
-  mejor, y entonces sobra margen. Se declara el conservador.
+- La tolerancia de ±2,5 % es la de un IRM. ~~Un DC-DC nuestro debería hacerlo
+  mejor, y entonces sobra margen. Se declara el conservador.~~ Es un supuesto
+  de cálculo (`ladrillo_budget.py:108`, `:115`), no una tolerancia garantizada
+  del sustituto sin pieza; H-V2-TRANSITORIOS exige acreditar su salida
+  (enmienda del 2026-09-08).
 
 ## 6. Lo que le pasa a la caja
 
@@ -304,10 +527,10 @@ Ninguno de los tres se toca aquí: este papel no está firmado.
 | | Qué | Dónde | Estado |
 |---|---|---|---|
 | **D-V1** | la etapa AC-DC es **pieza de catálogo certificada**, fuera de la caja; no un cajón nuestro | §3 | **FIRMADA 2026-09-08** |
-| **D-V2** | el ladrillo son **24 V** | §3 | sin firmar — le falta el contrato de entrada |
-| **D-V3** | el crudo de la cascada son **15,5 V**, y con eso `U2` cierra en +311 mV | §5 | sin firmar — **su razón está caduca**, ver §9.1 |
+| **D-V2** | el ladrillo son **24 V** | §3 | sin firmar — ~~le falta el contrato de entrada~~ contrato escrito con HUECOS y decisiones pendientes (enmienda 2026-09-08) |
+| **D-V3** | el crudo de la cascada son **15,5 V**, ~~y con eso `U2` cierra en +311 mV~~ para ganar holgura en `U1` y D-F4, con el coste completo de §5 | §5 | sin firmar — ~~**su razón está caduca**, ver §9.1~~ razón corregida; aceptar holgura y coste sigue pendiente (enmienda 2026-09-08) |
 | **D-V4** | los rieles se derivan **dentro** con DC-DC; la cascada no se toca | §4 | sin firmar — **no firmable aún**, ver junta §3 |
-| **D-V5** | el cordón es de **dos hilos**; no bajan rieles hechos | §3 | sin firmar — le falta retorno/chasis/PE |
+| **D-V5** | el cordón es de **dos hilos**; no bajan rieles hechos | §3 | sin firmar — ~~le falta retorno/chasis/PE~~ contrato escrito; retorno/chasis/PE y demás HUECOS siguen pendientes (enmienda 2026-09-08) |
 
 > ### D-V1, FIRMADA — 2026-09-08
 >
