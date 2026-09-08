@@ -13,9 +13,12 @@
 
 use defmt::{info, warn};
 use embassy_futures::select::{select, Either};
+use embassy_stm32::peripherals::USB1_OTG_HS;
+use embassy_stm32::rcc::mux::Otgphysel;
+use embassy_stm32::rcc::{IcConfig, Icint, Icsel, Pll, Plldivm, Pllpdiv, Pllsel, SupplyConfig};
+use embassy_stm32::usb::{Driver, InterruptHandler};
+use embassy_stm32::Peri;
 use embassy_time::{Duration, Instant, Timer};
-use embassy_rp::peripherals::USB;
-use embassy_rp::usb::{Driver, InterruptHandler};
 use embassy_usb::class::midi::MidiClass;
 use embassy_usb::{Builder, Config, UsbDevice};
 use sam17_nucleo_core::descriptor;
@@ -26,9 +29,81 @@ use sam17_nucleo_core::sysex::{desenvolver, envolver, largo_empaquetado};
 use sam17_nucleo_core::usbmidi::{empaquetar_sysex, Desempaquetador, Paquete, Trozo, MAX_SYSEX};
 use static_cell::StaticCell;
 
-embassy_rp::bind_interrupts!(pub struct Irqs {
-    USBCTRL_IRQ => InterruptHandler<USB>;
+embassy_stm32::bind_interrupts!(pub struct Irqs {
+    USB1_OTG_HS => InterruptHandler<USB1_OTG_HS>;
 });
+
+/// La configuracion del reloj que el USB del N657 EXIGE, y que hay que tener
+/// lista antes de `embassy_stm32::init`.
+///
+/// Dos cosas, y las dos cuelgan el arranque si se dejan por defecto:
+///
+/// 1. **El reloj de referencia del PHY** tiene que ser 19,2, 20 o 24 MHz
+///    exactos (RM0486 Rev 4, `USBPHYC_CR.FSEL`, p. 3929). Se saca del HSI para
+///    no depender del cristal de la placa:
+///
+///    ```text
+///      hsi_ck  = 64 MHz                        (RM0486 Rev 4, sec.14.6.2)
+///      FREF    = 64 MHz / DIVM 4  =  16 MHz    (5..1200 MHz, entero, p. 435)
+///      FVCO    = 16 MHz * DIVN 60 = 960 MHz    (800..3200 MHz, p. 435)
+///      pll4_ck = 960 MHz / 2 / 1  = 480 MHz    (DIVP1 = 2, DIVP2 = 1)
+///      ic15_ck = 480 MHz / 20     =  24 MHz    (ICINT = Div20)
+///    ```
+///
+///    PLL4 es la PLL que el RM reserva a «display, camara, FDCAN y otros
+///    perifericos» (sec.14.6.5, p. 435). **Reservada aqui al PHY:** el dia que
+///    la pantalla o la camara la quieran, esta cuenta se rehace, porque el
+///    PHY no admite otra frecuencia.
+///
+/// 2. **De donde sale el nucleo.** La Discovery lleva SMPS externo (UM3300
+///    Tab. 6 segun el ejemplo de embassy) y con el interno el `init` se queda
+///    colgado en `VOSRDY`. El SAM17 lleva el conmutado INTERNO del chip
+///    (`2026-08-31-alimentacion-n657-design.md`, y es el que #256 no puede
+///    dimensionar sin la columna de 85 C), que es ademas el defecto de
+///    embassy: en la placa del instrumento esta linea se BORRA, no se cambia.
+///
+/// ponytail: una sola configuracion, la de la placa que existe. Cuando haya
+/// dos placas de verdad, sera un parametro y no un `if`.
+pub fn configuracion() -> embassy_stm32::Config {
+    let mut config = embassy_stm32::Config::default();
+    config.rcc.supply_config = SupplyConfig::External;
+    config.rcc.pll4 = Some(Pll::Oscillator {
+        source: Pllsel::Hsi,
+        divm: Plldivm::Div4,
+        fractional: 0,
+        divn: 60,
+        divp1: Pllpdiv::Div2,
+        divp2: Pllpdiv::Div1,
+    });
+    config.rcc.ic15 = Some(IcConfig {
+        source: Icsel::Pll4,
+        divider: Icint::Div20,
+    });
+    config.rcc.mux.otgphy1sel = Otgphysel::Ic15;
+    config
+}
+
+/// El driver de USB del cerebro.
+///
+/// Los dos OTG del N6 son **solo High Speed** y atacan un PHY UTMI+ integrado
+/// por bolas dedicadas (`OTG1_HSDP` / `OTG1_HSDM`): el driver no toma pines de
+/// D+/D-, y por eso el constructor es `new_hs_dedicated_pins`.
+pub fn driver(p: Peri<'static, USB1_OTG_HS>) -> Driver<'static, USB1_OTG_HS> {
+    // La FIFO de salida es una sola para todos los endpoints OUT. 1 KB es lo
+    // que usa el ejemplo del N6 y sobra para un jack MIDI de 64 B.
+    static EP_OUT: StaticCell<[u8; 1024]> = StaticCell::new();
+
+    let mut config = embassy_stm32::usb::Config::default();
+    // HUECO de hardware, no de firmware: el SAM17 es autoalimentado -- sigue
+    // encendido con el USB desenchufado --, y la especificacion de USB exige
+    // que un dispositivo asi detecte VBUS. Detectarlo pide que la placa lleve
+    // la linea de VBUS al OTG, y el esquematico del hub todavia no existe.
+    // Queda en `false`, que es lo que funciona en cualquier placa, hasta que
+    // ese esquematico decida.
+    config.vbus_detection = false;
+
+    Driver::new_hs_dedicated_pins(p, Irqs, EP_OUT.init([0; 1024]), config)
+}
 
 /// `0x1209` es pid.codes, el rango libre para proyectos abiertos. El PID es de
 /// pruebas: registrar uno de verdad es del dia que esto se distribuya, y esta
@@ -66,14 +141,14 @@ const TAM_PAQUETE: u16 = 64;
 /// compilador y no la memoria de nadie.
 const MAX_SOBRE_B: usize = 3 + largo_empaquetado(descriptor::MAX_DESCRIPTOR_B);
 
-pub type Sam17Usb = UsbDevice<'static, Driver<'static, USB>>;
+pub type Sam17Usb = UsbDevice<'static, Driver<'static, USB1_OTG_HS>>;
 
 pub struct Puertos {
     pub dispositivo: Sam17Usb,
-    pub midi: MidiClass<'static, Driver<'static, USB>>,
+    pub midi: MidiClass<'static, Driver<'static, USB1_OTG_HS>>,
 }
 
-pub fn montar(driver: Driver<'static, USB>) -> Puertos {
+pub fn montar(driver: Driver<'static, USB1_OTG_HS>) -> Puertos {
     let mut config = Config::new(VID, PID);
     config.manufacturer = Some("SAM17");
     config.product = Some("SAM17 nucleo");
@@ -97,7 +172,10 @@ pub fn montar(driver: Driver<'static, USB>) -> Puertos {
     // Un jack de entrada y uno de salida: el instrumento habla y escucha.
     let midi = MidiClass::new(&mut builder, 1, 1, TAM_PAQUETE);
 
-    Puertos { dispositivo: builder.build(), midi }
+    Puertos {
+        dispositivo: builder.build(),
+        midi,
+    }
 }
 
 #[embassy_executor::task]
@@ -123,7 +201,7 @@ const PERIODO_TICK: Duration = Duration::from_millis(1);
 /// las aserciones `const` del buzon acotan los caminos por separado; meterlas
 /// en el mismo `Respuestas` podria desbordarlo.
 async fn correr_el_reloj(
-    midi: &mut MidiClass<'static, Driver<'static, USB>>,
+    midi: &mut MidiClass<'static, Driver<'static, USB1_OTG_HS>>,
     instrumento: &mut Instrumento,
 ) -> Result<(), ()> {
     let ahora = Instant::now();
@@ -139,7 +217,7 @@ async fn correr_el_reloj(
 /// El lazo. Todo lo que hace es cablear piezas ya probadas.
 #[embassy_executor::task]
 pub async fn atender(
-    mut midi: MidiClass<'static, Driver<'static, USB>>,
+    mut midi: MidiClass<'static, Driver<'static, USB1_OTG_HS>>,
     instrumento: &'static mut Instrumento,
 ) -> ! {
     let mut desemp = Desempaquetador::nuevo();
@@ -253,7 +331,7 @@ pub async fn atender(
 }
 
 async fn responder(
-    midi: &mut MidiClass<'static, Driver<'static, USB>>,
+    midi: &mut MidiClass<'static, Driver<'static, USB1_OTG_HS>>,
     instrumento: &Instrumento,
     resp: Respuesta,
 ) -> Result<(), ()> {
@@ -264,7 +342,7 @@ async fn responder(
 }
 
 async fn mandar_mensaje(
-    midi: &mut MidiClass<'static, Driver<'static, USB>>,
+    midi: &mut MidiClass<'static, Driver<'static, USB1_OTG_HS>>,
     m: &Mensaje,
 ) -> Result<(), ()> {
     let mut plano = [0u8; 64];
@@ -278,7 +356,7 @@ async fn mandar_mensaje(
 /// buffers pequeños y deja que el cliente empiece a parsear antes de que
 /// termine — que con 27 medidas ya se nota.
 async fn mandar_descriptores(
-    midi: &mut MidiClass<'static, Driver<'static, USB>>,
+    midi: &mut MidiClass<'static, Driver<'static, USB1_OTG_HS>>,
     instrumento: &Instrumento,
 ) -> Result<(), ()> {
     // B3, el contrato del volcado. La cabecera va ANTES del primer descriptor
@@ -340,7 +418,7 @@ async fn mandar_descriptores(
 }
 
 async fn mandar_sysex(
-    midi: &mut MidiClass<'static, Driver<'static, USB>>,
+    midi: &mut MidiClass<'static, Driver<'static, USB1_OTG_HS>>,
     sobre: &[u8],
 ) -> Result<(), ()> {
     let mut paquetes = [[0u8; 4]; MAX_SYSEX / 3 + 1];
