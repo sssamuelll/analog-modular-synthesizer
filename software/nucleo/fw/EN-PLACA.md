@@ -2,24 +2,30 @@
 
 Esto se escribió **sin placa**. Todo lo que hay en `core` está probado con
 `cargo test`, y el binario compila y enlaza para `thumbv8m.main-none-eabihf`
-— pero eso no demuestra que arranque, ni que enumere, ni que conteste.
+—el target del Cortex-M55 del N657, el mismo que traía el RP2350— pero eso no
+demuestra que arranque, ni que enumere, ni que conteste.
 
 Esta es la lista del día que llegue la placa, **en orden**: cada línea supone
 que la anterior salió bien.
 
 ## Antes de enchufar nada
 
-**Comprobar `memory.x` contra la placa.** `LENGTH` de FLASH es de la placa, no
-del chip: **2048K** es lo que trae una Pico 2, y el RP2350 soporta hasta 16 MB
-por QSPI (§10 de la spec). La SRAM sí es del chip: 520 kB, de los que `memory.x`
-declara 512K.
+**Cuál placa.** La STM32N6570-DK (#231). Lleva el mismo
+STM32N657X0H3Q en VFBGA264 que eligió el censo, y además la pantalla de
+800×480 en el LTDC y la PSRAM, que es por lo que se pidió ésa y no la Nucleo.
 
-**Comprobar el chip contra la feature.** El crate va por defecto a `rp235xb`
-—el que la spec §5.3 obliga por conteo de pines—. Si la placa lleva el A:
+**Comprobar `memory.x` contra la placa.** El N657 **no tiene flash interna**:
+`FLASH` y `RAM` son dos tramos de la misma AXISRAM2 y el binario se carga ahí
+por el USB serial de la ROM. El arranque de verdad —FSBL y binario firmado
+desde la XSPI— es el riesgo 2 del papel del hub y **no está hecho**: enlazar
+aquí no demuestra que arranque de la flash.
 
-```bash
-cargo build --release --no-default-features --features rp235xa
-```
+**Comprobar de dónde sale el núcleo.** `usb::configuracion()` pone
+`SupplyConfig::External` porque la DK lleva SMPS externo; con el interno el
+`init` se queda colgado en `VOSRDY`. **La placa del SAM17 lleva el conmutado
+interno** (papel de alimentación del N657), así que esa línea se borra el día
+que exista placa propia. Si el arranque se cuelga sin decir nada, éste es el
+sospechoso número uno.
 
 **Comprobar el pinout.** `core/src/pinout.rs` es una **propuesta**: los números
 salieron de agrupar por periférico, no de ninguna placa. Cuando haya una, ese
@@ -29,8 +35,15 @@ que impiden repetir un pin o pedir uno que no existe.
 ## 1. Arranca
 
 ```bash
-cargo run --release          # con probe-rs, o arrastrar el UF2
+cargo run --release          # probe-rs con el STLINK-V3EC de la placa
 ```
+
+**`--release` no es una preferencia: es la unica que enlaza.** Con
+`defmt` y embassy, el binario de depuracion se pasa **48 KB** de los 256 K que
+`memory.x` reserva para el codigo, y `rust-lld` lo dice con tres secciones que
+se solapan. Si hace falta depurar sin optimizar, se sube `FLASH` en
+`memory.x` — pero entonces los 768 KB de abajo dejan de ser contiguos y el
+framebuffer de 800x480 pierde su banco.
 
 Por `defmt` tiene que salir:
 
@@ -40,9 +53,10 @@ SAM17: el cerebro arranco, protocolo v1
 sin descubrimiento todavia: 27 parametros, todos de medida
 ```
 
-**Si no sale nada**, el sospechoso número uno es el `ImageDef` de
-`.start_block`: la ROM del RP2350 no ejecuta una imagen sin él, y tiene que
-caer en los primeros 4 K de flash. Enlazar no es arrancar.
+**Si no sale nada**, en orden: la configuración de alimentación (arriba), y
+después el reloj de referencia del PHY de USB, que tiene que ser 24 MHz
+exactos y sale de PLL4 → IC15 (`usb::configuracion()`, con la cuenta y su
+página). Enlazar no es arrancar.
 
 ## 2. Enumera
 
@@ -102,5 +116,11 @@ pasándole la sesión a un RP2350 por SPI).
 abiertos, y `0x0017` es un PID de pruebas que nadie asignó. Registrar uno es
 del día que esto se distribuya.
 
-**Todo lo demás de #86** — I²C, J2, PIO y el jitter del 74HC14 contra los
-131 ns, WS2812, DIN, clock/reset, pedal, USB host — va en los planes 2 y 3.
+**Todo lo demás de #86** — I²C, J2, el jitter del 74HC14 contra los 131 ns
+(que en el N657 mide captura de TIM, no PIO), DIN, clock/reset, pedal, USB
+host — va en los planes 2 y 3. Ese issue está escrito contra el RP2350 y hay
+que reescribirlo contra esta placa.
+
+**El J2 no está aquí.** El driver `j2_spi.rs` y su ejecutor son la fase B del
+plan del maestro del J2, y lo que los bloqueaba era este pase (#250). La
+política ya vive en `core/src/maestro_j2.rs`, probada en el host.

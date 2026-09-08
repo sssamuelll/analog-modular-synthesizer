@@ -93,7 +93,14 @@ g_fmt()      { cd "$RAIZ/software/nucleo" && cargo fmt --all --check; }
 # habia notado: `cargo test --workspace` NUNCA lo compilaba, asi que el
 # firmware -- la mitad que de verdad se flashea -- no lo miraba ninguna puerta.
 # Lo caza la junta adversarial del 2026-08-24 (Serrano, BLOCKER 1).
-g_fw()       { cd "$RAIZ/software/nucleo/fw" && cargo check --quiet; }
+#
+# Y va con `build --release`, no con `check`: `check` no ENLAZA, y desde el
+# pase al N657 (#250) el enlace es justo lo que se puede romper. El mapa de
+# `memory.x` reserva 256 K de AXISRAM2 para el codigo y el binario de
+# depuracion se pasa 48 KB; con `check` esa puerta salia verde sin que
+# existiera un binario. `--release` es ademas el unico perfil que EN-PLACA.md
+# manda flashear.
+g_fw()       { cd "$RAIZ/software/nucleo/fw" && cargo build --release --quiet; }
 
 corre hardware g_hardware
 

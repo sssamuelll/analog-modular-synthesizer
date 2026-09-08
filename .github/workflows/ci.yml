@@ -71,3 +71,12 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Formato
         run: cargo fmt --all --check
+      # `fw` esta excluido del workspace (otro target, otro chip), asi que los
+      # tres pasos de arriba no lo miran. Y va con `build`, no con `check`,
+      # porque lo que se rompe en el N657 es el ENLACE: el mapa de `memory.x`
+      # reserva 256 K y el perfil de depuracion no cabe.
+      - name: Firmware del N657 (enlaza)
+        working-directory: software/nucleo/fw
+        run: |
+          rustup target add thumbv8m.main-none-eabihf
+          cargo build --release

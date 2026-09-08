@@ -1,5 +1,12 @@
 [build]
 target = "thumbv8m.main-none-eabihf"
 
+# El N657 es un Cortex-M55 (Armv8.1-M) y embassy lo compila para
+# `thumbv8m.main-none-eabihf`: el mismo target que traia el RP2350, y por eso
+# esta linea no cambio en el pase. Verificado contra
+# `examples/stm32n6/.cargo/config.toml` de embassy.
+[target.thumbv8m.main-none-eabihf]
+runner = 'probe-rs run --chip STM32N657'
+
 [env]
 DEFMT_LOG = "debug"
