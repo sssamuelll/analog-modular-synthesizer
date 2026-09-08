@@ -168,8 +168,34 @@ que «si algún día alguien mete aquí un término que no baje por el cordón, 
 salta», y no puede saltar nunca. Es un detector de humo cableado a su propio
 botón de prueba.
 
-Y dos agravantes: **ninguna puerta corre este guion** (nada en `.githooks/`
-ni en `scripts/` lo nombra), y **el guion sale con código 2**.
+Y dos agravantes: ~~**ninguna puerta corre este guion** (nada en `.githooks/`
+ni en `scripts/` lo nombra)~~ **— falso, ver enmienda**, y **el guion sale con
+código 2**.
+
+> **ENMIENDA (2026-09-08). El primer agravante era falso**, y lo era por mirar
+> en dos sitios cuando el corredor vive en un tercero.
+>
+> `hardware/tools/gates.py` **descubre por patrón, no por lista**: su tupla
+> `PATRONES` (`:56`) incluye `hardware/**/*_budget.py` (`:58`), que recoge
+> `ladrillo_budget.py`. Un `grep` contra `.githooks/` y `scripts/` no lo
+> encuentra porque **el guion no se nombra en ningún sitio, y eso es el
+> diseño**: «una lista de scripts hay que acordarse de ampliarla, y el día que
+> a alguien se le olvida el gate nuevo nace ya sin correr» (`:17`).
+>
+> El segundo agravante es cierto y tampoco pesa lo que parecía: `gates.py`
+> trata el **código 2 como HUECO declarado, no como fallo** (`:166-167`), por
+> convención del repo. El guion corre, y su hueco se imprime en el resumen de
+> la tanda. No es un fallo invisible.
+>
+> **El hallazgo central no se mueve:** el aserto sigue comparando una función
+> contra lo que ella misma devuelve y sigue sin poder saltar. Lo que se cae es
+> la agravante, no el defecto. El **#338** hereda la corrección: su criterio de
+> cierre pedía «que una puerta corra el guion», y esa mitad ya estaba hecha
+> antes de pedirla.
+>
+> Es el mismo patrón que ya costó un hallazgo falso en este árbol: **las reglas
+> viven en más de un sitio**, y buscar solo en el que uno recuerda da un
+> negativo que parece evidencia.
 
 ### 4.2 D-F4 se retira por un sujeto equivocado
 
