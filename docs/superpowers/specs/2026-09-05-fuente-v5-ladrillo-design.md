@@ -1,8 +1,11 @@
 # Fuente v5 — el ladrillo afuera, la conversión adentro
 
-**Fecha**: 2026-09-05 · **Estado**: **propuesta, sin firmar** (D-V1 a D-V5 en §9) ·
+**Fecha**: 2026-09-05 · **Estado**: **D-V1 FIRMADA el 2026-09-08**; D-V2, D-V3,
+D-V4 y D-V5 siguen **sin firmar** (§9) ·
 **Decidido por Samuel el 2026-09-05**: sacar la etapa AC-DC de la caja (opción B de
 tres), y firmar **D-B2 a 500 mA/riel** para la fila de abajo ·
+**Junta**: `2026-09-08-junta-fuente-v5-dv1-dv5.md` — dictaminó D-V1 firmable tal
+cual, D-V2/D-V3/D-V5 con condición, y D-V4 **no firmable aún** ·
 **Guion**: `hardware/01-power-supply/v5/ladrillo_budget.py` — todas las cifras de
 este papel salen de ahí, corriendo ·
 **Reabre**: `fuente-v4-liston` §1 (D-F1), §3, §4.1, §4.2, §5 (D-F5), §6, §7 (D-F2);
@@ -298,13 +301,42 @@ Ninguno de los tres se toca aquí: este papel no está firmado.
 
 ## 9. Lo que hay que firmar
 
-| | Qué | Dónde |
-|---|---|---|
-| **D-V1** | la etapa AC-DC es **pieza de catálogo certificada**, fuera de la caja; no un cajón nuestro | §3 |
-| **D-V2** | el ladrillo son **24 V** | §3 |
-| **D-V3** | el crudo de la cascada son **15,5 V**, y con eso `U2` cierra en +311 mV | §5 |
-| **D-V4** | los rieles se derivan **dentro** con DC-DC; la cascada no se toca | §4 |
-| **D-V5** | el cordón es de **dos hilos**; no bajan rieles hechos | §3 |
+| | Qué | Dónde | Estado |
+|---|---|---|---|
+| **D-V1** | la etapa AC-DC es **pieza de catálogo certificada**, fuera de la caja; no un cajón nuestro | §3 | **FIRMADA 2026-09-08** |
+| **D-V2** | el ladrillo son **24 V** | §3 | sin firmar — le falta el contrato de entrada |
+| **D-V3** | el crudo de la cascada son **15,5 V**, y con eso `U2` cierra en +311 mV | §5 | sin firmar — **su razón está caduca**, ver §9.1 |
+| **D-V4** | los rieles se derivan **dentro** con DC-DC; la cascada no se toca | §4 | sin firmar — **no firmable aún**, ver junta §3 |
+| **D-V5** | el cordón es de **dos hilos**; no bajan rieles hechos | §3 | sin firmar — le falta retorno/chasis/PE |
+
+> ### D-V1, FIRMADA — 2026-09-08
+>
+> **La etapa AC-DC es una pieza de catálogo certificada, fuera de la caja.** No
+> se diseña, no se acaba y no se certifica un cajón de red propio.
+>
+> La junta la dictaminó **firmable tal cual**: es el «cómo» mínimo del «qué» que
+> Samuel ya había decidido el 05-09, y no compromete ni la tensión del ladrillo
+> (D-V2) ni el reparto de dentro (D-V4). Se firma sola, y por eso se firma antes.
+>
+> **Lo que arrastra:**
+>
+> - **El #130 pierde sujeto.** «La entrada de red del chasis no tiene pieza» deja
+>   de tener pregunta: no hay entrada de red en el chasis. Lo que quedaba vivo de
+>   ese issue era el recorte del IEC C14 en la chapa, y ese recorte no existe.
+>   **No se cierra aquí**: la lista de defunción es una decisión aparte, como en
+>   la v4.
+> - **D-F7** (`PS5` = IRM-45-5) pierde sujeto, y **las piezas de D-F5** (el Y2 de
+>   modo común por módulo) se van con los IRM. Sus obligaciones **no** se van con
+>   ellas: necesitan relevo nombrado en D-V4 y D-V5.
+>
+> **Lo que esta firma NO compra**, y conviene que quede escrito porque el papel
+> lo insinúa: la comparación de «0 W» contra un cajón externo multirriel **no
+> está calculada** — el guion solo modela los DC-DC de dentro. La firma se
+> sostiene sin ese número; el número sigue siendo HUECO.
+>
+> **Lo que sigue sin contestar bajo D-V1**: «certificada» no dice clase,
+> aislamiento, corriente de fuga, protecciones ni carga capacitiva admisible.
+> Eso es el contrato de D-V2, y por eso D-V2 no se firma todavía.
 
 Y una que este papel **no** propone y hay que decidir aparte: si la cascada
 sigue declarando 650 mA/riel contra un censo de 334 (HUECO 5).
