@@ -94,12 +94,29 @@ pub fn driver(p: Peri<'static, USB1_OTG_HS>) -> Driver<'static, USB1_OTG_HS> {
     static EP_OUT: StaticCell<[u8; 1024]> = StaticCell::new();
 
     let mut config = embassy_stm32::usb::Config::default();
-    // HUECO de hardware, no de firmware: el SAM17 es autoalimentado -- sigue
-    // encendido con el USB desenchufado --, y la especificacion de USB exige
-    // que un dispositivo asi detecte VBUS. Detectarlo pide que la placa lleve
-    // la linea de VBUS al OTG, y el esquematico del hub todavia no existe.
-    // Queda en `false`, que es lo que funciona en cualquier placa, hasta que
-    // ese esquematico decida.
+    // El N657 NO TIENE deteccion de VBUS por hardware, y esto no es una
+    // eleccion nuestra: RM0486 Rev 4, `OTG_GCCFG`, p. 3815 -- *«In this device,
+    // the software override is always active (no hardware detection is
+    // available)»*. El PHY va cableado en modo comparador externo y ni siquiera
+    // llega a VBUS (p. 3756: *«forced in external comparator mode and not
+    // connected to VBUS»*), y el encapsulado no publica bola de VBUS: el censo
+    // de las tablas 18-20 de DS14791 Rev 10 (pp. 89-133) solo da `OTG1_ID` en
+    // C3, que en modo periferico el manual ignora (p. 3766).
+    //
+    // Asi que `vbus_detection` se queda en `false` PARA SIEMPRE en este chip.
+    // Lo que falta es lo otro, y es de la placa. El manual lo escribe entero,
+    // p. 3766: *«External circuitry should be used to detect presence of a
+    // voltage on the VBUS connector pin»*, *«The B-peripheral VBUS detection
+    // should be overridden with OTG_GOTGCTL.BVALOEN = 1»*, y el resultado
+    // *«should be maintained by writing the current value to
+    // OTG_GOTGCTL.BVALOVAL»*.
+    //
+    // En embassy eso es `vbus_valid_override = true` (deja `BVALOEN = 1` y no
+    // toca `BVALOVAL`, para que lo escriba la aplicacion). Hoy va en `false`,
+    // y eso pone `BVALOVAL = 1` fijo: **el cerebro cree que el cable esta
+    // siempre puesto**. Es la mentira conocida, y es del #350: pide divisor de
+    // VBUS a un GPIO (el N657 tolera 3,6 V en una TT, no 5) y el esquematico
+    // del hub, que no existe.
     config.vbus_detection = false;
 
     Driver::new_hs_dedicated_pins(p, Irqs, EP_OUT.init([0; 1024]), config)
