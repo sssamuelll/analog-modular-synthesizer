@@ -398,7 +398,8 @@ coste térmico total de D-V3, desglosado en la enmienda.
 tercio de vatio por cerrar el único rojo que le queda a la fuente, y **con la
 misma pieza**: el LM2991 que el #322 daba por insuficiente.~~ La propuesta
 compra la holgura de `U1` y D-F4 descrita arriba, con el coste completo de la
-enmienda del 2026-09-08, pendiente de aceptación.
+enmienda del 2026-09-08, ~~pendiente de aceptación~~ **aceptada: D-V3 se
+firmó el 2026-09-08 y no arrastra ningún HUECO (§9).**
 
 Tres honestidades sobre esta tabla:
 
