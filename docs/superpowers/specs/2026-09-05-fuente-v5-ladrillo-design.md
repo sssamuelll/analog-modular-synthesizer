@@ -2,12 +2,14 @@
 
 **Fecha**: 2026-09-05 · **Estado**: **D-V1, D-V2, D-V3 y D-V5 FIRMADAS el
 2026-09-08**; D-V2 y D-V5 arrastran **16 HUECOS** a §9.2, de los que **cuatro
-políticas quedaron decididas el 2026-09-08** (§9.3). **D-V4 sigue sin firmar** y
-sigue siendo el atasco (§9) ·
+políticas quedaron decididas el 2026-09-08** (§9.3). ~~**D-V4 sigue sin firmar** y
+sigue siendo el atasco~~ **D-V4 FIRMADA 2026-09-08, en dirección, con M1–M5
+opción A** (§9; enmienda por firma de Samuel) ·
 **Decidido por Samuel el 2026-09-05**: sacar la etapa AC-DC de la caja (opción B de
 tres), y firmar **D-B2 a 500 mA/riel** para la fila de abajo ·
 **Junta**: `2026-09-08-junta-fuente-v5-dv1-dv5.md` — dictaminó D-V1 firmable tal
-cual, D-V2/D-V3/D-V5 con condición, y D-V4 **no firmable aún** ·
+cual, D-V2/D-V3/D-V5 con condición, y D-V4 ~~**no firmable aún**~~ **firmada
+posteriormente el 2026-09-08 con las asignaciones de §9** ·
 **Guion**: `hardware/01-power-supply/v5/ladrillo_budget.py` — todas las cifras de
 este papel salen de ahí, corriendo ·
 **Reabre**: `fuente-v4-liston` §1 (D-F1), §3, §4.1, §4.2, §5 (D-F5), §6, §7 (D-F2);
@@ -100,6 +102,13 @@ arranque~~ **la reserva de arranque queda por demostrar** (enmienda de D-V2 del
 | corriente del cordón | 2,68 A |
 | lo que le pide a la red | 72,98 W |
 | **se disipa fuera de la caja** | **8,76 W** |
+
+> **ENMIENDA (2026-09-08, M1/D-V4 · §4 y firma de §9). Presupuesto anterior a
+> la barrera digital.** Las cifras de esta tabla proceden del modelo todavía
+> sin adaptar (`hardware/01-power-supply/v5/ladrillo_budget.py:134`, `:135`,
+> `:147`, `:151`, `:164`, `:169`, `:294`). M1 obliga a revisar las pérdidas y
+> la demanda del ladrillo; no se publican nuevos valores. Véase
+> **H-CENSO-ETA-DIGITAL**, [censo](2026-09-08-censo-dv4-resolucion.md) §6.
 
 > **ENMIENDA (2026-09-08, D-V2 · `2026-09-08-junta-fuente-v5-dv1-dv5.md` §2). Contrato de entrada, fallo y
 > arranque por completar.** Se escribe qué hay que acreditar; ~~D-V2 sigue sin
@@ -226,10 +235,14 @@ de `U1`/`U2` — que es el problema que este papel viene a cerrar, no a empeorar
 > `2026-09-03-fuente-v4-liston-design.md` §4.1). D-F5 cerraba el modo común por
 > **módulo → Y2 → chasis → PE → primario** (mismo papel §4.2, «EMI»).
 > **Dos hilos de alimentación y retorno no transportan ese PE separado.**
-> **No hay todavía un heredero identificado de ese camino.** No queda por
+> ~~**No hay todavía un heredero identificado de ese camino.** No queda por
 > ello decidido que el retorno DC sea PE, que se una al chasis o que el
-> chasis quede flotante. El PE del propio ladrillo, si lo tiene, tampoco
-> demuestra un camino hasta el chasis a través del cordón.
+> chasis quede flotante.~~ **ENMIENDA (2026-09-08, M2/D-V4 · firma de §9): el
+> chasis se agarra al retorno de continua, y el modo común del ladrillo se
+> cierra fuera, con él.** Esto no declara que retorno DC sea PE. El PE del
+> propio ladrillo, si lo tiene, tampoco demuestra un camino hasta el chasis
+> a través del cordón. **H-V5-PE sigue abierto:** faltan mapa, evidencia y
+> ensayo del conjunto preservando GNDD; M1 asigna su barrera (§9).
 >
 > El relevo debe declarar las relaciones entre retorno DC, ★, `J5`, chasis
 > y PE, y acreditar el camino de modo común del conjunto. No puede dar por
@@ -291,29 +304,66 @@ de `U1`/`U2` — que es el problema que este papel viene a cerrar, no a empeorar
 >
 > **DECISIONES PENDIENTES:** elegir conector, polaridad, retención y cordón
 > vinculante; decidir qué maniobras y adaptadores quedan admitidos o cubiertos,
-> con su comportamiento de fallo y recuperación; definir retorno/chasis/PE y
-> asignar el relevo de D-F5. Cada respuesta debe nombrar responsable físico,
-> límites con fuente local y prueba de aceptación. Ninguna queda tomada aquí.
+> con su comportamiento de fallo y recuperación; ~~definir retorno/chasis/PE y
+> asignar el relevo de D-F5~~ **acreditar el reparto ya firmado en M2/D-V4
+> (2026-09-08, §9)**. Cada respuesta debe nombrar responsable físico,
+> límites con fuente local y prueba de aceptación. ~~Ninguna queda tomada aquí.~~
+> **Rigen las políticas de §9.3 y las asignaciones de §9; sus HUECOS siguen abiertos.**
 
 ## 4. Los rieles de dentro
+
+Cifras del modelo anterior a M1: `hardware/01-power-supply/v5/ladrillo_budget.py:119`
+(`rieles()`), `:143`, `:147` y salida de `:282`; la enmienda siguiente delimita
+su vigencia tras la firma, sin recalcular el guion.
 
 | riel | V | A | entrega | pierde |
 |---|---|---|---|---|
 | +12 rack (bus fila B + pantalla) | 12,00 | 1,050 | 12,60 W | 1,40 W |
 | −12 rack (bus fila B) | 12,00 | 0,500 | 6,00 W | 1,06 W |
 | +5 rack (bus fila B) | 5,00 | 0,500 | 2,50 W | 0,28 W |
-| +5 digital (4 × N657 + host USB) | 5,00 | 2,895 | 14,47 W | 1,61 W |
+| +5 digital (4 × N657 + host USB) | 5,00 | 2,895 | 14,47 W | ~~1,61 W~~ **HUECO M1: conversión aislada; pérdida por acreditar** |
 | crudo +cascada (a `U1`) | 15,89 | 0,650 | 10,33 W | 1,82 W |
 | crudo −cascada (a `U2`) | 15,89 | 0,650 | 10,33 W | 1,82 W |
-| | | | **56,23 W** | **7,99 W** |
+| | | | **56,23 W** | ~~**7,99 W**~~ **HUECO M1: total subestimado, sin valor nuevo** |
 
 El +12 lleva dos cargas por cables distintos: el bus de la fila y la pantalla de
 7" con su retorno dedicado, que es lo que pide `pantalla-motor`. Van juntas en
 el convertidor y separadas en el cableado.
 
-**Los tres rendimientos son ESTIMADO** y mueven los 7,99 W enteros. Es el único
-término de este presupuesto que no está anclado a una hoja, y se cierra
-eligiendo las piezas.
+**Los tres rendimientos son ESTIMADO** y ~~mueven los 7,99 W enteros~~
+**movían la pérdida publicada por el modelo anterior a M1**
+(`hardware/01-power-supply/v5/ladrillo_budget.py:239`). Es el único término de
+este presupuesto que no está anclado a una hoja, y se cierra eligiendo las piezas.
+
+> **ENMIENDA (2026-09-08, M1/D-V4 · firma de §9). La barrera digital cambia la
+> clase de conversión presupuestada.** M1 firma **aislar solo el cerebro
+> digital**: el convertidor del **+5 digital** lleva barrera; sonido y rack
+> comparten retorno. Abierto `rieles()`, se confirma que la fila digital usa
+> **`ETA_BUCK = 0,90`** (`hardware/01-power-supply/v5/ladrillo_budget.py:101`,
+> `:134`, `:135`), la estimación del buck sin barrera. **Esa clase ya no
+> corresponde a la conversión aislada exigida por M1.**
+>
+> La pérdida digital tachada y el total interior de **7,99 W están
+> subestimados por esa hipótesis de clase**, y la salida pedida al ladrillo
+> arrastra la misma carencia (`ladrillo_budget.py:147`, `:151`, `:291`, `:296`).
+> No se cuantifica la subida ni se sustituye el rendimiento por otro estimado:
+> los rendimientos interiores están declarados **ESTIMADO**, sin piezas ni
+> garantías (`:99`, `:110`, `:239`). El escenario de censo también usa
+> `ETA_BUCK` para el digital (`:226`); las comparaciones térmicas de §6 y las
+> cifras heredadas de §8 deben revisarse con el mismo dato garantizado.
+>
+> **Los crudos no cambian por M1.** Su **`ETA_AISLADO = 0,85`** sigue siendo la
+> estimación del flyback de doble salida por **topología**, no una barrera
+> exigida para esos rieles (`ladrillo_budget.py:100`, `:103`, `:136`, `:138`).
+> Ese nombre de constante no acredita aislamiento ni elige una pieza.
+>
+> **H-CENSO-ETA-DIGITAL — HUECO abierto**, registrado con nombre propio en el
+> [censo](2026-09-08-censo-dv4-resolucion.md) §6. **Pregunta exacta:** «¿Qué
+> rendimiento garantiza la conversión aislada que M1 obliga a poner en el +5
+> digital, y cuánto sube con él la pérdida interior y la salida pedida al
+> ladrillo?» Diseño de potencia y fabricante de esa conversión deben aportar
+> la garantía y el presupuesto actualizado. La firma no aporta ese dato.
+> **Que un trabajo tenga dueño no es que esté hecho.**
 
 ## 5. ~~El regalo: la tensión cruda cierra `U2`~~ Holgura para `U1` y D-F4 (D-V3)
 
@@ -509,7 +559,9 @@ adoptado**: su mitad R se va del edificio, y su mitad C —la cascada fuera de u
 cajón de acero— pasa a ser la respuesta a dónde vive lo que se queda. Conviene
 leerlo antes de escribir el plan de esta v5, no después.
 
-Ninguno de los tres se toca aquí: este papel no está firmado.
+Ninguno de los tres se toca aquí: ~~este papel no está firmado~~ **D-V4 se
+firmó en dirección el 2026-09-08 (§9); queda pendiente ejecutar su relevo**
+(enmienda por firma, sin modificar guiones ni cerrar issues).
 
 ## 8. HUECOS
 
@@ -536,7 +588,7 @@ Ninguno de los tres se toca aquí: este papel no está firmado.
 | **D-V1** | la etapa AC-DC es **pieza de catálogo certificada**, fuera de la caja; no un cajón nuestro | §3 | **FIRMADA 2026-09-08** |
 | **D-V2** | el ladrillo son **24 V** | §3 | **FIRMADA 2026-09-08** — dirección; **7 HUECOS arrastrados** a §9.2 |
 | **D-V3** | el crudo de la cascada son **15,5 V**, ~~y con eso `U2` cierra en +311 mV~~ para ganar holgura en `U1` y D-F4, con el coste completo de §5 | §5 | **FIRMADA 2026-09-08** — sin HUECOS |
-| **D-V4** | los rieles se derivan **dentro** con DC-DC; la cascada no se toca | §4 | sin firmar — **no firmable aún**, ver junta §3 |
+| **D-V4** | los rieles se derivan **dentro** con DC-DC; la cascada no se toca | §4 | ~~sin firmar — **no firmable aún**, ver junta §3~~ **FIRMADA 2026-09-08** — dirección, con M1–M5 opción A; enmienda por firma de Samuel, bloque siguiente |
 | **D-V5** | el cordón es de **dos hilos**; no bajan rieles hechos | §3 | **FIRMADA 2026-09-08** — dirección; **9 HUECOS arrastrados** a §9.2 |
 
 > ### D-V1, FIRMADA — 2026-09-08
@@ -593,11 +645,73 @@ Ninguno de los tres se toca aquí: este papel no está firmado.
 > **+330 a +811 mV**, y aire para el detector de D-F4 que vivía con +40 mV
 > útiles). Samuel acepta el vatio a cambio del margen. **Queda cerrada.**
 >
-> **Lo que estas tres firmas NO tocan:** **D-V4 sigue sin firmar** y sigue
+> **Lo que estas tres firmas NO tocan:** ~~**D-V4 sigue sin firmar** y sigue
 > siendo el atasco — los dos bloqueantes de la junta (protección por riel y
-> aislamiento de GNDD) no se resuelven aquí. Y **el #334 sigue abierto**: su
+> aislamiento de GNDD) no se resuelven aquí.~~ **ENMIENDA (2026-09-08, firma
+> posterior de D-V4): M3 y M1 les dan dueño, respectivamente; su realización
+> y acreditación siguen abiertas** (censo §3). Y **el #334 sigue abierto**: su
 > pregunta viaja como `H-V2-CORTO-DCDC`. Que el nodo de fallo haya cambiado de
 > origen no lo cierra.
+
+> ### D-V4, FIRMADA — 2026-09-08
+>
+> **ENMIENDA (2026-09-08, firma de Samuel · §4 y
+> [censo](2026-09-08-censo-dv4-resolucion.md) §1).** ~~No firmable aún~~
+> **FIRMADA en DIRECCIÓN, con las cinco asignaciones como parte de la firma.**
+> Los rieles se derivan dentro con DC-DC y la cascada de regulación se conserva.
+> Samuel firmó **D-V4 opción A: «Firmar la dirección, con las cinco asignaciones
+> como parte de la firma.»** Las asignaciones firmadas, todas **opción A** y
+> sin matiz añadido, son:
+>
+> - **M1:** **Aislar solo el cerebro digital.** El convertidor del +5 digital
+>   lleva barrera; el sonido y el rack comparten retorno, como ya lo compartían.
+> - **M2:** **El chasis se agarra al retorno de continua**, y el modo común del
+>   ladrillo se cierra fuera, con él.
+> - **M3:** **Las tres cosas a la vez**: cada convertidor se protege solo, los
+>   crowbars de rack de D-F6 se quedan, y `U1` lleva un tope delante.
+> - **M4:** **Un detector analógico con un hilo**, como el de hoy, gobernando
+>   los actuadores que se quedan.
+> - **M5:** **Un vigilante propio en la entrada de los 24 V**, antes de los
+>   convertidores.
+>
+> **Lo que arrastra:**
+>
+> - Los bloqueantes de la junta tienen dueño: **M3** reparte la protección por
+>   riel; **M1** asigna la barrera de GNDD al convertidor digital. Faltan mapa
+>   completo, piezas, límites, coordinación y pruebas; la aceptación entre
+>   masas sigue siendo la de v4 §4.1 y §9.1 (censo §3.1/§3.2).
+> - **D-F6 sigue firmada para el rack.** M3 conserva sus crowbars y les da el
+>   relevo de protección propia por convertidor; el **SCR sigue sin hoja**
+>   (`hardware/01-power-supply/v4/check_absmax.py:110`). El tope delante de `U1`
+>   queda asignado, sin pieza ni límite elegidos; **H-V2-CORTO-DCDC / #334
+>   sigue abierto**. M4 conserva el mando conjunto de D-F4 sobre sus actuadores
+>   (censo §3.1 y §4). Falta demostrar la supervivencia digital; no se le firma
+>   un crowbar ni una protección adicional por inferencia de M3.
+> - Los **H-CENSO** del censo §6 siguen abiertos: ya tienen a quien preguntarle,
+>   con las coberturas y límites de T16–T28 en §2.6. Se añade
+>   **H-CENSO-ETA-DIGITAL** por el presupuesto de clase equivocada en §4;
+>   no se reemplaza por una cifra nueva. **Que un trabajo tenga dueño no es
+>   que esté hecho.** Los HUECOS heredados de §8, §9.2 y §9.3 tampoco se cierran.
+> - **M2 hace de L14 una condición de compra:** si el candidato no documenta
+>   la relación de su salida con PE, no sirve (pliego §3, L14). Falta acreditar
+>   el relevo de modo común del conjunto; **H-V5-PE permanece abierto**.
+>   **L03–L09** dejan de esperar la firma de D-V4, pero siguen en su casilla,
+>   sin números, con sus dependencias externas y piezas por elegir
+>   ([pliego](2026-09-08-pliego-ladrillo.md) §3.2; censo §5).
+> - **Cobertura incompleta de T24:** M5 asigna el vigilante en la entrada,
+>   pero **no asigna quién deja de energizar un corto del cordón aguas arriba**.
+>   Ese tramo **sigue sin dueño** en **H-PL-ABANDONO-FUENTE** (pliego §4.1;
+>   censo §2.6). Las asignaciones firmadas no cubren íntegramente el conjunto
+>   mínimo anunciado por el censo; se registra la carencia sin completar M5.
+>
+> **Lo que esta firma NO compra:** no cierra ningún HUECO ni issue, no elige
+> ninguna pieza, no acredita garantías ni ensayos y **no autoriza fabricar**.
+> La firma es dirección, con el mismo alcance de D-V2 y D-V5. Ninguna de las
+> asignaciones se da por ejecutada por tener responsable.
+>
+> **El séptimo punto NO se firmó:** «¿Corregir la polaridad rearma el cupo de
+> reintentos?» sigue exactamente como **obligación abierta, sin dueño**, en
+> §9.3. No se contesta aquí ni se infiere de M5; queda fuera de esta firma.
 
 ### 9.2 Los 16 HUECOS que arrastran D-V2 y D-V5
 
@@ -623,7 +737,7 @@ de cómo el propio contrato del 08-09 formula cada pregunta — *al fabricante*,
 | `H-V5-RECONEXION` | ~~rearranque con energía residual o rebote~~ **derivado 08-09 de `H-V2-RECUPERACION` (§9.3)**; falta separar un rebote de un intento legítimo | diseño |
 | `H-V5-CORTO` | corto entre conductores o contra chasis, incluido el tramo de cable expuesto | diseño |
 | `H-V5-INCOMPATIBLE` | ~~qué adaptadores cubre el contrato~~ **decidido 08-09: contrato exclusivo (§9.3)**; faltan las referencias admitidas y su acreditación | ~~**Samuel** +~~ diseño |
-| `H-V5-PE` | **relevo de D-F5**: quién da el camino de modo común, preservando GNDD | diseño + medida |
+| `H-V5-PE` | **relevo de D-F5**: ~~quién da el camino de modo común~~ **M2 lo asigna fuera, con el ladrillo, y une chasis al retorno DC (firma 2026-09-08, §9)**; faltan mapa, evidencia y ensayo, preservando GNDD por M1; **HUECO abierto** | diseño + medida |
 
 **Tres de estas filas no son independientes:** `H-V5-CALIENTE` tiene que
 coincidir con `H-V2-TRANSITORIOS` y `H-V2-RESERVA`, y `H-V5-RECONEXION` ~~sigue
@@ -695,10 +809,17 @@ HUECOS que estuvieran escondidos, y van a la condición de fabricación:
 | **Corregir la polaridad, ¿rearma el cupo?** Si el bloqueo por inversión gastó intentos, corregir el cable tiene que poder volver a arrancar. Falta decir si el cupo se reinicia y bajo qué condición. | cruce `H-V5-INVERSION` × `H-V2-RECUPERACION` |
 | **La caída del bloqueo de inversión se paga en `H-V2-ENTRADA`.** El elemento que responde a la polaridad inversa va en serie y consume saldo de la misma ventana que todavía no tiene extremos. | cruce `H-V5-INVERSION` × `H-V2-ENTRADA` |
 
+> **ENMIENDA (2026-09-08, alcance de la firma D-V4/M1–M5 · §9).** La fila
+> «Corregir la polaridad, ¿rearma el cupo?» se conserva **sin contestar y sin
+> dueño**. Ese séptimo punto no se firmó: no hay condición de rearme elegida
+> ni se deduce una respuesta o una asignación de M5. Sigue siendo obligación
+> abierta en la condición de fabricación.
+
 Y la que ya estaba y ahora tiene dueño único: **la envolvente de supervivencia
 del enchufe en caliente accidental sigue sin número**, porque vive en
 `H-V2-RESERVA` y `H-V2-TRANSITORIOS`. La política está elegida; el límite no.
 
-**Lo que estas cuatro decisiones NO tocan:** ningún HUECO queda cerrado, D-V4
-sigue sin firmar, y el **#334** sigue abierto — `H-V2-CORTO-DCDC` es un
+**Lo que estas cuatro decisiones NO tocan:** ningún HUECO queda cerrado, ~~D-V4
+sigue sin firmar~~ **D-V4 se firmó por separado en dirección el 2026-09-08,
+con M1–M5 (§9; enmienda por firma de Samuel)**, y el **#334** sigue abierto — `H-V2-CORTO-DCDC` es un
 requisito comprable, no una política, y no había nada que decidir en él hoy.
