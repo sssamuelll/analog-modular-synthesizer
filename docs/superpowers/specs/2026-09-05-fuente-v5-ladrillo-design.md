@@ -1,8 +1,9 @@
 # Fuente v5 — el ladrillo afuera, la conversión adentro
 
 **Fecha**: 2026-09-05 · **Estado**: **D-V1, D-V2, D-V3 y D-V5 FIRMADAS el
-2026-09-08**; D-V2 y D-V5 arrastran **16 HUECOS** a §9.2. **D-V4 sigue sin
-firmar** y sigue siendo el atasco (§9) ·
+2026-09-08**; D-V2 y D-V5 arrastran **16 HUECOS** a §9.2, de los que **cuatro
+políticas quedaron decididas el 2026-09-08** (§9.3). **D-V4 sigue sin firmar** y
+sigue siendo el atasco (§9) ·
 **Decidido por Samuel el 2026-09-05**: sacar la etapa AC-DC de la caja (opción B de
 tres), y firmar **D-B2 a 500 mA/riel** para la fila de abajo ·
 **Junta**: `2026-09-08-junta-fuente-v5-dv1-dv5.md` — dictaminó D-V1 firmable tal
@@ -611,23 +612,88 @@ de cómo el propio contrato del 08-09 formula cada pregunta — *al fabricante*,
 | `H-V2-SUBTENSION` | arranque, inhibición, histéresis y tiempos, y su coordinación con D-F4 | diseño |
 | `H-V2-TRANSITORIOS` | envolvente admisible en cada interfaz, y quién limita lo que llega a los pre-reguladores | diseño |
 | `H-V2-RESERVA` | carga capacitiva y corriente de arranque admisibles, contra lo que la cadena exige | **fabricante** |
-| `H-V2-RECUPERACION` | política de rearranque, y estado de rieles durante la caída y la espera | **Samuel** + fabricante |
+| `H-V2-RECUPERACION` | ~~política de rearranque~~ **decidida 08-09: reintentos con abandono (§9.3)**; faltan intervalo, cupo, condición de abandono y estado de rieles | ~~**Samuel** +~~ fabricante |
 | `H-V2-CORTO-DCDC` | qué limita el corto entrada↔salida antes de `IN` de `U1` — **es el #334** | diseño |
 | `H-V2-AISLAMIENTO` | clase, aislamiento y fuga de la referencia, con hoja o certificado | **fabricante** |
 | `H-V5-CONECTOR` | pareja y polaridad, con hoja que acredite límites y resistencia de contacto | diseño |
 | `H-V5-RETENCION` | retención y alivio de tracción, con su ensayo | diseño |
 | `H-V5-CALIBRE` | calibre, longitud y resistencia total vinculantes | diseño |
-| `H-V5-INVERSION` | qué pasa con polaridad inversa y qué elemento responde | diseño |
-| `H-V5-CALIENTE` | si se admite conectar en caliente, y con qué límites | diseño |
-| `H-V5-RECONEXION` | rearranque con energía residual o rebote de contactos | diseño |
+| `H-V5-INVERSION` | ~~qué pasa con polaridad inversa~~ **decidido 08-09: bloquear y recuperar al corregir (§9.3)**; faltan el elemento, su envolvente y su caída | diseño |
+| `H-V5-CALIENTE` | ~~si se admite conectar en caliente~~ **decidido 08-09: desenergizado como norma, accidente cubierto (§9.3)**; falta la envolvente de supervivencia | diseño |
+| `H-V5-RECONEXION` | ~~rearranque con energía residual o rebote~~ **derivado 08-09 de `H-V2-RECUPERACION` (§9.3)**; falta separar un rebote de un intento legítimo | diseño |
 | `H-V5-CORTO` | corto entre conductores o contra chasis, incluido el tramo de cable expuesto | diseño |
-| `H-V5-INCOMPATIBLE` | qué adaptadores cubre el contrato y qué supervivencia se exige | **Samuel** + diseño |
+| `H-V5-INCOMPATIBLE` | ~~qué adaptadores cubre el contrato~~ **decidido 08-09: contrato exclusivo (§9.3)**; faltan las referencias admitidas y su acreditación | ~~**Samuel** +~~ diseño |
 | `H-V5-PE` | **relevo de D-F5**: quién da el camino de modo común, preservando GNDD | diseño + medida |
 
 **Tres de estas filas no son independientes:** `H-V5-CALIENTE` tiene que
-coincidir con `H-V2-TRANSITORIOS` y `H-V2-RESERVA`, y `H-V5-RECONEXION` sigue
-la política que se elija en `H-V2-RECUPERACION`. Contestarlas por separado es
-una forma de contradecirse.
+coincidir con `H-V2-TRANSITORIOS` y `H-V2-RESERVA`, y `H-V5-RECONEXION` ~~sigue
+la política que se elija en~~ **hereda la ya elegida en** `H-V2-RECUPERACION`
+(§9.3, 08-09). Contestarlas por separado es una forma de contradecirse.
 
 Y una que este papel **no** propone y hay que decidir aparte: si la cascada
 sigue declarando 650 mA/riel contra un censo de 334 (HUECO 5).
+
+### 9.3 Las cuatro políticas, decididas — 2026-09-08
+
+Los dos documentos de resolución —`2026-09-08-huecos-dv2-resolucion.md` y
+`2026-09-08-huecos-dv5-resolucion.md`— separaron los 16 HUECOS en **once
+requisitos comprables** y **cinco decisiones**. Las cuatro decisiones
+independientes quedan tomadas hoy; la quinta se deriva de una de ellas.
+
+**Elegir la política no cierra su HUECO.** Compra la dirección, igual que la
+firma de D-V2 y D-V5: los números —cuánta corriente, cuánto tiempo, cuántos
+milivoltios— siguen viviendo en `H-V2-RESERVA`, `H-V2-TRANSITORIOS` y
+`H-V2-ENTRADA`, que son de fabricante. Lo que cambia es que **ya no hace falta
+decidir nada para poder preguntar.**
+
+**`H-V2-RECUPERACION`: reintentos con abandono.** La cadena reintenta un número
+declarado de veces, con espera entre intentos, y se rinde si el fallo persiste.
+La razón no es preferencia, es **restitución**: el hiccup nativo de los IRM
+hacía exactamente esto, y la v5 los retira sin sustituto declarado (§7). Volver
+sola sin límite deja ciclar indefinidamente contra un corto permanente del
+DC-DC; enclavar hasta intervención convierte un parpadeo de red en una visita
+al taller.
+
+**`H-V5-INCOMPATIBLE`: contrato exclusivo.** Se acredita una referencia de
+ladrillo y una de cordón, y los adaptadores ajenos quedan **fuera de la
+garantía eléctrica**, declarado y no sobreentendido. El SAM17 se vende entero:
+prometer supervivencia a fuentes que no elegimos es certificar lo que no
+controlamos. Lo que esta decisión **no** compra: que otro adaptador encaje
+físicamente sigue siendo posible. Una exclusión de contrato no es una
+protección.
+
+**`H-V5-INVERSION`: bloquear, y recuperar al corregir.** Un elemento físico
+impide que la polaridad inversa llegue a nada, y al corregirla la cadena
+arranca sola si sus condiciones vuelven a ser válidas. Es la única de las
+cuatro que **excede el contrato exclusivo a propósito**, y por la misma razón
+que lo justifica: precisamente porque el conector va a admitir adaptadores que
+el contrato no cubre, el error más probable de todos no puede quedarse sin
+nada delante.
+
+**`H-V5-CALIENTE`: desenergizado como norma, accidente cubierto.** La maniobra
+documentada es acoplar el cordón con el ladrillo apagado. Pero la conexión en
+caliente accidental queda **expresamente cubierta**: se exige supervivencia, no
+funcionamiento. Una instrucción de uso no es una protección física, y este
+instrumento se enchufa y se desenchufa a menudo.
+
+**`H-V5-RECONEXION` no se decide: se deriva.** Hereda «reintentos con abandono»
+también cuando la caída venga del cordón.
+
+#### Las tres obligaciones que nacen de estas cuatro
+
+Ninguna existía antes de decidir. Son consecuencia de las elecciones, no
+HUECOS que estuvieran escondidos, y van a la condición de fabricación:
+
+| Obligación nueva | De dónde sale |
+|---|---|
+| **El rebote de contactos no puede gastar reintentos.** Un cupo que se consume solo con enchufar y desenchufar no protege de nada. Hay que declarar qué separa un intento legítimo de un rebote. | `H-V5-RECONEXION` heredando reintentos |
+| **Corregir la polaridad, ¿rearma el cupo?** Si el bloqueo por inversión gastó intentos, corregir el cable tiene que poder volver a arrancar. Falta decir si el cupo se reinicia y bajo qué condición. | cruce `H-V5-INVERSION` × `H-V2-RECUPERACION` |
+| **La caída del bloqueo de inversión se paga en `H-V2-ENTRADA`.** El elemento que responde a la polaridad inversa va en serie y consume saldo de la misma ventana que todavía no tiene extremos. | cruce `H-V5-INVERSION` × `H-V2-ENTRADA` |
+
+Y la que ya estaba y ahora tiene dueño único: **la envolvente de supervivencia
+del enchufe en caliente accidental sigue sin número**, porque vive en
+`H-V2-RESERVA` y `H-V2-TRANSITORIOS`. La política está elegida; el límite no.
+
+**Lo que estas cuatro decisiones NO tocan:** ningún HUECO queda cerrado, D-V4
+sigue sin firmar, y el **#334** sigue abierto — `H-V2-CORTO-DCDC` es un
+requisito comprable, no una política, y no había nada que decidir en él hoy.
