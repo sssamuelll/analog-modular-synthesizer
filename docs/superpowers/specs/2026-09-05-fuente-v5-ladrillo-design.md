@@ -1,7 +1,8 @@
 # Fuente v5 — el ladrillo afuera, la conversión adentro
 
-**Fecha**: 2026-09-05 · **Estado**: **D-V1 FIRMADA el 2026-09-08**; D-V2, D-V3,
-D-V4 y D-V5 siguen **sin firmar** (§9) ·
+**Fecha**: 2026-09-05 · **Estado**: **D-V1, D-V2, D-V3 y D-V5 FIRMADAS el
+2026-09-08**; D-V2 y D-V5 arrastran **16 HUECOS** a §9.2. **D-V4 sigue sin
+firmar** y sigue siendo el atasco (§9) ·
 **Decidido por Samuel el 2026-09-05**: sacar la etapa AC-DC de la caja (opción B de
 tres), y firmar **D-B2 a 500 mA/riel** para la fila de abajo ·
 **Junta**: `2026-09-08-junta-fuente-v5-dv1-dv5.md` — dictaminó D-V1 firmable tal
@@ -100,8 +101,9 @@ arranque~~ **la reserva de arranque queda por demostrar** (enmienda de D-V2 del
 | **se disipa fuera de la caja** | **8,76 W** |
 
 > **ENMIENDA (2026-09-08, D-V2 · `2026-09-08-junta-fuente-v5-dv1-dv5.md` §2). Contrato de entrada, fallo y
-> arranque por completar.** Se escribe qué hay que acreditar; D-V2 sigue sin
-> firmar. Las preguntas siguientes no tienen valores elegidos en el árbol.
+> arranque por completar.** Se escribe qué hay que acreditar; ~~D-V2 sigue sin
+> firmar~~ **D-V2 se firmó en dirección el 08-09 y estos HUECOS viajan con
+> ella a §9.2, sin darse por contestados**. Las preguntas siguientes no tienen valores elegidos en el árbol.
 >
 > **Los nodos no son intercambiables.** Se distingue la salida del ladrillo,
 > la entrada del chasis después del cordón, la entrada de los DC-DC después
@@ -207,7 +209,8 @@ bajar los rieles ya hechos, donde esa misma caída caería justo sobre el margen
 de `U1`/`U2` — que es el problema que este papel viene a cerrar, no a empeorar.
 
 > **ENMIENDA (2026-09-08, D-V5 · `2026-09-08-junta-fuente-v5-dv1-dv5.md` §2). Contrato del cordón y relevo de
-> retorno/chasis/PE por completar.** D-V5 sigue sin firmar. «Dos hilos» no
+> retorno/chasis/PE por completar.** ~~D-V5 sigue sin firmar.~~ **D-V5 se firmó
+> en dirección el 08-09; estos HUECOS viajan con ella a §9.2.** «Dos hilos» no
 > elige conector, protección ni referencia de masa.
 >
 > **Lo calculado no es todavía un calibre vinculante.** Se conserva el
@@ -365,7 +368,9 @@ eligiendo las piezas.
 > resultado del modelo, no una garantía de piezas aún sin elegir.
 >
 > **DECISIÓN PENDIENTE:** Samuel debe decidir si esa holgura para `U1` y D-F4
-> vale el coste completo. D-V3 sigue sin firmar. Su nominal no acota el crudo
+> vale el coste completo. ~~D-V3 sigue sin firmar.~~ **Decidido el 08-09: se
+> acepta el vatio a cambio del margen; D-V3 queda FIRMADA y sin HUECOS.** Su
+> nominal no acota el crudo
 > durante un fallo: #334 sigue abierto y su pregunta está en H-V2-CORTO-DCDC.
 > Las tachas del título, texto y tabla siguientes retiran la razón caduca y
 > conservan su rastro; esta continuación amplía, no reemplaza, la del 07-09.
@@ -527,10 +532,10 @@ Ninguno de los tres se toca aquí: este papel no está firmado.
 | | Qué | Dónde | Estado |
 |---|---|---|---|
 | **D-V1** | la etapa AC-DC es **pieza de catálogo certificada**, fuera de la caja; no un cajón nuestro | §3 | **FIRMADA 2026-09-08** |
-| **D-V2** | el ladrillo son **24 V** | §3 | sin firmar — ~~le falta el contrato de entrada~~ contrato escrito con HUECOS y decisiones pendientes (enmienda 2026-09-08) |
-| **D-V3** | el crudo de la cascada son **15,5 V**, ~~y con eso `U2` cierra en +311 mV~~ para ganar holgura en `U1` y D-F4, con el coste completo de §5 | §5 | sin firmar — ~~**su razón está caduca**, ver §9.1~~ razón corregida; aceptar holgura y coste sigue pendiente (enmienda 2026-09-08) |
+| **D-V2** | el ladrillo son **24 V** | §3 | **FIRMADA 2026-09-08** — dirección; **7 HUECOS arrastrados** a §9.2 |
+| **D-V3** | el crudo de la cascada son **15,5 V**, ~~y con eso `U2` cierra en +311 mV~~ para ganar holgura en `U1` y D-F4, con el coste completo de §5 | §5 | **FIRMADA 2026-09-08** — sin HUECOS |
 | **D-V4** | los rieles se derivan **dentro** con DC-DC; la cascada no se toca | §4 | sin firmar — **no firmable aún**, ver junta §3 |
-| **D-V5** | el cordón es de **dos hilos**; no bajan rieles hechos | §3 | sin firmar — ~~le falta retorno/chasis/PE~~ contrato escrito; retorno/chasis/PE y demás HUECOS siguen pendientes (enmienda 2026-09-08) |
+| **D-V5** | el cordón es de **dos hilos**; no bajan rieles hechos | §3 | **FIRMADA 2026-09-08** — dirección; **9 HUECOS arrastrados** a §9.2 |
 
 > ### D-V1, FIRMADA — 2026-09-08
 >
@@ -559,7 +564,69 @@ Ninguno de los tres se toca aquí: este papel no está firmado.
 >
 > **Lo que sigue sin contestar bajo D-V1**: «certificada» no dice clase,
 > aislamiento, corriente de fuga, protecciones ni carga capacitiva admisible.
-> Eso es el contrato de D-V2, y por eso D-V2 no se firma todavía.
+> Eso es el contrato de D-V2 — ~~y por eso D-V2 no se firma todavía~~ y viaja
+> como `H-V2-AISLAMIENTO` en §9.2 (D-V2 se firmó el mismo día, en dirección).
+
+> ### D-V2, D-V3 y D-V5, FIRMADAS — 2026-09-08
+>
+> **Se firma la DIRECCIÓN, no el detalle.** El ladrillo son **24 V**, el crudo
+> de la cascada son **15,5 V**, y el cordón es de **dos hilos**. Con eso queda
+> fijada la topología de transporte y la tensión de cada nodo nominal.
+>
+> **Ningún HUECO se da por contestado.** Los **16** que dejaron los contratos
+> del 08-09 —7 de D-V2 y 9 de D-V5— **no** se cierran con esta firma: pasan
+> enteros a §9.2 como trabajo previo a fabricar, con su dueño. Firmar la
+> dirección no es haber medido nada.
+>
+> **Precedente, y por qué se puede hacer así:** D-V1 se firmó ese mismo día
+> dejando abierto su hueco de aislamiento y remitiéndolo a D-V2. Una decisión
+> de arquitectura se firma cuando su dirección es correcta y su coste está
+> entendido; los números de pieza son trabajo de ingeniería posterior, no
+> requisito de la firma. Lo que **sí** sería fabricar sobre un hueco es llevar
+> esto a cobre sin cerrar §9.2 antes.
+>
+> **D-V3 es distinta: no arrastra nada.** No le faltaba ningún dato — le
+> faltaba una decisión de criterio. El coste está calculado (**+0,78 W**: 0,33
+> en `U1`, 0,33 en `U2`, 0,12 de conversión) y la holgura también (`U1` de
+> **+330 a +811 mV**, y aire para el detector de D-F4 que vivía con +40 mV
+> útiles). Samuel acepta el vatio a cambio del margen. **Queda cerrada.**
+>
+> **Lo que estas tres firmas NO tocan:** **D-V4 sigue sin firmar** y sigue
+> siendo el atasco — los dos bloqueantes de la junta (protección por riel y
+> aislamiento de GNDD) no se resuelven aquí. Y **el #334 sigue abierto**: su
+> pregunta viaja como `H-V2-CORTO-DCDC`. Que el nodo de fallo haya cambiado de
+> origen no lo cierra.
+
+### 9.2 Los 16 HUECOS que arrastran D-V2 y D-V5
+
+Esta lista es **la condición de fabricación**, no una lista de deseos: ninguna
+de las dos firmas autoriza cobre mientras tenga filas abiertas. El «dueño» sale
+de cómo el propio contrato del 08-09 formula cada pregunta — *al fabricante*,
+*a Samuel*, o sin destinatario, que es trabajo nuestro.
+
+| HUECO | Qué falta | Dueño |
+|---|---|---|
+| `H-V2-ENTRADA` | ventana garantizada del ladrillo y de los DC-DC, con las caídas del cordón dentro | **fabricante** |
+| `H-V2-SUBTENSION` | arranque, inhibición, histéresis y tiempos, y su coordinación con D-F4 | diseño |
+| `H-V2-TRANSITORIOS` | envolvente admisible en cada interfaz, y quién limita lo que llega a los pre-reguladores | diseño |
+| `H-V2-RESERVA` | carga capacitiva y corriente de arranque admisibles, contra lo que la cadena exige | **fabricante** |
+| `H-V2-RECUPERACION` | política de rearranque, y estado de rieles durante la caída y la espera | **Samuel** + fabricante |
+| `H-V2-CORTO-DCDC` | qué limita el corto entrada↔salida antes de `IN` de `U1` — **es el #334** | diseño |
+| `H-V2-AISLAMIENTO` | clase, aislamiento y fuga de la referencia, con hoja o certificado | **fabricante** |
+| `H-V5-CONECTOR` | pareja y polaridad, con hoja que acredite límites y resistencia de contacto | diseño |
+| `H-V5-RETENCION` | retención y alivio de tracción, con su ensayo | diseño |
+| `H-V5-CALIBRE` | calibre, longitud y resistencia total vinculantes | diseño |
+| `H-V5-INVERSION` | qué pasa con polaridad inversa y qué elemento responde | diseño |
+| `H-V5-CALIENTE` | si se admite conectar en caliente, y con qué límites | diseño |
+| `H-V5-RECONEXION` | rearranque con energía residual o rebote de contactos | diseño |
+| `H-V5-CORTO` | corto entre conductores o contra chasis, incluido el tramo de cable expuesto | diseño |
+| `H-V5-INCOMPATIBLE` | qué adaptadores cubre el contrato y qué supervivencia se exige | **Samuel** + diseño |
+| `H-V5-PE` | **relevo de D-F5**: quién da el camino de modo común, preservando GNDD | diseño + medida |
+
+**Tres de estas filas no son independientes:** `H-V5-CALIENTE` tiene que
+coincidir con `H-V2-TRANSITORIOS` y `H-V2-RESERVA`, y `H-V5-RECONEXION` sigue
+la política que se elija en `H-V2-RECUPERACION`. Contestarlas por separado es
+una forma de contradecirse.
 
 Y una que este papel **no** propone y hay que decidir aparte: si la cascada
 sigue declarando 650 mA/riel contra un censo de 334 (HUECO 5).
