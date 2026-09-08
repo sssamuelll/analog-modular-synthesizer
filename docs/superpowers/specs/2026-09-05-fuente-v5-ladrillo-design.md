@@ -648,11 +648,16 @@ decidir nada para poder preguntar.**
 
 **`H-V2-RECUPERACION`: reintentos con abandono.** La cadena reintenta un número
 declarado de veces, con espera entre intentos, y se rinde si el fallo persiste.
-La razón no es preferencia, es **restitución**: el hiccup nativo de los IRM
-hacía exactamente esto, y la v5 los retira sin sustituto declarado (§7). Volver
-sola sin límite deja ciclar indefinidamente contra un corto permanente del
-DC-DC; enclavar hasta intervención convierte un parpadeo de red en una visita
-al taller.
+~~La razón no es preferencia, es **restitución**: el hiccup nativo de los IRM
+hacía exactamente esto~~ **— corregido el 08-09: el hiccup hacía la mitad.** Su
+hoja dice «Hiccup mode, recovers automatically after fault condition is removed»
+(p. 2, citada en `check_absmax.py:26`): reintentaba **sin límite** y volvía sola
+al desaparecer el fallo. Nunca abandonaba. El reintento sí es restitución —la v5
+retira los IRM sin sustituto declarado (§7)—, pero **el abandono es añadido
+nuestro, y deliberado**: volver sola sin límite, que es justo lo que hacía el
+IRM, deja ciclar indefinidamente contra un corto permanente del DC-DC; enclavar
+hasta intervención convierte un parpadeo de red en una visita al taller. La
+decisión no cambia; lo que no se sostenía era llamarla restitución entera.
 
 **`H-V5-INCOMPATIBLE`: contrato exclusivo.** Se acredita una referencia de
 ladrillo y una de cordón, y los adaptadores ajenos quedan **fuera de la
