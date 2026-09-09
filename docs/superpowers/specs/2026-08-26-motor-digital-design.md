@@ -350,7 +350,7 @@ libro bilateral y el bring-up lo mide bajo carga plena.
    voz-total §5.
 5. **Censo de SRAM** con el binario adentro (§3): cuántas tablas residentes
    caben de verdad — **y ahora también los buffers de sample y granos**
-   (acta 2026-08-26, tarde). ✅ **Existe: `hardware/02-midi-cv/sram_budget.py`**
+   (acta 2026-08-26, tarde). ✅ **Existe: `hardware/03-vco/sram_voz_budget.py`**
    — y sale **HUECO con hallazgo**: apilando el peor caso de los ESTIMADO, lo
    fijo se come 3,2 de los 4,2 MB y no cierra ni sin pantalla. El hallazgo no
    es de pantalla: **el tamaño del binario es hoy el mayor desconocido del
