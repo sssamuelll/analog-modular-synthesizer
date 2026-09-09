@@ -32,14 +32,15 @@ EL DATO QUE SE MIDIO, Y LO QUE NO COMPRA
 
 LO QUE SIGUE ABIERTO, CON SU DUENO
 
-  D3-prima sigue PENDIENTE: lo dice la firma al final de hub S0. S10 fila
-  2 cobra NPU y cuadros de camara al hub; S10 fila 11 se los da al mago.
-  Es una CONTRADICCION del papel. Este censo la nombra y cobra ambos
-  costos por defecto; no firma D3-prima ni resuelve el papel.
+  D3-prima esta FIRMADA el 2026-09-09 (hub S0/S3.2): la camara y su NPU
+  son del mago, el tercer N657. La firma resolvio el reparto de S10 a
+  favor de la fila 11: esos costos ya no se cobran al hub.
 
-  Donde vive el audio (hub S6.2) sigue sin decidirse y su prerrequisito
-  es el papel de la interfaz, que no existe. None cobra las colas; solo
-  una decision explicita de sacarlas permite descontarlas.
+  Hub S6.2 quedo resuelta por ENMIENDA el 2026-09-09: ni hub ni Voz,
+  un cuarto N657 dedicado a la interfaz de audio, todavia sin nombre.
+  Sus colas de audio salen del hub; su censo de SRAM sigue PENDIENTE.
+  El papel propio de la interfaz sigue siendo prerrequisito, ahora con
+  chip dedicado: la propuesta del 2026-08-31 no equivale a diseno firmado.
 
   LA DEMANDA PROPIA DEL HUB NO ESTA ENUMERADA EN NINGUN PAPEL. Cero es lo
   enumerado hoy, no lo que el hub necesita. Falta escribir que debe vivir
@@ -97,22 +98,25 @@ ELF_EN_DISCO_B = 3_570_972     # Misma medida: debug = 2; NO entra al presupuest
 # firmware completo: se conserva solo para comparar lo que se afirmaba.
 BINARIO_ANTERIOR_B = (700_000, 2_000_000)
 
-# --- decisiones pendientes, valor conservador -----------------------------
-D3P_FIRMADA = False           # Hub S0, firma del 2026-08-30: pendiente S3.2.
-AUDIO_EN_EL_HUB = None        # Hub S6.2: falta decidir y falta el papel propio.
+# --- acta firmada y demanda todavia pendiente ------------------------------
+ACTA_CUATRO_CHIPS = "2026-09-09"  # Hub S0: firma de Samuel, cuatro N657.
+D3P_FIRMADA = True  # Acta 2026-09-09: "un procesador solo para la IA".
+AUDIO_EN_EL_HUB = False  # Acta 2026-09-09: "un procesador solamente para la interface de audio".
+CENSO_INTERFAZ_AUDIO_PENDIENTE = True  # Hub S6.2/S10: censo propio del cuarto chip.
 DEMANDA_HUB_ENUMERADA = False  # Hub S3.1/S10.2 no enumeran residentes propios.
 
-# --- lo fijo que aun es ESTIMADO ------------------------------------------
+# --- ESTIMADOS historicos, solo para escenarios alternativos ---------------
 # ESTIMADO heredado, sin fuente de tamano ni firmware completo: colas de
-# audio SAI in/out, CV, USB y retardos. Hub S6.2 manda cobrarlas si el audio
-# vive aqui; no enumera canales ni profundidades. La horquilla vieja NO
-# demuestra que alcance para la interfaz multicanal nueva.
+# audio SAI in/out, CV, USB y retardos del escenario integrado anterior.
+# La firma saca el audio del hub; esta horquilla NO dimensiona el cuarto
+# chip. Las colas PROPIAS del hub (protocolo, DMA del J2) siguen por censar
+# en su demanda, sin contar dos veces lo que ya lleva el ELF medido.
 COLAS_B = (150_000, 400_000)
 # ESTIMADO (camara-gestos S5, hub S3.2): activaciones del modelo de manos;
 # no hay modelo compilado ni mapa de activaciones que mida su huella.
 # Los PESOS no viven aqui: se streamean desde XSPI2, como en el censo padre.
 NPU_ACTIVACIONES_B = (200_000, 800_000)
-# ESTIMADO (camara-gestos S5 fila 1, hub S10 fila 2): entrada reducida por
+# ESTIMADO (camara-gestos S5 fila 1, hub S10 fila 11): entrada reducida por
 # DCMIPP, doble buffer para no leer un cuadro a medio escribir. No hay
 # modelo elegido que fije resolucion y formato de esa entrada.
 FRAMES_CAMARA_B = (150_000, 600_000)
@@ -167,7 +171,7 @@ def techo_binario_b(bytes_px: int, doble: bool, *,
 
 
 def parametros() -> dict:
-    """Hub S10 fila 2: framebuffer en PSRAM propia, pendientes conservadores."""
+    """Hub S10 fila 2: framebuffer en PSRAM propia, reparto firmado."""
     return {"binario": BINARIO_HUB_B, "framebuffer": 0, "peor": True,
             "d3p": D3P_FIRMADA, "audio": AUDIO_EN_EL_HUB}
 
@@ -205,7 +209,7 @@ def demo() -> None:
     print(f"  La punta baja del viejo ESTIMADO era "
           f"{BINARIO_ANTERIOR_B[0] / BINARIO_HUB_B:.1f}x esta huella.")
 
-    print("\n  Lo fijo que sigue ESTIMADO, sin medida ni tamanos publicados:")
+    print("\n  ESTIMADOS HISTORICOS, fuera del hub con el reparto firmado:")
     for nombre, (lo, hi) in (("colas de audio y retardos", COLAS_B),
                             ("activaciones de la NPU (gestos)", NPU_ACTIVACIONES_B),
                             ("cuadros de camara (DCMIPP, doble)", FRAMES_CAMARA_B)):
@@ -215,14 +219,20 @@ def demo() -> None:
     print(f"  Amplitud combinada: {ancho:,} B; EXACTAMENTE la del viejo")
     print("  rango del binario. Decir que el binario decidia solo ya era")
     print("  sobreafirmar antes de medirlo: las otras tres filas movian igual.")
+    print("  Son referencias del escenario anterior, sin medida ni tamanos")
+    print("  publicados; no son un presupuesto del cuarto chip.")
 
-    print(f"\n  D3P_FIRMADA = {D3P_FIRMADA}: pendiente en la firma de hub S0.")
-    print("  CONTRADICCION: S10 fila 2 cobra NPU y camara al hub; fila 11")
-    print("  se las da al mago. Aqui se cobran hasta firma; el papel decide.")
-    print(f"  AUDIO_EN_EL_HUB = {AUDIO_EN_EL_HUB}: S6.2 no eligio el chip.")
-    print("  Falta el papel propio de la interfaz; mientras tanto se cobra.")
+    print(f"\n  ACTA_CUATRO_CHIPS = {ACTA_CUATRO_CHIPS} (hub S0).")
+    print(f"  D3P_FIRMADA = {D3P_FIRMADA}: camara y NPU del mago.")
+    print("  El reparto de S10 quedo resuelto a favor de la fila 11.")
+    print(f"  AUDIO_EN_EL_HUB = {AUDIO_EN_EL_HUB}: ENMIENDA de S6.2.")
+    print("  La interfaz de audio tiene un cuarto N657 dedicado, sin nombre.")
+    print(f"  CENSO_INTERFAZ_AUDIO_PENDIENTE = {CENSO_INTERFAZ_AUDIO_PENDIENTE}.")
+    print("  Su papel propio sigue siendo prerrequisito; faltan sus censos.")
+    print("  Las colas propias del hub, protocolo y DMA del J2, siguen dentro")
+    print("  de la demanda sin enumerar: no se descuentan como si fueran audio.")
     print(f"  Lo fijo por defecto: {fijo_b(False):,} - {fijo_b(True):,} B.")
-    print("  Escenarios EXPLICITOS, sin convertirlos en decisiones:")
+    print("  Escenarios HISTORICOS para comparar con la firma vigente:")
     for d3p in (False, True):
         for audio in (False, True):
             print(f"    D3-prima={str(d3p):5s}, audio={str(audio):5s}: "
@@ -235,8 +245,8 @@ def demo() -> None:
         print(f"    {nombre:20s} simple {s:>9,} B   doble {d:>9,} B "
               f"({100*d/SRAM_B:.0f} % de la SRAM)")
 
-    print("\n  LO QUE QUEDA AL LADO DEL FRAMEBUFFER, pendientes conservadores:")
-    print("  Se cobra el piso medido y los ESTIMADO; la demanda propia falta.")
+    print("\n  LO QUE QUEDA AL LADO DEL FRAMEBUFFER, con el reparto firmado:")
+    print("  Se cobra el piso medido; la demanda propia del hub sigue faltando.")
     print(f"    {'framebuffer':32s} {'mejor caso':>14s} {'peor caso':>14s}"
           f"  {'techo binario':>14s}")
     configuraciones = [(f"{n}, {'doble' if d else 'simple'}", bpx, d)
@@ -288,8 +298,9 @@ def main() -> int:
         print("no lo ha escrito nadie. Cero enumera la lista vacia; no mide")
         print("la necesidad. La tabla Serum y el sample son de la Voz.")
         print("Se cierra enumerando esa demanda en papel, midiendo el firmware")
-        print("que la implemente y recorriendo el mismo censo. D3-prima y el")
-        print("audio conservan sus duenos y sus pendientes: no se firman aqui.")
+        print("que la implemente y recorriendo el mismo censo. D3-prima esta")
+        print("firmada; la interfaz de audio tiene cuarto chip por ENMIENDA.")
+        print("El censo de SRAM de ese chip sigue pendiente en su papel propio.")
         print("HUECO: demanda residente del hub sin enumerar; binario = PISO medido")
         return 2
     # Enumerar la lista no convierte el ELF parcial en firmware terminado.
@@ -307,17 +318,18 @@ def main() -> int:
 #
 #   * EL FIRMWARE TERMINADO. La medida ALLOC ya incluye .data, .bss y
 #     .uninit: no se deben cobrar otra vez al enumerar los residentes. El
-#     incremento por grafica, SPI del J2, XSPI y, si quedan aqui, audio y
-#     NPU no tiene cifra. Las colas heredadas son reserva conservadora,
-#     no una medida de la interfaz multicanal ni un desglose del ELF.
+#     incremento por grafica, SPI del J2 y XSPI no tiene cifra. Las colas
+#     propias del protocolo y DMA siguen por enumerar. Las horquillas de
+#     audio, NPU y camara solo conservan los escenarios historicos.
 #
 #   * LA DEMANDA PROPIA. La puerta queda HUECO aunque todos los saldos sean
 #     positivos. Hub S3.1 hereda framebuffer; no enumera el resto de UI,
 #     protocolo y DMA. Una lista vacia nunca es prueba de que alcanza.
 #
-#   * EL MAGO Y EL AUDIO. D3-prima requiere firma; hub S10 filas 2 y 11
-#     se contradicen. Hub S6.2 necesita el papel propio de la interfaz.
-#     Mostrar sus escenarios no resuelve ninguna de las dos decisiones.
+#   * EL MAGO Y LA INTERFAZ DE AUDIO. Acta del 2026-09-09: D3-prima firmada
+#     y cuarto N657 para la interfaz, por ENMIENDA de hub S6.2. Sus censos
+#     propios siguen pendientes (hub S10). No se asigna ninguna cifra al
+#     cuarto chip a partir de las horquillas del escenario anterior.
 #
 #   * LA PSRAM DEL HUB. Sacar el framebuffer compra bytes aqui, no caudal
 #     fuera. La pieza, el refresco y la contencion de este chip necesitan

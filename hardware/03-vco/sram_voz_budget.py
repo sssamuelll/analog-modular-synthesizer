@@ -14,11 +14,11 @@ del EP-133; la puerta de la pantalla vive en sram_hub_budget.py.
 
 QUE CAMBIO DE CHIP, Y QUE SIGUE ABIERTO
 
-  D2 esta firmada desde el 2026-08-30: la cara es del hub. La camara y la
-  NPU tampoco pertenecen a la Voz, con D3-prima o sin ella: son del hub
-  mientras esa forma siga pendiente, o del mago al firmarse. La ausencia
-  de esas reservas aqui no firma D3-prima. La linea de firma de sec.0 y
-  la tension entre sec.10 filas 2 y 11 se resuelven en su propio papel.
+  D2 esta firmada desde el 2026-08-30: la cara es del hub. D3-prima quedo
+  FIRMADA el 2026-09-09: camara y NPU son del mago, nunca de la Voz.
+  La misma acta resolvio hub sec.6.2 por ENMIENDA: un cuarto N657 dedicado
+  a la interfaz de audio, sin nombre. Su papel propio y sus censos siguen
+  pendientes de cierre; ese trabajo no recae en la Voz.
 
   La Voz sigue pagando su motor de audio. En el peor caso del escenario
   heredado quedan 1 800 000 B, mas que la tabla y el buffer minimo de
@@ -53,6 +53,9 @@ SRAM_B = 4_200_000            # DS p1, motor S1: 4,2 MB contiguos
 TCM_B = 192 * 1024           # DS p1: 192 KB TCM (ITCM+DTCM), fuera del censo:
                              # es para ISR criticas y tablas calientes
 
+# --- reparto firmado (hub S0/S6.2, ENMIENDA) --------------------------------
+INTERFAZ_AUDIO_EN_LA_VOZ = False  # Acta 2026-09-09: "un procesador solamente para la interface de audio".
+
 # --- las piezas del firmware ------------------------------------------------
 TABLA_SERUM_B = 1_000_000     # spec motor S3: "una tabla clase Serum ~1 MB en f16"
 
@@ -74,8 +77,9 @@ CALIBRACION_HUB_B = 82_280
 BINARIO_VOZ_B = (700_000, 2_000_000)
 # ESTIMADO: colas de audio (SAI in/out, CV, USB) y retardos del motor.
 # Rango heredado: no hay tamanos de buffers ni medicion que lo descompongan.
-# No incluye por decreto la futura interfaz multicanal de hub sec.6.2: su
-# papel propio tiene que decidir donde vive y que memoria anade al dueno.
+# No incluye la interfaz multicanal de hub sec.6.2: el acta del 2026-09-09
+# la asigna al cuarto chip. Su papel propio debe dimensionar su memoria;
+# la Voz conserva las colas y los retardos de su motor de audio.
 COLAS_B = (150_000, 400_000)
 
 # --- la vara del EP-133 (pagina oficial de Teenage Engineering, verificada
@@ -144,7 +148,10 @@ def demo() -> None:
     print("  criticas y tablas calientes por linker -- no entra al reparto).")
     print("  El chip NO tiene flash interna: el binario vive aqui dentro.")
     print("  Pantalla, camara y NPU pertenecen a los otros chips; la Voz")
-    print("  conserva el sampler, las tablas y sus colas de audio.\n")
+    print("  conserva el sampler, las tablas y sus colas de audio.")
+    print(f"  INTERFAZ_AUDIO_EN_LA_VOZ = {INTERFAZ_AUDIO_EN_LA_VOZ}.")
+    print("  Acta 2026-09-09, ENMIENDA de hub sec.6.2: la interfaz tiene")
+    print("  un cuarto N657 dedicado, sin nombre y con censos pendientes.\n")
 
     print("  LA MEDIDA QUE YA EXISTE, Y HASTA DONDE LLEGA:")
     print(f"    calibracion del hub: {CALIBRACION_HUB_B:,} B, MEDIDO 2026-09-09")
@@ -250,8 +257,9 @@ def main() -> int:
     print("La medida del hub ya calibra el software compartido. Lo que")
     print("falta es implementar y enlazar los motores, medir las secciones")
     print("ALLOC de ese firmware en escritorio y dimensionar colas y")
-    print("retardos. La interfaz multicanal de sec.6.2 sigue sin dueno")
-    print("firmado: si le toca a la Voz, su papel tiene que ampliar el censo.")
+    print("retardos del motor. La interfaz multicanal de sec.6.2 tiene dueno")
+    print("firmado el 2026-09-09: el cuarto N657 dedicado, sin nombre.")
+    print("Su papel propio debe cerrar sus censos; no se cargan a la Voz.")
     # gates.py conserva la ultima linea: el motivo tiene que entrar primero
     # para que su resumen no confunda un supuesto holgado con un cierre.
     print("HUECO: Voz sin firmware de audio; binario y colas ESTIMADOS")
@@ -271,9 +279,10 @@ def main() -> int:
 #     y no tiene fuente nueva. No falta una placa para medirlo: falta ese
 #     firmware, que despues se puede enlazar y medir desde el escritorio.
 #
-#   * COLAS, RETARDOS E INTERFAZ MULTICANAL. Se conserva el rango heredado sin
-#     tamanos de buffers ni medida. Hub sec.6.2 deja el dueno de la interfaz
-#     pendiente de su papel: aqui no se elige ni se le inventa una reserva.
+#   * COLAS Y RETARDOS DEL MOTOR. Se conserva el rango heredado sin tamanos
+#     de buffers ni medida. La interfaz multicanal tiene cuarto chip desde
+#     el acta del 2026-09-09 (ENMIENDA, hub sec.6.2): su dimensionamiento
+#     sigue en su papel propio y no se le inventa una reserva en la Voz.
 #
 #   * EL CATALOGO DE SAMPLES Y EL CAUDAL. La biblioteca no volatil vive en
 #     XSPI2 y su mesa de trabajo en la PSRAM del XSPI1. La vara del EP-133 y

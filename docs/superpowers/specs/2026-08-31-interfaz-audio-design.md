@@ -1,9 +1,23 @@
 # La interfaz de audio: un cuarto N657, dueño del reloj y única boca del instrumento — propuesta
 
-**Fecha**: 2026-08-31 · **Estado**: **propuesto, pendiente de Samuel** ·
+**Fecha**: 2026-08-31 · **Actualización**: 2026-09-09 ·
+**Estado**: **A-10 FIRMADA el 2026-09-09** (el cuarto N657 dedicado existe);
+**el resto del papel sigue propuesto, pendiente de Samuel** ·
 **Ejecuta**: A-6 (acta del 2026-08-30, papel del hub §6), que quedó declarada
 sin diseñar · **Reabre**: D-P6 y el puerto invitado del motor, la tarjeta
 trasera (#183), el presupuesto de potencia del módulo 1
+
+> **Qué se firmó el 2026-09-09, y qué no.** El acta de ese día —«un procesador
+> solamente para la interface de audio», dentro de un reparto de cuatro N657
+> «para tener suficiente headroom y que el instrumento jamás se cuelgue»—
+> **firma A-10**: la interfaz de audio tiene su propio N657, y con eso el §6.2
+> del papel del hub queda resuelto por una vía que aquel papel no ofrecía.
+>
+> **No firma nada más de este papel.** Siguen propuestos: que este chip sea el
+> dueño del reloj, que sea la única boca del instrumento, la reconciliación con
+> D-P6 y el puerto invitado, las cifras de la clase contra la hoja del Clarett+
+> 4Pre, y los censos propios de pines y SRAM —que no existen—. Que el chip esté
+> firmado no firma el trabajo que se le cuelga encima.
 
 ---
 

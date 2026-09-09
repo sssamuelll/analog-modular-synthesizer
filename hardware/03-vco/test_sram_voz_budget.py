@@ -79,6 +79,19 @@ def test_la_voz_conserva_la_demanda_del_motor_de_audio() -> None:
     assert vb.demanda_voz_b() == vb.TABLA_SERUM_B + vb.MINIMO_SAMPLE_B
 
 
+def test_la_interfaz_de_audio_tampoco_cae_en_la_voz() -> None:
+    """sec.6.2 amenazaba con que "la Voz pierde parte de lo que sec.3.1 le
+    devolvia" si la interfaz colgaba de ella. No cuelga.
+
+    Samuel firmo el 2026-09-09 un CUARTO N657 dedicado solo a la interfaz de
+    audio -- ni hub ni Voz--. Este censo tiene que decirlo, porque hasta hoy
+    su prosa dejaba la puerta abierta ("si le toca a la Voz, su papel tiene
+    que ampliar el censo") y esa frase ya es falsa."""
+    assert vb.INTERFAZ_AUDIO_EN_LA_VOZ is False, (
+        "el censo de la Voz sigue contemplando cargar con la interfaz de "
+        "audio: desde el 2026-09-09 ese trabajo tiene chip propio")
+
+
 def test_el_binario_de_la_voz_sigue_siendo_un_rango_declarado() -> None:
     """No hay firmware de la Voz que medir, y eso se dice, no se rellena."""
     assert isinstance(vb.BINARIO_VOZ_B, tuple) and len(vb.BINARIO_VOZ_B) == 2

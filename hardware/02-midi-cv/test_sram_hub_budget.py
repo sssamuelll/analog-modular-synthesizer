@@ -138,32 +138,46 @@ def test_los_costos_fijos_condicionales_mueven_de_verdad_a_fijo_b() -> None:
 
 # --- lo que no esta firmado no se da por firmado ----------------------------
 
-def test_d3_prima_sigue_pendiente_y_el_defecto_es_el_conservador() -> None:
-    """El papel del hub la deja PENDIENTE; el censo no puede adelantarla.
+def test_d3_prima_esta_firmada_y_el_hub_deja_de_pagar_la_camara() -> None:
+    """FIRMADA por Samuel el 2026-09-09. La condicional de sec.3.1 se cumplio.
 
-    hub sec.3.2 propone el tercer N657 para la IA y sec.3.1 dice que "con
-    D3-prima la camara y su NPU se van al tercer chip" --condicional--. Pero
-    la linea de firma del papel dice: "Firmado el 2026-08-30: D1, D2 y D7.
-    Pendiente: D3-prima (sec.3.2)". Cobrar el hub como si estuviera firmada
-    le regala 1 400 000 B que nadie le ha quitado."""
-    assert hb.D3P_FIRMADA is False, (
-        "D3-prima figura como firmada: si de verdad se firmo, la linea de "
-        "firma del papel del hub tiene que decirlo primero -- y sec.10 fila "
-        "2, que todavia le pide al hub la NPU y los cuadros de camara, "
-        "contradice a sec.10 fila 11, que se los da al mago. Esa "
-        "contradiccion se resuelve en el papel, no aqui")
-    assert hb.fijo_b(peor=True, d3p=hb.D3P_FIRMADA, audio=True) == \
-        hb.fijo_b(peor=True, d3p=False, audio=True)
+    Este test decia lo contrario hasta el 2026-09-09, y con razon: el papel
+    llevaba desde el 2026-08-30 diciendo "Pendiente: D3-prima", y cobrarle al
+    hub como si estuviera firmada le regalaba 1 400 000 B que nadie le habia
+    quitado. Ya se los quitaron. Acta de Samuel: "un procesador solo para la
+    IA", dentro de un diseno de cuatro N657, uno por trabajo, "para tener
+    suficiente headroom y que el instrumento jamas se cuelgue".
+
+    Lo que la firma cierra de paso: la contradiccion entre sec.10 fila 2 (que
+    le cobraba NPU y cuadros de camara al hub) y sec.10 fila 11 (que se los
+    daba al mago). Gana la fila 11."""
+    assert hb.D3P_FIRMADA is True, (
+        "D3-prima figura sin firmar: Samuel la firmo el 2026-09-09 y el "
+        "papel del hub tiene que llevarlo en su linea de firma")
+    assert hb.ACTA_CUATRO_CHIPS == "2026-09-09", (
+        "la firma tiene que traer su fecha: una decision sin acta fechada "
+        "es una premisa comoda esperando a que alguien la herede como hecho")
+    con = hb.fijo_b(peor=True, d3p=False, audio=False)
+    sin = hb.fijo_b(peor=True, d3p=True, audio=False)
+    assert con - sin == hb.NPU_ACTIVACIONES_B[1] + hb.FRAMES_CAMARA_B[1]
 
 
-def test_donde_vive_el_audio_sigue_sin_decidirse() -> None:
-    """sec.6.2: "Donde vive es decision de Samuel con el papel propio delante".
+def test_el_audio_tiene_chip_propio_y_el_hub_no_paga_sus_colas() -> None:
+    """sec.6.2 daba a elegir entre hub y Voz. La respuesta no fue ninguna.
 
-    El papel de la interfaz de audio no existe todavia: es la fila 8 de
-    sec.10 y un "papel propio, pendiente" de la tabla de enmiendas."""
-    assert hb.AUDIO_EN_EL_HUB is None, (
-        "el censo eligio donde vive la interfaz de audio: esa decision es de "
-        "Samuel y su prerrequisito es un papel que no existe")
+    Samuel firmo el 2026-09-09 una tercera via que el papel no ofrecia: un
+    CUARTO N657 dedicado solo a la interfaz de audio. Asi que las colas de
+    audio no son del hub -- pero ojo, esto NO es "sec.6.2 contestada segun lo
+    previsto": es una enmienda que obliga a que el papel propio de la
+    interfaz nazca describiendo un chip dedicado, y que ese chip estrene su
+    propio censo de SRAM como lo tiene el mago (sec.10 fila 11)."""
+    assert hb.AUDIO_EN_EL_HUB is False, (
+        "el hub sigue cobrando las colas de audio: desde el 2026-09-09 la "
+        "interfaz de audio tiene su propio N657")
+    assert hb.CENSO_INTERFAZ_AUDIO_PENDIENTE is True, (
+        "el cuarto chip no tiene censo de SRAM propio declarado como "
+        "pendiente: sacarle un costo al hub sin darselo a nadie es como se "
+        "pierden los bytes entre papeles")
 
 
 # --- la demanda del hub: hueco declarado, no numero prestado ----------------
@@ -204,15 +218,35 @@ def test_el_censo_sale_hueco_mientras_la_demanda_no_este_enumerada() -> None:
 
 # --- el canario: que el aserto que decide MUERDA ----------------------------
 
-def test_la_guarda_del_hub_muerde_por_el_binario() -> None:
-    """Buscado por biseccion, no con un valor elegido a mano.
+def test_la_guarda_del_hub_solo_muerde_por_encima_de_la_SRAM_FISICA() -> None:
+    """Y eso NO es un aprobado: es la medida de cuanto le falta a esta puerta.
 
-    Dos valores frontera escritos a mano pueden pasar con y sin el guardia;
-    la biseccion prueba que hay un sitio donde el aserto salta de verdad."""
+    Hasta el 2026-09-09 este test buscaba el borde dentro de [0, SRAM_B] y lo
+    encontraba, porque el hub cargaba con 1 800 000 B de NPU, camara y colas
+    de audio que no eran suyos. La firma de ese dia se los quito, y el binario
+    esta medido en 82 280 B. Lo que queda es una guarda que compara un saldo
+    de 4,1 MB contra una demanda de CERO: no puede saltar mientras el binario
+    quepa fisicamente.
+
+    No se arregla ensanchando el rango y callandose. Un aserto que solo puede
+    fallar ante un imposible fisico no vigila un diseno, y este repo ya se
+    quemo con guardas asi. Se deja escrito donde muerde HOY --por encima de
+    los 4,2 MB del chip-- para que el dia que alguien enumere la demanda del
+    hub, este test falle y obligue a rearmar el canario contra el numero de
+    verdad.
+
+    O sea: mientras DEMANDA_HUB_ENUMERADA sea False, esta linea es el
+    recordatorio de que la puerta del hub no vigila nada."""
+    assert hb.DEMANDA_HUB_ENUMERADA is False, (
+        "la demanda del hub ya esta enumerada: este canario tiene que "
+        "rearmarse contra ella y volver a buscar el borde DENTRO de la SRAM")
     p = hb.parametros()
-    rojo = borde_rojo(hb.guarda_hub, p, "binario", 0, hb.SRAM_B,
+    rojo = borde_rojo(hb.guarda_hub, p, "binario", 0, hb.SRAM_B * 2,
                       "no cabe en la SRAM del hub")
-    assert 0 < rojo < hb.SRAM_B
+    assert rojo > hb.SRAM_B, (
+        f"el borde salio en {rojo:,.0f} B, dentro de la SRAM: si la guarda "
+        f"volvio a tener dientes es que alguien le puso un costo al hub -- "
+        f"buena noticia, pero hay que decir cual y de donde salio")
 
 
 def test_la_guarda_del_hub_muerde_por_el_framebuffer() -> None:
