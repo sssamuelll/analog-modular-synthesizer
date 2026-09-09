@@ -74,7 +74,7 @@ cierre (riesgo 5 del motor §11, soak con el refresco activo).
 **El camino B queda de suplente declarado, con puerta y no con retórica**
 (la junta cobró que «se cae a B si un presupuesto se pone rojo» era
 infalsificable con los presupuestos aún sin correr): **el conector del
-panel no se dibuja hasta que el censo de SRAM (`sram_budget.py`) esté
+panel no se dibuja hasta que el censo de SRAM (`sram_hub_budget.py`) esté
 verde y el soak de contención con el refresco LTDC activo (riesgo 5 del
 motor §11) haya corrido.** — la junta de la tanda 2 corrigió la redacción
 anterior, que apuntaba a «la fila LTDC de `carga_motor`»: esa fila existe
@@ -88,7 +88,7 @@ Una puerta tiene que nombrar lo que de verdad la cierra.
 > `psram_budget` cierra su caudal y dice que el bus compra 2 500 granos a
 > velocidad ×1 y 625 a ×4 — el cuello es la CPU, no el bus, y el
 > framebuffer mudado a PSRAM cabría de sobra (46-69 MB/s de 240
-> disponibles). **`sram_budget` sale HUECO**, y su
+> disponibles). **`sram_hub_budget` sale HUECO**, y su
 > hallazgo cambia el foco: apilando el peor caso de los ESTIMADO, lo fijo
 > se come 3,2 de los 4,2 MB y **no cierra ni sin pantalla** — o sea que el
 > dato que decide esta puerta no es el framebuffer sino **el tamaño del

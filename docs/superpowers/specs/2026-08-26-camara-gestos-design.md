@@ -140,7 +140,7 @@ toque.
 
 | Fila | Dónde | Qué mide |
 |---|---|---|
-| Frames + activaciones del modelo | censo de SRAM (`sram_budget.py`) | ✅ **sentados**: cuadros del DCMIPP con doble buffer (150-600 kB, ESTIMADO) y activaciones (200-800 kB, ESTIMADO). La inferencia corre sobre entradas reducidas — el DCMIPP reescala en hardware. La primera versión del censo no tenía la fila de cuadros; la cazó la junta de la tanda 2 |
+| Frames + activaciones del modelo | censo de SRAM (`sram_hub_budget.py`) | ✅ **sentados**: cuadros del DCMIPP con doble buffer (150-600 kB, ESTIMADO) y activaciones (200-800 kB, ESTIMADO). La inferencia corre sobre entradas reducidas — el DCMIPP reescala en hardware. La primera versión del censo no tenía la fila de cuadros; la cazó la junta de la tanda 2 |
 | Caudal de cámara **+ inferencia NPU** por AXI y XSPI2 | `carga_motor` / cola del §8.8 | la cadena entera, no solo el DMA de la cámara: frames por AXI, **pesos desde XSPI2 — el mismo bus que streamea la biblioteca al cambiar preset** (el choque se mide, no se supone), activaciones en la SRAM de todos |
 | Ciclos de CPU de la cadena de gestos (pre/post-proceso, suavizado) | el libro bilateral de `carga_motor` (R-M2) | la NPU no le quita ciclos al motor; el pegamento alrededor sí, y se cuenta |
 | Latencia de la cadena de gestos | bring-up (Nucleo primero, motor §11) | cuadro→landmark→señal medido, **con puerta** (la junta cobró la fila sin criterio): aprobado en la clase del camino A (~30-80 ms); **suspenso desde ~100 ms**, la frontera que §4 declara muerta para expresión. Umbral de clase ESTIMADO — se afina con el modelo elegido, pero la fila nace con dientes |

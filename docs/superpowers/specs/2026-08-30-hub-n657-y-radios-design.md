@@ -111,7 +111,7 @@ razones nuevas, y la tercera es A-2:
    ranuras**. D3 del J2 exige que toda ranura activa vaya en SPI de hardware;
    el censo activo de D3 pide 4 (la Voz, el módulo de mandos #178 y las
    reservas de los módulos 8 y 9) y las ocho se cablean. Con 3 no cuadra.
-2. **SRAM y CPU.** `sram_budget.py` da rojo en las cuatro configuraciones de
+2. **SRAM y CPU.** `sram_hub_budget.py` da rojo en las cuatro configuraciones de
    pantalla, en el peor caso de lo fijo, y el motor está presupuestado al 50 %
    (~8 300 ciclos por muestra). Un hub que comparte chip con su cliente más
    grande no tiene sitio para crecer.
@@ -175,7 +175,7 @@ siendo el A de pantalla-motor (LTDC, RGB paralelo de 24 bits, táctil
 capacitivo por I²C); cambia el chip. Su alimentación propia desde +12 V con
 retorno dedicado (pantalla-motor §6) no cambia.
 
-Lo que esto le hace a la SRAM de la Voz, con la tabla de `sram_budget.py`
+Lo que esto le hace a la SRAM de la Voz, con la tabla de `sram_voz_budget.py`
 (peor caso de lo fijo, todo ESTIMADO y sin medir el binario):
 
 | Lo fijo en la Voz | Hoy (todo adentro) | Con la cara al hub y la cámara al mago |
@@ -284,7 +284,7 @@ punto:
   ese camino ya decía).
 - **Su memoria es suya.** Las activaciones de la NPU (200 000 a 800 000 B)
   y los cuadros de cámara (150 000 a 600 000 B, ESTIMADOS de
-  `sram_budget.py`) dejan de competir con el framebuffer del hub por el
+  `sram_hub_budget.py`) dejan de competir con el framebuffer del hub por el
   mismo AXI: la contención que el motor llamó riesgo 5 no se muda al hub,
   desaparece. Los pesos del modelo viven en su propia XSPI.
 - **El tiempo real del hub no ve la cámara.** Los seis maestros del J2, el
@@ -531,7 +531,7 @@ manden al aire (patrón conocido: #214).
 | `2026-08-21-modulo-2-v2-cerebro.md` (plan) | entero | Reescribir contra el N657 (VFBGA264, no QFN-80; `pinout.rs` nuevo) | plan nuevo | pendiente |
 | **Papel nuevo: la interfaz de audio** | — | Cifras de la clase contra hoja; dónde vive; reconciliación con D-P6; trasera, masa y phantom | papel propio | pendiente |
 | `hardware/02-midi-cv/pio_budget.py` | — | Retirar a historia: mide un chip que se va | PR de nivelación | pendiente |
-| `hardware/02-midi-cv/sram_budget.py` | — | Partir en dos censos: Voz sin cara, hub con cara (y con colas de audio si §6.2) | PR de nivelación | pendiente |
+| `hardware/03-vco/sram_voz_budget.py` | — | Partir en dos censos: Voz sin cara, hub con cara (y con colas de audio si §6.2) | PR de nivelación | pendiente |
 | `hardware/02-midi-cv/micro_budget.py` | censo N657 | Segundo censo de pines: el hub (§10 fila 1) | PR de nivelación | pendiente |
 | `hardware/02-midi-cv/power_budget.py` | — | Riel de phantom y consumo de la interfaz (§6.1) | papel de la interfaz | pendiente |
 | `hardware/03-vco/spi_privado_budget.py` | — | «Sigue modelando los dos RP2350B viejos» y da verde: sujeto muerto | PR de nivelación | pendiente |

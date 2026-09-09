@@ -45,7 +45,7 @@ delante:
 1. **No es lo que aprieta.** `carga_motor_budget.py` tiene los ADSR en 150
    ciclos por muestra de los 8 333 de la mitad heredada: menos del 2 %. Esa
    mitad va al 20-28 %, y al 59-84 % si todos los estimados mienten por tres.
-   Lo rojo de la Voz es la SRAM (`sram_budget.py`), y una envolvente cuesta
+   Lo rojo de la Voz es la SRAM (`sram_voz_budget.py`), y una envolvente cuesta
    bytes, no megas.
 2. **La envolvente del filtro no puede salir de la Voz** (S-9: un solo
    escritor del corte). Con la del VCA en otro chip habría dos generadores para
