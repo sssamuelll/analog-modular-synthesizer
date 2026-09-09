@@ -2,7 +2,7 @@
 name = "sam17-nucleo-fw"
 version = "0.1.0"
 edition = "2021"
-description = "El firmware del cerebro del SAM17 sobre RP2350"
+description = "El firmware del cerebro del SAM17 sobre STM32N657X0"
 
 # Workspace propio: compila para thumbv8m y `core` para el host. En estable no
 # hay `forced-target`, asi que compartirlo haria que `cargo test` en la raiz
@@ -12,34 +12,37 @@ description = "El firmware del cerebro del SAM17 sobre RP2350"
 [dependencies]
 sam17-nucleo-core = { path = "../core" }
 
-embassy-rp = { version = "0.10", features = [
-    "rp235xb",
-    "time-driver",
-    "critical-section-impl",
-    "binary-info",
+# Los cinco crates de embassy salen del MISMO git y la MISMA rev a proposito:
+# mezclar crates.io con git duplica `embassy-time-driver` y no enlaza.
+#
+# La rev es la cabeza de embassy-rs/embassy#6939 (rama `n6-usb` del fork), que
+# es quien trae el USB OTG HS del N6 con su PHY integrado. Su base ya incluye
+# el metapac con el RCC de los OTG (embassy-rs/stm32-data#911, mergeado el
+# 2026-09-05). El dia que #6939 entre a `main`, esto vuelve a versiones de
+# crates.io y esta nota se borra.
+embassy-stm32 = { git = "https://github.com/sssamuelll/embassy", rev = "dc6b71642fec0d61a3795157d550b29c0a505ce7", features = [
+    "stm32n657x0",
+    "time-driver-any",
+    "exti",
+    "unstable-pac",
     "defmt",
 ] }
-embassy-executor = { version = "0.10", features = [
+embassy-executor = { git = "https://github.com/sssamuelll/embassy", rev = "dc6b71642fec0d61a3795157d550b29c0a505ce7", features = [
     "platform-cortex-m",
     "executor-thread",
     "defmt",
 ] }
-embassy-time = { version = "0.5", features = ["defmt"] }
-embassy-usb = { version = "0.6", default-features = false, features = ["defmt"] }
-embassy-futures = "0.1"
+embassy-time = { git = "https://github.com/sssamuelll/embassy", rev = "dc6b71642fec0d61a3795157d550b29c0a505ce7", features = ["defmt"] }
+embassy-usb = { git = "https://github.com/sssamuelll/embassy", rev = "dc6b71642fec0d61a3795157d550b29c0a505ce7", default-features = false, features = ["defmt"] }
+embassy-futures = { git = "https://github.com/sssamuelll/embassy", rev = "dc6b71642fec0d61a3795157d550b29c0a505ce7" }
 
 defmt = "1.1"
 defmt-rtt = "1.0"
 panic-probe = { version = "1.0", features = ["print-defmt"] }
-cortex-m = { version = "0.7", features = ["inline-asm"] }
+# En el N657 la seccion critica la pone cortex-m: un solo nucleo de aplicacion (M55).
+cortex-m = { version = "0.7", features = ["inline-asm", "critical-section-single-core"] }
 cortex-m-rt = "0.7"
 static_cell = "2"
-
-[features]
-default = ["rp235xb"]
-rp235xb = ["embassy-rp/rp235xb"]
-# Para validar sobre una Pico 2, que lleva el A. Cambia el chip, no el codigo.
-rp235xa = ["embassy-rp/rp235xa"]
 
 [profile.release]
 debug = 2

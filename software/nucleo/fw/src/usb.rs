@@ -14,8 +14,9 @@
 use defmt::{info, warn};
 use embassy_futures::select::{select, Either};
 use embassy_time::{Duration, Instant, Timer};
-use embassy_rp::peripherals::USB;
-use embassy_rp::usb::{Driver, InterruptHandler};
+use embassy_stm32::peripherals::USB1_OTG_HS as USB;
+use embassy_stm32::usb::{Driver, InterruptHandler};
+use embassy_stm32::Peri;
 use embassy_usb::class::midi::MidiClass;
 use embassy_usb::{Builder, Config, UsbDevice};
 use sam17_nucleo_core::descriptor;
@@ -26,8 +27,8 @@ use sam17_nucleo_core::sysex::{desenvolver, envolver, largo_empaquetado};
 use sam17_nucleo_core::usbmidi::{empaquetar_sysex, Desempaquetador, Paquete, Trozo, MAX_SYSEX};
 use static_cell::StaticCell;
 
-embassy_rp::bind_interrupts!(pub struct Irqs {
-    USBCTRL_IRQ => InterruptHandler<USB>;
+embassy_stm32::bind_interrupts!(struct Irqs {
+    USB1_OTG_HS => InterruptHandler<USB>;
 });
 
 /// `0x1209` es pid.codes, el rango libre para proyectos abiertos. El PID es de
@@ -36,8 +37,10 @@ embassy_rp::bind_interrupts!(pub struct Irqs {
 const VID: u16 = 0x1209;
 const PID: u16 = 0x0017;
 
-/// 64 bytes es el maximo de un endpoint bulk a full speed.
-const TAM_PAQUETE: u16 = 64;
+/// Bulk a high speed exige 512 bytes; el N6 usa el PHY HS integrado.
+/// Fuente: examples/stm32n6/src/bin/usb_serial.rs de embassy (rev dc6b716). El evento MIDI sigue
+/// ocupando 4 bytes; este limite es el de la transferencia USB que los agrupa.
+const TAM_PAQUETE: u16 = 512;
 
 // El buffer de lectura se DERIVA de esta constante (`[0u8; TAM_PAQUETE as
 // usize]`), asi que la invariante "el buffer es al menos el tamano de endpoint"
@@ -73,7 +76,22 @@ pub struct Puertos {
     pub midi: MidiClass<'static, Driver<'static, USB>>,
 }
 
-pub fn montar(driver: Driver<'static, USB>) -> Puertos {
+pub fn montar(usb: Peri<'static, USB>) -> Puertos {
+    // El PHY UTMI+ integrado usa OTG1_HSDP/OTG1_HSDM dedicados, sin GPIO D+/D-.
+    // Los 1024 bytes y vbus_detection=false vienen dese mismo ejemplo;
+    // el buffer es estatico porque el dispositivo vive en una tarea separada.
+    static EP_OUT_BUFFER: StaticCell<[u8; 1024]> = StaticCell::new();
+    let mut config = embassy_stm32::usb::Config::default();
+    // Si la placa sigue alimentada al quitar el cable, validar deteccion VBUS
+    // y habilitarla cuando el cableado lo soporte; pendiente en EN-PLACA.md.
+    config.vbus_detection = false;
+    let driver = Driver::new_hs_dedicated_pins(
+        usb,
+        Irqs,
+        EP_OUT_BUFFER.init([0; 1024]),
+        config,
+    );
+
     let mut config = Config::new(VID, PID);
     config.manufacturer = Some("SAM17");
     config.product = Some("SAM17 nucleo");
@@ -147,15 +165,19 @@ pub async fn atender(
     // dice textualmente (`class/midi.rs`): "read_packet must be called with a
     // buffer large enough to hold max_packet_size bytes".
     //
-    // Aqui habia un `[0; 4]` contra un endpoint declarado de 64, y no fallaba
-    // suave: embassy-rp devuelve `BufferOverflow` ANTES de re-armar el
-    // endpoint, asi que el hardware no vuelve a aceptar un paquete nunca; el
+    // Se conserva esa invariante al pasar a HS: el host puede agrupar muchos
+    // eventos MIDI en una transferencia y el buffer debe recibirlos enteros.
+    //
+    // Por que se escribio esto, que en el RP2350 costo un cuelgue: habia un
+    // `[0; 4]` contra un endpoint declarado de 64, y no fallaba suave.
+    // `embassy-rp` devolvia `BufferOverflow` ANTES de re-armar el endpoint, el
     // `Err` de abajo lo leia como desconexion, `wait_connection` contestaba
-    // listo al primer poll porque el endpoint sigue habilitado, y vuelta a
-    // empezar. Ningun poll de ese ciclo devuelve `Pending`: la tarea gira para
-    // siempre dentro de un solo `poll()` y se lleva por delante la pila USB y
-    // el reloj. Bastaba con que el host agrupara eventos en una transferencia,
-    // que es lo normal y es para lo que sirve declarar 64.
+    // listo al primer poll —el endpoint sigue habilitado— y vuelta a empezar:
+    // ningun poll de ese ciclo devolvia `Pending` y la tarea giraba para
+    // siempre dentro de un solo `poll()`, llevandose por delante la pila USB y
+    // el reloj. HUECO: si `embassy-stm32` re-arma el endpoint antes o despues
+    // de devolver el error NO esta verificado — el mecanismo es de otro
+    // driver. Se comprueba en placa (EN-PLACA.md), no se da por heredado.
     let mut entrada = [0u8; TAM_PAQUETE as usize];
     let mut plano = [0u8; MAX_SYSEX];
     let mut proximo = Instant::now() + PERIODO_TICK;
@@ -196,10 +218,8 @@ pub async fn atender(
                 Ok(n) => n,
                 Err(_) => break, // se desconecto; a esperar de nuevo
             };
-            // Un bulk de 64 B trae HASTA DIECISEIS paquetes USB-MIDI de 4, y
-            // antes solo se miraba el caso de uno suelto: `Ok(4) => {}` y
-            // cualquier otra cosa a la basura. O sea que en cuanto el host
-            // agrupara, se tiraba la transferencia entera.
+            // Un bulk de 512 B trae hasta 128 eventos USB-MIDI de 4 bytes.
+            // Se recorren todos: el host puede agruparlos en una transferencia.
             if n % 4 != 0 {
                 warn!("USB: transferencia de {} B, no es multiplo de 4", n);
             }

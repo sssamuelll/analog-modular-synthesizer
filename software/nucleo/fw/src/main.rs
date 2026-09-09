@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-//! El firmware del cerebro del SAM17 sobre RP2350.
+//! El firmware del cerebro del SAM17 sobre STM32N657X0.
 //!
 //! Capa DELGADA a proposito: si una funcion de aqui merece un test, es que
 //! vive en la caja equivocada y se muda a `sam17-nucleo-core`. Todo lo que se
@@ -11,20 +11,15 @@ mod usb;
 
 use defmt::info;
 use embassy_executor::Spawner;
-use embassy_rp::block::ImageDef;
+use embassy_stm32::rcc::mux::Otgphysel;
+use embassy_stm32::rcc::{IcConfig, Icint, Icsel, Pll, Plldivm, Pllpdiv, Pllsel, SupplyConfig};
+use embassy_stm32::Config;
 use sam17_nucleo_core::descubrimiento::{placa_de, voces_del_instrumento, TIPO_VCO4};
 use sam17_nucleo_core::partes::{Parte, Partes, Repartidor};
 use sam17_nucleo_core::pinout::{N_PINES_USADOS, PINOUT};
 use sam17_nucleo_core::servidor::{Instrumento, VERSION_PROTOCOLO};
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
-
-/// El bootloader de la ROM del RP2350 solo ejecuta una imagen que traiga un
-/// IMAGE_DEF valido, y tiene que caer en los primeros 4 K de flash. Sin esto
-/// el chip no arranca, aunque el binario enlace.
-#[link_section = ".start_block"]
-#[used]
-static IMAGE_DEF: ImageDef = ImageDef::secure_exe();
 
 static INSTRUMENTO: StaticCell<Instrumento> = StaticCell::new();
 
@@ -48,7 +43,29 @@ const TABLA_DE_PARTES_PROVISIONAL_HASTA_DESCUBRIMIENTO_EEPROM_175: [Parte; 1] = 
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
-    let p = embassy_rp::init(Default::default());
+    let mut config = Config::default();
+    // La Discovery usa alimentacion externa; la interna deja init() esperando
+    // VOSRDY. Fuente: examples/stm32n6/src/bin/usb_serial.rs de embassy (rev dc6b716) (UM3300, tabla 6).
+    config.rcc.supply_config = SupplyConfig::External;
+
+    // Relojes copiados sin cambiar valores del mismo ejemplo: el PHY necesita
+    // 19,2, 20 o 24 MHz (RM0486 Rev 4, USBPHYC_CR.FSEL, p. 3929, citado alli).
+    // HSI 64 MHz / DIVM 4 * DIVN 60 = VCO 960 MHz; / DIVP1 2 / DIVP2 1
+    // da PLL4 480 MHz; IC15 / 20 da 24 MHz sin depender del cristal de placa.
+    config.rcc.pll4 = Some(Pll::Oscillator {
+        source: Pllsel::Hsi,
+        divm: Plldivm::Div4,
+        fractional: 0,
+        divn: 60,
+        divp1: Pllpdiv::Div2,
+        divp2: Pllpdiv::Div1,
+    });
+    config.rcc.ic15 = Some(IcConfig {
+        source: Icsel::Pll4,
+        divider: Icint::Div20,
+    });
+    config.rcc.mux.otgphy1sel = Otgphysel::Ic15;
+    let p = embassy_stm32::init(config);
 
     info!("SAM17: el cerebro arranco, protocolo v{}", VERSION_PROTOCOLO);
     info!("{} pines en el mapa", N_PINES_USADOS);
@@ -80,8 +97,7 @@ async fn main(spawner: Spawner) {
         instrumento.modelo().len()
     );
 
-    let driver = embassy_rp::usb::Driver::new(p.USB, usb::Irqs);
-    let puertos = usb::montar(driver);
+    let puertos = usb::montar(p.USB1_OTG_HS);
     spawner.spawn(usb::correr_usb(puertos.dispositivo).unwrap());
     spawner.spawn(usb::atender(puertos.midi, instrumento).unwrap());
 }
