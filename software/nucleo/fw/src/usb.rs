@@ -90,7 +90,7 @@ pub fn configuracion() -> embassy_stm32::Config {
 /// D+/D-, y por eso el constructor es `new_hs_dedicated_pins`.
 pub fn driver(p: Peri<'static, USB1_OTG_HS>) -> Driver<'static, USB1_OTG_HS> {
     // La FIFO de salida es una sola para todos los endpoints OUT. 1 KB es lo
-    // que usa el ejemplo del N6 y sobra para un jack MIDI de 64 B.
+    // que usa el ejemplo del N6, y con un solo endpoint OUT de 512 B sobra.
     static EP_OUT: StaticCell<[u8; 1024]> = StaticCell::new();
 
     let mut config = embassy_stm32::usb::Config::default();
@@ -128,8 +128,18 @@ pub fn driver(p: Peri<'static, USB1_OTG_HS>) -> Driver<'static, USB1_OTG_HS> {
 const VID: u16 = 0x1209;
 const PID: u16 = 0x0017;
 
-/// 64 bytes es el maximo de un endpoint bulk a full speed.
-const TAM_PAQUETE: u16 = 64;
+/// 512 bytes, y no es una eleccion: es el UNICO valor legal para un endpoint
+/// bulk a high speed (USB 2.0 sec.5.8.3 -- a full speed son 8, 16, 32 o 64).
+///
+/// El 64 que habia aqui venia del RP2350, que enumera a full speed. Este chip
+/// no puede: los dos OTG del N6 son **solo High Speed** y atacan el PHY UTMI+
+/// integrado -- esta escrito treinta lineas mas arriba, en `driver()`. Con 64
+/// el descriptor que sale por el cable es invalido, y eso no lo descubre el
+/// enlace: lo descubre el host al enumerar.
+///
+/// HUECO: sin placa (#231) nadie ha visto enumerar esto. Lo que se sabe es que
+/// 64 esta mal; que 512 baste se comprueba en el bring-up.
+const TAM_PAQUETE: u16 = 512;
 
 // El buffer de lectura se DERIVA de esta constante (`[0u8; TAM_PAQUETE as
 // usize]`), asi que la invariante "el buffer es al menos el tamano de endpoint"
@@ -250,7 +260,8 @@ pub async fn atender(
     // empezar. Ningun poll de ese ciclo devuelve `Pending`: la tarea gira para
     // siempre dentro de un solo `poll()` y se lleva por delante la pila USB y
     // el reloj. Bastaba con que el host agrupara eventos en una transferencia,
-    // que es lo normal y es para lo que sirve declarar 64.
+    // que es lo normal y es para lo que sirve declarar el tamano entero del
+    // endpoint. (Aquel 64 era del RP2350, a full speed; aqui son 512.)
     let mut entrada = [0u8; TAM_PAQUETE as usize];
     let mut plano = [0u8; MAX_SYSEX];
     let mut proximo = Instant::now() + PERIODO_TICK;
@@ -291,7 +302,7 @@ pub async fn atender(
                 Ok(n) => n,
                 Err(_) => break, // se desconecto; a esperar de nuevo
             };
-            // Un bulk de 64 B trae HASTA DIECISEIS paquetes USB-MIDI de 4, y
+            // Un bulk de 512 B trae HASTA CIENTO VEINTIOCHO paquetes USB-MIDI de 4, y
             // antes solo se miraba el caso de uno suelto: `Ok(4) => {}` y
             // cualquier otra cosa a la basura. O sea que en cuanto el host
             // agrupara, se tiraba la transferencia entera.
