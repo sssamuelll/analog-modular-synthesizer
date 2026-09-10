@@ -1,6 +1,6 @@
 # El maestro del J2: plazo, reinicio y cuenta, porque el silicio se cuelga
 
-**Fecha**: 2026-09-03 · **Estado**: v2, pasó la junta, a firma · **Sujeto**: el cerebro (STM32N657, hub §S10) como maestro de las seis ranuras SPI del J2 · **Cierra**: #287 (puntos 1 a 3) · **Cuelga de**: la cabecera del J2 (2026-09-02), el J2 punto a punto (2026-08-25), voz-total §9.2, el hub N657 (2026-08-30)
+**Fecha**: 2026-09-03 · **Estado**: **v2 FIRMADA el 2026-09-10** · **Sujeto**: el cerebro (STM32N657, hub §S10) como maestro de las seis ranuras SPI del J2 · **Cierra**: #287 (puntos 1 a 3, cerrado) · **Cuelga de**: la cabecera del J2 (2026-09-02), el J2 punto a punto (2026-08-25), voz-total §9.2, el hub N657 (2026-08-30)
 
 ---
 
@@ -411,7 +411,7 @@ Sale con `2` (HUECO) mientras `resistencia_j2.csv` no tenga fila o el hub no dec
 | `micro_budget.py` | censo del hub, `J2:SPIn_NSS` | Clarify | El NSS por hardware pasa de reparto a **requisito**: sin él, D1 no se sostiene. Y las dos ranuras USART quedan fuera de este papel | comentario en el guion | pendiente |
 | #250 | «Lo que hay que tocar» | Sync | El puerto incluye `j2_spi.rs`, el ejecutor del J2, los búferes no cacheables (R-MJ7); y el primer paso es compilar un `j2_spi.rs` vacío contra las cuatro APIs de §1.2 | issue | pendiente |
 | #231 | la lista de lo que la Discovery mide | Expand | La prueba de resistencia (riesgo 1), el osciloscopio de D3 (riesgo 2), y el conteo de `eot_tardios` con el bus al aire (riesgo 5) | issue | pendiente |
-| #287 | — | Cierra | Puntos 1 a 3 decididos aquí | `gh issue close` al firmar | pendiente |
+| #287 | — | Cierra | Puntos 1 a 3 decididos aquí | `gh issue close` al firmar | hecho |
 
 ---
 
@@ -456,3 +456,4 @@ Tres lentes sobre la v1, el mismo día, antes de pedir la firma (memoria del 02-
 - Cada cita del RM se pegó entera y textual con su página, y la interpretación va fuera de las comillas (memoria del 03-09: *«un corchete dentro de una cita es una interpretación disfrazada de fuente»*). La v1 tenía una recortada con «(...)»; Serrano la cazó y la v2 la lleva entera.
 - La v1 pasó la junta **antes** de pedir la firma. Siete decisiones cambiaron de mecanismo o murieron (D1, D2, D4, D5, D6, D7, D8) y llevan ⚠; D3 sobrevivió con una cifra corregida. La v1 defendía 200× con un vigía; la v2 defiende 102× sin él, y lo que ejecuta es lo que dice.
 - Lo que este papel no midió y dice que no midió: todo lo marcado ESTIMADO en §3, la tasa real del defecto en nuestro montaje, y cuánto sustain fantasma es tolerable. No hay Discovery.
+- Samuel, 2026-09-10: *«firmo formalmente»*. Firma de contenido, no solo de dirección: las ocho decisiones (D1-D8) quedan en vigor tal como salieron de la junta del 2026-09-03, sin matiz. Firmar el papel no aplica el mapa de enmiendas (§10): sus filas siguen `pendiente` hasta que alguien las ejecute en el papel que corresponde — la fila «hub N657, los ejecutores» es, en concreto, lo que el censo de GPDMA y prioridades de interrupción (#150, punto 2) tiene que escribir.
