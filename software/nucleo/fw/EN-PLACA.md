@@ -175,3 +175,30 @@ el driver:
 - **El SPI del N657 es `spi_v5` para embassy**, no `spi_v4` como dice el plan;
   el driver de embassy los trata juntos y los registros son los del cap. 67
   del RM0486 igual.
+
+> **Enmienda del 2026-09-11 (acta del J2).** Tres cosas cambian en estas medidas:
+>
+> 1. **El primer experimento es el control positivo, no el soak.** Antes de
+>    `resistencia_j2`: reproducir la configuración de jake-taf (embassy,
+>    100 kHz, CS por GPIO, `TSIZE = 0`, `blocking_read`) en nuestra placa.
+>    1 h da 98 % de potencia contra el extremo suave del hilo, un cuelgue cada
+>    900 s. Sin esto, un soak verde no distingue «no nos afecta» de «el banco
+>    no lo ve». Y antes que eso, un acceso: `SPE = 1` sin armar nada y leer
+>    `SR.EOT`. Si vuelve 1, prender levanta la bandera (RM0486 p. 3492) y la
+>    hipótesis de la errata 2.14.2 del H7 (spec D2, enmienda del 11-09) está
+>    viva.
+> 2. **`eot_al_aire` deja de ser cien mil transferencias.** 12,5 s a 8 kHz
+>    acotan p < 3e-5 al 95 %, que no excluye ni el peor extremo del hilo
+>    (2e-5): no discrimina nada. Pasa a ser el **barrido del retardo** entre
+>    `SPE = 1` (con lectura de vuelta de `CR1`) y `CSTART`, en
+>    {0, ¼, ½, 1, 2, 4} × T_SCK, en la configuración mala. Una tasa que dependa
+>    del retardo es la firma de la errata; una que no, no lo es.
+> 3. **El límite es cero artefactos audibles** (ficha 2 del acta), no una
+>    tasa tolerable. `resistencia_j2` sigue igual, pero su fila se juzga con
+>    3/T contra el horizonte que Samuel fije (HUECO), no con «tiene fila».
+>
+> Dos casillas más: la **prioridad de la interrupción del SPI** por encima del
+> ejecutor del J2 (si no, un `EOT` tardío no se pierde, pero no se cuenta); y
+> el **método de reset de `probe-rs`**, porque un SYSRESETREQ con los selectores
+> de reloj fuera de su valor por defecto puede dejar al chip sin arrancar
+> (ES0620 §2.2.22, #364), y en el banco parecería un binario roto.
