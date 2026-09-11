@@ -15,10 +15,12 @@ STM32N657X0H3Q en VFBGA264 que eligió el censo, y además la pantalla de
 800×480 en el LTDC y la PSRAM, que es por lo que se pidió ésa y no la Nucleo.
 
 **Comprobar `memory.x` contra la placa.** El N657 **no tiene flash interna**:
-`FLASH` y `RAM` son dos tramos de la misma AXISRAM2 y el binario se carga ahí
-por el USB serial de la ROM. El arranque de verdad —FSBL y binario firmado
-desde la XSPI— es el riesgo 2 del papel del hub y **no está hecho**: enlazar
-aquí no demuestra que arranque de la flash.
+`FLASH` y `RAM` son dos tramos de la misma AXISRAM2 y el binario lo carga ahí
+el depurador, con la placa en *development boot* (BOOT1 arriba). El arranque
+de verdad —FSBL y binario con cabecera desde la XSPI— es el riesgo 2 del papel
+del hub y está en `ARRANQUE.md`: existe en Rust (lo trae embassy), compila en
+esta máquina y **no está probado en placa**. Enlazar aquí no demuestra que
+arranque de la flash.
 
 **Comprobar de dónde sale el núcleo.** `usb::configuracion()` pone
 `SupplyConfig::External` porque la DK lleva SMPS externo; con el interno el
@@ -37,6 +39,11 @@ que impiden repetir un pin o pedir uno que no existe.
 ```bash
 cargo run --release          # probe-rs con el STLINK-V3EC de la placa
 ```
+
+**BOOT1 arriba antes de nada.** Con BOOT1 abajo la ROM se va a serial boot
+y `probe-rs` no encuentra a nadie escuchando: el LED rojo de PG10 parpadea
+rápido. En development boot se queda fijo (AN5967 §11.2). `ARRANQUE.md`
+tiene los tres caminos con su página.
 
 **`--release` no es una preferencia: es la unica que enlaza.** Con
 `defmt` y embassy, el binario de depuracion se pasa **48 KB** de los 256 K que
@@ -121,6 +128,50 @@ del día que esto se distribuya.
 host — va en los planes 2 y 3. Ese issue está escrito contra el RP2350 y hay
 que reescribirlo contra esta placa.
 
-**El J2 no está aquí.** El driver `j2_spi.rs` y su ejecutor son la fase B del
-plan del maestro del J2, y lo que los bloqueaba era este pase (#250). La
-política ya vive en `core/src/maestro_j2.rs`, probada en el host.
+## El J2 en la Discovery: las tres medidas del maestro
+
+El papel del maestro del J2 (§9) le encarga a esta placa tres medidas, y las
+tres necesitan lo mismo antes: **el driver `src/j2_spi.rs`**, del que hoy solo
+existe la cabecera (compila contra las cuatro APIs de embassy que el plan
+exige; el cuerpo es la tarea 7 del plan, fase B, con TDD y en su propio PR).
+La política ya vive en `core/src/maestro_j2.rs`, probada en el host: el
+driver solo transporta, y le pasa `Evento`s a su `Ranura`.
+
+Cada medida es un binario propio en `src/bin/`, que no existe todavía. Lo que
+tiene que hacer cada uno, para que el día de la placa sea escribirlos y no
+decidirlos:
+
+1. **`resistencia_j2`** (riesgo 1, embassy#5607). Una ranura, `TSIZE > 0` y
+   NSS por hardware, girando a los 8 kHz del lazo (`F_LAZO_HZ`) durante
+   ≥ 24 h al reloj del piso (10 MHz), y otra tanda al peldaño 2 (34,5 MHz).
+   Cada hora imprime por `defmt` la fila tal como la espera
+   `resistencia_j2.csv`:
+   `ranura,instancia,tsize,nss,reloj_MHz,horas,giros,plazos_vencidos,eot_tardios,subidas_malas,fecha,placa`.
+   Los cuatro contadores salen de la `Ranura` (`giros()`,
+   `plazos_vencidos()`, `eot_tardios()`, `subidas_malas()`); `fecha` y `placa`
+   los pone quien copia la fila. El otro extremo puede ser un módulo o el MISO
+   al aire: sin módulo `subidas_malas` cuenta todo y no importa, lo que se
+   mide es `plazos_vencidos`. Con la fila, `recuperacion_j2_budget.py` deja
+   de salir con 2 por esa causa.
+2. **`plazos_j2`** (riesgo 2, el osciloscopio). Manda en bucle cada mensaje
+   de la cabecera §4 con su `tsize`, y sube un GPIO al armar y lo baja al
+   `Ok`. En el osciloscopio: `t_real(msg)` contra `t_nominal = tsize × 8 / f`.
+   `FACTOR_PLAZO` se fija con ≥ 3× el peor exceso medido, y `T_SUELO_PLAZO`
+   con el retraso de ISR que se vea. Los dos se cambian en UN sitio,
+   `Umbrales::POR_DEFECTO` de `maestro_j2.rs` (R-MJ4): el guion los lee de
+   ahí.
+3. **`eot_al_aire`** (riesgo 5). Cien mil transferencias con el bus al aire
+   contando `eot_tardios` y `plazos_vencidos`. Si alguno sube sin cuelgue
+   real, el orden `SPE = 1 → EOTC → EOTIE` de D2 se revisa.
+
+Dos cosas que embassy no decide por nosotros y hay que saber antes de escribir
+el driver:
+
+- **La D-cache del M55 está apagada.** embassy no la enciende en ningún sitio
+  (`grep enable_dcache` en la rev fijada: nada). R-MJ7 (búferes de DMA en
+  región no cacheable) solo muerde el día que alguien la encienda para el
+  sampler; ese día los búferes del J2 van a una región MPU propia, y el test
+  del riesgo 8 (búfer contra analizador lógico) es obligatorio.
+- **El SPI del N657 es `spi_v5` para embassy**, no `spi_v4` como dice el plan;
+  el driver de embassy los trata juntos y los registros son los del cap. 67
+  del RM0486 igual.

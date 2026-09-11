@@ -7,6 +7,7 @@
 //! vive en la caja equivocada y se muda a `sam17-nucleo-core`. Todo lo que se
 //! puede probar sin placa ya viene probado de alla.
 
+mod j2_spi;
 mod usb;
 
 use defmt::info;

@@ -1,6 +1,8 @@
 /* El mapa del STM32N657. El chip NO TIENE FLASH INTERNA: arranca desde XSPI
-   con un FSBL y un binario firmado (hub sec.8, riesgo 2), o se carga en RAM
-   por el USB serial de la ROM, que es el camino de los primeros dias.
+   con un FSBL y un binario firmado (hub sec.8, riesgo 2), o la carga en RAM
+   el depurador con la placa en development boot (BOOT1 arriba), que es el
+   camino de los primeros dias. El serial boot de la ROM por USB es OTRO
+   camino y pide la cabecera de ST: ARRANQUE.md.
 
    Este mapa es el segundo: FLASH y RAM son dos tramos de la MISMA AXISRAM2, y
    el binario se carga ahi. El arranque firmado desde XSPI es del bring-up con
