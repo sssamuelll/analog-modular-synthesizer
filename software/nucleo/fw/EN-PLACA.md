@@ -128,7 +128,52 @@ del día que esto se distribuya.
 host — va en los planes 2 y 3. Ese issue está escrito contra el RP2350 y hay
 que reescribirlo contra esta placa.
 
-## El J2 en la Discovery: las tres medidas del maestro
+## El J2 en la Nucleo: el montaje, con sus pines
+
+*(Sección del 2026-09-11. La placa firmada en el acta del J2 es la
+**NUCLEO-N657X0-Q**, no la Discovery: mismo STM32N657X0H3Q en VFBGA264 y tres
+veces más barata. La Discovery entra el día que haya fecha de pedido de PCB con
+N657 a menos de ocho semanas, por la pantalla, la PSRAM y la cámara.)*
+
+**Los dos extremos del J2 caben en una sola placa**, y el maestro cae en una de
+las instancias que se cuelgan en el hilo. Sale de cruzar el morpho soldado de
+fábrica (UM3417 Rev 3, Tabla 13: CN3 y CN15; **CN2 y CN16 no vienen soldados**,
+§8.2) contra las funciones alternas de SPI1-6 (DS14791 Rev 10, Tabla 18):
+
+| Señal | Maestro: **SPI5** | CN15 | Esclavo: **SPI4** | CN15 |
+|---|---|---|---|---|
+| SCK | PE15 | 11 | PE2 | 30 |
+| MOSI | PG2 | 15 | PE14 | 26 |
+| MISO | PG1 | 13 | PE13 | 28 |
+| NSS | PA3 | 17 | PE11 | 23 |
+
+Cuatro hilos de una fila a la otra del **mismo conector**. Los ocho pines llevan
+la nota (1) de la Tabla 18 —*«Power supply is VDD»* (DS14791 p. 112)— y
+estructura `TT`, así que van al mismo dominio y el cable es directo, sin
+traslación de nivel. SPI5 alternativamente sale al Arduino (D13, D11, D12, D10);
+SPI4 tiene PE12 (CN15 pin 1) como SCK alternativo a PE2.
+
+**El maestro va en SPI5 a propósito:** es la instancia del repro original de
+jake-taf, que después confirmó el cuelgue también en SPI1 (2026-09-03).
+
+**SPI1 no se puede usar en esta placa.** Su único MOSI en el morpho es PC3, que
+la Nucleo cablea a `STLK_UCPD_CC1_C` del ST-LINK (UM3417 Tabla 16), y la Tabla
+19 de puentes no ofrece forma de liberarlo: clocar ahí sería clocar sobre las
+líneas CC del USB-C del depurador. SPI2, SPI3 y SPI6 quedan incompletas en el
+morpho (a SPI2 le falta el SCK, a SPI3 el MISO, a SPI6 el MOSI y el NSS).
+
+**Con esclavo real, el soak deja de ser media medida.** Un enlace contra el MISO
+al aire mide `plazos_vencidos` y nada más; contra un esclavo que cuenta bytes en
+el flanco de `CS` se puede probar además la línea del #292 (`SPE = 0 → SPE = 1`
+al contar corto) y ver si la trama siguiente se acepta, que es el riesgo 3 del
+papel del maestro.
+
+**Un aviso del propio manual:** §7.5 dice que el LED verde LD3 va a «PB15
+(ARDUINO D13)», la Tabla 12 da D13 = PE15 y la Tabla 16 da PB15 = `STLK_USB_P`.
+Las tres no pueden ser ciertas. No toca a SPI4 ni a SPI5, pero antes de usar
+PB15 o LD3 hay que mirar el esquemático del MB1940.
+
+## Las tres medidas del maestro
 
 El papel del maestro del J2 (§9) le encarga a esta placa tres medidas, y las
 tres necesitan lo mismo antes: **el driver `src/j2_spi.rs`**, del que hoy solo
