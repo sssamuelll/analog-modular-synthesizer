@@ -136,10 +136,11 @@ razones que sí son de hoy.
 
 ## 2. Un cerebro aparte, y de la misma clase — FIRMADA (D1)
 
-### 2.1 Por qué no se funden, con los números de hoy
+### 2.1 Por qué no se funden
 
 Fundir el cerebro en el N657 de la Voz se evaluó y se descarta por tres
-razones nuevas, y la tercera es A-2:
+razones nuevas, y la tercera es A-2. La segunda se apoyaba en un número que
+después se midió; lo que sostiene la decisión son la primera y la tercera:
 
 1. **SPI.** El N657 tiene 6 (SPI1-6, tabla de pines de `micro_budget.py`).
    El motor usa 3 para los 16 cortes de CV (motor-digital §5). Fundido, la
@@ -147,11 +148,17 @@ razones nuevas, y la tercera es A-2:
    ranuras**. D3 del J2 exige que toda ranura activa vaya en SPI de hardware;
    el censo activo de D3 pide 4 (la Voz, el módulo de mandos #178 y las
    reservas de los módulos 8 y 9) y las ocho se cablean. Con 3 no cuadra.
-2. **SRAM y CPU (análisis histórico de la fusión, 2026-08-30).** El censo
-   entonces compartido daba rojo en las cuatro configuraciones de pantalla,
-   en el peor caso de lo fijo, y el motor está presupuestado al 50 %
-   (~8 300 ciclos por muestra). Un hub que comparte chip con su cliente más
-   grande no tiene sitio para crecer.
+2. **CPU, y una SRAM que ya no es razón.** El motor está presupuestado al
+   50 % (~8 300 ciclos por muestra, `carga_motor_budget.py`): un hub que
+   comparte chip con su cliente más grande no tiene sitio para crecer. La
+   SRAM iba en esta misma fila el 2026-08-30 —«el censo compartido daba rojo
+   en las cuatro configuraciones de pantalla»—, pero ese rojo salía de un
+   binario ESTIMADO entre 700 000 y 2 000 000 B que nadie había medido. El
+   único binario medido desde entonces, la parte compartida del hub
+   (`sram_hub_budget.py`, 82 280 B en `c521302`), queda 8,5× por debajo de
+   la punta baja de aquel estimado y no trae motores de audio; el de la Voz
+   sigue ESTIMADO (`sram_voz_budget.py`, HUECO). La SRAM no sostiene esta
+   decisión ni la tumba: es un hueco declarado, no un argumento.
 3. **A-2.** Si el SAM17 controla otros módulos, el cerebro es el producto y la
    Voz es su primer cliente. El hub no vive de las sobras de un cliente.
 
@@ -185,8 +192,12 @@ razones nuevas, y la tercera es A-2:
 
 Ese registro describe la pareja hub/Voz y su presupuesto anterior a la
 separación de censos (PR #357). El reparto vigente es el de cuatro N657 del
-acta del 2026-09-09 (§0); los censos del mago y de la interfaz siguen
-pendientes (§10).
+acta del 2026-09-09 (§0), y la regla que sale de ahí es una sola, y vale
+igual para un quinto chip si llega: **cada trabajo tiene su chip, cada chip
+su SRAM interna de 4 200 000 B, y cada SRAM su censo.** Hoy existen dos
+censos, `sram_hub_budget.py` y `sram_voz_budget.py`; los del mago y de la
+interfaz de audio están mandados en §10 (filas 11 y 13) y no se cargan a
+ningún vecino mientras tanto.
 
 Lo que sigue en pie de la E-1 vieja: **la puerta sucia no vive en el cuarto
 limpio** sigue siendo ley, solo que ahora se cumple en la tarjeta trasera
@@ -233,8 +244,12 @@ binario; los censos se separaron en PR #357):
 La puerta de la pantalla pedía 1 256 000 B libres. En el escenario histórico
 con todo adentro era rojo en las cuatro configuraciones; con la cara en el
 hub cierra en el peor caso de esa comparación, sin haber
-medido el binario. De paso mueren el riesgo 5 del motor (contención del LTDC
-con el audio) y el riesgo del 27 («si el motor no arranca no hay pantalla»).
+medido el binario. Cerrar bajo un ESTIMADO no es verde: el censo vivo de la
+Voz (`sram_voz_budget.py`) sale HUECO con esos mismos 1 800 000 B libres
+contra los 1 256 000 del mínimo, y seguirá HUECO hasta que haya motores de
+audio enlazados que medir. De paso mueren el riesgo 5 del motor (contención
+del LTDC con el audio) y el riesgo del 27 («si el motor no arranca no hay
+pantalla»).
 
 #### El tamaño: 5", el panel del kit de prueba (A-7, acta)
 
@@ -604,7 +619,7 @@ individual para que no se manden al aire (patrón conocido: #214).
 | `2026-08-21-modulo-2-v2-cerebro.md` (plan) | entero | Reescribir contra el N657 (VFBGA264, no QFN-80; `pinout.rs` nuevo) | plan nuevo | pendiente |
 | `2026-08-31-interfaz-audio-design.md` (propuesta) | — | Cuarto N657 dedicado decidido (§0); censos propios de pines y SRAM; cifras de la clase contra hoja; reconciliación con D-P6; trasera, masa y phantom | papel propio | pendiente de cierre y firma |
 | `hardware/02-midi-cv/pio_budget.py` | — | Retirar a historia: mide un chip que se va | PR de nivelación | pendiente |
-| `hardware/03-vco/sram_voz_budget.py` | — | Separación de censos: Voz sin cara ni cámara/NPU; hub con cara. La interfaz de audio tiene censo propio pendiente (§6.2) | PR de nivelación | **APLICADA — PR #357** |
+| `hardware/03-vco/sram_voz_budget.py` y `hardware/02-midi-cv/sram_hub_budget.py` | — | Separación de censos: Voz sin cara ni cámara/NPU; hub con cara y su binario medido (82 280 B). La interfaz de audio tiene censo propio pendiente (§6.2) | PR de nivelación | **APLICADA — PR #357** |
 | `hardware/02-midi-cv/micro_budget.py` | censo N657 | Segundo censo de pines: el hub (§10 fila 1) | PR de nivelación | pendiente |
 | `hardware/02-midi-cv/power_budget.py` | — | Riel de phantom y consumo de la interfaz (§6.1) | papel de la interfaz | pendiente |
 | `hardware/03-vco/spi_privado_budget.py` | — | «Sigue modelando los dos RP2350B viejos» y da verde: sujeto muerto | PR de nivelación | pendiente |
@@ -638,9 +653,12 @@ individual para que no se manden al aire (patrón conocido: #214).
 5. **Coexistencia de dos radios de 2,4 GHz** en el mismo cajón: canales y
    antenas.
 6. **Drivers de embassy-stm32 para el N6** (SPI, USB HS, LTDC, SAI, DMA).
-7. **El binario del motor**, medido en la Discovery (#231): sigue siendo el
-   estimado que manda en el censo de SRAM de la Voz y debe sustituirse por
-   la medida.
+7. **El binario de la Voz**, medido en escritorio como se midió el del hub
+   (secciones ALLOC del ELF, `cargo build --release`; `sram_hub_budget.py`:
+   82 280 B en `c521302`): sigue siendo el ESTIMADO que manda en
+   `sram_voz_budget.py` (700 000 a 2 000 000 B) porque no hay motores de
+   audio que enlazar todavía, no porque falte placa. La Discovery (#231)
+   mide ciclos y contención; los bytes del binario no la esperan.
 8. **Las cifras de la clase Clarett+ 4Pre**, contra la hoja del producto,
    antes de cerrar el papel de la interfaz.
 9. **La hoja del panel de 5" de la DK** (A-7): pieza separable, contorno,

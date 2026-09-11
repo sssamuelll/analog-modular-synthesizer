@@ -101,6 +101,23 @@ es hipótesis remota, y caerse a B después de dibujar es un respin. El
 repliegue intermedio (bus de 16 bits, RGB565: 20 pines) está documentado
 en `micro_budget.py`.
 
+> **Estado 2026-09-11: la puerta sigue cerrada, pero el dato que la decide
+> cambió.** El guion que corrió el 26-08 era `sram_budget.py`, un censo
+> único para un chip que iba a hacerlo todo; el PR #357 lo partió en dos,
+> uno por chip, y el hub tiene el suyo (`sram_hub_budget.py`). En ese censo
+> el binario ya no es el desconocido: está **medido**, 82 280 B en
+> `c521302`, y es un piso, no un techo. El diagnóstico de arriba —lo fijo
+> se come 3,2 de los 4,2 MB y no cierra ni sin pantalla— era del motor
+> integrado, que cargaba con audio, cámara y NPU en la misma SRAM; con D2,
+> D3' y la enmienda de §6.2 del hub (acta del 2026-09-09) nada de eso vive
+> en el chip de la pantalla. Lo que hoy decide esta puerta es la **demanda
+> residente del propio hub** al lado del framebuffer —UI, protocolo, DMA
+> del J2—, y esa demanda no la ha escrito nadie: por eso el censo sale
+> HUECO, no verde. Las tres salidas de arriba eran del motor integrado; lo
+> que cierra esta puerta ahora es enumerar esa demanda y medir el firmware
+> que la implemente, y `sram_hub_budget.py` ya recorre el framebuffer
+> dentro y fuera de la SRAM (hub §10 fila 2).
+
 ---
 
 ## 2. El precio en pines: la mudanza de dos capturas
@@ -221,8 +238,9 @@ tanda 2):
 
 - **Framebuffer**: 800×480 = 384 000 px → 768 000 B a 2 B/px (RGB565),
   1 152 000 B a 3 B/px (RGB888); el doble con doble buffer. Dónde vive
-  dentro de los 4,2 MB — y contra los buffers de sample del acta de la
-  tarde — lo dice el **censo de SRAM** (motor §8.5), no este papel.
+  dentro de los 4,2 MB **del hub** (D2) — y contra la demanda residente del
+  propio hub, no contra los buffers de sample, que son de la Voz y de su
+  censo — lo dice `sram_hub_budget.py` (hub §10 fila 2), no este papel.
 - **Caudal de refresco**: 800×480×60 Hz = 23,04 Mpx/s sostenidos que el
   LTDC lee por AXI: 46/69/92 MB/s según el formato del framebuffer (la
   salida es RGB888 de 24 bits para este panel — el LTDC también saca
@@ -230,12 +248,15 @@ tanda 2):
   capa, con dithering de 2 bits si entra con menos — DS §3.29). Esa
   demanda se reparte en tres sitios distintos, y conviene no confundirlos
   (la junta de la tanda 2 corrigió la frase anterior, que los metía todos
-  en `carga_motor`): el **pegamento de CPU** es fila del libro bilateral
-  (motor §7); el **caudal**, solo si el framebuffer se muda a la PSRAM, lo
-  mide `psram_budget.py` (46 MB/s en RGB565, 69 en RGB888, de los 240
-  disponibles); y la **contención en SRAM** — el caso del camino A tal
-  como está hoy — no tiene modelo de escritorio: se mide en el soak del
-  riesgo 5.
+  en `carga_motor`): el **pegamento de CPU** es del hub desde D2 —
+  `carga_motor` conserva su fila solo como escenario heredado, y el hub no
+  tiene censo de CPU todavía—; el **caudal**, si el framebuffer se muda a
+  la PSRAM propia del hub, lo mide `psram_budget.py` en su escenario
+  (46 MB/s en RGB565, 69 en RGB888, de los 240 disponibles), sin sampler
+  al lado; y la **contención en SRAM** — el caso del camino A tal como
+  está hoy, ahora entre el LTDC y el DMA del J2 en el hub, no con el
+  audio — no tiene modelo de escritorio: se mide en bring-up con el
+  refresco LTDC activo, en el hub (#231).
 - **Reloj de píxel**: lo fija el datasheet del panel (clase ~33 MHz para
   800×480@60 — ESTIMADO hasta pieza); el techo del LTDC es 150 Mpx/s
   (DS §3.28), así que no es la variable apretada.
