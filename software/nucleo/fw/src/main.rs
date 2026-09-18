@@ -7,15 +7,13 @@
 //! vive en la caja equivocada y se muda a `sam17-nucleo-core`. Todo lo que se
 //! puede probar sin placa ya viene probado de alla.
 
-mod j2_spi;
-mod usb;
-
 use defmt::info;
 use embassy_executor::Spawner;
 use sam17_nucleo_core::descubrimiento::{placa_de, voces_del_instrumento, TIPO_VCO4};
 use sam17_nucleo_core::partes::{Parte, Partes, Repartidor};
 use sam17_nucleo_core::pinout::{N_PINES_USADOS, PINOUT};
 use sam17_nucleo_core::servidor::{Instrumento, VERSION_PROTOCOLO};
+use sam17_nucleo_fw::usb;
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
 
