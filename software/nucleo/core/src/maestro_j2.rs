@@ -153,6 +153,49 @@ pub fn plazo_us(tsize: Tsize, f_reloj_hz: u32, u: &Umbrales) -> u32 {
     (u.factor_plazo as u64 * t_nominal_us + u.t_suelo_plazo_us as u64) as u32
 }
 
+/// El `MBR` de `SPI_CFG1` y el `f_sck` real que sale de el (spec D1).
+///
+/// El divisor del maestro es `2^(MBR+1)`, de `/2` a `/256` (RM0486 Rev 4,
+/// `SPI_CFG1.MBR`, sec.67.11.3). Se elige **el divisor mas pequeno cuyo `f_sck`
+/// no pase del reloj sancionado**, o sea el reloj mas alto que cabe dentro de
+/// la sancion. La comparacion va en `u64` sin dividir (`f_ker <= f_sck_max *
+/// div`) para que el truncamiento de la division entera no deje pasar un reloj
+/// por encima del sancionado.
+///
+/// **Contrato de la frontera:** si ni `/256` baja del sancionado -- incluido el
+/// caso `f_sck_max_hz = 0` --, devuelve `(7, f_ker/256)`. No es un `Option`: la
+/// funcion es total, y **el llamador asevera** que el `f_sck` devuelto cabe en
+/// la sancion. Asi el driver imprime siempre el reloj real antes de morir.
+pub fn mbr_y_f_sck(f_ker_hz: u32, f_sck_max_hz: u32) -> (u8, u32) {
+    let mut mbr = 7u8;
+    for n in 0..8u8 {
+        if f_ker_hz as u64 <= (f_sck_max_hz as u64) << (n + 1) {
+            mbr = n;
+            break;
+        }
+    }
+    (mbr, f_ker_hz / (1u32 << (mbr + 1)))
+}
+
+/// Cuantos ciclos de CPU dura un cuarto de `T_SCK` (spec D2, enmienda del
+/// 11-09).
+///
+/// La espera entre `SPE = 1` y `CSTART` va en ciclos de CPU y no con
+/// `embassy_time`, cuyo grano de 1 us es diez veces el ciclo de SCK. El
+/// redondeo es **hacia arriba** y el minimo es 1: un retardo corto por
+/// truncamiento es exactamente lo que la enmienda quiere evitar.
+///
+/// **Contrato de la frontera:** con `f_sck_hz = 0` no hay `T_SCK`, asi que el
+/// cuarto es infinito y devuelve `u32::MAX` en vez de dividir entre cero. El
+/// llamador asevera `f_sck > 0` antes de llegar aqui.
+pub fn ciclos_por_cuarto_tsck(f_cpu_hz: u32, f_sck_hz: u32) -> u32 {
+    let cuarto = 4u64 * f_sck_hz as u64;
+    if cuarto == 0 {
+        return u32::MAX;
+    }
+    ((f_cpu_hz as u64).div_ceil(cuarto) as u32).max(1)
+}
+
 /// Los dos estados de una ranura (spec D7.4).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Estado {
@@ -862,5 +905,71 @@ mod tests {
         assert!(b.eot() && b.susp());
         assert_eq!(b.bits(), Banderas::EOT.bits() | Banderas::SUSP.bits());
         assert_eq!(Banderas::de_bits(b.bits()), b);
+    }
+
+    // --- El MBR y los ciclos del retardo (spec D1, D2 enmienda del 11-09) ---
+
+    #[test]
+    fn el_mbr_divide_exacto_cuando_puede() {
+        // 64 MHz de kernel, 32 MHz pedidos: /2, que es MBR = 0, y clava.
+        assert_eq!(mbr_y_f_sck(64_000_000, 32_000_000), (0, 32_000_000));
+        // 64 MHz y 8 MHz: /8, que es MBR = 2.
+        assert_eq!(mbr_y_f_sck(64_000_000, 8_000_000), (2, 8_000_000));
+        // El piso legado del J2, 10 MHz, desde 64: /8 da 8 MHz y /4 daria 16,
+        // que pasa del sancionado. Gana /8, y el reloj real NO es el pedido.
+        assert_eq!(mbr_y_f_sck(64_000_000, 10_000_000), (2, 8_000_000));
+    }
+
+    #[test]
+    fn el_mbr_nunca_pasa_del_sancionado_por_truncamiento() {
+        // 10_000_001 / 2 = 5_000_000,5: la division entera daria 5_000_000 y
+        // "cumple", pero el reloj real pasaria del sancionado por medio hercio.
+        // Con la cuenta en u64 el divisor elegido es el siguiente.
+        let (mbr, f_sck) = mbr_y_f_sck(10_000_001, 5_000_000);
+        assert!(f_sck <= 5_000_000, "f_sck {} pasa del sancionado", f_sck);
+        assert_eq!(mbr, 1);
+    }
+
+    #[test]
+    fn el_mbr_se_queda_en_256_cuando_ni_asi_baja() {
+        // Contrato: si ni /256 baja del sancionado, se devuelve MBR = 7 y el
+        // f_sck que sale de /256. NO es un Option: el llamador asevera.
+        let (mbr, f_sck) = mbr_y_f_sck(64_000_000, 100_000);
+        assert_eq!(mbr, 7);
+        assert_eq!(f_sck, 64_000_000 / 256);
+        assert!(f_sck > 100_000);
+    }
+
+    #[test]
+    fn el_mbr_con_sancionado_cero_cae_en_la_misma_rama() {
+        // Mismo contrato que arriba: MBR = 7, f_sck = f_ker / 256, y el
+        // llamador asevera. Asi `mbr_y_f_sck` es total y no entra en panico.
+        assert_eq!(mbr_y_f_sck(64_000_000, 0), (7, 64_000_000 / 256));
+    }
+
+    #[test]
+    fn los_ciclos_del_cuarto_redondean_hacia_arriba() {
+        // Multiplo exacto: 64 MHz de CPU, 8 MHz de SCK -> 4 * 8 = 32 MHz,
+        // 64/32 = 2 ciclos clavados.
+        assert_eq!(ciclos_por_cuarto_tsck(64_000_000, 8_000_000), 2);
+        // Sin multiplo exacto: 800 MHz y 10 MHz -> 800/40 = 20.
+        assert_eq!(ciclos_por_cuarto_tsck(800_000_000, 10_000_000), 20);
+        // 800 MHz y 34,5 MHz -> 800/138 = 5,79... -> 6, nunca 5: el retardo
+        // corto es el que la enmienda del 11-09 quiere evitar.
+        assert_eq!(ciclos_por_cuarto_tsck(800_000_000, 34_500_000), 6);
+    }
+
+    #[test]
+    fn los_ciclos_del_cuarto_nunca_son_cero() {
+        // CPU mas lenta que 4 * SCK: la cuenta da 0 y el retardo desapareceria.
+        assert_eq!(ciclos_por_cuarto_tsck(64_000_000, 64_000_000), 1);
+        assert_eq!(ciclos_por_cuarto_tsck(1, 64_000_000), 1);
+    }
+
+    #[test]
+    fn sin_reloj_el_cuarto_es_infinito() {
+        // Contrato de la frontera: `f_sck = 0` devuelve `u32::MAX` en vez de
+        // dividir entre cero. El llamador asevera `f_sck > 0` antes de llegar.
+        assert_eq!(ciclos_por_cuarto_tsck(64_000_000, 0), u32::MAX);
     }
 }
