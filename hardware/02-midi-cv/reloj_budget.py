@@ -651,7 +651,9 @@ def demo() -> int:
     print(f"  PPRE_DIV={PPRE_DIV}: pclk replica a hclk, no lo divide")
     print("  (ES0620 Rev 5, sec. 2.2.1, p. 7: el prescaler de APB no funciona).")
     print(f"  fPCLKx 0..{_mhz(PCLK_TECHO_HZ)} MHz (DS14791 Rev 10, Tabla 24, p. 139):")
-    print(f"  pclk = {_mhz(sol.derivadas['pclk'])} MHz cabe, y cabe sin un MHz de aire.")
+    margen_pclk = PCLK_TECHO_HZ - sol.derivadas["pclk"]  # Se lee, no se afirma.
+    print(f"  pclk = {_mhz(sol.derivadas['pclk'])} MHz, margen {_mhz(margen_pclk)} MHz"
+          + (" (cero aire, como el HSI en su entrada)." if margen_pclk == 0 else "."))
     print("  TIM1-5 del afinado pertenecen a la Voz (autotune_budget.py).")
     print("  El objetivo de bus conserva 200 MHz ESTIMADOS, sin importar el afinado.")
     print("  SYS_C/ic6 y SYS_BUS2/ic11 habilitados junto a ic2 por SYSSW;")
