@@ -470,3 +470,20 @@ del binario.
 > el **método de reset de `probe-rs`**, porque un SYSRESETREQ con los selectores
 > de reloj fuera de su valor por defecto puede dejar al chip sin arrancar
 > (ES0620 §2.2.22, #364), y en el banco parecería un binario roto.
+>
+> **Esa segunda casilla, con su orden (#364).** `probe-rs run` resetea el core
+> al cargar; si lo hace por `SYSRESETREQ` cae bajo la errata, y si tira de NRST
+> no. El `init` de embassy dejaba `RTCSEL` en `0x0` en vez de su defecto `0x2`,
+> y eso **ya está arreglado** en `usb::configuracion()` (ARRANQUE.md, «El reset
+> por software y el ES0620 §2.2.22»); pero hay que medirlo igual, porque el
+> aviso vale para cualquier driver futuro que mueva uno de los diez.
+>
+> 1. Lo gratis primero: `probe-rs run --help` — ver qué mandos de reset ofrece
+>    la 0.32.0 instalada, y con cuál arranca `cargo run --release`.
+> 2. La medida: carga el firmware, y **sin tocar NRST ni la alimentación**,
+>    vuelve a cargarlo. Si la segunda carga sube y habla por `defmt`, el reset
+>    de `probe-rs` no muerde. Si se queda muda antes de la primera línea y solo
+>    vuelve con NRST o con un ciclo de alimentación, muerde: anótalo y a partir
+>    de ahí toda carga va con NRST.
+>
+> La salida cuando pase, siempre: **NRST o quitar y poner la alimentación.**

@@ -14,7 +14,7 @@
 use defmt::{info, warn};
 use embassy_futures::select::{select, Either};
 use embassy_stm32::peripherals::USB1_OTG_HS;
-use embassy_stm32::rcc::mux::Otgphysel;
+use embassy_stm32::rcc::mux::{Otgphysel, Rtcsel};
 use embassy_stm32::rcc::{
     CpuClk, IcConfig, Icint, Icsel, Pll, Plldivm, Pllpdiv, Pllsel, SupplyConfig, HSI_FREQ,
 };
@@ -38,7 +38,9 @@ embassy_stm32::bind_interrupts!(pub struct Irqs {
 /// La configuracion del reloj que el USB del N657 EXIGE, y que hay que tener
 /// lista antes de `embassy_stm32::init`.
 ///
-/// Dos cosas, y las dos cuelgan el arranque si se dejan por defecto:
+/// Dos cosas cuelgan el arranque si se dejan por defecto, y hay una tercera
+/// que no lo cuelga pero arma una errata: `RTCSEL` (la ultima linea, con su
+/// cita).
 ///
 /// 1. **El reloj de referencia del PHY** tiene que ser 19,2, 20 o 24 MHz
 ///    exactos (RM0486 Rev 4, `USBPHYC_CR.FSEL`, p. 3929). Se saca del HSI para
@@ -82,6 +84,30 @@ pub fn configuracion() -> embassy_stm32::Config {
         divider: Icint::Div20,
     });
     config.rcc.mux.otgphy1sel = Otgphysel::Ic15;
+
+    // RTCSEL a su valor de reset, y no por gusto: sin esta linea el firmware
+    // lo deja en `0x0` en operacion NORMAL y sale del `init` ya armado para la
+    // errata ES0620 Rev 5 §2.2.22 (p. 12), que exige los diez selectores de
+    // reloj en su defecto antes de un reset por software. RTCSEL es el unico
+    // de los diez cuyo defecto no es cero, y lo confirma el reset de
+    // `RCC_CCIPR7`: `0x0000_0200` (RM0486 Rev 4, p. 536) es el bit 9 puesto, y
+    // RTCSEL son los bits [9:8] -- o sea `0b10`, lsi_ck (p. 537).
+    //
+    // Lo deja en `0x0` un fallo de embassy: `config.ls.init()`
+    // (`rcc/n6.rs:1038`) escribe `RTCSEL = Lsi`, y despues `config.mux.init()`
+    // (`rcc/n6.rs:1389`) lo pisa desde un `ClockMux` que por defecto es
+    // `mem::zeroed()`. Con el chip asi, un `SYSRESETREQ` -- el de `probe-rs`
+    // al cargar, sin ir mas lejos -- cae en la errata. Ver `reinicio.rs` y
+    // ARRANQUE.md.
+    //
+    // `config.rcc.ls` NO hace falta tocarlo: su defecto ya es `default_lsi()`
+    // (`rcc/bd.rs`), que enciende el LSI y espera `LSIRDY`, asi que lsi_ck
+    // esta puesto.
+    //
+    // ponytail: es un parche a un fallo aguas arriba; se borra el dia que la
+    // rama de embassy deje de pisar `ls.init` con `mux.init`.
+    config.rcc.mux.rtcsel = Rtcsel::Lsi; // RTCSEL = 0x2 (ES0620 p. 12)
+
     config
 }
 
