@@ -968,6 +968,11 @@ git commit -m "El presupuesto de recuperacion del J2 lee los umbrales del Rust y
 > `EN-PLACA.md`. Sin placa sigue sin poder verificarse: la Nucleo-N657X0-Q se
 > compra ahora (ficha 4, #231). Ojo: el cfg del N657 es `spi_v5`, no `spi_v4`.
 
+> **2026-09-18:** los pasos de la fase B están en
+> `docs/superpowers/plans/2026-09-18-j2-fase-b.md`. Las tareas 7 y 8 de abajo
+> conservan su contrato; ese plan las descompone (7a-7d, 8) y añade el esclavo
+> del banco (9), los binarios (10) y las dos erratas del ES0620 (11, 12).
+
 No se escribieron aquí como tareas con pasos porque **no había dónde compilarlas**.
 Quedan enunciadas con su contrato:
 

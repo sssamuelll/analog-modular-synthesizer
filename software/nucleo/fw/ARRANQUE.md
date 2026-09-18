@@ -197,11 +197,11 @@ Hoy `fw/` está enlazado para A y solo para A. Para C:
 | `rustup target thumbv8m.main-none-eabihf` | compilar | instalado |
 | `llvm-tools` + `cargo-binutils 0.4.0` (`rust-objcopy`, `rust-size`) | ELF a `.bin` | **instalado hoy** |
 | `probe-rs-tools 0.32.0` | A: cargar a RAM; C: grabar la NOR (`NVM 0x70000000` en su mapa) | **instalado hoy**. El README de embassy decía «v0.32+ not yet released»; salió a crates.io y es la que está |
-| STM32CubeProgrammer (`STM32_SigningTool_CLI`, `STM32_Programmer_CLI`, `ExternalLoader/*.stldr`) | la cabecera de B y C; suplente para grabar | **falta**. Solo está STM32CubeMX. Se baja de st.com con cuenta; `curl` no entra (memoria del repo): lo baja Samuel |
+| STM32CubeProgrammer (`STM32_SigningTool_CLI`, `STM32_Programmer_CLI`, `ExternalLoader/*.stldr`) | la cabecera de B y C; suplente para grabar | **instalado el 2026-09-18**: lo bajó Samuel de st.com con su cuenta (`curl` no entra, memoria del repo) |
 | `just` | recetas | no hace falta: los mandos están arriba |
 | `lrzsz` (`sx`), `uhubctl` | DFU por UART, ciclo de alimentación | opcionales, del `justfile` |
 
-**Lo único que bloquea el camino C sin placa es STM32CubeProgrammer.** Con él
+**Lo único que bloqueaba el camino C sin placa era STM32CubeProgrammer, y desde el 2026-09-18 está instalado.** Con él
 instalado, el paso 2 se puede correr hoy sobre los `.bin` del scratchpad y
 dejar los `-trusted.bin` listos.
 
