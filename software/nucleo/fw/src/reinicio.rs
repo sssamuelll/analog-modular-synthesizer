@@ -139,7 +139,6 @@ fn dejar_lsi_listo() -> bool {
 ///
 /// El orden es el del workaround y no se puede barajar: primero los relojes en
 /// su sitio, luego la barrera, luego el reset.
-#[allow(dead_code)] // Nadie resetea todavia; ver el `//!` de este modulo.
 pub fn por_software() -> ! {
     let rcc = pac::RCC;
 

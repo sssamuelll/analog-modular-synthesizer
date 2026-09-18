@@ -898,6 +898,7 @@ dependencies = [
  "embassy-executor",
  "embassy-futures",
  "embassy-stm32",
+ "embassy-sync",
  "embassy-time",
  "embassy-usb",
  "panic-probe",

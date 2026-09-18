@@ -21,21 +21,28 @@ sam17-nucleo-core = { path = "../core" }
 # rebasada sobre `main` y el `rev` exacto queda fijado en `Cargo.lock`.
 #
 # ponytail: vuelve a `version = "0.6"` de crates.io el dia que #6939 mergee.
+# "exti" no va: nada en fw/src usa ExtiInput (grep -rn "exti" src/ da cero) y
+# con la feature puesta embassy define su propio manejador de EXTI11, que
+# chocaria con el del esclavo del banco (tarea 9).
 embassy-stm32 = { git = "https://github.com/sssamuelll/embassy", branch = "n6-usb", features = [
     "stm32n657x0",
     "time-driver-any",
-    "exti",
     "unstable-pac",
     "defmt",
 ] }
+# "executor-interrupt": D5 del papel del maestro pone las tareas de ranura del
+# J2 en el ejecutor de interrupcion, no en el de hilo (R-MJ5).
 embassy-executor = { git = "https://github.com/sssamuelll/embassy", branch = "n6-usb", features = [
     "platform-cortex-m",
     "executor-thread",
+    "executor-interrupt",
     "defmt",
 ] }
 embassy-time = { git = "https://github.com/sssamuelll/embassy", branch = "n6-usb", features = ["defmt"] }
 embassy-usb = { git = "https://github.com/sssamuelll/embassy", branch = "n6-usb", default-features = false, features = ["defmt"] }
 embassy-futures = { git = "https://github.com/sssamuelll/embassy", branch = "n6-usb" }
+# embassy-sync trae AtomicWaker para la ISR del J2 (tarea 8).
+embassy-sync = { git = "https://github.com/sssamuelll/embassy", branch = "n6-usb" }
 
 defmt = "1.1"
 defmt-rtt = "1.0"

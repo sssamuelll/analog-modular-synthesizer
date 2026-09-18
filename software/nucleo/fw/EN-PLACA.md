@@ -184,48 +184,298 @@ PB15 o LD3 hay que mirar el esquemático del MB1940.
 
 ## Las tres medidas del maestro
 
-El papel del maestro del J2 (§9) le encarga a esta placa tres medidas, y las
-tres necesitan lo mismo antes: **el driver `src/j2_spi.rs`**, del que hoy solo
-existe la cabecera (compila contra las cuatro APIs de embassy que el plan
-exige; el cuerpo es la tarea 7 del plan, fase B, con TDD y en su propio PR).
-La política ya vive en `core/src/maestro_j2.rs`, probada en el host: el
-driver solo transporta, y le pasa `Evento`s a su `Ranura`.
+*(Cuerpo reescrito el 2026-09-18. Hoy son **cuatro binarios**, escritos y
+enlazando; el título se queda como está porque el plan de la fase B y la spec
+del maestro apuntan a él por ese nombre. La enmienda del 11-09, al final de la
+sección, sigue vigente entera.)*
 
-Cada medida es un binario propio en `src/bin/`, que no existe todavía. Lo que
-tiene que hacer cada uno, para que el día de la placa sea escribirlos y no
-decidirlos:
+El papel del maestro del J2 (§9) y el acta del 11-09 le encargan a esta placa un
+**orden del día**, no una lista de medidas sueltas: cada una supone que la
+anterior salió. Ya no hay nada que decidir el día de la placa —los cuatro
+binarios viven en `src/bin/`, compilan y enlazan—, solo que enchufar y leer.
 
-1. **`resistencia_j2`** (riesgo 1, embassy#5607). Una ranura, `TSIZE > 0` y
-   NSS por hardware, girando a los 8 kHz del lazo (`F_LAZO_HZ`) durante
-   ≥ 24 h al reloj del piso (10 MHz), y otra tanda al peldaño 2 (34,5 MHz).
-   Cada hora imprime por `defmt` la fila tal como la espera
-   `resistencia_j2.csv`:
-   `ranura,instancia,tsize,nss,reloj_MHz,horas,giros,plazos_vencidos,eot_tardios,subidas_malas,fecha,placa`.
-   Los cuatro contadores salen de la `Ranura` (`giros()`,
-   `plazos_vencidos()`, `eot_tardios()`, `subidas_malas()`); `fecha` y `placa`
-   los pone quien copia la fila. El otro extremo puede ser un módulo o el MISO
-   al aire: sin módulo `subidas_malas` cuenta todo y no importa, lo que se
-   mide es `plazos_vencidos`. Con la fila, `recuperacion_j2_budget.py` deja
-   de salir con 2 por esa causa.
-2. **`plazos_j2`** (riesgo 2, el osciloscopio). Manda en bucle cada mensaje
-   de la cabecera §4 con su `tsize`, y sube un GPIO al armar y lo baja al
-   `Ok`. En el osciloscopio: `t_real(msg)` contra `t_nominal = tsize × 8 / f`.
-   `FACTOR_PLAZO` se fija con ≥ 3× el peor exceso medido, y `T_SUELO_PLAZO`
-   con el retraso de ISR que se vea. Los dos se cambian en UN sitio,
-   `Umbrales::POR_DEFECTO` de `maestro_j2.rs` (R-MJ4): el guion los lee de
-   ahí.
-3. **`eot_al_aire`** (riesgo 5). Cien mil transferencias con el bus al aire
-   contando `eot_tardios` y `plazos_vencidos`. Si alguno sube sin cuelgue
-   real, el orden `SPE = 1 → EOTC → EOTIE` de D2 se revisa.
+| # | Binario | Qué contesta |
+|---|---|---|
+| (0) (1) | `control_positivo` | ¿prender el SPI levanta `EOT`? ¿nos pasa a nosotros el cuelgue del #5607? |
+| (2) | `barrido_retardo` | ¿la tasa de cuelgue depende del retardo `SPE = 1 → CSTART`? |
+| (3) | `resistencia_j2` | la fila del soak: **la puerta de fabricación** |
+| (4) | `plazos_j2` | `t_real` contra `t_nominal` en el osciloscopio: `FACTOR_PLAZO` y `T_SUELO_PLAZO` |
 
-Dos cosas que embassy no decide por nosotros y hay que saber antes de escribir
-el driver:
+**El orden no es negociable**, y la razón es la ficha 3 del acta: un soak verde
+no ejecuta D4 y no distingue «no nos afecta» de «el banco no lo ve». El control
+positivo va primero porque es el que demuestra que el banco *sabe ver* un
+cuelgue.
 
+**Si hay que cambiar un pin o un canal, se cambia en un solo sitio:**
+`src/j2_banco.rs`, en `maestro_del_banco` / `esclavo_del_banco` y el
+`bind_interrupts!` `IrqsBanco`. Ahí los pines van como **tipos concretos**
+(`Peri<'static, peripherals::PE15>`), así que un pin equivocado no compila —antes
+sí compilaba: los límites del driver aceptan varios pines por señal y PG2 y PG1
+son intercambiables por tipo—. Los binarios solo piden la ranura y el esclavo.
+
+### (0) y (1) `control_positivo`
+
+```bash
+cargo run --release --bin control_positivo
+```
+
+Imprime, en este orden:
+
+```
+experimento_0,eot_al_encender=<0|1>
+experimento_0,eot_al_encender_maestro=<0|1>
+control_positivo: firmware <rev>, f_ker <Hz>, MBR /<n>, f_sck <Hz> (pedido 100000), retardo: ninguno ..., f_cpu <Hz>
+control_positivo,minutos=M,lecturas=N,cuelgues=K          ← cada 60 s
+```
+
+**`firmware <rev>` sale en la línea de arranque de los cuatro**, y es la revisión
+de git con la que se compiló: `<sha corto>`, o `<sha corto>-sucio` si el árbol
+tenía cambios sin commitear, o `sin-git` si `git` no contestó. Lo pone `build.rs`
+en `SAM17_GIT`. **Anótalo con cada medida**: sin él, una fila del CSV o una
+captura del osciloscopio no se puede repetir.
+
+Y, cuando lo haya, una línea de error por cuelgue con su segundo y su cuenta.
+
+- **Las dos primeras líneas son el experimento de un acceso** (spec D2, enmienda
+  del 11-09): con el SPI5 encendido por RCC y **nada armado**, `SPE = 1` y leer
+  `SR.EOT`. Si vuelve **1**, prender *es* un evento `EOT`, y la hipótesis de
+  ES0396 §2.14.2 está viva. Se lee dos veces a propósito: la primera con el
+  periférico recién reseteado, que está en **esclavo** (`CFG2.MASTER = 0` es su
+  valor de reset), y la segunda con `MASTER = 1`, que es el modo del que habla
+  D2. Un 0 en la primera y un 1 en la segunda no sería una contradicción: sería
+  el dato.
+- **(1) es el repro de jake-taf tal cual**: embassy sin driver propio, 100 kHz,
+  modo 0, `CS` por GPIO en PA3, `TSIZE = 0` y `blocking_read` de 8 bytes en
+  bucle. Una hora da 98 % de potencia contra el extremo suave del hilo (un
+  cuelgue cada ~900 s).
+- **Pero el `f_sck` no van a ser 100 kHz, y la tercera línea lo dice.** El
+  kernel del SPI5 **no es el HSI de 64 MHz**: es `pclk2`, y son **32 MHz**. El
+  mux se queda en su cero (`ClockMux::default()` es `mem::zeroed()`,
+  `_generated.rs:5317-5319`, e `init()` escribe `set_spi5sel` incondicionalmente,
+  `:5397`), y ese cero es `Spisel45::Pclk2` (metapac `rcc_n6.rs:43346-43348`);
+  `pclk2` es `sys / hpre / ppre2` (embassy `rcc/n6.rs:462`, publicado en `:1413`)
+  y con los defectos que `usb::configuracion()` no toca —`sys: Hsi`, `ahb: Div2`,
+  `apb2: Div1` (`:196`, `:225`, `:227`)— eso es 64 / 2 / 1 = 32. Con eso,
+  `compute_baud_rate` reparte por tramos y la razón 320 cae en el último, `/256`
+  → **125 kHz**, que es el divisor más grande que hay. No invalida el repro —la
+  condición de la errata es «system clock much faster than SCK» y 125 kHz está
+  aún más lejos del núcleo que los 100 kHz de jake-taf— pero la tasa que se mida
+  **no es comparable byte a byte** con la suya. Anótalo con la medida.
+- **El bucle vive en el ejecutor de hilo y el vigía en el del J2.** El
+  `blocking_read` colgado no vuelve nunca; un vigía en su mismo ejecutor se
+  colgaría con él. El vigía mira cada 100 ms; tres tics sin avanzar son un
+  cuelgue.
+- **El paliativo del `TXDR` está en este binario y en ningún otro.** R-MJ3 lo
+  prohíbe en el driver; aquí *es* la medida, porque es lo que jake-taf usa para
+  desatascar su repro (`SPI1.txdr8().write_value(0)`, enmienda del 08-09 a D4).
+- **El MISO (PG1) va al aire y el esclavo no se arranca.** Lo que se mide es el
+  maestro.
+
+### (2) `barrido_retardo`
+
+```bash
+cargo run --release --bin barrido_retardo
+```
+
+Seis puntos, `retardo_tsck_cuartos` ∈ {0, 1, 2, 4, 8, 16} = {0, ¼, ½, 1, 2, 4} ×
+T_SCK, **15 min cada uno** (el acta: 15 min contestan p < 4,2e-7 al 95 % para la
+tasa por armado). Tramas de 25 bytes a 8 kHz, al piso de 10 MHz, con el esclavo
+activo. Por punto:
+
+```
+barrido,retardo_cuartos=R,armados=A,plazos_vencidos=P,eot_tardios=E,subidas_malas=S,escaladas=X,tramas_cortas=C
+```
+
+`armados` son transferencias **armadas**, no terminadas: sube una por vuelta del
+lazo, pase lo que pase, y `armados = ok + plazos_vencidos`. **No es el `giros` de
+`core`** (D7.3), que mide «mi periférico terminó» y no cuenta las que vencen
+plazo; por eso se llama distinto. `escaladas` son solo las del **maestro**
+(`ESCALADAS_GPDMA − REARMES_ESCALADOS`: `soltar_canales` la llaman los dos
+extremos). `escaladas` y `tramas_cortas` son **deltas del punto**, no totales,
+para que los seis se comparen entre sí. Al terminar los seis se queda en 4 —el de
+producción— para siempre, publicando un punto más cada 15 min.
+
+**La lectura, dicha, porque el acta no la fija.** El acta dice «en esa
+configuración» apuntando al punto (1), el de `TSIZE = 0`. Este binario corre
+sobre la **configuración con `EOT`** —el driver propio, `TSIZE > 0`, NSS por
+hardware— y la razón es el propio texto de la errata: su tercer workaround es
+*«Prevent EOT events from occurring, by setting transfer size to undefined
+(TSIZE = 0)»*, o sea que con `TSIZE = 0` **no hay eventos `EOT`**, y el mecanismo
+de §2.14.2 es *«stall upon setting the CSTART bit within one SCK cycle after the
+EOT event»*. Un retardo medido desde un evento que no ocurre no barre nada.
+
+**Una tasa que dependa del retardo es la firma de la errata; una que no, no lo
+es.** Y el maestro de este binario corre en el ejecutor de **hilo**, no por
+`j2_ejecutor::arrancar`: hay que cambiarle el retardo entre punto y punto y
+`arrancar` se lleva la `Ranura`. No vigila salud ni cuenta con la política de
+`core`: es un experimento de transporte. El esclavo sí va en el `EJECUTOR_J2`.
+
+### (3) `resistencia_j2` — la puerta de fabricación
+
+```bash
+cargo run --release --bin resistencia_j2
+```
+
+El montaje entero y tal como lo usará el instrumento: ranura 0 en SPI5 dentro
+del `EJECUTOR_J2` con la política de `core` detrás, esclavo del banco en SPI4
+como tarea del mismo ejecutor, retardo de producción (4 cuartos). Cada hora,
+cuatro líneas:
+
+```
+firmware=<rev>
+0,SPI5,25,hw,<reloj_MHz>,<horas>,<giros>,<plazos_vencidos>,<eot_tardios>,<subidas_malas>,,NUCLEO-N657X0-Q
+esclavo,tramas_ok=,tramas_cortas=,rearmes_escalados=
+maestro,escaladas_gpdma=,inestable=,muda=
+```
+
+**Y una tanda entera con `horas=0` nada más arrancar**, antes de la primera hora.
+No es una medida —todo está a cero— y por eso lleva su hora puesta: sirve para
+ver el formato delante de quien va a copiar filas durante 24 h, en vez de
+descubrir a la hora que una columna baila.
+
+`firmware=` va **fuera** de las doce columnas a propósito: la cabecera de
+`resistencia_j2.csv` es de R-MJ8 y no se toca. Va delante de su fila, y hay que
+anotarlo junto a ella —las dos tandas, al piso y al peldaño 2, son binarios
+distintos.
+
+La segunda línea son las doce columnas de `resistencia_j2.csv` en el orden de
+R-MJ8, y se copia tal cual al CSV: `fecha` va vacía —las dos comas seguidas—
+porque la pone quien copia. `reloj_MHz` lleva el **real**, el que sale del `MBR`,
+no el pedido: con 10 MHz pedidos y el kernel del SPI5 en `pclk2` a 32 MHz son
+**8** (`/4`).
+
+**HUECO declarado (#380): la segunda tanda no va a medir 34,5 MHz.** Con el
+kernel de hoy, 32 MHz, y el `MBR` más pequeño, `/2`, el techo del enlace es
+**16 MHz**: pedir 34,5 devuelve 16. Para clavar 34,5 haría falta un kernel de
+69 MHz —o 138, o 276: solo 69 × 2^k lo da exacto—, y eso es elegir otra fuente
+del mux, que se decide en el #380. Hasta entonces la segunda tanda cambia
+`F_SCK_HZ` en el binario y mide **16 MHz**; la columna `reloj_MHz` lo dice sola,
+pero quien lea la fila tiene que saber que ese 16 **no es el peldaño 2**.
+
+**Cómo se juzga la fila, que no es «tiene fila».** Ficha 1 del acta: ninguna PCB
+con N657 sale al taller sin una fila medida. Ficha 2: el límite es **cero
+artefactos audibles** atribuibles al bus, y para ser medible necesita un
+**horizonte** —cero en cuántas horas de instrumento— que sigue siendo **HUECO de
+Samuel**. Con cero eventos en `T` horas la tasa queda por debajo de `3/T` al
+95 % (regla de tres, Poisson), así que «cero en H horas» pide del orden de
+`3·H` horas limpias **con el control positivo ya hecho**.
+
+### (4) `plazos_j2` — el osciloscopio
+
+```bash
+cargo run --release --bin plazos_j2
+```
+
+Por cada mensaje de la cabecera §4 (`j2_banco::LARGOS_MENSAJES`), mil giros de su
+largo con un testigo que sube justo antes de `giro` y baja al volver, y medio
+segundo de silencio entre ráfagas para que los ocho grupos se distingan. Antes de
+cada ráfaga:
+
+```
+plazos,mensaje=<nombre>,tsize=<N>,t_nominal_us=<N×8/f_sck>,plazo_us=<el de core>
+```
+
+En la pantalla, el ancho del pulso es `t_real`. `FACTOR_PLAZO` se fija con **≥ 3×
+el peor exceso** (`t_real / t_nominal`) y `T_SUELO_PLAZO` con el retraso de ISR
+que se vea en `HOLA`, que es el mensaje donde el término nominal casi no pesa.
+Los dos se cambian en **un solo sitio**, `Umbrales::POR_DEFECTO` de
+`core/src/maestro_j2.rs` (R-MJ4). El binario no copia ninguno: hasta el
+`t_nominal` que imprime sale de despejar `plazo_us`, para no tener dos cuentas de
+lo mismo.
+
+**El pin del testigo: PE7, CN15 pin 22.** UM3417 Rev 3, Tabla 13, p. 32. Se
+eligió porque es —junto a PE1— el único del CN15 que **no aparece en ninguna otra
+tabla del manual**: no está en el mapa Arduino (Tabla 12, p. 30), no es ninguno
+de los ocho del J2, no es PE10 (el plan B de abajo), no es PE12 (el SCK
+alternativo de SPI4) y no toca nada del bring-up —LED LD5 PG10, LD6 PG0, LD7 PG8,
+LD3 PB15; botón B1 PC13; ST-LINK PB14/PB15 y PC3/PC4 (§7.5, §7.6 y Tabla 16)—.
+
+**El esclavo va apagado en esta medida, y el MISO al aire.** El esclavo del banco
+compara contra un `esperado` fijo de 25 bytes, así que los siete largos que no
+son 25 —`HOLA` con 9, `SET` con 103— le contarían tramas cortas por construcción
+y taparían las de verdad. Aquí se mide el maestro.
+
+### Antes de dar por bueno cualquiera de los cuatro: que el ejecutor exista
+
+El `#[interrupt] unsafe fn GFXTIM()` que bombea el `EJECUTOR_J2` vive en la
+**biblioteca** (`src/j2_ejecutor.rs`), no en los binarios. Si el enlazador se
+quedara con el `DefaultHandler` débil de `cortex-m-rt`, el ejecutor no correría
+nunca y las tareas quedarían mudas **en silencio**. Se comprueba sin placa, con
+`cargo-binutils`:
+
+```bash
+rust-nm -C target/thumbv8m.main-none-eabihf/release/resistencia_j2 \
+  | grep -iE "gfxtim|exti11|spi5|gpdma1_channel|DefaultHandler"
+```
+
+`GFXTIM` tiene que salir con **dirección propia**, distinta de la de
+`DefaultHandler`. Medido en los cuatro: sale propia, y la entrada del vector
+apunta ahí (`rust-objdump -s -j .vector_table`).
+
+**Y `SPI5`, `EXTI11` y `GPDMA1_CHANNEL0..3` también salen propias en los cuatro**,
+incluido `control_positivo`, que no usa ninguna de esas ISR: desde R23 el
+`bind_interrupts!` vive en la biblioteca (`IrqsBanco`), así que sus manejadores se
+enlazan en todo el que use la biblioteca. Es inofensivo —una ISR solo corre si su
+línea está desenmascarada— pero hay que saberlo al leer la salida: **el único
+negativo esperado es `SPI4`**, que sí cae en `DefaultHandler` porque el esclavo
+se despierta por `EXTI11` y por DMA, nunca por la interrupción de SPI4. Ejemplo
+real, `control_positivo`:
+
+```
+341a1952 T DefaultHandler
+341a54d8 T EXTI11
+341a5a60 T GFXTIM
+341a5522 T GPDMA1_CHANNEL0
+341a1952 T SPI4          ← el único que comparte dirección con DefaultHandler
+341a555a T SPI5
+```
+
+(las direcciones cambian con cada compilación; lo que se mira es **cuáles
+coinciden** con la de `DefaultHandler`, no sus valores).
+
+### Las tres causas de trama corta, y cómo se separan
+
+`TRAMAS_CORTAS` del esclavo no dice **por qué** fue corta. Son tres cosas y el
+banco tiene que poder distinguirlas; las tres se miran con el analizador lógico
+(riesgo 8 del papel del maestro):
+
+| Causa | Firma |
+|---|---|
+| **El maestro abortó la trama** (lo que el esclavo existe para probar) | sube **a la vez que** `plazos_vencidos` del maestro, giro a giro |
+| **El esclavo no llegó a rearmar** (el hueco entre el flanco de `CS` y el `SPE = 1` siguiente, sin cota en ningún papel) | sube **sin** `plazos_vencidos`, y sube en **todas** las tramas, no de vez en cuando |
+| **La carrera por el último byte, y es nuestra** (entre el flanco y la lectura de `BNDT` hay ISR, despertar y un poll) | tasa **baja y constante**, sin `plazos_vencidos` y **sin ninguna trama truncada en el cable** |
+
+El umbral no se toca por la tercera: es D8 de la cabecera y es del papel. Lo que
+el banco mide es si la carrera se pierde alguna vez.
+
+### El plan B del `CS` del esclavo
+
+El flanco se detecta con **`EXTI11` sobre PE11 con el pin en AF5**, que el RM
+sostiene (§15.3.11, p. 789: en función alterna *«the Schmitt trigger input is
+activated»*). **Si en la placa el flanco no dispara**, el plan B es un **quinto
+hilo** del NSS del maestro —PA3, CN15 pin 17— a **PE10, CN15 pin 27** (UM3417
+Rev 3, Tabla 13, p. 32), con ese pin en `Input` y la línea `EXTI10`. **No está
+implementado**: son dos constantes de `src/j2_esclavo.rs` y la línea `EXTI11`
+del `bind_interrupts!` `IrqsBanco` de `src/j2_banco.rs`.
+
+### Tres cosas que embassy no decide por nosotros
+
+- **La línea del SPI5 en el NVIC no la habilita `embassy_stm32::init`.** Sí
+  habilita los dieciséis canales del GPDMA por su cuenta
+  (`dma/gpdma/mod.rs:526-534`), pero la del SPI no la toca nadie de embassy. Sin
+  `enable()` el `EOT` no llega al núcleo y **todos** los giros vencen plazo —un
+  banco entero en rojo por una línea que falta—. Desde la ronda de arreglo 1 esa
+  línea la pone **`j2_spi::Ranura::nueva`** (regla R21: el NVIC lo maneja quien
+  arma la interrupción, y quien arma `EOTIE` es el driver), junto con la
+  prioridad `P1` suya y la de sus dos canales; `j2_esclavo::Esclavo::nuevo` hace
+  lo propio con su `EXTI11` y sus dos canales. **Los binarios no tocan el
+  NVIC**, y por eso no pueden olvidarlo.
 - **La D-cache del M55 está apagada.** embassy no la enciende en ningún sitio
-  (`grep enable_dcache` en la rev fijada: nada). R-MJ7 (búferes de DMA en
-  región no cacheable) solo muerde el día que alguien la encienda para el
-  sampler; ese día los búferes del J2 van a una región MPU propia, y el test
-  del riesgo 8 (búfer contra analizador lógico) es obligatorio.
+  (`grep enable_dcache` en la rev fijada: nada), y el driver lo asevera al
+  arrancar. R-MJ7 (búferes de DMA en región no cacheable) solo muerde el día que
+  alguien la encienda para el sampler; ese día los búferes del J2 van a una
+  región MPU propia, y el test del riesgo 8 (búfer contra analizador lógico) es
+  obligatorio.
 - **El SPI del N657 es `spi_v5` para embassy**, no `spi_v4` como dice el plan;
   el driver de embassy los trata juntos y los registros son los del cap. 67
   del RM0486 igual.
