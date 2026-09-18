@@ -56,6 +56,29 @@ UNA SOLA CUENTA, Y QUE SEA EXACTA
   nominal esta en el techo de entrada: el censo no demuestra su tolerancia
   real ni convierte una razon racional exacta en precision de cristal.
 
+EL DIVISOR DE APB QUE EL SILICIO NO TIENE
+
+  ES0620 Rev 5, sec. 2.2.1, p. 7: el prescaler de APB no se puede cambiar y
+  pclkx replica SIEMPRE al AHB. PPRE_DIV = 1 no es un reparto elegido; es lo
+  unico que hace el chip. El workaround de la errata no toca el reloj de bus
+  --no existe selector para un reloj de bus-- sino el KERNEL de cada
+  periferico: "select a clock source other than pclkx using the clock selector
+  of the peripheral".
+
+  Eso vacia un aserto que parecia sano. El techo de 100 MHz del I2C1 (Tabla 72,
+  p. 447) se cobraba sobre pclk, y pasaba porque PPRE_DIV = 2 dejaba pclk en
+  100 clavados: coincidencia, no fuente. El I2C1 TIENE selector (I2C1SEL,
+  RCC_CCIPR4, p. 532) y su kernel ya se juzga con los demas kernels, sobre el
+  IC que el reparto le da. Lo que queda sobre pclk es el techo del BUS, y ese
+  sale de la hoja del producto: fPCLKx 0..200 MHz (DS14791 Rev 10, Tabla 24,
+  p. 139). Cabe, y cabe sin un MHz de aire, igual que el HSI en la entrada.
+
+  La misma p. 447 da OTRO numero y contradice a la hoja: la fila "Bus" del
+  I2C1 dice 100 MHz para pclk1. Las dos citas estan aqui y ninguna se edita; el
+  HUECO lo declara y la salida lo publica. Si manda el RM, el hub no cabe con
+  200 MHz de AHB y hay que bajar hclk (HPRE o sys_bus_ck). Eso es una decision
+  de papel, no un numero que este guion pueda elegir solo.
+
 LO QUE NO COMPRA EL CIERRE
 
   Pixel y codec del cuarto chip siguen sin pieza; HSE sigue sin decision.
@@ -211,7 +234,26 @@ CLAVES = {
 SYS_BUS_ESTIMADO_HZ = 200_000_000  # Conserva objetivo de bus; no depende del afinado de la Voz.
 J2_KERNEL_ESTIMADO_HZ = 100_000_000  # Conserva objetivo J2, ahora para seis maestros; hub S2.2, clase 34,5 MHz con SCK/timing pendientes.
 HPRE_DIV = 1  # ESTIMADO de reparto: hclk = sys_bus; RM0486 Rev 4, p. 440-442.
-PPRE_DIV = 2  # ESTIMADO de reparto: APB a media frecuencia; RM0486 Rev 4, p. 442.
+# ES0620 Rev 5, sec. 2.2.1, p. 7, la cita entera: "Attempts to change the
+# default APBx clock prescaler division ratio of 1 (via the PPREx[2:0]
+# bitfields in the RCC_CFGR2 register) fail. As a result, the APBx (pclkx)
+# clocks always replicate the AHB clock signal." Workaround: "Keep the
+# PPREx[2:0] bitfields at their default value 000. To clock a peripheral with a
+# signal other than pclkx replicating the AHB clock, select a clock source
+# other than pclkx using the clock selector of the peripheral."
+PPRE_DIV = 1  # ES0620 Rev 5, sec. 2.2.1, p. 7: NO es reparto, es el silicio.
+PCLK_TECHO_HZ = 200_000_000  # DS14791 Rev 10, Tabla 24, p. 139: fPCLKx 0..200 MHz.
+I2C1_BUS_RM_HZ = 100_000_000  # RM0486 Rev 4, Tabla 72, p. 447, fila "Bus" del I2C1.
+I2C1SEL_RESET = "pclk1"  # RM0486 Rev 4, RCC_CCIPR4, I2C1SEL[2:0] = 000, p. 532.
+I2C1SEL_ELEGIDO = "ic15"  # RM0486 Rev 4, RCC_CCIPR4, I2C1SEL[2:0] = 011, p. 532.
+# CONSECUENCIA PARA EL FIRMWARE. Por esta errata no hay nada que cambiar hoy en
+# Rust: embassy trae apb1..apb5 en Div1 (rcc/n6.rs, Config::new de la rev
+# fijada) y fw no sobreescribe ningun prescaler, que es justo lo que pide el
+# workaround. Lo que si hay que escribir, el dia que entre el driver del I2C1,
+# es el selector, porque su valor de reset es I2C1SEL_RESET y la errata deja esa
+# fuente pegada al AHB: `config.rcc.mux.i2c1sel = I2c1sel::Ic15;`. El campo
+# existe (ClockMux generado del build de fw, _generated.rs; el RCC lo lee de
+# RCC_CCIPR4.I2C1SEL) y es el mismo gesto que usb.rs:82 ya hace con otgphy1sel.
 
 
 def _exacto(valor) -> Fraction:
@@ -445,7 +487,8 @@ def _reparte_plls(pedidos: dict[str, Fraction]):
 def _derivadas(asignaciones: dict[str, Asignacion]) -> dict[str, Fraction]:
     bus = asignaciones["SYS_BUS"].f_hz
     hclk = ic_hz(bus, HPRE_DIV)  # RM0486 Rev 4, p. 440-442: HPRE.
-    pclk = ic_hz(hclk, PPRE_DIV)  # RM0486 Rev 4, p. 442: PPRE1/2/4/5.
+    assert PPRE_DIV == 1, "ES0620 2.2.1: el silicio no divide el APB"
+    pclk = ic_hz(hclk, PPRE_DIV)  # ES0620 Rev 5, 2.2.1, p. 7: pclkx replica hclk.
     return {"hclk": hclk, "pclk": pclk, "CPU": _exacto(HSI_HZ),
             "OTG1": _exacto(OTG_KERNEL_HZ)}
 
@@ -469,7 +512,27 @@ def _verifica_solucion(sol: Solucion, pedidos: dict[str, Fraction]) -> None:
     assert sol.nombres_pll[phy.pll] == "PLL4", "PHY perdio la PLL4 fisica"
     assert phy.f_hz in PHY_REF_LEGALES_HZ, "PHY fuera de FSEL"
     assert sol.derivadas["hclk"] <= 200_000_000, "techo hclk"  # RM0486 Rev 4, Tabla 72, p. 445-453.
-    assert sol.derivadas["pclk"] <= 100_000_000, "techo APB/I2C1"  # RM0486 Rev 4, Tabla 72, p. 447.
+    # pclk tiene UN aserto en todo el guion, y este es. Antes cobraba aqui el
+    # techo de 100 MHz del I2C1 y pasaba porque PPRE_DIV = 2 dejaba pclk en 100
+    # clavados. Con la errata (ES0620 Rev 5, 2.2.1, p. 7) pclk = hclk, asi que
+    # cada techo que tocaba a pclk se decide por separado:
+    #   - I2C1, KERNEL, 100 MHz (Tabla 72, p. 447): TIENE selector. I2C1SEL
+    #     saca el kernel de pclk1 y lo pone en ic15_ck; ese techo ya se juzga
+    #     arriba, en el bucle, sobre la frecuencia que el reparto le dio.
+    #   - APB, BUS: un reloj de bus no tiene selector, asi que el techo es real
+    #     y manda la hoja del producto, no el RM: fPCLKx 0..200 MHz. Cabe con
+    #     pclk = hclk = 200 MHz, y cabe sin margen.
+    # El otro 100 de la p. 447 --la fila "Bus" del I2C1-- contradice a la hoja
+    # y no se resuelve aqui: sale por huecos(), con las dos citas.
+    assert sol.derivadas["pclk"] <= PCLK_TECHO_HZ, "techo fPCLKx"  # DS14791 Rev 10, Tabla 24, p. 139.
+    # El kernel del I2C1 vive en un IC, pero lo que el firmware escribe es el
+    # selector. Si el reparto lo mueve de IC, la nota de arriba miente.
+    i2c1 = sol.asignaciones["I2C1"]
+    i2c1_ker = i2c1.f_hz  # ESTE es el reloj que juzga el techo de 100 MHz, no pclk.
+    assert i2c1.ic == I2C1SEL_ELEGIDO, (
+        f"I2C1: el reparto le dio {i2c1.ic} a {i2c1_ker} Hz y la nota "
+        f"del firmware declara I2C1SEL = {I2C1SEL_ELEGIDO} (RM0486 Rev 4, "
+        f"RCC_CCIPR4, p. 532); o se mueve el selector o se mueve la nota")
 
 
 def _resuelve(p: dict, *, rgmii: bool = True) -> Solucion:
@@ -509,8 +572,19 @@ def _cadena(cfg: ConfigPLL) -> str:
             f"-> {_mhz(pll_out_hz(cfg))} MHz")
 
 
-def huecos() -> list[str]:
+def huecos(sol: Solucion) -> list[str]:
     pendientes = []
+    if sol.derivadas["pclk"] > I2C1_BUS_RM_HZ:
+        # Dos fuentes, dos numeros, y la consecuencia es el AHB del hub entero.
+        # No se elige aqui: se publica con las dos citas y se lleva al papel.
+        pendientes.append(
+            f"techo de BUS del I2C1 en disputa: con ES0620 Rev 5, 2.2.1, p. 7 "
+            f"pclk1 = hclk = {_mhz(sol.derivadas['pclk'])} MHz; RM0486 Rev 4, "
+            f"Tabla 72, p. 447 da {_mhz(I2C1_BUS_RM_HZ)} MHz a la fila 'Bus' del "
+            f"I2C1 y DS14791 Rev 10, Tabla 24, p. 139 da fPCLKx "
+            f"0..{_mhz(PCLK_TECHO_HZ)} MHz. El selector arregla el kernel, no el "
+            f"bus: si manda el RM hay que bajar hclk (HPRE o sys_bus_ck, hoy "
+            f"HPRE_DIV={HPRE_DIV} y sys_bus ESTIMADO) y eso es decision de papel")
     if not PANEL_ELEGIDO or LTDC_PX_ESTIMADO:
         pendientes.append("panel sin elegir: pixel clase ~33 MHz ESTIMADO, pantalla-motor S5")
     if not CODEC_ELEGIDO:
@@ -568,10 +642,16 @@ def demo() -> int:
     print("  ETH1: cobrado por defecto; D9 EN CUARENTENA, PTP/PHY externos sin pieza.")
     print("  resuelve(rgmii=False) retira ETH1 y libera ic12 antes de buscar PLL.")
     print("  ADC12: pedal y entrada del mux de perillas; adquisicion pendiente.")
-    print("  I2C1: descubrimiento y tactil en ic15; SCL/TIMINGR pendientes.")
+    print(f"  I2C1: descubrimiento y tactil en {I2C1SEL_ELEGIDO}; SCL/TIMINGR pendientes.")
+    print(f"  I2C1SEL sale de reset en {I2C1SEL_RESET}, la fuente que la errata pega al AHB;")
+    print(f"  el firmware la mueve a {I2C1SEL_ELEGIDO} (RM0486 Rev 4, RCC_CCIPR4, p. 532).")
     print("\n  Fuera del MUX de kernel por IC (RM0486 Rev 4, p. 440-442/449):")
     for nombre, hz in sol.derivadas.items():
         print(f"    {nombre:10s} {_mhz(hz)} MHz")
+    print(f"  PPRE_DIV={PPRE_DIV}: pclk replica a hclk, no lo divide")
+    print("  (ES0620 Rev 5, sec. 2.2.1, p. 7: el prescaler de APB no funciona).")
+    print(f"  fPCLKx 0..{_mhz(PCLK_TECHO_HZ)} MHz (DS14791 Rev 10, Tabla 24, p. 139):")
+    print(f"  pclk = {_mhz(sol.derivadas['pclk'])} MHz cabe, y cabe sin un MHz de aire.")
     print("  TIM1-5 del afinado pertenecen a la Voz (autotune_budget.py).")
     print("  El objetivo de bus conserva 200 MHz ESTIMADOS, sin importar el afinado.")
     print("  SYS_C/ic6 y SYS_BUS2/ic11 habilitados junto a ic2 por SYSSW;")
@@ -614,7 +694,7 @@ def demo() -> int:
     print("  Exactitud racional respecto a HSI nominal no asegura precision absoluta.")
     print(f"\n  CIERRA lo ENUMERADO del hub con {len(sol.plls)} PLL y sus ESTIMADOS.")
     print("  El arbol completo del hub sigue abierto: varios sin reloj censado y piezas pendientes.")
-    pendientes = huecos()
+    pendientes = huecos(sol)
     for pendiente in pendientes:
         print(f"  HUECO: {pendiente}")
     if pendientes:
