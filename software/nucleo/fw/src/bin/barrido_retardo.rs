@@ -82,7 +82,11 @@ const F_SCK_PISO_HZ: u32 = 10_000_000;
 
 /// Lo que se cuenta en un punto del barrido.
 struct Punto {
-    giros: u32,
+    /// Transferencias **armadas**, no terminadas: sube una por vuelta del lazo,
+    /// pase lo que pase. No es el `giros` de `core` (D7.3), que mide *«mi
+    /// periferico termino»* y no cuenta las que vencen plazo; por eso se llama
+    /// distinto y se publica como `armados=`. `armados = ok + plazos_vencidos`.
+    armados: u32,
     plazos_vencidos: u32,
     eot_tardios: u32,
     subidas_malas: u32,
@@ -152,22 +156,35 @@ async fn correr_punto(ranura: &mut Ranura<'static>, retardo: u8) {
     // Los dos contadores globales son acumulados desde el arranque; lo que este
     // punto publica es su **delta**, para que los seis puntos se comparen entre
     // si y no con la suma de los anteriores.
-    let escaladas_antes = ESCALADAS_GPDMA.load(Ordering::Relaxed);
+    let escaladas_antes = escaladas_del_maestro();
     let cortas_antes = j2_esclavo::TRAMAS_CORTAS.load(Ordering::Relaxed);
 
     let c = girar(ranura, Duration::from_secs(SEGUNDOS_POR_PUNTO)).await;
 
     info!(
-        "barrido,retardo_cuartos={},giros={},plazos_vencidos={},eot_tardios={},\
+        "barrido,retardo_cuartos={},armados={},plazos_vencidos={},eot_tardios={},\
          subidas_malas={},escaladas={},tramas_cortas={}",
         retardo,
-        c.giros,
+        c.armados,
         c.plazos_vencidos,
         c.eot_tardios,
         c.subidas_malas,
-        ESCALADAS_GPDMA.load(Ordering::Relaxed) - escaladas_antes,
+        escaladas_del_maestro().saturating_sub(escaladas_antes),
         j2_esclavo::TRAMAS_CORTAS.load(Ordering::Relaxed) - cortas_antes,
     );
+}
+
+/// Las escaladas del GPDMA que son **del maestro**.
+///
+/// `ESCALADAS_GPDMA` lo sube `j2_spi::soltar_canales`, y a esa la llaman los
+/// dos extremos: cada escalada del esclavo entra tambien ahi. Quien las separa
+/// es `j2_esclavo::REARMES_ESCALADOS`, que solo cuenta las suyas, asi que la
+/// resta deja las del maestro. `saturating_sub` porque los dos atomicos se leen
+/// por separado y el esclavo puede escalar entre una lectura y la otra.
+fn escaladas_del_maestro() -> u32 {
+    ESCALADAS_GPDMA
+        .load(Ordering::Relaxed)
+        .saturating_sub(j2_esclavo::REARMES_ESCALADOS.load(Ordering::Relaxed))
 }
 
 /// El lazo del maestro durante `cuanto`: un giro cada `PERIODO_GIRO_US`, con la
@@ -178,7 +195,7 @@ async fn girar(ranura: &mut Ranura<'static>, cuanto: Duration) -> Punto {
     let mut bajada = [0u8; LARGO_MAX];
     let mut subida = [0u8; LARGO_MAX];
     let mut c = Punto {
-        giros: 0,
+        armados: 0,
         plazos_vencidos: 0,
         eot_tardios: 0,
         subidas_malas: 0,
@@ -193,7 +210,7 @@ async fn girar(ranura: &mut Ranura<'static>, cuanto: Duration) -> Punto {
         let plazo = Duration::from_micros(plazo_us(tsize, f_sck_hz, &umbrales) as u64);
         let (res, tardios) = ranura.giro(&bajada, &mut subida, tsize, plazo).await;
 
-        c.giros += 1;
+        c.armados += 1;
         c.eot_tardios += tardios;
         match res {
             Resultado::Ok => {

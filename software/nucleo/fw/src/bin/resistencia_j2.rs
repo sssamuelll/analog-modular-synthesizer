@@ -30,6 +30,16 @@
 //! vuelve a correr: la columna `reloj_MHz` de la fila lleva el **real**, el que
 //! sale del `MBR`, no el pedido.
 //!
+//! **HUECO declarado (R24, #380): el peldano 2 no es alcanzable hoy.** El kernel
+//! del SPI5 es `pclk2`, 32 MHz (`j2_spi::Ranura::f_sck_hz` trae de donde sale), y
+//! el `MBR` mas pequeno es `/2`: `mbr_y_f_sck(32e6, 34_480_000)` devuelve **16
+//! MHz**, no 34,5. Para clavar 34,5 haria falta un kernel de 69 MHz -- o 138, o
+//! 276: solo 69 x 2^k lo da exacto --, y eso es elegir otra fuente del mux, que
+//! es el #150 y se decide en el **#380**. Mientras tanto la segunda tanda mide
+//! **16 MHz** y la columna `reloj_MHz` lo dice sola: el binario no falsea nada,
+//! pero quien lea la fila tiene que saber que ese 16 no es el peldano 2. No se
+//! arregla aqui.
+//!
 //! **Lo que no dice la fila.** `subidas_malas` cuenta contra el esclavo del
 //! banco, que devuelve un patron fijo; no es el CRC del sobre, que llega con
 //! #267. Y `tramas_cortas` del esclavo tiene tres causas distintas que solo el
@@ -59,10 +69,14 @@ use {defmt_rtt as _, panic_probe as _};
 
 /// El reloj del enlace para esta tanda. **Piso legado, 10 MHz** (J2 punto a
 /// punto D2; `F_CONTRATO_HZ` de `hardware/02-midi-cv/trama_j2_budget.py:89`).
-/// La segunda tanda es el peldano 2, `34_480_000` (D8;
-/// `hardware/02-midi-cv/enlace_budget.py:71`, `F_PELDANO_2_HZ`), y se dice sola
-/// en la columna `reloj_MHz` de la fila -- y, desde la ronda de arreglo 1,
-/// tambien en la linea `firmware=` que la acompana.
+/// Real: **8 MHz**, que es `32 / 4`.
+///
+/// La segunda tanda pide el peldano 2, `34_480_000` (D8;
+/// `hardware/02-midi-cv/enlace_budget.py:71`, `F_PELDANO_2_HZ`), y **lo que va a
+/// medir son 16 MHz**: el kernel es `pclk2` a 32 MHz y el `MBR` mas pequeno es
+/// `/2`, asi que 34,5 esta fuera de alcance hasta el #380 (ver la cabecera del
+/// modulo). Lo dice sola la columna `reloj_MHz` de la fila -- y, desde la ronda
+/// de arreglo 1, la linea `firmware=` que la acompana dice con que binario.
 const F_SCK_HZ: u32 = 10_000_000;
 
 /// El retardo de produccion: 4 cuartos, o sea `>= 1 T_SCK` (D2, enmienda del
@@ -95,7 +109,8 @@ impl defmt::Format for Mhz {
             defmt::write!(f, "{=u32}", ent)
         } else {
             // El `MBR` solo divide por potencias de dos (sec.67.11.3), asi que
-            // tres decimales cubren hasta `f_ker/256` con f_ker de 64 MHz.
+            // tres decimales cubren hasta `f_ker/256` con el kernel del SPI5 en
+            // `pclk2`, 32 MHz (`j2_spi::Ranura::f_sck_hz` trae de donde sale).
             defmt::write!(f, "{=u32}.{=u32:03}", ent, frac / 1_000)
         }
     }
@@ -200,10 +215,30 @@ fn publicar(horas: u32, f_sck_hz: u32) {
         j2_esclavo::TRAMAS_CORTAS.load(Ordering::Relaxed),
         j2_esclavo::REARMES_ESCALADOS.load(Ordering::Relaxed),
     );
+    // `escaladas_gpdma` de esta linea son **solo las del maestro**: ver
+    // `escaladas_del_maestro`. Las del esclavo ya salen arriba, en
+    // `rearmes_escalados`.
     info!(
         "maestro,escaladas_gpdma={},inestable={},muda={}",
-        ESCALADAS_GPDMA.load(Ordering::Relaxed),
+        escaladas_del_maestro(),
         c.inestable,
         c.muda,
     );
+}
+
+/// Las escaladas del GPDMA que son **del maestro**.
+///
+/// `ESCALADAS_GPDMA` lo sube `j2_spi::soltar_canales`, y a esa la llaman los dos
+/// extremos: cada escalada del esclavo entra tambien ahi, asi que publicar el
+/// total bajo `maestro,` contaria las suyas dos veces -- una aqui y otra en
+/// `rearmes_escalados`. Quien las separa es `j2_esclavo::REARMES_ESCALADOS`, que
+/// solo cuenta las del esclavo, y la resta deja las del maestro.
+///
+/// `saturating_sub` porque los dos atomicos se leen por separado y el esclavo
+/// puede escalar entre una lectura y la otra: preferimos un cero de mas a un
+/// contador que envuelve y publica cuatro mil millones.
+fn escaladas_del_maestro() -> u32 {
+    ESCALADAS_GPDMA
+        .load(Ordering::Relaxed)
+        .saturating_sub(j2_esclavo::REARMES_ESCALADOS.load(Ordering::Relaxed))
 }

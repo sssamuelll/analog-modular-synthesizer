@@ -81,9 +81,9 @@ const F_SCK_JAKE_HZ: u32 = 100_000;
 const BYTES_POR_LECTURA: usize = 8;
 
 /// Cadencia del vigia. Tres tics sin avanzar son el umbral de cuelgue, o sea
-/// 300 ms: tres ordenes de magnitud por encima de una lectura sana de 8 bytes al
-/// `f_sck` **real** de este binario, 250 kHz -- 8 x 8 / 250 kHz = **256 us**; ver
-/// la nota del `MBR` mas abajo --, asi que no hay falso positivo por lentitud.
+/// 300 ms: **mas de quinientas veces** una lectura sana de 8 bytes al `f_sck`
+/// **real** de este binario, 125 kHz -- 8 x 8 / 125 kHz = **512 us**; ver la nota
+/// del `MBR` mas abajo --, asi que no hay falso positivo por lentitud.
 const TIC_VIGIA_MS: u64 = 100;
 
 /// Tics seguidos sin que `PROGRESO` avance que cuentan como cuelgue.
@@ -150,15 +150,27 @@ async fn main(_spawner: Spawner) {
     // El `f_sck` que de verdad quedo: el `MBR` que embassy calculo, leido del
     // registro. El divisor es `2^(MBR+1)` (sec.67.11.3, `SPI_CFG1.MBR`).
     //
-    // **Ojo con este numero el dia de la placa: no van a ser 100 kHz.** El
-    // `compute_baud_rate` de embassy (`spi/mod.rs:1532-1546`) reparte por
-    // tramos: con el kernel en HSI 64 la razon es 64e6/100e3 = 640, que cae en
-    // el ultimo tramo y da `/256`, o sea **250 kHz**. Es el divisor mas grande
-    // que hay, asi que no se puede bajar mas por ahi. No invalida el repro -- la
-    // condicion de ES0396 sec.2.14.2 es *«system clock much faster than SCK»* y
-    // 250 kHz sigue tres ordenes por debajo del nucleo --, pero la tasa de
-    // cuelgue que se mida no es comparable byte a byte con la de jake-taf a
-    // 100 kHz. Por eso se imprime: es el reloj real del control positivo.
+    // **Ojo con este numero el dia de la placa: no van a ser 100 kHz.**
+    //
+    // El kernel del SPI5 **no es el HSI de 64 MHz**: es `pclk2`, y son 32 MHz.
+    // `ClockMux::default()` es `mem::zeroed()` (`_generated.rs:5317-5319`) e
+    // `init()` escribe `set_spi5sel(self.spi5sel)` **incondicionalmente**
+    // (`:5327`, `:5397`), asi que el cero manda; y el cero de este campo es
+    // `Spisel45::Pclk2` (metapac `rcc_n6.rs:43346-43348`). `pclk2` sale de
+    // `sys / hpre / ppre2` (embassy `rcc/n6.rs:462`, publicado en `:1413`), y con
+    // los defectos que `usb::configuracion()` no toca -- `sys: SysClk::Hsi`
+    // (`:196`), `ahb: Div2` (`:225`), `apb2: Div1` (`:227`) -- eso es
+    // 64 / 2 / 1 = **32 MHz**. (ES0620 sec.2.2.1 dice que el prescaler de APB no
+    // funciona y `pclk` replica siempre a `hclk`: da el mismo numero, 32.)
+    //
+    // Con eso, el `compute_baud_rate` de embassy (`spi/mod.rs:1532-1546`), que
+    // reparte por tramos: 32e6/100e3 = 320 cae en el ultimo tramo y da `/256`,
+    // o sea **125 kHz**. Es el divisor mas grande que hay, asi que no se puede
+    // bajar mas por ahi. No invalida el repro -- la condicion de ES0396
+    // sec.2.14.2 es *«system clock much faster than SCK»* y 125 kHz esta aun mas
+    // lejos del nucleo que los 100 kHz de jake-taf --, pero la tasa de cuelgue
+    // que se mida no es comparable byte a byte con la suya. Por eso se imprime:
+    // es el reloj real del control positivo.
     let f_ker = rcc::frequency::<peripherals::SPI5>().0;
     let mbr = pac::SPI5.cfg1().read().mbr().to_bits();
     let f_sck = f_ker / (1u32 << (mbr + 1));
