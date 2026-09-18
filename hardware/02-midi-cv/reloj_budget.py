@@ -71,7 +71,8 @@ EL DIVISOR DE APB QUE EL SILICIO NO TIENE
   RCC_CCIPR4, p. 532) y su kernel ya se juzga con los demas kernels, sobre el
   IC que el reparto le da. Lo que queda sobre pclk es el techo del BUS, y ese
   sale de la hoja del producto: fPCLKx 0..200 MHz (DS14791 Rev 10, Tabla 24,
-  p. 139). Cabe, y cabe sin un MHz de aire, igual que el HSI en la entrada.
+  p. 139), la fila de al lado de FHCLK. Cuanto aire queda debajo depende de
+  HPRE_DIV, que sigue siendo un ESTIMADO: la salida lo calcula y lo publica.
 
   La misma p. 447 da OTRO numero y contradice a la hoja: la fila "Bus" del
   I2C1 dice 100 MHz para pclk1. Las dos citas estan aqui y ninguna se edita; el
@@ -242,6 +243,7 @@ HPRE_DIV = 1  # ESTIMADO de reparto: hclk = sys_bus; RM0486 Rev 4, p. 440-442.
 # signal other than pclkx replicating the AHB clock, select a clock source
 # other than pclkx using the clock selector of the peripheral."
 PPRE_DIV = 1  # ES0620 Rev 5, sec. 2.2.1, p. 7: NO es reparto, es el silicio.
+HCLK_TECHO_HZ = 200_000_000  # DS14791 Rev 10, Tabla 24, p. 139: FHCLK 0..200 MHz.
 PCLK_TECHO_HZ = 200_000_000  # DS14791 Rev 10, Tabla 24, p. 139: fPCLKx 0..200 MHz.
 I2C1_BUS_RM_HZ = 100_000_000  # RM0486 Rev 4, Tabla 72, p. 447, fila "Bus" del I2C1.
 I2C1SEL_RESET = "pclk1"  # RM0486 Rev 4, RCC_CCIPR4, I2C1SEL[2:0] = 000, p. 532.
@@ -511,20 +513,24 @@ def _verifica_solucion(sol: Solucion, pedidos: dict[str, Fraction]) -> None:
     assert sol.plls[phy.pll] == CFG_PHY_DEL_FIRMWARE, "PHY perdio su PLL de firmware"
     assert sol.nombres_pll[phy.pll] == "PLL4", "PHY perdio la PLL4 fisica"
     assert phy.f_hz in PHY_REF_LEGALES_HZ, "PHY fuera de FSEL"
-    assert sol.derivadas["hclk"] <= 200_000_000, "techo hclk"  # RM0486 Rev 4, Tabla 72, p. 445-453.
-    # pclk tiene UN aserto en todo el guion, y este es. Antes cobraba aqui el
-    # techo de 100 MHz del I2C1 y pasaba porque PPRE_DIV = 2 dejaba pclk en 100
-    # clavados. Con la errata (ES0620 Rev 5, 2.2.1, p. 7) pclk = hclk, asi que
-    # cada techo que tocaba a pclk se decide por separado:
+    # Los dos relojes de bus, en UN aserto, y a proposito. La guarda de
+    # _derivadas fija PPRE_DIV = 1 y ic_hz(x, 1) es x exacto: pclk no es una
+    # copia de hclk, ES hclk. Un segundo aserto sobre pclk no podria morder sin
+    # que hubiera muerto este una linea antes -- seria vigilancia de adorno.
+    # Cobrar contra el MENOR de los dos techos de la Tabla 24, p. 139, deja el
+    # aserto correcto aunque una revision de la hoja separe las dos filas: hoy
+    # FHCLK y fPCLKx valen los dos 200 MHz y min() no hace nada visible.
+    # Que pclk CABE, y con cuanto margen, lo publica demo() calculado.
+    # De los techos que antes se cobraban aqui sobre pclk:
     #   - I2C1, KERNEL, 100 MHz (Tabla 72, p. 447): TIENE selector. I2C1SEL
     #     saca el kernel de pclk1 y lo pone en ic15_ck; ese techo ya se juzga
     #     arriba, en el bucle, sobre la frecuencia que el reparto le dio.
     #   - APB, BUS: un reloj de bus no tiene selector, asi que el techo es real
-    #     y manda la hoja del producto, no el RM: fPCLKx 0..200 MHz. Cabe con
-    #     pclk = hclk = 200 MHz, y cabe sin margen.
+    #     y manda la hoja del producto, no el RM.
     # El otro 100 de la p. 447 --la fila "Bus" del I2C1-- contradice a la hoja
     # y no se resuelve aqui: sale por huecos(), con las dos citas.
-    assert sol.derivadas["pclk"] <= PCLK_TECHO_HZ, "techo fPCLKx"  # DS14791 Rev 10, Tabla 24, p. 139.
+    techo_bus = min(HCLK_TECHO_HZ, PCLK_TECHO_HZ)
+    assert sol.derivadas["hclk"] <= techo_bus, "techo FHCLK/fPCLKx"  # DS14791 Rev 10, Tabla 24, p. 139.
     # El kernel del I2C1 vive en un IC, pero lo que el firmware escribe es el
     # selector. Si el reparto lo mueve de IC, la nota de arriba miente.
     i2c1 = sol.asignaciones["I2C1"]
