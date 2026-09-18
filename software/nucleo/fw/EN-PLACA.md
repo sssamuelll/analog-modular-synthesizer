@@ -10,9 +10,12 @@ que la anterior salió bien.
 
 ## Antes de enchufar nada
 
-**Cuál placa.** La STM32N6570-DK (#231). Lleva el mismo
-STM32N657X0H3Q en VFBGA264 que eligió el censo, y además la pantalla de
-800×480 en el LTDC y la PSRAM, que es por lo que se pidió ésa y no la Nucleo.
+**Cuál placa.** La **NUCLEO-N657X0-Q**, firmada en el acta del J2 del
+2026-09-11 (#231): el mismo STM32N657X0H3Q en VFBGA264 que eligió el censo,
+a un tercio del precio de la Discovery, y con los dos extremos del J2 en un
+solo conector (§«El J2 en la Nucleo», abajo). La STM32N6570-DK entra el día
+que haya fecha de pedido de PCB con N657 a menos de ocho semanas, por la
+pantalla de 800×480 en el LTDC, la PSRAM y la cámara.
 
 **Comprobar `memory.x` contra la placa.** El N657 **no tiene flash interna**:
 `FLASH` y `RAM` son dos tramos de la misma AXISRAM2 y el binario lo carga ahí
@@ -28,6 +31,12 @@ arranque de la flash.
 interno** (papel de alimentación del N657), así que esa línea se borra el día
 que exista placa propia. Si el arranque se cuelga sin decir nada, éste es el
 sospechoso número uno.
+
+**En la Nucleo, `External` también es lo correcto.** Llega en configuración
+de SMPS externo por defecto (UM3417 Rev 3 §7.4.3, p. 20: *«External SMPS
+default configuration»*); los puentes de soldadura para pasar al SMPS interno
+están en esa misma sección y **no se tocan en el bring-up**. Medir la corriente
+del SMPS interno (#256) pediría moverlos; se aparca.
 
 **Comprobar el pinout.** `core/src/pinout.rs` es una **propuesta**: los números
 salieron de agrupar por periférico, no de ninguna placa. Cuando haya una, ese

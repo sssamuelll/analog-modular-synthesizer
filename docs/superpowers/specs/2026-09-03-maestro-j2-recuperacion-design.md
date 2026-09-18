@@ -188,6 +188,27 @@ Un plazo vencido no se reintenta: se reinicia. La receta es la del RM0486, compl
 
 1. **Silenciar la ISR.** `EOTIE = 0`. Si no, el `CSUSP` del paso 3 produce `SUSP`, `SUSP` dispara la ISR (`EOTIE` cubre `SUSP`, p. 3490), y la ISR limpia `SUSPC` antes de que el paso 3 lo vea. *(⚠ S-12a)*
 2. **Soltar el DMA.** Los dos `Transfer` de embassy se sueltan: su `Drop` (`gpdma/mod.rs:1287-1295`) llama a `request_reset()` y espera a que el canal pare; `request_reset` (`:902-910`) hace `request_pause()`, espera `is_running() == false`, y resetea el canal. Esa espera es un bucle con cota práctica (la pausa actúa al fin de la ráfaga en curso) pero sin cota escrita: si el canal de GPDMA mismo no responde, ahí se queda, y eso lo cubre el IWDG del hub (D5), no este papel (§9, riesgo 6). Esto es el paso 1 del cierre del manual, §67.4.14, p. 3451: *«To close communication, it is mandatory to follow these steps in order: 1. Disable DMA requests for Tx and Rx in the DMA registers, if the DMA issued. 2. Disable the SPI by following the SPI disable procedure. 3. Disable DMA Tx and Rx buffers by clearing the TXDMAEN and RXDMAEN bits of the SPI_CFG1 register, if DMA Tx and/or DMA Rx are used.»*
+
+   > **Enmienda del 2026-09-18 (D4 paso 2 y R-MJ2; #368, riesgo 6 de la junta del 11-09):**
+   > la espera del `Drop` deja de ser «de embassy y declarada» y pasa a tener **cota
+   > propia**. El driver no suelta ningún `Transfer` mientras su canal pueda estar
+   > corriendo: pide `request_reset()` a los dos canales, sondea `is_running()`
+   > como máximo **`T_CANAL` (ESTIMADO 10 µs, de la clase de `T_SUSP`)** y solo
+   > entonces los suelta, con lo que el `Drop` de embassy entra y sale al instante.
+   > Si un canal no para dentro de la cota, el driver **escala**: olvida los dos
+   > `Transfer` (`core::mem::forget`) y resetea el GPDMA1 entero por RCC
+   > (`rcc::enable_and_reset::<GPDMA1>()`; el generador de embassy implementa
+   > `RccPeripheral` para `GPDMA1`). Las otras cinco ranuras ven sus futuros de DMA
+   > resolverse, no reciben `EOT`, vencen su plazo y ejecutan D4 cada una: un
+   > reinicio de las seis ranuras **bajo control y dentro de los 50 ms del módulo**,
+   > no un reinicio del chip. Se cuenta aparte (`escaladas_gpdma`, en `fw`, no en
+   > la política). El IWDG del hub deja de ser la cobertura del riesgo 6: es la red
+   > de lo que ni un reset de RCC arregla, que por construcción no existe. Por qué
+   > no la otra salida del issue (correr el reinicio en una tarea fuera del
+   > ejecutor): una espera sin cota bloquea al ejecutor donde gire, y todos tienen
+   > algo debajo que no puede parar. Los pasos están en
+   > `docs/superpowers/plans/2026-09-18-j2-fase-b.md`, tarea 7d.
+
 3. **Suspender, con cota.** `CSUSP = 1` y sondear `SUSP = 1` **como máximo `T_SUSP` (ESTIMADO 10 µs)**, contando con `embassy_time::Instant` (tick declarado en el plan; 1 MHz cubre esta cota) o con ciclos. §67.11.1, p. 3483: *«In master mode, when this bit is set by software, the CSTART bit is reset at the end of the current frame and communication is suspended. The user has to check SUSP flag to check end of the frame transfer.»* Es una espera síncrona **acotada**, que R-MJ2 permite: es el único sitio donde un sondeo con cota es la herramienta honesta, porque el periférico está mintiendo. *(⚠ S-13, V-11)*
 4. **Limpiar `SUSP` incondicionalmente.** `SUSPC = 1`, haya llegado `SUSP` o no. §67.11.6, p. 3491: *«This bit must be cleared prior to disabling the SPI. This is done by setting the SUSPC bit of SPI_IFCR exclusively.»* Escribir `SUSPC` sin `SUSP` no hace nada, y escribirlo con `SUSP` recién llegado (entre la cota y el apagado) evita apagar con la suspensión a medio aceptar. *(⚠ S-4c)*
 5. **Apagar.** `SPE = 0`. §67.11.1, p. 3484:
@@ -289,7 +310,7 @@ Todo lo de esta sección lo asevera `recuperacion_j2_budget.py` (§8). Aquí, en
 ## 4. Las reglas
 
 - **R-MJ1.** Ninguna transferencia del J2 en el cerebro corre con `TSIZE = 0`. Falla al compilar: `TSIZE` sale de un `NonZeroU16`. Y `TSIZE` es el largo clocado de la cabecera §4, con relleno.
-- **R-MJ2.** Ninguna espera del J2 en el cerebro es un bucle síncrono **sin cota**. Las dos esperas de la transferencia son futuros bajo plazo (D2); el sondeo de `SUSP` en D4 tiene cota escrita (`T_SUSP`); la espera del `Drop` del GPDMA es de embassy y se declara (D4.2, riesgo 6). *(⚠ V-11, S-13: la v1 decía «ningún bucle» y su grep no habría visto ni el `Drop` ni `T_SUSP`)*
+- **R-MJ2.** Ninguna espera del J2 en el cerebro es un bucle síncrono **sin cota**. Las dos esperas de la transferencia son futuros bajo plazo (D2); el sondeo de `SUSP` en D4 tiene cota escrita (`T_SUSP`); la espera del `Drop` del GPDMA tiene cota escrita (`T_CANAL`, D4.2, enmienda del 18-09) y escalada al reset del GPDMA1 por RCC. *(⚠ V-11, S-13: la v1 decía «ningún bucle» y su grep no habría visto ni el `Drop` ni `T_SUSP`)*
 - **R-MJ3.** El reinicio del periférico sigue los ocho pasos de D4 en ese orden, y cada paso cita su página. No se escribe a `TXDR` para desatascar.
 - **R-MJ4.** Los umbrales de D3 y D7 son parámetros, no literales. Viven en un solo `struct Umbrales` con sus valores ESTIMADO y su fuente, y `recuperacion_j2_budget.py` los lee de `maestro_j2.rs`, no los copia.
 - **R-MJ5.** Cada ranura activa tiene su tarea, y las seis viven en el ejecutor del J2, no en el de hilo. Ninguna tarea del ejecutor de hilo puede retrasar un giro.
@@ -391,7 +412,7 @@ Sale con `2` (HUECO) mientras `resistencia_j2.csv` no tenga fila o el hub no dec
 | 3 | **El módulo no limpia su SPI al contar corto** y arrastra medio byte: las tramas siguientes fallan CRC hasta que algo lo realinee | La enmienda al papel del módulo (§10) y su test: abortar una trama a mitad de byte desde el maestro y ver que la siguiente se acepta |
 | 4 | ~~embassy-stm32 no expone lo que el driver propio necesita~~ | **Cerrado en la v2**: verificado en `main` (§1.2, último párrafo). Queda que compile, y eso es el primer paso del plan |
 | 5 | **`EOT` se pone al rehabilitar** (p. 3492) y el orden `SPE = 1 → EOTC → EOTIE` de D2 no basta por alguna razón que el manual no dice | Bring-up: cien mil transferencias contando `eot_tardios` y `plazos_vencidos` con el bus al aire; si alguno sube sin cuelgue real, el orden se revisa |
-| 6 | **El canal de GPDMA no responde al reset** y el `Drop` del `Transfer` de embassy se queda en su bucle | Lo cubre el IWDG del hub, no este papel. Se anota porque es la única espera sin cota escrita que queda en el camino |
+| 6 | **El canal de GPDMA no responde al reset** y el `Drop` del `Transfer` de embassy se queda en su bucle | **Enmendado el 18-09:** cota `T_CANAL` al soltar y escalada al reset del GPDMA1 por RCC (D4.2), en vez de «lo cubre el IWDG». Cierra en la placa: inducir un canal trabado (pausarlo por registro desde otra tarea, con el bus al aire) y ver que las otras cinco ranuras siguen girando y que `escaladas_gpdma` sube en uno |
 | 7 | **Las dos ranuras por USART síncrono** no tienen plazo, reinicio ni cuenta | Su propio papel antes de que lleven módulo; hasta entonces son repuesto sin módulo, y el planificador las trata como `Vacia` |
 | 8 | **Un búfer de DMA cacheado** da datos viejos con CRC bueno | R-MJ7 en el plan; el test de bring-up compara el búfer contra el analizador lógico |
 
@@ -440,7 +461,7 @@ Sale con `2` (HUECO) mientras `resistencia_j2.csv` no tenga fila o el hub no dec
 | **este papel** (11-09) | D2, el orden de arranque | Patch | Espera anclada ≥ 1 T_SCK entre `SPE = 1` leído de vuelta y `CSTART`, por analogía con ES0396 §2.14.2 del H7; ES0620 no lista el SPI | enmienda del 11-09 en D2 | **aplicada** |
 | **este papel** (11-09) | §9 riesgos 1 y 5, acción 1 | Expand | Puerta de fabricación; límite de cero artefactos audibles con horizonte HUECO; control positivo antes del soak; el criterio del riesgo 5 no discrimina; segundo comentario en #5607 | enmienda del 11-09 en §9 | **aplicada** |
 | **este papel** (11-09) | D4.8, D6, §3 («`EVENTO` no tiene red») | Patch | La cabecera da red al `EVENTO` (`COMPUERTA`, R-E11) y el evento repara a `u16::MAX` sin tono de arranque: la degradación es otra y la función de §3 cambia | #371 | pendiente |
-| **este papel** (11-09) | D4.2, R-MJ2, §9 riesgo 6 | Rewrite | El `Drop` del GPDMA sin cota congela las seis ranuras del ejecutor: cota escrita o ejecutor aparte | #368 | pendiente |
+| **este papel** (11-09 → 18-09) | D4.2, R-MJ2, §9 riesgo 6 | Patch | Cota `T_CANAL` al soltar los canales y escalada al reset del GPDMA1 por RCC, en vez de «lo cubre el IWDG»; no un ejecutor aparte (una espera sin cota bloquea donde gire); #368 | enmienda del 18-09 en D4.2 | **aplicada** |
 | papel del módulo | nueva: recuperación del esclavo | Add | Plazo, reinicio y cuenta del lado esclavo, espejo de D2-D4; y la política de `muda` en el cerebro | #366 | pendiente |
 | motor-digital | §5, los tres buses SPI del CV | Add | Papel de recuperación de los buses del tono y censo de todos los maestros SPI con su consecuencia audible | #367 | pendiente |
 | hub N657 | supervisor de vitalidad (D5.4) | Patch | El sello no puede ser «armé»: «armé y alguno de los últimos N terminó», o el supervisor lee `inestable`/`muda` | comentario del 11-09 en #291 | pendiente |
