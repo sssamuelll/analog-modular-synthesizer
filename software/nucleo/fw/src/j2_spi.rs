@@ -27,9 +27,30 @@
 //! un largo, y devuelve `Ok` o `PlazoVencido`. `fw` cloca bytes; `core` sabe
 //! que son. Si la semantica del sobre aparece aqui, es un defecto.
 //!
+//! **Que protege la generacion de D2, dicho sin adornos:** protege que la tarea
+//! no consuma un resultado que quedo guardado de un giro anterior (regla 2,
+//! `armar` borra). **No** puede protegerte de un `EOT` viejo bajo una
+//! generacion nueva, porque el hardware no etiqueta el `EOT` y la ISR solo
+//! puede leer la generacion armada en ese instante. De eso se encargan dos
+//! cosas temporales: `EOTIE` armado solo entre `CSTART` y la ISR, y el
+//! `NVIC::unpend` de D4 (pasos 1 y 7). Detalle en el doc de [`Isr`].
+//!
 //! `bind_interrupts!` **no** vive aqui: lo pone quien arma la placa (tareas 8 y
 //! 10), atando `SPI5 => Isr<0>` y los dos canales del GPDMA a
 //! `embassy_stm32::dma::InterruptHandler`.
+//!
+//! **Los dos HUECOS que este archivo arrastra, dichos aqui para que no haya que
+//! encontrarlos leyendo:**
+//!
+//! 1. **`CPOL`/`CPHA` quedan en 0 (modo 0), que es el valor de reset.** Ningun
+//!    papel del J2 decide el modo del enlace. El dia que la cabecera o el punto
+//!    a punto lo fijen, se escribe en el `CFG2` de `nueva`.
+//! 2. **El reloj de la CPU no sale de `Clocks`.** El `set_clocks!` del N6
+//!    publica `sys` y no `cpuclk` (`rcc/n6.rs:1392`), y `asm::delay` cuenta
+//!    ciclos del nucleo. Mientras tanto lo pone el llamador en
+//!    `Config::f_cpu_hz` (lo calcula `usb::f_cpu_hz` de la misma `Config` del
+//!    reloj, y **cuelga** si la CPU deja de correr por HSI), y `nueva` asevera
+//!    `f_cpu_hz >= sys`. Se cierra cuando embassy publique `cpuclk` (#376).
 //!
 //! Ojo con el nombre: el plan dice `spi_v4`; el cfg que embassy pone para el
 //! N657 es `spi_v5` (su `build.rs`, de `STM32N657X0.json`: `spi` version
@@ -42,15 +63,18 @@ use core::pin::Pin;
 use core::sync::atomic::{AtomicU32, Ordering};
 use core::task::{Context, Poll};
 
+use cortex_m::peripheral::NVIC;
 use embassy_futures::join::join;
 use embassy_stm32::dma::{self, Transfer, TransferOptions};
 use embassy_stm32::gpio::{AfType, Flex, OutputType, Pull, Speed};
 use embassy_stm32::interrupt::typelevel::{Binding, Handler, Interrupt};
 use embassy_stm32::pac::spi::vals::{Master, Mbr, Ssom};
-use embassy_stm32::{gpio, pac, peripherals, rcc, spi, Peri};
+use embassy_stm32::{gpio, interrupt, pac, peripherals, rcc, spi, Peri};
 use embassy_sync::waitqueue::AtomicWaker;
 use embassy_time::{with_timeout, Duration, Instant};
-use sam17_nucleo_core::maestro_j2::{Banderas, Tsize, Turno, RANURAS_SPI};
+use sam17_nucleo_core::maestro_j2::{
+    ciclos_por_cuarto_tsck, mbr_y_f_sck, Banderas, Tsize, Turno, RANURAS_SPI,
+};
 
 /// Las ranuras del J2 por SPI. El numero no se copia: es el de la politica.
 pub const RANURAS: usize = RANURAS_SPI;
@@ -111,6 +135,52 @@ pub const SPI_DE_RANURA: [pac::spi::Spi; RANURAS] = [
     pac::SPI6,
 ];
 
+/// La interrupcion de cada ranura, en paralelo a `SPI_DE_RANURA`. La necesita
+/// D4 paso 1: apagar `EOTIE` no borra una ISR que el NVIC ya tenia PENDIENTE,
+/// y esa correria despues del reinicio sobre una ranura ya rearmada.
+pub const IRQ_DE_RANURA: [interrupt::Interrupt; RANURAS] = [
+    interrupt::SPI5,
+    interrupt::SPI4,
+    interrupt::SPI1,
+    interrupt::SPI2,
+    interrupt::SPI3,
+    interrupt::SPI6,
+];
+
+/// Los dieciseis canales del **GPDMA1**, y solo esos.
+///
+/// `spi::TxDma<SPI5>` lo implementan tambien los canales del HPDMA1
+/// (`_generated.rs`: 16 impls de cada controlador para SPI5). Si una ranura se
+/// armara con un canal del HPDMA1, la escalada de `soltar_canales` resetearia
+/// el GPDMA1 -- el controlador **equivocado** -- y devolveria `Escalado`
+/// creyendo que recupero. Esta marca lo vuelve un error de compilacion.
+pub trait CanalGpdma1: dma::ChannelInstance {}
+
+macro_rules! canales_gpdma1 {
+    ($($ch:ident),* $(,)?) => {
+        $( impl CanalGpdma1 for peripherals::$ch {} )*
+    };
+}
+
+canales_gpdma1!(
+    GPDMA1_CH0,
+    GPDMA1_CH1,
+    GPDMA1_CH2,
+    GPDMA1_CH3,
+    GPDMA1_CH4,
+    GPDMA1_CH5,
+    GPDMA1_CH6,
+    GPDMA1_CH7,
+    GPDMA1_CH8,
+    GPDMA1_CH9,
+    GPDMA1_CH10,
+    GPDMA1_CH11,
+    GPDMA1_CH12,
+    GPDMA1_CH13,
+    GPDMA1_CH14,
+    GPDMA1_CH15,
+);
+
 /// Lo que devuelve un giro. Un `EOT` tardio no sale por aqui: lo cuenta
 /// `Turno::armar` y `giro` lo devuelve como numero (D2, regla 1).
 #[derive(Clone, Copy, PartialEq, Eq, Debug, defmt::Format)]
@@ -136,6 +206,12 @@ pub struct Config {
     /// El reloj sancionado del enlace (punto a punto D2, `sancion_j2.csv`).
     /// El `MBR` real se redondea hacia abajo y se imprime por `defmt`.
     pub f_sck_hz: u32,
+    /// El reloj del **nucleo**, que es el que cuenta `cortex_m::asm::delay`.
+    /// Lo pone el llamador porque el `Clocks` de embassy no publica `cpuclk`
+    /// (HUECO 2 de la cabecera): en el cerebro sale de `usb::f_cpu_hz`, que lo
+    /// calcula de la misma `Config` con la que se construye el reloj. `nueva`
+    /// asevera que no es menor que el `sys` que embassy si publica.
+    pub f_cpu_hz: u32,
     /// El retardo entre `SPE = 1` y `CSTART`, en cuartos de `T_SCK`
     /// (D2, enmienda del 11-09). Produccion = 4, o sea >= 1 `T_SCK`; el
     /// barrido del bring-up usa 0, 1, 2, 4, 8 y 16.
@@ -171,9 +247,14 @@ impl<'d> Ranura<'d> {
     /// `Info` interno de embassy no es publico. Si el compilador no infiere
     /// `T`, se le da: `Ranura::nueva::<peripherals::SPI5, _, _, _, _, _, _>`.
     ///
+    /// Los dos canales tienen que ser del **GPDMA1** (`CanalGpdma1`): la
+    /// escalada de `soltar_canales` resetea ese controlador, y uno del HPDMA1
+    /// dejaria el reinicio mudo. Es un error de compilacion, no un comentario.
+    ///
     /// `rcc_peri` es `&p.RCC`: `rcc::clocks` (rcc/mod.rs:154) es la unica via
-    /// publica al reloj de CPU, y pide una referencia al periferico. Se usa
-    /// aqui y no se guarda.
+    /// publica al `Clocks` de embassy, y con el se asevera que el `f_cpu_hz`
+    /// que trae la `Config` no es menor que el `sys`. Se usa aqui y no se
+    /// guarda.
     #[allow(clippy::too_many_arguments)]
     pub fn nueva<T, Sck, Mosi, Miso, Nss, Tx, Rx>(
         indice: usize,
@@ -195,8 +276,8 @@ impl<'d> Ranura<'d> {
         Mosi: gpio::Pin,
         Miso: gpio::Pin,
         Nss: gpio::Pin,
-        Tx: spi::TxDma<T>,
-        Rx: spi::RxDma<T>,
+        Tx: CanalGpdma1 + spi::TxDma<T>,
+        Rx: CanalGpdma1 + spi::RxDma<T>,
     {
         defmt::assert!(indice < RANURAS, "J2: ranura fuera de rango");
         // La ISR alcanza los registros por `SPI_DE_RANURA[R]` y `giro` por
@@ -260,18 +341,13 @@ impl<'d> Ranura<'d> {
             w.set_afcntr(true);
         });
 
-        // MBR: el divisor mas pequeno `2^(n+1)` cuyo `f_sck` no pase del reloj
-        // sancionado. No se supone que salga exacto, asi que se imprime.
+        // MBR: la cuenta vive en `core` y esta probada en el host (R14). Aqui
+        // solo se asevera el contrato de su frontera: si ni `/256` baja del
+        // sancionado, `mbr_y_f_sck` devuelve `/256` y el que asevera es este
+        // llamador. No se supone que salga exacto, asi que se imprime.
         let f_ker = rcc::frequency::<T>().0;
-        let mut mbr = 7u8;
-        for n in 0..8u8 {
-            if u64::from(f_ker) <= u64::from(cfg.f_sck_hz) << (n + 1) {
-                mbr = n;
-                break;
-            }
-        }
+        let (mbr, f_sck) = mbr_y_f_sck(f_ker, cfg.f_sck_hz);
         let divisor = 1u32 << (mbr + 1);
-        let f_sck = f_ker / divisor;
         defmt::assert!(
             f_sck > 0 && f_sck <= cfg.f_sck_hz,
             "J2: el reloj de kernel no da un f_sck util dentro del sancionado"
@@ -293,16 +369,24 @@ impl<'d> Ranura<'d> {
 
         // Los ciclos de CPU de un cuarto de `T_SCK` (D2, enmienda del 11-09:
         // la espera va en ciclos, no con `embassy_time`, cuyo grano de 1 us es
-        // diez veces el ciclo de SCK).
+        // diez veces el ciclo de SCK). La cuenta esta en `core`, probada en el
+        // host (R14).
         //
-        // HUECO: `Clocks` de este build no publica `cpuclk` (es IC1); el campo
-        // mas cercano es `sys`, el sysclk (`rcc/n6.rs:1392`). En el N6 el M55
-        // puede correr por encima del sysclk, y entonces el retardo real sale
-        // corto. Por eso el retardo es un parametro y no una constante: el
-        // barrido de sec.9 lo mide y `retardo_tsck_cuartos` lo sube.
-        let f_cpu = defmt::unwrap!(rcc::clocks(rcc_peri).sys.to_hertz()).0;
-        let cuarto = 4u64 * u64::from(f_sck);
-        let ciclos_por_cuarto_tsck = ((u64::from(f_cpu) + cuarto - 1) / cuarto).max(1) as u32;
+        // `f_cpu` lo trae la `Config` porque `Clocks` no publica `cpuclk`
+        // (HUECO 2 de la cabecera). Lo unico que se puede comprobar contra
+        // embassy es que no sea MENOR que el `sys`: en el N6 el nucleo cuelga
+        // de IC1 y el bus de IC2, y el nucleo nunca va por debajo del bus. Si
+        // esta asercion salta, el llamador puso el reloj del bus donde va el
+        // del nucleo, y el retardo saldria corto en silencio.
+        let f_sys = defmt::unwrap!(rcc::clocks(rcc_peri).sys.to_hertz()).0;
+        let f_cpu = cfg.f_cpu_hz;
+        defmt::assert!(
+            f_cpu >= f_sys,
+            "J2: Config.f_cpu_hz ({} Hz) es menor que el sysclk ({} Hz); no es el reloj del nucleo",
+            f_cpu,
+            f_sys
+        );
+        let ciclos_cuarto = ciclos_por_cuarto_tsck(f_cpu, f_sck);
 
         let req_tx = tx.request();
         let req_rx = rx.request();
@@ -323,7 +407,7 @@ impl<'d> Ranura<'d> {
             f_sck,
             cfg.f_sck_hz,
             f_cpu,
-            ciclos_por_cuarto_tsck,
+            ciclos_cuarto,
             cfg.retardo_tsck_cuartos
         );
 
@@ -334,7 +418,7 @@ impl<'d> Ranura<'d> {
             canal_rx,
             req_tx,
             req_rx,
-            ciclos_por_cuarto_tsck,
+            ciclos_por_cuarto_tsck: ciclos_cuarto,
             retardo_cuartos: cfg.retardo_tsck_cuartos,
             _sck: sck,
             _mosi: mosi,
@@ -441,7 +525,7 @@ impl<'d> Ranura<'d> {
                 (Resultado::Ok, tardios)
             }
             Err(_) => {
-                Self::reiniciar(regs, tx, rx);
+                Self::reiniciar(self.indice, regs, tx, rx);
                 (Resultado::PlazoVencido, tardios)
             }
         }
@@ -456,6 +540,7 @@ impl<'d> Ranura<'d> {
     /// `self.canal_rx`; lo unico que necesita de la `Ranura` son los
     /// registros, que son `Copy`.
     fn reiniciar(
+        indice: usize,
         regs: pac::spi::Spi,
         tx: ManuallyDrop<Transfer<'_>>,
         rx: ManuallyDrop<Transfer<'_>>,
@@ -463,7 +548,16 @@ impl<'d> Ranura<'d> {
         // 1. Silenciar la ISR. Sin esto el `CSUSP` del paso 3 produce `SUSP`,
         //    `SUSP` dispara la ISR (`EOTIE` la cubre, sec.67.11.5, p. 3490) y
         //    la ISR limpia `SUSPC` antes de que el paso 3 lo vea.
+        //
+        //    Apagar `EOTIE` no basta: una ISR que el NVIC ya tenia PENDIENTE
+        //    cuando llegamos aqui corre igual, y correria DESPUES del reinicio,
+        //    sobre una ranura que la tarea ya rearmo -- registrando un
+        //    resultado que no es suyo. Por eso se borra el pendiente. ARM
+        //    v8-M, DDI0553, `NVIC_ICPR<n>`: escribir 1 en el bit limpia el
+        //    estado pendiente de esa excepcion sin afectar a la que se este
+        //    ejecutando (`cortex_m::peripheral::NVIC::unpend`).
         regs.ier().modify(|w| w.set_eotie(false));
+        NVIC::unpend(IRQ_DE_RANURA[indice]);
         // 2. Soltar el DMA, con cota. Es el paso 1 del cierre del manual,
         //    sec.67.4.14, p. 3451: *"Disable DMA requests for Tx and Rx in the
         //    DMA registers"*.
@@ -496,35 +590,57 @@ impl<'d> Ranura<'d> {
             w.set_suspc(true);
             w.set_modfc(true);
         });
+        // ...y otra vez el pendiente: entre el paso 1 y este, `CSUSP` y el
+        //    apagado pudieron levantar una bandera y dejar una ISR nueva
+        //    encolada. Ahora `SR` esta limpio, asi que esta es la ultima.
+        NVIC::unpend(IRQ_DE_RANURA[indice]);
         // 8. Contar y seguir: lo hace la tarea con `Evento::PlazoVencido`
         //    (`core::maestro_j2`). Aqui, nada.
     }
 }
 
-/// D4 paso 2 con cota (enmienda del 18-09, #368). Nunca gira sin cota: pide el
-/// reset a los dos canales, sondea `is_running()` como maximo `T_CANAL` y solo
-/// entonces los suelta, con lo que el `Drop` de embassy (gpdma/mod.rs:1287,
-/// `request_reset()` y luego `while self.is_running() {}`) entra y sale.
+/// D4 paso 2 con cota (enmienda del 18-09, #368). Nunca gira sin cota.
 ///
-/// Si un canal no para dentro de la cota, escala: **no** suelta los dos
-/// `Transfer` y resetea el GPDMA1 entero por RCC. Las otras ranuras veran sus
-/// futuros de DMA resolverse, no recibiran `EOT`, venceran su plazo y
-/// ejecutaran D4 cada una: un reinicio de las seis bajo control y dentro de los
-/// 50 ms del modulo, no un reinicio del chip.
+/// **Pide `request_pause()`, no `request_reset()`**, y la diferencia es todo el
+/// punto: `Channel::request_reset` (gpdma/mod.rs:901-910) es
+/// `self.request_pause(); while self.is_running() {}` **y luego** el
+/// `CxCR.RESET`. Ese `while` de la linea 907 es justo el bucle sin cota que
+/// esta funcion existe para evitar; llamarlo aqui dejaba la cota de abajo como
+/// codigo muerto y `Soltado::Escalado` inalcanzable. `request_pause`
+/// (gpdma/mod.rs:882-887) es una sola escritura, `CxCR.SUSP = 1`, y vuelve.
+///
+/// Asi que: `SUSP` a los dos canales, sondear `is_running()` -- que es
+/// `!suspf && !idlef` (gpdma/mod.rs:912-919) -- como maximo `T_CANAL`, y solo
+/// entonces soltarlos. El `Drop` de embassy (gpdma/mod.rs:1287-1294) hace
+/// `request_reset()` y su propio `while`: los dos salen al instante porque el
+/// canal ya esta suspendido, y el `CxCR.RESET` que aplica es el que de verdad
+/// deja el canal reconfigurable.
+///
+/// Si un canal no para dentro de la cota, escala: **no** suelta ninguno de los
+/// dos `Transfer` (soltarlos meteria el `Drop` en su bucle) y resetea el
+/// **GPDMA1 entero** por RCC. El radio de esa escalada no son las seis ranuras:
+/// es todo el controlador, con los canales de quien sea. Hoy en `fw` no hay
+/// otro usuario (`grep -rn GPDMA1_CH src/` fuera de este archivo da cero), y
+/// `nueva` exige `CanalGpdma1` para que ninguna ranura llegue aqui con un canal
+/// del HPDMA1, que este reset no tocaria. Las otras ranuras veran sus futuros
+/// de DMA resolverse, no recibiran `EOT`, venceran su plazo y ejecutaran D4
+/// cada una: un reinicio bajo control y dentro de los 50 ms del modulo, no un
+/// reinicio del chip.
 ///
 /// Que 10 us sea una cota y no un numero suelto lo sostiene RM0486 Rev 4,
-/// sec.19.4.4 p. 943 (y sec.19.4.3 p. 942 para la suspension): el paso 2 del
-/// abort dice *"Wait for the channel to be effectively in suspended state means
-/// wait for the completion of any ongoing GPDMA transfer over its master
-/// port"*, y el paso 3 resetea. Lo que se espera es una rafaga, no un bloque.
+/// sec.19.4.3 p. 942 -- es la **suspension** la que espera la rafaga:
+/// *"Wait for the channel to be effectively in suspended state means wait for
+/// the completion of any ongoing GPDMA transfer over its master ports"* -- y la
+/// misma frase esta en el paso 2 del abort, sec.19.4.4 p. 943. Lo que se espera
+/// es una rafaga, no un bloque.
 ///
 /// Lo usa tambien el esclavo (tarea 9).
 pub fn soltar_canales(
     mut tx: ManuallyDrop<Transfer<'_>>,
     mut rx: ManuallyDrop<Transfer<'_>>,
 ) -> Soltado {
-    tx.request_reset();
-    rx.request_reset();
+    tx.request_pause();
+    rx.request_pause();
     let limite = Instant::now() + Duration::from_micros(T_CANAL_US);
     while tx.is_running() || rx.is_running() {
         if Instant::now() >= limite {
@@ -571,6 +687,18 @@ impl Future for EsperaEot<'_> {
 /// La ISR de la ranura `R`. Se ata en quien arma la placa:
 /// `bind_interrupts!(struct IrqsJ2 { SPI5 => Isr<0>; ... })`, y con prioridad
 /// por encima del ejecutor del J2 (EN-PLACA, casilla del 11-09).
+///
+/// **Que protege la generacion y que la protege a ella.** La generacion que la
+/// ISR pasa a `registrar` es la que esta armada en ese instante, porque el
+/// hardware no etiqueta el `EOT`: no hay otra cosa que leer. Asi que esa
+/// comparacion **no es la guarda** contra un `EOT` tardio, y no puede serlo. Lo
+/// que la generacion protege de verdad es lo otro: que la tarea no consuma un
+/// resultado que quedo guardado de un giro anterior (D2, regla 2, `armar`
+/// borra). De que no llegue un `EOT` viejo bajo una generacion nueva se
+/// encargan dos cosas, las dos temporales: `EOTIE` solo esta armado entre
+/// `CSTART` y la ISR (la propia ISR lo apaga, y D4 paso 1 tambien), y el
+/// `NVIC::unpend` de D4 tira la ISR que ya estuviera encolada. Si algun dia se
+/// arma `EOTIE` fuera de esa ventana, esta guarda deja de existir.
 pub struct Isr<const R: usize>;
 
 impl<const R: usize, I: Interrupt> Handler<I> for Isr<R> {
@@ -604,7 +732,11 @@ impl<const R: usize, I: Interrupt> Handler<I> for Isr<R> {
         // vuelve a entrar sobre una ranura que ya no espera nada.
         regs.ier().modify(|w| w.set_eotie(false));
         let e = &ESTADOS[R];
-        // `false` = tardio; `Turno` ya lo conto (D2, regla 1).
+        // La generacion es la armada en este instante: el `EOT` no viene
+        // etiquetado y no hay otra cosa que leer, asi que `registrar` no puede
+        // fallar por aqui. Lo que cuenta los tardios de verdad es `armar`, al
+        // encontrarse un resultado guardado que la tarea no consumio. Ver la
+        // nota de `Isr`: quien cierra la ventana es `EOTIE` mas el `unpend`.
         let _ = e.turno.registrar(e.turno.generacion(), b);
         e.waker.wake();
     }

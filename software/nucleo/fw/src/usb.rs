@@ -15,7 +15,9 @@ use defmt::{info, warn};
 use embassy_futures::select::{select, Either};
 use embassy_stm32::peripherals::USB1_OTG_HS;
 use embassy_stm32::rcc::mux::Otgphysel;
-use embassy_stm32::rcc::{IcConfig, Icint, Icsel, Pll, Plldivm, Pllpdiv, Pllsel, SupplyConfig};
+use embassy_stm32::rcc::{
+    CpuClk, IcConfig, Icint, Icsel, Pll, Plldivm, Pllpdiv, Pllsel, SupplyConfig, HSI_FREQ,
+};
 use embassy_stm32::usb::{Driver, InterruptHandler};
 use embassy_stm32::Peri;
 use embassy_time::{Duration, Instant, Timer};
@@ -81,6 +83,37 @@ pub fn configuracion() -> embassy_stm32::Config {
     });
     config.rcc.mux.otgphy1sel = Otgphysel::Ic15;
     config
+}
+
+/// El reloj del **nucleo** en hercios, sacado de la MISMA `Config` que lo
+/// construye.
+///
+/// Existe porque el `Clocks` que embassy publica no trae `cpuclk`: su
+/// `set_clocks!` del N6 exporta `sys: Some(clocks.sysclk)` y deja `cpuclk`
+/// dentro de `ClocksOutput` sin publicar (`rcc/n6.rs:1392` y `:244`). Y el
+/// retardo de `j2_spi` se cuenta con `cortex_m::asm::delay`, que cuenta ciclos
+/// del **nucleo**, no del bus: usar el sysclk ahi da un retardo corto en
+/// silencio el dia que el CPU salga de IC1 por encima del sysclk.
+///
+/// La cuenta es la misma expresion de `rcc/n6.rs:409-414`
+/// (`CpuClk::Hsi => unwrap!(input.hsi)`), y `input.hsi` es el `hsi_ck` **crudo**
+/// de 64 MHz (`rcc/n6.rs:988`, `HSI_FREQ`): el prescaler `HSIDIV` NO entra
+/// aqui, porque alimenta el `hsi_div_ck`, que es otra salida del bloque
+/// (RM0486 Rev 4 sec.14.4.5; el propio comentario de embassy en `n6.rs:965-976`
+/// lo explica). Los 64 MHz: DS14791 Rev 10, p. 2, *"Internal oscillators:
+/// 64 MHz HSI"*.
+///
+/// Cualquier otra fuente **cuelga a la vista**: preferimos un panico en el
+/// arranque a un retardo corto que nadie mide. El dia que el CPU corra por IC1
+/// hay que publicar `cpuclk` en `Clocks` (una linea en el `set_clocks!` de
+/// embassy) y esta funcion se retira.
+pub fn f_cpu_hz(config: &embassy_stm32::Config) -> u32 {
+    match config.rcc.cpu {
+        CpuClk::Hsi => HSI_FREQ.0,
+        _ => defmt::panic!(
+            "f_cpu_hz: la CPU no corre por HSI; publica cpuclk (issue #376) antes de mover el reloj"
+        ),
+    }
 }
 
 /// El driver de USB del cerebro.
