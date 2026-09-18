@@ -224,8 +224,10 @@ pub fn bajada_del_banco(_n: usize, buf: &mut [u8; LARGO_MAX]) -> Tsize {
 }
 
 /// Los largos **clocados** de los mensajes de la cabecera, en bytes, con su
-/// nombre. Es `TSIZE` (D1): sobre de 6 bytes + carga + CRC + el byte de cola de
-/// D6.4, con el relleno a la ventana donde toca.
+/// nombre. Es `TSIZE` (D1): **sobre de 6 bytes, CRC dentro**, mas la carga, mas
+/// el byte de cola de D6.4, con el relleno a la ventana donde toca. O sea
+/// `carga + 7`, que es lo que da la tabla de la cabecera. (El CRC **no** se suma
+/// aparte: sec.4 dice *«Sobre de 6 bytes en todo»* y ese «en todo» lo incluye.)
 ///
 /// Fuente, numero a numero: `docs/superpowers/specs/`
 /// `2026-09-02-cabecera-j2-design.md`, sec.4 *«Los largos contra R-E1»*, la

@@ -71,7 +71,8 @@
 //! **El plazo sale del `f_sck` de cada ranura, y lo da la ranura.** D3 pide
 //! `f_reloj_sancionado(ranura)`, que es el reloj al que de verdad se cloca, no
 //! el que se pidio: el `MBR` solo da potencias de dos y redondea hacia abajo
-//! (10 MHz pedidos con el kernel en HSI 64 son 8 reales). Por eso cada tarea
+//! (10 MHz pedidos, con el kernel del SPI5 en `pclk2` a 32 MHz, son 8 reales;
+//! de donde sale ese 32, en `j2_spi::Ranura::f_sck_hz`). Por eso cada tarea
 //! usa `ranura.f_sck_hz()` y [`arrancar`] **no** recibe ningun reloj: no hay
 //! forma de pasarle uno equivocado ni de etiquetar el CSV de resistencia con un
 //! reloj que no existe.

@@ -237,8 +237,9 @@ pub struct Ranura<'d> {
     req_rx: dma::Request,
     /// El `f_sck` **real** que sale del `MBR`, no el pedido. Se guarda porque
     /// el plazo de D3 se calcula con `f_reloj_sancionado(ranura)` y el `MBR`
-    /// redondea hacia abajo: con 10 MHz pedidos y el kernel en HSI 64 el real
-    /// es 8. Lo lee [`Ranura::f_sck_hz`].
+    /// redondea hacia abajo: con 10 MHz pedidos y el kernel del SPI5 en `pclk2`
+    /// a 32 MHz el real es 8 (ver [`Ranura::f_sck_hz`], que trae de donde sale
+    /// ese 32). Lo lee [`Ranura::f_sck_hz`].
     f_sck_hz: u32,
     ciclos_por_cuarto_tsck: u32,
     retardo_cuartos: u8,
@@ -437,10 +438,27 @@ impl<'d> Ranura<'d> {
         // unico que falta es subirlos por encima del ejecutor del J2.
         Tx::Interrupt::set_priority(Priority::P1);
         Rx::Interrupt::set_priority(Priority::P1);
-        // SAFETY: es la unica forma de desenmascarar la linea, y el manejador
-        // existe porque el llamador ato `SPI<n> => Isr<indice>` en su
-        // `bind_interrupts!` -- lo prueban `irq_tx`/`irq_rx` para los canales y
-        // lo asevera `SPI_DE_RANURA[indice]` para el bloque de registros.
+        // SAFETY: desenmascarar una linea del NVIC solo es seguro si su vector
+        // apunta a un manejador de verdad. Aqui eso **no lo prueba nada de esta
+        // firma**, y conviene decirlo sin adornos: `irq_tx` e `irq_rx` prueban
+        // las ataduras de los dos CANALES del GPDMA, no la del SPI; y el aserto
+        // de `SPI_DE_RANURA[indice]` compara bloques de registros, no
+        // manejadores. Es un **contrato del llamador**: quien construye la
+        // `Ranura` tiene que haber atado `SPI<n> => Isr<indice>` con el mismo
+        // `indice`, o el vector se queda con el `DefaultHandler` debil de
+        // `cortex-m-rt` -- que es un bucle infinito -- y el primer `EOT` cuelga
+        // el chip. Hoy el unico llamador es `j2_banco::maestro_del_banco`, que
+        // pasa `IrqsBanco` con `SPI5 => Isr<0>` e `indice = RANURA_BANCO = 0`;
+        // se comprueba por `rust-nm` (EN-PLACA, *«que el ejecutor exista»*), que
+        // es una puerta de fuera del compilador.
+        //
+        // **HUECO: la forma que lo cerraria por tipo.** Que `indice` fuera un
+        // const generico -- `Ranura::nueva::<T, const INDICE: usize, ...>` -- y
+        // la firma pidiera ademas
+        // `impl Binding<T::Interrupt, Isr<INDICE>>`. Entonces atar el SPI
+        // equivocado, o el `indice` equivocado, seria un error de compilacion
+        // como ya lo es un canal del HPDMA1 (`CanalGpdma1`). No se hace hoy
+        // porque cambia la firma y arrastra a las seis ranuras del ejecutor.
         unsafe { IRQ_DE_RANURA[indice].enable() };
 
         // Apagado al salir: `SPE = 0` es el estado entre transferencias
@@ -483,11 +501,27 @@ impl<'d> Ranura<'d> {
     ///
     /// Existe porque el plazo de D3 se calcula con
     /// `f_reloj_sancionado(ranura)` y el `MBR` solo da potencias de dos: con
-    /// 10 MHz pedidos y el kernel en HSI 64 gana `/8` y el real es 8 MHz. Un
-    /// plazo calculado con el pedido sale corto en la misma proporcion, y con
-    /// `FACTOR_PLAZO = 1` eso son reinicios de tramas sanas (riesgo 2 de la
-    /// spec). `nueva` ya lo imprime por `defmt`; esto es para que el
-    /// planificador no tenga que leer el log ni repetir la cuenta.
+    /// 10 MHz pedidos gana `/4` y el real es **8 MHz**. Un plazo calculado con
+    /// el pedido sale corto en la misma proporcion, y con `FACTOR_PLAZO = 1` eso
+    /// son reinicios de tramas sanas (riesgo 2 de la spec). `nueva` ya lo
+    /// imprime por `defmt`; esto es para que el planificador no tenga que leer
+    /// el log ni repetir la cuenta.
+    ///
+    /// **De donde salen esos 32 MHz de kernel, que no son el HSI de 64.** El
+    /// mux del SPI5 se queda en su cero: `ClockMux::default()` es
+    /// `mem::zeroed()` (`_generated.rs:5317-5319`) e `init()` escribe
+    /// `set_spi5sel(self.spi5sel)` **incondicionalmente** (`:5327`, `:5397`), y
+    /// el cero de ese campo es `Spisel45::Pclk2` (metapac `rcc_n6.rs`
+    /// `:43346-43348`). `pclk2` es `sys / hpre / ppre2` (embassy `rcc/n6.rs:462`,
+    /// publicado en `:1413`), y con los defectos que `usb::configuracion()` no
+    /// toca -- `sys: SysClk::Hsi` (`:196`), `ahb: Div2` (`:225`), `apb2: Div1`
+    /// (`:227`) -- eso da 64 / 2 / 1 = **32 MHz**. ES0620 sec.2.2.1 (el
+    /// prescaler de APB que no funciona y deja `pclk` replicando a `hclk`) da el
+    /// mismo numero por otro camino.
+    ///
+    /// **Techo del enlace, por tanto: 16 MHz** (`/2`, el divisor mas pequeno).
+    /// El peldano 2 de D8, 34,5 MHz, **no es alcanzable** con este kernel; es
+    /// el #380.
     pub fn f_sck_hz(&self) -> u32 {
         self.f_sck_hz
     }
@@ -662,9 +696,21 @@ impl<'d> Ranura<'d> {
             w.set_suspc(true);
             w.set_modfc(true);
         });
-        // ...y otra vez el pendiente: entre el paso 1 y este, `CSUSP` y el
-        //    apagado pudieron levantar una bandera y dejar una ISR nueva
-        //    encolada. Ahora `SR` esta limpio, asi que esta es la ultima.
+        // ...y otra vez el pendiente. **No es porque `CSUSP` o el apagado
+        //    hayan podido levantar una ISR nueva**: una peticion al NVIC es
+        //    bandera Y habilitacion, y `EOTIE` lleva en cero desde el paso 1,
+        //    asi que ninguna bandera de los pasos 3 a 7 pudo pedir nada.
+        //
+        //    Lo que este `unpend` recoge es lo que quedo **de antes**, y son dos
+        //    cosas concretas: (a) una ISR que se hizo pendiente mientras el paso
+        //    2 tenia las interrupciones enmascaradas -- `rcc::enable_and_reset`
+        //    corre en seccion critica y el `defmt::error!` de la escalada
+        //    tambien --, que no pudo correr y sigue encolada; y (b) la escritura
+        //    de `IER` del paso 1 todavia en vuelo hacia el periferico cuando el
+        //    `unpend` de aquel paso ya habia pasado. En los dos casos la ISR
+        //    correria DESPUES del reinicio, sobre una ranura que la tarea ya
+        //    rearmo, y registraria un resultado que no es suyo. Ahora `SR` esta
+        //    limpio y `EOTIE` en cero, asi que esta es la ultima.
         NVIC::unpend(IRQ_DE_RANURA[indice]);
         // 8. Contar y seguir: lo hace la tarea con `Evento::PlazoVencido`
         //    (`core::maestro_j2`). Aqui, nada.

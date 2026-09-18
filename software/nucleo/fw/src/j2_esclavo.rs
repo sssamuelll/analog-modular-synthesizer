@@ -182,7 +182,8 @@
 //!    maestro (PA3, CN15 pin 17) a **PE10** (CN15 pin 27, UM3417 Rev 3
 //!    Tabla 13, p. 32) con ese pin en `Input` y la linea `EXTI10`. **No esta
 //!    implementado**: es una casilla de EN-PLACA, y cambiarlo son dos
-//!    constantes de este archivo y el `bind_interrupts!` del binario.
+//!    constantes de este archivo y la linea `EXTI11` de
+//!    [`crate::j2_banco::IrqsBanco`].
 
 use core::future::poll_fn;
 use core::mem::ManuallyDrop;
@@ -225,9 +226,25 @@ pub static TRAMAS_OK: AtomicU32 = AtomicU32::new(0);
 pub static TRAMAS_CORTAS: AtomicU32 = AtomicU32::new(0);
 
 /// Cuantas veces soltar los canales del esclavo tuvo que escalar al reset del
-/// GPDMA1 por RCC (`j2_spi::soltar_canales`, D4.2). Se cuenta aparte de
-/// `j2_spi::ESCALADAS_GPDMA` para saber **quien** escalo, aunque el reset que
-/// aplica sea el mismo controlador entero.
+/// GPDMA1 por RCC (`j2_spi::soltar_canales`, D4.2).
+///
+/// **No es un contador aparte: es el desglose.** `soltar_canales` la llaman los
+/// dos extremos y ella sube `j2_spi::ESCALADAS_GPDMA` siempre, asi que **toda
+/// escalada del esclavo esta tambien en ese total**. Este contador solo anade
+/// *«y ademas fue mia»*. De ahi la unica forma correcta de separarlas:
+///
+/// ```text
+/// escaladas del esclavo = REARMES_ESCALADOS
+/// escaladas del maestro = ESCALADAS_GPDMA - REARMES_ESCALADOS
+/// ```
+///
+/// con `saturating_sub`, porque los dos atomicos se leen por separado. Quien
+/// publique `ESCALADAS_GPDMA` a secas bajo una etiqueta de *«maestro»* estaria
+/// contando las del esclavo dos veces; lo hacen bien `resistencia_j2` y
+/// `barrido_retardo`, cada uno con su `escaladas_del_maestro`.
+///
+/// El reset que se aplica es el mismo -- el GPDMA1 entero -- venga de donde
+/// venga; lo que estos dos numeros dicen es **quien** lo pidio.
 pub static REARMES_ESCALADOS: AtomicU32 = AtomicU32::new(0);
 
 /// La bandera del flanco: la pone [`IsrCs`] y la consume [`flanco_de_cs`].
@@ -236,8 +253,8 @@ static FLANCO_CS: AtomicBool = AtomicBool::new(false);
 /// A quien despertar cuando `CS` suba.
 static WAKER_CS: AtomicWaker = AtomicWaker::new();
 
-/// La ISR del flanco de subida de `CS`. La ata el binario:
-/// `bind_interrupts!(struct IrqsEsclavo { EXTI11 => j2_esclavo::IsrCs; ... })`.
+/// La ISR del flanco de subida de `CS`. La ata [`crate::j2_banco::IrqsBanco`],
+/// con `EXTI11 => IsrCs`; los binarios no atan nada por su cuenta (R23).
 ///
 /// Hace lo minimo: limpia el pendiente, pone la bandera y despierta. Es
 /// generica en la linea (`I: Interrupt`) como [`crate::j2_spi::Isr`], pero el
@@ -319,8 +336,9 @@ impl<'d> Esclavo<'d> {
     /// [`crate::j2_spi::soltar_canales`] resetea ese controlador y uno del
     /// HPDMA1 la dejaria muda. Es un error de compilacion.
     ///
-    /// `irqs` es el `Irqs` del `bind_interrupts!` del binario, y prueba en el
-    /// tipo las tres ataduras: los dos canales del GPDMA y `EXTI11 => IsrCs`.
+    /// `irqs` es [`crate::j2_banco::IrqsBanco`], el unico `bind_interrupts!` del
+    /// banco (R23), y prueba en el tipo las tres ataduras que este constructor
+    /// necesita: los dos canales del GPDMA y `EXTI11 => IsrCs`.
     ///
     /// **Se construye en el arranque**, antes de `j2_ejecutor::arrancar`: los
     /// registros del EXTI se tocan con lectura-modificacion-escritura sin
