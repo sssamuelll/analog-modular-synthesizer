@@ -228,6 +228,11 @@ pub struct Ranura<'d> {
     canal_rx: dma::Channel<'d>,
     req_tx: dma::Request,
     req_rx: dma::Request,
+    /// El `f_sck` **real** que sale del `MBR`, no el pedido. Se guarda porque
+    /// el plazo de D3 se calcula con `f_reloj_sancionado(ranura)` y el `MBR`
+    /// redondea hacia abajo: con 10 MHz pedidos y el kernel en HSI 64 el real
+    /// es 8. Lo lee [`Ranura::f_sck_hz`].
+    f_sck_hz: u32,
     ciclos_por_cuarto_tsck: u32,
     retardo_cuartos: u8,
     _sck: Flex<'d>,
@@ -418,6 +423,7 @@ impl<'d> Ranura<'d> {
             canal_rx,
             req_tx,
             req_rx,
+            f_sck_hz: f_sck,
             ciclos_por_cuarto_tsck: ciclos_cuarto,
             retardo_cuartos: cfg.retardo_tsck_cuartos,
             _sck: sck,
@@ -425,6 +431,20 @@ impl<'d> Ranura<'d> {
             _miso: miso,
             _nss: nss,
         }
+    }
+
+    /// El `f_sck` **real** de esta ranura, el que sale del `MBR`, no el que se
+    /// pidio en `Config::f_sck_hz`.
+    ///
+    /// Existe porque el plazo de D3 se calcula con
+    /// `f_reloj_sancionado(ranura)` y el `MBR` solo da potencias de dos: con
+    /// 10 MHz pedidos y el kernel en HSI 64 gana `/8` y el real es 8 MHz. Un
+    /// plazo calculado con el pedido sale corto en la misma proporcion, y con
+    /// `FACTOR_PLAZO = 1` eso son reinicios de tramas sanas (riesgo 2 de la
+    /// spec). `nueva` ya lo imprime por `defmt`; esto es para que el
+    /// planificador no tenga que leer el log ni repetir la cuenta.
+    pub fn f_sck_hz(&self) -> u32 {
+        self.f_sck_hz
     }
 
     /// Una transferencia entera: el orden de arranque de D2 (enmendado el

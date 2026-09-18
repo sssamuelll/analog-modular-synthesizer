@@ -26,18 +26,23 @@
 //! **El vector que presta su linea es `GFXTIM`.** Los STM32 no tienen
 //! interrupciones reservadas para software, asi que se toma un vector libre,
 //! igual que el ejemplo de embassy toma `UART4`/`UART5`
-//! (`examples/stm32h7/src/bin/multiprio.rs:130-145`). `GFXTIM` es el
+//! (`examples/stm32h7/src/bin/multiprio.rs:108-145`). `GFXTIM` es el
 //! temporizador del acelerador grafico: existe en el `Interrupt` del N657
 //! (`_generated.rs` de este build, `interrupt_mod!` linea 755) y el hub no lo
 //! usa (`grep -rn GFXTIM src/` fuera de este archivo da cero). Si algun dia el
 //! cerebro dibuja con el GFXTIM, se cambia por otro periferico ausente y se
 //! deja la razon aqui.
 //!
-//! **Las prioridades** (EN-PLACA, casilla del 11-09). `embassy_stm32::interrupt`
-//! numera al reves que la urgencia: `Priority::P0 = 0x0`, `P1 = 0x10`,
-//! `P2 = 0x20`... (`embassy-hal-internal/src/interrupt.rs:308-312`, la variante
-//! `prio-bits-4` que pide `embassy-stm32/Cargo.toml:164`), y el NVIC atiende
-//! antes el numero mas bajo. Asi que:
+//! **Las prioridades.** Lo que viene de EN-PLACA (casilla del 11-09) es la
+//! **relacion**: las ISR del SPI y de los canales del GPDMA por encima del
+//! ejecutor del J2, y este por encima del de hilo. Los dos numeros concretos
+//! (`P1` y `P2`) los elige esta tarea y no hay papel que los fije.
+//!
+//! `embassy_stm32::interrupt` numera al reves que la urgencia:
+//! `Priority::P0 = 0x0`, `P1 = 0x10`, `P2 = 0x20`...
+//! (`embassy-hal-internal/src/interrupt.rs:324-341`, la variante `prio-bits-4`
+//! que pide `embassy-stm32/Cargo.toml:164`; `P1` en `:331`, `P2` en `:332`), y
+//! el NVIC atiende antes el numero mas bajo. Asi que:
 //!
 //! - las ISR del SPI y de los canales del GPDMA van a **`P1`**, por encima;
 //! - el ejecutor del J2 va a **`P2`** ([`PRIORIDAD_EJECUTOR`]), y lo fija
@@ -53,29 +58,25 @@
 //! ... (no `GPDMA1_CH0`, que es el nombre del *periferico*).
 //!
 //! **`Bajada` y `Juez` son punteros a funcion, no un trait.** Hoy hay un solo
-//! planificador, el patron del banco de aqui abajo; el real llega cuando exista
-//! la cabecera en codigo (#267), y entonces se le pasan sus dos funciones sin
-//! tocar este archivo. Un trait con una sola implementacion seria abstraccion
-//! de adorno.
+//! planificador -- el del banco, que vive aparte en [`crate::j2_banco`] porque
+//! no sobrevive a la cabecera --; el real llega cuando exista la cabecera en
+//! codigo (#267), y entonces se le pasan sus dos funciones sin tocar este
+//! archivo. Un trait con una sola implementacion seria abstraccion de adorno.
+//! Este modulo **no conoce** ningun patron ni ningun sobre.
 //!
-//! **`f_reloj_hz` es el `f_sck` real, no el pedido.** El plazo de D3 se calcula
-//! con el reloj al que de verdad se cloca, y ese lo redondea hacia abajo el
-//! `MBR`: es el numero que `j2_spi::Ranura::nueva` imprime por `defmt` (`f_sck
-//! ... (pedido ...)`). El driver no lo expone, asi que lo pasa el llamador y
-//! tiene que ser **ese**: uno mas alto da plazos cortos y reinicia tramas sanas
-//! (riesgo 2 de la spec).
+//! **El plazo sale del `f_sck` de cada ranura, y lo da la ranura.** D3 pide
+//! `f_reloj_sancionado(ranura)`, que es el reloj al que de verdad se cloca, no
+//! el que se pidio: el `MBR` solo da potencias de dos y redondea hacia abajo
+//! (10 MHz pedidos con el kernel en HSI 64 son 8 reales). Por eso cada tarea
+//! usa `ranura.f_sck_hz()` y [`arrancar`] **no** recibe ningun reloj: no hay
+//! forma de pasarle uno equivocado ni de etiquetar el CSV de resistencia con un
+//! reloj que no existe.
 //!
-//! **Los dos HUECOS que este archivo arrastra:**
-//!
-//! 1. **La identidad se decreta.** Cada tarea manda `Evento::Identidad(true)`
-//!    al arrancar, porque el descubrimiento por I2C no existe todavia (#175).
-//!    Hasta entonces, "tiene identidad" es "el binario le paso una `Ranura`":
-//!    una ranura `None` no tiene tarea, no se cloca y no se cuenta (R-MJ6,
-//!    D7.4).
-//! 2. **El juez del banco no es el CRC del sobre.** [`juez_del_banco`] compara
-//!    la subida con un patron fijo. Es el sustituto de bench mientras la
-//!    cabecera no este en codigo (#267); el juez de verdad valida el sobre
-//!    (cabecera D6.1) y devuelve lo mismo: `true` es `SubidaOk`.
+//! **La identidad se decreta (HUECO).** Cada tarea manda
+//! `Evento::Identidad(true)` al arrancar, porque el descubrimiento por I2C no
+//! existe todavia (#175). Hasta entonces, "tiene identidad" es "el binario le
+//! paso una `Ranura`": una ranura `None` no tiene tarea, no se cloca y no se
+//! cuenta (R-MJ6, D7.4).
 //!
 //! El sello de vitalidad de [`SELLOS`] lo **lee** el supervisor del hub (#291),
 //! que es quien alimenta el IWDG; aqui solo sube (D5.4).
@@ -88,7 +89,7 @@ use embassy_stm32::interrupt;
 use embassy_stm32::interrupt::{InterruptExt, Priority};
 use embassy_time::{Duration, Instant, Ticker};
 use sam17_nucleo_core::maestro_j2::{
-    plazo_us, Accion, Evento, Ranura as Politica, Tsize, Umbrales, PERIODO_GIRO_US, RANURAS_SPI,
+    plazo_us, Evento, Ranura as Politica, Tsize, Umbrales, PERIODO_GIRO_US, RANURAS_SPI,
 };
 
 use crate::j2_spi::{Ranura, Resultado, LARGO_MAX};
@@ -112,8 +113,14 @@ unsafe fn GFXTIM() {
 
 /// Rellena la bajada de la ranura `n` y dice cuantos bytes se clocan.
 ///
-/// Puntero a funcion, no trait: hoy hay un solo planificador (el patron del
-/// banco); el real lo sustituye cuando exista la cabecera en codigo (#267).
+/// Puntero a funcion, no trait: hoy hay un solo planificador (el de
+/// [`crate::j2_banco`]); el real lo sustituye cuando exista la cabecera en
+/// codigo (#267).
+///
+/// **Contrato del planificador:** el `Tsize` que devuelve son los bytes que ha
+/// dejado escritos en `buf`, y no pasa de `LARGO_MAX`. El segundo lo asevera el
+/// driver (`j2_spi::Ranura::giro`, *"TSIZE no cabe en los buferes"*), asi que un
+/// planificador que se pase muere ahi y no cloca basura en silencio.
 pub type Bajada = fn(n: usize, buf: &mut [u8; LARGO_MAX]) -> Tsize;
 
 /// Dice si la subida de la ranura `n` vale. `true` = `Evento::SubidaOk`.
@@ -206,12 +213,11 @@ pub fn cuentas(n: usize) -> Cuentas {
 /// binarios, que son los que tienen los pines y los canales). Las `None` no
 /// tienen tarea: R-MJ6 y D7.4.
 ///
-/// `f_reloj_hz` es el `f_sck` real de esas ranuras -- ver la cabecera del
-/// modulo.
+/// No hay parametro de reloj: el plazo de D3 sale de `ranura.f_sck_hz()`, que
+/// es el `f_sck` real de esa ranura -- ver la cabecera del modulo.
 pub fn arrancar(
     irq: impl InterruptNumber,
     ranuras: [Option<Ranura<'static>>; RANURAS_SPI],
-    f_reloj_hz: u32,
     bajada: Bajada,
     juez: Juez,
 ) {
@@ -231,9 +237,7 @@ pub fn arrancar(
             defmt::info!("J2 ranura {}: sin modulo, no entra al lazo (D7.4)", n);
             continue;
         };
-        spawner.spawn(defmt::unwrap!(tarea_ranura(
-            n, ranura, f_reloj_hz, bajada, juez
-        )));
+        spawner.spawn(defmt::unwrap!(tarea_ranura(n, ranura, bajada, juez)));
     }
 }
 
@@ -243,15 +247,12 @@ pub fn arrancar(
 /// junta tumbo las cuatro. Un plazo vencido se reinicia dentro de `giro` (D4) y
 /// el giro siguiente sale a su hora.
 #[embassy_executor::task(pool_size = RANURAS_SPI)]
-async fn tarea_ranura(
-    n: usize,
-    mut ranura: Ranura<'static>,
-    f_reloj_hz: u32,
-    bajada_fn: Bajada,
-    juez: Juez,
-) {
+async fn tarea_ranura(n: usize, mut ranura: Ranura<'static>, bajada_fn: Bajada, juez: Juez) {
     // R-MJ4: los umbrales son de `core`, no se copia ninguno aqui.
     let umbrales = Umbrales::POR_DEFECTO;
+    // D3 pide `f_reloj_sancionado(ranura)`: el reloj REAL de esta ranura, el
+    // que sale del `MBR`, no el que se pidio. Lo da la propia ranura.
+    let f_sck_hz = ranura.f_sck_hz();
     let mut politica = Politica::nueva(umbrales);
     // HUECO: identidad por decreto hasta que exista el descubrimiento por I2C
     // (#175). Que el binario haya construido esta `Ranura` ES la identidad.
@@ -263,15 +264,11 @@ async fn tarea_ranura(
     // es 1 us (`embassy-time-driver/src/tick.rs`, `TICK_HZ` por defecto
     // 1_000_000), asi que 125 us es exacto y no hay deriva por redondeo.
     //
-    // Cuando un giro se pasa del periodo -- un plazo vencido son 220 us de
-    // plazo mas 20 de reinicio (spec sec.3) --, el `Ticker` NO se salta los
-    // tics perdidos: su `next` suma `duration` a `expires_at` y devuelve
-    // `Ready` mientras siga atrasado (`embassy-time/src/timer.rs:470-480`). O
-    // sea que la ranura sale al instante y cloca en rafaga hasta reengancharse a
-    // la rejilla, en vez de esperar la alineacion que la cuenta de la spec
-    // sec.3 le concede. Clocar ANTES no rompe nada: ni el minimo de `F_SUBIDA`
-    // (cabecera D6.3) ni la cota de CPU de D7.2, que se calcula con un
-    // reinicio por giro y la rafaga da menos giros por segundo, no mas.
+    // El `Ticker` no se salta los tics perdidos por su cuenta: `next` suma
+    // `duration` a `expires_at` y devuelve `Ready` mientras siga atrasado
+    // (`embassy-time/src/timer.rs:470-480`). Tras un giro que se pasa del
+    // periodo eso sacaria los dos giros siguientes pegados, y por eso el brazo
+    // de `PlazoVencido` lo realinea -- ver alli.
     let mut ticker = Ticker::every(Duration::from_micros(PERIODO_GIRO_US as u64));
 
     loop {
@@ -285,7 +282,7 @@ async fn tarea_ranura(
         let _ = politica.paso(Evento::Armada, ahora_us());
 
         // D3: el plazo sale de la politica, con el `f_sck` real.
-        let plazo = Duration::from_micros(plazo_us(tsize, f_reloj_hz, &umbrales) as u64);
+        let plazo = Duration::from_micros(plazo_us(tsize, f_sck_hz, &umbrales) as u64);
         let (res, tardios) = ranura.giro(&bajada, &mut subida, tsize, plazo).await;
 
         // D2 regla 1: los `EOT` que el armado descarto por venir de una
@@ -305,15 +302,31 @@ async fn tarea_ranura(
                 let _ = politica.paso(ev, ahora_us());
             }
             Resultado::PlazoVencido => {
-                let accion = politica.paso(Evento::PlazoVencido, ahora_us());
-                // D4 ya corrio DENTRO de `giro`: esto no es una segunda
-                // ejecucion, es la comprobacion de que la politica y el
-                // transporte cuentan la misma historia. Si algun dia difieren,
-                // uno de los dos esta mal.
-                defmt::debug_assert!(
-                    accion == Accion::Reiniciar,
-                    "J2: plazo vencido sin Accion::Reiniciar"
-                );
+                // D4 ya corrio DENTRO de `giro`; aqui solo se cuenta. La
+                // `Accion::Reiniciar` que devuelve la politica es redundante a
+                // proposito y no se ejecuta otra vez.
+                let _ = politica.paso(Evento::PlazoVencido, ahora_us());
+                // Realinear el lazo a partir de AHORA, y perder los tics que
+                // el giro largo se comio en vez de recuperarlos. Lo que honra
+                // es `T_GAP`: sin esto los dos giros siguientes saldrian
+                // pegados -- el NSS subiendo y bajando casi sin hueco -- justo
+                // cuando al esclavo le acaban de arrancar el `CS` y esta en su
+                // `SPE = 0` -> `SPE = 1` antes de rearmar el DMA de recepcion.
+                // `T_GAP` existe para ese rearme y es una constante del
+                // planificador del cerebro, HUECO con 2 us provisionales
+                // (cabecera `2026-09-02-cabecera-j2-design.md`, D8: *"T_GAP es
+                // una constante del planificador del cerebro, HUECO hasta el
+                // bring-up, con valor provisional de 2 us"*); en regimen lo
+                // aportan los 125 us de cadencia, y una rafaga lo borraria.
+                //
+                // Lo que NO rompe: el techo de recuperacion de la spec sec.3.
+                // Realineado son 220 de plazo + 20 de reinicio + como mucho
+                // 125 de alineacion = 365 us, por debajo de los 490 (tres
+                // giros) que ese calculo publica.
+                //
+                // `Ticker::reset` es `expires_at = Instant::now() + duration`
+                // (`embassy-time/src/timer.rs:402-404`).
+                ticker.reset();
             }
         }
 
@@ -341,55 +354,6 @@ fn publicar_cuentas(n: usize, politica: &Politica) {
 
 fn ahora_us() -> u64 {
     Instant::now().as_micros()
-}
-
-/// El largo clocado del patron del banco, en bytes.
-///
-/// 25 = `VENTANA_SUBIDA + 1`, el minimo que la Voz cloca para muestrear un
-/// registro entero (cabecera `2026-09-02-cabecera-j2-design.md`, D6.3: la
-/// ventana de la Voz son 24 bytes de registro, y el maestro cloca siempre un
-/// byte mas por la cola de la regla 4).
-pub const LARGO_BANCO: usize = 25;
-
-/// Lo que el esclavo del banco tiene que devolver, byte a byte: `0xA5 ^ i`.
-///
-/// Un patron que cambia con el indice caza un desplazamiento de un byte, que es
-/// justo el sintoma que deja un esclavo interrumpido a mitad de trama (D4). Un
-/// relleno constante no lo veria.
-pub const PATRON_SUBIDA: [u8; LARGO_BANCO] = {
-    let mut p = [0u8; LARGO_BANCO];
-    let mut i = 0;
-    while i < LARGO_BANCO {
-        p[i] = 0xA5 ^ (i as u8);
-        i += 1;
-    }
-    p
-};
-
-const TSIZE_BANCO: Tsize = match Tsize::nuevo(LARGO_BANCO as u16) {
-    Some(t) => t,
-    None => panic!("LARGO_BANCO no puede ser cero (R-MJ1)"),
-};
-
-/// La bajada del banco: 25 bytes `0x5A ^ i`, iguales en las seis ranuras.
-///
-/// Es un planificador de mentira y se dice: el de verdad arma el sobre de la
-/// cabecera (#267). Lo unico que este tiene que hacer bien es clocar un largo
-/// realista y un contenido que el esclavo pueda comprobar.
-pub fn bajada_del_banco(_n: usize, buf: &mut [u8; LARGO_MAX]) -> Tsize {
-    for (i, b) in buf[..LARGO_BANCO].iter_mut().enumerate() {
-        *b = 0x5A ^ (i as u8);
-    }
-    TSIZE_BANCO
-}
-
-/// El juez del banco: la subida vale si es exactamente [`PATRON_SUBIDA`].
-///
-/// **Es el sustituto de bench del CRC del sobre** (cabecera D6.1), no el juez de
-/// verdad. Rechaza entero, como D8: un solo byte fuera de sitio es
-/// `SubidaMala`, y 40 seguidas ponen `muda` (D7.3).
-pub fn juez_del_banco(_n: usize, subida: &[u8]) -> bool {
-    subida == PATRON_SUBIDA
 }
 
 /// `SendSpawner::spawn` exige `S: Send` (`embassy-executor/src/spawner.rs:223`),
