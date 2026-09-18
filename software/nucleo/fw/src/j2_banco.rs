@@ -65,6 +65,59 @@ pub fn bajada_del_banco(_n: usize, buf: &mut [u8; LARGO_MAX]) -> Tsize {
     TSIZE_BANCO
 }
 
+/// Los largos **clocados** de los mensajes de la cabecera, en bytes, con su
+/// nombre. Es `TSIZE` (D1): sobre de 6 bytes + carga + CRC + el byte de cola de
+/// D6.4, con el relleno a la ventana donde toca.
+///
+/// Fuente, numero a numero: `docs/superpowers/specs/`
+/// `2026-09-02-cabecera-j2-design.md`, sec.4 *«Los largos contra R-E1»*, la
+/// tabla de `:718-727` (columna *«clocados (bytes)»*). Las tres filas con
+/// relleno son las que la tabla escribe con flecha -- `TONO` nada cambio
+/// `9 → 25`, `COMPUERTA` `11 → 25` y `NADA` `7 → 25` --, y el numero que entra
+/// aqui es el de la derecha, que es el que se cloca.
+///
+/// La usa `src/bin/plazos_j2.rs`: un pulso de GPIO por mensaje contra el
+/// osciloscopio, para sellar `FACTOR_PLAZO` y `T_SUELO_PLAZO` (spec del maestro
+/// sec.9, riesgo 2).
+///
+/// **La otra fuente es `hardware/02-midi-cv/trama_j2_budget.py`, y hoy no dice
+/// lo mismo.** Ese guion declara el trafico en **bits de carga por flujo**, sin
+/// sobre ni cola: `BITS_BLOQUE_TONO = 288` (`:104`),
+/// `BITS_ESTADO_COMPUERTA = 16` (`:105`), `BITS_EVENTO = 16+2+16+16` (`:106`) y
+/// `BITS_CROSSPOINT = 256` (`:110`). La cabecera ya mando la enmienda que los
+/// junta -- su mapa de enmiendas, `:956`: 288 → **328**, 16 → **200**,
+/// 50 → **112**, 256 → **568** -- y esta **pendiente**. Mientras no se aplique,
+/// esta tabla y el guion son **dos cuentas de lo mismo**; esta copia la del
+/// papel, que es el que manda. El dia que el guion se enmiende, deberian ser
+/// una sola: el guion las exporta y esto las lee.
+pub const LARGOS_MENSAJES: [(&str, u16); 8] = [
+    ("HOLA", 9),
+    ("EVENTO", 14),
+    ("TONO_nada_cambio", 25),
+    ("TONO_dieciseis", 41),
+    ("COMPUERTA", 25),
+    ("BAHIA", 71),
+    ("SET_dieciseis", 103),
+    ("NADA", 25),
+];
+
+// El mismo test que los dos de arriba -- lo evalua el compilador y falla la
+// puerta -- contra lo unico que esta tabla puede tener mal y no se veria hasta
+// la placa: un largo de cero (R-MJ1, y `Tsize::nuevo` devolveria `None`) o uno
+// que no cabe en los buferes del driver (`giro` aseveraria en la placa).
+const _: () = {
+    let mut i = 0;
+    while i < LARGOS_MENSAJES.len() {
+        let (_, largo) = LARGOS_MENSAJES[i];
+        assert!(largo > 0, "R-MJ1: ningun mensaje se cloca con TSIZE = 0");
+        assert!(
+            largo as usize <= LARGO_MAX,
+            "un mensaje no cabe en LARGO_MAX"
+        );
+        i += 1;
+    }
+};
+
 /// El juez del banco: la subida vale si es exactamente [`PATRON_SUBIDA`].
 ///
 /// Encaja en `j2_ejecutor::Juez`. Rechaza entero, como D8 del maestro: un solo

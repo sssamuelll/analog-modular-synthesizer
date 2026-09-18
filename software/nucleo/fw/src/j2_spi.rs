@@ -447,6 +447,13 @@ impl<'d> Ranura<'d> {
         self.f_sck_hz
     }
 
+    /// Cambia el retardo entre `SPE = 1` y `CSTART`, en cuartos de `T_SCK`.
+    /// Existe para el barrido del bring-up (`src/bin/barrido_retardo.rs`); en
+    /// produccion el valor viene en `Config::retardo_tsck_cuartos` y no se toca.
+    pub fn fijar_retardo_cuartos(&mut self, cuartos: u8) {
+        self.retardo_cuartos = cuartos;
+    }
+
     /// Una transferencia entera: el orden de arranque de D2 (enmendado el
     /// 11-09) y las DOS esperas bajo UN plazo (D2, D3). Devuelve el resultado
     /// y cuantos `EOT` tardios descarto el armado (D2, regla 1).
