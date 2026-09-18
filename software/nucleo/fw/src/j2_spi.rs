@@ -18,8 +18,9 @@
 //! - las DOS esperas (los dos DMA y el `EOT` por `EOTIE`) bajo UN solo plazo
 //!   (D2, D3), con el orden de arranque enmendado el 11-09 -- la espera de al
 //!   menos un `T_SCK` anclada entre `SPE = 1` y `CSTART`;
-//! - los ocho pasos del reinicio de D4, en orden, con su pagina del RM0486;
-//! - ninguna espera propia sin cota (R-MJ2), y nunca una escritura a `TXDR`
+//! - los ocho pasos del reinicio de D4, en orden, con su pagina del RM0486, y
+//!   `soltar_canales` con cota `T_CANAL` (enmienda del 18-09, #368);
+//! - ningun bucle sincrono sin cota (R-MJ2), y nunca una escritura a `TXDR`
 //!   para desatascar (R-MJ3).
 //!
 //! **No sabe nada del sobre** (D8): recibe un bufer de bajada, uno de subida y
@@ -38,6 +39,7 @@
 use core::future::Future;
 use core::mem::ManuallyDrop;
 use core::pin::Pin;
+use core::sync::atomic::{AtomicU32, Ordering};
 use core::task::{Context, Poll};
 
 use embassy_futures::join::join;
@@ -62,6 +64,19 @@ pub const LARGO_MAX: usize = 128;
 /// Cota del sondeo de `SUSP` en el paso 3 de D4, en microsegundos.
 /// **ESTIMADO** (D4.3): no hay cifra en el manual; la sella el bring-up.
 pub const T_SUSP_US: u64 = 10;
+
+/// Cota del sondeo de `is_running()` al soltar los canales del GPDMA, en
+/// microsegundos. **ESTIMADO** (D4.2, enmienda del 18-09, #368), de la misma
+/// clase que `T_SUSP`: RM0486 Rev 4, sec.19.4.3 p. 942 y sec.19.4.4 p. 943
+/// -- la suspension y el reset de un canal solo se completan al terminar la
+/// rafaga en curso (*"Wait for the channel to be effectively in suspended
+/// state means wait for the completion of any ongoing GPDMA transfer over its
+/// master port"*), y esa rafaga es de bytes, no de bloques.
+pub const T_CANAL_US: u64 = 10;
+
+/// Cuantas veces D4.2 tuvo que escalar al reset del GPDMA1 por RCC porque un
+/// canal no paro dentro de `T_CANAL`. Vive en `fw`, no en la politica.
+pub static ESCALADAS_GPDMA: AtomicU32 = AtomicU32::new(0);
 
 /// Lo que comparten la ISR de una ranura y su tarea (D2, reglas 1-3).
 pub struct EstadoRanura {
@@ -104,6 +119,15 @@ pub enum Resultado {
     Ok,
     /// El plazo vencio antes: el periferico se reinicio (D4).
     PlazoVencido,
+}
+
+/// Como quedaron los dos canales del GPDMA al soltarlos (D4.2).
+#[derive(Clone, Copy, PartialEq, Eq, Debug, defmt::Format)]
+pub enum Soltado {
+    /// Los dos pararon dentro de `T_CANAL` y su `Drop` entro y salio.
+    Limpio,
+    /// Uno no paro: se olvidaron los dos y se reseteo el GPDMA1 por RCC.
+    Escalado,
 }
 
 /// Lo que se elige por enlace al construir la ranura.
@@ -249,8 +273,8 @@ impl<'d> Ranura<'d> {
         let divisor = 1u32 << (mbr + 1);
         let f_sck = f_ker / divisor;
         defmt::assert!(
-            f_sck <= cfg.f_sck_hz,
-            "J2: ni con MBR = /256 se baja al reloj sancionado"
+            f_sck > 0 && f_sck <= cfg.f_sck_hz,
+            "J2: el reloj de kernel no da un f_sck util dentro del sancionado"
         );
 
         // CFG1: `DSIZE = 7` son 8 bits (el campo es largo-1, sec.67.4.9
@@ -433,22 +457,17 @@ impl<'d> Ranura<'d> {
     /// registros, que son `Copy`.
     fn reiniciar(
         regs: pac::spi::Spi,
-        mut tx: ManuallyDrop<Transfer<'_>>,
-        mut rx: ManuallyDrop<Transfer<'_>>,
+        tx: ManuallyDrop<Transfer<'_>>,
+        rx: ManuallyDrop<Transfer<'_>>,
     ) {
         // 1. Silenciar la ISR. Sin esto el `CSUSP` del paso 3 produce `SUSP`,
         //    `SUSP` dispara la ISR (`EOTIE` la cubre, sec.67.11.5, p. 3490) y
         //    la ISR limpia `SUSPC` antes de que el paso 3 lo vea.
         regs.ier().modify(|w| w.set_eotie(false));
-        // 2. Soltar el DMA. Es el paso 1 del cierre del manual, sec.67.4.14,
-        //    p. 3451: *"Disable DMA requests for Tx and Rx in the DMA
-        //    registers"*. El `Drop` de embassy (gpdma/mod.rs:1287) pide el
-        //    reset y espera a que el canal pare; esa espera es la de embassy,
-        //    declarada y sin cota escrita (spec D4.2, sec.9 riesgo 6, #368).
-        unsafe {
-            ManuallyDrop::drop(&mut tx);
-            ManuallyDrop::drop(&mut rx);
-        }
+        // 2. Soltar el DMA, con cota. Es el paso 1 del cierre del manual,
+        //    sec.67.4.14, p. 3451: *"Disable DMA requests for Tx and Rx in the
+        //    DMA registers"*.
+        let _ = soltar_canales(tx, rx);
         // 3. Suspender, con cota `T_SUSP`. sec.67.11.1, p. 3483: *"the CSTART
         //    bit is reset at the end of the current frame and communication is
         //    suspended. The user has to check SUSP flag"*.
@@ -480,6 +499,54 @@ impl<'d> Ranura<'d> {
         // 8. Contar y seguir: lo hace la tarea con `Evento::PlazoVencido`
         //    (`core::maestro_j2`). Aqui, nada.
     }
+}
+
+/// D4 paso 2 con cota (enmienda del 18-09, #368). Nunca gira sin cota: pide el
+/// reset a los dos canales, sondea `is_running()` como maximo `T_CANAL` y solo
+/// entonces los suelta, con lo que el `Drop` de embassy (gpdma/mod.rs:1287,
+/// `request_reset()` y luego `while self.is_running() {}`) entra y sale.
+///
+/// Si un canal no para dentro de la cota, escala: **no** suelta los dos
+/// `Transfer` y resetea el GPDMA1 entero por RCC. Las otras ranuras veran sus
+/// futuros de DMA resolverse, no recibiran `EOT`, venceran su plazo y
+/// ejecutaran D4 cada una: un reinicio de las seis bajo control y dentro de los
+/// 50 ms del modulo, no un reinicio del chip.
+///
+/// Que 10 us sea una cota y no un numero suelto lo sostiene RM0486 Rev 4,
+/// sec.19.4.4 p. 943 (y sec.19.4.3 p. 942 para la suspension): el paso 2 del
+/// abort dice *"Wait for the channel to be effectively in suspended state means
+/// wait for the completion of any ongoing GPDMA transfer over its master
+/// port"*, y el paso 3 resetea. Lo que se espera es una rafaga, no un bloque.
+///
+/// Lo usa tambien el esclavo (tarea 9).
+pub fn soltar_canales(
+    mut tx: ManuallyDrop<Transfer<'_>>,
+    mut rx: ManuallyDrop<Transfer<'_>>,
+) -> Soltado {
+    tx.request_reset();
+    rx.request_reset();
+    let limite = Instant::now() + Duration::from_micros(T_CANAL_US);
+    while tx.is_running() || rx.is_running() {
+        if Instant::now() >= limite {
+            // Los dos `Transfer` se quedan SIN soltar a proposito: el
+            // envoltorio `ManuallyDrop` no ejecuta el `Drop` de embassy, que
+            // es el bucle sin cota que estamos evitando. (`core::mem::forget`
+            // seria un no-op sobre el envoltorio, y el lint `forget_non_drop`
+            // lo diria.) Quien para los canales es el reset de RCC.
+            rcc::enable_and_reset::<peripherals::GPDMA1>();
+            ESCALADAS_GPDMA.fetch_add(1, Ordering::Relaxed);
+            defmt::error!(
+                "D4.2: un canal del GPDMA no paro en {} us; GPDMA1 reseteado por RCC",
+                T_CANAL_US
+            );
+            return Soltado::Escalado;
+        }
+    }
+    unsafe {
+        ManuallyDrop::drop(&mut tx);
+        ManuallyDrop::drop(&mut rx);
+    }
+    Soltado::Limpio
 }
 
 /// El futuro del `EOT`, que resuelve la ISR (D2).
