@@ -259,9 +259,10 @@ el driver:
 >
 > **Esa segunda casilla, con su orden (#364).** `probe-rs run` resetea el core
 > al cargar; si lo hace por `SYSRESETREQ` cae bajo la errata, y si tira de NRST
-> no. Hay que medirlo porque el `init` de embassy **ya deja `RTCSEL` en `0x0`**
-> en vez de su defecto `0x2` (ARRANQUE.md, «El reset por software y el ES0620
-> §2.2.22»), así que la condición de la errata está puesta hoy.
+> no. El `init` de embassy dejaba `RTCSEL` en `0x0` en vez de su defecto `0x2`,
+> y eso **ya está arreglado** en `usb::configuracion()` (ARRANQUE.md, «El reset
+> por software y el ES0620 §2.2.22»); pero hay que medirlo igual, porque el
+> aviso vale para cualquier driver futuro que mueva uno de los diez.
 >
 > 1. Lo gratis primero: `probe-rs run --help` — ver qué mandos de reset ofrece
 >    la 0.32.0 instalada, y con cuál arranca `cargo run --release`.

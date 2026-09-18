@@ -262,16 +262,22 @@ resetea el core al cargar. Cuál de los dos resets usa (`SYSRESETREQ` o tirar de
 NRST) es la casilla abierta del 2026-09-11 en `EN-PLACA.md`, y hasta que se
 mida hay que suponer el malo.
 
-Y no es un riesgo que espere a que un driver nuevo mueva un selector: **el
-`init` de embassy ya deja `RTCSEL` fuera de su defecto, hoy.** `config.ls.init()`
+Y no era un riesgo que esperase a que un driver nuevo moviera un selector: **el
+`init` de embassy dejaba `RTCSEL` fuera de su defecto.** `config.ls.init()`
 escribe `RTCSEL = Lsi` (`0x2`) en `rcc/bd.rs`, y después `config.mux.init()`
 (`rcc/n6.rs:1389`, contra `rcc/n6.rs:1038`) reescribe el mismo campo desde
 `ClockMux`, que por defecto es `mem::zeroed()`: `RTCSEL = 0x0`, «no clock
-provided». O sea que tras `embassy_stm32::init` el chip ya está en la condición
-de la errata. Se arregla con `config.rcc.mux.rtcsel = Rtcsel::Lsi` en
-`usb::configuracion()` — **HUECO**, no se toca aquí porque el árbol de relojes
-no es de esta tanda, y porque huele a fallo de embassy que merece su parte
-aguas arriba.
+provided». O sea que el chip salía de `embassy_stm32::init` ya en la condición
+de la errata, sin que nadie tocara nada.
+
+**Arreglado:** `usb::configuracion()` pone `config.rcc.mux.rtcsel =
+Rtcsel::Lsi` (`0x2`), así que **hoy el firmware deja los diez selectores en su
+defecto en operación normal** — `PERSEL` y `OTGPHY1CKREFSEL` no los toca nadie
+(lo que `usb.rs` fija de `CCIPR6` es `OTGPHY1SEL[13:12]`, que no es ninguno de
+los diez), los siete restantes salen a cero del `ClockMux`, y `RTCSEL` desde
+esa línea. **El fallo de embassy queda anotado para reportar aguas arriba**
+(`mux.init()` pisa a `ls.init()` sobre el mismo bitfield); el día que se
+arregle, esa línea sobra.
 
 **El síntoma parece un binario roto.** Si el ROM no arranca no hay `defmt`, no
 hay enumeración USB y el LED no dice nada que sirva: se lee como «el ELF está
