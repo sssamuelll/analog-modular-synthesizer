@@ -376,6 +376,106 @@ impl Maestro {
     }
 }
 
+use core::sync::atomic::{AtomicU32, Ordering};
+
+/// Las banderas de `SR` que la ISR copia (D2): `EOT`, `SUSP`, `OVR`, `MODF`.
+/// Un `u8` para que quepan en la palabra guardada del `Turno`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Banderas(u8);
+
+impl Banderas {
+    pub const NINGUNA: Banderas = Banderas(0);
+    pub const EOT: Banderas = Banderas(1);
+    pub const SUSP: Banderas = Banderas(2);
+    pub const OVR: Banderas = Banderas(4);
+    pub const MODF: Banderas = Banderas(8);
+    pub const fn con(self, otra: Banderas) -> Banderas {
+        Banderas(self.0 | otra.0)
+    }
+    pub const fn bits(self) -> u8 {
+        self.0
+    }
+    pub const fn de_bits(bits: u8) -> Banderas {
+        Banderas(bits)
+    }
+    pub const fn eot(self) -> bool {
+        self.0 & Self::EOT.0 != 0
+    }
+    pub const fn susp(self) -> bool {
+        self.0 & Self::SUSP.0 != 0
+    }
+}
+
+/// El turno de una transferencia: la generacion y el resultado guardado
+/// (spec D2, reglas 1 y 2). Lo comparten la ISR y la tarea, por eso va con
+/// atomicos y vive en un `static` de `fw`: la ISR `registra`, la tarea `arma`
+/// y `toma`. La generacion 0 es "nunca armada".
+///
+/// `guardado` empaqueta en una palabra `VALIDO | generacion[22:0] << 8 |
+/// banderas`, para que registrar y tomar sean un solo acceso atomico y no
+/// haya lectura rota entre dos palabras.
+pub struct Turno {
+    generacion: AtomicU32,
+    guardado: AtomicU32,
+    tardios: AtomicU32,
+}
+
+const VALIDO: u32 = 1 << 31;
+const MASCARA_GEN: u32 = (1 << 23) - 1;
+
+impl Turno {
+    pub const fn nuevo() -> Turno {
+        Turno {
+            generacion: AtomicU32::new(0),
+            guardado: AtomicU32::new(0),
+            tardios: AtomicU32::new(0),
+        }
+    }
+
+    /// Nueva generacion (nunca 0) y borra lo guardado (regla 2). Devuelve la
+    /// generacion y cuantos resultados se descartaron por tardios desde el
+    /// armado anterior (regla 1): los que la ISR registro con una generacion
+    /// que ya no era la armada, mas el que quedo guardado sin que la tarea
+    /// lo tomara.
+    pub fn armar(&self) -> (u32, u32) {
+        let mut g = self.generacion.load(Ordering::Relaxed).wrapping_add(1);
+        if g == 0 {
+            g = 1;
+        }
+        self.generacion.store(g, Ordering::Release);
+        let viejo = self.guardado.swap(0, Ordering::AcqRel);
+        let sobrante = (viejo & VALIDO != 0) as u32;
+        (g, self.tardios.swap(0, Ordering::AcqRel) + sobrante)
+    }
+
+    /// Desde la ISR. Guarda solo si `generacion` es la armada (regla 1); si
+    /// no, lo cuenta como tardio y devuelve `false`.
+    pub fn registrar(&self, generacion: u32, banderas: Banderas) -> bool {
+        if generacion == 0 || generacion != self.generacion.load(Ordering::Acquire) {
+            self.tardios.fetch_add(1, Ordering::AcqRel);
+            return false;
+        }
+        let palabra = VALIDO | ((generacion & MASCARA_GEN) << 8) | banderas.bits() as u32;
+        self.guardado.store(palabra, Ordering::Release);
+        true
+    }
+
+    /// Desde la tarea. Devuelve y borra el resultado de la generacion armada.
+    pub fn tomar(&self) -> Option<Banderas> {
+        let armada = self.generacion.load(Ordering::Acquire) & MASCARA_GEN;
+        let v = self.guardado.load(Ordering::Acquire);
+        if v & VALIDO == 0 || (v >> 8) & MASCARA_GEN != armada {
+            return None;
+        }
+        self.guardado.store(0, Ordering::Release);
+        Some(Banderas::de_bits(v as u8))
+    }
+
+    pub fn generacion(&self) -> u32 {
+        self.generacion.load(Ordering::Acquire)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -674,5 +774,93 @@ mod tests {
         assert_eq!(m.paso(RANURAS_SPI, Evento::GiroOk, 0), Accion::Nada);
         assert_eq!(m.paso(usize::MAX, Evento::PlazoVencido, 0), Accion::Nada);
         assert!(m.ranura(RANURAS_SPI).is_none());
+    }
+
+    // --- Turno (D2, reglas 1 y 2) ---
+
+    #[test]
+    fn turno_arma_generaciones_crecientes_y_nunca_cero() {
+        let t = Turno::nuevo();
+        assert_eq!(
+            t.generacion(),
+            0,
+            "sin armar, la generacion es 0: nunca armada"
+        );
+        let (g1, tardios1) = t.armar();
+        let (g2, tardios2) = t.armar();
+        assert_ne!(g1, 0);
+        assert_eq!(g2, g1 + 1);
+        assert_eq!((tardios1, tardios2), (0, 0));
+    }
+
+    #[test]
+    fn registrar_solo_acepta_la_generacion_armada() {
+        let t = Turno::nuevo();
+        let (g, _) = t.armar();
+        assert!(t.registrar(g, Banderas::EOT));
+        assert!(
+            !t.registrar(g + 1, Banderas::EOT),
+            "una generacion que no es la armada se descarta"
+        );
+        assert!(
+            !t.registrar(0, Banderas::EOT),
+            "la generacion 0 nunca esta armada"
+        );
+    }
+
+    #[test]
+    fn tomar_devuelve_una_vez_y_borra() {
+        let t = Turno::nuevo();
+        let (g, _) = t.armar();
+        assert_eq!(t.tomar(), None, "antes de la ISR no hay nada");
+        t.registrar(g, Banderas::EOT);
+        assert_eq!(t.tomar(), Some(Banderas::EOT));
+        assert_eq!(t.tomar(), None, "el resultado se consume una sola vez");
+    }
+
+    #[test]
+    fn armar_borra_lo_guardado_y_lo_cuenta_como_tardio() {
+        // La ISR llego despues de vencido el plazo: la tarea no lo tomo. Al
+        // armar la siguiente se descarta y se cuenta (D2 regla 1, `eot_tardios`).
+        let t = Turno::nuevo();
+        let (g, _) = t.armar();
+        t.registrar(g, Banderas::EOT);
+        let (_, tardios) = t.armar();
+        assert_eq!(tardios, 1);
+        assert_eq!(
+            t.tomar(),
+            None,
+            "la generacion nueva no hereda el resultado viejo (regla 2)"
+        );
+    }
+
+    #[test]
+    fn registrar_una_generacion_vieja_cuenta_tardio_al_siguiente_armar() {
+        let t = Turno::nuevo();
+        let (g, _) = t.armar();
+        let _ = t.armar();
+        assert!(!t.registrar(g, Banderas::EOT));
+        let (_, tardios) = t.armar();
+        assert_eq!(tardios, 1);
+    }
+
+    #[test]
+    fn los_tardios_se_entregan_una_sola_vez() {
+        let t = Turno::nuevo();
+        let (g, _) = t.armar();
+        t.registrar(g, Banderas::EOT);
+        assert_eq!(t.armar().1, 1);
+        assert_eq!(t.armar().1, 0);
+    }
+
+    #[test]
+    fn las_banderas_viajan_enteras() {
+        let t = Turno::nuevo();
+        let (g, _) = t.armar();
+        t.registrar(g, Banderas::EOT.con(Banderas::SUSP));
+        let b = t.tomar().unwrap();
+        assert!(b.eot() && b.susp());
+        assert_eq!(b.bits(), Banderas::EOT.bits() | Banderas::SUSP.bits());
+        assert_eq!(Banderas::de_bits(b.bits()), b);
     }
 }
