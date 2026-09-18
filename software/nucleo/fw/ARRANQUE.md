@@ -190,6 +190,103 @@ Hoy `fw/` está enlazado para A y solo para A. Para C:
    sirve el código. Eso es del papel del hub (riesgo 2), no de este archivo;
    se anota como HUECO, no se decide aquí.
 
+## El reset por software y el ES0620 §2.2.22
+
+Un `SCB::sys_reset()` a pelo en este chip puede dejarlo sin arrancar. La
+errata, entera (ES0620 Rev 5 §2.2.22, p. 12):
+
+> *«Upon a software reset, the RCC_CCIPRx registers duly revert to their
+> default values, but the clock switches controlled by the PERxSEL bitfields
+> in these registers may fail to output the corresponding clock signals.
+> Consequently, the boot ROM code execution may fail if the clock switch
+> states before the reset differ from their default states for peripherals
+> used during the ROM boot sequence.»*
+>
+> **Workaround.** *«Before performing a software reset, ensure that the
+> following clock switch control bitfields are set to their default values and
+> that the selected clocks are properly supplied to their corresponding
+> peripherals»*
+>
+> **Important.** *«To successfully switch from one clock signal to another,
+> ensure that both clock signals are present at their clock switch inputs
+> before updating the control bitfield value to reflect the new clock switch
+> state.»*
+
+Son **dos** obligaciones y no una: el valor por defecto **y** el reloj puesto.
+
+Los diez bitfields de esa tabla. La columna de defectos viene fusionada en el
+PDF, así que cada valor va **cotejado contra el valor de reset del registro**
+en el RM0486 Rev 4 — que es lo que la hace legible sin adivinar:
+
+| Registro | Reset (RM0486 Rev 4) | Bitfield | Defecto | Reloj que elige |
+|---|---|---|---|---|
+| `RCC_CCIPR6` | `0x0000_0000`, p. 534 | `XSPI1SEL[1:0]` | `0x0` | hclk5 |
+| | | `OTGPHY1CKREFSEL` | `0x0` | otgphy1_ker_ck |
+| `RCC_CCIPR7` | `0x0000_0200`, p. 536 | `PERSEL[2:0]` | `0x0` | hsi_ck |
+| | | `RTCSEL[1:0]` | `0x2` | lsi_ck |
+| `RCC_CCIPR8` | `0x0000_0000`, p. 538 | `SDMMC1SEL[1:0]` | `0x0` | hclku |
+| | | `SDMMC2SEL[1:0]` | `0x0` | hclku |
+| `RCC_CCIPR13` | `0x0000_0000`, p. 542 | `USART1SEL[2:0]` | `0x0` | pclk2 |
+| | | `USART2SEL[2:0]` | `0x0` | pclk1 |
+| | | `UART4SEL[2:0]` | `0x0` | pclk1 |
+| | | `UART5SEL[2:0]` | `0x0` | pclk1 |
+
+**El único defecto que no es cero es `RTCSEL = 0x2`**, y el valor de reset de
+`RCC_CCIPR7` lo confirma él solo: `0x0000_0200` es el bit 9 puesto, y `RTCSEL`
+son los bits [9:8] (RM0486 Rev 4, pp. 536-537); `0b10` es lsi_ck (p. 537).
+
+### La función
+
+`fw/src/reinicio.rs`: `reinicio::por_software() -> !`. Escribe los diez
+defectos por registro (`CCIPR6`, `CCIPR7`, `CCIPR8`, `CCIPR13`), una barrera
+`dsb`, y `SCB::sys_reset()`. Ese orden es el del workaround y no se baraja.
+
+Antes de todo enciende el LSI y espera `LSIRDY`, porque `RTCSEL = 0x2` elige
+lsi_ck y el «Important» de arriba pide el reloj puesto. Los otros relojes ya
+están: hclk5 y hclku son el AHB, pclk1 y pclk2 los APB, hsi_ck viene encendido
+de `Config::default()` (y además alimenta la PLL4 del PHY), e ic15_ck lo
+enciende `usb::configuracion()`. lsi_ck es el único que depende de
+`config.rcc.ls`, que no se ve desde `reinicio.rs`: por eso se enciende allí y
+la función no hereda una decisión de otro crate.
+
+**Nadie la llama todavía.** El firmware no se resetea a sí mismo: `panic-probe`
+se queda parado en el pánico. Existe para que el primero que resetee la use en
+vez de escribir `SCB::sys_reset()` a pelo.
+
+### La advertencia del banco: `probe-rs` y `SYSRESETREQ`
+
+Un `SYSRESETREQ` **es** un reset por software, así que cualquier cosa que
+resetee el core desde el depurador cae bajo esta errata — y `probe-rs`, que es
+como cargamos el firmware de cada día (camino A, `cargo run --release`),
+resetea el core al cargar. Cuál de los dos resets usa (`SYSRESETREQ` o tirar de
+NRST) es la casilla abierta del 2026-09-11 en `EN-PLACA.md`, y hasta que se
+mida hay que suponer el malo.
+
+Y no es un riesgo que espere a que un driver nuevo mueva un selector: **el
+`init` de embassy ya deja `RTCSEL` fuera de su defecto, hoy.** `config.ls.init()`
+escribe `RTCSEL = Lsi` (`0x2`) en `rcc/bd.rs`, y después `config.mux.init()`
+(`rcc/n6.rs:1389`, contra `rcc/n6.rs:1038`) reescribe el mismo campo desde
+`ClockMux`, que por defecto es `mem::zeroed()`: `RTCSEL = 0x0`, «no clock
+provided». O sea que tras `embassy_stm32::init` el chip ya está en la condición
+de la errata. Se arregla con `config.rcc.mux.rtcsel = Rtcsel::Lsi` en
+`usb::configuracion()` — **HUECO**, no se toca aquí porque el árbol de relojes
+no es de esta tanda, y porque huele a fallo de embassy que merece su parte
+aguas arriba.
+
+**El síntoma parece un binario roto.** Si el ROM no arranca no hay `defmt`, no
+hay enumeración USB y el LED no dice nada que sirva: se lee como «el ELF está
+mal» o «la carga falló». Antes de buscar el fallo en el código, prueba la
+salida: **el botón de NRST, o quitar y poner la alimentación.** Un reset de
+hardware no pasa por esta errata.
+
+### HUECO: ¿el reset del IWDG cae aquí?
+
+El texto de la errata dice «software reset», y el IWDG es **otra** fuente de
+reset. No se sabe si el reset del perro guardián cae bajo §2.2.22, y aquí no se
+supone: va como pregunta al caso abierto con ST (00268984) o al hilo de la
+comunidad. Hasta que haya respuesta, quien arme el IWDG no puede dar por
+sentada ninguna de las dos cosas.
+
 ## Herramientas, y qué hay en esta máquina (2026-09-11)
 
 | Herramienta | Para | Estado |
@@ -208,7 +305,10 @@ dejar los `-trusted.bin` listos.
 ## Fuentes
 
 - RM0486 Rev 4, `docs/reference/datasheets/stm32n6-rm0486-rev4.pdf`: §3.2
-  p. 183, §9.1 pp. 286-287.
+  p. 183, §9.1 pp. 286-287; §14.10.55-14.10.60 (los `RCC_CCIPRx`) pp. 534, 536,
+  537, 538 y 542.
+- ES0620 Rev 5, `docs/reference/datasheets/stm32n6-es0620-rev5.pdf`: §2.2.22 y
+  §2.2.23, p. 12.
 - AN5967 Rev 5, `docs/reference/datasheets/stm32n6-an5967-rev5.pdf`: §10
   p. 24 (Tabla 10), §11.2 p. 25.
 - embassy `dc6b716` (`~/.cargo/git/checkouts/embassy-*/dc6b716/`):
