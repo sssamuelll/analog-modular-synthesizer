@@ -23,14 +23,42 @@
 //! - **Contar bytes en el flanco de `CS`** (cabecera
 //!   `2026-09-02-cabecera-j2-design.md`, D6.2 y D6.4): *«"Entero" se mide en
 //!   bytes completos recibidos en ese giro -- un byte a medias no cuenta»*. Los
-//!   bytes completos los cuenta el GPDMA, no nosotros: `BNDT` solo baja cuando
-//!   el byte ya esta en memoria, asi que medio byte atrapado en el registro de
-//!   desplazamiento no suma. El byte de cola de D6.4 existe justo para que esa
-//!   cuenta no compita con el DMA por el ultimo byte (hallazgo H-14).
+//!   bytes completos los cuenta el GPDMA, no nosotros: `CxBR1.BNDT` *«is
+//!   decremented, indicating the remaining number of data items in the current
+//!   source block to be transferred»* (RM0486 Rev 4, sec.19.8.12, p. 997), y su
+//!   fuente es `RXDR`, asi que medio byte atrapado en el registro de
+//!   desplazamiento no llega a contarse. El byte de cola de D6.4 existe justo
+//!   para que esa cuenta no compita con el DMA por el ultimo byte
+//!   (hallazgo H-14).
 //! - **Rechazar entero y contar** (cabecera D8, punto 1): *«`CS` sube con menos
 //!   bytes que `largo + 7`»* es trama corta. Aqui el umbral es `esperado`, que
 //!   el binario pone en `j2_banco::LARGO_BANCO`; el `largo + 7` del sobre llega
 //!   con #267.
+//!
+//! # Las tres causas de trama corta, y como se distinguen
+//!
+//! `TRAMAS_CORTAS` no dice **por que** fue corta. Son tres cosas distintas y el
+//! banco tiene que poder separarlas; las tres se miran el dia de la placa con
+//! el analizador logico (riesgo 8 del papel del maestro).
+//!
+//! 1. **El maestro abortó la trama** -- lo que este esclavo existe para probar.
+//!    Firma: `TRAMAS_CORTAS` sube **a la vez que** `plazos_vencidos` del
+//!    maestro, giro a giro.
+//! 2. **El esclavo no llego a rearmar** (seccion siguiente). Firma:
+//!    `TRAMAS_CORTAS` sube **sin** `plazos_vencidos`.
+//! 3. **La carrera por el ultimo byte, y es nuestra.** El umbral `esperado`
+//!    incluye el byte de cola de D6.4 -- D8 mide contra `largo + 7`, cola
+//!    dentro --, o sea que el **ultimo** byte de datos tiene que estar contado
+//!    cuando leemos `BNDT`. Los ocho relojes de cola son el margen que D6.4
+//!    concede para el byte de datos anterior (hallazgo H-14), pero el byte de
+//!    cola en si **no tiene margen**: entre el flanco de `CS` y nuestro `BNDT`
+//!    hay la ISR, el despertar y un poll del ejecutor, y si el GPDMA pierde esa
+//!    carrera salen 24 donde hubo 25 y la trama se cuenta corta sin serlo.
+//!    Firma: `TRAMAS_CORTAS` subiendo con **una tasa baja y constante**, sin
+//!    `plazos_vencidos` y sin que el analizador vea ninguna trama truncada en
+//!    el cable. **El umbral no se toca por esto**: es D8 y es del papel. Lo que
+//!    se mide en el banco es si la carrera se pierde alguna vez, y si se
+//!    pierde, la respuesta vive en el papel (el byte de cola), no aqui.
 //!
 //! **La linea del #292.** Papel del maestro
 //! `2026-09-03-maestro-j2-recuperacion-design.md`, D4, parrafo *«Lo que le pasa
@@ -54,17 +82,35 @@
 //!
 //! # El hueco del rearme, que el banco tiene que medir
 //!
-//! Entre el flanco de `CS` y el `SPE = 1` de la vuelta siguiente hay
-//! microsegundos en que el esclavo **no escucha**. Si el maestro arranca la
-//! trama siguiente dentro de ese hueco, el esclavo la cuenta corta. Al piso no
-//! deberia pasar: 25 bytes a 10 MHz son 20 us de trama y `T_GAP` son 2 us
-//! provisionales (cabecera D8). Y si pasa, **deja firma**: `TRAMAS_CORTAS`
-//! subiendo **sin** `plazos_vencidos` del maestro es *«el esclavo no llego»*, y
-//! no *«el maestro se colgo»*. El flanco perdido en ese hueco no se descarta
-//! nunca -- la bandera de [`IsrCs`] se queda puesta y la consume la espera
-//! siguiente, que cuenta cero bytes y suma a `TRAMAS_CORTAS` --, porque
-//! borrarla al rearmar taparia justo lo que hay que medir. El dia de la placa
-//! lo mide el analizador logico (riesgo 8 del papel del maestro).
+//! Entre el flanco de `CS` y el `SPE = 1` de la vuelta siguiente hay un rato en
+//! que el esclavo **no escucha**: `SPE = 0`, `CFG1`, los dos `Channel::read` y
+//! `write`, `CFG1` otra vez y `SPE = 1`, mas los dos `request_pause` y el
+//! sondeo de `is_running` de `soltar_canales`, mas el despertar de la ISR y un
+//! poll del ejecutor. **Cuanto dura eso no esta acotado en ningun sitio** y no
+//! lo inventamos aqui: se mide en el banco.
+//!
+//! **Lo que lo hace inocuo no es `T_GAP`, es la cadencia.** `T_GAP` son 2 us
+//! provisionales (cabecera D8) y es el hueco **minimo** entre tramas, no el que
+//! hay en regimen: el maestro gira cada `PERIODO_GIRO_US` = 125 us y al piso de
+//! 10 MHz una trama de 25 bytes ocupa 25 x 8 / 10 MHz = 20 us, asi que el aire
+//! real son 125 - 20 = **105 us**. Si el rearme cupiera en 2 us no haria falta
+//! decir nada; lo que de verdad hay que comprobar es que cabe en 105.
+//!
+//! **Y los dos extremos comparten ejecutor.** El maestro y el esclavo del banco
+//! corren los dos como tareas del `EJECUTOR_J2` a `P2`
+//! (`j2_ejecutor::PRIORIDAD_EJECUTOR`), asi que el rearme del esclavo se
+//! planifica **contra** la tarea del maestro, no en paralelo con ella. Es una
+//! propiedad del banco -- en el instrumento de verdad el esclavo esta en otro
+//! chip -- y hay que tenerla delante al leer los numeros.
+//!
+//! **La firma.** Si el rearme no cabe, `TRAMAS_CORTAS` sube en **todas** las
+//! tramas, no de vez en cuando, y sin `plazos_vencidos` del maestro: es *«el
+//! esclavo no llego»* y no *«el maestro se colgo»*. El flanco perdido en el
+//! hueco no se descarta nunca -- la bandera de [`IsrCs`] se queda puesta y la
+//! consume la espera siguiente, que cuenta cero bytes y suma a
+//! `TRAMAS_CORTAS` --, porque borrarla al rearmar taparia justo lo que hay que
+//! medir. El dia de la placa lo mide el analizador logico (riesgo 8 del papel
+//! del maestro).
 //!
 //! # Lo que ponen los binarios (tarea 10)
 //!
@@ -82,16 +128,44 @@
 //! (los nombres de las lineas del N657 son `EXTI11`, `SPI4` y
 //! `GPDMA1_CHANNELn`, no `GPDMA1_CHn`, que es el nombre del *periferico*). El
 //! NVIC de `EXTI11` lo habilita y prioriza [`Esclavo::nuevo`]; los dos canales
-//! del GPDMA los prioriza el binario, como para el maestro. Y la tarea se lanza
-//! con el spawner del ejecutor del J2 despues de `j2_ejecutor::arrancar`:
+//! del GPDMA los prioriza el binario, como para el maestro. El esclavo se
+//! construye con el turbofish de `T` (ver [`Esclavo::nuevo`]) y la tarea se
+//! lanza con el spawner del ejecutor del J2 despues de `j2_ejecutor::arrancar`:
 //!
 //! ```ignore
-//! EJECUTOR_J2.spawner().spawn(j2_esclavo::tarea_esclavo(esclavo)).unwrap();
+//! let esclavo = j2_esclavo::Esclavo::nuevo::<peripherals::SPI4, _, _, _, _, _, _>(
+//!     pac::SPI4, p.PE2, p.PE14, p.PE13, p.PE11,
+//!     p.GPDMA1_CH2, p.GPDMA1_CH3, IrqsEsclavo, j2_banco::LARGO_BANCO,
+//! );
+//! // `#[embassy_executor::task]` devuelve `Result<SpawnToken, SpawnError>` y
+//! // `SendSpawner::spawn` devuelve `()`: se desenvuelve el token, no el spawn
+//! // (misma forma que `j2_ejecutor::arrancar`).
+//! EJECUTOR_J2.spawner().spawn(defmt::unwrap!(j2_esclavo::tarea_esclavo(esclavo)));
 //! ```
+//!
+//! **Y esa es la primera compilacion de verdad de este archivo.**
+//! [`Esclavo::nuevo`] y [`Esclavo::correr`] son genericos y hoy no los llama
+//! nadie, asi que la puerta de `fw` comprueba sus cuerpos pero **no los
+//! monomorfiza**: nada aqui demuestra todavia que los canales del GPDMA que
+//! elija el binario valgan para SPI4, ni que la atadura del `bind_interrupts!`
+//! case. Lo unico que si esta comprobado por el compilador hoy es que el futuro
+//! de la tarea es `Send` (ver el final del archivo).
 //!
 //! La feature `exti` de embassy sigue **fuera** de `fw/Cargo.toml` a proposito:
 //! con ella embassy define su propio manejador de `EXTI11` y chocaria con
 //! [`IsrCs`].
+//!
+//! **Donde vive la linea del #292, y por que no donde dice la spec.** El papel
+//! del maestro la describe como *«una linea en su ISR»*, y aqui vive en la
+//! tarea ([`Esclavo::correr`]), no en [`IsrCs`]. La razon es la misma que en el
+//! maestro (D2): la ISR hace lo minimo -- limpia el pendiente, pone la bandera
+//! y despierta -- porque corre a `P1`, por encima del ejecutor del J2, y todo
+//! lo que meta ahi se lo quita a las seis tareas de ranura. El sitio en el
+//! **orden** es el que manda el papel, y ese se respeta: al contar corto, antes
+//! de rearmar el DMA. Que sean dos escrituras en la tarea en vez de dos en la
+//! ISR no cambia ni el orden ni lo que ve el cable. En un modulo de verdad, con
+//! su propio chip y sin seis tareas compartiendo ejecutor, la ISR es el sitio
+//! natural; aqui no.
 //!
 //! # Los dos HUECOS y el plan B, dichos aqui para no tener que buscarlos
 //!
@@ -238,6 +312,12 @@ impl<'d> Esclavo<'d> {
     /// y **se asevera que son los del montaje**: si `T` y `regs` no fueran el
     /// mismo bloque, se configuraria uno y se clocaria en el otro.
     ///
+    /// **`T` hay que darselo**, igual que en `j2_spi::Ranura::nueva`: no sale
+    /// de ningun argumento -- solo aparece en `Tx: spi::TxDma<T>` y
+    /// `Rx: spi::RxDma<T>`, y un canal del GPDMA1 implementa `TxDma` para
+    /// varios SPI a la vez, asi que el compilador no puede elegir. La llamada
+    /// es `Esclavo::nuevo::<peripherals::SPI4, _, _, _, _, _, _>(...)`.
+    ///
     /// Los dos canales tienen que ser del **GPDMA1** (`CanalGpdma1`), por la
     /// misma razon que en el maestro: la escalada de
     /// [`crate::j2_spi::soltar_canales`] resetea ese controlador y uno del
@@ -314,7 +394,18 @@ impl<'d> Esclavo<'d> {
         let mut nss = Flex::new(nss);
         sck.set_as_af_unchecked(5, entrada);
         mosi.set_as_af_unchecked(5, entrada);
-        nss.set_as_af_unchecked(5, entrada);
+        // El NSS va con **pull-up**, y es el unico de los cuatro que lo lleva:
+        // el `CS` lo pone PA3 del maestro, que no existe hasta que el binario
+        // construya su `Ranura`, y hasta entonces la linea **flota**. Un flanco
+        // espurio en ese rato deja `FLANCO_CS` puesta y la primera vuelta de
+        // `correr` contaria una trama corta que no existio. El reposo del `CS`
+        // es el nivel alto (`SSIOP = 0`, activo a nivel bajo), asi que el
+        // pull-up es el reposo, no una invencion. Vale en AF: sec.15.3.11,
+        // p. 789 -- *«the weak pull-up and pull-down resistors are activated or
+        // not, depending on the value in GPIOx_PUPDR»* --, y `PUPDR` codifica
+        // *«01: Pull-up»* con reset `0x0000 0000` (sin pull) para el puerto E
+        // (sec.15.4.4, p. 795-796).
+        nss.set_as_af_unchecked(5, AfType::input(Pull::Up));
         // `VeryHigh` por la misma razon que en el maestro: el enlace sube a
         // 34,5 MHz en el peldano 2 (spec del maestro D8).
         miso.set_as_af_unchecked(5, AfType::output(OutputType::PushPull, Speed::VeryHigh));
@@ -324,6 +415,11 @@ impl<'d> Esclavo<'d> {
         // usamos la senal RDY) y `SSIOP = 0`, que es `ActiveLow` -- el `CS` del
         // maestro es activo a nivel bajo (sec.67.4.7, p. 3437: *«NSS level is
         // considered as active if it is equal to SSIOP»*).
+        //
+        // **`AFCNTR` se queda en 0 y no es un olvido**: el maestro lo pone a 1
+        // y aqui esta prohibido. sec.67.11.4, p. 3487: *«The bit AFCNTR must
+        // not be set, when the block is in slave mode.»* Con `write` cae a cero
+        // solo; se dice aqui para que nadie lo copie del `CFG2` del maestro.
         //
         // - `MASTER = 0`: sec.67.11.4, p. 3488, bit 22.
         // - `SSM = 0` y `SSOE = 0`, o sea NSS por hardware de **entrada**:
@@ -458,11 +554,20 @@ impl<'d> Esclavo<'d> {
     /// que estan protegidos con el SPI encendido (sec.67.11.1, p. 3484).
     pub async fn correr(mut self) -> ! {
         let regs = self.regs;
-        let txdr = regs.txdr32().as_ptr() as *mut u8;
-        let rxdr = regs.rxdr32().as_ptr() as *mut u8;
         let esperado = self.esperado;
 
         loop {
+            // Los dos punteros a los registros de datos se calculan DENTRO del
+            // lazo, igual que en `j2_spi::giro`, y no es estilo: si viven a
+            // traves del `.await` de mas abajo, el generador de este futuro se
+            // los queda, un `*mut u8` no es `Send` y el futuro deja de serlo.
+            // `InterruptExecutor` solo da un `SendSpawner`, cuyo `spawn` exige
+            // `S: Send` (`embassy-executor/src/spawner.rs:223`), asi que la
+            // tarea no se podria lanzar. Lo vigila el aserto del final del
+            // archivo, que mira EL FUTURO y no solo al `Esclavo`.
+            let txdr = regs.txdr32().as_ptr() as *mut u8;
+            let rxdr = regs.rxdr32().as_ptr() as *mut u8;
+
             regs.cr1().modify(|w| w.set_spe(false));
             // 1. `RXDMAEN`.
             regs.cfg1().modify(|w| w.set_rxdmaen(true));
@@ -473,12 +578,8 @@ impl<'d> Esclavo<'d> {
             //    clocar el maestro; lo que de verdad llego se lee luego del
             //    contador del canal.
             let rx = ManuallyDrop::new(unsafe {
-                self.canal_rx.read(
-                    self.req_rx,
-                    rxdr,
-                    &mut self.buf[..LARGO_MAX],
-                    TransferOptions::default(),
-                )
+                self.canal_rx
+                    .read(self.req_rx, rxdr, &mut self.buf, TransferOptions::default())
             });
             let tx = ManuallyDrop::new(unsafe {
                 self.canal_tx.write(
@@ -500,8 +601,16 @@ impl<'d> Esclavo<'d> {
             flanco_de_cs().await;
 
             // Bytes COMPLETOS recibidos (cabecera D6.2: *«un byte a medias no
-            // cuenta»*). `get_remaining_transfers` lee `CxBR1.BNDT`, que solo
-            // baja cuando el byte ya esta en memoria.
+            // cuenta»*). `get_remaining_transfers` lee `CxBR1.BNDT`, que es
+            // *«block number of data bytes to transfer from the source … is
+            // decremented, indicating the remaining number of data items in the
+            // current source block to be transferred»* (RM0486 Rev 4,
+            // sec.19.8.12, p. 997). Ojo con lo que eso significa: cuenta
+            // **lecturas de `RXDR`**, no escrituras a memoria. La conclusion
+            // que importa se sostiene igual -- medio byte atrapado en el
+            // registro de desplazamiento no llega a `RXDR` y no suma --, pero
+            // el ultimo byte de datos si es una carrera: ver la tercera causa
+            // de trama corta espuria en la cabecera del modulo.
             let recibidos = LARGO_MAX - rx.get_remaining_transfers() as usize;
 
             if recibidos < esperado {
@@ -551,14 +660,22 @@ pub async fn tarea_esclavo(esclavo: Esclavo<'static>) -> ! {
     esclavo.correr().await
 }
 
-/// `SendSpawner::spawn` exige `S: Send`, asi que el futuro de
-/// [`tarea_esclavo`] tiene que serlo y con el todo lo que se lleva dentro. Que
-/// el `Esclavo` lo sea lo comprueba el compilador aqui, no la lectura -- igual
-/// que `j2_ejecutor` hace con la `Ranura` del maestro.
-const _: () = {
-    const fn es_send<T: Send>() {}
-    es_send::<Esclavo<'static>>();
-};
+/// `SendSpawner::spawn` exige `S: Send` (`embassy-executor/src/spawner.rs:223`)
+/// y el `InterruptExecutor` del J2 **solo** da un `SendSpawner`, asi que lo que
+/// tiene que ser `Send` es **el futuro** de [`Esclavo::correr`], no el
+/// `Esclavo`: el futuro se queda dentro todo lo que siga vivo a traves de un
+/// `.await`, y ahi es donde entra un `*mut u8` que no lo es -- que es el
+/// defecto que cazo la ronda de arreglo 1: los punteros a `TXDR`/`RXDR` vivian
+/// fuera del lazo. Un aserto sobre `Esclavo<'static>` no lo habria visto.
+///
+/// Esta funcion no la llama nadie y no llega al binario: existe para que el
+/// compilador tenga que construir el futuro y comprobarlo. `Esclavo: Send` va
+/// implicito, porque `correr` se lo lleva por valor.
+#[allow(dead_code)]
+fn _el_futuro_de_la_tarea_es_send(e: Esclavo<'static>) {
+    fn exige<F: Send>(_: F) {}
+    exige(e.correr());
+}
 
 /// El bufer de recepcion tiene que caber en un bloque del GPDMA (`BNDT` es de
 /// 16 bits) y el contador de `correr` resta sobre `LARGO_MAX`: si alguien
