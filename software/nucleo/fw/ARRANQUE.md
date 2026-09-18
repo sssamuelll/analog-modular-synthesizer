@@ -241,13 +241,25 @@ son los bits [9:8] (RM0486 Rev 4, pp. 536-537); `0b10` es lsi_ck (p. 537).
 defectos por registro (`CCIPR6`, `CCIPR7`, `CCIPR8`, `CCIPR13`), una barrera
 `dsb`, y `SCB::sys_reset()`. Ese orden es el del workaround y no se baraja.
 
-Antes de todo enciende el LSI y espera `LSIRDY`, porque `RTCSEL = 0x2` elige
-lsi_ck y el «Important» de arriba pide el reloj puesto. Los otros relojes ya
-están: hclk5 y hclku son el AHB, pclk1 y pclk2 los APB, hsi_ck viene encendido
-de `Config::default()` (y además alimenta la PLL4 del PHY), e ic15_ck lo
-enciende `usb::configuracion()`. lsi_ck es el único que depende de
-`config.rcc.ls`, que no se ve desde `reinicio.rs`: por eso se enciende allí y
-la función no hereda una decisión de otro crate.
+Justo antes de `CCIPR7` enciende el LSI y espera `LSIRDY`, porque
+`RTCSEL = 0x2` elige lsi_ck y el «Important» de arriba pide el reloj puesto.
+Los otros relojes ya están: hclk5 y hclku son el AHB, pclk1 y pclk2 los APB,
+hsi_ck viene encendido de `Config::default()` (y además alimenta la PLL4 del
+PHY), e ic15_ck lo enciende `usb::configuracion()`. lsi_ck es el único que
+depende de `config.rcc.ls`, que no se ve desde `reinicio.rs`: por eso se
+enciende allí y la función no hereda una decisión de otro crate.
+
+**Esa espera tiene cota y el reset no depende de ella.** El plazo es
+**2 × `tsu(LSI)` = 360 µs** — `tsu(LSI)` máx. 180 µs, DS14791 Rev 10, Tabla 57,
+p. 166, *«Start-up time (from enable rise to first output clock edge)»*; el
+doble porque la nota (1) de esa tabla dice que el máximo está *«evaluated by
+characterization, not tested in production»*. Si vence, la función lo dice por
+`defmt::error!`, **no escribe `RTCSEL`** (hacerlo sin lsi_ck es justo lo que
+prohíbe §2.2.23), escribe los otros nueve y resetea igual. Por eso la espera
+está antes de `CCIPR7` y no al principio: los nueve que no dependen del LSI se
+escriben pase lo que pase. Un reset degradado deja el mismo estado que hay hoy
+sin la función; colgarse esperando un oscilador muerto, en una función cuyo
+único trabajo es resetear y sin perro guardián que la saque, es peor.
 
 **Nadie la llama todavía.** El firmware no se resetea a sí mismo: `panic-probe`
 se queda parado en el pánico. Existe para que el primero que resetee la use en
@@ -315,6 +327,8 @@ dejar los `-trusted.bin` listos.
   537, 538 y 542.
 - ES0620 Rev 5, `docs/reference/datasheets/stm32n6-es0620-rev5.pdf`: §2.2.22 y
   §2.2.23, p. 12.
+- DS14791 Rev 10, `docs/reference/datasheets/stm32n657-ds14791-rev10.pdf`:
+  Tabla 57 (oscilador LSI), p. 166, `tsu(LSI)`.
 - AN5967 Rev 5, `docs/reference/datasheets/stm32n6-an5967-rev5.pdf`: §10
   p. 24 (Tabla 10), §11.2 p. 25.
 - embassy `dc6b716` (`~/.cargo/git/checkouts/embassy-*/dc6b716/`):
