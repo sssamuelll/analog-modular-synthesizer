@@ -112,44 +112,40 @@
 //! medir. El dia de la placa lo mide el analizador logico (riesgo 8 del papel
 //! del maestro).
 //!
-//! # Lo que ponen los binarios (tarea 10)
+//! # Quien lo construye, y donde estan sus interrupciones
 //!
-//! El `bind_interrupts!` **no** vive aqui, igual que en el driver del maestro.
-//! La linea exacta del flanco es:
+//! El `bind_interrupts!` **no** vive aqui, igual que en el driver del maestro:
+//! vive **una sola vez** en [`crate::j2_banco::IrqsBanco`] (R23), junto a los
+//! pines del montaje, y de ahi lo toman los cuatro binarios. Las tres ataduras
+//! que este archivo necesita son `EXTI11 => IsrCs` y los dos canales:
 //!
 //! ```ignore
-//! embassy_stm32::bind_interrupts!(pub struct IrqsEsclavo {
-//!     EXTI11 => sam17_nucleo_fw::j2_esclavo::IsrCs;
-//!     GPDMA1_CHANNEL2 => embassy_stm32::dma::InterruptHandler<peripherals::GPDMA1_CH2>;
-//!     GPDMA1_CHANNEL3 => embassy_stm32::dma::InterruptHandler<peripherals::GPDMA1_CH3>;
-//! });
+//! EXTI11 => sam17_nucleo_fw::j2_esclavo::IsrCs;
+//! GPDMA1_CHANNEL2 => embassy_stm32::dma::InterruptHandler<peripherals::GPDMA1_CH2>;
+//! GPDMA1_CHANNEL3 => embassy_stm32::dma::InterruptHandler<peripherals::GPDMA1_CH3>;
 //! ```
 //!
 //! (los nombres de las lineas del N657 son `EXTI11`, `SPI4` y
-//! `GPDMA1_CHANNELn`, no `GPDMA1_CHn`, que es el nombre del *periferico*). El
-//! NVIC de `EXTI11` lo habilita y prioriza [`Esclavo::nuevo`]; los dos canales
-//! del GPDMA los prioriza el binario, como para el maestro. El esclavo se
-//! construye con el turbofish de `T` (ver [`Esclavo::nuevo`]) y la tarea se
-//! lanza con el spawner del ejecutor del J2 despues de `j2_ejecutor::arrancar`:
+//! `GPDMA1_CHANNELn`, no `GPDMA1_CHn`, que es el nombre del *periferico*).
+//!
+//! **El NVIC entero lo pone [`Esclavo::nuevo`]** (R21, igual que el maestro):
+//! `EXTI11` con su `P1` y su `enable`, y `P1` tambien a las dos lineas de los
+//! canales del GPDMA -- sin `enable`, porque esas las desenmascara
+//! `embassy_stm32::init` por su cuenta. Los binarios no tocan el NVIC.
+//!
+//! No se construye a mano: se pide a [`crate::j2_banco::esclavo_del_banco`],
+//! que tiene los cuatro pines como **tipos concretos** y no deja equivocarse.
+//! La tarea se lanza con el spawner del ejecutor del J2 **despues** de
+//! `j2_ejecutor::arrancar`:
 //!
 //! ```ignore
-//! let esclavo = j2_esclavo::Esclavo::nuevo::<peripherals::SPI4, _, _, _, _, _, _>(
-//!     pac::SPI4, p.PE2, p.PE14, p.PE13, p.PE11,
-//!     p.GPDMA1_CH2, p.GPDMA1_CH3, IrqsEsclavo, j2_banco::LARGO_BANCO,
-//! );
+//! let esclavo = j2_banco::esclavo_del_banco(p.PE2, p.PE14, p.PE13, p.PE11,
+//!                                           p.GPDMA1_CH2, p.GPDMA1_CH3);
 //! // `#[embassy_executor::task]` devuelve `Result<SpawnToken, SpawnError>` y
 //! // `SendSpawner::spawn` devuelve `()`: se desenvuelve el token, no el spawn
 //! // (misma forma que `j2_ejecutor::arrancar`).
 //! EJECUTOR_J2.spawner().spawn(defmt::unwrap!(j2_esclavo::tarea_esclavo(esclavo)));
 //! ```
-//!
-//! **Y esa es la primera compilacion de verdad de este archivo.**
-//! [`Esclavo::nuevo`] y [`Esclavo::correr`] son genericos y hoy no los llama
-//! nadie, asi que la puerta de `fw` comprueba sus cuerpos pero **no los
-//! monomorfiza**: nada aqui demuestra todavia que los canales del GPDMA que
-//! elija el binario valgan para SPI4, ni que la atadura del `bind_interrupts!`
-//! case. Lo unico que si esta comprobado por el compilador hoy es que el futuro
-//! de la tarea es `Send` (ver el final del archivo).
 //!
 //! La feature `exti` de embassy sigue **fuera** de `fw/Cargo.toml` a proposito:
 //! con ella embassy define su propio manejador de `EXTI11` y chocaria con
@@ -512,6 +508,17 @@ impl<'d> Esclavo<'d> {
         // SAFETY: la unica forma de habilitar la linea. El manejador existe
         // porque `irqs` prueba en el tipo la atadura `EXTI11 => IsrCs`.
         unsafe { interrupt::EXTI11.enable() };
+
+        // 6. Y los dos canales del GPDMA, tambien a `P1`, por la misma razon y
+        //    por simetria con `j2_spi::Ranura::nueva` (R21: el NVIC lo maneja
+        //    quien arma la interrupcion). Sin `enable`: los dieciseis los
+        //    desenmascara `embassy_stm32::init` por su cuenta
+        //    (`embassy-stm32/src/dma/gpdma/mod.rs:526-534`), con la prioridad de
+        //    su `Config`; lo unico que falta es subirlos por encima del ejecutor
+        //    del J2. Van por tipo, no por valor: el canal ya se movio dentro de
+        //    `Channel::new` unas lineas mas abajo.
+        Tx::Interrupt::set_priority(Priority::P1);
+        Rx::Interrupt::set_priority(Priority::P1);
 
         let req_tx = tx.request();
         let req_rx = rx.request();

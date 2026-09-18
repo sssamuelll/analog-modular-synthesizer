@@ -50,12 +50,16 @@
 //! - el ejecutor de hilo corre en modo hilo, que esta por debajo de cualquier
 //!   interrupcion habilitada, asi que queda debajo por construccion.
 //!
-//! **Lo que ponen los binarios antes de llamar a [`arrancar`]** (tarea 10): el
-//! `bind_interrupts!` -- `SPI5 => j2_spi::Isr<0>` y los dos canales del GPDMA a
-//! `embassy_stm32::dma::InterruptHandler` -- y la prioridad `P1` a esos
-//! vectores **antes** de construir la `Ranura`. Los nombres exactos de las
-//! lineas del N657 son `SPI5`, `SPI4` y `GPDMA1_CHANNEL0`, `GPDMA1_CHANNEL1`,
-//! ... (no `GPDMA1_CH0`, que es el nombre del *periferico*).
+//! **Lo que ponen los binarios antes de llamar a [`arrancar`]:** nada del NVIC.
+//! El `bind_interrupts!` vive una sola vez en [`crate::j2_banco::IrqsBanco`]
+//! (R23) -- `SPI5 => j2_spi::Isr<0>`, los cuatro canales del GPDMA a
+//! `embassy_stm32::dma::InterruptHandler` y `EXTI11 => j2_esclavo::IsrCs` --, y
+//! las prioridades `P1` y el `enable` los pone quien arma cada interrupcion:
+//! `j2_spi::Ranura::nueva` y `j2_esclavo::Esclavo::nuevo` (R21). Los binarios
+//! solo piden la `Ranura` a `j2_banco::maestro_del_banco` y se la pasan a
+//! [`arrancar`]. Los nombres exactos de las lineas del N657 son `SPI5`, `SPI4` y
+//! `GPDMA1_CHANNEL0`, `GPDMA1_CHANNEL1`, ... (no `GPDMA1_CH0`, que es el nombre
+//! del *periferico*).
 //!
 //! **`Bajada` y `Juez` son punteros a funcion, no un trait.** Hoy hay un solo
 //! planificador -- el del banco, que vive aparte en [`crate::j2_banco`] porque

@@ -35,9 +35,15 @@
 //! cosas temporales: `EOTIE` armado solo entre `CSTART` y la ISR, y el
 //! `NVIC::unpend` de D4 (pasos 1 y 7). Detalle en el doc de [`Isr`].
 //!
-//! `bind_interrupts!` **no** vive aqui: lo pone quien arma la placa (tareas 8 y
-//! 10), atando `SPI5 => Isr<0>` y los dos canales del GPDMA a
-//! `embassy_stm32::dma::InterruptHandler`.
+//! `bind_interrupts!` **no** vive aqui: lo pone quien arma la placa, atando
+//! `SPI5 => Isr<0>` y los dos canales del GPDMA a
+//! `embassy_stm32::dma::InterruptHandler`. En el banco eso es
+//! [`crate::j2_banco::IrqsBanco`], una sola vez para los cuatro binarios.
+//!
+//! **El NVIC si vive aqui** (R21): `nueva` pone `P1` en la linea del SPI y en
+//! las de sus dos canales, y desenmascara la del SPI. Quien arma `EOTIE` es este
+//! archivo, asi que quien tiene que dejar la linea en condiciones de servirlo
+//! tambien. Ver el bloque comentado al final de `nueva`.
 //!
 //! **Los dos HUECOS que este archivo arrastra, dichos aqui para que no haya que
 //! encontrarlos leyendo:**
@@ -68,6 +74,7 @@ use embassy_futures::join::join;
 use embassy_stm32::dma::{self, Transfer, TransferOptions};
 use embassy_stm32::gpio::{AfType, Flex, OutputType, Pull, Speed};
 use embassy_stm32::interrupt::typelevel::{Binding, Handler, Interrupt};
+use embassy_stm32::interrupt::{InterruptExt, Priority};
 use embassy_stm32::pac::spi::vals::{Master, Mbr, Ssom};
 use embassy_stm32::{gpio, interrupt, pac, peripherals, rcc, spi, Peri};
 use embassy_sync::waitqueue::AtomicWaker;
@@ -243,8 +250,9 @@ pub struct Ranura<'d> {
 
 impl<'d> Ranura<'d> {
     /// Configura los pines (AF5), el reloj del periferico, los `CFG1`/`CFG2`
-    /// fijos de D1, y deja el SPI **apagado**, que es como esta siempre entre
-    /// transferencias (D2).
+    /// fijos de D1, **el NVIC de las tres lineas** (R21: `P1` al SPI y a sus dos
+    /// canales, y `enable` al del SPI) y deja el SPI **apagado**, que es como
+    /// esta siempre entre transferencias (D2).
     ///
     /// `T` es el tipo del periferico (`peripherals::SPI5`): de ahi salen el
     /// reset por RCC, el reloj de kernel para el `MBR` y los numeros de
@@ -397,6 +405,43 @@ impl<'d> Ranura<'d> {
         let req_rx = rx.request();
         let canal_tx = dma::Channel::new(tx, irq_tx);
         let canal_rx = dma::Channel::new(rx, irq_rx);
+
+        // El NVIC de esta ranura, aqui, porque **el NVIC lo maneja quien arma la
+        // interrupcion** (R21). `giro` arma `EOTIE` y `EsperaEot` depende de que
+        // la ISR corra: dejar el `enable` en el llamador era repartir una sola
+        // cosa entre dos sitios, y el olvido no se ve -- venceria el plazo de
+        // TODOS los giros, que se lee como *"el driver no funciona"*.
+        // `Esclavo::nuevo` hace lo mismo con su `EXTI11`.
+        //
+        // `P1`, por encima del ejecutor del J2 (`j2_ejecutor::`
+        // `PRIORIDAD_EJECUTOR`, `P2`) y por tanto del de hilo. EN-PLACA (casilla
+        // del 11-09) fija la RELACION -- las ISR del SPI y de los canales por
+        // encima del ejecutor --; el numero lo elige este archivo.
+        // `embassy_stm32::interrupt` numera al reves que la urgencia
+        // (`P1 = 0x10`, `P2 = 0x20`; `embassy-hal-internal/src/interrupt.rs`
+        // `:324-341`, variante `prio-bits-4`) y el NVIC atiende antes el numero
+        // mas bajo.
+        //
+        // **Prioridad antes de `enable`, y `enable` antes de que `giro` arme
+        // `EOTIE`.** Lo primero porque cambiar la prioridad de una linea ya
+        // desenmascarada abre una ventana en la que una ISR podria correr con la
+        // vieja; lo segundo porque una linea enmascarada con `EOTIE` puesto deja
+        // el `EOT` pendiente en el periferico y el plazo vence igual. Aqui los
+        // dos ordenes salen solos: `EOTIE` esta en cero (el `enable_and_reset`
+        // de arriba dejo `IER` a cero) y no se toca hasta `giro`.
+        IRQ_DE_RANURA[indice].set_priority(Priority::P1);
+        // Los DOS canales del GPDMA, por tipo. No llevan `enable`: los dieciseis
+        // los desenmascara `embassy_stm32::init` por su cuenta
+        // (`embassy-stm32/src/dma/gpdma/mod.rs:526-534`, `set_priority_with_cs`
+        // mas `enable()` por cada uno), con la prioridad de su `Config`. Lo
+        // unico que falta es subirlos por encima del ejecutor del J2.
+        Tx::Interrupt::set_priority(Priority::P1);
+        Rx::Interrupt::set_priority(Priority::P1);
+        // SAFETY: es la unica forma de desenmascarar la linea, y el manejador
+        // existe porque el llamador ato `SPI<n> => Isr<indice>` en su
+        // `bind_interrupts!` -- lo prueban `irq_tx`/`irq_rx` para los canales y
+        // lo asevera `SPI_DE_RANURA[indice]` para el bloque de registros.
+        unsafe { IRQ_DE_RANURA[indice].enable() };
 
         // Apagado al salir: `SPE = 0` es el estado entre transferencias
         // (sec.67.4.12, p. 3448 y sec.67.11.6, p. 3492), y `TSIZE` solo se
@@ -712,8 +757,10 @@ impl Future for EsperaEot<'_> {
 }
 
 /// La ISR de la ranura `R`. Se ata en quien arma la placa:
-/// `bind_interrupts!(struct IrqsJ2 { SPI5 => Isr<0>; ... })`, y con prioridad
-/// por encima del ejecutor del J2 (EN-PLACA, casilla del 11-09).
+/// `bind_interrupts!(struct IrqsJ2 { SPI5 => Isr<0>; ... })` -- en el banco,
+/// [`crate::j2_banco::IrqsBanco`]. La **prioridad** por encima del ejecutor del
+/// J2 (EN-PLACA, casilla del 11-09) y el `enable` los pone [`Ranura::nueva`],
+/// no el llamador (R21).
 ///
 /// **Que protege la generacion y que la protege a ella.** La generacion que la
 /// ISR pasa a `registrar` es la que esta armada en ese instante, porque el
