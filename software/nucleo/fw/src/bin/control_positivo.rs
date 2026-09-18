@@ -81,8 +81,9 @@ const F_SCK_JAKE_HZ: u32 = 100_000;
 const BYTES_POR_LECTURA: usize = 8;
 
 /// Cadencia del vigia. Tres tics sin avanzar son el umbral de cuelgue, o sea
-/// 300 ms: dos ordenes de magnitud por encima de una lectura sana de 8 bytes a
-/// 100 kHz (640 us), asi que no hay falso positivo por lentitud.
+/// 300 ms: tres ordenes de magnitud por encima de una lectura sana de 8 bytes al
+/// `f_sck` **real** de este binario, 250 kHz -- 8 x 8 / 250 kHz = **256 us**; ver
+/// la nota del `MBR` mas abajo --, asi que no hay falso positivo por lentitud.
 const TIC_VIGIA_MS: u64 = 100;
 
 /// Tics seguidos sin que `PROGRESO` avance que cuentan como cuelgue.
@@ -162,8 +163,9 @@ async fn main(_spawner: Spawner) {
     let mbr = pac::SPI5.cfg1().read().mbr().to_bits();
     let f_sck = f_ker / (1u32 << (mbr + 1));
     info!(
-        "control_positivo: f_ker {} Hz, MBR /{}, f_sck {} Hz (pedido {}), \
+        "control_positivo: firmware {}, f_ker {} Hz, MBR /{}, f_sck {} Hz (pedido {}), \
          retardo: ninguno (no hay driver propio en este binario), f_cpu {} Hz",
+        env!("SAM17_GIT"),
         f_ker,
         1u32 << (mbr + 1),
         f_sck,

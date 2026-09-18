@@ -45,38 +45,29 @@ use core::sync::atomic::Ordering;
 
 use defmt::info;
 use embassy_executor::Spawner;
-use embassy_stm32::interrupt::{InterruptExt, Priority};
-use embassy_stm32::{dma, interrupt, pac, peripherals};
+use embassy_stm32::interrupt;
 use embassy_time::{Duration, Ticker};
-use sam17_nucleo_fw::j2_banco::{bajada_del_banco, juez_del_banco, LARGO_BANCO};
+use sam17_nucleo_fw::j2_banco::{
+    bajada_del_banco, esclavo_del_banco, juez_del_banco, maestro_del_banco, LARGO_BANCO,
+    RANURA_BANCO,
+};
 use sam17_nucleo_fw::j2_ejecutor::{arrancar, cuentas, EJECUTOR_J2};
-use sam17_nucleo_fw::j2_esclavo::{self, Esclavo};
-use sam17_nucleo_fw::j2_spi::{self, Config, Ranura, ESCALADAS_GPDMA};
+use sam17_nucleo_fw::j2_esclavo;
+use sam17_nucleo_fw::j2_spi::{Config, ESCALADAS_GPDMA};
 use sam17_nucleo_fw::usb;
 use {defmt_rtt as _, panic_probe as _};
-
-embassy_stm32::bind_interrupts!(struct Irqs {
-    SPI5 => j2_spi::Isr<0>;
-    GPDMA1_CHANNEL0 => dma::InterruptHandler<peripherals::GPDMA1_CH0>;
-    GPDMA1_CHANNEL1 => dma::InterruptHandler<peripherals::GPDMA1_CH1>;
-    GPDMA1_CHANNEL2 => dma::InterruptHandler<peripherals::GPDMA1_CH2>;
-    GPDMA1_CHANNEL3 => dma::InterruptHandler<peripherals::GPDMA1_CH3>;
-    EXTI11 => j2_esclavo::IsrCs;
-});
 
 /// El reloj del enlace para esta tanda. **Piso legado, 10 MHz** (J2 punto a
 /// punto D2; `F_CONTRATO_HZ` de `hardware/02-midi-cv/trama_j2_budget.py:89`).
 /// La segunda tanda es el peldano 2, `34_480_000` (D8;
 /// `hardware/02-midi-cv/enlace_budget.py:71`, `F_PELDANO_2_HZ`), y se dice sola
-/// en la columna `reloj_MHz` de la fila.
+/// en la columna `reloj_MHz` de la fila -- y, desde la ronda de arreglo 1,
+/// tambien en la linea `firmware=` que la acompana.
 const F_SCK_HZ: u32 = 10_000_000;
 
 /// El retardo de produccion: 4 cuartos, o sea `>= 1 T_SCK` (D2, enmienda del
 /// 11-09). El barrido de los otros cinco valores es `barrido_retardo`.
 const RETARDO_CUARTOS: u8 = 4;
-
-/// La ranura del banco. Va en el sitio 0 de la fila y del arreglo de `arrancar`.
-const RANURA: usize = 0;
 
 /// La columna `instancia` de la fila: el SPI del maestro. SPI5 a proposito, que
 /// es la instancia del repro original de jake-taf (EN-PLACA, montaje del 11-09).
@@ -116,32 +107,16 @@ async fn main(_spawner: Spawner) {
     let f_cpu = usb::f_cpu_hz(&config);
     let p = embassy_stm32::init(config);
 
-    // Las ISR del SPI y de los canales del GPDMA a `P1`, por encima del
-    // `EJECUTOR_J2` (`P2`), y ANTES de construir la ranura (EN-PLACA, casilla
-    // del 11-09). Los canales ya estan habilitados en el NVIC por
-    // `embassy_stm32::init` (`dma/gpdma/mod.rs:526-534`); la linea del SPI5 no
-    // la habilita nadie, y sin ella el `EOT` no llega y todos los giros
-    // venceria plazo.
-    interrupt::SPI5.set_priority(Priority::P1);
-    interrupt::GPDMA1_CHANNEL0.set_priority(Priority::P1);
-    interrupt::GPDMA1_CHANNEL1.set_priority(Priority::P1);
-    interrupt::GPDMA1_CHANNEL2.set_priority(Priority::P1);
-    interrupt::GPDMA1_CHANNEL3.set_priority(Priority::P1);
-    // SAFETY: la unica forma de desenmascarar la linea. El manejador existe
-    // porque `Irqs` ata `SPI5 => j2_spi::Isr<0>`.
-    unsafe { interrupt::SPI5.enable() };
-
-    let ranura = Ranura::nueva::<peripherals::SPI5, _, _, _, _, _, _>(
-        RANURA,
-        pac::SPI5,
+    // El montaje entero vive en `j2_banco` (R23): los pines y los canales van
+    // ahi como tipos concretos, asi que un pin cambiado no compila. El NVIC lo
+    // pone `Ranura::nueva` (R21): aqui no se toca ninguna prioridad.
+    let ranura = maestro_del_banco(
         p.PE15,
         p.PG2,
         p.PG1,
         p.PA3,
         p.GPDMA1_CH0,
         p.GPDMA1_CH1,
-        Irqs,
-        Irqs,
         &p.RCC,
         Config {
             f_sck_hz: F_SCK_HZ,
@@ -155,21 +130,15 @@ async fn main(_spawner: Spawner) {
     // una fila etiquetada con el pedido mentiria sobre a que reloj se midio.
     let f_sck_hz = ranura.f_sck_hz();
     info!(
-        "resistencia_j2: f_sck {} Hz (pedido {}), retardo {} cuartos, f_cpu {} Hz",
-        f_sck_hz, F_SCK_HZ, RETARDO_CUARTOS, f_cpu
+        "resistencia_j2: firmware {}, f_sck {} Hz (pedido {}), retardo {} cuartos, f_cpu {} Hz",
+        env!("SAM17_GIT"),
+        f_sck_hz,
+        F_SCK_HZ,
+        RETARDO_CUARTOS,
+        f_cpu
     );
 
-    let esclavo = Esclavo::nuevo::<peripherals::SPI4, _, _, _, _, _, _>(
-        pac::SPI4,
-        p.PE2,
-        p.PE14,
-        p.PE13,
-        p.PE11,
-        p.GPDMA1_CH2,
-        p.GPDMA1_CH3,
-        Irqs,
-        LARGO_BANCO,
-    );
+    let esclavo = esclavo_del_banco(p.PE2, p.PE14, p.PE13, p.PE11, p.GPDMA1_CH2, p.GPDMA1_CH3);
 
     arrancar(
         interrupt::GFXTIM,
@@ -181,43 +150,60 @@ async fn main(_spawner: Spawner) {
         .spawner()
         .spawn(defmt::unwrap!(j2_esclavo::tarea_esclavo(esclavo)));
 
+    // Una fila con `horas=0` nada mas arrancar. No es una medida -- todo esta a
+    // cero y el ejecutor lleva microsegundos corriendo -- y por eso lleva su
+    // hora puesta: es para **validar el formato** delante de quien va a copiar
+    // filas durante 24 h, en vez de descubrir a la hora que una columna baila.
+    publicar(0, f_sck_hz);
+
     let mut ticker = Ticker::every(Duration::from_secs(3600));
     let mut horas = 0u32;
     loop {
         ticker.next().await;
         horas += 1;
-        let c = cuentas(RANURA);
-
-        // La fila de `resistencia_j2.csv`, con sus doce columnas en el orden de
-        // R-MJ8: `ranura,instancia,tsize,nss,reloj_MHz,horas,giros,
-        // plazos_vencidos,eot_tardios,subidas_malas,fecha,placa`. `fecha` va
-        // vacia -- la pone quien copia la fila --, y por eso hay dos comas
-        // seguidas antes de `placa`.
-        info!(
-            "{=usize},{=str},{=usize},{=str},{},{=u32},{=u32},{=u32},{=u32},{=u32},,{=str}",
-            RANURA,
-            INSTANCIA,
-            LARGO_BANCO,
-            NSS,
-            Mhz(f_sck_hz),
-            horas,
-            c.giros,
-            c.plazos_vencidos,
-            c.eot_tardios,
-            c.subidas_malas,
-            PLACA
-        );
-        info!(
-            "esclavo,tramas_ok={},tramas_cortas={},rearmes_escalados={}",
-            j2_esclavo::TRAMAS_OK.load(Ordering::Relaxed),
-            j2_esclavo::TRAMAS_CORTAS.load(Ordering::Relaxed),
-            j2_esclavo::REARMES_ESCALADOS.load(Ordering::Relaxed),
-        );
-        info!(
-            "maestro,escaladas_gpdma={},inestable={},muda={}",
-            ESCALADAS_GPDMA.load(Ordering::Relaxed),
-            c.inestable,
-            c.muda,
-        );
+        publicar(horas, f_sck_hz);
     }
+}
+
+/// Las tres lineas de cada hora. Una sola funcion para la de `horas=0` y las de
+/// verdad: dos copias de una fila de doce columnas es como se separan.
+fn publicar(horas: u32, f_sck_hz: u32) {
+    let c = cuentas(RANURA_BANCO);
+
+    // El firmware con el que se midio, en su propia linea y **fuera** de las
+    // doce columnas: la cabecera de `resistencia_j2.csv` es de R-MJ8 y no se
+    // toca desde aqui. Va delante de la fila para que al copiar se vea a cual
+    // pertenece.
+    info!("firmware={=str}", env!("SAM17_GIT"));
+    // La fila de `resistencia_j2.csv`, con sus doce columnas en el orden de
+    // R-MJ8: `ranura,instancia,tsize,nss,reloj_MHz,horas,giros,
+    // plazos_vencidos,eot_tardios,subidas_malas,fecha,placa`. `fecha` va
+    // vacia -- la pone quien copia la fila --, y por eso hay dos comas
+    // seguidas antes de `placa`.
+    info!(
+        "{=usize},{=str},{=usize},{=str},{},{=u32},{=u32},{=u32},{=u32},{=u32},,{=str}",
+        RANURA_BANCO,
+        INSTANCIA,
+        LARGO_BANCO,
+        NSS,
+        Mhz(f_sck_hz),
+        horas,
+        c.giros,
+        c.plazos_vencidos,
+        c.eot_tardios,
+        c.subidas_malas,
+        PLACA
+    );
+    info!(
+        "esclavo,tramas_ok={},tramas_cortas={},rearmes_escalados={}",
+        j2_esclavo::TRAMAS_OK.load(Ordering::Relaxed),
+        j2_esclavo::TRAMAS_CORTAS.load(Ordering::Relaxed),
+        j2_esclavo::REARMES_ESCALADOS.load(Ordering::Relaxed),
+    );
+    info!(
+        "maestro,escaladas_gpdma={},inestable={},muda={}",
+        ESCALADAS_GPDMA.load(Ordering::Relaxed),
+        c.inestable,
+        c.muda,
+    );
 }

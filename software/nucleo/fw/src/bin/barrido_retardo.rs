@@ -52,25 +52,17 @@ use core::sync::atomic::Ordering;
 
 use defmt::info;
 use embassy_executor::Spawner;
-use embassy_stm32::interrupt::{InterruptExt, Priority};
-use embassy_stm32::{dma, interrupt, pac, peripherals};
+use embassy_stm32::interrupt;
 use embassy_time::{Duration, Instant, Ticker};
 use sam17_nucleo_core::maestro_j2::{plazo_us, Umbrales, PERIODO_GIRO_US};
-use sam17_nucleo_fw::j2_banco::{bajada_del_banco, juez_del_banco, LARGO_BANCO};
+use sam17_nucleo_fw::j2_banco::{
+    bajada_del_banco, esclavo_del_banco, juez_del_banco, maestro_del_banco, RANURA_BANCO,
+};
 use sam17_nucleo_fw::j2_ejecutor::{arrancar, EJECUTOR_J2};
-use sam17_nucleo_fw::j2_esclavo::{self, Esclavo};
-use sam17_nucleo_fw::j2_spi::{self, Config, Ranura, Resultado, ESCALADAS_GPDMA, LARGO_MAX};
+use sam17_nucleo_fw::j2_esclavo;
+use sam17_nucleo_fw::j2_spi::{Config, Ranura, Resultado, ESCALADAS_GPDMA, LARGO_MAX};
 use sam17_nucleo_fw::usb;
 use {defmt_rtt as _, panic_probe as _};
-
-embassy_stm32::bind_interrupts!(struct Irqs {
-    SPI5 => j2_spi::Isr<0>;
-    GPDMA1_CHANNEL0 => dma::InterruptHandler<peripherals::GPDMA1_CH0>;
-    GPDMA1_CHANNEL1 => dma::InterruptHandler<peripherals::GPDMA1_CH1>;
-    GPDMA1_CHANNEL2 => dma::InterruptHandler<peripherals::GPDMA1_CH2>;
-    GPDMA1_CHANNEL3 => dma::InterruptHandler<peripherals::GPDMA1_CH3>;
-    EXTI11 => j2_esclavo::IsrCs;
-});
 
 /// Los seis puntos de la enmienda del 11-09, en cuartos de `T_SCK`:
 /// `{0, ¼, ½, 1, 2, 4} x T_SCK`.
@@ -102,36 +94,15 @@ async fn main(_spawner: Spawner) {
     let f_cpu = usb::f_cpu_hz(&config);
     let p = embassy_stm32::init(config);
 
-    // Las ISR del SPI y de los canales del GPDMA a `P1`, por encima del
-    // `EJECUTOR_J2` (`P2`), y ANTES de construir la ranura (EN-PLACA, casilla
-    // del 11-09: sin esto un `EOT` tardio no se pierde, pero no se cuenta).
-    //
-    // Los canales del GPDMA ya estan **habilitados** en el NVIC: lo hace
-    // `embassy_stm32::init` para todos (`dma/gpdma/mod.rs:526-534`), con la
-    // prioridad de la `Config`; aqui solo se sube la suya. La del SPI5 no la
-    // habilita nadie -- ni `init`, ni `Ranura::nueva`, que solo arma `EOTIE` en
-    // el periferico --, y sin ella el `EOT` no llega al NVIC y **todos** los
-    // giros vencerian plazo. Por eso esta la linea de `enable`.
-    interrupt::SPI5.set_priority(Priority::P1);
-    interrupt::GPDMA1_CHANNEL0.set_priority(Priority::P1);
-    interrupt::GPDMA1_CHANNEL1.set_priority(Priority::P1);
-    interrupt::GPDMA1_CHANNEL2.set_priority(Priority::P1);
-    interrupt::GPDMA1_CHANNEL3.set_priority(Priority::P1);
-    // SAFETY: la unica forma de desenmascarar la linea. El manejador existe
-    // porque `Irqs` ata `SPI5 => j2_spi::Isr<0>`.
-    unsafe { interrupt::SPI5.enable() };
-
-    let mut ranura = Ranura::nueva::<peripherals::SPI5, _, _, _, _, _, _>(
-        0,
-        pac::SPI5,
+    // El montaje entero vive en `j2_banco` (R23); el NVIC lo pone
+    // `Ranura::nueva` (R21). Aqui no se toca ninguna prioridad.
+    let mut ranura = maestro_del_banco(
         p.PE15,
         p.PG2,
         p.PG1,
         p.PA3,
         p.GPDMA1_CH0,
         p.GPDMA1_CH1,
-        Irqs,
-        Irqs,
         &p.RCC,
         Config {
             f_sck_hz: F_SCK_PISO_HZ,
@@ -140,24 +111,16 @@ async fn main(_spawner: Spawner) {
         },
     );
     info!(
-        "barrido_retardo: f_sck {} Hz (pedido {}), retardo inicial {} cuartos, f_cpu {} Hz",
+        "barrido_retardo: firmware {}, f_sck {} Hz (pedido {}), retardo inicial {} cuartos, \
+         f_cpu {} Hz",
+        env!("SAM17_GIT"),
         ranura.f_sck_hz(),
         F_SCK_PISO_HZ,
         RETARDOS[0],
         f_cpu
     );
 
-    let esclavo = Esclavo::nuevo::<peripherals::SPI4, _, _, _, _, _, _>(
-        pac::SPI4,
-        p.PE2,
-        p.PE14,
-        p.PE13,
-        p.PE11,
-        p.GPDMA1_CH2,
-        p.GPDMA1_CH3,
-        Irqs,
-        LARGO_BANCO,
-    );
+    let esclavo = esclavo_del_banco(p.PE2, p.PE14, p.PE13, p.PE11, p.GPDMA1_CH2, p.GPDMA1_CH3);
 
     // Seis `None`: el maestro de este binario no vive en el ejecutor (ver la
     // cabecera). Lo unico que `arrancar` hace aqui es poner el `EJECUTOR_J2` en
@@ -226,7 +189,7 @@ async fn girar(ranura: &mut Ranura<'static>, cuanto: Duration) -> Punto {
     while Instant::now() < fin {
         ticker.next().await;
 
-        let tsize = bajada_del_banco(0, &mut bajada);
+        let tsize = bajada_del_banco(RANURA_BANCO, &mut bajada);
         let plazo = Duration::from_micros(plazo_us(tsize, f_sck_hz, &umbrales) as u64);
         let (res, tardios) = ranura.giro(&bajada, &mut subida, tsize, plazo).await;
 
@@ -234,7 +197,7 @@ async fn girar(ranura: &mut Ranura<'static>, cuanto: Duration) -> Punto {
         c.eot_tardios += tardios;
         match res {
             Resultado::Ok => {
-                if !juez_del_banco(0, &subida[..tsize.get() as usize]) {
+                if !juez_del_banco(RANURA_BANCO, &subida[..tsize.get() as usize]) {
                     c.subidas_malas += 1;
                 }
             }

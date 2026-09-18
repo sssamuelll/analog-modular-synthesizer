@@ -55,20 +55,12 @@
 use defmt::info;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::{Level, Output, Speed};
-use embassy_stm32::interrupt::{InterruptExt, Priority};
-use embassy_stm32::{dma, interrupt, pac, peripherals};
 use embassy_time::{Duration, Timer};
 use sam17_nucleo_core::maestro_j2::{plazo_us, Tsize, Umbrales};
-use sam17_nucleo_fw::j2_banco::LARGOS_MENSAJES;
-use sam17_nucleo_fw::j2_spi::{self, Config, Ranura, LARGO_MAX};
+use sam17_nucleo_fw::j2_banco::{maestro_del_banco, LARGOS_MENSAJES};
+use sam17_nucleo_fw::j2_spi::{Config, Resultado, LARGO_MAX};
 use sam17_nucleo_fw::usb;
 use {defmt_rtt as _, panic_probe as _};
-
-embassy_stm32::bind_interrupts!(struct Irqs {
-    SPI5 => j2_spi::Isr<0>;
-    GPDMA1_CHANNEL0 => dma::InterruptHandler<peripherals::GPDMA1_CH0>;
-    GPDMA1_CHANNEL1 => dma::InterruptHandler<peripherals::GPDMA1_CH1>;
-});
 
 /// El piso legado del enlace, 10 MHz (J2 punto a punto D2; `F_CONTRATO_HZ` de
 /// `hardware/02-midi-cv/trama_j2_budget.py:89`). Es donde los plazos aprietan:
@@ -80,12 +72,15 @@ const F_SCK_HZ: u32 = 10_000_000;
 /// que el instrumento va a llevar; barrerlo es `barrido_retardo`.
 const RETARDO_CUARTOS: u8 = 4;
 
-/// Giros por mensaje. Aqui **no hay cadencia**: los giros salen pegados, uno
-/// detras de otro, porque lo que se mide es el ancho del pulso y no el periodo.
-/// Mil giros son entonces mil veces `t_real`, que al piso real de 8 MHz va de
-/// unos **9 ms** (`HOLA`, 9 bytes) a unos **103 ms** (`SET` de dieciseis, 103
-/// bytes): sobra para que el osciloscopio capture el peor pulso con persistencia
-/// infinita, y cabe en un disparo unico de pantalla.
+/// Giros por mensaje. **No es una cifra fisica ni sale de ningun papel**: es
+/// diseno de experimento, y si el osciloscopio pide mas o menos se cambia.
+///
+/// Aqui no hay cadencia: los giros salen pegados, uno detras de otro, porque lo
+/// que se mide es el ancho del pulso y no el periodo. Mil giros son entonces mil
+/// veces `t_real`, que al piso real de 8 MHz va de unos **9 ms** (`HOLA`, 9
+/// bytes) a unos **103 ms** (`SET` de dieciseis, 103 bytes): sobra para que el
+/// osciloscopio capture el peor pulso con persistencia infinita, y cabe en un
+/// disparo unico de pantalla.
 const GIROS_POR_MENSAJE: u32 = 1000;
 
 /// Silencio entre rafagas, para que los ocho grupos de pulsos se distingan en la
@@ -99,32 +94,19 @@ async fn main(_spawner: Spawner) {
     let f_cpu = usb::f_cpu_hz(&config);
     let p = embassy_stm32::init(config);
 
-    // Las ISR del SPI y de los dos canales del GPDMA a `P1`, ANTES de construir
-    // la ranura. Aqui no hay `EJECUTOR_J2` -- el lazo vive en el ejecutor de
-    // hilo --, pero la relacion que EN-PLACA fija es de las ISR contra el
-    // ejecutor que corra el lazo, y el de hilo esta por debajo de cualquier
-    // interrupcion por construccion. Los canales ya los habilito
-    // `embassy_stm32::init` (`dma/gpdma/mod.rs:526-534`); la linea del SPI5 no la
-    // habilita nadie, y sin ella el `EOT` no llega al NVIC y todos los giros
-    // venceria plazo.
-    interrupt::SPI5.set_priority(Priority::P1);
-    interrupt::GPDMA1_CHANNEL0.set_priority(Priority::P1);
-    interrupt::GPDMA1_CHANNEL1.set_priority(Priority::P1);
-    // SAFETY: la unica forma de desenmascarar la linea. El manejador existe
-    // porque `Irqs` ata `SPI5 => j2_spi::Isr<0>`.
-    unsafe { interrupt::SPI5.enable() };
-
-    let mut ranura = Ranura::nueva::<peripherals::SPI5, _, _, _, _, _, _>(
-        0,
-        pac::SPI5,
+    // El montaje entero vive en `j2_banco` (R23); el NVIC lo pone
+    // `Ranura::nueva` (R21). Aqui no se toca ninguna prioridad. Este binario no
+    // construye esclavo, asi que los canales 2 y 3 y la linea `EXTI11` de
+    // `IrqsBanco` se enlazan sin que nadie los use: inofensivo, porque una ISR
+    // solo corre si su linea esta desenmascarada, y la del `EXTI11` la
+    // desenmascara `Esclavo::nuevo`, que aqui no se llama.
+    let mut ranura = maestro_del_banco(
         p.PE15,
         p.PG2,
         p.PG1,
         p.PA3,
         p.GPDMA1_CH0,
         p.GPDMA1_CH1,
-        Irqs,
-        Irqs,
         &p.RCC,
         Config {
             f_sck_hz: F_SCK_HZ,
@@ -140,9 +122,13 @@ async fn main(_spawner: Spawner) {
     let umbrales = Umbrales::POR_DEFECTO;
     let f_sck_hz = ranura.f_sck_hz();
     info!(
-        "plazos_j2: f_sck {} Hz (pedido {}), retardo {} cuartos, f_cpu {} Hz, \
+        "plazos_j2: firmware {}, f_sck {} Hz (pedido {}), retardo {} cuartos, f_cpu {} Hz, \
          testigo en PE7 (CN15 pin 22), esclavo apagado y MISO al aire",
-        f_sck_hz, F_SCK_HZ, RETARDO_CUARTOS, f_cpu
+        env!("SAM17_GIT"),
+        f_sck_hz,
+        F_SCK_HZ,
+        RETARDO_CUARTOS,
+        f_cpu
     );
 
     let mut bajada = [0u8; LARGO_MAX];
@@ -181,7 +167,7 @@ async fn main(_spawner: Spawner) {
                 testigo.set_high();
                 let (res, _tardios) = ranura.giro(&bajada, &mut subida, tsize, plazo).await;
                 testigo.set_low();
-                if let j2_spi::Resultado::PlazoVencido = res {
+                if let Resultado::PlazoVencido = res {
                     // Un plazo vencido aqui no es ruido de fondo: es el riesgo 2
                     // pasando delante del osciloscopio. El pulso de ese giro
                     // mide el plazo, no la trama, y hay que descartarlo al leer.
