@@ -249,12 +249,18 @@ Y, cuando lo haya, una línea de error por cuelgue con su segundo y su cuenta.
   bucle. Una hora da 98 % de potencia contra el extremo suave del hilo (un
   cuelgue cada ~900 s).
 - **Pero el `f_sck` no van a ser 100 kHz, y la tercera línea lo dice.** El
-  `compute_baud_rate` de embassy reparte por tramos y con el kernel en HSI 64 la
-  razón 640 cae en el último, `/256` → **250 kHz**, que es el divisor más grande
-  que hay. No invalida el repro —la condición de la errata es «system clock much
-  faster than SCK» y 250 kHz sigue tres órdenes por debajo del núcleo— pero la
-  tasa que se mida **no es comparable byte a byte** con la de jake-taf. Anótalo
-  con la medida.
+  kernel del SPI5 **no es el HSI de 64 MHz**: es `pclk2`, y son **32 MHz**. El
+  mux se queda en su cero (`ClockMux::default()` es `mem::zeroed()`,
+  `_generated.rs:5317-5319`, e `init()` escribe `set_spi5sel` incondicionalmente,
+  `:5397`), y ese cero es `Spisel45::Pclk2` (metapac `rcc_n6.rs:43346-43348`);
+  `pclk2` es `sys / hpre / ppre2` (embassy `rcc/n6.rs:462`, publicado en `:1413`)
+  y con los defectos que `usb::configuracion()` no toca —`sys: Hsi`, `ahb: Div2`,
+  `apb2: Div1` (`:196`, `:225`, `:227`)— eso es 64 / 2 / 1 = 32. Con eso,
+  `compute_baud_rate` reparte por tramos y la razón 320 cae en el último, `/256`
+  → **125 kHz**, que es el divisor más grande que hay. No invalida el repro —la
+  condición de la errata es «system clock much faster than SCK» y 125 kHz está
+  aún más lejos del núcleo que los 100 kHz de jake-taf— pero la tasa que se mida
+  **no es comparable byte a byte** con la suya. Anótalo con la medida.
 - **El bucle vive en el ejecutor de hilo y el vigía en el del J2.** El
   `blocking_read` colgado no vuelve nunca; un vigía en su mismo ejecutor se
   colgaría con él. El vigía mira cada 100 ms; tres tics sin avanzar son un
@@ -277,11 +283,16 @@ tasa por armado). Tramas de 25 bytes a 8 kHz, al piso de 10 MHz, con el esclavo
 activo. Por punto:
 
 ```
-barrido,retardo_cuartos=R,giros=G,plazos_vencidos=P,eot_tardios=E,subidas_malas=S,escaladas=X,tramas_cortas=C
+barrido,retardo_cuartos=R,armados=A,plazos_vencidos=P,eot_tardios=E,subidas_malas=S,escaladas=X,tramas_cortas=C
 ```
 
-`escaladas` y `tramas_cortas` son **deltas del punto**, no totales, para que los
-seis se comparen entre sí. Al terminar los seis se queda en 4 —el de
+`armados` son transferencias **armadas**, no terminadas: sube una por vuelta del
+lazo, pase lo que pase, y `armados = ok + plazos_vencidos`. **No es el `giros` de
+`core`** (D7.3), que mide «mi periférico terminó» y no cuenta las que vencen
+plazo; por eso se llama distinto. `escaladas` son solo las del **maestro**
+(`ESCALADAS_GPDMA − REARMES_ESCALADOS`: `soltar_canales` la llaman los dos
+extremos). `escaladas` y `tramas_cortas` son **deltas del punto**, no totales,
+para que los seis se comparen entre sí. Al terminar los seis se queda en 4 —el de
 producción— para siempre, publicando un punto más cada 15 min.
 
 **La lectura, dicha, porque el acta no la fija.** El acta dice «en esa
@@ -330,9 +341,16 @@ distintos.
 La segunda línea son las doce columnas de `resistencia_j2.csv` en el orden de
 R-MJ8, y se copia tal cual al CSV: `fecha` va vacía —las dos comas seguidas—
 porque la pone quien copia. `reloj_MHz` lleva el **real**, el que sale del `MBR`,
-no el pedido: con 10 MHz pedidos y el kernel en HSI 64 son **8**. La segunda
-tanda, al peldaño 2 (34,5 MHz), cambia `F_SCK_HZ` en el binario y se dice sola en
-esa columna.
+no el pedido: con 10 MHz pedidos y el kernel del SPI5 en `pclk2` a 32 MHz son
+**8** (`/4`).
+
+**HUECO declarado (#380): la segunda tanda no va a medir 34,5 MHz.** Con el
+kernel de hoy, 32 MHz, y el `MBR` más pequeño, `/2`, el techo del enlace es
+**16 MHz**: pedir 34,5 devuelve 16. Para clavar 34,5 haría falta un kernel de
+69 MHz —o 138, o 276: solo 69 × 2^k lo da exacto—, y eso es elegir otra fuente
+del mux, que se decide en el #380. Hasta entonces la segunda tanda cambia
+`F_SCK_HZ` en el binario y mide **16 MHz**; la columna `reloj_MHz` lo dice sola,
+pero quien lea la fila tiene que saber que ese 16 **no es el peldaño 2**.
 
 **Cómo se juzga la fila, que no es «tiene fila».** Ficha 1 del acta: ninguna PCB
 con N657 sale al taller sin una fila medida. Ficha 2: el límite es **cero
@@ -391,11 +409,29 @@ rust-nm -C target/thumbv8m.main-none-eabihf/release/resistencia_j2 \
 ```
 
 `GFXTIM` tiene que salir con **dirección propia**, distinta de la de
-`DefaultHandler`. Medido el 2026-09-18 en los cuatro: sale propia, y la entrada
-del vector apunta ahí (`rust-objdump -s -j .vector_table`). Lo mismo vale para
-`SPI5`, `EXTI11` y `GPDMA1_CHANNEL0..3` en los binarios que los atan: los que no
-los atan los dejan en `DefaultHandler`, y eso también es correcto —
-`control_positivo` no usa ninguna ISR del SPI.
+`DefaultHandler`. Medido en los cuatro: sale propia, y la entrada del vector
+apunta ahí (`rust-objdump -s -j .vector_table`).
+
+**Y `SPI5`, `EXTI11` y `GPDMA1_CHANNEL0..3` también salen propias en los cuatro**,
+incluido `control_positivo`, que no usa ninguna de esas ISR: desde R23 el
+`bind_interrupts!` vive en la biblioteca (`IrqsBanco`), así que sus manejadores se
+enlazan en todo el que use la biblioteca. Es inofensivo —una ISR solo corre si su
+línea está desenmascarada— pero hay que saberlo al leer la salida: **el único
+negativo esperado es `SPI4`**, que sí cae en `DefaultHandler` porque el esclavo
+se despierta por `EXTI11` y por DMA, nunca por la interrupción de SPI4. Ejemplo
+real, `control_positivo`:
+
+```
+341a1952 T DefaultHandler
+341a54d8 T EXTI11
+341a5a60 T GFXTIM
+341a5522 T GPDMA1_CHANNEL0
+341a1952 T SPI4          ← el único que comparte dirección con DefaultHandler
+341a555a T SPI5
+```
+
+(las direcciones cambian con cada compilación; lo que se mira es **cuáles
+coinciden** con la de `DefaultHandler`, no sus valores).
 
 ### Las tres causas de trama corta, y cómo se separan
 
@@ -419,8 +455,8 @@ sostiene (§15.3.11, p. 789: en función alterna *«the Schmitt trigger input is
 activated»*). **Si en la placa el flanco no dispara**, el plan B es un **quinto
 hilo** del NSS del maestro —PA3, CN15 pin 17— a **PE10, CN15 pin 27** (UM3417
 Rev 3, Tabla 13, p. 32), con ese pin en `Input` y la línea `EXTI10`. **No está
-implementado**: son dos constantes de `src/j2_esclavo.rs` y el `bind_interrupts!`
-del binario.
+implementado**: son dos constantes de `src/j2_esclavo.rs` y la línea `EXTI11`
+del `bind_interrupts!` `IrqsBanco` de `src/j2_banco.rs`.
 
 ### Tres cosas que embassy no decide por nosotros
 
