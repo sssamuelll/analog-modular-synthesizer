@@ -206,6 +206,13 @@ no ejecuta D4 y no distingue «no nos afecta» de «el banco no lo ve». El cont
 positivo va primero porque es el que demuestra que el banco *sabe ver* un
 cuelgue.
 
+**Si hay que cambiar un pin o un canal, se cambia en un solo sitio:**
+`src/j2_banco.rs`, en `maestro_del_banco` / `esclavo_del_banco` y el
+`bind_interrupts!` `IrqsBanco`. Ahí los pines van como **tipos concretos**
+(`Peri<'static, peripherals::PE15>`), así que un pin equivocado no compila —antes
+sí compilaba: los límites del driver aceptan varios pines por señal y PG2 y PG1
+son intercambiables por tipo—. Los binarios solo piden la ranura y el esclavo.
+
 ### (0) y (1) `control_positivo`
 
 ```bash
@@ -217,9 +224,15 @@ Imprime, en este orden:
 ```
 experimento_0,eot_al_encender=<0|1>
 experimento_0,eot_al_encender_maestro=<0|1>
-control_positivo: f_ker <Hz>, MBR /<n>, f_sck <Hz> (pedido 100000), retardo: ninguno ..., f_cpu <Hz>
+control_positivo: firmware <rev>, f_ker <Hz>, MBR /<n>, f_sck <Hz> (pedido 100000), retardo: ninguno ..., f_cpu <Hz>
 control_positivo,minutos=M,lecturas=N,cuelgues=K          ← cada 60 s
 ```
+
+**`firmware <rev>` sale en la línea de arranque de los cuatro**, y es la revisión
+de git con la que se compiló: `<sha corto>`, o `<sha corto>-sucio` si el árbol
+tenía cambios sin commitear, o `sin-git` si `git` no contestó. Lo pone `build.rs`
+en `SAM17_GIT`. **Anótalo con cada medida**: sin él, una fila del CSV o una
+captura del osciloscopio no se puede repetir.
 
 Y, cuando lo haya, una línea de error por cuelgue con su segundo y su cuenta.
 
@@ -294,21 +307,32 @@ cargo run --release --bin resistencia_j2
 
 El montaje entero y tal como lo usará el instrumento: ranura 0 en SPI5 dentro
 del `EJECUTOR_J2` con la política de `core` detrás, esclavo del banco en SPI4
-como tarea del mismo ejecutor, retardo de producción (4 cuartos). Cada hora, tres
-líneas:
+como tarea del mismo ejecutor, retardo de producción (4 cuartos). Cada hora,
+cuatro líneas:
 
 ```
+firmware=<rev>
 0,SPI5,25,hw,<reloj_MHz>,<horas>,<giros>,<plazos_vencidos>,<eot_tardios>,<subidas_malas>,,NUCLEO-N657X0-Q
 esclavo,tramas_ok=,tramas_cortas=,rearmes_escalados=
 maestro,escaladas_gpdma=,inestable=,muda=
 ```
 
-La primera son las doce columnas de `resistencia_j2.csv` en el orden de R-MJ8, y
-se copia tal cual al CSV: `fecha` va vacía —las dos comas seguidas— porque la
-pone quien copia. `reloj_MHz` lleva el **real**, el que sale del `MBR`, no el
-pedido: con 10 MHz pedidos y el kernel en HSI 64 son **8**. La segunda tanda, al
-peldaño 2 (34,5 MHz), cambia `F_SCK_HZ` en el binario y se dice sola en esa
-columna.
+**Y una tanda entera con `horas=0` nada más arrancar**, antes de la primera hora.
+No es una medida —todo está a cero— y por eso lleva su hora puesta: sirve para
+ver el formato delante de quien va a copiar filas durante 24 h, en vez de
+descubrir a la hora que una columna baila.
+
+`firmware=` va **fuera** de las doce columnas a propósito: la cabecera de
+`resistencia_j2.csv` es de R-MJ8 y no se toca. Va delante de su fila, y hay que
+anotarlo junto a ella —las dos tandas, al piso y al peldaño 2, son binarios
+distintos.
+
+La segunda línea son las doce columnas de `resistencia_j2.csv` en el orden de
+R-MJ8, y se copia tal cual al CSV: `fecha` va vacía —las dos comas seguidas—
+porque la pone quien copia. `reloj_MHz` lleva el **real**, el que sale del `MBR`,
+no el pedido: con 10 MHz pedidos y el kernel en HSI 64 son **8**. La segunda
+tanda, al peldaño 2 (34,5 MHz), cambia `F_SCK_HZ` en el binario y se dice sola en
+esa columna.
 
 **Cómo se juzga la fila, que no es «tiene fila».** Ficha 1 del acta: ninguna PCB
 con N657 sale al taller sin una fila medida. Ficha 2: el límite es **cero
@@ -400,13 +424,16 @@ del binario.
 
 ### Tres cosas que embassy no decide por nosotros
 
-- **La línea del SPI5 en el NVIC la habilita el binario, no el driver.**
-  `embassy_stm32::init` habilita los dieciséis canales del GPDMA por su cuenta
-  (`dma/gpdma/mod.rs:526-534`), pero **nadie** habilita la del SPI: ni `init`, ni
-  `Ranura::nueva`, que solo arma `EOTIE` dentro del periférico. Sin
-  `interrupt::SPI5.enable()` el `EOT` no llega al núcleo y **todos** los giros
-  vencen plazo —un banco entero en rojo por una línea que falta—. Los tres
-  binarios que usan el driver la ponen, junto a las prioridades `P1`.
+- **La línea del SPI5 en el NVIC no la habilita `embassy_stm32::init`.** Sí
+  habilita los dieciséis canales del GPDMA por su cuenta
+  (`dma/gpdma/mod.rs:526-534`), pero la del SPI no la toca nadie de embassy. Sin
+  `enable()` el `EOT` no llega al núcleo y **todos** los giros vencen plazo —un
+  banco entero en rojo por una línea que falta—. Desde la ronda de arreglo 1 esa
+  línea la pone **`j2_spi::Ranura::nueva`** (regla R21: el NVIC lo maneja quien
+  arma la interrupción, y quien arma `EOTIE` es el driver), junto con la
+  prioridad `P1` suya y la de sus dos canales; `j2_esclavo::Esclavo::nuevo` hace
+  lo propio con su `EXTI11` y sus dos canales. **Los binarios no tocan el
+  NVIC**, y por eso no pueden olvidarlo.
 - **La D-cache del M55 está apagada.** embassy no la enciende en ningún sitio
   (`grep enable_dcache` en la rev fijada: nada), y el driver lo asevera al
   arrancar. R-MJ7 (búferes de DMA en región no cacheable) solo muerde el día que
