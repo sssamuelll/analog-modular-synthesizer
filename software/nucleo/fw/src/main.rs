@@ -8,6 +8,7 @@
 //! puede probar sin placa ya viene probado de alla.
 
 mod j2_spi;
+mod reinicio;
 mod usb;
 
 use defmt::info;
