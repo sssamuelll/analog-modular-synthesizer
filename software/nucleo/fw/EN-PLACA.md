@@ -299,8 +299,10 @@ Y, cuando lo haya, una línea de error por cuelgue con su segundo y su cuenta.
   8 bytes contra `write` de 2 + `read` de 1, y un driver de embassy más nuevo.
   La lectura entera está en la spec del maestro, §9, enmienda del 11-09,
   punto 3.
-  **Decidido el mismo día** (las tres cosas): (A) el mismo binario, 6 h; (B) el
-  bucle del primer reporte, 6 h; (C) preguntarle a jake-taf en #5607 ([hecho](https://github.com/embassy-rs/embassy/issues/5607#issuecomment-5931298173)). B es:
+  **Decidido el mismo día** (las tres cosas): (A) el mismo binario, 6 h, **hecha**;
+  (B) el bucle del primer reporte, 6 h, **para el 02-10**; (C) preguntarle a
+  jake-taf en #5607 ([hecho](https://github.com/embassy-rs/embassy/issues/5607#issuecomment-5931298173), él respondió que repite con su embassy
+  actual y avisa). B es:
 
   ```bash
   cargo run --release --bin control_positivo --features bucle-del-reporte
@@ -311,6 +313,13 @@ Y, cuando lo haya, una línea de error por cuelgue con su segundo y su cuenta.
   vueltas. Arma el periférico dos veces por cada 3 bytes, contra una por cada
   8. Las dos `info!` por vuelta del reporte no están: serían del orden de 10^8
   líneas en 6 h.
+
+  **A, medida el 2026-10-01** (firmware `4d2d6f2`): 358 min, 37 160 399
+  lecturas, **0 cuelgues**, 103 800 lecturas en cada minuto. Un cuelgue cada
+  2 h o menos queda descartado al 95 % en esta configuración; no dice que el
+  defecto no exista. Faltan las filas 359 y 360 del log (probable búfer al
+  parar `probe-rs`). Las cuentas, en la spec del maestro, §9, enmienda del
+  11-09, punto 3.
 - **Pero el `f_sck` no van a ser 100 kHz, y la tercera línea lo dice.** El
   kernel del SPI5 **no es el HSI de 64 MHz**: es `pclk2`, y son **32 MHz**. El
   mux se queda en su cero (`ClockMux::default()` es `mem::zeroed()`,
