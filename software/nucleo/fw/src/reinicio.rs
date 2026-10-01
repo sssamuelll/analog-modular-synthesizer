@@ -57,9 +57,8 @@
 //! hclk5 y hclku son el AHB, pclk1 y pclk2 los APB, y los cuatro salen siempre
 //! encendidos del `init` de embassy (`rcc/n6.rs`: `hclk5`, `hclku`, `pclk1` y
 //! `pclk2` se publican como `Some(...)` incondicionalmente). hsi_ck tambien:
-//! `Config::default()` lo deja encendido y ademas es la entrada de la PLL4 que
-//! alimenta al PHY (`usb.rs`). otgphy1_ker_ck es ic15_ck, que `usb.rs`
-//! enciende. Queda **lsi_ck**, el unico que depende de un campo de
+//! `Config::default()` lo deja encendido. otgphy1_ker_ck es hse_div2_ck, y
+//! `usb.rs` enciende el HSE del que sale. Queda **lsi_ck**, el unico que depende de un campo de
 //! configuracion que no se ve desde aqui (`config.rcc.ls`): hoy viene
 //! encendido porque `LsConfig::default()` es `default_lsi()` (`rcc/bd.rs`,
 //! `lsi: true`), pero el dia que alguien ponga `LsConfig::off()` o

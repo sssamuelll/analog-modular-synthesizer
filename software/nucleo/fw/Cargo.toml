@@ -15,12 +15,13 @@ sam17-nucleo-core = { path = "../core" }
 # Todos los crates de embassy salen de la MISMA fuente a proposito: mezclar
 # crates.io y git duplica `embassy-usb-driver` y los tipos dejan de casar.
 #
-# La fuente es la rama `n6-usb` de nuestro fork, que es embassy `main` mas los
-# tres commits de embassy-rs/embassy#6939 -- el soporte de USB OTG HS del N6,
-# que `main` todavia no tiene y sin el cual `usb.rs` no compila. La rama va
-# rebasada sobre `main` y el `rev` exacto queda fijado en `Cargo.lock`.
+# La fuente es la rama `n6-usb` de nuestro fork: embassy `main` del 08-09 mas
+# los tres commits de embassy-rs/embassy#6939 (el USB OTG HS del N6, mergeado
+# arriba el 09-09) y, desde el 2026-10-01, el arreglo del bring-up del PHY que
+# colgaba el bus en placa (embassy-rs/embassy#7146, abierto). El `rev` exacto
+# queda fijado en `Cargo.lock`.
 #
-# ponytail: vuelve a `version = "0.6"` de crates.io el dia que #6939 mergee.
+# ponytail: vuelve a `version` de crates.io el dia que #7146 salga en una release.
 # "exti" no va: nada en fw/src usa ExtiInput (grep -rn "exti" src/ da cero) y
 # con la feature puesta embassy define su propio manejador de EXTI11, que
 # chocaria con el del esclavo del banco (tarea 9).

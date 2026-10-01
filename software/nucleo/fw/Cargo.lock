@@ -258,7 +258,7 @@ dependencies = [
 [[package]]
 name = "embassy-crypto"
 version = "0.1.0"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 dependencies = [
  "defmt",
  "unitrait",
@@ -267,7 +267,7 @@ dependencies = [
 [[package]]
 name = "embassy-embedded-hal"
 version = "0.6.0"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 dependencies = [
  "defmt",
  "embassy-futures",
@@ -285,7 +285,7 @@ dependencies = [
 [[package]]
 name = "embassy-executor"
 version = "0.10.0"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 dependencies = [
  "cordyceps",
  "cortex-m",
@@ -300,7 +300,7 @@ dependencies = [
 [[package]]
 name = "embassy-executor-macros"
 version = "0.8.0"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -311,7 +311,7 @@ dependencies = [
 [[package]]
 name = "embassy-executor-timer-queue"
 version = "0.1.1"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 dependencies = [
  "unitrait",
 ]
@@ -319,12 +319,12 @@ dependencies = [
 [[package]]
 name = "embassy-futures"
 version = "0.1.2"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 
 [[package]]
 name = "embassy-hal-internal"
 version = "0.5.0"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 dependencies = [
  "cortex-m",
  "critical-section",
@@ -335,7 +335,7 @@ dependencies = [
 [[package]]
 name = "embassy-net-driver-channel"
 version = "0.4.0"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 dependencies = [
  "embassy-futures",
  "embassy-sync",
@@ -345,7 +345,7 @@ dependencies = [
 [[package]]
 name = "embassy-ptp-driver"
 version = "0.1.0"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 dependencies = [
  "defmt",
 ]
@@ -353,7 +353,7 @@ dependencies = [
 [[package]]
 name = "embassy-stm32"
 version = "0.6.0"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 dependencies = [
  "aligned",
  "bit_field",
@@ -409,7 +409,7 @@ dependencies = [
 [[package]]
 name = "embassy-sync"
 version = "0.8.0"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 dependencies = [
  "cfg-if",
  "critical-section",
@@ -423,7 +423,7 @@ dependencies = [
 [[package]]
 name = "embassy-time"
 version = "0.5.1"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 dependencies = [
  "cfg-if",
  "critical-section",
@@ -439,7 +439,7 @@ dependencies = [
 [[package]]
 name = "embassy-time-driver"
 version = "0.2.2"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 dependencies = [
  "document-features",
 ]
@@ -447,7 +447,7 @@ dependencies = [
 [[package]]
 name = "embassy-time-queue-utils"
 version = "0.3.2"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 dependencies = [
  "embassy-executor-timer-queue",
  "heapless 0.9.3",
@@ -456,7 +456,7 @@ dependencies = [
 [[package]]
 name = "embassy-usb"
 version = "0.6.0"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 dependencies = [
  "bitflags 2.13.1",
  "defmt",
@@ -472,7 +472,7 @@ dependencies = [
 [[package]]
 name = "embassy-usb-driver"
 version = "0.2.2"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 dependencies = [
  "defmt",
  "embedded-io-async 0.6.1",
@@ -482,7 +482,7 @@ dependencies = [
 [[package]]
 name = "embassy-usb-synopsys-otg"
 version = "0.4.0"
-source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#dc6b71642fec0d61a3795157d550b29c0a505ce7"
+source = "git+https://github.com/sssamuelll/embassy?branch=n6-usb#697ec64c3a40cead17a9d801ce116cfbfd09530c"
 dependencies = [
  "defmt",
  "document-features",

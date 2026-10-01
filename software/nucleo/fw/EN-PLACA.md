@@ -8,6 +8,12 @@ demuestra que arranque, ni que enumere, ni que conteste.
 Esta es la lista del día que llegue la placa, **en orden**: cada línea supone
 que la anterior salió bien.
 
+> **Estado al 2026-10-01: la Nucleo está en el banco y los pasos 1 y 2 salieron**
+> —arranca y Windows la enumera como «SAM17 nucleo» a alta velocidad—. Hicieron
+> falta cinco cosas que esta lista no sabía; están en §«El primer día en
+> placa», al final, y las correcciones van en su sitio abajo. Los pasos 3 a 6
+> esperan un cliente MIDI del lado del PC, que el repo todavía no tiene.
+
 ## Antes de enchufar nada
 
 **Cuál placa.** La **NUCLEO-N657X0-Q**, firmada en el acta del J2 del
@@ -19,7 +25,9 @@ pantalla de 800×480 en el LTDC, la PSRAM y la cámara.
 
 **Comprobar `memory.x` contra la placa.** El N657 **no tiene flash interna**:
 `FLASH` y `RAM` son dos tramos de la misma AXISRAM2 y el binario lo carga ahí
-el depurador, con la placa en *development boot* (BOOT1 arriba). El arranque
+el depurador, con la placa en *development boot* (BOOT1 = 1: en la Nucleo,
+**el puente JP2 movido** de su [1-2] de fábrica, UM3417 Rev 3 Tabla 4, p. 8 y
+§7.13, p. 26; «BOOT1 arriba» es el interruptor de la DK). El arranque
 de verdad —FSBL y binario con cabecera desde la XSPI— es el riesgo 2 del papel
 del hub y está en `ARRANQUE.md`: existe en Rust (lo trae embassy), compila en
 esta máquina y **no está probado en placa**. Enlazar aquí no demuestra que
@@ -46,13 +54,17 @@ que impiden repetir un pin o pedir uno que no existe.
 ## 1. Arranca
 
 ```bash
-cargo run --release          # probe-rs con el STLINK-V3EC de la placa
+cargo run --release --bin sam17-nucleo-fw   # probe-rs con el STLINK-V3EC (CN10)
 ```
 
-**BOOT1 arriba antes de nada.** Con BOOT1 abajo la ROM se va a serial boot
-y `probe-rs` no encuentra a nadie escuchando: el LED rojo de PG10 parpadea
-rápido. En development boot se queda fijo (AN5967 §11.2). `ARRANQUE.md`
-tiene los tres caminos con su página.
+El `--bin` hace falta desde que existen los cuatro binarios del J2: sin él
+`cargo` no sabe cuál cargar.
+
+**JP2 movido antes de nada.** Con BOOT1 abajo la ROM se va a flash boot o a
+serial boot y `probe-rs` no encuentra a nadie escuchando. En development boot
+el LED rojo LD5 (PG10) se queda fijo (AN5967 §11.2); en la Nucleo, el 01-10,
+fijo y sin cambiar al pulsar B2. `ARRANQUE.md` tiene los tres caminos con su
+página.
 
 **`--release` no es una preferencia: es la unica que enlaza.** Con
 `defmt` y embassy, el binario de depuracion se pasa **48 KB** de los 256 K que
@@ -63,28 +75,51 @@ y no los 768 KB que dice el comentario heredado de embassy. Ojo con lo que
 eso arrastra: el framebuffer de 800x480 RGB565 son 750 KiB y **ya no cabe
 ahi hoy**, se toque o no `FLASH`. Es del #296.
 
-Por `defmt` tiene que salir:
+Por `defmt` tiene que salir (lo que salió el 2026-10-01; cuando se escribió
+esta lista eran protocolo v1, 39 pines y 27 parámetros):
 
 ```
-SAM17: el cerebro arranco, protocolo v1
-39 pines en el mapa
-sin descubrimiento todavia: 27 parametros, todos de medida
+SAM17: el cerebro arranco, protocolo v2
+46 pines en el mapa
+HUECO: tabla de partes provisional declarada: 1 parte, 4 voces; la sustituye EEPROM #175
+sin descubrimiento todavia: 42 parametros, todos de medida
+USB: un cliente se conecto            ← cuando el PC abre el puerto MIDI
 ```
+
+Las dos primeras pueden no verse: con `DEFMT_LOG=debug` las 46 líneas de
+pines llenan el búfer RTT de 1 KB antes de que probe-rs se enganche.
+`DEFMT_RTT_BUFFER_SIZE=16384` al compilar las conserva.
 
 **Si no sale nada**, en orden: la configuración de alimentación (arriba), y
 después el reloj de referencia del PHY de USB, que tiene que ser 24 MHz
-exactos y sale de PLL4 → IC15 (`usb::configuracion()`, con la cuenta y su
-página). Enlazar no es arrancar.
+exactos y sale del **cristal HSE ÷ 2** (`usb::configuracion()`, con su
+página; con HSI → PLL4 → IC15 el PHY no se presenta, medido el 01-10).
+Enlazar no es arrancar.
+
+**Si se cuelga, se corta la corriente, no se pulsa B2.** Tras un cuelgue del
+bus el depurador vuelve con NRST, pero cualquier firmware muere a ~0,9 s
+hasta que se desconecta CN10 unos segundos (ES0620 Rev 5 §2.2.18, *«might
+require a full power cycle»*; medido el 01-10: el mismo binario murió a
+0,85 s antes del corte y corrió 60 s después).
 
 ## 2. Enumera
 
 El sistema operativo lo ve como dispositivo MIDI con nombre **SAM17 nucleo**,
-VID `0x1209` y PID `0x0017`.
+VID `0x1209` y PID `0x0017`. **Hecho el 2026-10-01** en Windows 11: dispositivo
+compuesto USB, clase MEDIA y endpoint MIDI, todos `OK`, a alta velocidad.
+
+Dos condiciones de banco. El cable de **CN8** tiene que pasar datos: el
+primero que se probó unía D+ y D− (estado SE1 en `GCCFG`, de puerto o cable de
+carga) y Windows no veía nada. Y el firmware tiene que bajar `PRIMASK`, que
+probe-rs deja en 1 (§«El primer día en placa»): sin eso el PC resetea el bus,
+el driver no se entera y Windows dice *«Error de solicitud de descriptor de
+dispositivo»*.
 
 ## 3. `HELLO` da la vuelta
 
 **Este es el momento en que el instrumento contesta de verdad por primera vez.**
-Manda el SysEx de `HELLO` y espera `HOLA { version: 1 }`.
+Manda el SysEx de `HELLO` y espera `HOLA` con la versión que imprime la línea
+de arranque (2 el 2026-10-01).
 
 El sobre es `F0 7D <datos empaquetados a 7 bits> F7`, y el mensaje son la
 etiqueta `0x01` más la versión en `u16` little-endian. El troceo en paquetes
@@ -92,11 +127,12 @@ de 4 bytes lo hace el driver MIDI del sistema.
 
 ## 4. `DESCRIBE` vuelve entero
 
-Tienen que llegar **27 sobres**, uno por parámetro: las 24 bandas de Bark, el
-pico, su exceso y la sonoridad. Con sus nombres y sus unidades.
+Tiene que llegar **un sobre por parámetro**, tantos como dice la línea de
+arranque: 42 el 2026-10-01. Cuando se escribió esto eran 27, las 24 bandas de
+Bark, el pico, su exceso y la sonoridad. Con sus nombres y sus unidades.
 
-Si llegan menos, sospecha del troceo largo antes que del servidor: 27 sobres
-seguidos es lo primero que ejercita el buffer de verdad.
+Si llegan menos, sospecha del troceo largo antes que del servidor: decenas de
+sobres seguidos es lo primero que ejercita el buffer de verdad.
 
 ## 5. Un `SET` sobre una medida contesta `ERROR`
 
@@ -525,3 +561,43 @@ del `bind_interrupts!` `IrqsBanco` de `src/j2_banco.rs`.
 >    de ahí toda carga va con NRST.
 >
 > La salida cuando pase, siempre: **NRST o quitar y poner la alimentación.**
+
+## El primer día en placa (2026-10-01)
+
+La Nucleo llegó el 01-10 y en el mismo día salieron los pasos 1 y 2. Lo que
+la lista no sabía, en el orden en que apareció:
+
+1. **La casilla del reset de `probe-rs` (#364) queda cerrada: no muerde.**
+   Más de diez cargas seguidas sin tocar NRST arrancaron y hablaron por
+   `defmt`, con `RTCSEL` en su defecto y los dos selectores del PHY también
+   (`OTGPHY1SEL = 00`, `OTGPHY1CKREFSEL = 0`). Las muertes de ese día eran del
+   punto 2, no del reset.
+
+2. **El bring-up del PHY USB que aportamos a embassy colgaba el bus.**
+   `phy_init()` tocaba `USBPHYC_CR` con el reloj del OTG apagado y con el bit
+   23 de `AHB5RSTR` puesto. El chip se colgaba a los ~0,12 s de arrancar `main`
+   y el depurador respondía `SwdApFault`. Medido paso a paso: así como estaba
+   se cuelga, soltando solo el bit 23 también, y con la secuencia del ejemplo
+   de ST para esta placa lee `0x0001_0015` (el valor de reset del RM) y sigue.
+   Arreglo en embassy-rs/embassy#7146; el fork `n6-usb` lo lleva desde
+   `697ec64` y `Cargo.lock` apunta ahí.
+
+3. **probe-rs arranca el binario con `PRIMASK = 1`** y nada lo baja: ninguna
+   interrupción llega (probe-rs/probe-rs#4390). Lo resuelve `usb::iniciar()`,
+   la única puerta a `embassy_stm32::init`, que apaga y limpia el NVIC y
+   desenmascara. Sin ella, los cuatro binarios del J2 —que viven del `EOT`, del
+   DMA, del `EXTI11` y del ejecutor de `GFXTIM`— habrían dado cada giro por
+   plazo vencido, y el soak habría salido rojo por el cargador.
+
+4. **El PHY USB quiere el cristal.** Con la referencia HSI → PLL4 → IC15 a
+   24 MHz el PHY no se presenta: D+ y D− quedan en SE0 y Windows no ve nada.
+   Con el HSE de 48 MHz ÷ 2 enumera. Es una corrida de cada lado, y contradice
+   el «para no depender del cristal» que había en `usb.rs`: para la placa del
+   hub es decisión abierta, en #150.
+
+5. **Tras un cuelgue, NRST no basta** (ES0620 Rev 5 §2.2.18): se corta la
+   corriente. Y el primer cable de CN8 era de carga (D+ y D− unidos).
+
+De la errata salió además §2.9.4: en development mode el LPTIM4 de la ROM sigue
+vivo cuando arranca el código. Por eso `iniciar()` limpia el NVIC antes de
+desenmascarar.
