@@ -122,16 +122,21 @@ temperatura (DS14791 Rev 10, p. 165, `TJ` −40 a 125 °C), y el USB de alta
 velocidad pide ±500 ppm. Con esa deriva, el HSI no puede ser la referencia
 del PHY aunque una corrida a temperatura de escritorio hubiera salido.
 
+**La frecuencia, el mismo 2026-10-01**, ante las tres que caben (38,4, 40 o
+48 MHz) y el aviso de que 48 está en el techo del rango:
+
+«si la nucleo funciona bien con 48 que sea de 48 hombre. sin miedo.»
+
+**Interpretación, fuera de la cita:** el cristal del hub es de **48 MHz**, el
+mismo de la NUCLEO-N657X0-Q (X3, UM3417 Rev 3 §7.7.2, p. 24) y el único medido.
+Con el selector del PHY en su defecto (`OTGPHY1SEL = hse_div2_ck`) su mitad,
+24 MHz, es un `FSEL` legal (RM0486 Rev 4, p. 3929), y ninguno de los diez
+selectores de la errata §2.2.22 se mueve. Que 48 sea el techo de la hoja (16 a
+48 MHz, DS14791 Rev 10, Tabla 49, p. 161) queda dicho y aceptado: es la
+frecuencia con la que ST diseñó su propia placa para este chip.
+
 **Lo que el acta NO decide:**
 
-- **La frecuencia del cristal.** La hoja admite de 16 a 48 MHz (DS14791 Rev 10,
-  Tabla 49, p. 161), y con el selector del PHY en su defecto (`OTGPHY1SEL =
-  hse_div2_ck`) la mitad tiene que ser un `FSEL` legal (19,2, 20 o 24 MHz,
-  RM0486 Rev 4, p. 3929): **38,4, 40 o 48 MHz**. 48 es la única medida, y está
-  en el techo del rango. 40 es la del dibujo de aplicación típica de la hoja
-  (Figura 21) y no está medida. Otra frecuencia obliga a mover
-  `OTGPHY1CKREFSEL`, que es uno de los diez selectores de la errata §2.2.22.
-  `reloj_budget.py` usa 48 MHz como la del banco, no como pieza.
 - **La pieza**: tolerancia, ESR, carga (CL1 y CL2 contra la capacidad de pin y
   pista, DS14791 Rev 10, p. 162) y huella.
 - **Que las PLL tomen el cristal.** Hoy el censo de relojes las sigue
