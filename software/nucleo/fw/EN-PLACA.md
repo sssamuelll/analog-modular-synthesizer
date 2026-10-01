@@ -300,7 +300,7 @@ Y, cuando lo haya, una línea de error por cuelgue con su segundo y su cuenta.
   La lectura entera está en la spec del maestro, §9, enmienda del 11-09,
   punto 3.
   **Decidido el mismo día** (las tres cosas): (A) el mismo binario, 6 h; (B) el
-  bucle del primer reporte, 6 h; (C) preguntarle a jake-taf en #5607. B es:
+  bucle del primer reporte, 6 h; (C) preguntarle a jake-taf en #5607 ([hecho](https://github.com/embassy-rs/embassy/issues/5607#issuecomment-5931298173)). B es:
 
   ```bash
   cargo run --release --bin control_positivo --features bucle-del-reporte
