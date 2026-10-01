@@ -83,6 +83,17 @@ const F_SCK_JAKE_HZ: u32 = 100_000;
 /// Los bytes por lectura del repro: `blocking_read(&mut [0u8; 8])`.
 const BYTES_POR_LECTURA: usize = 8;
 
+/// El bucle del primer reporte de embassy-rs/embassy#5607: bajo `CS`, `write` de
+/// `[0x03, 0x2c]` y `read` de 1 byte. Lo pide `--features bucle-del-reporte`
+/// (decision del 2026-10-01, EN-PLACA punto (1)). Arma el periferico dos veces
+/// por cada 3 bytes, contra una por cada 8 del bucle de siempre. Las dos `info!`
+/// por vuelta del reporte NO estan: serian del orden de 10^8 lineas en 6 h.
+/// `lecturas` cuenta vueltas.
+const BUCLE_DEL_REPORTE: bool = cfg!(feature = "bucle-del-reporte");
+
+/// Lo que escribe el reporte antes de leer.
+const ESCRITURA_DEL_REPORTE: [u8; 2] = [0x03, 0x2c];
+
 /// Cadencia del vigia. Tres tics sin avanzar son el umbral de cuelgue, o sea
 /// 300 ms: **mas de quinientas veces** una lectura sana de 8 bytes al `f_sck`
 /// **real** de este binario, 125 kHz -- 8 x 8 / 125 kHz = **512 us**; ver la nota
@@ -179,13 +190,18 @@ async fn main(_spawner: Spawner) {
     let f_sck = f_ker / (1u32 << (mbr + 1));
     info!(
         "control_positivo: firmware {}, f_ker {} Hz, MBR /{}, f_sck {} Hz (pedido {}), \
-         retardo: ninguno (no hay driver propio en este binario), f_cpu {} Hz",
+         retardo: ninguno (no hay driver propio en este binario), f_cpu {} Hz, bucle: {}",
         env!("SAM17_GIT"),
         f_ker,
         1u32 << (mbr + 1),
         f_sck,
         F_SCK_JAKE_HZ,
-        f_cpu
+        f_cpu,
+        if BUCLE_DEL_REPORTE {
+            "reporte (write 2 + read 1, sin info!)"
+        } else {
+            "read de 8"
+        }
     );
 
     // El ejecutor del J2 arranca sin ninguna ranura: lo unico que se le pide es
@@ -201,12 +217,18 @@ async fn main(_spawner: Spawner) {
     // El bucle del repro. No vuelve nunca, y eso es a proposito: es el ejecutor
     // de hilo entero, que es justo lo que el cuelgue congela.
     let mut buf = [0u8; BYTES_POR_LECTURA];
+    let mut uno = [0u8; 1];
     loop {
         cs.set_low();
         // El `Err` no se distingue del `Ok` a proposito: lo que se cuenta es
         // *«volvio»*, y el modo del #5607 es que no vuelve. Un `Overrun` con el
         // MISO al aire no es el suceso que se mide.
-        let _ = spi.blocking_read(&mut buf);
+        if BUCLE_DEL_REPORTE {
+            let _ = spi.blocking_write(&ESCRITURA_DEL_REPORTE);
+            let _ = spi.blocking_read(&mut uno);
+        } else {
+            let _ = spi.blocking_read(&mut buf);
+        }
         cs.set_high();
         PROGRESO.fetch_add(1, Ordering::Relaxed);
     }
