@@ -4,9 +4,9 @@
     python hardware/02-midi-cv/reloj_budget.py
 
 El #150 perdio el RP2350, pero no el problema: varias funciones piden relojes
-al mismo silicio. El unico arbol programado esta en software/nucleo/fw/src/
-usb.rs. Este censo conserva su PLL4 y prueba si la mesa del hub cabe a su
-lado. La salida distingue FALLO de reparto, HUECO de pieza y cuenta exacta.
+al mismo silicio. El PHY de USB ya no pide PLL: su referencia sale del cristal
+HSE (acta del 2026-10-01, papel del hub S0) y las cuatro PLL quedan para la
+mesa. La salida distingue FALLO de reparto, HUECO de pieza y cuenta exacta.
 
 LA MESA SALE DEL CENSO DEL HUB
 
@@ -25,7 +25,8 @@ UNA PLL NO ES UN PERIFERICO
   RM0486 Rev 4, p. 435 llama a su reparto "A typical allocation is:".
   Es una sugerencia. ICxSEL[1:0] elige cualquiera de las cuatro PLL para
   CADA IC (RM0486 Rev 4, RCC_ICxCFGR, p. 507). El comentario del #150 del
-  2026-09-08 y usb.rs:53 leen una reserva donde el silicio trae un MUX.
+  2026-09-08 y el usb.rs de entonces leian una reserva donde el silicio trae
+  un MUX.
   El LTDC no obliga a tomar PLL4: obliga a pasar por ic16 (Tabla 72, p. 448).
   El PHY pasa por ic15 (Tabla 72, p. 449). Pueden elegir PLL distintas.
 
@@ -52,7 +53,8 @@ UNA SOLA CUENTA, Y QUE SEA EXACTA
 
   Manda DS14791 Rev 10, Tabla 58, p. 166: fPLL_IN no es fPFD. El rotulo
   "5 to 1200 MHz" del dibujo del RM0486 Rev 4, p. 436 no sustituye a esa
-  tabla. usb.rs:47 aplica aquel intervalo al resultado de DIVM. El HSI
+  tabla. El usb.rs de antes del 2026-10-01 aplicaba aquel intervalo al
+  resultado de DIVM. El HSI
   nominal esta en el techo de entrada: el censo no demuestra su tolerancia
   real ni convierte una razon racional exacta en precision de cristal.
 
@@ -82,7 +84,8 @@ EL DIVISOR DE APB QUE EL SILICIO NO TIENE
 
 LO QUE NO COMPRA EL CIERRE
 
-  Pixel y codec del cuarto chip siguen sin pieza; HSE sigue sin decision.
+  Pixel y codec del cuarto chip siguen sin pieza. El HSE existe (acta del
+  2026-10-01) sin pieza ni frecuencia firmada: 48 MHz es el del banco.
   Los objetivos elegidos para probar convivencia son ESTIMADOS, no registros aprobados
   para el firmware. Un kernel SPI no es SCK; un kernel SAI no fija MCLK ni
   FS sin programar el SAI y conocer el codec. Tampoco son un ensayo de DMA,
@@ -92,7 +95,8 @@ LO QUE NO COMPRA EL CIERRE
   promete ese maximo para todas las configuraciones que encuentra el censo.
   La ausencia de una frecuencia entera se calcula; no demuestra por si sola
   que fracN la reproduzca EXACTAMENTE con su registro finito. Aqui no hay
-  buscador fraccionario ni eleccion de cristal.
+  buscador fraccionario, y las PLL se barren desde el HSI: tomar el cristal
+  como entrada de PLL es una opcion que el acta abre y no decide.
 
   HUECO VARIOS SIN RELOJ CENSADO: los 32 GPIO de micro_budget.py:1168 no
   enumeran kernels. Faltan las dos ranuras por USART sincrono (D3), MIDI DIN
@@ -126,9 +130,16 @@ DIVN_FRAC = (20, 320)  # RM0486 Rev 4, p. 437, DIVN[11:0] en modo fraccionario.
 PDIV = (1, 7)  # RM0486 Rev 4, p. 436-437: cada POSTDIV[2:0]; arranque != rango.
 ICINT = (1, 256)  # RM0486 Rev 4, p. 507-508: divisor = ICxINT[7:0] + 1.
 N_PLL = 4  # RM0486 Rev 4, sec. 14.6.5, p. 435.
-HSI_HZ = 64_000_000  # RM0486 Rev 4, sec. 14.6.2, p. 430; usb.rs:46.
+HSI_HZ = 64_000_000  # RM0486 Rev 4, sec. 14.6.2, p. 430; usb.rs, f_cpu_hz.
 HSI_AL_BORDE = HSI_HZ == PLL_IN_HZ[1]  # DERIVADO: margen nominal fPLL_IN.
-HSE_HZ = None  # HUECO: ningun papel elige cristal para el hub (#150).
+# Acta del 2026-10-01 (papel del hub, S0): el hub lleva cristal en el HSE.
+# 48 MHz es el del banco y el unico medido (NUCLEO-N657X0-Q, X3; UM3417 Rev 3,
+# sec. 7.7.2, p. 24); la frecuencia de la pieza NO esta firmada. Con OTGPHY1SEL
+# en su reset la mitad tiene que ser un FSEL: 38,4, 40 o 48 MHz, y las tres caben
+# en 16..48 MHz (DS14791 Rev 10, Tabla 49, p. 161). Una guarda de ese rango no
+# podria morder nunca: la que manda es la del FSEL, en _peticiones.
+HSE_HZ = 48_000_000
+HSE_PIEZA_ELEGIDA = False  # HUECO: acta del 2026-10-01, sin cristal ni frecuencia firmados.
 JITTER_ENTERO_TYP_PS = 2.7  # DS14791 Rev 10, Tabla 58, p. 166: +-ps RMS.
 JITTER_ENTERO_PS = 6.6  # DS14791 Rev 10, Tabla 58, p. 166: max +-ps RMS.
 JITTER_FRAC_PS = 11.9  # DS14791 Rev 10, Tabla 58, p. 166: max +-ps RMS.
@@ -136,7 +147,7 @@ JITTER_BANDA_HZ = (10_000, 20_000_000)  # DS14791 Rev 10, Tabla 58, p. 166.
 JITTER_VCO_HZ = 3_200_000_000  # DS14791 Rev 10, Tabla 58, p. 166: condicion.
 JITTER_PFD_HZ = 25_000_000  # DS14791 Rev 10, Tabla 58, p. 166: condicion.
 PHY_REF_LEGALES_HZ = (19_200_000, 20_000_000, 24_000_000)  # RM0486 Rev 4, p. 3929, FSEL.
-PHY_ICINT_FIRMWARE = 20  # software/nucleo/fw/src/usb.rs:80, Icint::Div20.
+PHY_FUENTE = "hse_div2_ck"  # RM0486 Rev 4, RCC_CCIPR6, OTGPHY1SEL = 00, su reset, p. 535; usb.rs.
 OTG_KERNEL_HZ = 60_000_000  # RM0486 Rev 4, Tabla 72, p. 449, phyclock.
 MCLK_1024FS_44K1_HZ = 44_100 * 1024  # #150: DERIVADO, familia 44,1 kHz x1024.
 PANEL_ELEGIDO = False  # HUECO: pantalla-motor S5/S8, panel sin hoja elegida.
@@ -192,21 +203,13 @@ class Opcion(NamedTuple):
     cantidad: int  # Configuraciones completas con esta misma salida de PLL.
 
 
-CFG_PHY_DEL_FIRMWARE = ConfigPLL(
-    HSI_HZ,  # software/nucleo/fw/src/usb.rs:71, Pllsel::Hsi.
-    4,  # software/nucleo/fw/src/usb.rs:72, Plldivm::Div4.
-    60,  # software/nucleo/fw/src/usb.rs:74, divn.
-    2,  # software/nucleo/fw/src/usb.rs:75, Pllpdiv::Div2.
-    1,  # software/nucleo/fw/src/usb.rs:76, Pllpdiv::Div1.
-)
-
 # mux SOLO contiene ICs. Las fuentes de bus y per_ck se declaran aparte.
 # SYS_* son alimentadores, no filas de kernel de la Tabla 72. SYS_C y
 # SYS_BUS2 deben habilitarse junto a SYS_BUS al seleccionar SYSSW (p. 440).
 # No se les asigna carga de NPU ni de camara: solo se conserva la coherencia
 # de ese selector comun. La CPU puede seguir en HSI por CPUSW independiente.
 CONSUMIDORES = {
-    "OTGPHY1": Consumidor(("ic15",), 48_000_000, "usb", True, ("hse_div2_ck", "per_ck", "hse_div2_osc_ck")),  # RM0486 Rev 4, Tabla 72, p. 449.
+    "OTGPHY1": Consumidor(("ic15",), 48_000_000, "usb", True, ("hse_div2_ck", "per_ck", "hse_div2_osc_ck")),  # RM0486 Rev 4, Tabla 72, p. 449; desde el acta del 2026-10-01 sale de PHY_FUENTE, fuera del reparto.
     "LTDC": Consumidor(("ic16",), 86_000_000, "pantalla", False, ("pclk5", "per_ck", "hsi_div_ck")),  # RM0486 Rev 4, Tabla 72, p. 448.
     "SPI1": Consumidor(("ic8", "ic9"), 200_000_000, "J2", False, ("pclk2", "per_ck", "msi_ck", "hsi_div_ck", "I2S_CKIN")),  # RM0486 Rev 4, Tabla 72, p. 451.
     "SPI2": Consumidor(("ic8", "ic9"), 200_000_000, "J2", False, ("pclk1", "per_ck", "msi_ck", "hsi_div_ck", "I2S_CKIN")),  # RM0486 Rev 4, Tabla 72, p. 451.
@@ -225,7 +228,7 @@ CONSUMIDORES = {
 }
 
 CLAVES = {
-    "OTGPHY1": "phy_ref_hz", "LTDC": "ltdc_px_hz",
+    "LTDC": "ltdc_px_hz",
     "SPI1": "spi1_kernel_hz", "SPI2": "spi2_kernel_hz", "SPI3": "spi3_kernel_hz",
     "SPI4": "spi4_kernel_hz", "SPI5": "spi5_kernel_hz", "SPI6": "spi6_kernel_hz",
     "XSPI1": "xspi1_kernel_hz",
@@ -247,15 +250,15 @@ HCLK_TECHO_HZ = 200_000_000  # DS14791 Rev 10, Tabla 24, p. 139: FHCLK 0..200 MH
 PCLK_TECHO_HZ = 200_000_000  # DS14791 Rev 10, Tabla 24, p. 139: fPCLKx 0..200 MHz.
 I2C1_BUS_RM_HZ = 100_000_000  # RM0486 Rev 4, Tabla 72, p. 447, fila "Bus" del I2C1.
 I2C1SEL_RESET = "pclk1"  # RM0486 Rev 4, RCC_CCIPR4, I2C1SEL[2:0] = 000, p. 532.
-I2C1SEL_ELEGIDO = "ic15"  # RM0486 Rev 4, RCC_CCIPR4, I2C1SEL[2:0] = 011, p. 532.
+I2C1SEL_ELEGIDO = "ic10"  # RM0486 Rev 4, RCC_CCIPR4, I2C1SEL[2:0] = 010, p. 532. Era ic15 mientras lo compartia con el PHY (hasta el acta del 2026-10-01).
 # CONSECUENCIA PARA EL FIRMWARE. Por esta errata no hay nada que cambiar hoy en
 # Rust: embassy trae apb1..apb5 en Div1 (rcc/n6.rs, Config::new de la rev
 # fijada) y fw no sobreescribe ningun prescaler, que es justo lo que pide el
 # workaround. Lo que si hay que escribir, el dia que entre el driver del I2C1,
 # es el selector, porque su valor de reset es I2C1SEL_RESET y la errata deja esa
-# fuente pegada al AHB: `config.rcc.mux.i2c1sel = I2c1sel::Ic15;`. El campo
+# fuente pegada al AHB: `config.rcc.mux.i2c1sel = I2c1sel::Ic10;`. El campo
 # existe (ClockMux generado del build de fw, _generated.rs; el RCC lo lee de
-# RCC_CCIPR4.I2C1SEL) y es el mismo gesto que usb.rs:82 ya hace con otgphy1sel.
+# RCC_CCIPR4.I2C1SEL) y es el mismo gesto que usb.rs hace con otgphy1sel.
 
 
 def _exacto(valor) -> Fraction:
@@ -371,17 +374,21 @@ def busca_entero(f_in, f_obj) -> ConfigPLL | None:
     return opciones[0].cfg if opciones else None
 
 
+def referencia_phy(p: dict) -> Fraction:
+    """hse_div2_ck: la mitad del cristal (RM0486 Rev 4, p. 535). Una sola cuenta."""
+    return _exacto(p["hse_hz"]) / 2
+
+
 def parametros() -> dict:
-    phy = ic_hz(pll_out_hz(CFG_PHY_DEL_FIRMWARE), PHY_ICINT_FIRMWARE)
     return {
-        "phy_ref_hz": phy,  # DERIVADO del firmware usb.rs:71-83, no otra cuenta.
+        "hse_hz": HSE_HZ,  # Acta del 2026-10-01; la referencia del PHY se DERIVA de aqui.
         "ltdc_px_hz": 33_000_000,  # ESTIMADO: pantalla-motor S5, sin panel elegido.
         **{CLAVES[n]: J2_KERNEL_ESTIMADO_HZ for n, c in CONSUMIDORES.items()
            if c.trabajo == "J2"},  # Seis maestros del mismo trabajo y clase de velocidad.
         "xspi1_kernel_hz": 200_000_000,  # psram_budget.py:46, DS14791 Rev 2, Tabla 77, p. 182: DTR con DQS; no pieza elegida.
         "eth1_kernel_hz": 125_000_000,  # RM0486 Rev 4, Tabla 72, p. 446: reserva RGMII, D9 en cuarentena.
         "adc12_kernel_hz": 100_000_000,  # ESTIMADO: pedal y mux de perillas; conversion/adquisicion pendientes.
-        "i2c1_kernel_hz": phy,  # ESTIMADO: reutilizar ic15; SCL/TIMINGR para descubrimiento y tactil pendientes.
+        "i2c1_kernel_hz": 24_000_000,  # ESTIMADO: el de cuando compartia ic15 con el PHY; SCL/TIMINGR pendientes.
         "sys_bus_hz": SYS_BUS_ESTIMADO_HZ,  # ESTIMADO: RM0486 Rev 4, p. 440-442.
         "sys_c_hz": SYS_BUS_ESTIMADO_HZ,  # ESTIMADO: habilitar ic6 para SYSSW, RM0486 Rev 4, p. 440.
         "sys_bus2_hz": SYS_BUS_ESTIMADO_HZ,  # ESTIMADO: habilitar ic11 para SYSSW, RM0486 Rev 4, p. 440.
@@ -389,9 +396,10 @@ def parametros() -> dict:
 
 
 def _peticiones(p: dict, *, rgmii: bool = True) -> dict[str, Fraction]:
+    phy = referencia_phy(p)
+    assert phy in PHY_REF_LEGALES_HZ, (
+        f"PHY: referencia {phy} Hz (HSE {p['hse_hz']} Hz / 2) fuera de FSEL {PHY_REF_LEGALES_HZ}")
     pedidos = {n: _exacto(p[c]) for n, c in CLAVES.items() if rgmii or n != "ETH1"}
-    assert pedidos["OTGPHY1"] in PHY_REF_LEGALES_HZ, (
-        f"PHY: referencia {pedidos['OTGPHY1']} Hz fuera de FSEL {PHY_REF_LEGALES_HZ}")
     for nombre, hz in pedidos.items():
         consumidor = CONSUMIDORES[nombre]
         assert 0 < hz <= consumidor.techo_hz, (
@@ -438,12 +446,11 @@ def _reparte_ics(pedidos: dict[str, Fraction]) -> dict[str, str]:
 def _reparte_plls(pedidos: dict[str, Fraction]):
     """Cobertura exacta: una PLL alimenta todos los objetivos que puede dividir.
 
-    El PHY conserva su PLL4; las restantes se prueban como recursos libres.
+    El PHY no entra: su referencia sale del cristal. Las cuatro PLL son libres.
     Reutilizar una PLL para un Hz no consume otro recurso: el IC ya se
     reservo. Por eso se pueden resolver MUX y PLL en estas dos etapas sin
     perder soluciones. Se exploran alternativas si la primera pide de mas.
     """
-    assert not pll_ilegal(CFG_PHY_DEL_FIRMWARE), "PLL4 del firmware ilegal"
     objetivos = set(pedidos.values())
     opciones = {hz: _opciones_enteras(_exacto(HSI_HZ), hz) for hz in objetivos}
     faltantes = [hz for hz, ops in opciones.items() if not ops]
@@ -479,20 +486,20 @@ def _reparte_plls(pedidos: dict[str, Fraction]):
                 return resultado
         return None
 
-    resultado = busca([CFG_PHY_DEL_FIRMWARE], objetivos, {})
+    resultado = busca([], objetivos, {})
     assert resultado is not None, (
-        f"no cierra: no existe cobertura con {N_PLL} PLL, incluida PLL4 del PHY, "
+        f"no cierra: no existe cobertura con {N_PLL} PLL "
         f"para {sorted(objetivos)} Hz; cada objetivo aislado si tiene solucion")
     return resultado
 
 
-def _derivadas(asignaciones: dict[str, Asignacion]) -> dict[str, Fraction]:
+def _derivadas(asignaciones: dict[str, Asignacion], phy: Fraction) -> dict[str, Fraction]:
     bus = asignaciones["SYS_BUS"].f_hz
     hclk = ic_hz(bus, HPRE_DIV)  # RM0486 Rev 4, p. 440-442: HPRE.
     assert PPRE_DIV == 1, "ES0620 2.2.1: el silicio no divide el APB"
     pclk = ic_hz(hclk, PPRE_DIV)  # ES0620 Rev 5, 2.2.1, p. 7: pclkx replica hclk.
     return {"hclk": hclk, "pclk": pclk, "CPU": _exacto(HSI_HZ),
-            "OTG1": _exacto(OTG_KERNEL_HZ)}
+            "OTG1": _exacto(OTG_KERNEL_HZ), "OTGPHY1": phy}
 
 
 def _verifica_solucion(sol: Solucion, pedidos: dict[str, Fraction]) -> None:
@@ -509,10 +516,9 @@ def _verifica_solucion(sol: Solucion, pedidos: dict[str, Fraction]) -> None:
         assert real <= CONSUMIDORES[nombre].techo_hz, f"{nombre}: techo de kernel"
         ruta = (asig.pll, asig.icint, real)
         assert ocupados.setdefault(asig.ic, ruta) == ruta, f"{asig.ic}: dos configuraciones"
-    phy = sol.asignaciones["OTGPHY1"]
-    assert sol.plls[phy.pll] == CFG_PHY_DEL_FIRMWARE, "PHY perdio su PLL de firmware"
-    assert sol.nombres_pll[phy.pll] == "PLL4", "PHY perdio la PLL4 fisica"
-    assert phy.f_hz in PHY_REF_LEGALES_HZ, "PHY fuera de FSEL"
+    # El PHY sale del cristal (acta del 2026-10-01): si vuelve al reparto, alguien
+    # lo devolvio a una PLL, y con el HSI eso no enumera (EN-PLACA.md, 01-10).
+    assert "OTGPHY1" not in sol.asignaciones, "PHY de vuelta en una PLL: sale del cristal"
     # Los dos relojes de bus, en UN aserto, y a proposito. La guarda de
     # _derivadas fija PPRE_DIV = 1 y ic_hz(x, 1) es x exacto: pclk no es una
     # copia de hclk, ES hclk. Un segundo aserto sobre pclk no podria morder sin
@@ -523,7 +529,7 @@ def _verifica_solucion(sol: Solucion, pedidos: dict[str, Fraction]) -> None:
     # Que pclk CABE, y con cuanto margen, lo publica demo() calculado.
     # De los techos que antes se cobraban aqui sobre pclk:
     #   - I2C1, KERNEL, 100 MHz (Tabla 72, p. 447): TIENE selector. I2C1SEL
-    #     saca el kernel de pclk1 y lo pone en ic15_ck; ese techo ya se juzga
+    #     saca el kernel de pclk1 y lo pone en ic10_ck; ese techo ya se juzga
     #     arriba, en el bucle, sobre la frecuencia que el reparto le dio.
     #   - APB, BUS: un reloj de bus no tiene selector, asi que el techo es real
     #     y manda la hoja del producto, no el RM.
@@ -550,8 +556,8 @@ def _resuelve(p: dict, *, rgmii: bool = True) -> Solucion:
         indice, divisor = rutas[hz]
         real = ic_hz(pll_out_hz(plls[indice]), divisor)
         asignaciones[nombre] = Asignacion(indice, ics[nombre], divisor, real)
-    nombres = ("PLL4",) + tuple(f"PLL{i}" for i in range(1, len(plls)))
-    sol = Solucion(plls, asignaciones, nombres, _derivadas(asignaciones))
+    nombres = tuple(f"PLL{i + 1}" for i in range(len(plls)))
+    sol = Solucion(plls, asignaciones, nombres, _derivadas(asignaciones, referencia_phy(p)))
     _verifica_solucion(sol, pedidos)
     return sol
 
@@ -595,8 +601,9 @@ def huecos(sol: Solucion) -> list[str]:
         pendientes.append("panel sin elegir: pixel clase ~33 MHz ESTIMADO, pantalla-motor S5")
     if not CODEC_ELEGIDO:
         pendientes.append("codec del CUARTO chip sin elegir: interfaz-audio, faltan MCLK/FS y divisores SAI (A-10)")
-    if HSE_HZ is None:
-        pendientes.append("HSE sin decidir: el barrido de cristal es una alternativa, no una compra")
+    if not HSE_PIEZA_ELEGIDA:
+        pendientes.append(f"HSE sin pieza: el acta del 2026-10-01 pone cristal; {_mhz(HSE_HZ)} MHz es "
+                          "el del banco, y frecuencia, tolerancia y carga no estan firmadas")
     if not MESA_RECONCILIADA:
         pendientes.append(f"mesa sin reconciliar con {CENSO_FUENTE}")
     if VARIOS_SIN_RELOJ_CENSADO:
@@ -618,10 +625,10 @@ def demo() -> int:
         print(f"    {nombre:12s} {_mhz(limites[0])}..{_mhz(limites[1])} MHz")
     print(f"  HSI={_mhz(HSI_HZ)} MHz; HSI_AL_BORDE={HSI_AL_BORDE}.")
     print("  Cero margen nominal de entrada. Precision/deriva del HSI no medidas.")
-    print("  usb.rs:47 nombra fPLL_IN donde calcula PFD; la cuenta pasa,")
-    print("  pero la cita 5..1200 del RM no comprueba el limite del producto.")
     print("  PLL1..4 son intercambiables ante cada ICxSEL (RM Rev 4, p. 507).")
     print("  La asignacion tipica de p. 435 no reserva PLL4 a pantalla/camara.")
+    print(f"  PHY de USB: {PHY_FUENTE} = HSE {_mhz(HSE_HZ)} MHz / 2, fuera del reparto")
+    print("  de PLL (acta del 2026-10-01): el HSI deriva +-5 %, DS14791 Rev 10, p. 165.")
     print(f"\n  REPARTO CALCULADO: {len(sol.plls)} de {N_PLL} PLL, todas enteras.")
     for nombre, cfg in zip(sol.nombres_pll, sol.plls):
         print(f"    {nombre}: {_cadena(cfg)}")
@@ -684,7 +691,7 @@ def demo() -> int:
             divisor = _divisor_ic(pll_out_hz(cfg), _exacto(hz))
             print(f"      {_cadena(cfg)}; IC /{divisor} -> "
                   f"{_mhz(ic_hz(pll_out_hz(cfg), divisor))} MHz")
-    cristal_candidato = 22_579_200  # #150: alternativa de familia 44,1 kHz; NO HSE elegido.
+    cristal_candidato = 22_579_200  # #150: alternativa de audio del CUARTO chip; no es el HSE del hub.
     alternativas = cuenta_enteras(cristal_candidato, MCLK_1024FS_44K1_HZ)
     print(f"  Desde cristal CANDIDATO {_mhz(cristal_candidato)} MHz: "
           f"{alternativas} soluciones para {_mhz(MCLK_1024FS_44K1_HZ)} MHz.")
