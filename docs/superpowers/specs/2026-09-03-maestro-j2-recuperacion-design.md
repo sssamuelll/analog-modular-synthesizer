@@ -167,6 +167,8 @@ Los pasos del DMA son los de §67.4.14, p. 3451: *«When starting communication 
 > ```
 >
 > **Estado de la evidencia:** ES0620 Rev 5 (agosto 2026), la errata del N657, **no lista ningún ítem del periférico SPI**. La enmienda entra **por analogía** con el H7 y así queda marcada hasta que la placa la mida. La medida que dirime la lectura cuesta un acceso: con nada armado, escribir `SPE = 1` y leer `SR.EOT`. Si vuelve 1, la hipótesis está viva y todo armado cae dentro de la ventana al piso; si vuelve 0, el `EOT` anterior fue el de la trama del giro previo y D2 ya la cubría con más de 100 µs de sobra. Después, el barrido del retardo (§9, enmienda del 11-09, punto 3): una tasa de cuelgue que dependa del retardo es la firma de la errata; una que no, no lo es.
+>
+> **Medido el 2026-10-01 en la NUCLEO-N657X0-Q** (firmware `259bc91`, binario `control_positivo`; una corrida anterior con el mismo código sin commitear dio lo mismo): `eot_al_encender = 0` con el SPI5 recién reseteado (esclavo) y `= 0` con `MASTER = 1`. Prender no levanta `EOT`: por lo escrito arriba, D2 ya la cubría, y la errata 2.14.2 no es el mecanismo de #5607 en esta configuración (junta de Halberg, 11-09). Queda el barrido del retardo, que es lo que dice si la tasa depende de él.
 
 ### D3. Toda espera tiene plazo, y el plazo sale de R-E1
 

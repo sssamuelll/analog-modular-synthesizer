@@ -282,6 +282,11 @@ Y, cuando lo haya, una línea de error por cuelgue con su segundo y su cuenta.
   valor de reset), y la segunda con `MASTER = 1`, que es el modo del que habla
   D2. Un 0 en la primera y un 1 en la segunda no sería una contradicción: sería
   el dato.
+  **Medido el 2026-10-01** (firmware `259bc91`, y antes el mismo código sin
+  commitear): `0` y `0`.
+  Prender no levanta `EOT`; según la spec del maestro («Estado de la
+  evidencia», bajo D2), D2 ya cubría este caso. Lo que dice si la tasa de
+  cuelgue depende del retardo es el barrido, punto (2).
 - **(1) es el repro de jake-taf tal cual**: embassy sin driver propio, 100 kHz,
   modo 0, `CS` por GPIO en PA3, `TSIZE = 0` y `blocking_read` de 8 bytes en
   bucle. Una hora da 98 % de potencia contra el extremo suave del hilo (un
