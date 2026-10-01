@@ -58,3 +58,7 @@ static_cell = "2"
 debug = 2
 lto = true
 opt-level = "s"
+
+[features]
+# El bucle del primer reporte de embassy#5607 en `control_positivo` (EN-PLACA, punto (1)).
+bucle-del-reporte = []

@@ -298,7 +298,19 @@ Y, cuando lo haya, una línea de error por cuelgue con su segundo y su cuenta.
   contesta (hacen falta unas 6 h). El repro tampoco fue tal cual: lectura de
   8 bytes contra `write` de 2 + `read` de 1, y un driver de embassy más nuevo.
   La lectura entera está en la spec del maestro, §9, enmienda del 11-09,
-  punto 3. Qué se hace ahora es HUECO, de Samuel.
+  punto 3.
+  **Decidido el mismo día** (las tres cosas): (A) el mismo binario, 6 h; (B) el
+  bucle del primer reporte, 6 h; (C) preguntarle a jake-taf en #5607 ([hecho](https://github.com/embassy-rs/embassy/issues/5607#issuecomment-5931298173)). B es:
+
+  ```bash
+  cargo run --release --bin control_positivo --features bucle-del-reporte
+  ```
+
+  Bajo `CS`, `write` de `[0x03, 0x2c]` y `read` de 1 byte, como el reporte; la
+  línea de arranque termina en `bucle: reporte (...)` y `lecturas` cuenta
+  vueltas. Arma el periférico dos veces por cada 3 bytes, contra una por cada
+  8. Las dos `info!` por vuelta del reporte no están: serían del orden de 10^8
+  líneas en 6 h.
 - **Pero el `f_sck` no van a ser 100 kHz, y la tercera línea lo dice.** El
   kernel del SPI5 **no es el HSI de 64 MHz**: es `pclk2`, y son **32 MHz**. El
   mux se queda en su cero (`ClockMux::default()` es `mem::zeroed()`,
