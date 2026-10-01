@@ -435,8 +435,8 @@ def test_el_reloj_de_pixel_sigue_siendo_ESTIMADO_porque_no_hay_panel() -> None:
 
 def test_el_cristal_HSE_lo_pone_el_acta_y_no_la_pieza() -> None:
     """Acta del 2026-10-01 (papel del hub, S0): el hub lleva cristal, y la
-    referencia del PHY sale de el. La frecuencia y la pieza NO estan
-    firmadas: 48 MHz es la del banco, la unica medida, y el censo lo
+    referencia del PHY sale de el, y es de 48 MHz («que sea de 48»), la
+    del banco y la unica medida. La PIEZA no esta elegida, y el censo lo
     publica como HUECO en vez de darlo por comprado."""
     assert rb.HSE_HZ == 48e6
     assert rb.HSE_PIEZA_ELEGIDA is False

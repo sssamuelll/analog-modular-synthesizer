@@ -85,7 +85,7 @@ EL DIVISOR DE APB QUE EL SILICIO NO TIENE
 LO QUE NO COMPRA EL CIERRE
 
   Pixel y codec del cuarto chip siguen sin pieza. El HSE existe (acta del
-  2026-10-01) sin pieza ni frecuencia firmada: 48 MHz es el del banco.
+  2026-10-01) a 48 MHz, firmados ese mismo dia, y sin pieza elegida.
   Los objetivos elegidos para probar convivencia son ESTIMADOS, no registros aprobados
   para el firmware. Un kernel SPI no es SCK; un kernel SAI no fija MCLK ni
   FS sin programar el SAI y conocer el codec. Tampoco son un ensayo de DMA,
@@ -133,13 +133,13 @@ N_PLL = 4  # RM0486 Rev 4, sec. 14.6.5, p. 435.
 HSI_HZ = 64_000_000  # RM0486 Rev 4, sec. 14.6.2, p. 430; usb.rs, f_cpu_hz.
 HSI_AL_BORDE = HSI_HZ == PLL_IN_HZ[1]  # DERIVADO: margen nominal fPLL_IN.
 # Acta del 2026-10-01 (papel del hub, S0): el hub lleva cristal en el HSE.
-# 48 MHz es el del banco y el unico medido (NUCLEO-N657X0-Q, X3; UM3417 Rev 3,
-# sec. 7.7.2, p. 24); la frecuencia de la pieza NO esta firmada. Con OTGPHY1SEL
+# 48 MHz FIRMADOS el mismo dia («que sea de 48»): el del banco y el unico medido
+# (NUCLEO-N657X0-Q, X3; UM3417 Rev 3, sec. 7.7.2, p. 24). Con OTGPHY1SEL
 # en su reset la mitad tiene que ser un FSEL: 38,4, 40 o 48 MHz, y las tres caben
 # en 16..48 MHz (DS14791 Rev 10, Tabla 49, p. 161). Una guarda de ese rango no
 # podria morder nunca: la que manda es la del FSEL, en _peticiones.
 HSE_HZ = 48_000_000
-HSE_PIEZA_ELEGIDA = False  # HUECO: acta del 2026-10-01, sin cristal ni frecuencia firmados.
+HSE_PIEZA_ELEGIDA = False  # HUECO: 48 MHz firmados; tolerancia, ESR y carga sin elegir.
 JITTER_ENTERO_TYP_PS = 2.7  # DS14791 Rev 10, Tabla 58, p. 166: +-ps RMS.
 JITTER_ENTERO_PS = 6.6  # DS14791 Rev 10, Tabla 58, p. 166: max +-ps RMS.
 JITTER_FRAC_PS = 11.9  # DS14791 Rev 10, Tabla 58, p. 166: max +-ps RMS.
@@ -602,8 +602,8 @@ def huecos(sol: Solucion) -> list[str]:
     if not CODEC_ELEGIDO:
         pendientes.append("codec del CUARTO chip sin elegir: interfaz-audio, faltan MCLK/FS y divisores SAI (A-10)")
     if not HSE_PIEZA_ELEGIDA:
-        pendientes.append(f"HSE sin pieza: el acta del 2026-10-01 pone cristal; {_mhz(HSE_HZ)} MHz es "
-                          "el del banco, y frecuencia, tolerancia y carga no estan firmadas")
+        pendientes.append(f"HSE sin pieza: el acta del 2026-10-01 pone cristal de {_mhz(HSE_HZ)} MHz; "
+                          "tolerancia, ESR, carga y huella sin elegir")
     if not MESA_RECONCILIADA:
         pendientes.append(f"mesa sin reconciliar con {CENSO_FUENTE}")
     if VARIOS_SIN_RELOJ_CENSADO:
