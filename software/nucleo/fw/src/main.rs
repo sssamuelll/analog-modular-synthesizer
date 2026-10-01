@@ -43,7 +43,7 @@ async fn main(spawner: Spawner) {
     // referencia del PHY de USB y el modo de alimentacion se eligen ANTES de
     // `init`. Los dos viven en `usb.rs` con su cita, porque los dos son del
     // borde de USB.
-    let p = embassy_stm32::init(usb::configuracion());
+    let p = usb::iniciar(usb::configuracion());
 
     info!(
         "SAM17: el cerebro arranco, protocolo v{}",

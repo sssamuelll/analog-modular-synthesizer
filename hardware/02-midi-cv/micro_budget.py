@@ -316,7 +316,8 @@ def demo() -> None:
 #      pines, que solo existen desde VFBGA198. El ancho de 16 bits
 #      (PP8..PP15 + DQS1/PO3) queda de crecimiento, 223+. La pieza concreta
 #      se nombra con su hoja en el arbol antes de dibujar (R-M3).
-#   9. Reservas fijas fuera de la mesa: SWD (PA13/PA14), HSE (PH0/PH1),
+#   9. Reservas fijas fuera de la mesa: SWD (PA13/PA14), HSE (PH0/PH1 --
+#      el hub lleva cristal: acta del 2026-10-01 en el papel del hub, S0),
 #      LSE del RTC (PC14/PC15 -- nada decide hoy que no haya cristal de
 #      32 kHz, asi que se reservan), XSPI2 completo en el puerto PN
 #      (PN0..PN12: arranque + biblioteca por NCS2 -- presente en LOS SEIS

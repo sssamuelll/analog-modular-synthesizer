@@ -5,9 +5,10 @@
 De donde sale este archivo: el #150. Se abrio el 2026-08-21 contra el RP2350
 --`clk_sys` con dos duenos que no se conocian-- y sus hechos se murieron con
 ese chip. La tesis no: el 2026-09-08, en el pase a embassy-stm32 (#250, PR
-#349), la misma forma de problema reaparecio con otro reloj. Hoy vive como un
-comentario en `software/nucleo/fw/src/usb.rs:41-53` y no hay guion que lo
-vigile.
+#349), la misma forma de problema reaparecio con otro reloj. Vivia como un
+comentario en `software/nucleo/fw/src/usb.rs` y no habia guion que lo
+vigilara. Desde el acta del 2026-10-01 el PHY sale del cristal HSE y ese
+comentario cuenta la medida que lo decidio.
 
 Un grep de `PLL` en todo el repo devuelve UN solo sitio, y es ese comentario.
 Este repo tiene presupuestos ejecutables para el ancho del panel, la corriente
@@ -51,8 +52,9 @@ Lo que este contrato fija, y por que cada cosa:
 
   * QUE LO QUE NO ESTA ELEGIDO NO SE INVENTE. No hay panel elegido (el reloj
     de pixel es "clase ~33 MHz -- ESTIMADO hasta pieza", pantalla-motor
-    sec.5), no hay codec elegido, y no hay cristal HSE decidido en ningun
-    papel. Tres huecos reales: el censo sale en 2, no en 0.
+    sec.5), no hay codec elegido, y el cristal HSE que puso el acta del
+    2026-10-01 no tiene pieza ni frecuencia firmadas. Tres huecos reales:
+    el censo sale en 2, no en 0.
 
   * QUE LOS OTROS TRES CHIPS NO SE DEN POR RESUELTOS. La firma del 2026-09-09
     puso cuatro N657. De los cuatro, solo el hub y la Voz tienen su lista de
@@ -82,6 +84,10 @@ sys.path.insert(0, DIR)
 sys.path.insert(0, os.path.join(DIR, "..", "tools"))
 import reloj_budget as rb                                   # noqa: E402
 from canario import borde_rojo                              # noqa: E402
+
+# Una PLL legal conocida, contada a mano: la que tuvo el PHY hasta el
+# 2026-10-01 (HSI / 4 * 60 / 2 / 1). Sirve de base para mutar limites.
+PLL_LEGAL_CONOCIDA = rb.ConfigPLL(rb.HSI_HZ, 4, 60, 2, 1)
 
 
 # --- los limites: de la hoja, no del dibujo ---------------------------------
@@ -287,7 +293,7 @@ def test_la_legalidad_se_juzga_en_un_solo_sitio() -> None:
     """Cada limite de la Tabla 58 tiene que poder poner roja una config.
 
     Si un limite esta declarado y nadie lo mira, es adorno."""
-    base = rb.CFG_PHY_DEL_FIRMWARE
+    base = PLL_LEGAL_CONOCIDA
     assert rb.pll_ilegal(base) == []
     # PFD por encima de 50 MHz: DIVM 1 deja el PFD en 64.
     assert any("PFD" in r for r in rb.pll_ilegal(base._replace(divm=1)))
@@ -298,17 +304,37 @@ def test_la_legalidad_se_juzga_en_un_solo_sitio() -> None:
 
 
 def test_el_arbol_reproduce_el_que_el_firmware_ya_corre() -> None:
-    """El ancla. `software/nucleo/fw/src/usb.rs:46-50`:
+    """El ancla, y medida en placa el 2026-10-01: el firmware enciende el
+    HSE de 48 MHz y deja OTGPHY1SEL en su reset, hse_div2_ck, y el PHY
+    enumera a alta velocidad con esos 24 MHz.
+
+    Se lee `usb.rs` y no una constante de aqui: si el firmware cambia de
+    cristal o de selector y este guion no, son dos arboles, y uno miente.
+    Un modelo del arbol que no reproduzca el arbol que ya enlaza y arranca
+    no es un modelo del arbol: es una hoja de calculo bonita."""
+    usb = open(os.path.join(DIR, "..", "..", "software", "nucleo", "fw", "src",
+                            "usb.rs"), encoding="utf-8").read()
+    assert f"Hertz({rb.HSE_HZ:_})" in usb, "usb.rs enciende otro cristal"
+    assert "Otgphysel::HseDiv2" in usb, "usb.rs saca el PHY de otro sitio"
+    assert rb.PHY_FUENTE == "hse_div2_ck"
+    p = rb.parametros()
+    assert rb.referencia_phy(p) == 24e6
+    sol = rb.resuelve()
+    assert "OTGPHY1" not in sol.asignaciones
+    assert sol.derivadas["OTGPHY1"] == 24e6
+
+
+def test_la_cadena_de_la_PLL_reproduce_una_cuenta_a_mano() -> None:
+    """La PLL que tuvo el PHY hasta el 2026-10-01, contada a mano en el
+    usb.rs de entonces. En placa no enumero (el HSI deriva +-5 %), pero
+    la cuenta es la cuenta:
 
         hsi_ck  = 64 MHz
         FREF    = 64 / DIVM 4  = 16 MHz
         FVCO    = 16 * DIVN 60 = 960 MHz
         pll4_ck = 960 / 2 / 1  = 480 MHz
-        ic15_ck = 480 / 20     = 24 MHz
-
-    Un modelo del arbol que no reproduzca el arbol que ya enlaza y arranca
-    no es un modelo del arbol: es una hoja de calculo bonita."""
-    cfg = rb.CFG_PHY_DEL_FIRMWARE
+        ic15_ck = 480 / 20     = 24 MHz"""
+    cfg = PLL_LEGAL_CONOCIDA
     assert cfg.f_in_hz == rb.HSI_HZ
     assert (cfg.divm, cfg.divn, cfg.pdiv1, cfg.pdiv2) == (4, 60, 2, 1)
     assert rb.pfd_hz(cfg) == 16e6
@@ -326,11 +352,13 @@ def test_la_referencia_del_PHY_solo_admite_tres_valores() -> None:
 
 
 def test_la_guarda_muerde_si_la_referencia_del_PHY_se_sale() -> None:
-    """La mutacion que pide el #150: mover el divisor del PHY fuera de
-    19,2/20/24 y ver que falla. Por biseccion, no a mano: un valor frontera
-    escrito a mano se queda viejo el dia que la cadena se mueva."""
+    """La mutacion que pide el #150: mover el cristal hasta que su mitad
+    salga de 19,2/20/24 y ver que falla. Se muta el CRISTAL, no la
+    referencia: la referencia se deriva de el y no se puede tocar sola.
+    Por biseccion, no a mano: un valor frontera escrito a mano se queda
+    viejo el dia que la cadena se mueva."""
     p = rb.parametros()
-    borde_rojo(rb.guarda_reloj, p, "phy_ref_hz", 24e6, 40e6, "PHY")
+    borde_rojo(rb.guarda_reloj, p, "hse_hz", 48e6, 80e6, "PHY")
 
 
 def test_la_guarda_muerde_si_un_consumidor_pasa_de_su_techo() -> None:
@@ -405,13 +433,14 @@ def test_el_reloj_de_pixel_sigue_siendo_ESTIMADO_porque_no_hay_panel() -> None:
     assert rb.LTDC_PX_ESTIMADO is True
 
 
-def test_el_cristal_HSE_no_esta_decidido_en_ningun_papel() -> None:
-    """El firmware corre el PHY desde el HSI. Nadie ha escrito si el hub
-    lleva cristal, ni de cuanto, y hoy no hay ningun consumidor suyo que lo
-    exija: el hercio que obligaria a cristal es de audio, y el audio se fue
-    al cuarto chip. Queda sin duena igual -- el HSE tambien decide el
-    arranque, el CSS y la deriva, y de eso no se ha escrito nada."""
-    assert rb.HSE_HZ is None
+def test_el_cristal_HSE_lo_pone_el_acta_y_no_la_pieza() -> None:
+    """Acta del 2026-10-01 (papel del hub, S0): el hub lleva cristal, y la
+    referencia del PHY sale de el. La frecuencia y la pieza NO estan
+    firmadas: 48 MHz es la del banco, la unica medida, y el censo lo
+    publica como HUECO en vez de darlo por comprado."""
+    assert rb.HSE_HZ == 48e6
+    assert rb.HSE_PIEZA_ELEGIDA is False
+    assert any("HSE sin pieza" in h for h in rb.huecos(rb.resuelve()))
 
 
 def test_los_otros_tres_chips_no_tienen_arbol_y_el_guion_lo_dice() -> None:

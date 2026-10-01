@@ -120,7 +120,7 @@ impl defmt::Format for Mhz {
 async fn main(_spawner: Spawner) {
     let config = usb::configuracion();
     let f_cpu = usb::f_cpu_hz(&config);
-    let p = embassy_stm32::init(config);
+    let p = usb::iniciar(config);
 
     // El montaje entero vive en `j2_banco` (R23): los pines y los canales van
     // ahi como tipos concretos, asi que un pin cambiado no compila. El NVIC lo

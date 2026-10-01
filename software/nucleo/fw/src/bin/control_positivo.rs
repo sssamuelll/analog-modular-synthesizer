@@ -103,7 +103,7 @@ static CUELGUES: AtomicU32 = AtomicU32::new(0);
 async fn main(_spawner: Spawner) {
     let config = usb::configuracion();
     let f_cpu = usb::f_cpu_hz(&config);
-    let p = embassy_stm32::init(config);
+    let p = usb::iniciar(config);
 
     // --- (0) El experimento de un acceso -------------------------------------
     // El reloj y el reset del periferico, que es el paso 0 de D4. Despues de

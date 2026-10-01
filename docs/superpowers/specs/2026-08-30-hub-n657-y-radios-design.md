@@ -1,9 +1,9 @@
 # El hub del SAM17: el cerebro pasa a N657, se lleva la cara, y las radios se reparten — propuesta
 
 **Fecha:** 2026-08-30
-**Actualización:** 2026-09-09
+**Actualización:** 2026-10-01
 **Estado:** D1, D2, D7 y D3' FIRMADAS; ubicación de la interfaz de audio
-RESUELTA por ENMIENDA (§6.2). Quedan pendientes los cierres de papeles y
+RESUELTA por ENMIENDA (§6.2); cristal HSE en el hub por el acta del 2026-10-01 (§0). Quedan pendientes los cierres de papeles y
 censos propios. No toca DXF ni cobre;
 trae un guion (el censo de pines del hub, §10 fila 1). Mezcla dos clases de
 cosas y las rotula para que no se confundan: las **actas** de Samuel del
@@ -101,6 +101,46 @@ cara al hub) y D7 (el asiento del procesador de aplicaciones).
 módulo, FIRMADA; ubicación de la interfaz de audio (§6.2), RESUELTA mediante
 ENMIENDA con un cuarto N657 dedicado. El cierre de su papel propio sigue
 pendiente.
+
+### Acta del 2026-10-01 — El hub lleva cristal HSE
+
+Tras la medida en la NUCLEO-N657X0-Q de ese día (#150, comentario del
+2026-10-01), y ante la pregunta «¿la placa del hub lleva cristal HSE?»:
+
+«metamosle cristal HSE»
+
+**Interpretación y cierre del acta, fuera de la cita:** la placa del hub
+**lleva cristal en el HSE** (OSC_IN/OSC_OUT, PH0/PH1, que el censo de pines ya
+reservaba: `micro_budget.py`, reservas fijas), y **la referencia de 24 MHz del
+PHY de USB HS sale de él**, no de una PLL.
+
+La razón es doble y la segunda es la que manda. La medida: con la referencia
+HSI → PLL4 → IC15 el PHY no se presenta en el bus, y con el HSE de 48 MHz ÷ 2
+enumera a alta velocidad (una corrida de cada lado, #231 y `EN-PLACA.md`,
+«El primer día en placa»). La hoja: el HSI deriva de −5 % a +5 % con voltaje y
+temperatura (DS14791 Rev 10, p. 165, `TJ` −40 a 125 °C), y el USB de alta
+velocidad pide ±500 ppm. Con esa deriva, el HSI no puede ser la referencia
+del PHY aunque una corrida a temperatura de escritorio hubiera salido.
+
+**Lo que el acta NO decide:**
+
+- **La frecuencia del cristal.** La hoja admite de 16 a 48 MHz (DS14791 Rev 10,
+  Tabla 49, p. 161), y con el selector del PHY en su defecto (`OTGPHY1SEL =
+  hse_div2_ck`) la mitad tiene que ser un `FSEL` legal (19,2, 20 o 24 MHz,
+  RM0486 Rev 4, p. 3929): **38,4, 40 o 48 MHz**. 48 es la única medida, y está
+  en el techo del rango. 40 es la del dibujo de aplicación típica de la hoja
+  (Figura 21) y no está medida. Otra frecuencia obliga a mover
+  `OTGPHY1CKREFSEL`, que es uno de los diez selectores de la errata §2.2.22.
+  `reloj_budget.py` usa 48 MHz como la del banco, no como pieza.
+- **La pieza**: tolerancia, ESR, carga (CL1 y CL2 contra la capacidad de pin y
+  pista, DS14791 Rev 10, p. 162) y huella.
+- **Que las PLL tomen el cristal.** Hoy el censo de relojes las sigue
+  alimentando del HSI. Con el HSE presente es una opción nueva, no una
+  decisión.
+
+**Consecuencia:** la PLL4 deja de estar atada al PHY y pasa a ser una PLL
+libre más para la pantalla, la cámara del tercer chip o lo que el reparto
+pida (`reloj_budget.py`).
 
 ---
 

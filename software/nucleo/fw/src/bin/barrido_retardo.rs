@@ -96,7 +96,7 @@ struct Punto {
 async fn main(_spawner: Spawner) {
     let config = usb::configuracion();
     let f_cpu = usb::f_cpu_hz(&config);
-    let p = embassy_stm32::init(config);
+    let p = usb::iniciar(config);
 
     // El montaje entero vive en `j2_banco` (R23); el NVIC lo pone
     // `Ranura::nueva` (R21). Aqui no se toca ninguna prioridad.

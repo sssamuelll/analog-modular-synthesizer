@@ -15,9 +15,8 @@ use defmt::{info, warn};
 use embassy_futures::select::{select, Either};
 use embassy_stm32::peripherals::USB1_OTG_HS;
 use embassy_stm32::rcc::mux::{Otgphysel, Rtcsel};
-use embassy_stm32::rcc::{
-    CpuClk, IcConfig, Icint, Icsel, Pll, Plldivm, Pllpdiv, Pllsel, SupplyConfig, HSI_FREQ,
-};
+use embassy_stm32::rcc::{CpuClk, Hse, HseMode, SupplyConfig, HSI_FREQ};
+use embassy_stm32::time::Hertz;
 use embassy_stm32::usb::{Driver, InterruptHandler};
 use embassy_stm32::Peri;
 use embassy_time::{Duration, Instant, Timer};
@@ -43,21 +42,17 @@ embassy_stm32::bind_interrupts!(pub struct Irqs {
 /// cita).
 ///
 /// 1. **El reloj de referencia del PHY** tiene que ser 19,2, 20 o 24 MHz
-///    exactos (RM0486 Rev 4, `USBPHYC_CR.FSEL`, p. 3929). Se saca del HSI para
-///    no depender del cristal de la placa:
+///    exactos (RM0486 Rev 4, `USBPHYC_CR.FSEL`, p. 3929), y **sale del
+///    cristal**: el HSE de 48 MHz de la Nucleo (X3, UM3417 Rev 3 §7.7.2,
+///    p. 24) partido en dos, `hse_div2_ck` = 24 MHz, que es ademas el valor de
+///    reset de `OTGPHY1SEL` (`00`, RM0486 Rev 4, p. 535).
 ///
-///    ```text
-///      hsi_ck  = 64 MHz                        (RM0486 Rev 4, sec.14.6.2)
-///      FREF    = 64 MHz / DIVM 4  =  16 MHz    (5..1200 MHz, entero, p. 435)
-///      FVCO    = 16 MHz * DIVN 60 = 960 MHz    (800..3200 MHz, p. 435)
-///      pll4_ck = 960 MHz / 2 / 1  = 480 MHz    (DIVP1 = 2, DIVP2 = 1)
-///      ic15_ck = 480 MHz / 20     =  24 MHz    (ICINT = Div20)
-///    ```
-///
-///    PLL4 es la PLL que el RM reserva a «display, camara, FDCAN y otros
-///    perifericos» (sec.14.6.5, p. 435). **Reservada aqui al PHY:** el dia que
-///    la pantalla o la camara la quieran, esta cuenta se rehace, porque el
-///    PHY no admite otra frecuencia.
+///    Medido en placa el 2026-10-01: con la referencia de HSI -> PLL4 -> IC15
+///    a 24 MHz (lo que habia aqui, «para no depender del cristal») el PHY no se
+///    presenta nunca en el bus -- D+ y D- en SE0, Windows no ve nada --; con el
+///    HSE ÷ 2 enumera a alta velocidad. Es lo que hace el ejemplo USB de ST
+///    para esta placa. **Si la placa del hub lleva o no cristal es decision
+///    abierta**: ver el comentario del 2026-10-01 en #150.
 ///
 /// 2. **De donde sale el nucleo.** La Discovery lleva SMPS externo (UM3300
 ///    Tab. 6 segun el ejemplo de embassy) y con el interno el `init` se queda
@@ -71,19 +66,11 @@ embassy_stm32::bind_interrupts!(pub struct Irqs {
 pub fn configuracion() -> embassy_stm32::Config {
     let mut config = embassy_stm32::Config::default();
     config.rcc.supply_config = SupplyConfig::External;
-    config.rcc.pll4 = Some(Pll::Oscillator {
-        source: Pllsel::Hsi,
-        divm: Plldivm::Div4,
-        fractional: 0,
-        divn: 60,
-        divp1: Pllpdiv::Div2,
-        divp2: Pllpdiv::Div1,
+    config.rcc.hse = Some(Hse {
+        freq: Hertz(48_000_000),
+        mode: HseMode::Oscillator,
     });
-    config.rcc.ic15 = Some(IcConfig {
-        source: Icsel::Pll4,
-        divider: Icint::Div20,
-    });
-    config.rcc.mux.otgphy1sel = Otgphysel::Ic15;
+    config.rcc.mux.otgphy1sel = Otgphysel::HseDiv2;
 
     // RTCSEL a su valor de reset, y no por gusto: sin esta linea el firmware
     // lo deja en `0x0` en operacion NORMAL y sale del `init` ya armado para la
@@ -109,6 +96,39 @@ pub fn configuracion() -> embassy_stm32::Config {
     config.rcc.mux.rtcsel = Rtcsel::Lsi; // RTCSEL = 0x2 (ES0620 p. 12)
 
     config
+}
+
+/// La unica puerta a `embassy_stm32::init`: la usan `main` y los cuatro
+/// binarios del banco.
+///
+/// Existe por una linea que no es nuestra. probe-rs 0.32 carga el binario en
+/// RAM y lo arranca con **`PRIMASK = 1`**: su secuencia del N6
+/// (`reset_catch_clear`) escribe `EXTRA = 1` «since the NVIC state is
+/// unknown» y nadie lo vuelve a bajar, porque entre esa escritura y nuestro
+/// reset handler no hay reset (probe-rs/probe-rs#4390). Sin esta funcion no
+/// llega ninguna interrupcion: medido en placa el 2026-10-01, el host reseteaba
+/// el bus y el driver USB no se enteraba, y los cuatro binarios del J2 -- que
+/// viven del `EOT`, del DMA, del `EXTI11` y del ejecutor de `GFXTIM` -- habrian
+/// dado cada giro por plazo vencido.
+///
+/// Antes de desenmascarar se apagan y limpian todas las lineas del NVIC, que
+/// es lo que probe-rs temia: la ROM pudo dejar alguna puesta -- su LPTIM4 sigue
+/// vivo cuando arranca el codigo, ES0620 Rev 5 §2.9.4 -- y saltaria a un
+/// manejador que no existe. Las que hacen falta las enciende `init` despues.
+/// En un arranque de verdad `PRIMASK` ya vale 0 y esto no cambia nada.
+pub fn iniciar(config: embassy_stm32::Config) -> embassy_stm32::Peripherals {
+    // SAFETY: antes de `init` no hay ningun manejador de interrupcion vivo ni
+    // seccion critica abierta; con todas las lineas apagadas, desenmascarar no
+    // puede disparar nada.
+    unsafe {
+        let nvic = &*cortex_m::peripheral::NVIC::PTR;
+        for i in 0..nvic.icer.len() {
+            nvic.icer[i].write(u32::MAX);
+            nvic.icpr[i].write(u32::MAX);
+        }
+        cortex_m::interrupt::enable();
+    }
+    embassy_stm32::init(config)
 }
 
 /// El reloj del **nucleo** en hercios, sacado de la MISMA `Config` que lo

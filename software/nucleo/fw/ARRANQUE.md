@@ -5,6 +5,10 @@ del motor y del riesgo 2 del hub: «FSBL + Rust vivos»). Lo que aquí compila,
 compiló en esta máquina; lo que aquí arranca, **no está probado**: nadie ha
 tenido la Discovery en la mano.
 
+> **2026-10-01: el camino A está probado en la NUCLEO-N657X0-Q** (development
+> boot por el puente JP2, cargas con `probe-rs`); B y C siguen sin placa. Lo que
+> salió está en `EN-PLACA.md`, §«El primer día en placa».
+
 ## Lo que hace la ROM, con su página
 
 El N657 **no tiene flash interna**. Siempre arranca en la ROM del chip, y la
@@ -23,7 +27,8 @@ La Tabla 32 (p. 286), entera:
 
 AN5967 Rev 5 §10, p. 24, añade la prioridad: *«The BOOT1 pin check has
 priority on the BOOT0 pin check. If the BOOT1 pin is not set, BOOT0 is
-checked.»* En la DK, BOOT0 y BOOT1 son los dos interruptores de BOOT.
+checked.»* En la DK, BOOT0 y BOOT1 son los dos interruptores de BOOT; en la
+Nucleo son los puentes JP1 y JP2 (UM3417 Rev 3 §7.13, p. 26).
 
 Y lo que la ROM verifica, §3.2, p. 183:
 
@@ -57,7 +62,7 @@ irreversible, y **en la Discovery no se hace**.
 
 ### A. Development boot: el de cada día, y el único que ya tenemos
 
-BOOT1 arriba. RM0486 §9.1.3, p. 287:
+BOOT1 arriba (en la Nucleo, JP2 movido). RM0486 §9.1.3, p. 287:
 
 > *«If BOOT1 is selected, the BootROM code finishes in an endless loop after
 > having reopened debug in a secure way. This boot mode is available only when
@@ -181,7 +186,9 @@ Hoy `fw/` está enlazado para A y solo para A. Para C:
    llegar al mismo estado que dejó el FSBL: `xspi2sel = XspiClkSrc::Per` y
    `vddio3_1v8 = true`, además del `SupplyConfig::External` que ya está. Las
    dos existen en `rcc/n6.rs` de la rev fijada.
-3. **La PLL4 del PHY de USB** sigue nuestra: el FSBL no la toca.
+3. **El reloj del PHY de USB** sigue nuestro: el FSBL no lo toca. Desde el
+   2026-10-01 sale del HSE ÷ 2 (con PLL4 → IC15 el PHY no se presentaba en
+   placa; `usb.rs`).
 4. **Decidir dónde corre el código.** El FSBL de embassy deja la app en XIP
    desde la NOR por XSPI2 (con `cacheaxi`/`icache` por medio). Nuestro
    `memory.x` de hoy razona un framebuffer de 768 KB contiguo en AXISRAM2;
@@ -244,8 +251,8 @@ defectos por registro (`CCIPR6`, `CCIPR7`, `CCIPR8`, `CCIPR13`), una barrera
 Justo antes de `CCIPR7` enciende el LSI y espera `LSIRDY`, porque
 `RTCSEL = 0x2` elige lsi_ck y el «Important» de arriba pide el reloj puesto.
 Los otros relojes ya están: hclk5 y hclku son el AHB, pclk1 y pclk2 los APB,
-hsi_ck viene encendido de `Config::default()` (y además alimenta la PLL4 del
-PHY), e ic15_ck lo enciende `usb::configuracion()`. lsi_ck es el único que
+hsi_ck viene encendido de `Config::default()`, y otgphy1_ker_ck es
+hse_div2_ck, del HSE que enciende `usb::configuracion()`. lsi_ck es el único que
 depende de `config.rcc.ls`, que no se ve desde `reinicio.rs`: por eso se
 enciende allí y la función no hereda una decisión de otro crate.
 
@@ -271,8 +278,10 @@ Un `SYSRESETREQ` **es** un reset por software, así que cualquier cosa que
 resetee el core desde el depurador cae bajo esta errata — y `probe-rs`, que es
 como cargamos el firmware de cada día (camino A, `cargo run --release`),
 resetea el core al cargar. Cuál de los dos resets usa (`SYSRESETREQ` o tirar de
-NRST) es la casilla abierta del 2026-09-11 en `EN-PLACA.md`, y hasta que se
-mida hay que suponer el malo.
+NRST) era la casilla abierta del 2026-09-11 en `EN-PLACA.md`. **Medido el
+2026-10-01: no muerde** —más de diez cargas seguidas sin NRST arrancaron, con
+los diez selectores en su defecto—, pero el aviso vale para el driver que mueva
+uno de ellos.
 
 Y no era un riesgo que esperase a que un driver nuevo moviera un selector: **el
 `init` de embassy dejaba `RTCSEL` fuera de su defecto.** `config.ls.init()`
