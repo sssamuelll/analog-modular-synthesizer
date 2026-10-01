@@ -28,10 +28,13 @@
 //!
 //! **(1) La configuracion de jake-taf, sin el driver propio.** embassy tal cual:
 //! `Spi::new_blocking` a 100 kHz en modo 0, `CS` por GPIO en PA3, `TSIZE = 0` --
-//! que es lo que hace `blocking_read` -- y lecturas de 8 bytes en bucle. Es el
-//! repro del hilo embassy-rs/embassy#5607 tal como lo publico su autor. Una hora
-//! da 98 % de potencia contra el extremo suave del hilo, un cuelgue cada ~900 s
-//! (acta del 11-09, punto 3 del orden del dia).
+//! que es lo que hace `blocking_read` -- y lecturas de 8 bytes en bucle. **No es
+//! el repro tal como lo publico su autor**: el del primer reporte de
+//! embassy-rs/embassy#5607 hace `write` de 2 bytes + `read` de 1 por vuelta. El
+//! acta del 11-09 (punto 3) le daba a una hora 98 % de potencia contra los
+//! ~900 s de ese reporte; jake-taf dio despues 30-120 min con builds mas
+//! nuevos, y contra eso una hora no contesta. Medido el 2026-10-01: 64 min,
+//! 0 cuelgues (EN-PLACA.md, punto (1)).
 //!
 //! **El vigia no comparte ejecutor con el bucle.** `blocking_read` de embassy es
 //! sincrono y cuando el periferico se cuelga **no vuelve nunca**

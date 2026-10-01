@@ -287,10 +287,18 @@ Y, cuando lo haya, una línea de error por cuelgue con su segundo y su cuenta.
   Prender no levanta `EOT`; según la spec del maestro («Estado de la
   evidencia», bajo D2), D2 ya cubría este caso. Lo que dice si la tasa de
   cuelgue depende del retardo es el barrido, punto (2).
-- **(1) es el repro de jake-taf tal cual**: embassy sin driver propio, 100 kHz,
+- **(1) es la configuración de jake-taf, no su bucle**: embassy sin driver propio, 100 kHz,
   modo 0, `CS` por GPIO en PA3, `TSIZE = 0` y `blocking_read` de 8 bytes en
   bucle. Una hora da 98 % de potencia contra el extremo suave del hilo (un
   cuelgue cada ~900 s).
+  **Medido el 2026-10-01** (firmware `ca07f94`): 64 min, 6 643 199 lecturas,
+  **0 cuelgues**, 103 800 lecturas en cada minuto. **No dio positivo.** El
+  98 % está calculado contra los 900 s del primer reporte del hilo; jake-taf
+  dio después 30-120 min con builds más nuevos, y contra eso una hora no
+  contesta (hacen falta unas 6 h). El repro tampoco fue tal cual: lectura de
+  8 bytes contra `write` de 2 + `read` de 1, y un driver de embassy más nuevo.
+  La lectura entera está en la spec del maestro, §9, enmienda del 11-09,
+  punto 3. Qué se hace ahora es HUECO, de Samuel.
 - **Pero el `f_sck` no van a ser 100 kHz, y la tercera línea lo dice.** El
   kernel del SPI5 **no es el HSI de 64 MHz**: es `pclk2`, y son **32 MHz**. El
   mux se queda en su cero (`ClockMux::default()` es `mem::zeroed()`,
@@ -602,6 +610,12 @@ la lista no sabía, en el orden en que apareció:
 
 5. **Tras un cuelgue, NRST no basta** (ES0620 Rev 5 §2.2.18): se corta la
    corriente. Y el primer cable de CN8 era de carga (D+ y D− unidos).
+
+6. **La primera corrida de la (1) no midió nada.** El árbol principal estaba
+   8 commits detrás de `origin/main`, y cargó el firmware de antes de
+   `usb::iniciar()`: el vigía no corrió y en 30 minutos no salió ni una
+   fila. Lo delató la línea de arranque (`firmware 16145a6-sucio`). Antes
+   de medir: `git pull`, y comparar esa revisión con `git log -1`.
 
 De la errata salió además §2.9.4: en development mode el LPTIM4 de la ROM sigue
 vivo cuando arranca el código. Por eso `iniciar()` limpia el NVIC antes de
