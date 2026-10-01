@@ -58,8 +58,10 @@ tiene los tres caminos con su página.
 `defmt` y embassy, el binario de depuracion se pasa **48 KB** de los 256 K que
 `memory.x` reserva para el codigo, y `rust-lld` lo dice con tres secciones que
 se solapan. Si hace falta depurar sin optimizar, se sube `FLASH` en
-`memory.x` — pero entonces los 768 KB de abajo dejan de ser contiguos y el
-framebuffer de 800x480 pierde su banco.
+`memory.x` — pero entonces se come lo que queda abajo, que son **640 KiB**
+y no los 768 KB que dice el comentario heredado de embassy. Ojo con lo que
+eso arrastra: el framebuffer de 800x480 RGB565 son 750 KiB y **ya no cabe
+ahi hoy**, se toque o no `FLASH`. Es del #296.
 
 Por `defmt` tiene que salir:
 

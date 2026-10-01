@@ -21,11 +21,20 @@
      NPURAM   0x343C0000   256 KB
      VENCRAM  0x34400000   128 KB
 
-   FLASH y RAM se compactan ARRIBA de AXISRAM2 para que los 768 KB de abajo
-   queden contiguos: ahi cabe entero un framebuffer de 800x480 RGB565 (750 KB)
-   en un solo banco, sin la penalizacion de DMA2D al cruzar bancos. Esa es la
-   pantalla del hub (`2026-08-26-pantalla-motor-design.md` sec.1), asi que la
-   razon de embassy y la nuestra son la misma. */
+   FLASH y RAM se compactan ARRIBA de AXISRAM2 para que lo de abajo quede
+   contiguo. El comentario del ejemplo de embassy dice que abajo quedan 768 KB
+   y ESO ES FALSO -- lo desmienten sus propias direcciones, y lo heredamos:
+
+     0x341A0000 - 0x34100000 = 0xA0000 = 640 KiB
+     1024 KiB - 256 (FLASH) - 128 (RAM) = 640 KiB
+
+   Y un framebuffer de 800x480 RGB565 son 768 000 B = 750 KiB, que en 640 KiB
+   NO CABE. O sea que la razon con la que este mapa se justifica no se cumple
+   como esta escrita: la contiguidad si se consigue, el framebuffer no.
+
+   Donde vive el framebuffer es decision abierta y no de este archivo: es del
+   #296 y de `2026-08-26-pantalla-motor-design.md` sec.1. Las direcciones se
+   dejan EXACTAS como estan -- corregir la cuenta no es mover el mapa. */
 MEMORY
 {
   FLASH : ORIGIN = 0x341A0000, LENGTH = 256K
