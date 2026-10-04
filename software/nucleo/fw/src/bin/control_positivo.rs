@@ -94,6 +94,31 @@ const BUCLE_DEL_REPORTE: bool = cfg!(feature = "bucle-del-reporte");
 /// Lo que escribe el reporte antes de leer.
 const ESCRITURA_DEL_REPORTE: [u8; 2] = [0x03, 0x2c];
 
+/// El eco (decision del 2026-10-02): un puente de MOSI (PG2) a MISO (PG1) --
+/// CN15 pines 15 y 13, o los enchufes D11 y D12 del Arduino (UM3417 Rev 3,
+/// Tablas 12 y 13, p. 30 y 32) -- y `blocking_transfer` de 8 bytes con un patron
+/// que cambia en cada vuelta: lo que vuelve tiene que ser lo que se mando. Lo
+/// pide `--features eco`. Ve la corrupcion que jake-taf cuenta por CRC (#5607,
+/// 2026-10-02), que el bucle con el MISO al aire no puede ver. Una corrupcion
+/// justo despues de un cuelgue puede ser del paliativo: el byte que el vigia
+/// mete en `TXDR` tambien vuelve por el puente.
+const ECO: bool = cfg!(feature = "eco");
+
+/// El reloj del eco: el mas rapido que da el kernel de hoy, 32 MHz / 2 (spec del
+/// maestro, sec.9, lectura del 19-09). El J2 se diseno a 34,5 MHz (D8).
+const F_SCK_ECO_HZ: u32 = 16_000_000;
+
+/// Lo que se manda antes del bucle para saber si el puente esta: ceros, unos y
+/// alternancias, para que no pase ni una linea pegada a 0 o a 1 ni una al aire.
+const PRUEBA_DEL_PUENTE: [u8; 8] = [0x00, 0xFF, 0x55, 0xAA, 0x0F, 0xF0, 0x5A, 0xA5];
+
+/// Las corrupciones y los errores que se imprimen con su vuelta; los demas solo
+/// se cuentan.
+const DETALLES_MAX: u32 = 10;
+
+#[cfg(all(feature = "eco", feature = "bucle-del-reporte"))]
+compile_error!("`eco` y `bucle-del-reporte` son dos bucles: uno u otro");
+
 /// Cadencia del vigia. Tres tics sin avanzar son el umbral de cuelgue, o sea
 /// 300 ms: **mas de quinientas veces** una lectura sana de 8 bytes al `f_sck`
 /// **real** de este binario, 125 kHz -- 8 x 8 / 125 kHz = **512 us**; ver la nota
@@ -112,6 +137,12 @@ static PROGRESO: AtomicU32 = AtomicU32::new(0);
 
 /// Cuelgues detectados y paliados.
 static CUELGUES: AtomicU32 = AtomicU32::new(0);
+
+/// Vueltas del eco en que el driver dijo `Ok` y lo vuelto no es lo mandado.
+static CORRUPCIONES: AtomicU32 = AtomicU32::new(0);
+
+/// Vueltas del eco en que el driver devolvio `Err`.
+static ERRORES: AtomicU32 = AtomicU32::new(0);
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
@@ -152,8 +183,9 @@ async fn main(_spawner: Spawner) {
     // 100 kHz, modo 0, sin DMA y sin NSS del periferico: `new_blocking` no toma
     // pin de `CS`, asi que el `CS` es un GPIO nuestro. `TSIZE = 0` no se escribe
     // aqui: es lo que deja `blocking_read`, que cloca palabra a palabra.
+    let pedido = if ECO { F_SCK_ECO_HZ } else { F_SCK_JAKE_HZ };
     let mut cfg = spi::Config::default();
-    cfg.frequency = Hertz(F_SCK_JAKE_HZ);
+    cfg.frequency = Hertz(pedido);
     cfg.mode = spi::MODE_0;
     let mut spi = spi::Spi::new_blocking(p.SPI5, p.PE15, p.PG2, p.PG1, cfg);
 
@@ -195,14 +227,37 @@ async fn main(_spawner: Spawner) {
         f_ker,
         1u32 << (mbr + 1),
         f_sck,
-        F_SCK_JAKE_HZ,
+        pedido,
         f_cpu,
-        if BUCLE_DEL_REPORTE {
+        if ECO {
+            "eco (transfer de 8 con patron, puente MOSI-MISO)"
+        } else if BUCLE_DEL_REPORTE {
             "reporte (write 2 + read 1, sin info!)"
         } else {
             "read de 8"
         }
     );
+
+    // El eco no arranca sin puente: con el MISO al aire cada vuelta contaria como
+    // corrupcion y el numero no diria nada. El `panic!` termina `probe-rs run`.
+    if ECO {
+        let mut vuelto = [0u8; PRUEBA_DEL_PUENTE.len()];
+        cs.set_low();
+        let r = spi.blocking_transfer(&mut vuelto, &PRUEBA_DEL_PUENTE);
+        cs.set_high();
+        if r.is_err() || vuelto != PRUEBA_DEL_PUENTE {
+            defmt::panic!(
+                "eco: el puente no esta o no conduce: mandado {:#x}, vuelto {:#x}, driver ok {}",
+                PRUEBA_DEL_PUENTE,
+                vuelto,
+                r.is_ok()
+            );
+        }
+        info!(
+            "eco: puente OK, los {} bytes de prueba volvieron iguales",
+            PRUEBA_DEL_PUENTE.len()
+        );
+    }
 
     // El ejecutor del J2 arranca sin ninguna ranura: lo unico que se le pide es
     // que corra el vigia por encima del hilo.
@@ -218,7 +273,19 @@ async fn main(_spawner: Spawner) {
     // de hilo entero, que es justo lo que el cuelgue congela.
     let mut buf = [0u8; BYTES_POR_LECTURA];
     let mut uno = [0u8; 1];
+    let mut vuelta = 0u32;
     loop {
+        if ECO {
+            let mandado = patron(vuelta);
+            let mut vuelto = [0u8; BYTES_POR_LECTURA];
+            cs.set_low();
+            let r = spi.blocking_transfer(&mut vuelto, &mandado);
+            cs.set_high();
+            comprueba(vuelta, &mandado, &vuelto, r.is_ok());
+            vuelta = vuelta.wrapping_add(1);
+            PROGRESO.fetch_add(1, Ordering::Relaxed);
+            continue;
+        }
         cs.set_low();
         // El `Err` no se distingue del `Ok` a proposito: lo que se cuenta es
         // *«volvio»*, y el modo del #5607 es que no vuelve. Un `Overrun` con el
@@ -234,6 +301,42 @@ async fn main(_spawner: Spawner) {
     }
 }
 
+/// El patron de la vuelta `n`: `n` y su complemento, en little-endian. Cambia en
+/// cada vuelta, asi que ni un byte rancio de la anterior ni un bit corrido
+/// devuelven lo mismo por casualidad, y cada bit va una vez a 0 y otra a 1.
+fn patron(n: u32) -> [u8; BYTES_POR_LECTURA] {
+    let a = n.to_le_bytes();
+    let b = (!n).to_le_bytes();
+    [a[0], a[1], a[2], a[3], b[0], b[1], b[2], b[3]]
+}
+
+/// Cuenta la vuelta del eco si el driver dio `Err` o si dijo `Ok` con lo vuelto
+/// distinto de lo mandado, e imprime las primeras con sus bytes.
+fn comprueba(
+    vuelta: u32,
+    mandado: &[u8; BYTES_POR_LECTURA],
+    vuelto: &[u8; BYTES_POR_LECTURA],
+    ok: bool,
+) {
+    if !ok {
+        let n = ERRORES.fetch_add(1, Ordering::Relaxed) + 1;
+        if n <= DETALLES_MAX {
+            defmt::warn!("eco: error del driver {} en la vuelta {}", n, vuelta);
+        }
+    } else if vuelto != mandado {
+        let n = CORRUPCIONES.fetch_add(1, Ordering::Relaxed) + 1;
+        if n <= DETALLES_MAX {
+            defmt::warn!(
+                "eco: corrupcion {} en la vuelta {}: mandado {:#x}, vuelto {:#x}",
+                n,
+                vuelta,
+                mandado,
+                vuelto
+            );
+        }
+    }
+}
+
 /// El vigia, en el ejecutor del J2 (interrupcion, `P2`): mira si `PROGRESO`
 /// avanza, cuenta los cuelgues, aplica el paliativo del hilo e informa cada
 /// minuto.
@@ -243,6 +346,9 @@ async fn vigia() {
     let mut ultimo = 0u32;
     let mut quietos = 0u32;
     let mut tics = 0u32;
+    // `PROGRESO` es de 32 bits y el eco puede pasar de 2^32 vueltas en una noche:
+    // el total se suma por diferencias, que no se enteran de la vuelta del contador.
+    let mut total = 0u64;
 
     loop {
         ticker.next().await;
@@ -252,6 +358,7 @@ async fn vigia() {
         if ahora == ultimo {
             quietos += 1;
         } else {
+            total += u64::from(ahora.wrapping_sub(ultimo));
             quietos = 0;
             ultimo = ahora;
         }
@@ -263,7 +370,7 @@ async fn vigia() {
                  paliativo del hilo (TXDR)",
                 n,
                 tics as u64 * TIC_VIGIA_MS / 1000,
-                ahora
+                total
             );
             // El paliativo, aqui y solo aqui (R-MJ3 lo prohibe en el driver).
             // `txdr8` es el acceso de 8 bits al registro de datos de salida
@@ -276,12 +383,23 @@ async fn vigia() {
         }
 
         if tics % TICS_POR_INFORME == 0 {
-            info!(
-                "control_positivo,minutos={},lecturas={},cuelgues={}",
-                tics / TICS_POR_INFORME,
-                ahora,
-                CUELGUES.load(Ordering::Relaxed)
-            );
+            if ECO {
+                info!(
+                    "control_positivo,minutos={},lecturas={},cuelgues={},corrupciones={},errores={}",
+                    tics / TICS_POR_INFORME,
+                    total,
+                    CUELGUES.load(Ordering::Relaxed),
+                    CORRUPCIONES.load(Ordering::Relaxed),
+                    ERRORES.load(Ordering::Relaxed)
+                );
+            } else {
+                info!(
+                    "control_positivo,minutos={},lecturas={},cuelgues={}",
+                    tics / TICS_POR_INFORME,
+                    total,
+                    CUELGUES.load(Ordering::Relaxed)
+                );
+            }
         }
     }
 }
