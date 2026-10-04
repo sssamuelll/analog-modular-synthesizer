@@ -300,7 +300,7 @@ Y, cuando lo haya, una línea de error por cuelgue con su segundo y su cuenta.
   La lectura entera está en la spec del maestro, §9, enmienda del 11-09,
   punto 3.
   **Decidido el mismo día** (las tres cosas): (A) el mismo binario, 6 h, **hecha**;
-  (B) el bucle del primer reporte, 6 h, **para el 02-10**; (C) preguntarle a
+  (B) el bucle del primer reporte, 6 h, **hecha el 02-10**; (C) preguntarle a
   jake-taf en #5607 ([hecho](https://github.com/embassy-rs/embassy/issues/5607#issuecomment-5931298173), él respondió que repite con su embassy
   actual y avisa). B es:
 
@@ -317,9 +317,38 @@ Y, cuando lo haya, una línea de error por cuelgue con su segundo y su cuenta.
   **A, medida el 2026-10-01** (firmware `4d2d6f2`): 358 min, 37 160 399
   lecturas, **0 cuelgues**, 103 800 lecturas en cada minuto. Un cuelgue cada
   2 h o menos queda descartado al 95 % en esta configuración; no dice que el
-  defecto no exista. Faltan las filas 359 y 360 del log (probable búfer al
-  parar `probe-rs`). Las cuentas, en la spec del maestro, §9, enmienda del
-  11-09, punto 3.
+  defecto no exista. Faltan las filas 359 y 360 del log por el reloj lento de
+  la placa (ver más abajo). Las cuentas, en la spec del maestro, §9, enmienda
+  del 11-09, punto 3.
+
+  **B, medida el 2026-10-02** (firmware `7a01671`): 358 min, 78 174 777
+  vueltas, **0 cuelgues**.
+
+  **El eco** se decidió el 02-10, después de que jake-taf reportara que con
+  `main` se le sigue colgando y que ve errores de CRC «regularmente». Lleva un
+  puente de **D12 a D11** en la tira de enchufes CN14: son el 6.º y el 7.º
+  desde arriba (ojo: el 4.º y el 5.º son GND y D13, el reloj del SPI). También
+  sirve de CN15 pin 13 a CN15 pin 15 (UM3417 Rev 3, Tablas 12 y 13). Se corre
+  con:
+
+  ```bash
+  cargo run --release --bin control_positivo --features eco
+  ```
+
+  Pide 16 MHz y manda 8 bytes de prueba; si no vuelven iguales, se para con
+  `panic!`, porque sin puente no hay medida. Después hace `blocking_transfer`
+  de 8 bytes con un patrón distinto por vuelta. La fila de cada minuto suma
+  `corrupciones` (el driver dijo `Ok` y los datos no coinciden) y `errores`
+  (el driver dijo `Err`). **Medido el 2026-10-03 y 04** (firmware `fea2a17`):
+  una hora más una noche de 798 minutos, 812 millones de vueltas, **0
+  corrupciones, 0 errores y 0 cuelgues**. Las cuentas, en la spec del maestro.
+
+  **El reloj de la placa va lento.** En las cuatro corridas, la última fila
+  de cada log se escribe más tarde de lo que dice su minuto: 358 minutos de
+  placa son 361 reales. El HSI de esta Nucleo va entre un 0,82 % y un 0,85 %
+  lento contra el reloj de la PC, dentro de los ±5 % de la hoja (DS14791 Rev
+  10, p. 165). Por eso «faltan» filas al final de cada log: no se pierden,
+  simplemente no llegan a imprimirse antes del corte.
 - **Pero el `f_sck` no van a ser 100 kHz, y la tercera línea lo dice.** El
   kernel del SPI5 **no es el HSI de 64 MHz**: es `pclk2`, y son **32 MHz**. El
   mux se queda en su cero (`ClockMux::default()` es `mem::zeroed()`,
