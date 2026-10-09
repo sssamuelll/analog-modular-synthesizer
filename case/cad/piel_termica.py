@@ -25,17 +25,45 @@ ESCENARIOS = (("v5 declarada, fuente afuera", 64.2), ("v5 a censo", 35.1),
               ("fuente ADENTRO (v5 + 25.02)", 89.2))
 
 
-def salto(p, potencia_w, cd, respira_mm2, con_rejilla=True):
+def salto(p, potencia_w, cd, respira_mm2, con_rejilla=True, serie_mm2=()):
+    """serie_mm2: secciones que el aire cruza EN SERIE con la celosia, por
+    mitad de cachete (la placa ambar de la ficha 10: el canal y la rendija).
+    Mismo C_D en todas: 1/A^2 = suma de 1/A_i^2."""
     H = cb._vertices(p)[5][1]
     _n, _l, a_rej, y_rej = cb._rejilla_entrada(p)
-    a_mej = respira_mm2                    # por cachete: mitad entra, mitad sale
-    a_ent_m = a_sal = 2 * a_mej / 2
+    mitad = respira_mm2 / 2                # por cachete: mitad entra, mitad sale
+    if serie_mm2:
+        mitad = 1.0 / math.sqrt(1 / mitad ** 2 + sum(1 / a ** 2 for a in serie_mm2))
+    a_ent_m = a_sal = 2 * mitad
     a_ent = a_ent_m + (a_rej if con_rejilla else 0.0)
     y_ent = (a_ent_m * H / 4 + (a_rej * y_rej if con_rejilla else 0.0)) / a_ent
     h = (3 * H / 4 - y_ent) / 1000.0
     a_ef = 1.0 / math.sqrt(1 / a_ent ** 2 + 1 / a_sal ** 2)
     k = cb.RHO_AIRE * cb.CP_AIRE * cd * a_ef * 1e-6 * math.sqrt(2 * cb.G * h / cb.T_AMB)
     return (potencia_w / k) ** (2.0 / 3.0), a_ef, h * 1000.0
+
+
+# LA PLACA AMBAR de la ficha 10 (D-P3): acrilico detras de cada cachete, del
+# contorno de la ventana del anillo (el perfil menos la cara vista) menos una
+# rendija alrededor, por donde el aire entra y sale. Va dentro de la pletina,
+# contra su cara de dentro: entre el anillo y el primer riel quedan 6 mm, y el
+# interior es de los modulos. El aire del cachete cruza en serie el canal que
+# queda entre la placa y el cachete (t_anillo - ESPESOR_PLACA de fondo, a lo
+# largo del borde de la placa) y la rendija. ORDEN DE MAGNITUD: el mismo C_D
+# para todo, y sin el rozamiento del canal, que solo empeoraria la cifra.
+ESPESOR_PLACA = 3.0
+RENDIJAS_PLACA = (8.0, 12.0, 16.0)
+
+
+def placa_ambar(p, rendija):
+    """(canal, rendija) en mm2 por mitad de cachete."""
+    from shapely.geometry import Polygon
+    with open(os.path.join(DIR, "piel_borde.json"), encoding="utf-8") as f:
+        perfil = Polygon(json.load(f)["perfil_real"])
+    ventana = perfil.buffer(-p["cara_anillo"], join_style=2)
+    placa = perfil.buffer(-(p["cara_anillo"] + rendija), join_style=1)
+    canal = (p["t_anillo"] - ESPESOR_PLACA) * placa.length
+    return canal / 2, (ventana.area - placa.area) / 2
 
 
 if __name__ == "__main__":
@@ -69,3 +97,21 @@ if __name__ == "__main__":
     else:
         print(f"pasa el pesimista con {P} W: bastan {hi:.0f} mm2 por cachete y respira {respira} "
               f"({100 * (respira / hi - 1):.0f} % de margen)")
+
+    print("")
+    print(f"la placa ambar (ficha 10, D-P3): canal de {p['t_anillo'] - ESPESOR_PLACA:.0f} mm, "
+          f"en serie con la celosia; K con el C_D de la puerta / pesimista")
+    print(f"{'':20s} {'declarada 64,2 W':>17s} {'censo 35,1 W':>15s}")
+    filas = [("sin placa", ())] + [(f"rendija {r:.0f} mm", placa_ambar(p, r)) for r in RENDIJAS_PLACA]
+    for nombre, serie in filas:
+        celdas = []
+        for P in (ESCENARIOS[0][1], ESCENARIOS[1][1]):
+            a = salto(p, P, cb.CD_TIRO, respira, serie_mm2=serie)[0]
+            b_ = salto(p, P, cb.CD_TIRO_PESIMISTA, respira, serie_mm2=serie)[0]
+            celdas.append(f"{a:5.1f} / {b_:5.1f}{'' if b_ <= techo else ' X'}")
+        print(f"{nombre:20s} {celdas[0]:>17s} {celdas[1]:>15s}")
+    serie = placa_ambar(p, 12.0)
+    for nombre, P in ESCENARIOS[:2]:
+        d = (salto(p, P + 1.0, cb.CD_TIRO_PESIMISTA, respira, serie_mm2=serie)[0]
+             - salto(p, P, cb.CD_TIRO_PESIMISTA, respira, serie_mm2=serie)[0])
+        print(f"cada vatio de luz dentro, con la rendija de 12 y {nombre}: +{d:.2f} K (pesimista)")
