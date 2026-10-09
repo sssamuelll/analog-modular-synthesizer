@@ -40,7 +40,6 @@ import argparse
 import json
 import math
 import os
-import sys
 
 import numpy as np
 from scipy import ndimage
@@ -267,7 +266,7 @@ def mascara(r, mmpx=0.25):
     k = int(round(FILLET / mmpx))
     el = np.hypot(*np.mgrid[-k:k + 1, -k:k + 1]) <= k
     masa = ndimage.binary_closing(masa, el)          # funde gargantas
-    masa = ndimage.binary_opening(masa, el) | (~placa == False) & masa & ~huecos
+    masa = ndimage.binary_opening(masa, el) | placa & masa & ~huecos
     masa &= placa
     return placa, huecos, masa, mmpx
 
