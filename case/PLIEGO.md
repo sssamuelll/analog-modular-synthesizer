@@ -396,7 +396,7 @@ diamantado, ni el chaflán de 0.5. Esas tres cosas son del PMMA. Canto
 desbarbado y basta — salvo el anillo, que tiene su propio acabado (anodizado
 satinado, §6.1) y tampoco lleva recocido ni diamantado, y la tapa del valle,
 que va **anodizada en negro** después de plegar (ficha 14 del acta del
-09-10): enmarca la fila del valle junto con los rieles, que se compran negros.
+09-10).
 
 ### 6.1 Taller de mecanizado: el anillo
 

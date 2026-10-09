@@ -1,7 +1,7 @@
 // LA PIEL ORGANICA -- propuesta del 2026-09-05, SIN FIRMAR.
 //
 //   openscad -o build/piel/<parte>.stl -D 'PART="<parte>"' piel_organica.scad
-//   partes: banda | aluminio (= hueso + negro) | paneles | acrilico | madera
+//   partes: banda | aluminio (= plateado + negro) | paneles | acrilico | madera
 //
 // Vive AL LADO de sam17_case.scad y no lo toca: reutiliza su perfil y sus
 // piezas por `use`, y pone encima la piel del concepto de Samuel (cinco
@@ -26,8 +26,8 @@
 //              no quepa en una MJF de serie es la decision D-P6 del papel
 //   aluminio   lo que sigue igual: rieles, marcos de ventana, los dos anillos
 //              (ahora escondidos, y por eso ya no fresados con cara vista) y
-//              la tapa del valle. El render lo pide en dos: hueso (marcos y
-//              anillos) y negro (rieles y tapa del valle, ficha 14)
+//              la tapa del valle. El render lo pide en dos: plateado (rieles,
+//              marcos y anillos) y negro (la tapa del valle, ficha 14)
 //   paneles    los tres, en STL propio (van oscuros en el render)
 //   acrilico   la trasera, que se queda tal cual (KONDOR, ondas, ranuras)
 //   madera     la tabla y las paticas
@@ -100,20 +100,20 @@ module banda()
 // Los paneles van en STL propio: en el concepto son aluminio OSCURO dentro de
 // la piel blanca, y ese contraste es la idea (panel duro en marco blando).
 // Pintarlos del aluminio claro de render.py los funde con la piel.
-// Los RIELES y la TAPA DEL VALLE van en NEGRO (ficha 14 del acta del 09-10):
-// en el concepto enmarcan cada fila, y en aluminio claro se leian como
-// rendijas. Salen en STL propio para que el render los pinte aparte;
+// La TAPA DEL VALLE va en NEGRO (ficha 14 del acta del 09-10), y sale en STL
+// propio para que el render la pinte aparte. La ficha pedia tambien los rieles
+// en negro; se quedan PLATEADOS porque ya estaban comprados (Samuel, 10-10).
 // aluminio() sigue siendo los cuatro, que es contra lo que piel_choques.py
 // mide la piel.
-module hueso()    { marcos_ventana(); costillas(); }
-module negro()    { rails(); tapa_valle(); }
-module aluminio() { hueso(); negro(); }
+module plateado() { rails(); marcos_ventana(); costillas(); }
+module negro()    { tapa_valle(); }
+module aluminio() { plateado(); negro(); }
 module acrilico() { piel_trasera(); }
 module madera()   { bandeja_base(); paticas(); }
 
 if      (PART == "banda")    banda();
 else if (PART == "aluminio") aluminio();
-else if (PART == "hueso")    hueso();
+else if (PART == "plateado") plateado();
 else if (PART == "negro")    negro();
 else if (PART == "paneles")  paneles();
 else if (PART == "acrilico") acrilico();
