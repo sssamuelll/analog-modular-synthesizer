@@ -288,8 +288,8 @@ Lo que **no** enseñan, a propósito: la franja de conectores (§5, no modelada)
 > **ENMIENDA (2026-10-09).** El 1 cambia de forma. El cuello de la cubierta es ahora el hueco bajo su borde enrollado, donde entra la pestaña del cachete, y está dibujado y comprobado (§13.2). Los enganches pasan a ser las fijaciones por dentro, sin dibujar (el 9). El 2 sigue: la rigidez de una placa de nylon de 3 mm y 330 mm de largo está sin calcular. Y entran tres:
 >
 > 9. **Las fijaciones por dentro** (ficha 11, a): cuántos insertos, dónde, y si el destornillador llega desde dentro con los módulos montados. Sin medir.
-> 10. **La holgura bajo el borde** es de 0,6 mm de dibujo. Después del remallado, la regla de choques mide como mucho 0,12 mm de contacto entre las piezas. Es el juego del modelo, no el de la pieza impresa, que en MJF anda en ±0,3: se comprueba con una pieza.
-> 11. **Las dos juntas a inglete** de abajo son las únicas que se ven. Una arista viva impresa no sale perfecta, y la muestra dirá si la junta necesita un chaflán o un rehundido para leerse como algo hecho a propósito.
+> 10. **La holgura bajo el borde** (#398) es de 0,6 mm de dibujo. Después del remallado, la regla de choques mide como mucho 0,12 mm de contacto entre las piezas. Es el juego del modelo, no el de la pieza impresa, que en MJF anda en ±0,3: se comprueba con una pieza.
+> 11. **Las dos juntas a inglete** (#398) de abajo son las únicas que se ven. Una arista viva impresa no sale perfecta, y la muestra dirá si la junta necesita un chaflán o un rehundido para leerse como algo hecho a propósito.
 
 1. **Los puntos de enganche y el cuello.** Cómo la cubierta se centra en los cachetes y cómo el marco asienta en su canto: no dibujado (§8).
 2. **La rigidez de la rama.** Tubos de 3,6 a 12 mm en nylon, lentes de 15 a 60 mm, un marco de 28 × 11: sin calcular. Es lo que fija `NERVIO_PUNTA`, `NERVIO_NUDO` y el marco de verdad, y hoy son números de mirar. Y un cachete de 322 g colgado de cuatro M4 en un anillo de pletina: sin calcular el arranque.
@@ -374,14 +374,14 @@ Las fichas 1 a 6 no quedaron guardadas en el acta: un fallo de la página perdí
 | 3 | cachete y cubierta en el mismo sitio | hazlo | **hecho** con la 7: 0,6 mm de juego, regla en verde |
 | 4 | la costura de la nariz | hazlo | **hecho**: el marco ya no existe; la esquina es un inglete |
 | 5 | las paredes de los huecos picadas | hazlo | **hecho**: el relieve solo mueve en Z |
-| 6 | rendijas por las que se ve el suelo | hazlo | pendiente: toca `guarda_tapa()` |
+| 6 | rendijas por las que se ve el suelo | hazlo | pendiente, #389: toca `guarda_tapa()` |
 | 7 | dos tubos donde debería haber uno | una sola masa (A) | **hecho, primera vuelta**: se enseña en render |
-| 8 | la corteza parece nieve | enséñamelo primero | pendiente. Mientras tanto la cubierta sale lisa (`PIEL_CORTEZA=ruido` devuelve el ruido para comparar) |
-| 9 | la celosía no tiene cuerpo | enséñamelo primero | pendiente: tres grados de fondo, con la chimenea |
-| 10 | por la celosía se ve la máquina (D-P3) | enséñamelo primero | pendiente: placa ámbar detrás, con la chimenea |
-| 11 | los tornillos se veían | por dentro (a) | pendiente de dibujar (HUECO 9). Los de fuera ya no están |
-| 12 | la tabla se quedó corta | hazlo | pendiente |
-| 13 | la trasera en dos materiales | hazlo | pendiente: depende de la lista de conectores (#183) |
-| 14 | rieles negros y paneles vestidos | hazlo | pendiente |
-| 15 | acabado satinado | enséñamelo primero | pendiente |
+| 8 | la corteza parece nieve | enséñamelo primero | pendiente, #390. Mientras tanto la cubierta sale lisa (`PIEL_CORTEZA=ruido` devuelve el ruido para comparar) |
+| 9 | la celosía no tiene cuerpo | enséñamelo primero | pendiente, #391: tres grados de fondo, con la chimenea |
+| 10 | por la celosía se ve la máquina (D-P3) | enséñamelo primero | pendiente, #392: placa ámbar detrás, con la chimenea |
+| 11 | los tornillos se veían | por dentro (a) | pendiente de dibujar, #393 (HUECO 9). Los de fuera ya no están |
+| 12 | la tabla se quedó corta | hazlo | pendiente, #394 |
+| 13 | la trasera en dos materiales | hazlo | pendiente, #395: depende de la lista de conectores (#183) |
+| 14 | rieles negros y paneles vestidos | hazlo | pendiente, #396 |
+| 15 | acabado satinado | enséñamelo primero | pendiente, #397 |
 | 16 | una pieza por archivo y ningún choque | hazlo | **hecho**: `check_piel.py` |
