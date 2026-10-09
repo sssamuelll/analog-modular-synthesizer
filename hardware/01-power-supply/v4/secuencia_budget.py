@@ -20,7 +20,7 @@ un riel vivo y el otro muerto.
 
 ## Los tres hallazgos
 
-**1. Un solo hilo sirve para los dos reguladores, y hay que decirlo bien.** El
+**1. YA NO SIRVE UN SOLO HILO, y es lo que trajo el cambio de U1.** El
 papel describe el LM2941 como activo-bajo y el LM2991 como "activo-alto
 deshabilita", que suena a que hacen falta dos senales opuestas. No: en los dos,
 BAJO habilita (LM2941 <= 0,80 V, LM2991 <= 0,8 V) y ALTO deshabilita (LM2941
@@ -32,7 +32,8 @@ son los DOS lados del nivel alto: >= 2,4 V para que los dos se apaguen, y
 histeresis tiene que ser mayor que el rizado del punto que mide, o el
 comparador castanetea en cada ciclo de conmutacion. En el borne del modulo hay
 200 mVp-p (hoja p. 2); despues del LC de rizado_budget.py quedan ~1,2 mVp-p.
-Y la ventana entera donde puede vivir el umbral --entre lo que U1 necesita y lo
+Y la ventana entera donde puede vivir el umbral --entre lo que necesita el
+peor de los dos rieles (ver peor_reg()) y lo
 que un modulo de tolerancia mala garantiza-- **no llega a 200 mV**. O sea que
 midiendo el riel crudo de verdad, el detector de D-F4 no existe: pide mas
 histeresis que ventana hay.
@@ -75,13 +76,42 @@ from margen_budget import (V_SET, v_entrada_minima_v,  # noqa: E402
 from rizado_budget import F_CONMUTACION_HZ, RIZADO_IRM_VPP, h_lc  # noqa: E402
 
 # --- los pines ON/OFF, de sus hojas ---------------------------------------
-# LM2941 SNVS770I p. 6: habilita con <= 0,80 V garantizados; deshabilita con
-#   >= 2 V. Corriente del pin hasta 300 uA (50 tipicos).
-# LM2991 SNVS099I p. 5: habilita con <= 0,8 V; deshabilita con >= 2,4 V.
-#   p. 4, condiciones recomendadas: el pin admite de 0 a 5 V.
-V_ONOFF_HABILITA_MAX = {"U1": 0.80, "U2": 0.8}
-V_ONOFF_DESHABILITA_MIN = {"U1": 2.0, "U2": 2.4}
-V_ONOFF_MAX_RECOMENDADO = 5.0
+# LT1963A Rev G p. 5, "Shutdown Threshold": Off to On con <= 2 V garantizados;
+#   On to Off con >= 0,25 V. O SEA QUE HABILITA EN ALTO: es un pin SHDN
+#   activo-bajo, al reves que el ON/OFF del LM2941 al que sustituye.
+#   Corriente del pin 1 uA max a 0 V (p. 5, nota 10).
+# LT3015 rev B p. 6, "Shutdown Threshold": VOUT = Off-to-On (Positive) 1,07 /
+#   1,21 / 1,35 V y On-to-Off (Positive) 0,5 / 0,73. O SEA QUE TAMBIEN
+#   HABILITA EN ALTO: por encima de 1,35 V garantiza ENCENDIDO y por debajo de
+#   0,5 V garantiza APAGADO. Su p. 2 da el maximo absoluto del pin respecto a
+#   IN: -0,3 V a +55 V, o sea +40,6 V absolutos con IN en -14,4.
+#
+# LA POLARIDAD VOLVIO A SER LA MISMA EN LOS DOS, Y ESO CIERRA UN AGUJERO.
+# Con el LM2941 los dos habilitaban en BAJO y un solo hilo los gobernaba; D-F8
+# metio el LT1963A, que habilita en ALTO, y dejo la pareja en polaridades
+# opuestas -- lo que obligaba a un inversor cuyo modo de fallo era justo el
+# prohibido (dejar UN riel vivo). D-F9 mete el LT3015, que tambien habilita en
+# alto, y con eso:
+#
+#   * vuelve el hilo unico: un nivel bajo apaga a los dos, uno alto enciende
+#     a los dos;
+#   * y vuelve la propiedad que D-F4 necesita, POR CONSTRUCCION y no por un
+#     circuito: con un pulldown al comun, cortar el hilo deja el pin en el
+#     nivel que apaga a los DOS. No hay inversor que quedarse sin
+#     alimentacion.
+#
+# LOS NOMBRES DE ESTOS DOS DICCIONARIOS CAMBIARON AQUI. Se llamaban
+# HABILITA_MAX y DESHABILITA_MIN, de cuando los dos habilitaban en bajo, y
+# desde D-F8 guardaban lo contrario de lo que decian. Ahora dicen que guardan:
+# el nivel que garantiza apagado y el que garantiza encendido.
+HABILITA_EN_ALTO = {"U1": True, "U2": True}
+V_APAGA_MAX = {"U1": 0.25, "U2": 0.5}       # por debajo, APAGADO garantizado
+V_ENCIENDE_MIN = {"U1": 2.0, "U2": 1.35}    # por encima, ENCENDIDO garantizado
+# El techo del nivel alto. NO es un "recomendado": es el MAXIMO ABSOLUTO del
+# pin mas restrictivo de los dos, el SHDN del LT1963A (Rev G p. 2, +-20 V).
+# El del LT3015 son +40,6 V absolutos, asi que manda el otro. Era 5,0 V, que
+# era el maximo recomendado del pin del LM2991 (su p. 4) y murio con la pieza.
+V_ONOFF_TECHO = 20.0
 I_ONOFF_MAX_A = 300e-6
 
 # --- los tiempos del modulo, hoja p. 2 ------------------------------------
@@ -140,6 +170,13 @@ def error_umbral_v(v_umbral: float) -> float:
     """Cuanto se puede ir el umbral real del que se dibuje, en voltios."""
     return (v_umbral * (ERR_DIVISOR_FRAC + ERR_REFERENCIA_FRAC)
             + ERR_OFFSET_COMPARADOR_V * DIVISOR_RATIO)
+
+
+def peor_reg() -> str:
+    """El riel que pone la cota de abajo. NO se nombra a mano: desde que U1
+    es un LT1963A (2026-09-04) el que manda es U2, y escribir 'U1' en la
+    prosa dejaria al texto describiendo un estado que el codigo ya no tiene."""
+    return max(V_SET, key=v_necesaria_v)
 
 
 def ventana_v() -> tuple[float, float]:
@@ -252,7 +289,7 @@ def _guarda_ventana(p: dict[str, float]) -> None:
     assert hist <= ancho_ventana_v() + p["ancho_extra_v"], (
         f"histeresis de {hist * 1000:.0f} mV sobre una ventana de "
         f"{(ancho_ventana_v() + p['ancho_extra_v']) * 1000:.0f}: el umbral "
-        f"bajo cae por debajo de lo que U1 necesita y el detector apagaria "
+        f"bajo cae por debajo de lo que {peor_reg()} necesita y el detector apagaria "
         f"una cascada que todavia regula")
 
 
@@ -277,18 +314,31 @@ P_BASE = {
 
 def _autocomprobacion() -> None:
     # 1. UN SOLO HILO gobierna los dos reguladores, y sus dos niveles caben.
-    #    Los dos lados: el bajo por debajo del menor de los dos umbrales de
-    #    habilitacion, el alto por encima del mayor de deshabilitacion Y por
-    #    debajo del maximo recomendado del pin del LM2991.
-    nivel_bajo = min(V_ONOFF_HABILITA_MAX.values())
-    nivel_alto = max(V_ONOFF_DESHABILITA_MIN.values())
-    assert nivel_alto <= V_ONOFF_MAX_RECOMENDADO, (
-        f"el nivel alto comun tiene que llegar a {nivel_alto:.1f} V para "
-        f"apagar a los dos, y el pin del LM2991 admite hasta "
-        f"{V_ONOFF_MAX_RECOMENDADO:.1f} (su hoja p. 4)")
+    #    El bajo tiene que apagar a los DOS; el alto tiene que encender a los
+    #    DOS y quedarse por debajo del techo del pin mas restrictivo.
+    nivel_bajo = min(V_APAGA_MAX.values())
+    nivel_alto = max(V_ENCIENDE_MIN.values())
+    assert nivel_alto <= V_ONOFF_TECHO, (
+        f"el nivel alto comun tiene que llegar a {nivel_alto:.2f} V para "
+        f"encender a los dos, y el pin mas restrictivo (SHDN del LT1963A) "
+        f"admite hasta {V_ONOFF_TECHO:.1f} V (Rev G p. 2)")
     assert nivel_bajo < nivel_alto, (
-        "si el nivel que habilita a uno deshabilitara al otro, harian falta "
-        "dos senales opuestas y no una")
+        "si el nivel que apaga a uno encendiera al otro, harian falta dos "
+        "senales opuestas y no una")
+
+    # 1b. Y LA PROPIEDAD QUE D-F4 COMPRA CON ESO, aseverada y no comentada:
+    #     los dos tienen que habilitar en el MISMO sentido. Mientras sea asi,
+    #     un hilo roto con pulldown al comun los apaga a los dos por
+    #     construccion y no hace falta inversor. El dia que una de las dos
+    #     piezas cambie de polaridad --como paso con D-F8, que dejo la pareja
+    #     opuesta durante dos dias-- esta puerta lo dice EN VOZ ALTA en vez de
+    #     dejarlo en un comentario que nadie relee.
+    assert len(set(HABILITA_EN_ALTO.values())) == 1, (
+        f"U1 y U2 ya no habilitan en el mismo sentido ({HABILITA_EN_ALTO}): "
+        f"hace falta invertir una de las dos senales, y el inversor es un "
+        f"punto de fallo cuyo modo prohibido --dejar UN riel vivo-- es "
+        f"exactamente lo que D-F4 existe para impedir. Vuelve a leerse la "
+        f"#323 antes de seguir")
 
     # 2. LA MAQUINA DE ESTADOS, enumerada. Con detector, ningun estado ESTABLE
     #    deja un riel solo; sin el, la ventana es el setup del modulo.
@@ -364,17 +414,48 @@ def _autocomprobacion() -> None:
 def demo() -> int:
     print("secuencia_budget: el detector de ventana de D-F4\n")
 
-    print("  los dos pines ON/OFF, y por que basta UN hilo:")
+    print("  los dos pines ON/OFF, y por que BASTA UN HILO:")
     for reg in V_SET:
-        print(f"    {reg}: habilita con <= {V_ONOFF_HABILITA_MAX[reg]:.2f} V, "
-              f"deshabilita con >= {V_ONOFF_DESHABILITA_MIN[reg]:.1f} V")
-    print(f"    -> nivel bajo <= {min(V_ONOFF_HABILITA_MAX.values()):.2f} V, "
-          f"nivel alto entre {max(V_ONOFF_DESHABILITA_MIN.values()):.1f} y "
-          f"{V_ONOFF_MAX_RECOMENDADO:.0f} V")
-    print(f"    (el driver tiene que hundir {I_ONOFF_MAX_A * 1e6:.0f} uA en el "
-          f"pin del LM2941)")
-    print("    El papel llama al LM2991 'activo-alto deshabilita', que suena a")
-    print("    dos senales opuestas: no lo son. En los dos, bajo habilita.")
+        if HABILITA_EN_ALTO[reg]:
+            print(f"    {reg}: habilita en ALTO "
+                  f"(>= {V_ENCIENDE_MIN[reg]:.2f} V; apaga con "
+                  f"<= {V_APAGA_MAX[reg]:.2f} V)")
+        else:
+            print(f"    {reg}: habilita en BAJO "
+                  f"(<= {V_APAGA_MAX[reg]:.2f} V; apaga con "
+                  f">= {V_ENCIENDE_MIN[reg]:.2f} V)")
+    print()
+    print("    LA POLARIDAD, Y LOS DOS DIAS EN QUE ESTUVO ROTA. Hasta el")
+    print("    2026-09-04 U1 era un LM2941 y los dos habilitaban en BAJO: un")
+    print("    hilo los gobernaba, y un hilo roto los apagaba a los DOS. Eso")
+    print("    no era comodidad de cableado: era la razon por la que ningun")
+    print("    fallo simple dejaba un riel solo, que es exactamente lo que")
+    print("    D-F4 existe para impedir. D-F8 metio el LT1963A --habilita en")
+    print("    ALTO-- y dejo la pareja opuesta: hacia falta un inversor cuyo")
+    print("    modo de fallo era el prohibido (#323). D-F9 mete el LT3015,")
+    print("    que TAMBIEN habilita en alto, y la propiedad vuelve por")
+    print("    construccion: un pulldown al comun y el hilo roto apaga a los")
+    print("    dos. No hay inversor que pueda quedarse sin alimentacion.")
+    print("    Con el LT1963A hay que invertir una de las dos senales, y el")
+    print("    inversor es un punto de fallo NUEVO cuyo modo de fallo es el")
+    print("    prohibido. Requisito para la tanda B: el inversor tiene que")
+    print("    fallar hacia AMBOS APAGADOS, no hacia uno solo -- se disena")
+    print("    con eso escrito, no se elige y luego se comprueba.")
+    print()
+    print("    Y LO QUE HAY QUE APRENDER NO ES LA POLARIDAD: el hilo unico")
+    print("    nunca fue una decision de diseno. Sobrevivio porque las dos")
+    print("    piezas que la v3 eligio por otros motivos --margen y ruido--")
+    print("    resultaron habilitar igual, y se perdio en cuanto una cambio")
+    print("    por una razon que no tenia nada que ver. Se habria perdido")
+    print("    igual por el otro camino: el regulador positivo flotante que")
+    print("    se estudio para U2 rompe el mismo hilo por REFERENCIA en vez")
+    print("    de por polaridad. Dos caminos distintos, el mismo dano, y")
+    print("    ninguno de los dos lo buscaba.")
+    print("    Asi que la tanda B NO tiene que restaurar el hilo unico: tiene")
+    print("    que disenar la PROPIEDAD --ningun fallo simple deja un riel")
+    print("    solo-- con los hilos que hagan falta, y aseverarla aqui. Una")
+    print("    propiedad que depende de que dos hojas de datos coincidan no")
+    print("    es una propiedad: es una coincidencia con suerte.")
 
     print("\n  la maquina de estados, ENUMERADA (no razonada):")
     print(f"    {'estado':44s} {'habilita':>8s} {'riel solo':>10s} {'ms':>8s}")
@@ -423,7 +504,8 @@ def demo() -> int:
     print()
     print("=" * 72)
     print("El umbral de D-F4 no se puede colocar, y la causa no es de aqui:")
-    print(f"  tiene que estar por ENCIMA de {lo:.3f} V (lo que U1 necesita")
+    print(f"  tiene que estar por ENCIMA de {lo:.3f} V (lo que {peor_reg()} "
+          f"necesita")
     print("  para regular, con la deriva de su referencia dentro) y por")
     print(f"  DEBAJO de {hi:.3f} V (lo que un IRM de tolerancia mala da).")
     if ancho_ventana_v() <= 0.0:
@@ -448,15 +530,16 @@ def demo() -> int:
     print("    razonable de este riel los aguanta.")
     print("=" * 72)
     print()
-    print("HUECO: el umbral de D-F4 no cabe. Tiene que estar entre lo que U1 "
-          f"necesita para regular ({lo:.3f} V) y lo que un IRM de tolerancia "
+    print(f"HUECO: el umbral de D-F4 no cabe. Tiene que estar entre lo que "
+          f"{peor_reg()} necesita para regular ({lo:.3f} V) y lo que un IRM "
+          f"de tolerancia "
           f"mala entrega ({hi:.3f} V), y entre las dos hay "
           f"{ancho_ventana_v() * 1000:.0f} mV contra "
           f"+-{error_umbral_v((lo + hi) / 2.0) * 1000:.0f} de tolerancia del "
           f"comparador y {hist_min_v() * 1000:.0f} de histeresis minima: "
           f"quedan {ventana_util_v() * 1000:.0f} mV. Dueno del hueco: "
-          f"margen_budget.py. Lo que este guion si deja dimensionado: un solo "
-          f"hilo para los dos ON/OFF, sensado DESPUES del LC, y la maquina de "
+          f"margen_budget.py. Lo que este guion si deja dimensionado: el "
+          f"sensado DESPUES del LC y la maquina de "
           f"estados sin ningun riel solo estable.")
     return 2
 

@@ -32,19 +32,20 @@ paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
 1,inrush_pico_arranque_frio,A,<= 106.723,,,,,,fusible_budget: Vpico sobre la NTC fria mas la red
 1,inrush_pico_rearranque_100ms,A,<= 784.791,,,,,,fusible_budget: el caso que dimensiona el fusible. Cortar y volver a los 100 ms
 1,fuga_a_PE_seis_encendidos,mA,<= 3.5,,,,,,"fuga_budget.fuga_total_ma(), con los seis en marcha. Es tambien la medida que arbitra D-F5"
-2,mas15_minimo_con_carga,V,>= 14.3699,,,,,,margen_budget.v_entrada_minima_v(): lo que le tiene que llegar a U1 en el peor caso
-2,mas15_necesario_para_regular,V,registro,,,,,,"margen_budget.v_necesaria_v('U1'): REGISTRO del criterio, para que la hoja de campo lleve el numero contra el que se compara. Hoy el margen es NEGATIVO (HUECO de margen_budget)"
+2,mas15_minimo_con_carga,V,>= 14.37,,,,,,margen_budget.v_entrada_minima_v(): lo que le tiene que llegar a U1 en el peor caso
+2,mas15_necesario_para_regular,V,registro,,,,,,"margen_budget.v_necesaria_v('U1'): REGISTRO del criterio, para que la hoja de campo lleve el numero contra el que se compara. U1 es un LT1963A desde el 2026-09-04 y su margen es POSITIVO; el que sigue en negativo es U2 (HUECO de margen_budget)"
 2,rizado_tras_LC_20MHz,Vpp,<= 0.00365059,,,,,,rizado_budget: los 200 mVp-p del IRM por la transferencia del LC amortiguado a 65 kHz
 2,pico_del_LC_en_resonancia,dB,<= 3,,,,,,rizado_budget.pico_lc_db(): el LC amortiguado no puede amplificar dentro de la banda de 10 Hz-100 kHz
 2b,quitar_red_a_PS1_caen_los_dos,si/no,= si,,,,,,"papel sec.9.1 paso 2b: con PS2 viva, los dos rieles de la cascada caen juntos. Sin este paso, D-F4 es una promesa"
 2b,quitar_red_a_PS2_caen_los_dos,si/no,= si,,,,,,"papel sec.9.1 paso 2b, el otro sentido"
 2b,quitar_red_a_PS3_cae_el_rack_entero,si/no,= si,,,,,,"papel sec.4.3: el mismo detector, replicado en el rack"
 2b,ventana_riel_solo_medida,ms,<= 10,,,,,,secuencia_budget: el transitorio en el que la cascada sigue habilitada con un riel solo
-3,TP7_+13V1_sin_carga,V,12.8 .. 13.4,13.1,0.3,,,,"como la v3: +13.1 +-0.3. La ventana de TP7/TP8 la vigila margen_budget, que hoy dice que no cabe"
-3,TP8_-12V9_sin_carga,V,-13.2 .. -12.6,-12.9,0.3,,,,"como la v3: -12.9 +-0.3. La ventana de TP7/TP8 la vigila margen_budget, que hoy dice que no cabe"
-3,TP3_+12V_sin_carga,V,11.95 .. 12.05,12,0.05,,,,"como la v3: +12 +-0.05. La ventana de TP7/TP8 la vigila margen_budget, que hoy dice que no cabe"
-3,TP4_-12V_sin_carga,V,-12.05 .. -11.95,-12,0.05,,,,"como la v3: -12 +-0.05. La ventana de TP7/TP8 la vigila margen_budget, que hoy dice que no cabe"
-3,TP5_+5V_sin_carga,V,4.75 .. 5.25,5,0.25,,,,"como la v3: +5 +-0.25. La ventana de TP7/TP8 la vigila margen_budget, que hoy dice que no cabe"
+2b,cortar_la_senal_del_secuenciador_apaga_LOS_DOS,si/no,= si,,,,,,"secuencia_budget: desde D-F9 los dos habilitan en ALTO (LT1963A >= 2,00 V, LT3015 >= 1,35 V), asi que un hilo roto con pulldown los apaga a los dos POR CONSTRUCCION. Se mide igual: es la propiedad que D-F4 compra"
+3,TP7_+13V1_sin_carga,V,12.8 .. 13.4,13.1,0.3,,,,"como la v3: +13.1 +-0.3. La ventana de TP7/TP8 la vigila margen_budget, y desde D-F9 CABEN LAS DOS: TP7 con el LT1963A (+330 mV) y TP8 con el LT3015 (+536). En TP8 el +-0,3 ya no es un ajuste: la ventana de la referencia del LT3015 son +-0,254 V, o sea que cae dentro con divisor fijo"
+3,TP8_-12V9_sin_carga,V,-13.2 .. -12.6,-12.9,0.3,,,,"como la v3: -12.9 +-0.3. La ventana de TP7/TP8 la vigila margen_budget, y desde D-F9 CABEN LAS DOS: TP7 con el LT1963A (+330 mV) y TP8 con el LT3015 (+536). En TP8 el +-0,3 ya no es un ajuste: la ventana de la referencia del LT3015 son +-0,254 V, o sea que cae dentro con divisor fijo"
+3,TP3_+12V_sin_carga,V,11.95 .. 12.05,12,0.05,,,,"como la v3: +12 +-0.05. La ventana de TP7/TP8 la vigila margen_budget, y desde D-F9 CABEN LAS DOS: TP7 con el LT1963A (+330 mV) y TP8 con el LT3015 (+536). En TP8 el +-0,3 ya no es un ajuste: la ventana de la referencia del LT3015 son +-0,254 V, o sea que cae dentro con divisor fijo"
+3,TP4_-12V_sin_carga,V,-12.05 .. -11.95,-12,0.05,,,,"como la v3: -12 +-0.05. La ventana de TP7/TP8 la vigila margen_budget, y desde D-F9 CABEN LAS DOS: TP7 con el LT1963A (+330 mV) y TP8 con el LT3015 (+536). En TP8 el +-0,3 ya no es un ajuste: la ventana de la referencia del LT3015 son +-0,254 V, o sea que cae dentro con divisor fijo"
+3,TP5_+5V_sin_carga,V,4.75 .. 5.25,5,0.25,,,,"como la v3: +5 +-0.25. La ventana de TP7/TP8 la vigila margen_budget, y desde D-F9 CABEN LAS DOS: TP7 con el LT1963A (+330 mV) y TP8 con el LT3015 (+536). En TP8 el +-0,3 ya no es un ajuste: la ventana de la referencia del LT3015 son +-0,254 V, o sea que cae dentro con divisor fijo"
 4,J2_pin1,V,-12.5 .. -11.5,-12,0.5,,,,"como la v3 (#121): -12 V MEDIDO, no leido del rotulo"
 4,J2_pin2,V,-0.5 .. 0.5,0,0.5,,,,"como la v3 (#121): +0 V MEDIDO, no leido del rotulo"
 4,J2_pin3,V,-0.5 .. 0.5,0,0.5,,,,"como la v3 (#121): +0 V MEDIDO, no leido del rotulo"
@@ -59,13 +60,13 @@ paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
 6,telemetria_U10_menos12_rack_vs_multimetro,V,-12.12 .. -11.88,-12,0.12,,,,"papel sec.7: la telemetria contra un multimetro. Los +-15 V con carga son nuevos de la v4, y el cuarto canal del ADS1115 va al -12 de rack"
 6,U13_corriente_rack+12_vs_pinza,A,3.61 .. 3.99,3.8,0.19,,,,"D-F2: los dos INA226 de rack, poblados. Con la carga ficticia del liston (3.8 A)"
 6,U14_corriente_rack+5_vs_pinza,A,3.8 .. 4.2,4,0.2,,,,"D-F2: los dos INA226 de rack, poblados. Con la carga ficticia del liston (4.0 A)"
-7,aire_recinto_a_carga_sostenida,C,60.9233 .. 76.9233,68.9233,8,,,,"calor_budget.py, punto fijo con D-F3 = A y el venteo minimo. ES LA MEDIDA QUE DECIDE si la columna 'sostenido' de sec.1 es cierta"
-7,area_venteo_construida,mm2,>= 22200,,,,,,"el venteo que el papel del case acabe dibujando (#289). Por debajo del que calor_budget pide, el sostenido no vale"
+7,aire_recinto_a_carga_sostenida,C,60.9024 .. 76.9024,68.9024,8,,,,"calor_budget.py, punto fijo con D-F3 = A y el venteo minimo. ES LA MEDIDA QUE DECIDE si la columna 'sostenido' de sec.1 es cierta"
+7,area_venteo_construida,mm2,>= 21000,,,,,,"el venteo que el papel del case acabe dibujando (#289). Por debajo del que calor_budget pide, el sostenido no vale"
 7,carcasa_PS3_termopar,C,registro,,,,,,REGISTRO: la hoja publica la temperatura del AIRE (-30 a +85 C) y no la de la carcasa. Solo significa algo comparado con la placa siguiente
 7,carcasa_PS6_termopar,C,registro,,,,,,REGISTRO: la hoja publica la temperatura del AIRE (-30 a +85 C) y no la de la carcasa. Solo significa algo comparado con la placa siguiente
 7,NTC_carcasa,C,registro,,,,,,"REGISTRO: fusible_budget la estima disipando 2.75 W dentro del recinto, y la tabla de calor del papel sec.6 no la lleva"
-7,sostenido_rack+12_medido,A,>= 1.80205,,,,,,calor_budget.SOSTENIDO['rack+12']: la carga que el riel aguanta sin salirse de su curva a la T de arriba
-7,sostenido_rack-12_medido,A,>= 1.80205,,,,,,calor_budget.SOSTENIDO['rack-12']: la carga que el riel aguanta sin salirse de su curva a la T de arriba
+7,sostenido_rack+12_medido,A,>= 1.80385,,,,,,calor_budget.SOSTENIDO['rack+12']: la carga que el riel aguanta sin salirse de su curva a la T de arriba
+7,sostenido_rack-12_medido,A,>= 1.80385,,,,,,calor_budget.SOSTENIDO['rack-12']: la carga que el riel aguanta sin salirse de su curva a la T de arriba
 7,sostenido_rack+5_medido,A,>= 3.6,,,,,,calor_budget.SOSTENIDO['rack+5']: la carga que el riel aguanta sin salirse de su curva a la T de arriba
 8,desfase_masa_rack_a_GNDREF_con_2A_en_mas12,mV,3.38098 .. 13.5239,8.45246,5.07148,,,,"ground_budget.desfase_mv(2) : cargando SOLO el +12 de rack con 2 A de carga ficticia, que es lo que dice el papel sec.9.1. Por masa vuelven esos mismos 2 A"
 8,desfase_masa_rack_a_GNDREF_a_carga_sostenida,mV,6.76197 .. 27.0479,16.9049,10.143,,,,"ground_budget.desfase_mv() con el rack ENTERO a su carga sostenida: por masa vuelve el NETO, 4.00 A (+12 y +5 menos el -12). El numero es GRANDE a proposito: lo que se verifica no es que sea pequeno"

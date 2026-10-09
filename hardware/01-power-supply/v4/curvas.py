@@ -134,21 +134,42 @@ PSRR_DB: dict[tuple[str, float], float] = {
     # COUT=22 uF, IO=10 mA, VO=5 V: ~70 dB a 1 MHz, ultimo punto.
     ('LM2941', 1e6): 70.0,
 
-    # lm2991-snvs099i-2016-10.pdf, p. 7, Figure 8, C0=47 uF,
-    # IO=5 mA, VO=-5 V: ~59 dB a 1 kHz.
-    ('LM2991', 1e3): 59.0,
-    # lm2991-snvs099i-2016-10.pdf, p. 7, Figure 8, C0=47 uF,
-    # IO=5 mA, VO=-5 V: ~40 dB a 10 kHz.
-    ('LM2991', 10e3): 40.0,
-    # lm2991-snvs099i-2016-10.pdf, p. 7, Figure 8, C0=47 uF,
-    # IO=5 mA, VO=-5 V: ~24-25 dB a 65 kHz, entre rejillas.
-    ('LM2991', 65e3): 24.5,
-    # lm2991-snvs099i-2016-10.pdf, p. 7, Figure 8, C0=47 uF,
-    # IO=5 mA, VO=-5 V: ~22 dB a 100 kHz.
-    ('LM2991', 100e3): 22.0,
-    # lm2991-snvs099i-2016-10.pdf, p. 7, Figure 8, C0=47 uF,
-    # IO=5 mA, VO=-5 V: ~20 dB a 1 MHz, ultimo punto.
-    ('LM2991', 1e6): 20.0,
+    # EL LT3015 SUSTITUYE AL LM2991 EN U2 (D-F9, 2026-09-06). La figura
+    # equivalente a la Fig. 8 del LM2991 es la G41: las dos estan medidas a
+    # VO = -5 V, asi que la comparacion es de igual a igual aunque el diseno
+    # corra a -12,9 V. La traza que se lee es la ROJA, y NO es la unica:
+    #
+    #   LA CFF DE 10 nF NO ES ADORNO, ES REQUISITO. La G41 dibuja tres trazas
+    #   y a 65 kHz --la conmutacion del IRM-- valen ~41 dB (47 uF + CFF),
+    #   ~38 (10 uF + CFF) y ~15 (10 uF sin CFF). Sin el condensador de
+    #   avance el LT3015 es PEOR que el LM2991 justo en la frecuencia que
+    #   decide. Por eso rizado_budget.py declara las dos piezas y no solo
+    #   el COUT: ver COUT_U2_F y CFF_U2_F alli.
+    #
+    # lt3015-rev-b.pdf, p. 11, G41, traza roja COUT=47 uF, CFF=10 nF,
+    # TJ=25 C, IL=-1.5 A, VOUT=-5 V, VIN=-6.5 V: ~52 dB a 1 kHz.
+    ('LT3015', 1e3): 52.0,
+    # lt3015-rev-b.pdf, p. 11, G41, traza roja COUT=47 uF, CFF=10 nF,
+    # TJ=25 C, IL=-1.5 A, VOUT=-5 V, VIN=-6.5 V: ~51,5 dB a 10 kHz.
+    ('LT3015', 10e3): 51.5,
+    # lt3015-rev-b.pdf, p. 11, G41, traza roja COUT=47 uF, CFF=10 nF,
+    # TJ=25 C, IL=-1.5 A, VOUT=-5 V, VIN=-6.5 V: ~41 dB a 65 kHz. LECTURA
+    # SOBRE PENDIENTE: entre el pico local de ~46,5 dB a 41 kHz y el minimo
+    # de ~39 a 110 kHz, y ahi 10 kHz de error de lectura son 3 dB. Ver dudas.
+    ('LT3015', 65e3): 41.0,
+    # lt3015-rev-b.pdf, p. 11, G41, traza roja COUT=47 uF, CFF=10 nF,
+    # TJ=25 C, IL=-1.5 A, VOUT=-5 V, VIN=-6.5 V: ~39 dB a 100 kHz (el minimo).
+    ('LT3015', 100e3): 39.0,
+    # lt3015-rev-b.pdf, p. 11, G41, traza roja COUT=47 uF, CFF=10 nF,
+    # TJ=25 C, IL=-1.5 A, VOUT=-5 V, VIN=-6.5 V: ~46,5 dB a 1 MHz, en la
+    # meseta del segundo maximo.
+    ('LT3015', 1e6): 46.5,
+    # lt3015-rev-b.pdf, p. 11, G41, traza roja COUT=47 uF, CFF=10 nF,
+    # TJ=25 C, IL=-1.5 A, VOUT=-5 V, VIN=-6.5 V: ~35,5 dB a 2 MHz, ya bajando.
+    ('LT3015', 2e6): 35.5,
+    # lt3015-rev-b.pdf, p. 11, G41, traza roja COUT=47 uF, CFF=10 nF,
+    # TJ=25 C, IL=-1.5 A, VOUT=-5 V, VIN=-6.5 V: ~33 dB a 10 MHz, ultimo punto.
+    ('LT3015', 10e6): 33.0,
 
     # lt3045-rev-d.pdf, p. 10, G43, traza roja IL=500 mA, VIN=5 V,
     # RSET=30.1k, COUT=10 uF, CSET=0.47 uF: ~109 dB a 1 kHz.
@@ -215,9 +236,10 @@ FUENTE: dict[str, str] = {
         'lm2941-snvs770i-2015-01.pdf, p. 8, Figure 9 Ripple Rejection, '
         'IO = 10 mA, VO = 5 V; lectura ocular 2026-09-03'
     ),
-    'LM2991': (
-        'lm2991-snvs099i-2016-10.pdf, p. 7, Figure 8 Ripple Rejection, '
-        'IO = 5 mA, VO = -5 V; lectura ocular 2026-09-03'
+    'LT3015': (
+        'lt3015-rev-b.pdf, p. 11, G41 Input Ripple Rejection, traza roja '
+        'COUT = 47 uF y CFF = 10 nF, IL = -1500 mA, VO = -5 V; '
+        'lectura ocular 2026-09-06'
     ),
     'LT3045': (
         'lt3045-rev-d.pdf, p. 10, G43 Power Supply Ripple Rejection, '
@@ -257,7 +279,7 @@ def demo() -> None:
         print(f'  {curva:10s} codo {codo_c(curva):g} C; {texto}')
 
     print('\nPSRR tipico leido:')
-    for pieza in ('LM2941', 'LM2991', 'LT3045', 'LT3094'):
+    for pieza in ('LM2941', 'LT3015', 'LT3045', 'LT3094'):
         puntos = sorted((f, db) for (p, f), db in PSRR_DB.items() if p == pieza)
         texto = ', '.join(f'{f/1e3:g} kHz:{db:g} dB' for f, db in puntos)
         print(f'  {pieza:7s} {texto}')
@@ -267,6 +289,12 @@ def demo() -> None:
     print('  Los PSRR a 65 kHz caen entre marcas del eje logaritmico.')
     print('  LT3045 G43 y LT3094 G43: pico estrecho ~2 MHz; frecuencia')
     print('  y altura son lecturas visuales aproximadas del trazo grueso.')
+    print('  LT3015 G41 a 65 kHz: es LA lectura mas floja de esta tabla y')
+    print('  la unica que cae en una pendiente fuerte --entre el pico de')
+    print('  ~46,5 dB a 41 kHz y el minimo de ~39 a 110 kHz--. Ahi 10 kHz')
+    print('  de error de lectura mueven 3 dB, y 65 kHz es justo la')
+    print('  conmutacion del IRM. Se lee 41 dB; el canario de')
+    print('  rizado_budget.py dice cuanto aguanta ese numero.')
 
     # test_curvas importa curvas con su nombre de modulo y prueba esa copia.
     # Eso evita duplicar aqui el contrato que manda sobre estas lecturas.

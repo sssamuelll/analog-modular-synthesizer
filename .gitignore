@@ -107,6 +107,18 @@ case/renders/*.png
 !case/renders/propuesta-diseno-2026-08-16.png
 !case/renders/sam17-case.png
 !case/renders/sam17-case-trasera.png
+# Los tres de la piel organica (propuesta 2026-09-05): son lo que se mira
+# para decidir D-P1..D-P5, y por eso van versionados como los dos de arriba.
+!case/renders/sam17-piel.png
+!case/renders/sam17-piel-trasera.png
+!case/renders/sam17-piel-lado.png
+!case/renders/sam17-piel-cachete.png
+# Los STL para imprimir la piel (case/renders/imprimir_piel.py) pesan ~10 MB
+# cada uno y cambian con cada pasada de la celosia. Mientras la piel no este
+# firmada NO se versionan: los regenera el guion en segundos. Cuando D-P1 se
+# firme, el juego que se manda al servicio entra aqui con su commit, como los
+# DXF del laser.
+case/print/piel/*.stl
 # El lienzo es una PREVIEW: las 6 piezas en rejilla para mirarlas de un vistazo.
 # No se manda al taller (alli van los DXF sueltos) y lo regenera export.ps1.
 # Mismo criterio que los STL: 97.512 lineas de diff que no prueban nada.
@@ -138,6 +150,22 @@ docs/reference/datasheets/*.pdf
 !docs/reference/datasheets/ad75019-revf-2026-07.pdf
 !docs/reference/datasheets/lm2941-snvs770i-2015-01.pdf
 !docs/reference/datasheets/lm2991-snvs099i-2016-10.pdf
+# ESTA ESTABA EN DISCO Y NO EN EL ARBOL desde el 2026-09-04. La firmo D-F8 y
+# nadie escribio su linea aqui, asi que en cualquier clon limpio --un
+# worktree, el CI-- `docs/references.md` enlazaba a un fichero que no existe y
+# `margen_budget.py` citaba por pagina una hoja que no se podia abrir. Es el
+# mismo descuido que este bloque existe para impedir, y se vio al crear el
+# worktree de D-F9.
+!docs/reference/datasheets/lt1963a-rev-g-2021-02.pdf
+# U2 desde D-F9 (2026-09-06). Sustituye al LM2991: la fila `l` de su p. 5 es
+# la que pone el margen del riel negativo en +536 mV, y su G41 de la p. 11 es
+# la curva de rechazo que consume rizado_budget.py.
+!docs/reference/datasheets/lt3015-rev-b.pdf
+# La revision B del MIC29152, que la propia references.md llevaba pidiendo
+# desde el 04-09 ("ningun numero del MIC29152 debe entrar en un papel sin
+# comprobar antes si la B lo mueve"). Comprobado: no lo mueve. Es candidata
+# para U1 en la #334 porque aguanta +26 V de entrada y el LT1963A 20.
+!docs/reference/datasheets/mic29152-ds20005685b-2019.pdf
 !docs/reference/datasheets/lt3045-rev-d.pdf
 !docs/reference/datasheets/lt3094-rev-b.pdf
 !docs/reference/datasheets/meanwell-irm-15-spec-2025-11-21.pdf

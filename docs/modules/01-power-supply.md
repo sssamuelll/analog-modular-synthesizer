@@ -23,6 +23,19 @@
 > (`v4/fuga_budget.py`, HUECO). Ninguno bloquea la puerta; los cinco están
 > declarados.
 
+> ### ENMIENDA E16 — PRESUPUESTO TÉRMICO (#331, 2026-09-08)
+>
+> D1 retiró la cadena WS2812. `calor_budget.py`, ejecutado en este worktree,
+> da **2,895 A / 14,475 W** de carga digital, **2,86 W** de pérdida en
+> `PS6` y **29,23 W** en el recinto, incluida la franja de red.
+> Las constantes se imprimieron importando el guion, sin modificarlo;
+> el papel firmado conserva tachados los valores anteriores.
+>
+> **E16 queda parcial:** el guion aún no incluye la carga ultra de la Voz
+> en el cajón y no reproduce la temperatura cerrada solicitada. Esas celdas
+> y el total del cajón quedan pendientes, con evidencia en `REPORTE.md`
+> en la raíz. Los rieles de rack se declaran según D-B2 **si se firma**.
+
 ## Objetivo
 
 Generar las tensiones reguladas requeridas por el bus SAM17:
@@ -50,9 +63,16 @@ Cascada de dos etapas por riel — **no un solo 78xx/79xx**:
 
 | Riel | Pre-regulador | Post-regulador |
 |------|---------------|-----------------|
-| +12 V | LM2941 | LT3045 ×2 |
-| −12 V | LM2991 | LT3094 ×2 |
+| +12 V | **LT1963A** (era LM2941; D-F8, 04-09) | LT3045 ×2 |
+| −12 V | **LT3015** (era LM2991; D-F9, 06-09) | LT3094 ×2 |
 | +5 V (`U3`, módulo 2) | 7805 | — |
+
+Las dos piezas de la izquierda cambiaron en la v4 y **no por gusto**: con las
+viejas, `margen_budget.py` daba **−388 mV** de margen de entrada en el +12 y
+**−170** en el −12, o sea que ninguno de los dos rieles tenía garantizado que
+el pre-regulador siguiera regulando en el peor caso. Con las nuevas son
+**+330** y **+536 mV**. El razonamiento vive en el papel de la v4 y en el
+docstring de `margen_budget.py`.
 
 Objetivo de ruido: **0,8 µVrms (10 Hz–100 kHz)**. Sin crowbar en ningún
 riel — la cascada protege sola contra cualquier fallo simple del

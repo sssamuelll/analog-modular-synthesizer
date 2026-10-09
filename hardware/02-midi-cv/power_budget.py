@@ -33,12 +33,24 @@ eso el punto de trabajo si manda, asi que la NPU y el Max a 85 C siguen siendo
 HUECO y este guion sigue saliendo con codigo 2.
 
 EL LAZO QUE ESTE IMPORT CIERRA, declarado porque nadie mas lo dice. En
-calor_budget.py el cajon paga 24.7 W de digital, y esos 24.7 W son 4.935 A x
-5 V: la fila "Max TJ = 125 C, 4 N657, host a tope" de este mismo guion. O sea
-carga -> calor -> aire -> derating -> techo -> carga. Hoy cierra por el lado
-bueno y con holgura --el techo publicado, 4.22 A, es MENOR que los 4.94 A de
-calor que se le cobran--, pero el dia que este censo suba de 4.94 A hay que
-subir esa celda del papel sec.6 antes de creerse el techo.
+calor_budget.py el cajon paga 14.475 W de digital, y esos 14.475 W son
+2.895 A x 5 V: la fila "Max TJ = 125 C, 4 N657, host a tope" de este mismo
+guion, en su columna de cargas DURAS. O sea carga -> calor -> aire ->
+derating -> techo -> carga.
+
+Y EL LAZO CAMBIO DE LADO EL 2026-09-05. Hasta ese dia el cajon cobraba
+4.935 A --2.895 de duras MAS 2.04 de la cadena WS2812 que D1 retiro el
+03-09-- y esos 4.94 quedaban POR ENCIMA del techo publicado (4.22 A): el
+calor se cobraba de mas, el lazo cerraba con colchon, y el censo de aqui
+podia crecer 2 A sin mover una sola celda de la fuente. Retirar la cadena era
+lo correcto --era calor de una pieza que no se monta-- pero se llevo el
+colchon con ella: hoy se cobra el censo exacto, 2.895 A, y el techo esta por
+ENCIMA (3.89 pesimista, 4.22 optimista).
+
+Lo que hay que vigilar desde entonces: el censo de este guion ya no tiene
+delante ningun margen prestado. Cada miliamperio que suba aqui sube el calor
+del cajon uno a uno, y CAJON_DIGITAL_A hay que moverlo en la misma tanda.
+Antes bastaba mirar el techo; ahora se mira el censo.
 
 LA CORRECCION CONTRA DS14791 REV 10, DICHA EN VOZ ALTA.
 
@@ -150,7 +162,7 @@ from calor_budget import (P_BASE, SOSTENIDO,                # noqa: E402
 # LO QUE ESTE NUMERO ARRASTRA, y hay que decirlo en voz alta: sale del punto
 # fijo evaluado en el VENTEO MINIMO que calor_budget despeja, o sea de una
 # obra que el papel del case todavia no ha dibujado (D-F3 = A, issue #289).
-# Con la caja de hoy, cerrada, no hay techo ninguno: el aire se va a 86.7 C,
+# Con la caja de hoy, cerrada, no hay techo ninguno: el aire se va a 87.7 C,
 # por encima de donde acaba la curva de la hoja, y PS6 no opera. Este guion es
 # verde CON ESA OBRA HECHA, y lo imprime en cada corrida.
 V_RIEL = 5.0                    # V. PS6 = IRM-45-5, 5 V / 8 A de placa

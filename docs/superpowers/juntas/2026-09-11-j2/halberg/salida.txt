@@ -1,0 +1,182 @@
+
+==============================================================================
+1. ERRATA 2.14.2 - hueco entre SPE=1 y CSTART contra 1 ciclo de SCK
+==============================================================================
+D2: SPE=1 -> EOTC(IFCR) -> EOTIE(IER) -> CSTART(CR1) = 3 escrituras APB
+espaciado minimo en el periferico: 2 ciclos de pclk por escritura APB
+  pclk  100 MHz: gap  60.0 ns | 1 SCK a 10 MHz = 100.0 ns -> DENTRO de la errata  | 1 SCK a 34,5 MHz = 29.0 ns -> fuera
+        cuan pronto llega CSTART de mas: 1.7x a 10 MHz, 0.5x a 34,5 MHz
+  pclk  200 MHz: gap  30.0 ns | 1 SCK a 10 MHz = 100.0 ns -> DENTRO de la errata  | 1 SCK a 34,5 MHz = 29.0 ns -> fuera
+        cuan pronto llega CSTART de mas: 3.3x a 10 MHz, 1.0x a 34,5 MHz
+  pclk  400 MHz: gap  15.0 ns | 1 SCK a 10 MHz = 100.0 ns -> DENTRO de la errata  | 1 SCK a 34,5 MHz = 29.0 ns -> DENTRO de la errata
+        cuan pronto llega CSTART de mas: 6.7x a 10 MHz, 1.9x a 34,5 MHz
+
+Coste de GARANTIZAR la solucion 2 (espera anclada tras read-back de CR1):
+  SCK  10.0 MHz: esperar  100.0 ns =  80 ciclos de CPU a 800 MHz;  0.50 % del aire de la trama,  0.080 % del giro, 0.080 % de CPU por ranura
+  SCK  34.5 MHz: esperar   29.0 ns =  24 ciclos de CPU a 800 MHz;  0.50 % del aire de la trama,  0.023 % del giro, 0.023 % de CPU por ranura
+  con embassy_time a 1 MHz de tick el grano minimo es 1 us = 10x el ciclo a 10 MHz y 34x a 34,5 MHz; con 2 us son 1.6 % de CPU por ranura
+
+==============================================================================
+2. LA TASA DEL HILO, NORMALIZADA POR ARMADO
+==============================================================================
+Montaje del hilo: 100 kHz, write(2B)+read(1B) = 2 armados por vuelta, con dos defmt por vuelta.
+  a   1000 armados/s:  p(10 s)=1.00e-04  p(900 s)=1.11e-06  p(30 min)=5.56e-07  p(120 min)=1.39e-07
+  a   5000 armados/s:  p(10 s)=2.00e-05  p(900 s)=2.22e-07  p(30 min)=1.11e-07  p(120 min)=2.78e-08
+  a  10000 armados/s:  p(10 s)=1.00e-05  p(900 s)=1.11e-07  p(30 min)=5.56e-08  p(120 min)=1.39e-08
+
+Nuestro montaje: 48000 armados/s en el instrumento (8000/s por ranura, una trama por giro).
+  peor del hilo p=2e-5  :   0.9600 cuelgues/s en el instrumento = uno cada       1.0 s =    0.0 min
+  900 s  p=2,2e-7       :   0.0106 cuelgues/s en el instrumento = uno cada      94.7 s =    1.6 min
+  120 min p=2,8e-8      :   0.0013 cuelgues/s en el instrumento = uno cada     744.0 s =   12.4 min
+
+==============================================================================
+3. QUE OYE EL MUSICO - el EVENTO es el unico canal sin red completa
+==============================================================================
+Red por mensaje (cabecera 3): TONO bloque completo >=1 kHz; SET/BAHIA refresco 1 Hz;
+EVENTO -> COMPUERTA a 200 Hz (R-E11) repara QUE suena, no CON QUE FUERZA: la nota
+reparada entra a FUERZA_REPARACION = u16::MAX y sin tono de arranque (evento, enmienda 02-09).
+'dispara' no tiene red ninguna: golpe perdido.
+
+--- 1 trama(s) perdida(s) por cuelgue (tipico: el plazo de un EVENTO vence a 44 us y el reinicio cabe dentro del giro) ---
+  peor del hilo p=2e-5   | normal 20 ev/s/ranura  -> artefacto audible cada      757.6 s =     12.6 min
+  peor del hilo p=2e-5   | denso 50 ev/s/ranura   -> artefacto audible cada      303.0 s =      5.1 min
+  900 s  p=2,2e-7        | normal 20 ev/s/ranura  -> artefacto audible cada    68870.5 s =   1147.8 min
+  900 s  p=2,2e-7        | denso 50 ev/s/ranura   -> artefacto audible cada    27548.2 s =    459.1 min
+  120 min p=2,8e-8       | normal 20 ev/s/ranura  -> artefacto audible cada   541125.5 s =   9018.8 min
+  120 min p=2,8e-8       | denso 50 ev/s/ranura   -> artefacto audible cada   216450.2 s =   3607.5 min
+
+--- 3 trama(s) perdida(s) por cuelgue (peor caso de la spec 3: 490 us = 3 giros) ---
+  peor del hilo p=2e-5   | normal 20 ev/s/ranura  -> artefacto audible cada      252.5 s =      4.2 min
+  peor del hilo p=2e-5   | denso 50 ev/s/ranura   -> artefacto audible cada      101.0 s =      1.7 min
+  900 s  p=2,2e-7        | normal 20 ev/s/ranura  -> artefacto audible cada    22956.8 s =    382.6 min
+  900 s  p=2,2e-7        | denso 50 ev/s/ranura   -> artefacto audible cada     9182.7 s =    153.0 min
+  120 min p=2,8e-8       | normal 20 ev/s/ranura  -> artefacto audible cada   180375.2 s =   3006.3 min
+  120 min p=2,8e-8       | denso 50 ev/s/ranura   -> artefacto audible cada    72150.1 s =   1202.5 min
+
+A 100x la tasa del hilo (el caso que pide la junta):
+  peor del hilo p=2e-5   x100:    96.00 cuelgues/s instrumento;   0.60 % de giros perdidos por ranura; CPU de reinicios 0.032 %; artefacto audible cada     7.58 s
+  900 s  p=2,2e-7        x100:     1.06 cuelgues/s instrumento;   0.01 % de giros perdidos por ranura; CPU de reinicios 0.000 %; artefacto audible cada   688.71 s
+  120 min p=2,8e-8       x100:     0.13 cuelgues/s instrumento;   0.00 % de giros perdidos por ranura; CPU de reinicios 0.000 %; artefacto audible cada  5411.26 s
+
+==============================================================================
+4. EL MARGEN DE 102x: POR DONDE SE ROMPE DE VERDAD
+==============================================================================
+Margen de la spec 3: 102x (50 ms / 490 us)
+a) cuelgues INDEPENDIENTES: cada intento consume 240 us -> 209 intentos fallidos SEGUIDOS para que el modulo suelte
+   para UN disparo del watchdog del modulo por hora hace falta p = 0.937 por armado
+   -> el margen NO se rompe por tasa: aguanta hasta p = 0.94, 46844x por encima del peor p del hilo
+b) cuelgue de FASE BLOQUEADA: D4 termina en SPE=0 y el siguiente armado repite
+   SPE=1 -> EOTC -> EOTIE -> CSTART identico. Si la carrera es de fase y la fase esta
+   enganchada al arbol de reloj, p=1 durante T:
+     reinicios a 8000/s = 16 % de un nucleo por ranura
+     'inestable' sube a los 1.25 ms (10 plazos en 1 s) y D7.3 dice que NO es accion
+     el modulo suelta a los 50 ms; el sello de vitalidad de D5.4 se escribe AL ARMAR
+     -> ranura muda permanente, IWDG alimentado para siempre, marca levantada y nadie la mira
+c) espera SIN COTA (riesgo 6): Drop del Transfer de GPDMA = bucle sin cota, sincrono,
+   dentro del InterruptExecutor que comparten las SEIS tareas -> un canal trabado congela
+   las seis ranuras -> los seis modulos sueltan a los 50 ms -> el IWDG reinicia el chip.
+   Silencio: >50 ms (watchdog) + 7.9 ms (refresco de la cabecera D5) + arranque del N657 = HUECO (S-10)
+
+==============================================================================
+5. CORRUPCION: lo DETECTADO pesa mas que lo no detectado
+==============================================================================
+Tasa del hilo: 2/min por enlace -> 0.200 tramas corruptas/s en el instrumento
+  DETECTADA (CRC la caza, R-C2 la rechaza entera) | normal 20 ev/s/ranura  -> artefacto audible cada   3636.4 s =   60.6 min
+  DETECTADA (CRC la caza, R-C2 la rechaza entera) | denso 50 ev/s/ranura   -> artefacto audible cada   1454.5 s =   24.2 min
+  NO DETECTADA: CRC-16/CCITT-FALSE, P(pasar) <= 2^-16 = 1.53e-05 (cota floja: el modo del hilo
+    desplaza bits y acorta la trama, y R-C1 la rechaza por cuenta de bytes ANTES del CRC)
+    -> 3.05e-06 tramas malas aceptadas/s = una cada 91 h de instrumento encendido
+
+==============================================================================
+6. EL ESCLAVO: 6 de los 12 extremos de SPI no tienen recuperacion
+==============================================================================
+Los dos extremos del J2 son N657 (spec 2). El papel firmado cubre el MAESTRO (sujeto, 0).
+La limpieza del esclavo es una fila 'pendiente' del mapa de enmiendas (10).
+  peor del hilo p=2e-5  : un cuelgue por instancia esclava cada       6.2 s =     0.1 min -> una voz muerta hasta el reset
+  900 s  p=2,2e-7       : un cuelgue por instancia esclava cada     568.2 s =     9.5 min -> una voz muerta hasta el reset
+  120 min p=2,8e-8      : un cuelgue por instancia esclava cada    4464.3 s =    74.4 min -> una voz muerta hasta el reset
+
+==============================================================================
+7. EL SOAK: potencia estadistica en LAS DOS UNIDADES
+==============================================================================
+Regla de tres (Poisson, cero eventos): lambda_max(C) = -ln(1-C)/T
+
+a) hipotesis POR TIEMPO (deriva, PLL, periodo de minutos a horas):
+ soak (h) |     lam<_95%     lam<_99% | P(ver >=1) si la verdad es 1/h
+      1.0 |    3.000 /h    4.605 /h |                     63.212056 %
+      3.0 |    1.000 /h    1.535 /h |                     95.021293 %
+      4.6 |    0.652 /h    1.001 /h |                     98.994816 %
+     12.0 |    0.250 /h    0.384 /h |                     99.999386 %
+     24.0 |    0.125 /h    0.192 /h |                    100.000000 %
+     72.0 |    0.042 /h    0.064 /h |                    100.000000 %
+    168.0 |    0.018 /h    0.027 /h |                    100.000000 %
+
+b) hipotesis POR ARMADO (la carrera de la errata vive en CSTART):
+   umbral derivado del bloque 3 (<=1 artefacto audible por 10 h de toque, pasaje normal,
+   1 trama perdida por cuelgue): p_aceptable = 4.21e-07 por armado = un cuelgue cada 49 s en el instrumento
+      soak  ranuras        armados |     p<_95% contra el umbral
+     1 min        1         480000 |   6.25e-06 corto 15x
+     1 min        6        2880000 |   1.04e-06 corto 2x
+   7,4 min        1        3568000 |   8.41e-07 corto 2x
+   7,4 min        6       21408000 |   1.40e-07 PASA
+    45 min        1       21432000 |   1.40e-07 PASA
+    45 min        6      128592000 |   2.33e-08 PASA
+       1 h        1       28800000 |   1.04e-07 PASA
+       1 h        6      172800000 |   1.74e-08 PASA
+       3 h        1       86400000 |   3.47e-08 PASA
+       3 h        6      518400000 |   5.79e-09 PASA
+      24 h        1      691200000 |   4.34e-09 PASA
+      24 h        6     4147200000 |   7.23e-10 PASA
+
+   para probar p <= 4.2e-07 al 95 %: 7128000 armados = 15 min en UNA ranura, 2.5 min en seis
+   el soak de 24 h de R-MJ8 en una ranura son 6.91e+08 armados: p < 4.3e-09 al 95 %, 97x por debajo del umbral
+
+==============================================================================
+8. CONTROL POSITIVO: potencia de reproducir el bug CONOCIDO
+==============================================================================
+Sin reproducir el cuelgue en la config mala, un soak verde no distingue 'no nos afecta'
+de 'el arnes no lo detecta' ni de 'el firmware no corria'.
+  control de 0.25 h:  P(ver >=1 | 900 s) =  63.21 %  P(ver >=1 | 120 min) =  11.75 %
+  control de 0.50 h:  P(ver >=1 | 900 s) =  86.47 %  P(ver >=1 | 120 min) =  22.12 %
+  control de 1.00 h:  P(ver >=1 | 900 s) =  98.17 %  P(ver >=1 | 120 min) =  39.35 %
+  control de 2.00 h:  P(ver >=1 | 900 s) =  99.97 %  P(ver >=1 | 120 min) =  63.21 %
+  control de 4.00 h:  P(ver >=1 | 900 s) = 100.00 %  P(ver >=1 | 120 min) =  86.47 %
+
+==============================================================================
+9. BARRIDO DE LA ERRATA: cuanto cuesta dirimir la hipotesis del brief 3.2
+==============================================================================
+Variable: retardo D entre SPE=1 (anclado con read-back de CR1) y CSTART, en ciclos de SCK.
+Puntos: D en {0, 1/4, 1/2, 1, 2, 4, 8} x T_SCK, en la config mala (100 kHz, TSIZE=0, CS por GPIO)
+y en la nuestra (10 MHz y 34,5 MHz, TSIZE>0, NSS hw, DMA). 7 puntos x 3 relojes = 21 celdas.
+  si p(D=0) = 2.0e-05: 150000 armados por celda para 3 cuelgues esperados = 18.8 s a 8 kHz;
+     y 1500000 armados en el brazo con retardo para acreditar una mejora de 10x al 95 % = 3.1 min
+  si p(D=0) = 2.2e-07: 13636364 armados por celda para 3 cuelgues esperados = 1704.5 s a 8 kHz;
+     y 136363636 armados en el brazo con retardo para acreditar una mejora de 10x al 95 % = 284.1 min
+  coste total del barrido con el p suave: 99.4 h de DK; con el p malo: 6.6 min
+
+[autocomprobaciones OK]
+
+==============================================================================
+10. LA BIFURCACION DEL RM: p.3492 contra p.3490, cuantificada
+==============================================================================
+Lectura A (p.3492 literal: 'EOT is set ... when SPI is re-enabled'):
+   el evento EOT lo levanta el propio SPE=1 de D2 -> CSTART llega 3 escrituras APB despues
+   = 15-60 ns. Ventana de la errata a 10 MHz = 100 ns -> DENTRO en cada armado, siempre.
+Lectura B (el EOT solo lo levanta la terminacion de TSIZE datos):
+   el ultimo EOT fue al final de la trama del giro anterior. Con el SPI apagado en medio,
+   el hueco entre ese EOT y el CSTART siguiente es ~105 us = 1050x la ventana a 10 MHz y 3622x a 34,5 MHz
+   -> bajo la lectura B el diseno firmado cumple la solucion 2 con 1050x de holgura sin tocar nada.
+La medida que dirime: armar NADA, escribir SPE=1, leer SR.EOT. Un acceso de lectura.
+   EOT=1 -> la hipotesis del brief 3.2 esta viva y TODO armado cae dentro de la ventana al piso.
+   EOT=0 -> la errata 2.14.2 no es el mecanismo de #5607 en nuestra config, y D2 ya la cubre.
+
+==============================================================================
+11. POTENCIA DE LOS CRITERIOS DE CIERRE QUE LA SPEC YA FIRMO
+==============================================================================
+  cien mil transferencias    (spec 9, riesgo 5): 1e+05 armados -> p < 3.0e-05 al 95 %
+     NO excluye ni el peor p del hilo (2.0e-05): criterio sin poder discriminante
+     contra el umbral audible 4.2e-07: corto 71x
+  24 h a 8 kHz en un enlace  (spec 9 riesgo 1 / R-MJ8): 6.91e+08 armados -> p < 4.3e-09 al 95 %
+     excluye el peor p del hilo (2.0e-05): criterio con poder
+     contra el umbral audible 4.2e-07: PASA
+  tiempo de los cien mil armados a 8 kHz: 12.5 s

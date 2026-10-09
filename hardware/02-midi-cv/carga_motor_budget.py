@@ -13,6 +13,11 @@ sampler entran a v1 "sin cifra hasta que su fila corra en carga_motor"
 (spec S3). Aqui corre. Y por el acta de la noche suma los dos clientes
 nuevos: el pegamento de la pantalla y el de los gestos.
 
+Desde D2 (hub 2026-08-30), la memoria del motor es sram_voz_budget.py:
+sampler y tablas, sin pantalla, camara ni NPU. La cara vive en
+sram_hub_budget.py. Las dos filas de CPU de aquellas actas se conservan
+como escenario heredado; no son un censo de CPU del hub ni su puerta LTDC.
+
 DE DONDE SALE CADA NUMERO
 
   Publicados por el spec (S3 y S7), como ESTIMADO suyo -- se copian, no se
