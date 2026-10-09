@@ -19,8 +19,8 @@ tercera casi de lado, que es la unica desde la que se juzga la rama.
 No es una puerta: es lo que se mira para decidir. Y por eso re-exporta si el
 .scad es mas nuevo que el STL: un render del modelo de hace tres horas es peor
 que ninguno (render.py, importar()). La piel impresa NO se re-hace desde aqui
-(tarda minutos): si case/print/piel/ esta mas viejo que celosia_rama.json o
-que el .scad, avisa en ROJO y sale.
+(tarda minutos): si case/print/piel/ esta mas viejo que la placa
+(celosia_placa.json), el borde (piel_borde.json) o el .scad, avisa en ROJO y sale.
 """
 import math
 import os
@@ -63,14 +63,16 @@ def exportar() -> None:
 
 
 def piel_fresca() -> None:
-    # por pieza: los cachetes cuelgan de la rama (JSON), la cubierta del .scad
-    fuente = {"cachete_der": "celosia_rama.json", "cachete_izq": "celosia_rama.json",
-              "cubierta": "piel_organica.scad"}
+    # por pieza: los cachetes salen de la placa y del borde, la cubierta del
+    # .scad y del borde (el rollo de la ficha 7)
+    cachete = ("celosia_placa.json", "piel_borde.json")
+    fuente = {"cachete_der": cachete, "cachete_izq": cachete,
+              "cubierta": ("piel_organica.scad", "piel_borde.json")}
     for pieza in PIEL:
         stl = os.path.join(PRINT, pieza + ".stl")
-        fuentes = os.path.getmtime(os.path.join(CAD, fuente[pieza]))
+        fuentes = max(os.path.getmtime(os.path.join(CAD, f)) for f in fuente[pieza])
         if not os.path.exists(stl) or os.path.getmtime(stl) < fuentes:
-            raise SystemExit(f"ROJO: {stl} falta o es mas viejo que la rama o el .scad: "
+            raise SystemExit(f"ROJO: {stl} falta o es mas viejo que la placa, el borde o el .scad: "
                              f"corre imprimir_piel.py primero")
 
 

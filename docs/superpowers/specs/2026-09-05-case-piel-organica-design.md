@@ -6,6 +6,13 @@
 **Referencia visual**: seis imágenes generadas por Samuel el 05-09, en `docs/images/case-piel-organica/`. **Mandan sobre lenguaje, no sobre cotas** — la misma regla que el board del 16-08 y la foto del 26-08. Samuel, sobre las tres primeras: *«lo que está en los paneles es conceptual pero se entiende que va con el diseño que estamos haciendo, lo del valle seguimos trabajándolo como veníamos [...] son módulos de la fila B»*; sobre la sexta: *«ahí tienes más o menos la idea de las formas de las ramificaciones en los cachetes»* ·
 **Modelo**: `case/cad/celosia.py` → `celosia_rama.json` (la rama), `case/renders/imprimir_piel.py` (las piezas en 3D, listas para imprimir, en `case/print/piel/`), `case/cad/piel_organica.scad` (la lámina base de la cubierta y lo que sigue igual), `case/cad/piel_termica.py` (la chimenea), `case/renders/render_piel.py` → `sam17-piel*.png`.
 
+> **ENMIENDA (2026-10-09, acta «SAM17 de cerca»).** Este papel describe la rama del 05-09, y desde entonces pasaron dos cosas. **La celosía cambió** el 07-09: el cachete es la PLACA PERFORADA del concepto (`celosia_placa.py` → `celosia_placa.json`, §4.1). Y **el 09-10 Samuel firmó las 16 fichas de una revisión del modelo** (el acta está publicada en https://claude.ai/artifact/JBqb4yagaAuZyBmBdgriin, con su imagen y su decisión por ficha). Las tres consecuencias que cambian este papel:
+> 1. **La piel es una sola masa** (ficha 7, A). El marco del cachete desaparece: el borde de la cubierta se enrolla sobre el costado y la celosía sale de debajo. Abajo, donde la cubierta no puede llegar porque se pone bajando, el borde lo pone una base del cachete, a inglete con la cubierta (§13.2).
+> 2. **La piel impresa tiene dos reglas que la revisan** (ficha 16): una isla por pieza y ninguna pieza dentro de otra. Con ellas se vio que el cachete del 09-09 salía en siete piezas sueltas, se metía 5,9 mm en la tabla y pisaba la cubierta en todo el borde (§13.1).
+> 3. **D-P4 está cerrada** por D-V1, firmada en el papel de la fuente v5 el 2026-09-08: la fuente va afuera (§7.1).
+>
+> Modelo desde el 09-10: `celosia_placa.json` (la celosía), `case/cad/piel_borde.py` → `piel_borde.json` (el borde), `imprimir_piel.py` (las piezas), `case/renders/piel_choques.py` y `check_piel.py` (las dos reglas; esta última es una puerta de `gates.py`). Lo que cada ficha decide y en qué estado está, en §13. Las secciones que esto deroga llevan su enmienda encima.
+
 ---
 
 ## 0. En una línea
@@ -64,6 +71,8 @@ El case crece **32 mm de ancho** (16 de rama por lado: 568,62 → ~601) y la cub
 - **La corteza**, puesta en Blender solo sobre la cara exterior (la interior sigue lisa contra el hueso): tres capas de ruido desplazando la malla — **pliegues** anchos como una manta (escala 58 mm, de −3 a +7), **vetas** largas a lo largo del perfil (estiradas ×4 en el plano del perfil) y **grano** fino. Es lo que hace que lea a tronco y no a lámina; ±3 (el primer intento) era piel de naranja.
 - Los paneles quedan **7,5 mm** dentro del plano de la lámina (6 de piel + 1,5 de rehundido).
 
+> **ENMIENDA (2026-10-09, fichas 1 a 5, 7 y 11).** Lo que sigue describe la rama del 05-09 y su marco de almohada, y ya no es el modelo. Hoy el cachete es la placa de `celosia_placa.json` (3 mm, apoyada en la cara del anillo, los 34 huecos del concepto) más la BASE de abajo; no tiene marco ni tornillos por fuera, y la cubierta lo tapa con su borde enrollado (§13.2). Los cuatro M4 de las esquinas se van: las fijaciones van por dentro (ficha 11).
+
 **El cachete, la rama** (`celosia.py` → `celosia_rama.json` → `imprimir_piel.py`):
 
 - **El marco**: sección de **almohada** —plana contra el anillo, abombada hacia fuera— de 28 de ancho por 11 de alto, barrida por el contorno: **6 mm por fuera del perfil**, pisando el canto de la cubierta como en el despiece, y **22 por dentro**, tapando la cara del anillo (20) y casi el marco de la ventana (26). Las fibras nacen del marco, sin franja de aluminio entre medias.
@@ -86,6 +95,8 @@ El case crece **32 mm de ancho** (16 de rama por lado: 568,62 → ~601) y la cub
 ## 4. La rama
 
 ### 4.1 Cuatro versiones en un día, y por qué la cuarta es otra cosa
+
+> **ENMIENDA (2026-10-09).** Después de la cuarta hubo cuatro más, el 06 y el 07-09: la lámina KONDOR regenerada por estadística (`celosia_kondor.py`, *«caótica»*), el calco del cachete del concepto (`celosia_calco.py`: la organización sí, pero *«costillas»*), el ala de cinta fina (`celosia_ala.py`) y la **placa perforada** (`celosia_placa.py`): la máscara de material del cachete del concepto llevada tal cual a nuestro perfil, 34 huecos deformados con el mismo campo que el calco, relieve B (cada banda baja de 3 mm en su centro a 1 mm en el borde del hueco) y los huecos crecidos 0,3 mm por lado para la térmica. **Es la que aprobó Samuel el 07-09 y la que se imprime.** Dos cosas a saber de ella: las trazas del vectorizer de las que sale (`D:/Desktop/cachete_placa.json` y compañía) ya no están en el Desktop, así que `celosia_placa.json` es la única copia; y dos de sus huecos (el 5 y el 32) se solapan 0,5 mm² desde que crecieron, lo que obliga a cortarlos con el booleano que admite cortadores cruzados (`imprimir_piel.placa()`).
 
 Del dibujo orgánico importan tres números —cuánto abre, cuánto nervio le queda, cuánto borde macizo la enmarca— y los tres tienen que ser **parámetros**, porque el primero lo lee el modelo térmico y los otros dos los leerá la rigidez. Un dibujo no tiene parámetros.
 
@@ -115,6 +126,16 @@ La rama abre desde 28 mm del perfil hacia dentro: eso es **lo que se ve**. Detr�
 Medido por muestreo (120 000 puntos), con cada tramo como cápsula de su diámetro. Las fibras del 73a9bf1 respiraban 19 367: **la rama es un tejido mucho más cerrado**, y eso se paga abajo. (Una versión de este guion contaba como aire la franja entre 26 y 28 del perfil, que la tapa el marco: corregido con `max(ventana, marco)`.)
 
 ### 4.3 Lo que le pasa al calor
+
+> **ENMIENDA (2026-10-09).** Con la placa (13 727 mm² respirando por cachete, medidos a 28 mm o más del perfil), `piel_termica.py` imprime hoy:
+>
+> | escenario | W | salto | pesimista | sin la rejilla trasera |
+> |---|---|---|---|---|
+> | v5 declarada, fuente afuera | 64,2 | 17,9 K | **20,0 K** | 20,2 K |
+> | v5 a censo | 35,1 | 11,9 K | 13,3 K | 13,5 K |
+> | fuente adentro | 89,2 | 22,2 K | 24,9 K | 25,2 K |
+>
+> **Pasa el pesimista con cero margen** (bastan 13 678 y respira 13 727). Los 64,22 W se comprobaron contra `ladrillo_budget.py` de main el 09-10 y siguen vigentes. El borde enrollado del 09-10 tapa el costado hasta W (de 21 a 28 mm según la altura) y el marco de la ventana del anillo llega a 26: la cuenta, hecha a 28, no baja con él. Lo que sí la movería es la ficha 9 (más fondo en la celosía) y la 10 (una placa ámbar detrás), y por eso las dos se deciden con la chimenea delante.
 
 `case/cad/piel_termica.py` — la misma física que `clearance_budget._tiro()`, con las dos mejillas como chimenea: la mitad baja de cada una entra, la mitad alta sale, centroides a un cuarto y tres cuartos del alto; más la rejilla baja de la trasera. Techo, 20 K sobre una sala de 45 °C. `C_D` = 0,65 el de la puerta, 0,55 el pesimista. **La tabla la imprime el guion; no se copia a mano** (el 05-09 la misma resta de dos columnas se hizo mal tres veces).
 
@@ -162,6 +183,8 @@ Lo que sí cambia es **lo que el anillo tiene que ser**. Hoy es pletina de 14 fr
 
 ### 7.1 D-V1: la fuente afuera, con este case
 
+> **ENMIENDA (2026-10-09).** D-V1 se firmó el 2026-09-08 en `2026-09-05-fuente-v5-ladrillo-design.md`: la etapa AC-DC es pieza de catálogo certificada, fuera de la caja. Con eso **D-P4 queda cerrada: la fuente va afuera**, y lo de abajo se queda como la razón térmica que la apoyaba.
+
 La v5 sacó la fuente por cuatro razones, y esta piel **toca una**:
 
 | razón | con la rama |
@@ -192,6 +215,8 @@ La spec del chasis (`2026-08-15`) lleva 25 revisiones y este papel sería la 26.
 
 ## 8. Montaje y apertura
 
+> **ENMIENDA (2026-10-09, fichas 7 y 11).** Se queda el punto 1 (la cubierta es una C abierta por abajo y se pone bajando) y el 4 (la máquina, D-P6). **El 2 se invierte**: ya no son los cachetes los que capturan la cubierta, sino la cubierta la que tapa los cachetes. Su borde enrollado cubre la pestaña de cada cachete con 0,6 mm de juego, y al bajar solo barre su propia huella sobre el costado, así que no toca la celosía. **El 3 cambia**: nada de M4 por fuera; las fijaciones van por dentro (ficha 11, a): insertos roscados y tornillos desde el interior, a través del anillo. Sin dibujar: cuántos, dónde, y si el destornillador llega con los módulos puestos (HUECO 9).
+
 Samuel, el 05-09: *«no estoy convencido de partir la banda por la mitad. me gustaría que sea fácil de poner y quitar toda la piel»*. Las dos cosas se contestan con la misma geometría:
 
 1. **La cubierta es una C abierta por abajo y cae desde arriba.** El perfil no tiene voladizo: la cara baja se echa atrás al subir (x₂ = 89 en el entrepiso), el hombro sigue atrás (x₃ = 160), la cara alta más (x₄ = 270) y la trasera es un plomo. Una C rígida que copia ese contorno 6 mm por fuera baja en vertical sin tocar nada hasta asentar, y sube igual. No hay que abrirla, ni flexarla, ni deslizarla por el ancho.
@@ -219,6 +244,16 @@ Lo que no está dibujado: los **puntos de enganche** cubierta–cachete del desp
 Hace unas horas se preguntó qué era práctico para un luthier, y la respuesta fue el ladrillo. Esto es la respuesta contraria en la piel y la misma en todo lo demás — y es legítima: **una pieza de concepto para Superbooth se hace justo así**, una piel impresa sobre un hueso de corte y una base de madera.
 
 ### 9.1 Las piezas para imprimir
+
+> **ENMIENDA (2026-10-09).** Con el borde de una sola masa (§13.2), `imprimir_piel.py` saca hoy:
+>
+> | pieza | mm | g en PA12 | cerrada, una isla | cabe en |
+> |---|---|---|---|---|
+> | `cachete_der.stl` | 319 × 255 × 12 | ~178 | sí | MJF 5200, SLS P 770 |
+> | `cachete_izq.stl` (espejo) | 319 × 255 × 12 | ~178 | sí | MJF 5200, SLS P 770 |
+> | `cubierta.stl`, con los dos rollos | 593 × 332 × 262 | ~886 | sí | **solo SLS P 770** (D-P6) |
+>
+> Y `piel_choques.py` las da en verde: ninguna entra en otra más de 0,29 mm (contacto, con la tolerancia de 0,5). Lo que sigue describe el cachete del 05-09.
 
 Samuel: *«queremos tener las piezas listas para mandarlas a imprimir en 3D»*. `case/renders/imprimir_piel.py` las levanta en Blender y las deja en `case/print/piel/`:
 
@@ -250,6 +285,12 @@ Lo que **no** enseñan, a propósito: la franja de conectores (§5, no modelada)
 
 ## 11. HUECOS
 
+> **ENMIENDA (2026-10-09).** El 1 cambia de forma. El cuello de la cubierta es ahora el hueco bajo su borde enrollado, donde entra la pestaña del cachete, y está dibujado y comprobado (§13.2). Los enganches pasan a ser las fijaciones por dentro, sin dibujar (el 9). El 2 sigue: la rigidez de una placa de nylon de 3 mm y 330 mm de largo está sin calcular. Y entran tres:
+>
+> 9. **Las fijaciones por dentro** (ficha 11, a): cuántos insertos, dónde, y si el destornillador llega desde dentro con los módulos montados. Sin medir.
+> 10. **La holgura bajo el borde** es de 0,6 mm de dibujo. Después del remallado, la regla de choques mide como mucho 0,12 mm de contacto entre las piezas. Es el juego del modelo, no el de la pieza impresa, que en MJF anda en ±0,3: se comprueba con una pieza.
+> 11. **Las dos juntas a inglete** de abajo son las únicas que se ven. Una arista viva impresa no sale perfecta, y la muestra dirá si la junta necesita un chaflán o un rehundido para leerse como algo hecho a propósito.
+
 1. **Los puntos de enganche y el cuello.** Cómo la cubierta se centra en los cachetes y cómo el marco asienta en su canto: no dibujado (§8).
 2. **La rigidez de la rama.** Tubos de 3,6 a 12 mm en nylon, lentes de 15 a 60 mm, un marco de 28 × 11: sin calcular. Es lo que fija `NERVIO_PUNTA`, `NERVIO_NUDO` y el marco de verdad, y hoy son números de mirar. Y un cachete de 322 g colgado de cuatro M4 en un anillo de pletina: sin calcular el arranque.
 3. **El `C_D` de un hueco entre tubos redondos** de nylon: sin medir, como todo el `C_D`. Los huecos son lentes, no ranuras.
@@ -263,6 +304,8 @@ Lo que **no** enseñan, a propósito: la franja de conectores (§5, no modelada)
 
 ## 12. Lo que Samuel decide
 
+> **ENMIENDA (2026-10-09).** D-P4 queda cerrada por D-V1 (§7.1). D-P3 pasa a la ficha 10 del acta: Samuel la quiere ver primero, con la chimenea delante. D-P7 la sustituyen la ficha 7 (una sola masa) y la 11 (fijaciones por dentro). **D-P1 sigue sin firmar**: las 16 fichas la dan por hecha, pero este papel no firma por inferencia.
+
 | | decisión | estado |
 |---|---|---|
 | **D-P1** | **la piel sustituye a techo, nariz, talón y las dos mejillas** (cinco pieles a un árbol); la trasera se queda | pendiente |
@@ -274,3 +317,71 @@ Lo que **no** enseñan, a propósito: la franja de conectores (§5, no modelada)
 | **D-P7** | cómo se pone y se quita: cubierta capturada por los cachetes, cuatro M4 moleteados por cachete (§8) — o enganches sin tornillo | pendiente |
 
 Orden: mirar los renders y girar el `.blend` → afinar la rama mirando (cuántos brotes, carne, relieve; y el 8 % que le falta al pesimista) → junta (Serrano sobre lo no verificado; Halberg sobre el nylon a 65 °C; Elke sobre el marco, el labio y cómo se cuelga) → firma → enmiendas de §7.4 en su orden, cada una con su issue.
+
+---
+
+## 13. El acta del 9 de octubre
+
+### 13.1 Lo que encontró la revisión
+
+El 09-10 se miró el modelo en Blender desde 19 ángulos y se midió lo que los renders de presentación no enseñan: en cuántas piezas sueltas sale cada STL y cuánto se mete cada pieza en las demás. Las tres comprobaciones que `imprimir_piel.py` tenía (pieza cerrada, cabe en la bandeja, gramos) daban todo por bueno, y el cachete del 09-09:
+
+- salía en **siete islas**: el marco, la celosía y cinco migas. La celosía empezaba a 28 mm del perfil y el marco acababa a 22 (se había corrido 6 hacia fuera para pisar la cubierta), así que **flotaba** a 6 mm del marco sin tocarlo;
+- **se metía 5,9 mm en la tabla** por todo su canto de abajo;
+- **ocupaba el mismo sitio que la cubierta**, unos 6 mm, en todo el borde (el «cuello» del HUECO 1, sin dibujar);
+- tenía una **costura con escalón** en la nariz, donde empezaba y acababa el barrido del marco;
+- y el relieve dejaba **las paredes de los huecos picadas**: empujaba cada vértice por su normal, también los de las paredes.
+
+Además se comparó con las imágenes del concepto, y salieron nueve diferencias de acabado (fichas 7 a 15). Todo está en el acta, cada ficha con su imagen.
+
+### 13.2 El borde de una sola masa (ficha 7, A)
+
+`case/cad/piel_borde.py` → `piel_borde.json`, que levanta `imprimir_piel.py`.
+
+**Qué es.** El marco del cachete deja de existir. El borde de la cubierta se **enrolla** sobre el costado: la lámina de 6 mm llega a la cara del anillo, dobla con una esquina redonda y sigue por el costado hacia dentro como un **labio** que acaba en una **nariz** redonda. Debajo del labio va la **pestaña** del cachete, que es la propia placa (3 mm), con 0,6 mm de juego. La celosía sale de debajo de la nariz: los huecos empiezan a 14 mm del perfil y el labio llega a W, así que las hebras se ven entrar bajo el borde.
+
+**Abajo, la base.** La cubierta se pone bajando (§8), y un rollo por el canto de abajo barrería la celosía al bajar. Así que abajo el borde lo pone el cachete: una **base** con la misma sección que el rollo, apoyada en la tabla. El rollo baja hasta la tabla por delante y por detrás (sus dos patas) y la base va entre ellas, **a inglete**, como las esquinas de un marco de cuadro: detrás a 45 grados, delante más tendido, porque la nariz mide 19 mm y enseguida empieza la pendiente. Son las dos únicas juntas que se ven.
+
+**Las cotas** (constantes de `piel_borde.py`):
+
+| | valor | por qué |
+|---|---|---|
+| grueso sobre la cara del anillo, T | 12 mm | 11 era el marco que sustituye. Constante: variando de 13 a 9,5 la cara del costado salía inclinada y el remallado la hacía escalera (rayas finas en todo el borde) |
+| cuánto entra el labio, W | 28 mm junto a la tabla, 21 en la cumbre | lo que engorda abajo, como un tronco. Siempre tapa la cara vista del anillo (20) |
+| esquina de fuera | radio 0,55 T | |
+| pestaña | 3 mm, sigue 4 más allá de W | = el fondo de la placa |
+| juego labio-pestaña y en los ingletes | 0,6 mm | con 0,3 el remallado lo cerraba (salía −0,47) |
+
+**Tres cosas aprendidas al hacerlo.** *El anillo no tiene los cantos rectos*: `perfil_lateral()` lleva éntasis en las pendientes (hasta 0,76 mm) y radios en las esquinas (4,1 mm en el escalón). La lámina de la cubierta ya lo seguía; el borde nuevo, hecho primero sobre el polígono recto, se metía en el aluminio hasta 4,1 mm. Ahora `piel_borde.py` exporta el contorno real (`PART="perfil_2d"` de `piel_organica.scad`) y trabaja sobre él. *El booleano EXACT devolvía la placa vacía sin error* cuando dos huecos se solapaban; ahora corta con `use_self` y una guarda compara el volumen con el que debería salir. *El espejo del cachete izquierdo* se hacía respecto al origen de la placa (z = 1,5) y lo dejaba 3 mm dentro del anillo; ahora se refleja respecto a z = 0 del mundo.
+
+### 13.3 Las dos reglas (ficha 16)
+
+`case/renders/piel_choques.py` (Blender) y `case/renders/check_piel.py` (la puerta, que recoge `gates.py` por su nombre):
+
+1. **Una isla por pieza.**
+2. **Ninguna pieza dentro de otra**: cada pieza de la piel contra las otras y contra la tabla, los anillos y rieles, los paneles y la trasera. Se mide la profundidad, con una tolerancia de 0,5 mm para el contacto cara contra cara (el remallado mueve cada cara hasta medio vóxel). Que un punto esté dentro se decide con la paridad de dos rayos: la prueba rápida, la de la cara más cercana, daba falsos 27 mm junto a las aristas vivas de las ventanas.
+
+Con las piezas del 09-09 sale en rojo con todo lo de §13.1. Con las de hoy, en verde. Sin STL o sin Blender sale HUECO (código 2), no verde: los STL no se versionan hasta la firma.
+
+### 13.4 Las dieciséis fichas
+
+Las fichas 1 a 6 no quedaron guardadas en el acta: un fallo de la página perdía lo que se marcaba antes de que conectara (ya corregido). Samuel dijo *«firmadas todas»* y las seis estaban recomendadas en «hazlo», así que se tomaron así. Si alguna la marcó distinto, se corrige aquí.
+
+| ficha | qué | decisión | estado |
+|---|---|---|---|
+| 1 | la celosía estaba suelta | hazlo | **hecho**: una isla |
+| 2 | el marco se metía en la tabla | hazlo | **hecho**: la base apoya en la tabla |
+| 3 | cachete y cubierta en el mismo sitio | hazlo | **hecho** con la 7: 0,6 mm de juego, regla en verde |
+| 4 | la costura de la nariz | hazlo | **hecho**: el marco ya no existe; la esquina es un inglete |
+| 5 | las paredes de los huecos picadas | hazlo | **hecho**: el relieve solo mueve en Z |
+| 6 | rendijas por las que se ve el suelo | hazlo | pendiente: toca `guarda_tapa()` |
+| 7 | dos tubos donde debería haber uno | una sola masa (A) | **hecho, primera vuelta**: se enseña en render |
+| 8 | la corteza parece nieve | enséñamelo primero | pendiente. Mientras tanto la cubierta sale lisa (`PIEL_CORTEZA=ruido` devuelve el ruido para comparar) |
+| 9 | la celosía no tiene cuerpo | enséñamelo primero | pendiente: tres grados de fondo, con la chimenea |
+| 10 | por la celosía se ve la máquina (D-P3) | enséñamelo primero | pendiente: placa ámbar detrás, con la chimenea |
+| 11 | los tornillos se veían | por dentro (a) | pendiente de dibujar (HUECO 9). Los de fuera ya no están |
+| 12 | la tabla se quedó corta | hazlo | pendiente |
+| 13 | la trasera en dos materiales | hazlo | pendiente: depende de la lista de conectores (#183) |
+| 14 | rieles negros y paneles vestidos | hazlo | pendiente |
+| 15 | acabado satinado | enséñamelo primero | pendiente |
+| 16 | una pieza por archivo y ningún choque | hazlo | **hecho**: `check_piel.py` |

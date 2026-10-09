@@ -6,7 +6,7 @@ PROPUESTA (2026-09-05), no puerta. La misma fisica que clearance_budget._tiro()
 --P = k dT^1.5, k = rho cp C_D A_ef sqrt(2 g h / T), A_ef = 1/sqrt(1/A_ent^2 +
 1/A_sal^2)-- con las dos mejillas como chimenea: la mitad baja de cada una
 entra (centroide a H/4), la mitad alta sale (3H/4), mas la rejilla baja de la
-trasera de hoy como entrada. Lo que respira sale de celosia_rama.json (lo
+trasera de hoy como entrada. Lo que respira sale de celosia_placa.json (lo
 abierto sobre la ventana del anillo, a >= marco_fondo del perfil). Existe
 para que la tabla del papel salga de aqui y no de una cuenta a mano: el 05-09
 la misma resta de dos columnas distintas se hizo tres veces en un dia.
@@ -40,7 +40,7 @@ def salto(p, potencia_w, cd, respira_mm2, con_rejilla=True):
 
 if __name__ == "__main__":
     p = cb.leer_params()
-    with open(os.environ.get("PIEL_RAMA", os.path.join(DIR, "celosia_rama.json")), encoding="utf-8") as f:
+    with open(os.environ.get("PIEL_RAMA", os.path.join(DIR, "celosia_placa.json")), encoding="utf-8") as f:
         m = json.load(f)["medidas"]
     respira = m["abierto_ventana_mm2"]
     techo = p["salto_termico_max"]

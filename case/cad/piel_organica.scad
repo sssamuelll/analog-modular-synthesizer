@@ -87,7 +87,8 @@ module ventana_trasera_2d() {
 
 module banda()
     difference() {
-        translate([0, 0, -piel_e]) linear_extrude(ancho_total + 2*piel_e) banda_2d();
+        linear_extrude(ancho_total) banda_2d();   // de anillo a anillo: el rollo de cada
+                                                  // costado lo pone imprimir_piel.py (ficha 7)
         translate([0, 0, t_anillo + piel_solape])
             linear_extrude(ancho_total - 2*(t_anillo + piel_solape)) ventana_filas_2d();
         translate([0, 0, t_anillo])
@@ -108,6 +109,10 @@ else if (PART == "paneles")  paneles();
 else if (PART == "acrilico") acrilico();
 else if (PART == "madera")   madera();
 else if (PART == "todo")     { banda(); aluminio(); paneles(); acrilico(); madera(); }
+// el contorno REAL del anillo (con su entasis y el radio del escalon), en 2D:
+// de el sale el rollo de piel_borde.py, que con el poligono recto se le metia
+// hasta 4.1 mm (medido 2026-10-09)
+else if (PART == "perfil_2d") perfil_lateral();
 else assert(false, str("PART desconocida: ", PART));
 
 echo(str("PIEL: lamina de la cubierta de ", piel_e, " mm, de una pieza; el cachete y la corteza salen de imprimir_piel.py"));

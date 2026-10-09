@@ -1,43 +1,42 @@
-"""Las piezas de la piel LISTAS PARA IMPRIMIR: la rama (cachete) y el tronco
-(cubierta), levantadas en Blender y comprobadas como las mira un servicio.
+"""Las piezas de la piel LISTAS PARA IMPRIMIR: el cachete y la cubierta,
+levantadas en Blender y comprobadas como las mira un servicio.
 
     & "C:\\Program Files\\Blender Foundation\\Blender 5.0\\blender.exe" -b -P imprimir_piel.py
 
-LA FILOSOFIA (Samuel, 05-09): toda la piel simula un arbol. La cubierta es el
-TRONCO --la masa que envuelve el hueso, con corteza-- y cada cachete es UNA
-RAMA que sale de el con extensiones. Ni una ni otra son planas: por eso ya no
-salen de un extruido de OpenSCAD con las aristas a 90 grados sino que se
-levantan aqui, en 3D, con seccion redonda y relieve.
+UNA SOLA MASA (ficha 7, A, firmada el 2026-10-09). La cubierta y el marco del
+cachete eran dos tubos uno al lado del otro; en el concepto la celosia nace del
+borde de la cubierta. Ahora:
 
-EL CACHETE (la rama), de case/cad/celosia_rama.json (celosia.py):
-  * cada fibra es un TUBO de seccion redonda y radio variable (curva con
-    bevel y radio por punto): grueso junto al nudo, fino en las puntas, y
-    ondulando en Z para que en cada cruce una pase por encima de la otra;
-  * el MARCO es una seccion de almohada (superelipse: plana contra el
-    anillo, abombada hacia fuera) barrida por su eje, con los cuatro
-    pasantes M4 de las esquinas restados;
-  * todo se FUNDE con un remallado por voxeles: las uniones salen con su
-    garganta, como en el despiece. Y se suaviza un poco.
-  Son DOS piezas espejo (la cara plana va contra el anillo, la abombada
-  fuera): cachete_der.stl y cachete_izq.stl.
+  * LA CUBIERTA es la lamina de 6 mm de piel_organica.scad (de nariz a talon
+    por el techo, de un anillo al otro) mas el ROLLO de cada costado: su borde
+    se enrolla sobre la cara del anillo, entra W y acaba en una nariz redonda.
+    Engorda abajo y adelgaza arriba. La geometria del rollo la escribe
+    case/cad/piel_borde.py en piel_borde.json, en rebanadas; aqui se extruyen
+    y se funden con la lamina en un remallado.
+  * EL CACHETE es la celosia de celosia_placa.json --la placa del concepto,
+    PESTANA_T de fondo, apoyada en la cara del anillo-- mas la BASE, que pone
+    el borde de abajo con la misma seccion que el rollo (la cubierta baja desde
+    arriba y un rollo por abajo barreria la celosia). Debajo del rollo la placa
+    hace de pestana: el rollo la tapa, con HOLGURA entre los dos, y la celosia
+    sale de debajo de la nariz. Dos piezas espejo, cachete_der y cachete_izq.
+  * El RELIEVE de la placa (el lomo de cada banda, preset de celosia_placa)
+    mueve solo la cara de arriba y la de abajo, en Z: las paredes de los
+    huecos se quedan rectas (ficha 5: empujarlas por su normal las dejaba
+    picadas).
 
-LA CUBIERTA (el tronco), de piel_organica.scad, DE UNA PIEZA:
-  * la lamina de 6 mm que sigue el canto (OpenSCAD), remallada fina;
-  * CORTEZA: dos desplazamientos por ruido sobre la cara exterior --pliegues
-    largos a lo largo del perfil (+-3 mm) y grano fino--, solo hacia fuera:
-    la cara interior sigue lisa contra el hueso;
-  * remallado, suavizado, decimado.
+La CORTEZA de ruido (tres capas) ya no va por defecto: la ficha 8 pide quitar
+el ruido y poner veta, y se decide mirando. PIEL_CORTEZA=ruido la devuelve
+sobre la lamina, no sobre el rollo, para comparar.
 
-Comprobaciones: malla cerrada (cero aristas no-manifold), tamano contra dos
-bandejas --MJF 5200 (380 x 284 x 380) y SLS P 770 (700 x 380 x 580), cifras
-de catalogo sin hoja en el repo-- y volumen -> gramos en PA12 (1.01 g/cm3).
-La cubierta de una pieza NO cabe en la MJF: es la decision D-P6 del papel.
+Comprobaciones: malla cerrada, tamano contra dos bandejas --MJF 5200 (380 x 284
+x 380) y SLS P 770 (700 x 380 x 580), cifras de catalogo sin hoja en el repo--,
+gramos en PA12 (1.01 g/cm3) y, desde la ficha 16, las dos reglas de
+piel_choques.py: UNA ISLA por pieza y NINGUNA pieza dentro de otra.
 
-Salida: case/print/piel/{cachete_der,cachete_izq,cubierta}.stl. Artefactos
-de salida, como los DXF del laser; los regenera este guion.
+Salida: case/print/piel/{cachete_der,cachete_izq,cubierta}.stl. Artefactos de
+salida, como los DXF del laser; los regenera este guion.
 """
 import json
-import math
 import os
 import subprocess
 import sys
@@ -52,25 +51,20 @@ CRUDO = os.path.join(AQUI, "build", "piel")
 SALIDA = os.path.join(AQUI, "..", "print", "piel")
 OPENSCAD = r"C:\Program Files\OpenSCAD\openscad.exe"
 SCAD = os.path.join(CAD, "piel_organica.scad")
-RAMA = os.environ.get("PIEL_RAMA", os.path.join(CAD, "celosia_rama.json"))
+RAMA = os.environ.get("PIEL_RAMA", os.path.join(CAD, "celosia_placa.json"))
+BORDE = os.path.join(CAD, "piel_borde.json")
+CORTEZA = os.environ.get("PIEL_CORTEZA", "lisa")
 
-VOXEL_CACHETE = 0.6      # mm; fibras de 4-11, marco 24 x 11
-VOXEL_CUBIERTA = 0.8     # mm; lamina de 6 con pliegues de 3
+VOXEL_CUBIERTA = 0.6     # mm; lamina de 6 y rollo de 9.5 a 13. Mueve cada cara
+                         # hasta medio voxel: con 0.8 se comia la holgura del labio
 SUAVIZADO = (0.5, 4)     # factor, iteraciones
 DECIMAR = 0.35
 BANDEJAS = {"MJF 5200": (380.0, 284.0, 380.0), "SLS P 770": (700.0, 380.0, 580.0)}
-ALMOHADA_N = 3.5         # exponente de la superelipse del marco
-# la corteza, tres capas sobre la cara exterior: PLIEGUES anchos como una
-# manta gruesa (la referencia: la cubierta es masa, no lamina), VETAS largas
-# a lo largo del perfil (estiradas en XY, que es el plano del perfil; Z es el
-# ancho) y GRANO fino. `medio` es el nivel cero del ruido: 0.3 desplaza de
-# -0.3 a +0.7 de la fuerza, o sea mas hacia fuera que hacia dentro, para que
-# la lamina de 6 no baje de ~3 en los valles. Con +-3 (primer intento) era
-# piel de naranja, no corteza.
+# la corteza de ruido, solo con PIEL_CORTEZA=ruido: PLIEGUES anchos, VETAS
+# largas a lo largo del perfil y GRANO fino, sobre la cara exterior de la lamina
 PLIEGUES = dict(escala=58.0, estira=(1.6, 1.6, 1.0), fuerza=11.0, medio=0.3, hondura=1)
 VETAS = dict(escala=16.0, estira=(4.0, 4.0, 1.0), fuerza=3.0, medio=0.5, hondura=1)
 GRANO = dict(escala=6.0, estira=(1.0, 1.0, 1.0), fuerza=0.7, medio=0.5, hondura=1)
-PIEL_E = 6.0             # = piel_e de piel_organica.scad
 
 
 def exportar_scad(pieza: str) -> str:
@@ -104,6 +98,15 @@ def aplicar(obj, nombre: str) -> None:
     bpy.ops.object.modifier_apply(modifier=nombre)
 
 
+def unir(objs: list):
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in objs:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]
+    bpy.ops.object.join()
+    return bpy.context.view_layer.objects.active
+
+
 def remallar(obj, voxel: float, suavizado=SUAVIZADO, decimar=DECIMAR) -> None:
     m = obj.modifiers.new("remallar", "REMESH")
     m.mode = "VOXEL"
@@ -118,180 +121,94 @@ def remallar(obj, voxel: float, suavizado=SUAVIZADO, decimar=DECIMAR) -> None:
     aplicar(obj, "decimar")
 
 
-# --- EL CACHETE: la rama ---------------------------------------------------
-def _seccion_almohada(ancho: float, alto: float, n: int = 14):
-    """Puntos (u, v) del contorno: base plana en v = 0 de -a a +a y encima
-    la superelipse |u/a|^N + (v/alto)^N = 1. Cerrado, antihorario."""
-    a = ancho / 2
-    pts = []
-    for k in range(n + 1):
-        u = -a + ancho * k / n
-        v = alto * (max(0.0, 1.0 - abs(u / a) ** ALMOHADA_N)) ** (1.0 / ALMOHADA_N)
-        pts.append((u, v))
-    return pts                      # el ultimo (a, 0) cierra con el primero (-a, 0)
-
-
-def marco(eje, ancho: float, alto: float):
-    """El marco barrido: seccion almohada por el eje cerrado. Malla de quads."""
-    E = np.array(eje, dtype=float)
-    m = len(E)
-    sec = _seccion_almohada(ancho, alto)
-    verts, caras = [], []
-    for i in range(m):
-        t = E[(i + 1) % m] - E[i - 1]
-        t /= np.linalg.norm(t)
-        n = np.array([-t[1], t[0]])         # hacia fuera (perfil horario)
-        for u, v in sec:
-            q = E[i] + n * u
-            verts.append((float(q[0]), float(q[1]), float(v)))
-    S = len(sec)
-    for i in range(m):
-        for j in range(S):
-            a = i * S + j
-            b = i * S + (j + 1) % S
-            c = ((i + 1) % m) * S + (j + 1) % S
-            d = ((i + 1) % m) * S + j
-            caras.append((a, b, c, d))
-    me = bpy.data.meshes.new("marco")
-    me.from_pydata(verts, [], caras)
-    me.validate()
+def _normales_fuera(ob) -> None:
     bm = bmesh.new()
-    bm.from_mesh(me)
+    bm.from_mesh(ob.data)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    # HACIA FUERA de verdad: recalc solo las hace consistentes, y con el eje
-    # horario salian hacia dentro. El booleano EXACTO trata un solido
-    # invertido como su complemento y devolvia un disco de 24 x 23 (medido).
     if bm.calc_volume(signed=True) < 0:
         bmesh.ops.reverse_faces(bm, faces=bm.faces)
-    bm.to_mesh(me)
+    bm.to_mesh(ob.data)
     bm.free()
-    ob = bpy.data.objects.new("marco", me)
-    bpy.context.collection.objects.link(ob)
-    return ob
 
 
-def fibra(pts, z0: float):
-    """Un tubo de seccion redonda y radio variable por una polilinea
-    [x, y, z, w] (w = diametro), z relativo al plano medio z0."""
-    cu = bpy.data.curves.new("fibra", "CURVE")
-    cu.dimensions = "3D"
-    cu.bevel_depth = 1.0
-    cu.bevel_resolution = 5
-    cu.fill_mode = "FULL"
-    cu.use_fill_caps = True
-    sp = cu.splines.new("POLY")
-    sp.points.add(len(pts) - 1)
-    for p, (x, y, z, w) in zip(sp.points, pts):
-        p.co = (x, y, z0 + z, 1.0)
-        p.radius = w / 2.0
-    ob = bpy.data.objects.new("fibra", cu)
+def prisma(anillos, nombre: str, z0: float, z1: float):
+    """Un poligono (con sus agujeros) extruido de z0 a z1. Curva 2D con
+    relleno: los anillos interiores restan solos."""
+    cu = bpy.data.curves.new(nombre, "CURVE")
+    cu.dimensions = "2D"
+    cu.fill_mode = "BOTH"
+    cu.extrude = (z1 - z0) / 2.0
+    for anillo in anillos:
+        sp = cu.splines.new("POLY")
+        sp.points.add(len(anillo) - 1)
+        sp.use_cyclic_u = True
+        for p, (x, y) in zip(sp.points, anillo):
+            p.co = (x, y, 0.0, 1.0)
+    ob = bpy.data.objects.new(nombre, cu)
     bpy.context.collection.objects.link(ob)
+    ob.location.z = (z0 + z1) / 2.0
     activo(ob)
     bpy.ops.object.convert(target="MESH")
-    return bpy.context.view_layer.objects.active
-
-
-def cinta(pts, z0: float, fondo: float):
-    """Una CINTA: seccion estadio vertical (w de ancho en planta, `fondo` de
-    alto, cantos redondos) barrida por una polilinea [x, y, z, w]. La finura
-    se ve en planta y la rigidez sale del fondo (el ala, 07-09)."""
-    P = np.array([(x, y, z) for x, y, z, w in pts], dtype=float)
-    W = np.array([w for x, y, z, w in pts], dtype=float)
-    n = len(P)
-    T = np.zeros_like(P)
-    T[1:-1] = P[2:] - P[:-2]
-    T[0], T[-1] = P[1] - P[0], P[-1] - P[-2]
-    T /= np.linalg.norm(T, axis=1, keepdims=True) + 1e-12
-    N = np.stack([-T[:, 1], T[:, 0], np.zeros(n)], axis=1)
-    K = 8
-    verts, caras = [], []
-    for i in range(n):
-        r = W[i] / 2.0
-        h = max(fondo / 2.0 - r, 0.0)
-        anillo = [(math.cos(a) * r, h + math.sin(a) * r)
-                  for a in (math.pi * k / K for k in range(K + 1))]
-        anillo += [(math.cos(a) * r, -h + math.sin(a) * r)
-                   for a in (math.pi + math.pi * k / K for k in range(K + 1))]
-        for u, v in anillo:
-            q = P[i] + N[i] * u
-            verts.append((float(q[0]), float(q[1]), float(z0 + P[i, 2] + v)))
-    S = 2 * (K + 1)
-    for i in range(n - 1):
-        for j in range(S):
-            a = i * S + j
-            b = i * S + (j + 1) % S
-            c = (i + 1) * S + (j + 1) % S
-            d = (i + 1) * S + j
-            caras.append((a, b, c, d))
-    caras.append(tuple(range(S))[::-1])
-    caras.append(tuple((n - 1) * S + j for j in range(S)))
-    me = bpy.data.meshes.new("cinta")
-    me.from_pydata(verts, [], caras)
-    me.validate()
-    bm = bmesh.new()
-    bm.from_mesh(me)
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    if bm.calc_volume(signed=True) < 0:
-        bmesh.ops.reverse_faces(bm, faces=bm.faces)
-    bm.to_mesh(me)
-    bm.free()
-    ob = bpy.data.objects.new("cinta", me)
-    bpy.context.collection.objects.link(ob)
+    ob = bpy.context.view_layer.objects.active
+    _normales_fuera(ob)
     return ob
 
 
+def losas(rebanadas, z_base: float, signo: int, nombre: str):
+    """Las rebanadas de piel_borde.json apiladas en Z a partir de z_base
+    (signo +1: hacia +Z, lado derecho; -1: lado izquierdo). Cada una se solapa
+    0.02 con la siguiente para que el remallado las funda en un solido."""
+    piezas = []
+    for k, reb in enumerate(rebanadas):
+        a = z_base + signo * reb["v0"]
+        b = z_base + signo * reb["v1"]
+        lo, hi = min(a, b) - 0.02, max(a, b) + 0.02
+        for j, pol in enumerate(reb["poligonos"]):
+            piezas.append(prisma(pol, f"{nombre}_{k}_{j}", lo, hi))
+    ob = unir(piezas)
+    ob.name = nombre
+    return ob
+
+
+# --- EL CACHETE --------------------------------------------------------------
 def placa(exterior, huecos, z0: float, fondo: float):
     """Una PLACA perforada: el exterior solido menos los huecos, un CSG
     (booleano EXACT) sin remallado previo -- el hueco tiene que salir
     nitido, no una hebra (Samuel, 07-09: "que solo queden los huecos de
     los circulitos")."""
-    def prisma(pts, nombre, altura):
-        cu = bpy.data.curves.new(nombre, "CURVE")
-        cu.dimensions = "2D"
-        cu.fill_mode = "BOTH"
-        cu.extrude = altura / 2.0
-        sp = cu.splines.new("POLY")
-        sp.points.add(len(pts) - 1)
-        sp.use_cyclic_u = True
-        for p, (x, y) in zip(sp.points, pts):
-            p.co = (x, y, 0.0, 1.0)
-        ob = bpy.data.objects.new(nombre, cu)
-        bpy.context.collection.objects.link(ob)
-        ob.location.z = z0
-        activo(ob)
-        bpy.ops.object.convert(target="MESH")
-        ob = bpy.context.view_layer.objects.active
-        bm = bmesh.new()
-        bm.from_mesh(ob.data)
-        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-        bm.to_mesh(ob.data)
-        bm.free()
-        return ob
-
-    base = prisma(exterior, "placa", fondo)
-    cortes = [prisma(h, f"hueco{i}", fondo + 6.0) for i, h in enumerate(huecos)]
-    cortes_obj = cortes[0]
-    if len(cortes) > 1:
-        bpy.ops.object.select_all(action="DESELECT")
-        for c in cortes:
-            c.select_set(True)
-        bpy.context.view_layer.objects.active = cortes_obj
-        bpy.ops.object.join()
-        cortes_obj = bpy.context.view_layer.objects.active
+    base = prisma(exterior, "placa", z0 - fondo / 2.0, z0 + fondo / 2.0)
+    cortes = [prisma([h], f"hueco{i}", z0 - fondo / 2.0 - 3.0, z0 + fondo / 2.0 + 3.0)
+              for i, h in enumerate(huecos)]
+    cortes_obj = unir(cortes)
     b = base.modifiers.new("huecos", "BOOLEAN")
     b.operation = "DIFFERENCE"
     b.solver = "EXACT"
+    # use_self: dos huecos de celosia_placa.json (el 5 y el 32) se solapan
+    # 0.5 mm2 desde que crecieron 0.3 por lado, y el cortador queda cruzado
+    # consigo mismo. Sin esto el EXACT devolvia una placa VACIA sin error, y
+    # el MANIFOLD la devolvia sin cortar (medido 09-10).
+    b.use_self = True
     b.object = cortes_obj
-    aplicar(base, "huecos")
-    bpy.data.objects.remove(cortes_obj, do_unlink=True)
     bm = bmesh.new()
     bm.from_mesh(base.data)
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    if bm.calc_volume(signed=True) < 0:
-        bmesh.ops.reverse_faces(bm, faces=bm.faces)
-    bm.to_mesh(base.data)
+    v_base = bm.calc_volume()
     bm.free()
+    aplicar(base, "huecos")
+    bpy.data.objects.remove(cortes_obj, do_unlink=True)
+    _normales_fuera(base)
+    # guarda: la placa tiene que salir con los huecos cortados, ni vacia ni
+    # entera. Una placa que desaparece pasa todas las demas comprobaciones.
+    area = sum(0.5 * abs(np.dot(np.asarray(h)[:, 0], np.roll(np.asarray(h)[:, 1], 1))
+                         - np.dot(np.asarray(h)[:, 1], np.roll(np.asarray(h)[:, 0], 1)))
+               for h in huecos)
+    esperado = v_base - area * fondo
+    bm = bmesh.new()
+    bm.from_mesh(base.data)
+    v = bm.calc_volume()
+    bm.free()
+    if abs(v - esperado) > 0.02 * esperado:
+        raise SystemExit(f"ROJO: la placa salio con {v/1000:.1f} cm3 y con los huecos cortados "
+                         f"deberia tener {esperado/1000:.1f}")
     return base
 
 
@@ -316,12 +233,12 @@ def _distancia_a_huecos(xy: np.ndarray, huecos, w: float) -> np.ndarray:
 
 
 def relieve(ob, huecos, t_borde: float, t_max: float, w: float, voxel: float = 0.6):
-    """Talla el lomo redondeado ESCULPIENDO la malla: remalla fino y
-    mueve cada vertice por su propia normal segun la distancia (XY) al
-    hueco mas cercano -- sin booleano. Un primer intento con un solido
-    "campo de alturas" e interseccion EXACT revento el solver de Blender
-    (malloc de 906 MB, 07-09): las mesetas a espesor constante son
-    kilometros de caras coplanares, el peor caso para ese solver."""
+    """El lomo redondeado de cada banda, ESCULPIDO: remalla fino y baja la cara
+    de arriba (y sube la de abajo) segun la distancia en XY al hueco mas
+    cercano: t_borde junto al hueco, t_max a `w` de el. Solo en Z, y en
+    proporcion a cuanto mira la cara hacia arriba o abajo: las paredes de los
+    huecos no se mueven. Antes cada vertice iba por su normal, y las paredes
+    se empujaban de lado y salian picadas (ficha 5, 09-10)."""
     m = ob.modifiers.new("relieve_fino", "REMESH")
     m.mode = "VOXEL"
     m.voxel_size = voxel
@@ -335,90 +252,63 @@ def relieve(ob, huecos, t_borde: float, t_max: float, w: float, voxel: float = 0
     z = t_borde + (t_max - t_borde) * np.sqrt(np.clip(1 - (1 - d / w) ** 2, 0.0, None))
     disp = (z - t_max) / 2.0
     for v, dz in zip(bm.verts, disp):
-        v.co += v.normal * float(dz)
+        v.co.z += v.normal.z * float(dz)
     bm.to_mesh(ob.data)
     bm.free()
     ob.data.update()
     return ob
 
 
-def cachete():
+def cachete(borde: dict):
     with open(RAMA, encoding="utf-8") as f:
         d = json.load(f)
-    ancho, alto = d["marco"]["ancho"], d["marco"]["espesor"]
-    z0 = alto / 2.0
-    # ninguna pieza asoma por la cara plana (la que va contra el anillo)
-    if d.get("tipo") == "placa":
-        z0 = max(z0, 0.6 + d["fondo"] / 2.0)
-        pl = placa(d["exterior"], d["huecos"], z0, d["fondo"])
-        rv = d.get("relieve")
-        if rv:
-            relieve(pl, d["huecos"], rv["t_borde"], rv["t_max"], rv["w"])
-        piezas = [pl]
-    else:
-        seccion = d.get("seccion", {})
-        if seccion.get("tipo") == "cinta":
-            zmin = min(p[2] for fb in d["fibras"] for p in fb) - seccion["fondo"] / 2.0
-            z0 = max(z0, 0.6 - zmin)
-            piezas = [cinta(fb, z0, seccion["fondo"]) for fb in d["fibras"] if len(fb) >= 2]
-        else:
-            zmin = min(p[2] - p[3] / 2.0 for fb in d["fibras"] for p in fb)
-            z0 = max(z0, 0.6 - zmin)
-            piezas = [fibra(fb, z0) for fb in d["fibras"]]
-    mk = marco(d["marco"]["eje"], ancho, alto)
-    # los cuatro pasantes, restados del marco antes de fundir
-    for cx, cy in d["agujeros"]["centros"]:
-        bpy.ops.mesh.primitive_cylinder_add(radius=d["agujeros"]["diametro"] / 2.0,
-                                            depth=alto + 20.0, location=(cx, cy, alto / 2.0),
-                                            vertices=32)
-        cil = bpy.context.object
-        b = mk.modifiers.new("agujero", "BOOLEAN")
-        b.operation = "DIFFERENCE"
-        # MANIFOLD, no EXACT: con la barrida en quads el exacto devolvia un
-        # disco de 24 x 23 (medido 05-09, tambien triangulada); el manifold
-        # resta los 0.5 cm3 del cilindro y deja los 221.7 del marco
-        b.solver = "MANIFOLD"
-        b.object = cil
-        aplicar(mk, "agujero")
-        bpy.data.objects.remove(cil, do_unlink=True)
-    # guarda: el marco tiene que seguir ahi despues de taladrarlo. Con la
-    # barrida cruzada en la nariz, el booleano exacto devolvia un disco de
-    # 24 x 23 y la pieza salia sin marco, cerrada y 'lista' (medido 05-09).
-    bm = bmesh.new()
-    bm.from_mesh(mk.data)
-    vol_marco = bm.calc_volume(signed=True)
-    bm.free()
-    if vol_marco < 150_000:
-        raise SystemExit(f"ROJO: el marco quedo en {vol_marco/1000:.0f} cm3 tras los agujeros")
-    piezas.append(mk)
-    for ob in piezas:
-        ob.select_set(True)
-    bpy.context.view_layer.objects.active = mk
-    bpy.ops.object.join()
-    ob = bpy.context.view_layer.objects.active
+    if d.get("tipo") != "placa":
+        raise SystemExit(f"ROJO: {RAMA} no es una placa: el cachete de una sola masa "
+                         f"(ficha 7) se arma sobre la placa del concepto")
+    p = borde["params"]
+    # los huecos no pueden asomar donde va la base ni bajo la parte maciza de
+    # la pestana: piel_borde los deja desde HUECOS_DESDE
+    P = np.array(borde["perfil"])
+    hx = np.vstack([np.asarray(h) for h in d["huecos"]])
+    sys.path.insert(0, CAD)
+    import celosia
+    cerca = float(celosia._dist_borde(P, hx).min())
+    if cerca < p["HUECOS_DESDE"]:
+        raise SystemExit(f"ROJO: un hueco llega a {cerca:.1f} mm del perfil; la pestana "
+                         f"es maciza hasta {p['HUECOS_DESDE']}")
+    pt = p["PESTANA_T"]
+    pl = placa(borde["placa_exterior"][0], d["huecos"], pt / 2.0, pt)
+    rv = d.get("relieve")
+    if rv:
+        if rv["t_max"] > pt + 1e-6:
+            raise SystemExit(f"ROJO: el relieve pide {rv['t_max']} mm de fondo y bajo el "
+                             f"rollo solo caben {pt} (PESTANA_T)")
+        relieve(pl, d["huecos"], rv["t_borde"], rv["t_max"], rv["w"])
+    base = losas(borde["base"], 0.0, +1, "base")
+    ob = unir([pl, base])
     ob.name = "cachete_der"
-    remallar(ob, float(d.get("voxel", VOXEL_CACHETE)))
+    remallar(ob, float(d.get("voxel", 0.3)))
     return ob
 
 
 def espejo(obj, nombre: str):
     """La otra mano: la misma pieza reflejada en Z (la cara plana sigue
-    siendo la que mira al anillo), con las normales rehechas."""
+    siendo la que mira al anillo), con las normales rehechas. Se refleja
+    respecto a z = 0 del MUNDO: el objeto unido hereda el origen de la placa
+    (z = 1.5), y reflejar respecto a el dejaba el izquierdo 3 mm dentro del
+    anillo (check_piel.py, 09-10)."""
     activo(obj)
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     bpy.ops.object.duplicate()
     ob = bpy.context.view_layer.objects.active
     ob.name = nombre
     ob.scale = (1.0, 1.0, -1.0)
     bpy.ops.object.transform_apply(scale=True)
-    bm = bmesh.new()
-    bm.from_mesh(ob.data)
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    bm.to_mesh(ob.data)
-    bm.free()
+    _normales_fuera(ob)
     return ob
 
 
-# --- LA CUBIERTA: el tronco -------------------------------------------------
+# --- LA CUBIERTA ---------------------------------------------------------------
 def _dist_perfil(P: np.ndarray, pts: np.ndarray) -> np.ndarray:
     d = np.full(len(pts), np.inf)
     n = len(P)
@@ -438,10 +328,9 @@ def _ruido(nombre: str, escala: float, hondura: int):
     return tx
 
 
-def corteza(obj, P: np.ndarray, capa: dict, nombre: str) -> None:
-    """Un desplazamiento por ruido, solo sobre la cara EXTERIOR (grupo
-    'fuera'), con coordenadas de un Empty estirado para que los pliegues
-    corran a lo largo del perfil."""
+def corteza(obj, capa: dict, nombre: str) -> None:
+    """Un desplazamiento por ruido, solo sobre el grupo 'fuera', con
+    coordenadas de un Empty estirado para que corran a lo largo del perfil."""
     vac = bpy.data.objects.new(nombre + "_coord", None)
     bpy.context.collection.objects.link(vac)
     vac.scale = capa["estira"]
@@ -457,27 +346,31 @@ def corteza(obj, P: np.ndarray, capa: dict, nombre: str) -> None:
     bpy.data.objects.remove(vac, do_unlink=True)
 
 
-def cubierta(P: np.ndarray):
+def cubierta(borde: dict, ancho: float):
     ob = importar(exportar_scad("banda"))
     ob.name = "cubierta"
-    # malla uniforme y fina antes de desplazar: el STL viene en quads enormes
-    m = ob.modifiers.new("fino", "REMESH")
-    m.mode = "VOXEL"
-    m.voxel_size = 1.2
-    aplicar(ob, "fino")
-    # 'fuera': la cara exterior es la que esta a mas de 3 mm del perfil (la
-    # lamina va de 0 a 6 por fuera de el); la interior sigue lisa
-    co = np.empty(len(ob.data.vertices) * 3)
-    ob.data.vertices.foreach_get("co", co)
-    xy = co.reshape(-1, 3)[:, :2]
-    peso = np.clip((_dist_perfil(P, xy) - 3.0) / 2.0, 0.0, 1.0)
-    vg = ob.vertex_groups.new(name="fuera")
-    for i, w in enumerate(peso):
-        if w > 0:
-            vg.add([i], float(w), "REPLACE")
-    corteza(ob, P, PLIEGUES, "pliegues")
-    corteza(ob, P, VETAS, "vetas")
-    corteza(ob, P, GRANO, "grano")
+    if CORTEZA == "ruido":
+        m = ob.modifiers.new("fino", "REMESH")
+        m.mode = "VOXEL"
+        m.voxel_size = 1.2
+        aplicar(ob, "fino")
+        # 'fuera': la cara exterior de la lamina (a mas de 3 mm del perfil),
+        # lejos de los costados, donde el rollo se funde
+        co = np.empty(len(ob.data.vertices) * 3)
+        ob.data.vertices.foreach_get("co", co)
+        co = co.reshape(-1, 3)
+        peso = np.clip((_dist_perfil(np.array(borde["perfil"]), co[:, :2]) - 3.0) / 2.0, 0.0, 1.0)
+        peso *= np.clip(np.minimum(co[:, 2], ancho - co[:, 2]) / 20.0, 0.0, 1.0)
+        vg = ob.vertex_groups.new(name="fuera")
+        for i, w in enumerate(peso):
+            if w > 0:
+                vg.add([i], float(w), "REPLACE")
+        for capa, nombre in ((PLIEGUES, "pliegues"), (VETAS, "vetas"), (GRANO, "grano")):
+            corteza(ob, capa, nombre)
+    rollos = [losas(borde["rollo"], ancho, +1, "rollo_der"),
+              losas(borde["rollo"], 0.0, -1, "rollo_izq")]
+    ob = unir([ob] + rollos)
+    ob.name = "cubierta"
     remallar(ob, VOXEL_CUBIERTA, suavizado=(0.5, 2))
     return ob
 
@@ -512,17 +405,27 @@ def escribir(obj, pieza: str) -> None:
 if __name__ == "__main__":
     bpy.ops.wm.read_factory_settings(use_empty=True)
     os.makedirs(SALIDA, exist_ok=True)
-    with open(RAMA, encoding="utf-8") as f:
-        perfil = np.array(json.load(f)["perfil"], dtype=float)
+    with open(BORDE, encoding="utf-8") as f:
+        borde = json.load(f)
+    sys.path.insert(0, AQUI)
+    import piel_choques
+    ancho = piel_choques.ancho_total()
     todo_ok = True
-    der = cachete()
+    der = cachete(borde)
     izq = espejo(der, "cachete_izq")
-    # PIEL_SOLO=cachete: para iterar la rama sin esperar los minutos de la
+    # PIEL_SOLO=cachete: para iterar la celosia sin esperar los minutos de la
     # cubierta (el remallado de 580 mm)
     piezas = [der, izq]
     if os.environ.get("PIEL_SOLO", "") != "cachete":
-        piezas.append(cubierta(perfil))
+        piezas.append(cubierta(borde, ancho))
     for ob in piezas:
         todo_ok &= comprobar(ob, ob.name)
         escribir(ob, ob.name)
+    # las dos reglas de la ficha 16, sobre lo que se acaba de escribir
+    if len(piezas) == 3:
+        for ob in list(bpy.data.objects):
+            bpy.data.objects.remove(ob, do_unlink=True)
+        info = piel_choques.revisar(piel_choques._cargar())
+        piel_choques.imprimir_informe(info)
+        todo_ok &= info["ok"]
     sys.exit(0 if todo_ok else 1)
