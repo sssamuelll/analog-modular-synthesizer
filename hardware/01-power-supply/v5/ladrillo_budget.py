@@ -64,7 +64,8 @@ if V4 not in sys.path:
 
 # --- lo que la v4 ya decidio y aqui NO se vuelve a escribir ----------------
 # Se importan para que un cambio alli se vea aqui, en vez de quedarse pegado.
-from calor_budget import CAJON_DIGITAL_A, V_RIEL          # noqa: E402
+from calor_budget import (CAJON_DIGITAL_A, PLACA_A,       # noqa: E402
+                          V_RIEL, p_cajon_w, p_recinto_w)
 import margen_budget as mb                                 # noqa: E402
 
 # --- D-B2, firmada el 2026-09-05 -------------------------------------------
@@ -211,6 +212,19 @@ def quema_pre_regulador_w(reg: str, *, v_nom: float = V_CRUDO_CASCADA,
     return ((v_nom * (1 + tol)) - SETPOINT_V[reg]) * CASCADA_A
 
 
+def declarado_v4_w() -> float:
+    """Lo que la v4 declara que hay que evacuar de esta caja, para comparar.
+
+    DERIVADO de calor_budget.py y no transcrito. Estaba escrito a mano --139,31
+    W-- hasta el 2026-09-05, y ese mismo dia el numero se movio dos veces: bajo
+    a 139,31 al quitarle al digital la cadena de LED retirada, y subio a 147,31
+    al meterle al cajon la carga ultra de la Voz, que no estaba. Un papel que
+    compara contra una constante escrita a mano publica un ahorro que caduca
+    solo, y este guion existe justamente para que ese porcentaje no caduque.
+    """
+    return p_cajon_w(PLACA_A) + p_recinto_w(PLACA_A)
+
+
 def censo_optimista_w() -> float:
     """El mismo cajon con los censos en vez de las declaraciones.
 
@@ -303,8 +317,8 @@ def demo() -> int:
           f"{calor_del_cajon_w():.2f} W")
     print("    Todo lo que baja por el cordon acaba en calor dentro. Lo unico")
     print("    que se queda fuera es la perdida AC-DC del ladrillo.")
-    print(f"    La v4 declaraba 139,31 W: son "
-          f"{100*(1-calor_del_cajon_w()/139.31):.0f} % menos.")
+    print(f"    La v4 declara {declarado_v4_w():.2f} W: son "
+          f"{100*(1-calor_del_cajon_w()/declarado_v4_w()):.0f} % menos.")
 
     print("\n  y con los CENSOS en vez de las declaraciones:")
     print(f"    fila a 300 mA, cascada a {CASCADA_CENSO_A*1000:.0f} mA, digital al tipico")

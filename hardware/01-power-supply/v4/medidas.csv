@@ -60,13 +60,13 @@ paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
 6,telemetria_U10_menos12_rack_vs_multimetro,V,-12.12 .. -11.88,-12,0.12,,,,"papel sec.7: la telemetria contra un multimetro. Los +-15 V con carga son nuevos de la v4, y el cuarto canal del ADS1115 va al -12 de rack"
 6,U13_corriente_rack+12_vs_pinza,A,3.61 .. 3.99,3.8,0.19,,,,"D-F2: los dos INA226 de rack, poblados. Con la carga ficticia del liston (3.8 A)"
 6,U14_corriente_rack+5_vs_pinza,A,3.8 .. 4.2,4,0.2,,,,"D-F2: los dos INA226 de rack, poblados. Con la carga ficticia del liston (4.0 A)"
-7,aire_recinto_a_carga_sostenida,C,60.9046 .. 76.9046,68.9046,8,,,,"calor_budget.py, punto fijo con D-F3 = A y el venteo minimo. ES LA MEDIDA QUE DECIDE si la columna 'sostenido' de sec.1 es cierta"
-7,area_venteo_construida,mm2,>= 19700,,,,,,"el venteo que el papel del case acabe dibujando (#289). Por debajo del que calor_budget pide, el sostenido no vale"
+7,aire_recinto_a_carga_sostenida,C,60.9024 .. 76.9024,68.9024,8,,,,"calor_budget.py, punto fijo con D-F3 = A y el venteo minimo. ES LA MEDIDA QUE DECIDE si la columna 'sostenido' de sec.1 es cierta"
+7,area_venteo_construida,mm2,>= 21000,,,,,,"el venteo que el papel del case acabe dibujando (#289). Por debajo del que calor_budget pide, el sostenido no vale"
 7,carcasa_PS3_termopar,C,registro,,,,,,REGISTRO: la hoja publica la temperatura del AIRE (-30 a +85 C) y no la de la carcasa. Solo significa algo comparado con la placa siguiente
 7,carcasa_PS6_termopar,C,registro,,,,,,REGISTRO: la hoja publica la temperatura del AIRE (-30 a +85 C) y no la de la carcasa. Solo significa algo comparado con la placa siguiente
 7,NTC_carcasa,C,registro,,,,,,"REGISTRO: fusible_budget la estima disipando 2.75 W dentro del recinto, y la tabla de calor del papel sec.6 no la lleva"
-7,sostenido_rack+12_medido,A,>= 1.80365,,,,,,calor_budget.SOSTENIDO['rack+12']: la carga que el riel aguanta sin salirse de su curva a la T de arriba
-7,sostenido_rack-12_medido,A,>= 1.80365,,,,,,calor_budget.SOSTENIDO['rack-12']: la carga que el riel aguanta sin salirse de su curva a la T de arriba
+7,sostenido_rack+12_medido,A,>= 1.80385,,,,,,calor_budget.SOSTENIDO['rack+12']: la carga que el riel aguanta sin salirse de su curva a la T de arriba
+7,sostenido_rack-12_medido,A,>= 1.80385,,,,,,calor_budget.SOSTENIDO['rack-12']: la carga que el riel aguanta sin salirse de su curva a la T de arriba
 7,sostenido_rack+5_medido,A,>= 3.6,,,,,,calor_budget.SOSTENIDO['rack+5']: la carga que el riel aguanta sin salirse de su curva a la T de arriba
 8,desfase_masa_rack_a_GNDREF_con_2A_en_mas12,mV,3.38098 .. 13.5239,8.45246,5.07148,,,,"ground_budget.desfase_mv(2) : cargando SOLO el +12 de rack con 2 A de carga ficticia, que es lo que dice el papel sec.9.1. Por masa vuelven esos mismos 2 A"
 8,desfase_masa_rack_a_GNDREF_a_carga_sostenida,mV,6.76197 .. 27.0479,16.9049,10.143,,,,"ground_budget.desfase_mv() con el rack ENTERO a su carga sostenida: por masa vuelve el NETO, 4.00 A (+12 y +5 menos el -12). El numero es GRANDE a proposito: lo que se verifica no es que sea pequeno"

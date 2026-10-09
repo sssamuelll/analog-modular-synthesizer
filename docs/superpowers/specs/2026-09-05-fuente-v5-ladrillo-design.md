@@ -25,7 +25,7 @@ La v4 mete dentro de una caja de madera: seis módulos AC-DC, la entrada de red,
 el fusible, la NTC de arranque, el choke de modo común, los MOV, los Y2 al
 chasis, y un recinto de acero de **338,6 × 176,6 × 83 mm** que ocupa el **30 %
 del suelo interior**. Con eso, `clearance_budget.py` le encarga al case
-**23 666 mm²** de venteo nuevo (#289), que Elke midió como imposibles de sacar
+**21 725 mm²** de venteo nuevo (#289), que Elke midió como imposibles de sacar
 del suelo entero: con la regla de puente del propio repo caben 21 088.
 
 Samuel preguntó por qué un Moog puede ir sellado. La respuesta, con las cifras
@@ -34,13 +34,13 @@ de fábrica:
 | | potencia | fuente | refrigeración |
 |---|---|---|---|
 | Moog Subsequent 37 | 13 W | dentro, IEC | ninguna, sellado |
-| **SAM17 v4, declarado** | **139,31 W** | dentro | 23 666 mm² de venteo |
+| **SAM17 v4, declarado** | **147,31 W** | dentro | 25 025 mm² de venteo |
 | Moog One, 16 voces | 160 W | **fuera**, ladrillo | **ventilador interno** |
 
 Moog sella a 13 W. Al llegar a 160 sacó la fuente **y aun así puso ventilador**.
 A la potencia de la v4 la respuesta de Moog no sería «sellado».
 
-Pero los 139,31 W de la v4 son en un 69 % la fila de abajo **a corriente de
+Pero los 147,31 W de la v4 son en un 65 % la fila de abajo **a corriente de
 placa**: lo que los módulos pueden entregar, no lo que nadie pide. Con la fila
 declarada de verdad, el SAM17 no está en la escala del Moog One.
 
@@ -80,7 +80,7 @@ del papel:
 `ladrillo_budget.py` lo asevera, no lo promete: si algún día entra potencia por
 otro sitio, el aserto salta.
 
-De los 139,31 W de la v4, lo que se va con la fuente son **25,02 W** de pérdidas
+De los 147,31 W de la v4, lo que se va con la fuente son **25,02 W** de pérdidas
 de conversión y franja de red. Lo demás baja de golpe por otra razón: D-B2.
 
 ## 3. El ladrillo (D-V1, D-V2)
@@ -468,45 +468,102 @@ Tres honestidades sobre esta tabla:
 
 ## 6. Lo que le pasa a la caja
 
+> **ESTA SECCIÓN SE RECALCULÓ ENTERA EL 2026-09-05, DESPUÉS DE PUBLICARLA, Y
+> UNA DE SUS CONCLUSIONES ERA FALSA.** Dos defectos, los dos míos:
+>
+> 1. **Etiqueta y cifra medidas distinto.** El guion que produjo la tabla
+>    sumaba la carga ultra y la pantalla *por encima* de `calor_budget.py`, y
+>    luego etiquetaba cada fila con la cifra *sin* ellas. Las áreas eran ~5 %
+>    mayores que lo que su propia etiqueta decía.
+> 2. **La rejilla trasera agrandada sube el centroide de entrada, y eso acorta
+>    la chimenea.** La tabla de «trasera a 20 000» lo ignoraba: dejaba la
+>    entrada a la altura de hoy. Con el centroide bien puesto, la conclusión
+>    que publiqué —«a 30 mm pasa incluso con el `C_D` pesimista»— **no se
+>    sostiene**: da 21,4 K contra un techo de 20.
+>
+> Todo lo de abajo sale ahora de `clearance_budget._tiro()` con las geometrías
+> sustituidas y **nada sumado a mano**, que es la única forma de que no vuelva
+> a pasar: la cifra sale bien del modelo y se estropea al copiarla fuera.
+
+Área efectiva de hoy: **3 299 mm²**. Techo, 20 K sobre una sala de 45 °C.
+
 | escenario | calor del cajón | hay que abrir (chimenea sola) | con la pared contada |
 |---|---|---|---|
-| v4 declarada | 139,31 W | 21 355 mm² | 15 970 mm² |
-| **v5 declarada** | **64,22 W** | **8 066 mm²** | 2 680 mm² |
-| v5 a censo | 35,06 W | 2 906 mm² | 0 |
+| v4 declarada | 147,31 W | 21 725 mm² | 16 555 mm² |
+| v4 declarada **+ pantalla** | 150,36 W | 22 244 mm² | 17 074 mm² |
+| **v5 declarada** | **64,22 W** | **7 610 mm²** | 2 440 mm² |
+| v5 a censo | 35,06 W | 2 657 mm² | 0 |
 
-El encargo del #289 baja de **21 355 a 8 066 mm²**: un 62 % menos. Y eso cambia
+La comparación honesta es la segunda fila contra la tercera: la v5 lleva la
+pantalla dentro de `rieles()` y la v4 no le tiene celda (HUECO 2). Así el
+encargo del #289 baja de **22 244 a 7 610 mm²**, un **66 % menos**. Eso cambia
 la naturaleza de la obra, no solo su tamaño.
 
-Con 8 066 mm² **el suelo puede quedarse macizo**. Corriendo la geometría con la
-entrada donde está hoy y solo ensanchando la rendija del alero:
+### 6.1 Con el suelo macizo, solo ensanchando la rendija
 
-| rendija | v5 declarada | v5 a censo |
-|---|---|---|
-| 4 mm (hoy) | 45,6 K | 30,5 K |
-| 20 mm | 27,8 K | 18,6 K |
-| 30 mm | 25,6 K | 17,1 K |
+| rendija | v5 declarada | v5 a censo | v5 declarada, `C_D` pesimista |
+|---|---|---|---|
+| 4 mm (hoy) | 45,6 K | 30,5 K | 51,0 K |
+| 20 mm | 27,8 K | 18,6 K | 31,1 K |
+| 25 mm | 26,5 K | 17,7 K | 29,6 K |
+| 30 mm | 25,6 K | 17,1 K | 28,6 K |
 
-Con la trasera agrandada a 20 000 mm², **sin tocar el suelo**:
+Con la entrada donde está hoy, **la rendija sola no llega**: ni a 30 mm baja de
+25 K con la carga declarada. Hay que agrandar la entrada.
 
-| rendija | v5 declarada | v5 a censo |
-|---|---|---|
-| 20 mm | 21,1 K | 14,1 K |
-| 25 mm | **19,0 K** | 12,7 K |
-| 30 mm | 17,6 / 19,6 pesimista | 11,7 K |
+### 6.2 Agrandando la rejilla trasera — y tiene un óptimo
 
-**A 30 mm de rendija y con la trasera agrandada, la v5 declarada pasa el techo
-de 20 K incluso con el `C_D` pesimista, y el suelo no se toca.** Esa era la
-faena difícil: ranurar 18 mm de madera con puentes de 14,4.
+Las ranuras de hoy miden 41,8 mm de alto y su centroide está a y = 46,4.
+Agrandar el área las hace **más altas**, y eso sube el centroide y **acorta la
+chimenea**. Los dos efectos se pelean, así que hay un máximo:
+
+| trasera | rendija 30 mm: tiro | v5 declarada | v5 a censo | pesimista |
+|---|---|---|---|---|
+| 7 065 (hoy) | 167 mm | 25,6 K | 17,1 K | 28,6 K |
+| 10 000 | 159 mm | 22,1 K | 14,8 K | 24,8 K |
+| **20 000** | **129 mm** | **19,1 K** | 12,8 K | 21,4 K |
+| 30 000 | 99 mm | 19,7 K | 13,1 K | 22,0 K |
+
+**Pasar de 20 000 empeora.** A 30 000 la entrada tiene 50 % más de área y sale
+peor que a 20 000, porque el centroide sube a y ≈ 99 y se come 30 mm de tiro.
+Es lo contrario de lo que dice la intuición, y es la razón de que la palanca
+buena sea el **suelo** —entra a y = 0 y no le quita altura a nada— y no la
+trasera.
+
+### 6.3 Con el suelo abierto (lo que pedía el #327)
+
+Ranuras en la tabla, en serie con el hueco perimetral de las patas de 20:
+
+| suelo | rendija | v5 declarada | v5 a censo | pesimista |
+|---|---|---|---|---|
+| 20 000 + patas 20 | 20 mm | 19,4 K | 12,9 K | 21,6 K |
+| 40 000 + patas 20 | 20 mm | **18,8 K** | 12,6 K | 21,0 K |
+
+### 6.4 La lectura, sin adornos
+
+**Con la carga declarada, ninguna de las geometrías examinadas pasa el techo de
+20 K con el `C_D` pesimista.** La mejor —suelo abierto de 40 000, patas de 20,
+rendija de 20— da 18,8 K con el `C_D` de la puerta y 21,0 con el exigente.
+
+**Con los censos, todas pasan con holgura**: entre 12,6 y 18,6 K.
+
+Y eso es exactamente HUECO 5. La «v5 declarada» apila **tres peores casos a la
+vez**: la fila al techo duro de D-B2 (500 y no 300 mA/riel), la cascada a los
+650 mA/riel de D-F1 contra un censo de 334, y el digital al Max de 125 °C del
+#256 contra un típico de 0,965 A. Ninguno de los tres es un dato de la caja: son
+declaraciones, y dos de ellas están el doble por encima de lo que el instrumento
+pide. **Encargar el venteo contra las tres a la vez es una decisión, no una
+consecuencia**, y es la que hay que tomar antes de dibujar nada.
 
 > **Los 20 000 mm² de trasera caben, pero solo lo he comprobado en el plano.**
 > El campo útil de la trasera va de y = 19,0 a y = 230,2, y la rejilla de hoy
-> ocupa 41,8 mm de esos 211: 46 ranuras de 41,8 × 3,75, 7 065 mm². Llegar a
-> 20 000 pide ranuras de ~118 mm de alto, que terminarían en y ≈ 143 y por
-> tanto **por debajo del y = 157** donde `guarda_trasera_flexion()` ya declara
-> su HUECO. Geométricamente entra. **Lo que NO he verificado es qué le hace a
-> la rigidez del PMMA quitarle esa área**, y esa comprobación es del papel del
-> case, no de éste. Hasta que se haga, la cifra de 20 000 es una hipótesis de
-> trabajo y no un encargo.
+> ocupa 41,8 mm: 46 ranuras de 41,8 × 3,75, 7 065 mm². Llegar a 20 000 pide
+> ranuras de ~118 mm, que terminarían en y ≈ 144 y por tanto **por debajo del
+> y = 157** donde `guarda_trasera_flexion()` ya declara su HUECO.
+> Geométricamente entra. **Lo que NO he verificado es qué le hace a la rigidez
+> del PMMA quitarle esa área**, y esa comprobación es del papel del case, no de
+> éste. Hasta que se haga, la cifra de 20 000 es una hipótesis de trabajo y no
+> un encargo.
 
 Lo que la v5 **no** arregla: la rendija de 25-30 mm sigue arrastrando la franja
 del anillo trasero de 23 a ~44 mm, que es el precio estético que Elke identificó
@@ -531,7 +588,7 @@ Y se va, además de calor:
 | **D-F7** (`PS5` → IRM-45-5) | muere por desaparición del sujeto |
 | **§4.1** (fuga a PE) | se rehace: seis fugas menos dentro |
 | `calor_budget.py` | su modelo entero es de módulos AC-DC en un recinto |
-| `params.scad::potencia_disipada` | 139,31 → 64,22 |
+| `params.scad::potencia_disipada` | 147,31 → 64,22 |
 
 **No se reabre la cascada.** `U1`/`U2`, los LT3045/LT3094 y `U3` se quedan donde
 están, con su misma topología, alimentados por un crudo mejor.
@@ -574,7 +631,7 @@ firmó en dirección el 2026-09-08 (§9); queda pendiente ejecutar su relevo**
    el punto de trabajo real (85 °C) no está publicado. Entre ese máximo y el
    típico hay **3,0 veces** de corriente.
 4. **El coeficiente de la pared exterior sigue sin medir.** Con él, el venteo
-   nuevo baja de 8 066 a 2 680 mm². Sin él, no se puede contar. `U_PARED_W_M2K`
+   nuevo baja de 7 610 a 2 440 mm². Sin él, no se puede contar. `U_PARED_W_M2K`
    está fuera del veredicto a propósito y este papel no lo cambia.
 5. **La cascada declara el doble de su censo.** D-F1 dice 650 mA/riel; el censo
    son 334. Son **20,65 W declarados contra 10,60 reales**, y con D-B2 firmada
