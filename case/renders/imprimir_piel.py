@@ -37,6 +37,7 @@ Salida: case/print/piel/{cachete_der,cachete_izq,cubierta}.stl. Artefactos
 de salida, como los DXF del laser; los regenera este guion.
 """
 import json
+import math
 import os
 import subprocess
 import sys
@@ -51,7 +52,7 @@ CRUDO = os.path.join(AQUI, "build", "piel")
 SALIDA = os.path.join(AQUI, "..", "print", "piel")
 OPENSCAD = r"C:\Program Files\OpenSCAD\openscad.exe"
 SCAD = os.path.join(CAD, "piel_organica.scad")
-RAMA = os.path.join(CAD, "celosia_rama.json")
+RAMA = os.environ.get("PIEL_RAMA", os.path.join(CAD, "celosia_rama.json"))
 
 VOXEL_CACHETE = 0.6      # mm; fibras de 4-11, marco 24 x 11
 VOXEL_CUBIERTA = 0.8     # mm; lamina de 6 con pliegues de 3
@@ -190,15 +191,180 @@ def fibra(pts, z0: float):
     return bpy.context.view_layer.objects.active
 
 
+def cinta(pts, z0: float, fondo: float):
+    """Una CINTA: seccion estadio vertical (w de ancho en planta, `fondo` de
+    alto, cantos redondos) barrida por una polilinea [x, y, z, w]. La finura
+    se ve en planta y la rigidez sale del fondo (el ala, 07-09)."""
+    P = np.array([(x, y, z) for x, y, z, w in pts], dtype=float)
+    W = np.array([w for x, y, z, w in pts], dtype=float)
+    n = len(P)
+    T = np.zeros_like(P)
+    T[1:-1] = P[2:] - P[:-2]
+    T[0], T[-1] = P[1] - P[0], P[-1] - P[-2]
+    T /= np.linalg.norm(T, axis=1, keepdims=True) + 1e-12
+    N = np.stack([-T[:, 1], T[:, 0], np.zeros(n)], axis=1)
+    K = 8
+    verts, caras = [], []
+    for i in range(n):
+        r = W[i] / 2.0
+        h = max(fondo / 2.0 - r, 0.0)
+        anillo = [(math.cos(a) * r, h + math.sin(a) * r)
+                  for a in (math.pi * k / K for k in range(K + 1))]
+        anillo += [(math.cos(a) * r, -h + math.sin(a) * r)
+                   for a in (math.pi + math.pi * k / K for k in range(K + 1))]
+        for u, v in anillo:
+            q = P[i] + N[i] * u
+            verts.append((float(q[0]), float(q[1]), float(z0 + P[i, 2] + v)))
+    S = 2 * (K + 1)
+    for i in range(n - 1):
+        for j in range(S):
+            a = i * S + j
+            b = i * S + (j + 1) % S
+            c = (i + 1) * S + (j + 1) % S
+            d = (i + 1) * S + j
+            caras.append((a, b, c, d))
+    caras.append(tuple(range(S))[::-1])
+    caras.append(tuple((n - 1) * S + j for j in range(S)))
+    me = bpy.data.meshes.new("cinta")
+    me.from_pydata(verts, [], caras)
+    me.validate()
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    if bm.calc_volume(signed=True) < 0:
+        bmesh.ops.reverse_faces(bm, faces=bm.faces)
+    bm.to_mesh(me)
+    bm.free()
+    ob = bpy.data.objects.new("cinta", me)
+    bpy.context.collection.objects.link(ob)
+    return ob
+
+
+def placa(exterior, huecos, z0: float, fondo: float):
+    """Una PLACA perforada: el exterior solido menos los huecos, un CSG
+    (booleano EXACT) sin remallado previo -- el hueco tiene que salir
+    nitido, no una hebra (Samuel, 07-09: "que solo queden los huecos de
+    los circulitos")."""
+    def prisma(pts, nombre, altura):
+        cu = bpy.data.curves.new(nombre, "CURVE")
+        cu.dimensions = "2D"
+        cu.fill_mode = "BOTH"
+        cu.extrude = altura / 2.0
+        sp = cu.splines.new("POLY")
+        sp.points.add(len(pts) - 1)
+        sp.use_cyclic_u = True
+        for p, (x, y) in zip(sp.points, pts):
+            p.co = (x, y, 0.0, 1.0)
+        ob = bpy.data.objects.new(nombre, cu)
+        bpy.context.collection.objects.link(ob)
+        ob.location.z = z0
+        activo(ob)
+        bpy.ops.object.convert(target="MESH")
+        ob = bpy.context.view_layer.objects.active
+        bm = bmesh.new()
+        bm.from_mesh(ob.data)
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        bm.to_mesh(ob.data)
+        bm.free()
+        return ob
+
+    base = prisma(exterior, "placa", fondo)
+    cortes = [prisma(h, f"hueco{i}", fondo + 6.0) for i, h in enumerate(huecos)]
+    cortes_obj = cortes[0]
+    if len(cortes) > 1:
+        bpy.ops.object.select_all(action="DESELECT")
+        for c in cortes:
+            c.select_set(True)
+        bpy.context.view_layer.objects.active = cortes_obj
+        bpy.ops.object.join()
+        cortes_obj = bpy.context.view_layer.objects.active
+    b = base.modifiers.new("huecos", "BOOLEAN")
+    b.operation = "DIFFERENCE"
+    b.solver = "EXACT"
+    b.object = cortes_obj
+    aplicar(base, "huecos")
+    bpy.data.objects.remove(cortes_obj, do_unlink=True)
+    bm = bmesh.new()
+    bm.from_mesh(base.data)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    if bm.calc_volume(signed=True) < 0:
+        bmesh.ops.reverse_faces(bm, faces=bm.faces)
+    bm.to_mesh(base.data)
+    bm.free()
+    return base
+
+
+def _distancia_a_huecos(xy: np.ndarray, huecos, w: float) -> np.ndarray:
+    """Distancia (XY) de cada punto al segmento mas cercano de CUALQUIER
+    hueco, recortada a `w`. Filtra por bbox de cada hueco antes de medir
+    -- sin esto, 34 huecos x cientos de miles de vertices del remallado
+    fino revento la memoria de Blender (07-09)."""
+    sys.path.insert(0, CAD)
+    import celosia
+    dmin = np.full(len(xy), w + 10.0)
+    margen = w + 2.0
+    for hp in huecos:
+        H = np.asarray(hp, dtype=float)
+        x0, y0 = H[:, 0].min() - margen, H[:, 1].min() - margen
+        x1, y1 = H[:, 0].max() + margen, H[:, 1].max() + margen
+        cerca = (xy[:, 0] >= x0) & (xy[:, 0] <= x1) & (xy[:, 1] >= y0) & (xy[:, 1] <= y1)
+        if not cerca.any():
+            continue
+        dmin[cerca] = np.minimum(dmin[cerca], celosia._dist_borde(H, xy[cerca]))
+    return np.minimum(dmin, w)
+
+
+def relieve(ob, huecos, t_borde: float, t_max: float, w: float, voxel: float = 0.6):
+    """Talla el lomo redondeado ESCULPIENDO la malla: remalla fino y
+    mueve cada vertice por su propia normal segun la distancia (XY) al
+    hueco mas cercano -- sin booleano. Un primer intento con un solido
+    "campo de alturas" e interseccion EXACT revento el solver de Blender
+    (malloc de 906 MB, 07-09): las mesetas a espesor constante son
+    kilometros de caras coplanares, el peor caso para ese solver."""
+    m = ob.modifiers.new("relieve_fino", "REMESH")
+    m.mode = "VOXEL"
+    m.voxel_size = voxel
+    aplicar(ob, "relieve_fino")
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    bm.verts.ensure_lookup_table()
+    bm.normal_update()
+    xy = np.array([(v.co.x, v.co.y) for v in bm.verts])
+    d = _distancia_a_huecos(xy, huecos, w)
+    z = t_borde + (t_max - t_borde) * np.sqrt(np.clip(1 - (1 - d / w) ** 2, 0.0, None))
+    disp = (z - t_max) / 2.0
+    for v, dz in zip(bm.verts, disp):
+        v.co += v.normal * float(dz)
+    bm.to_mesh(ob.data)
+    bm.free()
+    ob.data.update()
+    return ob
+
+
 def cachete():
     with open(RAMA, encoding="utf-8") as f:
         d = json.load(f)
     ancho, alto = d["marco"]["ancho"], d["marco"]["espesor"]
     z0 = alto / 2.0
-    # ninguna fibra asoma por la cara plana (la que va contra el anillo)
-    zmin = min(p[2] - p[3] / 2.0 for fb in d["fibras"] for p in fb)
-    z0 = max(z0, 0.6 - zmin)
-    piezas = [fibra(fb, z0) for fb in d["fibras"]]
+    # ninguna pieza asoma por la cara plana (la que va contra el anillo)
+    if d.get("tipo") == "placa":
+        z0 = max(z0, 0.6 + d["fondo"] / 2.0)
+        pl = placa(d["exterior"], d["huecos"], z0, d["fondo"])
+        rv = d.get("relieve")
+        if rv:
+            relieve(pl, d["huecos"], rv["t_borde"], rv["t_max"], rv["w"])
+        piezas = [pl]
+    else:
+        seccion = d.get("seccion", {})
+        if seccion.get("tipo") == "cinta":
+            zmin = min(p[2] for fb in d["fibras"] for p in fb) - seccion["fondo"] / 2.0
+            z0 = max(z0, 0.6 - zmin)
+            piezas = [cinta(fb, z0, seccion["fondo"]) for fb in d["fibras"] if len(fb) >= 2]
+        else:
+            zmin = min(p[2] - p[3] / 2.0 for fb in d["fibras"] for p in fb)
+            z0 = max(z0, 0.6 - zmin)
+            piezas = [fibra(fb, z0) for fb in d["fibras"]]
     mk = marco(d["marco"]["eje"], ancho, alto)
     # los cuatro pasantes, restados del marco antes de fundir
     for cx, cy in d["agujeros"]["centros"]:
@@ -231,7 +397,7 @@ def cachete():
     bpy.ops.object.join()
     ob = bpy.context.view_layer.objects.active
     ob.name = "cachete_der"
-    remallar(ob, VOXEL_CACHETE)
+    remallar(ob, float(d.get("voxel", VOXEL_CACHETE)))
     return ob
 
 

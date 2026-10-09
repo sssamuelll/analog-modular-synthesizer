@@ -40,7 +40,7 @@ def salto(p, potencia_w, cd, respira_mm2, con_rejilla=True):
 
 if __name__ == "__main__":
     p = cb.leer_params()
-    with open(os.path.join(DIR, "celosia_rama.json"), encoding="utf-8") as f:
+    with open(os.environ.get("PIEL_RAMA", os.path.join(DIR, "celosia_rama.json")), encoding="utf-8") as f:
         m = json.load(f)["medidas"]
     respira = m["abierto_ventana_mm2"]
     techo = p["salto_termico_max"]

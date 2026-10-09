@@ -102,18 +102,24 @@ ns["mat"]("panel_oscuro", **{"Base Color": (0.10, 0.105, 0.115, 1.0),
                              "Metallic": 0.9, "Roughness": 0.38})
 
 
-def _importar(ruta, nombre, material, dz=0.0):
+def _importar(ruta, nombre, material, dz=0.0, suave=False):
     bpy.ops.wm.stl_import(filepath=ruta)
     obj = bpy.context.selected_objects[0]
     obj.name = nombre
     obj.location.z += dz
     obj.data.materials.append(bpy.data.materials[material])
+    # SUAVE SOLO LA PIEL. Es malla remallada por voxeles: sin esto, los tubos
+    # de la rama y los pliegues de la corteza salen facetados. Lo demas son
+    # piezas de caras planas --tabla, anillos, paneles, trasera-- y suavizarlas
+    # interpola la normal entre caras perpendiculares: el canto de la tabla se
+    # ilumina como si fuera un redondeo y el nogal se lava a beige (05-09: se
+    # aplico a todo y por eso la madera perdio su color).
     for p in obj.data.polygons:
-        p.use_smooth = True
+        p.use_smooth = suave
     return obj
 
 
-objetos = [_importar(os.path.join(PRINT, pieza + ".stl"), pieza, "piel", dz)
+objetos = [_importar(os.path.join(PRINT, pieza + ".stl"), pieza, "piel", dz, suave=True)
            for pieza, dz in PIEL.items()]
 objetos += [_importar(os.path.join(DIR, parte + ".stl"), parte, material)
             for parte, material in PARTES.items()]

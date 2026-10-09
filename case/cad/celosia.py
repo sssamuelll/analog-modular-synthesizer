@@ -75,24 +75,29 @@ SOLAPE_CUBIERTA = 6.0   # mm, = piel_e de piel_organica.scad: el marco del
                         # cachete pisa el canto de la cubierta, como en el despiece
 
 # --- la rama ---------------------------------------------------------------
-NUDO = (56.0, 38.0)     # donde entra la rama: LA PUNTA INFERIOR DELANTERA, la
-                        # nariz (Samuel, 05-09: "quiero que el punto del que
-                        # salen todas las ramificaciones sea la punta inferior
-                        # delantera"). Justo dentro del rincon de la region:
-                        # ~10 mm de la cara baja y del suelo (marco 28)
+NUDO = (120.0, 95.0)    # donde entra la rama. El 05-09 estaba en la NARIZ, en
+                        # (56, 38), por peticion de Samuel ("quiero que el punto
+                        # del que salen todas las ramificaciones sea la punta
+                        # inferior delantera"). El 06-09 pasa al CENTRO de la
+                        # pieza: en su concepto del cachete entero las ramas
+                        # convergen a media altura y desde ahi se abren a los
+                        # cuatro costados. Con el nudo en la nariz el abanico
+                        # solo barria la diagonal y dejaba la mitad pelada.
 NUDO_R = 18.0           # mm, radio del nudo: ahi las fibras no mueren, se funden
 # DEL NUDO SALEN TRES, y las demas NACEN MAS ARRIBA (Samuel, 05-09: "mejor
 # que salgan varias de ese nodo, unas tres, y luego otras nazcan de algun
 # punto mas arriba, cada una en donde va el primer row del rack"): las tres
 # primarias, por rumbo desde el nudo (el suelo, la vena a la cumbre, la cara
-# baja); el resto brota de una rama que ya pasa por la banda de la fila de
-# abajo (BROTE_Y, en mm de altura) y hacia atras muere fundida en su madre.
+# baja); el resto brota de una rama que ya pasa por la banda BROTE_Y (en mm de
+# altura) y hacia atras muere fundida en su madre. Esa banda era (28, 150) --la
+# fila de abajo del rack-- y el 06-09 se abre a toda la pieza: con el nudo en el
+# centro, limitar los brotes a una franja dejaba la cumbre sin tejido.
 PRIMARIAS = (2.0, 39.0, 54.0)
-BROTE_Y = (28.0, 150.0)
+BROTE_Y = (0.0, 260.0)
 MUERE_ATRAS = 0.6       # x espaciado: hacia atras, una fibra nueva muere en la madre
 SOLDADURA_L = 2.5       # x hueco: cuanto se tiende la Y al fundirse en la madre
 PRIMARIA_W = 1.3        # las tres del nudo, x esto de gruesas (la vena lleva VENA)
-SEPARACION = 12.0       # mm, entre ejes de fibras vecinas, JUNTO al nudo...
+SEPARACION = 14.0       # mm, entre ejes de fibras vecinas, JUNTO al nudo...
 SEP_CRECE = 0.25        # ...y crece con la distancia: x(1 + SEP_CRECE*d/250).
                         # La referencia: celdas chicas en el nudo, grandes lejos
 NERVIO_NUDO = 8.0       # mm, diametro junto al nudo
@@ -127,16 +132,21 @@ PARED_K = 0.9           # cuanto dobla como maximo (1 = nunca llega al marco)
 # fibra a menos de NACE x espaciado local.
 MUERE = 0.0
 NACE = 0.55
+# EL BORDE TAMBIEN SIEMBRA (06-09): cada cuantos mm de contorno nace una fibra
+# pegada al marco, y a que distancia de el. Con 0 se apaga y vuelve la rama del
+# 05-09, que dejaba el perimetro pelado.
+BORDE_CADA = 22.0
+BORDE_DENTRO = 6.0
 MIN_LARGO = 1.8         # x espaciado: mas corta que esto no se queda
 # LOS HACES Y LAS LENTES: fibras vecinas giran en sentidos opuestos, se
 # acercan hasta fundirse en un haz (o morir soldadas) y se vuelven a abrir.
 LENTE_MOD = 6.0         # grados, amplitud (solo ondula: las lentes las
                         # cierran los pellizcos de abajo)
 LENTE_L = 75.0          # mm, periodo a lo largo del flujo (radial)
-LENTE = 95.0            # mm, entre pellizcos (local: x(0.55 + d/220))
+LENTE = 55.0            # mm, entre pellizcos (local: x(0.55 + d/220))
 LENTE_JITTER = 0.35
-PELLIZCO_SOLAPE = 1.5   # mm, cuanto se meten una en otra al tocarse
-PELLIZCO_ORILLA = 30.0  # mm, sin pellizcos a menos de esto de una punta
+PELLIZCO_SOLAPE = 3.0   # mm, cuanto se meten una en otra al tocarse
+PELLIZCO_ORILLA = 6.0  # mm, sin pellizcos a menos de esto de una punta
 # LAS PUNTAS entran al marco de refilon (fundir_en_marco): PEGA_L mm mas
 # adelante, tangentes. Y una fibra que corre a menos de PEGA_D del marco
 # durante PEGA_MAX se funde en el sin esperar a tocarlo.
@@ -432,14 +442,32 @@ def generar(marco=MARCO, sep=SEPARACION, paso=PASO, semilla=SEMILLA, medir=True)
         return pts
 
     # semillas: las tres primarias desde el nudo; el resto, brotes en la banda
-    cola = [(nudo + NUDO_R * np.array([math.cos(math.radians(a)), math.sin(math.radians(a))]), True)
-            for a in PRIMARIAS]
+    cola = [(nudo + NUDO_R * np.array([math.cos(math.radians(a)), math.sin(math.radians(a))]),
+             True, False) for a in PRIMARIAS]
+    # Y SEMILLAS A LO LARGO DEL MARCO. El abanico del nudo no alcanza los
+    # rincones: medido el 06-09 sobre la rama del 05-09, un SOLO hueco de
+    # 16 440 mm2 --el 60 % de todo el aire-- rodeaba el tejido por fuera, con
+    # la nariz, el suelo y el perimetro pelados. Abrir BROTE_Y a toda la altura
+    # apenas lo movio (del 60 % al 54 %), porque el problema no es donde se
+    # permite brotar sino que la propagacion lateral solo nace de lo que ya
+    # existe, y en los rincones no existe nada. En la referencia de Samuel las
+    # ramas llegan al marco por los cuatro costados, asi que el borde tambien
+    # siembra: puntos repartidos por el contorno interior, hacia dentro.
+    if BORDE_CADA > 0:
+        anillo = _inset(P, marco + BORDE_DENTRO)
+        for a, b in zip(anillo, np.roll(anillo, -1, axis=0)):
+            L = float(np.hypot(*(b - a)))
+            for k in range(max(1, int(L / BORDE_CADA))):
+                t = (k + 0.5) / max(1, int(L / BORDE_CADA))
+                cola.append((a + (b - a) * t, False, True))
     primaria: list[bool] = []
     while cola:
-        s, es_prim = cola.pop(0)
+        s, es_prim, de_borde = cola.pop(0)
         if not en_region(s) or rej.cerca(s, NACE * _sep(s))[1] >= 0:
             continue
-        if not es_prim and not (BROTE_Y[0] <= s[1] <= BROTE_Y[1]):
+        # la banda BROTE_Y solo gobierna los brotes del abanico; lo que nace
+        # del marco llena donde el abanico no llega, y por eso no la mira
+        if not es_prim and not de_borde and not (BROTE_Y[0] <= s[1] <= BROTE_Y[1]):
             continue
         i = len(fibras)
         atras = integrar(s, -1.0, i, es_prim)[::-1]
@@ -456,7 +484,7 @@ def generar(marco=MARCO, sep=SEPARACION, paso=PASO, semilla=SEMILLA, medir=True)
             n = np.array([-t[1], t[0]])
             sl = _sep(linea[j])
             for lado in (+1.0, -1.0):
-                cola.append((linea[j] + n * sl * lado, False))
+                cola.append((linea[j] + n * sl * lado, False, de_borde))
 
     # --- ninguna punta suelta: cada extremo que no muere en el marco ni en el
     # nudo se funde en la vecina con una curva tangente al flujo -------------
