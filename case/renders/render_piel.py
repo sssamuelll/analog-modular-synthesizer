@@ -33,7 +33,7 @@ from mathutils import Vector
 AQUI = os.path.dirname(os.path.abspath(__file__))
 CAD = os.path.join(AQUI, "..", "cad")
 DIR = os.path.join(AQUI, "build", "piel")
-PRINT = os.path.join(AQUI, "..", "print", "piel")
+PRINT = os.environ.get("PIEL_SALIDA", os.path.join(AQUI, "..", "print", "piel"))   # PIEL_SALIDA: variantes para escoger
 OPENSCAD = r"C:\Program Files\OpenSCAD\openscad.exe"
 SCAD = os.path.join(CAD, "piel_organica.scad")
 
