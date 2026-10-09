@@ -1,6 +1,7 @@
 # El recinto partido — R cerrada, C a la vista — **PROPUESTA SIN FIRMAR**
 
-**Fecha**: 2026-09-04 · **Estado**: **propuesta. No firmada, sin junta.**
+**Fecha**: 2026-09-04 · **Estado**: **propuesta. No firmada, sin junta**; medio
+adoptada por la v5 y medio muerta (enmienda del 2026-10-09, abajo).
 Nada de este papel se ha implementado y **ningún fichero se ha tocado** ·
 **Depende de**: la fuente v4 (`2026-09-03-fuente-v4-liston-design.md`), cuyas
 decisiones D-F1 a D-F7 esta propuesta **no toca ninguna** ·
@@ -9,6 +10,32 @@ decisiones D-F1 a D-F7 esta propuesta **no toca ninguna** ·
 de la v4, y el encargo del #289 ·
 **Origen**: encargo de Samuel el 2026-09-04, sobre una observación de la sesión
 del case. Los datos de partida son suyos; la verificación y el papel, míos.
+
+> **ENMIENDA (2026-10-09, al entrar en `main`).** Esta propuesta nunca se
+> firmó, y la fuente v5 la dejó atrás por otro camino. **D-V1, firmada el
+> 2026-09-08** (`2026-09-05-fuente-v5-ladrillo-design.md`, §3 y §9), saca la
+> etapa AC-DC de la caja: es una pieza de catálogo certificada, **fuera**. Con
+> ella se van del edificio la red, los seis IRM y todo lo que este papel llama
+> R, y con R el chasis de acero que aquí se quería partir. La v5 lo dice así
+> (§7.1): el PR #316 «queda **medio adoptado**: su mitad R se va del edificio,
+> y su mitad C —la cascada fuera de un cajón de acero— pasa a ser la respuesta
+> a dónde vive lo que se queda. Conviene leerlo antes de escribir el plan de
+> esta v5, no después».
+>
+> **Lo que sigue vivo** es la mitad C: la cascada a la vista con su disipador
+> en placa, y los HUECOS que la acompañan en el §6 —el disipador (6.1), el PMMA
+> y el calor (6.2) y la isla analógica sin apantallar (6.3), que con la v5 ya
+> no tiene ningún acero cerca—. **Lo que murió**: el §1 y el §2 en todo lo que
+> toca a R, las cifras del §3 (son de la v4: los 31,25 W del recinto cuentan la
+> franja de red y los IRM, que ya no están dentro) y la tabla del §8, escrita
+> contra la v4. Ninguna de esas enmiendas se aplica.
+>
+> **El §6.1 se corrió** en el PR #336
+> (`hardware/01-power-supply/v4/disipador_budget.py`): con el modelo de la v4
+> **no da**, porque el aire que rodearía C ya pasa de los 61 °C. Pero ese
+> objetivo sale de la cuenta del `U2` = LM2991, que D-F9 (06-09) cambió por el
+> LT3015. Rehacer el criterio contra la v5 es trabajo del plan de la v5, que es
+> donde este papel pide que se lea.
 
 > **QUÉ ES ESTE DOCUMENTO Y QUÉ NO ES.** Es una propuesta para leer y romper.
 > No lleva firma, no ha pasado junta, y **rehace la arquitectura mecánica de la
