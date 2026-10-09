@@ -275,7 +275,7 @@ Los STL **no se versionan hasta la firma** (pesan 8–15 MB cada uno y cambian c
 
 ## 10. Los renders
 
-> **ENMIENDA (2026-10-10, ficha 14).** Los paneles ya no son placas lisas: `case/renders/cara_panel.py` les pone la cara, y los rieles y la tapa del valle van en negro. Hay una vista más, de frente puro, para juzgar el reparto: `PIEL_VISTAS=cara` → `sam17-piel-cara.png`. No se versiona (la regla de la #195 en `.gitignore`); está en el acta. Lo que eso pinta y lo que es provisional, en §13.6.
+> **ENMIENDA (2026-10-10, ficha 14).** Los paneles ya no son placas lisas: `case/renders/cara_panel.py` les pone la cara, y la tapa del valle va en negro (los rieles se quedan plateados, §13.6). Hay una vista más, de frente puro, para juzgar el reparto: `PIEL_VISTAS=cara` → `sam17-piel-cara.png`. No se versiona (la regla de la #195 en `.gitignore`); está en el acta. Lo que eso pinta y lo que es provisional, en §13.6.
 
 `case/renders/render_piel.py` reutiliza la escena de `render.py` entera y hace cuatro vistas: las dos de siempre, una **casi de lado** (`sam17-piel-lado.png`) y una **de lado puro** (`sam17-piel-cachete.png`), en la que el cachete llena el cuadro y se juzga la rama. Importa **la piel tal como se imprime** (`case/print/piel/`), no un extruido: lo que se ve es lo que sale de la máquina. `PIEL_MOTOR=eevee` para iterar en un minuto; `PIEL_BLEND=1` guarda `build/sam17-piel.blend` con cada pieza nombrada para girarla en Blender.
 
@@ -384,7 +384,7 @@ Las fichas 1 a 6 no quedaron guardadas en el acta: un fallo de la página perdí
 | 11 | los tornillos se veían | por dentro (a) | pendiente de dibujar, #393 (HUECO 9). Los de fuera ya no están |
 | 12 | la tabla se quedó corta | hazlo | pendiente, #394 |
 | 13 | la trasera en dos materiales | hazlo | pendiente, #395: depende de la lista de conectores (#183) |
-| 14 | rieles negros y paneles vestidos | hazlo | **hecho** (§13.6): la cara en el render, los rieles negros en la compra y la tapa del valle anodizada en negro |
+| 14 | rieles negros y paneles vestidos | hazlo | **hecho** (§13.6): la cara en el render y la tapa del valle anodizada en negro. Los rieles se quedan plateados: ya estaban comprados (Samuel, 10-10) |
 | 15 | acabado satinado | enséñamelo primero | **en render, a escoger** (§13.5), #397 |
 | 16 | una pieza por archivo y ningún choque | hazlo | **hecho**: `check_piel.py` |
 
@@ -428,7 +428,7 @@ Es un orden de magnitud: el mismo `C_D` para todo y sin el roce del canal, que s
 
 **Abajo, provisional**: los tres bloques del plan (30, 62 y 12 HP) con caras genéricas, perillas arriba y jacks abajo. Son módulos KONDOR que nadie ha dibujado. La fila del valle se queda lisa, porque tampoco tiene reparto.
 
-**El negro.** Los rieles y la tapa del valle salen en un STL propio (`PART="negro"`; el resto del aluminio es `PART="hueso"`). `aluminio` sigue siendo los dos, que es contra lo que mide `piel_choques.py`. En la compra van los *Tiptop Audio Z-Rails 104HP Black* (Thomann 511616, por pares), y en el pliego, la tapa del valle anodizada en negro después de plegar. Pintado como metal, el negro reflejaba la banda clara del entorno y salía gris; el material va sin `Metallic`, porque la capa anódica es un dieléctrico teñido.
+**El negro.** La tapa del valle sale en un STL propio (`PART="negro"`; el resto del aluminio, rieles incluidos, es `PART="plateado"`). `aluminio` sigue siendo los dos, que es contra lo que mide `piel_choques.py`. En el pliego, la tapa del valle va anodizada en negro después de plegar. **Los rieles se quedan plateados.** La ficha los pedía negros (existen tal cual: *Tiptop Audio Z-Rails 104HP Black*, Thomann 511616), pero Samuel ya los había comprado plateados: *«yo ya compré los rieles plateados, así que serán plateados»* (10-10). Pintado como metal, el negro reflejaba la banda clara del entorno y salía gris; el material va sin `Metallic`, porque la capa anódica es un dieléctrico teñido.
 
 **Lo que no es de fiar.** La zona activa de la pantalla (152,5 × 91,5) está estimada como 7" de diagonal a 5:3, sin hoja de la pieza. Lo que enseña la pantalla es una muestra (una onda y las 16 voces), no un diseño de interfaz.
 
