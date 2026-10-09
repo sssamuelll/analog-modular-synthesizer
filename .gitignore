@@ -107,6 +107,18 @@ case/renders/*.png
 !case/renders/propuesta-diseno-2026-08-16.png
 !case/renders/sam17-case.png
 !case/renders/sam17-case-trasera.png
+# Los tres de la piel organica (propuesta 2026-09-05): son lo que se mira
+# para decidir D-P1..D-P5, y por eso van versionados como los dos de arriba.
+!case/renders/sam17-piel.png
+!case/renders/sam17-piel-trasera.png
+!case/renders/sam17-piel-lado.png
+!case/renders/sam17-piel-cachete.png
+# Los STL para imprimir la piel (case/renders/imprimir_piel.py) pesan ~10 MB
+# cada uno y cambian con cada pasada de la celosia. Mientras la piel no este
+# firmada NO se versionan: los regenera el guion en segundos. Cuando D-P1 se
+# firme, el juego que se manda al servicio entra aqui con su commit, como los
+# DXF del laser.
+case/print/piel/*.stl
 # El lienzo es una PREVIEW: las 6 piezas en rejilla para mirarlas de un vistazo.
 # No se manda al taller (alli van los DXF sueltos) y lo regenera export.ps1.
 # Mismo criterio que los STL: 97.512 lineas de diff que no prueban nada.

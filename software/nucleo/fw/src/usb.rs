@@ -13,9 +13,13 @@
 
 use defmt::{info, warn};
 use embassy_futures::select::{select, Either};
+use embassy_stm32::peripherals::USB1_OTG_HS;
+use embassy_stm32::rcc::mux::{Otgphysel, Rtcsel};
+use embassy_stm32::rcc::{CpuClk, Hse, HseMode, SupplyConfig, HSI_FREQ};
+use embassy_stm32::time::Hertz;
+use embassy_stm32::usb::{Driver, InterruptHandler};
+use embassy_stm32::Peri;
 use embassy_time::{Duration, Instant, Timer};
-use embassy_rp::peripherals::USB;
-use embassy_rp::usb::{Driver, InterruptHandler};
 use embassy_usb::class::midi::MidiClass;
 use embassy_usb::{Builder, Config, UsbDevice};
 use sam17_nucleo_core::descriptor;
@@ -26,9 +30,176 @@ use sam17_nucleo_core::sysex::{desenvolver, envolver, largo_empaquetado};
 use sam17_nucleo_core::usbmidi::{empaquetar_sysex, Desempaquetador, Paquete, Trozo, MAX_SYSEX};
 use static_cell::StaticCell;
 
-embassy_rp::bind_interrupts!(pub struct Irqs {
-    USBCTRL_IRQ => InterruptHandler<USB>;
+embassy_stm32::bind_interrupts!(pub struct Irqs {
+    USB1_OTG_HS => InterruptHandler<USB1_OTG_HS>;
 });
+
+/// La configuracion del reloj que el USB del N657 EXIGE, y que hay que tener
+/// lista antes de `embassy_stm32::init`.
+///
+/// Dos cosas cuelgan el arranque si se dejan por defecto, y hay una tercera
+/// que no lo cuelga pero arma una errata: `RTCSEL` (la ultima linea, con su
+/// cita).
+///
+/// 1. **El reloj de referencia del PHY** tiene que ser 19,2, 20 o 24 MHz
+///    exactos (RM0486 Rev 4, `USBPHYC_CR.FSEL`, p. 3929), y **sale del
+///    cristal**: el HSE de 48 MHz de la Nucleo (X3, UM3417 Rev 3 §7.7.2,
+///    p. 24) partido en dos, `hse_div2_ck` = 24 MHz, que es ademas el valor de
+///    reset de `OTGPHY1SEL` (`00`, RM0486 Rev 4, p. 535).
+///
+///    Medido en placa el 2026-10-01: con la referencia de HSI -> PLL4 -> IC15
+///    a 24 MHz (lo que habia aqui, «para no depender del cristal») el PHY no se
+///    presenta nunca en el bus -- D+ y D- en SE0, Windows no ve nada --; con el
+///    HSE ÷ 2 enumera a alta velocidad. Es lo que hace el ejemplo USB de ST
+///    para esta placa. **Si la placa del hub lleva o no cristal es decision
+///    abierta**: ver el comentario del 2026-10-01 en #150.
+///
+/// 2. **De donde sale el nucleo.** La Discovery lleva SMPS externo (UM3300
+///    Tab. 6 segun el ejemplo de embassy) y con el interno el `init` se queda
+///    colgado en `VOSRDY`. El SAM17 lleva el conmutado INTERNO del chip
+///    (`2026-08-31-alimentacion-n657-design.md`, y es el que #256 no puede
+///    dimensionar sin la columna de 85 C), que es ademas el defecto de
+///    embassy: en la placa del instrumento esta linea se BORRA, no se cambia.
+///
+/// ponytail: una sola configuracion, la de la placa que existe. Cuando haya
+/// dos placas de verdad, sera un parametro y no un `if`.
+pub fn configuracion() -> embassy_stm32::Config {
+    let mut config = embassy_stm32::Config::default();
+    config.rcc.supply_config = SupplyConfig::External;
+    config.rcc.hse = Some(Hse {
+        freq: Hertz(48_000_000),
+        mode: HseMode::Oscillator,
+    });
+    config.rcc.mux.otgphy1sel = Otgphysel::HseDiv2;
+
+    // RTCSEL a su valor de reset, y no por gusto: sin esta linea el firmware
+    // lo deja en `0x0` en operacion NORMAL y sale del `init` ya armado para la
+    // errata ES0620 Rev 5 §2.2.22 (p. 12), que exige los diez selectores de
+    // reloj en su defecto antes de un reset por software. RTCSEL es el unico
+    // de los diez cuyo defecto no es cero, y lo confirma el reset de
+    // `RCC_CCIPR7`: `0x0000_0200` (RM0486 Rev 4, p. 536) es el bit 9 puesto, y
+    // RTCSEL son los bits [9:8] -- o sea `0b10`, lsi_ck (p. 537).
+    //
+    // Lo deja en `0x0` un fallo de embassy: `config.ls.init()`
+    // (`rcc/n6.rs:1038`) escribe `RTCSEL = Lsi`, y despues `config.mux.init()`
+    // (`rcc/n6.rs:1389`) lo pisa desde un `ClockMux` que por defecto es
+    // `mem::zeroed()`. Con el chip asi, un `SYSRESETREQ` -- el de `probe-rs`
+    // al cargar, sin ir mas lejos -- cae en la errata. Ver `reinicio.rs` y
+    // ARRANQUE.md.
+    //
+    // `config.rcc.ls` NO hace falta tocarlo: su defecto ya es `default_lsi()`
+    // (`rcc/bd.rs`), que enciende el LSI y espera `LSIRDY`, asi que lsi_ck
+    // esta puesto.
+    //
+    // ponytail: es un parche a un fallo aguas arriba; se borra el dia que la
+    // rama de embassy deje de pisar `ls.init` con `mux.init`.
+    config.rcc.mux.rtcsel = Rtcsel::Lsi; // RTCSEL = 0x2 (ES0620 p. 12)
+
+    config
+}
+
+/// La unica puerta a `embassy_stm32::init`: la usan `main` y los cuatro
+/// binarios del banco.
+///
+/// Existe por una linea que no es nuestra. probe-rs 0.32 carga el binario en
+/// RAM y lo arranca con **`PRIMASK = 1`**: su secuencia del N6
+/// (`reset_catch_clear`) escribe `EXTRA = 1` «since the NVIC state is
+/// unknown» y nadie lo vuelve a bajar, porque entre esa escritura y nuestro
+/// reset handler no hay reset (probe-rs/probe-rs#4390). Sin esta funcion no
+/// llega ninguna interrupcion: medido en placa el 2026-10-01, el host reseteaba
+/// el bus y el driver USB no se enteraba, y los cuatro binarios del J2 -- que
+/// viven del `EOT`, del DMA, del `EXTI11` y del ejecutor de `GFXTIM` -- habrian
+/// dado cada giro por plazo vencido.
+///
+/// Antes de desenmascarar se apagan y limpian todas las lineas del NVIC, que
+/// es lo que probe-rs temia: la ROM pudo dejar alguna puesta -- su LPTIM4 sigue
+/// vivo cuando arranca el codigo, ES0620 Rev 5 §2.9.4 -- y saltaria a un
+/// manejador que no existe. Las que hacen falta las enciende `init` despues.
+/// En un arranque de verdad `PRIMASK` ya vale 0 y esto no cambia nada.
+pub fn iniciar(config: embassy_stm32::Config) -> embassy_stm32::Peripherals {
+    // SAFETY: antes de `init` no hay ningun manejador de interrupcion vivo ni
+    // seccion critica abierta; con todas las lineas apagadas, desenmascarar no
+    // puede disparar nada.
+    unsafe {
+        let nvic = &*cortex_m::peripheral::NVIC::PTR;
+        for i in 0..nvic.icer.len() {
+            nvic.icer[i].write(u32::MAX);
+            nvic.icpr[i].write(u32::MAX);
+        }
+        cortex_m::interrupt::enable();
+    }
+    embassy_stm32::init(config)
+}
+
+/// El reloj del **nucleo** en hercios, sacado de la MISMA `Config` que lo
+/// construye.
+///
+/// Existe porque el `Clocks` que embassy publica no trae `cpuclk`: su
+/// `set_clocks!` del N6 exporta `sys: Some(clocks.sysclk)` y deja `cpuclk`
+/// dentro de `ClocksOutput` sin publicar (`rcc/n6.rs:1392` y `:244`). Y el
+/// retardo de `j2_spi` se cuenta con `cortex_m::asm::delay`, que cuenta ciclos
+/// del **nucleo**, no del bus: usar el sysclk ahi da un retardo corto en
+/// silencio el dia que el CPU salga de IC1 por encima del sysclk.
+///
+/// La cuenta es la misma expresion de `rcc/n6.rs:409-414`
+/// (`CpuClk::Hsi => unwrap!(input.hsi)`), y `input.hsi` es el `hsi_ck` **crudo**
+/// de 64 MHz (`rcc/n6.rs:988`, `HSI_FREQ`): el prescaler `HSIDIV` NO entra
+/// aqui, porque alimenta el `hsi_div_ck`, que es otra salida del bloque
+/// (RM0486 Rev 4 sec.14.4.5; el propio comentario de embassy en `n6.rs:965-976`
+/// lo explica). Los 64 MHz: DS14791 Rev 10, p. 2, *"Internal oscillators:
+/// 64 MHz HSI"*.
+///
+/// Cualquier otra fuente **cuelga a la vista**: preferimos un panico en el
+/// arranque a un retardo corto que nadie mide. El dia que el CPU corra por IC1
+/// hay que publicar `cpuclk` en `Clocks` (una linea en el `set_clocks!` de
+/// embassy) y esta funcion se retira.
+pub fn f_cpu_hz(config: &embassy_stm32::Config) -> u32 {
+    match config.rcc.cpu {
+        CpuClk::Hsi => HSI_FREQ.0,
+        _ => defmt::panic!(
+            "f_cpu_hz: la CPU no corre por HSI; publica cpuclk (issue #376) antes de mover el reloj"
+        ),
+    }
+}
+
+/// El driver de USB del cerebro.
+///
+/// Los dos OTG del N6 son **solo High Speed** y atacan un PHY UTMI+ integrado
+/// por bolas dedicadas (`OTG1_HSDP` / `OTG1_HSDM`): el driver no toma pines de
+/// D+/D-, y por eso el constructor es `new_hs_dedicated_pins`.
+pub fn driver(p: Peri<'static, USB1_OTG_HS>) -> Driver<'static, USB1_OTG_HS> {
+    // La FIFO de salida es una sola para todos los endpoints OUT. 1 KB es lo
+    // que usa el ejemplo del N6, y con un solo endpoint OUT de 512 B sobra.
+    static EP_OUT: StaticCell<[u8; 1024]> = StaticCell::new();
+
+    let mut config = embassy_stm32::usb::Config::default();
+    // El N657 NO TIENE deteccion de VBUS por hardware, y esto no es una
+    // eleccion nuestra: RM0486 Rev 4, `OTG_GCCFG`, p. 3815 -- *«In this device,
+    // the software override is always active (no hardware detection is
+    // available)»*. El PHY va cableado en modo comparador externo y ni siquiera
+    // llega a VBUS (p. 3756: *«forced in external comparator mode and not
+    // connected to VBUS»*), y el encapsulado no publica bola de VBUS: el censo
+    // de las tablas 18-20 de DS14791 Rev 10 (pp. 89-133) solo da `OTG1_ID` en
+    // C3, que en modo periferico el manual ignora (p. 3766).
+    //
+    // Asi que `vbus_detection` se queda en `false` PARA SIEMPRE en este chip.
+    // Lo que falta es lo otro, y es de la placa. El manual lo escribe entero,
+    // p. 3766: *«External circuitry should be used to detect presence of a
+    // voltage on the VBUS connector pin»*, *«The B-peripheral VBUS detection
+    // should be overridden with OTG_GOTGCTL.BVALOEN = 1»*, y el resultado
+    // *«should be maintained by writing the current value to
+    // OTG_GOTGCTL.BVALOVAL»*.
+    //
+    // En embassy eso es `vbus_valid_override = true` (deja `BVALOEN = 1` y no
+    // toca `BVALOVAL`, para que lo escriba la aplicacion). Hoy va en `false`,
+    // y eso pone `BVALOVAL = 1` fijo: **el cerebro cree que el cable esta
+    // siempre puesto**. Es la mentira conocida, y es del #350: pide divisor de
+    // VBUS a un GPIO (el N657 tolera 3,6 V en una TT, no 5) y el esquematico
+    // del hub, que no existe.
+    config.vbus_detection = false;
+
+    Driver::new_hs_dedicated_pins(p, Irqs, EP_OUT.init([0; 1024]), config)
+}
 
 /// `0x1209` es pid.codes, el rango libre para proyectos abiertos. El PID es de
 /// pruebas: registrar uno de verdad es del dia que esto se distribuya, y esta
@@ -36,8 +207,18 @@ embassy_rp::bind_interrupts!(pub struct Irqs {
 const VID: u16 = 0x1209;
 const PID: u16 = 0x0017;
 
-/// 64 bytes es el maximo de un endpoint bulk a full speed.
-const TAM_PAQUETE: u16 = 64;
+/// 512 bytes, y no es una eleccion: es el UNICO valor legal para un endpoint
+/// bulk a high speed (USB 2.0 sec.5.8.3 -- a full speed son 8, 16, 32 o 64).
+///
+/// El 64 que habia aqui venia del RP2350, que enumera a full speed. Este chip
+/// no puede: los dos OTG del N6 son **solo High Speed** y atacan el PHY UTMI+
+/// integrado -- esta escrito treinta lineas mas arriba, en `driver()`. Con 64
+/// el descriptor que sale por el cable es invalido, y eso no lo descubre el
+/// enlace: lo descubre el host al enumerar.
+///
+/// HUECO: sin placa (#231) nadie ha visto enumerar esto. Lo que se sabe es que
+/// 64 esta mal; que 512 baste se comprueba en el bring-up.
+const TAM_PAQUETE: u16 = 512;
 
 // El buffer de lectura se DERIVA de esta constante (`[0u8; TAM_PAQUETE as
 // usize]`), asi que la invariante "el buffer es al menos el tamano de endpoint"
@@ -66,14 +247,14 @@ const TAM_PAQUETE: u16 = 64;
 /// compilador y no la memoria de nadie.
 const MAX_SOBRE_B: usize = 3 + largo_empaquetado(descriptor::MAX_DESCRIPTOR_B);
 
-pub type Sam17Usb = UsbDevice<'static, Driver<'static, USB>>;
+pub type Sam17Usb = UsbDevice<'static, Driver<'static, USB1_OTG_HS>>;
 
 pub struct Puertos {
     pub dispositivo: Sam17Usb,
-    pub midi: MidiClass<'static, Driver<'static, USB>>,
+    pub midi: MidiClass<'static, Driver<'static, USB1_OTG_HS>>,
 }
 
-pub fn montar(driver: Driver<'static, USB>) -> Puertos {
+pub fn montar(driver: Driver<'static, USB1_OTG_HS>) -> Puertos {
     let mut config = Config::new(VID, PID);
     config.manufacturer = Some("SAM17");
     config.product = Some("SAM17 nucleo");
@@ -97,7 +278,10 @@ pub fn montar(driver: Driver<'static, USB>) -> Puertos {
     // Un jack de entrada y uno de salida: el instrumento habla y escucha.
     let midi = MidiClass::new(&mut builder, 1, 1, TAM_PAQUETE);
 
-    Puertos { dispositivo: builder.build(), midi }
+    Puertos {
+        dispositivo: builder.build(),
+        midi,
+    }
 }
 
 #[embassy_executor::task]
@@ -123,7 +307,7 @@ const PERIODO_TICK: Duration = Duration::from_millis(1);
 /// las aserciones `const` del buzon acotan los caminos por separado; meterlas
 /// en el mismo `Respuestas` podria desbordarlo.
 async fn correr_el_reloj(
-    midi: &mut MidiClass<'static, Driver<'static, USB>>,
+    midi: &mut MidiClass<'static, Driver<'static, USB1_OTG_HS>>,
     instrumento: &mut Instrumento,
 ) -> Result<(), ()> {
     let ahora = Instant::now();
@@ -139,7 +323,7 @@ async fn correr_el_reloj(
 /// El lazo. Todo lo que hace es cablear piezas ya probadas.
 #[embassy_executor::task]
 pub async fn atender(
-    mut midi: MidiClass<'static, Driver<'static, USB>>,
+    mut midi: MidiClass<'static, Driver<'static, USB1_OTG_HS>>,
     instrumento: &'static mut Instrumento,
 ) -> ! {
     let mut desemp = Desempaquetador::nuevo();
@@ -155,7 +339,8 @@ pub async fn atender(
     // empezar. Ningun poll de ese ciclo devuelve `Pending`: la tarea gira para
     // siempre dentro de un solo `poll()` y se lleva por delante la pila USB y
     // el reloj. Bastaba con que el host agrupara eventos en una transferencia,
-    // que es lo normal y es para lo que sirve declarar 64.
+    // que es lo normal y es para lo que sirve declarar el tamano entero del
+    // endpoint. (Aquel 64 era del RP2350, a full speed; aqui son 512.)
     let mut entrada = [0u8; TAM_PAQUETE as usize];
     let mut plano = [0u8; MAX_SYSEX];
     let mut proximo = Instant::now() + PERIODO_TICK;
@@ -196,7 +381,7 @@ pub async fn atender(
                 Ok(n) => n,
                 Err(_) => break, // se desconecto; a esperar de nuevo
             };
-            // Un bulk de 64 B trae HASTA DIECISEIS paquetes USB-MIDI de 4, y
+            // Un bulk de 512 B trae HASTA CIENTO VEINTIOCHO paquetes USB-MIDI de 4, y
             // antes solo se miraba el caso de uno suelto: `Ok(4) => {}` y
             // cualquier otra cosa a la basura. O sea que en cuanto el host
             // agrupara, se tiraba la transferencia entera.
@@ -253,7 +438,7 @@ pub async fn atender(
 }
 
 async fn responder(
-    midi: &mut MidiClass<'static, Driver<'static, USB>>,
+    midi: &mut MidiClass<'static, Driver<'static, USB1_OTG_HS>>,
     instrumento: &Instrumento,
     resp: Respuesta,
 ) -> Result<(), ()> {
@@ -264,7 +449,7 @@ async fn responder(
 }
 
 async fn mandar_mensaje(
-    midi: &mut MidiClass<'static, Driver<'static, USB>>,
+    midi: &mut MidiClass<'static, Driver<'static, USB1_OTG_HS>>,
     m: &Mensaje,
 ) -> Result<(), ()> {
     let mut plano = [0u8; 64];
@@ -278,7 +463,7 @@ async fn mandar_mensaje(
 /// buffers pequeños y deja que el cliente empiece a parsear antes de que
 /// termine — que con 27 medidas ya se nota.
 async fn mandar_descriptores(
-    midi: &mut MidiClass<'static, Driver<'static, USB>>,
+    midi: &mut MidiClass<'static, Driver<'static, USB1_OTG_HS>>,
     instrumento: &Instrumento,
 ) -> Result<(), ()> {
     // B3, el contrato del volcado. La cabecera va ANTES del primer descriptor
@@ -340,7 +525,7 @@ async fn mandar_descriptores(
 }
 
 async fn mandar_sysex(
-    midi: &mut MidiClass<'static, Driver<'static, USB>>,
+    midi: &mut MidiClass<'static, Driver<'static, USB1_OTG_HS>>,
     sobre: &[u8],
 ) -> Result<(), ()> {
     let mut paquetes = [[0u8; 4]; MAX_SYSEX / 3 + 1];

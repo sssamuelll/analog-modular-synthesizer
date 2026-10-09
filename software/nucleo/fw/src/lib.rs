@@ -1,0 +1,12 @@
+#![no_std]
+
+//! La biblioteca del firmware del cerebro: lo que comparten `main.rs` y los
+//! binarios del banco (`src/bin/`). Capa DELGADA a proposito, igual que
+//! `main.rs`: lo que merezca un test vive en `sam17-nucleo-core`.
+
+pub mod j2_banco;
+pub mod j2_ejecutor;
+pub mod j2_esclavo;
+pub mod j2_spi;
+pub mod reinicio;
+pub mod usb;

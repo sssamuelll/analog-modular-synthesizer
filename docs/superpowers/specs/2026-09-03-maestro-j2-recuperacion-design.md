@@ -1,6 +1,6 @@
 # El maestro del J2: plazo, reinicio y cuenta, porque el silicio se cuelga
 
-**Fecha**: 2026-09-03 · **Estado**: v2, pasó la junta, a firma · **Sujeto**: el cerebro (STM32N657, hub §S10) como maestro de las seis ranuras SPI del J2 · **Cierra**: #287 (puntos 1 a 3) · **Cuelga de**: la cabecera del J2 (2026-09-02), el J2 punto a punto (2026-08-25), voz-total §9.2, el hub N657 (2026-08-30)
+**Fecha**: 2026-09-03 · **Estado**: **v2 FIRMADA el 2026-09-10** · **Sujeto**: el cerebro (STM32N657, hub §S10) como maestro de las seis ranuras SPI del J2 · **Cierra**: #287 (puntos 1 a 3, cerrado) · **Cuelga de**: la cabecera del J2 (2026-09-02), el J2 punto a punto (2026-08-25), voz-total §9.2, el hub N657 (2026-08-30)
 
 ---
 
@@ -47,6 +47,23 @@ Este papel lo arregla desde el marco de un fabricante, no desde el de un proyect
 | Los dos reportantes usan `SPI5`; nadie probó otra instancia | Seis enlaces en `SPI1-6` | Pregunta upstream (§9, acción 1) |
 | Escribir a `TXDR` desatasca el caso bloqueante; en DMA no | — | El reinicio es el del manual, no el paliativo |
 
+> **Enmienda del 2026-09-08 (§1.1, alcance):** la premisa «nadie probó otra
+> instancia» queda refutada. En [embassy-rs/embassy#5607](https://github.com/embassy-rs/embassy/issues/5607),
+> jake-taf, uno de los reportantes originales, respondió el 2026-09-03:
+> *«I have observed this problem on SPI1 as well»*. Hay cuelgues reportados en
+> **dos instancias, SPI5 y SPI1**. El defecto no es exclusivo de SPI5; esta
+> respuesta no demuestra que fallen todas las instancias del bloque ni
+> identifica la causa. La pregunta de la fila ya tiene respuesta con ese alcance.
+
+> **Enmienda del 2026-09-08 (§1.1, consecuencia de diseño):** cambiar de
+> instancia no es una salida de esquemático acreditada por la evidencia. La
+> recuperación es **obligatoria para las seis ranuras SPI**: el plazo de D3,
+> los ocho pasos de D4 en su orden, la ventana deslizante y las dos marcas de
+> salud de D7. La política vive en `software/nucleo/core/src/maestro_j2.rs` y
+> el driver ejecuta la recuperación en `software/nucleo/fw/src/j2_spi.rs`
+> (D8). Es un requisito del diseño aun sin diagnóstico, y ninguna ranura queda
+> exenta por llevar una instancia distinta de SPI5.
+
 ### 1.2 Lo que embassy hace, leído en el código *(⚠ corregido por S-2)*
 
 `embassy-stm32/src/spi/mod.rs`, `main` al 2026-09-03 (copia en el scratchpad de la sesión, 2130 líneas):
@@ -85,6 +102,15 @@ O sea: el NSS por hardware que el censo ya reparte **no funciona sin `TSIZE`**. 
 
 **Por qué importa contra el #5607, dicho sin exagerar:** el montaje del hilo mueve el `CS` con un GPIO. El nuestro lo mueve el periférico. Eso es lo único que separa los dos montajes, porque `TSIZE > 0` ya lo usa el `read` de embassy y también se cuelga (§1.1). No es prueba de nada; es una variable que el bring-up mueve (§9, riesgo 1).
 
+> **Enmienda del 2026-09-08 (D1, NSS por hardware):** jake-taf respondió el
+> 2026-09-03 en [#5607](https://github.com/embassy-rs/embassy/issues/5607):
+> *«I haven't tried that mode.»*, sobre `SSM = 0, SSOE = 1`. No hay una prueba
+> de ese modo documentada en la evidencia disponible. El bring-up (#231)
+> aportará nuestro primer dato: si no se cuelga, será un hallazgo propio bajo
+> las condiciones ensayadas; si se cuelga igual, el modo de NSS dejará de
+> separar los casos con cuelgue. Sigue siendo **HUECO** el resultado con NSS
+> por hardware; la recuperación de D4 sigue siendo requisito en ambos casos.
+
 **Lo que trae de regalo:** con `TSIZE > 0` y `SSOM = 0`, el fin de la trama es un flanco de NSS generado por hardware al `EOT`, exacto al reloj. La cuenta de bytes en el flanco del esclavo (cabecera D6.4, H-14) recibe un flanco limpio.
 
 ### D2. Las dos esperas son cancelables, y el plazo abraza las dos *(⚠ reescrita: la v1 ponía el plazo solo sobre `EOT` — H-1, S-12, H-11)*
@@ -114,6 +140,8 @@ La ISR de `SPIn` hace lo mínimo: lee `SR`, guarda las banderas que importan (`E
 2. **El resultado guardado se borra al armar**, antes de habilitar nada. Nunca se consume un búfer de la trama anterior.
 3. **El `poll` del futuro de `EOT` registra el waker antes de mirar la bandera.** Al revés pierde el despertar y el plazo vence sobre una trama buena.
 
+> **Enmienda del 2026-09-18 (D2 regla 1, lectura; revisión del driver, ruling R13):** el hardware no etiqueta el `EOT` con ninguna generación, así que lo único que la ISR puede copiar es la generación **armada en el instante en que corre**; la comparación de la regla 1 no puede fallar por sí sola. Lo que la regla 1 protege de verdad es un resultado guardado que la tarea no llegó a consumir: lo descarta y lo cuenta la regla 2 al armar (`Turno::armar`, en `core`). Y lo que protege a la generación es la disciplina de `EOTIE` (apagado en D4.1, encendido después de armar) más una cosa que faltaba: **una ISR ya pendiente en el NVIC cuando D4 apaga `EOTIE` corre después del reinicio**, y por eso D4 hace `NVIC::unpend` de la interrupción de la ranura tras el paso 1 y tras el paso 7.
+
 **El orden de arranque, y por qué `EOTC` va donde va** *(⚠ S-12d, H-11)*: el manual dice en §67.11.6, p. 3492, que *«EOT is set by hardware as soon as a full transfer is complete, that is when SPI is re-enabled or when TSIZE number of data have been transmitted and/or received on the SPI. EOT is cleared when SPI is re-enabled or by writing 1 to the EOTC bit of the SPI_IFCR register optionally.»*, y en §67.11.6, p. 3490, que *«All the flags of this register are not cleared automatically when the SPI is reenabled.»* Las dos frases no encajan del todo, y este papel no elige cuál es la buena: **escribe `EOTC` después de `SPE = 1` y antes de `EOTIE = 1`**, con lo que da igual cuál sea. Es decisión propia por prudencia, no cita. El bring-up la mide (§9, riesgo 5). El orden completo:
 
 ```
@@ -124,6 +152,23 @@ SPE = 0 → TSIZE = N (CR2, solo con SPE = 0, p. 3484) → RXDMAEN → canales d
 Los pasos del DMA son los de §67.4.14, p. 3451: *«When starting communication using DMA, to prevent DMA channel management raising error events, these steps must be followed in order: 1. Enable the DMA Rx buffer in the RXDMAEN bit of the SPI_CFG1 register, if DMA Rx is used. 2. Enable DMA requests for Tx and Rx in DMA registers, if the DMA is used. 3. Enable the DMA Tx buffer in the TXDMAEN bit of the SPI_CFG1 register, if DMA Tx is used. 4. Enable the SPI by setting the SPE bit.»*
 
 **El SPI está apagado entre transferencias, siempre.** El manual lo recomienda tres veces (p. 3448 *«it is recommended to disable the SPI and enable it again when the transfer is complete, even if the SPI configuration is not changed»*; p. 3492 *«SPI is strongly suggested to be disabled and re-enabled before next transfer starts despite its setting is not changed»*; y `TSIZE` solo se puede escribir con `SPE = 0`, p. 3484), embassy lo hace, y D4 lo necesita. *(⚠ S-4b)*
+
+> **Enmienda del 2026-09-11 (D2, el hueco entre `SPE = 1` y `CSTART`; acta del 11-09, fichas 1 y 3):** el chip hermano tiene documentado un atasco del maestro que el orden de arriba no evita y, bajo una lectura del manual, provoca. ES0396 Rev 9 (STM32H750/H753, bloque `spi_v4`; el N657 es `spi_v5` y embassy los trata juntos), §2.14.2 «Master data transfer stall at system clock much faster than SCK», presente en todas las revisiones de silicio (A A A):
+>
+> *«With the system clock (spi_pclk) substantially faster than SCK (spi_ker_ck divided by a prescaler), SPI/I2S master data transfer can stall upon setting the CSTART bit within one SCK cycle after the EOT event (EOT flag raise) signaling the end of the previous transfer. Workaround. Apply one of the following measures: • Disable then enable SPI/I2S after each EOT event. • Upon EOT event, wait for at least one SCK cycle before setting CSTART. • Prevent EOT events from occurring, by setting transfer size to undefined (TSIZE = 0) and by triggering transmission exclusively by TXFIFO writes.»*
+>
+> Bajo la lectura literal de p. 3492 (*«EOT is set … when SPI is re-enabled»*), el `SPE = 1` del orden de arriba es él mismo un evento `EOT`, y `CSTART` llega tres escrituras APB después: **entre 15 y 60 ns** según pclk (cálculo de Halberg, junta del 11-09, H-1; no medido), contra **100 ns** de ciclo de SCK al piso de 10 MHz y 29 ns a los 34,5 MHz de D8. La solución 1 de la errata, apagar y encender, que D2 ya aplica, genera bajo esa lectura el evento que la solución 2 quiere evitar. Y ES0620 Rev 5 §2.2.1 (N657, #363) dice que el prescaler de APB no funciona y pclk replica siempre a hclk: la razón pclk/SCK no se puede bajar por ese camino.
+>
+> **Lo que cambia:** entre `SPE = 1` y `EOTC` el driver **lee de vuelta `CR1`** y **espera al menos un ciclo de SCK contado desde esa lectura**, en ciclos de CPU (80 a 800 MHz para 100 ns; 24 para 29 ns), no con `embassy_time`, cuyo grano de 1 µs es diez veces el ciclo. La lectura de vuelta es el anclaje: según Halberg, una escritura a memoria Device puede quedar en vuelo y el retardo transcurrir antes de que `SPE = 1` llegue al periférico; una lectura devuelve cuando el periférico contesta. Coste: 0,08 % del giro por ranura. El orden queda:
+>
+> ```
+> SPE = 0 → TSIZE = N → RXDMAEN → canales de DMA armados → TXDMAEN
+> → SPE = 1 → leer CR1 → esperar ≥ 1 T_SCK → EOTC → EOTIE = 1 → CSTART
+> ```
+>
+> **Estado de la evidencia:** ES0620 Rev 5 (agosto 2026), la errata del N657, **no lista ningún ítem del periférico SPI**. La enmienda entra **por analogía** con el H7 y así queda marcada hasta que la placa la mida. La medida que dirime la lectura cuesta un acceso: con nada armado, escribir `SPE = 1` y leer `SR.EOT`. Si vuelve 1, la hipótesis está viva y todo armado cae dentro de la ventana al piso; si vuelve 0, el `EOT` anterior fue el de la trama del giro previo y D2 ya la cubría con más de 100 µs de sobra. Después, el barrido del retardo (§9, enmienda del 11-09, punto 3): una tasa de cuelgue que dependa del retardo es la firma de la errata; una que no, no lo es.
+>
+> **Medido el 2026-10-01 en la NUCLEO-N657X0-Q** (firmware `259bc91`, binario `control_positivo`; una corrida anterior con el mismo código sin commitear dio lo mismo): `eot_al_encender = 0` con el SPI5 recién reseteado (esclavo) y `= 0` con `MASTER = 1`. Prender no levanta `EOT`: por lo escrito arriba, D2 ya la cubría, y la errata 2.14.2 no es el mecanismo de #5607 en esta configuración (junta de Halberg, 11-09). Queda el barrido del retardo, que es lo que dice si la tasa depende de él.
 
 ### D3. Toda espera tiene plazo, y el plazo sale de R-E1
 
@@ -141,12 +186,49 @@ t_nominal(msg) = bytes_clocados(msg) × 8 / f_reloj_sancionado(ranura)
 
 **Lo que NO se pone bajo plazo:** el `T_GAP` entre mensajes y la cadencia del giro. Esos son del planificador (cabecera D8) y no tienen nada que colgarse.
 
+> **Nota del 2026-09-19 (D3, la cota contra el reloj real):** los 82,4 µs y los 184,8 de arriba suponen que el enlace cloca a los 10 MHz del piso. **No es lo que sale.** El `MBR` solo da potencias de dos y redondea hacia abajo, y el kernel del SPI5 es `pclk2` = 32 MHz (no el HSI de 64: el mux se queda en su cero, `Spisel45::Pclk2`; la cadena está en `j2_spi::Ranura::f_sck_hz` y en el `//!` de `control_positivo`). Pedir 10 MHz da `/4`, o sea **8 MHz reales**, y con ese reloj:
+> 
+> - el `SET` de dieciséis, 103 bytes clocados, dura **103 µs** — por encima de los **100 µs de R-E1**;
+> - su plazo sale `2 × 103 + 20` = **226 µs** — por encima de los **220 µs** que esta misma sección publica como cota.
+> 
+> Las dos son la misma cosa vista dos veces, y ninguna es un defecto del driver: **el driver usa el `f_sck` real y lo publica** (`Ranura::f_sck_hz`, la columna `reloj_MHz` del CSV y la línea de arranque de los cuatro binarios), así que el plazo que calcula es el correcto para el reloj que hay. Lo que está mal es la premisa de que el piso son 10 MHz clocados. Elegir el piso de verdad —subir el kernel, bajar el mensaje más largo, o sancionar la ranura— es el **#380**, y hasta entonces esta cota queda **declarada y no cumplida** para el `SET` de dieciséis. Ningún otro mensaje de la tabla de la cabecera §4 la roza: el siguiente, `BAHIA` con 71 bytes, son 71 µs y 162 de plazo.
+
 ### D4. Al expirar, el periférico se reinicia según el manual, entero y en orden, y el reinicio se cuenta *(⚠ reescrita: la v1 omitía un paso, encendía al final y dejaba `EOTIE` armado — S-4, S-12a, S-13, H-8)*
 
 Un plazo vencido no se reintenta: se reinicia. La receta es la del RM0486, completa, y termina con el SPI **apagado**, que es como está siempre entre transferencias (D2).
 
 1. **Silenciar la ISR.** `EOTIE = 0`. Si no, el `CSUSP` del paso 3 produce `SUSP`, `SUSP` dispara la ISR (`EOTIE` cubre `SUSP`, p. 3490), y la ISR limpia `SUSPC` antes de que el paso 3 lo vea. *(⚠ S-12a)*
 2. **Soltar el DMA.** Los dos `Transfer` de embassy se sueltan: su `Drop` (`gpdma/mod.rs:1287-1295`) llama a `request_reset()` y espera a que el canal pare; `request_reset` (`:902-910`) hace `request_pause()`, espera `is_running() == false`, y resetea el canal. Esa espera es un bucle con cota práctica (la pausa actúa al fin de la ráfaga en curso) pero sin cota escrita: si el canal de GPDMA mismo no responde, ahí se queda, y eso lo cubre el IWDG del hub (D5), no este papel (§9, riesgo 6). Esto es el paso 1 del cierre del manual, §67.4.14, p. 3451: *«To close communication, it is mandatory to follow these steps in order: 1. Disable DMA requests for Tx and Rx in the DMA registers, if the DMA issued. 2. Disable the SPI by following the SPI disable procedure. 3. Disable DMA Tx and Rx buffers by clearing the TXDMAEN and RXDMAEN bits of the SPI_CFG1 register, if DMA Tx and/or DMA Rx are used.»*
+
+   > **Enmienda del 2026-09-18 (D4 paso 2 y R-MJ2; #368, riesgo 6 de la junta del 11-09):**
+   > la espera del `Drop` deja de ser «de embassy y declarada» y pasa a tener **cota
+   > propia**. El driver no suelta ningún `Transfer` mientras su canal pueda estar
+   > corriendo: pide `request_pause()` a los dos canales (una escritura de
+   > `CxCR.SUSP`, sin bucle; `gpdma/mod.rs:882-887`), sondea `is_running()`
+   > como máximo **`T_CANAL` (ESTIMADO 10 µs, de la clase de `T_SUSP`)** y solo
+   > entonces los suelta: el `Drop` de embassy (`request_reset()` + su espera,
+   > `gpdma/mod.rs:1287-1295`) entra y sale al instante con el canal ya suspendido.
+   > Si un canal no para dentro de la cota, el driver **escala**: deja los dos
+   > `Transfer` en su `ManuallyDrop` sin soltar (no se llama a `drop`; un
+   > `mem::forget` sobre un `ManuallyDrop` no hace nada) y resetea el GPDMA1 entero por RCC
+   > (`rcc::enable_and_reset::<GPDMA1>()`; el generador de embassy implementa
+   > `RccPeripheral` para `GPDMA1`). Las otras cinco ranuras ven sus futuros de DMA
+   > resolverse, no reciben `EOT`, vencen su plazo y ejecutan D4 cada una: un
+   > reinicio de las seis ranuras **bajo control y dentro de los 50 ms del módulo**,
+   > no un reinicio del chip. Se cuenta aparte (`escaladas_gpdma`, en `fw`, no en
+   > la política). El IWDG del hub deja de ser la cobertura del riesgo 6: es la red
+   > de lo que ni un reset de RCC arregla, que por construcción no existe. Por qué
+   > no la otra salida del issue (correr el reinicio en una tarea fuera del
+   > ejecutor): una espera sin cota bloquea al ejecutor donde gire, y todos tienen
+   > algo debajo que no puede parar. Los pasos están en
+   > `docs/superpowers/plans/2026-09-18-j2-fase-b.md`, tarea 7d.
+   >
+   > *Correccion del mismo 18-09:* la primera redaccion de esta enmienda mandaba
+   > `request_reset()` y luego sondear con cota. `request_reset()` de embassy ya
+   > contiene `request_pause(); while is_running() {}` sin cota (`gpdma/mod.rs:902-910`,
+   > que este mismo paso cita arriba): la cota habria sido codigo muerto. Lo cazo
+   > la revision del driver, no el plan. La forma que vale es la de arriba.
+
 3. **Suspender, con cota.** `CSUSP = 1` y sondear `SUSP = 1` **como máximo `T_SUSP` (ESTIMADO 10 µs)**, contando con `embassy_time::Instant` (tick declarado en el plan; 1 MHz cubre esta cota) o con ciclos. §67.11.1, p. 3483: *«In master mode, when this bit is set by software, the CSTART bit is reset at the end of the current frame and communication is suspended. The user has to check SUSP flag to check end of the frame transfer.»* Es una espera síncrona **acotada**, que R-MJ2 permite: es el único sitio donde un sondeo con cota es la herramienta honesta, porque el periférico está mintiendo. *(⚠ S-13, V-11)*
 4. **Limpiar `SUSP` incondicionalmente.** `SUSPC = 1`, haya llegado `SUSP` o no. §67.11.6, p. 3491: *«This bit must be cleared prior to disabling the SPI. This is done by setting the SUSPC bit of SPI_IFCR exclusively.»* Escribir `SUSPC` sin `SUSP` no hace nada, y escribirlo con `SUSP` recién llegado (entre la cota y el apagado) evita apagar con la suspensión a medio aceptar. *(⚠ S-4c)*
 5. **Apagar.** `SPE = 0`. §67.11.1, p. 3484:
@@ -164,6 +246,13 @@ Un plazo vencido no se reintenta: se reinicia. La receta es la del RM0486, compl
 
 **Lo que NO se hace:** escribir a `TXDR` para desatascar. Es el paliativo del hilo para el caso bloqueante, no funciona en DMA, y meter un byte en el bus a mitad de un estado desconocido es peor que apagar.
 
+> **Enmienda del 2026-09-08 (D4, dato del mecanismo):** jake-taf confirmó el
+> 2026-09-03 en [#5607](https://github.com/embassy-rs/embassy/issues/5607):
+> *«Interesting. I stuck with blocking since I have a workaround when it gets stuck (`SPI1.txdr8().write_value(0)`), but both have the problem»*.
+> Confirma que usa ese paliativo en el camino bloqueante y que el cuelgue
+> ocurre tanto en el bloqueante como con DMA. La prohibición de escribir a
+> `TXDR` para desatascar sigue en pie, tal cual (R-MJ3).
+
 ### D5. El J2 corre en su propio ejecutor, con una tarea por ranura; el IWDG es del hub *(⚠ reescrita entera: la v1 tenía un vigía y alimentaba el IWDG desde el J2 — V-4, V-5, V-6, S-7, S-8, H-1, H-2, H-6, H-9)*
 
 La v1 ponía un vigía en un ejecutor de interrupción que reiniciaba ranuras estancadas. La junta lo tumbó por tres lados que no admiten parche: no cubre ningún fallo que D2-D4 no cubran (si la tarea está viva, el plazo gana; si el ejecutor está congelado, reiniciar el SPI no lo descongela); no puede soltar los `Transfer` que posee la tarea, así que corre otra receta y deja dos dueños del canal; y una sección crítica que no suelta lo congela con lo que vigila. Era otra mano en el mismo volante, y R-C8 dice un solo escritor. **Muere.** Lo que queda es más simple y es lo que corre:
@@ -172,6 +261,8 @@ La v1 ponía un vigía en un ejecutor de interrupción que reiniciaba ranuras es
 2. **El planificador sigue siendo el único escritor del enlace** (R-C8). Decide qué baja por cada ranura en cada giro; las seis tareas son el transporte, como lo son los canales de DMA. No deciden nada del protocolo.
 3. **Las seis tareas viven en un `InterruptExecutor` propio** (`embassy-stm32/src/executor.rs:196`), a prioridad por encima del ejecutor de hilo donde viven la pantalla, el USB y el MIDI (`fw/src/main.rs`). Una tarea de pantalla que retenga la CPU 15 ms no retrasa un giro del J2 ni un microsegundo; sin esto, la simulación de Halberg da giros perdidos a partir de 6 ms de retención y el módulo soltando a 50 (H-9). El J2 es tiempo real a 8 kHz y la pantalla no; no comparten ejecutor.
 4. **El IWDG es del chip, no del J2.** Alimentarlo desde el planificador del enlace definía la vida del instrumento como «el J2 dio un giro», y con una ranura sin módulo lo habría disparado diez veces por segundo (H-6). Este papel **no decide** quién alimenta el IWDG ni con qué plazo. Le manda al papel del hub (§10) un **supervisor de vitalidad**: cada subsistema con requisito de tiempo real (el J2, la pantalla, el USB, la radio) escribe un sello; el supervisor alimenta el IWDG solo si todos los que deben estar vivos lo están. Lo que el J2 aporta es **un sello por ranura activa**, escrito al armar cada transferencia (no al completarla: una ranura reiniciando también está viva). Y le manda una cota: **el plazo del IWDG es estrictamente mayor que la ventana del watchdog de trama del módulo (~50 ms)**, para que cuando el chip se reinicie el módulo ya esté en release por su cuenta y el reinicio no añada silencio: lo termina de ordenar. Cuánto silencio añade el arranque del cerebro (descubrimiento por I²C, `HOLA`, los 7,9 ms de refresco de la cabecera D5) no está cuantificado y es HUECO del hub (S-10).
+
+> **Enmienda del 2026-09-18 (D5.1 y §3; revisión del ejecutor, ruling R15):** tras un plazo vencido la tarea de la ranura **se realinea** al periodo (`Ticker::reset()`), no recupera los tics perdidos. Sin esto el `Ticker` de embassy clocaría en ráfaga hasta reengancharse y dejaría fronteras de trama con gap ≈ 0, justo cuando el esclavo acaba de que le arranquen el `CS`: borraría el `T_GAP` de la cabecera D8 (2 µs provisional, HUECO). El techo de recuperación de §3 se mantiene: 220 + 20 + 125 = 365 µs < 490.
 
 ### D6. La corrupción la absorbe el CRC del sobre; lo que tiene red se repara solo, y lo que no la tiene se dice *(⚠ precisada: V-7, S-10, S-11, H-4)*
 
@@ -241,7 +332,7 @@ Todo lo de esta sección lo asevera `recuperacion_j2_budget.py` (§8). Aquí, en
 ## 4. Las reglas
 
 - **R-MJ1.** Ninguna transferencia del J2 en el cerebro corre con `TSIZE = 0`. Falla al compilar: `TSIZE` sale de un `NonZeroU16`. Y `TSIZE` es el largo clocado de la cabecera §4, con relleno.
-- **R-MJ2.** Ninguna espera del J2 en el cerebro es un bucle síncrono **sin cota**. Las dos esperas de la transferencia son futuros bajo plazo (D2); el sondeo de `SUSP` en D4 tiene cota escrita (`T_SUSP`); la espera del `Drop` del GPDMA es de embassy y se declara (D4.2, riesgo 6). *(⚠ V-11, S-13: la v1 decía «ningún bucle» y su grep no habría visto ni el `Drop` ni `T_SUSP`)*
+- **R-MJ2.** Ninguna espera del J2 en el cerebro es un bucle síncrono **sin cota**. Las dos esperas de la transferencia son futuros bajo plazo (D2); el sondeo de `SUSP` en D4 tiene cota escrita (`T_SUSP`); la espera del `Drop` del GPDMA tiene cota escrita (`T_CANAL`, D4.2, enmienda del 18-09) y escalada al reset del GPDMA1 por RCC. *(⚠ V-11, S-13: la v1 decía «ningún bucle» y su grep no habría visto ni el `Drop` ni `T_SUSP`)*
 - **R-MJ3.** El reinicio del periférico sigue los ocho pasos de D4 en ese orden, y cada paso cita su página. No se escribe a `TXDR` para desatascar.
 - **R-MJ4.** Los umbrales de D3 y D7 son parámetros, no literales. Viven en un solo `struct Umbrales` con sus valores ESTIMADO y su fuente, y `recuperacion_j2_budget.py` los lee de `maestro_j2.rs`, no los copia.
 - **R-MJ5.** Cada ranura activa tiene su tarea, y las seis viven en el ejecutor del J2, no en el de hilo. Ninguna tarea del ejecutor de hilo puede retrasar un giro.
@@ -286,6 +377,15 @@ Todo lo de esta sección lo asevera `recuperacion_j2_budget.py` (§8). Aquí, en
 | La cota superior de los 50 ms (cuánto sustain fantasma es tolerable) | voz-total (§10) |
 | Región MPU no cacheable o invalidación explícita para los búferes | El plan de implementación |
 | La contribución upstream de las esperas cancelables | Su propio PR, cuando haya Discovery |
+
+> **Enmienda del 2026-09-08 (§6, fila del alcance):** **cerrada por upstream
+> el 2026-09-03 la pregunta de si el cuelgue es exclusivo de SPI5**. jake-taf
+> respondió en [#5607](https://github.com/embassy-rs/embassy/issues/5607):
+> *«I have observed this problem on SPI1 as well»*. El alcance observado ya
+> abarca SPI5 y SPI1 (§1.1). Lo que sigue abierto es la **causa: silicio o
+> driver**. Este cierre no acredita una reproducción en las seis instancias;
+> el resultado en nuestro montaje con NSS por hardware sigue siendo HUECO
+> de #231 (D1, §9 riesgo 1).
 
 ---
 
@@ -334,7 +434,7 @@ Sale con `2` (HUECO) mientras `resistencia_j2.csv` no tenga fila o el hub no dec
 | 3 | **El módulo no limpia su SPI al contar corto** y arrastra medio byte: las tramas siguientes fallan CRC hasta que algo lo realinee | La enmienda al papel del módulo (§10) y su test: abortar una trama a mitad de byte desde el maestro y ver que la siguiente se acepta |
 | 4 | ~~embassy-stm32 no expone lo que el driver propio necesita~~ | **Cerrado en la v2**: verificado en `main` (§1.2, último párrafo). Queda que compile, y eso es el primer paso del plan |
 | 5 | **`EOT` se pone al rehabilitar** (p. 3492) y el orden `SPE = 1 → EOTC → EOTIE` de D2 no basta por alguna razón que el manual no dice | Bring-up: cien mil transferencias contando `eot_tardios` y `plazos_vencidos` con el bus al aire; si alguno sube sin cuelgue real, el orden se revisa |
-| 6 | **El canal de GPDMA no responde al reset** y el `Drop` del `Transfer` de embassy se queda en su bucle | Lo cubre el IWDG del hub, no este papel. Se anota porque es la única espera sin cota escrita que queda en el camino |
+| 6 | **El canal de GPDMA no responde al reset** y el `Drop` del `Transfer` de embassy se queda en su bucle | **Enmendado el 18-09:** cota `T_CANAL` al soltar y escalada al reset del GPDMA1 por RCC (D4.2), en vez de «lo cubre el IWDG». Cierra en la placa: inducir un canal trabado (pausarlo por registro desde otra tarea, con el bus al aire) y ver que las otras cinco ranuras siguen girando y que `escaladas_gpdma` sube en uno |
 | 7 | **Las dos ranuras por USART síncrono** no tienen plazo, reinicio ni cuenta | Su propio papel antes de que lleven módulo; hasta entonces son repuesto sin módulo, y el planificador las trata como `Vacia` |
 | 8 | **Un búfer de DMA cacheado** da datos viejos con CRC bueno | R-MJ7 en el plan; el test de bring-up compara el búfer contra el analizador lógico |
 
@@ -343,6 +443,60 @@ Sale con `2` (HUECO) mientras `resistencia_j2.csv` no tenga fila o el hub no dec
 1. **Comentar en #5607** con el borrador de D8.1. Sale con la cuenta de Samuel; se pide en la conversación.
 2. **Añadir a #231** la prueba de resistencia y el osciloscopio de D3 como cuarta y quinta razón de la Discovery.
 3. **Cerrar #287** cuando este papel se firme: sus puntos 1 a 3 quedan decididos aquí.
+
+> **Enmienda del 2026-09-08 (§9, acción 1; D8.1):** **hecha el 2026-09-03**.
+> Samuel publicó la pregunta en [#5607](https://github.com/embassy-rs/embassy/issues/5607)
+> y jake-taf respondió ese mismo día. Este intercambio también supera el
+> corte de actividad del 2026-06-24 citado en §0. Sobre C, la respuesta fue:
+> *«We wrote some small test firmware for C, but had issues getting probe-rs working on C.»*
+> No aporta un resultado de la comparación contra el HAL de C; ese resultado
+> sigue siendo **HUECO**, y **silicio contra driver sigue sin dirimir**. La
+> hipótesis del `EOT` releído (punto 3 de la pregunta, D8.1) no fue contestada.
+
+> **Enmienda del 2026-09-11 (§9; acta del 11-09, firmada por Samuel en el artifact «Acta del J2»):**
+>
+> 1. **Puerta de fabricación** (ficha 1). Ninguna PCB con N657 sale al taller sin una fila medida en `resistencia_j2.csv`. Antes era criterio de cierre del riesgo 1; desde hoy es prohibición. `recuperacion_j2_budget.py` la imprime como condición y deja de devolver 2 fijo (#369).
+> 2. **El límite que descarta al chip** (ficha 2): **cero artefactos audibles atribuibles al bus.** Samuel lo eligió sobre la opción que la junta recomendaba (≤ 1 por 10 h de toque, que equivalía a un cuelgue cada 49 s en el instrumento). Para ser medible necesita un **horizonte**, cero en cuántas horas de instrumento, que queda **HUECO** y es suyo. La aritmética que lo convierte en puerta: con cero eventos en T horas de soak, la tasa queda por debajo de 3/T al 95 % (regla de tres, Poisson); «cero en H horas» exige del orden de 3·H horas limpias con el control positivo hecho. El riesgo 1 deja de cerrar «con fila»: cierra cuando la cota medida multiplicada por H queda por debajo de uno.
+> 3. **El soak no va primero: va el control positivo.** Un soak limpio no ejecuta D4 y no distingue «no nos afecta» de «el banco no lo ve». Orden del día de la placa (Halberg, H-7): (0) `SPE = 1` sin armar nada y leer `SR.EOT`; (1) reproducir la configuración de jake-taf (embassy, 100 kHz, CS por GPIO, `TSIZE = 0`, `blocking_read`), donde 1 h da 98 % de potencia contra el extremo suave del hilo; (2) barrido del retardo entre `SPE = 1` y `CSTART` en {0, ¼, ½, 1, 2, 4} × T_SCK en esa configuración; (3) nuestra configuración con el driver de embassy; (4) el driver propio; (5) el HAL de C de ST solo si queda un cuelgue que el propio no limpia. Con la tasa por armado, 15 min en una ranura contestan p < 4,2e-7 al 95 %; 24 h contestan la hipótesis por tiempo (λ < 0,125/h).
+>
+>    *Lectura del 18-09 (fase B, rulings R4 y R22), con el reloj corregido el 2026-09-19:* el barrido del retardo (2) corre sobre **la configuración con `EOT`** (`TSIZE > 0`, NSS por hardware, el driver propio), no sobre la de jake-taf: el mecanismo de ES0396 §2.14.2 necesita eventos `EOT`, y con `TSIZE = 0` no los hay (es el tercer workaround de esa misma errata). Y el control positivo (1) corre a **125 kHz**, no a 100 ni a los 250 que dijo la primera redacción: el kernel del SPI5 **no es el HSI de 64 MHz, es `pclk2` y son 32**. El mux se queda en su cero —`ClockMux::default()` es `mem::zeroed()` (`_generated.rs:5317-5319`) e `init()` escribe `set_spi5sel` incondicionalmente (`:5397`)— y ese cero es `Spisel45::Pclk2` (metapac `rcc_n6.rs:43346-43348`); `pclk2` es `sys / hpre / ppre2` (embassy `rcc/n6.rs:462`, publicado en `:1413`), y con los defectos que `usb::configuracion()` no toca (`sys: Hsi`, `ahb: Div2`, `apb2: Div1`) eso es 64 / 2 / 1 = 32 MHz. Con 32 MHz el divisor máximo de `MBR`, /256, da 125 kHz. La hipótesis por tiempo (un cuelgue cada ~900 s) no cambia y la por armado gana potencia; **la variante «plan B a 125 kHz» que decía esta lectura se retira: 125 kHz es ya lo que sale por defecto**, sin tocar el mux.
+>
+>    *Medido el 2026-10-01 en la NUCLEO-N657X0-Q* (firmware `ca07f94`; el `-sucio` de la línea de arranque son cuatro PNG borrados en `case/renders`, nada del firmware): **64 minutos, 6 643 199 lecturas de 8 bytes a 125 kHz, 0 cuelgues.** El ritmo no se movió: 103 800 lecturas en cada minuto. **El control positivo no dio positivo.** Eso no dice que el N657 esté libre del defecto; dice que el banco todavía no ha demostrado que lo ve. El cero pesa distinto según contra qué período del hilo se lea:
+>
+>    - Contra el **primer reporte** de [#5607](https://github.com/embassy-rs/embassy/issues/5607) (*«after running the below test code snippet for 10-900 seconds»*, embassy `3651d8ef`, marzo, en la DK): se esperaban 4,3 cuelgues en 64 min, y ver cero tiene un 1,4 % de probabilidad. Esa tasa no está en este banco.
+>    - Contra lo que **jake-taf** midió después, con builds más nuevos (*«anywhere from several minutes to two hours»*, 2026-05-14; *«every 30-120 minutes regardless of how often I write/read to SPI»*, 2026-05-26): se esperaban entre 0,5 y 2,1, y ver cero tiene entre un 12 % y un 59 %. **Una hora no contesta.** El «98 % de potencia» de este punto se calculó contra los 900 s del primer reporte; contra 120 min hacen falta unas 6 h para el 95 % (120 min × ln 20, la misma regla de tres del punto 2).
+>    - **El repro no fue tal cual**, en tres cosas. El reloj: 125 kHz contra 100, ya dicho arriba. El bucle: aquí `CS` + `blocking_read` de 8 bytes; el del primer reporte es `CS` + `write` de 2 bytes + `read` de 1 + dos `info!` por vuelta. Y el driver: el `spi/mod.rs` de embassy lleva 22 commits después del `24e5731` que jake-taf reporta el 2026-06-12, entre ellos `60681501c` (2026-06-08, *«delay receive until corresponding rx»*), que toca el camino de recepción de `transfer_words`. El MISO al aire **no** es diferencia: el primer reporte dice *«It happens even when nothing is connected to the SPI bus»*.
+>
+>    Qué se hace con un control que no dio positivo lo decidió Samuel el mismo día, entre tres opciones (A: el mismo binario 6 h; B: el bucle del primer reporte 6 h; C: preguntarle a jake-taf en #5607 si con el embassy de hoy se le sigue colgando):
+>
+>    > «vamos a hacer las tres cosas. empezando desde ya mismo»
+>
+>    A y B van en fila porque la placa es una sola. Con A ya en marcha, Samuel dijo: «haremos hasta A, B lo lanzaremos mañana». B va con `--features bucle-del-reporte` (EN-PLACA, punto (1)). C salió a las 14:20 (12:20 UTC), con la cuenta de Samuel: [comentario en #5607](https://github.com/embassy-rs/embassy/issues/5607#issuecomment-5931298173), con la (0), esta (1) y la pregunta.
+>
+>    **A, medida el 2026-10-01** (firmware `4d2d6f2`, el mismo `-sucio` de los PNG; de 14:12:21 a 20:13:51): **358 minutos, 37 160 399 lecturas, 0 cuelgues y 0 líneas de error.** Las 358 filas del log van seguidas y todas con las mismas 103 800 lecturas. Faltan las filas 359 y 360. *Corregido el 2026-10-04:* no fue el búfer, fue el reloj de la placa. Su HSI va entre un 0,82 % y un 0,85 % lento contra el reloj de la PC: en cuatro corridas, la última fila de cada log se escribe a los 361,1, 361,0, 60,5 y 804,8 minutos reales para 358, 358, 60 y 798 minutos de la placa. Eso cae dentro de los ±5 % de DS14791 Rev 10, p. 165. En los 361,5 minutos que duró la corrida, la placa contó 358. Con 0 cuelgues en 358 min, la probabilidad de verlo si el periodo medio fuera de 15 min es 4e-11; de 30 min, 6,6e-6; de 60 min, 0,26 %; de 120 min, 5 %. **Un cuelgue cada 2 horas o menos queda descartado al 95 %** (regla de tres: un periodo medio de ≥ 119 min), en esta configuración y esta placa. Eso cubre casi entero el rango «every 30-120 minutes» de jake-taf. No dice que el defecto no exista: puede ser más raro, depender del bucle del primer reporte (B) o de algo de su montaje.
+>
+>    **La respuesta de jake-taf a C** (el mismo día, en el hilo): «Good question, I recently updated to the latest embassy yesterday, so let me rerun and see» (13:23 UTC) y «I’ll do a run overnight and report back in the morning to see if any stalls occurred» (15:47 UTC).
+>
+>    **B, medida el 2026-10-02** (firmware `7a01671`, `-sucio` por los PNG; de 09:45:24 a 15:46:54): **358 minutos, 78 174 777 vueltas, 0 cuelgues y 0 líneas de error.** Cada vuelta arma el periférico dos veces. Hubo entre 218 364 y 218 366 vueltas en cada minuto.
+>
+>    **El resultado de jake-taf, el 2026-10-02** (13:13 UTC), con `main` de hace unos dos días: «Unfortunately I still have SPI issues on `main` (from ~2 days ago). I saw `SPI1` lock up five times overnight. I also regularly get CRC errors reading SPI, though I haven't looked to see if those are the bit smear issue.» Son cinco bloqueos en 14,1 h, a las 5,5, 5,9, 6,0, 6,1 y 13,3 h de encendido, con el reloj «set to 100kHz still». Embassy no lo arregló, así que su versión sale de la lista de diferencias entre los dos bancos. Las que quedan: su montaje lleva un chip real con CRC al otro lado, un vigía propio y SPI1.
+>
+>    **El eco, decidido por Samuel el 2026-10-02** (EN-PLACA, punto (1)). Es un puente de D12 (MISO, PG1) a D11 (MOSI, PG2) a 16 MHz, lo más rápido que da el kernel de hoy, con `blocking_transfer` de 8 bytes y un patrón distinto en cada vuelta. **Medido el 2026-10-03 y 04** (firmware `fea2a17`) en dos corridas:
+>
+>    - una hora, de 12:58 a 14:00, con 56 807 737 vueltas;
+>    - una noche, de 14:13 a 03:38 del día 04, con 798 minutos de placa y 755 542 592 vueltas. La cortó Samuel al desconectar CN10 sin querer, 15 s después de la última fila.
+>
+>    **Las dos dieron 0 corrupciones, 0 errores del driver y 0 cuelgues.** En total son 6 499 millones de bytes comparados uno por uno.
+>
+>    **La lectura, por tiempo.** Contra el ritmo de jake-taf (5 en 14,1 h), la noche sola daría cero con un 0,9 %, contado con el tiempo de la placa, que es el más corto. Las cuatro corridas juntas (1 574 minutos de placa, 26,2 h) darían cero con un 0,009 %, pero solo si el ritmo no dependiera del bucle ni del reloj, que es lo que él dijo el 26-05 («regardless of how often I write/read to SPI»). La noche pasó por su ventana de 5,5-6,1 h.
+>
+>    **La lectura, por corrupción.** Su «once or twice a minute» de junio habría dado del orden de 860 corrupciones en 858 minutos. Cero las acota por debajo de una cada ~4,8 h al 95 %, o p < 3,7e-9 por vuelta.
+>
+>    **Lo que él ve no aparece en este banco**, y eso no dice por qué. Puede ser su montaje: su vigía detecta por tiempo y puede contar como cuelgue una tarea que solo se retrasó; además está su chip del otro lado, SPI1 y su programa. O puede ser algo que este banco no ejercita: DMA, `TSIZE > 0`, NSS por hardware y el bus a 400 MHz del hub. Eso último es el punto (3) del orden del día. **El control positivo sigue sin dar positivo**, y la frase del acta sigue en pie: un soak limpio no distingue «no nos afecta» de «el banco no lo ve».
+> 4. **El criterio del riesgo 5 no discrimina.** Cien mil transferencias son 12,5 s a 8 kHz y acotan p < 3e-5 al 95 %, que no excluye ni el peor extremo del hilo (2e-5). El binario `eot_al_aire` de `EN-PLACA.md` pasa a ser el barrido del punto 3.
+> 5. **Acción 1, segunda vez, hecha el 2026-09-11.** Samuel publicó en [#5607](https://github.com/embassy-rs/embassy/issues/5607#issuecomment-5636099116) que ES0620 Rev 5 no lista el SPI, la errata 2.14.2 del H7 como hipótesis con su cálculo, el §2.2.1 del N657, las dos comprobaciones baratas del punto 3, y la pregunta de si alguien abrió caso con ST por el canal formal. Sin respuesta al cierre de esta enmienda.
+> 6. **ES0620 Rev 5 leída y versionada** (`docs/reference/datasheets/stm32n6-es0620-rev5.pdf`, PR #365): ningún ítem del SPI; tres que tocan este proyecto: §2.2.1 (#363), §2.2.22 (#364), §2.15.1 (#350). El riesgo «errata joven» de los papeles del motor se cerraba midiendo arranque, no leyendo la errata: #370.
+> 7. **Lo que la junta encontró fuera del alcance de este papel**, con issue: el esclavo N657 sin recuperación (#366); los tres buses SPI del CV sin papel (#367); el `Drop` del GPDMA sin cota que congela las seis ranuras, riesgo 6 (#368); el `EVENTO` que sí tiene red y se repara tarde y a fuerza máxima, contra lo que dicen D4.8, D6 y §3 (#371, enmienda pendiente a este papel); y el sello de vitalidad al armar que ciega al IWDG ante una ranura que se rearma para siempre (comentario en #291).
 
 ---
 
@@ -360,7 +514,24 @@ Sale con `2` (HUECO) mientras `resistencia_j2.csv` no tenga fila o el hub no dec
 | `micro_budget.py` | censo del hub, `J2:SPIn_NSS` | Clarify | El NSS por hardware pasa de reparto a **requisito**: sin él, D1 no se sostiene. Y las dos ranuras USART quedan fuera de este papel | comentario en el guion | pendiente |
 | #250 | «Lo que hay que tocar» | Sync | El puerto incluye `j2_spi.rs`, el ejecutor del J2, los búferes no cacheables (R-MJ7); y el primer paso es compilar un `j2_spi.rs` vacío contra las cuatro APIs de §1.2 | issue | pendiente |
 | #231 | la lista de lo que la Discovery mide | Expand | La prueba de resistencia (riesgo 1), el osciloscopio de D3 (riesgo 2), y el conteo de `eot_tardios` con el bus al aire (riesgo 5) | issue | pendiente |
-| #287 | — | Cierra | Puntos 1 a 3 decididos aquí | `gh issue close` al firmar | pendiente |
+| #287 | — | Cierra | Puntos 1 a 3 decididos aquí | `gh issue close` al firmar | hecho |
+| **este papel** (11-09) | D2, el orden de arranque | Patch | Espera anclada ≥ 1 T_SCK entre `SPE = 1` leído de vuelta y `CSTART`, por analogía con ES0396 §2.14.2 del H7; ES0620 no lista el SPI | enmienda del 11-09 en D2 | **aplicada** |
+| **este papel** (11-09) | §9 riesgos 1 y 5, acción 1 | Expand | Puerta de fabricación; límite de cero artefactos audibles con horizonte HUECO; control positivo antes del soak; el criterio del riesgo 5 no discrimina; segundo comentario en #5607 | enmienda del 11-09 en §9 | **aplicada** |
+| **este papel** (11-09) | D4.8, D6, §3 («`EVENTO` no tiene red») | Patch | La cabecera da red al `EVENTO` (`COMPUERTA`, R-E11) y el evento repara a `u16::MAX` sin tono de arranque: la degradación es otra y la función de §3 cambia | #371 | pendiente |
+| **este papel** (11-09 → 18-09) | D4.2, R-MJ2, §9 riesgo 6 | Patch | Cota `T_CANAL` al soltar los canales (`request_pause` + sondeo; NO `request_reset`, que ya trae el bucle sin cota) y escalada al reset del GPDMA1 por RCC, en vez de «lo cubre el IWDG»; no un ejecutor aparte; #368 | enmienda del 18-09 en D4.2, corregida el mismo día | **aplicada** |
+| **este papel** (18-09) | D2 regla 1 | Clarify | La generación no puede rechazar nada por sí sola (el EOT no viene etiquetado); la protege la regla 2 + EOTIE + `NVIC::unpend` en D4.1 y D4.7 | enmienda del 18-09 en D2 | **aplicada** |
+| **este papel** (18-09) | D5.1, §3 | Patch | Tras un plazo vencido la ranura se realinea (`Ticker::reset`), no recupera tics: honra `T_GAP` (cabecera D8) y mantiene los 490 µs | enmienda del 18-09 en D5 | **aplicada** |
+| **este papel** (18-09 → 19-09) | §9, enmienda del 11-09, punto 3 | Clarify | El barrido corre sobre la configuración con `EOT`; el control positivo a **125 kHz**, no 100 ni 250: el kernel del SPI5 es `pclk2` = 32 MHz, no el HSI de 64 (el mux se queda en su cero, que es `Pclk2`). Se retira el «plan B a 125 kHz», que es lo que sale por defecto | lectura del 18-09 en §9, corregida el 19-09 | **aplicada** |
+| **este papel** (19-09) | D3, §3 | Clarify | Con el kernel real (32 MHz) el `f_sck` del piso es 8, no 10: el `SET` de dieciséis dura 103 µs (> 100 de R-E1) y su plazo sale 226 µs (> 220, la cota de D3). El driver usa el reloj real y lo publica; elegir el piso es el #380 | nota del 19-09 bajo D3 | **aplicada** |
+| **este papel** (19-09) | §9 riesgo 1, D8 | Clarify | El peldaño 2 (34,5 MHz) **no es alcanzable** con el kernel de hoy: `MBR` mínimo /2 sobre 32 MHz da 16. La segunda tanda del soak mide 16 MHz y la columna `reloj_MHz` lo dice; el arreglo es #150 y se decide en #380 | R24, declarado en `resistencia_j2.rs` y `EN-PLACA.md` | **declarado** |
+| papel del módulo | nueva: recuperación del esclavo | Add | Plazo, reinicio y cuenta del lado esclavo, espejo de D2-D4; y la política de `muda` en el cerebro | #366 | pendiente |
+| motor-digital | §5, los tres buses SPI del CV | Add | Papel de recuperación de los buses del tono y censo de todos los maestros SPI con su consecuencia audible | #367 | pendiente |
+| hub N657 | supervisor de vitalidad (D5.4) | Patch | El sello no puede ser «armé»: «armé y alguno de los últimos N terminó», o el supervisor lee `inestable`/`muda` | comentario del 11-09 en #291 | pendiente |
+| `recuperacion_j2_budget.py` | `demo()` | Rewrite | `return` calculado, no fijo: lee la fila, cota 3/T, horizonte, puerta de fabricación impresa | #369 | pendiente |
+| `EN-PLACA.md` | «El J2 en la Discovery» | Expand | Control positivo primero; `eot_al_aire` pasa a barrido del retardo; límite cero; prioridad de la ISR; método de reset de probe-rs | enmienda del 11-09 | **aplicada** |
+| plan 2026-09-04 | Fase B | Sync | Desbloqueada el 08-09 (#349); enmiendas antes del driver; `spi_v5` | enmienda del 11-09 | **aplicada** |
+| #231 | la lista de lo que la Discovery mide | Expand | Sexta razón: el soak es puerta de fabricación; la Nucleo ahora; control positivo primero; HUECOS: costo puesto en la puerta y los dos extremos en una placa | comentario del 11-09 | **hecho** |
+| `references.md` y el árbol | erratas | Add | Regla: ningún papel se firma sobre un periférico sin su errata versionada; faltan RA8M1 y H750; barrido de ES0620 contra los papeles vivos | #370 | pendiente |
 
 ---
 
@@ -405,3 +576,6 @@ Tres lentes sobre la v1, el mismo día, antes de pedir la firma (memoria del 02-
 - Cada cita del RM se pegó entera y textual con su página, y la interpretación va fuera de las comillas (memoria del 03-09: *«un corchete dentro de una cita es una interpretación disfrazada de fuente»*). La v1 tenía una recortada con «(...)»; Serrano la cazó y la v2 la lleva entera.
 - La v1 pasó la junta **antes** de pedir la firma. Siete decisiones cambiaron de mecanismo o murieron (D1, D2, D4, D5, D6, D7, D8) y llevan ⚠; D3 sobrevivió con una cifra corregida. La v1 defendía 200× con un vigía; la v2 defiende 102× sin él, y lo que ejecuta es lo que dice.
 - Lo que este papel no midió y dice que no midió: todo lo marcado ESTIMADO en §3, la tasa real del defecto en nuestro montaje, y cuánto sustain fantasma es tolerable. No hay Discovery.
+- Samuel, 2026-09-10: *«firmo formalmente»*. Firma de contenido, no solo de dirección: las ocho decisiones (D1-D8) quedan en vigor tal como salieron de la junta del 2026-09-03, sin matiz. Firmar el papel no aplica el mapa de enmiendas (§10): sus filas siguen `pendiente` hasta que alguien las ejecute en el papel que corresponde — la fila «hub N657, los ejecutores» es, en concreto, lo que el censo de GPDMA y prioridades de interrupción (#150, punto 2) tiene que escribir.
+- Samuel, 2026-09-11: frenó la tarea 7 con *«si el chip que usamos tiene un defecto reportado […] no podemos seleccionarlo. nunca podríamos confiar en él»* y pidió junta. El orquestador había dicho en la conversación «el chip tiene un defecto» donde este papel dice «en el silicio o en su driver»; la junta arrancó con esa corrección en la primera línea del brief. Seis lentes (Serrano, Halberg, Voronov, Richter, Lyra, Cassian) descartaron cambiar de chip por unanimidad y encontraron los huecos del punto 7 de la enmienda de §9; sus dictámenes, el brief, el extracto de ES0396 y el hilo #5607 quedan en `docs/superpowers/juntas/2026-09-11-j2/`. Después de la junta se leyó ES0620 Rev 5, que no lista el SPI.
+- Samuel, 2026-09-11, 15:27 UTC: firmó el «Acta del J2» (artifact, documento `firmas/junta-2026-09-11`) marcando las cuatro fichas y sin palabras añadidas: **seguir con el N657, y nada se fabrica hasta medir** (ficha 1); **cero artefactos audibles** como límite (ficha 2, sobre la opción recomendada); **primero las enmiendas, después el driver** (ficha 3); **la Nucleo-N657X0-Q ahora** (ficha 4). Lo que la firma habilita está en las enmiendas del 11-09 a D2 y §9, en las filas nuevas de §10, y en #363, #364 y #366 a #371. Lo que la junta no cambió: D1, D3, D5 a D8, y la frontera `fw`/`core`.

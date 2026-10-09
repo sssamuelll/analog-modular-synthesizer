@@ -69,8 +69,9 @@ def test_constantes_del_papel() -> None:
     assert abs(cb.P_RECINTO_MAX - 29.23) < 0.05, cb.P_RECINTO_MAX
     # 120,3 = 95,6 de la fila de invitados + 24,7 del digital. Desde el
     # 2026-09-05 el digital son 14,475 (los 24,7 llevaban dentro los 2,04 A de
-    # la cadena de LED que D1 retiro el 03-09): 110,075.
-    assert abs(cb.P_CAJON_MAX - 110.075) < 0.05, cb.P_CAJON_MAX
+    # la cadena de LED que D1 retiro el 03-09), y el cajon suma ademas los
+    # 8,00 de carga ultra que le faltaban (la Voz vive dentro): 118,077.
+    assert abs(cb.P_CAJON_MAX - 118.077) < 0.05, cb.P_CAJON_MAX
     # lo que el instrumento DECLARA (D-F1) y lo que cada modulo PUEDE dar
     # (su placa, hoja p. 2): son dos numeros, y el primero nunca supera al
     # segundo. D-F7 (2026-09-03): PS5 pasa de IRM-20-5 (4 A) a IRM-45-5 (8 A)
@@ -123,10 +124,16 @@ def test_cerrado_reproduce_el_orden_de_magnitud_de_la_junta() -> None:
         f"cerrado y con el cajon cargado el aire da {t:.1f} C, por debajo del "
         f"codo de derating ({codo:.0f}): entonces D-F3 no hacia falta "
         f"y toda la sec.6 del papel esta mal")
+    # La T del punto fijo cerrado se DERIVA aqui y no se escribe: es la cifra
+    # que se mueve cada vez que una celda del cajon cambia, y ya se quedo vieja
+    # una vez (86,7 antes de que el cajon contara la carga ultra).
+    cero = {r: 0.0 for r in RIELES}
+    t_cerrado = cb.aire_recinto_c(cb.p_recinto_w(cero), cb.p_cajon_w(cero),
+                                  area_venteo_mm2=0.0)
     print(f"  cerrado y A PLACA sin derating: {t:.1f} C de aire (no es un "
           f"estado alcanzable). La junta estimo ~78 C con el rack al 17 %; el "
-          f"punto fijo dice que cerrado no hay 17 % ni nada: 86,7 C y el rack "
-          f"a CERO, porque a esa T la curva de la hoja ya no dibuja")
+          f"punto fijo dice que cerrado no hay 17 % ni nada: {t_cerrado:.1f} C "
+          f"y el rack a CERO, porque a esa T la curva de la hoja ya no dibuja")
 
 
 def test_ventilar_baja_el_aire_y_es_para_lo_que_se_firmo_d_f3() -> None:
@@ -216,18 +223,56 @@ def test_el_cajon_cobra_a_cada_riel_su_propia_corriente() -> None:
     reales, un 11 % de menos -- y el liston pasaba por 5 mA."""
     for cor in (cb.SOSTENIDO, cb.PLACA_A, {r: 1.0 for r in RIELES}):
         esperado = (sum(cor[r] * cb.V_RIEL[r] for r in cb.V_RIEL)
-                    + cb.CAJON_DIGITAL_W)
+                    + cb.CAJON_DIGITAL_W + cb.CAJON_ULTRA_W)
         assert abs(cb.p_cajon_w(cor) - esperado) < 1e-9, (
             f"con {cor} el cajon cobra {cb.p_cajon_w(cor):.2f} W y cada riel a "
             f"su tension son {esperado:.2f}: vuelve a haber un cociente en medio")
     # Y EL DIGITAL NO MUEVE EL CALOR DEL CAJON. Es CARGA, no capacidad: el
-    # modulo 2 pide lo que pide (24,7 W de peor caso, papel sec.4.4) y da
+    # modulo 2 pide lo que pide --14,475 W de peor caso; eran los 24,7 de
+    # sec.4.4 hasta que se les quito la cadena de LED el 2026-09-05-- y da
     # igual que PS6 pueda dar 8 A. Cobrarle por su capacidad es lo que metia
     # el 44 % de peso en amperios que rompia el reparto.
     assert cb.p_cajon_w(cb.PLACA_A) == cb.p_cajon_w(
         {**cb.PLACA_A, "digital+5": 0.0}), (
         "cambiar la corriente del digital movio el calor del cajon: se le "
         "esta cobrando por lo que PS6 puede dar y no por lo que el modulo 2 pide")
+
+
+def test_el_cajon_cuenta_la_carga_ultra_que_alimenta_a_la_voz() -> None:
+    """EL HALLAZGO DEL 2026-09-04 (papel de la fila B, sec.7.1), APLICADO.
+
+    Hasta hoy el cajon sumaba los rieles de RACK y el digital, y nada mas.
+    Los +-12 V ULTRA que salen de la cascada y alimentan la Voz --el
+    instrumento entero: 16 voces, filtros, VCA, envolventes-- se disipan en
+    la Voz, DENTRO del cajon, y no estaban en ninguna celda. El recinto si
+    contaba la PERDIDA de fabricarlos (PS1+PS2 = 3,71 W y la cascada
+    U1/U2/LT x4/U3 = 4,21 W); lo ENTREGADO no lo contaba nadie.
+
+    Es la cadena de LED del 03-09 leida al reves. Alli se cobraba calor de
+    una pieza retirada; aqui NO se cobraba el de la unica carga que seguro
+    existe. Las dos salen de la misma regla: todo lo que baja por un riel
+    acaba en calor donde vive la carga, y el cajon es donde vive la Voz.
+
+    Se cobra por CARGA y no por capacidad, igual que el digital: el censo de
+    consumo_total_budget.py, no los 650 mA/riel a los que esta ruteada la
+    placa ni los 500 utiles de su puerta. Cobrar capacidad es justo el fallo
+    que el reparto del 03-09 arreglo."""
+    import consumo_total_budget as ctb  # noqa: PLC0415
+
+    mas_ma, menos_ma = ctb.suma(ctb.VOZ + ctb.RESTO)
+    esperado = (mas_ma + menos_ma) / 1000.0 * cb.V_ULTRA
+    assert abs(cb.CAJON_ULTRA_W - esperado) < 1e-9, (
+        f"CAJON_ULTRA_W = {cb.CAJON_ULTRA_W:.3f} W y el censo del instrumento "
+        f"da {esperado:.3f}: la constante esta transcrita, no derivada")
+    # El papel de la fuente v4 sec.6 la publica como 12 V x (340 + 327) mA.
+    assert abs(cb.CAJON_ULTRA_W - 8.0) < 0.1, cb.CAJON_ULTRA_W
+    # Y esta DENTRO del cajon: con todos los rieles a cero sigue habiendo el
+    # digital y la Voz, porque ninguno de los dos depende de la fila.
+    assert abs(cb.p_cajon_w({r: 0.0 for r in RIELES})
+               - (cb.CAJON_DIGITAL_W + cb.CAJON_ULTRA_W)) < 1e-9, (
+        "con la fila a cero el cajon no cobra el instrumento: la Voz disipa "
+        "sus +-12 V ultra aunque no haya un solo modulo en la fila de abajo")
+    assert cb.P_CAJON_MAX > cb.CAJON_ULTRA_W
 
 
 def test_las_celdas_suman_lo_que_el_papel_publica() -> None:
@@ -257,7 +302,12 @@ def test_las_celdas_suman_lo_que_el_papel_publica() -> None:
         f"N657, host a tope\" de power_budget.py da 2,895 A de cargas DURAS. Si "
         f"volvio a 4,935 alguien resucito la cadena de LED que D1 retiro")
     assert abs(cb.CAJON_DIGITAL_W - 14.475) < 0.005
-    assert abs(cb.P_CAJON_MAX - (rack_w + cb.CAJON_DIGITAL_W)) < 1e-9
+    # La CARGA ULTRA, la tercera celda del cajon (desde el 2026-09-05): la Voz
+    # se come lo que la cascada le entrega, y se lo come DENTRO. Tambien
+    # derivada --del censo de consumo_total_budget.py-- y no transcrita.
+    assert abs(cb.CAJON_ULTRA_W - 8.0) < 0.1, cb.CAJON_ULTRA_W
+    assert abs(cb.P_CAJON_MAX
+               - (rack_w + cb.CAJON_DIGITAL_W + cb.CAJON_ULTRA_W)) < 1e-9
     # Y PS6 SIGUE AL DIGITAL DE VERDAD: la celda se deriva, no se transcribe.
     # Era 4,88 W literal --24,7 x 0,198-- y llevaba la cadena retirada dentro.
     assert abs(cb.PS6_SIGUE_AL_DIGITAL_W - 2.86) < 0.005, cb.PS6_SIGUE_AL_DIGITAL_W
@@ -374,33 +424,38 @@ def test_la_caja_cerrada_no_tiene_punto_de_trabajo() -> None:
         f"la caja cerrada publica {cor}: por encima de 85 C la hoja no dibuja "
         f"nada y sostenido_a() vale 0, asi que un sostenido positivo ahi es un "
         f"punto de la discontinuidad, no un estado")
-    # EL SEGUNDO ASERTO DE ESTE TEST ESTABA MAL, y se vio el 2026-09-05 al bajar
-    # el calor. Decia "t > 85, porque si bajara de 85 habria punto de trabajo", y
-    # esa inferencia es falsa: t se mide CON EL RACK A CERO, que es el extremo
-    # FRIO del salto, no la temperatura a la que la caja se queda. Hoy da 82,9 C
-    # --por debajo de 85-- y sigue sin haber punto de trabajo, que es justo lo
-    # que el primer aserto acaba de comprobar. Los dos asertos se contradecian y
-    # el que mandaba era el equivocado.
+    # EL SEGUNDO ASERTO DE ESTE TEST YA SE HA MOVIDO DOS VECES, y las dos por la
+    # misma razon: estaba escrito contra un REGIMEN y no contra la propiedad.
     #
-    # Lo que SI hay que comprobar es que el ciclo no cierra: a la T del estado de
-    # cero la hoja promete corriente, esa corriente calienta, y a la T que
-    # produce la hoja ya no la promete. Eso es el salto, y es la razon de que la
-    # respuesta honesta sea cero.
+    #   * hasta el 2026-09-05 decia "t > 85, porque si bajara de 85 habria punto
+    #     de trabajo". Inferencia falsa: t se mide CON EL RACK A CERO, que es el
+    #     extremo FRIO del salto, no la temperatura a la que la caja se queda.
+    #   * lo sustituyo un ciclo --a la T de cero la hoja promete algo, ese calor
+    #     la lleva a donde no promete-- y ese exigia que en el extremo frio la
+    #     hoja SI prometiera. Con los 8,0 W de carga ultra que faltaban, el
+    #     extremo frio pasa de 86,7 a 87,7 C, ya fuera de curva, y la hoja no
+    #     promete nada ni siquiera ahi.
+    #
+    # Los dos regimenes dan el mismo veredicto y el test no tiene por que saber
+    # en cual esta. Lo que se comprueba es la propiedad: SEA LO QUE SEA lo que la
+    # hoja promete en el extremo frio, meter ese calor lleva a donde promete
+    # cero. Si el extremo frio ya es cero, el ciclo esta cerrado en cero desde el
+    # principio --que es el primer aserto--; y si algun dia la caja se enfriara
+    # lo bastante para que la promesa se sostuviera, este aserto se pone rojo.
     t_frio = cb.aire_recinto_c(cb.p_recinto_w(cor), cb.p_cajon_w(cor),
                                area_venteo_mm2=0.0)
     promete = {r: cb.sostenido_a(r, t_frio) for r in RIELES}
-    assert any(v > 0.0 for v in promete.values()), (
-        f"con la caja cerrada y el rack a cero el aire se queda en {t_frio:.1f} C "
-        f"y la hoja no promete corriente en ningun riel: entonces cero SI seria "
-        f"un punto fijo y este test esta mirando otra cosa")
     t_caliente = cb.aire_recinto_c(cb.p_recinto_w(promete), cb.p_cajon_w(promete),
                                    area_venteo_mm2=0.0)
     devuelve = {r: cb.sostenido_a(r, t_caliente) for r in RIELES}
     assert all(v == 0.0 for v in devuelve.values()), (
-        f"a {t_frio:.1f} C la hoja promete {promete} y ese calor lleva el aire a "
-        f"{t_caliente:.1f} C, donde la hoja da {devuelve}. Si ahi siguiera "
-        f"prometiendo corriente el ciclo podria cerrar y la caja cerrada tendria "
-        f"punto de trabajo: el modelo cambio y este test sobra")
+        f"a {t_frio:.1f} C (extremo frio, rack a cero) la hoja promete {promete} "
+        f"y ese calor lleva el aire a {t_caliente:.1f} C, donde la hoja da "
+        f"{devuelve}. Si ahi siguiera prometiendo corriente el ciclo podria "
+        f"cerrar y la caja cerrada tendria punto de trabajo: el modelo cambio y "
+        f"este test sobra")
+    print(f"  cerrada: el extremo frio ya son {t_frio:.1f} C y la hoja promete "
+          f"{'nada' if not any(promete.values()) else promete}")
 
 
 # --- el aserto que decide, y su canario ----------------------------------
