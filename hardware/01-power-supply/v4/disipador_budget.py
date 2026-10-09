@@ -2,16 +2,22 @@
 
     python hardware/01-power-supply/v4/disipador_budget.py
 
+ES DE LA V4, y se guarda como respuesta. Contesta el sec.6.1 del recinto
+partido (PR #316) con el modelo de la v4. La v5 saco la etapa AC-DC de la
+caja (D-V1, 2026-09-08), y el objetivo de 61 C mide un U2 que D-F9 retiro:
+ver la enmienda de arriba del papel. Las citas archivo:linea son del arbol
+del 2026-10-09 (se movieron al entrar el #332 y el #316 en main).
+
 Fuentes (rutas relativas a la raiz; paginas PDF contadas desde la portada):
-  * docs/superpowers/specs/2026-09-04-recinto-partido-design.md:192: objetivo
-    Tj <= 61 C con 12,80 W. La orden de descarte esta en :242 (sec.7, no 8).
-  * docs/superpowers/specs/2026-09-03-fuente-v4-liston-design.md:879: carga
-    SOSTENIDA firmada; :1040 deja todos los IRM en R, :1041 pone la cascada
-    en C; :1248 y :1249 fijan LT1963A y LT3015. MIC29152 es candidato (:228),
+  * docs/superpowers/specs/2026-09-04-recinto-partido-design.md:219: objetivo
+    Tj <= 61 C con 12,80 W. La orden de descarte esta en :269 (sec.7, no 8).
+  * docs/superpowers/specs/2026-09-03-fuente-v4-liston-design.md:922: carga
+    SOSTENIDA firmada; :1083 deja todos los IRM en R, :1084 pone la cascada
+    en C; :1291 y :1292 fijan LT1963A y LT3015. MIC29152 es candidato (:244),
     no el tercer regulador: ese es LM7805 (../v3/bom.csv:6).
-  * calor_budget.py:133, :138, :140, :142, :329: modelo del aire, sin copiar
+  * calor_budget.py:133, :138, :140, :142, :365: modelo del aire, sin copiar
     ni cambiar T_SALA, AREA_RECINTO_M2, H_CONV_W_M2K ni CD_TIRO.
-    :204 y :256 ya retiran del digital una carga que el papel aun conserva.
+    :204 y :292 ya retiran del digital una carga que el papel aun conserva.
   * docs/reference/datasheets/lt1963a-rev-g-2021-02.pdf p.19, fila
     "T Package, 5-Lead TO-220": theta_JC = 4 C/W, sin maximo declarado.
   * docs/reference/datasheets/lt3015-rev-b.pdf p.19, misma fila:
@@ -63,26 +69,26 @@ PROPUESTA = "docs/superpowers/specs/2026-09-04-recinto-partido-design.md"
 CHASIS = "docs/superpowers/specs/2026-08-18-fuente-chasis-telemetria.md"
 HOJAS = "docs/reference/datasheets/"
 MIC = HOJAS + "mic29152-ds20005685b-2019.pdf"
-FUENTE_AIRE = "calor_budget.py:329 (reparto y evaluacion: escenario_c_fuera)"
+FUENTE_AIRE = "calor_budget.py:365 (reparto y evaluacion: escenario_c_fuera)"
 FUENTE_CADENA = MIC + ' p.24, "Thermal Design", ecuaciones 4-1 y 4-2'
 
-TJ_OBJETIVO_C = 61.0  # 2026-09-04-recinto-partido-design.md:192.
-P_LITERAL_W = 12.80  # 2026-09-04-recinto-partido-design.md:93 y :192; CONTRA.
-AREA_FIRMADA_MM2 = 22200.0  # 2026-09-03-fuente-v4-liston-design.md:879; nuevos.
+TJ_OBJETIVO_C = 61.0  # 2026-09-04-recinto-partido-design.md:219.
+P_LITERAL_W = 12.80  # 2026-09-04-recinto-partido-design.md:120 y :219; CONTRA.
+AREA_FIRMADA_MM2 = 22200.0  # 2026-09-03-fuente-v4-liston-design.md:922; nuevos.
 CARGA_A = {
-    "rack+12": 2.0,  # 2026-09-03-fuente-v4-liston-design.md:879, sostenido.
-    "rack-12": 2.0,  # Misma fuente:879, NO el liston de la PSU3 de calor:160.
-    "rack+5": 4.0,  # Misma fuente:879, sostenido declarado.
+    "rack+12": 2.0,  # 2026-09-03-fuente-v4-liston-design.md:922, sostenido.
+    "rack-12": 2.0,  # Misma fuente:922, NO el liston de la PSU3 de calor:160.
+    "rack+5": 4.0,  # Misma fuente:922, sostenido declarado.
     "digital+5": calor.CAJON_DIGITAL_A,  # calor_budget.py:204; carga, no techo.
 }
 PIEZAS = {"U1": "LT1963A", "U2": "LT3015", "U3": "LM7805"}
-# Identidades: firmado:1248, :1249; hardware/01-power-supply/v3/bom.csv:6.
+# Identidades: firmado:1291, :1292; hardware/01-power-supply/v3/bom.csv:6.
 P_TABLA_W = {
-    "U1": 1.24,  # Firmado:851 y calor_budget.py:257; solo termino de paso.
-    "U2": 1.37,  # Firmado:851 y calor_budget.py:257; solo termino de paso.
-    "U3": 0.30,  # Firmado:852 y calor_budget.py:258; carga nominal de :1053.
+    "U1": 1.24,  # Firmado:875 y calor_budget.py:293; solo termino de paso.
+    "U2": 1.37,  # Firmado:875 y calor_budget.py:293; solo termino de paso.
+    "U3": 0.30,  # Firmado:876 y calor_budget.py:294; carga nominal de :1096.
 }
-P_ISLA_LT_W = 1.30  # Firmado:852; calor_budget.py:257. Disipa en PCB, no tabs.
+P_ISLA_LT_W = 1.30  # Firmado:876; calor_budget.py:293. Disipa en PCB, no tabs.
 P_C_TABLA_W = sum(P_TABLA_W.values()) + P_ISLA_LT_W  # DERIVADO de esas filas.
 THETA_JC_PUBLICADA = {
     "U1": 4.0,  # lt1963a-rev-g-2021-02.pdf p.19, "T Package, 5-Lead TO-220".
@@ -99,7 +105,7 @@ THETA_JC_MIC_TIP = 2.0  # MIC p.8, "Thermal Resistance TO-220", columna Typ.
 P_REAL_W = dict.fromkeys(PIEZAS)  # HUECO: LT1963A/LT3015 p.19, formula de P.
 THETA_JC_MAX = dict.fromkeys(PIEZAS)  # HUECO: fuentes FUENTE_JC, sin maximos.
 THETA_CS_MAX = dict.fromkeys(PIEZAS)  # HUECO: v3/bom.csv:19, interfaz pendiente.
-THETA_SA_REAL = None  # HUECO: propuesta:192-196, sin disipador seleccionado.
+THETA_SA_REAL = None  # HUECO: propuesta:219-223, sin disipador seleccionado.
 CERO = 0.0  # Limite ideal sin salto/perdida: MIC p.24 ecuacion 4-2; no pieza.
 
 HUECOS = (
@@ -108,18 +114,18 @@ HUECOS = (
     "real de la cascada; p.19 exige incluirla. margen_budget.py:257 conserva "
     "el consumo del regulador retirado. No se completa esta rama.",
     "U3: falta fabricante/hoja del LM7805 (v3/bom.csv:6); no se conocen aqui "
-    "Ignd ni theta_JC garantizados. MIC29152 no lo sustituye (firmado:228).",
+    "Ignd ni theta_JC garantizados. MIC29152 no lo sustituye (firmado:244).",
     "theta_JC de U1/U2: valor publicado sin maximo declarado (hojas p.19). "
     "MIC solo tipico (p.8). No se usan como garantias.",
     "theta_CS maxima del aislante y montaje: pendiente (v3/bom.csv:19). "
     "U2 lleva el tab a IN (lt3015-rev-b.pdf p.2, 'T PACKAGE'); el limite "
     "ideal sin interfaz no autoriza a montar los tabs sin aislamiento.",
-    "Disipador de C, orientacion y curva: sin hoja (propuesta:192). El arbol "
+    "Disipador de C, orientacion y curva: sin hoja (propuesta:219). El arbol "
     "nombra Fischer SK129/38,1 (v2/bom.csv:23), pero sus cifras son tipicas "
     "(notes/design-notes.md:1251). No se certifica esa pieza ni su montaje.",
     "Aire fisico: P_BASE y coeficientes son hipotesis heredadas, no medidas "
-    "(calor_budget.py:286); las perdidas parciales y cargas pendientes "
-    "siguen abiertas (:292). La rama fisica garantizada queda detenida; "
+    "(calor_budget.py:322); las perdidas parciales y cargas pendientes "
+    "siguen abiertas (:328). La rama fisica garantizada queda detenida; "
     "NO DA es el resultado del modelo solicitado.",
 )
 
@@ -127,12 +133,12 @@ HUECOS = (
 def escenario_c_fuera(area_mm2: float | None = None) -> dict[str, float]:
     """Misma carga, C pasa al cajon y todos los IRM permanecen en R."""
     area = calor.P_BASE["area_venteo_mm2"] if area_mm2 is None else area_mm2
-    # calor_budget.py:380/:372 y firmado:1040/:1041; se conserva la suma.
+    # calor_budget.py:417/:408 y firmado:1083/:1084; se conserva la suma.
     p_r = calor.p_recinto_w(CARGA_A) - P_C_TABLA_W
     p_cajon = calor.p_cajon_w(CARGA_A) + P_C_TABLA_W
     t_r = calor.aire_recinto_c(p_r, p_cajon, area_venteo_mm2=area,
                               t_sala_c=calor.T_SALA)  # calor_budget.py:138.
-    # calor_budget.py:333-350: con salto interior nulo queda SOLO cajon->sala.
+    # calor_budget.py:369-386: con salto interior nulo queda SOLO cajon->sala.
     t_c = calor.aire_recinto_c(CERO, p_r + p_cajon, area_venteo_mm2=area,
                               t_sala_c=calor.T_SALA)  # calor_budget.py:138.
     return dict(area_mm2=area, p_r_w=p_r, p_cajon_w=p_cajon,
@@ -225,26 +231,26 @@ def demo() -> int:
     _autocomprobacion()
     e = escenario_c_fuera()
     print(f"NO DA (modelo): Tj >= Taire_C = {e['t_c_c']:.4f} C > "
-          f"{TJ_OBJETIVO_C:.2f} C [{FUENTE_AIRE}; {PROPUESTA}:192]")
+          f"{TJ_OBJETIVO_C:.2f} C [{FUENTE_AIRE}; {PROPUESTA}:219]")
     print(f"  theta_SA <= {theta_sa_literal_ideal(e['t_c_c']):.4f} C/W aun "
           f"con JC=CS=0 ideal y los {P_LITERAL_W:.2f} W literales "
-          f"[{FUENTE_CADENA}; {PROPUESTA}:192]")
+          f"[{FUENTE_CADENA}; {PROPUESTA}:219]")
     print("  Ningun disipador pasivo de catalogo tiene esa resistencia negativa.")
     print("  La cadena fisica garantizada: HUECO; no hay Tj real calculada.\n")
-    print(f"  Carga sostenida: {CARGA_A} A [{FIRMADO}:879; calor_budget.py:204]")
+    print(f"  Carga sostenida: {CARGA_A} A [{FIRMADO}:922; calor_budget.py:204]")
     print(f"  Venteo nuevo vigente: {e['area_mm2']:.0f} mm2 "
-          "[calor_budget.py:526, :530; se suma al area base :271]")
+          "[calor_budget.py:563, :567; se suma al area base :307]")
     print(f"  Sala: {calor.T_SALA:.2f} C [calor_budget.py:138]")
     print(f"  R: {e['p_r_w']:.4f} W; cajon fuera de R: {e['p_cajon_w']:.4f} W; "
           f"total: {e['p_total_w']:.4f} W "
-          f"[calor_budget.py:372, :380; {FIRMADO}:851, :852, :1040, :1041]")
+          f"[calor_budget.py:408, :417; {FIRMADO}:875, :876, :1083, :1084]")
     print(f"  Aire_R: {e['t_r_c']:.4f} C; aire_C: {e['t_c_c']:.4f} C "
           f"[{FUENTE_AIRE}]")
     anterior = escenario_c_fuera(AREA_FIRMADA_MM2)
     print(f"  Con {AREA_FIRMADA_MM2:.0f} mm2 del firmado: "
           f"aire_C = {anterior['t_c_c']:.4f} C; theta_SA ideal <= "
           f"{theta_sa_literal_ideal(anterior['t_c_c']):.4f} C/W "
-          f"[{FIRMADO}:879; {FUENTE_AIRE}; {FUENTE_CADENA}]")
+          f"[{FIRMADO}:922; {FUENTE_AIRE}; {FUENTE_CADENA}]")
     print("\n  Cadena completa: Tj_i = Tc_i + P_i*JC_i; "
           "Tc_i = Ts + P_i*CS_i; Ts = Taire_C + sum(P_i)*SA")
     print(f"  Fuente: {FUENTE_CADENA}; {CHASIS}:189")
@@ -253,24 +259,24 @@ def demo() -> int:
     for ref, nombre in PIEZAS.items():
         jc = THETA_JC_PUBLICADA[ref]
         valor = "HUECO" if jc is None else f"{jc:.2f}, sin maximo"
-        print(f"  {ref} {nombre} | {P_TABLA_W[ref]:.2f} [{FIRMADO}:851-852] | "
+        print(f"  {ref} {nombre} | {P_TABLA_W[ref]:.2f} [{FIRMADO}:875-876] | "
               f"{valor} [{FUENTE_JC[ref]}] | HUECO (rama detenida)")
     print(f"  C contabilizada = {P_C_TABLA_W:.2f} W, de los cuales "
           f"{P_ISLA_LT_W:.2f} W van a la isla LT "
-          f"[{FIRMADO}:851-852; calor_budget.py:257-258].")
+          f"[{FIRMADO}:875-876; calor_budget.py:293-294].")
     print(f"  Los {P_LITERAL_W:.2f} W del papel incluyen IRM que viven en R "
-          f"[{PROPUESTA}:89-94; {FIRMADO}:846-852, :1040].")
+          f"[{PROPUESTA}:116-121; {FIRMADO}:870-876, :1083].")
     print(f"  MIC29152: candidato a U1; JC={THETA_JC_MIC_TIP:.2f} C/W TIPICO "
-          f"[{FIRMADO}:228; {MIC} p.8, 'Thermal Resistance TO-220', Typ].")
+          f"[{FIRMADO}:244; {MIC} p.8, 'Thermal Resistance TO-220', Typ].")
     print("\n  HUECOS:")
     for hueco in HUECOS:
         print(f"    - {hueco}")
     print("  ESTIMADOS heredados (sin convertirlos en garantias):")
     for estimado in calor.ESTIMADOS:
-        print(f"    - {estimado} [calor_budget.py:286]")
+        print(f"    - {estimado} [calor_budget.py:322]")
     for hueco in calor.HUECOS:
-        print(f"    - {hueco} [calor_budget.py:292]")
-    print(f"\n  Segun su propia puerta, la propuesta cae aqui [{PROPUESTA}:242].")
+        print(f"    - {hueco} [calor_budget.py:328]")
+    print(f"\n  Segun su propia puerta, la propuesta cae aqui [{PROPUESTA}:269].")
     print("OK: disipador_budget.py; autocomprobacion pasada, criterio termico NO DA.")
     return 0  # Contrato del encargo: diagnostico reproducible con salida limpia.
 
