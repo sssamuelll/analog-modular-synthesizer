@@ -350,13 +350,17 @@ libro bilateral y el bring-up lo mide bajo carga plena.
    voz-total §5.
 5. **Censo de SRAM** con el binario adentro (§3): cuántas tablas residentes
    caben de verdad — **y ahora también los buffers de sample y granos**
-   (acta 2026-08-26, tarde). ✅ **Existe: `hardware/02-midi-cv/sram_budget.py`**
-   — y sale **HUECO con hallazgo**: apilando el peor caso de los ESTIMADO, lo
-   fijo se come 3,2 de los 4,2 MB y no cierra ni sin pantalla. El hallazgo no
-   es de pantalla: **el tamaño del binario es hoy el mayor desconocido del
-   motor** y decide más que cualquier elección de framebuffer. Sus tres
-   salidas (medir en bring-up / mudar el framebuffer a PSRAM / camino B)
-   están escritas en el guion; ninguna se elige sin acta.
+   (acta 2026-08-26, tarde). ✅ **Existe: `hardware/03-vco/sram_voz_budget.py`**
+   — y sale **HUECO**: con la cara en el hub (D2) y la cámara en el mago
+   (D3'), lo fijo de la Voz en el peor caso ESTIMADO son 2,4 de los 4,2 MB
+   (binario 2 000 000 + colas 400 000), quedan 1 800 000 B y el mínimo —una
+   tabla residente más el buffer de sample— pide 1 256 000. No es verde
+   porque **el tamaño del binario sigue siendo el mayor desconocido del
+   motor**: el único medido es la parte compartida del hub (82 280 B,
+   `sram_hub_budget.py`) y no trae motores de audio. Se mide en escritorio,
+   secciones ALLOC del ELF, en cuanto haya motores que enlazar; las otras
+   dos salidas de antes (framebuffer a PSRAM, camino B) eran del motor
+   integrado y ya no le tocan a este censo.
 6. **Censo de parámetros del motor** contra `MAX_PARAMS` (#172): el motor
    entra al modelo o no existe.
 7. **Presupuesto de la PSRAM** (nace con el acta 2026-08-26, tarde): caudal
@@ -379,20 +383,23 @@ libro bilateral y el bring-up lo mide bajo carga plena.
    ni aserción** (R-M3). **La latencia sigue fuera** y está declarada en el
    cierre del guion: sale de la hoja de la pieza, no del ancho de banda.
 8. **Presupuesto de la pantalla** (nace con el acta 2026-08-26, noche —
-   spec pantalla-motor): el framebuffer entra al censo de SRAM (§8.5,
-   junto a los buffers de sample) y su caudal de refresco (23,04 Mpx/s
-   sostenidos por AXI: 46-92 MB/s según formato) entra a `carga_motor` y
-   al presupuesto del punto 7. **Dónde vive cada mitad, corregido por la
-   junta de la tanda 2** (la redacción anterior decía «entra a
+   spec pantalla-motor; **desde D2 la pantalla es del hub, no del motor**):
+   el framebuffer entra al censo de SRAM **del hub** (`sram_hub_budget.py`,
+   hub §10 fila 2), no al de la Voz ni junto a los buffers de sample; y su
+   caudal de refresco (23,04 Mpx/s sostenidos por AXI: 46-92 MB/s según
+   formato) se cobra en el hub. **Dónde vive cada mitad, corregido por la
+   junta de la tanda 2 y por D2** (la redacción anterior decía «entra a
    `carga_motor`» de algo que `carga_motor` declara fuera): el **pegamento
-   de CPU** (componer la UI) es fila del libro bilateral — ya está, ~25-150
-   ciclos, §7; el **caudal en PSRAM** lo mide `psram_budget.py` en su
-   escenario de framebuffer mudado (46 MB/s en RGB565, 69 en RGB888); y la
-   **contención en SRAM**, que es el costo real del camino A, **no tiene
-   modelo de escritorio a propósito**: se mide en el soak de la fila 5 de
-   §11, con el refresco LTDC activo. Hasta que el §8.5 cierre y ese soak
-   corra, **el conector del panel no se dibuja** (puerta del repliegue,
-   spec pantalla §1).
+   de CPU** (componer la UI) era fila del libro bilateral, ~25-150 ciclos,
+   §7, y `carga_motor` la conserva solo como escenario heredado — el hub no
+   tiene censo de CPU todavía; el **caudal en PSRAM** lo mide
+   `psram_budget.py` en su escenario de framebuffer mudado (46 MB/s en
+   RGB565, 69 en RGB888), y en el hub esa PSRAM no comparte bus con el
+   sampler; y la **contención en SRAM**, que es el costo real del camino A,
+   **no tiene modelo de escritorio a propósito**: se mide en bring-up con el
+   refresco LTDC activo, en el hub (#231). Hasta que el censo del hub cierre
+   y ese soak corra, **el conector del panel no se dibuja** (puerta del
+   repliegue, spec pantalla §1).
 
 ---
 

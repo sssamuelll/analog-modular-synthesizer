@@ -1,13 +1,17 @@
 # El hub del SAM17: el cerebro pasa a N657, se lleva la cara, y las radios se reparten — propuesta
 
 **Fecha:** 2026-08-30
-**Estado:** PROPUESTA con tres decisiones firmadas. No toca DXF ni cobre;
+**Actualización:** 2026-10-01
+**Estado:** D1, D2, D7 y D3' FIRMADAS; ubicación de la interfaz de audio
+RESUELTA por ENMIENDA (§6.2); cristal HSE en el hub por el acta del 2026-10-01 (§0). Quedan pendientes los cierres de papeles y
+censos propios. No toca DXF ni cobre;
 trae un guion (el censo de pines del hub, §10 fila 1). Mezcla dos clases de
 cosas y las rotula para que no se confundan: las **actas** de Samuel del
-2026-08-30 (§0, textuales) y las **decisiones que este papel recomienda**.
-El mismo día, Samuel firmó **D1, D2 y D7** («todas bien») y devolvió **D3**
+2026-08-30 y 2026-09-09 (§0, textuales) y sus decisiones e interpretaciones.
+El 2026-08-30, Samuel firmó **D1, D2 y D7** («todas bien») y devolvió **D3**
 con una acta nueva (A-9): la cámara y la IA van a un **tercer N657**. D3 queda
-sustituida por D3' (§3.2), que es lo único que sigue PENDIENTE DE FIRMA.
+sustituida por D3' (§3.2), firmada con su forma de módulo el 2026-09-09.
+Ese día queda decidido un **cuarto N657 dedicado a la interfaz de audio**.
 **Sujeto:** el zócalo del micro del cerebro (módulo 2 v2), y lo que cuelga de
 él: la cara del instrumento, las radios, la interfaz de audio y el asiento del
 procesador de aplicaciones.
@@ -17,7 +21,7 @@ cámara-gestos; panel al centro §4.1; Voz total E-1; cerebro §6.6 (el puente).
 
 ---
 
-## 0. Las actas del 2026-08-30
+## 0. Las actas del 2026-08-30 y 2026-09-09
 
 Textuales, en el orden en que salieron:
 
@@ -63,15 +67,92 @@ Textuales, en el orden en que salieron:
   controlen las cosas solo con mis manos (por medio de la camara) o con cada
   dedo o moviendo mi cuerpo». Sustituye a D3; su forma va en §3.2.
 
-**Firmado el 2026-08-30:** D1 (dos N657, hub y Voz), D2 (la cara al hub) y
-D7 (el asiento del procesador de aplicaciones). **Pendiente:** D3' (§3.2), y
-dónde vive la interfaz de audio (§6).
+### Acta del 2026-09-09 — Reparto por trabajo
+
+«la idea es que tengamos un procesador solamente para la parte analogica,
+un procesador solamente para la interface grafica y controladores, un
+procesador solo para la IA, un procesador solamente para la interface de
+audio, la razon de ese diseño es que queremos tener suficiente headroom
+para procesamiento y que el instrumento jamas se cuelgue. que sea el mas
+rapido de toda la historia de los sintetizadores y el que tenga el mejor
+sonido tambien, estoy pensando por eso en meterle valvulas y todo.»
+
+**Interpretación y cierre del acta, fuera de la cita:** D3' queda
+**FIRMADA el 2026-09-09**, incluida su forma de módulo por J2 (§3.2).
+§6.2 queda **RESUELTA mediante ENMIENDA**: la interfaz de audio vive en un
+**cuarto N657 dedicado**, fuera del hub y de la Voz. El reparto firmado es:
+
+| N657 | Trabajo |
+|---|---|
+| Voz | Parte analógica |
+| Hub | Interfaz gráfica y controladores |
+| Tercero, «el mago» por su trabajo, no como bautizo | IA |
+| Cuarto, **sin nombre**, referido por su trabajo | Interfaz de audio |
+
+La razón es reservar **headroom y aislar las cargas por silicio** para que
+el instrumento no se cuelgue. Es una intención de diseño; el reparto por sí
+solo no garantiza ausencia de cuelgues, mayor rapidez ni mejor sonido.
+**Válvulas: intención, NO DECIDIDO**; corresponde a otra conversación sobre
+sonido, no sobre cómputo.
+
+**Firmado el 2026-08-30:** D1 (la pareja inicial de N657, hub y Voz), D2 (la
+cara al hub) y D7 (el asiento del procesador de aplicaciones).
+**Cierre de pendientes el 2026-09-09:** D3' (§3.2), incluida la forma del
+módulo, FIRMADA; ubicación de la interfaz de audio (§6.2), RESUELTA mediante
+ENMIENDA con un cuarto N657 dedicado. El cierre de su papel propio sigue
+pendiente.
+
+### Acta del 2026-10-01 — El hub lleva cristal HSE
+
+Tras la medida en la NUCLEO-N657X0-Q de ese día (#150, comentario del
+2026-10-01), y ante la pregunta «¿la placa del hub lleva cristal HSE?»:
+
+«metamosle cristal HSE»
+
+**Interpretación y cierre del acta, fuera de la cita:** la placa del hub
+**lleva cristal en el HSE** (OSC_IN/OSC_OUT, PH0/PH1, que el censo de pines ya
+reservaba: `micro_budget.py`, reservas fijas), y **la referencia de 24 MHz del
+PHY de USB HS sale de él**, no de una PLL.
+
+La razón es doble y la segunda es la que manda. La medida: con la referencia
+HSI → PLL4 → IC15 el PHY no se presenta en el bus, y con el HSE de 48 MHz ÷ 2
+enumera a alta velocidad (una corrida de cada lado, #231 y `EN-PLACA.md`,
+«El primer día en placa»). La hoja: el HSI deriva de −5 % a +5 % con voltaje y
+temperatura (DS14791 Rev 10, p. 165, `TJ` −40 a 125 °C), y el USB de alta
+velocidad pide ±500 ppm. Con esa deriva, el HSI no puede ser la referencia
+del PHY aunque una corrida a temperatura de escritorio hubiera salido.
+
+**La frecuencia, el mismo 2026-10-01**, ante las tres que caben (38,4, 40 o
+48 MHz) y el aviso de que 48 está en el techo del rango:
+
+«si la nucleo funciona bien con 48 que sea de 48 hombre. sin miedo.»
+
+**Interpretación, fuera de la cita:** el cristal del hub es de **48 MHz**, el
+mismo de la NUCLEO-N657X0-Q (X3, UM3417 Rev 3 §7.7.2, p. 24) y el único medido.
+Con el selector del PHY en su defecto (`OTGPHY1SEL = hse_div2_ck`) su mitad,
+24 MHz, es un `FSEL` legal (RM0486 Rev 4, p. 3929), y ninguno de los diez
+selectores de la errata §2.2.22 se mueve. Que 48 sea el techo de la hoja (16 a
+48 MHz, DS14791 Rev 10, Tabla 49, p. 161) queda dicho y aceptado: es la
+frecuencia con la que ST diseñó su propia placa para este chip.
+
+**Lo que el acta NO decide:**
+
+- **La pieza**: tolerancia, ESR, carga (CL1 y CL2 contra la capacidad de pin y
+  pista, DS14791 Rev 10, p. 162) y huella.
+- **Que las PLL tomen el cristal.** Hoy el censo de relojes las sigue
+  alimentando del HSI. Con el HSE presente es una opción nueva, no una
+  decisión.
+
+**Consecuencia:** la PLL4 deja de estar atada al PHY y pasa a ser una PLL
+libre más para la pantalla, la cámara del tercer chip o lo que el reparto
+pida (`reloj_budget.py`).
 
 ---
 
 ## 1. Por qué existe este papel: la frontera de la ráfaga
 
-El desarrollo del instrumento avanza por ráfagas, y en la última la Voz llegó
+**Contexto histórico del 2026-08-30, previo a este reparto.** El desarrollo
+del instrumento avanza por ráfagas, y en la última la Voz llegó
 al N657 (26 de agosto) mientras el cerebro se quedó en el chip que su propio
 contrato ya declaraba inservible. El J2 punto a punto, mergeado el 26 (#210),
 cuelga de dos premisas; la segunda (el chip de la Voz) cayó y se reemplazó por
@@ -100,10 +181,11 @@ razones que sí son de hoy.
 
 ## 2. Un cerebro aparte, y de la misma clase — FIRMADA (D1)
 
-### 2.1 Por qué no se funden, con los números de hoy
+### 2.1 Por qué no se funden
 
 Fundir el cerebro en el N657 de la Voz se evaluó y se descarta por tres
-razones nuevas, y la tercera es A-2:
+razones nuevas, y la tercera es A-2. La segunda se apoyaba en un número que
+después se midió; lo que sostiene la decisión son la primera y la tercera:
 
 1. **SPI.** El N657 tiene 6 (SPI1-6, tabla de pines de `micro_budget.py`).
    El motor usa 3 para los 16 cortes de CV (motor-digital §5). Fundido, la
@@ -111,10 +193,17 @@ razones nuevas, y la tercera es A-2:
    ranuras**. D3 del J2 exige que toda ranura activa vaya en SPI de hardware;
    el censo activo de D3 pide 4 (la Voz, el módulo de mandos #178 y las
    reservas de los módulos 8 y 9) y las ocho se cablean. Con 3 no cuadra.
-2. **SRAM y CPU.** `sram_budget.py` da rojo en las cuatro configuraciones de
-   pantalla, en el peor caso de lo fijo, y el motor está presupuestado al 50 %
-   (~8 300 ciclos por muestra). Un hub que comparte chip con su cliente más
-   grande no tiene sitio para crecer.
+2. **CPU, y una SRAM que ya no es razón.** El motor está presupuestado al
+   50 % (~8 300 ciclos por muestra, `carga_motor_budget.py`): un hub que
+   comparte chip con su cliente más grande no tiene sitio para crecer. La
+   SRAM iba en esta misma fila el 2026-08-30 —«el censo compartido daba rojo
+   en las cuatro configuraciones de pantalla»—, pero ese rojo salía de un
+   binario ESTIMADO entre 700 000 y 2 000 000 B que nadie había medido. El
+   único binario medido desde entonces, la parte compartida del hub
+   (`sram_hub_budget.py`, 82 280 B en `c521302`), queda 8,5× por debajo de
+   la punta baja de aquel estimado y no trae motores de audio; el de la Voz
+   sigue ESTIMADO (`sram_voz_budget.py`, HUECO). La SRAM no sostiene esta
+   decisión ni la tumba: es un hueco declarado, no un argumento.
 3. **A-2.** Si el SAM17 controla otros módulos, el cerebro es el producto y la
    Voz es su primer cliente. El hub no vive de las sobras de un cliente.
 
@@ -137,7 +226,7 @@ razones nuevas, y la tercera es A-2:
   instante en que existe»). El cómputo superior de A-3 tiene su sitio en §5,
   fuera del camino de la nota.
 
-### 2.3 E-1, reescrita
+### 2.3 E-1, reescrita (registro del 2026-08-30)
 
 > **E-1 (2026-08-30).** El cerebro y la Voz **no se funden**: el hub necesita
 > los 6 SPI del chip para las ocho ranuras de D3 y la Voz gasta 3 en el CV;
@@ -146,6 +235,15 @@ razones nuevas, y la tercera es A-2:
 > N657, y lo que cambió el 30 no es qué instrumento es sino quién ejecuta
 > cada mitad.
 
+Ese registro describe la pareja hub/Voz y su presupuesto anterior a la
+separación de censos (PR #357). El reparto vigente es el de cuatro N657 del
+acta del 2026-09-09 (§0), y la regla que sale de ahí es una sola, y vale
+igual para un quinto chip si llega: **cada trabajo tiene su chip, cada chip
+su SRAM interna de 4 200 000 B, y cada SRAM su censo.** Hoy existen dos
+censos, `sram_hub_budget.py` y `sram_voz_budget.py`; los del mago y de la
+interfaz de audio están mandados en §10 (filas 11 y 13) y no se cargan a
+ningún vecino mientras tanto.
+
 Lo que sigue en pie de la E-1 vieja: **la puerta sucia no vive en el cuarto
 limpio** sigue siendo ley, solo que ahora se cumple en la tarjeta trasera
 (#183) y en los aisladores (D-P6), no en la partición de chips. Con A-6 esa
@@ -153,7 +251,7 @@ ley gana un cuarto limpio más: los preamplificadores de micrófono (§6).
 
 ---
 
-## 3. La cara se muda al hub — D2 FIRMADA; D3' pendiente
+## 3. La cara se muda al hub — D2 y D3' FIRMADAS
 
 ### 3.1 La pantalla (D2)
 
@@ -175,8 +273,9 @@ siendo el A de pantalla-motor (LTDC, RGB paralelo de 24 bits, táctil
 capacitivo por I²C); cambia el chip. Su alimentación propia desde +12 V con
 retorno dedicado (pantalla-motor §6) no cambia.
 
-Lo que esto le hace a la SRAM de la Voz, con la tabla de `sram_budget.py`
-(peor caso de lo fijo, todo ESTIMADO y sin medir el binario):
+Comparación histórica del 2026-08-30, con la tabla que entonces estaba en
+`sram_voz_budget.py` (peor caso de lo fijo, todo ESTIMADO y sin medir el
+binario; los censos se separaron en PR #357):
 
 | Lo fijo en la Voz | Hoy (todo adentro) | Con la cara al hub y la cámara al mago |
 |---|---:|---:|
@@ -187,10 +286,15 @@ Lo que esto le hace a la SRAM de la Voz, con la tabla de `sram_budget.py`
 | Framebuffer 800×480 | 768 000 a 2 304 000 | 0 (al hub, D2) |
 | **Queda para tablas y samples** (4 200 000 − lo fijo) | **−368 000 a −1 904 000** | **1 800 000** |
 
-La puerta de la pantalla pedía 1 256 000 B libres. Hoy es rojo en las cuatro
-configuraciones; con la cara en el hub cierra en el peor caso, sin haber
-medido el binario. De paso mueren el riesgo 5 del motor (contención del LTDC
-con el audio) y el riesgo del 27 («si el motor no arranca no hay pantalla»).
+La puerta de la pantalla pedía 1 256 000 B libres. En el escenario histórico
+con todo adentro era rojo en las cuatro configuraciones; con la cara en el
+hub cierra en el peor caso de esa comparación, sin haber
+medido el binario. Cerrar bajo un ESTIMADO no es verde: el censo vivo de la
+Voz (`sram_voz_budget.py`) sale HUECO con esos mismos 1 800 000 B libres
+contra los 1 256 000 del mínimo, y seguirá HUECO hasta que haya motores de
+audio enlazados que medir. De paso mueren el riesgo 5 del motor (contención
+del LTDC con el audio) y el riesgo del 27 («si el motor no arranca no hay
+pantalla»).
 
 #### El tamaño: 5", el panel del kit de prueba (A-7, acta)
 
@@ -257,13 +361,15 @@ LTDC en 24 bits, la PSRAM del framebuffer, el tronco I²C y el pedal, el
 VFBGA264 reparte 66 pines y deja **80 GPIO libres tras las reservas** —
 +53 después de cobrar los 27 estimados de lo vario (las dos ranuras por
 USART, MIDI DIN, el ESP32-S3, la radio ESB, la cadena WS2812, clock/reset,
-el táctil y el mux). Con la interfaz de audio sentada (A-6) quedan +48; con
-RGMII de D9, +38; con las dos, **+33**. El VFBGA223 también cierra en los
-cuatro escenarios, con menos aire. Los tres encapsulados chicos son rojo por
-la PSRAM, y el VFBGA198 por la pantalla, igual que en la Voz. **La puerta de
+el táctil y el mux). Los escenarios históricos del 2026-08-30 daban +48
+con la interfaz de audio sentada (A-6), +38 con RGMII de D9 y **+33** con
+las dos. El acta del 2026-09-09 saca la interfaz del hub; esas cifras con
+audio conservan el análisis anterior, no presupuestan el cuarto chip.
+El VFBGA223 también cierra en los cuatro escenarios, con menos aire. Los
+tres encapsulados chicos son rojo por la PSRAM, y el VFBGA198 por la pantalla, igual que en la Voz. **La puerta de
 D1 está en verde**: el hub cabe con todo lo que este papel le cuelga.
 
-### 3.2 La cámara y la IA: un tercer N657, como módulo (D3', sustituye a D3)
+### 3.2 La cámara y la IA: un tercer N657, como módulo (D3', sustituye a D3) — FIRMADA 2026-09-09
 
 La primera versión de este papel (D3) mudaba la cámara y su inferencia al
 hub. Samuel la devolvió con A-9: la IA entra de una, y para eso se dedica un
@@ -283,10 +389,10 @@ punto:
   satélite de camino C sobre la radio de D4 (con la inferencia allá, como
   ese camino ya decía).
 - **Su memoria es suya.** Las activaciones de la NPU (200 000 a 800 000 B)
-  y los cuadros de cámara (150 000 a 600 000 B, ESTIMADOS de
-  `sram_budget.py`) dejan de competir con el framebuffer del hub por el
-  mismo AXI: la contención que el motor llamó riesgo 5 no se muda al hub,
-  desaparece. Los pesos del modelo viven en su propia XSPI.
+  y los cuadros de cámara (150 000 a 600 000 B, ESTIMADOS históricos
+  conservados en `sram_hub_budget.py`) dejan de competir con el framebuffer
+  del hub por el mismo AXI: la contención que el motor llamó riesgo 5 no se muda al
+  hub, desaparece. Los pesos del modelo viven en su propia XSPI.
 - **El tiempo real del hub no ve la cámara.** Los seis maestros del J2, el
   evento de nota (≤100 µs) y el protocolo no comparten DMA ni bus con una
   tubería de vídeo. Y por §4.3, un mago muerto es «un sensor que calla»: el
@@ -317,8 +423,9 @@ dos censos propios (pines: trivial, CSI dedicado más J2 esclavo, I²C y
 XSPI; SRAM: el que §10 fila 11 manda). Lo que devuelve: la Voz recupera los
 350 000 a 1 400 000 B de la tabla de §3.1 **y** el hub no los hereda.
 
-D3' sustituye a D3; D2 no depende de ella. Lo que sigue pendiente de firma
-es esta forma (módulo por J2), no el tercer chip, que es acta.
+D3' sustituye a D3; D2 no depende de ella. **FIRMADA el 2026-09-09,
+incluida esta forma de módulo por J2.** Sus censos y el cierre de su papel
+propio siguen pendientes (§10 fila 11).
 
 ### 3.3 Los mandos
 
@@ -397,9 +504,10 @@ radio caída es un sensor que calla, no un instrumento que deja de sonar.
 
 ## 5. El asiento del procesador de aplicaciones — FIRMADA (D7)
 
-A-3 pide cómputo superior. Los dos N657 dan el camino de nota más rápido que
-el silicio de hoy permite en bare-metal, y la NPU del hub para gestos. Lo que
-un microcontrolador no da (agente de IA a bordo, red de verdad, sistema de
+A-3 pide cómputo superior. El acta del 2026-09-09 reparte el trabajo entre
+cuatro N657: Voz, hub, IA en el mago e interfaz de audio en el cuarto chip.
+La NPU para gestos es del mago. La rapidez y el sonido son objetivos, sin
+garantía por este reparto. Lo que un microcontrolador no da (agente de IA a bordo, red de verdad, sistema de
 archivos, pantalla compuesta) **ya tiene sitio en el diseño**:
 `architecture-compute.md` §1 lo llama «cualquier computadora» y D-P6 le da
 un conector aislado. Es un cliente del protocolo, con el mismo contrato que
@@ -420,20 +528,23 @@ como cliente del hub.** Sin pieza, sin fecha. Condiciones que nacen aquí:
 
 ---
 
-## 6. La interfaz de audio — ACTA A-6, sin diseñar aquí
+## 6. La interfaz de audio — chip dedicado decidido; diseño pendiente de cierre
 
 A-6 mete un subsistema entero que ningún papel tenía: el SAM17 es también
 **la interfaz de audio del estudio**, de la clase Clarett+ 4Pre (Focusrite).
 Este papel **no la diseña**: es un subsistema con su propia cadena analógica
 (preamplificadores de micrófono, phantom, entradas de línea e instrumento,
 salidas de línea y auriculares, conversión a 24 bits), su propio papel y su
-propia junta. Lo que sí hace es decir qué le exige al hub y qué reabre, para
-que el censo de §10 no la descubra tarde. **Las cifras de la clase** (cuántos
-preamplificadores, cuántas entradas y salidas, óptico ADAT sí o no, tasa
+propia junta. Conserva el análisis de lo que podía exigir al hub y lo que
+reabre; el acta del 2026-09-09 cierra su ubicación en un cuarto N657 dedicado
+(§6.2). **Las cifras de la clase** (cuántos preamplificadores, cuántas entradas y salidas, óptico ADAT sí o no, tasa
 máxima) **se fijan contra la hoja del producto de referencia** antes de
-escribir el papel propio, no de memoria (Principio I).
+cerrar el papel propio, no de memoria (Principio I).
 
 ### 6.1 Lo que ya existe y con lo que choca
+
+Antecedentes del 2026-08-30. La asignación del chip se resuelve en §6.2;
+la reconciliación de estos contratos sigue pendiente en el papel propio.
 
 - **D-P6 ya es «USB audio hacia la computadora»**: un invitado UAC2 asíncrono
   con endpoint de feedback, aislado, en el N657 de la Voz, con la boca y los
@@ -459,7 +570,9 @@ escribir el papel propio, no de memoria (Principio I).
 - **La fuente**: phantom de 48 V es un riel que el módulo 1 no tiene y que el
   presupuesto de potencia no conoce.
 
-### 6.2 Lo que le exige al hub, para el censo
+### 6.2 Dónde vive la interfaz — RESUELTA mediante ENMIENDA 2026-09-09
+
+**Análisis histórico del 2026-08-30, preservado íntegro:**
 
 Si la interfaz cuelga del hub (lo natural: el hub es quien habla con la
 computadora), el censo de §10.1 suma: SAI (el N657 tiene SAI1 y SAI2 en la
@@ -471,23 +584,42 @@ absorberla y la Voz pierde parte de lo que §3.1 le devolvía. **Dónde vive es
 decisión de Samuel con el papel propio delante**, y ese papel es el
 prerrequisito de la fila 1 de §10.
 
+**ENMIENDA del 2026-09-09 (§0):** la interfaz de audio vive en un
+**cuarto N657 dedicado**; ninguna de las dos alternativas anteriores (hub o
+Voz) es la decisión vigente. Su ubicación queda **RESUELTA** y sus cargas
+pertenecen a su propio censo. El cuarto chip se refiere por su trabajo y
+**no tiene nombre**.
+
+**El papel propio sigue siendo un prerrequisito pendiente de cierre y
+firma**, ahora con el chip dedicado dentro. Existe como propuesta en
+`2026-08-31-interfaz-audio-design.md`; esta acta resuelve la ubicación, sin
+firmar el resto de esa propuesta. Allí siguen la reconciliación de D-P6 y
+los demás contratos de §6.1 y los censos de pines y SRAM de §10. En este
+registro no se diseña la interfaz ni se fijan sus consumos, memoria, pines
+o encapsulado.
+
 ---
 
 ## 7. Lo que este papel NO decide
 
 - **Más de ocho ranuras.** El IDC y el censo son de ocho; crecer por encima es
   pregunta de conector y de autopista (D9), no de chip.
-- **La pieza del radio ESB**, la del SoM, ni ninguna de la interfaz de audio:
-  sin hoja en el árbol no hay nombre (R-M3).
-- **El diseño de la interfaz de audio** (§6): papel propio, con las cifras de
-  la clase contra su hoja.
+- **La pieza del radio ESB**, la del SoM ni las demás piezas de la interfaz
+  de audio: el acta del 2026-09-09 sí decide su N657 dedicado; el encapsulado
+  y las otras piezas siguen pendientes, con hoja en el árbol (R-M3).
+- **El diseño de la interfaz de audio** (§6): papel propio pendiente de
+  cierre y firma, con las cifras de la clase contra su hoja y el cuarto
+  N657 dedicado ya decidido.
+- **Las válvulas:** intención del acta del 2026-09-09, **NO DECIDIDO**. Se
+  trata en otra conversación sobre sonido, no sobre cómputo.
 - **Cuánto pesa el binario del motor.** Sigue sin medir y sigue siendo el
   estimado más gordo del censo; lo que cambia es que ya no tumba la puerta de
   la pantalla.
 - **El nombre del módulo.** La fila de arriba entera se propuso llamar «la
   cabeza» (con la pantalla como «la cara») el 2026-08-30; Samuel no ha
   contestado. Este papel usa «el hub» para el chip del cerebro y «el mago»
-  para el tercero por su trabajo; no bautiza nada.
+  para el tercero por su trabajo; el cuarto chip se refiere por su trabajo
+  de interfaz de audio y **no tiene nombre**. No bautiza nada.
 - **La segunda cámara** (de cuerpo entero): D3' dice que es el mismo módulo
   otra vez, cableado o por radio, y no decide cuál ni cuándo.
 - **El estudio del valle** (panel al centro §5): no cambia, pero §6.1 le
@@ -513,15 +645,16 @@ prerrequisito de la fila 1 de §10.
 
 ## 9. Enmiendas mandadas, con dueño
 
-Ninguna se ejecuta hasta que D1 y D2 se firmen. Se listan para que no se
-manden al aire (patrón conocido: #214).
+D1 y D2 se firmaron el 2026-08-30; D3' y la ubicación de la interfaz se
+cerraron el 2026-09-09 (§0). Las enmiendas conservan su estado de ejecución
+individual para que no se manden al aire (patrón conocido: #214).
 
 | Papel o guion | Sección | Qué cambia | Dueño | Estado |
 |---|---|---|---|---|
 | `2026-08-25-j2-punto-a-punto-design.md` | §0.1 | Premisa 1: «dirigida, no sellada» → sellada en N657 (D1) | este papel al firmarse | pendiente |
 | ídem | cabecera | «propuesto, pendiente de Samuel» → decidido y mergeado (#210, 26-ago) | una línea, cualquiera | pendiente |
 | `2026-08-23-modulo-voz-total-design.md` | E-1 | Reescrita como en §2.3 | este papel | pendiente |
-| `2026-08-26-motor-digital-design.md` | §0, actas de la noche, §10 riesgo 5, D-P6 | La pantalla y la cámara salen del motor (D2, D3); riesgo 5 muere; «#209 sitio 2» sigue cierto; D-P6 se reconcilia con A-6 | este papel + papel de la interfaz | pendiente |
+| `2026-08-26-motor-digital-design.md` | §0, actas de la noche, §10 riesgo 5, D-P6 | La pantalla y la cámara salen del motor (D2, D3'); riesgo 5 muere; «#209 sitio 2» sigue cierto; D-P6 se reconcilia con A-6 y el acta del 2026-09-09 | este papel + papel de la interfaz | pendiente |
 | `2026-08-26-pantalla-motor-design.md` | §1, §6 | «Por qué cuelga del motor» → del hub; sitio contestado | este papel | pendiente |
 | `2026-08-26-camara-gestos-design.md` | §1, §3, §4 | La cámara y la NPU salen del motor al **tercer N657** (D3'); camino C → radio de D4; §2 («modulación sí, disparo no») **sigue en pie y no la mueve A-9** | este papel, con acta de Samuel | pendiente |
 | **Papel nuevo: el mago (tercer N657)** | — | Placa, censo de pines y de SRAM, descriptor, dos cámaras y su reparto, modelos y su XSPI | papel propio | pendiente |
@@ -529,9 +662,9 @@ manden al aire (patrón conocido: #214).
 | `2026-08-27-panel-pantalla-al-centro-design.md` | §4.1 | «La cara se muda del cerebro al motor» → se queda en el cerebro; el requisito «el motor no arrancó, en luz» lo cumple la pantalla | este papel | pendiente |
 | `2026-08-21-modulo-2-v2-cerebro-design.md` | §1, §6.6, §7, §12 | RP2350B → N657; lista de trabajos de §4.1; la cabeza local es la 7"; el margen de pines se recalcula | este papel | pendiente |
 | `2026-08-21-modulo-2-v2-cerebro.md` (plan) | entero | Reescribir contra el N657 (VFBGA264, no QFN-80; `pinout.rs` nuevo) | plan nuevo | pendiente |
-| **Papel nuevo: la interfaz de audio** | — | Cifras de la clase contra hoja; dónde vive; reconciliación con D-P6; trasera, masa y phantom | papel propio | pendiente |
+| `2026-08-31-interfaz-audio-design.md` (propuesta) | — | Cuarto N657 dedicado decidido (§0); censos propios de pines y SRAM; cifras de la clase contra hoja; reconciliación con D-P6; trasera, masa y phantom | papel propio | pendiente de cierre y firma |
 | `hardware/02-midi-cv/pio_budget.py` | — | Retirar a historia: mide un chip que se va | PR de nivelación | pendiente |
-| `hardware/02-midi-cv/sram_budget.py` | — | Partir en dos censos: Voz sin cara, hub con cara (y con colas de audio si §6.2) | PR de nivelación | pendiente |
+| `hardware/03-vco/sram_voz_budget.py` y `hardware/02-midi-cv/sram_hub_budget.py` | — | Separación de censos: Voz sin cara ni cámara/NPU; hub con cara y su binario medido (82 280 B). La interfaz de audio tiene censo propio pendiente (§6.2) | PR de nivelación | **APLICADA — PR #357** |
 | `hardware/02-midi-cv/micro_budget.py` | censo N657 | Segundo censo de pines: el hub (§10 fila 1) | PR de nivelación | pendiente |
 | `hardware/02-midi-cv/power_budget.py` | — | Riel de phantom y consumo de la interfaz (§6.1) | papel de la interfaz | pendiente |
 | `hardware/03-vco/spi_privado_budget.py` | — | «Sigue modelando los dos RP2350B viejos» y da verde: sujeto muerto | PR de nivelación | pendiente |
@@ -548,13 +681,16 @@ manden al aire (patrón conocido: #214).
 1. **Censo de pines del hub** — ✅ **CORRIDO Y VERDE** (`micro_budget.py`,
    2026-08-30, con su mutación). Seis ranuras J2 en SPI1-6, pantalla al LTDC
    en 24 bits, PSRAM del framebuffer, tronco I²C y pedal: **VFBGA264, 66
-   pines repartidos, 80 GPIO libres, +53 tras lo vario**; +48 con audio,
-   +38 con RGMII, +33 con los dos. El VFBGA223 también cierra. **Queda
+   pines repartidos, 80 GPIO libres, +53 tras lo vario**; escenarios
+   históricos: +48 con audio, +38 con RGMII, +33 con los dos. El acta del
+   2026-09-09 saca la interfaz del hub; esas cifras no son el censo del
+   cuarto chip. El VFBGA223 también cierra. **Queda
    mandado** destilar los USART de la Tabla 16 para sentar las dos ranuras
    restantes de D3 con nombre de pin en vez de cobrarlas como GPIO varios.
-2. **Censo de SRAM del hub**: framebuffer en PSRAM propia (sin sampler),
-   activaciones de la NPU, cuadros de cámara y colas de audio de §6.2. Con su
-   mutación.
+2. **Censo de SRAM del hub**: framebuffer en PSRAM propia (sin sampler) y
+   demanda propia de UI, protocolo y DMA del J2, pendiente de censar. La
+   NPU y la cámara pertenecen al mago (D3'); la interfaz de audio, al cuarto
+   chip (§6.2). Con su mutación.
 3. **USART síncrono del N657** como maestro, contra la hoja: las dos ranuras
    de repuesto de D3 dependen de ello.
 4. **Latencia y jitter del enlace ESB** en bring-up, con cota escrita antes
@@ -562,10 +698,14 @@ manden al aire (patrón conocido: #214).
 5. **Coexistencia de dos radios de 2,4 GHz** en el mismo cajón: canales y
    antenas.
 6. **Drivers de embassy-stm32 para el N6** (SPI, USB HS, LTDC, SAI, DMA).
-7. **El binario del motor**, medido en la Discovery (#231): sigue siendo el
-   número que manda en ambos censos de SRAM.
+7. **El binario de la Voz**, medido en escritorio como se midió el del hub
+   (secciones ALLOC del ELF, `cargo build --release`; `sram_hub_budget.py`:
+   82 280 B en `c521302`): sigue siendo el ESTIMADO que manda en
+   `sram_voz_budget.py` (700 000 a 2 000 000 B) porque no hay motores de
+   audio que enlazar todavía, no porque falte placa. La Discovery (#231)
+   mide ciclos y contención; los bytes del binario no la esperan.
 8. **Las cifras de la clase Clarett+ 4Pre**, contra la hoja del producto,
-   antes del papel de la interfaz.
+   antes de cerrar el papel de la interfaz.
 9. **La hoja del panel de 5" de la DK** (A-7): pieza separable, contorno,
    FPC y táctil; y que se venda suelta. Con ella, el panel al centro recorre
    sus números de §2 y §8.
@@ -579,6 +719,8 @@ manden al aire (patrón conocido: #214).
 12. **La latencia de cámara a landmark**, medida en bring-up (30-80 ms según
     cámara-gestos §5): es lo que decide si la frontera «modulación sí,
     disparo no» se puede reabrir.
+13. **Los censos del cuarto chip, dedicado a la interfaz de audio**: pines
+    y SRAM, en su papel propio. **PENDIENTE**.
 
 ---
 
@@ -586,11 +728,12 @@ manden al aire (patrón conocido: #214).
 
 | # | Riesgo | Se cierra cuando |
 |---|---|---|
-| 1 | ~~El censo de pines del hub no cabe~~ | **CERRADO 2026-08-30**: §10.1 corrido, VFBGA264 con +33 GPIO en el peor escenario (audio y RGMII sentados) |
-| 2 | Dos N657 con dos arranques desde XSPI y dos binarios firmados | FSBL + Rust vivos en la Discovery (#231, riesgo 6 del motor) |
+| 1 | ~~El censo de pines del hub no cabe~~ | **CERRADO 2026-08-30**: §10.1 corrido, VFBGA264 con +33 GPIO en el peor escenario histórico (audio y RGMII sentados); no censa el cuarto chip del acta del 2026-09-09 |
+| 2 | La pareja hub/Voz requiere dos arranques desde XSPI y dos binarios firmados | FSBL + Rust vivos en la Discovery (#231, riesgo 6 del motor) |
 | 3 | Dos radios de 2,4 GHz se pisan | §10.5 medido; suplente: ESP-NOW sobre el S3 (§4.2) |
-| 4 | Se reabren tres papeles con acta (pantalla, cámara, panel al centro) | **D2 firmada**; la cámara la reabre A-9 con acta nueva; falta la forma de D3' |
-| 8 | Tres N657 son tres arranques desde XSPI, tres binarios firmados y tres flashes externas | El bring-up del mago sale del mismo #231; su papel propio lo acota |
+| 4 | Se reabren tres papeles con acta (pantalla, cámara, panel al centro) | **D2 firmada**; la cámara la reabre A-9; **D3' firmada con su forma el 2026-09-09**. Sigue pendiente ejecutar las enmiendas de §9 |
+| 8 | El mago añade su arranque desde XSPI, binario firmado y flash externa a la pareja hub/Voz | El bring-up del mago sale del mismo #231; su papel propio lo acota |
+| 10 | El cuarto N657 dedicado a interfaz de audio tiene pendiente el cierre de su papel y sus censos propios | Cierre y firma de su papel y censos de pines y SRAM de §10.13; el reparto por silicio no prueba ausencia de cuelgues ni superioridad de rapidez o sonido |
 | 9 | «Cosas tipo de mago» se lee como tocar notas en el aire, y la latencia no lo permite | §3.2 lo dice de frente; §10.12 lo mide antes de prometerlo |
 | 5 | La computadora ve dos dispositivos de audio (D-P6 y A-6) | El papel de la interfaz los reconcilia en uno compuesto |
 | 6 | La trasera y el valle recién dibujados no tienen sitio para los conectores de la interfaz | El papel de la interfaz cuenta conectores contra el estudio del valle (panel al centro §5) |

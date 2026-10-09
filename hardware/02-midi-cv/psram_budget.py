@@ -215,10 +215,14 @@ def demo() -> None:
     print("    promete hasta que el bring-up mida.")
     print()
     print("    Y no todos los granos leen de PSRAM: los que caben en SRAM")
-    print("    (censo de sram_budget.py) no tocan este bus. El reparto")
+    print("    (censo de sram_voz_budget.py) no tocan este bus. El reparto")
     print("    SRAM/PSRAM es del linker, y es la fila 5 de riesgos.")
 
-    print("\n  EL CLIENTE QUE PODRIA MUDARSE AQUI: el framebuffer\n")
+    print("\n  EL ESCENARIO INTEGRADO ANTERIOR: el framebuffer\n")
+    print("    D2 separo los chips: la pantalla es del hub. Su censo es")
+    print("    sram_hub_budget.py; su PSRAM no comparte bus con estos granos.")
+    print("    La cuenta siguiente conserva el escenario anterior, sin")
+    print("    usar su verde para cerrar la SRAM o el caudal del hub.\n")
     print("    si el censo de SRAM manda el framebuffer a la PSRAM (su")
     print("    salida 2), el LTDC leeria de este mismo bus SIN PAUSA y sin")
     print("    negociar -- y cuanto, depende del formato que se elija:")
@@ -296,10 +300,10 @@ def main() -> int:
         f"desde PSRAM: por debajo de una voz por canal, granular no es "
         f"motor de v1")
 
-    # 3. Asercion INVERSA sobre el framebuffer mudado: hoy la mudanza CABE
-    #    en caudal -- en el formato mas caro y con granos transpuestos --
-    #    y por eso es salida viva del censo de SRAM. El dia que deje de
-    #    caber, esa salida muere y hay que releer las tres.
+    # 3. Asercion INVERSA del escenario integrado ANTERIOR a D2: el caudal
+    #    soportaba el framebuffer solo. Se conserva como antecedente; ni
+    #    comparte hoy bus con la Voz ni cierra el censo propio del hub.
+    #    Los granos transpuestos se presupuestan arriba, por separado.
     fb_caro = PANTALLA_PX * 3 * PANTALLA_HZ
     for et, mhz, modo, ap in XSPI_TECHO:
         if not ap:

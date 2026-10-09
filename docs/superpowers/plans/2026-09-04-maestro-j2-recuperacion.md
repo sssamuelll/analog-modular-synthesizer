@@ -32,7 +32,7 @@ Consecuencia para este plan, y es buena: **la fase A no depende de nada.**
 | Fase | Qué | Bloqueo |
 |---|---|---|
 | **A** (tareas 1-6) | `maestro_j2.rs` en `core`, sus 12 tests, el presupuesto y el CSV | **ninguno** — se hace hoy |
-| **B** (tareas 7-8) | `j2_spi.rs` y el ejecutor en `fw` | **#250**, y la Discovery (#231) para medir |
+| **B** (tareas 7-8) | `j2_spi.rs` y el ejecutor en `fw` | ~~**#250**~~ cerrado el 08-09 (#349); las enmiendas del acta del 11-09 van antes del driver; la Nucleo (#231) para medir |
 
 La fase A es donde vive toda la política y todos los tests que la spec §7
 enumera. La fase B es transporte, y sin placa no se puede verificar de todos
@@ -956,10 +956,25 @@ git commit -m "El presupuesto de recuperacion del J2 lee los umbrales del Rust y
 
 ---
 
-## Fase B — bloqueada por #250
+## Fase B — ~~bloqueada por #250~~ desbloqueada el 2026-09-08
 
-No se escriben aquí como tareas con pasos porque **no hay dónde compilarlas**.
-Quedan enunciadas con su contrato para que #250 las herede:
+> **Enmienda del 2026-09-11 (acta del J2).** El bloqueo murió el 08-09 (#349):
+> `fw` compila contra `embassy-stm32` para el N657 y `j2_spi.rs` existe como
+> cabecera desde el #362. La tarea 7 se escribe **después** de las enmiendas del
+> acta del 11-09 a la spec (D2: la espera anclada entre `SPE = 1` y `CSTART`;
+> §9: la puerta de fabricación y el límite de cero artefactos audibles), con la
+> secuencia de D2 enmendada y no con la que cita el contrato de abajo. Orden
+> firmado (ficha 3): enmiendas, driver, tarea 8, los tres binarios de
+> `EN-PLACA.md`. Sin placa sigue sin poder verificarse: la Nucleo-N657X0-Q se
+> compra ahora (ficha 4, #231). Ojo: el cfg del N657 es `spi_v5`, no `spi_v4`.
+
+> **2026-09-18:** los pasos de la fase B están en
+> `docs/superpowers/plans/2026-09-18-j2-fase-b.md`. Las tareas 7 y 8 de abajo
+> conservan su contrato; ese plan las descompone (7a-7d, 8) y añade el esclavo
+> del banco (9), los binarios (10) y las dos erratas del ES0620 (11, 12).
+
+No se escribieron aquí como tareas con pasos porque **no había dónde compilarlas**.
+Quedan enunciadas con su contrato:
 
 ### Task 7 (bloqueada): `j2_spi.rs`, el driver con las dos esperas cancelables
 

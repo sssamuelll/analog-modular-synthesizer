@@ -237,18 +237,25 @@ def _puntos() -> list[Punto]:
     p.append(P("2b", "ventana_riel_solo_medida", "ms",
                "secuencia_budget: el transitorio en el que la cascada sigue "
                "habilitada con un riel solo", hi=10.0))
-    # NUEVO CON EL LT1963A: sus polaridades de habilitacion son OPUESTAS a las
-    # del LM2991, asi que ya no hay un hilo unico cuyo corte apague los dos.
-    # El inversor que las reconcilia es un punto de fallo cuyo modo prohibido
-    # es dejar UN riel vivo. Se mide, no se supone.
+    # ESTE PUNTO SE QUEDA, Y SU HERMANO SE VA. Nacieron los dos el 2026-09-04
+    # con D-F8: el LT1963A habilita en ALTO y el LM2991 en BAJO, asi que hacia
+    # falta un inversor y se median sus dos modos de fallo.
+    #
+    # D-F9 (LT3015) devuelve las dos polaridades al mismo sentido y con eso
+    # NO HAY INVERSOR. El segundo punto --"quitar alimentacion al inversor
+    # apaga LOS DOS"-- se retira porque se quedo sin sujeto, no porque se
+    # relaje nada: medir la alimentacion de una pieza que no existe es como se
+    # llega a una fila verde que no mira a nadie.
+    #
+    # El primero SE QUEDA. Ahora la propiedad la da la construccion --un
+    # pulldown al comun y el hilo roto apaga a los dos-- pero "por
+    # construccion" es un argumento, no una medida, y este es el punto donde
+    # el argumento se comprueba en la mesa.
     p.append(P("2b", "cortar_la_senal_del_secuenciador_apaga_LOS_DOS", "si/no",
-               "secuencia_budget, AVISO DE POLARIDAD: el LT1963A habilita en "
-               "ALTO y el LM2991 en BAJO. Con el LM2941 un hilo roto apagaba "
-               "los dos por construccion; ahora hay que DEMOSTRARLO",
-               literal="si"))
-    p.append(P("2b", "quitar_alimentacion_al_inversor_apaga_LOS_DOS", "si/no",
-               "el mismo fallo por el otro lado: si el inversor se queda sin "
-               "alimentacion, su salida no puede dejar vivo a uno solo",
+               "secuencia_budget: desde D-F9 los dos habilitan en ALTO "
+               "(LT1963A >= 2,00 V, LT3015 >= 1,35 V), asi que un hilo roto "
+               "con pulldown los apaga a los dos POR CONSTRUCCION. Se mide "
+               "igual: es la propiedad que D-F4 compra",
                literal="si"))
 
     # --- Pasos 3 a 5: la cascada, como en la v3 ---------------------------
@@ -259,8 +266,11 @@ def _puntos() -> list[Punto]:
                                 ("TP5", "+5V", 5.00, 0.25)):
         p.append(P("3", f"{tp}_{senal}_sin_carga", "V",
                    f"como la v3: {nom:+g} +-{tol}. La ventana de TP7/TP8 la "
-                   f"vigila margen_budget: TP7 cabe con el LT1963A, TP8 "
-                   f"todavia no",
+                   f"vigila margen_budget, y desde D-F9 CABEN LAS DOS: TP7 "
+                   f"con el LT1963A (+330 mV) y TP8 con el LT3015 (+536). "
+                   f"En TP8 el +-0,3 ya no es un ajuste: la ventana de la "
+                   f"referencia del LT3015 son +-0,254 V, o sea que cae "
+                   f"dentro con divisor fijo",
                    predicho=nom, tol=tol))
     for pin, nom in ((1, -12.0), (2, 0.0), (3, 0.0), (4, 12.0)):
         p.append(P("4", f"J2_pin{pin}", "V",
