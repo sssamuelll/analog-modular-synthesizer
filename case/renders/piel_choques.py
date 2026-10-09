@@ -30,7 +30,7 @@ from mathutils.bvhtree import BVHTree
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 CASE = os.path.join(AQUI, "..")
-PRINT = os.path.join(CASE, "print", "piel")
+PRINT = os.environ.get("PIEL_SALIDA", os.path.join(CASE, "print", "piel"))   # PIEL_SALIDA: variantes para escoger
 
 # Cuanto puede entrar una pieza en otra sin que sea un choque. La cubierta se
 # remalla a 0.8 mm (imprimir_piel.VOXEL_CUBIERTA): el remallado mueve cada cara

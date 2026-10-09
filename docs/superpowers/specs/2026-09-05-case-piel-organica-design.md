@@ -376,12 +376,44 @@ Las fichas 1 a 6 no quedaron guardadas en el acta: un fallo de la página perdí
 | 5 | las paredes de los huecos picadas | hazlo | **hecho**: el relieve solo mueve en Z |
 | 6 | rendijas por las que se ve el suelo | hazlo | pendiente, #389: toca `guarda_tapa()` |
 | 7 | dos tubos donde debería haber uno | una sola masa (A) | **hecho, primera vuelta**: se enseña en render |
-| 8 | la corteza parece nieve | enséñamelo primero | pendiente, #390. Mientras tanto la cubierta sale lisa (`PIEL_CORTEZA=ruido` devuelve el ruido para comparar) |
-| 9 | la celosía no tiene cuerpo | enséñamelo primero | pendiente, #391: tres grados de fondo, con la chimenea |
-| 10 | por la celosía se ve la máquina (D-P3) | enséñamelo primero | pendiente, #392: placa ámbar detrás, con la chimenea |
+| 8 | la corteza parece nieve | enséñamelo primero | **en render, a escoger** (§13.5), #390. Mientras tanto la cubierta sale lisa (`PIEL_CORTEZA=ruido` devuelve el ruido para comparar) |
+| 9 | la celosía no tiene cuerpo | enséñamelo primero | **en render, a escoger** (§13.5), #391: tres grados de fondo, con la chimenea |
+| 10 | por la celosía se ve la máquina (D-P3) | enséñamelo primero | **la placa entera no cabe** (§13.5), #392: placa ámbar detrás, con la chimenea |
 | 11 | los tornillos se veían | por dentro (a) | pendiente de dibujar, #393 (HUECO 9). Los de fuera ya no están |
 | 12 | la tabla se quedó corta | hazlo | pendiente, #394 |
 | 13 | la trasera en dos materiales | hazlo | pendiente, #395: depende de la lista de conectores (#183) |
 | 14 | rieles negros y paneles vestidos | hazlo | pendiente, #396 |
-| 15 | acabado satinado | enséñamelo primero | pendiente, #397 |
+| 15 | acabado satinado | enséñamelo primero | **en render, a escoger** (§13.5), #397 |
 | 16 | una pieza por archivo y ningún choque | hazlo | **hecho**: `check_piel.py` |
+
+### 13.5 Las cuatro de «enséñamelo primero», en render (09-10, noche)
+
+Las variantes se fabrican con `imprimir_piel.py` sin tocar las piezas de `case/print/piel/`: `PIEL_RELIEVE` y `PIEL_CORTEZA` escogen la variante y `PIEL_SALIDA` la manda a otra carpeta, que leen también `piel_choques.py` y `render_piel.py`. La puerta (`check_piel.py`) quita `PIEL_SALIDA` del entorno: mira siempre las piezas de verdad. Todas las variantes pasan las dos reglas, con el mismo peor contacto de hoy (0,29 mm, cubierta contra aluminio). Los renders y la elección están en el acta, en «Para escoger mirando». Sin las variables, las piezas salen como hasta hoy: cubierta lisa y relieve B.
+
+**Ficha 9, el lomo** (`imprimir_piel.lomo()`). Cada banda sube desde 2 mm junto al hueco, en cuarto de círculo de radio `rho`, hasta `t_max`. Una banda de menos de 2 `rho` de ancho no llega arriba, así que las finas quedan por debajo de las anchas sin decírselo a nadie. La media banda típica mide 2,8 mm (mediana de la cresta, medida sobre la placa). Solo crece hacia fuera: la cara que apoya en el anillo se queda en z = 0, y bajo el labio la placa no pasa de `PESTANA_T`.
+
+| grado | `rho` | `t_max` | banda típica | cada cachete |
+|---|---|---|---|---|
+| hoy (relieve B) | | 3 | 3 mm, plana | 178 g |
+| suave | 3,5 | 4,0 | 4,0 mm | 189 g |
+| medio | 4,5 | 5,5 | 5,2 mm | 202 g |
+| hondo | 5,5 | 7,0 | 6,4 mm | 215 g |
+
+Dos vueltas que no sirvieron. La primera escalaba la malla en sus coordenadas locales, con el origen en el plano medio de la placa: la engordaba hacia los dos lados, hasta 2,5 mm dentro de la ventana del anillo. Las reglas no lo vieron porque la ventana es hueca; lo delató la cota z del STL. La segunda subía cada banda según la distancia a sus **dos** huecos más cercanos, y salía con aristas donde cambiaba el segundo (cera con pliegues). La de ahora usa la distancia a uno solo y alisa la cresta.
+
+**La ventilación no cambia**: el área abierta es la misma, y la chimenea da 20,0 K pesimista con los cuatro. La ficha 9 del acta decía que «un hueco más hondo deja pasar algo menos de aire», y es al revés. El borde del hueco pasa de 1 a 2 mm y el lomo lo redondea, y un borde redondeado descarga igual o mejor que uno vivo. Si el modelo se equivoca, se equivoca a favor.
+
+**Ficha 8, la veta** (`imprimir_piel.veta()`). Son surcos que siguen cada franja de la lámina: las curvas de nivel de la distancia al canto más cercano, con un meandro lento y huecos a lo largo, de modo que rodean las esquinas de las ventanas y doblan sobre las franjas de los costados. Dos hondos: 0,5 mm por surco (`veta`) y 0,9 (`veta_honda`), que llegan a 0,6 y 1,3 donde se juntan dos. Se apagan a 1,5–3,5 mm de cada canto. Donde doblan la esquina de una ventana se leen como una moldura: si se escoge veta, eso se afina. La primera vuelta corría de anillo a anillo, como surcos paralelos al largo del aparato, y en las franjas angostas de los costados quedaba en rayitas sueltas. La cubierta pesa 875 g con la fina y 863 con la honda, contra 881 la lisa.
+
+**Ficha 10, la placa ámbar.** `piel_termica.py` la cuenta ahora. La placa va dentro de la pletina del anillo, contra su cara de dentro (entre el anillo y el primer riel quedan 6 mm, y el interior es de los módulos), con una rendija alrededor. El aire del cachete cruza en serie la celosía, el canal de 11 mm entre la placa y el cachete, y la rendija:
+
+| K sobre la sala (puerta / pesimista), techo 20 | v5 declarada, 64,2 W | censo, 35,1 W |
+|---|---|---|
+| sin placa | 17,9 / 20,0 | 11,9 / 13,3 |
+| rendija 8 mm | 32,7 / 36,5 | 21,8 / 24,4 |
+| rendija 12 mm | 29,8 / 33,3 | 19,9 / 22,3 |
+| rendija 16 mm | 28,9 / 32,3 | 19,3 / 21,6 |
+
+Es un orden de magnitud: el mismo `C_D` para todo y sin el roce del canal, que solo empeoraría la cifra. Con la luz, cada vatio dentro suma 0,34 K (declarada) o 0,42 K (censo), en el caso pesimista y con la rendija de 12. **La placa entera no cabe**: con la carga declarada no pasa de ninguna forma, y con el censo no pasa en el caso pesimista. Lo que se puede buscar es algo que tape la vista sin cerrarle el paso al aire (lamas ámbar inclinadas, como una persiana), y eso cuelga del HUECO 5 del papel de la v5: si el venteo se encarga contra la carga declarada o contra el censo. Con la declarada no cabe ni un vatio más.
+
+**Ficha 15, satinado**: solo el material del render, rugosidad 0,22 con una capa de barniz. Aproxima el PA12 alisado por vapor; lo que decide es una muestra.

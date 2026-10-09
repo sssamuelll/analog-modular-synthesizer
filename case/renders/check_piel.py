@@ -31,12 +31,15 @@ def main() -> int:
     if not os.path.exists(BLENDER):
         print(f"HUECO: necesita Blender en {BLENDER} (o SAM17_BLENDER)")
         return 2
+    # la puerta mira SIEMPRE las piezas de case/print/piel: una PIEL_SALIDA que
+    # quede en el entorno (variantes para escoger) la desviaria sin avisar
+    entorno = {k: v for k, v in os.environ.items() if k != "PIEL_SALIDA"}
     with tempfile.TemporaryDirectory() as tmp:
         salida = os.path.join(tmp, "piel.json")
         r = subprocess.run([BLENDER, "-b", "--factory-startup", "-P",
                             os.path.join(AQUI, "piel_choques.py"), "--", salida],
                            capture_output=True, text=True, encoding="utf-8",
-                           errors="replace", timeout=540)
+                           errors="replace", timeout=540, env=entorno)
         for linea in (r.stdout or "").splitlines():
             if linea.startswith(("  OK", "  ROJO", "PIEL ")):
                 print(linea)

@@ -28,6 +28,12 @@ La CORTEZA de ruido (tres capas) ya no va por defecto: la ficha 8 pide quitar
 el ruido y poner veta, y se decide mirando. PIEL_CORTEZA=ruido la devuelve
 sobre la lamina, no sobre el rollo, para comparar.
 
+LAS VARIANTES PARA ESCOGER (fichas 8 y 9, acta del 09-10): sin variables, las
+piezas salen como siempre. PIEL_RELIEVE=suave|medio|hondo da al cachete el
+lomo de la ficha 9 (lomo()), PIEL_CORTEZA=veta|veta_honda da a la cubierta la
+veta de la ficha 8 (veta()), PIEL_SALIDA manda las STL a otra carpeta y
+PIEL_SOLO=cachete|cubierta fabrica solo esa pieza.
+
 Comprobaciones: malla cerrada, tamano contra dos bandejas --MJF 5200 (380 x 284
 x 380) y SLS P 770 (700 x 380 x 580), cifras de catalogo sin hoja en el repo--,
 gramos en PA12 (1.01 g/cm3) y, desde la ficha 16, las dos reglas de
@@ -54,16 +60,40 @@ SCAD = os.path.join(CAD, "piel_organica.scad")
 RAMA = os.environ.get("PIEL_RAMA", os.path.join(CAD, "celosia_placa.json"))
 BORDE = os.path.join(CAD, "piel_borde.json")
 CORTEZA = os.environ.get("PIEL_CORTEZA", "lisa")
+SALIDA = os.environ.get("PIEL_SALIDA", SALIDA)   # variantes para escoger, fuera del repo
+# EL LOMO de la ficha 9, en tres grados para escoger mirando (PIEL_RELIEVE).
+# Cada banda sube de LOMO_BORDE junto al hueco, en cuarto de circulo de radio
+# `rho`, hasta t_max: la que mide menos de 2 rho de ancho no llega arriba, asi
+# que las finas quedan por debajo de las anchas sin decirselo a nadie. La media
+# banda tipica mide 2,8 mm (p50 en la cresta, 09-10): pico tipico 4,0 / 5,2 /
+# 6,4 mm. Con mas, la banda fina se vuelve aleta ("ala, no costillas"). Sin
+# PIEL_RELIEVE, el relieve de celosia_placa.
+GRADOS = {"suave": dict(rho=3.5, t_max=4.0), "medio": dict(rho=4.5, t_max=5.5),
+          "hondo": dict(rho=5.5, t_max=7.0)}
+GRADO = os.environ.get("PIEL_RELIEVE", "")
+LOMO_BORDE = 2.0         # mm junto al hueco
+LOMO_ALISADO = 12        # pasadas de vecinos sobre la malla de 0,5 mm: redondea la cresta
+# LA VETA de la ficha 8 (PIEL_CORTEZA=veta | veta_honda): surcos que siguen
+# cada franja de la lamina, paralelos a su canto, y doblan en las esquinas.
+# La primera vuelta corria de anillo a anillo y en las franjas angostas de los
+# lados quedaba en rayitas sueltas (render del 09-10). hondo y ancho en mm;
+# niveles: a que distancia del canto va cada surco. Si salen parejos, pana.
+VETAS = {"veta": dict(hondo=0.5, ancho=1.0, meandro=1.2,
+                     niveles=(3.5, 6.0, 9.0, 12.5, 16.5, 21.0, 26.0, 32.0)),
+         "veta_honda": dict(hondo=0.9, ancho=1.4, meandro=1.6,
+                           niveles=(3.5, 6.5, 10.0, 14.0, 18.5, 23.5, 29.0, 35.0))}
+VETA_APAGADO = (1.5, 3.5)   # mm del canto: dentro de esto, el canto limpio
+SEMILLA_VETA = 17
 
 VOXEL_CUBIERTA = 0.6     # mm; lamina de 6 y rollo de 9.5 a 13. Mueve cada cara
                          # hasta medio voxel: con 0.8 se comia la holgura del labio
 SUAVIZADO = (0.5, 4)     # factor, iteraciones
 DECIMAR = 0.35
 BANDEJAS = {"MJF 5200": (380.0, 284.0, 380.0), "SLS P 770": (700.0, 380.0, 580.0)}
-# la corteza de ruido, solo con PIEL_CORTEZA=ruido: PLIEGUES anchos, VETAS
+# la corteza de ruido, solo con PIEL_CORTEZA=ruido: PLIEGUES anchos, VETAS_RUIDO
 # largas a lo largo del perfil y GRANO fino, sobre la cara exterior de la lamina
 PLIEGUES = dict(escala=58.0, estira=(1.6, 1.6, 1.0), fuerza=11.0, medio=0.3, hondura=1)
-VETAS = dict(escala=16.0, estira=(4.0, 4.0, 1.0), fuerza=3.0, medio=0.5, hondura=1)
+VETAS_RUIDO = dict(escala=16.0, estira=(4.0, 4.0, 1.0), fuerza=3.0, medio=0.5, hondura=1)
 GRANO = dict(escala=6.0, estira=(1.0, 1.0, 1.0), fuerza=0.7, medio=0.5, hondura=1)
 
 
@@ -259,6 +289,79 @@ def relieve(ob, huecos, t_borde: float, t_max: float, w: float, voxel: float = 0
     return ob
 
 
+def _labio(xy: np.ndarray, borde: dict) -> np.ndarray:
+    """Cuanto queda cada punto MAS ALLA de la nariz del labio (negativo:
+    debajo del labio o de la base). W varia con la altura como en
+    piel_borde.params_en, y se mide sobre el contorno real del anillo."""
+    p = borde["params"]
+    P = np.asarray(borde["perfil_real"], dtype=float)
+    alto = np.asarray(borde["perfil"], dtype=float)[:, 1].max()
+    d = np.full(len(xy), np.inf)
+    y_cerca = np.zeros(len(xy))
+    for i in range(len(P)):
+        a, b = P[i], P[(i + 1) % len(P)]
+        ab = b - a
+        t = np.clip(((xy - a) @ ab) / (ab @ ab), 0.0, 1.0)
+        q = a + t[:, None] * ab
+        di = np.linalg.norm(xy - q, axis=1)
+        mejor = di < d
+        d[mejor], y_cerca[mejor] = di[mejor], q[mejor, 1]
+    s = np.clip(y_cerca / alto, 0.0, 1.0)
+    s = s * s * (3 - 2 * s)
+    W = p["W_ABAJO"] + (p["W_ARRIBA"] - p["W_ABAJO"]) * s
+    return d - W - p["HOLGURA"]
+
+
+def lomo(ob, huecos, borde: dict, grado: dict, voxel: float = 0.5):
+    """La ficha 9: el lomo de cada banda, ESCULPIDO solo hacia fuera. La
+    cara que apoya en el anillo se queda en z = 0 y cada vertice sube en
+    proporcion (z * t / PESTANA_T), asi que las paredes de los huecos siguen
+    verticales. Bajo el labio la placa no pasa de PESTANA_T; mas alla de la
+    nariz, el labio cuenta como un borde mas, de PESTANA_T de alto."""
+    pt = borde["params"]["PESTANA_T"]
+    m = ob.modifiers.new("lomo_fino", "REMESH")
+    m.mode = "VOXEL"
+    m.voxel_size = voxel
+    aplicar(ob, "lomo_fino")
+    co = np.empty(len(ob.data.vertices) * 3)
+    ob.data.vertices.foreach_get("co", co)
+    co = co.reshape(-1, 3)
+    xy = co[:, :2]
+    rho, t_max = grado["rho"], grado["t_max"]
+    h = _distancia_a_huecos(xy, huecos, rho)
+    dl = _labio(xy, borde)
+
+    def cuarto(d, e):
+        f = np.sqrt(np.clip(1.0 - (1.0 - np.minimum(d / rho, 1.0)) ** 2, 0.0, 1.0))
+        return e + (np.maximum(t_max, e) - e) * f
+
+    # fuera del labio, la nariz es un borde mas, de PESTANA_T de alto (la
+    # banda que llega al labio se mete debajo sin escalon)
+    lab = np.where(dl > 0, dl, np.inf)
+    t = np.where(dl > 0, cuarto(np.minimum(h, lab), np.where(lab < h, pt, LOMO_BORDE)),
+                 np.minimum(cuarto(h, LOMO_BORDE), pt))
+    # la cresta de una banda fina es una arista (los dos cuartos de circulo se
+    # cortan en el eje): se alisa como un escalar sobre la malla, a pasadas de
+    # vecinos, y bajo el labio se vuelve a recortar
+    E = np.empty(len(ob.data.edges) * 2, dtype=np.int64)
+    ob.data.edges.foreach_get("vertices", E)
+    E = E.reshape(-1, 2)
+    vecinos = np.bincount(E.ravel(), minlength=len(t)).astype(float)
+    for _ in range(LOMO_ALISADO):
+        s = (np.bincount(E[:, 0], weights=t[E[:, 1]], minlength=len(t))
+             + np.bincount(E[:, 1], weights=t[E[:, 0]], minlength=len(t)))
+        t = (t + s) / (1.0 + vecinos)
+    t = np.where(dl > 0, t, np.minimum(t, pt))
+    # en coordenadas del MUNDO: la malla es local a un origen en z = pt/2, y
+    # escalar en local engordaba la placa hacia los dos lados (medio t por
+    # debajo de la cara del anillo, visto el 09-10 en la cota z del STL)
+    z0 = ob.location.z
+    co[:, 2] = (co[:, 2] + z0) * t / pt - z0
+    ob.data.vertices.foreach_set("co", co.ravel())
+    ob.data.update()
+    return ob
+
+
 def cachete(borde: dict):
     with open(RAMA, encoding="utf-8") as f:
         d = json.load(f)
@@ -279,7 +382,9 @@ def cachete(borde: dict):
     pt = p["PESTANA_T"]
     pl = placa(borde["placa_exterior"][0], d["huecos"], pt / 2.0, pt)
     rv = d.get("relieve")
-    if rv:
+    if GRADO:
+        lomo(pl, d["huecos"], borde, GRADOS[GRADO])
+    elif rv:
         if rv["t_max"] > pt + 1e-6:
             raise SystemExit(f"ROJO: el relieve pide {rv['t_max']} mm de fondo y bajo el "
                              f"rollo solo caben {pt} (PESTANA_T)")
@@ -346,10 +451,93 @@ def corteza(obj, capa: dict, nombre: str) -> None:
     bpy.data.objects.remove(vac, do_unlink=True)
 
 
+def _s_perfil(P: np.ndarray, pts: np.ndarray):
+    """(d, s, radial): distancia al perfil, abscisa s (mm a lo largo del
+    perfil, de la nariz al talon) del punto mas cercano, y la direccion del
+    perfil al punto."""
+    lados = np.linalg.norm(np.diff(np.vstack([P, P[:1]]), axis=0), axis=1)
+    L = np.r_[0.0, np.cumsum(lados)]
+    d = np.full(len(pts), np.inf)
+    s = np.zeros(len(pts))
+    q = np.zeros_like(pts)
+    for i in range(len(P)):
+        a, b = P[i], P[(i + 1) % len(P)]
+        ab = b - a
+        t = np.clip(((pts - a) @ ab) / (ab @ ab), 0.0, 1.0)
+        qi = a + t[:, None] * ab
+        di = np.linalg.norm(pts - qi, axis=1)
+        m = di < d
+        d[m], s[m], q[m] = di[m], L[i] + t[m] * lados[i], qi[m]
+    radial = (pts - q) / np.maximum(d, 1e-9)[:, None]
+    return d, s, radial
+
+
+def _fibras(de, s, z, v: dict, rng) -> np.ndarray:
+    """Surcos que siguen el canto mas cercano --las curvas de nivel de la
+    distancia al canto--, con un meandro lento y huecos a lo largo: rodean las
+    esquinas de las ventanas y doblan sobre las franjas de los lados, como en
+    el concepto. Cada nivel con su hondura, su ancho y sus huecos, para que no
+    lea a moldura ni a pana."""
+    D = np.zeros(len(de))
+    for c in v["niveles"]:
+        p = rng.uniform(0, 2 * np.pi, 5)
+        meandro = v["meandro"] * (
+            np.sin(2 * np.pi * s / rng.uniform(70, 120) + p[0]) * np.sin(2 * np.pi * z / rng.uniform(110, 190) + p[1])
+            + 0.6 * np.sin(2 * np.pi * (s + z) / rng.uniform(40, 70) + p[2])) / 1.6
+        n = 0.5 + 0.5 * np.sin(2 * np.pi * s / rng.uniform(80, 140) + p[3]) * np.cos(2 * np.pi * z / rng.uniform(120, 220) + p[4])
+        hay = np.clip((n - 0.3) / 0.3, 0.0, 1.0)
+        hay = hay * hay * (3 - 2 * hay)
+        hondo = v["hondo"] * rng.uniform(0.7, 1.15)
+        w = v["ancho"] * rng.uniform(0.85, 1.2)
+        D -= hondo * hay * np.exp(-((de + meandro - c) / w) ** 2)
+    return D
+
+
+def veta(ob, borde: dict, ancho: float, modo: str, voxel: float = 0.6) -> None:
+    """La ficha 8: surcos finos que siguen la forma (VETAS[modo]), solo sobre
+    la cara de fuera de la lamina y apagados en los ultimos milimetros de cada
+    canto -- ventanas, extremos de la lamina (donde se funde el rollo) y bajos --:
+    el canto se queda limpio y de radio constante."""
+    from mathutils import kdtree
+    m = ob.modifiers.new("fino", "REMESH")
+    m.mode = "VOXEL"
+    m.voxel_size = voxel
+    aplicar(ob, "fino")
+    me = ob.data
+    n = len(me.vertices)
+    co = np.empty(n * 3)
+    me.vertices.foreach_get("co", co)
+    co = co.reshape(-1, 3)
+    nor = np.empty(n * 3)
+    me.vertex_normals.foreach_get("vector", nor)
+    nor = nor.reshape(-1, 3)
+    d, s, radial = _s_perfil(np.asarray(borde["perfil"], dtype=float), co[:, :2])
+    alinea = (nor[:, :2] * radial).sum(axis=1)
+    fuera = (d > 3.0) & (alinea > 0.8)
+    pared = (np.abs(alinea) < 0.5) | (np.abs(nor[:, 2]) > 0.5)
+    kd = kdtree.KDTree(int(pared.sum()))
+    for i, p in zip(np.flatnonzero(pared), co[pared]):
+        kd.insert(p, int(i))
+    kd.balance()
+    idx = np.flatnonzero(fuera)
+    al_canto = np.array([kd.find(co[i])[2] for i in idx])
+    a0, a1 = VETA_APAGADO
+    t = np.clip((al_canto - a0) / (a1 - a0), 0.0, 1.0)
+    peso = t * t * (3 - 2 * t)
+    D = _fibras(al_canto, s[idx], co[idx, 2], VETAS[modo], np.random.default_rng(SEMILLA_VETA))
+    co[idx] += nor[idx] * (D * peso)[:, None]
+    me.vertices.foreach_set("co", co.ravel())
+    me.update()
+    print(f"  veta '{modo}': {len(idx)} vertices de la cara de fuera, hasta {-D.min():.2f} mm de hondo",
+          flush=True)
+
+
 def cubierta(borde: dict, ancho: float):
     ob = importar(exportar_scad("banda"))
     ob.name = "cubierta"
-    if CORTEZA == "ruido":
+    if CORTEZA in VETAS:
+        veta(ob, borde, ancho, CORTEZA)
+    elif CORTEZA == "ruido":
         m = ob.modifiers.new("fino", "REMESH")
         m.mode = "VOXEL"
         m.voxel_size = 1.2
@@ -365,7 +553,7 @@ def cubierta(borde: dict, ancho: float):
         for i, w in enumerate(peso):
             if w > 0:
                 vg.add([i], float(w), "REPLACE")
-        for capa, nombre in ((PLIEGUES, "pliegues"), (VETAS, "vetas"), (GRANO, "grano")):
+        for capa, nombre in ((PLIEGUES, "pliegues"), (VETAS_RUIDO, "vetas"), (GRANO, "grano")):
             corteza(ob, capa, nombre)
     rollos = [losas(borde["rollo"], ancho, +1, "rollo_der"),
               losas(borde["rollo"], 0.0, -1, "rollo_izq")]
@@ -411,12 +599,14 @@ if __name__ == "__main__":
     import piel_choques
     ancho = piel_choques.ancho_total()
     todo_ok = True
-    der = cachete(borde)
-    izq = espejo(der, "cachete_izq")
     # PIEL_SOLO=cachete: para iterar la celosia sin esperar los minutos de la
-    # cubierta (el remallado de 580 mm)
-    piezas = [der, izq]
-    if os.environ.get("PIEL_SOLO", "") != "cachete":
+    # cubierta (el remallado de 580 mm); PIEL_SOLO=cubierta, para la corteza
+    solo = os.environ.get("PIEL_SOLO", "")
+    piezas = []
+    if solo != "cubierta":
+        der = cachete(borde)
+        piezas += [der, espejo(der, "cachete_izq")]
+    if solo != "cachete":
         piezas.append(cubierta(borde, ancho))
     for ob in piezas:
         todo_ok &= comprobar(ob, ob.name)
