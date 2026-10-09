@@ -83,7 +83,6 @@ g_hardware() { cd "$RAIZ" && python hardware/tools/gates.py; }
 # de fuera paso de 29 errores a 68 sin que nada la viera. Desde la raiz ruff
 # respeta .gitignore, asi que los worktrees de .claude/ no entran; las reglas
 # viven en ruff.toml.
-g_ruff()     { cd "$RAIZ" && ruff check .; }
 g_pytest()   { cd "$RAIZ/software/midi-cv" && python -m pytest -q; }
 g_cargo()    { cd "$RAIZ/software/nucleo" && cargo test --workspace --quiet; }
 g_clippy()   { cd "$RAIZ/software/nucleo" && cargo clippy --workspace --all-targets -- -D warnings; }
@@ -93,11 +92,26 @@ g_fmt()      { cd "$RAIZ/software/nucleo" && cargo fmt --all --check; }
 # habia notado: `cargo test --workspace` NUNCA lo compilaba, asi que el
 # firmware -- la mitad que de verdad se flashea -- no lo miraba ninguna puerta.
 # Lo caza la junta adversarial del 2026-08-24 (Serrano, BLOCKER 1).
-g_fw()       { cd "$RAIZ/software/nucleo/fw" && cargo check --quiet; }
+#
+# Y va con `build --release`, no con `check`: `check` no ENLAZA, y desde el
+# pase al N657 (#250) el enlace es justo lo que se puede romper. El mapa de
+# `memory.x` reserva 256 K de AXISRAM2 para el codigo y el binario de
+# depuracion se pasa 48 KB; con `check` esa puerta salia verde sin que
+# existiera un binario. `--release` es ademas el unico perfil que EN-PLACA.md
+# manda flashear.
+g_fw()       { cd "$RAIZ/software/nucleo/fw" && cargo build --release --quiet; }
 
 corre hardware g_hardware
 
+# ruff puede estar en el PATH o solo como modulo de Python (`pip install ruff`
+# sin la carpeta de scripts en el PATH). El 18-09 llevaba semanas NO-CORRIDO
+# por eso, con ruff 0.15 instalado: el lint no corria en ningun push desde esta
+# maquina y nadie lo veia. Se prueban las dos formas antes de darlo por ausente.
 if command -v ruff > /dev/null 2>&1; then
+    g_ruff()     { cd "$RAIZ" && ruff check .; }
+    corre ruff g_ruff
+elif python -m ruff --version > /dev/null 2>&1; then
+    g_ruff()     { cd "$RAIZ" && python -m ruff check .; }
     corre ruff g_ruff
 else
     falta ruff "pip install ruff"

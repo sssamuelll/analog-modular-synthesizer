@@ -80,17 +80,38 @@ from rizado_budget import F_CONMUTACION_HZ, RIZADO_IRM_VPP, h_lc  # noqa: E402
 #   On to Off con >= 0,25 V. O SEA QUE HABILITA EN ALTO: es un pin SHDN
 #   activo-bajo, al reves que el ON/OFF del LM2941 al que sustituye.
 #   Corriente del pin 1 uA max a 0 V (p. 5, nota 10).
-# LM2991 SNVS099I p. 5: habilita con <= 0,8 V; deshabilita con >= 2,4 V.
-#   p. 4, condiciones recomendadas: el pin admite de 0 a 5 V.
+# LT3015 rev B p. 6, "Shutdown Threshold": VOUT = Off-to-On (Positive) 1,07 /
+#   1,21 / 1,35 V y On-to-Off (Positive) 0,5 / 0,73. O SEA QUE TAMBIEN
+#   HABILITA EN ALTO: por encima de 1,35 V garantiza ENCENDIDO y por debajo de
+#   0,5 V garantiza APAGADO. Su p. 2 da el maximo absoluto del pin respecto a
+#   IN: -0,3 V a +55 V, o sea +40,6 V absolutos con IN en -14,4.
 #
-# LOS DOS SON OPUESTOS Y ESO NO ESTABA EN EL PRECIO DEL CAMBIO DE U1. Con el
-# LM2941 los dos habilitaban en bajo y un hilo gobernaba los dos; con el
-# LT1963A hace falta invertir uno de los dos, y la inversion NO es gratis:
-# ver el aviso de POLARIDAD mas abajo.
-HABILITA_EN_ALTO = {"U1": True, "U2": False}
-V_ONOFF_HABILITA_MAX = {"U1": 0.25, "U2": 0.8}     # nivel que garantiza APAGADO
-V_ONOFF_DESHABILITA_MIN = {"U1": 2.0, "U2": 2.4}   # nivel que garantiza el otro
-V_ONOFF_MAX_RECOMENDADO = 5.0
+# LA POLARIDAD VOLVIO A SER LA MISMA EN LOS DOS, Y ESO CIERRA UN AGUJERO.
+# Con el LM2941 los dos habilitaban en BAJO y un solo hilo los gobernaba; D-F8
+# metio el LT1963A, que habilita en ALTO, y dejo la pareja en polaridades
+# opuestas -- lo que obligaba a un inversor cuyo modo de fallo era justo el
+# prohibido (dejar UN riel vivo). D-F9 mete el LT3015, que tambien habilita en
+# alto, y con eso:
+#
+#   * vuelve el hilo unico: un nivel bajo apaga a los dos, uno alto enciende
+#     a los dos;
+#   * y vuelve la propiedad que D-F4 necesita, POR CONSTRUCCION y no por un
+#     circuito: con un pulldown al comun, cortar el hilo deja el pin en el
+#     nivel que apaga a los DOS. No hay inversor que quedarse sin
+#     alimentacion.
+#
+# LOS NOMBRES DE ESTOS DOS DICCIONARIOS CAMBIARON AQUI. Se llamaban
+# HABILITA_MAX y DESHABILITA_MIN, de cuando los dos habilitaban en bajo, y
+# desde D-F8 guardaban lo contrario de lo que decian. Ahora dicen que guardan:
+# el nivel que garantiza apagado y el que garantiza encendido.
+HABILITA_EN_ALTO = {"U1": True, "U2": True}
+V_APAGA_MAX = {"U1": 0.25, "U2": 0.5}       # por debajo, APAGADO garantizado
+V_ENCIENDE_MIN = {"U1": 2.0, "U2": 1.35}    # por encima, ENCENDIDO garantizado
+# El techo del nivel alto. NO es un "recomendado": es el MAXIMO ABSOLUTO del
+# pin mas restrictivo de los dos, el SHDN del LT1963A (Rev G p. 2, +-20 V).
+# El del LT3015 son +40,6 V absolutos, asi que manda el otro. Era 5,0 V, que
+# era el maximo recomendado del pin del LM2991 (su p. 4) y murio con la pieza.
+V_ONOFF_TECHO = 20.0
 I_ONOFF_MAX_A = 300e-6
 
 # --- los tiempos del modulo, hoja p. 2 ------------------------------------
@@ -293,18 +314,31 @@ P_BASE = {
 
 def _autocomprobacion() -> None:
     # 1. UN SOLO HILO gobierna los dos reguladores, y sus dos niveles caben.
-    #    Los dos lados: el bajo por debajo del menor de los dos umbrales de
-    #    habilitacion, el alto por encima del mayor de deshabilitacion Y por
-    #    debajo del maximo recomendado del pin del LM2991.
-    nivel_bajo = min(V_ONOFF_HABILITA_MAX.values())
-    nivel_alto = max(V_ONOFF_DESHABILITA_MIN.values())
-    assert nivel_alto <= V_ONOFF_MAX_RECOMENDADO, (
-        f"el nivel alto comun tiene que llegar a {nivel_alto:.1f} V para "
-        f"apagar a los dos, y el pin del LM2991 admite hasta "
-        f"{V_ONOFF_MAX_RECOMENDADO:.1f} (su hoja p. 4)")
+    #    El bajo tiene que apagar a los DOS; el alto tiene que encender a los
+    #    DOS y quedarse por debajo del techo del pin mas restrictivo.
+    nivel_bajo = min(V_APAGA_MAX.values())
+    nivel_alto = max(V_ENCIENDE_MIN.values())
+    assert nivel_alto <= V_ONOFF_TECHO, (
+        f"el nivel alto comun tiene que llegar a {nivel_alto:.2f} V para "
+        f"encender a los dos, y el pin mas restrictivo (SHDN del LT1963A) "
+        f"admite hasta {V_ONOFF_TECHO:.1f} V (Rev G p. 2)")
     assert nivel_bajo < nivel_alto, (
-        "si el nivel que habilita a uno deshabilitara al otro, harian falta "
-        "dos senales opuestas y no una")
+        "si el nivel que apaga a uno encendiera al otro, harian falta dos "
+        "senales opuestas y no una")
+
+    # 1b. Y LA PROPIEDAD QUE D-F4 COMPRA CON ESO, aseverada y no comentada:
+    #     los dos tienen que habilitar en el MISMO sentido. Mientras sea asi,
+    #     un hilo roto con pulldown al comun los apaga a los dos por
+    #     construccion y no hace falta inversor. El dia que una de las dos
+    #     piezas cambie de polaridad --como paso con D-F8, que dejo la pareja
+    #     opuesta durante dos dias-- esta puerta lo dice EN VOZ ALTA en vez de
+    #     dejarlo en un comentario que nadie relee.
+    assert len(set(HABILITA_EN_ALTO.values())) == 1, (
+        f"U1 y U2 ya no habilitan en el mismo sentido ({HABILITA_EN_ALTO}): "
+        f"hace falta invertir una de las dos senales, y el inversor es un "
+        f"punto de fallo cuyo modo prohibido --dejar UN riel vivo-- es "
+        f"exactamente lo que D-F4 existe para impedir. Vuelve a leerse la "
+        f"#323 antes de seguir")
 
     # 2. LA MAQUINA DE ESTADOS, enumerada. Con detector, ningun estado ESTABLE
     #    deja un riel solo; sin el, la ventana es el setup del modulo.
@@ -380,23 +414,28 @@ def _autocomprobacion() -> None:
 def demo() -> int:
     print("secuencia_budget: el detector de ventana de D-F4\n")
 
-    print("  los dos pines ON/OFF, y POR QUE YA NO BASTA UN HILO:")
+    print("  los dos pines ON/OFF, y por que BASTA UN HILO:")
     for reg in V_SET:
         if HABILITA_EN_ALTO[reg]:
             print(f"    {reg}: habilita en ALTO "
-                  f"(>= {V_ONOFF_DESHABILITA_MIN[reg]:.2f} V; apaga con "
-                  f"<= {V_ONOFF_HABILITA_MAX[reg]:.2f} V)")
+                  f"(>= {V_ENCIENDE_MIN[reg]:.2f} V; apaga con "
+                  f"<= {V_APAGA_MAX[reg]:.2f} V)")
         else:
             print(f"    {reg}: habilita en BAJO "
-                  f"(<= {V_ONOFF_HABILITA_MAX[reg]:.2f} V; apaga con "
-                  f">= {V_ONOFF_DESHABILITA_MIN[reg]:.2f} V)")
+                  f"(<= {V_APAGA_MAX[reg]:.2f} V; apaga con "
+                  f">= {V_ENCIENDE_MIN[reg]:.2f} V)")
     print()
-    print("    AVISO DE POLARIDAD -- lo que trajo el cambio de U1 y no estaba")
-    print("    en su precio. Hasta el 2026-09-04 U1 era un LM2941 y los dos")
-    print("    habilitaban en BAJO: un hilo los gobernaba, y un hilo roto los")
-    print("    apagaba a los DOS. Eso no era una comodidad de cableado: era")
-    print("    la razon por la que ningun fallo simple dejaba un riel solo,")
-    print("    que es exactamente lo que D-F4 existe para impedir.")
+    print("    LA POLARIDAD, Y LOS DOS DIAS EN QUE ESTUVO ROTA. Hasta el")
+    print("    2026-09-04 U1 era un LM2941 y los dos habilitaban en BAJO: un")
+    print("    hilo los gobernaba, y un hilo roto los apagaba a los DOS. Eso")
+    print("    no era comodidad de cableado: era la razon por la que ningun")
+    print("    fallo simple dejaba un riel solo, que es exactamente lo que")
+    print("    D-F4 existe para impedir. D-F8 metio el LT1963A --habilita en")
+    print("    ALTO-- y dejo la pareja opuesta: hacia falta un inversor cuyo")
+    print("    modo de fallo era el prohibido (#323). D-F9 mete el LT3015,")
+    print("    que TAMBIEN habilita en alto, y la propiedad vuelve por")
+    print("    construccion: un pulldown al comun y el hilo roto apaga a los")
+    print("    dos. No hay inversor que pueda quedarse sin alimentacion.")
     print("    Con el LT1963A hay que invertir una de las dos senales, y el")
     print("    inversor es un punto de fallo NUEVO cuyo modo de fallo es el")
     print("    prohibido. Requisito para la tanda B: el inversor tiene que")

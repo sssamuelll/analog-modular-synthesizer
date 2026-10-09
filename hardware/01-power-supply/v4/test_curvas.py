@@ -26,7 +26,7 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, DIR)
 from curvas import derating, codo_c, psrr_db, DERATING, PSRR_DB, FUENTE  # noqa: E402
 
-PIEZAS = ("LM2941", "LM2991", "LT3045", "LT3094")
+PIEZAS = ("LM2941", "LT3015", "LT3045", "LT3094")
 # Las curvas que la v4 usa: PS1/PS2 = IRM-20-15, PS3/PS4 = IRM-45-12,
 # PS5 = IRM-20-5 (curva "3.3V,5V" de la IRM-20), PS6 = IRM-45-5 (la IRM-45
 # dibuja UNA curva para toda la serie).
@@ -152,7 +152,7 @@ def test_por_encima_de_70_sigue_bajando() -> None:
 # Hasta donde llega el eje de frecuencia de cada figura (lectura independiente,
 # Claude, 2026-09-03). Los LM publican hasta 1 MHz y NO MAS: pedirles 10 MHz
 # es pedir un numero que la hoja no tiene.
-F_MAX_PUBLICADA = {"LM2941": 1e6, "LM2991": 1e6, "LT3045": 10e6, "LT3094": 10e6}
+F_MAX_PUBLICADA = {"LM2941": 1e6, "LT3015": 10e6, "LT3045": 10e6, "LT3094": 10e6}
 
 
 def test_cada_pieza_tiene_puntos_hasta_donde_publica_su_hoja() -> None:
@@ -167,10 +167,16 @@ def test_cada_pieza_tiene_puntos_hasta_donde_publica_su_hoja() -> None:
 
 
 def test_los_lm_no_tienen_datos_a_10_mhz() -> None:
-    # Fig. 9 del LM2941 y Fig. 8 del LM2991 acaban en 1 MHz. Un valor a 10 MHz
-    # para ellos es una invencion, y rizado_budget.py tiene que ENTERARSE de
-    # que ahi no hay hoja (ValueError), no recibir un numero.
-    for pieza in ("LM2941", "LM2991"):
+    # La Fig. 9 del LM2941 acaba en 1 MHz. Un valor a 10 MHz para el es una
+    # invencion, y rizado_budget.py tiene que ENTERARSE de que ahi no hay hoja
+    # (ValueError), no recibir un numero.
+    #
+    # ERA UNA LISTA DE DOS. El LM2991 salio con D-F9: su Fig. 8 tambien acababa
+    # en 1 MHz, pero la G41 del LT3015 que lo sustituye llega a 10 MHz y por
+    # eso el LT3015 NO va aqui. Queda uno solo a proposito -- el dia que U1
+    # deje de ser un LM2941 esta lista se queda vacia, y entonces el test
+    # sobra en vez de mentir.
+    for pieza in ("LM2941",):
         try:
             psrr_db(pieza, 10e6)
         except ValueError:
@@ -199,12 +205,18 @@ def test_psrr_cae_de_1khz_a_100khz() -> None:
             f"al reves o se leyo otra figura")
 
 
-def test_los_lt_rechazan_mas_que_los_lm() -> None:
-    # Es para lo que se compraron: el LT3045 publica >70 dB a 65 kHz donde el
-    # LM2941 anda por los 30-50. Si salen parecidos, una de las dos lecturas
-    # es de otra figura.
+def test_el_post_regulador_rechaza_mas_que_el_pre() -> None:
+    # Es para lo que se compraron los LT de la isla: a 65 kHz --la conmutacion
+    # del IRM-- el post-regulador tiene que sacarle DECENAS de dB al
+    # pre-regulador que tiene delante, o la cascada de dos etapas no compra
+    # nada. Si salen parecidos, una de las dos lecturas es de otra figura.
+    #
+    # El segundo par cambio de sujeto con D-F9: era LT3094 contra LM2991 y
+    # ahora es LT3094 contra LT3015. Los dos son LT, asi que el nombre viejo
+    # del test --"los lt rechazan mas que los lm"-- ya no describia lo que
+    # mide; lo que se vigila es la CASCADA, no el fabricante.
     assert psrr_db("LT3045", 65e3) > psrr_db("LM2941", 65e3) + 10.0
-    assert psrr_db("LT3094", 65e3) > psrr_db("LM2991", 65e3) + 10.0
+    assert psrr_db("LT3094", 65e3) > psrr_db("LT3015", 65e3) + 10.0
 
 
 def test_interpola_en_los_puntos_leidos() -> None:
@@ -254,7 +266,8 @@ PAGINAS_LEIDAS = {
     "IRM-20/5V": ("meanwell-irm-20-spec-2025-11-21.pdf", {3}),
     "IRM-45": ("meanwell-irm-45-spec-2025-11-21.pdf", {3}),
     "LM2941": ("lm2941-snvs770i-2015-01.pdf", {8}),
-    "LM2991": ("lm2991-snvs099i-2016-10.pdf", {7}),
+    # LT3015: leida el 2026-09-06 con D-F9, cuando sustituyo al LM2991 en U2.
+    "LT3015": ("lt3015-rev-b.pdf", {11}),
     "LT3045": ("lt3045-rev-d.pdf", {9, 10}),
     "LT3094": ("lt3094-rev-b.pdf", {11, 12}),
 }

@@ -1,9 +1,32 @@
 # La interfaz de audio: un cuarto N657, dueño del reloj y única boca del instrumento — propuesta
 
-**Fecha**: 2026-08-31 · **Estado**: **propuesto, pendiente de Samuel** ·
+**Fecha**: 2026-08-31 · **Actualización**: 2026-09-10 ·
+**Estado**: **A-10 FIRMADA el 2026-09-09** (el cuarto N657 dedicado existe);
+**A-11 FIRMADA el 2026-09-10** (arquitectura del reloj de conversión: dos
+cristales de audio dedicados, sin PLL fraccional — dirección, sin pieza);
+**el resto del papel sigue propuesto, pendiente de Samuel** ·
 **Ejecuta**: A-6 (acta del 2026-08-30, papel del hub §6), que quedó declarada
 sin diseñar · **Reabre**: D-P6 y el puerto invitado del motor, la tarjeta
 trasera (#183), el presupuesto de potencia del módulo 1
+
+> **Qué se firmó el 2026-09-09, y qué no.** El acta de ese día —«un procesador
+> solamente para la interface de audio», dentro de un reparto de cuatro N657
+> «para tener suficiente headroom y que el instrumento jamás se cuelgue»—
+> **firma A-10**: la interfaz de audio tiene su propio N657, y con eso el §6.2
+> del papel del hub queda resuelto por una vía que aquel papel no ofrecía.
+>
+> **No firma nada más de este papel.** Siguen propuestos: que este chip sea el
+> dueño del reloj, que sea la única boca del instrumento, la reconciliación con
+> D-P6 y el puerto invitado, las cifras de la clase contra la hoja del Clarett+
+> 4Pre, y los censos propios de pines y SRAM —que no existen—. Que el chip esté
+> firmado no firma el trabajo que se le cuelga encima.
+>
+> **Qué firma A-11, el 2026-09-10, y qué no.** Es ortogonal a D-A1: fija la
+> **topología** del reloj de conversión —dos cristales de audio dedicados, sin
+> PLL fraccional (§3.6)— sea cual sea el chip que termine generándolo. **No**
+> resuelve si este chip es su dueño (sigue en la lista de arriba), no elige el
+> cristal ni el mux (sin hoja no hay nombre, R-M3), y no cierra ningún riesgo
+> de §9.
 
 ---
 
@@ -18,6 +41,17 @@ trasera (#183), el presupuesto de potencia del módulo 1
 
 > *«que te parece si hacemos que la interface de audio sea su propio n657
 > tambien? igual que el mago»*
+
+**A-11 (2026-09-10)**, la topología del reloj de conversión, con las palabras
+de Samuel tras un brainstorm de arquitectura tenido en sesión (Claude Code,
+2026-09-10) que le presentó tres opciones apuntando a la clase del Clarett+
+4Pre:
+
+> *«en 2 firmo la opcion B.»*
+
+Referido al punto 2 de ese brainstorm (sample rate) y su Opción B: dos
+cristales de audio dedicados, uno por familia, en vez de un cristal único con
+PLL fraccional. Desarrollo en §3.6.
 
 ---
 
@@ -139,6 +173,38 @@ cómputo, éste es un sitio donde la diferencia **se oye**.
 > un número medido, y la frontera de la cámara ya nos enseñó la diferencia
 > (hub §3.2, «modulación sí, disparo no»). Se mide en §9.4 antes de ponerlo en
 > ningún material.
+
+### 3.6 El árbol de reloj: dos cristales dedicados, no uno (A-11, FIRMADA — dirección, no pieza)
+
+§3.2 ya declaraba el reloj de conversión el sitio más sensible del
+instrumento. Lo que faltaba decidir era **cómo se genera**, y el propio
+silicio no ofrece una vía barata: HSI no divide entero a la familia de
+44,1 kHz (cero soluciones barriendo los cuatro divisores del VCO contra
+45,1584 MHz — hallazgo del #150 punto 1, comentario del 2026-09-10). La
+alternativa de un cristal único más PLL fraccional mete jitter (±11,9 ps
+contra ±6,6 del HSI, DS14791 Tabla 58, p. 166) justo en el sitio que §3.2
+acaba de declarar el más delicado del instrumento — un preamplificador de
+micrófono, más sensible que el expo de la Voz.
+
+A-11 firma la dirección contraria, la misma que usan las interfaces de
+referencia de §2: **dos osciladores de audio dedicados, uno por familia, sin
+derivación fraccional**:
+
+| Familia | Cristal | Tasas exactas |
+|---|---|---|
+| 48 kHz | 24,576 MHz | `/512`=48.000 · `/256`=96.000 · `/128`=192.000 · `/64`=384.000 |
+| 44,1 kHz | 22,5792 MHz | `/512`=44.100 · `/256`=88.200 · `/128`=176.400 · `/64`=352.800 |
+
+Las ocho tasas salen enteras de su cristal; ninguna pasa por un divisor
+fraccional. Un mux de reloj (o el propio bloque SAI del N657, por verificar
+— §8) selecciona el dominio según la tasa pedida.
+
+**Lo que A-11 NO decide:** el cristal en sí (marca, tolerancia, ESR — sin
+hoja no hay nombre, R-M3), el mux o el chip que conmuta entre dominios, si el
+N657 acepta los dos XTAL directamente o hace falta un buffer externo, y si
+éste es el chip que efectivamente los aloja (§3.2 lo asume, pero «dueño del
+reloj» sigue en la lista de lo propuesto, encabezado del papel). Todo eso
+entra a §8 como prerrequisito nuevo antes de sellar D-A1.
 
 ---
 
@@ -308,6 +374,9 @@ Ninguna se ejecuta hasta que D-A1 se firme (patrón conocido: #214, #248).
 6. **Censo de pines y de SRAM de la interfaz**, con su mutación, como se hizo
    con el hub.
 7. **Los conectores contra el estudio del valle** y la trasera capturada.
+8. **Los dos cristales de audio de A-11**, su mux (o si el SAI conmuta
+   dominios sin uno externo), y si el N657 los acepta directamente — pieza y
+   hoja, arquitectura ya fijada (§3.6).
 
 ---
 

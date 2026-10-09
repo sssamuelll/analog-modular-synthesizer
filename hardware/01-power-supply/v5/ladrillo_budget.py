@@ -24,15 +24,20 @@ CONVERSION. Dicho al reves y en su forma mas limpia:
 Asi que el calor del cajon es, exactamente, la potencia de SALIDA del ladrillo.
 Lo que se queda fuera es la perdida AC-DC del propio ladrillo, y nada mas.
 
-**2. La tension cruda deja de ser un dato de catalogo, y eso cierra `U2`.** El
-margen de entrada del pre-regulador negativo lleva desde el 2026-09-03 en
-**-170 mV** y no tiene salida por piezas: ninguno de los candidatos de D-F8 es
-una pieza negativa. El problema no es `U2`, es que un IRM de catalogo entrega
-15,0 V con +-2,5 %. Con un DC-DC nuestro la tension cruda se elige, y a 15,5 V
-el margen se va a +311 mV por 0,33 W mas de disipacion en U2 (medidos los dos
-en el corner alto, que es el unico modo honesto de compararlos). Ese es el
-mejor regalo de esta arquitectura y no tiene nada que ver con el calor de la
+**2. La tension cruda deja de ser un dato de catalogo, y eso da holgura a la
+cascada.** Cuando se escribio este guion (05-09) el argumento era `U2`: llevaba
+desde el 03-09 en -170 mV y no parecia tener salida por piezas. El 06-09 se
+firmo **D-F9** y `U2` paso a LT3015: hoy cierra en **+536 mV con el crudo de
+catalogo**, sin que esta arquitectura haga nada. El regalo se cobro por otra
 caja.
+
+Lo que la tension cruda sigue comprando es holgura en **`U1`**, que a 15,0 V es
+el peor riel con +330 mV sobre una incertidumbre de modelo de 127, y a 15,5 se
+va a +811. Ese es el argumento vivo de D-V3, y cuesta lo mismo: 0,33 W mas de
+disipacion en U2 (medidos los dos en el corner alto, que es el unico modo
+honesto de compararlos). La diferencia es que antes se pagaban por cerrar un
+rojo y ahora por ensanchar un verde, y esto es un papel que va de bajar calor.
+Ver la enmienda del 07-09 en la sec.5 del papel.
 
 **3. Declarado y censado se separan mas que nunca.** D-B2 declara 500 mA/riel
 de rack (firmado 2026-09-05); la cascada declara 650 mA/riel (D-F1) contra un
@@ -264,14 +269,18 @@ def _autocomprobacion() -> None:
         "potencia por otro sitio o sale por otro sitio, y hay que decir cual")
     # 2. El ladrillo le pide a la red MAS de lo que entrega, nunca menos.
     assert pedido_a_la_red_w() > salida_ladrillo_w(), "rendimiento >= 1"
-    # 3. LA QUE DECIDE: la tension cruda elegida tiene que cerrar U2, que es el
-    #    unico rojo que esta arquitectura viene a cerrar. Si alguien baja
-    #    V_CRUDO_CASCADA "para que caliente menos", esto lo caza.
+    # 3. La tension cruda elegida tiene que cerrar la cascada entera.
+    #    OJO, PERDIO DIENTES CON D-F9 (06-09): se escribio para cazar a quien
+    #    bajara V_CRUDO_CASCADA "para que caliente menos", y mordia porque a
+    #    15,0 V el LM2991 daba -170 mV. Con el LT3015 da +536, asi que a 15,0
+    #    ya no salta nadie. Sigue siendo la propiedad correcta que vigilar --y
+    #    volveria a morder si alguien revirtiera la pieza-- pero hoy el que
+    #    aprieta es U1 (+330 a 15,0 V), no U2.
     for reg in ("U1", "U2"):
         assert margen_cascada_v(reg) > 0, (
             f"{reg} sigue sin margen con {V_CRUDO_CASCADA} V de crudo "
-            f"({margen_cascada_v(reg)*1000:+.0f} mV). Cerrar U2 es la razon de "
-            f"elegir la tension cruda; si no lo cierra, no vale la pena elegirla")
+            f"({margen_cascada_v(reg)*1000:+.0f} mV). Que la cascada regule es "
+            f"la razon de elegir la tension cruda; si no lo hace, no vale la pena")
     # 4. Y que el margen MEJORE con la tension, que es la direccion del arreglo.
     assert margen_cascada_v("U2", v_nom=16.0) > margen_cascada_v("U2", v_nom=15.0), (
         "subir el crudo no mejora el margen: el modelo esta al reves")
@@ -330,7 +339,7 @@ def demo() -> int:
         m1 = margen_cascada_v("U1", v_nom=nom) * 1000
         m2 = margen_cascada_v("U2", v_nom=nom) * 1000
         q = quema_pre_regulador_w("U2", v_nom=nom)
-        et = "  <- la v4, y su rojo" if nom == 15.0 else (
+        et = "  <- el crudo de hoy; era el rojo de U2 hasta D-F9" if nom == 15.0 else (
              "  <- D-V3, propuesta" if nom == V_CRUDO_CASCADA else "")
         print(f"    {nom:>6.1f} V {llega:>8.3f} V {m1:>+10.0f} {m2:>+10.0f} "
               f"{q:>8.2f} W{et}")
