@@ -8,8 +8,10 @@ las dos metricas-- ejecutandolo hasta su bloque RENDER, igual que piezas.py.
 Luego quita sus cuatro ensamblados y mete: LA PIEL TAL COMO SE IMPRIME, de
 case/print/piel/ (imprimir_piel.py: los dos cachetes espejo y la cubierta de
 una pieza, con su corteza) y lo que sigue igual, de cad/piel_organica.scad
-(aluminio, paneles, acrilico, madera). Tres vistas: las dos de siempre y una
-tercera casi de lado, que es la unica desde la que se juzga la rama.
+(el hueso, los rieles en negro, paneles, acrilico, madera). Encima, LA CARA:
+los mandos y la pantalla sobre los paneles, de cara_panel.py (ficha 14). Tres
+vistas: las dos de siempre y una tercera casi de lado, que es la unica desde la
+que se juzga la rama.
 
   PIEL_VISTAS=lado,frente   que vistas (por defecto las tres)
   PIEL_MOTOR=eevee          para iterar: segundos en vez de minutos
@@ -37,8 +39,10 @@ PRINT = os.environ.get("PIEL_SALIDA", os.path.join(AQUI, "..", "print", "piel"))
 OPENSCAD = r"C:\Program Files\OpenSCAD\openscad.exe"
 SCAD = os.path.join(CAD, "piel_organica.scad")
 
-# parte del .scad -> material (los de render.py mas el panel oscuro)
-PARTES = {"aluminio": "aluminio", "paneles": "panel_oscuro",
+# parte del .scad -> material (los de render.py mas el panel oscuro y el negro
+# de los rieles). El aluminio va en dos: los rieles y la tapa del valle son
+# negros desde la ficha 14.
+PARTES = {"hueso": "aluminio", "negro": "riel_negro", "paneles": "panel_oscuro",
           "acrilico": "acrilico_naranja", "madera": "nogal"}
 # la piel impresa: pieza -> (material, desplazamiento en z). El cachete
 # derecho va contra la cara exterior del anillo derecho (z = ancho_total); el
@@ -102,6 +106,13 @@ except KeyError:
 # render, 05-09). Color de mirar, no cota.
 ns["mat"]("panel_oscuro", **{"Base Color": (0.10, 0.105, 0.115, 1.0),
                              "Metallic": 0.9, "Roughness": 0.38})
+# LOS RIELES Y LA TAPA DEL VALLE, en negro (ficha 14): anodizado negro, como el
+# Z-Rail de Tiptop que se vende asi. Mas oscuro que el panel, para que enmarque
+# cada fila en vez de leerse como una rendija clara. SIN Metallic: la capa
+# anodica es un dielectrico tenido, y como metal negro el riel reflejaba la
+# banda clara del entorno y salia gris (primer render, 10-10).
+ns["mat"]("riel_negro", **{"Base Color": (0.014, 0.014, 0.016, 1.0),
+                           "Metallic": 0.0, "Roughness": 0.45})
 
 
 def _importar(ruta, nombre, material, dz=0.0, suave=False):
@@ -125,6 +136,12 @@ objetos = [_importar(os.path.join(PRINT, pieza + ".stl"), pieza, "piel", dz, sua
            for pieza, dz in PIEL.items()]
 objetos += [_importar(os.path.join(DIR, parte + ".stl"), parte, material)
             for parte, material in PARTES.items()]
+
+# LA CARA (ficha 14): los mandos y la pantalla, sobre el panel que se acaba de
+# importar, contra el que cara_panel comprueba su marco
+sys.path.insert(0, AQUI)
+import cara_panel  # noqa: E402
+cara_panel.vestir(ns, next(o for o in objetos if o.name == "paneles"))
 
 # el bbox real de TODO lo importado: construir_vista() y las luces leen
 # `esquinas` y `centro` de este mismo espacio de nombres
@@ -170,7 +187,9 @@ VISTAS = {"frente": ("sam17-piel.png", ns["AZIMUT_FRENTE"]),
           # casi de lado y un poco por encima: la rama entera y el canto
           "lado": ("sam17-piel-lado.png", math.radians(78)),
           # de lado puro: el cachete llena el cuadro y se juzga la rama
-          "cachete": ("sam17-piel-cachete.png", math.radians(90))}
+          "cachete": ("sam17-piel-cachete.png", math.radians(90)),
+          # de frente puro: la cara entera, para juzgar el reparto (ficha 14)
+          "cara": ("sam17-piel-cara.png", 0.0)}
 pedidas = os.environ.get("PIEL_VISTAS", "frente,trasera,lado").split(",")
 ok = True
 for v in pedidas:

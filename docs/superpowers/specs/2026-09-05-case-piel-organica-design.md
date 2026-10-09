@@ -275,6 +275,8 @@ Los STL **no se versionan hasta la firma** (pesan 8–15 MB cada uno y cambian c
 
 ## 10. Los renders
 
+> **ENMIENDA (2026-10-10, ficha 14).** Los paneles ya no son placas lisas: `case/renders/cara_panel.py` les pone la cara, y los rieles y la tapa del valle van en negro. Hay una vista más, de frente puro, para juzgar el reparto: `PIEL_VISTAS=cara` → `sam17-piel-cara.png`. No se versiona (la regla de la #195 en `.gitignore`); está en el acta. Lo que eso pinta y lo que es provisional, en §13.6.
+
 `case/renders/render_piel.py` reutiliza la escena de `render.py` entera y hace cuatro vistas: las dos de siempre, una **casi de lado** (`sam17-piel-lado.png`) y una **de lado puro** (`sam17-piel-cachete.png`), en la que el cachete llena el cuadro y se juzga la rama. Importa **la piel tal como se imprime** (`case/print/piel/`), no un extruido: lo que se ve es lo que sale de la máquina. `PIEL_MOTOR=eevee` para iterar en un minuto; `PIEL_BLEND=1` guarda `build/sam17-piel.blend` con cada pieza nombrada para girarla en Blender.
 
 Lo que enseñan: la cubierta blanca con su corteza sobre el hueso, la rama saliendo de la nariz con el anillo asomando detrás en la orilla y el interior en el centro, los paneles oscuros de las tres filas 7,5 dentro de la piel, la trasera en ámbar en su ventana, la tabla asomando.
@@ -382,7 +384,7 @@ Las fichas 1 a 6 no quedaron guardadas en el acta: un fallo de la página perdí
 | 11 | los tornillos se veían | por dentro (a) | pendiente de dibujar, #393 (HUECO 9). Los de fuera ya no están |
 | 12 | la tabla se quedó corta | hazlo | pendiente, #394 |
 | 13 | la trasera en dos materiales | hazlo | pendiente, #395: depende de la lista de conectores (#183) |
-| 14 | rieles negros y paneles vestidos | hazlo | pendiente, #396 |
+| 14 | rieles negros y paneles vestidos | hazlo | **hecho** (§13.6): la cara en el render, los rieles negros en la compra y la tapa del valle anodizada en negro |
 | 15 | acabado satinado | enséñamelo primero | **en render, a escoger** (§13.5), #397 |
 | 16 | una pieza por archivo y ningún choque | hazlo | **hecho**: `check_piel.py` |
 
@@ -403,7 +405,7 @@ Dos vueltas que no sirvieron. La primera escalaba la malla en sus coordenadas lo
 
 **La ventilación no cambia**: el área abierta es la misma, y la chimenea da 20,0 K pesimista con los cuatro. La ficha 9 del acta decía que «un hueco más hondo deja pasar algo menos de aire», y es al revés. El borde del hueco pasa de 1 a 2 mm y el lomo lo redondea, y un borde redondeado descarga igual o mejor que uno vivo. Si el modelo se equivoca, se equivoca a favor.
 
-**Ficha 8, la veta** (`imprimir_piel.veta()`). Son surcos que siguen cada franja de la lámina: las curvas de nivel de la distancia al canto más cercano, con un meandro lento y huecos a lo largo, de modo que rodean las esquinas de las ventanas y doblan sobre las franjas de los costados. Dos hondos: 0,5 mm por surco (`veta`) y 0,9 (`veta_honda`), que llegan a 0,6 y 1,3 donde se juntan dos. Se apagan a 1,5–3,5 mm de cada canto. Donde doblan la esquina de una ventana se leen como una moldura: si se escoge veta, eso se afina. La primera vuelta corría de anillo a anillo, como surcos paralelos al largo del aparato, y en las franjas angostas de los costados quedaba en rayitas sueltas. La cubierta pesa 875 g con la fina y 863 con la honda, contra 881 la lisa.
+**Ficha 8, la veta** (`imprimir_piel.veta()`). Son surcos que siguen cada franja de la lámina: las curvas de nivel de la distancia al canto más cercano, con un meandro lento y huecos a lo largo, de modo que rodean las esquinas de las ventanas y doblan sobre las franjas de los costados. Dos hondos: 0,5 mm por surco (`veta`) y 0,9 (`veta_honda`), que llegan a 0,6 y 1,3 donde se juntan dos. Se apagan a 1,5–3,5 mm de cada canto. Donde doblan la esquina de una ventana se leen como una moldura: si se escoge veta, eso se afina. La primera vuelta corría de anillo a anillo, como surcos paralelos al largo del aparato, y en las franjas angostas de los costados quedaba en rayitas sueltas. La cubierta pesa 875 g con la fina y 863 con la honda, contra 886 la lisa (aquí decía 881, que era la primera veta, la que se descartó: corregido el 10-10).
 
 **Ficha 10, la placa ámbar.** `piel_termica.py` la cuenta ahora. La placa va dentro de la pletina del anillo, contra su cara de dentro (entre el anillo y el primer riel quedan 6 mm, y el interior es de los módulos), con una rendija alrededor. El aire del cachete cruza en serie la celosía, el canal de 11 mm entre la placa y el cachete, y la rendija:
 
@@ -417,3 +419,17 @@ Dos vueltas que no sirvieron. La primera escalaba la malla en sus coordenadas lo
 Es un orden de magnitud: el mismo `C_D` para todo y sin el roce del canal, que solo empeoraría la cifra. Con la luz, cada vatio dentro suma 0,34 K (declarada) o 0,42 K (censo), en el caso pesimista y con la rendija de 12. **La placa entera no cabe**: con la carga declarada no pasa de ninguna forma, y con el censo no pasa en el caso pesimista. Lo que se puede buscar es algo que tape la vista sin cerrarle el paso al aire (lamas ámbar inclinadas, como una persiana), y eso cuelga del HUECO 5 del papel de la v5: si el venteo se encarga contra la carga declarada o contra el censo. Con la declarada no cabe ni un vatio más.
 
 **Ficha 15, satinado**: solo el material del render, rugosidad 0,22 con una capa de barniz. Aproxima el PA12 alisado por vapor; lo que decide es una muestra.
+
+### 13.6 La cara puesta (ficha 14, 10-10)
+
+`case/renders/cara_panel.py`, que llama `render_piel.py`. Solo pinta: no fabrica nada.
+
+**Arriba**, el reparto que está en papel (plan del panel §4, con la enmienda del 27-08): la pantalla de 7" al centro y, en los dos flancos de 181,66 mm, las 4 macros de 38 en cuadro con su corona de LED, las 16 perillas de 20 a paso 28 × 34 y los 11 botones de 12 a paso 18. **Cómo se reparten entre los dos flancos no está escrito.** El render pone el orden del paquete del 23-08 (macros, perillas, fuentes) y parte las perillas 3 y 5 alrededor de la pantalla. Cabe con 6,8 mm entre las tapas y el canto, y entre las tapas y la pantalla, por la izquierda; por la derecha, 5,8. Es una elección del render, no del panel.
+
+**Abajo, provisional**: los tres bloques del plan (30, 62 y 12 HP) con caras genéricas, perillas arriba y jacks abajo. Son módulos KONDOR que nadie ha dibujado. La fila del valle se queda lisa, porque tampoco tiene reparto.
+
+**El negro.** Los rieles y la tapa del valle salen en un STL propio (`PART="negro"`; el resto del aluminio es `PART="hueso"`). `aluminio` sigue siendo los dos, que es contra lo que mide `piel_choques.py`. En la compra van los *Tiptop Audio Z-Rails 104HP Black* (Thomann 511616, por pares), y en el pliego, la tapa del valle anodizada en negro después de plegar. Pintado como metal, el negro reflejaba la banda clara del entorno y salía gris; el material va sin `Metallic`, porque la capa anódica es un dieléctrico teñido.
+
+**Lo que no es de fiar.** La zona activa de la pantalla (152,5 × 91,5) está estimada como 7" de diagonal a 5:3, sin hoja de la pieza. Lo que enseña la pantalla es una muestra (una onda y las 16 voces), no un diseño de interfaz.
+
+**Una guarda.** El marco de cada panel sale de las gemelas de `clearance_budget.py`, y `vestir()` comprueba que sus cuatro esquinas caen sobre vértices del STL de los paneles. Si la gemela se separa del `.scad`, el render sale en rojo antes de pintar, en vez de dejar los mandos flotando.
