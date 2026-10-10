@@ -312,7 +312,7 @@ Lo que **no** enseñan, a propósito: la franja de conectores (§5, no modelada)
 |---|---|---|
 | **D-P1** | **la piel sustituye a techo, nariz, talón y las dos mejillas** (cinco pieles a un árbol); la trasera se queda | pendiente |
 | **D-P2** | material: **A**, piel impresa sobre el hueso de hoy; la pieza impresa es el acabado | **firmada 05-09** — *«todo el acabado se hace con impresión 3D»* |
-| **D-P3** | la rama abre sobre la ventana del anillo, interior a la vista (lo modelado) — o lleva el ámbar detrás como panel flotante con paso de aire arriba y abajo | pendiente |
+| **D-P3** | la rama abre sobre la ventana del anillo, interior a la vista (lo modelado) — o lleva el ámbar detrás como panel flotante con paso de aire arriba y abajo | **por ahora, lo modelado**: «sin nada detrás» en la ficha 10 (10-10), y la ficha en «después» |
 | **D-P4** | la fuente: afuera (v5, D-V1) o adentro con esta piel — §7.1: **adentro no pasa el techo con esta rama** | pendiente |
 | **D-P5** | las 46 ranuras de la trasera: se quedan por lenguaje, o se van (valen 2,7 K) | pendiente |
 | **D-P6** | la cubierta de una pieza: **qué máquina** (SLS P 770, Mammoth SLA) — o partirla, y dónde | pendiente |
@@ -367,7 +367,7 @@ Con las piezas del 09-09 sale en rojo con todo lo de §13.1. Con las de hoy, en 
 
 ### 13.4 Las dieciséis fichas
 
-Las fichas 1 a 6 no quedaron guardadas en el acta: un fallo de la página perdía lo que se marcaba antes de que conectara (ya corregido). Samuel dijo *«firmadas todas»* y las seis estaban recomendadas en «hazlo», así que se tomaron así. Si alguna la marcó distinto, se corrige aquí.
+Las fichas 1 a 6 no quedaron guardadas en el acta: un fallo de la página perdía lo que se marcaba antes de que conectara (ya corregido). Samuel dijo *«firmadas todas»* y las seis estaban recomendadas en «hazlo», así que se tomaron así. Si alguna la marcó distinto, se corrige aquí. **El 10-10 las volvió a marcar: las seis, «hazlo».**
 
 | ficha | qué | decisión | estado |
 |---|---|---|---|
@@ -378,19 +378,19 @@ Las fichas 1 a 6 no quedaron guardadas en el acta: un fallo de la página perdí
 | 5 | las paredes de los huecos picadas | hazlo | **hecho**: el relieve solo mueve en Z |
 | 6 | rendijas por las que se ve el suelo | hazlo | pendiente, #389: toca `guarda_tapa()` |
 | 7 | dos tubos donde debería haber uno | una sola masa (A) | **hecho, primera vuelta**: se enseña en render |
-| 8 | la corteza parece nieve | enséñamelo primero | **en render, a escoger** (§13.5), #390. Mientras tanto la cubierta sale lisa (`PIEL_CORTEZA=ruido` devuelve el ruido para comparar) |
-| 9 | la celosía no tiene cuerpo | enséñamelo primero | **en render, a escoger** (§13.5), #391: tres grados de fondo, con la chimenea |
-| 10 | por la celosía se ve la máquina (D-P3) | enséñamelo primero | **la placa entera no cabe** (§13.5), #392: placa ámbar detrás, con la chimenea |
+| 8 | la corteza parece nieve | enséñamelo primero → **veta honda** (10-10) | **hecho** (§13.7): la cubierta sale con la veta honda, y los surcos ya no doblan en las esquinas. Se le enseña una más marcada, como el concepto |
+| 9 | la celosía no tiene cuerpo | enséñamelo primero → **hondo** (10-10) | **hecho** (§13.7): 215 g cada cachete; la chimenea no cambia |
+| 10 | por la celosía se ve la máquina (D-P3) | enséñamelo primero → **sin nada detrás**, y la ficha «después» (10-10) | no se hace ahora: #392 queda aparcada (§13.7) |
 | 11 | los tornillos se veían | por dentro (a) | pendiente de dibujar, #393 (HUECO 9). Los de fuera ya no están |
 | 12 | la tabla se quedó corta | hazlo | pendiente, #394 |
 | 13 | la trasera en dos materiales | hazlo | pendiente, #395: depende de la lista de conectores (#183) |
 | 14 | rieles negros y paneles vestidos | hazlo | **hecho** (§13.6): la cara en el render y la tapa del valle anodizada en negro. Los rieles se quedan plateados: ya estaban comprados (Samuel, 10-10) |
-| 15 | acabado satinado | enséñamelo primero | **en render, a escoger** (§13.5), #397 |
+| 15 | acabado satinado | enséñamelo primero → **por confirmar** | dos marcas que chocan (§13.7), #397 |
 | 16 | una pieza por archivo y ningún choque | hazlo | **hecho**: `check_piel.py` |
 
 ### 13.5 Las cuatro de «enséñamelo primero», en render (09-10, noche)
 
-Las variantes se fabrican con `imprimir_piel.py` sin tocar las piezas de `case/print/piel/`: `PIEL_RELIEVE` y `PIEL_CORTEZA` escogen la variante y `PIEL_SALIDA` la manda a otra carpeta, que leen también `piel_choques.py` y `render_piel.py`. La puerta (`check_piel.py`) quita `PIEL_SALIDA` del entorno: mira siempre las piezas de verdad. Todas las variantes pasan las dos reglas, con el mismo peor contacto de hoy (0,29 mm, cubierta contra aluminio). Los renders y la elección están en el acta, en «Para escoger mirando». Sin las variables, las piezas salen como hasta hoy: cubierta lisa y relieve B.
+Las variantes se fabrican con `imprimir_piel.py` sin tocar las piezas de `case/print/piel/`: `PIEL_RELIEVE` y `PIEL_CORTEZA` escogen la variante y `PIEL_SALIDA` la manda a otra carpeta, que leen también `piel_choques.py` y `render_piel.py`. La puerta (`check_piel.py`) quita `PIEL_SALIDA` del entorno: mira siempre las piezas de verdad. Todas las variantes pasan las dos reglas, con el mismo peor contacto de hoy (0,29 mm, cubierta contra aluminio). Los renders y la elección están en el acta, en «Para escoger mirando». Sin las variables, las piezas salían como hasta entonces: cubierta lisa y relieve B. **Desde el 10-10 salen las escogidas** (§13.7).
 
 **Ficha 9, el lomo** (`imprimir_piel.lomo()`). Cada banda sube desde 2 mm junto al hueco, en cuarto de círculo de radio `rho`, hasta `t_max`. Una banda de menos de 2 `rho` de ancho no llega arriba, así que las finas quedan por debajo de las anchas sin decírselo a nadie. La media banda típica mide 2,8 mm (mediana de la cresta, medida sobre la placa). Solo crece hacia fuera: la cara que apoya en el anillo se queda en z = 0, y bajo el labio la placa no pasa de `PESTANA_T`.
 
@@ -433,3 +433,22 @@ Es un orden de magnitud: el mismo `C_D` para todo y sin el roce del canal, que s
 **Lo que no es de fiar.** La zona activa de la pantalla (152,5 × 91,5) está estimada como 7" de diagonal a 5:3, sin hoja de la pieza. Lo que enseña la pantalla es una muestra (una onda y las 16 voces), no un diseño de interfaz.
 
 **Una guarda.** El marco de cada panel sale de las gemelas de `clearance_budget.py`, y `vestir()` comprueba que sus cuatro esquinas caen sobre vértices del STL de los paneles. Si la gemela se separa del `.scad`, el render sale en rojo antes de pintar, en vez de dejar los mandos flotando.
+
+### 13.7 Lo que escogió Samuel (10-10)
+
+Marcó el acta la noche del 10-10. Desde entonces, `imprimir_piel.py` sin variables saca lo escogido:
+
+| ficha | escogió | qué cambia |
+|---|---|---|
+| 9, el fondo de la celosía | **hondo** | el lomo `hondo` (radio 5,5, hasta 7 mm) es el que sale por defecto; `PIEL_RELIEVE=hoy` da el relieve B. Cada cachete pesa 215 g (178 con el B). La chimenea no cambia: la misma área abierta, 20,0 K pesimista |
+| 8, la veta | **veta honda** | la cubierta sale con la veta honda: 871 g, surcos de hasta 1,3 mm. En las esquinas cambió la regla (abajo) |
+| 10, la luz detrás | **sin nada detrás**; la ficha, «después» | no se hace ahora. D-P3 se queda como está modelado y #392, aparcada |
+| 15, satinado | **por confirmar** | marcó «pide la muestra» en la elección y «no» en la ficha, con cuatro minutos de diferencia. Se le pregunta |
+
+Las fichas 1 a 6, que se habían perdido, las volvió a marcar: las seis, «hazlo», como se habían tomado.
+
+**La veta ya no dobla en las esquinas.** El §13.5 dejó dicho que, si se escogía veta, las esquinas se afinaban: donde los surcos doblaban la esquina de una ventana se leían como una moldura. La causa era la regla. Cada surco seguía la distancia al canto más cercano, así que en cada esquina doblaban todos a la vez, en paralelo, como el marco de un cuadro. Ahora el sitio de cada surco se mide **a lo largo del perfil**, desde el borde de su franja. Los surcos corren rectos a lo largo de la pieza en la nariz, el techo y el talón, y se apagan al llegar al rollo. Las franjas de los lados de cada ventana, donde a media anchura no hay lámina, quedan lisas, como el rollo al que llegan. `veta()` encuentra las ventanas sola: hoy van de 19 a 401 y de 476 a 688 mm de perfil.
+
+**La nota de Samuel, y una más marcada para verla.** Con la elección escribió: *«la veta del concept es super marcada parece el tronco de un arbol digital y al mismo tiempo es lo que la hace tan hermosa, con toques de modernismo del de verdad»*. La honda son surcos de 1,4 mm de ancho y hasta 1,3 de hondo. El concepto tiene lomos anchos y redondos. `PIEL_CORTEZA=veta_marcada` va hacia eso: surcos de 2,6 mm de ancho y 1,8 de hondo (hasta 2,6 donde se juntan), tan juntos que entre ellos quedan lomos. Pasa las dos reglas (peor contacto, 0,30 mm). La cubierta pesa 845 g, y bajo el surco más hondo quedan 3,4 mm de los 6 de la lámina. Se enseña en el acta al lado de la honda. **No está escogida.**
+
+**El peor contacto** pasa de 0,29 a 0,35 mm (cubierta contra aluminio), dentro de la tolerancia de 0,5: es el remallado de otra cubierta, no una pieza que entre en otra.
