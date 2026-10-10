@@ -264,7 +264,7 @@ todos alargados se arrastra hacia un extremo.** Si el taller propone
 
 ### Muestra que se pide
 
-Un retazo de la especie propuesta, 18 mm, con un canto acabado como se
+Un retazo de la especie propuesta, 30 mm, con el canto redondeado R8 acabado como se
 entregaría. Se compara contra el naranja del cuerpo — **la tabla y el acrílico
 se ven juntos y a la vez**, y eso no lo contesta ningún render.
 

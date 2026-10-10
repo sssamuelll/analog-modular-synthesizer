@@ -1470,8 +1470,12 @@ module rail_er(largo) { cube([rail_er_fondo, largo, rail_er_alto], center = true
 // Cuantos tornillos caben en un largo con el paso nominal. Se saca aparte
 // porque la tabla la necesita para su propia fila y no puede usar
 // fila_agujeros(): sus agujeros van ALARGADOS, no redondos.
+// Sin largo, la fila de M5 de la tabla, que se reparte en el fondo del CUERPO
+// y no en el de la tabla (10-10): el vuelo es cota de mirar, y medida en la
+// tabla un vuelo de 40 subia la fila de 3 a 4 tornillos y movia las roscas
+// ciegas del anillo.
 function n_agujeros(largo = 0, paso = reticula_paso) =
-    max(1, round((largo == 0 ? bandeja_base_fondo() : largo)/paso));
+    max(1, round((largo == 0 ? fondo() : largo)/paso));
 
 module fila_agujeros(largo, y, paso = reticula_paso, d = d_M3_paso) {
     n = max(1, round(largo/paso));
@@ -1527,7 +1531,7 @@ module bandeja_base_2d() {
         // dibujar -- se listan en el pliego (Tarea 5).
         for (zc = [v + t_anillo/2, v + ancho_total - t_anillo/2])
             for (i = [0 : n_agujeros() - 1])
-                let (y = bandeja_base_fondo()*(i + 0.5)/n_agujeros(),
+                let (y = v + fondo()*(i + 0.5)/n_agujeros(),
                      medio = (i == floor(n_agujeros()/2)))
                     translate([zc, y])
                         if (medio) circle(d = d_M5_paso + kerf);
@@ -2444,9 +2448,23 @@ module bandeja_base() {
     // y = 0. Su cara de arriba ES el suelo interior y su canto sobresale
     // vuelo_zocalo por los cuatro lados. Es la misma pieza que el "zocalo" de
     // la spec 9, que hasta hoy eran dos.
+    // EL CANTO DE ARRIBA, REDONDEADO (ficha 12): en local la cara de arriba es
+    // z = 0, porque el giro manda el grueso hacia -Y del mundo.
     translate([-vuelo_zocalo, 0, ancho_total + vuelo_zocalo])
         rotate([0, 90, 0]) rotate([90, 0, 0])
-            linear_extrude(t_base) bandeja_base_2d();
+            intersection() {
+                linear_extrude(t_base) bandeja_base_2d();
+                canto_redondeado(bandeja_base_ancho(), bandeja_base_fondo(), t_base, r_canto_tabla);
+            }
+}
+
+// Un bloque de a x f x t con las cuatro aristas de z = 0 redondeadas a radio r.
+module canto_redondeado(a, f, t, r) hull() {
+    translate([0, 0, r]) cube([a, f, t - r]);
+    for (y = [r, f - r])
+        translate([r, y, r]) rotate([0, 90, 0]) cylinder(r = r, h = a - 2*r, $fn = 48);
+    for (x = [r, a - r])
+        translate([x, r, r]) rotate([-90, 0, 0]) cylinder(r = r, h = f - 2*r, $fn = 48);
 }
 
 // tope de bandeja a ras de P3.y (canto SUPERIOR, no inferior — la cota la pone

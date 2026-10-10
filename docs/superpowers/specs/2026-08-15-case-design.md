@@ -245,6 +245,13 @@ lenguaje visual).
 > el frente. Esta revisión sustituye la geometría y el montaje de la rev. 26
 > en esos puntos; conserva debajo el razonamiento que llevó a aquella.
 >
+> **rev. 29** (2026-10-10): **la tabla de la ficha 12** del acta de la piel. Vuela
+> 40 por los cuatro lados (`vuelo_zocalo`, era 10) y mide 30 de grueso (`t_base`,
+> era 18), con el canto de arriba redondeado R8 (`r_canto_tabla`). Los M5 de la
+> tabla se reparten desde ese día en el fondo del cuerpo y no en el de la tabla:
+> con el vuelo nuevo habrían pasado solos de 3 a 4 por anillo. Detalle en el
+> §13.8 de [`2026-09-05-case-piel-organica-design.md`](2026-09-05-case-piel-organica-design.md).
+>
 > **rev. 28** (2026-08-31): **Tanda B — fila KONDOR de 55, banda apoyada y
 > paneles rehundidos 1.5**. La tercera fila deja de anunciarse como Intellijel:
 > mide 55 mm y 49 entre centros; el primer riel queda fijo y el segundo se
