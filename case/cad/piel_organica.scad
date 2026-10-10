@@ -27,7 +27,8 @@
 //   aluminio   lo que sigue igual: rieles, marcos de ventana, los dos anillos
 //              (ahora escondidos, y por eso ya no fresados con cara vista) y
 //              la tapa del valle. El render lo pide en dos: plateado (rieles,
-//              marcos y anillos) y negro (la tapa del valle, ficha 14)
+//              marcos y anillos) y negro (la tapa del valle, ficha 14, y la
+//              tira del valle, ficha 6)
 //   paneles    los tres, en STL propio (van oscuros en el render)
 //   acrilico   la trasera, que se queda tal cual (KONDOR, ondas, ranuras)
 //   madera     la tabla y las paticas
@@ -119,7 +120,7 @@ module banda()
 // aluminio() sigue siendo los cuatro, que es contra lo que piel_choques.py
 // mide la piel.
 module plateado() { rails(); marcos_ventana(); costillas(); }
-module negro()    { tapa_valle(); }
+module negro()    { tapa_valle(); tira_valle(); }   // y la tira del valle (ficha 6)
 module aluminio() { plateado(); negro(); }
 module acrilico() { piel_trasera(); }
 module madera()   { bandeja_base(); paticas(); }

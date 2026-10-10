@@ -637,6 +637,78 @@ def canario_labio_ventana(p: dict[str, float]) -> None:
         raise AssertionError(f"canario del labio NO salto ({aviso})")
 
 
+# Aire minimo entre la cara de fuera de la tira del valle y el camino del
+# modulo KONDOR, que sale en vertical por su canto de atras (ficha 6).
+TIRA_AIRE_MIN = 0.5
+
+
+def _tira_valle(p: dict[str, float]) -> dict[str, object]:
+    """La tira negra del valle (ficha 6), en el plano del perfil. GEMELA de
+    tira_valle_pie()/tira_valle_arista()/tira_valle_2d_pts() de sam17_case.scad:
+    el pie sobre el ala libre del riel de atras de la fila KONDOR, recostada en
+    la arista de abajo del riel bajo de la fila alta, t_tira_valle de grueso
+    hacia fuera."""
+    P = _vertices(p)
+    cr = _centros_rail(p, P)
+    ck = _centros_rail_1u(p, P, cr)
+    a = math.radians(p["angulo_superior"])
+    d = (math.sin(a), math.cos(a))
+    n = (-math.cos(a), math.sin(a))
+    c = cr[2]
+    pie = (ck[1][0] + p["rail_er_alto"] / 2 - p["hol_tira_valle"],
+           P[3][1] - p["rehundido_panel"] - p["t_panel"])
+    arista = (c[0] - d[0] * p["rail_er_alto"] / 2 + n[0] * p["rail_er_eje"],
+              c[1] - d[1] * p["rail_er_alto"] / 2 + n[1] * p["rail_er_eje"])
+    ancho = math.hypot(arista[0] - pie[0], arista[1] - pie[1])
+    u = ((arista[0] - pie[0]) / ancho, (arista[1] - pie[1]) / ancho)
+    t = p["t_tira_valle"]
+    pts = [pie, arista, (arista[0] - u[1] * t, arista[1] + u[0] * t),
+           (pie[0] - u[1] * t, pie[1] + u[0] * t)]
+    return {"pts": pts, "ancho": ancho,
+            "largo": p["ancho_total"] - 2 * p["t_anillo"] - 2 * p["t_placa"]
+            - 2 * p["hol_tira_valle_z"],
+            "canto_kondor": ck[1][0] + p["inset_er"],
+            "ala_kondor": ck[1][0] + p["rail_er_alto"] / 2}
+
+
+def _guarda_tira(t: dict[str, object]) -> None:
+    pie = t["pts"][0]
+    assert t["canto_kondor"] < pie[0] <= t["ala_kondor"] + 1e-9, (
+        f"el pie de la tira del valle cae en x={pie[0]:.2f}, fuera del ala libre "
+        f"del riel KONDOR ({t['canto_kondor']:.2f}..{t['ala_kondor']:.2f}): "
+        f"no apoya")
+    x_min = min(q[0] for q in t["pts"])
+    assert x_min - t["canto_kondor"] >= TIRA_AIRE_MIN, (
+        f"la cara de fuera de la tira del valle llega a x={x_min:.2f}, a "
+        f"{x_min - t['canto_kondor']:.2f} del canto del panel KONDOR: el modulo "
+        f"sale hacia arriba y la roza (minimo {TIRA_AIRE_MIN:g})")
+
+
+def guarda_tira_valle(p: dict[str, float]) -> None:
+    """La tira negra del valle (ficha 6) apoya en el ala del riel KONDOR y no
+    roza el camino del modulo KONDOR. Imprime las cotas de corte: son las del
+    BOM y el pliego, que no las copian a mano."""
+    t = _tira_valle(p)
+    _guarda_tira(t)
+    x_min = min(q[0] for q in t["pts"])
+    print(f"tira del valle (ficha 6): chapa de {p['t_tira_valle']:g}, "
+          f"{t['largo']:.2f} x {t['ancho']:.2f}; el pie en el ala del riel KONDOR "
+          f"y {x_min - t['canto_kondor']:.2f} mm de aire al camino del modulo")
+
+
+def canario_tira_valle(p: dict[str, float]) -> None:
+    """Los dos lados tienen que saltar: un pie que se cae del ala y una tira
+    tan gruesa que entra en el camino del modulo KONDOR."""
+    for cambio, aviso in (({"hol_tira_valle": -0.5}, "no apoya"),
+                          ({"t_tira_valle": 2.5}, "la roza")):
+        try:
+            _guarda_tira(_tira_valle({**p, **cambio}))
+        except AssertionError as e:
+            assert aviso in str(e), f"canario de la tira salto por '{e}'"
+            continue
+        raise AssertionError(f"canario de la tira NO salto con {cambio}")
+
+
 def _frente_kondor(p: dict[str, float], P: list[tuple[float, float]],
                    cr: list[tuple[float, float]]) -> float:
     """X invariante del primer KONDOR antes de rehundir los paneles.
@@ -6207,6 +6279,8 @@ def main() -> int:
     guarda_paneles_fijos(p)
     canario_labio_ventana(p)
     guarda_labio_ventana(p)
+    canario_tira_valle(p)
+    guarda_tira_valle(p)
     canario_fila_kondor(p)
     guarda_fila_1u(p)
     canario_rehundido_panel()
