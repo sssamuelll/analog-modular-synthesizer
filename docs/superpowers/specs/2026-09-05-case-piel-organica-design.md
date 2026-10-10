@@ -376,7 +376,7 @@ Las fichas 1 a 6 no quedaron guardadas en el acta: un fallo de la página perdí
 | 3 | cachete y cubierta en el mismo sitio | hazlo | **hecho** con la 7: 0,6 mm de juego, regla en verde |
 | 4 | la costura de la nariz | hazlo | **hecho**: el marco ya no existe; la esquina es un inglete |
 | 5 | las paredes de los huecos picadas | hazlo | **hecho**: el relieve solo mueve en Z |
-| 6 | rendijas por las que se ve el suelo | hazlo | pendiente, #389: toca `guarda_tapa()` |
+| 6 | rendijas por las que se ve el suelo | hazlo | **hecho abajo y arriba** (§13.9): el borde de la piel cae sobre el riel. La del valle espera una tira negra por dentro |
 | 7 | dos tubos donde debería haber uno | una sola masa (A) | **hecho, primera vuelta**: se enseña en render |
 | 8 | la corteza parece nieve | enséñamelo primero → **veta honda** (10-10) | **hecho** (§13.7): la cubierta sale con la veta honda, y los surcos ya no doblan en las esquinas. Se le enseña una más marcada, como el concepto |
 | 9 | la celosía no tiene cuerpo | enséñamelo primero → **hondo** (10-10) | **hecho** (§13.7): 215 g cada cachete; la chimenea no cambia |
@@ -470,3 +470,11 @@ Mide 648,62 × 399,76 y pesa unos 5 kg de nogal (a 0,65 g/cm³, densidad supuest
 **La tercera regla.** `piel_choques.py` mide ahora cuánto asoma la tabla de la piel por cada lado y sale en rojo fuera de 25 a 40 (`VUELO_PIEL`). La recoge la misma puerta, `check_piel.py`.
 
 **Papeles.** `bandeja_base_2d.dxf` regenerado; la compra (README), el pliego (§6.2) y la muestra del RFQ dicen 30 mm, 648,62 × 399,76 y R8; el papel del case suma la rev. 29.
+
+### 13.9 Las rendijas de la ficha 6 (10-10)
+
+**Abajo y arriba, hechas.** La ventana de la cubierta se abría entera de P1 a P4, y entre la piel y el panel quedaban 14,5 mm abajo y 10 arriba: por ahí se veían la tabla y el ámbar de dentro. Ahora la lámina sube por la cara de abajo hasta el canto del riel del frente (`borde_ventana_inf()`, a 12,5 mm de P1) y baja por la de arriba hasta el canto del riel del remate (`borde_ventana_sup()`, a 147 de P3). Entre la piel y el panel queda el ala del riel, una línea de 2 mm, recta en todo el largo. Como los rieles se quedan plateados, la línea es de aluminio, no negra. La cubierta gana dos franjas y pesa 933 g.
+
+**Una guarda nueva.** El issue nombraba una `guarda_tapa()` que no existe: los paneles no giran, salen de frente desatornillados (`guarda_paneles_fijos()`). La regla de choques mira la piel quieta y no habría visto un labio sobre la huella de un panel. Por eso `guarda_labio_ventana()`, en `clearance_budget.py` y gemela de las dos funciones del `.scad`, exige dos cosas. Que el labio quede al menos a 1 mm de la huella del panel, para que el panel salga sin rozar. Y que no deje más aire que el ala del riel, para que no vuelva la rendija. Su canario prueba los dos lados.
+
+**El valle, no.** Entre el canto de atrás del panel KONDOR y el panel alto queda una rendija de unos 11 mm en la esquina de P3, y por ahí se ve el ámbar. Con piel no se puede cerrar. El panel KONDOR se mete 6,7 mm bajo el arranque de la cara de arriba, y su módulo sale hacia arriba por esa esquina: entre su camino y el riel del panel alto quedan 2,2 mm. Para esto la ficha pedía «tapar por dentro la línea de vista hacia el suelo». Se propone una tira negra de 1,5 mm en el hueco, fuera del camino de los dos módulos, con su render en el acta. Es una pieza nueva del case y se apoya en el marco de la ventana, así que espera su firma.

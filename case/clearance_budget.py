@@ -577,6 +577,66 @@ def canario_paneles_fijos(p: dict[str, float]) -> None:
         "canario de panel fijo NO detecto el radio de giro heredado")
 
 
+# El aire entre el labio de la piel y el canto del panel (ficha 6). Por abajo
+# lo pone que el panel salga de frente sin rozar la lamina; por arriba, que el
+# labio llegue al canto del riel: si se queda mas corto, detras del ala del
+# riel vuelve a verse el interior.
+LABIO_AIRE_MIN = 1.0
+
+
+def _labio_ventana(p: dict[str, float]) -> dict[str, tuple[float, float]]:
+    """Donde acaba la lamina de la piel y donde empieza el panel, en mm a lo
+    largo de cada cara, como (borde de abajo, borde de arriba) del aire entre
+    los dos. GEMELA de borde_ventana_inf()/borde_ventana_sup() de
+    piel_organica.scad: la lamina llega al canto del riel del frente abajo y al
+    del riel del remate arriba."""
+    return {
+        "abajo": (p["inset_inf_frente"] - p["rail_er_alto"] / 2,
+                  p["inset_inf_frente"] - p["inset_er"]),
+        "arriba": (p["inset_sup_valle"] - p["inset_er"] + p["alto_panel_sup"],
+                   p["alto_cara_sup"] - p["inset_sup_remate"] + p["rail_er_alto"] / 2),
+    }
+
+
+def _guarda_labio(labios: dict[str, tuple[float, float]], ala: float) -> None:
+    for donde, (a, b) in labios.items():
+        assert b - a >= LABIO_AIRE_MIN, (
+            f"el labio de la piel queda a {b - a:.2f} mm del panel por {donde}: "
+            f"con menos de {LABIO_AIRE_MIN:g} el panel no sale de frente sin "
+            f"rozar la lamina")
+        assert b - a <= ala + 1e-6, (
+            f"el labio de la piel deja {b - a:.2f} mm de aire por {donde} y el "
+            f"ala del riel cubre {ala:.2f}: detras vuelve a verse el interior "
+            f"(la rendija de la ficha 6)")
+
+
+def guarda_labio_ventana(p: dict[str, float]) -> None:
+    """La piel acaba sobre el ala del riel, ni dentro de la huella del panel ni
+    antes del canto del riel (ficha 6 del acta del 09-10)."""
+    ala = p["rail_er_alto"] / 2 - p["inset_er"]
+    labios = _labio_ventana(p)
+    _guarda_labio(labios, ala)
+    print("labio de la piel (ficha 6): " + ", ".join(
+        f"{d} a {b - a:.2f} mm del panel" for d, (a, b) in labios.items())
+        + f", sobre los {ala:.2f} mm de ala del riel")
+
+
+def canario_labio_ventana(p: dict[str, float]) -> None:
+    """Los dos lados tienen que saltar: un labio que pisa la huella del panel y
+    uno que se queda antes del canto del riel."""
+    ala = p["rail_er_alto"] / 2 - p["inset_er"]
+    q = {**p, "inset_er": p["rail_er_alto"] / 2 - 0.5}      # el panel crece hacia el labio
+    a, b = _labio_ventana(p)["abajo"]
+    for labios, ala_q, aviso in ((_labio_ventana(q), q["rail_er_alto"] / 2 - q["inset_er"], "no sale de frente"),
+                                 ({"abajo": (a - 2.0, b)}, ala, "vuelve a verse")):
+        try:
+            _guarda_labio(labios, ala_q)
+        except AssertionError as e:
+            assert aviso in str(e), f"canario del labio salto por '{e}'"
+            continue
+        raise AssertionError(f"canario del labio NO salto ({aviso})")
+
+
 def _frente_kondor(p: dict[str, float], P: list[tuple[float, float]],
                    cr: list[tuple[float, float]]) -> float:
     """X invariante del primer KONDOR antes de rehundir los paneles.
@@ -6145,6 +6205,8 @@ def main() -> int:
     guarda_trasera_flexion(p)
     canario_paneles_fijos(p)
     guarda_paneles_fijos(p)
+    canario_labio_ventana(p)
+    guarda_labio_ventana(p)
     canario_fila_kondor(p)
     guarda_fila_1u(p)
     canario_rehundido_panel()

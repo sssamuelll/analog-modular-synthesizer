@@ -68,12 +68,25 @@ module cara_quad(A, B, dentro = 1, fuera = 3*piel_e) {
     polygon([A - n*dentro, B - n*dentro, B + n*fuera, A + n*fuera]);
 }
 
-// las tres caras de las filas, P1->P2->P3->P4: la banda se abre entera entre
-// los labios de los extremos. Entre filas no hay piel, como hoy no hay chapa:
-// ahi estan la tapa del valle y los rieles.
+// las tres caras de las filas, P1->P2->P3->P4. Entre filas no hay piel, como
+// hoy no hay chapa: ahi estan la tapa del valle y los rieles.
+//
+// EL BORDE CAE SOBRE EL RIEL (ficha 6 del acta del 09-10). La ventana se abria
+// entera de P1 a P4, y entre la piel y el panel quedaban dos rendijas -- 14.5
+// abajo, 10 arriba -- por las que se veian la tabla y el ambar de dentro. Ahora
+// la lamina sube por la cara de abajo hasta el canto del riel del frente y baja
+// por la de arriba hasta el del riel del remate: lo que queda entre la piel y el
+// panel es el ala del riel, una linea recta de rail_er_alto/2 - inset_er = 2 mm
+// en todo el largo. Los paneles salen de frente (guarda_paneles_fijos) y el labio acaba
+// antes de su huella. El valle sigue abierto: el modulo KONDOR sale hacia arriba
+// por la esquina de P3, y ahi no cabe lamina (§13.9 del papel).
+function borde_ventana_inf() = inset_inf_frente - rail_er_alto/2;
+function borde_ventana_sup() = alto_cara_sup - inset_sup_remate + rail_er_alto/2;
 module ventana_filas_2d() {
     P = pts_perfil();
-    for (i = [1 : 3]) cara_quad(P[i], P[i + 1]);
+    cara_quad(P[1] + (P[2] - P[1])/norm(P[2] - P[1])*borde_ventana_inf(), P[2]);
+    cara_quad(P[2], P[3]);
+    cara_quad(P[3], P[3] + (P[4] - P[3])/norm(P[4] - P[3])*borde_ventana_sup());
     translate(P[2]) circle(r = 3*piel_e);
     translate(P[3]) circle(r = 3*piel_e);
 }
