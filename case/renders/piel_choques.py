@@ -7,7 +7,7 @@ POR QUE (ficha 16 de la revision del 2026-10-09): el cachete de la placa
 pasaba las tres de imprimir_piel.comprobar() --cerrado, cabe en la bandeja,
 gramos-- y salia en SIETE islas (la celosia suelta a 6 mm del marco y cinco
 migas), con el marco 5.9 mm dentro de la tabla y pisando la cubierta en todo
-el borde. Ninguna de las tres miraba eso. Dos reglas:
+el borde. Ninguna de las tres miraba eso. Dos reglas, y una tercera del 10-10:
 
   1. UNA ISLA por pieza. Una pieza impresa que sale en dos es dos piezas, y la
      que no toca a la otra se cae al sacarla de la maquina.
@@ -15,6 +15,10 @@ el borde. Ninguna de las tres miraba eso. Dos reglas:
      contra lo que ya existe (tabla, anillos y rieles, paneles, trasera). Se
      mide la PROFUNDIDAD: los vertices de A que caen dentro de B y a que
      distancia de su cara. Apoyar cara contra cara se permite hasta TOL.
+  3. LA TABLA ASOMA DE LA PIEL entre VUELO_PIEL[0] y VUELO_PIEL[1] por cada
+     lado (ficha 12: «una losa que sobresalga de la piel entre 25 y 40 mm por
+     cada lado»). Con menos se lee como bandeja; con mas, el aparato se come
+     la mesa.
 
 Las piezas se colocan como en render_piel.py: el cachete derecho contra la
 cara exterior del anillo derecho (z = ancho_total), el izquierdo en z = 0.
@@ -40,6 +44,7 @@ PRINT = os.environ.get("PIEL_SALIDA", os.path.join(CASE, "print", "piel"))   # P
 # 09-10 son 5.9 mm.
 TOL = 0.5
 PIEL = ("cachete_der", "cachete_izq", "cubierta")
+VUELO_PIEL = (25.0, 40.0)   # mm que la tabla asoma de la piel por cada lado (ficha 12)
 PARTES = ("madera", "aluminio", "paneles", "acrilico")
 
 
@@ -193,6 +198,14 @@ def revisar(objetos: dict) -> dict:
         info["choques"].append(fila)
         if peor > TOL:
             info["ok"] = False
+    if "madera" in objetos and all(p in objetos for p in PIEL):
+        lo = np.min([cajas[p][0] for p in PIEL], axis=0)
+        hi = np.max([cajas[p][1] for p in PIEL], axis=0)
+        tl, th = cajas["madera"]
+        info["vuelo"] = {"delante": float(lo[0] - tl[0]), "detras": float(th[0] - hi[0]),
+                         "izquierda": float(lo[2] - tl[2]), "derecha": float(th[2] - hi[2])}
+        if not all(VUELO_PIEL[0] <= v <= VUELO_PIEL[1] for v in info["vuelo"].values()):
+            info["ok"] = False
     return info
 
 
@@ -209,6 +222,11 @@ def imprimir_informe(info: dict) -> None:
                          f"z{z['lo'][2]:.0f}..{z['hi'][2]:.0f}" for z in c["zonas"])
         print(f"  {marca} {c['a']} contra {c['b']}: entra {c['profundidad_mm']:.2f} mm"
               + (f"  en {zona}" if zona else ""))
+    if "vuelo" in info:
+        bien = all(VUELO_PIEL[0] <= v <= VUELO_PIEL[1] for v in info["vuelo"].values())
+        print(f"  {'OK  ' if bien else 'ROJO'} la tabla asoma de la piel "
+              + ", ".join(f"{k} {v:.1f}" for k, v in info["vuelo"].items())
+              + f" mm ({VUELO_PIEL[0]:g} a {VUELO_PIEL[1]:g})")
     print("PIEL " + ("EN VERDE" if info["ok"] else "EN ROJO") + f" (tolerancia {info['tol_mm']} mm)")
 
 

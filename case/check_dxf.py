@@ -2315,8 +2315,10 @@ def guarda_zocalo() -> list[str]:
     # 2026-08-27; la destapo el test de rotura de la reticula -- subir
     # reticula_paso a 137 movia la fila de la tabla en el modelo y no
     # aqui, y esta puerta cantaba "2 tornillos y el modelo pone 3".
-    # La tabla usa n_agujeros(), que desde hoy lee reticula_paso.
-    n = max(1, round((fondo_tabla := cb._fondo_bandeja(p))
+    # La tabla usa n_agujeros(), que desde hoy lee reticula_paso. Y desde el
+    # 10-10 reparte el fondo del CUERPO, no el de la tabla: el vuelo no mueve
+    # la fila (gemela de _m5_tabla_x).
+    n = max(1, round((fondo_cuerpo := cb.fondo(p))
                      / p["reticula_paso"]))
     for xc in filas_x:
         fila = sorted((t for t in tornillos if abs(t[0] - xc) < 0.1),
@@ -2324,7 +2326,7 @@ def guarda_zocalo() -> list[str]:
         if len(fila) != n:
             f.append(f"bandeja_base_2d: la fila de x={xc:.2f} trae "
                      f"{len(fila)} tornillos y el modelo pone {n} sobre "
-                     f"{fondo_tabla:.2f} mm de fondo")
+                     f"{fondo_cuerpo:.2f} mm de fondo del cuerpo")
             continue
         redondos = [t for t in fila if abs(t[2] - d) < 0.1]
         if len(redondos) != 1:

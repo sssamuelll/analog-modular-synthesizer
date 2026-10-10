@@ -51,7 +51,7 @@ Seis imágenes. Lo que en ellas es decisión y lo que es ruido del generador lo 
 | **se queda** | la silueta de dos pisos, las tres filas, el valle de 55 | 31-08 | igual |
 | | Z-Rails, marco de la ventana, paneles rehundidos 1,5 | 29/31-08 | igual |
 | | **la trasera**: PMMA, KONDOR, ondas, ranuras, capturada en bolsillo | 29-08 | igual, con la franja de conectores debajo (§5) |
-| | la tabla del carpintero, con su vuelo de 10 | 27-08 | igual; **los cachetes asoman ahora 6 mm por fuera de ella** |
+| | la tabla del carpintero, con su vuelo de 10 | 27-08 | igual; **los cachetes asoman ahora 6 mm por fuera de ella**. *Desde la ficha 12 (10-10): una losa de 30 que vuela 40, y es ella la que asoma de la piel (§13.8)* |
 | | el ámbar | 27-08 | se queda, pero **dentro**: es la trasera y lo que se ve por la rama |
 | **cambia** | los dos anillos | 28-08 | siguen siendo el hueso. Bajo la piel no se ven, y pasan a **pletina cortada y listo** (§6) |
 | | el chasis del PSU | 18-08 | con la fuente afuera (v5) no hay chasis. Si se queda dentro, entra como hoy, por el frente |
@@ -382,7 +382,7 @@ Las fichas 1 a 6 no quedaron guardadas en el acta: un fallo de la página perdí
 | 9 | la celosía no tiene cuerpo | enséñamelo primero → **hondo** (10-10) | **hecho** (§13.7): 215 g cada cachete; la chimenea no cambia |
 | 10 | por la celosía se ve la máquina (D-P3) | enséñamelo primero → **sin nada detrás**, y la ficha «después» (10-10) | no se hace ahora: #392 queda aparcada (§13.7) |
 | 11 | los tornillos se veían | por dentro (a) | pendiente de dibujar, #393 (HUECO 9). Los de fuera ya no están |
-| 12 | la tabla se quedó corta | hazlo | pendiente, #394 |
+| 12 | la tabla se quedó corta | hazlo | **hecho** (§13.8): losa de 30, vuelo de 40, canto de arriba redondeado; asoma 28 a 34 de la piel, y una tercera regla lo vigila |
 | 13 | la trasera en dos materiales | hazlo | pendiente, #395: depende de la lista de conectores (#183) |
 | 14 | rieles negros y paneles vestidos | hazlo | **hecho** (§13.6): la cara en el render y la tapa del valle anodizada en negro. Los rieles se quedan plateados: ya estaban comprados (Samuel, 10-10) |
 | 15 | acabado satinado | enséñamelo primero → **por confirmar** | dos marcas que chocan (§13.7), #397 |
@@ -452,3 +452,21 @@ Las fichas 1 a 6, que se habían perdido, las volvió a marcar: las seis, «hazl
 **La nota de Samuel, y una más marcada para verla.** Con la elección escribió: *«la veta del concept es super marcada parece el tronco de un arbol digital y al mismo tiempo es lo que la hace tan hermosa, con toques de modernismo del de verdad»*. La honda son surcos de 1,4 mm de ancho y hasta 1,3 de hondo. El concepto tiene lomos anchos y redondos. `PIEL_CORTEZA=veta_marcada` va hacia eso: surcos de 2,6 mm de ancho y 1,8 de hondo (hasta 2,6 donde se juntan), tan juntos que entre ellos quedan lomos. Pasa las dos reglas (peor contacto, 0,30 mm). La cubierta pesa 845 g, y bajo el surco más hondo quedan 3,4 mm de los 6 de la lámina. Se enseña en el acta al lado de la honda. **No está escogida.**
 
 **El peor contacto** pasa de 0,29 a 0,35 mm (cubierta contra aluminio), dentro de la tolerancia de 0,5: es el remallado de otra cubierta, no una pieza que entre en otra.
+
+### 13.8 La tabla de la ficha 12 (10-10)
+
+**Qué es.** La tabla del carpintero, la misma pieza de siempre (`bandeja_base()`), con tres cotas nuevas en `params.scad`:
+
+| | antes | ahora | por qué |
+|---|---|---|---|
+| `vuelo_zocalo`, lo que vuela del cuerpo por los cuatro lados | 10 | **40** | con la piel encima, la losa asoma **28 mm por los costados y 34 por delante y por detrás**, dentro de los 25 a 40 que firmó Samuel |
+| `t_base`, el grueso | 18 | **30** | «más gruesa a la vista». La flecha ya no la decide: con 200 N cede 0,067 mm, contra 0,376 con 18 |
+| `r_canto_tabla`, el canto de arriba | vivo | **R8** | fresa de redondeo; el de abajo queda vivo |
+
+Mide 648,62 × 399,76 y pesa unos 5 kg de nogal (a 0,65 g/cm³, densidad supuesta como `E_madera`), contra 2,3. Al aparato le suma 12 mm por debajo; el perfil y el interior no cambian. Las patas no se movieron: con 40 de vuelo quedan escondidas bajo la losa, que era lo que pedía la ficha. La placa grabada, opcional, no está.
+
+**Lo que colgaba del vuelo sin decirlo.** El comentario de `vuelo_zocalo` decía «cota de MIRAR, nada cuelga de ella», y no era verdad. Los M5 con que la tabla se rosca al canto del anillo se repartían en el fondo de la **tabla**. Con 40 de vuelo, la fila pasaba sola de 3 a 4 tornillos por anillo y movía las roscas ciegas del anillo, una pieza mecanizada. Desde hoy se reparten en el fondo del **cuerpo** (`n_agujeros()` en el `.scad`, `_m5_tabla_x()` y `check_dxf.py`, las tres gemelas): siguen siendo 3 por anillo, en x = 53,3, 159,9 y 266,5. Los de las puntas se metieron 6,7 mm hacia dentro, y las puertas que cruzan esas roscas con las del marco siguen en verde.
+
+**La tercera regla.** `piel_choques.py` mide ahora cuánto asoma la tabla de la piel por cada lado y sale en rojo fuera de 25 a 40 (`VUELO_PIEL`). La recoge la misma puerta, `check_piel.py`.
+
+**Papeles.** `bandeja_base_2d.dxf` regenerado; la compra (README), el pliego (§6.2) y la muestra del RFQ dicen 30 mm, 648,62 × 399,76 y R8; el papel del case suma la rev. 29.

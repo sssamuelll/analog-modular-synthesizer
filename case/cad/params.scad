@@ -1003,7 +1003,17 @@ t_cheek    = 8;    // costados portantes
 // CARGA, y una tabla maciza de 540.62 mm a contraveta se mueve milimetros con la
 // estacion. El marco de aluminio no se mueve: si la fijacion es rigida, o se
 // raja la tabla o se sueltan los tornillos. Lo vigila guarda_zocalo().
-t_base     = 18;
+//
+// 30 DESDE LA FICHA 12 (acta del 09-10, firmada «hazlo»): «una losa ... mas
+// gruesa a la vista». La flecha ya no la decide: a 30 cede un quinto que a 18.
+// Lo que cuesta es peso -- unos 5 kg la tabla entera a 0.65 g/cm3 (nogal,
+// supuesto como E_madera), contra 2,3 --
+// y 12 mm mas de aparato por debajo; el perfil y el interior no cambian.
+t_base     = 30;
+
+// El canto de ARRIBA de la tabla, redondeado (ficha 12): fresa de redondeo de
+// carpintero. Solo el de arriba, el que se ve; el de abajo queda vivo.
+r_canto_tabla = 8;
 
 // Modulo de elasticidad de la madera A FAVOR DE VETA. 11000 MPa es nogal o arce
 // -- el rango de manual para frondosas de densidad media va de 10000 a 12000.
@@ -1012,9 +1022,16 @@ t_base     = 18;
 E_madera   = 11000;
 
 // Lo que la tabla sobresale del cuerpo por los cuatro lados. Es cota de MIRAR,
-// no de calcular: nada cuelga de ella. Sale de la foto de referencia, donde el
-// zocalo asoma poco -- lo justo para leerse como base y no como bandeja.
-vuelo_zocalo = 10;
+// no de calcular. Fue 10, de la foto de referencia del 26-08, donde el zocalo
+// asomaba poco. DESDE LA FICHA 12 (acta del 09-10) son 40: con la piel encima,
+// la losa asoma 28 por los costados y 34 por delante y por detras, dentro de los
+// 25 a 40 que firmo Samuel (lo vigila la regla 3 de piel_choques.py).
+//
+// Y DESDE EL 10-10 DE VERDAD NADA CUELGA DE ELLA. Hasta ese dia los M5 con que
+// la tabla se rosca al anillo se repartian en el fondo de la TABLA: un vuelo de
+// 40 los subia de 3 a 4 por anillo y movia sus roscas ciegas, sin que nadie lo
+// pidiera. Ahora se reparten en el fondo del CUERPO (n_agujeros()).
+vuelo_zocalo = 40;
 
 // Carrera del agujero alargado, por lado, en Z. La tabla mide ancho_total +
 // 2*vuelo_zocalo a contraveta; una frondosa se mueve del orden del 0.25 % de su

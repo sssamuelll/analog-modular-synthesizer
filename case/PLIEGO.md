@@ -193,7 +193,7 @@ de su blank, `marco_sup`), no una plancha aparte. `remate_sup()` y
 `export.ps1`: la pieza no está en el diseño.
 
 **`bandeja_base_2d` SALIÓ de este pliego el 2026-08-27.** Era el suelo, de
-acrílico de 8. Ahora es una **tabla de madera maciza de 18 mm** que va bajo el
+acrílico de 8. Ahora es una **tabla de madera maciza de 30 mm** (18 hasta la ficha 12 del 10-10) que va bajo el
 marco y hace de suelo y de zócalo a la vez. Va al carpintero, §6.2.
 
 **Y el costado dejó de llevar taladros.** Tenía cuatro M4 de riel y cuatro M5 de
@@ -221,7 +221,7 @@ el 2026-08-28:
 | `nariz_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: blank **545.62 × 50.20**, pie de **20.5** y tres dobleces. En cada punta del pie, muesca de 2.65 hasta la línea de doblez a 20.06, con alivio de Ø2 a caballo de la esquina interior — **1 ud** |
 | `tapa_valle_2d` | aluminio, 3 mm | chapa | corte + **plegado**: blank **560.00 × 20.00**, dos pestañas de 21 mm y labio trasero de apoyo de 2.0 mm; sin taladros visibles en la banda |
 | `costilla_2d`, `costilla_dorso_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **fresado CNC**, sin plegar, sin soldar |
-| `bandeja_base_2d` | madera maciza, 18 mm | carpintería | corte + ranuras alargadas |
+| `bandeja_base_2d` | madera maciza, 30 mm | carpintería | corte + ranuras alargadas + canto de arriba redondeado R8 |
 | `marco_ventana_2d` | aluminio, `t_placa` = 6 mm, **láser** | chapa | corte + **6 cajeados** Ø8 × `prof_cajeado_riel` = 2.5 **por el lado del anillo** (bolsillos ciegos en UNA cara: dejan 3.5 mm bajo la cabeza del M4 del riel). Nota de mecanizado, no va en el DXF — ver abajo — **2 uds, PAR ESPEJADO**: mismo contorno, cajeado por caras opuestas. **Planitud ≤ 0.5 mm en 300** en el blank cortado: apoya en la cara mecanizada del anillo y doce M4 lo conforman contra ella (una pletina de 6 × 24 se aplana 0.5 con 200 N), pero con más de eso el acrílico lo nota |
 | `cupon_anillo_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **NO ES UNA PIEZA DEL CASE**: es la SECCIÓN del perfil del anillo, y de ella sale el **cupón de 100 mm** que hay que aprobar antes de cortar los dos anillos — ver el punto de parada en §6.1 |
 
@@ -531,14 +531,16 @@ por costilla — el anillo es una pieza, no siete tramos cerrados a soldadura.
 
 ### 6.2 La tabla — al carpintero
 
-`bandeja_base_2d`, **madera maciza de 18 mm, 588.62 × 339.76** (creció desde
-570.62 × 328.94 el 2026-08-28: el anillo es más grueso que la vieja costilla
-de chapa y la tabla vuela `vuelo_zocalo` = 10 mm más allá de él por los cuatro
-lados). Es el suelo interior del case **y** el zócalo que sobresale: una sola
+`bandeja_base_2d`, **madera maciza de 30 mm, 648.62 × 399.76**, con el
+**canto de arriba redondeado R8** (fresa de redondeo; el de abajo, vivo).
+Creció el 2026-10-10 por la ficha 12 del acta: la tabla vuela `vuelo_zocalo` =
+40 mm más allá del cuerpo por los cuatro lados, para que asome de la piel
+entre 25 y 40, y es más gruesa a la vista. Hasta entonces, 18 mm y 588.62 ×
+339.76. Es el suelo interior del case **y** el zócalo que sobresale: una sola
 pieza. El cuerpo se le apoya encima y las cuatro paticas van atornilladas por
 debajo.
 
-**La veta corre a lo largo** (los 588 mm). No es decoración: fija en qué
+**La veta corre a lo largo** (los 648 mm). No es decoración: fija en qué
 dirección se mueve la tabla, y de ahí salen las ranuras.
 
 **Las ranuras alargadas NO son opcionales y NO se pueden cambiar por agujeros

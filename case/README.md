@@ -766,7 +766,7 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | Tornillo **M3 botón** | **2** | **las pestañas** de la banda del valle **al marco de la ventana** (no al anillo, ruling R3). **La trasera ya no lleva ninguno**: va capturada como las mejillas (los 10 M3 con tuerca y arandela de nylon murieron el 29-08, más noche). **Atrás no se ve un tornillo** |
 
 | **Chapa de aluminio t=3 mm** — banda delantera del valle | **1** | **anodizada en negro** (ficha 14): vuelo delantero liso, desarrollo **560.00 × 20.00**, con pestaña de 21 mm doblada en cada punta, atornillada al **marco de la ventana** con un M3 (no al anillo desde el 2026-08-28). Aleación recomendada, no obligatoria: 5754 H22 pasa a 130 MPa con margen (48.0 MPa real, `guarda_valle()`). Va al taller de CHAPA — sin recocido, sin diamantado, sin chaflán: eso es del PMMA |
-| **TABLA de madera maciza t=18 mm** | **1** | el suelo interior y el zócalo, una sola pieza, **588.62 × 339.76**. 2 filas de 3 M5 a **rosca ciega en el canto inferior del anillo** (una fila por anillo), uno redondo por fila (punto fijo) y dos en ranura de 10.5. Y **catorce taladros pasantes de 4.5**: 4 de las paticas, 3 de la nariz, 3 del talón y 4 del chasis (`guarda_zocalo()` los censa) |
+| **TABLA de madera maciza t=30 mm** | **1** | el suelo interior y el zócalo, una sola pieza, **648.62 × 399.76**, con el **canto de arriba redondeado R8**. Crece el 10-10 por la ficha 12 del acta: vuela 40 por los cuatro lados y asoma 28 a 34 de la piel; eran 18 mm y 588.62 × 339.76. 2 filas de 3 M5 a **rosca ciega en el canto inferior del anillo** (una fila por anillo), uno redondo por fila (punto fijo) y dos en ranura de 10.5, repartidos en el fondo del **cuerpo** y no en el de la tabla. Y **catorce taladros pasantes de 4.5**: 4 de las paticas, 3 de la nariz, 3 del talón y 4 del chasis (`guarda_zocalo()` los censa) |
 | Plancha acrílico t=8 mm | **3** | 2 costados + **trasera de 552.32 × 237.18**, con ondas, rejilla y KONDOR. **Ninguna lleva un taladro.** En el tramo trasero el costado entra 3.5. La trasera queda con su cara vista a **6.5** del plano trasero, dentro del bolsillo u = 5.5..16.5, y sus puntas entran 5.85. El labio del techo tapa 8.5 de su canto y los tacos conservan la rendija. Entra con el anillo B; no sale sin quitar un anillo |
 | Patica de goma con casquillo roscado | 4 | EPDM o NBR, Shore 45–55 A, **d20 × 10**. Se atornillan **a la tabla**, no al acrílico. **Se exige la curva carga-deformación: ≥ 0.25 mm de flecha con 22.8 N** — por debajo la pata AMPLIFICA los 100 Hz del toroide en vez de aislarlos (`flecha_pie`). Casquillo roscado moldeado: se atornilla, **no se pega** |
 
@@ -1052,7 +1052,7 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
       MPa y es supuesto declarado (bloquea el pedido de carpintería)
 - [ ] **Pesar el chasis del PSU** — los 200 N del suelo son `carga_mano`
       heredado del costado, y el modo real es el peso del chasis. De ese
-      supuesto cuelgan los 18 mm de tabla
+      supuesto colgaban los 18 mm de tabla; desde la ficha 12 son 30, por la vista, y la flecha sobra
 - [ ] Cupón cortado y kerf registrado (bloquea el corte de planchas)
 - [ ] **Cupón del anillo** (100 mm del perfil, chaflán y anodizado) cortado y
       comparado contra la foto de referencia — las cotas de la cara vista

@@ -4517,15 +4517,16 @@ CUELLOS_MARCO = {("meseta", 1), ("trasera", 0)}
 
 
 def _m5_tabla_x(p: dict[str, float]) -> list[float]:
-    """x de los tres M5 con que la tabla se rosca al CANTO inferior de cada
-    anillo. GEMELA de la fila de bandeja_base_2d(): bandeja_base_fondo()
-    repartido en n_agujeros() con orillas de medio paso, y la tabla vuela
-    vuelo_zocalo por delante del perfil. Entran por el canto (y = 0) hacia
-    arriba, centrados en los 14 del anillo: una rosca ciega del dorso que
-    caiga en la misma x los cruza sin que ningun DXF lo ensene."""
-    fb = _vertices(p)[6][0] + 2 * p["vuelo_zocalo"]
+    """x de los M5 con que la tabla se rosca al CANTO inferior de cada anillo.
+    GEMELA de la fila de bandeja_base_2d(): el fondo del CUERPO repartido en
+    n_agujeros() con orillas de medio paso. Hasta el 10-10 se repartia el fondo
+    de la tabla, y el vuelo (cota de mirar) movia las roscas del anillo: con 40
+    pasaban de 3 a 4. Entran por el canto (y = 0) hacia arriba, centrados en
+    los 14 del anillo: una rosca ciega del dorso que caiga en la misma x los
+    cruza sin que ningun DXF lo ensene."""
+    fb = _vertices(p)[6][0]
     n = max(1, math.floor(fb / p["reticula_paso"] + 0.5))
-    return [fb * (i + 0.5) / n - p["vuelo_zocalo"] for i in range(n)]
+    return [fb * (i + 0.5) / n for i in range(n)]
 
 
 def _flecha_pata(p: dict[str, float], L: float, b: float, empotres: int
