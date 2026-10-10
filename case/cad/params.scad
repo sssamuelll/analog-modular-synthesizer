@@ -948,6 +948,16 @@ chaflan         = 0.5;
 // Lo que se lleva por delante, y es ganancia: la unica linea de BOM de 5 mm.
 // El cuerpo de acrilico queda con UN solo espesor, 8.
 t_valle    = 3;    // ALUMINIO. Ver guarda_valle(); el material va en el PLIEGO
+// LA TIRA NEGRA DEL VALLE (ficha 6, 2026-10-10): chapa de aluminio que tapa por
+// dentro la rendija de la esquina de P3. Su pie va sobre el ala libre del riel
+// de atras de la fila KONDOR, que mide 2, y su cara de fuera tiene que quedar
+// fuera del camino del modulo KONDOR, que sale hacia arriba. Por eso es de 1:
+// con 1.5 queda en el limite y con 2 lo roza. Lo vigila guarda_tira_valle().
+// hol_tira_valle: lo que el pie se retira del canto del ala; hol_tira_valle_z:
+// el juego contra cada marco.
+t_tira_valle     = 1.0;
+hol_tira_valle   = 0.1;
+hol_tira_valle_z = 0.5;
 // El borde trasero de la banda se prolonga a ESPESOR COMPLETO sobre el primer
 // Z-Rail KONDOR. El rehundido de panel deja 0.10 de gap bajo los 3 mm de chapa;
 // una tira oculta anti-ruido de 0.20 nominal cede 0.10 y entrega la carga.

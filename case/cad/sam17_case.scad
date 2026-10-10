@@ -2531,6 +2531,34 @@ module tapa_valle() {
             linear_extrude(t_valle) tapa_valle_2d();
 }
 
+// LA TIRA NEGRA DEL VALLE (ficha 6, 2026-10-10). Entre el canto de atras del
+// panel KONDOR y el panel alto quedaba una rendija de unos 11 mm, en la esquina
+// de P3, por la que se veia el ambar de la trasera. La piel no la puede cerrar:
+// el modulo KONDOR sale hacia arriba justo por ahi. La tira la tapa POR DENTRO,
+// de riel a riel: su pie se apoya en el ala libre del riel de atras de la fila
+// KONDOR (los 2 mm entre el canto del panel y el del riel) y se recuesta en la
+// arista de abajo del riel bajo de la fila alta, como una escalera contra la
+// pared. Sin taladros; dos tacos de VHB en las puntas la sujetan (BOM).
+// GEMELA de _tira_valle() en clearance_budget.py.
+function tira_valle_pie() =
+    let (c = centros_rail_1u()[1])
+    [c.x + rail_er_alto/2 - hol_tira_valle, pts_perfil()[3].y - rehundido_panel - t_panel];
+function tira_valle_arista() =
+    let (c = centros_rail()[2],
+         d = [sin(angulo_superior), cos(angulo_superior)],
+         n = [-cos(angulo_superior), sin(angulo_superior)])
+    c - d*rail_er_alto/2 + n*rail_er_eje;
+function tira_valle_ancho() = norm(tira_valle_arista() - tira_valle_pie());
+function tira_valle_largo() = tapa_valle_au() - 2*hol_tira_valle_z;
+function tira_valle_2d_pts() =
+    let (A = tira_valle_pie(), B = tira_valle_arista(),
+         u = (B - A)/norm(B - A), nl = [-u.y, u.x])
+    [A, B, B + nl*t_tira_valle, A + nl*t_tira_valle];
+module tira_valle() {
+    translate([0, 0, t_anillo + t_placa + hol_tira_valle_z])
+        linear_extrude(tira_valle_largo()) polygon(tira_valle_2d_pts());
+}
+
 // Tira oculta entre la prolongacion maciza y el primer KONDOR. En el modelo se
 // dibuja ya comprimida: 0.20 nominal - 0.10 de compresion = gap 0.10.
 module tira_anti_ruido_valle() {
@@ -2709,6 +2737,8 @@ module assembly_aluminio() {           // idem, Z-Rails + miembros + paneles sol
     // el cambio no rompe el lenguaje visual: queda entre los paneles de las dos
     // filas, que ya son PCB de aluminio.
     tapa_valle();
+    // y la tira negra que tapa por dentro la esquina de P3 (ficha 6)
+    tira_valle();
 }
 
 // --- lienzo de corte: 5 piezas (2 costados + 3 planchas) en rejilla -----
