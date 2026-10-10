@@ -378,14 +378,14 @@ Las fichas 1 a 6 no quedaron guardadas en el acta: un fallo de la página perdí
 | 5 | las paredes de los huecos picadas | hazlo | **hecho**: el relieve solo mueve en Z |
 | 6 | rendijas por las que se ve el suelo | hazlo | **hecho** (§13.9): abajo y arriba el borde de la piel cae sobre el riel, y en el valle una tira negra la tapa por dentro |
 | 7 | dos tubos donde debería haber uno | una sola masa (A) | **hecho, primera vuelta**: se enseña en render |
-| 8 | la corteza parece nieve | enséñamelo primero → **veta honda** (10-10) | **hecho** (§13.7): la cubierta sale con la veta honda, y los surcos ya no doblan en las esquinas. Se le enseña una más marcada, como el concepto |
-| 9 | la celosía no tiene cuerpo | enséñamelo primero → **hondo** (10-10) | **hecho** (§13.7): 215 g cada cachete; la chimenea no cambia |
+| 8 | la corteza parece nieve | enséñamelo primero → veta honda, y luego **«más marcada todavía», en toda la estructura blanca** (10-10) | **hecho** (§13.10): la corteza del concepto, cordones por toda la masa blanca |
+| 9 | la celosía no tiene cuerpo | enséñamelo primero → hondo, y luego **«más hondo todavía»** (10-10) | **hecho** (§13.10): `mas_hondo`, 231 g cada cachete; la chimenea no cambia |
 | 10 | por la celosía se ve la máquina (D-P3) | enséñamelo primero → **sin nada detrás**, y la ficha «después» (10-10) | no se hace ahora: #392 queda aparcada (§13.7) |
 | 11 | los tornillos se veían | por dentro (a) | pendiente de dibujar, #393 (HUECO 9). Los de fuera ya no están |
 | 12 | la tabla se quedó corta | hazlo | **hecho** (§13.8): losa de 30, vuelo de 40, canto de arriba redondeado; asoma 28 a 34 de la piel, y una tercera regla lo vigila |
 | 13 | la trasera en dos materiales | hazlo | pendiente, #395: depende de la lista de conectores (#183) |
 | 14 | rieles negros y paneles vestidos | hazlo | **hecho** (§13.6): la cara en el render y la tapa del valle anodizada en negro. Los rieles se quedan plateados: ya estaban comprados (Samuel, 10-10) |
-| 15 | acabado satinado | enséñamelo primero → **por confirmar** | dos marcas que chocan (§13.7), #397 |
+| 15 | acabado satinado | enséñamelo primero → **después, sin muestra** (10-10) | aparcada: el render sigue mate (§13.10), #397 |
 | 16 | una pieza por archivo y ningún choque | hazlo | **hecho**: `check_piel.py` |
 
 ### 13.5 Las cuatro de «enséñamelo primero», en render (09-10, noche)
@@ -480,3 +480,22 @@ Mide 648,62 × 399,76 y pesa unos 5 kg de nogal (a 0,65 g/cm³, densidad supuest
 **El valle, no.** Entre el canto de atrás del panel KONDOR y el panel alto queda una rendija de unos 11 mm en la esquina de P3, y por ahí se ve el ámbar. Con piel no se puede cerrar. El panel KONDOR se mete 6,7 mm bajo el arranque de la cara de arriba, y su módulo sale hacia arriba por esa esquina: entre su camino y el riel del panel alto quedan 2,2 mm. Para esto la ficha pedía «tapar por dentro la línea de vista hacia el suelo». Se propuso una tira negra en el hueco, fuera del camino de los dos módulos, y Samuel la autorizó en el chat el 10-10 («te autorizo que crees el pr pues»).
 
 **La tira del valle.** Es chapa de aluminio de 1 mm, anodizada en negro, lisa y sin taladros (`tira_valle()` en el `.scad`; en el render va en la parte `negro`). Su pie se apoya en el ala libre del riel de atrás de la fila KONDOR, los 2 mm entre el canto del panel y el del riel. Se recuesta en la arista de abajo del riel bajo de la fila alta, como una escalera contra la pared, y dos tacos de VHB en las puntas la sujetan. Va de riel a riel, así que tapa toda la línea de vista. No toca el marco ni pide taladros nuevos. `guarda_tira_valle()` es gemela de la geometría (comprobada contra el `echo` del `.scad`), vigila que el pie apoye en el ala y que la cara de fuera quede a 0,95 mm del camino del módulo KONDOR, e imprime las cotas de corte: 527,62 × 11,78. Su canario prueba los dos lados. El grueso no da para más: con 1,5 quedaría en el límite (0,52 mm de aire) y con 2 roza el módulo.
+
+### 13.10 La corteza del concepto y un fondo más hondo (10-10, segunda vuelta)
+
+Samuel volvió a marcar el acta. Junto a la veta honda le enseñé una más marcada, y escogió «más marcada todavía», con esta nota: *«tambien tiene que estar marcada la de los lados, basicamente toda la estructura blanca sin contar la celocia y las formas son extremadamente coherentes en el concepto me gustaria repetir eso tal cual»*. Al fondo de la celosía le puso «más hondo todavía». Y el satinado quedó en «después», sin muestra.
+
+**La corteza** (`PIEL_CORTEZA=corteza`, la de por defecto; `FIBRAS` y `corteza_fibra()` en `imprimir_piel.py`). En el concepto la masa blanca es fibrosa: muchos cordones juntos que siguen el marco, doblan las esquinas en curva y bajan por los lados. No son surcos en franjas. Por eso la corteza va ahora sobre **toda** la masa blanca: la lámina, los rollos de los costados con sus patas, y la base del cachete. La celosía queda fuera.
+
+Cómo se hace:
+- **Dónde va cada cordón.** Lo marca la distancia de cada punto de la cara de fuera al canto más cercano (ventanas, apoyos en la tabla, la nariz del labio), alisada 800 pasadas sobre la malla. Sin alisar, donde se encuentran dos familias de líneas (el eje medio de cada franja) salía un inglete, y eso era lo que hacía la moldura.
+- **El relieve.** Surcos de hasta 1,8 mm y lomos de hasta 1,3 entre ellos, cada 4,2 mm de media, con el paso irregular. Un ruido 3D lento los hace serpentear y los corta a trozos.
+- **El orden.** Se pone entre el remallado y el decimado, porque una malla decimada no sostiene un surco de 1 mm: salía rayado. En la base del cachete, los cordones corren a lo largo y se apagan en los ingletes.
+
+**Un fallo cazado por la regla 2.** La primera vuelta se metió 0,81 mm en el aluminio. La cara de fuera se decidía con la dirección punto-perfil. En la cara de dentro, pegada al anillo, esa dirección es ruido: el contorno real tiene radios y cae dentro del polígono, y daba la cara de dentro por cara de fuera. Ahora la decide la normal del tramo del perfil (`_lado_perfil()`), y en la lámina solo cuenta la cara que está a más de 2 mm por fuera.
+
+**El fondo más hondo** (`mas_hondo`, el de por defecto): las bandas suben en cuarto de círculo de radio 7 hasta 9,5 mm, por debajo del rollo (12), así que la celosía no asoma del borde. La chimenea no cambia, porque el área abierta es la misma.
+
+**Cifras.** Cada cachete pesa 231 g y la cubierta 949. Las tres reglas pasan en verde: peor contacto 0,40 mm (cubierta contra aluminio), y la tabla asoma 33 mm por delante y por detrás y 27 por los costados.
+
+**Lo que no es el concepto todavía.** En las zonas anchas, donde la distancia al canto tiene una cima, los cordones se cierran en óvalos. Se leen como nudos de madera; en el concepto, en cambio, las fibras corren largas sin cerrarse. Si hace falta, el paso siguiente es medir cada punto entre los **dos** cantos de su franja, no solo contra el más cercano. Así las fibras se juntan donde la franja se estrecha y se abren donde se ensancha, sin cerrarse nunca.
