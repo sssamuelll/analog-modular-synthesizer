@@ -24,15 +24,11 @@ borde de la cubierta. Ahora:
     huecos se quedan rectas (ficha 5: empujarlas por su normal las dejaba
     picadas).
 
-La CORTEZA de ruido (tres capas) ya no va por defecto: la ficha 8 pide quitar
-el ruido y poner veta, y se decide mirando. PIEL_CORTEZA=ruido la devuelve
-sobre la lamina, no sobre el rollo, para comparar.
-
-LAS VARIANTES PARA ESCOGER (fichas 8 y 9, acta del 09-10): sin variables, las
-piezas salen como siempre. PIEL_RELIEVE=suave|medio|hondo da al cachete el
-lomo de la ficha 9 (lomo()), PIEL_CORTEZA=veta|veta_honda da a la cubierta la
-veta de la ficha 8 (veta()), PIEL_SALIDA manda las STL a otra carpeta y
-PIEL_SOLO=cachete|cubierta fabrica solo esa pieza.
+LO ESCOGIDO (Samuel, 10-10, en el acta): el cachete lleva el lomo HONDO de la
+ficha 9 y la cubierta la VETA HONDA de la ficha 8. Para comparar con lo de
+antes: PIEL_RELIEVE=hoy (el relieve B de celosia_placa) o suave|medio, y
+PIEL_CORTEZA=lisa|veta|veta_marcada|ruido. PIEL_SALIDA manda las STL a otra
+carpeta y PIEL_SOLO=cachete|cubierta fabrica solo esa pieza.
 
 Comprobaciones: malla cerrada, tamano contra dos bandejas --MJF 5200 (380 x 284
 x 380) y SLS P 770 (700 x 380 x 580), cifras de catalogo sin hoja en el repo--,
@@ -59,7 +55,7 @@ OPENSCAD = r"C:\Program Files\OpenSCAD\openscad.exe"
 SCAD = os.path.join(CAD, "piel_organica.scad")
 RAMA = os.environ.get("PIEL_RAMA", os.path.join(CAD, "celosia_placa.json"))
 BORDE = os.path.join(CAD, "piel_borde.json")
-CORTEZA = os.environ.get("PIEL_CORTEZA", "lisa")
+CORTEZA = os.environ.get("PIEL_CORTEZA", "veta_honda")   # ficha 8, escogida el 10-10
 SALIDA = os.environ.get("PIEL_SALIDA", SALIDA)   # variantes para escoger, fuera del repo
 # EL LOMO de la ficha 9, en tres grados para escoger mirando (PIEL_RELIEVE).
 # Cada banda sube de LOMO_BORDE junto al hueco, en cuarto de circulo de radio
@@ -67,21 +63,30 @@ SALIDA = os.environ.get("PIEL_SALIDA", SALIDA)   # variantes para escoger, fuera
 # que las finas quedan por debajo de las anchas sin decirselo a nadie. La media
 # banda tipica mide 2,8 mm (p50 en la cresta, 09-10): pico tipico 4,0 / 5,2 /
 # 6,4 mm. Con mas, la banda fina se vuelve aleta ("ala, no costillas"). Sin
-# PIEL_RELIEVE, el relieve de celosia_placa.
+# PIEL_RELIEVE, el hondo, que escogio Samuel el 10-10; PIEL_RELIEVE=hoy da el
+# relieve B de celosia_placa.
 GRADOS = {"suave": dict(rho=3.5, t_max=4.0), "medio": dict(rho=4.5, t_max=5.5),
           "hondo": dict(rho=5.5, t_max=7.0)}
-GRADO = os.environ.get("PIEL_RELIEVE", "")
+GRADO = os.environ.get("PIEL_RELIEVE", "hondo")   # ficha 9, escogido el 10-10; "hoy" = relieve B
+if GRADO not in (*GRADOS, "hoy"):
+    raise SystemExit(f"PIEL_RELIEVE={GRADO}: tiene que ser hoy, {', '.join(GRADOS)}")
 LOMO_BORDE = 2.0         # mm junto al hueco
 LOMO_ALISADO = 12        # pasadas de vecinos sobre la malla de 0,5 mm: redondea la cresta
-# LA VETA de la ficha 8 (PIEL_CORTEZA=veta | veta_honda): surcos que siguen
-# cada franja de la lamina, paralelos a su canto, y doblan en las esquinas.
-# La primera vuelta corria de anillo a anillo y en las franjas angostas de los
-# lados quedaba en rayitas sueltas (render del 09-10). hondo y ancho en mm;
-# niveles: a que distancia del canto va cada surco. Si salen parejos, pana.
+# LA VETA de la ficha 8: surcos a lo largo de la pieza, cada uno a una
+# distancia del canto de su franja medida EN EL PERFIL (veta()). hondo y ancho
+# en mm; niveles: a que distancia del canto va cada surco. Si salen parejos,
+# pana. veta_marcada es la que se acerca al concepto (Samuel, 10-10: «la veta
+# del concept es super marcada, parece el tronco de un arbol digital»): surcos
+# anchos y juntos, que dejan lomos redondos entre ellos. Se ensena; no esta
+# escogida.
 VETAS = {"veta": dict(hondo=0.5, ancho=1.0, meandro=1.2,
                      niveles=(3.5, 6.0, 9.0, 12.5, 16.5, 21.0, 26.0, 32.0)),
          "veta_honda": dict(hondo=0.9, ancho=1.4, meandro=1.6,
-                           niveles=(3.5, 6.5, 10.0, 14.0, 18.5, 23.5, 29.0, 35.0))}
+                           niveles=(3.5, 6.5, 10.0, 14.0, 18.5, 23.5, 29.0, 35.0)),
+         "veta_marcada": dict(hondo=1.8, ancho=2.6, meandro=2.4,
+                             niveles=(4.0, 9.0, 14.5, 20.5, 27.0, 34.0, 41.5, 49.5))}
+if CORTEZA not in (*VETAS, "lisa", "ruido"):
+    raise SystemExit(f"PIEL_CORTEZA={CORTEZA}: tiene que ser lisa, ruido o {', '.join(VETAS)}")
 VETA_APAGADO = (1.5, 3.5)   # mm del canto: dentro de esto, el canto limpio
 SEMILLA_VETA = 17
 
@@ -382,7 +387,7 @@ def cachete(borde: dict):
     pt = p["PESTANA_T"]
     pl = placa(borde["placa_exterior"][0], d["huecos"], pt / 2.0, pt)
     rv = d.get("relieve")
-    if GRADO:
+    if GRADO in GRADOS:
         lomo(pl, d["huecos"], borde, GRADOS[GRADO])
     elif rv:
         if rv["t_max"] > pt + 1e-6:
@@ -493,6 +498,17 @@ def _fibras(de, s, z, v: dict, rng) -> np.ndarray:
     return D
 
 
+def _ventanas(s: np.ndarray, z: np.ndarray, ancho: float, hueco: float = 8.0):
+    """Los tramos del perfil donde a media anchura no hay lamina (las ventanas)
+    y los cantos de las franjas largas: los bordes de las ventanas y las dos
+    puntas de la lamina, en mm de perfil."""
+    medio = np.sort(s[np.abs(z - ancho / 2) < 40.0])
+    saltos = np.flatnonzero(np.diff(medio) > hueco)
+    ventanas = [(float(medio[i]), float(medio[i + 1])) for i in saltos]
+    cantos = np.array([medio[0], medio[-1]] + [c for v in ventanas for c in v])
+    return ventanas, cantos
+
+
 def veta(ob, borde: dict, ancho: float, modo: str, voxel: float = 0.6) -> None:
     """La ficha 8: surcos finos que siguen la forma (VETAS[modo]), solo sobre
     la cara de fuera de la lamina y apagados en los ultimos milimetros de cada
@@ -524,8 +540,22 @@ def veta(ob, borde: dict, ancho: float, modo: str, voxel: float = 0.6) -> None:
     a0, a1 = VETA_APAGADO
     t = np.clip((al_canto - a0) / (a1 - a0), 0.0, 1.0)
     peso = t * t * (3 - 2 * t)
-    D = _fibras(al_canto, s[idx], co[idx, 2], VETAS[modo], np.random.default_rng(SEMILLA_VETA))
+    # EL SITIO DE CADA SURCO SE MIDE EN EL PERFIL (10-10): a s constante, el
+    # surco corre a lo largo de z y no dobla. Medido al canto mas cercano en 3D,
+    # todos doblaban juntos en cada esquina de ventana y se leian como la
+    # moldura de un cuadro (render del 09-10). Las franjas de los lados de cada
+    # ventana --donde a media anchura el perfil no tiene lamina-- quedan lisas,
+    # como el rollo al que llegan.
+    sv, zv = s[idx], co[idx, 2]
+    ventanas, cantos = _ventanas(sv, zv, ancho)
+    en_s = np.min(np.abs(sv[:, None] - cantos[None, :]), axis=1)
+    lado = np.zeros(len(idx))
+    for v0, v1 in ventanas:
+        u = np.clip(np.minimum(sv - v0, v1 - sv) / 3.0, 0.0, 1.0)
+        lado = np.maximum(lado, u * u * (3 - 2 * u))
+    D = _fibras(en_s, sv, zv, VETAS[modo], np.random.default_rng(SEMILLA_VETA)) * (1.0 - lado)
     co[idx] += nor[idx] * (D * peso)[:, None]
+    print("  ventanas en el perfil (mm): " + ", ".join(f"{a:.0f}-{b:.0f}" for a, b in ventanas), flush=True)
     me.vertices.foreach_set("co", co.ravel())
     me.update()
     print(f"  veta '{modo}': {len(idx)} vertices de la cara de fuera, hasta {-D.min():.2f} mm de hondo",
