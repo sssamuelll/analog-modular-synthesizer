@@ -24,10 +24,12 @@ borde de la cubierta. Ahora:
     huecos se quedan rectas (ficha 5: empujarlas por su normal las dejaba
     picadas).
 
-LO ESCOGIDO (Samuel, 10-10, en el acta): el cachete lleva el lomo HONDO de la
-ficha 9 y la cubierta la VETA HONDA de la ficha 8. Para comparar con lo de
-antes: PIEL_RELIEVE=hoy (el relieve B de celosia_placa) o suave|medio, y
-PIEL_CORTEZA=lisa|veta|veta_marcada|ruido. PIEL_SALIDA manda las STL a otra
+LO ESCOGIDO (Samuel, 10-10, en el acta, segunda vuelta): el cachete lleva el
+lomo MAS_HONDO de la ficha 9 («mas hondo todavia») y toda la masa blanca --la
+cubierta con sus rollos y la base del cachete-- la CORTEZA del concepto
+(«mas marcada todavia ... toda la estructura blanca»). Para comparar con lo de
+antes: PIEL_RELIEVE=hoy (el relieve B) o suave|medio|hondo, y
+PIEL_CORTEZA=lisa|veta|veta_honda|veta_marcada|ruido. PIEL_SALIDA manda las STL a otra
 carpeta y PIEL_SOLO=cachete|cubierta fabrica solo esa pieza.
 
 Comprobaciones: malla cerrada, tamano contra dos bandejas --MJF 5200 (380 x 284
@@ -55,19 +57,22 @@ OPENSCAD = r"C:\Program Files\OpenSCAD\openscad.exe"
 SCAD = os.path.join(CAD, "piel_organica.scad")
 RAMA = os.environ.get("PIEL_RAMA", os.path.join(CAD, "celosia_placa.json"))
 BORDE = os.path.join(CAD, "piel_borde.json")
-CORTEZA = os.environ.get("PIEL_CORTEZA", "veta_honda")   # ficha 8, escogida el 10-10
+CORTEZA = os.environ.get("PIEL_CORTEZA", "corteza")   # ficha 8: la del concepto (10-10, segunda vuelta)
 SALIDA = os.environ.get("PIEL_SALIDA", SALIDA)   # variantes para escoger, fuera del repo
 # EL LOMO de la ficha 9, en tres grados para escoger mirando (PIEL_RELIEVE).
 # Cada banda sube de LOMO_BORDE junto al hueco, en cuarto de circulo de radio
 # `rho`, hasta t_max: la que mide menos de 2 rho de ancho no llega arriba, asi
 # que las finas quedan por debajo de las anchas sin decirselo a nadie. La media
 # banda tipica mide 2,8 mm (p50 en la cresta, 09-10): pico tipico 4,0 / 5,2 /
-# 6,4 mm. Con mas, la banda fina se vuelve aleta ("ala, no costillas"). Sin
-# PIEL_RELIEVE, el hondo, que escogio Samuel el 10-10; PIEL_RELIEVE=hoy da el
-# relieve B de celosia_placa.
+# 6,4 mm. Sin PIEL_RELIEVE, el mas_hondo, que pidio Samuel el 10-10 («mas
+# hondo todavia» sobre el hondo); PIEL_RELIEVE=hoy da el relieve B de
+# celosia_placa.
 GRADOS = {"suave": dict(rho=3.5, t_max=4.0), "medio": dict(rho=4.5, t_max=5.5),
-          "hondo": dict(rho=5.5, t_max=7.0)}
-GRADO = os.environ.get("PIEL_RELIEVE", "hondo")   # ficha 9, escogido el 10-10; "hoy" = relieve B
+          "hondo": dict(rho=5.5, t_max=7.0),
+          # Samuel, 10-10, sobre el hondo: «mas hondo todavia». Por debajo del
+          # rollo (T = 12): la celosia no asoma del borde.
+          "mas_hondo": dict(rho=7.0, t_max=9.5)}
+GRADO = os.environ.get("PIEL_RELIEVE", "mas_hondo")   # ficha 9; "hoy" = relieve B
 if GRADO not in (*GRADOS, "hoy"):
     raise SystemExit(f"PIEL_RELIEVE={GRADO}: tiene que ser hoy, {', '.join(GRADOS)}")
 LOMO_BORDE = 2.0         # mm junto al hueco
@@ -85,8 +90,21 @@ VETAS = {"veta": dict(hondo=0.5, ancho=1.0, meandro=1.2,
                            niveles=(3.5, 6.5, 10.0, 14.0, 18.5, 23.5, 29.0, 35.0)),
          "veta_marcada": dict(hondo=1.8, ancho=2.6, meandro=2.4,
                              niveles=(4.0, 9.0, 14.5, 20.5, 27.0, 34.0, 41.5, 49.5))}
-if CORTEZA not in (*VETAS, "lisa", "ruido"):
-    raise SystemExit(f"PIEL_CORTEZA={CORTEZA}: tiene que ser lisa, ruido o {', '.join(VETAS)}")
+# LA CORTEZA DEL CONCEPTO (Samuel, 10-10, segunda vuelta: «mas marcada todavia
+# ... tambien tiene que estar marcada la de los lados, basicamente toda la
+# estructura blanca sin contar la celosia ... repetir eso tal cual»). No son
+# surcos en franjas: son CORDONES que siguen el marco por toda la masa blanca --
+# la lamina, los rollos de los costados y sus patas, y la base del cachete --,
+# paralelos a los cantos, y que doblan las esquinas en curva amplia en vez de a
+# inglete. El sitio de cada cordon es la distancia al canto mas cercano ALISADA
+# sobre la malla: las aristas del eje medio, donde se encuentran dos familias de
+# lineas, eran las que hacian la moldura. hondo/alto: lo que baja el surco y
+# sube el lomo, en mm; paso: de un surco al siguiente, irregular; onda: largo del
+# meandro y de los cortes; alisado: pasadas del suavizado de la distancia.
+FIBRAS = {"corteza": dict(hondo=2.0, alto=1.3, paso=4.2, ancho_surco=1.1, ancho_lomo=1.6,
+                          meandro=3.0, onda=130.0, alisado=800, hasta=80.0)}
+if CORTEZA not in (*VETAS, *FIBRAS, "lisa", "ruido"):
+    raise SystemExit(f"PIEL_CORTEZA={CORTEZA}: tiene que ser lisa, ruido, {', '.join(FIBRAS)} o {', '.join(VETAS)}")
 VETA_APAGADO = (1.5, 3.5)   # mm del canto: dentro de esto, el canto limpio
 SEMILLA_VETA = 17
 
@@ -143,6 +161,8 @@ def unir(objs: list):
 
 
 def remallar(obj, voxel: float, suavizado=SUAVIZADO, decimar=DECIMAR) -> None:
+    """decimar=None deja la malla fina: la corteza se pone entre el remallado y
+    el decimado (una malla decimada no sostiene un surco de 1 mm)."""
     m = obj.modifiers.new("remallar", "REMESH")
     m.mode = "VOXEL"
     m.voxel_size = voxel
@@ -151,8 +171,13 @@ def remallar(obj, voxel: float, suavizado=SUAVIZADO, decimar=DECIMAR) -> None:
     s = obj.modifiers.new("suavizar", "SMOOTH")
     s.factor, s.iterations = suavizado
     aplicar(obj, "suavizar")
+    if decimar:
+        diezmar(obj, decimar)
+
+
+def diezmar(obj, ratio: float) -> None:
     d = obj.modifiers.new("decimar", "DECIMATE")
-    d.ratio = decimar
+    d.ratio = ratio
     aplicar(obj, "decimar")
 
 
@@ -395,6 +420,13 @@ def cachete(borde: dict):
                              f"rollo solo caben {pt} (PESTANA_T)")
         relieve(pl, d["huecos"], rv["t_borde"], rv["t_max"], rv["w"])
     base = losas(borde["base"], 0.0, +1, "base")
+    if CORTEZA in FIBRAS:
+        # la base es masa blanca tambien (Samuel, 10-10: «toda la estructura
+        # blanca sin contar la celosia»): sus cordones corren a lo largo, y se
+        # apagan en los ingletes, que son canto
+        remallar(base, 0.4, decimar=None)
+        corteza_fibra(base, lambda co: (np.tile([0.0, 0.0, 1.0], (len(co), 1)), np.ones(len(co), bool)),
+                      FIBRAS[CORTEZA], "base")
     ob = unir([pl, base])
     ob.name = "cachete_der"
     remallar(ob, float(d.get("voxel", 0.3)))
@@ -562,6 +594,111 @@ def veta(ob, borde: dict, ancho: float, modo: str, voxel: float = 0.6) -> None:
           flush=True)
 
 
+def _ruido3(co: np.ndarray, largo: float, rng, k: int = 3) -> np.ndarray:
+    """Ruido suave en 3D, de -1 a 1: suma de k ondas planas en direcciones al
+    azar, de largo ~largo mm. Sirve en toda la pieza sin parametrizarla."""
+    r = np.zeros(len(co))
+    for _ in range(k):
+        v = rng.normal(size=3)
+        v /= np.linalg.norm(v)
+        r += np.sin(co @ v * (2 * np.pi / (largo * rng.uniform(0.7, 1.3))) + rng.uniform(0, 2 * np.pi))
+    return r / k
+
+
+def corteza_fibra(ob, fuera_dir, cfg: dict, nombre: str) -> None:
+    """La corteza del concepto (FIBRAS): cordones paralelos a los cantos sobre
+    la cara de fuera. fuera_dir(co) da, por vertice, la direccion de fuera de la
+    pieza (y que vertices pueden serlo): un vertice es CARA DE FUERA si su
+    normal va con ella, y CANTO si va
+    de lado (ventanas, apoyos, la nariz del labio). La distancia de cada
+    vertice al canto mas cercano, alisada sobre la malla, pone el sitio de cada
+    surco; un ruido 3D lento lo hace serpentear y corta los cordones a trozos."""
+    from mathutils import kdtree
+    me = ob.data
+    n = len(me.vertices)
+    co = np.empty(n * 3)
+    me.vertices.foreach_get("co", co)
+    co = co.reshape(-1, 3)
+    nor = np.empty(n * 3)
+    me.vertex_normals.foreach_get("vector", nor)
+    nor = nor.reshape(-1, 3)
+    o, vale = fuera_dir(co)
+    no = (nor * o).sum(axis=1)
+    fuera = (no > 0.6) & vale
+    pared = np.abs(no) < 0.35
+    kd = kdtree.KDTree(int(pared.sum()))
+    for i in np.flatnonzero(pared):
+        kd.insert(co[i], int(i))
+    kd.balance()
+    dc = np.array([kd.find(c)[2] for c in co])
+    e = np.empty(len(me.edges) * 2, dtype=np.int64)
+    me.edges.foreach_get("vertices", e)
+    e = e.reshape(-1, 2)
+    grado = np.bincount(e[:, 0], minlength=n) + np.bincount(e[:, 1], minlength=n)
+    g = dc.copy()
+    for _ in range(cfg["alisado"]):
+        vec = (np.bincount(e[:, 0], weights=g[e[:, 1]], minlength=n)
+               + np.bincount(e[:, 1], weights=g[e[:, 0]], minlength=n))
+        g = 0.5 * g + 0.5 * vec / np.maximum(grado, 1)
+    rng = np.random.default_rng(SEMILLA_VETA)
+    gm = g + cfg["meandro"] * _ruido3(co, cfg["onda"], rng)
+    niveles = 2.5 + np.cumsum(cfg["paso"] * rng.uniform(0.75, 1.3, int(cfg["hasta"] / cfg["paso"]) + 3))
+    D = np.zeros(n)
+    for i, c in enumerate(niveles):
+        hay = np.clip((_ruido3(co, cfg["onda"] * 1.6, rng, 2) + 0.7) / 0.8, 0.0, 1.0)
+        D -= cfg["hondo"] * rng.uniform(0.7, 1.15) * hay * np.exp(-((gm - c) / cfg["ancho_surco"]) ** 2)
+        if i + 1 < len(niveles):
+            cm = (c + niveles[i + 1]) / 2
+            D += cfg["alto"] * rng.uniform(0.6, 1.1) * np.exp(-((gm - cm) / cfg["ancho_lomo"]) ** 2)
+    a0, a1 = VETA_APAGADO
+    t = np.clip((dc - a0) / (a1 - a0), 0.0, 1.0)
+    D *= t * t * (3 - 2 * t) * fuera
+    co += nor * D[:, None]
+    me.vertices.foreach_set("co", co.ravel())
+    me.update()
+    print(f"  corteza '{nombre}': {int(fuera.sum())} vertices de fuera, {int(pared.sum())} de canto; "
+          f"de {-D.min():.2f} mm de surco a {D.max():.2f} de lomo", flush=True)
+
+
+def _lado_perfil(P: np.ndarray, pts: np.ndarray):
+    """(distancia CON SIGNO al perfil, normal de fuera del tramo mas cercano).
+    La normal sale del TRAMO y no del punto: en la cara de dentro, pegada al
+    anillo, la direccion punto-perfil es ruido -- el contorno real tiene radios
+    y cae dentro del poligono -- y daba la cara de dentro por cara de fuera
+    (10-10: la corteza se metio 0.81 mm en el aluminio)."""
+    sd = np.full(len(pts), np.inf)
+    nn = np.zeros_like(pts)
+    for i in range(len(P)):
+        a, b = P[i], P[(i + 1) % len(P)]
+        ab = b - a
+        t = np.clip(((pts - a) @ ab) / (ab @ ab), 0.0, 1.0)
+        q = a + t[:, None] * ab
+        di = np.linalg.norm(pts - q, axis=1)
+        nseg = np.array([-ab[1], ab[0]]) / np.linalg.norm(ab)   # la izquierda, hacia fuera (perfil horario)
+        m = di < np.abs(sd)
+        sd[m] = ((pts[m] - q[m]) @ nseg)
+        nn[m] = nseg
+    return sd, nn
+
+
+def _fuera_cubierta(borde: dict, ancho: float):
+    """Fuera de la cubierta: la normal del perfil en la lamina y, en los rollos
+    de los costados (z < 0, z > ancho), tambien hacia el costado; el labio que
+    baja por el costado, solo hacia el costado. En la lamina solo cuenta la cara
+    que esta a mas de 2 mm por fuera del perfil."""
+    P = np.asarray(borde["perfil"], dtype=float)
+
+    def f(co):
+        sd, nn = _lado_perfil(P, co[:, :2])
+        zd = np.where(co[:, 2] < 0.0, -1.0, np.where(co[:, 2] > ancho, 1.0, 0.0))
+        lado = zd != 0
+        w = np.where(lado & (sd < 0.0), 0.0, 1.0)            # el labio: solo hacia el costado
+        o = np.column_stack([nn * w[:, None], zd])
+        o /= np.linalg.norm(o, axis=1)[:, None]
+        return o, lado | (sd > 2.0)
+    return f
+
+
 def cubierta(borde: dict, ancho: float):
     ob = importar(exportar_scad("banda"))
     ob.name = "cubierta"
@@ -589,7 +726,14 @@ def cubierta(borde: dict, ancho: float):
               losas(borde["rollo"], 0.0, -1, "rollo_izq")]
     ob = unir([ob] + rollos)
     ob.name = "cubierta"
-    remallar(ob, VOXEL_CUBIERTA, suavizado=(0.5, 2))
+    if CORTEZA in FIBRAS:
+        # la corteza va sobre la pieza ENTERA, lamina y rollos, y antes del
+        # decimado: con la malla fina
+        remallar(ob, VOXEL_CUBIERTA, suavizado=(0.5, 2), decimar=None)
+        corteza_fibra(ob, _fuera_cubierta(borde, ancho), FIBRAS[CORTEZA], CORTEZA)
+        diezmar(ob, 0.65)   # menos: un surco de 1 mm en triangulos grandes sale rayado
+    else:
+        remallar(ob, VOXEL_CUBIERTA, suavizado=(0.5, 2))
     return ob
 
 
