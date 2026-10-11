@@ -6,9 +6,9 @@
 > 8-in/8-out patch bay routed through an analog crosspoint; and an STM32N657
 > brain running Rust firmware, in a two-tier Eurorack console. It began as
 > Samuel Ballesteros's engineering thesis at Universidad Yacambú, Venezuela, in
-> 2020. Today the firmware runs on the STM32N657 evaluation board, the first
-> voice board is being drawn, and there is no finished unit yet. The first
-> playable prototype is planned for May 2027. Hardware is licensed under
+> 2020. Today the firmware runs on the STM32N657 evaluation board and the
+> first voice board is being drawn; there is no finished unit yet. The first
+> complete instrument is planned for May 2027. Hardware is licensed under
 > CERN-OHL-S v2, firmware under GPL-3.0-or-later and documentation under
 > CC BY-SA 4.0. The name SAM17 is not part of the licence, see
 > [LICENSE](LICENSE). Most documents are in Spanish.
