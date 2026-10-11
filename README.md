@@ -1,5 +1,18 @@
 # SAM17 — Sintetizador Analógico Modular
 
+> **English summary, October 2026.** SAM17 is an open-source polyphonic analog
+> synthesizer. Sixteen analog channels, each with an SSI2130 oscillator, an
+> MS-20 style LM13700 filter and SSI2164 VCAs; a 16-line FM matrix; an
+> 8-in/8-out patch bay routed through an analog crosspoint; and an STM32N657
+> brain running Rust firmware, in a two-tier Eurorack console. It began as
+> Samuel Ballesteros's engineering thesis at Universidad Yacambú, Venezuela, in
+> 2020. Today the firmware runs on the STM32N657 evaluation board, the first
+> voice board is being drawn, and there is no finished unit yet. The first
+> playable prototype is planned for May 2027. Hardware is licensed under
+> CERN-OHL-S v2, firmware under GPL-3.0-or-later and documentation under
+> CC BY-SA 4.0. The name SAM17 is not part of the licence, see
+> [LICENSE](LICENSE). Most documents are in Spanish.
+
 Reproducción y evolución de código abierto del **Sintetizador Analógico Modular
 SAM17**, presentado como Trabajo de Grado por *Samuel Ballesteros García* en la
 Universidad Yacambú (Barquisimeto, 2020). La tesis original se conserva en
@@ -121,3 +134,7 @@ analog-modular-synthesizer/
 ## Licencia
 
 Ver [`LICENSE`](LICENSE). La tesis original se incluye con fines documentales.
+El nombre **SAM17** no forma parte de ninguna de las licencias: puedes
+construir, modificar y vender derivados de este diseño bajo sus términos, pero
+no llamarlos SAM17 ni presentarlos como unidades originales o avaladas por el
+autor. El uso descriptivo («basado en el diseño del SAM17») está bien.
