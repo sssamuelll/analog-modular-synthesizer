@@ -98,9 +98,9 @@ def _labio_chapas(p: dict[str, float]) -> dict[str, tuple[float, float, float]]:
     s_ret = L - p["retorno_meseta"]
     s_riel_sup = L - p["inset_sup_remate"] + p["rail_er_alto"] / 2
     s_panel_sup = p["inset_sup_valle"] - p["inset_er"] + p["alto_panel_sup"]
-    # todo medido "hacia fuera del panel": abajo crece hacia el panel, arriba
-    # decrece; se normaliza para que en los dos sea labio < riel <= panel no,
-    # labio > riel y panel > labio: se guardan las tres distancias con signo
+    # Abajo se mide desde P1 subiendo por la cara; arriba, desde el pico (P4)
+    # bajando. Asi, en los dos, riel < labio < panel cuando la rendija esta
+    # cerrada y el panel sale de frente.
     return {"abajo": (s_nariz, s_riel_inf, s_panel_inf),
             "arriba": (L - s_ret, L - s_riel_sup, L - s_panel_sup)}
 
@@ -132,7 +132,7 @@ def guarda_labio_chapas(p: dict[str, float]) -> None:
 def canario_labio_chapas(p: dict[str, float]) -> None:
     """Los dos lados tienen que saltar: un labio que pisa la huella del panel y
     uno que se queda antes del canto del riel."""
-    for cambio, aviso in (({"retorno_meseta": p["retorno_meseta"] - 1.0}, "no sale de frente"),
+    for cambio, aviso in (({"retorno_meseta": p["retorno_meseta"] + 0.5}, "no sale de frente"),
                           ({"retiro_placa_inf": p["retiro_placa_inf"] - 2.0}, "vuelve a verse")):
         try:
             _guarda_labio(_labio_chapas({**p, **cambio}))
@@ -339,6 +339,7 @@ def tacos(p) -> list[tuple[float, float, str]]:
     for k in range(10):
         meta = (loc[0] + k * L / 10) % L
         elegidos.append(min(validos, key=lambda v: min(abs(v[0] - meta), L - abs(v[0] - meta))))
+    assert len(set(elegidos)) == 10, "dos tacos cayeron en el mismo punto"
     en_suelo = sorted((v for v in elegidos if v[2] <= p["u_taco"] + 1e-6), key=lambda v: v[1])
     assert len(en_suelo) >= 2 and en_suelo[-1][1] - en_suelo[0][1] >= 200.0, (
         "los dos localizadores tienen que caer en el suelo y a 200 mm o mas")
@@ -854,7 +855,7 @@ git add -A case/ && git commit -m "La mejilla de acrílico se va: la persiana oc
 ### Tarea 6: La piel se va (D-S7)
 
 **Ficheros:**
-- Borrar: `case/cad/piel_organica.scad`, `case/cad/piel_borde.py`, `case/cad/piel_borde.json`, `case/cad/piel_termica.py`, `case/cad/piel_funda.py` (si existe), `case/cad/celosia.py`, `celosia_ala.py`, `celosia_calco.py`, `celosia_kondor.py`, `celosia_placa.py` y los `celosia_*.json`, `case/cad/kondor_lattice.png`, `kondor_lattice.svg`, `case/renders/imprimir_piel.py`, `piel_choques.py`, `check_piel.py`, `render_piel.py`, y los `case/renders/sam17-piel*.png`
+- Borrar: `case/cad/piel_organica.scad`, `case/cad/piel_borde.py`, `case/cad/piel_borde.json`, `case/cad/piel_termica.py`, `case/cad/celosia.py`, `celosia_ala.py`, `celosia_calco.py`, `celosia_kondor.py`, `celosia_placa.py` y los `celosia_*.json`, `case/cad/kondor_lattice.png`, `kondor_lattice.svg`, `case/renders/imprimir_piel.py`, `piel_choques.py`, `check_piel.py`, `render_piel.py`, y los `case/renders/sam17-piel*.png`
 - Modificar: `.gitignore` (líneas ~110-121), `case/renders/cara_panel.py` (docstring), `params.scad:1034-1044` (el comentario de la regla 3 de `piel_choques.py`)
 
 - [ ] **Paso 1: buscar quién se apoya en cada fichero**
@@ -915,11 +916,11 @@ En `export.ps1`, añadir `"render_rieles","render_negro","render_paneles"` a la 
 
 - [ ] **Paso 2: el valle con paneles en `cara_panel.py`**
 
-Llevar `vestir_valle()` del guion del acta (scratchpad `monje/escena.py`) a `cara_panel.py` como `fila_valle(cara, M, alto, ancho)`, con el mismo reparto PROVISIONAL (cascos 14 HP, ocho entradas y salidas 44 HP, MIDI y reloj 30 HP, USB y un nivel 16 HP) y su docstring: «PROVISIONAL: nadie ha decidido qué va en el valle; es la conexión con el exterior que el papel del instrumento le pone (instrumento-entero §6.2), firmada como punto de partida (D-S6)». En `marcos()`, añadir la fila `"valle"` con la matriz de la cara horizontal: `M = Matrix(((0, 1, 0, x0), (0, 0, 1, y_top), (1, 0, 0, t_anillo + t_placa), (0, 0, 0, 1)))`, con `x0` y `y_top` de `cb._centros_rail_1u(p, P, cr)[0]` (`x0 = c.x - inset_er`, `y_top = P[3].y - rehundido_panel`) y alto `alto_panel_1u`; y en `comprobar()` la fila del valle entra como las otras. En `vestir()`, rellenar `"valle"` con `fila_valle`.
+Llevar `vestir_valle()` del guion del acta (`C:\Users\simon\AppData\Local\Temp\claude\D--Desktop-projects-sam17\dddcb8e5-6871-4320-b7ee-40c834cee6aa\scratchpad\monje\escena.py`) a `cara_panel.py` como `fila_valle(cara, M, alto, ancho)`, con el mismo reparto PROVISIONAL (cascos 14 HP, ocho entradas y salidas 44 HP, MIDI y reloj 30 HP, USB y un nivel 16 HP) y su docstring: «PROVISIONAL: nadie ha decidido qué va en el valle; es la conexión con el exterior que el papel del instrumento le pone (instrumento-entero §6.2), firmada como punto de partida (D-S6)». En `marcos()`, añadir la fila `"valle"` con la matriz de la cara horizontal: `M = Matrix(((0, 1, 0, x0), (0, 0, 1, y_top), (1, 0, 0, t_anillo + t_placa), (0, 0, 0, 1)))`, con `x0` y `y_top` de `cb._centros_rail_1u(p, P, cr)[0]` (`x0 = c.x - inset_er`, `y_top = P[3].y - rehundido_panel`) y alto `alto_panel_1u`; y en `comprobar()` la fila del valle entra como las otras. En `vestir()`, rellenar `"valle"` con `fila_valle`.
 
 - [ ] **Paso 3: `render_persiana.py`**
 
-Copiar la escena del acta (`monje/escena.py`) como `case/renders/render_persiana.py`, con estos cambios: las partes salen de `case/renders/build/` (los STL de `export.ps1`) y se re-exportan si el `.scad`, `params.scad` o `persiana_generada.scad` son más nuevos (como `render.py`, `importar()`); las persianas son `assembly_persiana.stl` en `anodizado_negro`; las vistas `frente` (az 32, el 25), `trasera` (az 222, el 19), `lado` (az 68, el 14), `noche` (como `lado`, a oscuras y con la luz de dentro) y `costado` (ortográfica de lado puro, fondo transparente), con salida `sam17-persiana*.png`; y `PERSIANA_MOTOR=eevee` para iterar. Los umbrales de `medir()` de `render.py` se calibraron con naranja y plata: `render_persiana.py` lleva los suyos (cobertura mínima 0,05 y brillo mínimo 0,08, medidos sobre la primera corrida y escritos con la fecha).
+Copiar la escena del acta (la misma `escena.py` del scratchpad) como `case/renders/render_persiana.py`, con estos cambios: las partes salen de `case/renders/build/` (los STL de `export.ps1`) y se re-exportan si el `.scad`, `params.scad` o `persiana_generada.scad` son más nuevos (como `render.py`, `importar()`); las persianas son `assembly_persiana.stl` en `anodizado_negro`; las vistas `frente` (az 32, el 25), `trasera` (az 222, el 19), `lado` (az 68, el 14), `noche` (como `lado`, a oscuras y con la luz de dentro) y `costado` (ortográfica de lado puro, fondo transparente), con salida `sam17-persiana*.png`; y `PERSIANA_MOTOR=eevee` para iterar. Los umbrales de `medir()` de `render.py` se calibraron con naranja y plata: `render_persiana.py` lleva los suyos (cobertura mínima 0,05 y brillo mínimo 0,08, medidos sobre la primera corrida y escritos con la fecha).
 
 - [ ] **Paso 4: correrlo**
 
@@ -948,7 +949,7 @@ git commit -m "Los renders del repo con la persiana, y la fila del valle con sus
 
 - [ ] **Paso 1: el PLIEGO**
 
-Bitácora, rev. 28: «2026-10-11: la persiana sustituye a las mejillas de acrílico (papel `2026-10-11-case-persiana-design.md`)». En §1, el PMMA naranja deja de ser material de las mejillas: queda la trasera. **Pieza nueva, la persiana** (dos, espejadas: dos programas): 6082-T651 laminada y estirada (no placa colada: se anodiza manchada), de 12 frenteada a 9,5 con los tacos; orden de operaciones (frentear las dos caras; todas las ranuras a 4 de fondo por delante con las paredes acabadas mientras el alma de 2 las sostiene; el pasante de los últimos 2 mm solo en `persiana_pasante_2d`, por tramos entre atados, sobre placa de sacrificio; el contorno al final); fresa Ø3 de 3 filos; chaflán 0,2 × 45° en las aristas de delante y repaso por detrás; planitud ≤ 0,2 sobre 320 tras ranurar y anodizar (pregunta eliminatoria, como el anillo); los tres DXF y qué dice cada uno. **El anillo**: gana los diez bolsillos de `costilla_bolsillos_2d` por la cara de fuera (hondos: 3,8 el del taco más el asiento del imán, 3,1 o 1,1 en el tramo de atrás); el localizador a 8 H7 y la colisa; el rebaje se queda (vacío). **El anodizado**: todo el aluminio visto en 6082-T6/T651, negro, ISO 7599 AA15–AA20 sellado, un anodizador y un lote, contactos del bastidor en caras tapadas (el dorso de la banda de la persiana, la cara interior del anillo), arista rota ≥ 0,2 en todo canto visto; el «anodizado satinado» del anillo se cambia. **Los imanes**: 20 pares N42 Ø6 (16 de 3 + 2 en el anillo, 16 de 2 + 4 de 1 en los tacos: contarlos contra `tacos_persiana`), con la polaridad marcada. **La muestra** (#398): la tira de altura completa de §3.4 del papel, y lo que mide. Las roscas del suelo: corregir las cotas atrasadas (M5 de la tabla en 53,3 / 159,9 / 266,5 y M4 del suelo en 242,76, las que da hoy el budget). Quitar todo lo que nombra el costado de acrílico (la junta EPDM del costado, «el acrílico lo nota», el criterio 2 del cupón —pasa a «la persiana asienta plana en la cara del anillo y sus tacos entran en sus bolsillos», con la tira de muestra—).
+Bitácora, rev. 28: «2026-10-11: la persiana sustituye a las mejillas de acrílico (papel `2026-10-11-case-persiana-design.md`)». En §1, el PMMA naranja deja de ser material de las mejillas: queda la trasera. **Pieza nueva, la persiana** (dos, espejadas: dos programas): 6082-T651 laminada y estirada (no placa colada: se anodiza manchada), de 12 frenteada a 9,5 con los tacos; orden de operaciones (frentear las dos caras; todas las ranuras a 4 de fondo por delante con las paredes acabadas mientras el alma de 2 las sostiene; el pasante de los últimos 2 mm solo en `persiana_pasante_2d`, por tramos entre atados, sobre placa de sacrificio; el contorno al final); fresa Ø3 de 3 filos; chaflán 0,2 × 45° en las aristas de delante y repaso por detrás; planitud ≤ 0,2 sobre 320 tras ranurar y anodizar (pregunta eliminatoria, como el anillo); los tres DXF y qué dice cada uno. **El anillo**: gana los diez bolsillos de `costilla_bolsillos_2d` por la cara de fuera (hondos: 3,8 el del taco más el asiento del imán, 3,1 o 1,1 en el tramo de atrás); el localizador a 8 H7 y la colisa; el rebaje se queda (vacío). **El anodizado**: todo el aluminio visto en 6082-T6/T651, negro, ISO 7599 AA15–AA20 sellado, un anodizador y un lote, contactos del bastidor en caras tapadas (el dorso de la banda de la persiana, la cara interior del anillo), arista rota ≥ 0,2 en todo canto visto; el «anodizado satinado» del anillo se cambia. **Los imanes**: 20 pares N42 Ø6 entre los dos costados: 16 pares de un Ø6 × 3 en el anillo con un Ø6 × 2 en el taco, y 4 pares de Ø6 × 1 + Ø6 × 1 en el tramo de atrás (contarlos contra `tacos_persiana`), con la polaridad fija y marcada. **La muestra** (#398): la tira de altura completa de §3.4 del papel, y lo que mide. Las roscas del suelo: corregir las cotas atrasadas (M5 de la tabla en 53,3 / 159,9 / 266,5 y M4 del suelo en 242,76, las que da hoy el budget). Quitar todo lo que nombra el costado de acrílico (la junta EPDM del costado, «el acrílico lo nota», el criterio 2 del cupón —pasa a «la persiana asienta plana en la cara del anillo y sus tacos entran en sus bolsillos», con la tira de muestra—).
 
 - [ ] **Paso 2: el RFQ y el README**
 
@@ -956,7 +957,7 @@ RFQ: el bloque de taller de la persiana (las preguntas de la tira, la planitud, 
 
 - [ ] **Paso 3: las specs**
 
-`2026-08-15-case-design.md`: rev. 30 en la bitácora (rev. 29 ya existe). La piel: enmienda de cierre arriba — «**Sucedida el 2026-10-11** por `2026-10-11-case-persiana-design.md`. D-P1 nunca se firmó; D-P2 la retiró D-S2 de la persiana. Sus guiones salieron del repo con la persiana; quedan en el historial». Las cuatro de agosto: una línea arriba — «**Enmienda 2026-10-11:** la mejilla de acrílico coplanar que este papel describe la sustituyó la persiana (`2026-10-11-case-persiana-design.md`); el rebaje del anillo se queda vacío». La de la persiana: estado «implementado» con los hashes de esta tanda.
+`2026-08-15-case-design.md`: rev. 30 en la bitácora (rev. 29 ya existe). En el papel de la persiana, §8: «`ancho_exterior` entra cuando se decida la tabla (D-S4): hoy no lo lee nadie y no se crea un parámetro sin lector». La piel: enmienda de cierre arriba — «**Sucedida el 2026-10-11** por `2026-10-11-case-persiana-design.md`. D-P1 nunca se firmó; D-P2 la retiró D-S2 de la persiana. Sus guiones salieron del repo con la persiana; quedan en el historial». Las cuatro de agosto: una línea arriba — «**Enmienda 2026-10-11:** la mejilla de acrílico coplanar que este papel describe la sustituyó la persiana (`2026-10-11-case-persiana-design.md`); el rebaje del anillo se queda vacío». La de la persiana: estado «implementado» con los hashes de esta tanda.
 
 - [ ] **Paso 4: commit**
 
@@ -1002,6 +1003,6 @@ git fetch -q origin && git checkout --detach origin/main && sh .githooks/pre-pus
 
 ## Autorrevisión
 
-- **Cobertura del papel:** §3 (la persiana) → Tareas 2-3; §3.3-3.4 (atados, sonido, muestra) → Tareas 2-3 (geometría), 8 (PLIEGO, muestra) y 9 (#398); §4 (sujeción) → Tarea 4; §5 (el aire) → el plan del aire (fuera, declarado arriba), y `persiana.py` imprime sus cifras; §6 (líquidos) → Tarea 9 (issue); §7.1 (el negro) → Tareas 7 y 8; §7.2 (el anillo, lo que muere con el acrílico) → Tareas 4 y 5; §7.3 (rendijas) → Tarea 1; §8 (ancho y tabla) → la tabla en espera; `ancho_exterior` se añade en la Tarea 5 si alguna puerta o render lo necesita (hoy solo lo nombra el papel: no se crea un parámetro sin lector); §9 (luz) → no (D-S5 «no por ahora»); §10 (retirar) → Tareas 5, 6 y 9; §11 (renders) → Tarea 7.
+- **Cobertura del papel:** §3 (la persiana) → Tareas 2-3; §3.3-3.4 (atados, sonido, muestra) → Tareas 2-3 (geometría), 8 (PLIEGO, muestra) y 9 (#398); §4 (sujeción) → Tarea 4; §5 (el aire) → el plan del aire (fuera, declarado arriba), y `persiana.py` imprime sus cifras; §6 (líquidos) → Tarea 9 (issue); §7.1 (el negro) → Tareas 7 y 8; §7.2 (el anillo, lo que muere con el acrílico) → Tareas 4 y 5; §7.3 (rendijas) → Tarea 1; §8 (ancho y tabla) → la tabla en espera; `ancho_exterior` entra con la decisión de la tabla, y la Tarea 8 lo deja escrito en el papel; §9 (luz) → no (D-S5 «no por ahora»); §10 (retirar) → Tareas 5, 6 y 9; §11 (renders) → Tarea 7.
 - **Huecos sin tarea:** ninguno de los once HUECOS del papel se resuelve en código; los que piden medir (sonido, tirón, holgura, derrame) quedan en issues (Tarea 9).
 - **Nombres:** `persiana.tacos(p)`, `persiana.varillas_x(p)`, `persiana.geometria(p)`, `persiana.generado(p)`, `persiana.GENERADO`, `guarda_tacos_persiana`, `canario_tacos_persiana`, `anillo_tiene_bolsillos`, `guarda_persiana`, `guarda_persiana_generada`, `guarda_labio_chapas`, `canario_labio_chapas`, `_labio_chapas`, `fila_valle` — usados igual en todas las tareas.
