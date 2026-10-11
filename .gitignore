@@ -107,6 +107,8 @@ case/renders/*.png
 !case/renders/propuesta-diseno-2026-08-16.png
 !case/renders/sam17-case.png
 !case/renders/sam17-case-trasera.png
+# Los de la persiana (spec 2026-10-11, §11): los saca render_persiana.py.
+!case/renders/sam17-persiana*.png
 # El lienzo es una PREVIEW: las 6 piezas en rejilla para mirarlas de un vistazo.
 # No se manda al taller (alli van los DXF sueltos) y lo regenera export.ps1.
 # Mismo criterio que los STL: 97.512 lineas de diff que no prueban nada.

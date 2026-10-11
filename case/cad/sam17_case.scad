@@ -1,4 +1,5 @@
-// sam17_case.scad — consola de dos pisos en acrilico naranja (spec rev. 3).
+// sam17_case.scad — la consola del SAM17: anillos de aluminio, una persiana
+// por costado y la trasera de acrilico (spec rev. 3 y la del 2026-10-11).
 // Fuente de verdad dimensional: params.scad. Este fichero DIBUJA;
 // clearance_budget.py DECIDE. Angulos desde la vertical.
 //
@@ -523,7 +524,8 @@ module perfil_lateral() {
 
 // --- EL ANILLO DE PLETINA -------------------------------------------------
 // La costilla es un anillo FRESADO desde el 2026-08-28: silueta por fuera,
-// ventana por dentro, y por detras el rebaje donde asienta el acrilico. No
+// ventana por dentro, y por detras el rebaje donde asentaba el acrilico (vacio
+// desde el 2026-10-11, que lo tapa la persiana). No
 // tiene desarrollo, no tiene alivios, no tiene P3 que soldar: es una pieza.
 //
 // LO QUE SE FUE CON LA CHAPA, y conviene que quede escrito porque fueron dos
@@ -896,7 +898,7 @@ module banda_marco_2d(b) {
 // es una esquina viva igual --, pero en P3, el rincon concavo de radio 54,
 // el offset de la silueta sube en arco y dejaba el paso del segundo riel KONDOR
 // a 6.26 del canto (check_dxf lo cazo). Con las aristas rectas el marco es
-// mas hondo en ese rincon -- pisa 9 de acrilico en vez de 6, sin
+// mas hondo en ese rincon -- entra 9 mas alla de la ventana en vez de 6, sin
 // consecuencia -- y el paso se queda a 10.
 module marco_contorno_2d() {
     difference() {
@@ -2360,6 +2362,11 @@ else if (PART == "persiana_pasante_2d")  persiana_pasante_2d();
 else if (PART == "persiana_dorso_2d")    persiana_dorso_2d();
 else if (PART == "assembly_persiana")    persianas();
 else if (PART == "costilla_bolsillos_2d") costilla_bolsillos_2d();
+// Para render_persiana.py: lo que se pinta de cada color. Plateado solo los
+// Z-Rails (comprados); negro todo lo demas del aluminio; los paneles, grafito.
+else if (PART == "render_rieles")   rails();
+else if (PART == "render_negro")    { costillas(); marcos_ventana(); nariz(); miembros(); tapa_valle(); tira_valle(); }
+else if (PART == "render_paneles")  paneles();
 else assert(false, str("PART desconocido: ", PART));
 
 // Los dos anillos son las capas exteriores: ocupan z=0..t_anillo y
@@ -2764,11 +2771,11 @@ module assembly_aluminio() {           // idem, Z-Rails + miembros + paneles sol
     rails();
     paneles();
     // LOS DOS MARCOS DE LA VENTANA (2026-08-29, noche): una pletina por
-    // costado que ata los seis rieles al case y retiene el acrilico hacia
-    // dentro por los siete tramos. Sustituyen a las seis placas de anclaje,
+    // costado que ata los seis rieles al case (y hasta el 2026-10-11 retenia
+    // el acrilico hacia dentro). Sustituyen a las seis placas de anclaje,
     // los cuatro clips y las dos escuadras. Van por la cara INTERIOR: en el
-    // render se ven asomar 6 mm por el canto de la ventana -- el marco de
-    // cada fila, y a traves del acrilico una sombra uniforme --, y nada mas.
+    // render se ven asomar 6 mm por el canto de la ventana, entre las varillas
+    // de la persiana, y nada mas.
     // Si algo mas se viera por fuera, estaria mal puesto.
     marcos_ventana();
     // LA NARIZ. Entra el 2026-08-29 y se ve entera: es lo que cierra el

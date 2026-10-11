@@ -56,7 +56,8 @@ def exportar_piezas() -> None:
     os.makedirs(DIR, exist_ok=True)
     scad = os.path.join(CAD, "piezas.scad")
     fuentes = max(os.path.getmtime(os.path.join(CAD, f))
-                  for f in ("piezas.scad", "sam17_case.scad", "params.scad"))
+                  for f in ("piezas.scad", "sam17_case.scad", "params.scad",
+                            "persiana_generada.scad"))
     for nombres in GRUPOS.values():
         for nombre in nombres:
             stl = os.path.join(DIR, nombre + ".stl")
