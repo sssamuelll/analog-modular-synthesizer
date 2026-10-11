@@ -307,6 +307,31 @@ hol_chapa          = 0.5;
 // Chaflan de las dos aristas de la cara vista, silueta y ventana. Rango
 // ESTIMADO 1-3 de la foto. Es lo que hace que la arista brille.
 chaflan_anillo     = 1.5;
+// --- LA PERSIANA (2026-10-11) ----------------------------------------------
+// docs/superpowers/specs/2026-10-11-case-persiana-design.md. La placa de cada
+// costado, por fuera del anillo y tapandolo. El ritmo de las varillas y los
+// tacos los calcula case/cad/persiana.py y los escribe en
+// persiana_generada.scad; aqui van las cotas que los gobiernan.
+t_persiana           = 6;     // el fondo de la varilla: lo que la sostiene de frente
+borde_persiana       = 4;     // el borde macizo que sigue la silueta
+varilla_persiana     = 2.0;   // 6 / 2.0 = 3:1, ESBELTEZ_MAX_PARED de clearance_budget
+paso_persiana        = 7.0;   // paso medio; con 6.2 el pesimista daba 20.1 K
+ola_persiana         = 0.16;  // la ola lenta del paso (+-16 %)
+azar_persiana        = 0.06;  // y un azar determinista (+-6 %): sin numpy.random
+hondo_ciego_persiana = 4;     // la ranura ciega (banda y atados) deja un puente de 2
+alto_atado           = 4;     // los dos atados, a 1/3 y 2/3 del alto
+suelo_persiana       = 0.3;   // sobre la tabla
+// los tacos y sus bolsillos (Elke Brandt, junta del 11-10)
+u_taco               = 6.5;   // centro, desde la silueta: deja 3.0 al rebaje (u = 14)
+d_taco               = 8;     // y localizador a 8 H7
+alto_taco            = 3.5;
+d_bolsillo_taco      = 9;     // los de retencion, con holgura
+hondo_bolsillo_taco  = 3.8;   // 0.3 de aire bajo el taco: la persiana apoya en el anillo
+colisa_taco          = 10;    // el segundo localizador, alargado en x
+d_iman               = 6;     // neodimio N42
+alto_iman_anillo     = 3;
+alto_iman_taco       = 2;
+alto_iman_fino       = 1;     // en el tramo de atras: detras esta el bolsillo de la trasera
 // EL CUPON: un tramo recto del perfil del anillo que se corta, se chaflana, se
 // anodiza y se mira ANTES de mandar cortar los dos anillos enteros (#237). 100
 // mm es lo que pide la spec 2026-08-28 §9 y lo que ya prometia el PLIEGO: largo

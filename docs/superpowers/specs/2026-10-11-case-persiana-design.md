@@ -13,7 +13,7 @@
 
 ## 0. En una línea
 
-El case se queda sin piel. Vuelve a ser el aluminio de agosto, anodizado en negro, y cada mejilla de acrílico se cambia por una **persiana**: una placa de 6 mm, por fuera del anillo y tapándolo, con 48 varillas rectas y verticales de 2 mm, atadas por dentro en dos alturas, que se pone y se quita con imanes. Es por donde respira el instrumento, y lo único que se ve de él además de los paneles.
+El case se queda sin piel. Vuelve a ser el aluminio de agosto, anodizado en negro, y cada mejilla de acrílico se cambia por una **persiana**: una placa de 6 mm, por fuera del anillo y tapándolo, con 47 varillas rectas y verticales de 2 mm, atadas por dentro en dos alturas, que se pone y se quita con imanes. Es por donde respira el instrumento, y lo único que se ve de él además de los paneles.
 
 ---
 
@@ -66,14 +66,14 @@ Todas las cifras salen de `python case/cad/persiana.py`.
 | contorno | el perfil real del anillo (`perfil_real`: 197 puntos, con los labios del anillo y las éntasis), 0,3 mm sobre la tabla | que su canto caiga sobre el del anillo. Con el perfil de 7 puntos, los labios asomaban hasta 4,1 mm |
 | grueso | 6 mm | lo que la sostiene de frente (§3.3) |
 | borde macizo | 4 mm | el marco que se ve de lado |
-| varillas | **48**, verticales y rectas, de **2,0 mm** | 6 / 2,0 = 3:1, la esbeltez máxima de pared fresada del repo (`ESBELTEZ_MAX_PARED`). La versión 1 decía 1,9: 3,16:1, fuera de la regla |
-| ritmo | paso medio **7,0 mm** (ranura de 5,0), con una ola lenta de ±16 % y un ±6 % de azar con semilla fija | como un bambusal. La versión 1 decía 6,2: con el aire bien calculado no pasaba el pesimista (§5) |
+| varillas | **47**, verticales y rectas, de **2,0 mm** | 6 / 2,0 = 3:1, la esbeltez máxima de pared fresada del repo (`ESBELTEZ_MAX_PARED`). La versión 1 decía 1,9: 3,16:1, fuera de la regla |
+| ritmo | paso medio **7,0 mm** (ranura de 5,0), con una ola lenta de ±16 % y un ±6 % de azar determinista (k · φ módulo 1, sin `numpy.random`) | como un bambusal. La versión 1 decía 6,2: con el aire bien calculado no pasaba el pesimista (§5) |
 | puntas de ranura | radio 1,5, el de la fresa de Ø3 | la fresa no deja esquinas vivas; contra las pendientes se come 3,6 a 4,8 mm de cada punta |
-| atados | dos, a 85 y 171 mm del suelo, de 4 mm de alto; ahí la ranura se queda a 4 de los 6 mm y deja un puente de 2 por detrás | **son requisito de taller** (§3.3) y de rigidez; cuestan 783 mm² de aire |
+| atados | dos, a 85 y 171 mm del suelo, de 4 mm de alto; ahí la ranura se queda a 4 de los 6 mm y deja un puente de 2 por detrás | **son requisito de taller** (§3.3) y de rigidez; cuestan 782 mm² de aire |
 | banda ciega | los 20 mm que caen sobre la cara del anillo (23 en el tramo de atrás): ranura a 4 de fondo, alma de 2 | detrás está el aluminio: ahí la ranura no tiene por qué pasar |
-| respira | **18 905 mm²** por costado, detrás de la ventana real | el marco de la ventana llega a 26 mm del perfil en seis tramos y a 30 en el de atrás. La versión 1 medía a 28 uniforme |
-| se ve abierto | 64 % del costado | |
-| peso | 369 g por costado en aluminio | con la banda ciega y los atados |
+| respira | **18 828 mm²** por costado, detrás de la ventana real | el marco de la ventana llega a 26 mm del perfil en seis tramos y a 30 en el de atrás. La versión 1 medía a 28 uniforme |
+| se ve abierto | 65 % del costado | |
+| peso | 362 g por costado en aluminio | con la banda ciega y los atados |
 
 ### 3.2 Dónde va
 
@@ -122,7 +122,7 @@ Lo que mide:
 - **La persiana** lleva **10 tacos** de Ø8 × 3,5 en el dorso, del mismo bloque (sale de pletina de 12, frenteada a 9,5 con los tacos: ninguna pieza suelta), a 7 mm del contorno, uno cada ~96 mm por el perímetro.
 - **El anillo** lleva **10 bolsillos** en su cara de fuera, que ahora nadie ve: 3,8 mm de hondo (0,3 de aire bajo el taco) más el asiento del imán, Ø6,1 × 3,1. Quedan 3,0 mm de pared hasta el rebaje vacío del acrílico, que es `PARED_MIN_ANILLO`, y 10 mm o más de cada una de las 14 roscas M4 y de los 3 M5 de la tabla.
 - **Dos localizan, ocho retienen.** En el suelo, x = 25: taco redondo en agujero Ø8 H7/g6 (juego de 5 a 29 µm; ISO 286-2, citado de memoria). En el suelo, x = 290: colisa de 8 H7 × 10 en x, que localiza sin forzar. Los otros ocho, Ø9 con holgura, retienen.
-- **Imanes**: pares de neodimio N42, Ø6 × 3 en el anillo y Ø6 × 2 en el taco, con la polaridad fija y marcada. En el tramo de atrás, detrás está el bolsillo de la trasera, y van imanes finos (Ø6 × 1) para que la pared no baje de 3,1. Tirón total del orden de **50–70 N** (ESTIMADO; se mide en la muestra) contra una persiana de 3,6 N (369 g). Si se levanta el aparato por los costados, la carga la llevan los tacos, no los imanes.
+- **Imanes**: pares de neodimio N42, Ø6 × 3 en el anillo y Ø6 × 2 en el taco, con la polaridad fija y marcada. En el tramo de atrás, detrás está el bolsillo de la trasera, y van imanes finos (Ø6 × 1) para que la pared no baje de 3,1. Tirón total del orden de **50–70 N** (ESTIMADO; se mide en la muestra) contra una persiana de 3,6 N (362 g). Si se levanta el aparato por los costados, la carga la llevan los tacos, no los imanes.
 - **Quitarla**: se tira derecho con dos ganchos de alambre de 2 mm metidos en dos ranuras junto a un atado. Sin la persiana, la ventana del anillo deja aspirar el interior sin quitar paneles.
 - **Alineación**: el canto de la persiana queda a 0,2 mm o menos del del anillo (juego del localizador más las tolerancias de contorno de las dos piezas, ±0,05–0,10 del taller de los anillos). Lo esconde la junta de sombra (§3.2). La arista de atrás de la persiana va rota a 0,3 × 45°.
 
@@ -140,24 +140,24 @@ Elke colocó los tacos contra las roscas que da hoy `clearance_budget.py`. **El 
 
 | escenario | W | `C_D` de la puerta (0,65) | pesimista (0,55) | techo |
 |---|---|---|---|---|
-| **v5 declarada, fuente afuera** | 64,2 | **16,8 K** | **18,8 K** | 20 K |
+| **v5 declarada, fuente afuera** | 64,2 | **16,9 K** | **18,9 K** | 20 K |
 | v5 + 2 W de luz dentro | 66,2 | 17,2 K | 19,2 K | 20 K |
 | v5 + 5 W de luz dentro | 69,2 | 17,7 K | 19,8 K | 20 K |
-| fuente adentro (v5 + 25,02) | 89,2 | 20,9 K | 23,4 K | **no pasa** |
-| v4, lo que lee hoy `guarda_aire()` | 147,31 | 29,3 K | 32,7 K | **no pasa** |
+| fuente adentro (v5 + 25,02) | 89,2 | 21,0 K | 23,5 K | **no pasa** |
+| v4, lo que lee hoy `guarda_aire()` | 147,31 | 29,4 K | 32,8 K | **no pasa** |
 
 Y con 64,2 W, pesimista, por partes:
 
 | | salto |
 |---|---|
-| todo (la tabla de arriba) | 18,8 K |
-| las dos persianas solas, sin la trasera ni el alero | 22,6 K |
+| todo (la tabla de arriba) | 18,9 K |
+| las dos persianas solas, sin la trasera ni el alero | 22,7 K |
 | **un costado tapado** (el aparato contra una pared) | **26,0 K** |
 | sin persianas: el case de agosto | 51,9 K |
 
 Lo que eso dice:
 
-1. **Pasa con la fuente afuera y con 1,2 K de margen en el pesimista.** Por eso el paso es 7,0: con 6,2 daba 20,1 K.
+1. **Pasa con la fuente afuera y con 1,1 K de margen en el pesimista.** Por eso el paso es 7,0: con 6,2 daba 20,1 K.
 2. **La rendija del alero no muere.** El §7.2 de la piel la daba por muerta; con la persiana es una de las dos salidas altas, y sin ella no pasa. `guarda_rendija()` y su capilaridad siguen.
 3. **Los dos costados tienen que quedar libres.** Con uno contra una pared no pasa. Es una **condición de uso** que hoy no está escrita en ningún sitio: va al manual y al pliego, con la holgura que se mida en el arranque (D-S11, HUECO 4).
 4. **El #289 no se cierra solo con la persiana.** `guarda_aire()` lee hoy 147,31 W de la v4 (`params.scad:1719`, atado por `guarda_potencia_vigente()` a `hardware/01-power-supply/v4/calor_budget.py`), y con eso no pasa. La fuente v5 mandó cambiar esa cifra a 64,22 y **nadie lo hizo**. Cerrar el #289 son tres cosas: aplicar esa enmienda, mover `guarda_potencia_vigente()` a la v5, y que `_tiro()` calcule con el plano neutro y las persianas. Detrás cuelga una cadena: `calor_budget.py` (`A_EF_BASE_MM2`, `P_BASE`), `test_calor_budget.py`, `TECHO_VENTEO_MM2` de `02-midi-cv/power_budget.py`, `medidas.csv` y `check_bringup.py`, y `canario_techo()`, que exige que el HUECO se publique. Va en el plan, en su orden.
@@ -167,7 +167,7 @@ Lo que eso dice:
 
 ## 6. Los líquidos
 
-> **Nueva, de la junta (H5 de Serrano).** El papel del techo macizo sacó la salida de aire de la meseta por esto: *«esa parte es sensible a que le entren líquidos»*. La persiana abre 48 ranuras pasantes por costado.
+> **Nueva, de la junta (H5 de Serrano).** El papel del techo macizo sacó la salida de aire de la meseta por esto: *«esa parte es sensible a que le entren líquidos»*. La persiana abre 45 ranuras por costado, pasantes dentro de la ventana.
 
 Lo que se sabe: los primeros 26 mm sobre la tabla no pasan (detrás están la banda ciega, el anillo y el marco), así que un charco en la mesa no entra. Un derrame que caiga sobre el costado baja por las varillas y **parte entra**: cae sobre el canto de la ventana del anillo, el marco y la tabla. Lo que no se sabe es si llega a alguna placa. **El ensayo de derrame del techo se extiende a los costados** (D-S10): la misma taza, volcada sobre el costado, y el criterio de que nada llegue a una placa. Si no pasa, el rebaje vacío del anillo puede trabajar de canalón con dos desagües abajo; eso se dibuja solo si el ensayo lo pide.
 
@@ -179,7 +179,7 @@ Lo que se sabe: los primeros 26 mm sobre la tabla no pasan (detrás están la ba
 
 - **Una sola aleación** para todo el aluminio negro que se ve: **6082-T6/T651**, que ya es la de las chapas. Con la persiana canto con canto con el anillo, dos aleaciones se distinguen en la junta.
 - **Un anodizador y un lote.**
-- **Arista rota de 0,2 mm o más** en todo canto visto (C0,2 o R0,2). En canto vivo el anodizado no cierra la arista: sale más claro y se pela al limpiar, y serían 96 rayas grises a lo largo de las varillas (ESTIMADO, práctica de taller).
+- **Arista rota de 0,2 mm o más** en todo canto visto (C0,2 o R0,2). En canto vivo el anodizado no cierra la arista: sale más claro y se pela al limpiar, y serían 94 rayas grises a lo largo de las varillas (ESTIMADO, práctica de taller).
 - Espesor: ISO 7599, clase AA15–AA20, sellado (citado de memoria, sin copia en el repo).
 - Los contactos del bastidor del anodizador van en el dorso de la banda, que tapa el anillo.
 - El PLIEGO dice hoy «anodizado satinado» para el anillo: se reescribe.
@@ -225,7 +225,7 @@ La única regla que vigilaba el vuelo era la regla 3 de `piel_choques.py` (25–
 
 ## 9. La luz
 
-De día el costado casi desaparece, y la identidad depende de lo que se ve entre las varillas. Hoy eso es la trasera ámbar iluminada por la sala. **Una luz propia dentro no es una pieza nueva: reabre una retirada.** El papel firmado del instrumento entero retiró en su D1 *«el farol del interior (#42)»* junto con la cadena WS2812. D-S5 es si se reabre: entonces vuelve el #42, la carga entra en el presupuesto de la fuente (`ladrillo_budget.py`, en el riel que se escoja) y en el calor (5 W suben el pesimista de 18,8 a 19,8 K).
+De día el costado casi desaparece, y la identidad depende de lo que se ve entre las varillas. Hoy eso es la trasera ámbar iluminada por la sala. **Una luz propia dentro no es una pieza nueva: reabre una retirada.** El papel firmado del instrumento entero retiró en su D1 *«el farol del interior (#42)»* junto con la cadena WS2812. D-S5 es si se reabre: entonces vuelve el #42, la carga entra en el presupuesto de la fuente (`ladrillo_budget.py`, en el riel que se escoja) y en el calor (5 W suben el pesimista de 18,9 a 19,8 K).
 
 De noche, con luz, los dos atados tapan las ranuras en 4 mm por detrás: son **dos rayas oscuras horizontales** que cruzan el ámbar a 85 y 171 mm. Las sudares de verdad tienen sus hilos. Los renders del acta, arriba, ya las llevan.
 
