@@ -577,60 +577,86 @@ def canario_paneles_fijos(p: dict[str, float]) -> None:
         "canario de panel fijo NO detecto el radio de giro heredado")
 
 
-# El aire entre el labio de la piel y el canto del panel (ficha 6). Por abajo
-# lo pone que el panel salga de frente sin rozar la lamina; por arriba, que el
-# labio llegue al canto del riel: si se queda mas corto, detras del ala del
-# riel vuelve a verse el interior.
+# El aire entre el labio de la chapa y el canto del panel (ficha 6, persiana
+# del 11-10). Por abajo lo pone la nariz; por arriba, el retorno del techo.
+# Cada labio tiene que hacer dos cosas a la vez: dejar que el panel salga de
+# frente sin rozarlo (LABIO_AIRE_MIN al canto del panel) y pasar del canto del
+# riel (LABIO_SOBRE_RIEL_MIN sobre su cara), porque si se queda corto, detras
+# del ala del riel vuelve a verse el interior. Las dos reglas del barrido que
+# dejaban la rendija abierta (1 mm de aire BAJO el riel, holgura_rail SOBRE el
+# riel) eran de cuando las filas giraban; desde la tanda B los paneles son
+# fijos (guarda_paneles_fijos()).
 LABIO_AIRE_MIN = 1.0
+LABIO_SOBRE_RIEL_MIN = 0.5
+# Y como ahora el labio pasa POR DELANTE de la cara del riel, entre los dos
+# tiene que quedar aire de fondo: la chapa ocupa t_costilla desde la silueta y
+# la cara del riel esta detras del panel, a rehundido_panel + t_panel.
+LABIO_FONDO_MIN = 0.5
 
 
-def _labio_ventana(p: dict[str, float]) -> dict[str, tuple[float, float]]:
-    """Donde acaba la lamina de la piel y donde empieza el panel, en mm a lo
-    largo de cada cara, como (borde de abajo, borde de arriba) del aire entre
-    los dos. GEMELA de borde_ventana_inf()/borde_ventana_sup() de
-    piel_organica.scad: la lamina llega al canto del riel del frente abajo y al
-    del riel del remate arriba."""
-    return {
-        "abajo": (p["inset_inf_frente"] - p["rail_er_alto"] / 2,
-                  p["inset_inf_frente"] - p["inset_er"]),
-        "arriba": (p["inset_sup_valle"] - p["inset_er"] + p["alto_panel_sup"],
-                   p["alto_cara_sup"] - p["inset_sup_remate"] + p["rail_er_alto"] / 2),
-    }
+def _labio_chapas(p: dict[str, float]) -> dict[str, tuple[float, float, float]]:
+    """(donde acaba el labio, donde empieza la cara del riel, donde empieza el
+    panel), en mm a lo largo de cada cara y medidos desde el canto del panel
+    hacia fuera. Abajo, la nariz sube por la cara de abajo hasta s_top (GEMELA
+    de nariz_s_top()); arriba, el retorno del techo baja por la cara de arriba
+    hasta L - retorno_meseta (GEMELA de miembro_alto())."""
+    s_nariz = _nariz(p)["s_top"]
+    s_riel_inf = p["inset_inf_frente"] - p["rail_er_alto"] / 2
+    s_panel_inf = p["inset_inf_frente"] - p["inset_er"]
+    L = p["alto_cara_sup"]
+    s_ret = L - p["retorno_meseta"]
+    s_riel_sup = L - p["inset_sup_remate"] + p["rail_er_alto"] / 2
+    s_panel_sup = p["inset_sup_valle"] - p["inset_er"] + p["alto_panel_sup"]
+    # Abajo se mide desde P1 subiendo por la cara; arriba, desde el pico (P4)
+    # bajando. Asi, en los dos, riel < labio < panel cuando la rendija esta
+    # cerrada y el panel sale de frente.
+    return {"abajo": (s_nariz, s_riel_inf, s_panel_inf),
+            "arriba": (L - s_ret, L - s_riel_sup, L - s_panel_sup)}
 
 
-def _guarda_labio(labios: dict[str, tuple[float, float]], ala: float) -> None:
-    for donde, (a, b) in labios.items():
-        assert b - a >= LABIO_AIRE_MIN, (
-            f"el labio de la piel queda a {b - a:.2f} mm del panel por {donde}: "
+def _guarda_labio(labios: dict[str, tuple[float, float, float]]) -> None:
+    for donde, (labio, riel, panel) in labios.items():
+        aire = panel - labio
+        sobre = labio - riel
+        assert aire >= LABIO_AIRE_MIN - 1e-9, (
+            f"el labio de la chapa queda a {aire:.2f} mm del panel por {donde}: "
             f"con menos de {LABIO_AIRE_MIN:g} el panel no sale de frente sin "
-            f"rozar la lamina")
-        assert b - a <= ala + 1e-6, (
-            f"el labio de la piel deja {b - a:.2f} mm de aire por {donde} y el "
-            f"ala del riel cubre {ala:.2f}: detras vuelve a verse el interior "
-            f"(la rendija de la ficha 6)")
+            f"rozarla")
+        assert sobre >= LABIO_SOBRE_RIEL_MIN - 1e-9, (
+            f"el labio de la chapa pisa {sobre:.2f} mm de la cara del riel por "
+            f"{donde} y se piden {LABIO_SOBRE_RIEL_MIN:g}: detras vuelve a verse "
+            f"el interior (la rendija de la ficha 6)")
 
 
-def guarda_labio_ventana(p: dict[str, float]) -> None:
-    """La piel acaba sobre el ala del riel, ni dentro de la huella del panel ni
-    antes del canto del riel (ficha 6 del acta del 09-10)."""
-    ala = p["rail_er_alto"] / 2 - p["inset_er"]
-    labios = _labio_ventana(p)
-    _guarda_labio(labios, ala)
-    print("labio de la piel (ficha 6): " + ", ".join(
-        f"{d} a {b - a:.2f} mm del panel" for d, (a, b) in labios.items())
-        + f", sobre los {ala:.2f} mm de ala del riel")
+def _fondo_labio(p: dict[str, float]) -> float:
+    """Aire, en la normal de la cara, entre la cara de dentro de la chapa y la
+    cara del riel que el labio tapa por delante."""
+    return p["rehundido_panel"] + p["t_panel"] - p["t_costilla"]
 
 
-def canario_labio_ventana(p: dict[str, float]) -> None:
+def guarda_labio_chapas(p: dict[str, float]) -> None:
+    """La nariz y el techo acaban sobre el ala del riel, ni dentro de la huella
+    del panel ni antes del canto del riel, y sin tocar la cara del riel por
+    detras (ficha 6; persiana §7.3)."""
+    labios = _labio_chapas(p)
+    _guarda_labio(labios)
+    fondo = _fondo_labio(p)
+    assert fondo >= LABIO_FONDO_MIN - 1e-9, (
+        f"el labio de la chapa pasa a {fondo:.2f} mm de la cara del riel, por "
+        f"delante, y se piden {LABIO_FONDO_MIN:g}: la chapa toca el riel")
+    print("labio de las chapas (ficha 6): " + ", ".join(
+        f"{d} a {panel - labio:.2f} del panel y {labio - riel:.2f} sobre el riel"
+        for d, (labio, riel, panel) in labios.items())
+        + f"; {fondo:.2f} de fondo contra la cara del riel")
+
+
+def canario_labio_chapas(p: dict[str, float]) -> None:
     """Los dos lados tienen que saltar: un labio que pisa la huella del panel y
     uno que se queda antes del canto del riel."""
-    ala = p["rail_er_alto"] / 2 - p["inset_er"]
-    q = {**p, "inset_er": p["rail_er_alto"] / 2 - 0.5}      # el panel crece hacia el labio
-    a, b = _labio_ventana(p)["abajo"]
-    for labios, ala_q, aviso in ((_labio_ventana(q), q["rail_er_alto"] / 2 - q["inset_er"], "no sale de frente"),
-                                 ({"abajo": (a - 2.0, b)}, ala, "vuelve a verse")):
+    for cambio, aviso in (({"retorno_meseta": p["retorno_meseta"] + 0.5}, "no sale de frente"),
+                          ({"retiro_placa_inf": p["retiro_placa_inf"] - 2.0}, "vuelve a verse")):
         try:
-            _guarda_labio(labios, ala_q)
+            _guarda_labio(_labio_chapas({**p, **cambio}))
         except AssertionError as e:
             assert aviso in str(e), f"canario del labio salto por '{e}'"
             continue
@@ -1449,7 +1475,13 @@ def canario_acceso_marco(p: dict[str, float]) -> None:
     casos = (
         ({"sep_rosca_riel": 7.0, "d_cajeado_riel": 0.0},
          "cabezas M4", "reparto viejo bajo el riel"),
-        ({"sep_rosca_riel": 1.0},
+        # 5 y no 1 desde el 2026-10-11: con el retorno del techo a 9 (la
+        # rendija de la ficha 6), la pata de arriba se retira mas bajo el
+        # labio y con sep 1 o 3 la rosca de la punta cae antes contra el canto
+        # de la pata -- otra regla, que tumbaba el canario por otra razon.
+        # Con 5 las roscas siguen pegadas al cajeado (6.21 contra 6.75) y la
+        # que salta es la suya.
+        ({"sep_rosca_riel": 5.0},
          "pasos M4", "roscas convertidas en una ranura junto al cajeado"),
     )
     for cambios, clave, que in casos:
@@ -5638,26 +5670,22 @@ def _retorno_meseta(p: dict[str, float]) -> dict:
 
 
 def guarda_retorno_meseta(p: dict[str, float]) -> None:
-    """El retorno fijo deja libres el panel y el riel en posicion montada.
+    """El retorno fijo de la meseta: su caja y la sombra que deja sobre el panel.
 
-    No existe barrido radial: los paneles se desmontan quitando tornillos. La
-    puerta conserva solo la holgura estatica y la linea de sombra resultante."""
+    No existe barrido radial: los paneles se desmontan quitando tornillos. Desde
+    el 2026-10-11 el retorno baja hasta pisar el riel y cerrar la rendija de la
+    ficha 6; esa relacion la vigila guarda_labio_chapas()."""
     L = p["alto_cara_sup"]
     s_panel = p["inset_sup_valle"] - p["inset_er"] + p["alto_panel_sup"]
     ret = _retorno_meseta(p)
     s_ret = L - p["retorno_meseta"]
-    s_riel = L - p["inset_sup_remate"] + p["rail_er_alto"] / 2
-    margen = s_ret - max(s_panel, s_riel)
-    assert margen >= p["holgura_rail"], (
-        f"el retorno acaba en s={s_ret:.2f}; panel/riel fijo llegan hasta "
-        f"{max(s_panel, s_riel):.2f}: quedan {margen:.2f} mm y se exigen "
-        f"{p['holgura_rail']:.2f}")
+    # La regla del barrido (margen >= holgura_rail SOBRE el riel) murio el
+    # 2026-10-11 con la persiana: era de cuando las filas giraban, y dejaba la
+    # rendija de la ficha 6. Lo que el labio tiene que hacer ahora lo mide
+    # guarda_labio_chapas().
     print(f"retorno de la meseta: {p['retorno_meseta']:g} mm por la cara de "
-          f"arriba, doblez de {ret['doblez']:g}; margen estatico "
-          f"panel/riel {margen:.2f} mm")
-    print(f"  linea de sombra sobre el panel: {s_ret - s_panel:.2f} mm "
-          f"({s_riel - s_panel:.2f} de labio del riel + {s_ret - s_riel:.2f} "
-          f"de aire)")
+          f"arriba, doblez de {ret['doblez']:g}; deja {s_ret - s_panel:.2f} mm "
+          f"de sombra sobre el panel (guarda_labio_chapas)")
 
 
 def _nariz(p: dict[str, float]) -> dict:
@@ -5725,8 +5753,10 @@ def guarda_nariz(p: dict[str, float]) -> None:
       2. el chaflan deja frente vertical (>= 5) y no toca el riel del frente:
          la esquina del riel mas cercana a la nariz queda a x+y = 37.4 y el
          panel arranca a 39.2 -- debajo del riel hay aire, no modulos.
-      3. la banda se para DEBAJO de la cara del riel fijo con al menos 1 mm de
-         aire (la linea de sombra).
+      3. (murio el 2026-10-11: la banda se paraba DEBAJO de la cara del riel
+         con 1 mm de aire, regla del barrido de cuando las filas giraban; desde
+         la persiana la nariz sube hasta pisar el riel y cerrar la rendija de
+         la ficha 6, y lo vigila guarda_labio_chapas()).
       4. los M4 del pie: fuera de la zona del doblez del chaflan (setback +
          2t + d/2) y a 1.5 D del canto libre."""
     P = _vertices(p)
@@ -5747,12 +5777,6 @@ def guarda_nariz(p: dict[str, float]) -> None:
     assert diag_riel - c >= 5.0, (
         f"el chaflan de {c:g} se acerca a {diag_riel - c:.2f} mm de la esquina "
         f"del riel del frente (x+y = {diag_riel:.2f}); se exigen 5")
-    s_riel = p["inset_inf_frente"] - p["rail_er_alto"] / 2
-    aire = s_riel - nz["s_top"]
-    assert aire >= 1.0, (
-        f"la nariz sube hasta s = {nz['s_top']:.2f} por la cara de abajo y la "
-        f"cara del riel del frente arranca en {s_riel:.2f}: {aire:.2f} de aire "
-        f"contra 1.0")
     raiz = p["radio_doblez_costilla"] + 3 * t + p["d_M4_paso"] / 2
     assert nz["m4_x"] - c >= raiz, (
         f"el M4 del pie cae a {nz['m4_x'] - c:.2f} de la linea del chaflan y "
@@ -5764,10 +5788,8 @@ def guarda_nariz(p: dict[str, float]) -> None:
     print(f"nariz: chaflan de {c:g} a 45 ({frente:.2f} de frente vertical, "
           f"{diag_riel - c:.2f} al riel), banda de {t:g} hasta s = "
           f"{nz['s_top']:.2f} de la cara de abajo; panel y riel fijos")
-    print(f"  linea de sombra: {aire:.2f} de aire + "
-          f"{p['inset_inf_frente'] - p['inset_er'] - s_riel:.2f} de labio del "
-          f"riel bajo el panel; desarrollo {nz['largo']:.2f} x "
-          f"{nz['desarrollo']:.2f}, {len(nz['m4_z'])} M4 a la tabla")
+    print(f"  la rendija la cierra el labio (guarda_labio_chapas); desarrollo "
+          f"{nz['largo']:.2f} x {nz['desarrollo']:.2f}, {len(nz['m4_z'])} M4 a la tabla")
 
 
 def guarda_escalon(p: dict[str, float]) -> None:
@@ -6277,8 +6299,8 @@ def main() -> int:
     guarda_trasera_flexion(p)
     canario_paneles_fijos(p)
     guarda_paneles_fijos(p)
-    canario_labio_ventana(p)
-    guarda_labio_ventana(p)
+    canario_labio_chapas(p)
+    guarda_labio_chapas(p)
     canario_tira_valle(p)
     guarda_tira_valle(p)
     canario_fila_kondor(p)

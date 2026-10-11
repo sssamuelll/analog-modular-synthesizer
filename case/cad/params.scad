@@ -429,7 +429,13 @@ retiro_placa_sup   = 12;
 // tiene que quedarse a 1.5 D del escalon del canto (guarda_anclajes): con 9
 // se queda en 7.08 contra los 6.75 que pide. Fue el retiro de la placa de la
 // cara de abajo, con el mismo numero y por la misma razon.
-retiro_placa_inf   = 9;
+// 11.9 desde el 2026-10-11 (persiana, D-S9): la nariz sube hasta pisar 0.98 de
+// la cara del riel del frente y deja 1.02 al canto del panel, que cierra la
+// rendija de la ficha 6. Era 9: la regla del barrido pedia 1 mm de aire BAJO
+// el riel, y desde la tanda B los paneles son fijos. Lo vigila
+// guarda_labio_chapas(); la pata del marco que arranca aqui la sigue
+// guarda_anclajes().
+retiro_placa_inf   = 11.9;
 // Cajeado de la cabeza del M4 del riel, por el lado del anillo. Boton ISO
 // 7380 M4: cabeza de 7.6 de diametro y 2.2 de alto.
 d_cajeado_riel     = 8;
@@ -1410,10 +1416,12 @@ prof_sup    = 50;
 // de arriba este tramo, medido por la cara exterior desde el pico. Es lo que
 // cierra el frente de la meseta sobre el Z-Rail fijo -- y de paso mata la ola del
 // canto libre de 528 mm y el canto vivo que lo hacia leerse como REPISA.
-// Con 4 deja una linea de sombra estatica de 6 mm sobre el panel (2 de labio
-// del riel + 4 de aire). guarda_retorno_meseta() comprueba esa envolvente
-// cerrada; no existe estado de apertura.
-retorno_meseta  = 4;
+// 9 desde el 2026-10-11 (persiana, D-S9): el retorno baja hasta pisar 1.0 de
+// la cara del riel del remate y deja 1.0 al canto del panel. Era 4 por
+// holgura_rail sobre el riel, una regla del barrido de cuando las filas
+// giraban, y dejaba una linea de sombra de 6 mm por la que se veia el ambar de
+// dentro (la rendija de la ficha 6). Lo vigila guarda_labio_chapas().
+retorno_meseta  = 9;
 
 // --- ventilacion con firma (spec §7) ---
 // Diametro de la fresa estandar del taller. NO es decoracion del BOM: manda
