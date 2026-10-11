@@ -4,7 +4,9 @@
 > synthesizer. Sixteen analog channels, each with an SSI2130 oscillator, an
 > MS-20 style LM13700 filter and SSI2164 VCAs; a 16-line FM matrix; an
 > 8-in/8-out patch bay routed through an analog crosspoint; and an STM32N657
-> brain running Rust firmware, in a two-tier Eurorack console. It began as
+> brain running Rust firmware, in a three-row console: Eurorack 3U on top for
+> the instrument, a 55 mm tile row in the middle, and a free 3U rack below for
+> guest modules. It began as
 > Samuel Ballesteros's engineering thesis at Universidad Yacambú, Venezuela, in
 > 2020. Today the firmware runs on the STM32N657 evaluation board and the
 > first voice board is being drawn; there is no finished unit yet. The first
