@@ -124,7 +124,7 @@ def autocomprobacion(p: dict[str, float]) -> None:
     g = perfil({**p, "angulo_inferior": 12, "angulo_superior": 35,
                 "alto_cara_inf": 190, "alto_cara_sup": 190,
                 "alto_frontal": 50, "paso_horizontal": 20,
-                "t_valle": 5, "ancho_total": 500, "t_cheek": 8})
+                "t_valle": 5, "ancho_total": 500})
     # A mano: 50 + 190*cos12 = 50 + 185.85 = 235.85
     assert abs(g["y_entrepiso"] - 235.85) < 0.05, g["y_entrepiso"]
     # A mano: 235.85 + 190*cos35 = 235.85 + 155.64 = 391.49
@@ -374,7 +374,8 @@ def _muesca_pie(p: dict[str, float]) -> float:
 
 def _cara_anillo_trasera(p: dict[str, float]) -> float:
     """La franja del anillo en el tramo trasero, de fuera a dentro: el bolsillo
-    de la trasera (labio + 11) + su pared + lo que entra el costado.
+    de la trasera (labio + 11) + su pared + el rebaje (vacio desde el
+    2026-10-11; fue lo que entraba el costado).
 
     FUE UN PARAMETRO DE 20 y es DERIVADO desde el 2026-08-30, con 22. El
     revisor de la ronda 3 cazo que se usaba como derivado Y se mutaba como
@@ -864,8 +865,9 @@ def _retiro_vertice(p: dict[str, float], P: list[tuple[float, float]],
 def _tol_pmma(p: dict[str, float]) -> float:
     """Tolerancia de espesor del PMMA: +-(0.4 + 0.1 x t), Schaeffer AG
     (2026-08-18). Es la cota que manda en todo lo que vive delante o detras de
-    una plancha de acrilico."""
-    return 0.4 + 0.1 * p["t_cheek"]
+    una plancha de acrilico, y desde el 2026-10-11 la unica es la trasera: se
+    calcula con su t_piel. Fue t_cheek, el de las mejillas, el mismo 8."""
+    return 0.4 + 0.1 * p["t_piel"]
 
 
 def _retiro_marco_pie(p: dict[str, float]) -> float:
@@ -1291,9 +1293,10 @@ def guarda_anclajes(p: dict[str, float]) -> None:
     material alrededor en LAS DOS piezas que une.
 
     La cabeza del M4 del riel va del lado del anillo (el tornillo entra en el
-    riel por su eje) y debajo de la placa, a z < t_anillo, hay acrilico hasta
-    rehundido + t_cheek + tolerancia + junta. Por eso la placa mide 6 y no 4
-    (plan, R1).
+    riel por su eje). La placa mide 6 y no 4 (plan, R1) porque debajo, a
+    z < t_anillo, hubo acrilico hasta el 2026-10-11; con la persiana el rebaje
+    se queda vacio, y 6 se queda: bajarla mueve los seis rieles y no compra
+    nada que se vea.
 
     Y LA FRANJA MANDA DOS VECES: por fuera la silueta, por dentro la pared del
     rebaje. Una rosca que se acerque a la primera raja el canto vista al
@@ -1306,11 +1309,6 @@ def guarda_anclajes(p: dict[str, float]) -> None:
     rosca puede estar perfectamente puesta en la franja y el AGUJERO DE PASO de
     la pieza que apoya estar en el aire. Cada tornillo se mide contra el canto
     de SU pieza, con el poligono real de esa pieza."""
-    tol = 0.4 + 0.1 * p["t_cheek"]
-    techo_pmma = p["rehundido_acrilico"] + p["t_cheek"] + tol + p["t_junta_asiento"]
-    assert techo_pmma <= p["t_anillo"], (
-        f"el acrilico llega a z={techo_pmma:.2f} y la cara interior del anillo "
-        f"esta en {p['t_anillo']:g}: el PMMA asoma por detras del anillo")
     # 2.2 es el alto de la cabeza del boton ISO 7380 M4; lo que el modelo fresa
     # es prof_cajeado_riel, y se LEE del parametro en vez de repetir aqui el
     # 2.5 a mano -- era la segunda copia del mismo numero, y la copia se
@@ -1318,7 +1316,7 @@ def guarda_anclajes(p: dict[str, float]) -> None:
     cabeza = 2.2
     assert p["prof_cajeado_riel"] >= cabeza, (
         f"el cajeado mide {p['prof_cajeado_riel']:g} y la cabeza del boton ISO "
-        f"7380 M4 mide {cabeza:g} de alto: asomaria y pinzaria el acrilico")
+        f"7380 M4 mide {cabeza:g} de alto: asomaria por la cara de la placa")
     assert p["t_placa"] - p["prof_cajeado_riel"] >= 3.0, (
         f"la placa de {p['t_placa']:g} con un cajeado de "
         f"{p['prof_cajeado_riel']:g} para la cabeza deja "
@@ -1458,8 +1456,7 @@ def guarda_anclajes(p: dict[str, float]) -> None:
         f"para roscarlo sin reventar una cara")
     print(f"anclajes: {len(centros)} roscas ciegas M4 por anillo en la franja "
           f"de {franja:g} (a {p['dist_rosca_ciega']:g} de la silueta, {canto:.2f} "
-          f"de sobra de canto); marco de {p['t_placa']:g} con la cabeza dentro "
-          f"(PMMA hasta z={techo_pmma:.2f})")
+          f"de sobra de canto); marco de {p['t_placa']:g} con la cabeza dentro")
     print(f"  el agujero del marco mas justo es el {peor_eje[1]} a "
           f"{peor_eje[0]:.2f} del canto; el M4 de brida mas justo, '{peor_brida[1]}' a "
           f"{peor_brida[0]:.2f} (minimo {minimo:.2f}); el M3 de la pestana a "
@@ -1670,8 +1667,9 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
     # plancha de 8 no de ya. El delantero aguanto hasta el 2026-08-25: era el
     # unico larguero del case sin plancha encima, o sea el unico que ninguna
     # puerta de anclaje miraba, y su papel -- atar los costados a media altura
-    # -- ya lo hace el del valle a la MISMA altura. Lo que costo se mide en
-    # guarda_costado(), en check_dxf.py.
+    # -- ya lo hace el del valle a la MISMA altura. Lo que costo lo midio
+    # guarda_costado(), en check_dxf.py, mientras hubo mejilla (hasta el
+    # 2026-10-11).
     # tapa_valle: solo la banda lisa del vuelo delantero, a ras del plano
     # del valle. Las diez M3 al canto de las alas murieron con el resto de la
     # plancha; quedan unicamente las dos pestanas atornilladas a las costillas.
@@ -1717,6 +1715,17 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
         railes.append((f"pestana valle {lado}", x0_pv, x1_pv,
                        P[3][1] - p["pestana_valle"], P[3][1] - t_acr,
                        za, zb))
+    # LAS DOS PERSIANAS (2026-10-11): por fuera de los anillos, de la tabla
+    # (suelo_persiana por encima) a la silueta. Van en `railes` por lo mismo que
+    # las pestanas: solapes() las cruza contra todo y _sobres() no les busca un
+    # DXF con su nombre (los suyos son los tres persiana_*). Los tacos no van
+    # en caja: viven en sus bolsillos y los mira guarda_tacos_persiana().
+    x_fin = max(v[0] for v in P)
+    y_fin = max(v[1] for v in P)
+    for nombre, za, zb in (("persiana izquierda", -p["t_persiana"], 0.0),
+                           ("persiana derecha", ancho_total,
+                            ancho_total + p["t_persiana"])):
+        railes.append((nombre, 0.0, x_fin, p["suelo_persiana"], y_fin, za, zb))
     # piel_trasera: UNA sola plancha desde el 2026-08-21. Fueron dos, partidas
     # a la altura del entrepiso porque cada una se atornillaba a los dos
     # largueros de su piso; muerta esa bandeja la frontera dejo de existir. Va
@@ -2115,6 +2124,16 @@ def canario_solapes(p: dict[str, float]) -> None:
         "solapes()")
 
 
+def canario_persiana_tabla(p: dict[str, float]) -> None:
+    """La persiana empieza suelo_persiana por encima de la tabla. Con -1 se
+    mete en ella, y solapes() tiene que cantarlo: es la prueba de que sus dos
+    cajas estan en la lista que cruza contra todo."""
+    fallos = solapes({**p, "suelo_persiana": -1.0})
+    assert any("persiana" in f and "bandeja_base" in f for f in fallos), (
+        "canario de la persiana no disparo: con suelo_persiana = -1 la "
+        "persiana entra 1 mm en la tabla y solapes() no lo ve")
+
+
 def _sat_gap(p: dict[str, float], c1: tuple[float, float], ang1: float,
              c2: tuple[float, float], ang2: float) -> float:
     """Holgura EXACTA (SAT, no AABB) entre 2 rieles de panel, cada uno girado
@@ -2160,14 +2179,17 @@ def guarda_parametros_vivos(p: dict[str, float]) -> None:
     """Ningun parametro promete una capacidad que el codigo no tiene.
 
     n_bulkheads dice '2 (3 si el vano flexa)' y la spec §11 lo remata: 'si el
-    prototipo flexa, n_bulkheads pasa a 3 y se re-exporta'. Pero costados()
-    dibuja DOS costados fijos -- uno en z=rehundido_acrilico y otro en
-    z=ancho_total - rehundido_acrilico - t_cheek, o sea los dos ASENTADOS EN EL
-    REBAJE de su anillo desde el 2026-08-28; no en z=0 y ancho_total-t_cheek,
-    que era donde vivian cuando la mejilla era la pieza exterior --, sin
-    ningun bucle sobre este parametro. Quien lo suba a 3 esperando un refuerzo
-    central no recibe nada: ni costado, ni error, ni aviso. El .scad sigue
-    sacando dos, y los DXF salen identicos.
+    prototipo flexa, n_bulkheads pasa a 3 y se re-exporta'. Pero costillas()
+    dibuja DOS anillos fijos -- uno en z = 0 y su espejo en ancho_total -- y
+    persianas() las dos de fuera, sin ningun bucle sobre este parametro. Quien
+    lo suba a 3 esperando un refuerzo central no recibe nada: ni anillo, ni
+    error, ni aviso. El .scad sigue sacando dos, y los DXF salen identicos.
+
+    EL SUJETO CAMBIO DOS VECES. Hasta el 2026-08-28 el costado portante era el
+    acrilico, y la puerta nombraba costados(); desde entonces el que cierra por
+    los lados es el ANILLO, y el 2026-10-11 las mejillas de acrilico se fueron
+    con la persiana. El tabique central seria un tercer anillo: la persiana es
+    una tapa de fuera y no tiene gemela en el centro.
 
     Eso es lo que hace peligroso al parametro muerto -- no que no haga nada,
     sino que PARECE que hace algo. Asi que en vez de borrarlo y perder la
@@ -2177,11 +2199,11 @@ def guarda_parametros_vivos(p: dict[str, float]) -> None:
     Issue #54. Su hermano alto_pie ya se resolvio solo -- cuando entraron las
     paticas dejo de estar huerfano."""
     assert p["n_bulkheads"] == 2, (
-        f"n_bulkheads = {p['n_bulkheads']}, y costados() solo sabe dibujar 2. "
-        f"El tercer costado central NO esta implementado: subir este numero no "
-        f"anade nada, solo lo parece. Para que sirva hay que tocar costados() "
+        f"n_bulkheads = {p['n_bulkheads']}, y costillas() solo sabe dibujar 2. "
+        f"El tercer anillo central NO esta implementado: subir este numero no "
+        f"anade nada, solo lo parece. Para que sirva hay que tocar costillas() "
         f"en sam17_case.scad, y de paso decidir como cruzan los largueros por "
-        f"el (hoy van de punta a punta) y que agujeros lleva ese costado.")
+        f"el (hoy van de punta a punta) y que agujeros lleva ese anillo.")
 
 
 # guarda_standoff() vivio aqui hasta el 2026-08-21. Comprobaba que gap_sombra
@@ -2730,8 +2752,9 @@ def guarda_aire(p: dict[str, float]) -> None:
 
 
 # Umbral de fluencia del PMMA. SUPUESTO DECLARADO (#106): nadie lo ha medido
-# sobre el acrilico que se va a comprar. Vive aqui porque guarda_costado(), en
-# check_dxf.py, importa este modulo.
+# sobre el acrilico que se va a comprar. Vive aqui con su cliente,
+# guarda_trasera_flexion(); hasta el 2026-10-11 lo leia tambien
+# guarda_costado(), en check_dxf.py, que se fue con la mejilla.
 SIGMA_PMMA = 10.0
 
 
@@ -2806,7 +2829,7 @@ def guarda_chaflan(p: dict[str, float]) -> None:
     # chaflan de esta puerta es cota de fresado de PMMA. Mismo motivo por el que
     # ya estaba fuera la tapa del valle -- una regla que no le aplica a la pieza
     # grita en falso.
-    t_min = min(p["t_cheek"], p["t_piel"])
+    t_min = p["t_piel"]
     assert p["chaflan"] >= 0.3, (
         f"chaflan = {p['chaflan']} mm: por debajo de 0.3 el taller no lo "
         f"ejecuta como chaflan, lo redondea. Pedir 0 (arista viva) es otra "
@@ -3309,8 +3332,6 @@ def canario_techo(p: dict[str, float]) -> None:
          "capturada", "pasada esa holgura la chapa deja de estar capturada en z"),
         (guarda_rebaje_chapa, {"aire_labios": 2.4},
          "la fresa", "con la rendija a 2.4 el rebaje mide 2.9 y la fresa es de 3"),
-        (guarda_tramo_trasero, {"entrada_costado_trasero": 2.5},
-         "el costado entra", "el costado entra 2.5 y se piden 3"),
         (guarda_tramo_trasero, {"pared_rebaje_trasera": 2.0},
          "pared de 2 contra 3", "una pared de 2 entre dos vaciados se rompe al fresar"),
         (guarda_tramo_trasero, {"rebaje_anillo": 5.0},
@@ -3766,9 +3787,10 @@ def guarda_miembro_alto(p: dict[str, float]) -> None:
 # El PMMA colado como material: modulo, Poisson y el radio del disco sobre el
 # que se reparte carga_mano (una mano apoyada, no una punta: con carga puntual
 # la teoria de placas da tension infinita). Viven aqui, junto a SIGMA_PMMA,
-# porque tienen DOS clientes: guarda_costado() en check_dxf.py (que importa
-# este modulo) y guarda_trasera_flexion() aqui. Hasta el 2026-08-30 estaban
-# dos veces, con dos nombres y dos justificaciones.
+# porque tuvieron DOS clientes: guarda_costado() en check_dxf.py (hasta el
+# 2026-10-11, cuando la mejilla se fue con la persiana) y
+# guarda_trasera_flexion() aqui. Hasta el 2026-08-30 estaban dos veces, con
+# dos nombres y dos justificaciones.
 E_PMMA = 3000.0       # MPa
 NU_PMMA = 0.37
 R_CONTACTO = 10.0     # mm
@@ -3888,8 +3910,8 @@ def _placa_trasera_barrido(p: dict[str, float], manos, apoyos_abajo: str = "pest
     de las cinco manos que barria pasaban del techo.
 
     carga_mano en cada mano de `manos` = [(x, y)], repartida como presion
-    uniforme en un disco de R_CONTACTO (el mismo con el que guarda_costado
-    acota el costado): integrada en x en cerrado modo a modo y en y por
+    uniforme en un disco de R_CONTACTO (el canto de una mano; fue tambien el
+    de la puerta del costado de acrilico, retirada el 2026-10-11): integrada en x en cerrado modo a modo y en y por
     Gauss de seis nodos -- una carga suave, sin puntos singulares --, asi que
     la tension bajo la mano es la del contacto. La reaccion de cada pestana
     se reparte en su ancho y en su altura (tres lineas). Las funciones de
@@ -4265,7 +4287,7 @@ def guarda_talon(p: dict[str, float]) -> None:
 
 
 def guarda_trasera_capturada(p: dict[str, float]) -> None:
-    """La trasera va DENTRO de los anillos como las mejillas, y nada la toca
+    """La trasera va DENTRO de los anillos, y nada la toca
     a distancia fija.
 
     SUSTITUYE A guarda_trasera_dentro() (#241), que vigilaba la trasera
@@ -4274,8 +4296,8 @@ def guarda_trasera_capturada(p: dict[str, float]) -> None:
          del costado (labio = rehundido_acrilico, hondo = rebaje_anillo,
          ancho = t_anillo - rehundido) y sitio para la plancha mas gruesa del
          lote mas la junta, con medio milimetro de sobra.
-      2. la pared entre los dos bolsillos mide >= 3, y el costado sigue
-         entrando >= 3 en el tramo trasero (cara_anillo - rebaje_costado).
+      2. la pared entre los dos bolsillos mide >= 3 (desde el 2026-10-11 el
+         otro bolsillo es el rebaje vacio del costado).
       3. las puntas de la trasera entran >= 5 en los bolsillos.
       4. NADA FIJO a menos de tol + 0.5 de su cara interior nominal dentro
          de su huella: la pared del bolsillo (en la rebanada del anillo), la
@@ -4409,8 +4431,8 @@ def guarda_trasera_capturada(p: dict[str, float]) -> None:
           f"sin un taladro; puntas {tr['entra']:.2f} dentro de los bolsillos "
           f"(labio {bo['u0']:g}, hondo {bo['hondo']:g}, ancho {bo['ancho']:g}, "
           f"{sitio:.2f} de sobra), cara vista rehundida "
-          f"{bo['u0'] + p['t_junta_asiento']:g} (la pared y lo que entra el "
-          f"costado, en guarda_tramo_trasero)")
+          f"{bo['u0'] + p['t_junta_asiento']:g} (la pared, en "
+          f"guarda_tramo_trasero)")
     print(f"  tope hacia dentro: la pared del bolsillo a {tr['x0'] - x_pared:.2f} y el "
           f"marco a {tr['x0'] - (P[6][0] - _retiro_marco_trasera(p)):.2f} de su cara "
           f"interior; el techo la tapa {tapa_arriba:.2f} y el talon {tapa_abajo:.2f}; "
@@ -4558,7 +4580,8 @@ def guarda_rebaje_chapa(p: dict[str, float]) -> None:
 
 def guarda_tramo_trasero(p: dict[str, float]) -> None:
     """La cara vertical P5-P6 del anillo, donde se cruzan TRES vaciados: el
-    bolsillo de la trasera, el del costado y -- desde el 2026-08-30 -- el
+    bolsillo de la trasera, el rebaje del costado (vacio desde el 2026-10-11:
+    la mejilla la sustituyo la persiana) y -- desde el 2026-08-30 -- el
     rebaje de chapa bajo los dos labios (el del techo arriba, el del talon
     abajo). Es el sitio mas cargado de la pieza, y el unico donde la franja no
     mide cara_anillo.
@@ -4567,18 +4590,20 @@ def guarda_tramo_trasero(p: dict[str, float]) -> None:
 
       y = 6..19 y 230.18..239.18  (bajo los labios de chapa)
         z 11..14  reborde 0..1; UN SOLO VACIADO de 1 a 15.5 (rebaje + bolsillo);
-                  pared; costado
+                  pared; rebaje vacio
         z  8..11  labio del bolsillo 0..4.5 con 3 DE HONDO; bolsillo; pared;
-                  costado
+                  rebaje vacio
       y = 19..230.18  (sin chapa)
         z  8..14  labio del bolsillo con los 6 de hondo de siempre
       y = 239.18..250.18  (fin del bolsillo, y la brida)
         z 11..14  reborde; rebaje; y desde 240.18 el cajeado de la brida
 
-    De ahi salen las tres cosas que esta puerta mide: que bajo los labios el
-    labio del bolsillo conserve cuerpo, que la pared entre vaciados no baje de
-    PARED_MIN_ANILLO, y que el costado siga entrando lo suyo aunque el bolsillo
-    se haya corrido 1.5 hacia dentro."""
+    De ahi salen las dos cosas que esta puerta mide: que bajo los labios el
+    labio del bolsillo conserve cuerpo, y que la pared entre vaciados no baje
+    de PARED_MIN_ANILLO. Media tambien una tercera -- que el costado entrara
+    al menos 3 y nunca mas que rebaje_anillo --, y murio con la mejilla el
+    2026-10-11: entrada_costado_trasero sigue dibujando la franja trasera, pero
+    ya no entra nada en ese rebaje."""
     bo = _bolsillo_trasero(p)
     reb, reh = p["rebaje_chapa"], p["rehundido_chapa"]
 
@@ -4587,7 +4612,7 @@ def guarda_tramo_trasero(p: dict[str, float]) -> None:
     # contra PARED_MIN_ANILLO: es la pared del anillo, no una cota de la
     # trasera, y el dia que el aluminio o la fresa cambien se sube una vez.
     assert bo["pared"] >= PARED_MIN_ANILLO - 1e-9, (
-        f"la pared entre el bolsillo de la trasera y el del costado mide "
+        f"la pared entre el bolsillo de la trasera y el rebaje del costado mide "
         f"{bo['pared']:g} contra {PARED_MIN_ANILLO:g} de minimo: pared de "
         f"{bo['pared']:g} contra {PARED_MIN_ANILLO:g}")
     # POR ARRIBA la manda la franja: la pared, el bolsillo y lo que entra el
@@ -4598,22 +4623,6 @@ def guarda_tramo_trasero(p: dict[str, float]) -> None:
         f"la franja del tramo trasero mide {_cara_anillo_trasera(p):g} y la de "
         f"los otros seis tramos {p['cara_anillo']:g}: mas de 6 de diferencia "
         f"deja de leerse como el mismo anillo y se ve un escalon desde el lado")
-
-    # --- lo que entra el costado, contra la franja de ESTE tramo -----------
-    entra = _cara_anillo_trasera(p) - bo["rebaje_costado"]
-    assert abs(entra - p["entrada_costado_trasero"]) < 1e-9
-    assert entra >= 3.0 - 1e-9, (
-        f"en el tramo trasero el costado entra {entra:.2f} en su bolsillo "
-        f"(franja {_cara_anillo_trasera(p):g} - rebaje {bo['rebaje_costado']:g}); "
-        f"se piden 3: el costado entra {entra:.2f}")
-    # Y POR ARRIBA: lo que entra el costado sale de la franja, asi que pasado
-    # el rebaje del costado de los otros tramos ya no es "la excepcion del
-    # tramo trasero" sino otro anillo. El costado entra 6 en los seis tramos.
-    assert entra <= p["rebaje_anillo"] + 1e-9, (
-        f"el costado entra {entra:.2f} en el tramo trasero y {p['rebaje_anillo']:g} "
-        f"en los otros seis: aqui entra MENOS por diseno (la trasera ocupa el "
-        f"sitio), nunca mas -- si hace falta mas, lo que hay que mover es el "
-        f"bolsillo de la trasera")
 
     # --- el labio del bolsillo bajo los dos labios de chapa ----------------
     # Donde hay chapa, el rebaje (z = 11..14) se come los 3 de arriba del labio
@@ -4650,8 +4659,8 @@ def guarda_tramo_trasero(p: dict[str, float]) -> None:
         f"de la brida volveria a roscar sobre la boca del bolsillo")
 
     print(f"tramo trasero: franja {_cara_anillo_trasera(p):g} (bolsillo "
-          f"{bo['u0']:g}..{bo['u1']:g}, pared {bo['pared']:g}, costado entra "
-          f"{entra:g}); bajo los labios de chapa el labio del bolsillo queda "
+          f"{bo['u0']:g}..{bo['u1']:g}, pared {bo['pared']:g}, rebaje vacio "
+          f"{p['entrada_costado_trasero']:g}); bajo los labios de chapa el labio del bolsillo queda "
           f"con {labio_bajo_chapa:g} de hondo y el rebaje con {reb:g}")
     # OTRA COTA SIN HOLGURA: rebaje_anillo - rebaje_chapa >= 3 se cumple con
     # IGUALDAD (6 - 3), o sea que el bolsillo del acrilico esta en su minimo
@@ -4709,15 +4718,13 @@ def _flecha_pata(p: dict[str, float], L: float, b: float, empotres: int
 
 def guarda_marco_ventana(p: dict[str, float]) -> None:
     """El marco de la ventana: ocho patas, el canto donde toca, y cada tramo
-    aguanta el empujon del acrilico con lo que tiene.
+    aguanta una mano con lo que tiene.
 
     Lo que mide, en orden: (1) el canto exterior de cada pata -- a la silueta
     en las tres filas, retirado t_costilla + hol_piel bajo cada chapa,
-    retirado t_anillo + 0.5 detras, sobre la pared entre bolsillos --; (2) que pise 6 de
-    acrilico mas alla de la ventana; (3) que cada pata aguante carga_mano
-    (el acrilico empujado desde fuera contra el marco) con menos de 2 mm de
-    flecha -- el acrilico necesita 3 para salirse del rebaje -- y por debajo
-    de RP02: las patas CON roscas, por su vano mayor entre dos roscas como
+    retirado t_anillo + 0.5 detras, sobre la pared entre bolsillos --; (2) que
+    la pata trasera no entre menos que las otras; (3) que cada pata aguante
+    carga_mano por debajo de RP02: las patas CON roscas, por su vano mayor entre dos roscas como
     viga biempotrada; las patas SIN rosca (chaflan, frente, meseta y la
     trasera, que no puede llevarla porque en la franja trasera no cabe),
     enteras, y empotradas solo por las esquinas que lo merecen -- vecina con
@@ -4728,7 +4735,16 @@ def guarda_marco_ventana(p: dict[str, float]) -> None:
     canto inferior del anillo en la misma franja; (5) que la muesca de la
     brida deje pata entera debajo -- es lo que puso brida_ancho en 14.5. Los
     agujeros contra el canto de su pata (las roscas del suelo a 6.85 del
-    canto retirado, que pide 6.75) van en guarda_anclajes()."""
+    canto retirado, que pide 6.75) van en guarda_anclajes().
+
+    EL CASO DE CARGA CAMBIO DE SUJETO EL 2026-10-11. Era el acrilico empujado
+    desde fuera contra el marco, y con el se fueron dos asertos: que el marco
+    pisara 6 de acrilico mas alla de la ventana, y que ninguna pata cediera mas
+    de 2 mm, que era lo que el acrilico necesitaba para salirse del rebaje. La
+    tension se queda: la persiana se quita para aspirar el interior por la
+    ventana (spec de la persiana, §4), y entonces la mano llega al marco.
+    marco_fondo_trasera = 30 se queda: lo puso el caso de carga que murio con
+    la mejilla, y bajarlo no compra nada que se vea."""
     patas = _marco_ventana(p)
     por = {q["nombre"]: q for q in patas}
     rm, rmt = _retiro_marco(p), _retiro_marco_trasera(p)
@@ -4749,9 +4765,6 @@ def guarda_marco_ventana(p: dict[str, float]) -> None:
         assert por[nm]["retiro"] == 0.0, nm
     assert abs(por["trasera"]["retiro"] - rmt) < 1e-9
     sombra = p["marco_fondo"] - p["cara_anillo"]
-    assert sombra >= 6.0 - 1e-9, (
-        f"el marco pisa {sombra:.2f} mm de acrilico mas alla de la ventana; el "
-        f"tope pide 6 (era lo que pisaban las placas)")
     # LA PATA TRASERA ENTRA marco_fondo_trasera, y nunca menos que las demas:
     # por debajo de marco_fondo el .scad la dibujaria a marco_fondo (la ventana
     # manda) y esta gemela no.
@@ -4800,11 +4813,6 @@ def guarda_marco_ventana(p: dict[str, float]) -> None:
             modo = (f"sin tornillo, {L:.1f} de largo, {emp} esquina(s) "
                     f"empotrada(s) (rosca vecina a {d0:.0f} y {d1:.0f} por el "
                     f"contorno)")
-        assert flecha <= 2.0, (
-            f"la pata '{nm}' del marco ({b:.2f} x {p['t_placa']:g}, {modo}) cede "
-            f"{flecha:.2f} mm con {p['carga_mano']:.0f} N: mas de 2, y el "
-            f"acrilico se sale del rebaje con 3. Una rosca mas en esa pata, o "
-            f"una en la vecina a menos de {EMPOTRE_MAX:g} de la esquina")
         assert sigma <= RP02_ALUMINIO, (
             f"la pata '{nm}' del marco trabaja a {sigma:.0f} MPa con "
             f"{p['carga_mano']:.0f} N ({modo}); RP02 = {RP02_ALUMINIO:g}")
@@ -4829,8 +4837,9 @@ def guarda_marco_ventana(p: dict[str, float]) -> None:
         f"Baja brida_ancho")
     print(f"marco de la ventana: {len(patas)} patas de {p['t_placa']:g} hasta "
           f"{p['marco_fondo']:g} de la silueta; canto a la silueta en las filas, "
-          f"retirado {rm:.2f} bajo la chapa y {rmt:.2f} en la trasera; pisa "
-          f"{sombra:g} de acrilico en seis tramos y {sombra_tr:g} en la trasera; "
+          f"retirado {rm:.2f} bajo la chapa y {rmt:.2f} en la trasera; entra "
+          f"{sombra:g} mas alla de la ventana en seis tramos y {sombra_tr:g} en "
+          f"la trasera; "
           f"{len(S_roscas)} roscas")
     for nm, b, flecha, sigma, modo in filas:
         if flecha >= 0.05:
@@ -5327,61 +5336,32 @@ def guarda_meseta_es_chapa(p: dict[str, float]) -> None:
 
 
 def guarda_rebaje(p: dict[str, float]) -> None:
-    """El acrilico cabe en el rebaje del anillo, y el anillo lo cubre entero.
+    """La franja interior del anillo, entre su rebaje y la silueta, admite una
+    rosca ciega M4 con 1.5 D a cada lado: 3 x d_M4_paso = 13.5. Es lo que puso
+    la cara vista en 20, y ahi asientan las placas de anclaje.
 
-    ES LA PUERTA QUE SUSTITUYE A guarda_apilado() Y A guarda_canto_visto() A LA
-    VEZ. Con la costilla de chapa el acrilico iba APILADO detras (chapa, junta,
-    PMMA) y un casquillo cruzaba las tres capas; con el anillo de pletina va
-    COPLANAR dentro de su ventana, asentado en un rebaje por detras. Ya no hay
-    orden de capas que verificar ni casquillo que dimensionar: hay un rebaje
-    que tiene que ser MAS HONDO que el acrilico mas grueso del lote.
+    MEDIA CUATRO COSAS Y SE QUEDA CON UNA (2026-10-11). Las otras tres median
+    la mejilla de acrilico en su rebaje, y se fueron con ella cuando la
+    sustituyo la persiana: (1) que el rebaje fuera mas hondo que el PMMA mas
+    grueso del lote mas su junta -- es la que puso el anillo en 14 --; (3) que
+    el acrilico solapara el labio al menos 5 para que lo retuviera; y (4) que
+    el labio tuviera cuerpo sobre el acrilico, 3 y el doble del chaflan. El
+    rebaje se queda vacio y tapado por la persiana (spec, §7.2): sus cotas
+    siguen dibujando el bolsillo de la trasera, y ese lo mide
+    guarda_tramo_trasero().
 
-    Cuatro condiciones, y la primera es la que puso el espesor en 14:
-
-      1. la profundidad del rebaje (t_anillo - rehundido) alcanza para el PMMA
-         mas grueso del lote -- 8 + 1.2 de tolerancia Schaeffer -- mas la junta
-         de asiento y media decima de aire. Con 12 de anillo el rebaje quedaba
-         a -0.2: no cabia.
-      2. la franja interior (cara_anillo - rebaje_anillo) admite un M4 a rosca
-         ciega con 1.5 D a cada lado: 3 x d_M4_paso = 13.5. Es lo que puso la
-         cara vista en 20.
-      3. el acrilico solapa el labio al menos 5 mm, para que lo retenga.
-      4. el labio tiene cuerpo sobre el acrilico: 3 mm de la spec, y nunca
-         menos del doble del chaflan -- la arista de la ventana se lo come por
-         la cara vista, y con rehundido = chaflan el labio se queda en filo.
-
-    El canto del PMMA queda cubierto POR CONSTRUCCION: un anillo con ventana
-    rodea al acrilico en todo su perimetro. Por eso esta puerta no recorre
-    tramos -- ya no hay 'tramo con ala' que decidir."""
-    tol = 0.4 + 0.1 * p["t_cheek"]            # Schaeffer AG, 2026-08-18
-    hondo = p["t_anillo"] - p["rehundido_acrilico"]
-    pide = p["t_cheek"] + tol + p["t_junta_asiento"] + 0.5
-    assert hondo >= pide, (
-        f"el rebaje del anillo tiene {hondo:.2f} mm de fondo (t_anillo "
-        f"{p['t_anillo']:g} - rehundido {p['rehundido_acrilico']:g}) y el "
-        f"acrilico mas grueso del lote pide {pide:.2f} ({p['t_cheek']:g} + "
-        f"{tol:.1f} de tolerancia + {p['t_junta_asiento']:g} de junta + 0.5 de "
-        f"aire). Con ese anillo el PMMA no entra: sube t_anillo, no bajes la "
-        f"junta")
+    El rebaje ES UN HUECO DEL ANILLO, no una cota de la pieza que asentaba en
+    el, y esta condicion lo mide asi: lo que queda de franja para los
+    tornillos."""
     franja = p["cara_anillo"] - p["rebaje_anillo"]
     assert franja >= 3 * p["d_M4_paso"], (
         f"la franja interior del anillo mide {franja:.2f} (cara {p['cara_anillo']:g} "
         f"- rebaje {p['rebaje_anillo']:g}) y una rosca ciega M4 con 1.5 D a cada "
         f"lado pide {3 * p['d_M4_paso']:.2f}. Ahi asientan las placas de anclaje")
-    assert p["rebaje_anillo"] >= 5, (
-        f"el acrilico solo solapa el labio {p['rebaje_anillo']:g} mm; con menos de "
-        f"5 el labio no lo retiene")
-    labio = max(3.0, 2 * p["chaflan_anillo"])
-    assert p["rehundido_acrilico"] >= labio, (
-        f"el labio tiene {p['rehundido_acrilico']:g} mm de cuerpo sobre el "
-        f"acrilico y pide {labio:g}, que es el mayor de dos minimos: los 3 de "
-        f"la spec (cuerpo del labio) y 2 x {p['chaflan_anillo']:g} de chaflan "
-        f"-- el de la arista de la ventana se come {p['chaflan_anillo']:g} mm "
-        f"de ese cuerpo por la cara vista, y se pide el doble para que quede "
-        f"al menos otro tanto de labio entero debajo")
-    print(f"rebaje: anillo de {p['t_anillo']:g}, acrilico {p['rehundido_acrilico']:g} "
-          f"atras en un rebaje de {hondo:.1f} (pide {pide:.1f}); franja de "
-          f"{franja:.0f} para las roscas ciegas; cara vista {p['cara_anillo']:g}")
+    print(f"rebaje: anillo de {p['t_anillo']:g}, rebaje vacio de "
+          f"{p['rebaje_anillo']:g} x {p['t_anillo'] - p['rehundido_acrilico']:g} "
+          f"tras un labio de {p['rehundido_acrilico']:g}; franja de {franja:.0f} "
+          f"para las roscas ciegas; cara vista {p['cara_anillo']:g}")
 
 
 def _seccion_anillo(p: dict[str, float], tramo: int | None = None
@@ -6326,6 +6306,7 @@ def main() -> int:
         f"usa {E_ALUMINIO:.0f}: el anillo se dimensionaria con un modulo que "
         f"el resto del repo no cree.")
     canario_solapes(p)
+    canario_persiana_tabla(p)
     canario_alineacion(p)
     guarda_rebaje(p)
     canario_acceso_marco(p)
@@ -6424,7 +6405,7 @@ def main() -> int:
     # LA VERIFICACION DE VERDAD VIVE EN check_dxf.py, contra el contorno
     # RELEIDO del DXF de la costilla, que es un artefacto independiente y por
     # tanto si puede contradecir al modelo. Mismo motivo por el que
-    # guarda_costado() vive alli y no aqui.
+    # guarda_costado() vivio alli, y no aqui, mientras hubo mejilla.
     #
     # Y ES POR LO QUE LA IGUALDAD ancho_util == largo_riel QUE TRAE EL MERGE
     # CON MAIN (2026-08-29) NO ENTRA AQUI. En `main` el riel sigue yendo de

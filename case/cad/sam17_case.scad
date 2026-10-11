@@ -2,8 +2,8 @@
 // Fuente de verdad dimensional: params.scad. Este fichero DIBUJA;
 // clearance_budget.py DECIDE. Angulos desde la vertical.
 //
-//   openscad -o out.stl -D 'PART="costado"'    sam17_case.scad
-//   openscad -o out.dxf -D 'PART="costado_2d"' sam17_case.scad
+//   openscad -o out.stl -D 'PART="assembly_persiana"' sam17_case.scad
+//   openscad -o out.dxf -D 'PART="costilla_2d"'       sam17_case.scad
 
 include <params.scad>
 include <persiana_generada.scad>
@@ -189,7 +189,8 @@ function x_valle() =
 //
 // El punto mas desasistido del costado NO era el suyo ni antes ni despues:
 // esta en el canto trasero a media altura, donde ademas apoya la trasera.
-// Se llevan 228 g y dos M5. Lo vigila guarda_costado() en clearance_budget.
+// Se llevan 228 g y dos M5. Lo vigilo guarda_costado(), en check_dxf, hasta
+// el 2026-10-11: la mejilla se fue con la persiana.
 //
 // LO QUE ESTE CALCULO NO CUBRE, y hay que decirlo: el racking del cajon
 // entero. La spec §11 ya lista la rigidez del vano de 528 sin bulkhead
@@ -476,8 +477,9 @@ function radios_contorno() =
 // filas ([2], [3], [4]), que conservan la entasis.
 function tramos_rectos() = [for (i = [0 : len(pts_contorno()) - 1]) if (i < 2 || i > 4) i];
 
-// Va DENTRO de perfil_lateral y no en costado_2d a proposito: costado_2d
-// resta los agujeros DESPUES, de modo que el redondeo no toca los taladros.
+// Va DENTRO de perfil_lateral y no en cada pieza a proposito: las que salen de
+// el (la costilla, la persiana; hasta el 2026-10-11 tambien costado_2d) restan
+// sus agujeros DESPUES, de modo que el redondeo no toca los taladros.
 // Si se aplicara al resultado de la resta, los M4 saldrian fuera de
 // diametro -- el mismo tipo de fallo que el cupon pentagonal.
 //
@@ -518,48 +520,6 @@ module perfil_lateral() {
     // NARIZ -- chapa plana, o sea "algo plano".
     polygon(redondear(pts_contorno(), radios_contorno(), tramos_rectos()));
 }
-
-// EL COSTADO YA NO LLEVA UN SOLO TORNILLO. Es piel: un contorno de acrilico y
-// nada mas. Los cuatro M4 de riel y los M5 de transversal se fueron a la
-// costilla el 2026-08-27, y con ellos se fue lo ultimo que hacia de esta pieza
-// una pieza portante.
-//
-// UN AGUJERO QUE NO RECIBE TORNILLO NO ES NEUTRO EN ACRILICO: quita material
-// justo donde el radio de la esquina en punta ya andaba corto, y cada uno es un
-// concentrador de tension en una plancha que rompe por el canto.
-//
-// Como se sujeta entonces: estuvo capturada entre las dos alas de la costilla
-// de chapa (spec 2) y desde el 2026-08-28 ASIENTA EN EL REBAJE DEL ANILLO --
-// el labio la sostiene hacia fuera por todo el perimetro y los clips la
-// retienen hacia dentro. Sin tornillo, y por eso guarda_costado() dejo de
-// medir vanos entre anclas y pasa a medir contra el canto de la ventana, que
-// es apoyo CONTINUO.
-//
-// LE VOLVIERON CUATRO AGUJEROS EL 2026-08-27 Y SE VAN EL 28. Eran los pasos
-// de casquillo: con el marco POR FUERA y el acrilico APILADO detras, el M4 del
-// riel tenia que cruzar el PMMA antes de morder, y el casquillo de aluminio se
-// comia el apriete para que no lo pinzara. Ese apilado murio con el anillo --
-// el acrilico va DENTRO de la ventana, coplanar, y el tornillo del riel ni lo
-// roza: entra en una placa de anclaje por la cara interior. Vuelve a cero.
-//
-// EL 2026-08-28 EL CONTORNO SE RETRANQUEA. Ya no es la silueta del case: es la
-// silueta menos retiro_rebaje() (lo que el anillo tapa por delante) menos la
-// holgura de montaje, porque la pieza entra POR DETRAS y asienta en el rebaje.
-// Los rebaje_anillo - hol_costado que sobresalen bajo el labio son justo lo que
-// lo retiene, y lo mide guarda_costado() en check_dxf como vano libre.
-module costado_2d() {
-    // EL CANTO TRASERO ENTRA 3, NO 6 (2026-08-29, noche, 2): en el tramo
-    // trasero el rebaje retrocede a la pared entre su bolsillo y el de la
-    // trasera (rebaje_costado_trasero). Nadie lo ve: ese canto vive detras
-    // del labio y el marco lo sigue pisando.
-    difference() {
-        offset(delta = -(retiro_rebaje() + hol_costado)) perfil_lateral();
-        translate([pts_perfil()[6].x - rebaje_costado_trasero() - hol_costado, -1])
-            square([100, 400]);
-    }
-}
-
-module costado() { linear_extrude(t_cheek) costado_2d(); }
 
 // --- EL ANILLO DE PLETINA -------------------------------------------------
 // La costilla es un anillo FRESADO desde el 2026-08-28: silueta por fuera,
@@ -768,8 +728,6 @@ module costilla_dorso_2d() {
 // _centros_rosca_ciega() en clearance_budget.py, y quien las cruza es
 // taladros_anillo() y taladros_marco_ventana() en check_dxf releyendo los DXF.
 
-// Tolerancia de espesor del PMMA: +-(0.4 + 0.1 x t), Schaeffer AG (2026-08-18).
-function tol_pmma() = 0.4 + 0.1*t_cheek;
 function retiro_marco_pie() = t_costilla + hol_piel;
 function retiro_marco_chapa() = rehundido_chapa + t_costilla + hol_piel;
 function retiro_marco() = retiro_marco_chapa();
@@ -2363,9 +2321,7 @@ module chasis_abierto() {
     translate([t_chapa, t_chapa, 0]) chasis_contenido();
 }
 
-if (PART == "costado")             costado();
-else if (PART == "costado_2d")     costado_2d();
-else if (PART == "costilla_2d")    costilla_2d();
+if (PART == "costilla_2d")         costilla_2d();
 // El dorso del anillo va en su propio fichero por lo mismo que el cajeado
 // KONDOR: un DXF 2D no sabe decir "a 11 mm de profundidad". Sin el, el anillo
 // vuelve del taller SIN REBAJE y el acrilico no entra.
@@ -2405,23 +2361,6 @@ else if (PART == "persiana_dorso_2d")    persiana_dorso_2d();
 else if (PART == "assembly_persiana")    persianas();
 else if (PART == "costilla_bolsillos_2d") costilla_bolsillos_2d();
 else assert(false, str("PART desconocido: ", PART));
-
-// costado_2d vive en el plano XY del perfil (X = fondo, Y = altura);
-// costado() lo extruye en +Z por t_cheek, o sea Z pasa a ser el ancho.
-//
-// EL ACRILICO VA DENTRO DE LA VENTANA desde el 2026-08-28, no apilado detras.
-// Su cara exterior queda rehundido_acrilico por detras de la cara del anillo
-// -- eso es lo que se ve desde fuera: metal, y el PMMA hundido 3 mm -- y su
-// cara interior a rehundido + t_cheek, o sea todavia dentro del rebaje, que es
-// mas hondo. Entre el labio y el PMMA va la junta de asiento; aqui no se
-// dibuja (1 mm de EPDM no cambia ninguna colision) y la mide guarda_rebaje().
-//
-// El apilado que esto sustituye era t_costilla + t_junta + t_cheek desde
-// fuera, con un casquillo cruzando las tres capas.
-module costados() {
-    translate([0, 0, rehundido_acrilico]) costado();
-    translate([0, 0, ancho_total - rehundido_acrilico - t_cheek]) costado();
-}
 
 // Los dos anillos son las capas exteriores: ocupan z=0..t_anillo y
 // z=ancho_total-t_anillo..ancho_total, y entre sus caras interiores cruza todo
@@ -2753,7 +2692,7 @@ module paticas() {
 }
 
 module assembly() {
-    costados();
+    persianas();
     rails();
     costillas();
     miembros();
@@ -2765,8 +2704,9 @@ module assembly() {
     %paneles();                        // paneles de modulo: solo referencia
 }
 
+// La trasera, sola: las mejillas de acrilico las sustituyo la persiana el
+// 2026-10-11.
 module assembly_acrilico() {           // STL separado para Blender (Task 8)
-    costados();
     planchas_acrilico();
 }
 
@@ -2853,15 +2793,10 @@ module assembly_aluminio() {           // idem, Z-Rails + miembros + paneles sol
 // las piezas pueden desbordarlo (nesting real lo hace el servicio de corte).
 module lienzo_2d() {
     sep = 8;
-    P = pts_perfil();
-    prof = max([for (pp = P) pp.x]);   // ancho real de costado_2d (fondo)
-    alto = max([for (pp = P) pp.y]);   // alto real de costado_2d
     au  = ancho_util;
-    aup = ancho_util - 2*hol_piel;
-    // fila 1: los 2 costados
-    costado_2d();
-    translate([prof + sep, 0]) costado_2d();
-    // fila 2: las 2 planchas de acrilico. Fueron 6 hasta el 2026-08-21 (murio
+    // UNA FILA desde el 2026-10-11: la de los dos costados se fue con la
+    // mejilla, que la sustituyo la persiana (de aluminio, otro taller).
+    // Las planchas de acrilico. Fueron 6 hasta el 2026-08-21 (murio
     // la bandeja de entrepiso y las dos pieles se fundieron en una), y 4 hasta
     // el 2026-08-25, cuando la tapa del valle paso a ALUMINIO.
     //
@@ -2875,9 +2810,8 @@ module lienzo_2d() {
     // la variable ausente como undef y coloca la pieza en NaN --, y como el
     // lienzo es PREVIEW y no lo relee check_dxf, ninguna puerta lo hubiera
     // cazado. Por eso va encadenado sin huecos y no por indices sueltos.
-    y2 = alto + sep;
-    x1 = 0;               translate([x1, y2]) bandeja_base_2d();
-    x2 = x1 + au + sep;   translate([x2, y2]) piel_trasera_2d();
+    x1 = 0;               bandeja_base_2d();
+    x2 = x1 + au + sep;   translate([x2, 0]) piel_trasera_2d();
     %square([1000, 600]);
 }
 
@@ -2886,8 +2820,8 @@ module bom() {
     echo(str("BOM: COSTILLA x2 -- anillo de PLETINA de aluminio FRESADA, una",
              " pieza por lado (sin soldar, sin doblar). Espesor ", t_anillo,
              ", cara vista ", cara_anillo, ", rebaje de ", rebaje_anillo,
-             " x ", t_anillo - rehundido_acrilico, " por detras donde",
-             " asienta el costado, chaflan ", chaflan_anillo,
+             " x ", t_anillo - rehundido_acrilico, " por detras (vacio desde el",
+             " 2026-10-11: lo tapa la persiana), chaflan ", chaflan_anillo,
              " x 45 grados en las dos aristas de la cara vista. P1 y P4 a",
              " radio_chapa (", radio_chapa, ", dobla chapa a 90 encima); P0 y P6",
              " a chaflan de ", chaflan_nariz, " (la nariz y el talon), y P5",
@@ -2898,6 +2832,12 @@ module bom() {
              bolsillo_y_fin(), "), con el rebaje del costado retirado a ",
              rebaje_costado_trasero(), " ahi (pared de ", pared_rebaje_trasera,
              " entre los dos)."));
+    echo(str("     Y EN LA CARA DE FUERA, DIEZ BOLSILLOS por anillo para los tacos",
+             " de la persiana (2026-10-11): ", d_bolsillo_taco, " (dos de",
+             " localizacion: uno de ", d_taco, " H7 y una colisa de ", d_taco,
+             " x ", colisa_taco, ") x ", hondo_bolsillo_taco, " de hondo, con el",
+             " asiento del iman de ", d_iman + 0.1, " al fondo. Los dibuja",
+             " costilla_bolsillos_2d; las profundidades van en el pliego."));
     echo(str("     NINGUN TORNILLO ATRAVIESA LA CARA VISTA: ",
              len(centros_rosca_ciega()), " roscas ciegas M4 en la cara",
              " interior (taladros_anillo, broca ", d_M4_rosca,
@@ -2925,8 +2865,8 @@ module bom() {
              " corrida por los siete tramos, ", marco_fondo, " hacia dentro",
              " desde la silueta. Una por costado, ESPEJADAS: el mismo",
              " contorno se corta x2 y se cajea por caras opuestas."));
-    echo("     ES LO QUE ATA LOS SEIS RIELES AL CASE Y LO QUE RETIENE EL");
-    echo("     ACRILICO HACIA DENTRO por todo el perimetro. Sustituye desde el");
+    echo("     ES LO QUE ATA LOS SEIS RIELES AL CASE (hasta el 2026-10-11");
+    echo("     retenia ademas la mejilla de acrilico). Sustituye desde el");
     echo("     2026-08-29 por la noche a las tres placas de anclaje, los dos");
     echo("     clips y la escuadra de la trasera de cada costado: 'la placa es");
     echo("     el marco de la fila' (Samuel, 28-08) llevado hasta el final.");
@@ -2940,10 +2880,9 @@ module bom() {
              retiro_marco(), " bajo cada chapa (nariz, pies, meseta, retorno) y ",
              retiro_marco_trasera(), " en la trasera, que es t_anillo + 0.5:",
              " la pata apoya sobre la pared entre el bolsillo de la trasera y",
-             " el del costado --, y pisa ", marco_fondo - cara_anillo,
-             " de acrilico volado por seis tramos y ",
-             marco_fondo_trasera - cara_anillo, " por la trasera: a traves del",
-             " PMMA se lee una sombra uniforme de 6, no retazos."));
+             " el del rebaje --, y entra ", marco_fondo - cara_anillo,
+             " mas alla de la ventana en seis tramos y ",
+             marco_fondo_trasera - cara_anillo, " en la trasera."));
     echo("     Lleva ademas la rosca M3 pasante de la pestana de la banda del");
     echo("     valle y UNA MUESCA en la esquina trasera-alta, abierta al canto");
     echo("     exterior, sobre la huella de la brida del miembro alto. Sus dos");
@@ -2958,7 +2897,7 @@ module bom() {
     echo(str("     anillo, desde dentro, con sus ", len(roscas_marco()),
              " M4. Las cabezas de los diez que viven en las filas quedan"));
     echo("     fuera de la huella de los rieles (#242). Al reves no se puede");
-    echo("     montar el riel, y el costado no entra con el marco puesto.");
+    echo("     montar el riel.");
     echo(str("BOM: tornillo M4 boton x", 2*len(roscas_marco()), " -- el marco",
              " de la ventana al anillo, a rosca ciega en la franja de ",
              cara_anillo - rebaje_anillo, " (", len(roscas_marco()),
@@ -3033,12 +2972,6 @@ module bom() {
     echo(str("BOM: tornillo M4 avellanado x", len(nariz_m4_z()), " -- el pie de",
              " la nariz a la TABLA, desde dentro, con el mismo herraje que las",
              " paticas (d_pie_tornillo). Ninguno en la cara vista."));
-    echo(str("BOM: JUNTA DE ASIENTO EPDM x2 (una por anillo), ",
-             t_junta_asiento, " mm -- perfil continuo en el rebaje, entre",
-             " el labio y el costado. Nunca aluminio contra acrilico. No",
-             " es la junta de 4 mm del apilado viejo (muerta el",
-             " 2026-08-28): esta va EN EL PLANO del rebaje, no atravesada",
-             " por ningun tornillo."));
     echo(str("BOM: tornillo M4 x", len(chasis_tornillos_int()), " + TUERCA",
              " REMACHABLE (clinch, PEM S-M4) en el suelo del chasis -- el",
              " chasis del PSU a la TABLA, desde abajo, por su suelo. Cabezas",
@@ -3057,7 +2990,8 @@ module bom() {
     n_fila = max(1, round(au/100));
     echo(str("BOM: tornillo M3 x2 -- las dos PESTANAS de la banda del valle al",
              " marco de la ventana. La trasera ya no lleva NINGUNO: va",
-             " capturada como las mejillas (2026-08-29, noche, 2); murieron los ",
+             " capturada en los bolsillos de los anillos (2026-08-29, noche, 2);",
+             " murieron los ",
              2*n_fila, " M3 con sus tuercas y arandelas de nylon, y con ellos",
              " las diez cabezas que se veian atras. Atras no se ve un tornillo."));
     echo("     LOS DOS DE LA PESTANA VAN AL MARCO DE LA VENTANA, no al anillo:");
@@ -3066,12 +3000,12 @@ module bom() {
     echo("     la franja de 14 solo admite hasta 10.25 -- la broca saldria por");
     echo(str("     la pared del rebaje. En el marco hay ", t_placa,
              " mm de pletina y se rosca pasante (ruling R3)."));
-    echo(str("BOM: la TRASERA es UNA plancha de t=", t_piel, ", CAPTURADA COMO",
-             " LAS MEJILLAS (2026-08-29, noche, 2): sus puntas dentro de un",
+    echo(str("BOM: la TRASERA es UNA plancha de t=", t_piel, ", CAPTURADA",
+             " (2026-08-29, noche, 2): sus puntas dentro de un",
              " bolsillo fresado en la cara interior de cada anillo a lo largo",
              " del tramo trasero -- labio de ", rehundido_acrilico, ", ",
              rebaje_anillo, " de hondo, ", t_anillo - rehundido_acrilico,
-             " de ancho: los numeros del bolsillo del costado --, la cara",
+             " de ancho: los numeros del rebaje del anillo --, la cara",
              " vista rehundida ", rehundido_acrilico + t_junta_asiento,
              " sobre junta de EPDM de ", t_junta_asiento, ", el canto de abajo",
              " sobre el pie del talon y el de arriba bajo la brida del techo."));
@@ -3171,16 +3105,28 @@ module bom() {
     echo(str("     Y catorce taladros pasantes de ", d_pie_tornillo, ": 4 de",
              " las paticas, 3 de la nariz, 3 del talon y 4 del chasis del PSU",
              " (los siete ultimos desde el 2026-08-29). Los censa guarda_zocalo()."));
-    echo(str("BOM: plancha de acrilico t=", t_cheek, ": costados x2 y",
-             " TRASERA -- 3 piezas."));
+    n_taco = len(tacos_persiana);
+    n_fino = len([for (t = tacos_persiana) if (t[2] == "fino") 1]);
+    echo(str("BOM: PERSIANA x2 (2026-10-11) -- aluminio anodizado en negro, por",
+             " fuera de cada anillo: placa de ", t_persiana, " con ",
+             len(varillas_persiana), " varillas de ", varilla_persiana,
+             ", borde de ", borde_persiana, ", dos atados por dentro y ", n_taco,
+             " tacos de ", d_taco, " x ", alto_taco, " en el dorso, del mismo",
+             " bloque (pletina de 12 frenteada: ninguna pieza suelta). ESPEJADAS:",
+             " el mismo contorno x2, con los atados y los tacos por caras",
+             " opuestas. La dibujan persiana_2d, persiana_pasante_2d y",
+             " persiana_dorso_2d."));
+    echo(str("BOM: IMAN de neodimio N42 -- ", 2*(n_taco - n_fino), " de ", d_iman,
+             " x ", alto_iman_anillo, " (en el anillo) y ", 2*(n_taco - n_fino),
+             " de ", d_iman, " x ", alto_iman_taco, " (en el taco); en el tramo",
+             " trasero ", 4*n_fino, " finos de ", d_iman, " x ", alto_iman_fino,
+             ", uno a cada lado. ", 2*n_taco, " pares, con la polaridad fija y",
+             " marcada."));
+    echo(str("BOM: plancha de acrilico t=", t_piel, ": la TRASERA -- 1 pieza."));
     echo("     UN SOLO ESPESOR en todo el cuerpo. Hubo dos hasta el 2026-08-25:");
     echo("     los 5 mm existian para UNA pieza, y esa pieza es ahora de");
     echo("     aluminio. Media plancha de 5 que ya no hay que comprar.");
     echo("     Y desde el 2026-08-27 el suelo tampoco es acrilico: es la tabla.");
     echo("     Y desde el 2026-08-27 la tapa de remate tampoco existe: la");
     echo("     meseta del techo es el ala del miembro alto.");
-    echo("     LOS COSTADOS YA NO LLEVAN UN SOLO TALADRO. Son PIEL: asientan");
-    echo("     en el rebaje del anillo, sin tornillo -- el labio los sostiene");
-    echo("     hacia fuera y el marco de la ventana hacia dentro, por los");
-    echo("     siete tramos.");
 }

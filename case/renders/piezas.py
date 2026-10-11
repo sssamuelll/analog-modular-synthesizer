@@ -30,9 +30,9 @@ OPENSCAD = r"C:\Program Files\OpenSCAD\openscad.exe"
 # nombre de pieza -> material de render.py (o el acero, que render.py no tiene)
 GRUPOS = {
     "aluminio": ["anillos", "rieles_3u", "rieles_1u", "paneles", "marcos_ventana",
-                 "nariz", "talon", "miembro_alto", "tapa_valle"],
+                 "nariz", "talon", "miembro_alto", "tapa_valle", "persianas"],
     "junta": ["tira_anti_ruido_valle"],
-    "acrilico": ["costados", "piel_trasera"],
+    "acrilico": ["piel_trasera"],
     "madera": ["tabla", "paticas"],
     "acero": ["chasis"],
 }

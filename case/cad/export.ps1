@@ -46,7 +46,7 @@ Remove-Item (Join-Path $build "*.stl") -ErrorAction SilentlyContinue
 # EL MARCO DE LA VENTANA (2026-08-29, noche) sustituye a las tres placas, el
 # clip y la escuadra; el talon al miembro bajo; y la banda del miembro alto a
 # los dos marcos de la trasera. Nueve DXF pasan a tres.
-$piezas = "costado_2d","costilla_2d","costilla_dorso_2d","cupon_anillo_2d","bandeja_base_2d","tapa_valle_2d",
+$piezas = "costilla_2d","costilla_dorso_2d","cupon_anillo_2d","bandeja_base_2d","tapa_valle_2d",
           "miembro_alto_2d","talon_2d","nariz_2d","marco_ventana_2d",
           "piel_trasera_2d",
           "persiana_2d","persiana_pasante_2d","persiana_dorso_2d","costilla_bolsillos_2d",

@@ -94,11 +94,6 @@ GIRADAS: set[str] = set()
 # que relee taladros_marco_ventana().
 
 
-def _retiro_costado(p: dict[str, float]) -> float:
-    """Cuanto se retranquea el acrilico del costado respecto a la silueta."""
-    return p["cara_anillo"] - p["rebaje_anillo"] + p["hol_costado"]
-
-
 def _sobre_dorso(cb, p: dict[str, float],
                   g: dict[str, float]) -> tuple[float, float]:
     """Envolvente del DXF del dorso: el contorno del rebaje MAS los circulos
@@ -140,13 +135,6 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
     _, planchas, _ = cb._cajas_solidas(p)
 
     dims: dict[str, tuple[float, float]] = {
-        # EL COSTADO VA DENTRO DE LA VENTANA DEL ANILLO desde el 2026-08-28:
-        # su contorno es la silueta retranqueada (cara - rebaje + holgura).
-        # Y SU CANTO TRASERO ENTRA 3, NO 6, desde la trasera capturada
-        # (2026-08-29, noche, 2): retrocede a la pared entre bolsillos.
-        "costado_2d": (cb.fondo(p) - _retiro_costado(p)
-                       - (p["t_anillo"] + p["pared_rebaje_trasera"] + p["hol_costado"]),
-                       g["alto_total"] - 2 * _retiro_costado(p)),
         # LA COSTILLA VUELVE A SER EL CONTORNO DE LA PIEZA: un anillo fresado
         # no tiene desarrollo. Silueta entera, con la ventana dentro.
         "costilla_2d": (cb.fondo(p), g["alto_total"]),
@@ -356,8 +344,8 @@ def _cantos(nombre: str) -> list:
     """TODAS las aristas de canto de una pieza: contorno exterior, ventana
     interior y cualquier vaciado. Fuera quedan los agujeros de tornillo.
 
-    `_contorno_costado()` se queda con la componente mas grande y basta para el
-    costado, que es macizo. La COSTILLA no lo es: es una banda, y un taladro
+    `_contorno_exterior()` se queda con la componente mas grande y basta para
+    una pieza maciza. La COSTILLA no lo es: es una banda, y un taladro
     suyo tiene DOS cantos de los que apartarse. Mirar solo el de fuera es
     exactamente el fallo que esta puerta caza -- los cuatro M4 caen a 16 mm del
     contorno, que sobra, y a 4 mm de la ventana, que no."""
@@ -392,11 +380,6 @@ def _contorno_exterior(nombre: str) -> list:
         return (max(px) - min(px)) * (max(py) - min(py))
 
     return [aristas[j] for j in max(comps, key=area)]
-
-
-def _contorno_costado() -> list:
-    """Aristas del contorno EXTERIOR de costado_2d, releidas del DXF."""
-    return _contorno_exterior("costado_2d")
 
 
 def _dentro(contorno, pt) -> bool:
@@ -565,22 +548,14 @@ def agujeros_donde_toca() -> list[str]:
     p = cb.leer_params()
     f: list[str] = []
 
-    # --- costado: CERO agujeros, otra vez ---
-    # Los tuvo (once M5), no los tuvo (2026-08-27 por la manana), tuvo cuatro
-    # pasos de casquillo (por la tarde) y desde el 2026-08-28 no tiene ninguno:
-    # va DENTRO de la ventana del anillo, coplanar, y nada lo atraviesa.
-    if _redondos("costado_2d"):
-        f.append(f"costado_2d: {len(_redondos('costado_2d'))} agujero(s) redondo(s) "
-                 f"en el acrilico. El costado es PIEL dentro del anillo: cero")
     # --- trasera: CERO agujeros de tornillo desde la trasera capturada ---
     # (2026-08-29, noche, 2). Tuvo 16 con las escuadras y 10 con las bandas;
-    # va DENTRO de los bolsillos de los anillos como el costado, y nada la
+    # va DENTRO de los bolsillos de los anillos, y nada la
     # atraviesa. Lo que si lleva -- rejilla, ondas, ventana de la red -- no
     # es redondo, y lo miran sus propias puertas.
     if (PLANS / "piel_trasera_2d.dxf").exists() and _redondos("piel_trasera_2d"):
         f.append(f"piel_trasera_2d: {len(_redondos('piel_trasera_2d'))} agujero(s) "
-                 f"redondo(s) en el acrilico. La trasera va CAPTURADA como el "
-                 f"costado: cero")
+                 f"redondo(s) en el acrilico. La trasera va CAPTURADA: cero")
 
     # --- planchas: filas, paso y separacion ---
     _, _, filas = cb._cajas_solidas(p)
@@ -781,217 +756,6 @@ def guarda_kondor() -> list[str]:
     return fallos
 
 
-# Paso del barrido con que se busca el punto mas desasistido del costado. 2 mm
-# sobre una pieza de 309 x 256 son ~10 mil puntos dentro del contorno: el vano
-# sale con +-1 mm, que sobra para una cota que hoy vale 119 y tiene el techo en
-# 173. Bajarlo a 1 cuadruplica el tiempo y mueve el resultado 0.3 mm.
-PASO_BARRIDO = 2.0
-# Radio de contacto de la carga. Es el canto de una mano o la base de un pulgar
-# apoyado, no una punta: con carga estrictamente puntual la teoria de placas da
-# tension infinita y no dice nada util.
-# Viven en clearance_budget.py junto a SIGMA_PMMA (dos clientes: esta puerta
-# y guarda_trasera_flexion); aqui solo el alias.
-R_CONTACTO, NU_PMMA, E_PMMA = cb.R_CONTACTO, cb.NU_PMMA, cb.E_PMMA
-
-
-def guarda_costado() -> list[str]:
-    """El costado no se hunde con la mano entre sus anclajes.
-
-    NACE EL 2026-08-25, con el retiro del entrepiso delantero. Ese larguero era
-    el unico del case que no sostenia ninguna plancha -- las seis filas de M3
-    van a base delantera, base trasera, valle y remate trasero -- asi que
-    ninguna de las puertas de anclaje lo miraba: alineacion() y apoyo() solo
-    ven filas de agujeros, y solapes() solo verifica disyuncion. Se podia
-    retirar sin que nada se pusiera rojo, y eso es justo lo que hace peligroso
-    el cambio, no el cambio.
-
-    Lo que se pierde al quitar un larguero no es una fila de tornillos: es un
-    ANCLAJE DEL COSTADO. El costado deja de tener cinco M5 y pasa a tener
-    cuatro, y el parche de acrilico que queda sin apoyo crece.
-
-    EL MODELO, declarado entero porque es la mitad del resultado: el parche
-    desasistido se trata como PLACA CIRCULAR EMPOTRADA de radio a, donde a es
-    la distancia del punto interior mas lejano a su ancla mas cercana.
-
-        D = E t^3 / (12 (1 - v^2))
-        flecha central   = P a^2 / (16 pi D)
-        tension bajo la carga = 3P/(2 pi t^2) * [(1+v) ln(a/r0) + 1]
-
-    Y SE MIDE SOBRE EL FICHERO: el contorno y los taladros salen de
-    costado_2d.dxf, no de una copia de la geometria en Python. Por eso la
-    puerta vive aqui y no en clearance_budget -- misma razon que
-    _contorno_costado().
-
-    El costado no lleva un solo tornillo: queda ASENTADO EN EL REBAJE DEL
-    ANILLO, y el labio lo sostiene hacia fuera por todo el perimetro. El vano
-    deja de ser "distancia a un punto" y pasa a ser "distancia al canto de la
-    ventana", que es apoyo continuo.
-
-    Y EL 2026-08-27 EL APOYO LE LLEGA POR LA OTRA CARA. Con la inversion, la
-    costilla pasa a ser la capa de FUERA y el acrilico queda por dentro: el
-    marco ya no lo sostiene desde atras, lo PISA desde delante. Se mide contra
-    costilla_2d.dxf -- el fichero, no una copia del offset en Python -- por la
-    misma razon que el contorno.
-
-    EL 2026-08-28 CAMBIA LA PIEZA PERO NO EL MODELO. El costado ya no se apila
-    detras de una chapa: entra por detras en la ventana del anillo y asienta en
-    su rebaje, coplanar. Lo que esta puerta mide es lo mismo -- distancia al
-    canto de la ventana -- pero ese canto se movio: la banda de chapa media 27
-    y la cara del anillo mide 20, o sea que la ventana es MAS GRANDE y el vano
-    libre crece. Ese numero se anota en cada corrida y su techo lo sigue
-    poniendo la flecha, no el gusto.
-
-    Y EL 2026-08-28 LA PUERTA MIDE DOS VECES, porque el costado no se sujeta
-    igual por las dos caras y hasta hoy solo se miraba una:
-
-      HACIA FUERA  el labio del rebaje lo pisa por TODO el perimetro de la
-                   ventana. Apoyo continuo, y el vano es la distancia al canto
-                   de la ventana. Es la medicion de apoyo de siempre.
-      HACIA DENTRO no hay labio: entre la cara del PMMA y la cara interior del
-                   anillo quedan 3 mm de aire, y por ahi el acrilico se sale
-                   del rebaje. Lo unico que lo para son APOYOS PUNTUALES sobre
-                   la cara interior -- las placas de anclaje, que corren tres
-                   tramos enteros, y los clips de la Tarea 4 --, asi que el
-                   vano es la distancia al apoyo mas cercano, no a un canto.
-
-    Es la misma formula de placa circular con dos vanos distintos, y hoy manda
-    el de FUERA: 69.4 mm contra 65.0 el de dentro.
-
-    NO SIEMPRE FUE ASI, Y EL CAMBIO ES LA TAREA 4b. Del 27 al 28-08 el vano de
-    dentro valia 95.5 mm y su punto peor caia en (292.8, 117.5), a menos de 1
-    mm del canto TRASERO del acrilico -- 227 mm de canto sin un solo apoyo
-    hacia dentro --, y ahi la formula de placa EMPOTRADA no vale: supone
-    material sujeto alrededor del punto, y un canto libre no lo esta. Samuel
-    eligio la salida (a) de las tres que la spec §10 dejaba abiertas y la
-    ESCUADRA DE LA TRASERA se construyo: el canto trasero esta cogido por las
-    dos caras en el 91 % de su largo libre, el punto peor se mudo a (221, 84)
-    -- centro del panel, con material alrededor por los cuatro lados, que es
-    donde el modelo SI vale -- y el vano de dentro bajo a 65.0.
-
-    Lo que esta puerta hace es medir siempre los dos y dejar los numeros
-    escritos en cada corrida.
-
-    Lo que el esqueleto vale sigue siendo enorme contra el costado atornillado:
-    el vano era 119.0 mm con cuatro anclas y la flecha 0.38.
-
-    LO QUE NO CUBRE: el racking del cajon entero. Esta puerta mira UNA pieza
-    plana. La rigidez del vano de 528 sigue siendo la heuristica que la spec
-    no ha cerrado, y se cierra cargando el prototipo."""
-    import clearance_budget as cb
-    p = cb.leer_params()
-    contorno = _contorno_costado()
-    if not contorno:
-        return ["costado_2d: sin contorno, no se puede medir el vano"]
-    cantos = _cantos("costilla_2d")
-    if not cantos:
-        return ["costilla_2d: sin cantos, no se puede medir el apoyo del costado"]
-
-    xs = [q[0] for a in contorno for q in a]
-    ys = [q[1] for a in contorno for q in a]
-    vano, donde = 0.0, (0.0, 0.0)
-    y = min(ys)
-    while y <= max(ys):
-        x = min(xs)
-        while x <= max(xs):
-            if _dentro(contorno, (x, y)):
-                d = _dist_al_contorno(cantos, (x, y))
-                if d > vano:
-                    vano, donde = d, (x, y)
-            x += PASO_BARRIDO
-        y += PASO_BARRIDO
-
-    t = p["t_cheek"]
-    D = E_PMMA * t ** 3 / (12 * (1 - NU_PMMA ** 2))
-    P = p["carga_mano"]
-    flecha = P * vano ** 2 / (16 * math.pi * D)
-
-    # HACIA DENTRO el apoyo es PUNTUAL: placas y clips sobre la cara interior
-    # del anillo, en los sitios donde asoman sobre la ventana. La mano empuja
-    # hacia dentro y ahi el labio no ayuda -- pisa la cara de fuera del PMMA,
-    # que es justo la que se separa de el.
-    #
-    # LOS APOYOS PASAN SU POLIGONO REAL y no su caja. Las tres placas van
-    # giradas con su tramo (35 y 45 grados) y con una esquina honda cortada:
-    # su AABB se mete hasta 20 mm de mas en el rincon del valle y en la punta
-    # de la cara superior, o sea que el vano interior saldria optimista justo
-    # donde el acrilico esta mas suelto. Los clips van a plomo y hoy su caja y
-    # su poligono son la misma cosa, pero se piden a _clips() -- que es de
-    # donde salen sus esquinas -- y no a _cajas_clip(): esa devuelve una caja
-    # POR CARA, o sea el doble de apoyos con el mismo contorno, y con ella la
-    # cuenta de esta lista no cuadraba con la que se imprime abajo.
-    #
-    # Y DESDE EL 2026-08-28 HAY UN APOYO MAS, que no es puntual: el ala B de la
-    # ESCUADRA DE LA TRASERA. Corre 194.68 mm a lo largo del canto trasero del
-    # acrilico y lo pisa 5.5 mm hacia dentro -- exactamente el trozo que el
-    # labio pisa por fuera --, o sea que ese canto pasa de no tener nada a
-    # estar cogido por las dos caras. Es LA pieza que la Tarea 4b existe para
-    # poner, y este barrido es el numero que la juzga: antes de ella el peor
-    # punto de dentro caia en (291, 116), a menos de 1 mm de ese canto libre,
-    # que es donde la formula de placa empotrada no vale.
-    #
-    # Se pasa UNA por costado y solo su ala B: el ala A vive detras del canto
-    # del acrilico (x >= 297.9) y no pisa un solo milimetro de PMMA.
-    # DESDE EL 2026-08-29 POR LA NOCHE EL APOYO HACIA DENTRO ES CONTINUO: el
-    # marco de la ventana, una pletina por costado que corre los siete tramos
-    # y pisa 6 mm de acrilico mas alla de la ventana. Placas, clips y escuadra
-    # murieron en el. Cada pata pasa su poligono real (con el escalon del
-    # canto exterior y la muesca de la brida); en las esquinas las patas se
-    # solapan o dejan un triangulo minimo, y el barrido lo trata como lo que
-    # es: el vano hasta el canto interior del marco.
-    apoyos = [q["poligono"] for q in cb._marco_ventana(p)]
-    vano_in, donde_in = 0.0, (0.0, 0.0)
-    y = min(ys)
-    while y <= max(ys):
-        x = min(xs)
-        while x <= max(xs):
-            if _dentro(contorno, (x, y)):
-                d = min(_dist_al_apoyo(q, (x, y)) for q in apoyos)
-                if d > vano_in:
-                    vano_in, donde_in = d, (x, y)
-            x += PASO_BARRIDO
-        y += PASO_BARRIDO
-    flecha_in = P * vano_in ** 2 / (16 * math.pi * D)
-    sigma = (3 * P / (2 * math.pi * t ** 2)
-             * ((1 + NU_PMMA) * math.log(vano / R_CONTACTO) + 1))
-    # Vano que agotaria el techo de flecha, para que el mensaje diga cuanto
-    # margen queda en la cota que de verdad se mueve.
-    vano_max = math.sqrt(p["flecha_costado_max"] * 16 * math.pi * D / P)
-
-    fallos = []
-    if flecha > p["flecha_costado_max"]:
-        fallos.append(
-            f"costado_2d: con {P:.0f} N el costado se hunde {flecha:.2f} mm y "
-            f"el techo son {p['flecha_costado_max']:.2f} (flecha_costado_max). "
-            f"El vano sin apoyo vale {vano:.1f} mm en (x={donde[0]:.0f}, "
-            f"y={donde[1]:.0f}) y el maximo que cabe son {vano_max:.1f}. Ya no "
-            f"se arregla con un anclaje: el apoyo es la VENTANA del anillo, "
-            f"asi que o se ensancha cara_anillo o sube t_cheek (la flecha va "
-            f"con t^3)")
-    if flecha_in > p["flecha_costado_max"]:
-        fallos.append(
-            f"costado_2d: empujado hacia DENTRO se hunde {flecha_in:.2f} mm "
-            f"(vano {vano_in:.1f} en x={donde_in[0]:.0f}, y={donde_in[1]:.0f}) "
-            f"contra {p['flecha_costado_max']:.2f}. Hacia dentro lo para el "
-            f"marco de la ventana: sube marco_fondo")
-    if sigma > cb.SIGMA_PMMA:
-        fallos.append(
-            f"costado_2d: {sigma:.1f} MPa bajo la mano contra el umbral de "
-            f"{cb.SIGMA_PMMA} (#106) — esto no deberia pasar antes que la "
-            f"flecha, asi que revisa t_cheek y carga_mano antes de creerlo")
-    print(f"costado: PIEL sin tornillos, asentada en el rebaje del anillo; "
-          f"vano libre {vano:.1f} mm "
-          f"(x={donde[0]:.0f}, y={donde[1]:.0f}); con {P:.0f} N se hunde "
-          f"{flecha:.2f} mm (techo {p['flecha_costado_max']:.2f}, vano maximo "
-          f"{vano_max:.0f}) y trabaja a {sigma:.1f} MPa (fluencia "
-          f"{cb.SIGMA_PMMA})")
-    print(f"  hacia DENTRO lo para el marco de la ventana ({len(apoyos)} patas "
-          f"por costado, {p['marco_fondo']:g} desde la silueta): vano interior "
-          f"{vano_in:.1f} mm (x={donde_in[0]:.0f}, y={donde_in[1]:.0f}) y se "
-          f"hunde {flecha_in:.2f} mm (techo {p['flecha_costado_max']:.2f}, vano "
-          f"maximo {vano_max:.0f})")
-    return fallos
-
-
 # Cuanto se le tolera al ancho de la cara del anillo, medido del DXF. No es
 # tolerancia de fabricacion: offset() es exacto y los 47 vertices de la ventana
 # salieron entre 19.9994 y 20.0069 de la silueta. Es el ruido de la
@@ -1003,7 +767,8 @@ def anillo_tiene_ventana() -> list[str]:
     """El DXF de la costilla es un ANILLO, y su cara mide lo que dice params.
 
     NACE DE UN TEST DE ROTURA QUE NO ROMPIO (2026-08-28). El plan pedia quitar
-    la ventana de costilla_2d() y esperaba ROJO en guarda_costado() o en
+    la ventana de costilla_2d() y esperaba ROJO en la puerta del acrilico del
+    costado (retirada con la persiana el 2026-10-11) o en
     cuerpos_dentro_del_anillo(). Las dos siguieron VERDES, y cada una tiene su
     razon: la silueta EXTERIOR no se mueve al quitar la ventana, asi que los
     cuerpos siguen cabiendo y el sobre mide exactamente lo mismo; y el vano
@@ -2675,7 +2440,6 @@ def main() -> int:
     fallos += taladros_reticula()
     fallos += guarda_zocalo()
     fallos += guarda_kondor()
-    fallos += guarda_costado()
     fallos += agujeros_donde_toca()
     fallos += chasis_agujeros()
     fallos += guarda_persiana_generada()

@@ -266,7 +266,12 @@ radio_doblez_valle = 3;
 // 14 LO MANDA EL ACRILICO, no el gusto. El PMMA de 8 viene +-1.2 (Schaeffer),
 // asi que el peor caso mide 9.2; tras el labio de 3 tienen que caber 9.2 mas
 // 1 de junta de asiento mas 0.5 de aire = 10.7. Con 12 el rebaje quedaba a
-// -0.2. Lo vigila guarda_rebaje().
+// -0.2.
+// DESDE EL 2026-10-11 ESE ACRILICO ES LA TRASERA. La cuenta la puso la mejilla
+// del costado, que se fue con la persiana, y la trasera es el mismo PMMA de 8
+// en un bolsillo con los mismos tres numeros (labio 3, 11 de ancho, 6 de
+// hondo): la vigila guarda_trasera_capturada(). Los bolsillos de la persiana,
+// 6.9 de hondo con el iman, dejan 7.1 detras (guarda_tacos_persiana()).
 t_anillo           = 14;
 // Cara vista. La foto de referencia da 12-24 ESTIMADO; el minimo lo pone la
 // franja interior donde asientan las placas de anclaje: cara - rebaje >= 3 D
@@ -336,7 +341,9 @@ alto_iman_fino       = 1;     // en el tramo de atras: detras esta el bolsillo d
 // anodiza y se mira ANTES de mandar cortar los dos anillos enteros (#237). 100
 // mm es lo que pide la spec 2026-08-28 §9 y lo que ya prometia el PLIEGO: largo
 // suficiente para leer el chaflan a lo largo (no en una esquina), para meter el
-// PMMA de 8 +-1.2 con su junta en el rebaje y ver si asienta, y para dejar un
+// PMMA de 8 +-1.2 con su junta en el rebaje y ver si asienta -- desde el
+// 2026-10-11 es el de la trasera, que va en un bolsillo con la misma seccion;
+// el rebaje del costado se queda vacio --, y para dejar un
 // punto de bonding enmascarado con sitio de sobra alrededor. Vive aqui y no
 // suelto en el pliego para que la puerta lo imprima con las cotas de la seccion
 // del mismo sitio: el cupon no es una pieza del case y no entra en el BOM.
@@ -403,7 +410,8 @@ dist_rosca_ciega   = 8.5;
 //
 // Cuanto entra desde la silueta, en los siete tramos. Fue placa_fondo. El
 // cajeado del riel cae a 15.90 y su borde a 19.90, o sea 6.1 de pletina por
-// detras; sobre la ventana (cara_anillo = 20) sobran 6 que pisan el acrilico.
+// detras; sobre la ventana (cara_anillo = 20) sobran 6, que hasta el
+// 2026-10-11 pisaban el acrilico del costado.
 marco_fondo        = 26;
 // LA PATA TRASERA ENTRA 2 MAS (2026-08-29, noche, 2). Con la trasera capturada
 // esa pata arranca en t_anillo + 0.5 = 14.5 (sobre la pared entre bolsillos)
@@ -419,6 +427,10 @@ marco_fondo        = 26;
 // (techos 2 mm y 130); con 28 quedaba por un pelo. Los numeros son los de
 // despues de subir la rendija a 4.0 (revision del 30-08); con la rendija en
 // 3.0 eran retiro 16, 1.70 mm y 112 MPa.
+// SE QUEDA EN 30 SIN EL CASO QUE LO PUSO (2026-10-11). El techo de 2 mm era el
+// del acrilico saliendose del rebaje, y se fue con la mejilla; la tension (114
+// contra 130) se sigue mirando con la persiana quitada, que es cuando la mano
+// llega al marco. Bajarlo no compra nada que se vea.
 marco_fondo_trasera = 30;
 // Distancia MINIMA a lo largo del tramo entre el eje del riel y la rosca del
 // marco mas cercana. 9.5 saca la cabeza boton M4 Ø7.6 de la huella de 10 del
@@ -534,7 +546,7 @@ radio_doblez_costilla = 3;
 // que caber en lo que quede. 0.15 por lado, la misma cifra que hol_piel.
 hol_riel        = 0.30;
 // ancho_total NO VIVE AQUI: OpenSCAD evalua en orden textual y esta formula usa
-// largo_riel (linea ~604) y t_cheek (~515), que se declaran mas abajo. Aqui
+// largo_riel, t_placa y t_anillo, que se declaran mas abajo. Aqui
 // daba "Ignoring unknown variable" y ancho_total salia undefined -- sin error
 // de export, solo geometria vacia. Esta al final del fichero, detras de sus
 // dependencias.
@@ -772,9 +784,9 @@ nariz_pie       = 20.5;
 // pieza que tapa la meseta va de lado a lado, pero desde el 2026-08-27 es la
 // cara horizontal del miembro trasero alto y no una pieza de acrilico.
 //
-// No es un valor libre: si cambia t_cheek hay que cambiar este a mano (aqui no
-// se pueden escribir expresiones, ver la cabecera del fichero). Y baja el
-// fondo del case 14 mm de golpe, porque el fondo se deriva de el.
+// Era el 8 de la mejilla (t_cheek), que se fue con la persiana el 2026-10-11;
+// desde entonces es un valor propio. Cambiarlo mueve el fondo del case, que se
+// deriva de el.
 //
 // Efecto secundario buscado: con el marco en 8 la esquina de arriba pasa a
 // tangente 4 mm en vez de 11, o sea que las dos puntas del techo se vuelven
@@ -998,7 +1010,6 @@ compresion_tira_valle = 0.10;
 // Ancho conservador de una mano apoyada de canto. Compartido por la puerta y
 // el BOM para que la tension publicada no sea un literal envejecido.
 b_mano_valle = 50.0;
-t_cheek    = 8;    // costados portantes
 // SUELO del case. La bandeja de base dejo de ser una plancha del cuerpo el
 // 2026-08-17: ya no se apoya ENCIMA de los dos largueros -- 20 + 5 = 25 mm de
 // sandwich justo debajo del riel del panel -- sino que pasa a ser el propio
@@ -1013,8 +1024,8 @@ t_cheek    = 8;    // costados portantes
 // del costado, de la pestana y del marco de remate. Es lo que pidio Samuel --
 // "el mismo grosor que todo el resto de la estructura".
 //
-// No es un valor libre: si cambia t_cheek hay que cambiar este a mano (aqui no
-// se pueden escribir expresiones, ver la cabecera del fichero).
+// Era el 8 de la mejilla (t_cheek), que se fue con la persiana el 2026-10-11;
+// desde entonces es un valor propio.
 // LA TABLA. Dejo de ser una plancha DENTRO del case el 2026-08-27 y paso a ser
 // una TABLA DE MADERA MACIZA BAJO EL MARCO -- la misma pieza que el zocalo, que
 // hasta entonces eran dos (spec 9.1, decidido sobre la foto de referencia).
@@ -1262,15 +1273,18 @@ sep_railes_sup  = 122.5;
 holgura_rail    = 4;    // separacion minima entre railes vecinos (fix solapes)
 
 // --- esqueleto y herrajes ---
-n_bulkheads      = 2;    // costados exteriores (3 si el vano flexa, spec §11)
+n_bulkheads      = 2;    // anillos (3 si el vano flexa, spec §11)
 // RIGIDEZ DEL COSTADO. Entran el 2026-08-25 con el retiro del entrepiso
 // delantero: el case baja de cinco largueros a cuatro y el costado se queda
 // con cuatro M5 en vez de cinco, asi que el vano sin apoyo crece y eso deja de
 // poder darse por bueno a ojo.
 //
-// La puerta es guarda_costado() en check_dxf.py -- y va ahi, y no en
-// clearance_budget, porque mide sobre el CONTORNO Y LOS TALADROS REALES de
-// costado_2d.dxf, no sobre una copia de la geometria en Python.
+// La puerta fue guarda_costado() en check_dxf.py hasta el 2026-10-11, cuando
+// la mejilla se fue con la persiana -- y vivia ahi, y no en clearance_budget,
+// porque media sobre el CONTORNO Y LOS TALADROS REALES de costado_2d.dxf, no
+// sobre una copia de la geometria en Python. Los dos techos de abajo se quedan:
+// carga_mano la leen el marco y la trasera, y flecha_costado_max el valle, el
+// anillo y la tabla.
 //
 // POR QUE FLECHA Y NO TENSION: la tension no es el limitante ni de lejos. Con
 // 200 N sobre el vano actual el costado trabaja a 6.56 MPa contra los 10 de

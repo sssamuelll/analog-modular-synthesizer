@@ -37,7 +37,7 @@ else if (PIEZA == "talon")             talon();
 else if (PIEZA == "miembro_alto")      miembro_alto();
 else if (PIEZA == "tapa_valle")        tapa_valle();
 else if (PIEZA == "tira_anti_ruido_valle") tira_anti_ruido_valle();
-else if (PIEZA == "costados")          costados();
+else if (PIEZA == "persianas")         persianas();
 else if (PIEZA == "piel_trasera")      piel_trasera();
 else if (PIEZA == "tabla")             bandeja_base();
 else if (PIEZA == "paticas")           paticas();
