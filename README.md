@@ -1,143 +1,190 @@
-# SAM17 — Sintetizador Analógico Modular
+# SAM17
 
-> **English summary, October 2026.** SAM17 is an open-source polyphonic analog
-> synthesizer. Sixteen analog channels, each with an SSI2130 oscillator, an
-> MS-20 style LM13700 filter and SSI2164 VCAs; a 16-line FM matrix; an
-> 8-in/8-out patch bay routed through an analog crosspoint; and an STM32N657
-> brain running Rust firmware, in a three-row console: Eurorack 3U on top for
-> the instrument's panel, a slim 55 mm utility row in the middle for its
-> connection tiles, and a 3U Eurorack row below for the instrument's own
-> expansion modules. It began as
-> Samuel Ballesteros's engineering thesis at Universidad Yacambú, Venezuela, in
-> 2020. Today the firmware runs on the STM32N657 evaluation board and the
-> first voice board is being drawn; there is no finished unit yet. The first
-> complete instrument is planned for May 2027. Hardware is licensed under
-> CERN-OHL-S v2, firmware under GPL-3.0-or-later and documentation under
-> CC BY-SA 4.0. The name SAM17 is not part of the licence, see
-> [LICENSE](LICENSE). Most documents are in Spanish.
+**SAM17 is a 16-voice analog synthesizer that patches like a modular and
+recalls like a polysynth.** It has sixteen complete analog voices, an FM
+matrix between all sixteen oscillators, an 8-in/8-out patch bay routed through
+an analog crosspoint, and an STM32N657 brain running Rust firmware, all in a
+three-row console on Eurorack rails. The whole design is open: hardware under
+CERN-OHL-S v2, firmware under GPL-3.0-or-later, documentation under
+CC BY-SA 4.0.
 
-Reproducción y evolución de código abierto del **Sintetizador Analógico Modular
-SAM17**, presentado como Trabajo de Grado por *Samuel Ballesteros García* en la
-Universidad Yacambú (Barquisimeto, 2020). La tesis original se conserva en
-[`docs/thesis.pdf`](docs/thesis.pdf).
+It began as Samuel Ballesteros's electronic engineering thesis at Universidad
+Yacambú, Venezuela, in 2020, a monophonic modular in seven modules. In 2022 the
+Goethe-Institut Venezuela selected it for its programme *Pensar la Música
+Electrónica en Venezuela*. Since then it has been redesigned, in Nürnberg, as
+the sixteen-voice instrument this repository describes. **There is no finished
+unit yet.** The firmware runs on the STM32N657 evaluation board, the voice
+board is being drawn, and the first complete instrument is due in May 2027.
+Details, with dates, under [Status](#status-october-2026).
 
-El objetivo de este repositorio es construir, a partir de la tesis, un
-**esqueleto de proyecto vivo**: un lugar donde las ideas originales puedan
-reproducirse fielmente, documentarse con detalle y, sobre todo, mejorarse con
-aportes de la comunidad.
+The working language of the project is Spanish: specs, budgets and design
+notes are written in Spanish. This README is in English because it is the
+front door.
 
-## Filosofía del proyecto
+## The instrument
 
-- **Modularidad, en dos regímenes**: por dentro del instrumento es
-  programática — la matriz de modulación, los roles y el crosspoint **son** el
-  patch, y un preset es un patch completo. En la frontera es física: cable y
-  jack. *Por dentro el patch es un preset; por fuera es un cable.*
-- **Un directorio por módulo** dentro de `hardware/`, con su README, BOM y
-  esquemáticos. La numeración de siete viene de la tesis y se conserva aunque el
-  diseño vigente ya no tenga siete placas.
-- **Hardware y software por separado**: la electrónica analógica está en
-  `hardware/`, las simulaciones SPICE en `simulations/`, y el firmware en
-  `software/nucleo/` (Rust, STM32N657). `software/midi-cv/` es el firmware Python
-  de la v1 de Raspberry Pi, superada.
-- **Reproducible**: todo lo necesario para construir el instrumento (BOM,
-  planos, código, manual) está versionado.
-- **Mejorable**: cada módulo lista explícitamente las mejoras propuestas sobre
-  el diseño original (ver la sección *Mejoras propuestas* de cada README).
+```mermaid
+flowchart LR
+  MIDI["MIDI<br/>USB and DIN"] --> C
+  P["Panel and display"] --> C
+  C["Brain<br/>STM32N657, Rust"] -- "J2 link (SPI)" --> V
+  subgraph V["Voice module: 16 channels on one board"]
+    direction LR
+    O["16× SSI2130<br/>oscillators"] --> F["16× MS-20 style filter<br/>LM13700"] --> A["32× VCA<br/>SSI2164"]
+    M["FM matrix 16×16"] -.-> O
+    X["Crosspoint<br/>2× AD75019"] --- O
+    X --- A
+  end
+  B["Patch bay<br/>8 inputs + 8 outputs"] --- X
+  A --> S["Stereo output"]
+```
 
-## Módulos del sintetizador
+*Inside the instrument the patch is a preset; outside, it is a cable.*
 
-La numeración de siete módulos viene de la tesis y se conserva como índice.
-**El diseño vigente ya no son siete placas**: el módulo de Voz absorbió cuatro
-de ellas, por la razón de la §1 del
-[spec de Voz total](docs/superpowers/specs/2026-08-23-modulo-voz-total-design.md)
-— un canal es oscilador → filtro → VCA soldado de punta a punta, y partirlo en
-tres placas era cablear dieciséis veces lo que cabe en una pista.
+- Sixteen complete voices, each one oscillator → filter → VCA soldered end to
+  end on the same board. The copper builds channels; **the preset assigns the
+  roles**: sixteen clean voices, eight FM voices with carrier and modulator, or
+  any mix.
+- Sixteen rather than eight because in FM each voice needs two oscillators:
+  the modulator has to track its carrier in frequency. One modulator shared by
+  eight different notes gives dissonant bells.
+- The oscillators are SSI2130, with saw, triangle, pulse, and sine from the
+  chip's shaper. A 16-line FM matrix lets any oscillator modulate any other,
+  which is why all sixteen sit in one module. Split in two, the matrix splits
+  with them.
+- One filter per voice, a 24 dB/oct MS-20 style low-pass on an LM13700 and a
+  TL074. The resonance is controlled by a VCA, never by a digipot.
+- Two VCAs per voice, signal and resonance. Thirty-two in all, on eight
+  SSI2164.
+- The envelopes run as code on the voice module's microcontroller, with their
+  own knobs on the panel. There is no envelope circuit.
+- The patch bay has eight inputs and eight outputs, with jack sensing and an
+  LED per jack, routed through two AD75019, a 16×16 crosspoint. The brain sends
+  the crosspoint image over the J2 link.
+- The brain is an STM32N657 running bare-metal Rust
+  ([`software/nucleo`](software/nucleo)). It takes MIDI over USB and DIN,
+  drives the panel and the display, and talks to the voice module over the J2,
+  an SPI link with its header, master and recovery already specified.
+- The output is stereo, with a place for each voice in the stereo field.
+- The console has three rows on 104 HP Eurorack rails. The instrument's
+  unified panel is on top, 3U. A slim 55 mm utility row in the middle takes the
+  instrument's connection tiles; it is not Intellijel 1U and is not advertised
+  as compatible. A 3U Eurorack row below is for the instrument's own expansion
+  modules, with its own current budget. The skeleton is machined aluminium;
+  the outer finish is being decided. Dimensions, materials and drawings in
+  [`case/README.md`](case/README.md).
+- Power is 230 VAC. The supply is on paper and parked until the first note
+  sounds, in two versions: v4 with Mean Well IRM modules and a cascade of
+  linear regulators ([`hardware/01-power-supply`](hardware/01-power-supply)),
+  and the v5 "brick"
+  ([spec](docs/superpowers/specs/2026-09-05-fuente-v5-ladrillo-design.md)).
+  The test kit runs from a bench supply.
 
-| # | Módulo | Estado en el diseño vigente | Tecnología clave | Directorio |
-|---|--------|------|-----------------|-----------|
-| 1 | Alimentación | **Vigente**; la v1 queda como diseño cerrado que no se construye | LM7805 en +5 V, parejas LT3045/LT3094 en ±12 V | [`hardware/01-power-supply`](hardware/01-power-supply) |
-| 2 | Cerebro | **Vigente**; la v1 de Raspberry Pi está superada por la v2 sobre STM32N657 | STM32N657 (Rust bare-metal) | [`hardware/02-midi-cv`](hardware/02-midi-cv) + [`software/nucleo`](software/nucleo) |
-| 3 | **Voz** (era «VCO») | **Vigente, y creció**: 16 canales completos + la bahía asignable | 16× SSI2130, 16× LM13700, 8× SSI2164, 1× STM32N657, 2× AD75019 | [`hardware/03-vco`](hardware/03-vco) |
-| 4 | Mixer | **Desaparece como placa**: suma, volumen, salida y los oídos se mudan al módulo de Voz | — | [`hardware/04-mixer`](hardware/04-mixer) |
-| 5 | VCF | **Desaparece como placa**: un filtro por canal, dentro del módulo de Voz | LM13700 (OTA tipo MS-20) | [`hardware/05-vcf`](hardware/05-vcf) |
-| 6 | ADSR | **Desaparece como circuito**: las envolventes son generadores en los micros del módulo de Voz | firmware | [`hardware/06-adsr`](hardware/06-adsr) |
-| 7 | VCA | **Desaparece como placa**: dos VCA por canal (voz y resonancia), dentro del módulo de Voz | SSI2164 | [`hardware/07-vca`](hardware/07-vca) |
-| — | Bus board | Vigente | plano de masa sólido, 6 slots por segmento | [`hardware/bus-board`](hardware/bus-board) |
-| — | Cajón y paneles | Vigente | Acrílico naranja, Eurorack 3U en las dos filas | [`case/`](case) |
+## Status, October 2026
 
-Arquitectura global y diagrama de bloques: [`docs/architecture.md`](docs/architecture.md).
+The project map is the
+[GitHub milestones](https://github.com/sssamuelll/analog-modular-synthesizer/milestones):
+eight stages, each with its "done when" in the description, and every issue
+hangs from one of them. As of 11 October 2026:
 
-## Especificaciones generales
+| Milestone | Done when | Where it stands |
+|---|---|---|
+| 1 · Power supply v4: paper closed | No open decision is left in the power supply paper | Parked until the first note; the v5 "brick" had its review on 8 September, with decisions still conditional |
+| 2 · Power supply v4 in copper | The supply boards are built and measured on the bench | Parked until the first note |
+| 3 · The brain boots | Our firmware runs on the N657, speaks USB MIDI and lights the display | In progress: the firmware has run on the NUCLEO-N657X0-Q since 1 October, and the J2 link has 26 hours of soak without a fault |
+| 4 · Test kit: brain plus one voice | A MIDI note comes in and one voice sounds through the J2 | The current front: the J2 header and master are on paper, and the full voice board is being drawn in KiCad |
+| 5 · The remaining boards | The rest of the boards are in KiCad with their gates green | Pending |
+| 6 · Case and panel to the workshop | Case and panel cut and assembled, with the supply inside and breathing | Skeleton drawings in [`case/plans`](case/plans); the outer finish is being decided this week |
+| 7 · The first SAM17 that sounds | Everything in the case, calibrated, thirty minutes without drifting | Depends on all of the above |
+| 8 · Parked: does not block sound | App and plugin, sequencer, the agent | Resumes after 7 |
 
-- **Canales**: **16 canales analógicos completos**, cada uno oscilador → filtro
-  → VCA, soldados de punta a punta en la misma placa. El módulo suelda canales;
-  **el preset reparte los roles**.
-- **Polifonía**: 16 voces limpias, u **8 voces de FM** (2 osciladores por voz:
-  portadora + moduladora), o cualquier mezcla. Lo decide el preset, no el cobre.
-  La tesis original era monofónica.
-- **Por qué dieciséis y no ocho**: en FM cada voz necesita dos osciladores,
-  porque la moduladora tiene que seguir a su portadora en frecuencia. Una
-  moduladora compartida entre ocho notas distintas no da FM tonal, da campanas
-  disonantes.
-- **Osciladores**: SSI2130 (sierra, triangular, cuadrada/pulso, seno por el
-  shaper del chip), con matriz de modulación FM de 16 líneas — cualquiera de los
-  dieciséis puede modular a cualquiera, y por eso van en **un solo módulo**: en
-  dos, la matriz se parte por la mitad.
-- **Filtro**: uno por canal. Pasa-bajo 24 dB/oct tipo MS-20 (LM13700 + TL074)
-  con LEDs en el lazo. **Resonancia controlada por VCA**, nunca digipot.
-- **VCA**: dos por canal (voz y resonancia) — 32 en total, sobre 8× SSI2164.
-- **Envolventes**: ya no son un circuito. Son **generadores que corren en los
-  micros del módulo de Voz**, con sus perillas en el panel de mandos.
-- **Bahía asignable**: 8 entradas + 8 salidas en jacks Thonkiconn con sensado de
-  ocupación y LED por jack, ruteadas por dos AD75019 (crosspoint 16×16). Por
-  dentro el patch es un preset; por fuera es un cable.
-- **Entrada MIDI**: USB y DIN. Los conectores del mundo van **a la trasera** del
-  cajón, no al frente.
-- **Salida**: **estéreo**, con sitio por voz en el campo.
-- **Formato**: Eurorack 3U en las dos filas. Arriba el instrumento; abajo, rack
-  de verdad para módulos invitados intercambiables.
-- **Dimensiones del cajón**: las manda [`case/clearance_budget.py`](case/clearance_budget.py);
-  la cifra vigente vive en [`case/README.md`](case/README.md) y no se copia aquí
-  para que no envejezca.
-- **Alimentación**: 230 VAC 50 Hz (variante Europa; tesis original: 110 VAC
-  60 Hz Venezuela, ver [`hardware/01-power-supply`](hardware/01-power-supply))
-  → +5 V / +12 V / −12 V. El envelope es de 650 mA por riel.
+What exists physically today, of this design, is the N657 evaluation board on
+the bench.
 
-## Estructura del repositorio
+## Where it comes from
+
+- [`docs/thesis.pdf`](docs/thesis.pdf): the 2020 thesis, in Spanish. Seven
+  monophonic modules with three CEM3340, an MS-20 style filter, and MIDI/CV
+  control from a Raspberry Pi and an AD5686R DAC. Summary in
+  [`docs/summary.md`](docs/summary.md), monophonic architecture in
+  [`docs/architecture.md`](docs/architecture.md).
+- The v1 firmware, Python on a Raspberry Pi, stays in
+  [`software/midi-cv`](software/midi-cv) for reference. It is superseded.
+- The thesis numbering of seven modules survives as the folder index in
+  [`hardware/`](hardware), although the current design is no longer seven
+  boards: the voice module absorbed four of them, for the reason given in §1
+  of the [voice module spec](docs/superpowers/specs/2026-08-23-modulo-voz-total-design.md).
+
+## Repository map
 
 ```
 analog-modular-synthesizer/
-├── docs/              Tesis original, resumen, referencias, manual de usuario,
-│                      arquitectura y documentación detallada por módulo.
-├── hardware/          Un subdirectorio por módulo con esquemáticos KiCad, PCB,
-│                      BOM y notas de diseño.
-├── software/          nucleo/  — contrato y firmware en Rust para STM32N657.
-│                      midi-cv/ — firmware Python de la v1 (superada).
-├── simulations/       Simulaciones SPICE / LTspice para validar diseños.
-├── case/              Planos mecánicos del cajón y paneles frontales.
-└── .github/           CI y plantillas.
+├── docs/
+│   ├── superpowers/specs/   The current design: dated specs, the newest one rules.
+│   ├── superpowers/plans/   Work plans, one per spec.
+│   ├── modules/             Documentation per thesis module.
+│   ├── reference/           Datasheets and references.
+│   ├── thesis.pdf           The 2020 thesis; its summary in summary.md.
+│   └── architecture*.md     Monophonic (thesis), polyphonic and compute architecture.
+├── hardware/
+│   ├── 01-power-supply/     Power supply: v1 to v4, bring-up and budgets.
+│   ├── 02-midi-cv/          The brain: the N657 board and the J2 budgets.
+│   ├── 03-vco/              The voice: 16 channels, FM matrix and patch bay (its 4-VCO v1, superseded).
+│   ├── 04..07/              Mixer, VCF, ADSR and VCA from the thesis, dissolved into the voice.
+│   ├── bus-board/           ±12 V distribution and the ground budget.
+│   └── tools/               gates.py and the check_* and *_budget scripts that are the quality gates.
+├── software/
+│   ├── nucleo/              Rust firmware for the STM32N657.
+│   └── midi-cv/             Python firmware of v1, superseded.
+├── simulations/             SPICE per block: vco, vcf, vca, adsr, mixer, power.
+├── case/                    The console: cad/ (OpenSCAD), plans/ (DXF), panels/, renders/,
+│                            clearance_budget.py and the workshop PLIEGO.
+├── .specify/memory/         The project constitution.
+└── .githooks/               The gates that run on every push.
 ```
 
-## Cómo empezar
+## Getting started
 
-1. Lee el [resumen de la tesis](docs/summary.md) para saber de dónde sale esto.
-2. **El diseño vigente vive en las specs fechadas de
-   [`docs/superpowers/specs/`](docs/superpowers/specs), y la más reciente manda.**
-   Las dos que gobiernan hoy el instrumento son
-   [Voz total](docs/superpowers/specs/2026-08-23-modulo-voz-total-design.md)
-   (los 16 canales y la doctrina) y
-   [el cerebro v2](docs/superpowers/specs/2026-08-21-modulo-2-v2-cerebro-design.md).
-   [`docs/architecture-poly.md`](docs/architecture-poly.md) está pendiente de
-   reescritura contra ellas y **lleva aviso**.
-3. Elige un módulo: cada `hardware/NN-<módulo>/README.md` explica el objetivo,
-   componentes, parámetros de diseño y mejoras pendientes.
-4. Para el firmware: `cd software/nucleo && cargo test`.
-5. Para contribuir: [`CONTRIBUTING.md`](CONTRIBUTING.md).
+1. **The current design lives in the dated specs** in
+   [`docs/superpowers/specs/`](docs/superpowers/specs), and the newest one
+   rules. The ones governing the instrument today:
+   [the voice module](docs/superpowers/specs/2026-08-23-modulo-voz-total-design.md),
+   [the brain v2](docs/superpowers/specs/2026-08-21-modulo-2-v2-cerebro-design.md),
+   [the whole instrument](docs/superpowers/specs/2026-09-03-instrumento-entero-design.md),
+   and for the link between brain and voice the J2
+   [header](docs/superpowers/specs/2026-09-02-cabecera-j2-design.md) and
+   [master](docs/superpowers/specs/2026-09-03-maestro-j2-recuperacion-design.md).
+   [`docs/architecture-poly.md`](docs/architecture-poly.md) is pending a
+   rewrite against them and carries a notice.
+2. **The hardware quality gates** run on the Python standard library, with no
+   dependencies:
 
-## Licencia
+   ```bash
+   python hardware/tools/gates.py
+   ```
 
-Ver [`LICENSE`](LICENSE). La tesis original se incluye con fines documentales.
-El nombre **SAM17** no forma parte de ninguna de las licencias: puedes
-construir, modificar y vender derivados de este diseño bajo sus términos, pero
-no llamarlos SAM17 ni presentarlos como unidades originales o avaladas por el
-autor. El uso descriptivo («basado en el diseño del SAM17») está bien.
+   It runs every `check_*.py`, every `*_budget.py`, the simulations and the
+   connectivity signature. Details in
+   [`hardware/tools/README.md`](hardware/tools/README.md).
+3. **The firmware:**
+
+   ```bash
+   cd software/nucleo && cargo test --workspace
+   ```
+
+   The N657 binary links separately, in `software/nucleo/fw`.
+4. **The console** is regenerated from [`case/`](case): its README explains
+   the OpenSCAD, the DXF and the clearance budgets.
+5. **To contribute**, read the [constitution](.specify/memory/constitution.md)
+   and [`CONTRIBUTING.md`](CONTRIBUTING.md). Every issue carries a milestone.
+
+## Licence and name
+
+See [`LICENSE`](LICENSE). Hardware designs are licensed under CERN-OHL-S v2,
+software under GPL-3.0-or-later, and documentation under CC BY-SA 4.0. The
+original thesis is included for documentation only.
+
+The name **SAM17** is not part of any of the licences: you may build, modify
+and sell derivatives of this design under their terms, but you may not call
+them SAM17 or present them as original or endorsed units. Descriptive use
+("based on the SAM17 design") is fine.
