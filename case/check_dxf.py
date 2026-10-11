@@ -218,6 +218,22 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
     # silueta menos los retiros, derivado en el budget.
     dims["marco_ventana_2d"] = cb.bbox_marco_ventana(p)
 
+    # LA PERSIANA (2026-10-11): sus tres DXF, con la envolvente que da su gemela
+    # en shapely (persiana.py). Es la unica forma de cruzar dos gemelas que
+    # viven en lenguajes distintos.
+    sys.path.insert(0, str(Path(__file__).parent / "cad"))
+    import persiana
+    pg = persiana.geometria(p)
+
+    def lados(geom):
+        x0, y0, x1, y1 = geom.bounds
+        return x1 - x0, y1 - y0
+    dims["persiana_2d"] = lados(pg["contorno"])
+    dims["persiana_pasante_2d"] = lados(pg["pasante"])
+    tx = [t[0] for t in persiana.tacos(p)]
+    ty = [t[1] for t in persiana.tacos(p)]
+    dims["persiana_dorso_2d"] = (max(tx) - min(tx) + p["d_taco"], max(ty) - min(ty) + p["d_taco"])
+
     return {n: (w - TOL, w + TOL, h - TOL, h + TOL) for n, (w, h) in dims.items()}
 
 
@@ -2235,6 +2251,64 @@ def chasis_agujeros() -> list[str]:
     return f
 
 
+def guarda_persiana_generada() -> list[str]:
+    """persiana_generada.scad es lo que sale de persiana.py, byte a byte."""
+    import clearance_budget as cb
+    sys.path.insert(0, str(Path(__file__).parent / "cad"))
+    import persiana
+    p = cb.leer_params()
+    ruta = Path(persiana.GENERADO)
+    if not ruta.exists() or ruta.read_text(encoding="utf-8") != persiana.generado(p):
+        return ["persiana_generada.scad no es lo que sale de persiana.py: corre "
+                "`python case/cad/persiana.py --escribir` y vuelve a exportar"]
+    return []
+
+
+def guarda_persiana() -> list[str]:
+    """Lo que el taller va a fresar de la persiana, releido del DXF:
+    las ranuras no son mas estrechas que la fresa, ninguna varilla es mas fina
+    que t / ESBELTEZ_MAX_PARED, el borde macizo no baja de borde_persiana, las
+    puntas llevan el radio de la fresa, y el numero de ranuras es el del ritmo."""
+    import clearance_budget as cb
+    from shapely.geometry import LineString
+    from shapely.ops import polygonize
+    sys.path.insert(0, str(Path(__file__).parent / "cad"))
+    import persiana
+    p = cb.leer_params()
+    f: list[str] = []
+    doc = ezdxf.readfile(PLANS / "persiana_2d.dxf")
+    lineas = [LineString([(e.dxf.start.x, e.dxf.start.y), (e.dxf.end.x, e.dxf.end.y)])
+              for e in doc.modelspace() if e.dxftype() == "LINE"]
+    piezas = sorted(polygonize(lineas), key=lambda q: q.area, reverse=True)
+    contorno, ranuras = piezas[0], piezas[1:]
+    esperadas = len(persiana.varillas_x(p)) - 1
+    ranuras = [r for r in ranuras if r.area > 1.0]
+    huecos_contorno = len(contorno.interiors)
+    if huecos_contorno != len(ranuras):
+        f.append(f"persiana_2d: el contorno tiene {huecos_contorno} huecos y se leyeron {len(ranuras)} ranuras")
+    if not (esperadas - 8 <= len(ranuras) <= esperadas):
+        f.append(f"persiana_2d: {len(ranuras)} ranuras; el ritmo da {esperadas} (las de las puntas pueden no caber)")
+    xs = sorted((r.bounds[0], r.bounds[2]) for r in ranuras)
+    anchos = [b - a for a, b in xs]
+    if min(anchos) < p["fresa_d"] - 0.02:
+        f.append(f"persiana_2d: una ranura mide {min(anchos):.2f} y la fresa {p['fresa_d']:g}")
+    varillas = [xs[i + 1][0] - xs[i][1] for i in range(len(xs) - 1)]
+    minimo = p["t_persiana"] / cb.ESBELTEZ_MAX_PARED
+    if min(varillas) < minimo - 0.02:
+        f.append(f"persiana_2d: una varilla mide {min(varillas):.2f} y la esbeltez pide {minimo:.2f}")
+    borde = min(contorno.exterior.distance(r) for r in ranuras)
+    if borde < p["borde_persiana"] - 0.05:
+        f.append(f"persiana_2d: el borde macizo baja a {borde:.2f} y se piden {p['borde_persiana']:g}")
+    r = p["fresa_d"] / 2
+    picos = [q for q in ranuras if q.buffer(-r).buffer(r).area < 0.995 * q.area]
+    if picos:
+        f.append(f"persiana_2d: {len(picos)} ranuras con esquinas mas vivas que la fresa (R{r:g})")
+    if not f:
+        print(f"  persiana_2d: {len(ranuras)} ranuras de {min(anchos):.2f} a {max(anchos):.2f}, "
+              f"varillas de {min(varillas):.2f} o mas, borde de {borde:.2f}")
+    return f
+
+
 def todo_dxf_tiene_quien_lo_mire() -> list[str]:
     """Ningun DXF sale al taller sin que una puerta lo mire.
 
@@ -2563,6 +2637,8 @@ def main() -> int:
     fallos += guarda_costado()
     fallos += agujeros_donde_toca()
     fallos += chasis_agujeros()
+    fallos += guarda_persiana_generada()
+    fallos += guarda_persiana()
     fallos += todo_dxf_tiene_quien_lo_mire()
     for nombre, motivo in SIN_DXF.items():
         print(f"  PENDIENTE (sin DXF, no bloquea): {nombre} -- {motivo}")

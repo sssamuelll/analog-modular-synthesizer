@@ -6,6 +6,7 @@
 //   openscad -o out.dxf -D 'PART="costado_2d"' sam17_case.scad
 
 include <params.scad>
+include <persiana_generada.scad>
 PART = "assembly";
 // $fn vive en params.scad: asi lo hereda TODO .scad que incluya params.
 // Tenerlo aqui fue el bug del cupon pentagonal (ver nota en params.scad).
@@ -2371,6 +2372,10 @@ else if (PART == "chasis_abierto")       chasis_abierto();
 else if (PART == "chasis_cerrado")       chasis_3d();
 else if (PART == "lienzo_2d")            lienzo_2d();
 else if (PART == "bom")                  bom();
+else if (PART == "persiana_2d")          persiana_2d();
+else if (PART == "persiana_pasante_2d")  persiana_pasante_2d();
+else if (PART == "persiana_dorso_2d")    persiana_dorso_2d();
+else if (PART == "assembly_persiana")    persianas();
 else assert(false, str("PART desconocido: ", PART));
 
 // costado_2d vive en el plano XY del perfil (X = fondo, Y = altura);
@@ -2398,6 +2403,80 @@ module costillas() {
     costilla();
     translate([0, 0, ancho_total])
         mirror([0, 0, 1]) costilla();
+}
+
+// --- LA PERSIANA (2026-10-11) ------------------------------------------------
+// docs/superpowers/specs/2026-10-11-case-persiana-design.md. Una placa por
+// costado, por fuera del anillo y tapandolo, en el plano del perfil (x = fondo,
+// y = alto); el grueso en z, con la cara que apoya en el anillo en z = 0.
+// El ritmo y los tacos vienen de persiana_generada.scad (persiana.py).
+module persiana_contorno_2d()
+    intersection() {
+        perfil_lateral();
+        translate([-50, suelo_persiana]) square([500, 500]);
+    }
+
+// El hueco entre cada dos varillas, dentro del borde macizo, con el radio de la
+// fresa en las puntas: encoger y volver a crecer redondea las esquinas.
+module persiana_ranuras_2d() {
+    r = fresa_d / 2;
+    v = varilla_persiana;
+    xs = varillas_persiana;
+    offset(r = r) offset(delta = -r)
+        intersection() {
+            offset(delta = -borde_persiana) persiana_contorno_2d();
+            union()
+                for (k = [0 : len(xs) - 2])
+                    translate([xs[k] + v/2, -10]) square([xs[k+1] - xs[k] - v, 400]);
+        }
+}
+
+function y_atados() = let (H = pts_perfil()[5].y) [H/3, 2*H/3];
+
+module persiana_atados_2d()
+    for (y = y_atados()) translate([-50, y - alto_atado/2]) square([500, alto_atado]);
+
+// Lo que atraviesa: la ranura dentro de la ventana del anillo, menos los atados.
+// Lo demas (la banda sobre el anillo y los atados) se queda a
+// hondo_ciego_persiana desde fuera.
+module persiana_pasante_2d()
+    difference() {
+        intersection() { persiana_ranuras_2d(); ventana_anillo_2d(); }
+        persiana_atados_2d();
+    }
+
+// LA CARA (DXF): el contorno con todas las ranuras, que se fresan a
+// hondo_ciego_persiana desde fuera. Lo pasante va en persiana_pasante_2d, y los
+// tacos del dorso en persiana_dorso_2d: un DXF 2D no sabe decir profundidades.
+module persiana_2d() difference() { persiana_contorno_2d(); persiana_ranuras_2d(); }
+
+module persiana_dorso_2d()
+    for (t = tacos_persiana)
+        translate([t[0], t[1]]) difference() {
+            circle(d = d_taco, $fn = 48);
+            circle(d = d_iman + 0.1, $fn = 32);
+        }
+
+function alto_iman_taco_de(tipo) = tipo == "fino" ? alto_iman_fino : alto_iman_taco;
+
+module persiana() {
+    translate([0, 0, -t_persiana]) linear_extrude(t_persiana) persiana_2d();
+    translate([0, 0, -(t_persiana - hondo_ciego_persiana)])
+        linear_extrude(t_persiana - hondo_ciego_persiana)
+            difference() { persiana_ranuras_2d(); persiana_pasante_2d(); }
+    for (t = tacos_persiana)
+        translate([t[0], t[1], 0]) difference() {
+            cylinder(d = d_taco, h = alto_taco, $fn = 48);
+            translate([0, 0, alto_taco - alto_iman_taco_de(t[2]) - 0.1])
+                cylinder(d = d_iman + 0.1, h = alto_iman_taco_de(t[2]) + 0.2, $fn = 32);
+        }
+}
+
+// Las dos, espejadas como los anillos: la de la izquierda apoya en z = 0 y
+// sale hacia -z; la de la derecha apoya en ancho_total y sale hacia +z.
+module persianas() {
+    persiana();
+    translate([0, 0, ancho_total]) mirror([0, 0, 1]) persiana();
 }
 
 // railes de panel (centros_rail(), 4) van a ras de su cara: giro extra
