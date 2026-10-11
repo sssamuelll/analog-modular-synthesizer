@@ -1,6 +1,6 @@
 # La persiana: el case sin piel, y el costado que respira
 
-**Fecha**: 2026-10-11 · **Estado**: **firmado el 11-10** (versión 2, después de la junta): D-S1 en conversación (*«he decidido C · La persiana»*), y de D-S2 a D-S11 y el papel en el acta, todas en la opción recomendada. **D-S4 en espera**: Samuel la firmó con la nota *«pero ojo, estoy pensando en quitar la tabla, creo que es algo que nos puede beneficiar, que opinas tu?»* (§8) ·
+**Fecha**: 2026-10-11 · **Estado**: **firmado el 11-10** (versión 2, después de la junta): D-S1 en conversación (*«he decidido C · La persiana»*), y de D-S2 a D-S11 y el papel en el acta, todas en la opción recomendada. **D-S4 en espera**: Samuel la firmó con la nota *«pero ojo, estoy pensando en quitar la tabla, creo que es algo que nos puede beneficiar, que opinas tu?»* (§8). **Implementado el 2026-10-12** en la rama `feat/case-persiana`, del plan `docs/superpowers/plans/2026-10-11-case-persiana.md` (commits `ad4f47c` a `6cc4f77`, y estas enmiendas en el siguiente) ·
 **Sucede a**: `2026-09-05-case-piel-organica-design.md` como dirección del acabado. Su D-P1 (*la piel sustituye a techo, nariz, talón y las dos mejillas*) nunca se firmó ·
 **Base**: `main` en `820a2eb` (11-10). Es el case de agosto con lo que la etapa de la piel dejó hecho en el modelo y sigue valiendo: la tabla de 30 con canto redondeado (ficha 12), la tira negra del valle (ficha 6), los paneles vestidos y los rieles plateados (ficha 14) ·
 **Se apoya en**: `2026-08-28-costilla-pletina` (el anillo), `2026-08-29-nariz-recta-valle-limpio` (la nariz), `2026-08-29-trasera-capturada-talon-nariz` (la trasera y el talón), `2026-08-30-techo-macizo-chapas-empotradas` (el techo y la rendija del alero, que siguen), `2026-08-31-case-tanda-b` (las tres filas, paneles fijos) y `2026-09-05-fuente-v5-ladrillo` (D-V1, la fuente afuera) ·
@@ -211,6 +211,8 @@ Siguen en verde `guarda_marco_ventana()`, `guarda_anclajes()`, `guarda_paneles_f
 ## 8. El ancho y la tabla
 
 `ancho_total` es derivado (largo del riel + holgura + 2 · `t_placa` + 2 · `t_anillo`) y mide de anillo a anillo; z = 0 está en la cara de fuera del anillo izquierdo. La persiana va por fuera: de z = −6 a 0 y de `ancho_total` a `ancho_total` + 6. Entra una cota derivada nueva, **`ancho_exterior` = 580,62**, y se revisa cada uno de los 72 usos de `ancho_total` para ver cuál quería decir «por fuera» (el censo del plan).
+
+**Lo que hizo el plan** (2026-10-11): `ancho_exterior` entra cuando se decida la tabla (D-S4). Hoy no lo lee nadie, y no se crea un parámetro sin lector.
 
 `vuelo_zocalo` se mide desde el anillo. Con 20, la tabla asoma **14 mm a los lados**, por fuera de la persiana, y 20 delante y detrás. D-S4 escoge entre:
 

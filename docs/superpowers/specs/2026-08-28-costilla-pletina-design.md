@@ -1,5 +1,7 @@
 # La costilla de pletina mecanizada
 
+> **Enmienda 2026-10-11:** la mejilla de acrílico coplanar que este papel describe la sustituyó la persiana ([`2026-10-11-case-persiana-design.md`](2026-10-11-case-persiana-design.md)); el rebaje del anillo se queda vacío.
+
 **Fecha:** 2026-08-28 · **Estado:** propuesta, pendiente de aprobación por secciones ·
 **Sustituye** la costilla de chapa plegada de `2026-08-26-case-esqueleto-aluminio` y la
 inversión del apilado de `2026-08-27-case-esqueleto-visible` §3 (casquillo + junta).

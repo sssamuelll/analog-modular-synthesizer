@@ -1,5 +1,7 @@
 # El techo macizo, con la salida de aire por el alero, y las tres chapas empotradas en el anillo
 
+> **Enmienda 2026-10-11:** la mejilla de acrílico coplanar que este papel describe la sustituyó la persiana ([`2026-10-11-case-persiana-design.md`](2026-10-11-case-persiana-design.md)); el rebaje del anillo se queda vacío.
+
 **Fecha:** 2026-08-30 · **Estado:** aprobado por Samuel en conversación («dale»)
 sobre la propuesta de esta mañana, con sus cuatro números (chapa rehundida 1,
 rebaje en las tres chapas; y para la tanda B, panel 1U de 55 y paneles 1.5

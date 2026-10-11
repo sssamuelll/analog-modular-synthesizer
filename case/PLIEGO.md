@@ -1,5 +1,19 @@
 # Pliego de fabricación — cuerpo del SAM17
 
+> **rev. 28 (2026-10-11). La persiana sustituye a las mejillas de acrílico**
+> (papel `docs/superpowers/specs/2026-10-11-case-persiana-design.md`). **Sale
+> `costado_2d`**: el PMMA naranja se queda en una sola pieza, la trasera.
+> **Entra la persiana** (§6.3): dos placas de aluminio de 6, espejadas, con 47
+> varillas de 2 y diez tacos en el dorso, en tres DXF (`persiana_2d`,
+> `persiana_pasante_2d`, `persiana_dorso_2d`). **Al mecanizado del anillo
+> (§6.1)**: diez bolsillos por la cara de fuera para los tacos, en
+> `costilla_bolsillos_2d`; el rebaje del costado se queda, vacío. **Al
+> anodizado (§6.4)**: todo el aluminio que se ve va en negro, con una aleación,
+> un anodizador y un lote; el anillo deja de ser «satinado». **Se compran**
+> 20 pares de imanes de neodimio (§6.5). Muere la junta de asiento EPDM del
+> costado. Esta revisión sustituye las cotas operativas de la rev. 27 donde
+> chocan; su bloque se conserva debajo como historia.
+>
 > **rev. 27 (2026-08-30). Tanda A: techo macizo y tres chapas empotradas.**
 > **Al mecanizado:** cada anillo gana el rebaje de chapa de 4.5 de ancho × 3
 > de fondo y un cajeado de brida de 28 × 15.5 × 3; son dos al fabricar el par.
@@ -96,6 +110,9 @@ Para elegir taller antes de pedir, ver [`RFQ.md`](RFQ.md).
 
 - **PMMA COLADO (GS)**, naranja translúcido. **NO extruido (XT)**: el
   extruido trae tensión interna de fábrica y craquela solo.
+- **Una sola pieza desde la rev. 28: la trasera** (`piel_trasera_2d`). Las dos
+  mejillas (`costado_2d`) las sustituyó la persiana, que es de aluminio y va
+  al taller de mecanizado (§6.3).
 - Espesor: **8 mm**, y es el único. Hubo dos hasta el 2026-08-25: los 5 mm
   existían para una sola pieza —la tapa del valle— y esa pieza pasó a
   **chapa de aluminio**, así que no entra en este pliego (§6).
@@ -135,7 +152,7 @@ al desembalar.
 
 | dónde | acabado |
 |---|---|
-| **canto visible** (contorno exterior de las piezas, ~7.5 m) | **PULIDO DIAMANTADO en máquina** |
+| **canto visible** (contorno exterior de las piezas: eran ~7.5 m con las mejillas) | **PULIDO DIAMANTADO en máquina** |
 | **canto interior** (ranuras, ondas, taladros, ~10 m) | tal cual sale de fresa |
 
 **PULIDO A LLAMA PROHIBIDO.** Mete tensión superficial y deshace el
@@ -145,13 +162,17 @@ El acrílico es translúcido: la luz viaja por dentro de la plancha y sale por
 el canto. Un canto áspero se lee como una línea blanca lechosa rodeando cada
 pieza; uno diamantado se enciende del color del cuerpo.
 
+**Desde la rev. 28 ningún canto de acrílico queda a la vista**: la trasera es
+la única pieza, y sus cuatro cantos van dentro de los bolsillos del anillo y
+tras los labios del techo y del talón. Si el diamantado sigue siendo condición
+del taller lo decide Samuel (HUECO); hasta entonces se pide.
+
 ### 3.3 Chaflán
 
 **0.5 × 45° en toda arista vista**, mecanizado (no lijado a mano).
 
-Incluye **las dos esquinas traseras del costado**, que van a **arista viva
-por diseño** (radio 0) para que la trasera empotre a ras. Arista viva más
-canto pulido se desportilla al primer roce, y la de abajo va a ras del suelo.
+(Hasta la rev. 28 incluía las dos esquinas traseras del costado, a arista
+viva por diseño. El costado ya no es de acrílico.)
 
 ## 4. Cajeado ciego — la operación que el DXF no describe
 
@@ -180,8 +201,7 @@ Las demás piezas son indiferentes al lado.
 
 | DXF | espesor | uds | notas |
 |---|---|---|---|
-| `costado_2d` | 8 | **2** | canto visible completo, diamantado. **Sin un solo taladro** desde el 2026-08-27 |
-| `piel_trasera_2d` | 8 | 1 | **+ `kondor_cajeado_2d` a 4 mm en la cara exterior** (§4, §5). **Sin un taladro** desde el 2026-08-29 (más noche): va CAPTURADA como el costado, con sus puntas en los bolsillos del tramo trasero de los anillos (5.85 por punta), sobre el pie del talón y bajo el fin del bolsillo. **Un chaflán de 5.5 × 45° en la arista de abajo por la cara exterior**, a lo largo de los 552.32 — cota que el DXF no sabe decir: se pide aquí, como el diamantado. Es lo que libra el escalón del bolsillo bajo el chaflán del anillo con la plancha en el fondo del bolsillo y pegada al labio; deja 2.5 de canto plano sobre el pie y queda escondido detrás del labio del talón. **552.32 × 237.18** |
+| `piel_trasera_2d` | 8 | 1 | **+ `kondor_cajeado_2d` a 4 mm en la cara exterior** (§4, §5). **Sin un taladro** desde el 2026-08-29 (más noche): va CAPTURADA, con sus puntas en los bolsillos del tramo trasero de los anillos (5.85 por punta), sobre el pie del talón y bajo el fin del bolsillo. **Un chaflán de 5.5 × 45° en la arista de abajo por la cara exterior**, a lo largo de los 552.32 — cota que el DXF no sabe decir: se pide aquí, como el diamantado. Es lo que libra el escalón del bolsillo bajo el chaflán del anillo con la plancha en el fondo del bolsillo y pegada al labio; deja 2.5 de canto plano sobre el pie y queda escondido detrás del labio del talón. **552.32 × 237.18** |
 | `coupon.dxf` | 8 | 1 | pieza de calibración — **sin acabado, sin recocer** |
 
 **`remate_sup_2d` NO EXISTE.** Hasta el 2026-08-27 era la tapa de remate en
@@ -196,22 +216,21 @@ de su blank, `marco_sup`), no una plancha aparte. `remate_sup()` y
 acrílico de 8. Ahora es una **tabla de madera maciza de 30 mm** (18 hasta la ficha 12 del 10-10) que va bajo el
 marco y hace de suelo y de zócalo a la vez. Va al carpintero, §6.2.
 
-**Y el costado dejó de llevar taladros.** Tenía cuatro M4 de riel y cuatro M5 de
-larguero; los ocho se fueron al anillo de aluminio. La pieza es ahora
-**piel**: entra por detrás y asienta en el rebaje del anillo (§6.1), sobre una
-junta de EPDM de 1 mm, sin tocarlo con ningún tornillo — la retención hacia
-dentro la hace el **marco de la ventana** (una pletina por costado, corrida
-por los siete tramos, desde el 2026-08-29 por la noche; antes placas, clips y
-escuadra), atornillado al aluminio, nunca al acrílico. Al taller le llega un
-contorno y nada más — menos operaciones y menos sitios por donde el PMMA raja.
+**Y el costado dejó de ser de acrílico el 2026-10-11 (rev. 28).** Desde el
+27-08 era piel sin un taladro, asentada en el rebaje del anillo sobre una junta
+de EPDM de 1 mm y retenida hacia dentro por el marco de la ventana. Lo
+sustituye la **persiana**, de aluminio anodizado en negro, que va al taller de
+mecanizado (§6.3). El rebaje del anillo se queda vacío y la junta del costado
+no se compra.
 
 **`lienzo_2d.dxf` es solo previsualización de nesteado: NO SE CORTA.**
 
 ### Lo que NO va a este taller
 
-Diez DXF de `case/plans/` **no son de acrílico** y no entran aquí. Se reparten
-entre DOS talleres — chapa y mecanizado (§6.1) — que **no son el mismo** desde
-el 2026-08-28:
+Dieciséis DXF de `case/plans/` **no son de acrílico** y no entran aquí. Se
+reparten entre tres talleres — chapa, mecanizado (§6.1 y §6.3) y carpintería
+(§6.2) —, y chapa y mecanizado **no son el mismo** desde el 2026-08-28. Todo el
+aluminio que se ve pasa después por un solo anodizador (§6.4):
 
 | DXF | material | taller | proceso |
 |---|---|---|---|
@@ -221,8 +240,10 @@ el 2026-08-28:
 | `nariz_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: blank **545.62 × 50.20**, pie de **20.5** y tres dobleces. En cada punta del pie, muesca de 2.65 hasta la línea de doblez a 20.06, con alivio de Ø2 a caballo de la esquina interior — **1 ud** |
 | `tapa_valle_2d` | aluminio, 3 mm | chapa | corte + **plegado**: blank **560.00 × 20.00**, dos pestañas de 21 mm y labio trasero de apoyo de 2.0 mm; sin taladros visibles en la banda |
 | `costilla_2d`, `costilla_dorso_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **fresado CNC**, sin plegar, sin soldar |
+| `costilla_bolsillos_2d` | la cara de FUERA del anillo | **mecanizado** (§6.1) | diez bolsillos ciegos por anillo para los tacos de la persiana, con el asiento del imán dibujado dentro; las profundidades, en §6.1 |
+| `persiana_2d`, `persiana_pasante_2d`, `persiana_dorso_2d` | **aluminio 6082-T651, pletina de 12** frenteada a 9.5 | **mecanizado** (§6.3) | **fresado CNC** por las dos caras: ranuras a 4 de fondo por delante, el pasante solo donde detrás hay ventana, y los tacos por detrás — **2 uds, PAR ESPEJADO** |
 | `bandeja_base_2d` | madera maciza, 30 mm | carpintería | corte + ranuras alargadas + canto de arriba redondeado R8 |
-| `marco_ventana_2d` | aluminio, `t_placa` = 6 mm, **láser** | chapa | corte + **6 cajeados** Ø8 × `prof_cajeado_riel` = 2.5 **por el lado del anillo** (bolsillos ciegos en UNA cara: dejan 3.5 mm bajo la cabeza del M4 del riel). Nota de mecanizado, no va en el DXF — ver abajo — **2 uds, PAR ESPEJADO**: mismo contorno, cajeado por caras opuestas. **Planitud ≤ 0.5 mm en 300** en el blank cortado: apoya en la cara mecanizada del anillo y doce M4 lo conforman contra ella (una pletina de 6 × 24 se aplana 0.5 con 200 N), pero con más de eso el acrílico lo nota |
+| `marco_ventana_2d` | aluminio, `t_placa` = 6 mm, **láser** | chapa | corte + **6 cajeados** Ø8 × `prof_cajeado_riel` = 2.5 **por el lado del anillo** (bolsillos ciegos en UNA cara: dejan 3.5 mm bajo la cabeza del M4 del riel). Nota de mecanizado, no va en el DXF — ver abajo — **2 uds, PAR ESPEJADO**: mismo contorno, cajeado por caras opuestas. **Planitud ≤ 0.5 mm en 300** en el blank cortado: apoya en la cara mecanizada del anillo y doce M4 lo conforman contra ella (una pletina de 6 × 24 se aplana 0.5 con 200 N) |
 | `cupon_anillo_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **NO ES UNA PIEZA DEL CASE**: es la SECCIÓN del perfil del anillo, y de ella sale el **cupón de 100 mm** que hay que aprobar antes de cortar los dos anillos — ver el punto de parada en §6.1 |
 
 **Juntas de los dos labios:** suministrar y pegar **12 tacos de EPDM de
@@ -243,15 +264,19 @@ cara):
   silueta, que es el ancho de la cara vista. **NO trae el contorno del rebaje.**
   Es la hoja del corte del blank.
 - **`costilla_dorso_2d` — LA CARA INTERIOR.** Trae el contorno del rebaje del
-  costado y, desde la rev. 27, el **rebaje de chapa de 4.5 de ancho** a lo
+  costado (vacío desde la rev. 28) y, desde la rev. 27, el **rebaje de chapa de 4.5 de ancho** a lo
   largo del contorno solo donde se ve techo, nariz o talón. Bajo los dos
   labios, ese contorno se funde con el bolsillo de la trasera. El bolsillo va
-  en **u = 5.5..16.5**, con pared de 3 y el costado entrando 3.5; su labio
+  en **u = 5.5..16.5**, con pared de 3 y 3.5 de rebaje vacío; su labio
   queda con 3 de hondo bajo los labios de chapa y conserva 6 en el resto.
   Trae también la planta del cajeado de brida de cada anillo —dos al fabricar
   el par—, de **28 × 15.5**, y los 14 círculos de rosca ciega. La silueta no se repite: dibujarla sería mandar
   cortar el contorno dos veces. **Las profundidades no viven en esta planta**;
   están escritas en §6.1.
+- **`costilla_bolsillos_2d` — LA CARA DE FUERA (rev. 28).** Los diez bolsillos
+  de los tacos de la persiana, cada uno con el círculo del asiento del imán
+  dentro: ocho de Ø9, el localizador de Ø8 y la colisa de 8 × 10. En las mismas
+  coordenadas que la cara; **las profundidades están en §6.1**.
 
 **El dorso está dibujado EN LAS MISMAS COORDENADAS que la cara, no espejado.**
 Léase como *la cara de atrás de la misma pieza, mirada desde el mismo lado*:
@@ -266,13 +291,14 @@ del chasis: el DXF trae el recorte, y la pieza doblada mide menos. Cortar el
 contorno de la pieza montada da un fichero válido e inservible.
 
 **LOS DOS ANILLOS SON PIEZAS ESPEJADAS, no dos iguales.** Mismo contorno y
-misma ventana, pero **el rebaje, el chaflán de la ventana y las 14 roscas
-ciegas van en la cara OPUESTA de cada uno**: la cara vista de cada anillo mira
+misma ventana, pero **el rebaje, el chaflán de la ventana, las 14 roscas
+ciegas y los diez bolsillos de la persiana van en la cara OPUESTA de cada
+uno**: la cara vista de cada anillo mira
 hacia FUERA del case, así que el dorso de uno es el lado que en el otro queda
 por delante (`costillas()` en `sam17_case.scad` monta el segundo con
 `mirror([0,0,1])` justo por esto). Cortar los dos con las operaciones del mismo
 lado da un case con un anillo del revés: el rebaje del segundo abriría hacia
-fuera y el acrílico no tendría dónde entrar. **Un anillo derecho y uno
+fuera y sus bolsillos de la persiana quedarían por dentro. **Un anillo derecho y uno
 izquierdo.**
 
 **EL MARCO DE LA VENTANA (`marco_ventana_2d`) SUSTITUYE A PLACAS, CLIPS Y
@@ -280,8 +306,8 @@ ESCUADRAS desde el 2026-08-29 por la noche.** Es la pletina de 6 con el
 contorno de la ventana del anillo, corrida por los siete tramos: sobre las
 tres filas es exactamente la placa de anclaje de la mañana (canto a la
 silueta, cajeado por riel, dos roscas por riel), y en el frente, el suelo,
-la meseta y la trasera es el tope del acrílico que daban los clips y la
-escuadra. Blank **294.56 × 252.88**. **Se cortan DOS con el mismo DXF y son
+la meseta y la trasera fue el tope del acrílico que daban los clips y la
+escuadra, hasta la rev. 28. Blank **294.56 × 252.88**. **Se cortan DOS con el mismo DXF y son
 un PAR ESPEJADO**: el cajeado Ø8 × 2.5 va en la cara OPUESTA en el de un
 costado y en el del otro, porque cada cajeado tiene que mirar al anillo de
 SU lado. Los seis cajeados van centrados en los seis pasos M4 de riel
@@ -304,8 +330,9 @@ En el **suelo** se retira **1.65**: los pies apoyan a ras y no entran en el
 rebaje. En la trasera se retira **17.00**, medio milímetro después de la pared
 del bolsillo. El canto interior conserva 26 de fondo salvo en la pata
 trasera, donde `marco_fondo_trasera` vale **30**. Así queda una pata de
-**13 × 6**; con 200 N cede 1.54 mm y trabaja a 114 MPa, por debajo de los
-techos de 2 mm y 130 MPa. `taladros_marco_ventana()` relee el contorno del
+**13 × 6**, que con 200 N trabaja a 114 MPa, por debajo de 130: con la
+persiana quitada, la mano llega al marco. (El techo de flecha de 2 mm era el
+del acrílico, que se salía del rebaje con 3, y se fue con él.) `taladros_marco_ventana()` relee el contorno del
 fichero.
 
 **LA BRIDA DEL TECHO VA EMPOTRADA.** Cada brida mide **27 × 14.5** y lleva
@@ -393,12 +420,12 @@ cambió de pieza, no la función.
 
 **Ninguna pieza de aluminio o de acero lleva nada de §3**: ni recocido, ni
 diamantado, ni el chaflán de 0.5. Esas tres cosas son del PMMA. Canto
-desbarbado y basta — salvo el anillo, que tiene su propio acabado (anodizado
-satinado, §6.1) y tampoco lleva recocido ni diamantado, y la tapa del valle,
-que va **anodizada en negro** después de plegar (ficha 14 del acta del
-09-10), y la **tira negra del valle** (ficha 6, 10-10): chapa de aluminio de 1 mm,
-lisa, cortada a las cotas que imprime `guarda_tira_valle()` y anodizada en
-negro, sin taladros ni plegados.
+desbarbado y basta, y **todo el aluminio que se ve, anodizado en negro**
+(§6.4): el anillo, la persiana, las tres chapas empotradas, la tapa del valle
+(ficha 14 del acta del 09-10), el marco de la ventana, que se ve entre las
+varillas, y la **tira negra del valle** (ficha 6, 10-10): chapa de aluminio de
+1 mm, lisa, cortada a las cotas que imprime `guarda_tira_valle()`, sin
+taladros ni plegados.
 
 ### 6.1 Taller de mecanizado: el anillo
 
@@ -413,18 +440,29 @@ maciza, vaciada por el centro con fresadora CNC.
   contorno real mide 319.8 × 256.2 mm, `costilla_2d`, con margen de sujeción
   y desbaste).
 - **SON DOS PIEZAS ESPEJADAS, uno derecho y uno izquierdo.** Mismo contorno y
-  misma ventana; los **rebajes, los cajeados, el chaflán de la ventana y las
-  14 roscas ciegas van en la cara OPUESTA de cada anillo**, porque la cara vista de cada uno
-  mira hacia FUERA del case. Mecanizar los dos por el mismo lado da un anillo
-  del revés, con el rebaje abriendo hacia fuera y el acrílico sin sitio donde
-  entrar. En el modelo esto es el `mirror([0,0,1])` de `costillas()`.
+  misma ventana; los **rebajes, los cajeados, el chaflán de la ventana, las
+  14 roscas ciegas y los diez bolsillos de la persiana van en la cara OPUESTA
+  de cada anillo**, porque la cara vista de cada uno mira hacia FUERA del case.
+  Mecanizar los dos por el mismo lado da un anillo del revés, con el rebaje
+  abriendo hacia fuera y los bolsillos de la persiana por dentro. En el modelo esto es el `mirror([0,0,1])` de `costillas()`.
 - **Contorno + ventana.** Corte de la silueta exterior y de la ventana
   central — láser o agua y luego fresa, o todo fresa: lo decide el taller,
   siempre que el acabado final sea el fresado de §6.1.
-- **Rebaje**, por detrás de la cara vista, donde asienta el costado: **6 mm**
-  de ancho en el plano (`rebaje_anillo`) × **11 mm** de profundidad
-  (`t_anillo − rehundido_acrilico`, 14 − 3). Sin él el acrílico no tiene
-  dónde entrar y asoma por delante del anillo.
+- **Rebaje**, por detrás de la cara vista: **6 mm** de ancho en el plano
+  (`rebaje_anillo`) × **11 mm** de profundidad (`t_anillo − rehundido_acrilico`,
+  14 − 3). **Desde la rev. 28 queda VACÍO**: ahí asentaba la mejilla de
+  acrílico, y la persiana lo tapa. Se mantiene porque sus cotas son las del
+  bolsillo de la trasera y quitarlo no compra nada (papel de la persiana,
+  §7.2). Junta polvo: con la persiana fuera, se aspira.
+- **Diez bolsillos por anillo en la cara de FUERA** (rev. 28), los de los
+  tacos de la persiana, según `costilla_bolsillos_2d`: **3.8 mm de hondo**
+  (0.3 de aire bajo el taco de 3.5) y, en el fondo, el **asiento del imán de
+  Ø6.1 × 3.1** — **Ø6.1 × 1.1** en los tres del tramo de atrás, que tienen
+  detrás el bolsillo de la trasera. Ocho de **Ø9**, con holgura, retienen;
+  dos localizan: el delantero del suelo a **Ø8 H7** y el trasero del suelo en
+  **colisa de 8 H7 × 10** a lo largo de x. Quedan 3.0 de pared al rebaje
+  (`guarda_tacos_persiana()`), y cada bolsillo libra las roscas M4 del dorso y
+  los M5 de la tabla (`anillo_tiene_bolsillos()`).
 - **Rebaje de chapa**, en la cara interior y solo a lo largo del contorno que
   queda cubierto por techo, nariz o talón: **4.5 mm de ancho × 3 mm de
   profundidad**, desde z = 11 hasta z = 14 contando desde la cara vista. Deja
@@ -435,7 +473,7 @@ maciza, vaciada por el centro con fresadora CNC.
   en la cara interior. Esquinas interiores R1.5 para la fresa Ø3. Las bridas
   van a R2. Quedan 11 mm de pletina bajo sus dos M4 ciegos.
 - **Tramo trasero de 23 mm de franja.** El bolsillo de la trasera ocupa
-  u = 5.5..16.5; después quedan la pared de 3 y los 3.5 que entra el costado.
+  u = 5.5..16.5; después quedan la pared de 3 y 3.5 de rebaje vacío.
   Bajo los labios del techo y del talón, el labio del bolsillo tiene 3 de
   hondo porque el rebaje de chapa ocupa los otros 3. En el resto conserva 6.
 - **Radios de contorno:** 5.5 donde se ve chapa empotrada; 4.5 donde la chapa
@@ -461,15 +499,15 @@ la huella, no el eje Z. No deducir la profundidad del ancho dibujado.
   el margen que deja la puerta de anclajes). Son **14 roscas M4 por anillo**
   — la cuenta que imprime `taladros_anillo()` sobre este mismo DXF: dos por
   riel 3U, dos sobre el primer riel 1U y dos en la pata del suelo (las doce
-  del marco de la ventana; las del suelo caen en x = 67.6 y 236.2, lejos de
-  los tres M5 de la tabla que entran por el canto en 44.6, 153.7 y 262.8 —
+  del marco de la ventana; las del suelo caen en x = 67.6 y 242.8, lejos de
+  los tres M5 de la tabla que entran por el canto en 53.3, 159.9 y 266.5 —
   `guarda_marco_ventana()` lo mide) y dos de la brida del miembro alto; eran
   16 con los clips y la brida del
   miembro bajo, muertos el 29-08 por la noche — más **3 roscas M5 por anillo (6 en total, 2
   filas de 3) en el CANTO INFERIOR** para la tabla: esas NO salen en el DXF
   del dorso porque entran por el canto, no por la cara, así que van descritas
   aquí y no en el plano: al medio de los 14 mm de espesor, broca 4.2.
-- **Acabado: anodizado satinado**, después de mecanizar. El punto de bonding
+- **Acabado: anodizado negro** (§6.4), después de mecanizar. El punto de bonding
   de PE va **enmascarado antes de anodizar**, en la cara interior, uno por
   anillo — el anodizado es aislante y ese punto tiene que quedar metal
   desnudo.
@@ -485,7 +523,7 @@ la huella, no el eje Z. No deducir la profundidad del ancho dibujado.
   vistas de planta y ninguna sabe decir «14 de pletina» ni «1.5 × 45». Del
   perfil de esa sección, **100 mm de largo**, con **una rosca ciega M4 (broca
   3.3, 10 mm útiles) a media altura de la franja, a media longitud**, y
-  **anodizado satinado con un punto de bonding enmascarado** en la cara
+  **anodizado negro (§6.4) con un punto de bonding enmascarado** en la cara
   interior. Mismo material, mismo mecanizado y mismo anodizador que van a
   hacer los anillos: un cupón hecho de otra forma no mide nada.
 
@@ -505,7 +543,7 @@ la huella, no el eje Z. No deducir la profundidad del ancho dibujado.
   | # | Qué se comprueba | Criterio | Si falla |
   |---|---|---|---|
   | 1 | El chaflán se lee como en la foto de referencia | 1.5 ± 0.2 a 45°, continuo y sin escalones de faceta, mirado con la misma luz y al lado de la referencia impresa | Se cambia `chaflan_anillo` (rango ESTIMADO 1–3), se reexporta la sección y se pide otro cupón |
-  | 2 | El rebaje asienta el PMMA del lote | Con el recorte **más grueso** del lote (8 + 1.2 = 9.2) más la junta de 1 tiene que entrar en los 11 de fondo y **sobrar 0.3**; con el **más fino** (6.8) la junta todavía tiene que precargar | Se sube `t_anillo` — la puerta `guarda_rebaje()` ya dice que con 12 el rebaje quedaba a −0.2, o sea que no cabía |
+  | 2 | La persiana asienta plana en la cara del anillo y sus tacos entran en sus bolsillos | Con la **tira de muestra** de la persiana (§6.3) sobre su placa de 14 con dos bolsillos: apoya sin balanceo en toda la banda, el localizador entra a mano y el imán la sostiene sola | Se corrige la cota que falle (`d_bolsillo_taco`, `hondo_bolsillo_taco`, `d_taco`), se regeneran `costilla_bolsillos_2d` y `persiana_dorso_2d` y se pide otra placa antes de cortar los anillos. (Hasta la rev. 28 este criterio era «el rebaje asienta el PMMA del lote»: el rebaje ya no recibe nada) |
   | 3 | El anodizado no interrumpe el PE | **≤ 0.1 Ω** medido a cuatro hilos entre el punto enmascarado y un tornillo M4 apretado en la rosca ciega (spec 2026-08-27 §3.4) | El enmascarado no valió: se rehace el punto y se vuelve a medir antes de anodizar los anillos |
   | 4 | El rebaje de chapa deja un marco continuo | Rebaje de 4.5 × 3 y reborde de 1 × 3, sin mordidas ni pared abierta | No se cortan los anillos; se aplica la respuesta acordada en el RFQ y se pide otro cupón |
 
@@ -514,13 +552,13 @@ la huella, no el eje Z. No deducir la profundidad del ancho dibujado.
   contra los ficheros que se cortan, en cada corrida. Lo que el cupón cierra
   son las **profundidades del perfil** y el **acabado**, que ningún DXF de planta
   puede decir y ningún render puede decidir.
-- **Aleación: recomendada, no obligatoria.** La puerta (`guarda_anillo()`)
-  calcula con **Rp0.2 = 130 MPa**, el conservador de siempre, y con la
+- **Aleación: 6082-T6/T651, obligatoria desde la rev. 28.** No por cálculo:
+  la puerta (`guarda_anillo()`) calcula con **Rp0.2 = 130 MPa** y con la
   sección de este anillo (I = 3714 mm⁴, 214 mm², contra 1673 mm⁴ de la vieja
-  L plegada) el **5754 H22 pasa con margen de sobra**. El taller puede
-  ofrecer 6082-T6 o 5083 por planitud de la pletina tras el vaciado del
-  centro — el riesgo técnico real de esta pieza, no la resistencia — pero no
-  es un requisito de cálculo.
+  L plegada) el 5754 H22 pasaba con margen de sobra. Es por color: el anillo
+  va canto con canto con la persiana, y dos aleaciones anodizan con distinto
+  tono y se distinguen en la junta (§6.4). La planitud tras el vaciado sigue
+  siendo el riesgo técnico real de esta pieza.
 
 **Pregunta eliminatoria para este taller** (va también al RFQ, §D):
 **planitud garantizada después de vaciar el centro de una pletina de 14 mm.**
@@ -574,6 +612,101 @@ pediría 20 mm. **Decir qué especie se suministra antes de cortar.**
 por dentro del case a través del acrílico; el canto es lo que se ve por fuera.
 Las dos cuentan.
 
+### 6.3 Taller de mecanizado: la persiana
+
+**Pieza nueva desde la rev. 28.** Sustituye a las dos mejillas de acrílico:
+una placa por costado, por fuera del anillo y tapándolo entero, con 47 varillas
+verticales de 2 mm. Es por donde respira el instrumento y lo que se ve de él de
+lado. Papel: `docs/superpowers/specs/2026-10-11-case-persiana-design.md`.
+
+- **Material y blank.** Aluminio **6082-T651 laminado y estirado** — no placa
+  colada: se anodiza manchada —, en **pletina de 12** frenteada a **9.5**: 6
+  de placa y los diez tacos de 3.5 del dorso, del mismo bloque. Ninguna pieza
+  suelta.
+- **SON DOS PIEZAS ESPEJADAS: dos programas.** Mismo contorno; las ranuras
+  ciegas, los atados y los tacos van por la cara opuesta en cada una, porque
+  los tacos miran a SU anillo (`persianas()` monta la segunda con
+  `mirror([0,0,1])`, como `costillas()`).
+- **Qué trae cada hoja.** Las tres van en las mismas coordenadas que el anillo
+  y **no se espejan**: quien se voltea es la pieza en la máquina.
+  - **`persiana_2d` — LA CARA.** El contorno y las 45 ranuras, con sus puntas a
+    radio 1.5. Todo lo que dibuja se fresa **a 4 mm de fondo por delante**.
+  - **`persiana_pasante_2d` — LO QUE ATRAVIESA.** Las ranuras donde detrás hay
+    ventana, menos los dos atados: ahí se quitan **los 2 mm que quedan**. Donde
+    no sale (la banda que cae sobre la cara del anillo, 20 mm y 23 en el tramo
+    de atrás, y los dos atados de 4), la ranura se queda a 4 y deja un alma de
+    2 por detrás.
+  - **`persiana_dorso_2d` — EL DORSO.** Los diez tacos de **Ø8 × 3.5**, cada uno
+    con el asiento del imán: **Ø6.1 × 2.1** en siete y **Ø6.1 × 1.1** en los
+    tres del tramo de atrás.
+- **Orden de operaciones.** Es lo que hace la pieza posible: sin los atados y
+  sin el alma, la varilla de 248 cede más de 1 mm mientras se corta (papel,
+  §3.3).
+  1. frentear las dos caras, dejando los tacos;
+  2. todas las ranuras **a 4 de fondo por delante, con las paredes
+     acabadas**, mientras el alma de 2 las sostiene;
+  3. el pasante de los últimos 2 mm, **solo en `persiana_pasante_2d`**, por
+     tramos entre atados y **sobre placa de sacrificio**;
+  4. el contorno, al final.
+- **Fresa Ø3 de 3 filos.**
+- **Chaflán 0.2 × 45°** en las aristas de delante, y repaso de rebaba por
+  detrás (§6.4: arista rota en todo canto visto).
+- **Planitud ≤ 0.2 en 320**, medida después de ranurar **y** de anodizar.
+  **Pregunta eliminatoria**, como la del anillo: la persiana apoya en la cara
+  del anillo por toda su banda, y esa sujeción decide cómo suena (el primer
+  modo de frente va de 350 a 920 Hz según cuánto apoye; papel, §3.3).
+
+**La muestra, antes que las dos persianas (#398).** Una **tira de altura
+completa**, 60 × 256 mm, cortada de la propia persiana donde están las
+varillas de 248 (x ≈ 270–330): 9 o 10 varillas, los dos atados, la banda
+ciega, el borde de 4 por los cuatro lados y **dos tacos con sus imanes sobre
+una placa de 14 con dos bolsillos**. Mismo material, mismo taller, mismo
+anodizador. Una muestra de 100 × 100 no sirve: ningún vano pasaría de 45 mm,
+sería seis veces más rígida y daría verde sin merecerlo. Lo que se mide:
+
+- el corte pasante en el vano de 83, sin vibración y con 0.05 mm o menos de
+  ondulación de pared (ESTIMADO);
+- el anodizado en cantos de 2 y en el fondo de las ranuras ciegas;
+- **el golpe de uña**: el tono más bajo de frente y cuánto dura. Criterio:
+  **que se apague en medio segundo o menos**. Si dura más, una lámina de
+  aluminio con adhesivo viscoelástico (tipo 3M 434/435; la hoja hay que
+  traerla) pegada detrás de los dos atados, que no se ve y no quita aire;
+- el tirón de los imanes, con dinamómetro (el papel lo estima en 50–70 N por
+  persiana entera, contra los 3.6 N de su peso);
+- el escalón entre el canto de la persiana y el del anillo, contra el cupón
+  del anillo (§6.1, criterio 2).
+
+### 6.4 El anodizado — todo el aluminio que se ve
+
+**Desde la rev. 28, todo el aluminio que se ve va anodizado en negro**: los dos
+anillos, las dos persianas, el techo, la nariz, el talón, la tapa del valle, la
+tira negra del valle y el marco de la ventana, que se ve entre las varillas.
+Los Z-Rails no: son comprados y van en plata.
+
+- **Una sola aleación: 6082-T6/T651**, la de las chapas. La persiana va canto
+  con canto con el anillo, y dos aleaciones anodizan con distinto tono y se
+  distinguen en la junta.
+- **Un anodizador y un lote** para todo.
+- **Negro, ISO 7599 clase AA15–AA20, sellado.** Citado de memoria: la norma no
+  está en el repo, y hay que confirmarla con el anodizador.
+- **Arista rota de 0.2 mm o más** (C0.2 o R0.2) **en todo canto visto**. En
+  canto vivo el anodizado no cierra la arista: sale más claro y se pela al
+  limpiar, y en la persiana serían 94 rayas grises a lo largo de las varillas.
+- **Los contactos del bastidor, en caras tapadas**: en la persiana, el dorso de
+  la banda, que tapa el anillo; en el anillo, la cara interior.
+- **Enmascarado**: el punto de bonding de PE de cada anillo (§6.1).
+
+### 6.5 Los imanes — se compran
+
+**20 pares de neodimio N42 de Ø6** entre los dos costados (BOM de
+`sam17_case.scad`, contados contra `tacos_persiana`):
+
+- **14 pares** de un **Ø6 × 3** en el anillo con un **Ø6 × 2** en el taco;
+- **6 pares de finos, Ø6 × 1 + Ø6 × 1**, en los tres tacos del tramo de atrás
+  de cada costado, que tienen detrás el bolsillo de la trasera.
+
+Cuarenta piezas, **con la polaridad fija y marcada**.
+
 ## 7. Manipulación y limpieza — para nosotros, no para el taller
 
 Esta sección no es del pedido: es de lo que pasa **después**, y es donde se
@@ -584,9 +717,17 @@ estropea un acabado que llegó bien.
 - **El film protector se quita al FINAL del montaje**, no al recibir. El
   acrílico llega perfecto y se raya durante el ensamblaje: al deslizarlo por
   la mesa, al apoyar una herramienta, al girar una pieza sobre otra.
-- **Ningún tornillo toca acrílico** desde el 29-08 (más noche): los costados
-  y la trasera van capturados. Los paneles y sus seis Z-Rails quedan fijos;
+- **Ningún tornillo toca acrílico** desde el 29-08 (más noche): la trasera va
+  capturada (y desde el 2026-10-11 los costados son la persiana, de aluminio,
+  sujeta con imanes). Los paneles y sus seis Z-Rails quedan fijos;
   no existen ejes de giro, cierres manuales ni tornillos de fricción.
+- **La persiana se quita tirando derecho**, con dos ganchos de alambre de 2 mm
+  metidos en dos ranuras junto a un atado (papel de la persiana, §4). Sin ella,
+  la ventana del anillo deja aspirar el interior sin quitar paneles; el rebaje
+  vacío del anillo junta polvo.
+- **Los dos costados, libres.** Por la persiana respira el instrumento: con un
+  costado contra una pared el aire no pasa (26 K sobre la sala; D-S11). Cuánta
+  holgura hace falta se mide en el arranque.
 - **Paticas**: goma con casquillo roscado, **atornilladas, nunca pegadas**.
   El case no lleva ninguna junta irreversible desde el 2026-08-21.
 
@@ -608,12 +749,14 @@ contradicen, el equivocado es este documento.**
 | fila auxiliar KONDOR 55 mm / centros 49 mm; paneles y rieles rehundidos 1.50 | `alto_panel_1u`, `inset_er`, `rehundido_panel` | `guarda_fila_1u()`, `guarda_rehundido_panel()` |
 | anillo: espesor 14, cara 20, rebaje 6, rehundido 3, chaflán 1.5 × 45° | `t_anillo`, `cara_anillo`, `rebaje_anillo`, `rehundido_acrilico`, `chaflan_anillo` | `guarda_anillo()`, `guarda_rebaje()` |
 | roscas ciegas del anillo, broca M4 3.3 / M5 4.2 | `d_M4_rosca`, `d_M5_rosca` | `guarda_anclajes()`, `taladros_anillo()` |
-| junta de asiento EPDM 1 mm (costado y trasera) | `t_junta_asiento` | `guarda_rebaje()`, `guarda_trasera_capturada()` |
+| junta de asiento EPDM 1 mm (la trasera; la del costado murió en la rev. 28) | `t_junta_asiento` | `guarda_trasera_capturada()` |
 | rebaje de chapa 4.5 × 3, rehundido 1, holgura 0.5, reborde 1 × 3 | `rebaje_chapa`, `rehundido_chapa`, `hol_chapa` | `guarda_rebaje_chapa()`, `anillo_dorso_tiene_rebaje()` |
-| tramo trasero 23; bolsillo u = 5.5..16.5; pared 3; costado 3.5; labio 3 bajo las chapas y 6 en el resto | `cara_anillo_trasera`, `rehundido_trasera`, `pared_rebaje_trasera`, `entrada_costado_trasero` | `guarda_tramo_trasero()`, `anillo_tiene_bolsillo_trasero()` |
+| tramo trasero 23; bolsillo u = 5.5..16.5; pared 3; rebaje vacío 3.5; labio 3 bajo las chapas y 6 en el resto | `cara_anillo_trasera`, `rehundido_trasera`, `pared_rebaje_trasera`, `entrada_costado_trasero` | `guarda_tramo_trasero()`, `anillo_tiene_bolsillo_trasero()` |
 | cajeado de brida 28 × 15.5 × 3, R1.5; brida R2; pletina restante 11 | `rebaje_chapa`, `brida_*` | `guarda_miembro_alto()`, `bridas_techo()` |
 | marco retirado 2.65 bajo chapa, 1.65 en el suelo y 17.00 atrás; fondo trasero 30 | `rehundido_chapa`, `marco_fondo_trasera` | `guarda_marco_ventana()`, `taladros_marco_ventana()` |
 | talón: pie 22.5, blank 545.62 × 42.23, muesca 2.65 hasta 22.06, alivio Ø2 | `talon_pie`, `muesca_pie` | `guarda_talon()`, `pestanas_talon()` |
 | nariz: pie 20.5, blank 545.62 × 50.20, muesca 2.65 hasta 20.06, alivio Ø2 | `nariz_pie`, `muesca_pie` | `guarda_talon()`, `check_dxf` |
 | techo macizo: labio 20, blank 593.02 × 73.85 | `techo_labio` | `guarda_miembro_alto()`, `techo_macizo()` |
 | doce tacos EPDM 4.0 × 15; rendija nominal 4.0, comprimida 3.20 | `aire_labios`, `taco_largo` | `guarda_rendija()`, `guarda_aire()` |
+| persiana: placa 6, borde 4, varilla 2.0, paso medio 7.0, ciego 4, atados de 4, 0.3 sobre la tabla | `t_persiana`, `borde_persiana`, `varilla_persiana`, `paso_persiana`, `hondo_ciego_persiana`, `alto_atado`, `suelo_persiana` | `guarda_persiana()`, `cad/persiana.py` |
+| tacos Ø8 × 3.5 a 6.5 de la silueta; bolsillos Ø9 × 3.8, localizador 8 H7, colisa 8 × 10; imanes Ø6 × 3, × 2 y × 1 | `u_taco`, `d_taco`, `alto_taco`, `d_bolsillo_taco`, `hondo_bolsillo_taco`, `colisa_taco`, `d_iman`, `alto_iman_*` | `guarda_tacos_persiana()`, `anillo_tiene_bolsillos()` |

@@ -1,5 +1,7 @@
 # La trasera capturada como las mejillas, y el talón como la nariz
 
+> **Enmienda 2026-10-11:** la mejilla de acrílico coplanar que este papel describe la sustituyó la persiana ([`2026-10-11-case-persiana-design.md`](2026-10-11-case-persiana-design.md)); el rebaje del anillo se queda vacío.
+
 **Fecha:** 2026-08-29 (noche, 2) · **Estado:** aprobado por Samuel en conversación
 («Dale con todo») sobre la propuesta de esta misma noche; **implementado** en la
 rama `feat/case-trasera-capturada` con sus puertas, y corregido contra lo que las
