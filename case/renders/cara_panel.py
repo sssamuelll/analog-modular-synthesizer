@@ -1,6 +1,6 @@
 """LA CARA del render (ficha 14 del acta del 09-10): los mandos sobre los
 paneles, para juzgar el case con su cara puesta. Solo render: nada de esto se
-fabrica desde aqui. Lo llama render_piel.py; aparte no corre.
+fabrica desde aqui. Lo llama render_persiana.py; aparte no corre.
 
 FILA DE ARRIBA, con el reparto que esta en papel (plan del panel §4, enmendado
 el 27-08 por 2026-08-27-panel-pantalla-al-centro-design.md): la pantalla de 7"

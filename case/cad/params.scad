@@ -1077,7 +1077,8 @@ E_madera   = 11000;
 // no de calcular. Fue 10, de la foto de referencia del 26-08, donde el zocalo
 // asomaba poco. DESDE LA FICHA 12 (acta del 09-10) son 40: con la piel encima,
 // la losa asoma 28 por los costados y 34 por delante y por detras, dentro de los
-// 25 a 40 que firmo Samuel (lo vigila la regla 3 de piel_choques.py).
+// 25 a 40 que firmo Samuel (la vigilaba la regla 3 de piel_choques.py, que
+// murio con la piel el 2026-10-11; la tabla esta en espera, D-S4).
 //
 // Y DESDE EL 10-10 DE VERDAD NADA CUELGA DE ELLA. Hasta ese dia los M5 con que
 // la tabla se rosca al anillo se repartian en el fondo de la TABLA: un vuelo de
