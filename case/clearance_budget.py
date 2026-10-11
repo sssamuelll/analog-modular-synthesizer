@@ -5438,6 +5438,46 @@ def autocomprobacion_anillo() -> None:
     assert abs(ymax - (14 - 1399 / 214)) < 1e-9, f"ymax {ymax:.6f}"
 
 
+def _tacos_persiana_cotas(p: dict[str, float]) -> list[tuple[str, float, float]]:
+    """(que, tiene, pide) de cada relacion de cotas entre tacos y bolsillos."""
+    fondo_trasera = p["t_anillo"] - p["rebaje_anillo"]           # el bolsillo de la trasera empieza ahi
+    return [
+        ("aire bajo el taco", p["hondo_bolsillo_taco"] - p["alto_taco"], 0.3),
+        ("holgura del taco en su bolsillo", p["d_bolsillo_taco"] - p["d_taco"], 0.5),
+        ("pared hasta el rebaje del acrilico", (p["cara_anillo"] - p["rebaje_anillo"])
+         - (p["u_taco"] + p["d_bolsillo_taco"] / 2), PARED_MIN_ANILLO),
+        ("canto hasta el chaflan de la silueta", p["u_taco"] - p["d_bolsillo_taco"] / 2,
+         p["chaflan_anillo"] + 0.5),
+        ("pared hasta el bolsillo de la trasera (iman fino)", fondo_trasera
+         - (p["hondo_bolsillo_taco"] + p["alto_iman_fino"] + 0.1), PARED_MIN_ANILLO),
+        ("el iman del anillo cabe en el anillo", p["t_anillo"]
+         - (p["hondo_bolsillo_taco"] + p["alto_iman_anillo"] + 0.1), PARED_MIN_ANILLO),
+        ("el iman del taco cabe en el taco", p["alto_taco"] - (p["alto_iman_taco"] + 0.1), 1.0),
+    ]
+
+
+def guarda_tacos_persiana(p: dict[str, float]) -> None:
+    """La persiana apoya en el anillo y no en sus tacos, y los bolsillos no
+    rompen hacia el rebaje, el chaflan ni el bolsillo de la trasera (persiana
+    §4). Lo que el DXF no puede decir: profundidades y holguras."""
+    for que, tiene, pide in _tacos_persiana_cotas(p):
+        assert tiene >= pide - 1e-9, f"{que}: {tiene:.2f} mm y se piden {pide:.2f}"
+    print("tacos de la persiana: " + ", ".join(
+        f"{que} {tiene:.2f}" for que, tiene, _ in _tacos_persiana_cotas(p)))
+
+
+def canario_tacos_persiana(p: dict[str, float]) -> None:
+    for cambio, aviso in (({"alto_taco": p["hondo_bolsillo_taco"]}, "aire bajo el taco"),
+                          ({"u_taco": p["u_taco"] + 1.0}, "rebaje del acrilico"),
+                          ({"alto_iman_fino": 3.0}, "bolsillo de la trasera")):
+        try:
+            guarda_tacos_persiana({**p, **cambio})
+        except AssertionError as e:
+            assert aviso in str(e), f"canario de los tacos salto por '{e}'"
+            continue
+        raise AssertionError(f"canario de los tacos NO salto ({aviso})")
+
+
 def guarda_anillo(p: dict[str, float]) -> None:
     """El anillo aguanta que empujen el case de lado, tramo por tramo.
 
@@ -6310,6 +6350,8 @@ def main() -> int:
     guarda_meseta_es_chapa(p)
     guarda_piso(p)
     guarda_anillo(p)
+    guarda_tacos_persiana(p)
+    canario_tacos_persiana(p)
     guarda_rendija(p)
     guarda_potencia_vigente(p)
     guarda_aire(p)

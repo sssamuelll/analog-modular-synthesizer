@@ -49,7 +49,7 @@ Remove-Item (Join-Path $build "*.stl") -ErrorAction SilentlyContinue
 $piezas = "costado_2d","costilla_2d","costilla_dorso_2d","cupon_anillo_2d","bandeja_base_2d","tapa_valle_2d",
           "miembro_alto_2d","talon_2d","nariz_2d","marco_ventana_2d",
           "piel_trasera_2d",
-          "persiana_2d","persiana_pasante_2d","persiana_dorso_2d",
+          "persiana_2d","persiana_pasante_2d","persiana_dorso_2d","costilla_bolsillos_2d",
           "kondor_cajeado_2d","lienzo_2d",
           "chasis_cuerpo_2d","chasis_tapa_2d","chasis_refuerzo_2d"
 # Piso de tamano del DXF. Es un SMOKE TEST -- "OpenSCAD escribio algo" --, no una

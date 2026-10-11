@@ -1164,6 +1164,31 @@ module seccion_anillo_2d() {
              [0, T], [0, c]]);
 }
 
+// LOS BOLSILLOS DE LA PERSIANA (2026-10-11): por la cara de FUERA del anillo,
+// que ahora tapa la persiana, uno por taco. El localizador a d_taco (H7, en el
+// pliego); la colisa, alargada en x; los demas con holgura. Debajo, el asiento
+// del iman (fino en el tramo de atras: detras esta el bolsillo de la trasera).
+// Lo vigilan guarda_tacos_persiana() (cotas) y anillo_tiene_bolsillos() (DXF).
+function alto_iman_anillo_de(tipo) = tipo == "fino" ? alto_iman_fino : alto_iman_anillo;
+module bolsillo_taco_2d(tipo)
+    if (tipo == "colisa")
+        hull() for (dx = [-(colisa_taco - d_taco)/2, (colisa_taco - d_taco)/2])
+            translate([dx, 0]) circle(d = d_taco, $fn = 48);
+    else circle(d = tipo == "loc" ? d_taco : d_bolsillo_taco, $fn = 48);
+module bolsillo_taco(tipo) {
+    translate([0, 0, -0.1]) linear_extrude(hondo_bolsillo_taco + 0.1) bolsillo_taco_2d(tipo);
+    translate([0, 0, hondo_bolsillo_taco - 0.01])
+        cylinder(d = d_iman + 0.1, h = alto_iman_anillo_de(tipo) + 0.11, $fn = 32);
+}
+// El DXF de la CARA DE FUERA: lo que se fresa por delante. Cada bolsillo con
+// el asiento del iman dibujado dentro (como agujero, para que su circunferencia
+// salga en el fichero); las profundidades van en el pliego.
+module costilla_bolsillos_2d()
+    for (t = tacos_persiana) translate([t[0], t[1]]) difference() {
+        bolsillo_taco_2d(t[2]);
+        circle(d = d_iman + 0.1, $fn = 32);
+    }
+
 module costilla() {
     n = 6;
     difference() {
@@ -1194,6 +1219,8 @@ module costilla() {
                 rebaje_chapa_2d();
                 cajeado_brida_2d();
             }
+        // los bolsillos de la persiana, por la cara de fuera (z = 0)
+        for (t = tacos_persiana) translate([t[0], t[1], 0]) bolsillo_taco(t[2]);
     }
 }
 
@@ -2376,6 +2403,7 @@ else if (PART == "persiana_2d")          persiana_2d();
 else if (PART == "persiana_pasante_2d")  persiana_pasante_2d();
 else if (PART == "persiana_dorso_2d")    persiana_dorso_2d();
 else if (PART == "assembly_persiana")    persianas();
+else if (PART == "costilla_bolsillos_2d") costilla_bolsillos_2d();
 else assert(false, str("PART desconocido: ", PART));
 
 // costado_2d vive en el plano XY del perfil (X = fondo, Y = altura);

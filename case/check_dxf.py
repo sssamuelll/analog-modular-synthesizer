@@ -233,6 +233,7 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
     tx = [t[0] for t in persiana.tacos(p)]
     ty = [t[1] for t in persiana.tacos(p)]
     dims["persiana_dorso_2d"] = (max(tx) - min(tx) + p["d_taco"], max(ty) - min(ty) + p["d_taco"])
+    dims["costilla_bolsillos_2d"] = (max(tx) - min(tx) + p["colisa_taco"], max(ty) - min(ty) + p["d_bolsillo_taco"])
 
     return {n: (w - TOL, w + TOL, h - TOL, h + TOL) for n, (w, h) in dims.items()}
 
@@ -2309,6 +2310,46 @@ def guarda_persiana() -> list[str]:
     return f
 
 
+def anillo_tiene_bolsillos() -> list[str]:
+    """Los bolsillos de la cara del anillo caen donde los tacos del dorso de la
+    persiana (las dos piezas casan, en el plano del perfil), y cada uno queda a
+    PARED_MIN_ANILLO de toda rosca M4 del dorso y a 10 mm en x de todo M5 de la
+    tabla. Las profundidades las mira guarda_tacos_persiana() en el budget."""
+    import clearance_budget as cb
+    p = cb.leer_params()
+    f: list[str] = []
+
+    def centros(nombre):
+        aristas, comps = _componentes(nombre)
+        out = []
+        for comp in comps:
+            px = [q[0] for j in comp for q in aristas[j]]
+            py = [q[1] for j in comp for q in aristas[j]]
+            if max(px) - min(px) > p["d_iman"] + 0.5:          # el de fuera, no el asiento
+                out.append(((min(px) + max(px)) / 2, (min(py) + max(py)) / 2, max(px) - min(px)))
+        return sorted(out)
+    bolsillos, tacos_ = centros("costilla_bolsillos_2d"), centros("persiana_dorso_2d")
+    if len(bolsillos) != len(tacos_) or len(bolsillos) != 10:
+        f.append(f"costilla_bolsillos_2d: {len(bolsillos)} bolsillos y persiana_dorso_2d "
+                 f"{len(tacos_)} tacos; se esperan 10 y 10")
+        return f
+    for (bx, by, bw), (tx, ty, _tw) in zip(bolsillos, tacos_):
+        if math.dist((bx, by), (tx, ty)) > 0.05:
+            f.append(f"el bolsillo en ({bx:.2f}, {by:.2f}) no casa con el taco en ({tx:.2f}, {ty:.2f})")
+    for bx, by, bw in bolsillos:
+        for nombre, c, d in cb._centros_rosca_ciega(p):
+            pared = math.dist((bx, by), c) - min(bw, p["d_bolsillo_taco"]) / 2 - d / 2
+            if pared < cb.PARED_MIN_ANILLO - 0.02:
+                f.append(f"el bolsillo en ({bx:.2f}, {by:.2f}) deja {pared:.2f} contra la rosca {nombre}")
+        if by <= p["u_taco"] + 1.0:
+            for x in cb._m5_tabla_x(p):
+                if abs(bx - x) < 10.0 - 0.02:
+                    f.append(f"el bolsillo en x={bx:.2f} cae a {abs(bx - x):.2f} del M5 de la tabla en x={x:.2f}")
+    if not f:
+        print("  costilla_bolsillos_2d: 10 bolsillos que casan con los tacos de la persiana")
+    return f
+
+
 def todo_dxf_tiene_quien_lo_mire() -> list[str]:
     """Ningun DXF sale al taller sin que una puerta lo mire.
 
@@ -2639,6 +2680,7 @@ def main() -> int:
     fallos += chasis_agujeros()
     fallos += guarda_persiana_generada()
     fallos += guarda_persiana()
+    fallos += anillo_tiene_bolsillos()
     fallos += todo_dxf_tiene_quien_lo_mire()
     for nombre, motivo in SIN_DXF.items():
         print(f"  PENDIENTE (sin DXF, no bloquea): {nombre} -- {motivo}")
