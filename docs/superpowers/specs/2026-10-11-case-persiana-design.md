@@ -1,6 +1,6 @@
 # La persiana: el case sin piel, y el costado que respira
 
-**Fecha**: 2026-10-11 · **Estado**: **propuesta, versión 2, después de la junta**; **D-S1 firmada en conversación el 11-10** (*«he decidido C · La persiana»*); de D-S2 a D-S11 sin firmar (§12) ·
+**Fecha**: 2026-10-11 · **Estado**: **firmado el 11-10** (versión 2, después de la junta): D-S1 en conversación (*«he decidido C · La persiana»*), y de D-S2 a D-S11 y el papel en el acta, todas en la opción recomendada. **D-S4 en espera**: Samuel la firmó con la nota *«pero ojo, estoy pensando en quitar la tabla, creo que es algo que nos puede beneficiar, que opinas tu?»* (§8) ·
 **Sucede a**: `2026-09-05-case-piel-organica-design.md` como dirección del acabado. Su D-P1 (*la piel sustituye a techo, nariz, talón y las dos mejillas*) nunca se firmó ·
 **Base**: `main` en `820a2eb` (11-10). Es el case de agosto con lo que la etapa de la piel dejó hecho en el modelo y sigue valiendo: la tabla de 30 con canto redondeado (ficha 12), la tira negra del valle (ficha 6), los paneles vestidos y los rieles plateados (ficha 14) ·
 **Se apoya en**: `2026-08-28-costilla-pletina` (el anillo), `2026-08-29-nariz-recta-valle-limpio` (la nariz), `2026-08-29-trasera-capturada-talon-nariz` (la trasera y el talón), `2026-08-30-techo-macizo-chapas-empotradas` (el techo y la rendija del alero, que siguen), `2026-08-31-case-tanda-b` (las tres filas, paneles fijos) y `2026-09-05-fuente-v5-ladrillo` (D-V1, la fuente afuera) ·
@@ -219,6 +219,8 @@ Siguen en verde `guarda_marco_ventana()`, `guarda_anclajes()`, `guarda_paneles_f
 
 La única regla que vigilaba el vuelo era la regla 3 de `piel_choques.py` (25–40 contra la piel), que muere con la piel. La sustituye una que mide contra la persiana.
 
+**En espera (11-10).** Samuel firmó «uno» y escribió: *«pero ojo, estoy pensando en quitar la tabla, creo que es algo que nos puede beneficiar, que opinas tu?»*. Quitarla es otro papel: hoy la tabla **es el suelo** (en ella van los anillos, la nariz, el talón y las patas, y amarra los dos anillos por abajo), y sin ella hace falta un suelo nuevo. Lo que compra, medido con `persiana.py`: unos 4–5 kg de nogal menos, y la mejor entrada de aire posible, el suelo (con 10 000 mm² abiertos abajo, el pesimista baja de 18,8 a 16,1 K). **Mientras se decide, este papel no toca la tabla**: se queda como está en la base, sin redimensionar.
+
 ---
 
 ## 9. La luz
@@ -252,16 +254,16 @@ La escena del acta pasa al repo como `case/renders/render_persiana.py`: el cuerp
 | | decisión | estado |
 |---|---|---|
 | **D-S1** | el costado es la persiana | **firmada 11-10** — *«he decidido C · La persiana»* |
-| **D-S2** | material: **aluminio 6082-T6/T651 fresado y anodizado negro** (recomendado: el PA12 no aguanta, §3.3). **Con esto se retira D-P2** de la piel (*«todo el acabado se hace con impresión 3D»*): la persiana y todo el cuerpo son metal | pendiente |
-| **D-S3** | la sujeción: **tacos e imanes, y el anillo gana diez bolsillos por cara** (recomendado) — o cinta VHB (no se quita) — o M2 negros en el fondo de las ranuras (se ven) | pendiente |
-| **D-S4** | la tabla: un vuelo de 20 (14 a los lados) — o dos vuelos, 26 y 20 (20 en los cuatro lados) | pendiente |
-| **D-S5** | la luz de dentro: reabre D1 del instrumento y el #42 — o no | pendiente |
-| **D-S6** | lo del valle es provisional y solo de render | pendiente |
-| **D-S7** | los guiones de la piel se borran — o se archivan (lo que la persiana usa se muda antes) | pendiente |
-| **D-S8** | la regla del puente (≥ 0,8 × espesor, `guarda_puentes_ventilacion()`) **no se le aplica a la persiana**: nació para plancha perforada (se dobla al manipularla, y en PMMA arranca la fisura). A la persiana fresada se le aplican la de esbeltez (3:1) y la cuenta de rigidez (recomendado) — o se le aplica, y la varilla pasa a 4,8 mm, que es otra pieza | pendiente |
-| **D-S9** | las rendijas de la ficha 6 se cierran con la nariz y el techo (§7.3), y las dos reglas del barrido se sustituyen por la del labio | pendiente |
-| **D-S10** | los líquidos: el ensayo de derrame se extiende a los costados, con el criterio de que nada llegue a una placa (recomendado) — o se acepta el riesgo sin ensayo | pendiente |
-| **D-S11** | condición de uso: los dos costados libres, con la holgura que se mida en el arranque, escrita en el manual y en el pliego | pendiente |
+| **D-S2** | material: **aluminio 6082-T6/T651 fresado y anodizado negro** (recomendado: el PA12 no aguanta, §3.3). **Con esto se retira D-P2** de la piel (*«todo el acabado se hace con impresión 3D»*): la persiana y todo el cuerpo son metal | **firmada 11-10** |
+| **D-S3** | la sujeción: **tacos e imanes, y el anillo gana diez bolsillos por cara** (recomendado) — o cinta VHB (no se quita) — o M2 negros en el fondo de las ranuras (se ven) | **firmada 11-10** |
+| **D-S4** | la tabla: un vuelo de 20 (14 a los lados) — o dos vuelos, 26 y 20 (20 en los cuatro lados) | **firmada 11-10 («uno»), **en espera**: Samuel piensa quitar la tabla (§8)** |
+| **D-S5** | la luz de dentro: reabre D1 del instrumento y el #42 — o no | **firmada 11-10 («no por ahora»)** |
+| **D-S6** | lo del valle es provisional y solo de render | **firmada 11-10** |
+| **D-S7** | los guiones de la piel se borran — o se archivan (lo que la persiana usa se muda antes) | **firmada 11-10 («se borran»)** |
+| **D-S8** | la regla del puente (≥ 0,8 × espesor, `guarda_puentes_ventilacion()`) **no se le aplica a la persiana**: nació para plancha perforada (se dobla al manipularla, y en PMMA arranca la fisura). A la persiana fresada se le aplican la de esbeltez (3:1) y la cuenta de rigidez (recomendado) — o se le aplica, y la varilla pasa a 4,8 mm, que es otra pieza | **firmada 11-10** |
+| **D-S9** | las rendijas de la ficha 6 se cierran con la nariz y el techo (§7.3), y las dos reglas del barrido se sustituyen por la del labio | **firmada 11-10** |
+| **D-S10** | los líquidos: el ensayo de derrame se extiende a los costados, con el criterio de que nada llegue a una placa (recomendado) — o se acepta el riesgo sin ensayo | **firmada 11-10** |
+| **D-S11** | condición de uso: los dos costados libres, con la holgura que se mida en el arranque, escrita en el manual y en el pliego | **firmada 11-10** |
 
 ---
 
