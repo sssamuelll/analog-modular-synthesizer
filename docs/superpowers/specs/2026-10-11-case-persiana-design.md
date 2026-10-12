@@ -167,6 +167,13 @@ Lo que eso dice:
 4. **El #289 no se cierra solo con la persiana.** `guarda_aire()` lee hoy 147,31 W de la v4 (`params.scad:1719`, atado por `guarda_potencia_vigente()` a `hardware/01-power-supply/v4/calor_budget.py`), y con eso no pasa. La fuente v5 mandó cambiar esa cifra a 64,22 y **nadie lo hizo**. Cerrar el #289 son tres cosas: aplicar esa enmienda, mover `guarda_potencia_vigente()` a la v5, y que `_tiro()` calcule con el plano neutro y las persianas. Detrás cuelga una cadena: `calor_budget.py` (`A_EF_BASE_MM2`, `P_BASE`), `test_calor_budget.py`, `TECHO_VENTEO_MM2` de `02-midi-cv/power_budget.py`, `medidas.csv` y `check_bringup.py`, y `canario_techo()`, que exige que el HUECO se publique. Va en el plan, en su orden.
 5. **La puerta juzga con el `C_D` de 0,65**; el pesimista es la prueba de robustez. Este papel da los dos y no promete más que el primero.
 
+> **Aplicado el 2026-10-12 (plan del aire, `docs/superpowers/plans/2026-10-11-aire-plano-neutro.md`):**
+> `potencia_disipada` = 64,22 W de la v5, `_tiro()` cuenta con el plano neutro y
+> las dos persianas, y `guarda_aire()` vuelve a juzgar con `C_D` = 0,65: 16,9 K,
+> 18,9 con el pesimista. La fila de la v4 de la tabla es la de antes. Con la sala
+> de 45 °C de la spec del chasis serían 18,3 y 20,5 K: la puerta lo publica como
+> HUECO hasta que se decida la sala del case.
+
 ---
 
 ## 6. Los líquidos

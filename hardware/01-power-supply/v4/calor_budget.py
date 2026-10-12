@@ -304,6 +304,9 @@ P_RECINTO_MAX = _CONSTANTE_RECINTO_W + sum(PERDIDA_RECINTO_W.values())
 # reventaria el import de este fichero --y con el los de power_budget.py,
 # margen_budget.py y todo lo que cuelga-- por un cambio de geometria del
 # case, que es un dato y no un defecto.
+# Las aberturas de D-F3 son las persianas del case (2026-10-11), y esta base
+# no las sigue a proposito: es la v4, que no se monta (D-V4). Ver
+# test_el_area_base_es_la_que_el_case_tiene_hoy().
 A_EF_BASE_MM2 = 3299.0
 H_TIRO_CAJON_M = 0.105
 # Spec del chasis sec.3.3: exterior derivado 338.6 x 176.6 x 83 mm.
@@ -322,7 +325,7 @@ FRACCION_SENSIBILIDAD = 0.10      # Convencion: perturbacion comparativa 10 %.
 ESTIMADOS = (
     "H_CONV_W_M2K=9.0: manual, no medido (chassis spec sec.3.1)",
     "CD_TIRO=0.65: SUPUESTO de rejilla (clearance_budget.py)",
-    "P_BASE area: hipotesis para #289; el papel del case fija la real",
+    "P_BASE area: el venteo nuevo que la v4 pide al case; el case respira por las persianas para la v5 (#289)",
     f"CHOKE_RED_W={CHOKE_RED_W}: DCR de catalogo de un choke de >=4 A, sin hoja",
 )
 HUECOS = (
@@ -562,7 +565,9 @@ def _busca_area_minima() -> tuple[float, float, str]:
 # desacuerdo entre los dos modelos donde hay un 1,3 %.
 AREA_VENTEO_MIN_MM2, _AREA_BASE_MM2, _FALLO_AREA_MAX = _busca_area_minima()
 P_BASE = {
-    # ESTIMADO - hipotesis para #289, el papel del case fija la real.
+    # ESTIMADO - el venteo nuevo que la v4 pide al case. El case dibujo el
+    # suyo para la v5 (#289), y en los terminos de este modelo a la v4 no le
+    # alcanza.
     # Como no existe area finita, queda el extremo explorado por mandato.
     "area_venteo_mm2": _AREA_BASE_MM2,
     "p_recinto_w": P_RECINTO_MAX,  # W; papel sec.6.

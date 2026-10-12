@@ -1746,6 +1746,7 @@ valle_margen    = 6;   // historico; la banda del valle ya no se perfora
 // dejarlo salir. Esta geometria evacua 12.6 W al techo de 15 K, asi que
 // guarda_aire() ya NO asevera ese techo: publica el deficit como HUECO con
 // el area que hace falta. La obra que lo cierra es del papel del case (#289).
+// La cerro la persiana con la fuente v5: ver el parrafo del 2026-10-12, abajo.
 //
 // DE 151.55 A 147.31 EL 2026-09-05, EN DOS CORRECCIONES DE SIGNO CONTRARIO, y
 // ninguna para que una puerta pase. Las dos son la misma regla mal aplicada:
@@ -1794,6 +1795,7 @@ potencia_disipada = 64.22; // W, TODO el cajon: lo que baja por el cordon (fuent
 // fuente v4 (35e1bb2) el instrumento solo ya pide 50.3 W y sube 37.7 K por la
 // chimenea, asi que el deficit sigue ahi y guarda_aire() lo sigue publicando
 // como HUECO. Solo deja de haber dos techos distintos en el mismo aparato.
+// Lo cerro el 2026-10-12 el plan del aire: la fuente v5 afuera y las persianas.
 salto_termico_max = 20;  // K sobre ambiente; fuente: tuning_budget.py l.73
 
 // --- lo que el budget vigila (spec §11: catalogos, no medidos) ---

@@ -25,9 +25,10 @@
 >
 > **Estado:** en el modelo y con sus puertas (`guarda_persiana()`,
 > `guarda_tacos_persiana()`, `anillo_tiene_bolsillos()`, y las cajas de la
-> persiana en `solapes()`); sin fabricar. Lo siguiente es la tira de muestra
-> (#398) y el aire contado con el plano neutro (#289). La tabla se va (D-S4,
-> firmada «quitar» el 11-10): su papel corto va después. Dos decisiones
+> persiana en `solapes()`); sin fabricar. El aire se cuenta con el plano neutro
+> y la potencia de la v5: 16,9 K sobre la sala con las dos persianas, contra un
+> techo de 20 (#289). Lo siguiente es la tira de muestra (#398). La tabla se va
+> (D-S4, firmada «quitar» el 11-10): su papel corto va después. Dos decisiones
 > abiertas: con diez tacos el tramo más largo sin taco mide 112 mm y el papel
 > pide 100 (once lo bajan a 92), y el doblez R3 de la tapa del valle en
 > 6082-T6.
@@ -298,6 +299,10 @@ con `C_D = 0.55`). Y menos si el venteo nuevo sube el tiro, que va con la
 **raíz** de la altura y hoy son 105 mm en un case de 256. La obra que lo cierra
 es del papel del case —**D-F3 = A**, ventilar por convección natural sin
 ventilador— y vive en **#289**, no en esta puerta.
+**Desde el 2026-10-12 la puerta vuelve a juzgar**: con la fuente v5 afuera
+(64,22 W) y el aire contado con el plano neutro y las dos persianas, el case sube
+16,9 K contra 20. Lo que queda abierto son dos HUECOS: la holgura de los
+costados y la sala de diseño del case.
 
 **Corrección del 2026-08-30, tras la revisión adversarial.** La primera cuenta
 escogía **3.0 mm** por capilaridad. Conservaba esa razón, pero `guarda_aire()`
