@@ -1144,12 +1144,14 @@ def _roscas_marco(p: dict[str, float]) -> list[tuple[str, tuple[float, float]]]:
 def bbox_marco_ventana(p: dict[str, float]) -> tuple[float, float]:
     """Envolvente del DXF del marco: la silueta menos los retiros. De la cara
     del frente (retirada bajo la nariz) a la pata trasera (retirada de la
-    banda y la trasera), y del suelo a la meseta (retirados bajo sus chapas).
-    Derivada, no escrita a mano: si una banda de retiro se mueve, el sobre se
-    mueve con ella y revisar() lo canta."""
+    banda y la trasera), y del suelo (bajo los pies, que no van empotrados) a
+    la meseta (bajo su chapa empotrada). Derivada, no escrita a mano: si una
+    banda de retiro se mueve, el sobre se mueve con ella y revisar() lo canta.
+    Hasta el 2026-10-12 el suelo se retiraba como la meseta y el sobre salia
+    1 mm mas bajo que el DXF."""
     P = _vertices(p)
     rm, rmt = _retiro_marco(p), _retiro_marco_trasera(p)
-    return (P[6][0] - rmt - rm, P[5][1] - 2 * rm)
+    return (P[6][0] - rmt - rm, P[5][1] - rm - _retiro_marco_pie(p))
 
 
 def _pasos_riel_marco(p: dict[str, float]) -> list[tuple[str, tuple[float, float]]]:
