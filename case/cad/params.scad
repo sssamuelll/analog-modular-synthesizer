@@ -128,9 +128,12 @@ entrada_costado_trasero = 3.5;
 // LABIO vertical a ras del plano trasero que tapa el canto de abajo de la
 // trasera. Sin bridas: tres M4 avellanados por el pie, desde dentro, como la
 // nariz. GEMELO de _talon() en clearance_budget.py; lo mide guarda_talon().
+// DESDE EL PAPEL DEL SUELO (2026-10-12, D-T2) el M4 entra desde abajo y lo que
+// asoma dentro es el cuerpo de la tuerca CLS (pem_cls_m4_cuerpo), no la boca del
+// avellanado: guarda_talon() mide eso.
 //
 // El pie, hacia delante desde el PIE DEL CHAFLAN. 20 y no 18 como la nariz:
-// la boca del avellanado (d_cabeza_M4_avell) es un cuerpo fijo detras de la
+// la boca del avellanado (d_cabeza_M4_avell, retirada) era un cuerpo fijo detras de la
 // cara interior del acrilico -- que puede venir 1.2 mas gruesa -- y vale para
 // ella la regla de la trasera, tol_pmma + 0.5 = 1.70 de aire; con 20 quedan
 // 2.77, con 18 quedaban 0.77.
@@ -1012,89 +1015,40 @@ compresion_tira_valle = 0.10;
 // Ancho conservador de una mano apoyada de canto. Compartido por la puerta y
 // el BOM para que la tension publicada no sea un literal envejecido.
 b_mano_valle = 50.0;
-// SUELO del case. La bandeja de base dejo de ser una plancha del cuerpo el
-// 2026-08-17: ya no se apoya ENCIMA de los dos largueros -- 20 + 5 = 25 mm de
-// sandwich justo debajo del riel del panel -- sino que pasa a ser el propio
-// canto de abajo, con los largueros montados sobre ella.
-//
-// LA ESTRUCTURA NO PIERDE NADA y conviene decirlo claro: son los mismos dos 2020
-// cruzando el mismo vano de 528, y la bandeja sigue atornillada a ellos cada
-// 100 mm; lo unico que cambia es por que cara. Pero el techo que el riel tiene
-// que librar baja de 25 a 8, y con el baja el case entero 17 mm.
-//
-// Sube de t_valle a t_cheek porque ahora es cara vista y de apoyo: el mismo 8
-// del costado, de la pestana y del marco de remate. Es lo que pidio Samuel --
-// "el mismo grosor que todo el resto de la estructura".
-//
-// Era el 8 de la mejilla (t_cheek), que se fue con la persiana el 2026-10-11;
-// desde entonces es un valor propio.
-// LA TABLA. Dejo de ser una plancha DENTRO del case el 2026-08-27 y paso a ser
-// una TABLA DE MADERA MACIZA BAJO EL MARCO -- la misma pieza que el zocalo, que
-// hasta entonces eran dos (spec 9.1, decidido sobre la foto de referencia).
-// Ocupa y = -t_base .. 0: su cara de arriba ES el suelo interior y su canto
-// sobresale del cuerpo. Las dos costillas se le apoyan encima y las cuatro
-// paticas se le atornillan por debajo, o sea que el peso del case va de costilla
-// a pata casi en linea recta.
-//
-// 18 SALE DE LA FLECHA. Lo que la dobla no es el peso del case sino el chasis
-// del PSU sentado en medio del vano entre las dos costillas, que es ancho_util
-// y NO una constante: valia 528.62 y desde el 2026-08-28 son 540.62, un 2.3 %
-// mas de luz y un 7 % mas de flecha, porque va con L^3.
-//
-// Con la tabla de 327.41 de ancho, 200 N y E = 11000 MPa: 16 da 0.536, 18 da
-// 0.376 y 20 da 0.274, contra un techo de 0.60. Los tres pasan y 18 es ademas
-// espesor de tabla de catalogo, asi que se queda: el margen es lo que se
-// compra, no el aprobado justo.
-//
-// ESTA TABLA NO ES EL NUMERO VIVO -- se queda vieja en cuanto se mueva el
-// ancho, la especie o el fondo. El vivo lo imprime guarda_piso() en cada
-// corrida, con esta misma formula y con el vano de verdad:
-//   suelo: TABLA DE MADERA MACIZA t=18 bajo el marco, 327.41 x 588.62 ...
-//     con 200 N en medio del vano de 540.62 cede 0.376 mm (techo 0.60, E 11000
-//     MPa a favor de veta)
-//
-// MACIZA, con AGUJEROS ALARGADOS en Z. Es la unica pieza de madera del case que
-// CARGA, y una tabla maciza de 540.62 mm a contraveta se mueve milimetros con la
-// estacion. El marco de aluminio no se mueve: si la fijacion es rigida, o se
-// raja la tabla o se sueltan los tornillos. Lo vigila guarda_zocalo().
-//
-// 30 DESDE LA FICHA 12 (acta del 09-10, firmada «hazlo»): «una losa ... mas
-// gruesa a la vista». La flecha ya no la decide: a 30 cede un quinto que a 18.
-// Lo que cuesta es peso -- unos 5 kg la tabla entera a 0.65 g/cm3 (nogal,
-// supuesto como E_madera), contra 2,3 --
-// y 12 mm mas de aparato por debajo; el perfil y el interior no cambian.
-t_base     = 30;
-
-// El canto de ARRIBA de la tabla, redondeado (ficha 12): fresa de redondeo de
-// carpintero. Solo el de arriba, el que se ve; el de abajo queda vivo.
-r_canto_tabla = 8;
-
-// Modulo de elasticidad de la madera A FAVOR DE VETA. 11000 MPa es nogal o arce
-// -- el rango de manual para frondosas de densidad media va de 10000 a 12000.
-// SUPUESTO DECLARADO hasta que la especie este elegida en el pliego: roble da
-// 12000 (mejor) y el contrachapado 8000 (peor, pediria 20 mm).
-E_madera   = 11000;
-
-// Lo que la tabla sobresale del cuerpo por los cuatro lados. Es cota de MIRAR,
-// no de calcular. Fue 10, de la foto de referencia del 26-08, donde el zocalo
-// asomaba poco. DESDE LA FICHA 12 (acta del 09-10) son 40: con la piel encima,
-// la losa asoma 28 por los costados y 34 por delante y por detras, dentro de los
-// 25 a 40 que firmo Samuel (la vigilaba la regla 3 de piel_choques.py, que
-// murio con la piel el 2026-10-11; la tabla esta en espera, D-S4).
-//
-// Y DESDE EL 10-10 DE VERDAD NADA CUELGA DE ELLA. Hasta ese dia los M5 con que
-// la tabla se rosca al anillo se repartian en el fondo de la TABLA: un vuelo de
-// 40 los subia de 3 a 4 por anillo y movia sus roscas ciegas, sin que nadie lo
-// pidiera. Ahora se reparten en el fondo del CUERPO (n_agujeros()).
-vuelo_zocalo = 40;
-
-// Carrera del agujero alargado, por lado, en Z. La tabla mide ancho_total +
-// 2*vuelo_zocalo a contraveta; una frondosa se mueve del orden del 0.25 % de su
-// ancho entre invierno y verano en interior, o sea ~1.4 mm sobre 570. Se dan 2.5
-// por lado (5 de carrera total) para cubrir un ambiente peor que el supuesto.
-// El tornillo del medio de cada costilla va REDONDO: la tabla tiene que crecer
-// hacia los dos lados desde un punto fijo, no arrastrarse hacia uno.
-holgura_veta = 2.5;
+// LA BASE, desde el papel del suelo (2026-10-12): una chapa de 6082-T6 de 3 mm,
+// anodizada en negro, bajo los anillos y a ras de su huella, de y = -t_base a
+// 0. Sustituye a la tabla de nogal de 30 (D-S4 «quitar», acta 3), que fue el
+// suelo desde el 2026-08-27. Amarra los anillos con los mismos seis M5 a su
+// canto inferior, recibe la nariz, el talon, las patas y el chasis, y es la
+// entrada de aire (sec.5). 3 mm los pide la mano, no el peso: con 200 N
+// (carga_mano) en el campo, 2 mm plastifican el borde de los agujeros y 3 no
+// (guarda_piso(), papel sec.3.2). El plano del suelo interior sigue en y = 0:
+// nada de lo que hay encima se mueve. CONSERVA SUS NOMBRES (bandeja_base,
+// t_base): "suelo" ya nombra cinco cosas en el codigo.
+t_base     = 3;
+// EL CAMPO DE AGUJEROS DE LA BASE (papel del suelo, 2026-10-12, sec.3.2 y 5).
+// Ø5 al tresbolillo cada 8, el patron Rv 5-8: un 35,4 % abierto, y el puente
+// entre agujeros mide 3, una vez el espesor. La regla de 0,8 veces es la del
+// PMMA; para aluminio cortado a laser se pide 1 vez (Elke). El campo es una L
+// que esquiva la huella del chasis y deja base_orilla libre junto al canto de
+// los anillos, los pies de nariz y talon y el chasis. GEMELAS: campo_base()
+// aqui y _campo_base() en el budget; check_dxf las cruza.
+base_agujero = 5;
+base_paso    = 8;
+base_orilla  = 10;
+// LOS INSERTOS DE PRESION (papel del suelo, sec.3.4). Van de acero o de
+// inoxidable, nunca de la serie de aluminio: esa pide chapa de HB <= 89 y el
+// 6082-T6 ronda 95. Se prensan despues de anodizar, y sus agujeros se cortan
+// a cota de catalogo sobre la pieza anodizada. SUPUESTOS DE MEMORIA hasta la
+// hoja de PEM (HUECO H4 del papel).
+pem_cls_m4   = 5.4;   // tuerca CLS-M4, en los pies de nariz y talon (D-T2)
+pem_cls_m4_cuerpo = 7.9;   // diametro del cuerpo de la CLS-M4 sobre el pie, por dentro: lo mide guarda_talon() contra la trasera
+pem_fh_m4    = 4.0;   // esparrago FH-M4, en la base, para las patas
+pem_borde    = 7.0;   // del centro de un inserto al canto o al borde de otro agujero
+// El paso del M5 de los anillos en la base: medio milimetro de juego por lado
+// para casar dos anillos mecanizados por separado. Los seis van redondos: la
+// veta de la tabla se fue con ella.
+d_M5_base    = 6.0;
 t_panel    = 1.6;  // PCB de aluminio, espesor estandar JLCPCB
 rehundido_panel = 1.50; // las tres filas: panel, riel, ejes y cajeados juntos
 // EL PROCESO ES FRESADO CNC, NO LASER (decidido el 2026-08-17). Y por eso
@@ -1308,10 +1262,6 @@ carga_mano       = 200;  // N. Alguien apoyandose, el mismo caso de carga con
 flecha_costado_max = 0.6;// mm bajo carga_mano. El techo NO es nuevo: es el
                          // mismo que el proyecto ya acepto para la trasera en
                          // su vano de 211.73. Hoy sale 0.38
-// Boca del avellanado de un M4 (ISO 10642, dk maximo). No es un agujero: es
-// el CUERPO FIJO que la cabeza a ras deja en el pie del talon, y guarda_talon
-// lo mide contra la cara de la trasera con la tolerancia del PMMA.
-d_cabeza_M4_avell = 8.96;
 d_M3_paso   = 3.4;  // agujero paso M3 (ISO holgura media)
 d_M4_paso   = 4.5;  // agujero paso M4: standoffs de las pieles Y los seis
                     // rieles EUROrack, cuyo taladro de punta viene roscado M4
@@ -1355,38 +1305,17 @@ t_piel      = 8;
 // tablas distintas, y la spec decia goma -- y se cierra volviendo al unico
 // que no se movio.
 //
-// LA COTA QUE DECIDE SI SIRVE ES CUANTO SE HUNDE, no la dureza ni el
-// diametro. El toroide excita a 100 Hz (#106) y la pata es un muelle: si su
-// frecuencia propia cae cerca de ahi, AMPLIFICA en vez de aislar, y le pasa
-// a la mesa mas zumbido del que le pasaria el acrilico en seco.
-//
-//   se hunde   f propia   transmite
-//   0.10 mm     49.8 Hz     33 %
-//   0.25 mm     31.5 Hz     11 %    <- esta
-//   0.50 mm     22.3 Hz      5 %
-//   1.00 mm     15.8 Hz    2.5 %
-//
-// 0.25 es el minimo que deja la f propia a un tercio de la excitacion, que
-// es el criterio de manual. Mas blanda aisla mejor y se bambolea mas.
-//
-// ES REQUISITO DE COMPRA, NO DE DIBUJO: se exige la curva carga-deformacion
-// del fabricante. Una goma que no publica esa curva no se puede verificar y
-// por tanto no sirve, por seria que parezca.
-//
-// La altura sale gratis: la entrada de aire se mudo a la trasera el
-// 2026-08-21, asi que la separacion al suelo ya no ventila nada y alto_pie
-// no entra en ninguna derivacion.
-flecha_pie  = 0.25; // mm bajo 22.8 N. DE HOJA DE DATOS, no estimado
-alto_pie    = 10;   // sube de 8: la flecha necesita material donde ocurrir
-d_pie       = 20;   // sube de 16: area para no aplastarse permanentemente   // diametro; pequeno a proposito
-// EL TORNILLO CON QUE LA PATICA SE ATORNILLA A LA TABLA (Tarea 6). El BOM
-// de arriba dice "casquillo roscado" sin metrica -- no hay hoja de la
-// patica citada con un diametro de rosca, y sin hoja no hay cota que leer.
-// SUPUESTO = d_M4_paso: mismo herraje que ya usa el resto del case (12 M4
-// de riel, 8 de brida, 4 de clip, 4 de lengueta de bahia), asi que no anade
-// una talla nueva al pedido. Si el catalogo real trae otra metrica, este es
-// el unico numero que hay que tocar.
-d_pie_tornillo = 4.5;  // SUPUESTO M4 paso (=d_M4_paso), sin hoja de la patica
+// LA PATA, desde el papel del suelo (2026-10-12, D-T1: las de 10). El criterio de
+// compra se invierte. Era una goma BLANDA (>= 0.25 mm de flecha con 22.8 N) para
+// aislar los 100 Hz de un toroide que se fue con la v4; ahora la pata es parte de
+// la entrada de aire (la rendija de alto_pie bajo la base, sec.5) y se quiere
+// FIRME: <= 0.3 mm con 50 N (Shore 60-70 A), alto nominal +- 0.2 (cuatro patas
+// desiguales cojean), compuesto que no manche el barniz, y la profundidad del
+// casquillo y su par en la hoja. Se rosca a una FH-M4 de la base (pem_fh_m4).
+// ES REQUISITO DE COMPRA: sin la hoja no se verifica (HUECO H3 del papel).
+flecha_pie  = 0.3;  // mm con 50 N: el MAXIMO que se compra, no una medida
+alto_pie    = 10;   // D-T1: las de hoy; es el alto de la rendija del aire
+d_pie       = 20;
 // HISTORICO, HASTA 2026-08-21. PESTANA SUPERIOR: la banda de acrilico que cruzaba por
 // encima del canto del panel de arriba, sobre la propia cara. Samuel la pidio
 // porque el panel remataba pelado ("no veo esa pestana ... quiero un top marco
@@ -1950,8 +1879,8 @@ chasis_holgura_larguero = 3;
 // 7.6 a 2.7 de la pared, fuera de la curva del doblez (r + t = 3), y y = 20
 // deja al de la derecha 2.75 de aire hasta el refuerzo del toroide (que
 // arranca en y = 25) y al de la izquierda 8.2 mm hasta el separador de la
-// esquina de la PCB. Lo comprueba guarda_chasis(); las posiciones en la tabla
-// las cruza guarda_zocalo() en check_dxf.
+// esquina de la PCB. Lo comprueba guarda_chasis(); las posiciones en la base
+// las cruza guarda_bandeja_base() en check_dxf.
 chasis_tornillo_x = 8.5;
 chasis_tornillo_y = 20;
 chasis_tornillo_baja  = 8;   // cuanto por debajo del techo va la fila de M3

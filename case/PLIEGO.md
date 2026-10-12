@@ -1,5 +1,19 @@
 # Pliego de fabricación — cuerpo del SAM17
 
+> **rev. 29 (2026-10-12). La tabla de nogal se cambia por una base de chapa**
+> (papel `docs/superpowers/specs/2026-10-12-case-suelo-design.md`, firmado en
+> el acta 4). **`bandeja_base_2d` vuelve a este pliego**: chapa 6082-T6 de 3 mm
+> anodizada en negro, a ras de la huella del cuerpo (**307.76 × 568.62**), con
+> **1118 agujeros de Ø5 cada 8** (21 952 mm² abiertos) y 20 taladros de
+> fijación, al **taller de chapa** (§6.2). **Se va el carpintero.** **Insertos de
+> presión** de acero o inoxidable, nunca de la serie de aluminio, **prensados
+> después de anodizar**: 6 tuercas CLS-M4 en los pies de nariz y talón y 4
+> espárragos FH-M4 en la base. Los M4 de nariz y talón entran **desde abajo**.
+> **Al anillo (§6.1)**: un círculo de Ø12 sin anodizar en el canto inferior,
+> alrededor de un M5, para la masa de la base. **Condiciones de uso (§7)**: mesa
+> dura bajo las patas, y las patas se compran firmes. Esta revisión sustituye
+> las cotas operativas de la rev. 28 donde chocan.
+>
 > **rev. 28 (2026-10-11). La persiana sustituye a las mejillas de acrílico**
 > (papel `docs/superpowers/specs/2026-10-11-case-persiana-design.md`). **Sale
 > `costado_2d`**: el PMMA naranja se queda en una sola pieza, la trasera.
@@ -215,9 +229,9 @@ de su blank, `marco_sup`), no una plancha aparte. `remate_sup()` y
 (2026-08-28, sin llamador confirmado por grep). No es un pendiente de
 `export.ps1`: la pieza no está en el diseño.
 
-**`bandeja_base_2d` SALIÓ de este pliego el 2026-08-27.** Era el suelo, de
-acrílico de 8. Ahora es una **tabla de madera maciza de 30 mm** (18 hasta la ficha 12 del 10-10) que va bajo el
-marco y hace de suelo y de zócalo a la vez. Va al carpintero, §6.2.
+**`bandeja_base_2d` vuelve a este pliego el 2026-10-12 (rev. 29)**, ahora de
+chapa de aluminio: va al taller de chapa (§6.2 y la tabla de abajo). Fue
+acrílico de 8 hasta el 2026-08-27 y tabla de nogal de 30 hasta la rev. 29.
 
 **Y el costado dejó de ser de acrílico el 2026-10-11 (rev. 28).** Desde el
 27-08 era piel sin un taladro, asentada en el rebaje del anillo sobre una junta
@@ -231,21 +245,21 @@ no se compra.
 ### Lo que NO va a este taller
 
 Dieciséis DXF de `case/plans/` **no son de acrílico** y no entran aquí. Se
-reparten entre tres talleres — chapa, mecanizado (§6.1 y §6.3) y carpintería
-(§6.2) —, y chapa y mecanizado **no son el mismo** desde el 2026-08-28. Todo el
+reparten entre dos talleres — chapa (§6.2) y mecanizado (§6.1 y §6.3) —, y
+chapa y mecanizado **no son el mismo** desde el 2026-08-28. Todo el
 aluminio que se ve pasa después por un solo anodizador (§6.4):
 
 | DXF | material | taller | proceso |
 |---|---|---|---|
 | `chasis_cuerpo_2d`, `chasis_tapa_2d`, `chasis_refuerzo_2d` | acero | chapa | corte + **plegado** |
 | `miembro_alto_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: techo **sin ranuras**, blank **593.02 × 78.85**, meseta de 50, retorno de **9** (ficha 6), chaflán de 6 y labio de 20. Dos bridas de 27 × 14.5 con esquinas R2. Entran en los cajeados del anillo; no se dejan sobre la cara — **1 ud** |
-| `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: blank **545.62 × 42.23**, labio de 13, chaflán y pie de **22.5**. En cada punta del pie, muesca de 2.65 hasta la línea de doblez a 22.06, con alivio de Ø2 a caballo de la esquina interior. Conserva sus ocho pestañas lanzadas; el 6082-T6 sigue siendo obligatorio — **1 ud** |
-| `nariz_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: blank **545.62 × 53.10** (el frente baja hasta el riel, ficha 6), pie de **20.5** y tres dobleces. En cada punta del pie, muesca de 2.65 hasta la línea de doblez a 20.06, con alivio de Ø2 a caballo de la esquina interior — **1 ud** |
+| `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: blank **545.62 × 42.23**, labio de 13, chaflán y pie de **22.5**. En el pie, tres agujeros de **5.4** a 7.0 del canto libre para las tuercas CLS-M4, que se prensan después de anodizar (el M4 entra desde abajo, rev. 29). En cada punta del pie, muesca de 2.65 hasta la línea de doblez a 22.06, con alivio de Ø2 a caballo de la esquina interior. Conserva sus ocho pestañas lanzadas; el 6082-T6 sigue siendo obligatorio — **1 ud** |
+| `nariz_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: blank **545.62 × 53.10** (el frente baja hasta el riel, ficha 6), pie de **20.5** y tres dobleces. En el pie, tres agujeros de **5.4** a 7.0 del canto libre para las tuercas CLS-M4, como el talón. En cada punta del pie, muesca de 2.65 hasta la línea de doblez a 20.06, con alivio de Ø2 a caballo de la esquina interior — **1 ud** |
 | `tapa_valle_2d` | aluminio 6082-T6/T651, 3 mm (§6.4) | chapa | corte + **plegado**: blank **560.00 × 20.00**, dos pestañas de 21 mm y labio trasero de apoyo de 2.0 mm; sin taladros visibles en la banda |
 | `costilla_2d`, `costilla_dorso_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **fresado CNC**, sin plegar, sin soldar |
 | `costilla_bolsillos_2d` | la cara de FUERA del anillo | **mecanizado** (§6.1) | diez bolsillos ciegos por anillo para los tacos de la persiana, con el asiento del imán dibujado dentro; las profundidades, en §6.1 |
 | `persiana_2d`, `persiana_pasante_2d`, `persiana_dorso_2d` | **aluminio 6082-T651, pletina de 12** frenteada a 9.5 | **mecanizado** (§6.3) | **fresado CNC** por las dos caras: ranuras a 4 de fondo por delante, el pasante solo donde detrás hay ventana, y los tacos por detrás — **2 uds, PAR ESPEJADO** |
-| `bandeja_base_2d` | madera maciza, 30 mm | carpintería | corte + ranuras alargadas + canto de arriba redondeado R8 |
+| `bandeja_base_2d` | **aluminio 6082-T6, 3 mm**, anodizado negro (§6.4) | chapa (§6.2) | **láser**, con los 1118 agujeros de Ø5 cortados **salteados**; desbarbado a máquina por las dos caras, con la arista de arriba matada; **planitud ≤ 1 mm** en la chapa suelta, medida antes de anodizar; el canto de abajo, **R0.5**. Después del anodizado, la prensa: 4 FH-M4 (agujero 4.0). Los 6 M5 (Ø6) y los 10 M4 (Ø4.5) son de paso — **1 ud** |
 | `marco_ventana_2d` | aluminio 6082-T651, `t_placa` = 6 mm, **láser** (§6.4) | chapa | corte + **6 cajeados** Ø8 × `prof_cajeado_riel` = 2.5 **por el lado del anillo** (bolsillos ciegos en UNA cara: dejan 3.5 mm bajo la cabeza del M4 del riel). Nota de mecanizado, no va en el DXF — ver abajo — **2 uds, PAR ESPEJADO**: mismo contorno, cajeado por caras opuestas. **Planitud ≤ 0.5 mm en 300** en el blank cortado: apoya en la cara mecanizada del anillo y doce M4 lo conforman contra ella (una pletina de 6 × 24 se aplana 0.5 con 200 N) |
 | `cupon_anillo_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **NO ES UNA PIEZA DEL CASE**: es la SECCIÓN del perfil del anillo, y de ella sale el **cupón de 100 mm** que hay que aprobar antes de cortar los dos anillos — ver el punto de parada en §6.1 |
 
@@ -352,7 +366,7 @@ ancho de apoyo mediante una muesca de 2.65 en cada punta. No recortar el pie a
 todo el ancho del blank, porque entonces dejaría de apoyar entre los anillos.
 
 **EL TALÓN (`talon_2d`) ES LA NARIZ EN ESPEJO**: labio vertical de 13,
-chaflán a 45° sobre P6 y pie de **22.5** sobre la tabla. Blank
+chaflán a 45° sobre P6 y pie de **22.5** sobre la base. Blank
 **545.62 × 42.23**. En cada punta del pie se corta una **muesca de 2.65** desde
 el canto libre hasta la línea de doblez pie-chaflán. Esa línea está a
 **22.06** del canto libre (`largo − BD45/2`), no en el largo nominal del pie.
@@ -368,13 +382,13 @@ difieran más de 2: se mantienen como una familia. En cada punta se corta una
 **muesca de 2.65** desde el canto libre hasta la primera línea de doblez, a
 **20.06** (`largo − BD45/2`). Lleva un **alivio de Ø2 a caballo de la esquina
 interior**. Después siguen los dos dobleces restantes del perfil vigente. Los
-tres van hacia dentro; el pie queda sobre la tabla.
+tres van hacia dentro; el pie queda sobre la base.
 
 **Corrección del 2026-08-30.** La boca del avellanado M4 del talón es un cuerpo
 fijo detrás de la cara interior del acrílico y necesita 1.70 de aire. Con la
 trasera 1 mm más adentro y el pie en 21.5 quedaban 1.77: verde por 0.07 no es
 margen. El pie en 22.5 recupera 2.77. La nariz lo sigue a 20.5 porque los dos
-pies no pueden diferir más de 2. Va bajo la tabla y no se ve.
+pies no pueden diferir más de 2. Va bajo la base y no se ve.
 
 **`miembro_alto_2d` ES EL TECHO MACIZO.** Hay una sola geometría operativa en
 esta revisión: blank **593.02 × 78.85**, meseta de 50 **sin ranuras**, retorno
@@ -388,7 +402,7 @@ trasera no se atornilla al techo.
 empotrada, el radio es **5.5**: `radio_chapa` 4.5 más el rehundido de 1. Así el
 reborde sigue concéntrico al arco del pliegue. Donde nariz o talón salen del
 rebaje hacia el pie, vuelve a **4.5**: el reborde termina y el pie sigue a ras
-sobre la tabla. Las tres esquinas con chaflán conservan el chaflán de 6.
+sobre la base. Las tres esquinas con chaflán conservan el chaflán de 6.
 
 (Las notas sobre los DXF de placa y su fix round — el cajeado dibujado en
 vez del paso M4 — quedan en el historial: la pieza es hoy el marco de la
@@ -467,7 +481,7 @@ maciza, vaciada por el centro con fresadora CNC.
   dos localizan: el delantero del suelo a **Ø8 H7** y el trasero del suelo en
   **colisa de 8 H7 × 10** a lo largo de x. Quedan 3.0 de pared al rebaje
   (`guarda_tacos_persiana()`), y cada bolsillo libra las roscas M4 del dorso y
-  los M5 de la tabla (`anillo_tiene_bolsillos()`). El reparto deja el tramo
+  los M5 de la base (`anillo_tiene_bolsillos()`). El reparto deja el tramo
   más largo sin taco en 112 mm, y el papel pide 100 o menos para que la banda
   quede apretada: con diez tacos no se llega (HUECO en el budget; once lo bajan
   a 92, y eso lo decide Samuel).
@@ -491,7 +505,7 @@ maciza, vaciada por el centro con fresadora CNC.
   hondo porque el rebaje de chapa ocupa los otros 3. En el resto conserva 6.
 - **Radios de contorno:** 5.5 donde se ve chapa empotrada; 4.5 donde la chapa
   abandona el rebaje para formar el pie. Así el marco sigue el pliegue sin
-  levantar el apoyo de la tabla.
+  levantar el apoyo de la base.
 
 **PROFUNDIDADES QUE NO ESTÁN EN EL DXF:** el rebaje de chapa tiene **3 mm** y
 cada cajeado de brida tiene **3 mm**. `costilla_dorso_2d` es una planta: marca
@@ -513,17 +527,19 @@ la huella, no el eje Z. No deducir la profundidad del ancho dibujado.
   — la cuenta que imprime `taladros_anillo()` sobre este mismo DXF: dos por
   riel 3U, dos sobre el primer riel 1U y dos en la pata del suelo (las doce
   del marco de la ventana; las del suelo caen en x = 67.6 y 242.8, lejos de
-  los tres M5 de la tabla que entran por el canto en 53.3, 159.9 y 266.5 —
+  los tres M5 de la base que entran por el canto en 53.3, 159.9 y 266.5 —
   `guarda_marco_ventana()` lo mide) y dos de la brida del miembro alto; eran
   16 con los clips y la brida del
   miembro bajo, muertos el 29-08 por la noche — más **3 roscas M5 por anillo (6 en total, 2
-  filas de 3) en el CANTO INFERIOR** para la tabla: esas NO salen en el DXF
+  filas de 3) en el CANTO INFERIOR** para la base: esas NO salen en el DXF
   del dorso porque entran por el canto, no por la cara, así que van descritas
   aquí y no en el plano: al medio de los 14 mm de espesor, broca 4.2.
 - **Acabado: anodizado negro** (§6.4), después de mecanizar. El punto de bonding
   de PE va **enmascarado antes de anodizar**, en la cara interior, uno por
   anillo — el anodizado es aislante y ese punto tiene que quedar metal
-  desnudo.
+  desnudo. **Y desde la rev. 29 un segundo punto**: un círculo de **Ø12** en el
+  canto inferior, alrededor de uno de los tres M5, para la masa de la base
+  (arandela dentada bajo la cabeza del M5).
 - **PUNTO DE PARADA: el cupón, antes de cortar los dos anillos.** Las cotas
   de la cara vista (chaflán, rebaje, rehundido) salieron de escalar una foto
   de referencia y están marcadas ESTIMADO en la spec de diseño. **No se corta
@@ -557,7 +573,7 @@ la huella, no el eje Z. No deducir la profundidad del ancho dibujado.
   |---|---|---|---|
   | 1 | El chaflán se lee como en la foto de referencia | 1.5 ± 0.2 a 45°, continuo y sin escalones de faceta, mirado con la misma luz y al lado de la referencia impresa | Se cambia `chaflan_anillo` (rango ESTIMADO 1–3), se reexporta la sección y se pide otro cupón |
   | 2 | La persiana asienta plana en la cara del anillo y sus tacos entran en sus bolsillos | Con la **tira de muestra** de la persiana (§6.3) sobre su placa de 14 con dos bolsillos: apoya sin balanceo en toda la banda, el localizador entra a mano y el imán la sostiene sola | Se corrige la cota que falle (`d_bolsillo_taco`, `hondo_bolsillo_taco`, `d_taco`), se regeneran `costilla_bolsillos_2d` y `persiana_dorso_2d` y se pide otra placa antes de cortar los anillos. (Hasta la rev. 28 este criterio era «el rebaje asienta el PMMA del lote»: el rebaje ya no recibe nada) |
-  | 3 | El anodizado no interrumpe el PE | **≤ 0.1 Ω** medido a cuatro hilos entre el punto enmascarado y un tornillo M4 apretado en la rosca ciega (spec 2026-08-27 §3.4) | El enmascarado no valió: se rehace el punto y se vuelve a medir antes de anodizar los anillos |
+  | 3 | El anodizado no interrumpe el PE | **≤ 0.1 Ω** medido a cuatro hilos entre cada punto enmascarado (el de la cara interior y el círculo del canto) y un tornillo apretado en la rosca ciega (spec 2026-08-27 §3.4; rev. 29) | El enmascarado no valió: se rehace el punto y se vuelve a medir antes de anodizar los anillos |
   | 4 | El rebaje de chapa deja un marco continuo | Rebaje de 4.5 × 3 y reborde de 1 × 3, sin mordidas ni pared abierta | No se cortan los anillos; se aplica la respuesta acordada en el RFQ y se pide otro cupón |
 
   Las cotas **en el plano** (cara vista y ancho del rebaje) no hacen falta
@@ -582,53 +598,29 @@ puede alabearla; si el taller no puede darla plana, no es el taller.
 convexos de 4.5 mm, el rip bisector de P3 y su soldadura lineal de 14.5 mm
 por costilla — el anillo es una pieza, no siete tramos cerrados a soldadura.
 
-### 6.2 La tabla — al carpintero
+### 6.2 La base — al taller de chapa (rev. 29)
 
-**Ojo (2026-10-11): la tabla se quita.** Samuel firmó «quitar» en la ficha D-S4
-del acta de la persiana. Va en un papel corto y su propia tanda, con un suelo
-nuevo que respire; hasta entonces este apartado es el de la tabla que hay en el
-modelo, y **no se encarga**.
+La base es la pieza de abajo del case: chapa de **6082-T6 de 3 mm**, anodizada en
+negro, a ras de la huella del cuerpo (`bandeja_base_2d`, 307.76 × 568.62). Amarra
+los dos anillos con seis M5 × 12 de botón desde abajo, recibe la nariz, el talón
+y las patas, y es la entrada de aire por su campo de 1118 agujeros de Ø5 (papel
+del suelo, sec.3 y 5).
 
-`bandeja_base_2d`, **madera maciza de 30 mm, 648.62 × 399.76**, con el
-**canto de arriba redondeado R8** (fresa de redondeo; el de abajo, vivo).
-Creció el 2026-10-10 por la ficha 12 del acta: la tabla vuela `vuelo_zocalo` =
-40 mm más allá del cuerpo por los cuatro lados, para que asome de la piel
-entre 25 y 40, y es más gruesa a la vista. Hasta entonces, 18 mm y 588.62 ×
-339.76. Es el suelo interior del case **y** el zócalo que sobresale: una sola
-pieza. El cuerpo se le apoya encima y las cuatro paticas van atornilladas por
-debajo.
-
-**La veta corre a lo largo** (los 648 mm). No es decoración: fija en qué
-dirección se mueve la tabla, y de ahí salen las ranuras.
-
-**Las ranuras alargadas NO son opcionales y NO se pueden cambiar por agujeros
-redondos.** Son la fijación al anillo de aluminio, que no se mueve, y la tabla
-sí: a contraveta, del orden de 3 mm sobre los 307 mm de fondo entre un invierno
-seco y un verano húmedo. **Van a rosca ciega en el canto inferior del anillo**
-(al medio de sus 14 mm, broca 4.2 — §6.1), no a un larguero. El dibujo trae,
-en cada una de las dos filas (una por anillo, 3 tornillos cada una):
-
-- **un agujero REDONDO, el del medio** — es el punto fijo,
-- **dos RANURAS de 10.5 × 5.5**, alargadas en el fondo.
-
-Con todos redondos, la tabla se raja por la fila o suelta los tornillos. Con
-todos alargados, se arrastra hacia un extremo y el vuelo del zócalo deja de ser
-simétrico.
-
-**Y catorce taladros pasantes de Ø4.5, redondos**: cuatro de las paticas
-(por debajo), tres de la nariz y tres del talón (las dos bandas de chapa que
-se atornillan a la tabla por su pie, desde dentro) y, desde el 2026-08-29 por
-la noche, **cuatro del chasis del PSU**, que apoya en la tabla y se atornilla
-desde abajo a tuercas remachables de su suelo. `guarda_zocalo()` y
-`taladros_talon()` los censan por posición.
-
-**Especie sin elegir.** Las cuentas del modelo van contra E = 11 000 MPa a favor
-de veta (nogal o arce). Roble da ~12 000 y sobra; un contrachapado da ~8 000 y
-pediría 20 mm. **Decir qué especie se suministra antes de cortar.**
-
-**Acabado y sentido de la cara vista**: la cara de arriba es el suelo que se ve
-por dentro del case a través del acrílico; el canto es lo que se ve por fuera.
-Las dos cuentan.
+- **Láser**, con los agujeros cortados **salteados** para repartir el calor.
+- **Planitud ≤ 1 mm** en la chapa suelta, **medida antes de anodizar**. Si hay
+  que nivelar, se nivela antes, nunca después.
+- **Desbarbado a máquina por las dos caras**, con la arista de arriba matada:
+  por los agujeros del campo pasan las bridas de los cables.
+- **El canto de abajo, R0.5**: el aparato se levanta con los dedos bajo él.
+- **El orden**: láser, desbarbado, anodizado (§6.4) y **después la prensa** de
+  los insertos (4 FH-M4 en la base; las 6 CLS-M4 de los pies de nariz y talón
+  van en esas piezas). Los insertos, de **acero o inoxidable** (CLS/FH o
+  CLSS/FHS), **nunca de la serie de aluminio**: pide chapa de dureza ≤ HB 89 y
+  el 6082-T6 ronda 95. Sus agujeros se cortan a la cota del catálogo sobre la
+  pieza **anodizada** (el anodizado los cierra unos 0.02). La hoja de PEM no
+  está en el repo: las cotas de insertos son de memoria hasta tenerla.
+- **La masa**: un círculo de Ø12 sin anodizar en la cara de arriba, alrededor
+  de un M5 por anillo, que casa con el del canto del anillo (§6.1).
 
 ### 6.3 Taller de mecanizado: la persiana
 
@@ -706,7 +698,8 @@ sería seis veces más rígida y daría verde sin merecerlo. Lo que se mide:
 
 **Desde la rev. 28, todo el aluminio que se ve va anodizado en negro**: los dos
 anillos, las dos persianas, el techo, la nariz, el talón, la tapa del valle, la
-tira negra del valle y el marco de la ventana, que se ve entre las varillas.
+tira negra del valle y el marco de la ventana, que se ve entre las varillas. Y
+desde la rev. 29, la base.
 Los Z-Rails no: son comprados y van en plata.
 
 - **Una sola aleación: 6082-T6/T651**, la de las chapas. La persiana va canto
@@ -720,7 +713,9 @@ Los Z-Rails no: son comprados y van en plata.
   limpiar, y en la persiana serían 94 rayas grises a lo largo de las varillas.
 - **Los contactos del bastidor, en caras tapadas**: en la persiana, el dorso de
   la banda, que tapa el anillo; en el anillo, la cara interior.
-- **Enmascarado**: el punto de bonding de PE de cada anillo (§6.1), y los
+- **Enmascarado**: el punto de bonding de PE de cada anillo y el círculo de
+  Ø12 de su canto inferior (§6.1), el círculo de la base que casa con él
+  (§6.2), y los
   dos localizadores de cada persiana con sus bolsillos si el taller prefiere
   eso a compensar la crece (§6.1).
 - **La tapa del valle se dobla a R3 en 3 mm (1 t)**, `radio_doblez_valle`. En
@@ -758,9 +753,16 @@ estropea un acabado que llegó bien.
   la ventana del anillo deja aspirar el interior sin quitar paneles; el rebaje
   vacío del anillo junta polvo.
 - **Los dos costados, libres.** Por la persiana respira el instrumento: con un
-  costado contra una pared el aire no pasa (26 K sobre la sala; D-S11). Cuánta
-  holgura hace falta se mide en el arranque.
-- **Paticas**: goma con casquillo roscado, **atornilladas, nunca pegadas**.
+  costado contra una pared sube 21.4 K sobre la sala en el pesimista, contra un
+  techo de 20 (D-S11, rev. 29: 26 K antes de la base). Cuánta holgura hace falta
+  se mide en el arranque.
+- **Sobre una mesa dura**, con los 10 mm de pata libres debajo: por la base
+  entra el aire (rev. 29). Sobre un paño o una alfombrilla la base no respira y
+  el pesimista sube a 18.9 K.
+- **El ensayo de derrame (D-S10)** gana un criterio: el agua que entra sale por
+  la base y no se encharca en ella.
+- **Paticas**: goma **firme** (Shore 60–70 A, ≤ 0.3 mm con 50 N, alto 10 ± 0.2)
+  con casquillo roscado, **roscadas a una FH-M4 de la base, nunca pegadas**.
   El case no lleva ninguna junta irreversible desde el 2026-08-21.
 
 ## 8. De dónde salen estos números
@@ -775,7 +777,10 @@ contradicen, el equivocado es este documento.**
 | chaflán 0.5 × 45° (PMMA) | `chaflan` | `guarda_chaflan()` |
 | cajeado 4.0 mm | `kondor_prof` | `guarda_kondor()` |
 | apriete 1.0 N·m / d16 | `par_m3`, `d_arandela` | `guarda_apriete()` |
-| flecha de patica 0.25 mm | `flecha_pie` | `guarda_paticas()` |
+| patica firme: ≤ 0.3 mm con 50 N (de compra; HUECO hasta la hoja) | `flecha_pie`, `alto_pie` | `guarda_paticas()` |
+| base: chapa 3, campo Ø5 cada 8 en L, puente 3 ≥ t, 7.0 de un inserto | `t_base`, `base_agujero`, `base_paso`, `base_orilla`, `pem_borde` | `guarda_campo_base()`, `guarda_bandeja_base()` |
+| base: mano de 200 N en el campo, ≤ 9 mm de flecha y ≤ 160 MPa en el puente | `t_base`, `carga_mano` | `guarda_piso()` |
+| tuercas CLS-M4 en los pies, a 7.0 del canto libre (Ø5.4, cuerpo 7.9) | `pem_cls_m4`, `pem_cls_m4_cuerpo`, `pem_borde` | `guarda_talon()`, `taladros_nariz()`, `taladros_talon()` |
 | fresa ⌀3 mm | `fresa_d` | `guarda_fresado()` |
 | tapa del valle, aluminio 3 mm; apoyo 2.0; tira 0.20 comprimida a 0.10 | `t_valle`, `apoyo_valle`, `tira_valle_nominal`, `compresion_tira_valle` | `guarda_valle()` |
 | fila auxiliar KONDOR 55 mm / centros 49 mm; paneles y rieles rehundidos 1.50 | `alto_panel_1u`, `inset_er`, `rehundido_panel` | `guarda_fila_1u()`, `guarda_rehundido_panel()` |
@@ -790,5 +795,5 @@ contradicen, el equivocado es este documento.**
 | nariz: pie 20.5, blank 545.62 × 53.10, muesca 2.65 hasta 20.06, alivio Ø2 | `nariz_pie`, `muesca_pie` | `guarda_talon()`, `check_dxf` |
 | techo macizo: labio 20, retorno 9, blank 593.02 × 78.85 | `techo_labio` | `guarda_miembro_alto()`, `techo_macizo()` |
 | doce tacos EPDM 4.0 × 15; rendija nominal 4.0, comprimida 3.20 | `aire_labios`, `taco_largo` | `guarda_rendija()`, `guarda_aire()` |
-| persiana: placa 6, borde 4, varilla 2.0, paso medio 7.0, ciego 4, atados de 4, 0.3 sobre la tabla | `t_persiana`, `borde_persiana`, `varilla_persiana`, `paso_persiana`, `hondo_ciego_persiana`, `alto_atado`, `suelo_persiana` | `guarda_persiana()`, `cad/persiana.py` |
+| persiana: placa 6, borde 4, varilla 2.0, paso medio 7.0, ciego 4, atados de 4, 0.3 sobre la base | `t_persiana`, `borde_persiana`, `varilla_persiana`, `paso_persiana`, `hondo_ciego_persiana`, `alto_atado`, `suelo_persiana` | `guarda_persiana()`, `cad/persiana.py` |
 | tacos Ø8 × 3.5 a 6.5 de la silueta; bolsillos Ø9 × 3.8, localizador 8 H7, colisa 8 × 10; imanes Ø6 × 3, × 2 y × 1 | `u_taco`, `d_taco`, `alto_taco`, `d_bolsillo_taco`, `hondo_bolsillo_taco`, `colisa_taco`, `d_iman`, `alto_iman_*` | `guarda_tacos_persiana()`, `anillo_tiene_bolsillos()` |

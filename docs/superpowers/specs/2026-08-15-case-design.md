@@ -245,6 +245,18 @@ lenguaje visual).
 > el frente. Esta revisión sustituye la geometría y el montaje de la rev. 26
 > en esos puntos; conserva debajo el razonamiento que llevó a aquella.
 >
+> **rev. 31** (2026-10-12): **la base de chapa**. La tabla de nogal se cambia
+> por una chapa de 6082-T6 de 3 mm (`t_base` 30 → 3), anodizada en negro, bajo
+> los anillos y a ras de su huella, sin vuelo (`vuelo_zocalo`, `holgura_veta`,
+> `r_canto_tabla` y `E_madera` se retiran). La pieza conserva sus nombres de
+> código (`bandeja_base`). Amarra los anillos con los mismos seis M5, ahora
+> redondos; recibe la nariz y el talón, cuyos M4 entran desde abajo a tuercas
+> CLS de sus pies (D-T2); recibe las patas, de 10 (D-T1), roscadas a espárragos
+> FH-M4, y el chasis de la fuente, que se queda. Y es entrada de aire: 1118
+> agujeros de Ø5 cada 8 en una L que esquiva el chasis (`_campo_base()`), en
+> serie con la rendija de las patas y el canal de debajo (`_tiro()`). Detalle en
+> [`2026-10-12-case-suelo-design.md`](2026-10-12-case-suelo-design.md).
+>
 > **rev. 30** (2026-10-11): **la persiana**. Las dos mejillas de acrílico se
 > van y cada costado pasa a ser una placa de aluminio de 6 por fuera del anillo,
 > con 44 varillas de 2, sujeta con diez tacos e imanes; todo el aluminio que se
@@ -495,7 +507,7 @@ esta dirección).
 | `alto_frontal` | **19 mm** | Canto delantero. **No es un zócalo**: el zócalo se eliminó. Fue 13 hasta rev. 10; subió para que el raíl de panel del frente librara la bandeja |
 | `fondo` / `alto_total` | derivados | **319.76 mm / 256.18 mm**. Ya NO cuadra con el board (350 × ~380): el board se dibujó para paneles de 190. El fondo subió 12.35 en la rev. 28 por la fila KONDOR de 55 |
 | `t_valle` / `t_piel` | **3** / **8 mm** | `t_valle` es la tapa del valle y desde la rev. 20 es **chapa de ALUMINIO**: no entra en la medición de espesor de §11 ni en el pliego de acrílico. Se llamó `t_acrilico` hasta esa rev., y el nombre mentía sobre el material. La trasera tiene su propio espesor de 8, y ese sí se MIDE con calibre (§11) |
-| `t_base` / `t_cheek` | 8 mm | Suelo portante y costados. La bandeja de base subió de 5 a 8 al pasar a ser el propio canto de abajo |
+| `t_base` | **3 mm** | La base: chapa 6082-T6 bajo los anillos desde la rev. 31. Fue acrílico de 5 y de 8, y tabla de nogal de 18 y de 30. `t_cheek` murió con la mejilla en la rev. 30 |
 | `kerf` | **0** | Correcto fresando: el CAM compensa el radio de herramienta. Solo vuelve a ser negativo si se regresa al láser |
 | `n_bulkheads` | 2 | Costados exteriores; el modelo admite uno central si el vano lo pide |
 
@@ -516,6 +528,17 @@ comprobación va antes del paso destructivo).
 
 ## 5. Estructura
 
+> **Enmienda rev. 31 — 2026-10-12.** Sustituye en esta sección todo lo que dice
+> de la tabla. El suelo es una **base de chapa de 3 mm** bajo los anillos, a ras
+> de su huella: los dos anillos se le apoyan encima con seis M5 redondos (sin
+> ranuras: aluminio contra aluminio), la nariz y el talón se le atornillan por
+> sus pies desde abajo, las cuatro patas se roscan a sus FH-M4 y el chasis del
+> PSU va encima, en sus cuatro M4. En planta y en torsión la base amarra los
+> anillos mejor que la tabla; de lado, peor (trabaja como bisagra), y el
+> descuadre (#203) se prueba con la base y sin paneles. Con una mano de
+> `carga_mano` barrida por el campo cede 2.80 mm como mucho, y el borde de los
+> agujeros llega a 177 MPa de 240 (`guarda_piso()`, emparrillado).
+>
 > **Enmienda rev. 27 — 2026-08-30.** Sustituye en esta sección los párrafos
 > operativos de «el techo y el talón» y «trasera» de la rev. 26. El techo queda
 > **macizo**, con labio de 20, y descarga por una rendija de 4.0 bajo el alero;
@@ -696,6 +719,12 @@ case/
 
 ## 9. BOM mecánico (categorías; cantidades exactas en el eco)
 
+> **Enmienda rev. 31 — 2026-10-12.** Donde abajo dice «tabla de madera maciza»,
+> es la base de chapa 6082-T6 de 3 mm; entran 6 tuercas PEM CLS-M4, 4 espárragos
+> PEM FH-M4, 6 M5 × 12 de botón y 6 M4 × 8 de botón, y las paticas se compran
+> firmes (≤ 0.3 mm con 50 N). El eco del BOM y `case/README.md` llevan las
+> cantidades.
+
 **Este párrafo quedó revisiones enteras detrás de la implementación real**
 (pieles con standoffs, paticas torneadas, transversales 2020 pasantes) y se
 corrige aquí contra la salida real del modelo, el 2026-08-28. Categorías
@@ -777,6 +806,10 @@ de tocar `params.scad` toma ese eco, no este párrafo.
    redondo del medio de cada fila de la tabla va antes que los de ranura, y
    los de ranura no se pasan de apriete.** Un tornillo de ranura apretado a
    tope es un tornillo redondo, y ahí se acabó la ranura.
+
+   **Y EN LA REV. 31 (2026-10-12)** la tabla es la base de chapa: los seis M5
+   van redondos y no hay orden de apriete entre ellos, y los M4 de nariz y
+   talón entran desde abajo. El orden vigente está en `case/README.md`.
 
    Este punto decía «costados → bandejas y standoffs → raíles», y era
    físicamente imposible según el §5 de esta misma spec: las bandejas se

@@ -4,6 +4,21 @@ Documento para pedir presupuesto. Va **antes** que el pliego
 ([`PLIEGO.md`](PLIEGO.md)): el pliego dice qué hay que hacer, esto sirve
 para saber **quién puede hacerlo**.
 
+> **rev. 28 (2026-10-12). La base de chapa.** La tabla de nogal se cambia por
+> una chapa de aluminio de 3 mm bajo los anillos (papel
+> `docs/superpowers/specs/2026-10-12-case-suelo-design.md`). **Se va la
+> carpintería (§C).** **A la chapa (§B)**: la base, con su campo de 1118
+> agujeros de Ø5 y sus insertos de presión, y tres agujeros para tuercas CLS en
+> los pies de la nariz y del talón. **Al anodizador (§E)**: la base, y un
+> círculo más por anillo sin anodizar.
+>
+> | § | taller | qué se le pide |
+> |---|---|---|
+> | A | casa de acrílico | la trasera — **sin taladros** |
+> | B | chapa de aluminio (y acero) | techo macizo, talón y nariz (con tres agujeros para tuercas CLS en el pie), **la base** (3 mm, campo de agujeros e insertos), marco de la ventana ×2, tapa del valle, chasis ×3 |
+> | D | mecanizado de aluminio | el anillo ×2, con sus diez bolsillos por fuera, y la persiana ×2 |
+> | E | anodizado | todo el aluminio que se ve, en negro y en un lote, con la base |
+>
 > **rev. 27 (2026-10-11). La persiana.** Las dos mejillas de acrílico se van
 > y las sustituye una persiana de aluminio por costado (papel
 > `docs/superpowers/specs/2026-10-11-case-persiana-design.md`). **A la casa de
@@ -194,8 +209,10 @@ cada punta), el **talón** (blank 545.62 × 42.23, pie de 22.5 con muescas y
 ocho pestañas lanzadas), la
 **nariz** (la banda del frente, blank 545.62 × 53.10, tres dobleces), los
 dos **marcos de la ventana** (pletina de 6 cortada a láser, con seis cajeados
-por el lado del anillo, un par espejado) y la **tapa del valle** (aluminio de
-3 mm, blank 560.00 × 20.00, dos pestañas y labio de apoyo de 2.0 mm). Son las piezas
+por el lado del anillo, un par espejado), la **tapa del valle** (aluminio de
+3 mm, blank 560.00 × 20.00, dos pestañas y labio de apoyo de 2.0 mm) y, desde la
+rev. 28, **la base** (6082-T6 de 3 mm, 307.76 × 568.62, plana: el suelo del
+case). Son las piezas
 que llevan los rieles y sostienen el marco por dentro del anillo. (La bahía,
 tercer miembro hasta el 2026-08-29, y las placas, clips, escuadras y marcos de
 la trasera, muertos esa misma noche, ya no existen.)
@@ -271,36 +288,20 @@ el fichero. **Se cortan dos y se cajean por caras opuestas.**
    exigido (1.5 diámetros del M4 de paso), sin margen de sobra.
 6. ¿**Desbarban** el canto? Ninguna de estas piezas lleva recocido, ni
    diamantado, ni chaflán: esas tres cosas son del PMMA.
+7. **La base (rev. 28).** ¿Cortan **1118 agujeros de Ø5 cada 8** en 6082-T6 de
+   3 mm, **salteados**, sin pasar de **1 mm de planitud** en 568 × 308, medida
+   antes de anodizar? ¿Desbarban a máquina las dos caras?
+8. **¿Prensan insertos PEM** (tuercas CLS-M4 en chapa de 1.5; espárragos FH-M4
+   en chapa de 3), de **acero o inoxidable**, **después de anodizar**, con el
+   agujero a la cota del catálogo sobre la pieza anodizada? Si no tienen
+   prensa, ¿quién la tiene cerca?
 
 ---
 
-## C. Carpintería — preguntas eliminatorias
+## C. Carpintería — retirada en la rev. 28
 
-Una sola pieza, pero **carga**: es el suelo del case y el zócalo a la vez, y el
-cuerpo entero se le apoya encima.
-
-1. **¿Qué especie y con qué contenido de humedad la entregan?** El modelo
-   calcula contra **E = 11 000 MPa** a favor de veta (nogal, arce). Roble da
-   ~12 000 y sobra; un contrachapado da ~8 000 y pediría 20 mm en vez de 18.
-   **Decir la especie antes de cortar.**
-2. **¿Pueden hacer ranuras alargadas de 10.5 × 5.5 mm** (agujero de paso M5 con
-   5 mm de carrera) en la posición del dibujo, y **catorce taladros pasantes de
-   Ø4.5** (paticas, nariz, talón y chasis)?
-3. ¿Qué **acabado** proponen para una pieza cuya cara de arriba se ve por dentro
-   del case a través del acrílico y cuyo canto se ve por fuera?
-
-**La cota que no se negocia:** el dibujo trae, en cada una de las dos filas,
-**un agujero redondo (el del medio) y dos ranuras**. No es un descuido ni una
-mezcla: es lo que deja que la tabla se mueva con la estación sin rajarse contra
-un marco de aluminio que no se mueve. **Con todos redondos la tabla se raja; con
-todos alargados se arrastra hacia un extremo.** Si el taller propone
-«homogeneizarlos», la respuesta es no.
-
-### Muestra que se pide
-
-Un retazo de la especie propuesta, 30 mm, con el canto redondeado R8 acabado como se
-entregaría. Se compara contra el naranja del cuerpo — **la tabla y el acrílico
-se ven juntos y a la vez**, y eso no lo contesta ningún render.
+La tabla de nogal se cambió por la base de chapa (§B). Esta sección queda
+vacía para no renumerar §D y §E.
 
 ---
 
@@ -432,16 +433,17 @@ El pliego (§6.3) dice qué se mide en ella.
 
 Todo el aluminio que se ve va anodizado en negro **por un solo anodizador y en
 un solo lote**: los dos anillos y las dos persianas (de §D) con el techo, la
-nariz, el talón, la tapa del valle, la tira negra del valle y el marco de la
-ventana (de §B). Puede ser el propio taller de §D si anodiza; si no, es un
+nariz, el talón, la tapa del valle, la tira negra del valle, el marco de la
+ventana y, desde la rev. 28, la base (de §B). Puede ser el propio taller de §D si anodiza; si no, es un
 pedido aparte. El pliego (§6.4) lleva el detalle.
 
 1. **¿Anodizan en negro 6082-T6/T651, ISO 7599 clase AA15–AA20, sellado**,
    **en un solo lote** para piezas de dos talleres? (La clase está citada de
    memoria: confírmenla.)
 2. ¿Ponen los **contactos del bastidor en caras tapadas** — el dorso de la
-   banda de la persiana, la cara interior del anillo — y **enmascaran un
-   punto** por anillo?
+   banda de la persiana, la cara interior del anillo — y **enmascaran dos
+   puntos** por anillo (el de la cara interior y un círculo de Ø12 en el canto
+   inferior) y el círculo de Ø12 de la base que casa con él (rev. 28)?
 3. ¿Cierran el anodizado en **cantos de 2 mm con arista rota de 0.2** y en el
    **fondo de ranuras ciegas de 3.5 a 6.3 de ancho y 4 de hondo**? Es lo que
    mide la tira de muestra de la persiana (§D).

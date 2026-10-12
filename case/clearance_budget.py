@@ -265,14 +265,14 @@ def _chasis_tornillos(p: dict[str, float]) -> list[tuple[float, float]]:
 
 def _chasis_tornillos_tabla(p: dict[str, float]) -> list[tuple[float, float]]:
     """Los mismos cuatro en coordenadas LOCALES de bandeja_base_2d: la misma
-    cadena que salida_cables_xy() en el .scad (x local = vuelo + z del mundo,
-    y local = vuelo + x del mundo; el interior arranca desfase + t dentro de
-    la envolvente de la tapa). GEMELA de chasis_tornillos_tabla()."""
+    cadena que salida_cables_xy() en el .scad (x local = z del mundo, y local
+    = x del mundo, sin vuelo desde el papel del suelo; el interior arranca
+    desfase + t dentro de la envolvente de la tapa). GEMELA de
+    chasis_tornillos_tabla()."""
     c = _chasis(p)
     au = perfil(p)["ancho_util"]
-    v = p["vuelo_zocalo"]
-    pos_x = v + p["t_anillo"] + au - p["chasis_margen_bandeja"] - c["tapa_x"]
-    pos_y = _x_chasis_frente(p) + v
+    pos_x = p["t_anillo"] + au - p["chasis_margen_bandeja"] - c["tapa_x"]
+    pos_y = _x_chasis_frente(p)
     d = c["desfase"] + p["t_chapa"]
     return [(pos_x + d + ix, pos_y + d + iy) for ix, iy in _chasis_tornillos(p)]
 
@@ -1658,31 +1658,32 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
 
     planchas: list[Caja] = []
     filas: list[Fila] = []
-    # bandeja_base: LA TABLA. Cambio de sitio y de material el 2026-08-27 y es
-    # el cambio mas grande que ha tenido esta pieza.
+    # bandeja_base: LA BASE de chapa (papel del suelo, 2026-10-12), bajo los
+    # anillos y a ras de su huella, de y = -t_base a 0. Lo que sigue es la
+    # historia de la tabla de nogal que fue esta pieza hasta ese dia.
     #
     # Fue plancha de acrilico DENTRO del case (y = 0 a t_base) desde el
     # 2026-08-17, con los dos largueros montados encima, y su canto delantero
-    # valio 8.46 mm de alto de aparato en su ultima vuelta. Ahora es una TABLA DE
-    # MADERA MACIZA BAJO EL MARCO: ocupa y = -t_base .. 0, su cara de arriba ES
-    # el suelo interior y su canto sobresale vuelo_zocalo por los cuatro lados.
+    # valio 8.46 mm de alto de aparato en su ultima vuelta. Luego fue una TABLA
+    # DE MADERA MACIZA BAJO EL MARCO (2026-08-27 a 2026-10-12), con su vuelo por
+    # los cuatro lados. Ahora es la BASE de chapa: ocupa y = -t_base .. 0, a ras
+    # de la huella del cuerpo, y su cara de arriba ES el suelo interior.
     # Es la misma pieza que el "zocalo" de la spec 9, que hasta hoy eran dos.
     #
     # LO QUE ESO DESHACE, y por eso el modelo se simplifica en vez de crecer:
     #   - No hay voladizo. La plancha volaba 271.45 mm desde `base trasera` y
     #     pedia 10 mm de aluminio. Ahora las dos costillas se apoyan ENCIMA de
-    #     la tabla y las cuatro paticas van debajo, casi en la misma vertical:
+    #     la base y las cuatro paticas van debajo, casi en la misma vertical:
     #     el peso del case va de costilla a pata sin cruzar el vano.
-    #   - No hay fila de M3 a un larguero. La tabla no cuelga de nada; el marco
-    #     se le apoya. Su fijacion es a las dos costillas y va con AGUJERO
-    #     ALARGADO, que es cosa de guarda_zocalo() y no de apoyo().
+    #   - No hay fila de M3 a un larguero. La base no cuelga de nada; el marco
+    #     se le apoya. Su fijacion es a las dos costillas, con seis M5 de paso
+    #     redondo, que es cosa de guarda_bandeja_base() y no de apoyo().
     #   - alto_frontal se suelta del espesor del suelo: el riel del frente solo
     #     tiene que librar y=0.
-    v = p["vuelo_zocalo"]
     planchas.append(("bandeja_base",
-                     -v, fondo(p) + v,
+                     p["chaflan_nariz"], fondo(p) - p["chaflan_nariz"],
                      -p["t_base"], 0.0,
-                     -v, p["ancho_total"] + v))
+                     0.0, p["ancho_total"]))
     # bandeja_entrepiso MURIO el 2026-08-21 ("vamos a evitar la complejidad").
     # Era el piso del piso de arriba, y su papel de barrera entre la fuente y
     # los modulos ya lo hace el chasis de ACERO (#107): la red y el toroide
@@ -2091,6 +2092,11 @@ def solapes(p: dict[str, float]) -> list[str]:
     mismo. Paneles inclinados (1.6 mm, PCB de aluminio de cada modulo): su
     clase la resuelve la rotacion de railes (R3), no entran en esta caja."""
     railes, planchas, _ = _cajas_solidas(p)
+    # Las dos persianas tienen que estar entre las cajas que se cruzan. Lo
+    # probaba canario_persiana_tabla(), hasta que la base dejo de pasar bajo
+    # la persiana (papel del suelo, 2026-10-12).
+    assert {"persiana izquierda", "persiana derecha"} <= {c[0] for c in railes}, (
+        "las dos persianas no estan entre las cajas que solapes() cruza")
     fallos: list[str] = []
     todas = railes + planchas
     n_rail = len(railes)
@@ -2151,16 +2157,6 @@ def canario_solapes(p: dict[str, float]) -> None:
         "canario de solapes no disparo: el checker no detecta un choque "
         "conocido (6.92 x 9.40 mm en planta) — no confiar en el resto de "
         "solapes()")
-
-
-def canario_persiana_tabla(p: dict[str, float]) -> None:
-    """La persiana empieza suelo_persiana por encima de la tabla. Con -1 se
-    mete en ella, y solapes() tiene que cantarlo: es la prueba de que sus dos
-    cajas estan en la lista que cruza contra todo."""
-    fallos = solapes({**p, "suelo_persiana": -1.0})
-    assert any("persiana" in f and "bandeja_base" in f for f in fallos), (
-        "canario de la persiana no disparo: con suelo_persiana = -1 la "
-        "persiana entra 1 mm en la tabla y solapes() no lo ve")
 
 
 def _sat_gap(p: dict[str, float], c1: tuple[float, float], ang1: float,
@@ -2552,16 +2548,16 @@ def guarda_rendija(p: dict[str, float]) -> None:
 
 
 def _envolvente_m2(p: dict[str, float]) -> float:
-    """Envolvente exterior del case MENOS el suelo, que apoya en la mesa y no
-    convecta. DERIVADA del perfil (perimetro x ancho + las dos mejillas), no
-    parametro: hoy son 0.507 m2 de los 0.689 del envolvente entero."""
+    """Envolvente exterior del case, con el suelo. Hasta el papel del suelo
+    (2026-10-12) restaba el suelo porque la tabla apoyaba en la mesa y no
+    convectaba; la base de chapa va sobre patas, con aire debajo. DERIVADA del
+    perfil (perimetro x ancho + las dos mejillas), no parametro."""
     V = _vertices(p)
     n = len(V)
     per = sum(math.dist(V[i], V[(i + 1) % n]) for i in range(n))
     mejilla = abs(sum(V[i][0] * V[(i + 1) % n][1] - V[(i + 1) % n][0] * V[i][1]
                       for i in range(n))) / 2.0
-    return (per * p["ancho_total"] + 2 * mejilla
-            - fondo(p) * p["ancho_total"]) * 1e-6
+    return (per * p["ancho_total"] + 2 * mejilla) * 1e-6
 
 
 def _potencia_del_cajon() -> float:
@@ -2668,13 +2664,88 @@ def _huecos(p: dict[str, float], costados: int = 2,
     return hs
 
 
+# EL CANAL BAJO LA BASE (papel del suelo, sec.5). Es lo que el aire corre por
+# el hueco de alto_pie entre la chapa y la mesa hasta el campo de agujeros. El
+# flujo de verdad es 2D y converge; aqui es un canal solo, de ancho la rendija
+# libre y de este largo. 60 es la estimacion: casi todo el perimetro queda a
+# 25-30 mm de un agujero, y el tramo de atras a la derecha a unos 200, debajo
+# del chasis. 120 es la pesimista, que va con CD_TIRO_PESIMISTA. SUPUESTO: se
+# mide en la primera unidad (HUECO H2 del papel).
+CANAL_BASE = 60.0
+CANAL_BASE_PESIMISTA = 120.0
+MU_AIRE = 1.8e-5          # Pa s, aire a ~30 C
+
+
+def _camino_base(p: dict[str, float], costados: int = 2,
+                 canal: float = CANAL_BASE) -> dict:
+    """La entrada por la base, en serie: la rendija que dejan las patas en el
+    perimetro de la chapa, el canal laminar de alto_pie y los agujeros del
+    campo. Cada pata tapa su diametro de rendija, y una pared contra un costado
+    tapa tambien el tramo de ese costado."""
+    largo = fondo(p) - 2 * p["chaflan_nariz"]
+    libre = (2 * (p["ancho_total"] + largo) - 4 * p["d_pie"]
+             - (2 - costados) * (largo - 2 * p["d_pie"]))
+    return {"a_base": len(_campo_base(p)) * math.pi * p["base_agujero"] ** 2 / 4,
+            "w": libre, "largo": canal, "h": p["alto_pie"]}
+
+
+def _caudal_base(dp: float, cd: float, a_base: float, w: float, largo: float,
+                 h: float) -> float:
+    """m3/s que suben por la base con dp Pa de tiro a y = 0:
+        dp = rho/2 (Q / (C_D A_r))^2 + 12 mu L Q / (W h^3) + rho/2 (Q / (C_D A_b))^2
+    La rendija y los agujeros son orificios; el canal, Poiseuille entre placas."""
+    if dp <= 0 or a_base <= 0:
+        return 0.0
+    a = RHO_AIRE / 2 * (1 / (cd * w * h * 1e-6) ** 2 + 1 / (cd * a_base * 1e-6) ** 2)
+    b = 12 * MU_AIRE * largo * 1e-3 / (w * 1e-3 * (h * 1e-3) ** 3)
+    return (-b + math.sqrt(b * b + 4 * a * dp)) / (2 * a)
+
+
+def _caudales(hs, cd: float, camino: dict | None, yn: float,
+              dt: float) -> tuple[float, float]:
+    """(entra, sale) en m3/s con el plano neutro en yn mm y el salto dt K."""
+    g = RHO_AIRE * G * dt / T_AMB * 1e-3          # Pa por mm de altura
+    entra = sale = 0.0
+    for y, a in hs:
+        q = cd * a * 1e-6 * math.sqrt(2 * g * abs(y - yn) / RHO_AIRE)
+        if y < yn:
+            entra += q
+        else:
+            sale += q
+    if camino:
+        entra += _caudal_base(g * yn, cd, **camino)
+    return entra, sale
+
+
+def _neutro(hs, cd: float, camino: dict | None, dt: float) -> float:
+    """El plano neutro por balance de masa. Con la base deja de ser independiente
+    de dT, porque el canal es lineal y los orificios no."""
+    lo, hi = min(0.0, min(y for y, _ in hs)), max(y for y, _ in hs)
+    for _ in range(50):
+        yn = (lo + hi) / 2
+        entra, sale = _caudales(hs, cd, camino, yn, dt)
+        lo, hi = (lo, yn) if entra > sale else (yn, hi)
+    return (lo + hi) / 2
+
+
+def _potencia_con(hs, cd: float, camino: dict | None, dt: float) -> float:
+    """W que la chimenea evacua con un salto de dt K."""
+    yn = _neutro(hs, cd, camino, dt)
+    return RHO_AIRE * CP_AIRE * _caudales(hs, cd, camino, yn, dt)[1] * dt
+
+
 def _tiro(p: dict[str, float], cd: float = CD_TIRO, costados: int = 2,
-          trasera: bool = True) -> dict:
+          trasera: bool = True, base: bool = True,
+          canal: float = CANAL_BASE) -> dict:
     """La chimenea del case: el plano neutro, lo que entra y lo que sale, el
     salto termico y lo que evacua al techo.
 
-        P = k dT^1.5,   k = rho cp C_D sqrt(2 g / T) S
-
+    DESDE EL PAPEL DEL SUELO (2026-10-12) LA BASE ES UN CAMINO DE ENTRADA EN
+    SERIE (_camino_base()): rendija de las patas, canal laminar y agujeros. Con
+    un termino lineal la chimenea deja de ser P = k dT^1.5 y se resuelve con
+    dos bisecciones: el plano neutro por masa a cada dT (_neutro()) y dT por
+    energia. Sin base (base=False) da la forma cerrada de antes al millonesimo
+    (autocomprobacion_base()): P = k dT^1.5, k = rho cp C_D sqrt(2 g / T) S,
     con S la suma de a sqrt(y - yn) de los huecos de arriba (_plano_neutro()).
 
     FUE EN SERIE HASTA EL 2026-10-12: una entrada y una salida, A_ef^-2 =
@@ -2688,23 +2759,49 @@ def _tiro(p: dict[str, float], cd: float = CD_TIRO, costados: int = 2,
     SALIO DE guarda_aire() EL 2026-09-03 para que canario_techo() pudiera leer
     los NUMEROS y no el mensaje de la puerta.
 
-    `falta` es el factor por el que hay que multiplicar el area de TODAS las
-    aberturas, a las mismas alturas, para quedarse en el techo: escalarlas
-    todas no mueve el plano neutro, asi que S y k crecen con ese mismo
-    factor."""
+    `falta` es la potencia de dentro sobre la que la chimenea evacua al techo.
+    Con la base ya no dice cuanta area hace falta: el canal no escala con el
+    area de los agujeros."""
     hs = _huecos(p, costados, trasera)
-    yn, s = _plano_neutro(hs)
-    k = (RHO_AIRE * CP_AIRE * cd * math.sqrt(2 * G / T_AMB)
-         * s * 1e-6 * math.sqrt(1e-3))
+    camino = _camino_base(p, costados, canal) if base else None
     techo = p["salto_termico_max"]
-    p_evacuada = k * techo ** 1.5
-    return {"huecos": hs, "yn": yn, "S": s, "k": k,
+    lo, hi = 1e-3, 500.0
+    for _ in range(50):
+        dt = (lo + hi) / 2
+        if _potencia_con(hs, cd, camino, dt) < p["potencia_disipada"]:
+            lo = dt
+        else:
+            hi = dt
+    dt = (lo + hi) / 2
+    yn = _neutro(hs, cd, camino, dt)
+    g = RHO_AIRE * G * dt / T_AMB * 1e-3
+    p_evacuada = _potencia_con(hs, cd, camino, techo)
+    return {"huecos": hs, "yn": yn,
             "a_entra": sum(a for y, a in hs if y < yn),
             "a_sale": sum(a for y, a in hs if y > yn),
+            "a_base": camino["a_base"] if camino else 0.0,
+            "q_base": _caudal_base(g * yn, cd, **camino) if camino else 0.0,
             "p_evacuada": p_evacuada,
             "p_pared": U_PARED_W_M2K * _envolvente_m2(p) * techo,
-            "dt": (p["potencia_disipada"] / k) ** (2.0 / 3.0),
+            "dt": dt,
             "falta": p["potencia_disipada"] / p_evacuada}
+
+
+def _tiro_pesimista(p: dict[str, float], **kw) -> dict:
+    """El pesimista junta los dos supuestos pesimistas: C_D 0.55 y el canal de
+    120 bajo la base."""
+    return _tiro(p, CD_TIRO_PESIMISTA, canal=CANAL_BASE_PESIMISTA, **kw)
+
+
+def _potencia_a(p: dict[str, float], dt: float, cd: float = CD_TIRO,
+                costados: int = 2, trasera: bool = True, base: bool = True,
+                canal: float = CANAL_BASE) -> float:
+    """W que la chimenea evacua con un salto de dt K: la inversa de _tiro().
+    Con la base ya no hay k que elevar a 1.5, asi que los canarios que derivan
+    una carga del techo pasan por aqui."""
+    hs = _huecos(p, costados, trasera)
+    camino = _camino_base(p, costados, canal) if base else None
+    return _potencia_con(hs, cd, camino, dt)
 
 
 def guarda_potencia_vigente(p: dict[str, float]) -> None:
@@ -2790,7 +2887,14 @@ def guarda_aire(p: dict[str, float]) -> None:
     la prueba de robustez y se imprime. Un costado contra una pared no pasa,
     y eso es una condicion de uso (PLIEGO sec.7), con su HUECO hasta que el
     arranque mida cuanta holgura hace falta. La sala de 45 C de la spec del
-    chasis se imprime tambien, y publica su HUECO mientras no se decida."""
+    chasis se imprime tambien, y publica su HUECO mientras no se decida.
+
+    Y DESDE EL PAPEL DEL SUELO (2026-10-12) LA BASE RESPIRA. El aire entra
+    tambien por la base, en serie con la rendija de las patas y el canal de
+    debajo (_camino_base()). Los dos HUECOS se juzgan con el pesimista, que
+    es C_D 0.55 con el canal de 120: con la base, el nominal de un costado
+    tapado pasa y el pesimista no, y juzgarlo con el nominal lo callaba en
+    silencio (papel del suelo, sec.5)."""
     _n, largo_ent, _a, _y = _rejilla_entrada(p)
     assert largo_ent >= 4 * p["vent_ancho_ranura"], (
         f"la rejilla de entrada mide {largo_ent:.1f} mm de largo con "
@@ -2799,23 +2903,24 @@ def guarda_aire(p: dict[str, float]) -> None:
     t = _tiro(p)
     techo = p["salto_termico_max"]
     print(f"aire: plano neutro a {t['yn']:.0f} mm; por debajo entran "
-          f"{t['a_entra']:.0f} mm2 y por encima salen {t['a_sale']:.0f}, en "
-          f"{len(t['huecos'])} huecos: las franjas de las dos persianas, la "
-          f"rejilla baja de la trasera, la rendija del alero y las ondas")
+          f"{t['a_entra']:.0f} mm2 de huecos y los {t['a_base']:.0f} de la "
+          f"base, y por encima salen {t['a_sale']:.0f}, en {len(t['huecos'])} "
+          f"huecos: las franjas de las dos persianas, la rejilla baja de la "
+          f"trasera, la rendija del alero y las ondas")
     print(f"  {t['dt']:.1f} K sobre ambiente con {p['potencia_disipada']:.2f} W "
           f"(techo {techo:.0f}; esta chimenea evacua {t['p_evacuada']:.1f} W a "
           f"ese techo). SUPUESTO: C_D={CD_TIRO}, aire a {T_AMB - 273.15:.0f} C")
     assert t["dt"] <= techo + 1e-9, (
         f"el case sube {t['dt']:.1f} K sobre ambiente con "
         f"{p['potencia_disipada']:.2f} W y el techo es {techo:g}: esta chimenea "
-        f"evacua {t['p_evacuada']:.1f} W a ese techo. Hace falta un "
-        f"{100 * (t['falta'] - 1):.0f} % mas de area en todas las aberturas, a "
-        f"las mismas alturas, o salidas mas altas: el tiro va con la RAIZ de la "
-        f"altura")
-    t_p = _tiro(p, CD_TIRO_PESIMISTA)
+        f"evacua {t['p_evacuada']:.1f} W a ese techo. Hace falta mas area, "
+        f"salidas mas altas o mas pata bajo la base: el tiro va con la RAIZ de "
+        f"la altura")
+    t_p = _tiro_pesimista(p)
     print(f"  aviso: con C_D={CD_TIRO_PESIMISTA} (rendija bajo alero, no chapa "
-          f"ranurada) serian {t_p['dt']:.1f} K, y evacua {t_p['p_evacuada']:.1f} W "
-          f"a ese techo. Sin medir hasta el ensayo")
+          f"ranurada) y el canal de {CANAL_BASE_PESIMISTA:g} bajo la base serian "
+          f"{t_p['dt']:.1f} K, y evacua {t_p['p_evacuada']:.1f} W a ese techo. "
+          f"Sin medir hasta el ensayo")
     f_sala = T_SALA_DISENO_K / T_AMB
     print(f"  aviso: con la sala a {T_SALA_DISENO_K - 273.15:.0f} C de la spec "
           f"del chasis serian {t['dt'] * f_sala:.1f} K, y "
@@ -2827,18 +2932,22 @@ def guarda_aire(p: dict[str, float]) -> None:
             f"{t['dt'] * f_sala:.1f} K, y {t_p['dt'] * f_sala:.1f} con el C_D "
             f"pesimista contra un techo de {techo:.0f}. La puerta juzga con "
             f"{T_AMB - 273.15:.0f} C; cual es la sala del case lo decide Samuel")
-    print(f"  aviso: la envolvente exterior ({_envolvente_m2(p):.3f} m2, sin el "
-          f"suelo) se lleva otros {t['p_pared']:.1f} W a ese techo con "
+    print(f"  aviso: la envolvente exterior ({_envolvente_m2(p):.3f} m2, con la "
+          f"base, que va sobre patas) se lleva otros {t['p_pared']:.1f} W a ese techo con "
           f"U={U_PARED_W_M2K} W/m2K (SUPUESTO); no entra en el veredicto")
-    t_1 = _tiro(p, costados=1)
-    print(f"  con un costado tapado (contra una pared): {t_1['dt']:.1f} K")
+    t_1 = _tiro_pesimista(p, costados=1)
+    print(f"  con un costado tapado (contra una pared), pesimista: {t_1['dt']:.1f} K")
     if t_1["dt"] > techo + 1e-9:
         _HUECOS.append(
             f"la holgura de los costados sin medir: con un costado tapado el "
-            f"case sube {t_1['dt']:.1f} K con {p['potencia_disipada']:.2f} W y "
-            f"el techo es {techo:.0f}. Los dos tienen que quedar libres (PLIEGO "
-            f"sec.7); cuanta holgura hace falta a cada lado se mide en el "
-            f"arranque (papel de la persiana, HUECO 4)")
+            f"case sube {t_1['dt']:.1f} K con el pesimista y "
+            f"{p['potencia_disipada']:.2f} W, y el techo es {techo:.0f}. Los dos "
+            f"tienen que quedar libres (PLIEGO sec.7); cuanta holgura hace falta "
+            f"a cada lado se mide en el arranque (papel de la persiana, HUECO 4)")
+    t_0 = _tiro_pesimista(p, base=False)
+    print(f"  aviso: sobre un pano o una alfombrilla la base no respira y el "
+          f"pesimista sube a {t_0['dt']:.1f} K (PLIEGO sec.7: mesa dura, con "
+          f"los {p['alto_pie']:g} mm de pata libres debajo)")
 
 
 # Umbral de fluencia del PMMA. SUPUESTO DECLARADO (#106): nadie lo ha medido
@@ -2849,39 +2958,30 @@ SIGMA_PMMA = 10.0
 
 
 def guarda_paticas(p: dict[str, float]) -> None:
-    """Una goma dura no aisla menos: AMPLIFICA.
+    """La pata, desde el papel del suelo (2026-10-12).
 
-    El toroide excita a 100 Hz -- magnetostriccion al doble de la red, #106.
-    La pata y la masa del case forman un muelle, y si su frecuencia propia
-    cae cerca de esos 100 Hz la transmisibilidad se dispara: la mesa recibe
-    MAS zumbido del que recibiria con el acrilico apoyado en seco. Una mesa
-    es una superficie radiante mucho mayor que el case.
-
-    Por eso la cota que decide una patica no es la dureza ni el diametro:
-    es CUANTO SE HUNDE bajo carga. f_propia = 15.76 / sqrt(flecha_mm) es la
-    formula de manual para un grado de libertad bajo su propio peso.
-
-    Se exige f_propia <= 100/3. El factor 3 es el minimo habitual para que la
-    transmisibilidad baje del 15 %; por debajo de 3 se entra en la zona donde
-    la curva sube en vez de bajar.
-
-    ES REQUISITO DE COMPRA, NO DE DIBUJO: la flecha sale de la curva
-    carga-deformacion del fabricante. Una goma que no publica esa curva no se
-    puede verificar, y por tanto no sirve.
-    """
-    MASA_CASE, F_TOROIDE = 9.30, 100.0        # kg (#106, con 5 largueros), Hz
-    carga = MASA_CASE * 9.81 / 4
-    f_propia = 15.76 / math.sqrt(p["flecha_pie"])
-    transmision = 1 / abs((F_TOROIDE / f_propia) ** 2 - 1)
-    flecha_min = (15.76 / (F_TOROIDE / 3)) ** 2
-    assert f_propia <= F_TOROIDE / 3, (
-        f"flecha_pie = {p['flecha_pie']} mm da f propia {f_propia:.1f} Hz "
-        f"contra los {F_TOROIDE:.0f} Hz del toroide: transmite "
-        f"{transmision*100:.0f} %. Una goma que se hunde poco NO aisla menos, "
-        f"AMPLIFICA. Hace falta >= {flecha_min:.2f} mm de flecha.")
-    print(f"paticas: {carga:.1f} N por pata, se hunden {p['flecha_pie']} mm "
-          f"-> f propia {f_propia:.1f} Hz, transmiten {transmision*100:.0f} % "
-          f"de los {F_TOROIDE:.0f} Hz del toroide")
+    La regla de antes (una goma blanda contra los 100 Hz del toroide) se fue
+    con el toroide. La pata es ahora parte de la entrada de aire: la rendija
+    de alto_pie bajo la base. Lo que se asevera es que su disco cabe bajo la
+    base, dentro de su contorno, porque sin la tabla no hay vuelo que lo
+    tape. Lo que se compra (firme: <= flecha_pie con 50 N) no se puede
+    verificar sin la hoja, y se publica como HUECO mientras falte."""
+    x0, x1 = p["chaflan_nariz"], fondo(p) - p["chaflan_nariz"]
+    r = p["d_pie"] / 2
+    for x, z, _d, tipo in _taladros_base(p):
+        if tipo != "FH pata":
+            continue
+        assert x0 <= x - r + 1e-9 and x + r <= x1 + 1e-9, (
+            f"la pata de x={x:.2f} asoma por delante o por detras de la base "
+            f"({x0:.2f}..{x1:.2f}): sin el vuelo de la tabla nadie la tapa")
+        assert r <= z + 1e-9 and z <= p["ancho_total"] - r + 1e-9, (
+            f"la pata de z={z:.2f} asoma por el costado de la base")
+    print(f"paticas: {p['alto_pie']:g} mm, Ø{p['d_pie']:g}, bajo el canto de los "
+          f"anillos y dentro de la base; su alto es la rendija del aire")
+    _HUECOS.append(
+        f"la hoja de la pata sin pedir: se compra firme (<= {p['flecha_pie']:g} "
+        f"mm con 50 N, alto {p['alto_pie']:g} +- 0.2) y su casquillo tiene que "
+        f"casar con la FH-M4 de la base (papel del suelo, HUECO H3)")
 
 
 
@@ -2960,10 +3060,16 @@ def guarda_chaflan(p: dict[str, float]) -> None:
 E_ALUMINIO, RP02_ALUMINIO = 69000.0, 130.0
 # El talon, el techo y la nariz van en 6082-T6 por pliego (PLIEGO.md, tabla de
 # chapa) desde que el techo necesito los 240 con el labio a 13 -- y aunque
-# volvio a 18 y pasa con 130, el pliego lo dejo escrito. Solo lo usa la
-# lengueta de la pestana del talon, que con la reaccion en su punta trabaja
-# a unos 200 MPa: es la UNICA cuenta del repo que exige ese material.
+# volvio a 18 y pasa con 130, el pliego lo dejo escrito. Lo usan la lengueta
+# de la pestana del talon, que con la reaccion en su punta trabaja a unos 200
+# MPa, y desde el papel del suelo el borde de los agujeros de la base.
 RP02_6082_T6 = 240.0
+# Cuanto concentra el borde de un agujero la tension del puente entre agujeros
+# (papel del suelo sec.3.2: «de 2 a 3 veces»; Elke, ESTIMADO). Va en el extremo
+# alto: la puerta de la base se pone roja si el borde llega a la fluencia.
+K_BORDE_AGUJERO = 3.0
+
+
 def _geometria_apoyo_valle(p: dict[str, float]) -> dict[str, object]:
     """Mide la cadena banda--tira--primer KONDOR--marco en cajas reales."""
     P = _vertices(p)
@@ -3508,8 +3614,12 @@ def canario_techo(p: dict[str, float]) -> None:
     # aguanta: con la de hoy el de la sala se publica con 2 W de holgura, y la
     # de hoy es cota de abajo (enmienda M1 de la v5).
     techo = p["salto_termico_max"]
-    w_sala = _tiro(p, CD_TIRO_PESIMISTA)["k"] * (techo * T_AMB / T_SALA_DISENO_K) ** 1.5
-    w_costado = _tiro(p, costados=1)["k"] * techo ** 1.5
+    # Las dos cargas salen de la chimenea con el pesimista, que es como la
+    # puerta juzga los dos huecos desde el papel del suelo.
+    w_sala = _potencia_a(p, techo * T_AMB / T_SALA_DISENO_K, CD_TIRO_PESIMISTA,
+                         canal=CANAL_BASE_PESIMISTA)
+    w_costado = _potencia_a(p, techo, CD_TIRO_PESIMISTA, costados=1,
+                            canal=CANAL_BASE_PESIMISTA)
     w_media = round((max(w_sala, w_costado) + t["p_evacuada"]) / 2, 2)
     n_media = len(_HUECOS)
     with contextlib.redirect_stdout(sordo):
@@ -3520,6 +3630,26 @@ def canario_techo(p: dict[str, float]) -> None:
             f"cabe con un costado tapado ({w_costado:.1f} W) ni en la sala de "
             f"45 C con el pesimista ({w_sala:.1f} W), y guarda_aire() NO publico "
             f"el hueco de '{texto}' -- su silencio no vale")
+    # Y JUZGA EL PESIMISTA, no el nominal. w_media queda por encima del umbral
+    # nominal del costado, asi que con ella un guarda_aire() que volviera al
+    # nominal seguiria publicando el hueco y nadie lo veria (revision final del
+    # suelo). Entre el umbral nominal y el pesimista el nominal calla y el
+    # pesimista publica: ahi es donde el hueco decide algo, y por eso la carga
+    # se toma a medio camino de los dos, en cada uno de los dos huecos.
+    for texto, w_pes, w_nom in (
+            ("holgura de los costados", w_costado,
+             _potencia_a(p, techo, costados=1)),
+            ("sala de diseno", w_sala,
+             _potencia_a(p, techo * T_AMB / T_SALA_DISENO_K))):
+        w_entre = round((w_pes + w_nom) / 2, 2)
+        n_entre = len(_HUECOS)
+        with contextlib.redirect_stdout(sordo):
+            guarda_aire({**p, "potencia_disipada": w_entre})
+        assert any(texto in h for h in _HUECOS[n_entre:]), (
+            f"canario del aire: con {w_entre} W, entre el umbral nominal "
+            f"({w_nom:.1f} W) y el pesimista ({w_pes:.1f} W), guarda_aire() NO "
+            f"publico el hueco de '{texto}': lo esta juzgando con el nominal, y "
+            f"con el nominal el hueco calla justo donde el pesimista lo ve")
     n_verde = len(_HUECOS)
     with contextlib.redirect_stdout(sordo):
         guarda_aire({**p, "potencia_disipada": 1.0})
@@ -3543,6 +3673,11 @@ def canario_techo(p: dict[str, float]) -> None:
         f"canario del aire: con los tacos vueltos una tira de 89 mm la rendija "
         f"se ahoga y el salto no sube ({ahogado['dt']:.2f} contra "
         f"{t['dt']:.2f} K) -- _tiro() no esta mirando la rendija")
+    sin_base = _tiro({**p, "alto_pie": 0.5})
+    assert sin_base["dt"] > t["dt"] + 1.0, (
+        f"canario del aire: con las patas aplastadas a 0.5 mm el salto da "
+        f"{sin_base['dt']:.2f} K contra {t['dt']:.2f} -- _tiro() no esta "
+        f"mirando la base")
     del _HUECOS[n_huecos:]
 
 
@@ -3766,7 +3901,7 @@ def _talon(p: dict[str, float]) -> dict:
             "pestana_ventana": p["talon_pestana_ancho"] / 2 + max(k, k / 2 + r_al),
             "contorno": [(x_pie, 0.0), (x_ch, 0.0), (xp, c),
                          (xp, c + p["talon_labio"])],
-            "m4_x": x_pie + 1.5 * p["d_M4_paso"],
+            "m4_x": x_pie + _m4_pie_borde(p),
             "m4_z": [p["t_anillo"] + au * f for f in (0.25, 0.5, 0.75)],
             "pestana_x": tr["x0"] - p["talon_pestana_aire"],
             "pestana_z": [p["t_anillo"] + au * (2 * i + 1) / (2 * p["talon_pestana_n"])
@@ -4304,7 +4439,8 @@ def guarda_trasera_flexion(p: dict[str, float]) -> None:
 
 def guarda_talon(p: dict[str, float]) -> None:
     """El talon es la nariz de atras: P6 a chaflan, el labio que tapa el canto
-    de abajo de la trasera, tres M4 en el pie con la boca lejos del acrilico,
+    de abajo de la trasera, tres M4 desde abajo con la tuerca de su pie lejos
+    del acrilico (D-T2, papel del suelo),
     y las pestanas que le hacen de tope por dentro (cuantas, lo dice
     guarda_trasera_flexion).
 
@@ -4345,14 +4481,14 @@ def guarda_talon(p: dict[str, float]) -> None:
         f"chaflan y la regla de chapa pide {raiz:.2f}")
     assert tl["m4_x"] - tl["x_pie"] >= 1.5 * p["d_M4_paso"] - 1e-9, (
         f"el M4 del pie cae a {tl['m4_x'] - tl['x_pie']:.2f} de su canto libre")
-    boca = tl["m4_x"] + p["d_cabeza_M4_avell"] / 2
+    boca = tl["m4_x"] + p["pem_cls_m4_cuerpo"] / 2
     franja = _tol_pmma(p) + 0.5
     aire = tr["x0"] - boca
     assert aire >= franja - 1e-9, (
-        f"la boca del avellanado del M4 del talon llega a x={boca:.2f} y la cara "
-        f"interior de la trasera esta en {tr['x0']:.2f}: {aire:.2f} de aire, y "
-        f"detras de un PMMA de +-{_tol_pmma(p):.1f} se piden {franja:.2f}. Sube "
-        f"talon_pie")
+        f"la tuerca del M4 del talon (D-T2: el tornillo entra desde abajo) llega "
+        f"a x={boca:.2f} y la cara interior de la trasera esta en "
+        f"{tr['x0']:.2f}: {aire:.2f} de aire, y detras de un PMMA de "
+        f"+-{_tol_pmma(p):.1f} se piden {franja:.2f}. Sube talon_pie")
     aire_p = tr["x0"] - tl["pestana_x"]
     assert aire_p >= franja - 1e-9, (
         f"la pestana del talon queda a {aire_p:.2f} de la cara interior de la "
@@ -4408,8 +4544,8 @@ def guarda_talon(p: dict[str, float]) -> None:
         f"mismo estilo, y difieren mas de 2")
     print(f"talon: la nariz de atras -- chaflan de {c:g} en P6, labio de "
           f"{p['talon_labio']:g} a ras del plano trasero (tapa {tapa:.2f} de "
-          f"trasera), pie de {p['talon_pie']:g}; 3 M4 avellanados en "
-          f"x={tl['m4_x']:.2f} (boca a {aire:.2f} de la trasera, piden {franja:.2f}); "
+          f"trasera), pie de {p['talon_pie']:g}; 3 M4 desde abajo en "
+          f"x={tl['m4_x']:.2f} (tuerca a {aire:.2f} de la trasera, piden {franja:.2f}); "
           f"{len(tl['pestana_z'])} pestanas de {p['talon_pestana_ancho']:g} x {p['talon_pestana_alto']:g} "
           f"a {aire_p:.2f} de la trasera con {plano:.2f} de plano tras el chaflan; "
           f"desarrollo {tl['largo']:.2f} x {tl['desarrollo']:.2f}")
@@ -4829,6 +4965,124 @@ def _m5_tabla_x(p: dict[str, float]) -> list[float]:
     fb = _vertices(p)[6][0]
     n = max(1, math.floor(fb / p["reticula_paso"] + 0.5))
     return [fb * (i + 0.5) / n for i in range(n)]
+
+
+def _m4_pie_borde(p: dict[str, float]) -> float:
+    """Del canto libre del pie de nariz y talon al centro de su M4. Era 1.5 D;
+    con D-T2 el M4 rosca en una tuerca de presion prensada en el pie, y la
+    tuerca pide pem_borde al canto (papel del suelo, sec.3.4)."""
+    return max(1.5 * p["d_M4_paso"], p["pem_borde"])
+
+
+def _zonas_campo_base(p: dict[str, float]) -> list[tuple[float, float, float, float]]:
+    """La L donde pueden ir los agujeros de la base, en mundo: (x0, x1, z0, z1).
+    A va a la izquierda del chasis, de delante a atras; B, delante del chasis.
+    Fuera quedan el canto de los anillos, los pies de nariz y talon y la huella
+    del chasis, cada uno con base_orilla de margen. GEMELA de
+    zonas_campo_base() en el .scad."""
+    o = p["base_orilla"]
+    c = _chasis(p)
+    x0 = p["chaflan_nariz"] + p["nariz_pie"] + o
+    x1 = _talon(p)["x_pie"] - o
+    z0 = p["t_anillo"] + o
+    z1 = p["ancho_total"] - p["t_anillo"] - o
+    z_ch = (p["t_anillo"] + perfil(p)["ancho_util"] - p["chasis_margen_bandeja"]
+            - c["tapa_x"])
+    x_ch = _x_chasis_frente(p)
+    return [(x0, x1, z0, z_ch - o), (x0, x_ch - o, z_ch - o, z1)]
+
+
+def _campo_base(p: dict[str, float]) -> list[tuple[float, float]]:
+    """Los centros (x, z) de los agujeros del campo, en mundo. Una sola red al
+    tresbolillo anclada en la esquina de la L, que se queda con los agujeros
+    que caben enteros en alguna de las dos zonas. Dos redes, cada una con su
+    origen, dejarian en la costura un puente mas fino que el resto. GEMELA de
+    campo_base() en el .scad: misma red, mismo filtro."""
+    zonas = _zonas_campo_base(p)
+    d, s = p["base_agujero"], p["base_paso"]
+    r, fila = d / 2, s * math.sqrt(3) / 2
+    x0, x1 = min(q[0] for q in zonas), max(q[1] for q in zonas)
+    z0, z1 = min(q[2] for q in zonas), max(q[3] for q in zonas)
+    ni = math.floor((x1 - x0 - d) / fila + 1e-9)
+    nj = math.floor((z1 - z0 - d) / s + 1e-9)
+    return [(x, z) for i in range(ni + 1) for j in range(nj + 1)
+            for x, z in [(x0 + r + i * fila, z0 + r + (i % 2) * s / 2 + j * s)]
+            if any(a + r - 1e-9 <= x <= b - r + 1e-9
+                   and c + r - 1e-9 <= z <= e - r + 1e-9
+                   for a, b, c, e in zonas)]
+
+
+def _taladros_base(p: dict[str, float]) -> list[tuple[float, float, float, str]]:
+    """Todo taladro de fijacion de la base, en mundo: (x, z, d, tipo). Los 6 M5
+    de los anillos, los 3 + 3 M4 de nariz y talon (de paso: D-T2 los mete desde
+    abajo a la tuerca de su pie), las 4 FH de las patas y los 4 M4 del chasis.
+    Lo leen guarda_campo_base() y guarda_bandeja_base() en check_dxf."""
+    nz, tl = _nariz(p), _talon(p)
+    out = [(x, z, p["d_M5_base"], "M5") for x in _m5_tabla_x(p)
+           for z in (p["t_anillo"] / 2, p["ancho_total"] - p["t_anillo"] / 2)]
+    out += [(nz["m4_x"], z, p["d_M4_paso"], "M4 nariz") for z in nz["m4_z"]]
+    out += [(tl["m4_x"], z, p["d_M4_paso"], "M4 talon") for z in tl["m4_z"]]
+    out += [(x, z, p["pem_fh_m4"], "FH pata")
+            for x in (p["alto_frontal"] / 2 + p["d_pie"] / 2,
+                      tl["x_chaflan"] - p["talon_pie"] / 2)
+            for z in (p["d_pie"] / 2, p["ancho_total"] - p["d_pie"] / 2)]
+    out += [(yl, xl, p["d_M4_paso"], "M4 chasis") for xl, yl in _chasis_tornillos_tabla(p)]
+    return out
+
+
+def guarda_campo_base(p: dict[str, float]) -> None:
+    """El campo de agujeros de la base: que respire lo que el aire cuenta sin
+    debilitar la chapa ni pisar un inserto (papel del suelo, sec.3.2 y 5).
+
+      1. El puente entre agujeros vecinos (la red es de paso base_paso en las
+         tres direcciones) mide al menos el espesor: con menos, la mano apoyada
+         plastifica el borde del agujero (Elke).
+      2. Ningun agujero del campo queda a menos de pem_borde de un taladro de
+         fijacion, de centro de taladro a canto de agujero.
+
+    La huella del chasis no se asevera: la L se deriva de ella, y un aserto
+    sobre lo que la propia construccion garantiza no puede fallar."""
+    puente = p["base_paso"] - p["base_agujero"]
+    assert puente >= p["t_base"] - 1e-9, (
+        f"el puente del campo de la base mide {puente:.2f} mm (paso "
+        f"{p['base_paso']:g} - agujero {p['base_agujero']:g}) y la chapa "
+        f"{p['t_base']:g}: con la mano apoyada el borde del agujero plastifica. "
+        f"Se pide un puente de una vez el espesor")
+    campo = _campo_base(p)
+    r = p["base_agujero"] / 2
+    peor = min((math.hypot(x - tx, z - tz) - r, tipo)
+               for x, z in campo for tx, tz, _d, tipo in _taladros_base(p))
+    assert peor[0] >= p["pem_borde"] - 1e-9, (
+        f"un agujero del campo queda a {peor[0]:.2f} mm de un taladro de "
+        f"{peor[1]} y el inserto pide {p['pem_borde']:g} (pem_borde): sube "
+        f"base_orilla o aparta el campo")
+    abierto = len(campo) * math.pi * r * r
+    print(f"base: {len(campo)} agujeros de {p['base_agujero']:g} cada "
+          f"{p['base_paso']:g}, {abierto:.0f} mm2 abiertos; puente {puente:.1f} "
+          f"contra {p['t_base']:g} de chapa; el mas cercano a un inserto, a "
+          f"{peor[0]:.1f} mm ({peor[1]})")
+
+
+def canario_campo_base(p: dict[str, float]) -> None:
+    """Autocomprobacion ROJA de guarda_campo_base(): con el puente mas fino que
+    la chapa, o con la distancia de un inserto mayor que la orilla que lo
+    separa del campo, la puerta tiene que saltar y por SU razon; y con los
+    parametros de verdad, callar."""
+    for cambios, clave in (({"base_paso": p["base_agujero"] + p["t_base"] - 0.5}, "puente"),
+                           ({"pem_borde": 25.0}, "inserto")):
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                guarda_campo_base({**p, **cambios})
+        except AssertionError as e:
+            assert clave in str(e), (
+                f"canario del campo: con {cambios} guarda_campo_base() salto, "
+                f"pero por otra razon ('{str(e)[:80]}...')")
+            continue
+        raise AssertionError(
+            f"canario del campo NO disparo con {cambios}: guarda_campo_base() "
+            f"lo deja pasar -- no confiar en su VERDE")
+    with contextlib.redirect_stdout(io.StringIO()):
+        guarda_campo_base(dict(p))
 
 
 def _flecha_pata(p: dict[str, float], L: float, b: float, empotres: int
@@ -5566,6 +5820,36 @@ def autocomprobacion_plano_neutro() -> None:
         f"que subir de 16 sin pasar la salida nueva, y S que crecer de 12")
 
 
+def autocomprobacion_base() -> None:
+    """La chimenea con el camino de la base tiene que caer en las dos cuentas
+    que ya se conocen. Sin base, la forma cerrada de toda la vida: P = k dT^1.5,
+    con S de _plano_neutro(). Y con el canal sin roce, la rendija y los
+    agujeros en serie, que son un orificio equivalente a_ef = (a1^-2 +
+    a2^-2)^-1/2 metido como un hueco mas a y = 0 (papel del suelo, sec.5)."""
+    p = leer_params()
+
+    def cerrada(hs, cd):
+        _yn, s = _plano_neutro(hs)
+        k = (RHO_AIRE * CP_AIRE * cd * math.sqrt(2 * G / T_AMB)
+             * s * 1e-6 * math.sqrt(1e-3))
+        return (p["potencia_disipada"] / k) ** (2 / 3)
+
+    for cd in (CD_TIRO, CD_TIRO_PESIMISTA):
+        for costados in (2, 1):
+            a = _tiro(p, cd, costados, base=False)["dt"]
+            b = cerrada(_huecos(p, costados), cd)
+            assert abs(a - b) < 1e-6 * b, (
+                f"autocomprobacion de la base: sin base el solver da {a:.6f} K "
+                f"y la forma cerrada {b:.6f} (C_D {cd}, {costados} costados)")
+    cam = _camino_base(p, canal=0.0)
+    a_ef = 1 / math.sqrt(1 / (cam["w"] * cam["h"]) ** 2 + 1 / cam["a_base"] ** 2)
+    a = _tiro(p, canal=0.0)["dt"]
+    b = cerrada(_huecos(p) + [(0.0, a_ef)], CD_TIRO)
+    assert abs(a - b) < 1e-6 * b, (
+        f"autocomprobacion de la base: con el canal sin roce el solver da "
+        f"{a:.6f} K y el orificio equivalente {b:.6f}")
+
+
 def _tacos_persiana_cotas(p: dict[str, float]) -> list[tuple[str, float, float]]:
     """(que, tiene, pide) de cada relacion de cotas entre tacos y bolsillos."""
     fondo_trasera = _bolsillo_trasero(p)["z0"]                   # el bolsillo de la trasera empieza ahi
@@ -5671,6 +5955,288 @@ def guarda_anillo(p: dict[str, float]) -> None:
         print(f"  {nombres[i]:<18} {largo:7.2f} mm  cede {flecha:.3f}")
 
 
+def _seccion_chapa(poly: list[tuple[float, float]], t: float) -> float:
+    """Inercia (mm4) de una chapa de espesor t por su linea media, para flexion
+    vertical: la seccion de la nariz o del talon tumbada (secciones.py de Elke,
+    papel del suelo sec.3.2)."""
+    segs = list(zip(poly[:-1], poly[1:]))
+    area = sum(t * math.dist(a, b) for a, b in segs)
+    yc = sum(t * math.dist(a, b) * (a[1] + b[1]) / 2 for a, b in segs) / area
+    inercia = 0.0
+    for a, b in segs:
+        largo = math.dist(a, b)
+        s = abs(b[1] - a[1]) / largo if largo else 0.0
+        ym = (a[1] + b[1]) / 2
+        inercia += (t * largo * (ym - yc) ** 2 + t * largo ** 3 * s ** 2 / 12
+                    + largo * t ** 3 * (1 - s ** 2) / 12)
+    return inercia
+
+
+def _emparrillado(lx: float, lz: float, t: float, nx: int, nz: int, apoyos: str,
+                  casos: list[list[tuple[float, float, float]]],
+                  blando: list[tuple[float, float, float, float]] = (),
+                  f_blando: float = 1.0, bordes: list[dict] | None = None,
+                  lineas_z: tuple[float, ...] = ()) -> list[dict]:
+    """Emparrillado de una placa de lx por lz y espesor t (analogia de Hambly,
+    el modelo de Elke del papel del suelo): vigas en x y en z con la rigidez D
+    de su franja y torsion, tres grados por nudo (w, giro en x, giro en z).
+    Una sola matriz para todos los casos de carga. Devuelve, por caso,
+    {"flecha": mm maximos, "m_campo": N mm/mm de la barra mas cargada dentro de
+    los rectangulos blandos, "m_llena": lo mismo en la chapa llena}.
+
+    El momento es el de los EXTREMOS DE CADA BARRA (k*u del elemento) entre su
+    ancho tributario, no D*curvatura en el nudo. En la costura entre el campo y
+    la chapa llena la curvatura por diferencias centrales mezcla las dos
+    rigideces y se multiplica por una sola: el nudo de la esquina de la L daba
+    el triple del momento de la barra de al lado (revision final del suelo).
+
+    apoyos: "cuatro bordes" (la validacion) o "lineas" (w = 0 a lo largo de las
+    z de lineas_z: el canto de los anillos). blando: rectangulos (x0, x1, z0,
+    z1) con la rigidez por f_blando (el campo perforado). bordes: vigas de
+    borde atadas en puntos, [{"x", "EI", "z_atados", "z_apoyos"}]. casos: listas
+    de cargas (x, z, N), cada una en el nudo mas cercano. numpy denso: la malla
+    de la puerta tiene unos 1 600 grados y se resuelve en menos de un segundo."""
+    import numpy as np
+
+    nu = 0.33
+    xs, zs = np.linspace(0.0, lx, nx + 1), np.linspace(0.0, lz, nz + 1)
+    d0 = E_ALUMINIO * t ** 3 / (12 * (1 - nu ** 2))
+    nn = (nx + 1) * (nz + 1)
+    bordes = bordes or []
+    nb = nz + 1
+    ndof = 3 * nn + 2 * nb * len(bordes)
+    K = np.zeros((ndof, ndof))
+
+    def idx(i, j):
+        return i * (nz + 1) + j
+
+    def kb(ei, L):
+        c = ei / L ** 3
+        return np.array([[12 * c, 6 * L * c, -12 * c, 6 * L * c],
+                         [6 * L * c, 4 * L * L * c, -6 * L * c, 2 * L * L * c],
+                         [-12 * c, -6 * L * c, 12 * c, -6 * L * c],
+                         [6 * L * c, 2 * L * L * c, -6 * L * c, 4 * L * L * c]])
+
+    def add(dofs, k):
+        K[np.ix_(dofs, dofs)] += k
+
+    def en_campo(x, z):
+        return any(a <= x <= b and c <= z <= e for a, b, c, e in blando)
+
+    barras = []                         # (grados, matriz, ancho tributario, en el campo)
+
+    def barra(dofs, ei, largo, ancho, campo):
+        ke = kb(ei, largo)
+        add(dofs, ke)
+        barras.append((dofs, ke, ancho, campo))
+
+    dx, dz = np.diff(xs), np.diff(zs)
+    torsion = np.array([[1.0, -1.0], [-1.0, 1.0]])
+    for i in range(nx + 1):
+        for j in range(nz + 1):
+            if i < nx:
+                s = (dz[j - 1] / 2 if j > 0 else 0) + (dz[j] / 2 if j < nz else 0)
+                campo = en_campo((xs[i] + xs[i + 1]) / 2, zs[j])
+                dl = d0 * (f_blando if campo else 1.0) * s
+                n1, n2 = idx(i, j), idx(i + 1, j)
+                barra([3 * n1, 3 * n1 + 1, 3 * n2, 3 * n2 + 1], dl, dx[i], s, campo)
+                add([3 * n1 + 2, 3 * n2 + 2], torsion * dl / dx[i])
+            if j < nz:
+                s = (dx[i - 1] / 2 if i > 0 else 0) + (dx[i] / 2 if i < nx else 0)
+                campo = en_campo(xs[i], (zs[j] + zs[j + 1]) / 2)
+                dl = d0 * (f_blando if campo else 1.0) * s
+                n1, n2 = idx(i, j), idx(i, j + 1)
+                barra([3 * n1, 3 * n1 + 2, 3 * n2, 3 * n2 + 2], dl, dz[j], s, campo)
+                add([3 * n1 + 1, 3 * n2 + 1], torsion * dl / dz[j])
+
+    def ni(x):
+        return int(np.argmin(abs(xs - x)))
+
+    def nj(z):
+        return int(np.argmin(abs(zs - z)))
+
+    fijos = set()
+    kpen = 1e7                         # N/mm, como Elke: tres ordenes sobre la malla
+    for bi, bd in enumerate(bordes):
+        b0 = 3 * nn + 2 * nb * bi
+        for j in range(nz):
+            add([b0 + 2 * j, b0 + 2 * j + 1, b0 + 2 * (j + 1), b0 + 2 * (j + 1) + 1],
+                kb(bd["EI"], dz[j]))
+        for z in bd["z_atados"]:
+            a, b = 3 * idx(ni(bd["x"]), nj(z)), b0 + 2 * nj(z)
+            add([a, b], kpen * torsion)
+        for z in bd["z_apoyos"]:
+            fijos.add(b0 + 2 * nj(z))
+    if apoyos == "cuatro bordes":
+        fijos |= {3 * idx(i, j) for i in range(nx + 1) for j in range(nz + 1)
+                  if i in (0, nx) or j in (0, nz)}
+    else:
+        fijos |= {3 * idx(i, nj(z)) for z in lineas_z for i in range(nx + 1)}
+    F = np.zeros((ndof, len(casos)))
+    for k, cargas in enumerate(casos):
+        for x, z, n in cargas:
+            F[3 * idx(ni(x), nj(z)), k] -= n
+    lib = np.array(sorted(set(range(ndof)) - fijos))
+    U = np.zeros((ndof, len(casos)))
+    U[lib] = np.linalg.solve(K[np.ix_(lib, lib)], F[lib])
+    gl = np.array([b[0] for b in barras])
+    ke = np.array([b[1] for b in barras])
+    ancho = np.array([b[2] for b in barras])
+    es_campo = np.array([b[3] for b in barras])
+    assert not blando or es_campo.any(), (
+        f"ninguna barra de la malla de {nx} x {nz} cae dentro de los "
+        f"rectangulos blandos: el momento del campo saldria 0 y la puerta "
+        f"pasaria sin medir nada")
+    resultado = []
+    for k in range(len(casos)):
+        u = U[:, k]
+        f = np.einsum("bij,bj->bi", ke, u[gl])
+        m = np.maximum(abs(f[:, 1]), abs(f[:, 3])) / ancho
+        resultado.append({
+            "flecha": float(-u[0:3 * nn:3].min()),
+            "m_campo": float(m[es_campo].max()) if es_campo.any() else 0.0,
+            "m_llena": float(m[~es_campo].max()) if (~es_campo).any() else 0.0})
+    return resultado
+
+
+# La mano sobre el campo: huella de 40 x 60 mm, una posicion cada 60 mm.
+HUELLA_MANO = (40.0, 60.0)
+PASO_MANO = 60.0
+
+
+def _manos_en_el_campo(p: dict[str, float]) -> list[tuple[str, float, float, list]]:
+    """La mano de carga_mano --9 cargas puntuales en su huella de 40 x 60--
+    barrida por los dos brazos de la L del campo, con la huella entera dentro:
+    (brazo, x, z, cargas). No va solo en el centro de cada brazo: el peor sitio
+    de la flecha (la fila de arriba del brazo A) y el del puente (junto a la
+    esquina de la L) son distintos y ninguno es ese (revision final del suelo).
+    Sale de _zonas_campo_base(): si la L cambia, la barrida la sigue."""
+    hx, hz = HUELLA_MANO
+
+    def barrido(lo: float, hi: float) -> list[float]:
+        if hi <= lo:                    # el brazo es mas estrecho que la mano
+            return [(lo + hi) / 2]
+        n = math.ceil((hi - lo) / PASO_MANO) + 1
+        return [lo + (hi - lo) * i / (n - 1) for i in range(n)]
+
+    manos = []
+    for brazo, (a, b, c, e) in zip("AB", _zonas_campo_base(p)):
+        for x in barrido(a + hx / 2, b - hx / 2):
+            for z in barrido(c + hz / 2, e - hz / 2):
+                cargas = [(x + dx, z + dz, p["carga_mano"] / 9)
+                          for dx in (-hx / 2, 0.0, hx / 2)
+                          for dz in (-hz / 2, 0.0, hz / 2)]
+                manos.append((brazo, x, z, cargas))
+    return manos
+
+
+def _flecha_base(p: dict[str, float], casos: list[list[tuple[float, float, float]]]
+                 ) -> list[dict]:
+    """La base con sus apoyos de verdad: el canto de los dos anillos (lineas en
+    z = t_anillo/2 y ancho - t_anillo/2), y la nariz y el talon como vigas de
+    borde atadas en sus tres M4 y apoyadas en el rebaje del anillo. El campo
+    perforado, con el 30 % de la rigidez (Elke, O'Donnell-Langer, ligamento
+    0.375; ESTIMADO). Coordenadas de la placa: x desde el chaflan delantero.
+    Devuelve, por caso de carga, el dict de _emparrillado()."""
+    x0 = p["chaflan_nariz"]
+    lx = fondo(p) - 2 * x0
+    nz_, tl = _nariz(p), _talon(p)
+    t = p["t_costilla"]
+    apoyos = (p["t_anillo"], p["ancho_total"] - p["t_anillo"])
+    bordes = [{"x": nz_["m4_x"] - x0, "EI": E_ALUMINIO * _seccion_chapa(nz_["contorno"], t),
+               "z_atados": nz_["m4_z"], "z_apoyos": apoyos},
+              {"x": tl["m4_x"] - x0, "EI": E_ALUMINIO * _seccion_chapa(tl["contorno"], t),
+               "z_atados": tl["m4_z"], "z_apoyos": apoyos}]
+    blando = [(a - x0, b - x0, c, e) for a, b, c, e in _zonas_campo_base(p)]
+    return _emparrillado(lx, p["ancho_total"], p["t_base"], 16, 28, "lineas",
+                         [[(x - x0, z, n) for x, z, n in cargas] for cargas in casos],
+                         blando, 0.30, bordes,
+                         (p["t_anillo"] / 2, p["ancho_total"] - p["t_anillo"] / 2))
+
+
+def canario_m4_desde_abajo(p: dict[str, float]) -> None:
+    """D-T2: el M4 del pie de nariz y talon rosca en una tuerca prensada a
+    pem_borde del canto libre. Si pem_borde no cabe entre el canto libre y el
+    doblez, guarda_talon() tiene que saltar por la regla de chapa."""
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            guarda_talon({**p, "pem_borde": p["talon_pie"]})
+    except AssertionError as e:
+        assert "regla de chapa" in str(e), (
+            f"canario del M4 desde abajo: guarda_talon() salto, pero por otra "
+            f"razon ('{str(e)[:80]}...')")
+        return
+    raise AssertionError("canario del M4 desde abajo NO disparo: con la tuerca "
+                         "a talon_pie del canto, el M4 cae en el doblez y "
+                         "guarda_talon() lo deja pasar")
+
+
+def canario_base_fina(p: dict[str, float]) -> None:
+    """Una base mas fina tiene que saltar en guarda_piso(), y cada rama por SU
+    razon. Con 2 mm, la que el papel descarto, la flecha todavia cabe en la
+    rendija y lo que salta es el borde de los agujeros; con las patas a 3 mm el
+    techo de la flecha baja a 2 y salta la mesa aunque la chapa sea la buena.
+    Las dos ramas tienen que tener su prueba roja: una puerta cuyo aserto de
+    tension nunca ha mordido no vale por su VERDE."""
+    casos = (
+        ({"t_base": 2.0}, "puente",
+         "con 2 mm el borde del agujero llega al limite elastico"),
+        ({"alto_pie": 3.0}, "toca la mesa",
+         "con la rendija a 3 mm la flecha de la mano no cabe debajo"),
+    )
+    for cambios, clave, que in casos:
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                guarda_piso({**p, **cambios})
+        except AssertionError as e:
+            assert clave in str(e), (
+                f"canario de la base: con {cambios} guarda_piso() salto, pero "
+                f"por otra razon ('{str(e)[:80]}...') y no por '{clave}'")
+            continue
+        raise AssertionError(f"canario de la base NO disparo: con {cambios} "
+                             f"hay {que} y guarda_piso() lo deja pasar -- no "
+                             f"confiar en su VERDE")
+
+
+def autocomprobacion_emparrillado() -> None:
+    """El emparrillado contra Timoshenko, en la flecha Y EN EL MOMENTO, sobre la
+    placa cuadrada de 300 apoyada en los cuatro bordes.
+
+    Flecha: 100 N al centro, w = 0.01160 P a^2 / D. Elke lo valido a n = 20
+    dentro del 1.3 %; aqui se exige el 3 % con la malla de la puerta.
+
+    Momento: carga uniforme q, M = 0.0479 q a^2 en el centro (nu = 0.3). La
+    parrilla no acopla Poisson --cada barra solo siente su curvatura--, asi que
+    lo que ha de dar es D*kappa = M / (1 + nu), y se exige el 5 % (la malla de
+    la puerta da +3 %, y converge a +1 % con el doble de fina). Se mide en una
+    ventana central de rigidez plena: el maximo global de la placa cae junto a
+    la esquina apoyada, donde el momento de barra equilibra la torsion y no es
+    flexion. Sin esta prueba nadie vigilaba la escala de los momentos de barra
+    (su ancho tributario), de donde la puerta del suelo saca la tension del
+    puente."""
+    t, a, n = 3.0, 300.0, 16
+    nu = 0.33
+    d = E_ALUMINIO * t ** 3 / (12 * (1 - nu ** 2))
+    w = _emparrillado(a, a, t, n, n, apoyos="cuatro bordes",
+                      casos=[[(a / 2, a / 2, 100.0)]])[0]["flecha"]
+    w_t = 0.01160 * 100.0 * a * a / d
+    assert abs(w - w_t) < 0.03 * w_t, (
+        f"el emparrillado da {w:.3f} mm y Timoshenko {w_t:.3f} en la placa "
+        f"cuadrada: la malla o el ensamblado estan mal")
+    q, h = 0.001, a / n
+    uniforme = [(i * h, j * h, q * h * h * (0.5 if i in (0, n) else 1.0)
+                 * (0.5 if j in (0, n) else 1.0))
+                for i in range(n + 1) for j in range(n + 1)]
+    m = _emparrillado(a, a, t, n, n, apoyos="cuatro bordes", casos=[uniforme],
+                      blando=[(a / 4, 3 * a / 4, a / 4, 3 * a / 4)],
+                      f_blando=1.0)[0]["m_campo"]
+    m_t = 0.0479 * q * a * a / (1 + 0.3)
+    assert abs(m - m_t) < 0.05 * m_t, (
+        f"el emparrillado da {m:.3f} N mm/mm de momento de barra y Timoshenko "
+        f"{m_t:.3f} (D*kappa = M / (1 + nu)) con carga uniforme: la escala de "
+        f"los momentos de barra esta mal")
+
+
 def guarda_piso(p: dict[str, float]) -> None:
     """El riel de panel del frente tiene que librar el SUELO del case.
 
@@ -5717,44 +6283,46 @@ def guarda_piso(p: dict[str, float]) -> None:
         f"(holgura_rail sobre y=0). Subir alto_frontal o inset_inf_frente "
         f"(van emparejados: la curva en punta pide "
         f"inset >= alto_frontal/2 + rail_er_alto/2 + 3)")
-    # 2. LA TABLA NO SE HUNDE BAJO EL CHASIS DEL PSU.
-    #
-    #    Aqui vivian tres asserts y los tres se cayeron al pasar el suelo a
-    #    tabla bajo el marco:
-    #      - "la bandeja LLEGA al frente" se volvio TAUTOLOGIA cuando su canto
-    #        paso a derivarse de la tangente de la curva. Una puerta que no
-    #        puede fallar no mide nada.
-    #      - "el larguero de base delantera se aparta del riel" se quedo sin
-    #        sujeto: ese larguero ya no existe.
-    #      - el VOLADIZO de 271.45 mm, que pedia 10 mm de aluminio, no existe:
-    #        la tabla no cuelga de una barra, el marco se le APOYA encima.
-    #
-    #    LO QUE QUEDA, y es lo unico que de verdad la dobla: el chasis del PSU
-    #    sentado en medio del vano entre las dos costillas. El peso del propio
-    #    case NO cuenta aqui -- las cuatro paticas van casi bajo las lineas de
-    #    apoyo de las costillas, asi que ese camino no cruza el vano.
-    #
-    #    SUPUESTO HEREDADO y hay que decirlo: los 200 N son carga_mano, del
-    #    costado. El peso real del chasis no esta itemizado en el repo (spec
-    #    10). Se usa el conservador que ya existe. E_madera es a favor de veta
-    #    y tambien es supuesto hasta que la especie este elegida.
-    vano = perfil(p)["ancho_util"]
-    b_tabla = fondo(p) + 2 * p["vuelo_zocalo"]
-    I_z = b_tabla * p["t_base"] ** 3 / 12
-    flecha_z = p["carga_mano"] * vano ** 3 / (48 * p["E_madera"] * I_z)
-    assert flecha_z <= p["flecha_costado_max"], (
-        f"la tabla cede {flecha_z:.3f} mm cruzando los {vano:.2f} mm entre las "
-        f"dos costillas con el chasis del PSU encima, y el techo son "
-        f"{p['flecha_costado_max']:.2f}. Con E_madera={p['E_madera']:.0f} hacen "
-        f"falta 16 mm justos, 18 con margen y 20 si la especie es "
-        f"contrachapado (E 8000). Subir t_base NO cuesta alto de aparato desde "
-        f"que la tabla va debajo del marco.")
-    print(f"suelo: TABLA DE MADERA MACIZA t={p['t_base']:g} bajo el marco, "
-          f"{b_tabla:.2f} x {p['ancho_total'] + 2 * p['vuelo_zocalo']:.2f} "
-          f"(vuela {p['vuelo_zocalo']:g} por los cuatro lados)")
-    print(f"  con {p['carga_mano']:.0f} N en medio del vano de {vano:.2f} cede "
-          f"{flecha_z:.3f} mm (techo {p['flecha_costado_max']:.2f}, "
-          f"E {p['E_madera']:.0f} MPa a favor de veta)")
+    # 2. LA BASE AGUANTA UNA MANO (papel del suelo, 2026-10-12, sec.3.2). Lo que
+    #    la carga de verdad es poco: ella misma, el chasis en sus cuatro M4 y la
+    #    trasera en el pie del talon (Elke, 0.31 a 0.41 mm). Lo que la decide es
+    #    una mano de carga_mano apoyada en el campo, que es lo unico de la base
+    #    que se alcanza, y se barre por toda la L. Dos condiciones, cada una en
+    #    su peor sitio: no toca la mesa (flecha <= alto_pie - 1) y el borde de
+    #    los agujeros no llega a la fluencia (el momento de la barra del campo,
+    #    por el ligamento paso / (paso - agujero) del puente y por la
+    #    concentracion K_BORDE_AGUJERO del papel, contra RP02_6082_T6). Es el
+    #    criterio del papel: «en el borde de los agujeros, que concentra la
+    #    tension de 2 a 3 veces, el aluminio se deforma para siempre». La chapa
+    #    llena trabaja a una fraccion de eso (sin ligamento ni borde de agujero)
+    #    y no se vigila aparte. Sustituye al aserto de la tabla de madera, que
+    #    media 200 N en medio del vano contra 0.60 mm con E_madera.
+    manos = _manos_en_el_campo(p)
+    res = _flecha_base(p, [m[3] for m in manos])
+    k_w = max(range(len(manos)), key=lambda k: res[k]["flecha"])
+    k_s = max(range(len(manos)), key=lambda k: res[k]["m_campo"])
+    paso, agujero, t_b = p["base_paso"], p["base_agujero"], p["t_base"]
+    s_puente = 6 * res[k_s]["m_campo"] / t_b ** 2 * paso / (paso - agujero)
+    s_borde = K_BORDE_AGUJERO * s_puente
+
+    def donde(k: int) -> str:
+        return f"brazo {manos[k][0]} (x={manos[k][1]:.0f}, z={manos[k][2]:.0f})"
+
+    assert res[k_w]["flecha"] <= p["alto_pie"] - 1.0 + 1e-9, (
+        f"la base cede {res[k_w]['flecha']:.2f} mm con una mano de "
+        f"{p['carga_mano']:.0f} N en el {donde(k_w)} y las patas dejan "
+        f"{p['alto_pie']:g}: toca la mesa. Sube t_base")
+    assert s_borde <= RP02_6082_T6 + 1e-9, (
+        f"el borde de los agujeros de la base llega a {s_borde:.0f} MPa "
+        f"({K_BORDE_AGUJERO:g} x los {s_puente:.0f} del puente) con una mano de "
+        f"{p['carga_mano']:.0f} N en el {donde(k_s)}, contra {RP02_6082_T6:.0f} "
+        f"de limite elastico: el aluminio se deforma para siempre. Sube t_base "
+        f"o cierra el campo")
+    print(f"suelo: BASE de chapa t={t_b:g}; con {p['carga_mano']:.0f} N en "
+          f"{len(manos)} sitios de la L cede {res[k_w]['flecha']:.2f} mm como "
+          f"mucho, en el {donde(k_w)} (techo {p['alto_pie'] - 1:.0f}); el puente "
+          f"trabaja a {s_puente:.0f} MPa y el borde del agujero a {s_borde:.0f} "
+          f"(x{K_BORDE_AGUJERO:g}, en el {donde(k_s)}), contra {RP02_6082_T6:.0f}")
     # 3. y la trasera TAMBIEN llega al suelo. El suelo no lo cierra solo la
     #    bandeja: la cara trasera es la cuarta pared, y si su canto de abajo no
     #    baja hasta el mismo plano queda un rebaje corrido a lo largo de los
@@ -5861,7 +6429,7 @@ def _nariz(p: dict[str, float]) -> dict:
                   + s_top - 2 * _bd_angulo(p, 45.0)
                   - _bd_angulo(p, p["angulo_inferior"]))
     return {"contorno": contorno, "s_top": s_top, "cara": cara,
-            "m4_x": c + p["nariz_pie"] - 1.5 * p["d_M4_paso"],
+            "m4_x": c + p["nariz_pie"] - _m4_pie_borde(p),
             "m4_z": [p["t_anillo"] + au * f for f in (0.25, 0.5, 0.75)],
             # Igual que el talon: el blank es lo que entra en rebaje (chaflan y
             # frente empotrados), y el pie queda en largo_pie tras la muesca.
@@ -6301,14 +6869,15 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
     # delantera` estaba justo ahi. Muerta esa barra el 2026-08-27 se escribe la
     # cadena en su sentido: la cara delantera del chasis, menos el canto de la
     # plancha. Da el mismo numero (91.85) y ahora por la razon correcta.
-    pos_y = _x_chasis_frente(p) + p["vuelo_zocalo"]
+    pos_y = _x_chasis_frente(p)
     ax = pos_x + c["desfase"] + t + p["chasis_salida_x"] - hol
     ay = pos_y + c["desfase"] + t + p["chasis_salida_y"] - hol
     exige(0 <= ax and ax + w <= au
-          and 0 <= ay and ay + h <= fondo_bandeja,
+          and p["chaflan_nariz"] <= ay
+          and ay + h <= p["chaflan_nariz"] + fondo_bandeja,
           f"el agujero de cables cae en x={ax:.1f}..{ax + w:.1f}, "
-          f"y={ay:.1f}..{ay + h:.1f} y la tabla mide {au:.2f} x "
-          f"{fondo_bandeja:.2f}: se sale de la pieza")
+          f"y={ay:.1f}..{ay + h:.1f} y la base va de y={p['chaflan_nariz']:.2f} "
+          f"a {p['chaflan_nariz'] + fondo_bandeja:.2f}: se sale de la pieza")
 
     # --- 6. el chasis: cuelga por detras y APOYA por delante ---------------
     # ESTA PREMISA SE HA INVERTIDO DOS VECES Y CONVIENE QUE LAS DOS ESTEN
@@ -6338,7 +6907,7 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
     # 120 Hz contra los 100 del toroide -- pero eso es la tabla sola. Se cierra
     # pesando el chasis.
     hol = p["chasis_holgura_larguero"]
-    libre_1 = _talon(p)["x_pie"] + p["vuelo_zocalo"] - hol
+    libre_1 = _talon(p)["x_pie"] - hol
     exige(pos_y >= 0 and pos_y + c["tapa_y"] <= libre_1,
           f"el chasis ocupa y={pos_y:.1f}..{pos_y + c['tapa_y']:.1f} de la "
           f"tabla y, con {hol:.0f} mm de holgura al pie del talon, cabe "
@@ -6358,7 +6927,7 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
     # (r) con 1.5 D de margen --, fuera de la ranura de salida de cables y del
     # refuerzo del toroide (que es otra chapa remachada debajo: un agujero ahi
     # atraviesa dos), y lejos de los separadores de la PCB. Lo que va a la
-    # tabla lo cruza guarda_zocalo() en check_dxf.
+    # base lo cruza guarda_bandeja_base() en check_dxf.
     borde_m4 = p["radio_doblez"] + 1.5 * p["d_M4_paso"]
     r_ref = p["chasis_refuerzo_lado"] / 2
     for ix, iy in _chasis_tornillos(p):
@@ -6406,15 +6975,10 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
 
 
 def _fondo_bandeja(p: dict[str, float]) -> float:
-    """Fondo de la TABLA, de canto a canto.
-
-    ERA EL VANO ENTRE LOS DOS LARGUEROS. Hasta el 2026-08-21 ese vano y la
-    plancha midieron lo mismo; luego no, porque la bandeja volaba por delante
-    del larguero delantero para cerrar el suelo. El 2026-08-27 la pieza cambia
-    de sitio -- pasa a ser tabla BAJO el marco -- y de vano ya no queda nada:
-    es el fondo del case mas lo que la tabla sobresale por delante y por
-    detras."""
-    return fondo(p) + 2 * p["vuelo_zocalo"]
+    """Largo de la BASE en x, de chaflan a chaflan (papel del suelo,
+    2026-10-12). Fue el vano entre los dos largueros hasta el 2026-08-21, y el
+    fondo de la tabla con su vuelo hasta el papel del suelo."""
+    return fondo(p) - 2 * p["chaflan_nariz"]
 
 
 def main() -> int:
@@ -6422,6 +6986,8 @@ def main() -> int:
     autocomprobacion(p)
     autocomprobacion_anillo()
     autocomprobacion_plano_neutro()
+    autocomprobacion_base()
+    autocomprobacion_emparrillado()
     autocomprobacion_pv()
     # LAS DOS COPIAS DE E SIGUEN CRUZADAS, y el motivo cambio el 2026-08-28. El
     # .scad la usaba para derivar alli que tramos de la costilla llevaban ala
@@ -6435,7 +7001,6 @@ def main() -> int:
         f"usa {E_ALUMINIO:.0f}: el anillo se dimensionaria con un modulo que "
         f"el resto del repo no cree.")
     canario_solapes(p)
-    canario_persiana_tabla(p)
     canario_alineacion(p)
     guarda_rebaje(p)
     canario_acceso_marco(p)
@@ -6464,6 +7029,7 @@ def main() -> int:
     canario_tacos_persiana(p)
     guarda_rendija(p)
     guarda_potencia_vigente(p)
+    guarda_campo_base(p)
     guarda_aire(p)
     guarda_chaflan(p)
     canario_valle(p)
@@ -6473,6 +7039,9 @@ def main() -> int:
     canario_red(p)
     canario_trasera(p)
     canario_techo(p)
+    canario_campo_base(p)
+    canario_base_fina(p)
+    canario_m4_desde_abajo(p)
     guarda_red(p)
     guarda_fresado(p)
     guarda_puentes_ventilacion(p)

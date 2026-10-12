@@ -266,7 +266,7 @@ function frente_kondor() =
 
 // EL TALON (2026-08-29, noche): la banda de abajo del plano trasero y su pie
 // sobre la tabla. Sustituye al miembro trasero bajo: un angulo de la misma
-// chapa, sin bridas ni rosca en el anillo -- se atornilla a la TABLA por el
+// chapa, sin bridas ni rosca en el anillo -- se atornilla a la BASE por el
 // pie, como la nariz --, que recibe la trasera en su banda y la asienta en
 // su pie. GEMELO de _talon() en clearance_budget.py.
 // EL TALON, la nariz de atras (2026-08-29, noche, 2): pie sobre la tabla del
@@ -275,7 +275,7 @@ function frente_kondor() =
 function talon_x_band()    = pts_perfil()[6].x - t_costilla;    // cara interior del labio
 function talon_x_chaflan() = pts_perfil()[6].x - chaflan_nariz; // pie del chaflan
 function talon_x_pie()     = talon_x_chaflan() - talon_pie;     // canto libre del pie
-function talon_m4_x()      = talon_x_pie() + 1.5*d_M4_paso;
+function talon_m4_x()      = talon_x_pie() + m4_pie_borde();
 function centro_talon()    = [talon_x_chaflan() - talon_pie/2, talon_labio/2];
 // Las pestanas lanzadas del pie: su cara hacia la trasera, y sus centros en
 // z, a (2i+1)/2n del hueco entre anillos (los M4 van a 1/4, 1/2 y 3/4).
@@ -994,9 +994,12 @@ function nariz_desarrollo() =
     let (c = chaflan_nariz)
     nariz_pie + c*sqrt(2) + (alto_frontal - c) + nariz_s_top()
     - 2*doblez_bd(45) - doblez_bd(angulo_inferior);
-// Los tres M4 del pie: a 1.5 D del canto libre del pie (x del perfil) y a un
-// cuarto, medio y tres cuartos del hueco entre anillos (z del mundo).
-function nariz_m4_x() = chaflan_nariz + nariz_pie - 1.5*d_M4_paso;
+// Los tres M4 del pie: a m4_pie_borde() del canto libre del pie (x del perfil)
+// y a un cuarto, medio y tres cuartos del hueco entre anillos (z del mundo).
+// Era 1.5 D; con D-T2 (papel del suelo) el M4 rosca en una tuerca CLS prensada
+// en el pie, y la tuerca pide pem_borde al canto. GEMELA de _m4_pie_borde().
+function m4_pie_borde() = max(1.5*d_M4_paso, pem_borde);
+function nariz_m4_x() = chaflan_nariz + nariz_pie - m4_pie_borde();
 function nariz_m4_z() = [for (f = [0.25, 0.5, 0.75]) t_anillo + ancho_util*f];
 
 // Un tramo de chapa entre dos puntos del contorno, con el espesor hacia
@@ -1082,9 +1085,10 @@ module nariz_2d() {
         square([largo, nariz_desarrollo()]);
         // el pie va en y = 0 y el desarrollo crece hacia +y
         muesca_pie_2d(largo, 0, +1, nariz_pie);
+        // D-T2 (papel del suelo): tuerca CLS-M4 prensada en el pie; el M4 entra desde abajo.
         for (z = nariz_m4_z())
-            translate([z - chapa_z0(), 1.5*d_M4_paso])
-                circle(d = d_M4_paso + kerf);
+            translate([z - chapa_z0(), m4_pie_borde()])
+                circle(d = pem_cls_m4 + kerf);
     }
 }
 
@@ -1327,9 +1331,10 @@ module talon_2d() {
         square([largo, d]);
         // el pie va en y = d y el desarrollo crece hacia -y
         muesca_pie_2d(largo, d, -1, talon_pie);
+        // D-T2 (papel del suelo): tuerca CLS-M4 prensada en el pie; el M4 entra desde abajo.
         for (z = nariz_m4_z())
-            translate([z - chapa_z0(), d - 1.5*d_M4_paso])
-                circle(d = d_M4_paso + kerf);
+            translate([z - chapa_z0(), d - m4_pie_borde()])
+                circle(d = pem_cls_m4 + kerf);
         // el corte en U, de corte_pestana de ancho, POR FUERA de la pestana:
         // la pestana mide talon_pestana_ancho x su desarrollo, y el corte la
         // rodea por los dos lados y por el fondo, dejando el doblez sin cortar
@@ -1484,97 +1489,41 @@ module plancha(l, a) square([l, a]);   // l = ancho_util, a = fondo local
 // solapes() no lo vio nunca porque una placa flotando es disjunta —
 // alineacion() en clearance_budget.py es la puerta que si lo ve.
 module bandeja_base_2d() {
-    // EL SUELO CIERRA (2026-08-21). El canto delantero estuvo A RAS del larguero
-    // de base delantera, y como ese larguero se retira por detras del riel de
-    // panel, el suelo del case tenia 37.96 mm abiertos por delante. Ahora la
-    // plancha vuela por delante del larguero hasta donde muere la curva del
-    // costado: el unico hueco que queda por abajo es el propio redondeo de la
-    // esquina, que se lee como esquina y no como ranura.
-    //
-    // No salio gratis: el riel de panel del frente bajaba a y=4.84 y el techo de
-    // la plancha esta en y=8, o sea que se metia 3.16 mm dentro del plano del
-    // suelo. Subirlo costo 8.46 mm de alto de aparato (ver alto_frontal). Y la
-    // ENTRADA DE AIRE, que era este hueco, se fue a la trasera. Vivio aqui unas
-    // horas como rejilla dibujada en el vuelo y se le veia: el acrilico naranja
-    // es TRASLUCIDO y el campo de ranuras se transparentaba a lo largo del canto
-    // inferior. Ahora el vuelo es plancha maciza y el suelo cierra de verdad.
-    v = vuelo_zocalo;
+    // LA BASE (papel del suelo, 2026-10-12): chapa de 3, a ras de la huella del
+    // cuerpo. Local x = z del mundo, local y = x del mundo, sin desplazamiento.
+    // Fue la tabla de nogal desde el 2026-08-27, con su vuelo, su veta y su
+    // canto redondeado; la historia de esta pieza vive en git y en el papel.
     difference() {
-        plancha(bandeja_base_ancho(), bandeja_base_fondo());
-        // LAS DOS FILAS DE FIJACION A LAS COSTILLAS. Corren a lo largo de la
-        // tabla, una bajo cada costilla, y NO son agujeros redondos: la tabla
-        // es maciza y se mueve a contraveta. La veta va a lo LARGO (los 570 mm
-        // del ancho del case, como en la foto), asi que lo que crece y encoge
-        // es el FONDO -- la direccion en la que corre esta misma fila. De ahi
-        // que las ranuras sean alargadas en Y local.
-        //
-        // El del MEDIO va redondo a proposito: la tabla tiene que crecer hacia
-        // los dos lados desde un punto fijo. Si todos fueran ranura, la tabla
-        // se arrastra hacia un extremo y el vuelo deja de ser simetrico.
-        // AL MEDIO DEL CANTO INFERIOR DEL ANILLO desde el 2026-08-28. Fue
-        // t_cheek + t_costilla/2 -- el alma de la costilla de chapa, que se
-        // apoyaba detras del acrilico -- y esa cota apuntaba a un sitio donde
-        // ya no hay pieza: hoy el anillo ES el canto, 14 mm de pletina de
-        // z=0 a z=14, y el M5 de la tabla va a una rosca ciega en el centro
-        // de ese canto. Esas seis roscas NO salen en costilla_dorso_2d: van
-        // en el canto, no en el dorso, y un DXF de la cara no las sabe
-        // dibujar -- se listan en el pliego (Tarea 5).
-        for (zc = [v + t_anillo/2, v + ancho_total - t_anillo/2])
+        translate([0, chaflan_nariz]) plancha(bandeja_base_ancho(), bandeja_base_fondo());
+        // LOS SEIS M5 DE LOS ANILLOS, al medio de su canto inferior (rosca
+        // ciega). Redondos los seis: aluminio contra aluminio se dilata igual,
+        // y la veta se fue con la tabla. d_M5_base deja medio mm de juego.
+        // La fila se reparte en el fondo del CUERPO (n_agujeros()), igual que
+        // _m5_tabla_x() en el budget.
+        for (zc = [t_anillo/2, ancho_total - t_anillo/2])
             for (i = [0 : n_agujeros() - 1])
-                let (y = v + fondo()*(i + 0.5)/n_agujeros(),
-                     medio = (i == floor(n_agujeros()/2)))
-                    translate([zc, y])
-                        if (medio) circle(d = d_M5_paso + kerf);
-                        else hull() for (dy = [-holgura_veta, holgura_veta])
-                            translate([0, dy]) circle(d = d_M5_paso + kerf);
-        // LOS CUATRO TALADROS DE PIE (Tarea 6). paticas() atornilla las
-        // paticas de goma A LA TABLA, no al acrilico (BOM), asi que la tabla
-        // necesita su propio taladro por pata -- REDONDO y no ranura: la
-        // patica no la mueve la contraveta, la sostiene.
-        //
-        // MISMAS CUATRO POSICIONES QUE paticas(), pasadas por la MISMA
-        // conversion de coordenadas que las dos filas de arriba: local x =
-        // vuelo_zocalo + z del mundo, local y = vuelo_zocalo + x del mundo
-        // (ver la nota larga sobre bandeja_base_2d() mas abajo en este
-        // fichero, junto a ch_pos()). Repetir aqui la formula de paticas()
-        // en vez de llamarla es a proposito: paticas() dibuja un cilindro
-        // rotado en 3D y este agujero es 2D puro, asi que no hay una sola
-        // funcion que sirva a los dos -- pero las CUATRO coordenadas de
-        // mundo son las mismas literales, y por eso el comentario de
-        // paticas() vale tambien aqui.
+                translate([zc, fondo()*(i + 0.5)/n_agujeros()])
+                    circle(d = d_M5_base + kerf);
+        // LAS CUATRO FH-M4 DE LAS PATAS, en las posiciones de paticas().
         for (wx = [alto_frontal/2 + d_pie/2, centro_talon().x])
             for (wz = [d_pie/2, ancho_total - d_pie/2])
-                translate([v + wz, v + wx])
-                    circle(d = d_pie_tornillo + kerf);
-        // LOS TRES M4 DE LA NARIZ (2026-08-29): la banda del frente se
-        // atornilla a la tabla por su pie, desde dentro. Misma conversion de
-        // coordenadas que los pies y mismo diametro (d_pie_tornillo): es el
-        // mismo herraje a la misma madera. Los cruza taladros_nariz().
-        for (wz = nariz_m4_z())
-            translate([v + wz, v + nariz_m4_x()])
-                circle(d = d_pie_tornillo + kerf);
-        // LOS TRES M4 DEL TALON (2026-08-29, noche): la banda de abajo del
-        // plano trasero se atornilla a la tabla por su pie, como la nariz.
-        // Los cruza taladros_talon().
-        for (wz = nariz_m4_z())
-            translate([v + wz, v + talon_m4_x()])
-                circle(d = d_pie_tornillo + kerf);
-        // LOS CUATRO M4 DEL CHASIS DEL PSU (2026-08-29, noche): el chasis
-        // apoya en la tabla y se atornilla a ella por el suelo, desde abajo,
-        // a tuerca remachable en el acero. Los cruza taladros_talon() con
-        // chasis_cuerpo_2d, que lleva los mismos cuatro.
+                translate([wz, wx]) circle(d = pem_fh_m4 + kerf);
+        // LOS 3 + 3 M4 DE NARIZ Y TALON, de paso: entran desde abajo a la
+        // tuerca CLS de su pie (D-T2). Los cruzan taladros_nariz() y
+        // taladros_talon() en check_dxf.
+        for (wz = nariz_m4_z()) {
+            translate([wz, nariz_m4_x()]) circle(d = d_M4_paso + kerf);
+            translate([wz, talon_m4_x()]) circle(d = d_M4_paso + kerf);
+        }
+        // LOS CUATRO M4 DEL CHASIS DEL PSU, desde abajo a la tuerca remachable
+        // de su suelo de acero. Los cruza taladros_talon() con chasis_cuerpo_2d,
+        // que lleva los mismos cuatro.
         for (q = chasis_tornillos_tabla())
             translate(q) circle(d = d_M4_paso + kerf);
-        // LA SALIDA DE CABLES DEL CHASIS. Era un campo de ondas de 104 x 32
-        // dibujado como VENTILACION, y con la caja de acero encima ya no
-        // ventila nada (spec §3.3). El cambio no es solo de nombre: una onda
-        // son ranuras de 4 mm con puentes, y por 4 mm no pasa un mazo. Ahora
-        // es un agujero de verdad.
-        //
-        // Y se DERIVA de la ranura del suelo del chasis, no al reves: este
-        // hueco existe para dejarla pasar, asi que crece con ella y la
-        // contiene por construccion. El assert de clearance_budget lo
-        // confirma releyendo las dos, por si alguien toca una sola.
+        // LA SALIDA DE CABLES DEL CHASIS: se DERIVA de la ranura del suelo del
+        // chasis, no al reves -- este hueco existe para dejarla pasar, asi que
+        // crece con ella y la contiene por construccion. El budget la relee en
+        // guarda_chasis(), por si alguien toca una sola.
         translate(salida_cables_xy()) {
             w = chasis_salida_ancho + 2*salida_holgura;
             h = chasis_salida_fondo + 2*salida_holgura;
@@ -1582,6 +1531,10 @@ module bandeja_base_2d() {
             hull() for (dx = [r, w - r], dy = [r, h - r])
                 translate([dx, dy]) circle(r = r + kerf/2);
         }
+        // EL CAMPO: la L de campo_base(). 16 lados: el error de cuerda es de
+        // 0.05 mm en un agujero de aire, y el DXF no pasa de unos MB.
+        for (c = campo_base())
+            translate([c[1], c[0]]) circle(d = base_agujero + kerf, $fn = 16);
     }
 }
 
@@ -2160,25 +2113,33 @@ module chasis_3d() {
         cylinder(d = diam_transformador + 4, h = alto_transformador);
 }
 
-// Colocacion sobre la bandeja de base. La bandeja vive con su X local a lo
-// ANCHO del case y crece hacia -Z del mundo (ver bandeja_base()); el chasis
-// necesita ademas que su Z local suba, asi que el giro se escribe entero en
-// vez de encadenar rotates y confiar en que salga.
-// OJO: esto es el VANO ENTRE LARGUEROS, no el fondo de la plancha. Fueron el
-// mismo numero hasta el 2026-08-21, cuando la bandeja paso a volar por delante
-// del larguero delantero. Todo lo del chasis se mide contra ESTE, que es lo que
-// de verdad lo encierra; el fondo de la plancha es este mas el vuelo.
-function bandeja_base_fondo() = fondo() + 2*vuelo_zocalo;
+// LA BASE (papel del suelo, 2026-10-12): la huella del canto inferior del
+// anillo, de chaflan a chaflan, y de cara de fuera a cara de fuera de los
+// anillos. Sin vuelo. Su marco local: x = z del mundo, y = x del mundo.
+function bandeja_base_fondo() = fondo() - 2*chaflan_nariz;
+function bandeja_base_ancho() = ancho_total;
 
-// Lo que la plancha vuela por delante del larguero de base delantera. DERIVADO,
-// no parametro: llega hasta donde MUERE LA CURVA de la esquina inferior
-// delantera del costado, que es la misma regla que usa x_valle() para el pico.
-// Un milimetro mas y la plancha asoma por delante del redondeo; uno menos y
-// queda suelo sin cubrir. Con alto_frontal=19 la curva muere en x=9.49; el
-// larguero arranca en 78.34 desde que lo coloca el chasis, o sea 68.85 de
-// vuelo. Fueron 30.19 mientras el larguero se derivaba del riel de panel, y ese
-// crecimiento se lo lleva entero la rejilla de entrada de aire, que vive aqui.
-function bandeja_base_ancho() = ancho_total + 2*vuelo_zocalo;
+// LA L DEL CAMPO DE LA BASE y su red. GEMELAS de _zonas_campo_base() y
+// _campo_base() del budget: check_dxf compara la cuenta y los centros.
+function zonas_campo_base() =
+    let (o = base_orilla,
+         x0 = chaflan_nariz + nariz_pie + o, x1 = talon_x_pie() - o,
+         z0 = t_anillo + o, z1 = ancho_total - t_anillo - o,
+         z_ch = t_anillo + ancho_util - chasis_margen_bandeja - ch_tapa_ext().x,
+         x_ch = x_chasis_frente())
+    [[x0, x1, z0, z_ch - o], [x0, x_ch - o, z_ch - o, z1]];
+function campo_base() =
+    let (zs = zonas_campo_base(), d = base_agujero, s = base_paso,
+         r = d/2, f = s*sqrt(3)/2,
+         x0 = min([for (q = zs) q[0]]), x1 = max([for (q = zs) q[1]]),
+         z0 = min([for (q = zs) q[2]]), z1 = max([for (q = zs) q[3]]),
+         ni = floor((x1 - x0 - d)/f + 1e-9), nj = floor((z1 - z0 - d)/s + 1e-9))
+    [for (i = [0 : ni]) for (j = [0 : nj])
+        let (x = x0 + r + i*f, z = z0 + r + (i % 2)*s/2 + j*s)
+        if (len([for (q = zs)
+                    if (x >= q[0] + r - 1e-9 && x <= q[1] - r + 1e-9
+                        && z >= q[2] + r - 1e-9 && z <= q[3] - r + 1e-9) 1]) > 0)
+            [x, z]];
 
 // El chasis YA NO VA CENTRADO entre los largueros (2026-08-21). Se pega al
 // TRASERO, a chasis_holgura_larguero, y el larguero delantero se pega a el: una
@@ -2186,10 +2147,8 @@ function bandeja_base_ancho() = ancho_total + 2*vuelo_zocalo;
 // nadie -- ch_pos() simplemente lo centraba -- y salia caro: sus 176.6 x 93 en
 // medio del piso dejaban el fondo de modulo de la fila de abajo en 18.6 mm.
 //
-// Aqui se expresa en el marco LOCAL de la plancha, cuyo origen esta el vuelo por
-// delante del larguero delantero. Como el larguero se planta a
-// chasis_holgura_larguero del chasis, la cuenta se cierra sola y no necesita
-// mirar donde acabo ce[0]: vuelo + rail + holgura.
+// Aqui se expresa en el marco LOCAL de la base: x = z del mundo, y = x del
+// mundo (papel del suelo; hasta entonces el origen llevaba el vuelo de la tabla).
 // Cara delantera del chasis: cuelga del larguero TRASERO y de ahi hacia
 // delante ya no hay nada. Estuvo escrito como vuelo + rail + holgura -- la
 // cadena leida al reves desde el canto de la plancha -- y solo daba lo mismo
@@ -2212,9 +2171,8 @@ function chasis_tornillos_tabla() =
     let (pc = ch_pos(), d = ch_desfase() + t_chapa)
     [for (q = chasis_tornillos_int()) [pc.x + d + q.x, pc.y + d + q.y]];
 
-// En coordenadas LOCALES de la tabla, cuyo origen esta vuelo_zocalo por delante
-// y por fuera del cuerpo. O sea: x local = vuelo_zocalo + z del mundo, la misma
-// cadena con que bandeja_base_2d() coloca sus dos filas de tornillo.
+// En coordenadas LOCALES de la base: x local = z del mundo, y local = x del
+// mundo, la misma cadena con que bandeja_base_2d() coloca sus taladros.
 //
 // LA CARA INTERIOR ES t_anillo desde el 2026-08-28, no t_cheek + t_costilla.
 // guarda_chasis() mide este mismo hueco con el origen EN la cara interior
@@ -2223,9 +2181,8 @@ function chasis_tornillos_tabla() =
 // nombra: con los 9.5 viejos el agujero de salida de cables se dibujaba 4.5 mm
 // corrido respecto a lo que el presupuesto verifica, y no lo cazaba nadie --
 // agujeros_donde_toca() relee las filas de tornillo de la tabla, no la ranura.
-function ch_pos() = [vuelo_zocalo + t_anillo
-                       + ancho_util - chasis_margen_bandeja - ch_tapa_ext().x,
-                     x_chasis_frente() + vuelo_zocalo];
+function ch_pos() = [t_anillo + ancho_util - chasis_margen_bandeja - ch_tapa_ext().x,
+                     x_chasis_frente()];
 
 // Esquina de la salida de cables del chasis, en coordenadas locales de
 // bandeja_base_2d(). Una sola definicion: la consume el agujero del acrilico
@@ -2251,9 +2208,9 @@ function salida_cables_xy() =
 // trasera. Con el espejo puesto, la boca del chasis y su agujero en la tabla
 // quedaban en lados opuestos del aparato.
 //
-// La conversion es la de siempre en este fichero: x local de la tabla =
-// vuelo_zocalo + z del mundo (la misma con que bandeja_base_2d() coloca sus dos
-// filas de tornillo), asi que el termino es p.x - vuelo_zocalo y el signo, +1.
+// La conversion es la de siempre en este fichero: x local de la base = z del
+// mundo (la misma con que bandeja_base_2d() coloca sus taladros), asi que el
+// termino es p.x y el signo, +1.
 // Con eso el 3x3 vuelve a ser un giro propio.
 //
 // SIGUE SIN ADJUDICARLO NINGUNA PUERTA: el chasis no es un cuerpo de
@@ -2262,9 +2219,9 @@ function salida_cables_xy() =
 // decision.
 module chasis() {
     p  = ch_pos();
-    multmatrix([[0, 1, 0, -vuelo_zocalo + p.y],
+    multmatrix([[0, 1, 0, p.y],
                 [0, 0, 1, chasis_pie],
-                [1, 0, 0, p.x - vuelo_zocalo],
+                [1, 0, 0, p.x],
                 [0, 0, 0, 1]])
         chasis_3d();
 }
@@ -2337,7 +2294,8 @@ else if (PART == "nariz_2d")             nariz_2d();
 else if (PART == "assembly")           assembly();
 else if (PART == "assembly_acrilico")  assembly_acrilico();
 else if (PART == "assembly_aluminio")  assembly_aluminio();
-else if (PART == "assembly_madera")    assembly_madera();
+else if (PART == "assembly_patas")     assembly_patas();
+else if (PART == "assembly_base")      assembly_base();
 else if (PART == "assembly_juntas")    assembly_juntas();
 else if (PART == "assembly_esqueleto") assembly_esqueleto();
 else if (PART == "assembly_acero")     assembly_acero();
@@ -2367,7 +2325,7 @@ else if (PART == "costilla_bolsillos_2d") costilla_bolsillos_2d();
 // Para render_persiana.py: lo que se pinta de cada color. Plateado solo los
 // Z-Rails (comprados); negro todo lo demas del aluminio; los paneles, grafito.
 else if (PART == "render_rieles")   rails();
-else if (PART == "render_negro")    { costillas(); marcos_ventana(); nariz(); miembros(); tapa_valle(); tira_valle(); }
+else if (PART == "render_negro")    { costillas(); marcos_ventana(); nariz(); miembros(); tapa_valle(); tira_valle(); bandeja_base(); }
 else if (PART == "render_paneles")  paneles();
 else assert(false, str("PART desconocido: ", PART));
 
@@ -2499,27 +2457,12 @@ module rails() {
 // bandeja_base_2d() para derivar su fondo (ronda final: antes iba en
 // x=rail, que no es donde esta el rail).
 module bandeja_base() {
-    // LA TABLA, y desde el 2026-08-27 vive DEBAJO del marco: de y = -t_base a
-    // y = 0. Su cara de arriba ES el suelo interior y su canto sobresale
-    // vuelo_zocalo por los cuatro lados. Es la misma pieza que el "zocalo" de
-    // la spec 9, que hasta hoy eran dos.
-    // EL CANTO DE ARRIBA, REDONDEADO (ficha 12): en local la cara de arriba es
-    // z = 0, porque el giro manda el grueso hacia -Y del mundo.
-    translate([-vuelo_zocalo, 0, ancho_total + vuelo_zocalo])
-        rotate([0, 90, 0]) rotate([90, 0, 0])
-            intersection() {
-                linear_extrude(t_base) bandeja_base_2d();
-                canto_redondeado(bandeja_base_ancho(), bandeja_base_fondo(), t_base, r_canto_tabla);
-            }
-}
-
-// Un bloque de a x f x t con las cuatro aristas de z = 0 redondeadas a radio r.
-module canto_redondeado(a, f, t, r) hull() {
-    translate([0, 0, r]) cube([a, f, t - r]);
-    for (y = [r, f - r])
-        translate([r, y, r]) rotate([0, 90, 0]) cylinder(r = r, h = a - 2*r, $fn = 48);
-    for (x = [r, a - r])
-        translate([x, r, r]) rotate([-90, 0, 0]) cylinder(r = r, h = f - 2*r, $fn = 48);
+    // LA BASE: de y = -t_base a 0, bajo los anillos. La transformacion es una
+    // ROTACION (determinante +1): local x = z, local y = x, como ch_pos() y el
+    // budget. La de la tabla espejaba z (local (x,y,z) -> mundo (y,-z,-x)), y
+    // solo no se veia porque sus agujeros eran simetricos.
+    multmatrix([[0, 1, 0, 0], [0, 0, 1, -t_base], [1, 0, 0, 0], [0, 0, 0, 1]])
+        linear_extrude(t_base) bandeja_base_2d();
 }
 
 // tope de bandeja a ras de P3.y (canto SUPERIOR, no inferior — la cota la pone
@@ -2683,10 +2626,9 @@ module paneles() {
 // y los papeles seguian vendiendo una pieza que no existia; corregido en la
 // misma tanda.
 
-// Paticas torneadas bajo los costados. En X caen sobre los dos rieles de
-// base, que es donde esta la estructura; en Z su cara exterior queda a ras
-// del canto del case (centro a d_pie/2) para que la carga del costado baje
-// recta al pie y no de canto.
+// Las cuatro patas bajo el canto de los anillos, roscadas a las FH-M4 de la
+// base. En Z su cara exterior queda a ras del canto del case (centro a
+// d_pie/2) para que la carga baje recta al pie y no de canto.
 module paticas() {
     // El pie delantero ya no cae sobre un larguero: la base delantera se retiro
     // 39 mm hacia dentro para librar el riel del panel, y un pie ahi dejaria todo
@@ -2725,22 +2667,15 @@ module assembly_juntas() {
     tira_anti_ruido_valle();
 }
 
-// LA TABLA, en su propio STL. Sale de assembly_acrilico() el 2026-08-27 porque
-// dejo de ser acrilico: es madera, y en el render tiene que verse como madera.
-// Meterla en el ensamblado naranja la pintaba de naranja translucido, que es
-// justo el tipo de render que miente sobre una decision de material.
-module assembly_madera() {
-    bandeja_base();
-    // LAS CUATRO PATICAS (Tarea 6). Van aqui, con la tabla, y no en
-    // assembly_aluminio(): se atornillan A ELLA (BOM: "se atornilla A LA
-    // TABLA, no al acrilico"), asi que este STL es el que las tiene que
-    // ensenar para que se vean en su sitio. SON DE GOMA y Blender pinta este
-    // STL entero de nogal -- una patica de goma con nogal encima es un
-    // desvio de color, no de geometria, y se acepta: separar un cuarto STL
-    // solo para cuatro cilindros de 20x10 no paga su peso. paticas() TAMBIEN
-    // sigue en assembly() (la vista de conjunto sin separar materiales) --
-    // esto la ANADE aqui, no la muda.
+// LAS PATAS, en su propio STL: son de goma. Hasta el papel del suelo
+// (2026-10-12) iban en assembly_madera() con la tabla, pintadas de nogal; la
+// base de chapa sale en render_negro y en assembly_base(), con el aluminio negro.
+module assembly_patas() {
     paticas();
+}
+
+module assembly_base() {               // la base sola, para la vista de la bahia
+    bandeja_base();
 }
 
 // LA BAHIA DE ABAJO, para mirarla por dentro. Es el unico sitio del case cuyo
@@ -2820,8 +2755,8 @@ module lienzo_2d() {
     // la variable ausente como undef y coloca la pieza en NaN --, y como el
     // lienzo es PREVIEW y no lo relee check_dxf, ninguna puerta lo hubiera
     // cazado. Por eso va encadenado sin huecos y no por indices sueltos.
-    x1 = 0;               bandeja_base_2d();
-    x2 = x1 + au + sep;   translate([x2, 0]) piel_trasera_2d();
+    // La base salio el 2026-10-12 (papel del suelo): es de aluminio, otro taller.
+    x1 = 0;               piel_trasera_2d();
     %square([1000, 600]);
 }
 
@@ -2941,9 +2876,9 @@ module bom() {
              " trasera: su tope hacia dentro, y estructura. Desarrollo ",
              entre_anillos(), " x ", talon_desarrollo(), ". Sin bridas ni",
              " rosca en el anillo."));
-    echo(str("BOM: tornillo M4 avellanado x", len(nariz_m4_z()), " -- el pie del",
-             " talon a la TABLA, desde dentro, mismo herraje que las paticas y",
-             " la nariz (d_pie_tornillo). Ninguno en la cara vista."));
+    echo(str("BOM: tornillo M4 x 8 ISO 7380 de boton x", len(nariz_m4_z()),
+             " -- el pie del talon a la BASE, desde ABAJO (D-T2), a tuercas",
+             " CLS-M4 prensadas en el pie. Ninguno en la cara vista."));
     echo(str("BOM: Z-Rail de Tiptop x", len(centros_rail()) + len(centros_rail_1u()),
              ", largo ", largo_riel,
              " (104 HP) -- seccion ", rail_er_fondo, " x ", rail_er_alto,
@@ -2981,13 +2916,13 @@ module bom() {
     echo("     desnudos desde delante y desde abajo (2026-08-29). Desde la");
     echo("     ficha 6 (2026-10-11) sube hasta pisar 1 mm de la cara del riel,");
     echo("     a 1 mm del panel, y cierra la rendija.");
-    echo(str("BOM: tornillo M4 avellanado x", len(nariz_m4_z()), " -- el pie de",
-             " la nariz a la TABLA, desde dentro, con el mismo herraje que las",
-             " paticas (d_pie_tornillo). Ninguno en la cara vista."));
+    echo(str("BOM: tornillo M4 x 8 ISO 7380 de boton x", len(nariz_m4_z()),
+             " -- el pie de la nariz a la BASE, desde ABAJO (D-T2), a tuercas",
+             " CLS-M4 prensadas en el pie. Ninguno en la cara vista."));
     echo(str("BOM: tornillo M4 x", len(chasis_tornillos_int()), " + TUERCA",
              " REMACHABLE (clinch, PEM S-M4) en el suelo del chasis -- el",
-             " chasis del PSU a la TABLA, desde abajo, por su suelo. Cabezas",
-             " bajo la tabla (el case va sobre sus paticas de ", alto_pie,
+             " chasis del PSU a la BASE, desde abajo, por su suelo. Cabezas",
+             " bajo la base (el case va sobre sus paticas de ", alto_pie,
              "), nada visto por dentro."));
     echo("     COLGABA DE DOS M5 DE PARED 'a la ranura interior de base");
     echo("     trasera' hasta el 2026-08-29 por la noche -- un 2020 que murio");
@@ -3044,30 +2979,32 @@ module bom() {
     // ningun M4 de riel trabaja como eje o cierre de apertura. Del total
     // (12 M4 de riel + 24 M4 de marco al anillo + 4 M4 de brida + 3 M4 de la
     // nariz + 3 M4 del talon + 4 M4 del chasis + 2 M3 de pestana + 6 M5 de
-    // la tabla = 58; eran 68 con los 10 M3 de la trasera hasta que se capturo
-    // la noche del 2026-08-29).
+    // la base = 58; eran 68 con los 10 M3 de la trasera hasta que se capturo
+    // la noche del 2026-08-29. Desde el papel del suelo los 6 M4 de nariz y
+    // talon entran desde abajo, a tuercas CLS de sus pies).
     echo("BOM: x12 M4 FIJOS para los seis Z-Rails, atornillados por ambas");
     echo("     puntas al MARCO DE LA VENTANA. No son ejes, hombros, cierres ni");
     echo("     palomillas; no llevan Belleville ni se dimensionan por friccion.");
     echo("     Estos 12 son los M4 DE RIEL. El case lleva mas M4 en otras");
     echo("     lineas de este BOM: marco al anillo x24, brida x4, nariz x3,");
     echo("     talon x3, chasis x4.");
-    echo("     Los M5 del case son SOLO los de la TABLA (6, a rosca ciega en el");
-    echo("     canto inferior del anillo): los 2 del chasis murieron con el");
-    echo("     miembro bajo la noche del 2026-08-29.");
+    echo("     Los M5 del case son SOLO los de la BASE (6, x 12 ISO 7380, a rosca");
+    echo("     ciega en el canto inferior del anillo): los 2 del chasis murieron");
+    echo("     con el miembro bajo la noche del 2026-08-29.");
+    echo("BOM: PEM CLS-M4 x6 (pies de nariz y talon) y PEM FH-M4 x4 (base, patas);");
+    echo("     de acero o inoxidable, nunca de la serie de aluminio, prensadas");
+    echo("     DESPUES de anodizar (papel del suelo, sec.3.4).");
     echo("BOM: paneles ciegos en TODO hueco de las tres filas; atornillados,");
     echo("     completan el cierre y atan cada pareja de rieles.");
-    // Decia "metalica torneada" y se quedo asi cuando las paticas pasaron a
-    // GOMA el 2026-08-24 (spec rev. 18): el BOM del README y el PLIEGO ya
-    // dicen goma con casquillo roscado, y este echo seguia mandando a comprar
-    // otra pieza. La cota de compra no es el material sino la FLECHA -- una
-    // goma dura no aisla menos, AMPLIFICA los 100 Hz del toroide.
-    echo(str("BOM: patica de GOMA (EPDM/NBR, Shore 45-55 A) con casquillo",
-             " roscado x4, d=", d_pie, " x ", alto_pie, " mm -- se atornilla",
-             " A LA TABLA, no al acrilico, y NO se pega. Se exige la curva",
-             " carga-deformacion: >= ", flecha_pie,
-             " mm de flecha con 22.8 N (flecha_pie). Las dos traseras van bajo",
-             " el centro del pie del talon (x = ", centro_talon().x, ")."));
+    // DESDE EL PAPEL DEL SUELO (2026-10-12) la pata se compra FIRME: es parte de
+    // la entrada de aire (la rendija de alto_pie bajo la base), y la goma blanda
+    // de antes era para aislar los 100 Hz de un toroide que ya no esta.
+    echo(str("BOM: patica de GOMA FIRME (Shore 60-70 A) con casquillo roscado x4,",
+             " d=", d_pie, " x ", alto_pie, " +- 0.2 mm -- roscada a una FH-M4 de",
+             " la BASE, NO se pega. Se exige la hoja: <= ", flecha_pie,
+             " mm con 50 N, compuesto que no manche, y la profundidad del casquillo.",
+             " Las dos traseras van bajo el centro del pie del talon (x = ",
+             centro_talon().x, ")."));
     echo(str("BOM: banda delantera del valle: chapa de ALUMINIO t=", t_valle,
              " PLEGADA, desarrollo ", tapa_valle_desarrollo_ancho(), " x ",
              tapa_valle_desarrollo_fondo(),
@@ -3096,29 +3033,21 @@ module bom() {
     echo(str("     OJO, HUECO: se dobla a radio_doblez_valle = ", radio_doblez_valle,
              " en 3 mm, 1 t, y el 6082-T6 a ese radio puede fisurar (ESTIMADO, sin",
              " tabla en el repo). Se pregunta al taller (RFQ, B)."));
-    echo(str("BOM: TABLA de madera MACIZA t=", t_base, " x1, ",
-             ancho_total + 2*vuelo_zocalo, " x ", fondo() + 2*vuelo_zocalo,
-             " mm -- el suelo interior Y el zocalo, una sola pieza."));
-    echo(str("     Ocupa y = -", t_base, " a 0: su cara de arriba es el suelo y su"));
-    echo(str("     canto sobresale ", vuelo_zocalo,
-             " mm por los cuatro lados. El marco se le APOYA encima y las"));
-    echo("     cuatro paticas se le atornillan debajo.");
-    echo(str("     FIJACION CON AGUJERO ALARGADO: 2 filas de 3 M5, uno REDONDO"));
-    echo(str("     Van a ROSCA CIEGA en el CANTO INFERIOR del anillo, al medio"));
-    echo(str("     de sus ", t_anillo, " mm (broca ", d_M5_rosca,
-             "). No son del dorso y por eso no salen en costilla_dorso_2d: un"));
-    echo("     DXF de la cara no sabe dibujar un taladro que entra por el canto");
-    echo("     -- van listadas en el pliego, con su profundidad.");
-    echo("     por fila (el del medio, el punto fijo) y los otros dos en ranura");
-    echo(str("     de ", d_M5_paso + 2*holgura_veta,
-             ". La madera se mueve ~3 mm a contraveta sobre los ", fondo(), " de"));
-    echo("     fondo y el aluminio no. Sin el redondo la tabla se arrastra");
-    echo("     hacia un extremo; con dos vuelve a estar clavada y se raja.");
-    echo("     Especie sin elegir: las cuentas van contra E = 11000 MPa (nogal");
-    echo("     o arce). Roble da 12000; contrachapado 8000 y pediria 20 mm.");
-    echo(str("     Y catorce taladros pasantes de ", d_pie_tornillo, ": 4 de",
-             " las paticas, 3 de la nariz, 3 del talon y 4 del chasis del PSU",
-             " (los siete ultimos desde el 2026-08-29). Los censa guarda_zocalo()."));
+    echo(str("BOM: BASE de chapa 6082-T6 t=", t_base, " anodizada negra x1, ",
+             bandeja_base_ancho(), " x ", bandeja_base_fondo(),
+             " mm (papel del suelo, 2026-10-12): campo de ", len(campo_base()),
+             " agujeros de ", base_agujero, " cada ", base_paso, ", 6 M5 de paso ",
+             d_M5_base, " (anillos), 6 M4 de paso (nariz y talon, desde abajo),",
+             " 4 FH-M4 (patas) y 4 M4 del chasis."));
+    echo(str("     Ocupa y = -", t_base, " a 0, bajo los anillos y a ras de su huella:"));
+    echo("     su cara de arriba es el suelo interior. Al taller de CHAPA: laser");
+    echo("     (agujeros salteados), desbarbado por las dos caras, planitud <= 1 mm");
+    echo("     antes de anodizar, anodizado, y despues la prensa de insertos.");
+    echo(str("BOM: tornillo M5 x 12 ISO 7380 de boton x6 -- los anillos a la BASE,",
+             " desde abajo, a la rosca ciega del CANTO INFERIOR del anillo, al",
+             " medio de sus ", t_anillo, " mm (broca ", d_M5_rosca, "). Van",
+             " listadas en el pliego, con su profundidad: un DXF de la cara no",
+             " sabe dibujar un taladro que entra por el canto."));
     n_taco = len(tacos_persiana);
     n_fino = len([for (t = tacos_persiana) if (t[2] == "fino") 1]);
     echo(str("BOM: PERSIANA x2 (2026-10-11) -- aluminio anodizado en negro, por",

@@ -1,4 +1,4 @@
-"""Vistas de la BAHIA INFERIOR — la tabla con el chasis del PSU encima.
+"""Vistas de la BAHIA INFERIOR — la base de chapa con el chasis del PSU encima.
 
     & "C:\\Program Files\\Blender Foundation\\Blender 5.0\\blender.exe" -b -P render_bahia.py
 
@@ -6,15 +6,16 @@ POR QUE EXISTE. Es el unico sitio del case cuyo interior es una DECISION y no
 una consecuencia, y no se ve en ninguna de las dos vistas del conjunto: los
 paneles y la tapa del valle lo tapan entero. Lo que hay que poder juzgar aqui:
 
-  - la TABLA de madera como suelo (2026-08-27) -- se ve por dentro y por fuera
+  - la BASE de chapa como suelo (papel del suelo, 2026-10-12; fue la tabla de
+    nogal desde el 2026-08-27) -- se ve por dentro y por fuera, con su campo
   - el chasis del PSU sentado encima, con su pared trasera colgando de
-    `base trasera` y la delantera apoyada en la tabla. Fue el punto que dejo
+    `base trasera` y la delantera apoyada en la base. Fue el punto que dejo
     la Tarea 7 en rojo, y se decidio sin poder verlo
   - las TRES transversales que quedan, y el hueco que dejo `base delantera`
   - cuanto suelo libre queda por delante del chasis
 
-Se importan TRES ensamblados y no uno porque son tres materiales: madera,
-aluminio y acero. Pintarlos igual pierde justo lo que la vista existe para
+Se importan TRES ensamblados y no uno porque son tres materiales: la base
+negra, el aluminio y el acero. Pintarlos igual pierde justo lo que la vista existe para
 ensenar. El acrilico y los paneles NO se importan: taparian la bahia.
 
 Misma iluminacion y mismo mundo que render.py -- si aquello cambia, esto
@@ -53,10 +54,10 @@ def mat(nombre, **bsdf):
 
 
 # --- geometria y materiales ----------------------------------------------
-mad = importar("assembly_madera")
-mad.data.materials.append(mat(
-    "nogal", **{"Base Color": (0.28, 0.16, 0.09, 1.0),
-                "Roughness": 0.55, "Specular IOR Level": 0.35}))
+bas = importar("assembly_base")
+bas.data.materials.append(mat(
+    "anodizado_negro", **{"Base Color": (0.014, 0.014, 0.016, 1.0),
+                          "Roughness": 0.45}))
 alu = importar("assembly_esqueleto")
 alu.data.materials.append(mat(
     "aluminio", **{"Base Color": (0.85, 0.86, 0.88, 1.0),
@@ -93,10 +94,10 @@ esc.world = mundo
 
 # --- bbox de LA BAHIA, no del case ---------------------------------------
 # Encuadrar contra el bbox entero deja la bahia diminuta en el centro: el
-# esqueleto llega hasta el remate de arriba. Se encuadra contra la TABLA mas
+# esqueleto llega hasta el remate de arriba. Se encuadra contra la BASE mas
 # el chasis, que es lo que la vista trata.
 esquinas = [obj.matrix_world @ Vector(c)
-            for obj in (mad, ace) for c in obj.bound_box]
+            for obj in (bas, ace) for c in obj.bound_box]
 xs, ys, zs = ([p[i] for p in esquinas] for i in range(3))
 minv = Vector((min(xs), min(ys), min(zs)))
 maxv = Vector((max(xs), max(ys), max(zs)))

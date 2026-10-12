@@ -29,13 +29,13 @@ OPENSCAD = r"C:\Program Files\OpenSCAD\openscad.exe"
 # nombre de pieza -> material de render.py (o el acero, que render.py no tiene)
 GRUPOS = {
     "aluminio": ["anillos", "rieles_3u", "rieles_1u", "paneles", "marcos_ventana",
-                 "nariz", "talon", "miembro_alto", "tapa_valle", "persianas"],
+                 "nariz", "talon", "miembro_alto", "tapa_valle", "persianas", "base"],
     "junta": ["tira_anti_ruido_valle"],
     "acrilico": ["piel_trasera"],
-    "madera": ["tabla", "paticas"],
+    "goma": ["paticas"],
     "acero": ["chasis"],
 }
-MATERIAL = {"acrilico": "acrilico_naranja", "madera": "nogal",
+MATERIAL = {"acrilico": "acrilico_naranja", "goma": "goma",
             "aluminio": "aluminio", "junta": "anti_ruido", "acero": "acero"}
 
 
@@ -76,7 +76,7 @@ fuente = open(ruta_render, encoding="utf-8").read()
 ns = {"__file__": ruta_render, "__name__": "escena_case"}
 exec(compile(fuente, ruta_render, "exec"), ns)
 ns["poner_luces"](*ns["construir_vista"](ns["AZIMUT_FRENTE"]))
-for obj in (ns["acr"], ns["alu"], ns["jun"], ns["mad"]):
+for obj in (ns["acr"], ns["alu"], ns["jun"], ns["pat"]):
     bpy.data.objects.remove(obj, do_unlink=True)
 
 acero = bpy.data.materials.new("acero")

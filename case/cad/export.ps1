@@ -75,7 +75,7 @@ $coupon_out = Join-Path $plans "coupon.dxf"
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path $coupon_out) -or (Get-Item $coupon_out).Length -lt $dxf_min) {
   Write-Warning "FALLO: coupon"; $fallos++
 }
-foreach ($m in "assembly_acrilico","assembly_aluminio","assembly_madera",
+foreach ($m in "assembly_acrilico","assembly_aluminio","assembly_patas","assembly_base",
                 "assembly_esqueleto","assembly_acero","assembly_persiana") {
   $out = Join-Path $build "$m.stl"
   & $scad -o ($out.Replace('\', '/')) -D ('PART=\"' + $m + '\"') (Join-Path $PSScriptRoot "sam17_case.scad") | Out-Null
