@@ -247,7 +247,7 @@ lenguaje visual).
 >
 > **rev. 30** (2026-10-11): **la persiana**. Las dos mejillas de acrílico se
 > van y cada costado pasa a ser una placa de aluminio de 6 por fuera del anillo,
-> con 47 varillas de 2, sujeta con diez tacos e imanes; todo el aluminio que se
+> con 44 varillas de 2, sujeta con diez tacos e imanes; todo el aluminio que se
 > ve, en negro. La piel orgánica no se hace. El rebaje del anillo se queda
 > vacío, y cada anillo gana diez bolsillos por la cara de fuera. Detalle en
 > [`2026-10-11-case-persiana-design.md`](2026-10-11-case-persiana-design.md).

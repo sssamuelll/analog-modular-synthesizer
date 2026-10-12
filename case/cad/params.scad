@@ -446,8 +446,10 @@ sep_rosca_riel     = 9.5;
 // esta distancia de cada extremo de la pata (del retiro de 11.2 tras P6 y del
 // retiro del chaflan): dejan 168 entre ellas (0.16 mm) y 71 desde P6, que es
 // lo que EMPOTRA la pata trasera, la unica que no puede llevar tornillo.
-// Lejos de los tres M5 de la tabla, que entran por el canto inferior a 44.6,
-// 153.7 y 262.8 (guarda_marco_ventana lo mide).
+// Lejos de los tres M5 de la tabla, que entran por el canto inferior a 53.3,
+// 159.9 y 266.5 (guarda_marco_ventana lo mide). El techo de flecha que puso
+// las dos roscas (el acrilico se salia con 3) se fue con la mejilla el
+// 2026-10-11; las roscas se quedan atando la pata del suelo.
 rosca_suelo_retiro = 60;
 // DONDE ARRANCA LA PATA DE LA CARA DE ARRIBA, medido desde P3. P3 es concavo
 // y su redondeo de 54 curva la franja: el fondo util pasa de 8.51 en x = 128 a

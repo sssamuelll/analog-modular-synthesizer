@@ -1,6 +1,6 @@
 # La persiana: el case sin piel, y el costado que respira
 
-**Fecha**: 2026-10-11 · **Estado**: **firmado el 11-10** (versión 2, después de la junta): D-S1 en conversación (*«he decidido C · La persiana»*), y de D-S2 a D-S11 y el papel en el acta, todas en la opción recomendada. **D-S4 en espera**: Samuel la firmó con la nota *«pero ojo, estoy pensando en quitar la tabla, creo que es algo que nos puede beneficiar, que opinas tu?»* (§8). **Implementado el 2026-10-12** en la rama `feat/case-persiana`, del plan `docs/superpowers/plans/2026-10-11-case-persiana.md` (commits `ad4f47c` a `6cc4f77`, y estas enmiendas en el siguiente) ·
+**Fecha**: 2026-10-11 · **Estado**: **firmado el 11-10** (versión 2, después de la junta): D-S1 en conversación (*«he decidido C · La persiana»*), y de D-S2 a D-S11 y el papel en el acta, todas en la opción recomendada. **D-S4 en espera**: Samuel la firmó con la nota *«pero ojo, estoy pensando en quitar la tabla, creo que es algo que nos puede beneficiar, que opinas tu?»* (§8). **Implementado el 2026-10-12** en la rama `feat/case-persiana`, del plan `docs/superpowers/plans/2026-10-11-case-persiana.md` (PR #412). **D-S4 firmada después, el 11-10 a las 23:00: quitar la tabla** (ficha `quitar_tabla` del acta). Va en un papel corto y su propia tanda ·
 **Sucede a**: `2026-09-05-case-piel-organica-design.md` como dirección del acabado. Su D-P1 (*la piel sustituye a techo, nariz, talón y las dos mejillas*) nunca se firmó ·
 **Base**: `main` en `820a2eb` (11-10). Es el case de agosto con lo que la etapa de la piel dejó hecho en el modelo y sigue valiendo: la tabla de 30 con canto redondeado (ficha 12), la tira negra del valle (ficha 6), los paneles vestidos y los rieles plateados (ficha 14) ·
 **Se apoya en**: `2026-08-28-costilla-pletina` (el anillo), `2026-08-29-nariz-recta-valle-limpio` (la nariz), `2026-08-29-trasera-capturada-talon-nariz` (la trasera y el talón), `2026-08-30-techo-macizo-chapas-empotradas` (el techo y la rendija del alero, que siguen), `2026-08-31-case-tanda-b` (las tres filas, paneles fijos) y `2026-09-05-fuente-v5-ladrillo` (D-V1, la fuente afuera) ·
@@ -75,6 +75,8 @@ Todas las cifras salen de `python case/cad/persiana.py`.
 | se ve abierto | 65 % del costado | |
 | peso | 362 g por costado en aluminio | con la banda ciega y los atados |
 
+> **Corrección 2026-10-12 (revisión final de la tanda):** son **44 varillas** libres entre 45 ranuras. El 47 contaba los centros del ritmo: el primero cae en el borde y el último fuera del perfil. `persiana.py` cuenta ahora de la geometría.
+
 ### 3.2 Dónde va
 
 Por fuera del anillo, tapando su cara entera. El anillo deja de verse de lado. De frente, el canto de la persiana (6) va pegado al del anillo (14); entre los dos queda el chaflán de 1,5 × 45° de la silueta del anillo, que se queda como **junta de sombra** y esconde el escalón entre las dos piezas (Elke, H15 de Serrano).
@@ -124,6 +126,8 @@ Lo que mide:
 - **Dos localizan, ocho retienen.** En el suelo, x = 25: taco redondo en agujero Ø8 H7/g6 (juego de 5 a 29 µm; ISO 286-2, citado de memoria). En el suelo, x = 290: colisa de 8 H7 × 10 en x, que localiza sin forzar. Los otros ocho, Ø9 con holgura, retienen.
 - **Imanes**: pares de neodimio N42, Ø6 × 3 en el anillo y Ø6 × 2 en el taco, con la polaridad fija y marcada. En el tramo de atrás, detrás está el bolsillo de la trasera, y van imanes finos (Ø6 × 1) para que la pared no baje de 3,1. Tirón total del orden de **50–70 N** (ESTIMADO; se mide en la muestra) contra una persiana de 3,6 N (362 g). Si se levanta el aparato por los costados, la carga la llevan los tacos, no los imanes.
 - **Quitarla**: se tira derecho con dos ganchos de alambre de 2 mm metidos en dos ranuras junto a un atado. Sin la persiana, la ventana del anillo deja aspirar el interior sin quitar paneles.
+
+> **Corrección 2026-10-12 (revisión final de la tanda):** «uno cada ~96 mm» no cabe. Con diez tacos y 10 mm a cada rosca, el tramo más largo sin taco no baja de 106 mm, y con los localizadores en x = 25 y x = 290 queda en **112** (`persiana.py` lo minimiza; antes dejaba 166). Once tacos lo bajan a 92. Lo decide Samuel; mientras, el budget lo declara como HUECO.
 - **Alineación**: el canto de la persiana queda a 0,2 mm o menos del del anillo (juego del localizador más las tolerancias de contorno de las dos piezas, ±0,05–0,10 del taller de los anillos). Lo esconde la junta de sombra (§3.2). La arista de atrás de la persiana va rota a 0,3 × 45°.
 
 Las dos salidas que no tocan el anillo rompen un requisito cada una: cinta VHB (no se quita para limpiar) o tornillos M2 negros en el fondo de las ranuras (se quitan, pero se ven, y la ficha 11 pidió que no se viera ninguno). Es D-S3.
@@ -221,7 +225,7 @@ Siguen en verde `guarda_marco_ventana()`, `guarda_anclajes()`, `guarda_paneles_f
 
 La única regla que vigilaba el vuelo era la regla 3 de `piel_choques.py` (25–40 contra la piel), que muere con la piel. La sustituye una que mide contra la persiana.
 
-**En espera (11-10).** Samuel firmó «uno» y escribió: *«pero ojo, estoy pensando en quitar la tabla, creo que es algo que nos puede beneficiar, que opinas tu?»*. Quitarla es otro papel: hoy la tabla **es el suelo** (en ella van los anillos, la nariz, el talón y las patas, y amarra los dos anillos por abajo), y sin ella hace falta un suelo nuevo. Lo que compra, medido con `persiana.py`: unos 4–5 kg de nogal menos, y la mejor entrada de aire posible, el suelo (con 10 000 mm² abiertos abajo, el pesimista baja de 18,8 a 16,1 K). **Mientras se decide, este papel no toca la tabla**: se queda como está en la base, sin redimensionar.
+**En espera (11-10), y firmada después: quitar** (23:00, ficha `quitar_tabla`). Antes Samuel firmó «uno» y escribió: *«pero ojo, estoy pensando en quitar la tabla, creo que es algo que nos puede beneficiar, que opinas tu?»*. Quitarla es otro papel: hoy la tabla **es el suelo** (en ella van los anillos, la nariz, el talón y las patas, y amarra los dos anillos por abajo), y sin ella hace falta un suelo nuevo. Lo que compra, medido con `persiana.py`: unos 4–5 kg de nogal menos, y la mejor entrada de aire posible, el suelo (con 10 000 mm² abiertos abajo, el pesimista baja de 18,8 a 16,1 K). **Mientras se decide, este papel no toca la tabla**: se queda como está en la base, sin redimensionar.
 
 ---
 

@@ -88,47 +88,85 @@ def varillas_x(p) -> list[float]:
     return out
 
 
-def tacos(p) -> list[tuple[float, float, str]]:
-    """Diez tacos a u_taco de la silueta, repartidos por el contorno, a 10 mm o
-    mas de toda rosca M4 del dorso y de todo M5 de la tabla. Dos localizan en
-    el suelo (el de delante redondo, el de atras en colisa); los del tramo de
-    atras llevan iman fino (detras esta el bolsillo de la trasera); el resto
-    retiene. Es el reparto de Elke Brandt (junta del 11-10)."""
-    perfil = perfil_real()
-    linea = perfil.buffer(-p["u_taco"], join_style="mitre").exterior
-    L = linea.length
+def _puntos_validos(p, linea) -> list[tuple[float, float, float]]:
+    """Las muestras de la linea de tacos, cada 2 mm, a 10 mm o mas de toda rosca
+    M4 del dorso y de todo M5 de la tabla: (s por la linea, x, y)."""
     m4 = [c for _n, c, _d in cb._centros_rosca_ciega(p)]
     m5 = cb._m5_tabla_x(p)
-    fondo_x = cb._vertices(p)[5][0]
-    validos = []
-    for i in range(int(L / 2.0)):
+    out = []
+    for i in range(int(linea.length / 2.0)):
         q = linea.interpolate(i * 2.0)
         lejos_m4 = all(math.dist((q.x, q.y), c) >= 10.0 for c in m4)
         lejos_m5 = all(abs(q.x - x) >= 10.0 for x in m5) or q.y > p["u_taco"] + 1.0
         if lejos_m4 and lejos_m5:
-            validos.append((i * 2.0, round(q.x, 3), round(q.y, 3)))
+            out.append((i * 2.0, round(q.x, 3), round(q.y, 3)))
+    return out
+
+
+def _entre(validos, L, a, b, D):
+    """Los tacos que hacen falta de a a b, hacia delante por la linea, para que
+    ningun tramo pase de D: cada vez el punto valido mas lejano que llega. None
+    si un tramo sin puntos validos ya pasa de D."""
+    largo = (b[0] - a[0]) % L
+    cand = sorted(((v[0] - a[0]) % L, v) for v in validos if 0 < (v[0] - a[0]) % L < largo)
+    pos, out = 0.0, []
+    while largo - pos > D + 1e-9:
+        alcance = [c for c in cand if pos < c[0] <= pos + D + 1e-9]
+        if not alcance:
+            return None
+        pos, v = max(alcance)
+        out.append(v)
+    return out
+
+
+def tacos(p) -> list[tuple[float, float, str]]:
+    """Diez tacos a u_taco de la silueta, a 10 mm o mas de toda rosca M4 del
+    dorso y de todo M5 de la tabla. Dos localizan en el suelo: el de delante,
+    redondo, en el punto valido mas cercano a x = 25, y el de atras, en colisa,
+    a 30 del canto de atras (papel §4; Elke lo puso en x = 290). Los ocho que
+    retienen se reparten para que el tramo mas largo de la linea sin taco sea
+    el menor posible: es lo que aprieta la banda contra el anillo (papel §3.3).
+    Los del tramo de atras llevan iman fino: detras esta el bolsillo de la
+    trasera.
+
+    HASTA EL 2026-10-12 SE REPARTIAN A PARTES IGUALES desde el localizador, y
+    la colisa se movia despues a su sitio: quedaba un tramo de 166 mm en el
+    suelo sin taco. Repartir parejo y llevar cada taco al punto valido mas
+    cercano tampoco basta (114 a 122): hay tramos de hasta 42 mm donde ningun
+    taco libra las roscas. Con diez tacos y las roscas donde estan, el tramo
+    mayor no baja de 100, que es lo que pide el papel: lo declara el budget."""
+    linea = perfil_real().buffer(-p["u_taco"], join_style="mitre").exterior
+    L = linea.length
+    validos = _puntos_validos(p, linea)
+    fondo_x = cb._vertices(p)[5][0]
     suelo = [v for v in validos if v[2] <= p["u_taco"] + 1e-6]
     loc = min(suelo, key=lambda v: abs(v[1] - 25.0))
-    elegidos = []
-    for k in range(10):
-        meta = (loc[0] + k * L / 10) % L
-        elegidos.append(min(validos, key=lambda v: min(abs(v[0] - meta), L - abs(v[0] - meta))))
-    # LA COLISA, al fondo del suelo: el reparto parejo deja el taco de suelo mas
-    # atrasado donde caiga, y el segundo localizador quiere la base mas larga
-    # posible. Se lleva al punto valido del suelo mas cercano a 30 del canto de
-    # atras (Elke lo puso en x = 290).
-    en_suelo = sorted((v for v in elegidos if v[2] <= p["u_taco"] + 1e-6), key=lambda v: v[1])
     colisa = min(suelo, key=lambda v: abs(v[1] - (fondo_x - 30.0)))
-    elegidos[elegidos.index(en_suelo[-1])] = colisa
-    assert len(set(elegidos)) == 10, "dos tacos cayeron en el mismo punto"
-    en_suelo = sorted((v for v in elegidos if v[2] <= p["u_taco"] + 1e-6), key=lambda v: v[1])
-    assert len(en_suelo) >= 2 and en_suelo[-1][1] - en_suelo[0][1] >= 200.0, (
+    assert colisa[1] - loc[1] >= 200.0, (
         "los dos localizadores tienen que caer en el suelo y a 200 mm o mas")
+    lo, hi = 0.0, L
+    for _ in range(50):
+        D = (lo + hi) / 2
+        ida, vuelta = _entre(validos, L, loc, colisa, D), _entre(validos, L, colisa, loc, D)
+        if ida is not None and vuelta is not None and len(ida) + len(vuelta) <= 8:
+            hi = D
+        else:
+            lo = D
+    elegidos = [loc, colisa] + _entre(validos, L, loc, colisa, hi) + _entre(validos, L, colisa, loc, hi)
+    while len(elegidos) < 10:            # si sobran, parten el tramo mas largo
+        orden = sorted(elegidos)
+        a, b = max(zip(orden, orden[1:] + [(orden[0][0] + L,) + orden[0][1:]]),
+                   key=lambda ab: ab[1][0] - ab[0][0])
+        medio = (a[0] + b[0]) / 2 % L
+        libres = [v for v in validos if v not in elegidos]
+        elegidos.append(min(libres, key=lambda v: min(abs(v[0] - medio), L - abs(v[0] - medio))))
+    assert len(set(elegidos)) == 10, "dos tacos cayeron en el mismo punto"
     out = []
-    for _s, x, y in elegidos:
-        if (x, y) == en_suelo[0][1:]:
+    for v in sorted(elegidos, key=lambda v: (v[0] - loc[0]) % L):
+        _s, x, y = v
+        if v == loc:
             tipo = "loc"
-        elif (x, y) == en_suelo[-1][1:]:
+        elif v == colisa:
             tipo = "colisa"
         elif x > fondo_x - cb._cara_anillo_trasera(p):
             tipo = "fino"
@@ -138,13 +176,32 @@ def tacos(p) -> list[tuple[float, float, str]]:
     return out
 
 
+def hueco_mayor(p, ts=None) -> float:
+    """El tramo mas largo de la linea de tacos sin un taco, medido por ella. El
+    papel (§3.3 y §4) pide un punto cada 100 mm o menos: es lo que aprieta la
+    banda contra el anillo y sube el primer modo de frente hacia 900 Hz."""
+    from shapely.geometry import Point
+    linea = perfil_real().buffer(-p["u_taco"], join_style="mitre").exterior
+    s = sorted(linea.project(Point(x, y)) for x, y, _t in (ts or tacos(p)))
+    return max(b - a for a, b in zip(s, s[1:] + [s[0] + linea.length]))
+
+
 def generado(p) -> str:
     v = ", ".join(f"{x:.3f}" for x in varillas_x(p))
     t = ", ".join(f'[{x:.3f}, {y:.3f}, "{tipo}"]' for x, y, tipo in tacos(p))
+    n = geometria(p)["varillas"]
     return ("// GENERADO por case/cad/persiana.py -- no editar a mano. Lo compara\n"
             "// guarda_persiana_generada() en check_dxf.py.\n"
             f"varillas_persiana = [{v}];\n"
-            f"tacos_persiana = [{t}];\n")
+            f"tacos_persiana = [{t}];\n"
+            f"n_varillas_persiana = {n};\n")
+
+
+def _varillas(ranuras) -> int:
+    """Las varillas libres: las que quedan entre dos ranuras. No son los centros
+    del ritmo: el primero cae en el borde y el ultimo fuera del perfil, y hasta
+    el 2026-10-12 se contaban esos (47 contra las 44 de verdad)."""
+    return len(getattr(ranuras, "geoms", [ranuras])) - 1
 
 
 def geometria(p):
@@ -168,7 +225,7 @@ def geometria(p):
         box(-50, -50, fondo_x - p[MARCO_ATRAS], 400))
     abierto = pasante.intersection(ventana_real)
     return {"contorno": cont, "macizo": macizo, "fondo": fondo, "ranuras": ranuras,
-            "pasante": pasante, "abierto": abierto, "varillas": len(xs), "alto": alto}
+            "pasante": pasante, "abierto": abierto, "varillas": _varillas(ranuras), "alto": alto}
 
 
 # --- el aire ---------------------------------------------------------------------

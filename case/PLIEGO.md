@@ -3,7 +3,7 @@
 > **rev. 28 (2026-10-11). La persiana sustituye a las mejillas de acrílico**
 > (papel `docs/superpowers/specs/2026-10-11-case-persiana-design.md`). **Sale
 > `costado_2d`**: el PMMA naranja se queda en una sola pieza, la trasera.
-> **Entra la persiana** (§6.3): dos placas de aluminio de 6, espejadas, con 47
+> **Entra la persiana** (§6.3): dos placas de aluminio de 6, espejadas, con 44
 > varillas de 2 y diez tacos en el dorso, en tres DXF (`persiana_2d`,
 > `persiana_pasante_2d`, `persiana_dorso_2d`). **Al mecanizado del anillo
 > (§6.1)**: diez bolsillos por la cara de fuera para los tacos, en
@@ -11,7 +11,10 @@
 > anodizado (§6.4)**: todo el aluminio que se ve va en negro, con una aleación,
 > un anodizador y un lote; el anillo deja de ser «satinado». **Se compran**
 > 20 pares de imanes de neodimio (§6.5). Muere la junta de asiento EPDM del
-> costado. Esta revisión sustituye las cotas operativas de la rev. 27 donde
+> costado. **A la chapa (ficha 6, D-S9)**: la nariz y el techo bajan hasta
+> pisar la cara del riel y cierran las dos rendijas: `retiro_placa_inf` pasa de
+> 9 a 11.9 y el retorno del techo de 4 a 9. Crecen los dos blanks: la nariz a
+> **545.62 × 53.10** y el techo a **593.02 × 78.85**. Esta revisión sustituye las cotas operativas de la rev. 27 donde
 > chocan; su bloque se conserva debajo como historia.
 >
 > **rev. 27 (2026-08-30). Tanda A: techo macizo y tres chapas empotradas.**
@@ -235,15 +238,15 @@ aluminio que se ve pasa después por un solo anodizador (§6.4):
 | DXF | material | taller | proceso |
 |---|---|---|---|
 | `chasis_cuerpo_2d`, `chasis_tapa_2d`, `chasis_refuerzo_2d` | acero | chapa | corte + **plegado** |
-| `miembro_alto_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: techo **sin ranuras**, blank **593.02 × 73.85**, meseta de 50, retorno de 4, chaflán de 6 y labio de 20. Dos bridas de 27 × 14.5 con esquinas R2. Entran en los cajeados del anillo; no se dejan sobre la cara — **1 ud** |
+| `miembro_alto_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: techo **sin ranuras**, blank **593.02 × 78.85**, meseta de 50, retorno de **9** (ficha 6), chaflán de 6 y labio de 20. Dos bridas de 27 × 14.5 con esquinas R2. Entran en los cajeados del anillo; no se dejan sobre la cara — **1 ud** |
 | `talon_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: blank **545.62 × 42.23**, labio de 13, chaflán y pie de **22.5**. En cada punta del pie, muesca de 2.65 hasta la línea de doblez a 22.06, con alivio de Ø2 a caballo de la esquina interior. Conserva sus ocho pestañas lanzadas; el 6082-T6 sigue siendo obligatorio — **1 ud** |
-| `nariz_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: blank **545.62 × 50.20**, pie de **20.5** y tres dobleces. En cada punta del pie, muesca de 2.65 hasta la línea de doblez a 20.06, con alivio de Ø2 a caballo de la esquina interior — **1 ud** |
-| `tapa_valle_2d` | aluminio, 3 mm | chapa | corte + **plegado**: blank **560.00 × 20.00**, dos pestañas de 21 mm y labio trasero de apoyo de 2.0 mm; sin taladros visibles en la banda |
+| `nariz_2d` | aluminio 6082-T6, 1.5 mm | chapa | corte + **plegado**: blank **545.62 × 53.10** (el frente baja hasta el riel, ficha 6), pie de **20.5** y tres dobleces. En cada punta del pie, muesca de 2.65 hasta la línea de doblez a 20.06, con alivio de Ø2 a caballo de la esquina interior — **1 ud** |
+| `tapa_valle_2d` | aluminio 6082-T6/T651, 3 mm (§6.4) | chapa | corte + **plegado**: blank **560.00 × 20.00**, dos pestañas de 21 mm y labio trasero de apoyo de 2.0 mm; sin taladros visibles en la banda |
 | `costilla_2d`, `costilla_dorso_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **fresado CNC**, sin plegar, sin soldar |
 | `costilla_bolsillos_2d` | la cara de FUERA del anillo | **mecanizado** (§6.1) | diez bolsillos ciegos por anillo para los tacos de la persiana, con el asiento del imán dibujado dentro; las profundidades, en §6.1 |
 | `persiana_2d`, `persiana_pasante_2d`, `persiana_dorso_2d` | **aluminio 6082-T651, pletina de 12** frenteada a 9.5 | **mecanizado** (§6.3) | **fresado CNC** por las dos caras: ranuras a 4 de fondo por delante, el pasante solo donde detrás hay ventana, y los tacos por detrás — **2 uds, PAR ESPEJADO** |
 | `bandeja_base_2d` | madera maciza, 30 mm | carpintería | corte + ranuras alargadas + canto de arriba redondeado R8 |
-| `marco_ventana_2d` | aluminio, `t_placa` = 6 mm, **láser** | chapa | corte + **6 cajeados** Ø8 × `prof_cajeado_riel` = 2.5 **por el lado del anillo** (bolsillos ciegos en UNA cara: dejan 3.5 mm bajo la cabeza del M4 del riel). Nota de mecanizado, no va en el DXF — ver abajo — **2 uds, PAR ESPEJADO**: mismo contorno, cajeado por caras opuestas. **Planitud ≤ 0.5 mm en 300** en el blank cortado: apoya en la cara mecanizada del anillo y doce M4 lo conforman contra ella (una pletina de 6 × 24 se aplana 0.5 con 200 N) |
+| `marco_ventana_2d` | aluminio 6082-T651, `t_placa` = 6 mm, **láser** (§6.4) | chapa | corte + **6 cajeados** Ø8 × `prof_cajeado_riel` = 2.5 **por el lado del anillo** (bolsillos ciegos en UNA cara: dejan 3.5 mm bajo la cabeza del M4 del riel). Nota de mecanizado, no va en el DXF — ver abajo — **2 uds, PAR ESPEJADO**: mismo contorno, cajeado por caras opuestas. **Planitud ≤ 0.5 mm en 300** en el blank cortado: apoya en la cara mecanizada del anillo y doce M4 lo conforman contra ella (una pletina de 6 × 24 se aplana 0.5 con 200 N) |
 | `cupon_anillo_2d` | **aluminio, pletina de 14 mm** | **mecanizado** (§6.1) | **NO ES UNA PIEZA DEL CASE**: es la SECCIÓN del perfil del anillo, y de ella sale el **cupón de 100 mm** que hay que aprobar antes de cortar los dos anillos — ver el punto de parada en §6.1 |
 
 **Juntas de los dos labios:** suministrar y pegar **12 tacos de EPDM de
@@ -359,7 +362,8 @@ ventanas de pestaña del DXF. Los dos dobleces van hacia dentro. Sin bridas ni
 rosca en el anillo.
 
 **LA NARIZ (`nariz_2d`) LLEVA TRES DOBLECES, y ninguno es a 90°.** Blank
-**545.62 × 50.20**, con pie de **20.5**. El pie crece para que los dos pies no
+**545.62 × 53.10** (era 50.20 hasta la rev. 28: el frente baja hasta pisar la
+cara del riel, ficha 6), con pie de **20.5**. El pie crece para que los dos pies no
 difieran más de 2: se mantienen como una familia. En cada punta se corta una
 **muesca de 2.65** desde el canto libre hasta la primera línea de doblez, a
 **20.06** (`largo − BD45/2`). Lleva un **alivio de Ø2 a caballo de la esquina
@@ -373,8 +377,9 @@ margen. El pie en 22.5 recupera 2.77. La nariz lo sigue a 20.5 porque los dos
 pies no pueden diferir más de 2. Va bajo la tabla y no se ve.
 
 **`miembro_alto_2d` ES EL TECHO MACIZO.** Hay una sola geometría operativa en
-esta revisión: blank **593.02 × 73.85**, meseta de 50 **sin ranuras**, retorno
-de 4 a 45° en el pico, chaflán de 6 y labio de **20**. Las dos bridas de
+esta revisión: blank **593.02 × 78.85**, meseta de 50 **sin ranuras**, retorno
+de **9** a 45° en el pico (era 4 hasta la rev. 28: baja hasta pisar la cara
+del riel y cierra la rendija, ficha 6), chaflán de 6 y labio de **20**. Las dos bridas de
 27 × 14.5 se doblan de las puntas del labio y llevan las esquinas a **R2** para
 entrar enteras en los cajeados R1.5 del anillo. Sin fila de M3 y sin canal: la
 trasera no se atornilla al techo.
@@ -457,12 +462,20 @@ maciza, vaciada por el centro con fresadora CNC.
 - **Diez bolsillos por anillo en la cara de FUERA** (rev. 28), los de los
   tacos de la persiana, según `costilla_bolsillos_2d`: **3.8 mm de hondo**
   (0.3 de aire bajo el taco de 3.5) y, en el fondo, el **asiento del imán de
-  Ø6.1 × 3.1** — **Ø6.1 × 1.1** en los tres del tramo de atrás, que tienen
+  Ø6.1 × 3.1** — **Ø6.1 × 1.1** en los dos del tramo de atrás, que tienen
   detrás el bolsillo de la trasera. Ocho de **Ø9**, con holgura, retienen;
   dos localizan: el delantero del suelo a **Ø8 H7** y el trasero del suelo en
   **colisa de 8 H7 × 10** a lo largo de x. Quedan 3.0 de pared al rebaje
   (`guarda_tacos_persiana()`), y cada bolsillo libra las roscas M4 del dorso y
-  los M5 de la tabla (`anillo_tiene_bolsillos()`).
+  los M5 de la tabla (`anillo_tiene_bolsillos()`). El reparto deja el tramo
+  más largo sin taco en 112 mm, y el papel pide 100 o menos para que la banda
+  quede apretada: con diez tacos no se llega (HUECO en el budget; once lo bajan
+  a 92, y eso lo decide Samuel).
+- **Los dos localizadores ajustan DESPUÉS de anodizar.** El anodizado crece
+  hacia fuera en las dos piezas, el bolsillo y el taco (del orden de un tercio a
+  la mitad de su espesor, ESTIMADO), y con AA15–AA20 eso se come el juego de un
+  H7/g6 (5 a 29 µm). El taller mecaniza contando con esa crece, o enmascara los
+  dos localizadores y sus bolsillos; que lo diga en el presupuesto (RFQ §D).
 - **Rebaje de chapa**, en la cara interior y solo a lo largo del contorno que
   queda cubierto por techo, nariz o talón: **4.5 mm de ancho × 3 mm de
   profundidad**, desde z = 11 hasta z = 14 contando desde la cara vista. Deja
@@ -571,6 +584,11 @@ por costilla — el anillo es una pieza, no siete tramos cerrados a soldadura.
 
 ### 6.2 La tabla — al carpintero
 
+**Ojo (2026-10-11): la tabla se quita.** Samuel firmó «quitar» en la ficha D-S4
+del acta de la persiana. Va en un papel corto y su propia tanda, con un suelo
+nuevo que respire; hasta entonces este apartado es el de la tabla que hay en el
+modelo, y **no se encarga**.
+
 `bandeja_base_2d`, **madera maciza de 30 mm, 648.62 × 399.76**, con el
 **canto de arriba redondeado R8** (fresa de redondeo; el de abajo, vivo).
 Creció el 2026-10-10 por la ficha 12 del acta: la tabla vuela `vuelo_zocalo` =
@@ -615,7 +633,7 @@ Las dos cuentan.
 ### 6.3 Taller de mecanizado: la persiana
 
 **Pieza nueva desde la rev. 28.** Sustituye a las dos mejillas de acrílico:
-una placa por costado, por fuera del anillo y tapándolo entero, con 47 varillas
+una placa por costado, por fuera del anillo y tapándolo entero, con 44 varillas
 verticales de 2 mm. Es por donde respira el instrumento y lo que se ve de él de
 lado. Papel: `docs/superpowers/specs/2026-10-11-case-persiana-design.md`.
 
@@ -637,8 +655,9 @@ lado. Papel: `docs/superpowers/specs/2026-10-11-case-persiana-design.md`.
     de atrás, y los dos atados de 4), la ranura se queda a 4 y deja un alma de
     2 por detrás.
   - **`persiana_dorso_2d` — EL DORSO.** Los diez tacos de **Ø8 × 3.5**, cada uno
-    con el asiento del imán: **Ø6.1 × 2.1** en siete y **Ø6.1 × 1.1** en los
-    tres del tramo de atrás.
+    con el asiento del imán: **Ø6.1 × 2.1** en ocho y **Ø6.1 × 1.1** en los
+    dos del tramo de atrás. Los dos localizadores ajustan después de anodizar
+    (§6.1).
 - **Orden de operaciones.** Es lo que hace la pieza posible: sin los atados y
   sin el alma, la varilla de 248 cede más de 1 mm mientras se corta (papel,
   §3.3).
@@ -694,15 +713,21 @@ Los Z-Rails no: son comprados y van en plata.
   limpiar, y en la persiana serían 94 rayas grises a lo largo de las varillas.
 - **Los contactos del bastidor, en caras tapadas**: en la persiana, el dorso de
   la banda, que tapa el anillo; en el anillo, la cara interior.
-- **Enmascarado**: el punto de bonding de PE de cada anillo (§6.1).
+- **Enmascarado**: el punto de bonding de PE de cada anillo (§6.1), y los
+  dos localizadores de cada persiana con sus bolsillos si el taller prefiere
+  eso a compensar la crece (§6.1).
+- **La tapa del valle se dobla a R3 en 3 mm (1 t)**, `radio_doblez_valle`. En
+  6082-T6 ese radio puede fisurar (ESTIMADO: la tabla de radios mínimos no está
+  en el repo). Se pregunta al taller (RFQ §B) y queda como HUECO: el radio no lo
+  cambia el taller por su cuenta, porque de él cuelga el desarrollo.
 
 ### 6.5 Los imanes — se compran
 
 **20 pares de neodimio N42 de Ø6** entre los dos costados (BOM de
 `sam17_case.scad`, contados contra `tacos_persiana`):
 
-- **14 pares** de un **Ø6 × 3** en el anillo con un **Ø6 × 2** en el taco;
-- **6 pares de finos, Ø6 × 1 + Ø6 × 1**, en los tres tacos del tramo de atrás
+- **16 pares** de un **Ø6 × 3** en el anillo con un **Ø6 × 2** en el taco;
+- **4 pares de finos, Ø6 × 1 + Ø6 × 1**, en los dos tacos del tramo de atrás
   de cada costado, que tienen detrás el bolsillo de la trasera.
 
 Cuarenta piezas, **con la polaridad fija y marcada**.
@@ -755,8 +780,8 @@ contradicen, el equivocado es este documento.**
 | cajeado de brida 28 × 15.5 × 3, R1.5; brida R2; pletina restante 11 | `rebaje_chapa`, `brida_*` | `guarda_miembro_alto()`, `bridas_techo()` |
 | marco retirado 2.65 bajo chapa, 1.65 en el suelo y 17.00 atrás; fondo trasero 30 | `rehundido_chapa`, `marco_fondo_trasera` | `guarda_marco_ventana()`, `taladros_marco_ventana()` |
 | talón: pie 22.5, blank 545.62 × 42.23, muesca 2.65 hasta 22.06, alivio Ø2 | `talon_pie`, `muesca_pie` | `guarda_talon()`, `pestanas_talon()` |
-| nariz: pie 20.5, blank 545.62 × 50.20, muesca 2.65 hasta 20.06, alivio Ø2 | `nariz_pie`, `muesca_pie` | `guarda_talon()`, `check_dxf` |
-| techo macizo: labio 20, blank 593.02 × 73.85 | `techo_labio` | `guarda_miembro_alto()`, `techo_macizo()` |
+| nariz: pie 20.5, blank 545.62 × 53.10, muesca 2.65 hasta 20.06, alivio Ø2 | `nariz_pie`, `muesca_pie` | `guarda_talon()`, `check_dxf` |
+| techo macizo: labio 20, retorno 9, blank 593.02 × 78.85 | `techo_labio` | `guarda_miembro_alto()`, `techo_macizo()` |
 | doce tacos EPDM 4.0 × 15; rendija nominal 4.0, comprimida 3.20 | `aire_labios`, `taco_largo` | `guarda_rendija()`, `guarda_aire()` |
 | persiana: placa 6, borde 4, varilla 2.0, paso medio 7.0, ciego 4, atados de 4, 0.3 sobre la tabla | `t_persiana`, `borde_persiana`, `varilla_persiana`, `paso_persiana`, `hondo_ciego_persiana`, `alto_atado`, `suelo_persiana` | `guarda_persiana()`, `cad/persiana.py` |
 | tacos Ø8 × 3.5 a 6.5 de la silueta; bolsillos Ø9 × 3.8, localizador 8 H7, colisa 8 × 10; imanes Ø6 × 3, × 2 y × 1 | `u_taco`, `d_taco`, `alto_taco`, `d_bolsillo_taco`, `hondo_bolsillo_taco`, `colisa_taco`, `d_iman`, `alto_iman_*` | `guarda_tacos_persiana()`, `anillo_tiene_bolsillos()` |

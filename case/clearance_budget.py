@@ -629,10 +629,23 @@ def _guarda_labio(labios: dict[str, tuple[float, float, float]]) -> None:
             f"el interior (la rendija de la ficha 6)")
 
 
-def _fondo_labio(p: dict[str, float]) -> float:
+def _fondo_labio(p: dict[str, float]) -> dict[str, float]:
     """Aire, en la normal de la cara, entre la cara de dentro de la chapa y la
-    cara del riel que el labio tapa por delante."""
-    return p["rehundido_panel"] + p["t_panel"] - p["t_costilla"]
+    cara del riel que el labio tapa por delante. NO ES EL MISMO EN LOS DOS: la
+    nariz tapa el riel con su tramo [C3, C4], que va a ras de la silueta; el
+    techo va entero rehundido rehundido_chapa, retorno incluido (techo() en
+    sam17_case.scad). Hasta el 2026-10-12 los dos salian con la cuenta de la
+    nariz, y el de arriba daba 1.60 donde hay 0.60."""
+    riel = p["rehundido_panel"] + p["t_panel"]
+    return {"abajo": riel - p["t_costilla"],
+            "arriba": riel - p["rehundido_chapa"] - p["t_costilla"]}
+
+
+def _guarda_fondo(fondos: dict[str, float]) -> None:
+    for donde, fondo in fondos.items():
+        assert fondo >= LABIO_FONDO_MIN - 1e-9, (
+            f"el labio de la chapa pasa {donde} a {fondo:.2f} mm de la cara del "
+            f"riel, por delante, y se piden {LABIO_FONDO_MIN:g}: la chapa toca el riel")
 
 
 def guarda_labio_chapas(p: dict[str, float]) -> None:
@@ -641,19 +654,18 @@ def guarda_labio_chapas(p: dict[str, float]) -> None:
     detras (ficha 6; persiana §7.3)."""
     labios = _labio_chapas(p)
     _guarda_labio(labios)
-    fondo = _fondo_labio(p)
-    assert fondo >= LABIO_FONDO_MIN - 1e-9, (
-        f"el labio de la chapa pasa a {fondo:.2f} mm de la cara del riel, por "
-        f"delante, y se piden {LABIO_FONDO_MIN:g}: la chapa toca el riel")
+    fondos = _fondo_labio(p)
+    _guarda_fondo(fondos)
     print("labio de las chapas (ficha 6): " + ", ".join(
-        f"{d} a {panel - labio:.2f} del panel y {labio - riel:.2f} sobre el riel"
-        for d, (labio, riel, panel) in labios.items())
-        + f"; {fondo:.2f} de fondo contra la cara del riel")
+        f"{d} a {panel - labio:.2f} del panel, {labio - riel:.2f} sobre el riel y "
+        f"{fondos[d]:.2f} de fondo contra su cara"
+        for d, (labio, riel, panel) in labios.items()))
 
 
 def canario_labio_chapas(p: dict[str, float]) -> None:
     """Los dos lados tienen que saltar: un labio que pisa la huella del panel y
-    uno que se queda antes del canto del riel."""
+    uno que se queda antes del canto del riel. Y el fondo de arriba, que es el
+    justo."""
     for cambio, aviso in (({"retorno_meseta": p["retorno_meseta"] + 0.5}, "no sale de frente"),
                           ({"retiro_placa_inf": p["retiro_placa_inf"] - 2.0}, "vuelve a verse")):
         try:
@@ -662,6 +674,15 @@ def canario_labio_chapas(p: dict[str, float]) -> None:
             assert aviso in str(e), f"canario del labio salto por '{e}'"
             continue
         raise AssertionError(f"canario del labio NO salto ({aviso})")
+    # EL FONDO DE ARRIBA va a 0.6 contra 0.5: dos decimas mas de rehundido del
+    # techo y la chapa toca el riel. El canario lo mide solo, porque esa misma
+    # mutacion mueve antes el labio de la nariz.
+    try:
+        _guarda_fondo(_fondo_labio({**p, "rehundido_chapa": p["rehundido_chapa"] + 0.2}))
+    except AssertionError as e:
+        assert "arriba" in str(e) and "toca el riel" in str(e), f"canario del fondo salto por '{e}'"
+    else:
+        raise AssertionError("canario del fondo del labio NO salto (toca el riel)")
 
 
 # Aire minimo entre la cara de fuera de la tira del valle y el camino del
@@ -5444,6 +5465,17 @@ def guarda_tacos_persiana(p: dict[str, float]) -> None:
         assert tiene >= pide - 1e-9, f"{que}: {tiene:.2f} mm y se piden {pide:.2f}"
     print("tacos de la persiana: " + ", ".join(
         f"{que} {tiene:.2f}" for que, tiene, _ in _tacos_persiana_cotas(p)))
+    # LO QUE ESTE FICHERO NO PUEDE COMPROBAR de la sujecion, y el papel pide
+    # (persiana §3.3, §4 y §7.2). Sale como HUECO hasta que se mida o se decida.
+    _HUECOS.append(
+        "el tiron de los imanes de la persiana sin medir: el papel lo estima en "
+        "50-70 N por persiana entera (ESTIMADO) contra los 3.6 N de su peso; se "
+        "mide con dinamometro en la tira de muestra (#393, #398)")
+    _HUECOS.append(
+        "el reparto de los tacos de la persiana deja tramos de mas de 100 mm sin "
+        "taco, y el papel pide 100 o menos para apretar la banda (3.3 y 4): con "
+        "diez tacos y 10 mm a las roscas no se llega, y el tramo mas largo lo "
+        "imprime check_dxf.py en cada corrida. Pasar a once tacos lo decide Samuel")
 
 
 def canario_tacos_persiana(p: dict[str, float]) -> None:

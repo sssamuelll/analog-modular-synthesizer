@@ -2111,7 +2111,74 @@ def anillo_tiene_bolsillos() -> list[str]:
                 if abs(bx - x) < 10.0 - 0.02:
                     f.append(f"el bolsillo en x={bx:.2f} cae a {abs(bx - x):.2f} del M5 de la tabla en x={x:.2f}")
     if not f:
-        print("  costilla_bolsillos_2d: 10 bolsillos que casan con los tacos de la persiana")
+        sys.path.insert(0, str(Path(__file__).parent / "cad"))
+        import persiana
+        print(f"  costilla_bolsillos_2d: 10 bolsillos que casan con los tacos de la persiana; "
+              f"el tramo mas largo sin taco mide {persiana.hueco_mayor(p):.1f} (el papel pide 100)")
+    return f
+
+
+def persiana_pasante_cuadra(ruta: Path = PLANS / "persiana_pasante_2d.dxf") -> list[str]:
+    """Lo que atraviesa la persiana, releido del DXF: no entra en las dos franjas
+    de los atados -- sin atados la varilla no se fresa (papel de la persiana,
+    §3.3) -- y es lo que calcula persiana.py, pieza por pieza y en area. El
+    sobre de _sobres() solo mira la caja, y sin atados la caja es la misma."""
+    import clearance_budget as cb
+    from shapely.geometry import LineString, box
+    from shapely.ops import polygonize, unary_union
+    sys.path.insert(0, str(Path(__file__).parent / "cad"))
+    import persiana
+    p = cb.leer_params()
+    doc = ezdxf.readfile(ruta)
+    lineas = [LineString([(e.dxf.start.x, e.dxf.start.y), (e.dxf.end.x, e.dxf.end.y)])
+              for e in doc.modelspace() if e.dxftype() == "LINE"]
+    piezas = [q for q in polygonize(lineas) if q.area > 1.0]
+    area = sum(q.area for q in piezas)
+    # la gemela deja dos astillas de menos de 1 mm2 que el DXF no trae
+    gemela = [q for q in getattr(persiana.geometria(p)["pasante"], "geoms", []) if q.area > 1.0]
+    n_gemela, area_gemela = len(gemela), sum(q.area for q in gemela)
+    alto, h = cb._vertices(p)[5][1], p["alto_atado"] / 2
+    atados = unary_union([box(-50, y - h, 400, y + h) for y in (alto / 3, 2 * alto / 3)])
+    en_atados = sum(q.intersection(atados).area for q in piezas)
+    f: list[str] = []
+    if en_atados > 0.5:
+        f.append(f"persiana_pasante_2d: {en_atados:.1f} mm2 del pasante caen en los dos "
+                 f"atados; sin atados la varilla no se fresa")
+    if len(piezas) != n_gemela or abs(area - area_gemela) > 0.005 * area_gemela:
+        f.append(f"persiana_pasante_2d: {len(piezas)} tramos y {area:.0f} mm2, y "
+                 f"persiana.py da {n_gemela} y {area_gemela:.0f}")
+    if not f:
+        print(f"  persiana_pasante_2d: {len(piezas)} tramos pasantes y {area:.0f} mm2, como "
+              f"persiana.py, ninguno en los dos atados")
+    return f
+
+
+# Las chapas que se pliegan. Sus DXF no traen lineas de plegado: el taller
+# dobla con las cotas del papel.
+DESARROLLOS = ("miembro_alto_2d", "nariz_2d", "talon_2d", "tapa_valle_2d")
+
+
+def papel_trae_los_desarrollos() -> list[str]:
+    """El PLIEGO, el RFQ y el README dan el blank de cada chapa plegada con las
+    cifras del DXF que se corta. NACE DE LA REVISION FINAL DE LA PERSIANA
+    (2026-10-12): la ficha 6 hizo crecer el techo y la nariz el 2026-10-11, y
+    los tres papeles siguieron dando los blanks de antes."""
+    f: list[str] = []
+    for nombre in DESARROLLOS:
+        xs: list[float] = []
+        ys: list[float] = []
+        for e in ezdxf.readfile(PLANS / f"{nombre}.dxf").modelspace():
+            if e.dxftype() == "LINE":
+                xs += [e.dxf.start.x, e.dxf.end.x]
+                ys += [e.dxf.start.y, e.dxf.end.y]
+        cota = f"{max(xs) - min(xs):.2f} × {max(ys) - min(ys):.2f}"
+        for papel in ("PLIEGO.md", "RFQ.md", "README.md"):
+            if cota not in (Path(__file__).parent / papel).read_text(encoding="utf-8"):
+                f.append(f"{papel} no da el blank de {nombre} que se corta: "
+                         f"{cota.replace('×', 'x')}")
+    if not f:
+        print(f"  PLIEGO, RFQ y README: el blank de las {len(DESARROLLOS)} chapas plegadas, "
+              f"el del DXF")
     return f
 
 
@@ -2445,6 +2512,8 @@ def main() -> int:
     fallos += guarda_persiana_generada()
     fallos += guarda_persiana()
     fallos += anillo_tiene_bolsillos()
+    fallos += persiana_pasante_cuadra()
+    fallos += papel_trae_los_desarrollos()
     fallos += todo_dxf_tiene_quien_lo_mire()
     for nombre, motivo in SIN_DXF.items():
         print(f"  PENDIENTE (sin DXF, no bloquea): {nombre} -- {motivo}")

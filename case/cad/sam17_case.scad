@@ -935,8 +935,9 @@ module marco_ventana_2d() {
 // El marco en 3D, sobre la cara interior del anillo, con el cajeado de cada
 // riel por el lado del anillo. ORDEN DE MONTAJE OBLIGADO: primero los seis
 // rieles al marco (la cabeza queda en el cajeado, del lado que despues mira
-// al anillo), despues el marco al anillo desde dentro -- con el costado YA
-// asentado en el rebaje, porque el marco lo pisa. Al reves no se puede.
+// al anillo), despues el marco al anillo desde dentro. Al reves no se puede.
+// (Hasta el 2026-10-11 el costado iba antes, asentado en el rebaje: el marco
+// lo pisaba.)
 module marco_ventana() {
     translate([0, 0, t_anillo]) difference() {
         linear_extrude(t_placa) marco_ventana_2d();
@@ -2795,7 +2796,8 @@ module assembly_aluminio() {           // idem, Z-Rails + miembros + paneles sol
     tira_valle();
 }
 
-// --- lienzo de corte: 5 piezas (2 costados + 3 planchas) en rejilla -----
+// --- lienzo de corte: las planchas, en una fila (las mejillas se fueron
+// con la persiana el 2026-10-11) ---------------------------------------------
 // Separacion 8 mm; marco de 1000x600 es solo referencia visual de plancha,
 // las piezas pueden desbordarlo (nesting real lo hace el servicio de corte).
 module lienzo_2d() {
@@ -2853,20 +2855,21 @@ module bom() {
              " alto; eran 16 con clips y miembro bajo -- + 3 M5 por anillo",
              " en el CANTO inferior para la tabla (ver esa linea, no salen",
              " en el mismo DXF). CERO casquillos, CERO junta de 4 mm."));
-    echo(str("     El costado asienta en el rebaje sobre una junta de EPDM",
-             " de ", t_junta_asiento,
-             " mm (ver linea propia), nunca aluminio contra acrilico.",
-             " Hasta el 2026-08-28 era chapa plegada con casquillo de",
+    echo(str("     El rebaje queda VACIO desde el 2026-10-11: ahi asentaba la",
+             " mejilla de acrilico, sobre una junta de EPDM de ", t_junta_asiento,
+             ", y la persiana lo tapa. Hasta el 2026-08-28 era chapa plegada con casquillo de",
              " aluminio y junta de EPDM de 4 mm entre costilla y acrilico;",
              " ese dia Samuel vio el render y lo rechazo: 'parece que el",
              " acrilico estuviera envuelto en un sandwich de aluminio'."));
-    echo("     Anodizado satinado tras mecanizar, con el punto de bonding");
+    echo("     Anodizado NEGRO tras mecanizar (era satinado hasta el 2026-10-11),");
+    echo("     con el punto de bonding");
     echo("     de PE ENMASCARADO antes de anodizar -- uno por anillo, en la");
     echo("     cara interior.");
-    echo(str("     Aleacion recomendada, no obligatoria: 5754 H22 pasa a 130",
-             " MPa (guarda_anillo, I=3714 mm4, 214 mm2); 6082-T6 o 5083 se",
-             " piden por planitud tras el vaciado, no por calculo. ~0.58 kg",
-             " por costilla."));
+    echo(str("     Aleacion 6082-T6/T651, OBLIGATORIA desde el 2026-10-11. No por",
+             " calculo -- 5754 H22 pasa a 130 MPa (guarda_anillo, I=3714 mm4,",
+             " 214 mm2) --, sino por color: el anillo va canto con canto con la",
+             " persiana, y dos aleaciones anodizan distinto. ~0.58 kg por",
+             " costilla."));
     echo(str("BOM: MARCO DE LA VENTANA x2 -- pletina de aluminio de ", t_placa,
              " cortada a laser con el contorno de la ventana del anillo,",
              " corrida por los siete tramos, ", marco_fondo, " hacia dentro",
@@ -2898,9 +2901,9 @@ module bom() {
     echo("     se dibuja: un DXF 2D no sabe decir 'a 2.5 de profundidad' y va");
     echo("     como NOTA DE MECANIZADO en el pliego, tres por una cara y tres");
     echo("     por la otra (PLIEGO 6).");
-    echo("     ORDEN DE MONTAJE OBLIGADO: el costado asentado en el rebaje,");
-    echo("     DESPUES los seis rieles al marco (la cabeza queda en el cajeado,");
-    echo("     del lado que despues mira al anillo) y DESPUES el marco al");
+    echo("     ORDEN DE MONTAJE OBLIGADO: los seis rieles al marco (la cabeza");
+    echo("     queda en el cajeado, del lado que despues mira al anillo) y");
+    echo("     DESPUES el marco al");
     echo(str("     anillo, desde dentro, con sus ", len(roscas_marco()),
              " M4. Las cabezas de los diez que viven en las filas quedan"));
     echo("     fuera de la huella de los rieles (#242). Al reves no se puede");
@@ -3028,7 +3031,7 @@ module bom() {
     echo("     tornillo. Separadores, junta de sombra, una plancha entera y");
     echo("     tres largueros murieron por el camino, todos el 2026-08-21; los");
     echo("     diez M3 y las dos muescas de #241, la misma noche.");
-    echo("     ENTRA AL MONTAR EL SEGUNDO ANILLO, como los costados: los bolsillos");
+    echo("     ENTRA AL MONTAR EL SEGUNDO ANILLO, como entraban los costados: los bolsillos");
     echo("     estan cerrados por los dos extremos (nada a la vista en ningun canto)");
     echo("     y la plancha se mete de lado en el anillo A antes de que el B entre");
     echo("     sobre los rieles y sobre su otra punta. Las tres planchas del case se");
@@ -3083,12 +3086,14 @@ module bom() {
     echo("     Va al taller de CHAPA con las tres piezas del chasis, no al de");
     echo("     acrilico. Sin recocido, sin diamantado, sin chaflan de pliego:");
     echo("     esas tres cosas son del PMMA. Canto desbarbado y basta.");
-    echo("     Aleacion recomendada, no obligatoria: 6082-T6. guarda_valle()");
-    echo(str("     calcula con Rp0.2 = 130 MPa (RP02_ALUMINIO) y a ",
+    echo("     Aleacion 6082-T6/T651, OBLIGATORIA desde el 2026-10-11 por color:");
+    echo("     todo el aluminio negro que se ve, una aleacion y un lote. No por");
+    echo(str("     calculo: guarda_valle() calcula con Rp0.2 = 130 MPa y a ",
              tension_valle(), " MPa el"));
-    echo("     5754 H22 pasa con margen -- fluye a 533 N. El eco decia");
-    echo("     'obligatoria' y Rp0.2 = 250: no es lo que la puerta exige");
-    echo("     hoy, corregido aqui.");
+    echo("     5754 H22 tambien pasaria -- fluye a 533 N.");
+    echo(str("     OJO, HUECO: se dobla a radio_doblez_valle = ", radio_doblez_valle,
+             " en 3 mm, 1 t, y el 6082-T6 a ese radio puede fisurar (ESTIMADO, sin",
+             " tabla en el repo). Se pregunta al taller (RFQ, B)."));
     echo(str("BOM: TABLA de madera MACIZA t=", t_base, " x1, ",
              ancho_total + 2*vuelo_zocalo, " x ", fondo() + 2*vuelo_zocalo,
              " mm -- el suelo interior Y el zocalo, una sola pieza."));
@@ -3116,7 +3121,7 @@ module bom() {
     n_fino = len([for (t = tacos_persiana) if (t[2] == "fino") 1]);
     echo(str("BOM: PERSIANA x2 (2026-10-11) -- aluminio anodizado en negro, por",
              " fuera de cada anillo: placa de ", t_persiana, " con ",
-             len(varillas_persiana), " varillas de ", varilla_persiana,
+             n_varillas_persiana, " varillas de ", varilla_persiana,
              ", borde de ", borde_persiana, ", dos atados por dentro y ", n_taco,
              " tacos de ", d_taco, " x ", alto_taco, " en el dorso, del mismo",
              " bloque (pletina de 12 frenteada: ninguna pieza suelta). ESPEJADAS:",
