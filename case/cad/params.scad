@@ -1773,6 +1773,8 @@ valle_margen    = 6;   // historico; la banda del valle ya no se perfora
 // calor_del_cajon_w(): 56.23 W entregados a las cargas + 7.99 perdidos
 // convirtiendo dentro). La v5 lo mando el 05-09 en su sec.7 y quedo sin
 // aplicar hasta aqui. El desglose de arriba es el de la v4, que no se monta.
+// ES COTA DE ABAJO: la enmienda M1 de la v5 aisla el +5 V digital y deja su
+// perdida sin valor hasta que haya pieza (H-CENSO-ETA-DIGITAL).
 potencia_disipada = 64.22; // W, TODO el cajon: lo que baja por el cordon (fuente v5)
 // Techo de salto sobre ambiente. 15 K era el criterio de siempre para caja de
 // electronica lineal con electroliticos dentro: a partir de ahi la vida del

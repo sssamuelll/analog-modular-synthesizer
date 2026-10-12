@@ -172,7 +172,10 @@ Lo que eso dice:
 > las dos persianas, y `guarda_aire()` vuelve a juzgar con `C_D` = 0,65: 16,9 K,
 > 18,9 con el pesimista. La fila de la v4 de la tabla es la de antes. Con la sala
 > de 45 °C de la spec del chasis serían 18,3 y 20,5 K: la puerta lo publica como
-> HUECO hasta que se decida la sala del case.
+> HUECO hasta que se decida la sala del case. Los 64,22 W son cota de abajo: la
+> enmienda M1 de la v5 aísla el +5 V digital y deja su pérdida sin valor. La
+> chimenea aguanta 82,9 W con el `C_D` de la puerta y 70,1 con el pesimista, y
+> `guarda_aire()` lo imprime en cada corrida.
 
 ---
 

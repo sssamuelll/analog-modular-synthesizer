@@ -2576,6 +2576,13 @@ def _potencia_del_cajon() -> float:
     ese dia era la suma de la v4, p_cajon_w + p_recinto_w a placa: 147.31 W,
     con el recinto de la fuente dentro del cajon.
 
+    ES UNA COTA DE ABAJO, y lo dice la propia v5: su enmienda M1 (08-09) aisla
+    el +5 V digital, y ladrillo_budget.py lo sigue contando con el rendimiento
+    de un buck sin barrera (ETA_BUCK). La perdida interior esta subestimada y
+    no tiene valor nuevo hasta que haya pieza (H-CENSO-ETA-DIGITAL). El dia
+    que la v5 la cuente, esta copia se pone roja sola; mientras, guarda_aire()
+    imprime cuanto aguanta la chimenea con los dos C_D.
+
     EL 2026-09-04 ESA COPIA LLEVO UN DIA MINTIENDO. Decia 147.83 cuando la
     franja de red (2.75 W de la NTC de arranque y 0.95 del choke) ya la habia
     subido a 151.55, y con ella se le publico al #289 un encargo de 25113 mm2
@@ -2724,7 +2731,8 @@ def guarda_potencia_vigente(p: dict[str, float]) -> None:
         f"salto y el veredicto del aire se recalculan solos. Si el que esta mal "
         f"es el de la fuente, arreglalo alli y no aqui")
     print(f"potencia del cajon: {pot:.2f} W, y params.scad dice lo mismo "
-          f"(la copia se cruza contra ladrillo_budget.py de la fuente v5)")
+          f"(la copia se cruza contra ladrillo_budget.py de la fuente v5; es "
+          f"cota de abajo por su enmienda M1)")
 
 
 def guarda_aire(p: dict[str, float]) -> None:
@@ -2806,7 +2814,8 @@ def guarda_aire(p: dict[str, float]) -> None:
         f"altura")
     t_p = _tiro(p, CD_TIRO_PESIMISTA)
     print(f"  aviso: con C_D={CD_TIRO_PESIMISTA} (rendija bajo alero, no chapa "
-          f"ranurada) serian {t_p['dt']:.1f} K. Sin medir hasta el ensayo")
+          f"ranurada) serian {t_p['dt']:.1f} K, y evacua {t_p['p_evacuada']:.1f} W "
+          f"a ese techo. Sin medir hasta el ensayo")
     f_sala = T_SALA_DISENO_K / T_AMB
     print(f"  aviso: con la sala a {T_SALA_DISENO_K - 273.15:.0f} C de la spec "
           f"del chasis serian {t['dt'] * f_sala:.1f} K, y "
@@ -3490,13 +3499,27 @@ def canario_techo(p: dict[str, float]) -> None:
             f"canario del aire NO disparo: con {roja} W dentro y "
             f"{t['p_evacuada']:.1f} evacuables al techo, guarda_aire() lo deja "
             f"pasar -- no confiar en su VERDE")
-    # LOS HUECOS DEL AIRE MIRAN LA CARGA, por los dos lados: con la de hoy, un
-    # costado tapado no pasa y se publica; con 1 W todo cabe y nada se publica.
-    # Un hueco que se publica siempre no avisa de nada y no se apagaria nunca.
-    assert any("holgura de los costados" in h for h in _HUECOS[n_huecos:]), (
-        f"canario del aire: con {p['potencia_disipada']:.2f} W y un costado "
-        f"tapado el case sube {_tiro(p, costados=1)['dt']:.1f} K, y guarda_aire() "
-        f"NO publico el hueco de los costados -- su silencio no vale")
+    # LOS HUECOS DEL AIRE MIRAN LA CARGA, por los dos lados. Con una carga que
+    # la puerta deja pasar pero que ya no cabe con un costado tapado, ni en la
+    # sala de 45 C con el pesimista, se publican los dos; con 1 W, ninguno. Un
+    # hueco que se publica siempre no avisa de nada, y uno que no se publica
+    # nunca se lleva la decision que nombra. La carga sale de la chimenea, a
+    # medio camino entre el umbral mas alto de los dos y lo que la puerta
+    # aguanta: con la de hoy el de la sala se publica con 2 W de holgura, y la
+    # de hoy es cota de abajo (enmienda M1 de la v5).
+    techo = p["salto_termico_max"]
+    w_sala = _tiro(p, CD_TIRO_PESIMISTA)["k"] * (techo * T_AMB / T_SALA_DISENO_K) ** 1.5
+    w_costado = _tiro(p, costados=1)["k"] * techo ** 1.5
+    w_media = round((max(w_sala, w_costado) + t["p_evacuada"]) / 2, 2)
+    n_media = len(_HUECOS)
+    with contextlib.redirect_stdout(sordo):
+        guarda_aire({**p, "potencia_disipada": w_media})
+    for texto in ("holgura de los costados", "sala de diseno"):
+        assert any(texto in h for h in _HUECOS[n_media:]), (
+            f"canario del aire: con {w_media} W el case pasa la puerta pero no "
+            f"cabe con un costado tapado ({w_costado:.1f} W) ni en la sala de "
+            f"45 C con el pesimista ({w_sala:.1f} W), y guarda_aire() NO publico "
+            f"el hueco de '{texto}' -- su silencio no vale")
     n_verde = len(_HUECOS)
     with contextlib.redirect_stdout(sordo):
         guarda_aire({**p, "potencia_disipada": 1.0})
