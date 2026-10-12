@@ -142,19 +142,13 @@ jun = importar("assembly_juntas")
 jun.data.materials.append(mat(
     "anti_ruido", **{"Base Color": (0.025, 0.025, 0.03, 1.0),
                      "Roughness": 0.8, "Metallic": 0.0}))
-# LA TABLA, en su propio STL desde el 2026-08-27. Estuvo dentro del ensamblado
-# de acrilico mientras el suelo era PMMA, y meterla ahi ahora la pintaria de
-# naranja translucido: un render que miente sobre una decision de material.
-#
-# EL COLOR ES DE MIRAR, NO UNA COTA -- igual que el naranja del acrilico (ver
-# README). La especie no esta elegida: las cuentas del modelo van contra
-# E = 11000 MPa, que es nogal o arce, y esto es un nogal de catalogo. Cuando
-# el pliego cierre la especie, este numero se cambia aqui y en ningun otro
-# sitio. Sin Metallic y con roughness alto: la madera no brilla.
-mad = importar("assembly_madera")
-mad.data.materials.append(mat(
-    "nogal", **{"Base Color": (0.28, 0.16, 0.09, 1.0),
-                "Roughness": 0.55, "Specular IOR Level": 0.35}))
+# LAS PATAS, de goma, en su propio STL desde el papel del suelo (2026-10-12):
+# hasta entonces iban con la tabla de nogal en assembly_madera. La base de chapa
+# no se importa aqui: es aluminio negro y la pinta quien la necesita
+# (render_persiana.py con render_negro, render_bahia.py con assembly_base).
+pat = importar("assembly_patas")
+pat.data.materials.append(mat(
+    "goma", **{"Base Color": (0.02, 0.02, 0.022, 1.0), "Roughness": 0.85}))
 
 esc = bpy.context.scene
 esc.render.engine = "CYCLES"
@@ -243,11 +237,10 @@ esc.world = mundo
 # linear_extrude sobre Z): X = profundidad, Y = altura (arriba),
 # Z = ancho. Confirmado con el bbox real: X en [-10, 360], Y en [-5, 396],
 # Z en [0, 500] -- coincide con el board.
-# LAS TRES MALLAS, no dos. La tabla sobresale 10 mm del cuerpo por los cuatro
-# lados y es lo mas bajo del case: dejarla fuera del bbox encuadra un aparato
-# que no es el que se ve, y el zocalo saldria cortado por abajo.
+# LAS TRES MALLAS, no dos. Las patas son lo mas bajo del case: dejarlas fuera
+# del bbox encuadra un aparato que no es el que se ve.
 esquinas = [obj.matrix_world @ Vector(c)
-            for obj in (acr, alu, mad) for c in obj.bound_box]
+            for obj in (acr, alu, pat) for c in obj.bound_box]
 xs, ys, zs = ([p[i] for p in esquinas] for i in range(3))
 minv = Vector((min(xs), min(ys), min(zs)))
 maxv = Vector((max(xs), max(ys), max(zs)))

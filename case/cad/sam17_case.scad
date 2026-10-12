@@ -2294,7 +2294,8 @@ else if (PART == "nariz_2d")             nariz_2d();
 else if (PART == "assembly")           assembly();
 else if (PART == "assembly_acrilico")  assembly_acrilico();
 else if (PART == "assembly_aluminio")  assembly_aluminio();
-else if (PART == "assembly_madera")    assembly_madera();
+else if (PART == "assembly_patas")     assembly_patas();
+else if (PART == "assembly_base")      assembly_base();
 else if (PART == "assembly_juntas")    assembly_juntas();
 else if (PART == "assembly_esqueleto") assembly_esqueleto();
 else if (PART == "assembly_acero")     assembly_acero();
@@ -2666,22 +2667,15 @@ module assembly_juntas() {
     tira_anti_ruido_valle();
 }
 
-// LA TABLA, en su propio STL. Sale de assembly_acrilico() el 2026-08-27 porque
-// dejo de ser acrilico: es madera, y en el render tiene que verse como madera.
-// Meterla en el ensamblado naranja la pintaba de naranja translucido, que es
-// justo el tipo de render que miente sobre una decision de material.
-module assembly_madera() {
-    bandeja_base();
-    // LAS CUATRO PATICAS (Tarea 6). Van aqui, con la tabla, y no en
-    // assembly_aluminio(): se atornillan A ELLA (BOM: "se atornilla A LA
-    // TABLA, no al acrilico"), asi que este STL es el que las tiene que
-    // ensenar para que se vean en su sitio. SON DE GOMA y Blender pinta este
-    // STL entero de nogal -- una patica de goma con nogal encima es un
-    // desvio de color, no de geometria, y se acepta: separar un cuarto STL
-    // solo para cuatro cilindros de 20x10 no paga su peso. paticas() TAMBIEN
-    // sigue en assembly() (la vista de conjunto sin separar materiales) --
-    // esto la ANADE aqui, no la muda.
+// LAS PATAS, en su propio STL: son de goma. Hasta el papel del suelo
+// (2026-10-12) iban en assembly_madera() con la tabla, pintadas de nogal; la
+// base de chapa sale en render_negro y en assembly_base(), con el aluminio negro.
+module assembly_patas() {
     paticas();
+}
+
+module assembly_base() {               // la base sola, para la vista de la bahia
+    bandeja_base();
 }
 
 // LA BAHIA DE ABAJO, para mirarla por dentro. Es el unico sitio del case cuyo

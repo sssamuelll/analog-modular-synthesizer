@@ -39,7 +39,7 @@ else if (PIEZA == "tapa_valle")        tapa_valle();
 else if (PIEZA == "tira_anti_ruido_valle") tira_anti_ruido_valle();
 else if (PIEZA == "persianas")         persianas();
 else if (PIEZA == "piel_trasera")      piel_trasera();
-else if (PIEZA == "tabla")             bandeja_base();
+else if (PIEZA == "base")              bandeja_base();
 else if (PIEZA == "paticas")           paticas();
 else if (PIEZA == "chasis")            chasis();
 else assert(false, str("PIEZA desconocida: ", PIEZA));

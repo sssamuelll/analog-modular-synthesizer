@@ -29,7 +29,7 @@ ruta = os.path.join(AQUI, "render.py")
 src = open(ruta, encoding="utf-8").read()
 ns = {"__file__": ruta, "__name__": "render_persiana"}
 exec(compile(src, ruta, "exec"), ns)
-for o in (ns["acr"], ns["alu"], ns["jun"], ns["mad"]):
+for o in (ns["acr"], ns["alu"], ns["jun"], ns["pat"]):
     bpy.data.objects.remove(o, do_unlink=True)
 esc = bpy.context.scene
 mat = ns["mat"]
@@ -42,7 +42,7 @@ ZD = cp.cb.leer_params()["ancho_total"]   # la cara de fuera del anillo derecho
 # --- 2. materiales (color de mirar, no cota) -----------------------------------
 mat("anodizado_negro", **{"Base Color": (0.014, 0.014, 0.016, 1.0), "Metallic": 0.0, "Roughness": 0.45})
 mat("panel_oscuro", **{"Base Color": (0.10, 0.105, 0.115, 1.0), "Metallic": 0.9, "Roughness": 0.38})
-mat("nogal_oscuro", **{"Base Color": (0.13, 0.075, 0.045, 1.0), "Roughness": 0.5, "Specular IOR Level": 0.35})
+mat("goma", **{"Base Color": (0.02, 0.02, 0.022, 1.0), "Roughness": 0.85})
 mat("luz_dentro", **{"Base Color": (0, 0, 0, 1), "Emission Color": (1.0, 0.42, 0.10, 1.0),
                      "Emission Strength": 6.0})
 
@@ -61,7 +61,7 @@ objetos = [parte(n, m) for n, m in (("render_negro", "anodizado_negro"),
                                     ("render_rieles", "aluminio"),
                                     ("render_paneles", "panel_oscuro"),
                                     ("assembly_acrilico", "acrilico_naranja"),
-                                    ("assembly_madera", "nogal_oscuro"),
+                                    ("assembly_patas", "goma"),
                                     ("assembly_persiana", "anodizado_negro"))]
 paneles = next(o for o in objetos if o.name == "render_paneles")
 
