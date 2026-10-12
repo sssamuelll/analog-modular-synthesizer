@@ -409,9 +409,11 @@ orden de operaciones y lo que trae cada uno de sus tres DXF.
    anillo por toda su banda, y esa sujeción decide cómo suena.
 7. ¿Pueden **ranurar a 4 de fondo por delante con las paredes acabadas** y
    dar después el pasante de los últimos 2 mm **por tramos, sobre placa de
-   sacrificio**? Sin ese orden, las varillas de 248 vibran al cortarlas.
-8. ¿Trabajan con **fresa Ø3 de 3 filos** y **chaflán 0.2 × 45°** en las aristas
-   de delante?
+   sacrificio**? Sin ese orden, las varillas de 248 vibran al cortarlas. La
+   placa lleva alojamiento para los diez tacos del dorso (Ø8 × 3.5), que van
+   espejados en la segunda persiana: la pieza apoya plana, no sobre los tacos.
+8. ¿Trabajan con **fresa Ø3 de 3 filos**, **chaflán 0.2 × 45°** en las aristas
+   de delante y **0.3 × 45°** en la arista de atrás del contorno?
 9. Son **dos programas**: las dos persianas son un par espejado (las ranuras
    ciegas, los atados y los tacos por la cara opuesta en cada una).
 10. Los dos localizadores ajustan a **Ø8 H7/g6 después de anodizar**, y el

@@ -1,5 +1,7 @@
 # SAM17 — Nariz recta, meseta al pico, valle limpio
 
+> **Enmienda 2026-10-11 (ficha 6):** la nariz sube hasta pisar 1 mm de la cara del riel de abajo (`retiro_placa_inf` 9 → 11.9, blank 545.62 × 53.10) y el retorno de la meseta baja de 4 a 9 hasta pisar la del riel de arriba (blank 593.02 × 78.85): las dos rendijas se cierran. La línea de sombra bajo y sobre el riel, y las reglas de `guarda_nariz()` (1 mm de aire bajo el riel) y `guarda_retorno_meseta()` (`holgura_rail` sobre él) que la pedían, eran del barrido de cuando las filas giraban. Lo mide `guarda_labio_chapas()` ([`2026-10-11-case-persiana-design.md`](2026-10-11-case-persiana-design.md) §7.3).
+
 **Fecha:** 2026-08-29 · **Estado:** aprobado por Samuel en conversación (las tres
 notas, y la esquina de abajo a 45° «y ya luego vemos cómo queda»); implementado en
 la rama `feat/case-nariz-recta` con sus puertas ·

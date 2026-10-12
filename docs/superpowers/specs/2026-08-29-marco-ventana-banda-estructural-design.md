@@ -2,6 +2,8 @@
 
 > **Enmienda 2026-10-11:** la mejilla de acrílico coplanar que este papel describe la sustituyó la persiana ([`2026-10-11-case-persiana-design.md`](2026-10-11-case-persiana-design.md)); el rebaje del anillo se queda vacío.
 
+> **Enmienda 2026-10-11 (ficha 6):** la nariz sube hasta pisar 1 mm de la cara del riel de abajo (`retiro_placa_inf` 9 → 11.9, blank 545.62 × 53.10) y el retorno de la meseta baja de 4 a 9 hasta pisar la del riel de arriba (blank 593.02 × 78.85): las dos rendijas se cierran. El retorno de 4 que pedía el barrido del panel (`guarda_retorno_meseta`) era de cuando las filas giraban. Lo mide `guarda_labio_chapas()` ([`2026-10-11-case-persiana-design.md`](2026-10-11-case-persiana-design.md) §7.3).
+
 **Fecha:** 2026-08-29 (noche) · **Estado:** aprobado por Samuel en conversación
 («dale vamos con furia»), con dos supuestos que él dejó abiertos y aquí se cierran
 (§1); **implementado** en la rama `feat/case-marco-ventana` con sus puertas — y

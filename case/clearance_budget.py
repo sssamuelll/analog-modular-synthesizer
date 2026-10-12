@@ -501,8 +501,8 @@ def _cajas_miembro(p: dict[str, float], P: list[tuple[float, float]],
     labio del talon, t_costilla de espesor, REHUNDIDOS del plano trasero.
 
     Fueron las bandas de 24 que recibian los M3 de la trasera (#241); desde la
-    trasera capturada no reciben nada: tapan. La meseta, el chaflan, el
-    retorno, el pie y las pestanas van aparte como caras (_caras_miembro).
+    trasera capturada no reciben nada: tapan. La meseta, el pie y las
+    pestanas van aparte como caras (_caras_miembro).
     El argumento cr se queda por los llamadores.
 
     ESTABAN A RAS DEL PLANO TRASERO hasta el 2026-08-30 y ahora entran
@@ -1144,12 +1144,14 @@ def _roscas_marco(p: dict[str, float]) -> list[tuple[str, tuple[float, float]]]:
 def bbox_marco_ventana(p: dict[str, float]) -> tuple[float, float]:
     """Envolvente del DXF del marco: la silueta menos los retiros. De la cara
     del frente (retirada bajo la nariz) a la pata trasera (retirada de la
-    banda y la trasera), y del suelo a la meseta (retirados bajo sus chapas).
-    Derivada, no escrita a mano: si una banda de retiro se mueve, el sobre se
-    mueve con ella y revisar() lo canta."""
+    banda y la trasera), y del suelo (bajo los pies, que no van empotrados) a
+    la meseta (bajo su chapa empotrada). Derivada, no escrita a mano: si una
+    banda de retiro se mueve, el sobre se mueve con ella y revisar() lo canta.
+    Hasta el 2026-10-12 el suelo se retiraba como la meseta y el sobre salia
+    1 mm mas bajo que el DXF."""
     P = _vertices(p)
     rm, rmt = _retiro_marco(p), _retiro_marco_trasera(p)
-    return (P[6][0] - rmt - rm, P[5][1] - 2 * rm)
+    return (P[6][0] - rmt - rm, P[5][1] - rm - _retiro_marco_pie(p))
 
 
 def _pasos_riel_marco(p: dict[str, float]) -> list[tuple[str, tuple[float, float]]]:
@@ -1493,14 +1495,18 @@ def canario_acceso_marco(p: dict[str, float]) -> None:
     casos = (
         ({"sep_rosca_riel": 7.0, "d_cajeado_riel": 0.0},
          "cabezas M4", "reparto viejo bajo el riel"),
-        # 5 y no 1 desde el 2026-10-11: con el retorno del techo a 9 (la
-        # rendija de la ficha 6), la pata de arriba se retira mas bajo el
-        # labio y con sep 1 o 3 la rosca de la punta cae antes contra el canto
-        # de la pata -- otra regla, que tumbaba el canario por otra razon.
-        # Con 5 las roscas siguen pegadas al cajeado (6.21 contra 6.75) y la
-        # que salta es la suya.
-        ({"sep_rosca_riel": 5.0},
-         "pasos M4", "roscas convertidas en una ranura junto al cajeado"),
+        # EL CAJEADO CRECE HASTA LOS PASOS, y el borde se busca (2026-10-12).
+        # Fue sep_rosca_riel escrito a mano, 1.0 y luego 5.0: al juntar las
+        # roscas salta antes "cabezas M4" (hoy de 9.3 a 6.0) y por debajo de
+        # 3.15 el canto de la pata, asi que el numero se quedaba viejo con cada
+        # cambio del techo. d_cajeado_riel no entra en ninguna otra regla, asi
+        # que el tope de la busqueda puede ser holgado: crece con la separacion,
+        # que es lo que mueve el borde (12.5 con 9.5, 15.6 con 11.5).
+        ({"d_cajeado_riel": _borde_rojo(guarda_anclajes, p, "d_cajeado_riel",
+                                        p["d_cajeado_riel"],
+                                        p["d_cajeado_riel"] + 4 * p["sep_rosca_riel"],
+                                        "pasos M4")},
+         "pasos M4", "un cajeado crecido hasta los pasos M4"),
     )
     for cambios, clave, que in casos:
         roto = {**p, **cambios}
@@ -1527,8 +1533,13 @@ def _m3_pestana(p: dict[str, float]) -> tuple[float, float]:
 
 def _caras_miembro(p: dict[str, float], cajas: dict[str, Caja]) -> list[Caja]:
     """Cajas de las caras de chapa del techo y del talon, sin rellenar el
-    vacio de cada plegado: labio o banda, meseta y retorno del techo; labio,
-    pie y pestanas del talon.
+    vacio de cada plegado: labio o banda y meseta del techo; labio, pie y
+    pestanas del talon.
+
+    EL RETORNO NO VA desde el 2026-10-12. Su caja nunca entraba en solapes()
+    (la filtra _cajas_solidas()), y desde la ficha 6 tapa por delante la cara
+    del riel de arriba a proposito: su AABB a 45 pisaria la del riel. Lo que
+    hace con el riel y con el panel lo mide guarda_labio_chapas().
 
     LOS DOS CHAFLANES NO VAN: son tramos a 45 y su AABB pisaria la trasera
     sin tocarla (el de abajo, por la esquina del acrilico que descansa en el
@@ -1546,9 +1557,6 @@ def _caras_miembro(p: dict[str, float], cajas: dict[str, Caja]) -> list[Caja]:
         # marco_sup (= t) de espesor
         ("trasero alto meseta", P[4][0], x_mes1, P[5][1] - p["marco_sup"],
          P[5][1], z0, z1),
-        # EL RETORNO del pico: AABB conservadora del tramo inclinado; su
-        # separación estática del panel la mide guarda_retorno_meseta().
-        _retorno_meseta(p)["caja"] + (z0, z1),
         talon,
         ("talon pie", tl["x_pie"], tl["x_chaflan"], 0.0, t, tl["z0"], tl["z1"]),
     ]
@@ -1629,7 +1637,7 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
                        c[1] + p["rail_er_eje"],
                        z0 + p["t_placa"], z1 - p["t_placa"]))
     # LAS DOS BANDAS (miembro alto y talon) son las cajas de los miembros; la
-    # meseta, el pie del talon y el retorno van aparte como caras, porque un
+    # meseta, el pie del talon y sus pestanas van aparte como caras, porque un
     # canal ya no existe y la AABB de la L entera seria un hueco enorme que
     # acusaria de chocar al Z-Rail superior fijo.
     railes.extend(miembros.values())
@@ -5441,7 +5449,13 @@ def autocomprobacion_anillo() -> None:
 
 def _tacos_persiana_cotas(p: dict[str, float]) -> list[tuple[str, float, float]]:
     """(que, tiene, pide) de cada relacion de cotas entre tacos y bolsillos."""
-    fondo_trasera = p["t_anillo"] - p["rebaje_anillo"]           # el bolsillo de la trasera empieza ahi
+    fondo_trasera = _bolsillo_trasero(p)["z0"]                   # el bolsillo de la trasera empieza ahi
+    # BAJO LAS CHAPAS EMPOTRADAS el anillo no llega a t_anillo: el rebaje de la
+    # chapa se come rebaje_chapa por la cara interior (guarda_rebaje_chapa()),
+    # hoy de 1 a 5.5 de la silueta, y el asiento del iman arranca en 3.45: hay
+    # asiento debajo del rebaje, y su pared es la de z. Hasta el 2026-10-12 se
+    # medía contra t_anillo, 3 mm de mas bajo la nariz, la meseta y el retorno.
+    fondo_chapa = p["t_anillo"] - p["rebaje_chapa"]
     return [
         ("aire bajo el taco", p["hondo_bolsillo_taco"] - p["alto_taco"], 0.3),
         ("holgura del taco en su bolsillo", p["d_bolsillo_taco"] - p["d_taco"], 0.5),
@@ -5451,7 +5465,7 @@ def _tacos_persiana_cotas(p: dict[str, float]) -> list[tuple[str, float, float]]
          p["chaflan_anillo"] + 0.5),
         ("pared hasta el bolsillo de la trasera (iman fino)", fondo_trasera
          - (p["hondo_bolsillo_taco"] + p["alto_iman_fino"] + 0.1), PARED_MIN_ANILLO),
-        ("el iman del anillo cabe en el anillo", p["t_anillo"]
+        ("pared hasta el rebaje de la chapa (iman del anillo)", fondo_chapa
          - (p["hondo_bolsillo_taco"] + p["alto_iman_anillo"] + 0.1), PARED_MIN_ANILLO),
         ("el iman del taco cabe en el taco", p["alto_taco"] - (p["alto_iman_taco"] + 0.1), 1.0),
     ]
@@ -5481,7 +5495,10 @@ def guarda_tacos_persiana(p: dict[str, float]) -> None:
 def canario_tacos_persiana(p: dict[str, float]) -> None:
     for cambio, aviso in (({"alto_taco": p["hondo_bolsillo_taco"]}, "aire bajo el taco"),
                           ({"u_taco": p["u_taco"] + 1.0}, "rebaje del acrilico"),
-                          ({"alto_iman_fino": 3.0}, "bolsillo de la trasera")):
+                          ({"alto_iman_fino": 3.0}, "bolsillo de la trasera"),
+                          # el rebaje de la chapa llega al fondo del asiento
+                          ({"rebaje_chapa": p["t_anillo"] - p["hondo_bolsillo_taco"]
+                            - p["alto_iman_anillo"]}, "rebaje de la chapa")):
         try:
             guarda_tacos_persiana({**p, **cambio})
         except AssertionError as e:
@@ -5670,8 +5687,8 @@ def guarda_remate(p: dict[str, float]) -> None:
                               marco_remate entero.
 
     EL INSET MURIO EL 2026-08-29 al sustituir la meseta de acrilico apoyada por
-    chapa de 1.5. La meseta LLEGA AL PICO, tapa el riel fijo y su retorno se
-    verifica por holgura estatica en guarda_retorno_meseta()."""
+    chapa de 1.5. La meseta LLEGA AL PICO, tapa el riel fijo y su retorno lo
+    mide guarda_labio_chapas() (ficha 6)."""
     # UN SOLO SUMANDO DESDE EL 2026-08-29 POR LA NOCHE: la meseta llega al
     # plano trasero y dobla ahi como banda. Los otros dos (t_piel y
     # t_costilla, el ala del marco de la manana y su espesor) murieron con el
@@ -5698,46 +5715,6 @@ def _bd_angulo(p: dict[str, float], ang: float) -> float:
     r, t = p["radio_doblez_costilla"], p["t_costilla"]
     a = math.radians(ang)
     return 2 * (r + t) * math.tan(a / 2) - a * (r + p["k_factor"] * t)
-
-
-def _retorno_meseta(p: dict[str, float]) -> dict:
-    """El retorno de la meseta: sus cuatro esquinas en el perfil y su caja.
-
-    Dobla en el pico (P4) y baja retorno_meseta por la cara de arriba, con el
-    espesor hacia dentro. El doblez es de 90 - angulo_superior: lo que esa cara
-    se aparta de la horizontal de la meseta. GEMELA del retorno en
-    miembro_alto() y miembro_alto_2d()."""
-    P = _vertices(p)
-    a = math.radians(p["angulo_superior"])
-    d, n = (math.sin(a), math.cos(a)), (math.cos(a), -math.sin(a))
-    r, t = p["retorno_meseta"], p["t_costilla"]
-    q = [P[4],
-         (P[4][0] - d[0] * r, P[4][1] - d[1] * r),
-         (P[4][0] - d[0] * r + n[0] * t, P[4][1] - d[1] * r + n[1] * t),
-         (P[4][0] + n[0] * t, P[4][1] + n[1] * t)]
-    xs, ys = [e[0] for e in q], [e[1] for e in q]
-    return {"esquinas": q, "esquina_interior": q[2],
-            "doblez": 90.0 - p["angulo_superior"],
-            "caja": ("trasero alto retorno", min(xs), max(xs), min(ys), max(ys))}
-
-
-def guarda_retorno_meseta(p: dict[str, float]) -> None:
-    """El retorno fijo de la meseta: su caja y la sombra que deja sobre el panel.
-
-    No existe barrido radial: los paneles se desmontan quitando tornillos. Desde
-    el 2026-10-11 el retorno baja hasta pisar el riel y cerrar la rendija de la
-    ficha 6; esa relacion la vigila guarda_labio_chapas()."""
-    L = p["alto_cara_sup"]
-    s_panel = p["inset_sup_valle"] - p["inset_er"] + p["alto_panel_sup"]
-    ret = _retorno_meseta(p)
-    s_ret = L - p["retorno_meseta"]
-    # La regla del barrido (margen >= holgura_rail SOBRE el riel) murio el
-    # 2026-10-11 con la persiana: era de cuando las filas giraban, y dejaba la
-    # rendija de la ficha 6. Lo que el labio tiene que hacer ahora lo mide
-    # guarda_labio_chapas().
-    print(f"retorno de la meseta: {p['retorno_meseta']:g} mm por la cara de "
-          f"arriba, doblez de {ret['doblez']:g}; deja {s_ret - s_panel:.2f} mm "
-          f"de sombra sobre el panel (guarda_labio_chapas)")
 
 
 def _nariz(p: dict[str, float]) -> dict:
@@ -6382,7 +6359,6 @@ def main() -> int:
     guarda_parametros_vivos(p)
     guarda_escalon(p)
     guarda_remate(p)
-    guarda_retorno_meseta(p)
     guarda_nariz(p)
     g = perfil(p)
     fallos: list[str] = []

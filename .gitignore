@@ -105,6 +105,8 @@ case/renders/viejos/
 case/renders/*.png
 !case/renders/chasis-plano-plegado.png
 !case/renders/propuesta-diseno-2026-08-16.png
+# Las dos de antes de la persiana (2026-10-10): ya no las regenera ningun
+# guion, y el README las enlaza como historia.
 !case/renders/sam17-case.png
 !case/renders/sam17-case-trasera.png
 # Los de la persiana (spec 2026-10-11, §11): los saca render_persiana.py.

@@ -148,7 +148,8 @@
 Spec: [`docs/superpowers/specs/2026-08-15-case-design.md`](../docs/superpowers/specs/2026-08-15-case-design.md) (rev. 28)
 Board de intención: [`renders/propuesta-diseno-2026-08-16.png`](renders/propuesta-diseno-2026-08-16.png)
 — **manda sobre lenguaje visual, NO sobre cotas**: se dibujó para paneles de
-190 mm y un case de 500 × 380 × 350, y el case real mide 568.62 × 256.18 × 319.76.
+190 mm y un case de 500 × 380 × 350, y el case real mide 580.62 × 256.18 × 319.76
+con las persianas (568.62 de anillo a anillo).
 
 ## Formato: EUROrack 3U, las dos filas
 
@@ -427,7 +428,8 @@ ondular y de leerse como repisa. `guarda_retorno_meseta()` exige ahora **4 mm
 de margen estático** al panel/riel fijo. Línea de sombra: 6 mm (2 de labio + 4
 de aire). **Desde el 2026-10-11 son 9 mm** (ficha 6): el retorno baja hasta
 pisar 1 mm de la cara del riel y deja 1 de sombra sobre el panel, y el margen de
-4 murió con el barrido (`guarda_labio_chapas()`).
+4 murió con el barrido (`guarda_labio_chapas()`); `guarda_retorno_meseta()` se
+retiró con él.
 
 Lo vigila `guarda_marco_trasera()`, y lo primero que exige es justo lo del
 issue: que el ala de arriba tape el canto **entero** y muera en el doblez, sin
@@ -448,8 +450,9 @@ no canta porque no hay solape, y `alineacion()`/`apoyo()` solo ven filas de
 agujeros.
 
 Lo que costó: la plancha pasó de 245.18 a **248.18 mm** de alto — ese número
-es de aquel día; hoy mide **540.32 × 254.68**, y lo que lo movió después fue la
-meseta integrándose en el miembro (27-08). Lo que NO se
+es de aquel día. La meseta integrándose en el miembro (27-08) la llevó a
+540.32 × 254.68, y el 2026-10-12 mide **552.32 × 237.18** (`piel_trasera_2d`).
+Lo que NO se
 movió, y se verificó con la salida de la puerta byte a byte contra la de antes:
 las tres ondas, la rejilla de entrada, el área abierta y los 6.6 K. Van
 derivadas de `f_base` y `f_tras`, que son diferencias contra `ce[].y`, así que
@@ -809,7 +812,7 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 | **Tira negra del valle** — chapa de aluminio t=1 mm, anodizada en negro | **1** | lisa, sin taladros ni plegados; corte y anodizado. Tapa por dentro la rendija de la esquina de P3, entre el canto de atrás del panel KONDOR y el panel alto (ficha 6, 10-10). Se apoya en el ala libre del riel de atrás de la fila KONDOR y se recuesta en la arista de abajo del riel bajo de la fila alta, y la sujetan **dos tacos de VHB negro** en las puntas. Las cotas de corte las imprime `guarda_tira_valle()`, que también vigila que no roce el módulo KONDOR al salir |
 | **PERSIANA** — aluminio 6082-T651, pletina de 12 frenteada a 9.5, anodizada en negro | **2** | una por costado, **espejadas** (dos programas): placa de 6 por fuera del anillo, con **44 varillas de 2**, borde de 4, dos atados por dentro y **diez tacos de Ø8 × 3.5** en el dorso, del mismo bloque. Sustituye a las mejillas de acrílico (2026-10-11). Pliego §6.3 |
 | **IMÁN de neodimio N42, Ø6** | **40** | 20 pares: 16 de Ø6 × 3 (anillo) con Ø6 × 2 (taco), y 4 de finos Ø6 × 1 + Ø6 × 1 en los tacos del tramo de atrás. Polaridad fija y marcada. Pliego §6.5 |
-| **TABLA de madera maciza t=30 mm** | **1** | el suelo interior y el zócalo, una sola pieza, **648.62 × 399.76**, con el **canto de arriba redondeado R8**. Crece el 10-10 por la ficha 12 del acta: vuela 40 por los cuatro lados y asoma 28 a 34 de la piel; eran 18 mm y 588.62 × 339.76. 2 filas de 3 M5 a **rosca ciega en el canto inferior del anillo** (una fila por anillo), uno redondo por fila (punto fijo) y dos en ranura de 10.5, repartidos en el fondo del **cuerpo** y no en el de la tabla. Y **catorce taladros pasantes de 4.5**: 4 de las paticas, 3 de la nariz, 3 del talón y 4 del chasis (`guarda_zocalo()` los censa) |
+| **TABLA de madera maciza t=30 mm** | **1** | el suelo interior y el zócalo, una sola pieza, **648.62 × 399.76**, con el **canto de arriba redondeado R8**. Crece el 10-10 por la ficha 12 del acta: vuela 40 por los cuatro lados (34 más allá de la cara de la persiana); eran 18 mm y 588.62 × 339.76. 2 filas de 3 M5 a **rosca ciega en el canto inferior del anillo** (una fila por anillo), uno redondo por fila (punto fijo) y dos en ranura de 10.5, repartidos en el fondo del **cuerpo** y no en el de la tabla. Y **catorce taladros pasantes de 4.5**: 4 de las paticas, 3 de la nariz, 3 del talón y 4 del chasis (`guarda_zocalo()` los censa) |
 | Plancha acrílico t=8 mm | **1** | la **trasera de 552.32 × 237.18**, con ondas, rejilla y KONDOR, **sin un taladro**. Las dos mejillas las sustituyó la persiana el 2026-10-11. La trasera queda con su cara vista a **6.5** del plano trasero, dentro del bolsillo u = 5.5..16.5, y sus puntas entran 5.85. El labio del techo tapa 8.5 de su canto y los tacos conservan la rendija. Entra con el anillo B; no sale sin quitar un anillo |
 | Patica de goma con casquillo roscado | 4 | EPDM o NBR, Shore 45–55 A, **d20 × 10**. Se atornillan **a la tabla**, no al acrílico. **Se exige la curva carga-deformación: ≥ 0.25 mm de flecha con 22.8 N** — por debajo la pata AMPLIFICA los 100 Hz del toroide en vez de aislarlos (`flecha_pie`). Casquillo roscado moldeado: se atornilla, **no se pega** |
 
@@ -1084,9 +1087,12 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
       consecuencia, y no se ve en ninguna vista del conjunto: los paneles y la
       tapa del valle lo tapan entero. Importa tres ensamblados —madera,
       aluminio y acero— porque pintarlos igual pierde lo que la vista enseña
-- [x] **Render del conjunto**, regenerado por última vez el 2026-08-29, más
-      noche, con la trasera capturada y el talón como la nariz (variante B
-      del techo). Los anteriores están en `renders/viejos/`, ordenados por
+- [x] **Render del conjunto**: desde el 2026-10-12 lo pinta
+      `renders/render_persiana.py` (las `sam17-persiana*.png` de arriba), y
+      `render.py` se queda como la escena común, sin renders propios. Lo que
+      sigue es el render de antes de la persiana, con la trasera capturada y
+      el talón como la nariz: la variante B del techo se regeneró por última
+      vez el 2026-10-10, y la A el 2026-08-29. Los anteriores están en `renders/viejos/`, ordenados por
       fecha. Dos vistas: frontal ([`renders/sam17-case.png`](renders/sam17-case.png))
       y trasera ([`renders/sam17-case-trasera.png`](renders/sam17-case-trasera.png)),
       y las mismas dos con el techo en banda (variante A):

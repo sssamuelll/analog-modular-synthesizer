@@ -2,6 +2,8 @@
 
 > **Enmienda 2026-10-11:** la mejilla de acrílico coplanar que este papel describe la sustituyó la persiana ([`2026-10-11-case-persiana-design.md`](2026-10-11-case-persiana-design.md)); el rebaje del anillo se queda vacío.
 
+> **Enmienda 2026-10-11 (ficha 6):** la nariz sube hasta pisar 1 mm de la cara del riel de abajo (`retiro_placa_inf` 9 → 11.9, blank 545.62 × 53.10) y el retorno de la meseta baja de 4 a 9 hasta pisar la del riel de arriba (blank 593.02 × 78.85): las dos rendijas se cierran. Los blanks de este papel (593.02 × 73.85 y 545.62 × 50.20) son los de antes. Lo mide `guarda_labio_chapas()` ([`2026-10-11-case-persiana-design.md`](2026-10-11-case-persiana-design.md) §7.3).
+
 **Fecha:** 2026-08-30 · **Estado:** aprobado por Samuel en conversación («dale»)
 sobre la propuesta de esta mañana, con sus cuatro números (chapa rehundida 1,
 rebaje en las tres chapas; y para la tanda B, panel 1U de 55 y paneles 1.5

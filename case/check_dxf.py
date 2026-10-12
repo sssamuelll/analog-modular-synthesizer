@@ -218,10 +218,20 @@ def _sobres() -> dict[str, tuple[float, float, float, float]]:
         return x1 - x0, y1 - y0
     dims["persiana_2d"] = lados(pg["contorno"])
     dims["persiana_pasante_2d"] = lados(pg["pasante"])
-    tx = [t[0] for t in persiana.tacos(p)]
-    ty = [t[1] for t in persiana.tacos(p)]
+    ts = persiana.tacos(p)
+    tx = [t[0] for t in ts]
+    ty = [t[1] for t in ts]
     dims["persiana_dorso_2d"] = (max(tx) - min(tx) + p["d_taco"], max(ty) - min(ty) + p["d_taco"])
-    dims["costilla_bolsillos_2d"] = (max(tx) - min(tx) + p["colisa_taco"], max(ty) - min(ty) + p["d_bolsillo_taco"])
+
+    def medio(tipo):
+        """Media caja del bolsillo de cada tipo. GEMELA de bolsillo_taco_2d()."""
+        if tipo == "colisa":
+            return p["colisa_taco"] / 2, p["d_taco"] / 2
+        r = (p["d_taco"] if tipo == "loc" else p["d_bolsillo_taco"]) / 2
+        return r, r
+    dims["costilla_bolsillos_2d"] = (
+        max(x + medio(t)[0] for x, _, t in ts) - min(x - medio(t)[0] for x, _, t in ts),
+        max(y + medio(t)[1] for _, y, t in ts) - min(y - medio(t)[1] for _, y, t in ts))
 
     return {n: (w - TOL, w + TOL, h - TOL, h + TOL) for n, (w, h) in dims.items()}
 
@@ -2030,11 +2040,12 @@ def guarda_persiana_generada() -> list[str]:
     return []
 
 
-def guarda_persiana() -> list[str]:
+def guarda_persiana(ruta: Path = PLANS / "persiana_2d.dxf") -> list[str]:
     """Lo que el taller va a fresar de la persiana, releido del DXF:
     las ranuras no son mas estrechas que la fresa, ninguna varilla es mas fina
     que t / ESBELTEZ_MAX_PARED, el borde macizo no baja de borde_persiana, las
-    puntas llevan el radio de la fresa, y el numero de ranuras es el del ritmo."""
+    puntas llevan el radio de la fresa, y hay tantas ranuras como en su gemela
+    de persiana.py. Hasta el 2026-10-12 se aceptaban de 38 a 46."""
     import clearance_budget as cb
     from shapely.geometry import LineString
     from shapely.ops import polygonize
@@ -2042,18 +2053,18 @@ def guarda_persiana() -> list[str]:
     import persiana
     p = cb.leer_params()
     f: list[str] = []
-    doc = ezdxf.readfile(PLANS / "persiana_2d.dxf")
+    doc = ezdxf.readfile(ruta)
     lineas = [LineString([(e.dxf.start.x, e.dxf.start.y), (e.dxf.end.x, e.dxf.end.y)])
               for e in doc.modelspace() if e.dxftype() == "LINE"]
     piezas = sorted(polygonize(lineas), key=lambda q: q.area, reverse=True)
     contorno, ranuras = piezas[0], piezas[1:]
-    esperadas = len(persiana.varillas_x(p)) - 1
+    esperadas = persiana.geometria(p)["varillas"] + 1       # las ranuras de la gemela
     ranuras = [r for r in ranuras if r.area > 1.0]
     huecos_contorno = len(contorno.interiors)
     if huecos_contorno != len(ranuras):
         f.append(f"persiana_2d: el contorno tiene {huecos_contorno} huecos y se leyeron {len(ranuras)} ranuras")
-    if not (esperadas - 8 <= len(ranuras) <= esperadas):
-        f.append(f"persiana_2d: {len(ranuras)} ranuras; el ritmo da {esperadas} (las de las puntas pueden no caber)")
+    if len(ranuras) != esperadas:
+        f.append(f"persiana_2d: {len(ranuras)} ranuras y su gemela de persiana.py da {esperadas}")
     xs = sorted((r.bounds[0], r.bounds[2]) for r in ranuras)
     anchos = [b - a for a, b in xs]
     if min(anchos) < p["fresa_d"] - 0.02:
@@ -2081,29 +2092,42 @@ def anillo_tiene_bolsillos() -> list[str]:
     PARED_MIN_ANILLO de toda rosca M4 del dorso y a 10 mm en x de todo M5 de la
     tabla. Las profundidades las mira guarda_tacos_persiana() en el budget."""
     import clearance_budget as cb
+    from shapely.geometry import LineString, Point
+    from shapely.ops import polygonize, unary_union
     p = cb.leer_params()
     f: list[str] = []
 
     def centros(nombre):
+        """(x, y, forma) del contorno de fuera de cada bolsillo o taco. La pared
+        se mide contra la forma y no contra un diametro: la colisa es un oblongo,
+        y con un radio unico se leia 0.5 de mas en su eje largo."""
         aristas, comps = _componentes(nombre)
         out = []
         for comp in comps:
             px = [q[0] for j in comp for q in aristas[j]]
             py = [q[1] for j in comp for q in aristas[j]]
             if max(px) - min(px) > p["d_iman"] + 0.5:          # el de fuera, no el asiento
-                out.append(((min(px) + max(px)) / 2, (min(py) + max(py)) / 2, max(px) - min(px)))
-        return sorted(out)
+                forma = unary_union(list(polygonize([LineString(aristas[j]) for j in comp])))
+                out.append(((min(px) + max(px)) / 2, (min(py) + max(py)) / 2, forma))
+        return sorted(out, key=lambda q: q[:2])
     bolsillos, tacos_ = centros("costilla_bolsillos_2d"), centros("persiana_dorso_2d")
     if len(bolsillos) != len(tacos_) or len(bolsillos) != 10:
         f.append(f"costilla_bolsillos_2d: {len(bolsillos)} bolsillos y persiana_dorso_2d "
                  f"{len(tacos_)} tacos; se esperan 10 y 10")
         return f
+    # Un contorno que no cierra da una forma vacia, y su distancia es NaN: la
+    # pared pasaria sin medirse.
+    abiertos = [f"costilla_bolsillos_2d: el bolsillo en ({bx:.2f}, {by:.2f}) no cierra "
+                f"su contorno y su pared no se puede medir"
+                for bx, by, forma in bolsillos if forma.is_empty]
+    if abiertos:
+        return abiertos
     for (bx, by, bw), (tx, ty, _tw) in zip(bolsillos, tacos_):
         if math.dist((bx, by), (tx, ty)) > 0.05:
             f.append(f"el bolsillo en ({bx:.2f}, {by:.2f}) no casa con el taco en ({tx:.2f}, {ty:.2f})")
-    for bx, by, bw in bolsillos:
+    for bx, by, forma in bolsillos:
         for nombre, c, d in cb._centros_rosca_ciega(p):
-            pared = math.dist((bx, by), c) - min(bw, p["d_bolsillo_taco"]) / 2 - d / 2
+            pared = forma.distance(Point(c)) - d / 2
             if pared < cb.PARED_MIN_ANILLO - 0.02:
                 f.append(f"el bolsillo en ({bx:.2f}, {by:.2f}) deja {pared:.2f} contra la rosca {nombre}")
         if by <= p["u_taco"] + 1.0:
@@ -2156,15 +2180,19 @@ def persiana_pasante_cuadra(ruta: Path = PLANS / "persiana_pasante_2d.dxf") -> l
 # Las chapas que se pliegan. Sus DXF no traen lineas de plegado: el taller
 # dobla con las cotas del papel.
 DESARROLLOS = ("miembro_alto_2d", "nariz_2d", "talon_2d", "tapa_valle_2d")
+# El blank del marco solo lo da el PLIEGO, y se copia a mano igual: el
+# 2026-10-12 seguia en 294.56 x 252.88 con el DXF en 300.11 x 251.88.
+SOLO_PLIEGO = ("marco_ventana_2d",)
 
 
 def papel_trae_los_desarrollos() -> list[str]:
     """El PLIEGO, el RFQ y el README dan el blank de cada chapa plegada con las
-    cifras del DXF que se corta. NACE DE LA REVISION FINAL DE LA PERSIANA
+    cifras del DXF que se corta, y el PLIEGO el del marco. NACE DE LA REVISION FINAL DE LA PERSIANA
     (2026-10-12): la ficha 6 hizo crecer el techo y la nariz el 2026-10-11, y
     los tres papeles siguieron dando los blanks de antes."""
     f: list[str] = []
-    for nombre in DESARROLLOS:
+    papeles = ("PLIEGO.md", "RFQ.md", "README.md")
+    for nombre, donde in [(n, papeles) for n in DESARROLLOS] + [(n, ("PLIEGO.md",)) for n in SOLO_PLIEGO]:
         xs: list[float] = []
         ys: list[float] = []
         for e in ezdxf.readfile(PLANS / f"{nombre}.dxf").modelspace():
@@ -2172,13 +2200,13 @@ def papel_trae_los_desarrollos() -> list[str]:
                 xs += [e.dxf.start.x, e.dxf.end.x]
                 ys += [e.dxf.start.y, e.dxf.end.y]
         cota = f"{max(xs) - min(xs):.2f} × {max(ys) - min(ys):.2f}"
-        for papel in ("PLIEGO.md", "RFQ.md", "README.md"):
+        for papel in donde:
             if cota not in (Path(__file__).parent / papel).read_text(encoding="utf-8"):
                 f.append(f"{papel} no da el blank de {nombre} que se corta: "
                          f"{cota.replace('×', 'x')}")
     if not f:
         print(f"  PLIEGO, RFQ y README: el blank de las {len(DESARROLLOS)} chapas plegadas, "
-              f"el del DXF")
+              f"el del DXF; y el PLIEGO, el del marco")
     return f
 
 

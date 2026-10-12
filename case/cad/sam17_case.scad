@@ -971,11 +971,12 @@ module marcos_ventana() {
 // HASTA DONDE SUBE lo manda la envolvente fija de la cara de abajo: en las
 // puntas las dos viven en la misma rebanada de z, asi que la banda acaba
 // hol_piel por debajo del arranque de la placa (que a su vez se retira
-// retiro_placa_inf para dejarle sitio). Y NO PUEDE TAPAR LA CARA DEL RIEL: la
-// nariz fija tiene que quedarse debajo del Z-Rail y del panel fijos. Queda una
-// linea de sombra de ~2 mm mas los 2 de
-// labio del riel bajo el panel, lo mismo que entre dos filas de cualquier
-// Eurorack. Lo mide guarda_nariz() en clearance_budget.py.
+// retiro_placa_inf para dejarle sitio). DESDE EL 2026-10-11 (ficha 6) TAPA LA
+// CARA DEL RIEL: retiro_placa_inf pasa a 11.9 y la nariz sube hasta pisar 1 mm
+// de ella, a 1 mm del panel, y la rendija se cierra. Lo mide
+// guarda_labio_chapas() en clearance_budget.py. Hasta entonces se quedaba
+// debajo del riel, con una linea de sombra de ~2 mm: era la regla del barrido,
+// de cuando las filas giraban.
 //
 // GEMELA de _nariz(), _cajas_nariz() y bbox_desarrollo_nariz() en
 // clearance_budget.py; los taladros los cruza taladros_nariz() en check_dxf.
@@ -2887,8 +2888,9 @@ module bom() {
              " por riel 3U, dos sobre el primer KONDOR y dos en la pata del suelo",
              " (el trabajo de los clips). En el frente, el suelo, la",
              " meseta y la trasera el canto exterior va RETIRADO -- ",
-             retiro_marco(), " bajo cada chapa (nariz, pies, meseta, retorno) y ",
-             retiro_marco_trasera(), " en la trasera, que es t_anillo + 0.5:",
+             retiro_marco_chapa(), " bajo las chapas empotradas (nariz, meseta,",
+             " retorno), ", retiro_marco_pie(), " bajo los pies, que no se",
+             " empotran, y ", retiro_marco_trasera(), " en la trasera:",
              " la pata apoya sobre la pared entre el bolsillo de la trasera y",
              " el del rebaje --, y entra ", marco_fondo - cara_anillo,
              " mas alla de la ventana en seis tramos y ",
@@ -2976,9 +2978,9 @@ module bom() {
              " y ", nariz_s_top(), " subiendo por la cara de abajo hasta el",
              " marco de la ventana."));
     echo("     Tapa el riel del frente y el hueco entre anillos que se veian");
-    echo("     desnudos desde delante y desde abajo (2026-08-29). Se para");
-    echo("     debajo de la cara del riel fijo; queda la linea de sombra del");
-    echo("     labio, como entre dos filas de cualquier Eurorack.");
+    echo("     desnudos desde delante y desde abajo (2026-08-29). Desde la");
+    echo("     ficha 6 (2026-10-11) sube hasta pisar 1 mm de la cara del riel,");
+    echo("     a 1 mm del panel, y cierra la rendija.");
     echo(str("BOM: tornillo M4 avellanado x", len(nariz_m4_z()), " -- el pie de",
              " la nariz a la TABLA, desde dentro, con el mismo herraje que las",
              " paticas (d_pie_tornillo). Ninguno en la cara vista."));
