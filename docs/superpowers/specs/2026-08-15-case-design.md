@@ -245,6 +245,13 @@ lenguaje visual).
 > el frente. Esta revisión sustituye la geometría y el montaje de la rev. 26
 > en esos puntos; conserva debajo el razonamiento que llevó a aquella.
 >
+> **rev. 30** (2026-10-11): **la persiana**. Las dos mejillas de acrílico se
+> van y cada costado pasa a ser una placa de aluminio de 6 por fuera del anillo,
+> con 44 varillas de 2, sujeta con diez tacos e imanes; todo el aluminio que se
+> ve, en negro. La piel orgánica no se hace. El rebaje del anillo se queda
+> vacío, y cada anillo gana diez bolsillos por la cara de fuera. Detalle en
+> [`2026-10-11-case-persiana-design.md`](2026-10-11-case-persiana-design.md).
+>
 > **rev. 29** (2026-10-10): **la tabla de la ficha 12** del acta de la piel. Vuela
 > 40 por los cuatro lados (`vuelo_zocalo`, era 10) y mide 30 de grueso (`t_base`,
 > era 18), con el canto de arriba redondeado R8 (`r_canto_tabla`). Los M5 de la

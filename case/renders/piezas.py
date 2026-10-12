@@ -30,9 +30,9 @@ OPENSCAD = r"C:\Program Files\OpenSCAD\openscad.exe"
 # nombre de pieza -> material de render.py (o el acero, que render.py no tiene)
 GRUPOS = {
     "aluminio": ["anillos", "rieles_3u", "rieles_1u", "paneles", "marcos_ventana",
-                 "nariz", "talon", "miembro_alto", "tapa_valle"],
+                 "nariz", "talon", "miembro_alto", "tapa_valle", "persianas"],
     "junta": ["tira_anti_ruido_valle"],
-    "acrilico": ["costados", "piel_trasera"],
+    "acrilico": ["piel_trasera"],
     "madera": ["tabla", "paticas"],
     "acero": ["chasis"],
 }
@@ -56,7 +56,8 @@ def exportar_piezas() -> None:
     os.makedirs(DIR, exist_ok=True)
     scad = os.path.join(CAD, "piezas.scad")
     fuentes = max(os.path.getmtime(os.path.join(CAD, f))
-                  for f in ("piezas.scad", "sam17_case.scad", "params.scad"))
+                  for f in ("piezas.scad", "sam17_case.scad", "params.scad",
+                            "persiana_generada.scad"))
     for nombres in GRUPOS.values():
         for nombre in nombres:
             stl = os.path.join(DIR, nombre + ".stl")

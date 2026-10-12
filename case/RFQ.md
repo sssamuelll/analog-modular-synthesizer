@@ -4,6 +4,27 @@ Documento para pedir presupuesto. Va **antes** que el pliego
 ([`PLIEGO.md`](PLIEGO.md)): el pliego dice qué hay que hacer, esto sirve
 para saber **quién puede hacerlo**.
 
+> **rev. 27 (2026-10-11). La persiana.** Las dos mejillas de acrílico se van
+> y las sustituye una persiana de aluminio por costado (papel
+> `docs/superpowers/specs/2026-10-11-case-persiana-design.md`). **A la casa de
+> acrílico (§A)**: queda una pieza, la trasera. **Al mecanizado (§D)**: diez
+> bolsillos por la cara de fuera de cada anillo, y **la persiana ×2**, dos
+> programas espejados, con una tira de muestra antes que las piezas. **Entra
+> §E, el anodizador**: uno solo, un lote y una aleación para todo el aluminio
+> que se ve, en negro; el anillo deja de ir «satinado». Esta revisión
+> sustituye el alcance operativo de la rev. 26, que se conserva debajo como
+> historia. **A la chapa (§B), por la ficha 6 (D-S9)**: la nariz y el techo
+> bajan hasta pisar la cara del riel; sus blanks crecen a 545.62 × 53.10 y
+> 593.02 × 78.85 (el retorno del techo pasa de 4 a 9).
+>
+> | § | taller | qué se le pide |
+> |---|---|---|
+> | A | casa de acrílico | la trasera — **sin taladros** |
+> | B | chapa de aluminio (y acero) | **techo macizo** (sin ranuras, labio de 20, bridas R2), **talón** (pie de 22.5 y muescas), **nariz** (pie de 20.5 y muescas), **marco de la ventana ×2**, tapa del valle, chasis ×3 |
+> | C | carpintería | la tabla (suelo + zócalo) |
+> | D | mecanizado de aluminio | el anillo ×2, con sus diez bolsillos por fuera, y **la persiana ×2** |
+> | E | anodizado | todo el aluminio que se ve, en negro y en un lote |
+>
 > **rev. 26 (2026-08-30).** **Al mecanizado (§D):** en la cara interior de
 > cada anillo entra el rebaje de chapa de 4.5 × 3 y un cajeado de brida de
 > 28 × 15.5 × 3; son dos cajeados en total. La única pregunta abierta de esta
@@ -72,7 +93,9 @@ Si alguna respuesta es «no», no es el taller. No se negocia por precio.
    sirve: mete tensión y deshace el recocido.)
 3. **¿Trabajan PMMA COLADO (GS)** en 8 mm, en naranja translúcido?
    *(Un solo espesor desde el 2026-08-25: los 5 mm existían para una única
-   pieza —la tapa del valle— y esa pasó a chapa de aluminio.)*
+   pieza —la tapa del valle— y esa pasó a chapa de aluminio. Y una sola pieza
+   desde el 2026-10-11: la trasera. Las dos mejillas las sustituyó la persiana,
+   de aluminio, que va a §D.)*
 
 ### Por qué estas tres y no otras
 
@@ -83,18 +106,23 @@ taladros, y se acelera donde hay un tornillo apretado o donde tocó un
 limpiador. No se ve al desembalar.
 
 El **diamantado** es el que decide si el aparato parece comprado o cortado a
-medida. Son ~7,5 m de canto visible, y el acrílico es translúcido: la luz
+medida. Eran ~7,5 m de canto visible, y el acrílico es translúcido: la luz
 viaja por dentro de la plancha y sale por el canto, así que un canto áspero
-se ve como una línea blanca lechosa rodeando cada pieza.
+se ve como una línea blanca lechosa rodeando cada pieza. **Desde el
+2026-10-11 ningún canto de acrílico queda a la vista**: la trasera es la única
+pieza, y sus cuatro cantos van dentro de los bolsillos del anillo y tras los
+labios del techo y del talón. Si el diamantado sigue siendo eliminatorio lo
+decide Samuel (HUECO); hasta entonces se pregunta.
 
 El **colado** ya está decidido en la spec §11 y no es negociable: el
 extruido trae tensión interna de fábrica y craquela solo.
 
-**Lo que ESTE taller ya no hace, desde el 2026-08-27:** taladrar. El costado
-tenía ocho agujeros —cuatro M4 de riel y cuatro M5 de larguero— y los ocho se
-fueron al anillo de aluminio. La pieza es un contorno y nada más. Eso quita
-de un plumazo el sitio por donde el PMMA craquela primero, pero **no quita el
-recocido**: la tensión también la deja el fresado del canto.
+**Lo que ESTE taller ya no hace:** taladrar, desde el 2026-08-27 (los ocho
+agujeros del costado se fueron al anillo de aluminio), y el costado, desde el
+2026-10-11 (es la persiana, de aluminio). La trasera es un contorno con su
+cajeado y nada más. Eso quita de un plumazo el sitio por donde el PMMA
+craquela primero, pero **no quita el recocido**: la tensión también la deja el
+fresado del canto.
 
 ---
 
@@ -161,10 +189,10 @@ Se rellena al recibir. Va aquí y no en un correo.
 Es el taller que ya hace las tres piezas del chasis de acero. **No es un
 taller nuevo**, pero desde el 2026-08-28 **ya no hace la costilla** — esa
 pieza se mecaniza en un taller aparte (§D). Lo que sí hace: el **techo
-macizo** (blank 593.02 × 73.85, sin ranuras, labio de 20 y una brida R2 en
+macizo** (blank 593.02 × 78.85, sin ranuras, retorno de 9, labio de 20 y una brida R2 en
 cada punta), el **talón** (blank 545.62 × 42.23, pie de 22.5 con muescas y
 ocho pestañas lanzadas), la
-**nariz** (la banda del frente, tres dobleces), los
+**nariz** (la banda del frente, blank 545.62 × 53.10, tres dobleces), los
 dos **marcos de la ventana** (pletina de 6 cortada a láser, con seis cajeados
 por el lado del anillo, un par espejado) y la **tapa del valle** (aluminio de
 3 mm, blank 560.00 × 20.00, dos pestañas y labio de apoyo de 2.0 mm). Son las piezas
@@ -186,16 +214,22 @@ la trasera, muertos esa misma noche, ya no existen.)
 2. **¿Qué factor K usan?** El modelo asume **k = 0.42**. Con r = 3 y t = 1.5
    eso da BA = 5.70 y BD = 3.30 mm por doblez. Si trabajan con otro, los DXF se
    regeneran — pero hay que saberlo, no adivinarlo.
-3. **¿Qué aleación y temple suministran, y con qué `Rp0.2`?** Para el techo
-   y la nariz no es eliminatoria: con 130 MPa pasan (el techo SOLO trabaja a
-   95 MPa con 200 N en el centro de la meseta; y también el anillo de §D, cada
-   pieza con su propia puerta). **Para el talón SÍ lo es: 6082-T6 (Rp0.2 ≥
-   240)**, porque sus ocho lengüetas sujetan el canto de abajo de la trasera
+3. **¿Qué aleación y temple suministran, y con qué `Rp0.2`?** **Desde la
+   rev. 27 es eliminatoria para todas: 6082-T6/T651**, por color: todo el
+   aluminio negro que se ve va en una aleación y un lote (§E). Por cálculo, el
+   techo y la nariz pasarían con 130 MPa (el techo SOLO trabaja a 95 MPa con
+   200 N en el centro de la meseta). **El talón lo pide además por resistencia:
+   Rp0.2 ≥ 240**, porque sus ocho lengüetas sujetan el canto de abajo de la trasera
    y la más cargada trabaja a 199 MPa en la raíz (23.5: los 25 menos lo que
    muerde el alivio) con la carga en la punta — con 130 no pasa ninguna
    lengüeta de 1.5 (`guarda_trasera_flexion()`). Una aleación
    distinta **hay que aprobarla antes de cortar**, regenerando las puertas si
    cambia.
+
+   **Y la tapa del valle, 6082-T6 de 3 mm, se dobla a R3 (1 t).** ¿Lo hacen sin
+   fisurar? Si su radio mínimo en ese espesor es mayor, díganlo con el
+   presupuesto: es un HUECO del diseño (`radio_doblez_valle`), no una cota que
+   el taller pueda cambiar por su cuenta.
 
 El techo de esta tanda **no lleva ranuras**. Se eliminan 16 operaciones del
 blank y no aparece ningún proceso nuevo de chapa. Por eso no se añade una
@@ -270,7 +304,7 @@ se ven juntos y a la vez**, y eso no lo contesta ningún render.
 
 ---
 
-## D. Taller de mecanizado — pregunta eliminatoria
+## D. Taller de mecanizado — preguntas eliminatorias
 
 **Taller nuevo desde el 2026-08-28.** No es el de chapa (§B): la costilla deja
 de plegarse y pasa a ser un **anillo fresado de una pletina de aluminio
@@ -296,13 +330,17 @@ maciza de 14 mm**, vaciada por el centro, una pieza por lado.
    el **rebaje de chapa de 4.5 de ancho × 3 de fondo**, solo por el contorno
    donde se ve chapa; **un cajeado de brida por anillo, 28 × 15.5 × 3**, con
    esquina interior R1.5; y el tramo trasero de 23, con bolsillo en
-   u = 5.5..16.5, pared de 3 y el costado entrando 3.5. Bajo los dos labios de
+   u = 5.5..16.5, pared de 3 y 3.5 de rebaje vacío. Bajo los dos labios de
    chapa el labio del bolsillo queda con 3 de hondo; en el resto conserva 6.
+   Y desde la rev. 27, por la cara de FUERA, **diez bolsillos por anillo** para
+   los tacos de la persiana (`costilla_bolsillos_2d`): Ø9 × 3.8 con un asiento
+   de imán de Ø6.1 × 3.1 (× 1.1 en los dos de atrás), y dos de ellos
+   localizan: uno a **Ø8 H7** y una **colisa de 8 H7 × 10**.
 4. ¿Hacen **chaflán mecanizado de 1.5 × 45°** en dos aristas de la cara
    vista, por pieza?
-5. ¿Anodizan en **satinado**, con **enmascarado de un punto** antes de
-   anodizar (para el bonding de tierra)? Si no lo hacen ellos, ¿trabajan con
-   un anodizador que sí?
+5. ¿Anodizan en **negro**, con **enmascarado de un punto** antes de
+   anodizar (para el bonding de tierra)? Si no lo hacen ellos, el anodizado va
+   a §E: uno solo para todo el negro.
 
 **Única pregunta abierta de esta tanda:** «¿Un reborde de **1 mm de ancho por
 3 de alto** a lo largo del contorno, con tolerancia **+0.3 / −0**: se puede?
@@ -356,6 +394,58 @@ cupón aprobado no se corta el material de los anillos.**
 
 ### Registro
 
-| fecha | proveedor | planitud confirmada | anodizado | cupón aprobado |
+| fecha | proveedor | planitud confirmada | anodizado | cupón aprobado | tira de la persiana aprobada |
+|---|---|---|---|---|---|
+| (pendiente) | | | | | |
+
+### La persiana (rev. 27)
+
+Dos placas de **6082-T651 laminado y estirado**, pletina de 12 frenteada a
+9.5, con 45 ranuras y diez tacos del mismo bloque: el pliego (§6.3) lleva el
+orden de operaciones y lo que trae cada uno de sus tres DXF.
+
+6. **¿Garantizan planitud ≤ 0.2 en 320, después de ranurar y de anodizar?**
+   Es eliminatoria, como la del anillo: la persiana apoya en la cara del
+   anillo por toda su banda, y esa sujeción decide cómo suena.
+7. ¿Pueden **ranurar a 4 de fondo por delante con las paredes acabadas** y
+   dar después el pasante de los últimos 2 mm **por tramos, sobre placa de
+   sacrificio**? Sin ese orden, las varillas de 248 vibran al cortarlas.
+8. ¿Trabajan con **fresa Ø3 de 3 filos** y **chaflán 0.2 × 45°** en las aristas
+   de delante?
+9. Son **dos programas**: las dos persianas son un par espejado (las ranuras
+   ciegas, los atados y los tacos por la cara opuesta en cada una).
+10. Los dos localizadores ajustan a **Ø8 H7/g6 después de anodizar**, y el
+    anodizado crece en las dos piezas. ¿Mecanizan contando con esa crece, o
+    enmascaran los localizadores y sus bolsillos?
+
+**Muestra, antes que las dos persianas (#398):** una **tira de altura
+completa**, 60 × 256 mm, cortada de la propia persiana (x ≈ 270–330), con los
+dos atados, la banda ciega, el borde de 4 y dos tacos con sus imanes sobre una
+placa de 14 con dos bolsillos. Mismo material, mismo taller, mismo anodizador.
+El pliego (§6.3) dice qué se mide en ella.
+
+---
+
+## E. Anodizador — uno para todo el negro (rev. 27)
+
+Todo el aluminio que se ve va anodizado en negro **por un solo anodizador y en
+un solo lote**: los dos anillos y las dos persianas (de §D) con el techo, la
+nariz, el talón, la tapa del valle, la tira negra del valle y el marco de la
+ventana (de §B). Puede ser el propio taller de §D si anodiza; si no, es un
+pedido aparte. El pliego (§6.4) lleva el detalle.
+
+1. **¿Anodizan en negro 6082-T6/T651, ISO 7599 clase AA15–AA20, sellado**,
+   **en un solo lote** para piezas de dos talleres? (La clase está citada de
+   memoria: confírmenla.)
+2. ¿Ponen los **contactos del bastidor en caras tapadas** — el dorso de la
+   banda de la persiana, la cara interior del anillo — y **enmascaran un
+   punto** por anillo?
+3. ¿Cierran el anodizado en **cantos de 2 mm con arista rota de 0.2** y en el
+   **fondo de ranuras ciegas de 3.5 a 6.3 de ancho y 4 de hondo**? Es lo que
+   mide la tira de muestra de la persiana (§D).
+
+### Registro
+
+| fecha | proveedor | lote único | negro AA15–AA20 | tira aprobada |
 |---|---|---|---|---|
 | (pendiente) | | | | |

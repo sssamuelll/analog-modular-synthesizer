@@ -64,7 +64,7 @@ def _fuentes_mtime() -> float:
     """La fecha del .scad mas nuevo del que cuelga la geometria."""
     cad = os.path.join(AQUI, "..", "cad")
     return max(os.path.getmtime(os.path.join(cad, f))
-               for f in ("sam17_case.scad", "params.scad"))
+               for f in ("sam17_case.scad", "params.scad", "persiana_generada.scad"))
 
 
 def importar(nombre):

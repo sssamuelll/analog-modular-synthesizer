@@ -1,5 +1,7 @@
 # SAM17 — El marco de la ventana y la banda estructural: cinco piezas a cuatro
 
+> **Enmienda 2026-10-11:** la mejilla de acrílico coplanar que este papel describe la sustituyó la persiana ([`2026-10-11-case-persiana-design.md`](2026-10-11-case-persiana-design.md)); el rebaje del anillo se queda vacío.
+
 **Fecha:** 2026-08-29 (noche) · **Estado:** aprobado por Samuel en conversación
 («dale vamos con furia»), con dos supuestos que él dejó abiertos y aquí se cierran
 (§1); **implementado** en la rama `feat/case-marco-ventana` con sus puertas — y

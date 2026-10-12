@@ -46,9 +46,10 @@ Remove-Item (Join-Path $build "*.stl") -ErrorAction SilentlyContinue
 # EL MARCO DE LA VENTANA (2026-08-29, noche) sustituye a las tres placas, el
 # clip y la escuadra; el talon al miembro bajo; y la banda del miembro alto a
 # los dos marcos de la trasera. Nueve DXF pasan a tres.
-$piezas = "costado_2d","costilla_2d","costilla_dorso_2d","cupon_anillo_2d","bandeja_base_2d","tapa_valle_2d",
+$piezas = "costilla_2d","costilla_dorso_2d","cupon_anillo_2d","bandeja_base_2d","tapa_valle_2d",
           "miembro_alto_2d","talon_2d","nariz_2d","marco_ventana_2d",
           "piel_trasera_2d",
+          "persiana_2d","persiana_pasante_2d","persiana_dorso_2d","costilla_bolsillos_2d",
           "kondor_cajeado_2d","lienzo_2d",
           "chasis_cuerpo_2d","chasis_tapa_2d","chasis_refuerzo_2d"
 # Piso de tamano del DXF. Es un SMOKE TEST -- "OpenSCAD escribio algo" --, no una
@@ -75,7 +76,7 @@ if ($LASTEXITCODE -ne 0 -or -not (Test-Path $coupon_out) -or (Get-Item $coupon_o
   Write-Warning "FALLO: coupon"; $fallos++
 }
 foreach ($m in "assembly_acrilico","assembly_aluminio","assembly_madera",
-                "assembly_esqueleto","assembly_acero") {
+                "assembly_esqueleto","assembly_acero","assembly_persiana") {
   $out = Join-Path $build "$m.stl"
   & $scad -o ($out.Replace('\', '/')) -D ('PART=\"' + $m + '\"') (Join-Path $PSScriptRoot "sam17_case.scad") | Out-Null
   if ($LASTEXITCODE -ne 0 -or -not (Test-Path $out) -or (Get-Item $out).Length -lt 10000) {
@@ -105,7 +106,7 @@ if ($LASTEXITCODE -ne 0) { Write-Error "check_dxf en ROJO: no se manda a cortar"
 # lleva el corte y no dice de donde doblar. Este si se versiona.
 python (Join-Path $repo "case/renders/plano_chasis.py")
 if ($LASTEXITCODE -ne 0) { Write-Error "plano de plegado en ROJO"; exit 1 }
-Write-Output "export completo: $($piezas.Count + 6) artefactos regenerados y releidos"
+Write-Output "export completo: $($piezas.Count + 7) artefactos regenerados y releidos"
 
 # El 2 tiene que SOBREVIVIR hasta quien llama. La constitucion (punto III):
 # «un script que deja el trabajo a medias sale con codigo de error,

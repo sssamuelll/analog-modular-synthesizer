@@ -1,5 +1,7 @@
 # La piel orgánica: un árbol sobre el hueso — el tronco y las dos ramas
 
+> **Sucedida el 2026-10-11** por [`2026-10-11-case-persiana-design.md`](2026-10-11-case-persiana-design.md). D-P1 nunca se firmó; D-P2 la retiró D-S2 de la persiana. Sus guiones salieron del repo con la persiana; quedan en el historial.
+
 **Fecha**: 2026-09-05 · **Estado**: **propuesta**; **D-P2 firmada en conversación el 05-09** (*«todo el acabado se hace con impresión 3D»*); **la filosofía dicha por Samuel la misma noche**, mirando la tercera celosía ya impresa en STL: *«toda esta pieza simula un árbol. los cachetes son como ramas (las ramas deberían tener una estructura natural de rama) [...] se interpreta como una rama con extensiones, todo lo que envuelve al aluminio se comporta como un tronco. hasta que no entiendas esto no lograremos el acabado que queremos para la piel 3d»*; y el origen de la rama: *«quiero que el punto del que salen todas las ramificaciones sea la punta inferior delantera»*. D-P1, D-P3, D-P4, D-P5, D-P6 y D-P7 sin firmar (§12) ·
 **Sucede a**: nada; **se apoya en** `2026-08-28-costilla-pletina` (el anillo), `2026-08-29-trasera-capturada-talon-nariz` (la trasera, que se queda), `2026-08-30-techo-macizo-chapas-empotradas` (el techo, que se va), `2026-08-31-case-tanda-b` (las tres filas, que no se tocan) y `2026-09-05-fuente-v5-ladrillo` (la fuente afuera, que este papel reabre en §7.1) ·
 **No toca**: la silueta, los ángulos, las tres filas, los Z-Rails, el marco de la ventana, los paneles rehundidos, la tabla, el ámbar ·

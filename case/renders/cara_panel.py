@@ -1,6 +1,6 @@
 """LA CARA del render (ficha 14 del acta del 09-10): los mandos sobre los
 paneles, para juzgar el case con su cara puesta. Solo render: nada de esto se
-fabrica desde aqui. Lo llama render_piel.py; aparte no corre.
+fabrica desde aqui. Lo llama render_persiana.py; aparte no corre.
 
 FILA DE ARRIBA, con el reparto que esta en papel (plan del panel §4, enmendado
 el 27-08 por 2026-08-27-panel-pantalla-al-centro-design.md): la pantalla de 7"
@@ -14,8 +14,10 @@ la pantalla. Es una eleccion del render, no del panel.
 FILA DE ABAJO, PROVISIONAL: son modulos KONDOR que nadie ha dibujado. Van los
 tres bloques que dejo escritos el plan (30, 62 y 12 HP) con caras genericas
 --perillas arriba, jacks abajo--, para ver el case con una cara puesta y no
-para decidir que va ahi. La fila KONDOR del valle se queda lisa: tampoco tiene
-reparto.
+para decidir que va ahi.
+
+LA FILA KONDOR DEL VALLE, PROVISIONAL tambien (2026-10-11): la conexion con el
+exterior, en cuatro modulos. Ver fila_valle().
 
 El marco de cada panel sale de las gemelas de clearance_budget (el perfil y
 panel_cara() de sam17_case.scad), y vestir() lo comprueba contra el STL de los
@@ -69,7 +71,14 @@ def marcos() -> dict:
     ancho = p["ancho_total"] - 2 * p["t_anillo"] - 2 * p["t_placa"]
     filas = {"abajo": (P[1], P[2], p["inset_inf_frente"] - p["inset_er"], p["alto_panel_inf"]),
              "arriba": (P[3], P[4], p["inset_sup_valle"] - p["inset_er"], p["alto_panel_sup"])}
-    out = {}
+    # EL VALLE es horizontal: w a lo ancho, u hacia atras y c hacia arriba. El
+    # panel 1U arranca inset_er antes del eje de su primer riel, y su cara
+    # queda rehundido_panel bajo el plano del valle.
+    c = cb._centros_rail_1u(p, P, cb._centros_rail(p, P))[0]
+    out = {"valle": (Matrix(((0, 1, 0, c[0] - p["inset_er"]),
+                             (0, 0, 1, P[3][1] - p["rehundido_panel"]),
+                             (1, 0, 0, p["t_anillo"] + p["t_placa"]), (0, 0, 0, 1))),
+                     p["alto_panel_1u"], ancho)}
     for fila, (A, B, s0, alto) in filas.items():
         L = math.hypot(B[0] - A[0], B[1] - A[1])
         dx, dy = (B[0] - A[0]) / L, (B[1] - A[1]) / L
@@ -264,6 +273,53 @@ def fila_abajo(cara: Cara, M: Matrix, alto: float, ancho: float) -> None:
         w += a
 
 
+def fila_valle(cara: Cara, M: Matrix, alto: float, ancho: float) -> None:
+    """PROVISIONAL: nadie ha decidido que va en el valle; es la conexion con el
+    exterior que el papel del instrumento le pone (instrumento-entero §6.2),
+    firmada como punto de partida (D-S6). Cuatro modulos en 104 HP: cascos
+    (14), ocho entradas y salidas con su luz (44), MIDI y reloj (30), y USB con
+    un nivel (16)."""
+
+    def perillita(w, u):
+        r, h = 6.5, 11.0
+        E = _en(M, w, u, _giro(cara._valor()))
+        cara.mallas["mando"].torno(E, [(0, 0), (r + 1.2, 0), (r + 1.2, 1.2), (r, 1.2),
+                                       (r - 0.3, h - 0.8), (r - 1.0, h), (0, h)])
+        cara.mallas["indicador"].caja(E, 0.8, r - 1.5, 0.8, h - 0.05, h + 0.1)
+
+    def led(w, u, encendido):
+        cara.mallas["led" if encendido else "led_apagado"].torno(
+            _en(M, w, u), [(0, 0), (1.6, 0), (1.6, 0.8), (0, 0.8)], 16)
+
+    w = (ancho - 104 * HP) / 2
+    um = alto / 2
+    for i, hp in enumerate((14, 44, 30, 16)):
+        a = hp * HP
+        if i:
+            cara.costura(M, w, alto)
+        for x in (w + 7.5, w + a - 7.5):
+            for u in (3.0, alto - 3.0):
+                cara.tornillo(M, x, u)
+        if i == 0:                       # cascos: nivel y salida
+            perillita(w + a * 0.36, um)
+            cara.jack(M, w + a * 0.76, um)
+        elif i == 1:                     # ocho entradas y salidas, con su luz
+            for k in range(8):
+                ww = w + 16 + k * (a - 32) / 7
+                cara.jack(M, ww, um - 6)
+                led(ww, um + 12, k in (1, 2, 5))
+        elif i == 2:                     # MIDI y reloj
+            for k in range(5):
+                cara.jack(M, w + 18 + k * (a - 36) / 4, um - 4)
+            for k in range(2):
+                led(w + 18 + k * (a - 36) / 4, um + 13, k == 0)
+        else:                            # USB y un nivel
+            cara.mallas["agujero"].caja(_en(M, w + a * 0.3, um), -4.5, 4.5, 3.2, -0.4, 0.15)
+            cara.mallas["niquel"].caja(_en(M, w + a * 0.3, um), -5.5, 5.5, 4.4, -0.1, 0.05)
+            perillita(w + a * 0.72, um)
+        w += a
+
+
 # --- la pantalla --------------------------------------------------------------
 def imagen_ui(ancho: int = 800, alto: int = 480):
     """Una pantalla ENCENDIDA, no un diseno de interfaz: reticula, una onda y
@@ -337,7 +393,7 @@ def vestir(ns: dict, paneles) -> list:
     comprobar(paneles, filas)
     materiales(ns["mat"])
     objetos = []
-    for fila, rellenar in (("arriba", fila_arriba), ("abajo", fila_abajo)):
+    for fila, rellenar in (("arriba", fila_arriba), ("abajo", fila_abajo), ("valle", fila_valle)):
         M, alto, ancho = filas[fila]
         cara = Cara(fila)
         rellenar(cara, M, alto, ancho)
