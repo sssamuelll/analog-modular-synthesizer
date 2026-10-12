@@ -1136,13 +1136,14 @@ def anillo_tiene_chaflan() -> list[str]:
 
 
 def taladros_nariz() -> list[str]:
-    """La nariz trae sus tres M4 en el pie, y la tabla los mismos tres debajo.
+    """La nariz trae sus tres M4 en el pie, y la base los mismos tres debajo.
 
-    Dos ficheros y un solo herraje: el M4 atraviesa el pie de la nariz
-    (nariz_2d, en el DESARROLLO, a 1.5 D del canto libre del pie -- un canto
-    libre no se mueve al plegar) y entra en la tabla (bandeja_base_2d, con el
-    mismo diametro que los pies, d_pie_tornillo, porque es el mismo herraje a
-    la misma madera). Si uno de los dos se mueve, el tornillo no cae."""
+    Dos ficheros y un solo tornillo, que entra DESDE ABAJO (D-T2, papel del
+    suelo): pasa por la base (bandeja_base_2d, agujero de paso d_M4_paso) y
+    rosca en la tuerca CLS-M4 prensada en el pie de la nariz (nariz_2d, en el
+    DESARROLLO, agujero pem_cls_m4 a m4_pie_borde del canto libre del pie -- un
+    canto libre no se mueve al plegar). Si uno de los dos se mueve, el
+    tornillo no cae."""
     import clearance_budget as cb
 
     p = cb.leer_params()
@@ -1153,8 +1154,8 @@ def taladros_nariz() -> list[str]:
     f: list[str] = []
     cantos = _cantos(dxf)
     leidos = _redondos(dxf)
-    d = p["d_M4_paso"] + p["kerf"]
-    esperados = [(_x_blank(p, z), 1.5 * p["d_M4_paso"])
+    d = p["pem_cls_m4"] + p["kerf"]
+    esperados = [(_x_blank(p, z), cb._m4_pie_borde(p))
                  for z in nz["m4_z"]]
     for ex, ey in esperados:
         cerca = [q for q in leidos
@@ -1170,19 +1171,18 @@ def taladros_nariz() -> list[str]:
     if len(leidos) != len(esperados):
         f.append(f"{dxf}: {len(leidos)} agujeros en el DXF y el modelo pone "
                  f"{len(esperados)}")
-    v = p["vuelo_zocalo"]
-    d_t = p["d_pie_tornillo"] + p["kerf"]
+    d_t = p["d_M4_paso"] + p["kerf"]
     tabla = _redondos("bandeja_base_2d")
     for z in nz["m4_z"]:
-        ex, ey = v + z, v + nz["m4_x"]
+        ex, ey = z, nz["m4_x"]
         if not any(math.hypot(q[0] - ex, q[1] - ey) <= DESVIO_DXF_MAX
                    and abs(q[2] - d_t) < 0.1 for q in tabla):
             f.append(f"bandeja_base_2d: falta el taladro de la nariz en "
                      f"({ex:.2f}, {ey:.2f}), d={d_t:.2f}")
     if not f:
-        print(f"  {dxf}: {len(esperados)} M4 en el pie a "
-              f"{1.5 * p['d_M4_paso']:.2f} del canto libre, y los mismos "
-              f"{len(esperados)} en la tabla (d={d_t:.2f})")
+        print(f"  {dxf}: {len(esperados)} tuercas CLS en el pie a "
+              f"{cb._m4_pie_borde(p):.2f} del canto libre, y los mismos "
+              f"{len(esperados)} pasos en la base (d={d_t:.2f})")
     return f
 
 
@@ -1504,15 +1504,15 @@ def taladros_marco_ventana() -> list[str]:
 
 
 def taladros_talon() -> list[str]:
-    """El talon trae sus tres M4 en el pie, y la tabla lleva debajo los tres
+    """El talon trae sus tres M4 en el pie, y la base lleva debajo los tres
     del talon y los cuatro del chasis.
 
-    Como taladros_nariz(): dos ficheros y un solo herraje. Los M4 del pie
-    atraviesan el talon (talon_2d, en el desarrollo, a 1.5 D del canto libre
-    del pie) y entran en la tabla (bandeja_base_2d, con d_pie_tornillo, el
-    mismo herraje a la misma madera). Y los cuatro M4 del suelo del chasis --
-    que desde el 2026-08-29 por la noche va a la tabla y no a un miembro --
-    tienen que estar en la tabla donde chasis_cuerpo_2d los lleva. La fila
+    Como taladros_nariz(): dos ficheros y un solo tornillo, desde abajo
+    (D-T2). Las tuercas CLS van en el pie del talon (talon_2d, en el
+    desarrollo, a m4_pie_borde del canto libre del pie) y los pasos en la base
+    (bandeja_base_2d, d_M4_paso). Y los cuatro M4 del suelo del chasis --
+    que desde el 2026-08-29 por la noche va al suelo y no a un miembro --
+    tienen que estar en la base donde chasis_cuerpo_2d los lleva. La fila
     de M3 de la trasera murio con la trasera capturada: el talon no lleva
     mas agujeros redondos que sus tres M4."""
     import clearance_budget as cb
@@ -1524,9 +1524,9 @@ def taladros_talon() -> list[str]:
     if (PLANS / f"{dxf}.dxf").exists():
         cantos = _cantos(dxf)
         leidos = _redondos(dxf)
-        d4 = p["d_M4_paso"] + p["kerf"]
+        d4 = p["pem_cls_m4"] + p["kerf"]
         esperados = [(_x_blank(p, z),
-                      tl["desarrollo"] - 1.5 * p["d_M4_paso"]) for z in tl["m4_z"]]
+                      tl["desarrollo"] - cb._m4_pie_borde(p)) for z in tl["m4_z"]]
         for ex, ey in esperados:
             cerca = [q for q in leidos
                      if math.hypot(q[0] - ex, q[1] - ey) <= DESVIO_DXF_MAX
@@ -1562,11 +1562,10 @@ def taladros_talon() -> list[str]:
                      f"pone {len(esperados)} (los tres M4; los alivios de las pestanas "
                      f"van fundidos con el corte en U, y la fila de M3 murio con la "
                      f"trasera capturada)")
-    v = p["vuelo_zocalo"]
     tabla = _redondos("bandeja_base_2d")
-    d_t = p["d_pie_tornillo"] + p["kerf"]
+    d_t = p["d_M4_paso"] + p["kerf"]
     for z in tl["m4_z"]:
-        ex, ey = v + z, v + tl["m4_x"]
+        ex, ey = z, tl["m4_x"]
         if not any(math.hypot(q[0] - ex, q[1] - ey) <= DESVIO_DXF_MAX
                    and abs(q[2] - d_t) < 0.1 for q in tabla):
             f.append(f"bandeja_base_2d: falta el taladro del talon en "
@@ -1578,8 +1577,8 @@ def taladros_talon() -> list[str]:
             f.append(f"bandeja_base_2d: falta el taladro del chasis en "
                      f"({ex:.2f}, {ey:.2f}), d={d4t:.2f}")
     if not f:
-        print(f"  talon_2d: 3 M4 en el pie a {1.5 * p['d_M4_paso']:.2f} del canto "
-              f"libre; la tabla lleva los 3 del talon (d={d_t:.2f}) y los 4 del "
+        print(f"  talon_2d: 3 tuercas CLS en el pie a {cb._m4_pie_borde(p):.2f} del canto "
+              f"libre; la base lleva los 3 del talon (d={d_t:.2f}) y los 4 del "
               f"chasis (d={d4t:.2f})")
     return f
 
@@ -2238,147 +2237,71 @@ def todo_dxf_tiene_quien_lo_mire() -> list[str]:
 
 
 
-def guarda_zocalo() -> list[str]:
-    """La tabla se puede mover, y por eso sus tornillos no son todos redondos.
+def guarda_bandeja_base() -> list[str]:
+    """La base de chapa, leida de su DXF (papel del suelo, 2026-10-12).
 
-    ES LA UNICA PIEZA DE MADERA DEL CASE Y DESDE EL 2026-08-27 CARGA. Una tabla
-    maciza cambia de tamano con la humedad: a contraveta, del orden del 1 % entre
-    un invierno seco y un verano humedo, o sea 3 mm sobre los 329 de fondo. El
-    marco de aluminio no se mueve. Si los seis tornillos fueran redondos, en
-    diciembre la tabla tira de ellos y o se raja por la fila o se sueltan.
+    Va al taller de chapa lo que diga el DXF, y por eso se lee el DXF:
+      1. el contorno es la huella del cuerpo, sin vuelo;
+      2. cada taladro de fijacion de _taladros_base() esta, con su diametro;
+      3. el campo de agujeros es EL MISMO que cuenta el aire: misma cuenta y
+         mismos centros que _campo_base(). Si las gemelas del .scad y del budget
+         se separan, el aire cuenta unos agujeros y el taller corta otros.
 
-    La solucion es de ebanisteria y tiene DOS mitades, y las dos hay que
-    verificarlas porque cada una sola no sirve:
-      1. Todos los tornillos menos uno van en RANURA, alargada en la direccion
-         en que la tabla se mueve -- que es su FONDO, porque la veta corre a lo
-         largo (los 570 mm del ancho del case, como en la foto de referencia).
-      2. UNO de cada fila va REDONDO. Es el punto fijo. Sin el, la tabla no se
-         queda quieta: se arrastra hacia un extremo y el vuelo deja de ser
-         simetrico. Con dos redondos vuelve el problema entero.
+    Fue guarda_zocalo() hasta el papel del suelo: la tabla de nogal se movia con
+    la estacion y sus tornillos iban en ranura con uno redondo de punto fijo.
+    La base es aluminio contra aluminio, y los seis van redondos.
 
-    Se lee del DXF y no del modelo porque lo que va al carpintero es el DXF, y
-    una ranura que sale redonda de la exportacion no la nota nadie: el contorno
-    no cambia y la pieza parece correcta hasta que llega el invierno."""
+    Coordenadas locales del DXF: x = z del mundo, y = x del mundo."""
     import clearance_budget as cb
 
     p = cb.leer_params()
-    d = p["d_M5_paso"] + p["kerf"]
-    viaje = 2 * p["holgura_veta"]
-    # AL MEDIO DEL CANTO INFERIOR DEL ANILLO desde el 2026-08-28, gemela de
-    # bandeja_base_2d(). Fue t_cheek + t_costilla/2 mientras la costilla era
-    # chapa apoyada detras del acrilico; hoy el canto ES el anillo, 14 mm de
-    # pletina, y el M5 va a una rosca ciega en su centro.
-    filas_x = [p["vuelo_zocalo"] + p["t_anillo"] / 2,
-               p["vuelo_zocalo"] + p["ancho_total"] - p["t_anillo"] / 2]
-    aristas, comps = _componentes("bandeja_base_2d")
-    if not aristas:
-        return ["bandeja_base_2d: sin LINEs, no se puede verificar la tabla"]
-
-    # Todo lo que mide d de ancho es tornillo de fijacion: redondo si es
-    # cuadrado, ranura si es mas largo que ancho.
-    tornillos = []
-    for comp in comps:
-        px = [q[0] for j in comp for q in aristas[j]]
-        py = [q[1] for j in comp for q in aristas[j]]
-        w, h = max(px) - min(px), max(py) - min(py)
-        if abs(w - d) > 0.1 or h < d - 0.1:
-            continue
-        tornillos.append(((min(px) + max(px)) / 2, (min(py) + max(py)) / 2, h))
-
     f: list[str] = []
-    # LA QUINTA COPIA DEL PASO, y la ultima. Fue un 100 a mano hasta el
-    # 2026-08-27; la destapo el test de rotura de la reticula -- subir
-    # reticula_paso a 137 movia la fila de la tabla en el modelo y no
-    # aqui, y esta puerta cantaba "2 tornillos y el modelo pone 3".
-    # La tabla usa n_agujeros(), que desde hoy lee reticula_paso. Y desde el
-    # 10-10 reparte el fondo del CUERPO, no el de la tabla: el vuelo no mueve
-    # la fila (gemela de _m5_tabla_x).
-    n = max(1, round((fondo_cuerpo := cb.fondo(p))
-                     / p["reticula_paso"]))
-    for xc in filas_x:
-        fila = sorted((t for t in tornillos if abs(t[0] - xc) < 0.1),
-                      key=lambda t: t[1])
-        if len(fila) != n:
-            f.append(f"bandeja_base_2d: la fila de x={xc:.2f} trae "
-                     f"{len(fila)} tornillos y el modelo pone {n} sobre "
-                     f"{fondo_cuerpo:.2f} mm de fondo del cuerpo")
-            continue
-        redondos = [t for t in fila if abs(t[2] - d) < 0.1]
-        if len(redondos) != 1:
-            f.append(f"bandeja_base_2d: la fila de x={xc:.2f} tiene "
-                     f"{len(redondos)} tornillos REDONDOS y tiene que tener "
-                     f"exactamente 1. Ninguno: la tabla no tiene punto fijo y "
-                     f"se arrastra hacia un extremo. Dos o mas: vuelve a estar "
-                     f"clavada a un marco que no se mueve, y se raja")
-            continue
-        if abs(redondos[0][1] - fila[n // 2][1]) > 1e-6:
-            f.append(f"bandeja_base_2d: el tornillo redondo de la fila de "
-                     f"x={xc:.2f} no es el del MEDIO. Fijar por una punta deja "
-                     f"toda la carrera hacia el otro lado y el vuelo del "
-                     f"zocalo deja de ser simetrico")
-        for t in fila:
-            if abs(t[2] - d) < 0.1:
-                continue
-            if abs(t[2] - (d + viaje)) > 0.1:
-                f.append(f"bandeja_base_2d: la ranura de (x={t[0]:.1f}, "
-                         f"y={t[1]:.1f}) mide {t[2]:.2f} de largo y se exige "
-                         f"{d + viaje:.2f} (paso M5 + 2 x holgura_veta). La "
-                         f"carrera cubre lo que la madera se mueve a "
-                         f"contraveta: acortarla es volver a clavarla")
-    if not f:
-        print(f"  bandeja_base_2d: {len(tornillos)} tornillos en 2 filas, "
-              f"1 redondo y {n - 1} en ranura de {d + viaje:.1f} mm por fila "
-              f"-- la tabla puede moverse {viaje:.1f} mm a contraveta")
-
-    # LOS CUATRO TALADROS DE PIE (Tarea 6). ADEMAS de las dos filas de M5, no
-    # en vez de ellas: paticas() atornilla las cuatro paticas de goma A LA
-    # TABLA, y esos cuatro agujeros son un censo aparte con su propio
-    # diametro (d_pie_tornillo, no d_M5_paso).
-    #
-    # LA CONVERSION DE COORDENADAS ES LA MISMA que usan las dos filas de
-    # arriba: local x = vuelo_zocalo + z del mundo, local y = vuelo_zocalo +
-    # x del mundo (comentario largo sobre bandeja_base_2d() en el .scad,
-    # "x local de la tabla = vuelo_zocalo + z del mundo"). GEMELA de
-    # paticas(): mismos cuatro centros del .scad, sin la rotacion a Z que ahi
-    # hace falta para plantar el cilindro y aqui no, porque esto es 2D.
-    v = p["vuelo_zocalo"]
-    tl = cb._talon(p)
-    x_frente = p["alto_frontal"] / 2 + p["d_pie"] / 2
-    x_trasero = tl["x_chaflan"] - p["talon_pie"] / 2  # centro_talon().x: el pie va del chaflan hacia dentro
-    d_pie_taladro = p["d_pie_tornillo"] + p["kerf"]
-    esperados_pie = [(v + wz, v + wx)
-                     for wx in (x_frente, x_trasero)
-                     for wz in (p["d_pie"] / 2, p["ancho_total"] - p["d_pie"] / 2)]
+    aristas, _comps = _componentes("bandeja_base_2d")
+    if not aristas:
+        return ["bandeja_base_2d: sin LINEs, no se puede verificar la base"]
+    xs = [q[0] for a in aristas for q in a]
+    ys = [q[1] for a in aristas for q in a]
+    largo = cb.fondo(p) - 2 * p["chaflan_nariz"]
+    caja = (min(xs), max(xs), min(ys), max(ys))
+    esperada = (0.0, p["ancho_total"], p["chaflan_nariz"],
+                cb.fondo(p) - p["chaflan_nariz"])
+    if any(abs(a - b) > DESVIO_DXF_MAX for a, b in zip(caja, esperada)):
+        f.append(f"bandeja_base_2d: el contorno va de "
+                 f"{tuple(round(v, 2) for v in caja)} y la huella del cuerpo es "
+                 f"{tuple(round(v, 2) for v in esperada)}: la base no lleva vuelo")
     redondos = _redondos("bandeja_base_2d")
-    # LOS TRES DE LA NARIZ llevan el mismo diametro (mismo herraje a la misma
-    # tabla) y NO son pies: se apartan por posicion, y los cuenta
-    # taladros_nariz(). Sin esto, el censo de pies decia 7.
-    # Y LOS TRES DEL TALON Y LOS CUATRO DEL CHASIS (2026-08-29, noche), por lo
-    # mismo: mismo diametro, se apartan por posicion y los cuenta
-    # taladros_talon().
-    nz = cb._nariz(p)
-    de_otros = ([(v + z, v + nz["m4_x"]) for z in nz["m4_z"]]
-                + [(v + z, v + tl["m4_x"]) for z in tl["m4_z"]]
-                + cb._chasis_tornillos_tabla(p))
-    pies = [q for q in redondos if abs(q[2] - d_pie_taladro) < 0.1
-            and not any(math.hypot(q[0] - ex, q[1] - ey) <= DESVIO_DXF_MAX
-                        for ex, ey in de_otros)]
-    if len(pies) != 4:
-        f.append(f"bandeja_base_2d: faltan los 4 taladros de pie -- hay "
-                 f"{len(pies)} de d={d_pie_taladro:.2f} mm (d_pie_tornillo) "
-                 f"en el DXF y paticas() pone 4")
+    k = p["kerf"]
+
+    def faltan(puntos, d):
+        return [(x, y) for x, y in puntos
+                if not any(abs(q[2] - (d + k)) < 0.1
+                           and math.hypot(q[0] - x, q[1] - y) <= DESVIO_DXF_MAX
+                           for q in redondos)]
+
+    taladros = cb._taladros_base(p)
+    for tipo in ("M5", "M4 nariz", "M4 talon", "FH pata", "M4 chasis"):
+        puntos = [(z, x) for x, z, _d, t in taladros if t == tipo]
+        d = next(dd for _x, _z, dd, t in taladros if t == tipo)
+        mal = faltan(puntos, d)
+        if mal:
+            f.append(f"bandeja_base_2d: el taladro de {tipo} (d={d:g}) en "
+                     f"{tuple(round(v, 2) for v in mal[0])} no esta en el DXF")
+    campo = [(z, x) for x, z in cb._campo_base(p)]
+    del_dxf = [q for q in redondos if abs(q[2] - (p["base_agujero"] + k)) < 0.1]
+    if len(del_dxf) != len(campo):
+        f.append(f"bandeja_base_2d: el DXF trae {len(del_dxf)} agujeros de "
+                 f"{p['base_agujero']:g} y el aire cuenta {len(campo)} "
+                 f"(_campo_base): las gemelas se separaron")
     else:
-        faltan_pie = []
-        for ex, ey in esperados_pie:
-            if not any(math.hypot(q[0] - ex, q[1] - ey) <= DESVIO_DXF_MAX
-                       for q in pies):
-                faltan_pie.append((ex, ey))
-        if faltan_pie:
-            f.append(f"bandeja_base_2d: el taladro de pie en "
-                     f"{faltan_pie[0]} no cae donde paticas() lo pone")
-        else:
-            print(f"  bandeja_base_2d: 4 taladros de pie d={d_pie_taladro:.2f} "
-                  f"mm en las posiciones de paticas()")
+        mal = faltan(campo, p["base_agujero"])
+        if mal:
+            f.append(f"bandeja_base_2d: el agujero del campo en "
+                     f"{tuple(round(v, 2) for v in mal[0])} no esta donde lo "
+                     f"pone _campo_base()")
+    if not f:
+        print(f"  bandeja_base_2d: {largo:.2f} x {p['ancho_total']:.2f}, "
+              f"{len(taladros)} taladros de fijacion y {len(campo)} agujeros "
+              f"del campo, los mismos que cuenta el aire")
     return f
 
 
@@ -2533,7 +2456,7 @@ def main() -> int:
     fallos += cuerpos_dentro_del_anillo()
     fallos += tapa_valle_conectada()
     fallos += taladros_reticula()
-    fallos += guarda_zocalo()
+    fallos += guarda_bandeja_base()
     fallos += guarda_kondor()
     fallos += agujeros_donde_toca()
     fallos += chasis_agujeros()

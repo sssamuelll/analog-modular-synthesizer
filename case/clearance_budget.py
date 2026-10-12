@@ -265,14 +265,14 @@ def _chasis_tornillos(p: dict[str, float]) -> list[tuple[float, float]]:
 
 def _chasis_tornillos_tabla(p: dict[str, float]) -> list[tuple[float, float]]:
     """Los mismos cuatro en coordenadas LOCALES de bandeja_base_2d: la misma
-    cadena que salida_cables_xy() en el .scad (x local = vuelo + z del mundo,
-    y local = vuelo + x del mundo; el interior arranca desfase + t dentro de
-    la envolvente de la tapa). GEMELA de chasis_tornillos_tabla()."""
+    cadena que salida_cables_xy() en el .scad (x local = z del mundo, y local
+    = x del mundo, sin vuelo desde el papel del suelo; el interior arranca
+    desfase + t dentro de la envolvente de la tapa). GEMELA de
+    chasis_tornillos_tabla()."""
     c = _chasis(p)
     au = perfil(p)["ancho_util"]
-    v = p["vuelo_zocalo"]
-    pos_x = v + p["t_anillo"] + au - p["chasis_margen_bandeja"] - c["tapa_x"]
-    pos_y = _x_chasis_frente(p) + v
+    pos_x = p["t_anillo"] + au - p["chasis_margen_bandeja"] - c["tapa_x"]
+    pos_y = _x_chasis_frente(p)
     d = c["desfase"] + p["t_chapa"]
     return [(pos_x + d + ix, pos_y + d + iy) for ix, iy in _chasis_tornillos(p)]
 
@@ -1658,31 +1658,32 @@ def _cajas_solidas(p: dict[str, float]) -> tuple[list[Caja], list[Caja],
 
     planchas: list[Caja] = []
     filas: list[Fila] = []
-    # bandeja_base: LA TABLA. Cambio de sitio y de material el 2026-08-27 y es
-    # el cambio mas grande que ha tenido esta pieza.
+    # bandeja_base: LA BASE de chapa (papel del suelo, 2026-10-12), bajo los
+    # anillos y a ras de su huella, de y = -t_base a 0. Lo que sigue es la
+    # historia de la tabla de nogal que fue esta pieza hasta ese dia.
     #
     # Fue plancha de acrilico DENTRO del case (y = 0 a t_base) desde el
     # 2026-08-17, con los dos largueros montados encima, y su canto delantero
-    # valio 8.46 mm de alto de aparato en su ultima vuelta. Ahora es una TABLA DE
-    # MADERA MACIZA BAJO EL MARCO: ocupa y = -t_base .. 0, su cara de arriba ES
-    # el suelo interior y su canto sobresale vuelo_zocalo por los cuatro lados.
+    # valio 8.46 mm de alto de aparato en su ultima vuelta. Luego fue una TABLA
+    # DE MADERA MACIZA BAJO EL MARCO (2026-08-27 a 2026-10-12), con su vuelo por
+    # los cuatro lados. Ahora es la BASE de chapa: ocupa y = -t_base .. 0, a ras
+    # de la huella del cuerpo, y su cara de arriba ES el suelo interior.
     # Es la misma pieza que el "zocalo" de la spec 9, que hasta hoy eran dos.
     #
     # LO QUE ESO DESHACE, y por eso el modelo se simplifica en vez de crecer:
     #   - No hay voladizo. La plancha volaba 271.45 mm desde `base trasera` y
     #     pedia 10 mm de aluminio. Ahora las dos costillas se apoyan ENCIMA de
-    #     la tabla y las cuatro paticas van debajo, casi en la misma vertical:
+    #     la base y las cuatro paticas van debajo, casi en la misma vertical:
     #     el peso del case va de costilla a pata sin cruzar el vano.
-    #   - No hay fila de M3 a un larguero. La tabla no cuelga de nada; el marco
-    #     se le apoya. Su fijacion es a las dos costillas y va con AGUJERO
-    #     ALARGADO, que es cosa de guarda_zocalo() y no de apoyo().
+    #   - No hay fila de M3 a un larguero. La base no cuelga de nada; el marco
+    #     se le apoya. Su fijacion es a las dos costillas, con seis M5 de paso
+    #     redondo, que es cosa de guarda_bandeja_base() y no de apoyo().
     #   - alto_frontal se suelta del espesor del suelo: el riel del frente solo
     #     tiene que librar y=0.
-    v = p["vuelo_zocalo"]
     planchas.append(("bandeja_base",
-                     -v, fondo(p) + v,
+                     p["chaflan_nariz"], fondo(p) - p["chaflan_nariz"],
                      -p["t_base"], 0.0,
-                     -v, p["ancho_total"] + v))
+                     0.0, p["ancho_total"]))
     # bandeja_entrepiso MURIO el 2026-08-21 ("vamos a evitar la complejidad").
     # Era el piso del piso de arriba, y su papel de barrera entre la fuente y
     # los modulos ya lo hace el chasis de ACERO (#107): la red y el toroide
@@ -2091,6 +2092,11 @@ def solapes(p: dict[str, float]) -> list[str]:
     mismo. Paneles inclinados (1.6 mm, PCB de aluminio de cada modulo): su
     clase la resuelve la rotacion de railes (R3), no entran en esta caja."""
     railes, planchas, _ = _cajas_solidas(p)
+    # Las dos persianas tienen que estar entre las cajas que se cruzan. Lo
+    # probaba canario_persiana_tabla(), hasta que la base dejo de pasar bajo
+    # la persiana (papel del suelo, 2026-10-12).
+    assert {"persiana izquierda", "persiana derecha"} <= {c[0] for c in railes}, (
+        "las dos persianas no estan entre las cajas que solapes() cruza")
     fallos: list[str] = []
     todas = railes + planchas
     n_rail = len(railes)
@@ -2151,16 +2157,6 @@ def canario_solapes(p: dict[str, float]) -> None:
         "canario de solapes no disparo: el checker no detecta un choque "
         "conocido (6.92 x 9.40 mm en planta) — no confiar en el resto de "
         "solapes()")
-
-
-def canario_persiana_tabla(p: dict[str, float]) -> None:
-    """La persiana empieza suelo_persiana por encima de la tabla. Con -1 se
-    mete en ella, y solapes() tiene que cantarlo: es la prueba de que sus dos
-    cajas estan en la lista que cruza contra todo."""
-    fallos = solapes({**p, "suelo_persiana": -1.0})
-    assert any("persiana" in f and "bandeja_base" in f for f in fallos), (
-        "canario de la persiana no disparo: con suelo_persiana = -1 la "
-        "persiana entra 1 mm en la tabla y solapes() no lo ve")
 
 
 def _sat_gap(p: dict[str, float], c1: tuple[float, float], ang1: float,
@@ -3908,7 +3904,7 @@ def _talon(p: dict[str, float]) -> dict:
             "pestana_ventana": p["talon_pestana_ancho"] / 2 + max(k, k / 2 + r_al),
             "contorno": [(x_pie, 0.0), (x_ch, 0.0), (xp, c),
                          (xp, c + p["talon_labio"])],
-            "m4_x": x_pie + 1.5 * p["d_M4_paso"],
+            "m4_x": x_pie + _m4_pie_borde(p),
             "m4_z": [p["t_anillo"] + au * f for f in (0.25, 0.5, 0.75)],
             "pestana_x": tr["x0"] - p["talon_pestana_aire"],
             "pestana_z": [p["t_anillo"] + au * (2 * i + 1) / (2 * p["talon_pestana_n"])
@@ -6007,44 +6003,6 @@ def guarda_piso(p: dict[str, float]) -> None:
         f"(holgura_rail sobre y=0). Subir alto_frontal o inset_inf_frente "
         f"(van emparejados: la curva en punta pide "
         f"inset >= alto_frontal/2 + rail_er_alto/2 + 3)")
-    # 2. LA TABLA NO SE HUNDE BAJO EL CHASIS DEL PSU.
-    #
-    #    Aqui vivian tres asserts y los tres se cayeron al pasar el suelo a
-    #    tabla bajo el marco:
-    #      - "la bandeja LLEGA al frente" se volvio TAUTOLOGIA cuando su canto
-    #        paso a derivarse de la tangente de la curva. Una puerta que no
-    #        puede fallar no mide nada.
-    #      - "el larguero de base delantera se aparta del riel" se quedo sin
-    #        sujeto: ese larguero ya no existe.
-    #      - el VOLADIZO de 271.45 mm, que pedia 10 mm de aluminio, no existe:
-    #        la tabla no cuelga de una barra, el marco se le APOYA encima.
-    #
-    #    LO QUE QUEDA, y es lo unico que de verdad la dobla: el chasis del PSU
-    #    sentado en medio del vano entre las dos costillas. El peso del propio
-    #    case NO cuenta aqui -- las cuatro paticas van casi bajo las lineas de
-    #    apoyo de las costillas, asi que ese camino no cruza el vano.
-    #
-    #    SUPUESTO HEREDADO y hay que decirlo: los 200 N son carga_mano, del
-    #    costado. El peso real del chasis no esta itemizado en el repo (spec
-    #    10). Se usa el conservador que ya existe. E_madera es a favor de veta
-    #    y tambien es supuesto hasta que la especie este elegida.
-    vano = perfil(p)["ancho_util"]
-    b_tabla = fondo(p) + 2 * p["vuelo_zocalo"]
-    I_z = b_tabla * p["t_base"] ** 3 / 12
-    flecha_z = p["carga_mano"] * vano ** 3 / (48 * p["E_madera"] * I_z)
-    assert flecha_z <= p["flecha_costado_max"], (
-        f"la tabla cede {flecha_z:.3f} mm cruzando los {vano:.2f} mm entre las "
-        f"dos costillas con el chasis del PSU encima, y el techo son "
-        f"{p['flecha_costado_max']:.2f}. Con E_madera={p['E_madera']:.0f} hacen "
-        f"falta 16 mm justos, 18 con margen y 20 si la especie es "
-        f"contrachapado (E 8000). Subir t_base NO cuesta alto de aparato desde "
-        f"que la tabla va debajo del marco.")
-    print(f"suelo: TABLA DE MADERA MACIZA t={p['t_base']:g} bajo el marco, "
-          f"{b_tabla:.2f} x {p['ancho_total'] + 2 * p['vuelo_zocalo']:.2f} "
-          f"(vuela {p['vuelo_zocalo']:g} por los cuatro lados)")
-    print(f"  con {p['carga_mano']:.0f} N en medio del vano de {vano:.2f} cede "
-          f"{flecha_z:.3f} mm (techo {p['flecha_costado_max']:.2f}, "
-          f"E {p['E_madera']:.0f} MPa a favor de veta)")
     # 3. y la trasera TAMBIEN llega al suelo. El suelo no lo cierra solo la
     #    bandeja: la cara trasera es la cuarta pared, y si su canto de abajo no
     #    baja hasta el mismo plano queda un rebaje corrido a lo largo de los
@@ -6151,7 +6109,7 @@ def _nariz(p: dict[str, float]) -> dict:
                   + s_top - 2 * _bd_angulo(p, 45.0)
                   - _bd_angulo(p, p["angulo_inferior"]))
     return {"contorno": contorno, "s_top": s_top, "cara": cara,
-            "m4_x": c + p["nariz_pie"] - 1.5 * p["d_M4_paso"],
+            "m4_x": c + p["nariz_pie"] - _m4_pie_borde(p),
             "m4_z": [p["t_anillo"] + au * f for f in (0.25, 0.5, 0.75)],
             # Igual que el talon: el blank es lo que entra en rebaje (chaflan y
             # frente empotrados), y el pie queda en largo_pie tras la muesca.
@@ -6591,14 +6549,15 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
     # delantera` estaba justo ahi. Muerta esa barra el 2026-08-27 se escribe la
     # cadena en su sentido: la cara delantera del chasis, menos el canto de la
     # plancha. Da el mismo numero (91.85) y ahora por la razon correcta.
-    pos_y = _x_chasis_frente(p) + p["vuelo_zocalo"]
+    pos_y = _x_chasis_frente(p)
     ax = pos_x + c["desfase"] + t + p["chasis_salida_x"] - hol
     ay = pos_y + c["desfase"] + t + p["chasis_salida_y"] - hol
     exige(0 <= ax and ax + w <= au
-          and 0 <= ay and ay + h <= fondo_bandeja,
+          and p["chaflan_nariz"] <= ay
+          and ay + h <= p["chaflan_nariz"] + fondo_bandeja,
           f"el agujero de cables cae en x={ax:.1f}..{ax + w:.1f}, "
-          f"y={ay:.1f}..{ay + h:.1f} y la tabla mide {au:.2f} x "
-          f"{fondo_bandeja:.2f}: se sale de la pieza")
+          f"y={ay:.1f}..{ay + h:.1f} y la base va de y={p['chaflan_nariz']:.2f} "
+          f"a {p['chaflan_nariz'] + fondo_bandeja:.2f}: se sale de la pieza")
 
     # --- 6. el chasis: cuelga por detras y APOYA por delante ---------------
     # ESTA PREMISA SE HA INVERTIDO DOS VECES Y CONVIENE QUE LAS DOS ESTEN
@@ -6628,7 +6587,7 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
     # 120 Hz contra los 100 del toroide -- pero eso es la tabla sola. Se cierra
     # pesando el chasis.
     hol = p["chasis_holgura_larguero"]
-    libre_1 = _talon(p)["x_pie"] + p["vuelo_zocalo"] - hol
+    libre_1 = _talon(p)["x_pie"] - hol
     exige(pos_y >= 0 and pos_y + c["tapa_y"] <= libre_1,
           f"el chasis ocupa y={pos_y:.1f}..{pos_y + c['tapa_y']:.1f} de la "
           f"tabla y, con {hol:.0f} mm de holgura al pie del talon, cabe "
@@ -6648,7 +6607,7 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
     # (r) con 1.5 D de margen --, fuera de la ranura de salida de cables y del
     # refuerzo del toroide (que es otra chapa remachada debajo: un agujero ahi
     # atraviesa dos), y lejos de los separadores de la PCB. Lo que va a la
-    # tabla lo cruza guarda_zocalo() en check_dxf.
+    # base lo cruza guarda_bandeja_base() en check_dxf.
     borde_m4 = p["radio_doblez"] + 1.5 * p["d_M4_paso"]
     r_ref = p["chasis_refuerzo_lado"] / 2
     for ix, iy in _chasis_tornillos(p):
@@ -6696,15 +6655,10 @@ def guarda_chasis(p: dict[str, float], g: dict[str, float]) -> list[str]:
 
 
 def _fondo_bandeja(p: dict[str, float]) -> float:
-    """Fondo de la TABLA, de canto a canto.
-
-    ERA EL VANO ENTRE LOS DOS LARGUEROS. Hasta el 2026-08-21 ese vano y la
-    plancha midieron lo mismo; luego no, porque la bandeja volaba por delante
-    del larguero delantero para cerrar el suelo. El 2026-08-27 la pieza cambia
-    de sitio -- pasa a ser tabla BAJO el marco -- y de vano ya no queda nada:
-    es el fondo del case mas lo que la tabla sobresale por delante y por
-    detras."""
-    return fondo(p) + 2 * p["vuelo_zocalo"]
+    """Largo de la BASE en x, de chaflan a chaflan (papel del suelo,
+    2026-10-12). Fue el vano entre los dos largueros hasta el 2026-08-21, y el
+    fondo de la tabla con su vuelo hasta el papel del suelo."""
+    return fondo(p) - 2 * p["chaflan_nariz"]
 
 
 def main() -> int:
@@ -6726,7 +6680,6 @@ def main() -> int:
         f"usa {E_ALUMINIO:.0f}: el anillo se dimensionaria con un modulo que "
         f"el resto del repo no cree.")
     canario_solapes(p)
-    canario_persiana_tabla(p)
     canario_alineacion(p)
     guarda_rebaje(p)
     canario_acceso_marco(p)
@@ -6755,6 +6708,7 @@ def main() -> int:
     canario_tacos_persiana(p)
     guarda_rendija(p)
     guarda_potencia_vigente(p)
+    guarda_campo_base(p)
     guarda_aire(p)
     guarda_chaflan(p)
     canario_valle(p)
@@ -6764,6 +6718,7 @@ def main() -> int:
     canario_red(p)
     canario_trasera(p)
     canario_techo(p)
+    canario_campo_base(p)
     guarda_red(p)
     guarda_fresado(p)
     guarda_puentes_ventilacion(p)
