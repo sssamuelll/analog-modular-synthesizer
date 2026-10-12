@@ -1,6 +1,10 @@
 # El suelo: el case sin tabla
 
-**Fecha**: 2026-10-12 · **Estado**: versión 2, después de la junta; para firmar en el acta ·
+**Fecha**: 2026-10-12 · **Estado**: **firmado el 12-10** (versión 2, después de la junta) en el acta 4 (https://claude.ai/artifact/7PvsQ3aUfGtEdt7jj936kV):
+- D-T1: **patas de 10, las de hoy**;
+- D-T2: **los tornillos del suelo, desde abajo**;
+- el papel: «Arma el plan».
+
 **Sucede a**: la D-S4 del papel de la persiana (`2026-10-11-case-persiana-design.md` §8), firmada «quitar» el 11-10 a las 23:00 (ficha `quitar_tabla` del acta 3) ·
 **Base**: `main` en `38d2ac4` (12-10): la persiana (#412), sus deudas (#419) y el aire con el plano neutro y la potencia de la v5 (#421) ·
 **Se apoya en**:
@@ -104,13 +108,12 @@ Se va el único material cálido del case. La ficha que firmó Samuel ya lo dec�
   - Los agujeros son **redondos de Ø6**: aluminio contra aluminio se dilata igual, así que las ranuras de la veta sobran y `holgura_veta` se retira. El medio milímetro de juego absorbe la posición entre dos anillos mecanizados por separado.
   - El agujero queda a 7,0 del canto, contra los 8,25 que pide la regla del repo (1,5 veces el diámetro, `params.scad` l.391-395). Se declara como excepción: arrancar ese borde pide del orden de 4 kN.
   - Un M5 avellanado no cabe: la cabeza ISO 10642 M5 mide 3,1 de alto.
-- **La nariz y el talón.**
-  - Van con M4 × 8 ISO 7380 de botón a tuercas de presión CLS-M4.
-  - **No avellanados.** En un pie de 1,5 el avellanado de la cabeza ISO 10642 (2,48 de alto) atraviesa la chapa y deja el cono 0,98 mm por debajo. Con la tabla se clavaba en el nogal y nadie lo vio; en chapa apoyaría en el canto de la tuerca.
-  - La cabeza de botón asoma 2,2 por dentro:
-    - en la nariz, lejos del riel más bajo;
-    - en el talón, deja 3,46 hasta la trasera, donde hoy hay 2,77. `guarda_talon()` pasa a medir la cabeza.
-  - Por dónde entran los tornillos lo decide D-T2.
+- **La nariz y el talón.** Los tornillos entran **desde abajo** (D-T2, firmada):
+  - M4 × 8 ISO 7380 de botón, por agujeros de paso en el suelo, a tuercas de presión CLS-M4 prensadas en los pies de la nariz y del talón (chapa de 1,5).
+  - Las cabezas quedan bajo el suelo, dentro de los 10 mm de las patas, y los doce tornillos del suelo se alcanzan desde fuera.
+  - **No avellanados.** En un pie de 1,5 el avellanado de la cabeza ISO 10642 (2,48 de alto) atraviesa la chapa y deja el cono 0,98 mm por debajo. Con la tabla se clavaba en el nogal y nadie lo vio.
+  - El M4 queda a 6,75 del canto libre del pie, y la tuerca pide unos 6,9 (Elke, de memoria). **Los dos pies crecen medio milímetro**: la nariz de 20,5 a 21 y el talón de 22,5 a 23. Siguen difiriendo en 2, que es lo que pide `guarda_talon()`. La hoja de PEM lo confirma (H4).
+  - Por dentro, sobre cada pie, asoma el cuerpo de la tuerca, no la cabeza. `guarda_talon()` pasa a medir la tuerca contra la trasera.
 - **Las patas.** Van en espárragos de presión de cabeza plana FH-M4, a ras de la cara de arriba, bajo el canto del anillo.
   - El largo del espárrago tiene que casar con la profundidad del casquillo de la pata (H3). Si es más largo, la pata no asienta y el aparato carga en la punta.
   - Si se quiere no depender de que la cabeza quede a ras, el anillo lleva un rebaje de Ø9 × 0,3 sobre cada espárrago, en la misma puesta que sus M5.
@@ -149,7 +152,7 @@ Es el mismo de hoy, cambiando la tabla por el suelo:
 3. Entra el anillo B, con el suelo todavía vacío, que es lo que deja llegar a los doce M4 del marco B.
 4. El chasis entra al final por el frente, y sus cuatro M4 se aprietan desde debajo del suelo.
 
-Con D-T2, el suelo sale entero por abajo, con el chasis encima, sin tocar ningún anillo.
+**Para el servicio** (D-T2): se voltea el aparato, se sueltan los doce tornillos del suelo y los cuatro del chasis no hace falta tocarlos. El suelo baja entero, con el chasis encima, sin tocar ningún anillo ni ningún panel. Antes se desenchufan los cables del chasis. Cuánto cable hace falta para llegar a los conectores lo dice el relevo de la v5 (H1).
 
 ---
 
@@ -323,7 +326,16 @@ El censo de la junta tiene 212 entradas. Por fichero:
 
 ## 9. Lo que Samuel decide
 
-| | qué | recomiendo | lo otro, y lo que cuesta |
+**Firmado el 12-10** en el acta 4, sin notas:
+- **D-T1: patas de 10**, las de hoy. Es la que recomendaba Elke; la mía eran las de 20.
+- **D-T2: desde abajo.**
+- **El papel: «Arma el plan».**
+
+Con patas de 10 sigue la condición de los costados libres (D-S11), porque con uno tapado el pesimista da 21,0–21,5 K. También sigue el HUECO de los costados, que la puerta pasa a juzgar con el pesimista. El canal pesa 0,3–0,5 K y se mide (H2).
+
+Las fichas, como se presentaron:
+
+| | qué | recomendé | lo otro, y lo que cuesta |
 |---|---|---|---|
 | **D-T1** | las patas | **de 20**. Con un costado tapado pasa (19,4–19,5 K), así que el aparato puede ir pegado a otro equipo por un lado. El canal deja de importar, y el cuerpo flota 23 mm | **de 10**, las de hoy. Flota 13 mm, y la pata es el doble de firme de lado (0,16 contra 0,32 mm al meter un jack, las dos imperceptibles). Con un costado tapado no pasa (21–21,5 K). **Elke recomienda estas**: con el suelo libre por los dos costados, los 0,7 K de más no hacen falta |
 | **D-T2** | por dónde entran los M4 de nariz y talón | **desde abajo**, a tuercas en sus pies. Los doce tornillos del suelo se alcanzan desde fuera, y el suelo sale por abajo con el chasis sin tocar ningún anillo | **desde dentro**, como hoy. Para sacar el suelo hay que abrir el case. Desde abajo cuesta seis tuercas en pies de 1,5, con el M4 a 6,75 del canto del pie contra unos 6,9 que pide la tuerca: el pie crece medio milímetro, y se confirma con la hoja (H4) |
@@ -334,7 +346,7 @@ El censo de la junta tiene 212 entradas. Por fichero:
 ## 10. El orden
 
 1. ~~Papel, versión 1~~ y ~~junta~~.
-2. Versión 2: este papel.
-3. Acta con renders y firma.
+2. ~~Versión 2: este papel~~.
+3. ~~Acta con renders y firma~~ (12-10).
 4. Plan.
 5. Tanda, con su PR y sus issues.
