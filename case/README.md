@@ -427,7 +427,8 @@ ondular y de leerse como repisa. `guarda_retorno_meseta()` exige ahora **4 mm
 de margen estático** al panel/riel fijo. Línea de sombra: 6 mm (2 de labio + 4
 de aire). **Desde el 2026-10-11 son 9 mm** (ficha 6): el retorno baja hasta
 pisar 1 mm de la cara del riel y deja 1 de sombra sobre el panel, y el margen de
-4 murió con el barrido (`guarda_labio_chapas()`).
+4 murió con el barrido (`guarda_labio_chapas()`); `guarda_retorno_meseta()` se
+retiró con él.
 
 Lo vigila `guarda_marco_trasera()`, y lo primero que exige es justo lo del
 issue: que el ala de arriba tape el canto **entero** y muera en el doblez, sin
