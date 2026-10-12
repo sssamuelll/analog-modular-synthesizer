@@ -4831,6 +4831,124 @@ def _m5_tabla_x(p: dict[str, float]) -> list[float]:
     return [fb * (i + 0.5) / n for i in range(n)]
 
 
+def _m4_pie_borde(p: dict[str, float]) -> float:
+    """Del canto libre del pie de nariz y talon al centro de su M4. Era 1.5 D;
+    con D-T2 el M4 rosca en una tuerca de presion prensada en el pie, y la
+    tuerca pide pem_borde al canto (papel del suelo, sec.3.4)."""
+    return max(1.5 * p["d_M4_paso"], p["pem_borde"])
+
+
+def _zonas_campo_base(p: dict[str, float]) -> list[tuple[float, float, float, float]]:
+    """La L donde pueden ir los agujeros de la base, en mundo: (x0, x1, z0, z1).
+    A va a la izquierda del chasis, de delante a atras; B, delante del chasis.
+    Fuera quedan el canto de los anillos, los pies de nariz y talon y la huella
+    del chasis, cada uno con base_orilla de margen. GEMELA de
+    zonas_campo_base() en el .scad."""
+    o = p["base_orilla"]
+    c = _chasis(p)
+    x0 = p["chaflan_nariz"] + p["nariz_pie"] + o
+    x1 = _talon(p)["x_pie"] - o
+    z0 = p["t_anillo"] + o
+    z1 = p["ancho_total"] - p["t_anillo"] - o
+    z_ch = (p["t_anillo"] + perfil(p)["ancho_util"] - p["chasis_margen_bandeja"]
+            - c["tapa_x"])
+    x_ch = _x_chasis_frente(p)
+    return [(x0, x1, z0, z_ch - o), (x0, x_ch - o, z_ch - o, z1)]
+
+
+def _campo_base(p: dict[str, float]) -> list[tuple[float, float]]:
+    """Los centros (x, z) de los agujeros del campo, en mundo. Una sola red al
+    tresbolillo anclada en la esquina de la L, que se queda con los agujeros
+    que caben enteros en alguna de las dos zonas. Dos redes, cada una con su
+    origen, dejarian en la costura un puente mas fino que el resto. GEMELA de
+    campo_base() en el .scad: misma red, mismo filtro."""
+    zonas = _zonas_campo_base(p)
+    d, s = p["base_agujero"], p["base_paso"]
+    r, fila = d / 2, s * math.sqrt(3) / 2
+    x0, x1 = min(q[0] for q in zonas), max(q[1] for q in zonas)
+    z0, z1 = min(q[2] for q in zonas), max(q[3] for q in zonas)
+    ni = math.floor((x1 - x0 - d) / fila + 1e-9)
+    nj = math.floor((z1 - z0 - d) / s + 1e-9)
+    return [(x, z) for i in range(ni + 1) for j in range(nj + 1)
+            for x, z in [(x0 + r + i * fila, z0 + r + (i % 2) * s / 2 + j * s)]
+            if any(a + r - 1e-9 <= x <= b - r + 1e-9
+                   and c + r - 1e-9 <= z <= e - r + 1e-9
+                   for a, b, c, e in zonas)]
+
+
+def _taladros_base(p: dict[str, float]) -> list[tuple[float, float, float, str]]:
+    """Todo taladro de fijacion de la base, en mundo: (x, z, d, tipo). Los 6 M5
+    de los anillos, los 3 + 3 M4 de nariz y talon (de paso: D-T2 los mete desde
+    abajo a la tuerca de su pie), las 4 FH de las patas y los 4 M4 del chasis.
+    Lo leen guarda_campo_base() y guarda_bandeja_base() en check_dxf."""
+    nz, tl = _nariz(p), _talon(p)
+    out = [(x, z, p["d_M5_base"], "M5") for x in _m5_tabla_x(p)
+           for z in (p["t_anillo"] / 2, p["ancho_total"] - p["t_anillo"] / 2)]
+    out += [(nz["m4_x"], z, p["d_M4_paso"], "M4 nariz") for z in nz["m4_z"]]
+    out += [(tl["m4_x"], z, p["d_M4_paso"], "M4 talon") for z in tl["m4_z"]]
+    out += [(x, z, p["pem_fh_m4"], "FH pata")
+            for x in (p["alto_frontal"] / 2 + p["d_pie"] / 2,
+                      tl["x_chaflan"] - p["talon_pie"] / 2)
+            for z in (p["d_pie"] / 2, p["ancho_total"] - p["d_pie"] / 2)]
+    out += [(yl, xl, p["d_M4_paso"], "M4 chasis") for xl, yl in _chasis_tornillos_tabla(p)]
+    return out
+
+
+def guarda_campo_base(p: dict[str, float]) -> None:
+    """El campo de agujeros de la base: que respire lo que el aire cuenta sin
+    debilitar la chapa ni pisar un inserto (papel del suelo, sec.3.2 y 5).
+
+      1. El puente entre agujeros vecinos (la red es de paso base_paso en las
+         tres direcciones) mide al menos el espesor: con menos, la mano apoyada
+         plastifica el borde del agujero (Elke).
+      2. Ningun agujero del campo queda a menos de pem_borde de un taladro de
+         fijacion, de centro de taladro a canto de agujero.
+
+    La huella del chasis no se asevera: la L se deriva de ella, y un aserto
+    sobre lo que la propia construccion garantiza no puede fallar."""
+    puente = p["base_paso"] - p["base_agujero"]
+    assert puente >= p["t_base"] - 1e-9, (
+        f"el puente del campo de la base mide {puente:.2f} mm (paso "
+        f"{p['base_paso']:g} - agujero {p['base_agujero']:g}) y la chapa "
+        f"{p['t_base']:g}: con la mano apoyada el borde del agujero plastifica. "
+        f"Se pide un puente de una vez el espesor")
+    campo = _campo_base(p)
+    r = p["base_agujero"] / 2
+    peor = min((math.hypot(x - tx, z - tz) - r, tipo)
+               for x, z in campo for tx, tz, _d, tipo in _taladros_base(p))
+    assert peor[0] >= p["pem_borde"] - 1e-9, (
+        f"un agujero del campo queda a {peor[0]:.2f} mm de un taladro de "
+        f"{peor[1]} y el inserto pide {p['pem_borde']:g} (pem_borde): sube "
+        f"base_orilla o aparta el campo")
+    abierto = len(campo) * math.pi * r * r
+    print(f"base: {len(campo)} agujeros de {p['base_agujero']:g} cada "
+          f"{p['base_paso']:g}, {abierto:.0f} mm2 abiertos; puente {puente:.1f} "
+          f"contra {p['t_base']:g} de chapa; el mas cercano a un inserto, a "
+          f"{peor[0]:.1f} mm ({peor[1]})")
+
+
+def canario_campo_base(p: dict[str, float]) -> None:
+    """Autocomprobacion ROJA de guarda_campo_base(): con el puente mas fino que
+    la chapa, o con la distancia de un inserto mayor que la orilla que lo
+    separa del campo, la puerta tiene que saltar y por SU razon; y con los
+    parametros de verdad, callar."""
+    for cambios, clave in (({"base_paso": p["base_agujero"] + p["t_base"] - 0.5}, "puente"),
+                           ({"pem_borde": 25.0}, "inserto")):
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                guarda_campo_base({**p, **cambios})
+        except AssertionError as e:
+            assert clave in str(e), (
+                f"canario del campo: con {cambios} guarda_campo_base() salto, "
+                f"pero por otra razon ('{str(e)[:80]}...')")
+            continue
+        raise AssertionError(
+            f"canario del campo NO disparo con {cambios}: guarda_campo_base() "
+            f"lo deja pasar -- no confiar en su VERDE")
+    with contextlib.redirect_stdout(io.StringIO()):
+        guarda_campo_base(dict(p))
+
+
 def _flecha_pata(p: dict[str, float], L: float, b: float, empotres: int
                  ) -> tuple[float, float]:
     """Flecha y tension de un tramo del marco como viga de b x t_placa

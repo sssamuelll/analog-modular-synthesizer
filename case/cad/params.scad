@@ -1095,6 +1095,28 @@ vuelo_zocalo = 40;
 // El tornillo del medio de cada costilla va REDONDO: la tabla tiene que crecer
 // hacia los dos lados desde un punto fijo, no arrastrarse hacia uno.
 holgura_veta = 2.5;
+// EL CAMPO DE AGUJEROS DE LA BASE (papel del suelo, 2026-10-12, sec.3.2 y 5).
+// Ø5 al tresbolillo cada 8, el patron Rv 5-8: un 35,4 % abierto, y el puente
+// entre agujeros mide 3, una vez el espesor. La regla de 0,8 veces es la del
+// PMMA; para aluminio cortado a laser se pide 1 vez (Elke). El campo es una L
+// que esquiva la huella del chasis y deja base_orilla libre junto al canto de
+// los anillos, los pies de nariz y talon y el chasis. GEMELAS: campo_base()
+// aqui y _campo_base() en el budget; check_dxf las cruza.
+base_agujero = 5;
+base_paso    = 8;
+base_orilla  = 10;
+// LOS INSERTOS DE PRESION (papel del suelo, sec.3.4). Van de acero o de
+// inoxidable, nunca de la serie de aluminio: esa pide chapa de HB <= 89 y el
+// 6082-T6 ronda 95. Se prensan despues de anodizar, y sus agujeros se cortan
+// a cota de catalogo sobre la pieza anodizada. SUPUESTOS DE MEMORIA hasta la
+// hoja de PEM (HUECO H4 del papel).
+pem_cls_m4   = 5.4;   // tuerca CLS-M4, en los pies de nariz y talon (D-T2)
+pem_fh_m4    = 4.0;   // esparrago FH-M4, en la base, para las patas
+pem_borde    = 7.0;   // del centro de un inserto al canto o al borde de otro agujero
+// El paso del M5 de los anillos en la base: medio milimetro de juego por lado
+// para casar dos anillos mecanizados por separado. Los seis van redondos: la
+// veta de la tabla se fue con ella.
+d_M5_base    = 6.0;
 t_panel    = 1.6;  // PCB de aluminio, espesor estandar JLCPCB
 rehundido_panel = 1.50; // las tres filas: panel, riel, ejes y cajeados juntos
 // EL PROCESO ES FRESADO CNC, NO LASER (decidido el 2026-08-17). Y por eso
