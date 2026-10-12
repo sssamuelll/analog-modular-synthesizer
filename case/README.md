@@ -148,7 +148,8 @@
 Spec: [`docs/superpowers/specs/2026-08-15-case-design.md`](../docs/superpowers/specs/2026-08-15-case-design.md) (rev. 28)
 Board de intención: [`renders/propuesta-diseno-2026-08-16.png`](renders/propuesta-diseno-2026-08-16.png)
 — **manda sobre lenguaje visual, NO sobre cotas**: se dibujó para paneles de
-190 mm y un case de 500 × 380 × 350, y el case real mide 568.62 × 256.18 × 319.76.
+190 mm y un case de 500 × 380 × 350, y el case real mide 580.62 × 256.18 × 319.76
+con las persianas (568.62 de anillo a anillo).
 
 ## Formato: EUROrack 3U, las dos filas
 
@@ -449,8 +450,9 @@ no canta porque no hay solape, y `alineacion()`/`apoyo()` solo ven filas de
 agujeros.
 
 Lo que costó: la plancha pasó de 245.18 a **248.18 mm** de alto — ese número
-es de aquel día; hoy mide **540.32 × 254.68**, y lo que lo movió después fue la
-meseta integrándose en el miembro (27-08). Lo que NO se
+es de aquel día. La meseta integrándose en el miembro (27-08) la llevó a
+540.32 × 254.68, y el 2026-10-12 mide **552.32 × 237.18** (`piel_trasera_2d`).
+Lo que NO se
 movió, y se verificó con la salida de la puerta byte a byte contra la de antes:
 las tres ondas, la rejilla de entrada, el área abierta y los 6.6 K. Van
 derivadas de `f_base` y `f_tras`, que son diferencias contra `ce[].y`, así que
