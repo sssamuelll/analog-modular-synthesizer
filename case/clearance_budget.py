@@ -1493,14 +1493,18 @@ def canario_acceso_marco(p: dict[str, float]) -> None:
     casos = (
         ({"sep_rosca_riel": 7.0, "d_cajeado_riel": 0.0},
          "cabezas M4", "reparto viejo bajo el riel"),
-        # 5 y no 1 desde el 2026-10-11: con el retorno del techo a 9 (la
-        # rendija de la ficha 6), la pata de arriba se retira mas bajo el
-        # labio y con sep 1 o 3 la rosca de la punta cae antes contra el canto
-        # de la pata -- otra regla, que tumbaba el canario por otra razon.
-        # Con 5 las roscas siguen pegadas al cajeado (6.21 contra 6.75) y la
-        # que salta es la suya.
-        ({"sep_rosca_riel": 5.0},
-         "pasos M4", "roscas convertidas en una ranura junto al cajeado"),
+        # EL CAJEADO CRECE HASTA LOS PASOS, y el borde se busca (2026-10-12).
+        # Fue sep_rosca_riel escrito a mano, 1.0 y luego 5.0: al juntar las
+        # roscas salta antes "cabezas M4" (hoy de 9.3 a 6.0) y por debajo de
+        # 3.15 el canto de la pata, asi que el numero se quedaba viejo con cada
+        # cambio del techo. d_cajeado_riel no entra en ninguna otra regla, asi
+        # que el tope de la busqueda puede ser holgado: crece con la separacion,
+        # que es lo que mueve el borde (12.5 con 9.5, 15.6 con 11.5).
+        ({"d_cajeado_riel": _borde_rojo(guarda_anclajes, p, "d_cajeado_riel",
+                                        p["d_cajeado_riel"],
+                                        p["d_cajeado_riel"] + 4 * p["sep_rosca_riel"],
+                                        "pasos M4")},
+         "pasos M4", "un cajeado crecido hasta los pasos M4"),
     )
     for cambios, clave, que in casos:
         roto = {**p, **cambios}
