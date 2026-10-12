@@ -1766,7 +1766,13 @@ valle_margen    = 6;   // historico; la banda del valle ya no se perfora
 //
 // Las dos se arreglaron en el origen --v4/calor_budget.py, y la de la Voz
 // derivada del censo, no transcrita-- que es lo que esta misma guarda pide.
-potencia_disipada = 147.31; // W, TODO el cajon: 29.23 fuente + 118.08 modulos
+// 64.22 DESDE EL PLAN DEL AIRE (2026-10-12): la fuente v5 (D-V4) saca la
+// etapa AC-DC de la caja, y el calor del cajon es lo que baja por el cordon
+// del ladrillo (hardware/01-power-supply/v5/ladrillo_budget.py,
+// calor_del_cajon_w(): 56.23 W entregados a las cargas + 7.99 perdidos
+// convirtiendo dentro). La v5 lo mando el 05-09 en su sec.7 y quedo sin
+// aplicar hasta aqui. El desglose de arriba es el de la v4, que no se monta.
+potencia_disipada = 64.22; // W, TODO el cajon: lo que baja por el cordon (fuente v5)
 // Techo de salto sobre ambiente. 15 K era el criterio de siempre para caja de
 // electronica lineal con electroliticos dentro: a partir de ahi la vida del
 // condensador se parte por dos cada 10 K y deja de ser un detalle.

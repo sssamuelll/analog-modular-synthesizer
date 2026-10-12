@@ -2560,54 +2560,37 @@ def _envolvente_m2(p: dict[str, float]) -> float:
 def _potencia_del_cajon() -> float:
     """Los W que el case tiene que evacuar, LEIDOS DE DONDE SE CALCULAN.
 
-    `potencia_disipada` de params.scad es una COPIA. El numero se deriva en
-    hardware/01-power-supply/v4/calor_budget.py de las celdas de la fuente y
-    del censo digital, y aqui se transcribe porque el .scad es OpenSCAD y no
-    puede importar nada. La copia no es el defecto -- el CAD la necesita --;
-    el defecto es que nadie la mirara.
+    `potencia_disipada` de params.scad es una COPIA, y el .scad la necesita
+    porque es OpenSCAD y no puede importar nada. Desde el 2026-10-12 es la de
+    la fuente v5 (D-V4, firmada en direccion el 08-09): todo lo que baja por el
+    cordon del ladrillo acaba en calor dentro de la caja, y lo unico que se
+    queda fuera es la perdida AC-DC del propio ladrillo. El numero lo calcula
+    hardware/01-power-supply/v5/ladrillo_budget.py, calor_del_cajon_w(). Hasta
+    ese dia era la suma de la v4, p_cajon_w + p_recinto_w a placa: 147.31 W,
+    con el recinto de la fuente dentro del cajon.
 
-    EL 2026-09-04 ESA COPIA LLEVABA UN DIA MINTIENDO. Decia 147.83 cuando la
+    EL 2026-09-04 ESA COPIA LLEVO UN DIA MINTIENDO. Decia 147.83 cuando la
     franja de red (2.75 W de la NTC de arranque y 0.95 del choke) ya la habia
     subido a 151.55, y con ella se le publico al #289 un encargo de 25113 mm2
     de venteo cuando eran 25742. Nadie hizo nada mal: el numero cambio en la
     fuente y aqui no habia nada que lo notara.
 
-    EL IMPORT ES DIFERIDO A PROPOSITO. calor_budget.py importa de este modulo
+    EL IMPORT ES DIFERIDO A PROPOSITO. ladrillo_budget.py importa
+    calor_budget.py de la v4, y calor_budget.py importa de este modulo
     (CD_TIRO, CD_TIRO_PESIMISTA, CP_AIRE, G, RHO_AIRE), asi que a nivel de
-    modulo esto seria un ciclo. Y el aserto vive dentro de guarda_aire() por
-    la misma razon que la puerta simetrica de la fuente --el test que ata su
-    A_EF_BASE_MM2 a este params.scad-- vive en su contrato: un aserto al
-    importar dejaria rojos tambien a power_budget, margen_budget,
-    secuencia_budget, fusible_budget, invitados_budget y check_bringup, que no
-    tienen la culpa de un numero descuadrado aqui."""
+    modulo esto seria un ciclo. Y el aserto vive en guarda_potencia_vigente()
+    y no al importar: un aserto al importar dejaria rojos tambien a
+    power_budget, margen_budget, secuencia_budget, fusible_budget,
+    invitados_budget y check_bringup, que no tienen la culpa de un numero
+    descuadrado aqui."""
     import os
     import sys
-    v4 = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                      "..", "hardware", "01-power-supply", "v4")
-    if v4 not in sys.path:
-        sys.path.insert(0, v4)
-    from calor_budget import PLACA_A, p_cajon_w, p_recinto_w
-    return p_cajon_w(PLACA_A) + p_recinto_w(PLACA_A)
-
-
-def _reparto_del_cajon() -> tuple[float, float]:
-    """Los dos sumandos del anterior, para poder NOMBRARLOS en el HUECO.
-
-    Hasta el 2026-09-05 el mensaje del HUECO decia "31,25 del recinto + 120,3
-    de la fila de invitados y el digital" con esos dos numeros escritos a mano
-    dentro de la f-string, al lado de un total que si venia de la fuente. Al
-    corregir el digital el total bajo a 139.31 y el desglose siguio diciendo
-    151,55: la etiqueta se quedo pegada mientras la cifra se movia, que es la
-    forma mas facil de publicarle al #289 un encargo que no cuadra consigo
-    mismo. Ahora los tres salen del mismo sitio."""
-    import os
-    import sys
-    v4 = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                      "..", "hardware", "01-power-supply", "v4")
-    if v4 not in sys.path:
-        sys.path.insert(0, v4)
-    from calor_budget import PLACA_A, p_cajon_w, p_recinto_w
-    return p_recinto_w(PLACA_A), p_cajon_w(PLACA_A)
+    v5 = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                      "..", "hardware", "01-power-supply", "v5")
+    if v5 not in sys.path:
+        sys.path.insert(0, v5)
+    from ladrillo_budget import calor_del_cajon_w
+    return calor_del_cajon_w()
 
 
 def _tiro(p: dict[str, float], cd: float = CD_TIRO) -> dict[str, float]:
@@ -2665,15 +2648,15 @@ def guarda_potencia_vigente(p: dict[str, float]) -> None:
     pot = _potencia_del_cajon()
     assert abs(p["potencia_disipada"] - pot) < 0.01, (
         f"potencia_disipada dice {p['potencia_disipada']:.2f} W y "
-        f"calor_budget.py, que es donde se calcula, da {pot:.2f} a placa "
-        f"(p_cajon_w + p_recinto_w sobre PLACA_A): "
-        f"{abs(p['potencia_disipada'] - pot):.2f} W de desfase. Este numero NO "
-        f"se toca aqui para que la puerta calle: si la fuente lo cambio, copia "
-        f"el suyo a params.scad y vuelve a correr -- el salto, el deficit y el "
-        f"encargo del #289 se recalculan solos. Si el que esta mal es el de la "
-        f"fuente, arreglalo alli y no aqui")
+        f"ladrillo_budget.py de la fuente v5, que es donde se calcula, da "
+        f"{pot:.2f}: lo que baja por el cordon del ladrillo, que acaba entero en "
+        f"calor dentro de la caja. {abs(p['potencia_disipada'] - pot):.2f} W de "
+        f"desfase. Este numero NO se toca aqui para que la puerta calle: si la "
+        f"fuente lo cambio, copia el suyo a params.scad y vuelve a correr -- el "
+        f"salto y el veredicto del aire se recalculan solos. Si el que esta mal "
+        f"es el de la fuente, arreglalo alli y no aqui")
     print(f"potencia del cajon: {pot:.2f} W, y params.scad dice lo mismo "
-          f"(la copia se cruza contra calor_budget.py de la fuente v4)")
+          f"(la copia se cruza contra ladrillo_budget.py de la fuente v5)")
 
 
 def guarda_aire(p: dict[str, float]) -> None:
@@ -2764,13 +2747,11 @@ def guarda_aire(p: dict[str, float]) -> None:
           f"del encargo, no el encargo")
 
     if t["dt"] > p["salto_termico_max"] + 1e-9:
-        w_recinto, w_cajon = _reparto_del_cajon()
         _HUECOS.append(
             f"esta geometria evacua {t['p_evacuada']:.1f} W al techo de "
             f"{p['salto_termico_max']:.0f} K y el instrumento le mete "
-            f"{p['potencia_disipada']:.2f} ({w_recinto:.2f} del recinto de la "
-            f"fuente + {w_cajon:.2f} de la fila de invitados, el digital y la "
-            f"Voz, papel de la fuente v4 sec.6): sube {t['dt']:.0f} K. Hacen falta "
+            f"{p['potencia_disipada']:.2f} (lo que baja por el cordon del "
+            f"ladrillo, fuente v5): sube {t['dt']:.0f} K. Hacen falta "
             f"{t['a_ef_techo']:.0f} mm2 de venteo efectivo, "
             f"{t['a_ef_techo'] - t['a_ef']:.0f} MAS que los {t['a_ef']:.0f} de "
             f"hoy ({t['a_ef_techo_pared'] - t['a_ef']:.0f} si se cuenta la "
