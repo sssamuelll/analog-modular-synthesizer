@@ -112,7 +112,7 @@ Se va el único material cálido del case. La ficha que firmó Samuel ya lo dec�
   - M4 × 8 ISO 7380 de botón, por agujeros de paso en el suelo, a tuercas de presión CLS-M4 prensadas en los pies de la nariz y del talón (chapa de 1,5).
   - Las cabezas quedan bajo el suelo, dentro de los 10 mm de las patas, y los doce tornillos del suelo se alcanzan desde fuera.
   - **No avellanados.** En un pie de 1,5 el avellanado de la cabeza ISO 10642 (2,48 de alto) atraviesa la chapa y deja el cono 0,98 mm por debajo. Con la tabla se clavaba en el nogal y nadie lo vio.
-  - El M4 queda a 6,75 del canto libre del pie, y la tuerca pide unos 6,9 (Elke, de memoria). **Los dos pies crecen medio milímetro**: la nariz de 20,5 a 21 y el talón de 22,5 a 23. Siguen difiriendo en 2, que es lo que pide `guarda_talon()`. La hoja de PEM lo confirma (H4).
+  - El M4 queda hoy a 6,75 del canto libre del pie (1,5 D), y la tuerca pide unos 6,9 (Elke, de memoria). **El M4 se aparta del canto libre hasta `pem_borde` = 7,0**, SUPUESTO hasta la hoja de PEM (H4). **Los pies no cambian**. Enmienda del plan: Elke proponía crecer los pies medio milímetro, pero `m4_x` se mide desde el canto libre, así que crecer el pie arrastraba el tornillo y no lo apartaba. Hace falta el sitio entre el doblez y el canto, y sobra: 9,75 + 7,0 en 20,5 de pie.
   - Por dentro, sobre cada pie, asoma el cuerpo de la tuerca, no la cabeza. `guarda_talon()` pasa a medir la tuerca contra la trasera.
 - **Las patas.** Van en espárragos de presión de cabeza plana FH-M4, a ras de la cara de arriba, bajo el canto del anillo.
   - El largo del espárrago tiene que casar con la profundidad del casquillo de la pata (H3). Si es más largo, la pata no asienta y el aparato carga en la punta.
@@ -276,14 +276,14 @@ El techo es de 20 K. La tabla dice cuatro cosas:
 El censo de la junta tiene 212 entradas. Por fichero:
 
 - **`params.scad`**:
-  - `t_base` (30) pasa a `t_suelo` (3);
+  - `t_base` pasa de 30 a 3. La pieza conserva sus nombres de código (`bandeja_base`, `bandeja_base_2d`, `t_base`), porque «suelo» ya nombra cinco cosas en el código (censo a.19);
   - se retiran `r_canto_tabla`, `E_madera`, `vuelo_zocalo` y `holgura_veta`;
   - `flecha_pie` cambia por el criterio nuevo de la pata;
   - **el bloque del chasis se queda entero.**
 - **`sam17_case.scad`**:
   - `bandeja_base()` y `bandeja_base_2d()` pasan a ser el suelo, sin vuelo. La cadena de coordenadas locales de la tabla («x local = vuelo + z») está copiada en el `.scad`, en `check_dxf.py` y en el budget, y hay que cambiarla en todos los sitios a la vez;
   - se retira `canto_redondeado()`;
-  - `paticas()` baja a y = −`t_suelo` y sale de `assembly_madera()`, que hoy es el único camino por el que las patas llegan a Blender;
+  - `paticas()` baja a y = −`t_base` y sale de `assembly_madera()`, que hoy es el único camino por el que las patas llegan a Blender;
   - `lienzo_2d()`, declarado de acrílico, deja de llevar el suelo;
   - la razón de que `n_agujeros()` exista aparte (la ranura) desaparece.
 - **`clearance_budget.py`**:
