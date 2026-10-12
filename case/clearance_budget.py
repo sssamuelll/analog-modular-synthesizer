@@ -2552,16 +2552,16 @@ def guarda_rendija(p: dict[str, float]) -> None:
 
 
 def _envolvente_m2(p: dict[str, float]) -> float:
-    """Envolvente exterior del case MENOS el suelo, que apoya en la mesa y no
-    convecta. DERIVADA del perfil (perimetro x ancho + las dos mejillas), no
-    parametro: hoy son 0.507 m2 de los 0.689 del envolvente entero."""
+    """Envolvente exterior del case, con el suelo. Hasta el papel del suelo
+    (2026-10-12) restaba el suelo porque la tabla apoyaba en la mesa y no
+    convectaba; la base de chapa va sobre patas, con aire debajo. DERIVADA del
+    perfil (perimetro x ancho + las dos mejillas), no parametro."""
     V = _vertices(p)
     n = len(V)
     per = sum(math.dist(V[i], V[(i + 1) % n]) for i in range(n))
     mejilla = abs(sum(V[i][0] * V[(i + 1) % n][1] - V[(i + 1) % n][0] * V[i][1]
                       for i in range(n))) / 2.0
-    return (per * p["ancho_total"] + 2 * mejilla
-            - fondo(p) * p["ancho_total"]) * 1e-6
+    return (per * p["ancho_total"] + 2 * mejilla) * 1e-6
 
 
 def _potencia_del_cajon() -> float:
@@ -2668,13 +2668,88 @@ def _huecos(p: dict[str, float], costados: int = 2,
     return hs
 
 
+# EL CANAL BAJO LA BASE (papel del suelo, sec.5). Es lo que el aire corre por
+# el hueco de alto_pie entre la chapa y la mesa hasta el campo de agujeros. El
+# flujo de verdad es 2D y converge; aqui es un canal solo, de ancho la rendija
+# libre y de este largo. 60 es la estimacion: casi todo el perimetro queda a
+# 25-30 mm de un agujero, y el tramo de atras a la derecha a unos 200, debajo
+# del chasis. 120 es la pesimista, que va con CD_TIRO_PESIMISTA. SUPUESTO: se
+# mide en la primera unidad (HUECO H2 del papel).
+CANAL_BASE = 60.0
+CANAL_BASE_PESIMISTA = 120.0
+MU_AIRE = 1.8e-5          # Pa s, aire a ~30 C
+
+
+def _camino_base(p: dict[str, float], costados: int = 2,
+                 canal: float = CANAL_BASE) -> dict:
+    """La entrada por la base, en serie: la rendija que dejan las patas en el
+    perimetro de la chapa, el canal laminar de alto_pie y los agujeros del
+    campo. Cada pata tapa su diametro de rendija, y una pared contra un costado
+    tapa tambien el tramo de ese costado."""
+    largo = fondo(p) - 2 * p["chaflan_nariz"]
+    libre = (2 * (p["ancho_total"] + largo) - 4 * p["d_pie"]
+             - (2 - costados) * (largo - 2 * p["d_pie"]))
+    return {"a_base": len(_campo_base(p)) * math.pi * p["base_agujero"] ** 2 / 4,
+            "w": libre, "largo": canal, "h": p["alto_pie"]}
+
+
+def _caudal_base(dp: float, cd: float, a_base: float, w: float, largo: float,
+                 h: float) -> float:
+    """m3/s que suben por la base con dp Pa de tiro a y = 0:
+        dp = rho/2 (Q / (C_D A_r))^2 + 12 mu L Q / (W h^3) + rho/2 (Q / (C_D A_b))^2
+    La rendija y los agujeros son orificios; el canal, Poiseuille entre placas."""
+    if dp <= 0 or a_base <= 0:
+        return 0.0
+    a = RHO_AIRE / 2 * (1 / (cd * w * h * 1e-6) ** 2 + 1 / (cd * a_base * 1e-6) ** 2)
+    b = 12 * MU_AIRE * largo * 1e-3 / (w * 1e-3 * (h * 1e-3) ** 3)
+    return (-b + math.sqrt(b * b + 4 * a * dp)) / (2 * a)
+
+
+def _caudales(hs, cd: float, camino: dict | None, yn: float,
+              dt: float) -> tuple[float, float]:
+    """(entra, sale) en m3/s con el plano neutro en yn mm y el salto dt K."""
+    g = RHO_AIRE * G * dt / T_AMB * 1e-3          # Pa por mm de altura
+    entra = sale = 0.0
+    for y, a in hs:
+        q = cd * a * 1e-6 * math.sqrt(2 * g * abs(y - yn) / RHO_AIRE)
+        if y < yn:
+            entra += q
+        else:
+            sale += q
+    if camino:
+        entra += _caudal_base(g * yn, cd, **camino)
+    return entra, sale
+
+
+def _neutro(hs, cd: float, camino: dict | None, dt: float) -> float:
+    """El plano neutro por balance de masa. Con la base deja de ser independiente
+    de dT, porque el canal es lineal y los orificios no."""
+    lo, hi = min(0.0, min(y for y, _ in hs)), max(y for y, _ in hs)
+    for _ in range(50):
+        yn = (lo + hi) / 2
+        entra, sale = _caudales(hs, cd, camino, yn, dt)
+        lo, hi = (lo, yn) if entra > sale else (yn, hi)
+    return (lo + hi) / 2
+
+
+def _potencia_con(hs, cd: float, camino: dict | None, dt: float) -> float:
+    """W que la chimenea evacua con un salto de dt K."""
+    yn = _neutro(hs, cd, camino, dt)
+    return RHO_AIRE * CP_AIRE * _caudales(hs, cd, camino, yn, dt)[1] * dt
+
+
 def _tiro(p: dict[str, float], cd: float = CD_TIRO, costados: int = 2,
-          trasera: bool = True) -> dict:
+          trasera: bool = True, base: bool = True,
+          canal: float = CANAL_BASE) -> dict:
     """La chimenea del case: el plano neutro, lo que entra y lo que sale, el
     salto termico y lo que evacua al techo.
 
-        P = k dT^1.5,   k = rho cp C_D sqrt(2 g / T) S
-
+    DESDE EL PAPEL DEL SUELO (2026-10-12) LA BASE ES UN CAMINO DE ENTRADA EN
+    SERIE (_camino_base()): rendija de las patas, canal laminar y agujeros. Con
+    un termino lineal la chimenea deja de ser P = k dT^1.5 y se resuelve con
+    dos bisecciones: el plano neutro por masa a cada dT (_neutro()) y dT por
+    energia. Sin base (base=False) da la forma cerrada de antes al millonesimo
+    (autocomprobacion_base()): P = k dT^1.5, k = rho cp C_D sqrt(2 g / T) S,
     con S la suma de a sqrt(y - yn) de los huecos de arriba (_plano_neutro()).
 
     FUE EN SERIE HASTA EL 2026-10-12: una entrada y una salida, A_ef^-2 =
@@ -2688,23 +2763,49 @@ def _tiro(p: dict[str, float], cd: float = CD_TIRO, costados: int = 2,
     SALIO DE guarda_aire() EL 2026-09-03 para que canario_techo() pudiera leer
     los NUMEROS y no el mensaje de la puerta.
 
-    `falta` es el factor por el que hay que multiplicar el area de TODAS las
-    aberturas, a las mismas alturas, para quedarse en el techo: escalarlas
-    todas no mueve el plano neutro, asi que S y k crecen con ese mismo
-    factor."""
+    `falta` es la potencia de dentro sobre la que la chimenea evacua al techo.
+    Con la base ya no dice cuanta area hace falta: el canal no escala con el
+    area de los agujeros."""
     hs = _huecos(p, costados, trasera)
-    yn, s = _plano_neutro(hs)
-    k = (RHO_AIRE * CP_AIRE * cd * math.sqrt(2 * G / T_AMB)
-         * s * 1e-6 * math.sqrt(1e-3))
+    camino = _camino_base(p, costados, canal) if base else None
     techo = p["salto_termico_max"]
-    p_evacuada = k * techo ** 1.5
-    return {"huecos": hs, "yn": yn, "S": s, "k": k,
+    lo, hi = 1e-3, 500.0
+    for _ in range(50):
+        dt = (lo + hi) / 2
+        if _potencia_con(hs, cd, camino, dt) < p["potencia_disipada"]:
+            lo = dt
+        else:
+            hi = dt
+    dt = (lo + hi) / 2
+    yn = _neutro(hs, cd, camino, dt)
+    g = RHO_AIRE * G * dt / T_AMB * 1e-3
+    p_evacuada = _potencia_con(hs, cd, camino, techo)
+    return {"huecos": hs, "yn": yn,
             "a_entra": sum(a for y, a in hs if y < yn),
             "a_sale": sum(a for y, a in hs if y > yn),
+            "a_base": camino["a_base"] if camino else 0.0,
+            "q_base": _caudal_base(g * yn, cd, **camino) if camino else 0.0,
             "p_evacuada": p_evacuada,
             "p_pared": U_PARED_W_M2K * _envolvente_m2(p) * techo,
-            "dt": (p["potencia_disipada"] / k) ** (2.0 / 3.0),
+            "dt": dt,
             "falta": p["potencia_disipada"] / p_evacuada}
+
+
+def _tiro_pesimista(p: dict[str, float], **kw) -> dict:
+    """El pesimista junta los dos supuestos pesimistas: C_D 0.55 y el canal de
+    120 bajo la base."""
+    return _tiro(p, CD_TIRO_PESIMISTA, canal=CANAL_BASE_PESIMISTA, **kw)
+
+
+def _potencia_a(p: dict[str, float], dt: float, cd: float = CD_TIRO,
+                costados: int = 2, trasera: bool = True, base: bool = True,
+                canal: float = CANAL_BASE) -> float:
+    """W que la chimenea evacua con un salto de dt K: la inversa de _tiro().
+    Con la base ya no hay k que elevar a 1.5, asi que los canarios que derivan
+    una carga del techo pasan por aqui."""
+    hs = _huecos(p, costados, trasera)
+    camino = _camino_base(p, costados, canal) if base else None
+    return _potencia_con(hs, cd, camino, dt)
 
 
 def guarda_potencia_vigente(p: dict[str, float]) -> None:
@@ -2790,7 +2891,14 @@ def guarda_aire(p: dict[str, float]) -> None:
     la prueba de robustez y se imprime. Un costado contra una pared no pasa,
     y eso es una condicion de uso (PLIEGO sec.7), con su HUECO hasta que el
     arranque mida cuanta holgura hace falta. La sala de 45 C de la spec del
-    chasis se imprime tambien, y publica su HUECO mientras no se decida."""
+    chasis se imprime tambien, y publica su HUECO mientras no se decida.
+
+    Y DESDE EL PAPEL DEL SUELO (2026-10-12) LA BASE RESPIRA. El aire entra
+    tambien por la base, en serie con la rendija de las patas y el canal de
+    debajo (_camino_base()). Los dos HUECOS se juzgan con el pesimista, que
+    es C_D 0.55 con el canal de 120: con la base, el nominal de un costado
+    tapado pasa y el pesimista no, y juzgarlo con el nominal lo callaba en
+    silencio (papel del suelo, sec.5)."""
     _n, largo_ent, _a, _y = _rejilla_entrada(p)
     assert largo_ent >= 4 * p["vent_ancho_ranura"], (
         f"la rejilla de entrada mide {largo_ent:.1f} mm de largo con "
@@ -2799,23 +2907,24 @@ def guarda_aire(p: dict[str, float]) -> None:
     t = _tiro(p)
     techo = p["salto_termico_max"]
     print(f"aire: plano neutro a {t['yn']:.0f} mm; por debajo entran "
-          f"{t['a_entra']:.0f} mm2 y por encima salen {t['a_sale']:.0f}, en "
-          f"{len(t['huecos'])} huecos: las franjas de las dos persianas, la "
-          f"rejilla baja de la trasera, la rendija del alero y las ondas")
+          f"{t['a_entra']:.0f} mm2 de huecos y los {t['a_base']:.0f} de la "
+          f"base, y por encima salen {t['a_sale']:.0f}, en {len(t['huecos'])} "
+          f"huecos: las franjas de las dos persianas, la rejilla baja de la "
+          f"trasera, la rendija del alero y las ondas")
     print(f"  {t['dt']:.1f} K sobre ambiente con {p['potencia_disipada']:.2f} W "
           f"(techo {techo:.0f}; esta chimenea evacua {t['p_evacuada']:.1f} W a "
           f"ese techo). SUPUESTO: C_D={CD_TIRO}, aire a {T_AMB - 273.15:.0f} C")
     assert t["dt"] <= techo + 1e-9, (
         f"el case sube {t['dt']:.1f} K sobre ambiente con "
         f"{p['potencia_disipada']:.2f} W y el techo es {techo:g}: esta chimenea "
-        f"evacua {t['p_evacuada']:.1f} W a ese techo. Hace falta un "
-        f"{100 * (t['falta'] - 1):.0f} % mas de area en todas las aberturas, a "
-        f"las mismas alturas, o salidas mas altas: el tiro va con la RAIZ de la "
-        f"altura")
-    t_p = _tiro(p, CD_TIRO_PESIMISTA)
+        f"evacua {t['p_evacuada']:.1f} W a ese techo. Hace falta mas area, "
+        f"salidas mas altas o mas pata bajo la base: el tiro va con la RAIZ de "
+        f"la altura")
+    t_p = _tiro_pesimista(p)
     print(f"  aviso: con C_D={CD_TIRO_PESIMISTA} (rendija bajo alero, no chapa "
-          f"ranurada) serian {t_p['dt']:.1f} K, y evacua {t_p['p_evacuada']:.1f} W "
-          f"a ese techo. Sin medir hasta el ensayo")
+          f"ranurada) y el canal de {CANAL_BASE_PESIMISTA:g} bajo la base serian "
+          f"{t_p['dt']:.1f} K, y evacua {t_p['p_evacuada']:.1f} W a ese techo. "
+          f"Sin medir hasta el ensayo")
     f_sala = T_SALA_DISENO_K / T_AMB
     print(f"  aviso: con la sala a {T_SALA_DISENO_K - 273.15:.0f} C de la spec "
           f"del chasis serian {t['dt'] * f_sala:.1f} K, y "
@@ -2827,18 +2936,22 @@ def guarda_aire(p: dict[str, float]) -> None:
             f"{t['dt'] * f_sala:.1f} K, y {t_p['dt'] * f_sala:.1f} con el C_D "
             f"pesimista contra un techo de {techo:.0f}. La puerta juzga con "
             f"{T_AMB - 273.15:.0f} C; cual es la sala del case lo decide Samuel")
-    print(f"  aviso: la envolvente exterior ({_envolvente_m2(p):.3f} m2, sin el "
-          f"suelo) se lleva otros {t['p_pared']:.1f} W a ese techo con "
+    print(f"  aviso: la envolvente exterior ({_envolvente_m2(p):.3f} m2, con la "
+          f"base, que va sobre patas) se lleva otros {t['p_pared']:.1f} W a ese techo con "
           f"U={U_PARED_W_M2K} W/m2K (SUPUESTO); no entra en el veredicto")
-    t_1 = _tiro(p, costados=1)
-    print(f"  con un costado tapado (contra una pared): {t_1['dt']:.1f} K")
+    t_1 = _tiro_pesimista(p, costados=1)
+    print(f"  con un costado tapado (contra una pared), pesimista: {t_1['dt']:.1f} K")
     if t_1["dt"] > techo + 1e-9:
         _HUECOS.append(
             f"la holgura de los costados sin medir: con un costado tapado el "
-            f"case sube {t_1['dt']:.1f} K con {p['potencia_disipada']:.2f} W y "
-            f"el techo es {techo:.0f}. Los dos tienen que quedar libres (PLIEGO "
-            f"sec.7); cuanta holgura hace falta a cada lado se mide en el "
-            f"arranque (papel de la persiana, HUECO 4)")
+            f"case sube {t_1['dt']:.1f} K con el pesimista y "
+            f"{p['potencia_disipada']:.2f} W, y el techo es {techo:.0f}. Los dos "
+            f"tienen que quedar libres (PLIEGO sec.7); cuanta holgura hace falta "
+            f"a cada lado se mide en el arranque (papel de la persiana, HUECO 4)")
+    t_0 = _tiro_pesimista(p, base=False)
+    print(f"  aviso: sobre un pano o una alfombrilla la base no respira y el "
+          f"pesimista sube a {t_0['dt']:.1f} K (PLIEGO sec.7: mesa dura, con "
+          f"los {p['alto_pie']:g} mm de pata libres debajo)")
 
 
 # Umbral de fluencia del PMMA. SUPUESTO DECLARADO (#106): nadie lo ha medido
@@ -3508,8 +3621,12 @@ def canario_techo(p: dict[str, float]) -> None:
     # aguanta: con la de hoy el de la sala se publica con 2 W de holgura, y la
     # de hoy es cota de abajo (enmienda M1 de la v5).
     techo = p["salto_termico_max"]
-    w_sala = _tiro(p, CD_TIRO_PESIMISTA)["k"] * (techo * T_AMB / T_SALA_DISENO_K) ** 1.5
-    w_costado = _tiro(p, costados=1)["k"] * techo ** 1.5
+    # Las dos cargas salen de la chimenea con el pesimista, que es como la
+    # puerta juzga los dos huecos desde el papel del suelo.
+    w_sala = _potencia_a(p, techo * T_AMB / T_SALA_DISENO_K, CD_TIRO_PESIMISTA,
+                         canal=CANAL_BASE_PESIMISTA)
+    w_costado = _potencia_a(p, techo, CD_TIRO_PESIMISTA, costados=1,
+                            canal=CANAL_BASE_PESIMISTA)
     w_media = round((max(w_sala, w_costado) + t["p_evacuada"]) / 2, 2)
     n_media = len(_HUECOS)
     with contextlib.redirect_stdout(sordo):
@@ -3520,6 +3637,26 @@ def canario_techo(p: dict[str, float]) -> None:
             f"cabe con un costado tapado ({w_costado:.1f} W) ni en la sala de "
             f"45 C con el pesimista ({w_sala:.1f} W), y guarda_aire() NO publico "
             f"el hueco de '{texto}' -- su silencio no vale")
+    # Y JUZGA EL PESIMISTA, no el nominal. w_media queda por encima del umbral
+    # nominal del costado, asi que con ella un guarda_aire() que volviera al
+    # nominal seguiria publicando el hueco y nadie lo veria (revision final del
+    # suelo). Entre el umbral nominal y el pesimista el nominal calla y el
+    # pesimista publica: ahi es donde el hueco decide algo, y por eso la carga
+    # se toma a medio camino de los dos, en cada uno de los dos huecos.
+    for texto, w_pes, w_nom in (
+            ("holgura de los costados", w_costado,
+             _potencia_a(p, techo, costados=1)),
+            ("sala de diseno", w_sala,
+             _potencia_a(p, techo * T_AMB / T_SALA_DISENO_K))):
+        w_entre = round((w_pes + w_nom) / 2, 2)
+        n_entre = len(_HUECOS)
+        with contextlib.redirect_stdout(sordo):
+            guarda_aire({**p, "potencia_disipada": w_entre})
+        assert any(texto in h for h in _HUECOS[n_entre:]), (
+            f"canario del aire: con {w_entre} W, entre el umbral nominal "
+            f"({w_nom:.1f} W) y el pesimista ({w_pes:.1f} W), guarda_aire() NO "
+            f"publico el hueco de '{texto}': lo esta juzgando con el nominal, y "
+            f"con el nominal el hueco calla justo donde el pesimista lo ve")
     n_verde = len(_HUECOS)
     with contextlib.redirect_stdout(sordo):
         guarda_aire({**p, "potencia_disipada": 1.0})
@@ -3543,6 +3680,11 @@ def canario_techo(p: dict[str, float]) -> None:
         f"canario del aire: con los tacos vueltos una tira de 89 mm la rendija "
         f"se ahoga y el salto no sube ({ahogado['dt']:.2f} contra "
         f"{t['dt']:.2f} K) -- _tiro() no esta mirando la rendija")
+    sin_base = _tiro({**p, "alto_pie": 0.5})
+    assert sin_base["dt"] > t["dt"] + 1.0, (
+        f"canario del aire: con las patas aplastadas a 0.5 mm el salto da "
+        f"{sin_base['dt']:.2f} K contra {t['dt']:.2f} -- _tiro() no esta "
+        f"mirando la base")
     del _HUECOS[n_huecos:]
 
 
@@ -5684,6 +5826,36 @@ def autocomprobacion_plano_neutro() -> None:
         f"que subir de 16 sin pasar la salida nueva, y S que crecer de 12")
 
 
+def autocomprobacion_base() -> None:
+    """La chimenea con el camino de la base tiene que caer en las dos cuentas
+    que ya se conocen. Sin base, la forma cerrada de toda la vida: P = k dT^1.5,
+    con S de _plano_neutro(). Y con el canal sin roce, la rendija y los
+    agujeros en serie, que son un orificio equivalente a_ef = (a1^-2 +
+    a2^-2)^-1/2 metido como un hueco mas a y = 0 (papel del suelo, sec.5)."""
+    p = leer_params()
+
+    def cerrada(hs, cd):
+        _yn, s = _plano_neutro(hs)
+        k = (RHO_AIRE * CP_AIRE * cd * math.sqrt(2 * G / T_AMB)
+             * s * 1e-6 * math.sqrt(1e-3))
+        return (p["potencia_disipada"] / k) ** (2 / 3)
+
+    for cd in (CD_TIRO, CD_TIRO_PESIMISTA):
+        for costados in (2, 1):
+            a = _tiro(p, cd, costados, base=False)["dt"]
+            b = cerrada(_huecos(p, costados), cd)
+            assert abs(a - b) < 1e-6 * b, (
+                f"autocomprobacion de la base: sin base el solver da {a:.6f} K "
+                f"y la forma cerrada {b:.6f} (C_D {cd}, {costados} costados)")
+    cam = _camino_base(p, canal=0.0)
+    a_ef = 1 / math.sqrt(1 / (cam["w"] * cam["h"]) ** 2 + 1 / cam["a_base"] ** 2)
+    a = _tiro(p, canal=0.0)["dt"]
+    b = cerrada(_huecos(p) + [(0.0, a_ef)], CD_TIRO)
+    assert abs(a - b) < 1e-6 * b, (
+        f"autocomprobacion de la base: con el canal sin roce el solver da "
+        f"{a:.6f} K y el orificio equivalente {b:.6f}")
+
+
 def _tacos_persiana_cotas(p: dict[str, float]) -> list[tuple[str, float, float]]:
     """(que, tiene, pide) de cada relacion de cotas entre tacos y bolsillos."""
     fondo_trasera = _bolsillo_trasero(p)["z0"]                   # el bolsillo de la trasera empieza ahi
@@ -6540,6 +6712,7 @@ def main() -> int:
     autocomprobacion(p)
     autocomprobacion_anillo()
     autocomprobacion_plano_neutro()
+    autocomprobacion_base()
     autocomprobacion_pv()
     # LAS DOS COPIAS DE E SIGUEN CRUZADAS, y el motivo cambio el 2026-08-28. El
     # .scad la usaba para derivar alli que tramos de la costilla llevaban ala

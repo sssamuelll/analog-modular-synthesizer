@@ -288,22 +288,23 @@ if __name__ == "__main__":
         print(f"  pesa {vol / 1000 * rho:.0f} g por costado en {nombre}")
     print(f"  {len(tacos(p))} tacos: " + ", ".join(f"{t} en ({x:.1f}, {y:.1f})" for x, y, t in tacos(p)))
     print("\nEL AIRE (clearance_budget._tiro(): plano neutro; las persianas, la "
-          "rejilla de la trasera, la rendija del alero y las ondas)")
+          "base, la rejilla de la trasera, la rendija del alero y las ondas)")
     print(f"  {'escenario':36s} {'W':>7s} {'C_D puerta':>11s} {'pesimista':>10s} {'techo':>6s}")
     w5 = p["potencia_disipada"]
     for nombre, W in (("v5 declarada, fuente afuera", w5),
                       ("fuente adentro (v5 + 25,02)", w5 + 25.02),
                       ("v4, que no se monta", 147.31)):
         q = {**p, "potencia_disipada": W}
-        dt, dtp = cb._tiro(q)["dt"], cb._tiro(q, cb.CD_TIRO_PESIMISTA)["dt"]
+        dt, dtp = cb._tiro(q)["dt"], cb._tiro_pesimista(q)["dt"]
         print(f"  {nombre:36s} {W:7.2f} {dt:9.1f} K {dtp:8.1f} K {p['salto_termico_max']:4.0f} K"
               f"{'' if dtp <= p['salto_termico_max'] else '   <- NO pasa el pesimista'}")
     print(f"  (plano neutro a {cb._tiro(p)['yn']:.0f} mm)")
     print(f"\n  con {w5:.2f} W, pesimista:")
-    for nombre, kw in (("las dos persianas solas", {"trasera": False}),
+    for nombre, kw in (("las dos persianas solas", {"trasera": False, "base": False}),
                        ("un costado tapado (contra una pared)", {"costados": 1}),
-                       ("sin persianas: el case de agosto", {"costados": 0})):
-        print(f"    {nombre:38s} {cb._tiro(p, cb.CD_TIRO_PESIMISTA, **kw)['dt']:5.1f} K")
+                       ("sin la base (sobre un pano)", {"base": False}),
+                       ("sin persianas: el case de agosto", {"costados": 0, "base": False})):
+        print(f"    {nombre:38s} {cb._tiro_pesimista(p, **kw)['dt']:5.1f} K")
     if "--escribir" in sys.argv:
         with open(GENERADO, "w", encoding="utf-8", newline="\n") as f:
             f.write(generado(p))
