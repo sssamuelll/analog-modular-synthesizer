@@ -3069,10 +3069,16 @@ def guarda_chaflan(p: dict[str, float]) -> None:
 E_ALUMINIO, RP02_ALUMINIO = 69000.0, 130.0
 # El talon, el techo y la nariz van en 6082-T6 por pliego (PLIEGO.md, tabla de
 # chapa) desde que el techo necesito los 240 con el labio a 13 -- y aunque
-# volvio a 18 y pasa con 130, el pliego lo dejo escrito. Solo lo usa la
-# lengueta de la pestana del talon, que con la reaccion en su punta trabaja
-# a unos 200 MPa: es la UNICA cuenta del repo que exige ese material.
+# volvio a 18 y pasa con 130, el pliego lo dejo escrito. Lo usan la lengueta
+# de la pestana del talon, que con la reaccion en su punta trabaja a unos 200
+# MPa, y desde el papel del suelo el borde de los agujeros de la base.
 RP02_6082_T6 = 240.0
+# Cuanto concentra el borde de un agujero la tension del puente entre agujeros
+# (papel del suelo sec.3.2: «de 2 a 3 veces»; Elke, ESTIMADO). Va en el extremo
+# alto: la puerta de la base se pone roja si el borde llega a la fluencia.
+K_BORDE_AGUJERO = 3.0
+
+
 def _geometria_apoyo_valle(p: dict[str, float]) -> dict[str, object]:
     """Mide la cadena banda--tira--primer KONDOR--marco en cajas reales."""
     P = _vertices(p)
@@ -5957,6 +5963,271 @@ def guarda_anillo(p: dict[str, float]) -> None:
         print(f"  {nombres[i]:<18} {largo:7.2f} mm  cede {flecha:.3f}")
 
 
+def _seccion_chapa(poly: list[tuple[float, float]], t: float) -> float:
+    """Inercia (mm4) de una chapa de espesor t por su linea media, para flexion
+    vertical: la seccion de la nariz o del talon tumbada (secciones.py de Elke,
+    papel del suelo sec.3.2)."""
+    segs = list(zip(poly[:-1], poly[1:]))
+    area = sum(t * math.dist(a, b) for a, b in segs)
+    yc = sum(t * math.dist(a, b) * (a[1] + b[1]) / 2 for a, b in segs) / area
+    inercia = 0.0
+    for a, b in segs:
+        largo = math.dist(a, b)
+        s = abs(b[1] - a[1]) / largo if largo else 0.0
+        ym = (a[1] + b[1]) / 2
+        inercia += (t * largo * (ym - yc) ** 2 + t * largo ** 3 * s ** 2 / 12
+                    + largo * t ** 3 * (1 - s ** 2) / 12)
+    return inercia
+
+
+def _emparrillado(lx: float, lz: float, t: float, nx: int, nz: int, apoyos: str,
+                  casos: list[list[tuple[float, float, float]]],
+                  blando: list[tuple[float, float, float, float]] = (),
+                  f_blando: float = 1.0, bordes: list[dict] | None = None,
+                  lineas_z: tuple[float, ...] = ()) -> list[dict]:
+    """Emparrillado de una placa de lx por lz y espesor t (analogia de Hambly,
+    el modelo de Elke del papel del suelo): vigas en x y en z con la rigidez D
+    de su franja y torsion, tres grados por nudo (w, giro en x, giro en z).
+    Una sola matriz para todos los casos de carga. Devuelve, por caso,
+    {"flecha": mm maximos, "m_campo": N mm/mm de la barra mas cargada dentro de
+    los rectangulos blandos, "m_llena": lo mismo en la chapa llena}.
+
+    El momento es el de los EXTREMOS DE CADA BARRA (k*u del elemento) entre su
+    ancho tributario, no D*curvatura en el nudo. En la costura entre el campo y
+    la chapa llena la curvatura por diferencias centrales mezcla las dos
+    rigideces y se multiplica por una sola: el nudo de la esquina de la L daba
+    el triple del momento de la barra de al lado (revision final del suelo).
+
+    apoyos: "cuatro bordes" (la validacion) o "lineas" (w = 0 a lo largo de las
+    z de lineas_z: el canto de los anillos). blando: rectangulos (x0, x1, z0,
+    z1) con la rigidez por f_blando (el campo perforado). bordes: vigas de
+    borde atadas en puntos, [{"x", "EI", "z_atados", "z_apoyos"}]. casos: listas
+    de cargas (x, z, N), cada una en el nudo mas cercano. numpy denso: la malla
+    de la puerta tiene unos 1 600 grados y se resuelve en menos de un segundo."""
+    import numpy as np
+
+    nu = 0.33
+    xs, zs = np.linspace(0.0, lx, nx + 1), np.linspace(0.0, lz, nz + 1)
+    d0 = E_ALUMINIO * t ** 3 / (12 * (1 - nu ** 2))
+    nn = (nx + 1) * (nz + 1)
+    bordes = bordes or []
+    nb = nz + 1
+    ndof = 3 * nn + 2 * nb * len(bordes)
+    K = np.zeros((ndof, ndof))
+
+    def idx(i, j):
+        return i * (nz + 1) + j
+
+    def kb(ei, L):
+        c = ei / L ** 3
+        return np.array([[12 * c, 6 * L * c, -12 * c, 6 * L * c],
+                         [6 * L * c, 4 * L * L * c, -6 * L * c, 2 * L * L * c],
+                         [-12 * c, -6 * L * c, 12 * c, -6 * L * c],
+                         [6 * L * c, 2 * L * L * c, -6 * L * c, 4 * L * L * c]])
+
+    def add(dofs, k):
+        K[np.ix_(dofs, dofs)] += k
+
+    def en_campo(x, z):
+        return any(a <= x <= b and c <= z <= e for a, b, c, e in blando)
+
+    barras = []                         # (grados, matriz, ancho tributario, en el campo)
+
+    def barra(dofs, ei, largo, ancho, campo):
+        ke = kb(ei, largo)
+        add(dofs, ke)
+        barras.append((dofs, ke, ancho, campo))
+
+    dx, dz = np.diff(xs), np.diff(zs)
+    torsion = np.array([[1.0, -1.0], [-1.0, 1.0]])
+    for i in range(nx + 1):
+        for j in range(nz + 1):
+            if i < nx:
+                s = (dz[j - 1] / 2 if j > 0 else 0) + (dz[j] / 2 if j < nz else 0)
+                campo = en_campo((xs[i] + xs[i + 1]) / 2, zs[j])
+                dl = d0 * (f_blando if campo else 1.0) * s
+                n1, n2 = idx(i, j), idx(i + 1, j)
+                barra([3 * n1, 3 * n1 + 1, 3 * n2, 3 * n2 + 1], dl, dx[i], s, campo)
+                add([3 * n1 + 2, 3 * n2 + 2], torsion * dl / dx[i])
+            if j < nz:
+                s = (dx[i - 1] / 2 if i > 0 else 0) + (dx[i] / 2 if i < nx else 0)
+                campo = en_campo(xs[i], (zs[j] + zs[j + 1]) / 2)
+                dl = d0 * (f_blando if campo else 1.0) * s
+                n1, n2 = idx(i, j), idx(i, j + 1)
+                barra([3 * n1, 3 * n1 + 2, 3 * n2, 3 * n2 + 2], dl, dz[j], s, campo)
+                add([3 * n1 + 1, 3 * n2 + 1], torsion * dl / dz[j])
+
+    def ni(x):
+        return int(np.argmin(abs(xs - x)))
+
+    def nj(z):
+        return int(np.argmin(abs(zs - z)))
+
+    fijos = set()
+    kpen = 1e7                         # N/mm, como Elke: tres ordenes sobre la malla
+    for bi, bd in enumerate(bordes):
+        b0 = 3 * nn + 2 * nb * bi
+        for j in range(nz):
+            add([b0 + 2 * j, b0 + 2 * j + 1, b0 + 2 * (j + 1), b0 + 2 * (j + 1) + 1],
+                kb(bd["EI"], dz[j]))
+        for z in bd["z_atados"]:
+            a, b = 3 * idx(ni(bd["x"]), nj(z)), b0 + 2 * nj(z)
+            add([a, b], kpen * torsion)
+        for z in bd["z_apoyos"]:
+            fijos.add(b0 + 2 * nj(z))
+    if apoyos == "cuatro bordes":
+        fijos |= {3 * idx(i, j) for i in range(nx + 1) for j in range(nz + 1)
+                  if i in (0, nx) or j in (0, nz)}
+    else:
+        fijos |= {3 * idx(i, nj(z)) for z in lineas_z for i in range(nx + 1)}
+    F = np.zeros((ndof, len(casos)))
+    for k, cargas in enumerate(casos):
+        for x, z, n in cargas:
+            F[3 * idx(ni(x), nj(z)), k] -= n
+    lib = np.array(sorted(set(range(ndof)) - fijos))
+    U = np.zeros((ndof, len(casos)))
+    U[lib] = np.linalg.solve(K[np.ix_(lib, lib)], F[lib])
+    gl = np.array([b[0] for b in barras])
+    ke = np.array([b[1] for b in barras])
+    ancho = np.array([b[2] for b in barras])
+    es_campo = np.array([b[3] for b in barras])
+    assert not blando or es_campo.any(), (
+        f"ninguna barra de la malla de {nx} x {nz} cae dentro de los "
+        f"rectangulos blandos: el momento del campo saldria 0 y la puerta "
+        f"pasaria sin medir nada")
+    resultado = []
+    for k in range(len(casos)):
+        u = U[:, k]
+        f = np.einsum("bij,bj->bi", ke, u[gl])
+        m = np.maximum(abs(f[:, 1]), abs(f[:, 3])) / ancho
+        resultado.append({
+            "flecha": float(-u[0:3 * nn:3].min()),
+            "m_campo": float(m[es_campo].max()) if es_campo.any() else 0.0,
+            "m_llena": float(m[~es_campo].max()) if (~es_campo).any() else 0.0})
+    return resultado
+
+
+# La mano sobre el campo: huella de 40 x 60 mm, una posicion cada 60 mm.
+HUELLA_MANO = (40.0, 60.0)
+PASO_MANO = 60.0
+
+
+def _manos_en_el_campo(p: dict[str, float]) -> list[tuple[str, float, float, list]]:
+    """La mano de carga_mano --9 cargas puntuales en su huella de 40 x 60--
+    barrida por los dos brazos de la L del campo, con la huella entera dentro:
+    (brazo, x, z, cargas). No va solo en el centro de cada brazo: el peor sitio
+    de la flecha (la fila de arriba del brazo A) y el del puente (junto a la
+    esquina de la L) son distintos y ninguno es ese (revision final del suelo).
+    Sale de _zonas_campo_base(): si la L cambia, la barrida la sigue."""
+    hx, hz = HUELLA_MANO
+
+    def barrido(lo: float, hi: float) -> list[float]:
+        if hi <= lo:                    # el brazo es mas estrecho que la mano
+            return [(lo + hi) / 2]
+        n = math.ceil((hi - lo) / PASO_MANO) + 1
+        return [lo + (hi - lo) * i / (n - 1) for i in range(n)]
+
+    manos = []
+    for brazo, (a, b, c, e) in zip("AB", _zonas_campo_base(p)):
+        for x in barrido(a + hx / 2, b - hx / 2):
+            for z in barrido(c + hz / 2, e - hz / 2):
+                cargas = [(x + dx, z + dz, p["carga_mano"] / 9)
+                          for dx in (-hx / 2, 0.0, hx / 2)
+                          for dz in (-hz / 2, 0.0, hz / 2)]
+                manos.append((brazo, x, z, cargas))
+    return manos
+
+
+def _flecha_base(p: dict[str, float], casos: list[list[tuple[float, float, float]]]
+                 ) -> list[dict]:
+    """La base con sus apoyos de verdad: el canto de los dos anillos (lineas en
+    z = t_anillo/2 y ancho - t_anillo/2), y la nariz y el talon como vigas de
+    borde atadas en sus tres M4 y apoyadas en el rebaje del anillo. El campo
+    perforado, con el 30 % de la rigidez (Elke, O'Donnell-Langer, ligamento
+    0.375; ESTIMADO). Coordenadas de la placa: x desde el chaflan delantero.
+    Devuelve, por caso de carga, el dict de _emparrillado()."""
+    x0 = p["chaflan_nariz"]
+    lx = fondo(p) - 2 * x0
+    nz_, tl = _nariz(p), _talon(p)
+    t = p["t_costilla"]
+    apoyos = (p["t_anillo"], p["ancho_total"] - p["t_anillo"])
+    bordes = [{"x": nz_["m4_x"] - x0, "EI": E_ALUMINIO * _seccion_chapa(nz_["contorno"], t),
+               "z_atados": nz_["m4_z"], "z_apoyos": apoyos},
+              {"x": tl["m4_x"] - x0, "EI": E_ALUMINIO * _seccion_chapa(tl["contorno"], t),
+               "z_atados": tl["m4_z"], "z_apoyos": apoyos}]
+    blando = [(a - x0, b - x0, c, e) for a, b, c, e in _zonas_campo_base(p)]
+    return _emparrillado(lx, p["ancho_total"], p["t_base"], 16, 28, "lineas",
+                         [[(x - x0, z, n) for x, z, n in cargas] for cargas in casos],
+                         blando, 0.30, bordes,
+                         (p["t_anillo"] / 2, p["ancho_total"] - p["t_anillo"] / 2))
+
+
+def canario_base_fina(p: dict[str, float]) -> None:
+    """Una base mas fina tiene que saltar en guarda_piso(), y cada rama por SU
+    razon. Con 2 mm, la que el papel descarto, la flecha todavia cabe en la
+    rendija y lo que salta es el borde de los agujeros; con las patas a 3 mm el
+    techo de la flecha baja a 2 y salta la mesa aunque la chapa sea la buena.
+    Las dos ramas tienen que tener su prueba roja: una puerta cuyo aserto de
+    tension nunca ha mordido no vale por su VERDE."""
+    casos = (
+        ({"t_base": 2.0}, "puente",
+         "con 2 mm el borde del agujero llega al limite elastico"),
+        ({"alto_pie": 3.0}, "toca la mesa",
+         "con la rendija a 3 mm la flecha de la mano no cabe debajo"),
+    )
+    for cambios, clave, que in casos:
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                guarda_piso({**p, **cambios})
+        except AssertionError as e:
+            assert clave in str(e), (
+                f"canario de la base: con {cambios} guarda_piso() salto, pero "
+                f"por otra razon ('{str(e)[:80]}...') y no por '{clave}'")
+            continue
+        raise AssertionError(f"canario de la base NO disparo: con {cambios} "
+                             f"hay {que} y guarda_piso() lo deja pasar -- no "
+                             f"confiar en su VERDE")
+
+
+def autocomprobacion_emparrillado() -> None:
+    """El emparrillado contra Timoshenko, en la flecha Y EN EL MOMENTO, sobre la
+    placa cuadrada de 300 apoyada en los cuatro bordes.
+
+    Flecha: 100 N al centro, w = 0.01160 P a^2 / D. Elke lo valido a n = 20
+    dentro del 1.3 %; aqui se exige el 3 % con la malla de la puerta.
+
+    Momento: carga uniforme q, M = 0.0479 q a^2 en el centro (nu = 0.3). La
+    parrilla no acopla Poisson --cada barra solo siente su curvatura--, asi que
+    lo que ha de dar es D*kappa = M / (1 + nu), y se exige el 5 % (la malla de
+    la puerta da +3 %, y converge a +1 % con el doble de fina). Se mide en una
+    ventana central de rigidez plena: el maximo global de la placa cae junto a
+    la esquina apoyada, donde el momento de barra equilibra la torsion y no es
+    flexion. Sin esta prueba nadie vigilaba la escala de los momentos de barra
+    (su ancho tributario), de donde la puerta del suelo saca la tension del
+    puente."""
+    t, a, n = 3.0, 300.0, 16
+    nu = 0.33
+    d = E_ALUMINIO * t ** 3 / (12 * (1 - nu ** 2))
+    w = _emparrillado(a, a, t, n, n, apoyos="cuatro bordes",
+                      casos=[[(a / 2, a / 2, 100.0)]])[0]["flecha"]
+    w_t = 0.01160 * 100.0 * a * a / d
+    assert abs(w - w_t) < 0.03 * w_t, (
+        f"el emparrillado da {w:.3f} mm y Timoshenko {w_t:.3f} en la placa "
+        f"cuadrada: la malla o el ensamblado estan mal")
+    q, h = 0.001, a / n
+    uniforme = [(i * h, j * h, q * h * h * (0.5 if i in (0, n) else 1.0)
+                 * (0.5 if j in (0, n) else 1.0))
+                for i in range(n + 1) for j in range(n + 1)]
+    m = _emparrillado(a, a, t, n, n, apoyos="cuatro bordes", casos=[uniforme],
+                      blando=[(a / 4, 3 * a / 4, a / 4, 3 * a / 4)],
+                      f_blando=1.0)[0]["m_campo"]
+    m_t = 0.0479 * q * a * a / (1 + 0.3)
+    assert abs(m - m_t) < 0.05 * m_t, (
+        f"el emparrillado da {m:.3f} N mm/mm de momento de barra y Timoshenko "
+        f"{m_t:.3f} (D*kappa = M / (1 + nu)) con carga uniforme: la escala de "
+        f"los momentos de barra esta mal")
+
+
 def guarda_piso(p: dict[str, float]) -> None:
     """El riel de panel del frente tiene que librar el SUELO del case.
 
@@ -6003,6 +6274,46 @@ def guarda_piso(p: dict[str, float]) -> None:
         f"(holgura_rail sobre y=0). Subir alto_frontal o inset_inf_frente "
         f"(van emparejados: la curva en punta pide "
         f"inset >= alto_frontal/2 + rail_er_alto/2 + 3)")
+    # 2. LA BASE AGUANTA UNA MANO (papel del suelo, 2026-10-12, sec.3.2). Lo que
+    #    la carga de verdad es poco: ella misma, el chasis en sus cuatro M4 y la
+    #    trasera en el pie del talon (Elke, 0.31 a 0.41 mm). Lo que la decide es
+    #    una mano de carga_mano apoyada en el campo, que es lo unico de la base
+    #    que se alcanza, y se barre por toda la L. Dos condiciones, cada una en
+    #    su peor sitio: no toca la mesa (flecha <= alto_pie - 1) y el borde de
+    #    los agujeros no llega a la fluencia (el momento de la barra del campo,
+    #    por el ligamento paso / (paso - agujero) del puente y por la
+    #    concentracion K_BORDE_AGUJERO del papel, contra RP02_6082_T6). Es el
+    #    criterio del papel: «en el borde de los agujeros, que concentra la
+    #    tension de 2 a 3 veces, el aluminio se deforma para siempre». La chapa
+    #    llena trabaja a una fraccion de eso (sin ligamento ni borde de agujero)
+    #    y no se vigila aparte. Sustituye al aserto de la tabla de madera, que
+    #    media 200 N en medio del vano contra 0.60 mm con E_madera.
+    manos = _manos_en_el_campo(p)
+    res = _flecha_base(p, [m[3] for m in manos])
+    k_w = max(range(len(manos)), key=lambda k: res[k]["flecha"])
+    k_s = max(range(len(manos)), key=lambda k: res[k]["m_campo"])
+    paso, agujero, t_b = p["base_paso"], p["base_agujero"], p["t_base"]
+    s_puente = 6 * res[k_s]["m_campo"] / t_b ** 2 * paso / (paso - agujero)
+    s_borde = K_BORDE_AGUJERO * s_puente
+
+    def donde(k: int) -> str:
+        return f"brazo {manos[k][0]} (x={manos[k][1]:.0f}, z={manos[k][2]:.0f})"
+
+    assert res[k_w]["flecha"] <= p["alto_pie"] - 1.0 + 1e-9, (
+        f"la base cede {res[k_w]['flecha']:.2f} mm con una mano de "
+        f"{p['carga_mano']:.0f} N en el {donde(k_w)} y las patas dejan "
+        f"{p['alto_pie']:g}: toca la mesa. Sube t_base")
+    assert s_borde <= RP02_6082_T6 + 1e-9, (
+        f"el borde de los agujeros de la base llega a {s_borde:.0f} MPa "
+        f"({K_BORDE_AGUJERO:g} x los {s_puente:.0f} del puente) con una mano de "
+        f"{p['carga_mano']:.0f} N en el {donde(k_s)}, contra {RP02_6082_T6:.0f} "
+        f"de limite elastico: el aluminio se deforma para siempre. Sube t_base "
+        f"o cierra el campo")
+    print(f"suelo: BASE de chapa t={t_b:g}; con {p['carga_mano']:.0f} N en "
+          f"{len(manos)} sitios de la L cede {res[k_w]['flecha']:.2f} mm como "
+          f"mucho, en el {donde(k_w)} (techo {p['alto_pie'] - 1:.0f}); el puente "
+          f"trabaja a {s_puente:.0f} MPa y el borde del agujero a {s_borde:.0f} "
+          f"(x{K_BORDE_AGUJERO:g}, en el {donde(k_s)}), contra {RP02_6082_T6:.0f}")
     # 3. y la trasera TAMBIEN llega al suelo. El suelo no lo cierra solo la
     #    bandeja: la cara trasera es la cuarta pared, y si su canto de abajo no
     #    baja hasta el mismo plano queda un rebaje corrido a lo largo de los
@@ -6667,6 +6978,7 @@ def main() -> int:
     autocomprobacion_anillo()
     autocomprobacion_plano_neutro()
     autocomprobacion_base()
+    autocomprobacion_emparrillado()
     autocomprobacion_pv()
     # LAS DOS COPIAS DE E SIGUEN CRUZADAS, y el motivo cambio el 2026-08-28. El
     # .scad la usaba para derivar alli que tramos de la costilla llevaban ala
@@ -6719,6 +7031,7 @@ def main() -> int:
     canario_trasera(p)
     canario_techo(p)
     canario_campo_base(p)
+    canario_base_fina(p)
     guarda_red(p)
     guarda_fresado(p)
     guarda_puentes_ventilacion(p)
