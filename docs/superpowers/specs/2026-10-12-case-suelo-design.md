@@ -5,6 +5,10 @@
 - D-T2: **los tornillos del suelo, desde abajo**;
 - el papel: «Arma el plan».
 
+**Implementado el 2026-10-12** en la rama `docs/case-suelo`, del plan
+`docs/superpowers/plans/2026-10-12-case-suelo.md`. Las cifras del §3.2 y del §5
+son las de la implementación (enmienda al final de cada sección).
+
 **Sucede a**: la D-S4 del papel de la persiana (`2026-10-11-case-persiana-design.md` §8), firmada «quitar» el 11-10 a las 23:00 (ficha `quitar_tabla` del acta 3) ·
 **Base**: `main` en `38d2ac4` (12-10): la persiana (#412), sus deudas (#419) y el aire con el plano neutro y la potencia de la v5 (#421) ·
 **Se apoya en**:
@@ -89,6 +93,19 @@ Con una mano de 200 N (`carga_mano`) en el centro, Elke modeló la chapa como un
 **Con 2 mm**, la mano empuja la chapa hasta la mesa, y en el borde de los agujeros, que concentra la tensión de 2 a 3 veces, el aluminio se deforma para siempre. **Con 3 mm no pasa ninguna de las dos cosas.**
 
 El criterio nuevo sustituye al aserto 2 de `guarda_piso()`, que medía la tabla con 200 N en medio del vano contra 0,60 mm. Con `carga_mano` en el centro, la chapa no plastifica en el puente del campo y no toca la mesa.
+
+**Enmienda de la implementación (12-10).** La tabla de arriba es de Elke con el campo en el centro de la chapa y la mano en medio del vano. Pero el chasis se queda encima (§4), así que el centro de la base no se alcanza, y el campo es una L. La puerta (`guarda_piso()`, el emparrillado de Elke en el budget, comprobado contra Timoshenko en la flecha y en el momento) barre la mano de 200 N por toda la L, en 27 sitios con la huella entera dentro, y toma el peor de cada criterio:
+
+- **No toca la mesa**: la flecha, contra `alto_pie` − 1 = 9 mm.
+- **No plastifica el borde del agujero**: la tensión del puente, medida en las barras del campo, por 3 (el extremo del «de 2 a 3 veces» de arriba), contra los 240 MPa de fluencia del 6082-T6.
+
+| | 3 mm | 2 mm | 1,8 mm |
+|---|---|---|---|
+| flecha con la mano, en su peor sitio | 2,80 mm | 7,88 mm | 10,55 mm ✗ |
+| tensión en el puente | 59 MPa | 133 MPa | 164 MPa |
+| borde del agujero (× 3) | 177 MPa | 398 MPa ✗ | 492 MPa ✗ |
+
+El orden de magnitud es el de Elke (53 y 120 MPa con la mano en el centro); el peor sitio de la mano no es el centro, sino junto a la esquina interior de la L. Con la L, a 2 mm la mano ya no toca la mesa (7,9 mm contra 9), pero el borde del agujero pasa de la fluencia: **los 2 mm se descartan por el borde y no por la mesa**, y los 3 mm firmados se quedan, con 2,80 mm donde el techo es 9 y 177 MPa donde es 240. El canario de la puerta exige las dos ramas: 2 mm tiene que saltar por el puente, y con las patas a 3 mm tiene que saltar la mesa.
 
 ### 3.3 Lo que se ve
 
@@ -211,7 +228,9 @@ La rendija y los agujeros son orificios, cuya pérdida va con Q². El canal es l
 | A, a la izquierda del chasis | 45–273 | 24–196 | 39 179 mm² |
 | B, delante del chasis | 45–102 | 196–545 | 19 750 mm² |
 
-  Con Ø5 al tresbolillo cada 8 (el patrón Rv 5-8, un 35,4 % abierto) el campo abre hasta 20 876 mm², y se usan 20 000. Casi todo el perímetro queda a 25–30 mm de un agujero. El tramo de atrás a la derecha queda a unos 200, por debajo del chasis. Por eso el largo del canal se da como **60 mm** (estimado) y **120 mm** (el pesimista).
+  Con Ø5 al tresbolillo cada 8 (el patrón Rv 5-8, un 35,4 % abierto) el campo abre hasta 20 876 mm², y se usan 20 000.
+
+  **Enmienda de la implementación (12-10).** La L se deriva con `base_orilla` = 10 desde el canto libre de los pies, el canto del anillo y la huella del chasis, sin el margen de 8,5 del guion de este papel: A va de x 36,5 a 281,3 y B de 36,5 a 101,7. El campo la llena con una sola red, porque dos redes dejarían en la costura un puente más fino: son **1118 agujeros y 21 952 mm² abiertos** (`_campo_base()`, y su gemela `campo_base()` en el `.scad`, que `check_dxf` cruza con el DXF). Casi todo el perímetro queda a 25–30 mm de un agujero. El tramo de atrás a la derecha queda a unos 200, por debajo del chasis. Por eso el largo del canal se da como **60 mm** (estimado) y **120 mm** (el pesimista).
 
 Las cifras, con 64,22 W, las dos persianas y 20 000 mm² abiertos (`python case/cad/suelo.py`):
 
@@ -222,6 +241,17 @@ Las cifras, con 64,22 W, las dos persianas y 20 000 mm² abiertos (`python case/
 | patas de 10, canal de 120 | 14,67 | 16,26 | 21,50 ✗ | 17,64 |
 | patas de 20, canal de 60 | 13,31 | 14,86 | 19,39 | 16,13 |
 | patas de 20, canal de 120 | 13,40 | 14,94 | 19,50 | 16,21 |
+
+**Enmienda de la implementación (12-10)**, con el campo real de 21 952 mm² (`python case/cad/suelo.py`). La puerta juzga el salto con el canal de 60, y el pesimista con C_D 0,55 y el canal de 120:
+
+| | salto | pesimista | un costado tapado (pesimista) | sala a 45 °C (pesimista) |
+|---|---|---|---|---|
+| patas de 10, canal de 60 | 14,27 | 15,85 | 20,94 ✗ | 17,20 |
+| patas de 10, canal de 120 | 14,64 | 16,21 | 21,44 ✗ | 17,59 |
+| patas de 20, canal de 60 | 13,16 | 14,69 | 19,21 | 15,94 |
+| patas de 20, canal de 120 | 13,26 | 14,78 | 19,32 | 16,04 |
+
+Con las patas de 10 firmadas, la puerta da 14,3 K y 16,2 en el pesimista, y la chimenea evacúa 107,4 W al techo, u 88,6 en el pesimista. El HUECO de la sala ya no se publica. El de los costados sí: 21,4 K con el pesimista. Y sobre un paño, sin base, el pesimista vuelve a 18,9 K.
 
 El techo es de 20 K. La tabla dice cuatro cosas:
 

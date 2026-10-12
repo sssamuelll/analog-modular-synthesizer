@@ -25,10 +25,13 @@
 >
 > **Estado:** en el modelo y con sus puertas (`guarda_persiana()`,
 > `guarda_tacos_persiana()`, `anillo_tiene_bolsillos()`, y las cajas de la
-> persiana en `solapes()`); sin fabricar. El aire se cuenta con el plano neutro
-> y la potencia de la v5: 16,9 K sobre la sala con las dos persianas, contra un
-> techo de 20 (#289). Lo siguiente es la tira de muestra (#398). La tabla se va
-> (D-S4, firmada «quitar» el 11-10): su papel corto va después. Dos decisiones
+> persiana en `solapes()`); sin fabricar. El aire se cuenta con el plano neutro,
+> la potencia de la v5 y la base como entrada: 14,3 K sobre la sala (16,2 en el
+> pesimista), contra un techo de 20. **La tabla de nogal ya es una base de chapa
+> de 3 mm** (papel `docs/superpowers/specs/2026-10-12-case-suelo-design.md`,
+> acta 4): bajo los anillos, con 1118 agujeros de Ø5 y los M4 de nariz y talón
+> desde abajo; el chasis de la fuente se queda encima. Lo siguiente es la tira
+> de muestra (#398). Dos decisiones
 > abiertas: con diez tacos el tramo más largo sin taco mide 112 mm y el papel
 > pide 100 (once lo bajan a 92), y el doblez R3 de la tapa del valle en
 > 6082-T6.
@@ -258,6 +261,7 @@ La primera versión se olvidó ese término y los 14 salieron 12.
 | | área abierta | altura | ranuras |
 |---|---|---|---|
 | entrada (trasera, abajo) | **7 065 mm²** | y = 46 | 46 de 41.8 × 3.75 |
+| entrada — la base (abajo) | **21 952 mm²**, en serie con la rendija de las patas y el canal de debajo | y = 0 | 1118 de Ø5 cada 8, en L (papel del suelo) |
 | salida — rendija bajo el alero | **1 442 mm²** | y = 238 | luz nominal 4.0, 3.20 comprimida, mirando al suelo |
 | salida — las dos ondas abiertas | 2 289 mm² | — | — |
 
@@ -301,8 +305,10 @@ es del papel del case —**D-F3 = A**, ventilar por convección natural sin
 ventilador— y vive en **#289**, no en esta puerta.
 **Desde el 2026-10-12 la puerta vuelve a juzgar**: con la fuente v5 afuera
 (64,22 W) y el aire contado con el plano neutro y las dos persianas, el case sube
-16,9 K contra 20. Lo que queda abierto son dos HUECOS: la holgura de los
-costados y la sala de diseño del case.
+16,9 K contra 20. **Y desde el papel del suelo (2026-10-12) la base respira**:
+14,3 K, 16,2 en el pesimista. La sala de 45 °C pasa (17,6) y un costado tapado
+no (21,4): los costados siguen libres. Lo que queda abierto es el HUECO de la
+holgura de los costados y la hoja de la pata.
 
 **Corrección del 2026-08-30, tras la revisión adversarial.** La primera cuenta
 escogía **3.0 mm** por capilaridad. Conservaba esa razón, pero `guarda_aire()`
@@ -796,41 +802,44 @@ Salida real de `openscad -D 'PART=\"bom\"' cad/sam17_case.scad` — los 4
 
 | Pieza | Cantidad | Nota |
 |-------|----------|------|
-| **ANILLO** (costilla) — pletina de aluminio **FRESADA** t=14, cara vista 20 | **2** | **la pieza portante del case, mecanizada, no plegada**. Conserva el rebaje de 6 × 11 del costado, vacío desde el 2026-10-11, y el chaflán 1.5 × 45° de la cara vista; y en la cara de fuera gana **diez bolsillos** para los tacos de la persiana. En la cara interior gana el **rebaje de chapa de 4.5 de ancho × 3 de fondo, z = 11..14**, solo donde se ve techo, nariz o talón. La chapa queda rehundida 1, con 0.5 contra la pared y 2.5 agarrados en z; el **reborde de 1 × 3** tapa el canto. El radio es 5.5 donde hay chapa y vuelve a 4.5 donde la chapa sale hacia el pie: así sigue el arco del pliegue sin levantar el pie de la tabla. El tramo trasero pasa a franja 23: bolsillo de la trasera en u = 5.5..16.5, pared 3 y 3.5 de rebaje vacío. Bajo los dos labios de chapa, el labio del bolsillo tiene 3 de hondo; en el resto conserva 6. Cada anillo lleva un cajeado de brida de **28 × 15.5 × 3**, dos en total, con esquina interior R1.5. Conserva 14 roscas ciegas M4 por anillo y 3 M5 en el canto inferior. **Anodizado negro** (desde el 2026-10-11; era satinado), con el punto de bonding enmascarado |
+| **ANILLO** (costilla) — pletina de aluminio **FRESADA** t=14, cara vista 20 | **2** | **la pieza portante del case, mecanizada, no plegada**. Conserva el rebaje de 6 × 11 del costado, vacío desde el 2026-10-11, y el chaflán 1.5 × 45° de la cara vista; y en la cara de fuera gana **diez bolsillos** para los tacos de la persiana. En la cara interior gana el **rebaje de chapa de 4.5 de ancho × 3 de fondo, z = 11..14**, solo donde se ve techo, nariz o talón. La chapa queda rehundida 1, con 0.5 contra la pared y 2.5 agarrados en z; el **reborde de 1 × 3** tapa el canto. El radio es 5.5 donde hay chapa y vuelve a 4.5 donde la chapa sale hacia el pie: así sigue el arco del pliegue sin levantar el pie de la base. El tramo trasero pasa a franja 23: bolsillo de la trasera en u = 5.5..16.5, pared 3 y 3.5 de rebaje vacío. Bajo los dos labios de chapa, el labio del bolsillo tiene 3 de hondo; en el resto conserva 6. Cada anillo lleva un cajeado de brida de **28 × 15.5 × 3**, dos en total, con esquina interior R1.5. Conserva 14 roscas ciegas M4 por anillo y 3 M5 en el canto inferior. **Anodizado negro** (desde el 2026-10-11; era satinado), con el punto de bonding enmascarado |
 | **MARCO DE LA VENTANA** — pletina t=6, láser | **2** | **una por costado, espejadas**. Aloja las cabezas de los seis rieles (y hasta el 2026-10-11 retenía el costado hacia dentro). El canto se retira **2.65 bajo las chapas empotradas**; en el suelo sigue en **1.65**, porque allí los pies no se rehunden. En la trasera arranca a **17.00** y `marco_fondo_trasera` pasa a **30**: queda una pata de **13 × 6**, que trabaja a 114 MPa con 200 N, por debajo de 130 (el techo de flecha de 2 mm era el del acrílico y se fue con él). Lleva la rosca M3 de la banda del valle y la muesca sobre la brida del techo. **Orden obligado: rieles al marco, marco al anillo desde dentro** |
 | Tornillo M4 botón (marco al anillo) | **24** | 12 por costado — 10 en las tres filas + 2 en la pata del suelo, el trabajo que hacían los de los clips —, a rosca ciega en la franja de 14. Eran los «20 de placa al anillo» que este README llevaba sin itemizar, más los 4 de los clips. Las diez cabezas de las filas quedan fuera de la huella de los Z-Rails, con ≥0.5 mm libres para apretarlas después de montar los rieles (#242) |
 | **MIEMBRO ALTO** — chapa 6082-T6 t=1.5 | **1** | el **techo macizo**, sin ranuras: meseta de 50, retorno de 9 (ficha 6, 2026-10-11), chaflán de 6 y **labio de 20**. Con 200 N en el centro del vano de 540.62 cede 1.62 mm y trabaja a 95 MPa, por debajo de Rp0.2 = 130. Blank **593.02 × 78.85**. Las dos bridas de 27 × 14.5 llevan esquinas R2 y entran en los cajeados de 28 × 15.5 × 3; quedan 11 de pletina bajo sus M4 ciegos. **Sin canal** y sin fila de tornillos para la trasera |
-| **TALÓN** — chapa 6082-T6 t=1.5 | **1** | **la nariz de atrás**: pie de **22.5** sobre la tabla, chaflán de 6 y labio vertical de 13. Blank **545.62 × 42.23**. En cada punta, una muesca de **2.65** va desde el canto libre del pie hasta la línea de doblez, a **22.06** (`largo − BD45/2`), con alivio de Ø2 a caballo de la esquina interior. Sus ocho pestañas siguen sujetando la trasera hacia dentro. Tres M4 avellanados a la tabla desde arriba. El chasis del PSU se adelanta 2.5 con este pie |
-| Tornillo M4 avellanado (talón) | **3** | el pie del talón a la **tabla**, desde dentro — mismo herraje que las paticas y la nariz |
-| **NARIZ** — chapa 6082-T6 t=1.5 | **1** | la banda del frente: pie de **20.5** sobre la tabla, chaflán a 45° y frente vertical. El pie crece para no separarse más de 2 del talón: mismo estilo. Blank **545.62 × 53.10**. En cada punta, una muesca de **2.65** llega desde el canto libre del pie hasta la línea de doblez, a **20.06** (`largo − BD45/2`), con alivio de Ø2 a caballo de la esquina interior. Conserva sus tres dobleces |
-| Tornillo M4 avellanado (nariz) | **3** | el pie de la nariz a la **tabla**, desde dentro — mismo herraje que las paticas. Ninguno en la cara vista |
+| **TALÓN** — chapa 6082-T6 t=1.5 | **1** | **la nariz de atrás**: pie de **22.5** sobre la base, chaflán de 6 y labio vertical de 13. Blank **545.62 × 42.23**. En cada punta, una muesca de **2.65** va desde el canto libre del pie hasta la línea de doblez, a **22.06** (`largo − BD45/2`), con alivio de Ø2 a caballo de la esquina interior. Sus ocho pestañas siguen sujetando la trasera hacia dentro. Tres M4 de botón desde abajo, a tuercas CLS-M4 prensadas en el pie, a 7.0 del canto libre (papel del suelo, D-T2). El chasis del PSU se adelanta 2.5 con este pie |
+| Tornillo M4 × 8 ISO 7380 de botón (talón) | **3** | el pie del talón a la **base**, desde **abajo**, a la tuerca CLS de su pie |
+| **NARIZ** — chapa 6082-T6 t=1.5 | **1** | la banda del frente: pie de **20.5** sobre la base, chaflán a 45° y frente vertical. El pie crece para no separarse más de 2 del talón: mismo estilo. Blank **545.62 × 53.10**. En cada punta, una muesca de **2.65** llega desde el canto libre del pie hasta la línea de doblez, a **20.06** (`largo − BD45/2`), con alivio de Ø2 a caballo de la esquina interior. Conserva sus tres dobleces |
+| Tornillo M4 × 8 ISO 7380 de botón (nariz) | **3** | el pie de la nariz a la **base**, desde **abajo**, a la tuerca CLS de su pie. Ninguno en la cara vista |
 | Z-Rail de Tiptop | **6** | 104 HP (528.32 mm), sección 23.8 × 10. Cuatro forman las dos filas 3U y dos la fila auxiliar **KONDOR de 55 mm**. Atornillan al **marco de la ventana**, no directo al anillo. **Plateados**: son los 6 comprados el 18-08. La ficha 14 del acta del 09-10 los pedía negros, y Samuel los dejó así el 10-10 (*«yo ya compré los rieles plateados, así que serán plateados»*) |
 | Tornillo **M4 fijo** para los rieles | **12** | roscan en el propio Z-Rail (M4 taladrado a 3.3 de fábrica). Sin tuerca, sin inserto, sin hombro, Belleville, palomilla ni cierre manual. Los seis rieles quedan fijos por ambas puntas |
 | **Tira anti-ruido del valle** | **1** | 0.20 mm nominal, oculta sobre el primer Z-Rail KONDOR; queda comprimida 0.10 mm en el gap de apoyo bajo la prolongación de 2 mm de la banda |
-| Tornillo M4 botón (brida del miembro alto) | **4** | por la punta del miembro alto, a rosca ciega en el anillo. Eran 8 con la brida del miembro bajo, que hoy es talón y va a la tabla. Eran M5 hasta el 2026-08-28: bajan a M4 porque la franja de 14 mm no admite las dos brocas (paso M5 + broca M5) a la vez |
+| Tornillo M4 botón (brida del miembro alto) | **4** | por la punta del miembro alto, a rosca ciega en el anillo. Eran 8 con la brida del miembro bajo, que hoy es talón y va a la base. Eran M5 hasta el 2026-08-28: bajan a M4 porque la franja de 14 mm no admite las dos brocas (paso M5 + broca M5) a la vez |
 | **JUNTA DE ASIENTO EPDM** t=1 mm | **2** | una por anillo: la tira del bolsillo de la trasera. La del rebaje del costado se fue con la mejilla el 2026-10-11. Nunca aluminio contra acrílico |
 | **TACO DE EPDM adhesivo, 4.0 × 15** | **12** | seis en la cara interior del labio del techo y seis en la del talón. Sustituyen las dos tiras continuas de 2.5: fijan una luz nominal de 4.0 sin cerrar la salida entre tacos |
-| Tornillo M4 + **tuerca remachable** (clinch, PEM S-M4) | **4** | el chasis del PSU a la **tabla**, por el suelo, desde abajo. Se adelanta 1.5 con el pie del talón y entra al final por el frente; sus tornillos se aprietan después desde debajo de la tabla |
+| Tornillo M4 + **tuerca remachable** (clinch, PEM S-M4) | **4** | el chasis del PSU a la **base**, por el suelo, desde abajo. Se adelanta 1.5 con el pie del talón y entra al final por el frente; sus tornillos se aprietan después desde debajo de la base |
 | Tornillo **M3 botón** | **2** | **las pestañas** de la banda del valle **al marco de la ventana** (no al anillo, ruling R3). **La trasera ya no lleva ninguno**: va capturada (los 10 M3 con tuerca y arandela de nylon murieron el 29-08, más noche). **Atrás no se ve un tornillo** |
 
 | **Chapa de aluminio t=3 mm** — banda delantera del valle | **1** | **anodizada en negro** (ficha 14): vuelo delantero liso, desarrollo **560.00 × 20.00**, con pestaña de 21 mm doblada en cada punta, atornillada al **marco de la ventana** con un M3 (no al anillo desde el 2026-08-28). Aleación **6082-T6/T651, obligatoria desde el 2026-10-11** por color (todo el aluminio negro que se ve, un lote); por cálculo también pasaría 5754 H22 (48.0 MPa real, `guarda_valle()`). **HUECO:** se dobla a R3 = 1 t, y el 6082-T6 de 3 mm puede fisurar a ese radio; se pregunta al taller (RFQ §B). Va al taller de CHAPA — sin recocido, sin diamantado, sin chaflán: eso es del PMMA |
 | **Tira negra del valle** — chapa de aluminio t=1 mm, anodizada en negro | **1** | lisa, sin taladros ni plegados; corte y anodizado. Tapa por dentro la rendija de la esquina de P3, entre el canto de atrás del panel KONDOR y el panel alto (ficha 6, 10-10). Se apoya en el ala libre del riel de atrás de la fila KONDOR y se recuesta en la arista de abajo del riel bajo de la fila alta, y la sujetan **dos tacos de VHB negro** en las puntas. Las cotas de corte las imprime `guarda_tira_valle()`, que también vigila que no roce el módulo KONDOR al salir |
 | **PERSIANA** — aluminio 6082-T651, pletina de 12 frenteada a 9.5, anodizada en negro | **2** | una por costado, **espejadas** (dos programas): placa de 6 por fuera del anillo, con **44 varillas de 2**, borde de 4, dos atados por dentro y **diez tacos de Ø8 × 3.5** en el dorso, del mismo bloque. Sustituye a las mejillas de acrílico (2026-10-11). Pliego §6.3 |
 | **IMÁN de neodimio N42, Ø6** | **40** | 20 pares: 16 de Ø6 × 3 (anillo) con Ø6 × 2 (taco), y 4 de finos Ø6 × 1 + Ø6 × 1 en los tacos del tramo de atrás. Polaridad fija y marcada. Pliego §6.5 |
-| **TABLA de madera maciza t=30 mm** | **1** | el suelo interior y el zócalo, una sola pieza, **648.62 × 399.76**, con el **canto de arriba redondeado R8**. Crece el 10-10 por la ficha 12 del acta: vuela 40 por los cuatro lados (34 más allá de la cara de la persiana); eran 18 mm y 588.62 × 339.76. 2 filas de 3 M5 a **rosca ciega en el canto inferior del anillo** (una fila por anillo), uno redondo por fila (punto fijo) y dos en ranura de 10.5, repartidos en el fondo del **cuerpo** y no en el de la tabla. Y **catorce taladros pasantes de 4.5**: 4 de las paticas, 3 de la nariz, 3 del talón y 4 del chasis (`guarda_zocalo()` los censa) |
+| **BASE de chapa 6082-T6 t=3 mm**, anodizada negra | **1** | el suelo del case desde el papel del suelo (2026-10-12), bajo los anillos y a ras de su huella: **307.76 × 568.62**. Campo de **1118 agujeros de Ø5 cada 8** en L, fuera de la huella del chasis (21 952 mm² abiertos: la entrada de aire de abajo). 6 M5 de paso Ø6 a la rosca ciega del canto inferior de los anillos; 6 M4 de paso de nariz y talón, desde abajo; 4 FH-M4 de las patas; 4 M4 del chasis. Al taller de chapa (PLIEGO §6.2). Fue la tabla de nogal de 30 desde el 2026-08-27 |
+| Tornillo M5 × 12 ISO 7380 de botón | 6 | los anillos a la base, desde abajo, a la rosca ciega del canto inferior (9 de rosca en 10) |
+| Tuerca de presión PEM CLS-M4 | 6 | en los pies de nariz y talón, prensadas después de anodizar; de acero o inoxidable |
+| Espárrago de presión PEM FH-M4 | 4 | en la base, para las patas, a ras de la cara de arriba |
 | Plancha acrílico t=8 mm | **1** | la **trasera de 552.32 × 237.18**, con ondas, rejilla y KONDOR, **sin un taladro**. Las dos mejillas las sustituyó la persiana el 2026-10-11. La trasera queda con su cara vista a **6.5** del plano trasero, dentro del bolsillo u = 5.5..16.5, y sus puntas entran 5.85. El labio del techo tapa 8.5 de su canto y los tacos conservan la rendija. Entra con el anillo B; no sale sin quitar un anillo |
-| Patica de goma con casquillo roscado | 4 | EPDM o NBR, Shore 45–55 A, **d20 × 10**. Se atornillan **a la tabla**, no al acrílico. **Se exige la curva carga-deformación: ≥ 0.25 mm de flecha con 22.8 N** — por debajo la pata AMPLIFICA los 100 Hz del toroide en vez de aislarlos (`flecha_pie`). Casquillo roscado moldeado: se atornilla, **no se pega** |
+| Patica de goma **firme** con casquillo roscado | 4 | Shore 60–70 A, **d20 × 10 ± 0.2**. Se rosca a una FH-M4 de la **base**, **no se pega**. **Se exige la hoja: ≤ 0.3 mm con 50 N**, compuesto que no manche y la profundidad del casquillo: la pata es el alto de la rendija del aire (`flecha_pie`, HUECO hasta la hoja). La goma blanda de antes aislaba los 100 Hz de un toroide que ya no está |
 
 **Corrección del 2026-08-30: por qué crecen otra vez los dos pies.** La boca
 del avellanado M4 es un cuerpo fijo detrás de la cara interior del acrílico y
 necesita **1.70 mm** de aire. Al retroceder la trasera 1 mm, el pie del talón en
 21.5 dejaba **1.77 mm**: verde por 0.07 no es margen. Con **22.5 mm** vuelve a
 **2.77 mm**. La nariz lo sigue hasta **20.5 mm** porque los dos pies no pueden
-diferir más de 2: mismo estilo. Va bajo la tabla y no se ve.
+diferir más de 2: mismo estilo. Va bajo la base y no se ve.
 
 **Total de tornillos del case: 58** — 12 M4 de raíl + 24 M4 de marco al
 anillo + 4 M4 de brida + 3 M4 de la nariz + 3 M4 del talón + 4 M4 del chasis
-+ 2 M3 de pestaña + 6 M5 de la tabla. Eran 68 hasta que la trasera se capturó
++ 2 M3 de pestaña + 6 M5 de la base. Eran 68 hasta que la trasera se capturó
 (−10 M3), y 73 la mañana del 2026-08-29: −4
 de brida (el miembro bajo), −6 M3 de escuadra, −4 M4 de clip, −2 M5 del
 chasis, +3 del talón y +4 del chasis; y los 20 M4 de placa al anillo, que
@@ -880,8 +889,8 @@ atornilla**: sus puntas quedan en los bolsillos de los anillos; el talón la
 apoya y sus pestañas la paran hacia dentro; el techo y el talón tapan sus
 cantos con tacos de EPDM. La banda del valle conserva sus dos pestañas al
 marco de la ventana. El techo ata los anillos por sus dos bridas cajeadas. La
-tabla tampoco cuelga de un raíl: se fija al canto inferior de los anillos y
-recibe nariz, talón y chasis.
+base tampoco cuelga de un raíl: se fija al canto inferior de los anillos y
+recibe nariz, talón, patas y chasis.
 
 Los raíles se atornillan al marco de la ventana. Esa separación importa: un
 tornillo de plancha contra la cara inclinada de un raíl entraría descentrado y
@@ -935,7 +944,12 @@ cara interior, **uno por anillo** (dos en total), para que quede metal
 desnudo donde enganchar un cable de tierra si algún día algo estructural lo
 necesita. Es una precaución de acabado, no un sustituto del bonding por
 panel de arriba: el requisito de §13 sigue siendo uno independiente por
-panel, y el punto del anillo no lo reemplaza.
+panel, y el punto del anillo no lo reemplaza. **Desde el papel del suelo, un
+segundo punto por anillo**: un círculo de Ø12 sin anodizar en el canto
+inferior, alrededor de un M5, que casa con el de la base, con arandela dentada
+bajo la cabeza y ≤ 0,1 Ω a cuatro hilos. Es la masa de la base, que si no
+quedaría aislada. El papel no promete blindaje: la trasera es de PMMA y la
+persiana es una reja.
 
 **Prohibido leer esta sección como "los largueros bondan los paneles, el
 cable sobra"**. Eso no está confirmado, y aunque se confirmara, el bonding
@@ -953,8 +967,15 @@ final**, desde fuera. Los dos tacos localizadores del suelo entran en su
 bolsillo y en su colisa, y los imanes la sostienen. La guía se reescribe con
 la primera persiana real.
 
+**LA BASE SUSTITUYE A LA TABLA EL 2026-10-12** (papel del suelo). Los pasos son
+los mismos con la base en el sitio de la tabla. Los M4 de nariz y talón entran
+**desde abajo** a las tuercas CLS de sus pies (D-T2), y por eso la base sale
+entera por debajo para el servicio: se voltea el aparato, se desenchufan los
+cables del chasis, se sueltan los seis M5 y los seis M4, y la base baja con el
+chasis encima, sin tocar anillos ni paneles.
+
 **EL ORDEN CAMBIÓ EL 2026-08-30.** Las tres chapas entran en los rebajes de
-los dos anillos. Por eso la tabla, con nariz y talón ya atornillados, entra
+los dos anillos. Por eso la base, con nariz y talón ya atornillados, entra
 antes que el anillo B. El chasis no puede estar sobre ella en ese momento:
 taparía el acceso al marco B. Entra al final por el frente.
 
@@ -979,28 +1000,31 @@ al anillo con los rieles ya puestos, sin cambiar tornillos ni añadir piezas.
    se puede apretar, y con el marco puesto el costado no entra.**
 4. **El anillo A tumbado, con su costado, los rieles y el marco A.** La
    trasera entra en el bolsillo de A, con KONDOR hacia fuera, y se apoya en el
-   fin de abajo. En el banco se prepara la **tabla con nariz y talón**: 3 + 3
-   M4 avellanados desde arriba, y los seis tacos del labio del talón pegados.
-   **Sin el chasis.** La tabla se pone de canto sobre el tramo de abajo de A;
+   fin de abajo. En el banco se prepara la **base con nariz y talón**: 3 + 3
+   M4 de botón desde abajo, a las tuercas CLS de sus pies, y los seis tacos del
+   labio del talón pegados. **Sin el chasis.** La base se pone de canto sobre
+   el tramo de abajo de A;
    sus 3 M5 entran al canto de A desde fuera. Nariz y talón meten sus puntas
    en los rebajes. El techo lleva sus seis tacos pegados; su punta entra en el
    rebaje de A y la brida A se rosca en sus dos M4. El marco B se monta en las
    otras puntas de los rieles. El costado B queda en el anillo B, sujeto con
    cinta hasta que lo pise su marco.
 5. **El anillo B baja sobre cinco puntas a la vez**: marco B, trasera, techo,
-   nariz y talón; también baja sobre el canto de la tabla. Los doce M4 del
+   nariz y talón; también baja sobre el canto de la base. Los doce M4 del
    marco B y los dos de la brida B se aprietan desde dentro, por el frente
-   abierto. Los 3 M5 de la tabla entran al canto de B desde fuera. Después se
+   abierto. Los 3 M5 de la base entran al canto de B desde fuera. Después se
    pone el case de pie.
 6. **El chasis del PSU entra AL FINAL por el frente**, por la ventana de la
    fila de abajo. Se arrima al pie del talón con 3 mm de aire. Sus 4 M4 se
-   aprietan desde debajo de la tabla.
+   aprietan desde debajo de la base.
 7. **Tapa del valle** — las dos pestañas al marco de la ventana (2 M3, ruling
    R3). Es de **aluminio de 3 mm**: no lleva film ni las precauciones del
    PMMA.
-8. **Electricidad y bonding** — bloque IEC fijo (su pieza va a la tabla,
-   #130), espárrago junto al PSU.
-9. **Paticas y paneles** — las 4 paticas **a la tabla, por debajo** (las dos
+8. **Electricidad y bonding** — la entrada del cordón y la pieza que recibe
+   su tirón son del relevo de la v5 en el case (#130 decía la tabla), espárrago
+   junto al PSU.
+9. **Paticas y paneles** — las 4 paticas **a la base, por debajo**, roscadas a
+     sus FH-M4 (las dos
      traseras bajo el centro del pie del talón), y paneles ciegos en todo
      hueco de las dos filas, que con una tapa abierta son lo único que ata sus
      dos raíles.
@@ -1016,7 +1040,7 @@ no lleva tornillos: la sujetan los bolsillos, el talón y el techo.
 
 El orden importa por acceso. El costado va antes que el marco, porque el marco
 lo pisa. El riel va al marco antes que el marco al anillo, porque su cabeza
-queda tapada. Trasera, techo, nariz, talón y tabla van antes que el anillo B,
+queda tapada. Trasera, techo, nariz, talón y base van antes que el anillo B,
 porque B captura sus puntas. El chasis va después de B, porque sin él queda
 abierto el acceso al marco y todavía puede entrar por el frente.
 
@@ -1108,11 +1132,10 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
       con las ondas, la rejilla y KONDOR, **sin una sola cabeza**. A través
       del costado se lee una sombra de 6 alrededor de la ventana (8 en el
       tramo trasero): es el marco
-- [ ] **Especie y humedad de la tabla** — las cuentas van contra E = 11 000
-      MPa y es supuesto declarado (bloquea el pedido de carpintería)
-- [ ] **Pesar el chasis del PSU** — los 200 N del suelo son `carga_mano`
-      heredado del costado, y el modo real es el peso del chasis. De ese
-      supuesto colgaban los 18 mm de tabla; desde la ficha 12 son 30, por la vista, y la flecha sobra
+- [ ] **Las hojas de PEM y de la pata** — las cotas de los insertos (CLS, FH)
+      son de memoria, y la pata se compra firme con su hoja (papel del suelo,
+      H3 y H4)
+- [ ] **Medir el canal bajo la base** en la primera unidad, con el salto (H2)
 - [ ] Cupón cortado y kerf registrado (bloquea el corte de planchas)
 - [ ] **Cupón del anillo** (100 mm del perfil, chaflán y anodizado) cortado y
       comparado contra la foto de referencia — las cotas de la cara vista

@@ -48,7 +48,7 @@ Contra la base (`820a2eb`):
 | | la nariz y el techo | sus labios bajan hasta el riel y cierran las rendijas de la ficha 6 (§7.3) |
 | | el color | todo el aluminio visto, anodizado negro y de una sola aleación (§7.1). Los Z-Rails se quedan plateados: ya están comprados |
 | | el ancho por fuera | +12 mm. **`ancho_total` no cambia**: es derivado y mide de anillo a anillo. Hace falta una cota nueva, `ancho_exterior` = `ancho_total` + 2 · 6 = 580,62 (§8) |
-| | la tabla | D-S4 (§8) |
+| | la tabla | D-S4 (§8): «quitar»; la ejecuta el papel del suelo (`2026-10-12-case-suelo-design.md`) |
 | | la puerta del aire | pasa a calcular con cada hueco a su altura y con la fuente v5 (§5) |
 | **se queda** | la silueta, las tres filas, los Z-Rails, el marco de la ventana, el talón, la trasera ámbar con el KONDOR y sus 46 ranuras, la rendija del alero, la tapa y la tira del valle | como están |
 | **se retira** | la dirección de la piel orgánica | §10 |
@@ -272,7 +272,7 @@ La escena del acta pasa al repo como `case/renders/render_persiana.py`: el cuerp
 | **D-S1** | el costado es la persiana | **firmada 11-10** — *«he decidido C · La persiana»* |
 | **D-S2** | material: **aluminio 6082-T6/T651 fresado y anodizado negro** (recomendado: el PA12 no aguanta, §3.3). **Con esto se retira D-P2** de la piel (*«todo el acabado se hace con impresión 3D»*): la persiana y todo el cuerpo son metal | **firmada 11-10** |
 | **D-S3** | la sujeción: **tacos e imanes, y el anillo gana diez bolsillos por cara** (recomendado) — o cinta VHB (no se quita) — o M2 negros en el fondo de las ranuras (se ven) | **firmada 11-10** |
-| **D-S4** | la tabla: un vuelo de 20 (14 a los lados) — o dos vuelos, 26 y 20 (20 en los cuatro lados) | **firmada 11-10 («uno»), **en espera**: Samuel piensa quitar la tabla (§8)** |
+| **D-S4** | la tabla: un vuelo de 20 (14 a los lados) — o dos vuelos, 26 y 20 (20 en los cuatro lados) | **firmada 11-10 («uno») y después «quitar» (23:00, ficha `quitar_tabla`)**: la ejecuta el papel `2026-10-12-case-suelo-design.md` |
 | **D-S5** | la luz de dentro: reabre D1 del instrumento y el #42 — o no | **firmada 11-10 («no por ahora»)** |
 | **D-S6** | lo del valle es provisional y solo de render | **firmada 11-10** |
 | **D-S7** | los guiones de la piel se borran — o se archivan (lo que la persiana usa se muda antes) | **firmada 11-10 («se borran»)** |
