@@ -5443,7 +5443,13 @@ def autocomprobacion_anillo() -> None:
 
 def _tacos_persiana_cotas(p: dict[str, float]) -> list[tuple[str, float, float]]:
     """(que, tiene, pide) de cada relacion de cotas entre tacos y bolsillos."""
-    fondo_trasera = p["t_anillo"] - p["rebaje_anillo"]           # el bolsillo de la trasera empieza ahi
+    fondo_trasera = _bolsillo_trasero(p)["z0"]                   # el bolsillo de la trasera empieza ahi
+    # BAJO LAS CHAPAS EMPOTRADAS el anillo no llega a t_anillo: el rebaje de la
+    # chapa se come rebaje_chapa por la cara interior (guarda_rebaje_chapa()),
+    # hoy de 1 a 5.5 de la silueta, y el asiento del iman arranca en 3.45: hay
+    # asiento debajo del rebaje, y su pared es la de z. Hasta el 2026-10-12 se
+    # medía contra t_anillo, 3 mm de mas bajo la nariz, la meseta y el retorno.
+    fondo_chapa = p["t_anillo"] - p["rebaje_chapa"]
     return [
         ("aire bajo el taco", p["hondo_bolsillo_taco"] - p["alto_taco"], 0.3),
         ("holgura del taco en su bolsillo", p["d_bolsillo_taco"] - p["d_taco"], 0.5),
@@ -5453,7 +5459,7 @@ def _tacos_persiana_cotas(p: dict[str, float]) -> list[tuple[str, float, float]]
          p["chaflan_anillo"] + 0.5),
         ("pared hasta el bolsillo de la trasera (iman fino)", fondo_trasera
          - (p["hondo_bolsillo_taco"] + p["alto_iman_fino"] + 0.1), PARED_MIN_ANILLO),
-        ("el iman del anillo cabe en el anillo", p["t_anillo"]
+        ("pared hasta el rebaje de la chapa (iman del anillo)", fondo_chapa
          - (p["hondo_bolsillo_taco"] + p["alto_iman_anillo"] + 0.1), PARED_MIN_ANILLO),
         ("el iman del taco cabe en el taco", p["alto_taco"] - (p["alto_iman_taco"] + 0.1), 1.0),
     ]
@@ -5483,7 +5489,10 @@ def guarda_tacos_persiana(p: dict[str, float]) -> None:
 def canario_tacos_persiana(p: dict[str, float]) -> None:
     for cambio, aviso in (({"alto_taco": p["hondo_bolsillo_taco"]}, "aire bajo el taco"),
                           ({"u_taco": p["u_taco"] + 1.0}, "rebaje del acrilico"),
-                          ({"alto_iman_fino": 3.0}, "bolsillo de la trasera")):
+                          ({"alto_iman_fino": 3.0}, "bolsillo de la trasera"),
+                          # el rebaje de la chapa llega al fondo del asiento
+                          ({"rebaje_chapa": p["t_anillo"] - p["hondo_bolsillo_taco"]
+                            - p["alto_iman_anillo"]}, "rebaje de la chapa")):
         try:
             guarda_tacos_persiana({**p, **cambio})
         except AssertionError as e:
