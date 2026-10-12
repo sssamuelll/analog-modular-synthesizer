@@ -266,7 +266,7 @@ function frente_kondor() =
 
 // EL TALON (2026-08-29, noche): la banda de abajo del plano trasero y su pie
 // sobre la tabla. Sustituye al miembro trasero bajo: un angulo de la misma
-// chapa, sin bridas ni rosca en el anillo -- se atornilla a la TABLA por el
+// chapa, sin bridas ni rosca en el anillo -- se atornilla a la BASE por el
 // pie, como la nariz --, que recibe la trasera en su banda y la asienta en
 // su pie. GEMELO de _talon() en clearance_budget.py.
 // EL TALON, la nariz de atras (2026-08-29, noche, 2): pie sobre la tabla del
@@ -2324,7 +2324,7 @@ else if (PART == "costilla_bolsillos_2d") costilla_bolsillos_2d();
 // Para render_persiana.py: lo que se pinta de cada color. Plateado solo los
 // Z-Rails (comprados); negro todo lo demas del aluminio; los paneles, grafito.
 else if (PART == "render_rieles")   rails();
-else if (PART == "render_negro")    { costillas(); marcos_ventana(); nariz(); miembros(); tapa_valle(); tira_valle(); }
+else if (PART == "render_negro")    { costillas(); marcos_ventana(); nariz(); miembros(); tapa_valle(); tira_valle(); bandeja_base(); }
 else if (PART == "render_paneles")  paneles();
 else assert(false, str("PART desconocido: ", PART));
 
@@ -2625,10 +2625,9 @@ module paneles() {
 // y los papeles seguian vendiendo una pieza que no existia; corregido en la
 // misma tanda.
 
-// Paticas torneadas bajo los costados. En X caen sobre los dos rieles de
-// base, que es donde esta la estructura; en Z su cara exterior queda a ras
-// del canto del case (centro a d_pie/2) para que la carga del costado baje
-// recta al pie y no de canto.
+// Las cuatro patas bajo el canto de los anillos, roscadas a las FH-M4 de la
+// base. En Z su cara exterior queda a ras del canto del case (centro a
+// d_pie/2) para que la carga baje recta al pie y no de canto.
 module paticas() {
     // El pie delantero ya no cae sobre un larguero: la base delantera se retiro
     // 39 mm hacia dentro para librar el riel del panel, y un pie ahi dejaria todo
@@ -2928,8 +2927,8 @@ module bom() {
              " CLS-M4 prensadas en el pie. Ninguno en la cara vista."));
     echo(str("BOM: tornillo M4 x", len(chasis_tornillos_int()), " + TUERCA",
              " REMACHABLE (clinch, PEM S-M4) en el suelo del chasis -- el",
-             " chasis del PSU a la TABLA, desde abajo, por su suelo. Cabezas",
-             " bajo la tabla (el case va sobre sus paticas de ", alto_pie,
+             " chasis del PSU a la BASE, desde abajo, por su suelo. Cabezas",
+             " bajo la base (el case va sobre sus paticas de ", alto_pie,
              "), nada visto por dentro."));
     echo("     COLGABA DE DOS M5 DE PARED 'a la ranura interior de base");
     echo("     trasera' hasta el 2026-08-29 por la noche -- un 2020 que murio");
@@ -2986,30 +2985,32 @@ module bom() {
     // ningun M4 de riel trabaja como eje o cierre de apertura. Del total
     // (12 M4 de riel + 24 M4 de marco al anillo + 4 M4 de brida + 3 M4 de la
     // nariz + 3 M4 del talon + 4 M4 del chasis + 2 M3 de pestana + 6 M5 de
-    // la tabla = 58; eran 68 con los 10 M3 de la trasera hasta que se capturo
-    // la noche del 2026-08-29).
+    // la base = 58; eran 68 con los 10 M3 de la trasera hasta que se capturo
+    // la noche del 2026-08-29. Desde el papel del suelo los 6 M4 de nariz y
+    // talon entran desde abajo, a tuercas CLS de sus pies).
     echo("BOM: x12 M4 FIJOS para los seis Z-Rails, atornillados por ambas");
     echo("     puntas al MARCO DE LA VENTANA. No son ejes, hombros, cierres ni");
     echo("     palomillas; no llevan Belleville ni se dimensionan por friccion.");
     echo("     Estos 12 son los M4 DE RIEL. El case lleva mas M4 en otras");
     echo("     lineas de este BOM: marco al anillo x24, brida x4, nariz x3,");
     echo("     talon x3, chasis x4.");
-    echo("     Los M5 del case son SOLO los de la TABLA (6, a rosca ciega en el");
-    echo("     canto inferior del anillo): los 2 del chasis murieron con el");
-    echo("     miembro bajo la noche del 2026-08-29.");
+    echo("     Los M5 del case son SOLO los de la BASE (6, x 12 ISO 7380, a rosca");
+    echo("     ciega en el canto inferior del anillo): los 2 del chasis murieron");
+    echo("     con el miembro bajo la noche del 2026-08-29.");
+    echo("BOM: PEM CLS-M4 x6 (pies de nariz y talon) y PEM FH-M4 x4 (base, patas);");
+    echo("     de acero o inoxidable, nunca de la serie de aluminio, prensadas");
+    echo("     DESPUES de anodizar (papel del suelo, sec.3.4).");
     echo("BOM: paneles ciegos en TODO hueco de las tres filas; atornillados,");
     echo("     completan el cierre y atan cada pareja de rieles.");
-    // Decia "metalica torneada" y se quedo asi cuando las paticas pasaron a
-    // GOMA el 2026-08-24 (spec rev. 18): el BOM del README y el PLIEGO ya
-    // dicen goma con casquillo roscado, y este echo seguia mandando a comprar
-    // otra pieza. La cota de compra no es el material sino la FLECHA -- una
-    // goma dura no aisla menos, AMPLIFICA los 100 Hz del toroide.
-    echo(str("BOM: patica de GOMA (EPDM/NBR, Shore 45-55 A) con casquillo",
-             " roscado x4, d=", d_pie, " x ", alto_pie, " mm -- se atornilla",
-             " A LA TABLA, no al acrilico, y NO se pega. Se exige la curva",
-             " carga-deformacion: >= ", flecha_pie,
-             " mm de flecha con 22.8 N (flecha_pie). Las dos traseras van bajo",
-             " el centro del pie del talon (x = ", centro_talon().x, ")."));
+    // DESDE EL PAPEL DEL SUELO (2026-10-12) la pata se compra FIRME: es parte de
+    // la entrada de aire (la rendija de alto_pie bajo la base), y la goma blanda
+    // de antes era para aislar los 100 Hz de un toroide que ya no esta.
+    echo(str("BOM: patica de GOMA FIRME (Shore 60-70 A) con casquillo roscado x4,",
+             " d=", d_pie, " x ", alto_pie, " +- 0.2 mm -- roscada a una FH-M4 de",
+             " la BASE, NO se pega. Se exige la hoja: <= ", flecha_pie,
+             " mm con 50 N, compuesto que no manche, y la profundidad del casquillo.",
+             " Las dos traseras van bajo el centro del pie del talon (x = ",
+             centro_talon().x, ")."));
     echo(str("BOM: banda delantera del valle: chapa de ALUMINIO t=", t_valle,
              " PLEGADA, desarrollo ", tapa_valle_desarrollo_ancho(), " x ",
              tapa_valle_desarrollo_fondo(),

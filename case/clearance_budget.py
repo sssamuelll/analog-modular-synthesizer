@@ -2958,39 +2958,30 @@ SIGMA_PMMA = 10.0
 
 
 def guarda_paticas(p: dict[str, float]) -> None:
-    """Una goma dura no aisla menos: AMPLIFICA.
+    """La pata, desde el papel del suelo (2026-10-12).
 
-    El toroide excita a 100 Hz -- magnetostriccion al doble de la red, #106.
-    La pata y la masa del case forman un muelle, y si su frecuencia propia
-    cae cerca de esos 100 Hz la transmisibilidad se dispara: la mesa recibe
-    MAS zumbido del que recibiria con el acrilico apoyado en seco. Una mesa
-    es una superficie radiante mucho mayor que el case.
-
-    Por eso la cota que decide una patica no es la dureza ni el diametro:
-    es CUANTO SE HUNDE bajo carga. f_propia = 15.76 / sqrt(flecha_mm) es la
-    formula de manual para un grado de libertad bajo su propio peso.
-
-    Se exige f_propia <= 100/3. El factor 3 es el minimo habitual para que la
-    transmisibilidad baje del 15 %; por debajo de 3 se entra en la zona donde
-    la curva sube en vez de bajar.
-
-    ES REQUISITO DE COMPRA, NO DE DIBUJO: la flecha sale de la curva
-    carga-deformacion del fabricante. Una goma que no publica esa curva no se
-    puede verificar, y por tanto no sirve.
-    """
-    MASA_CASE, F_TOROIDE = 9.30, 100.0        # kg (#106, con 5 largueros), Hz
-    carga = MASA_CASE * 9.81 / 4
-    f_propia = 15.76 / math.sqrt(p["flecha_pie"])
-    transmision = 1 / abs((F_TOROIDE / f_propia) ** 2 - 1)
-    flecha_min = (15.76 / (F_TOROIDE / 3)) ** 2
-    assert f_propia <= F_TOROIDE / 3, (
-        f"flecha_pie = {p['flecha_pie']} mm da f propia {f_propia:.1f} Hz "
-        f"contra los {F_TOROIDE:.0f} Hz del toroide: transmite "
-        f"{transmision*100:.0f} %. Una goma que se hunde poco NO aisla menos, "
-        f"AMPLIFICA. Hace falta >= {flecha_min:.2f} mm de flecha.")
-    print(f"paticas: {carga:.1f} N por pata, se hunden {p['flecha_pie']} mm "
-          f"-> f propia {f_propia:.1f} Hz, transmiten {transmision*100:.0f} % "
-          f"de los {F_TOROIDE:.0f} Hz del toroide")
+    La regla de antes (una goma blanda contra los 100 Hz del toroide) se fue
+    con el toroide. La pata es ahora parte de la entrada de aire: la rendija
+    de alto_pie bajo la base. Lo que se asevera es que su disco cabe bajo la
+    base, dentro de su contorno, porque sin la tabla no hay vuelo que lo
+    tape. Lo que se compra (firme: <= flecha_pie con 50 N) no se puede
+    verificar sin la hoja, y se publica como HUECO mientras falte."""
+    x0, x1 = p["chaflan_nariz"], fondo(p) - p["chaflan_nariz"]
+    r = p["d_pie"] / 2
+    for x, z, _d, tipo in _taladros_base(p):
+        if tipo != "FH pata":
+            continue
+        assert x0 <= x - r + 1e-9 and x + r <= x1 + 1e-9, (
+            f"la pata de x={x:.2f} asoma por delante o por detras de la base "
+            f"({x0:.2f}..{x1:.2f}): sin el vuelo de la tabla nadie la tapa")
+        assert r <= z + 1e-9 and z <= p["ancho_total"] - r + 1e-9, (
+            f"la pata de z={z:.2f} asoma por el costado de la base")
+    print(f"paticas: {p['alto_pie']:g} mm, Ø{p['d_pie']:g}, bajo el canto de los "
+          f"anillos y dentro de la base; su alto es la rendija del aire")
+    _HUECOS.append(
+        f"la hoja de la pata sin pedir: se compra firme (<= {p['flecha_pie']:g} "
+        f"mm con 50 N, alto {p['alto_pie']:g} +- 0.2) y su casquillo tiene que "
+        f"casar con la FH-M4 de la base (papel del suelo, HUECO H3)")
 
 
 
@@ -4448,7 +4439,8 @@ def guarda_trasera_flexion(p: dict[str, float]) -> None:
 
 def guarda_talon(p: dict[str, float]) -> None:
     """El talon es la nariz de atras: P6 a chaflan, el labio que tapa el canto
-    de abajo de la trasera, tres M4 en el pie con la boca lejos del acrilico,
+    de abajo de la trasera, tres M4 desde abajo con la tuerca de su pie lejos
+    del acrilico (D-T2, papel del suelo),
     y las pestanas que le hacen de tope por dentro (cuantas, lo dice
     guarda_trasera_flexion).
 
@@ -4489,14 +4481,14 @@ def guarda_talon(p: dict[str, float]) -> None:
         f"chaflan y la regla de chapa pide {raiz:.2f}")
     assert tl["m4_x"] - tl["x_pie"] >= 1.5 * p["d_M4_paso"] - 1e-9, (
         f"el M4 del pie cae a {tl['m4_x'] - tl['x_pie']:.2f} de su canto libre")
-    boca = tl["m4_x"] + p["d_cabeza_M4_avell"] / 2
+    boca = tl["m4_x"] + p["pem_cls_m4_cuerpo"] / 2
     franja = _tol_pmma(p) + 0.5
     aire = tr["x0"] - boca
     assert aire >= franja - 1e-9, (
-        f"la boca del avellanado del M4 del talon llega a x={boca:.2f} y la cara "
-        f"interior de la trasera esta en {tr['x0']:.2f}: {aire:.2f} de aire, y "
-        f"detras de un PMMA de +-{_tol_pmma(p):.1f} se piden {franja:.2f}. Sube "
-        f"talon_pie")
+        f"la tuerca del M4 del talon (D-T2: el tornillo entra desde abajo) llega "
+        f"a x={boca:.2f} y la cara interior de la trasera esta en "
+        f"{tr['x0']:.2f}: {aire:.2f} de aire, y detras de un PMMA de "
+        f"+-{_tol_pmma(p):.1f} se piden {franja:.2f}. Sube talon_pie")
     aire_p = tr["x0"] - tl["pestana_x"]
     assert aire_p >= franja - 1e-9, (
         f"la pestana del talon queda a {aire_p:.2f} de la cara interior de la "
@@ -4552,8 +4544,8 @@ def guarda_talon(p: dict[str, float]) -> None:
         f"mismo estilo, y difieren mas de 2")
     print(f"talon: la nariz de atras -- chaflan de {c:g} en P6, labio de "
           f"{p['talon_labio']:g} a ras del plano trasero (tapa {tapa:.2f} de "
-          f"trasera), pie de {p['talon_pie']:g}; 3 M4 avellanados en "
-          f"x={tl['m4_x']:.2f} (boca a {aire:.2f} de la trasera, piden {franja:.2f}); "
+          f"trasera), pie de {p['talon_pie']:g}; 3 M4 desde abajo en "
+          f"x={tl['m4_x']:.2f} (tuerca a {aire:.2f} de la trasera, piden {franja:.2f}); "
           f"{len(tl['pestana_z'])} pestanas de {p['talon_pestana_ancho']:g} x {p['talon_pestana_alto']:g} "
           f"a {aire_p:.2f} de la trasera con {plano:.2f} de plano tras el chaflan; "
           f"desarrollo {tl['largo']:.2f} x {tl['desarrollo']:.2f}")
@@ -6162,6 +6154,23 @@ def _flecha_base(p: dict[str, float], casos: list[list[tuple[float, float, float
                          (p["t_anillo"] / 2, p["ancho_total"] - p["t_anillo"] / 2))
 
 
+def canario_m4_desde_abajo(p: dict[str, float]) -> None:
+    """D-T2: el M4 del pie de nariz y talon rosca en una tuerca prensada a
+    pem_borde del canto libre. Si pem_borde no cabe entre el canto libre y el
+    doblez, guarda_talon() tiene que saltar por la regla de chapa."""
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            guarda_talon({**p, "pem_borde": p["talon_pie"]})
+    except AssertionError as e:
+        assert "regla de chapa" in str(e), (
+            f"canario del M4 desde abajo: guarda_talon() salto, pero por otra "
+            f"razon ('{str(e)[:80]}...')")
+        return
+    raise AssertionError("canario del M4 desde abajo NO disparo: con la tuerca "
+                         "a talon_pie del canto, el M4 cae en el doblez y "
+                         "guarda_talon() lo deja pasar")
+
+
 def canario_base_fina(p: dict[str, float]) -> None:
     """Una base mas fina tiene que saltar en guarda_piso(), y cada rama por SU
     razon. Con 2 mm, la que el papel descarto, la flecha todavia cabe en la
@@ -7032,6 +7041,7 @@ def main() -> int:
     canario_techo(p)
     canario_campo_base(p)
     canario_base_fina(p)
+    canario_m4_desde_abajo(p)
     guarda_red(p)
     guarda_fresado(p)
     guarda_puentes_ventilacion(p)

@@ -128,6 +128,9 @@ entrada_costado_trasero = 3.5;
 // LABIO vertical a ras del plano trasero que tapa el canto de abajo de la
 // trasera. Sin bridas: tres M4 avellanados por el pie, desde dentro, como la
 // nariz. GEMELO de _talon() en clearance_budget.py; lo mide guarda_talon().
+// DESDE EL PAPEL DEL SUELO (2026-10-12, D-T2) el M4 entra desde abajo y lo que
+// asoma dentro es el cuerpo de la tuerca CLS (pem_cls_m4_cuerpo), no la boca del
+// avellanado: guarda_talon() mide eso.
 //
 // El pie, hacia delante desde el PIE DEL CHAFLAN. 20 y no 18 como la nariz:
 // la boca del avellanado (d_cabeza_M4_avell, retirada) era un cuerpo fijo detras de la
@@ -1039,6 +1042,7 @@ base_orilla  = 10;
 // a cota de catalogo sobre la pieza anodizada. SUPUESTOS DE MEMORIA hasta la
 // hoja de PEM (HUECO H4 del papel).
 pem_cls_m4   = 5.4;   // tuerca CLS-M4, en los pies de nariz y talon (D-T2)
+pem_cls_m4_cuerpo = 7.9;   // diametro del cuerpo de la CLS-M4 sobre el pie, por dentro: lo mide guarda_talon() contra la trasera
 pem_fh_m4    = 4.0;   // esparrago FH-M4, en la base, para las patas
 pem_borde    = 7.0;   // del centro de un inserto al canto o al borde de otro agujero
 // El paso del M5 de los anillos en la base: medio milimetro de juego por lado
@@ -1258,10 +1262,6 @@ carga_mano       = 200;  // N. Alguien apoyandose, el mismo caso de carga con
 flecha_costado_max = 0.6;// mm bajo carga_mano. El techo NO es nuevo: es el
                          // mismo que el proyecto ya acepto para la trasera en
                          // su vano de 211.73. Hoy sale 0.38
-// Boca del avellanado de un M4 (ISO 10642, dk maximo). No es un agujero: es
-// el CUERPO FIJO que la cabeza a ras deja en el pie del talon, y guarda_talon
-// lo mide contra la cara de la trasera con la tolerancia del PMMA.
-d_cabeza_M4_avell = 8.96;
 d_M3_paso   = 3.4;  // agujero paso M3 (ISO holgura media)
 d_M4_paso   = 4.5;  // agujero paso M4: standoffs de las pieles Y los seis
                     // rieles EUROrack, cuyo taladro de punta viene roscado M4
@@ -1305,30 +1305,17 @@ t_piel      = 8;
 // tablas distintas, y la spec decia goma -- y se cierra volviendo al unico
 // que no se movio.
 //
-// LA COTA QUE DECIDE SI SIRVE ES CUANTO SE HUNDE, no la dureza ni el
-// diametro. El toroide excita a 100 Hz (#106) y la pata es un muelle: si su
-// frecuencia propia cae cerca de ahi, AMPLIFICA en vez de aislar, y le pasa
-// a la mesa mas zumbido del que le pasaria el acrilico en seco.
-//
-//   se hunde   f propia   transmite
-//   0.10 mm     49.8 Hz     33 %
-//   0.25 mm     31.5 Hz     11 %    <- esta
-//   0.50 mm     22.3 Hz      5 %
-//   1.00 mm     15.8 Hz    2.5 %
-//
-// 0.25 es el minimo que deja la f propia a un tercio de la excitacion, que
-// es el criterio de manual. Mas blanda aisla mejor y se bambolea mas.
-//
-// ES REQUISITO DE COMPRA, NO DE DIBUJO: se exige la curva carga-deformacion
-// del fabricante. Una goma que no publica esa curva no se puede verificar y
-// por tanto no sirve, por seria que parezca.
-//
-// La altura sale gratis: la entrada de aire se mudo a la trasera el
-// 2026-08-21, asi que la separacion al suelo ya no ventila nada y alto_pie
-// no entra en ninguna derivacion.
-flecha_pie  = 0.25; // mm bajo 22.8 N. DE HOJA DE DATOS, no estimado
-alto_pie    = 10;   // sube de 8: la flecha necesita material donde ocurrir
-d_pie       = 20;   // sube de 16: area para no aplastarse permanentemente   // diametro; pequeno a proposito
+// LA PATA, desde el papel del suelo (2026-10-12, D-T1: las de 10). El criterio de
+// compra se invierte. Era una goma BLANDA (>= 0.25 mm de flecha con 22.8 N) para
+// aislar los 100 Hz de un toroide que se fue con la v4; ahora la pata es parte de
+// la entrada de aire (la rendija de alto_pie bajo la base, sec.5) y se quiere
+// FIRME: <= 0.3 mm con 50 N (Shore 60-70 A), alto nominal +- 0.2 (cuatro patas
+// desiguales cojean), compuesto que no manche el barniz, y la profundidad del
+// casquillo y su par en la hoja. Se rosca a una FH-M4 de la base (pem_fh_m4).
+// ES REQUISITO DE COMPRA: sin la hoja no se verifica (HUECO H3 del papel).
+flecha_pie  = 0.3;  // mm con 50 N: el MAXIMO que se compra, no una medida
+alto_pie    = 10;   // D-T1: las de hoy; es el alto de la rendija del aire
+d_pie       = 20;
 // HISTORICO, HASTA 2026-08-21. PESTANA SUPERIOR: la banda de acrilico que cruzaba por
 // encima del canto del panel de arriba, sobre la propia cara. Samuel la pidio
 // porque el panel remataba pelado ("no veo esa pestana ... quiero un top marco
