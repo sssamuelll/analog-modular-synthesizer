@@ -2593,6 +2593,29 @@ def _potencia_del_cajon() -> float:
     return calor_del_cajon_w()
 
 
+def _plano_neutro(huecos: list[tuple[float, float]]) -> tuple[float, float]:
+    """El plano neutro de una caja con huecos (y, area), en mm y mm2: la altura
+    yn donde lo que entra por debajo iguala lo que sale por encima. La presion
+    de flotabilidad es lineal en la altura, asi que el caudal de cada hueco va
+    con a * sqrt(|y - yn|), y yn es la raiz de
+
+        suma(a sqrt(yn - y), los de abajo) = suma(a sqrt(y - yn), los de arriba)
+
+    Devuelve (yn, S), con S la suma de arriba en mm^2.5. La diferencia crece
+    con yn y es continua --cada hueco pasa de salir a entrar por cero--, asi
+    que la biseccion no salta. Vivio en case/cad/persiana.py hasta el
+    2026-10-12."""
+    def sobra(yn: float) -> float:
+        return (sum(a * math.sqrt(yn - y) for y, a in huecos if y < yn)
+                - sum(a * math.sqrt(y - yn) for y, a in huecos if y > yn))
+    lo, hi = min(y for y, _ in huecos), max(y for y, _ in huecos)
+    for _ in range(80):
+        mid = (lo + hi) / 2
+        lo, hi = (lo, mid) if sobra(mid) > 0 else (mid, hi)
+    yn = (lo + hi) / 2
+    return yn, sum(a * math.sqrt(y - yn) for y, a in huecos if y > yn)
+
+
 def _tiro(p: dict[str, float], cd: float = CD_TIRO) -> dict[str, float]:
     """La chimenea del case: areas, desnivel, salto termico, y el area efectiva
     que haria falta para quedarse en el techo.
@@ -5428,6 +5451,25 @@ def autocomprobacion_anillo() -> None:
     assert abs(ymax - (14 - 1399 / 214)) < 1e-9, f"ymax {ymax:.6f}"
 
 
+def autocomprobacion_plano_neutro() -> None:
+    """El plano neutro, a mano. Mismo patron que autocomprobacion_anillo(): la
+    cuenta primero, la funcion despues.
+
+    Una entrada de 3 a y = 0 y una salida de 4 a y = 25: el plano iguala
+    3 sqrt(yn) = 4 sqrt(25 - yn), o sea 9 yn = 16 (25 - yn), yn = 16, y
+    S = 4 sqrt(9) = 12. Es la cuenta en serie con la que el case conto su aire
+    hasta el 2026-10-12: a_ef = 3 x 4 / sqrt(3^2 + 4^2) = 2.4, y
+    a_ef sqrt(h) = 2.4 x 5 = 12. Con otra salida de 1 a y = 20, por encima
+    del plano, sale mas aire: el plano sube y S crece."""
+    yn, s = _plano_neutro([(0.0, 3.0), (25.0, 4.0)])
+    assert abs(yn - 16.0) < 1e-9, f"plano neutro a {yn}, a mano 16"
+    assert abs(s - 12.0) < 1e-9, f"S = {s}, a mano 12"
+    yn3, s3 = _plano_neutro([(0.0, 3.0), (25.0, 4.0), (20.0, 1.0)])
+    assert 16.0 < yn3 < 20.0 and s3 > 12.0, (
+        f"con una salida mas el plano queda en {yn3:.3f} y S en {s3:.3f}: tenia "
+        f"que subir de 16 sin pasar la salida nueva, y S que crecer de 12")
+
+
 def _tacos_persiana_cotas(p: dict[str, float]) -> list[tuple[str, float, float]]:
     """(que, tiene, pide) de cada relacion de cotas entre tacos y bolsillos."""
     fondo_trasera = _bolsillo_trasero(p)["z0"]                   # el bolsillo de la trasera empieza ahi
@@ -6283,6 +6325,7 @@ def main() -> int:
     p = leer_params()
     autocomprobacion(p)
     autocomprobacion_anillo()
+    autocomprobacion_plano_neutro()
     autocomprobacion_pv()
     # LAS DOS COPIAS DE E SIGUEN CRUZADAS, y el motivo cambio el 2026-08-28. El
     # .scad la usaba para derivar alli que tramos de la costilla llevaban ala

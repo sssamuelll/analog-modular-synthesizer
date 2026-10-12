@@ -239,20 +239,8 @@ def franjas(geom, paso=2.0):
     return out
 
 
-def plano_neutro(huecos):
-    def sobra(yn):
-        return (sum(a * math.sqrt(yn - y) for y, a in huecos if y < yn)
-                - sum(a * math.sqrt(y - yn) for y, a in huecos if y > yn))
-    lo, hi = min(y for y, _ in huecos), max(y for y, _ in huecos)
-    for _ in range(80):
-        mid = (lo + hi) / 2
-        lo, hi = (lo, mid) if sobra(mid) > 0 else (mid, hi)
-    yn = (lo + hi) / 2
-    return yn, sum(a * math.sqrt(y - yn) for y, a in huecos if y > yn)
-
-
 def salto(huecos, potencia_w, cd):
-    yn, S = plano_neutro(huecos)                       # S en mm^2.5
+    yn, S = cb._plano_neutro(huecos)                   # S en mm^2.5
     k = cb.RHO_AIRE * cb.CP_AIRE * cd * math.sqrt(2 * cb.G / cb.T_AMB) * S * 1e-6 * math.sqrt(1e-3)
     return (potencia_w / k) ** (2.0 / 3.0), yn
 
