@@ -171,8 +171,7 @@ def renderizar(nombre: str, elevacion_deg: float, azimut_deg: float,
     return True
 
 
-# Convencion de azimut igual que render_detalle_trasera: 0 = frontal (-X),
-# 180 = trasera (+X).
+# Convencion de azimut: 0 = frontal (-X), 180 = trasera (+X).
 # El MARGEN va por vista y no compartido: el encuadre se calcula contra el bbox
 # de tabla + chasis, y en picado casi cenital el esqueleto que sube por encima
 # entra en cuadro sin contar para el encuadre. La planta pedia aire.

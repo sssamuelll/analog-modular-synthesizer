@@ -1085,9 +1085,12 @@ https://claude.ai/code/artifact/0ff54175-6449-4e14-93dd-7c614251bf17
       consecuencia, y no se ve en ninguna vista del conjunto: los paneles y la
       tapa del valle lo tapan entero. Importa tres ensamblados —madera,
       aluminio y acero— porque pintarlos igual pierde lo que la vista enseña
-- [x] **Render del conjunto**, regenerado por última vez el 2026-08-29, más
-      noche, con la trasera capturada y el talón como la nariz (variante B
-      del techo). Los anteriores están en `renders/viejos/`, ordenados por
+- [x] **Render del conjunto**: desde el 2026-10-12 lo pinta
+      `renders/render_persiana.py` (las `sam17-persiana*.png` de arriba), y
+      `render.py` se queda como la escena común, sin renders propios. Lo que
+      sigue es el render de antes de la persiana, con la trasera capturada y
+      el talón como la nariz: la variante B del techo se regeneró por última
+      vez el 2026-10-10, y la A el 2026-08-29. Los anteriores están en `renders/viejos/`, ordenados por
       fecha. Dos vistas: frontal ([`renders/sam17-case.png`](renders/sam17-case.png))
       y trasera ([`renders/sam17-case-trasera.png`](renders/sam17-case-trasera.png)),
       y las mismas dos con el techo en banda (variante A):

@@ -11,8 +11,7 @@ se hace clic, se lee el nombre en el Outliner y ese nombre es el del repo.
 
 Exporta cada pieza con OpenSCAD desde cad/piezas.scad (solo las que falten o
 esten mas viejas que el .scad), reusa el mundo, las luces, la camara y los
-materiales de render.py -- se ejecuta hasta su bloque RENDER, sin renderizar
--- y guarda el .blend en build/. No es un artefacto del repo: build/ esta
+materiales de render.py -- la escena, que no renderiza nada -- y guarda el .blend en build/. No es un artefacto del repo: build/ esta
 ignorado, y esto no es una puerta ni un render que se juzgue."""
 import os
 import subprocess
@@ -70,12 +69,12 @@ def exportar_piezas() -> None:
 
 exportar_piezas()
 
-# La escena de render.py hasta su bloque RENDER: mundo, luces, camara y los
+# La escena de render.py, que no renderiza nada: mundo, luces, camara y los
 # tres materiales. Despues se quitan sus tres ensamblados y entran las piezas.
 ruta_render = os.path.join(AQUI, "render.py")
 fuente = open(ruta_render, encoding="utf-8").read()
 ns = {"__file__": ruta_render, "__name__": "escena_case"}
-exec(compile(fuente[:fuente.index("# --- RENDER: vista frontal")], ruta_render, "exec"), ns)
+exec(compile(fuente, ruta_render, "exec"), ns)
 ns["poner_luces"](*ns["construir_vista"](ns["AZIMUT_FRENTE"]))
 for obj in (ns["acr"], ns["alu"], ns["jun"], ns["mad"]):
     bpy.data.objects.remove(obj, do_unlink=True)

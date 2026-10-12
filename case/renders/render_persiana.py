@@ -11,8 +11,8 @@ los paneles con sus tres filas (cara_panel.py). Es la escena del acta del
 
 Las partes son STL de build/ y se re-exportan si el modelo es mas nuevo
 (importar() de render.py, que mira tambien persiana_generada.scad). De
-render.py se reusan el mundo, las luces, mat() y medir(); sus umbrales se
-calibraron con un case naranja y plateado, y este lleva los suyos.
+render.py se reusan el mundo, las luces, mat() y medir(); los umbrales son
+de aqui: los que tenia render.py eran de un case naranja y plateado.
 """
 import math
 import os
@@ -28,7 +28,7 @@ args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 ruta = os.path.join(AQUI, "render.py")
 src = open(ruta, encoding="utf-8").read()
 ns = {"__file__": ruta, "__name__": "render_persiana"}
-exec(compile(src[:src.index("# --- RENDER: vista frontal")], ruta, "exec"), ns)
+exec(compile(src, ruta, "exec"), ns)
 for o in (ns["acr"], ns["alu"], ns["jun"], ns["mad"]):
     bpy.data.objects.remove(o, do_unlink=True)
 esc = bpy.context.scene
@@ -197,8 +197,8 @@ VISTAS = {"frente": lambda: todo(32, 25, "sam17-persiana"),
           "lado": lambda: todo(68, 14, "sam17-persiana-lado"),
           "noche": lambda: noche("sam17-persiana-noche", 68, 14),
           "costado": lambda: costado("sam17-persiana-costado")}
-# UMBRALES PROPIOS (2026-10-12). Los de render.py (brillo 0.20) son de un case
-# naranja y plateado; este es negro. Medidos en las dos primeras corridas: en
+# UMBRALES PROPIOS (2026-10-12). Los que tenia render.py (brillo 0.20) eran de
+# un case naranja y plateado; este es negro. Medidos en las dos primeras corridas: en
 # Eevee (800 x 600) cobertura 0.31 a 0.52 y brillo 0.28 a 0.35 de dia y 0.056
 # de noche; en Cycles (1600 x 1200, 128 muestras) cobertura 0.37 a 0.52 y brillo
 # 0.25 a 0.28 de dia y 0.070 de noche, que es oscura por diseno y lleva su

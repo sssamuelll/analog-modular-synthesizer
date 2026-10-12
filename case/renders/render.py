@@ -1,9 +1,14 @@
-"""Render del case: acrilico naranja translucido + aluminio.
+"""La escena comun de los renders del case: mundo, luces, camara, materiales,
+importar() y medir().
 
-    & "C:\\Program Files\\Blender Foundation\\Blender 5.0\\blender.exe" -b -P render.py
+DESDE EL 2026-10-12 NO RENDERIZA NADA POR SI SOLA. El case que pintaba --
+mejillas de acrilico naranja y el aluminio en plata -- ya no existe, y al
+correrlo sobrescribia sam17-case.png con un case sin costados. La ejecutan
+entera render_persiana.py (las vistas del case de hoy) y piezas.py (el .blend
+con cada pieza por su nombre). Sus ultimas vistas, del 2026-10-10, se quedan
+en el repo como historia: sam17-case.png y sam17-case-trasera.png.
 
-Dos vistas (frontal y trasera, Fix round 1 FIX 3), mismo pipeline. Tres
-rulings/fixes de la Task 8 que no vienen del brief original:
+Tres rulings/fixes de la Task 8 que no vienen del brief original:
 
   Encuadre (seccion "bbox real" + construir_vista): calculado desde el
   bounding box REAL de las dos mallas importadas, no desde una posicion de
@@ -13,14 +18,13 @@ rulings/fixes de la Task 8 que no vienen del brief original:
   angulo_superior y se regenera el STL, el render se sigue encuadrando
   solo, sin tocar este script.
 
-  Verificacion (medir() + renderizar_vista): un PNG >100 KB no prueba que
+  Verificacion (medir()): un PNG >100 KB no prueba que
   el case este en cuadro NI que se vea -- ver Fix round 1. Tras escribir
   cada PNG se relee con bpy.data.images.load y se miden dos cosas sobre
   los pixeles que no son fondo: la FRACCION del cuadro que ocupan
   (cobertura) y el BRILLO medio (para no dejar pasar un render tecnicamente
-  "en cuadro" pero tan oscuro que no se distingue del fondo). Si cualquiera
-  de las dos vistas falla cualquiera de los dos umbrales, el script sale
-  con codigo != 0 y un mensaje ROJO.
+  "en cuadro" pero tan oscuro que no se distingue del fondo). Los umbrales
+  los pone cada guion que renderiza: render_persiana.py, los del case negro.
 
   Iluminacion (mundo con Light Path / Is Camera Ray): el fondo oscuro
   original (visible a camara, como en el board) tambien era la UNICA luz
@@ -32,8 +36,7 @@ rulings/fixes de la Task 8 que no vienen del brief original:
   esto solo subio el brillo de 0.051 a ~0.377 en la trasera Y la cobertura
   de 0.123 a ~0.34 (pixeles que antes eran indistinguibles del fondo casi
   negro ahora se distinguen -- ver comentario de MARGEN mas abajo). El brillo
-  decia "~0.60-0.64", de una version anterior de la metrica; el numero bueno
-  es el mismo que sostiene BRILLO_MINIMO mas abajo, y lo imprime cada corrida.
+  decia "~0.60-0.64", de una version anterior de la metrica.
 
 Nombres de la API de materiales (Principled BSDF) verificados a mano en
 Blender 5.0.1: "Base Color", "Metallic", "Roughness" y "Transmission
@@ -46,7 +49,6 @@ de tocar el material: existen tal cual, sin ambiguedad.
 """
 import math
 import os
-import sys
 
 import bpy
 import numpy as np
@@ -254,11 +256,8 @@ radio = (maxv - minv).length / 2
 
 ELEVACION = math.radians(22)   # sobre la horizontal -- estetica, fija
 # Tres cuartos elevado (foto hero del board): frente = mayormente -X
-# (delante del case) con desvio hacia +Z. Trasera (Fix round 1, FIX 3):
-# espejo sobre el eje de profundidad (pi - azimut), mismo costado +Z -- no
-# es un numero nuevo, es el mismo AZIMUT_FRENTE reflejado.
+# (delante del case) con desvio hacia +Z. Con ella pone piezas.py sus luces.
 AZIMUT_FRENTE = math.radians(35)
-AZIMUT_TRASERA = math.pi - AZIMUT_FRENTE
 # Aire alrededor del case en el cuadro, no pegado al borde. Con el fix de
 # brillo la cobertura ya cae en el rango pedido (30-45%, medido 34.2%) SIN
 # tocar este valor -- la causa real del 12.3% original no era margen de
@@ -401,132 +400,3 @@ def medir(ruta_png: str) -> tuple[float, float]:
         return frac, brillo
     finally:
         bpy.data.images.remove(img)
-
-
-# Umbrales elegidos a mano (juicio, no derivado), calibrados contra DOS
-# renders reales, no uno solo:
-#   - el render SUBEXPUESTO de la Task 8 original (antes de este fix):
-#     cobertura 0.1229, brillo 0.0509 -- tiene que dar ROJO con la metrica
-#     de brillo nueva (antes no existia).
-#   - el render corregido de mas abajo (trasera): cobertura ~0.34, brillo ~0.377.
-# COBERTURA_MINIMA se deja en 0.05 (ya mordia bien, sigue mordiendo -- ver
-# prueba en rojo del reporte). BRILLO_MINIMO en 0.20: por encima del 0.0509
-# del render viejo (para que ESE caso de verdad falle si se repite) y
-# comodo por debajo del ~0.377 del render bueno (margen ~1.9x, no 3x).
-COBERTURA_MINIMA = 0.05
-BRILLO_MINIMO = 0.20
-
-
-def renderizar_vista(nombre_archivo: str, azimut: float) -> bool:
-    derecha, arriba_cam, adelante, distancia = construir_vista(azimut)
-    poner_luces(derecha, arriba_cam, adelante, distancia)
-
-    ruta = os.path.join(AQUI, nombre_archivo)
-    esc.render.filepath = ruta
-    resultado = bpy.ops.render.render(write_still=True)
-    if resultado != {"FINISHED"}:
-        print(f"ROJO [{nombre_archivo}]: bpy.ops.render.render no devolvio FINISHED: {resultado}")
-        return False
-    print(f"render escrito: {ruta}")
-
-    frac, brillo = medir(ruta)
-    print(f"{nombre_archivo}: cobertura={frac:.4f} ({frac * 100:.1f}%) brillo={brillo:.4f}")
-
-    ok = True
-    if frac < COBERTURA_MINIMA:
-        print(f"ROJO [{nombre_archivo}]: cobertura {frac:.4f} por debajo del minimo {COBERTURA_MINIMA} "
-              f"-- el case no esta en cuadro (vacio, negro o recortado)")
-        ok = False
-    if brillo < BRILLO_MINIMO:
-        print(f"ROJO [{nombre_archivo}]: brillo {brillo:.4f} por debajo del minimo {BRILLO_MINIMO} "
-              f"-- se ve casi negro/apagado, no como acrilico naranja iluminado")
-        ok = False
-    if ok:
-        print(f"VERDE [{nombre_archivo}]: cobertura {frac:.4f} >= {COBERTURA_MINIMA}, "
-              f"brillo {brillo:.4f} >= {BRILLO_MINIMO}")
-    return ok
-
-
-def renderizar_esquina(nombre_archivo: str, azimut_deg: float,
-                       elev_deg: float, semi: float = 55.0) -> bool:
-    """PRIMER PLANO DE LA ESQUINA DE ARRIBA-ATRAS (P5), 2026-08-30.
-
-    Las dos vistas de arriba encuadran el case entero y a esa escala la junta
-    de sombra de 1 mm entre la chapa y el anillo son dos pixeles: no se puede
-    juzgar. Y lo que esta tanda decide ES una esquina -- Samuel: "el acabado
-    debe sentirse perfecto con respecto a la esquina, perfectamente alineado
-    con el del marco o si no se ve feo". Asi que la esquina tiene sus propios
-    renders, con lente larga (85 mm, poca perspectiva: los dos chaflanes se
-    comparan sin que la proyeccion los tuerza) y encuadre de +-55 mm.
-
-    Estos dos si se miran para decidir. En ellos se vio, el mismo dia, que el
-    cajeado de la brida se comia el reborde en el chaflan y que la brida
-    asomaba 1.5 mm: dos defectos que las dos puertas daban por buenos porque
-    ninguna mira una arista vista."""
-    az, el = math.radians(azimut_deg), math.radians(elev_deg)
-    horizontal = Vector((-math.cos(az), 0.0, math.sin(az)))
-    direccion = (horizontal * math.cos(el)
-                 + Vector((0.0, math.sin(el), 0.0))).normalized()
-    arriba_mundo = Vector((0.0, 1.0, 0.0))
-    adelante = -direccion
-    derecha = adelante.cross(arriba_mundo).normalized()
-    arriba_cam = derecha.cross(adelante).normalized()
-
-    cam_data = bpy.data.cameras.new("cam_esquina")
-    cam_data.lens = 85.0
-    cam_obj = bpy.data.objects.new("cam_esquina", cam_data)
-    esc.collection.objects.link(cam_obj)
-    esc.camera = cam_obj
-    # el centro del encuadre: la esquina de arriba-atras del bbox, metida un
-    # poco hacia dentro para que quepan el anillo, la chapa y la junta.
-    foco = Vector((max(p.x for p in esquinas) - 8.0,
-                   max(p.y for p in esquinas) - 10.0,
-                   max(p.z for p in esquinas) - 6.0))
-    distancia = semi / math.tan(cam_data.angle_x / 2)
-    cam_obj.location = foco + direccion * distancia
-    cam_obj.rotation_euler = Matrix(
-        (derecha, arriba_cam, -adelante)).transposed().to_euler()
-    cam_data.clip_start = 1.0
-    cam_data.clip_end = max(distancia * 3.0, 2000.0)
-    poner_luces(derecha, arriba_cam, adelante, distancia)
-
-    ruta = os.path.join(AQUI, nombre_archivo)
-    esc.render.filepath = ruta
-    resultado = bpy.ops.render.render(write_still=True)
-    if resultado != {"FINISHED"}:
-        print(f"ROJO [{nombre_archivo}]: bpy.ops.render.render no devolvio "
-              f"FINISHED: {resultado}")
-        return False
-    print(f"render escrito: {ruta}")
-    frac, brillo = medir(ruta)
-    print(f"{nombre_archivo}: cobertura={frac:.4f} brillo={brillo:.4f}")
-    # UN PRIMER PLANO NO SE MIDE COMO UNA VISTA GENERAL: aqui la pieza llena
-    # media pantalla y el resto es fondo, asi que el umbral de cobertura del
-    # case entero no aplica. Lo que se exige es que haya PIEZA en cuadro --
-    # una camara mal apuntada da un render vacio -- y que este iluminada.
-    ok = True
-    if frac < 0.15:
-        print(f"ROJO [{nombre_archivo}]: cobertura {frac:.4f} por debajo de "
-              f"0.15 -- la esquina no esta en cuadro")
-        ok = False
-    if brillo < BRILLO_MINIMO:
-        print(f"ROJO [{nombre_archivo}]: brillo {brillo:.4f} por debajo del "
-              f"minimo {BRILLO_MINIMO}")
-        ok = False
-    if ok:
-        print(f"VERDE [{nombre_archivo}]: cobertura {frac:.4f}, brillo {brillo:.4f}")
-    return ok
-
-
-# --- RENDER: vista frontal (brief original) + vista trasera (Fix round 1,
-# FIX 3 -- una vista tres cuartos frontal no puede mostrar, por geometria,
-# las ranuras de ventilacion en onda de las pieles traseras) + los dos
-# primeros planos de la esquina de arriba-atras (2026-08-30) --------------
-ok_frente = renderizar_vista("sam17-case.png", AZIMUT_FRENTE)
-ok_trasera = renderizar_vista("sam17-case-trasera.png", AZIMUT_TRASERA)
-ok_esq_3q = renderizar_esquina("sam17-case-esquina.png", 145.0, 22.0)
-ok_esq_pf = renderizar_esquina("sam17-case-esquina-perfil.png", 90.0, 4.0)
-
-if not (ok_frente and ok_trasera and ok_esq_3q and ok_esq_pf):
-    sys.exit(1)
-sys.exit(0)
