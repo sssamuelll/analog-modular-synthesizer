@@ -310,7 +310,7 @@ contorno de la ventana del anillo, corrida por los siete tramos: sobre las
 tres filas es exactamente la placa de anclaje de la mañana (canto a la
 silueta, cajeado por riel, dos roscas por riel), y en el frente, el suelo,
 la meseta y la trasera fue el tope del acrílico que daban los clips y la
-escuadra, hasta la rev. 28. Blank **294.56 × 252.88**. **Se cortan DOS con el mismo DXF y son
+escuadra, hasta la rev. 28. Blank **300.11 × 251.88**. **Se cortan DOS con el mismo DXF y son
 un PAR ESPEJADO**: el cajeado Ø8 × 2.5 va en la cara OPUESTA en el de un
 costado y en el del otro, porque cada cajeado tiene que mirar al anillo de
 SU lado. Los seis cajeados van centrados en los seis pasos M4 de riel
@@ -665,11 +665,18 @@ lado. Papel: `docs/superpowers/specs/2026-10-11-case-persiana-design.md`.
   2. todas las ranuras **a 4 de fondo por delante, con las paredes
      acabadas**, mientras el alma de 2 las sostiene;
   3. el pasante de los últimos 2 mm, **solo en `persiana_pasante_2d`**, por
-     tramos entre atados y **sobre placa de sacrificio**;
+     tramos entre atados y **sobre placa de sacrificio**. La placa lleva un
+     **alojamiento para cada uno de los diez tacos del dorso** (Ø8 × 3.5, en
+     `persiana_dorso_2d`): la persiana apoya plana por su dorso, no sobre los
+     tacos. Las dos persianas son espejadas, y sus tacos no caen en el mismo
+     sitio de la placa;
   4. el contorno, al final.
 - **Fresa Ø3 de 3 filos.**
-- **Chaflán 0.2 × 45°** en las aristas de delante, y repaso de rebaba por
-  detrás (§6.4: arista rota en todo canto visto).
+- **Chaflán 0.2 × 45°** en las aristas de delante, y **0.3 × 45° en la arista
+  de atrás del contorno**, la que asienta en el anillo: con la junta de sombra
+  esconde el escalón de hasta 0.2 entre los dos cantos (papel, §4). En la
+  salida de las ranuras por detrás, repaso de rebaba (§6.4: arista rota en todo
+  canto visto).
 - **Planitud ≤ 0.2 en 320**, medida después de ranurar **y** de anodizar.
   **Pregunta eliminatoria**, como la del anillo: la persiana apoya en la cara
   del anillo por toda su banda, y esa sujeción decide cómo suena (el primer

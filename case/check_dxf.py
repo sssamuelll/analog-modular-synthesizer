@@ -2180,15 +2180,19 @@ def persiana_pasante_cuadra(ruta: Path = PLANS / "persiana_pasante_2d.dxf") -> l
 # Las chapas que se pliegan. Sus DXF no traen lineas de plegado: el taller
 # dobla con las cotas del papel.
 DESARROLLOS = ("miembro_alto_2d", "nariz_2d", "talon_2d", "tapa_valle_2d")
+# El blank del marco solo lo da el PLIEGO, y se copia a mano igual: el
+# 2026-10-12 seguia en 294.56 x 252.88 con el DXF en 300.11 x 251.88.
+SOLO_PLIEGO = ("marco_ventana_2d",)
 
 
 def papel_trae_los_desarrollos() -> list[str]:
     """El PLIEGO, el RFQ y el README dan el blank de cada chapa plegada con las
-    cifras del DXF que se corta. NACE DE LA REVISION FINAL DE LA PERSIANA
+    cifras del DXF que se corta, y el PLIEGO el del marco. NACE DE LA REVISION FINAL DE LA PERSIANA
     (2026-10-12): la ficha 6 hizo crecer el techo y la nariz el 2026-10-11, y
     los tres papeles siguieron dando los blanks de antes."""
     f: list[str] = []
-    for nombre in DESARROLLOS:
+    papeles = ("PLIEGO.md", "RFQ.md", "README.md")
+    for nombre, donde in [(n, papeles) for n in DESARROLLOS] + [(n, ("PLIEGO.md",)) for n in SOLO_PLIEGO]:
         xs: list[float] = []
         ys: list[float] = []
         for e in ezdxf.readfile(PLANS / f"{nombre}.dxf").modelspace():
@@ -2196,13 +2200,13 @@ def papel_trae_los_desarrollos() -> list[str]:
                 xs += [e.dxf.start.x, e.dxf.end.x]
                 ys += [e.dxf.start.y, e.dxf.end.y]
         cota = f"{max(xs) - min(xs):.2f} × {max(ys) - min(ys):.2f}"
-        for papel in ("PLIEGO.md", "RFQ.md", "README.md"):
+        for papel in donde:
             if cota not in (Path(__file__).parent / papel).read_text(encoding="utf-8"):
                 f.append(f"{papel} no da el blank de {nombre} que se corta: "
                          f"{cota.replace('×', 'x')}")
     if not f:
         print(f"  PLIEGO, RFQ y README: el blank de las {len(DESARROLLOS)} chapas plegadas, "
-              f"el del DXF")
+              f"el del DXF; y el PLIEGO, el del marco")
     return f
 
 

@@ -249,7 +249,10 @@ lenguaje visual).
 > van y cada costado pasa a ser una placa de aluminio de 6 por fuera del anillo,
 > con 44 varillas de 2, sujeta con diez tacos e imanes; todo el aluminio que se
 > ve, en negro. La piel orgánica no se hace. El rebaje del anillo se queda
-> vacío, y cada anillo gana diez bolsillos por la cara de fuera. Detalle en
+> vacío, y cada anillo gana diez bolsillos por la cara de fuera. La nariz y el
+> retorno del techo bajan hasta pisar la cara del riel y cierran las dos
+> rendijas de la ficha 6 (`retiro_placa_inf` 9 → 11.9, `retorno_meseta` 4 → 9):
+> el aire bajo y sobre el riel que pedía el barrido ya no rige. Detalle en
 > [`2026-10-11-case-persiana-design.md`](2026-10-11-case-persiana-design.md).
 >
 > **rev. 29** (2026-10-10): **la tabla de la ficha 12** del acta de la piel. Vuela
