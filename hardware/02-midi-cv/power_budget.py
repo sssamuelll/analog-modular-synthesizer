@@ -160,8 +160,10 @@ from calor_budget import (P_BASE, SOSTENIDO,                # noqa: E402
 # termico de verdad es el OTRO extremo, el pesimista: mismo venteo, peor C_D.
 #
 # LO QUE ESTE NUMERO ARRASTRA, y hay que decirlo en voz alta: sale del punto
-# fijo evaluado en el VENTEO MINIMO que calor_budget despeja, o sea de una
-# obra que el papel del case todavia no ha dibujado (D-F3 = A, issue #289).
+# fijo evaluado en el VENTEO MINIMO que calor_budget despeja, o sea de la
+# obra que la v4 le pedia al case (D-F3 = A). El case dibujo la suya para la
+# v5 --las persianas, #289-- y este modelo, que es el de la v4, no la sigue:
+# ver calor_budget.A_EF_BASE_MM2.
 # Con la caja de hoy, cerrada, no hay techo ninguno: el aire se va a 87.7 C,
 # por encima de donde acaba la curva de la hoja, y PS6 no opera. Este guion es
 # verde CON ESA OBRA HECHA, y lo imprime en cada corrida.

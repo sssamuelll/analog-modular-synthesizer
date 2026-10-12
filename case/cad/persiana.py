@@ -28,10 +28,10 @@ desde la tabla), con z hacia fuera desde la cara del anillo:
     atados; lo que respira, lo que atraviesa DETRAS de la ventana real (el marco
     llega a marco_fondo del perfil, y a marco_fondo_trasera en el tramo de atras).
 
-EL AIRE: plano neutro. Cada hueco a su altura; por debajo del plano entra y por
-encima sale. Con una entrada y una salida da exactamente clearance_budget._tiro()
-(se comprueba al arrancar). Es propuesta, no puerta: la puerta del aire es
-guarda_aire(), y lo que la lleve al plano neutro es otro plan.
+EL AIRE lo cuenta desde el 2026-10-12 clearance_budget._tiro(), que es la
+puerta, con el plano neutro: cada hueco a su altura, y por debajo del plano
+entra y por encima sale. De aqui sale lo que respira cada persiana (franjas()
+sobre geometria()["abierto"]); abajo se imprimen los escenarios del papel.
 """
 import json
 import math
@@ -51,8 +51,6 @@ DXF_ANILLO = os.path.join(AQUI, "..", "plans", "costilla_2d.dxf")
 GENERADO = os.path.join(AQUI, "persiana_generada.scad")
 MARCO, MARCO_ATRAS = "marco_fondo", "marco_fondo_trasera"   # las claves de params
 MATERIALES = {"aluminio 6082-T6": 2.70, "PA12 impreso": 1.01}   # g/cm3, de manual
-ESCENARIOS = (("v5 declarada, fuente afuera", 64.2), ("fuente adentro (v5 + 25,02)", 89.2),
-              ("v4, lo que lee hoy guarda_aire()", 147.31))
 
 
 def perfil_real():
@@ -239,42 +237,6 @@ def franjas(geom, paso=2.0):
     return out
 
 
-def plano_neutro(huecos):
-    def sobra(yn):
-        return (sum(a * math.sqrt(yn - y) for y, a in huecos if y < yn)
-                - sum(a * math.sqrt(y - yn) for y, a in huecos if y > yn))
-    lo, hi = min(y for y, _ in huecos), max(y for y, _ in huecos)
-    for _ in range(80):
-        mid = (lo + hi) / 2
-        lo, hi = (lo, mid) if sobra(mid) > 0 else (mid, hi)
-    yn = (lo + hi) / 2
-    return yn, sum(a * math.sqrt(y - yn) for y, a in huecos if y > yn)
-
-
-def salto(huecos, potencia_w, cd):
-    yn, S = plano_neutro(huecos)                       # S en mm^2.5
-    k = cb.RHO_AIRE * cb.CP_AIRE * cd * math.sqrt(2 * cb.G / cb.T_AMB) * S * 1e-6 * math.sqrt(1e-3)
-    return (potencia_w / k) ** (2.0 / 3.0), yn
-
-
-def huecos_case(p, abierto, costados=2, trasera=True):
-    hs = [(y, a * costados) for y, a in franjas(abierto)] if costados else []
-    if trasera:
-        _n, _l, a_ent, y_ent = cb._rejilla_entrada(p)
-        a_ren, y_ren = cb._rendija(p)
-        a_ond, y_ond = cb._ondas_trasera(p)
-        hs += [(y_ent, a_ent), (y_ren, a_ren), (y_ond, a_ond)]
-    return hs
-
-
-def autocomprobacion(p):
-    """Con la entrada y la salida de _tiro(), el plano neutro da su cifra exacta."""
-    t = cb._tiro(p, cb.CD_TIRO_PESIMISTA)
-    dt, _ = salto([(t["y_ent"], t["a_ent"]), (t["y_sal"], t["a_sal"])],
-                  p["potencia_disipada"], cb.CD_TIRO_PESIMISTA)
-    assert abs(dt - t["dt"]) < 1e-6 * t["dt"], f"el plano neutro da {dt} y _tiro() {t['dt']}"
-
-
 def autocomprobacion_ritmo(p) -> None:
     """El ritmo no depende de numpy: dos llamadas dan lo mismo, ninguna ranura
     queda mas estrecha que la fresa y el paso no se sale de la ola."""
@@ -306,7 +268,6 @@ def capas_json(p, g, ruta):
 
 if __name__ == "__main__":
     p = cb.leer_params()
-    autocomprobacion(p)
     autocomprobacion_ritmo(p)
     g = geometria(p)
     ab = g["abierto"]
@@ -326,21 +287,23 @@ if __name__ == "__main__":
     for nombre, rho in MATERIALES.items():
         print(f"  pesa {vol / 1000 * rho:.0f} g por costado en {nombre}")
     print(f"  {len(tacos(p))} tacos: " + ", ".join(f"{t} en ({x:.1f}, {y:.1f})" for x, y, t in tacos(p)))
-    print("\nEL AIRE (plano neutro; rejilla de la trasera, rendija del alero y ondas incluidas)")
+    print("\nEL AIRE (clearance_budget._tiro(): plano neutro; las persianas, la "
+          "rejilla de la trasera, la rendija del alero y las ondas)")
     print(f"  {'escenario':36s} {'W':>7s} {'C_D puerta':>11s} {'pesimista':>10s} {'techo':>6s}")
-    for nombre, W in ESCENARIOS:
-        hs = huecos_case(p, ab)
-        dt, yn = salto(hs, W, cb.CD_TIRO)
-        dtp, _ = salto(hs, W, cb.CD_TIRO_PESIMISTA)
+    w5 = p["potencia_disipada"]
+    for nombre, W in (("v5 declarada, fuente afuera", w5),
+                      ("fuente adentro (v5 + 25,02)", w5 + 25.02),
+                      ("v4, que no se monta", 147.31)):
+        q = {**p, "potencia_disipada": W}
+        dt, dtp = cb._tiro(q)["dt"], cb._tiro(q, cb.CD_TIRO_PESIMISTA)["dt"]
         print(f"  {nombre:36s} {W:7.2f} {dt:9.1f} K {dtp:8.1f} K {p['salto_termico_max']:4.0f} K"
               f"{'' if dtp <= p['salto_termico_max'] else '   <- NO pasa el pesimista'}")
-    print(f"  (plano neutro a {yn:.0f} mm)")
-    print("\n  con 64,2 W, pesimista:")
-    for nombre, hs in (("las dos persianas solas", huecos_case(p, ab, trasera=False)),
-                       ("un costado tapado (contra una pared)", huecos_case(p, ab, costados=1)),
-                       ("sin persianas: el case de agosto", huecos_case(p, ab, costados=0))):
-        dtp, _ = salto(hs, 64.2, cb.CD_TIRO_PESIMISTA)
-        print(f"    {nombre:38s} {dtp:5.1f} K")
+    print(f"  (plano neutro a {cb._tiro(p)['yn']:.0f} mm)")
+    print(f"\n  con {w5:.2f} W, pesimista:")
+    for nombre, kw in (("las dos persianas solas", {"trasera": False}),
+                       ("un costado tapado (contra una pared)", {"costados": 1}),
+                       ("sin persianas: el case de agosto", {"costados": 0})):
+        print(f"    {nombre:38s} {cb._tiro(p, cb.CD_TIRO_PESIMISTA, **kw)['dt']:5.1f} K")
     if "--escribir" in sys.argv:
         with open(GENERADO, "w", encoding="utf-8", newline="\n") as f:
             f.write(generado(p))

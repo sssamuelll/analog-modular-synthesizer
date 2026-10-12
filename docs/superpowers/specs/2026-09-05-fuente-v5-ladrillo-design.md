@@ -590,6 +590,13 @@ Y se va, además de calor:
 | `calor_budget.py` | su modelo entero es de módulos AC-DC en un recinto |
 | `params.scad::potencia_disipada` | 147,31 → 64,22 |
 
+> **Aplicado el 2026-10-12 (plan del aire, #289):** `params.scad::potencia_disipada`
+> = 64,22, y `guarda_potencia_vigente()` la cruza contra
+> `ladrillo_budget.calor_del_cajon_w()`. `calor_budget.py` sigue siendo el modelo
+> de la v4: lo reabre el relevo de esta v5, no el plan del aire. En sus términos
+> (en serie, 105 mm de tiro) la persiana equivale a 10 776 mm² más de venteo, y la
+> v4 pedía 20 907.
+
 **No se reabre la cascada.** `U1`/`U2`, los LT3045/LT3094 y `U3` se quedan donde
 están, con su misma topología, alimentados por un crudo mejor.
 

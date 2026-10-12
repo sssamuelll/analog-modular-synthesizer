@@ -38,22 +38,31 @@ RIELES = RIELES_RACK + ("digital+5",)
 # --- las constantes del papel sec.6, con su valor ---------------------------
 
 def test_el_area_base_es_la_que_el_case_tiene_hoy() -> None:
-    """A_EF_BASE_MM2 es una COPIA de la salida del case, y aqui se recalcula.
+    """A_EF_BASE_MM2 es la base de la v4: el venteo del case SIN las aberturas
+    de D-F3, con la cuenta en serie de este modelo --una entrada y una salida,
+    a_ef^-2 = a_ent^-2 + a_sal^-2--. Se recalcula aqui desde params.scad con
+    las tres aberturas de la trasera, asi que si el case cambia su rejilla, su
+    rendija o sus ondas y nadie mueve esta constante, la copia se ve vieja.
 
-    calor_budget suma su `area_venteo_mm2` a esta base, asi que si el case
-    cambia sus rejillas o su rendija y nadie mueve esta constante, el area
-    minima que publica la fuente sale de una geometria que ya no existe.
-    Vive en el contrato y no en el modulo a proposito: un assert a nivel de
-    modulo convertiria un cambio de geometria del case en un rojo del import
-    de media tanda."""
+    DESDE EL 2026-10-12 el case cuenta su aire con el plano neutro y las dos
+    persianas, que SON las aberturas de D-F3 (clearance_budget._tiro()). Esta
+    base no lo sigue a proposito: describe la v4, que no se monta (D-V4), y su
+    relevo es el de la v5, cuyo sec.7 reabre este modelo entero. Vive en el
+    contrato y no en el modulo: un assert a nivel de modulo convertiria un
+    cambio de geometria del case en un rojo del import de media tanda."""
+    import math  # noqa: PLC0415
     import clearance_budget as cl  # noqa: PLC0415
 
-    a_ef = cl._tiro(cl.leer_params())["a_ef"]
+    p = cl.leer_params()
+    _n, _largo, a_ent, _y = cl._rejilla_entrada(p)
+    a_sal = cl._rendija(p)[0] + cl._ondas_trasera(p)[0]
+    a_ef = 1.0 / math.sqrt(1 / a_ent ** 2 + 1 / a_sal ** 2)
     assert abs(a_ef - cb.A_EF_BASE_MM2) < 1.0, (
-        f"el case tiene hoy {a_ef:.1f} mm2 de venteo efectivo y "
-        f"calor_budget.A_EF_BASE_MM2 dice {cb.A_EF_BASE_MM2:.1f}. Esa base es "
-        f"a la que la fuente le SUMA su area_venteo_mm2: con ella vieja, el "
-        f"venteo minimo que publica sale de una geometria que ya no existe")
+        f"el case tiene hoy {a_ef:.1f} mm2 de venteo efectivo sin las "
+        f"persianas y calor_budget.A_EF_BASE_MM2 dice {cb.A_EF_BASE_MM2:.1f}. "
+        f"Esa base es a la que la fuente le SUMA su area_venteo_mm2: con ella "
+        f"vieja, el venteo minimo que publica sale de una geometria que ya no "
+        f"existe")
 
 
 def test_constantes_del_papel() -> None:

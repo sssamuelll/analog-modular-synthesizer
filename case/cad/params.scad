@@ -1746,6 +1746,7 @@ valle_margen    = 6;   // historico; la banda del valle ya no se perfora
 // dejarlo salir. Esta geometria evacua 12.6 W al techo de 15 K, asi que
 // guarda_aire() ya NO asevera ese techo: publica el deficit como HUECO con
 // el area que hace falta. La obra que lo cierra es del papel del case (#289).
+// La cerro la persiana con la fuente v5: ver el parrafo del 2026-10-12, abajo.
 //
 // DE 151.55 A 147.31 EL 2026-09-05, EN DOS CORRECCIONES DE SIGNO CONTRARIO, y
 // ninguna para que una puerta pase. Las dos son la misma regla mal aplicada:
@@ -1766,7 +1767,15 @@ valle_margen    = 6;   // historico; la banda del valle ya no se perfora
 //
 // Las dos se arreglaron en el origen --v4/calor_budget.py, y la de la Voz
 // derivada del censo, no transcrita-- que es lo que esta misma guarda pide.
-potencia_disipada = 147.31; // W, TODO el cajon: 29.23 fuente + 118.08 modulos
+// 64.22 DESDE EL PLAN DEL AIRE (2026-10-12): la fuente v5 (D-V4) saca la
+// etapa AC-DC de la caja, y el calor del cajon es lo que baja por el cordon
+// del ladrillo (hardware/01-power-supply/v5/ladrillo_budget.py,
+// calor_del_cajon_w(): 56.23 W entregados a las cargas + 7.99 perdidos
+// convirtiendo dentro). La v5 lo mando el 05-09 en su sec.7 y quedo sin
+// aplicar hasta aqui. El desglose de arriba es el de la v4, que no se monta.
+// ES COTA DE ABAJO: la enmienda M1 de la v5 aisla el +5 V digital y deja su
+// perdida sin valor hasta que haya pieza (H-CENSO-ETA-DIGITAL).
+potencia_disipada = 64.22; // W, TODO el cajon: lo que baja por el cordon (fuente v5)
 // Techo de salto sobre ambiente. 15 K era el criterio de siempre para caja de
 // electronica lineal con electroliticos dentro: a partir de ahi la vida del
 // condensador se parte por dos cada 10 K y deja de ser un detalle.
@@ -1788,6 +1797,7 @@ potencia_disipada = 147.31; // W, TODO el cajon: 29.23 fuente + 118.08 modulos
 // fuente v4 (35e1bb2) el instrumento solo ya pide 50.3 W y sube 37.7 K por la
 // chimenea, asi que el deficit sigue ahi y guarda_aire() lo sigue publicando
 // como HUECO. Solo deja de haber dos techos distintos en el mismo aparato.
+// Lo cerro el 2026-10-12 el plan del aire: la fuente v5 afuera y las persianas.
 salto_termico_max = 20;  // K sobre ambiente; fuente: tuning_budget.py l.73
 
 // --- lo que el budget vigila (spec §11: catalogos, no medidos) ---
