@@ -11,10 +11,12 @@
 //! el es la firma de ES0396 sec.2.14.2; una que no, no lo es.
 //!
 //! Se barren los seis puntos de la enmienda -- `{0, ¼, ½, 1, 2, 4} x T_SCK`, o
-//! sea `retardo_tsck_cuartos` en `{0, 1, 2, 4, 8, 16}` -- a **15 min por
-//! punto**, que es lo que el acta pide: *«Con la tasa por armado, 15 min en una
-//! ranura contestan p < 4,2e-7 al 95 %»*. Al terminar los seis se queda en 4,
-//! el de produccion, para siempre, imprimiendo un punto mas cada 15 min.
+//! sea `retardo_tsck_cuartos` en `{0, 1, 2, 4, 8, 16}` -- a **45 min por
+//! punto**. El acta pedia 15 contando con 8 kHz: *«Con la tasa por armado, 15
+//! min en una ranura contestan p < 4,2e-7 al 95 %»*. En el banco un giro dura
+//! unos 335 us y el lazo va a ~2,6 kHz (#428), asi que la misma cota pide 45.
+//! Al terminar los seis se queda en 4, el de produccion, para siempre,
+//! imprimiendo un punto mas cada 45 min.
 //!
 //! **En que configuracion corre, y por que es la nuestra y no la de jake-taf.**
 //! El acta dice *«en esa configuracion»*, apuntando al punto (1). Este plan lo
@@ -71,9 +73,10 @@ const RETARDOS: [u8; 6] = [0, 1, 2, 4, 8, 16];
 /// El de produccion, `>= 1 T_SCK` (D2, enmienda del 11-09). Es donde se queda.
 const RETARDO_PRODUCCION: u8 = 4;
 
-/// 15 min por punto: *«15 min en una ranura contestan p < 4,2e-7 al 95 %»*
-/// (acta del 11-09, punto 3 del orden del dia).
-const SEGUNDOS_POR_PUNTO: u64 = 15 * 60;
+/// 45 min por punto: la cota del acta (*«15 min en una ranura contestan
+/// p < 4,2e-7 al 95 %»*, punto 3 del orden del dia del 11-09) a la cadencia
+/// real del banco, ~2,6 kHz y no 8 (#428). Elegido el 2026-10-14.
+const SEGUNDOS_POR_PUNTO: u64 = 45 * 60;
 
 /// El piso legado del enlace, 10 MHz (J2 punto a punto D2; `F_CONTRATO_HZ` de
 /// `hardware/02-midi-cv/trama_j2_budget.py:89`). Es donde la errata muerde:
@@ -143,13 +146,13 @@ async fn main(_spawner: Spawner) {
         correr_punto(&mut ranura, retardo).await;
     }
     // Los seis puntos estan medidos: se queda en el de produccion para siempre,
-    // publicando un punto mas cada 15 min.
+    // publicando un punto mas cada 45 min.
     loop {
         correr_punto(&mut ranura, RETARDO_PRODUCCION).await;
     }
 }
 
-/// Un punto del barrido: fija el retardo, gira 15 min a 8 kHz y publica.
+/// Un punto del barrido: fija el retardo, gira `SEGUNDOS_POR_PUNTO` y publica.
 async fn correr_punto(ranura: &mut Ranura<'static>, retardo: u8) {
     ranura.fijar_retardo_cuartos(retardo);
 
