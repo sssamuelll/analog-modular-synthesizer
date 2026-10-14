@@ -426,6 +426,25 @@ salen unos 2,4 millones de armados y la cota por punto es p < 1,3e-6 al 95 %,
 no 4,2e-7. Para la potencia del acta hacen falta 45 minutos por punto, y así
 quedó el 2026-10-14.
 
+**Medido el 2026-10-14** (firmware `c88c1bb`, de 12:03:50 a 16:36:52, un solo
+`probe-rs` sin reenganches): **los seis puntos, 0 fallas de cualquier tipo.**
+
+| Retardo (cuartos de T_SCK) | Armados | Plazos vencidos | EOT tardíos | Subidas malas | Escaladas | Tramas cortas |
+|---|---|---|---|---|---|---|
+| 0 | 7 454 090 | 0 | 0 | 0 | 0 | 0 |
+| 1 | 7 455 622 | 0 | 0 | 0 | 0 | 0 |
+| 2 | 7 455 615 | 0 | 0 | 0 | 0 | 0 |
+| 4 | 7 431 075 | 0 | 0 | 0 | 0 | 0 |
+| 8 | 7 452 480 | 0 | 0 | 0 | 0 | 0 |
+| 16 | 7 432 201 | 0 | 0 | 0 | 0 | 0 |
+
+Son 44 681 083 transferencias con `TSIZE > 0`, DMA y NSS por hardware. Cada
+punto acota la tasa por armado por debajo de 4,1e-7 al 95 %, y no hay tasa que
+dependa del retardo porque no hubo ningún fallo. Lo que este banco no ejercita
+es la razón de relojes del instrumento: aquí `pclk` va a 32 MHz y el SCK a 8, y
+la errata habla de un reloj de sistema *mucho* más rápido que el SCK. La lectura
+completa, en la spec del maestro (§9, enmienda del 11-09, punto 3).
+
 ### (3) `resistencia_j2` — la puerta de fabricación
 
 ```bash
