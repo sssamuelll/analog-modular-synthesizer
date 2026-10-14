@@ -235,7 +235,7 @@ pub enum Evento {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Accion {
     Nada,
-    /// Los ocho pasos de D4, en orden. Los ejecuta `fw`, no `core`.
+    /// El reinicio de D4, en su orden. Lo ejecuta `fw`, no `core`.
     Reiniciar,
 }
 

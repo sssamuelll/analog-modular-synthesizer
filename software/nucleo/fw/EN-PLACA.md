@@ -411,6 +411,20 @@ es.** Y el maestro de este binario corre en el ejecutor de **hilo**, no por
 `arrancar` se lleva la `Ranura`. No vigila salud ni cuenta con la política de
 `core`: es un experimento de transporte. El esclavo sí va en el `EJECUTOR_J2`.
 
+**Primer intento, el 2026-10-14: medida inválida.** El primer punto dio
+`armados=2132419, plazos_vencidos=2132418` y ceros en lo demás: vencieron plazo
+todos los giros menos el primero. Eran dos defectos del driver, no el silicio:
+`TXTF` sin limpiar entre transferencias (el GPDMA no pedía datos) y el reinicio
+de D4 con `CSUSP`, que dejaba el SPI sin poder arrancar. Los dos están
+arreglados (spec del maestro, enmiendas del 14-10 en D2 y D4), y 20 000 giros
+seguidos salen bien.
+
+**La cadencia real del banco es de unos 2,6 kHz, no 8.** Cada giro tarda unos
+335 µs con el reloj de hoy (HSI a 64 MHz, sin cachés), así que en 15 minutos
+salen unos 2,4 millones de armados y la cota por punto es p < 1,3e-6 al 95 %,
+no 4,2e-7. Para la potencia del acta hacen falta 45 minutos por punto.
+Pendiente de decisión.
+
 ### (3) `resistencia_j2` — la puerta de fabricación
 
 ```bash
@@ -559,7 +573,7 @@ Rev 3, Tabla 13, p. 32), con ese pin en `Input` y la línea `EXTI10`. **No está
 implementado**: son dos constantes de `src/j2_esclavo.rs` y la línea `EXTI11`
 del `bind_interrupts!` `IrqsBanco` de `src/j2_banco.rs`.
 
-### Tres cosas que embassy no decide por nosotros
+### Cuatro cosas que embassy no decide por nosotros
 
 - **La línea del SPI5 en el NVIC no la habilita `embassy_stm32::init`.** Sí
   habilita los dieciséis canales del GPDMA por su cuenta
@@ -577,6 +591,11 @@ del `bind_interrupts!` `IrqsBanco` de `src/j2_banco.rs`.
   alguien la encienda para el sampler; ese día los búferes del J2 van a una
   región MPU propia, y el test del riesgo 8 (búfer contra analizador lógico) es
   obligatorio.
+- **`rcc::enable_and_reset` no resetea un periférico con el reloj
+  encendido**: se salta el pulso (`rcc/mod.rs`, rama `skip reset`). Al
+  construir da igual, porque el reloj está apagado; en el reinicio de D4 y en la
+  escalada del GPDMA1, no. El driver usa `j2_spi::resetear_por_rcc`, que apaga
+  el reloj antes. Medido el 2026-10-14.
 - **El SPI del N657 es `spi_v5` para embassy**, no `spi_v4` como dice el plan;
   el driver de embassy los trata juntos y los registros son los del cap. 67
   del RM0486 igual.
