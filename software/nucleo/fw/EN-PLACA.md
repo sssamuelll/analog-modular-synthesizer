@@ -379,9 +379,10 @@ cargo run --release --bin barrido_retardo
 ```
 
 Seis puntos, `retardo_tsck_cuartos` ∈ {0, 1, 2, 4, 8, 16} = {0, ¼, ½, 1, 2, 4} ×
-T_SCK, **15 min cada uno** (el acta: 15 min contestan p < 4,2e-7 al 95 % para la
-tasa por armado). Tramas de 25 bytes a 8 kHz, al piso de 10 MHz, con el esclavo
-activo. Por punto:
+T_SCK, **45 min cada uno**: la cota del acta, p < 4,2e-7 al 95 % para la tasa
+por armado, a la cadencia real del banco (~2,6 kHz, #428; el acta contaba 15 min
+a 8 kHz). Tramas de 25 bytes, al piso de 10 MHz, con el esclavo activo. Por
+punto:
 
 ```
 barrido,retardo_cuartos=R,armados=A,plazos_vencidos=P,eot_tardios=E,subidas_malas=S,escaladas=X,tramas_cortas=C
@@ -394,7 +395,7 @@ plazo; por eso se llama distinto. `escaladas` son solo las del **maestro**
 (`ESCALADAS_GPDMA − REARMES_ESCALADOS`: `soltar_canales` la llaman los dos
 extremos). `escaladas` y `tramas_cortas` son **deltas del punto**, no totales,
 para que los seis se comparen entre sí. Al terminar los seis se queda en 4 —el de
-producción— para siempre, publicando un punto más cada 15 min.
+producción— para siempre, publicando un punto más cada 45 min.
 
 **La lectura, dicha, porque el acta no la fija.** El acta dice «en esa
 configuración» apuntando al punto (1), el de `TSIZE = 0`. Este binario corre
@@ -422,8 +423,8 @@ seguidos salen bien.
 **La cadencia real del banco es de unos 2,6 kHz, no 8.** Cada giro tarda unos
 335 µs con el reloj de hoy (HSI a 64 MHz, sin cachés), así que en 15 minutos
 salen unos 2,4 millones de armados y la cota por punto es p < 1,3e-6 al 95 %,
-no 4,2e-7. Para la potencia del acta hacen falta 45 minutos por punto.
-Pendiente de decisión.
+no 4,2e-7. Para la potencia del acta hacen falta 45 minutos por punto, y así
+quedó el 2026-10-14.
 
 ### (3) `resistencia_j2` — la puerta de fabricación
 
