@@ -42,9 +42,9 @@ _RS = os.path.join(_AQUI, "..", "..", "software", "nucleo", "core", "src",
 _CSV = os.path.join(_AQUI, "..", "..", "software", "nucleo", "fw",
                     "resistencia_j2.csv")
 
-# ESTIMADO. Spec sec.3: T_SUSP (10 us, cota escrita en D4 paso 3) + el reset del
-# canal de GPDMA (sin cifra: su Drop espera a que el canal pare) + escribir los
-# registros de los ocho pasos. Lo mide el bring-up con osciloscopio.
+# ESTIMADO. Spec sec.3, con D4 enmendado el 2026-10-14: soltar los canales del
+# GPDMA (sin cifra: su Drop espera a que el canal pare) + el reset del SPI por
+# RCC + reescribir CFG1 y CFG2. Lo mide el bring-up con osciloscopio.
 T_REINICIO_S = 20e-6
 
 # Cuantos giros cuesta alinearse otra vez con el lazo despues de un reinicio.

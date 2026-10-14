@@ -18,8 +18,9 @@
 //! - las DOS esperas (los dos DMA y el `EOT` por `EOTIE`) bajo UN solo plazo
 //!   (D2, D3), con el orden de arranque enmendado el 11-09 -- la espera de al
 //!   menos un `T_SCK` anclada entre `SPE = 1` y `CSTART`;
-//! - los ocho pasos del reinicio de D4, en orden, con su pagina del RM0486, y
-//!   `soltar_canales` con cota `T_CANAL` (enmienda del 18-09, #368);
+//! - el reinicio de D4: la ISR en silencio, los canales soltados con cota
+//!   `T_CANAL` (enmienda del 18-09, #368) y el periferico reseteado por RCC
+//!   (enmienda del 2026-10-14);
 //! - ningun bucle sincrono sin cota (R-MJ2), y nunca una escritura a `TXDR`
 //!   para desatascar (R-MJ3).
 //!
@@ -33,7 +34,7 @@
 //! generacion nueva, porque el hardware no etiqueta el `EOT` y la ISR solo
 //! puede leer la generacion armada en ese instante. De eso se encargan dos
 //! cosas temporales: `EOTIE` armado solo entre `CSTART` y la ISR, y el
-//! `NVIC::unpend` de D4 (pasos 1 y 7). Detalle en el doc de [`Isr`].
+//! `NVIC::unpend` de D4 (pasos 1 y 5). Detalle en el doc de [`Isr`].
 //!
 //! `bind_interrupts!` **no** vive aqui: lo pone quien arma la placa, atando
 //! `SPI5 => Isr<0>` y los dos canales del GPDMA a
@@ -92,13 +93,9 @@ pub const RANURAS: usize = RANURAS_SPI;
 /// piso de 10 MHz). 128 lo cubre con margen y es potencia de dos.
 pub const LARGO_MAX: usize = 128;
 
-/// Cota del sondeo de `SUSP` en el paso 3 de D4, en microsegundos.
-/// **ESTIMADO** (D4.3): no hay cifra en el manual; la sella el bring-up.
-pub const T_SUSP_US: u64 = 10;
-
 /// Cota del sondeo de `is_running()` al soltar los canales del GPDMA, en
-/// microsegundos. **ESTIMADO** (D4.2, enmienda del 18-09, #368), de la misma
-/// clase que `T_SUSP`: RM0486 Rev 4, sec.19.4.3 p. 942 y sec.19.4.4 p. 943
+/// microsegundos. **ESTIMADO** (D4.2, enmienda del 18-09, #368): RM0486 Rev 4,
+/// sec.19.4.3 p. 942 y sec.19.4.4 p. 943
 /// -- la suspension y el reset de un canal solo se completan al terminar la
 /// rafaga en curso (*"Wait for the channel to be effectively in suspended
 /// state means wait for the completion of any ongoing GPDMA transfer over its
@@ -243,6 +240,12 @@ pub struct Ranura<'d> {
     f_sck_hz: u32,
     ciclos_por_cuarto_tsck: u32,
     retardo_cuartos: u8,
+    /// `CFG1` y `CFG2` tal como los escribe `nueva`: D4 los vuelve a escribir
+    /// despues del reset por RCC, que los deja en su valor de reset.
+    cfg1: pac::spi::regs::Cfg1,
+    cfg2: pac::spi::regs::Cfg2,
+    /// El reset por RCC de este periferico: [`resetear_por_rcc`] con su `T`.
+    resetear: fn(),
     _sck: Flex<'d>,
     _mosi: Flex<'d>,
     _miso: Flex<'d>,
@@ -312,8 +315,9 @@ impl<'d> Ranura<'d> {
             "R-MJ7: la D-cache esta encendida y los buferes del J2 no estan en region MPU"
         );
 
-        // Paso 0 de D4: el reloj y el reset del periferico.
-        rcc::enable_and_reset::<T>();
+        // Paso 0 de D4: el reloj y el reset del periferico, con el reset que
+        // de verdad resetea (ver `resetear_por_rcc`).
+        resetear_por_rcc::<T>();
 
         // Los cuatro pines a AF5. Los ocho del montaje son AF5:
         // `stm32-data-generated/data/chips/STM32N657X0.json` (verificado el
@@ -354,6 +358,7 @@ impl<'d> Ranura<'d> {
             w.set_ssom(Ssom::Asserted);
             w.set_afcntr(true);
         });
+        let cfg2 = regs.cfg2().read();
 
         // MBR: la cuenta vive en `core` y esta probada en el host (R14). Aqui
         // solo se asevera el contrato de su frontera: si ni `/256` baja del
@@ -380,6 +385,7 @@ impl<'d> Ranura<'d> {
             w.set_txdmaen(false);
             w.set_rxdmaen(false);
         });
+        let cfg1 = regs.cfg1().read();
 
         // Los ciclos de CPU de un cuarto de `T_SCK` (D2, enmienda del 11-09:
         // la espera va en ciclos, no con `embassy_time`, cuyo grano de 1 us es
@@ -428,8 +434,8 @@ impl<'d> Ranura<'d> {
         // desenmascarada abre una ventana en la que una ISR podria correr con la
         // vieja; lo segundo porque una linea enmascarada con `EOTIE` puesto deja
         // el `EOT` pendiente en el periferico y el plazo vence igual. Aqui los
-        // dos ordenes salen solos: `EOTIE` esta en cero (el `enable_and_reset`
-        // de arriba dejo `IER` a cero) y no se toca hasta `giro`.
+        // dos ordenes salen solos: `EOTIE` esta en cero (el reset de arriba
+        // dejo `IER` a cero) y no se toca hasta `giro`.
         IRQ_DE_RANURA[indice].set_priority(Priority::P1);
         // Los DOS canales del GPDMA, por tipo. No llevan `enable`: los dieciseis
         // los desenmascara `embassy_stm32::init` por su cuenta
@@ -489,6 +495,9 @@ impl<'d> Ranura<'d> {
             f_sck_hz: f_sck,
             ciclos_por_cuarto_tsck: ciclos_cuarto,
             retardo_cuartos: cfg.retardo_tsck_cuartos,
+            cfg1,
+            cfg2,
+            resetear: resetear_por_rcc::<T>,
             _sck: sck,
             _mosi: mosi,
             _miso: miso,
@@ -559,6 +568,13 @@ impl<'d> Ranura<'d> {
 
         // sec.67.11.1, p. 3484: `CR2` esta protegido con el SPI encendido.
         regs.cr1().modify(|w| w.set_spe(false));
+        // El `TXTF` del giro anterior. sec.67.11.6, p. 3492: *"This bit is
+        // cleared by software write 1 to the TXTFC bit of the SPI_IFCR
+        // exclusively"* -- ni `SPE = 0` ni rehabilitar lo borran, y el cierre
+        // ordenado de abajo no lo toca. Puesto al armar, el GPDMA no recibe ni
+        // una peticion de `TXDR` y el giro vence plazo sin clocar nada: medido
+        // en placa el 2026-10-14, el segundo giro de cada arranque.
+        regs.ifcr().write(|w| w.set_txtfc(true));
         // D1: `TSIZE` son los bytes clocados de la trama. Nunca cero (R-MJ1,
         // y `Tsize` es un `NonZeroU16`). sec.67.4.7, p. 3437.
         regs.cr2().write(|w| w.set_tsize(tsize.get()));
@@ -631,29 +647,50 @@ impl<'d> Ranura<'d> {
                 (Resultado::Ok, tardios)
             }
             Err(_) => {
-                Self::reiniciar(self.indice, regs, tx, rx);
+                Self::reiniciar(
+                    self.indice,
+                    regs,
+                    self.cfg1,
+                    self.cfg2,
+                    self.resetear,
+                    tx,
+                    rx,
+                );
                 (Resultado::PlazoVencido, tardios)
             }
         }
     }
 
-    /// Los ocho pasos de D4, en ese orden, cada uno con su pagina (R-MJ3).
-    /// Termina con el SPI **apagado y limpio**, que es como esta entre
-    /// transferencias (D2). **Nunca** escribe a `TXDR`.
+    /// D4: la ISR en silencio, el DMA soltado con cota y el periferico
+    /// reseteado por RCC, en ese orden (R-MJ3). Termina con el SPI **apagado y
+    /// limpio**, que es como esta entre transferencias (D2). **Nunca** escribe
+    /// a `TXDR`.
+    ///
+    /// **Por que un reset y no la receta del manual** (enmienda del 2026-10-14
+    /// a D4). La receta de la redaccion del 11-09 -- `CSUSP` con cota
+    /// `T_SUSP`, `SUSPC`, `SPE = 0`, los dos `DMAEN` y `IFCR` -- dejaba el SPI
+    /// muerto en placa: si la suspension no llega a aceptarse antes de apagar,
+    /// queda pendiente, sobrevive a `SPE = 0` y a rehabilitar, y ningun
+    /// `CSTART` posterior saca un solo reloj (el DMA llena la FIFO y el maestro
+    /// no arranca). No se acepta nunca en un maestro parado con `CSTART = 1` y
+    /// la FIFO vacia, que es el estado de un cuelgue, y tampoco a tiempo en un
+    /// aborto a mitad de trama a 125 kHz, donde un byte dura 64 us. Lo unico
+    /// que lo revivio fue el reset por RCC. Los registros, en la spec.
     ///
     /// No toma `&mut self` (el brief lo dibujaba asi) porque los dos
     /// `Transfer` que recibe ya tienen prestados `self.canal_tx` y
-    /// `self.canal_rx`; lo unico que necesita de la `Ranura` son los
-    /// registros, que son `Copy`.
+    /// `self.canal_rx`; lo que necesita de la `Ranura` son valores `Copy`.
     fn reiniciar(
         indice: usize,
         regs: pac::spi::Spi,
+        cfg1: pac::spi::regs::Cfg1,
+        cfg2: pac::spi::regs::Cfg2,
+        resetear: fn(),
         tx: ManuallyDrop<Transfer<'_>>,
         rx: ManuallyDrop<Transfer<'_>>,
     ) {
-        // 1. Silenciar la ISR. Sin esto el `CSUSP` del paso 3 produce `SUSP`,
-        //    `SUSP` dispara la ISR (`EOTIE` la cubre, sec.67.11.5, p. 3490) y
-        //    la ISR limpia `SUSPC` antes de que el paso 3 lo vea.
+        // 1. Silenciar la ISR, para que un `EOT` tardio no registre nada
+        //    mientras se reinicia.
         //
         //    Apagar `EOTIE` no basta: una ISR que el NVIC ya tenia PENDIENTE
         //    cuando llegamos aqui corre igual, y correria DESPUES del reinicio,
@@ -668,53 +705,59 @@ impl<'d> Ranura<'d> {
         //    sec.67.4.14, p. 3451: *"Disable DMA requests for Tx and Rx in the
         //    DMA registers"*.
         let _ = soltar_canales(tx, rx);
-        // 3. Suspender, con cota `T_SUSP`. sec.67.11.1, p. 3483: *"the CSTART
-        //    bit is reset at the end of the current frame and communication is
-        //    suspended. The user has to check SUSP flag"*.
-        regs.cr1().modify(|w| w.set_csusp(true));
-        let limite = Instant::now() + Duration::from_micros(T_SUSP_US);
-        while !regs.sr().read().susp() && Instant::now() < limite {}
-        // 4. `SUSPC` incondicional, haya llegado `SUSP` o no. sec.67.11.6,
-        //    p. 3491: *"This bit must be cleared prior to disabling the SPI"*.
-        regs.ifcr().write(|w| w.set_suspc(true));
-        // 5. Apagar. sec.67.11.1, p. 3484: con `SPE = 0` se para todo, se
-        //    desactiva el NSS del maestro, se resetea la maquina de estados y
-        //    se vacian las FIFO. Se acepta perder la trama en curso
-        //    (sec.67.4.12, p. 3449); ya estaba perdida.
-        regs.cr1().modify(|w| w.set_spe(false));
-        // 6. Los dos `DMAEN` del periferico, que solo se pueden escribir con
-        //    `SPE = 0` (p. 3484). Es el paso 3 del cierre del manual (p. 3451).
-        regs.cfg1().modify(|w| {
-            w.set_txdmaen(false);
-            w.set_rxdmaen(false);
-        });
-        // 7. Limpiar banderas: no se limpian solas (sec.67.11.6, p. 3490).
-        regs.ifcr().write(|w| {
-            w.set_eotc(true);
-            w.set_txtfc(true);
-            w.set_ovrc(true);
-            w.set_suspc(true);
-            w.set_modfc(true);
-        });
-        // ...y otra vez el pendiente. **No es porque `CSUSP` o el apagado
-        //    hayan podido levantar una ISR nueva**: una peticion al NVIC es
-        //    bandera Y habilitacion, y `EOTIE` lleva en cero desde el paso 1,
-        //    asi que ninguna bandera de los pasos 3 a 7 pudo pedir nada.
+        // 3. El reset por RCC. Deja cada registro del SPI en su valor de reset
+        //    -- `SPE = 0`, los dos `DMAEN` y `IER` a cero, las banderas
+        //    limpias --, que es lo que hacian los pasos 5 a 7 de la receta, y
+        //    se lleva ademas lo que esos pasos no alcanzan, como la suspension
+        //    pendiente. Mientras `CFG2` vale cero el SPI no maneja NSS ni SCK
+        //    (`AFCNTR = 0`): el `CS` queda un instante a lo que el esclavo
+        //    ponga en el (en el banco, el pull-up de PE11), y la trama ya
+        //    estaba perdida (sec.67.4.12, p. 3449).
+        resetear();
+        // 4. La configuracion fija de D1, tal como la dejo `nueva`, con el SPI
+        //    apagado. `CFG2` primero, como en `nueva`: con `AFCNTR = 1` el NSS
+        //    y el SCK vuelven a su nivel inactivo.
+        regs.cfg2().write_value(cfg2);
+        regs.cfg1().write_value(cfg1);
+        // 5. ...y otra vez el pendiente. **No es porque el reset haya podido
+        //    levantar una ISR nueva**: una peticion al NVIC es bandera Y
+        //    habilitacion, y `EOTIE` lleva en cero desde el paso 1 (y el reset
+        //    deja `IER` a cero), asi que nada de los pasos 3 y 4 pudo pedir
+        //    nada.
         //
         //    Lo que este `unpend` recoge es lo que quedo **de antes**, y son dos
         //    cosas concretas: (a) una ISR que se hizo pendiente mientras el paso
-        //    2 tenia las interrupciones enmascaradas -- `rcc::enable_and_reset`
-        //    corre en seccion critica y el `defmt::error!` de la escalada
-        //    tambien --, que no pudo correr y sigue encolada; y (b) la escritura
-        //    de `IER` del paso 1 todavia en vuelo hacia el periferico cuando el
-        //    `unpend` de aquel paso ya habia pasado. En los dos casos la ISR
-        //    correria DESPUES del reinicio, sobre una ranura que la tarea ya
-        //    rearmo, y registraria un resultado que no es suyo. Ahora `SR` esta
-        //    limpio y `EOTIE` en cero, asi que esta es la ultima.
+        //    2 tenia las interrupciones enmascaradas -- `resetear_por_rcc` corre
+        //    en seccion critica y el `defmt::error!` de la escalada tambien --,
+        //    que no pudo correr y sigue encolada; y (b) la escritura de `IER`
+        //    del paso 1 todavia en vuelo hacia el periferico cuando el `unpend`
+        //    de aquel paso ya habia pasado. En los dos casos la ISR correria
+        //    DESPUES del reinicio, sobre una ranura que la tarea ya rearmo, y
+        //    registraria un resultado que no es suyo. Ahora `SR` esta limpio y
+        //    `EOTIE` en cero, asi que esta es la ultima.
         NVIC::unpend(IRQ_DE_RANURA[indice]);
-        // 8. Contar y seguir: lo hace la tarea con `Evento::PlazoVencido`
+        // 6. Contar y seguir: lo hace la tarea con `Evento::PlazoVencido`
         //    (`core::maestro_j2`). Aqui, nada.
     }
+}
+
+/// El reset de RCC que de verdad resetea.
+///
+/// `rcc::enable_and_reset` de embassy **solo pulsa el bit de reset si el reloj
+/// del periferico esta apagado**: con el reloj encendido se lo salta
+/// (`rcc/mod.rs`, `enable_and_reset_with_cs_inner`, rama `skip reset`), asi
+/// que despues del arranque no resetea nada. Apagar antes el reloj obliga al
+/// pulso. Medido en placa el 2026-10-14: con `enable_and_reset` solo, el
+/// `CxCR` del canal 0 del GPDMA1 y el `CR2` del SPI5 siguen como estaban; con
+/// `disable` delante, vuelven a cero.
+///
+/// Vale porque SPI1-6 y GPDMA1 no llevan cuenta de referencias en el
+/// `_generated.rs` de este build (`refcount_idx = None`), y `disable` apaga el
+/// reloj sin preguntar. Uno que la llevara, compartido, no se apagaria y el
+/// reset se volveria a saltar.
+pub(crate) fn resetear_por_rcc<T: rcc::RccPeripheral>() {
+    rcc::disable::<T>();
+    rcc::enable_and_reset::<T>();
 }
 
 /// D4 paso 2 con cota (enmienda del 18-09, #368). Nunca gira sin cota.
@@ -767,7 +810,7 @@ pub fn soltar_canales(
             // es el bucle sin cota que estamos evitando. (`core::mem::forget`
             // seria un no-op sobre el envoltorio, y el lint `forget_non_drop`
             // lo diria.) Quien para los canales es el reset de RCC.
-            rcc::enable_and_reset::<peripherals::GPDMA1>();
+            resetear_por_rcc::<peripherals::GPDMA1>();
             ESCALADAS_GPDMA.fetch_add(1, Ordering::Relaxed);
             defmt::error!(
                 "D4.2: un canal del GPDMA no paro en {} us; GPDMA1 reseteado por RCC",

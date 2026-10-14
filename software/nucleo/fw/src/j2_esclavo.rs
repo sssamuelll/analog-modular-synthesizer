@@ -196,11 +196,11 @@ use embassy_stm32::gpio::{AfType, Flex, OutputType, Pull, Speed};
 use embassy_stm32::interrupt::typelevel::{Binding, Handler, Interrupt};
 use embassy_stm32::interrupt::{InterruptExt, Priority};
 use embassy_stm32::pac::spi::vals::{Cpha, Cpol, Master, Udrcfg};
-use embassy_stm32::{gpio, interrupt, pac, rcc, spi, Peri};
+use embassy_stm32::{gpio, interrupt, pac, spi, Peri};
 use embassy_sync::waitqueue::AtomicWaker;
 
 use crate::j2_banco::PATRON_SUBIDA;
-use crate::j2_spi::{soltar_canales, CanalGpdma1, Soltado, LARGO_MAX};
+use crate::j2_spi::{resetear_por_rcc, soltar_canales, CanalGpdma1, Soltado, LARGO_MAX};
 
 /// La linea de EXTI del `CS`, que es el numero del pin: PE**11**.
 const LINEA_CS: usize = 11;
@@ -394,7 +394,7 @@ impl<'d> Esclavo<'d> {
             "R-MJ7: la D-cache esta encendida y el bufer del esclavo no esta en region MPU"
         );
 
-        rcc::enable_and_reset::<T>();
+        resetear_por_rcc::<T>();
 
         // Los cuatro pines a AF5 (`STM32N657X0.json` y DS14791 Rev 10 Tabla 18;
         // el `_generated.rs` de este build lo repite: `pin_trait_impl!(
