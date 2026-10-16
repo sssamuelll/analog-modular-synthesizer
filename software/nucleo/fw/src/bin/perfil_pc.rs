@@ -5,7 +5,7 @@
 //!
 //! El perfilador por muestreo ([`sam17_nucleo_fw::muestreo`]) sobre el maestro
 //! solo, igual que `carga_j2` pero con `TIM6` anotando el PC a 21 kHz. Es lo que
-//! dice **que funciones** se comen los ~18 700 ciclos de un giro: el reparto de
+//! dice **que funciones** se comen los ~21 600 ciclos de un giro: el reparto de
 //! `carga_j2` solo los separa en tramos que alguien acoto, y mas de la mitad
 //! caia en «maquinaria de futuros y despacho».
 //!

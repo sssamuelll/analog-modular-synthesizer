@@ -545,7 +545,9 @@ y taparían las de verdad. Aquí se mide el maestro.
 ### `carga_j2` — cuánta CPU gasta un giro (herramienta, fuera del orden del día)
 
 ```bash
-cargo run --release --features perfil --bin carga_j2
+python carga_j2.py            # corre las dos pasadas y saca la fila de carga_j2.csv
+python carga_j2.py --anota    # ademas la anade (se niega si el firmware sale -sucio)
+cargo run --release --features perfil --bin carga_j2   # lo mismo, sin la cuenta de la fila
 ```
 
 Gira **el maestro solo** al periodo del instrumento, 125 µs, sin el esclavo del
@@ -567,10 +569,16 @@ despacho. `espera` es tiempo de reloj, no CPU. El mismo binario repite a menos d
 
 **Medido el 2026-10-16** (firmware `b9f6d7d`, 64 MHz; repetido, sale igual a menos del 0,1 %):
 
-| | `ciclo_us` | `hilo_libre_permil` | `ejecutor` | código de la tarea | el resto |
-|---|---|---|---|---|---|
-| sin caché | 420 | 198 | 18 738 | 8 138 | 10 600 |
-| I-cache | 343 | 328 | 13 366 | 5 265 | 8 101 |
+| | `ciclo_us` | `hilo_libre_permil` | **J2 entero** | `ejecutor` | código de la tarea | el resto del ejecutor |
+|---|---|---|---|---|---|---|
+| sin caché | 420 | 198 | **21 558** | 18 738 | 8 138 | 10 600 |
+| I-cache | 343 | 328 | **14 752** | 13 366 | 5 265 | 8 101 |
+
+**El número que se compara con el límite es el «J2 entero»**: lo que el hilo no usa
+en un ciclo, `(1000 - hilo_libre_permil) / 1000 × ciclo_us × f_cpu`. Lleva la ISR
+del SPI, las del DMA y la del reloj de embassy, que el `ejecutor` no cuenta (el
+`ejecutor` y los tramos son el desglose). `carga_j2.py` hace la cuenta y escribe
+la fila.
 
 Es el número que el papel pide como criterio de aceptación de la CPU (riesgo 9
 de la spec del maestro), contra el límite que Samuel firmó el 2026-10-16: **2 500
