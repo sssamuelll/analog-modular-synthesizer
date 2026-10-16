@@ -418,7 +418,7 @@ async fn tarea_ranura(
 }
 
 /// Publica los seis contadores y las dos marcas de la ranura `n` (D7.3, D7.5).
-fn publicar_cuentas(n: usize, politica: &Politica, atrasos: u32) {
+pub(crate) fn publicar_cuentas(n: usize, politica: &Politica, atrasos: u32) {
     let c = &CUENTAS[n];
     c.giros.store(politica.giros(), Ordering::Relaxed);
     c.plazos_vencidos

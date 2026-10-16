@@ -4,6 +4,7 @@
     python carga_j2.py            # compila, corre las pasadas y muestra la fila
     python carga_j2.py --hub      # lo mismo con el nucleo a 800 MHz (feature reloj-hub)
     python carga_j2.py --ranuras 3   # con tres ranuras girando (2 o 3; pines en j2_banco)
+    python carga_j2.py --isr      # el transporte por ISR de j2_isr, la cota sin ejecutor
     python carga_j2.py --anota    # ademas la anade a carga_j2.csv
     python carga_j2.py --autotest # el parseo y la cuenta, sin placa
 
@@ -20,7 +21,8 @@ que el hilo no usa, repartido entre los giros de todas.
 `--anota` se niega si el firmware sale `-sucio` (una fila con la revision de un
 commit que no es el codigo que corrio no se puede repetir) y se niega con las
 pasadas `-sin-mpu`, que son de exploracion: la D-cache sin la region MPU de los
-buferes del DMA incumple R-MJ7 y esa fila no sirve para la puerta.
+buferes del DMA incumple R-MJ7 y esa fila no sirve para la puerta. Tampoco anota
+las de `--isr`: es una cota de coste, no el transporte del instrumento.
 
 La cuenta usa el reloj que **pidio** la configuracion (`f_cpu`); se niega si el
 que **midio** el firmware (`f_cpu_medido`) se aparta mas de un 2 %: seria la
@@ -41,7 +43,9 @@ PLACA = "NUCLEO-N657X0-Q"
 # aqui solo se usa para decir cuantas veces lo pasa, no para decidir nada.
 LIMITE_INFORMATIVO = 2500
 
-CABECERA = re.compile(r"carga_j2: firmware (\S+), f_cpu (\d+) Hz(?:, f_cpu_medido (\d+) Hz)?")
+CABECERA = re.compile(
+    r"carga_j2: firmware (\S+), f_cpu (\d+) Hz(?:, f_cpu_medido (\d+) Hz)?"
+    r"(?:.*?transporte (\w+))?")
 TOLERANCIA_RELOJ = 0.02
 # `ranuras` y `periodo_us` no estan en las lineas anteriores al 17-10: una ranura a 125 us.
 PASADA = re.compile(
@@ -87,7 +91,8 @@ def parsea(texto: str) -> dict:
         if p["plazos"]:
             raise SystemExit(f"cache={cache}: {p['plazos']} plazos vencidos; la medida no vale")
         p["ciclos_por_giro"] = ciclos_del_j2(p["libre"], p["ciclo_us"], f_cpu, p["ranuras"])
-    return {"firmware": firmware, "f_cpu": f_cpu, "medido": medido, "pasadas": pasadas}
+    return {"firmware": firmware, "f_cpu": f_cpu, "medido": medido,
+            "transporte": cab.group(4) or "ejecutor", "pasadas": pasadas}
 
 
 def filas(medida: dict, fecha: str) -> list[str]:
@@ -98,7 +103,7 @@ def filas(medida: dict, fecha: str) -> list[str]:
 
 def muestra(medida: dict) -> None:
     print(f"\nfirmware {medida['firmware']}, {medida['f_cpu']/1e6:.0f} MHz "
-          f"(medido {medida['medido']/1e6:.1f} MHz)\n")
+          f"(medido {medida['medido']/1e6:.1f} MHz), transporte {medida['transporte']}\n")
     print(f"  {'cache':8} {'ranuras':>7} {'ciclo_us':>8} {'libre':>7} {'J2 ciclos/giro':>15} "
           f"{'x limite':>9}   desglose del ejecutor")
     for cache, p in medida["pasadas"].items():
@@ -113,7 +118,9 @@ def muestra(medida: dict) -> None:
               f"{p['ciclos_por_giro'] / LIMITE_INFORMATIVO:8.1f}x   {desglose}")
 
 
-def anota(lineas: list[str], firmware: str) -> None:
+def anota(lineas: list[str], firmware: str, transporte: str = "ejecutor") -> None:
+    if transporte != "ejecutor":
+        raise SystemExit(f"transporte `{transporte}`: es una cota de coste y no se anota")
     if "sucio" in firmware or firmware == "sin-git":
         raise SystemExit(f"firmware `{firmware}`: commitea antes de anotar la fila")
     if any("sin-mpu" in ln for ln in lineas):
@@ -176,6 +183,14 @@ def autotest() -> None:
         pass
     else:
         raise AssertionError("anoto una pasada sin MPU")
+    isr = parsea(hub.replace("periodo 125 us (x)", "periodo 125 us, base 1 vueltas/s, transporte isr (x)"))
+    assert isr["transporte"] == "isr" and mh["transporte"] == "ejecutor"
+    try:
+        anota(["x"], "abc1234", "isr")
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError("anoto una cota")
     try:
         parsea(hub.replace("f_cpu_medido 799800000", "f_cpu_medido 640000000"))
     except SystemExit:
@@ -189,6 +204,8 @@ def main() -> None:
     if "--autotest" in sys.argv:
         return autotest()
     features = ["perfil"] + (["reloj-hub"] if "--hub" in sys.argv else [])
+    if "--isr" in sys.argv:
+        features.append("transporte-isr")
     if "--ranuras" in sys.argv:
         n = sys.argv[sys.argv.index("--ranuras") + 1]
         if n not in ("2", "3"):
@@ -202,7 +219,7 @@ def main() -> None:
     lineas = filas(medida, datetime.date.today().isoformat())
     print("\nfilas de carga_j2.csv:\n  " + "\n  ".join(lineas))
     if "--anota" in sys.argv:
-        anota(lineas, medida["firmware"])
+        anota(lineas, medida["firmware"], medida["transporte"])
 
 
 if __name__ == "__main__":

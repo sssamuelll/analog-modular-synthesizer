@@ -54,6 +54,7 @@
 
 use defmt::info;
 use embassy_executor::Spawner;
+#[cfg(not(feature = "transporte-isr"))]
 use embassy_stm32::interrupt;
 use embassy_time::Timer;
 use sam17_nucleo_core::maestro_j2::RANURAS_SPI;
@@ -61,7 +62,9 @@ use sam17_nucleo_fw::carga::{vueltas_del_hilo, Medidor};
 use sam17_nucleo_fw::j2_banco::{
     bajada_del_banco, juez_del_banco, PERIODO_DE_MEDIDA_US, RANURAS_DE_MEDIDA,
 };
-use sam17_nucleo_fw::j2_ejecutor::{cuentas, iniciar_ejecutor, lanzar_ranuras};
+use sam17_nucleo_fw::j2_ejecutor::cuentas;
+#[cfg(not(feature = "transporte-isr"))]
+use sam17_nucleo_fw::j2_ejecutor::{iniciar_ejecutor, lanzar_ranuras};
 use sam17_nucleo_fw::j2_spi::Config;
 use sam17_nucleo_fw::perfil::{self, Promedios};
 use sam17_nucleo_fw::ranuras_de_medida;
@@ -70,6 +73,9 @@ use {defmt_rtt as _, panic_probe as _};
 
 /// Cuanto dura cada muestra.
 const MUESTRA_S: u64 = 5;
+
+#[cfg(all(feature = "transporte-isr", feature = "ranuras-2"))]
+compile_error!("transporte-isr solo mueve la ranura 0: sin ranuras-2 ni ranuras-3");
 
 const RANURAS_ACTIVAS: u32 = RANURAS_DE_MEDIDA;
 const PERIODO_US: u32 = PERIODO_DE_MEDIDA_US;
@@ -95,14 +101,20 @@ async fn main(spawner: Spawner) {
     // La base, con el J2 sin arrancar: la CPU entera.
     let mut medidor = Medidor::calibrar(500).await;
     info!(
-        "carga_j2: firmware {}, f_cpu {} Hz, f_cpu_medido {} Hz, periodo {} us, base {} vueltas/s",
+        "carga_j2: firmware {}, f_cpu {} Hz, f_cpu_medido {} Hz, periodo {} us, base {} vueltas/s, transporte {=str}",
         env!("SAM17_GIT"),
         f_cpu,
         f_cpu_medido,
         PERIODO_US,
-        medidor.base_por_s()
+        medidor.base_por_s(),
+        if cfg!(feature = "transporte-isr") {
+            "isr"
+        } else {
+            "ejecutor"
+        }
     );
 
+    #[cfg(not(feature = "transporte-isr"))]
     lanzar_ranuras(
         iniciar_ejecutor(interrupt::GFXTIM),
         ranuras,
@@ -110,6 +122,17 @@ async fn main(spawner: Spawner) {
         juez_del_banco,
         PERIODO_US,
     );
+    #[cfg(feature = "transporte-isr")]
+    {
+        let [r0, ..] = ranuras;
+        sam17_nucleo_fw::j2_isr::lanzar(
+            defmt::unwrap!(r0),
+            p.TIM7,
+            PERIODO_US,
+            bajada_del_banco,
+            juez_del_banco,
+        );
+    }
 
     let mut promedios = Promedios::nuevo();
     let mut giros_antes = 0u32;

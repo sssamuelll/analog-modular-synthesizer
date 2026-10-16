@@ -74,6 +74,9 @@ reloj-hub = []
 # Mas ranuras girando en `carga_j2` y `perfil_pc`: 2 suma SPI1 (ranura 2), 3 suma tambien
 # SPI2 (ranura 3). Sin modulo detras: solo miden el transporte. Pines en `j2_banco`.
 ranuras-2 = []
+# El transporte por ISR de `j2_isr` en `carga_j2`, en lugar del ejecutor: la cota de
+# lo que cuesta el mismo giro sin futuros. Solo la ranura 0.
+transporte-isr = []
 ranuras-3 = ["ranuras-2"]
 
 # `perfil_pc` necesita el modulo que solo existe con la feature: sin ella no se compila.
