@@ -9,10 +9,19 @@
 //! y despues de tocar el camino caliente del driver.
 //!
 //! Gira **el maestro solo** -- sin el esclavo del banco, que en el mismo nucleo
-//! le comeria la CPU y falsearia la cuenta -- al periodo del instrumento,
-//! [`PERIODO_GIRO_US`] (125 us), que en esta placa no cabe: cada giro llega
-//! tarde, el calendario deja un periodo de hueco (`core::maestro_j2::Calendario`)
-//! y lo que se mide es el coste del giro y lo que sobra para el hilo. Dos
+//! le comeria la CPU y falsearia la cuenta. El periodo depende del reloj: a 800
+//! MHz (`reloj-hub`) es el del instrumento, [`PERIODO_GIRO_US`] (125 us); a 64
+//! MHz son 1 ms, porque a 125 us el giro llega siempre tarde, el calendario
+//! (`core::maestro_j2::Calendario`) deja un periodo de hueco y la medida es la
+//! de un lazo saturado, que no se parece al del hub. Lo que se mide es el coste
+//! del giro y lo que sobra para el hilo.
+//!
+//! Con `--features ranuras-2` o `ranuras-3` giran ademas una o dos ranuras de
+//! relleno (SPI1 y SPI2, sin modulo detras; pines en `j2_banco`): el coste por
+//! giro es el total entre todos los giros de todas las ranuras, y asi se ve que
+//! parte es de cada ranura y cual se reparte (la ISR del reloj, la entrada del
+//! ejecutor). Con `ranuras-3` a 64 MHz el periodo sube a 2 ms para que ninguna
+//! ranura llegue tarde. Dos
 //! pasadas: sin cache y con la I-cache encendida; con `--features reloj-hub` (el
 //! nucleo a 800 MHz) hay una tercera con tambien la D-cache, **sin la region MPU
 //! de los buferes del DMA** (R-MJ7): es de exploracion, los datos de los buferes
@@ -22,7 +31,7 @@
 //! Por cada pasada, dos lineas:
 //!
 //! ```text
-//! carga_j2,cache=<no|icache>,ciclo_us=,giros_en_5s=,hilo_libre_permil=,atrasos=,plazos_vencidos=
+//! carga_j2,cache=<no|icache>,ranuras=,periodo_us=,ciclo_us=,giros_en_5s=,hilo_libre_permil=,atrasos=,plazos_vencidos=
 //! carga_j2,cache=<no|icache>,previo=,armado=,espera=,cierre=,posterior=,isr_spi=,ejecutor=
 //! ```
 //!
@@ -47,19 +56,23 @@ use defmt::info;
 use embassy_executor::Spawner;
 use embassy_stm32::interrupt;
 use embassy_time::Timer;
-use sam17_nucleo_core::maestro_j2::PERIODO_GIRO_US;
+use sam17_nucleo_core::maestro_j2::RANURAS_SPI;
 use sam17_nucleo_fw::carga::{vueltas_del_hilo, Medidor};
 use sam17_nucleo_fw::j2_banco::{
-    bajada_del_banco, juez_del_banco, maestro_del_banco, RANURA_BANCO,
+    bajada_del_banco, juez_del_banco, PERIODO_DE_MEDIDA_US, RANURAS_DE_MEDIDA,
 };
 use sam17_nucleo_fw::j2_ejecutor::{cuentas, iniciar_ejecutor, lanzar_ranuras};
 use sam17_nucleo_fw::j2_spi::Config;
 use sam17_nucleo_fw::perfil::{self, Promedios};
+use sam17_nucleo_fw::ranuras_de_medida;
 use sam17_nucleo_fw::usb;
 use {defmt_rtt as _, panic_probe as _};
 
 /// Cuanto dura cada muestra.
 const MUESTRA_S: u64 = 5;
+
+const RANURAS_ACTIVAS: u32 = RANURAS_DE_MEDIDA;
+const PERIODO_US: u32 = PERIODO_DE_MEDIDA_US;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -69,20 +82,12 @@ async fn main(spawner: Spawner) {
     let config = usb::configuracion();
     let f_cpu = usb::f_cpu_hz(&config);
     let p = usb::iniciar(config);
-    let ranura = maestro_del_banco(
-        p.PE15,
-        p.PG2,
-        p.PG1,
-        p.PA3,
-        p.GPDMA1_CH0,
-        p.GPDMA1_CH1,
-        &p.RCC,
-        Config {
-            f_sck_hz: 10_000_000,
-            f_cpu_hz: f_cpu,
-            retardo_tsck_cuartos: 4,
-        },
-    );
+    let cfg = Config {
+        f_sck_hz: 10_000_000,
+        f_cpu_hz: f_cpu,
+        retardo_tsck_cuartos: 4,
+    };
+    let ranuras = ranuras_de_medida!(p, cfg);
 
     perfil::iniciar();
     let f_cpu_medido = perfil::f_cpu_medido_hz().await;
@@ -94,16 +99,16 @@ async fn main(spawner: Spawner) {
         env!("SAM17_GIT"),
         f_cpu,
         f_cpu_medido,
-        PERIODO_GIRO_US,
+        PERIODO_US,
         medidor.base_por_s()
     );
 
     lanzar_ranuras(
         iniciar_ejecutor(interrupt::GFXTIM),
-        [Some(ranura), None, None, None, None, None],
+        ranuras,
         bajada_del_banco,
         juez_del_banco,
-        PERIODO_GIRO_US,
+        PERIODO_US,
     );
 
     let mut promedios = Promedios::nuevo();
@@ -116,7 +121,7 @@ async fn main(spawner: Spawner) {
     for &cache in pasadas {
         // SAFETY: nadie mas toca el SCB. La D-cache solo se enciende en la pasada
         // de exploracion, con el J2 ya girando y sin la region MPU (R-MJ7): `nueva`
-        // asevero que estaba apagada al construir la ranura.
+        // asevera que estaba apagada al construir la ranura.
         unsafe {
             let mut p = cortex_m::Peripherals::steal();
             match cache {
@@ -129,22 +134,30 @@ async fn main(spawner: Spawner) {
         // cache; la segunda es la que vale.
         for muestra in 0..2 {
             Timer::after_secs(MUESTRA_S).await;
-            let c = cuentas(RANURA_BANCO);
+            let (mut giros, mut atrasos, mut plazos) = (0u32, 0u32, 0u32);
+            for n in 0..RANURAS_SPI {
+                let c = cuentas(n);
+                giros = giros.wrapping_add(c.giros);
+                atrasos = atrasos.wrapping_add(c.atrasos);
+                plazos = plazos.wrapping_add(c.plazos_vencidos);
+            }
             let libre = medidor.libre_por_mil();
-            let dg = c.giros.wrapping_sub(giros_antes);
-            giros_antes = c.giros;
-            let (m, _) = promedios.tomar(c.giros);
+            let dg = giros.wrapping_sub(giros_antes);
+            giros_antes = giros;
+            let (m, _) = promedios.tomar(giros);
             if muestra == 0 {
                 continue;
             }
             info!(
-                "carga_j2,cache={=str},ciclo_us={},giros_en_5s={},hilo_libre_permil={},atrasos={},plazos_vencidos={}",
+                "carga_j2,cache={=str},ranuras={},periodo_us={},ciclo_us={},giros_en_5s={},hilo_libre_permil={},atrasos={},plazos_vencidos={}",
                 cache,
-                (MUESTRA_S * 1_000_000) as u32 / dg.max(1),
+                RANURAS_ACTIVAS,
+                PERIODO_US,
+                (MUESTRA_S * 1_000_000) as u32 * RANURAS_ACTIVAS / dg.max(1),
                 dg,
                 libre,
-                c.atrasos,
-                c.plazos_vencidos
+                atrasos,
+                plazos
             );
             if m.iter().all(|x| *x == 0) {
                 info!("carga_j2,cache={=str}: compilado sin `--features perfil`, los tramos salen en cero", cache);

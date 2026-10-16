@@ -25,14 +25,13 @@ use defmt::info;
 use embassy_executor::Spawner;
 use embassy_stm32::interrupt;
 use embassy_time::Timer;
-use sam17_nucleo_core::maestro_j2::PERIODO_GIRO_US;
+use sam17_nucleo_core::maestro_j2::RANURAS_SPI;
 use sam17_nucleo_fw::carga::{vueltas_del_hilo, Medidor};
-use sam17_nucleo_fw::j2_banco::{
-    bajada_del_banco, juez_del_banco, maestro_del_banco, RANURA_BANCO,
-};
+use sam17_nucleo_fw::j2_banco::{bajada_del_banco, juez_del_banco, PERIODO_DE_MEDIDA_US};
 use sam17_nucleo_fw::j2_ejecutor::{cuentas, iniciar_ejecutor, lanzar_ranuras};
 use sam17_nucleo_fw::j2_spi::Config;
 use sam17_nucleo_fw::muestreo;
+use sam17_nucleo_fw::ranuras_de_medida;
 use sam17_nucleo_fw::usb;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -42,6 +41,11 @@ const MUESTRAS_POR_S: u32 = 21_000;
 /// Cuanto muestrea.
 const SEGUNDOS: u64 = 20;
 
+/// Los giros de todas las ranuras que giran.
+fn giros_totales() -> u32 {
+    (0..RANURAS_SPI).fold(0u32, |t, n| t.wrapping_add(cuentas(n).giros))
+}
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     #[cfg(feature = "reloj-hub")]
@@ -50,39 +54,31 @@ async fn main(spawner: Spawner) {
     let config = usb::configuracion();
     let f_cpu = usb::f_cpu_hz(&config);
     let p = usb::iniciar(config);
-    let ranura = maestro_del_banco(
-        p.PE15,
-        p.PG2,
-        p.PG1,
-        p.PA3,
-        p.GPDMA1_CH0,
-        p.GPDMA1_CH1,
-        &p.RCC,
-        Config {
-            f_sck_hz: 10_000_000,
-            f_cpu_hz: f_cpu,
-            retardo_tsck_cuartos: 4,
-        },
-    );
+    let cfg = Config {
+        f_sck_hz: 10_000_000,
+        f_cpu_hz: f_cpu,
+        retardo_tsck_cuartos: 4,
+    };
+    let ranuras = ranuras_de_medida!(p, cfg);
 
     spawner.spawn(defmt::unwrap!(vueltas_del_hilo()));
     let mut medidor = Medidor::calibrar(500).await;
     lanzar_ranuras(
         iniciar_ejecutor(interrupt::GFXTIM),
-        [Some(ranura), None, None, None, None, None],
+        ranuras,
         bajada_del_banco,
         juez_del_banco,
-        PERIODO_GIRO_US,
+        PERIODO_DE_MEDIDA_US,
     );
     // El J2 a regimen antes de muestrear.
     Timer::after_secs(2).await;
     let _ = medidor.libre_por_mil();
 
-    let giros_antes = cuentas(RANURA_BANCO).giros;
+    let giros_antes = giros_totales();
     let ciclos_timer = muestreo::iniciar(p.TIM6, MUESTRAS_POR_S);
     Timer::after_secs(SEGUNDOS).await;
     muestreo::parar();
-    let giros = cuentas(RANURA_BANCO).giros.wrapping_sub(giros_antes);
+    let giros = giros_totales().wrapping_sub(giros_antes);
     let libre = medidor.libre_por_mil();
 
     info!(

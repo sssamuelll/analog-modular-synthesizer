@@ -52,7 +52,7 @@
 //! `SPE = 1` antes de rearmar el DMA).
 
 use embassy_stm32::{dma, pac, peripherals, Peri};
-use sam17_nucleo_core::maestro_j2::Tsize;
+use sam17_nucleo_core::maestro_j2::{Tsize, PERIODO_GIRO_US};
 
 use crate::j2_esclavo::{Esclavo, IsrCs};
 use crate::j2_spi::{Config, Isr, Ranura, LARGO_MAX};
@@ -75,10 +75,16 @@ embassy_stm32::bind_interrupts!(
     /// (`dma_channel_impl!(GPDMA1_CH0, ...::GPDMA1_CHANNEL0)`).
     pub struct IrqsBanco {
         SPI5 => Isr<0>;
+        SPI1 => Isr<2>;
+        SPI2 => Isr<3>;
         GPDMA1_CHANNEL0 => dma::InterruptHandler<peripherals::GPDMA1_CH0>;
         GPDMA1_CHANNEL1 => dma::InterruptHandler<peripherals::GPDMA1_CH1>;
         GPDMA1_CHANNEL2 => dma::InterruptHandler<peripherals::GPDMA1_CH2>;
         GPDMA1_CHANNEL3 => dma::InterruptHandler<peripherals::GPDMA1_CH3>;
+        GPDMA1_CHANNEL4 => dma::InterruptHandler<peripherals::GPDMA1_CH4>;
+        GPDMA1_CHANNEL5 => dma::InterruptHandler<peripherals::GPDMA1_CH5>;
+        GPDMA1_CHANNEL6 => dma::InterruptHandler<peripherals::GPDMA1_CH6>;
+        GPDMA1_CHANNEL7 => dma::InterruptHandler<peripherals::GPDMA1_CH7>;
         EXTI11 => IsrCs;
     }
 );
@@ -139,6 +145,159 @@ pub fn maestro_del_banco(
         rcc,
         cfg,
     )
+}
+
+/// Una ranura **de relleno** para medir la CPU con varias a la vez (`carga_j2`,
+/// `ranuras-2`): SPI1, la ranura 2 de `SPI_DE_RANURA`, con sus cuatro pines al aire
+/// y los canales 4 y 5 del GPDMA1. Cloca de verdad, pero no hay modulo detras: la
+/// subida sale mala y no importa, porque lo que se mide es el coste del transporte.
+///
+/// Los pines son los de las cabeceras morpho de la Nucleo que el N657 puede dar a
+/// SPI1 en AF5 (`SckPin`, `MosiPin`, `MisoPin`, `CsPin` del `_generated.rs`) y que
+/// UM3417 Rev 3 (Tabla 13, p. 32) saca a un conector sin otra funcion en la placa:
+///
+/// | Senal | Pin | Conector |
+/// |---|---|---|
+/// | SCK | PB9 | CN15-16 |
+/// | MOSI | PC3 | CN3-25 |
+/// | MISO | PB8 | CN15-14 |
+/// | NSS | PC5 | CN3-15 |
+///
+/// Es solo para el banco de carga: no hay nada cableado ahi.
+#[allow(clippy::too_many_arguments)]
+pub fn maestro_de_relleno_2(
+    sck: Peri<'static, peripherals::PB9>,
+    mosi: Peri<'static, peripherals::PC3>,
+    miso: Peri<'static, peripherals::PB8>,
+    nss: Peri<'static, peripherals::PC5>,
+    tx: Peri<'static, peripherals::GPDMA1_CH4>,
+    rx: Peri<'static, peripherals::GPDMA1_CH5>,
+    rcc: &Peri<'_, peripherals::RCC>,
+    cfg: Config,
+) -> Ranura<'static> {
+    Ranura::nueva::<peripherals::SPI1, _, _, _, _, _, _>(
+        2,
+        pac::SPI1,
+        sck,
+        mosi,
+        miso,
+        nss,
+        tx,
+        rx,
+        IrqsBanco,
+        IrqsBanco,
+        rcc,
+        cfg,
+    )
+}
+
+/// La otra ranura de relleno: SPI2, la ranura 3, con los canales 6 y 7. Igual que
+/// [`maestro_de_relleno_2`], con los pines de SPI2 en AF5 que salen a un conector:
+///
+/// | Senal | Pin | Conector |
+/// |---|---|---|
+/// | SCK | PF2 | CN2-4 |
+/// | MOSI | PD7 | CN15-19 |
+/// | MISO | PD6 | CN15-6 |
+/// | NSS | PC1 | CN15-5 |
+#[allow(clippy::too_many_arguments)]
+pub fn maestro_de_relleno_3(
+    sck: Peri<'static, peripherals::PF2>,
+    mosi: Peri<'static, peripherals::PD7>,
+    miso: Peri<'static, peripherals::PD6>,
+    nss: Peri<'static, peripherals::PC1>,
+    tx: Peri<'static, peripherals::GPDMA1_CH6>,
+    rx: Peri<'static, peripherals::GPDMA1_CH7>,
+    rcc: &Peri<'_, peripherals::RCC>,
+    cfg: Config,
+) -> Ranura<'static> {
+    Ranura::nueva::<peripherals::SPI2, _, _, _, _, _, _>(
+        3,
+        pac::SPI2,
+        sck,
+        mosi,
+        miso,
+        nss,
+        tx,
+        rx,
+        IrqsBanco,
+        IrqsBanco,
+        rcc,
+        cfg,
+    )
+}
+
+/// Cuantas ranuras giran en los binarios de medida (`carga_j2`, `perfil_pc`): la
+/// del banco y, con `ranuras-2` y `ranuras-3`, las de relleno.
+pub const RANURAS_DE_MEDIDA: u32 = if cfg!(feature = "ranuras-3") {
+    3
+} else if cfg!(feature = "ranuras-2") {
+    2
+} else {
+    1
+};
+
+/// El periodo del giro de los binarios de medida. A 800 MHz (`reloj-hub`) es el
+/// del instrumento; a 64 MHz uno en que todas las ranuras caben sin llegar
+/// tarde, porque un lazo saturado no se parece al del hub (el calendario deja un
+/// periodo de hueco tras cada giro tardio y casi nunca duerme al reloj).
+pub const PERIODO_DE_MEDIDA_US: u32 = if cfg!(feature = "reloj-hub") {
+    PERIODO_GIRO_US
+} else if RANURAS_DE_MEDIDA >= 3 {
+    2_000
+} else {
+    1_000
+};
+
+/// Las ranuras de los binarios de medida, ya construidas: la del banco y las de
+/// relleno que pida [`RANURAS_DE_MEDIDA`], en el arreglo que espera
+/// `j2_ejecutor::lanzar_ranuras` (la ranura `n` en el indice `n`).
+///
+/// Es una macro y no una funcion porque saca los pines y los canales de `$p`, el
+/// `Peripherals` del llamador, **campo a campo**: el que llama conserva el resto
+/// (`perfil_pc` se queda con `TIM6`).
+#[macro_export]
+macro_rules! ranuras_de_medida {
+    ($p:ident, $cfg:expr) => {{
+        let cfg = $cfg;
+        let mut ranuras: [Option<$crate::j2_spi::Ranura<'static>>; $crate::j2_spi::RANURAS] =
+            [const { None }; $crate::j2_spi::RANURAS];
+        ranuras[0] = Some($crate::j2_banco::maestro_del_banco(
+            $p.PE15,
+            $p.PG2,
+            $p.PG1,
+            $p.PA3,
+            $p.GPDMA1_CH0,
+            $p.GPDMA1_CH1,
+            &$p.RCC,
+            cfg,
+        ));
+        if $crate::j2_banco::RANURAS_DE_MEDIDA >= 2 {
+            ranuras[2] = Some($crate::j2_banco::maestro_de_relleno_2(
+                $p.PB9,
+                $p.PC3,
+                $p.PB8,
+                $p.PC5,
+                $p.GPDMA1_CH4,
+                $p.GPDMA1_CH5,
+                &$p.RCC,
+                cfg,
+            ));
+        }
+        if $crate::j2_banco::RANURAS_DE_MEDIDA >= 3 {
+            ranuras[3] = Some($crate::j2_banco::maestro_de_relleno_3(
+                $p.PF2,
+                $p.PD7,
+                $p.PD6,
+                $p.PC1,
+                $p.GPDMA1_CH6,
+                $p.GPDMA1_CH7,
+                &$p.RCC,
+                cfg,
+            ));
+        }
+        ranuras
+    }};
 }
 
 /// El esclavo del banco: SPI4 con los otros cuatro pines del montaje y los

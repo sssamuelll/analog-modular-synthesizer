@@ -586,6 +586,42 @@ ciclos por giro**, el 15 % de un núcleo a 800 MHz. Cada corrida se anota como u
 fila de `carga_j2.csv`; `recuperacion_j2_budget.py` la lee y falla si una fila a
 800 MHz pasa del límite. Hoy solo hay filas de la Nucleo a 64 MHz y no cumplen.
 
+**Tres opciones, para acercar el banco al hub** (cada una es una feature de `fw`, y
+`carga_j2.py` las pasa con `--hub` y `--ranuras N`):
+
+- `reloj-hub`: el núcleo a **800 MHz** (`usb::configuracion_hub`: PLL1 desde el HSE de
+  48 MHz, `48 / 3 × 50`, y `IC1` como reloj de la CPU). El periodo pasa a ser el del
+  instrumento, 125 µs; a 64 MHz es de 1 ms, porque a 125 µs el giro llega siempre
+  tarde y se mide un lazo saturado. La cabecera imprime el reloj pedido y el medido
+  con el `DWT`, y `carga_j2.py` se niega si se apartan más de un 2 %. Hay una tercera
+  pasada con la D-cache, **sin la región MPU de los búferes del DMA** (R-MJ7): sale
+  como `icache+dcache-sin-mpu`, es de exploración y no se anota en el CSV.
+- `ranuras-2` y `ranuras-3`: giran además una y dos ranuras de relleno, **SPI1 y SPI2
+  sin módulo detrás** (la 2 y la 3 de `SPI_DE_RANURA`), que clocan al aire; la subida
+  sale mala y da igual, porque se mide el transporte. Sirve para ver qué parte del
+  coste es de cada ranura y cuál se reparte entre ellas (la ISR del reloj, la entrada
+  del ejecutor): el coste por giro es el total entre todos los giros. Los pines salen a
+  conectores sin otra función en la placa (UM3417 Rev 3, Tabla 13) y no llevan nada
+  cableado:
+
+  | Ranura | SPI | SCK | MOSI | MISO | NSS | DMA |
+  |---|---|---|---|---|---|---|
+  | 2 | SPI1 | PB9 (CN15-16) | PC3 (CN3-25) | PB8 (CN15-14) | PC5 (CN3-15) | CH4, CH5 |
+  | 3 | SPI2 | PF2 (CN2-4) | PD7 (CN15-19) | PD6 (CN15-6) | PC1 (CN15-5) | CH6, CH7 |
+
+- `muestreo` y `perfil_pc.py`: el **reparto por función** de lo que gasta la CPU. `TIM6`
+  a la prioridad más alta anota el PC a 21 kHz en un histograma (`src/muestreo.rs`) y
+  el guion lo lee por `probe-rs read` y lo cruza con los símbolos del ELF:
+
+  ```bash
+  cargo build --release --features muestreo --bin perfil_pc    # (y reloj-hub, ranuras-N)
+  python perfil_pc.py target/thumbv8m.main-none-eabihf/release/perfil_pc
+  ```
+
+  Da **cómo se reparten** los ciclos, no cuántos son: la ISR del muestreo perturba (~5 %
+  de la CPU a 64 MHz) y los ciclos por giro salen de `carga_j2`. Existe porque
+  `probe-rs profile` 0.32 no arranca y `DWT_PCSR` lee `0xFFFFFFFF` en el M55.
+
 ### Antes de dar por bueno cualquiera de los cuatro: que el ejecutor exista
 
 El `#[interrupt] unsafe fn GFXTIM()` que bombea el `EJECUTOR_J2` vive en la
