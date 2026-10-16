@@ -1,0 +1,3 @@
+fecha,firmware,placa,f_cpu_hz,cache,ciclos_por_giro,hilo_libre_permil
+2026-10-16,b9f6d7d,NUCLEO-N657X0-Q,64000000,no,18738,198
+2026-10-16,b9f6d7d,NUCLEO-N657X0-Q,64000000,icache,13366,328

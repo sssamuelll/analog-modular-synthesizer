@@ -573,7 +573,10 @@ despacho. `espera` es tiempo de reloj, no CPU. El mismo binario repite a menos d
 | I-cache | 343 | 328 | 13 366 | 5 265 | 8 101 |
 
 Es el número que el papel pide como criterio de aceptación de la CPU (riesgo 9
-de la spec del maestro): hoy no hay reparto firmado contra el que compararlo.
+de la spec del maestro), contra el límite que Samuel firmó el 2026-10-16: **2 500
+ciclos por giro**, el 15 % de un núcleo a 800 MHz. Cada corrida se anota como una
+fila de `carga_j2.csv`; `recuperacion_j2_budget.py` la lee y falla si una fila a
+800 MHz pasa del límite. Hoy solo hay filas de la Nucleo a 64 MHz y no cumplen.
 
 ### Antes de dar por bueno cualquiera de los cuatro: que el ejecutor exista
 
