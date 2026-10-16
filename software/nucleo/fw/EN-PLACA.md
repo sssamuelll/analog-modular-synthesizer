@@ -586,8 +586,9 @@ ciclos por giro**, el 15 % de un núcleo a 800 MHz. Cada corrida se anota como u
 fila de `carga_j2.csv`; `recuperacion_j2_budget.py` la lee y falla si una fila a
 800 MHz pasa del límite. Hoy solo hay filas de la Nucleo a 64 MHz y no cumplen.
 
-**Tres opciones, para acercar el banco al hub** (cada una es una feature de `fw`, y
-`carga_j2.py` las pasa con `--hub` y `--ranuras N`):
+**Opciones y herramientas para acercar el banco al hub** (`reloj-hub`, `ranuras-N` y
+`muestreo` son features de `fw`; `carga_j2.py` pasa las dos primeras con `--hub` y
+`--ranuras N`):
 
 - `reloj-hub`: el núcleo a **800 MHz** (`usb::configuracion_hub`: PLL1 desde el HSE de
   48 MHz, `48 / 3 × 50`, y `IC1` como reloj de la CPU). El periodo pasa a ser el del
@@ -621,6 +622,15 @@ fila de `carga_j2.csv`; `recuperacion_j2_budget.py` la lee y falla si una fila a
   Da **cómo se reparten** los ciclos, no cuántos son: la ISR del muestreo perturba (~5 %
   de la CPU a 64 MHz) y los ciclos por giro salen de `carga_j2`. Existe porque
   `probe-rs profile` 0.32 no arranca y `DWT_PCSR` lee `0xFFFFFFFF` en el M55.
+
+- `costes_bus`: **cuánto cuesta un acceso a un registro de periférico**, en ciclos de CPU
+  (`cargo run --release --features perfil[,reloj-hub] --bin costes_bus`). A 800 MHz el
+  núcleo lleva el bus de periférico a una fracción de su velocidad y cada lectura espera:
+  un giro hace cerca de un centenar de accesos (SPI, GPDMA, el reloj de embassy), así que
+  lo que decide si caben en 2 500 ciclos puede ser el número de accesos y no el código.
+  Imprime `costes_bus,f_cpu=,cache=,destino=,lee_x100=,escribe_x100=`, en centésimas de
+  ciclo por acceso, para la SRAM (referencia), el SPI5, el canal 15 del GPDMA1 y el
+  reloj de embassy.
 
 ### Antes de dar por bueno cualquiera de los cuatro: que el ejecutor exista
 
