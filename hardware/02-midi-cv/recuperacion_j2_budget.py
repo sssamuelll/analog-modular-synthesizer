@@ -28,12 +28,14 @@ Lo que este guion NO sabe, y sale con HUECO por ello:
 """
 from __future__ import annotations
 
+import csv
 import os
 import re
 import sys
 
 _AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _AQUI)
+import carga_motor_budget as cm  # noqa: E402
 import enlace_budget as eb       # noqa: E402
 import trama_j2_budget as tb     # noqa: E402
 
@@ -41,6 +43,8 @@ _RS = os.path.join(_AQUI, "..", "..", "software", "nucleo", "core", "src",
                    "maestro_j2.rs")
 _CSV = os.path.join(_AQUI, "..", "..", "software", "nucleo", "fw",
                     "resistencia_j2.csv")
+_CSV_CARGA = os.path.join(_AQUI, "..", "..", "software", "nucleo", "fw",
+                         "carga_j2.csv")
 
 # ESTIMADO. Spec sec.3, con D4 enmendado el 2026-10-14: soltar los canales del
 # GPDMA (sin cifra: su Drop espera a que el canal pare) + el reset del SPI por
@@ -53,13 +57,22 @@ T_REINICIO_S = 20e-6
 # alineacion al giro + un giro".
 GIROS_DE_ALINEACION = 2
 
+# El reparto de CPU del J2 del hub, FIRMADO por Samuel el 2026-10-16 ("firmamos
+# el reparto de CPU del J2"): como maximo el 15 % de UN nucleo del N657, seis
+# ranuras a 8 kHz con sus ISR, el despacho del ejecutor y los DMA. Es la primera
+# fila del censo de CPU del hub, que no existe: carga_motor_budget.py es del
+# motor y dice que sus filas heredadas no son un censo del hub. El reloj es el
+# de ese libro, `cm.F_CPU` (800 MHz), que es el punto de diseno del papel de
+# alimentacion ("VOS high a 800 MHz"): una sola fuente para los dos.
+FRACCION_CPU_J2 = 0.15
+
 # Margen que este papel exige entre recuperarse y que el modulo suelte. No es
 # de ninguna hoja: es el criterio del propio presupuesto, y se declara.
 MARGEN_EXIGIDO = 10.0
 
 
 def _lee_const_rust(txt: str, nombre: str) -> int:
-    m = re.search(rf"pub const {nombre}: u32 = ([\d_]+);", txt)
+    m = re.search(rf"pub const {nombre}: (?:u32|usize) = ([\d_]+);", txt)
     if not m:
         raise SystemExit(
             f"maestro_j2.rs no expone `pub const {nombre}: u32`. R-MJ4 dice "
@@ -67,6 +80,14 @@ def _lee_const_rust(txt: str, nombre: str) -> int:
             "si el Rust cambio de forma o de nombre, arregla el guion. NO "
             "copies el numero aqui.")
     return int(m.group(1).replace("_", ""))
+
+
+def lee_carga(ruta: str = _CSV_CARGA) -> list[dict]:
+    """Las medidas de `carga_j2`, una fila por pasada (EN-PLACA)."""
+    if not os.path.exists(ruta):
+        return []
+    with open(ruta, encoding="utf-8", newline="") as f:
+        return list(csv.DictReader(f))
 
 
 def del_rust(ruta: str = _RS) -> dict:
@@ -88,6 +109,7 @@ def del_rust(ruta: str = _RS) -> dict:
         raise SystemExit(f"POR_DEFECTO no trae {sorted(faltan)}: R-MJ4 roto.")
     campos["periodo_giro_us"] = _lee_const_rust(txt, "PERIODO_GIRO_US")
     campos["t_watchdog_trama_us"] = _lee_const_rust(txt, "T_WATCHDOG_TRAMA_US")
+    campos["ranuras_spi"] = _lee_const_rust(txt, "RANURAS_SPI")
     return campos
 
 
@@ -189,7 +211,39 @@ def demo() -> int:
     print("  Discovery, el otro del musico). `EVENTO` no tiene red y eso lo")
     print("  decidio la cabecera D7, no este papel.")
 
-    # --- 6. los HUECOS ---------------------------------------------------
+    # --- 6. la CPU de un giro normal: el reparto firmado (D5.1, 16-10) ---
+    giros_s = u["ranuras_spi"] * tb.F_LAZO_HZ
+    limite = FRACCION_CPU_J2 * cm.F_CPU / giros_s
+    print("\nLA CPU DE UN GIRO NORMAL (D5.1, enmienda del 16-10; riesgo 9)\n")
+    print(f"  reparto firmado: {FRACCION_CPU_J2*100:.0f} % de un nucleo a "
+          f"{cm.F_CPU/1e6:.0f} MHz, {u['ranuras_spi']} ranuras x "
+          f"{tb.F_LAZO_HZ/1e3:.0f} kHz = {giros_s:.0f} giros/s")
+    print(f"  limite: {limite:.0f} ciclos por giro")
+    en_diseno = []
+    for fila in lee_carga():
+        ciclos = int(fila["ciclos_por_giro"])
+        f_cpu = float(fila["f_cpu_hz"])
+        a_diseno = f_cpu >= cm.F_CPU
+        if a_diseno:
+            en_diseno.append(ciclos)
+        nota = "" if a_diseno else "   [no es el reloj del hub]"
+        print(f"    {fila['fecha']} {fila['placa']} {f_cpu/1e6:.0f} MHz, "
+              f"cache {fila['cache']}: {ciclos} ciclos = "
+              f"{ciclos/limite:.1f}x el limite{nota}")
+    if en_diseno:
+        mejor = min(en_diseno)
+        assert mejor <= limite, (
+            f"la mejor medida a {cm.F_CPU/1e6:.0f} MHz ({mejor} ciclos por "
+            f"giro) pasa el limite firmado ({limite:.0f}): el J2 no cabe en "
+            "su reparto de CPU")
+    else:
+        huecos.append(
+            f"la CPU de un giro normal no tiene ninguna medida a "
+            f"{cm.F_CPU/1e6:.0f} MHz contra el limite firmado de {limite:.0f} "
+            "ciclos por giro: lo medido en la Nucleo (64 MHz) no lo cumple y "
+            "no es el reloj del hub (riesgo 9, #428)")
+
+    # --- 7. los HUECOS ---------------------------------------------------
     if not csv_tiene_fila():
         huecos.append(
             "resistencia_j2.csv no tiene ni una fila: la tasa REAL del defecto "
@@ -202,11 +256,6 @@ def demo() -> int:
     huecos.append(
         "los ESTIMADO sin sustituir: FACTOR_PLAZO, T_SUELO_PLAZO, T_REINICIO "
         "y la propia ventana de ~50 ms del modulo ('N del plan')")
-    huecos.append(
-        "la CPU de un giro NORMAL no esta presupuestada (D7.2 solo acota la de "
-        "los reinicios): medido el 16-10 en la Nucleo, ~18700 ciclos por giro "
-        "en el ejecutor sin caches, ~13400 con I-cache; seis ranuras a 8 kHz "
-        "serian casi un nucleo a 800 MHz (riesgo 9, #428)")
 
     print("\nHUECOS (Principio V)\n")
     for h in huecos:
