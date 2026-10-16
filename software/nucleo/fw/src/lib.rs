@@ -9,6 +9,8 @@ pub mod j2_banco;
 pub mod j2_ejecutor;
 pub mod j2_esclavo;
 pub mod j2_spi;
+#[cfg(feature = "muestreo")]
+pub mod muestreo;
 pub mod perfil;
 pub mod reinicio;
 pub mod usb;

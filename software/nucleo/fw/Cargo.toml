@@ -66,3 +66,11 @@ bucle-del-reporte = []
 eco = []
 # El desglose de un giro del J2 por tramos, en ciclos (`perfil.rs`). Solo para el banco.
 perfil = []
+# El perfilador por muestreo del PC (`muestreo.rs`, `perfil_pc.py`). Solo para el banco.
+muestreo = []
+
+# `perfil_pc` necesita el modulo que solo existe con la feature: sin ella no se compila.
+[[bin]]
+name = "perfil_pc"
+path = "src/bin/perfil_pc.rs"
+required-features = ["muestreo"]
