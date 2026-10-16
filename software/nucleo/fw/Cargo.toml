@@ -64,3 +64,5 @@ opt-level = "s"
 bucle-del-reporte = []
 # El eco con puente MOSI-MISO a 16 MHz en `control_positivo` (EN-PLACA, punto (1)).
 eco = []
+# El desglose de un giro del J2 por tramos, en ciclos (`perfil.rs`). Solo para el banco.
+perfil = []

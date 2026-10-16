@@ -57,11 +57,12 @@ use defmt::info;
 use embassy_executor::Spawner;
 use embassy_stm32::interrupt;
 use embassy_time::{Duration, Ticker};
+use sam17_nucleo_fw::carga::{vueltas_del_hilo, Medidor};
 use sam17_nucleo_fw::j2_banco::{
     bajada_del_banco, esclavo_del_banco, juez_del_banco, maestro_del_banco, LARGO_BANCO,
     RANURA_BANCO,
 };
-use sam17_nucleo_fw::j2_ejecutor::{arrancar, cuentas, EJECUTOR_J2};
+use sam17_nucleo_fw::j2_ejecutor::{cuentas, iniciar_ejecutor, lanzar_ranuras};
 use sam17_nucleo_fw::j2_esclavo;
 use sam17_nucleo_fw::j2_spi::{Config, ESCALADAS_GPDMA};
 use sam17_nucleo_fw::usb;
@@ -78,6 +79,16 @@ use {defmt_rtt as _, panic_probe as _};
 /// modulo). Lo dice sola la columna `reloj_MHz` de la fila -- y, desde la ronda
 /// de arreglo 1, la linea `firmware=` que la acompana dice con que binario.
 const F_SCK_HZ: u32 = 10_000_000;
+
+/// El periodo del giro **del banco**, 1 kHz, y no los 125 us del instrumento.
+///
+/// A 64 MHz y sin caches un giro del maestro cuesta unos 17 000 ciclos solo en
+/// el ejecutor y el esclavo del banco, que va en el mismo nucleo, otros tantos:
+/// a 125 us la CPU queda al 100 %, el hilo no corre y este binario no podria
+/// publicar ni una fila (#428). A 1 ms el ejecutor trabaja al 45 % y al hilo le
+/// queda el resto. La fila vale para **1 kHz**, no para 8; el instrumento de
+/// verdad lo mide `carga_j2`.
+const PERIODO_BANCO_US: u32 = 1_000;
 
 /// El retardo de produccion: 4 cuartos, o sea `>= 1 T_SCK` (D2, enmienda del
 /// 11-09). El barrido de los otros cinco valores es `barrido_retardo`.
@@ -117,7 +128,7 @@ impl defmt::Format for Mhz {
 }
 
 #[embassy_executor::main]
-async fn main(_spawner: Spawner) {
+async fn main(spawner: Spawner) {
     let config = usb::configuracion();
     let f_cpu = usb::f_cpu_hz(&config);
     let p = usb::iniciar(config);
@@ -145,25 +156,35 @@ async fn main(_spawner: Spawner) {
     // una fila etiquetada con el pedido mentiria sobre a que reloj se midio.
     let f_sck_hz = ranura.f_sck_hz();
     info!(
-        "resistencia_j2: firmware {}, f_sck {} Hz (pedido {}), retardo {} cuartos, f_cpu {} Hz",
+        "resistencia_j2: firmware {}, f_sck {} Hz (pedido {}), retardo {} cuartos, f_cpu {} Hz, periodo {} us",
         env!("SAM17_GIT"),
         f_sck_hz,
         F_SCK_HZ,
         RETARDO_CUARTOS,
-        f_cpu
+        f_cpu,
+        PERIODO_BANCO_US
     );
 
     let esclavo = esclavo_del_banco(p.PE2, p.PE14, p.PE13, p.PE11, p.GPDMA1_CH2, p.GPDMA1_CH3);
 
-    arrancar(
-        interrupt::GFXTIM,
+    // La CPU que le queda al hilo, medida por el hilo: la base se calibra ahora,
+    // con el J2 sin arrancar (`carga`).
+    spawner.spawn(defmt::unwrap!(vueltas_del_hilo()));
+    let mut medidor = Medidor::calibrar(500).await;
+    info!("carga: base {} vueltas/s", medidor.base_por_s());
+
+    // El esclavo nace ANTES que el maestro: el maestro clocaria desde el primer
+    // instante contra un esclavo que no existe y esos giros saldrian como
+    // `subidas_malas` en la fila.
+    let spawner_j2 = iniciar_ejecutor(interrupt::GFXTIM);
+    spawner_j2.spawn(defmt::unwrap!(j2_esclavo::tarea_esclavo(esclavo)));
+    lanzar_ranuras(
+        spawner_j2,
         [Some(ranura), None, None, None, None, None],
         bajada_del_banco,
         juez_del_banco,
+        PERIODO_BANCO_US,
     );
-    EJECUTOR_J2
-        .spawner()
-        .spawn(defmt::unwrap!(j2_esclavo::tarea_esclavo(esclavo)));
 
     // Una fila con `horas=0` nada mas arrancar. No es una medida -- todo esta a
     // cero y el ejecutor lleva microsegundos corriendo -- y por eso lleva su
@@ -171,12 +192,22 @@ async fn main(_spawner: Spawner) {
     // filas durante 24 h, en vez de descubrir a la hora que una columna baila.
     publicar(0, f_sck_hz);
 
-    let mut ticker = Ticker::every(Duration::from_secs(3600));
-    let mut horas = 0u32;
+    // Un minuto de tic, una linea de carga por tic y la fila de la hora cada 60.
+    // La carga es la CPU libre para el hilo (`carga`): un instrumento sano la
+    // deja casi entera; la Nucleo a 64 MHz sin caches no (#428).
+    let mut ticker = Ticker::every(Duration::from_secs(60));
+    let mut minutos = 0u32;
     loop {
         ticker.next().await;
-        horas += 1;
-        publicar(horas, f_sck_hz);
+        minutos += 1;
+        info!(
+            "carga,minuto={},hilo_libre_permil={}",
+            minutos,
+            medidor.libre_por_mil()
+        );
+        if minutos % 60 == 0 {
+            publicar(minutos / 60, f_sck_hz);
+        }
     }
 }
 
@@ -219,8 +250,9 @@ fn publicar(horas: u32, f_sck_hz: u32) {
     // `escaladas_del_maestro`. Las del esclavo ya salen arriba, en
     // `rearmes_escalados`.
     info!(
-        "maestro,escaladas_gpdma={},inestable={},muda={}",
+        "maestro,escaladas_gpdma={},atrasos={},inestable={},muda={}",
         escaladas_del_maestro(),
+        c.atrasos,
         c.inestable,
         c.muda,
     );

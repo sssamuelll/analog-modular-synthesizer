@@ -196,6 +196,74 @@ pub fn ciclos_por_cuarto_tsck(f_cpu_hz: u32, f_sck_hz: u32) -> u32 {
     ((f_cpu_hz as u64).div_ceil(cuarto) as u32).max(1)
 }
 
+/// El calendario de los giros de una ranura (spec D5.1, enmienda del 2026-10-16).
+///
+/// Dice cuando toca el proximo giro. Con el giro a tiempo sigue la rejilla de
+/// `periodo_us` exacta. Con un giro que se pasa del periodo **no recupera los
+/// tics perdidos**: deja un periodo entero de hueco y cuenta un atraso.
+///
+/// Por que existe: el `Ticker` de embassy si los recupera (`embassy-time`,
+/// `timer.rs:470-480`: `next` suma `duration` a `expires_at` y devuelve `Ready`
+/// mientras siga atrasado). Con un giro mas largo que el periodo eso encadena
+/// giros sin parar, el ejecutor del J2 no se queda nunca sin trabajo y el hilo
+/// no corre jamas. Medido el 2026-10-15 en la NUCLEO-N657X0-Q, con giros de unos
+/// 335 us contra 125: la CPU al 100 % dentro de excepciones, `main` sin
+/// ejecutarse y el esclavo sin lanzar (#428). El hueco es ademas lo que el
+/// esclavo necesita para rearmar (cabecera D8, `T_GAP`).
+///
+/// No degrada por salud (D7.1: la salud es una marca que sube, no una cadencia
+/// que baja): degrada por **carga**, y lo dice con un contador. Un atraso es un
+/// fallo del presupuesto de CPU, no del modulo.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Calendario {
+    periodo_us: u64,
+    proximo_us: u64,
+    atrasos: u32,
+}
+
+impl Calendario {
+    /// El primer giro toca un periodo despues de `ahora_us`, como el `Ticker`.
+    pub const fn nuevo(periodo_us: u32, ahora_us: u64) -> Calendario {
+        Calendario {
+            periodo_us: periodo_us as u64,
+            proximo_us: ahora_us + periodo_us as u64,
+            atrasos: 0,
+        }
+    }
+
+    /// Cuando toca el proximo giro, en microsegundos del reloj de la tarea.
+    pub const fn proximo_us(&self) -> u64 {
+        self.proximo_us
+    }
+
+    /// Giros que acabaron cuando ya tocaba el siguiente. Se satura: dar la
+    /// vuelta a cero borraria la evidencia de una sobrecarga.
+    pub const fn atrasos(&self) -> u32 {
+        self.atrasos
+    }
+
+    /// Se llama al terminar un giro **y todo lo que la tarea hace con el**,
+    /// justo antes de esperar: lo que cuenta es cuando queda libre la CPU. Si
+    /// el siguiente hueco de la rejilla ya paso (o es ahora mismo) el giro no
+    /// dejo respiro: cuenta un atraso y el proximo toca un periodo despues de
+    /// `ahora_us`. Despues de la llamada `proximo_us > ahora_us` siempre, y
+    /// nunca por mas de un periodo.
+    pub fn giro_terminado(&mut self, ahora_us: u64) {
+        self.proximo_us += self.periodo_us;
+        if self.proximo_us <= ahora_us {
+            self.atrasos = self.atrasos.saturating_add(1);
+            self.proximo_us = ahora_us + self.periodo_us;
+        }
+    }
+
+    /// Tras un plazo vencido (D4): un periodo de hueco desde `ahora_us`, para
+    /// el rearme del esclavo, y sin contar atraso, que ya esta contado como
+    /// plazo vencido. Es el `Ticker::reset` de la enmienda del 2026-09-18.
+    pub fn reanclar(&mut self, ahora_us: u64) {
+        self.proximo_us = ahora_us + self.periodo_us;
+    }
+}
+
 /// Los dos estados de una ranura (spec D7.4).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Estado {
@@ -527,6 +595,122 @@ mod tests {
         let mut r = Ranura::nueva(Umbrales::POR_DEFECTO);
         r.paso(Evento::Identidad(true), 0);
         r
+    }
+
+    // --- el calendario: un giro que se pasa del periodo no encadena al siguiente
+
+    #[test]
+    fn a_tiempo_el_calendario_sigue_la_rejilla_sin_importar_cuanto_dure_el_giro() {
+        // Primer giro a las 125; cada uno termina antes de su siguiente hueco.
+        // (duracion del giro, fin del giro, proximo esperado) -- a mano.
+        let tabla: [(u64, u64); 4] = [(40, 250), (124, 375), (1, 500), (0, 625)];
+        let mut c = Calendario::nuevo(125, 0);
+        assert_eq!(c.proximo_us(), 125);
+        let mut inicio = 125u64;
+        for (duracion, proximo) in tabla {
+            c.giro_terminado(inicio + duracion);
+            assert_eq!(c.proximo_us(), proximo, "giro de {duracion} us");
+            inicio = proximo;
+        }
+        assert_eq!(c.atrasos(), 0);
+    }
+
+    #[test]
+    fn un_giro_mas_largo_que_el_periodo_deja_un_periodo_entero_de_hueco() {
+        // El caso de la placa del 15-10: giros de 335 us con periodo de 125.
+        // Empieza a las 1000, termina a las 1335. Con el comportamiento del
+        // Ticker el proximo seria 1125, que ya paso: giros pegados, CPU al 100 %.
+        let mut c = Calendario::nuevo(125, 875);
+        assert_eq!(c.proximo_us(), 1000);
+        c.giro_terminado(1335);
+        assert_eq!(c.proximo_us(), 1460);
+        assert_eq!(c.atrasos(), 1);
+    }
+
+    #[test]
+    fn saturado_el_hueco_entre_giros_se_mantiene_en_un_periodo() {
+        // 100 giros de 335 us. Cada ciclo son 335 de giro y 125 de hueco: 460.
+        // El primero arranca a las 125, asi que el proximo tras el giro 100 es
+        // 125 + 100 x 460 = 46125.
+        let mut c = Calendario::nuevo(125, 0);
+        let mut inicio = c.proximo_us();
+        for _ in 0..100 {
+            let fin = inicio + 335;
+            c.giro_terminado(fin);
+            assert_eq!(
+                c.proximo_us() - fin,
+                125,
+                "hueco tras el giro que acaba en {fin}"
+            );
+            inicio = c.proximo_us();
+        }
+        assert_eq!(c.proximo_us(), 46_125);
+        assert_eq!(c.atrasos(), 100);
+    }
+
+    #[test]
+    fn el_atraso_empieza_justo_en_el_siguiente_hueco() {
+        // Termina a 1 us del siguiente hueco: a tiempo. En el hueco: tarde,
+        // porque un giro que acaba cuando ya toca otro no deja ningun respiro.
+        let mut a_tiempo = Calendario::nuevo(125, 875);
+        a_tiempo.giro_terminado(1124);
+        assert_eq!((a_tiempo.proximo_us(), a_tiempo.atrasos()), (1125, 0));
+
+        let mut justo = Calendario::nuevo(125, 875);
+        justo.giro_terminado(1125);
+        assert_eq!((justo.proximo_us(), justo.atrasos()), (1250, 1));
+    }
+
+    #[test]
+    fn para_cualquier_duracion_el_proximo_giro_queda_en_el_futuro_a_lo_sumo_un_periodo() {
+        // Se barre la duracion entera, de 0 a tres periodos: dos valores a mano
+        // coincidirian con y sin la politica. Lo que se afirma no sale del codigo.
+        for duracion in 0..=375u64 {
+            let mut c = Calendario::nuevo(125, 0);
+            let ahora = c.proximo_us() + duracion;
+            c.giro_terminado(ahora);
+            assert!(
+                c.proximo_us() > ahora,
+                "duracion {duracion}: el proximo ya paso"
+            );
+            assert!(
+                c.proximo_us() - ahora <= 125,
+                "duracion {duracion}: espera de mas"
+            );
+            let tarde = duracion >= 125;
+            assert_eq!(c.atrasos(), tarde as u32, "duracion {duracion}");
+            if !tarde {
+                assert_eq!(
+                    c.proximo_us(),
+                    250,
+                    "duracion {duracion}: se salio de la rejilla"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn tras_un_plazo_vencido_se_reancla_a_un_periodo_y_no_cuenta_atraso() {
+        // D4/D5.1: el giro vencio su plazo y acabo a las 1300. Hueco de un
+        // periodo para el rearme del esclavo, y el atraso no se cuenta: ya
+        // esta contado como plazo vencido.
+        let mut c = Calendario::nuevo(125, 875);
+        c.reanclar(1300);
+        assert_eq!(c.proximo_us(), 1425);
+        assert_eq!(c.atrasos(), 0);
+    }
+
+    #[test]
+    fn el_contador_de_atrasos_se_satura_y_no_da_la_vuelta() {
+        // Dar la vuelta a cero borraria la evidencia de una sobrecarga. Se
+        // empieza a uno del maximo: el primer atraso tiene que llegar al
+        // maximo y el segundo quedarse ahi.
+        let mut c = Calendario::nuevo(125, 0);
+        c.atrasos = u32::MAX - 1;
+        c.giro_terminado(10_000);
+        assert_eq!(c.atrasos(), u32::MAX);
+        c.giro_terminado(20_000);
+        assert_eq!(c.atrasos(), u32::MAX);
     }
 
     // --- 10: los tipos rechazan lo que no sirve -------------------------

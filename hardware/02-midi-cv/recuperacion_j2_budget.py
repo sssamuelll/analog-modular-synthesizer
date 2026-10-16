@@ -202,6 +202,11 @@ def demo() -> int:
     huecos.append(
         "los ESTIMADO sin sustituir: FACTOR_PLAZO, T_SUELO_PLAZO, T_REINICIO "
         "y la propia ventana de ~50 ms del modulo ('N del plan')")
+    huecos.append(
+        "la CPU de un giro NORMAL no esta presupuestada (D7.2 solo acota la de "
+        "los reinicios): medido el 16-10 en la Nucleo, ~18700 ciclos por giro "
+        "en el ejecutor sin caches, ~13400 con I-cache; seis ranuras a 8 kHz "
+        "serian casi un nucleo a 800 MHz (riesgo 9, #428)")
 
     print("\nHUECOS (Principio V)\n")
     for h in huecos:

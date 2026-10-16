@@ -84,6 +84,8 @@ use sam17_nucleo_core::maestro_j2::{
     ciclos_por_cuarto_tsck, mbr_y_f_sck, Banderas, Tsize, Turno, RANURAS_SPI,
 };
 
+use crate::perfil::{self, Fase};
+
 /// Las ranuras del J2 por SPI. El numero no se copia: es el de la politica.
 pub const RANURAS: usize = RANURAS_SPI;
 
@@ -552,6 +554,7 @@ impl<'d> Ranura<'d> {
         tsize: Tsize,
         plazo: Duration,
     ) -> (Resultado, u32) {
+        let inicio_armado = perfil::marca();
         let n = tsize.get() as usize;
         defmt::assert!(
             n <= bajada.len() && n <= subida.len() && n <= LARGO_MAX,
@@ -627,7 +630,12 @@ impl<'d> Ranura<'d> {
             join(&mut *tx, &mut *rx).await;
             EsperaEot { estado }.await
         };
-        match with_timeout(plazo, esperas).await {
+        perfil::cierra(Fase::Armado, inicio_armado);
+        let inicio_espera = perfil::marca();
+        let espera = with_timeout(plazo, esperas).await;
+        perfil::cierra(Fase::Espera, inicio_espera);
+        let inicio_cierre = perfil::marca();
+        let resultado = match espera {
             Ok(_banderas) => {
                 // Los dos futuros del DMA resolvieron, y solo resuelven con
                 // `is_running() == false` (gpdma/mod.rs:1298-1313): el `Drop`
@@ -658,7 +666,9 @@ impl<'d> Ranura<'d> {
                 );
                 (Resultado::PlazoVencido, tardios)
             }
-        }
+        };
+        perfil::cierra(Fase::Cierre, inicio_cierre);
+        resultado
     }
 
     /// D4: la ISR en silencio, el DMA soltado con cota y el periferico
@@ -866,6 +876,7 @@ pub struct Isr<const R: usize>;
 
 impl<const R: usize, I: Interrupt> Handler<I> for Isr<R> {
     unsafe fn on_interrupt() {
+        let inicio = perfil::marca();
         // D2: la ISR hace lo minimo. Lee `SR`, copia las banderas que
         // importan, limpia por `IFCR`, deshabilita `EOTIE` y despierta.
         let regs = SPI_DE_RANURA[R];
@@ -902,5 +913,6 @@ impl<const R: usize, I: Interrupt> Handler<I> for Isr<R> {
         // nota de `Isr`: quien cierra la ventana es `EOTIE` mas el `unpend`.
         let _ = e.turno.registrar(e.turno.generacion(), b);
         e.waker.wake();
+        perfil::cierra_isr(Fase::IsrSpi, inicio);
     }
 }

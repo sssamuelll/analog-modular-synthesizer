@@ -451,17 +451,29 @@ completa, en la spec del maestro (§9, enmienda del 11-09, punto 3).
 cargo run --release --bin resistencia_j2
 ```
 
-El montaje entero y tal como lo usará el instrumento: ranura 0 en SPI5 dentro
-del `EJECUTOR_J2` con la política de `core` detrás, esclavo del banco en SPI4
-como tarea del mismo ejecutor, retardo de producción (4 cuartos). Cada hora,
-cuatro líneas:
+El montaje entero y tal como lo usará el instrumento, salvo el periodo: ranura 0
+en SPI5 dentro del `EJECUTOR_J2` con la política de `core` detrás, esclavo del
+banco en SPI4 como tarea del mismo ejecutor (lanzado **antes** que el maestro),
+retardo de producción (4 cuartos). **Corre a 1 kHz, no a los 8 del
+instrumento:** a 125 µs la CPU de la Nucleo (64 MHz, sin cachés) no da para el
+maestro y el esclavo juntos, el hilo se queda sin CPU y el binario no puede
+publicar ni una fila (#428, spec D5.1, enmienda del 16-10). A 1 ms el hilo
+conserva más de la mitad de la CPU y `atrasos` casi no sube (uno en 316 000
+giros el 16-10). **La fila vale para 1 kHz.** Cada hora, cuatro líneas, y una de carga cada minuto:
 
 ```
 firmware=<rev>
 0,SPI5,25,hw,<reloj_MHz>,<horas>,<giros>,<plazos_vencidos>,<eot_tardios>,<subidas_malas>,,NUCLEO-N657X0-Q
 esclavo,tramas_ok=,tramas_cortas=,rearmes_escalados=
-maestro,escaladas_gpdma=,inestable=,muda=
+maestro,escaladas_gpdma=,atrasos=,inestable=,muda=
+carga,minuto=<n>,hilo_libre_permil=<0..1000>
 ```
+
+`atrasos` son los giros que acabaron cuando ya tocaba el siguiente: en un
+instrumento sano, cero. `hilo_libre_permil` es la CPU que le queda al hilo,
+medida por el propio hilo (`carga`): a 1 kHz sale en torno a 540 (el 54 %), y
+una caída sostenida es una sobrecarga que ningún otro contador diría. Si las
+líneas de carga dejan de salir, el hilo se quedó sin CPU.
 
 **Y una tanda entera con `horas=0` nada más arrancar**, antes de la primera hora.
 No es una medida —todo está a cero— y por eso lleva su hora puesta: sirve para
@@ -529,6 +541,39 @@ LD3 PB15; botón B1 PC13; ST-LINK PB14/PB15 y PC3/PC4 (§7.5, §7.6 y Tabla 16)�
 compara contra un `esperado` fijo de 25 bytes, así que los siete largos que no
 son 25 —`HOLA` con 9, `SET` con 103— le contarían tramas cortas por construcción
 y taparían las de verdad. Aquí se mide el maestro.
+
+### `carga_j2` — cuánta CPU gasta un giro (herramienta, fuera del orden del día)
+
+```bash
+cargo run --release --features perfil --bin carga_j2
+```
+
+Gira **el maestro solo** al periodo del instrumento, 125 µs, sin el esclavo del
+banco (en el mismo núcleo le comería la CPU y falsearía la cuenta), una pasada
+sin caché y otra con la I-cache encendida (la D-cache sigue apagada, R-MJ7).
+Cada pasada imprime dos líneas:
+
+```
+carga_j2,cache=<no|icache>,ciclo_us=,giros_en_5s=,hilo_libre_permil=,atrasos=,plazos_vencidos=
+carga_j2,cache=<no|icache>,previo=,armado=,espera=,cierre=,posterior=,isr_spi=,ejecutor=
+```
+
+La segunda son **ciclos de CPU por giro**, y pide `--features perfil`; sin ella
+salen en cero y lo dice. `ejecutor` es todo el manejador del ejecutor del J2
+sin la ISR del SPI; `previo`, `armado`, `cierre` y `posterior` son el código de
+la tarea, y la diferencia con `ejecutor` es la maquinaria de futuros y el
+despacho. `espera` es tiempo de reloj, no CPU. El mismo binario repite a menos del
+0,1 %; entre dos compilaciones distintas del código varía hasta un 10 %.
+
+**Medido el 2026-10-16** (firmware `b9f6d7d`, 64 MHz; repetido, sale igual a menos del 0,1 %):
+
+| | `ciclo_us` | `hilo_libre_permil` | `ejecutor` | código de la tarea | el resto |
+|---|---|---|---|---|---|
+| sin caché | 420 | 198 | 18 738 | 8 138 | 10 600 |
+| I-cache | 343 | 328 | 13 366 | 5 265 | 8 101 |
+
+Es el número que el papel pide como criterio de aceptación de la CPU (riesgo 9
+de la spec del maestro): hoy no hay reparto firmado contra el que compararlo.
 
 ### Antes de dar por bueno cualquiera de los cuatro: que el ejecutor exista
 
