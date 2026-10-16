@@ -13,8 +13,11 @@
 //! [`PERIODO_GIRO_US`] (125 us), que en esta placa no cabe: cada giro llega
 //! tarde, el calendario deja un periodo de hueco (`core::maestro_j2::Calendario`)
 //! y lo que se mide es el coste del giro y lo que sobra para el hilo. Dos
-//! pasadas: sin cache y con la I-cache encendida. La D-cache sigue apagada
-//! (R-MJ7).
+//! pasadas: sin cache y con la I-cache encendida; con `--features reloj-hub` (el
+//! nucleo a 800 MHz) hay una tercera con tambien la D-cache, **sin la region MPU
+//! de los buferes del DMA** (R-MJ7): es de exploracion, los datos de los buferes
+//! salen incoherentes y esa fila no sirve para la puerta. Se marca
+//! `icache+dcache-sin-mpu`.
 //!
 //! Por cada pasada, dos lineas:
 //!
@@ -33,7 +36,12 @@
 //!
 //! ```bash
 //! cargo run --release --features perfil --bin carga_j2
+//! cargo run --release --features perfil,reloj-hub --bin carga_j2   # a 800 MHz
 //! ```
+//!
+//! La cabecera trae el reloj pedido (`f_cpu`) y el medido (`f_cpu_medido`, los
+//! ciclos del `DWT` en 100 ms de `embassy_time`): si no coinciden, la cuenta de
+//! ciclos por giro sale con un reloj que no es el que se cree.
 
 use defmt::info;
 use embassy_executor::Spawner;
@@ -55,6 +63,9 @@ const MUESTRA_S: u64 = 5;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
+    #[cfg(feature = "reloj-hub")]
+    let config = usb::configuracion_hub();
+    #[cfg(not(feature = "reloj-hub"))]
     let config = usb::configuracion();
     let f_cpu = usb::f_cpu_hz(&config);
     let p = usb::iniciar(config);
@@ -74,13 +85,15 @@ async fn main(spawner: Spawner) {
     );
 
     perfil::iniciar();
+    let f_cpu_medido = perfil::f_cpu_medido_hz().await;
     spawner.spawn(defmt::unwrap!(vueltas_del_hilo()));
     // La base, con el J2 sin arrancar: la CPU entera.
     let mut medidor = Medidor::calibrar(500).await;
     info!(
-        "carga_j2: firmware {}, f_cpu {} Hz, periodo {} us, base {} vueltas/s",
+        "carga_j2: firmware {}, f_cpu {} Hz, f_cpu_medido {} Hz, periodo {} us, base {} vueltas/s",
         env!("SAM17_GIT"),
         f_cpu,
+        f_cpu_medido,
         PERIODO_GIRO_US,
         medidor.base_por_s()
     );
@@ -95,12 +108,23 @@ async fn main(spawner: Spawner) {
 
     let mut promedios = Promedios::nuevo();
     let mut giros_antes = 0u32;
-    for icache in [false, true] {
-        if icache {
-            // SAFETY: nadie mas toca el SCB; la D-cache sigue apagada (R-MJ7).
-            unsafe { cortex_m::Peripherals::steal().SCB.enable_icache() };
+    let pasadas: &[&str] = if cfg!(feature = "reloj-hub") {
+        &["no", "icache", "icache+dcache-sin-mpu"]
+    } else {
+        &["no", "icache"]
+    };
+    for &cache in pasadas {
+        // SAFETY: nadie mas toca el SCB. La D-cache solo se enciende en la pasada
+        // de exploracion, con el J2 ya girando y sin la region MPU (R-MJ7): `nueva`
+        // asevero que estaba apagada al construir la ranura.
+        unsafe {
+            let mut p = cortex_m::Peripherals::steal();
+            match cache {
+                "icache" => p.SCB.enable_icache(),
+                "icache+dcache-sin-mpu" => p.SCB.enable_dcache(&mut p.CPUID),
+                _ => {}
+            }
         }
-        let cache = if icache { "icache" } else { "no" };
         // La primera muestra de cada pasada absorbe el arranque o el cambio de
         // cache; la segunda es la que vale.
         for muestra in 0..2 {

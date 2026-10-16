@@ -68,6 +68,9 @@ eco = []
 perfil = []
 # El perfilador por muestreo del PC (`muestreo.rs`, `perfil_pc.py`). Solo para el banco.
 muestreo = []
+# El nucleo a 800 MHz, el reloj de diseno del hub (`usb::configuracion_hub`), en los
+# binarios de medida de carga. Sin la feature corren a 64 MHz, como siempre.
+reloj-hub = []
 
 # `perfil_pc` necesita el modulo que solo existe con la feature: sin ella no se compila.
 [[bin]]

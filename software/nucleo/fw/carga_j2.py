@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Corre `carga_j2` en la placa y saca la fila de `carga_j2.csv`, ya calculada.
 
-    python carga_j2.py            # compila, corre las dos pasadas y muestra la fila
+    python carga_j2.py            # compila, corre las pasadas y muestra la fila
+    python carga_j2.py --hub      # lo mismo con el nucleo a 800 MHz (feature reloj-hub)
     python carga_j2.py --anota    # ademas la anade a carga_j2.csv
     python carga_j2.py --autotest # el parseo y la cuenta, sin placa
 
@@ -12,8 +13,14 @@ hilo, durante un ciclo. `ejecutor` y los tramos son el desglose, no el total.
 
     ciclos_por_giro = (1000 - hilo_libre_permil) / 1000 * ciclo_us * f_cpu / 1e6
 
-`--anota` se niega si el firmware sale `-sucio`: una fila con la revision de un
-commit que no es el codigo que corrio no se puede repetir.
+`--anota` se niega si el firmware sale `-sucio` (una fila con la revision de un
+commit que no es el codigo que corrio no se puede repetir) y se niega con las
+pasadas `-sin-mpu`, que son de exploracion: la D-cache sin la region MPU de los
+buferes del DMA incumple R-MJ7 y esa fila no sirve para la puerta.
+
+La cuenta usa el reloj que **pidio** la configuracion (`f_cpu`); se niega si el
+que **midio** el firmware (`f_cpu_medido`) se aparta mas de un 2 %: seria la
+cuenta de un reloj que no es el que corre.
 """
 from __future__ import annotations
 
@@ -30,12 +37,13 @@ PLACA = "NUCLEO-N657X0-Q"
 # aqui solo se usa para decir cuantas veces lo pasa, no para decidir nada.
 LIMITE_INFORMATIVO = 2500
 
-CABECERA = re.compile(r"carga_j2: firmware (\S+), f_cpu (\d+) Hz")
+CABECERA = re.compile(r"carga_j2: firmware (\S+), f_cpu (\d+) Hz(?:, f_cpu_medido (\d+) Hz)?")
+TOLERANCIA_RELOJ = 0.02
 PASADA = re.compile(
-    r"carga_j2,cache=(\w+),ciclo_us=(\d+),giros_en_5s=(\d+),hilo_libre_permil=(\d+),"
+    r"carga_j2,cache=([\w+-]+),ciclo_us=(\d+),giros_en_5s=(\d+),hilo_libre_permil=(\d+),"
     r"atrasos=(\d+),plazos_vencidos=(\d+)")
 TRAMOS = re.compile(
-    r"carga_j2,cache=(\w+),previo=(\d+),armado=(\d+),espera=(\d+),cierre=(\d+),"
+    r"carga_j2,cache=([\w+-]+),previo=(\d+),armado=(\d+),espera=(\d+),cierre=(\d+),"
     r"posterior=(\d+),isr_spi=(\d+),ejecutor=(\d+)")
 
 
@@ -50,6 +58,10 @@ def parsea(texto: str) -> dict:
     if not cab:
         raise SystemExit("no hay linea `carga_j2: firmware ...`: la placa no corrio el binario")
     firmware, f_cpu = cab.group(1), int(cab.group(2))
+    medido = int(cab.group(3)) if cab.group(3) else 0
+    if medido and abs(medido - f_cpu) > TOLERANCIA_RELOJ * f_cpu:
+        raise SystemExit(f"el reloj pedido es {f_cpu} Hz y el medido {medido} Hz: "
+                         "la cuenta de ciclos saldria con un reloj que no corre")
     pasadas = {}
     for m in PASADA.finditer(texto):
         cache, ciclo_us, giros, libre, atrasos, plazos = m.group(1), *map(int, m.groups()[1:])
@@ -66,7 +78,7 @@ def parsea(texto: str) -> dict:
         if p["plazos"]:
             raise SystemExit(f"cache={cache}: {p['plazos']} plazos vencidos; la medida no vale")
         p["ciclos_por_giro"] = ciclos_del_j2(p["libre"], p["ciclo_us"], f_cpu)
-    return {"firmware": firmware, "f_cpu": f_cpu, "pasadas": pasadas}
+    return {"firmware": firmware, "f_cpu": f_cpu, "medido": medido, "pasadas": pasadas}
 
 
 def filas(medida: dict, fecha: str) -> list[str]:
@@ -76,7 +88,8 @@ def filas(medida: dict, fecha: str) -> list[str]:
 
 
 def muestra(medida: dict) -> None:
-    print(f"\nfirmware {medida['firmware']}, {medida['f_cpu']/1e6:.0f} MHz\n")
+    print(f"\nfirmware {medida['firmware']}, {medida['f_cpu']/1e6:.0f} MHz "
+          f"(medido {medida['medido']/1e6:.1f} MHz)\n")
     print(f"  {'cache':8} {'ciclo_us':>8} {'libre':>7} {'J2 ciclos/giro':>15} "
           f"{'x limite':>9}   desglose del ejecutor")
     for cache, p in medida["pasadas"].items():
@@ -94,6 +107,8 @@ def muestra(medida: dict) -> None:
 def anota(lineas: list[str], firmware: str) -> None:
     if "sucio" in firmware or firmware == "sin-git":
         raise SystemExit(f"firmware `{firmware}`: commitea antes de anotar la fila")
+    if any("sin-mpu" in ln for ln in lineas):
+        raise SystemExit("hay una pasada `-sin-mpu`: es de exploracion y no se anota")
     with open(CSV, "a", encoding="utf-8", newline="") as f:
         for ln in lineas:
             f.write(ln + "\n")
@@ -130,14 +145,35 @@ def autotest() -> None:
         pass
     else:
         raise AssertionError("anoto un firmware sucio")
+    # El reloj de diseno: la cabecera trae el medido y las pasadas el D-cache sin MPU.
+    hub = (
+        "carga_j2: firmware abc1234, f_cpu 800000000 Hz, f_cpu_medido 799800000 Hz, periodo 125 us (x)\n"
+        "carga_j2,cache=icache+dcache-sin-mpu,ciclo_us=200,giros_en_5s=25000,hilo_libre_permil=500,atrasos=0,plazos_vencidos=0 (x)\n"
+    )
+    mh = parsea(hub)
+    p = mh["pasadas"]["icache+dcache-sin-mpu"]
+    assert p["ciclos_por_giro"] == round(500 * 200 * 800_000_000 / 1e9) == 80000, p
+    try:
+        anota(filas(mh, "2026-10-17"), mh["firmware"])
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError("anoto una pasada sin MPU")
+    try:
+        parsea(hub.replace("f_cpu_medido 799800000", "f_cpu_medido 640000000"))
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError("acepto un reloj medido que no es el pedido")
     print("autotest ok")
 
 
 def main() -> None:
     if "--autotest" in sys.argv:
         return autotest()
+    features = "perfil,reloj-hub" if "--hub" in sys.argv else "perfil"
     run = subprocess.run(
-        ["cargo", "run", "--release", "--features", "perfil", "--bin", "carga_j2"],
+        ["cargo", "run", "--release", "--features", features, "--bin", "carga_j2"],
         cwd=AQUI, capture_output=True, text=True, timeout=600)
     medida = parsea(run.stdout + run.stderr)
     muestra(medida)

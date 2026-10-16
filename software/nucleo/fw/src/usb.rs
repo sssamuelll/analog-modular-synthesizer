@@ -15,7 +15,10 @@ use defmt::{info, warn};
 use embassy_futures::select::{select, Either};
 use embassy_stm32::peripherals::USB1_OTG_HS;
 use embassy_stm32::rcc::mux::{Otgphysel, Rtcsel};
-use embassy_stm32::rcc::{CpuClk, Hse, HseMode, SupplyConfig, HSI_FREQ};
+use embassy_stm32::rcc::{
+    CpuClk, Hse, HseMode, IcConfig, Icint, Icsel, Pll, Plldivm, Pllpdiv, Pllsel, SupplyConfig,
+    SysClk, HSI_FREQ,
+};
 use embassy_stm32::time::Hertz;
 use embassy_stm32::usb::{Driver, InterruptHandler};
 use embassy_stm32::Peri;
@@ -98,6 +101,47 @@ pub fn configuracion() -> embassy_stm32::Config {
     config
 }
 
+/// La misma configuracion con el reloj de diseno del hub: **el nucleo a 800 MHz**,
+/// el punto del papel de alimentacion (*«VOS high a 800 MHz»*).
+///
+/// El PLL1 sale del HSE de 48 MHz (el cristal, como en la placa del hub y como
+/// el PHY del USB): `48 / 3 x 50 = 800 MHz`, sin divisores de salida. `IC1` es
+/// el nucleo y `IC2` el reloj de sistema, a 200 MHz; `IC6` e `IC11` los pide el
+/// ejemplo de embassy para el N6 (`examples/stm32n6/src/bin/eth_speedtest.rs`,
+/// `rcc_config`) con el mismo divisor, y se copian sin entenderlos del todo.
+/// Los divisores de bus son los de embassy (AHB /2, APB /1): hclk y pclk a
+/// 100 MHz, asi que el kernel de los SPI sale de ahi y el `MBR` cae en /16
+/// (6,25 MHz): no es el `f_sck` del hub, que no esta decidido (#380).
+///
+/// **Es solo para el banco de carga.** No cambia la tension: `VoltageScale::Scale0`
+/// ya es el defecto de embassy y el que usa `configuracion`, con el SMPS
+/// externo de la Nucleo.
+pub fn configuracion_hub() -> embassy_stm32::Config {
+    let mut config = configuracion();
+    config.rcc.pll1 = Some(Pll::Oscillator {
+        source: Pllsel::Hse,
+        divm: Plldivm::Div3,
+        fractional: 0,
+        divn: 50,
+        divp1: Pllpdiv::Div1,
+        divp2: Pllpdiv::Div1,
+    });
+    config.rcc.ic1 = Some(IcConfig {
+        source: Icsel::Pll1,
+        divider: Icint::Div1,
+    });
+    let sys_ic = IcConfig {
+        source: Icsel::Pll1,
+        divider: Icint::Div4,
+    };
+    config.rcc.ic2 = Some(sys_ic);
+    config.rcc.ic6 = Some(sys_ic);
+    config.rcc.ic11 = Some(sys_ic);
+    config.rcc.cpu = CpuClk::Ic1;
+    config.rcc.sys = SysClk::Ic2;
+    config
+}
+
 /// La unica puerta a `embassy_stm32::init`: la usan `main` y los cuatro
 /// binarios del banco.
 ///
@@ -149,17 +193,57 @@ pub fn iniciar(config: embassy_stm32::Config) -> embassy_stm32::Peripherals {
 /// lo explica). Los 64 MHz: DS14791 Rev 10, p. 2, *"Internal oscillators:
 /// 64 MHz HSI"*.
 ///
-/// Cualquier otra fuente **cuelga a la vista**: preferimos un panico en el
-/// arranque a un retardo corto que nadie mide. El dia que el CPU corra por IC1
-/// hay que publicar `cpuclk` en `Clocks` (una linea en el `set_clocks!` de
-/// embassy) y esta funcion se retira.
+/// **Por `IC1`** (el reloj del hub, [`configuracion_hub`]) la cuenta sale del
+/// PLL1 y del divisor de `IC1`, y se niega a redondear: una division inexacta
+/// seria un reloj que no es el que se cree. Cualquier otra fuente **cuelga a
+/// la vista**: preferimos un panico en el arranque a un retardo corto que
+/// nadie mide. Cuando embassy publique `cpuclk` en `Clocks` (una linea en el
+/// `set_clocks!`, #376) esta funcion se retira.
 pub fn f_cpu_hz(config: &embassy_stm32::Config) -> u32 {
     match config.rcc.cpu {
         CpuClk::Hsi => HSI_FREQ.0,
+        CpuClk::Ic1 => f_ic1_hz(config),
         _ => defmt::panic!(
-            "f_cpu_hz: la CPU no corre por HSI; publica cpuclk (issue #376) antes de mover el reloj"
+            "f_cpu_hz: la CPU no corre por HSI ni IC1; publica cpuclk (issue #376) antes de mover el reloj"
         ),
     }
+}
+
+/// `IC1 = PLL1 / divider`, con `PLL1 = f_in / divm x divn / (divp1 x divp2)`.
+fn f_ic1_hz(config: &embassy_stm32::Config) -> u32 {
+    let Some(Pll::Oscillator {
+        source,
+        divm,
+        fractional,
+        divn,
+        divp1,
+        divp2,
+    }) = config.rcc.pll1
+    else {
+        defmt::panic!("f_cpu_hz: IC1 sin PLL1 en modo oscilador")
+    };
+    let Some(ic1) = config.rcc.ic1 else {
+        defmt::panic!("f_cpu_hz: CpuClk::Ic1 sin IC1 configurado")
+    };
+    defmt::assert!(ic1.source == Icsel::Pll1, "f_cpu_hz: IC1 no sale del PLL1");
+    defmt::assert!(fractional == 0, "f_cpu_hz: PLL1 fraccionario");
+    let f_in = match source {
+        Pllsel::Hsi => HSI_FREQ.0,
+        Pllsel::Hse => match config.rcc.hse {
+            Some(hse) => hse.freq.0,
+            None => defmt::panic!("f_cpu_hz: PLL1 desde HSE con el HSE apagado"),
+        },
+        _ => defmt::panic!("f_cpu_hz: fuente de PLL1 que no es HSI ni HSE"),
+    };
+    // Los enums del PAC son `repr(u8)` y su valor es el divisor (`Div4 = 4`); el de
+    // `Icint` va uno por debajo (`Div1 = 0`).
+    let (m, n, p) = (divm as u32, divn as u32, divp1 as u32 * divp2 as u32);
+    let ic = ic1.divider as u32 + 1;
+    defmt::assert!(
+        m != 0 && p != 0 && f_in % m == 0 && (f_in / m * n) % (p * ic) == 0,
+        "f_cpu_hz: la cuenta del PLL1 y de IC1 no sale exacta"
+    );
+    f_in / m * n / (p * ic)
 }
 
 /// El driver de USB del cerebro.

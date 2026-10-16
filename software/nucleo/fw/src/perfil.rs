@@ -73,6 +73,25 @@ pub fn iniciar() {
 #[cfg(not(feature = "perfil"))]
 pub fn iniciar() {}
 
+/// Los ciclos del nucleo por segundo, medidos con `DWT_CYCCNT` contra 100 ms de
+/// `embassy_time`. Es la comprobacion de que `usb::f_cpu_hz` -- que sale de la
+/// `Config` -- es el reloj que de verdad corre: la cuenta de ciclos por giro lo
+/// usa, y un PLL que no engancho o un divisor mal contado la falsearia en
+/// silencio. Hay que llamarla tras `iniciar`; sin la feature da cero.
+#[cfg(feature = "perfil")]
+pub async fn f_cpu_medido_hz() -> u32 {
+    let antes = cortex_m::peripheral::DWT::cycle_count();
+    embassy_time::Timer::after_millis(100).await;
+    cortex_m::peripheral::DWT::cycle_count()
+        .wrapping_sub(antes)
+        .wrapping_mul(10)
+}
+
+#[cfg(not(feature = "perfil"))]
+pub async fn f_cpu_medido_hz() -> u32 {
+    0
+}
+
 #[cfg(feature = "perfil")]
 #[inline(always)]
 pub fn marca() -> Marca {

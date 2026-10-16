@@ -44,6 +44,9 @@ const SEGUNDOS: u64 = 20;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
+    #[cfg(feature = "reloj-hub")]
+    let config = usb::configuracion_hub();
+    #[cfg(not(feature = "reloj-hub"))]
     let config = usb::configuracion();
     let f_cpu = usb::f_cpu_hz(&config);
     let p = usb::iniciar(config);
