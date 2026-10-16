@@ -98,6 +98,7 @@ use sam17_nucleo_core::maestro_j2::{
 };
 
 use crate::j2_spi::{Ranura, Resultado, LARGO_MAX};
+use crate::perfil::{self, Fase};
 
 /// El ejecutor de interrupcion del J2 (D5.3). Lo arranca [`arrancar`] y corre
 /// sobre el vector `GFXTIM`, a [`PRIORIDAD_EJECUTOR`].
@@ -113,7 +114,9 @@ const IRQ_EJECUTOR: interrupt::Interrupt = interrupt::GFXTIM;
 
 #[interrupt]
 unsafe fn GFXTIM() {
+    let inicio = perfil::marca();
     unsafe { EJECUTOR_J2.on_interrupt() }
+    perfil::cierra(Fase::Ejecutor, inicio);
 }
 
 /// Rellena la bajada de la ranura `n` y dice cuantos bytes se clocan.
@@ -337,6 +340,7 @@ async fn tarea_ranura(
 
     loop {
         Timer::at(Instant::from_micros(calendario.proximo_us())).await;
+        let inicio_previo = perfil::marca();
 
         // El planificador decide que baja; la tarea solo lo cloca (D5.2).
         let tsize = bajada_fn(n, &mut bajada);
@@ -347,7 +351,9 @@ async fn tarea_ranura(
 
         // D3: el plazo sale de la politica, con el `f_sck` real.
         let plazo = Duration::from_micros(plazo_us(tsize, f_sck_hz, &umbrales) as u64);
+        perfil::cierra(Fase::Previo, inicio_previo);
         let (res, tardios) = ranura.giro(&bajada, &mut subida, tsize, plazo).await;
+        let inicio_posterior = perfil::marca();
 
         // D2 regla 1: los `EOT` que el armado descarto por venir de una
         // generacion vieja. No hay nada que reiniciar por ellos.
@@ -407,6 +413,7 @@ async fn tarea_ranura(
         // evento y aqui pasa por lo menos uno por giro, asi que la ventana de
         // `inestable` (D7.3) desliza sola.
         publicar_cuentas(n, &politica, calendario.atrasos());
+        perfil::cierra(Fase::Posterior, inicio_posterior);
     }
 }
 

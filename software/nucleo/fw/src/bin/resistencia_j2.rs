@@ -57,6 +57,7 @@ use defmt::info;
 use embassy_executor::Spawner;
 use embassy_stm32::interrupt;
 use embassy_time::{Duration, Ticker};
+use sam17_nucleo_fw::carga::{vueltas_del_hilo, Medidor};
 use sam17_nucleo_fw::j2_banco::{
     bajada_del_banco, esclavo_del_banco, juez_del_banco, maestro_del_banco, LARGO_BANCO,
     RANURA_BANCO,
@@ -127,7 +128,7 @@ impl defmt::Format for Mhz {
 }
 
 #[embassy_executor::main]
-async fn main(_spawner: Spawner) {
+async fn main(spawner: Spawner) {
     let config = usb::configuracion();
     let f_cpu = usb::f_cpu_hz(&config);
     let p = usb::iniciar(config);
@@ -166,6 +167,12 @@ async fn main(_spawner: Spawner) {
 
     let esclavo = esclavo_del_banco(p.PE2, p.PE14, p.PE13, p.PE11, p.GPDMA1_CH2, p.GPDMA1_CH3);
 
+    // La CPU que le queda al hilo, medida por el hilo: la base se calibra ahora,
+    // con el J2 sin arrancar (`carga`).
+    spawner.spawn(defmt::unwrap!(vueltas_del_hilo()));
+    let mut medidor = Medidor::calibrar(500).await;
+    info!("carga: base {} vueltas/s", medidor.base_por_s());
+
     // El esclavo nace ANTES que el maestro: el maestro clocaria desde el primer
     // instante contra un esclavo que no existe y esos giros saldrian como
     // `subidas_malas` en la fila.
@@ -185,12 +192,22 @@ async fn main(_spawner: Spawner) {
     // filas durante 24 h, en vez de descubrir a la hora que una columna baila.
     publicar(0, f_sck_hz);
 
-    let mut ticker = Ticker::every(Duration::from_secs(3600));
-    let mut horas = 0u32;
+    // Un minuto de tic, una linea de carga por tic y la fila de la hora cada 60.
+    // La carga es la CPU libre para el hilo (`carga`): un instrumento sano la
+    // deja casi entera; la Nucleo a 64 MHz sin caches no (#428).
+    let mut ticker = Ticker::every(Duration::from_secs(60));
+    let mut minutos = 0u32;
     loop {
         ticker.next().await;
-        horas += 1;
-        publicar(horas, f_sck_hz);
+        minutos += 1;
+        info!(
+            "carga,minuto={},hilo_libre_permil={}",
+            minutos,
+            medidor.libre_por_mil()
+        );
+        if minutos % 60 == 0 {
+            publicar(minutos / 60, f_sck_hz);
+        }
     }
 }
 

@@ -201,6 +201,7 @@ use embassy_sync::waitqueue::AtomicWaker;
 
 use crate::j2_banco::PATRON_SUBIDA;
 use crate::j2_spi::{resetear_por_rcc, soltar_canales, CanalGpdma1, Soltado, LARGO_MAX};
+use crate::perfil::{self, Fase};
 
 /// La linea de EXTI del `CS`, que es el numero del pin: PE**11**.
 const LINEA_CS: usize = 11;
@@ -265,12 +266,14 @@ pub struct IsrCs;
 
 impl<I: Interrupt> Handler<I> for IsrCs {
     unsafe fn on_interrupt() {
+        let inicio = perfil::marca();
         // RM0486 Rev 4, sec.25.7.4, p. 1137: `RPIFx` es `rc_w1` --
         // *«This bit is cleared by writing a 1 into the bit»*. `write` deja en
         // cero todo lo demas, o sea que no toca el pendiente de otras lineas.
         pac::EXTI.rpr(0).write(|w| w.set_line(LINEA_CS, true));
         FLANCO_CS.store(true, Ordering::Release);
         WAKER_CS.wake();
+        perfil::cierra_isr(Fase::IsrCs, inicio);
     }
 }
 
