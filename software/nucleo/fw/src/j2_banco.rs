@@ -339,13 +339,24 @@ pub fn esclavo_del_banco(
     )
 }
 
-/// El largo clocado del patron del banco, en bytes.
+/// El largo clocado del patron del banco, en bytes. Con `largo-41`, `largo-71` o
+/// `largo-103` es el de `TONO`, `BAHIA` o el `SET` de dieciseis (los de `LARGOS_MENSAJES`),
+/// para medir lo que cuesta el transporte con mensajes mas largos; el esclavo y el patron
+/// cambian con el.
 ///
 /// 25 = `VENTANA_SUBIDA + 1`, el minimo que la Voz cloca para muestrear un
 /// registro entero (cabecera `2026-09-02-cabecera-j2-design.md`, D6.3: la
 /// ventana de la Voz son 24 bytes de registro, y el maestro cloca siempre un
 /// byte mas por la cola de la regla 4).
-pub const LARGO_BANCO: usize = 25;
+pub const LARGO_BANCO: usize = if cfg!(feature = "largo-103") {
+    103
+} else if cfg!(feature = "largo-71") {
+    71
+} else if cfg!(feature = "largo-41") {
+    41
+} else {
+    25
+};
 
 /// Lo que el esclavo del banco tiene que devolver, byte a byte: `0xA5 ^ i`.
 pub const PATRON_SUBIDA: [u8; LARGO_BANCO] = {
@@ -363,7 +374,7 @@ pub const PATRON_SUBIDA: [u8; LARGO_BANCO] = {
 // y fallan la puerta -- y cazan lo unico que el bucle de arriba puede hacer
 // mal: arrancar en el byte equivocado o quedarse corto.
 const _: () = assert!(PATRON_SUBIDA[0] == 0xA5);
-const _: () = assert!(PATRON_SUBIDA[LARGO_BANCO - 1] == 0xA5 ^ 24);
+const _: () = assert!(PATRON_SUBIDA[LARGO_BANCO - 1] == 0xA5 ^ (LARGO_BANCO as u8 - 1));
 
 const TSIZE_BANCO: Tsize = match Tsize::nuevo(LARGO_BANCO as u16) {
     Some(t) => t,

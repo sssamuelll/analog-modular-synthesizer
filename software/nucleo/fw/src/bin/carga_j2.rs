@@ -97,6 +97,26 @@ const BAJADA: sam17_nucleo_fw::j2_ejecutor::Bajada = if cfg!(feature = "sin-comp
     bajada_del_banco
 };
 
+/// Una tarea de hilo que recorre 64 KB -- el doble de la D-cache del M55 -- a razon de una
+/// lectura por linea de 32 bytes, y cede el turno. Con ella el hilo se parece a un hub que
+/// hace otras cosas: lo que el J2 necesita de la cache se lo desaloja cada pasada.
+#[cfg(feature = "contaminador")]
+#[embassy_executor::task]
+async fn contaminador() -> ! {
+    static mut AREA: [u32; 16_384] = [0; 16_384];
+    loop {
+        let mut suma = 0u32;
+        for i in (0..16_384).step_by(8) {
+            // SAFETY: nadie mas toca `AREA`, y `i` esta en rango.
+            suma = suma.wrapping_add(unsafe {
+                core::ptr::read_volatile((core::ptr::addr_of!(AREA) as *const u32).add(i))
+            });
+        }
+        core::hint::black_box(suma);
+        embassy_futures::yield_now().await;
+    }
+}
+
 const RANURAS_ACTIVAS: u32 = RANURAS_DE_MEDIDA;
 const PERIODO_US: u32 = PERIODO_DE_MEDIDA_US;
 
@@ -223,6 +243,8 @@ async fn main(spawner: Spawner) {
     perfil::iniciar();
     let f_cpu_medido = perfil::f_cpu_medido_hz().await;
     spawner.spawn(defmt::unwrap!(vueltas_del_hilo()));
+    #[cfg(feature = "contaminador")]
+    spawner.spawn(defmt::unwrap!(contaminador()));
     let pasadas: &[&'static str] = if cfg!(feature = "reloj-hub") {
         if cfg!(feature = "transporte-tic") {
             &["no", "icache", "icache+dcache-mpu"]
@@ -249,10 +271,11 @@ async fn main(spawner: Spawner) {
         if cfg!(feature = "transporte-isr") {
             "isr"
         } else if cfg!(feature = "transporte-tic") {
-            if cfg!(feature = "sin-componer") {
-                "tic-sin-componer"
-            } else {
-                "tic"
+            match (cfg!(feature = "sin-componer"), cfg!(feature = "contaminador")) {
+                (false, false) => "tic",
+                (true, false) => "tic-sin-componer",
+                (false, true) => "tic-contaminado",
+                (true, true) => "tic-sin-componer-contaminado",
             }
         } else {
             "ejecutor"

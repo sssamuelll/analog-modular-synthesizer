@@ -87,6 +87,14 @@ inyeccion = ["transporte-tic"]
 # La bajada que no compone nada (`j2_banco::bajada_quieta`) en `carga_j2`: el enlace solo, sin
 # el costo de componer la trama (ficha 1 del acta del 17-10).
 sin-componer = []
+# El mensaje del banco de 41, 71 o 103 bytes (`TONO`, `BAHIA`, `SET` de dieciseis) en vez de
+# los 25 de `NADA`: lo que cuesta el transporte segun el largo.
+largo-41 = []
+largo-71 = []
+largo-103 = []
+# Una tarea de hilo que recorre 64 KB entre vuelta y vuelta en `carga_j2`: cada tic y cada
+# pasada del planificador empiezan con la D-cache desalojada.
+contaminador = []
 # El periodo del banco a 1 kHz en `tic_banco`, en vez de los 8 kHz del instrumento.
 mil-hz = []
 # Una corrida de 20 s en `tic_banco`, en vez de 600.
