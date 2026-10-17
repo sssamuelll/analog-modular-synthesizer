@@ -46,6 +46,36 @@ const PERIODO_US: u32 = if cfg!(feature = "mil-hz") {
     PERIODO_GIRO_US
 };
 
+/// La interrupcion que acapara: `VENC` a P2, que ningun otro modulo atiende. Hace un
+/// bucle de espera de `CICLOS` ciclos cuando el hilo la hace pendiente.
+#[cfg(feature = "acapara")]
+mod acapara {
+    use core::sync::atomic::{AtomicU32, Ordering};
+
+    use cortex_m::peripheral::{DWT, NVIC};
+    use embassy_stm32::interrupt;
+    use embassy_stm32::interrupt::{InterruptExt, Priority};
+
+    pub static CICLOS: AtomicU32 = AtomicU32::new(0);
+
+    #[interrupt]
+    unsafe fn VENC() {
+        let t0 = DWT::cycle_count();
+        let n = CICLOS.load(Ordering::Relaxed);
+        while DWT::cycle_count().wrapping_sub(t0) < n {}
+    }
+
+    pub fn arranca() {
+        interrupt::VENC.set_priority(Priority::P2);
+        // SAFETY: el vector `VENC` es la ISR de arriba.
+        unsafe { interrupt::VENC.enable() };
+    }
+
+    pub fn golpe() {
+        NVIC::pend(interrupt::VENC);
+    }
+}
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let _ = spawner;
@@ -106,7 +136,50 @@ async fn main(spawner: Spawner) {
         cp.SCB.enable_dcache(&mut cp.CPUID);
     }
 
+    #[cfg(not(feature = "acapara"))]
     Timer::after_secs(DURACION_S).await;
+
+    // Cada fase: durante 3 s, un golpe de `us` microsegundos cada 10 ms. Lo que se pierde en
+    // cada una se lee como la diferencia entre las fotos de antes y despues.
+    #[cfg(feature = "acapara")]
+    let fases = {
+        acapara::arranca();
+        const US: [u32; 9] = [0, 50, 100, 150, 200, 300, 500, 1_000, 3_000];
+        let mut out = [(0u32, 0u32, 0u32, j2_tic::testigos(), 0u32); US.len()];
+        for (k, &us) in US.iter().enumerate() {
+            acapara::CICLOS.store(us * (f_cpu / 1_000_000), Ordering::Relaxed);
+            let antes = (
+                cuentas(RANURA_BANCO),
+                j2_tic::testigos(),
+                j2_esclavo::TRAMAS_OK.load(Ordering::Relaxed),
+            );
+            for _ in 0..300 {
+                if us != 0 {
+                    acapara::golpe();
+                }
+                Timer::after_millis(10).await;
+            }
+            let despues = (
+                cuentas(RANURA_BANCO),
+                j2_tic::testigos(),
+                j2_esclavo::TRAMAS_OK.load(Ordering::Relaxed),
+            );
+            out[k] = (
+                us,
+                despues.0.giros - antes.0.giros,
+                despues.2 - antes.2,
+                j2_tic::Testigos {
+                    sin_bajada: despues.1.sin_bajada - antes.1.sin_bajada,
+                    eventos_perdidos: despues.1.eventos_perdidos - antes.1.eventos_perdidos,
+                    subidas_perdidas: despues.1.subidas_perdidas - antes.1.subidas_perdidas,
+                    ranuras_muertas: despues.1.ranuras_muertas,
+                    ..despues.1
+                },
+                despues.0.plazos_vencidos - antes.0.plazos_vencidos,
+            );
+        }
+        out
+    };
 
     // Se lee todo seguido y se imprime despues.
     let c = cuentas(RANURA_BANCO);
@@ -129,6 +202,13 @@ async fn main(spawner: Spawner) {
         j2_esclavo::BAJADAS_MALAS.load(Ordering::Relaxed)
     );
     info!("tic_banco,tic,{}", t);
+    #[cfg(feature = "acapara")]
+    for (us, giros, tramas, t, plazos) in fases {
+        info!(
+            "tic_banco,acapara,golpe_us={},giros={},tramas_esclavo={},sin_bajada={},eventos_perdidos={},subidas_perdidas={},plazos={},muertas={},tics_tardios={}",
+            us, giros, tramas, t.sin_bajada, t.eventos_perdidos, t.subidas_perdidas, plazos, t.ranuras_muertas, t.tics_tardios
+        );
+    }
     info!("tic_banco: fin");
     // Un `bkpt` para que `probe-rs run` termine solo y suelte la sonda.
     cortex_m::asm::bkpt();
