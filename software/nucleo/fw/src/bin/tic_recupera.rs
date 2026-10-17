@@ -21,6 +21,8 @@
 //!   fase va sin el.
 //! - **D, la ranura muerta:** el planificador deja de pedir la recuperacion y la ranura 0
 //!   tiene que pasar a `Muerta` y dejar de sellar; las vecinas, no.
+//! - **F, un error del DMA:** el canal de recepcion con un ajuste de usuario invalido (`USEF`):
+//!   prueba la rama `error_dma` de la maquina, que el reset por RCC de la recuperacion esconde.
 //!
 //! ```bash
 //! cargo run --release --features inyeccion,reloj-hub --bin tic_recupera
@@ -55,6 +57,7 @@ struct Foto {
     subidas_ok: u32,
     subidas_malas: u32,
     recuperaciones: u32,
+    errores_dma: u32,
     escaladas: u32,
     muertas: u32,
     cortas_esclavo: u32,
@@ -83,6 +86,7 @@ fn foto() -> Foto {
     }
     let t = j2_tic::testigos();
     f.recuperaciones = t.recuperaciones;
+    f.errores_dma = t.errores_dma;
     f.escaladas = t.escaladas_gpdma;
     f.muertas = t.ranuras_muertas;
     f.cortas_esclavo = j2_esclavo::TRAMAS_CORTAS.load(Ordering::Relaxed);
@@ -167,7 +171,7 @@ async fn main(spawner: Spawner) {
 
     // ---- C: la escalada del GPDMA1, con las vecinas en vuelo -------------------------
     #[cfg(feature = "escalada")]
-    let (antes_c, despues_c) = {
+    let (antes_c, despues_c, marcas_c) = {
         let antes = foto();
         for _ in 0..10 {
             j2_tic::fuerza_escalada();
@@ -175,13 +179,21 @@ async fn main(spawner: Spawner) {
             Timer::after_millis(30).await;
         }
         Timer::after_millis(50).await;
-        (antes, foto())
+        // Las marcas, ahora: la fase F recupera la ranura 0 otra vez y las pisa.
+        (antes, foto(), j2_tic::marcas())
     };
 
+    // ---- F: un error del DMA --------------------------------------------------------------
+    let antes_f = foto();
+    j2_tic::envenena_dma(0);
+    Timer::after_millis(20).await;
+    let despues_f = foto();
+
     // ---- D: la ranura muerta ------------------------------------------------------------
+    // Con las cotas de hoy (100 tics, 12,5 ms) la muerte tarda; con `cotas-v2`, 3 tics.
     j2_tic::sin_recuperacion(true);
     j2_tic::envenena(0);
-    Timer::after_millis(5).await;
+    Timer::after_millis(30).await;
     let sello_0 = SELLOS[0].load(Ordering::Relaxed);
     let sello_vecina = SELLOS[2].load(Ordering::Relaxed);
     Timer::after_millis(5).await;
@@ -304,7 +316,7 @@ async fn main(spawner: Spawner) {
             despues_c.recuperaciones - antes_c.recuperaciones,
             despues_c.muertas,
         );
-        let m = j2_tic::marcas();
+        let m = marcas_c;
         info!(
             "tic_recupera,C,ultima_escalada: seccion_critica_ns={},escalada_entera_us={}",
             m[Marca::SeccionFin as usize].wrapping_sub(m[Marca::SeccionIni as usize]) * 1000
@@ -327,6 +339,32 @@ async fn main(spawner: Spawner) {
                 && despues_c.giros[2] > antes_c.giros[2] + 1000,
         );
     }
+
+    // F
+    info!(
+        "tic_recupera,F,errores_dma={},plazos={},recuperaciones={},muertas={}",
+        despues_f.errores_dma - antes_f.errores_dma,
+        despues_f.plazos[0] - antes_f.plazos[0],
+        despues_f.recuperaciones - antes_f.recuperaciones,
+        despues_f.muertas,
+    );
+    veredicto(
+        "F.un_error_del_dma",
+        despues_f.errores_dma == antes_f.errores_dma + 1,
+    );
+    veredicto(
+        "F.un_plazo_vencido",
+        despues_f.plazos[0] == antes_f.plazos[0] + 1,
+    );
+    veredicto(
+        "F.una_recuperacion",
+        despues_f.recuperaciones == antes_f.recuperaciones + 1,
+    );
+    veredicto("F.ninguna_muerta", despues_f.muertas == 0);
+    veredicto(
+        "F.los_giros_siguen",
+        despues_f.giros[0] >= antes_f.giros[0] + 100,
+    );
 
     // D
     info!(

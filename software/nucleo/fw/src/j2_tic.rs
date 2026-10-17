@@ -30,7 +30,11 @@
 //! casillas (ver `core::buzones_j2`); la reinicializacion del SPI (RCC, `CFG2`, `CFG1`)
 //! va en una sola seccion critica y no solo el reset; y el planificador manda un
 //! `Evento::Tick` solo a la ranura que en esa pasada no recibio ningun otro evento, porque
-//! todo evento lleva ya su `ahora_us` y desliza la ventana de la politica.
+//! todo evento lleva ya su `ahora_us` y desliza la ventana de la politica; `Vencida` y
+//! `Reiniciando` dan la ranura por muerta a los 100 tics y no a los 2 y 4 (revision de Halberg
+//! del 17-10, hallazgo 1: una retencion de P2 de 350 us coincidiendo con un cuelgue la mataba);
+//! y el reloj de la politica es de 64 bits (`Reloj64`), porque el contador de 32 bits del tic da la
+//! vuelta a los 6,2 dias.
 
 use core::cell::UnsafeCell;
 use core::ptr::addr_of_mut;
@@ -46,7 +50,7 @@ use sam17_nucleo_core::maestro_j2::{
     plazo_us, Accion, Evento, Ranura as Politica, Umbrales, RANURAS_SPI,
 };
 use sam17_nucleo_core::transporte_j2::{
-    tics_de_plazo, tics_fusionados, Aviso, Entrada, Estado, Lectura, Transporte,
+    tics_de_plazo, tics_fusionados, Aviso, Entrada, Estado, Lectura, Reloj64, Transporte,
 };
 
 use crate::j2_ejecutor::{publicar_cuentas, Bajada, Juez, SELLOS};
@@ -326,6 +330,11 @@ impl Hw {
         regs.ifcr().write(|w| w.set_txtfc(true));
         regs.cr2().write(|w| w.set_tsize(n));
         regs.cfg1().write_value(self.cfg1_rx);
+        // `BR1`, `DAR` y `SAR` solo se escriben con `EN = 0`. No se lee `CR.EN`: la ranura llega aqui `Libre`,
+        // y a `Libre` se llega con `TCF` de los dos canales o tras el `RESET` de la recuperacion. En los dos
+        // casos `EN` ya esta en cero: GPDMA_CxCR.EN *"is deasserted by hardware when there is a transfer
+        // error [...] or when there is a channel transfer complete"* y `RESET` lo baja siempre (RM0486 Rev 4,
+        // bit 0 EN; hallazgo 8a).
         self.rx.ch.br1().write(|w| w.set_bndt(n));
         self.rx.ch.dar().write_value(subida);
         self.rx.ch.cr().write_value(self.rx.cr_en);
@@ -400,6 +409,9 @@ static REC_T_HECHA: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
 static SUCIA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
 
 static TICS: AtomicU32 = AtomicU32::new(0);
+/// El contador de arriba extendido a 64 bits. Dueno: el planificador.
+static RELOJ_PLAN: Celda<Reloj64> = Celda::nueva(Reloj64::nuevo());
+static CICLOS_POR_US: AtomicU32 = AtomicU32::new(0);
 static TICS_TARDIOS: AtomicU32 = AtomicU32::new(0);
 static TICS_FUSIONADOS: AtomicU32 = AtomicU32::new(0);
 static RETRASO_MAX_US: AtomicU32 = AtomicU32::new(0);
@@ -419,6 +431,9 @@ static CICLOS: [AtomicU32; 7] = [const { AtomicU32::new(0) }; 7];
 static ENVENENAR: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
 #[cfg(feature = "inyeccion")]
 static FORZAR_ESCALADA: AtomicBool = AtomicBool::new(false);
+/// La proxima armada de la ranura lleva un error de ajuste de usuario del DMA (`USEF`).
+#[cfg(feature = "inyeccion")]
+static ENVENENAR_DMA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
 /// El planificador no pide la recuperacion: la ranura se queda en `Vencida` hasta `Muerta`.
 #[cfg(feature = "inyeccion")]
 static SIN_RECUPERACION: AtomicBool = AtomicBool::new(false);
@@ -540,6 +555,15 @@ pub fn envenena(n: usize) {
     ENVENENAR[n].store(true, Ordering::Relaxed);
 }
 
+/// Hace que la proxima armada de la ranura `n` lleve un error del DMA: el canal de recepcion con
+/// palabras de destino y un `BNDT` que no es multiplo de cuatro, que el DMA marca como error de
+/// ajuste de usuario (`USEF`) y no arranca. Prueba la rama `error_dma` de la maquina, que el
+/// reset por RCC de la recuperacion esconde.
+#[cfg(feature = "inyeccion")]
+pub fn envenena_dma(n: usize) {
+    ENVENENAR_DMA[n].store(true, Ordering::Relaxed);
+}
+
 /// Hace que la proxima recuperacion trate el sondeo de `SUSPF` como vencido y escale.
 #[cfg(feature = "inyeccion")]
 pub fn fuerza_escalada() {
@@ -625,6 +649,7 @@ pub fn lanzar(
 
     PERIODO_US.store(periodo_us, Ordering::Relaxed);
     let ciclos_us = f_cpu_hz / 1_000_000;
+    CICLOS_POR_US.store(ciclos_us, Ordering::Relaxed);
     PERIODO_CICLOS.store(periodo_us * ciclos_us, Ordering::Relaxed);
     GAP_CICLOS.store(T_GAP_REARME_US * ciclos_us, Ordering::Relaxed);
     T_CANAL_CICLOS.store(T_CANAL_US * ciclos_us, Ordering::Relaxed);
@@ -688,6 +713,13 @@ pub fn lanzar(
                 local_bajada: Local([0; LARGO_MAX]),
                 local_subida: Local([0; LARGO_MAX]),
             });
+        }
+        // Con `cotas-v2`, las cotas del papel v2 (2 y 4 tics) en vez de las de hoy: para medir
+        // en placa lo que cambia la revision de Halberg del 17-10 (hallazgo 1).
+        #[cfg(feature = "cotas-v2")]
+        // SAFETY: las interrupciones del transporte siguen apagadas.
+        unsafe {
+            (*TIC[n].0.get()).transporte = Transporte::con_cotas(2, 4);
         }
         // La primera trama ya esta en el buzon cuando llega el primer tic.
         // SAFETY: las interrupciones del transporte siguen apagadas.
@@ -783,13 +815,23 @@ unsafe fn TIM7() {
         let bajada = bz
             .fresca()
             .map(|c| (META[n][c].load(Ordering::Relaxed) >> 8) as u8);
-        let hecho = REC_HECHA[n].load(Ordering::Relaxed)
-            && t0.wrapping_sub(REC_T_HECHA[n].load(Ordering::Relaxed)) >= gap;
+        // La recuperacion solo le importa a la maquina en `Vencida` y `Reiniciando`.
+        let (en_curso, hecho) =
+            if matches!(antes, Estado::Vencida { .. } | Estado::Reiniciando { .. }) {
+                // `Acquire`: lo que la recuperacion reprogramo antes de publicar `HECHA` ya esta escrito.
+                let hecha = REC_HECHA[n].load(Ordering::Acquire);
+                (
+                    REC_EN_CURSO[n].load(Ordering::Relaxed),
+                    hecha && t0.wrapping_sub(REC_T_HECHA[n].load(Ordering::Relaxed)) >= gap,
+                )
+            } else {
+                (false, false)
+            };
         let s = t.transporte.paso(Entrada {
             lectura,
             identidad: IDENTIDAD[n].load(Ordering::Relaxed),
             bajada,
-            reinicio_en_curso: REC_EN_CURSO[n].load(Ordering::Relaxed),
+            reinicio_en_curso: en_curso,
             reinicio_hecho: hecho,
         });
 
@@ -814,6 +856,11 @@ unsafe fn TIM7() {
                 let envenenada = ENVENENAR[n].swap(false, Ordering::Relaxed);
                 #[cfg(feature = "inyeccion")]
                 let bndt_tx = u16::from(largo) - u16::from(envenenada);
+                #[cfg(feature = "inyeccion")]
+                if ENVENENAR_DMA[n].swap(false, Ordering::Relaxed) {
+                    // El canal esta parado (EN = 0), asi que `TR1` se puede escribir.
+                    hw.rx.ch.tr1().modify(|w| w.set_ddw(dma::Dw::Word));
+                }
                 #[cfg(not(feature = "inyeccion"))]
                 let bndt_tx = u16::from(largo);
                 #[cfg(feature = "perfil")]
@@ -845,6 +892,7 @@ unsafe fn TIM7() {
             #[cfg(feature = "inyeccion")]
             if n == 0 && e == Evento::PlazoVencido {
                 marca(Marca::Vencida, t0);
+                acapara::si_toca_en_vencida();
             }
         }
         match s.aviso {
@@ -911,8 +959,9 @@ unsafe fn DMA2D() {
     let t0 = DWT::cycle_count();
     #[cfg(feature = "perfil")]
     let tic0 = CICLOS[0].load(Ordering::Relaxed);
-    let ahora_us =
-        u64::from(TICS.load(Ordering::Relaxed)) * u64::from(PERIODO_US.load(Ordering::Relaxed));
+    // SAFETY: el planificador es el unico que toca `RELOJ_PLAN`.
+    let tics = unsafe { &mut *RELOJ_PLAN.0.get() }.extiende(TICS.load(Ordering::Relaxed));
+    let ahora_us = tics * u64::from(PERIODO_US.load(Ordering::Relaxed));
     for n in 0..N {
         // SAFETY: el planificador es el unico que toca `PLAN`.
         let Some(p) = (unsafe { &mut *PLAN[n].0.get() }).as_mut() else {
@@ -993,13 +1042,23 @@ fn para_canales(hw: &Hw) -> bool {
     if FORZAR_ESCALADA.swap(false, Ordering::Relaxed) {
         return false;
     }
-    loop {
+    let paradas = || {
         let tx = hw.tx.ch.sr().read();
         let rx = hw.rx.ch.sr().read();
-        if (tx.suspf() || tx.idlef()) && (rx.suspf() || rx.idlef()) {
+        (tx.suspf() || tx.idlef()) && (rx.suspf() || rx.idlef())
+    };
+    loop {
+        if paradas() {
             break;
         }
         if DWT::cycle_count().wrapping_sub(inicio) >= limite {
+            // Una interrupcion pudo caer entre la lectura y esta comparacion y comerse el plazo
+            // entero: los canales pudieron parar mientras tanto. Se mira una vez mas antes de
+            // rendirse, que rendirse es resetear el GPDMA1 de las seis ranuras (revision de
+            // Halberg del 17-10, hallazgo 6).
+            if paradas() {
+                break;
+            }
             return false;
         }
     }
@@ -1076,14 +1135,18 @@ fn recupera(n: usize) {
     hw.tx.programa();
     hw.rx.programa();
     // Paso 5: publicar `ReinicioHecho` con su marca de tiempo. El tic devuelve la ranura
-    // a `Libre` solo cuando han pasado `T_GAP_REARME`.
+    // a `Libre` solo cuando han pasado `T_GAP_REARME`. Los registros de arriba tienen que haber
+    // salido antes: ni el compilador ni el bus pueden dejarlos detras de `HECHA` (revision de
+    // Halberg del 17-10, hallazgo 8b).
+    cortex_m::asm::dsb();
+    core::sync::atomic::compiler_fence(Ordering::SeqCst);
     let hecha = DWT::cycle_count();
     #[cfg(feature = "inyeccion")]
     if n == 0 {
         marca(Marca::RecHecha, hecha);
     }
     REC_T_HECHA[n].store(hecha, Ordering::Relaxed);
-    REC_HECHA[n].store(true, Ordering::Relaxed);
+    REC_HECHA[n].store(true, Ordering::Release);
     // Paso 6: contar.
     CONT[n].recuperaciones.fetch_add(1, Ordering::Relaxed);
 }
@@ -1112,4 +1175,61 @@ unsafe fn JPEG() {
     }
     #[cfg(not(feature = "perfil"))]
     let _ = t0;
+}
+
+/// Una interrupcion que acapara la CPU un rato, para los binarios de estres: `VENC`, que ningun otro
+/// modulo atiende, con la prioridad que se le pida. A P2 es un USB o una pantalla que retiene al
+/// planificador (P3) y a la recuperacion (P4); a P3, trabajo del planificador que no pega al
+/// resto del banco (el esclavo del banco es una tarea de P2).
+#[cfg(feature = "inyeccion")]
+pub mod acapara {
+    use core::sync::atomic::{AtomicU32, Ordering};
+
+    use cortex_m::peripheral::{DWT, NVIC};
+    use embassy_stm32::interrupt;
+    use embassy_stm32::interrupt::{InterruptExt, Priority};
+
+    static CICLOS: AtomicU32 = AtomicU32::new(0);
+    static EN_VENCIDA: AtomicU32 = AtomicU32::new(0);
+
+    #[interrupt]
+    unsafe fn VENC() {
+        let t0 = DWT::cycle_count();
+        let n = CICLOS.load(Ordering::Relaxed);
+        while DWT::cycle_count().wrapping_sub(t0) < n {}
+    }
+
+    /// Pone la prioridad y desenmascara la linea. Una vez, despues de `lanzar`.
+    pub fn arranca(prioridad: Priority) {
+        interrupt::VENC.set_priority(prioridad);
+        // SAFETY: el vector `VENC` es la ISR de arriba.
+        unsafe { interrupt::VENC.enable() };
+    }
+
+    /// Hace pendiente un golpe de `us` microsegundos.
+    pub fn golpe(us: u32) {
+        CICLOS.store(
+            us * super::CICLOS_POR_US.load(Ordering::Relaxed),
+            Ordering::Relaxed,
+        );
+        NVIC::pend(interrupt::VENC);
+    }
+
+    /// El proximo `PlazoVencido` de la ranura 0 hace pendiente un golpe de `us` microsegundos,
+    /// en el mismo instante en que el tic lo emite: el planificador queda retenido justo cuando
+    /// tiene que pedir la recuperacion. Con 0 se apaga.
+    pub fn en_vencida(us: u32) {
+        EN_VENCIDA.store(
+            us * super::CICLOS_POR_US.load(Ordering::Relaxed),
+            Ordering::Relaxed,
+        );
+    }
+
+    pub(super) fn si_toca_en_vencida() {
+        let c = EN_VENCIDA.swap(0, Ordering::Relaxed);
+        if c != 0 {
+            CICLOS.store(c, Ordering::Relaxed);
+            NVIC::pend(interrupt::VENC);
+        }
+    }
 }

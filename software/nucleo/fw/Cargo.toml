@@ -87,10 +87,13 @@ inyeccion = ["transporte-tic"]
 # La bajada que no compone nada (`j2_banco::bajada_quieta`) en `carga_j2`: el enlace solo, sin
 # el costo de componer la trama (ficha 1 del acta del 17-10).
 sin-componer = []
+# Las cotas de v2 (2 y 4 tics) para `Vencida` y `Reiniciando`, en vez de las de hoy (100 y 100): lo que
+# cambia la revision de Halberg del 17-10, hallazgo 1, medido en placa con `tic_recupera`.
+cotas-v2 = ["transporte-tic"]
 # `tic_banco` con una interrupcion de P2 que acapara la CPU un rato cada 10 ms, por encima
 # del planificador (P3) y por debajo del tic (P1): cuanto puede retener el hub antes de que
 # se pierdan tramas.
-acapara = []
+acapara = ["inyeccion"]
 # El esclavo del banco comprueba el contenido de la bajada que recibe (`PATRON_BAJADA`) y
 # cuenta las buenas y las malas. Para `tic_banco` y `tic_recupera`.
 verifica-bajada = []
@@ -136,4 +139,9 @@ required-features = ["transporte-tic"]
 [[bin]]
 name = "tic_recupera"
 path = "src/bin/tic_recupera.rs"
+required-features = ["inyeccion"]
+
+[[bin]]
+name = "tic_cota"
+path = "src/bin/tic_cota.rs"
 required-features = ["inyeccion"]

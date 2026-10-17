@@ -52,36 +52,6 @@ const PERIODO_US: u32 = if cfg!(feature = "mil-hz") {
     PERIODO_GIRO_US
 };
 
-/// La interrupcion que acapara: `VENC` a P2, que ningun otro modulo atiende. Hace un
-/// bucle de espera de `CICLOS` ciclos cuando el hilo la hace pendiente.
-#[cfg(feature = "acapara")]
-mod acapara {
-    use core::sync::atomic::{AtomicU32, Ordering};
-
-    use cortex_m::peripheral::{DWT, NVIC};
-    use embassy_stm32::interrupt;
-    use embassy_stm32::interrupt::{InterruptExt, Priority};
-
-    pub static CICLOS: AtomicU32 = AtomicU32::new(0);
-
-    #[interrupt]
-    unsafe fn VENC() {
-        let t0 = DWT::cycle_count();
-        let n = CICLOS.load(Ordering::Relaxed);
-        while DWT::cycle_count().wrapping_sub(t0) < n {}
-    }
-
-    pub fn arranca() {
-        interrupt::VENC.set_priority(Priority::P2);
-        // SAFETY: el vector `VENC` es la ISR de arriba.
-        unsafe { interrupt::VENC.enable() };
-    }
-
-    pub fn golpe() {
-        NVIC::pend(interrupt::VENC);
-    }
-}
-
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let _ = spawner;
@@ -153,11 +123,10 @@ async fn main(spawner: Spawner) {
     // cada una se lee como la diferencia entre las fotos de antes y despues.
     #[cfg(feature = "acapara")]
     let fases = {
-        acapara::arranca();
+        j2_tic::acapara::arranca(embassy_stm32::interrupt::Priority::P2);
         const US: [u32; 9] = [0, 50, 100, 150, 200, 300, 500, 1_000, 3_000];
         let mut out = [(0u32, 0u32, 0u32, j2_tic::testigos(), 0u32); US.len()];
         for (k, &us) in US.iter().enumerate() {
-            acapara::CICLOS.store(us * (f_cpu / 1_000_000), Ordering::Relaxed);
             let antes = (
                 cuentas(RANURA_BANCO),
                 j2_tic::testigos(),
@@ -168,7 +137,7 @@ async fn main(spawner: Spawner) {
             // las 300 fases se repartan.
             for i in 0..300u64 {
                 if us != 0 {
-                    acapara::golpe();
+                    j2_tic::acapara::golpe(us);
                 }
                 Timer::after_micros(10_000 + (i * 53) % 125).await;
             }
