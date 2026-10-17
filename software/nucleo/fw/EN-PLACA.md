@@ -788,6 +788,66 @@ Qué falta para una fila: el transporte con sus búferes dentro de la región (l
 locales de las tareas y de la ISR) y la D-cache encendida con ella (R-MJ7, #380), y que el
 transporte que se mida sea el del instrumento.
 
+### El transporte por tic (prototipo de banco, 2026-10-17)
+
+`j2_tic` (feature `transporte-tic`) es el diseño de `docs/superpowers/juntas/2026-10-17-j2-transporte/papel-v2.md` §2 puesto en la Nucleo, y **no es el transporte firmado de D5.1** (acta del 17-10, ficha 3; no cambia nada firmado ni nada del instrumento). Una interrupción periódica (`TIM7`, P1) lee `SR` del SPI y de los dos canales del GPDMA de cada ranura armada, se lo da a la máquina de `core::transporte_j2` y hace lo que ella diga. El planificador (`DMA2D`, P3) es el único que llama a la política: vacía el anillo de eventos, copia la subida con `ldm`, la juzga y compone la trama siguiente en un buzón de **tres** casillas. La recuperación (`JPEG`, P4) hace D4 con `CxCR.RESET`, el reset del SPI por RCC y, si un canal no para en 25 µs, el del GPDMA1 entero. No hay `EOTIE`, ni ISR de SPI ni de DMA (sus líneas, enmascaradas); los búferes del DMA van en una región no cacheable (R-MJ7) que `lanzar` pone en la MPU, y las dos cachés, encendidas. Las piezas puras (la máquina, el anillo, el buzón, la subida) viven en `core` con sus pruebas: `transporte_j2` y `buzones_j2`.
+
+```bash
+cargo run --release --features transporte-tic,reloj-hub[,perfil][,ranuras-3][,sin-componer][,contaminador][,largo-71] --bin carga_j2
+cargo run --release --features transporte-tic,reloj-hub[,verifica-bajada][,mil-hz][,corta][,acapara] --bin tic_banco
+cargo run --release --features inyeccion,reloj-hub[,verifica-bajada] --bin tic_recupera
+cargo run --release --features inyeccion,reloj-hub,ranuras-3,sin-esclavo,escalada --bin tic_recupera
+```
+
+`carga_j2.py` no lo anota (se niega con cualquier transporte que no sea el `ejecutor`) y `carga_j2.csv` no tiene filas suyas: la puerta toma el mínimo de las filas a 800 MHz sin mirar el transporte, y una fila del tic taparía los 8 000 del ejecutor firmado (papel v2 §5). Qué hace cada binario:
+
+- **`carga_j2 --features transporte-tic`**: el mismo medidor del hilo de arriba, con una base por estado de caché. `sin-componer` hace que la trama sea siempre la misma (el enlace solo); sin él, `bajada_del_banco` la rehace en un lazo cada giro (un compositor de mentira, que cuesta unos 170 ciclos a 25 bytes). `contaminador` añade una tarea de hilo que recorre 64 KB entre vuelta y vuelta, y cada tic y cada pasada del planificador empiezan con la D-cache desalojada. `largo-41` y `largo-71` cambian el mensaje. Con `perfil` imprime además los ciclos por giro de cada nivel (tic, planificador, recuperación, componer) y el detalle del tic (leer, cerrar, armar).
+- **`tic_banco`**: el maestro de `j2_tic` en SPI5 contra el esclavo del banco en SPI4, a 8 kHz y con las cachés y la región, 600 s; publica una sola vez al final. `verifica-bajada` hace que el esclavo compare cada bajada con el patrón (`PATRON_BAJADA`) y cuente las buenas y las malas.
+- **`tic_recupera`** (feature `inyeccion`): A, un SPI envenenado (el canal de transmisión cuenta un byte menos que el `TSIZE`: el maestro se queda sin dato a mitad de trama con el `CS` abajo); B, mil incidentes seguidos; C, diez escaladas forzadas del GPDMA1 con las vecinas en vuelo (sin esclavo: el esclavo comparte el GPDMA1); D, la recuperación inhibida hasta que la ranura pasa a `Muerta`. Cada fase termina con sus comprobaciones.
+
+**Ciclos por giro y por ranura a 800 MHz** (medidor del hilo, sin `perfil`; mensaje de 25 bytes salvo que se diga; límite provisional 2 500; el ejecutor de D5.1 da 8 000 con las mismas cachés, arriba). Cada columna con las dos cachés y la región MPU salvo las dos últimas filas:
+
+| | 1 ranura | 3 ranuras |
+|---|---|---|
+| el enlace solo (`sin-componer`) | 2 200 | **1 967** |
+| con el compositor de mentira | 2 400 | 2 133 |
+| el enlace solo, D-cache desalojada entre tic y tic (`contaminador`) | — | **2 833** |
+| solo la I-cache (sin D-cache), el enlace solo | 18 000 | 15 933 |
+| sin cachés, el enlace solo | 27 500 | 23 033 |
+
+| el enlace solo, 3 ranuras, con cachés | 25 bytes | 41 bytes | 71 bytes |
+|---|---|---|---|
+| ciclos por giro y ranura | 1 967 | 2 100 | 2 233 |
+
+El `SET` de dieciséis (103 bytes) no está medido: a los ~6 ciclos por byte de la tabla saldrían unos 2 400, pero a 6,25 MHz (el kernel del SPI a `pclk2`, #380) ocupa 131,8 µs y no cabe en un periodo de 125 (R-H5).
+
+- **El desglose del `DWT`** (3 ranuras, con `perfil`, ciclos por giro y ranura, cachés calientes, enlace solo): el tic **1 177** (leer los tres `SR` 138; cerrar 12 —las escrituras van al búfer de escritura y su coste aparece en la lectura siguiente—; armar 615, de los cuales 128 son la espera de un `T_SCK` de D2; el resto, unos 410, es el estado, las banderas, el buzón y el anillo) y el planificador **826** (de los cuales 285 son entregar la trama al buzón). Suman 2 003 con la instrumentación puesta, que cuesta del orden de 100 ciclos, contra los 1 967 del medidor sin ella. Con la D-cache desalojada: tic 1 576 (leer 268, cerrar 36, armar 604) y planificador 1 067.
+- **El tic no depende del largo del mensaje** (1 177 a 25, 41 y 71 bytes); el planificador sí: 826, 955 y 1 074 (las copias con `ldm` de la bajada y de la subida y la comparación del juez).
+- **El juez del banco es una comparación de 25 bytes.** El de verdad valida el sobre y su CRC, que es trabajo del enlace (ficha 1 del acta) y no está medido ni escrito (#267); un CRC por tabla a unos 5 ciclos por byte suma del orden de 125 a 350 ciclos según el mensaje. **El compositor de mentira tampoco es el real:** la ficha 1 no cuenta componer la trama.
+- **De uno a tres ranuras** el coste por ranura baja unos 230 ciclos (se reparten la entrada y la salida de las dos excepciones y el trabajo fijo del tic; la espera de un `T_SCK` de D2, no). Con las seis, algo menos de lo medido con tres.
+- **La estimación del papel v2 (§3) se quedó corta:** 1 060 el enlace solo y 1 560 componiendo, a 25 bytes, contra 1 967 y 2 133 medidos.
+- **La D-cache lo decide casi todo, como antes** (R-H4): sin ella, 16 000 a 18 000; sin ninguna caché, más de 23 000 (la columna sin cachés cambia de una compilación a otra).
+
+**Resistencia** (`tic_banco`, 8 kHz, 800 MHz, cachés y región; esclavo real en SPI4). 600 s: **4 799 999 giros, 4 799 999 subidas buenas y 4 799 999 tramas vistas por el esclavo**, con cero plazos vencidos, cero subidas malas, cero tramas cortas, cero tics tardíos ni fundidos, cero eventos o subidas perdidos y ninguna trama sin bajada fresca; el retardo máximo del tic al entrar fue de 0 µs (firmware `0ae706a` con el árbol sucio). Una segunda corrida de 600 s con `verifica-bajada`, sobre el commit `13d8d6b` limpio: **4 799 999 giros, otras tantas subidas buenas, otras tantas tramas y 4 799 999 bajadas con el contenido correcto, ninguna mala**, y los mismos ceros. `verifica-bajada` tiene su control negativo: con el patrón de la bajada corrompido a propósito, el esclavo cuenta 0 buenas y 159 999 malas en 20 s.
+
+**Recuperación** (`tic_recupera`, esclavo real, una ranura). Un SPI envenenado, en microsegundos desde el `CSTART` de la transferencia envenenada: el tic la da por vencida a los **123**, la recuperación entra a los 125, resetea el SPI a los 126 y lo deja configurado a los 127, publica `ReinicioHecho` a los 131, y la primera trama buena sale a los **249**. El `CS` queda sin manejar por el reset **1,5 µs** (de `rcc::disable` a la reescritura de `CFG1`), y hasta que vence el módulo vio el `CS` abajo unos 95 µs sin reloj (por cuenta, no medido: el maestro se queda sin dato tras 24 bytes a 6,25 MHz, o sea a los 31 µs). El hueco con el `CS` arriba antes de la siguiente trama es de 121 µs. El techo de recuperación del papel v2 para un `NADA` era 395 µs. Mil incidentes seguidos, uno cada 4 ms: 1 000 plazos, 1 000 recuperaciones, ninguna ranura muerta, ninguna subida mala, **el esclavo vio exactamente 1 000 tramas cortas y 30 558 bajadas buenas y ninguna mala**. Diez escaladas forzadas del GPDMA1 con las vecinas en vuelo (tres ranuras, sin esclavo): diez escaladas, **diez plazos vencidos en cada una de las tres ranuras**, 30 recuperaciones, ninguna muerta, las tres siguen girando; la sección crítica de la escalada dura **673 ns** y la escalada entera, 2 µs. Con la recuperación inhibida, la ranura pasa a `Muerta` y deja de sellar (el sello del IWDG se queda quieto) mientras las vecinas siguen sellando.
+
+**Estrés: una interrupción de P2 que acapara la CPU** (`tic_banco --features acapara,sin-esclavo`). Cada fase son 300 golpes de `D` µs, uno cada unos 10 ms y con la fase respecto al tic repartida; el planificador está en P3 (por debajo del golpe) y el tic en P1 (por encima). Va sin esclavo: el del banco es una tarea de P2 y los golpes le pegan a él también. Lo que se pierde en 300 golpes:
+
+| `D` (µs) | tramas sin bajada fresca | giros perdidos por golpe | subidas perdidas |
+|---|---|---|---|
+| 0, 50, 100 | 0 | 0 | 0 |
+| 150 | 78 | 0,26 | 73 |
+| 200 | 209 | 0,70 | 204 |
+| 300 | 413 | 1,4 | 300 |
+| 500 | 906 | 3,0 | 300 |
+| 1 000 | 2 105 | 7,0 | 300 |
+| 3 000 | 6 903 | 23 | 300 |
+
+El tic no se entera (cero tics tardíos hasta con 3 ms), no se pierde ningún evento, no vence ningún plazo y no muere ninguna ranura: el planificador se queda atrás y la ranura espera una trama que no llega. Cada golpe cuesta unos (`D` − 120) / 125 giros en cada ranura y una subida; **hasta ~100 µs de retención de P2 no cuesta nada**. Lo que no se probó es el cruce con un fallo: una ranura que vence mientras el planificador está retenido más de dos tics pasa a `Muerta` (la cota de `Vencida`) y el IWDG reinicia el chip.
+
+**Lo que no está medido**: seis ranuras reales (SPI3 y SPI6 piden otra función alterna que `Ranura::nueva` no soporta; el banco tiene tres físicas); el juez real, el compositor real y la cabecera; el hub (USB, pantalla y MIDI, y los niveles de NVIC, R-H1 a R-H6); la subida con un periodo más de latencia contra `latencia_mano_budget.py`; el `CS` visto con un analizador lógico (los tiempos de arriba son marcas del `DWT`, y se supone que el `CS` sube en cuanto el SPI suelta el pin); y ninguna cifra de un módulo de verdad.
+
 ### Antes de dar por bueno cualquiera de los cuatro: que el ejecutor exista
 
 El `#[interrupt] unsafe fn GFXTIM()` que bombea el `EJECUTOR_J2` vive en la
