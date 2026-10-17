@@ -550,13 +550,24 @@ python carga_j2.py --anota    # ademas la anade (se niega si el firmware sale -s
 cargo run --release --features perfil --bin carga_j2   # lo mismo, sin la cuenta de la fila
 ```
 
-Gira **el maestro solo** al periodo del instrumento, 125 µs, sin el esclavo del
-banco (en el mismo núcleo le comería la CPU y falsearía la cuenta), una pasada
-sin caché y otra con la I-cache encendida (la D-cache sigue apagada, R-MJ7).
+Gira **el maestro solo**, sin el esclavo del banco (en el mismo núcleo le comería
+la CPU y falsearía la cuenta), una pasada sin caché y otra con la I-cache
+encendida (la D-cache sigue apagada, R-MJ7). El periodo es el del reloj: 1 ms a
+64 MHz y 125 µs a 800 MHz (`--hub`).
+
+**Cada estado de caché tiene su base.** El medidor del hilo compara sus vueltas
+con las de la CPU entera, y con la I-cache el hilo da más vueltas por segundo que
+sin ella: contra la base de sin caché, la CPU libre salía de más y el J2 de
+menos (a 1 kHz salió un total de 7 104 ciclos por giro con un manejador del
+ejecutor que ya gastaba 14 011). Se calibra una base por estado antes de
+arrancar el J2, y
+`carga_j2.py` marca como **inválida**, y no anota, la pasada cuyo total sale
+menor que el manejador del ejecutor o cuyo `hilo_libre` satura en 1000.
+
 Cada pasada imprime dos líneas:
 
 ```
-carga_j2,cache=<no|icache>,ciclo_us=,giros_en_5s=,hilo_libre_permil=,atrasos=,plazos_vencidos=
+carga_j2,cache=<no|icache>,ranuras=,periodo_us=,ciclo_us=,giros_en_5s=,hilo_libre_permil=,atrasos=,plazos_vencidos=,base_por_s=
 carga_j2,cache=<no|icache>,previo=,armado=,espera=,cierre=,posterior=,isr_spi=,ejecutor=
 ```
 
@@ -567,12 +578,16 @@ la tarea, y la diferencia con `ejecutor` es la maquinaria de futuros y el
 despacho. `espera` es tiempo de reloj, no CPU. El mismo binario repite a menos del
 0,1 %; entre dos compilaciones distintas del código varía hasta un 10 %.
 
-**Medido el 2026-10-16** (firmware `b9f6d7d`, 64 MHz; repetido, sale igual a menos del 0,1 %):
+**Medido el 2026-10-17 a 64 MHz** (firmware `4b97dcf`, una ranura a 1 kHz; repetido,
+sale igual a ±1 ciclo):
 
-| | `ciclo_us` | `hilo_libre_permil` | **J2 entero** | `ejecutor` | código de la tarea | el resto del ejecutor |
+| | `hilo_libre_permil` | **J2 entero** | `ejecutor` | código de la tarea | el resto del ejecutor | `isr_spi` |
 |---|---|---|---|---|---|---|
-| sin caché | 420 | 198 | **21 558** | 18 738 | 8 138 | 10 600 |
-| I-cache | 343 | 328 | **14 752** | 13 366 | 5 265 | 8 101 |
+| sin caché | 685 | **20 160** | 17 415 | 6 625 | 10 790 | 508 |
+| I-cache | 748 | **16 112** | 14 004 | 5 236 | 8 768 | 429 |
+
+La fila de sin caché del 16-10 (21 558 a 125 µs, saturado) sigue en `carga_j2.csv`;
+la de I-cache de ese día (14 752) salió con la base de sin caché y se retiró.
 
 **El número que se compara con el límite es el «J2 entero»**: lo que el hilo no usa
 en un ciclo, `(1000 - hilo_libre_permil) / 1000 × ciclo_us × f_cpu`. Lleva la ISR
@@ -622,6 +637,10 @@ fila de `carga_j2.csv`; `recuperacion_j2_budget.py` la lee y falla si una fila a
   Da **cómo se reparten** los ciclos, no cuántos son: la ISR del muestreo perturba (~5 %
   de la CPU a 64 MHz) y los ciclos por giro salen de `carga_j2`. Existe porque
   `probe-rs profile` 0.32 no arranca y `DWT_PCSR` lee `0xFFFFFFFF` en el M55.
+  Solo las muestras que caen en una ISR (`IPSR != 0`, el J2 entero) van al histograma;
+  las del hilo se cuentan aparte, porque el medidor del hilo es otro ejecutor de
+  embassy con las mismas funciones y se mezclaba con las tareas del J2. La feature
+  `caches` enciende la I-cache y la D-cache (sin MPU) para perfilar el régimen de 800 MHz.
 
 - `costes_bus`: **cuánto cuesta un acceso a un registro de periférico**, en ciclos de CPU
   (`cargo run --release --features perfil[,reloj-hub] --bin costes_bus`). A 800 MHz el
@@ -631,6 +650,58 @@ fila de `carga_j2.csv`; `recuperacion_j2_budget.py` la lee y falla si una fila a
   Imprime `costes_bus,f_cpu=,cache=,destino=,lee_x100=,escribe_x100=`, en centésimas de
   ciclo por acceso, para la SRAM (referencia), el SPI5, el canal 15 del GPDMA1 y el
   reloj de embassy.
+
+**Medido el 2026-10-17 a 800 MHz** (`--hub`, núcleo medido a 800,1 MHz, periodo 125 µs).
+**Es exploración, no una fila de `carga_j2.csv`**: la pasada con D-cache va sin la región
+MPU de los búferes del DMA (R-MJ7) y no se anota, y `recuperacion_j2_budget.py` sigue
+sin medida a 800 MHz con las cachés del hub. Ciclos por giro, J2 entero (límite 2 500):
+
+| transporte | ranuras | sin caché | I-cache | I-cache + D-cache, sin MPU |
+|---|---|---|---|---|
+| ejecutor (el de D5.1) | 1 | 82 435 | 57 900 | **8 000** (3,2×) |
+| ejecutor | 3 | 70 063 | 49 048 | **8 167** (3,3×) |
+| ISR sin ejecutor (`j2_isr`, una cota) | 1 | 10 200 | 7 837 | **1 500** (0,6×) |
+
+- **La D-cache lo decide casi todo.** Sin ella, una lectura de la SRAM cuesta 80 ciclos a
+  800 MHz (26 a 64 MHz); con ella, 1,1. Una lectura de registro de periférico cuesta 32 a
+  48 ciclos (12 a 16 a 64 MHz) y no se cachea (tabla de `costes_bus` abajo).
+- **Con tres ranuras no baja:** 8 167 por giro contra 8 000 con una. El coste del giro no
+  se reparte entre ranuras (cada una espera en su propio `Timer`); las seis ranuras a 8 kHz
+  serían cerca de la mitad de un núcleo (48 %), contra el 15 % firmado.
+- **De los 8 000 (una ranura, con cachés)**, `ejecutor` son 5 810, de los cuales solo 2 706
+  son código de la tarea (previo 333, armado 1 479, cierre 549, posterior 345) y 3 104 la
+  maquinaria de futuros y el despacho; `isr_spi` son 244 y el resto, unos 1 950, es lo que
+  no cae en esos dos manejadores (las ISR del DMA y del reloj de embassy, y lo que el hilo
+  pierde al volver). Lo que no es código de la tarea son 5 300 ciclos, el doble del límite
+  por sí solo.
+- **El perfil por función (`perfil_pc`, 800 MHz con cachés)** da 6 278 ciclos por giro en
+  ISR: `TaskStorage::poll` 2 065 (el cuerpo de las tareas), `_embassy_time_schedule_wake`
+  1 457, el driver del DMA (`is_running`, `drop`, `configure`, `on_irq`, `start`) 1 281, el
+  waker, `Timer::poll`, `poll` de `&mut F` y la entrada del ejecutor 971, `SPI5` 195. Los
+  1 700 que faltan hasta los 8 000 no caen en ninguna función; lo más probable es el hilo
+  al volver (cachés frías, entrada y salida de cada excepción), pero no está medido.
+  Quitando por completo el reloj de embassy y la maquinaria de wakers y ejecutor (2 428
+  ciclos) quedarían unos 3 850: tampoco cabe.
+- **`j2_isr` es una cota, no el transporte del instrumento:** el mismo giro por ISR, sin
+  ejecutor ni futuros (un `TIM7` de tic cierra el giro anterior y arma el siguiente; los
+  canales del GPDMA preprogramados, sin `TCIE`), con la política de `core` detrás. No tiene
+  plazo, ni D4, ni calendario, ni EOT tardío, y no se ha corrido contra el esclavo. Mide
+  1 121 en la ISR del tic más 185 en la del SPI, y 1 500 por el medidor del hilo.
+
+`costes_bus` (ciclos por acceso, de la lectura y de la escritura, en bucle desenrollado:
+las escrituras seguidas llenan el búfer de escritura y miden su caudal; una lectura espera
+siempre al periférico):
+
+| destino | 64 MHz, lee | 64 MHz, escribe | 800 MHz, lee | 800 MHz, escribe (I-cache) |
+|---|---|---|---|---|
+| SRAM, sin D-cache | 26,0 | 1,1 | 80,0 | 1,1 |
+| SRAM, con D-cache | 1,1 | 1,1 | 1,1 | 1,1 |
+| SPI5 (`SR`, `CRCPOLY`) | 16,0 | 4,0 | 48,0 | 16,0 |
+| GPDMA1 (canal 15) | 12,0 | 2,0 | 32,0 | 8,0 |
+| reloj de embassy (`TIM12.CNT`) | 16,0 | — | 48,0 | — |
+
+Qué falta para una fila: la región MPU de los búferes del DMA y la D-cache encendida con
+ella (R-MJ7, #380), y que el transporte que se mida sea el del instrumento.
 
 ### Antes de dar por bueno cualquiera de los cuatro: que el ejecutor exista
 
