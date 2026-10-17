@@ -7,6 +7,13 @@ fn main() {
     println!("cargo:rustc-link-arg-bins=-Tdefmt.x");
     println!("cargo:rerun-if-changed=memory.x");
     println!("cargo:rerun-if-changed=build.rs");
+    // El codigo que entra en el binario: si cambia sin que se mueva `HEAD`, `-sucio`
+    // tiene que aparecer. Sin esto el guion corria una sola vez por commit y un
+    // binario con cambios encima seguia diciendo que era el commit limpio.
+    println!("cargo:rerun-if-changed=src");
+    println!("cargo:rerun-if-changed=Cargo.toml");
+    println!("cargo:rerun-if-changed=../core/src");
+    println!("cargo:rerun-if-changed=../core/Cargo.toml");
 
     // La revision de git, embebida en el binario y publicada por `defmt` al
     // arrancar. No es adorno: `resistencia_j2.csv` es la puerta de fabricacion
@@ -57,7 +64,8 @@ fn revision() -> String {
 }
 
 /// Pide a cargo que vuelva a correr este guion cuando `HEAD` se mueva, para que
-/// `SAM17_GIT` no se quede pegado al commit del primer build.
+/// `SAM17_GIT` no se quede pegado al commit del primer build. (Cuando cambia el
+/// codigo sin mover `HEAD` lo piden las rutas de `main`.)
 ///
 /// **El `.git` de un worktree es un archivo, no un directorio** (dice
 /// `gitdir: .../\.git/worktrees/<nombre>`), asi que no vale con mirar `.git/HEAD`
