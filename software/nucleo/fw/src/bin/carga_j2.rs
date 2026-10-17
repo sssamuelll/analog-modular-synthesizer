@@ -61,16 +61,18 @@
 
 use defmt::info;
 use embassy_executor::Spawner;
-#[cfg(not(feature = "transporte-isr"))]
+#[cfg(not(any(feature = "transporte-isr", feature = "transporte-tic")))]
 use embassy_stm32::interrupt;
 use embassy_time::Timer;
 use sam17_nucleo_core::maestro_j2::RANURAS_SPI;
 use sam17_nucleo_fw::carga::{vueltas_del_hilo, Medidor};
+#[cfg_attr(not(feature = "transporte-tic"), allow(unused_imports))]
+use sam17_nucleo_fw::j2_banco::bajada_quieta;
 use sam17_nucleo_fw::j2_banco::{
     bajada_del_banco, juez_del_banco, PERIODO_DE_MEDIDA_US, RANURAS_DE_MEDIDA,
 };
 use sam17_nucleo_fw::j2_ejecutor::cuentas;
-#[cfg(not(feature = "transporte-isr"))]
+#[cfg(not(any(feature = "transporte-isr", feature = "transporte-tic")))]
 use sam17_nucleo_fw::j2_ejecutor::{iniciar_ejecutor, lanzar_ranuras};
 use sam17_nucleo_fw::j2_spi::Config;
 use sam17_nucleo_fw::perfil::{self, Promedios};
@@ -83,12 +85,24 @@ const MUESTRA_S: u64 = 5;
 
 #[cfg(all(feature = "transporte-isr", feature = "ranuras-2"))]
 compile_error!("transporte-isr solo mueve la ranura 0: sin ranuras-2 ni ranuras-3");
+#[cfg(all(feature = "transporte-isr", feature = "transporte-tic"))]
+compile_error!("transporte-isr y transporte-tic son dos transportes: uno solo");
+
+/// La bajada que el planificador pide: con `sin-componer`, la que no compone nada. Es la
+/// mitad de la medida de la ficha 1 del acta del 17-10 (el enlace sin componer la trama).
+#[cfg(feature = "transporte-tic")]
+const BAJADA: sam17_nucleo_fw::j2_ejecutor::Bajada = if cfg!(feature = "sin-componer") {
+    bajada_quieta
+} else {
+    bajada_del_banco
+};
 
 const RANURAS_ACTIVAS: u32 = RANURAS_DE_MEDIDA;
 const PERIODO_US: u32 = PERIODO_DE_MEDIDA_US;
 
 /// Enciende las caches que pide la pasada, sin apagar las de la anterior: `icache` la
-/// I-cache; `icache+dcache-sin-mpu`, ademas la D-cache.
+/// I-cache; `icache+dcache-sin-mpu` e `icache+dcache-mpu`, ademas la D-cache (la segunda,
+/// con la region de los bufferes del transporte por tic ya en la MPU).
 fn encender_cache(cache: &str) {
     // SAFETY: nadie mas toca el SCB. La D-cache solo se enciende en la pasada de
     // exploracion, sin la region MPU (R-MJ7): `nueva` asevera que estaba apagada al
@@ -97,7 +111,7 @@ fn encender_cache(cache: &str) {
         let mut p = cortex_m::Peripherals::steal();
         match cache {
             "icache" => p.SCB.enable_icache(),
-            "icache+dcache-sin-mpu" => p.SCB.enable_dcache(&mut p.CPUID),
+            "icache+dcache-sin-mpu" | "icache+dcache-mpu" => p.SCB.enable_dcache(&mut p.CPUID),
             _ => {}
         }
     }
@@ -127,11 +141,16 @@ struct Pasada {
     atrasos: u32,
     plazos: u32,
     base: u32,
+    #[cfg_attr(feature = "transporte-tic", allow(dead_code))]
     m: [u32; perfil::FASES],
     /// Los giros que el transporte por ISR no cerro, sus errores del DMA y como
     /// estaba el ultimo que un tic encontro sin cerrar.
     #[cfg(feature = "transporte-isr")]
     isr: (u32, u32, [u32; 5]),
+    /// Ciclos por giro de cada nivel del transporte por tic (tic, planificador,
+    /// recuperacion, componer) y los testigos al cerrar la pasada.
+    #[cfg(feature = "transporte-tic")]
+    tic: ([u32; 4], sam17_nucleo_fw::j2_tic::Testigos),
 }
 
 impl Pasada {
@@ -148,14 +167,26 @@ impl Pasada {
             self.plazos,
             self.base
         );
-        let m = &self.m;
-        if m.iter().all(|x| *x == 0) {
-            info!("carga_j2,cache={=str}: compilado sin `--features perfil`, los tramos salen en cero", self.cache);
-        } else {
+        #[cfg(feature = "transporte-tic")]
+        {
+            let (c, t) = &self.tic;
             info!(
-                "carga_j2,cache={=str},previo={},armado={},espera={},cierre={},posterior={},isr_spi={},ejecutor={}",
-                self.cache, m[0], m[1], m[2], m[3], m[4], m[5], m[7]
+                "carga_j2,cache={=str},tic,ciclos_por_giro: tic={},planificador={},recuperacion={},componer={}",
+                self.cache, c[0], c[1], c[2], c[3]
             );
+            info!("carga_j2,cache={=str},tic,{}", self.cache, t);
+        }
+        #[cfg(not(feature = "transporte-tic"))]
+        {
+            let m = &self.m;
+            if m.iter().all(|x| *x == 0) {
+                info!("carga_j2,cache={=str}: compilado sin `--features perfil`, los tramos salen en cero", self.cache);
+            } else {
+                info!(
+                    "carga_j2,cache={=str},previo={},armado={},espera={},cierre={},posterior={},isr_spi={},ejecutor={}",
+                    self.cache, m[0], m[1], m[2], m[3], m[4], m[5], m[7]
+                );
+            }
         }
         #[cfg(feature = "transporte-isr")]
         {
@@ -193,7 +224,11 @@ async fn main(spawner: Spawner) {
     let f_cpu_medido = perfil::f_cpu_medido_hz().await;
     spawner.spawn(defmt::unwrap!(vueltas_del_hilo()));
     let pasadas: &[&'static str] = if cfg!(feature = "reloj-hub") {
-        &["no", "icache", "icache+dcache-sin-mpu"]
+        if cfg!(feature = "transporte-tic") {
+            &["no", "icache", "icache+dcache-mpu"]
+        } else {
+            &["no", "icache", "icache+dcache-sin-mpu"]
+        }
     } else {
         &["no", "icache"]
     };
@@ -213,12 +248,18 @@ async fn main(spawner: Spawner) {
         medidores[0].as_ref().map_or(0, |m| m.base_por_s()),
         if cfg!(feature = "transporte-isr") {
             "isr"
+        } else if cfg!(feature = "transporte-tic") {
+            if cfg!(feature = "sin-componer") {
+                "tic-sin-componer"
+            } else {
+                "tic"
+            }
         } else {
             "ejecutor"
         }
     );
 
-    #[cfg(not(feature = "transporte-isr"))]
+    #[cfg(not(any(feature = "transporte-isr", feature = "transporte-tic")))]
     lanzar_ranuras(
         iniciar_ejecutor(interrupt::GFXTIM),
         ranuras,
@@ -226,6 +267,12 @@ async fn main(spawner: Spawner) {
         juez_del_banco,
         PERIODO_US,
     );
+    #[cfg(feature = "transporte-tic")]
+    {
+        let (base, largo) = sam17_nucleo_fw::j2_tic::region();
+        info!("carga_j2: region no cacheable {:#x}, {} bytes", base, largo);
+        sam17_nucleo_fw::j2_tic::lanzar(ranuras, p.TIM7, PERIODO_US, f_cpu, BAJADA, juez_del_banco);
+    }
     #[cfg(feature = "transporte-isr")]
     {
         let [r0, ..] = ranuras;
@@ -240,6 +287,8 @@ async fn main(spawner: Spawner) {
 
     let mut promedios = Promedios::nuevo();
     let mut giros_antes = 0u32;
+    #[cfg(feature = "transporte-tic")]
+    let mut ciclos_antes = sam17_nucleo_fw::j2_tic::ciclos();
     let mut guardadas: [Option<Pasada>; 3] = [None; 3];
     for (i, &cache) in pasadas.iter().enumerate() {
         encender_cache(cache);
@@ -267,6 +316,16 @@ async fn main(spawner: Spawner) {
             let dg = giros.wrapping_sub(giros_antes);
             giros_antes = giros;
             let (m, _) = promedios.tomar(giros);
+            #[cfg(feature = "transporte-tic")]
+            let tic = {
+                let ahora = sam17_nucleo_fw::j2_tic::ciclos();
+                let mut c = [0u32; 4];
+                for k in 0..4 {
+                    c[k] = ahora[k].wrapping_sub(ciclos_antes[k]) / dg.max(1);
+                }
+                ciclos_antes = ahora;
+                (c, sam17_nucleo_fw::j2_tic::testigos())
+            };
             if muestra == 0 {
                 continue;
             }
@@ -281,6 +340,8 @@ async fn main(spawner: Spawner) {
                 m,
                 #[cfg(feature = "transporte-isr")]
                 isr: (sin_cerrar, errores_dma, sam17_nucleo_fw::j2_isr::diagnostico()),
+                #[cfg(feature = "transporte-tic")]
+                tic,
             });
         }
     }

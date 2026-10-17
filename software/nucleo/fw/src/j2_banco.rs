@@ -382,6 +382,19 @@ pub fn bajada_del_banco(_n: usize, buf: &mut [u8; LARGO_MAX]) -> Tsize {
     TSIZE_BANCO
 }
 
+/// La bajada que **no compone nada**: el mismo mensaje del banco, rellenado una sola vez.
+///
+/// Es la mitad de la medida que pide la ficha 1 del acta del 17-10: lo que cuesta el
+/// enlace sin lo que cuesta componer la trama (notas, CV, pantalla). El bufer que
+/// recibe es el del planificador y sobrevive entre llamadas, asi que el patron se
+/// escribe la primera vez y despues basta con devolver el largo.
+pub fn bajada_quieta(n: usize, buf: &mut [u8; LARGO_MAX]) -> Tsize {
+    if buf[0] != 0x5A {
+        bajada_del_banco(n, buf);
+    }
+    TSIZE_BANCO
+}
+
 /// Los largos **clocados** de los mensajes de la cabecera, en bytes, con su
 /// nombre. Es `TSIZE` (D1): **sobre de 6 bytes, CRC dentro**, mas la carga, mas
 /// el byte de cola de D6.4, con el relleno a la ventana donde toca. O sea

@@ -206,16 +206,19 @@ pub enum Soltado {
     Escalado,
 }
 
-/// Lo que el transporte por ISR (`j2_isr`) toma prestado de una ranura ya
-/// construida: los registros, los numeros de peticion del GPDMA, el `CFG1` que
-/// dejo `nueva` y el retardo de arranque en ciclos de CPU.
+/// Lo que los transportes de banco (`j2_isr`, `j2_tic`) toman prestado de una
+/// ranura ya construida: los registros, los numeros de peticion del GPDMA, el
+/// `CFG1` y el `CFG2` que dejo `nueva`, el retardo de arranque en ciclos de CPU y
+/// el reset por RCC del periferico (D4 paso 2).
 #[derive(Clone, Copy)]
 pub struct Partes {
     pub regs: pac::spi::Spi,
     pub req_tx: u8,
     pub req_rx: u8,
     pub cfg1: pac::spi::regs::Cfg1,
+    pub cfg2: pac::spi::regs::Cfg2,
     pub ciclos_retardo: u32,
+    pub resetear: fn(),
 }
 
 /// Lo que se elige por enlace al construir la ranura.
@@ -557,7 +560,9 @@ impl<'d> Ranura<'d> {
             req_tx: self.req_tx,
             req_rx: self.req_rx,
             cfg1: self.cfg1,
+            cfg2: self.cfg2,
             ciclos_retardo: self.ciclos_por_cuarto_tsck * u32::from(self.retardo_cuartos),
+            resetear: self.resetear,
         }
     }
 

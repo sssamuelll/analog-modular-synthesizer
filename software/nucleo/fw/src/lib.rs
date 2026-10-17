@@ -11,6 +11,8 @@ pub mod j2_esclavo;
 #[cfg(feature = "transporte-isr")]
 pub mod j2_isr;
 pub mod j2_spi;
+#[cfg(feature = "transporte-tic")]
+pub mod j2_tic;
 pub mod mpu;
 #[cfg(feature = "muestreo")]
 pub mod muestreo;
