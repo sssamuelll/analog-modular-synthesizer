@@ -113,6 +113,67 @@ fn apagar_caches() {
     }
 }
 
+/// Lo que se midio en la segunda muestra de una pasada. Se guarda y se imprime al
+/// final: un `info!` mantiene las interrupciones apagadas mientras escribe -- a
+/// 800 MHz, 174 us sin caches, 87 con la I-cache y ~11 con las dos --, mas que un
+/// periodo del J2 en los dos primeros casos, y retrasaria el tic o el ejecutor
+/// justo donde se mide.
+#[derive(Clone, Copy)]
+struct Pasada {
+    cache: &'static str,
+    ciclo_us: u32,
+    giros: u32,
+    libre: u32,
+    atrasos: u32,
+    plazos: u32,
+    base: u32,
+    m: [u32; perfil::FASES],
+    /// Los giros que el transporte por ISR no cerro, sus errores del DMA y como
+    /// estaba el ultimo que un tic encontro sin cerrar.
+    #[cfg(feature = "transporte-isr")]
+    isr: (u32, u32, [u32; 5]),
+}
+
+impl Pasada {
+    fn imprime(&self) {
+        info!(
+            "carga_j2,cache={=str},ranuras={},periodo_us={},ciclo_us={},giros_en_5s={},hilo_libre_permil={},atrasos={},plazos_vencidos={},base_por_s={}",
+            self.cache,
+            RANURAS_ACTIVAS,
+            PERIODO_US,
+            self.ciclo_us,
+            self.giros,
+            self.libre,
+            self.atrasos,
+            self.plazos,
+            self.base
+        );
+        let m = &self.m;
+        if m.iter().all(|x| *x == 0) {
+            info!("carga_j2,cache={=str}: compilado sin `--features perfil`, los tramos salen en cero", self.cache);
+        } else {
+            info!(
+                "carga_j2,cache={=str},previo={},armado={},espera={},cierre={},posterior={},isr_spi={},ejecutor={}",
+                self.cache, m[0], m[1], m[2], m[3], m[4], m[5], m[7]
+            );
+        }
+        #[cfg(feature = "transporte-isr")]
+        {
+            let (sin_cerrar, errores_dma, d) = self.isr;
+            info!(
+                "carga_j2,cache={=str},isr,sin_cerrar={},errores_dma={}",
+                self.cache, sin_cerrar, errores_dma
+            );
+            if sin_cerrar != 0 {
+                info!(
+                    "carga_j2,isr,diag: desde_el_armado_us={},sr={:#x},rx_br1={:#x},tx_br1={:#x},en_us={}",
+                    d[0], d[1], d[2], d[3], d[4]
+                );
+            }
+        }
+    }
+}
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     #[cfg(feature = "reloj-hub")]
@@ -131,7 +192,7 @@ async fn main(spawner: Spawner) {
     perfil::iniciar();
     let f_cpu_medido = perfil::f_cpu_medido_hz().await;
     spawner.spawn(defmt::unwrap!(vueltas_del_hilo()));
-    let pasadas: &[&str] = if cfg!(feature = "reloj-hub") {
+    let pasadas: &[&'static str] = if cfg!(feature = "reloj-hub") {
         &["no", "icache", "icache+dcache-sin-mpu"]
     } else {
         &["no", "icache"]
@@ -179,6 +240,7 @@ async fn main(spawner: Spawner) {
 
     let mut promedios = Promedios::nuevo();
     let mut giros_antes = 0u32;
+    let mut guardadas: [Option<Pasada>; 3] = [None; 3];
     for (i, &cache) in pasadas.iter().enumerate() {
         encender_cache(cache);
         let medidor = defmt::unwrap!(medidores[i].as_mut());
@@ -196,8 +258,9 @@ async fn main(spawner: Spawner) {
             // El transporte por ISR no alimenta los contadores de la politica con sus
             // fallos: los giros que no cerro y los errores del DMA cuentan como plazos.
             #[cfg(feature = "transporte-isr")]
+            let (sin_cerrar, errores_dma) = sam17_nucleo_fw::j2_isr::fallos();
+            #[cfg(feature = "transporte-isr")]
             {
-                let (sin_cerrar, errores_dma) = sam17_nucleo_fw::j2_isr::fallos();
                 plazos = plazos.wrapping_add(sin_cerrar).wrapping_add(errores_dma);
             }
             let libre = medidor.libre_por_mil();
@@ -207,27 +270,22 @@ async fn main(spawner: Spawner) {
             if muestra == 0 {
                 continue;
             }
-            info!(
-                "carga_j2,cache={=str},ranuras={},periodo_us={},ciclo_us={},giros_en_5s={},hilo_libre_permil={},atrasos={},plazos_vencidos={},base_por_s={}",
+            guardadas[i] = Some(Pasada {
                 cache,
-                RANURAS_ACTIVAS,
-                PERIODO_US,
-                (MUESTRA_S * 1_000_000) as u32 * RANURAS_ACTIVAS / dg.max(1),
-                dg,
+                ciclo_us: (MUESTRA_S * 1_000_000) as u32 * RANURAS_ACTIVAS / dg.max(1),
+                giros: dg,
                 libre,
                 atrasos,
                 plazos,
-                medidor.base_por_s()
-            );
-            if m.iter().all(|x| *x == 0) {
-                info!("carga_j2,cache={=str}: compilado sin `--features perfil`, los tramos salen en cero", cache);
-            } else {
-                info!(
-                    "carga_j2,cache={=str},previo={},armado={},espera={},cierre={},posterior={},isr_spi={},ejecutor={}",
-                    cache, m[0], m[1], m[2], m[3], m[4], m[5], m[7]
-                );
-            }
+                base: medidor.base_por_s(),
+                m,
+                #[cfg(feature = "transporte-isr")]
+                isr: (sin_cerrar, errores_dma, sam17_nucleo_fw::j2_isr::diagnostico()),
+            });
         }
+    }
+    for pasada in guardadas.into_iter().flatten() {
+        pasada.imprime();
     }
     info!("carga_j2: fin");
     // Un `bkpt` para que `probe-rs run` termine solo y suelte la sonda.

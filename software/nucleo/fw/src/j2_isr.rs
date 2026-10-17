@@ -148,6 +148,10 @@ struct Giro {
     en_vuelo: bool,
     plazos: u32,
     errores_dma: u32,
+    /// Cuando se armo el giro en vuelo, y como estaba cuando un tic lo encontro sin
+    /// cerrar: microsegundos desde el armado, `SR` del SPI y el `BR1` de los canales RX y TX.
+    t_arm_us: u64,
+    diag: [u32; 5],
     // La ranura se guarda viva: sus `Flex` desconfiguran los pines al caer.
     _ranura: Ranura<'static>,
 }
@@ -280,6 +284,8 @@ pub fn lanzar(
         en_vuelo: false,
         plazos: 0,
         errores_dma: 0,
+        t_arm_us: 0,
+        diag: [0; 5],
         _ranura: ranura,
     };
     // SAFETY: la ISR de `TIM7` aun esta apagada.
@@ -329,6 +335,13 @@ unsafe fn TIM7() {
         let eot = ESTADOS[N].turno.tomar().is_some_and(|b| b.eot());
         if !eot {
             g.plazos += 1;
+            g.diag = [
+                (ahora - g.t_arm_us) as u32,
+                g.regs.sr().read().0,
+                g.rx.ch.br1().read().0,
+                g.tx.ch.br1().read().0,
+                ahora as u32,
+            ];
             perfil::cierra_isr(Fase::Ejecutor, inicio);
             return;
         }
@@ -354,9 +367,20 @@ unsafe fn TIM7() {
     SELLOS[N].fetch_add(1, Ordering::Relaxed);
     let _ = g.politica.paso(Evento::Armada, ahora);
     let _ = ESTADOS[N].turno.armar();
+    g.t_arm_us = ahora;
     g.arma(g.tsize.get());
     g.en_vuelo = true;
     perfil::cierra_isr(Fase::Ejecutor, inicio);
+}
+
+/// Como estaba el ultimo giro que un tic encontro sin cerrar: microsegundos desde el
+/// armado, `SR` del SPI y el `BR1` de los canales RX y TX.
+pub fn diagnostico() -> [u32; 5] {
+    // SAFETY: cuatro enteros; el banco los lee con el periodo corriendo.
+    match unsafe { (*GIRO.0.get()).as_ref() } {
+        Some(g) => g.diag,
+        None => [0; 5],
+    }
 }
 
 /// Los fallos que no son un giro normal, para el banco: plazos y errores del DMA.
