@@ -22,15 +22,21 @@ use core::sync::atomic::Ordering;
 
 use defmt::info;
 use embassy_executor::Spawner;
+#[cfg(not(feature = "sin-esclavo"))]
 use embassy_stm32::interrupt;
 use embassy_time::Timer;
 use sam17_nucleo_core::maestro_j2::PERIODO_GIRO_US;
+#[cfg(not(feature = "sin-esclavo"))]
+use sam17_nucleo_fw::j2_banco::esclavo_del_banco;
 use sam17_nucleo_fw::j2_banco::{
-    bajada_del_banco, esclavo_del_banco, juez_del_banco, maestro_del_banco, LARGO_BANCO,
-    RANURA_BANCO,
+    bajada_del_banco, juez_del_banco, maestro_del_banco, LARGO_BANCO, RANURA_BANCO,
 };
-use sam17_nucleo_fw::j2_ejecutor::{cuentas, iniciar_ejecutor};
-use sam17_nucleo_fw::j2_esclavo::{self, tarea_esclavo};
+use sam17_nucleo_fw::j2_ejecutor::cuentas;
+#[cfg(not(feature = "sin-esclavo"))]
+use sam17_nucleo_fw::j2_ejecutor::iniciar_ejecutor;
+use sam17_nucleo_fw::j2_esclavo;
+#[cfg(not(feature = "sin-esclavo"))]
+use sam17_nucleo_fw::j2_esclavo::tarea_esclavo;
 use sam17_nucleo_fw::j2_spi::Config;
 use sam17_nucleo_fw::j2_tic;
 use sam17_nucleo_fw::usb;
@@ -101,6 +107,7 @@ async fn main(spawner: Spawner) {
         },
     );
     let f_sck_hz = ranura.f_sck_hz();
+    #[cfg(not(feature = "sin-esclavo"))]
     let esclavo = esclavo_del_banco(p.PE2, p.PE14, p.PE13, p.PE11, p.GPDMA1_CH2, p.GPDMA1_CH3);
     info!(
         "tic_banco: firmware {}, f_sck {} Hz, f_cpu {} Hz, periodo {} us, mensaje {} B, duracion {} s",
@@ -114,8 +121,11 @@ async fn main(spawner: Spawner) {
 
     // El esclavo nace ANTES que el maestro, como en `resistencia_j2`: si no, los primeros
     // giros irian contra un esclavo que no existe y saldrian como subidas malas.
-    let spawner_j2 = iniciar_ejecutor(interrupt::GFXTIM);
-    spawner_j2.spawn(defmt::unwrap!(tarea_esclavo(esclavo)));
+    #[cfg(not(feature = "sin-esclavo"))]
+    {
+        let spawner_j2 = iniciar_ejecutor(interrupt::GFXTIM);
+        spawner_j2.spawn(defmt::unwrap!(tarea_esclavo(esclavo)));
+    }
     let mut ranuras = [const { None }; 6];
     ranuras[RANURA_BANCO] = Some(ranura);
     j2_tic::lanzar(
@@ -153,11 +163,14 @@ async fn main(spawner: Spawner) {
                 j2_tic::testigos(),
                 j2_esclavo::TRAMAS_OK.load(Ordering::Relaxed),
             );
-            for _ in 0..300 {
+            // 10 ms son exactamente 80 periodos: con un periodo fijo el golpe caeria siempre
+            // en la misma fase del tic. Se desplaza 53 us cada vez (primo con 125) para que
+            // las 300 fases se repartan.
+            for i in 0..300u64 {
                 if us != 0 {
                     acapara::golpe();
                 }
-                Timer::after_millis(10).await;
+                Timer::after_micros(10_000 + (i * 53) % 125).await;
             }
             let despues = (
                 cuentas(RANURA_BANCO),
