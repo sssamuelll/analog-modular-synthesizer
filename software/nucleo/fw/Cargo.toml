@@ -124,6 +124,8 @@ contaminador-32k = ["contaminador"]
 mil-hz = []
 # Una corrida de 20 s en `tic_banco`, en vez de 600.
 corta = []
+# `tic_estres` con fases de 150 s (diez minutos en total), en vez de 60 s.
+larga = []
 # `tic_recupera` y `tic_banco` sin el esclavo del banco: la fase de la escalada resetea el GPDMA1
 # entero y el esclavo comparte el controlador; y con `acapara` el esclavo es una tarea de P2 a la
 # que los golpes tambien pegan.

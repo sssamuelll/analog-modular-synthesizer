@@ -52,8 +52,14 @@ use sam17_nucleo_fw::j2_tic::{self, acapara};
 use sam17_nucleo_fw::usb;
 use {defmt_rtt as _, panic_probe as _};
 
-/// Cuanto dura cada fase, en segundos: 60, o 5 con `--features corta`.
-const FASE_S: u64 = if cfg!(feature = "corta") { 5 } else { 60 };
+/// Cuanto dura cada fase, en segundos: 60, 5 con `--features corta` o 150 con `--features larga` (diez minutos).
+const FASE_S: u64 = if cfg!(feature = "corta") {
+    5
+} else if cfg!(feature = "larga") {
+    150
+} else {
+    60
+};
 
 /// Un generador de bolsillo. La semilla es fija: la corrida se puede repetir.
 struct Azar(u32);
