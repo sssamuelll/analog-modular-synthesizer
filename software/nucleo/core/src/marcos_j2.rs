@@ -12,6 +12,11 @@
 /// El marco más corto: la cabeza y la cola de cuatro bytes.
 pub const MINIMO: usize = 8;
 
+/// La base de las bajadas (del cerebro al módulo) y la de las subidas: distintas, para que un marco de un
+/// sentido no pase por uno del otro.
+pub const BASE_BAJADA: u8 = 0x5A;
+pub const BASE_SUBIDA: u8 = 0xA5;
+
 /// El byte de `posicion` en el medio de un marco de `valor`, con la `base` de su sentido.
 const fn byte_medio(valor: u32, posicion: usize, base: u8) -> u8 {
     let h = (valor ^ (posicion as u32).wrapping_mul(0x9E37_79B1)).wrapping_mul(0x85EB_CA6B);
@@ -133,6 +138,12 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn las_bases_de_los_dos_sentidos_se_distinguen() {
+        assert_ne!(BASE_BAJADA, BASE_SUBIDA);
+        assert_eq!(lee(&marco(25, BASE_BAJADA, 7), BASE_SUBIDA), None);
     }
 
     #[test]

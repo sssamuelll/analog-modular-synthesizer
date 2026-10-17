@@ -86,6 +86,18 @@ use sam17_nucleo_core::maestro_j2::{
 
 use crate::perfil::{self, Fase};
 
+/// La velocidad de borde de los pines del J2. `VeryHigh` es la de siempre (el enlace sube a 34,5 MHz en el
+/// peldano 2, D8); las features `pines-medio` y `pines-bajo` la bajan para el banco: con `VeryHigh` su
+/// cableado de puentes rompe los marcos de apariencia aleatoria, y con `Medium` o `Low` llegan enteros
+/// (`tic_contenidos`, `EN-PLACA.md`).
+pub const VELOCIDAD_PINES: Speed = if cfg!(feature = "pines-bajo") {
+    Speed::Low
+} else if cfg!(feature = "pines-medio") {
+    Speed::Medium
+} else {
+    Speed::VeryHigh
+};
+
 /// Las ranuras del J2 por SPI. El numero no se copia: es el de la politica.
 pub const RANURAS: usize = RANURAS_SPI;
 
@@ -341,7 +353,7 @@ impl<'d> Ranura<'d> {
         // 18-09, y el `_generated.rs` de este build lo repite:
         // `pin_trait_impl!(spi::SckPin, SPI5, PE15, 5u8)`), y DS14791 Rev 10
         // Tabla 18. `VeryHigh` porque el enlace sube a 34,5 MHz (spec D8).
-        let salida = AfType::output(OutputType::PushPull, Speed::VeryHigh);
+        let salida = AfType::output(OutputType::PushPull, VELOCIDAD_PINES);
         let mut sck = Flex::new(sck);
         let mut mosi = Flex::new(mosi);
         let mut miso = Flex::new(miso);

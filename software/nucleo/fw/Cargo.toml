@@ -97,6 +97,17 @@ acapara = ["inyeccion"]
 # El esclavo del banco comprueba el contenido de la bajada que recibe (`PATRON_BAJADA`) y
 # cuenta las buenas y las malas. Para `tic_banco` y `tic_recupera`.
 verifica-bajada = []
+# Marcos numerados en los dos sentidos (`core::marcos_j2`): el cerebro numera cada bajada, el esclavo
+# la clasifica (rota, repetida, atrasada, saltada) y devuelve su numero en la subida, y el juez del
+# cerebro hace lo mismo con la subida. Para `tic_estres`.
+secuencia = ["verifica-bajada"]
+# Una tabla de 16 contenidos de prueba (`j2_banco::tabla`) por la bajada, y el esclavo cuenta cuales llegan
+# enteros: para ver que contenidos maltrata el enlace del banco. Para `tic_contenidos`.
+tabla = ["verifica-bajada"]
+# La velocidad de borde de los pines del J2 (maestro y MISO del esclavo) en `Medium` o en `Low` en vez de
+# `VeryHigh`: con `VeryHigh` el cableado de puentes del banco rompe los marcos de apariencia aleatoria.
+pines-medio = []
+pines-bajo = []
 # El mensaje del banco de 41, 71 o 103 bytes (`TONO`, `BAHIA`, `SET` de dieciseis) en vez de
 # los 25 de `NADA`: lo que cuesta el transporte segun el largo.
 largo-41 = []
@@ -145,3 +156,13 @@ required-features = ["inyeccion"]
 name = "tic_cota"
 path = "src/bin/tic_cota.rs"
 required-features = ["inyeccion"]
+
+[[bin]]
+name = "tic_estres"
+path = "src/bin/tic_estres.rs"
+required-features = ["inyeccion", "secuencia"]
+
+[[bin]]
+name = "tic_contenidos"
+path = "src/bin/tic_contenidos.rs"
+required-features = ["transporte-tic", "tabla"]

@@ -419,6 +419,157 @@ pub fn bajada_quieta(n: usize, buf: &mut [u8; LARGO_MAX]) -> Tsize {
     TSIZE_BANCO
 }
 
+/// Los marcos numerados de `tic_estres` (feature `secuencia`): la bajada lleva un numero que sube de
+/// uno en uno, el esclavo lo devuelve en la subida, y el juez comprueba que la subida llega entera,
+/// ni vieja ni del futuro. Con el contenido fijo de `bajada_del_banco`, una trama a medias, una repetida
+/// y una buena son el mismo contenido (revision de Halberg del 17-10, hallazgo 2).
+#[cfg(feature = "secuencia")]
+pub mod secuencia {
+    use core::cell::UnsafeCell;
+    use core::sync::atomic::{AtomicU32, Ordering};
+
+    use sam17_nucleo_core::maestro_j2::Tsize;
+    use sam17_nucleo_core::marcos_j2::{
+        escribe, lee, Seguimiento, Veredicto, BASE_BAJADA, BASE_SUBIDA,
+    };
+
+    use super::{LARGO_BANCO, TSIZE_BANCO};
+    use crate::j2_spi::LARGO_MAX;
+
+    /// La ultima secuencia compuesta.
+    pub static COMPUESTAS: AtomicU32 = AtomicU32::new(0);
+    pub static SUBIDAS_BUENAS: AtomicU32 = AtomicU32::new(0);
+    /// Subidas con la cabeza distinta de la cola, o con un byte del medio que no es el suyo.
+    pub static SUBIDAS_ROTAS: AtomicU32 = AtomicU32::new(0);
+    /// Subidas con un numero menor que el de una anterior.
+    pub static SUBIDAS_ATRASADAS: AtomicU32 = AtomicU32::new(0);
+    /// Subidas con un numero que el cerebro todavia no ha compuesto.
+    pub static SUBIDAS_FUTURAS: AtomicU32 = AtomicU32::new(0);
+    /// Subidas con el mismo numero que la anterior: legitimo si el esclavo no acepto la bajada de en medio.
+    pub static SUBIDAS_REPETIDAS: AtomicU32 = AtomicU32::new(0);
+    /// Numeros que no se vieron entre dos subidas.
+    pub static SUBIDAS_SALTOS: AtomicU32 = AtomicU32::new(0);
+
+    struct Seg(UnsafeCell<Seguimiento>);
+    // SAFETY: solo lo toca el juez, y al juez lo llama el planificador (un solo nivel).
+    unsafe impl Sync for Seg {}
+    static SEG: Seg = Seg(UnsafeCell::new(Seguimiento::nuevo()));
+
+    /// Encaja en `j2_ejecutor::Bajada`.
+    pub fn bajada(_n: usize, buf: &mut [u8; LARGO_MAX]) -> Tsize {
+        let v = COMPUESTAS.fetch_add(1, Ordering::Relaxed) + 1;
+        escribe(&mut buf[..LARGO_BANCO], BASE_BAJADA, v);
+        TSIZE_BANCO
+    }
+
+    /// Encaja en `j2_ejecutor::Juez`. Rechaza la subida rota, la atrasada y la futura.
+    pub fn juez(_n: usize, subida: &[u8]) -> bool {
+        let Some(eco) = lee(subida, BASE_SUBIDA) else {
+            SUBIDAS_ROTAS.fetch_add(1, Ordering::Relaxed);
+            return false;
+        };
+        if eco > COMPUESTAS.load(Ordering::Relaxed) {
+            SUBIDAS_FUTURAS.fetch_add(1, Ordering::Relaxed);
+            return false;
+        }
+        // SAFETY: ver `Seg`.
+        match unsafe { &mut *SEG.0.get() }.ve(eco) {
+            Veredicto::Nuevo { saltos } => {
+                SUBIDAS_BUENAS.fetch_add(1, Ordering::Relaxed);
+                SUBIDAS_SALTOS.fetch_add(saltos, Ordering::Relaxed);
+                true
+            }
+            Veredicto::Repetido => {
+                SUBIDAS_REPETIDAS.fetch_add(1, Ordering::Relaxed);
+                true
+            }
+            Veredicto::Atrasado => {
+                SUBIDAS_ATRASADAS.fetch_add(1, Ordering::Relaxed);
+                false
+            }
+        }
+    }
+}
+
+/// Una tabla de contenidos de prueba (feature `tabla`): la bajada recorre los 16, de uno en uno, y el
+/// esclavo comprueba cada trama recibida contra el mismo contenido (el primer byte lleva el numero).
+#[cfg(feature = "tabla")]
+pub mod tabla {
+    use core::sync::atomic::{AtomicU32, Ordering};
+
+    use sam17_nucleo_core::maestro_j2::Tsize;
+
+    use super::{LARGO_BANCO, TSIZE_BANCO};
+    use crate::j2_spi::LARGO_MAX;
+
+    pub const N: usize = 16;
+    pub static COMPUESTAS: AtomicU32 = AtomicU32::new(0);
+
+    /// El contenido numero `id`. El byte 0 es siempre `id`.
+    pub fn marco(id: u8, out: &mut [u8]) {
+        let n = out.len();
+        let mut x: u32 = 0x1234_5678;
+        for (i, b) in out.iter_mut().enumerate() {
+            *b = match id {
+                0 => 0x00,
+                1 => 0xFF,
+                2 => 0xAA,
+                3 => 0x55,
+                4 => 0x5A ^ (i as u8),
+                5 => i as u8,
+                6 => 0x96,
+                7 => {
+                    // el contenido del marco numero 1 de `core::marcos_j2`
+                    0
+                }
+                8 => {
+                    if i % 2 == 0 {
+                        0x00
+                    } else {
+                        0xFF
+                    }
+                }
+                9 => 0x80,
+                10 => 0x01,
+                11 => {
+                    x ^= x << 13;
+                    x ^= x >> 17;
+                    x ^= x << 5;
+                    (x >> 8) as u8
+                }
+                12 => {
+                    if i == 12 {
+                        0x5A
+                    } else {
+                        0x00
+                    }
+                }
+                13 => {
+                    if i == 4 {
+                        0x5A
+                    } else {
+                        0x00
+                    }
+                }
+                14 => 0xA5 ^ (i as u8),
+                _ => (i as u8).wrapping_mul(37),
+            };
+        }
+        if id == 7 {
+            sam17_nucleo_core::marcos_j2::escribe(out, 0x5A, 1);
+        }
+        out[0] = id;
+        let _ = n;
+    }
+
+    /// Encaja en `j2_ejecutor::Bajada`.
+    pub fn bajada(_n: usize, buf: &mut [u8; LARGO_MAX]) -> Tsize {
+        let id = (COMPUESTAS.fetch_add(1, Ordering::Relaxed) % N as u32) as u8;
+        marco(id, &mut buf[..LARGO_BANCO]);
+        TSIZE_BANCO
+    }
+}
+
 /// Los largos **clocados** de los mensajes de la cabecera, en bytes, con su
 /// nombre. Es `TSIZE` (D1): **sobre de 6 bytes, CRC dentro**, mas la carga, mas
 /// el byte de cola de D6.4, con el relleno a la ventana donde toca. O sea

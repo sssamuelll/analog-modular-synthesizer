@@ -556,8 +556,9 @@ pub fn envenena(n: usize) {
 }
 
 /// Hace que la proxima armada de la ranura `n` lleve un error del DMA: el canal de recepcion con
-/// palabras de destino y un `BNDT` que no es multiplo de cuatro, que el DMA marca como error de
-/// ajuste de usuario (`USEF`) y no arranca. Prueba la rama `error_dma` de la maquina, que el
+/// palabras de origen y un `BNDT` que no es multiplo de cuatro (RM0486, sec. 19.4.17: el tamano
+/// del bloque tiene que ser multiplo del ancho de origen), que el DMA marca como error de ajuste
+/// de usuario (`USEF`) y no arranca. Prueba la rama `error_dma` de la maquina, que el
 /// reset por RCC de la recuperacion esconde.
 #[cfg(feature = "inyeccion")]
 pub fn envenena_dma(n: usize) {
@@ -859,7 +860,7 @@ unsafe fn TIM7() {
                 #[cfg(feature = "inyeccion")]
                 if ENVENENAR_DMA[n].swap(false, Ordering::Relaxed) {
                     // El canal esta parado (EN = 0), asi que `TR1` se puede escribir.
-                    hw.rx.ch.tr1().modify(|w| w.set_ddw(dma::Dw::Word));
+                    hw.rx.ch.tr1().modify(|w| w.set_sdw(dma::Dw::Word));
                 }
                 #[cfg(not(feature = "inyeccion"))]
                 let bndt_tx = u16::from(largo);
