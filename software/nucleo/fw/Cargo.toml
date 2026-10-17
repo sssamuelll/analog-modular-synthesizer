@@ -78,6 +78,9 @@ ranuras-2 = []
 # lo que cuesta el mismo giro sin futuros. Solo la ranura 0.
 transporte-isr = []
 ranuras-3 = ["ranuras-2"]
+# La I-cache y la D-cache encendidas en `perfil_pc`, sin la region MPU de los buferes del
+# DMA (R-MJ7): es de exploracion, como la pasada `-sin-mpu` de `carga_j2`.
+caches = []
 
 # `perfil_pc` necesita el modulo que solo existe con la feature: sin ella no se compila.
 [[bin]]

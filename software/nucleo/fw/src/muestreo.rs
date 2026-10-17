@@ -6,14 +6,21 @@
 //! contiene. Al terminar, el histograma se lee por el depurador y
 //! `perfil_pc.py` lo cruza con los simbolos del ELF.
 //!
+//! **Solo el modo manejador va al histograma.** El `IPSR` apilado dice si la
+//! muestra cayo en una ISR (el J2 entero: ejecutor, SPI, GPDMA, reloj de
+//! embassy) o en el hilo; las del hilo (la CPU ociosa y las vueltas del medidor,
+//! que son otro ejecutor con las mismas funciones de embassy) solo se cuentan.
+//! Sin esa division el medidor del hilo se mezclaba con las tareas del J2 bajo
+//! los mismos nombres.
+//!
 //! Existe porque no habia otra forma: `probe-rs profile` 0.32 no arranca (pide
 //! un argumento `reset` que no deja pasar) y `DWT_PCSR` lee `0xFFFFFFFF` en el
 //! M55 de esta placa. Lo que da, y lo que no:
 //!
 //! - **Da el reparto completo**, no el de los tramos que alguien acoto: el
-//!   despacho del ejecutor, los futuros, las ISR del DMA y del reloj de embassy,
-//!   la division de 64 bits, la CPU ociosa del hilo (`Executor::run`) y las
-//!   vueltas del medidor (`carga`).
+//!   despacho del ejecutor, los futuros, las ISR del DMA y del reloj de embassy
+//!   y la division de 64 bits. El hilo (la CPU ociosa y el medidor de `carga`)
+//!   sale como un solo numero, [`HILO`].
 //! - **Un sesgo conocido:** una seccion critica (`PRIMASK = 1`) retrasa la
 //!   muestra hasta el `cpsie` que la cierra, y esa se anota en la instruccion de
 //!   despues, en la misma funcion que la tomo. A nivel de funcion no cambia nada.
@@ -49,8 +56,10 @@ pub struct Histograma(pub [AtomicU16; CUBOS]);
 
 /// Lo lee el depurador por su direccion (`perfil_pc.py`).
 pub static HISTOGRAMA: Histograma = Histograma([const { AtomicU16::new(0) }; CUBOS]);
-/// Muestras tomadas, y las que cayeron fuera de la region de codigo.
+/// Muestras tomadas, las que cayeron en el hilo (`IPSR = 0`) y las que cayeron
+/// en una ISR fuera de la region de codigo.
 pub static MUESTRAS: AtomicU32 = AtomicU32::new(0);
+pub static HILO: AtomicU32 = AtomicU32::new(0);
 pub static FUERA: AtomicU32 = AtomicU32::new(0);
 
 unsafe extern "C" {
@@ -71,17 +80,28 @@ core::arch::global_asm!(
 
 /// Lo que hace la ISR. `marco` es el marco de la excepcion: `r0-r3`, `r12`,
 /// `lr`, `pc`, `xpsr`. Con la FPU activa el marco se extiende **despues** de
-/// esos ocho, asi que el PC apilado esta siempre en la posicion 6.
+/// esos ocho, asi que el PC apilado esta siempre en la posicion 6 y el `xPSR`
+/// en la 7.
 extern "C" fn muestrear(marco: *const u32) {
     // SAFETY: `marco` es el `MSP` en la entrada de la excepcion y apunta al marco
     // que acaba de apilar el hardware.
-    let pc = unsafe { core::ptr::read_volatile(marco.add(6)) };
+    let (pc, xpsr) = unsafe {
+        (
+            core::ptr::read_volatile(marco.add(6)),
+            core::ptr::read_volatile(marco.add(7)),
+        )
+    };
     // Se baja `UIF` antes de nada: el contador sigue corriendo.
     pac::TIM6.sr().write(|w| w.set_uif(false));
     MUESTRAS.store(
         MUESTRAS.load(Ordering::Relaxed).wrapping_add(1),
         Ordering::Relaxed,
     );
+    // `IPSR` (xPSR[8:0]) en cero: la CPU estaba en el hilo.
+    if xpsr & 0x1FF == 0 {
+        HILO.store(HILO.load(Ordering::Relaxed).wrapping_add(1), Ordering::Relaxed);
+        return;
+    }
     let desde_base = (pc & !1).wrapping_sub(BASE);
     let cubo = (desde_base / CUBO) as usize;
     if cubo < CUBOS {

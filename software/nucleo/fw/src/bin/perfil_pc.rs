@@ -61,6 +61,16 @@ async fn main(spawner: Spawner) {
     };
     let ranuras = ranuras_de_medida!(p, cfg);
 
+    // Las caches, con el J2 sin girar y antes de calibrar: la base del medidor es
+    // la del estado en que se mide. `nueva` ya asevero la D-cache apagada.
+    #[cfg(feature = "caches")]
+    {
+        // SAFETY: nadie mas toca el SCB.
+        let mut c = unsafe { cortex_m::Peripherals::steal() };
+        c.SCB.enable_icache();
+        c.SCB.enable_dcache(&mut c.CPUID);
+    }
+
     spawner.spawn(defmt::unwrap!(vueltas_del_hilo()));
     let mut medidor = Medidor::calibrar(500).await;
     lanzar_ranuras(
@@ -82,12 +92,13 @@ async fn main(spawner: Spawner) {
     let libre = medidor.libre_por_mil();
 
     info!(
-        "perfil_pc: firmware {}, f_cpu {} Hz, segundos {}, giros {}, muestras {}, fuera {}, ciclos_timer {}, hilo_libre_permil {}, base {:#x}, cubo {}, cubos {}, histograma {:#x}",
+        "perfil_pc: firmware {}, f_cpu {} Hz, segundos {}, giros {}, muestras {}, muestras_hilo {}, fuera {}, ciclos_timer {}, hilo_libre_permil {}, base {:#x}, cubo {}, cubos {}, histograma {:#x}",
         env!("SAM17_GIT"),
         f_cpu,
         SEGUNDOS,
         giros,
         muestreo::MUESTRAS.load(core::sync::atomic::Ordering::Relaxed),
+        muestreo::HILO.load(core::sync::atomic::Ordering::Relaxed),
         muestreo::FUERA.load(core::sync::atomic::Ordering::Relaxed),
         ciclos_timer,
         libre,
@@ -96,6 +107,13 @@ async fn main(spawner: Spawner) {
         muestreo::CUBOS as u32,
         core::ptr::addr_of!(muestreo::HISTOGRAMA) as u32
     );
+    // Con la D-cache, lo escrito puede no haber llegado a la RAM que lee el depurador.
+    #[cfg(feature = "caches")]
+    {
+        // SAFETY: nadie mas toca el SCB.
+        let mut c = unsafe { cortex_m::Peripherals::steal() };
+        c.SCB.clean_dcache(&mut c.CPUID);
+    }
     // Un `bkpt` para que `probe-rs run` termine solo y el histograma se pueda
     // leer con el nucleo parado.
     cortex_m::asm::bkpt();

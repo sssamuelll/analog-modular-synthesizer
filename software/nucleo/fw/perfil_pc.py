@@ -17,6 +17,10 @@ El perfilador esta en `src/muestreo.rs`. Da **como se reparten** los ciclos, no
 cuantos son: perturba (~5 % de la CPU) y los ciclos por giro salen de `carga_j2`.
 Lo que imprime como ciclos por giro es el reparto aplicado al ciclo total
 (`f_cpu x segundos / giros`), con la CPU ociosa del hilo incluida.
+
+El histograma solo lleva las muestras que cayeron en una ISR (`IPSR != 0`): el
+J2 entero. Las del hilo -- la CPU ociosa y el medidor, que es otro ejecutor con
+las mismas funciones de embassy -- vienen como un solo numero (`muestras_hilo`).
 """
 from __future__ import annotations
 
@@ -26,8 +30,6 @@ import subprocess
 import sys
 
 CHIP = "STM32N657"
-# Los simbolos que son la CPU ociosa o el medidor del hilo: lo que NO es J2.
-HILO = re.compile(r"Executor::run|vueltas_del_hilo|yield_now|embassy_main")
 
 
 def simbolos(elf: str) -> tuple[list[int], list[tuple[int, int, str]]]:
@@ -94,18 +96,19 @@ def campo(linea: str, clave: str) -> int:
     return int(m.group(1), 0)
 
 
-def imprime(por: dict[str, int], giros: int, f_cpu: int, segundos: int, limite: int = 30) -> None:
-    total = sum(por.values())
+def imprime(por: dict[str, int], giros: int, f_cpu: int, segundos: int,
+            muestras: int, hilo: int, limite: int = 30) -> None:
+    """`muestras` son todas las tomadas; `hilo`, las que cayeron en el hilo; `por`,
+    las de ISR por funcion. Los porcentajes son de la CPU entera."""
+    j2 = sum(por.values())
     ciclo = f_cpu * segundos / max(giros, 1)
-    hilo = sum(n for k, n in por.items() if HILO.search(k))
-    print(f"\n{total} muestras, {giros} giros en {segundos} s, "
+    print(f"\n{muestras} muestras ({hilo} en el hilo, {j2} en ISR), {giros} giros en {segundos} s, "
           f"{ciclo:,.0f} ciclos de reloj por giro (con la CPU ociosa incluida)\n")
-    print(f"  {'muestras':>9} {'%':>6} {'ciclos/giro':>11}  funcion")
+    print(f"  {'muestras':>9} {'% CPU':>6} {'ciclos/giro':>11}  funcion (en ISR)")
     for nombre, n in sorted(por.items(), key=lambda kv: -kv[1])[:limite]:
-        print(f"  {n:9d} {100*n/total:6.1f} {ciclo*n/total:11,.0f}  {nombre}")
-    print(f"\n  hilo (CPU ociosa y medidor):   {100*hilo/total:5.1f} %  {ciclo*hilo/total:8,.0f} ciclos/giro")
-    print(f"  J2 y sistema (todo lo demas):  {100*(total-hilo)/total:5.1f} %  "
-          f"{ciclo*(total-hilo)/total:8,.0f} ciclos/giro")
+        print(f"  {n:9d} {100*n/muestras:6.1f} {ciclo*n/muestras:11,.0f}  {nombre}")
+    print(f"\n  hilo (CPU ociosa y medidor):  {100*hilo/muestras:5.1f} %  {ciclo*hilo/muestras:8,.0f} ciclos/giro")
+    print(f"  J2 y sistema (en ISR):        {100*j2/muestras:5.1f} %  {ciclo*j2/muestras:8,.0f} ciclos/giro")
 
 
 def autotest(elf: str) -> None:
@@ -132,6 +135,9 @@ def autotest(elf: str) -> None:
     # El formato de `probe-rs read b32`: dos palabras por fila, la baja primero.
     fila = "341a0000: 00010002 00000003\n341a0008: ffff0000 00000000\n"
     assert histograma_de(fila, 8) == [2, 1, 3, 0, 0, 0xFFFF, 0, 0]
+    # `muestras` no coge el valor de `muestras_hilo`, que va despues.
+    cab = "perfil_pc: giros 20, muestras 100, muestras_hilo 40, fuera 0"
+    assert campo(cab, "muestras") == 100 and campo(cab, "muestras_hilo") == 40
     print("autotest ok:", len(sims), "simbolos")
 
 
@@ -152,7 +158,8 @@ def main() -> None:
     hist = lee_histograma(campo(linea, "histograma"), cubos)
     dirs, sims = simbolos(elf)
     por = reparte(hist, base, cubo, dirs, sims)
-    imprime(por, campo(linea, "giros"), campo(linea, "f_cpu"), campo(linea, "segundos"))
+    imprime(por, campo(linea, "giros"), campo(linea, "f_cpu"), campo(linea, "segundos"),
+            campo(linea, "muestras"), campo(linea, "muestras_hilo"))
     print(f"\n  muestras fuera del codigo: {campo(linea, 'fuera')}, "
           f"hilo libre medido por carga: {campo(linea, 'hilo_libre_permil')/10:.1f} %")
 
