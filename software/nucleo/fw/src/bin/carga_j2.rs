@@ -193,6 +193,13 @@ async fn main(spawner: Spawner) {
                 atrasos = atrasos.wrapping_add(c.atrasos);
                 plazos = plazos.wrapping_add(c.plazos_vencidos);
             }
+            // El transporte por ISR no alimenta los contadores de la politica con sus
+            // fallos: los giros que no cerro y los errores del DMA cuentan como plazos.
+            #[cfg(feature = "transporte-isr")]
+            {
+                let (sin_cerrar, errores_dma) = sam17_nucleo_fw::j2_isr::fallos();
+                plazos = plazos.wrapping_add(sin_cerrar).wrapping_add(errores_dma);
+            }
             let libre = medidor.libre_por_mil();
             let dg = giros.wrapping_sub(giros_antes);
             giros_antes = giros;
