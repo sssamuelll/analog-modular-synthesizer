@@ -331,10 +331,12 @@ impl Hw {
         regs.cr2().write(|w| w.set_tsize(n));
         regs.cfg1().write_value(self.cfg1_rx);
         // `BR1`, `DAR` y `SAR` solo se escriben con `EN = 0`. No se lee `CR.EN`: la ranura llega aqui `Libre`,
-        // y a `Libre` se llega con `TCF` de los dos canales o tras el `RESET` de la recuperacion. En los dos
-        // casos `EN` ya esta en cero: GPDMA_CxCR.EN *"is deasserted by hardware when there is a transfer
-        // error [...] or when there is a channel transfer complete"* y `RESET` lo baja siempre (RM0486 Rev 4,
-        // bit 0 EN; hallazgo 8a).
+        // y a `Libre` se llega con `TCF` de los dos canales o tras el `RESET` de la recuperacion. RM0486 Rev 4,
+        // GPDMA_CxCR, bit 0 EN: *"Writing 1 into the field RESET (bit 1) causes the hardware to de-assert this
+        // bit, whatever is written into this bit 0. Else: this bit is deasserted by hardware when there is a
+        // transfer error (master bus error or user setting error) or when there is a channel transfer complete
+        // (channel ready to be configured, for example if LSM = 1 at the end of a single execution of the
+        // LLI)."* Con `TCF` o con `RESET`, `EN` ya esta en cero (hallazgo 8a).
         self.rx.ch.br1().write(|w| w.set_bndt(n));
         self.rx.ch.dar().write_value(subida);
         self.rx.ch.cr().write_value(self.rx.cr_en);
