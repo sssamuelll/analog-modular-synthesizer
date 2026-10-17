@@ -507,6 +507,34 @@ Samuel**. Con cero eventos en `T` horas la tasa queda por debajo de `3/T` al
 95 % (regla de tres, Poisson), así que «cero en H horas» pide del orden de
 `3·H` horas limpias **con el control positivo ya hecho**.
 
+**Medido: el soak de 24 h, del 2026-10-16 al 17** (firmware `b9f6d7d`, de 09:17:53 a
+09:31:14, un solo `probe-rs` sin reenganches; ranura 0 en SPI5, el esclavo en SPI4, SCK a
+8 MHz, a 1 kHz). La fila de `resistencia_j2.csv`:
+
+```
+0,SPI5,25,hw,8,24,86399999,0,0,0,2026-10-17,NUCLEO-N657X0-Q
+```
+
+El esclavo recibió 86 400 001 tramas, ninguna corta y sin rearmes escalados; el maestro,
+cero escaladas del GPDMA, `inestable = false` y `muda = false`. **Cero plazos vencidos,
+cero EOT tardíos y cero subidas malas en 86,4 millones de giros.** Por la regla de tres,
+la tasa queda por debajo de 3,5e-8 por transferencia y de 0,125 por hora al 95 %. Contra el
+ritmo de jake-taf (5 bloqueos en 14,1 h) cero en 24 h tendría una probabilidad de 2e-4, si
+su tasa dependiera del tiempo y no de la cadencia.
+
+**Lo que la fila no dice.** (1) Es de 1 kHz, no de 8: a 125 µs la CPU de la Nucleo a
+64 MHz no da para el maestro y el esclavo del banco juntos (D5.1, enmienda del 16-10).
+(2) `pclk` va a 32 MHz y el SCK a 8, cuatro veces; el hub los separa más, y la errata
+habla de un reloj de sistema «mucho más rápido» que el SCK. (3) No ejerció D4: sin un solo
+plazo vencido el reinicio no corrió ni una vez, así que la fila no distingue «no nos afecta»
+de «el banco no lo ve». (4) El horizonte de «cero artefactos audibles» sigue siendo HUECO
+de Samuel.
+
+**Los cuatro atrasos** (giros que acabaron cuando ya tocaba el siguiente: un fallo del
+presupuesto de CPU, no del módulo) cayeron todos entre las 10:18 y las 15:20 del 16-10, y
+las 18 horas siguientes no tuvieron ninguno. No se conoce la causa; no se trazó.
+`hilo_libre_permil` se quedó en 540 todos los minutos.
+
 ### (4) `plazos_j2` — el osciloscopio
 
 ```bash
