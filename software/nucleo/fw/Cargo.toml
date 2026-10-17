@@ -107,6 +107,8 @@ tabla = ["verifica-bajada"]
 # La velocidad de borde de los pines del J2 (maestro y MISO del esclavo) en `Medium` o en `Low` en vez de
 # `VeryHigh`: con `VeryHigh` el cableado de puentes del banco rompe los marcos de apariencia aleatoria.
 pines-medio = []
+# El esclavo del banco contesta ceros en vez de `PATRON_SUBIDA`: el MISO no conmuta.
+subida-quieta = []
 pines-bajo = []
 # El mensaje del banco de 41, 71 o 103 bytes (`TONO`, `BAHIA`, `SET` de dieciseis) en vez de
 # los 25 de `NADA`: lo que cuesta el transporte segun el largo.

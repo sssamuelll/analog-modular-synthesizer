@@ -205,7 +205,7 @@ use embassy_sync::waitqueue::AtomicWaker;
     not(feature = "tabla")
 ))]
 use crate::j2_banco::PATRON_BAJADA;
-#[cfg(not(feature = "secuencia"))]
+#[cfg(not(any(feature = "secuencia", feature = "subida-quieta")))]
 use crate::j2_banco::PATRON_SUBIDA;
 use crate::j2_spi::{resetear_por_rcc, soltar_canales, CanalGpdma1, Soltado, LARGO_MAX};
 use crate::perfil::{self, Fase};
@@ -213,6 +213,11 @@ use crate::perfil::{self, Fase};
 use sam17_nucleo_core::marcos_j2::{
     escribe, lee, Seguimiento, Veredicto, BASE_BAJADA, BASE_SUBIDA,
 };
+
+/// Con `subida-quieta` el esclavo contesta siempre ceros: el MISO no conmuta. Para separar, en
+/// `tic_contenidos`, lo que rompe la bajada del propio contenido de la bajada.
+#[cfg(all(feature = "subida-quieta", not(feature = "secuencia")))]
+static SUBIDA_QUIETA: [u8; LARGO_MAX] = [0; LARGO_MAX];
 
 /// La linea de EXTI del `CS`, que es el numero del pin: PE**11**.
 const LINEA_CS: usize = 11;
@@ -674,10 +679,12 @@ impl<'d> Esclavo<'d> {
                     TransferOptions::default(),
                 )
             });
-            #[cfg(not(feature = "secuencia"))]
+            #[cfg(not(any(feature = "secuencia", feature = "subida-quieta")))]
             let fuente: &[u8] = &PATRON_SUBIDA;
             #[cfg(feature = "secuencia")]
             let fuente: &[u8] = &self.tx_buf.0[..esperado];
+            #[cfg(all(feature = "subida-quieta", not(feature = "secuencia")))]
+            let fuente: &[u8] = &SUBIDA_QUIETA[..esperado];
             let tx = ManuallyDrop::new(unsafe {
                 self.canal_tx
                     .write(self.req_tx, fuente, txdr, TransferOptions::default())
