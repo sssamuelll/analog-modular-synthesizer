@@ -1096,8 +1096,8 @@ unsafe fn JPEG() {
         CICLOS[0].load(Ordering::Relaxed),
         CICLOS[1].load(Ordering::Relaxed),
     );
-    for n in 0..N {
-        if REC_PEDIDA[n].swap(false, Ordering::Relaxed) {
+    for (n, pedida) in REC_PEDIDA.iter().enumerate() {
+        if pedida.swap(false, Ordering::Relaxed) {
             recupera(n);
         }
     }
