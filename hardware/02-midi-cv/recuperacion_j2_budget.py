@@ -123,11 +123,25 @@ def plazo_s(bytes_clocados: int, f_reloj_hz: float, u: dict) -> float:
     return u["factor_plazo"] * t_nominal + u["t_suelo_plazo_us"] * 1e-6
 
 
-def csv_tiene_fila(ruta: str = _CSV) -> bool:
+def cadencia_de_filas(lineas: list[str]) -> float:
+    """La mayor cadencia, en giros por segundo, entre las filas de
+    `resistencia_j2.csv`; 0 si no hay ninguna medida. La fila no lleva la cadencia:
+    sale de `giros / (horas * 3600)`. La del soak del 17-10 es de 1 kHz y no de los
+    8 del lazo (spec D5.1, enmienda del 16-10), asi que `tiene fila` no puede darla
+    por cerrada. La tanda de `horas = 0` es el formato, no una medida."""
+    mejor = 0.0
+    for fila in csv.DictReader(lineas):
+        horas, giros = float(fila["horas"]), float(fila["giros"])
+        if horas > 0:
+            mejor = max(mejor, giros / (horas * 3600))
+    return mejor
+
+
+def cadencia_del_csv(ruta: str = _CSV) -> float:
     if not os.path.exists(ruta):
-        return False
-    with open(ruta, encoding="utf-8") as f:
-        return len([ln for ln in f if ln.strip()]) > 1
+        return 0.0
+    with open(ruta, encoding="utf-8", newline="") as f:
+        return cadencia_de_filas(f.read().splitlines())
 
 
 def demo() -> int:
@@ -244,10 +258,25 @@ def demo() -> int:
             "no es el reloj del hub (riesgo 9, #428)")
 
     # --- 7. los HUECOS ---------------------------------------------------
-    if not csv_tiene_fila():
+    # La cuenta de la cadencia, contra un CSV sintetico: una fila de 1 kHz no cierra
+    # el lazo de 8 kHz, y una de 8 kHz si; la tanda de horas = 0 no cuenta.
+    cab = ("ranura,instancia,tsize,nss,reloj_MHz,horas,giros,plazos_vencidos,"
+           "eot_tardios,subidas_malas,fecha,placa")
+    assert cadencia_de_filas([cab]) == 0.0
+    assert cadencia_de_filas([cab, "0,SPI5,25,hw,8,0,0,0,0,0,,x"]) == 0.0
+    assert cadencia_de_filas([cab, "0,SPI5,25,hw,8,24,86400000,0,0,0,,x"]) == 1000.0
+    assert cadencia_de_filas([cab, "0,SPI5,25,hw,8,1,28800000,0,0,0,,x"]) == 8000.0
+    cadencia = cadencia_del_csv()
+    if cadencia == 0:
         huecos.append(
             "resistencia_j2.csv no tiene ni una fila: la tasa REAL del defecto "
             "en nuestro montaje no se conoce (R-MJ8, #231)")
+    elif cadencia < 0.9 * tb.F_LAZO_HZ:
+        huecos.append(
+            f"resistencia_j2.csv solo tiene filas a {cadencia/1e3:.1f} kHz y el lazo del "
+            f"hub es de {tb.F_LAZO_HZ/1e3:.0f} kHz: la tasa del defecto a esa cadencia y "
+            "con la razon de relojes del hub no se conoce (D5.1, enmienda del 16-10; "
+            "R-MJ8, #231)")
     huecos.append(
         "T_IWDG no esta declarado por el papel del hub (#291). La cota que "
         f"este papel le manda es T_IWDG > {t_wd*1e3:.0f} ms, para que cuando "
