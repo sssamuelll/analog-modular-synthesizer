@@ -57,6 +57,10 @@ T_REINICIO_S = 20e-6
 # alineacion al giro + un giro".
 GIROS_DE_ALINEACION = 2
 
+# PROVISIONAL desde el acta del 2026-10-17: queda asi hasta que exista el censo de CPU
+# del hub (`carga_hub_budget.py`), y lo que cuenta es el trabajo propio del enlace sin
+# componer la trama (spec, D5.1, acta del 17-10).
+#
 # El reparto de CPU del J2 del hub, FIRMADO por Samuel el 2026-10-16 ("firmamos
 # el reparto de CPU del J2"): como maximo el 15 % de UN nucleo del N657, seis
 # ranuras a 8 kHz con sus ISR, el despacho del ejecutor y los DMA. Es la primera
