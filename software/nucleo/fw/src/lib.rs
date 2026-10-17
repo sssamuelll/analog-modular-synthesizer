@@ -11,6 +11,7 @@ pub mod j2_esclavo;
 #[cfg(feature = "transporte-isr")]
 pub mod j2_isr;
 pub mod j2_spi;
+pub mod mpu;
 #[cfg(feature = "muestreo")]
 pub mod muestreo;
 pub mod perfil;

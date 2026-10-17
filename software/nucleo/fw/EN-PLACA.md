@@ -679,6 +679,13 @@ fila de `carga_j2.csv`; `recuperacion_j2_budget.py` la lee y falla si una fila a
   ciclo por acceso, para la SRAM (referencia), el SPI5, el canal 15 del GPDMA1 y el
   reloj de embassy.
 
+- `costes_dma` y `mpu::region_no_cacheable`: **cuánto cuesta leer y escribir un búfer de
+  DMA** de 32 y de 128 bytes según la forma de R-MJ7: una región de la MPU *Normal, no
+  cacheable*, o el búfer cacheable con `clean` e `invalidate` por dirección
+  (`cargo run --release --features perfil[,reloj-hub] --bin costes_dma`). Imprime
+  `costes_dma,f_cpu=,cache=,operacion=,ciclos_x100=`, en centésimas de ciclo por
+  operación entera.
+
 **Medido el 2026-10-17 a 800 MHz** (`--hub`, núcleo medido a 800,1 MHz, periodo 125 µs).
 **Es exploración, no una fila de `carga_j2.csv`**: la pasada con D-cache va sin la región
 MPU de los búferes del DMA (R-MJ7) y no se anota, y `recuperacion_j2_budget.py` sigue
@@ -728,8 +735,35 @@ siempre al periférico):
 | GPDMA1 (canal 15) | 12,0 | 2,0 | 32,0 | 8,0 |
 | reloj de embassy (`TIM12.CNT`) | 16,0 | — | 48,0 | — |
 
-Qué falta para una fila: la región MPU de los búferes del DMA y la D-cache encendida con
-ella (R-MJ7, #380), y que el transporte que se mida sea el del instrumento.
+`costes_dma` a 800 MHz, con la D-cache y la región MPU puestas (ciclos por operación; la
+I-cache, siempre encendida):
+
+| operación | 32 bytes (una línea) | 128 bytes (cuatro) |
+|---|---|---|
+| región no cacheable, leer con `ldm` en ráfaga | **96** | **372** |
+| región no cacheable, leer palabra a palabra | 676 | 2 692 |
+| región no cacheable, leer byte a byte | 2 696 | 10 756 |
+| región no cacheable, escribir palabras | 51 | 195 |
+| cacheable: `invalidate` y leer palabras | 160 | 580 |
+| cacheable: `invalidate` y leer bytes | — | 1 028 |
+| cacheable: escribir palabras y `clean` | 176 | 388 |
+| cacheable, ya en la caché y sin mantenimiento (cota inferior): leer palabras | — | 164 |
+
+- **En la región no cacheable un acceso suelto cuesta 84 ciclos, sea byte o palabra**, y una
+  ráfaga `ldm` de ocho palabras cuesta 96. Un CRC o una comparación que lea el búfer de
+  subida directamente, a byte, cuesta unos 10 000 ciclos por 128 bytes: la subida se copia
+  con `ldm` a un búfer local y se trabaja sobre la copia. Que el compilador genere `ldm`
+  para un `copy_from_slice` hay que mirarlo en el desensamblado: aquí está hecho con `asm!`.
+- **Con mantenimiento por dirección**, un `invalidate` o un `clean` de una línea cuestan unos
+  30 ciclos, y traer de nuevo una línea invalidada, unos 85.
+- **Una trama de 25 bytes (la normal), bajada y subida:** región no cacheable con `ldm`,
+  unos 150 ciclos (51 + 96); cacheable con mantenimiento, unos 340 (176 + 160). **Una de 103
+  bytes (el `SET` de dieciséis):** unos 570 contra unos 970. La región no cacheable sale más
+  barata en los dos tamaños, con la condición de arriba.
+
+Qué falta para una fila: el transporte con sus búferes dentro de la región (los de hoy son
+locales de las tareas y de la ISR) y la D-cache encendida con ella (R-MJ7, #380), y que el
+transporte que se mida sea el del instrumento.
 
 ### Antes de dar por bueno cualquiera de los cuatro: que el ejecutor exista
 
