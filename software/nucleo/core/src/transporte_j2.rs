@@ -19,9 +19,15 @@ use crate::maestro_j2::Evento;
 
 /// Tics que `Vencida` espera a que arranque la recuperacion antes de dar la
 /// ranura por muerta (papel v2, §2.5). ESTIMADO.
-pub const COTA_VENCIDA_TICS: u8 = 2;
-/// Tics que `Reiniciando` espera a que la recuperacion acabe. ESTIMADO.
-pub const COTA_REINICIANDO_TICS: u8 = 4;
+///
+/// v2 decia 2: el planificador y la recuperacion van por debajo de USB y pantalla (P2), y una
+/// retencion de 350 us de P2 coincidiendo con un cuelgue bastaba para matar la ranura y, con
+/// ella, el instrumento (revision de Halberg del 17-10, hallazgo 1). 100 tics son 12,5 ms.
+pub const COTA_VENCIDA_TICS: u8 = 100;
+/// Tics que `Reiniciando` espera a que la recuperacion acabe (v2: 4). ESTIMADO. Las dos cotas
+/// suman 25 ms, la mitad de lo que el modulo aguanta sin tramas (400 giros, ~50 ms): una
+/// ranura se da por muerta antes de que el modulo se rinda solo.
+pub const COTA_REINICIANDO_TICS: u8 = 100;
 
 /// Cuantos tics dura un plazo de `plazo_us` microsegundos: el entero hacia
 /// arriba, y nunca menos de uno (una transferencia armada en un tic se mira como
@@ -48,6 +54,37 @@ pub const fn tics_fusionados(delta: u32, periodo: u32) -> u32 {
         return 0;
     }
     ((d + p / 2) / p - 1) as u32
+}
+
+/// El contador de tics de 32 bits del tic, extendido a 64 por quien lo lee (el planificador).
+///
+/// A 8 kHz el contador de 32 bits da la vuelta a los 6,2 dias, y la politica recibe como
+/// reloj `tics x periodo`: sin extenderlo, ese reloj da un paso atras de 6,2 dias y
+/// `inestable()` (que resta con `saturating_sub`) se queda en `true` hasta que el reloj
+/// alcance otra vez sus marcas viejas (revision de Halberg del 17-10, hallazgo 3).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Reloj64 {
+    epoca: u32,
+    ultimo: u32,
+}
+
+impl Reloj64 {
+    pub const fn nuevo() -> Reloj64 {
+        Reloj64 {
+            epoca: 0,
+            ultimo: 0,
+        }
+    }
+
+    /// `bajo` es el contador de 32 bits. Hay que llamarla al menos una vez por vuelta de 32 bits
+    /// (6,2 dias a 8 kHz); el planificador la llama en cada tic.
+    pub fn extiende(&mut self, bajo: u32) -> u64 {
+        if bajo < self.ultimo {
+            self.epoca = self.epoca.wrapping_add(1);
+        }
+        self.ultimo = bajo;
+        (u64::from(self.epoca) << 32) | u64::from(bajo)
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -125,12 +162,21 @@ impl Salida {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Transporte {
     estado: Estado,
+    cota_vencida: u8,
+    cota_reiniciando: u8,
 }
 
 impl Transporte {
     pub const fn nuevo() -> Transporte {
+        Transporte::con_cotas(COTA_VENCIDA_TICS, COTA_REINICIANDO_TICS)
+    }
+
+    /// Como [`Transporte::nuevo`], con otras cotas de espera para `Vencida` y `Reiniciando`.
+    pub const fn con_cotas(vencida: u8, reiniciando: u8) -> Transporte {
         Transporte {
             estado: Estado::Libre,
+            cota_vencida: vencida,
+            cota_reiniciando: reiniciando,
         }
     }
 
@@ -210,7 +256,7 @@ impl Transporte {
                 } else if e.reinicio_en_curso {
                     self.estado = Estado::Reiniciando { espera: 0 };
                     s
-                } else if espera >= COTA_VENCIDA_TICS {
+                } else if espera >= self.cota_vencida {
                     self.muerta(s)
                 } else {
                     self.estado = Estado::Vencida { espera: espera + 1 };
@@ -220,7 +266,7 @@ impl Transporte {
             Estado::Reiniciando { espera } => {
                 if e.reinicio_hecho {
                     self.desde_libre(&e, s)
-                } else if espera >= COTA_REINICIANDO_TICS {
+                } else if espera >= self.cota_reiniciando {
                     self.muerta(s)
                 } else {
                     self.estado = Estado::Reiniciando { espera: espera + 1 };
@@ -674,6 +720,153 @@ mod tests {
         assert_eq!(libre.estado(), Estado::Libre);
     }
 
+    // --- cotas ---------------------------------------------------------------------------
+
+    #[test]
+    fn nuevo_lleva_las_cotas_por_defecto() {
+        assert_eq!(
+            Transporte::nuevo(),
+            Transporte::con_cotas(COTA_VENCIDA_TICS, COTA_REINICIANDO_TICS)
+        );
+    }
+
+    #[test]
+    fn la_cota_por_defecto_aguanta_una_retencion_larga_del_planificador() {
+        // Un planificador retenido 5 ms (40 tics) por debajo de USB y pantalla: la ranura espera
+        // y la recuperacion arranca en cuanto el planificador corre; no muere.
+        let mut t = vencida();
+        for _ in 0..40 {
+            let s = t.paso(Entrada {
+                identidad: true,
+                ..Entrada::default()
+            });
+            assert_eq!(s.aviso, None);
+        }
+        let s = t.paso(Entrada {
+            identidad: true,
+            reinicio_en_curso: true,
+            ..Entrada::default()
+        });
+        assert_eq!(s, Salida::default());
+        assert_eq!(t.estado(), Estado::Reiniciando { espera: 0 });
+    }
+
+    #[test]
+    fn reiniciando_con_la_cota_por_defecto_aguanta_una_retencion_larga_de_la_recuperacion() {
+        let mut t = vencida();
+        t.paso(Entrada {
+            identidad: true,
+            reinicio_en_curso: true,
+            ..Entrada::default()
+        });
+        for _ in 0..40 {
+            let s = t.paso(Entrada {
+                identidad: true,
+                reinicio_en_curso: true,
+                ..Entrada::default()
+            });
+            assert_eq!(s.aviso, None);
+        }
+        let s = t.paso(Entrada {
+            reinicio_en_curso: true,
+            reinicio_hecho: true,
+            ..con_bajada(1)
+        });
+        assert!(s.armar);
+        assert_eq!(
+            t.estado(),
+            Estado::Armada {
+                edad: 0,
+                plazo_tics: 1
+            }
+        );
+    }
+
+    fn vencida_con(mut t: Transporte) -> Transporte {
+        t.paso(con_bajada(1));
+        t.paso(Entrada {
+            identidad: true,
+            ..Entrada::default()
+        });
+        assert_eq!(t.estado(), Estado::Vencida { espera: 0 });
+        t
+    }
+
+    #[test]
+    fn con_cotas_propias_vencida_muere_a_su_hora() {
+        let mut t = vencida_con(Transporte::con_cotas(1, 9));
+        let s = t.paso(Entrada {
+            identidad: true,
+            ..Entrada::default()
+        });
+        assert_eq!(s.aviso, None);
+        assert_eq!(t.estado(), Estado::Vencida { espera: 1 });
+        let s = t.paso(Entrada {
+            identidad: true,
+            ..Entrada::default()
+        });
+        assert_eq!(s.aviso, Some(Aviso::RanuraMuerta));
+        assert_eq!(t.estado(), Estado::Muerta);
+    }
+
+    #[test]
+    fn con_cotas_propias_reiniciando_muere_a_su_hora() {
+        let mut t = vencida_con(Transporte::con_cotas(9, 1));
+        t.paso(Entrada {
+            identidad: true,
+            reinicio_en_curso: true,
+            ..Entrada::default()
+        });
+        assert_eq!(t.estado(), Estado::Reiniciando { espera: 0 });
+        let s = t.paso(Entrada {
+            identidad: true,
+            reinicio_en_curso: true,
+            ..Entrada::default()
+        });
+        assert_eq!(s.aviso, None);
+        let s = t.paso(Entrada {
+            identidad: true,
+            reinicio_en_curso: true,
+            ..Entrada::default()
+        });
+        assert_eq!(s.aviso, Some(Aviso::RanuraMuerta));
+        assert_eq!(t.estado(), Estado::Muerta);
+    }
+
+    // --- Reloj64 ---------------------------------------------------------------------------
+
+    #[test]
+    fn el_reloj_de_64_bits_empieza_en_cero_y_sigue_al_de_32() {
+        let mut r = Reloj64::nuevo();
+        assert_eq!(r.extiende(0), 0);
+        assert_eq!(r.extiende(1), 1);
+        assert_eq!(r.extiende(1000), 1000);
+        assert_eq!(r.extiende(1000), 1000);
+    }
+
+    #[test]
+    fn el_reloj_de_64_bits_no_da_marcha_atras_cuando_el_de_32_da_la_vuelta() {
+        let mut r = Reloj64::nuevo();
+        assert_eq!(r.extiende(u32::MAX - 1), u64::from(u32::MAX) - 1);
+        assert_eq!(r.extiende(u32::MAX), u64::from(u32::MAX));
+        assert_eq!(r.extiende(0), 1 << 32);
+        assert_eq!(r.extiende(1), (1 << 32) + 1);
+    }
+
+    #[test]
+    fn el_reloj_de_64_bits_sigue_a_un_contador_verdadero_con_pasos_de_casi_una_vuelta() {
+        for semilla in 1..=20u64 {
+            let mut azar = Xorshift(semilla.wrapping_mul(0x9E37_79B9_7F4A_7C15));
+            let mut r = Reloj64::nuevo();
+            let mut verdadero = 0u64;
+            for _ in 0..2000 {
+                // Pasos de 0 a 2^32 - 1: lo mas que el reloj puede pedir entre dos llamadas.
+                verdadero += azar.sig() & u64::from(u32::MAX);
+                assert_eq!(r.extiende(verdadero as u32), verdadero, "semilla {semilla}");
+            }
+        }
+    }
+
     // --- propiedades --------------------------------------------------------------------
 
     /// Un generador pseudoaleatorio de bolsillo: el contrato no necesita un crate.
@@ -713,7 +906,8 @@ mod tests {
     fn nunca_se_arma_sobre_una_transferencia_en_vuelo() {
         for semilla in 1..=20u64 {
             let mut r = Xorshift(semilla.wrapping_mul(0x9E37_79B9_7F4A_7C15));
-            let mut t = Transporte::nuevo();
+            // Las cotas de v2: con las de hoy las secuencias al azar casi nunca llegan a `Muerta`.
+            let mut t = Transporte::con_cotas(2, 4);
             for _ in 0..5000 {
                 let antes = t.estado();
                 let s = t.paso(entrada_al_azar(&mut r));
@@ -737,7 +931,7 @@ mod tests {
         // Conservacion: Armada = GiroOk + PlazoVencido + (1 si hay una en vuelo al final).
         for semilla in 1..=20u64 {
             let mut r = Xorshift(semilla.wrapping_mul(0xD1B5_4A32_D192_ED03));
-            let mut t = Transporte::nuevo();
+            let mut t = Transporte::con_cotas(2, 4);
             let (mut armadas, mut buenos, mut vencidos) = (0u32, 0u32, 0u32);
             for _ in 0..5000 {
                 let s = t.paso(entrada_al_azar(&mut r));
