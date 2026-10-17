@@ -37,7 +37,9 @@ use embassy_stm32::interrupt::{InterruptExt, Priority};
 use embassy_stm32::pac::gpdma::vals as dma;
 use embassy_stm32::{pac, peripherals, rcc, Peri};
 use embassy_time::Instant;
-use sam17_nucleo_core::maestro_j2::{Evento, Ranura as Politica, Tsize, Umbrales};
+use sam17_nucleo_core::maestro_j2::{
+    Evento, Ranura as Politica, Tsize, Umbrales, PERIODO_GIRO_US,
+};
 
 use crate::j2_ejecutor::{publicar_cuentas, Bajada, Juez, SELLOS};
 use crate::j2_spi::{Partes, Ranura, ESTADOS, LARGO_MAX};
@@ -146,6 +148,10 @@ struct Giro {
     en_vuelo: bool,
     plazos: u32,
     errores_dma: u32,
+    /// Cuando se armo el giro en vuelo, y como estaba cuando un tic lo encontro sin
+    /// cerrar: microsegundos desde el armado, `SR` del SPI y el `BR1` de los canales RX y TX.
+    t_arm_us: u64,
+    diag: [u32; 5],
     // La ranura se guarda viva: sus `Flex` desconfiguran los pines al caer.
     _ranura: Ranura<'static>,
 }
@@ -278,6 +284,8 @@ pub fn lanzar(
         en_vuelo: false,
         plazos: 0,
         errores_dma: 0,
+        t_arm_us: 0,
+        diag: [0; 5],
         _ranura: ranura,
     };
     // SAFETY: la ISR de `TIM7` aun esta apagada.
@@ -286,7 +294,15 @@ pub fn lanzar(
     rcc::enable_and_reset::<peripherals::TIM7>();
     let f_timer = rcc::frequency::<peripherals::TIM7>().0;
     let psc = f_timer / 1_000_000 - 1;
-    defmt::assert!(psc <= 0xFFFF && periodo_us >= 2 && periodo_us <= 0x1_0000);
+    defmt::assert!(psc <= 0xFFFF && periodo_us <= 0x1_0000);
+    // El periodo del banco puede ser mayor que el del instrumento, nunca menor
+    // (spec D5.1, enmienda del 16-10): lo mismo que exige `lanzar_ranuras`.
+    defmt::assert!(
+        periodo_us >= PERIODO_GIRO_US,
+        "j2_isr: periodo de {} us, menor que el del instrumento ({} us)",
+        periodo_us,
+        PERIODO_GIRO_US
+    );
     let t = pac::TIM7;
     t.psc().write_value(psc as u16);
     t.arr().write(|w| w.set_arr((periodo_us - 1) as u16));
@@ -316,34 +332,55 @@ unsafe fn TIM7() {
     if g.en_vuelo {
         // El `EOT` que guardo la ISR del SPI. Sin el, el giro no acabo: se
         // cuenta y no se arma (el plazo y D4 no estan escritos, ver la cabecera).
-        match ESTADOS[N].turno.tomar() {
-            Some(b) if b.eot() && g.cierra() => {
-                let largo = g.tsize.get() as usize;
-                let _ = g.politica.paso(Evento::GiroOk, ahora);
-                let ev = if (g.juez)(N, &g.subida[..largo]) {
-                    Evento::SubidaOk
-                } else {
-                    Evento::SubidaMala
-                };
-                let _ = g.politica.paso(ev, ahora);
-                g.en_vuelo = false;
-                publica(g);
-            }
-            _ => {
-                g.plazos += 1;
-                perfil::cierra_isr(Fase::Ejecutor, inicio);
-                return;
-            }
+        let eot = ESTADOS[N].turno.tomar().is_some_and(|b| b.eot());
+        if !eot {
+            g.plazos += 1;
+            g.diag = [
+                (ahora - g.t_arm_us) as u32,
+                g.regs.sr().read().0,
+                g.rx.ch.br1().read().0,
+                g.tx.ch.br1().read().0,
+                ahora as u32,
+            ];
+            perfil::cierra_isr(Fase::Ejecutor, inicio);
+            return;
         }
+        if g.cierra() {
+            let largo = g.tsize.get() as usize;
+            let _ = g.politica.paso(Evento::GiroOk, ahora);
+            let ev = if (g.juez)(N, &g.subida[..largo]) {
+                Evento::SubidaOk
+            } else {
+                Evento::SubidaMala
+            };
+            let _ = g.politica.paso(ev, ahora);
+            publica(g);
+        } else {
+            // El `EOT` llego pero el DMA no acabo bien: `cierra` ya apago el SPI.
+            // Se cuenta y se rearma; antes se quedaba `en_vuelo` para siempre.
+            g.plazos += 1;
+        }
+        g.en_vuelo = false;
     }
 
     g.tsize = (g.bajada_fn)(N, &mut g.bajada);
     SELLOS[N].fetch_add(1, Ordering::Relaxed);
     let _ = g.politica.paso(Evento::Armada, ahora);
     let _ = ESTADOS[N].turno.armar();
+    g.t_arm_us = ahora;
     g.arma(g.tsize.get());
     g.en_vuelo = true;
     perfil::cierra_isr(Fase::Ejecutor, inicio);
+}
+
+/// Como estaba el ultimo giro que un tic encontro sin cerrar: microsegundos desde el
+/// armado, `SR` del SPI y el `BR1` de los canales RX y TX.
+pub fn diagnostico() -> [u32; 5] {
+    // SAFETY: cuatro enteros; el banco los lee con el periodo corriendo.
+    match unsafe { (*GIRO.0.get()).as_ref() } {
+        Some(g) => g.diag,
+        None => [0; 5],
+    }
 }
 
 /// Los fallos que no son un giro normal, para el banco: plazos y errores del DMA.

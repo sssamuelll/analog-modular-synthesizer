@@ -71,6 +71,13 @@ def invalida(p: dict) -> str:
     dice cuanto mas."""
     if p["libre"] >= 1000:
         return "hilo_libre saturado en 1000: la base no es la de este estado"
+    # El lazo tiene que girar a su periodo, un giro completado por periodo: si no,
+    # la cifra es de otro regimen. Con el ejecutor, los `atrasos` explican un ciclo
+    # mas largo (el calendario deja un periodo de hueco); el transporte por ISR no
+    # tiene calendario, y un ciclo distinto del periodo es que se saltaron tics.
+    if abs(p["ciclo_us"] - p["periodo"]) > 0.05 * p["periodo"] and not p["atrasos"]:
+        return (f"el lazo no gira a su periodo ({p['ciclo_us']} us contra "
+                f"{p['periodo']}) y ningun atraso lo explica")
     if "ejecutor" in p and p["ciclos_por_giro"] < p["ejecutor"]:
         return (f"el total ({p['ciclos_por_giro']}) es menor que el manejador del ejecutor "
                 f"({p['ejecutor']}): la base del medidor no es la de este estado")
@@ -238,6 +245,16 @@ def autotest() -> None:
     llena = parsea(rota.replace("hilo_libre_permil=658,atrasos=0,plazos_vencidos=0",
                                 "hilo_libre_permil=1000,atrasos=0,plazos_vencidos=0,base_por_s=2400000"))
     assert llena["pasadas"]["no"]["invalida"] and llena["pasadas"]["no"]["base"] == 2400000
+    # Un giro por tic: el ciclo es el periodo. Si el ciclo es tres veces el periodo y
+    # nada lo explica (el transporte por ISR no tiene atrasos), se saltaron tics y
+    # la cifra por giro no es la de un lazo que gira.
+    cab_isr = ("carga_j2: firmware abc1234, f_cpu 800000000 Hz, f_cpu_medido 800000000 Hz, "
+               "periodo 125 us, base 1 vueltas/s, transporte isr (x)\n")
+    linea = ("carga_j2,cache=icache,ranuras=1,periodo_us=125,ciclo_us={},giros_en_5s=40000,"
+             "hilo_libre_permil=985,atrasos=0,plazos_vencidos=0 (x)\n")
+    assert not parsea(cab_isr + linea.format(125))["pasadas"]["icache"]["invalida"]
+    assert not parsea(cab_isr + linea.format(124))["pasadas"]["icache"]["invalida"]
+    assert parsea(cab_isr + linea.format(375))["pasadas"]["icache"]["invalida"]
     print("autotest ok")
 
 
