@@ -122,6 +122,12 @@ async fn main(spawner: Spawner) {
         "tic_banco,esclavo,tramas_ok={},tramas_cortas={},rearmes_escalados={}",
         ok, cortas, rearmes
     );
+    #[cfg(feature = "verifica-bajada")]
+    info!(
+        "tic_banco,esclavo,bajadas_ok={},bajadas_malas={}",
+        j2_esclavo::BAJADAS_OK.load(Ordering::Relaxed),
+        j2_esclavo::BAJADAS_MALAS.load(Ordering::Relaxed)
+    );
     info!("tic_banco,tic,{}", t);
     info!("tic_banco: fin");
     // Un `bkpt` para que `probe-rs run` termine solo y suelte la sonda.

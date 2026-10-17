@@ -411,8 +411,9 @@ static GAP_CICLOS: AtomicU32 = AtomicU32::new(0);
 static T_CANAL_CICLOS: AtomicU32 = AtomicU32::new(0);
 
 /// Ciclos de CPU acumulados por nivel (con `--features perfil`): tic, planificador sin el
-/// tic, recuperacion sin los otros dos, y dentro del planificador lo que gasta componer.
-static CICLOS: [AtomicU32; 4] = [const { AtomicU32::new(0) }; 4];
+/// tic, recuperacion sin los otros dos, y dentro del planificador lo que gasta componer;
+/// y dentro del tic, leer los registros de estado, cerrar y armar.
+static CICLOS: [AtomicU32; 7] = [const { AtomicU32::new(0) }; 7];
 
 #[cfg(feature = "inyeccion")]
 static ENVENENAR: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
@@ -425,7 +426,7 @@ static SIN_RECUPERACION: AtomicBool = AtomicBool::new(false);
 /// Las marcas de tiempo (`DWT_CYCCNT`) del ultimo incidente de la ranura 0, en el orden de
 /// [`Marca`]. Cero = aun no ocurrio.
 #[cfg(feature = "inyeccion")]
-static MARCAS: [AtomicU32; 7] = [const { AtomicU32::new(0) }; 7];
+static MARCAS: [AtomicU32; 10] = [const { AtomicU32::new(0) }; 10];
 
 /// Los instantes de un incidente de la ranura 0: de un armado envenenado a la trama buena
 /// siguiente.
@@ -447,6 +448,12 @@ pub enum Marca {
     RecHecha,
     /// `CSTART` de la primera transferencia tras la recuperacion: el `CS` vuelve a bajar.
     CstartSiguiente,
+    /// Entra la escalada del GPDMA1 (de la ultima escalada, de cualquier ranura).
+    EscalaIni,
+    /// Empieza la seccion critica de la escalada: desde aqui el tic no corre.
+    SeccionIni,
+    /// Acaba la seccion critica: el GPDMA1 ya esta reseteado y las ranuras, marcadas.
+    SeccionFin,
 }
 
 #[cfg(feature = "inyeccion")]
@@ -507,10 +514,10 @@ pub fn testigos() -> Testigos {
 }
 
 /// Los ciclos acumulados desde el arranque, con la vuelta de 32 bits: tic, planificador,
-/// recuperacion y, dentro del planificador, componer la trama. Con `--features perfil`;
-/// sin ella salen en cero.
-pub fn ciclos() -> [u32; 4] {
-    let mut v = [0u32; 4];
+/// recuperacion, componer la trama (dentro del planificador) y, dentro del tic, leer,
+/// cerrar y armar. Con `--features perfil`; sin ella salen en cero.
+pub fn ciclos() -> [u32; 7] {
+    let mut v = [0u32; 7];
     for (d, s) in v.iter_mut().zip(CICLOS.iter()) {
         *d = s.load(Ordering::Relaxed);
     }
@@ -565,8 +572,8 @@ pub fn borra_marcas() {
 
 /// Las marcas del ultimo incidente de la ranura 0, en ciclos de CPU.
 #[cfg(feature = "inyeccion")]
-pub fn marcas() -> [u32; 7] {
-    let mut v = [0u32; 7];
+pub fn marcas() -> [u32; 10] {
+    let mut v = [0u32; 10];
     for (d, s) in v.iter_mut().zip(MARCAS.iter()) {
         *d = s.load(Ordering::Relaxed);
     }
@@ -763,11 +770,15 @@ unsafe fn TIM7() {
         }
         let t = unsafe { &mut *TIC[n].0.get() };
         let antes = t.transporte.estado();
+        #[cfg(feature = "perfil")]
+        let a0 = DWT::cycle_count();
         let lectura = if matches!(antes, Estado::Armada { .. }) {
             hw.lee()
         } else {
             Lectura::default()
         };
+        #[cfg(feature = "perfil")]
+        suma(4, DWT::cycle_count().wrapping_sub(a0));
         let bz = &BUZON[n];
         let bajada = bz
             .fresca()
@@ -783,7 +794,11 @@ unsafe fn TIM7() {
         });
 
         if s.cerrar {
+            #[cfg(feature = "perfil")]
+            let c0 = DWT::cycle_count();
             hw.cierra();
+            #[cfg(feature = "perfil")]
+            suma(5, DWT::cycle_count().wrapping_sub(c0));
             if s.eventos[0] == Some(Evento::GiroOk) {
                 LARGO_SUBIDA[n].store(t.largo, Ordering::Relaxed);
                 SUBIDA[n].publicar(t.rx_actual as usize);
@@ -801,12 +816,16 @@ unsafe fn TIM7() {
                 let bndt_tx = u16::from(largo) - u16::from(envenenada);
                 #[cfg(not(feature = "inyeccion"))]
                 let bndt_tx = u16::from(largo);
+                #[cfg(feature = "perfil")]
+                let r0 = DWT::cycle_count();
                 hw.arma(
                     u16::from(largo),
                     bndt_tx,
                     ptr_bajada(n, c) as u32,
                     ptr_subida(n, t.rx_actual as usize) as u32,
                 );
+                #[cfg(feature = "perfil")]
+                suma(6, DWT::cycle_count().wrapping_sub(r0));
                 #[cfg(feature = "inyeccion")]
                 if n == 0 {
                     let ahora = DWT::cycle_count();
@@ -995,7 +1014,11 @@ fn para_canales(hw: &Hw) -> bool {
 /// Despues se reprograman los canales de todas las ranuras activas y se limpian.
 fn escala() {
     ESCALADAS_GPDMA.fetch_add(1, Ordering::Relaxed);
+    #[cfg(feature = "inyeccion")]
+    marca(Marca::EscalaIni, DWT::cycle_count());
     cortex_m::interrupt::free(|_| {
+        #[cfg(feature = "inyeccion")]
+        marca(Marca::SeccionIni, DWT::cycle_count());
         crate::j2_spi::resetear_por_rcc::<peripherals::GPDMA1>();
         for k in 0..N {
             // SAFETY: con las interrupciones enmascaradas el tic no corre.
@@ -1008,6 +1031,8 @@ fn escala() {
                 ANILLO[k].empujar(ev);
             }
         }
+        #[cfg(feature = "inyeccion")]
+        marca(Marca::SeccionFin, DWT::cycle_count());
     });
     for k in 0..N {
         if let Some(hw) = unsafe { &*HW[k].0.get() }.as_ref() {

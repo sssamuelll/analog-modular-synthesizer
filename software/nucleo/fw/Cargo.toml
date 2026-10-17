@@ -87,6 +87,9 @@ inyeccion = ["transporte-tic"]
 # La bajada que no compone nada (`j2_banco::bajada_quieta`) en `carga_j2`: el enlace solo, sin
 # el costo de componer la trama (ficha 1 del acta del 17-10).
 sin-componer = []
+# El esclavo del banco comprueba el contenido de la bajada que recibe (`PATRON_BAJADA`) y
+# cuenta las buenas y las malas. Para `tic_banco` y `tic_recupera`.
+verifica-bajada = []
 # El mensaje del banco de 41, 71 o 103 bytes (`TONO`, `BAHIA`, `SET` de dieciseis) en vez de
 # los 25 de `NADA`: lo que cuesta el transporte segun el largo.
 largo-41 = []

@@ -59,6 +59,10 @@ struct Foto {
     muertas: u32,
     cortas_esclavo: u32,
     ok_esclavo: u32,
+    #[cfg_attr(not(feature = "verifica-bajada"), allow(dead_code))]
+    bajadas_malas: u32,
+    #[cfg_attr(not(feature = "verifica-bajada"), allow(dead_code))]
+    bajadas_ok: u32,
     sellos: [u32; 4],
 }
 
@@ -83,6 +87,11 @@ fn foto() -> Foto {
     f.muertas = t.ranuras_muertas;
     f.cortas_esclavo = j2_esclavo::TRAMAS_CORTAS.load(Ordering::Relaxed);
     f.ok_esclavo = j2_esclavo::TRAMAS_OK.load(Ordering::Relaxed);
+    #[cfg(feature = "verifica-bajada")]
+    {
+        f.bajadas_ok = j2_esclavo::BAJADAS_OK.load(Ordering::Relaxed);
+        f.bajadas_malas = j2_esclavo::BAJADAS_MALAS.load(Ordering::Relaxed);
+    }
     f
 }
 
@@ -218,9 +227,15 @@ async fn main(spawner: Spawner) {
     );
     veredicto("A.ninguna_muerta", despues_a.muertas == 0);
     veredicto(
+        "A.los_giros_siguen",
+        despues_a.giros[0] >= antes_a.giros[0] + 100,
+    );
+    #[cfg(not(feature = "sin-esclavo"))]
+    veredicto(
         "A.las_subidas_siguen",
         despues_a.subidas_ok >= antes_a.subidas_ok + 100,
     );
+    #[cfg(not(feature = "sin-esclavo"))]
     veredicto(
         "A.ninguna_subida_mala",
         despues_a.subidas_malas == antes_a.subidas_malas,
@@ -251,6 +266,7 @@ async fn main(spawner: Spawner) {
         despues_b.recuperaciones - antes_b.recuperaciones == 1000,
     );
     veredicto("B.ninguna_muerta", despues_b.muertas == 0);
+    #[cfg(not(feature = "sin-esclavo"))]
     veredicto(
         "B.ninguna_subida_mala",
         despues_b.subidas_malas == antes_b.subidas_malas,
@@ -260,6 +276,21 @@ async fn main(spawner: Spawner) {
         "B.el_esclavo_ve_mil_tramas_cortas",
         despues_b.cortas_esclavo - antes_b.cortas_esclavo == 1000,
     );
+
+    // La bajada que el esclavo recibio, antes y despues de las rafagas de incidentes.
+    #[cfg(feature = "verifica-bajada")]
+    {
+        info!(
+            "tic_recupera,bajada,ok={},malas={}",
+            despues_b.bajadas_ok - antes_a.bajadas_ok,
+            despues_b.bajadas_malas - antes_a.bajadas_malas
+        );
+        veredicto(
+            "B.la_bajada_siempre_buena",
+            despues_b.bajadas_malas == antes_a.bajadas_malas
+                && despues_b.bajadas_ok > antes_a.bajadas_ok,
+        );
+    }
 
     // C
     #[cfg(feature = "escalada")]
@@ -272,6 +303,13 @@ async fn main(spawner: Spawner) {
             despues_c.plazos[2] - antes_c.plazos[2],
             despues_c.recuperaciones - antes_c.recuperaciones,
             despues_c.muertas,
+        );
+        let m = j2_tic::marcas();
+        info!(
+            "tic_recupera,C,ultima_escalada: seccion_critica_ns={},escalada_entera_us={}",
+            m[Marca::SeccionFin as usize].wrapping_sub(m[Marca::SeccionIni as usize]) * 1000
+                / ciclos_us,
+            m[Marca::RecHecha as usize].wrapping_sub(m[Marca::EscalaIni as usize]) / ciclos_us
         );
         veredicto(
             "C.diez_escaladas",

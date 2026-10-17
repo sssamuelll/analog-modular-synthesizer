@@ -199,6 +199,8 @@ use embassy_stm32::pac::spi::vals::{Cpha, Cpol, Master, Udrcfg};
 use embassy_stm32::{gpio, interrupt, pac, spi, Peri};
 use embassy_sync::waitqueue::AtomicWaker;
 
+#[cfg(feature = "verifica-bajada")]
+use crate::j2_banco::PATRON_BAJADA;
 use crate::j2_banco::PATRON_SUBIDA;
 use crate::j2_spi::{resetear_por_rcc, soltar_canales, CanalGpdma1, Soltado, LARGO_MAX};
 use crate::perfil::{self, Fase};
@@ -225,6 +227,12 @@ pub static TRAMAS_OK: AtomicU32 = AtomicU32::new(0);
 /// Subiendo **sin** `plazos_vencidos` del maestro, es el hueco del rearme de
 /// este modulo, no un cuelgue del maestro. Ver la cabecera del modulo.
 pub static TRAMAS_CORTAS: AtomicU32 = AtomicU32::new(0);
+
+/// Con `verifica-bajada`: tramas completas cuyo contenido es `PATRON_BAJADA`, y las que no.
+#[cfg(feature = "verifica-bajada")]
+pub static BAJADAS_OK: AtomicU32 = AtomicU32::new(0);
+#[cfg(feature = "verifica-bajada")]
+pub static BAJADAS_MALAS: AtomicU32 = AtomicU32::new(0);
 
 /// Cuantas veces soltar los canales del esclavo tuvo que escalar al reset del
 /// GPDMA1 por RCC (`j2_spi::soltar_canales`, D4.2).
@@ -297,6 +305,11 @@ async fn flanco_de_cs() {
 /// El esclavo del banco: los registros, los dos canales del GPDMA, sus numeros
 /// de peticion, el bufer de recepcion y los cuatro pines. Los `Flex` viven aqui
 /// porque su `Drop` desconfigura el pin.
+/// El bufer de recepcion, alineado a una linea de D-cache para que `verifica-bajada` pueda
+/// invalidarlo sin tocar nada que no sea suyo.
+#[repr(C, align(32))]
+struct Bufer([u8; LARGO_MAX]);
+
 pub struct Esclavo<'d> {
     regs: pac::spi::Spi,
     canal_tx: dma::Channel<'d>,
@@ -309,7 +322,7 @@ pub struct Esclavo<'d> {
     /// El bufer de recepcion. El esclavo **no mira** lo que llega: solo cuenta
     /// cuantos bytes entraron, que es todo lo que D6.2 le pide al receptor para
     /// decidir si la trama vale.
-    buf: [u8; LARGO_MAX],
+    buf: Bufer,
     _sck: Flex<'d>,
     _mosi: Flex<'d>,
     _miso: Flex<'d>,
@@ -563,7 +576,7 @@ impl<'d> Esclavo<'d> {
             req_tx,
             req_rx,
             esperado,
-            buf: [0u8; LARGO_MAX],
+            buf: Bufer([0u8; LARGO_MAX]),
             _sck: sck,
             _mosi: mosi,
             _miso: miso,
@@ -606,8 +619,12 @@ impl<'d> Esclavo<'d> {
             //    clocar el maestro; lo que de verdad llego se lee luego del
             //    contador del canal.
             let rx = ManuallyDrop::new(unsafe {
-                self.canal_rx
-                    .read(self.req_rx, rxdr, &mut self.buf, TransferOptions::default())
+                self.canal_rx.read(
+                    self.req_rx,
+                    rxdr,
+                    &mut self.buf.0,
+                    TransferOptions::default(),
+                )
             });
             let tx = ManuallyDrop::new(unsafe {
                 self.canal_tx.write(
@@ -665,6 +682,23 @@ impl<'d> Esclavo<'d> {
             // el GPDMA1 por RCC y lo dice.
             if let Soltado::Escalado = soltar_canales(tx, rx) {
                 REARMES_ESCALADOS.fetch_add(1, Ordering::Relaxed);
+            }
+            // Ya con los canales soltados el bufer vuelve a ser del esclavo. El DMA escribio
+            // detras de la D-cache: se invalida el bufer (alineado a la linea y de largo
+            // multiplo de ella) antes de leerlo.
+            #[cfg(feature = "verifica-bajada")]
+            if recibidos >= esperado {
+                // SAFETY: el bufer es de este esclavo, alineado y de 128 bytes, y el DMA de
+                // recepcion ya paro.
+                unsafe {
+                    let mut cp = cortex_m::Peripherals::steal();
+                    cp.SCB.invalidate_dcache_by_slice(&mut self.buf.0);
+                }
+                if self.buf.0[..esperado] == PATRON_BAJADA[..esperado] {
+                    BAJADAS_OK.fetch_add(1, Ordering::Relaxed);
+                } else {
+                    BAJADAS_MALAS.fetch_add(1, Ordering::Relaxed);
+                }
             }
 
             // Cierre: apagar y solo entonces los dos `DMAEN` (sec.67.4.14,

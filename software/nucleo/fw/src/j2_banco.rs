@@ -358,6 +358,18 @@ pub const LARGO_BANCO: usize = if cfg!(feature = "largo-103") {
     25
 };
 
+/// Lo que el maestro del banco manda, byte a byte: `0x5A ^ i`. Es lo que la feature
+/// `verifica-bajada` del esclavo comprueba que le llega.
+pub const PATRON_BAJADA: [u8; LARGO_BANCO] = {
+    let mut p = [0u8; LARGO_BANCO];
+    let mut i = 0;
+    while i < LARGO_BANCO {
+        p[i] = 0x5A ^ (i as u8);
+        i += 1;
+    }
+    p
+};
+
 /// Lo que el esclavo del banco tiene que devolver, byte a byte: `0xA5 ^ i`.
 pub const PATRON_SUBIDA: [u8; LARGO_BANCO] = {
     let mut p = [0u8; LARGO_BANCO];
@@ -373,6 +385,7 @@ pub const PATRON_SUBIDA: [u8; LARGO_BANCO] = {
 // test`. Estos dos asertos son el test que si cabe -- los evalua el compilador
 // y fallan la puerta -- y cazan lo unico que el bucle de arriba puede hacer
 // mal: arrancar en el byte equivocado o quedarse corto.
+const _: () = assert!(PATRON_BAJADA[0] == 0x5A);
 const _: () = assert!(PATRON_SUBIDA[0] == 0xA5);
 const _: () = assert!(PATRON_SUBIDA[LARGO_BANCO - 1] == 0xA5 ^ (LARGO_BANCO as u8 - 1));
 

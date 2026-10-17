@@ -170,7 +170,7 @@ struct Pasada {
     /// Ciclos por giro de cada nivel del transporte por tic (tic, planificador,
     /// recuperacion, componer) y los testigos al cerrar la pasada.
     #[cfg(feature = "transporte-tic")]
-    tic: ([u32; 4], sam17_nucleo_fw::j2_tic::Testigos),
+    tic: ([u32; 7], sam17_nucleo_fw::j2_tic::Testigos),
 }
 
 impl Pasada {
@@ -193,6 +193,10 @@ impl Pasada {
             info!(
                 "carga_j2,cache={=str},tic,ciclos_por_giro: tic={},planificador={},recuperacion={},componer={}",
                 self.cache, c[0], c[1], c[2], c[3]
+            );
+            info!(
+                "carga_j2,cache={=str},tic,detalle_del_tic: lee={},cierra={},arma={}",
+                self.cache, c[4], c[5], c[6]
             );
             info!("carga_j2,cache={=str},tic,{}", self.cache, t);
         }
@@ -342,8 +346,8 @@ async fn main(spawner: Spawner) {
             #[cfg(feature = "transporte-tic")]
             let tic = {
                 let ahora = sam17_nucleo_fw::j2_tic::ciclos();
-                let mut c = [0u32; 4];
-                for k in 0..4 {
+                let mut c = [0u32; 7];
+                for k in 0..7 {
                     c[k] = ahora[k].wrapping_sub(ciclos_antes[k]) / dg.max(1);
                 }
                 ciclos_antes = ahora;
