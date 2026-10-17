@@ -9,6 +9,7 @@
 pub mod atribucion;
 pub mod bahia;
 pub mod bahia_serie;
+pub mod buzones_j2;
 pub mod descriptor;
 pub mod descubrimiento;
 pub mod envolvente;
