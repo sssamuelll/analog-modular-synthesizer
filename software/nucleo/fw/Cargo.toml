@@ -66,3 +66,24 @@ bucle-del-reporte = []
 eco = []
 # El desglose de un giro del J2 por tramos, en ciclos (`perfil.rs`). Solo para el banco.
 perfil = []
+# El perfilador por muestreo del PC (`muestreo.rs`, `perfil_pc.py`). Solo para el banco.
+muestreo = []
+# El nucleo a 800 MHz, el reloj de diseno del hub (`usb::configuracion_hub`), en los
+# binarios de medida de carga. Sin la feature corren a 64 MHz, como siempre.
+reloj-hub = []
+# Mas ranuras girando en `carga_j2` y `perfil_pc`: 2 suma SPI1 (ranura 2), 3 suma tambien
+# SPI2 (ranura 3). Sin modulo detras: solo miden el transporte. Pines en `j2_banco`.
+ranuras-2 = []
+# El transporte por ISR de `j2_isr` en `carga_j2`, en lugar del ejecutor: la cota de
+# lo que cuesta el mismo giro sin futuros. Solo la ranura 0.
+transporte-isr = []
+ranuras-3 = ["ranuras-2"]
+# La I-cache y la D-cache encendidas en `perfil_pc`, sin la region MPU de los buferes del
+# DMA (R-MJ7): es de exploracion, como la pasada `-sin-mpu` de `carga_j2`.
+caches = []
+
+# `perfil_pc` necesita el modulo que solo existe con la feature: sin ella no se compila.
+[[bin]]
+name = "perfil_pc"
+path = "src/bin/perfil_pc.rs"
+required-features = ["muestreo"]

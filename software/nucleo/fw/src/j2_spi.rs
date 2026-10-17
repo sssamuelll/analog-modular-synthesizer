@@ -206,6 +206,18 @@ pub enum Soltado {
     Escalado,
 }
 
+/// Lo que el transporte por ISR (`j2_isr`) toma prestado de una ranura ya
+/// construida: los registros, los numeros de peticion del GPDMA, el `CFG1` que
+/// dejo `nueva` y el retardo de arranque en ciclos de CPU.
+#[derive(Clone, Copy)]
+pub struct Partes {
+    pub regs: pac::spi::Spi,
+    pub req_tx: u8,
+    pub req_rx: u8,
+    pub cfg1: pac::spi::regs::Cfg1,
+    pub ciclos_retardo: u32,
+}
+
 /// Lo que se elige por enlace al construir la ranura.
 #[derive(Clone, Copy)]
 pub struct Config {
@@ -535,6 +547,18 @@ impl<'d> Ranura<'d> {
     /// el #380.
     pub fn f_sck_hz(&self) -> u32 {
         self.f_sck_hz
+    }
+
+    /// Las piezas que usa el transporte por ISR (`j2_isr`). La ranura sigue
+    /// viva: guarda los pines y los canales.
+    pub fn partes(&self) -> Partes {
+        Partes {
+            regs: self.regs,
+            req_tx: self.req_tx,
+            req_rx: self.req_rx,
+            cfg1: self.cfg1,
+            ciclos_retardo: self.ciclos_por_cuarto_tsck * u32::from(self.retardo_cuartos),
+        }
     }
 
     /// Cambia el retardo entre `SPE = 1` y `CSTART`, en cuartos de `T_SCK`.
