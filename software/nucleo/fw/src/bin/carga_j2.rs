@@ -104,9 +104,19 @@ const BAJADA: sam17_nucleo_fw::j2_ejecutor::Bajada = if cfg!(feature = "sin-comp
 #[embassy_executor::task]
 async fn contaminador() -> ! {
     static mut AREA: [u32; 16_384] = [0; 16_384];
+    // Palabras que recorre por vuelta: 64 KB, o menos con `contaminador-8k|16k|32k`.
+    const BARRIDO: usize = if cfg!(feature = "contaminador-8k") {
+        2_048
+    } else if cfg!(feature = "contaminador-16k") {
+        4_096
+    } else if cfg!(feature = "contaminador-32k") {
+        8_192
+    } else {
+        16_384
+    };
     loop {
         let mut suma = 0u32;
-        for i in (0..16_384).step_by(8) {
+        for i in (0..BARRIDO).step_by(8) {
             // SAFETY: nadie mas toca `AREA`, y `i` esta en rango.
             suma = suma.wrapping_add(unsafe {
                 core::ptr::read_volatile((core::ptr::addr_of!(AREA) as *const u32).add(i))
