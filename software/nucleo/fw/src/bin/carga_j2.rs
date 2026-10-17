@@ -28,10 +28,17 @@
 //! salen incoherentes y esa fila no sirve para la puerta. Se marca
 //! `icache+dcache-sin-mpu`.
 //!
+//! **Una base por estado de cache.** El medidor del hilo cuenta vueltas y las compara
+//! con las de la CPU entera, y con la I-cache el hilo da mas vueltas por segundo que
+//! sin ella. Antes de arrancar el J2 se calibra una base con cada estado (encendiendo
+//! las caches de a una y apagandolas al final); la pasada compara contra la suya. Con
+//! una sola base, la de sin cache, el 17-10 salio 889 permil libres con un ejecutor
+//! que ya gastaba el 22 % de la CPU: el J2 salia menor que su propio manejador.
+//!
 //! Por cada pasada, dos lineas:
 //!
 //! ```text
-//! carga_j2,cache=<no|icache>,ranuras=,periodo_us=,ciclo_us=,giros_en_5s=,hilo_libre_permil=,atrasos=,plazos_vencidos=
+//! carga_j2,cache=<no|icache>,ranuras=,periodo_us=,ciclo_us=,giros_en_5s=,hilo_libre_permil=,atrasos=,plazos_vencidos=,base_por_s=
 //! carga_j2,cache=<no|icache>,previo=,armado=,espera=,cierre=,posterior=,isr_spi=,ejecutor=
 //! ```
 //!
@@ -80,6 +87,32 @@ compile_error!("transporte-isr solo mueve la ranura 0: sin ranuras-2 ni ranuras-
 const RANURAS_ACTIVAS: u32 = RANURAS_DE_MEDIDA;
 const PERIODO_US: u32 = PERIODO_DE_MEDIDA_US;
 
+/// Enciende las caches que pide la pasada, sin apagar las de la anterior: `icache` la
+/// I-cache; `icache+dcache-sin-mpu`, ademas la D-cache.
+fn encender_cache(cache: &str) {
+    // SAFETY: nadie mas toca el SCB. La D-cache solo se enciende en la pasada de
+    // exploracion, sin la region MPU (R-MJ7): `nueva` asevera que estaba apagada al
+    // construir la ranura, y las ranuras ya estan construidas.
+    unsafe {
+        let mut p = cortex_m::Peripherals::steal();
+        match cache {
+            "icache" => p.SCB.enable_icache(),
+            "icache+dcache-sin-mpu" => p.SCB.enable_dcache(&mut p.CPUID),
+            _ => {}
+        }
+    }
+}
+
+/// Deja las caches apagadas, como las encuentra el J2 al arrancar.
+fn apagar_caches() {
+    // SAFETY: igual, y sin DMA en vuelo: el J2 todavia no ha arrancado.
+    unsafe {
+        let mut p = cortex_m::Peripherals::steal();
+        p.SCB.disable_dcache(&mut p.CPUID);
+        p.SCB.disable_icache();
+    }
+}
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     #[cfg(feature = "reloj-hub")]
@@ -98,15 +131,25 @@ async fn main(spawner: Spawner) {
     perfil::iniciar();
     let f_cpu_medido = perfil::f_cpu_medido_hz().await;
     spawner.spawn(defmt::unwrap!(vueltas_del_hilo()));
-    // La base, con el J2 sin arrancar: la CPU entera.
-    let mut medidor = Medidor::calibrar(500).await;
+    let pasadas: &[&str] = if cfg!(feature = "reloj-hub") {
+        &["no", "icache", "icache+dcache-sin-mpu"]
+    } else {
+        &["no", "icache"]
+    };
+    // Una base por estado de cache, con el J2 sin arrancar: la CPU entera en cada uno.
+    let mut medidores: [Option<Medidor>; 3] = [None, None, None];
+    for (i, &cache) in pasadas.iter().enumerate() {
+        encender_cache(cache);
+        medidores[i] = Some(Medidor::calibrar(500).await);
+    }
+    apagar_caches();
     info!(
         "carga_j2: firmware {}, f_cpu {} Hz, f_cpu_medido {} Hz, periodo {} us, base {} vueltas/s, transporte {=str}",
         env!("SAM17_GIT"),
         f_cpu,
         f_cpu_medido,
         PERIODO_US,
-        medidor.base_por_s(),
+        medidores[0].as_ref().map_or(0, |m| m.base_por_s()),
         if cfg!(feature = "transporte-isr") {
             "isr"
         } else {
@@ -136,23 +179,9 @@ async fn main(spawner: Spawner) {
 
     let mut promedios = Promedios::nuevo();
     let mut giros_antes = 0u32;
-    let pasadas: &[&str] = if cfg!(feature = "reloj-hub") {
-        &["no", "icache", "icache+dcache-sin-mpu"]
-    } else {
-        &["no", "icache"]
-    };
-    for &cache in pasadas {
-        // SAFETY: nadie mas toca el SCB. La D-cache solo se enciende en la pasada
-        // de exploracion, con el J2 ya girando y sin la region MPU (R-MJ7): `nueva`
-        // asevera que estaba apagada al construir la ranura.
-        unsafe {
-            let mut p = cortex_m::Peripherals::steal();
-            match cache {
-                "icache" => p.SCB.enable_icache(),
-                "icache+dcache-sin-mpu" => p.SCB.enable_dcache(&mut p.CPUID),
-                _ => {}
-            }
-        }
+    for (i, &cache) in pasadas.iter().enumerate() {
+        encender_cache(cache);
+        let medidor = defmt::unwrap!(medidores[i].as_mut());
         // La primera muestra de cada pasada absorbe el arranque o el cambio de
         // cache; la segunda es la que vale.
         for muestra in 0..2 {
@@ -172,7 +201,7 @@ async fn main(spawner: Spawner) {
                 continue;
             }
             info!(
-                "carga_j2,cache={=str},ranuras={},periodo_us={},ciclo_us={},giros_en_5s={},hilo_libre_permil={},atrasos={},plazos_vencidos={}",
+                "carga_j2,cache={=str},ranuras={},periodo_us={},ciclo_us={},giros_en_5s={},hilo_libre_permil={},atrasos={},plazos_vencidos={},base_por_s={}",
                 cache,
                 RANURAS_ACTIVAS,
                 PERIODO_US,
@@ -180,7 +209,8 @@ async fn main(spawner: Spawner) {
                 dg,
                 libre,
                 atrasos,
-                plazos
+                plazos,
+                medidor.base_por_s()
             );
             if m.iter().all(|x| *x == 0) {
                 info!("carga_j2,cache={=str}: compilado sin `--features perfil`, los tramos salen en cero", cache);

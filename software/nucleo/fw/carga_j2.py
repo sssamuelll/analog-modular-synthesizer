@@ -51,7 +51,7 @@ TOLERANCIA_RELOJ = 0.02
 PASADA = re.compile(
     r"carga_j2,cache=(?P<cache>[\w+-]+),(?:ranuras=(?P<ranuras>\d+),periodo_us=(?P<periodo>\d+),)?"
     r"ciclo_us=(?P<ciclo>\d+),giros_en_5s=(?P<giros>\d+),hilo_libre_permil=(?P<libre>\d+),"
-    r"atrasos=(?P<atrasos>\d+),plazos_vencidos=(?P<plazos>\d+)")
+    r"atrasos=(?P<atrasos>\d+),plazos_vencidos=(?P<plazos>\d+)(?:,base_por_s=(?P<base>\d+))?")
 TRAMOS = re.compile(
     r"carga_j2,cache=([\w+-]+),previo=(\d+),armado=(\d+),espera=(\d+),cierre=(\d+),"
     r"posterior=(\d+),isr_spi=(\d+),ejecutor=(\d+)")
@@ -61,6 +61,20 @@ def ciclos_del_j2(libre_permil: int, ciclo_us: int, f_cpu_hz: int, ranuras: int 
     """La CPU que gasta el J2 en un giro: la parte del ciclo que no es libre,
     repartida entre los giros que caben en el (uno por ranura)."""
     return round((1000 - libre_permil) * ciclo_us * f_cpu_hz / 1e9 / ranuras)
+
+
+def invalida(p: dict) -> str:
+    """Por que una pasada no se puede creer, o `""`. El total es el J2 entero y el
+    ejecutor es una parte: si el total sale menor, la base del medidor no es la del
+    estado de esa pasada (el 17-10, con la base de sin cache, la I-cache dio 7 104
+    ciclos de total contra 14 011 del ejecutor). Y `libre = 1000` esta saturado: no
+    dice cuanto mas."""
+    if p["libre"] >= 1000:
+        return "hilo_libre saturado en 1000: la base no es la de este estado"
+    if "ejecutor" in p and p["ciclos_por_giro"] < p["ejecutor"]:
+        return (f"el total ({p['ciclos_por_giro']}) es menor que el manejador del ejecutor "
+                f"({p['ejecutor']}): la base del medidor no es la de este estado")
+    return ""
 
 
 def parsea(texto: str) -> dict:
@@ -79,7 +93,7 @@ def parsea(texto: str) -> dict:
             "ranuras": int(m.group("ranuras") or 1), "periodo": int(m.group("periodo") or 125),
             "ciclo_us": int(m.group("ciclo")), "giros": int(m.group("giros")),
             "libre": int(m.group("libre")), "atrasos": int(m.group("atrasos")),
-            "plazos": int(m.group("plazos"))}
+            "plazos": int(m.group("plazos")), "base": int(m.group("base") or 0)}
     for m in TRAMOS.finditer(texto):
         t = dict(zip(("previo", "armado", "espera", "cierre", "posterior", "isr_spi", "ejecutor"),
                      map(int, m.groups()[1:])))
@@ -91,6 +105,7 @@ def parsea(texto: str) -> dict:
         if p["plazos"]:
             raise SystemExit(f"cache={cache}: {p['plazos']} plazos vencidos; la medida no vale")
         p["ciclos_por_giro"] = ciclos_del_j2(p["libre"], p["ciclo_us"], f_cpu, p["ranuras"])
+        p["invalida"] = invalida(p)
     return {"firmware": firmware, "f_cpu": f_cpu, "medido": medido,
             "transporte": cab.group(4) or "ejecutor", "pasadas": pasadas}
 
@@ -116,9 +131,13 @@ def muestra(medida: dict) -> None:
                         f"isr_spi {p['isr_spi']}")
         print(f"  {cache:8} {p['ranuras']:7d} {p['ciclo_us']:8d} {p['libre']:7d} {p['ciclos_por_giro']:15,d} "
               f"{p['ciclos_por_giro'] / LIMITE_INFORMATIVO:8.1f}x   {desglose}")
+        if p["invalida"]:
+            print(f"  {'':8} INVALIDA: {p['invalida']}")
 
 
-def anota(lineas: list[str], firmware: str, transporte: str = "ejecutor") -> None:
+def anota(lineas: list[str], firmware: str, transporte: str = "ejecutor", invalidas=()) -> None:
+    if invalidas:
+        raise SystemExit(f"pasadas invalidas ({', '.join(invalidas)}): no se anotan")
     if transporte != "ejecutor":
         raise SystemExit(f"transporte `{transporte}`: es una cota de coste y no se anota")
     if "sucio" in firmware or firmware == "sin-git":
@@ -197,6 +216,28 @@ def autotest() -> None:
         pass
     else:
         raise AssertionError("acepto un reloj medido que no es el pedido")
+    # La medida del 17-10 con la base de sin cache: la I-cache da un total menor que su
+    # propio ejecutor. Es invalida y no se anota; la de sin cache de la misma corrida vale.
+    rota = (
+        "carga_j2: firmware d33dcac, f_cpu 64000000 Hz, f_cpu_medido 64000000 Hz, periodo 1000 us (x)\n"
+        "carga_j2,cache=no,ranuras=1,periodo_us=1000,ciclo_us=1000,giros_en_5s=5000,hilo_libre_permil=658,atrasos=0,plazos_vencidos=0 (x)\n"
+        "carga_j2,cache=no,previo=2345,armado=2982,espera=0,cierre=1088,posterior=1600,isr_spi=506,ejecutor=19065 (x)\n"
+        "carga_j2,cache=icache,ranuras=1,periodo_us=1000,ciclo_us=1000,giros_en_5s=5000,hilo_libre_permil=889,atrasos=0,plazos_vencidos=0 (x)\n"
+        "carga_j2,cache=icache,previo=880,armado=2430,espera=0,cierre=799,posterior=1115,isr_spi=429,ejecutor=14011 (x)\n"
+    )
+    r = parsea(rota)["pasadas"]
+    assert not r["no"]["invalida"] and r["icache"]["invalida"], r
+    assert r["no"]["ciclos_por_giro"] == 21888 and r["icache"]["ciclos_por_giro"] == 7104
+    try:
+        anota(["x"], "abc1234", "ejecutor", ["icache"])
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError("anoto una pasada invalida")
+    # Saturado en 1000 tampoco vale, y la base por pasada se lee cuando viene.
+    llena = parsea(rota.replace("hilo_libre_permil=658,atrasos=0,plazos_vencidos=0",
+                                "hilo_libre_permil=1000,atrasos=0,plazos_vencidos=0,base_por_s=2400000"))
+    assert llena["pasadas"]["no"]["invalida"] and llena["pasadas"]["no"]["base"] == 2400000
     print("autotest ok")
 
 
@@ -219,7 +260,8 @@ def main() -> None:
     lineas = filas(medida, datetime.date.today().isoformat())
     print("\nfilas de carga_j2.csv:\n  " + "\n  ".join(lineas))
     if "--anota" in sys.argv:
-        anota(lineas, medida["firmware"], medida["transporte"])
+        anota(lineas, medida["firmware"], medida["transporte"],
+              [c for c, p in medida["pasadas"].items() if p["invalida"]])
 
 
 if __name__ == "__main__":
