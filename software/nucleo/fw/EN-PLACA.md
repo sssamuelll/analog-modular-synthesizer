@@ -822,6 +822,17 @@ cargo run --release --features inyeccion,reloj-hub,ranuras-3,sin-esclavo,escalad
 El `SET` de dieciséis (103 bytes) no está medido: a los ~6 ciclos por byte de la tabla saldrían unos 2 400, pero a 6,25 MHz (el kernel del SPI a `pclk2`, #380) ocupa 131,8 µs y no cabe en un periodo de 125 (R-H5).
 
 - **El desglose del `DWT`** (3 ranuras, con `perfil`, ciclos por giro y ranura, cachés calientes, enlace solo): el tic **1 177** (leer los tres `SR` 138; cerrar 12 —las escrituras van al búfer de escritura y su coste aparece en la lectura siguiente—; armar 615, de los cuales 128 son la espera de un `T_SCK` de D2; el resto, unos 410, es el estado, las banderas, el buzón y el anillo) y el planificador **826** (de los cuales 285 son entregar la trama al buzón). Suman 2 003 con la instrumentación puesta, que cuesta del orden de 100 ciclos, contra los 1 967 del medidor sin ella. Con la D-cache desalojada: tic 1 576 (leer 268, cerrar 36, armar 604) y planificador 1 067.
+- **La caché fría, por cuánto se desaloja** (3 ranuras, enlace solo, ciclos propios del J2 por giro y ranura según el `DWT`; `contaminador-8k`, `-16k`, `-32k` y el de 64 KB recorren esa cantidad entre vuelta y vuelta, y la D-cache es de 32 KB):
+
+  | barrido | tic | planificador | total |
+  |---|---|---|---|
+  | ninguno (calientes) | 1 177 | 826 | 2 003 |
+  | 8 KB | 1 177 | 824 | 2 001 |
+  | 16 KB | 1 177 | 824 | 2 001 |
+  | 32 KB | 1 657 | 1 113 | 2 770 |
+  | 64 KB | 1 576 | 1 067 | 2 643 |
+
+  El J2 conserva sus líneas mientras quien le comparte la D-cache no la recorra entera entre dos tics: con la mitad no paga nada medible, y desalojada entera paga unos 650 a 770 ciclos más. **El medidor del hilo no sirve para el barrido de 32 KB** (19 000): un recorrido cíclico del tamaño exacto de la caché falla en cada acceso en cuanto el J2 le quita una sola línea, y lo que mide es ese hilo hundiéndose, no el J2. Con 64 KB el hilo falla siempre, con J2 o sin él, y el medidor da 2 833 contra los 2 643 del `DWT`.
 - **El tic no depende del largo del mensaje** (1 177 a 25, 41 y 71 bytes); el planificador sí: 826, 955 y 1 074 (las copias con `ldm` de la bajada y de la subida y la comparación del juez).
 - **El juez del banco es una comparación de 25 bytes.** El de verdad valida el sobre y su CRC, que es trabajo del enlace (ficha 1 del acta) y no está medido ni escrito (#267); un CRC por tabla a unos 5 ciclos por byte suma del orden de 125 a 350 ciclos según el mensaje. **El compositor de mentira tampoco es el real:** la ficha 1 no cuenta componer la trama.
 - **De uno a tres ranuras** el coste por ranura baja unos 230 ciclos (se reparten la entrada y la salida de las dos excepciones y el trabajo fijo del tic; la espera de un `T_SCK` de D2, no). Con las seis, algo menos de lo medido con tres.
