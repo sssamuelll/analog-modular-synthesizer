@@ -241,6 +241,7 @@ pub fn lanzar(
         req_rx,
         cfg1,
         ciclos_retardo,
+        ..
     } = ranura.partes();
     let mut politica = Politica::nueva(Umbrales::POR_DEFECTO);
     let _ = politica.paso(Evento::Identidad(true), ahora_us());

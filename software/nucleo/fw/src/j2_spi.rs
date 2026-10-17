@@ -86,6 +86,18 @@ use sam17_nucleo_core::maestro_j2::{
 
 use crate::perfil::{self, Fase};
 
+/// La velocidad de borde de los pines del J2. `VeryHigh` es la de siempre (el enlace sube a 34,5 MHz en el
+/// peldano 2, D8); las features `pines-medio` y `pines-bajo` la bajan para el banco: con `VeryHigh` su
+/// cableado de puentes rompe los marcos de apariencia aleatoria, y con `Medium` o `Low` llegan enteros
+/// (`tic_contenidos`, `EN-PLACA.md`).
+pub const VELOCIDAD_PINES: Speed = if cfg!(feature = "pines-bajo") {
+    Speed::Low
+} else if cfg!(feature = "pines-medio") {
+    Speed::Medium
+} else {
+    Speed::VeryHigh
+};
+
 /// Las ranuras del J2 por SPI. El numero no se copia: es el de la politica.
 pub const RANURAS: usize = RANURAS_SPI;
 
@@ -206,16 +218,19 @@ pub enum Soltado {
     Escalado,
 }
 
-/// Lo que el transporte por ISR (`j2_isr`) toma prestado de una ranura ya
-/// construida: los registros, los numeros de peticion del GPDMA, el `CFG1` que
-/// dejo `nueva` y el retardo de arranque en ciclos de CPU.
+/// Lo que los transportes de banco (`j2_isr`, `j2_tic`) toman prestado de una
+/// ranura ya construida: los registros, los numeros de peticion del GPDMA, el
+/// `CFG1` y el `CFG2` que dejo `nueva`, el retardo de arranque en ciclos de CPU y
+/// el reset por RCC del periferico (D4 paso 2).
 #[derive(Clone, Copy)]
 pub struct Partes {
     pub regs: pac::spi::Spi,
     pub req_tx: u8,
     pub req_rx: u8,
     pub cfg1: pac::spi::regs::Cfg1,
+    pub cfg2: pac::spi::regs::Cfg2,
     pub ciclos_retardo: u32,
+    pub resetear: fn(),
 }
 
 /// Lo que se elige por enlace al construir la ranura.
@@ -338,7 +353,7 @@ impl<'d> Ranura<'d> {
         // 18-09, y el `_generated.rs` de este build lo repite:
         // `pin_trait_impl!(spi::SckPin, SPI5, PE15, 5u8)`), y DS14791 Rev 10
         // Tabla 18. `VeryHigh` porque el enlace sube a 34,5 MHz (spec D8).
-        let salida = AfType::output(OutputType::PushPull, Speed::VeryHigh);
+        let salida = AfType::output(OutputType::PushPull, VELOCIDAD_PINES);
         let mut sck = Flex::new(sck);
         let mut mosi = Flex::new(mosi);
         let mut miso = Flex::new(miso);
@@ -557,7 +572,9 @@ impl<'d> Ranura<'d> {
             req_tx: self.req_tx,
             req_rx: self.req_rx,
             cfg1: self.cfg1,
+            cfg2: self.cfg2,
             ciclos_retardo: self.ciclos_por_cuarto_tsck * u32::from(self.retardo_cuartos),
+            resetear: self.resetear,
         }
     }
 

@@ -77,6 +77,63 @@ ranuras-2 = []
 # El transporte por ISR de `j2_isr` en `carga_j2`, en lugar del ejecutor: la cota de
 # lo que cuesta el mismo giro sin futuros. Solo la ranura 0.
 transporte-isr = []
+# El transporte por tic de `j2_tic` (papel v2, prototipo de banco de la ficha 3 del acta
+# del 17-10) en `carga_j2` y `resistencia_j2`, en lugar del ejecutor. Una ranura de banco
+# por SPI, mas las de relleno que pidan `ranuras-2` y `ranuras-3`.
+transporte-tic = []
+# Fallos a pedido para los binarios de recuperacion del transporte por tic: envenenar una
+# ranura y forzar la escalada del GPDMA1. Solo para el banco.
+inyeccion = ["transporte-tic"]
+# La bajada que no compone nada (`j2_banco::bajada_quieta`) en `carga_j2`: el enlace solo, sin
+# el costo de componer la trama (ficha 1 del acta del 17-10).
+sin-componer = []
+# Las cotas de v2 (2 y 4 tics) para `Vencida` y `Reiniciando`, en vez de las de hoy (100 y 100): lo que
+# cambia la revision de Halberg del 17-10, hallazgo 1, medido en placa con `tic_recupera`.
+cotas-v2 = ["transporte-tic"]
+# `tic_banco` con una interrupcion de P2 que acapara la CPU un rato cada 10 ms, por encima
+# del planificador (P3) y por debajo del tic (P1): cuanto puede retener el hub antes de que
+# se pierdan tramas.
+acapara = ["inyeccion"]
+# El esclavo del banco comprueba el contenido de la bajada que recibe (`PATRON_BAJADA`) y
+# cuenta las buenas y las malas. Para `tic_banco` y `tic_recupera`.
+verifica-bajada = []
+# Marcos numerados en los dos sentidos (`core::marcos_j2`): el cerebro numera cada bajada, el esclavo
+# la clasifica (rota, repetida, atrasada, saltada) y devuelve su numero en la subida, y el juez del
+# cerebro hace lo mismo con la subida. Para `tic_estres`.
+secuencia = ["verifica-bajada"]
+# Una tabla de 16 contenidos de prueba (`j2_banco::tabla`) por la bajada, y el esclavo cuenta cuales llegan
+# enteros: para ver que contenidos maltrata el enlace del banco. Para `tic_contenidos`.
+tabla = ["verifica-bajada"]
+# La velocidad de borde de los pines del J2 (maestro y MISO del esclavo) en `Medium` o en `Low` en vez de
+# `VeryHigh`: con `VeryHigh` el cableado de puentes del banco rompe los marcos de apariencia aleatoria.
+pines-medio = []
+# El esclavo del banco contesta ceros en vez de `PATRON_SUBIDA`: el MISO no conmuta.
+subida-quieta = []
+pines-bajo = []
+# El mensaje del banco de 41, 71 o 103 bytes (`TONO`, `BAHIA`, `SET` de dieciseis) en vez de
+# los 25 de `NADA`: lo que cuesta el transporte segun el largo.
+largo-41 = []
+largo-71 = []
+largo-103 = []
+# Una tarea de hilo que recorre 64 KB entre vuelta y vuelta en `carga_j2`: cada tic y cada
+# pasada del planificador empiezan con la D-cache desalojada.
+contaminador = []
+# El contaminador recorre 8, 16 o 32 KB en vez de 64: desaloja una parte de la D-cache (32 KB).
+contaminador-8k = ["contaminador"]
+contaminador-16k = ["contaminador"]
+contaminador-32k = ["contaminador"]
+# El periodo del banco a 1 kHz en `tic_banco`, en vez de los 8 kHz del instrumento.
+mil-hz = []
+# Una corrida de 20 s en `tic_banco`, en vez de 600.
+corta = []
+# `tic_estres` con fases de 150 s (diez minutos en total), en vez de 60 s.
+larga = []
+# `tic_recupera` y `tic_banco` sin el esclavo del banco: la fase de la escalada resetea el GPDMA1
+# entero y el esclavo comparte el controlador; y con `acapara` el esclavo es una tarea de P2 a la
+# que los golpes tambien pegan.
+sin-esclavo = []
+# La fase C de `tic_recupera`: la escalada del GPDMA1 con las vecinas en vuelo.
+escalada = []
 ranuras-3 = ["ranuras-2"]
 # La I-cache y la D-cache encendidas en `perfil_pc`, sin la region MPU de los buferes del
 # DMA (R-MJ7): es de exploracion, como la pasada `-sin-mpu` de `carga_j2`.
@@ -87,3 +144,29 @@ caches = []
 name = "perfil_pc"
 path = "src/bin/perfil_pc.rs"
 required-features = ["muestreo"]
+
+# `tic_banco` necesita el modulo que solo existe con la feature: sin ella no se compila.
+[[bin]]
+name = "tic_banco"
+path = "src/bin/tic_banco.rs"
+required-features = ["transporte-tic"]
+
+[[bin]]
+name = "tic_recupera"
+path = "src/bin/tic_recupera.rs"
+required-features = ["inyeccion"]
+
+[[bin]]
+name = "tic_cota"
+path = "src/bin/tic_cota.rs"
+required-features = ["inyeccion"]
+
+[[bin]]
+name = "tic_estres"
+path = "src/bin/tic_estres.rs"
+required-features = ["inyeccion", "secuencia"]
+
+[[bin]]
+name = "tic_contenidos"
+path = "src/bin/tic_contenidos.rs"
+required-features = ["transporte-tic", "tabla"]

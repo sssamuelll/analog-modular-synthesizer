@@ -192,16 +192,32 @@ use core::task::Poll;
 
 use cortex_m::peripheral::NVIC;
 use embassy_stm32::dma::{self, TransferOptions};
-use embassy_stm32::gpio::{AfType, Flex, OutputType, Pull, Speed};
+use embassy_stm32::gpio::{AfType, Flex, OutputType, Pull};
 use embassy_stm32::interrupt::typelevel::{Binding, Handler, Interrupt};
 use embassy_stm32::interrupt::{InterruptExt, Priority};
 use embassy_stm32::pac::spi::vals::{Cpha, Cpol, Master, Udrcfg};
 use embassy_stm32::{gpio, interrupt, pac, spi, Peri};
 use embassy_sync::waitqueue::AtomicWaker;
 
+#[cfg(all(
+    feature = "verifica-bajada",
+    not(feature = "secuencia"),
+    not(feature = "tabla")
+))]
+use crate::j2_banco::PATRON_BAJADA;
+#[cfg(not(any(feature = "secuencia", feature = "subida-quieta")))]
 use crate::j2_banco::PATRON_SUBIDA;
 use crate::j2_spi::{resetear_por_rcc, soltar_canales, CanalGpdma1, Soltado, LARGO_MAX};
 use crate::perfil::{self, Fase};
+#[cfg(feature = "secuencia")]
+use sam17_nucleo_core::marcos_j2::{
+    escribe, lee, Seguimiento, Veredicto, BASE_BAJADA, BASE_SUBIDA,
+};
+
+/// Con `subida-quieta` el esclavo contesta siempre ceros: el MISO no conmuta. Para separar, en
+/// `tic_contenidos`, lo que rompe la bajada del propio contenido de la bajada.
+#[cfg(all(feature = "subida-quieta", not(feature = "secuencia")))]
+static SUBIDA_QUIETA: [u8; LARGO_MAX] = [0; LARGO_MAX];
 
 /// La linea de EXTI del `CS`, que es el numero del pin: PE**11**.
 const LINEA_CS: usize = 11;
@@ -225,6 +241,30 @@ pub static TRAMAS_OK: AtomicU32 = AtomicU32::new(0);
 /// Subiendo **sin** `plazos_vencidos` del maestro, es el hueco del rearme de
 /// este modulo, no un cuelgue del maestro. Ver la cabecera del modulo.
 pub static TRAMAS_CORTAS: AtomicU32 = AtomicU32::new(0);
+
+/// Con `verifica-bajada`: tramas completas cuyo contenido es `PATRON_BAJADA`, y las que no.
+#[cfg(feature = "verifica-bajada")]
+pub static BAJADAS_OK: AtomicU32 = AtomicU32::new(0);
+#[cfg(feature = "verifica-bajada")]
+pub static BAJADAS_MALAS: AtomicU32 = AtomicU32::new(0);
+/// Con `tabla`: por cada contenido de prueba, cuantas tramas llegaron enteras y cuantas no, y los 32 bytes de la
+/// primera que no.
+#[cfg(feature = "tabla")]
+pub static TABLA_OK: [AtomicU32; 16] = [const { AtomicU32::new(0) }; 16];
+#[cfg(feature = "tabla")]
+pub static TABLA_MAL: [AtomicU32; 16] = [const { AtomicU32::new(0) }; 16];
+#[cfg(feature = "tabla")]
+pub static TABLA_PRIMERA: [[core::sync::atomic::AtomicU8; 32]; 16] =
+    [const { [const { core::sync::atomic::AtomicU8::new(0) }; 32] }; 16];
+/// Con `secuencia`: bajadas rotas, repetidas, atrasadas, y los numeros que no se vieron entre dos buenas.
+#[cfg(feature = "secuencia")]
+pub static BAJADAS_ROTAS: AtomicU32 = AtomicU32::new(0);
+#[cfg(feature = "secuencia")]
+pub static BAJADAS_REPETIDAS: AtomicU32 = AtomicU32::new(0);
+#[cfg(feature = "secuencia")]
+pub static BAJADAS_ATRASADAS: AtomicU32 = AtomicU32::new(0);
+#[cfg(feature = "secuencia")]
+pub static BAJADAS_SALTOS: AtomicU32 = AtomicU32::new(0);
 
 /// Cuantas veces soltar los canales del esclavo tuvo que escalar al reset del
 /// GPDMA1 por RCC (`j2_spi::soltar_canales`, D4.2).
@@ -297,6 +337,11 @@ async fn flanco_de_cs() {
 /// El esclavo del banco: los registros, los dos canales del GPDMA, sus numeros
 /// de peticion, el bufer de recepcion y los cuatro pines. Los `Flex` viven aqui
 /// porque su `Drop` desconfigura el pin.
+/// El bufer de recepcion, alineado a una linea de D-cache para que `verifica-bajada` pueda
+/// invalidarlo sin tocar nada que no sea suyo.
+#[repr(C, align(32))]
+struct Bufer([u8; LARGO_MAX]);
+
 pub struct Esclavo<'d> {
     regs: pac::spi::Spi,
     canal_tx: dma::Channel<'d>,
@@ -309,7 +354,15 @@ pub struct Esclavo<'d> {
     /// El bufer de recepcion. El esclavo **no mira** lo que llega: solo cuenta
     /// cuantos bytes entraron, que es todo lo que D6.2 le pide al receptor para
     /// decidir si la trama vale.
-    buf: [u8; LARGO_MAX],
+    buf: Bufer,
+    /// Con `secuencia`: lo que se transmite en la subida (el eco del ultimo numero aceptado), el
+    /// seguimiento de los numeros de la bajada y ese ultimo numero.
+    #[cfg(feature = "secuencia")]
+    tx_buf: Bufer,
+    #[cfg(feature = "secuencia")]
+    seg: Seguimiento,
+    #[cfg(feature = "secuencia")]
+    eco: u32,
     _sck: Flex<'d>,
     _mosi: Flex<'d>,
     _miso: Flex<'d>,
@@ -425,7 +478,10 @@ impl<'d> Esclavo<'d> {
         nss.set_as_af_unchecked(5, AfType::input(Pull::Up));
         // `VeryHigh` por la misma razon que en el maestro: el enlace sube a
         // 34,5 MHz en el peldano 2 (spec del maestro D8).
-        miso.set_as_af_unchecked(5, AfType::output(OutputType::PushPull, Speed::VeryHigh));
+        miso.set_as_af_unchecked(
+            5,
+            AfType::output(OutputType::PushPull, crate::j2_spi::VELOCIDAD_PINES),
+        );
 
         // CFG2 del esclavo. `write` deja en cero todo lo que no se nombra:
         // `COMM = 0` (full duplex), `LSBFRST = 0`, `IOSWP = 0`, `RDIOM = 0` (no
@@ -563,7 +619,17 @@ impl<'d> Esclavo<'d> {
             req_tx,
             req_rx,
             esperado,
-            buf: [0u8; LARGO_MAX],
+            buf: Bufer([0u8; LARGO_MAX]),
+            #[cfg(feature = "secuencia")]
+            tx_buf: {
+                let mut b = Bufer([0u8; LARGO_MAX]);
+                escribe(&mut b.0[..esperado], BASE_SUBIDA, 0);
+                b
+            },
+            #[cfg(feature = "secuencia")]
+            seg: Seguimiento::nuevo(),
+            #[cfg(feature = "secuencia")]
+            eco: 0,
             _sck: sck,
             _mosi: mosi,
             _miso: miso,
@@ -606,16 +672,22 @@ impl<'d> Esclavo<'d> {
             //    clocar el maestro; lo que de verdad llego se lee luego del
             //    contador del canal.
             let rx = ManuallyDrop::new(unsafe {
-                self.canal_rx
-                    .read(self.req_rx, rxdr, &mut self.buf, TransferOptions::default())
-            });
-            let tx = ManuallyDrop::new(unsafe {
-                self.canal_tx.write(
-                    self.req_tx,
-                    &PATRON_SUBIDA,
-                    txdr,
+                self.canal_rx.read(
+                    self.req_rx,
+                    rxdr,
+                    &mut self.buf.0,
                     TransferOptions::default(),
                 )
+            });
+            #[cfg(not(any(feature = "secuencia", feature = "subida-quieta")))]
+            let fuente: &[u8] = &PATRON_SUBIDA;
+            #[cfg(feature = "secuencia")]
+            let fuente: &[u8] = &self.tx_buf.0[..esperado];
+            #[cfg(all(feature = "subida-quieta", not(feature = "secuencia")))]
+            let fuente: &[u8] = &SUBIDA_QUIETA[..esperado];
+            let tx = ManuallyDrop::new(unsafe {
+                self.canal_tx
+                    .write(self.req_tx, fuente, txdr, TransferOptions::default())
             });
             // 3. `TXDMAEN`.
             regs.cfg1().modify(|w| w.set_txdmaen(true));
@@ -665,6 +737,81 @@ impl<'d> Esclavo<'d> {
             // el GPDMA1 por RCC y lo dice.
             if let Soltado::Escalado = soltar_canales(tx, rx) {
                 REARMES_ESCALADOS.fetch_add(1, Ordering::Relaxed);
+            }
+            // Ya con los canales soltados el bufer vuelve a ser del esclavo. El DMA escribio
+            // detras de la D-cache: se invalida el bufer (alineado a la linea y de largo
+            // multiplo de ella) antes de leerlo.
+            #[cfg(feature = "secuencia")]
+            if recibidos >= esperado {
+                // SAFETY: el bufer es de este esclavo, alineado y de 128 bytes, y el DMA de
+                // recepcion ya paro.
+                unsafe {
+                    let mut cp = cortex_m::Peripherals::steal();
+                    cp.SCB.invalidate_dcache_by_slice(&mut self.buf.0);
+                }
+                match lee(&self.buf.0[..esperado], BASE_BAJADA) {
+                    None => {
+                        BAJADAS_ROTAS.fetch_add(1, Ordering::Relaxed);
+                    }
+                    Some(v) => match self.seg.ve(v) {
+                        Veredicto::Nuevo { saltos } => {
+                            BAJADAS_OK.fetch_add(1, Ordering::Relaxed);
+                            BAJADAS_SALTOS.fetch_add(saltos, Ordering::Relaxed);
+                            self.eco = v;
+                        }
+                        Veredicto::Repetido => {
+                            BAJADAS_REPETIDAS.fetch_add(1, Ordering::Relaxed);
+                        }
+                        Veredicto::Atrasado => {
+                            BAJADAS_ATRASADAS.fetch_add(1, Ordering::Relaxed);
+                        }
+                    },
+                }
+                // La subida de la proxima trama lleva el eco del ultimo numero aceptado. Se
+                // escribe en memoria cacheable y se limpia: el DMA lee de la RAM.
+                escribe(&mut self.tx_buf.0[..esperado], BASE_SUBIDA, self.eco);
+                // SAFETY: bufer alineado y de 128 bytes; el DMA de transmision ya paro.
+                unsafe {
+                    let mut cp = cortex_m::Peripherals::steal();
+                    cp.SCB.clean_dcache_by_slice(&self.tx_buf.0);
+                }
+            }
+            #[cfg(feature = "tabla")]
+            if recibidos >= esperado {
+                // SAFETY: el bufer es de este esclavo, alineado y de 128 bytes, y el DMA de
+                // recepcion ya paro.
+                unsafe {
+                    let mut cp = cortex_m::Peripherals::steal();
+                    cp.SCB.invalidate_dcache_by_slice(&mut self.buf.0);
+                }
+                let id = (self.buf.0[0] & 15) as usize;
+                let mut esp = [0u8; LARGO_MAX];
+                crate::j2_banco::tabla::marco(id as u8, &mut esp[..esperado]);
+                if self.buf.0[..esperado] == esp[..esperado] {
+                    TABLA_OK[id].fetch_add(1, Ordering::Relaxed);
+                } else if TABLA_MAL[id].fetch_add(1, Ordering::Relaxed) == 0 {
+                    for (d, o) in TABLA_PRIMERA[id].iter().zip(self.buf.0.iter()) {
+                        d.store(*o, Ordering::Relaxed);
+                    }
+                }
+            }
+            #[cfg(all(
+                feature = "verifica-bajada",
+                not(feature = "secuencia"),
+                not(feature = "tabla")
+            ))]
+            if recibidos >= esperado {
+                // SAFETY: el bufer es de este esclavo, alineado y de 128 bytes, y el DMA de
+                // recepcion ya paro.
+                unsafe {
+                    let mut cp = cortex_m::Peripherals::steal();
+                    cp.SCB.invalidate_dcache_by_slice(&mut self.buf.0);
+                }
+                if self.buf.0[..esperado] == PATRON_BAJADA[..esperado] {
+                    BAJADAS_OK.fetch_add(1, Ordering::Relaxed);
+                } else {
+                    BAJADAS_MALAS.fetch_add(1, Ordering::Relaxed);
+                }
             }
 
             // Cierre: apagar y solo entonces los dos `DMAEN` (sec.67.4.14,
