@@ -12,7 +12,7 @@
 //! hacen hoy en `fw/src/j2_tic.rs`.
 
 use sam17_nucleo_core::buzones_j2::{codigo, Anillo, Lectura as LecSubida, Subida, Triple};
-use sam17_nucleo_core::escaladas_j2::Presupuesto;
+use sam17_nucleo_core::escaladas_j2::{Presupuesto, Respuesta};
 use sam17_nucleo_core::maestro_j2::{
     plazo_us, Accion, Evento, Ranura as Politica, Tsize, Umbrales,
 };
@@ -69,6 +69,12 @@ pub struct Cfg {
     pub feed_period_ns: u64,
     pub iwdg_ns: u64,
     pub escaladas: Escaladas,
+    /// La espera minima entre dos escaladas concedidas (con K1; candidata de la cuarta pasada).
+    /// 0 = sin espera.
+    pub espera_escalada_ns: u64,
+    /// Al cumplirse la espera, la recuperacion la despierta el tic (sexta pasada) y no el
+    /// planificador. `false`: el planificador vuelve a pedirla, como en la quinta pasada.
+    pub despierta_el_tic: bool,
     /// Parar la corrida cuando el IWDG reinicia el chip: lo de despues no existe.
     pub para_al_reiniciar: bool,
 }
@@ -95,6 +101,8 @@ impl Cfg {
                 e: 3,
                 ventana_ns: 1_000_000_000,
             },
+            espera_escalada_ns: 0,
+            despierta_el_tic: true,
             para_al_reiniciar: false,
         }
     }
@@ -134,6 +142,11 @@ pub struct SlotW {
     pub subida: Subida,
     pub largo_subida: u16,
     pub rec_pedida: bool,
+    /// La escalada se aplazo: el planificador vuelve a pedir la recuperacion en este instante.
+    pub aplazada_hasta_us: Option<u64>,
+    /// Desde cuando la recuperacion de esta ranura esta debida (pedida, o despertada al
+    /// cumplirse la espera): el testigo `rec_debida_max` la cobra al terminar.
+    pub rec_debida: Option<u64>,
     pub rec_en_curso: bool,
     pub rec_hecha: bool,
     pub rec_t_hecha: u64,
@@ -283,6 +296,10 @@ pub struct Sim {
     evs: Vec<Option<HwEv>>,
     /// El contador de periodos del tic (`TICS` de `fw`).
     pub tics: u32,
+    /// El mismo contador en 64 bits: lo extiende el tic, que corre en cada periodo y no se salta
+    /// ninguna vuelta de los 32 bits (Halberg, sexta pasada, N11). El presupuesto lo lee.
+    pub tics64: u64,
+    epoca_tic: Reloj64,
     /// Actualizaciones del TIM7 desde el arranque, y cuantas habia en la ultima entrada del tic:
     /// el reloj es exacto si `tics` es siempre esta ultima.
     pub uevs: u32,
@@ -298,6 +315,13 @@ pub struct Sim {
     pub escaladas: u32,
     pub presupuesto: Presupuesto,
     pub denegadas: u32,
+    pub aplazadas: u32,
+    /// La primera espera cumplida que el tic tiene que despertar: la publica la recuperacion
+    /// (P4) y la lee el tic (P1). Cruza prioridades en una palabra, los 32 bits bajos del
+    /// contador, y el tic la compara por diferencia con vuelta.
+    pub rec_despierta: Option<u32>,
+    /// La mayor latencia de la recuperacion, de debida a terminada (R-H1, por nivel).
+    pub rec_debida_max: u64,
     pub esc_times: Vec<u64>,
     pub stall_until: u64,
     pub s: Vec<SlotW>,
@@ -352,6 +376,8 @@ impl Sim {
                 subida: Subida::nueva(),
                 largo_subida: 0,
                 rec_pedida: false,
+                aplazada_hasta_us: None,
+                rec_debida: None,
                 rec_en_curso: false,
                 rec_hecha: false,
                 rec_t_hecha: 0,
@@ -398,6 +424,8 @@ impl Sim {
             heap: BinaryHeap::new(),
             evs: Vec::new(),
             tics: 0,
+            tics64: 0,
+            epoca_tic: Reloj64::nuevo(),
             uevs: 0,
             uevs_en_entrada: 0,
             // Como `lanzar`: la tolerancia son dos cuentas del TIM7 (ESTIMADO).
@@ -416,6 +444,9 @@ impl Sim {
             escaladas: 0,
             presupuesto: Presupuesto::nuevo(0, 0),
             denegadas: 0,
+            aplazadas: 0,
+            rec_despierta: None,
+            rec_debida_max: 0,
             esc_times: Vec::new(),
             stall_until: 0,
             s,
@@ -445,7 +476,9 @@ impl Sim {
         sim.supervisor = Supervisor::nuevo(sim.cfg.sup_w_ns / 1000);
         sim.presupuesto = match sim.cfg.escaladas {
             Escaladas::Siempre => Presupuesto::nuevo(0, 0),
-            Escaladas::K1 { e, ventana_ns } => Presupuesto::nuevo(e, ventana_ns / 1000),
+            Escaladas::K1 { e, ventana_ns } => {
+                Presupuesto::con_espera(e, ventana_ns / 1000, sim.cfg.espera_escalada_ns / 1000)
+            }
             Escaladas::V2 { e, ventana } => Presupuesto::nuevo(e, ventana),
         };
         // `lanzar`: la primera trama ya esta en el buzon cuando llega el primer tic.
@@ -954,6 +987,23 @@ impl Sim {
                 self.periodos_saltados += u64::from(p.n - 1);
                 self.cur_periodos = p.n.min(u32::from(u16::MAX)) as u16;
                 self.tics = self.tics.wrapping_add(p.n);
+                self.tics64 = self.epoca_tic.extiende(self.tics);
+                let tic_us = self.tics64 * 125;
+                if self
+                    .rec_despierta
+                    .is_some_and(|h| self.tics.wrapping_sub(h) as i32 >= 0)
+                {
+                    // El tic hace de despertador de la recuperacion (sexta pasada): su trabajo
+                    // queda pendiente en el instante en que se cumple la espera.
+                    self.rec_despierta = None;
+                    self.pend_rec = true;
+                    for s in self.s.iter_mut() {
+                        if s.aplazada_hasta_us.is_some_and(|h| tic_us >= h) {
+                            s.rec_debida.get_or_insert(now);
+                        }
+                    }
+                    self.mark(-1, "tic_despierta_rec", 0);
+                }
                 self.tic_next_slot(0, job);
             }
             Fx::TicRead(n) => {
@@ -1098,8 +1148,14 @@ impl Sim {
                 job.push_back(cy(20), false, Fx::RecScan(0));
             }
             Fx::RecScan(n) => {
-                if self.s[n].rec_pedida {
+                let tic_us = self.tics64 * 125;
+                let cumplida = self.cfg.despierta_el_tic
+                    && self.s[n].aplazada_hasta_us.is_some_and(|h| tic_us >= h);
+                if self.s[n].rec_pedida || cumplida {
                     self.s[n].rec_pedida = false;
+                    if cumplida {
+                        self.s[n].aplazada_hasta_us = None;
+                    }
                     if n + 1 < N {
                         job.push_front(cy(20), false, Fx::RecScan(n + 1));
                     }
@@ -1152,13 +1208,34 @@ impl Sim {
                 job.push_front(1_200, true, Fx::SpiReset(n));
             }
             Fx::RecDecide(n) => {
-                let concede = match self.cfg.escaladas {
-                    Escaladas::Siempre => true,
-                    // El reloj del tic, en us.
-                    Escaladas::K1 { .. } => self.presupuesto.pide(u64::from(self.tics) * 125),
-                    Escaladas::V2 { .. } => self.presupuesto.pide(self.entradas),
+                let respuesta = match self.cfg.escaladas {
+                    Escaladas::Siempre => Respuesta::Concedida,
+                    // El reloj del tic en 64 bits, en us. Leer el reloj, decidir y publicar el
+                    // instante es un solo paso para P2 (Halberg, sexta pasada, N12).
+                    Escaladas::K1 { .. } => self.presupuesto.solicita(self.tics64 * 125),
+                    Escaladas::V2 { .. } => {
+                        if self.presupuesto.pide(self.entradas) {
+                            Respuesta::Concedida
+                        } else {
+                            Respuesta::Denegada
+                        }
+                    }
                 };
-                if concede {
+                if let Respuesta::Aplazada { hasta_us } = respuesta {
+                    // Ni RESET ni `HECHA`: la ranura sigue en `Reiniciando` con su cota, y el
+                    // planificador la vuelve a pedir en `hasta_us`.
+                    self.aplazadas += 1;
+                    self.s[n].aplazada_hasta_us = Some(hasta_us);
+                    self.s[n].rec_debida = None;
+                    if self.cfg.despierta_el_tic {
+                        let h = hasta_us.div_ceil(125) as u32;
+                        self.rec_despierta = Some(match self.rec_despierta {
+                            Some(antes) if (h.wrapping_sub(antes) as i32) > 0 => antes,
+                            _ => h,
+                        });
+                    }
+                    self.mark(n as i32, "escalada_aplazada", hasta_us as i64);
+                } else if respuesta == Respuesta::Concedida {
                     job.push_front(cy(100), false, Fx::EscPrep(n));
                 } else {
                     self.denegadas += 1;
@@ -1170,6 +1247,9 @@ impl Sim {
                 // K1: el RESET por canal y nada mas; la ranura muere por la cota de
                 // `Reiniciando`.
                 self.s[n].hw.ch_en = false;
+                if let Some(d) = self.s[n].rec_debida.take() {
+                    self.rec_debida_max = self.rec_debida_max.max(now - d);
+                }
             }
             Fx::EscPrep(n) => {
                 self.escaladas += 1;
@@ -1245,6 +1325,9 @@ impl Sim {
                 s.rec_t_hecha = now;
                 s.rec_hecha = true;
                 s.recuperaciones += 1;
+                if let Some(d) = s.rec_debida.take() {
+                    self.rec_debida_max = self.rec_debida_max.max(now - d);
+                }
                 self.mark(n as i32, "rec_hecha", 0);
             }
             // ---------------- el supervisor del hub (hilo) ----------------
@@ -1282,6 +1365,21 @@ impl Sim {
     fn plan_drain(&mut self, n: usize) {
         let ahora = self.plan_now_us;
         let mut hubo = false;
+        if let Some(h) = self.s[n]
+            .aplazada_hasta_us
+            .filter(|_| !self.cfg.despierta_el_tic)
+        {
+            if ahora >= h {
+                // La escalada aplazada: se vuelve a pedir la recuperacion del mismo incidente.
+                self.s[n].aplazada_hasta_us = None;
+                if self.s[n].muertas == 0 {
+                    self.s[n].rec_pedida = true;
+                    self.s[n].rec_debida.get_or_insert(self.now);
+                    self.pend_rec = true;
+                    self.mark(n as i32, "plan_repide_rec", 0);
+                }
+            }
+        }
         if let Some(p) = self.s[n].id_pend.take() {
             // ponytail: sin la limpieza por identidad de §2.2 (K4); solo la politica y la marca.
             let _ = self.s[n].pol.paso(Evento::Identidad(p), ahora);
@@ -1306,6 +1404,7 @@ impl Sim {
                     {
                         self.s[n].rec_inc_pedido = self.s[n].tic.incidente();
                         self.s[n].rec_pedida = true;
+                        self.s[n].rec_debida.get_or_insert(self.now);
                         self.pend_rec = true;
                         self.mark(n as i32, "plan_pide_rec", 0);
                     }
