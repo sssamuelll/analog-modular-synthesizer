@@ -215,6 +215,34 @@ fn una_recuperacion_pedida_antes_de_morir_no_se_ejecuta() {
     assert_eq!(sim.s[2].recuperaciones, 0);
 }
 
+// --- el supervisor (K5) ------------------------------------------------------------------
+
+#[test]
+fn una_ranura_muerta_reinicia_el_chip_a_w_mas_t_iwdg_de_su_ultimo_sello() {
+    // Papel v3, §2.11: el reinicio llega a W + T_IWDG del ultimo sello, con hasta P_s de juego.
+    let cfg = Cfg::base();
+    let (w, p_s, t_iwdg) = (cfg.sup_w_ns, cfg.feed_period_ns, cfg.iwdg_ns);
+    let mut sim = Sim::new(cfg);
+    sim.hold_on_vencida = Some((2, vec![vec![(40_000_000, false)]]));
+    sim.hw_at(
+        ms(30),
+        HwEv::Inject {
+            slot: 2,
+            kind: Inj::Hang,
+        },
+    );
+    sim.run_until(ms(300));
+    assert_eq!(sim.s[2].tic.estado(), Estado::Muerta);
+    assert_eq!(sim.supervisor.causa(), Some(2));
+    let sello = sim.s[2].last_seal_t;
+    let reinicio = sim.iwdg_reset_at.expect("el IWDG reinicia el chip") - sello;
+    assert!(
+        reinicio + p_s >= w + t_iwdg && reinicio <= w + t_iwdg + p_s,
+        "reinicio a {:.3} ms del ultimo sello",
+        reinicio as f64 / 1e6
+    );
+}
+
 // --- corridas largas -------------------------------------------------------------------
 
 /// El fuzz de la junta, 30 semillas de 4 s: `cargo test -p sam17-nucleo-modelo --release --

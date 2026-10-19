@@ -15,6 +15,7 @@ use sam17_nucleo_core::buzones_j2::{codigo, Anillo, Lectura as LecSubida, Subida
 use sam17_nucleo_core::maestro_j2::{
     plazo_us, Accion, Evento, Ranura as Politica, Tsize, Umbrales,
 };
+use sam17_nucleo_core::supervisor_j2::{Supervisor, Vista};
 use sam17_nucleo_core::transporte_j2::{
     tics_de_plazo, Aviso, Entrada, Estado, Lectura, Reloj64, RelojDelTic, Salida, Transporte,
 };
@@ -51,6 +52,10 @@ pub struct Cfg {
     pub pat: Option<fn(usize, u64) -> u16>,
     pub gap_ns: u64,
     pub plan_extra_ns: u64,
+    /// El supervisor del hub (K5): su ventana `W`, su periodo `P_s` y el IWDG. ESTIMADOS.
+    pub sup_w_ns: u64,
+    pub feed_period_ns: u64,
+    pub iwdg_ns: u64,
 }
 
 impl Cfg {
@@ -67,6 +72,9 @@ impl Cfg {
             pat: None,
             gap_ns: 2_000,
             plan_extra_ns: 0,
+            sup_w_ns: 55_000_000, // mayor que el mayor hueco de sello, ~50 ms (papel v3, §2.11)
+            feed_period_ns: 5_000_000,
+            iwdg_ns: 60_000_000,
         }
     }
 }
@@ -163,6 +171,7 @@ pub enum Fx {
     SpiReset(usize),
     RecProg(usize),
     RecDone(usize),
+    Feeder,
     P2End,
 }
 
@@ -210,6 +219,8 @@ pub enum HwEv {
     P0 { dur: u64 },
     Ident { slot: usize, present: bool },
     FrameDone { slot: usize, gen: u64 },
+    FeedTimer,
+    IwdgExpire { deadline: u64 },
     Stop,
 }
 
@@ -237,6 +248,7 @@ pub struct Sim {
     pub pend_tic: bool,
     pub pend_plan: bool,
     pub pend_rec: bool,
+    pub pend_feed: bool,
     pub pend_p2: VecDeque<Vec<(u64, bool)>>,
     pub pend_p0: VecDeque<u64>,
     /// Periodos que una entrada del tic trajo de mas (testigo `periodos_saltados`).
@@ -283,6 +295,13 @@ pub struct Sim {
     pub rec_lat_max: u64,
     pub trace_arm: Option<usize>,
     pub ring_hist_max: usize,
+    pub supervisor: Supervisor<N>,
+    pub feed_since: Option<u64>,
+    pub feed_lat_max: u64,
+    pub deadline: u64,
+    /// Cuando el supervisor dejo de alimentar, y cuando el IWDG reinicio el chip.
+    pub first_refusal: Option<u64>,
+    pub iwdg_reset_at: Option<u64>,
 }
 
 impl Sim {
@@ -345,6 +364,7 @@ impl Sim {
             pend_tic: false,
             pend_plan: false,
             pend_rec: false,
+            pend_feed: false,
             pend_p2: VecDeque::new(),
             pend_p0: VecDeque::new(),
             periodos_saltados: 0,
@@ -389,7 +409,14 @@ impl Sim {
             rec_lat_max: 0,
             trace_arm: None,
             ring_hist_max: 0,
+            supervisor: Supervisor::nuevo(0),
+            feed_since: None,
+            feed_lat_max: 0,
+            deadline: 0,
+            first_refusal: None,
+            iwdg_reset_at: None,
         };
+        sim.supervisor = Supervisor::nuevo(sim.cfg.sup_w_ns / 1000);
         // `lanzar`: la primera trama ya esta en el buzon cuando llega el primer tic.
         for n in 0..N {
             if sim.s[n].on {
@@ -397,6 +424,11 @@ impl Sim {
             }
         }
         sim.hw_at(PERIODO_NS, HwEv::Uev);
+        let fp = sim.cfg.feed_period_ns;
+        sim.hw_at(fp, HwEv::FeedTimer);
+        sim.deadline = sim.cfg.iwdg_ns;
+        let d = sim.deadline;
+        sim.hw_at(d, HwEv::IwdgExpire { deadline: d });
         sim
     }
 
@@ -565,6 +597,9 @@ impl Sim {
         if self.pend_rec {
             consider(4, 3);
         }
+        if self.pend_feed {
+            consider(5, 4);
+        }
         best
     }
 
@@ -600,6 +635,15 @@ impl Sim {
                 self.pend_rec = false;
                 let mut j = Job::new(4, "rec");
                 j.push_back(cy(100), false, Fx::RecEntry);
+                j
+            }
+            4 => {
+                if let Some(t) = self.feed_since.take() {
+                    self.feed_lat_max = self.feed_lat_max.max(self.now - t);
+                }
+                self.pend_feed = false;
+                let mut j = Job::new(5, "feed");
+                j.push_back(5_000, false, Fx::Feeder);
                 j
             }
             _ => {
@@ -767,6 +811,19 @@ impl Sim {
                         s.max_gap = gap;
                     }
                     s.last_valid = now;
+                }
+            }
+            HwEv::FeedTimer => {
+                if self.feed_since.is_none() {
+                    self.feed_since = Some(self.now);
+                }
+                self.pend_feed = true;
+                self.hw_at(self.now + self.cfg.feed_period_ns, HwEv::FeedTimer);
+            }
+            HwEv::IwdgExpire { deadline } => {
+                if deadline == self.deadline && self.iwdg_reset_at.is_none() {
+                    self.iwdg_reset_at = Some(self.now);
+                    self.mark(-1, "iwdg_reset", 0);
                 }
             }
             HwEv::Stop => self.stop = true,
@@ -1132,6 +1189,23 @@ impl Sim {
                 s.rec_hecha = true;
                 s.recuperaciones += 1;
                 self.mark(n as i32, "rec_hecha", 0);
+            }
+            // ---------------- el supervisor del hub (hilo) ----------------
+            Fx::Feeder => {
+                let mut vistas = [Vista::default(); N];
+                for (v, s) in vistas.iter_mut().zip(&self.s) {
+                    v.identidad = s.on && s.identidad;
+                    v.ultimo_sello_us = s.last_seal_t / 1000;
+                }
+                if self.supervisor.mira(now / 1000, &vistas) {
+                    self.deadline = now + self.cfg.iwdg_ns;
+                    let d = self.deadline;
+                    self.hw_at(d, HwEv::IwdgExpire { deadline: d });
+                } else if self.first_refusal.is_none() {
+                    self.first_refusal = Some(now);
+                    let causa = self.supervisor.causa().map_or(-1, |c| c as i64);
+                    self.mark(-1, "supervisor_deja_de_alimentar", causa);
+                }
             }
         }
     }
