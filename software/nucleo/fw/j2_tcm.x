@@ -28,8 +28,11 @@ SECTIONS
     *(.text._ZN15sam17_nucleo_fw8j2_banco*)
     *(.text._ZN15sam17_nucleo_fw11j2_ejecutor*)
     *(.text._ZN17sam17_nucleo_core*)
-    *(.text._ZN13embassy_stm323rcc*)
-    *(.text.memcmp .text.__aeabi_uldivmod .text.__aeabi_memclr4 .text.__aeabi_memmove8)
+    *(.text._ZN13embassy_stm323rcc7RccInfo*)
+    *(.text.memcmp .text.__aeabi_memclr4 .text.__aeabi_memmove8)
+    *(.text.__aeabi_uldivmod .text.__aeabi_ldivmod .text.__udivmoddi4 .text.__divmoddi4)
+    *(.text._R*17compiler_builtins3int19specialized_div_rem11u64_div_rem*)
+    *(.text._R*17compiler_builtins3mem7memmove*)
     . = ALIGN(4);
     __eitcm = .;
   } > ITCM AT> IMG
