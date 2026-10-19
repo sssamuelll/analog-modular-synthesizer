@@ -135,6 +135,113 @@ fn la_espera_cabe_en_reiniciando_junto_con_la_retencion_de_r_h1() {
     }
 }
 
+/// El instante en que la escalada aplazada vuelve a pedirse (o el tic la despierta), en una
+/// corrida sin retenciones: un bloqueo de 1 ms a `T_INI`.
+const T_INI: u64 = 60_010_000;
+
+fn instante_de_la_repeticion(cfg: &Cfg) -> u64 {
+    let mut sim = Sim::new(cfg.clone());
+    sim.hw_at(
+        T_INI,
+        HwEv::StallStart {
+            until: T_INI + 1_000_000,
+        },
+    );
+    sim.run_until(ms(250));
+    sim.marks
+        .iter()
+        .find(|m| m.what == "plan_repide_rec" || m.what == "tic_despierta_rec")
+        .map(|m| m.t)
+        .expect("el bloqueo de 1 ms aplaza alguna escalada")
+}
+
+/// El bloqueo de 1 ms y dos retenciones de P2: `l1` desde 200 us antes del instante de la
+/// repeticion (asi el planificador no llega a repedir hasta que acaba) y `l2` cuando la
+/// recuperacion arranca la ranura `k` (x15 de Halberg, quinta pasada).
+fn dos_retenciones(cfg: &Cfg, l1: u64, l2: u64, k: usize) -> Sim {
+    let t = instante_de_la_repeticion(cfg);
+    let mut sim = Sim::new(cfg.clone());
+    sim.hw_at(
+        T_INI,
+        HwEv::StallStart {
+            until: T_INI + 1_000_000,
+        },
+    );
+    sim.hw_at(
+        t - 200_000,
+        HwEv::P2 {
+            dur: l1,
+            atomic: false,
+        },
+    );
+    sim.run_until(t + 1_000);
+    if l2 > 0 {
+        sim.hold_on_rec = Some((k, vec![vec![(l2, false)]]));
+    }
+    sim.run_until(ms(250));
+    sim
+}
+
+fn cfg_b(despierta_el_tic: bool) -> Cfg {
+    let mut cfg = con_espera(1_000_000);
+    cfg.escaladas = Escaladas::K1 {
+        e: 6,
+        ventana_ns: 1_000_000_000,
+    };
+    cfg.cotas = (200, 112);
+    cfg.despierta_el_tic = despierta_el_tic;
+    cfg
+}
+
+#[test]
+fn con_el_tic_de_despertador_la_peor_retencion_legal_no_reinicia() {
+    // R-H1 por nivel, desde que su trabajo queda pendiente hasta que termina: con el tic
+    // despertando a la recuperacion, el trabajo de P4 queda pendiente al cumplirse la espera, y
+    // todo lo que la retiene hasta terminar (antes de arrancar y en medio) cabe en una ventana.
+    for (l1, l2) in [
+        (11_800_000, 0),
+        (8_000_000, 3_800_000),
+        (4_000_000, 7_800_000),
+        (0, 11_800_000),
+    ] {
+        for k in 0..N {
+            let sim = dos_retenciones(&cfg_b(true), l1, l2, k);
+            assert!(sim.iwdg_reset_at.is_none(), "l1 {l1}, l2 {l2}, k {k}");
+        }
+    }
+}
+
+#[test]
+fn con_el_planificador_repidiendo_dos_retenciones_legales_reinician() {
+    // Con el planificador como despertador, el trabajo de P4 no queda pendiente hasta que P3
+    // corre: P3 tiene su ventana y P4 la suya, y las dos seguidas no caben en `Reiniciando`.
+    assert!((0..N).any(|k| {
+        dos_retenciones(&cfg_b(false), 11_500_000, 11_500_000, k)
+            .iwdg_reset_at
+            .is_some()
+    }));
+}
+
+#[test]
+fn con_el_tic_de_despertador_el_testigo_de_la_recuperacion_ve_la_retencion_que_mata() {
+    // Las dos retenciones de 11,5 ms reinician el chip con los dos despertadores. Con el tic,
+    // la latencia de la recuperacion, de debida a terminada, pasa de 12 ms: el hub rompio R-H1
+    // y el testigo lo ve. Con el planificador, cada nivel queda dentro de su ventana y ningun
+    // testigo lo ve.
+    let peor = |tic: bool| {
+        (0..N)
+            .map(|k| dos_retenciones(&cfg_b(tic), 11_500_000, 11_500_000, k))
+            .filter(|s| s.iwdg_reset_at.is_some())
+            .map(|s| s.rec_debida_max)
+            .max()
+    };
+    let con_tic = peor(true).expect("con el tic tambien reinicia");
+    let con_plan = peor(false).expect("con el planificador reinicia");
+    println!("latencia de la recuperacion hasta terminar: con el tic {con_tic} ns, con el planificador {con_plan} ns");
+    assert!(con_tic > 12_000_000, "{con_tic}");
+    assert!(con_plan <= 12_000_000, "{con_plan}");
+}
+
 const SEMILLAS: u64 = 30;
 
 /// Las dos reglas de K1 que la junta pone una al lado de la otra, y la de `fw` hoy.

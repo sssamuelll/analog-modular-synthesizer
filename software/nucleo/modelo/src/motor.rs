@@ -72,6 +72,9 @@ pub struct Cfg {
     /// La espera minima entre dos escaladas concedidas (con K1; candidata de la cuarta pasada).
     /// 0 = sin espera.
     pub espera_escalada_ns: u64,
+    /// Al cumplirse la espera, la recuperacion la despierta el tic (sexta pasada) y no el
+    /// planificador. `false`: el planificador vuelve a pedirla, como en la quinta pasada.
+    pub despierta_el_tic: bool,
     /// Parar la corrida cuando el IWDG reinicia el chip: lo de despues no existe.
     pub para_al_reiniciar: bool,
 }
@@ -99,6 +102,7 @@ impl Cfg {
                 ventana_ns: 1_000_000_000,
             },
             espera_escalada_ns: 0,
+            despierta_el_tic: true,
             para_al_reiniciar: false,
         }
     }
@@ -140,6 +144,9 @@ pub struct SlotW {
     pub rec_pedida: bool,
     /// La escalada se aplazo: el planificador vuelve a pedir la recuperacion en este instante.
     pub aplazada_hasta_us: Option<u64>,
+    /// Desde cuando la recuperacion de esta ranura esta debida (pedida, o despertada al
+    /// cumplirse la espera): el testigo `rec_debida_max` la cobra al terminar.
+    pub rec_debida: Option<u64>,
     pub rec_en_curso: bool,
     pub rec_hecha: bool,
     pub rec_t_hecha: u64,
@@ -305,6 +312,11 @@ pub struct Sim {
     pub presupuesto: Presupuesto,
     pub denegadas: u32,
     pub aplazadas: u32,
+    /// La primera espera cumplida que el tic tiene que despertar, en us del reloj del tic: la
+    /// publica la recuperacion (P4) y la lee el tic (P1).
+    pub rec_despierta_us: Option<u64>,
+    /// La mayor latencia de la recuperacion, de debida a terminada (R-H1, por nivel).
+    pub rec_debida_max: u64,
     pub esc_times: Vec<u64>,
     pub stall_until: u64,
     pub s: Vec<SlotW>,
@@ -360,6 +372,7 @@ impl Sim {
                 largo_subida: 0,
                 rec_pedida: false,
                 aplazada_hasta_us: None,
+                rec_debida: None,
                 rec_en_curso: false,
                 rec_hecha: false,
                 rec_t_hecha: 0,
@@ -425,6 +438,8 @@ impl Sim {
             presupuesto: Presupuesto::nuevo(0, 0),
             denegadas: 0,
             aplazadas: 0,
+            rec_despierta_us: None,
+            rec_debida_max: 0,
             esc_times: Vec::new(),
             stall_until: 0,
             s,
@@ -965,6 +980,19 @@ impl Sim {
                 self.periodos_saltados += u64::from(p.n - 1);
                 self.cur_periodos = p.n.min(u32::from(u16::MAX)) as u16;
                 self.tics = self.tics.wrapping_add(p.n);
+                let tic_us = u64::from(self.tics) * 125;
+                if self.rec_despierta_us.is_some_and(|h| tic_us >= h) {
+                    // El tic hace de despertador de la recuperacion (sexta pasada): su trabajo
+                    // queda pendiente en el instante en que se cumple la espera.
+                    self.rec_despierta_us = None;
+                    self.pend_rec = true;
+                    for s in self.s.iter_mut() {
+                        if s.aplazada_hasta_us.is_some_and(|h| tic_us >= h) {
+                            s.rec_debida.get_or_insert(now);
+                        }
+                    }
+                    self.mark(-1, "tic_despierta_rec", 0);
+                }
                 self.tic_next_slot(0, job);
             }
             Fx::TicRead(n) => {
@@ -1109,8 +1137,14 @@ impl Sim {
                 job.push_back(cy(20), false, Fx::RecScan(0));
             }
             Fx::RecScan(n) => {
-                if self.s[n].rec_pedida {
+                let tic_us = u64::from(self.tics) * 125;
+                let cumplida = self.cfg.despierta_el_tic
+                    && self.s[n].aplazada_hasta_us.is_some_and(|h| tic_us >= h);
+                if self.s[n].rec_pedida || cumplida {
                     self.s[n].rec_pedida = false;
+                    if cumplida {
+                        self.s[n].aplazada_hasta_us = None;
+                    }
                     if n + 1 < N {
                         job.push_front(cy(20), false, Fx::RecScan(n + 1));
                     }
@@ -1180,6 +1214,11 @@ impl Sim {
                     // planificador la vuelve a pedir en `hasta_us`.
                     self.aplazadas += 1;
                     self.s[n].aplazada_hasta_us = Some(hasta_us);
+                    self.s[n].rec_debida = None;
+                    if self.cfg.despierta_el_tic {
+                        self.rec_despierta_us =
+                            Some(self.rec_despierta_us.map_or(hasta_us, |h| h.min(hasta_us)));
+                    }
                     self.mark(n as i32, "escalada_aplazada", hasta_us as i64);
                 } else if respuesta == Respuesta::Concedida {
                     job.push_front(cy(100), false, Fx::EscPrep(n));
@@ -1193,6 +1232,9 @@ impl Sim {
                 // K1: el RESET por canal y nada mas; la ranura muere por la cota de
                 // `Reiniciando`.
                 self.s[n].hw.ch_en = false;
+                if let Some(d) = self.s[n].rec_debida.take() {
+                    self.rec_debida_max = self.rec_debida_max.max(now - d);
+                }
             }
             Fx::EscPrep(n) => {
                 self.escaladas += 1;
@@ -1268,6 +1310,9 @@ impl Sim {
                 s.rec_t_hecha = now;
                 s.rec_hecha = true;
                 s.recuperaciones += 1;
+                if let Some(d) = s.rec_debida.take() {
+                    self.rec_debida_max = self.rec_debida_max.max(now - d);
+                }
                 self.mark(n as i32, "rec_hecha", 0);
             }
             // ---------------- el supervisor del hub (hilo) ----------------
@@ -1305,12 +1350,16 @@ impl Sim {
     fn plan_drain(&mut self, n: usize) {
         let ahora = self.plan_now_us;
         let mut hubo = false;
-        if let Some(h) = self.s[n].aplazada_hasta_us {
+        if let Some(h) = self.s[n]
+            .aplazada_hasta_us
+            .filter(|_| !self.cfg.despierta_el_tic)
+        {
             if ahora >= h {
                 // La escalada aplazada: se vuelve a pedir la recuperacion del mismo incidente.
                 self.s[n].aplazada_hasta_us = None;
                 if self.s[n].muertas == 0 {
                     self.s[n].rec_pedida = true;
+                    self.s[n].rec_debida.get_or_insert(self.now);
                     self.pend_rec = true;
                     self.mark(n as i32, "plan_repide_rec", 0);
                 }
@@ -1340,6 +1389,7 @@ impl Sim {
                     {
                         self.s[n].rec_inc_pedido = self.s[n].tic.incidente();
                         self.s[n].rec_pedida = true;
+                        self.s[n].rec_debida.get_or_insert(self.now);
                         self.pend_rec = true;
                         self.mark(n as i32, "plan_pide_rec", 0);
                     }
