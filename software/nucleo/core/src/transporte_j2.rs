@@ -76,6 +76,14 @@ pub const fn hueco_cabe_en_el_modulo(
     hueco * (periodo_us as u64) < techo
 }
 
+/// R-H1, ninguna ISR por encima del tic: la primera interrupcion habilitada (`habilitadas`, los
+/// `ISER` del NVIC) cuyo byte de prioridad (`prioridades`, los `IPR`) es menor que `nivel`, el del
+/// tic. Un numero menor es mas prioridad; la del mismo nivel no lo interrumpe.
+pub fn primera_por_encima(habilitadas: &[u32], prioridades: &[u8], nivel: u8) -> Option<usize> {
+    (0..prioridades.len())
+        .find(|&n| habilitadas[n / 32] & (1 << (n % 32)) != 0 && prioridades[n] < nivel)
+}
+
 /// Cuantos tics dura un plazo de `plazo_us` microsegundos: el entero hacia
 /// arriba, y nunca menos de uno (una transferencia armada en un tic se mira como
 /// pronto en el siguiente). Satura en 255.
@@ -1672,5 +1680,28 @@ mod tests {
         // 3 + 200 + 185 + 2 + 1 = 391 periodos, 48,875 ms; con 186, 49 ms justos, ya no cabe.
         assert!(hueco_cabe_en_el_modulo(3, 125, 200, 185));
         assert!(!hueco_cabe_en_el_modulo(3, 125, 200, 186));
+    }
+
+    /// R-H1: cuenta la habilitada con un numero de prioridad menor que el del tic, la del mismo
+    /// nivel no, y la que esta apagada tampoco, tenga la prioridad que tenga.
+    #[test]
+    fn por_encima_del_tic_solo_cuenta_la_habilitada_con_mas_prioridad() {
+        const P0: u8 = 0x00;
+        const P1: u8 = 0x10;
+        const P2: u8 = 0x20;
+        let mut habilitadas = [0u32; 16];
+        let mut prioridades = [P0; 496];
+        // Apagadas, aunque esten en P0: nada.
+        assert_eq!(primera_por_encima(&habilitadas, &prioridades, P1), None);
+        // Habilitadas en el nivel del tic y por debajo: nada.
+        habilitadas[0] = 1 << 5 | 1 << 7;
+        prioridades[5] = P1;
+        prioridades[7] = P2;
+        assert_eq!(primera_por_encima(&habilitadas, &prioridades, P1), None);
+        // Una habilitada en P0, en la segunda palabra: la 35.
+        habilitadas[1] = 1 << 3;
+        assert_eq!(primera_por_encima(&habilitadas, &prioridades, P1), Some(35));
+        prioridades[35] = P2;
+        assert_eq!(primera_por_encima(&habilitadas, &prioridades, P1), None);
     }
 }

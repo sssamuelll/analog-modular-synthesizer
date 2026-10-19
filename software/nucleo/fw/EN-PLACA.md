@@ -978,6 +978,20 @@ Con `con-usb`, `carga_j2` arranca el USB del instrumento con el mismo `atender` 
 - **Los 9 µs del USB sin cable de arriba no salen aquí sin tráfico (1 µs).** Cambiaron dos cosas a la vez: el J2 está en la TCM, y arranca 5 s después que el USB, cuando el PC ya lo enumeró. Cuál de las dos los quitó no está separado.
 - **Lo que no dice.** Cuántos paquetes USB llegaron: Windows puede juntar varios mensajes en un paquete y la placa no cuenta lo que recibe, así que `trafico_midi.py` solo sabe que el driver aceptó todos los mensajes sin un fallo (150 000 en los primeros 30 s de la corrida de 5 000). Los máximos salen de unas 240 000 entradas del tic: algo más raro que eso no se ha visto.
 
+**Los niveles de R-H1, en `fw`** (2026-10-19, el árbol de este cambio sobre `3c81a1f`; las mismas cuatro corridas que el bloque de arriba). embassy deja en P0, por encima del tic, todo lo que enciende sin que se le diga la prioridad: los canales del GPDMA1 y del HPDMA1 (en `init`), el temporizador de `embassy-time` (TIM12, también en `init`) y el USB (al arrancar el dispositivo). Ninguno aparece como un `set_priority` en el código. `usb::iniciar`, por donde arrancan `main` y todos los binarios del banco, los baja ahora al nivel 2, el del hub, y `j2_tic::lanzar` lee el NVIC y no arranca el tic si queda alguna interrupción habilitada por encima. Antes del arreglo, `carga_j2` con `con-usb` se paraba ahí: «la interrupción 68 está en 0x0», `HPDMA1_CHANNEL0`.
+
+| | retraso de entrada máximo | tics de más de 10 µs | reloj anómalo | planificador, de pendiente a terminado | hilo libre con las dos cachés |
+|---|---|---|---|---|---|
+| el J2 solo | 0 µs | 0 | 0 | 32 µs | 931 ‰ |
+| con el USB, sin tráfico | 3 µs | 0 | 0 | 32 µs | 925 ‰ |
+| 1 000 mensajes MIDI/s | 6 µs (antes 9) | 0 | 0 | 34 µs | 922 ‰ |
+| 5 000 mensajes MIDI/s | **4 µs (antes 15)** | 0 (antes 1) | **0 (antes 4)** | 34 µs | 910 ‰ |
+
+- **Con 5 000 mensajes/s, ya no se cuela nada al entrar el tic**: el reloj anómalo pasa de 4 a 0. Ninguna entrada pasa de 10 µs, y en ninguna corrida hay una trama atrasada, un plazo vencido ni una ranura muerta.
+- **Lo que cuesta el USB no cambia** (910 a 925 ‰, como antes). El planificador, que ahora queda por debajo del USB, se queda en 34 µs, contra los 12 ms de R-H1.
+- **Queda un retraso de 3 a 6 µs con el USB, y sin él 0.** Con el USB por debajo del tic, eso es, lo más probable, una sección crítica del camino del USB, que enmascara todo. Encaja con los 5 µs por sección de R-H2, pero R-H2 no está medido directamente: ni cuál es la sección ni cuánto dura.
+- **El muestreo de `perfil_pc` sigue en P0, y tiene que estar ahí:** muestrea dentro de las ISR. Usa el transporte del ejecutor, no `j2_tic::lanzar`, así que el aserto no lo ve.
+
 **Las fichas B y C en `fw`** (2026-10-19, firmware `0186c68`; acta del 19-10, tercera firma; #455). `Vencida` 200 y `Reiniciando` 112 periodos. El presupuesto concede 6 escaladas por segundo con 1 ms entre dos, y la que llega antes se aplaza: la recuperación lee la cuenta de 64 bits del tic, pide al presupuesto y publica el tic en que vence en una sola sección crítica, y el tic la deja pendiente al llegar. `lanzar` asevera las dos condiciones de la ficha C.
 
 - **`tic_recupera` con la escalada** (`inyeccion,reloj-hub,ranuras-3,sin-esclavo,escalada`): todas las fases en verde. **G, la escalada aplazada:** dos escaladas forzadas a la vez, en las ranuras 2 y 3. Se concede una y la otra se aplaza; el tic despierta a la recuperación una vez, y la ranura 3 sale sin morir y sigue sellando (`escaladas=1`, `aplazadas=1`, `despertadas=1`, `denegadas=0`, ninguna muerta). **E** pasa a siete escaladas en la ranura 3, una cada 30 ms: seis concedidas y la séptima denegada, y la ranura muere por su cota. **C:** diez escaladas, ninguna denegada.

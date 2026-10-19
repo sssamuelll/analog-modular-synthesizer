@@ -13,6 +13,8 @@
 
 use defmt::{info, warn};
 use embassy_futures::select::{select, Either};
+use embassy_stm32::interrupt;
+use embassy_stm32::interrupt::{InterruptExt, Priority};
 use embassy_stm32::peripherals::USB1_OTG_HS;
 use embassy_stm32::rcc::mux::{Otgphysel, Rtcsel};
 use embassy_stm32::rcc::{
@@ -160,7 +162,14 @@ pub fn configuracion_hub() -> embassy_stm32::Config {
 /// vivo cuando arranca el codigo, ES0620 Rev 5 §2.9.4 -- y saltaria a un
 /// manejador que no existe. Las que hacen falta las enciende `init` despues.
 /// En un arranque de verdad `PRIMASK` ya vale 0 y esto no cambia nada.
-pub fn iniciar(config: embassy_stm32::Config) -> embassy_stm32::Peripherals {
+///
+/// **Y los niveles de R-H1** (papel v3 del transporte del J2): nada por encima
+/// del tic, que va en P1. embassy deja en P0 lo que enciende sin que se le
+/// diga la prioridad: los canales del GPDMA1 y del HPDMA1, el temporizador de
+/// `embassy-time` (TIM12) y el USB. Medido en placa el 2026-10-19: con 5 000
+/// mensajes MIDI/s el USB se colaba al entrar el tic. Van al nivel del hub, el 2.
+/// `j2_tic::lanzar` lee el NVIC y no arranca si algo sigue por encima.
+pub fn iniciar(mut config: embassy_stm32::Config) -> embassy_stm32::Peripherals {
     // SAFETY: antes de `init` no hay ningun manejador de interrupcion vivo ni
     // seccion critica abierta; con todas las lineas apagadas, desenmascarar no
     // puede disparar nada.
@@ -172,7 +181,11 @@ pub fn iniciar(config: embassy_stm32::Config) -> embassy_stm32::Peripherals {
         }
         cortex_m::interrupt::enable();
     }
-    embassy_stm32::init(config)
+    config.gpdma_interrupt_priority = Priority::P2;
+    let p = embassy_stm32::init(config);
+    interrupt::TIM12.set_priority(Priority::P2);
+    interrupt::USB1_OTG_HS.set_priority(Priority::P2);
+    p
 }
 
 /// El reloj del **nucleo** en hercios, sacado de la MISMA `Config` que lo

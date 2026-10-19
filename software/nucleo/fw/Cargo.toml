@@ -27,7 +27,8 @@ sam17-nucleo-core = { path = "../core" }
 # chocaria con el del esclavo del banco (tarea 9).
 embassy-stm32 = { git = "https://github.com/sssamuelll/embassy", branch = "n6-usb", features = [
     "stm32n657x0",
-    "time-driver-any",
+    # TIM12, el que `time-driver-any` escogia: `usb::iniciar` lo baja a P2 (R-H1).
+    "time-driver-tim12",
     "unstable-pac",
     "defmt",
 ] }
