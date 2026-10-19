@@ -123,6 +123,8 @@ async fn contaminador() -> ! {
             });
         }
         core::hint::black_box(suma);
+        #[cfg(feature = "contaminador-icache")]
+        perfil::invalida_icache();
         embassy_futures::yield_now().await;
     }
 }
@@ -181,6 +183,13 @@ struct Pasada {
     /// recuperacion, componer) y los testigos al cerrar la pasada.
     #[cfg(feature = "transporte-tic")]
     tic: ([u32; 7], sam17_nucleo_fw::j2_tic::Testigos),
+    /// Lo que dura cada entrada del tic, en ciclos (media y maximo de la muestra), sin la
+    /// entrada ni la salida de la excepcion. Con `perfil`.
+    #[cfg(feature = "transporte-tic")]
+    isr_tic: (u32, u32),
+    /// f_cpu en MHz (ciclos por microsegundo), para pasar los ciclos de arriba a nanosegundos.
+    #[cfg(feature = "transporte-tic")]
+    f_cpu_mhz: u32,
 }
 
 impl Pasada {
@@ -209,6 +218,16 @@ impl Pasada {
                 self.cache, c[4], c[5], c[6]
             );
             info!("carga_j2,cache={=str},tic,{}", self.cache, t);
+            let (media, max) = self.isr_tic;
+            let mhz = self.f_cpu_mhz.max(1);
+            info!(
+                "carga_j2,cache={=str},tic,isr_tic: media={} ciclos ({} ns), max={} ciclos ({} ns)",
+                self.cache,
+                media,
+                media * 1000 / mhz,
+                max,
+                max * 1000 / mhz
+            );
         }
         #[cfg(not(feature = "transporte-tic"))]
         {
@@ -253,6 +272,9 @@ async fn main(spawner: Spawner) {
         retardo_tsck_cuartos: 4,
     };
     let ranuras = ranuras_de_medida!(p, cfg);
+    // La imagen de las TCM se copio en `pre_init`; aqui se comprueba.
+    #[cfg(feature = "j2-tcm")]
+    sam17_nucleo_fw::j2_tcm::comprueba();
 
     perfil::iniciar();
     let f_cpu_medido = perfil::f_cpu_medido_hz().await;
@@ -326,6 +348,8 @@ async fn main(spawner: Spawner) {
     let mut giros_antes = 0u32;
     #[cfg(feature = "transporte-tic")]
     let mut ciclos_antes = sam17_nucleo_fw::j2_tic::ciclos();
+    #[cfg(feature = "transporte-tic")]
+    let mut tics_antes = 0u32;
     let mut guardadas: [Option<Pasada>; 3] = [None; 3];
     for (i, &cache) in pasadas.iter().enumerate() {
         encender_cache(cache);
@@ -354,14 +378,18 @@ async fn main(spawner: Spawner) {
             giros_antes = giros;
             let (m, _) = promedios.tomar(giros);
             #[cfg(feature = "transporte-tic")]
-            let tic = {
+            let (tic, isr_tic) = {
                 let ahora = sam17_nucleo_fw::j2_tic::ciclos();
+                let t = sam17_nucleo_fw::j2_tic::testigos();
+                let dt = t.tics.wrapping_sub(tics_antes).max(1);
+                tics_antes = t.tics;
                 let mut c = [0u32; 7];
                 for k in 0..7 {
                     c[k] = ahora[k].wrapping_sub(ciclos_antes[k]) / dg.max(1);
                 }
+                let media = ahora[0].wrapping_sub(ciclos_antes[0]) / dt;
                 ciclos_antes = ahora;
-                (c, sam17_nucleo_fw::j2_tic::testigos())
+                ((c, t), (media, sam17_nucleo_fw::j2_tic::tic_max_ciclos()))
             };
             if muestra == 0 {
                 continue;
@@ -379,6 +407,10 @@ async fn main(spawner: Spawner) {
                 isr: (sin_cerrar, errores_dma, sam17_nucleo_fw::j2_isr::diagnostico()),
                 #[cfg(feature = "transporte-tic")]
                 tic,
+                #[cfg(feature = "transporte-tic")]
+                isr_tic,
+                #[cfg(feature = "transporte-tic")]
+                f_cpu_mhz: f_cpu / 1_000_000,
             });
         }
     }

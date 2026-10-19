@@ -13,6 +13,8 @@ pub mod j2_isr;
 pub mod j2_spi;
 #[cfg(feature = "transporte-tic")]
 pub mod j2_tic;
+#[cfg(feature = "j2-tcm")]
+pub mod j2_tcm;
 pub mod mpu;
 #[cfg(feature = "muestreo")]
 pub mod muestreo;

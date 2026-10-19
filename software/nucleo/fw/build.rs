@@ -3,6 +3,17 @@ use std::process::Command;
 
 fn main() {
     println!("cargo:rustc-link-arg-bins=--nmagic");
+    // `j2-tcm`: el guion de las TCM va antes de `link.x`, para que sus sentencias de SECTIONS
+    // se lleven el texto del J2 antes que `.text` (ver `j2_tcm.x`).
+    println!("cargo:rerun-if-changed=j2_tcm.x");
+    println!("cargo:rerun-if-changed=j2_tcm_pila.x");
+    if std::env::var_os("CARGO_FEATURE_J2_TCM").is_some() {
+        let aqui = std::env::var("CARGO_MANIFEST_DIR").expect("cargo da CARGO_MANIFEST_DIR");
+        println!("cargo:rustc-link-arg-bins=-T{aqui}/j2_tcm.x");
+        if std::env::var_os("CARGO_FEATURE_J2_TCM_PILA").is_some() {
+            println!("cargo:rustc-link-arg-bins=-T{aqui}/j2_tcm_pila.x");
+        }
+    }
     println!("cargo:rustc-link-arg-bins=-Tlink.x");
     println!("cargo:rustc-link-arg-bins=-Tdefmt.x");
     println!("cargo:rerun-if-changed=memory.x");
