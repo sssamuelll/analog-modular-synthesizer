@@ -75,6 +75,9 @@ pub const T_CANAL_US: u32 = 25;
 pub const T_GAP_REARME_US: u32 = 2;
 /// Un tic que entra con el contador del temporizador por encima de esto va tarde (§2.8).
 const TARDIO_US: u16 = 10;
+/// El presupuesto de retraso del tic (§2.8, R-H2): una entrada que pasa de esto cuenta en
+/// `tics_fuera_de_presupuesto`.
+const PRESUPUESTO_RETRASO_US: u16 = 60;
 
 /// Los canales del GPDMA1 de la ranura `n` son `2n` y `2n + 1` (los de `j2_banco`).
 const IRQ_CANAL: [interrupt::Interrupt; 12] = [
@@ -464,6 +467,16 @@ static PERIODOS_SALTADOS: AtomicU32 = AtomicU32::new(0);
 static RELOJ_ANOMALO: AtomicU32 = AtomicU32::new(0);
 #[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static RETRASO_MAX_US: AtomicU32 = AtomicU32::new(0);
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static TICS_FUERA_DE_PRESUPUESTO: AtomicU32 = AtomicU32::new(0);
+/// El `DWT` de la primera vez que se hizo pendiente el planificador desde que arranco por ultima
+/// vez (con el bit bajo puesto, para que no sea 0); 0 = no esta pedido.
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static PLAN_PEDIDO: AtomicU32 = AtomicU32::new(0);
+/// La mayor espera del planificador, en ciclos, desde que se pide hasta que arranca: lo que
+/// observa R-H1 (§2.8).
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static LATENCIA_PLAN_MAX: AtomicU32 = AtomicU32::new(0);
 /// El reloj del tic (candidata K2). Dueno: el tic.
 #[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static RELOJ_TIC: Celda<RelojDelTic> = Celda::nueva(RelojDelTic::nuevo(0, 0, 0));
@@ -555,7 +568,9 @@ pub struct Testigos {
     pub tics_tardios: u32,
     pub periodos_saltados: u32,
     pub reloj_anomalo: u32,
-    pub retraso_max_us: u32,
+    pub retraso_entrada_max_us: u32,
+    pub tics_fuera_de_presupuesto: u32,
+    pub latencia_plan_max_us: u32,
     pub sin_bajada: u32,
     pub errores_dma: u32,
     pub subidas_perdidas: u32,
@@ -573,7 +588,11 @@ pub fn testigos() -> Testigos {
         tics_tardios: TICS_TARDIOS.load(Ordering::Relaxed),
         periodos_saltados: PERIODOS_SALTADOS.load(Ordering::Relaxed),
         reloj_anomalo: RELOJ_ANOMALO.load(Ordering::Relaxed),
-        retraso_max_us: RETRASO_MAX_US.load(Ordering::Relaxed),
+        retraso_entrada_max_us: RETRASO_MAX_US.load(Ordering::Relaxed),
+        tics_fuera_de_presupuesto: TICS_FUERA_DE_PRESUPUESTO.load(Ordering::Relaxed),
+        latencia_plan_max_us: LATENCIA_PLAN_MAX
+            .load(Ordering::Relaxed)
+            .div_ceil(CICLOS_POR_US.load(Ordering::Relaxed).max(1)),
         sin_bajada: 0,
         errores_dma: 0,
         subidas_perdidas: 0,
@@ -864,6 +883,9 @@ unsafe fn TIM7() {
     if retraso > TARDIO_US {
         TICS_TARDIOS.fetch_add(1, Ordering::Relaxed);
     }
+    if retraso > PRESUPUESTO_RETRASO_US {
+        TICS_FUERA_DE_PRESUPUESTO.fetch_add(1, Ordering::Relaxed);
+    }
     if u32::from(retraso) > RETRASO_MAX_US.load(Ordering::Relaxed) {
         RETRASO_MAX_US.store(u32::from(retraso), Ordering::Relaxed);
     }
@@ -1016,7 +1038,7 @@ unsafe fn TIM7() {
             REC_EN_CURSO[n].store(false, Ordering::Relaxed);
         }
     }
-    NVIC::pend(IRQ_PLAN);
+    pide_plan();
     let dur = DWT::cycle_count().wrapping_sub(t0);
     suma(0, dur);
     #[cfg(feature = "perfil")]
@@ -1059,8 +1081,26 @@ fn compone(n: usize, p: &mut PlanRanura) {
     suma(3, DWT::cycle_count().wrapping_sub(t0));
 }
 
+/// Hace pendiente el planificador y apunta cuando, si no lo estaba ya.
+fn pide_plan() {
+    let _ = PLAN_PEDIDO.compare_exchange(
+        0,
+        DWT::cycle_count() | 1,
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    NVIC::pend(IRQ_PLAN);
+}
+
 #[interrupt]
 unsafe fn DMA2D() {
+    let pedido = PLAN_PEDIDO.swap(0, Ordering::Relaxed);
+    if pedido != 0 {
+        let espera = DWT::cycle_count().wrapping_sub(pedido);
+        if espera > LATENCIA_PLAN_MAX.load(Ordering::Relaxed) {
+            LATENCIA_PLAN_MAX.store(espera, Ordering::Relaxed);
+        }
+    }
     #[cfg(feature = "contaminador-icache")]
     crate::perfil::invalida_icache();
     let t0 = DWT::cycle_count();
@@ -1213,7 +1253,7 @@ fn escala() {
             SUCIA[k].store(false, Ordering::Relaxed);
         }
     }
-    NVIC::pend(IRQ_PLAN);
+    pide_plan();
 }
 
 fn recupera(n: usize) {
