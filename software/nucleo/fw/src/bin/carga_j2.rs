@@ -187,6 +187,9 @@ struct Pasada {
     /// entrada ni la salida de la excepcion. Con `perfil`.
     #[cfg(feature = "transporte-tic")]
     isr_tic: (u32, u32),
+    /// La entrada de la excepcion del tic, en ciclos (media y maximo). Con `tic-fino` y `perfil`.
+    #[cfg(feature = "transporte-tic")]
+    entrada_tic: (u32, u32),
     /// f_cpu en MHz (ciclos por microsegundo), para pasar los ciclos de arriba a nanosegundos.
     #[cfg(feature = "transporte-tic")]
     f_cpu_mhz: u32,
@@ -227,6 +230,13 @@ impl Pasada {
                 media * 1000 / mhz,
                 max,
                 max * 1000 / mhz
+            );
+            let (em, ex) = self.entrada_tic;
+            info!(
+                "carga_j2,cache={=str},tic,entrada_tic: media={} ciclos, max={} ciclos",
+                self.cache,
+                em,
+                ex
             );
         }
         #[cfg(not(feature = "transporte-tic"))]
@@ -424,6 +434,8 @@ async fn main(spawner: Spawner) {
                 tic,
                 #[cfg(feature = "transporte-tic")]
                 isr_tic,
+                #[cfg(feature = "transporte-tic")]
+                entrada_tic: sam17_nucleo_fw::j2_tic::entrada_ciclos(),
                 #[cfg(feature = "transporte-tic")]
                 f_cpu_mhz: f_cpu / 1_000_000,
             });

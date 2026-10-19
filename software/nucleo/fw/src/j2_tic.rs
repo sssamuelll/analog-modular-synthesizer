@@ -487,6 +487,32 @@ static CICLOS: [AtomicU32; 7] = [const { AtomicU32::new(0) }; 7];
 #[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static TIC_MAX: AtomicU32 = AtomicU32::new(0);
 
+/// Con `tic-fino`, las cuentas del temporizador por microsegundo (sin preescalar).
+#[cfg(feature = "tic-fino")]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static CUENTAS_POR_US: AtomicU32 = AtomicU32::new(1);
+#[cfg(all(feature = "tic-fino", feature = "perfil"))]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static CICLOS_POR_CUENTA: AtomicU32 = AtomicU32::new(0);
+/// La entrada de la excepcion del tic, en ciclos, desde el suceso de actualizacion hasta que el
+/// manejador lee `TIM7.CNT` (apilado, captacion del vector y el prologo): suma, cuenta y maximo.
+#[cfg(all(feature = "tic-fino", feature = "perfil"))]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static ENTRADA: [AtomicU32; 3] = [const { AtomicU32::new(0) }; 3];
+
+/// La entrada del tic desde la llamada anterior, en ciclos: media y maximo, y los pone a cero.
+/// Sin `tic-fino` y `perfil`, ceros.
+pub fn entrada_ciclos() -> (u32, u32) {
+    #[cfg(all(feature = "tic-fino", feature = "perfil"))]
+    {
+        let suma = ENTRADA[0].swap(0, Ordering::Relaxed);
+        let n = ENTRADA[1].swap(0, Ordering::Relaxed).max(1);
+        return (suma / n, ENTRADA[2].swap(0, Ordering::Relaxed));
+    }
+    #[allow(unreachable_code)]
+    (0, 0)
+}
+
 /// El tic mas largo desde la llamada anterior, en ciclos, y lo pone a cero. Sin `perfil`, cero.
 pub fn tic_max_ciclos() -> u32 {
     #[cfg(feature = "perfil")]
@@ -818,8 +844,17 @@ pub fn lanzar(
 
     rcc::enable_and_reset::<peripherals::TIM7>();
     let f_timer = rcc::frequency::<peripherals::TIM7>().0;
-    let psc = f_timer / 1_000_000 - 1;
-    defmt::assert!(psc <= 0xFFFF && periodo_us <= 0x1_0000);
+    // Con `tic-fino` el temporizador cuenta sin preescalar: el retraso de entrada sale en cuentas
+    // de `f_timer`, y con ellas la entrada de la excepcion en ciclos. Solo para el banco.
+    let cuentas_por_us = if cfg!(feature = "tic-fino") {
+        f_timer / 1_000_000
+    } else {
+        1
+    };
+    let psc = f_timer / 1_000_000 / cuentas_por_us - 1;
+    defmt::assert!(psc <= 0xFFFF && periodo_us * cuentas_por_us <= 0x1_0000);
+    #[cfg(feature = "tic-fino")]
+    CUENTAS_POR_US.store(cuentas_por_us, Ordering::Relaxed);
     let t = pac::TIM7;
     t.psc().write_value(psc as u16);
     // El reloj del tic resta cuentas del temporizador de los ciclos del contador libre: los dos
@@ -830,6 +865,8 @@ pub fn lanzar(
         "j2_tic: el TIM7 y el nucleo sin razon entera"
     );
     let ciclos_por_cuenta = (num / u64::from(f_timer)) as u32;
+    #[cfg(all(feature = "tic-fino", feature = "perfil"))]
+    CICLOS_POR_CUENTA.store(ciclos_por_cuenta, Ordering::Relaxed);
     // SAFETY: el tic todavia no corre; es el unico dueno del reloj despues.
     unsafe {
         *RELOJ_TIC.0.get() = RelojDelTic::nuevo(
@@ -838,7 +875,8 @@ pub fn lanzar(
             2 * ciclos_por_cuenta,
         );
     }
-    t.arr().write(|w| w.set_arr((periodo_us - 1) as u16));
+    t.arr()
+        .write(|w| w.set_arr((periodo_us * cuentas_por_us - 1) as u16));
     t.egr().write(|w| w.set_ug(true));
     t.sr().write(|w| w.set_uif(false));
     t.dier().modify(|w| w.set_uie(true));
@@ -865,7 +903,18 @@ unsafe fn TIM7() {
     let t0 = DWT::cycle_count();
     let tim = pac::TIM7;
     // Testigo de retraso: microsegundos desde el ultimo suceso de actualizacion (§2.8).
-    let retraso = tim.cnt().read().cnt();
+    let cuentas = tim.cnt().read().cnt();
+    #[cfg(feature = "tic-fino")]
+    let retraso = (u32::from(cuentas) / CUENTAS_POR_US.load(Ordering::Relaxed)) as u16;
+    #[cfg(not(feature = "tic-fino"))]
+    let retraso = cuentas;
+    #[cfg(all(feature = "tic-fino", feature = "perfil"))]
+    {
+        let c = u32::from(cuentas) * CICLOS_POR_CUENTA.load(Ordering::Relaxed);
+        ENTRADA[0].fetch_add(c, Ordering::Relaxed);
+        ENTRADA[1].fetch_add(1, Ordering::Relaxed);
+        ENTRADA[2].fetch_max(c, Ordering::Relaxed);
+    }
     tim.sr().write(|w| w.set_uif(false));
     if retraso > TARDIO_US {
         TICS_TARDIOS.fetch_add(1, Ordering::Relaxed);
@@ -875,7 +924,7 @@ unsafe fn TIM7() {
     }
     // El reloj del tic cuenta periodos desde la actualizacion, no entradas (§2.7, K2).
     // SAFETY: el tic es el unico dueno de `RELOJ_TIC`.
-    let p = unsafe { &mut *RELOJ_TIC.0.get() }.entrada(u32::from(retraso), t0);
+    let p = unsafe { &mut *RELOJ_TIC.0.get() }.entrada(u32::from(cuentas), t0);
     if p.anomalo {
         RELOJ_ANOMALO.fetch_add(1, Ordering::Relaxed);
     }
