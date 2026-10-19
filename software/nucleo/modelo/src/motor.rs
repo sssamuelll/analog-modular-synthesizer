@@ -69,6 +69,8 @@ pub struct Cfg {
     pub feed_period_ns: u64,
     pub iwdg_ns: u64,
     pub escaladas: Escaladas,
+    /// Parar la corrida cuando el IWDG reinicia el chip: lo de despues no existe.
+    pub para_al_reiniciar: bool,
 }
 
 impl Cfg {
@@ -93,6 +95,7 @@ impl Cfg {
                 e: 3,
                 ventana_ns: 1_000_000_000,
             },
+            para_al_reiniciar: false,
         }
     }
 }
@@ -860,6 +863,7 @@ impl Sim {
                 if deadline == self.deadline && self.iwdg_reset_at.is_none() {
                     self.iwdg_reset_at = Some(self.now);
                     self.mark(-1, "iwdg_reset", 0);
+                    self.stop = self.cfg.para_al_reiniciar;
                 }
             }
             HwEv::Stop => self.stop = true,
