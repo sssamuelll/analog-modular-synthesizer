@@ -513,6 +513,58 @@ pub fn entrada_ciclos() -> (u32, u32) {
     (0, 0)
 }
 
+/// Los ciclos del `DWT` al final del tic.
+#[cfg(all(feature = "tic-fino", feature = "perfil"))]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static FIN_TIC: AtomicU32 = AtomicU32::new(0);
+/// El tic acabo sin que el planificador estuviera corriendo: la proxima entrada de `DMA2D` es
+/// el encadenado desde ese tic.
+#[cfg(all(feature = "tic-fino", feature = "perfil"))]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static ENCADENA: AtomicBool = AtomicBool::new(false);
+/// El cuerpo del planificador esta corriendo.
+#[cfg(all(feature = "tic-fino", feature = "perfil"))]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static PLAN_DENTRO: AtomicBool = AtomicBool::new(false);
+/// El encadenado del tic al planificador, en ciclos (del final del tic a la primera
+/// instruccion de `DMA2D`): suma, cuenta y maximo.
+#[cfg(all(feature = "tic-fino", feature = "perfil"))]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static CADENA: [AtomicU32; 3] = [const { AtomicU32::new(0) }; 3];
+/// Los ciclos del `DWT` al final del planificador.
+#[cfg(all(feature = "tic-fino", feature = "perfil"))]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static FIN_PLAN: AtomicU32 = AtomicU32::new(0);
+/// Cuantas veces ha acabado el planificador.
+#[cfg(all(feature = "tic-fino", feature = "perfil"))]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static PLANES: AtomicU32 = AtomicU32::new(0);
+
+/// El encadenado del tic al planificador desde la llamada anterior, en ciclos: media y maximo,
+/// y los pone a cero. Sin `tic-fino` y `perfil`, ceros.
+pub fn cadena_ciclos() -> (u32, u32) {
+    #[cfg(all(feature = "tic-fino", feature = "perfil"))]
+    {
+        let suma = CADENA[0].swap(0, Ordering::Relaxed);
+        let n = CADENA[1].swap(0, Ordering::Relaxed).max(1);
+        return (suma / n, CADENA[2].swap(0, Ordering::Relaxed));
+    }
+    #[allow(unreachable_code)]
+    (0, 0)
+}
+
+/// Cuantas veces ha acabado el planificador y los ciclos del `DWT` de la ultima. Se lee el
+/// contador primero y el instante despues. Sin `tic-fino` y `perfil`, ceros.
+pub fn fin_del_planificador() -> (u32, u32) {
+    #[cfg(all(feature = "tic-fino", feature = "perfil"))]
+    {
+        let n = PLANES.load(Ordering::Relaxed);
+        return (n, FIN_PLAN.load(Ordering::Relaxed));
+    }
+    #[allow(unreachable_code)]
+    (0, 0)
+}
+
 /// El tic mas largo desde la llamada anterior, en ciclos, y lo pone a cero. Sin `perfil`, cero.
 pub fn tic_max_ciclos() -> u32 {
     #[cfg(feature = "perfil")]
@@ -1076,6 +1128,11 @@ unsafe fn TIM7() {
     suma(0, dur);
     #[cfg(feature = "perfil")]
     TIC_MAX.fetch_max(dur, Ordering::Relaxed);
+    #[cfg(all(feature = "tic-fino", feature = "perfil"))]
+    {
+        FIN_TIC.store(DWT::cycle_count(), Ordering::Relaxed);
+        ENCADENA.store(!PLAN_DENTRO.load(Ordering::Relaxed), Ordering::Relaxed);
+    }
 }
 
 // ---------------------------------------------------------------------------------------
@@ -1116,6 +1173,17 @@ fn compone(n: usize, p: &mut PlanRanura) {
 
 #[interrupt]
 unsafe fn DMA2D() {
+    #[cfg(all(feature = "tic-fino", feature = "perfil"))]
+    {
+        let t_in = DWT::cycle_count();
+        PLAN_DENTRO.store(true, Ordering::Relaxed);
+        if ENCADENA.swap(false, Ordering::Relaxed) {
+            let c = t_in.wrapping_sub(FIN_TIC.load(Ordering::Relaxed));
+            CADENA[0].fetch_add(c, Ordering::Relaxed);
+            CADENA[1].fetch_add(1, Ordering::Relaxed);
+            CADENA[2].fetch_max(c, Ordering::Relaxed);
+        }
+    }
     #[cfg(feature = "contaminador-icache")]
     crate::perfil::invalida_icache();
     let t0 = DWT::cycle_count();
@@ -1192,6 +1260,12 @@ unsafe fn DMA2D() {
     }
     #[cfg(not(feature = "perfil"))]
     let _ = t0;
+    #[cfg(all(feature = "tic-fino", feature = "perfil"))]
+    {
+        PLAN_DENTRO.store(false, Ordering::Relaxed);
+        FIN_PLAN.store(DWT::cycle_count(), Ordering::Relaxed);
+        PLANES.fetch_add(1, Ordering::Relaxed);
+    }
 }
 
 // ---------------------------------------------------------------------------------------
