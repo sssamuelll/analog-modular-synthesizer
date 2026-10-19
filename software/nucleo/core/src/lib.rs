@@ -13,6 +13,7 @@ pub mod buzones_j2;
 pub mod descriptor;
 pub mod descubrimiento;
 pub mod envolvente;
+pub mod escaladas_j2;
 pub mod escritor;
 pub mod fuerza;
 pub mod j2;

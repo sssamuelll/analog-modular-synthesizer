@@ -49,6 +49,7 @@ use sam17_nucleo_core::buzones_j2::{Anillo, Lectura as LecturaSubida, Subida, Tr
 use sam17_nucleo_core::maestro_j2::{
     plazo_us, Accion, Evento, Ranura as Politica, Umbrales, RANURAS_SPI,
 };
+use sam17_nucleo_core::escaladas_j2::Presupuesto;
 use sam17_nucleo_core::transporte_j2::{
     tics_de_plazo, Aviso, Entrada, Estado, Lectura, Reloj64, RelojDelTic, Transporte,
 };
@@ -410,6 +411,15 @@ static REC_T_HECHA: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
 static INCIDENTE: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
 static REC_INCIDENTE_PEDIDO: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
 static REC_INCIDENTE: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
+/// El presupuesto de escaladas del GPDMA1 (papel v3, §2.5, K1): como mucho `E_ESCALADAS` en
+/// `VENTANA_ESCALADAS_US` del reloj del tic. ESTIMADOS. Dueno: la recuperacion, con su propio
+/// reloj de 64 bits.
+const E_ESCALADAS: usize = 3;
+const VENTANA_ESCALADAS_US: u64 = 1_000_000;
+static PRESUPUESTO: Celda<Presupuesto> =
+    Celda::nueva(Presupuesto::nuevo(E_ESCALADAS, VENTANA_ESCALADAS_US));
+static RELOJ_REC: Celda<Reloj64> = Celda::nueva(Reloj64::nuevo());
+static ESCALADAS_DENEGADAS: AtomicU32 = AtomicU32::new(0);
 /// La ranura esta `Muerta`: lo publica el tic, y ni el planificador ni la recuperacion la tocan
 /// (papel v3, §2.2, Halberg H5).
 static MUERTA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
@@ -507,6 +517,7 @@ pub struct Testigos {
     pub ranuras_muertas: u32,
     pub recuperaciones: u32,
     pub escaladas_gpdma: u32,
+    pub escaladas_denegadas: u32,
 }
 
 pub fn testigos() -> Testigos {
@@ -524,6 +535,7 @@ pub fn testigos() -> Testigos {
         ranuras_muertas: 0,
         recuperaciones: 0,
         escaladas_gpdma: ESCALADAS_GPDMA.load(Ordering::Relaxed),
+        escaladas_denegadas: ESCALADAS_DENEGADAS.load(Ordering::Relaxed),
     };
     for n in 0..N {
         if !IDENTIDAD[n].load(Ordering::Relaxed) {
@@ -1170,7 +1182,19 @@ fn recupera(n: usize) {
         marca(Marca::RecInicio, DWT::cycle_count());
     }
     if !para_canales(hw) {
-        escala();
+        // SAFETY: la recuperacion es la unica que toca `RELOJ_REC` y `PRESUPUESTO`.
+        let tics = unsafe { &mut *RELOJ_REC.0.get() }.extiende(TICS.load(Ordering::Relaxed));
+        let ahora_us = tics * u64::from(PERIODO_US.load(Ordering::Relaxed));
+        if unsafe { &mut *PRESUPUESTO.0.get() }.pide(ahora_us) {
+            escala();
+        } else {
+            // K1: sin presupuesto, el RESET por canal y nada mas: ni HECHA ni reintento. La
+            // ranura muere por la cota de `Reiniciando` y el supervisor reinicia el chip.
+            hw.tx.ch.cr().write(|w| w.set_reset(true));
+            hw.rx.ch.cr().write(|w| w.set_reset(true));
+            ESCALADAS_DENEGADAS.fetch_add(1, Ordering::Relaxed);
+            return;
+        }
     }
     // Pasos 2 y 3 en una sola seccion critica: el reset del SPI deja `CFG2 = 0`, con
     // `AFCNTR = 0` el `CS` y el reloj flotan, y cuanto menos dure, mejor.

@@ -12,6 +12,7 @@
 //! hacen hoy en `fw/src/j2_tic.rs`.
 
 use sam17_nucleo_core::buzones_j2::{codigo, Anillo, Lectura as LecSubida, Subida, Triple};
+use sam17_nucleo_core::escaladas_j2::Presupuesto;
 use sam17_nucleo_core::maestro_j2::{
     plazo_us, Accion, Evento, Ranura as Politica, Tsize, Umbrales,
 };
@@ -38,6 +39,17 @@ pub fn ms(x: u64) -> u64 {
     x * 1_000_000
 }
 
+/// Quien autoriza la escalada del GPDMA1.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Escaladas {
+    /// Escala siempre, como `fw` antes de K1.
+    Siempre,
+    /// K1: `e` escaladas como mucho en `ventana_ns` del reloj del tic.
+    K1 { e: usize, ventana_ns: u64 },
+    /// El presupuesto retirado, de referencia: `e` en `ventana` entradas del tic.
+    V2 { e: usize, ventana: u64 },
+}
+
 #[derive(Clone)]
 pub struct Cfg {
     pub f_sck: u64,
@@ -56,6 +68,7 @@ pub struct Cfg {
     pub sup_w_ns: u64,
     pub feed_period_ns: u64,
     pub iwdg_ns: u64,
+    pub escaladas: Escaladas,
 }
 
 impl Cfg {
@@ -75,6 +88,11 @@ impl Cfg {
             sup_w_ns: 55_000_000, // mayor que el mayor hueco de sello, ~50 ms (papel v3, §2.11)
             feed_period_ns: 5_000_000,
             iwdg_ns: 60_000_000,
+            // ESTIMADOS: el barrido los recorre.
+            escaladas: Escaladas::K1 {
+                e: 3,
+                ventana_ns: 1_000_000_000,
+            },
         }
     }
 }
@@ -171,6 +189,7 @@ pub enum Fx {
     SpiReset(usize),
     RecProg(usize),
     RecDone(usize),
+    RecDeny(usize),
     Feeder,
     P2End,
 }
@@ -274,6 +293,8 @@ pub struct Sim {
     pub reloj: Reloj64,
     pub plan_now_us: u64,
     pub escaladas: u32,
+    pub presupuesto: Presupuesto,
+    pub denegadas: u32,
     pub esc_times: Vec<u64>,
     pub stall_until: u64,
     pub s: Vec<SlotW>,
@@ -390,6 +411,8 @@ impl Sim {
             reloj: Reloj64::nuevo(),
             plan_now_us: 0,
             escaladas: 0,
+            presupuesto: Presupuesto::nuevo(0, 0),
+            denegadas: 0,
             esc_times: Vec::new(),
             stall_until: 0,
             s,
@@ -417,6 +440,11 @@ impl Sim {
             iwdg_reset_at: None,
         };
         sim.supervisor = Supervisor::nuevo(sim.cfg.sup_w_ns / 1000);
+        sim.presupuesto = match sim.cfg.escaladas {
+            Escaladas::Siempre => Presupuesto::nuevo(0, 0),
+            Escaladas::K1 { e, ventana_ns } => Presupuesto::nuevo(e, ventana_ns / 1000),
+            Escaladas::V2 { e, ventana } => Presupuesto::nuevo(e, ventana),
+        };
         // `lanzar`: la primera trama ya esta en el buzon cuando llega el primer tic.
         for n in 0..N {
             if sim.s[n].on {
@@ -1112,8 +1140,24 @@ impl Sim {
                 job.push_front(1_200, true, Fx::SpiReset(n));
             }
             Fx::RecDecide(n) => {
-                // `fw` escala siempre: el presupuesto (K1) no esta.
-                job.push_front(cy(100), false, Fx::EscPrep(n));
+                let concede = match self.cfg.escaladas {
+                    Escaladas::Siempre => true,
+                    // El reloj del tic, en us.
+                    Escaladas::K1 { .. } => self.presupuesto.pide(u64::from(self.tics) * 125),
+                    Escaladas::V2 { .. } => self.presupuesto.pide(self.entradas),
+                };
+                if concede {
+                    job.push_front(cy(100), false, Fx::EscPrep(n));
+                } else {
+                    self.denegadas += 1;
+                    self.mark(n as i32, "escalada_DENEGADA", 0);
+                    job.push_front(cy(100), false, Fx::RecDeny(n));
+                }
+            }
+            Fx::RecDeny(n) => {
+                // K1: el RESET por canal y nada mas; la ranura muere por la cota de
+                // `Reiniciando`.
+                self.s[n].hw.ch_en = false;
             }
             Fx::EscPrep(n) => {
                 self.escaladas += 1;
