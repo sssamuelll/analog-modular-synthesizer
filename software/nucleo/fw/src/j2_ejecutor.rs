@@ -146,6 +146,8 @@ pub type Juez = fn(n: usize, subida: &[u8]) -> bool;
 pub struct Cuentas {
     pub giros: u32,
     pub plazos_vencidos: u32,
+    /// Plazos que vencieron por la escalada de otra ranura (papel v3, K4): no puntuan.
+    pub plazos_ajenos: u32,
     pub eot_tardios: u32,
     pub subidas_ok: u32,
     pub subidas_malas: u32,
@@ -170,6 +172,7 @@ pub static SELLOS: [AtomicU32; RANURAS_SPI] = [const { AtomicU32::new(0) }; RANU
 struct CuentasAtomicas {
     giros: AtomicU32,
     plazos_vencidos: AtomicU32,
+    plazos_ajenos: AtomicU32,
     eot_tardios: AtomicU32,
     subidas_ok: AtomicU32,
     subidas_malas: AtomicU32,
@@ -183,6 +186,7 @@ impl CuentasAtomicas {
         Self {
             giros: AtomicU32::new(0),
             plazos_vencidos: AtomicU32::new(0),
+            plazos_ajenos: AtomicU32::new(0),
             eot_tardios: AtomicU32::new(0),
             subidas_ok: AtomicU32::new(0),
             subidas_malas: AtomicU32::new(0),
@@ -207,6 +211,7 @@ pub fn cuentas(n: usize) -> Cuentas {
     Cuentas {
         giros: c.giros.load(Ordering::Relaxed),
         plazos_vencidos: c.plazos_vencidos.load(Ordering::Relaxed),
+        plazos_ajenos: c.plazos_ajenos.load(Ordering::Relaxed),
         eot_tardios: c.eot_tardios.load(Ordering::Relaxed),
         subidas_ok: c.subidas_ok.load(Ordering::Relaxed),
         subidas_malas: c.subidas_malas.load(Ordering::Relaxed),
@@ -417,12 +422,14 @@ async fn tarea_ranura(
     }
 }
 
-/// Publica los seis contadores y las dos marcas de la ranura `n` (D7.3, D7.5).
+/// Publica los siete contadores y las dos marcas de la ranura `n` (D7.3, D7.5).
 pub(crate) fn publicar_cuentas(n: usize, politica: &Politica, atrasos: u32) {
     let c = &CUENTAS[n];
     c.giros.store(politica.giros(), Ordering::Relaxed);
     c.plazos_vencidos
         .store(politica.plazos_vencidos(), Ordering::Relaxed);
+    c.plazos_ajenos
+        .store(politica.plazos_ajenos(), Ordering::Relaxed);
     c.eot_tardios
         .store(politica.eot_tardios(), Ordering::Relaxed);
     c.subidas_ok.store(politica.subidas_ok(), Ordering::Relaxed);
