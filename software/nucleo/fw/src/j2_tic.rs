@@ -410,6 +410,9 @@ static REC_T_HECHA: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
 static INCIDENTE: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
 static REC_INCIDENTE_PEDIDO: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
 static REC_INCIDENTE: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
+/// La ranura esta `Muerta`: lo publica el tic, y ni el planificador ni la recuperacion la tocan
+/// (papel v3, §2.2, Halberg H5).
+static MUERTA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
 /// `canales_sucios`: la escalada reseteo el GPDMA1 y esta ranura aun no esta reprogramada.
 static SUCIA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
 
@@ -941,6 +944,7 @@ unsafe fn TIM7() {
                 CONT[n].errores_dma.fetch_add(1, Ordering::Relaxed);
             }
             Some(Aviso::RanuraMuerta) => {
+                MUERTA[n].store(true, Ordering::Relaxed);
                 CONT[n].muertas.fetch_add(1, Ordering::Relaxed);
             }
             None => {}
@@ -1035,7 +1039,9 @@ unsafe fn DMA2D() {
                 Evento::PlazoVencido | Evento::PlazoAjeno => {
                     // La politica es la unica autoridad sobre «reiniciar» (papel v2, §2.5); un
                     // plazo ajeno pide la limpieza sin puntuar (papel v3, §2.5).
-                    if p.politica.paso(ev, ahora_us) == Accion::Reiniciar {
+                    if p.politica.paso(ev, ahora_us) == Accion::Reiniciar
+                        && !MUERTA[n].load(Ordering::Relaxed)
+                    {
                         #[cfg(feature = "inyeccion")]
                         if SIN_RECUPERACION.load(Ordering::Relaxed) {
                             continue;
@@ -1150,6 +1156,10 @@ fn recupera(n: usize) {
     let Some(hw) = (unsafe { &*HW[n].0.get() }).as_ref() else {
         return;
     };
+    if MUERTA[n].load(Ordering::Relaxed) {
+        // La pidio viva y murio antes de que la recuperacion corriera.
+        return;
+    }
     REC_INCIDENTE[n].store(
         REC_INCIDENTE_PEDIDO[n].load(Ordering::Relaxed),
         Ordering::Relaxed,

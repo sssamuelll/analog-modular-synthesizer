@@ -1012,6 +1012,11 @@ impl Sim {
                 }
             }
             Fx::RecStart(n) => {
+                if self.s[n].muertas > 0 {
+                    // H5: la pidio viva y murio antes de que la recuperacion corriera.
+                    self.mark(n as i32, "rec_saltada_muerta", 0);
+                    return;
+                }
                 self.s[n].rec_inc = self.s[n].rec_inc_pedido;
                 self.s[n].rec_en_curso = true;
                 self.mark(n as i32, "rec_inicio", 0);
@@ -1165,7 +1170,9 @@ impl Sim {
                 Evento::PlazoVencido | Evento::PlazoAjeno => {
                     // La politica es la unica autoridad sobre «reiniciar»; un plazo ajeno pide
                     // la limpieza sin puntuar.
-                    if self.s[n].pol.paso(ev, ahora) == Accion::Reiniciar {
+                    // H5: `muertas` es lo que publica el tic; una ranura muerta no se recupera.
+                    if self.s[n].pol.paso(ev, ahora) == Accion::Reiniciar && self.s[n].muertas == 0
+                    {
                         self.s[n].rec_inc_pedido = self.s[n].tic.incidente();
                         self.s[n].rec_pedida = true;
                         self.pend_rec = true;

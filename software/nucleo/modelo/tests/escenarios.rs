@@ -155,6 +155,66 @@ fn con_tics_tardios_la_cota_de_vencida_vence_en_tiempo_de_pared() {
     }
 }
 
+// --- H5 ----------------------------------------------------------------------------------
+
+#[test]
+fn una_ranura_muerta_no_se_recupera() {
+    // Papel v3, §2.2 (Halberg H5): la ranura 2 se cuelga y P2 retiene al planificador y a la
+    // recuperacion 40 ms, mas que la cota de `Vencida` (25 ms). Cuando el planificador corre, el
+    // `PlazoVencido` sigue en el anillo; la ranura ya esta `Muerta` y nadie la recupera.
+    let mut sim = Sim::new(Cfg::base());
+    sim.hold_on_vencida = Some((2, vec![vec![(40_000_000, false)]]));
+    sim.hw_at(
+        ms(30),
+        HwEv::Inject {
+            slot: 2,
+            kind: Inj::Hang,
+        },
+    );
+    sim.run_until(ms(100));
+    assert_eq!(sim.s[2].tic.estado(), Estado::Muerta);
+    assert_eq!(
+        sim.primera("plan_pide_rec", 2),
+        None,
+        "el planificador no la pide"
+    );
+    assert_eq!(sim.primera("rec_inicio", 2), None);
+    assert_eq!(sim.s[2].recuperaciones, 0);
+}
+
+#[test]
+fn una_recuperacion_pedida_antes_de_morir_no_se_ejecuta() {
+    // El planificador pide la recuperacion con la ranura viva, y una retencion de P2 que entra
+    // justo despues la aplaza mas que la cota: cuando la recuperacion corre, la ranura ya esta
+    // `Muerta` y no se toca.
+    let mut sim = Sim::new(Cfg::base());
+    sim.hw_at(
+        ms(30),
+        HwEv::Inject {
+            slot: 2,
+            kind: Inj::Hang,
+        },
+    );
+    let mut t = ms(30);
+    while sim.primera("plan_pide_rec", 2).is_none() {
+        t += 200;
+        sim.run_until(t);
+        assert!(t < ms(31), "el planificador no pidio la recuperacion");
+    }
+    assert_eq!(sim.primera("rec_inicio", 2), None, "todavia no arranco");
+    sim.hw_at(
+        t,
+        HwEv::P2 {
+            dur: 40_000_000,
+            atomic: false,
+        },
+    );
+    sim.run_until(ms(100));
+    assert_eq!(sim.s[2].tic.estado(), Estado::Muerta);
+    assert_eq!(sim.primera("rec_inicio", 2), None);
+    assert_eq!(sim.s[2].recuperaciones, 0);
+}
+
 // --- corridas largas -------------------------------------------------------------------
 
 /// El fuzz de la junta, 30 semillas de 4 s: `cargo test -p sam17-nucleo-modelo --release --
