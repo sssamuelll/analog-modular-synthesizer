@@ -177,3 +177,15 @@ impl Promedios {
         (medias, dg)
     }
 }
+
+/// Invalida entera la I-cache (`ICIALLU`) y espera a que acabe: lo siguiente que corra
+/// capta de la memoria. Es del banco (`contaminador-icache`): un hub con otro codigo
+/// corriendo entre dos tics deja la I-cache sin el texto del J2.
+#[cfg(feature = "contaminador-icache")]
+#[inline(never)]
+pub fn invalida_icache() {
+    // SAFETY: `ICIALLU` (0xE000EF50) es de escritura y no tiene efecto sobre el estado.
+    unsafe { core::ptr::write_volatile(0xE000_EF50 as *mut u32, 0) };
+    cortex_m::asm::dsb();
+    cortex_m::asm::isb();
+}

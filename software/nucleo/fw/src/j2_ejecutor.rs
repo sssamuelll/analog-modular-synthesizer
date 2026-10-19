@@ -163,6 +163,7 @@ pub struct Cuentas {
 /// vida del instrumento como *"el J2 dio un giro"* y una ranura sin modulo lo
 /// disparaba diez veces por segundo (H-6). Quien lee esto es el supervisor de
 /// vitalidad del hub (#291).
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 pub static SELLOS: [AtomicU32; RANURAS_SPI] = [const { AtomicU32::new(0) }; RANURAS_SPI];
 
 /// Lo que cada tarea publica tras su giro. Sin `Mutex`: cada ranura escribe
@@ -193,6 +194,7 @@ impl CuentasAtomicas {
     }
 }
 
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static CUENTAS: [CuentasAtomicas; RANURAS_SPI] = [const { CuentasAtomicas::nuevas() }; RANURAS_SPI];
 
 /// Las cuentas de la ranura `n`, para los binarios y la pantalla.

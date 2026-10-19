@@ -122,6 +122,14 @@ contaminador = []
 contaminador-8k = ["contaminador"]
 contaminador-16k = ["contaminador"]
 contaminador-32k = ["contaminador"]
+# Ademas de la D-cache, el contaminador deja fria la I-cache: la invalida (ICIALLU) entre
+# vuelta y vuelta, y el planificador la invalida al entrar. Cota del peor caso de cache.
+contaminador-icache = ["contaminador"]
+# El texto del tic, del planificador y de la recuperacion en ITCM, y sus statics en DTCM
+# (`j2_tcm`). Solo para el banco.
+j2-tcm = ["transporte-tic"]
+# Ademas, la pila principal (la de las excepciones) en el tope de la DTCM (`j2_tcm_pila.x`).
+j2-tcm-pila = ["j2-tcm"]
 # El periodo del banco a 1 kHz en `tic_banco`, en vez de los 8 kHz del instrumento.
 mil-hz = []
 # Una corrida de 20 s en `tic_banco`, en vez de 600.

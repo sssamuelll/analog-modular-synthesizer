@@ -380,7 +380,9 @@ impl Cont {
     }
 }
 
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static HW: [Celda<Option<Hw>>; N] = [const { Celda::nueva(None) }; N];
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static TIC: [Celda<Tic>; N] = [const {
     Celda::nueva(Tic {
         transporte: Transporte::nuevo(),
@@ -389,43 +391,81 @@ static TIC: [Celda<Tic>; N] = [const {
     })
 }; N];
 
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static IDENTIDAD: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static BUZON: [Triple; N] = [const { Triple::nuevo() }; N];
 /// Por casilla de bajada, el mensaje que contiene: `plazo en tics << 8 | largo`. Lo escribe
 /// el planificador antes de publicar y lo lee el tic.
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static META: [[AtomicU16; 3]; N] = [const { [const { AtomicU16::new(0) }; 3] }; N];
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static SUBIDA: [Subida; N] = [const { Subida::nueva() }; N];
 /// El largo de la transferencia que produjo la ultima subida publicada.
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static LARGO_SUBIDA: [AtomicU8; N] = [const { AtomicU8::new(0) }; N];
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static ANILLO: [Anillo<8>; N] = [const { Anillo::nuevo() }; N];
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static CONT: [Cont; N] = [const { Cont::nuevo() }; N];
 
 /// El apreton de manos de la recuperacion (papel v2, §2.5).
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static REC_PEDIDA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static REC_EN_CURSO: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static REC_HECHA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static REC_T_HECHA: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
 /// `canales_sucios`: la escalada reseteo el GPDMA1 y esta ranura aun no esta reprogramada.
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static SUCIA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
 
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static TICS: AtomicU32 = AtomicU32::new(0);
 /// El contador de arriba extendido a 64 bits. Dueno: el planificador.
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static RELOJ_PLAN: Celda<Reloj64> = Celda::nueva(Reloj64::nuevo());
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static CICLOS_POR_US: AtomicU32 = AtomicU32::new(0);
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static TICS_TARDIOS: AtomicU32 = AtomicU32::new(0);
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static TICS_FUSIONADOS: AtomicU32 = AtomicU32::new(0);
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static RETRASO_MAX_US: AtomicU32 = AtomicU32::new(0);
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static ULTIMA_ENTRADA: AtomicU32 = AtomicU32::new(0);
 
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static PERIODO_US: AtomicU32 = AtomicU32::new(0);
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static PERIODO_CICLOS: AtomicU32 = AtomicU32::new(0);
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static GAP_CICLOS: AtomicU32 = AtomicU32::new(0);
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static T_CANAL_CICLOS: AtomicU32 = AtomicU32::new(0);
 
 /// Ciclos de CPU acumulados por nivel (con `--features perfil`): tic, planificador sin el
 /// tic, recuperacion sin los otros dos, y dentro del planificador lo que gasta componer;
 /// y dentro del tic, leer los registros de estado, cerrar y armar.
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static CICLOS: [AtomicU32; 7] = [const { AtomicU32::new(0) }; 7];
+
+/// El tic mas largo desde la ultima lectura, en ciclos propios (sin la entrada ni la salida
+/// de la excepcion). Con `--features perfil`.
+#[cfg(feature = "perfil")]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static TIC_MAX: AtomicU32 = AtomicU32::new(0);
+
+/// El tic mas largo desde la llamada anterior, en ciclos, y lo pone a cero. Sin `perfil`, cero.
+pub fn tic_max_ciclos() -> u32 {
+    #[cfg(feature = "perfil")]
+    return TIC_MAX.swap(0, Ordering::Relaxed);
+    #[cfg(not(feature = "perfil"))]
+    0
+}
 
 #[cfg(feature = "inyeccion")]
 static ENVENENAR: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
@@ -620,6 +660,7 @@ struct PlanRanura {
     local_subida: Local,
 }
 
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static PLAN: [Celda<Option<PlanRanura>>; N] = [const { Celda::nueva(None) }; N];
 
 /// Pone en marcha el transporte: construye el estado de cada ranura, programa la region
@@ -916,7 +957,10 @@ unsafe fn TIM7() {
         }
     }
     NVIC::pend(IRQ_PLAN);
-    suma(0, DWT::cycle_count().wrapping_sub(t0));
+    let dur = DWT::cycle_count().wrapping_sub(t0);
+    suma(0, dur);
+    #[cfg(feature = "perfil")]
+    TIC_MAX.fetch_max(dur, Ordering::Relaxed);
 }
 
 // ---------------------------------------------------------------------------------------
@@ -957,6 +1001,8 @@ fn compone(n: usize, p: &mut PlanRanura) {
 
 #[interrupt]
 unsafe fn DMA2D() {
+    #[cfg(feature = "contaminador-icache")]
+    crate::perfil::invalida_icache();
     let t0 = DWT::cycle_count();
     #[cfg(feature = "perfil")]
     let tic0 = CICLOS[0].load(Ordering::Relaxed);
