@@ -1,6 +1,6 @@
 # Enmienda propuesta a D5.1 — el transporte del J2 «por tic» (v3)
 
-**v3 · 2026-10-17 · PROPUESTA: sin firma.** Absorbe la segunda pasada de la junta (`junta2_serrano.md`, `junta2_halberg.md`, `junta2_voronov.md`, sobre el texto del commit `72d6e6f`) y la tercera (`junta3_serrano.md`, `junta3_halberg.md`, `junta3_voronov.md`, sobre el del commit `4c639f0`), y sustituye al `papel-v2.md`, que queda como registro. El código del prototipo está en `main` detrás de features (PR #437–#440): la máquina en `core::transporte_j2`, los buzones en `core::buzones_j2`, los marcos de prueba en `core::marcos_j2`, el transporte en `fw/src/j2_tic.rs`. Lo medido, en `software/nucleo/fw/EN-PLACA.md`, «El transporte por tic»; la revisión del código, en `junta_halberg_codigo.md`; lo que quedó sin resolver, en #441. **Nada de esto es el transporte del instrumento: D5.1 sigue en vigor hasta la firma y hasta las condiciones de §5.2.**
+**v3 · 2026-10-17 · Fichas A, D, E, F y G firmadas el 2026-10-19 (`acta-2026-10-19.md`); B y C sin firmar.** Absorbe la segunda pasada de la junta (`junta2_serrano.md`, `junta2_halberg.md`, `junta2_voronov.md`, sobre el texto del commit `72d6e6f`) y la tercera (`junta3_serrano.md`, `junta3_halberg.md`, `junta3_voronov.md`, sobre el del commit `4c639f0`), y sustituye al `papel-v2.md`, que queda como registro. El código del prototipo está en `main` detrás de features (PR #437–#440): la máquina en `core::transporte_j2`, los buzones en `core::buzones_j2`, los marcos de prueba en `core::marcos_j2`, el transporte en `fw/src/j2_tic.rs`. Lo medido, en `software/nucleo/fw/EN-PLACA.md`, «El transporte por tic»; la revisión del código, en `junta_halberg_codigo.md`; lo que quedó sin resolver, en #441. **Nada de esto es el transporte del instrumento: D5.1 sigue en vigor hasta la firma y hasta las condiciones de §5.2.**
 
 Cada cifra lleva su estatus: **(M)** medida en el banco, **(A)** aritmética sobre lo medido, **(E)** estimada, **(S)** simulada: sale del simulador de Halberg, que modela la máquina real, el tic y el GPDMA1 y no mide nada (versionado en `sim/junta2` y `sim/junta3`, junto a este papel). **Los mecanismos de §2.2 (identidad y `SUCIA`), §2.5 (permiso de escalada y `PlazoAjeno`), §2.7 (tics reconstruidos) y §2.11 no están construidos. La tercera pasada los rompió tal como estaban escritos** (§0.3): las fichas B y C no se firman en esta pasada, y lo que este papel dice de esos mecanismos queda como **candidatas sin junta**, a decidir con el modelo de §5.2(h).
 
@@ -315,7 +315,7 @@ R-H6 cierra o no el 15 %. **Ya no bloquea el transporte** —firmar la ficha A l
 
 ## 7. Lo que sigue abierto
 
-- **Las fichas A, D, E, F y G** (Samuel), y **B y C** después del modelo de §5.2(h).
+- **Las fichas B y C**, después del modelo de §5.2(h). A, D, E, F y G están firmadas (`acta-2026-10-19.md`), con un orden de ejecución: el censo del hub (R-H1, R-H2, R-H4, R-H6) en paralelo con el modelo, y en el modelo el reloj (K2) antes que la escalada (K1).
 - **Las candidatas K1 a K5** (§2.2, §2.5, §2.7, §2.11): ninguna tiene junta; las decide el modelo.
 - **El CRC del sobre y el compositor reales** (#267): lo que decide si 12,6 a 13,9 % se mantiene.
 - **El régimen de caché del hub y las otras diez filas del censo.**
