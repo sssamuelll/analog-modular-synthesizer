@@ -480,6 +480,14 @@ impl Sim {
         self.primera_desde(what, slot, 0)
     }
 
+    /// Cuantas marcas `what` de la ranura `slot` hay desde `t`.
+    pub fn cuenta_desde(&self, what: &str, slot: i32, t: u64) -> usize {
+        self.marks
+            .iter()
+            .filter(|m| m.what == what && (slot < 0 || m.slot == slot) && m.t >= t)
+            .count()
+    }
+
     pub fn primera_desde(&self, what: &str, slot: i32, t: u64) -> Option<u64> {
         self.marks
             .iter()
@@ -1180,6 +1188,7 @@ impl Sim {
                     if let Some(ev) = self.s[k].tic.declarar_vencida() {
                         self.s[k].colateral += 1;
                         self.s[k].t_venc = now;
+                        self.mark(k as i32, "plazo_ajeno", n as i64);
                         self.ring_push(k, ev);
                     }
                 }
