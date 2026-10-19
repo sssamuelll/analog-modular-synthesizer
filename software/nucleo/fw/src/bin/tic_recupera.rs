@@ -17,15 +17,19 @@
 //! - **B, una rafaga** de 1 000 incidentes, uno cada 4 ms: nada se acumula, nada se queda.
 //! - **C, la escalada del GPDMA1** (`--features escalada`, con `ranuras-3` y
 //!   `sin-esclavo`): `fuerza_escalada()` mas un veneno, diez veces, con las vecinas en
-//!   vuelo, una cada 400 ms para que el presupuesto de escaladas (papel v3, K1: 3 por
-//!   segundo) las conceda todas. Las vecinas vencen por la escalada ajena y no puntuan
+//!   vuelo, una cada 400 ms para que el presupuesto de escaladas (ficha B: 6 por segundo y
+//!   1 ms entre dos) las conceda todas. Las vecinas vencen por la escalada ajena y no puntuan
 //!   (K4). El esclavo del banco comparte el GPDMA1 y moriria con el reset, por eso esta
 //!   fase va sin el.
+//! - **G, la escalada aplazada** (con `escalada`): dos escaladas forzadas a la vez, en las
+//!   ranuras 2 y 3. Se concede la primera; la segunda llega dentro de la espera de 1 ms y se
+//!   aplaza, el tic despierta a la recuperacion al cumplirse y la ranura sale sin morir.
 //! - **D, la ranura muerta:** el planificador deja de pedir la recuperacion y la ranura 0
 //!   tiene que pasar a `Muerta` y dejar de sellar; las vecinas, no.
 //! - **E, la escalada denegada** (con `escalada`): con la ventana del presupuesto vacia,
-//!   cuatro escaladas seguidas en la ranura 3. Se conceden tres; la cuarta se deniega, el
-//!   canal se resetea sin la recuperacion hecha y la ranura 3 muere por su cota; la 2 sigue.
+//!   siete escaladas seguidas en la ranura 3, una cada 30 ms. Se conceden seis; la septima se
+//!   deniega, el canal se resetea sin la recuperacion hecha y la ranura 3 muere por su cota; la
+//!   2 sigue.
 //! - **F, un error del DMA:** el canal de recepcion con un ajuste de usuario invalido (`USEF`):
 //!   prueba la rama `error_dma` de la maquina, que el reset por RCC de la recuperacion esconde.
 //!
@@ -66,6 +70,8 @@ struct Foto {
     errores_dma: u32,
     escaladas: u32,
     denegadas: u32,
+    aplazadas: u32,
+    despertadas: u32,
     muertas: u32,
     cortas_esclavo: u32,
     ok_esclavo: u32,
@@ -97,6 +103,8 @@ fn foto() -> Foto {
     f.errores_dma = t.errores_dma;
     f.escaladas = t.escaladas_gpdma;
     f.denegadas = t.escaladas_denegadas;
+    f.aplazadas = t.escaladas_aplazadas;
+    f.despertadas = t.rec_despertadas;
     f.muertas = t.ranuras_muertas;
     f.cortas_esclavo = j2_esclavo::TRAMAS_CORTAS.load(Ordering::Relaxed);
     f.ok_esclavo = j2_esclavo::TRAMAS_OK.load(Ordering::Relaxed);
@@ -199,6 +207,27 @@ async fn main(spawner: Spawner) {
         (antes, foto(), j2_tic::marcas())
     };
 
+    // ---- G: la escalada aplazada, que despierta el tic ------------------------------------
+    #[cfg(feature = "escalada")]
+    let (antes_g, despues_g, estado_g, sello_3_g, sello_3_g_despues) = {
+        let antes = foto();
+        j2_tic::fuerza_escalada();
+        j2_tic::fuerza_escalada();
+        j2_tic::envenena(2);
+        j2_tic::envenena(3);
+        Timer::after_millis(50).await;
+        let estado = j2_tic::estado(3);
+        let sello_3 = SELLOS[3].load(Ordering::Relaxed);
+        Timer::after_millis(5).await;
+        (
+            antes,
+            foto(),
+            estado,
+            sello_3,
+            SELLOS[3].load(Ordering::Relaxed),
+        )
+    };
+
     // ---- F: un error del DMA --------------------------------------------------------------
     let antes_f = foto();
     j2_tic::envenena_dma(0);
@@ -206,10 +235,10 @@ async fn main(spawner: Spawner) {
     let despues_f = foto();
 
     // ---- D: la ranura muerta ------------------------------------------------------------
-    // Con las cotas de hoy (100 tics, 12,5 ms) la muerte tarda; con `cotas-v2`, 3 tics.
+    // Con las cotas firmadas (`Vencida` 200 tics, 25 ms) la muerte tarda; con `cotas-v2`, 3 tics.
     j2_tic::sin_recuperacion(true);
     j2_tic::envenena(0);
-    Timer::after_millis(30).await;
+    Timer::after_millis(40).await;
     let sello_0 = SELLOS[0].load(Ordering::Relaxed);
     let sello_vecina = SELLOS[2].load(Ordering::Relaxed);
     Timer::after_millis(5).await;
@@ -225,7 +254,7 @@ async fn main(spawner: Spawner) {
         // La ultima escalada concedida sale de la ventana de 1 s.
         Timer::after_millis(1100).await;
         let antes = foto();
-        for _ in 0..4 {
+        for _ in 0..7 {
             j2_tic::fuerza_escalada();
             j2_tic::envenena(3);
             Timer::after_millis(30).await;
@@ -390,6 +419,44 @@ async fn main(spawner: Spawner) {
         );
     }
 
+    // G
+    #[cfg(feature = "escalada")]
+    {
+        info!(
+            "tic_recupera,G,escaladas={},aplazadas={},despertadas={},denegadas={},recuperaciones={},muertas={},latencia_rec_max_us={},sello_ranura3: {}->{}",
+            despues_g.escaladas - antes_g.escaladas,
+            despues_g.aplazadas - antes_g.aplazadas,
+            despues_g.despertadas - antes_g.despertadas,
+            despues_g.denegadas - antes_g.denegadas,
+            despues_g.recuperaciones - antes_g.recuperaciones,
+            despues_g.muertas,
+            j2_tic::testigos().latencia_rec_max_us,
+            sello_3_g,
+            sello_3_g_despues,
+        );
+        veredicto(
+            "G.una_concedida",
+            despues_g.escaladas - antes_g.escaladas == 1,
+        );
+        veredicto(
+            "G.una_aplazada",
+            despues_g.aplazadas - antes_g.aplazadas == 1,
+        );
+        veredicto(
+            "G.el_tic_la_despierta",
+            despues_g.despertadas - antes_g.despertadas == 1,
+        );
+        veredicto(
+            "G.ninguna_denegada",
+            despues_g.denegadas == antes_g.denegadas,
+        );
+        veredicto("G.ninguna_muerta", despues_g.muertas == antes_g.muertas);
+        veredicto(
+            "G.la_3_sigue_sellando",
+            estado_g != Estado::Muerta && sello_3_g_despues > sello_3_g,
+        );
+    }
+
     // F
     info!(
         "tic_recupera,F,errores_dma={},plazos={},recuperaciones={},muertas={}",
@@ -445,8 +512,8 @@ async fn main(spawner: Spawner) {
             sello_2_e_despues,
         );
         veredicto(
-            "E.tres_concedidas",
-            despues_e.escaladas - antes_e.escaladas == 3,
+            "E.seis_concedidas",
+            despues_e.escaladas - antes_e.escaladas == 6,
         );
         veredicto(
             "E.una_denegada",

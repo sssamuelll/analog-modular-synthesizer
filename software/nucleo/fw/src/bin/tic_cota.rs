@@ -15,7 +15,7 @@
 //! la ranura sigue viva. El primer `D` que la mata es el umbral; las que sobreviven, no se repiten.
 //!
 //! ```bash
-//! cargo run --release --features inyeccion,reloj-hub --bin tic_cota                # las cotas de hoy
+//! cargo run --release --features inyeccion,reloj-hub --bin tic_cota                # las firmadas
 //! cargo run --release --features inyeccion,reloj-hub,cotas-v2 --bin tic_cota       # las del papel v2
 //! ```
 
@@ -104,7 +104,7 @@ async fn main(spawner: Spawner) {
         if cfg!(feature = "cotas-v2") {
             "de v2 (2 y 4 tics)"
         } else {
-            "de hoy (100 y 100 tics)"
+            "firmadas (200 y 112 tics)"
         },
         f_cpu
     );
