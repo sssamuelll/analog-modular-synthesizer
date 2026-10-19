@@ -29,6 +29,7 @@ Lo que este guion NO sabe, y sale con HUECO por ello:
 from __future__ import annotations
 
 import csv
+import math
 import os
 import re
 import sys
@@ -41,6 +42,8 @@ import trama_j2_budget as tb     # noqa: E402
 
 _RS = os.path.join(_AQUI, "..", "..", "software", "nucleo", "core", "src",
                    "maestro_j2.rs")
+_RS_TRANSPORTE = os.path.join(_AQUI, "..", "..", "software", "nucleo", "core", "src",
+                              "transporte_j2.rs")
 _CSV = os.path.join(_AQUI, "..", "..", "software", "nucleo", "fw",
                     "resistencia_j2.csv")
 _CSV_CARGA = os.path.join(_AQUI, "..", "..", "software", "nucleo", "fw",
@@ -76,14 +79,37 @@ MARGEN_EXIGIDO = 10.0
 
 
 def _lee_const_rust(txt: str, nombre: str) -> int:
-    m = re.search(rf"pub const {nombre}: (?:u32|usize) = ([\d_]+);", txt)
+    m = re.search(rf"pub const {nombre}: (?:u16|u32|usize) = ([\d_]+);", txt)
     if not m:
         raise SystemExit(
-            f"maestro_j2.rs no expone `pub const {nombre}: u32`. R-MJ4 dice "
+            f"el Rust no expone `pub const {nombre}`. R-MJ4 dice "
             "que los umbrales viven en un solo sitio y que este guion los LEE: "
             "si el Rust cambio de forma o de nombre, arregla el guion. NO "
             "copies el numero aqui.")
     return int(m.group(1).replace("_", ""))
+
+
+def cotas_del_tic(ruta: str = _RS_TRANSPORTE) -> dict:
+    """Las cotas de la ficha C y los numeros ajenos que el J2 copia, LEIDOS de
+    transporte_j2.rs."""
+    with open(ruta, encoding="utf-8") as f:
+        txt = f.read()
+    nombres = ("COTA_VENCIDA_TICS", "COTA_REINICIANDO_TICS", "VENTANA_RH1_US",
+               "ESPERA_ESCALADA_US", "RECUPERACION_SEIS_US",
+               "TOLERANCIA_OSCILADOR_MODULO_PCT")
+    return {n: _lee_const_rust(txt, n) for n in nombres}
+
+
+def cubren_rh1(c: dict, periodo_us: int, vencida: int, reiniciando: int) -> bool:
+    """La misma cuenta que `cotas_cubren_rh1` de transporte_j2.rs (ficha C, 1)."""
+    return ((vencida + 1) * periodo_us > 2 * c["VENTANA_RH1_US"]
+            and (reiniciando + 1) * periodo_us
+            > c["ESPERA_ESCALADA_US"] + c["VENTANA_RH1_US"] + c["RECUPERACION_SEIS_US"])
+
+
+def hueco_tic_us(plazo_tics: int, vencida: int, reiniciando: int, periodo_us: int) -> int:
+    """`hueco_de_recuperacion` de transporte_j2.rs mas la trama siguiente (ficha C, 2)."""
+    return (plazo_tics + vencida + reiniciando + 2 + 1) * periodo_us
 
 
 def lee_carga(ruta: str = _CSV_CARGA) -> list[dict]:
@@ -210,6 +236,41 @@ def demo() -> int:
         "la marca `muda` subiria despues de que el modulo suelte las notas: "
         "llegaria de luto. Es la misma cota que Umbrales::nuevos asevera en "
         "el Rust; si aqui falla y alli no, uno de los dos lee mal")
+
+    # --- 3b. el transporte por tic: las cotas de la ficha C (2026-10-19) --
+    # Lo de arriba es la recuperacion de D4 sin cotas de espera; con el tic, una
+    # ranura que sobrevive puede pasar sus dos cotas enteras sin trama.
+    c = cotas_del_tic()
+    t_us = u["periodo_giro_us"]
+    cv, cr = c["COTA_VENCIDA_TICS"], c["COTA_REINICIANDO_TICS"]
+    # El plazo de la cota de D3, que ningun mensaje legal pasa (`tics_de_plazo`).
+    plazo_tics = max(1, math.ceil(cota_plazo * 1e6 / t_us - 1e-9))
+    hueco = hueco_tic_us(plazo_tics, cv, cr, t_us)
+    techo = u["t_watchdog_trama_us"] * (100 - c["TOLERANCIA_OSCILADOR_MODULO_PCT"]) // 100
+    reiniciando_pide = (c["ESPERA_ESCALADA_US"] + c["VENTANA_RH1_US"]
+                        + c["RECUPERACION_SEIS_US"])
+    print("\nEL TRANSPORTE POR TIC (ficha C), cotas LEIDAS de transporte_j2.rs\n")
+    print(f"  Vencida {cv} y Reiniciando {cr} periodos de {t_us} us")
+    print(f"  salir de Vencida      {(cv + 1) * t_us / 1e3:7.3f} ms  > "
+          f"{2 * c['VENTANA_RH1_US'] / 1e3:.3f} ms (dos ventanas de R-H1)")
+    print(f"  salir de Reiniciando  {(cr + 1) * t_us / 1e3:7.3f} ms  > "
+          f"{reiniciando_pide / 1e3:.3f} ms (espera, una ventana, recuperacion)")
+    print(f"  el mayor hueco de una ranura que sobrevive, con el plazo de la cota de "
+          f"D3 ({plazo_tics} tics): {hueco / 1e3:.2f} ms")
+    print("  (la ficha C cuenta 3 tics, 39,75 ms: un SET de 103 B a 6,25 MHz, el reloj")
+    print("  de hoy por debajo del piso de R-E1, #380; lanzar() lo asevera con el suyo)")
+    print(f"  watchdog de trama menos {c['TOLERANCIA_OSCILADOR_MODULO_PCT']} %: "
+          f"{techo / 1e3:.0f} ms  (margen {(techo - hueco) / 1e3:.2f} ms)")
+    assert not cubren_rh1(c, t_us, 100, 100), (
+        "la cuenta de R-H1 da por buenas las cotas de 100 y 100, que no cubren "
+        "dos ventanas: la formula de aqui ya no es la del Rust")
+    assert cubren_rh1(c, t_us, cv, cr), (
+        f"las cotas {cv} y {cr} no cubren R-H1: lanzar() lo asevera en placa, "
+        "y la ficha C esta firmada con 200 y 112")
+    assert hueco < techo, (
+        f"el hueco de una ranura que sobrevive ({hueco / 1e3:.2f} ms) no cabe en "
+        f"los {techo / 1e3:.0f} ms del modulo: los modulos soltarian las notas "
+        "sin que el J2 se rinda")
 
     # --- 4. CPU por reinicios: cota impresa, sin aserto ------------------
     cpu = tb.F_LAZO_HZ * T_REINICIO_S
