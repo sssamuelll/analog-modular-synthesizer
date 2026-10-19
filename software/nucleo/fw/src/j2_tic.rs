@@ -31,10 +31,15 @@
 //! va en una sola seccion critica y no solo el reset; y el planificador manda un
 //! `Evento::Tick` solo a la ranura que en esa pasada no recibio ningun otro evento, porque
 //! todo evento lleva ya su `ahora_us` y desliza la ventana de la politica; `Vencida` y
-//! `Reiniciando` dan la ranura por muerta a los 100 tics y no a los 2 y 4 (revision de Halberg
-//! del 17-10, hallazgo 1: una retencion de P2 de 350 us coincidiendo con un cuelgue la mataba);
-//! y el reloj de la politica es de 64 bits (`Reloj64`), porque el contador de 32 bits del tic da la
-//! vuelta a los 6,2 dias.
+//! `Reiniciando` dan la ranura por muerta a los 200 y 112 tics y no a los 2 y 4 (revision de
+//! Halberg del 17-10, hallazgo 1, y ficha C del 2026-10-19); y el reloj de la politica es de 64
+//! bits (`Reloj64`), porque el contador de 32 bits del tic da la vuelta a los 6,2 dias.
+//!
+//! **La escalada con espera (ficha B del 2026-10-19).** Entre dos escaladas concedidas pasa al
+//! menos `ESPERA_ESCALADA_US`; la que llega antes se aplaza: ni `RESET` ni `HECHA`, la ranura
+//! sigue en `Reiniciando`, la recuperacion se la apunta y publica el tic en que vence, y el tic
+//! la deja pendiente al llegar. El tic lleva la cuenta de 64 bits que lee el presupuesto, y el
+//! instante cruza de P4 a P1 en sus 32 bits bajos, comparado por diferencia con vuelta (N11).
 
 use core::cell::UnsafeCell;
 use core::ptr::addr_of_mut;
@@ -46,12 +51,13 @@ use embassy_stm32::interrupt::{InterruptExt, Priority};
 use embassy_stm32::pac::gpdma::vals as dma;
 use embassy_stm32::{pac, peripherals, rcc, Peri};
 use sam17_nucleo_core::buzones_j2::{Anillo, Lectura as LecturaSubida, Subida, Triple};
-use sam17_nucleo_core::escaladas_j2::Presupuesto;
+use sam17_nucleo_core::escaladas_j2::{Presupuesto, Respuesta};
 use sam17_nucleo_core::maestro_j2::{
-    plazo_us, Accion, Evento, Ranura as Politica, Umbrales, RANURAS_SPI,
+    plazo_us, Accion, Evento, Ranura as Politica, Tsize, Umbrales, RANURAS_SPI,
 };
 use sam17_nucleo_core::transporte_j2::{
-    tics_de_plazo, Aviso, Entrada, Estado, Lectura, Reloj64, RelojDelTic, Transporte,
+    cotas_cubren_rh1, hueco_cabe_en_el_modulo, tics_de_plazo, Aviso, Entrada, Estado, Lectura,
+    Reloj64, RelojDelTic, Transporte, COTA_REINICIANDO_TICS, COTA_VENCIDA_TICS, ESPERA_ESCALADA_US,
 };
 
 use crate::j2_ejecutor::{publicar_cuentas, Bajada, Juez, SELLOS};
@@ -432,18 +438,36 @@ static INCIDENTE: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
 static REC_INCIDENTE_PEDIDO: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
 #[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static REC_INCIDENTE: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
-/// El presupuesto de escaladas del GPDMA1 (papel v3, §2.5, K1): como mucho `E_ESCALADAS` en
-/// `VENTANA_ESCALADAS_US` del reloj del tic. ESTIMADOS. Dueno: la recuperacion, con su propio
-/// reloj de 64 bits.
-const E_ESCALADAS: usize = 3;
+/// El presupuesto de escaladas del GPDMA1 (papel v3, §2.5, K1; ficha B del 2026-10-19): como
+/// mucho `E_ESCALADAS` en `VENTANA_ESCALADAS_US` del reloj del tic, y entre dos concedidas
+/// `ESPERA_ESCALADA_US`. Dueno: la recuperacion, que lo fecha con la cuenta de 64 bits del tic.
+const E_ESCALADAS: usize = 6;
 const VENTANA_ESCALADAS_US: u64 = 1_000_000;
 #[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
-static PRESUPUESTO: Celda<Presupuesto> =
-    Celda::nueva(Presupuesto::nuevo(E_ESCALADAS, VENTANA_ESCALADAS_US));
-#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
-static RELOJ_REC: Celda<Reloj64> = Celda::nueva(Reloj64::nuevo());
+static PRESUPUESTO: Celda<Presupuesto> = Celda::nueva(Presupuesto::con_espera(
+    E_ESCALADAS,
+    VENTANA_ESCALADAS_US,
+    ESPERA_ESCALADA_US as u64,
+));
 #[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static ESCALADAS_DENEGADAS: AtomicU32 = AtomicU32::new(0);
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static ESCALADAS_APLAZADAS: AtomicU32 = AtomicU32::new(0);
+/// El tic en que vence la espera de la escalada aplazada de cada ranura, en la cuenta de 64 bits.
+/// Duena: la recuperacion. Todas las aplazadas a la vez vencen en el mismo tic: el instante es la
+/// ultima concedida mas la espera, y esa no cambia hasta que se cumple.
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static APLAZADA_HASTA: [Celda<Option<u64>>; N] = [const { Celda::nueva(None) }; N];
+/// El tic que despierta a la recuperacion (ficha B): los 32 bits bajos de la cuenta del tic, y si
+/// hay uno puesto. Los escribe la recuperacion con las interrupciones enmascaradas (N12), y el tic,
+/// que los lee entero, apaga `REC_DESPIERTA_ARMADA` al cumplirse.
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static REC_DESPIERTA: AtomicU32 = AtomicU32::new(0);
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static REC_DESPIERTA_ARMADA: AtomicBool = AtomicBool::new(false);
+/// Cuantas veces el tic dejo pendiente la recuperacion al cumplirse una espera.
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static REC_DESPERTADAS: AtomicU32 = AtomicU32::new(0);
 /// La ranura esta `Muerta`: lo publica el tic, y ni el planificador ni la recuperacion la tocan
 /// (papel v3, §2.2, Halberg H5).
 #[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
@@ -454,6 +478,13 @@ static SUCIA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
 
 #[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static TICS: AtomicU32 = AtomicU32::new(0);
+/// `TICS` en 64 bits (ficha B, N11). El tic la extiende en cada entrada y es su unico escritor; la
+/// recuperacion la lee con las interrupciones enmascaradas, y asi ve las dos palabras de una misma
+/// entrada.
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static TICS64: Celda<u64> = Celda::nueva(0);
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static EPOCA_TIC: Celda<Reloj64> = Celda::nueva(Reloj64::nuevo());
 /// El contador de arriba extendido a 64 bits. Dueno: el planificador.
 #[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static RELOJ_PLAN: Celda<Reloj64> = Celda::nueva(Reloj64::nuevo());
@@ -475,10 +506,16 @@ static TICS_FUERA_DE_PRESUPUESTO: AtomicU32 = AtomicU32::new(0);
 /// vez (con el bit bajo puesto, para que no sea 0); 0 = no esta pedido.
 #[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static PLAN_PEDIDO: AtomicU32 = AtomicU32::new(0);
-/// La mayor espera del planificador, en ciclos, desde que se pide hasta que arranca: lo que
-/// observa R-H1 (§2.8).
+/// La mayor latencia del planificador, en ciclos, desde que se pide hasta que termina: lo que
+/// acota R-H1 por nivel (§2.8).
 #[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static LATENCIA_PLAN_MAX: AtomicU32 = AtomicU32::new(0);
+/// Lo mismo para la recuperacion: el `DWT` de la primera vez que se hizo pendiente, y su mayor
+/// latencia de pendiente a terminada.
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static REC_PEDIDO: AtomicU32 = AtomicU32::new(0);
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static LATENCIA_REC_MAX: AtomicU32 = AtomicU32::new(0);
 /// El reloj del tic (candidata K2). Dueno: el tic.
 #[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static RELOJ_TIC: Celda<RelojDelTic> = Celda::nueva(RelojDelTic::nuevo(0, 0, 0));
@@ -590,8 +627,9 @@ pub fn tic_max_ciclos() -> u32 {
 
 #[cfg(feature = "inyeccion")]
 static ENVENENAR: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
+/// Cuantas de las proximas recuperaciones tratan el sondeo de `SUSPF` como vencido.
 #[cfg(feature = "inyeccion")]
-static FORZAR_ESCALADA: AtomicBool = AtomicBool::new(false);
+static FORZAR_ESCALADA: AtomicU32 = AtomicU32::new(0);
 /// La proxima armada de la ranura lleva un error de ajuste de usuario del DMA (`USEF`).
 #[cfg(feature = "inyeccion")]
 static ENVENENAR_DMA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
@@ -651,6 +689,7 @@ pub struct Testigos {
     pub retraso_entrada_max_us: u32,
     pub tics_fuera_de_presupuesto: u32,
     pub latencia_plan_max_us: u32,
+    pub latencia_rec_max_us: u32,
     pub sin_bajada: u32,
     pub errores_dma: u32,
     pub subidas_perdidas: u32,
@@ -660,9 +699,12 @@ pub struct Testigos {
     pub recuperaciones: u32,
     pub escaladas_gpdma: u32,
     pub escaladas_denegadas: u32,
+    pub escaladas_aplazadas: u32,
+    pub rec_despertadas: u32,
 }
 
 pub fn testigos() -> Testigos {
+    let ciclos_us = CICLOS_POR_US.load(Ordering::Relaxed).max(1);
     let mut t = Testigos {
         tics: TICS.load(Ordering::Relaxed),
         tics_tardios: TICS_TARDIOS.load(Ordering::Relaxed),
@@ -672,7 +714,8 @@ pub fn testigos() -> Testigos {
         tics_fuera_de_presupuesto: TICS_FUERA_DE_PRESUPUESTO.load(Ordering::Relaxed),
         latencia_plan_max_us: LATENCIA_PLAN_MAX
             .load(Ordering::Relaxed)
-            .div_ceil(CICLOS_POR_US.load(Ordering::Relaxed).max(1)),
+            .div_ceil(ciclos_us),
+        latencia_rec_max_us: LATENCIA_REC_MAX.load(Ordering::Relaxed).div_ceil(ciclos_us),
         sin_bajada: 0,
         errores_dma: 0,
         subidas_perdidas: 0,
@@ -682,6 +725,8 @@ pub fn testigos() -> Testigos {
         recuperaciones: 0,
         escaladas_gpdma: ESCALADAS_GPDMA.load(Ordering::Relaxed),
         escaladas_denegadas: ESCALADAS_DENEGADAS.load(Ordering::Relaxed),
+        escaladas_aplazadas: ESCALADAS_APLAZADAS.load(Ordering::Relaxed),
+        rec_despertadas: REC_DESPERTADAS.load(Ordering::Relaxed),
     };
     for n in 0..N {
         if !IDENTIDAD[n].load(Ordering::Relaxed) {
@@ -736,10 +781,10 @@ pub fn envenena_dma(n: usize) {
     ENVENENAR_DMA[n].store(true, Ordering::Relaxed);
 }
 
-/// Hace que la proxima recuperacion trate el sondeo de `SUSPF` como vencido y escale.
+/// Hace que una recuperacion mas trate el sondeo de `SUSPF` como vencido y pida la escalada.
 #[cfg(feature = "inyeccion")]
 pub fn fuerza_escalada() {
-    FORZAR_ESCALADA.store(true, Ordering::Relaxed);
+    FORZAR_ESCALADA.fetch_add(1, Ordering::Relaxed);
 }
 
 /// Con `true`, el planificador deja de pedir la recuperacion: lo que pase despues es la red
@@ -815,6 +860,18 @@ pub fn lanzar(
         "j2_tic: periodo de {} us, menor que el del instrumento",
         periodo_us
     );
+    // Ficha C (1): las cotas cubren las ventanas de R-H1. Con `cotas-v2` se miden a proposito las
+    // del papel v2, que no las cubren, y no se asevera.
+    let asevera_cotas = !cfg!(feature = "cotas-v2");
+    if asevera_cotas {
+        defmt::assert!(
+            cotas_cubren_rh1(periodo_us, COTA_VENCIDA_TICS, COTA_REINICIANDO_TICS),
+            "j2_tic: las cotas {} y {} no cubren R-H1 con {} us",
+            COTA_VENCIDA_TICS,
+            COTA_REINICIANDO_TICS,
+            periodo_us
+        );
+    }
     // SAFETY: nadie mas toca el DWT, el DEMCR ni la MPU en el banco.
     let mut cp = unsafe { cortex_m::Peripherals::steal() };
     cp.DCB.enable_trace();
@@ -833,6 +890,29 @@ pub fn lanzar(
     for (n, ranura) in ranuras.into_iter().enumerate() {
         let Some(ranura) = ranura else { continue };
         let f_sck_hz = ranura.f_sck_hz();
+        // Ficha C (2): con el plazo de la trama mas larga que cabe, el hueco que deja un incidente
+        // cabe en el watchdog de trama del modulo.
+        if asevera_cotas {
+            let plazo_max = tics_de_plazo(
+                plazo_us(
+                    defmt::unwrap!(Tsize::nuevo(LARGO_MAX as u16)),
+                    f_sck_hz,
+                    &Umbrales::POR_DEFECTO,
+                ),
+                periodo_us,
+            );
+            defmt::assert!(
+                hueco_cabe_en_el_modulo(
+                    plazo_max,
+                    periodo_us,
+                    COTA_VENCIDA_TICS,
+                    COTA_REINICIANDO_TICS
+                ),
+                "j2_tic: ranura {}: con un plazo de {} tics el hueco no cabe en el modulo",
+                n,
+                plazo_max
+            );
+        }
         let Partes {
             regs,
             req_tx,
@@ -1012,10 +1092,20 @@ unsafe fn TIM7() {
         PERIODOS_SALTADOS.fetch_add(p.n - 1, Ordering::Relaxed);
     }
     let periodos = p.n.min(u32::from(u16::MAX)) as u16;
-    TICS.store(
-        TICS.load(Ordering::Relaxed).wrapping_add(p.n),
-        Ordering::Relaxed,
-    );
+    let tics = TICS.load(Ordering::Relaxed).wrapping_add(p.n);
+    TICS.store(tics, Ordering::Relaxed);
+    // SAFETY: el tic es el unico escritor de `EPOCA_TIC` y `TICS64`; la recuperacion los lee con
+    // las interrupciones enmascaradas, nunca a medias de esta escritura.
+    unsafe { *TICS64.0.get() = (*EPOCA_TIC.0.get()).extiende(tics) };
+    // Ficha B: al cumplirse la espera de una escalada aplazada, el tic deja pendiente la
+    // recuperacion. El instante llega en 32 bits y se compara por diferencia con vuelta (N11).
+    if REC_DESPIERTA_ARMADA.load(Ordering::Relaxed)
+        && tics.wrapping_sub(REC_DESPIERTA.load(Ordering::Relaxed)) as i32 >= 0
+    {
+        REC_DESPIERTA_ARMADA.store(false, Ordering::Relaxed);
+        REC_DESPERTADAS.fetch_add(1, Ordering::Relaxed);
+        pide_rec();
+    }
 
     let gap = GAP_CICLOS.load(Ordering::Relaxed);
     for n in 0..N {
@@ -1206,6 +1296,27 @@ fn pide_plan() {
     NVIC::pend(IRQ_PLAN);
 }
 
+/// Lo mismo para la recuperacion.
+fn pide_rec() {
+    let _ = REC_PEDIDO.compare_exchange(
+        0,
+        DWT::cycle_count() | 1,
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    NVIC::pend(IRQ_REC);
+}
+
+/// La latencia de un nivel, de pendiente a terminado: `pedido` es lo que su ISR tomo al entrar.
+fn anota_latencia(pedido: u32, maximo: &AtomicU32) {
+    if pedido != 0 {
+        let latencia = DWT::cycle_count().wrapping_sub(pedido);
+        if latencia > maximo.load(Ordering::Relaxed) {
+            maximo.store(latencia, Ordering::Relaxed);
+        }
+    }
+}
+
 #[interrupt]
 unsafe fn DMA2D() {
     #[cfg(all(feature = "tic-fino", feature = "perfil"))]
@@ -1219,13 +1330,8 @@ unsafe fn DMA2D() {
             CADENA[2].fetch_max(c, Ordering::Relaxed);
         }
     }
+    // Lo que se pida desde aqui es otra pasada, y cuenta desde que se pide.
     let pedido = PLAN_PEDIDO.swap(0, Ordering::Relaxed);
-    if pedido != 0 {
-        let espera = DWT::cycle_count().wrapping_sub(pedido);
-        if espera > LATENCIA_PLAN_MAX.load(Ordering::Relaxed) {
-            LATENCIA_PLAN_MAX.store(espera, Ordering::Relaxed);
-        }
-    }
     #[cfg(feature = "contaminador-icache")]
     crate::perfil::invalida_icache();
     let t0 = DWT::cycle_count();
@@ -1279,7 +1385,7 @@ unsafe fn DMA2D() {
                         REC_INCIDENTE_PEDIDO[n]
                             .store(INCIDENTE[n].load(Ordering::Relaxed), Ordering::Relaxed);
                         REC_PEDIDA[n].store(true, Ordering::Relaxed);
-                        NVIC::pend(IRQ_REC);
+                        pide_rec();
                     }
                 }
                 otro => {
@@ -1302,6 +1408,7 @@ unsafe fn DMA2D() {
     }
     #[cfg(not(feature = "perfil"))]
     let _ = t0;
+    anota_latencia(pedido, &LATENCIA_PLAN_MAX);
     #[cfg(all(feature = "tic-fino", feature = "perfil"))]
     {
         PLAN_DENTRO.store(false, Ordering::Relaxed);
@@ -1322,7 +1429,10 @@ fn para_canales(hw: &Hw) -> bool {
     let limite = T_CANAL_CICLOS.load(Ordering::Relaxed);
     let inicio = DWT::cycle_count();
     #[cfg(feature = "inyeccion")]
-    if FORZAR_ESCALADA.swap(false, Ordering::Relaxed) {
+    if FORZAR_ESCALADA
+        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |k| k.checked_sub(1))
+        .is_ok()
+    {
         return false;
     }
     let paradas = || {
@@ -1387,6 +1497,34 @@ fn escala() {
     pide_plan();
 }
 
+/// Ficha B: lee la cuenta del tic, pide la escalada al presupuesto y, si se aplaza, apunta la
+/// ranura y publica el tic que despierta a la recuperacion, todo con las interrupciones
+/// enmascaradas. Si P2 entrara entre la lectura y la publicacion, la recuperacion decidiria con un
+/// reloj viejo y dos retenciones legales reiniciarian el chip sin que ningun testigo pasara de
+/// 12 ms (N12). Son unas decenas de instrucciones, dentro de los 5 us de R-H2.
+fn pide_escalada(n: usize) -> Respuesta {
+    cortex_m::interrupt::free(|_| {
+        // SAFETY: enmascarado, el tic no escribe `TICS64`; la recuperacion es la unica que toca
+        // `PRESUPUESTO` y `APLAZADA_HASTA`.
+        let ahora = unsafe { *TICS64.0.get() };
+        let periodo = u64::from(PERIODO_US.load(Ordering::Relaxed));
+        let r = unsafe { &mut *PRESUPUESTO.0.get() }.solicita(ahora * periodo);
+        if let Respuesta::Aplazada { hasta_us } = r {
+            let hasta = hasta_us.div_ceil(periodo);
+            unsafe { *APLAZADA_HASTA[n].0.get() = Some(hasta) };
+            // El mas temprano de los puestos, comparado con vuelta (N11).
+            let h = hasta as u32;
+            if !REC_DESPIERTA_ARMADA.load(Ordering::Relaxed)
+                || (h.wrapping_sub(REC_DESPIERTA.load(Ordering::Relaxed)) as i32) < 0
+            {
+                REC_DESPIERTA.store(h, Ordering::Relaxed);
+            }
+            REC_DESPIERTA_ARMADA.store(true, Ordering::Relaxed);
+        }
+        r
+    })
+}
+
 fn recupera(n: usize) {
     // SAFETY: solo se lee; los campos de `Hw` no cambian despues de `lanzar`.
     let Some(hw) = (unsafe { &*HW[n].0.get() }).as_ref() else {
@@ -1406,18 +1544,22 @@ fn recupera(n: usize) {
         marca(Marca::RecInicio, DWT::cycle_count());
     }
     if !para_canales(hw) {
-        // SAFETY: la recuperacion es la unica que toca `RELOJ_REC` y `PRESUPUESTO`.
-        let tics = unsafe { &mut *RELOJ_REC.0.get() }.extiende(TICS.load(Ordering::Relaxed));
-        let ahora_us = tics * u64::from(PERIODO_US.load(Ordering::Relaxed));
-        if unsafe { &mut *PRESUPUESTO.0.get() }.pide(ahora_us) {
-            escala();
-        } else {
-            // K1: sin presupuesto, el RESET por canal y nada mas: ni HECHA ni reintento. La
-            // ranura muere por la cota de `Reiniciando` y el supervisor reinicia el chip.
-            hw.tx.ch.cr().write(|w| w.set_reset(true));
-            hw.rx.ch.cr().write(|w| w.set_reset(true));
-            ESCALADAS_DENEGADAS.fetch_add(1, Ordering::Relaxed);
-            return;
+        match pide_escalada(n) {
+            Respuesta::Concedida => escala(),
+            Respuesta::Aplazada { .. } => {
+                // Ficha B: ni RESET ni HECHA. La ranura sigue en `Reiniciando` con su cota, y el
+                // tic despierta a la recuperacion cuando se cumple la espera.
+                ESCALADAS_APLAZADAS.fetch_add(1, Ordering::Relaxed);
+                return;
+            }
+            Respuesta::Denegada => {
+                // K1: sin presupuesto, el RESET por canal y nada mas: ni HECHA ni reintento. La
+                // ranura muere por la cota de `Reiniciando` y el supervisor reinicia el chip.
+                hw.tx.ch.cr().write(|w| w.set_reset(true));
+                hw.rx.ch.cr().write(|w| w.set_reset(true));
+                ESCALADAS_DENEGADAS.fetch_add(1, Ordering::Relaxed);
+                return;
+            }
         }
     }
     // Pasos 2 y 3 en una sola seccion critica: el reset del SPI deja `CFG2 = 0`, con
@@ -1457,14 +1599,26 @@ fn recupera(n: usize) {
 
 #[interrupt]
 unsafe fn JPEG() {
+    let pedido = REC_PEDIDO.swap(0, Ordering::Relaxed);
     let t0 = DWT::cycle_count();
     #[cfg(feature = "perfil")]
     let (tic0, plan0) = (
         CICLOS[0].load(Ordering::Relaxed),
         CICLOS[1].load(Ordering::Relaxed),
     );
+    // Solo para ver que aplazadas se cumplieron: la decision de escalar lee su propio reloj
+    // (`pide_escalada`).
+    // SAFETY: enmascarado, el tic no escribe `TICS64`.
+    let ahora = cortex_m::interrupt::free(|_| unsafe { *TICS64.0.get() });
     for (n, pedida) in REC_PEDIDA.iter().enumerate() {
-        if pedida.swap(false, Ordering::Relaxed) {
+        let pedida = pedida.swap(false, Ordering::Relaxed);
+        // SAFETY: la recuperacion es la unica que toca `APLAZADA_HASTA`.
+        let aplazada = unsafe { &mut *APLAZADA_HASTA[n].0.get() };
+        let cumplida = aplazada.is_some_and(|h| ahora >= h);
+        if cumplida {
+            *aplazada = None;
+        }
+        if pedida || cumplida {
             recupera(n);
         }
     }
@@ -1479,6 +1633,7 @@ unsafe fn JPEG() {
     }
     #[cfg(not(feature = "perfil"))]
     let _ = t0;
+    anota_latencia(pedido, &LATENCIA_REC_MAX);
 }
 
 /// Una interrupcion que acapara la CPU un rato, para los binarios de estres: `VENC`, que ningun otro

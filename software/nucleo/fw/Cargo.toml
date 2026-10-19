@@ -87,7 +87,7 @@ inyeccion = ["transporte-tic"]
 # La bajada que no compone nada (`j2_banco::bajada_quieta`) en `carga_j2`: el enlace solo, sin
 # el costo de componer la trama (ficha 1 del acta del 17-10).
 sin-componer = []
-# Las cotas de v2 (2 y 4 tics) para `Vencida` y `Reiniciando`, en vez de las de hoy (100 y 100): lo que
+# Las cotas de v2 (2 y 4 tics) para `Vencida` y `Reiniciando`, en vez de las firmadas (200 y 112): lo que
 # cambia la revision de Halberg del 17-10, hallazgo 1, medido en placa con `tic_recupera`.
 cotas-v2 = ["transporte-tic"]
 # `tic_banco` con una interrupcion de P2 que acapara la CPU un rato cada 10 ms, por encima
