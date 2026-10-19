@@ -32,6 +32,10 @@ SECTIONS
     *(.text._ZN17sam17_nucleo_core10buzones_j2*)
     *(.text._ZN17sam17_nucleo_core12escaladas_j2*)
     *(.text._ZN17sam17_nucleo_core9marcos_j2*)
+    /* El CRC del sobre que llama el juez (ficha I): no es un modulo del J2, y sin esta linea
+       solo quedaria en la ITCM si LTO lo inserta en el juez. */
+    *(.text._ZN17sam17_nucleo_core14descubrimiento9crc16_con*)
+    *(.text._ZN17sam17_nucleo_core14descubrimiento5crc16*)
     *(.text._ZN13embassy_stm323rcc7RccInfo*)
     *(.text.memcmp .text.__aeabi_memclr4 .text.__aeabi_memmove8)
     *(.text.__aeabi_uldivmod .text.__aeabi_ldivmod .text.__udivmoddi4 .text.__divmoddi4)
