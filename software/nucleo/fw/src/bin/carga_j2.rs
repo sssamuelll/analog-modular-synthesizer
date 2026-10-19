@@ -330,7 +330,22 @@ async fn main(spawner: Spawner) {
     {
         let (base, largo) = sam17_nucleo_fw::j2_tic::region();
         info!("carga_j2: region no cacheable {:#x}, {} bytes", base, largo);
-        sam17_nucleo_fw::j2_tic::lanzar(ranuras, p.TIM7, PERIODO_US, f_cpu, BAJADA, juez_del_banco);
+        // El juez: el del banco, o el mismo con el CRC del sobre de la subida (`crc-*`).
+        #[cfg(feature = "crc-unidad")]
+        {
+            sam17_nucleo_fw::j2_banco::prepara_crc_unidad();
+            info!("carga_j2: la unidad CRC da el CRC-16/CCITT-FALSE (0x29B1 y largos 0 a 71)");
+        }
+        let juez: fn(usize, &[u8]) -> bool = if cfg!(feature = "crc-bits") {
+            sam17_nucleo_fw::j2_banco::juez_crc_bits
+        } else if cfg!(feature = "crc-tabla") {
+            sam17_nucleo_fw::j2_banco::juez_crc_tabla
+        } else if cfg!(feature = "crc-unidad") {
+            sam17_nucleo_fw::j2_banco::juez_crc_unidad
+        } else {
+            juez_del_banco
+        };
+        sam17_nucleo_fw::j2_tic::lanzar(ranuras, p.TIM7, PERIODO_US, f_cpu, BAJADA, juez);
     }
     #[cfg(feature = "transporte-isr")]
     {

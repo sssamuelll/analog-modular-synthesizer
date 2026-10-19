@@ -72,6 +72,41 @@ pub fn crc16(datos: &[u8]) -> u16 {
     crc
 }
 
+/// La tabla de 256 entradas de [`crc16`]: el CRC de cada byte alto con el resto a cero.
+pub const TABLA_CRC16: [u16; 256] = {
+    let mut t = [0u16; 256];
+    let mut i = 0;
+    while i < 256 {
+        let mut crc = (i as u16) << 8;
+        let mut k = 0;
+        while k < 8 {
+            crc = if crc & 0x8000 != 0 {
+                (crc << 1) ^ 0x1021
+            } else {
+                crc << 1
+            };
+            k += 1;
+        }
+        t[i] = crc;
+        i += 1;
+    }
+    t
+};
+
+/// [`crc16`] byte a byte con una tabla: la misma cuenta. `tabla` es [`TABLA_CRC16`], o una
+/// copia suya donde el que llama la quiera tener (la DTCM del cerebro).
+pub fn crc16_con(tabla: &[u16; 256], datos: &[u8]) -> u16 {
+    let mut crc: u16 = 0xFFFF;
+    for b in datos {
+        crc = (crc << 8) ^ tabla[usize::from((crc >> 8) as u8 ^ *b)];
+    }
+    crc
+}
+
+pub fn crc16_tabla(datos: &[u8]) -> u16 {
+    crc16_con(&TABLA_CRC16, datos)
+}
+
 pub fn leer_identidad(bytes: &[u8]) -> Result<Identidad<'_>, ErrorEeprom> {
     let cab = bytes.get(..CABECERA).ok_or(ErrorEeprom::Truncada)?;
     if cab[0] != MAGIA {
@@ -169,6 +204,26 @@ mod tests {
     fn el_crc_es_el_ccitt_false_de_verdad() {
         // Vector canonico del CRC-16/CCITT-FALSE: "123456789" -> 0x29B1.
         assert_eq!(crc16(b"123456789"), 0x29B1);
+    }
+
+    #[test]
+    fn el_crc_por_tabla_es_el_mismo_crc() {
+        assert_eq!(crc16_tabla(b"123456789"), 0x29B1);
+        assert_eq!(crc16_tabla(&[]), crc16(&[]));
+        // Todos los largos hasta 130 y contenidos de un generador lineal congruencial.
+        let mut x: u32 = 1;
+        let mut datos = [0u8; 130];
+        for b in datos.iter_mut() {
+            x = x.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            *b = (x >> 24) as u8;
+        }
+        for largo in 0..=datos.len() {
+            assert_eq!(
+                crc16_tabla(&datos[..largo]),
+                crc16(&datos[..largo]),
+                "{largo}"
+            );
+        }
     }
 
     #[test]
