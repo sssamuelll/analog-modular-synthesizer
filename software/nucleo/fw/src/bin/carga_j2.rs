@@ -495,6 +495,10 @@ async fn main(spawner: Spawner) {
         let puertos = usb::montar(usb::driver(p.USB1_OTG_HS));
         spawner.spawn(defmt::unwrap!(usb::correr_usb(puertos.dispositivo)));
         spawner.spawn(defmt::unwrap!(usb::atender(puertos.midi, instrumento)));
+        // `atender` imprime cuando el PC configura el dispositivo, y un `info!` apaga las
+        // interrupciones: el J2 arranca cuando el PC ya ha tenido tiempo de enumerarlo, para que
+        // esa linea no caiga en los testigos.
+        Timer::after_secs(5).await;
     }
     #[cfg(feature = "transporte-tic")]
     {

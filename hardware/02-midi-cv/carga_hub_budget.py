@@ -78,6 +78,11 @@ MEDIDO, ESTIMADO, HUECO = "MEDIDO", "ESTIMADO", "HUECO"
 # porque la columna de seis ranuras es aritmetica sobre la medida con tres.
 J2_TIC_CICLOS_POR_GIRO = 2_429
 
+# El USB del instrumento (`atender` y el OTG) con 1 000 mensajes MIDI/s, medido en el banco del J2
+# con las dos caches encendidas: el hilo libre de `carga_j2` baja de 931 a 921 por mil
+# (fw/EN-PLACA.md, «El USB con trafico, medido»). Ningun papel fija ese ritmo: con 5 000/s son 21.
+USB_POR_MIL = 10
+
 
 @dataclass(frozen=True)
 class Fila:
@@ -140,7 +145,10 @@ def censo() -> list[Fila]:
         Fila("Pantalla: LTDC, GPU y la interfaz", "hub 3.1 (D2) y pantalla-motor", HUECO, None,
              "el framebuffer sale de AXISRAM o PSRAM: tambien pesa en el bus"),
         Fila("Mandos alrededor de la pantalla", "hub 3.3", HUECO, None, ""),
-        Fila("USB (dispositivo) y MIDI", "fw/src/usb.rs; sin papel de CPU", HUECO, None, ""),
+        Fila("USB (dispositivo) y MIDI", "fw/src/usb.rs; sin papel de CPU", MEDIDO,
+             USB_POR_MIL / 1000 * cm.F_CPU,
+             f"{USB_POR_MIL} por mil con 1 000 mensajes MIDI/s y las caches encendidas (EN-PLACA); "
+             "21 con 5 000"),
         Fila("Radios: satelites y BLE", "hub 4.2 (D4)", HUECO, None,
              "coprocesador de radio por SPI o UART, con TDMA propio"),
         Fila("Escritor de CV", "#367", HUECO, None, "si comparte el GPDMA1 con el J2, ademas pesa en R-H3"),
@@ -162,16 +170,19 @@ def obligaciones() -> list[Obligacion]:
     acta = "acta del 2026-10-19, tercera firma"
     return [
         Obligacion("R-H1: ninguna ISR por encima del tic", "el tic en el nivel 1, nada en el 0",
-                   f"{v3}, R-H1", HUECO, "hoy el USB de embassy queda en el nivel 0"),
+                   f"{v3}, R-H1", HUECO,
+                   "hoy el USB de embassy queda en el nivel 0; en el banco, con 5 000 mensajes MIDI/s, "
+                   "se cuela 4 veces al entrar el tic (reloj anomalo, EN-PLACA)"),
         Obligacion("R-H1: inanicion del planificador (P3)",
                    "<= 12 ms de pendiente a terminado", f"{v3}, R-H1; {acta}, fichas B y C", HUECO,
-                   "testigo latencia_plan_max_us de fw, de pendiente a terminado; solo en el banco"),
+                   "testigo latencia_plan_max_us de fw, de pendiente a terminado; "
+                   "banco: 40 us con el USB a 5 000 mensajes MIDI/s (EN-PLACA)"),
         Obligacion("R-H1: inanicion de la recuperacion (P4)",
                    "<= 12 ms de pendiente a terminado", f"{v3}, R-H1; {acta}, fichas B y C", HUECO,
                    "testigo latencia_rec_max_us de fw, de pendiente a terminada; solo en el banco"),
         Obligacion("R-H2: maximo enmascarado", "<= 5 us por seccion critica", f"{v3}, R-H2", HUECO),
         Obligacion("R-H2: entrada del tic", "<= 60 us desde su instante", f"{v3}, R-H2 y 2.8", HUECO,
-                   "banco: 9 us con el USB del instrumento sin trafico (EN-PLACA)"),
+                   "banco: 9 us con el USB a 1 000 mensajes MIDI/s y 15 us a 5 000 (EN-PLACA)"),
         Obligacion("R-H4: el enlace del J2 en TCM", "ITCM 8 224 B y DTCM 5 128 B (referencia)",
                    f"{acta}, ficha H", HUECO, "reservarlas y las dos obligaciones de arranque (#231)"),
         Obligacion("R-H6: ocupacion sostenida del nivel 2", "excluir ~94 % durante ~100 ms",

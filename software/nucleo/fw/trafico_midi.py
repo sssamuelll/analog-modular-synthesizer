@@ -57,8 +57,13 @@ def main():
     print(f"trafico_midi: {puerto}, {por_s:.0f} mensajes/s durante {segundos:.0f} s", flush=True)
     paso = 1.0 / por_s
     t0 = time.perf_counter()
-    siguiente, n, fallos = t0, 0, 0
+    siguiente, n, fallos, aviso = t0, 0, 0, t0 + 5
     while time.perf_counter() - t0 < segundos:
+        # Cuando el banco acaba, el USB deja de contestar y `midiOutShortMsg` se queda colgado:
+        # la cuenta sale cada 5 s para que quede aunque nunca se llegue al final.
+        if time.perf_counter() >= aviso:
+            print(f"trafico_midi: {n} mensajes en {aviso - t0:.0f} s, {fallos} fallidos", flush=True)
+            aviso += 5
         nota = 36 + (n // 2) % 48
         msg = (0x90 if n % 2 == 0 else 0x80) | (nota << 8) | (100 << 16)
         if winmm.midiOutShortMsg(h, wintypes.DWORD(msg)) != 0:
