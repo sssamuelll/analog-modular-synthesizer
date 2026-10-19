@@ -49,8 +49,9 @@ use sam17_nucleo_core::buzones_j2::{Anillo, Lectura as LecturaSubida, Subida, Tr
 use sam17_nucleo_core::maestro_j2::{
     plazo_us, Accion, Evento, Ranura as Politica, Umbrales, RANURAS_SPI,
 };
+use sam17_nucleo_core::escaladas_j2::Presupuesto;
 use sam17_nucleo_core::transporte_j2::{
-    tics_de_plazo, tics_fusionados, Aviso, Entrada, Estado, Lectura, Reloj64, Transporte,
+    tics_de_plazo, Aviso, Entrada, Estado, Lectura, Reloj64, RelojDelTic, Transporte,
 };
 
 use crate::j2_ejecutor::{publicar_cuentas, Bajada, Juez, SELLOS};
@@ -405,6 +406,23 @@ static REC_PEDIDA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
 static REC_EN_CURSO: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
 static REC_HECHA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
 static REC_T_HECHA: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
+/// El incidente de cada ranura (papel v3, K4): el tic publica el suyo, el planificador lo pone
+/// en la peticion y la recuperacion lo devuelve con `EN_CURSO` y `HECHA`.
+static INCIDENTE: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
+static REC_INCIDENTE_PEDIDO: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
+static REC_INCIDENTE: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
+/// El presupuesto de escaladas del GPDMA1 (papel v3, §2.5, K1): como mucho `E_ESCALADAS` en
+/// `VENTANA_ESCALADAS_US` del reloj del tic. ESTIMADOS. Dueno: la recuperacion, con su propio
+/// reloj de 64 bits.
+const E_ESCALADAS: usize = 3;
+const VENTANA_ESCALADAS_US: u64 = 1_000_000;
+static PRESUPUESTO: Celda<Presupuesto> =
+    Celda::nueva(Presupuesto::nuevo(E_ESCALADAS, VENTANA_ESCALADAS_US));
+static RELOJ_REC: Celda<Reloj64> = Celda::nueva(Reloj64::nuevo());
+static ESCALADAS_DENEGADAS: AtomicU32 = AtomicU32::new(0);
+/// La ranura esta `Muerta`: lo publica el tic, y ni el planificador ni la recuperacion la tocan
+/// (papel v3, §2.2, Halberg H5).
+static MUERTA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
 /// `canales_sucios`: la escalada reseteo el GPDMA1 y esta ranura aun no esta reprogramada.
 static SUCIA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
 
@@ -413,12 +431,15 @@ static TICS: AtomicU32 = AtomicU32::new(0);
 static RELOJ_PLAN: Celda<Reloj64> = Celda::nueva(Reloj64::nuevo());
 static CICLOS_POR_US: AtomicU32 = AtomicU32::new(0);
 static TICS_TARDIOS: AtomicU32 = AtomicU32::new(0);
-static TICS_FUSIONADOS: AtomicU32 = AtomicU32::new(0);
+/// Periodos que una entrada del tic trajo de mas: actualizaciones fundidas en una (§2.8).
+static PERIODOS_SALTADOS: AtomicU32 = AtomicU32::new(0);
+/// Entradas en las que el reloj del tic no pudo contar limpio y conto uno (§2.7).
+static RELOJ_ANOMALO: AtomicU32 = AtomicU32::new(0);
 static RETRASO_MAX_US: AtomicU32 = AtomicU32::new(0);
-static ULTIMA_ENTRADA: AtomicU32 = AtomicU32::new(0);
+/// El reloj del tic (candidata K2). Dueno: el tic.
+static RELOJ_TIC: Celda<RelojDelTic> = Celda::nueva(RelojDelTic::nuevo(0, 0, 0));
 
 static PERIODO_US: AtomicU32 = AtomicU32::new(0);
-static PERIODO_CICLOS: AtomicU32 = AtomicU32::new(0);
 static GAP_CICLOS: AtomicU32 = AtomicU32::new(0);
 static T_CANAL_CICLOS: AtomicU32 = AtomicU32::new(0);
 
@@ -485,7 +506,8 @@ fn marca(m: Marca, ciclos: u32) {
 pub struct Testigos {
     pub tics: u32,
     pub tics_tardios: u32,
-    pub tics_fusionados: u32,
+    pub periodos_saltados: u32,
+    pub reloj_anomalo: u32,
     pub retraso_max_us: u32,
     pub sin_bajada: u32,
     pub errores_dma: u32,
@@ -495,13 +517,15 @@ pub struct Testigos {
     pub ranuras_muertas: u32,
     pub recuperaciones: u32,
     pub escaladas_gpdma: u32,
+    pub escaladas_denegadas: u32,
 }
 
 pub fn testigos() -> Testigos {
     let mut t = Testigos {
         tics: TICS.load(Ordering::Relaxed),
         tics_tardios: TICS_TARDIOS.load(Ordering::Relaxed),
-        tics_fusionados: TICS_FUSIONADOS.load(Ordering::Relaxed),
+        periodos_saltados: PERIODOS_SALTADOS.load(Ordering::Relaxed),
+        reloj_anomalo: RELOJ_ANOMALO.load(Ordering::Relaxed),
         retraso_max_us: RETRASO_MAX_US.load(Ordering::Relaxed),
         sin_bajada: 0,
         errores_dma: 0,
@@ -511,6 +535,7 @@ pub fn testigos() -> Testigos {
         ranuras_muertas: 0,
         recuperaciones: 0,
         escaladas_gpdma: ESCALADAS_GPDMA.load(Ordering::Relaxed),
+        escaladas_denegadas: ESCALADAS_DENEGADAS.load(Ordering::Relaxed),
     };
     for n in 0..N {
         if !IDENTIDAD[n].load(Ordering::Relaxed) {
@@ -651,7 +676,6 @@ pub fn lanzar(
     PERIODO_US.store(periodo_us, Ordering::Relaxed);
     let ciclos_us = f_cpu_hz / 1_000_000;
     CICLOS_POR_US.store(ciclos_us, Ordering::Relaxed);
-    PERIODO_CICLOS.store(periodo_us * ciclos_us, Ordering::Relaxed);
     GAP_CICLOS.store(T_GAP_REARME_US * ciclos_us, Ordering::Relaxed);
     T_CANAL_CICLOS.store(T_CANAL_US * ciclos_us, Ordering::Relaxed);
 
@@ -744,6 +768,22 @@ pub fn lanzar(
     defmt::assert!(psc <= 0xFFFF && periodo_us <= 0x1_0000);
     let t = pac::TIM7;
     t.psc().write_value(psc as u16);
+    // El reloj del tic resta cuentas del temporizador de los ciclos del contador libre: los dos
+    // relojes tienen que guardar una razon entera (R-H9). Tolerancia: dos cuentas. ESTIMADO.
+    let num = u64::from(psc + 1) * u64::from(f_cpu_hz);
+    defmt::assert!(
+        num % u64::from(f_timer) == 0,
+        "j2_tic: el TIM7 y el nucleo sin razon entera"
+    );
+    let ciclos_por_cuenta = (num / u64::from(f_timer)) as u32;
+    // SAFETY: el tic todavia no corre; es el unico dueno del reloj despues.
+    unsafe {
+        *RELOJ_TIC.0.get() = RelojDelTic::nuevo(
+            periodo_us * ciclos_us,
+            ciclos_por_cuenta,
+            2 * ciclos_por_cuenta,
+        );
+    }
     t.arr().write(|w| w.set_arr((periodo_us - 1) as u16));
     t.egr().write(|w| w.set_ug(true));
     t.sr().write(|w| w.set_uif(false));
@@ -759,7 +799,6 @@ pub fn lanzar(
         IRQ_REC.enable();
         interrupt::TIM7.enable();
     }
-    ULTIMA_ENTRADA.store(DWT::cycle_count(), Ordering::Relaxed);
     t.cr1().modify(|w| w.set_cen(true));
 }
 
@@ -780,15 +819,22 @@ unsafe fn TIM7() {
     if u32::from(retraso) > RETRASO_MAX_US.load(Ordering::Relaxed) {
         RETRASO_MAX_US.store(u32::from(retraso), Ordering::Relaxed);
     }
-    // Testigo de tics fundidos: el intervalo entre dos entradas.
-    let delta = t0.wrapping_sub(ULTIMA_ENTRADA.load(Ordering::Relaxed));
-    ULTIMA_ENTRADA.store(t0, Ordering::Relaxed);
-    let fundidos = tics_fusionados(delta, PERIODO_CICLOS.load(Ordering::Relaxed));
-    if fundidos != 0 {
-        TICS_FUSIONADOS.fetch_add(fundidos, Ordering::Relaxed);
+    // El reloj del tic cuenta periodos desde la actualizacion, no entradas (§2.7, K2).
+    // SAFETY: el tic es el unico dueno de `RELOJ_TIC`.
+    let p = unsafe { &mut *RELOJ_TIC.0.get() }.entrada(u32::from(retraso), t0);
+    if p.anomalo {
+        RELOJ_ANOMALO.fetch_add(1, Ordering::Relaxed);
     }
+    if p.n == 0 {
+        // Una reentrada por la misma actualizacion: no ha pasado ningun periodo.
+        return;
+    }
+    if p.n > 1 {
+        PERIODOS_SALTADOS.fetch_add(p.n - 1, Ordering::Relaxed);
+    }
+    let periodos = p.n.min(u32::from(u16::MAX)) as u16;
     TICS.store(
-        TICS.load(Ordering::Relaxed).wrapping_add(1),
+        TICS.load(Ordering::Relaxed).wrapping_add(p.n),
         Ordering::Relaxed,
     );
 
@@ -798,14 +844,14 @@ unsafe fn TIM7() {
         let Some(hw) = (unsafe { &*HW[n].0.get() }).as_ref() else {
             continue;
         };
-        if SUCIA[n].load(Ordering::Relaxed) {
-            continue;
-        }
+        // La marca entra en la maquina (papel v3, §2.2, K3): no se lee ni se arma, y las
+        // esperas siguen contando contra sus cotas.
+        let sucia = SUCIA[n].load(Ordering::Relaxed);
         let t = unsafe { &mut *TIC[n].0.get() };
         let antes = t.transporte.estado();
         #[cfg(feature = "perfil")]
         let a0 = DWT::cycle_count();
-        let lectura = if matches!(antes, Estado::Armada { .. }) {
+        let lectura = if matches!(antes, Estado::Armada { .. }) && !sucia {
             hw.lee()
         } else {
             Lectura::default()
@@ -828,13 +874,19 @@ unsafe fn TIM7() {
             } else {
                 (false, false)
             };
-        let s = t.transporte.paso(Entrada {
-            lectura,
-            identidad: IDENTIDAD[n].load(Ordering::Relaxed),
-            bajada,
-            reinicio_en_curso: en_curso,
-            reinicio_hecho: hecho,
-        });
+        let s = t.transporte.avanza(
+            Entrada {
+                lectura,
+                identidad: IDENTIDAD[n].load(Ordering::Relaxed),
+                bajada,
+                reinicio_en_curso: en_curso,
+                reinicio_hecho: hecho,
+                sucia,
+                incidente: REC_INCIDENTE[n].load(Ordering::Relaxed),
+            },
+            periodos,
+        );
+        INCIDENTE[n].store(t.transporte.incidente(), Ordering::Relaxed);
 
         if s.cerrar {
             #[cfg(feature = "perfil")]
@@ -904,6 +956,7 @@ unsafe fn TIM7() {
                 CONT[n].errores_dma.fetch_add(1, Ordering::Relaxed);
             }
             Some(Aviso::RanuraMuerta) => {
+                MUERTA[n].store(true, Ordering::Relaxed);
                 CONT[n].muertas.fetch_add(1, Ordering::Relaxed);
             }
             None => {}
@@ -995,13 +1048,18 @@ unsafe fn DMA2D() {
                         let _ = p.politica.paso(ev, ahora_us);
                     }
                 }
-                Evento::PlazoVencido => {
-                    // La politica es la unica autoridad sobre «reiniciar» (papel v2, §2.5).
-                    if p.politica.paso(ev, ahora_us) == Accion::Reiniciar {
+                Evento::PlazoVencido | Evento::PlazoAjeno => {
+                    // La politica es la unica autoridad sobre «reiniciar» (papel v2, §2.5); un
+                    // plazo ajeno pide la limpieza sin puntuar (papel v3, §2.5).
+                    if p.politica.paso(ev, ahora_us) == Accion::Reiniciar
+                        && !MUERTA[n].load(Ordering::Relaxed)
+                    {
                         #[cfg(feature = "inyeccion")]
                         if SIN_RECUPERACION.load(Ordering::Relaxed) {
                             continue;
                         }
+                        REC_INCIDENTE_PEDIDO[n]
+                            .store(INCIDENTE[n].load(Ordering::Relaxed), Ordering::Relaxed);
                         REC_PEDIDA[n].store(true, Ordering::Relaxed);
                         NVIC::pend(IRQ_REC);
                     }
@@ -1088,6 +1146,7 @@ fn escala() {
             SUCIA[k].store(true, Ordering::Relaxed);
             let t = unsafe { &mut *TIC[k].0.get() };
             if let Some(ev) = t.transporte.declarar_vencida() {
+                INCIDENTE[k].store(t.transporte.incidente(), Ordering::Relaxed);
                 ANILLO[k].empujar(ev);
             }
         }
@@ -1109,13 +1168,33 @@ fn recupera(n: usize) {
     let Some(hw) = (unsafe { &*HW[n].0.get() }).as_ref() else {
         return;
     };
+    if MUERTA[n].load(Ordering::Relaxed) {
+        // La pidio viva y murio antes de que la recuperacion corriera.
+        return;
+    }
+    REC_INCIDENTE[n].store(
+        REC_INCIDENTE_PEDIDO[n].load(Ordering::Relaxed),
+        Ordering::Relaxed,
+    );
     REC_EN_CURSO[n].store(true, Ordering::Relaxed);
     #[cfg(feature = "inyeccion")]
     if n == 0 {
         marca(Marca::RecInicio, DWT::cycle_count());
     }
     if !para_canales(hw) {
-        escala();
+        // SAFETY: la recuperacion es la unica que toca `RELOJ_REC` y `PRESUPUESTO`.
+        let tics = unsafe { &mut *RELOJ_REC.0.get() }.extiende(TICS.load(Ordering::Relaxed));
+        let ahora_us = tics * u64::from(PERIODO_US.load(Ordering::Relaxed));
+        if unsafe { &mut *PRESUPUESTO.0.get() }.pide(ahora_us) {
+            escala();
+        } else {
+            // K1: sin presupuesto, el RESET por canal y nada mas: ni HECHA ni reintento. La
+            // ranura muere por la cota de `Reiniciando` y el supervisor reinicia el chip.
+            hw.tx.ch.cr().write(|w| w.set_reset(true));
+            hw.rx.ch.cr().write(|w| w.set_reset(true));
+            ESCALADAS_DENEGADAS.fetch_add(1, Ordering::Relaxed);
+            return;
+        }
     }
     // Pasos 2 y 3 en una sola seccion critica: el reset del SPI deja `CFG2 = 0`, con
     // `AFCNTR = 0` el `CS` y el reloj flotan, y cuanto menos dure, mejor.

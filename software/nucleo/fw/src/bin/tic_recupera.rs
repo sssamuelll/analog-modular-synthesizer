@@ -3,7 +3,7 @@
 
 //! **La recuperacion del transporte por tic, en placa.**
 //!
-//! Medida 2 de `papel-v2.md` §4 (acta del 17-10, ficha 3). Cuatro fases, cada una con sus
+//! Medida 2 de `papel-v2.md` §4 (acta del 17-10, ficha 3). Seis fases, cada una con sus
 //! comprobaciones al final -- no se imprime nada mientras el transporte corre, por la
 //! misma razon que en `tic_banco`:
 //!
@@ -17,10 +17,15 @@
 //! - **B, una rafaga** de 1 000 incidentes, uno cada 4 ms: nada se acumula, nada se queda.
 //! - **C, la escalada del GPDMA1** (`--features escalada`, con `ranuras-3` y
 //!   `sin-esclavo`): `fuerza_escalada()` mas un veneno, diez veces, con las vecinas en
-//!   vuelo. El esclavo del banco comparte el GPDMA1 y moriria con el reset, por eso esta
+//!   vuelo, una cada 400 ms para que el presupuesto de escaladas (papel v3, K1: 3 por
+//!   segundo) las conceda todas. Las vecinas vencen por la escalada ajena y no puntuan
+//!   (K4). El esclavo del banco comparte el GPDMA1 y moriria con el reset, por eso esta
 //!   fase va sin el.
 //! - **D, la ranura muerta:** el planificador deja de pedir la recuperacion y la ranura 0
 //!   tiene que pasar a `Muerta` y dejar de sellar; las vecinas, no.
+//! - **E, la escalada denegada** (con `escalada`): con la ventana del presupuesto vacia,
+//!   cuatro escaladas seguidas en la ranura 3. Se conceden tres; la cuarta se deniega, el
+//!   canal se resetea sin la recuperacion hecha y la ranura 3 muere por su cota; la 2 sigue.
 //! - **F, un error del DMA:** el canal de recepcion con un ajuste de usuario invalido (`USEF`):
 //!   prueba la rama `error_dma` de la maquina, que el reset por RCC de la recuperacion esconde.
 //!
@@ -54,11 +59,13 @@ use {defmt_rtt as _, panic_probe as _};
 struct Foto {
     giros: [u32; 4],
     plazos: [u32; 4],
+    ajenos: [u32; 4],
     subidas_ok: u32,
     subidas_malas: u32,
     recuperaciones: u32,
     errores_dma: u32,
     escaladas: u32,
+    denegadas: u32,
     muertas: u32,
     cortas_esclavo: u32,
     ok_esclavo: u32,
@@ -78,6 +85,7 @@ fn foto() -> Foto {
         let c = cuentas(n);
         f.giros[k] = c.giros;
         f.plazos[k] = c.plazos_vencidos;
+        f.ajenos[k] = c.plazos_ajenos;
         f.sellos[k] = SELLOS[n].load(Ordering::Relaxed);
         if n == 0 {
             f.subidas_ok = c.subidas_ok;
@@ -88,6 +96,7 @@ fn foto() -> Foto {
     f.recuperaciones = t.recuperaciones;
     f.errores_dma = t.errores_dma;
     f.escaladas = t.escaladas_gpdma;
+    f.denegadas = t.escaladas_denegadas;
     f.muertas = t.ranuras_muertas;
     f.cortas_esclavo = j2_esclavo::TRAMAS_CORTAS.load(Ordering::Relaxed);
     f.ok_esclavo = j2_esclavo::TRAMAS_OK.load(Ordering::Relaxed);
@@ -97,6 +106,18 @@ fn foto() -> Foto {
         f.bajadas_malas = j2_esclavo::BAJADAS_MALAS.load(Ordering::Relaxed);
     }
     f
+}
+
+/// Fuera de `main`: el `ldr =0xE000ED14` del ensamblador de `cortex-m` deja el literal al
+/// final de la funcion, y en la tarea principal queda a mas de 4 KB de la carga.
+#[inline(never)]
+fn enciende_caches() {
+    // SAFETY: nadie mas toca el SCB en este binario.
+    unsafe {
+        let mut cp = cortex_m::Peripherals::steal();
+        cp.SCB.enable_icache();
+        cp.SCB.enable_dcache(&mut cp.CPUID);
+    }
 }
 
 fn veredicto(nombre: &'static str, bien: bool) {
@@ -144,12 +165,7 @@ async fn main(spawner: Spawner) {
         bajada_del_banco,
         juez_del_banco,
     );
-    // SAFETY: nadie mas toca el SCB en este binario.
-    unsafe {
-        let mut cp = cortex_m::Peripherals::steal();
-        cp.SCB.enable_icache();
-        cp.SCB.enable_dcache(&mut cp.CPUID);
-    }
+    enciende_caches();
     Timer::after_millis(500).await;
 
     // ---- A: un incidente ------------------------------------------------------------
@@ -176,7 +192,7 @@ async fn main(spawner: Spawner) {
         for _ in 0..10 {
             j2_tic::fuerza_escalada();
             j2_tic::envenena(0);
-            Timer::after_millis(30).await;
+            Timer::after_millis(400).await;
         }
         Timer::after_millis(50).await;
         // Las marcas, ahora: la fase F recupera la ranura 0 otra vez y las pisa.
@@ -202,6 +218,29 @@ async fn main(spawner: Spawner) {
     let sello_vecina_despues = SELLOS[2].load(Ordering::Relaxed);
     let despues_d = foto();
     j2_tic::sin_recuperacion(false);
+
+    // ---- E: la escalada denegada, en la ranura 3 ----------------------------------------
+    #[cfg(feature = "escalada")]
+    let (antes_e, despues_e, estado_e, sello_2_e, sello_2_e_despues) = {
+        // La ultima escalada concedida sale de la ventana de 1 s.
+        Timer::after_millis(1100).await;
+        let antes = foto();
+        for _ in 0..4 {
+            j2_tic::fuerza_escalada();
+            j2_tic::envenena(3);
+            Timer::after_millis(30).await;
+        }
+        let estado = j2_tic::estado(3);
+        let sello_2 = SELLOS[2].load(Ordering::Relaxed);
+        Timer::after_millis(5).await;
+        (
+            antes,
+            foto(),
+            estado,
+            sello_2,
+            SELLOS[2].load(Ordering::Relaxed),
+        )
+    };
 
     // ---- Se imprime todo seguido -----------------------------------------------------
     info!(
@@ -308,11 +347,14 @@ async fn main(spawner: Spawner) {
     #[cfg(feature = "escalada")]
     {
         info!(
-            "tic_recupera,C,escaladas={},plazos_ranura0={},plazos_ranura2={},plazos_ranura3={},recuperaciones={},muertas={}",
+            "tic_recupera,C,escaladas={},denegadas={},plazos_ranura0={},plazos_ranura2={},plazos_ranura3={},ajenos_ranura2={},ajenos_ranura3={},recuperaciones={},muertas={}",
             despues_c.escaladas - antes_c.escaladas,
+            despues_c.denegadas - antes_c.denegadas,
             despues_c.plazos[0] - antes_c.plazos[0],
             despues_c.plazos[1] - antes_c.plazos[1],
             despues_c.plazos[2] - antes_c.plazos[2],
+            despues_c.ajenos[1] - antes_c.ajenos[1],
+            despues_c.ajenos[2] - antes_c.ajenos[2],
             despues_c.recuperaciones - antes_c.recuperaciones,
             despues_c.muertas,
         );
@@ -328,8 +370,16 @@ async fn main(spawner: Spawner) {
             despues_c.escaladas - antes_c.escaladas == 10,
         );
         veredicto(
-            "C.las_vecinas_en_vuelo_vencen",
-            despues_c.plazos[1] > antes_c.plazos[1] && despues_c.plazos[2] > antes_c.plazos[2],
+            "C.ninguna_denegada",
+            despues_c.denegadas == antes_c.denegadas,
+        );
+        veredicto(
+            "C.las_vecinas_en_vuelo_vencen_por_ajeno",
+            despues_c.ajenos[1] > antes_c.ajenos[1] && despues_c.ajenos[2] > antes_c.ajenos[2],
+        );
+        veredicto(
+            "C.las_vecinas_no_puntuan",
+            despues_c.plazos[1] == antes_c.plazos[1] && despues_c.plazos[2] == antes_c.plazos[2],
         );
         veredicto("C.ninguna_muerta", despues_c.muertas == 0);
         veredicto(
@@ -379,6 +429,32 @@ async fn main(spawner: Spawner) {
             "D.las_vecinas_siguen_sellando",
             sello_vecina_despues > sello_vecina,
         );
+    }
+
+    // E
+    #[cfg(feature = "escalada")]
+    {
+        info!(
+            "tic_recupera,E,escaladas={},denegadas={},muertas={},ajenos_ranura2={},plazos_ranura2={},sello_ranura2: {}->{}",
+            despues_e.escaladas - antes_e.escaladas,
+            despues_e.denegadas - antes_e.denegadas,
+            despues_e.muertas,
+            despues_e.ajenos[1] - antes_e.ajenos[1],
+            despues_e.plazos[1] - antes_e.plazos[1],
+            sello_2_e,
+            sello_2_e_despues,
+        );
+        veredicto(
+            "E.tres_concedidas",
+            despues_e.escaladas - antes_e.escaladas == 3,
+        );
+        veredicto(
+            "E.una_denegada",
+            despues_e.denegadas - antes_e.denegadas == 1,
+        );
+        veredicto("E.la_ranura_3_muere", estado_e == Estado::Muerta);
+        veredicto("E.dos_muertas", despues_e.muertas == 2);
+        veredicto("E.la_2_sigue_sellando", sello_2_e_despues > sello_2_e);
     }
     let t = j2_tic::testigos();
     info!("tic_recupera,tic,{}", t);

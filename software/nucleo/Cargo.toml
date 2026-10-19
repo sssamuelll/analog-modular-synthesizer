@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["core"]
+members = ["core", "modelo"]
 # `fw` compila para thumbv8m y `core` para el host. En estable no hay
 # `forced-target`, asi que compartir workspace haria que `cargo test` en la
 # raiz intentara compilar el firmware para tu maquina.

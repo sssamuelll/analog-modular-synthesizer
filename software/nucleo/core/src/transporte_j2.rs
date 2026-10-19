@@ -23,11 +23,11 @@ use crate::maestro_j2::Evento;
 /// v2 decia 2: el planificador y la recuperacion van por debajo de USB y pantalla (P2), y una
 /// retencion de 350 us de P2 coincidiendo con un cuelgue bastaba para matar la ranura y, con
 /// ella, el instrumento (revision de Halberg del 17-10, hallazgo 1). 100 tics son 12,5 ms.
-pub const COTA_VENCIDA_TICS: u8 = 100;
+pub const COTA_VENCIDA_TICS: u16 = 100;
 /// Tics que `Reiniciando` espera a que la recuperacion acabe (v2: 4). ESTIMADO. Las dos cotas
 /// suman 25 ms, la mitad de lo que el modulo aguanta sin tramas (400 giros, ~50 ms): una
 /// ranura se da por muerta antes de que el modulo se rinda solo.
-pub const COTA_REINICIANDO_TICS: u8 = 100;
+pub const COTA_REINICIANDO_TICS: u16 = 100;
 
 /// Cuantos tics dura un plazo de `plazo_us` microsegundos: el entero hacia
 /// arriba, y nunca menos de uno (una transferencia armada en un tic se mira como
@@ -43,17 +43,74 @@ pub const fn tics_de_plazo(plazo_us: u32, periodo_us: u32) -> u8 {
     }
 }
 
-/// Cuantos tics se fundieron entre dos entradas de la ISR del tic (papel v2, §2.8): el
-/// intervalo `delta` en ciclos contra el `periodo` en ciclos. Un temporizador de hardware
-/// funde dos actualizaciones en una pendiente, y sin este testigo el giro perdido no deja
-/// rastro. Cuenta cuando el intervalo pasa de 1,5 periodos: entonces faltan `redondeo(delta /
-/// periodo) - 1` tics.
-pub const fn tics_fusionados(delta: u32, periodo: u32) -> u32 {
-    let (d, p) = (delta as u64, periodo as u64);
-    if p == 0 || d * 2 < p * 3 {
-        return 0;
+/// Lo que una entrada del tic dice del tiempo: cuantos periodos van desde la anterior, y si
+/// la cuenta no salio limpia.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Periodos {
+    pub n: u32,
+    /// El contador de ciclos esta parado, o la diferencia entre dos eventos no es un multiplo
+    /// del periodo dentro de la tolerancia: se cuenta uno.
+    pub anomalo: bool,
+}
+
+/// El reloj del tic contado desde el instante del evento de actualizacion, no desde la entrada
+/// (papel v3, §2.7, candidata K2).
+///
+/// En cada entrada el tic lee el contador de su temporizador (lo que lleva contado desde la
+/// ultima actualizacion) y despues el contador libre de ciclos. Restar lo primero de lo segundo
+/// da el instante de la actualizacion, y la diferencia entre dos de esos instantes es un
+/// multiplo exacto del periodo por tarde que llegue la entrada: su redondeo no se equivoca, y
+/// la suma de periodos es la de la pared aunque se fundan actualizaciones.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct RelojDelTic {
+    periodo: u32,
+    ciclos_por_cuenta: u32,
+    tolerancia: u32,
+    anterior: Option<(u32, u32)>,
+}
+
+impl RelojDelTic {
+    /// `periodo` y `tolerancia` en ciclos del contador libre; `ciclos_por_cuenta`, los ciclos de
+    /// una cuenta del temporizador del tic.
+    pub const fn nuevo(periodo: u32, ciclos_por_cuenta: u32, tolerancia: u32) -> RelojDelTic {
+        RelojDelTic {
+            periodo,
+            ciclos_por_cuenta,
+            tolerancia,
+            anterior: None,
+        }
     }
-    ((d + p / 2) / p - 1) as u32
+
+    /// Una entrada del tic: `cnt` es el contador del temporizador y `ciclos` el contador libre,
+    /// leidos en ese orden.
+    pub fn entrada(&mut self, cnt: u32, ciclos: u32) -> Periodos {
+        let act = ciclos.wrapping_sub(cnt.wrapping_mul(self.ciclos_por_cuenta));
+        let anomalo = Periodos {
+            n: 1,
+            anomalo: true,
+        };
+        let Some((ciclos_ant, act_ant)) = self.anterior.replace((ciclos, act)) else {
+            return Periodos {
+                n: 1,
+                anomalo: false,
+            };
+        };
+        if ciclos == ciclos_ant || self.periodo == 0 {
+            // El contador libre no avanza: nadie lo habilito, o el nucleo duerme y lo para.
+            return anomalo;
+        }
+        // Con signo: una reentrada por la misma actualizacion puede dar unos ciclos de menos.
+        let d = i64::from(act.wrapping_sub(act_ant) as i32);
+        let p = i64::from(self.periodo);
+        let n = (d + p / 2).div_euclid(p);
+        if n < 0 || (d - n * p).unsigned_abs() > u64::from(self.tolerancia) {
+            return anomalo;
+        }
+        Periodos {
+            n: n as u32,
+            anomalo: false,
+        }
+    }
 }
 
 /// El contador de tics de 32 bits del tic, extendido a 64 por quien lo lee (el planificador).
@@ -91,12 +148,12 @@ impl Reloj64 {
 pub enum Estado {
     /// El SPI esta apagado y la ranura espera una bajada.
     Libre,
-    /// Una transferencia en vuelo: lleva `edad` tics y tiene `plazo_tics`.
-    Armada { edad: u8, plazo_tics: u8 },
+    /// Una transferencia en vuelo: lleva `edad` periodos del tic y tiene `plazo_tics`.
+    Armada { edad: u16, plazo_tics: u8 },
     /// El plazo vencio; espera a que la politica pida el reinicio y arranque.
-    Vencida { espera: u8 },
+    Vencida { espera: u16 },
     /// La recuperacion esta en curso.
-    Reiniciando { espera: u8 },
+    Reiniciando { espera: u16 },
     /// Se paso de las cotas: ya no arma ni sella. El IWDG del hub se queda sin sello.
     Muerta,
 }
@@ -124,6 +181,11 @@ pub struct Entrada {
     pub reinicio_en_curso: bool,
     /// La recuperacion termino y han pasado `T_GAP_REARME`.
     pub reinicio_hecho: bool,
+    /// La escalada reseteo el GPDMA1 y los canales de esta ranura aun no estan reprogramados.
+    pub sucia: bool,
+    /// El incidente al que pertenecen `reinicio_en_curso` y `reinicio_hecho` (papel v3, K4):
+    /// la recuperacion lo recibe con la peticion y lo devuelve con `HECHA`.
+    pub incidente: u32,
 }
 
 /// Lo que la maquina cuenta sin que sea un evento de la politica.
@@ -162,8 +224,10 @@ impl Salida {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Transporte {
     estado: Estado,
-    cota_vencida: u8,
-    cota_reiniciando: u8,
+    cota_vencida: u16,
+    cota_reiniciando: u16,
+    /// Entradas en `Vencida` desde el arranque: el incidente en curso es el ultimo.
+    incidentes: u32,
 }
 
 impl Transporte {
@@ -172,16 +236,29 @@ impl Transporte {
     }
 
     /// Como [`Transporte::nuevo`], con otras cotas de espera para `Vencida` y `Reiniciando`.
-    pub const fn con_cotas(vencida: u8, reiniciando: u8) -> Transporte {
+    pub const fn con_cotas(vencida: u16, reiniciando: u16) -> Transporte {
         Transporte {
             estado: Estado::Libre,
             cota_vencida: vencida,
             cota_reiniciando: reiniciando,
+            incidentes: 0,
         }
     }
 
     pub const fn estado(&self) -> Estado {
         self.estado
+    }
+
+    /// El numero del incidente en curso, o del ultimo: cada entrada en `Vencida` abre uno, y el
+    /// primero es el cero.
+    pub const fn incidente(&self) -> u32 {
+        self.incidentes.wrapping_sub(1)
+    }
+
+    /// Entra en `Vencida` y abre un incidente.
+    fn vence(&mut self) {
+        self.estado = Estado::Vencida { espera: 0 };
+        self.incidentes = self.incidentes.wrapping_add(1);
     }
 
     /// La ranura esta libre, o acaba de quedar libre en este tic: arma si puede.
@@ -216,8 +293,33 @@ impl Transporte {
         }
     }
 
-    /// Un tic. Lee `entrada`, cambia de estado y dice que hacer.
+    /// Un tic de un periodo. Lee `entrada`, cambia de estado y dice que hacer.
     pub fn paso(&mut self, e: Entrada) -> Salida {
+        self.avanza(e, 1)
+    }
+
+    /// Un tic que trae `periodos` periodos del reloj del tic ([`RelojDelTic`]): la edad y las
+    /// esperas avanzan en periodos, no en entradas (papel v3, §2.7). Una espera muere en la
+    /// entrada que la lleva mas alla de su cota.
+    pub fn avanza(&mut self, e: Entrada, periodos: u16) -> Salida {
+        // Papel v3, §2.2 (K3): con la marca puesta no se lee ni se arma, y la marca gana a la
+        // recuperacion; solo cuentan el plazo y las cotas. Sin identidad, `Libre` espera sin
+        // avisar.
+        let e = if e.sucia {
+            Entrada {
+                sucia: true,
+                ..Entrada::default()
+            }
+        } else if e.incidente != self.incidente() {
+            // K4: la recuperacion de otro incidente no saca a la ranura de este.
+            Entrada {
+                reinicio_en_curso: false,
+                reinicio_hecho: false,
+                ..e
+            }
+        } else {
+            e
+        };
         let s = Salida::default();
         match self.estado {
             Estado::Muerta => s,
@@ -226,7 +328,7 @@ impl Transporte {
                 let l = e.lectura;
                 if l.error_dma {
                     // Un canal parado o con error no se da por bueno aunque haya EOT.
-                    self.estado = Estado::Vencida { espera: 0 };
+                    self.vence();
                     Salida {
                         cerrar: true,
                         aviso: Some(Aviso::ErrorDma),
@@ -237,13 +339,13 @@ impl Transporte {
                     // El EOT y los dos canales acabados: lo que el tic encuentra es la
                     // verdad de este instante, tambien en el tic del vencimiento.
                     self.desde_libre(&e, Salida { cerrar: true, ..s }.con_evento(Evento::GiroOk))
-                } else if edad.saturating_add(1) >= plazo_tics {
+                } else if edad.saturating_add(periodos) >= u16::from(plazo_tics) {
                     // El SPI se deja como esta: la recuperacion lo resetea.
-                    self.estado = Estado::Vencida { espera: 0 };
+                    self.vence();
                     s.con_evento(Evento::PlazoVencido)
                 } else {
                     self.estado = Estado::Armada {
-                        edad: edad + 1,
+                        edad: edad + periodos,
                         plazo_tics,
                     };
                     s
@@ -256,20 +358,24 @@ impl Transporte {
                 } else if e.reinicio_en_curso {
                     self.estado = Estado::Reiniciando { espera: 0 };
                     s
-                } else if espera >= self.cota_vencida {
+                } else if espera.saturating_add(periodos) > self.cota_vencida {
                     self.muerta(s)
                 } else {
-                    self.estado = Estado::Vencida { espera: espera + 1 };
+                    self.estado = Estado::Vencida {
+                        espera: espera + periodos,
+                    };
                     s
                 }
             }
             Estado::Reiniciando { espera } => {
                 if e.reinicio_hecho {
                     self.desde_libre(&e, s)
-                } else if espera >= self.cota_reiniciando {
+                } else if espera.saturating_add(periodos) > self.cota_reiniciando {
                     self.muerta(s)
                 } else {
-                    self.estado = Estado::Reiniciando { espera: espera + 1 };
+                    self.estado = Estado::Reiniciando {
+                        espera: espera + periodos,
+                    };
                     s
                 }
             }
@@ -277,12 +383,12 @@ impl Transporte {
     }
 
     /// La escalada de D4.2 mato las transferencias en vuelo: la ranura que estaba
-    /// `Armada` pasa a `Vencida` de una vez, sin esperar su plazo. Devuelve el evento
-    /// para la politica, o `None` si no estaba en vuelo.
+    /// `Armada` pasa a `Vencida` de una vez, sin esperar su plazo. Devuelve el
+    /// `PlazoAjeno` para la politica, o `None` si no estaba en vuelo.
     pub fn declarar_vencida(&mut self) -> Option<Evento> {
         if matches!(self.estado, Estado::Armada { .. }) {
-            self.estado = Estado::Vencida { espera: 0 };
-            Some(Evento::PlazoVencido)
+            self.vence();
+            Some(Evento::PlazoAjeno)
         } else {
             None
         }
@@ -332,29 +438,169 @@ mod tests {
         assert_eq!(tics_de_plazo(u32::MAX, PERIODO), 255);
     }
 
-    // --- tics_fusionados -----------------------------------------------------------
+    // --- RelojDelTic (K2) ---------------------------------------------------------------
+
+    /// 125 us a 800 MHz; el temporizador cuenta cada 4 ciclos.
+    const P_CICLOS: u32 = 100_000;
+    const CPC: u32 = 4;
+    const TOL: u32 = 64;
+    /// Ciclos entre leer el contador del temporizador y leer el contador libre.
+    const LECTURA: u32 = 12;
+
+    /// Las entradas del tic con estos retrasos, uno por actualizacion, sobre una pared que
+    /// empieza en `t0` ciclos: una entrada que llega despues de la actualizacion siguiente
+    /// funde a esa en ella, como el `UIF` de un temporizador. Devuelve, por entrada, la suma
+    /// de periodos del reloj y la de la pared desde la primera.
+    fn corre(t0: u32, retrasos: &[u32]) -> (Vec<(u64, u64)>, u32) {
+        let mut r = RelojDelTic::nuevo(P_CICLOS, CPC, TOL);
+        let mut out = Vec::new();
+        let mut anomalos = 0;
+        let (mut suma, mut primera) = (0u64, None);
+        let mut k = 0usize;
+        while k < retrasos.len() {
+            let t_act = u64::from(t0) + k as u64 * u64::from(P_CICLOS);
+            let t_cnt = t_act + u64::from(retrasos[k]);
+            // La actualizacion mas reciente antes de leer el contador.
+            let ultima = k + (retrasos[k] / P_CICLOS) as usize;
+            let desde = t_cnt - (u64::from(t0) + ultima as u64 * u64::from(P_CICLOS));
+            let cnt = (desde / u64::from(CPC)) as u32;
+            let ciclos = (t_cnt + u64::from(LECTURA)) as u32;
+            let p = r.entrada(cnt, ciclos);
+            anomalos += u32::from(p.anomalo);
+            let base = *primera.get_or_insert(ultima);
+            suma += u64::from(p.n);
+            out.push((suma, (ultima - base) as u64 + 1));
+            k = ultima + 1;
+        }
+        (out, anomalos)
+    }
 
     #[test]
-    fn un_intervalo_normal_no_funde_ningun_tic() {
-        // 125 us a 800 MHz son 100 000 ciclos.
-        for delta in [0, 99_000, 100_000, 101_000, 149_999] {
-            assert_eq!(tics_fusionados(delta, 100_000), 0, "delta {delta}");
+    fn el_reloj_del_tic_cuenta_la_pared_por_tarde_que_lleguen_las_entradas() {
+        // Retrasos de 0 a 1,9 periodos con un generador fijo, y sobre la vuelta de 32 bits del
+        // contador libre (5,4 s a 800 MHz).
+        let mut x: u32 = 0x1234_5678;
+        let retrasos: Vec<u32> = (0..20_000)
+            .map(|_| {
+                x = x.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+                (x >> 8) % (P_CICLOS * 19 / 10)
+            })
+            .collect();
+        let (out, anomalos) = corre(u32::MAX - 5 * P_CICLOS, &retrasos);
+        assert_eq!(anomalos, 0);
+        for (i, (reloj, pared)) in out.iter().enumerate() {
+            assert_eq!(reloj, pared, "entrada {i}");
         }
     }
 
     #[test]
-    fn un_intervalo_de_mas_de_uno_y_medio_periodos_cuenta_los_que_faltan() {
-        assert_eq!(tics_fusionados(150_000, 100_000), 1);
-        assert_eq!(tics_fusionados(200_000, 100_000), 1);
-        assert_eq!(tics_fusionados(249_999, 100_000), 1);
-        assert_eq!(tics_fusionados(250_000, 100_000), 2);
-        assert_eq!(tics_fusionados(300_000, 100_000), 2);
-        assert_eq!(tics_fusionados(1_000_000, 100_000), 9);
+    fn uno_de_cada_dos_tics_tarde_no_hace_correr_al_reloj() {
+        // Tercera pasada de la junta (Halberg N2): con uno de cada dos tics entre 63 y 124 us
+        // tarde, sumar el redondeo de cada intervalo entre entradas corre x1,5 y la cota de
+        // 25 ms vence a los 16,75 ms de pared. 25 ms son 200 periodos.
+        let retrasos: Vec<u32> = (0..200u32)
+            .map(|k| {
+                if k % 2 == 0 {
+                    0
+                } else {
+                    50_400 + (k % 31) * 1_600
+                }
+            })
+            .collect();
+        let (out, _) = corre(1_000, &retrasos);
+        assert_eq!(out.last().copied(), Some((200, 200)));
     }
 
     #[test]
-    fn el_periodo_cero_no_divide_por_cero() {
-        assert_eq!(tics_fusionados(1_000, 0), 0);
+    fn una_reentrada_por_la_misma_actualizacion_no_cuenta_periodos() {
+        // La ISR vuelve a entrar porque la escritura que borra `UIF` no llego a tiempo: el
+        // temporizador sigue contando desde la misma actualizacion.
+        let mut r = RelojDelTic::nuevo(P_CICLOS, CPC, TOL);
+        r.entrada(250, 1_000 + 250 * CPC);
+        assert_eq!(
+            r.entrada(300, 1_000 + 300 * CPC),
+            Periodos {
+                n: 0,
+                anomalo: false
+            }
+        );
+    }
+
+    #[test]
+    fn una_reentrada_que_lee_unos_ciclos_antes_tampoco_cuenta_periodos() {
+        // El contador del temporizador redondea hacia abajo: el instante sale hasta una cuenta
+        // antes o despues, y la diferencia puede ser negativa.
+        let mut r = RelojDelTic::nuevo(P_CICLOS, CPC, TOL);
+        r.entrada(250, 1_000 + 250 * CPC + 3);
+        assert_eq!(
+            r.entrada(300, 1_000 + 300 * CPC),
+            Periodos {
+                n: 0,
+                anomalo: false
+            }
+        );
+    }
+
+    #[test]
+    fn un_evento_anterior_al_ultimo_cuenta_uno_y_lo_marca() {
+        let mut r = RelojDelTic::nuevo(P_CICLOS, CPC, TOL);
+        r.entrada(0, 10 * P_CICLOS);
+        assert_eq!(
+            r.entrada(0, 9 * P_CICLOS),
+            Periodos {
+                n: 1,
+                anomalo: true
+            }
+        );
+    }
+
+    #[test]
+    fn con_el_contador_de_ciclos_parado_cuenta_uno_y_lo_marca() {
+        // Sin sonda, nadie habilita `DWT_CYCCNT` (R-H9): el contador libre lee siempre lo mismo.
+        let mut r = RelojDelTic::nuevo(P_CICLOS, CPC, TOL);
+        r.entrada(10, 0);
+        for cnt in [12, 9, 15, 10] {
+            assert_eq!(
+                r.entrada(cnt, 0),
+                Periodos {
+                    n: 1,
+                    anomalo: true
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn una_diferencia_que_no_es_un_multiplo_del_periodo_cuenta_uno_y_lo_marca() {
+        let mut r = RelojDelTic::nuevo(P_CICLOS, CPC, TOL);
+        r.entrada(0, 0);
+        assert_eq!(
+            r.entrada(0, P_CICLOS * 3 / 2),
+            Periodos {
+                n: 1,
+                anomalo: true
+            }
+        );
+        // Y la siguiente cuenta otra vez desde esa, sin arrastrar el error.
+        assert_eq!(
+            r.entrada(0, P_CICLOS * 3 / 2 + 2 * P_CICLOS + TOL - 1),
+            Periodos {
+                n: 2,
+                anomalo: false
+            }
+        );
+    }
+
+    #[test]
+    fn la_primera_entrada_cuenta_un_periodo() {
+        let mut r = RelojDelTic::nuevo(P_CICLOS, CPC, TOL);
+        assert_eq!(
+            r.entrada(40, 7_777),
+            Periodos {
+                n: 1,
+                anomalo: false
+            }
+        );
     }
 
     // --- Libre -------------------------------------------------------------------
@@ -701,6 +947,8 @@ mod tests {
             bajada: Some(1),
             reinicio_en_curso: true,
             reinicio_hecho: true,
+            sucia: false,
+            incidente: 0,
         };
         for _ in 0..50 {
             assert_eq!(t.paso(todo), Salida::default());
@@ -711,7 +959,7 @@ mod tests {
     #[test]
     fn la_escalada_declara_vencida_solo_a_la_que_estaba_en_vuelo() {
         let mut t = armada(2);
-        assert_eq!(t.declarar_vencida(), Some(Evento::PlazoVencido));
+        assert_eq!(t.declarar_vencida(), Some(Evento::PlazoAjeno));
         assert_eq!(t.estado(), Estado::Vencida { espera: 0 });
         // Ya vencida, o libre, o muerta: no hay nada que declarar.
         assert_eq!(t.declarar_vencida(), None);
@@ -833,6 +1081,287 @@ mod tests {
         assert_eq!(t.estado(), Estado::Muerta);
     }
 
+    // --- sucia (K3) -------------------------------------------------------------------------
+
+    /// Todo lo que haria salir a la ranura de su estado, con la marca puesta.
+    fn sucia_con_todo() -> Entrada {
+        Entrada {
+            lectura: bien(),
+            identidad: true,
+            bajada: Some(1),
+            reinicio_en_curso: true,
+            reinicio_hecho: true,
+            sucia: true,
+            incidente: 0,
+        }
+    }
+
+    #[test]
+    fn libre_y_sucia_espera_sin_armar_ni_avisar() {
+        let mut t = Transporte::nuevo();
+        for _ in 0..1000 {
+            assert_eq!(t.avanza(sucia_con_todo(), 3), Salida::default());
+            assert_eq!(t.estado(), Estado::Libre);
+        }
+    }
+
+    #[test]
+    fn armada_y_sucia_no_lee_y_el_plazo_sigue_contando() {
+        let mut t = armada(3);
+        assert_eq!(t.avanza(sucia_con_todo(), 1), Salida::default());
+        assert_eq!(
+            t.estado(),
+            Estado::Armada {
+                edad: 1,
+                plazo_tics: 3
+            }
+        );
+        let s = t.avanza(sucia_con_todo(), 2);
+        assert!(!s.cerrar && !s.armar);
+        assert_eq!(s.eventos[0], Some(Evento::PlazoVencido));
+        assert_eq!(t.estado(), Estado::Vencida { espera: 0 });
+    }
+
+    #[test]
+    fn vencida_y_sucia_no_vuelve_ni_reinicia_y_la_cota_sigue() {
+        let mut t = vencida_con(Transporte::con_cotas(5, 9));
+        assert_eq!(t.avanza(sucia_con_todo(), 3), Salida::default());
+        assert_eq!(t.estado(), Estado::Vencida { espera: 3 });
+        let s = t.avanza(sucia_con_todo(), 3);
+        assert_eq!(s.aviso, Some(Aviso::RanuraMuerta));
+        assert_eq!(t.estado(), Estado::Muerta);
+    }
+
+    #[test]
+    fn reiniciando_y_sucia_no_vuelve_y_la_cota_sigue() {
+        let mut t = vencida_con(Transporte::con_cotas(9, 5));
+        t.paso(Entrada {
+            reinicio_en_curso: true,
+            ..sin_nada()
+        });
+        assert_eq!(t.estado(), Estado::Reiniciando { espera: 0 });
+        assert_eq!(t.avanza(sucia_con_todo(), 5), Salida::default());
+        assert_eq!(t.estado(), Estado::Reiniciando { espera: 5 });
+        let s = t.avanza(sucia_con_todo(), 1);
+        assert_eq!(s.aviso, Some(Aviso::RanuraMuerta));
+        assert_eq!(t.estado(), Estado::Muerta);
+    }
+
+    #[test]
+    fn al_quitar_la_marca_la_ranura_sigue_como_siempre() {
+        let mut t = vencida_con(Transporte::nuevo());
+        t.avanza(sucia_con_todo(), 1);
+        let s = t.avanza(
+            Entrada {
+                sucia: false,
+                ..sucia_con_todo()
+            },
+            1,
+        );
+        assert!(
+            s.armar,
+            "con la marca quitada, la HECHA devuelve la ranura y arma"
+        );
+    }
+
+    // --- incidentes (K4) ----------------------------------------------------------------------
+
+    fn hecha(incidente: u32) -> Entrada {
+        Entrada {
+            reinicio_hecho: true,
+            incidente,
+            ..sin_nada()
+        }
+    }
+
+    fn en_curso(incidente: u32) -> Entrada {
+        Entrada {
+            reinicio_en_curso: true,
+            incidente,
+            ..sin_nada()
+        }
+    }
+
+    #[test]
+    fn cada_entrada_en_vencida_abre_un_incidente_nuevo() {
+        // Por su plazo, por un error del DMA y por la escalada de otra ranura.
+        let mut t = vencida_con(Transporte::nuevo());
+        assert_eq!(t.incidente(), 0);
+        t.paso(Entrada {
+            bajada: Some(1),
+            ..hecha(0)
+        });
+        let s = t.paso(Entrada {
+            lectura: Lectura {
+                error_dma: true,
+                ..bien()
+            },
+            ..sin_nada()
+        });
+        assert_eq!(s.aviso, Some(Aviso::ErrorDma));
+        assert_eq!(t.incidente(), 1);
+        t.paso(Entrada {
+            bajada: Some(1),
+            ..hecha(1)
+        });
+        assert!(t.declarar_vencida().is_some());
+        assert_eq!(t.incidente(), 2);
+    }
+
+    #[test]
+    fn una_hecha_de_otro_incidente_no_devuelve_la_ranura() {
+        let mut t = vencida_con(Transporte::nuevo());
+        t.paso(Entrada {
+            bajada: Some(1),
+            ..hecha(0)
+        });
+        t.paso(sin_nada());
+        assert_eq!(t.estado(), Estado::Vencida { espera: 0 });
+        assert_eq!(t.incidente(), 1);
+        // La HECHA del incidente 0 sigue publicada: no vale para el 1.
+        let s = t.paso(Entrada {
+            bajada: Some(1),
+            ..hecha(0)
+        });
+        assert!(!s.armar);
+        assert_eq!(t.estado(), Estado::Vencida { espera: 1 });
+        assert!(
+            t.paso(Entrada {
+                bajada: Some(1),
+                ..hecha(1)
+            })
+            .armar
+        );
+    }
+
+    #[test]
+    fn un_en_curso_de_otro_incidente_no_pasa_a_reiniciando() {
+        let mut t = vencida_con(Transporte::nuevo());
+        t.paso(hecha(0));
+        assert!(t.declarar_vencida().is_none(), "libre: no estaba en vuelo");
+        t.paso(con_bajada(1));
+        t.declarar_vencida();
+        assert_eq!(t.incidente(), 1);
+        t.paso(en_curso(0));
+        assert_eq!(t.estado(), Estado::Vencida { espera: 1 });
+        t.paso(en_curso(1));
+        assert_eq!(t.estado(), Estado::Reiniciando { espera: 0 });
+    }
+
+    #[test]
+    fn reiniciando_no_vuelve_con_la_hecha_de_otro_incidente() {
+        let mut t = vencida_con(Transporte::nuevo());
+        t.paso(hecha(0));
+        t.paso(con_bajada(1));
+        t.declarar_vencida();
+        t.paso(en_curso(1));
+        assert_eq!(t.estado(), Estado::Reiniciando { espera: 0 });
+        t.paso(hecha(0));
+        assert_eq!(t.estado(), Estado::Reiniciando { espera: 1 });
+        t.paso(hecha(1));
+        assert_eq!(t.estado(), Estado::Libre);
+    }
+
+    // --- periodos (K2) ---------------------------------------------------------------------
+
+    fn sin_nada() -> Entrada {
+        Entrada {
+            identidad: true,
+            ..Entrada::default()
+        }
+    }
+
+    #[test]
+    fn una_entrada_de_varios_periodos_envejece_la_transferencia_en_todos() {
+        let mut t = armada(5);
+        t.avanza(sin_nada(), 3);
+        assert_eq!(
+            t.estado(),
+            Estado::Armada {
+                edad: 3,
+                plazo_tics: 5
+            }
+        );
+        let s = t.avanza(sin_nada(), 2);
+        assert_eq!(s.eventos[0], Some(Evento::PlazoVencido));
+        assert_eq!(t.estado(), Estado::Vencida { espera: 0 });
+    }
+
+    #[test]
+    fn una_entrada_sin_periodos_no_envejece_nada() {
+        let mut t = armada(1);
+        assert_eq!(t.avanza(sin_nada(), 0), Salida::default());
+        assert_eq!(
+            t.estado(),
+            Estado::Armada {
+                edad: 0,
+                plazo_tics: 1
+            }
+        );
+        let mut t = vencida_con(Transporte::con_cotas(0, 0));
+        t.avanza(sin_nada(), 0);
+        assert_eq!(t.estado(), Estado::Vencida { espera: 0 });
+    }
+
+    #[test]
+    fn un_salto_enorme_de_periodos_no_desborda() {
+        let mut t = armada(255);
+        t.avanza(sin_nada(), u16::MAX);
+        assert_eq!(t.estado(), Estado::Vencida { espera: 0 });
+        t.avanza(sin_nada(), COTA_VENCIDA_TICS);
+        assert_eq!(
+            t.estado(),
+            Estado::Vencida {
+                espera: COTA_VENCIDA_TICS
+            }
+        );
+        t.avanza(sin_nada(), u16::MAX);
+        assert_eq!(t.estado(), Estado::Muerta);
+    }
+
+    #[test]
+    fn las_cotas_cuentan_periodos_y_no_entradas() {
+        // La misma cota, partida en entradas de 1 a 7 periodos al azar: la ranura muere en la
+        // entrada que pasa de la cota, ni antes ni despues. Con un periodo por entrada es la
+        // cuenta de siempre: muere en el tic `cota + 1` desde que entro en el estado.
+        let mut r = Xorshift(0x9E37_79B9_7F4A_7C15);
+        for _ in 0..400 {
+            let cota = (r.sig() % 400) as u16;
+            for reiniciando in [false, true] {
+                let (cv, cr) = if reiniciando {
+                    (400, cota)
+                } else {
+                    (cota, 400)
+                };
+                let mut t = vencida_con(Transporte::con_cotas(cv, cr));
+                let e = Entrada {
+                    reinicio_en_curso: reiniciando,
+                    ..sin_nada()
+                };
+                if reiniciando {
+                    t.avanza(e, 1);
+                    assert_eq!(t.estado(), Estado::Reiniciando { espera: 0 });
+                }
+                let mut total = 0u32;
+                loop {
+                    let n = 1 + (r.sig() % 7) as u16;
+                    let s = t.avanza(e, n);
+                    let antes = total;
+                    total += u32::from(n);
+                    if t.estado() == Estado::Muerta {
+                        assert_eq!(s.aviso, Some(Aviso::RanuraMuerta));
+                        assert!(
+                            antes <= u32::from(cota) && total > u32::from(cota),
+                            "cota {cota}"
+                        );
+                        break;
+                    }
+                    assert!(total <= u32::from(cota), "cota {cota}: vive con {total}");
+                }
+            }
+        }
+    }
+
     // --- Reloj64 ---------------------------------------------------------------------------
 
     #[test]
@@ -883,6 +1412,16 @@ mod tests {
         }
     }
 
+    /// Con el incidente de la maquina tres de cada cuatro veces; la cuarta, una `HECHA` o un
+    /// `en_curso` rancios.
+    fn al_azar_para(r: &mut Xorshift, t: &Transporte) -> Entrada {
+        let mut e = entrada_al_azar(r);
+        if !r.azar(4) {
+            e.incidente = t.incidente();
+        }
+        e
+    }
+
     fn entrada_al_azar(r: &mut Xorshift) -> Entrada {
         Entrada {
             lectura: Lectura {
@@ -899,6 +1438,8 @@ mod tests {
             },
             reinicio_en_curso: r.azar(3),
             reinicio_hecho: r.azar(4),
+            sucia: r.azar(10),
+            incidente: 0,
         }
     }
 
@@ -910,7 +1451,7 @@ mod tests {
             let mut t = Transporte::con_cotas(2, 4);
             for _ in 0..5000 {
                 let antes = t.estado();
-                let s = t.paso(entrada_al_azar(&mut r));
+                let s = t.paso(al_azar_para(&mut r, &t));
                 if s.armar {
                     let libre_o_cerrando = matches!(
                         antes,
@@ -934,7 +1475,7 @@ mod tests {
             let mut t = Transporte::con_cotas(2, 4);
             let (mut armadas, mut buenos, mut vencidos) = (0u32, 0u32, 0u32);
             for _ in 0..5000 {
-                let s = t.paso(entrada_al_azar(&mut r));
+                let s = t.paso(al_azar_para(&mut r, &t));
                 for e in s.eventos.into_iter().flatten() {
                     match e {
                         Evento::Armada => armadas += 1,
@@ -958,9 +1499,11 @@ mod tests {
         let mut b: [Transporte; 6] = [Transporte::nuevo(); 6];
         for _ in 0..2000 {
             for k in 0..6 {
-                let e = entrada_al_azar(&mut r_ref);
-                let e2 = entrada_al_azar(&mut r_mix);
-                assert_eq!(e, e2);
+                let e = al_azar_para(&mut r_ref, &a[k]);
+                let e2 = al_azar_para(&mut r_mix, &b[k]);
+                if k != 2 {
+                    assert_eq!(e, e2);
+                }
                 let sa = a[k].paso(e);
                 // En la segunda corrida, la ranura 2 nunca recibe lectura buena: se cuelga.
                 let e_b = if k == 2 {
