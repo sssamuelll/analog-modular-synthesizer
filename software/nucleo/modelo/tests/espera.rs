@@ -87,6 +87,54 @@ fn con_espera_un_canal_incurable_gasta_e_escaladas_y_reinicia_el_chip() {
     }
 }
 
+/// Un bloqueo del GPDMA1 de 1 ms y una retencion de P2 de `l_us`, no atomica, que arranca en
+/// cualquier punto de los 4 ms siguientes, cada 100 us (x1 de Halberg, cuarta pasada): cuantas de
+/// las 41 corridas reinician el chip.
+fn reinicios_con_retencion(cfg: &Cfg, l_us: u64) -> usize {
+    let t_ini = ms(60) + 10_000;
+    (0..=40u64)
+        .filter(|k| {
+            let mut sim = Sim::new(cfg.clone());
+            sim.hw_at(
+                t_ini,
+                HwEv::StallStart {
+                    until: t_ini + 1_000_000,
+                },
+            );
+            sim.hw_at(
+                t_ini + k * 100_000,
+                HwEv::P2 {
+                    dur: l_us * 1000,
+                    atomic: false,
+                },
+            );
+            sim.run_until(ms(250));
+            sim.iwdg_reset_at.is_some()
+        })
+        .count()
+}
+
+#[test]
+fn la_espera_cabe_en_reiniciando_junto_con_la_retencion_de_r_h1() {
+    // La espera corre dentro de `Reiniciando`: la cota tiene que cubrir la espera, la ventana de
+    // R-H1 (12 ms) y la recuperacion. Con 12,5 ms no la cubre y el chip reinicia; con la cota
+    // que pide cada espera, no.
+    for (espera_ms, cota_corta, cota_que_cabe) in [(1, 100, 112), (2, 100, 120)] {
+        let mut cfg = con_espera(espera_ms * 1_000_000);
+        cfg.escaladas = Escaladas::K1 {
+            e: 6,
+            ventana_ns: 1_000_000_000,
+        };
+        cfg.cotas = (200, cota_corta);
+        let cortas = reinicios_con_retencion(&cfg, 12_000);
+        cfg.cotas = (200, cota_que_cabe);
+        let largas = reinicios_con_retencion(&cfg, 12_000);
+        println!("espera {espera_ms} ms, P2 12 ms: reinicios {cortas}/41 con Reiniciando {cota_corta}, {largas}/41 con {cota_que_cabe}");
+        assert!(cortas > 0, "espera {espera_ms} ms");
+        assert_eq!(largas, 0, "espera {espera_ms} ms");
+    }
+}
+
 const SEMILLAS: u64 = 30;
 
 /// Las dos reglas de K1 que la junta pone una al lado de la otra, y la de `fw` hoy.
@@ -231,5 +279,119 @@ fn barrido_de_la_espera() {
                 );
             }
         }
+    }
+}
+
+/// Las tres candidatas de la ficha B tras la cuarta pasada, con la regla 6 en 1 s: sin espera y
+/// las cotas de antes, y las dos esperas con la cota de `Reiniciando` que cada una pide.
+fn propuestas() -> [(&'static str, u64, (u16, u16)); 3] {
+    [
+        ("sin espera, 200/100", 0, (200, 100)),
+        ("1 ms, 200/112", 1, (200, 112)),
+        ("2 ms, 200/120", 2, (200, 120)),
+    ]
+}
+
+fn cfg_propuesta(espera_ms: u64, cotas: (u16, u16), msg: u16) -> Cfg {
+    let mut cfg = con_espera(espera_ms * 1_000_000);
+    cfg.escaladas = Escaladas::K1 {
+        e: 6,
+        ventana_ns: 1_000_000_000,
+    };
+    cfg.cotas = cotas;
+    cfg.msg = [msg; N];
+    cfg
+}
+
+/// `cargo test -p sam17-nucleo-modelo --release --test espera -- --ignored --nocapture propuesta`.
+#[test]
+#[ignore]
+fn barrido_de_la_propuesta() {
+    for msg in [25u16, 71] {
+        let duraciones: &[u64] = if msg == 25 {
+            &[
+                1_000, 2_000, 3_000, 5_000, 7_000, 10_000, 12_000, 15_000, 20_000,
+            ]
+        } else {
+            &[1_000, 3_000, 5_000, 10_000]
+        };
+        println!("\nbloqueo del GPDMA1, mensajes de {msg} B, 5 fases: escaladas max / reinicios / mayor hueco sin tramas validas (ms)");
+        for (nombre, espera, cotas) in propuestas() {
+            let cfg = cfg_propuesta(espera, cotas, msg);
+            print!("  {nombre:20}");
+            for &d in duraciones {
+                let sims = atasco(&cfg, d);
+                let esc = sims.iter().map(|s| s.escaladas).max().unwrap();
+                let rs = sims.iter().filter(|s| s.iwdg_reset_at.is_some()).count();
+                let hueco = sims
+                    .iter()
+                    .filter(|s| s.iwdg_reset_at.is_none())
+                    .flat_map(|s| s.s.iter().map(|r| r.max_gap))
+                    .max()
+                    .map_or("-".to_string(), |g| format!("{:.2}", g as f64 / 1e6));
+                print!(" {:>15}", format!("{} ms: {esc}/{rs}/{hueco}", d / 1000));
+            }
+            println!();
+        }
+    }
+
+    println!("\nbloqueo de 1 ms y retencion de P2 no atomica de L en los 4 ms siguientes (41 arranques): reinicios");
+    for (nombre, espera, cotas) in propuestas() {
+        let cfg = cfg_propuesta(espera, cotas, 25);
+        print!("  {nombre:20}");
+        for l in [10_000u64, 11_000, 12_000] {
+            print!(
+                " L {} ms: {:>2}/41",
+                l / 1000,
+                reinicios_con_retencion(&cfg, l)
+            );
+        }
+        println!();
+    }
+
+    println!("\ncanal que el reset no cura (ranura 2, a los 50 ms)");
+    for (nombre, espera, cotas) in propuestas() {
+        let mut sim = Sim::new(cfg_propuesta(espera, cotas, 25));
+        sim.hw_at(
+            ms(50),
+            HwEv::Inject {
+                slot: 2,
+                kind: Inj::Stuck { persistente: true },
+            },
+        );
+        sim.run_until(ms(400));
+        let aj_max = (0..N)
+            .filter(|&n| n != 2)
+            .map(|n| sim.s[n].colateral)
+            .max()
+            .unwrap();
+        println!(
+            "  {nombre:20} escaladas {} tramas perdidas por vecina, max {aj_max}; reinicio a {:?} ms",
+            sim.escaladas,
+            sim.iwdg_reset_at.map(|t| (t - ms(50)) / 1_000_000)
+        );
+    }
+
+    let tasas = Tasas {
+        hang: 15.0,
+        stuck: 0.8,
+        p2: 30.0,
+        late: 5.0,
+    };
+    println!("\nfuzz2 (atascos curables 0,8/s, una tasa inventada), {SEMILLAS} x 4 s: reinicios");
+    for (nombre, espera, cotas) in propuestas() {
+        let rs = (1..=SEMILLAS)
+            .filter(|&seed| {
+                let (mut sim, t_fin, _) = montar(seed, 4, tasas, 6_250_000, &|c: &mut Cfg| {
+                    *c = Cfg {
+                        para_al_reiniciar: true,
+                        ..cfg_propuesta(espera, cotas, 25)
+                    };
+                });
+                sim.run_until(t_fin + ms(150));
+                sim.iwdg_reset_at.is_some()
+            })
+            .count();
+        println!("  {nombre:20} {rs}/{SEMILLAS}");
     }
 }
