@@ -545,3 +545,50 @@ fn al_terminar_la_recuperacion_la_trama_ya_esta_en_el_buzon() {
     println!("de HECHA al rearme, con el planificador retenido 10 ms: {rearme} ns");
     assert!(rearme <= 2 * 125_000 + 10_000, "{rearme}");
 }
+
+#[test]
+fn la_vuelta_del_contador_del_tic_no_cambia_nada() {
+    // El contador de 32 bits del tic da la vuelta a los 6,2 dias (Halberg, sexta pasada, N11).
+    // Se arranca 800 periodos antes: dos atascos de 1 ms, uno a cada lado de la vuelta, y uno que
+    // empieza en cada fase alrededor de ella, para que alguna espera la cruce, dan lo mismo que
+    // sin vuelta.
+    let antes = 0u32.wrapping_sub(800);
+    let mut reloj = Sim::new(cfg_b(true));
+    reloj.tics = antes;
+    let mut vuelta = 0;
+    while reloj.tics >= antes {
+        vuelta += 125_000;
+        reloj.run_until(vuelta);
+    }
+    let corre = |tics: u32, atascos: &[u64]| {
+        let mut sim = Sim::new(cfg_b(true));
+        sim.tics = tics;
+        for &t in atascos {
+            sim.hw_at(
+                t,
+                HwEv::StallStart {
+                    until: t + 1_000_000,
+                },
+            );
+        }
+        sim.run_until(vuelta + ms(300));
+        sim
+    };
+    let mut casos = vec![vec![ms(20), vuelta + ms(50)]];
+    casos.extend((0..40).map(|k| vec![vuelta - ms(2) + k * 50_000]));
+    let mut aplazadas = 0;
+    for atascos in &casos {
+        let sin = corre(0, atascos);
+        let con = corre(antes, atascos);
+        for (nombre, sim) in [("sin vuelta", &sin), ("con vuelta", &con)] {
+            assert!(sim.iwdg_reset_at.is_none(), "{atascos:?} {nombre}");
+            assert!((0..N).all(|n| !muerta(sim, n)), "{atascos:?} {nombre}");
+        }
+        assert_eq!(con.escaladas, sin.escaladas, "{atascos:?}");
+        aplazadas += con.aplazadas;
+    }
+    println!(
+        "vuelta a los {vuelta} ns; {} casos sin reinicio ni ranura muerta, {aplazadas} aplazadas",
+        casos.len()
+    );
+}
