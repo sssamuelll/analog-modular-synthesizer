@@ -36,6 +36,7 @@ pub const fn codigo(e: Evento) -> u8 {
         Evento::SubidaOk => 7,
         Evento::SubidaMala => 8,
         Evento::Tick => 9,
+        Evento::PlazoAjeno => 10,
     }
 }
 
@@ -51,6 +52,7 @@ pub const fn evento_de(c: u8) -> Option<Evento> {
         7 => Some(Evento::SubidaOk),
         8 => Some(Evento::SubidaMala),
         9 => Some(Evento::Tick),
+        10 => Some(Evento::PlazoAjeno),
         _ => None,
     }
 }
@@ -277,7 +279,7 @@ mod tests {
         }
     }
 
-    const TODOS: [Evento; 9] = [
+    const TODOS: [Evento; 10] = [
         Evento::Identidad(false),
         Evento::Identidad(true),
         Evento::Armada,
@@ -287,6 +289,7 @@ mod tests {
         Evento::SubidaOk,
         Evento::SubidaMala,
         Evento::Tick,
+        Evento::PlazoAjeno,
     ];
 
     // --- codigo ---------------------------------------------------------------------
@@ -298,7 +301,7 @@ mod tests {
             assert_ne!(codigo(e), 0);
         }
         assert_eq!(evento_de(0), None);
-        assert_eq!(evento_de(10), None);
+        assert_eq!(evento_de(11), None);
         assert_eq!(evento_de(255), None);
     }
 

@@ -116,7 +116,7 @@ pub struct SlotW {
     pub recuperaciones: u32,
     pub giros: u32,
     pub plazos: u32,
-    /// Plazos vencidos que declaro la escalada de otra ranura (van al anillo como propios).
+    /// Plazos ajenos que declaro la escalada de otra ranura.
     pub colateral: u32,
     pub composes: u64,
     pub last_valid: u64,
@@ -1067,7 +1067,7 @@ impl Sim {
                         continue;
                     }
                     self.s[k].sucia = true;
-                    // `escala()`: el `PlazoVencido` de las vecinas va al anillo como propio.
+                    // `escala()`: las vecinas en vuelo reciben un `PlazoAjeno`.
                     if let Some(ev) = self.s[k].tic.declarar_vencida() {
                         self.s[k].colateral += 1;
                         self.s[k].t_venc = now;
@@ -1159,8 +1159,9 @@ impl Sim {
                         let _ = self.s[n].pol.paso(Evento::SubidaOk, ahora);
                     }
                 }
-                Evento::PlazoVencido => {
-                    // La politica es la unica autoridad sobre «reiniciar».
+                Evento::PlazoVencido | Evento::PlazoAjeno => {
+                    // La politica es la unica autoridad sobre «reiniciar»; un plazo ajeno pide
+                    // la limpieza sin puntuar.
                     if self.s[n].pol.paso(ev, ahora) == Accion::Reiniciar {
                         self.s[n].rec_pedida = true;
                         self.pend_rec = true;

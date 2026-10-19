@@ -1024,8 +1024,9 @@ unsafe fn DMA2D() {
                         let _ = p.politica.paso(ev, ahora_us);
                     }
                 }
-                Evento::PlazoVencido => {
-                    // La politica es la unica autoridad sobre «reiniciar» (papel v2, §2.5).
+                Evento::PlazoVencido | Evento::PlazoAjeno => {
+                    // La politica es la unica autoridad sobre «reiniciar» (papel v2, §2.5); un
+                    // plazo ajeno pide la limpieza sin puntuar (papel v3, §2.5).
                     if p.politica.paso(ev, ahora_us) == Accion::Reiniciar {
                         #[cfg(feature = "inyeccion")]
                         if SIN_RECUPERACION.load(Ordering::Relaxed) {

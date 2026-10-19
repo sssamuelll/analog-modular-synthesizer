@@ -297,6 +297,8 @@ pub enum Evento {
     SubidaMala,
     /// Pasa el tiempo sin que ocurra nada. Deja deslizar la ventana.
     Tick,
+    /// La escalada de otra ranura dio por vencida la transferencia de esta (papel v3, §2.5).
+    PlazoAjeno,
 }
 
 /// Lo unico que la politica puede mandar hacer.
@@ -319,6 +321,7 @@ pub struct Ranura {
     estado: Estado,
     giros: u32,
     plazos_vencidos: u32,
+    plazos_ajenos: u32,
     eot_tardios: u32,
     subidas_ok: u32,
     subidas_malas: u32,
@@ -337,6 +340,7 @@ impl Ranura {
             estado: Estado::Vacia,
             giros: 0,
             plazos_vencidos: 0,
+            plazos_ajenos: 0,
             eot_tardios: 0,
             subidas_ok: 0,
             subidas_malas: 0,
@@ -362,9 +366,15 @@ impl Ranura {
             return Accion::Nada;
         }
 
-        // R-MJ6: una ranura sin identidad no se cloca ni se cuenta.
+        // R-MJ6: una ranura sin identidad no se cloca ni se cuenta. Pero un plazo, propio o
+        // ajeno, pide el reinicio igual (papel v3, K4): si el modulo se desenchufa con la
+        // transferencia en vuelo, la politica sigue siendo el unico peticionario y la ranura no
+        // muere por la cota.
         if matches!(self.estado, Estado::Vacia) {
-            return Accion::Nada;
+            return match ev {
+                Evento::PlazoVencido | Evento::PlazoAjeno => Accion::Reiniciar,
+                _ => Accion::Nada,
+            };
         }
 
         match ev {
@@ -393,6 +403,12 @@ impl Ranura {
                 self.subidas_malas += 1;
                 self.malas_seguidas += 1;
                 Accion::Nada
+            }
+            // La limpieza tras la escalada de otra ranura: se cuenta aparte y no entra en la
+            // ventana de salud (papel v3, §2.5).
+            Evento::PlazoAjeno => {
+                self.plazos_ajenos += 1;
+                Accion::Reiniciar
             }
             Evento::Armada | Evento::Tick => Accion::Nada,
             Evento::Identidad(_) => Accion::Nada,
@@ -443,6 +459,9 @@ impl Ranura {
     }
     pub fn plazos_vencidos(&self) -> u32 {
         self.plazos_vencidos
+    }
+    pub fn plazos_ajenos(&self) -> u32 {
+        self.plazos_ajenos
     }
     pub fn eot_tardios(&self) -> u32 {
         self.eot_tardios
@@ -797,10 +816,10 @@ mod tests {
     fn vacia_no_cloca_ni_cuenta() {
         let mut r = Ranura::nueva(Umbrales::POR_DEFECTO);
         assert_eq!(r.estado(), Estado::Vacia);
+        // Los plazos si piden reiniciar (K4): eso lo prueba la de abajo.
         for ev in [
             Evento::Armada,
             Evento::GiroOk,
-            Evento::PlazoVencido,
             Evento::EotTardio,
             Evento::SubidaOk,
             Evento::SubidaMala,
@@ -815,6 +834,42 @@ mod tests {
         assert_eq!(r.subidas_malas(), 0);
         assert!(!r.inestable() && !r.muda());
         assert_eq!(r.estado(), Estado::Vacia);
+    }
+
+    #[test]
+    fn un_plazo_ajeno_pide_reiniciar_y_no_puntua() {
+        // Papel v3, §2.5: la escalada de otra ranura declara vencida a esta. La politica manda
+        // el reinicio de limpieza, lo cuenta aparte y no lo anota en la ventana de salud.
+        let mut r = activa();
+        let n = u64::from(Umbrales::POR_DEFECTO.umbral_inestable);
+        for k in 0..2 * n {
+            assert_eq!(r.paso(Evento::PlazoAjeno, k), Accion::Reiniciar);
+        }
+        assert_eq!(u64::from(r.plazos_ajenos()), 2 * n);
+        assert_eq!(r.plazos_vencidos(), 0);
+        assert!(
+            !r.inestable(),
+            "un plazo ajeno no entra en la ventana de salud"
+        );
+    }
+
+    #[test]
+    fn en_vacia_un_plazo_propio_o_ajeno_pide_reiniciar_sin_contar_nada() {
+        // K4: sin modulo la ranura sigue el camino de siempre (la politica es el unico
+        // peticionario del reinicio), pero no hay salud que medir.
+        let mut r = Ranura::nueva(Umbrales::POR_DEFECTO);
+        let n = u64::from(Umbrales::POR_DEFECTO.umbral_inestable);
+        for k in 0..2 * n {
+            assert_eq!(r.paso(Evento::PlazoVencido, k), Accion::Reiniciar);
+            assert_eq!(r.paso(Evento::PlazoAjeno, k), Accion::Reiniciar);
+        }
+        assert_eq!(r.plazos_vencidos(), 0);
+        assert_eq!(r.plazos_ajenos(), 0);
+        r.paso(Evento::Identidad(true), 2 * n);
+        assert!(
+            !r.inestable(),
+            "los plazos de la ranura vacia no quedan en la ventana"
+        );
     }
 
     #[test]

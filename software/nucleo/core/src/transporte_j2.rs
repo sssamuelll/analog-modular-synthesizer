@@ -345,12 +345,12 @@ impl Transporte {
     }
 
     /// La escalada de D4.2 mato las transferencias en vuelo: la ranura que estaba
-    /// `Armada` pasa a `Vencida` de una vez, sin esperar su plazo. Devuelve el evento
-    /// para la politica, o `None` si no estaba en vuelo.
+    /// `Armada` pasa a `Vencida` de una vez, sin esperar su plazo. Devuelve el
+    /// `PlazoAjeno` para la politica, o `None` si no estaba en vuelo.
     pub fn declarar_vencida(&mut self) -> Option<Evento> {
         if matches!(self.estado, Estado::Armada { .. }) {
             self.estado = Estado::Vencida { espera: 0 };
-            Some(Evento::PlazoVencido)
+            Some(Evento::PlazoAjeno)
         } else {
             None
         }
@@ -919,7 +919,7 @@ mod tests {
     #[test]
     fn la_escalada_declara_vencida_solo_a_la_que_estaba_en_vuelo() {
         let mut t = armada(2);
-        assert_eq!(t.declarar_vencida(), Some(Evento::PlazoVencido));
+        assert_eq!(t.declarar_vencida(), Some(Evento::PlazoAjeno));
         assert_eq!(t.estado(), Estado::Vencida { espera: 0 });
         // Ya vencida, o libre, o muerta: no hay nada que declarar.
         assert_eq!(t.declarar_vencida(), None);
