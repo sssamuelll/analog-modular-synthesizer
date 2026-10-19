@@ -56,6 +56,76 @@ pub const fn tics_fusionados(delta: u32, periodo: u32) -> u32 {
     ((d + p / 2) / p - 1) as u32
 }
 
+/// Lo que una entrada del tic dice del tiempo: cuantos periodos van desde la anterior, y si
+/// la cuenta no salio limpia.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Periodos {
+    pub n: u32,
+    /// El contador de ciclos esta parado, o la diferencia entre dos eventos no es un multiplo
+    /// del periodo dentro de la tolerancia: se cuenta uno.
+    pub anomalo: bool,
+}
+
+/// El reloj del tic contado desde el instante del evento de actualizacion, no desde la entrada
+/// (papel v3, §2.7, candidata K2).
+///
+/// En cada entrada el tic lee el contador de su temporizador (lo que lleva contado desde la
+/// ultima actualizacion) y despues el contador libre de ciclos. Restar lo primero de lo segundo
+/// da el instante de la actualizacion, y la diferencia entre dos de esos instantes es un
+/// multiplo exacto del periodo por tarde que llegue la entrada: su redondeo no se equivoca, y
+/// la suma de periodos es la de la pared aunque se fundan actualizaciones.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct RelojDelTic {
+    periodo: u32,
+    ciclos_por_cuenta: u32,
+    tolerancia: u32,
+    anterior: Option<(u32, u32)>,
+}
+
+impl RelojDelTic {
+    /// `periodo` y `tolerancia` en ciclos del contador libre; `ciclos_por_cuenta`, los ciclos de
+    /// una cuenta del temporizador del tic.
+    pub const fn nuevo(periodo: u32, ciclos_por_cuenta: u32, tolerancia: u32) -> RelojDelTic {
+        RelojDelTic {
+            periodo,
+            ciclos_por_cuenta,
+            tolerancia,
+            anterior: None,
+        }
+    }
+
+    /// Una entrada del tic: `cnt` es el contador del temporizador y `ciclos` el contador libre,
+    /// leidos en ese orden.
+    pub fn entrada(&mut self, cnt: u32, ciclos: u32) -> Periodos {
+        let act = ciclos.wrapping_sub(cnt.wrapping_mul(self.ciclos_por_cuenta));
+        let anomalo = Periodos {
+            n: 1,
+            anomalo: true,
+        };
+        let Some((ciclos_ant, act_ant)) = self.anterior.replace((ciclos, act)) else {
+            return Periodos {
+                n: 1,
+                anomalo: false,
+            };
+        };
+        if ciclos == ciclos_ant || self.periodo == 0 {
+            // El contador libre no avanza: nadie lo habilito, o el nucleo duerme y lo para.
+            return anomalo;
+        }
+        // Con signo: una reentrada por la misma actualizacion puede dar unos ciclos de menos.
+        let d = i64::from(act.wrapping_sub(act_ant) as i32);
+        let p = i64::from(self.periodo);
+        let n = (d + p / 2).div_euclid(p);
+        if n < 0 || (d - n * p).unsigned_abs() > u64::from(self.tolerancia) {
+            return anomalo;
+        }
+        Periodos {
+            n: n as u32,
+            anomalo: false,
+        }
+    }
+}
+
 /// El contador de tics de 32 bits del tic, extendido a 64 por quien lo lee (el planificador).
 ///
 /// A 8 kHz el contador de 32 bits da la vuelta a los 6,2 dias, y la politica recibe como
@@ -355,6 +425,165 @@ mod tests {
     #[test]
     fn el_periodo_cero_no_divide_por_cero() {
         assert_eq!(tics_fusionados(1_000, 0), 0);
+    }
+
+    // --- RelojDelTic (K2) ---------------------------------------------------------------
+
+    /// 125 us a 800 MHz; el temporizador cuenta cada 4 ciclos.
+    const P_CICLOS: u32 = 100_000;
+    const CPC: u32 = 4;
+    const TOL: u32 = 64;
+    /// Ciclos entre leer el contador del temporizador y leer el contador libre.
+    const LECTURA: u32 = 12;
+
+    /// Las entradas del tic con estos retrasos, uno por actualizacion, sobre una pared que
+    /// empieza en `t0` ciclos: una entrada que llega despues de la actualizacion siguiente
+    /// funde a esa en ella, como el `UIF` de un temporizador. Devuelve, por entrada, la suma
+    /// de periodos del reloj y la de la pared desde la primera.
+    fn corre(t0: u32, retrasos: &[u32]) -> (Vec<(u64, u64)>, u32) {
+        let mut r = RelojDelTic::nuevo(P_CICLOS, CPC, TOL);
+        let mut out = Vec::new();
+        let mut anomalos = 0;
+        let (mut suma, mut primera) = (0u64, None);
+        let mut k = 0usize;
+        while k < retrasos.len() {
+            let t_act = u64::from(t0) + k as u64 * u64::from(P_CICLOS);
+            let t_cnt = t_act + u64::from(retrasos[k]);
+            // La actualizacion mas reciente antes de leer el contador.
+            let ultima = k + (retrasos[k] / P_CICLOS) as usize;
+            let desde = t_cnt - (u64::from(t0) + ultima as u64 * u64::from(P_CICLOS));
+            let cnt = (desde / u64::from(CPC)) as u32;
+            let ciclos = (t_cnt + u64::from(LECTURA)) as u32;
+            let p = r.entrada(cnt, ciclos);
+            anomalos += u32::from(p.anomalo);
+            let base = *primera.get_or_insert(ultima);
+            suma += u64::from(p.n);
+            out.push((suma, (ultima - base) as u64 + 1));
+            k = ultima + 1;
+        }
+        (out, anomalos)
+    }
+
+    #[test]
+    fn el_reloj_del_tic_cuenta_la_pared_por_tarde_que_lleguen_las_entradas() {
+        // Retrasos de 0 a 1,9 periodos con un generador fijo, y sobre la vuelta de 32 bits del
+        // contador libre (5,4 s a 800 MHz).
+        let mut x: u32 = 0x1234_5678;
+        let retrasos: Vec<u32> = (0..20_000)
+            .map(|_| {
+                x = x.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+                (x >> 8) % (P_CICLOS * 19 / 10)
+            })
+            .collect();
+        let (out, anomalos) = corre(u32::MAX - 5 * P_CICLOS, &retrasos);
+        assert_eq!(anomalos, 0);
+        for (i, (reloj, pared)) in out.iter().enumerate() {
+            assert_eq!(reloj, pared, "entrada {i}");
+        }
+    }
+
+    #[test]
+    fn uno_de_cada_dos_tics_tarde_no_hace_correr_al_reloj() {
+        // Tercera pasada de la junta (Halberg N2): con uno de cada dos tics entre 63 y 124 us
+        // tarde, sumar el redondeo de cada intervalo entre entradas corre x1,5 y la cota de
+        // 25 ms vence a los 16,75 ms de pared. 25 ms son 200 periodos.
+        let retrasos: Vec<u32> = (0..200u32)
+            .map(|k| if k % 2 == 0 { 0 } else { 50_400 + (k % 31) * 1_600 })
+            .collect();
+        let (out, _) = corre(1_000, &retrasos);
+        assert_eq!(out.last().copied(), Some((200, 200)));
+    }
+
+    #[test]
+    fn una_reentrada_por_la_misma_actualizacion_no_cuenta_periodos() {
+        // La ISR vuelve a entrar porque la escritura que borra `UIF` no llego a tiempo: el
+        // temporizador sigue contando desde la misma actualizacion.
+        let mut r = RelojDelTic::nuevo(P_CICLOS, CPC, TOL);
+        r.entrada(250, 1_000 + 250 * CPC);
+        assert_eq!(
+            r.entrada(300, 1_000 + 300 * CPC),
+            Periodos {
+                n: 0,
+                anomalo: false
+            }
+        );
+    }
+
+    #[test]
+    fn una_reentrada_que_lee_unos_ciclos_antes_tampoco_cuenta_periodos() {
+        // El contador del temporizador redondea hacia abajo: el instante sale hasta una cuenta
+        // antes o despues, y la diferencia puede ser negativa.
+        let mut r = RelojDelTic::nuevo(P_CICLOS, CPC, TOL);
+        r.entrada(250, 1_000 + 250 * CPC + 3);
+        assert_eq!(
+            r.entrada(300, 1_000 + 300 * CPC),
+            Periodos {
+                n: 0,
+                anomalo: false
+            }
+        );
+    }
+
+    #[test]
+    fn un_evento_anterior_al_ultimo_cuenta_uno_y_lo_marca() {
+        let mut r = RelojDelTic::nuevo(P_CICLOS, CPC, TOL);
+        r.entrada(0, 10 * P_CICLOS);
+        assert_eq!(
+            r.entrada(0, 9 * P_CICLOS),
+            Periodos {
+                n: 1,
+                anomalo: true
+            }
+        );
+    }
+
+    #[test]
+    fn con_el_contador_de_ciclos_parado_cuenta_uno_y_lo_marca() {
+        // Sin sonda, nadie habilita `DWT_CYCCNT` (R-H9): el contador libre lee siempre lo mismo.
+        let mut r = RelojDelTic::nuevo(P_CICLOS, CPC, TOL);
+        r.entrada(10, 0);
+        for cnt in [12, 9, 15, 10] {
+            assert_eq!(
+                r.entrada(cnt, 0),
+                Periodos {
+                    n: 1,
+                    anomalo: true
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn una_diferencia_que_no_es_un_multiplo_del_periodo_cuenta_uno_y_lo_marca() {
+        let mut r = RelojDelTic::nuevo(P_CICLOS, CPC, TOL);
+        r.entrada(0, 0);
+        assert_eq!(
+            r.entrada(0, P_CICLOS * 3 / 2),
+            Periodos {
+                n: 1,
+                anomalo: true
+            }
+        );
+        // Y la siguiente cuenta otra vez desde esa, sin arrastrar el error.
+        assert_eq!(
+            r.entrada(0, P_CICLOS * 3 / 2 + 2 * P_CICLOS + TOL - 1),
+            Periodos {
+                n: 2,
+                anomalo: false
+            }
+        );
+    }
+
+    #[test]
+    fn la_primera_entrada_cuenta_un_periodo() {
+        let mut r = RelojDelTic::nuevo(P_CICLOS, CPC, TOL);
+        assert_eq!(
+            r.entrada(40, 7_777),
+            Periodos {
+                n: 1,
+                anomalo: false
+            }
+        );
     }
 
     // --- Libre -------------------------------------------------------------------
