@@ -855,13 +855,8 @@ impl Sim {
                 self.tic_next_slot(0, job);
             }
             Fx::TicRead(n) => {
-                if self.s[n].sucia {
-                    // `fw`: el tic no toca una ranura sucia (`continue`).
-                    self.tic_next_slot(n + 1, job);
-                    return;
-                }
                 let antes = self.s[n].tic.estado();
-                let lectura = if matches!(antes, Estado::Armada { .. }) {
+                let lectura = if matches!(antes, Estado::Armada { .. }) && !self.s[n].sucia {
                     self.lee(n)
                 } else {
                     Lectura::default()
@@ -888,6 +883,7 @@ impl Sim {
                         bajada,
                         reinicio_en_curso: en_curso,
                         reinicio_hecho: hecho,
+                        sucia: s.sucia,
                     },
                     per,
                 );

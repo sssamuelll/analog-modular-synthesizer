@@ -181,6 +181,8 @@ pub struct Entrada {
     pub reinicio_en_curso: bool,
     /// La recuperacion termino y han pasado `T_GAP_REARME`.
     pub reinicio_hecho: bool,
+    /// La escalada reseteo el GPDMA1 y los canales de esta ranura aun no estan reprogramados.
+    pub sucia: bool,
 }
 
 /// Lo que la maquina cuenta sin que sea un evento de la politica.
@@ -282,6 +284,17 @@ impl Transporte {
     /// esperas avanzan en periodos, no en entradas (papel v3, §2.7). Una espera muere en la
     /// entrada que la lleva mas alla de su cota.
     pub fn avanza(&mut self, e: Entrada, periodos: u16) -> Salida {
+        // Papel v3, §2.2 (K3): con la marca puesta no se lee ni se arma, y la marca gana a la
+        // recuperacion; solo cuentan el plazo y las cotas. Sin identidad, `Libre` espera sin
+        // avisar.
+        let e = if e.sucia {
+            Entrada {
+                sucia: true,
+                ..Entrada::default()
+            }
+        } else {
+            e
+        };
         let s = Salida::default();
         match self.estado {
             Estado::Muerta => s,
@@ -909,6 +922,7 @@ mod tests {
             bajada: Some(1),
             reinicio_en_curso: true,
             reinicio_hecho: true,
+            sucia: false,
         };
         for _ in 0..50 {
             assert_eq!(t.paso(todo), Salida::default());
@@ -1039,6 +1053,88 @@ mod tests {
         });
         assert_eq!(s.aviso, Some(Aviso::RanuraMuerta));
         assert_eq!(t.estado(), Estado::Muerta);
+    }
+
+    // --- sucia (K3) -------------------------------------------------------------------------
+
+    /// Todo lo que haria salir a la ranura de su estado, con la marca puesta.
+    fn sucia_con_todo() -> Entrada {
+        Entrada {
+            lectura: bien(),
+            identidad: true,
+            bajada: Some(1),
+            reinicio_en_curso: true,
+            reinicio_hecho: true,
+            sucia: true,
+        }
+    }
+
+    #[test]
+    fn libre_y_sucia_espera_sin_armar_ni_avisar() {
+        let mut t = Transporte::nuevo();
+        for _ in 0..1000 {
+            assert_eq!(t.avanza(sucia_con_todo(), 3), Salida::default());
+            assert_eq!(t.estado(), Estado::Libre);
+        }
+    }
+
+    #[test]
+    fn armada_y_sucia_no_lee_y_el_plazo_sigue_contando() {
+        let mut t = armada(3);
+        assert_eq!(t.avanza(sucia_con_todo(), 1), Salida::default());
+        assert_eq!(
+            t.estado(),
+            Estado::Armada {
+                edad: 1,
+                plazo_tics: 3
+            }
+        );
+        let s = t.avanza(sucia_con_todo(), 2);
+        assert!(!s.cerrar && !s.armar);
+        assert_eq!(s.eventos[0], Some(Evento::PlazoVencido));
+        assert_eq!(t.estado(), Estado::Vencida { espera: 0 });
+    }
+
+    #[test]
+    fn vencida_y_sucia_no_vuelve_ni_reinicia_y_la_cota_sigue() {
+        let mut t = vencida_con(Transporte::con_cotas(5, 9));
+        assert_eq!(t.avanza(sucia_con_todo(), 3), Salida::default());
+        assert_eq!(t.estado(), Estado::Vencida { espera: 3 });
+        let s = t.avanza(sucia_con_todo(), 3);
+        assert_eq!(s.aviso, Some(Aviso::RanuraMuerta));
+        assert_eq!(t.estado(), Estado::Muerta);
+    }
+
+    #[test]
+    fn reiniciando_y_sucia_no_vuelve_y_la_cota_sigue() {
+        let mut t = vencida_con(Transporte::con_cotas(9, 5));
+        t.paso(Entrada {
+            reinicio_en_curso: true,
+            ..sin_nada()
+        });
+        assert_eq!(t.estado(), Estado::Reiniciando { espera: 0 });
+        assert_eq!(t.avanza(sucia_con_todo(), 5), Salida::default());
+        assert_eq!(t.estado(), Estado::Reiniciando { espera: 5 });
+        let s = t.avanza(sucia_con_todo(), 1);
+        assert_eq!(s.aviso, Some(Aviso::RanuraMuerta));
+        assert_eq!(t.estado(), Estado::Muerta);
+    }
+
+    #[test]
+    fn al_quitar_la_marca_la_ranura_sigue_como_siempre() {
+        let mut t = vencida_con(Transporte::nuevo());
+        t.avanza(sucia_con_todo(), 1);
+        let s = t.avanza(
+            Entrada {
+                sucia: false,
+                ..sucia_con_todo()
+            },
+            1,
+        );
+        assert!(
+            s.armar,
+            "con la marca quitada, la HECHA devuelve la ranura y arma"
+        );
     }
 
     // --- periodos (K2) ---------------------------------------------------------------------
@@ -1207,6 +1303,7 @@ mod tests {
             },
             reinicio_en_curso: r.azar(3),
             reinicio_hecho: r.azar(4),
+            sucia: r.azar(10),
         }
     }
 

@@ -824,14 +824,14 @@ unsafe fn TIM7() {
         let Some(hw) = (unsafe { &*HW[n].0.get() }).as_ref() else {
             continue;
         };
-        if SUCIA[n].load(Ordering::Relaxed) {
-            continue;
-        }
+        // La marca entra en la maquina (papel v3, §2.2, K3): no se lee ni se arma, y las
+        // esperas siguen contando contra sus cotas.
+        let sucia = SUCIA[n].load(Ordering::Relaxed);
         let t = unsafe { &mut *TIC[n].0.get() };
         let antes = t.transporte.estado();
         #[cfg(feature = "perfil")]
         let a0 = DWT::cycle_count();
-        let lectura = if matches!(antes, Estado::Armada { .. }) {
+        let lectura = if matches!(antes, Estado::Armada { .. }) && !sucia {
             hw.lee()
         } else {
             Lectura::default()
@@ -861,6 +861,7 @@ unsafe fn TIM7() {
                 bajada,
                 reinicio_en_curso: en_curso,
                 reinicio_hecho: hecho,
+                sucia,
             },
             periodos,
         );
