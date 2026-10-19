@@ -632,3 +632,89 @@ const _: () = {
 pub fn juez_del_banco(_n: usize, subida: &[u8]) -> bool {
     subida == PATRON_SUBIDA
 }
+
+/// Los jueces con el CRC del sobre de la subida (cabecera del J2, D1: CRC-16/CCITT-FALSE de
+/// todo menos los dos ultimos bytes, que lo llevan en little-endian), para medir en `carga_j2`
+/// lo que cuesta: por bits (`descubrimiento::crc16`, el que reutiliza `core`), por tabla y con
+/// la unidad CRC. El patron del banco no lleva un CRC valido, asi que el veredicto sigue siendo
+/// el de [`juez_del_banco`]: el CRC se calcula y se compara igual, y la politica recorre el
+/// mismo camino que sin el.
+fn crc_del_sobre(subida: &[u8], crc: impl FnOnce(&[u8]) -> u16) {
+    let (cuerpo, cola) = subida.split_at(subida.len().saturating_sub(2));
+    let ok = cola.len() == 2 && crc(cuerpo) == u16::from_le_bytes([cola[0], cola[1]]);
+    core::hint::black_box(ok);
+}
+
+pub fn juez_crc_bits(n: usize, subida: &[u8]) -> bool {
+    crc_del_sobre(subida, sam17_nucleo_core::descubrimiento::crc16);
+    juez_del_banco(n, subida)
+}
+
+/// La tabla del CRC donde la lee el planificador: con `j2-tcm`, en la DTCM (512 B).
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static TABLA_CRC: [u16; 256] = sam17_nucleo_core::descubrimiento::TABLA_CRC16;
+
+pub fn juez_crc_tabla(n: usize, subida: &[u8]) -> bool {
+    crc_del_sobre(subida, |d| {
+        sam17_nucleo_core::descubrimiento::crc16_con(&TABLA_CRC, d)
+    });
+    juez_del_banco(n, subida)
+}
+
+pub fn juez_crc_unidad(n: usize, subida: &[u8]) -> bool {
+    crc_del_sobre(subida, crc_unidad);
+    juez_del_banco(n, subida)
+}
+
+/// Enciende la unidad CRC con el CRC-16/CCITT-FALSE (polinomio de 16 bits `0x1021`, inicial
+/// `0xFFFF`, sin reflejar) y comprueba que da lo mismo que `descubrimiento::crc16` con el vector
+/// canonico (`"123456789"` -> `0x29B1`) y con todos los largos hasta 71 de un contenido
+/// pseudoaleatorio. Si no, el CRC del sobre no puede ir en la unidad (cabecera, §10, riesgo 5).
+pub fn prepara_crc_unidad() {
+    use embassy_stm32::pac::crc::vals;
+    embassy_stm32::rcc::enable_and_reset::<peripherals::CRC>();
+    pac::CRC.pol().write_value(0x1021);
+    pac::CRC.init().write_value(0xFFFF);
+    pac::CRC.cr().write(|w| {
+        w.set_polysize(vals::Polysize::Polysize16);
+        w.set_rev_in(vals::RevIn::Normal);
+        w.set_rev_out(vals::RevOut::Normal);
+    });
+    assert_eq!(crc_unidad(b"123456789"), 0x29B1);
+    let mut datos = [0u8; 71];
+    let mut x: u32 = 1;
+    for b in datos.iter_mut() {
+        x = x.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+        *b = (x >> 24) as u8;
+    }
+    for largo in 0..=datos.len() {
+        assert_eq!(
+            crc_unidad(&datos[..largo]),
+            sam17_nucleo_core::descubrimiento::crc16(&datos[..largo])
+        );
+    }
+}
+
+/// El CRC con la unidad. La unidad mete primero el bit mas alto de lo que se le escribe y el
+/// sobre va byte a byte desde el primero, asi que cada palabra va con sus bytes dados la vuelta
+/// (`REV`); la cola, por media palabra y por byte.
+pub fn crc_unidad(datos: &[u8]) -> u16 {
+    let crc = pac::CRC;
+    crc.cr().modify(|w| w.set_reset(true));
+    let mut palabras = datos.chunks_exact(4);
+    for p in &mut palabras {
+        crc.dr32()
+            .write_value(u32::from_be_bytes([p[0], p[1], p[2], p[3]]));
+    }
+    let resto = palabras.remainder();
+    let mut i = 0;
+    if resto.len() >= 2 {
+        crc.dr16()
+            .write_value(u16::from_be_bytes([resto[0], resto[1]]));
+        i = 2;
+    }
+    if resto.len() > i {
+        crc.dr8().write_value(resto[i]);
+    }
+    crc.dr32().read() as u16
+}
