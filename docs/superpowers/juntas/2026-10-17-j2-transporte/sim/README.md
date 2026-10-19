@@ -6,6 +6,7 @@ Lo escribió Halberg durante la junta: modela la máquina de `core::transporte_j
 |---|---|---|
 | `junta2/` | segunda (`junta2_halberg.md`) | el v3 anterior a la junta, con el presupuesto de escaladas que se retiró |
 | `junta3/` | tercera (`junta3_halberg.md`) | el v3 absorbido: permiso de la política, periodos reconstruidos, `SUCIA` en `Vencida`, supervisor de R-H8 |
+| `junta4/` a `junta6/` | cuarta a sexta (`junta4_halberg.md` a `junta6_halberg.md`) | pruebas de Halberg sobre el modelo de `software/nucleo/modelo`, no sobre este simulador, con el parche de instrumentación cuando lo hubo |
 
 No es parte del workspace de `software/nucleo` ni lo compilan las puertas. Para correrlo:
 
