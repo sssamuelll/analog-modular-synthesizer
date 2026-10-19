@@ -23,11 +23,11 @@ use crate::maestro_j2::Evento;
 /// v2 decia 2: el planificador y la recuperacion van por debajo de USB y pantalla (P2), y una
 /// retencion de 350 us de P2 coincidiendo con un cuelgue bastaba para matar la ranura y, con
 /// ella, el instrumento (revision de Halberg del 17-10, hallazgo 1). 100 tics son 12,5 ms.
-pub const COTA_VENCIDA_TICS: u8 = 100;
+pub const COTA_VENCIDA_TICS: u16 = 100;
 /// Tics que `Reiniciando` espera a que la recuperacion acabe (v2: 4). ESTIMADO. Las dos cotas
 /// suman 25 ms, la mitad de lo que el modulo aguanta sin tramas (400 giros, ~50 ms): una
 /// ranura se da por muerta antes de que el modulo se rinda solo.
-pub const COTA_REINICIANDO_TICS: u8 = 100;
+pub const COTA_REINICIANDO_TICS: u16 = 100;
 
 /// Cuantos tics dura un plazo de `plazo_us` microsegundos: el entero hacia
 /// arriba, y nunca menos de uno (una transferencia armada en un tic se mira como
@@ -161,12 +161,12 @@ impl Reloj64 {
 pub enum Estado {
     /// El SPI esta apagado y la ranura espera una bajada.
     Libre,
-    /// Una transferencia en vuelo: lleva `edad` tics y tiene `plazo_tics`.
-    Armada { edad: u8, plazo_tics: u8 },
+    /// Una transferencia en vuelo: lleva `edad` periodos del tic y tiene `plazo_tics`.
+    Armada { edad: u16, plazo_tics: u8 },
     /// El plazo vencio; espera a que la politica pida el reinicio y arranque.
-    Vencida { espera: u8 },
+    Vencida { espera: u16 },
     /// La recuperacion esta en curso.
-    Reiniciando { espera: u8 },
+    Reiniciando { espera: u16 },
     /// Se paso de las cotas: ya no arma ni sella. El IWDG del hub se queda sin sello.
     Muerta,
 }
@@ -232,8 +232,8 @@ impl Salida {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Transporte {
     estado: Estado,
-    cota_vencida: u8,
-    cota_reiniciando: u8,
+    cota_vencida: u16,
+    cota_reiniciando: u16,
 }
 
 impl Transporte {
@@ -242,7 +242,7 @@ impl Transporte {
     }
 
     /// Como [`Transporte::nuevo`], con otras cotas de espera para `Vencida` y `Reiniciando`.
-    pub const fn con_cotas(vencida: u8, reiniciando: u8) -> Transporte {
+    pub const fn con_cotas(vencida: u16, reiniciando: u16) -> Transporte {
         Transporte {
             estado: Estado::Libre,
             cota_vencida: vencida,
@@ -286,8 +286,15 @@ impl Transporte {
         }
     }
 
-    /// Un tic. Lee `entrada`, cambia de estado y dice que hacer.
+    /// Un tic de un periodo. Lee `entrada`, cambia de estado y dice que hacer.
     pub fn paso(&mut self, e: Entrada) -> Salida {
+        self.avanza(e, 1)
+    }
+
+    /// Un tic que trae `periodos` periodos del reloj del tic ([`RelojDelTic`]): la edad y las
+    /// esperas avanzan en periodos, no en entradas (papel v3, §2.7). Una espera muere en la
+    /// entrada que la lleva mas alla de su cota.
+    pub fn avanza(&mut self, e: Entrada, periodos: u16) -> Salida {
         let s = Salida::default();
         match self.estado {
             Estado::Muerta => s,
@@ -307,13 +314,13 @@ impl Transporte {
                     // El EOT y los dos canales acabados: lo que el tic encuentra es la
                     // verdad de este instante, tambien en el tic del vencimiento.
                     self.desde_libre(&e, Salida { cerrar: true, ..s }.con_evento(Evento::GiroOk))
-                } else if edad.saturating_add(1) >= plazo_tics {
+                } else if edad.saturating_add(periodos) >= u16::from(plazo_tics) {
                     // El SPI se deja como esta: la recuperacion lo resetea.
                     self.estado = Estado::Vencida { espera: 0 };
                     s.con_evento(Evento::PlazoVencido)
                 } else {
                     self.estado = Estado::Armada {
-                        edad: edad + 1,
+                        edad: edad + periodos,
                         plazo_tics,
                     };
                     s
@@ -326,20 +333,24 @@ impl Transporte {
                 } else if e.reinicio_en_curso {
                     self.estado = Estado::Reiniciando { espera: 0 };
                     s
-                } else if espera >= self.cota_vencida {
+                } else if espera.saturating_add(periodos) > self.cota_vencida {
                     self.muerta(s)
                 } else {
-                    self.estado = Estado::Vencida { espera: espera + 1 };
+                    self.estado = Estado::Vencida {
+                        espera: espera + periodos,
+                    };
                     s
                 }
             }
             Estado::Reiniciando { espera } => {
                 if e.reinicio_hecho {
                     self.desde_libre(&e, s)
-                } else if espera >= self.cota_reiniciando {
+                } else if espera.saturating_add(periodos) > self.cota_reiniciando {
                     self.muerta(s)
                 } else {
-                    self.estado = Estado::Reiniciando { espera: espera + 1 };
+                    self.estado = Estado::Reiniciando {
+                        espera: espera + periodos,
+                    };
                     s
                 }
             }
@@ -1060,6 +1071,99 @@ mod tests {
         });
         assert_eq!(s.aviso, Some(Aviso::RanuraMuerta));
         assert_eq!(t.estado(), Estado::Muerta);
+    }
+
+    // --- periodos (K2) ---------------------------------------------------------------------
+
+    fn sin_nada() -> Entrada {
+        Entrada {
+            identidad: true,
+            ..Entrada::default()
+        }
+    }
+
+    #[test]
+    fn una_entrada_de_varios_periodos_envejece_la_transferencia_en_todos() {
+        let mut t = armada(5);
+        t.avanza(sin_nada(), 3);
+        assert_eq!(
+            t.estado(),
+            Estado::Armada {
+                edad: 3,
+                plazo_tics: 5
+            }
+        );
+        let s = t.avanza(sin_nada(), 2);
+        assert_eq!(s.eventos[0], Some(Evento::PlazoVencido));
+        assert_eq!(t.estado(), Estado::Vencida { espera: 0 });
+    }
+
+    #[test]
+    fn una_entrada_sin_periodos_no_envejece_nada() {
+        let mut t = armada(1);
+        assert_eq!(t.avanza(sin_nada(), 0), Salida::default());
+        assert_eq!(
+            t.estado(),
+            Estado::Armada {
+                edad: 0,
+                plazo_tics: 1
+            }
+        );
+        let mut t = vencida_con(Transporte::con_cotas(0, 0));
+        t.avanza(sin_nada(), 0);
+        assert_eq!(t.estado(), Estado::Vencida { espera: 0 });
+    }
+
+    #[test]
+    fn un_salto_enorme_de_periodos_no_desborda() {
+        let mut t = armada(255);
+        t.avanza(sin_nada(), u16::MAX);
+        assert_eq!(t.estado(), Estado::Vencida { espera: 0 });
+        t.avanza(sin_nada(), COTA_VENCIDA_TICS);
+        assert_eq!(
+            t.estado(),
+            Estado::Vencida {
+                espera: COTA_VENCIDA_TICS
+            }
+        );
+        t.avanza(sin_nada(), u16::MAX);
+        assert_eq!(t.estado(), Estado::Muerta);
+    }
+
+    #[test]
+    fn las_cotas_cuentan_periodos_y_no_entradas() {
+        // La misma cota, partida en entradas de 1 a 7 periodos al azar: la ranura muere en la
+        // entrada que pasa de la cota, ni antes ni despues. Con un periodo por entrada es la
+        // cuenta de siempre: muere en el tic `cota + 1` desde que entro en el estado.
+        let mut r = Xorshift(0x9E37_79B9_7F4A_7C15);
+        for _ in 0..400 {
+            let cota = (r.sig() % 400) as u16;
+            for reiniciando in [false, true] {
+                let (cv, cr) = if reiniciando { (400, cota) } else { (cota, 400) };
+                let mut t = vencida_con(Transporte::con_cotas(cv, cr));
+                let e = Entrada {
+                    reinicio_en_curso: reiniciando,
+                    ..sin_nada()
+                };
+                if reiniciando {
+                    t.avanza(e, 1);
+                    assert_eq!(t.estado(), Estado::Reiniciando { espera: 0 });
+                }
+                let mut total = 0u32;
+                loop {
+                    let n = 1 + (r.sig() % 7) as u16;
+                    let s = t.avanza(e, n);
+                    let antes = total;
+                    total += u32::from(n);
+                    if t.estado() == Estado::Muerta {
+                        assert_eq!(s.aviso, Some(Aviso::RanuraMuerta));
+                        assert!(antes <= u32::from(cota) && total > u32::from(cota), "cota {cota}");
+                        break;
+                    }
+                    assert!(total <= u32::from(cota), "cota {cota}: vive con {total}");
+                }
+            }
+        }
     }
 
     // --- Reloj64 ---------------------------------------------------------------------------
