@@ -125,6 +125,9 @@ contaminador-32k = ["contaminador"]
 # Ademas de la D-cache, el contaminador deja fria la I-cache: la invalida (ICIALLU) entre
 # vuelta y vuelta, y el planificador la invalida al entrar. Cota del peor caso de cache.
 contaminador-icache = ["contaminador"]
+# El USB del instrumento (el `atender` de `main.rs`) girando junto al J2 en `carga_j2`, para
+# medir con los testigos lo que le impone al tic (#443). Solo para el banco.
+con-usb = []
 # El juez de `carga_j2` con el CRC del sobre de la subida (cabecera del J2, D1), para medir
 # lo que cuesta: por bits (`descubrimiento::crc16`), por tabla de 256 entradas, o con la
 # unidad CRC. El veredicto sigue siendo el del juez del banco. Solo para el banco.

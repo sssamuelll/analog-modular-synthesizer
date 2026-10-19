@@ -474,6 +474,28 @@ async fn main(spawner: Spawner) {
         juez_del_banco,
         PERIODO_US,
     );
+    // Con `con-usb`, el USB del instrumento (el mismo `atender` de `main.rs`, con su lazo de 1 ms)
+    // gira junto al J2: lo que le impone al tic se ve en los testigos (#443).
+    #[cfg(feature = "con-usb")]
+    {
+        use sam17_nucleo_core::partes::{Parte, Partes, Repartidor};
+        use sam17_nucleo_core::servidor::Instrumento;
+        static INSTRUMENTO: static_cell::StaticCell<Instrumento> = static_cell::StaticCell::new();
+        const PARTE: [Parte; 1] = [Parte {
+            canal: 0,
+            nota_min: 0,
+            nota_max: 127,
+            voces: 4,
+            primera_voz: 0,
+            preset: 0,
+        }];
+        let partes = Partes::from_slice(&PARTE).expect("la parte no cabe");
+        let instrumento = INSTRUMENTO
+            .init(Instrumento::con_medidas().con_partes(partes, Repartidor::nueva(4)));
+        let puertos = usb::montar(usb::driver(p.USB1_OTG_HS));
+        spawner.spawn(defmt::unwrap!(usb::correr_usb(puertos.dispositivo)));
+        spawner.spawn(defmt::unwrap!(usb::atender(puertos.midi, instrumento)));
+    }
     #[cfg(feature = "transporte-tic")]
     {
         let (base, largo) = sam17_nucleo_fw::j2_tic::region();

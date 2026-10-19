@@ -29,8 +29,24 @@ LA FILA DEL J2
   DMA, el CRC de la subida y los contadores de salud --, y NO componer la
   trama, que es la fila de abajo. Sale de `carga_j2.csv` por el mismo camino que
   la puerta `recuperacion_j2_budget.py`: la mejor fila a 800 MHz con las
-  cachés del hub, por 6 ranuras x 8 kHz giros por segundo. Mientras no haya una,
-  es HUECO, y las cifras de exploracion de EN-PLACA (sin region MPU) no son filas.
+  cachés del hub, por 6 ranuras x 8 kHz giros por segundo. Las cifras de
+  exploracion de EN-PLACA (sin region MPU) no son filas. Mientras el CSV no tenga
+  una del transporte por tic, la fila lleva la cifra que firmo la ficha J del acta
+  del 2026-10-19 (tercera firma), como ESTIMADO: la columna de seis ranuras es
+  aritmetica sobre la medida con tres.
+
+LAS OBLIGACIONES DE TIEMPO (R-H6, la segunda tabla)
+
+  El papel v3 del transporte del J2 (R-H6) pide dos tablas: la de ciclos de
+  arriba y una de obligaciones de tiempo que el J2 le pone al hub -- niveles,
+  ventanas de inanicion, maximo enmascarado, huella en TCM y ocupacion
+  sostenida del nivel 2 --, que son la moneda de R-H1 a R-H4. Una obligacion es
+  HUECO hasta que el hub muestre que la cumple; una cifra del banco del J2 es
+  evidencia, no prueba del hub. La de la ocupacion sostenida la pide el acta
+  del 2026-10-19 (tercera firma, nota de la ficha C): con el nivel 2 ocupado
+  ~94 % durante ~100 ms un bloqueo del GPDMA1 encadena incidentes, las ranuras
+  sobreviven y los modulos pasan de 60 a 85 ms sin trama (S, Halberg N13), y el
+  aserto del modulo, que vale por incidente, no lo ve.
 
 LO QUE ESTE GUION DECIDE Y LO QUE NO
 
@@ -55,6 +71,13 @@ import recuperacion_j2_budget as rj  # noqa: E402
 
 MEDIDO, ESTIMADO, HUECO = "MEDIDO", "ESTIMADO", "HUECO"
 
+# La cifra de la fila del J2 que firmo la ficha J (acta del 2026-10-19, tercera firma), con la
+# salida y la cadena ya medidas: los cuerpos del tic y del planificador por el DWT (2 329) mas
+# la entrada, la cadena y la salida de la excepcion (301 por tic, entre tres ranuras), con TCM,
+# las dos caches frias y el CRC por tabla, firmware 50d43c3 (fw/EN-PLACA.md). Es ESTIMADO
+# porque la columna de seis ranuras es aritmetica sobre la medida con tres.
+J2_TIC_CICLOS_POR_GIRO = 2_429
+
 
 @dataclass(frozen=True)
 class Fila:
@@ -63,6 +86,15 @@ class Fila:
     estado: str
     ciclos_por_s: float | None
     nota: str = ""
+
+
+@dataclass(frozen=True)
+class Obligacion:
+    nombre: str
+    limite: str
+    fuente: str
+    estado: str
+    evidencia: str = ""
 
 
 def fraccion(ciclos_por_s: float) -> float:
@@ -90,8 +122,10 @@ def fila_j2() -> Fila:
     a_diseno = [int(f["ciclos_por_giro"]) for f in rj.lee_carga()
                 if float(f["f_cpu_hz"]) >= cm.F_CPU]
     if not a_diseno:
-        return Fila("J2: el trabajo propio del enlace", "spec del maestro J2 (D5.1)", HUECO, None,
-                    "carga_j2.csv no tiene fila a 800 MHz con las caches del hub; "
+        return Fila("J2: el trabajo propio del enlace", "acta del 2026-10-19, tercera firma, ficha J",
+                    ESTIMADO, J2_TIC_CICLOS_POR_GIRO * giros_s,
+                    f"transporte por tic: {J2_TIC_CICLOS_POR_GIRO} ciclos por giro x {giros_s:.0f} giros/s, "
+                    "medido con tres ranuras (EN-PLACA); "
                     f"limite provisional: {rj.FRACCION_CPU_J2*100:.0f} %")
     mejor = min(a_diseno)
     return Fila("J2: el trabajo propio del enlace", "spec del maestro J2 (D5.1)", MEDIDO,
@@ -118,6 +152,35 @@ def censo() -> list[Fila]:
     ]
 
 
+def veredicto_obligaciones(obligaciones: list[Obligacion]) -> int:
+    """0 si el hub probo todas, 2 si queda alguna sin prueba."""
+    return 2 if any(o.estado == HUECO for o in obligaciones) else 0
+
+
+def obligaciones() -> list[Obligacion]:
+    v3 = "papel v3 del transporte del J2"
+    acta = "acta del 2026-10-19, tercera firma"
+    return [
+        Obligacion("R-H1: ninguna ISR por encima del tic", "el tic en el nivel 1, nada en el 0",
+                   f"{v3}, R-H1", HUECO, "hoy el USB de embassy queda en el nivel 0"),
+        Obligacion("R-H1: inanicion del planificador (P3)",
+                   "<= 12 ms de pendiente a terminado", f"{v3}, R-H1; {acta}, fichas B y C", HUECO,
+                   "testigo LATENCIA_PLAN_MAX, solo en el banco"),
+        Obligacion("R-H1: inanicion de la recuperacion (P4)",
+                   "<= 12 ms de pendiente a terminado", f"{v3}, R-H1; {acta}, fichas B y C", HUECO,
+                   "testigo de la recuperacion, solo en el modelo (#455)"),
+        Obligacion("R-H2: maximo enmascarado", "<= 5 us por seccion critica", f"{v3}, R-H2", HUECO),
+        Obligacion("R-H2: entrada del tic", "<= 60 us desde su instante", f"{v3}, R-H2 y 2.8", HUECO,
+                   "banco: 9 us con el USB del instrumento sin trafico (EN-PLACA)"),
+        Obligacion("R-H4: el enlace del J2 en TCM", "ITCM 8 224 B y DTCM 5 128 B (referencia)",
+                   f"{acta}, ficha H", HUECO, "reservarlas y las dos obligaciones de arranque (#231)"),
+        Obligacion("R-H6: ocupacion sostenida del nivel 2", "excluir ~94 % durante ~100 ms",
+                   f"{acta}, nota de la ficha C (Halberg N13)", HUECO),
+        Obligacion("R-H9: el contador de ciclos corre siempre", "DWT_CYCCNT encendido y sin parar",
+                   f"{v3}, R-H9", HUECO, "y si el nucleo duerme con el J2 girando"),
+    ]
+
+
 def _autocomprobacion() -> None:
     """Las dos puertas, contra filas sinteticas: lo que pasa del nucleo falla, y un HUECO no suma."""
     una = Fila("a", "x", MEDIDO, 400e6)
@@ -131,6 +194,14 @@ def _autocomprobacion() -> None:
         pass
     else:
         raise AssertionError("1,375 nucleos tenian que fallar")
+    # La tabla de obligaciones: sin pruebas del hub es HUECO, y una sola sin prueba basta.
+    cumple = Obligacion("a", "x", "y", MEDIDO)
+    sin_prueba = Obligacion("b", "x", "y", HUECO)
+    assert veredicto_obligaciones([cumple]) == 0
+    assert veredicto_obligaciones([cumple, sin_prueba]) == 2
+    assert all(o.estado == HUECO for o in obligaciones()), "el hub aun no ha probado ninguna"
+    # La fila del J2 lleva la cifra de la ficha J aunque carga_j2.csv no tenga fila del tic.
+    assert fila_j2().ciclos_por_s is not None, "la ficha J firmo la cifra de la fila del J2"
 
 
 def main() -> int:
@@ -142,13 +213,20 @@ def main() -> int:
     for f in filas:
         cifra = f"{f.ciclos_por_s/1e6:10.1f} {fraccion(f.ciclos_por_s)*100:8.1f}%" if f.ciclos_por_s else f"{'-':>10} {'-':>9}"
         print(f"  {f.nombre:46} {f.estado:9} {cifra}   {f.duenio}" + (f" ({f.nota})" if f.nota else ""))
-    codigo = veredicto(filas)
+    obls = obligaciones()
+    print("\n  las obligaciones de tiempo que el J2 le pone al hub (R-H6):\n")
+    for o in obls:
+        print(f"  {o.nombre:46} {o.estado:9} {o.limite}   {o.fuente}"
+              + (f" ({o.evidencia})" if o.evidencia else ""))
+    codigo = max(veredicto(filas), veredicto_obligaciones(obls))
     sin = [f for f in filas if f.ciclos_por_s is None]
     print(f"\n  con cifra: {len(filas) - len(sin)} de {len(filas)} filas, "
           f"{fraccion(suma_conocida(filas))*100:.1f} % de un nucleo")
     if codigo:
-        print(f"\nHUECO: {len(sin)} filas sin cifra. Esto todavia no es un censo, y el 15 % del J2")
-        print("  sigue siendo provisional hasta que lo sea (acta del 2026-10-17, ficha 2).")
+        sin_prueba = sum(o.estado == HUECO for o in obls)
+        print("\n  Esto todavia no es un censo, y el 15 % del J2 sigue siendo provisional hasta que lo")
+        print("  sea (acta del 2026-10-17, ficha 2).")
+        print(f"HUECO: {len(sin)} filas sin cifra y {sin_prueba} obligaciones sin prueba del hub")
     return codigo
 
 
