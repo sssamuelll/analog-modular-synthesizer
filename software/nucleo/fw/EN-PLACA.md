@@ -920,7 +920,7 @@ Ninguna pasada tuvo atrasos, plazos vencidos, tics tardíos ni periodos saltados
 Con 71 bytes y las dos frías (DWT): el planificador sin CRC hace 1 089; por bits, 5 749 (+4 660); por tabla, 1 737 (+648); con la unidad, 1 903 (+814). Totales: 2 302, 6 962, 2 950 y 3 115 ciclos, el 13,8, 41,8, 17,7 y 18,7 % de un núcleo con seis ranuras (E). El tic no se mueve en ninguna (1 211 a 1 213).
 
 - **La tabla es la más barata: unos 10 ciclos por byte** (238 con 23 bytes, 648 con 69), y con la tabla en la DTCM no depende de la caché (caliente, 237). Pide 512 B más de DTCM: 5 128 B.
-- **La unidad CRC cuesta un 50 % más que la tabla con 23 bytes y un 25 % más con 69:** cada escritura en el periférico se paga, y la lectura del resultado espera a todas. La cuenta de la junta de la cabecera (§10, riesgo 5: 82 a 92 ciclos por trama con la unidad) se quedó corta unas cuatro veces.
+- **La unidad CRC cuesta un 50 % más que la tabla con 23 bytes y un 25 % más con 69:** cada escritura en el periférico se paga, y la lectura del resultado espera a todas. La cabecera (§10, riesgo 5) ponía la unidad por debajo de la tabla; en el cerebro es al revés. Sus cifras (82 a 92 ciclos con la unidad, 101 con tabla) son **por muestra y del lado del módulo**, el receptor, con su coste fijo de 47: no se comparan con estas, que son por trama y del lado del cerebro.
 - **Por bits, 68 ciclos por byte:** con 25 bytes el J2 pasa al 21,8 % de un núcleo.
 - **La estimación del papel v3** (§3: de 125 a 350 ciclos, 5 por byte, sin fuente) acierta con la tabla y 25 bytes (238) y se queda en la mitad con 71 (648).
 - En las 60 pasadas no hubo atrasos ni plazos vencidos; `reloj_anomalo` salió una vez, en la pasada con las cachés apagadas de una corrida con TCM.
