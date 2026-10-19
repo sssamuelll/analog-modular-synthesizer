@@ -502,3 +502,46 @@ fn barrido_de_la_propuesta() {
         println!("  {nombre:20} {rs}/{SEMILLAS}");
     }
 }
+
+#[test]
+fn al_terminar_la_recuperacion_la_trama_ya_esta_en_el_buzon() {
+    // El aserto del módulo de la ficha C no suma la espera de R-H1 tras `HECHA` (Serrano, quinta
+    // pasada, hallazgo 1): el planificador va una trama por delante, la recuperación no vacía el
+    // buzón y la abortada no se repite, así que al terminar ya hay trama fresca. Con el
+    // planificador retenido 10 ms justo al terminar, la ranura vuelve a armar en el tic siguiente.
+    // Si la recuperación vaciara el buzón, esperaría los 10 ms.
+    let cuelga = |sim: &mut Sim| {
+        sim.trace_arm = Some(0);
+        sim.hw_at(
+            ms(50),
+            HwEv::Inject {
+                slot: 0,
+                kind: Inj::Hang,
+            },
+        );
+    };
+    let mut previa = Sim::new(Cfg::base());
+    cuelga(&mut previa);
+    previa.run_until(ms(100));
+    let t_hecha = previa
+        .primera("rec_hecha", 0)
+        .expect("la recuperación termina");
+    let mut sim = Sim::new(Cfg::base());
+    cuelga(&mut sim);
+    sim.hw_at(
+        t_hecha + 1_000,
+        HwEv::P2 {
+            dur: 10_000_000,
+            atomic: false,
+        },
+    );
+    sim.run_until(ms(100));
+    let rearme = sim
+        .marks
+        .iter()
+        .find(|m| m.what == "cstart" && m.slot == 0 && m.t > t_hecha)
+        .map(|m| m.t - t_hecha)
+        .expect("la ranura vuelve a armar");
+    println!("de HECHA al rearme, con el planificador retenido 10 ms: {rearme} ns");
+    assert!(rearme <= 2 * 125_000 + 10_000, "{rearme}");
+}
