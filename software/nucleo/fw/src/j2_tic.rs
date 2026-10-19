@@ -489,6 +489,84 @@ static CICLOS: [AtomicU32; 7] = [const { AtomicU32::new(0) }; 7];
 #[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
 static TIC_MAX: AtomicU32 = AtomicU32::new(0);
 
+/// Con `tic-fino`, las cuentas del temporizador por microsegundo (sin preescalar).
+#[cfg(feature = "tic-fino")]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static CUENTAS_POR_US: AtomicU32 = AtomicU32::new(1);
+#[cfg(all(feature = "tic-fino", feature = "perfil"))]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static CICLOS_POR_CUENTA: AtomicU32 = AtomicU32::new(0);
+/// La entrada de la excepcion del tic, en ciclos, desde el suceso de actualizacion hasta que el
+/// manejador lee `TIM7.CNT` (apilado, captacion del vector y el prologo): suma, cuenta y maximo.
+#[cfg(all(feature = "tic-fino", feature = "perfil"))]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static ENTRADA: [AtomicU32; 3] = [const { AtomicU32::new(0) }; 3];
+
+/// La entrada del tic desde la llamada anterior, en ciclos: media y maximo, y los pone a cero.
+/// Sin `tic-fino` y `perfil`, ceros.
+pub fn entrada_ciclos() -> (u32, u32) {
+    #[cfg(all(feature = "tic-fino", feature = "perfil"))]
+    {
+        let suma = ENTRADA[0].swap(0, Ordering::Relaxed);
+        let n = ENTRADA[1].swap(0, Ordering::Relaxed).max(1);
+        return (suma / n, ENTRADA[2].swap(0, Ordering::Relaxed));
+    }
+    #[allow(unreachable_code)]
+    (0, 0)
+}
+
+/// Los ciclos del `DWT` al final del tic.
+#[cfg(all(feature = "tic-fino", feature = "perfil"))]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static FIN_TIC: AtomicU32 = AtomicU32::new(0);
+/// El tic acabo sin que el planificador estuviera corriendo: la proxima entrada de `DMA2D` es
+/// el encadenado desde ese tic.
+#[cfg(all(feature = "tic-fino", feature = "perfil"))]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static ENCADENA: AtomicBool = AtomicBool::new(false);
+/// El cuerpo del planificador esta corriendo.
+#[cfg(all(feature = "tic-fino", feature = "perfil"))]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static PLAN_DENTRO: AtomicBool = AtomicBool::new(false);
+/// El encadenado del tic al planificador, en ciclos (del final del tic a la primera
+/// instruccion de `DMA2D`): suma, cuenta y maximo.
+#[cfg(all(feature = "tic-fino", feature = "perfil"))]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static CADENA: [AtomicU32; 3] = [const { AtomicU32::new(0) }; 3];
+/// Los ciclos del `DWT` al final del planificador.
+#[cfg(all(feature = "tic-fino", feature = "perfil"))]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static FIN_PLAN: AtomicU32 = AtomicU32::new(0);
+/// Cuantas veces ha acabado el planificador.
+#[cfg(all(feature = "tic-fino", feature = "perfil"))]
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static PLANES: AtomicU32 = AtomicU32::new(0);
+
+/// El encadenado del tic al planificador desde la llamada anterior, en ciclos: media y maximo,
+/// y los pone a cero. Sin `tic-fino` y `perfil`, ceros.
+pub fn cadena_ciclos() -> (u32, u32) {
+    #[cfg(all(feature = "tic-fino", feature = "perfil"))]
+    {
+        let suma = CADENA[0].swap(0, Ordering::Relaxed);
+        let n = CADENA[1].swap(0, Ordering::Relaxed).max(1);
+        return (suma / n, CADENA[2].swap(0, Ordering::Relaxed));
+    }
+    #[allow(unreachable_code)]
+    (0, 0)
+}
+
+/// Cuantas veces ha acabado el planificador y los ciclos del `DWT` de la ultima. Se lee el
+/// contador primero y el instante despues. Sin `tic-fino` y `perfil`, ceros.
+pub fn fin_del_planificador() -> (u32, u32) {
+    #[cfg(all(feature = "tic-fino", feature = "perfil"))]
+    {
+        let n = PLANES.load(Ordering::Relaxed);
+        return (n, FIN_PLAN.load(Ordering::Relaxed));
+    }
+    #[allow(unreachable_code)]
+    (0, 0)
+}
+
 /// El tic mas largo desde la llamada anterior, en ciclos, y lo pone a cero. Sin `perfil`, cero.
 pub fn tic_max_ciclos() -> u32 {
     #[cfg(feature = "perfil")]
@@ -820,8 +898,17 @@ pub fn lanzar(
 
     rcc::enable_and_reset::<peripherals::TIM7>();
     let f_timer = rcc::frequency::<peripherals::TIM7>().0;
-    let psc = f_timer / 1_000_000 - 1;
-    defmt::assert!(psc <= 0xFFFF && periodo_us <= 0x1_0000);
+    // Con `tic-fino` el temporizador cuenta sin preescalar: el retraso de entrada sale en cuentas
+    // de `f_timer`, y con ellas la entrada de la excepcion en ciclos. Solo para el banco.
+    let cuentas_por_us = if cfg!(feature = "tic-fino") {
+        f_timer / 1_000_000
+    } else {
+        1
+    };
+    let psc = f_timer / 1_000_000 / cuentas_por_us - 1;
+    defmt::assert!(psc <= 0xFFFF && periodo_us * cuentas_por_us <= 0x1_0000);
+    #[cfg(feature = "tic-fino")]
+    CUENTAS_POR_US.store(cuentas_por_us, Ordering::Relaxed);
     let t = pac::TIM7;
     t.psc().write_value(psc as u16);
     // El reloj del tic resta cuentas del temporizador de los ciclos del contador libre: los dos
@@ -832,6 +919,8 @@ pub fn lanzar(
         "j2_tic: el TIM7 y el nucleo sin razon entera"
     );
     let ciclos_por_cuenta = (num / u64::from(f_timer)) as u32;
+    #[cfg(all(feature = "tic-fino", feature = "perfil"))]
+    CICLOS_POR_CUENTA.store(ciclos_por_cuenta, Ordering::Relaxed);
     // SAFETY: el tic todavia no corre; es el unico dueno del reloj despues.
     unsafe {
         *RELOJ_TIC.0.get() = RelojDelTic::nuevo(
@@ -840,7 +929,8 @@ pub fn lanzar(
             2 * ciclos_por_cuenta,
         );
     }
-    t.arr().write(|w| w.set_arr((periodo_us - 1) as u16));
+    t.arr()
+        .write(|w| w.set_arr((periodo_us * cuentas_por_us - 1) as u16));
     t.egr().write(|w| w.set_ug(true));
     t.sr().write(|w| w.set_uif(false));
     t.dier().modify(|w| w.set_uie(true));
@@ -867,7 +957,18 @@ unsafe fn TIM7() {
     let t0 = DWT::cycle_count();
     let tim = pac::TIM7;
     // Testigo de retraso: microsegundos desde el ultimo suceso de actualizacion (§2.8).
-    let retraso = tim.cnt().read().cnt();
+    let cuentas = tim.cnt().read().cnt();
+    #[cfg(feature = "tic-fino")]
+    let retraso = (u32::from(cuentas) / CUENTAS_POR_US.load(Ordering::Relaxed)) as u16;
+    #[cfg(not(feature = "tic-fino"))]
+    let retraso = cuentas;
+    #[cfg(all(feature = "tic-fino", feature = "perfil"))]
+    {
+        let c = u32::from(cuentas) * CICLOS_POR_CUENTA.load(Ordering::Relaxed);
+        ENTRADA[0].fetch_add(c, Ordering::Relaxed);
+        ENTRADA[1].fetch_add(1, Ordering::Relaxed);
+        ENTRADA[2].fetch_max(c, Ordering::Relaxed);
+    }
     tim.sr().write(|w| w.set_uif(false));
     if retraso > TARDIO_US {
         TICS_TARDIOS.fetch_add(1, Ordering::Relaxed);
@@ -877,7 +978,7 @@ unsafe fn TIM7() {
     }
     // El reloj del tic cuenta periodos desde la actualizacion, no entradas (§2.7, K2).
     // SAFETY: el tic es el unico dueno de `RELOJ_TIC`.
-    let p = unsafe { &mut *RELOJ_TIC.0.get() }.entrada(u32::from(retraso), t0);
+    let p = unsafe { &mut *RELOJ_TIC.0.get() }.entrada(u32::from(cuentas), t0);
     if p.anomalo {
         RELOJ_ANOMALO.fetch_add(1, Ordering::Relaxed);
     }
@@ -1029,6 +1130,11 @@ unsafe fn TIM7() {
     suma(0, dur);
     #[cfg(feature = "perfil")]
     TIC_MAX.fetch_max(dur, Ordering::Relaxed);
+    #[cfg(all(feature = "tic-fino", feature = "perfil"))]
+    {
+        FIN_TIC.store(DWT::cycle_count(), Ordering::Relaxed);
+        ENCADENA.store(!PLAN_DENTRO.load(Ordering::Relaxed), Ordering::Relaxed);
+    }
 }
 
 // ---------------------------------------------------------------------------------------
@@ -1069,6 +1175,17 @@ fn compone(n: usize, p: &mut PlanRanura) {
 
 #[interrupt]
 unsafe fn DMA2D() {
+    #[cfg(all(feature = "tic-fino", feature = "perfil"))]
+    {
+        let t_in = DWT::cycle_count();
+        PLAN_DENTRO.store(true, Ordering::Relaxed);
+        if ENCADENA.swap(false, Ordering::Relaxed) {
+            let c = t_in.wrapping_sub(FIN_TIC.load(Ordering::Relaxed));
+            CADENA[0].fetch_add(c, Ordering::Relaxed);
+            CADENA[1].fetch_add(1, Ordering::Relaxed);
+            CADENA[2].fetch_max(c, Ordering::Relaxed);
+        }
+    }
     #[cfg(feature = "contaminador-icache")]
     crate::perfil::invalida_icache();
     let t0 = DWT::cycle_count();
@@ -1145,6 +1262,12 @@ unsafe fn DMA2D() {
     }
     #[cfg(not(feature = "perfil"))]
     let _ = t0;
+    #[cfg(all(feature = "tic-fino", feature = "perfil"))]
+    {
+        PLAN_DENTRO.store(false, Ordering::Relaxed);
+        FIN_PLAN.store(DWT::cycle_count(), Ordering::Relaxed);
+        PLANES.fetch_add(1, Ordering::Relaxed);
+    }
 }
 
 // ---------------------------------------------------------------------------------------
