@@ -729,6 +729,10 @@ pub fn lanzar(
     GAP_CICLOS.store(T_GAP_REARME_US * ciclos_us, Ordering::Relaxed);
     T_CANAL_CICLOS.store(T_CANAL_US * ciclos_us, Ordering::Relaxed);
 
+    // El juez (con el CRC del sobre) es trabajo del enlace; la bajada (el compositor) es del hub,
+    // y donde vive lo decide el hub (papel v3, ficha H).
+    #[cfg(feature = "j2-tcm")]
+    crate::j2_tcm::asevera_en_itcm(juez as usize, "el juez");
     for (n, ranura) in ranuras.into_iter().enumerate() {
         let Some(ranura) = ranura else { continue };
         let f_sck_hz = ranura.f_sck_hz();
@@ -741,6 +745,8 @@ pub fn lanzar(
             ciclos_retardo,
             resetear,
         } = ranura.partes();
+        #[cfg(feature = "j2-tcm")]
+        crate::j2_tcm::asevera_en_itcm(resetear as usize, "el reset de la ranura");
 
         let mut cfg1_rx = cfg1;
         cfg1_rx.set_rxdmaen(true);
