@@ -50,7 +50,7 @@ use sam17_nucleo_core::maestro_j2::{
     plazo_us, Accion, Evento, Ranura as Politica, Umbrales, RANURAS_SPI,
 };
 use sam17_nucleo_core::transporte_j2::{
-    tics_de_plazo, tics_fusionados, Aviso, Entrada, Estado, Lectura, Reloj64, Transporte,
+    tics_de_plazo, Aviso, Entrada, Estado, Lectura, Reloj64, RelojDelTic, Transporte,
 };
 
 use crate::j2_ejecutor::{publicar_cuentas, Bajada, Juez, SELLOS};
@@ -413,12 +413,15 @@ static TICS: AtomicU32 = AtomicU32::new(0);
 static RELOJ_PLAN: Celda<Reloj64> = Celda::nueva(Reloj64::nuevo());
 static CICLOS_POR_US: AtomicU32 = AtomicU32::new(0);
 static TICS_TARDIOS: AtomicU32 = AtomicU32::new(0);
-static TICS_FUSIONADOS: AtomicU32 = AtomicU32::new(0);
+/// Periodos que una entrada del tic trajo de mas: actualizaciones fundidas en una (§2.8).
+static PERIODOS_SALTADOS: AtomicU32 = AtomicU32::new(0);
+/// Entradas en las que el reloj del tic no pudo contar limpio y conto uno (§2.7).
+static RELOJ_ANOMALO: AtomicU32 = AtomicU32::new(0);
 static RETRASO_MAX_US: AtomicU32 = AtomicU32::new(0);
-static ULTIMA_ENTRADA: AtomicU32 = AtomicU32::new(0);
+/// El reloj del tic (candidata K2). Dueno: el tic.
+static RELOJ_TIC: Celda<RelojDelTic> = Celda::nueva(RelojDelTic::nuevo(0, 0, 0));
 
 static PERIODO_US: AtomicU32 = AtomicU32::new(0);
-static PERIODO_CICLOS: AtomicU32 = AtomicU32::new(0);
 static GAP_CICLOS: AtomicU32 = AtomicU32::new(0);
 static T_CANAL_CICLOS: AtomicU32 = AtomicU32::new(0);
 
@@ -485,7 +488,8 @@ fn marca(m: Marca, ciclos: u32) {
 pub struct Testigos {
     pub tics: u32,
     pub tics_tardios: u32,
-    pub tics_fusionados: u32,
+    pub periodos_saltados: u32,
+    pub reloj_anomalo: u32,
     pub retraso_max_us: u32,
     pub sin_bajada: u32,
     pub errores_dma: u32,
@@ -501,7 +505,8 @@ pub fn testigos() -> Testigos {
     let mut t = Testigos {
         tics: TICS.load(Ordering::Relaxed),
         tics_tardios: TICS_TARDIOS.load(Ordering::Relaxed),
-        tics_fusionados: TICS_FUSIONADOS.load(Ordering::Relaxed),
+        periodos_saltados: PERIODOS_SALTADOS.load(Ordering::Relaxed),
+        reloj_anomalo: RELOJ_ANOMALO.load(Ordering::Relaxed),
         retraso_max_us: RETRASO_MAX_US.load(Ordering::Relaxed),
         sin_bajada: 0,
         errores_dma: 0,
@@ -651,7 +656,6 @@ pub fn lanzar(
     PERIODO_US.store(periodo_us, Ordering::Relaxed);
     let ciclos_us = f_cpu_hz / 1_000_000;
     CICLOS_POR_US.store(ciclos_us, Ordering::Relaxed);
-    PERIODO_CICLOS.store(periodo_us * ciclos_us, Ordering::Relaxed);
     GAP_CICLOS.store(T_GAP_REARME_US * ciclos_us, Ordering::Relaxed);
     T_CANAL_CICLOS.store(T_CANAL_US * ciclos_us, Ordering::Relaxed);
 
@@ -744,6 +748,22 @@ pub fn lanzar(
     defmt::assert!(psc <= 0xFFFF && periodo_us <= 0x1_0000);
     let t = pac::TIM7;
     t.psc().write_value(psc as u16);
+    // El reloj del tic resta cuentas del temporizador de los ciclos del contador libre: los dos
+    // relojes tienen que guardar una razon entera (R-H9). Tolerancia: dos cuentas. ESTIMADO.
+    let num = u64::from(psc + 1) * u64::from(f_cpu_hz);
+    defmt::assert!(
+        num % u64::from(f_timer) == 0,
+        "j2_tic: el TIM7 y el nucleo sin razon entera"
+    );
+    let ciclos_por_cuenta = (num / u64::from(f_timer)) as u32;
+    // SAFETY: el tic todavia no corre; es el unico dueno del reloj despues.
+    unsafe {
+        *RELOJ_TIC.0.get() = RelojDelTic::nuevo(
+            periodo_us * ciclos_us,
+            ciclos_por_cuenta,
+            2 * ciclos_por_cuenta,
+        );
+    }
     t.arr().write(|w| w.set_arr((periodo_us - 1) as u16));
     t.egr().write(|w| w.set_ug(true));
     t.sr().write(|w| w.set_uif(false));
@@ -759,7 +779,6 @@ pub fn lanzar(
         IRQ_REC.enable();
         interrupt::TIM7.enable();
     }
-    ULTIMA_ENTRADA.store(DWT::cycle_count(), Ordering::Relaxed);
     t.cr1().modify(|w| w.set_cen(true));
 }
 
@@ -780,15 +799,22 @@ unsafe fn TIM7() {
     if u32::from(retraso) > RETRASO_MAX_US.load(Ordering::Relaxed) {
         RETRASO_MAX_US.store(u32::from(retraso), Ordering::Relaxed);
     }
-    // Testigo de tics fundidos: el intervalo entre dos entradas.
-    let delta = t0.wrapping_sub(ULTIMA_ENTRADA.load(Ordering::Relaxed));
-    ULTIMA_ENTRADA.store(t0, Ordering::Relaxed);
-    let fundidos = tics_fusionados(delta, PERIODO_CICLOS.load(Ordering::Relaxed));
-    if fundidos != 0 {
-        TICS_FUSIONADOS.fetch_add(fundidos, Ordering::Relaxed);
+    // El reloj del tic cuenta periodos desde la actualizacion, no entradas (§2.7, K2).
+    // SAFETY: el tic es el unico dueno de `RELOJ_TIC`.
+    let p = unsafe { &mut *RELOJ_TIC.0.get() }.entrada(u32::from(retraso), t0);
+    if p.anomalo {
+        RELOJ_ANOMALO.fetch_add(1, Ordering::Relaxed);
     }
+    if p.n == 0 {
+        // Una reentrada por la misma actualizacion: no ha pasado ningun periodo.
+        return;
+    }
+    if p.n > 1 {
+        PERIODOS_SALTADOS.fetch_add(p.n - 1, Ordering::Relaxed);
+    }
+    let periodos = p.n.min(u32::from(u16::MAX)) as u16;
     TICS.store(
-        TICS.load(Ordering::Relaxed).wrapping_add(1),
+        TICS.load(Ordering::Relaxed).wrapping_add(p.n),
         Ordering::Relaxed,
     );
 
@@ -828,13 +854,16 @@ unsafe fn TIM7() {
             } else {
                 (false, false)
             };
-        let s = t.transporte.paso(Entrada {
-            lectura,
-            identidad: IDENTIDAD[n].load(Ordering::Relaxed),
-            bajada,
-            reinicio_en_curso: en_curso,
-            reinicio_hecho: hecho,
-        });
+        let s = t.transporte.avanza(
+            Entrada {
+                lectura,
+                identidad: IDENTIDAD[n].load(Ordering::Relaxed),
+                bajada,
+                reinicio_en_curso: en_curso,
+                reinicio_hecho: hecho,
+            },
+            periodos,
+        );
 
         if s.cerrar {
             #[cfg(feature = "perfil")]

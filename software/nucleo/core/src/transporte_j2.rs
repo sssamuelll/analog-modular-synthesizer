@@ -43,19 +43,6 @@ pub const fn tics_de_plazo(plazo_us: u32, periodo_us: u32) -> u8 {
     }
 }
 
-/// Cuantos tics se fundieron entre dos entradas de la ISR del tic (papel v2, §2.8): el
-/// intervalo `delta` en ciclos contra el `periodo` en ciclos. Un temporizador de hardware
-/// funde dos actualizaciones en una pendiente, y sin este testigo el giro perdido no deja
-/// rastro. Cuenta cuando el intervalo pasa de 1,5 periodos: entonces faltan `redondeo(delta /
-/// periodo) - 1` tics.
-pub const fn tics_fusionados(delta: u32, periodo: u32) -> u32 {
-    let (d, p) = (delta as u64, periodo as u64);
-    if p == 0 || d * 2 < p * 3 {
-        return 0;
-    }
-    ((d + p / 2) / p - 1) as u32
-}
-
 /// Lo que una entrada del tic dice del tiempo: cuantos periodos van desde la anterior, y si
 /// la cuenta no salio limpia.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -413,31 +400,6 @@ mod tests {
         assert_eq!(tics_de_plazo(u32::MAX, PERIODO), 255);
     }
 
-    // --- tics_fusionados -----------------------------------------------------------
-
-    #[test]
-    fn un_intervalo_normal_no_funde_ningun_tic() {
-        // 125 us a 800 MHz son 100 000 ciclos.
-        for delta in [0, 99_000, 100_000, 101_000, 149_999] {
-            assert_eq!(tics_fusionados(delta, 100_000), 0, "delta {delta}");
-        }
-    }
-
-    #[test]
-    fn un_intervalo_de_mas_de_uno_y_medio_periodos_cuenta_los_que_faltan() {
-        assert_eq!(tics_fusionados(150_000, 100_000), 1);
-        assert_eq!(tics_fusionados(200_000, 100_000), 1);
-        assert_eq!(tics_fusionados(249_999, 100_000), 1);
-        assert_eq!(tics_fusionados(250_000, 100_000), 2);
-        assert_eq!(tics_fusionados(300_000, 100_000), 2);
-        assert_eq!(tics_fusionados(1_000_000, 100_000), 9);
-    }
-
-    #[test]
-    fn el_periodo_cero_no_divide_por_cero() {
-        assert_eq!(tics_fusionados(1_000, 0), 0);
-    }
-
     // --- RelojDelTic (K2) ---------------------------------------------------------------
 
     /// 125 us a 800 MHz; el temporizador cuenta cada 4 ciclos.
@@ -499,7 +461,13 @@ mod tests {
         // tarde, sumar el redondeo de cada intervalo entre entradas corre x1,5 y la cota de
         // 25 ms vence a los 16,75 ms de pared. 25 ms son 200 periodos.
         let retrasos: Vec<u32> = (0..200u32)
-            .map(|k| if k % 2 == 0 { 0 } else { 50_400 + (k % 31) * 1_600 })
+            .map(|k| {
+                if k % 2 == 0 {
+                    0
+                } else {
+                    50_400 + (k % 31) * 1_600
+                }
+            })
             .collect();
         let (out, _) = corre(1_000, &retrasos);
         assert_eq!(out.last().copied(), Some((200, 200)));
@@ -1139,7 +1107,11 @@ mod tests {
         for _ in 0..400 {
             let cota = (r.sig() % 400) as u16;
             for reiniciando in [false, true] {
-                let (cv, cr) = if reiniciando { (400, cota) } else { (cota, 400) };
+                let (cv, cr) = if reiniciando {
+                    (400, cota)
+                } else {
+                    (cota, 400)
+                };
                 let mut t = vencida_con(Transporte::con_cotas(cv, cr));
                 let e = Entrada {
                     reinicio_en_curso: reiniciando,
@@ -1157,7 +1129,10 @@ mod tests {
                     total += u32::from(n);
                     if t.estado() == Estado::Muerta {
                         assert_eq!(s.aviso, Some(Aviso::RanuraMuerta));
-                        assert!(antes <= u32::from(cota) && total > u32::from(cota), "cota {cota}");
+                        assert!(
+                            antes <= u32::from(cota) && total > u32::from(cota),
+                            "cota {cota}"
+                        );
                         break;
                     }
                     assert!(total <= u32::from(cota), "cota {cota}: vive con {total}");
