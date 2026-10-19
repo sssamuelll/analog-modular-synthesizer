@@ -108,6 +108,9 @@ pub struct SlotW {
     pub rec_en_curso: bool,
     pub rec_hecha: bool,
     pub rec_t_hecha: u64,
+    /// El incidente que pide el planificador, y el de la recuperacion en curso o hecha (K4).
+    pub rec_inc_pedido: u32,
+    pub rec_inc: u32,
     pub sucia: bool,
     pub sellos: u64,
     pub sin_bajada: u32,
@@ -309,6 +312,8 @@ impl Sim {
                 rec_en_curso: false,
                 rec_hecha: false,
                 rec_t_hecha: 0,
+                rec_inc_pedido: 0,
+                rec_inc: 0,
                 sucia: false,
                 sellos: 0,
                 sin_bajada: 0,
@@ -884,6 +889,7 @@ impl Sim {
                         reinicio_en_curso: en_curso,
                         reinicio_hecho: hecho,
                         sucia: s.sucia,
+                        incidente: s.rec_inc,
                     },
                     per,
                 );
@@ -1006,6 +1012,7 @@ impl Sim {
                 }
             }
             Fx::RecStart(n) => {
+                self.s[n].rec_inc = self.s[n].rec_inc_pedido;
                 self.s[n].rec_en_curso = true;
                 self.mark(n as i32, "rec_inicio", 0);
                 if let Some((hn, durs)) = self.hold_on_rec.clone() {
@@ -1159,6 +1166,7 @@ impl Sim {
                     // La politica es la unica autoridad sobre «reiniciar»; un plazo ajeno pide
                     // la limpieza sin puntuar.
                     if self.s[n].pol.paso(ev, ahora) == Accion::Reiniciar {
+                        self.s[n].rec_inc_pedido = self.s[n].tic.incidente();
                         self.s[n].rec_pedida = true;
                         self.pend_rec = true;
                         self.mark(n as i32, "plan_pide_rec", 0);

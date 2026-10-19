@@ -405,6 +405,11 @@ static REC_PEDIDA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
 static REC_EN_CURSO: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
 static REC_HECHA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
 static REC_T_HECHA: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
+/// El incidente de cada ranura (papel v3, K4): el tic publica el suyo, el planificador lo pone
+/// en la peticion y la recuperacion lo devuelve con `EN_CURSO` y `HECHA`.
+static INCIDENTE: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
+static REC_INCIDENTE_PEDIDO: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
+static REC_INCIDENTE: [AtomicU32; N] = [const { AtomicU32::new(0) }; N];
 /// `canales_sucios`: la escalada reseteo el GPDMA1 y esta ranura aun no esta reprogramada.
 static SUCIA: [AtomicBool; N] = [const { AtomicBool::new(false) }; N];
 
@@ -862,9 +867,11 @@ unsafe fn TIM7() {
                 reinicio_en_curso: en_curso,
                 reinicio_hecho: hecho,
                 sucia,
+                incidente: REC_INCIDENTE[n].load(Ordering::Relaxed),
             },
             periodos,
         );
+        INCIDENTE[n].store(t.transporte.incidente(), Ordering::Relaxed);
 
         if s.cerrar {
             #[cfg(feature = "perfil")]
@@ -1033,6 +1040,8 @@ unsafe fn DMA2D() {
                         if SIN_RECUPERACION.load(Ordering::Relaxed) {
                             continue;
                         }
+                        REC_INCIDENTE_PEDIDO[n]
+                            .store(INCIDENTE[n].load(Ordering::Relaxed), Ordering::Relaxed);
                         REC_PEDIDA[n].store(true, Ordering::Relaxed);
                         NVIC::pend(IRQ_REC);
                     }
@@ -1119,6 +1128,7 @@ fn escala() {
             SUCIA[k].store(true, Ordering::Relaxed);
             let t = unsafe { &mut *TIC[k].0.get() };
             if let Some(ev) = t.transporte.declarar_vencida() {
+                INCIDENTE[k].store(t.transporte.incidente(), Ordering::Relaxed);
                 ANILLO[k].empujar(ev);
             }
         }
@@ -1140,6 +1150,10 @@ fn recupera(n: usize) {
     let Some(hw) = (unsafe { &*HW[n].0.get() }).as_ref() else {
         return;
     };
+    REC_INCIDENTE[n].store(
+        REC_INCIDENTE_PEDIDO[n].load(Ordering::Relaxed),
+        Ordering::Relaxed,
+    );
     REC_EN_CURSO[n].store(true, Ordering::Relaxed);
     #[cfg(feature = "inyeccion")]
     if n == 0 {

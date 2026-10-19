@@ -183,6 +183,9 @@ pub struct Entrada {
     pub reinicio_hecho: bool,
     /// La escalada reseteo el GPDMA1 y los canales de esta ranura aun no estan reprogramados.
     pub sucia: bool,
+    /// El incidente al que pertenecen `reinicio_en_curso` y `reinicio_hecho` (papel v3, K4):
+    /// la recuperacion lo recibe con la peticion y lo devuelve con `HECHA`.
+    pub incidente: u32,
 }
 
 /// Lo que la maquina cuenta sin que sea un evento de la politica.
@@ -223,6 +226,8 @@ pub struct Transporte {
     estado: Estado,
     cota_vencida: u16,
     cota_reiniciando: u16,
+    /// Entradas en `Vencida` desde el arranque: el incidente en curso es el ultimo.
+    incidentes: u32,
 }
 
 impl Transporte {
@@ -236,11 +241,24 @@ impl Transporte {
             estado: Estado::Libre,
             cota_vencida: vencida,
             cota_reiniciando: reiniciando,
+            incidentes: 0,
         }
     }
 
     pub const fn estado(&self) -> Estado {
         self.estado
+    }
+
+    /// El numero del incidente en curso, o del ultimo: cada entrada en `Vencida` abre uno, y el
+    /// primero es el cero.
+    pub const fn incidente(&self) -> u32 {
+        self.incidentes.wrapping_sub(1)
+    }
+
+    /// Entra en `Vencida` y abre un incidente.
+    fn vence(&mut self) {
+        self.estado = Estado::Vencida { espera: 0 };
+        self.incidentes = self.incidentes.wrapping_add(1);
     }
 
     /// La ranura esta libre, o acaba de quedar libre en este tic: arma si puede.
@@ -292,6 +310,13 @@ impl Transporte {
                 sucia: true,
                 ..Entrada::default()
             }
+        } else if e.incidente != self.incidente() {
+            // K4: la recuperacion de otro incidente no saca a la ranura de este.
+            Entrada {
+                reinicio_en_curso: false,
+                reinicio_hecho: false,
+                ..e
+            }
         } else {
             e
         };
@@ -303,7 +328,7 @@ impl Transporte {
                 let l = e.lectura;
                 if l.error_dma {
                     // Un canal parado o con error no se da por bueno aunque haya EOT.
-                    self.estado = Estado::Vencida { espera: 0 };
+                    self.vence();
                     Salida {
                         cerrar: true,
                         aviso: Some(Aviso::ErrorDma),
@@ -316,7 +341,7 @@ impl Transporte {
                     self.desde_libre(&e, Salida { cerrar: true, ..s }.con_evento(Evento::GiroOk))
                 } else if edad.saturating_add(periodos) >= u16::from(plazo_tics) {
                     // El SPI se deja como esta: la recuperacion lo resetea.
-                    self.estado = Estado::Vencida { espera: 0 };
+                    self.vence();
                     s.con_evento(Evento::PlazoVencido)
                 } else {
                     self.estado = Estado::Armada {
@@ -362,7 +387,7 @@ impl Transporte {
     /// `PlazoAjeno` para la politica, o `None` si no estaba en vuelo.
     pub fn declarar_vencida(&mut self) -> Option<Evento> {
         if matches!(self.estado, Estado::Armada { .. }) {
-            self.estado = Estado::Vencida { espera: 0 };
+            self.vence();
             Some(Evento::PlazoAjeno)
         } else {
             None
@@ -923,6 +948,7 @@ mod tests {
             reinicio_en_curso: true,
             reinicio_hecho: true,
             sucia: false,
+            incidente: 0,
         };
         for _ in 0..50 {
             assert_eq!(t.paso(todo), Salida::default());
@@ -1066,6 +1092,7 @@ mod tests {
             reinicio_en_curso: true,
             reinicio_hecho: true,
             sucia: true,
+            incidente: 0,
         }
     }
 
@@ -1135,6 +1162,104 @@ mod tests {
             s.armar,
             "con la marca quitada, la HECHA devuelve la ranura y arma"
         );
+    }
+
+    // --- incidentes (K4) ----------------------------------------------------------------------
+
+    fn hecha(incidente: u32) -> Entrada {
+        Entrada {
+            reinicio_hecho: true,
+            incidente,
+            ..sin_nada()
+        }
+    }
+
+    fn en_curso(incidente: u32) -> Entrada {
+        Entrada {
+            reinicio_en_curso: true,
+            incidente,
+            ..sin_nada()
+        }
+    }
+
+    #[test]
+    fn cada_entrada_en_vencida_abre_un_incidente_nuevo() {
+        // Por su plazo, por un error del DMA y por la escalada de otra ranura.
+        let mut t = vencida_con(Transporte::nuevo());
+        assert_eq!(t.incidente(), 0);
+        t.paso(Entrada {
+            bajada: Some(1),
+            ..hecha(0)
+        });
+        let s = t.paso(Entrada {
+            lectura: Lectura {
+                error_dma: true,
+                ..bien()
+            },
+            ..sin_nada()
+        });
+        assert_eq!(s.aviso, Some(Aviso::ErrorDma));
+        assert_eq!(t.incidente(), 1);
+        t.paso(Entrada {
+            bajada: Some(1),
+            ..hecha(1)
+        });
+        assert!(t.declarar_vencida().is_some());
+        assert_eq!(t.incidente(), 2);
+    }
+
+    #[test]
+    fn una_hecha_de_otro_incidente_no_devuelve_la_ranura() {
+        let mut t = vencida_con(Transporte::nuevo());
+        t.paso(Entrada {
+            bajada: Some(1),
+            ..hecha(0)
+        });
+        t.paso(sin_nada());
+        assert_eq!(t.estado(), Estado::Vencida { espera: 0 });
+        assert_eq!(t.incidente(), 1);
+        // La HECHA del incidente 0 sigue publicada: no vale para el 1.
+        let s = t.paso(Entrada {
+            bajada: Some(1),
+            ..hecha(0)
+        });
+        assert!(!s.armar);
+        assert_eq!(t.estado(), Estado::Vencida { espera: 1 });
+        assert!(
+            t.paso(Entrada {
+                bajada: Some(1),
+                ..hecha(1)
+            })
+            .armar
+        );
+    }
+
+    #[test]
+    fn un_en_curso_de_otro_incidente_no_pasa_a_reiniciando() {
+        let mut t = vencida_con(Transporte::nuevo());
+        t.paso(hecha(0));
+        assert!(t.declarar_vencida().is_none(), "libre: no estaba en vuelo");
+        t.paso(con_bajada(1));
+        t.declarar_vencida();
+        assert_eq!(t.incidente(), 1);
+        t.paso(en_curso(0));
+        assert_eq!(t.estado(), Estado::Vencida { espera: 1 });
+        t.paso(en_curso(1));
+        assert_eq!(t.estado(), Estado::Reiniciando { espera: 0 });
+    }
+
+    #[test]
+    fn reiniciando_no_vuelve_con_la_hecha_de_otro_incidente() {
+        let mut t = vencida_con(Transporte::nuevo());
+        t.paso(hecha(0));
+        t.paso(con_bajada(1));
+        t.declarar_vencida();
+        t.paso(en_curso(1));
+        assert_eq!(t.estado(), Estado::Reiniciando { espera: 0 });
+        t.paso(hecha(0));
+        assert_eq!(t.estado(), Estado::Reiniciando { espera: 1 });
+        t.paso(hecha(1));
+        assert_eq!(t.estado(), Estado::Libre);
     }
 
     // --- periodos (K2) ---------------------------------------------------------------------
@@ -1287,6 +1412,16 @@ mod tests {
         }
     }
 
+    /// Con el incidente de la maquina tres de cada cuatro veces; la cuarta, una `HECHA` o un
+    /// `en_curso` rancios.
+    fn al_azar_para(r: &mut Xorshift, t: &Transporte) -> Entrada {
+        let mut e = entrada_al_azar(r);
+        if !r.azar(4) {
+            e.incidente = t.incidente();
+        }
+        e
+    }
+
     fn entrada_al_azar(r: &mut Xorshift) -> Entrada {
         Entrada {
             lectura: Lectura {
@@ -1304,6 +1439,7 @@ mod tests {
             reinicio_en_curso: r.azar(3),
             reinicio_hecho: r.azar(4),
             sucia: r.azar(10),
+            incidente: 0,
         }
     }
 
@@ -1315,7 +1451,7 @@ mod tests {
             let mut t = Transporte::con_cotas(2, 4);
             for _ in 0..5000 {
                 let antes = t.estado();
-                let s = t.paso(entrada_al_azar(&mut r));
+                let s = t.paso(al_azar_para(&mut r, &t));
                 if s.armar {
                     let libre_o_cerrando = matches!(
                         antes,
@@ -1339,7 +1475,7 @@ mod tests {
             let mut t = Transporte::con_cotas(2, 4);
             let (mut armadas, mut buenos, mut vencidos) = (0u32, 0u32, 0u32);
             for _ in 0..5000 {
-                let s = t.paso(entrada_al_azar(&mut r));
+                let s = t.paso(al_azar_para(&mut r, &t));
                 for e in s.eventos.into_iter().flatten() {
                     match e {
                         Evento::Armada => armadas += 1,
@@ -1363,9 +1499,11 @@ mod tests {
         let mut b: [Transporte; 6] = [Transporte::nuevo(); 6];
         for _ in 0..2000 {
             for k in 0..6 {
-                let e = entrada_al_azar(&mut r_ref);
-                let e2 = entrada_al_azar(&mut r_mix);
-                assert_eq!(e, e2);
+                let e = al_azar_para(&mut r_ref, &a[k]);
+                let e2 = al_azar_para(&mut r_mix, &b[k]);
+                if k != 2 {
+                    assert_eq!(e, e2);
+                }
                 let sa = a[k].paso(e);
                 // En la segunda corrida, la ranura 2 nunca recibe lectura buena: se cuelga.
                 let e_b = if k == 2 {
