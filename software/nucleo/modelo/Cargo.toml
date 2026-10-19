@@ -1,0 +1,9 @@
+[package]
+name = "sam17-nucleo-modelo"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "El modelo de host de las seis ranuras del J2: el entorno del simulador de la junta sobre la maquina real de core"
+
+[dependencies]
+sam17-nucleo-core = { path = "../core" }

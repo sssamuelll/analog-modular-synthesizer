@@ -43,6 +43,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "sam17-nucleo-modelo"
+version = "0.1.0"
+dependencies = [
+ "sam17-nucleo-core",
+]
+
+[[package]]
 name = "stable_deref_trait"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
