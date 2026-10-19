@@ -154,6 +154,22 @@ Seis bytes de sobre. Cada campo tiene un porqué y ninguno es «por si acaso»:
   variable no conoce de antemano; por eso el CRC se computa sobre el búfer al
   subir `CS`, con la unidad. Lo que eso cuesta en ciclos está en §10, riesgo
   5, con la cuenta de la junta.
+
+  > **Enmienda del 2026-10-19 (D2 y D9, del lado del cerebro; tercera firma
+  > del transporte del J2, ficha I,
+  > `docs/superpowers/juntas/2026-10-17-j2-transporte/acta-2026-10-19-tercera.md`):**
+  > en el cerebro el CRC del sobre de la subida se calcula con una tabla de
+  > 256 entradas en la DTCM, no con la unidad. Medido en la NUCLEO-N657X0-Q
+  > con el J2 en TCM y las dos cachés frías: +236 ciclos por giro y ranura
+  > con 25 bytes, contra +361 con la unidad y +1 567 bit a bit (M,
+  > `software/nucleo/fw/EN-PLACA.md`, «El CRC del sobre de la subida,
+  > medido»). La unidad reproduce el CRC de `crc16`, pero cada escritura en el
+  > periférico se paga. Es el mismo CRC-16/CCITT-FALSE: `crc16_con` con
+  > `TABLA_CRC16`, probada contra `crc16` en todos los largos de 0 a 130
+  > bytes; no es un segundo CRC. En D9, `decodificar` deja de usar `crc16`
+  > (bit a bit) y usa `crc16_con` con la tabla donde la ponga quien llama.
+  > «Con la unidad» queda para el receptor del módulo, que decide con su
+  > propia medida; §10, riesgo 5, no se toca.
 - **Little-endian** en todo campo de más de un byte: es la convención de
   `descubrimiento.rs` (`u16 LE`, `u32 LE`), de `descriptor.rs` y de
   `preset.rs`, y es el orden nativo del Cortex-M55: el búfer del DMA se lee sin

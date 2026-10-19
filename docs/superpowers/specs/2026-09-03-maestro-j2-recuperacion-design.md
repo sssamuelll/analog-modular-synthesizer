@@ -320,6 +320,17 @@ La v1 ponía un vigía en un ejecutor de interrupción que reiniciaba ranuras es
 > 3. **Se construye un prototipo de banco** del transporte «por tic» (`papel-v2.md` de la junta), acotado en el tiempo, que no toca nada firmado ni el binario del instrumento.
 >
 > Cambiar D5.1 sigue exigiendo brief, papel, junta y firma.
+>
+> **Actas del 2026-10-19 (el transporte por tic; D4.2, D5.1, R-MJ4).** Firmadas por Samuel tras la segunda a la sexta pasada de la junta del transporte (`acta-2026-10-19.md` y `acta-2026-10-19-tercera.md`, con el papel `papel-v3.md`, en `docs/superpowers/juntas/2026-10-17-j2-transporte/`). No cambian el texto de arriba, que sigue en vigor hasta que se cumplan las doce condiciones de §5.2 del papel:
+>
+> 1. **El transporte por tic es el diseño que se construye** (ficha A): una máquina por ranura movida por un tic de 125 µs, con el planificador y la recuperación en niveles por debajo. Lo que reescribe de D2, D4, D5.1, D7 y R-MJ2 a R-MJ4 está en §6 del papel.
+> 2. **La escalada del GPDMA1 (D4.2) la autoriza un presupuesto** (ficha B): como mucho 6 en cualquier ventana de 1 s, y 1 ms entre dos concedidas, que despierta el tic.
+> 3. **Las cotas de los estados de recuperación** (ficha C): `Vencida` 25 ms y `Reiniciando` 14 ms, con dos asertos en `lanzar`. **Dependen de dos números que no son del J2:**
+>    - **El techo de silencio del módulo, que es de voz-total:** `T_WATCHDOG_TRAMA` = 50 ms, ESTIMADO, con una tolerancia del oscilador del módulo de ± 2 %, ESTIMADA. El aserto del módulo lo compara con el mayor hueco entre tramas de una ranura que se recupera, 39,75 ms. Si voz-total lo baja de unos 41 ms, la ficha C vuelve a la mesa.
+>    - **Que el censo del hub (R-H6) excluya la saturación sostenida de las interrupciones de nivel 2:** con ellas ocupadas ~94 % durante ~100 ms, un bloqueo largo del GPDMA1 encadena incidentes, las ranuras sobreviven y los módulos pasan de 60 a 85 ms sin trama (S). El aserto del módulo vale por incidente y no lo ve.
+>
+>    Y R-H1, la ventana de inanición de 12 ms por nivel, también es del hub.
+> 4. **El enlace del J2 vive en TCM** (ficha H, R-H4 del papel), **el CRC del sobre se calcula en el cerebro con una tabla** (ficha I; enmienda del 19-10 en D2 de la cabecera del J2), y **la fila del J2 en el censo de CPU es del 14,1 al 14,5 % de un núcleo (E)** (ficha J). La salida de la excepción y la entrada del planificador quedan por medir, y la pasada de optimización corre solo si el total medido pasa del 15,0 %.
 
 ### D6. La corrupción la absorbe el CRC del sobre; lo que tiene red se repara solo, y lo que no la tiene se dice *(⚠ precisada: V-7, S-10, S-11, H-4)*
 
@@ -612,6 +623,10 @@ Sale con `2` (HUECO) mientras `resistencia_j2.csv` no tenga fila o el hub no dec
 | **este papel** (16-10) | D5.1, D7.2, §3, §9 riesgo 9 | Patch | El reparto de CPU del J2 queda firmado: 15 % de un núcleo a 800 MHz, 2 500 ciclos por giro; `recuperacion_j2_budget.py` lo lee y compara con `carga_j2.csv` | enmienda del 16-10 en D5 | **aplicada** |
 | **este papel** (17-10) | D5.1, §3, §9 riesgo 9 | Patch | Las cifras de CPU de un giro, medidas con una base del hilo por estado de caché (la de I-cache del 16-10 salía de menos); la exploración a 800 MHz: 8 000 ciclos por giro con cachés, contra el límite de 2 500 | enmienda del 16-10 en D5, `EN-PLACA.md` | **aplicada** |
 | **este papel** (17-10) | D5.1, §3, riesgo 9 | Clarify | El acta del 17-10: qué cuenta contra los 2 500 ciclos, el 15 % provisional hasta el censo del hub, y el prototipo de banco del transporte «por tic» | acta de la junta del transporte | **aplicada** |
+| **este papel** (19-10) | D4.2, D5.1, R-MJ4 | Clarify | Las dos actas del 19-10: el transporte por tic como el diseño que se construye, la regla de la escalada, las cotas con sus dos dependencias de fuera del J2, el J2 en TCM y la cifra del censo | actas de la junta del transporte | **aplicada** (el texto de D2 a D8 se reescribe al cumplirse §5.2 del papel) |
+| cabecera J2 | D2 y D9 (el CRC del sobre «con la unidad») | Patch | En el cerebro, una tabla de 256 entradas en la DTCM; la unidad queda para el receptor del módulo | enmienda del 19-10 en D2 de la cabecera | **aplicada** |
+| voz-total | §9.2 (`T_WATCHDOG_TRAMA`) | Clarify | Las cotas de la ficha C del 19-10 dependen de 50 ms ± 2 %: si baja de ~41 ms, la ficha vuelve a la mesa | papel de voz-total | pendiente |
+| censo del hub | R-H6, la tabla de obligaciones de tiempo | Add | Excluir la saturación sostenida de las interrupciones de nivel 2 (~94 % durante ~100 ms), que encadena incidentes sin que el aserto del módulo lo vea | #443 | pendiente |
 | **este papel** (17-10) | §9 riesgo 1, acción 1 | Expand | El soak de 24 h a 1 kHz medido (86,4 millones de giros, cero fallos) y el cuarto comentario en #5607 | enmienda del 11-09 en §9, punto 3 | **aplicada** |
 | hub N657 | supervisor de vitalidad (D5.4) | Patch | El IWDG se alimenta desde el hilo, a la prioridad más baja, después de comprobar el sello de las ranuras: el sello subía con el hilo muerto | comentario del 16-10 en #291 | pendiente |
 | papel del módulo | nueva: recuperación del esclavo | Add | Plazo, reinicio y cuenta del lado esclavo, espejo de D2-D4; y la política de `muda` en el cerebro | #366 | pendiente |
