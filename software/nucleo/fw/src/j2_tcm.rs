@@ -50,8 +50,9 @@ fn tramos() -> [(*const u32, *mut u32, *mut u32); 2] {
 // rutinas de memoria de `compiler_builtins`), y `defmt` aun no esta listo. Va en ensamblador
 // y sin pila: con `j2-tcm-pila` la pila esta en la DTCM y el primer paso la escribe entera.
 //
-// La DTCM sale del reset sin escribir y lleva ECC: un store de un byte (los `AtomicBool`, la
-// pila) lee antes la palabra, y leer una palabra nunca escrita da un BusFault preciso. Por
+// Un store de un byte (los `AtomicBool`, la pila) en una palabra de la DTCM no escrita desde
+// el reset da un BusFault preciso, y escribir antes la palabra entera lo quita. Se sospecha
+// del ECC de la TCM (el store parcial leeria la palabra), sin verificar contra el RM. Por
 // eso se escribe entera, por palabras, antes de copiar nada.
 core::arch::global_asm!(
     ".section .text.__pre_init,\"ax\"",

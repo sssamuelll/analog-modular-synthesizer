@@ -187,7 +187,7 @@ struct Pasada {
     /// entrada ni la salida de la excepcion. Con `perfil`.
     #[cfg(feature = "transporte-tic")]
     isr_tic: (u32, u32),
-    /// Los ciclos de CPU por Hz de f_cpu, para pasar los ciclos de arriba a microsegundos.
+    /// f_cpu en MHz (ciclos por microsegundo), para pasar los ciclos de arriba a nanosegundos.
     #[cfg(feature = "transporte-tic")]
     f_cpu_mhz: u32,
 }
