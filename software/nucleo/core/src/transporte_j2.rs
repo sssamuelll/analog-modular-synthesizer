@@ -18,16 +18,18 @@
 use crate::maestro_j2::Evento;
 
 /// Tics que `Vencida` espera a que arranque la recuperacion antes de dar la
-/// ranura por muerta (papel v2, §2.5). ESTIMADO.
+/// ranura por muerta (papel v3, §2.5). Firmado el 2026-10-19 (ficha C): 200 periodos, 25 ms.
 ///
 /// v2 decia 2: el planificador y la recuperacion van por debajo de USB y pantalla (P2), y una
 /// retencion de 350 us de P2 coincidiendo con un cuelgue bastaba para matar la ranura y, con
-/// ella, el instrumento (revision de Halberg del 17-10, hallazgo 1). 100 tics son 12,5 ms.
-pub const COTA_VENCIDA_TICS: u16 = 100;
-/// Tics que `Reiniciando` espera a que la recuperacion acabe (v2: 4). ESTIMADO. Las dos cotas
-/// suman 25 ms, la mitad de lo que el modulo aguanta sin tramas (400 giros, ~50 ms): una
-/// ranura se da por muerta antes de que el modulo se rinda solo.
-pub const COTA_REINICIANDO_TICS: u16 = 100;
+/// ella, el instrumento (revision de Halberg del 17-10, hallazgo 1). Salir de `Vencida` pide dos
+/// niveles en serie, cada uno con su ventana de R-H1: [`cotas_cubren_rh1`].
+pub const COTA_VENCIDA_TICS: u16 = 200;
+/// Tics que `Reiniciando` espera a que la recuperacion acabe (v2: 4). Firmado el 2026-10-19
+/// (ficha C): 112 periodos, 14 ms, que cubren la espera entre escaladas de la ficha B, una
+/// ventana de R-H1 y la recuperacion. El hueco que dejan las dos cotas lo acota
+/// [`hueco_cabe_en_el_modulo`].
+pub const COTA_REINICIANDO_TICS: u16 = 112;
 
 /// El mayor hueco, en periodos, entre el tic que arma la trama que se cuelga y el tic que vuelve
 /// a armar, para una ranura que sobrevive a la recuperacion: el plazo, y cada estado de espera
@@ -35,6 +37,43 @@ pub const COTA_REINICIANDO_TICS: u16 = 100;
 /// el tic en que vence la cota salva la ranura (papel v3, cuarta pasada, ficha C).
 pub const fn hueco_de_recuperacion(plazo: u8, cota_vencida: u16, cota_reiniciando: u16) -> u32 {
     plazo as u32 + cota_vencida as u32 + cota_reiniciando as u32 + 2
+}
+
+/// La ventana de inanicion de R-H1, por nivel y de pendiente a terminado (papel v3, R-H1). Es un
+/// numero del hub: el J2 lo copia hasta que el censo lo escriba (ficha C, Voronov N1).
+pub const VENTANA_RH1_US: u32 = 12_000;
+/// La espera minima entre dos escaladas del GPDMA1 (ficha B).
+pub const ESPERA_ESCALADA_US: u32 = 1_000;
+/// Lo que tarda la recuperacion de las seis ranuras. ESTIMADO (ficha C).
+pub const RECUPERACION_SEIS_US: u32 = 250;
+/// Cuanto antes puede soltar el watchdog de trama del modulo por su oscilador, en porcentaje.
+/// ESTIMADO, y del modulo (ficha C).
+pub const TOLERANCIA_OSCILADOR_MODULO_PCT: u32 = 2;
+
+/// Ficha C (1): salir de `Vencida` pide dos niveles en serie, el planificador que decide y la
+/// recuperacion que arranca; salir de `Reiniciando`, la espera de la ficha B, una ventana de la
+/// recuperacion y la recuperacion de las seis. Cada cota cuenta hasta su tic `cota + 1`.
+pub const fn cotas_cubren_rh1(periodo_us: u32, cota_vencida: u16, cota_reiniciando: u16) -> bool {
+    let t = periodo_us as u64;
+    (cota_vencida as u64 + 1) * t > 2 * VENTANA_RH1_US as u64
+        && (cota_reiniciando as u64 + 1) * t
+            > (ESPERA_ESCALADA_US + VENTANA_RH1_US + RECUPERACION_SEIS_US) as u64
+}
+
+/// Ficha C (2): el mayor hueco entre tramas de una ranura que sobrevive a un incidente, mas el
+/// periodo de la trama siguiente, por debajo del watchdog de trama del modulo menos su tolerancia.
+/// Vale por incidente, no por bloqueo (Halberg, sexta pasada, N13).
+pub const fn hueco_cabe_en_el_modulo(
+    plazo_max: u8,
+    periodo_us: u32,
+    cota_vencida: u16,
+    cota_reiniciando: u16,
+) -> bool {
+    let hueco = hueco_de_recuperacion(plazo_max, cota_vencida, cota_reiniciando) as u64 + 1;
+    let techo = crate::maestro_j2::T_WATCHDOG_TRAMA_US as u64
+        * (100 - TOLERANCIA_OSCILADOR_MODULO_PCT) as u64
+        / 100;
+    hueco * (periodo_us as u64) < techo
 }
 
 /// Cuantos tics dura un plazo de `plazo_us` microsegundos: el entero hacia
@@ -1594,5 +1633,44 @@ mod tests {
         }
         // La cuenta de Halberg: 305 periodos con plazo 3 y cotas 200 y 100.
         assert_eq!(hueco_simulado(3, 200, 100), 305);
+    }
+
+    /// Ficha C (1), como la cuenta el papel: (200 + 1) x 125 us = 25,125 ms > 2 x 12 ms, y
+    /// (112 + 1) x 125 us = 14,125 ms > 1 + 12 + 0,25 ms.
+    #[test]
+    fn las_cotas_firmadas_cubren_r_h1_y_las_de_antes_no() {
+        use crate::maestro_j2::PERIODO_GIRO_US;
+        assert!(cotas_cubren_rh1(
+            PERIODO_GIRO_US,
+            COTA_VENCIDA_TICS,
+            COTA_REINICIANDO_TICS
+        ));
+        assert!(!cotas_cubren_rh1(PERIODO_GIRO_US, 100, 100));
+        // La frontera de cada cota, con la otra holgada: 192 x 125 us son 24 ms justos, y
+        // 106 x 125 us, 13,25 ms justos.
+        assert!(!cotas_cubren_rh1(125, 191, 112));
+        assert!(cotas_cubren_rh1(125, 192, 112));
+        assert!(!cotas_cubren_rh1(125, 200, 105));
+        assert!(cotas_cubren_rh1(125, 200, 106));
+    }
+
+    /// Ficha C (2): con el plazo mas largo (3 tics), 318 periodos, 39,75 ms, contra los 49 ms del
+    /// watchdog de trama menos la tolerancia del oscilador del modulo.
+    #[test]
+    fn el_hueco_de_las_cotas_firmadas_cabe_en_el_modulo() {
+        use crate::maestro_j2::PERIODO_GIRO_US;
+        assert_eq!(
+            hueco_de_recuperacion(3, COTA_VENCIDA_TICS, COTA_REINICIANDO_TICS) + 1,
+            318
+        );
+        assert!(hueco_cabe_en_el_modulo(
+            3,
+            PERIODO_GIRO_US,
+            COTA_VENCIDA_TICS,
+            COTA_REINICIANDO_TICS
+        ));
+        // 3 + 200 + 185 + 2 + 1 = 391 periodos, 48,875 ms; con 186, 49 ms justos, ya no cabe.
+        assert!(hueco_cabe_en_el_modulo(3, 125, 200, 185));
+        assert!(!hueco_cabe_en_el_modulo(3, 125, 200, 186));
     }
 }
