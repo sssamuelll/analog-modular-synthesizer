@@ -171,18 +171,20 @@ def obligaciones() -> list[Obligacion]:
     return [
         Obligacion("R-H1: ninguna ISR por encima del tic", "el tic en el nivel 1, nada en el 0",
                    f"{v3}, R-H1", HUECO,
-                   "hoy el USB de embassy queda en el nivel 0; en el banco, con 5 000 mensajes MIDI/s, "
-                   "se cuela 4 veces al entrar el tic (reloj anomalo, EN-PLACA)"),
+                   "fw: usb::iniciar baja a P2 el USB, TIM12 y los DMA, y j2_tic::lanzar no arranca "
+                   "con una por encima; el instrumento todavia no lanza el tic (EN-PLACA)"),
         Obligacion("R-H1: inanicion del planificador (P3)",
                    "<= 12 ms de pendiente a terminado", f"{v3}, R-H1; {acta}, fichas B y C", HUECO,
                    "testigo latencia_plan_max_us de fw, de pendiente a terminado; "
-                   "banco: 40 us con el USB a 5 000 mensajes MIDI/s (EN-PLACA)"),
+                   "banco: 34 us con el USB a 5 000 mensajes MIDI/s (EN-PLACA)"),
         Obligacion("R-H1: inanicion de la recuperacion (P4)",
                    "<= 12 ms de pendiente a terminado", f"{v3}, R-H1; {acta}, fichas B y C", HUECO,
                    "testigo latencia_rec_max_us de fw, de pendiente a terminada; solo en el banco"),
-        Obligacion("R-H2: maximo enmascarado", "<= 5 us por seccion critica", f"{v3}, R-H2", HUECO),
+        Obligacion("R-H2: maximo enmascarado", "<= 5 us por seccion critica", f"{v3}, R-H2", HUECO,
+                   "banco: con el USB por debajo del tic, la entrada aun llega a 6 us: lo mas probable, "
+                   "una seccion critica del USB; sin medir directamente (EN-PLACA)"),
         Obligacion("R-H2: entrada del tic", "<= 60 us desde su instante", f"{v3}, R-H2 y 2.8", HUECO,
-                   "banco: 9 us con el USB a 1 000 mensajes MIDI/s y 15 us a 5 000 (EN-PLACA)"),
+                   "banco: 6 us con el USB a 1 000 mensajes MIDI/s y 4 us a 5 000 (EN-PLACA)"),
         Obligacion("R-H4: el enlace del J2 en TCM", "ITCM 8 224 B y DTCM 5 128 B (referencia)",
                    f"{acta}, ficha H", HUECO, "reservarlas y las dos obligaciones de arranque (#231)"),
         Obligacion("R-H6: ocupacion sostenida del nivel 2", "excluir ~94 % durante ~100 ms",

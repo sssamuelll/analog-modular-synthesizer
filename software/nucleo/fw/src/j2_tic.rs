@@ -56,8 +56,9 @@ use sam17_nucleo_core::maestro_j2::{
     plazo_us, Accion, Evento, Ranura as Politica, Tsize, Umbrales, RANURAS_SPI,
 };
 use sam17_nucleo_core::transporte_j2::{
-    cotas_cubren_rh1, hueco_cabe_en_el_modulo, tics_de_plazo, Aviso, Entrada, Estado, Lectura,
-    Reloj64, RelojDelTic, Transporte, COTA_REINICIANDO_TICS, COTA_VENCIDA_TICS, ESPERA_ESCALADA_US,
+    cotas_cubren_rh1, hueco_cabe_en_el_modulo, primera_por_encima, tics_de_plazo, Aviso, Entrada,
+    Estado, Lectura, Reloj64, RelojDelTic, Transporte, COTA_REINICIANDO_TICS, COTA_VENCIDA_TICS,
+    ESPERA_ESCALADA_US,
 };
 
 use crate::j2_ejecutor::{publicar_cuentas, Bajada, Juez, SELLOS};
@@ -1038,6 +1039,19 @@ pub fn lanzar(
     interrupt::TIM7.set_priority(PRIO_TIC);
     IRQ_PLAN.set_priority(PRIO_PLAN);
     IRQ_REC.set_priority(PRIO_REC);
+    // R-H1: ninguna interrupcion habilitada por encima del tic. Lo que embassy enciende sin que
+    // nadie le diga la prioridad queda en P0, y en el codigo no se ve: se lee el NVIC.
+    // SAFETY: solo lee registros del NVIC.
+    let nvic = unsafe { &*NVIC::PTR };
+    let habilitadas: [u32; 16] = core::array::from_fn(|i| nvic.iser[i].read());
+    let prioridades: [u8; 496] = core::array::from_fn(|n| nvic.ipr[n].read());
+    if let Some(n) = primera_por_encima(&habilitadas, &prioridades, PRIO_TIC as u8) {
+        defmt::panic!(
+            "j2_tic: la interrupcion {} esta en {:#x}, por encima del tic (R-H1)",
+            n,
+            prioridades[n]
+        );
+    }
     // SAFETY: los tres vectores son las ISR de abajo, y todo su estado esta construido.
     unsafe {
         IRQ_PLAN.enable();
