@@ -12,7 +12,7 @@
 //! hacen hoy en `fw/src/j2_tic.rs`.
 
 use sam17_nucleo_core::buzones_j2::{codigo, Anillo, Lectura as LecSubida, Subida, Triple};
-use sam17_nucleo_core::escaladas_j2::Presupuesto;
+use sam17_nucleo_core::escaladas_j2::{Presupuesto, Respuesta};
 use sam17_nucleo_core::maestro_j2::{
     plazo_us, Accion, Evento, Ranura as Politica, Tsize, Umbrales,
 };
@@ -69,6 +69,9 @@ pub struct Cfg {
     pub feed_period_ns: u64,
     pub iwdg_ns: u64,
     pub escaladas: Escaladas,
+    /// La espera minima entre dos escaladas concedidas (con K1; candidata de la cuarta pasada).
+    /// 0 = sin espera.
+    pub espera_escalada_ns: u64,
     /// Parar la corrida cuando el IWDG reinicia el chip: lo de despues no existe.
     pub para_al_reiniciar: bool,
 }
@@ -95,6 +98,7 @@ impl Cfg {
                 e: 3,
                 ventana_ns: 1_000_000_000,
             },
+            espera_escalada_ns: 0,
             para_al_reiniciar: false,
         }
     }
@@ -134,6 +138,8 @@ pub struct SlotW {
     pub subida: Subida,
     pub largo_subida: u16,
     pub rec_pedida: bool,
+    /// La escalada se aplazo: el planificador vuelve a pedir la recuperacion en este instante.
+    pub aplazada_hasta_us: Option<u64>,
     pub rec_en_curso: bool,
     pub rec_hecha: bool,
     pub rec_t_hecha: u64,
@@ -298,6 +304,7 @@ pub struct Sim {
     pub escaladas: u32,
     pub presupuesto: Presupuesto,
     pub denegadas: u32,
+    pub aplazadas: u32,
     pub esc_times: Vec<u64>,
     pub stall_until: u64,
     pub s: Vec<SlotW>,
@@ -352,6 +359,7 @@ impl Sim {
                 subida: Subida::nueva(),
                 largo_subida: 0,
                 rec_pedida: false,
+                aplazada_hasta_us: None,
                 rec_en_curso: false,
                 rec_hecha: false,
                 rec_t_hecha: 0,
@@ -416,6 +424,7 @@ impl Sim {
             escaladas: 0,
             presupuesto: Presupuesto::nuevo(0, 0),
             denegadas: 0,
+            aplazadas: 0,
             esc_times: Vec::new(),
             stall_until: 0,
             s,
@@ -445,7 +454,9 @@ impl Sim {
         sim.supervisor = Supervisor::nuevo(sim.cfg.sup_w_ns / 1000);
         sim.presupuesto = match sim.cfg.escaladas {
             Escaladas::Siempre => Presupuesto::nuevo(0, 0),
-            Escaladas::K1 { e, ventana_ns } => Presupuesto::nuevo(e, ventana_ns / 1000),
+            Escaladas::K1 { e, ventana_ns } => {
+                Presupuesto::con_espera(e, ventana_ns / 1000, sim.cfg.espera_escalada_ns / 1000)
+            }
             Escaladas::V2 { e, ventana } => Presupuesto::nuevo(e, ventana),
         };
         // `lanzar`: la primera trama ya esta en el buzon cuando llega el primer tic.
@@ -1152,13 +1163,25 @@ impl Sim {
                 job.push_front(1_200, true, Fx::SpiReset(n));
             }
             Fx::RecDecide(n) => {
-                let concede = match self.cfg.escaladas {
-                    Escaladas::Siempre => true,
+                let respuesta = match self.cfg.escaladas {
+                    Escaladas::Siempre => Respuesta::Concedida,
                     // El reloj del tic, en us.
-                    Escaladas::K1 { .. } => self.presupuesto.pide(u64::from(self.tics) * 125),
-                    Escaladas::V2 { .. } => self.presupuesto.pide(self.entradas),
+                    Escaladas::K1 { .. } => self.presupuesto.solicita(u64::from(self.tics) * 125),
+                    Escaladas::V2 { .. } => {
+                        if self.presupuesto.pide(self.entradas) {
+                            Respuesta::Concedida
+                        } else {
+                            Respuesta::Denegada
+                        }
+                    }
                 };
-                if concede {
+                if let Respuesta::Aplazada { hasta_us } = respuesta {
+                    // Ni RESET ni `HECHA`: la ranura sigue en `Reiniciando` con su cota, y el
+                    // planificador la vuelve a pedir en `hasta_us`.
+                    self.aplazadas += 1;
+                    self.s[n].aplazada_hasta_us = Some(hasta_us);
+                    self.mark(n as i32, "escalada_aplazada", hasta_us as i64);
+                } else if respuesta == Respuesta::Concedida {
                     job.push_front(cy(100), false, Fx::EscPrep(n));
                 } else {
                     self.denegadas += 1;
@@ -1282,6 +1305,17 @@ impl Sim {
     fn plan_drain(&mut self, n: usize) {
         let ahora = self.plan_now_us;
         let mut hubo = false;
+        if let Some(h) = self.s[n].aplazada_hasta_us {
+            if ahora >= h {
+                // La escalada aplazada: se vuelve a pedir la recuperacion del mismo incidente.
+                self.s[n].aplazada_hasta_us = None;
+                if self.s[n].muertas == 0 {
+                    self.s[n].rec_pedida = true;
+                    self.pend_rec = true;
+                    self.mark(n as i32, "plan_repide_rec", 0);
+                }
+            }
+        }
         if let Some(p) = self.s[n].id_pend.take() {
             // ponytail: sin la limpieza por identidad de §2.2 (K4); solo la politica y la marca.
             let _ = self.s[n].pol.paso(Evento::Identidad(p), ahora);
