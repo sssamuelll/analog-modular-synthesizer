@@ -1,0 +1,28 @@
+--- a/software/nucleo/modelo/src/motor.rs
++++ b/software/nucleo/modelo/src/motor.rs
+@@ -72,6 +72,8 @@
+     /// La espera minima entre dos escaladas concedidas (con K1; candidata de la cuarta pasada).
+     /// 0 = sin espera.
+     pub espera_escalada_ns: u64,
++    /// Halberg 4 (variante): lo que el reloj de P3 va por delante del de P4 al mirar la aplazada.
++    pub desfase_plan_us: u64,
+     /// Parar la corrida cuando el IWDG reinicia el chip: lo de despues no existe.
+     pub para_al_reiniciar: bool,
+ }
+@@ -99,6 +101,7 @@
+                 ventana_ns: 1_000_000_000,
+             },
+             espera_escalada_ns: 0,
++            desfase_plan_us: 0,
+             para_al_reiniciar: false,
+         }
+     }
+@@ -1306,7 +1309,7 @@
+         let ahora = self.plan_now_us;
+         let mut hubo = false;
+         if let Some(h) = self.s[n].aplazada_hasta_us {
+-            if ahora >= h {
++            if ahora + self.cfg.desfase_plan_us >= h {
+                 // La escalada aplazada: se vuelve a pedir la recuperacion del mismo incidente.
+                 self.s[n].aplazada_hasta_us = None;
+                 if self.s[n].muertas == 0 {

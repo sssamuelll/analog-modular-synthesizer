@@ -1,0 +1,101 @@
+200a201
+>     RecClock(usize),
+325a327,338
+>     // halberg6: instrumentacion y variantes (copia de trabajo, no el modelo del repo)
+>     pub plan_job_since: Option<u64>,
+>     pub plan_term_max: u64,
+>     pub rec_term_max: u64,
+>     pub reloj_antes_de_decidir: bool,
+>     pub rec_reloj_us: u64,
+>     pub hold_on_decide: Option<(usize, Golpes)>,
+>     pub presupuesto_64: bool,
+>     pub paso_reloj: bool,
+>     pub hecha_sin_trama: u32,
+>     pub hechas: u32,
+>     pub reloj_rec: Reloj64,
+455a469,479
+>             plan_job_since: None,
+>             plan_term_max: 0,
+>             rec_term_max: 0,
+>             reloj_antes_de_decidir: false,
+>             rec_reloj_us: 0,
+>             hold_on_decide: None,
+>             presupuesto_64: false,
+>             paso_reloj: false,
+>             hecha_sin_trama: 0,
+>             hechas: 0,
+>             reloj_rec: Reloj64::nuevo(),
+688c712,713
+<                 if let Some(t) = self.plan_since.take() {
+---
+>                 let t_pend = self.plan_since.take();
+>                 if let Some(t) = t_pend {
+690a716
+>                 self.plan_job_since = Some(t_pend.unwrap_or(self.now));
+956c982,999
+<             Fx::None | Fx::P2End | Fx::PlanEnd => {}
+---
+>             Fx::None | Fx::P2End => {}
+>             Fx::PlanEnd => {
+>                 if let Some(t) = self.plan_job_since.take() {
+>                     self.plan_term_max = self.plan_term_max.max(now - t);
+>                 }
+>             }
+>             Fx::RecClock(n) => {
+>                 self.rec_reloj_us = self.reloj_us_rec();
+>                 if let Some((hn, durs)) = self.hold_on_decide.clone() {
+>                     if hn == n || hn == usize::MAX {
+>                         self.hold_on_decide = None;
+>                         self.mark(n as i32, "retencion_entre_reloj_y_decision", 0);
+>                         for d in durs {
+>                             self.pend_p2.push_back(d);
+>                         }
+>                     }
+>                 }
+>             }
+1159a1203,1205
+>                     if let Some(d) = self.s[n].rec_debida.take() {
+>                         self.rec_term_max = self.rec_term_max.max(now - d);
+>                     }
+1191a1238,1240
+>                     if self.reloj_antes_de_decidir || self.paso_reloj {
+>                         job.push_front(0, false, Fx::RecClock(n));
+>                     }
+1203c1252,1259
+<                     Escaladas::K1 { .. } => self.presupuesto.solicita(u64::from(self.tics) * 125),
+---
+>                     Escaladas::K1 { .. } => {
+>                         let ahora = if self.reloj_antes_de_decidir {
+>                             self.rec_reloj_us
+>                         } else {
+>                             self.reloj_us_rec()
+>                         };
+>                         self.presupuesto.solicita(ahora)
+>                     }
+1217c1273,1275
+<                     self.s[n].rec_debida = None;
+---
+>                     if let Some(d) = self.s[n].rec_debida.take() {
+>                         self.rec_term_max = self.rec_term_max.max(now - d);
+>                     }
+1236a1295
+>                     self.rec_term_max = self.rec_term_max.max(now - d);
+1308a1368,1372
+>                 self.hechas += 1;
+>                 if self.s[n].buzon.fresca().is_none() && self.s[n].muertas == 0 {
+>                     self.hecha_sin_trama += 1;
+>                     self.mark(n as i32, "HECHA_SIN_TRAMA", 0);
+>                 }
+1314a1379
+>                     self.rec_term_max = self.rec_term_max.max(now - d);
+1334a1400,1409
+>         }
+>     }
+> 
+>     /// El reloj con que la recuperacion fecha el presupuesto: el contador crudo de 32 bits del
+>     /// tic (lo del modelo) o extendido a 64 bits por la propia recuperacion (lo de `fw`).
+>     fn reloj_us_rec(&mut self) -> u64 {
+>         if self.presupuesto_64 {
+>             self.reloj_rec.extiende(self.tics) * 125
+>         } else {
+>             u64::from(self.tics) * 125

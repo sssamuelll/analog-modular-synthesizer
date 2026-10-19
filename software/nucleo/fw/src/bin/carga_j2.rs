@@ -187,6 +187,12 @@ struct Pasada {
     /// entrada ni la salida de la excepcion. Con `perfil`.
     #[cfg(feature = "transporte-tic")]
     isr_tic: (u32, u32),
+    /// La entrada de la excepcion del tic, en ciclos (media y maximo). Con `tic-fino` y `perfil`.
+    #[cfg(feature = "transporte-tic")]
+    entrada_tic: (u32, u32),
+    /// El encadenado del tic al planificador, en ciclos (media y maximo). Con `tic-fino` y `perfil`.
+    #[cfg(feature = "transporte-tic")]
+    cadena_tic: (u32, u32),
     /// f_cpu en MHz (ciclos por microsegundo), para pasar los ciclos de arriba a nanosegundos.
     #[cfg(feature = "transporte-tic")]
     f_cpu_mhz: u32,
@@ -228,6 +234,20 @@ impl Pasada {
                 max,
                 max * 1000 / mhz
             );
+            let (em, ex) = self.entrada_tic;
+            info!(
+                "carga_j2,cache={=str},tic,entrada_tic: media={} ciclos, max={} ciclos",
+                self.cache,
+                em,
+                ex
+            );
+            let (cm, cx) = self.cadena_tic;
+            info!(
+                "carga_j2,cache={=str},tic,cadena_tic: media={} ciclos, max={} ciclos",
+                self.cache,
+                cm,
+                cx
+            );
         }
         #[cfg(not(feature = "transporte-tic"))]
         {
@@ -255,6 +275,134 @@ impl Pasada {
                 );
             }
         }
+    }
+}
+
+/// Invalida la I-cache y limpia e invalida la D-cache. Cada una en su funcion, fuera de
+/// linea: inlinada en un `main` grande, la constante de `ICIALLU` no ensambla (literal fuera
+/// de rango).
+#[cfg(all(feature = "tic-fino", feature = "transporte-tic"))]
+#[inline(never)]
+fn invalida_icache() {
+    // SAFETY: nadie mas toca el SCB mientras gira esta pasada.
+    unsafe { cortex_m::Peripherals::steal() }.SCB.invalidate_icache();
+}
+
+#[cfg(all(feature = "tic-fino", feature = "transporte-tic"))]
+#[inline(never)]
+fn limpia_invalida_dcache() {
+    // SAFETY: igual.
+    let mut p = unsafe { cortex_m::Peripherals::steal() };
+    p.SCB.clean_invalidate_dcache(&mut p.CPUID);
+}
+
+/// Lo que midio una pasada de la salida y el hueco (`mide_salida`).
+#[cfg(all(feature = "tic-fino", feature = "transporte-tic"))]
+#[derive(Clone, Copy)]
+struct Salida {
+    fria: bool,
+    huecos: u32,
+    otros: u32,
+    paso_min: u32,
+    entrada: (u32, u32),
+    tic: u32,
+    cadena: (u32, u32),
+    plan: u32,
+    /// Salida: media, maximo y minimo.
+    salida: (u32, u32, u32),
+    /// Hueco: media y maximo.
+    hueco: (u32, u32),
+}
+
+#[cfg(all(feature = "tic-fino", feature = "transporte-tic"))]
+impl Salida {
+    fn imprime(&self) {
+        info!(
+            "carga_j2,salida,frio={=bool},gaps={},otros={},paso_min={},entrada=({},{}),tic={},cadena=({},{}),plan={},salida=({},{},{}),hueco=({},{})",
+            self.fria,
+            self.huecos,
+            self.otros,
+            self.paso_min,
+            self.entrada.0,
+            self.entrada.1,
+            self.tic,
+            self.cadena.0,
+            self.cadena.1,
+            self.plan,
+            self.salida.0,
+            self.salida.1,
+            self.salida.2,
+            self.hueco.0,
+            self.hueco.1
+        );
+    }
+}
+
+/// Un hueco es un salto del contador entre dos lecturas seguidas mayor que esto, en ciclos.
+#[cfg(all(feature = "tic-fino", feature = "transporte-tic"))]
+const UMBRAL: u32 = 200;
+#[cfg(all(feature = "tic-fino", feature = "transporte-tic"))]
+const HUECOS: u32 = 8_000;
+
+/// El hilo gira en un lazo cerrado sin esperar nada y mide cada hueco que le deja el J2: la
+/// salida de la excepcion (del final del planificador a la primera lectura del hilo) y el hueco
+/// entero. No imprime nada: un `info!` apaga las interrupciones y retrasaria el tic.
+#[cfg(all(feature = "tic-fino", feature = "transporte-tic"))]
+#[inline(never)]
+fn mide_salida(fria: bool) -> Salida {
+    use cortex_m::peripheral::DWT;
+    use sam17_nucleo_fw::j2_tic::{cadena_ciclos, ciclos, entrada_ciclos, fin_del_planificador, testigos};
+    let _ = (entrada_ciclos(), cadena_ciclos());
+    let (c0, tics0) = (ciclos(), testigos().tics);
+    let mut prev = DWT::cycle_count();
+    let (mut n_plan, _) = fin_del_planificador();
+    let (mut huecos, mut otros, mut registrados) = (0u32, 0u32, 0u32);
+    let (mut paso_min, mut s_sum, mut s_max, mut s_min) = (u32::MAX, 0u32, 0u32, u32::MAX);
+    let (mut h_sum, mut h_max) = (0u32, 0u32);
+    while huecos < HUECOS {
+        let t = DWT::cycle_count();
+        let d = t.wrapping_sub(prev);
+        if d > UMBRAL {
+            huecos += 1;
+            let (p, fin) = fin_del_planificador();
+            if p.wrapping_sub(n_plan) == 1 {
+                let s = t.wrapping_sub(fin);
+                registrados += 1;
+                s_sum = s_sum.wrapping_add(s);
+                s_max = s_max.max(s);
+                s_min = s_min.min(s);
+                h_sum = h_sum.wrapping_add(d);
+                h_max = h_max.max(d);
+            } else {
+                otros += 1;
+            }
+            n_plan = p;
+            if fria {
+                invalida_icache();
+                limpia_invalida_dcache();
+            }
+            prev = DWT::cycle_count();
+        } else {
+            paso_min = paso_min.min(d);
+            prev = t;
+        }
+    }
+    let entrada = entrada_ciclos();
+    let cadena = cadena_ciclos();
+    let (c1, tics1) = (ciclos(), testigos().tics);
+    let dt = tics1.wrapping_sub(tics0).max(1);
+    let n = registrados.max(1);
+    Salida {
+        fria,
+        huecos,
+        otros,
+        paso_min,
+        entrada,
+        tic: c1[0].wrapping_sub(c0[0]) / dt,
+        cadena,
+        plan: c1[1].wrapping_sub(c0[1]) / dt,
+        salida: (s_sum / n, s_max, if registrados == 0 { 0 } else { s_min }),
+        hueco: (h_sum / n, h_max),
     }
 }
 
@@ -352,7 +500,22 @@ async fn main(spawner: Spawner) {
     {
         let (base, largo) = sam17_nucleo_fw::j2_tic::region();
         info!("carga_j2: region no cacheable {:#x}, {} bytes", base, largo);
-        sam17_nucleo_fw::j2_tic::lanzar(ranuras, p.TIM7, PERIODO_US, f_cpu, BAJADA, juez_del_banco);
+        // El juez: el del banco, o el mismo con el CRC del sobre de la subida (`crc-*`).
+        #[cfg(feature = "crc-unidad")]
+        {
+            sam17_nucleo_fw::j2_banco::prepara_crc_unidad();
+            info!("carga_j2: la unidad CRC da el CRC-16/CCITT-FALSE (0x29B1 y largos 0 a 71)");
+        }
+        let juez: fn(usize, &[u8]) -> bool = if cfg!(feature = "crc-bits") {
+            sam17_nucleo_fw::j2_banco::juez_crc_bits
+        } else if cfg!(feature = "crc-tabla") {
+            sam17_nucleo_fw::j2_banco::juez_crc_tabla
+        } else if cfg!(feature = "crc-unidad") {
+            sam17_nucleo_fw::j2_banco::juez_crc_unidad
+        } else {
+            juez_del_banco
+        };
+        sam17_nucleo_fw::j2_tic::lanzar(ranuras, p.TIM7, PERIODO_US, f_cpu, BAJADA, juez);
     }
     #[cfg(feature = "transporte-isr")]
     {
@@ -432,12 +595,25 @@ async fn main(spawner: Spawner) {
                 #[cfg(feature = "transporte-tic")]
                 isr_tic,
                 #[cfg(feature = "transporte-tic")]
+                entrada_tic: sam17_nucleo_fw::j2_tic::entrada_ciclos(),
+                #[cfg(feature = "transporte-tic")]
+                cadena_tic: sam17_nucleo_fw::j2_tic::cadena_ciclos(),
+                #[cfg(feature = "transporte-tic")]
                 f_cpu_mhz: f_cpu / 1_000_000,
             });
         }
     }
+    // La pasada de la salida y el hueco, en el regimen que dejo la ultima pasada (la ultima de
+    // `pasadas`: con `reloj-hub` y `transporte-tic`, `icache+dcache-mpu`). Nada se imprime
+    // hasta que acaban las dos.
+    #[cfg(all(feature = "tic-fino", feature = "transporte-tic"))]
+    let salidas = [mide_salida(false), mide_salida(true)];
     for pasada in guardadas.into_iter().flatten() {
         pasada.imprime();
+    }
+    #[cfg(all(feature = "tic-fino", feature = "transporte-tic"))]
+    for r in salidas {
+        r.imprime();
     }
     info!("carga_j2: fin");
     // Un `bkpt` para que `probe-rs run` termine solo y suelte la sonda.

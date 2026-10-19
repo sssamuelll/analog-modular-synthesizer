@@ -29,6 +29,14 @@ pub const COTA_VENCIDA_TICS: u16 = 100;
 /// ranura se da por muerta antes de que el modulo se rinda solo.
 pub const COTA_REINICIANDO_TICS: u16 = 100;
 
+/// El mayor hueco, en periodos, entre el tic que arma la trama que se cuelga y el tic que vuelve
+/// a armar, para una ranura que sobrevive a la recuperacion: el plazo, y cada estado de espera
+/// hasta su ultimo tic que no mata, que es el tic `cota + 1` porque una recuperacion que llega en
+/// el tic en que vence la cota salva la ranura (papel v3, cuarta pasada, ficha C).
+pub const fn hueco_de_recuperacion(plazo: u8, cota_vencida: u16, cota_reiniciando: u16) -> u32 {
+    plazo as u32 + cota_vencida as u32 + cota_reiniciando as u32 + 2
+}
+
 /// Cuantos tics dura un plazo de `plazo_us` microsegundos: el entero hacia
 /// arriba, y nunca menos de uno (una transferencia armada en un tic se mira como
 /// pronto en el siguiente). Satura en 255.
@@ -1520,5 +1528,71 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// El hueco de una ranura que sobrevive a una recuperacion, contado sobre la maquina (la
+    /// prueba x2 de Halberg, cuarta pasada): del tic que arma la trama que se cuelga al tic que
+    /// vuelve a armar, con `en_curso` y `hecho` llegando en el ultimo tic que no mata.
+    fn hueco_simulado(plazo: u8, cv: u16, cr: u16) -> u32 {
+        let mut t = Transporte::con_cotas(cv, cr);
+        t.paso(con_bajada(plazo));
+        assert!(matches!(t.estado(), Estado::Armada { .. }));
+        let mut tics = 0u32;
+        loop {
+            tics += 1;
+            t.paso(Entrada {
+                identidad: true,
+                ..Entrada::default()
+            });
+            if matches!(t.estado(), Estado::Vencida { .. }) {
+                break;
+            }
+        }
+        let inc = t.incidente();
+        let espera = |en_curso: bool| Entrada {
+            identidad: true,
+            incidente: inc,
+            reinicio_en_curso: en_curso,
+            ..Entrada::default()
+        };
+        for en_curso in [false, true] {
+            loop {
+                let mut u = t;
+                u.paso(espera(en_curso));
+                if u.estado() == Estado::Muerta {
+                    break;
+                }
+                t = u;
+                tics += 1;
+            }
+            tics += 1;
+            t.paso(Entrada {
+                reinicio_hecho: en_curso,
+                bajada: Some(plazo),
+                ..espera(true)
+            });
+        }
+        assert!(
+            matches!(t.estado(), Estado::Armada { .. }),
+            "{plazo} {cv} {cr}"
+        );
+        tics
+    }
+
+    #[test]
+    fn el_hueco_de_recuperacion_es_el_de_la_maquina() {
+        for plazo in 1..=3u8 {
+            for cv in [0u16, 1, 7, 100, 200] {
+                for cr in [0u16, 1, 9, 100, 112, 120] {
+                    assert_eq!(
+                        hueco_de_recuperacion(plazo, cv, cr),
+                        hueco_simulado(plazo, cv, cr),
+                        "plazo {plazo}, cotas {cv} y {cr}"
+                    );
+                }
+            }
+        }
+        // La cuenta de Halberg: 305 periodos con plazo 3 y cotas 200 y 100.
+        assert_eq!(hueco_simulado(3, 200, 100), 305);
     }
 }

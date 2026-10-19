@@ -885,6 +885,75 @@ Ninguna pasada tuvo atrasos, plazos vencidos, tics tardíos ni fundidos; el retr
 - **Direcciones y tamaños: de dónde salen.** No se pudo bajar el RM0486 (`st.com` no contesta a `curl` y el PDF no está en `docs/reference`), así que **no hay página del manual que citar**. Las direcciones salen de `stm32n657xx.h` de `cmsis-device-n6` (`ITCM_BASE_S` `0x10000000`, `DTCM_BASE_S` `0x30000000`; 64 KB y 128 KB de base, extensibles con FLEXRAM por `RAMCFG_CR.ITCMCFG` y `DTCMCFG`, que **no se tocan**), y el estado, de la placa en development boot leído con `probe-rs read`: `ITCMCR` `0x39` (`EN`, tamaño 7 = 64 KB), `DTCMCR` `0x41` (`EN`, tamaño 8 = 128 KB) y `SYSCFG_CM55TCMCR` (`0x56008008`) `0x87`. Las TCM no hay que encenderlas: las deja encendidas la ROM. Falta cotejar con el RM0486 la secuencia de FLEXRAM y el ECC de las TCM.
 - **No cubre:** la recuperación (`recuperacion` sale 0, no hay fallos en estas corridas; su texto está en la ITCM pero no se midió frío), seis ranuras reales, el CRC del sobre, un hub con USB y pantalla compartiendo la I-cache (la invalidación entera es la cota, no un caso) y el arranque desde XSPI. La tabla de vectores sigue en la AXISRAM2; llevarla a la DTCM con `VTOR` no se probó.
 
+**Lo mismo con K1 a K5, y la división de 64 bits en la ITCM** (2026-10-19, firmware `a1f6623`: lo de arriba más el tic con el reloj de K2, el presupuesto de escaladas, la marca de la escalada, el incidente y las guardas de `Muerta`; mismas compilaciones y mismo método). Con las K, el tic llama en cada entrada a `__aeabi_ldivmod` (la división con signo de 64 bits del reloj de K2), `compone` a `__aeabi_uldivmod` y `Ranura::paso` a `__aeabi_memmove8`; las tres puertas estaban en la ITCM, pero sus cuerpos (`__divmoddi4`, `__udivmoddi4`, `u64_div_rem` y `memmove`) se quedaban en la AXISRAM2. `j2_tcm.x` los lleva ahora a la ITCM, y del patrón de `embassy_stm32::rcc` deja solo `RccInfo`, que es lo que llama la recuperación (`init` y las PLL, unos 8 KB, salen). Lo que el texto de la ITCM llama fuera de ella, leído del desensamblado de `.itcm` (todo salto a una dirección fuera de `0x1000xxxx`): los pánicos, `defmt` y el contaminador del banco (`perfil::invalida_icache`), nada más.
+
+| | tic (DWT) | planificador (DWT) | total DWT | medidor del hilo | 6 ranuras, DWT / medidor (E) | tic: media / máximo (µs) |
+|---|---|---|---|---|---|---|
+| sin TCM, caliente | 1 237 | 846 | 2 083 | 2 067 | 12,5 / 12,4 % | 4,64 / 4,95 |
+| sin TCM, D fría | 1 648 | 1 093 | 2 741 | 2 900 | 16,4 / 17,4 % | 6,18 / 6,68 |
+| sin TCM, I y D frías | 3 360 | 2 500 | **5 860** | **6 233** | 35,2 / 37,4 % | 12,60 / 14,13 |
+| `j2-tcm`, caliente | 1 212 | 834 | 2 046 | 2 000 | 12,3 / 12,0 % | 4,55 / 4,86 |
+| `j2-tcm`, D fría | 1 212 | 853 | 2 065 | 2 067 | 12,4 / 12,4 % | 4,54 / 4,86 |
+| `j2-tcm`, I y D frías | 1 213 | 850 | **2 063** | **2 400** | 12,4 / 14,4 % | 4,55 / 5,64 |
+| `j2-tcm-pila`, caliente | 1 208 | 816 | 2 024 | 1 967 | 12,1 / 11,8 % | 4,53 / 4,85 |
+| `j2-tcm-pila`, D fría | 1 207 | 835 | 2 042 | 2 000 | 12,3 / 12,0 % | 4,53 / 4,82 |
+| `j2-tcm-pila`, I y D frías | 1 206 | 836 | **2 042** | **2 300** | 12,3 / 13,8 % | 4,52 / 5,64 |
+
+Ninguna pasada tuvo atrasos, plazos vencidos, tics tardíos ni periodos saltados; el retraso máximo del tic al entrar fue de 0 a 2 µs.
+
+- **Las K le cuestan al tic unos 60 ciclos por giro y ranura en caliente** (1 174 a 1 237 sin TCM) y al planificador unos 20 (825 a 846); con TCM y las dos frías, el tic sube 65 (1 148 a 1 213).
+- **Los ~150 ciclos del planificador que no estaban diagnosticados eran la división de 64 bits de `compone`**, que se iba a la AXISRAM2: con su cuerpo en la ITCM, el planificador con las dos frías baja de 989 a 850, a 16 ciclos del caliente de la misma compilación. El total DWT con TCM y las dos frías queda en 2 063 (+0,8 % sobre su caliente; antes +8,6 %), y 2 042 con la pila (+0,9 %). El medidor, que con las dos frías lee también la I-cache vaciada del hilo, da 2 400 y 2 300: es el techo, y el DWT la cota de diseño, como arriba.
+- **Sin TCM y con las dos frías el J2 cuesta más que antes** (5 140 a 5 860 el DWT): la división de K2 se capta desde la AXISRAM2 en cada entrada del tic.
+- **`reloj_anomalo` salió 1 y 2 veces en dos corridas sin TCM, las dos en la primera pasada, la de las cachés apagadas** (el tic dura ahí unos 45 µs por entrada; los testigos son acumulados y no crecen en las pasadas con caché), y 0 en todas las demás: K2 contó un periodo en vez de reconstruirlo. Ningún régimen del instrumento corre sin cachés; la causa no está diagnosticada.
+- **Huella, con seis ranuras** (`RANURAS_SPI` = 6 dimensiona todos los estáticos, aunque giren tres), sin `perfil` ni contaminador, de `rust-size`: **ITCM 8 120 B** (de 64 KB) y **DTCM 4 616 B** (de 128 KB); igual con `j2-tcm-pila` y con `sin-componer` (8 128). Dentro, el juez del banco (`juez_del_banco`, 38 B, y `memcmp`, 116 B), que hace las veces de la comprobación de la subida y no es el CRC real. Los búferes del DMA (`REGION`, 3 840 B) siguen en la AXISRAM2, en la región no cacheable de R-MJ7. La pila del anidamiento de las tres rutinas, por el desensamblado (E: los marcos más hondos de `TIM7`, `DMA2D` y `JPEG`, 204, 240 y 80 B, más tres marcos de excepción de hasta 104 B; no sigue llamadas indirectas): unos 0,85 KB.
+- **El tic con seis ranuras, extrapolado (E)** con el fijo de unos 160 ciclos de la medida con una ranura: con TCM y las dos frías, ~8,9 µs de media y ~11,1 µs de máximo; sin TCM y frío (con su fijo de unos 4 240), ~20 µs de media.
+
+**El CRC del sobre de la subida, medido** (2026-10-19; el árbol de este cambio sin commitear, sobre `52f0521`; `j2-tcm`, tres ranuras, `sin-componer`, mensaje de 25 bytes salvo donde se dice). Con `crc-bits`, `crc-tabla` o `crc-unidad`, el juez de `carga_j2` calcula además el CRC-16/CCITT-FALSE de la cabecera del J2 (D1: de todos los bytes de la subida menos los dos últimos) y lo compara con esos dos; el veredicto sigue siendo el de `juez_del_banco`, así que la política recorre el mismo camino y la diferencia con la fila sin CRC es lo que cuesta el CRC. Por bits es `descubrimiento::crc16`, el que la cabecera dice reutilizar; por tabla, `descubrimiento::crc16_con` con la tabla de 256 entradas copiada a la DTCM (512 B); con la unidad, la unidad CRC del N657 (v3, `0x46024C00`) con el polinomio `0x1021` de 16 bits, inicial `0xFFFF` y sin reflejar, por palabras con los bytes dados la vuelta (`REV`: la unidad mete primero el bit 31 y la v3 no invierte por bytes) y la cola por media palabra y byte. **La unidad da el CRC de `crc16` en la placa:** el vector canónico (`"123456789"` → `0x29B1`) y todos los largos de 0 a 71 de un contenido pseudoaleatorio, comprobados al arrancar (`prepara_crc_unidad`).
+
+| | caliente: planificador / total DWT / medidor | I y D frías: planificador / total DWT / medidor | el CRC con las dos frías (DWT) | 6 ranuras, I y D frías, DWT / medidor (E) |
+|---|---|---|---|---|
+| sin CRC | 834 / 2 046 / 2 000 | 852 / 2 065 / 2 400 | — | 12,4 / 14,4 % |
+| por bits | 2 393 / 3 605 / 3 567 | 2 417 / 3 630 / 3 933 | +1 565 | 21,8 / 23,6 % |
+| **por tabla, en la DTCM** | 1 071 / 2 282 / 2 233 | 1 090 / **2 303** / **2 600** | **+238** | **13,8 / 15,6 %** |
+| con la unidad | 1 195 / 2 407 / 2 333 | 1 210 / 2 423 / 2 766 | +358 | 14,5 / 16,6 % |
+
+Con 71 bytes y las dos frías (DWT): el planificador sin CRC hace 1 089; por bits, 5 749 (+4 660); por tabla, 1 737 (+648); con la unidad, 1 903 (+814). Totales: 2 302, 6 962, 2 950 y 3 115 ciclos, el 13,8, 41,8, 17,7 y 18,7 % de un núcleo con seis ranuras (E). El tic no se mueve en ninguna (1 211 a 1 213).
+
+- **La tabla es la más barata: unos 10 ciclos por byte** (238 con 23 bytes, 648 con 69), y con la tabla en la DTCM no depende de la caché (caliente, 237). Pide 512 B más de DTCM: 5 128 B.
+- **La unidad CRC cuesta un 50 % más que la tabla con 23 bytes y un 25 % más con 69:** cada escritura en el periférico se paga, y la lectura del resultado espera a todas. La cabecera (§10, riesgo 5) ponía la unidad por debajo de la tabla; en el cerebro es al revés. Sus cifras (82 a 92 ciclos con la unidad, 101 con tabla) son **por muestra y del lado del módulo**, el receptor, con su coste fijo de 47: no se comparan con estas, que son por trama y del lado del cerebro.
+- **Por bits, 68 ciclos por byte:** con 25 bytes el J2 pasa al 21,8 % de un núcleo.
+- **La estimación del papel v3** (§3: de 125 a 350 ciclos, 5 por byte, sin fuente) acierta con la tabla y 25 bytes (238) y se queda en la mitad con 71 (648).
+- En las 60 pasadas no hubo atrasos ni plazos vencidos; `reloj_anomalo` salió una vez, en la pasada con las cachés apagadas de una corrida con TCM.
+
+**Lo mismo sobre el guion de enlazado final** (2026-10-19, firmware `13ecefa`: de `core` solo los módulos del J2 y las dos funciones del CRC nombradas en `j2_tcm.x`; `tcm_cierre.py --raices TIM7,DMA2D,JPEG` en verde con las tres variantes). Las dos cachés frías, 25 bytes, DWT / medidor: sin CRC, 2 063 / 2 400; por tabla, **2 299 / 2 633** (+236 en el planificador), el 13,8 y el 15,8 % de un núcleo con seis ranuras (E); con la unidad, 2 424 / 2 767 (+361); por bits, 3 629 por el DWT (+1 567). Con 71 bytes, por tabla, +650 sobre su fila sin CRC (1 087 a 1 737). Las primeras corridas metían todo `core` en la ITCM; con el guion estrecho las cifras se mueven unos pocos ciclos, y la tabla sigue por debajo de la unidad. Huella con el CRC por tabla, sin `perfil`: ITCM 8 224 B y DTCM 5 128 B. Ningún testigo con novedad en las nueve corridas.
+
+**La entrada de la excepción del tic, medida** (2026-10-19, firmware `7fec6a2`, `tic-fino`: `TIM7` sin preescalar, así que el retraso de entrada sale en cuentas de `f_timer`; con `perfil`, `entrada_ciclos` da en ciclos lo que va del suceso de actualización a que el manejador lee `TIM7.CNT`: el apilado, la captación del vector y el prólogo, que el DWT del tic no ve). Tres ranuras, `sin-componer`, CRC por tabla; media / máximo por entrada del tic (una entrada sirve a las tres ranuras):
+
+| | caliente | I y D frías |
+|---|---|---|
+| sin TCM | 61 / 68 | 319 / 860 |
+| `j2-tcm` | 62 / 68 | 143 / 844 |
+| `j2-tcm-pila` | 60 / 60 | 136 / 716 |
+
+- **Con TCM, la caché fría le añade a la entrada unos 80 ciclos por tic** (de 62 a 143), unos 27 por ranura y giro con tres ranuras; la pila en la DTCM apenas la mueve (136). Sin TCM, unos 260 (de 61 a 319).
+- **No está medido:** la salida (el desapilado) ni la entrada del planificador, que se encadena al tic (`DMA2D` queda pendiente al final del tic; en el M55 la cadena se ahorra apilar, no captar el vector). Si cada una costara lo que la entrada del tic (E), las tres juntas sumarían unos 50 a 110 ciclos por ranura y giro con las dos frías y TCM: el J2 con el CRC por tabla quedaría en unos 2 350 a 2 410 ciclos, del 14,1 al 14,5 % de un núcleo con seis ranuras (E), entre el DWT (13,8 %) y el medidor (15,8 %), y más cerca del primero.
+- El reloj de K2 con la cuenta fina no dio `reloj_anomalo` en ninguna pasada con caché; salió 2 veces en la corrida sin TCM, que cuenta también la pasada con las cachés apagadas.
+
+**La salida de la excepción y la entrada encadenada del planificador, medidas** (2026-10-19, firmware `50d43c3`; acta del 19-10, tercera firma, nota de la ficha J). Con `tic-fino` y `perfil`, el tic anota el ciclo en que acaba y `DMA2D` mide desde su primera instrucción cuánto tardó en entrar: **la cadena**, que son el epílogo del tic, el encadenado y el prólogo del planificador. Para **la salida**, una pasada final de `carga_j2` deja el hilo girando sobre el contador de ciclos sin esperar nada, y en cada hueco mide desde el final de `DMA2D` hasta la primera lectura del hilo, y el hueco entero. La pasada corre dos veces: una sin tocar las cachés y otra invalidando las dos tras cada hueco, así que el tic siguiente entra con las dos frías. Tres ranuras, `sin-componer`, CRC por tabla, 8 000 huecos por pasada, I y D encendidas con la región. Medias por tic:
+
+| | entrada | cadena | salida | cuerpos del tic y del planificador, por giro y ranura (DWT) |
+|---|---|---|---|---|
+| `j2-tcm`, caliente | 62 | 44 | 34 | 2 305 |
+| `j2-tcm`, I y D frías | 143 | 121 | 37 | 2 329 |
+| `j2-tcm-pila`, I y D frías | 136 | 119 | 35 | 2 303 |
+
+- **Las partes cuadran con el hueco que ve el hilo.** Entrada, tic, cadena, planificador y salida suman entre 62 y 67 ciclos menos que el hueco medido: la propia instrumentación y el paso del bucle del hilo (4 a 13 ciclos). Con `contaminador-icache` faltan unos 780 más, que son la invalidación de la I-cache que el banco hace dentro de `DMA2D`, no trabajo del J2.
+- **Cuando el banco vacía la I-cache, la salida sube a una media de 213 a 256 ciclos (109 de mínimo).** Al volver, el hilo tiene que traer otra vez su propio código. Es el coste que la ficha J deja fuera de la cifra del J2 («el medidor cuenta como J2 la I-cache vaciada de su propio hilo y sobrestima»). Con el código del hilo en la I-cache y la D-cache fría, la salida es de 31 a 37 ciclos: el marco se apiló al entrar y sigue en la caché al salir.
+- **La cifra de la ficha J, medida.** Con TCM, las dos frías y el CRC por tabla, entrada, cadena y salida suman 301 ciclos por tic, unos 100 por giro y ranura con tres ranuras. Con los cuerpos de esta corrida (2 329), el J2 cuesta **2 429 ciclos por giro y ranura: el 14,6 % de un núcleo con seis ranuras** (las partes son M, la suma es A y la columna de seis ranuras, E). Con los cuerpos de `13ecefa` (2 299), 2 399, el 14,4 %. **Por debajo del 15,0 %: la pasada de optimización sigue aparcada.** Si al J2 se le cargara también lo que el hilo tarda en traer su código, serían de 2 488 a 2 502 ciclos, del 14,9 al 15,0 %.
+- **La columna de seis ranuras cuenta dos veces la entrada, la cadena y la salida:** pasan una vez por tic, y aquí se reparten entre tres ranuras y se multiplican por seis. Con seis ranuras de verdad serían unos 50 ciclos por giro y ranura, no 100 (E).
+- **Máximos.** La entrada llega a 684 ciclos. La salida, en la pasada con las dos frías y `contaminador-icache`, llegó una vez a 8 817. No se ha buscado de dónde salen.
+- **Sin TCM, con las dos frías:** entrada 320, cadena 251, salida 320 y cuerpos 6 726. En la pasada con las cachés apagadas de esa corrida, 20 060 tramas salieron sin bajada fresca; con las cachés encendidas, ninguna. El testigo es acumulado, y por eso la línea de la última pasada dice 20 062.
+
 **Lo que el resto del hub le impone al tic: los testigos** (2026-10-19, `carga_j2` con `transporte-tic`, `reloj-hub`, `sin-componer` y `ranuras-3`, sin TCM y con las cachés calientes; el árbol de este cambio). `tics_fuera_de_presupuesto` cuenta las entradas del tic con más de 60 µs de retraso (R-H2) y `latencia_plan_max_us` es la mayor espera del planificador desde que se pide hasta que arranca (R-H1). Son máximos y cuentas de toda la corrida, con sus tres pasadas.
 
 | | retraso de entrada máximo | tics fuera de presupuesto | espera máxima del planificador |

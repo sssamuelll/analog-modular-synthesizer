@@ -15,28 +15,58 @@ pub const E_MAX: usize = 8;
 pub struct Presupuesto {
     e: usize,
     ventana_us: u64,
+    /// La espera minima entre dos escaladas (candidata de la cuarta pasada); 0 = sin espera.
+    espera_us: u64,
     /// Los instantes de las ultimas `e` concesiones, en anillo.
     concesiones: [u64; E_MAX],
+    ultima_us: u64,
     concedidas: u32,
     denegadas: u32,
+    aplazadas: u32,
+}
+
+/// Lo que contesta el presupuesto a una escalada pedida.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Respuesta {
+    Concedida,
+    /// Dentro de la espera desde la ultima concedida: se vuelve a pedir en `hasta_us`, y entonces
+    /// decide el presupuesto. No gasta ni cuenta como negada.
+    Aplazada {
+        hasta_us: u64,
+    },
+    Denegada,
 }
 
 impl Presupuesto {
     /// `e` escaladas como mucho en cualquier ventana de `ventana_us`.
     pub const fn nuevo(e: usize, ventana_us: u64) -> Presupuesto {
+        Presupuesto::con_espera(e, ventana_us, 0)
+    }
+
+    /// Lo mismo, y ademas dos escaladas concedidas quedan separadas al menos `espera_us`.
+    pub const fn con_espera(e: usize, ventana_us: u64, espera_us: u64) -> Presupuesto {
         assert!(e <= E_MAX);
         Presupuesto {
             e,
             ventana_us,
+            espera_us,
             concesiones: [0; E_MAX],
+            ultima_us: 0,
             concedidas: 0,
             denegadas: 0,
+            aplazadas: 0,
         }
     }
 
-    /// Pide una escalada en `ahora_us`. `true` si se concede, y entonces se gasta.
-    pub fn pide(&mut self, ahora_us: u64) -> bool {
+    /// Pide una escalada en `ahora_us`. Si se concede, se gasta.
+    pub fn solicita(&mut self, ahora_us: u64) -> Respuesta {
         let n = self.concedidas as usize;
+        if n > 0 && ahora_us.saturating_sub(self.ultima_us) < self.espera_us {
+            self.aplazadas += 1;
+            return Respuesta::Aplazada {
+                hasta_us: self.ultima_us + self.espera_us,
+            };
+        }
         // La casilla del anillo guarda la `e`-esima concesion mas reciente: la que sale primero
         // de la ventana.
         let cabe = self.e > 0
@@ -44,11 +74,18 @@ impl Presupuesto {
                 || ahora_us.saturating_sub(self.concesiones[n % self.e]) >= self.ventana_us);
         if cabe {
             self.concesiones[n % self.e] = ahora_us;
+            self.ultima_us = ahora_us;
             self.concedidas += 1;
+            Respuesta::Concedida
         } else {
             self.denegadas += 1;
+            Respuesta::Denegada
         }
-        cabe
+    }
+
+    /// `solicita` sin espera: `true` si se concede.
+    pub fn pide(&mut self, ahora_us: u64) -> bool {
+        self.solicita(ahora_us) == Respuesta::Concedida
     }
 
     pub const fn concedidas(&self) -> u32 {
@@ -58,6 +95,10 @@ impl Presupuesto {
     pub const fn denegadas(&self) -> u32 {
         self.denegadas
     }
+
+    pub const fn aplazadas(&self) -> u32 {
+        self.aplazadas
+    }
 }
 
 #[cfg(test)]
@@ -65,6 +106,44 @@ mod tests {
     use super::*;
 
     const MS: u64 = 1000;
+
+    #[test]
+    fn con_espera_aplaza_la_que_llega_dentro_y_concede_al_cumplirse() {
+        let mut p = Presupuesto::con_espera(3, 1000 * MS, 2 * MS);
+        assert_eq!(p.solicita(0), Respuesta::Concedida);
+        assert_eq!(p.solicita(300), Respuesta::Aplazada { hasta_us: 2 * MS });
+        assert_eq!(
+            p.solicita(2 * MS - 1),
+            Respuesta::Aplazada { hasta_us: 2 * MS }
+        );
+        assert_eq!(p.solicita(2 * MS), Respuesta::Concedida);
+        assert_eq!((p.concedidas(), p.denegadas(), p.aplazadas()), (2, 0, 2));
+    }
+
+    #[test]
+    fn la_espera_solo_espacia_y_el_presupuesto_decide_al_cumplirse() {
+        let mut p = Presupuesto::con_espera(2, 1000 * MS, MS);
+        assert_eq!(p.solicita(0), Respuesta::Concedida);
+        assert_eq!(p.solicita(MS), Respuesta::Concedida);
+        assert_eq!(
+            p.solicita(MS + 500),
+            Respuesta::Aplazada { hasta_us: 2 * MS }
+        );
+        assert_eq!(p.solicita(2 * MS), Respuesta::Denegada);
+        // Una negada no mueve la espera: cuenta desde la ultima concedida.
+        assert_eq!(p.solicita(2 * MS + 1), Respuesta::Denegada);
+        assert_eq!((p.concedidas(), p.denegadas(), p.aplazadas()), (2, 2, 1));
+    }
+
+    #[test]
+    fn sin_espera_nunca_aplaza() {
+        let mut p = Presupuesto::nuevo(3, 1000 * MS);
+        for t in [0, 0, 1] {
+            assert_eq!(p.solicita(t), Respuesta::Concedida);
+        }
+        assert_eq!(p.solicita(2), Respuesta::Denegada);
+        assert_eq!(p.aplazadas(), 0);
+    }
 
     #[test]
     fn concede_e_en_la_ventana_y_niega_la_siguiente() {

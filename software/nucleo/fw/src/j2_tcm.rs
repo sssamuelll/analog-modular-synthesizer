@@ -89,6 +89,21 @@ core::arch::global_asm!(
 
 /// Comprueba que las TCM estan encendidas y que la copia coincide con la imagen, palabra a
 /// palabra. Al arrancar el binario, antes de lanzar el J2.
+/// Asevera que la funcion de `f` esta en la ITCM. El J2 llama por puntero al juez y al reset de
+/// cada ranura, y `tcm_cierre.py` solo sigue los saltos con direccion: una de esas
+/// que se quede en la AXISRAM2 volveria a captar texto frio en cada giro sin que nada fallara.
+pub fn asevera_en_itcm(f: usize, que: &str) {
+    let a = f & !1;
+    let ini = core::ptr::addr_of!(__sitcm) as usize;
+    let fin = core::ptr::addr_of!(__eitcm) as usize;
+    defmt::assert!(
+        ini <= a && a < fin,
+        "j2_tcm: {} ({:#x}) fuera de la ITCM",
+        que,
+        a
+    );
+}
+
 pub fn comprueba() {
     // SAFETY: solo se leen las TCM, las imagenes y los registros de configuracion del nucleo.
     unsafe {
