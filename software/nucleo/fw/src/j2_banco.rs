@@ -710,8 +710,8 @@ pub fn prepara_registro_banco() {
 }
 
 /// [`juez_sobre`] sobre [`REGISTRO_BANCO`], con el largo clocado, en vez de sobre lo que trajo el
-/// cable: sin modulo, el ruido del `MISO` se rechaza en los dos primeros bytes, sin llegar al CRC,
-/// y la medida saldria corta.
+/// cable: sin modulo, lo que trae el `MISO` no es un registro, y segun el `largo` que lea el sobre
+/// sale corto sin CRC o con el CRC de unos pocos bytes. La medida saldria corta.
 pub fn juez_sobre_sin_modulo(n: usize, subida: &[u8]) -> bool {
     // SAFETY: ver `Registro`.
     let r = unsafe { &*REGISTRO_BANCO.0.get() };
