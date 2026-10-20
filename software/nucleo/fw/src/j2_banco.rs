@@ -630,8 +630,13 @@ const _: () = {
 /// Encaja en `j2_ejecutor::Juez`. Rechaza entero, como D8 del maestro: un solo
 /// byte fuera de sitio es `SubidaMala`, y 40 seguidas ponen `muda` (D7.3).
 pub fn juez_del_banco(_n: usize, subida: &[u8]) -> bool {
-    subida == PATRON_SUBIDA
+    subida == PATRON_JUEZ
 }
+
+/// El patron donde lo lee el juez: con `j2-tcm`, en la DTCM, como los statics del J2 (ficha H).
+/// Como `const` se quedaba en el `.rodata` de la AXISRAM2.
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static PATRON_JUEZ: [u8; LARGO_BANCO] = PATRON_SUBIDA;
 
 /// Los jueces con el CRC del sobre de la subida (cabecera del J2, D1: CRC-16/CCITT-FALSE de
 /// todo menos los dos ultimos bytes, que lo llevan en little-endian), para medir en `carga_j2`
