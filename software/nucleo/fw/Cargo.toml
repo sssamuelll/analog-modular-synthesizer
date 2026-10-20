@@ -143,6 +143,9 @@ con-usb = []
 crc-bits = []
 crc-tabla = []
 crc-unidad = []
+# El juez de verdad (`juez_sobre`, el sobre de `core::j2`) sobre un registro de la Voz que
+# llena la ventana, porque en `carga_j2` no hay modulo detras. Solo para el banco.
+crc-sobre = []
 # `TIM7` sin preescalar: el retraso de entrada del tic en cuentas de f_timer, y con `perfil`
 # la entrada de la excepcion en ciclos (`entrada_ciclos`). Solo para el banco.
 tic-fino = []

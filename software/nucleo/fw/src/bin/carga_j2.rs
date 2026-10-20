@@ -363,8 +363,16 @@ fn mide_salida(fria: bool) -> Salida {
         let t = DWT::cycle_count();
         let d = t.wrapping_sub(prev);
         if d > UMBRAL {
-            huecos += 1;
             let (p, fin) = fin_del_planificador();
+            if p == n_plan {
+                // Sin planificador no es del J2: otra interrupcion, o el hilo trayendo su propio
+                // codigo despues de invalidar. No cuenta ni invalida otra vez; si invalidara, el
+                // hilo frio se mediria a si mismo en cada vuelta (con `368d1ac`, 7 061 de 8 000).
+                otros += 1;
+                prev = t;
+                continue;
+            }
+            huecos += 1;
             if p.wrapping_sub(n_plan) == 1 {
                 let s = t.wrapping_sub(fin);
                 registrados += 1;
@@ -504,13 +512,21 @@ async fn main(spawner: Spawner) {
     {
         let (base, largo) = sam17_nucleo_fw::j2_tic::region();
         info!("carga_j2: region no cacheable {:#x}, {} bytes", base, largo);
-        // El juez: el del banco, o el mismo con el CRC del sobre de la subida (`crc-*`).
+        // El juez: el de verdad con `crc-sobre`; si no, el del banco, o el mismo con el CRC del
+        // sobre de la subida calculado aparte (`crc-bits`, `crc-tabla`, `crc-unidad`).
         #[cfg(feature = "crc-unidad")]
         {
             sam17_nucleo_fw::j2_banco::prepara_crc_unidad();
             info!("carga_j2: la unidad CRC da el CRC-16/CCITT-FALSE (0x29B1 y largos 0 a 71)");
         }
-        let juez: fn(usize, &[u8]) -> bool = if cfg!(feature = "crc-bits") {
+        #[cfg(feature = "crc-sobre")]
+        {
+            sam17_nucleo_fw::j2_banco::prepara_registro_banco();
+            info!("carga_j2: el juez decodifica el sobre de un registro de 24 bytes");
+        }
+        let juez: fn(usize, &[u8]) -> bool = if cfg!(feature = "crc-sobre") {
+            sam17_nucleo_fw::j2_banco::juez_sobre_sin_modulo
+        } else if cfg!(feature = "crc-bits") {
             sam17_nucleo_fw::j2_banco::juez_crc_bits
         } else if cfg!(feature = "crc-tabla") {
             sam17_nucleo_fw::j2_banco::juez_crc_tabla
@@ -637,6 +653,14 @@ async fn main(spawner: Spawner) {
         if let Some(t) = t {
             sam17_nucleo_fw::secciones::imprime(t, cache, f_cpu / 1_000_000);
         }
+    }
+    // Lo que dijo el juez en toda la corrida: que la politica recorrio el camino que se cree.
+    for n in 0..RANURAS_SPI {
+        let c = cuentas(n);
+        info!(
+            "carga_j2: ranura {} subidas_ok={} subidas_malas={}",
+            n, c.subidas_ok, c.subidas_malas
+        );
     }
     info!("carga_j2: fin");
     // Un `bkpt` para que `probe-rs run` termine solo y suelte la sonda.

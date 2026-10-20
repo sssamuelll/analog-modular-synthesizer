@@ -105,7 +105,7 @@ g_fw()       { cd "$RAIZ/software/nucleo/fw" && cargo build --release --quiet; }
 # `tcm_cierre.py`, que sale con 1 si algo de lo que corre en la ITCM salta fuera de ella o si
 # uno de los vectores del J2 no esta dentro. La division de 64 bits se quedo fuera una vez y lo
 # encontraron los ciclos, no una puerta.
-g_tcm()      { cd "$RAIZ/software/nucleo/fw" && cargo build --release --quiet --features transporte-tic,reloj-hub,ranuras-3,j2-tcm --bin carga_j2 && python tcm_cierre.py target/thumbv8m.main-none-eabihf/release/carga_j2 --raices TIM7,DMA2D,JPEG; }
+g_tcm()      { cd "$RAIZ/software/nucleo/fw" && cargo build --release --quiet --features transporte-tic,reloj-hub,ranuras-3,j2-tcm,crc-sobre --bin carga_j2 && python tcm_cierre.py target/thumbv8m.main-none-eabihf/release/carga_j2 --raices TIM7,DMA2D,JPEG; }
 
 corre hardware g_hardware
 
