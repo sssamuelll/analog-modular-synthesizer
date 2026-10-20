@@ -740,6 +740,27 @@ sesión y una vez al abrirla; con sesión, `SALUD` a 1 Hz, `ESTADO_VOZ` a 1 Hz,
 `JACKS` a 20 Hz o al cambiar, `MEDIDA` cuando haya barrido, y `NADA` cuando
 no toque nada. Un registro a la vez (D1).
 
+> **Enmienda del 2026-10-20 (la subida en código):** los registros son
+> `dialecto_voz::Registro`, con `codificar` del lado del módulo y
+> `decodificar_registro` del lado del cerebro, y `VENTANA_SUBIDA = 24`
+> (tests 1 y 8 de §8). Un `HOLA` de subida con `sesion` distinto de 0 y de 1
+> se rechaza por forma. La publicación vive en `dialecto_voz::Receptor`, y lo
+> que este papel no fijaba queda así:
+>
+> - `Receptor::recibir` recibe todos los bytes que el maestro clocó en el
+>   giro, relleno y cola incluidos, y con ellos mide si el registro salió
+>   entero (D6.2).
+> - El `HOLA` de la sesión nueva sale con la `secuencia` **0**, como el `HOLA`
+>   de bajada; la publicación siguiente es la 1.
+> - Abrir sesión descarta también lo pedido que aún no salió: era de la
+>   sesión vieja, y sus cuentas también.
+> - Cerrar la sesión (el `HOLA` que el módulo no habla, enmienda de D5)
+>   abandona el registro a medias y publica el `HOLA` con `sesión = 0`: sin
+>   sesión no sale otra cosa.
+> - Lo pedido sale en orden fijo, `SALUD` y después `ESTADO_VOZ`, uno por
+>   muestreo, y de cada uno sale lo último pedido. La cadencia de 1 Hz la
+>   lleva quien pide (`Receptor::pedir`), no el receptor.
+
 ---
 
 ## 4. Los largos contra R-E1
