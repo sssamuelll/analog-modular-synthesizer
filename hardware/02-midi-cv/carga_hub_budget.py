@@ -181,8 +181,8 @@ def obligaciones() -> list[Obligacion]:
                    "<= 12 ms de pendiente a terminado", f"{v3}, R-H1; {acta}, fichas B y C", HUECO,
                    "testigo latencia_rec_max_us de fw, de pendiente a terminada; solo en el banco"),
         Obligacion("R-H2: maximo enmascarado", "<= 5 us por seccion critica", f"{v3}, R-H2", HUECO,
-                   "banco: con el USB por debajo del tic, la entrada aun llega a 6 us: lo mas probable, "
-                   "una seccion critica del USB; sin medir directamente (EN-PLACA)"),
+                   "banco, con las dos caches: 0,77 us, y 3,4 us frias (el temporizador de embassy-time, "
+                   "TIM12); 9,9 us con las caches apagadas; desde la RAM, no desde XSPI (EN-PLACA)"),
         Obligacion("R-H2: entrada del tic", "<= 60 us desde su instante", f"{v3}, R-H2 y 2.8", HUECO,
                    "banco: 6 us con el USB a 1 000 mensajes MIDI/s y 4 us a 5 000 (EN-PLACA)"),
         Obligacion("R-H4: el enlace del J2 en TCM", "ITCM 8 224 B y DTCM 5 128 B (referencia)",

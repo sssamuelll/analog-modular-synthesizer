@@ -33,6 +33,7 @@ pub mod rampa;
 pub mod rejilla;
 pub mod reloj;
 pub mod retencion;
+pub mod secciones;
 pub mod servidor;
 pub mod supervisor_j2;
 pub mod sysex;

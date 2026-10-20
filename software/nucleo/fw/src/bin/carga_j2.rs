@@ -533,6 +533,11 @@ async fn main(spawner: Spawner) {
         );
     }
 
+    // R-H2: cuanto dura cada seccion critica y quien la abre, en la muestra que vale de cada
+    // pasada; 5 us es el tope.
+    #[cfg(feature = "secciones")]
+    let mut secciones: [Option<sam17_nucleo_core::secciones::Tabla>; 3] = [None; 3];
+
     let mut promedios = Promedios::nuevo();
     let mut giros_antes = 0u32;
     #[cfg(feature = "transporte-tic")]
@@ -546,7 +551,15 @@ async fn main(spawner: Spawner) {
         // La primera muestra de cada pasada absorbe el arranque o el cambio de
         // cache; la segunda es la que vale.
         for muestra in 0..2 {
+            #[cfg(feature = "secciones")]
+            if muestra == 1 {
+                sam17_nucleo_fw::secciones::reinicia(5 * (f_cpu / 1_000_000));
+            }
             Timer::after_secs(MUESTRA_S).await;
+            #[cfg(feature = "secciones")]
+            if muestra == 1 {
+                secciones[i] = Some(sam17_nucleo_fw::secciones::toma());
+            }
             let (mut giros, mut atrasos, mut plazos) = (0u32, 0u32, 0u32);
             for n in 0..RANURAS_SPI {
                 let c = cuentas(n);
@@ -618,6 +631,12 @@ async fn main(spawner: Spawner) {
     #[cfg(all(feature = "tic-fino", feature = "transporte-tic"))]
     for r in salidas {
         r.imprime();
+    }
+    #[cfg(feature = "secciones")]
+    for (t, cache) in secciones.iter().zip(pasadas) {
+        if let Some(t) = t {
+            sam17_nucleo_fw::secciones::imprime(t, cache, f_cpu / 1_000_000);
+        }
     }
     info!("carga_j2: fin");
     // Un `bkpt` para que `probe-rs run` termine solo y suelte la sonda.
