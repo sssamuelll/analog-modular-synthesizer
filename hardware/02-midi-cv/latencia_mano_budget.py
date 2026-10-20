@@ -24,7 +24,7 @@ nota -> VCA (<=3 ms, voz-total S3.3), que ya tiene su cota y su guion pendiente
 --- La regla que gobierna la cuenta ----------------------------------------
 
 La latencia de una etapa periodica NO es lo que tarda en transmitir: es su
-PERIODO. Una trama de 288 bits tarda 28,8 us en salir a 10 MHz, pero si solo
+PERIODO. Una trama de 328 bits tarda 32,8 us en salir a 10 MHz, pero si solo
 sale una cada 10 ms, la latencia son 10 ms. El bus no es el cuello; la cadencia
 del lazo lo es. Y desde el punto a punto, el bus NI SIQUIERA acota la cadencia:
 la acotan los EXTREMOS (D6) -- el barrido analogico del panel por un lado y la
@@ -102,7 +102,7 @@ def suelo_midi_din_ms() -> float:
 
 def bits_escritura(agrupado: bool = True) -> int:
     """Lo que el enlace de la VOZ mueve por giro, con el mismo payload:
-    agrupados, UN bloque de 288 (R-M4); sueltos, 16 tramas del dialecto
+    agrupados, UN bloque de 328 (cabecera S4); sueltos, 16 tramas del dialecto
     legado de 72."""
     return BITS_ESCRITURA if agrupado else PARAMS_POR_BLOQUE * BITS_TRAMA_VCO
 

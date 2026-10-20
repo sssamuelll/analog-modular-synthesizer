@@ -15,7 +15,19 @@ supuestos daria un total y no diria nada.
 """
 from __future__ import annotations
 
+import os
 import sys
+
+_AQUI = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(_AQUI, "..", "02-midi-cv"))
+import trama_j2_budget as tj    # noqa: E402
+
+# El evento viaja por el enlace privado de la Voz, al reloj al que ese enlace
+# corre hoy. Delante puede tener la trama mas larga del enlace (el SET de
+# dieciseis), y despues del gap sale el suyo (cabecera S9, hallazgo S-9).
+_VOZ = tj.enlace("Voz total")
+ESPERA_J2_US = (_VOZ.t_trama_mas_larga_s() + tj.T_GAP_S) * 1e6
+AIRE_EVENTO_US = tj.BITS_EVENTO / _VOZ.reloj_operacion_hz() * 1e6
 
 OBJETIVO_US = 3_000.0          # voz-total S3.3: <= 3 ms de nota a VCA
 T_TICK_US = 100.0              # generador S1: F_RENDER = 10 kHz
@@ -26,8 +38,10 @@ RC_MAX_US = T_ATAQUE_MIN_MS * 1000.0 / 10.0   # generador S9: un decimo del ataq
 FILAS = [
     ("reaccion del cerebro", None,
      "evento S5: depende de en que nucleo viva el host USB (C2)"),
-    ("turno del J2", 100.0,
-     "R-E1: ningun mensaje dura mas de 100 us (la cota viva; la cifra vieja del bus compartido no)"),
+    ("espera al mensaje en curso del J2", ESPERA_J2_US,
+     "cabecera S4 y D8: la trama mas larga del enlace de la Voz mas T_GAP (provisional)"),
+    ("aire del propio evento en el J2", AIRE_EVENTO_US,
+     "cabecera S4: el EVENTO con sobre y cola"),
     ("parse del evento y encolado en el N657", None,
      "bring-up: ISR del esclavo SPI bajo carga plena (motor-digital S7)"),
     ("latencia de la ISR del tick", None,

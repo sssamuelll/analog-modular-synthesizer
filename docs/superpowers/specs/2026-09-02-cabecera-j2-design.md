@@ -1019,10 +1019,10 @@ en el host, con la cita del papel en cada uno:
 
 | Guion | Qué cambia | Estado |
 |---|---|---|
-| `hardware/02-midi-cv/trama_j2_budget.py` | `BITS_BLOQUE_TONO` 288 → **328** (máscara + 16 tonos + sobre + cola), fuente §4; `BITS_EVENTO` gana sobre y cola: **112**; `BITS_ESTADO_COMPUERTA` 16 → **200** (con relleno a la ventana); `BITS_CROSSPOINT` 256 → **568** (la imagen del modelo con sobre, no los bits del chip); filas nuevas: **`TONO` completo a 1 kHz** (328), **refresco `SET`** (824 × 63 Hz), **refresco `BAHIA`** (568 × 1 Hz); `SALUD`, `ESTADO_VOZ` y `JACKS` con tamaño en la subida (**200**, la ventana clocada); `Fila` gana `red: str \| None` y `evaluar` falla si una fila de bajada no lo declara ni está en `SIN_RED = ("dispara",)` (R-C4); `T_GAP = 2e-6  # HUECO` como constante citada | pendiente |
-| `hardware/02-midi-cv/latencia_mano_budget.py` | Hereda `BITS_BLOQUE_TONO` del anterior; nada más | se mueve solo |
-| `hardware/03-vco/ataque_budget.py` | La fila «Turno del J2 ≤ 100 µs» se parte en dos, porque la v1 fundía dos términos (S-9): **espera al mensaje en curso** (82,4 µs al piso, 23,9 a D8, más `T_GAP`) y **aire del propio `EVENTO`** (11,2 / 3,2). Suman 95,6 al piso y siguen bajo la cota | pendiente |
-| `hardware/02-midi-cv/tiempo_budget.py` | Ya lee la trama más larga del enlace de la Voz (`:43-44`); con `SET` pasa de 288 a 824 bits y sus dos aserciones siguen verdes (§4) | se mueve solo |
+| `hardware/02-midi-cv/trama_j2_budget.py` | `BITS_BLOQUE_TONO` 288 → **328** (máscara + 16 tonos + sobre + cola), fuente §4; `BITS_EVENTO` gana sobre y cola: **112**; `BITS_ESTADO_COMPUERTA` 16 → **200** (con relleno a la ventana); `BITS_CROSSPOINT` 256 → **568** (la imagen del modelo con sobre, no los bits del chip); filas nuevas: **`TONO` completo a 1 kHz** (328), **refresco `SET`** (824 × 63 Hz), **refresco `BAHIA`** (568 × 1 Hz); `SALUD`, `ESTADO_VOZ` y `JACKS` con tamaño en la subida (**200**, la ventana clocada); `Fila` gana `red: str \| None` y `evaluar` falla si una fila de bajada no lo declara ni está en `SIN_RED = ("dispara",)` (R-C4); `T_GAP = 2e-6  # HUECO` como constante citada | **hecho** el 2026-10-20: `SOBRE`, `VENTANA_SUBIDA` y `MAX_ESCRITURAS` se leen del `core`, y la autocomprobación asevera los cinco largos de §4; la constante se llama `T_GAP_S` |
+| `hardware/02-midi-cv/latencia_mano_budget.py` | Hereda `BITS_BLOQUE_TONO` del anterior; nada más | se movió solo el 2026-10-20: 58,4 µs por giro del lazo; sale en su HUECO del ADC antes de aseverar el techo del lazo, como antes |
+| `hardware/03-vco/ataque_budget.py` | La fila «Turno del J2 ≤ 100 µs» se parte en dos, porque la v1 fundía dos términos (S-9): **espera al mensaje en curso** (82,4 µs al piso, 23,9 a D8, más `T_GAP`) y **aire del propio `EVENTO`** (11,2 / 3,2). Suman 95,6 al piso y siguen bajo la cota | **hecho** el 2026-10-20: las dos filas salen de `trama_j2_budget.py` (la trama más larga del enlace de la Voz, `T_GAP_S` y `BITS_EVENTO`) |
+| `hardware/02-midi-cv/tiempo_budget.py` | Ya lee la trama más larga del enlace de la Voz (`:43-44`); con `SET` pasa de 288 a 824 bits y sus dos aserciones siguen verdes (§4) | se movió solo el 2026-10-20: 82,4 µs, verde |
 
 ---
 
@@ -1087,7 +1087,7 @@ en el host, con la cita del papel en cada uno:
 | núcleo | §5 tabla de bloques :597 («72 bits… Congelado por el módulo 3, no se toca») y `software/nucleo/README.md:56` («j2 = la trama de 72 bits») | Rewrite | Deuda heredada del mapa del J2 punto a punto (§6 de aquel papel) y del #214; este papel la hereda, no la salda | pendiente (#214) |
 | `core/src/j2.rs` | :1-3 | Rewrite | El sobre; el legado a rótulo | el PR de código |
 | `core/src/envolvente.rs`, `core/src/bahia.rs` | `Entrada`, `Generadores`, `Barrera` | Expand | D9 | hechos el 2026-10-20 |
-| `trama_j2_budget.py`, `ataque_budget.py` | constantes y filas | Expand | §9 | el PR de guiones |
+| `trama_j2_budget.py`, `ataque_budget.py` | constantes y filas | Expand | §9 | hechos el 2026-10-20 |
 | issue #267 | criterio de cierre | Comentar | Cabecera con evento, imagen, `SET` y compuerta; test de R-E1 al piso; la sesión y el contador que el issue no sabía que pedía | al mergear |
 | issue #178 | — | Comentar | El módulo de mandos ya tiene sobre y sesión; le falta dialecto, ventana y `F_SUBIDA` | al mergear |
 | issue #148 / #226 | — | Comentar | Los once índices de la Voz v1 quedan fijados por el enlace; el descriptor, cuando exista, los hereda | al mergear |

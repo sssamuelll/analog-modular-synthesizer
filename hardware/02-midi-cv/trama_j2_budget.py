@@ -51,7 +51,8 @@ hardware/03-vco/notes/medidas.csv. Hoy la fila esta vacia: piso = 10 MHz.
      falten medidas.
   1  ROJO: lo declarado NO cabe al reloj de operacion; o un modulo CON papel
      no declara reloj (R-P2: "falla si un modulo no declara reloj"); o un
-     mensaje declarado dura mas de lo que R-E1 permite.
+     mensaje declarado dura mas de lo que R-E1 permite; o un mensaje de
+     bajada no declara su red (R-C4).
 
 --- Lo que NO esta confirmado ------------------------------------------------
 
@@ -60,11 +61,12 @@ hardware/03-vco/notes/medidas.csv. Hoy la fila esta vacia: piso = 10 MHz.
     sin decidir, como el papel del evento manda ("R-E11 nace con su linea
     reservada en ese guion"), y se imprime lo que costaria a las tres
     candidatas de aquel papel.
-  * La subida (MISO privado, D4): sondeo de jacks a 20 Hz y salud a 1 Hz
-    tienen cadencia declarada (orquestacion S7.1) pero NO tamano declarado.
-    Se listan sin bits: cuentan cero y se dice. Es la advertencia de C8 del
-    evento que sobrevivio: "el piso sigue siendo optimista porque sigue sin
-    contar la telemetria ni el sondeo de jacks".
+  * La subida (MISO privado, D4): la carga de JACKS es de otro papel. Cada
+    registro cuenta la ventana clocada (VENTANA_SUBIDA + cola, cabecera D6),
+    que es lo que ocupa aunque su carga sea mas corta: ninguno sale de ella
+    (R-C5).
+  * T_GAP es provisional (cabecera D8, riesgo 1 de S10): lo usa
+    ataque_budget.py, y lo mide el bring-up.
   * La subida se cuenta APARTE de la bajada, que es conservador: D4 permite
     que viaje en el mismo giro, y entonces sobra lo que aqui se suma.
   * El SPI privado de la Voz cuenta el tono a 1 kHz (voz-total S3.1, que es
@@ -75,6 +77,7 @@ from __future__ import annotations
 
 import csv
 import os
+import re
 import sys
 from dataclasses import dataclass, field
 
@@ -101,19 +104,72 @@ F_LAZO_HZ = 8_000.0             # latencia_mano_budget.py, lazo desacoplado
                                 # (2026-08-24). Aquel guion lo RECALCULA contra
                                 # este enlace y asevera que sale este mismo
                                 # numero: si cambia alla, canta alla
-BITS_BLOQUE_TONO = 288          # orquestacion R-M4: 16 x 16 bits + cabecera
-BITS_ESTADO_COMPUERTA = 16      # evento R-E10: "16 bits por modulo"
-BITS_EVENTO = 16 + 2 + 16 + 16  # evento S3: destino 16, borde 2, tono 16, y
-                                # fuerza 16 (derivada en #230 contra
-                                # M2-115-U). SIN cabecera declarada: la pone
-                                # el codec del cambio 1 cuando exista
-BITS_CROSSPOINT = 256           # issue #171: "los 256 bits del crosspoint";
-                                # viaja por el enlace de la Voz (E-3)
+T_GAP_S = 2e-6                  # cabecera D8: el gap entre tramas es una
+                                # constante del PLANIFICADOR del cerebro, no
+                                # del hardware del maestro (H-4: los retardos
+                                # MIDI/MSSI de la hoja viven DENTRO de la
+                                # transaccion). HUECO: lo mide el bring-up
+
+# --- el sobre (docs/superpowers/specs/2026-09-02-cabecera-j2-design.md) ------
+# SOBRE, VENTANA_SUBIDA y MAX_ESCRITURAS NO se escriben aqui: se LEEN del core
+# que arma las tramas, como bahia_budget.py lee CANALES de bahia.rs. Un largo
+# copiado a mano es una segunda cuenta de lo mismo, y se separa sola.
+_CORE = os.path.join(AQUI, "..", "..", "software", "nucleo", "core", "src")
+
+
+def _const_del_rust(archivo: str, nombre: str) -> int:
+    with open(os.path.join(_CORE, archivo), encoding="utf-8") as fh:
+        m = re.search(rf"pub const {nombre}: usize = (\d+);", fh.read())
+    if not m:
+        raise SystemExit(
+            f"{archivo} no expone `pub const {nombre}: usize`. Este guion LEE "
+            "del core; si el Rust cambio de forma, arregla el guion. NO copies "
+            "el numero aqui.")
+    return int(m.group(1))
+
+
+SOBRE = _const_del_rust("j2.rs", "SOBRE")   # D2: tipo, largo, secuencia, crc
+COLA = 1                        # D6.4: "el maestro cloca siempre un byte mas
+                                # que la trama de bajada, relleno incluido"
+VENTANA_SUBIDA = _const_del_rust("dialecto_voz.rs", "VENTANA_SUBIDA")
+MAX_ESCRITURAS = _const_del_rust("dialecto_voz.rs", "MAX_ESCRITURAS")
+
+
+def _clocados(carga: int) -> int:
+    """Bits que el maestro cloca por un mensaje de `carga` bytes (S4)."""
+    return (carga + SOBRE + COLA) * 8
+
+
+# D6.3: el giro de la Voz cloca por lo menos la ventana de subida mas la cola,
+# con relleno despues del CRC, para que la subida no dependa de que suene algo.
+BITS_GIRO_MINIMO = (VENTANA_SUBIDA + COLA) * 8
+
+# --- los largos de S4 de la cabecera, con sobre y cola ------------------------
+BITS_BLOQUE_TONO = _clocados(2 + 2 * 16)    # D4: mascara u16 + 16 tonos u16.
+                                # Con mascara 0xFFFF es tambien el bloque
+                                # COMPLETO, la red de las deltas (S-3)
+BITS_EVENTO = _clocados(7)      # S3.2: destino u16, borde u8, fuerza u16 (#230)
+                                # y tono u16
+BITS_ESTADO_COMPUERTA = max(_clocados(4), BITS_GIRO_MINIMO)   # mascara u16 +
+                                # contador u16, RELLENADO a la ventana
+BITS_CROSSPOINT = _clocados(64)  # la imagen del MODELO, 2 chips x 16 canales
+                                # x u16 (Imagen.filas), no los 256 bits del chip
+BITS_SET = _clocados(6 * MAX_ESCRITURAS)    # dieciseis tuplas de 6: la trama
+                                # mas larga del enlace de la Voz
 BITS_SONDEO_PANEL = 256         # latencia_mano_budget.py: "bloque de vuelta
-                                # del panel: deltas + cabecera"
+                                # del panel: deltas + cabecera". Del modulo de
+                                # mandos: su dialecto es del #178
 CADENCIAS_R_E11_HZ = (20.0, 100.0, 200.0)   # evento S4, la tabla de R-E11
+F_REFRESCO_BAHIA_HZ = 1.0       # cabecera D7: "el cerebro reenvia la imagen
+                                # vigente", a 1 Hz
+F_REFRESCO_SET_HZ = 63.0        # cabecera D7: los mil parametros del modulo una
+                                # vez por segundo, un SET por giro: 1000/16
 F_JACKS_HZ = 20.0               # orquestacion S7.1: "Sondeo cada 50 ms"
 F_SALUD_HZ = 1.0                # orquestacion S7.1: "1 Hz"
+F_ESTADO_VOZ_HZ = 1.0           # cabecera S3.3: la cola de publicacion
+
+# R-C4: los mensajes de bajada declarados SIN red, a proposito.
+SIN_RED: tuple[str, ...] = ("dispara",)
 
 
 @dataclass(frozen=True)
@@ -124,6 +180,9 @@ class Fila:
     hz: float | None            # None: no periodico (al ocurrir) o sin decidir
     fuente: str
     subida: bool = False
+    red: str | None = None      # R-C4: quien lo repara si la trama se pierde
+                                # -- flujo, refresco o sesion (cabecera D7).
+                                # Obligatorio en las filas de BAJADA
 
     def bit_s(self) -> float:
         if self.bits is None or self.hz is None:
@@ -156,18 +215,36 @@ RANURAS: tuple[Ranura, ...] = (
         papel="voz-total (E-3: una sola bajada) + #210 D8",
         reloj_declarado_hz=F_PELDANO_2_HZ,
         trafico=(
-            Fila("bloque de tono, 16x16 + cabecera", BITS_BLOQUE_TONO,
-                 F_LAZO_HZ, "R-M4 + latencia_mano (lazo 8 kHz)"),
+            Fila("bloque de tono, mascara + deltas", BITS_BLOQUE_TONO,
+                 F_LAZO_HZ, "cabecera D4 + latencia_mano (lazo 8 kHz), peor "
+                 "caso: los dieciseis", red="flujo: el bloque completo"),
+            Fila("bloque de tono completo (la red)", BITS_BLOQUE_TONO, None,
+                 "cabecera D4: >= 1 kHz, DENTRO del peor caso de arriba; no "
+                 "se suma dos veces", red="flujo: es la red"),
             Fila("estado de compuerta (R-E10)", BITS_ESTADO_COMPUERTA, None,
-                 "R-E11: cadencia RESERVADA, la elige el oido"),
+                 "R-E11: cadencia RESERVADA, la elige el oido",
+                 red="flujo: ella misma, periodica"),
             Fila("evento de nota", BITS_EVENTO, None,
-                 "evento S3: al ocurrir, sin tasa declarada"),
+                 "evento S3: al ocurrir, sin tasa declarada",
+                 red="flujo: el bloque de compuerta (R-E10)"),
             Fila("bajada del crosspoint (bahia)", BITS_CROSSPOINT, None,
-                 "#171 + orquestacion S7.1: al cambiar"),
-            Fila("estado del patch / sondeo de jacks", None, F_JACKS_HZ,
-                 "orquestacion S7.1: sin tamano declarado", subida=True),
-            Fila("salud (T, VREF, identidad)", None, F_SALUD_HZ,
-                 "orquestacion S7.1: sin tamano declarado", subida=True),
+                 "#171 + orquestacion S7.1: al cambiar",
+                 red="refresco: la imagen vigente a 1 Hz"),
+            Fila("refresco de la bahia", BITS_CROSSPOINT, F_REFRESCO_BAHIA_HZ,
+                 "cabecera D7: retransmision ciega", red="refresco: es la red"),
+            Fila("SET de parametros, dieciseis", BITS_SET, None,
+                 "cabecera D4: al mover un mando",
+                 red="refresco: todos los parametros a 1 Hz"),
+            Fila("refresco del SET (1000 parametros)", BITS_SET,
+                 F_REFRESCO_SET_HZ, "cabecera D7: un SET por giro",
+                 red="refresco: es la red"),
+            Fila("estado del patch / sondeo de jacks", BITS_GIRO_MINIMO,
+                 F_JACKS_HZ, "cabecera S3.3: carga de otro papel; cuenta la "
+                 "ventana clocada", subida=True),
+            Fila("salud (T, VREF, contadores)", BITS_GIRO_MINIMO, F_SALUD_HZ,
+                 "cabecera S3.3: 18 bytes en la ventana", subida=True),
+            Fila("estado de la Voz", BITS_GIRO_MINIMO, F_ESTADO_VOZ_HZ,
+                 "cabecera S3.3: 14 bytes en la ventana", subida=True),
         ),
     ),
     Ranura(
@@ -305,12 +382,16 @@ def evaluar(lista: list[Enlace]) -> tuple[list[str], list[str]]:
                 fallos.append(f"{r.modulo}: '{x.que}' dura "
                               f"{x.bits/e.reloj_operacion_hz()*1e6:.0f} us "
                               f"y R-E1 permite {T_MENSAJE_MAX_S*1e6:.0f}")
+            if not x.subida and not x.red and x.que not in SIN_RED:
+                fallos.append(f"{r.modulo}: '{x.que}' baja sin declarar su "
+                              "red (R-C4): flujo, refresco o sesion, o entra "
+                              "en SIN_RED")
     return fallos, huecos
 
 
 # --- autocomprobacion: que muerda, sobre ranuras de mentira -------------------
 def autocomprobacion() -> None:
-    fila = Fila("x", 288, 8_000.0, "a mano")
+    fila = Fila("x", 288, 8_000.0, "a mano", red="flujo")
     sola = Ranura(1, "A", "activa", "papel", 20e6, (fila,))
     # 288 bits x 8 kHz = 2,304 Mb/s; a 10 MHz son el 23,04 %.
     e = Enlace(sola, None, 10e6)
@@ -323,7 +404,7 @@ def autocomprobacion() -> None:
     # 900 bits x 8 kHz a 10 MHz = 72 % (revienta el techo) y 90 us por
     # trama (cabe en R-E1): un fallo, y solo uno, por la razon correcta.
     gorda = Ranura(2, "B", "activa", "papel", 20e6,
-                   (Fila("y", 900, 8_000.0, "a mano"),))
+                   (Fila("y", 900, 8_000.0, "a mano", red="flujo"),))
     assert Enlace(sola, None, 10e6).ocupacion() == e.ocupacion()
     assert Enlace(gorda, None, 10e6).ocupacion() > TECHO_OCUPACION_ENLACE
     # El juez: sin sancion es HUECO, no fallo; reventar el techo es FALLO;
@@ -343,11 +424,42 @@ def autocomprobacion() -> None:
     assert not f and len(h) == 2, (f, h)
     # R-E1: un mensaje de 1001 bits a 10 MHz dura 100,1 us y no pasa.
     larga = Ranura(4, "E", "activa", "papel", 10e6,
-                   (Fila("z", 1001, None, "a mano"),))
+                   (Fila("z", 1001, None, "a mano", red="flujo"),))
     f, _ = evaluar([Enlace(larga, 10e6, 10e6)])
     assert any("R-E1" in x for x in f), f
     # Y las ranuras que no estan activas no juzgan nada.
     assert evaluar([Enlace(Ranura(None, "L", "libre", None, None), None, 10e6)]) == ([], [])
+    # R-C4: toda fila de BAJADA declara su red -- flujo, refresco o sesion --
+    # o esta en SIN_RED. Un mensaje nuevo sin red es un fallo, no un hueco:
+    # con el CRC del sobre (D2) toda trama puede perderse, y "lo que viaje
+    # solo en el evento y no lo reafirme un flujo periodico queda sin red"
+    # (R-E12).
+    sin_red = Ranura(5, "F", "activa", "papel", 10e6,
+                     (Fila("mensaje nuevo", 100, 10.0, "a mano"),))
+    f, _ = evaluar([Enlace(sin_red, 10e6, 10e6)])
+    assert any("R-C4" in x for x in f), f
+    con_red = Ranura(6, "G", "activa", "papel", 10e6,
+                     (Fila("mensaje nuevo", 100, 10.0, "a mano",
+                           red="flujo: el bloque completo"),))
+    assert evaluar([Enlace(con_red, 10e6, 10e6)]) == ([], [])
+    # La subida no necesita red: no la reafirma nadie, la muestrea el maestro.
+    solo_sube = Ranura(7, "H", "activa", "papel", 10e6,
+                       (Fila("registro", 200, 1.0, "a mano", subida=True),))
+    assert evaluar([Enlace(solo_sube, 10e6, 10e6)]) == ([], [])
+    # `dispara` va sin red a proposito (evento D6 enmienda 1: "un `dispara`
+    # perdido es un golpe perdido").
+    assert SIN_RED == ("dispara",)
+    assert evaluar([Enlace(Ranura(8, "I", "activa", "papel", 10e6,
+                                  (Fila("dispara", 112, None, "a mano"),)),
+                           10e6, 10e6)]) == ([], [])
+    # Toda fila de bajada de las ranuras REALES declara su red.
+    for e in enlaces():
+        for x in e.ranura.trafico:
+            assert x.subida or x.red or x.que in SIN_RED, f"{e.ranura.modulo}: {x.que}"
+    # Los largos de la tabla de la cabecera (S4), con los SOBRE, VENTANA y
+    # MAX_ESCRITURAS que el core lee hoy. Si el Rust cambia, el papel tambien.
+    assert (BITS_BLOQUE_TONO, BITS_EVENTO, BITS_ESTADO_COMPUERTA,
+            BITS_CROSSPOINT, BITS_SET) == (328, 112, 200, 568, 824)
     # El piso legado: un CSV con 6,5 MHz adoptados baja el piso a 6,5.
     import tempfile
     with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False,
@@ -373,6 +485,8 @@ def main() -> int:
     m = "SIN SELLAR (#209): no acota" if F_MAESTRO_HZ is None else f"{F_MAESTRO_HZ/1e6:.1f} MHz"
     print(f"  maestro (cerebro)       {m}")
     print(f"  techo por enlace (D6)   {TECHO_OCUPACION_ENLACE:.0%}")
+    print(f"  gap entre tramas        {T_GAP_S*1e6:.1f} us   HUECO: provisional, "
+          "lo mide el bring-up (cabecera D8)")
     print(f"  tabla de sancion        {os.path.relpath(CSV_SANCION, AQUI)}"
           f"  ({len(leer_sancion())} filas)\n")
 
@@ -398,6 +512,8 @@ def main() -> int:
         hz = f"{x.hz:.0f} Hz" if x.hz else ("al ocurrir" if x.bits else "")
         if x.hz is None and x.bits and "R-E11" in x.fuente:
             hz = "RESERVADA"
+        if x.hz is None and "DENTRO del peor caso" in x.fuente:
+            hz = ">= 1 kHz"
         pct = f"{x.bit_s()/voz.reloj_operacion_hz():.2%}" if x.bit_s() else "0"
         dirc = "^" if x.subida else "v"
         print(f"  {dirc} {x.que:38}  {b:>5}  {hz:>9}  {x.bit_s():9.0f}  {pct:>8}")
