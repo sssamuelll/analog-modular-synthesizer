@@ -28,12 +28,14 @@ LA FILA DEL J2
   enlace -- armar y cerrar cada transferencia, el tic o las interrupciones, el
   DMA, el CRC de la subida y los contadores de salud --, y NO componer la
   trama, que es la fila de abajo. Sale de `carga_j2.csv` por el mismo camino que
-  la puerta `recuperacion_j2_budget.py`: la mejor fila a 800 MHz con las
-  cachés del hub, por 6 ranuras x 8 kHz giros por segundo. Las cifras de
-  exploracion de EN-PLACA (sin region MPU) no son filas. Mientras el CSV no tenga
-  una del transporte por tic, la fila lleva la cifra que firmo la ficha J del acta
-  del 2026-10-19 (tercera firma), como ESTIMADO: la columna de seis ranuras es
-  aritmetica sobre la medida con tres.
+  la puerta `recuperacion_j2_budget.py` (papel v3, 5.2a): de las filas del tic
+  con las cachés del hub, a 800 MHz y 8 kHz, las de mas ranuras; de cada regimen
+  de cache, la ultima; y la peor de las dos, por 6 ranuras x 8 kHz giros por
+  segundo. La cifra de cada fila es la que fijo la ficha J del acta del
+  2026-10-19 (tercera firma): el DWT mas la entrada, la cadena y la salida de la
+  excepcion. Medida con menos de seis ranuras es ESTIMADO, porque la columna de
+  seis es aritmetica; sin las filas de los dos regimenes es HUECO. Las cifras de
+  exploracion de EN-PLACA (sin region MPU) no son filas.
 
 LAS OBLIGACIONES DE TIEMPO (R-H6, la segunda tabla)
 
@@ -70,13 +72,6 @@ import carga_motor_budget as cm  # noqa: E402
 import recuperacion_j2_budget as rj  # noqa: E402
 
 MEDIDO, ESTIMADO, HUECO = "MEDIDO", "ESTIMADO", "HUECO"
-
-# La cifra de la fila del J2 que firmo la ficha J (acta del 2026-10-19, tercera firma), con la
-# salida y la cadena ya medidas: los cuerpos del tic y del planificador por el DWT (2 329) mas
-# la entrada, la cadena y la salida de la excepcion (301 por tic, entre tres ranuras), con TCM,
-# las dos caches frias y el CRC por tabla, firmware 50d43c3 (fw/EN-PLACA.md). Es ESTIMADO
-# porque la columna de seis ranuras es aritmetica sobre la medida con tres.
-J2_TIC_CICLOS_POR_GIRO = 2_429
 
 # El USB del instrumento (`atender` y el OTG) con 1 000 mensajes MIDI/s, medido en el banco del J2
 # con las dos caches encendidas: el hilo libre de `carga_j2` baja de 931 a 921 por mil
@@ -120,21 +115,23 @@ def veredicto(filas: list[Fila]) -> int:
     return 2 if any(f.estado == HUECO or f.ciclos_por_s is None for f in filas) else 0
 
 
-def fila_j2() -> Fila:
-    """La mejor fila de `carga_j2.csv` a >= F_CPU, por los giros por segundo del lazo."""
+def fila_j2(carga: list[dict] | None = None) -> Fila:
+    """La fila de `carga_j2.csv` que cuenta (papel v3, 5.2a), por los giros por segundo del lazo."""
     u = rj.del_rust()
     giros_s = u["ranuras_spi"] * rj.tb.F_LAZO_HZ
-    a_diseno = [int(f["ciclos_por_giro"]) for f in rj.lee_carga()
-                if float(f["f_cpu_hz"]) >= cm.F_CPU]
-    if not a_diseno:
-        return Fila("J2: el trabajo propio del enlace", "acta del 2026-10-19, tercera firma, ficha J",
-                    ESTIMADO, J2_TIC_CICLOS_POR_GIRO * giros_s,
-                    f"transporte por tic: {J2_TIC_CICLOS_POR_GIRO} ciclos por giro x {giros_s:.0f} giros/s, "
-                    "medido con tres ranuras (EN-PLACA); "
-                    f"limite provisional: {rj.FRACCION_CPU_J2*100:.0f} %")
-    mejor = min(a_diseno)
-    return Fila("J2: el trabajo propio del enlace", "spec del maestro J2 (D5.1)", MEDIDO,
-                mejor * giros_s, f"{mejor} ciclos por giro x {giros_s:.0f} giros/s")
+    nombre, duenio = "J2: el trabajo propio del enlace", "acta del 2026-10-19, tercera firma, ficha J"
+    peor, faltan = rj.peor_regimen(rj.lee_carga() if carga is None else carga, cm.F_CPU,
+                                   round(1e6 / rj.tb.F_LAZO_HZ))
+    if not peor:
+        return Fila(nombre, duenio, HUECO, None,
+                    f"carga_j2.csv no tiene fila del hub con el regimen {', '.join(faltan)} (papel v3, 5.2a)")
+    ciclos, n = int(peor["ciclos_por_giro"]), int(peor["ranuras"])
+    # Con menos ranuras que el hub, la columna de seis es aritmetica sobre la medida.
+    estado = MEDIDO if n >= u["ranuras_spi"] else ESTIMADO
+    return Fila(nombre, duenio, estado, ciclos * giros_s,
+                f"{ciclos} ciclos por giro x {giros_s:.0f} giros/s, el peor regimen del hub "
+                f"({peor['regimen_cache']}, {peor['fecha']}, carga_j2.csv, medido con {n} ranuras); "
+                f"limite provisional: {rj.FRACCION_CPU_J2*100:.0f} %")
 
 
 def censo() -> list[Fila]:
@@ -213,8 +210,16 @@ def _autocomprobacion() -> None:
     assert veredicto_obligaciones([cumple]) == 0
     assert veredicto_obligaciones([cumple, sin_prueba]) == 2
     assert all(o.estado == HUECO for o in obligaciones()), "el hub aun no ha probado ninguna"
-    # La fila del J2 lleva la cifra de la ficha J aunque carga_j2.csv no tenga fila del tic.
-    assert fila_j2().ciclos_por_s is not None, "la ficha J firmo la cifra de la fila del J2"
+    # La fila del J2 es la del peor regimen del hub en carga_j2.csv, y sin ella es HUECO, no cero.
+    def f(ciclos, regimen):
+        return {"ciclos_por_giro": str(ciclos), "regimen_cache": regimen, "transporte": "tic",
+                "cache": "icache+dcache-mpu", "f_cpu_hz": "800000000", "ranuras": "3",
+                "periodo_us": "125", "fecha": "x"}
+    giros_s = rj.del_rust()["ranuras_spi"] * rj.tb.F_LAZO_HZ
+    tres = fila_j2([f(2300, "caliente"), f(2450, "fria")])
+    assert tres.ciclos_por_s == 2450 * giros_s and tres.estado == ESTIMADO, tres
+    assert fila_j2([f(2300, "caliente")]).estado == HUECO
+    assert fila_j2([f(2300, "caliente")]).ciclos_por_s is None
 
 
 def main() -> int:

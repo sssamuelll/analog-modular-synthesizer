@@ -633,8 +633,9 @@ la fila.
 Es el número que el papel pide como criterio de aceptación de la CPU (riesgo 9
 de la spec del maestro), contra el límite que Samuel firmó el 2026-10-16: **2 500
 ciclos por giro**, el 15 % de un núcleo a 800 MHz. Cada corrida se anota como una
-fila de `carga_j2.csv`; `recuperacion_j2_budget.py` la lee y falla si una fila a
-800 MHz pasa del límite. Hoy solo hay filas de la Nucleo a 64 MHz y no cumplen.
+fila de `carga_j2.csv`; `recuperacion_j2_budget.py` la lee y falla si la fila que
+cuenta pasa del límite. Desde el papel v3 (§5.2 a), la que cuenta es la del peor
+régimen de caché del tic (ver «Las filas del tic en `carga_j2.csv`»).
 
 **Opciones y herramientas para acercar el banco al hub** (`reloj-hub`, `ranuras-N` y
 `muestreo` son features de `fw`; `carga_j2.py` pasa las dos primeras con `--hub` y
@@ -802,7 +803,7 @@ cargo run --release --features inyeccion,reloj-hub[,cotas-v2] --bin tic_cota
 cargo run --release --features transporte-tic,tabla,reloj-hub,corta[,pines-medio][,subida-quieta] --bin tic_contenidos
 ```
 
-`carga_j2.py` no lo anota (se niega con cualquier transporte que no sea el `ejecutor`) y `carga_j2.csv` no tiene filas suyas: la puerta toma el mínimo de las filas a 800 MHz sin mirar el transporte, y una fila del tic taparía los 8 000 del ejecutor firmado (papel v2 §5). Qué hace cada binario:
+Hasta el 20-10, `carga_j2.py` no lo anotaba (se negaba con cualquier transporte que no fuera el `ejecutor`) y `carga_j2.csv` no tenía filas suyas: la puerta tomaba el mínimo de las filas a 800 MHz sin mirar el transporte, y una fila del tic habría tapado los 8 000 del ejecutor firmado (papel v2 §5). Desde entonces el CSV lleva el transporte y el régimen de caché (ver «Las filas del tic en `carga_j2.csv`»). Qué hace cada binario:
 
 - **`carga_j2 --features transporte-tic`**: el mismo medidor del hilo de arriba, con una base por estado de caché. `sin-componer` hace que la trama sea siempre la misma (el enlace solo); sin él, `bajada_del_banco` la rehace en un lazo cada giro (un compositor de mentira, que cuesta unos 170 ciclos a 25 bytes). `contaminador` añade una tarea de hilo que recorre 64 KB entre vuelta y vuelta, y cada tic y cada pasada del planificador empiezan con la D-cache desalojada. `largo-41` y `largo-71` cambian el mensaje. Con `perfil` imprime además los ciclos por giro de cada nivel (tic, planificador, recuperación, componer) y el detalle del tic (leer, cerrar, armar).
 - **`tic_banco`**: el maestro de `j2_tic` en SPI5 contra el esclavo del banco en SPI4, a 8 kHz y con las cachés y la región, 600 s; publica una sola vez al final. `verifica-bajada` hace que el esclavo compare cada bajada con el patrón (`PATRON_BAJADA`) y cuente las buenas y las malas.
@@ -1014,6 +1015,18 @@ Los sitios que salen, con lo que se repiten en 5 s a 1 000 mensajes/s:
 - **Cada mensaje llega en su propio paquete.** La lectura del OTG corre una vez por mensaje, a 1 000 y a 5 000 mensajes/s: Windows no los junta. Con el contaminador y las cachés apagadas la placa no da abasto, y el PC solo logra mandar unos 3 600 a 4 300 por segundo, sin un fallo.
 - **El reloj alarga lo que mide.** La tabla se lleva con las interrupciones enmascaradas: buscar la fila no entra en la cifra, pero retrasa al tic. Con `secciones`, la entrada del tic llega a 10 µs con 5 000 mensajes/s (4 sin la feature, arriba). Con las dos cachés frías llega a 21 µs, con 60 tics de más de 10 µs; la misma corrida sin `secciones` da 6 µs y ninguno. Para la cláusula de entrada de R-H2 valen las corridas sin `secciones`.
 - **Lo que no ve.** `cortex_m::interrupt::free` no pasa por `critical-section`. En `fw` hay cuatro, todas de la recuperación (`escala`, `pide_escalada`, el reset del SPI y la lectura de la cuenta de 64 bits del tic), y en `carga_j2` la recuperación no corre (`latencia_rec_max_us` 0). La sección de la escalada está medida aparte (671 ns, más abajo). Los crates de `embassy` que usa el firmware no tienen otro `interrupt::free` ni `cpsid` (los de `flash` son de otras familias, y el del ejecutor, de AVR). Y son 5 s por pasada: lo que pase menos que eso no se ha visto.
+
+**Las filas del tic en `carga_j2.csv` (§5.2 a)** (2026-10-20, firmware `1d62576`; `carga_j2.py --tic`, que corre `carga_j2` en la configuración de la ficha J, con `transporte-tic`, `reloj-hub`, `sin-componer`, `ranuras-3`, `j2-tcm` y `crc-tabla`, más `perfil` y `tic-fino` para la pasada de la salida). El CSV lleva dos columnas nuevas, `transporte` y `regimen_cache`, y las tres filas del ejecutor a 64 MHz quedan como `ejecutor` y `caliente`. Las filas del tic salen de la pasada de la salida, una por régimen: `caliente` sin tocar las cachés, y `fria` con las dos invalidadas tras cada hueco, así que cada tic entra con las dos frías. La cifra es la de la ficha J: la entrada, el cuerpo del tic, la cadena, el cuerpo del planificador y la salida, en medias por tic y repartidas entre las tres ranuras. El medidor del hilo no entra, y su columna queda vacía. Ciclos:
+
+| | entrada | tic | cadena | planificador | salida | por tic | por giro y ranura | un núcleo, con seis ranuras |
+|---|---|---|---|---|---|---|---|---|
+| caliente | 60 | 3 695 | 44 | 3 227 | 35 | 7 061 | 2 354 | 14,1 % |
+| fría | 140 | 3 742 | 121 | 3 317 | 35 | 7 355 | **2 452** | **14,7 %** |
+
+- **La que cuenta es la fría: 2 452 ciclos por giro, por debajo de los 2 500 del límite.** `recuperacion_j2_budget.py` y `carga_hub_budget.py` toman, de las filas del tic con las cachés del hub a 800 MHz y 8 kHz, las de más ranuras; de cada régimen, la última; y la peor de las dos. La fila del J2 en el censo sale de ahí y deja de llevar la cifra fija de la ficha J. Sigue como ESTIMADO, porque la columna de seis ranuras es aritmética sobre la medida con tres. La pasada de optimización sigue aparcada: no pasa del 15,0 %.
+- **Son 23 ciclos más que los 2 429 del 19-10.** Aquella cifra juntaba dos corridas: los cuerpos, la entrada y la cadena venían de la de `contaminador-icache`, y la salida, de la pasada fría de la otra, porque con el contaminador la salida carga además lo que el hilo tarda en traer su propio código. Aquí todo sale de una pasada, y en ella las dos cachés están vacías al entrar cada tic. El contaminador recorre 64 KB por vuelta del hilo, y entre dos tics no siempre la termina.
+- **Por el DWT, los cuerpos fríos cuestan un 2 % más que los calientes** (7 059 contra 6 922 ciclos por tic, un 1,98 %; en la pasada fría del 19-10, un 2,05 %). Es justo el tope de la ficha H para los datos de solo lectura que quedan en la AXISRAM2: «la fila con las dos cachés frías no pasa de la caliente en más de un 2 %». Con el contaminador era un 1,0 %. Ningún guion comprueba ese tope, y el CSV no guarda los cuerpos aparte.
+- **Dos corridas con el mismo código** (`8f41065` sin anotar, y `1d62576` la anotada): 2 353 y 2 452, y 2 354 y 2 452.
 
 **Las fichas B y C en `fw`** (2026-10-19, firmware `0186c68`; acta del 19-10, tercera firma; #455). `Vencida` 200 y `Reiniciando` 112 periodos. El presupuesto concede 6 escaladas por segundo con 1 ms entre dos, y la que llega antes se aplaza: la recuperación lee la cuenta de 64 bits del tic, pide al presupuesto y publica el tic en que vence en una sola sección crítica, y el tic la deja pendiente al llegar. `lanzar` asevera las dos condiciones de la ficha C.
 

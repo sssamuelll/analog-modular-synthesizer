@@ -5,24 +5,36 @@
     python carga_j2.py --hub      # lo mismo con el nucleo a 800 MHz (feature reloj-hub)
     python carga_j2.py --ranuras 3   # con tres ranuras girando (2 o 3; pines en j2_banco)
     python carga_j2.py --isr      # el transporte por ISR de j2_isr, la cota sin ejecutor
+    python carga_j2.py --tic      # el transporte por tic en la configuracion de la ficha J
     python carga_j2.py --anota    # ademas la anade a carga_j2.csv
     python carga_j2.py --autotest # el parseo y la cuenta, sin placa
 
 **La cifra que se compara con el limite firmado (D5.1, 16-10) es el J2 entero**
 -- ISR del SPI, DMA, reloj de embassy y despacho del ejecutor --, no solo el
-manejador del ejecutor. Sale del medidor del hilo: lo que no es CPU libre para el
-hilo, durante un ciclo. `ejecutor` y los tramos son el desglose, no el total.
+manejador del ejecutor. Con el ejecutor sale del medidor del hilo: lo que no es CPU
+libre para el hilo, durante un ciclo. `ejecutor` y los tramos son el desglose, no
+el total.
 
     ciclos_por_giro = (1000 - hilo_libre_permil) / 1000 * ciclo_us * f_cpu / 1e6 / ranuras
 
 `ciclo_us` es el ciclo de una ranura, en el que cada una da un giro: el J2 gasta lo
 que el hilo no usa, repartido entre los giros de todas.
 
+Con el tic, la cifra es la de la ficha J (acta del 19-10, tercera firma): el DWT
+de los cuerpos del tic y del planificador mas la entrada, la cadena y la salida de
+la excepcion, de la pasada de la salida (`tic-fino`), repartido entre las ranuras.
+El medidor no entra: cuenta como J2 lo que el hilo tarda en traer su propio codigo.
+Una fila por `regimen_cache`: `caliente` sin tocar las caches, `fria` con las dos
+invalidadas antes de cada tic. Las del ejecutor son `caliente`.
+
+    ciclos_por_giro = (entrada + tic + cadena + planificador + salida) / ranuras
+
 `--anota` se niega si el firmware sale `-sucio` (una fila con la revision de un
 commit que no es el codigo que corrio no se puede repetir) y se niega con las
 pasadas `-sin-mpu`, que son de exploracion: la D-cache sin la region MPU de los
-buferes del DMA incumple R-MJ7 y esa fila no sirve para la puerta. Tampoco anota
-las de `--isr`: es una cota de coste, no el transporte del instrumento.
+buferes del DMA incumple R-MJ7 y esa fila no sirve para la puerta. Solo anota el
+ejecutor y el tic sin componer (ficha 1 del acta del 17-10): `--isr` es una cota de
+coste, y el tic con el contaminador o componiendo no es la cifra que se firmo.
 
 La cuenta usa el reloj que **pidio** la configuracion (`f_cpu`); se niega si el
 que **midio** el firmware (`f_cpu_medido`) se aparta mas de un 2 %: seria la
@@ -45,7 +57,7 @@ LIMITE_INFORMATIVO = 2500
 
 CABECERA = re.compile(
     r"carga_j2: firmware (\S+), f_cpu (\d+) Hz(?:, f_cpu_medido (\d+) Hz)?"
-    r"(?:.*?transporte (\w+))?")
+    r"(?:.*?transporte ([\w-]+))?")
 TOLERANCIA_RELOJ = 0.02
 # `ranuras` y `periodo_us` no estan en las lineas anteriores al 17-10: una ranura a 125 us.
 PASADA = re.compile(
@@ -55,6 +67,16 @@ PASADA = re.compile(
 TRAMOS = re.compile(
     r"carga_j2,cache=([\w+-]+),previo=(\d+),armado=(\d+),espera=(\d+),cierre=(\d+),"
     r"posterior=(\d+),isr_spi=(\d+),ejecutor=(\d+)")
+# La pasada de la salida del tic (`tic-fino`): medias por tic, sin tocar las caches o con las
+# dos invalidadas tras cada hueco.
+SALIDA = re.compile(
+    r"carga_j2,salida,frio=(?P<frio>true|false),gaps=(?P<huecos>\d+),otros=\d+,paso_min=\d+,"
+    r"entrada=\((?P<entrada>\d+),\d+\),tic=(?P<tic>\d+),cadena=\((?P<cadena>\d+),\d+\),"
+    r"plan=(?P<plan>\d+),salida=\((?P<salida>\d+),\d+,\d+\),hueco=\((?P<hueco>\d+),\d+\)")
+# Las caches del hub: I y D con la region MPU de los buferes del DMA (R-MJ7).
+CACHE_DEL_HUB = "icache+dcache-mpu"
+# Lo que se anota: el ejecutor, y el tic sin componer (ficha 1 del acta del 17-10).
+SE_ANOTAN = ("ejecutor", "tic-sin-componer")
 
 
 def ciclos_del_j2(libre_permil: int, ciclo_us: int, f_cpu_hz: int, ranuras: int = 1) -> int:
@@ -113,14 +135,37 @@ def parsea(texto: str) -> dict:
             raise SystemExit(f"cache={cache}: {p['plazos']} plazos vencidos; la medida no vale")
         p["ciclos_por_giro"] = ciclos_del_j2(p["libre"], p["ciclo_us"], f_cpu, p["ranuras"])
         p["invalida"] = invalida(p)
+    salidas = {}
+    for m in SALIDA.finditer(texto):
+        s = {k: int(v) for k, v in m.groupdict().items() if k != "frio"}
+        partes = s["entrada"] + s["tic"] + s["cadena"] + s["plan"] + s["salida"]
+        # La cifra de la ficha J (acta del 19-10, tercera firma): los cuerpos del tic y del
+        # planificador por el DWT mas la entrada, la cadena y la salida de la excepcion, por
+        # giro y ranura. Las partes suman unos 60 ciclos menos que el hueco que ve el hilo.
+        s["partes"] = partes
+        s["invalida"] = (f"las partes ({partes}) suman mas que el hueco ({s['hueco']})"
+                         if partes > s["hueco"] else "")
+        salidas["fria" if m.group("frio") == "true" else "caliente"] = s
     return {"firmware": firmware, "f_cpu": f_cpu, "medido": medido,
-            "transporte": cab.group(4) or "ejecutor", "pasadas": pasadas}
+            "transporte": cab.group(4) or "ejecutor", "pasadas": pasadas, "salidas": salidas}
 
 
 def filas(medida: dict, fecha: str) -> list[str]:
-    return [f"{fecha},{medida['firmware']},{PLACA},{medida['f_cpu']},{cache},"
-            f"{p['ciclos_por_giro']},{p['libre']},{p['ranuras']},{p['periodo']}"
-            for cache, p in medida["pasadas"].items()]
+    """Las del ejecutor, una por pasada, con el medidor del hilo. Las del tic, una por regimen
+    de cache, de la pasada de la salida con las caches del hub y sin el medidor."""
+    comun = f"{fecha},{medida['firmware']},{PLACA},{medida['f_cpu']}"
+    transporte = medida["transporte"].split("-")[0]
+    if transporte != "tic":
+        return [f"{comun},{cache},{p['ciclos_por_giro']},{p['libre']},{p['ranuras']},{p['periodo']},"
+                f"{transporte},caliente"
+                for cache, p in medida["pasadas"].items()]
+    hub = medida["pasadas"].get(CACHE_DEL_HUB)
+    if not hub or not medida["salidas"]:
+        raise SystemExit("sin la pasada de la salida (`tic-fino`) o sin la de las caches del hub "
+                         "no hay cifra de la ficha J")
+    return [f"{comun},{CACHE_DEL_HUB},{round(s['partes'] / hub['ranuras'])},,{hub['ranuras']},"
+            f"{hub['periodo']},tic,{regimen}"
+            for regimen, s in medida["salidas"].items()]
 
 
 def muestra(medida: dict) -> None:
@@ -140,13 +185,17 @@ def muestra(medida: dict) -> None:
               f"{p['ciclos_por_giro'] / LIMITE_INFORMATIVO:8.1f}x   {desglose}")
         if p["invalida"]:
             print(f"  {'':8} INVALIDA: {p['invalida']}")
+    for regimen, s in medida["salidas"].items():
+        print(f"  salida, {regimen}: entrada {s['entrada']} + tic {s['tic']} + cadena {s['cadena']} + "
+              f"planificador {s['plan']} + salida {s['salida']} = {s['partes']} por tic "
+              f"(hueco {s['hueco']})" + (f"  INVALIDA: {s['invalida']}" if s["invalida"] else ""))
 
 
 def anota(lineas: list[str], firmware: str, transporte: str = "ejecutor", invalidas=()) -> None:
     if invalidas:
         raise SystemExit(f"pasadas invalidas ({', '.join(invalidas)}): no se anotan")
-    if transporte != "ejecutor":
-        raise SystemExit(f"transporte `{transporte}`: es una cota de coste y no se anota")
+    if transporte not in SE_ANOTAN:
+        raise SystemExit(f"transporte `{transporte}`: solo se anotan {', '.join(SE_ANOTAN)}")
     if "sucio" in firmware or firmware == "sin-git":
         raise SystemExit(f"firmware `{firmware}`: commitea antes de anotar la fila")
     if any("sin-mpu" in ln for ln in lineas):
@@ -172,7 +221,8 @@ def autotest() -> None:
     assert m["pasadas"]["no"]["ciclos_por_giro"] == 21558, m["pasadas"]["no"]
     assert m["pasadas"]["icache"]["ciclos_por_giro"] == 14752, m["pasadas"]["icache"]
     assert m["pasadas"]["no"]["ciclos_por_giro"] > m["pasadas"]["no"]["ejecutor"]
-    assert filas(m, "2026-10-16")[0] == "2026-10-16,b9f6d7d,NUCLEO-N657X0-Q,64000000,no,21558,198,1,125"
+    assert filas(m, "2026-10-16")[0] == ("2026-10-16,b9f6d7d,NUCLEO-N657X0-Q,64000000,no,21558,198,1,125,"
+                                         "ejecutor,caliente")
     # Tres ranuras: el ciclo es de una ranura y el coste se reparte entre los tres giros.
     tres = (
         "[INFO ] carga_j2: firmware abc1234, f_cpu 64000000 Hz, f_cpu_medido 64000000 Hz, periodo 2000 us (x)\n"
@@ -255,6 +305,43 @@ def autotest() -> None:
     assert not parsea(cab_isr + linea.format(125))["pasadas"]["icache"]["invalida"]
     assert not parsea(cab_isr + linea.format(124))["pasadas"]["icache"]["invalida"]
     assert parsea(cab_isr + linea.format(375))["pasadas"]["icache"]["invalida"]
+    # El tic en la configuracion de la ficha J (firmware 50d43c3): una fila por regimen, de la
+    # pasada de la salida, con la cifra de la ficha J por giro y ranura y sin el medidor.
+    tic = (
+        "carga_j2: firmware 50d43c3, f_cpu 800000000 Hz, f_cpu_medido 800066460 Hz, periodo 125 us, "
+        "base 385309 vueltas/s, transporte tic-sin-componer (x)\n"
+        "carga_j2,cache=icache+dcache-mpu,ranuras=3,periodo_us=125,ciclo_us=125,giros_en_5s=120000,"
+        "hilo_libre_permil=928,atrasos=0,plazos_vencidos=0,base_por_s=6956418 (x)\n"
+        "carga_j2,salida,frio=false,gaps=8000,otros=30,paso_min=4,entrada=(60,60),tic=3657,"
+        "cadena=(45,45),plan=3256,salida=(34,42,31),hueco=(7119,7201) (x)\n"
+        "carga_j2,salida,frio=true,gaps=8000,otros=22,paso_min=12,entrada=(139,140),tic=3708,"
+        "cadena=(120,124),plan=3347,salida=(37,42,31),hueco=(7415,8346) (x)\n"
+    )
+    mt = parsea(tic)
+    assert mt["transporte"] == "tic-sin-componer"
+    assert filas(mt, "2026-10-19") == [
+        "2026-10-19,50d43c3,NUCLEO-N657X0-Q,800000000,icache+dcache-mpu,2351,,3,125,tic,caliente",
+        "2026-10-19,50d43c3,NUCLEO-N657X0-Q,800000000,icache+dcache-mpu,2450,,3,125,tic,fria",
+    ], filas(mt, "2026-10-19")
+    assert not any(s["invalida"] for s in mt["salidas"].values())
+    # Las partes no pueden sumar mas que el hueco que ve el hilo.
+    corta = parsea(tic.replace("hueco=(7119,7201)", "hueco=(7000,7201)"))
+    assert corta["salidas"]["caliente"]["invalida"] and not corta["salidas"]["fria"]["invalida"]
+    # Sin la pasada de la salida (sin `tic-fino`) no hay cifra de la ficha J: no hay fila.
+    try:
+        filas(parsea(tic.split("carga_j2,salida")[0]), "2026-10-19")
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError("saco filas del tic sin la pasada de la salida")
+    # Solo se anotan el ejecutor y el tic sin componer (ficha 1 del acta del 17-10).
+    for etiqueta in ("tic", "tic-sin-componer-contaminado", "isr"):
+        try:
+            anota(["x"], "abc1234", etiqueta)
+        except SystemExit:
+            pass
+        else:
+            raise AssertionError(f"anoto `{etiqueta}`")
     print("autotest ok")
 
 
@@ -262,7 +349,10 @@ def main() -> None:
     if "--autotest" in sys.argv:
         return autotest()
     features = ["perfil"] + (["reloj-hub"] if "--hub" in sys.argv else [])
-    if "--isr" in sys.argv:
+    if "--tic" in sys.argv:
+        features = ["perfil", "tic-fino", "reloj-hub", "transporte-tic", "sin-componer", "ranuras-3",
+                    "j2-tcm", "crc-tabla"]
+    elif "--isr" in sys.argv:
         features.append("transporte-isr")
     if "--ranuras" in sys.argv:
         n = sys.argv[sys.argv.index("--ranuras") + 1]
@@ -277,8 +367,10 @@ def main() -> None:
     lineas = filas(medida, datetime.date.today().isoformat())
     print("\nfilas de carga_j2.csv:\n  " + "\n  ".join(lineas))
     if "--anota" in sys.argv:
+        # Las filas del tic salen de la pasada de la salida, no de las del medidor.
+        de = medida["salidas"] if medida["transporte"].startswith("tic") else medida["pasadas"]
         anota(lineas, medida["firmware"], medida["transporte"],
-              [c for c, p in medida["pasadas"].items() if p["invalida"]])
+              [c for c, p in de.items() if p["invalida"]])
 
 
 if __name__ == "__main__":
