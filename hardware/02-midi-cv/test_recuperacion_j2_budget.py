@@ -56,6 +56,12 @@ def test_las_ranuras_del_soak_se_suman():
     assert r.juicio_resistencia(seis, 8.1, **INSTRUMENTO)[0] == 2
 
 
+def test_el_horizonte_firmado_pide_48_h_en_tres_ranuras():
+    # Samuel, 2026-10-20: H = 8 h, y una Nucleo soakea tres ranuras con esclavo.
+    assert r.juicio_resistencia([fila(48, 48 * A_8K)] * 3, r.HORIZONTE_H, **INSTRUMENTO)[0] == 0
+    assert r.juicio_resistencia([fila(47, 47 * A_8K)] * 3, r.HORIZONTE_H, **INSTRUMENTO)[0] == 2
+
+
 def test_una_fila_limpia_por_debajo_del_lazo_no_aprueba():
     # La del 17-10, a 1 kHz, aunque durara un ano: D5.1, enmienda del 16-10.
     assert r.juicio_resistencia([fila(24 * 365, 365 * 86_400_000)], 0.01,

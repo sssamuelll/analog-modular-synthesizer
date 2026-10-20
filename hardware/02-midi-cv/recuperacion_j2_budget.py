@@ -25,8 +25,6 @@ Lo que este guion NO sabe, y sale con HUECO por ello:
     (#231) y se anota en `resistencia_j2.csv`.
   * `T_IWDG`, que es del papel del hub (#291) y todavia no esta declarado.
   * La densidad de EVENTO por giro, que es del musico y no de un guion.
-  * El horizonte de "cero artefactos audibles" (acta del 2026-09-11, ficha 2),
-    que fija Samuel.
 """
 from __future__ import annotations
 
@@ -79,10 +77,12 @@ FRACCION_CPU_J2 = 0.15
 # de ninguna hoja: es el criterio del propio presupuesto, y se declara.
 MARGEN_EXIGIDO = 10.0
 
-# HUECO de Samuel (acta del 2026-09-11, ficha 2): cero artefactos audibles atribuibles al bus,
-# en cuantas horas de instrumento. La puerta pide que la cota de la tasa de fallos por
-# transferencia, a la CONFIANZA, por las transferencias de esas horas, quede por debajo de uno.
-HORIZONTE_H: float | None = None
+# Acta del 2026-09-11, ficha 2: cero artefactos audibles atribuibles al bus. El horizonte, en
+# horas de instrumento, lo fijo Samuel el 2026-10-20: un dia entero de estudio o de concierto.
+# La puerta pide que la cota de la tasa de fallos por transferencia, a la CONFIANZA, por las
+# transferencias de esas horas, quede por debajo de uno. Con cero fallos son 3 x 8 = 24 h
+# limpias con las seis ranuras a 8 kHz, 48 h con tres (una Nucleo) y 144 h con una.
+HORIZONTE_H: float | None = 8.0
 CONFIANZA = 0.95
 
 # Del papel del hub (#291), que todavia no lo declara.
