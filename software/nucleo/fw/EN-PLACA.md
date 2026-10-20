@@ -633,8 +633,9 @@ la fila.
 Es el número que el papel pide como criterio de aceptación de la CPU (riesgo 9
 de la spec del maestro), contra el límite que Samuel firmó el 2026-10-16: **2 500
 ciclos por giro**, el 15 % de un núcleo a 800 MHz. Cada corrida se anota como una
-fila de `carga_j2.csv`; `recuperacion_j2_budget.py` la lee y falla si una fila a
-800 MHz pasa del límite. Hoy solo hay filas de la Nucleo a 64 MHz y no cumplen.
+fila de `carga_j2.csv`; `recuperacion_j2_budget.py` la lee y falla si la fila que
+cuenta pasa del límite. Desde el papel v3 (§5.2 a), la que cuenta es la del peor
+régimen de caché del tic (ver «Las filas del tic en `carga_j2.csv`»).
 
 **Opciones y herramientas para acercar el banco al hub** (`reloj-hub`, `ranuras-N` y
 `muestreo` son features de `fw`; `carga_j2.py` pasa las dos primeras con `--hub` y
@@ -802,7 +803,7 @@ cargo run --release --features inyeccion,reloj-hub[,cotas-v2] --bin tic_cota
 cargo run --release --features transporte-tic,tabla,reloj-hub,corta[,pines-medio][,subida-quieta] --bin tic_contenidos
 ```
 
-`carga_j2.py` no lo anota (se niega con cualquier transporte que no sea el `ejecutor`) y `carga_j2.csv` no tiene filas suyas: la puerta toma el mínimo de las filas a 800 MHz sin mirar el transporte, y una fila del tic taparía los 8 000 del ejecutor firmado (papel v2 §5). Qué hace cada binario:
+Hasta el 20-10, `carga_j2.py` no lo anotaba (se negaba con cualquier transporte que no fuera el `ejecutor`) y `carga_j2.csv` no tenía filas suyas: la puerta tomaba el mínimo de las filas a 800 MHz sin mirar el transporte, y una fila del tic habría tapado los 8 000 del ejecutor firmado (papel v2 §5). Desde entonces el CSV lleva el transporte y el régimen de caché (ver «Las filas del tic en `carga_j2.csv`»). Qué hace cada binario:
 
 - **`carga_j2 --features transporte-tic`**: el mismo medidor del hilo de arriba, con una base por estado de caché. `sin-componer` hace que la trama sea siempre la misma (el enlace solo); sin él, `bajada_del_banco` la rehace en un lazo cada giro (un compositor de mentira, que cuesta unos 170 ciclos a 25 bytes). `contaminador` añade una tarea de hilo que recorre 64 KB entre vuelta y vuelta, y cada tic y cada pasada del planificador empiezan con la D-cache desalojada. `largo-41` y `largo-71` cambian el mensaje. Con `perfil` imprime además los ciclos por giro de cada nivel (tic, planificador, recuperación, componer) y el detalle del tic (leer, cerrar, armar).
 - **`tic_banco`**: el maestro de `j2_tic` en SPI5 contra el esclavo del banco en SPI4, a 8 kHz y con las cachés y la región, 600 s; publica una sola vez al final. `verifica-bajada` hace que el esclavo compare cada bajada con el patrón (`PATRON_BAJADA`) y cuente las buenas y las malas.
