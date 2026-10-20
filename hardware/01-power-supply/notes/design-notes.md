@@ -2,7 +2,7 @@
 
 > Nota de diseño viva para el módulo de alimentación del SAM17. Se escribe
 > **antes** de capturar el esquemático para que las decisiones queden
-> trazadas. Ítem del [epic #2](https://github.com/sssamuelll/analog-modular-synthesizer/issues/2),
+> trazadas. Ítem del [epic #2](https://github.com/sssamuelll/sam17/issues/2),
 > sección 1.
 
 ## 1. Contexto y punto de partida (tesis)

@@ -83,7 +83,7 @@ flowchart LR
 ## Status, October 2026
 
 The project map is the
-[GitHub milestones](https://github.com/sssamuelll/analog-modular-synthesizer/milestones):
+[GitHub milestones](https://github.com/sssamuelll/sam17/milestones):
 eight stages, each with its "done when" in the description, and every issue
 hangs from one of them. As of 11 October 2026:
 
@@ -118,7 +118,7 @@ the bench.
 ## Repository map
 
 ```
-analog-modular-synthesizer/
+sam17/
 ├── docs/
 │   ├── superpowers/specs/   The current design: dated specs, the newest one rules.
 │   ├── superpowers/plans/   Work plans, one per spec.
