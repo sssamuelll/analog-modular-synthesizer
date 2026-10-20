@@ -120,6 +120,29 @@ def lee_carga(ruta: str = _CSV_CARGA) -> list[dict]:
         return list(csv.DictReader(f))
 
 
+# Lo que el hub declara (papel v3, R-H4 enmendado por la ficha H): el transporte por tic, las
+# caches con la region MPU de los buferes del DMA (R-MJ7), y que el J2 puede entrar con las
+# caches calientes o con las dos frias.
+TRANSPORTE_DEL_HUB = "tic"
+CACHE_DEL_HUB = "icache+dcache-mpu"
+REGIMENES_DEL_HUB = ("caliente", "fria")
+
+
+def peor_regimen(filas: list[dict], f_cpu: float, periodo_us: int) -> tuple[dict | None, list[str]]:
+    """Papel v3, 5.2(a): de las filas del transporte y las caches del hub, a su reloj y a su
+    lazo, las de mas ranuras; de cada regimen declarado, la ultima medida; y de esas, la peor.
+    Devuelve esa fila, o None y los regimenes que no tienen ninguna."""
+    del_hub = [f for f in filas
+               if f.get("transporte") == TRANSPORTE_DEL_HUB and f["cache"] == CACHE_DEL_HUB
+               and float(f["f_cpu_hz"]) >= f_cpu and int(f["periodo_us"]) == periodo_us]
+    n = max((int(f["ranuras"]) for f in del_hub), default=0)
+    ultima = {f["regimen_cache"]: f for f in del_hub if int(f["ranuras"]) == n}
+    faltan = [r for r in REGIMENES_DEL_HUB if r not in ultima]
+    if faltan:
+        return None, faltan
+    return max((ultima[r] for r in REGIMENES_DEL_HUB), key=lambda f: int(f["ciclos_por_giro"])), []
+
+
 def del_rust(ruta: str = _RS) -> dict:
     """Lee POR_DEFECTO y las dos constantes de tiempo de maestro_j2.rs (R-MJ4)."""
     with open(ruta, encoding="utf-8") as f:
@@ -298,29 +321,41 @@ def demo() -> int:
           f"{cm.F_CPU/1e6:.0f} MHz, {u['ranuras_spi']} ranuras x "
           f"{tb.F_LAZO_HZ/1e3:.0f} kHz = {giros_s:.0f} giros/s")
     print(f"  limite: {limite:.0f} ciclos por giro")
-    en_diseno = []
-    for fila in lee_carga():
+    # Papel v3, 5.2(a), contra filas sinteticas: de las del hub, la ultima de cada regimen y la
+    # peor de ellas; las de otro transporte, otras caches, otro lazo o menos ranuras no cuentan.
+    def f(ciclos, regimen, transporte="tic", cache="icache+dcache-mpu", f_cpu="800000000",
+          ranuras="3", periodo="125"):
+        return {"ciclos_por_giro": str(ciclos), "regimen_cache": regimen, "transporte": transporte,
+                "cache": cache, "f_cpu_hz": f_cpu, "ranuras": ranuras, "periodo_us": periodo}
+    hub = [f(2900, "fria"), f(2300, "caliente"), f(2450, "fria")]
+    ruido = [f(900, "fria", transporte="ejecutor"), f(9000, "fria", cache="no"),
+             f(9000, "fria", f_cpu="64000000"), f(9000, "fria", periodo="1000"),
+             f(9000, "fria", ranuras="1")]
+    assert peor_regimen(hub + ruido, cm.F_CPU, 125) == (hub[2], [])
+    assert peor_regimen(hub[1:2] + ruido, cm.F_CPU, 125) == (None, ["fria"])
+    assert peor_regimen(ruido[:1], cm.F_CPU, 125) == (None, ["caliente", "fria"])
+    carga = lee_carga()
+    for fila in carga:
         ciclos = int(fila["ciclos_por_giro"])
-        f_cpu = float(fila["f_cpu_hz"])
-        a_diseno = f_cpu >= cm.F_CPU
-        if a_diseno:
-            en_diseno.append(ciclos)
-        nota = "" if a_diseno else "   [no es el reloj del hub]"
-        print(f"    {fila['fecha']} {fila['placa']} {f_cpu/1e6:.0f} MHz, "
-              f"cache {fila['cache']}: {ciclos} ciclos = "
-              f"{ciclos/limite:.1f}x el limite{nota}")
-    if en_diseno:
-        mejor = min(en_diseno)
-        assert mejor <= limite, (
-            f"la mejor medida a {cm.F_CPU/1e6:.0f} MHz ({mejor} ciclos por "
-            f"giro) pasa el limite firmado ({limite:.0f}): el J2 no cabe en "
-            "su reparto de CPU")
+        print(f"    {fila['fecha']} {fila['placa']} {float(fila['f_cpu_hz'])/1e6:.0f} MHz, "
+              f"{fila['transporte']}, {fila['ranuras']} ranuras a {fila['periodo_us']} us, "
+              f"cache {fila['cache']} {fila['regimen_cache']}: {ciclos} ciclos = "
+              f"{ciclos/limite:.1f}x el limite")
+    periodo = round(1e6 / tb.F_LAZO_HZ)
+    peor, faltan = peor_regimen(carga, cm.F_CPU, periodo)
+    if peor:
+        ciclos = int(peor["ciclos_por_giro"])
+        print(f"  la que cuenta (5.2a): la del {peor['fecha']}, regimen {peor['regimen_cache']}, "
+              f"{ciclos} ciclos = {ciclos/limite:.2f}x el limite")
+        assert ciclos <= limite, (
+            f"el peor regimen del hub ({peor['regimen_cache']}, {ciclos} ciclos por giro) "
+            f"pasa el limite firmado ({limite:.0f}): el J2 no cabe en su reparto de CPU")
     else:
         huecos.append(
-            f"la CPU de un giro normal no tiene ninguna medida a "
-            f"{cm.F_CPU/1e6:.0f} MHz contra el limite firmado de {limite:.0f} "
-            "ciclos por giro: lo medido en la Nucleo (64 MHz) no lo cumple y "
-            "no es el reloj del hub (riesgo 9, #428)")
+            f"la CPU de un giro normal no tiene fila del hub ({TRANSPORTE_DEL_HUB}, "
+            f"{CACHE_DEL_HUB}, {cm.F_CPU/1e6:.0f} MHz, {periodo} us) con el regimen "
+            f"{', '.join(faltan)}: sin ella no se compara con el limite firmado de "
+            f"{limite:.0f} ciclos por giro (papel v3, 5.2a)")
 
     # --- 7. los HUECOS ---------------------------------------------------
     # La cuenta de la cadencia, contra un CSV sintetico: una fila de 1 kHz no cierra
