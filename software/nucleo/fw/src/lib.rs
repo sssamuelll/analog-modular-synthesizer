@@ -20,4 +20,6 @@ pub mod mpu;
 pub mod muestreo;
 pub mod perfil;
 pub mod reinicio;
+#[cfg(feature = "secciones")]
+pub mod secciones;
 pub mod usb;

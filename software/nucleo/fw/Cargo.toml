@@ -50,8 +50,10 @@ defmt = "1.1"
 defmt-rtt = "1.0"
 panic-probe = { version = "1.0", features = ["print-defmt"] }
 # `critical-section-single-core` la daba `embassy-rp` con su feature
-# `critical-section-impl`; en STM32 la pone el usuario.
-cortex-m = { version = "0.7", features = ["inline-asm", "critical-section-single-core"] }
+# `critical-section-impl`; en STM32 la pone el usuario. Va por la feature
+# `seccion-cortex-m`, que es la de defecto, para que `secciones` la pueda cambiar.
+cortex-m = { version = "0.7", features = ["inline-asm"] }
+critical-section = { version = "1.2", features = ["restore-state-u32"], optional = true }
 cortex-m-rt = "0.7"
 static_cell = "2"
 
@@ -61,6 +63,12 @@ lto = true
 opt-level = "s"
 
 [features]
+default = ["seccion-cortex-m"]
+# La seccion critica de siempre: PRIMASK, de `cortex-m`.
+seccion-cortex-m = ["cortex-m/critical-section-single-core"]
+# R-H2 en el banco: la misma seccion critica, con un reloj y quien la abre (`secciones.rs`).
+# Va sin la de defecto: `--no-default-features --features secciones,...`.
+secciones = ["dep:critical-section"]
 # El bucle del primer reporte de embassy#5607 en `control_positivo` (EN-PLACA, punto (1)).
 bucle-del-reporte = []
 # El eco con puente MOSI-MISO a 16 MHz en `control_positivo` (EN-PLACA, punto (1)).
