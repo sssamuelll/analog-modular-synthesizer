@@ -241,22 +241,32 @@ pub struct Parametros {
 /// Lo que entra por la cola (§3.5). Lo encola la ISR del J2; lo drena el tick.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Entrada {
+    /// `secuencia` es la del sobre de su trama (cabecera del J2, D4).
     Evento {
         canal: u8,
         borde: Borde,
         fuerza: Fuerza,
+        secuencia: u16,
     },
     Parametros {
         canal: u8,
         parametros: Parametros,
     },
-    /// R-E10: la mascara de compuertas (`abre`/`cierra`, nunca disparos) y el
-    /// contador de eventos emitidos por el cerebro (§3.4).
+    /// Una tupla de `SET` (cabecera del J2, D4): el campo que nombra el indice
+    /// de la tabla del dialecto. El rango lo valida el dialecto.
+    Parametro {
+        canal: u8,
+        indice: u8,
+        valor: i32,
+    },
+    /// R-E10: la mascara de compuertas (`abre`/`cierra`, nunca disparos) y la
+    /// secuencia del ultimo `EVENTO` que el cerebro emitio antes de armarla
+    /// (cabecera del J2, D4).
     Compuerta {
         mascara: u16,
         contador: u16,
     },
-    /// El watchdog de trama (voz-total §9.2).
+    /// El watchdog de trama (voz-total §9.2). No toca `ultimo_evento`.
     SoltarTodo,
     /// El firmware latcheo el crosspoint: los canales en conmutacion se sueltan.
     Conmutado,
@@ -333,9 +343,14 @@ impl Canal {
 
 pub struct Generadores {
     canales: [Canal; CANALES],
-    recibidos: u16,
-    resincronizar: bool,
+    /// La mayor secuencia de `EVENTO` aceptada (cabecera del J2, D4).
+    ultimo_evento: u16,
     en_conmutacion: u16,
+}
+
+/// `a` es anterior a `b` en la aritmetica de 16 bits con vuelta.
+fn anterior(a: u16, b: u16) -> bool {
+    (a.wrapping_sub(b) as i16) < 0
 }
 
 impl Generadores {
@@ -343,8 +358,7 @@ impl Generadores {
     pub fn nuevos(parametros: Parametros) -> Self {
         Generadores {
             canales: core::array::from_fn(|_| Canal::nuevo(parametros)),
-            recibidos: 0,
-            resincronizar: false,
+            ultimo_evento: 0,
             en_conmutacion: 0,
         }
     }
@@ -373,8 +387,11 @@ impl Generadores {
                 canal,
                 borde,
                 fuerza,
+                secuencia,
             } => {
-                self.recibidos = self.recibidos.wrapping_add(1);
+                if anterior(self.ultimo_evento, secuencia) {
+                    self.ultimo_evento = secuencia;
+                }
                 self.borde(canal, borde, fuerza);
             }
             Entrada::Parametros { canal, parametros } => {
@@ -385,12 +402,36 @@ impl Generadores {
                     c.r = r;
                 }
             }
+            Entrada::Parametro {
+                canal,
+                indice,
+                valor,
+            } => {
+                let Some(c) = self.canales.get_mut(canal as usize) else {
+                    return;
+                };
+                let p = &mut c.parametros;
+                match indice {
+                    0 => p.vca.ataque_ms = valor as u32,
+                    1 => p.vca.decaimiento_ms = valor as u32,
+                    2 => p.vca.relajacion_ms = valor as u32,
+                    3 => p.vca_sostenido = valor as u16,
+                    4 => p.filtro.ataque_ms = valor as u32,
+                    5 => p.filtro.decaimiento_ms = valor as u32,
+                    6 => p.filtro.relajacion_ms = valor as u32,
+                    7 => p.filtro_sostenido = valor as u16,
+                    8 => p.sensibilidad_fuerza = valor as u16,
+                    9 => p.filtro_cantidad = valor as i16,
+                    10 => {
+                        p.paneo = valor as u16;
+                        (c.l, c.r) = factores_paneo(p.paneo);
+                    }
+                    _ => {}
+                }
+            }
             Entrada::Compuerta { mascara, contador } => {
-                if self.resincronizar {
-                    self.recibidos = contador;
-                    self.resincronizar = false;
-                } else if (contador.wrapping_sub(self.recibidos) as i16) < 0 {
-                    return; // un bloque viejo no hace nada (papel §3.4)
+                if anterior(contador, self.ultimo_evento) {
+                    return; // un bloque viejo no hace nada (cabecera del J2, D4)
                 }
                 for i in 0..CANALES {
                     let bit = mascara & (1 << i) != 0;
@@ -407,7 +448,6 @@ impl Generadores {
                     c.diferido = None;
                     c.aplicar(Borde::Cierra, Fuerza(0));
                 }
-                self.resincronizar = true;
             }
             Entrada::Conmutado => {
                 self.en_conmutacion = 0;
@@ -474,7 +514,13 @@ impl Generadores {
             .map_or(Etapa::Ocioso, |c| c.vca.etapa())
     }
 
-    pub fn eventos_recibidos(&self) -> u16 {
-        self.recibidos
+    /// La secuencia que `COMPUERTA` compara; sube por `ESTADO_VOZ`.
+    pub fn ultimo_evento(&self) -> u16 {
+        self.ultimo_evento
+    }
+
+    /// Los parametros del canal, para el descriptor y los tests.
+    pub fn parametros(&self, canal: u8) -> Option<Parametros> {
+        self.canales.get(canal as usize).map(|c| c.parametros)
     }
 }

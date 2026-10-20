@@ -340,6 +340,20 @@ adopta el contador del primer bloque válido que llegue y lo aplica: las notas
 que el cerebro sostenía vuelven, con la fuerza de reparación. Es la
 recuperación del watchdog, y es la que R-E10 prometía.
 
+> **Enmienda del 2026-10-20 (cabecera del J2, D4; hallazgos V-1 y H-1 de su
+> junta):** el contador ya no es una cuenta. El bloque lleva la `secuencia` del
+> sobre del último `EVENTO` que el cerebro emitió antes de armarlo (`0` si
+> ninguno desde `HOLA`), y el módulo guarda `ultimo_evento`, la mayor
+> `secuencia` de `EVENTO` que aceptó. Un bloque con `contador` anterior a
+> `ultimo_evento`, en aritmética de 16 bits con vuelta, es viejo y se ignora;
+> igual o posterior, se aplica. `soltar_todo()` no toca `ultimo_evento` y no
+> adopta nada: tras el watchdog, el siguiente bloque al día reabre lo que el
+> cerebro sostiene, y uno viejo sigue sin hacer nada. Con la cuenta local, un
+> evento rechazado por CRC la desplazaba para siempre y cada bloque armado
+> antes de un evento que lo adelantó pasaba por bueno: 1 802 reversiones en
+> 60 s con una pérdida por mil. `core/tests/envolvente.rs`,
+> `el_contador_no_deriva_con_eventos_perdidos`, es esa simulación.
+
 ### 3.5 Un solo dueño del estado
 
 La lente de runtime lo encontró en la primera lectura: el evento llega por
@@ -372,6 +386,13 @@ FIFO, así que un `SET` que el cerebro tenga en cola detrás del bloque
 periódico puede ser adelantado por un evento (D1). La nota usa el valor de
 hace 100 µs. *«La siguiente nota usa los valores nuevos»* vale a la
 granularidad del enlace, y se dice.
+
+> **Enmienda del 2026-10-20 (cabecera del J2, D4 y D9):** una escritura de
+> parámetro entra como `Entrada::Parametro { canal, indice, valor }`, una por
+> tupla del `SET`, y el tick la aplica al campo que nombra el índice de la
+> tabla del dialecto de la Voz; el rango lo valida el dialecto al decodificar.
+> `Entrada::Parametros`, el bloque entero del canal, sigue para la carga
+> local. `Entrada::Evento` lleva la `secuencia` de su trama (§3.4).
 
 ---
 

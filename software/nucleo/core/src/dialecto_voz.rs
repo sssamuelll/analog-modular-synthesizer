@@ -5,11 +5,15 @@
 //! §3.2 (los bytes). Van con ellos los dos universales de bajada, `NADA` y
 //! `HOLA`, para que todo tipo de bajada tenga respuesta.
 //!
-//! Todavia no estan aqui: los registros de subida (§3.3), la sesion (D5) y la
-//! traduccion a `envolvente::Entrada` (D9).
+//! La traduccion a `envolvente::Entrada` (D9) cubre `EVENTO`, `COMPUERTA` y
+//! `SET`. El tono de arranque del `EVENTO` y el `TONO` son del camino del tono,
+//! y `BAHIA` es de la barrera, que no estan en el generador.
+//!
+//! Todavia no estan aqui: los registros de subida (§3.3) y la sesion (D5).
 
 use crate::bahia::{Imagen, CANALES};
-use crate::envolvente::Borde;
+use crate::envolvente::{Borde, Entrada};
+use crate::fuerza::Fuerza;
 use crate::j2::{self, Cabecera, ErrorTrama};
 
 /// Tuplas por `SET` (D4): los once parametros de una voz, o uno de las
@@ -102,6 +106,38 @@ impl Mensaje {
         let (tipo, n) = self.carga(&mut carga)?;
         leer(tipo, &carga[..n]).ok()?;
         j2::codificar(tabla, tipo, secuencia, &carga[..n], out)
+    }
+
+    /// Lo que el mensaje deja en la cola del generador (D8), con `secuencia`, la
+    /// del sobre de su trama. Un `SET` da una entrada por tupla, en orden.
+    pub fn entradas(&self, secuencia: u16) -> impl Iterator<Item = Entrada> + '_ {
+        let una = match *self {
+            Mensaje::Evento {
+                destino,
+                borde,
+                fuerza,
+                ..
+            } => Some(Entrada::Evento {
+                canal: (destino & 0xF) as u8,
+                borde,
+                fuerza: Fuerza(fuerza),
+                secuencia,
+            }),
+            Mensaje::Compuerta { mascara, contador } => {
+                Some(Entrada::Compuerta { mascara, contador })
+            }
+            _ => None,
+        };
+        let tuplas = match self {
+            Mensaje::Set { n, escrituras } => escrituras.get(..usize::from(*n)).unwrap_or(&[]),
+            _ => &[],
+        };
+        una.into_iter()
+            .chain(tuplas.iter().map(|e| Entrada::Parametro {
+                canal: e.instancia,
+                indice: e.indice,
+                valor: e.valor,
+            }))
     }
 
     fn carga(&self, b: &mut [u8; CARGA_MAX]) -> Option<(u8, usize)> {

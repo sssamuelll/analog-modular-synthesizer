@@ -12,7 +12,8 @@
 use sam17_nucleo_core::bahia::{Chip, Imagen, CANALES, LINEAS};
 use sam17_nucleo_core::descubrimiento::{crc16, TABLA_CRC16};
 use sam17_nucleo_core::dialecto_voz::{decodificar, Escritura, Mensaje, MAX_ESCRITURAS};
-use sam17_nucleo_core::envolvente::Borde;
+use sam17_nucleo_core::envolvente::{Borde, Entrada, Generadores, Parametros, Tiempos};
+use sam17_nucleo_core::fuerza::Fuerza;
 use sam17_nucleo_core::j2::{self, carga_max, Cabecera, ErrorTrama, SOBRE};
 
 fn trama(m: &Mensaje, secuencia: u16) -> Vec<u8> {
@@ -442,5 +443,94 @@ fn todo_mensaje_cabe_en_r_e1_al_piso() {
 fn todo_mensaje_cabe_en_r_e1_al_reloj_de_hoy() {
     for m in mas_largos() {
         assert!(trama(&m, 0).len() - SOBRE <= carga_max(6_250_000), "{m:?}");
+    }
+}
+
+/// §8.11: la traduccion al generador. El `EVENTO` entra entero con la
+/// secuencia de su sobre y la instancia de los cuatro bits bajos del destino;
+/// `COMPUERTA` lleva su contador; un `SET` de tres tuplas da tres
+/// `Entrada::Parametro` en orden, y aplicadas, cada una deja su campo.
+#[test]
+fn la_traduccion_al_generador() {
+    let evento = Mensaje::Evento {
+        destino: 0x7A35,
+        borde: Borde::Cierra,
+        fuerza: 0x1234,
+        tono: 0x4000,
+    };
+    assert_eq!(
+        evento.entradas(77).collect::<Vec<_>>(),
+        [Entrada::Evento {
+            canal: 5,
+            borde: Borde::Cierra,
+            fuerza: Fuerza(0x1234),
+            secuencia: 77,
+        }]
+    );
+    let compuerta = Mensaje::Compuerta {
+        mascara: 0x00F0,
+        contador: 76,
+    };
+    assert_eq!(
+        compuerta.entradas(78).collect::<Vec<_>>(),
+        [Entrada::Compuerta {
+            mascara: 0x00F0,
+            contador: 76,
+        }]
+    );
+    let entradas: Vec<_> = set(&[(2, 0, 5), (2, 9, -1_200), (15, 10, 1_000)])
+        .entradas(79)
+        .collect();
+    assert_eq!(
+        entradas,
+        [
+            Entrada::Parametro {
+                canal: 2,
+                indice: 0,
+                valor: 5,
+            },
+            Entrada::Parametro {
+                canal: 2,
+                indice: 9,
+                valor: -1_200,
+            },
+            Entrada::Parametro {
+                canal: 15,
+                indice: 10,
+                valor: 1_000,
+            },
+        ]
+    );
+    let base = Parametros {
+        vca: Tiempos {
+            ataque_ms: 10,
+            decaimiento_ms: 20,
+            relajacion_ms: 30,
+        },
+        vca_sostenido: 700,
+        filtro: Tiempos {
+            ataque_ms: 5,
+            decaimiento_ms: 30,
+            relajacion_ms: 30,
+        },
+        filtro_sostenido: 300,
+        sensibilidad_fuerza: 500,
+        filtro_cantidad: 0,
+        paneo: 500,
+    };
+    let mut g = Generadores::nuevos(base);
+    g.tick(&entradas);
+    let dos = g.parametros(2).unwrap();
+    assert_eq!((dos.vca.ataque_ms, dos.filtro_cantidad), (5, -1_200));
+    assert_eq!(g.parametros(15).unwrap().paneo, 1_000);
+    // TONO y BAHIA esperan a sus duenos, que no son el generador; NADA y HOLA
+    // no llevan nada para el.
+    for m in [
+        Mensaje::Nada,
+        casos()[1],
+        casos()[7],
+        Mensaje::Bahia(bahia_llena()),
+    ] {
+        assert_eq!(m.entradas(1).count(), 0, "{m:?}");
     }
 }
