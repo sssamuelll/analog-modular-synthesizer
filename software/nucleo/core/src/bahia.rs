@@ -217,6 +217,23 @@ impl Barrera {
         self.desde_ms = ahora_ms;
     }
 
+    /// El refresco de `BAHIA` (papel de la cabecera, D7): el cerebro reenvia la
+    /// imagen vigente a 1 Hz, y un refresco identico tiene que ser inocuo. Por
+    /// `proponer` no lo era: reiniciaba el reloj, asi que un `Forzar` de un
+    /// segundo o mas no vencia nunca, y daba `Commit` para la imagen ya activa.
+    ///
+    /// La pendiente no cambia nada, ni el reloj. La activa descarta la
+    /// pendiente que hubiera: el cable no distingue el refresco del cambio, y
+    /// la activa es lo que llega cuando el cerebro deshace una ruta antes de
+    /// que se conmute. Otra imagen es una propuesta.
+    pub fn reafirmar(&mut self, imagen: Imagen, ahora_ms: u64) {
+        if imagen == self.activa {
+            self.pendiente = None;
+        } else if self.pendiente != Some(imagen) {
+            self.proponer(imagen, ahora_ms);
+        }
+    }
+
     /// Un bit en 1 de `canales_en_silencio` es un canal callado.
     ///
     /// Commit cuando todos los canales que cambian estan callados; bajo

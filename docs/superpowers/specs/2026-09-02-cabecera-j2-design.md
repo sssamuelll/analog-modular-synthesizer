@@ -577,6 +577,18 @@ genera el cambio y el refresco desde el mismo estado. La carrera que la
 junta planteó —un refresco de la imagen anterior pisando una pendiente— no
 tiene dónde nacer si nadie más escribe el enlace.
 
+> **Enmienda del 2026-10-20:** reafirmar la imagen **activa** no deja la
+> pendiente donde está: la descarta. El cable no distingue el refresco del
+> cambio, así que todo `BAHIA` entra por `reafirmar`, y la activa es también
+> lo que manda el cerebro cuando la mano deshace una ruta que todavía espera
+> el silencio. Con «no hace nada» la ruta deshecha se quedaba pendiente, el
+> refresco de la activa la ignoraba cada segundo, y se latcheaba en el
+> siguiente silencio; bajo `diferir` con un drone, eso puede ser minutos
+> después. Descartarla no da `Commit` ni toca el chip. La pendiente
+> reafirmada sigue sin mover el reloj, y una imagen distinta de las dos sigue
+> siendo propuesta. Código: `Barrera::reafirmar` en `core/src/bahia.rs`, con
+> el test 16 de §8 y el de la ruta deshecha.
+
 El 1 Hz es la cadencia de la salud (orquestación §7.1) y se elige por la
 misma razón que R-E11 eligió la suya: **lo fija la tolerancia, no el
 presupuesto**. Un parámetro perdido es un mando que no responde hasta un
@@ -1074,7 +1086,7 @@ en el host, con la cita del papel en cada uno:
 | núcleo | §3.1.1 («desde el cerebro es un módulo más — así que el contrato J2 sigue congelado») | Comentar | La premisa murió con el J2 punto a punto; el concentrador exigirá túnel o ruta en todo mensaje (D3) | pendiente |
 | núcleo | §5 tabla de bloques :597 («72 bits… Congelado por el módulo 3, no se toca») y `software/nucleo/README.md:56` («j2 = la trama de 72 bits») | Rewrite | Deuda heredada del mapa del J2 punto a punto (§6 de aquel papel) y del #214; este papel la hereda, no la salda | pendiente (#214) |
 | `core/src/j2.rs` | :1-3 | Rewrite | El sobre; el legado a rótulo | el PR de código |
-| `core/src/envolvente.rs`, `core/src/bahia.rs` | `Entrada`, `Generadores`, `Barrera` | Expand | D9 | `envolvente.rs` hecho el 2026-10-20; `Barrera::reafirmar` pendiente |
+| `core/src/envolvente.rs`, `core/src/bahia.rs` | `Entrada`, `Generadores`, `Barrera` | Expand | D9 | hechos el 2026-10-20 |
 | `trama_j2_budget.py`, `ataque_budget.py` | constantes y filas | Expand | §9 | el PR de guiones |
 | issue #267 | criterio de cierre | Comentar | Cabecera con evento, imagen, `SET` y compuerta; test de R-E1 al piso; la sesión y el contador que el issue no sabía que pedía | al mergear |
 | issue #178 | — | Comentar | El módulo de mandos ya tiene sobre y sesión; le falta dialecto, ventana y `F_SUBIDA` | al mergear |

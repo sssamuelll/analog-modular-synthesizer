@@ -351,3 +351,84 @@ fn un_tick_sin_pendiente_no_hace_nada() {
     assert_eq!(*b.activa(), Imagen::vacia());
     assert_eq!(b.estado(), Estado::Activa);
 }
+
+/// Papel de la cabecera, D7 y §8 test 16: el refresco de `BAHIA` a 1 Hz entra
+/// por `reafirmar`. La activa no da `Commit`, ni con todo sonando: por
+/// `proponer` daba uno con `cambian` 0 cada segundo, y el firmware latchearia
+/// sobre el supuesto sin verificar de que el latch no glitchea (voz-total
+/// §11.2). La pendiente no mueve el reloj, y una imagen distinta de las dos se
+/// vuelve la pendiente.
+#[test]
+fn reafirmar_la_vigente_no_latchea_ni_mueve_el_reloj() {
+    let mut b = Barrera::nueva(PoliticaDrones::Forzar { timeout_ms: 1_500 });
+    b.reafirmar(Imagen::vacia(), 0);
+    assert_eq!(b.estado(), Estado::Activa);
+    assert!(b.tick(0, 1).is_none(), "la activa reafirmada dio Commit");
+
+    let otra = imagen_con(Chip::Entrada, 3, 9);
+    b.reafirmar(otra, 1_000);
+    assert_eq!(b.estado(), Estado::Pendiente { desde_ms: 1_000 });
+    b.reafirmar(otra, 2_000);
+    assert_eq!(
+        b.estado(),
+        Estado::Pendiente { desde_ms: 1_000 },
+        "reafirmar la pendiente movio el reloj"
+    );
+
+    let tercera = imagen_con(Chip::Salida, 5, 0);
+    b.reafirmar(tercera, 2_100);
+    assert_eq!(b.estado(), Estado::Pendiente { desde_ms: 2_100 });
+    b.tick(u16::MAX, 2_101).expect("todo callado");
+    assert_eq!(*b.activa(), tercera);
+    b.reafirmar(tercera, 3_000);
+    assert!(b.tick(0, 3_001).is_none(), "la activa nueva dio Commit");
+}
+
+/// D7 y §8 test 16, hallazgo H-10 caso 3: un `Forzar{1500 ms}` reafirmado cada
+/// 1000 ms vence a los 1500, una vez. Por `proponer`, cada refresco reiniciaba
+/// el reloj y no vencia nunca.
+#[test]
+fn reafirmada_cada_segundo_vence_a_su_hora() {
+    let otra = imagen_con(Chip::Entrada, 3, 9);
+    let sonando = silencio_menos(&[3]);
+    let mut b = Barrera::nueva(PoliticaDrones::Forzar { timeout_ms: 1_500 });
+    let mut por_proponer = Barrera::nueva(PoliticaDrones::Forzar { timeout_ms: 1_500 });
+    let mut commits = Vec::new();
+    for t in 0..10_000u64 {
+        if t % 1_000 == 0 {
+            b.reafirmar(otra, t);
+            por_proponer.proponer(otra, t);
+        }
+        commits.extend(b.tick(sonando, t).map(|c| (t, c)));
+        assert!(
+            por_proponer.tick(sonando, t).is_none(),
+            "por proponer vencio en {t}"
+        );
+    }
+    assert_eq!(commits.len(), 1, "{commits:?}");
+    let (t, c) = commits[0];
+    assert_eq!(t, 1_500);
+    assert_eq!((c.cambian, c.mutear), (1 << 3, 1 << 3));
+}
+
+/// D7, enmienda del 2026-10-20: reafirmar la activa descarta la pendiente. El
+/// cable no distingue el refresco del cambio, y la activa es lo que manda el
+/// cerebro cuando deshace una ruta que aun espera el silencio; si se ignorara,
+/// la ruta deshecha se latchearia en el siguiente silencio.
+#[test]
+fn reafirmar_la_activa_descarta_la_pendiente() {
+    let mut b = Barrera::nueva(PoliticaDrones::Diferir);
+    let deshecha = imagen_con(Chip::Entrada, 3, 9);
+    b.reafirmar(deshecha, 0);
+    assert!(
+        b.tick(silencio_menos(&[3]), 1).is_none(),
+        "el canal 3 suena"
+    );
+    b.reafirmar(Imagen::vacia(), 2);
+    assert_eq!(b.estado(), Estado::Activa);
+    assert!(
+        b.tick(u16::MAX, 3).is_none(),
+        "el silencio latcheo la ruta deshecha"
+    );
+    assert_eq!(*b.activa(), Imagen::vacia());
+}
