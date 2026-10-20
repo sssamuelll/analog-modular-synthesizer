@@ -363,8 +363,16 @@ fn mide_salida(fria: bool) -> Salida {
         let t = DWT::cycle_count();
         let d = t.wrapping_sub(prev);
         if d > UMBRAL {
-            huecos += 1;
             let (p, fin) = fin_del_planificador();
+            if p == n_plan {
+                // Sin planificador no es del J2: otra interrupcion, o el hilo trayendo su propio
+                // codigo despues de invalidar. No cuenta ni invalida otra vez; si invalidara, el
+                // hilo frio se mediria a si mismo en cada vuelta (con `368d1ac`, 7 061 de 8 000).
+                otros += 1;
+                prev = t;
+                continue;
+            }
+            huecos += 1;
             if p.wrapping_sub(n_plan) == 1 {
                 let s = t.wrapping_sub(fin);
                 registrados += 1;
