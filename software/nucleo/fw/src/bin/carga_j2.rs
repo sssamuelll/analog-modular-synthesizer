@@ -646,6 +646,14 @@ async fn main(spawner: Spawner) {
             sam17_nucleo_fw::secciones::imprime(t, cache, f_cpu / 1_000_000);
         }
     }
+    // Lo que dijo el juez en toda la corrida: que la politica recorrio el camino que se cree.
+    for n in 0..RANURAS_SPI {
+        let c = cuentas(n);
+        info!(
+            "carga_j2: ranura {} subidas_ok={} subidas_malas={}",
+            n, c.subidas_ok, c.subidas_malas
+        );
+    }
     info!("carga_j2: fin");
     // Un `bkpt` para que `probe-rs run` termine solo y suelte la sonda.
     cortex_m::asm::bkpt();
