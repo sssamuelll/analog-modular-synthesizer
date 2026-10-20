@@ -481,6 +481,13 @@ posible.
 >    etapa**: bit alto y compuerta baja abre —también sobre una voz en
 >    relajación, que es el caso normal de reutilización—; bit bajo y compuerta
 >    alta cierra; lo demás no hace nada.
+>
+> **Enmienda del 2026-10-20 al punto 2 (cabecera del J2, D4; hallazgos V-1 y
+> H-1 de su junta):** el contador no es una cuenta. Es la `secuencia` del sobre
+> del último `EVENTO` que el cerebro emitió por ese enlace antes de armar el
+> bloque, y el módulo guarda `ultimo_evento`, la mayor que aceptó. Con la
+> cuenta, un evento rechazado por CRC la desplazaba para siempre y los bloques
+> viejos pasaban por buenos.
 
 ### D7. Lo que no repite el flujo, no tiene red
 

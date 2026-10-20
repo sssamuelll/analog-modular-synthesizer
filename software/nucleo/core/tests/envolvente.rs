@@ -292,26 +292,20 @@ fn parametros() -> Parametros {
     }
 }
 
-fn abre(canal: u8, fuerza: u16) -> Entrada {
+fn evento(canal: u8, borde: Borde, fuerza: u16, secuencia: u16) -> Entrada {
     Entrada::Evento {
         canal,
-        borde: Borde::Abre,
+        borde,
         fuerza: Fuerza(fuerza),
+        secuencia,
     }
+}
+// Los tests que no miran el contador de `COMPUERTA` mandan la secuencia 0.
+fn abre(canal: u8, fuerza: u16) -> Entrada {
+    evento(canal, Borde::Abre, fuerza, 0)
 }
 fn cierra(canal: u8) -> Entrada {
-    Entrada::Evento {
-        canal,
-        borde: Borde::Cierra,
-        fuerza: Fuerza(0),
-    }
-}
-fn dispara(canal: u8, fuerza: u16) -> Entrada {
-    Entrada::Evento {
-        canal,
-        borde: Borde::Dispara,
-        fuerza: Fuerza(fuerza),
-    }
+    evento(canal, Borde::Cierra, 0, 0)
 }
 fn ticks(g: &mut Generadores, n: u32) -> Salida {
     let mut s = g.tick(&[]);
@@ -446,11 +440,14 @@ fn la_mascara_de_silencio_es_el_generador_ocioso_y_no_la_palabra() {
 #[test]
 fn la_reafirmacion_compara_contra_la_compuerta_propia_y_dispara_es_invisible() {
     let mut g = Generadores::nuevos(parametros());
-    g.tick(&[abre(0, 30000), dispara(1, 30000)]);
+    g.tick(&[
+        evento(0, Borde::Abre, 30000, 1),
+        evento(1, Borde::Dispara, 30000, 2),
+    ]);
     assert_eq!(g.compuertas(), 0b01, "dispara no levanta la compuerta");
-    assert_eq!(g.eventos_recibidos(), 2);
+    assert_eq!(g.ultimo_evento(), 2);
     ticks(&mut g, 50);
-    // un bloque VIEJO (contador 1 < 2 recibidos) no hace nada
+    // un bloque VIEJO (contador 1 < ultimo evento 2) no hace nada
     g.tick(&[Entrada::Compuerta {
         mascara: 0,
         contador: 1,
@@ -482,7 +479,7 @@ fn la_reafirmacion_compara_contra_la_compuerta_propia_y_dispara_es_invisible() {
     }]);
     assert_eq!(g.etapa(1), Etapa::Ocioso, "dispara no resucita");
     // abierta sobre un canal en relajacion (compuerta baja) abre: el caso normal
-    g.tick(&[cierra(4)]);
+    g.tick(&[evento(4, Borde::Cierra, 0, 3)]);
     assert_eq!(g.etapa(4), Etapa::Relajacion);
     g.tick(&[Entrada::Compuerta {
         mascara: 0b10000,
@@ -565,25 +562,36 @@ fn la_cola_se_aplica_en_orden_y_la_conmutacion_retiene_solo_las_aperturas() {
     );
 }
 
-/// §3.4 y voz-total §9.2: `SoltarTodo` lleva todo a relajacion y baja todas las
-/// compuertas; el primer bloque valido despues reabre lo que el cerebro
-/// sostiene, con la fuerza de reparacion, y resincroniza el contador.
+/// §3.4 y voz-total §9.2, con la enmienda de la cabecera del J2 (D4):
+/// `SoltarTodo` lleva todo a relajacion y baja todas las compuertas, y el
+/// modulo conserva su `ultimo_evento`. El siguiente bloque al dia reabre lo que
+/// el cerebro sostiene, con la fuerza de reparacion; uno viejo sigue sin hacer
+/// nada.
 #[test]
-fn soltar_todo_libera_y_el_primer_bloque_valido_reabre_lo_que_el_cerebro_sostiene() {
+fn soltar_todo_libera_y_el_siguiente_bloque_al_dia_reabre_lo_que_el_cerebro_sostiene() {
     let mut g = Generadores::nuevos(parametros());
-    g.tick(&[abre(0, 65535), abre(1, 65535), dispara(2, 65535)]);
+    g.tick(&[
+        evento(0, Borde::Abre, 65535, 898),
+        evento(1, Borde::Abre, 65535, 899),
+        evento(2, Borde::Dispara, 65535, 900),
+    ]);
     ticks(&mut g, 100);
     g.tick(&[Entrada::SoltarTodo]);
     for c in 0..3 {
         assert_eq!(g.etapa(c), Etapa::Relajacion, "canal {c}");
     }
     assert_eq!(g.compuertas(), 0);
-    // un bloque con contador cualquiera (el cerebro va por 900) se adopta
+    assert_eq!(g.ultimo_evento(), 900, "el watchdog no toca el contador");
+    // un bloque armado antes del ultimo evento sigue siendo viejo
+    g.tick(&[Entrada::Compuerta {
+        mascara: 0b11,
+        contador: 899,
+    }]);
+    assert_eq!(g.compuertas(), 0, "un bloque viejo no reabre");
     g.tick(&[Entrada::Compuerta {
         mascara: 0b11,
         contador: 900,
     }]);
-    assert_eq!(g.eventos_recibidos(), 900);
     assert_eq!(g.etapa(0), Etapa::Ataque);
     assert_eq!(g.etapa(1), Etapa::Ataque);
     assert_eq!(
@@ -591,12 +599,157 @@ fn soltar_todo_libera_y_el_primer_bloque_valido_reabre_lo_que_el_cerebro_sostien
         Etapa::Relajacion,
         "el tambor no se reabre: no era compuerta"
     );
-    // y desde ahi los bloques viejos vuelven a ignorarse
+}
+
+/// Cabecera del J2, D4: `ultimo_evento` es el mayor que el modulo acepto,
+/// comparado con vuelta en 16 bits. Tras 0xFFFF viene 1, y un bloque armado en
+/// 0xFFFF es viejo frente a 1.
+#[test]
+fn el_ultimo_evento_da_la_vuelta_en_16_bits() {
+    let mut g = Generadores::nuevos(parametros());
+    g.tick(&[evento(0, Borde::Abre, 65535, 0xFFFF)]);
+    g.tick(&[evento(0, Borde::Cierra, 0, 1)]);
+    assert_eq!(g.ultimo_evento(), 1);
     g.tick(&[Entrada::Compuerta {
-        mascara: 0,
-        contador: 899,
+        mascara: 1,
+        contador: 0xFFFF,
     }]);
-    assert_eq!(g.etapa(0), Etapa::Ataque);
+    assert_eq!(g.compuertas(), 0, "0xFFFF es anterior a 1");
+    // un evento con una secuencia anterior no baja el maximo
+    g.tick(&[evento(3, Borde::Abre, 65535, 0xFFFE)]);
+    assert_eq!(g.ultimo_evento(), 1);
+}
+
+/// Cabecera del J2, §8 test 13 (la simulacion H-1 de la junta, hecha test).
+/// El cerebro arma un bloque de compuerta con su estado y la secuencia del
+/// ultimo `EVENTO` emitido; antes de que el bloque salga, de cero a tres
+/// eventos lo adelantan (evento D1). Se pierde un evento de cada mil, al azar,
+/// sobre 60 000. Ningun bloque armado antes de un evento aceptado lo revierte,
+/// y un bloque al que nada adelanto deja el modulo igual que el cerebro: todo
+/// evento perdido queda reparado. Con la cuenta local de eventos recibidos
+/// (generador §3.4, v1) el primer evento perdido la desplaza para siempre y
+/// los bloques viejos pasan por buenos.
+#[test]
+fn el_contador_no_deriva_con_eventos_perdidos() {
+    let mut lcg: u64 = 0x5A17_2026_1020;
+    let mut azar = move |n: u64| {
+        lcg = lcg
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        (lcg >> 33) % n
+    };
+    let mut g = Generadores::nuevos(parametros());
+    let mut cerebro = 0u16; // las compuertas que el cerebro sostiene
+    let mut secuencia = 0u16; // la del ultimo EVENTO emitido
+    let mut aceptado: [Option<(u16, bool)>; CANALES] = [None; CANALES];
+    let (mut eventos, mut perdidos, mut reversiones, mut sin_reparar) = (0, 0, 0, 0);
+    while eventos < 60_000 {
+        let bloque = (cerebro, secuencia);
+        let adelantan = azar(4);
+        for _ in 0..adelantan {
+            let canal = azar(16) as u8;
+            let abre = cerebro & (1 << canal) == 0;
+            cerebro ^= 1 << canal;
+            secuencia = secuencia.wrapping_add(1);
+            eventos += 1;
+            if azar(1000) == 0 {
+                perdidos += 1;
+                continue;
+            }
+            let borde = if abre { Borde::Abre } else { Borde::Cierra };
+            g.tick(&[evento(canal, borde, 30000, secuencia)]);
+            aceptado[canal as usize] = Some((secuencia, abre));
+        }
+        g.tick(&[Entrada::Compuerta {
+            mascara: bloque.0,
+            contador: bloque.1,
+        }]);
+        let compuertas = g.compuertas();
+        for (canal, a) in aceptado.iter().enumerate() {
+            if let Some((s, abre)) = *a {
+                let posterior = (s.wrapping_sub(bloque.1) as i16) > 0;
+                if posterior && (compuertas & (1 << canal) != 0) != abre {
+                    reversiones += 1;
+                }
+            }
+        }
+        if adelantan == 0 && compuertas != cerebro {
+            sin_reparar += 1;
+        }
+    }
+    assert!(
+        perdidos > 30,
+        "la simulacion tiene que perder eventos: {perdidos}"
+    );
+    assert_eq!(reversiones, 0, "bloques viejos que revierten un evento");
+    assert_eq!(sin_reparar, 0, "bloques al dia que no reparan");
+}
+
+/// Cabecera del J2, D4: cada indice de la tabla escribe su campo y ningun otro.
+#[test]
+fn cada_indice_escribe_su_campo() {
+    let base = parametros();
+    type Poner = fn(&mut Parametros, i32);
+    let campos: [(u8, i32, Poner); 11] = [
+        (0, 7_001, |p, v| p.vca.ataque_ms = v as u32),
+        (1, 7_002, |p, v| p.vca.decaimiento_ms = v as u32),
+        (2, 17_003, |p, v| p.vca.relajacion_ms = v as u32),
+        (3, 404, |p, v| p.vca_sostenido = v as u16),
+        (4, 7_005, |p, v| p.filtro.ataque_ms = v as u32),
+        (5, 7_006, |p, v| p.filtro.decaimiento_ms = v as u32),
+        (6, 17_007, |p, v| p.filtro.relajacion_ms = v as u32),
+        (7, 808, |p, v| p.filtro_sostenido = v as u16),
+        (8, 909, |p, v| p.sensibilidad_fuerza = v as u16),
+        (9, -4_321, |p, v| p.filtro_cantidad = v as i16),
+        (10, 111, |p, v| p.paneo = v as u16),
+    ];
+    for (indice, valor, poner) in campos {
+        let mut g = Generadores::nuevos(base);
+        g.tick(&[Entrada::Parametro {
+            canal: 6,
+            indice,
+            valor,
+        }]);
+        let mut esperado = base;
+        poner(&mut esperado, valor);
+        assert_eq!(g.parametros(6), Some(esperado), "indice {indice}");
+        assert_eq!(g.parametros(5), Some(base), "indice {indice}: otro canal");
+    }
+    // un indice fuera de la tabla o un canal fuera de rango no hacen nada
+    let mut g = Generadores::nuevos(base);
+    g.tick(&[
+        Entrada::Parametro {
+            canal: 6,
+            indice: 11,
+            valor: 1,
+        },
+        Entrada::Parametro {
+            canal: 16,
+            indice: 0,
+            valor: 1,
+        },
+    ]);
+    for canal in 0..CANALES as u8 {
+        assert_eq!(g.parametros(canal), Some(base));
+    }
+    assert_eq!(g.parametros(16), None);
+}
+
+/// §4.2: el paneo es vivo tambien por indice, y aplica en el mismo tick.
+#[test]
+fn el_paneo_por_indice_aplica_en_el_acto() {
+    let mut g = Generadores::nuevos(parametros());
+    g.tick(&[abre(3, 65535)]);
+    ticks(&mut g, 400);
+    assert_eq!(g.etapa(3), Etapa::Sostenido);
+    let s = g.tick(&[Entrada::Parametro {
+        canal: 3,
+        indice: 10,
+        valor: 0,
+    }]);
+    let (l, r) = factores_paneo(0);
+    let g_v = ganancia_fuerza(Fuerza(65535), 500);
+    assert_eq!(s.vca[3], [amplitud(0.7, g_v, l), amplitud(0.7, g_v, r)]);
 }
 
 /// §5 y §4.3: la salida del filtro es el nivel de su propia envolvente, con sus
