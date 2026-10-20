@@ -1,6 +1,31 @@
-//! La trama del mazo digital J2. Contrato CONGELADO por el modulo 3
-//! (`hardware/03-vco/README.md`): 72 bits, `CS` abajo durante los 72 relojes,
-//! SPI modo 1, <=10 MHz, orden de transmision `[U7][U6][U5]`.
+//! El mazo digital J2: el sobre de la cabecera y, debajo, el dialecto legado
+//! del modulo 3 v1.
+//!
+//! # El sobre
+//!
+//! Papel: `docs/superpowers/specs/2026-09-02-cabecera-j2-design.md`, D2 y D9.
+//! El contrato del enlace es este: toda trama de bajada y todo registro de
+//! subida llevan seis bytes de sobre.
+//!
+//! ```text
+//!  byte 0      tipo       u8      bit alto puesto: sube
+//!  byte 1      largo      u8      bytes de carga
+//!  bytes 2-3   secuencia  u16 LE
+//!  bytes 4..   carga      largo bytes
+//!  2 bytes     crc16      u16 LE  CRC-16/CCITT-FALSE de los 4 + largo primeros
+//!  [relleno y byte de cola: el CRC no los cubre y el receptor no los mira]
+//! ```
+//!
+//! El CRC es el de `descubrimiento`, con la tabla que pase quien llama
+//! (enmienda del 2026-10-19 a D2 y D9, ficha I): en el cerebro, una copia en la
+//! DTCM. Los mensajes de cada dialecto, sus tipos y la forma de su carga no
+//! viven aqui.
+//!
+//! # El dialecto legado del modulo 3 v1
+//!
+//! Sin sobre (D9). El contrato del modulo 3 v1 (`hardware/03-vco/README.md`):
+//! 72 bits, `CS` abajo durante los 72 relojes, SPI modo 1, <=10 MHz, orden de
+//! transmision `[U7][U6][U5]`.
 //!
 //! # De donde salen los numeros del AD5686R
 //!
@@ -25,6 +50,73 @@
 //! command (0011 nnnn)» pero sus constantes valen `0x11`, o sea comando `0001`
 //! («write to input register n»), que solo mueve la salida si `LDAC` esta
 //! cableado abajo. Aqui se usa `0011` a proposito.
+
+use crate::descubrimiento::crc16_con;
+
+/// Bytes de sobre: cuatro delante (tipo, largo, secuencia) y el CRC detras (D2).
+pub const SOBRE: usize = 6;
+
+/// Lo que dice el sobre de una trama o de un registro (D2).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Cabecera {
+    pub tipo: u8,
+    pub largo: u8,
+    pub secuencia: u16,
+}
+
+/// Por que se rechaza una trama entera (D8). Las otras dos causas de D8, el tipo
+/// y la forma de la carga, son del dialecto y no del sobre.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ErrorTrama {
+    /// Menos bytes que `largo + 6` (causa 1, R-C1).
+    Corta,
+    /// El CRC no cuadra (causa 2, R-C2).
+    Crc,
+}
+
+/// Escribe el sobre con `carga` en `out` y devuelve cuantos bytes ocupa,
+/// `SOBRE + carga.len()`. `None`, sin tocar `out`, si la carga no cabe en
+/// `largo` o la trama no cabe en `out`.
+pub fn codificar(
+    tabla: &[u16; 256],
+    tipo: u8,
+    secuencia: u16,
+    carga: &[u8],
+    out: &mut [u8],
+) -> Option<usize> {
+    let largo = u8::try_from(carga.len()).ok()?;
+    let n = 4 + carga.len();
+    let out = out.get_mut(..n + 2)?;
+    out[0] = tipo;
+    out[1] = largo;
+    out[2..4].copy_from_slice(&secuencia.to_le_bytes());
+    out[4..n].copy_from_slice(carga);
+    let crc = crc16_con(tabla, &out[..n]);
+    out[n..].copy_from_slice(&crc.to_le_bytes());
+    Some(n + 2)
+}
+
+/// Lee el sobre de `trama` y devuelve la cabecera y la carga. Lo que sigue al
+/// CRC no se mira (R-C1) y la secuencia no rechaza (R-C3).
+pub fn decodificar<'a>(
+    tabla: &[u16; 256],
+    trama: &'a [u8],
+) -> Result<(Cabecera, &'a [u8]), ErrorTrama> {
+    let largo = *trama.get(1).ok_or(ErrorTrama::Corta)?;
+    let n = 4 + usize::from(largo);
+    let (Some(cuerpo), Some(crc)) = (trama.get(..n), trama.get(n..n + 2)) else {
+        return Err(ErrorTrama::Corta);
+    };
+    if crc16_con(tabla, cuerpo) != u16::from_le_bytes([crc[0], crc[1]]) {
+        return Err(ErrorTrama::Crc);
+    }
+    let cab = Cabecera {
+        tipo: cuerpo[0],
+        largo,
+        secuencia: u16::from_le_bytes([cuerpo[2], cuerpo[3]]),
+    };
+    Ok((cab, &cuerpo[4..]))
+}
 
 /// «Write to and update DAC channel n».
 pub const CMD_ESCRIBIR_Y_ACTUALIZAR: u8 = 0b0011;
