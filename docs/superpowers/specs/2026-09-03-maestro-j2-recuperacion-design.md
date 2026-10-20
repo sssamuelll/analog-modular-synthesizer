@@ -490,6 +490,8 @@ Todos en `core`, sin hardware, sobre `maestro_j2.rs`. La numeración es la del p
 
 Sale con `2` (HUECO) mientras `resistencia_j2.csv` no tenga fila o el hub no declare `T_IWDG`; con `0` cuando los dos existan y los ESTIMADO se hayan sustituido; con `1` si algún aserto falla.
 
+> **Enmienda del 2026-10-20 (#369): la fila se juzga, no se cuenta.** Contra el horizonte `H` de «cero artefactos audibles» (acta del 11-09, ficha 2; HUECO de Samuel), por transferencia: cada plazo vencido, EOT tardío o subida mala cuenta como artefacto; los fallos cuentan de todas las filas y las transferencias solo de las filas al lazo del hub (≥ 0,9 × 8 kHz), sumadas entre ranuras. Sale con `1` si la tasa vista da un fallo o más en las `H` horas del instrumento (seis ranuras a 8 kHz); con `2` si falta `H` o si la cota de Poisson al 95 % todavía no queda por debajo de uno (y entonces imprime cuántas horas de soak faltan); la resistencia queda cubierta cuando sí queda. Con cero fallos, eso pide `3·H` horas limpias con las seis ranuras, o `18·H` con una.
+
 **`software/nucleo/fw/resistencia_j2.csv`** (nuevo, vacío hasta la Discovery). Columnas: `ranura, instancia, tsize, nss, reloj_MHz, horas, giros, plazos_vencidos, eot_tardios, subidas_malas, fecha, placa`.
 
 ---

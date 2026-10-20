@@ -25,6 +25,8 @@ Lo que este guion NO sabe, y sale con HUECO por ello:
     (#231) y se anota en `resistencia_j2.csv`.
   * `T_IWDG`, que es del papel del hub (#291) y todavia no esta declarado.
   * La densidad de EVENTO por giro, que es del musico y no de un guion.
+  * El horizonte de "cero artefactos audibles" (acta del 2026-09-11, ficha 2),
+    que fija Samuel.
 """
 from __future__ import annotations
 
@@ -77,6 +79,21 @@ FRACCION_CPU_J2 = 0.15
 # de ninguna hoja: es el criterio del propio presupuesto, y se declara.
 MARGEN_EXIGIDO = 10.0
 
+# HUECO de Samuel (acta del 2026-09-11, ficha 2): cero artefactos audibles atribuibles al bus,
+# en cuantas horas de instrumento. La puerta pide que la cota de la tasa de fallos por
+# transferencia, a la CONFIANZA, por las transferencias de esas horas, quede por debajo de uno.
+HORIZONTE_H: float | None = None
+CONFIANZA = 0.95
+
+# Del papel del hub (#291), que todavia no lo declara.
+T_IWDG_S: float | None = None
+
+# Lo que sigue siendo ESTIMADO (spec sec.8); sale de la lista cuando se mida.
+ESTIMADOS = ("FACTOR_PLAZO", "T_SUELO_PLAZO", "T_REINICIO",
+             "la propia ventana de ~50 ms del modulo ('N del plan')")
+
+FALLOS = ("plazos_vencidos", "eot_tardios", "subidas_malas")
+
 
 def _lee_const_rust(txt: str, nombre: str) -> int:
     m = re.search(rf"pub const {nombre}: (?:u16|u32|usize) = ([\d_]+);", txt)
@@ -112,8 +129,8 @@ def hueco_tic_us(plazo_tics: int, vencida: int, reiniciando: int, periodo_us: in
     return (plazo_tics + vencida + reiniciando + 2 + 1) * periodo_us
 
 
-def lee_carga(ruta: str = _CSV_CARGA) -> list[dict]:
-    """Las medidas de `carga_j2`, una fila por pasada (EN-PLACA)."""
+def lee_filas(ruta: str) -> list[dict]:
+    """Las filas de un CSV del banco (`carga_j2`, `resistencia_j2`); ninguna si no existe."""
     if not os.path.exists(ruta):
         return []
     with open(ruta, encoding="utf-8", newline="") as f:
@@ -200,25 +217,48 @@ def plazo_s(bytes_clocados: int, f_reloj_hz: float, u: dict) -> float:
     return u["factor_plazo"] * t_nominal + u["t_suelo_plazo_us"] * 1e-6
 
 
-def cadencia_de_filas(lineas: list[str]) -> float:
-    """La mayor cadencia, en giros por segundo, entre las filas de
-    `resistencia_j2.csv`; 0 si no hay ninguna medida. La fila no lleva la cadencia:
-    sale de `giros / (horas * 3600)`. La del soak del 17-10 es de 1 kHz y no de los
-    8 del lazo (spec D5.1, enmienda del 16-10), asi que `tiene fila` no puede darla
-    por cerrada. La tanda de `horas = 0` es el formato, no una medida."""
-    mejor = 0.0
-    for fila in csv.DictReader(lineas):
-        horas, giros = float(fila["horas"]), float(fila["giros"])
-        if horas > 0:
-            mejor = max(mejor, giros / (horas * 3600))
-    return mejor
+def cota_poisson(k: int, confianza: float = CONFIANZA) -> float:
+    """La media de Poisson que, vistos k eventos, queda por encima de la verdadera con esa
+    confianza: la que deja P(X <= k) en 1 - confianza. Con k = 0 es -ln(1 - C), la regla de
+    tres."""
+    def hasta_k(m):  # en logaritmos: exp(-m) se hunde en cero con k grande
+        return sum(math.exp(i * math.log(m) - m - math.lgamma(i + 1)) for i in range(k + 1))
+    lo, hi = 0.0, k + 10 * math.sqrt(k + 1) + 10
+    for _ in range(100):
+        m = (lo + hi) / 2
+        lo, hi = (m, hi) if hasta_k(m) > 1 - confianza else (lo, m)
+    return hi
 
 
-def cadencia_del_csv(ruta: str = _CSV) -> float:
-    if not os.path.exists(ruta):
-        return 0.0
-    with open(ruta, encoding="utf-8", newline="") as f:
-        return cadencia_de_filas(f.read().splitlines())
+def juicio_resistencia(filas: list[dict], horizonte_h: float | None, ranuras: int,
+                       f_lazo_hz: float) -> tuple[int, str]:
+    """Las filas de `resistencia_j2.csv` contra el horizonte: 1 si la tasa vista ya da un fallo
+    o mas en el horizonte, 0 si su cota a la CONFIANZA no lo da, 2 si falta el horizonte o soak.
+
+    Todo plazo vencido, EOT tardio o subida mala cuenta como artefacto, se oiga o no: cuantos se
+    oyen depende de lo que toque el musico (sec.5 de demo()). Los fallos cuentan de todas las
+    filas; las transferencias, solo de las que van al lazo del hub (D5.1, enmienda del 16-10;
+    la tanda de `horas = 0` es el formato), y por ranura: el instrumento tiene `ranuras`."""
+    if horizonte_h is None:
+        return 2, ("el horizonte de cero artefactos audibles es HUECO de Samuel "
+                   "(acta del 11-09, ficha 2)")
+    por_horizonte = ranuras * f_lazo_hz * 3600 * horizonte_h
+    fallos = sum(int(f[c]) for f in filas for c in FALLOS)
+    giros = sum(int(f["giros"]) for f in filas)
+    if fallos and fallos / giros * por_horizonte >= 1:
+        return 1, (f"{fallos} fallos en {giros} giros: a esa tasa, {ranuras} ranuras a "
+                   f"{f_lazo_hz/1e3:.0f} kHz dan {fallos / giros * por_horizonte:.3g} en "
+                   f"{horizonte_h:g} h")
+    al_lazo = sum(int(f["giros"]) for f in filas if float(f["horas"]) > 0
+                  and int(f["giros"]) / (float(f["horas"]) * 3600) >= 0.9 * f_lazo_hz)
+    hacen_falta = cota_poisson(fallos) * por_horizonte
+    estado = (f"{fallos} fallos; {al_lazo} giros al lazo de {f_lazo_hz/1e3:.0f} kHz, y para "
+              f"{horizonte_h:g} h de instrumento hacen falta {hacen_falta:.4g} "
+              f"(cota al {CONFIANZA:.0%})")
+    if al_lazo > hacen_falta:
+        return 0, estado
+    faltan_h = (hacen_falta - al_lazo) / (f_lazo_hz * 3600)
+    return 2, f"{estado}: faltan {faltan_h:.1f} h de soak en una ranura, o {faltan_h/ranuras:.1f} en {ranuras}"
 
 
 def demo() -> int:
@@ -367,7 +407,7 @@ def demo() -> int:
     assert exceso_frio([par[0], dict(par[1], firmware="b")], cm.F_CPU, 125)[0] is None
     assert exceso_frio([par[0], dict(par[1], cuerpos_por_giro="")], cm.F_CPU, 125)[0] is None
     assert exceso_frio(par[:1], cm.F_CPU, 125)[0] is None
-    carga = lee_carga()
+    carga = lee_filas(_CSV_CARGA)
     for fila in carga:
         ciclos = int(fila["ciclos_por_giro"])
         print(f"    {fila['fecha']} {fila['placa']} {float(fila['f_cpu_hz'])/1e6:.0f} MHz, "
@@ -400,42 +440,39 @@ def demo() -> int:
             f"calientes, por encima del {EXCESO_FRIO_MAX*100:.0f} % de la ficha H: algo que el J2 "
             f"lee en cada tic sigue en la AXISRAM2")
 
-    # --- 7. los HUECOS ---------------------------------------------------
-    # La cuenta de la cadencia, contra un CSV sintetico: una fila de 1 kHz no cierra
-    # el lazo de 8 kHz, y una de 8 kHz si; la tanda de horas = 0 no cuenta.
-    cab = ("ranura,instancia,tsize,nss,reloj_MHz,horas,giros,plazos_vencidos,"
-           "eot_tardios,subidas_malas,fecha,placa")
-    assert cadencia_de_filas([cab]) == 0.0
-    assert cadencia_de_filas([cab, "0,SPI5,25,hw,8,0,0,0,0,0,,x"]) == 0.0
-    assert cadencia_de_filas([cab, "0,SPI5,25,hw,8,24,86400000,0,0,0,,x"]) == 1000.0
-    assert cadencia_de_filas([cab, "0,SPI5,25,hw,8,1,28800000,0,0,0,,x"]) == 8000.0
-    cadencia = cadencia_del_csv()
-    if cadencia == 0:
-        huecos.append(
-            "resistencia_j2.csv no tiene ni una fila: la tasa REAL del defecto "
-            "en nuestro montaje no se conoce (R-MJ8, #231)")
-    elif cadencia < 0.9 * tb.F_LAZO_HZ:
-        huecos.append(
-            f"resistencia_j2.csv solo tiene filas a {cadencia/1e3:.1f} kHz y el lazo del "
-            f"hub es de {tb.F_LAZO_HZ/1e3:.0f} kHz: la tasa del defecto a esa cadencia y "
-            "con la razon de relojes del hub no se conoce (D5.1, enmienda del 16-10; "
-            "R-MJ8, #231)")
-    huecos.append(
-        "T_IWDG no esta declarado por el papel del hub (#291). La cota que "
-        f"este papel le manda es T_IWDG > {t_wd*1e3:.0f} ms, para que cuando "
-        "el chip se reinicie el modulo ya este en release por su cuenta y el "
-        "reinicio no anada silencio")
-    huecos.append(
-        "los ESTIMADO sin sustituir: FACTOR_PLAZO, T_SUELO_PLAZO, T_REINICIO "
-        "y la propia ventana de ~50 ms del modulo ('N del plan')")
+    # --- 7. la resistencia, contra el horizonte (R-MJ8, #369) -----------
+    codigo, porque = juicio_resistencia(lee_filas(_CSV), HORIZONTE_H, u["ranuras_spi"],
+                                        tb.F_LAZO_HZ)
+    print("\nLA RESISTENCIA (R-MJ8), contra cero artefactos audibles (acta del 11-09)\n")
+    print(f"  {porque}")
+    print("  puerta de fabricacion (acta del 11-09, ficha 1): ninguna PCB con N657 sin "
+          "una fila en resistencia_j2.csv")
+    assert codigo != 1, f"resistencia_j2.csv rompe el horizonte: {porque}"
+    if codigo == 2:
+        huecos.append(f"la resistencia: {porque}")
 
-    print("\nHUECOS (Principio V)\n")
-    for h in huecos:
-        print(f"  * {h}")
+    # --- 8. los HUECOS ---------------------------------------------------
+    if T_IWDG_S is None:
+        huecos.append(
+            "T_IWDG no esta declarado por el papel del hub (#291). La cota que "
+            f"este papel le manda es T_IWDG > {t_wd*1e3:.0f} ms, para que cuando "
+            "el chip se reinicie el modulo ya este en release por su cuenta y el "
+            "reinicio no anada silencio")
+    else:
+        assert T_IWDG_S > t_wd, (
+            f"T_IWDG ({T_IWDG_S*1e3:.0f} ms) no pasa de la ventana del modulo "
+            f"({t_wd*1e3:.0f} ms): el reinicio del chip anadiria silencio")
+    if ESTIMADOS:
+        huecos.append("los ESTIMADO sin sustituir: " + ", ".join(ESTIMADOS))
 
-    print(f"\nHUECO: el margen sale {margen:.0f}x con ESTIMADO. Sale con codigo 2 "
-          "hasta que\n  la Discovery ponga una fila y el hub declare T_IWDG.")
-    return 2
+    if huecos:
+        print("\nHUECOS (Principio V)\n")
+        for h in huecos:
+            print(f"  * {h}")
+        print(f"\nHUECO: el margen sale {margen:.0f}x.")
+        return 2
+    print(f"\nOK: margen {margen:.0f}x, y la resistencia cubre el horizonte.")
+    return 0
 
 
 if __name__ == "__main__":

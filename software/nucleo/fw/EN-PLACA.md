@@ -505,7 +505,10 @@ artefactos audibles** atribuibles al bus, y para ser medible necesita un
 **horizonte** —cero en cuántas horas de instrumento— que sigue siendo **HUECO de
 Samuel**. Con cero eventos en `T` horas la tasa queda por debajo de `3/T` al
 95 % (regla de tres, Poisson), así que «cero en H horas» pide del orden de
-`3·H` horas limpias **con el control positivo ya hecho**.
+`3·H` horas limpias **con las seis ranuras a 8 kHz**, porque el instrumento hace seis
+transferencias por giro del lazo; con una sola ranura son `18·H`. Y **con el control
+positivo ya hecho**. `recuperacion_j2_budget.py` hace la cuenta por transferencia
+(#369).
 
 **Medido: el soak de 24 h, del 2026-10-16 al 17** (firmware `b9f6d7d`, de 09:17:53 a
 09:31:14, un solo `probe-rs` sin reenganches; ranura 0 en SPI5, el esclavo en SPI4, SCK a
