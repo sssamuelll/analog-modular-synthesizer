@@ -28,6 +28,11 @@ Una fila por `regimen_cache`: `caliente` sin tocar las caches, `fria` con las do
 invalidadas antes de cada tic. Las del ejecutor son `caliente`.
 
     ciclos_por_giro = (entrada + tic + cadena + planificador + salida) / ranuras
+    cuerpos_por_giro = (tic + planificador) / ranuras
+
+`cuerpos_por_giro` es lo que mide el DWT, la medida en frio de la ficha H: la fila
+fria no pasa de la caliente en mas de un 2 % (`recuperacion_j2_budget.py`). Las del
+ejecutor la dejan vacia.
 
 `--anota` se niega si el firmware sale `-sucio` (una fila con la revision de un
 commit que no es el codigo que corrio no se puede repetir) y se niega con las
@@ -152,19 +157,20 @@ def parsea(texto: str) -> dict:
 
 def filas(medida: dict, fecha: str) -> list[str]:
     """Las del ejecutor, una por pasada, con el medidor del hilo. Las del tic, una por regimen
-    de cache, de la pasada de la salida con las caches del hub y sin el medidor."""
+    de cache, de la pasada de la salida con las caches del hub y sin el medidor, y con los
+    cuerpos del tic y del planificador por el DWT (la medida en frio de la ficha H)."""
     comun = f"{fecha},{medida['firmware']},{PLACA},{medida['f_cpu']}"
     transporte = medida["transporte"].split("-")[0]
     if transporte != "tic":
         return [f"{comun},{cache},{p['ciclos_por_giro']},{p['libre']},{p['ranuras']},{p['periodo']},"
-                f"{transporte},caliente"
+                f"{transporte},caliente,"
                 for cache, p in medida["pasadas"].items()]
     hub = medida["pasadas"].get(CACHE_DEL_HUB)
     if not hub or not medida["salidas"]:
         raise SystemExit("sin la pasada de la salida (`tic-fino`) o sin la de las caches del hub "
                          "no hay cifra de la ficha J")
     return [f"{comun},{CACHE_DEL_HUB},{round(s['partes'] / hub['ranuras'])},,{hub['ranuras']},"
-            f"{hub['periodo']},tic,{regimen}"
+            f"{hub['periodo']},tic,{regimen},{round((s['tic'] + s['plan']) / hub['ranuras'])}"
             for regimen, s in medida["salidas"].items()]
 
 
@@ -222,7 +228,7 @@ def autotest() -> None:
     assert m["pasadas"]["icache"]["ciclos_por_giro"] == 14752, m["pasadas"]["icache"]
     assert m["pasadas"]["no"]["ciclos_por_giro"] > m["pasadas"]["no"]["ejecutor"]
     assert filas(m, "2026-10-16")[0] == ("2026-10-16,b9f6d7d,NUCLEO-N657X0-Q,64000000,no,21558,198,1,125,"
-                                         "ejecutor,caliente")
+                                         "ejecutor,caliente,")
     # Tres ranuras: el ciclo es de una ranura y el coste se reparte entre los tres giros.
     tres = (
         "[INFO ] carga_j2: firmware abc1234, f_cpu 64000000 Hz, f_cpu_medido 64000000 Hz, periodo 2000 us (x)\n"
@@ -306,7 +312,8 @@ def autotest() -> None:
     assert not parsea(cab_isr + linea.format(124))["pasadas"]["icache"]["invalida"]
     assert parsea(cab_isr + linea.format(375))["pasadas"]["icache"]["invalida"]
     # El tic en la configuracion de la ficha J (firmware 50d43c3): una fila por regimen, de la
-    # pasada de la salida, con la cifra de la ficha J por giro y ranura y sin el medidor.
+    # pasada de la salida, con la cifra de la ficha J por giro y ranura y sin el medidor, y los
+    # cuerpos del tic y del planificador por el DWT, la medida en frio de la ficha H.
     tic = (
         "carga_j2: firmware 50d43c3, f_cpu 800000000 Hz, f_cpu_medido 800066460 Hz, periodo 125 us, "
         "base 385309 vueltas/s, transporte tic-sin-componer (x)\n"
@@ -320,8 +327,8 @@ def autotest() -> None:
     mt = parsea(tic)
     assert mt["transporte"] == "tic-sin-componer"
     assert filas(mt, "2026-10-19") == [
-        "2026-10-19,50d43c3,NUCLEO-N657X0-Q,800000000,icache+dcache-mpu,2351,,3,125,tic,caliente",
-        "2026-10-19,50d43c3,NUCLEO-N657X0-Q,800000000,icache+dcache-mpu,2450,,3,125,tic,fria",
+        "2026-10-19,50d43c3,NUCLEO-N657X0-Q,800000000,icache+dcache-mpu,2351,,3,125,tic,caliente,2304",
+        "2026-10-19,50d43c3,NUCLEO-N657X0-Q,800000000,icache+dcache-mpu,2450,,3,125,tic,fria,2352",
     ], filas(mt, "2026-10-19")
     assert not any(s["invalida"] for s in mt["salidas"].values())
     # Las partes no pueden sumar mas que el hueco que ve el hilo.

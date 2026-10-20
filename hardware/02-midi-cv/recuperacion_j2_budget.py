@@ -128,19 +128,43 @@ CACHE_DEL_HUB = "icache+dcache-mpu"
 REGIMENES_DEL_HUB = ("caliente", "fria")
 
 
-def peor_regimen(filas: list[dict], f_cpu: float, periodo_us: int) -> tuple[dict | None, list[str]]:
-    """Papel v3, 5.2(a): de las filas del transporte y las caches del hub, a su reloj y a su
-    lazo, las de mas ranuras; de cada regimen declarado, la ultima medida; y de esas, la peor.
-    Devuelve esa fila, o None y los regimenes que no tienen ninguna."""
+# Ficha H (acta del 2026-10-19, tercera): para los datos de solo lectura, la puerta es la
+# medida: por el DWT, la fila con las dos caches frias no pasa de la caliente en mas de un 2 %.
+EXCESO_FRIO_MAX = 0.02
+
+
+def ultimas_del_hub(filas: list[dict], f_cpu: float, periodo_us: int) -> tuple[dict, list[str]]:
+    """De las filas del transporte y las caches del hub, a su reloj y a su lazo, las de mas
+    ranuras: la ultima de cada regimen declarado, y los regimenes que no tienen ninguna."""
     del_hub = [f for f in filas
                if f.get("transporte") == TRANSPORTE_DEL_HUB and f["cache"] == CACHE_DEL_HUB
                and float(f["f_cpu_hz"]) >= f_cpu and int(f["periodo_us"]) == periodo_us]
     n = max((int(f["ranuras"]) for f in del_hub), default=0)
     ultima = {f["regimen_cache"]: f for f in del_hub if int(f["ranuras"]) == n}
-    faltan = [r for r in REGIMENES_DEL_HUB if r not in ultima]
+    return ultima, [r for r in REGIMENES_DEL_HUB if r not in ultima]
+
+
+def peor_regimen(filas: list[dict], f_cpu: float, periodo_us: int) -> tuple[dict | None, list[str]]:
+    """Papel v3, 5.2(a): de las ultimas del hub (`ultimas_del_hub`), la peor. Devuelve esa
+    fila, o None y los regimenes que no tienen ninguna."""
+    ultima, faltan = ultimas_del_hub(filas, f_cpu, periodo_us)
     if faltan:
         return None, faltan
     return max((ultima[r] for r in REGIMENES_DEL_HUB), key=lambda f: int(f["ciclos_por_giro"])), []
+
+
+def exceso_frio(filas: list[dict], f_cpu: float, periodo_us: int) -> tuple[float | None, str]:
+    """Ficha H: cuanto pasan los cuerpos por el DWT de la ultima fila fria del hub de los de la
+    ultima caliente. None y el motivo si no son del mismo firmware o les faltan los cuerpos."""
+    ultima, faltan = ultimas_del_hub(filas, f_cpu, periodo_us)
+    if faltan:
+        return None, f"sin fila del regimen {', '.join(faltan)}"
+    fria, caliente = ultima["fria"], ultima["caliente"]
+    if fria["firmware"] != caliente["firmware"]:
+        return None, f"la fria y la caliente son de firmwares distintos ({fria['firmware']}, {caliente['firmware']})"
+    if not fria.get("cuerpos_por_giro") or not caliente.get("cuerpos_por_giro"):
+        return None, "sin los cuerpos por el DWT (columna cuerpos_por_giro)"
+    return int(fria["cuerpos_por_giro"]) / int(caliente["cuerpos_por_giro"]) - 1, ""
 
 
 def del_rust(ruta: str = _RS) -> dict:
@@ -334,6 +358,15 @@ def demo() -> int:
     assert peor_regimen(hub + ruido, cm.F_CPU, 125) == (hub[2], [])
     assert peor_regimen(hub[1:2] + ruido, cm.F_CPU, 125) == (None, ["fria"])
     assert peor_regimen(ruido[:1], cm.F_CPU, 125) == (None, ["caliente", "fria"])
+    # Ficha H, contra las mismas: los cuerpos de la ultima fria sobre los de la ultima caliente,
+    # del mismo firmware; sin los dos regimenes, de dos firmwares o sin cuerpos, no hay medida.
+    par = [dict(f(2400, "caliente"), cuerpos_por_giro="2000", firmware="a"),
+           dict(f(2500, "fria"), cuerpos_por_giro="2030", firmware="a")]
+    ruido_h = [dict(r, cuerpos_por_giro="9000", firmware="a") for r in ruido]
+    assert exceso_frio(par + ruido_h, cm.F_CPU, 125) == (2030 / 2000 - 1, "")
+    assert exceso_frio([par[0], dict(par[1], firmware="b")], cm.F_CPU, 125)[0] is None
+    assert exceso_frio([par[0], dict(par[1], cuerpos_por_giro="")], cm.F_CPU, 125)[0] is None
+    assert exceso_frio(par[:1], cm.F_CPU, 125)[0] is None
     carga = lee_carga()
     for fila in carga:
         ciclos = int(fila["ciclos_por_giro"])
@@ -356,6 +389,16 @@ def demo() -> int:
             f"{CACHE_DEL_HUB}, {cm.F_CPU/1e6:.0f} MHz, {periodo} us) con el regimen "
             f"{', '.join(faltan)}: sin ella no se compara con el limite firmado de "
             f"{limite:.0f} ciclos por giro (papel v3, 5.2a)")
+    exceso, motivo = exceso_frio(carga, cm.F_CPU, periodo)
+    if exceso is None:
+        huecos.append(f"la medida en frio de la ficha H (datos de solo lectura): {motivo}")
+    else:
+        print(f"  ficha H: por el DWT, los cuerpos frios pasan de los calientes un "
+              f"{exceso*100:.2f} % (tope {EXCESO_FRIO_MAX*100:.0f} %)")
+        assert exceso <= EXCESO_FRIO_MAX, (
+            f"con las dos caches frias, los cuerpos del J2 cuestan un {exceso*100:.2f} % mas que "
+            f"calientes, por encima del {EXCESO_FRIO_MAX*100:.0f} % de la ficha H: algo que el J2 "
+            f"lee en cada tic sigue en la AXISRAM2")
 
     # --- 7. los HUECOS ---------------------------------------------------
     # La cuenta de la cadencia, contra un CSV sintetico: una fila de 1 kHz no cierra
