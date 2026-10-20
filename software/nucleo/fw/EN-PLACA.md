@@ -502,10 +502,14 @@ pero quien lea la fila tiene que saber que ese 16 **no es el peldaño 2**.
 **Cómo se juzga la fila, que no es «tiene fila».** Ficha 1 del acta: ninguna PCB
 con N657 sale al taller sin una fila medida. Ficha 2: el límite es **cero
 artefactos audibles** atribuibles al bus, y para ser medible necesita un
-**horizonte** —cero en cuántas horas de instrumento— que sigue siendo **HUECO de
-Samuel**. Con cero eventos en `T` horas la tasa queda por debajo de `3/T` al
+**horizonte** —cero en cuántas horas de instrumento—, que Samuel fijó el 2026-10-20 en
+**8 h**, un día entero de estudio o de concierto. Con cero eventos en `T` horas la tasa queda por debajo de `3/T` al
 95 % (regla de tres, Poisson), así que «cero en H horas» pide del orden de
-`3·H` horas limpias **con el control positivo ya hecho**.
+`3·H` horas limpias **con las seis ranuras a 8 kHz**, porque el instrumento hace seis
+transferencias por giro del lazo; con una sola ranura son `18·H`. Con `H = 8`: 24 h con
+seis ranuras, **48 h con tres** (una Nucleo) y 144 h con una. Y **con el control
+positivo ya hecho**. `recuperacion_j2_budget.py` hace la cuenta por transferencia
+(#369).
 
 **Medido: el soak de 24 h, del 2026-10-16 al 17** (firmware `b9f6d7d`, de 09:17:53 a
 09:31:14, un solo `probe-rs` sin reenganches; ranura 0 en SPI5, el esclavo en SPI4, SCK a

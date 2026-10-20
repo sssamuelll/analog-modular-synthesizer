@@ -120,7 +120,7 @@ def fila_j2(carga: list[dict] | None = None) -> Fila:
     u = rj.del_rust()
     giros_s = u["ranuras_spi"] * rj.tb.F_LAZO_HZ
     nombre, duenio = "J2: el trabajo propio del enlace", "acta del 2026-10-19, tercera firma, ficha J"
-    peor, faltan = rj.peor_regimen(rj.lee_carga() if carga is None else carga, cm.F_CPU,
+    peor, faltan = rj.peor_regimen(rj.lee_filas(rj._CSV_CARGA) if carga is None else carga, cm.F_CPU,
                                    round(1e6 / rj.tb.F_LAZO_HZ))
     if not peor:
         return Fila(nombre, duenio, HUECO, None,
