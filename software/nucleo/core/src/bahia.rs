@@ -65,6 +65,17 @@ impl Imagen {
         }
     }
 
+    /// Por chip y canal, la mascara de lineas. Es la carga de `BAHIA` (cabecera
+    /// del J2, D4).
+    pub const fn filas(&self) -> &[[u16; CANALES as usize]; 2] {
+        &self.filas
+    }
+
+    /// Toda mascara es una imagen valida: dieciseis lineas, dieciseis bits.
+    pub const fn desde_filas(filas: [[u16; CANALES as usize]; 2]) -> Self {
+        Imagen { filas }
+    }
+
     pub fn poner(&mut self, chip: Chip, canal: u8, linea: u8) {
         if let (Some(bit), Some(fila)) = (Self::bit(linea), self.fila_mut(chip, canal)) {
             *fila |= bit;

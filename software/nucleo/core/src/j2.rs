@@ -64,14 +64,31 @@ pub struct Cabecera {
     pub secuencia: u16,
 }
 
-/// Por que se rechaza una trama entera (D8). Las otras dos causas de D8, el tipo
-/// y la forma de la carga, son del dialecto y no del sobre.
+/// Por que se rechaza una trama entera (D8). Las dos primeras las ve el sobre;
+/// las otras dos, el dialecto.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ErrorTrama {
     /// Menos bytes que `largo + 6` (causa 1, R-C1).
     Corta,
     /// El CRC no cuadra (causa 2, R-C2).
     Crc,
+    /// El tipo no es del dialecto ni universal (causa 3).
+    Tipo,
+    /// La carga no tiene la forma del tipo (causa 4).
+    Forma,
+}
+
+/// El techo de carga que R-E1 deja a un reloj del enlace (§4): los bytes que
+/// caben en 100 us, menos el sobre y el byte de cola, y el `largo` de un byte
+/// recorta a 255.
+pub const fn carga_max(reloj_hz: u32) -> usize {
+    let bytes = (reloj_hz / 80_000) as usize;
+    let carga = bytes.saturating_sub(SOBRE + 1);
+    if carga > 255 {
+        255
+    } else {
+        carga
+    }
 }
 
 /// Escribe el sobre con `carga` en `out` y devuelve cuantos bytes ocupa,

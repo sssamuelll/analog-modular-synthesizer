@@ -12,6 +12,7 @@ pub mod bahia_serie;
 pub mod buzones_j2;
 pub mod descriptor;
 pub mod descubrimiento;
+pub mod dialecto_voz;
 pub mod envolvente;
 pub mod escaladas_j2;
 pub mod escritor;
