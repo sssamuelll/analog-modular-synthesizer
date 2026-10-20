@@ -352,7 +352,10 @@ recuperación del watchdog, y es la que R-E10 prometía.
 > evento rechazado por CRC la desplazaba para siempre y cada bloque armado
 > antes de un evento que lo adelantó pasaba por bueno: 1 802 reversiones en
 > 60 s con una pérdida por mil. `core/tests/envolvente.rs`,
-> `el_contador_no_deriva_con_eventos_perdidos`, es esa simulación.
+> `el_contador_no_deriva_con_eventos_perdidos`, es esa simulación. La sesión
+> nueva sí pone `ultimo_evento` a cero, porque la cuenta del cerebro también
+> arranca de cero: `Entrada::Sesion` suelta todo como el watchdog y deja el
+> contador en `0` (cabecera del J2, D5).
 
 ### 3.5 Un solo dueño del estado
 

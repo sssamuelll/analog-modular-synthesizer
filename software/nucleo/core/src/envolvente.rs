@@ -268,6 +268,9 @@ pub enum Entrada {
     },
     /// El watchdog de trama (voz-total §9.2). No toca `ultimo_evento`.
     SoltarTodo,
+    /// La sesion nueva (cabecera del J2, D5): lo que hace `SoltarTodo`, y
+    /// `ultimo_evento` vuelve a cero, como la cuenta del cerebro.
+    Sesion,
     /// El firmware latcheo el crosspoint: los canales en conmutacion se sueltan.
     Conmutado,
 }
@@ -448,6 +451,10 @@ impl Generadores {
                     c.diferido = None;
                     c.aplicar(Borde::Cierra, Fuerza(0));
                 }
+            }
+            Entrada::Sesion => {
+                self.aplicar_entrada(Entrada::SoltarTodo);
+                self.ultimo_evento = 0;
             }
             Entrada::Conmutado => {
                 self.en_conmutacion = 0;

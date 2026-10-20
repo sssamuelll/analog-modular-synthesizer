@@ -441,6 +441,23 @@ por forma como cualquier otra trama; el `HOLA` de subida seguirá diciendo
 `sesión = 0` con lo que el módulo habla, que es toda la información que el
 cerebro necesita para saber qué pasa.
 
+> **Enmienda del 2026-10-20:** un `HOLA` con versión `≠ 1` o con un dialecto
+> que el módulo no habla se rechaza **por tipo**, no por forma: la carga tiene
+> la forma de `HOLA`, y lo que falla es que el módulo no habla esa versión. Da
+> `ErrorTrama::Tipo` y cuenta en `rechazadas_tipo`, como ya decía §3.3. Si el
+> módulo tenía sesión, ese `HOLA` **la cierra**: el módulo solo publica su
+> `HOLA` sin sesión, así que con la sesión abierta el cerebro no vería el
+> desacuerdo y seguiría escribiendo en un dialecto que el módulo lee con el
+> viejo. Lo que estuviera sonando lo suelta el watchdog de trama (voz-total
+> §9.2), porque sin sesión ninguna trama es válida. Abrir sesión llega al
+> generador como **una sola entrada, `Entrada::Sesion`**, que suelta todo como
+> `SoltarTodo` y pone `ultimo_evento` a cero; `SoltarTodo` queda para el
+> watchdog, y lo que D4 dice de la sesión nueva pasa a `Entrada::Sesion`. El
+> lado del módulo es `dialecto_voz::Receptor` (`core/src/dialecto_voz.rs`),
+> con el test 14 de §8. Lo que toca a la subida (su `secuencia` a cero, el
+> registro a medias abandonado y el `HOLA` con `sesión = 1`) llega con los
+> registros de §3.3.
+
 La versión **no viaja en cada trama**. Viaja en `HOLA` y en el catálogo: una
 cabecera que cambie de forma es un dialecto nuevo. Un byte de versión por
 trama a 8 kHz sería 64 kbit/s para decir siempre `1`.
@@ -1022,7 +1039,7 @@ en el host, con la cita del papel en cada uno:
 | evento de nota | §8 («la cabecera concreta del bloque de deltas de D3») | Sync | Decidida aquí: máscara + tonos, y el bloque completo a ≥ 1 kHz como red (D4) | pendiente |
 | evento de nota | §10 («Gana los 16 bits de estado de compuerta… No es mensaje nuevo: es campo en un bloque») | Clarify | R-E11 lo sacó de la cadencia del tono, y `trama_j2_budget.py` y el generador ya lo tratan como flujo propio: aquí es **mensaje propio** (`COMPUERTA`), con su contador | pendiente |
 | evento de nota | D6 enmienda del 2026-09-02, punto 2 («El módulo lleva su cuenta de eventos recibidos e ignora los bloques con contador menor») | **Rewrite** ⚠ | El contador es la `secuencia` del sobre del último `EVENTO` emitido; el módulo guarda la del último aceptado (D4, hallazgos V-1/H-1) | **aplicada** 2026-10-20 |
-| generador de envolvente | §3.4 (el contador de eventos), §3.5 (`Entrada`), §13 decisión del contador, §14 fila #267 | **Rewrite** ⚠ | `ultimo_evento` en vez de `recibidos`; muere `resincronizar`; `Entrada::Evento` gana `secuencia`; nace `Entrada::Parametro`; `SoltarTodo` solo local (watchdog y sesión); H-B2 cerrado | **aplicada** en §3.4 y §3.5, 2026-10-20 |
+| generador de envolvente | §3.4 (el contador de eventos), §3.5 (`Entrada`), §13 decisión del contador, §14 fila #267 | **Rewrite** ⚠ | `ultimo_evento` en vez de `recibidos`; muere `resincronizar`; `Entrada::Evento` gana `secuencia`; nace `Entrada::Parametro`; `SoltarTodo` solo para el watchdog, y la sesión nueva como `Entrada::Sesion` (D5); H-B2 cerrado | **aplicada** en §3.4 y §3.5, 2026-10-20 |
 | generador de envolvente | §7 (la tabla de parámetros) | Sync | Los once índices del dialecto v1 (D4) son los índices de esa tabla | pendiente |
 | J2 punto a punto | D5 («la trama es lo que cabe entre bajada y subida de CS») | Clarify | Y lleva exactamente un mensaje con este sobre (D1 de aquí); la subida es un registro muestreado (D6) | pendiente |
 | J2 punto a punto | D2 («El esclavo lo declara en su EEPROM de identidad») | Clarify | Hasta que la identidad gane versión 2, el reloj declarado y el dialecto viven en el catálogo del cerebro por tipo de placa (D5, hallazgo S-10) | pendiente |

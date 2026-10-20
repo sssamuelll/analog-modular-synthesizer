@@ -11,7 +11,9 @@
 
 use sam17_nucleo_core::bahia::{Chip, Imagen, CANALES, LINEAS};
 use sam17_nucleo_core::descubrimiento::{crc16, TABLA_CRC16};
-use sam17_nucleo_core::dialecto_voz::{decodificar, Escritura, Mensaje, MAX_ESCRITURAS};
+use sam17_nucleo_core::dialecto_voz::{
+    decodificar, Cuentas, Escritura, Mensaje, Receptor, DIALECTO, MAX_ESCRITURAS,
+};
 use sam17_nucleo_core::envolvente::{Borde, Entrada, Generadores, Parametros, Tiempos};
 use sam17_nucleo_core::fuerza::Fuerza;
 use sam17_nucleo_core::j2::{self, carga_max, Cabecera, ErrorTrama, SOBRE};
@@ -523,14 +525,168 @@ fn la_traduccion_al_generador() {
     let dos = g.parametros(2).unwrap();
     assert_eq!((dos.vca.ataque_ms, dos.filtro_cantidad), (5, -1_200));
     assert_eq!(g.parametros(15).unwrap().paneo, 1_000);
-    // TONO y BAHIA esperan a sus duenos, que no son el generador; NADA y HOLA
-    // no llevan nada para el.
-    for m in [
-        Mensaje::Nada,
-        casos()[1],
-        casos()[7],
-        Mensaje::Bahia(bahia_llena()),
-    ] {
+    // TONO y BAHIA esperan a sus duenos, que no son el generador; NADA no lleva
+    // nada para el. HOLA lleva la sesion: su test es el 14.
+    for m in [Mensaje::Nada, casos()[7], Mensaje::Bahia(bahia_llena())] {
         assert_eq!(m.entradas(1).count(), 0, "{m:?}");
     }
+}
+
+fn hola(version: u8, dialecto: u8) -> Vec<u8> {
+    trama(&Mensaje::Hola { version, dialecto }, 0)
+}
+
+/// §8.14, D5 y R-C7: sin `HOLA` no hay dialecto. Todo lo demas da `SinSesion` y
+/// cuenta en `rechazadas_tipo` (§3.3). Un `HOLA` con version 2 o con un
+/// dialecto que el modulo no habla tampoco abre sesion, y cuenta en
+/// `rechazadas_tipo`, no en forma (decidido el 2026-10-20).
+#[test]
+fn sin_hola_no_hay_dialecto() {
+    assert_eq!(DIALECTO, 1, "D5: 0 legado, 1 Voz v1");
+    let mut r = Receptor::default();
+    let otros: Vec<_> = casos()
+        .into_iter()
+        .filter(|m| !matches!(m, Mensaje::Hola { .. }))
+        .collect();
+    for (s, m) in (1..).zip(&otros) {
+        assert_eq!(
+            r.recibir(&TABLA_CRC16, &trama(m, s)),
+            Err(ErrorTrama::SinSesion),
+            "{m:?}"
+        );
+    }
+    assert_eq!(
+        r.recibir(&TABLA_CRC16, &cruda(0x02, &[])),
+        Err(ErrorTrama::SinSesion),
+        "un tipo desconocido tampoco pasa sin sesion"
+    );
+    for (version, dialecto) in [(2, 1), (0, 1), (1, 0), (1, 2)] {
+        assert_eq!(
+            r.recibir(&TABLA_CRC16, &hola(version, dialecto)),
+            Err(ErrorTrama::Tipo),
+            "version {version}, dialecto {dialecto}"
+        );
+    }
+    // el sobre y la forma se juzgan antes, como con sesion
+    assert_eq!(
+        r.recibir(&TABLA_CRC16, &cruda(0x01, &[1, 1, 0])),
+        Err(ErrorTrama::Forma)
+    );
+    let mut mala = hola(1, 1);
+    mala[4] ^= 1;
+    assert_eq!(r.recibir(&TABLA_CRC16, &mala), Err(ErrorTrama::Crc));
+    assert!(!r.sesion());
+    assert_eq!(r.sesiones(), 0);
+    assert_eq!(
+        r.cuentas(),
+        Cuentas {
+            rechazadas_crc: 1,
+            rechazadas_forma: 1,
+            rechazadas_tipo: otros.len() as u16 + 5,
+            perdidas: 0,
+        }
+    );
+}
+
+/// §8.14, D5: un `HOLA` valido abre sesion. `sesiones` sube uno, los
+/// contadores vuelven a cero (son totales desde la sesion, §3.3), se espera la
+/// secuencia 1, y el generador recibe la sesion: todo suelto y `ultimo_evento`
+/// a cero.
+#[test]
+fn hola_abre_la_sesion() {
+    let mut r = Receptor::default();
+    assert_eq!(
+        r.recibir(&TABLA_CRC16, &trama(&Mensaje::Nada, 5)),
+        Err(ErrorTrama::SinSesion)
+    );
+    let (cab, m) = r.recibir(&TABLA_CRC16, &hola(1, 1)).expect("abre");
+    assert_eq!(
+        m.entradas(cab.secuencia).collect::<Vec<_>>(),
+        [Entrada::Sesion]
+    );
+    assert!(r.sesion());
+    assert_eq!(r.sesiones(), 1);
+    assert_eq!(r.cuentas(), Cuentas::default());
+    r.recibir(&TABLA_CRC16, &trama(&Mensaje::Nada, 1))
+        .expect("con sesion pasa");
+    assert_eq!(r.cuentas().perdidas, 0, "tras HOLA se espera la 1");
+    r.recibir(&TABLA_CRC16, &trama(&Mensaje::Nada, 4))
+        .expect("la secuencia no rechaza");
+    assert_eq!(r.cuentas().perdidas, 2, "faltaron la 2 y la 3");
+}
+
+/// D8 y §3.3: con sesion, cada rechazo suma en su causa (la trama corta va con
+/// la forma) y no mueve la secuencia esperada, asi que el hueco que deja lo
+/// cuenta `perdidas` y perdidas >= rechazadas.
+#[test]
+fn con_sesion_cada_rechazo_cuenta_en_su_causa() {
+    let mut r = Receptor::default();
+    r.recibir(&TABLA_CRC16, &hola(1, 1)).expect("abre");
+    let mut mala = trama(&Mensaje::Nada, 1);
+    mala[4] ^= 1;
+    assert_eq!(r.recibir(&TABLA_CRC16, &mala), Err(ErrorTrama::Crc));
+    let t = trama(&Mensaje::Nada, 2);
+    assert_eq!(
+        r.recibir(&TABLA_CRC16, &t[..t.len() - 1]),
+        Err(ErrorTrama::Corta)
+    );
+    assert_eq!(
+        r.recibir(&TABLA_CRC16, &cruda(0x10, &[0; 6])),
+        Err(ErrorTrama::Forma)
+    );
+    assert_eq!(
+        r.recibir(&TABLA_CRC16, &cruda(0x02, &[])),
+        Err(ErrorTrama::Tipo)
+    );
+    r.recibir(&TABLA_CRC16, &trama(&Mensaje::Nada, 6))
+        .expect("pasa");
+    assert_eq!(
+        r.cuentas(),
+        Cuentas {
+            rechazadas_crc: 1,
+            rechazadas_forma: 2,
+            rechazadas_tipo: 1,
+            perdidas: 5,
+        }
+    );
+}
+
+/// D5, «no abre sesion y su `HOLA` lo dice»: un `HOLA` que el modulo no habla
+/// cierra la sesion que hubiera. Sin sesion el modulo publica su `HOLA`, y asi
+/// el cerebro ve el desacuerdo; con la sesion abierta seguiria leyendo con el
+/// dialecto viejo lo que el cerebro escribe en el nuevo.
+#[test]
+fn un_hola_que_no_se_habla_cierra_la_sesion() {
+    let mut r = Receptor::default();
+    r.recibir(&TABLA_CRC16, &hola(1, 1)).expect("abre");
+    assert_eq!(r.recibir(&TABLA_CRC16, &hola(1, 2)), Err(ErrorTrama::Tipo));
+    assert!(!r.sesion());
+    assert_eq!(r.sesiones(), 1, "cerrar no cuenta como sesion");
+    assert_eq!(r.cuentas().rechazadas_tipo, 1);
+    assert_eq!(
+        r.recibir(&TABLA_CRC16, &trama(&Mensaje::Nada, 1)),
+        Err(ErrorTrama::SinSesion)
+    );
+}
+
+/// D5: el cerebro reabre sesion sobre un modulo vivo. `sesiones` sube otra
+/// vez, los contadores vuelven a cero y se espera otra vez la 1; `sesiones`
+/// da la vuelta en un byte (§3.3).
+#[test]
+fn hola_en_sesion_la_reabre() {
+    let mut r = Receptor::default();
+    r.recibir(&TABLA_CRC16, &hola(1, 1)).expect("abre");
+    r.recibir(&TABLA_CRC16, &trama(&Mensaje::Nada, 900))
+        .expect("pasa");
+    assert_eq!(r.cuentas().perdidas, 899);
+    r.recibir(&TABLA_CRC16, &hola(1, 1)).expect("reabre");
+    assert_eq!((r.sesion(), r.sesiones()), (true, 2));
+    assert_eq!(r.cuentas(), Cuentas::default());
+    r.recibir(&TABLA_CRC16, &trama(&Mensaje::Nada, 1))
+        .expect("pasa");
+    assert_eq!(r.cuentas().perdidas, 0);
+    for _ in 3..=256 {
+        r.recibir(&TABLA_CRC16, &hola(1, 1)).expect("reabre");
+    }
+    assert_eq!(r.sesiones(), 0, "la sesion 256 da la vuelta");
 }

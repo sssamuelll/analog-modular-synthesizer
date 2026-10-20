@@ -5,16 +5,20 @@
 //! §3.2 (los bytes). Van con ellos los dos universales de bajada, `NADA` y
 //! `HOLA`, para que todo tipo de bajada tenga respuesta.
 //!
-//! La traduccion a `envolvente::Entrada` (D9) cubre `EVENTO`, `COMPUERTA` y
-//! `SET`. El tono de arranque del `EVENTO` y el `TONO` son del camino del tono,
-//! y `BAHIA` es de la barrera, que no estan en el generador.
+//! La traduccion a `envolvente::Entrada` (D9) cubre `HOLA`, `EVENTO`,
+//! `COMPUERTA` y `SET`. El tono de arranque del `EVENTO` y el `TONO` son del
+//! camino del tono, y `BAHIA` es de la barrera, que no estan en el generador.
 //!
-//! Todavia no estan aqui: los registros de subida (§3.3) y la sesion (D5).
+//! `Receptor` es el lado del modulo: la sesion (D5) y las cuentas de rechazo
+//! (D8). Todavia no estan aqui los registros de subida (§3.3).
 
 use crate::bahia::{Imagen, CANALES};
 use crate::envolvente::{Borde, Entrada};
 use crate::fuerza::Fuerza;
 use crate::j2::{self, Cabecera, ErrorTrama};
+
+/// El numero del dialecto en `HOLA` (D5): `0` es el legado, `1` la Voz v1.
+pub const DIALECTO: u8 = 1;
 
 /// Tuplas por `SET` (D4): los once parametros de una voz, o uno de las
 /// dieciseis, en una trama.
@@ -108,10 +112,12 @@ impl Mensaje {
         j2::codificar(tabla, tipo, secuencia, &carga[..n], out)
     }
 
-    /// Lo que el mensaje deja en la cola del generador (D8), con `secuencia`, la
-    /// del sobre de su trama. Un `SET` da una entrada por tupla, en orden.
+    /// Lo que un mensaje aceptado deja en la cola del generador (D8), con
+    /// `secuencia`, la del sobre de su trama. Un `SET` da una entrada por tupla,
+    /// en orden; un `HOLA` aceptado es una sesion nueva (D5).
     pub fn entradas(&self, secuencia: u16) -> impl Iterator<Item = Entrada> + '_ {
         let una = match *self {
+            Mensaje::Hola { .. } => Some(Entrada::Sesion),
             Mensaje::Evento {
                 destino,
                 borde,
@@ -204,6 +210,100 @@ impl Mensaje {
 pub fn decodificar(tabla: &[u16; 256], trama: &[u8]) -> Result<(Cabecera, Mensaje), ErrorTrama> {
     let (cabecera, carga) = j2::decodificar(tabla, trama)?;
     Ok((cabecera, leer(cabecera.tipo, carga)?))
+}
+
+/// Las cuentas del receptor que sube `SALUD` (§3.3): totales desde la sesion,
+/// en 16 bits con vuelta.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct Cuentas {
+    /// Causa 2 de D8.
+    pub rechazadas_crc: u16,
+    /// Causas 1 y 4: trama corta o carga sin la forma de su tipo.
+    pub rechazadas_forma: u16,
+    /// Causa 3: tipo ajeno, sin sesion, o `HOLA` de otra version o dialecto.
+    pub rechazadas_tipo: u16,
+    /// Huecos de secuencia entre tramas aceptadas (R-C3).
+    pub perdidas: u16,
+}
+
+/// El lado del modulo: la sesion (D5) y las cuentas de rechazo (D8). Sin
+/// sesion solo pasa `HOLA`.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Receptor {
+    sesion: bool,
+    sesiones: u8,
+    esperada: u16,
+    cuentas: Cuentas,
+}
+
+impl Receptor {
+    /// La cabecera y el mensaje de una trama aceptada. Una rechazada suma en su
+    /// causa y no cambia nada mas, salvo un `HOLA` que el modulo no habla, que
+    /// cierra la sesion: asi el modulo publica su `HOLA` y el cerebro ve el
+    /// desacuerdo (D5). Un `HOLA` con la version y el dialecto del modulo abre
+    /// sesion, o la reabre.
+    pub fn recibir(
+        &mut self,
+        tabla: &[u16; 256],
+        trama: &[u8],
+    ) -> Result<(Cabecera, Mensaje), ErrorTrama> {
+        let leida = self.aceptar(tabla, trama);
+        if let Err(e) = leida {
+            let c = &mut self.cuentas;
+            let n = match e {
+                ErrorTrama::Crc => &mut c.rechazadas_crc,
+                ErrorTrama::Corta | ErrorTrama::Forma => &mut c.rechazadas_forma,
+                ErrorTrama::Tipo | ErrorTrama::SinSesion => &mut c.rechazadas_tipo,
+            };
+            *n = n.wrapping_add(1);
+        }
+        leida
+    }
+
+    fn aceptar(
+        &mut self,
+        tabla: &[u16; 256],
+        trama: &[u8],
+    ) -> Result<(Cabecera, Mensaje), ErrorTrama> {
+        let (cabecera, carga) = j2::decodificar(tabla, trama)?;
+        if !self.sesion && cabecera.tipo != HOLA {
+            return Err(ErrorTrama::SinSesion);
+        }
+        let m = leer(cabecera.tipo, carga)?;
+        if let Mensaje::Hola { version, dialecto } = m {
+            if version != j2::VERSION || dialecto != DIALECTO {
+                self.sesion = false;
+                return Err(ErrorTrama::Tipo);
+            }
+            *self = Receptor {
+                sesion: true,
+                sesiones: self.sesiones.wrapping_add(1),
+                esperada: 1,
+                cuentas: Cuentas::default(),
+            };
+        } else {
+            let c = &mut self.cuentas;
+            c.perdidas = c
+                .perdidas
+                .wrapping_add(j2::perdidas(self.esperada, cabecera.secuencia));
+            self.esperada = cabecera.secuencia.wrapping_add(1);
+        }
+        Ok((cabecera, m))
+    }
+
+    /// El campo `sesion` del `HOLA` de subida (§3.3).
+    pub fn sesion(&self) -> bool {
+        self.sesion
+    }
+
+    /// Las sesiones abiertas desde el arranque, con vuelta (§3.3).
+    pub fn sesiones(&self) -> u8 {
+        self.sesiones
+    }
+
+    pub fn cuentas(&self) -> Cuentas {
+        self.cuentas
+    }
 }
 
 fn leer(tipo: u8, c: &[u8]) -> Result<Mensaje, ErrorTrama> {

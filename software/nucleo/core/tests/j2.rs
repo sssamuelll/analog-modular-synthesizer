@@ -10,7 +10,9 @@
 //! prueba no prueba nada.
 
 use sam17_nucleo_core::descubrimiento::{crc16, TABLA_CRC16};
-use sam17_nucleo_core::j2::{codificar, decodificar, Cabecera, ErrorTrama, SOBRE};
+use sam17_nucleo_core::j2::{
+    codificar, decodificar, perdidas, Cabecera, ErrorTrama, SOBRE, VERSION,
+};
 
 fn trama(tipo: u8, secuencia: u16, carga: &[u8]) -> Vec<u8> {
     let mut out = vec![0u8; SOBRE + carga.len()];
@@ -143,13 +145,17 @@ fn el_crc_va_con_la_tabla_de_quien_llama() {
     }
 }
 
-/// §8.12, R-C3: la secuencia no rechaza. Un salto de 7 a 12 decodifica las dos.
+/// §8.12, R-C3: la secuencia no rechaza. Un salto de 7 a 12 decodifica las dos,
+/// y entre ellas se perdieron cuatro: tras 7 se esperaba 8.
 #[test]
 fn la_secuencia_no_rechaza() {
     for s in [7, 12] {
         let t = trama(0x11, s, &[0x01, 0x00, 0x00, 0x40]);
         assert_eq!(decodificar(&TABLA_CRC16, &t).unwrap().0.secuencia, s);
     }
+    assert_eq!(perdidas(8, 12), 4);
+    assert_eq!(perdidas(8, 8), 0);
+    assert_eq!(perdidas(0xFFFE, 2), 4, "0xFFFE, 0xFFFF, 0, 1");
 }
 
 /// `largo` es un byte: una carga de 256 no tiene sobre, y un bufer pequeno no
@@ -167,4 +173,5 @@ fn codificar_no_escribe_lo_que_no_cabe() {
 #[test]
 fn el_sobre_son_seis_bytes() {
     assert_eq!(SOBRE, 6);
+    assert_eq!(VERSION, 1);
 }
