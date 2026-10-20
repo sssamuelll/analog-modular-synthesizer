@@ -4,3 +4,5 @@ fecha,firmware,placa,f_cpu_hz,cache,ciclos_por_giro,hilo_libre_permil,ranuras,pe
 2026-10-17,4b97dcf,NUCLEO-N657X0-Q,64000000,icache,16112,748,1,1000,ejecutor,caliente,
 2026-10-20,1d62576,NUCLEO-N657X0-Q,800000000,icache+dcache-mpu,2354,,3,125,tic,caliente,2307
 2026-10-20,1d62576,NUCLEO-N657X0-Q,800000000,icache+dcache-mpu,2452,,3,125,tic,fria,2353
+2026-10-20,646a97a,NUCLEO-N657X0-Q,800000000,icache+dcache-mpu,2354,,3,125,tic,caliente,2307
+2026-10-20,646a97a,NUCLEO-N657X0-Q,800000000,icache+dcache-mpu,2419,,3,125,tic,fria,2321
