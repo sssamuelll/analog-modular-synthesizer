@@ -56,6 +56,10 @@ use crate::descubrimiento::crc16_con;
 /// Bytes de sobre: cuatro delante (tipo, largo, secuencia) y el CRC detras (D2).
 pub const SOBRE: usize = 6;
 
+/// La version del sobre, la que viaja en `HOLA` (D5). Un sobre de otra forma es
+/// otro dialecto, no otra version (R-C6).
+pub const VERSION: u8 = 1;
+
 /// Lo que dice el sobre de una trama o de un registro (D2).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Cabecera {
@@ -65,15 +69,18 @@ pub struct Cabecera {
 }
 
 /// Por que se rechaza una trama entera (D8). Las dos primeras las ve el sobre;
-/// las otras dos, el dialecto.
+/// las demas, el dialecto y su sesion.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ErrorTrama {
     /// Menos bytes que `largo + 6` (causa 1, R-C1).
     Corta,
     /// El CRC no cuadra (causa 2, R-C2).
     Crc,
-    /// El tipo no es del dialecto ni universal (causa 3).
+    /// El tipo no es del dialecto ni universal, o un `HOLA` trae una version o
+    /// un dialecto que el modulo no habla (causa 3).
     Tipo,
+    /// No hay sesion y la trama no es `HOLA` (causa 3, R-C7).
+    SinSesion,
     /// La carga no tiene la forma del tipo (causa 4).
     Forma,
 }
@@ -133,6 +140,12 @@ pub fn decodificar<'a>(
         secuencia: u16::from_le_bytes([cuerpo[2], cuerpo[3]]),
     };
     Ok((cab, &cuerpo[4..]))
+}
+
+/// Las tramas que faltan entre la `esperada` y la que `llego`, con vuelta en
+/// 16 bits (R-C3).
+pub const fn perdidas(esperada: u16, llego: u16) -> u16 {
+    llego.wrapping_sub(esperada)
 }
 
 /// «Write to and update DAC channel n».

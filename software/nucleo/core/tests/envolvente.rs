@@ -601,6 +601,30 @@ fn soltar_todo_libera_y_el_siguiente_bloque_al_dia_reabre_lo_que_el_cerebro_sost
     );
 }
 
+/// Cabecera del J2, D5: abrir sesion suelta todo, como el watchdog, y ademas
+/// pone `ultimo_evento` a cero. El cerebro tambien arranca de cero, y su primer
+/// bloque sin eventos lleva contador 0: con el contador viejo seria viejo.
+#[test]
+fn la_sesion_suelta_todo_y_el_contador_vuelve_a_cero() {
+    let mut g = Generadores::nuevos(parametros());
+    g.tick(&[
+        evento(0, Borde::Abre, 65535, 900),
+        evento(1, Borde::Abre, 65535, 901),
+    ]);
+    ticks(&mut g, 100);
+    g.tick(&[Entrada::Sesion]);
+    assert_eq!(g.etapa(0), Etapa::Relajacion);
+    assert_eq!(g.etapa(1), Etapa::Relajacion);
+    assert_eq!(g.compuertas(), 0);
+    assert_eq!(g.ultimo_evento(), 0);
+    g.tick(&[Entrada::Compuerta {
+        mascara: 0b10,
+        contador: 0,
+    }]);
+    assert_eq!(g.compuertas(), 0b10, "el primer bloque de la sesion aplica");
+    assert_eq!(g.etapa(1), Etapa::Ataque);
+}
+
 /// Cabecera del J2, D4: `ultimo_evento` es el mayor que el modulo acepto,
 /// comparado con vuelta en 16 bits. Tras 0xFFFF viene 1, y un bloque armado en
 /// 0xFFFF es viejo frente a 1.
