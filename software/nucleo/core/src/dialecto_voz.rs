@@ -1,16 +1,18 @@
-//! El dialecto de la Voz, version 1: los mensajes de bajada.
+//! El dialecto de la Voz, version 1: los mensajes de bajada y los registros de
+//! subida.
 //!
 //! Papel: `docs/superpowers/specs/2026-09-02-cabecera-j2-design.md`, D4 (los
-//! cinco mensajes y la tabla de indices), D8 (lo que el receptor rechaza) y
-//! §3.2 (los bytes). Van con ellos los dos universales de bajada, `NADA` y
-//! `HOLA`, para que todo tipo de bajada tenga respuesta.
+//! cinco mensajes y la tabla de indices), D6 (la subida), D8 (lo que el
+//! receptor rechaza), §3.2 y §3.3 (los bytes). Van con ellos los universales,
+//! `NADA` y `HOLA` en los dos sentidos y `SALUD`, para que todo tipo tenga
+//! respuesta. `JACKS`, `MEDIDA` y `LOG` no: su carga es de otros papeles (§7).
 //!
 //! La traduccion a `envolvente::Entrada` (D9) cubre `HOLA`, `EVENTO`,
 //! `COMPUERTA` y `SET`. El tono de arranque del `EVENTO` y el `TONO` son del
 //! camino del tono, y `BAHIA` es de la barrera, que no estan en el generador.
 //!
-//! `Receptor` es el lado del modulo: la sesion (D5) y las cuentas de rechazo
-//! (D8). Todavia no estan aqui los registros de subida (§3.3).
+//! `Receptor` es el lado del modulo: la sesion (D5), las cuentas de rechazo
+//! (D8) y el registro que publica (D6).
 
 use crate::bahia::{Imagen, CANALES};
 use crate::envolvente::{Borde, Entrada};
@@ -26,6 +28,13 @@ pub const MAX_ESCRITURAS: usize = 16;
 
 /// La carga mas larga del dialecto: un `SET` lleno.
 const CARGA_MAX: usize = 6 * MAX_ESCRITURAS;
+
+/// Los bytes de registro, con sobre, que el cerebro muestrea en cada giro a
+/// `F_SUBIDA` (D6.3). Ningun registro de la Voz v1 la pasa (R-C5).
+pub const VENTANA_SUBIDA: usize = 24;
+
+/// La carga de subida mas larga: `SALUD`.
+const CARGA_SUBIDA: usize = 12;
 
 /// La tabla de indices de D4: el rango firme de cada parametro, por indice
 /// (generador §7, decision 11; el paneo, D4). Un indice fuera de la tabla o un
@@ -52,6 +61,12 @@ const TONO: u8 = 0x11;
 const COMPUERTA: u8 = 0x12;
 const BAHIA: u8 = 0x13;
 const SET: u8 = 0x14;
+
+// Los tipos de subida (§3.1): el bit alto puesto.
+const NADA_SUBE: u8 = 0x80;
+const HOLA_SUBE: u8 = 0x81;
+const SALUD: u8 = 0x82;
+const ESTADO_VOZ: u8 = 0x93;
 
 /// Una escritura de `SET`: el parametro `indice` de la instancia, con el valor
 /// en los 32 bits con signo del modelo (`param.rs`).
@@ -226,27 +241,209 @@ pub struct Cuentas {
     pub perdidas: u16,
 }
 
-/// El lado del modulo: la sesion (D5) y las cuentas de rechazo (D8). Sin
-/// sesion solo pasa `HOLA`.
-#[derive(Clone, Copy, Debug, Default)]
+/// Un registro de subida (§3.3): estado que el modulo publica y el maestro
+/// muestrea (D6).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Registro {
+    /// El modulo no tiene nada que publicar.
+    Nada,
+    /// Lo que el modulo habla y si tiene sesion (D5). El cerebro computa la
+    /// compatibilidad; el modulo no la juzga.
+    Hola {
+        version: u8,
+        dialecto: u8,
+        sesion: bool,
+        /// Las sesiones abiertas desde el arranque, con vuelta.
+        sesiones: u8,
+    },
+    /// Universal, de todo modulo. La temperatura es la del 0x48 de
+    /// `memoria.rs`.
+    Salud {
+        temperatura_centesimas: i16,
+        vref_milivoltios: u16,
+        cuentas: Cuentas,
+    },
+    /// `ultimo_evento` y `bahia_aplicada` son secuencias del cerebro, no
+    /// contadores; los otros dos son totales desde la sesion.
+    EstadoVoz {
+        cola_desbordada: u16,
+        ultimo_evento: u16,
+        bahia_aplicada: u16,
+        watchdogs: u16,
+    },
+}
+
+impl Registro {
+    /// Escribe el registro con su sobre y devuelve cuantos bytes ocupa. `None`,
+    /// sin tocar `out`, si no cabe en `out`.
+    pub fn codificar(&self, tabla: &[u16; 256], secuencia: u16, out: &mut [u8]) -> Option<usize> {
+        let mut carga = [0u8; CARGA_SUBIDA];
+        let (tipo, n) = self.carga(&mut carga);
+        j2::codificar(tabla, tipo, secuencia, &carga[..n], out)
+    }
+
+    fn largo(&self) -> usize {
+        self.carga(&mut [0; CARGA_SUBIDA]).1
+    }
+
+    fn carga(&self, b: &mut [u8; CARGA_SUBIDA]) -> (u8, usize) {
+        let mut n = 0;
+        let mut poner = |bytes: &[u8]| {
+            b[n..n + bytes.len()].copy_from_slice(bytes);
+            n += bytes.len();
+        };
+        let tipo = match *self {
+            Registro::Nada => NADA_SUBE,
+            Registro::Hola {
+                version,
+                dialecto,
+                sesion,
+                sesiones,
+            } => {
+                poner(&[version, dialecto, u8::from(sesion), sesiones]);
+                HOLA_SUBE
+            }
+            Registro::Salud {
+                temperatura_centesimas,
+                vref_milivoltios,
+                cuentas: c,
+            } => {
+                poner(&temperatura_centesimas.to_le_bytes());
+                for v in [
+                    vref_milivoltios,
+                    c.rechazadas_crc,
+                    c.rechazadas_forma,
+                    c.rechazadas_tipo,
+                    c.perdidas,
+                ] {
+                    poner(&v.to_le_bytes());
+                }
+                SALUD
+            }
+            Registro::EstadoVoz {
+                cola_desbordada,
+                ultimo_evento,
+                bahia_aplicada,
+                watchdogs,
+            } => {
+                for v in [cola_desbordada, ultimo_evento, bahia_aplicada, watchdogs] {
+                    poner(&v.to_le_bytes());
+                }
+                ESTADO_VOZ
+            }
+        };
+        (tipo, n)
+    }
+}
+
+/// Lee el sobre de un registro muestreado y el registro de su carga: el lado
+/// del cerebro. Como en la bajada, uno sin la forma de su tipo se rechaza
+/// entero.
+pub fn decodificar_registro(
+    tabla: &[u16; 256],
+    trama: &[u8],
+) -> Result<(Cabecera, Registro), ErrorTrama> {
+    let (cabecera, c) = j2::decodificar(tabla, trama)?;
+    let forma = |largo: usize| {
+        if c.len() == largo {
+            Ok(())
+        } else {
+            Err(ErrorTrama::Forma)
+        }
+    };
+    // Solo se llama con el largo ya comprobado.
+    let u16_en = |i: usize| u16::from_le_bytes([c[i], c[i + 1]]);
+    let r = match cabecera.tipo {
+        NADA_SUBE => forma(0).map(|_| Registro::Nada)?,
+        HOLA_SUBE => {
+            forma(4)?;
+            let sesion = match c[2] {
+                0 => false,
+                1 => true,
+                _ => return Err(ErrorTrama::Forma),
+            };
+            Registro::Hola {
+                version: c[0],
+                dialecto: c[1],
+                sesion,
+                sesiones: c[3],
+            }
+        }
+        SALUD => forma(12).map(|_| Registro::Salud {
+            temperatura_centesimas: i16::from_le_bytes([c[0], c[1]]),
+            vref_milivoltios: u16_en(2),
+            cuentas: Cuentas {
+                rechazadas_crc: u16_en(4),
+                rechazadas_forma: u16_en(6),
+                rechazadas_tipo: u16_en(8),
+                perdidas: u16_en(10),
+            },
+        })?,
+        ESTADO_VOZ => forma(8).map(|_| Registro::EstadoVoz {
+            cola_desbordada: u16_en(0),
+            ultimo_evento: u16_en(2),
+            bahia_aplicada: u16_en(4),
+            watchdogs: u16_en(6),
+        })?,
+        _ => return Err(ErrorTrama::Tipo),
+    };
+    Ok((cabecera, r))
+}
+
+/// El lado del modulo: la sesion (D5), las cuentas de rechazo (D8) y el
+/// registro que publica (D6). Sin sesion solo pasa `HOLA`, y solo sale su
+/// `HOLA`.
+#[derive(Clone, Copy, Debug)]
 pub struct Receptor {
     sesion: bool,
     sesiones: u8,
     esperada: u16,
     cuentas: Cuentas,
+    /// La secuencia del registro publicado: +1 por publicacion (D6.1).
+    subida: u16,
+    publicado: Registro,
+    /// `SALUD` y `ESTADO_VOZ`, lo ultimo pedido de cada uno.
+    pedidos: [Option<Registro>; 2],
+}
+
+impl Default for Receptor {
+    /// Un modulo que acaba de arrancar: sin sesion, publicando su `HOLA`.
+    fn default() -> Self {
+        let mut r = Receptor {
+            sesion: false,
+            sesiones: 0,
+            esperada: 0,
+            cuentas: Cuentas::default(),
+            subida: 0,
+            publicado: Registro::Nada,
+            pedidos: [None; 2],
+        };
+        r.publicado = r.hola();
+        r
+    }
 }
 
 impl Receptor {
-    /// La cabecera y el mensaje de una trama aceptada. Una rechazada suma en su
-    /// causa y no cambia nada mas, salvo un `HOLA` que el modulo no habla, que
-    /// cierra la sesion: asi el modulo publica su `HOLA` y el cerebro ve el
-    /// desacuerdo (D5). Un `HOLA` con la version y el dialecto del modulo abre
-    /// sesion, o la reabre.
+    /// Un giro: `trama` son todos los bytes que el maestro cloco, con relleno y
+    /// byte de cola. Devuelve la cabecera y el mensaje de una trama aceptada.
+    /// Una rechazada suma en su causa y no cambia nada mas, salvo un `HOLA` que
+    /// el modulo no habla, que cierra la sesion: asi el modulo publica su
+    /// `HOLA` y el cerebro ve el desacuerdo (D5). Un `HOLA` con la version y el
+    /// dialecto del modulo abre sesion, o la reabre.
+    ///
+    /// Si el giro cloco entero el registro publicado, publica el siguiente
+    /// (D6.2); si no, el mismo sigue en el giro que viene. Abrir o cerrar la
+    /// sesion abandona lo publicado y publica el `HOLA`.
     pub fn recibir(
         &mut self,
         tabla: &[u16; 256],
         trama: &[u8],
     ) -> Result<(Cabecera, Mensaje), ErrorTrama> {
+        // `bytes - 1 >= largo + 6`: el byte de cola no cuenta (D6.4).
+        if trama.len() > j2::SOBRE + self.publicado.largo() {
+            let siguiente = self.siguiente();
+            self.publicar(siguiente);
+        }
         let leida = self.aceptar(tabla, trama);
         if let Err(e) = leida {
             let c = &mut self.cuentas;
@@ -273,14 +470,18 @@ impl Receptor {
         if let Mensaje::Hola { version, dialecto } = m {
             if version != j2::VERSION || dialecto != DIALECTO {
                 self.sesion = false;
+                self.publicar(self.hola());
                 return Err(ErrorTrama::Tipo);
             }
+            // Las cuentas a cero, la secuencia de subida a cero, lo publicado y
+            // lo pedido abandonados (eran de la sesion vieja), y su `HOLA`.
             *self = Receptor {
                 sesion: true,
                 sesiones: self.sesiones.wrapping_add(1),
                 esperada: 1,
-                cuentas: Cuentas::default(),
+                ..Receptor::default()
             };
+            self.publicado = self.hola();
         } else {
             let c = &mut self.cuentas;
             c.perdidas = c
@@ -303,6 +504,49 @@ impl Receptor {
 
     pub fn cuentas(&self) -> Cuentas {
         self.cuentas
+    }
+
+    /// El registro que el modulo deja en el bufer de transmision antes de que
+    /// `CS` baje, con su secuencia (D6.1).
+    pub fn publicado(&self) -> (u16, Registro) {
+        (self.subida, self.publicado)
+    }
+
+    /// La cola de publicacion de §3.3: `SALUD` y `ESTADO_VOZ`, a la cadencia
+    /// que lleve quien llama. Salen en ese orden, uno por muestreo, con lo
+    /// ultimo pedido de cada uno. Sin sesion no sale nada pedido, y abrir
+    /// sesion lo descarta. `HOLA` y `NADA` no se piden: los pone el receptor.
+    pub fn pedir(&mut self, r: Registro) {
+        let i = match r {
+            Registro::Salud { .. } => 0,
+            Registro::EstadoVoz { .. } => 1,
+            _ => return,
+        };
+        self.pedidos[i] = Some(r);
+    }
+
+    fn hola(&self) -> Registro {
+        Registro::Hola {
+            version: j2::VERSION,
+            dialecto: DIALECTO,
+            sesion: self.sesion,
+            sesiones: self.sesiones,
+        }
+    }
+
+    fn siguiente(&mut self) -> Registro {
+        if !self.sesion {
+            return self.hola();
+        }
+        self.pedidos
+            .iter_mut()
+            .find_map(Option::take)
+            .unwrap_or(Registro::Nada)
+    }
+
+    fn publicar(&mut self, r: Registro) {
+        self.subida = self.subida.wrapping_add(1);
+        self.publicado = r;
     }
 }
 

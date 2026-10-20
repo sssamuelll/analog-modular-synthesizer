@@ -1,10 +1,10 @@
-//! Los mensajes de bajada del dialecto de la Voz v1, contra el papel de la
-//! cabecera.
+//! El dialecto de la Voz v1, contra el papel de la cabecera: los mensajes de
+//! bajada, la sesion y los registros de subida.
 //!
 //! Papel: `docs/superpowers/specs/2026-09-02-cabecera-j2-design.md`, D4 (los
-//! cinco mensajes y la tabla de indices), D8 (las causas de rechazo), §3.2 (los
-//! bytes) y §4 (los largos contra R-E1). Los numeros de los tests son los de
-//! su §8.
+//! cinco mensajes y la tabla de indices), D5 (la sesion), D6 (la subida), D8
+//! (las causas de rechazo), §3.2 y §3.3 (los bytes) y §4 (los largos contra
+//! R-E1). Los numeros de los tests son los de su §8.
 //!
 //! Los bytes esperados y los rangos se escriben a mano desde el papel: un test
 //! que lea la tabla que prueba no prueba nada.
@@ -12,7 +12,8 @@
 use sam17_nucleo_core::bahia::{Chip, Imagen, CANALES, LINEAS};
 use sam17_nucleo_core::descubrimiento::{crc16, TABLA_CRC16};
 use sam17_nucleo_core::dialecto_voz::{
-    decodificar, Cuentas, Escritura, Mensaje, Receptor, DIALECTO, MAX_ESCRITURAS,
+    decodificar, decodificar_registro, Cuentas, Escritura, Mensaje, Receptor, Registro, DIALECTO,
+    MAX_ESCRITURAS, VENTANA_SUBIDA,
 };
 use sam17_nucleo_core::envolvente::{Borde, Entrada, Generadores, Parametros, Tiempos};
 use sam17_nucleo_core::fuerza::Fuerza;
@@ -566,6 +567,11 @@ fn sin_hola_no_hay_dialecto() {
             Err(ErrorTrama::Tipo),
             "version {version}, dialecto {dialecto}"
         );
+        assert_eq!(
+            r.publicado().1,
+            hola_de_subida(false, 0),
+            "su HOLA sigue diciendo sesion 0 con lo que habla"
+        );
     }
     // el sobre y la forma se juzgan antes, como con sesion
     assert_eq!(
@@ -689,4 +695,280 @@ fn hola_en_sesion_la_reabre() {
         r.recibir(&TABLA_CRC16, &hola(1, 1)).expect("reabre");
     }
     assert_eq!(r.sesiones(), 0, "la sesion 256 da la vuelta");
+}
+
+fn hola_de_subida(sesion: bool, sesiones: u8) -> Registro {
+    Registro::Hola {
+        version: 1,
+        dialecto: 1,
+        sesion,
+        sesiones,
+    }
+}
+
+fn registro(r: &Registro, secuencia: u16) -> Vec<u8> {
+    let mut out = [0u8; 64];
+    let n = r
+        .codificar(&TABLA_CRC16, secuencia, &mut out)
+        .expect("se codifica");
+    out[..n].to_vec()
+}
+
+fn salud() -> Registro {
+    Registro::Salud {
+        temperatura_centesimas: -2_550,
+        vref_milivoltios: 3_300,
+        cuentas: Cuentas {
+            rechazadas_crc: 1,
+            rechazadas_forma: 2,
+            rechazadas_tipo: 3,
+            perdidas: 0x1234,
+        },
+    }
+}
+
+fn estado() -> Registro {
+    Registro::EstadoVoz {
+        cola_desbordada: 0x0102,
+        ultimo_evento: 0x0304,
+        bahia_aplicada: 0x0506,
+        watchdogs: 0x0708,
+    }
+}
+
+/// Los registros de borde de §8.1: todo cero, todo `0xFF`, `HOLA` con
+/// `sesion` 0 y 1, y campos distintos entre si.
+fn registros() -> Vec<Registro> {
+    let todo = Cuentas {
+        rechazadas_crc: 0xFFFF,
+        rechazadas_forma: 0xFFFF,
+        rechazadas_tipo: 0xFFFF,
+        perdidas: 0xFFFF,
+    };
+    vec![
+        Registro::Nada,
+        hola_de_subida(false, 0),
+        hola_de_subida(true, 0xFF),
+        Registro::Salud {
+            temperatura_centesimas: 0,
+            vref_milivoltios: 0,
+            cuentas: Cuentas::default(),
+        },
+        Registro::Salud {
+            temperatura_centesimas: i16::MIN,
+            vref_milivoltios: 0xFFFF,
+            cuentas: todo,
+        },
+        salud(),
+        Registro::EstadoVoz {
+            cola_desbordada: 0,
+            ultimo_evento: 0,
+            bahia_aplicada: 0,
+            watchdogs: 0,
+        },
+        Registro::EstadoVoz {
+            cola_desbordada: 0xFFFF,
+            ultimo_evento: 0xFFFF,
+            bahia_aplicada: 0xFFFF,
+            watchdogs: 0xFFFF,
+        },
+        estado(),
+    ]
+}
+
+/// §8.1 y §8.4 para la subida: cada registro vuelve igual, con las dos
+/// secuencias extremas y con lo que el maestro cloco detras.
+#[test]
+fn ida_y_vuelta_de_cada_registro() {
+    for r in registros() {
+        for secuencia in [0, 0xFFFF] {
+            let mut t = registro(&r, secuencia);
+            let cabecera = Cabecera {
+                tipo: t[0],
+                largo: (t.len() - SOBRE) as u8,
+                secuencia,
+            };
+            t.extend_from_slice(&[0; 33]);
+            assert_eq!(
+                decodificar_registro(&TABLA_CRC16, &t),
+                Ok((cabecera, r)),
+                "{r:?}"
+            );
+        }
+    }
+}
+
+/// §3.1 y §3.3: el tipo y la carga de cada registro, byte a byte.
+#[test]
+fn los_registros_byte_a_byte() {
+    let bytes = |r: &Registro| {
+        let t = registro(r, 0);
+        (t[0], t[4..t.len() - 2].to_vec())
+    };
+    assert_eq!(bytes(&Registro::Nada), (0x80, vec![]));
+    assert_eq!(bytes(&hola_de_subida(false, 0)), (0x81, vec![1, 1, 0, 0]));
+    assert_eq!(bytes(&hola_de_subida(true, 7)), (0x81, vec![1, 1, 1, 7]));
+    // -25,50 grados son -2 550 = 0xF60A; 3 300 mV son 0x0CE4.
+    assert_eq!(
+        bytes(&salud()),
+        (
+            0x82,
+            vec![0x0A, 0xF6, 0xE4, 0x0C, 1, 0, 2, 0, 3, 0, 0x34, 0x12]
+        )
+    );
+    assert_eq!(
+        bytes(&estado()),
+        (0x93, vec![0x02, 0x01, 0x04, 0x03, 0x06, 0x05, 0x08, 0x07])
+    );
+}
+
+/// §8.8, R-C5: cada registro de §3.3 cabe con su sobre en la ventana de la
+/// Voz, y `SALUD`, el piso universal, mide exactamente 18 (D6.3).
+#[test]
+fn la_ventana_de_la_voz() {
+    assert_eq!(VENTANA_SUBIDA, 24);
+    for r in registros() {
+        assert!(registro(&r, 0).len() <= VENTANA_SUBIDA, "{r:?}");
+    }
+    assert_eq!(registro(&salud(), 0).len(), 18);
+    assert_eq!(registro(&estado(), 0).len(), 14);
+    assert_eq!(registro(&hola_de_subida(true, 1), 0).len(), 10);
+}
+
+/// D8 del lado del cerebro: un registro sin la forma de su tipo se rechaza
+/// entero; un tipo que no es de subida, o sin carga en v1 (`JACKS`, `MEDIDA`,
+/// `LOG`), por tipo.
+#[test]
+fn la_forma_mala_de_un_registro() {
+    let malas: [(u8, &[u8]); 9] = [
+        (0x80, &[0]),
+        (0x81, &[1, 1, 0]),
+        (0x81, &[1, 1, 0, 0, 0]),
+        (0x81, &[1, 1, 2, 0]),
+        (0x82, &[0; 11]),
+        (0x82, &[0; 13]),
+        (0x93, &[0; 7]),
+        (0x93, &[0; 9]),
+        (0x93, &[]),
+    ];
+    for (tipo, carga) in malas {
+        assert_eq!(
+            decodificar_registro(&TABLA_CRC16, &cruda(tipo, carga)),
+            Err(ErrorTrama::Forma),
+            "{tipo:#04x} {carga:?}"
+        );
+    }
+    for tipo in [0x00, 0x01, 0x83, 0x90, 0x91, 0x92, 0x94] {
+        assert_eq!(
+            decodificar_registro(&TABLA_CRC16, &cruda(tipo, &[])),
+            Err(ErrorTrama::Tipo),
+            "{tipo:#04x}"
+        );
+    }
+}
+
+/// Un giro que muestrea la subida entera: el cerebro cloca la trama con
+/// relleno hasta la ventana y el byte de cola (D6.3, D6.4).
+fn giro(m: &Mensaje, secuencia: u16) -> Vec<u8> {
+    let mut t = trama(m, secuencia);
+    t.resize(t.len().max(VENTANA_SUBIDA + 1), 0);
+    t
+}
+
+/// Un giro entero, y lo que queda publicado para el siguiente.
+fn tras_giro(r: &mut Receptor) -> (u16, Registro) {
+    let _ = r.recibir(&TABLA_CRC16, &giro(&Mensaje::Nada, 0));
+    r.publicado()
+}
+
+/// D5 y D6.2: sin sesion el modulo publica solo su `HOLA`, desde que arranca,
+/// y la secuencia del registro sube uno por publicacion. Un registro se queda
+/// publicado hasta que un giro lo cloca entero con el byte de cola
+/// (`bytes - 1 >= largo + 6`); lo que se pida sin sesion no sale.
+#[test]
+fn sin_sesion_solo_sale_su_hola() {
+    let mut r = Receptor::default();
+    assert_eq!(r.publicado(), (0, hola_de_subida(false, 0)));
+    r.pedir(salud());
+    r.pedir(estado());
+    let mut t = trama(
+        &Mensaje::Compuerta {
+            mascara: 0,
+            contador: 0,
+        },
+        1,
+    );
+    assert_eq!(t.len(), 10, "el HOLA de subida entero, sin el byte de cola");
+    let _ = r.recibir(&TABLA_CRC16, &t);
+    assert_eq!(r.publicado(), (0, hola_de_subida(false, 0)));
+    t.push(0);
+    let _ = r.recibir(&TABLA_CRC16, &t);
+    assert_eq!(r.publicado(), (1, hola_de_subida(false, 0)));
+    for s in 2..6 {
+        assert_eq!(tras_giro(&mut r), (s, hola_de_subida(false, 0)));
+    }
+}
+
+/// D5: abrir sesion pone a cero la secuencia de subida, abandona el registro a
+/// medio muestrear y publica el `HOLA` con `sesion = 1`, que sale con la
+/// secuencia 0. Despues (§3.3), lo pedido, en orden y uno por muestreo, con lo
+/// ultimo que se pidio de cada tipo; y `NADA` cuando no toca nada.
+#[test]
+fn la_sesion_publica_su_hola_y_despues_lo_pedido() {
+    let mut r = Receptor::default();
+    for _ in 0..3 {
+        tras_giro(&mut r);
+    }
+    assert_eq!(r.publicado().0, 3);
+    // el giro del HOLA son 8 bytes: el HOLA de subida queda a medias
+    r.recibir(&TABLA_CRC16, &hola(1, 1)).expect("abre");
+    assert_eq!(r.publicado(), (0, hola_de_subida(true, 1)));
+    r.recibir(&TABLA_CRC16, &trama(&Mensaje::Nada, 1))
+        .expect("pasa");
+    assert_eq!(r.publicado(), (0, hola_de_subida(true, 1)), "giro corto");
+    let otro = Registro::EstadoVoz {
+        cola_desbordada: 9,
+        ultimo_evento: 8,
+        bahia_aplicada: 7,
+        watchdogs: 6,
+    };
+    r.pedir(estado());
+    r.pedir(salud());
+    r.pedir(otro);
+    assert_eq!(tras_giro(&mut r), (1, salud()));
+    r.recibir(&TABLA_CRC16, &trama(&Mensaje::Nada, 3))
+        .expect("pasa");
+    assert_eq!(
+        r.publicado(),
+        (1, salud()),
+        "SALUD sigue hasta salir entera"
+    );
+    assert_eq!(tras_giro(&mut r), (2, otro));
+    assert_eq!(tras_giro(&mut r), (3, Registro::Nada));
+    assert_eq!(tras_giro(&mut r), (4, Registro::Nada));
+}
+
+/// D5: reabrir abandona el registro a medias y lo pedido, que era de la sesion
+/// vieja (sus cuentas lo son). Cerrarla con un `HOLA` que no se habla tambien
+/// abandona lo publicado: sin sesion solo sale el `HOLA`.
+#[test]
+fn reabrir_o_cerrar_abandona_lo_publicado() {
+    let mut r = Receptor::default();
+    r.recibir(&TABLA_CRC16, &hola(1, 1)).expect("abre");
+    r.pedir(salud());
+    r.pedir(estado());
+    assert_eq!(tras_giro(&mut r), (1, salud()));
+    r.recibir(&TABLA_CRC16, &hola(1, 1)).expect("reabre");
+    assert_eq!(r.publicado(), (0, hola_de_subida(true, 2)));
+    assert_eq!(
+        tras_giro(&mut r),
+        (1, Registro::Nada),
+        "lo pedido se descarta"
+    );
+    r.pedir(salud());
+    assert_eq!(tras_giro(&mut r), (2, salud()));
+    assert_eq!(r.recibir(&TABLA_CRC16, &hola(1, 2)), Err(ErrorTrama::Tipo));
+    assert_eq!(r.publicado(), (3, hola_de_subida(false, 2)));
+    r.pedir(estado());
+    assert_eq!(tras_giro(&mut r), (4, hola_de_subida(false, 2)));
 }
