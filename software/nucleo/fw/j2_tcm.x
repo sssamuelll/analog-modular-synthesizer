@@ -36,6 +36,8 @@ SECTIONS
        solo quedaria en la ITCM si LTO lo inserta en el juez. */
     *(.text._ZN17sam17_nucleo_core14descubrimiento9crc16_con*)
     *(.text._ZN17sam17_nucleo_core14descubrimiento5crc16*)
+    /* El sobre que decodifica el juez de verdad, por la misma razon. */
+    *(.text._ZN17sam17_nucleo_core2j211decodificar*)
     *(.text._ZN13embassy_stm323rcc7RccInfo*)
     *(.text.memcmp .text.__aeabi_memclr4 .text.__aeabi_memmove8)
     *(.text.__aeabi_uldivmod .text.__aeabi_ldivmod .text.__udivmoddi4 .text.__divmoddi4)

@@ -504,13 +504,21 @@ async fn main(spawner: Spawner) {
     {
         let (base, largo) = sam17_nucleo_fw::j2_tic::region();
         info!("carga_j2: region no cacheable {:#x}, {} bytes", base, largo);
-        // El juez: el del banco, o el mismo con el CRC del sobre de la subida (`crc-*`).
+        // El juez: el de verdad con `crc-sobre`; si no, el del banco, o el mismo con el CRC del
+        // sobre de la subida calculado aparte (`crc-bits`, `crc-tabla`, `crc-unidad`).
         #[cfg(feature = "crc-unidad")]
         {
             sam17_nucleo_fw::j2_banco::prepara_crc_unidad();
             info!("carga_j2: la unidad CRC da el CRC-16/CCITT-FALSE (0x29B1 y largos 0 a 71)");
         }
-        let juez: fn(usize, &[u8]) -> bool = if cfg!(feature = "crc-bits") {
+        #[cfg(feature = "crc-sobre")]
+        {
+            sam17_nucleo_fw::j2_banco::prepara_registro_banco();
+            info!("carga_j2: el juez decodifica el sobre de un registro de 24 bytes");
+        }
+        let juez: fn(usize, &[u8]) -> bool = if cfg!(feature = "crc-sobre") {
+            sam17_nucleo_fw::j2_banco::juez_sobre_sin_modulo
+        } else if cfg!(feature = "crc-bits") {
             sam17_nucleo_fw::j2_banco::juez_crc_bits
         } else if cfg!(feature = "crc-tabla") {
             sam17_nucleo_fw::j2_banco::juez_crc_tabla

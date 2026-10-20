@@ -36,10 +36,12 @@
 //!
 //! **Es el sustituto de bench del CRC del sobre**, no el juez de verdad. La
 //! cabecera del J2 pone un sobre con su CRC en cada giro y el maestro lo
-//! valida (`2026-09-02-cabecera-j2-design.md`, D6.1); mientras esa cabecera no
-//! este en codigo (#267) el banco necesita algo que distinga *"el modulo
-//! contesto bien"* de *"el modulo devolvio basura"*, y esto es lo mas simple
-//! que lo hace. **Lo retira #267**, y con el se va este archivo entero.
+//! valida (`2026-09-02-cabecera-j2-design.md`, D6.1); antes de que el sobre
+//! estuviera en codigo el banco necesitaba algo que distinguiera *"el modulo
+//! contesto bien"* de *"el modulo devolvio basura"*, y esto era lo mas simple
+//! que lo hacia. El juez de verdad es [`juez_sobre`], con el sobre de
+//! `core::j2`; el patron se queda porque el esclavo del banco lo publica y las
+//! pruebas del cable lo leen.
 //!
 //! Vive aparte de [`crate::j2_ejecutor`] a proposito: el ejecutor sobrevive a
 //! la cabecera y el banco no. El ejecutor no conoce este modulo -- toma
@@ -51,7 +53,10 @@
 //! (spec del maestro D4, y la enmienda al papel del modulo: `SPE = 0` →
 //! `SPE = 1` antes de rearmar el DMA).
 
+use core::cell::UnsafeCell;
+
 use embassy_stm32::{dma, pac, peripherals, Peri};
+use sam17_nucleo_core::j2;
 use sam17_nucleo_core::maestro_j2::{Tsize, PERIODO_GIRO_US};
 
 use crate::j2_esclavo::{Esclavo, IsrCs};
@@ -669,6 +674,48 @@ pub fn juez_crc_tabla(n: usize, subida: &[u8]) -> bool {
 pub fn juez_crc_unidad(n: usize, subida: &[u8]) -> bool {
     crc_del_sobre(subida, crc_unidad);
     juez_del_banco(n, subida)
+}
+
+/// El juez de verdad (cabecera del J2, D2 y D8): la subida vale si su sobre lo dice, con el CRC
+/// por la tabla de la DTCM (ficha I). El ultimo byte clocado es la cola de D6.4 y no entra, asi
+/// que el registro tiene que caber en lo de antes: es el `largo + 7` que el cerebro exige para
+/// leerlo (D6.2).
+pub fn juez_sobre(_n: usize, subida: &[u8]) -> bool {
+    j2::decodificar(&TABLA_CRC, &subida[..subida.len().saturating_sub(1)]).is_ok()
+}
+
+/// La ventana de subida de la Voz, sobre incluido (cabecera, D6.3).
+const VENTANA_VOZ: usize = 24;
+
+/// Lo que publicaria el modulo en `carga_j2`, donde no hay modulo: un registro que llena la
+/// ventana de la Voz, y despues relleno. El tipo es `JACKS` (`0x90`), cuya carga es de otro
+/// papel; aqui son 18 bytes de prueba. Vive en la DTCM, como `local_subida`, donde el
+/// planificador copia cada subida antes de pasarsela al juez.
+struct Registro(UnsafeCell<[u8; LARGO_BANCO]>);
+// SAFETY: lo escribe `prepara_registro_banco` antes de `lanzar`; despues solo se lee.
+unsafe impl Sync for Registro {}
+#[cfg_attr(feature = "j2-tcm", link_section = ".dtcm")]
+static REGISTRO_BANCO: Registro = Registro(UnsafeCell::new([0; LARGO_BANCO]));
+
+/// Escribe [`REGISTRO_BANCO`] con `j2::codificar` y comprueba que [`juez_sobre`] lo acepta.
+pub fn prepara_registro_banco() {
+    let carga: [u8; VENTANA_VOZ - j2::SOBRE] = core::array::from_fn(|i| i as u8);
+    // SAFETY: ver `Registro`.
+    let r = unsafe { &mut *REGISTRO_BANCO.0.get() };
+    assert_eq!(
+        j2::codificar(&TABLA_CRC, 0x90, 1, &carga, r),
+        Some(VENTANA_VOZ)
+    );
+    assert!(juez_sobre(RANURA_BANCO, r));
+}
+
+/// [`juez_sobre`] sobre [`REGISTRO_BANCO`], con el largo clocado, en vez de sobre lo que trajo el
+/// cable: sin modulo, el ruido del `MISO` se rechaza en los dos primeros bytes, sin llegar al CRC,
+/// y la medida saldria corta.
+pub fn juez_sobre_sin_modulo(n: usize, subida: &[u8]) -> bool {
+    // SAFETY: ver `Registro`.
+    let r = unsafe { &*REGISTRO_BANCO.0.get() };
+    r.get(..subida.len()).is_some_and(|r| juez_sobre(n, r))
 }
 
 /// Enciende la unidad CRC con el CRC-16/CCITT-FALSE (polinomio de 16 bits `0x1021`, inicial

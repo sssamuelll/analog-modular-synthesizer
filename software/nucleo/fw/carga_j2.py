@@ -358,7 +358,7 @@ def main() -> None:
     features = ["perfil"] + (["reloj-hub"] if "--hub" in sys.argv else [])
     if "--tic" in sys.argv:
         features = ["perfil", "tic-fino", "reloj-hub", "transporte-tic", "sin-componer", "ranuras-3",
-                    "j2-tcm", "crc-tabla"]
+                    "j2-tcm", "crc-sobre"]
     elif "--isr" in sys.argv:
         features.append("transporte-isr")
     if "--ranuras" in sys.argv:
