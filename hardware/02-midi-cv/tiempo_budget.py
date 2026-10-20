@@ -35,7 +35,7 @@ umbral significa que el oyente mas fino si lo nota.
 # Era «72 bits a 10 MHz», el contrato congelado del modulo 3. Ese contrato
 # paso a dialecto legado: el evento viaja por el enlace privado de la Voz, y
 # lo que puede tener delante en ese enlace es su trama mas larga declarada
-# (hoy el bloque de tono de 288 bits) al reloj al que ESE enlace corre. Las
+# (hoy el SET de dieciseis, 824 bits) al reloj al que ESE enlace corre. Las
 # dos cosas las da trama_j2_budget.py; aqui no se declara ninguna.
 import trama_j2_budget as tj
 
