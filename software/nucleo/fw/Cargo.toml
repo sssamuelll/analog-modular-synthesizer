@@ -90,6 +90,10 @@ transporte-isr = []
 # del 17-10) en `carga_j2` y `resistencia_j2`, en lugar del ejecutor. Una ranura de banco
 # por SPI, mas las de relleno que pidan `ranuras-2` y `ranuras-3`.
 transporte-tic = []
+# El RTT de defmt sin bloqueo: si el host (probe-rs) desaparece, la firmware descarta lo que no
+# cabe en el bufer en vez de esperar con las interrupciones apagadas. Para las corridas de dias
+# (`resistencia_j2`), donde un reenganche tardio no puede contar el cuelgue como fallos.
+rtt-sin-bloqueo = ["defmt-rtt/disable-blocking-mode"]
 # Fallos a pedido para los binarios de recuperacion del transporte por tic: envenenar una
 # ranura y forzar la escalada del GPDMA1. Solo para el banco.
 inyeccion = ["transporte-tic"]

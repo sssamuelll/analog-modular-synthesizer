@@ -10,6 +10,7 @@ pub mod atribucion;
 pub mod bahia;
 pub mod bahia_serie;
 pub mod buzones_j2;
+pub mod cuenta_larga;
 pub mod descriptor;
 pub mod descubrimiento;
 pub mod dialecto_voz;
