@@ -47,8 +47,23 @@
 //! se publican en su propia linea junto a `plazos_vencidos`, que es la que las
 //! discrimina.
 //!
+//! **Con `--features transporte-tic,reloj-hub`: el soak del instrumento.** El transporte por tic
+//! de `j2_tic` a 8 kHz y el nucleo a 800 MHz con las dos caches, como `tic_banco`: es el lazo
+//! que cuenta para el horizonte (`recuperacion_j2_budget.py` solo suma las filas con al menos
+//! el 90 % de 8 kHz). La fila es la misma, de doce columnas; cambia lo que la rodea:
+//!
+//! * **Una fila por hora y nada mas.** Sin la linea de carga de cada minuto ni el medidor del
+//!   hilo: no hacen falta para el lazo del hub.
+//! * **Los `info!` no ensucian el tic.** Medido el 21-10 en la Nucleo: 375 impresiones a 8 kHz,
+//!   sin sincronizarlas con el tic, y cero tics tardios y cero retraso de entrada. La linea
+//!   `tic,` de cada fila deja el testigo a la vista por si cambiara.
+//! * **`giros` va en 64 bits** ([`CuentaLarga`]): el contador de 32 da la vuelta a las 149 h.
+//! * Con `--features corta` la fila sale cada 10 s y la columna `horas` queda en 0: para
+//!   probar el montaje en la placa, y que la puerta no la cuente.
+//!
 //! ```bash
 //! cargo run --release --bin resistencia_j2
+//! cargo run --release --features transporte-tic,reloj-hub --bin resistencia_j2
 //! ```
 
 use core::sync::atomic::Ordering;
@@ -57,16 +72,29 @@ use defmt::info;
 use embassy_executor::Spawner;
 use embassy_stm32::interrupt;
 use embassy_time::{Duration, Ticker};
+use sam17_nucleo_core::cuenta_larga::CuentaLarga;
+#[cfg(feature = "transporte-tic")]
+use sam17_nucleo_core::maestro_j2::PERIODO_GIRO_US;
+#[cfg(not(feature = "transporte-tic"))]
 use sam17_nucleo_fw::carga::{vueltas_del_hilo, Medidor};
 use sam17_nucleo_fw::j2_banco::{
     bajada_del_banco, esclavo_del_banco, juez_del_banco, maestro_del_banco, LARGO_BANCO,
     RANURA_BANCO,
 };
-use sam17_nucleo_fw::j2_ejecutor::{cuentas, iniciar_ejecutor, lanzar_ranuras};
+#[cfg(not(feature = "transporte-tic"))]
+use sam17_nucleo_fw::j2_ejecutor::lanzar_ranuras;
+use sam17_nucleo_fw::j2_ejecutor::{cuentas, iniciar_ejecutor};
 use sam17_nucleo_fw::j2_esclavo;
 use sam17_nucleo_fw::j2_spi::{Config, ESCALADAS_GPDMA};
+#[cfg(feature = "transporte-tic")]
+use sam17_nucleo_fw::j2_tic;
 use sam17_nucleo_fw::usb;
 use {defmt_rtt as _, panic_probe as _};
+
+#[cfg(all(feature = "transporte-tic", not(feature = "reloj-hub")))]
+compile_error!(
+    "transporte-tic a 8 kHz pide el nucleo a 800 MHz: --features transporte-tic,reloj-hub"
+);
 
 /// El reloj del enlace para esta tanda. **Piso legado, 10 MHz** (J2 punto a
 /// punto D2; `F_CONTRATO_HZ` de `hardware/02-midi-cv/trama_j2_budget.py:89`).
@@ -88,7 +116,17 @@ const F_SCK_HZ: u32 = 10_000_000;
 /// publicar ni una fila (#428). A 1 ms el ejecutor trabaja al 45 % y al hilo le
 /// queda el resto. La fila vale para **1 kHz**, no para 8; el instrumento de
 /// verdad lo mide `carga_j2`.
+///
+/// Con `transporte-tic` es el del instrumento, 125 us: el tic gasta ~2 000 ciclos por giro y a
+/// 800 MHz sobra CPU (`tic_banco`).
+#[cfg(not(feature = "transporte-tic"))]
 const PERIODO_BANCO_US: u32 = 1_000;
+#[cfg(feature = "transporte-tic")]
+const PERIODO_BANCO_US: u32 = PERIODO_GIRO_US;
+
+/// Cada cuanto sale la fila, en segundos: la hora. Con `corta`, 10 s para probar el montaje.
+#[cfg(feature = "transporte-tic")]
+const FILA_CADA_S: u64 = if cfg!(feature = "corta") { 10 } else { 3_600 };
 
 /// El retardo de produccion: 4 cuartos, o sea `>= 1 T_SCK` (D2, enmienda del
 /// 11-09). El barrido de los otros cinco valores es `barrido_retardo`.
@@ -129,6 +167,9 @@ impl defmt::Format for Mhz {
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
+    #[cfg(feature = "transporte-tic")]
+    let config = usb::configuracion_hub();
+    #[cfg(not(feature = "transporte-tic"))]
     let config = usb::configuracion();
     let f_cpu = usb::f_cpu_hz(&config);
     let p = usb::iniciar(config);
@@ -156,8 +197,13 @@ async fn main(spawner: Spawner) {
     // una fila etiquetada con el pedido mentiria sobre a que reloj se midio.
     let f_sck_hz = ranura.f_sck_hz();
     info!(
-        "resistencia_j2: firmware {}, f_sck {} Hz (pedido {}), retardo {} cuartos, f_cpu {} Hz, periodo {} us",
+        "resistencia_j2: firmware {}, transporte {}, f_sck {} Hz (pedido {}), retardo {} cuartos, f_cpu {} Hz, periodo {} us",
         env!("SAM17_GIT"),
+        if cfg!(feature = "transporte-tic") {
+            "tic"
+        } else {
+            "ejecutor"
+        },
         f_sck_hz,
         F_SCK_HZ,
         RETARDO_CUARTOS,
@@ -168,16 +214,24 @@ async fn main(spawner: Spawner) {
     let esclavo = esclavo_del_banco(p.PE2, p.PE14, p.PE13, p.PE11, p.GPDMA1_CH2, p.GPDMA1_CH3);
 
     // La CPU que le queda al hilo, medida por el hilo: la base se calibra ahora,
-    // con el J2 sin arrancar (`carga`).
-    spawner.spawn(defmt::unwrap!(vueltas_del_hilo()));
-    let mut medidor = Medidor::calibrar(500).await;
-    info!("carga: base {} vueltas/s", medidor.base_por_s());
+    // con el J2 sin arrancar (`carga`). Con el tic no se mide: el hilo no imprime
+    // entre filas (cabecera).
+    #[cfg(not(feature = "transporte-tic"))]
+    let mut medidor = {
+        spawner.spawn(defmt::unwrap!(vueltas_del_hilo()));
+        let medidor = Medidor::calibrar(500).await;
+        info!("carga: base {} vueltas/s", medidor.base_por_s());
+        medidor
+    };
+    #[cfg(feature = "transporte-tic")]
+    let _ = spawner;
 
     // El esclavo nace ANTES que el maestro: el maestro clocaria desde el primer
     // instante contra un esclavo que no existe y esos giros saldrian como
     // `subidas_malas` en la fila.
     let spawner_j2 = iniciar_ejecutor(interrupt::GFXTIM);
     spawner_j2.spawn(defmt::unwrap!(j2_esclavo::tarea_esclavo(esclavo)));
+    #[cfg(not(feature = "transporte-tic"))]
     lanzar_ranuras(
         spawner_j2,
         [Some(ranura), None, None, None, None, None],
@@ -185,36 +239,80 @@ async fn main(spawner: Spawner) {
         juez_del_banco,
         PERIODO_BANCO_US,
     );
+    #[cfg(feature = "transporte-tic")]
+    {
+        let _ = spawner_j2;
+        let mut ranuras = [const { None }; 6];
+        ranuras[RANURA_BANCO] = Some(ranura);
+        j2_tic::lanzar(
+            ranuras,
+            p.TIM7,
+            PERIODO_BANCO_US,
+            f_cpu,
+            bajada_del_banco,
+            juez_del_banco,
+        );
+        // La D-cache solo se enciende con la region de los bufferes ya en la MPU, y
+        // `lanzar` la acaba de programar (como en `tic_banco`).
+        // SAFETY: nadie mas toca el SCB en este binario.
+        unsafe {
+            let mut cp = cortex_m::Peripherals::steal();
+            cp.SCB.enable_icache();
+            cp.SCB.enable_dcache(&mut cp.CPUID);
+        }
+    }
+
+    let mut giros = CuentaLarga::nueva();
 
     // Una fila con `horas=0` nada mas arrancar. No es una medida -- todo esta a
     // cero y el ejecutor lleva microsegundos corriendo -- y por eso lleva su
     // hora puesta: es para **validar el formato** delante de quien va a copiar
     // filas durante 24 h, en vez de descubrir a la hora que una columna baila.
-    publicar(0, f_sck_hz);
+    publicar(0, f_sck_hz, &mut giros);
+
+    // Con el tic, solo la fila de cada hora (o de cada 10 s con `corta`).
+    #[cfg(feature = "transporte-tic")]
+    {
+        let mut ticker = Ticker::every(Duration::from_secs(FILA_CADA_S));
+        let mut filas = 0u32;
+        loop {
+            ticker.next().await;
+            filas += 1;
+            publicar(
+                if cfg!(feature = "corta") { 0 } else { filas },
+                f_sck_hz,
+                &mut giros,
+            );
+        }
+    }
 
     // Un minuto de tic, una linea de carga por tic y la fila de la hora cada 60.
     // La carga es la CPU libre para el hilo (`carga`): un instrumento sano la
     // deja casi entera; la Nucleo a 64 MHz sin caches no (#428).
-    let mut ticker = Ticker::every(Duration::from_secs(60));
-    let mut minutos = 0u32;
-    loop {
-        ticker.next().await;
-        minutos += 1;
-        info!(
-            "carga,minuto={},hilo_libre_permil={}",
-            minutos,
-            medidor.libre_por_mil()
-        );
-        if minutos % 60 == 0 {
-            publicar(minutos / 60, f_sck_hz);
+    #[cfg(not(feature = "transporte-tic"))]
+    {
+        let mut ticker = Ticker::every(Duration::from_secs(60));
+        let mut minutos = 0u32;
+        loop {
+            ticker.next().await;
+            minutos += 1;
+            info!(
+                "carga,minuto={},hilo_libre_permil={}",
+                minutos,
+                medidor.libre_por_mil()
+            );
+            if minutos % 60 == 0 {
+                publicar(minutos / 60, f_sck_hz, &mut giros);
+            }
         }
     }
 }
 
 /// Las tres lineas de cada hora. Una sola funcion para la de `horas=0` y las de
 /// verdad: dos copias de una fila de doce columnas es como se separan.
-fn publicar(horas: u32, f_sck_hz: u32) {
+fn publicar(horas: u32, f_sck_hz: u32, giros: &mut CuentaLarga) {
     let c = cuentas(RANURA_BANCO);
+    let giros = giros.anota(c.giros);
 
     // El firmware con el que se midio, en su propia linea y **fuera** de las
     // doce columnas: la cabecera de `resistencia_j2.csv` es de R-MJ8 y no se
@@ -227,14 +325,14 @@ fn publicar(horas: u32, f_sck_hz: u32) {
     // vacia -- la pone quien copia la fila --, y por eso hay dos comas
     // seguidas antes de `placa`.
     info!(
-        "{=usize},{=str},{=usize},{=str},{},{=u32},{=u32},{=u32},{=u32},{=u32},,{=str}",
+        "{=usize},{=str},{=usize},{=str},{},{=u32},{=u64},{=u32},{=u32},{=u32},,{=str}",
         RANURA_BANCO,
         INSTANCIA,
         LARGO_BANCO,
         NSS,
         Mhz(f_sck_hz),
         horas,
-        c.giros,
+        giros,
         c.plazos_vencidos,
         c.eot_tardios,
         c.subidas_malas,
@@ -256,6 +354,11 @@ fn publicar(horas: u32, f_sck_hz: u32) {
         c.inestable,
         c.muda,
     );
+    // Los testigos del tic, en la propia fila de la hora: si un `info!` ensucio el tic, sale aqui.
+    #[cfg(feature = "transporte-tic")]
+    {
+        info!("tic,{}", j2_tic::testigos());
+    }
 }
 
 /// Las escaladas del GPDMA que son **del maestro**.
