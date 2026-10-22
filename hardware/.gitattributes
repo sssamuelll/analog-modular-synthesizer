@@ -1,0 +1,4 @@
+# Los guiones, CSV y ficheros de KiCad de hardware/ van en LF. El cierre de la
+# fuente v5 (#474) llego con 25 ficheros en CRLF y el diff de v4/ pasaba de
+# 156 lineas reales a ~4800: el cambio de fondo quedaba escondido en el ruido.
+* text=auto eol=lf
