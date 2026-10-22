@@ -93,13 +93,36 @@ RIZADO_VPP = {"rack+12": 0.150, "rack-12": 0.150, "rack+5": 0.080}
 # U1 es el LT1963A desde D-F8 y su maximo absoluto de entrada son +-20,0 V
 # (lt1963a-rev-g-2021-02.pdf p. 2). El OVP de PS1 (IRM-20-15) llega a 20,25 V
 # sostenidos (meanwell-irm-20-spec-2025-11-21.pdf p. 2), lo que sin proteccion
-# deja -0,25 V de margen (#334). El tope M3 (TI TPS26630, tps2663.pdf p. 6-8:
+# deja -0,25 V de margen (#334). El tope M3 (TI TPS26631, tps2663.pdf p. 6-8:
 # V(OVPR) = 1,176..1,224 V, corte en 8,5..14 us, antes del filtro LC + TVS
 # Bourns SMBJ16A, bourns_smbj.pdf p. 2, en U1 IN) corta a 16,92 V maximos de
-# umbral y sujeta el pico inductivo tras el LC en 18,08 V <= 20,0 V.
-TOPE_U1_REF = "TI TPS26630 + Bourns SMBJ16A"
-V_DISPARO_TOPE_U1_MAX_V = 16.92     # tps2663.pdf p. 6: V(OVPR)=1,224 V + divisor 0,1 %
-V_PICO_TOPE_U1_MAX_V = 18.08        # pico en U1 IN con t_OFF(dly)=14 us (p. 8) + SMBJ16A
+# umbral y sujeta el pico inductivo tras el LC por debajo de 20,0 V.
+# EL PICO NO SE ESCRIBE: SE CALCULA. Hasta #474 aqui habia un 18,08 a mano y
+# el guarda lo comparaba con los 20,0 V de U1 -- una puerta que no podia
+# ponerse roja por ningun cambio de diseno. Ahora sale del modelo RK4 de la v5
+# (v5/check_absmax.py::escalon_lc), que simula el LC y el divisor del OVP que
+# monta la placa (los lee de v5/bom.csv), con el fallo de ESTA rama: el OVP
+# de PS1 a 20,25 V sostenidos.
+def _modelo_tope_v5():
+    import importlib.util
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "v5", "check_absmax.py")
+    spec = importlib.util.spec_from_file_location("check_absmax_v5", ruta)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+TOPE_V5 = _modelo_tope_v5()
+TOPE_U1_REF = "TI TPS26631 + Bourns SMBJ16A (v5)"
+V_DISPARO_TOPE_U1_MAX_V = TOPE_V5.V_DISPARO_MAX_U1_V
+T_CORTE_TOPE_US = TOPE_V5.T_CORTE_OVP_MAX_S * 1e6   # tps2663.pdf p. 8: 14 us max
+
+
+def v_pico_tope_u1_v(v_fallo_v: float, t_corte_us: float = T_CORTE_TOPE_US) -> float:
+    """Pico en U1 IN con el tope M3 cortando antes del LC y el SMBJ16A en U1."""
+    return TOPE_V5.escalon_lc(v_fallo_v=v_fallo_v, t_corte_s=t_corte_us * 1e-6,
+                              sensa_antes_del_lc=True, con_efuse=True,
+                              con_tvs=True)["v_pico_v"]
 
 # --- el crowbar de D-F6: piezas y cifras leidas de hoja (#340) ------------
 # SCR: NXP BT151-500R (docs/reference/datasheets/nxp-bt151-500r.pdf, Rev. 05).
@@ -174,7 +197,7 @@ def _guarda_tope_u1(p: dict[str, float]) -> None:
     filas = leer_absmax()
     u1 = next(f for f in filas if f["victima"] == "U1 LT1963A")
     lim_u1 = float(u1["v_absmax"])
-    v_pico = p["v_pico_tope_u1_v"]
+    v_pico = v_pico_tope_u1_v(p["v_fallo_tope_v"], p["t_corte_tope_us"])
     assert v_pico < lim_u1, (
         f"U1 LT1963A fuera de maximo absoluto (#334): le llegan {v_pico:.2f} V "
         f"contra {lim_u1:.1f} V de limite (lt1963a-rev-g-2021-02.pdf p. 2)")
@@ -211,7 +234,8 @@ def _guarda_enganche(p: dict[str, float]) -> None:
 
 
 P_BASE = {
-    "v_pico_tope_u1_v": V_PICO_TOPE_U1_MAX_V,
+    "v_fallo_tope_v": OVP_V["PS1/PS2 (IRM-20-15)"][1],
+    "t_corte_tope_us": T_CORTE_TOPE_US,
     "v_disparo_v": V_DISPARO_V["rack+12"],
     "riel_es_5v": 0.0,
     "i_mantenimiento_a": I_MANTENIMIENTO_MAX_A,
@@ -232,7 +256,8 @@ def main() -> int:
     assert ovp > lim_u1, (
         f"si el OVP de PS1 ({ovp:.2f} V) cupiera en los {lim_u1:.1f} V de U1 "
         f"LT1963A, la #334 y el tope M3 no tendrian razon de ser")
-    for nombre, v_efectivo in (("U1 LT1963A", V_PICO_TOPE_U1_MAX_V),
+    v_pico_u1 = v_pico_tope_u1_v(ovp)
+    for nombre, v_efectivo in (("U1 LT1963A", v_pico_u1),
                                ("U2 LT3015", ovp)):
         fila = next(f for f in filas if f["victima"] == nombre)
         lim = float(fila["v_absmax"])
@@ -245,10 +270,10 @@ def main() -> int:
     print()
     print(f"  #334 cerrada con el tope M3 ({TOPE_U1_REF}): sin tope, el OVP de")
     print(f"  PS1 llega a {ovp:.2f} V > {lim_u1:.1f} V (margen {lim_u1 - ovp:+.2f} V);")
-    print(f"  con el TPS26630 antes del LC (disparo <= {V_DISPARO_TOPE_U1_MAX_V:.2f} V,")
+    print(f"  con el TPS26631 antes del LC (disparo <= {V_DISPARO_TOPE_U1_MAX_V:.2f} V,")
     print("  corte <= 14 us, tps2663.pdf p. 6-8) y el SMBJ16A en U1 IN, el")
-    print(f"  pico queda en {V_PICO_TOPE_U1_MAX_V:.2f} V (margen "
-          f"{lim_u1 - V_PICO_TOPE_U1_MAX_V:+.2f} V).")
+    print(f"  modelo RK4 de la v5 da {v_pico_u1:.2f} V de pico (margen "
+          f"{lim_u1 - v_pico_u1:+.2f} V).")
     print("\n  Y el fallo DOBLE (PS1 en OVP y U1 en corto), que se documenta y")
     print("  no bloquea porque son dos causas independientes:")
     for nombre in ("LT3045", "LT3094"):
@@ -369,10 +394,13 @@ def main() -> int:
     print(f"  canario: con mas de {v:.2f} A de corriente de mantenimiento, el "
           f"SCR se suelta")
     _guarda_tope_u1(dict(P_BASE))
-    v_u1 = borde_rojo(_guarda_tope_u1, dict(P_BASE), "v_pico_tope_u1_v",
-                      0.0, 30.0, "fuera de maximo absoluto")
-    print(f"  canario U1: por encima de {v_u1:.2f} V de tope, U1 (LT1963A) "
-          f"sale de maximo absoluto")
+    # El canario mueve una CAUSA (el fallo que llega), no el resultado: con
+    # el pico como parametro el borde salia en el propio limite, que es una
+    # tautologia.
+    v_u1 = borde_rojo(_guarda_tope_u1, dict(P_BASE), "v_fallo_tope_v",
+                      OVP_V["PS1/PS2 (IRM-20-15)"][1], 60.0, "fuera de maximo absoluto")
+    print(f"  canario U1: con un fallo de mas de {v_u1:.1f} V delante del tope, "
+          f"U1 (LT1963A) sale de maximo absoluto")
 
     print(f"\n  ESTIMADO: {len(ESTIMADOS)}; HUECO: {len(HUECOS)}")
     for e in ESTIMADOS:

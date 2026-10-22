@@ -165,7 +165,7 @@ def _puntos() -> list[Punto]:
     p.append(P("1", "caida_LM74502_ideal_diode", "mV",
                "M5 / L04: caida directa del controlador de diodo ideal + FET inverso",
                hi=50.0))
-    p.append(P("1", "caida_TPS26630_efuse_nominal", "mV",
+    p.append(P("1", "caida_TPS26631_efuse_nominal", "mV",
                "margen_budget: caida de conduccion del eFuse (53 mohm a 2.69 A)",
                predicho=143.0, tol=40.0))
     for ref in MODULOS_DCDC:
@@ -205,7 +205,7 @@ def _puntos() -> list[Punto]:
                "margen_budget.margen_v5_v('U2'): holgura de dropout de U2 (> 300 mV requerido)",
                lo=0.300, predicho=margen_budget.margen_v5_v("U2"), tol=0.100))
     p.append(P("2", "rizado_tras_LC_20MHz", "Vpp",
-               "rizado_budget: rizado de conmutacion residual tras filtro LC de 10 uH + 47 uF",
+               "rizado_budget: rizado de conmutacion residual tras filtro LC de 22 uH + 47 uF",
                hi=0.003))
     p.append(P("2", "pico_LC_en_resonancia", "dB",
                "rizado_budget: atenuacion en resonancia (filtro LC amortiguado criticamente)",
@@ -361,7 +361,7 @@ def _plantilla(puntos: list[Punto]) -> None:
         if r.get("medido", "").strip() and k not in {pt.clave for pt in puntos}
     ]
     with open(CSV_PATH, "w", encoding="utf-8", newline="") as f:
-        w = csv.writer(f)
+        w = csv.writer(f, lineterminator="\n")
         w.writerow(COLS)
         for pt in puntos:
             pred = "" if pt.predicho is None else f"{pt.predicho:g}"

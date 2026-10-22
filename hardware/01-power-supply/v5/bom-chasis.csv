@@ -1,0 +1,5 @@
+refs,value,fabricante,referencia,quantity,supplier,notes
+X1,Conector de panel 4 polos 24 V,Kycon,KPJX-PM-4S,1,Kycon / Mouser,"Va en el PANEL del chasis, no en la PCB: es de montaje en panel con dos tornillos M2.5 y sus patillas salen axiales (kycon_KPJX-PM-4S.pdf). Pines 1 y 2 = +24 V, 3 y 4 = retorno (2 por polo en paralelo, 7.5 A por pin a 48 V). Se cablea a J1 de la placa: 1+2 -> J1.1 (+24V_RAW), 3+4 -> J1.2 (GND24)."
+X1P,Clavija 4 polos del cordon,Kycon,KPPX-4P,1,Kycon / Mouser,"La que lleva el cordon del ladrillo (kycon_KPPX-4P.pdf). Solo si el cordon se hace a medida."
+—,Cable 16 AWG rojo y negro,—,—,0.3 m,—,"De X1 a J1. 141 mV de caida con 2 m de cordon a 2.68 A (ladrillo_budget.py); el tramo interno es despreciable frente a eso."
+—,Tornillo M2.5 x 8 + tuerca,—,—,2,—,"Fijacion de X1 al panel (kycon_KPJX-PM-4S.pdf: 6.60 mm + espesor de panel)."

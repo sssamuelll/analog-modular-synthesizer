@@ -36,6 +36,25 @@ establecidos en D-V4 (M1, M2, D-F2) y el censo T15..T26:
 """
 from __future__ import annotations
 
+import os
+import sys
+
+DIR = os.path.dirname(os.path.abspath(__file__))
+if DIR not in sys.path:
+    sys.path.insert(0, DIR)
+
+
+def _pico_tope_u1() -> float:
+    """El pico en VRAW+ lo da el modelo RK4 de check_absmax.py con las piezas
+    de la BOM, no un 18,08 copiado (#474)."""
+    import check_absmax
+    return check_absmax.escalon_lc(v_fallo_v=36.0)["v_pico_v"]
+
+
+def _disparo_alto_rack12() -> float:
+    import check_absmax
+    return check_absmax.RACK_RIELES["rack-12"]["disparo_v"] + check_absmax.TOL_DISPARO_TL431BI_V
+
 
 # Limites garantizados de hojas primarias (INA226, ADS1115, TMP1075, ISO1541):
 INA_CM_MIN, INA_CM_MAX = -0.30, 40.0
@@ -67,7 +86,7 @@ CANALES_ADS_V5 = [
     ("AIN1", "VRAW+ crudo", 0.0, [
         ("nominal recortado", 15.50),
         ("maximo sano en vacio", 16.01),
-        ("tope eFuse TPS26630", 18.08),
+        ("tope eFuse TPS26631 (modelo RK4)", _pico_tope_u1()),
         ("apagada", 0.0),
     ], False),
     ("AIN2", "VRAW- crudo", ADS_VDD, [
@@ -79,7 +98,7 @@ CANALES_ADS_V5 = [
     ("AIN3", "-12 V rack", ADS_VDD, [
         ("nominal", -12.00),
         ("OVP max THN 30-2422WI", -16.56),
-        ("disparo crowbar D-F6", -14.30),
+        ("disparo crowbar D-F6 (borde alto)", -_disparo_alto_rack12()),
         ("apagada", 0.0),
     ], True),
 ]
@@ -93,8 +112,8 @@ FALLO_VDD_CANALES = [
 I2C_V5 = [
     ("U8",  "INA226",  0x40, "A1=GND, A0=GND (+12 V ultra)"),
     ("U12", "INA226",  0x41, "A1=GND, A0=VDD (+5 V aux U3)"),
-    ("U13", "INA226",  0x44, "A1=SDA, A0=GND (+12 V rack, D-F2)"),
-    ("U14", "INA226",  0x45, "A1=SDA, A0=VDD (+5 V rack, D-F2)"),
+    ("U13", "INA226",  0x44, "A1=VS, A0=GND (+12 V rack, D-F2)"),
+    ("U14", "INA226",  0x45, "A1=VS, A0=VS (+5 V rack, D-F2)"),
     ("U10", "ADS1115", 0x48, "ADDR=GND (4 canales rieles y crudos)"),
     ("U11", "TMP1075", 0x49, "A2=GND, A1=GND, A0=VDD (temperatura placa)"),
 ]
@@ -106,8 +125,8 @@ ALIMENTACION_V5 = [
     ("U14", "INA226",       5.00, 6.0),
     ("U10", "ADS1115",      5.00, 7.0),
     ("U11", "TMP1075",      5.00, 6.5),
-    ("U9",  "ISO1541 lado 2", 5.00, 6.0),
-    ("U9",  "ISO1541 lado 1", 3.30, 6.0),
+    ("U9",  "ISO1541 lado 1 (+5V_AUX)", 5.00, 6.0),
+    ("U9",  "ISO1541 lado 2 (+3V3_DIG)", 3.30, 6.0),
 ]
 
 

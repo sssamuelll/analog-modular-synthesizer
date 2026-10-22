@@ -7,7 +7,7 @@ paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
 0,aislamiento_pantalla_retorno_dedicado,Mohm,>= 1,,,,,,T25: retorno de pantalla aislado de GNDA dentro de la fuente
 1,tension_ladrillo_vacio,V,23.52 .. 24.48,24,0.48,,,,T09 / L04: salida continua nominal del ladrillo 24 V en vacio
 1,caida_LM74502_ideal_diode,mV,<= 50,,,,,,M5 / L04: caida directa del controlador de diodo ideal + FET inverso
-1,caida_TPS26630_efuse_nominal,mV,103 .. 183,143,40,,,,margen_budget: caida de conduccion del eFuse (53 mohm a 2.69 A)
+1,caida_TPS26631_efuse_nominal,mV,103 .. 183,143,40,,,,margen_budget: caida de conduccion del eFuse (53 mohm a 2.69 A)
 1,THN30_mas12_vacio,V,11.76 .. 12.24,12,0.24,,,,M1 / T10: THN30_mas12 en vacio a 24 V de entrada
 1,THN30_mas12_a_nominal,V,11.76 .. 12.24,12,0.24,,,,M1 / T10: THN30_mas12 con carga resistiva a corriente nominal
 1,THN30_mas12_rizado_20MHz,Vpp,<= 0.1,,,,,,T12 / L05: rizado y ruido de conmutacion a 20 MHz de ancho de banda
@@ -33,7 +33,7 @@ paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
 2,menos15_maximo_con_carga,V,>= 14.9303,,,,,,margen_budget.v_entrada_minima_rama_v('U2'): tension minima que alcanza U2 LT3015
 2,margen_dropout_U1_v,V,0.3 .. 0.94573,0.84573,0.1,,,,margen_budget.margen_v5_v('U1'): holgura de dropout de U1 (> 300 mV requerido)
 2,margen_dropout_U2_v,V,0.3 .. 1.19652,1.09652,0.1,,,,margen_budget.margen_v5_v('U2'): holgura de dropout de U2 (> 300 mV requerido)
-2,rizado_tras_LC_20MHz,Vpp,<= 0.003,,,,,,rizado_budget: rizado de conmutacion residual tras filtro LC de 10 uH + 47 uF
+2,rizado_tras_LC_20MHz,Vpp,<= 0.003,,,,,,rizado_budget: rizado de conmutacion residual tras filtro LC de 22 uH + 47 uF
 2,pico_LC_en_resonancia,dB,<= 2.5,,,,,,rizado_budget: atenuacion en resonancia (filtro LC amortiguado criticamente)
 2b,quitar_mas15_caen_los_dos,si/no,= si,,,,,,"M4 / #339: al perder el crudo positivo, el comparador LM393B apaga U1 y U2"
 2b,quitar_menos15_caen_los_dos,si/no,= si,,,,,,"M4 / #339: al perder el crudo negativo, el comparador LM393B apaga U1 y U2"
@@ -80,11 +80,11 @@ paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
 7,temperatura_U1_LT1963A_c,C,<= 90,,,,,,T10 / T27: union de U1 LT1963A disipando 1.85 W con disipador (< 90 C)
 7,temperatura_U2_LT3015_c,C,<= 90,,,,,,T10 / T27: union de U2 LT3015 disipando 1.87 W con disipador (< 90 C)
 7,potencia_derating_ladrillo_45C_w,W,80.5 .. 84.5,82.5,2,,,,"curvas.derating('TE90A2403F01', 45) * 90.0: potencia garantizada del ladrillo a 45 C"
-8,disparo_crowbar_rack+12,V,13.7 .. 14.3,14,0.3,,,,check_absmax: disparo de proteccion en rack+12
-8,disparo_crowbar_rack-12,V,13.7 .. 14.3,14,0.3,,,,check_absmax: disparo de proteccion en rack-12
-8,disparo_crowbar_rack+5,V,5.5 .. 6.1,5.8,0.3,,,,check_absmax: disparo de proteccion en rack+5
-8,disparo_crowbar_digital+5,V,5.35 .. 5.95,5.65,0.3,,,,check_absmax: disparo de proteccion en digital+5
+8,disparo_crowbar_rack+12,V,13.4974 .. 14.0974,13.7974,0.3,,,,check_absmax: disparo de proteccion en rack+12
+8,disparo_crowbar_rack-12,V,13.4974 .. 14.0974,13.7974,0.3,,,,check_absmax: disparo de proteccion en rack-12
+8,disparo_crowbar_rack+5,V,5.51335 .. 6.11335,5.81335,0.3,,,,check_absmax: disparo de proteccion en rack+5
+8,disparo_crowbar_digital+5,V,5.36365 .. 5.96365,5.66365,0.3,,,,check_absmax: disparo de proteccion en digital+5
 8,fusible_abre_sin_dano_a_pistas,si/no,= si,,,,,,check_absmax: fusible Bourns SF-1206F corta corriente de falta sin danar PCB
-8,pico_transitorio_U1_con_clamp_v,V,<= 18.5,18.0514,,,,,check_absmax (#334): simulacion RK4 de escalon 36 V con SMBJ16A < 20.0 V absmax
+8,pico_transitorio_U1_con_clamp_v,V,<= 18.5,18.1053,,,,,check_absmax (#334): simulacion RK4 de escalon 36 V con SMBJ16A < 20.0 V absmax
 8,ruido_riel_ultra_20MHz_uvrms,uVrms,<= 0.3,,,,,,rizado_budget: ruido residual total de la cascada en ancho de banda de 20 MHz
 8,ruido_riel_ultra_LNA_10Hz_100kHz_uvrms,uVrms,<= 0.8,,,,,,rizado_budget: ruido en banda de audio 10 Hz - 100 kHz (< 0.80 uVrms)

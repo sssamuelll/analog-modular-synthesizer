@@ -13,7 +13,7 @@ del censo D-V4 (`2026-09-08-censo-dv4-resolucion.md`) y los issues **#334** y
        ladrillo) al filtro LC (`22 uH` + `47 uF` + `0,68 ohm` + `220 uF`).
      - `U1` es el `LT1963A` (D-F8, `lt1963a-rev-g-2021-02.pdf` p. 2), cuyo
        maximo absoluto de entrada es **+-20,0 V**.
-     - Con el eFuse **TI TPS26630** (`tps2663.pdf` p. 6-8: `V(OVPR) = 1,176 ..
+     - Con el eFuse **TI TPS26631** (`tps2663.pdf` p. 6-8: `V(OVPR) = 1,176 ..
        1,224 V`, corte en `8,5..14 us`, `RON <= 53 mohm`) **antes del filtro LC,
        sensando del lado del modulo** (disparo nominal `16,55 V`, borde bajo
        `16,19 V` > maximo sano `16,01 V`, borde alto `16,92 V`) y el TVS
@@ -51,30 +51,46 @@ from __future__ import annotations
 
 import csv
 import os
+import sys
 from typing import Callable
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_PATH = os.path.join(DIR, "absmax.csv")
+if DIR not in sys.path:
+    sys.path.insert(0, DIR)
+
+from bom_valores import valor  # noqa: E402
+
+# EL MODELO SIMULA LAS PIEZAS DE LA PLACA. L, C, Cd, Rd y el divisor del OVP
+# se leen de bom.csv (#474: el modelo llevaba un LC y la BOM otro, y con el de
+# la BOM U1 veia 21,0 V; ningun numero de este fichero lo habria delatado).
 
 # --- Limites de U1 (LT1963A) y parametros del tope M3 (#334) ----------------
 V_ABSMAX_U1_V = 20.0                   # lt1963a-rev-g-2021-02.pdf p. 2
 V_ABSMAX_U2_V = 33.0                   # lt3015-rev-b.pdf p. 2
 V_SANO_MAX_U1_V = 16.012               # de v5/margen_budget.py
-V_DISPARO_NOM_U1_V = 16.55             # divisor 0,1 % sobre V(OVPR)=1,200 V
-TOL_OVPR_TPS26630_FRAC = 0.020         # tps2663.pdf p. 6: 1,176..1,224 V (+-2,0 %)
+V_OVPR_NOM_V = 1.200                   # tps2663.pdf p. 6: V(OVPR) 1,176..1,224 V
+V_DISPARO_NOM_U1_V = V_OVPR_NOM_V * (1.0 + valor("R35") / valor("R36"))
+TOL_OVPR_TPS26631_FRAC = 0.020         # tps2663.pdf p. 6: 1,176..1,224 V (+-2,0 %)
 TOL_DIVISOR_01PCT_FRAC = 0.002         # dos resistencias de 0,1 %
-V_DISPARO_MIN_U1_V = V_DISPARO_NOM_U1_V * (1.0 - TOL_OVPR_TPS26630_FRAC - TOL_DIVISOR_01PCT_FRAC)
-V_DISPARO_MAX_U1_V = V_DISPARO_NOM_U1_V * (1.0 + TOL_OVPR_TPS26630_FRAC + TOL_DIVISOR_01PCT_FRAC)
+V_DISPARO_MIN_U1_V = V_DISPARO_NOM_U1_V * (1.0 - TOL_OVPR_TPS26631_FRAC - TOL_DIVISOR_01PCT_FRAC)
+V_DISPARO_MAX_U1_V = V_DISPARO_NOM_U1_V * (1.0 + TOL_OVPR_TPS26631_FRAC + TOL_DIVISOR_01PCT_FRAC)
 T_CORTE_OVP_MAX_S = 14.0e-6            # tps2663.pdf p. 8: 8,5 us typ, 14 us max
 
 # Parametros del filtro LC amortiguado + TVS Bourns SMBJ16A (bourns_smbj.pdf p. 2)
-L_LC_H = 22.0e-6
-R_SERIE_LC_OHM = 0.053 + 0.030 + 0.050  # TPS26630 (53m) + bobina (30m) + fuente/traza (50m)
-C_LC_F = 47.0e-6
-C_DAMP_F = 220.0e-6
-R_DAMP_OHM = 0.68 + 0.10               # Rd (0,68) + ESR_Cd (0,10)
+L_LC_H = valor("L2")
+# TPS2663x RON max (53m) + bobina (30m, la DCR MAS BAJA amortigua menos: cota
+# pesimista para el pico) + fuente/traza (50m).
+R_SERIE_LC_OHM = 0.053 + 0.030 + 0.050
+C_LC_F = valor("C3")
+C_DAMP_F = valor("C1")
+ESR_CD_OHM = 0.10                      # ESTIMADO: electrolitico de 220 uF (rizado_budget.py v4)
+R_DAMP_OHM = valor("R37") + ESR_CD_OHM
 I_CARGA_U1_A = 0.770                   # 650 mA + 120 mA Iq (#343)
-V_BR_SMBJ16A_V = 17.80                 # bourns_smbj.pdf p. 2: V_BR min 17,8 V
+# bourns_smbj.pdf p. 2: V_BR 17,8..19,7 V a 1 mA. Para el PICO manda el
+# MAXIMO: con el minimo (que es lo que usaba #474) el TVS recorta antes y el
+# modelo sale optimista.
+V_BR_SMBJ16A_V = 19.70
 R_DIN_SMBJ16A_OHM = 0.35               # pendiente dinamica del SMBJ16A en conduccion
 
 # --- Parametros de D-F6 (NXP BT151-500R + TI TL431BI) -----------------------
@@ -82,15 +98,25 @@ I_MANTENIMIENTO_BT151_A = 0.040        # nxp-bt151-500r.pdf p. 2: I_H max 40 mA
 I2T_BT151_A2S = 72.0                   # nxp-bt151-500r.pdf p. 2: I^2t = 72 A^2s
 TOL_DISPARO_TL431BI_V = 0.30           # TL431BI 0,5 % + divisor + V_GK
 
+# El disparo se calcula de los divisores de la placa: con el TL431 -> PNP ->
+# puerta el umbral es 2,495 V * (1 + R_alta/R_baja), sin V_GT (en #474 el anodo
+# del TL431 iba a la puerta y el umbral se corria V_GT*(1+R1/R2), de 3 a 8 V).
+V_REF_TL431_V = 2.495                  # tl431.pdf p. 5
+
+
+def _disparo(r_alta: str, r_baja: str) -> float:
+    return V_REF_TL431_V * (1.0 + valor(r_alta) / valor(r_baja))
+
+
 RACK_RIELES = {
     "rack+12": {"sano_max_v": 12.533, "ovp_max_v": 16.56, "victima_max_v": 16.00,
-                "disparo_v": 14.00, "i_pliegue_min_a": 1.875},
+                "disparo_v": _disparo("R45", "R47"), "i_pliegue_min_a": 1.875},
     "rack-12": {"sano_max_v": 12.533, "ovp_max_v": 16.56, "victima_max_v": 16.00,
-                "disparo_v": 14.00, "i_pliegue_min_a": 1.875},
+                "disparo_v": _disparo("R46", "R48"), "i_pliegue_min_a": 1.875},
     "rack+5":  {"sano_max_v": 5.231,  "ovp_max_v": 6.75,  "victima_max_v": 6.30,
-                "disparo_v": 5.80,  "i_pliegue_min_a": 2.500},
+                "disparo_v": _disparo("R49", "R50"), "i_pliegue_min_a": 2.500},
     "digital+5": {"sano_max_v": 5.150, "ovp_max_v": 8.00, "victima_max_v": 6.30,
-                  "disparo_v": 5.65, "i_pliegue_min_a": 4.400},
+                  "disparo_v": _disparo("R51", "R52"), "i_pliegue_min_a": 4.400},
 }
 
 
@@ -233,7 +259,7 @@ def leer_csv() -> list[dict[str, str]]:
 
 
 def demo() -> int:
-    print("check_absmax v5: modelo RK4 de #334 (TPS26630 + SMBJ16A) y crowbars D-F6\n")
+    print("check_absmax v5: modelo RK4 de #334 (TPS26631 + SMBJ16A) y crowbars D-F6\n")
     filas = leer_csv()
     assert len(filas) == 8, f"esperaba 8 filas en absmax.csv y hay {len(filas)}"
 
@@ -246,9 +272,9 @@ def demo() -> int:
 
     print("  1. Simulacion RK4 de #334 (escalon de 36 V sobre el filtro LC de U1):")
     print(f"    maximo sano en vacio:             {V_SANO_MAX_U1_V:.3f} V")
-    print(f"    banda de disparo TPS26630 (0,1%): {V_DISPARO_MIN_U1_V:.2f} .. {V_DISPARO_MAX_U1_V:.2f} V "
+    print(f"    banda de disparo TPS26631 (0,1%): {V_DISPARO_MIN_U1_V:.2f} .. {V_DISPARO_MAX_U1_V:.2f} V "
           f"(nom {V_DISPARO_NOM_U1_V:.2f} V)")
-    print(f"    [verde] CON TPS26630 antes del LC (14 us) + SMBJ16A: "
+    print(f"    [verde] CON TPS26631 antes del LC (14 us) + SMBJ16A: "
           f"pico = {con_tope['v_pico_v']:.2f} V <= {V_ABSMAX_U1_V:.1f} V "
           f"(energia TVS {con_tope['energia_tvs_mj']:.2f} mJ)")
     print(f"    [rojo ] SIN proteccion (puente 36 V):                "
@@ -274,6 +300,20 @@ def demo() -> int:
               f"I_pliegue={d['i_pliegue_min_a']:.2f}A >> I_H={I_MANTENIMIENTO_BT151_A*1000:.0f}mA")
 
     print("\n  3. Matriz completa de absmax.csv:")
+    # La fila de U1 no se cree: tiene que coincidir con el modelo. Antes era un
+    # 18,08 escrito a mano que se comparaba consigo mismo.
+    fila_u1 = next(f for f in filas if f["victima"].startswith("U1 "))
+    assert abs(float(fila_u1["v_pico_con_tope_v"]) - con_tope["v_pico_v"]) <= 0.05, (
+        f"absmax.csv dice {fila_u1['v_pico_con_tope_v']} V en U1 y el modelo da "
+        f"{con_tope['v_pico_v']:.2f} V: actualiza la fila")
+    tope_rack = {"Invitados rack +12V": "rack+12", "Invitados rack -12V": "rack-12",
+                 "Invitados rack +5V": "rack+5", "Cerebro digital +5V": "digital+5"}
+    for victima, riel in tope_rack.items():
+        f = next(f for f in filas if f["victima"] == victima)
+        esperado = RACK_RIELES[riel]["disparo_v"] + TOL_DISPARO_TL431BI_V
+        assert abs(float(f["v_pico_con_tope_v"]) - esperado) <= 0.02, (
+            f"absmax.csv dice {f['v_pico_con_tope_v']} V en {victima} y los divisores "
+            f"de la placa dan {esperado:.2f} V: actualiza la fila")
     for f in filas:
         v_con = float(f["v_pico_con_tope_v"])
         v_max = float(f["v_absmax_v"])
@@ -283,7 +323,7 @@ def demo() -> int:
 
     _guarda_u1_rk4(dict(P_BASE))
     _guarda_enganche_scr(dict(P_BASE))
-    # Canario de retardo cuando falla el TVS (solo el TPS26630 cortando antes del LC):
+    # Canario de retardo cuando falla el TVS (solo el TPS26631 cortando antes del LC):
     def _guarda_u1_solo_efuse(p: dict[str, float]) -> None:
         r = escalon_lc(v_fallo_v=36.0, v_disparo_v=p["v_disparo_u1_v"],
                        t_corte_s=p["t_corte_us"] * 1e-6,
@@ -295,7 +335,7 @@ def demo() -> int:
                           14.0, 100.0, "U1 supera absmax")
     ih_max = borde_rojo(_guarda_enganche_scr, dict(P_BASE), "i_mantenimiento_scr_a",
                         0.040, 5.0, "el crowbar se suelta")
-    print(f"\n  canario #334 (sin TVS): si el corte del TPS26630 tarda > {t_max_us:.1f} us, "
+    print(f"\n  canario #334 (sin TVS): si el corte del TPS26631 tarda > {t_max_us:.1f} us, "
           f"U1 supera 20,0 V (la hoja garantiza <= 14,0 us)")
     print(f"  canario D-F6: con I_H > {ih_max:.2f} A el crowbar se soltaria "
           f"(el BT151-500R pide <= 0,04 A)")

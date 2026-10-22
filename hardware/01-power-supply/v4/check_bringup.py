@@ -398,7 +398,7 @@ def _plantilla(puntos: list[Punto]) -> None:
                  if r.get("medido", "").strip()
                  and k not in {pt.clave for pt in puntos}]
     with open(CSV_PATH, "w", encoding="utf-8", newline="") as f:
-        w = csv.writer(f)
+        w = csv.writer(f, lineterminator="\n")
         w.writerow(COLS)
         for pt in puntos:
             pred = "" if pt.predicho is None else f"{pt.predicho:g}"
