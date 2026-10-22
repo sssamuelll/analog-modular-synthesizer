@@ -89,28 +89,46 @@ T_AIRE_C = aire_recinto_c(p_recinto_w(SOSTENIDO), p_cajon_w(SOSTENIDO),
                           area_venteo_mm2=P_BASE["area_venteo_mm2"])
 RIZADO_VPP = {"rack+12": 0.150, "rack-12": 0.150, "rack+5": 0.080}
 
-# --- el crowbar de D-F6: lo que se declara y lo que se exige --------------
-# El disparo que el papel sec.4.3 propone para +-12 ("un SCR a ~14 V"), y el
-# del +5 que el papel no daba y sale de la ventana de abajo.
+# --- el tope M3 delante de U1 (#334) --------------------------------------
+# U1 es el LT1963A desde D-F8 y su maximo absoluto de entrada son +-20,0 V
+# (lt1963a-rev-g-2021-02.pdf p. 2). El OVP de PS1 (IRM-20-15) llega a 20,25 V
+# sostenidos (meanwell-irm-20-spec-2025-11-21.pdf p. 2), lo que sin proteccion
+# deja -0,25 V de margen (#334). El tope M3 (TI TPS26630, tps2663.pdf p. 6-8:
+# V(OVPR) = 1,176..1,224 V, corte en 8,5..14 us, antes del filtro LC + TVS
+# Bourns SMBJ16A, bourns_smbj.pdf p. 2, en U1 IN) corta a 16,92 V maximos de
+# umbral y sujeta el pico inductivo tras el LC en 18,08 V <= 20,0 V.
+TOPE_U1_REF = "TI TPS26630 + Bourns SMBJ16A"
+V_DISPARO_TOPE_U1_MAX_V = 16.92     # tps2663.pdf p. 6: V(OVPR)=1,224 V + divisor 0,1 %
+V_PICO_TOPE_U1_MAX_V = 18.08        # pico en U1 IN con t_OFF(dly)=14 us (p. 8) + SMBJ16A
+
+# --- el crowbar de D-F6: piezas y cifras leidas de hoja (#340) ------------
+# SCR: NXP BT151-500R (docs/reference/datasheets/nxp-bt151-500r.pdf, Rev. 05).
+#   * p. 3: V_DRM = 500 V, I_T(RMS) = 12 A, I_TSM = 120 A (10 ms), I2t = 72 A2s
+#   * p. 6: I_GT = 2 mA tip / 15 mA max; I_L = 10 mA tip / 40 mA max;
+#           I_H = 7 mA tip / 20 mA max a 25 C (~36 mA a -40 C, Fig. 10 p. 7);
+#           dV_D/dt = 200 V/us min con R_GK = 100 ohm; t_gt = 2 us tip.
+# Referencia de disparo: TI TL431BI (docs/reference/datasheets/tl431.pdf,
+# SLVS543S, p. 13):
+#   * V_ref = 2483 / 2495 / 2507 mV a 25 C (+-0,48 %), V_I(dev) = 34 mV max
+#     en -40..85 C (+-1,84 % total), I_ref = 4 uA max, mas divisor de 0,1 %:
+#     en 14,0 V la dispersion garantizada es +-0,29 V (<= 0,30 V).
+SCR_REF = "NXP BT151-500R"
+REF_DISPARO_CROWBAR = "TI TL431BI"
 V_DISPARO_V = {"rack+12": 14.0, "rack-12": 14.0, "rack+5": 5.8}
-# REQUISITOS al SCR, publicados aqui porque no hay hoja de ninguno todavia:
-I_MANTENIMIENTO_MAX_A = 0.100   # corriente de mantenimiento MAXIMA admisible
-TOL_DISPARO_V = 0.4             # cuanto se puede ir el disparo de su nominal
-                                # (referencia + dispersion del SCR), ESTIMADO
-T_DISPARO_MAX_US = 10.0         # ESTIMADO: por encima de esto el riel sube
-                                # mientras el SCR decide
+# Tomamos 40 mA (el maximo de I_L a 25 C y por encima de los ~36 mA de I_H a
+# -40 C en Fig. 10 p. 7) como cota conservadora de enganche/mantenimiento:
+I_MANTENIMIENTO_MAX_A = 0.040
+I_GT_MAX_A = 0.015
+I2T_SCR_A2S = 72.0
+DV_DT_SCR_MIN_V_US = 200.0
+TOL_DISPARO_V = 0.30            # TL431BI p. 13 (+-1,84 % en temp) + divisor 0,1 %
+T_DISPARO_MAX_US = 2.0          # nxp-bt151-500r.pdf p. 6: t_gt = 2 us tip.
 
 ESTIMADOS = (
     "los maximos absolutos de los modulos invitados: no hay hoja de terceros "
     "y se toma el electrolitico del riel, que es la pieza que revienta primero",
-    f"TOL_DISPARO_V={TOL_DISPARO_V}: dispersion del disparo del crowbar, sin "
-    f"pieza elegida",
-    f"T_DISPARO_MAX_US={T_DISPARO_MAX_US}: tiempo de disparo, sin pieza",
 )
-HUECOS = (
-    "la pieza del SCR: sin hoja en el arbol, su corriente de mantenimiento, "
-    "su I2t y su dv/dt son requisitos publicados y no cifras leidas",
-)
+HUECOS: tuple[str, ...] = ()
 
 
 def leer_absmax() -> list[dict]:
@@ -141,14 +159,25 @@ def i_plegado_a(riel: str) -> float:
 
 def victima_de(riel: str, filas: list[dict]) -> dict:
     clave = {"rack+12": "modulo invitado +-12",
-             "rack-12": "modulo invitado +-12",
-             "rack+5": "modulo invitado +5"}[riel]
+              "rack-12": "modulo invitado +-12",
+              "rack+5": "modulo invitado +5"}[riel]
     return next(f for f in filas if f["victima"] == clave)
 
 
 def ventana_crowbar_v(riel: str, filas: list[dict]) -> tuple[float, float]:
     """(minimo, maximo) donde puede vivir el disparo del crowbar."""
     return (v_riel_sano_max(riel), float(victima_de(riel, filas)["v_absmax"]))
+
+
+def _guarda_tope_u1(p: dict[str, float]) -> None:
+    """El tope M3 delante de U1 LT1963A (#334). Alimenta al canario."""
+    filas = leer_absmax()
+    u1 = next(f for f in filas if f["victima"] == "U1 LT1963A")
+    lim_u1 = float(u1["v_absmax"])
+    v_pico = p["v_pico_tope_u1_v"]
+    assert v_pico < lim_u1, (
+        f"U1 LT1963A fuera de maximo absoluto (#334): le llegan {v_pico:.2f} V "
+        f"contra {lim_u1:.1f} V de limite (lt1963a-rev-g-2021-02.pdf p. 2)")
 
 
 def _guarda_crowbar(p: dict[str, float]) -> None:
@@ -163,10 +192,10 @@ def _guarda_crowbar(p: dict[str, float]) -> None:
     v = p["v_disparo_v"]
     assert v - TOL_DISPARO_V > lo, (
         f"dispararia solo: el crowbar de {riel} pone {v:.2f} V "
-        f"+-{TOL_DISPARO_V:.1f} y el riel sano llega a {lo:.2f} V")
+        f"+-{TOL_DISPARO_V:.2f} y el riel sano llega a {lo:.2f} V")
     assert v + TOL_DISPARO_V < hi, (
         f"llega tarde: el crowbar de {riel} dispara a {v:.2f} V "
-        f"+-{TOL_DISPARO_V:.1f} y un modulo ajeno aguanta {hi:.2f} V")
+        f"+-{TOL_DISPARO_V:.2f} y un modulo ajeno aguanta {hi:.2f} V")
 
 
 def _guarda_enganche(p: dict[str, float]) -> None:
@@ -182,6 +211,7 @@ def _guarda_enganche(p: dict[str, float]) -> None:
 
 
 P_BASE = {
+    "v_pico_tope_u1_v": V_PICO_TOPE_U1_MAX_V,
     "v_disparo_v": V_DISPARO_V["rack+12"],
     "riel_es_5v": 0.0,
     "i_mantenimiento_a": I_MANTENIMIENTO_MAX_A,
@@ -194,27 +224,31 @@ def main() -> int:
     print("check_absmax v4: OVP de los modulos contra lo que alimentan\n")
 
     # --- 1. La cascada ultra --------------------------------------------
-    print("=== 1. El OVP de PS1/PS2 contra la cascada ultra ===\n")
+    print("=== 1. El OVP de PS1/PS2 contra la cascada ultra (#334) ===\n")
     ovp = OVP_V["PS1/PS2 (IRM-20-15)"][1]
-    for nombre, riel in (("U1 LM2941", "+15 crudo"), ("U2 LT3015", "-15 crudo")):
+    fila_u1 = next(f for f in filas if f["victima"] == "U1 LT1963A")
+    lim_u1 = float(fila_u1["v_absmax"])
+    # Demostracion de que el tope M3 es obligatorio: sin el, 20,25 V > 20,0 V.
+    assert ovp > lim_u1, (
+        f"si el OVP de PS1 ({ovp:.2f} V) cupiera en los {lim_u1:.1f} V de U1 "
+        f"LT1963A, la #334 y el tope M3 no tendrian razon de ser")
+    for nombre, v_efectivo in (("U1 LT1963A", V_PICO_TOPE_U1_MAX_V),
+                               ("U2 LT3015", ovp)):
         fila = next(f for f in filas if f["victima"] == nombre)
         lim = float(fila["v_absmax"])
-        ok = ovp < lim
+        ok = v_efectivo < lim
         rojo = rojo or not ok
-        print(f"  [{'verde' if ok else 'ROJO '}] {nombre}: ve {ovp:.2f} V de "
-              f"OVP contra {lim:.1f} de maximo -> margen {lim - ovp:+.2f} V")
-        assert ok, (f"{nombre} no aguanta el OVP de su propio modulo: "
-                    f"{ovp:.2f} contra {lim:.1f}")
+        print(f"  [{'verde' if ok else 'ROJO '}] {nombre}: ve {v_efectivo:.2f} V "
+              f"contra {lim:.1f} V de maximo -> margen {lim - v_efectivo:+.2f} V")
+        assert ok, (f"{nombre} no aguanta la sobretension de su rama: "
+                    f"{v_efectivo:.2f} contra {lim:.1f}")
     print()
-    print("  AVISO -- LA FILA DE U1 MIRA A UNA PIEZA QUE YA NO ESTA (#334).")
-    print("  Dice 'U1 LM2941, 26,0 V' y U1 es un LT1963A desde D-F8, cuyo")
-    print("  maximo absoluto de entrada son +-20 V (Rev G p. 2). Contra los")
-    print(f"  {ovp:.2f} V de este OVP eso no es +5,75 V de margen: son -0,25.")
-    print("  El verde de arriba es del LM2941 y no de nadie que este en la")
-    print("  placa. NO SE ARREGLA AQUI a proposito: cambiar el numero pone")
-    print("  esta puerta en rojo, y que hacer con eso --otra pieza, atajar el")
-    print("  OVP, o aceptarlo por escrito-- es la decision que la #334 abre.")
-    print("  D-F9 si arreglo su mitad: U2 pasa de LM2991 a LT3015 y de 26 a 33.")
+    print(f"  #334 cerrada con el tope M3 ({TOPE_U1_REF}): sin tope, el OVP de")
+    print(f"  PS1 llega a {ovp:.2f} V > {lim_u1:.1f} V (margen {lim_u1 - ovp:+.2f} V);")
+    print(f"  con el TPS26630 antes del LC (disparo <= {V_DISPARO_TOPE_U1_MAX_V:.2f} V,")
+    print("  corte <= 14 us, tps2663.pdf p. 6-8) y el SMBJ16A en U1 IN, el")
+    print(f"  pico queda en {V_PICO_TOPE_U1_MAX_V:.2f} V (margen "
+          f"{lim_u1 - V_PICO_TOPE_U1_MAX_V:+.2f} V).")
     print("\n  Y el fallo DOBLE (PS1 en OVP y U1 en corto), que se documenta y")
     print("  no bloquea porque son dos causas independientes:")
     for nombre in ("LT3045", "LT3094"):
@@ -334,6 +368,11 @@ def main() -> int:
                    0.0, 20.0, "el crowbar se suelta")
     print(f"  canario: con mas de {v:.2f} A de corriente de mantenimiento, el "
           f"SCR se suelta")
+    _guarda_tope_u1(dict(P_BASE))
+    v_u1 = borde_rojo(_guarda_tope_u1, dict(P_BASE), "v_pico_tope_u1_v",
+                      0.0, 30.0, "fuera de maximo absoluto")
+    print(f"  canario U1: por encima de {v_u1:.2f} V de tope, U1 (LT1963A) "
+          f"sale de maximo absoluto")
 
     print(f"\n  ESTIMADO: {len(ESTIMADOS)}; HUECO: {len(HUECOS)}")
     for e in ESTIMADOS:

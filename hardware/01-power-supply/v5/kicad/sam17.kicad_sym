@@ -1,0 +1,252 @@
+(kicad_symbol_lib
+  (version 20241209)
+  (generator "sam17-generator")
+  (generator_version "10.0")
+
+  (symbol "KPJX-PM-4S"
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (property "Reference" "J" (at 0 7.62 0) (effects (font (size 1.27 1.27))))
+    (property "Value" "KPJX-PM-4S" (at 0 -10.16 0) (effects (font (size 1.27 1.27))))
+    (property "Footprint" "sam17:Kycon_KPJX-PM-4S" (at 0 0 0) (effects (font (size 1.27 1.27))) (hide yes))
+    (symbol "KPJX-PM-4S_0_1"
+      (rectangle (start -5.08 6.35) (end 5.08 -8.89) (stroke (width 0.254)) (fill (type background)))
+    )
+    (symbol "KPJX-PM-4S_1_1"
+      (pin power_out line (at 7.62 3.81 180) (length 2.54) (name "+24V" (effects (font (size 1.27 1.27)))) (number "1"))
+      (pin power_out line (at 7.62 1.27 180) (length 2.54) (name "+24V" (effects (font (size 1.27 1.27)))) (number "2"))
+      (pin power_out line (at 7.62 -3.81 180) (length 2.54) (name "GND24" (effects (font (size 1.27 1.27)))) (number "3"))
+      (pin power_out line (at 7.62 -6.35 180) (length 2.54) (name "GND24" (effects (font (size 1.27 1.27)))) (number "4"))
+      (pin power_out line (at 0 -11.43 90) (length 2.54) (name "PE" (effects (font (size 1.27 1.27)))) (number "5"))
+    )
+  )
+
+  (symbol "LM74502DDFR"
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (property "Reference" "U" (at 0 6.35 0) (effects (font (size 1.27 1.27))))
+    (property "Value" "LM74502DDFR" (at 0 -6.35 0) (effects (font (size 1.27 1.27))))
+    (property "Footprint" "Package_SO:SOT-23-8" (at 0 0 0) (effects (font (size 1.27 1.27))) (hide yes))
+    (symbol "LM74502DDFR_0_1"
+      (rectangle (start -7.62 5.08) (end 7.62 -5.08) (stroke (width 0.254)) (fill (type background)))
+    )
+    (symbol "LM74502DDFR_1_1"
+      (pin power_in line (at -10.16 2.54 0) (length 2.54) (name "VIN" (effects (font (size 1.27 1.27)))) (number "1"))
+      (pin input line (at -10.16 -2.54 0) (length 2.54) (name "EN" (effects (font (size 1.27 1.27)))) (number "2"))
+      (pin passive line (at -2.54 7.62 270) (length 2.54) (name "VCAP" (effects (font (size 1.27 1.27)))) (number "3"))
+      (pin output line (at 10.16 2.54 180) (length 2.54) (name "GATE" (effects (font (size 1.27 1.27)))) (number "4"))
+      (pin power_in line (at 10.16 -2.54 180) (length 2.54) (name "SRC" (effects (font (size 1.27 1.27)))) (number "5"))
+      (pin power_in line (at 0 -7.62 90) (length 2.54) (name "GND" (effects (font (size 1.27 1.27)))) (number "6"))
+    )
+  )
+
+  (symbol "TPS26630PWPR"
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (property "Reference" "U" (at 0 11.43 0) (effects (font (size 1.27 1.27))))
+    (property "Value" "TPS26630PWPR" (at 0 -11.43 0) (effects (font (size 1.27 1.27))))
+    (property "Footprint" "Package_SO:HTSSOP-20-1EP_4.4x6.5mm_P0.65mm_EP3.4x6.5mm" (at 0 0 0) (effects (font (size 1.27 1.27))) (hide yes))
+    (symbol "TPS26630PWPR_0_1"
+      (rectangle (start -10.16 10.16) (end 10.16 -10.16) (stroke (width 0.254)) (fill (type background)))
+    )
+    (symbol "TPS26630PWPR_1_1"
+      (pin power_in line (at -12.7 7.62 0) (length 2.54) (name "IN" (effects (font (size 1.27 1.27)))) (number "1"))
+      (pin input line (at -12.7 5.08 0) (length 2.54) (name "UVLO" (effects (font (size 1.27 1.27)))) (number "4"))
+      (pin input line (at -12.7 2.54 0) (length 2.54) (name "OVPR" (effects (font (size 1.27 1.27)))) (number "5"))
+      (pin input line (at -12.7 0 0) (length 2.54) (name "MODE" (effects (font (size 1.27 1.27)))) (number "6"))
+      (pin input line (at -12.7 -2.54 0) (length 2.54) (name "SHDN" (effects (font (size 1.27 1.27)))) (number "7"))
+      (pin power_in line (at -12.7 -5.08 0) (length 2.54) (name "RTN" (effects (font (size 1.27 1.27)))) (number "8"))
+      (pin passive line (at -12.7 -7.62 0) (length 2.54) (name "DVDT" (effects (font (size 1.27 1.27)))) (number "9"))
+      (pin open_collector line (at 12.7 -7.62 180) (length 2.54) (name "FLT" (effects (font (size 1.27 1.27)))) (number "10"))
+      (pin output line (at 12.7 -5.08 180) (length 2.54) (name "IMON" (effects (font (size 1.27 1.27)))) (number "11"))
+      (pin passive line (at 12.7 -2.54 180) (length 2.54) (name "ILIM" (effects (font (size 1.27 1.27)))) (number "12"))
+      (pin power_in line (at 0 -12.7 90) (length 2.54) (name "GND" (effects (font (size 1.27 1.27)))) (number "13"))
+      (pin power_out line (at 12.7 7.62 180) (length 2.54) (name "OUT" (effects (font (size 1.27 1.27)))) (number "15"))
+    )
+  )
+
+  (symbol "MSP430FR2111IPW16"
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (property "Reference" "U" (at 0 12.7 0) (effects (font (size 1.27 1.27))))
+    (property "Value" "MSP430FR2111IPW16" (at 0 -12.7 0) (effects (font (size 1.27 1.27))))
+    (property "Footprint" "Package_SO:TSSOP-16_4.4x5mm_P0.65mm" (at 0 0 0) (effects (font (size 1.27 1.27))) (hide yes))
+    (symbol "MSP430FR2111IPW16_0_1"
+      (rectangle (start -10.16 11.43) (end 10.16 -11.43) (stroke (width 0.254)) (fill (type background)))
+    )
+    (symbol "MSP430FR2111IPW16_1_1"
+      (pin bidirectional line (at -12.7 7.62 0) (length 2.54) (name "P1.0" (effects (font (size 1.27 1.27)))) (number "1"))
+      (pin bidirectional line (at -12.7 5.08 0) (length 2.54) (name "P1.1_FLT" (effects (font (size 1.27 1.27)))) (number "2"))
+      (pin bidirectional line (at -12.7 2.54 0) (length 2.54) (name "P1.2_OVP" (effects (font (size 1.27 1.27)))) (number "3"))
+      (pin bidirectional line (at -12.7 0 0) (length 2.54) (name "P1.3_SHDN" (effects (font (size 1.27 1.27)))) (number "4"))
+      (pin bidirectional line (at -12.7 -2.54 0) (length 2.54) (name "P1.4_LED" (effects (font (size 1.27 1.27)))) (number "5"))
+      (pin bidirectional line (at -12.7 -5.08 0) (length 2.54) (name "P1.5_RSTBTN" (effects (font (size 1.27 1.27)))) (number "6"))
+      (pin bidirectional line (at -12.7 -7.62 0) (length 2.54) (name "P1.6" (effects (font (size 1.27 1.27)))) (number "7"))
+      (pin bidirectional line (at -12.7 -10.16 0) (length 2.54) (name "P1.7" (effects (font (size 1.27 1.27)))) (number "8"))
+      (pin input line (at 12.7 -2.54 180) (length 2.54) (name "RST" (effects (font (size 1.27 1.27)))) (number "11"))
+      (pin input line (at 12.7 0 180) (length 2.54) (name "TEST" (effects (font (size 1.27 1.27)))) (number "12"))
+      (pin power_in line (at 0 13.97 270) (length 2.54) (name "VDD" (effects (font (size 1.27 1.27)))) (number "13"))
+      (pin power_in line (at 0 -13.97 90) (length 2.54) (name "VSS" (effects (font (size 1.27 1.27)))) (number "14"))
+    )
+  )
+
+  (symbol "TRACO_THN_30-2422WI"
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (property "Reference" "PS" (at 0 10.16 0) (effects (font (size 1.27 1.27))))
+    (property "Value" "TRACO_THN_30-2422WI" (at 0 -10.16 0) (effects (font (size 1.27 1.27))))
+    (property "Footprint" "sam17:Converter_DCDC_TRACO_THN-30WI_THT" (at 0 0 0) (effects (font (size 1.27 1.27))) (hide yes))
+    (symbol "TRACO_THN_30-2422WI_0_1"
+      (rectangle (start -10.16 8.89) (end 10.16 -8.89) (stroke (width 0.254)) (fill (type background)))
+    )
+    (symbol "TRACO_THN_30-2422WI_1_1"
+      (pin power_in line (at -12.7 5.08 0) (length 2.54) (name "+VIN" (effects (font (size 1.27 1.27)))) (number "1"))
+      (pin power_in line (at -12.7 -5.08 0) (length 2.54) (name "-VIN" (effects (font (size 1.27 1.27)))) (number "2"))
+      (pin input line (at -12.7 0 0) (length 2.54) (name "REMOTE" (effects (font (size 1.27 1.27)))) (number "3"))
+      (pin power_out line (at 12.7 5.08 180) (length 2.54) (name "+VOUT" (effects (font (size 1.27 1.27)))) (number "4"))
+      (pin power_out line (at 12.7 0 180) (length 2.54) (name "COMMON" (effects (font (size 1.27 1.27)))) (number "5"))
+      (pin power_out line (at 12.7 -5.08 180) (length 2.54) (name "-VOUT" (effects (font (size 1.27 1.27)))) (number "6"))
+    )
+  )
+
+  (symbol "TRACO_THN_20-2413WI"
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (property "Reference" "PS" (at 0 10.16 0) (effects (font (size 1.27 1.27))))
+    (property "Value" "TRACO_THN_20-2413WI" (at 0 -10.16 0) (effects (font (size 1.27 1.27))))
+    (property "Footprint" "sam17:Converter_DCDC_TRACO_THN-20WI_THT" (at 0 0 0) (effects (font (size 1.27 1.27))) (hide yes))
+    (symbol "TRACO_THN_20-2413WI_0_1"
+      (rectangle (start -10.16 8.89) (end 10.16 -8.89) (stroke (width 0.254)) (fill (type background)))
+    )
+    (symbol "TRACO_THN_20-2413WI_1_1"
+      (pin power_in line (at -12.7 5.08 0) (length 2.54) (name "+VIN" (effects (font (size 1.27 1.27)))) (number "1"))
+      (pin power_in line (at -12.7 -5.08 0) (length 2.54) (name "-VIN" (effects (font (size 1.27 1.27)))) (number "2"))
+      (pin input line (at -12.7 0 0) (length 2.54) (name "REMOTE" (effects (font (size 1.27 1.27)))) (number "3"))
+      (pin power_out line (at 12.7 5.08 180) (length 2.54) (name "+VOUT" (effects (font (size 1.27 1.27)))) (number "4"))
+      (pin power_out line (at 12.7 -5.08 180) (length 2.54) (name "-VOUT" (effects (font (size 1.27 1.27)))) (number "5"))
+      (pin input line (at 12.7 0 180) (length 2.54) (name "TRIM" (effects (font (size 1.27 1.27)))) (number "6"))
+    )
+  )
+
+  (symbol "Mornsun_URB2405YMD-20WR3"
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (property "Reference" "PS" (at 0 10.16 0) (effects (font (size 1.27 1.27))))
+    (property "Value" "Mornsun_URB2405YMD-20WR3" (at 0 -10.16 0) (effects (font (size 1.27 1.27))))
+    (property "Footprint" "sam17:Converter_DCDC_Mornsun_URB-YMD-20WR3_THT" (at 0 0 0) (effects (font (size 1.27 1.27))) (hide yes))
+    (symbol "Mornsun_URB2405YMD-20WR3_0_1"
+      (rectangle (start -10.16 8.89) (end 10.16 -8.89) (stroke (width 0.254)) (fill (type background)))
+    )
+    (symbol "Mornsun_URB2405YMD-20WR3_1_1"
+      (pin power_in line (at -12.7 5.08 0) (length 2.54) (name "+VIN" (effects (font (size 1.27 1.27)))) (number "1"))
+      (pin power_in line (at -12.7 -5.08 0) (length 2.54) (name "-VIN" (effects (font (size 1.27 1.27)))) (number "2"))
+      (pin input line (at -12.7 0 0) (length 2.54) (name "CTRL" (effects (font (size 1.27 1.27)))) (number "3"))
+      (pin power_out line (at 12.7 5.08 180) (length 2.54) (name "+VOUT" (effects (font (size 1.27 1.27)))) (number "4"))
+      (pin power_out line (at 12.7 -5.08 180) (length 2.54) (name "0V" (effects (font (size 1.27 1.27)))) (number "5"))
+      (pin input line (at 12.7 0 180) (length 2.54) (name "TRIM" (effects (font (size 1.27 1.27)))) (number "6"))
+    )
+  )
+
+  (symbol "Mornsun_K7805T-1000R3"
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (property "Reference" "PS" (at 0 7.62 0) (effects (font (size 1.27 1.27))))
+    (property "Value" "Mornsun_K7805T-1000R3" (at 0 -7.62 0) (effects (font (size 1.27 1.27))))
+    (property "Footprint" "sam17:Converter_DCDC_Mornsun_K78_T1000R3_SMD" (at 0 0 0) (effects (font (size 1.27 1.27))) (hide yes))
+    (symbol "Mornsun_K7805T-1000R3_0_1"
+      (rectangle (start -7.62 5.08) (end 7.62 -5.08) (stroke (width 0.254)) (fill (type background)))
+    )
+    (symbol "Mornsun_K7805T-1000R3_1_1"
+      (pin power_in line (at -10.16 0 0) (length 2.54) (name "+VIN" (effects (font (size 1.27 1.27)))) (number "1"))
+      (pin power_in line (at 0 -7.62 90) (length 2.54) (name "GND" (effects (font (size 1.27 1.27)))) (number "2"))
+      (pin power_out line (at 10.16 0 180) (length 2.54) (name "+VOUT" (effects (font (size 1.27 1.27)))) (number "3"))
+    )
+  )
+
+  (symbol "LT1963AEST"
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (property "Reference" "U" (at 0 7.62 0) (effects (font (size 1.27 1.27))))
+    (property "Value" "LT1963AEST" (at 0 -7.62 0) (effects (font (size 1.27 1.27))))
+    (property "Footprint" "Package_TO_SOT_SMD:SOT-223-3_TabPin2" (at 0 0 0) (effects (font (size 1.27 1.27))) (hide yes))
+    (symbol "LT1963AEST_0_1"
+      (rectangle (start -7.62 5.08) (end 7.62 -5.08) (stroke (width 0.254)) (fill (type background)))
+    )
+    (symbol "LT1963AEST_1_1"
+      (pin power_in line (at -10.16 2.54 0) (length 2.54) (name "IN" (effects (font (size 1.27 1.27)))) (number "2"))
+      (pin input line (at -10.16 -2.54 0) (length 2.54) (name "SHDN" (effects (font (size 1.27 1.27)))) (number "1"))
+      (pin power_in line (at 0 -7.62 90) (length 2.54) (name "GND" (effects (font (size 1.27 1.27)))) (number "3"))
+      (pin power_out line (at 10.16 2.54 180) (length 2.54) (name "OUT" (effects (font (size 1.27 1.27)))) (number "4"))
+      (pin input line (at 10.16 -2.54 180) (length 2.54) (name "ADJ" (effects (font (size 1.27 1.27)))) (number "5"))
+    )
+  )
+
+  (symbol "LT3015EQ"
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (property "Reference" "U" (at 0 7.62 0) (effects (font (size 1.27 1.27))))
+    (property "Value" "LT3015EQ" (at 0 -7.62 0) (effects (font (size 1.27 1.27))))
+    (property "Footprint" "Package_TO_SOT_SMD:TO-263-5_TabPin3" (at 0 0 0) (effects (font (size 1.27 1.27))) (hide yes))
+    (symbol "LT3015EQ_0_1"
+      (rectangle (start -7.62 5.08) (end 7.62 -5.08) (stroke (width 0.254)) (fill (type background)))
+    )
+    (symbol "LT3015EQ_1_1"
+      (pin power_in line (at -10.16 2.54 0) (length 2.54) (name "IN" (effects (font (size 1.27 1.27)))) (number "2"))
+      (pin input line (at -10.16 -2.54 0) (length 2.54) (name "SHDN" (effects (font (size 1.27 1.27)))) (number "1"))
+      (pin power_in line (at 0 -7.62 90) (length 2.54) (name "GND" (effects (font (size 1.27 1.27)))) (number "3"))
+      (pin power_out line (at 10.16 2.54 180) (length 2.54) (name "OUT" (effects (font (size 1.27 1.27)))) (number "4"))
+      (pin input line (at 10.16 -2.54 180) (length 2.54) (name "ADJ" (effects (font (size 1.27 1.27)))) (number "5"))
+    )
+  )
+
+  (symbol "BT151-500R"
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (property "Reference" "SCR" (at 2.54 0 0) (effects (font (size 1.27 1.27))))
+    (property "Value" "BT151-500R" (at 0 -7.62 0) (effects (font (size 1.27 1.27))))
+    (property "Footprint" "Package_TO_SOT_THT:TO-220-3_Vertical" (at 0 0 0) (effects (font (size 1.27 1.27))) (hide yes))
+    (symbol "BT151-500R_0_1"
+      (polyline (pts (xy -2.54 2.54) (xy 2.54 2.54)) (stroke (width 0.254)))
+      (polyline (pts (xy -2.54 -2.54) (xy 2.54 -2.54) (xy 0 2.54) (xy -2.54 -2.54)) (stroke (width 0.254)) (fill (type outline)))
+      (polyline (pts (xy -2.54 -2.54) (xy -5.08 -5.08)) (stroke (width 0.254)))
+    )
+    (symbol "BT151-500R_1_1"
+      (pin passive line (at 0 -5.08 90) (length 2.54) (name "K" (effects (font (size 1.27 1.27)))) (number "1"))
+      (pin passive line (at 0 5.08 270) (length 2.54) (name "A" (effects (font (size 1.27 1.27)))) (number "2"))
+      (pin input line (at -7.62 -5.08 0) (length 2.54) (name "G" (effects (font (size 1.27 1.27)))) (number "3"))
+    )
+  )
+
+  (symbol "LM393BDR"
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (property "Reference" "U" (at 0 10.16 0) (effects (font (size 1.27 1.27))))
+    (property "Value" "LM393BDR" (at 0 -10.16 0) (effects (font (size 1.27 1.27))))
+    (property "Footprint" "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm" (at 0 0 0) (effects (font (size 1.27 1.27))) (hide yes))
+    (symbol "LM393BDR_0_1"
+      (rectangle (start -10.16 8.89) (end 10.16 -8.89) (stroke (width 0.254)) (fill (type background)))
+    )
+    (symbol "LM393BDR_1_1"
+      (pin input line (at -12.7 5.08 0) (length 2.54) (name "IN1-" (effects (font (size 1.27 1.27)))) (number "2"))
+      (pin input line (at -12.7 2.54 0) (length 2.54) (name "IN1+" (effects (font (size 1.27 1.27)))) (number "3"))
+      (pin open_collector line (at 12.7 3.81 180) (length 2.54) (name "OUT1" (effects (font (size 1.27 1.27)))) (number "1"))
+      (pin input line (at -12.7 -2.54 0) (length 2.54) (name "IN2+" (effects (font (size 1.27 1.27)))) (number "5"))
+      (pin input line (at -12.7 -5.08 0) (length 2.54) (name "IN2-" (effects (font (size 1.27 1.27)))) (number "6"))
+      (pin open_collector line (at 12.7 -3.81 180) (length 2.54) (name "OUT2" (effects (font (size 1.27 1.27)))) (number "7"))
+      (pin power_in line (at 0 11.43 270) (length 2.54) (name "V+" (effects (font (size 1.27 1.27)))) (number "8"))
+      (pin power_in line (at 0 -11.43 90) (length 2.54) (name "V-" (effects (font (size 1.27 1.27)))) (number "4"))
+    )
+  )
+)

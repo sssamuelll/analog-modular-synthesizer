@@ -173,3 +173,24 @@ docs/reference/datasheets/*.pdf
 !docs/reference/datasheets/stm32n6-an5967-rev5.pdf
 !docs/reference/datasheets/stm32n657-ds14791-rev10.pdf
 !docs/reference/datasheets/stm32n657-ds14791-rev2.pdf
+# Fuente v5 (2026-10-22): convertidores DC-DC, ladrillos 24 V, conectores y protecciones M3/M4/M5/D-F6
+!docs/reference/datasheets/traco_thn30wi.pdf
+!docs/reference/datasheets/traco_thn20wi.pdf
+!docs/reference/datasheets/recom_rpmb20.pdf
+!docs/reference/datasheets/mornsun_urb_ymd20wr3.pdf
+!docs/reference/datasheets/mornsun_k78_t1000r3.pdf
+!docs/reference/datasheets/ae-TE90-datasheet.pdf
+!docs/reference/datasheets/ae-TE90-CB-cert.pdf
+!docs/reference/datasheets/ae-TE90-DEMKO-EN62368.pdf
+!docs/reference/datasheets/meanwell-GST120A-spec.pdf
+!docs/reference/datasheets/meanwell-GSM120A-spec.pdf
+!docs/reference/datasheets/kycon_KPJX-PM-4S.pdf
+!docs/reference/datasheets/kycon_KPPX-4P.pdf
+!docs/reference/datasheets/tps2663.pdf
+!docs/reference/datasheets/lm74502.pdf
+!docs/reference/datasheets/bourns_smbj.pdf
+!docs/reference/datasheets/bourns_sf1206f.pdf
+!docs/reference/datasheets/tl431.pdf
+!docs/reference/datasheets/msp430fr2111.pdf
+!docs/reference/datasheets/nxp-bt151-500r.pdf
+!docs/reference/datasheets/ti-lm393b.pdf

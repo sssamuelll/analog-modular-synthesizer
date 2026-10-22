@@ -879,26 +879,20 @@ Las fuentes de calor, con los rendimientos ya corregidos de §3:
 | **Total en el recinto** | **7,2 W** | ~~**27,5 W**~~ **29,23 W** (E16, 2026-09-08: `P_RECINTO_MAX`, `PS6` sin cadena y franja de red incluida; 28,9 con la IRM-20-5 en `PS5`, antes de D-F7) |
 | + el 1,8 V si vive dentro | +0,62 W | +4,57 W |
 
-> ### ENMIENDA E16 — SUMA DEL RECINTO Y CARGA DIGITAL (2026-09-08)
+> ### ENMIENDA E16 — SUMA DEL RECINTO, CARGA DIGITAL Y CARGA ULTRA (#331, completada el 2026-10-22)
 >
-> El máximo incluye ahora la franja de red que ya llevaba el guion. Los
-> sumandos publicados dan **29,23 W**, redondeando al final; el MOV no
-> añade pérdida en régimen. La fila opcional del regulador de 1,8 V sigue
-> aparte. `U1`, `U2` y sus pérdidas se conservan juntos tal como los carga
-> `calor_budget.py`.
+> El máximo incluye la franja de red (`NTC_ARRANQUE_W = 2,75 W` + `CHOKE_RED_W = 0,95 W`) que ya lleva `calor_budget.py`. Los sumandos dan **29,23 W** (`P_RECINTO_MAX = 29,2303 W`), redondeando al final; el MOV no añade pérdida en régimen. La fila opcional del regulador de 1,8 V sigue aparte.
 >
-> **La columna típica entera es histórica, anterior a D1**, incluido su
-> total: aún cuenta la cadena en `PS6` y no contiene la franja de red.
-> El guion no publica un típico actualizado; «—» no significa pérdida nula.
+> **La columna típica entera es histórica, anterior a D1**, incluido su total: aún cuenta la cadena en `PS6` y no contiene la franja de red.
 >
-> La carga ultra solicitada por #331 **no se añade**: falta en el guion
-> ejecutado. El total del cajón y las temperaturas cerradas del texto se
-> conservan pendientes de conciliación; no son resultados de esta enmienda.
+> **Conciliación completa con `calor_budget.py`:** fuera del recinto pero dentro del cajón entran los **95,6 W** de la fila a placa, los **14,475 W** del digital sin cadena (`CAJON_DIGITAL_W`) y los **8,00 W** de la carga ultra de la Voz (`CAJON_ULTRA_W = 8,0016 W`, derivada de `consumo_total_budget.py`), sumando **`P_CAJON_MAX` = 118,08 W** y un total de **147,31 W** (`147,3069 W`) en el cajón. Con esa carga, `calor_budget.py` da **87,7 °C** en caja cerrada (punto fijo con derating) y **146,8 °C** a placa sin derating; el venteo mínimo nuevo pasa de 22 200 a **21 000 mm²** (`AREA_VENTEO_MIN_MM2 = 20 907 mm²`, redondeado arriba a centena en `P_BASE`).
 
 Y **fuera del recinto pero dentro del cajón**, lo que el listón permite y
-`guarda_aire()` no tiene: la fila de invitados a placa disipa **95,6 W** y el
+`guarda_aire()` no tiene: la fila de invitados a placa disipa **95,6 W**, el
 digital ~~**24,7 W**~~ **14,475 W** (E16, 2026-09-08:
-`CAJON_DIGITAL_W`, retirada de la cadena por D1). El case se cerró (techo macizo, trasera capturada) con 9 W
+`CAJON_DIGITAL_W`, retirada de la cadena por D1) y la Voz **8,00 W**
+(`CAJON_ULTRA_W = 8,0016 W`, #331), para un total fuera del recinto de
+~~**120,3 W**~~ **118,08 W** (`P_CAJON_MAX`) y **147,31 W** en todo el cajón. El case se cerró (techo macizo, trasera capturada) con 9 W
 de fuente en su presupuesto de aire.
 
 **Lo que da el lazo** (junta, sobre el modelo del case y del recinto de hoy;
@@ -918,26 +912,26 @@ D-F3 = A y D-F7; **punto fijo**, no carga a placa):
 
 | Situación | Aire del recinto | Rack sostenido (+12 / −12 / +5) | Digital sostenido |
 |---|---|---|---|
-| Caja de hoy (cerrada), todo lo que el rack pueda dar | **86,7 °C** | **0 / 0 / 0 A** — no hay punto de trabajo | 0 A |
-| **Venteo mínimo: 22 200 mm² nuevos** (D-F3 = A; 20 600 antes de contar la franja de red) | **68,9 °C** | **2,0 / 2,0 / 4,0 A** — el +12 fija el mínimo | **4,2 A** |
-| A placa sin derating, caja de hoy (no es un estado alcanzable) | 145,7 °C | — | — |
+| Caja de hoy (cerrada), todo lo que el rack pueda dar | ~~**86,7 °C**~~ **87,7 °C** (E16, #331) | **0 / 0 / 0 A** — no hay punto de trabajo | 0 A |
+| **Venteo mínimo: ~~22 200~~ 21 000 mm² nuevos** (`AREA_VENTEO_MIN_MM2 = 20 907 mm²`, E16, #331; D-F3 = A; 20 600 antes de contar la franja de red) | **68,9 °C** | **2,0 / 2,0 / 4,0 A** — el +12 fija el mínimo | **4,2 A** |
+| A placa sin derating, caja de hoy (no es un estado alcanzable) | ~~145,7 °C~~ **146,8 °C** (E16, #331) | — | — |
 
 Con la IRM-20-5 en `PS5` la segunda fila **no existía**: ningún venteo daba
 4,0 A en el +5 V, y de ahí D-F7. Dos cosas del modelo que hay que decir: la
 constante que más mueve el sostenido es **`CD_TIRO`** (el coeficiente de
 descarga del venteo, supuesto y no medido), y el modelo **hereda de
 `guarda_aire()` que el cajón solo evacúa por chimenea** —ignora la convección
-de las paredes exteriores—, así que los 22 200 mm² son **pesimistas**.
+de las paredes exteriores—, así que los ~~22 200~~ **21 000 mm²** son **pesimistas**.
 
-**Y NO SON EL ENCARGO (Tarea 4, 03-09).** Al meter los 147,83 W en
-`guarda_aire()` —27,53 del recinto + 120,3 de fila y digital— salió que el
+**Y NO SON EL ENCARGO (Tarea 4, 03-09).** Al meter los ~~147,83 W~~ **147,31 W** en
+`guarda_aire()` —~~27,53~~ **29,23 W** del recinto + ~~120,3~~ **118,08 W** de fila, digital y Voz— salió que el
 listón del rack y el criterio del propio case piden cosas distintas, y manda
 el segundo:
 
 | Quién pregunta | Qué exige | Venteo **nuevo** | Venteo **total** |
 |---|---|---|---|
-| `calor_budget.py` | que los rieles den el listón con la sala a 45 °C | **22 148 mm²** | 25 447 mm² |
-| `guarda_aire()` | los **20 K sobre ambiente** que la afinación ya suponía | **22 446 mm²** | 25 745 mm² |
+| `calor_budget.py` | que los rieles den el listón con la sala a 45 °C | ~~**22 148 mm²**~~ **20 907 mm²** (`P_BASE = 21 000 mm²`, E16) | ~~25 447 mm²~~ **24 206 mm²** |
+| `guarda_aire()` | los **20 K sobre ambiente** que la afinación ya suponía | ~~**22 446 mm²**~~ **21 725 mm²** (con 147,31 W, E16) | ~~25 745 mm²~~ **25 024 mm²** |
 
 **Las dos columnas están porque la confusión entre ellas es fácil y ya se
 cometió dos veces el 04-09.** `calor_budget.py` toma `area_venteo_mm2` como
@@ -1291,11 +1285,13 @@ lo que otro no hace** (#214, #206).
 | **D-F8** (04-09) | `U1` = **LT1963A** (era LM2941) | `margen_budget.py` pasa de −388 a **+330 mV**. Trae la ventana de ESR nueva (0–3 Ω, acepta cerámico) y **se llevó por delante el hilo único del ON/OFF**, que D-F9 devuelve. Deja abierto su máximo absoluto de entrada: **#334** |
 | **D-F9** (06-09) | `U2` = **LT3015** `LT3015IT#PBF` (era LM2991) | `margen_budget.py` pasa de −170 a **+536 mV** y sale de HUECO. Cierra el inversor del ON/OFF (**#323**) y abre la ventana del umbral de D-F4 (**#324**, +330 mV). Exige `COUT` = 47 µF **y** `CFF` = 10 nF, y el grado `I`. No mueve `chasis_to220_*` |
 
-> ### ENMIENDA E16 — NOTA BAJO D-F1 (2026-09-08)
+> ### ENMIENDA E16 — NOTA BAJO D-F1 (#331, actualizada el 2026-10-22)
 >
-> Los rieles de rack se declaran según D-B2 **si se firma**. Esta nota deja
-> explícita la dependencia solicitada por #331; no sustituye las decisiones
-> D-F* firmadas ni adopta otro listón.
+> D-B2 se firmó el 2026-09-04 (`0,5 / 0,5 / 0,5 A` de techo duro en los tres
+> rieles de rack para los 52 HP de la fila B) y D-V4 el 2026-09-08: este listón
+> v4 se conserva íntegro como contrato de `hardware/01-power-supply/v4/`, mientras
+> que la fuente vigente (`v5/`, [`2026-09-05-fuente-v5-ladrillo-design.md`](2026-09-05-fuente-v5-ladrillo-design.md))
+> dimensiona los rieles de rack según D-B2.
 
 **Estas dos filas faltaban.** D-F8 se firmó el 04-09 y vivió sólo en su bloque
 de enmiendas: la cabecera decía «D-F1 a D-F8 decididas (§14)» y §14 se paraba

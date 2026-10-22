@@ -1,5 +1,5 @@
 victima,riel,v_absmax,estado,fuente
-U1 LM2941,+15 crudo,26.0,confirmado,"lm2941-snvs770i-2015-01.pdf p. 5: entrada maxima operacional 26 V (MIN de la especificacion; TYP 31). El absoluto transitorio de la p. 4 son 60 V, y no se usa: un OVP no es un transitorio de red"
+U1 LT1963A,+15 crudo,20.0,confirmado,"lt1963a-rev-g-2021-02.pdf p. 2, ABSOLUTE MAXIMUM RATINGS: 'IN Pin Voltage: +-20V'. Sustituye al LM2941 (26,0 V) con D-F8. Protegido delante por el tope M3 (#334): TPS26630 (tps2663.pdf p. 6-8) + SMBJ16A (bourns_smbj.pdf p. 2), que cortan a <= 18,08 V"
 U2 LT3015,-15 crudo,33.0,confirmado,"lt3015-rev-b.pdf p. 2, ABSOLUTE MAXIMUM RATINGS: 'IN Pin Voltage ... +-33V'. Sustituye al LM2991 (26,0 V) con D-F9. Se toma el modulo"
 LT3045,salida de U1,22.0,confirmado,"lt3045-rev-d.pdf p. 2, IN Pin Voltage: +-22 V. Solo lo ve si U1 se pone en corto Y PS1 esta en su OVP: fallo doble, se documenta"
 LT3094,salida de U2,22.0,confirmado,"lt3094-rev-b.pdf p. 3: -22 V. Mismo fallo doble que el LT3045"
