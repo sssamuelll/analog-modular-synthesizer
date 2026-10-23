@@ -1,4 +1,4 @@
-"""Comprobacion de telemetria, aislamiento e interfaces en la fuente v5 (T15-T17, T25-T26).
+"""Comprobacion de telemetria, aislamiento e interfaces en la fuente v5 (T15-T17, T26).
 
     python check_telemetria.py     # 0 verde, 1 infraccion, 2 hueco (algo sin poder comprobar)
 
@@ -20,12 +20,13 @@ etiquetas de texto y los escenarios de fallo que vienen de otros modelos.
      Table 6-2 p. 18, ads1115.pdf Table 7-2 p. 20, tmp1075.pdf Table 7-2 p. 14),
      y se busca colision en cada bus (par SDA/SCL).
   4. Tension de alimentacion de cada chip contra su maximo absoluto.
-  5. T16/T17/T25/T26: lo que la netlist demuestra (GNDD solo toca GNDA/GND24
+  5. T16/T17/T26: lo que la netlist demuestra (GNDD solo toca GNDA/GND24
      por el URB y el ISO1541, el I2C solo cruza por el ISO1541, J5 en GNDA, +5 V
-     de rack y +5 V digital en conectores distintos) se comprueba; lo que es una
-     medida fisica (continuidad, aislamiento, fugas) se busca en medidas.csv y,
-     si no esta medido, sale como HUECO con el motivo. Nada de eso se imprime en
-     verde sin evidencia.
+     de rack y +5 V digital en conectores distintos, +12V_RACK y su retorno solo
+     en J3) se comprueba; lo que es una medida fisica (continuidad, aislamiento,
+     fugas, el par de la pantalla en el mazo) se busca en medidas.csv y, si no
+     esta medido, sale como HUECO con el motivo. Nada de eso se imprime en verde
+     sin evidencia.
 
 Una infraccion sale con codigo 1. Sin infracciones pero con cosas sin verificar,
 con codigo 2 (gates.py lo cuenta como HUECO).
@@ -296,16 +297,19 @@ def _medidas() -> dict[str, dict[str, str]]:
         return {f["magnitud"]: f for f in csv.DictReader(fh)}
 
 
-def _juzga(criterio: str, medido: float) -> bool | None:
+def _juzga(criterio: str, medido: str) -> bool | None:
+    lit = re.fullmatch(r"\s*=\s*(\S+)\s*", criterio)
+    if lit:
+        return medido.strip().lower() == lit.group(1).lower()
     m = re.fullmatch(r"\s*(>=|<=)\s*([0-9.]+)\s*", criterio)
     if not m:
         return None
     lim = float(m.group(2))
-    return medido >= lim if m.group(1) == ">=" else medido <= lim
+    return float(medido) >= lim if m.group(1) == ">=" else float(medido) <= lim
 
 
 def demo() -> int:
-    print("check_telemetria v5: sensores INA226, ADS1115, TMP1075 e interfaces (T15-T17, T25-T26)\n")
+    print("check_telemetria v5: sensores INA226, ADS1115, TMP1075 e interfaces (T15-T17, T26)\n")
     if NETS is None:
         print(f"HUECO: falta {os.path.basename(NET)} -- corre kicad/build_schematic.py")
         return 2
@@ -412,7 +416,7 @@ def demo() -> int:
             continue
         linea(v_op < v_max, f"{ref:4s} {chip:<13s} {red} {v_op:.2f} V < {v_max:.2f} V absmax ({fuente})")
 
-    print("\n=== 6. Aislamiento e interfaces de dominio (T16, T17, T25, T26) ===")
+    print("\n=== 6. Aislamiento e interfaces de dominio (T16, T17, T26) ===")
 
     def refs_en(red: str) -> set[str]:
         return {n.split(".")[0] for n in nets.get(red, ())}
@@ -427,7 +431,7 @@ def demo() -> int:
             hueco(texto, f"sin medir en la placa ({magnitud} {fila['criterio']} {fila['unidad']})")
         else:
             try:
-                ok = _juzga(fila["criterio"], float(fila["medido"]))
+                ok = _juzga(fila["criterio"], fila["medido"])
             except ValueError:
                 ok = None
             if ok is None:
@@ -456,10 +460,14 @@ def demo() -> int:
     hueco("T17: fuga a PE de los ladrillos candidatos", "ni medidas.csv ni ningun presupuesto de la v5 "
           "la tiene (fuga_budget.py es de la v4, con la red dentro del chasis)")
 
-    # T25: el reparto del retorno de la pantalla vive en el cableado.
-    hueco("T25: retorno dedicado de la pantalla (550 mA, #477)",
-          "la netlist no tiene conector ni red de retorno de pantalla (J3 lleva un solo pin GNDA); "
-          "lo demostraria la medida aislamiento_pantalla_retorno_dedicado, sin medir")
+    # T26 (#477): la pantalla vuelve por su propio par en el mazo, no por el bus
+    # de la fila. Es regla de cableado, no red de la placa: la placa solo pone
+    # el borne, J3.1 y J3.2.
+    con_12 = {r for r in refs_en("+12V_RACK") if r.startswith("J")}
+    linea(con_12 == {"J3"} and red_de(nets, "J3.1") == "+12V_RACK" and red_de(nets, "J3.2") == "GNDA",
+          f"T26: +12V_RACK sale por {sorted(con_12)}; J3.1 {red_de(nets, 'J3.1')}, J3.2 {red_de(nets, 'J3.2')}")
+    fisica("T26: la pantalla lleva su propio par desde J3.1/J3.2 en el mazo",
+           "mazo_pantalla_par_propio_desde_J3")
 
     # T26: +5 V de rack y +5 V digital, conectores distintos.
     con_rack = {r for r in refs_en("+5V_RACK") if r.startswith("J")}
@@ -478,7 +486,7 @@ def demo() -> int:
             print(f"  - {h}")
         print(f"\nHUECO: {len(huecos)} afirmaciones de telemetria sin verificar (ver arriba)")
         return 2
-    print("\nOK: check_telemetria.py v5 (T15, T16, T17, T25, T26 verificados)")
+    print("\nOK: check_telemetria.py v5 (T15, T16, T17, T26 verificados)")
     return 0
 
 
