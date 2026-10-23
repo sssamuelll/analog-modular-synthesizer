@@ -149,17 +149,20 @@ V_DISPARO_V = {"rack+12": 14.0, "rack-12": 14.0, "rack+5": 5.8}
 # Tomamos 40 mA (el maximo de I_L a 25 C y por encima de los ~36 mA de I_H a
 # -40 C en Fig. 10 p. 7) como cota conservadora de enganche/mantenimiento:
 I_MANTENIMIENTO_MAX_A = 0.040
-I_GT_MAX_A = 0.015
-I2T_SCR_A2S = 72.0
-DV_DT_SCR_MIN_V_US = 200.0
 TOL_DISPARO_V = 0.30            # TL431BI p. 13 (+-1,84 % en temp) + divisor 0,1 %
-T_DISPARO_MAX_US = 2.0          # nxp-bt151-500r.pdf p. 6: t_gt = 2 us tip.
 
 ESTIMADOS = (
     "los maximos absolutos de los modulos invitados: no hay hoja de terceros "
     "y se toma el electrolitico del riel, que es la pieza que revienta primero",
 )
-HUECOS: tuple[str, ...] = ()
+# El I2t y el dV/dt del SCR estan en su hoja (arriba), pero solo significan
+# algo contra el fusible y la R_GK que se monten, y la v4 no tiene placa. La
+# comprobacion contra piezas es la de v5/check_absmax.py (D-F6 por dentro).
+HUECOS: tuple[str, ...] = (
+    "D-F6 sin piezas: el I2t del SCR (72 A2s) contra el del fusible y su dV/dt "
+    "(200 V/us solo con R_GK = 100 ohm) no se comprueban en la v4, que no tiene "
+    "fusible ni R_GK elegidos",
+)
 
 
 def leer_absmax() -> list[dict]:
@@ -428,15 +431,13 @@ def main() -> int:
     # relevo. La condicion, no el resultado.
     if not HUECOS:
         print()
-        print("D-F6 ya no esta en cotas: la hoja del SCR bajo y sus cifras "
-              "son leidas.")
+        print("D-F6 comprobada contra piezas.")
         return 0
     print()
-    print("HUECO: D-F6 esta dimensionada en COTAS y no en una pieza. No hay "
-          "hoja de ningun SCR en el arbol, asi que su corriente de "
-          "mantenimiento (<= 100 mA), su I2t y su dv/dt son requisitos que "
-          "este guion publica, no cifras leidas. Se cierra bajando la hoja del "
-          "SCR que se elija, poniendo sus cifras aqui y vaciando HUECOS.")
+    print("HUECO: la corriente de mantenimiento del BT151-500R esta leida y "
+          "comprobada, pero su I2t y su dV/dt dependen del fusible y de la "
+          "R_GK, que la v4 no elige. Se cierra eligiendolos aqui o dando la v4 "
+          "por sustituida por la v5, que si los comprueba.")
     return 2
 
 

@@ -20,11 +20,11 @@ del censo D-V4 (`2026-09-08-censo-dv4-resolucion.md`) y los issues **#334** y
        **Bourns SMBJ16A** (`bourns_smbj.pdf` p. 2: `V_WM = 16,0 V`, `V_BR =
        17,8..19,7 V`) en `U1 IN`:
          * Con tope (sensado antes del LC, `t_corte = 14 us`, falla de `36 V`):
-           el pico en `U1 IN` es **18,08 V < 20,0 V** (margen `+1,92 V`).
-         * Sin tope: el pico en el LC sube a **27,14 V > 20,0 V** (ROJO).
+           el pico en `U1 IN` es **18,11 V < 20,0 V** (margen `+1,89 V`).
+         * Sin tope: el pico en el LC sube a **38,59 V > 20,0 V** (ROJO).
          * Mutante con sensado DESPUES del LC: cuando el nodo de `U1` cruza
            `16,92 V`, la bobina de `22 uH` ya lleva corriente acumulada y el
-           pico tras cortar sube a **22,21 V > 20,0 V** (ROJO: mutante cazado).
+           pico tras cortar sube a **22,48 V > 20,0 V** (ROJO: mutante cazado).
 
   2. **`U2` (`LT3015`, D-F9, T18):**
      - `IN Pin Voltage` maximo absoluto de **+-33,0 V** (`lt3015-rev-b.pdf` p. 2),
@@ -46,20 +46,64 @@ del censo D-V4 (`2026-09-08-censo-dv4-resolucion.md`) y los issues **#334** y
        OVP entre `110 %` y `160 %` (`5,50..8,00 V`). Como `8,00 V` superaria los
        `6,30 V` de los condensadores de entrada de 5 V del modulo 2, M3 incluye
        un tope local con `TL431BI` (`5,65 V +- 0,30 V`, pico `<= 5,95 V < 6,30 V`).
+
+  5. **`U18` (`TPS709`, el LDO del supervisor M5):** `R64` y el zener `D2`
+     sujetan su entrada cuando `D1` recorta un transitorio a `42,1 V`.
+
+  6. **D-F6 por dentro:** la corriente de puerta que el PNP puede dar con
+     `R_GK` en el disparo mas bajo, y el `I^2t` de los fusibles contra el del SCR.
+
+Cada fila de `absmax.csv` sale de un modelo o de la BOM y se comprueba contra
+el: ninguna se cree.
+
+LO QUE ESTE CALCULO NO CUBRE (se imprime al final):
+  * Fallo doble en el negativo (`THN-` en OVP y `U2` en corto): `U6`/`U7` ven
+    `24,6 V` contra `22 V`. El positivo lo cubre el tope M3; el negativo no.
+  * `OUT` de `U19` baja a `-V_F` de `D19` (hasta `0,55 V` a `3 A`) durante el
+    corte. La hoja da `-0,3 V` absoluto en DC y pide ese Schottky (p. 36, 38),
+    sin cifra de transitorio.
+  * La pendiente del riel de rack en un enchufe en caliente no esta modelada:
+    el SCR aguanta `200 V/us` con `R_GK = 100 ohm` (`nxp-bt151-500r.pdf` p. 6).
+  * Un crowbar disparado no llega al MSP430: el SCR se queda conduciendo la
+    corriente de pliegue del convertidor (los fusibles de `+-12 V` son de
+    `3 A` y el THN 30 pliega a `1,875 A`).
 """
 from __future__ import annotations
 
 import csv
+import importlib.util
 import os
 import sys
-from typing import Callable
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_PATH = os.path.join(DIR, "absmax.csv")
 if DIR not in sys.path:
     sys.path.insert(0, DIR)
+sys.path.insert(0, os.path.join(DIR, "..", "..", "tools"))
 
-from bom_valores import valor  # noqa: E402
+from bom_valores import filas, valor  # noqa: E402
+from canario import borde_rojo  # noqa: E402
+
+_MARGEN = []
+
+
+def _margen():
+    """margen_budget.py de la v5, cargado al usarlo y no al importar: la v4
+    carga este modulo para el modelo RK4, y con su propio directorio en
+    sys.path el margen_budget de la v5 acababa importando el rizado_budget
+    equivocado. Por ruta y con nombre propio, por la misma razon."""
+    if not _MARGEN:
+        spec = importlib.util.spec_from_file_location("_v5_margen_budget",
+                                                      os.path.join(DIR, "margen_budget.py"))
+        assert spec and spec.loader
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _MARGEN.append(mod)
+    return _MARGEN[0]
+
+
+def v_sano_max_u1_v() -> float:
+    return _margen().v_entrada_maxima_sana_v()
 
 # EL MODELO SIMULA LAS PIEZAS DE LA PLACA. L, C, Cd, Rd y el divisor del OVP
 # se leen de bom.csv (#474: el modelo llevaba un LC y la BOM otro, y con el de
@@ -68,7 +112,8 @@ from bom_valores import valor  # noqa: E402
 # --- Limites de U1 (LT1963A) y parametros del tope M3 (#334) ----------------
 V_ABSMAX_U1_V = 20.0                   # lt1963a-rev-g-2021-02.pdf p. 2
 V_ABSMAX_U2_V = 33.0                   # lt3015-rev-b.pdf p. 2
-V_SANO_MAX_U1_V = 16.012               # de v5/margen_budget.py
+# THN 20-2413WI: OVP entre el 112 % y el 164 % de 15 V (traco_thn20wi.pdf p. 2)
+V_OVP_MAX_THN20_V = 1.64 * 15.0
 V_OVPR_NOM_V = 1.200                   # tps2663.pdf p. 6: V(OVPR) 1,176..1,224 V
 V_DISPARO_NOM_U1_V = V_OVPR_NOM_V * (1.0 + valor("R35") / valor("R36"))
 TOL_OVPR_TPS26631_FRAC = 0.020         # tps2663.pdf p. 6: 1,176..1,224 V (+-2,0 %)
@@ -96,7 +141,21 @@ R_DIN_SMBJ16A_OHM = 0.35               # pendiente dinamica del SMBJ16A en condu
 # --- Parametros de D-F6 (NXP BT151-500R + TI TL431BI) -----------------------
 I_MANTENIMIENTO_BT151_A = 0.040        # nxp-bt151-500r.pdf p. 2: I_H max 40 mA
 I2T_BT151_A2S = 72.0                   # nxp-bt151-500r.pdf p. 2: I^2t = 72 A^2s
+I_GT_MAX_BT151_A = 0.015               # nxp-bt151-500r.pdf p. 6
+V_GT_MAX_BT151_V = 1.5                 # nxp-bt151-500r.pdf p. 6
+R_GK_DVDT_OHM = 100.0                  # nxp-bt151-500r.pdf p. 6: 200 V/us con R_GK = 100 ohm
 TOL_DISPARO_TL431BI_V = 0.30           # TL431BI 0,5 % + divisor + V_GK
+# MMBT3906 (onsemi_mmbt3906.pdf p. 2): h_FE >= 60 a 50 mA; V_CE(sat) <= 0,4 V
+# y V_BE(sat) <= 0,95 V a 50 mA.
+HFE_MIN_PNP = 60.0
+V_CE_SAT_PNP_V = 0.40
+V_BE_SAT_PNP_V = 0.95
+# I^2t de fusion (tipico) de cada fusible de la BOM, por MPN:
+# bourns_sf1206f.pdf p. 1 (a 10 x I_n) y littelfuse_0466.pdf p. 1.
+I2T_FUSION_A2S = {"SF-1206F300-2": 0.501, "SF-1206F200-2": 0.181, "0466004.NRHF": 1.764}
+# ESTIMADO: el despeje (fusion + arco) frente a la fusion tipica. Ninguna de
+# las dos hojas da el I^2t de despeje.
+FACTOR_DESPEJE_I2T = 10.0
 
 # El disparo se calcula de los divisores de la placa: con el TL431 -> PNP ->
 # puerta el umbral es 2,495 V * (1 + R_alta/R_baja), sin V_GT (en #474 el anodo
@@ -108,16 +167,88 @@ def _disparo(r_alta: str, r_baja: str) -> float:
     return V_REF_TL431_V * (1.0 + valor(r_alta) / valor(r_baja))
 
 
+# (V nominal, fracciones de hoja que suben la salida, tempco por K, rizado Vpp)
+SANO_HOJA = {
+    # traco_thn30wi.pdf p. 2 (modelo doble): exactitud 1 %, linea 0,5 %, carga
+    # 1 %, regulacion cruzada 5 % con carga asimetrica, 0,02 %/K; rizado 60 mVpp
+    # TIPICO (la hoja no da maximo).
+    "rack+12": (12.0, (0.01, 0.005, 0.01, 0.05), 0.0002, 0.060),
+    "rack-12": (12.0, (0.01, 0.005, 0.01, 0.05), 0.0002, 0.060),
+    # mornsun_k78_t1000r3.pdf p. 1-2: exactitud 3 %, linea 0,4 %, carga 0,6 %,
+    # 0,03 %/C, rizado 75 mVpp max.
+    "rack+5": (5.0, (0.03, 0.004, 0.006), 0.0003, 0.075),
+    # mornsun_urb_ymd20wr3.pdf p. 2: exactitud 3 %, linea 0,5 %, carga 1 %,
+    # 0,03 %/C, rizado 100 mVpp max.
+    "digital+5": (5.0, (0.03, 0.005, 0.01), 0.0003, 0.100),
+}
+
+
+def sano_max_v(riel: str) -> float:
+    """Lo mas alto que el riel llega a valer funcionando bien: exactitud,
+    regulaciones y deriva de hoja sumadas al maximo (con el salto de
+    temperatura de margen_budget.py), mas medio rizado."""
+    v_nom, fracs, tempco_k, rizado = SANO_HOJA[riel]
+    return v_nom * (1.0 + sum(fracs) + tempco_k * _margen().DELTA_T_K_V5) + rizado / 2.0
+
+# (r_alta, r_baja, R_B, R_BE, R_C, R_GK, fusible) de cada crowbar, como los
+# coloca build_schematic.py (_crowbar y rack()).
+PIEZAS_CROWBAR = {
+    "rack+12": ("R45", "R47", "R70", "R74", "R78", "R53", "F2"),
+    "rack-12": ("R46", "R48", "R71", "R75", "R79", "R54", "F3"),
+    "rack+5": ("R49", "R50", "R72", "R76", "R80", "R55", "F4"),
+    "digital+5": ("R51", "R52", "R73", "R77", "R81", "R56", "F5"),
+}
+
 RACK_RIELES = {
-    "rack+12": {"sano_max_v": 12.533, "ovp_max_v": 16.56, "victima_max_v": 16.00,
+    "rack+12": {"ovp_max_v": 16.56, "victima_max_v": 16.00,
                 "disparo_v": _disparo("R45", "R47"), "i_pliegue_min_a": 1.875},
-    "rack-12": {"sano_max_v": 12.533, "ovp_max_v": 16.56, "victima_max_v": 16.00,
+    "rack-12": {"ovp_max_v": 16.56, "victima_max_v": 16.00,
                 "disparo_v": _disparo("R46", "R48"), "i_pliegue_min_a": 1.875},
-    "rack+5":  {"sano_max_v": 5.231,  "ovp_max_v": 6.75,  "victima_max_v": 6.30,
+    "rack+5":  {"ovp_max_v": 6.75, "victima_max_v": 6.30,
                 "disparo_v": _disparo("R49", "R50"), "i_pliegue_min_a": 2.500},
-    "digital+5": {"sano_max_v": 5.150, "ovp_max_v": 8.00, "victima_max_v": 6.30,
+    "digital+5": {"ovp_max_v": 8.00, "victima_max_v": 6.30,
                   "disparo_v": _disparo("R51", "R52"), "i_pliegue_min_a": 4.400},
 }
+
+
+def corriente_puerta_a(riel: str, i_gt_a: float = I_GT_MAX_BT151_A) -> dict[str, float]:
+    """Lo que pide la puerta y lo que da el PNP en el disparo MAS BAJO del riel.
+
+    Pide: I_GT max + lo que se lleva R_GK a V_GT max. Da: el PNP saturado (si
+    h_FE * I_B alcanza) a traves de R_C. La base la tira el catodo del TL431,
+    que no baja de V_ref, a traves de R_B, menos lo que se lleva R_BE."""
+    _ra, _rb, r_b, r_be, r_c, r_gk, _f = PIEZAS_CROWBAR[riel]
+    v = RACK_RIELES[riel]["disparo_v"] - TOL_DISPARO_TL431BI_V
+    pide = i_gt_a + V_GT_MAX_BT151_V / valor(r_gk)
+    i_base = (v - V_BE_SAT_PNP_V - V_REF_TL431_V) / valor(r_b) - V_BE_SAT_PNP_V / valor(r_be)
+    da = min(HFE_MIN_PNP * i_base, (v - V_CE_SAT_PNP_V - V_GT_MAX_BT151_V) / valor(r_c))
+    return {"pide_a": pide, "da_a": da, "r_gk_ohm": valor(r_gk)}
+
+
+# --- U18 (TPS709) detras de R64 + D2 ----------------------------------------
+V_C_SMBJ26CA_V = 42.1                  # bourns_smbj.pdf p. 2: V_C a I_PP = 14,3 A
+V_BR_MAX_SMBJ26CA_V = 31.9             # bourns_smbj.pdf p. 2: por debajo, D1 casi no conduce
+V_IN_MAX_U18_V = 30.0                  # tps709.pdf p. 4: maximo de operacion
+V_ABSMAX_U18_V = 32.0                  # tps709.pdf p. 4
+# diodes_bzt52.pdf p. 2: (V_Z max, I_ZT, Z_ZT max) por valor; P_D 370 mW a 25 C.
+ZENER_BZT52 = {"BZT52C18": (19.1, 5e-3, 45.0), "BZT52C20": (21.2, 5e-3, 55.0),
+               "BZT52C22": (23.3, 5e-3, 55.0), "BZT52C24": (25.6, 5e-3, 70.0),
+               "BZT52C27": (28.9, 2e-3, 80.0), "BZT52C30": (32.0, 2e-3, 80.0)}
+P_D_BZT52_W = 0.370
+
+
+def u18_peor(v_entrada_v: float, r64_ohm: float | None = None) -> dict[str, float]:
+    """TPS709 IN sin carga (toda la corriente por el zener) con el zener en
+    su V_Z maximo y la pendiente Z_ZT por encima de I_ZT."""
+    r = valor("R64") if r64_ohm is None else r64_ohm
+    vz, izt, zzt = ZENER_BZT52[filas()["D2"]["value"]]
+    if v_entrada_v <= vz:
+        return {"v_in_v": v_entrada_v, "i_z_a": 0.0, "p_z_w": 0.0}
+    v = (vz - zzt * izt + zzt * v_entrada_v / r) / (1.0 + zzt / r)
+    if (v_entrada_v - v) / r < izt:
+        v = vz
+    i_z = (v_entrada_v - v) / r
+    return {"v_in_v": v, "i_z_a": i_z, "p_z_w": v * i_z}
 
 
 def escalon_lc(*, v_fallo_v: float = 36.0,
@@ -146,10 +277,14 @@ def escalon_lc(*, v_fallo_v: float = 36.0,
     v_pico = v_1
     e_tvs_j = 0.0
 
+    i_corte = None
+
     def derivadas(il: float, v1: float, vd: float, cortado: bool) -> tuple[float, float, float, float]:
         if cortado:
-            # El eFuse abrio: si i_L > 0, el diodo de rueda libre / cuerpo a masa
-            # descarga la bobina contra v1; si i_L <= 0, la bobina queda en 0 A.
+            # El eFuse abrio: si i_L > 0, el Schottky D19 de OUT a GNDA descarga
+            # la bobina contra v1; si i_L <= 0, la bobina queda en 0 A. Con
+            # V_F = 0 la bobina se descarga MAS DESPACIO que con el diodo real
+            # y mete mas carga en C3: cota pesimista para el pico.
             if il <= 0.0:
                 dil = 0.0
             else:
@@ -172,6 +307,8 @@ def escalon_lc(*, v_fallo_v: float = 36.0,
         if con_efuse and not sensa_antes_del_lc and t_deteccion is None and v_1 >= v_disparo_v:
             t_deteccion = t
         cortado = (t_deteccion is not None) and (t >= t_deteccion + t_corte_s)
+        if cortado and i_corte is None:
+            i_corte = i_l
         if cortado and i_l < 0.0:
             i_l = 0.0
 
@@ -196,19 +333,53 @@ def escalon_lc(*, v_fallo_v: float = 36.0,
             v_pico = v_1
         e_tvs_j += p_tvs * dt
 
-    return {"v_pico_v": v_pico, "energia_tvs_mj": e_tvs_j * 1e3}
+    return {"v_pico_v": v_pico, "energia_tvs_mj": e_tvs_j * 1e3,
+            "i_rueda_libre_a": max(0.0, i_corte or 0.0)}
 
+
+I_FSM_SS34_A = 80.0                    # mdd_ss34.pdf p. 1 (8,3 ms; el pulso de L2 dura us)
 
 P_BASE: dict[str, float] = {
     "t_corte_us": T_CORTE_OVP_MAX_S * 1e6,
     "v_disparo_u1_v": V_DISPARO_MAX_U1_V,
     "i_mantenimiento_scr_a": I_MANTENIMIENTO_BT151_A,
+    "r64_ohm": valor("R64"),
+    "i_gt_max_a": I_GT_MAX_BT151_A,
+    "factor_despeje_i2t": FACTOR_DESPEJE_I2T,
 }
 
 
+def _guarda_u18(p: dict[str, float]) -> None:
+    r = u18_peor(V_C_SMBJ26CA_V, p["r64_ohm"])
+    assert r["v_in_v"] <= V_IN_MAX_U18_V, (
+        f"U18 IN sube a {r['v_in_v']:.2f} V > {V_IN_MAX_U18_V:.0f} V con D1 en {V_C_SMBJ26CA_V} V")
+    c = u18_peor(V_BR_MAX_SMBJ26CA_V, p["r64_ohm"])
+    assert c["p_z_w"] <= P_D_BZT52_W, (
+        f"D2 disipa {c['p_z_w'] * 1e3:.0f} mW continuos > {P_D_BZT52_W * 1e3:.0f} mW "
+        f"con la entrada en {V_BR_MAX_SMBJ26CA_V} V")
+
+
+def _guarda_puerta_scr(p: dict[str, float]) -> None:
+    for riel in RACK_RIELES:
+        c = corriente_puerta_a(riel, p["i_gt_max_a"])
+        assert c["r_gk_ohm"] <= R_GK_DVDT_OHM, (
+            f"{riel}: R_GK = {c['r_gk_ohm']:.0f} ohm; el dV/dt de 200 V/us pide <= 100")
+        assert c["da_a"] >= c["pide_a"], (
+            f"puerta corta en {riel}: el PNP da {c['da_a'] * 1e3:.1f} mA y la puerta "
+            f"pide {c['pide_a'] * 1e3:.1f} mA")
+
+
+def _guarda_i2t(p: dict[str, float]) -> None:
+    for riel, piezas in PIEZAS_CROWBAR.items():
+        i2t = I2T_FUSION_A2S[filas()[piezas[-1]]["mpn"]] * p["factor_despeje_i2t"]
+        assert i2t < I2T_BT151_A2S, (
+            f"el fusible {piezas[-1]} de {riel} deja pasar {i2t:.1f} A2s >= "
+            f"{I2T_BT151_A2S:.0f} A2s del SCR")
+
+
 def _guarda_u1_rk4(p: dict[str, float]) -> None:
-    assert V_DISPARO_MIN_U1_V > V_SANO_MAX_U1_V, (
-        f"disparo bajo {V_DISPARO_MIN_U1_V:.2f} V <= sano max {V_SANO_MAX_U1_V:.2f} V")
+    assert V_DISPARO_MIN_U1_V > v_sano_max_u1_v(), (
+        f"disparo bajo {V_DISPARO_MIN_U1_V:.2f} V <= sano max {v_sano_max_u1_v():.2f} V")
     res = escalon_lc(
         v_fallo_v=36.0,
         v_disparo_v=p["v_disparo_u1_v"],
@@ -228,31 +399,6 @@ def _guarda_enganche_scr(p: dict[str, float]) -> None:
         f"pliegue={peor_pliegue:.2f} A")
 
 
-def borde_rojo(guarda: Callable[[dict[str, float]], None],
-               base: dict[str, float], clave: str,
-               lo: float, hi: float, subcadena: str) -> float:
-    def pasa(v: float) -> bool:
-        q = dict(base)
-        q[clave] = v
-        try:
-            guarda(q)
-            return True
-        except AssertionError as exc:
-            assert subcadena in str(exc), (
-                f"En {clave}={v}: esperaba {subcadena!r} y salio {str(exc)!r}")
-            return False
-
-    p_lo, p_hi = pasa(lo), pasa(hi)
-    assert p_lo != p_hi, f"{clave} no cruza el rojo entre {lo} y {hi}"
-    for _ in range(60):
-        m = 0.5 * (lo + hi)
-        if pasa(m) == p_lo:
-            lo = m
-        else:
-            hi = m
-    return 0.5 * (lo + hi)
-
-
 def leer_csv() -> list[dict[str, str]]:
     with open(CSV_PATH, encoding="utf-8", newline="") as f:
         return list(csv.DictReader(f))
@@ -260,8 +406,8 @@ def leer_csv() -> list[dict[str, str]]:
 
 def demo() -> int:
     print("check_absmax v5: modelo RK4 de #334 (TPS26631 + SMBJ16A) y crowbars D-F6\n")
-    filas = leer_csv()
-    assert len(filas) == 8, f"esperaba 8 filas en absmax.csv y hay {len(filas)}"
+    tabla = leer_csv()
+    filas_bom = filas()
 
     con_tope = escalon_lc(v_fallo_v=36.0, sensa_antes_del_lc=True,
                           con_efuse=True, con_tvs=True)
@@ -271,7 +417,7 @@ def demo() -> int:
                          con_efuse=True, con_tvs=False)
 
     print("  1. Simulacion RK4 de #334 (escalon de 36 V sobre el filtro LC de U1):")
-    print(f"    maximo sano en vacio:             {V_SANO_MAX_U1_V:.3f} V")
+    print(f"    maximo sano en vacio:             {v_sano_max_u1_v():.3f} V")
     print(f"    banda de disparo TPS26631 (0,1%): {V_DISPARO_MIN_U1_V:.2f} .. {V_DISPARO_MAX_U1_V:.2f} V "
           f"(nom {V_DISPARO_NOM_U1_V:.2f} V)")
     print(f"    [verde] CON TPS26631 antes del LC (14 us) + SMBJ16A: "
@@ -290,31 +436,64 @@ def demo() -> int:
     for riel, d in RACK_RIELES.items():
         bajo = d["disparo_v"] - TOL_DISPARO_TL431BI_V
         alto = d["disparo_v"] + TOL_DISPARO_TL431BI_V
-        holgura_baja = bajo - d["sano_max_v"]
+        sano = sano_max_v(riel)
+        holgura_baja = bajo - sano
         holgura_alta = d["victima_max_v"] - alto
-        assert holgura_baja > 0.0, f"{riel}: disparo bajo {bajo} <= sano {d['sano_max_v']}"
+        assert holgura_baja > 0.0, f"{riel}: disparo bajo {bajo} <= sano {sano}"
         assert holgura_alta >= 0.0, f"{riel}: disparo alto {alto} > victima {d['victima_max_v']}"
-        print(f"    {riel:<10} sano<={d['sano_max_v']:.2f}V | "
+        print(f"    {riel:<10} sano<={sano:.2f}V | "
               f"disparo {bajo:.2f}..{alto:.2f}V | "
               f"victima<={d['victima_max_v']:.2f}V | "
               f"I_pliegue={d['i_pliegue_min_a']:.2f}A >> I_H={I_MANTENIMIENTO_BT151_A*1000:.0f}mA")
 
-    print("\n  3. Matriz completa de absmax.csv:")
-    # La fila de U1 no se cree: tiene que coincidir con el modelo. Antes era un
-    # 18,08 escrito a mano que se comparaba consigo mismo.
-    fila_u1 = next(f for f in filas if f["victima"].startswith("U1 "))
-    assert abs(float(fila_u1["v_pico_con_tope_v"]) - con_tope["v_pico_v"]) <= 0.05, (
-        f"absmax.csv dice {fila_u1['v_pico_con_tope_v']} V en U1 y el modelo da "
-        f"{con_tope['v_pico_v']:.2f} V: actualiza la fila")
-    tope_rack = {"Invitados rack +12V": "rack+12", "Invitados rack -12V": "rack-12",
-                 "Invitados rack +5V": "rack+5", "Cerebro digital +5V": "digital+5"}
-    for victima, riel in tope_rack.items():
-        f = next(f for f in filas if f["victima"] == victima)
-        esperado = RACK_RIELES[riel]["disparo_v"] + TOL_DISPARO_TL431BI_V
-        assert abs(float(f["v_pico_con_tope_v"]) - esperado) <= 0.02, (
-            f"absmax.csv dice {f['v_pico_con_tope_v']} V en {victima} y los divisores "
-            f"de la placa dan {esperado:.2f} V: actualiza la fila")
-    for f in filas:
+    print("\n  3. U19 abre: la corriente de L2 vuelve por D19 (SS34):")
+    assert "D19" in filas_bom, "el modelo descarga L2 por D19 y D19 no esta en bom.csv"
+    i_rueda = con_tope["i_rueda_libre_a"]
+    assert i_rueda < I_FSM_SS34_A, f"D19 lleva {i_rueda:.1f} A >= I_FSM {I_FSM_SS34_A:.0f} A"
+    print(f"    [verde] pico en D19 al cortar: {i_rueda:.1f} A < I_FSM {I_FSM_SS34_A:.0f} A "
+          f"(sin contar el corte por sobrecorriente de U19, que llega antes)")
+
+    print("\n  4. U18 (TPS709) tras R64 + D2:")
+    _guarda_u18(dict(P_BASE))
+    pico_u18 = u18_peor(V_C_SMBJ26CA_V)
+    cont_u18 = u18_peor(V_BR_MAX_SMBJ26CA_V)
+    print(f"    [verde] con D1 en {V_C_SMBJ26CA_V} V: U18 IN = {pico_u18['v_in_v']:.2f} V "
+          f"<= {V_IN_MAX_U18_V:.0f} V (D2 {filas_bom['D2']['value']}, R64 {valor('R64'):.0f} ohm)")
+    print(f"    [verde] a {V_BR_MAX_SMBJ26CA_V} V sostenidos: D2 disipa "
+          f"{cont_u18['p_z_w'] * 1e3:.0f} mW <= {P_D_BZT52_W * 1e3:.0f} mW")
+
+    print("\n  5. D-F6 por dentro (puerta y fusible):")
+    _guarda_puerta_scr(dict(P_BASE))
+    _guarda_i2t(dict(P_BASE))
+    for riel, piezas in PIEZAS_CROWBAR.items():
+        c = corriente_puerta_a(riel)
+        i2t = I2T_FUSION_A2S[filas_bom[piezas[-1]]["mpn"]] * FACTOR_DESPEJE_I2T
+        print(f"    [verde] {riel:<10} PNP da {c['da_a'] * 1e3:5.1f} mA >= puerta "
+              f"{c['pide_a'] * 1e3:4.1f} mA (R_GK {c['r_gk_ohm']:.0f} ohm) | "
+              f"{piezas[-1]} <= {i2t:.1f} A2s < {I2T_BT151_A2S:.0f} A2s")
+
+    print("\n  6. Matriz completa de absmax.csv (cada fila contra su modelo):")
+    v_max_u2 = 1.220 * (1 + (valor("R7") + valor("RV3")) / valor("R8"))   # lt3015-rev-b.pdf p. 1
+    esperados = {
+        "U1 ": con_tope["v_pico_v"],
+        "U2 ": V_OVP_MAX_THN20_V,
+        "U4,U5 ": con_tope["v_pico_v"],
+        "U6,U7 ": v_max_u2,
+        "U18 ": pico_u18["v_in_v"],
+    }
+    for victima, riel in {"Invitados rack +12V": "rack+12", "Invitados rack -12V": "rack-12",
+                          "Invitados rack +5V": "rack+5", "Cerebro digital +5V": "digital+5"}.items():
+        esperados[victima] = RACK_RIELES[riel]["disparo_v"] + TOL_DISPARO_TL431BI_V
+    for f in tabla:
+        clave = next((k for k in esperados if f["victima"].startswith(k)), None)
+        assert clave is not None, f"absmax.csv: '{f['victima']}' no tiene modelo que la calcule"
+        if clave == "U1 ":
+            assert abs(float(f["v_pico_sin_tope_v"]) - sin_tope["v_pico_v"]) <= 0.05, (
+                f"absmax.csv dice {f['v_pico_sin_tope_v']} V sin tope en U1 y el modelo "
+                f"da {sin_tope['v_pico_v']:.2f} V: actualiza la fila")
+        assert abs(float(f["v_pico_con_tope_v"]) - esperados[clave]) <= 0.05, (
+            f"absmax.csv dice {f['v_pico_con_tope_v']} V en {f['victima']} y el modelo "
+            f"da {esperados[clave]:.2f} V: actualiza la fila")
         v_con = float(f["v_pico_con_tope_v"])
         v_max = float(f["v_absmax_v"])
         assert v_con <= v_max, f"{f['victima']} supera absmax: {v_con} > {v_max}"
@@ -335,10 +514,28 @@ def demo() -> int:
                           14.0, 100.0, "U1 supera absmax")
     ih_max = borde_rojo(_guarda_enganche_scr, dict(P_BASE), "i_mantenimiento_scr_a",
                         0.040, 5.0, "el crowbar se suelta")
+    r64_v = borde_rojo(_guarda_u18, dict(P_BASE), "r64_ohm", valor("R64"), 1.0, "U18 IN")
+    r64_p = borde_rojo(_guarda_u18, dict(P_BASE), "r64_ohm", valor("R64"), 250.0, "D2 disipa")
+    igt = borde_rojo(_guarda_puerta_scr, dict(P_BASE), "i_gt_max_a", I_GT_MAX_BT151_A, 1.0,
+                     "puerta corta")
+    despeje = borde_rojo(_guarda_i2t, dict(P_BASE), "factor_despeje_i2t", FACTOR_DESPEJE_I2T,
+                         1000.0, "deja pasar")
     print(f"\n  canario #334 (sin TVS): si el corte del TPS26631 tarda > {t_max_us:.1f} us, "
           f"U1 supera 20,0 V (la hoja garantiza <= 14,0 us)")
     print(f"  canario D-F6: con I_H > {ih_max:.2f} A el crowbar se soltaria "
           f"(el BT151-500R pide <= 0,04 A)")
+    print(f"  canario U18: R64 < {r64_v:.0f} ohm lleva U18 IN por encima de 30 V, y "
+          f"R64 < {r64_p:.0f} ohm quema D2")
+    print(f"  canario D-F6: con I_GT > {igt * 1e3:.0f} mA algun PNP no llega a la puerta")
+    print(f"  canario D-F6: un despeje > {despeje:.0f} x la fusion pasaria el I2t del SCR")
+
+    print("\n  LO QUE NO CUBRE:")
+    print(f"    - fallo doble THN- en OVP + U2 en corto: U6/U7 verian {V_OVP_MAX_THN20_V:.1f} V "
+          f"contra 22 V, sin tope (el positivo si lo tiene)")
+    print("    - OUT de U19 a -V_F de D19 (<= 0,55 V a 3 A) durante el corte; la hoja da "
+          "-0,3 V en DC y pide el Schottky")
+    print("    - pendiente del riel de rack en enchufe en caliente (el SCR aguanta 200 V/us)")
+    print("    - un crowbar disparado no llega al MSP430: el SCR sigue conduciendo el pliegue")
 
     print("\nOK: check_absmax.py v5 (#334, #340 y T18..T21 en verde)")
     return 0
