@@ -668,8 +668,8 @@ firmó en dirección el 2026-09-08 (§9); queda pendiente ejecutar su relevo**
    > 340,2 mA y la regla del 30 % (`hardware/03-vco/consumo_total_budget.py`,
    > `MARGEN`) pide 442. Con 650, `U1` llegaba a 148,9 °C de unión con el aire
    > del cajón a 63,9 °C (`tj_budget.py`); con 450 el cajón baja de 72,61 a
-   > 64,93 W, el aire a 62,6 °C y `U1` a 120,5 °C. El cobre no cambia: la
-   > cascada sigue ruteada para 650.
+   > 64,93 W, el aire a 62,6 °C, el cordón de 3,21 a 2,87 A en su peor caso y
+   > `U1` a 120,5 °C. El cobre no cambia: la cascada sigue ruteada para 650.
 
 ## 9. Lo que hay que firmar
 
