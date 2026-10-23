@@ -1,9 +1,9 @@
 (export
 	(version "E")
 	(design
-		(source "/home/user/sam17/hardware/01-power-supply/v5/kicad/sam17-power-v5.kicad_sch")
-		(date "2026-10-23T01:49:35")
-		(tool "Eeschema 10.0.7-10.0.7~ubuntu24.04.1")
+		(source "D:\\Desktop\\projects\\sam17\\.claude\\worktrees\\fuente-v5\\hardware\\01-power-supply\\v5\\kicad\\sam17-power-v5.kicad_sch")
+		(date "2026-10-23T13:07:28")
+		(tool "Eeschema 10.0.3")
 		(sheet
 			(number "1")
 			(name "/")
@@ -87,7 +87,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -153,7 +153,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -219,7 +219,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -285,7 +285,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -351,7 +351,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -417,7 +417,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -483,7 +483,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -549,7 +549,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -615,7 +615,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -681,7 +681,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -747,7 +747,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -813,7 +813,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -879,7 +879,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -945,7 +945,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -1011,7 +1011,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -1077,7 +1077,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -1143,7 +1143,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -1209,7 +1209,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -1275,7 +1275,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -1341,7 +1341,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -1407,7 +1407,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -1473,7 +1473,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -1539,7 +1539,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -1605,7 +1605,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -1671,7 +1671,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -1737,7 +1737,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -1803,7 +1803,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -1869,7 +1869,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -1935,7 +1935,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -2001,7 +2001,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -2067,7 +2067,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -2133,7 +2133,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -2199,7 +2199,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -2265,7 +2265,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -2331,7 +2331,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -2397,7 +2397,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -2463,7 +2463,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -2529,7 +2529,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -2595,7 +2595,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -2630,13 +2630,13 @@
 		)
 		(comp
 			(ref "D2")
-			(value "BZT52C30")
+			(value "BZT52C24")
 			(footprint "Diode_SMD:D_SOD-123")
 			(fields
 				(field
-					(name "LCSC") "C163721")
+					(name "LCSC") "C171749")
 				(field
-					(name "MPN") "BZT52C30-7-F")
+					(name "MPN") "BZT52C24-7-F")
 				(field
 					(name "Footprint") "Diode_SMD:D_SOD-123")
 				(field
@@ -2653,15 +2653,15 @@
 			)
 			(property
 				(name "LCSC")
-				(value "C163721")
+				(value "C171749")
 			)
 			(property
 				(name "MPN")
-				(value "BZT52C30-7-F")
+				(value "BZT52C24-7-F")
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -2727,7 +2727,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -2793,7 +2793,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -2859,7 +2859,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -2925,7 +2925,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -2991,7 +2991,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -3057,7 +3057,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -3123,7 +3123,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -3189,7 +3189,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -3255,7 +3255,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -3324,7 +3324,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -3393,7 +3393,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -3462,7 +3462,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -3531,7 +3531,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -3550,6 +3550,72 @@
 				(tstamps "/")
 			)
 			(tstamps "6abd3926-345e-5d83-8df9-e50374657040")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "D19")
+			(value "SS34")
+			(footprint "Diode_SMD:D_SMA")
+			(fields
+				(field
+					(name "LCSC") "C8678")
+				(field
+					(name "MPN") "SS34")
+				(field
+					(name "Footprint") "Diode_SMD:D_SMA")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "Device")
+				(part "D_Schottky")
+				(description "Schottky diode")
+			)
+			(property
+				(name "LCSC")
+				(value "C8678")
+			)
+			(property
+				(name "MPN")
+				(value "SS34")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "sam17-power-v5.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "diode Schottky")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "TO-???* *_Diode_* *SingleDiode* D_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "c786bd0d-a733-5e9d-b9ac-c3940a149efd")
 			(units
 				(unit
 					(name "A")
@@ -3597,7 +3663,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -3663,7 +3729,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -3729,7 +3795,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -3795,7 +3861,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -3861,7 +3927,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -3927,7 +3993,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -3993,7 +4059,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -4059,7 +4125,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -4131,7 +4197,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -4197,7 +4263,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -4260,7 +4326,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -4326,7 +4392,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -4398,7 +4464,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -4470,7 +4536,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -4536,7 +4602,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -4608,7 +4674,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -4674,7 +4740,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -4734,7 +4800,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -4794,7 +4860,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -4858,7 +4924,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -4922,7 +4988,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -4992,7 +5058,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -5056,7 +5122,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -5126,7 +5192,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -5201,7 +5267,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -5270,7 +5336,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -5339,7 +5405,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -5408,7 +5474,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -5477,7 +5543,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -5543,7 +5609,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -5609,7 +5675,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -5675,7 +5741,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -5741,7 +5807,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -5807,7 +5873,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -5873,7 +5939,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -5939,7 +6005,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -6005,7 +6071,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -6071,7 +6137,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -6137,7 +6203,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -6203,7 +6269,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -6269,7 +6335,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -6335,7 +6401,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -6401,7 +6467,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -6467,7 +6533,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -6533,7 +6599,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -6599,7 +6665,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -6665,7 +6731,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -6731,7 +6797,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -6797,7 +6863,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -6863,7 +6929,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -6929,7 +6995,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -6995,7 +7061,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -7061,7 +7127,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -7127,7 +7193,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -7193,7 +7259,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -7259,7 +7325,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -7325,7 +7391,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -7391,7 +7457,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -7457,7 +7523,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -7523,7 +7589,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -7589,7 +7655,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -7655,7 +7721,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -7721,7 +7787,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -7787,7 +7853,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -7853,7 +7919,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -7919,7 +7985,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -7985,7 +8051,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -8051,7 +8117,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -8117,7 +8183,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -8183,7 +8249,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -8249,7 +8315,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -8315,7 +8381,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -8381,7 +8447,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -8447,7 +8513,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -8513,7 +8579,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -8579,7 +8645,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -8645,7 +8711,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -8711,7 +8777,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -8777,7 +8843,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -8843,7 +8909,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -8878,13 +8944,13 @@
 		)
 		(comp
 			(ref "R53")
-			(value "1k")
+			(value "100")
 			(footprint "Resistor_SMD:R_0805_2012Metric")
 			(fields
 				(field
-					(name "LCSC") "C17513")
+					(name "LCSC") "C17408")
 				(field
-					(name "MPN") "0805W8F1001T5E")
+					(name "MPN") "0805W8F1000T5E")
 				(field
 					(name "Footprint") "Resistor_SMD:R_0805_2012Metric")
 				(field
@@ -8901,15 +8967,15 @@
 			)
 			(property
 				(name "LCSC")
-				(value "C17513")
+				(value "C17408")
 			)
 			(property
 				(name "MPN")
-				(value "0805W8F1001T5E")
+				(value "0805W8F1000T5E")
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -8944,13 +9010,13 @@
 		)
 		(comp
 			(ref "R54")
-			(value "1k")
+			(value "100")
 			(footprint "Resistor_SMD:R_0805_2012Metric")
 			(fields
 				(field
-					(name "LCSC") "C17513")
+					(name "LCSC") "C17408")
 				(field
-					(name "MPN") "0805W8F1001T5E")
+					(name "MPN") "0805W8F1000T5E")
 				(field
 					(name "Footprint") "Resistor_SMD:R_0805_2012Metric")
 				(field
@@ -8967,15 +9033,15 @@
 			)
 			(property
 				(name "LCSC")
-				(value "C17513")
+				(value "C17408")
 			)
 			(property
 				(name "MPN")
-				(value "0805W8F1001T5E")
+				(value "0805W8F1000T5E")
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -9010,13 +9076,13 @@
 		)
 		(comp
 			(ref "R55")
-			(value "1k")
+			(value "100")
 			(footprint "Resistor_SMD:R_0805_2012Metric")
 			(fields
 				(field
-					(name "LCSC") "C17513")
+					(name "LCSC") "C17408")
 				(field
-					(name "MPN") "0805W8F1001T5E")
+					(name "MPN") "0805W8F1000T5E")
 				(field
 					(name "Footprint") "Resistor_SMD:R_0805_2012Metric")
 				(field
@@ -9033,15 +9099,15 @@
 			)
 			(property
 				(name "LCSC")
-				(value "C17513")
+				(value "C17408")
 			)
 			(property
 				(name "MPN")
-				(value "0805W8F1001T5E")
+				(value "0805W8F1000T5E")
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -9076,13 +9142,13 @@
 		)
 		(comp
 			(ref "R56")
-			(value "1k")
+			(value "100")
 			(footprint "Resistor_SMD:R_0805_2012Metric")
 			(fields
 				(field
-					(name "LCSC") "C17513")
+					(name "LCSC") "C17408")
 				(field
-					(name "MPN") "0805W8F1001T5E")
+					(name "MPN") "0805W8F1000T5E")
 				(field
 					(name "Footprint") "Resistor_SMD:R_0805_2012Metric")
 				(field
@@ -9099,15 +9165,15 @@
 			)
 			(property
 				(name "LCSC")
-				(value "C17513")
+				(value "C17408")
 			)
 			(property
 				(name "MPN")
-				(value "0805W8F1001T5E")
+				(value "0805W8F1000T5E")
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -9173,7 +9239,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -9239,7 +9305,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -9305,7 +9371,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -9371,7 +9437,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -9437,7 +9503,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -9503,7 +9569,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -9569,7 +9635,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -9604,13 +9670,13 @@
 		)
 		(comp
 			(ref "R64")
-			(value "220")
+			(value "1k")
 			(footprint "Resistor_SMD:R_0805_2012Metric")
 			(fields
 				(field
-					(name "LCSC") "C17557")
+					(name "LCSC") "C17513")
 				(field
-					(name "MPN") "0805W8F2200T5E")
+					(name "MPN") "0805W8F1001T5E")
 				(field
 					(name "Footprint") "Resistor_SMD:R_0805_2012Metric")
 				(field
@@ -9627,15 +9693,15 @@
 			)
 			(property
 				(name "LCSC")
-				(value "C17557")
+				(value "C17513")
 			)
 			(property
 				(name "MPN")
-				(value "0805W8F2200T5E")
+				(value "0805W8F1001T5E")
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -9701,7 +9767,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -9767,7 +9833,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -9833,7 +9899,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -9899,7 +9965,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -9965,7 +10031,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -10031,7 +10097,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -10097,7 +10163,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -10163,7 +10229,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -10229,7 +10295,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -10295,7 +10361,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -10361,7 +10427,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -10427,7 +10493,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -10493,7 +10559,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -10559,7 +10625,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -10625,7 +10691,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -10691,7 +10757,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -10757,7 +10823,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -10776,6 +10842,204 @@
 				(tstamps "/")
 			)
 			(tstamps "d1e4f1bb-db36-5f6f-bf12-7ab49360d89b")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R82")
+			(value "6.8M")
+			(footprint "Resistor_SMD:R_0805_2012Metric")
+			(fields
+				(field
+					(name "LCSC") "C17773")
+				(field
+					(name "MPN") "0805W8F6804T5E")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0805_2012Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "Device")
+				(part "R")
+				(description "Resistor")
+			)
+			(property
+				(name "LCSC")
+				(value "C17773")
+			)
+			(property
+				(name "MPN")
+				(value "0805W8F6804T5E")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "sam17-power-v5.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "e2709c33-a911-58fc-a398-eadfb48ed12e")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R83")
+			(value "47k")
+			(footprint "Resistor_SMD:R_0805_2012Metric")
+			(fields
+				(field
+					(name "LCSC") "C17713")
+				(field
+					(name "MPN") "0805W8F4702T5E")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0805_2012Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "Device")
+				(part "R")
+				(description "Resistor")
+			)
+			(property
+				(name "LCSC")
+				(value "C17713")
+			)
+			(property
+				(name "MPN")
+				(value "0805W8F4702T5E")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "sam17-power-v5.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "f53824ae-d1b7-5db3-b0b7-133197a4a842")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R84")
+			(value "10k")
+			(footprint "Resistor_SMD:R_0805_2012Metric")
+			(fields
+				(field
+					(name "LCSC") "C17414")
+				(field
+					(name "MPN") "0805W8F1002T5E")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0805_2012Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "Device")
+				(part "R")
+				(description "Resistor")
+			)
+			(property
+				(name "LCSC")
+				(value "C17414")
+			)
+			(property
+				(name "MPN")
+				(value "0805W8F1002T5E")
+			)
+			(property
+				(name "Sheetname")
+				(value "")
+			)
+			(property
+				(name "Sheetfile")
+				(value "sam17-power-v5.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "ca35c197-fde8-5baf-8124-1f346fae4ac9")
 			(units
 				(unit
 					(name "A")
@@ -10823,7 +11087,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -10892,7 +11156,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -10961,7 +11225,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11022,7 +11286,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11083,7 +11347,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11144,7 +11408,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11205,7 +11469,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11261,7 +11525,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11318,7 +11582,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11375,7 +11639,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11432,7 +11696,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11489,7 +11753,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11546,7 +11810,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11603,7 +11867,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11660,7 +11924,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11717,7 +11981,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11774,7 +12038,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11831,7 +12095,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11894,7 +12158,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -11969,7 +12233,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -12044,7 +12308,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -12137,7 +12401,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -12230,7 +12494,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -12329,7 +12593,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -12428,7 +12692,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -12518,7 +12782,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -12602,7 +12866,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -12692,7 +12956,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -12776,7 +13040,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -12866,7 +13130,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -12956,7 +13220,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -13046,7 +13310,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -13122,7 +13386,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -13146,13 +13410,13 @@
 					(name "A")
 					(pins
 						(pin
+							(num "1")
+						)
+						(pin
 							(num "2")
 						)
 						(pin
 							(num "3")
-						)
-						(pin
-							(num "1")
 						)
 						(pin
 							(num "4")
@@ -13176,10 +13440,10 @@
 							(num "6")
 						)
 						(pin
-							(num "21")
+							(num "9")
 						)
 						(pin
-							(num "9")
+							(num "21")
 						)
 						(pin
 							(num "18")
@@ -13245,7 +13509,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -13345,7 +13609,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -13412,7 +13676,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -13436,13 +13700,13 @@
 					(name "A")
 					(pins
 						(pin
+							(num "1")
+						)
+						(pin
 							(num "2")
 						)
 						(pin
 							(num "3")
-						)
-						(pin
-							(num "1")
 						)
 						(pin
 							(num "4")
@@ -13466,10 +13730,10 @@
 							(num "6")
 						)
 						(pin
-							(num "21")
+							(num "9")
 						)
 						(pin
-							(num "9")
+							(num "21")
 						)
 						(pin
 							(num "18")
@@ -13535,7 +13799,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -13553,7 +13817,7 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "f9759124-5a89-5da0-971a-5258e4415b6f" "f0e49f2d-2205-57e2-86d7-e131dac5106a"
+			(tstamps "f0e49f2d-2205-57e2-86d7-e131dac5106a" "f9759124-5a89-5da0-971a-5258e4415b6f"
 				"c405e1ac-ebd0-5dc4-8998-9bdd4d399b08"
 			)
 			(units
@@ -13631,7 +13895,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -13700,7 +13964,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -13769,7 +14033,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -13838,7 +14102,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -13907,7 +14171,7 @@
 			)
 			(property
 				(name "Sheetname")
-				(value "sam17-power-v5")
+				(value "")
 			)
 			(property
 				(name "Sheetfile")
@@ -16066,6 +16330,11 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "R84")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
 				(ref "U17")
 				(pin "5")
 				(pinfunction "DVCC_5")
@@ -16695,6 +16964,12 @@
 			(name "+15V5_EFUSE")
 			(class "Potencia")
 			(node
+				(ref "D19")
+				(pin "1")
+				(pinfunction "K_1")
+				(pintype "passive")
+			)
+			(node
 				(ref "L2")
 				(pin "1")
 				(pinfunction "1_1")
@@ -16806,6 +17081,11 @@
 			)
 			(node
 				(ref "R35")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "R82")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -17608,6 +17888,28 @@
 		)
 		(net
 			(code "40")
+			(name "FLT_U19")
+			(class "Default")
+			(node
+				(ref "R84")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U17")
+				(pin "16")
+				(pinfunction "P1.2_16")
+				(pintype "bidirectional")
+			)
+			(node
+				(ref "U19")
+				(pin "15")
+				(pinfunction "~{FLT}_15")
+				(pintype "open_collector")
+			)
+		)
+		(net
+			(code "41")
 			(name "GATE_Q2")
 			(class "Default")
 			(node
@@ -17624,7 +17926,7 @@
 			)
 		)
 		(net
-			(code "41")
+			(code "42")
 			(name "GATE_SCR1")
 			(class "Default")
 			(node
@@ -17645,7 +17947,7 @@
 			)
 		)
 		(net
-			(code "42")
+			(code "43")
 			(name "GATE_SCR2")
 			(class "Default")
 			(node
@@ -17666,7 +17968,7 @@
 			)
 		)
 		(net
-			(code "43")
+			(code "44")
 			(name "GATE_SCR3")
 			(class "Default")
 			(node
@@ -17687,7 +17989,7 @@
 			)
 		)
 		(net
-			(code "44")
+			(code "45")
 			(name "GATE_SCR4")
 			(class "Default")
 			(node
@@ -17708,7 +18010,7 @@
 			)
 		)
 		(net
-			(code "45")
+			(code "46")
 			(name "GND24")
 			(class "Masa")
 			(node
@@ -17839,6 +18141,11 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "R83")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
 				(ref "SW1")
 				(pin "2")
 				(pinfunction "2_2")
@@ -17894,7 +18201,7 @@
 			)
 		)
 		(net
-			(code "46")
+			(code "47")
 			(name "GNDA")
 			(class "Masa")
 			(node
@@ -18056,6 +18363,12 @@
 				(ref "D17")
 				(pin "1")
 				(pinfunction "A_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "D19")
+				(pin "2")
+				(pinfunction "A_2")
 				(pintype "passive")
 			)
 			(node
@@ -18358,12 +18671,6 @@
 			)
 			(node
 				(ref "U19")
-				(pin "7")
-				(pinfunction "UVLO_7")
-				(pintype "input")
-			)
-			(node
-				(ref "U19")
 				(pin "9")
 				(pinfunction "GND_9")
 				(pintype "power_in")
@@ -18484,7 +18791,7 @@
 			)
 		)
 		(net
-			(code "47")
+			(code "48")
 			(name "GNDD")
 			(class "Masa")
 			(node
@@ -18557,7 +18864,7 @@
 			)
 		)
 		(net
-			(code "48")
+			(code "49")
 			(name "ILIM_U16")
 			(class "Default")
 			(node
@@ -18573,7 +18880,7 @@
 			)
 		)
 		(net
-			(code "49")
+			(code "50")
 			(name "ILIM_U19")
 			(class "Default")
 			(node
@@ -18589,7 +18896,7 @@
 			)
 		)
 		(net
-			(code "50")
+			(code "51")
 			(name "LED3_A")
 			(class "Default")
 			(node
@@ -18605,7 +18912,7 @@
 			)
 		)
 		(net
-			(code "51")
+			(code "52")
 			(name "LED4_K")
 			(class "Default")
 			(node
@@ -18621,7 +18928,7 @@
 			)
 		)
 		(net
-			(code "52")
+			(code "53")
 			(name "LED6_A")
 			(class "Default")
 			(node
@@ -18637,7 +18944,7 @@
 			)
 		)
 		(net
-			(code "53")
+			(code "54")
 			(name "LED7_A")
 			(class "Default")
 			(node
@@ -18653,7 +18960,7 @@
 			)
 		)
 		(net
-			(code "54")
+			(code "55")
 			(name "LED_ANODE")
 			(class "Default")
 			(node
@@ -18669,7 +18976,7 @@
 			)
 		)
 		(net
-			(code "55")
+			(code "56")
 			(name "LED_CTRL")
 			(class "Default")
 			(node
@@ -18685,7 +18992,7 @@
 			)
 		)
 		(net
-			(code "56")
+			(code "57")
 			(name "MCU_RST")
 			(class "Default")
 			(node
@@ -18712,7 +19019,7 @@
 			)
 		)
 		(net
-			(code "57")
+			(code "58")
 			(name "MCU_TEST")
 			(class "Default")
 			(node
@@ -18729,7 +19036,7 @@
 			)
 		)
 		(net
-			(code "58")
+			(code "59")
 			(name "OUTS_POS")
 			(class "Potencia")
 			(node
@@ -18772,7 +19079,7 @@
 			)
 		)
 		(net
-			(code "59")
+			(code "60")
 			(name "OUT_U4")
 			(class "Potencia")
 			(node
@@ -18788,7 +19095,7 @@
 			)
 		)
 		(net
-			(code "60")
+			(code "61")
 			(name "OUT_U5")
 			(class "Potencia")
 			(node
@@ -18804,7 +19111,7 @@
 			)
 		)
 		(net
-			(code "61")
+			(code "62")
 			(name "OUT_U6")
 			(class "Potencia")
 			(node
@@ -18826,7 +19133,7 @@
 			)
 		)
 		(net
-			(code "62")
+			(code "63")
 			(name "OUT_U7")
 			(class "Potencia")
 			(node
@@ -18848,7 +19155,7 @@
 			)
 		)
 		(net
-			(code "63")
+			(code "64")
 			(name "OVP_U16")
 			(class "Default")
 			(node
@@ -18869,7 +19176,7 @@
 			)
 		)
 		(net
-			(code "64")
+			(code "65")
 			(name "OVP_U19")
 			(class "Default")
 			(node
@@ -18890,7 +19197,7 @@
 			)
 		)
 		(net
-			(code "65")
+			(code "66")
 			(name "QB_CB1")
 			(class "Default")
 			(node
@@ -18911,7 +19218,7 @@
 			)
 		)
 		(net
-			(code "66")
+			(code "67")
 			(name "QB_CB2")
 			(class "Default")
 			(node
@@ -18932,7 +19239,7 @@
 			)
 		)
 		(net
-			(code "67")
+			(code "68")
 			(name "QB_CB3")
 			(class "Default")
 			(node
@@ -18953,7 +19260,7 @@
 			)
 		)
 		(net
-			(code "68")
+			(code "69")
 			(name "QB_CB4")
 			(class "Default")
 			(node
@@ -18974,7 +19281,7 @@
 			)
 		)
 		(net
-			(code "69")
+			(code "70")
 			(name "QC_CB1")
 			(class "Default")
 			(node
@@ -18990,7 +19297,7 @@
 			)
 		)
 		(net
-			(code "70")
+			(code "71")
 			(name "QC_CB2")
 			(class "Default")
 			(node
@@ -19006,7 +19313,7 @@
 			)
 		)
 		(net
-			(code "71")
+			(code "72")
 			(name "QC_CB3")
 			(class "Default")
 			(node
@@ -19022,7 +19329,7 @@
 			)
 		)
 		(net
-			(code "72")
+			(code "73")
 			(name "QC_CB4")
 			(class "Default")
 			(node
@@ -19038,7 +19345,7 @@
 			)
 		)
 		(net
-			(code "73")
+			(code "74")
 			(name "REF0_NEG")
 			(class "Default")
 			(node
@@ -19059,7 +19366,7 @@
 			)
 		)
 		(net
-			(code "74")
+			(code "75")
 			(name "REF_CB1")
 			(class "Default")
 			(node
@@ -19080,7 +19387,7 @@
 			)
 		)
 		(net
-			(code "75")
+			(code "76")
 			(name "REF_CB2")
 			(class "Default")
 			(node
@@ -19101,7 +19408,7 @@
 			)
 		)
 		(net
-			(code "76")
+			(code "77")
 			(name "REF_CB3")
 			(class "Default")
 			(node
@@ -19122,7 +19429,7 @@
 			)
 		)
 		(net
-			(code "77")
+			(code "78")
 			(name "REF_CB4")
 			(class "Default")
 			(node
@@ -19143,7 +19450,7 @@
 			)
 		)
 		(net
-			(code "78")
+			(code "79")
 			(name "SCL_A")
 			(class "Default")
 			(node
@@ -19195,7 +19502,7 @@
 			)
 		)
 		(net
-			(code "79")
+			(code "80")
 			(name "SCL_D")
 			(class "Default")
 			(node
@@ -19217,7 +19524,7 @@
 			)
 		)
 		(net
-			(code "80")
+			(code "81")
 			(name "SDA_A")
 			(class "Default")
 			(node
@@ -19269,7 +19576,7 @@
 			)
 		)
 		(net
-			(code "81")
+			(code "82")
 			(name "SDA_D")
 			(class "Default")
 			(node
@@ -19291,7 +19598,7 @@
 			)
 		)
 		(net
-			(code "82")
+			(code "83")
 			(name "SENSE_NEG")
 			(class "Default")
 			(node
@@ -19317,7 +19624,7 @@
 			)
 		)
 		(net
-			(code "83")
+			(code "84")
 			(name "SENSE_POS")
 			(class "Default")
 			(node
@@ -19348,7 +19655,7 @@
 			)
 		)
 		(net
-			(code "84")
+			(code "85")
 			(name "SET_NEG")
 			(class "Default")
 			(node
@@ -19380,7 +19687,7 @@
 			)
 		)
 		(net
-			(code "85")
+			(code "86")
 			(name "SET_POS")
 			(class "Default")
 			(node
@@ -19412,7 +19719,7 @@
 			)
 		)
 		(net
-			(code "86")
+			(code "87")
 			(name "SHDN_CASCADE")
 			(class "Default")
 			(node
@@ -19459,9 +19766,14 @@
 			)
 		)
 		(net
-			(code "87")
+			(code "88")
 			(name "SHDN_M5")
 			(class "Default")
+			(node
+				(ref "R83")
+				(pin "1")
+				(pintype "passive")
+			)
 			(node
 				(ref "U16")
 				(pin "13")
@@ -19476,7 +19788,7 @@
 			)
 		)
 		(net
-			(code "88")
+			(code "89")
 			(name "SW_RESET")
 			(class "Default")
 			(node
@@ -19493,7 +19805,7 @@
 			)
 		)
 		(net
-			(code "89")
+			(code "90")
 			(name "TLK_CB1")
 			(class "Default")
 			(node
@@ -19509,7 +19821,7 @@
 			)
 		)
 		(net
-			(code "90")
+			(code "91")
 			(name "TLK_CB2")
 			(class "Default")
 			(node
@@ -19525,7 +19837,7 @@
 			)
 		)
 		(net
-			(code "91")
+			(code "92")
 			(name "TLK_CB3")
 			(class "Default")
 			(node
@@ -19541,7 +19853,7 @@
 			)
 		)
 		(net
-			(code "92")
+			(code "93")
 			(name "TLK_CB4")
 			(class "Default")
 			(node
@@ -19557,7 +19869,7 @@
 			)
 		)
 		(net
-			(code "93")
+			(code "94")
 			(name "TRIM_PS4")
 			(class "Default")
 			(node
@@ -19573,7 +19885,7 @@
 			)
 		)
 		(net
-			(code "94")
+			(code "95")
 			(name "TRIM_PS5")
 			(class "Default")
 			(node
@@ -19589,7 +19901,7 @@
 			)
 		)
 		(net
-			(code "95")
+			(code "96")
 			(name "TRIM_U1_HI")
 			(class "Default")
 			(node
@@ -19605,7 +19917,7 @@
 			)
 		)
 		(net
-			(code "96")
+			(code "97")
 			(name "TRIM_U2_HI")
 			(class "Default")
 			(node
@@ -19621,7 +19933,7 @@
 			)
 		)
 		(net
-			(code "97")
+			(code "98")
 			(name "UVLO_U16")
 			(class "Default")
 			(node
@@ -19642,7 +19954,23 @@
 			)
 		)
 		(net
-			(code "98")
+			(code "99")
+			(name "UVLO_U19")
+			(class "Default")
+			(node
+				(ref "R82")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U19")
+				(pin "7")
+				(pinfunction "UVLO_7")
+				(pintype "input")
+			)
+		)
+		(net
+			(code "100")
 			(name "VCAP_U15")
 			(class "Default")
 			(node
@@ -19658,7 +19986,7 @@
 			)
 		)
 		(net
-			(code "99")
+			(code "101")
 			(name "VREF_2V5")
 			(class "Default")
 			(node
@@ -19691,7 +20019,7 @@
 			)
 		)
 		(net
-			(code "100")
+			(code "102")
 			(name "unconnected-(PS1-Remote-Pad6)")
 			(class "Default")
 			(node
@@ -19702,7 +20030,7 @@
 			)
 		)
 		(net
-			(code "101")
+			(code "103")
 			(name "unconnected-(PS2-Ctrl-Pad1)")
 			(class "Default")
 			(node
@@ -19713,7 +20041,7 @@
 			)
 		)
 		(net
-			(code "102")
+			(code "104")
 			(name "unconnected-(PS2-Trim-Pad5)")
 			(class "Default")
 			(node
@@ -19724,7 +20052,7 @@
 			)
 		)
 		(net
-			(code "103")
+			(code "105")
 			(name "unconnected-(PS3-Remote-Pad10)")
 			(class "Default")
 			(node
@@ -19735,7 +20063,7 @@
 			)
 		)
 		(net
-			(code "104")
+			(code "106")
 			(name "unconnected-(PS3-Vadj-Pad6)")
 			(class "Default")
 			(node
@@ -19746,7 +20074,7 @@
 			)
 		)
 		(net
-			(code "105")
+			(code "107")
 			(name "unconnected-(PS4-Remote-Pad6)")
 			(class "Default")
 			(node
@@ -19757,7 +20085,7 @@
 			)
 		)
 		(net
-			(code "106")
+			(code "108")
 			(name "unconnected-(PS5-Remote-Pad6)")
 			(class "Default")
 			(node
@@ -19768,7 +20096,7 @@
 			)
 		)
 		(net
-			(code "107")
+			(code "109")
 			(name "unconnected-(U4-PG-Pad4)")
 			(class "Default")
 			(node
@@ -19779,7 +20107,7 @@
 			)
 		)
 		(net
-			(code "108")
+			(code "110")
 			(name "unconnected-(U5-PG-Pad4)")
 			(class "Default")
 			(node
@@ -19790,7 +20118,7 @@
 			)
 		)
 		(net
-			(code "109")
+			(code "111")
 			(name "unconnected-(U6-PG-Pad4)")
 			(class "Default")
 			(node
@@ -19801,7 +20129,7 @@
 			)
 		)
 		(net
-			(code "110")
+			(code "112")
 			(name "unconnected-(U6-VIOC-Pad7)")
 			(class "Default")
 			(node
@@ -19812,7 +20140,7 @@
 			)
 		)
 		(net
-			(code "111")
+			(code "113")
 			(name "unconnected-(U7-PG-Pad4)")
 			(class "Default")
 			(node
@@ -19823,7 +20151,7 @@
 			)
 		)
 		(net
-			(code "112")
+			(code "114")
 			(name "unconnected-(U7-VIOC-Pad7)")
 			(class "Default")
 			(node
@@ -19834,7 +20162,7 @@
 			)
 		)
 		(net
-			(code "113")
+			(code "115")
 			(name "unconnected-(U8-~{Alert}-Pad3)")
 			(class "Default")
 			(node
@@ -19845,7 +20173,7 @@
 			)
 		)
 		(net
-			(code "114")
+			(code "116")
 			(name "unconnected-(U10-ALERT{slash}RDY-Pad2)")
 			(class "Default")
 			(node
@@ -19856,7 +20184,7 @@
 			)
 		)
 		(net
-			(code "115")
+			(code "117")
 			(name "unconnected-(U11-ALERT-Pad3)")
 			(class "Default")
 			(node
@@ -19867,7 +20195,7 @@
 			)
 		)
 		(net
-			(code "116")
+			(code "118")
 			(name "unconnected-(U12-~{Alert}-Pad3)")
 			(class "Default")
 			(node
@@ -19878,7 +20206,7 @@
 			)
 		)
 		(net
-			(code "117")
+			(code "119")
 			(name "unconnected-(U13-~{Alert}-Pad3)")
 			(class "Default")
 			(node
@@ -19889,7 +20217,7 @@
 			)
 		)
 		(net
-			(code "118")
+			(code "120")
 			(name "unconnected-(U14-~{Alert}-Pad3)")
 			(class "Default")
 			(node
@@ -19900,7 +20228,7 @@
 			)
 		)
 		(net
-			(code "119")
+			(code "121")
 			(name "unconnected-(U15-NC-Pad3)")
 			(class "Default")
 			(node
@@ -19911,7 +20239,7 @@
 			)
 		)
 		(net
-			(code "120")
+			(code "122")
 			(name "unconnected-(U16-B_GATE-Pad4)")
 			(class "Default")
 			(node
@@ -19922,7 +20250,7 @@
 			)
 		)
 		(net
-			(code "121")
+			(code "123")
 			(name "unconnected-(U16-DRV-Pad5)")
 			(class "Default")
 			(node
@@ -19933,7 +20261,7 @@
 			)
 		)
 		(net
-			(code "122")
+			(code "124")
 			(name "unconnected-(U16-IMON-Pad14)")
 			(class "Default")
 			(node
@@ -19944,7 +20272,7 @@
 			)
 		)
 		(net
-			(code "123")
+			(code "125")
 			(name "unconnected-(U16-MODE-Pad12)")
 			(class "Default")
 			(node
@@ -19955,7 +20283,7 @@
 			)
 		)
 		(net
-			(code "124")
+			(code "126")
 			(name "unconnected-(U16-PGOOD-Pad17)")
 			(class "Default")
 			(node
@@ -19966,7 +20294,7 @@
 			)
 		)
 		(net
-			(code "125")
+			(code "127")
 			(name "unconnected-(U17-P1.0-Pad2)")
 			(class "Default")
 			(node
@@ -19977,18 +20305,7 @@
 			)
 		)
 		(net
-			(code "126")
-			(name "unconnected-(U17-P1.2-Pad16)")
-			(class "Default")
-			(node
-				(ref "U17")
-				(pin "16")
-				(pinfunction "P1.2_16")
-				(pintype "bidirectional+no_connect")
-			)
-		)
-		(net
-			(code "127")
+			(code "128")
 			(name "unconnected-(U17-P1.6-Pad12)")
 			(class "Default")
 			(node
@@ -19999,7 +20316,7 @@
 			)
 		)
 		(net
-			(code "128")
+			(code "129")
 			(name "unconnected-(U17-P1.7-Pad11)")
 			(class "Default")
 			(node
@@ -20010,7 +20327,7 @@
 			)
 		)
 		(net
-			(code "129")
+			(code "130")
 			(name "unconnected-(U17-P2.0-Pad10)")
 			(class "Default")
 			(node
@@ -20021,7 +20338,7 @@
 			)
 		)
 		(net
-			(code "130")
+			(code "131")
 			(name "unconnected-(U17-P2.1-Pad9)")
 			(class "Default")
 			(node
@@ -20032,7 +20349,7 @@
 			)
 		)
 		(net
-			(code "131")
+			(code "132")
 			(name "unconnected-(U17-P2.6{slash}XOUT-Pad8)")
 			(class "Default")
 			(node
@@ -20043,7 +20360,7 @@
 			)
 		)
 		(net
-			(code "132")
+			(code "133")
 			(name "unconnected-(U17-P2.7{slash}XIN-Pad7)")
 			(class "Default")
 			(node
@@ -20054,7 +20371,7 @@
 			)
 		)
 		(net
-			(code "133")
+			(code "134")
 			(name "unconnected-(U18-EN-Pad3)")
 			(class "Default")
 			(node
@@ -20065,7 +20382,7 @@
 			)
 		)
 		(net
-			(code "134")
+			(code "135")
 			(name "unconnected-(U18-NC-Pad4)")
 			(class "Default")
 			(node
@@ -20076,7 +20393,7 @@
 			)
 		)
 		(net
-			(code "135")
+			(code "136")
 			(name "unconnected-(U19-B_GATE-Pad4)")
 			(class "Default")
 			(node
@@ -20087,7 +20404,7 @@
 			)
 		)
 		(net
-			(code "136")
+			(code "137")
 			(name "unconnected-(U19-DRV-Pad5)")
 			(class "Default")
 			(node
@@ -20098,7 +20415,7 @@
 			)
 		)
 		(net
-			(code "137")
+			(code "138")
 			(name "unconnected-(U19-IMON-Pad14)")
 			(class "Default")
 			(node
@@ -20109,7 +20426,7 @@
 			)
 		)
 		(net
-			(code "138")
+			(code "139")
 			(name "unconnected-(U19-PGOOD-Pad17)")
 			(class "Default")
 			(node
@@ -20117,17 +20434,6 @@
 				(pin "17")
 				(pinfunction "PGOOD_17")
 				(pintype "output+no_connect")
-			)
-		)
-		(net
-			(code "139")
-			(name "unconnected-(U19-~{FLT}-Pad15)")
-			(class "Default")
-			(node
-				(ref "U19")
-				(pin "15")
-				(pinfunction "~{FLT}_15")
-				(pintype "open_collector+no_connect")
 			)
 		)
 		(net

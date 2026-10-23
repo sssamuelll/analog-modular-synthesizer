@@ -36,6 +36,9 @@ LAS DECISIONES QUE CORRIGEN #474 (cada una con su motivo junto a su bloque):
   Cascada: R_SET = 2 x 120k en paralelo (dos LT3045/LT3094 suman 200 uA en
       SET, ltc3045 Figure 7) y PGFB a IN (si no, el arranque rapido de 2 mA no
       se apaga nunca).
+  M5  SHDN de U16 con pull-down (R83) y FLT de U19 al MSP430 (R84, P1.2).
+  #334 U19 sin UVLO (R82 a IN_SYS) y con Schottky de rueda libre (D19).
+  D-F6 R_GK = 100 ohm: el dV/dt de 200 V/us del BT151 se garantiza con 100.
 """
 from __future__ import annotations
 
@@ -139,29 +142,43 @@ def entrada_m5() -> None:
         "10": "DVDT_U16", "11": "ILIM_U16", "12": None, "13": "SHDN_M5",
         "14": None, "15": "FLT_M5", "16": "GND24", "17": None,
         "18": "+24V_SW", "19": "+24V_SW", "20": "+24V_SW", "21": "GND24"})
+    # SHDN con pull-down: el pin tiene su propio pull-up (2.48..3.3 V en vacio,
+    # hasta 10 uA, tps2663.pdf p. 7), asi que suelto ENCIENDE. Con 47k queda en
+    # <= 0.47 V < V(SHUTF) = 0.8 V mientras el MSP430 no lo levante: al
+    # enchufar, en un reset o programando, U16 sigue apagado hasta que el
+    # firmware haya leido la bandera ABANDONADO de la FRAM.
+    dos("R83", "R", b, "SHDN_M5", "GND24")
     dos("R11", "R", b, "ILIM_U16", "GND24")       # 18/4.02k = 4.48 A
     # UVLO 17.9 V / OVP 32.7 V con V(UVLOR) = V(OVPR) = 1.2 V (p. 6)
     dos("R12", "R", b, "+24V_PROT", "UVLO_U16")
     dos("R13", "R", b, "UVLO_U16", "OVP_U16")
     dos("R14", "R", b, "OVP_U16", "GND24")
     dos("C11", "C", b, "DVDT_U16", "GND24")       # 1.775 uA * 25 / 22 nF = 2 V/ms
-    # LDO del supervisor. 220 ohm + zener de 30 V: D1 deja pasar hasta 42 V
-    # en un transitorio y el TPS709 aguanta 32 V en IN.
+    # LDO del supervisor. 1k + zener de 24 V: D1 deja pasar hasta 42 V en un
+    # transitorio y el TPS709 funciona hasta 30 V (32 V absoluto, tps709.pdf
+    # p. 4). El BZT52C30 de antes llega a 32 V a solo 2 mA (diodes_bzt52.pdf
+    # p. 2): ni un miliamperio de margen. check_absmax.py calcula U18 IN.
     dos("R64", "R", b, "+24V_PROT", "+24V_LDO")
     dos("D2", "DZ", b, "+24V_LDO", "GND24")
     dos("C7", "C", b, "+24V_LDO", "GND24")
     P("U18", "TPS709", b, {"1": "+24V_LDO", "3": None, "2": "GND24",
                            "5": "+3V3_MCU", "4": None})
     dos("C8", "C", b, "+3V3_MCU", "GND24")         # >= 2 uF efectivos (p. 21)
+    # P1.2 lee el FLT de U19 (tope #334): sobretension de riel = abandono en
+    # el primer pulso (recuperacion_budget.py). Va al MCU y NO al SHDN de U16:
+    # el TPS26631 baja FLT mientras su entrada esta por debajo de UVLO
+    # (tps2663.pdf p. 19) y hasta 700 us despues (p. 8), asi que cableado al
+    # SHDN mantendria U16 apagado en cada arranque, con +15V5_RAW subiendo.
     P("U17", "MSP430", b, {
         "5": "+3V3_MCU", "6": "GND24", "4": "MCU_RST", "3": "MCU_TEST",
-        "7": None, "8": None, "2": None, "1": "FLT_M5", "16": None,
+        "7": None, "8": None, "2": None, "1": "FLT_M5", "16": "FLT_U19",
         "15": "SHDN_M5", "14": "LED_CTRL", "13": "SW_RESET", "12": None,
         "11": None, "10": None, "9": None})
     dos("C23", "C", b, "+3V3_MCU", "GND24")
     dos("R65", "R", b, "+3V3_MCU", "MCU_RST")      # 47k + 1 nF: compatible con SBW
     dos("C12", "C", b, "MCU_RST", "GND24")
     dos("R66", "R", b, "+3V3_MCU", "FLT_M5")       # FLT es drenador abierto
+    dos("R84", "R", b, "+3V3_MCU", "FLT_U19")      # idem, el de U19
     dos("SW1", "SW", b, "SW_RESET", "GND24")
     dos("R31", "R", b, "LED_CTRL", "LED_ANODE")
     P("D18", "LED", b, {"1": "GND24", "2": "LED_ANODE"})
@@ -197,16 +214,23 @@ def convertidores() -> None:
 
 def tope_y_lc() -> None:
     b = "LC"
-    # Tope M3 (#334) antes del LC, sensando del lado del modulo. UVLO a GND =
-    # umbral interno; MODE a GND = reintento automatico; SHDN al aire (tiene
-    # pull-up interno, p. 7): NO va al hilo D-F4, que mira la salida de este
-    # mismo eFuse.
+    # Tope M3 (#334) antes del LC, sensando del lado del modulo. MODE a GND =
+    # reintento automatico; SHDN al aire (tiene pull-up interno, p. 7): NO va
+    # al hilo D-F4, que mira la salida de este mismo eFuse. FLT al MSP430.
+    # UVLO a IN_SYS por 6.8M = sin UVLO (tps2663.pdf p. 20: >= 300k si hay
+    # inversion). A GND elegia el umbral interno de 15.1..15.9 V (p. 6), por
+    # encima de los 15.5 V del riel que protege. Quien decide si el riel vale
+    # es D-F4 (14.46 V, secuencia_budget.py), no U19.
     P("U19", "TPS26631", b, {
         "1": "+15V5_RAW", "2": "+15V5_RAW", "3": "+15V5_RAW", "4": None, "5": None,
-        "6": "+15V5_RAW", "7": "GNDA", "8": "OVP_U19", "9": "GNDA",
+        "6": "+15V5_RAW", "7": "UVLO_U19", "8": "OVP_U19", "9": "GNDA",
         "10": "DVDT_U19", "11": "ILIM_U19", "12": "GNDA", "13": None,
-        "14": None, "15": None, "16": "GNDA", "17": None,
+        "14": None, "15": "FLT_U19", "16": "GNDA", "17": None,
         "18": "+15V5_EFUSE", "19": "+15V5_EFUSE", "20": "+15V5_EFUSE", "21": "GNDA"})
+    dos("R82", "R", b, "+15V5_RAW", "UVLO_U19")
+    # Schottky de OUT a GND (tps2663.pdf p. 36 y 38): al abrir U19, la
+    # corriente de L2 vuelve por aqui y no por OUT (-0.3 V absoluto, p. 5).
+    dos("D19", "DS", b, "+15V5_EFUSE", "GNDA")
     dos("R34", "R", b, "ILIM_U19", "GNDA")          # 18/18.2k = 0.99 A
     dos("R35", "R", b, "+15V5_RAW", "OVP_U19")      # 1.2*(1+49.9/3.9) = 16.55 V
     dos("R36", "R", b, "OVP_U19", "GNDA")

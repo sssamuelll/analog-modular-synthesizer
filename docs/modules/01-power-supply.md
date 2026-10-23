@@ -43,7 +43,8 @@ fila Eurorack de invitados (52 HP, D-B2):
   `U3`/LM7805 propio.
 - **±12 V y +5 V de rack (fila B de invitados)** — **500 mA/riel** de techo duro
   (D-B2; censo comercial de 300 mA/riel), con protección crowbar (`D-F6`,
-  `BT151-500R` + `TL431BI`) y habilitación conjunta (`D-F4`).
+  `BT151-500R` + `TL431BI`, `R_GK` = 100 Ω para el dV/dt de 200 V/µs de la hoja) y
+  habilitación conjunta (`D-F4`).
 - **+5 V digital aislado (`M1`)** — **2,895 A** de techo de diseño (`Max TJ = 125 °C`
   de los 4 STM32N657 más USB host, `0,965 A` típico) mediante convertidor DC-DC
   aislado (`URB2405YMD-20WR3`, 4 A, 1500 VDC, ≥ 88 % mín.), conservando `GNDD`
@@ -61,6 +62,12 @@ fila Eurorack de invitados (52 HP, D-B2):
   por **TI MSP430FR2111** con FRAM no volátil (`msp430fr2111.pdf`): 3 reintentos
   (4 intentos totales) con espera de 1,0 s, filtro de rebote de 100 ms y
   enclavamiento en abandono persistente hasta rearme manual por botón dedicado ≥ 2 s.
+  `SHDN` de `U16` con pull-down (`R83`, 47 kΩ): sin el MCU vivo, el eFuse queda
+  apagado. El `FLT` del tope `U19` entra al MCU por P1.2 (`R84`): sobretensión de
+  riel = abandono en el primer pulso, ignorándolo los primeros 100 ms, que es
+  cuando el propio `U19` lo baja por UVLO al arrancar. El MCU se alimenta por
+  `TPS709` tras `R64` (1 kΩ) y un zener de 24 V (`D2`): con `D1` en 42,1 V su
+  entrada no pasa de 26,4 V (`check_absmax.py`).
 
 ## Topología de la cascada (`v4`/`v5`)
 
@@ -69,7 +76,7 @@ recortados +3,3 %, D-V3):
 
 | Riel | Tope OVP (`M3` / #334) | Pre-regulador | Post-regulador |
 |------|------------------------|---------------|----------------|
-| +12 V ultra | `TPS26631` (`U19`) + `SMBJ16A` + LC 22 µH / 47 µF (`U1` ve 18,11 V ≤ 20 V ante un fallo de 36 V, `check_absmax.py`) | **LT1963A** `LT1963AEQ` (D-F8) | LT3045 ×2 |
+| +12 V ultra | `TPS26631` (`U19`, sin UVLO y con Schottky de rueda libre `D19`) + `SMBJ16A` + LC 22 µH / 47 µF (`U1` ve 18,11 V ≤ 20 V ante un fallo de 36 V, `check_absmax.py`) | **LT1963A** `LT1963AEQ` (D-F8) | LT3045 ×2 |
 | −12 V ultra | Diodo Schottky de enclavamiento (LT3015 soporta ±33 V) | **LT3015** `LT3015EQ` (D-F9; DD-PAK, la aleta es IN) | LT3094 ×2 |
 | +5 V aux (módulo 2) | — (del +5 V de rack, `PS3` por el shunt `R20`) | — | — |
 

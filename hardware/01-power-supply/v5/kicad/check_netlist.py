@@ -18,7 +18,8 @@ lo que el circuito va a hacer, contra la cifra del presupuesto que lo pide.
      U1/U2, UVLO/OVP de U16, OVP de U19, umbrales de D-F4 contra la ventana de
      secuencia_budget.py y disparos de D-F6.
   5. Patillas que no admiten lo que tienen: EN del TPS709, PGFB/VIOC de las
-     cascadas, SHDN de U19 fuera de D-F4, orientacion de TL431 y BAT54S.
+     cascadas, SHDN de U19 fuera de D-F4, orientacion de TL431 y BAT54S,
+     UVLO y FLT de U19, Schottky de rueda libre, pull-down de SHDN_M5 y R_GK.
 """
 from __future__ import annotations
 
@@ -235,6 +236,34 @@ def main() -> int:
             fallos.append(f"{u}: VIOC al aire (lt3094-rev-b.pdf p. 9)")
     if red_de(nets, "U19.13") == "SHDN_CASCADE":
         fallos.append("U19: su SHDN no puede colgar de D-F4, que mira la salida de U19")
+    # U19 sin UVLO: a GND el umbral interno es 15.1..15.9 V (tps2663.pdf p. 6),
+    # por encima del riel de 15.5 V que protege. A IN_SYS por >= 300k (p. 20).
+    r_uv = resistencias_entre(nets, "+15V5_RAW", "UVLO_U19")
+    if red_de(nets, "U19.7") != "UVLO_U19" or not r_uv or min(valor(r) for r in r_uv) < 300e3:
+        fallos.append("U19: UVLO a IN_SYS (+15V5_RAW) por >= 300k; a GND el umbral "
+                      "interno de 15.1..15.9 V queda por encima del riel de 15.5 V")
+    # El FLT de U19 al MSP430, nunca al SHDN de U16: en UVLO baja FLT
+    # (tps2663.pdf p. 19) y U16 no arrancaria nunca.
+    if red_de(nets, "U19.15") != "FLT_U19" or "U17.16" not in nets.get("FLT_U19", set()):
+        fallos.append("U19: FLT a P1.2 del MSP430 (sobretension de riel = abandono)")
+    elif red_de(nets, "U19.15") == red_de(nets, "U16.13"):
+        fallos.append("U19: su FLT no puede ir al SHDN de U16: en UVLO baja y U16 no arranca")
+    if not resistencias_entre(nets, "+3V3_MCU", "FLT_U19"):
+        fallos.append("U19: FLT es drenador abierto y necesita pull-up a +3V3_MCU")
+    if (red_de(nets, "D19.1"), red_de(nets, "D19.2")) != ("+15V5_EFUSE", "GNDA"):
+        fallos.append("D19: Schottky con K en OUT de U19 y A en GNDA (tps2663.pdf p. 36, 38)")
+    # SHDN de U16 con pull-down: el pull-up interno da hasta 10 uA (p. 7) y
+    # tiene que quedar por debajo de V(SHUTF) = 0.8 V con el MCU sin levantarlo.
+    r_pd = resistencias_entre(nets, "SHDN_M5", "GND24")
+    if not r_pd or paralelo(*r_pd) * 10e-6 >= 0.8:
+        fallos.append("U16: SHDN_M5 necesita pull-down <= 80k a GND24 (sin el, U16 "
+                      "enciende antes de que el MCU lea la FRAM)")
+    # D-F6: el dV/dt de 200 V/us del BT151 se garantiza con R_GK = 100 ohm
+    # (nxp-bt151-500r.pdf p. 6); con la puerta mas floja vale 50 V/us.
+    for n in ("1", "2", "3", "4"):
+        r_gk = resistencias_entre(nets, f"GATE_SCR{n}", red_de(nets, f"SCR{n}.1") or "")
+        if not r_gk or paralelo(*r_gk) > 100.0:
+            fallos.append(f"SCR{n}: R_GK <= 100 ohm (dV/dt de 200 V/us, nxp-bt151-500r.pdf p. 6)")
     for d, ain in (("D14", "AIN0"), ("D15", "AIN1"), ("D16", "AIN2"), ("D17", "AIN3")):
         if (red_de(nets, f"{d}.3"), red_de(nets, f"{d}.1"), red_de(nets, f"{d}.2")) != (ain, "GNDA", "+5V_AUX"):
             fallos.append(f"{d}: BAT54S con COM en {ain}, A en GNDA y K en +5V_AUX")

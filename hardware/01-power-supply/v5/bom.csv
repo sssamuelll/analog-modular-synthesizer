@@ -34,7 +34,8 @@ C29,100uF 25V,Capacitor_SMD:CP_Elec_6.3x7.7,1,Nichicon,UCD1E101MCL1GS,C250945,LC
 D10,SMBJ16A,Diode_SMD:D_SMB,1,Littelfuse,SMBJ16A,C151254,LCSC,"TVS unidireccional en U1 IN (tope M3, #334)."
 D11,BAT54WS,Diode_SMD:D_SOD-323,1,Diodes Incorporated,BAT54WS-7-F,C124205,LCSC,"K a GNDA, A en -15V5_FILT: VIN de U2 nunca por encima de +0.3 V."
 "D12,D13",S1M,Diode_SMD:D_SMA,2,Vishay,S1M-E3/61T,C144860,LCSC,Antirretorno OUT -> IN de U1/U2.
-D2,BZT52C30,Diode_SMD:D_SOD-123,1,Diodes Incorporated,BZT52C30-7-F,C163721,LCSC,Zener de 30 V tras R64: el TPS709 aguanta 32 V en IN y D1 deja pasar hasta 42 V.
+D2,BZT52C24,Diode_SMD:D_SOD-123,1,Diodes Incorporated,BZT52C24-7-F,C171749,LCSC,"Zener de 24 V tras R64 = 1k: TPS709 IN <= 30 V con D1 en 42 V (check_absmax.py, diodes_bzt52.pdf p. 2, tps709.pdf p. 4)."
+D19,SS34,Diode_SMD:D_SMA,1,MDD,SS34,C8678,LCSC,"Rueda libre de L2 de OUT de U19 a GNDA (tps2663.pdf p. 36 y 38): 40 V, 3 A, IFSM 80 A (mdd_ss34.pdf p. 1)."
 "D14,D15,D16,D17",BAT54S,Package_TO_SOT_SMD:SOT-23,4,onsemi,BAT54SLT1G,C19726,LCSC,"Clamp de las entradas del ADS1115: COMUN en la entrada, A a GNDA, K a +5V_AUX."
 D3,LED rojo 3mm,LED_THT:LED_D3.0mm,1,Everlight,204-10SURD/S530-A3-L,C99771,LCSC,+12 V ultra.
 D4,LED amarillo 3mm,LED_THT:LED_D3.0mm,1,Everlight,204-10UYD/S530-A3-L,C85160,LCSC,-12 V ultra.
@@ -69,15 +70,15 @@ R11,4.02k,Resistor_SMD:R_0805_2012Metric,1,UniOhm,0805W8F4021T5E,C17663,LCSC,"IL
 R34,18.2k,Resistor_SMD:R_0805_2012Metric,1,UniOhm,0805W8F1822T5E,C17497,LCSC,ILIM de U19: 0.99 A.
 "R1,R2,R57,R58,R59,R60",2.2k,Resistor_SMD:R_0805_2012Metric,6,UniOhm,0805W8F2201T5E,C17520,LCSC,LED de +-12 V ultra y pull-ups I2C.
 "R3,R4",680,Resistor_SMD:R_0805_2012Metric,2,UniOhm,0805W8F6800T5E,C17798,LCSC,LED de +5 V.
-"R53,R54,R55,R56,R70,R71,R72,R73",1k,Resistor_SMD:R_0805_2012Metric,8,UniOhm,0805W8F1001T5E,C17513,LCSC,R_GK de los SCR y base de los PNP.
-"R44,R66,R68,R74,R75,R76,R77",10k,Resistor_SMD:R_0805_2012Metric,7,UniOhm,0805W8F1002T5E,C17414,LCSC,"Pull-up de SHDN_CASCADE y de FLT, referencia del canal - de D-F4 y base-emisor de los PNP."
+"R64,R70,R71,R72,R73",1k,Resistor_SMD:R_0805_2012Metric,5,UniOhm,0805W8F1001T5E,C17513,LCSC,"Base de los PNP de D-F6 y R64 del LDO del supervisor (con D2 = 24 V, check_absmax.py calcula U18 IN)."
+"R44,R66,R68,R74,R75,R76,R77,R84",10k,Resistor_SMD:R_0805_2012Metric,8,UniOhm,0805W8F1002T5E,C17414,LCSC,"Pull-up de SHDN_CASCADE y de los FLT de U16 y U19, referencia del canal - de D-F4 y base-emisor de los PNP."
 R43,100k,Resistor_SMD:R_0805_2012Metric,1,UniOhm,0805W8F1003T5E,C149504,LCSC,Pull-down de SHDN_CASCADE: hilo roto = cascada apagada.
 R63,1.2k,Resistor_SMD:R_0805_2012Metric,1,UniOhm,0805W8F1201T5E,C17379,LCSC,Polarizacion de U21 (TL431): ~2 mA. #474 no la tenia y VREF_2V5 quedaba al aire.
-"R31,R64",220,Resistor_SMD:R_0805_2012Metric,2,UniOhm,0805W8F2200T5E,C17557,LCSC,R31: LED verde D18 desde el MSP430 a 3.3 V (~5 mA). R64: serie de la entrada de U18 con D2.
-R65,47k,Resistor_SMD:R_0805_2012Metric,1,UniOhm,0805W8F4702T5E,C17713,LCSC,"Pull-up de RST/NMI del MSP430 (con C12 = 1 nF, compatible con Spy-Bi-Wire)."
-R67,6.8M,Resistor_SMD:R_0805_2012Metric,1,UniOhm,0805W8F6804T5E,C17773,LCSC,Histeresis del canal +: ~32 mV en el riel (secuencia_budget.py pide 31 mV).
+R31,220,Resistor_SMD:R_0805_2012Metric,1,UniOhm,0805W8F2200T5E,C17557,LCSC,LED verde D18 desde el MSP430 a 3.3 V (~5 mA).
+"R65,R83",47k,Resistor_SMD:R_0805_2012Metric,2,UniOhm,0805W8F4702T5E,C17713,LCSC,"R65: pull-up de RST/NMI del MSP430 (con C12 = 1 nF, compatible con Spy-Bi-Wire). R83: pull-down de SHDN_M5, <= 0.47 V con los 10 uA del pull-up interno de U16 (tps2663.pdf p. 7)."
+"R67,R82",6.8M,Resistor_SMD:R_0805_2012Metric,2,UniOhm,0805W8F6804T5E,C17773,LCSC,"R67: histeresis del canal + (~32 mV en el riel, secuencia_budget.py pide 31 mV). R82: UVLO de U19 a IN_SYS, sin UVLO (tps2663.pdf p. 20: >= 300k)."
 R69,10M,Resistor_SMD:R_0805_2012Metric,1,UniOhm,0805W8F1005T5E,C26108,LCSC,Histeresis del canal -: ~31 mV en el riel.
-"R78,R79,R80,R81",100,Resistor_SMD:R_0805_2012Metric,4,UniOhm,0805W8F1000T5E,C17408,LCSC,Limite de corriente de puerta de los SCR.
+"R53,R54,R55,R56,R78,R79,R80,R81",100,Resistor_SMD:R_0805_2012Metric,8,UniOhm,0805W8F1000T5E,C17408,LCSC,R53..R56 = R_GK de los SCR: el dV/dt de 200 V/us del BT151 se da con R_GK = 100 ohm (nxp-bt151-500r.pdf p. 6). R78..R81 limitan la corriente de puerta.
 "C5,C6,C9,C10,C23,C24,C25,C26,C27,C28,C30,C31,C32,C33,C34,C35",100nF 50V X7R,Capacitor_SMD:C_0805_2012Metric,16,Yageo,CC0805KRX7R9BB104,C49678,LCSC,"Desacoplo, C_VCAP de U15 y filtro de los divisores de D-F4 (tau ~0.85 ms)."
 C7,1uF 50V X7R,Capacitor_SMD:C_0805_2012Metric,1,Samsung,CL21B105KBFNNNE,C28323,LCSC,Entrada de U18.
 C8,4.7uF 25V X7R,Capacitor_SMD:C_0805_2012Metric,1,Yageo,CC0805KKX7R8BB475,C354262,LCSC,Salida de U18: >= 2 uF efectivos (TPS709).
