@@ -134,6 +134,27 @@ PSRR_DB: dict[tuple[str, float], float] = {
     # COUT=22 uF, IO=10 mA, VO=5 V: ~70 dB a 1 MHz, ultimo punto.
     ('LM2941', 1e6): 70.0,
 
+    # EL LT1963A SUSTITUYE AL LM2941 EN U1 (D-F8, 2026-09-04). Su curva de
+    # rechazo es la G31 de la p. 11 ("Ripple Rejection", IL = 0.75 A,
+    # VIN = VOUT(NOMINAL) + 1 V + 50 mVRMS, COUT = 10 uF TANTALUM), que esta
+    # medida a 750 mA --casi clavada en los 770 mA reales de la cascada-- y
+    # llega hasta 1 MHz.
+    # lt1963a-rev-g-2021-02.pdf, p. 11, G31 Ripple Rejection, IL=750 mA,
+    # COUT=10 uF: ~68 dB a 1 kHz.
+    ('LT1963A', 1e3): 68.0,
+    # lt1963a-rev-g-2021-02.pdf, p. 11, G31 Ripple Rejection, IL=750 mA,
+    # COUT=10 uF: ~56 dB a 10 kHz.
+    ('LT1963A', 10e3): 56.0,
+    # lt1963a-rev-g-2021-02.pdf, p. 11, G31 Ripple Rejection, IL=750 mA,
+    # COUT=10 uF: ~38 dB a 65 kHz, entre rejillas.
+    ('LT1963A', 65e3): 38.0,
+    # lt1963a-rev-g-2021-02.pdf, p. 11, G31 Ripple Rejection, IL=750 mA,
+    # COUT=10 uF: ~35 dB a 100 kHz.
+    ('LT1963A', 100e3): 35.0,
+    # lt1963a-rev-g-2021-02.pdf, p. 11, G31 Ripple Rejection, IL=750 mA,
+    # COUT=10 uF: ~23 dB a 1 MHz, ultimo punto publicado.
+    ('LT1963A', 1e6): 23.0,
+
     # EL LT3015 SUSTITUYE AL LM2991 EN U2 (D-F9, 2026-09-06). La figura
     # equivalente a la Fig. 8 del LM2991 es la G41: las dos estan medidas a
     # VO = -5 V, asi que la comparacion es de igual a igual aunque el diseno
@@ -217,7 +238,7 @@ PSRR_DB: dict[tuple[str, float], float] = {
 }
 
 
-# Citas completas de las siete series anteriores. La fecha es la lectura de
+# Citas completas de las ocho series anteriores. La fecha es la lectura de
 # las paginas adjuntas, no la fecha editorial de la hoja.
 FUENTE: dict[str, str] = {
     'IRM-20': (
@@ -235,6 +256,10 @@ FUENTE: dict[str, str] = {
     'LM2941': (
         'lm2941-snvs770i-2015-01.pdf, p. 8, Figure 9 Ripple Rejection, '
         'IO = 10 mA, VO = 5 V; lectura ocular 2026-09-03'
+    ),
+    'LT1963A': (
+        'lt1963a-rev-g-2021-02.pdf, p. 11, G31 Ripple Rejection, '
+        'IL = 750 mA, COUT = 10 uF; lectura ocular 2026-10-22'
     ),
     'LT3015': (
         'lt3015-rev-b.pdf, p. 11, G41 Input Ripple Rejection, traza roja '
@@ -279,7 +304,7 @@ def demo() -> None:
         print(f'  {curva:10s} codo {codo_c(curva):g} C; {texto}')
 
     print('\nPSRR tipico leido:')
-    for pieza in ('LM2941', 'LT3015', 'LT3045', 'LT3094'):
+    for pieza in ('LM2941', 'LT1963A', 'LT3015', 'LT3045', 'LT3094'):
         puntos = sorted((f, db) for (p, f), db in PSRR_DB.items() if p == pieza)
         texto = ', '.join(f'{f/1e3:g} kHz:{db:g} dB' for f, db in puntos)
         print(f'  {pieza:7s} {texto}')

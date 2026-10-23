@@ -244,18 +244,20 @@ V_DROPOUT_TIP = {"U1": 0.19, "U2": 0.20}
 # los 20,00 del LT1963A, y ESO es la #334: vive en check_absmax.py, que es su
 # dueno, y no se decide aqui.
 V_ABSMAX_ENTRADA = 20.0
-# El umbral al que el LM2941 se apagaba solo por sobretension (su p. 10).
-# SUJETO MUERTO DESDE D-F8: el LT1963A no tiene esa prestacion, asi que el
-# aserto que lo usa pasa siempre y por el motivo equivocado. Se deja tal cual
-# a proposito --arreglarlo es decidir que pone el LT1963A en su lugar-- y esta
-# contado en la #334.
-V_OVSD_U1 = 30.0
 
-# --- la corriente real de la cascada --------------------------------------
+# --- la corriente real de la cascada (#343) -------------------------------
 # 650 mA/riel es lo que la PCB de la cascada rutea y lo que vigila
 # consumo_total_budget.py; se importa, no se copia. Encima, el consumo propio
-# del pre-regulador a plena carga (LM2941 p. 5: 60 mA max sobre temperatura).
-IQ_U1_MAX_A = 0.060
+# del pre-regulador a plena carga:
+#   * U1 (LT1963A, lt1963a-rev-g-2021-02.pdf p. 5, "GND Pin Current",
+#     IL = 1,5 A, VIN = VOUT(NOMINAL) + 1 V, fila de punto negro para todo el
+#     rango de temperatura): 80 mA tip., 120 mA max. (Sustituye a los 60 mA del
+#     LM2941 retirado por D-F8: issue #343).
+#   * U2 (LT3015, lt3015-rev-b.pdf p. 5, "GND Pin Current", IL = -1,5 A,
+#     fila de punto negro): 35 mA tip., 70 mA max.
+# La cota comun conservadora toma el maximo de los dos (120 mA de U1).
+IQ_U1_MAX_A = 0.120
+IQ_U2_MAX_A = 0.070
 I_CASCADA_A = RIEL_MA / 1000.0 + IQ_U1_MAX_A
 I_PLACA_PS1_A = 1.4      # hoja p. 2, RATED CURRENT del IRM-20-15
 
@@ -456,9 +458,6 @@ def _autocomprobacion() -> None:
     assert v_entrada_maxima_v() <= V_ABSMAX_ENTRADA, (
         f"en vacio y a tolerancia alta llegan {v_entrada_maxima_v():.2f} V "
         f"contra los {V_ABSMAX_ENTRADA:.1f} de maximo absoluto")
-    assert v_entrada_maxima_v() < V_OVSD_U1, (
-        f"el LM2941 se apaga solo por encima de {V_OVSD_U1:.0f} V (hoja p. 10) "
-        f"y en marcha normal llegan {v_entrada_maxima_v():.2f}")
 
     # 2. El modelo reproduce la cuenta del papel sec.4.2 en SU escenario:
     #    setpoint exacto, sin filtro, a 75 C. Si no cayera cerca, la
@@ -605,7 +604,7 @@ def demo() -> int:
     print(f"  temperatura del aire del recinto: {t:.2f} C "
           f"(calor_budget.py, punto fijo con D-F3 = A)")
     print(f"  corriente de la cascada: {I_CASCADA_A * 1000:.0f} mA "
-          f"({RIEL_MA:.0f} de riel + {IQ_U1_MAX_A * 1000:.0f} de U1), sobre "
+          f"({RIEL_MA:.0f} de riel + {IQ_U1_MAX_A * 1000:.0f} de U1, #343), sobre "
           f"{I_PLACA_PS1_A:.1f} A de placa de PS1")
     print(f"  resistencia serie: {R_SERIE_OHM * 1000:.0f} mohm "
           f"({DCR_OHM * 1000:.0f} del LC + {R_FERRITA_DC_OHM * 1000:.0f} de la "
@@ -663,13 +662,7 @@ def demo() -> int:
           "En marcha")
     print("  normal ese lado pasa holgado. El caso que SI aprieta por arriba "
           "es el")
-    print("  OVP del IRM --20,25 V sostenidos-- y es de check_absmax.py, no "
-          "de aqui:")
-    print("  contra los 20,00 del LT1963A no cabe, y eso es la #334.")
-    print(f"  ({V_OVSD_U1:.0f} V era el apagado por sobretension del LM2941, "
-          f"que ya no esta:")
-    print("   su aserto pasa siempre y por el motivo equivocado. Tambien "
-          "es la #334.)")
+    print("  OVP del IRM --20,25 V sostenidos-- y es de check_absmax.py (#334).")
 
     print(f"\n  requisito de la hoja de U1 (p. 12): COUT >= "
           f"{COUT_U1_MIN_F * 1e6:.0f} uF con ESR entre "

@@ -205,8 +205,8 @@ PSRR_FUERA_DE_GRAFICA_DB = 0.0
 COUT_U2_F = 47e-6            # DECLARADO: la traza roja de la G41
 CFF_U2_F = 10e-9             # DECLARADO: de ADJ a OUT. NO es opcional
 
-# Las dos ramas de la cascada, con su pareja de reguladores.
-RAMAS = {"+15 -> U1 -> LT3045": ("LM2941", "LT3045"),
+# Las dos ramas de la cascada, con su pareja de reguladores vigentes (D-F8 y D-F9).
+RAMAS = {"+15 -> U1 -> LT3045": ("LT1963A", "LT3045"),
          "-15 -> U2 -> LT3094": ("LT3015", "LT3094")}
 
 # LO QUE ESTE PRESUPUESTO NO CUBRE. Aseverado, no anotado.

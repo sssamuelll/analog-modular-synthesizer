@@ -15,7 +15,8 @@ import os
 import re
 
 KICAD_SYMS = os.environ.get(
-    "KICAD_SYMBOLS", r"C:\Program Files\KiCad\10.0\share\kicad\symbols")
+    "KICAD_SYMBOLS", r"C:\Program Files\KiCad\10.0\share\kicad\symbols"
+    if os.name == "nt" else "/usr/share/kicad/symbols")
 
 # Sitios donde buscar una libreria, en orden. Un modulo que necesite un simbolo
 # que KiCad no trae (el AD5686R del modulo 2, por ejemplo) mete su .kicad_sym

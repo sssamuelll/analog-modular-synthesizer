@@ -583,8 +583,9 @@ Y se va, además de calor:
 |---|---|
 | **D-F1** | el listón se rehace: D-B2 sustituye 3,8/2,5/4,0 por 0,5/0,5/0,5 |
 | **D-F2** (telemetría de rack) | los INA226 medían en los bornes de PS3/PS4; ahora miden a la salida de convertidores nuestros |
-| **D-F4** (secuenciador) | usaba los pines ON/OFF de los Mean Well, que ya no están dentro |
+| **D-F4** (secuenciador, #339) | ~~usaba los pines ON/OFF de los Mean Well, que ya no están dentro~~ **los Mean Well IRM no tienen pin ON/OFF**: `D-F4` gobierna los pines `SHDN` de `U1`/`U2` (`v4` l. 593–600) y los interruptores de carga del par de rack (`v4` l. 682–684), que **se quedan dentro**. Lo que cambia bajo `M4` es el nodo vigilado: el detector analógico (`LM393B` + `TL431BI`) vigila ahora los ±15,5 V crudos de los convertidores DC-DC tras el filtro LC |
 | **D-F5** (Y2 al chasis) | **muere**: la red sale de la caja |
+| **D-F6** (crowbar en los tres rieles de rack, #340) | **se queda bajo `M3`**: los tres tiristores (`BT151-500R` + `TL431BI`) en +12 V, −12 V y +5 V de rack (`v4` l. 283, 685–690) siguen firmados; el corte tras el disparo pasa del *hiccup* de los IRM a la protección continua contra cortocircuito de los convertidores DC-DC (`THN 30-2422WI` / `K7805T-1000R3`) y al vigilante de entrada `M5` (`TPS26630`) |
 | **D-F7** (`PS5` → IRM-45-5) | muere por desaparición del sujeto |
 | **§4.1** (fuga a PE) | se rehace: seis fugas menos dentro |
 | `calor_budget.py` | su modelo entero es de módulos AC-DC en un recinto |

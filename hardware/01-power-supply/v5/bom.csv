@@ -1,0 +1,98 @@
+refs,value,footprint,quantity,fabricante,mpn,lcsc,supplier,notes
+J1,Bornera 2P 5.0 mm,TerminalBlock:TerminalBlock_MaiXu_MX126-5.0-02P_1x02_P5.00mm,1,MaiXu,MX126-5.0-02P-GN01-Cu-S-A,C5188434,LCSC,"Entrada del cableado desde el conector de panel (Kycon KPJX-PM-4S en bom-chasis.csv). 1 = +24V_RAW, 2 = GND24."
+D1,SMBJ26CA,Diode_SMD:D_SMB,1,Littelfuse,SMBJ26CA,C83332,LCSC,TVS BIDIRECCIONAL en la entrada. Un unidireccional conduce en directa con el ladrillo al reves (#474).
+Q2,CSD18534Q5A,Package_TO_SOT_SMD:TDSON-8-1,1,Texas Instruments,CSD18534Q5A,C115943,LCSC,"MOSFET de proteccion de polaridad: FUENTE en +24V_RAW, drenador en +24V_PROT (lm74502.pdf p. 1)."
+U15,LM74502DDFR,Package_TO_SOT_SMD:SOT-23-8,1,Texas Instruments,LM74502DDFR,C3236215,LCSC,Controlador de polaridad. VS = SRC = EN = +24V_RAW; OV a GND24 (el OVP lo hace U16).
+"U16,U19",TPS26631PWPR,Package_SO:HTSSOP-20-1EP_4.4x6.5mm_P0.65mm_EP3.4x6.5mm_Mask2.96x2.96mm_ThermalVias,2,Texas Instruments,TPS26631PWPR,C2866319,LCSC,"eFuse 60 V con OVP ajustable. La TPS26630PWPR de #474 no existe: TI solo vende el TPS26630 en VQFN-24 (tps2663.pdf, orderables). U16: 4.5 A, MODE al aire (enclava). U19: 1.0 A, MODE a GND (reintenta)."
+U18,TPS70933DBVR,Package_TO_SOT_SMD:SOT-23-5,1,Texas Instruments,TPS70933DBVR,C89347,LCSC,"LDO 3.3 V del supervisor. EN al aire (pull-up interno, EN <= 6.5 V)."
+U17,MSP430FR2111IPW16,Package_SO:TSSOP-16_4.4x5mm_P0.65mm,1,Texas Instruments,MSP430FR2111IPW16R,C2052845,LCSC,"Supervisor M5. P1.1 = FLT, P1.3 = SHDN de U16, P1.4 = LED, P1.5 = boton (msp430fr2111.pdf p. 8). STOCK BAJO en LCSC (7 uds el 2026-10-22): reservar o comprar en Mouser/DigiKey."
+U1,LT1963AEQ,Package_TO_SOT_SMD:TO-263-5_TabPin3,1,Analog Devices,LT1963AEQ#TRPBF,C459702,LCSC,Pre-regulador +13.10 V. AJUSTABLE: el SOT-223 de #474 solo existe en 1.5/1.8/2.5/3.3 V fijos.
+U2,LT3015EQ,Package_TO_SOT_SMD:TO-263-5_TabPin3,1,Analog Devices,LT3015EQ#PBF,C666306,LCSC,Pre-regulador -12.90 V. El TAB es IN (lt3015-rev-b.pdf p. 2).
+"U4,U5",LT3045EDD,Package_DFN_QFN:DFN-10-1EP_3x3mm_P0.5mm_EP1.65x2.38mm_ThermalVias,2,Analog Devices,LT3045EDD#TRPBF,C514420,LCSC,"+12 V ultra en paralelo. PGFB a IN (si no, el arranque rapido de 2 mA queda enganchado)."
+"U6,U7",LT3094EDD,Package_DFN_QFN:DFN-12-1EP_3x3mm_P0.45mm_EP1.65x2.38mm_ThermalVias,2,Analog Devices,LT3094EDD#TRPBF,C670493,LCSC,-12 V ultra en paralelo. PGFB a IN y VIOC al aire (lt3094-rev-b.pdf p. 9).
+"U8,U12,U13,U14",INA226,Package_SO:TSSOP-10_3x3mm_P0.5mm,4,Texas Instruments,INA226AIDGSR,C49851,LCSC,"Direcciones 0x40 (U8), 0x41 (U12), 0x44 (U13), 0x45 (U14) por A1/A0 (ina226.pdf Table 6-2)."
+U10,ADS1115IDGS,Package_SO:TSSOP-10_3x3mm_P0.5mm,1,Texas Instruments,ADS1115IDGSR,C37593,LCSC,"ADC de telemetria, 0x48 (ADDR a GND)."
+U11,TMP1075DGK,Package_SO:VSSOP-8_3x3mm_P0.65mm,1,Texas Instruments,TMP1075DGKR,C2864807,LCSC,"Temperatura de placa, 0x49 (A0 a V+)."
+U9,ISO1541,Package_SO:SOIC-8_3.9x4.9mm_P1.27mm,1,Texas Instruments,ISO1541DR,C143028,LCSC,Aislador I2C GNDA / GNDD (M1).
+U20,LM393B,Package_SO:SOIC-8_3.9x4.9mm_P1.27mm,1,Texas Instruments,LM393BIDR,C2865059,LCSC,"Detector D-F4, colector abierto cableado en OR sobre SHDN_CASCADE."
+"U21,U22,U23,U24,U25",TL431BI,Package_TO_SOT_SMD:SOT-23,5,Texas Instruments,TL431BIDBZR,C41283,LCSC,"DBZ: 1 = K, 2 = REF, 3 = A (tl431.pdf Table 5-1). #474 usaba el simbolo TO-92 sobre esta huella."
+"Q3,Q4,Q5,Q6",MMBT3906,Package_TO_SOT_SMD:SOT-23,4,onsemi,MMBT3906LT1G,C53444,LCSC,Excitador de puerta de los crowbar D-F6 (TL431 -> PNP -> SCR).
+"SCR1,SCR2,SCR3,SCR4",BT151-500R,Package_TO_SOT_THT:TO-220-3_Vertical,4,WeEn,"BT151-500R,127",C9211,LCSC,"Tiristor de crowbar D-F6. 1 = K, 2 = A, 3 = G (nxp-bt151-500r.pdf p. 2)."
+PS1,THN 30-2422WI,Converter_DCDC:Converter_DCDC_TRACO_THL30-xxxxWI_THT,1,TRACO,THN 30-2422WI,,Farnell/Mouser,"+-12 V de rack, 30 W. Pinout 1x1 pulgada estandar TRACO (traco_thn30wi.pdf p. 5). LCSC lo lista (C6553108) sin stock."
+"PS4,PS5",THN 20-2413WI,Converter_DCDC:Converter_DCDC_TRACO_THL30-xxxxWI_THT,2,TRACO,THN 20-2413WI,,Farnell/Mouser,+-15.5 V crudos. Trim HACIA ARRIBA con 45.3k de Trim a -Vout (nota TRACO thn15/20/30wi voltage adjustment). LCSC lo lista (C7361463) sin stock.
+PS2,URB2405YMD-20WR3,sam17:Converter_DCDC_Mornsun_URB_YMD-20WR3_Horizontal_THT,1,Mornsun,URB2405YMD-20WR3,,Mouser,"+5 V digital aislado M1. 1 Ctrl, 2 GND, 3 Vin, 4 +Vo, 5 Trim, 6 0V (mornsun_urb_ymd20wr3.pdf p. 6). En LCSC solo hay clones de otras marcas con el mismo nombre: no valen."
+PS3,K7805T-1000R3,sam17:Converter_DCDC_Mornsun_K78_T-1000R3_SMD,1,Mornsun,K7805T-1000R3,,Mouser,"+5 V de rack, NO aislado: su GND es GND24 y la union con GNDA es NT1. No esta en LCSC: se suelda a mano o se consigna a JLC."
+NT1,NetTie GND24-GNDA,NetTie:NetTie-2_SMD_Pad2.0mm,1,—,—,,—,"Unica union entre GND24 y GNDA, en los pads de masa de PS3. Es cobre: no se compra."
+"L2,L3",22uH SRR1260-220M,Inductor_SMD:L_Bourns_SRR1260,2,Bourns,SRR1260-220M,C3224283,LCSC,"Bobina del filtro LC de +-15.5 V: 22 uH, el valor de rizado_budget.py y check_absmax.py. Isat 3.7 A, DCR 43 mohm (catalogo)."
+"C1,C2",220uF 35V,Capacitor_SMD:CP_Elec_8x10,2,Panasonic,EEEFK1V221P,C178562,LCSC,"Cd de la rama de amortiguamiento (Rd = 0.68 ohm + Cd = 220 uF, rizado_budget.py)."
+"C3,C4",47uF 35V,Capacitor_SMD:CP_Elec_6.3x7.7,2,Lelon,VZH470M1VTR-0607,C249923,LCSC,"C principal del filtro LC (47 uF, rizado_budget.py y el modelo RK4 de check_absmax.py)."
+"C17,C18",47uF 35V,Capacitor_SMD:CP_Elec_6.3x7.7,2,Lelon,VZH470M1VTR-0607,C249923,LCSC,"Salida de U1/U2: 47 uF electrolitico declarado en margen_budget.py (COUT_U1_F, ESR 0.3 ohm dentro de 0..3 ohm)."
+C14,100uF 50V,Capacitor_SMD:CP_Elec_8x10,1,Panasonic,EEEFK1H101P,C178548,LCSC,"Cin del URB2405 (mornsun_urb_ymd20wr3.pdf p. 4, Fig. 2: 100 uF/50 V)."
+C29,100uF 25V,Capacitor_SMD:CP_Elec_6.3x7.7,1,Nichicon,UCD1E101MCL1GS,C250945,LCSC,"Cout del URB2405 (p. 4, Fig. 2: 100 uF/16 V)."
+"R37,R38",0.68,Resistor_SMD:R_1206_3216Metric,2,UniOhm,1206W4F680LT5E,C19108,LCSC,Rd de la rama de amortiguamiento.
+"FB1,FB2",BLM21PG600SN1D,Inductor_SMD:L_0805_2012Metric,2,Murata,BLM21PG600SN1D,C18305,LCSC,"Perla tras el LC, hacia U1/U2."
+D10,SMBJ16A,Diode_SMD:D_SMB,1,Littelfuse,SMBJ16A,C151254,LCSC,"TVS unidireccional en U1 IN (tope M3, #334)."
+D11,BAT54WS,Diode_SMD:D_SOD-323,1,Diodes Incorporated,BAT54WS-7-F,C124205,LCSC,"K a GNDA, A en -15V5_FILT: VIN de U2 nunca por encima de +0.3 V."
+"D12,D13",S1M,Diode_SMD:D_SMA,2,Vishay,S1M-E3/61T,C144860,LCSC,Antirretorno OUT -> IN de U1/U2.
+D2,BZT52C24,Diode_SMD:D_SOD-123,1,Diodes Incorporated,BZT52C24-7-F,C171749,LCSC,"Zener de 24 V tras R64 = 1k: TPS709 IN <= 30 V con D1 en 42 V (check_absmax.py, diodes_bzt52.pdf p. 2, tps709.pdf p. 4)."
+D19,SS34,Diode_SMD:D_SMA,1,MDD,SS34,C8678,LCSC,"Rueda libre de L2 de OUT de U19 a GNDA (tps2663.pdf p. 36 y 38): 40 V, 3 A, IFSM 80 A (mdd_ss34.pdf p. 1)."
+"D14,D15,D16,D17",BAT54S,Package_TO_SOT_SMD:SOT-23,4,onsemi,BAT54SLT1G,C19726,LCSC,"Clamp de las entradas del ADS1115: COMUN en la entrada, A a GNDA, K a +5V_AUX."
+D3,LED rojo 3mm,LED_THT:LED_D3.0mm,1,Everlight,204-10SURD/S530-A3-L,C99771,LCSC,+12 V ultra.
+D4,LED amarillo 3mm,LED_THT:LED_D3.0mm,1,Everlight,204-10UYD/S530-A3-L,C85160,LCSC,-12 V ultra.
+D6,LED verde 3mm,LED_THT:LED_D3.0mm,1,Everlight,204-10SYGD/S530-E2-L,C181864,LCSC,+5 V de rack.
+D7,LED azul 3mm,LED_THT:LED_D3.0mm,1,Everlight,204-10SUBC/S400-A4,C86881,LCSC,+5 V digital.
+D18,LED verde 0805,LED_SMD:LED_0805_2012Metric,1,Lite-On,LTST-C170KGKT,C98221,LCSC,Estado del supervisor M5. Verde (Vf ~2 V): un azul a 3.3 V con 1k no llegaba a 0.5 mA.
+"F2,F3",SF-1206F300-2 3A,Fuse:Fuse_1206_3216Metric,2,Bourns,SF-1206F300-2,C208499,LCSC,"Fusible rapido de los rieles +-12 V de rack, antes del crowbar."
+F4,SF-1206F200-2 2A,Fuse:Fuse_1206_3216Metric,1,Bourns,SF-1206F200-2,C719183,LCSC,+5 V de rack.
+F5,0466004 4A,Fuse:Fuse_1206_3216Metric,1,Littelfuse,0466004.NRHF,C187596,LCSC,"+5 V digital. Littelfuse 0466004 (4 A muy rapido, 1206): el SF-1206F400-2 no tiene stock."
+"R15,R16,R17,R18",0.02,Resistor_SMD:R_2512_6332Metric,4,Vishay,WSL2512R0200FEA,C553969,LCSC,Ballast de los LT3045/LT3094 en paralelo (lt3045-rev-d.pdf Figure 7: 20 mohm).
+"R19,R29,R30",0.02,Resistor_SMD:R_2512_6332Metric,3,Vishay,WSL2512R0200FEA,C553969,LCSC,Shunt de U8 / U13 / U14.
+R20,0.1,Resistor_SMD:R_2512_6332Metric,1,Vishay,WSL2512R1000FEA,C844904,LCSC,Shunt de U12 (+5 V auxiliar).
+"R9,R10,R61,R62",120k 0.1%,Resistor_SMD:R_0805_2012Metric,4,Yageo,RT0805BRD07120KL,C865161,LCSC,R_SET = 120k || 120k = 60k: dos reguladores en paralelo suman 200 uA en SET. 200 uA * 60k = 12.000 V.
+"R12,R35",49.9k 0.1%,Resistor_SMD:R_0805_2012Metric,2,Yageo,RT0805BRD0749K9L,C469661,LCSC,Rama alta de los divisores UVLO/OVP de U16 y OVP de U19.
+R13,1.62k 0.1%,Resistor_SMD:R_0805_2012Metric,1,UniOhm,TC0525B1621T5G,C50670348,LCSC,UVLO de U16: 1.2 V * 53.48/3.58 = 17.9 V.
+R14,1.96k 0.1%,Resistor_SMD:R_0805_2012Metric,1,Vishay,TNPW08051K96BEEN,C2093012,LCSC,OVP de U16: 1.2 V * 53.48/1.96 = 32.7 V.
+R36,3.9k 0.1%,Resistor_SMD:R_0805_2012Metric,1,Yageo,RT0805BRD073K9L,C865471,LCSC,"OVP de U19: 1.2 V * (1 + 49.9/3.9) = 16.55 V, el disparo nominal de check_absmax.py."
+R39,47.5k 0.1%,Resistor_SMD:R_0805_2012Metric,1,Yageo,RT0805BRD0747K5L,C865514,LCSC,"Canal + de D-F4: 2.495 V * (1 + 47.5/10) = 14.35 V, dentro de la ventana util de secuencia_budget.py (48.1k no tiene stock en 0805 0.1%)."
+"R40,R47,R48,R50,R52",10.0k 0.1%,Resistor_SMD:R_0805_2012Metric,5,Yageo,RT0805BRD0710KL,C110775,LCSC,Ramas de 10k de los divisores de precision (D-F4 y D-F6).
+R41,10.2k 0.1%,Resistor_SMD:R_0805_2012Metric,1,Yageo,RT0805BRD0710K2L,C865134,LCSC,Canal - de D-F4 (de VREF a -15.5 V) con R42 = 59.0k: dispara a 2.495 V * 59.0/10.2 = 14.43 V.
+R42,59.0k 0.1%,Resistor_SMD:R_0805_2012Metric,1,Yageo,RT0805BRD0759KL,C865570,LCSC,Canal - de D-F4 con R41 = 10.2k (58.3k no tiene stock en 0805 0.1%).
+"R45,R46",45.3k 0.1%,Resistor_SMD:R_0805_2012Metric,2,Yageo,RT0805BRE0745K3L,C866072,LCSC,Crowbar +-12 V de rack: 2.495 V * (1 + 45.3/10) = 13.80 V. 50 ppm/C: no hay 0805 0.1% de 25 ppm con stock.
+R49,13.3k 0.1%,Resistor_SMD:R_0805_2012Metric,1,Yageo,RT0805BRD0713K3L,C865182,LCSC,Crowbar +5 V de rack: 5.81 V.
+R51,12.7k 0.1%,Resistor_SMD:R_0805_2012Metric,1,UniOhm,TC0525B1272T5G,C50670219,LCSC,Crowbar +5 V digital: 5.66 V.
+R5,9.31k 0.1%,Resistor_SMD:R_0805_2012Metric,1,Yageo,RT0805BRD079K31L,C865720,LCSC,U1: 1.21 V * (1 + (9.31k + RV2)/1.00k) = 12.47..13.69 V.
+"R6,R8",1.00k 0.1%,Resistor_SMD:R_0805_2012Metric,2,Yageo,RT0805BRD071KL,C110774,LCSC,Rama baja de los divisores de U1/U2.
+R7,9.09k 0.1%,Resistor_SMD:R_0805_2012Metric,1,Yageo,RT0805BRD079K09L,C865717,LCSC,U2: -1.22 V * (1 + (9.09k + RV3)/1.00k) = -12.31..-13.53 V.
+"R21,R22,R23,R24",100k 0.1%,Resistor_SMD:R_0805_2012Metric,4,Yageo,RT0805BRD07100KL,C122537,LCSC,Rama alta de los divisores del ADS1115.
+"R25,R26,R27,R28",20.0k 0.1%,Resistor_SMD:R_0805_2012Metric,4,Yageo,RT0805BRD0720KL,C469660,LCSC,Rama baja de los divisores del ADS1115.
+"R32,R33",45.3k,Resistor_SMD:R_0805_2012Metric,2,UniOhm,0805W8F4532T5E,C17701,LCSC,Trim de PS4/PS5 a -Vout: R = 10000*2.5/(15.5-2.5-12.5) - 5110 = 44.9k (nota TRACO).
+R11,4.02k,Resistor_SMD:R_0805_2012Metric,1,UniOhm,0805W8F4021T5E,C17663,LCSC,"ILIM de U16: 18.1/4.02 = 4.50 A, banda 4.185..4.815 A (tps2663.pdf p. 7, p. 22 ec. 5): bajo el disparo minimo del TE90 (4.875 A)."
+R34,18.2k,Resistor_SMD:R_0805_2012Metric,1,UniOhm,0805W8F1822T5E,C17497,LCSC,ILIM de U19: 0.99 A.
+"R1,R2,R57,R58,R59,R60",2.2k,Resistor_SMD:R_0805_2012Metric,6,UniOhm,0805W8F2201T5E,C17520,LCSC,LED de +-12 V ultra y pull-ups I2C.
+"R3,R4",680,Resistor_SMD:R_0805_2012Metric,2,UniOhm,0805W8F6800T5E,C17798,LCSC,LED de +5 V.
+"R64,R70,R71,R72,R73",1k,Resistor_SMD:R_0805_2012Metric,5,UniOhm,0805W8F1001T5E,C17513,LCSC,"Base de los PNP de D-F6 y R64 del LDO del supervisor (con D2 = 24 V, check_absmax.py calcula U18 IN)."
+"R44,R66,R68,R74,R75,R76,R77,R84",10k,Resistor_SMD:R_0805_2012Metric,8,UniOhm,0805W8F1002T5E,C17414,LCSC,"Pull-up de SHDN_CASCADE y de los FLT de U16 y U19, referencia del canal - de D-F4 y base-emisor de los PNP."
+R43,100k,Resistor_SMD:R_0805_2012Metric,1,UniOhm,0805W8F1003T5E,C149504,LCSC,Pull-down de SHDN_CASCADE: hilo roto = cascada apagada.
+R63,1.2k,Resistor_SMD:R_0805_2012Metric,1,UniOhm,0805W8F1201T5E,C17379,LCSC,Polarizacion de U21 (TL431): ~2 mA. #474 no la tenia y VREF_2V5 quedaba al aire.
+R31,220,Resistor_SMD:R_0805_2012Metric,1,UniOhm,0805W8F2200T5E,C17557,LCSC,LED verde D18 desde el MSP430 a 3.3 V (~5 mA).
+"R65,R83",47k,Resistor_SMD:R_0805_2012Metric,2,UniOhm,0805W8F4702T5E,C17713,LCSC,"R65: pull-up de RST/NMI del MSP430 (con C12 = 1 nF, compatible con Spy-Bi-Wire). R83: pull-down de SHDN_M5, <= 0.47 V con los 10 uA del pull-up interno de U16 (tps2663.pdf p. 7)."
+"R67,R82",6.8M,Resistor_SMD:R_0805_2012Metric,2,UniOhm,0805W8F6804T5E,C17773,LCSC,"R67: histeresis del canal + (~32 mV en el riel, secuencia_budget.py pide 31 mV). R82: UVLO de U19 a IN_SYS, sin UVLO (tps2663.pdf p. 20: >= 300k)."
+R69,10M,Resistor_SMD:R_0805_2012Metric,1,UniOhm,0805W8F1005T5E,C26108,LCSC,Histeresis del canal -: ~31 mV en el riel.
+"R53,R54,R55,R56,R78,R79,R80,R81",100,Resistor_SMD:R_0805_2012Metric,8,UniOhm,0805W8F1000T5E,C17408,LCSC,R53..R56 = R_GK de los SCR: el dV/dt de 200 V/us del BT151 se da con R_GK = 100 ohm (nxp-bt151-500r.pdf p. 6). R78..R81 limitan la corriente de puerta.
+"C5,C6,C9,C10,C23,C24,C25,C26,C27,C28,C30,C31,C32,C33,C34,C35",100nF 50V X7R,Capacitor_SMD:C_0805_2012Metric,16,Yageo,CC0805KRX7R9BB104,C49678,LCSC,"Desacoplo, C_VCAP de U15 y filtro de los divisores de D-F4 (tau ~0.85 ms)."
+C7,1uF 50V X7R,Capacitor_SMD:C_0805_2012Metric,1,Samsung,CL21B105KBFNNNE,C28323,LCSC,Entrada de U18.
+C8,4.7uF 25V X7R,Capacitor_SMD:C_0805_2012Metric,1,Yageo,CC0805KKX7R8BB475,C354262,LCSC,Salida de U18: >= 2 uF efectivos (TPS709).
+"C11,C13",22nF 50V X7R,Capacitor_SMD:C_0805_2012Metric,2,Samsung,CL21B223KBANNNC,C1729,LCSC,dVdT de U16/U19: 2 V/ms.
+C12,1nF 50V C0G,Capacitor_SMD:C_0805_2012Metric,1,Yageo,CC0805JRNPO9BN102,C62774,LCSC,RST/NMI del MSP430.
+"C19,C21",470nF 50V X7R,Capacitor_SMD:C_0805_2012Metric,2,Samsung,CL21B474KBFNNNE,C13967,LCSC,C_SET de los LT3045/LT3094.
+"C16,C20,C22,C36,C37,C38",22uF 25V X7R,Capacitor_SMD:C_1210_3225Metric,6,Murata,GRM32ER71E226KE15L,C21397,LCSC,Salida de PS3 (K78 C2) y entrada/salida de la cascada ultra: >= 10 uF efectivos a 12 V.
+C15,10uF 50V X7R,Capacitor_SMD:C_1210_3225Metric,1,Murata,GRM32ER71H106KA12L,C77102,LCSC,Entrada de PS3 (K78 C1: 10 uF/50 V).
+"RV2,RV3",1k 3296W,Potentiometer_THT:Potentiometer_Bourns_3296W_Vertical,2,Bourns,3296W-1-102LF,C57089,LCSC,Ajuste fino de +13.10 V y -12.90 V.
+SW1,Pulsador 6x6,Button_Switch_THT:SW_PUSH_6mm,1,Omron,B3F-1000,C93157,LCSC,Rearme manual del enclavamiento M5 (>= 2 s).
+J3,Bornera 4P 5.08 mm,"TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-4-5.08_1x04_P5.08mm_Horizontal",1,Phoenix Contact,1715747,C5443561,LCSC,"Fila de invitados (D-B2): 1 +12V_RACK, 2 GNDA, 3 -12V_RACK, 4 +5V_RACK."
+"J2,J7",Molex KK-254 4P,Connector_Molex:Molex_KK-254_AE-6410-04A_1x04_P2.54mm_Vertical,2,Molex,22-27-2041,C504991,LCSC,"Bus propio, una salida por segmento de la placa bus (bus-board/README). 1 = -12V, 2 = GNDA, 3 = GNDA, 4 = +12V."
+J6,Molex KK-254 2P,Connector_Molex:Molex_KK-254_AE-6410-02A_1x02_P2.54mm_Vertical,1,Molex,22-27-2021,C293316,LCSC,"+5 V auxiliar al modulo 2. 1 = +5V_AUX, 2 = GNDA."
+J9,Molex KK-254 2P,Connector_Molex:Molex_KK-254_AE-6410-02A_1x02_P2.54mm_Vertical,1,Molex,22-27-2021,C293316,LCSC,"+5 V digital aislado. 1 = +5V_DIG, 2 = GNDD."
+"J8,J10",PinHeader 1x04,Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical,2,XFCN,PZ254V-11-04P,C2691448,LCSC,"J8: I2C aislado (3V3_DIG, SDA_D, SCL_D, GNDD). J10: Spy-Bi-Wire del MSP430."
+J5,Faston 6.3x0.8 PCB,sam17:Faston_6.3x0.8mm_PCB_2Leg_P5.0mm,1,Vogt,3866A.68,,Reichelt,Puente unico GNDA - chasis.
+"TP1,TP2,TP3,TP4,TP5,TP6,TP7,TP8,TP9,TP10,TP11",TestPoint,TestPoint:TestPoint_THTPad_D2.0mm_Drill1.0mm,11,—,—,,—,"Pad de prueba: TP1 +24V, TP2 GND24, TP3 +12V ultra, TP4 -12V ultra, TP5 +5V rack, TP6 GNDA, TP7 +13V1, TP8 -12V9, TP9 +15V5_LC, TP10 -15V5_LC, TP11 GNDD. Sin pieza."

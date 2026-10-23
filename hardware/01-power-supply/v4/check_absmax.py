@@ -89,27 +89,79 @@ T_AIRE_C = aire_recinto_c(p_recinto_w(SOSTENIDO), p_cajon_w(SOSTENIDO),
                           area_venteo_mm2=P_BASE["area_venteo_mm2"])
 RIZADO_VPP = {"rack+12": 0.150, "rack-12": 0.150, "rack+5": 0.080}
 
-# --- el crowbar de D-F6: lo que se declara y lo que se exige --------------
-# El disparo que el papel sec.4.3 propone para +-12 ("un SCR a ~14 V"), y el
-# del +5 que el papel no daba y sale de la ventana de abajo.
+# --- el tope M3 delante de U1 (#334) --------------------------------------
+# U1 es el LT1963A desde D-F8 y su maximo absoluto de entrada son +-20,0 V
+# (lt1963a-rev-g-2021-02.pdf p. 2). El OVP de PS1 (IRM-20-15) llega a 20,25 V
+# sostenidos (meanwell-irm-20-spec-2025-11-21.pdf p. 2), lo que sin proteccion
+# deja -0,25 V de margen (#334). El tope M3 (TI TPS26631, tps2663.pdf p. 6-8:
+# V(OVPR) = 1,176..1,224 V, corte en 8,5..14 us, antes del filtro LC + TVS
+# Bourns SMBJ16A, bourns_smbj.pdf p. 2, en U1 IN) corta a 16,92 V maximos de
+# umbral y sujeta el pico inductivo tras el LC por debajo de 20,0 V.
+# EL PICO NO SE ESCRIBE: SE CALCULA. Hasta #474 aqui habia un 18,08 a mano y
+# el guarda lo comparaba con los 20,0 V de U1 -- una puerta que no podia
+# ponerse roja por ningun cambio de diseno. Ahora sale del modelo RK4 de la v5
+# (v5/check_absmax.py::escalon_lc), que simula el LC y el divisor del OVP que
+# monta la placa (los lee de v5/bom.csv), con el fallo de ESTA rama: el OVP
+# de PS1 a 20,25 V sostenidos.
+def _modelo_tope_v5():
+    import importlib.util
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "v5", "check_absmax.py")
+    spec = importlib.util.spec_from_file_location("check_absmax_v5", ruta)
+    mod = importlib.util.module_from_spec(spec)
+    # Al cargarse, la v5 se pone la PRIMERA en sys.path, y sus margen_budget y
+    # rizado_budget se llaman igual que los de aqui: sin devolver sys.path a
+    # como estaba, el fusible_budget de la v4 importaba los de la v5 y
+    # check_bringup.py de la v4 se caia con ImportError.
+    camino = list(sys.path)
+    try:
+        spec.loader.exec_module(mod)
+    finally:
+        sys.path[:] = camino
+    return mod
+
+
+TOPE_V5 = _modelo_tope_v5()
+TOPE_U1_REF = "TI TPS26631 + Bourns SMBJ16A (v5)"
+V_DISPARO_TOPE_U1_MAX_V = TOPE_V5.V_DISPARO_MAX_U1_V
+T_CORTE_TOPE_US = TOPE_V5.T_CORTE_OVP_MAX_S * 1e6   # tps2663.pdf p. 8: 14 us max
+
+
+def v_pico_tope_u1_v(v_fallo_v: float, t_corte_us: float = T_CORTE_TOPE_US) -> float:
+    """Pico en U1 IN con el tope M3 cortando antes del LC y el SMBJ16A en U1."""
+    return TOPE_V5.escalon_lc(v_fallo_v=v_fallo_v, t_corte_s=t_corte_us * 1e-6,
+                              sensa_antes_del_lc=True, con_efuse=True,
+                              con_tvs=True)["v_pico_v"]
+
+# --- el crowbar de D-F6: piezas y cifras leidas de hoja (#340) ------------
+# SCR: NXP BT151-500R (docs/reference/datasheets/nxp-bt151-500r.pdf, Rev. 05).
+#   * p. 3: V_DRM = 500 V, I_T(RMS) = 12 A, I_TSM = 120 A (10 ms), I2t = 72 A2s
+#   * p. 6: I_GT = 2 mA tip / 15 mA max; I_L = 10 mA tip / 40 mA max;
+#           I_H = 7 mA tip / 20 mA max a 25 C (~36 mA a -40 C, Fig. 10 p. 7);
+#           dV_D/dt = 200 V/us min con R_GK = 100 ohm; t_gt = 2 us tip.
+# Referencia de disparo: TI TL431BI (docs/reference/datasheets/tl431.pdf,
+# SLVS543S, p. 13):
+#   * V_ref = 2483 / 2495 / 2507 mV a 25 C (+-0,48 %), V_I(dev) = 34 mV max
+#     en -40..85 C (+-1,84 % total), I_ref = 4 uA max, mas divisor de 0,1 %:
+#     en 14,0 V la dispersion garantizada es +-0,29 V (<= 0,30 V).
+SCR_REF = "NXP BT151-500R"
+REF_DISPARO_CROWBAR = "TI TL431BI"
 V_DISPARO_V = {"rack+12": 14.0, "rack-12": 14.0, "rack+5": 5.8}
-# REQUISITOS al SCR, publicados aqui porque no hay hoja de ninguno todavia:
-I_MANTENIMIENTO_MAX_A = 0.100   # corriente de mantenimiento MAXIMA admisible
-TOL_DISPARO_V = 0.4             # cuanto se puede ir el disparo de su nominal
-                                # (referencia + dispersion del SCR), ESTIMADO
-T_DISPARO_MAX_US = 10.0         # ESTIMADO: por encima de esto el riel sube
-                                # mientras el SCR decide
+# Tomamos 40 mA (el maximo de I_L a 25 C y por encima de los ~36 mA de I_H a
+# -40 C en Fig. 10 p. 7) como cota conservadora de enganche/mantenimiento:
+I_MANTENIMIENTO_MAX_A = 0.040
+TOL_DISPARO_V = 0.30            # TL431BI p. 13 (+-1,84 % en temp) + divisor 0,1 %
 
 ESTIMADOS = (
     "los maximos absolutos de los modulos invitados: no hay hoja de terceros "
     "y se toma el electrolitico del riel, que es la pieza que revienta primero",
-    f"TOL_DISPARO_V={TOL_DISPARO_V}: dispersion del disparo del crowbar, sin "
-    f"pieza elegida",
-    f"T_DISPARO_MAX_US={T_DISPARO_MAX_US}: tiempo de disparo, sin pieza",
 )
-HUECOS = (
-    "la pieza del SCR: sin hoja en el arbol, su corriente de mantenimiento, "
-    "su I2t y su dv/dt son requisitos publicados y no cifras leidas",
+# El I2t y el dV/dt del SCR estan en su hoja (arriba), pero solo significan
+# algo contra el fusible y la R_GK que se monten, y la v4 no tiene placa. La
+# comprobacion contra piezas es la de v5/check_absmax.py (D-F6 por dentro).
+HUECOS: tuple[str, ...] = (
+    "D-F6 sin piezas: el I2t del SCR (72 A2s) contra el del fusible y su dV/dt "
+    "(200 V/us solo con R_GK = 100 ohm) no se comprueban en la v4, que no tiene "
+    "fusible ni R_GK elegidos",
 )
 
 
@@ -141,14 +193,25 @@ def i_plegado_a(riel: str) -> float:
 
 def victima_de(riel: str, filas: list[dict]) -> dict:
     clave = {"rack+12": "modulo invitado +-12",
-             "rack-12": "modulo invitado +-12",
-             "rack+5": "modulo invitado +5"}[riel]
+              "rack-12": "modulo invitado +-12",
+              "rack+5": "modulo invitado +5"}[riel]
     return next(f for f in filas if f["victima"] == clave)
 
 
 def ventana_crowbar_v(riel: str, filas: list[dict]) -> tuple[float, float]:
     """(minimo, maximo) donde puede vivir el disparo del crowbar."""
     return (v_riel_sano_max(riel), float(victima_de(riel, filas)["v_absmax"]))
+
+
+def _guarda_tope_u1(p: dict[str, float]) -> None:
+    """El tope M3 delante de U1 LT1963A (#334). Alimenta al canario."""
+    filas = leer_absmax()
+    u1 = next(f for f in filas if f["victima"] == "U1 LT1963A")
+    lim_u1 = float(u1["v_absmax"])
+    v_pico = v_pico_tope_u1_v(p["v_fallo_tope_v"], p["t_corte_tope_us"])
+    assert v_pico < lim_u1, (
+        f"U1 LT1963A fuera de maximo absoluto (#334): le llegan {v_pico:.2f} V "
+        f"contra {lim_u1:.1f} V de limite (lt1963a-rev-g-2021-02.pdf p. 2)")
 
 
 def _guarda_crowbar(p: dict[str, float]) -> None:
@@ -163,10 +226,10 @@ def _guarda_crowbar(p: dict[str, float]) -> None:
     v = p["v_disparo_v"]
     assert v - TOL_DISPARO_V > lo, (
         f"dispararia solo: el crowbar de {riel} pone {v:.2f} V "
-        f"+-{TOL_DISPARO_V:.1f} y el riel sano llega a {lo:.2f} V")
+        f"+-{TOL_DISPARO_V:.2f} y el riel sano llega a {lo:.2f} V")
     assert v + TOL_DISPARO_V < hi, (
         f"llega tarde: el crowbar de {riel} dispara a {v:.2f} V "
-        f"+-{TOL_DISPARO_V:.1f} y un modulo ajeno aguanta {hi:.2f} V")
+        f"+-{TOL_DISPARO_V:.2f} y un modulo ajeno aguanta {hi:.2f} V")
 
 
 def _guarda_enganche(p: dict[str, float]) -> None:
@@ -182,6 +245,8 @@ def _guarda_enganche(p: dict[str, float]) -> None:
 
 
 P_BASE = {
+    "v_fallo_tope_v": OVP_V["PS1/PS2 (IRM-20-15)"][1],
+    "t_corte_tope_us": T_CORTE_TOPE_US,
     "v_disparo_v": V_DISPARO_V["rack+12"],
     "riel_es_5v": 0.0,
     "i_mantenimiento_a": I_MANTENIMIENTO_MAX_A,
@@ -194,27 +259,32 @@ def main() -> int:
     print("check_absmax v4: OVP de los modulos contra lo que alimentan\n")
 
     # --- 1. La cascada ultra --------------------------------------------
-    print("=== 1. El OVP de PS1/PS2 contra la cascada ultra ===\n")
+    print("=== 1. El OVP de PS1/PS2 contra la cascada ultra (#334) ===\n")
     ovp = OVP_V["PS1/PS2 (IRM-20-15)"][1]
-    for nombre, riel in (("U1 LM2941", "+15 crudo"), ("U2 LT3015", "-15 crudo")):
+    fila_u1 = next(f for f in filas if f["victima"] == "U1 LT1963A")
+    lim_u1 = float(fila_u1["v_absmax"])
+    # Demostracion de que el tope M3 es obligatorio: sin el, 20,25 V > 20,0 V.
+    assert ovp > lim_u1, (
+        f"si el OVP de PS1 ({ovp:.2f} V) cupiera en los {lim_u1:.1f} V de U1 "
+        f"LT1963A, la #334 y el tope M3 no tendrian razon de ser")
+    v_pico_u1 = v_pico_tope_u1_v(ovp)
+    for nombre, v_efectivo in (("U1 LT1963A", v_pico_u1),
+                               ("U2 LT3015", ovp)):
         fila = next(f for f in filas if f["victima"] == nombre)
         lim = float(fila["v_absmax"])
-        ok = ovp < lim
+        ok = v_efectivo < lim
         rojo = rojo or not ok
-        print(f"  [{'verde' if ok else 'ROJO '}] {nombre}: ve {ovp:.2f} V de "
-              f"OVP contra {lim:.1f} de maximo -> margen {lim - ovp:+.2f} V")
-        assert ok, (f"{nombre} no aguanta el OVP de su propio modulo: "
-                    f"{ovp:.2f} contra {lim:.1f}")
+        print(f"  [{'verde' if ok else 'ROJO '}] {nombre}: ve {v_efectivo:.2f} V "
+              f"contra {lim:.1f} V de maximo -> margen {lim - v_efectivo:+.2f} V")
+        assert ok, (f"{nombre} no aguanta la sobretension de su rama: "
+                    f"{v_efectivo:.2f} contra {lim:.1f}")
     print()
-    print("  AVISO -- LA FILA DE U1 MIRA A UNA PIEZA QUE YA NO ESTA (#334).")
-    print("  Dice 'U1 LM2941, 26,0 V' y U1 es un LT1963A desde D-F8, cuyo")
-    print("  maximo absoluto de entrada son +-20 V (Rev G p. 2). Contra los")
-    print(f"  {ovp:.2f} V de este OVP eso no es +5,75 V de margen: son -0,25.")
-    print("  El verde de arriba es del LM2941 y no de nadie que este en la")
-    print("  placa. NO SE ARREGLA AQUI a proposito: cambiar el numero pone")
-    print("  esta puerta en rojo, y que hacer con eso --otra pieza, atajar el")
-    print("  OVP, o aceptarlo por escrito-- es la decision que la #334 abre.")
-    print("  D-F9 si arreglo su mitad: U2 pasa de LM2991 a LT3015 y de 26 a 33.")
+    print(f"  #334 cerrada con el tope M3 ({TOPE_U1_REF}): sin tope, el OVP de")
+    print(f"  PS1 llega a {ovp:.2f} V > {lim_u1:.1f} V (margen {lim_u1 - ovp:+.2f} V);")
+    print(f"  con el TPS26631 antes del LC (disparo <= {V_DISPARO_TOPE_U1_MAX_V:.2f} V,")
+    print("  corte <= 14 us, tps2663.pdf p. 6-8) y el SMBJ16A en U1 IN, el")
+    print(f"  modelo RK4 de la v5 da {v_pico_u1:.2f} V de pico (margen "
+          f"{lim_u1 - v_pico_u1:+.2f} V).")
     print("\n  Y el fallo DOBLE (PS1 en OVP y U1 en corto), que se documenta y")
     print("  no bloquea porque son dos causas independientes:")
     for nombre in ("LT3045", "LT3094"):
@@ -334,6 +404,14 @@ def main() -> int:
                    0.0, 20.0, "el crowbar se suelta")
     print(f"  canario: con mas de {v:.2f} A de corriente de mantenimiento, el "
           f"SCR se suelta")
+    _guarda_tope_u1(dict(P_BASE))
+    # El canario mueve una CAUSA (el fallo que llega), no el resultado: con
+    # el pico como parametro el borde salia en el propio limite, que es una
+    # tautologia.
+    v_u1 = borde_rojo(_guarda_tope_u1, dict(P_BASE), "v_fallo_tope_v",
+                      OVP_V["PS1/PS2 (IRM-20-15)"][1], 60.0, "fuera de maximo absoluto")
+    print(f"  canario U1: con un fallo de mas de {v_u1:.1f} V delante del tope, "
+          f"U1 (LT1963A) sale de maximo absoluto")
 
     print(f"\n  ESTIMADO: {len(ESTIMADOS)}; HUECO: {len(HUECOS)}")
     for e in ESTIMADOS:
@@ -353,15 +431,13 @@ def main() -> int:
     # relevo. La condicion, no el resultado.
     if not HUECOS:
         print()
-        print("D-F6 ya no esta en cotas: la hoja del SCR bajo y sus cifras "
-              "son leidas.")
+        print("D-F6 comprobada contra piezas.")
         return 0
     print()
-    print("HUECO: D-F6 esta dimensionada en COTAS y no en una pieza. No hay "
-          "hoja de ningun SCR en el arbol, asi que su corriente de "
-          "mantenimiento (<= 100 mA), su I2t y su dv/dt son requisitos que "
-          "este guion publica, no cifras leidas. Se cierra bajando la hoja del "
-          "SCR que se elija, poniendo sus cifras aqui y vaciando HUECOS.")
+    print("HUECO: la corriente de mantenimiento del BT151-500R esta leida y "
+          "comprobada, pero su I2t y su dV/dt dependen del fusible y de la "
+          "R_GK, que la v4 no elige. Se cierra eligiendolos aqui o dando la v4 "
+          "por sustituida por la v5, que si los comprueba.")
     return 2
 
 
