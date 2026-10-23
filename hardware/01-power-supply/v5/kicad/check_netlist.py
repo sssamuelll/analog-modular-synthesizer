@@ -245,11 +245,18 @@ def main() -> int:
     # El FLT de U19 al MSP430, nunca al SHDN de U16: en UVLO baja FLT
     # (tps2663.pdf p. 19) y U16 no arrancaria nunca.
     if red_de(nets, "U19.15") != "FLT_U19" or "U17.16" not in nets.get("FLT_U19", set()):
-        fallos.append("U19: FLT a P1.2 del MSP430 (sobretension de riel = abandono)")
+        fallos.append("U19: FLT a P1.2 del MSP430 (un fallo de riel gasta un intento)")
     elif red_de(nets, "U19.15") == red_de(nets, "U16.13"):
         fallos.append("U19: su FLT no puede ir al SHDN de U16: en UVLO baja y U16 no arranca")
     if not resistencias_entre(nets, "+3V3_MCU", "FLT_U19"):
         fallos.append("U19: FLT es drenador abierto y necesita pull-up a +3V3_MCU")
+    # El FLT de U16 al MSP430: se suelta cuando U16 vuelve a cerrar solo tras
+    # un bajon de entrada (p. 19), y el firmware reinicia ahi la ventana en la
+    # que ignora el FLT de U19 (recuperacion_budget.py, propiedad 6).
+    if red_de(nets, "U16.15") != "FLT_M5" or "U17.1" not in nets.get("FLT_M5", set()):
+        fallos.append("U16: FLT al MSP430 (marca el cierre tras un bajon de entrada)")
+    if not resistencias_entre(nets, "+3V3_MCU", "FLT_M5"):
+        fallos.append("U16: FLT es drenador abierto y necesita pull-up a +3V3_MCU")
     if (red_de(nets, "D19.1"), red_de(nets, "D19.2")) != ("+15V5_EFUSE", "GNDA"):
         fallos.append("D19: Schottky con K en OUT de U19 y A en GNDA (tps2663.pdf p. 36, 38)")
     # SHDN de U16 con pull-down: el pull-up interno da hasta 10 uA (p. 7) y

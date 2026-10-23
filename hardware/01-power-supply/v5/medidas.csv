@@ -45,7 +45,8 @@ paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
 2c,tiempo_espera_reintento_s,s,0.85 .. 1.15,1,0.15,,,,M5 / recuperacion_budget: tiempo de enfriamiento entre intentos de arranque
 2c,debounce_deteccion_ms,ms,85 .. 115,100,15,,,,M5 / recuperacion_budget: ventana de discriminacion contra transitorios de insercion
 2c,tiempo_reset_cupo_s,s,55 .. 65,60,5,,,,M5 / recuperacion_budget: tiempo de operacion sana antes de restaurar el cupo
-2c,latch_inmediato_ante_ovp,si/no,= si,,,,,,M5: FLT de U19 (P1.2) con la cadena arrancada: corte y enclavamiento sin reintentos
+2c,flt_U19_gasta_intento,si/no,= si,,,,,,"M5: FLT de U19 (P1.2) con la cadena arrancada: corta, gasta un intento y reintenta; persistente, enclava al 4o pulso"
+2c,bajon_de_entrada_no_gasta,si/no,= si,,,,,,M5: bajon por debajo del UVLO de U16 sin apagar el MSP430: U16 cierra solo y no gasta intento
 2c,flt_U19_en_arranque_no_abandona,si/no,= si,,,,,,M5 / recuperacion_budget: 10 arranques completos seguidos no la dejan ABANDONADA (FLT de U19 del arranque)
 2c,shdn_U16_con_MCU_en_reset_v,V,<= 0.8,,,,,,"R83: SHDN de U16 con el MSP430 en reset, por debajo de V(SHUTF) (tps2663.pdf p. 7)"
 2c,persistencia_latch_en_fram,si/no,= si,,,,,,M5: el estado de enclavamiento sobrevive a desconexion de la alimentacion

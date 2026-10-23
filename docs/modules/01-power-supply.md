@@ -63,9 +63,14 @@ fila Eurorack de invitados (52 HP, D-B2):
   (4 intentos totales) con espera de 1,0 s, filtro de rebote de 100 ms y
   enclavamiento en abandono persistente hasta rearme manual por botón dedicado ≥ 2 s.
   `SHDN` de `U16` con pull-down (`R83`, 47 kΩ): sin el MCU vivo, el eFuse queda
-  apagado. El `FLT` del tope `U19` entra al MCU por P1.2 (`R84`): sobretensión de
-  riel = abandono en el primer pulso, ignorándolo los primeros 100 ms, que es
-  cuando el propio `U19` lo baja por UVLO al arrancar. El MCU se alimenta por
+  apagado. El `FLT` del tope `U19` entra al MCU por P1.2 (`R84`): un fallo de riel
+  gasta un intento, como cualquier otro, y se ignora los primeros 100 ms tras cada
+  cierre de `U16`, que es cuando el propio `U19` lo baja por UVLO al arrancar. Tras
+  un bajón de entrada `U16` vuelve a cerrar solo; el MCU lo ve porque el `FLT` de
+  `U16` se suelta, y ahí empiezan otra vez los 100 ms: el bajón no gasta intento.
+  El `FLT` de `U19` es el mismo para sobretensión y sobrecarga, y el MCU no ve la
+  tensión del riel: una sobretensión gasta los 4 intentos antes de abandonar, con
+  `U19` abriendo el riel en cada uno. El MCU se alimenta por
   `TPS709` tras `R64` (1 kΩ) y un zener de 24 V (`D2`): con `D1` en 42,1 V su
   entrada no pasa de 26,4 V (`check_absmax.py`).
 

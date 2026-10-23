@@ -256,8 +256,12 @@ def _puntos() -> list[Punto]:
     p.append(P("2c", "tiempo_reset_cupo_s", "s",
                "M5 / recuperacion_budget: tiempo de operacion sana antes de restaurar el cupo",
                predicho=recuperacion_budget.T_REARME_SANO_S, tol=5.0))
-    p.append(P("2c", "latch_inmediato_ante_ovp", "si/no",
-               "M5: FLT de U19 (P1.2) con la cadena arrancada: corte y enclavamiento sin reintentos",
+    p.append(P("2c", "flt_U19_gasta_intento", "si/no",
+               "M5: FLT de U19 (P1.2) con la cadena arrancada: corta, gasta un intento y reintenta; "
+               "persistente, enclava al 4o pulso",
+               literal="si"))
+    p.append(P("2c", "bajon_de_entrada_no_gasta", "si/no",
+               "M5: bajon por debajo del UVLO de U16 sin apagar el MSP430: U16 cierra solo y no gasta intento",
                literal="si"))
     p.append(P("2c", "flt_U19_en_arranque_no_abandona", "si/no",
                "M5 / recuperacion_budget: 10 arranques completos seguidos no la dejan ABANDONADA (FLT de U19 del arranque)",

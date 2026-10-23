@@ -148,7 +148,7 @@ def entrada_m5() -> None:
     # enchufar, en un reset o programando, U16 sigue apagado hasta que el
     # firmware haya leido la bandera ABANDONADO de la FRAM.
     dos("R83", "R", b, "SHDN_M5", "GND24")
-    dos("R11", "R", b, "ILIM_U16", "GND24")       # 18/4.02k = 4.48 A
+    dos("R11", "R", b, "ILIM_U16", "GND24")       # 18.1/3.74k = 4.84 A
     # UVLO 17.9 V / OVP 32.7 V con V(UVLOR) = V(OVPR) = 1.2 V (p. 6)
     dos("R12", "R", b, "+24V_PROT", "UVLO_U16")
     dos("R13", "R", b, "UVLO_U16", "OVP_U16")
@@ -164,8 +164,8 @@ def entrada_m5() -> None:
     P("U18", "TPS709", b, {"1": "+24V_LDO", "3": None, "2": "GND24",
                            "5": "+3V3_MCU", "4": None})
     dos("C8", "C", b, "+3V3_MCU", "GND24")         # >= 2 uF efectivos (p. 21)
-    # P1.2 lee el FLT de U19 (tope #334): sobretension de riel = abandono en
-    # el primer pulso (recuperacion_budget.py). Va al MCU y NO al SHDN de U16:
+    # P1.2 lee el FLT de U19 (tope #334): un fallo de riel gasta un intento
+    # (recuperacion_budget.py). Va al MCU y NO al SHDN de U16:
     # el TPS26631 baja FLT mientras su entrada esta por debajo de UVLO
     # (tps2663.pdf p. 19) y hasta 700 us despues (p. 8), asi que cableado al
     # SHDN mantendria U16 apagado en cada arranque, con +15V5_RAW subiendo.
