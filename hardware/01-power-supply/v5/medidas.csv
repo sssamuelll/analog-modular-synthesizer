@@ -4,7 +4,7 @@ paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
 0,continuidad_PE_a_chasis,mohm,<= 50,,,,,,M2 / T17: continuidad de tierra PE desde conector Kycon pin shell a chasis
 0,continuidad_estrella_GNDA_a_chasis,mohm,<= 20,,,,,,T17 / M2: estrella analogica de masa J5 atornillada al chasis
 0,aislamiento_GNDA_a_GNDD,Mohm,>= 1000,,,,,,T16 / M1: separacion galvanica entre masa analogica y masa digital (barrera URB2405 + ISO1541 > 1000 Mohm)
-0,aislamiento_pantalla_retorno_dedicado,Mohm,>= 1,,,,,,T25: retorno de pantalla aislado de GNDA dentro de la fuente
+0,mazo_pantalla_par_propio_desde_J3,si/no,= si,,,,,,"T26 (#477): la pantalla lleva su propio par, +12 V y retorno, de J3.1 y J3.2 hasta la pantalla, sin pasar por el bus de la fila"
 1,tension_ladrillo_vacio,V,23.52 .. 24.48,24,0.48,,,,T09 / L04: salida continua nominal del ladrillo 24 V en vacio
 1,caida_LM74502_ideal_diode,mV,<= 50,,,,,,M5 / L04: caida directa del controlador de diodo ideal + FET inverso
 1,ron_TPS26631_efuse_U16,mohm,19 .. 45,,,,,,"M5: caida de U16 / corriente del cordon, con >= 0,6 A (tps2663.pdf p. 7)"
@@ -87,6 +87,18 @@ paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
 8,disparo_crowbar_rack-12,V,13.4974 .. 14.0974,13.7974,0.3,,,,check_absmax: disparo de proteccion en rack-12
 8,disparo_crowbar_rack+5,V,5.51335 .. 6.11335,5.81335,0.3,,,,check_absmax: disparo de proteccion en rack+5
 8,disparo_crowbar_digital+5,V,5.36365 .. 5.96365,5.66365,0.3,,,,check_absmax: disparo de proteccion en digital+5
+8,crowbar_rack+12_se_suelta_solo,si/no,registro,,,,,,"#476 REGISTRO: tras un pulso de puerta (>= 30 mA, check_absmax.corriente_puerta_a), el convertidor de rack+12 suelta el SCR y el riel vuelve sin quitar la entrada"
+8,crowbar_rack+12_corriente_enclavado_a,A,registro,,,,,,"#476 REGISTRO: corriente media por el SCR de rack+12 enclavado, y si es constante o a pulsos (osciloscopio en el shunt o pinza)"
+8,crowbar_rack+12_subida_base_scr_30min_k,K,<= 47.4433,,,,,,#476: base del SCR de rack+12 sobre el aire del banco tras 30 min enclavado; con el aire del cajon (63.9 C) la union queda <= 125 C (check_absmax.subida_max_scr_k)
+8,crowbar_rack-12_se_suelta_solo,si/no,registro,,,,,,"#476 REGISTRO: tras un pulso de puerta (>= 30 mA, check_absmax.corriente_puerta_a), el convertidor de rack-12 suelta el SCR y el riel vuelve sin quitar la entrada"
+8,crowbar_rack-12_corriente_enclavado_a,A,registro,,,,,,"#476 REGISTRO: corriente media por el SCR de rack-12 enclavado, y si es constante o a pulsos (osciloscopio en el shunt o pinza)"
+8,crowbar_rack-12_subida_base_scr_30min_k,K,<= 47.4433,,,,,,#476: base del SCR de rack-12 sobre el aire del banco tras 30 min enclavado; con el aire del cajon (63.9 C) la union queda <= 125 C (check_absmax.subida_max_scr_k)
+8,crowbar_rack+5_se_suelta_solo,si/no,registro,,,,,,"#476 REGISTRO: tras un pulso de puerta (>= 30 mA, check_absmax.corriente_puerta_a), el convertidor de rack+5 suelta el SCR y el riel vuelve sin quitar la entrada"
+8,crowbar_rack+5_corriente_enclavado_a,A,registro,,,,,,"#476 REGISTRO: corriente media por el SCR de rack+5 enclavado, y si es constante o a pulsos (osciloscopio en el shunt o pinza)"
+8,crowbar_rack+5_subida_base_scr_30min_k,K,<= 51.9933,,,,,,#476: base del SCR de rack+5 sobre el aire del banco tras 30 min enclavado; con el aire del cajon (63.9 C) la union queda <= 125 C (check_absmax.subida_max_scr_k)
+8,crowbar_digital+5_se_suelta_solo,si/no,registro,,,,,,"#476 REGISTRO: tras un pulso de puerta (>= 30 mA, check_absmax.corriente_puerta_a), el convertidor de digital+5 suelta el SCR y el riel vuelve sin quitar la entrada"
+8,crowbar_digital+5_corriente_enclavado_a,A,registro,,,,,,"#476 REGISTRO: corriente media por el SCR de digital+5 enclavado, y si es constante o a pulsos (osciloscopio en el shunt o pinza)"
+8,crowbar_digital+5_subida_base_scr_30min_k,K,<= 42.8933,,,,,,#476: base del SCR de digital+5 sobre el aire del banco tras 30 min enclavado; con el aire del cajon (63.9 C) la union queda <= 125 C (check_absmax.subida_max_scr_k)
 8,fusible_abre_sin_dano_a_pistas,si/no,= si,,,,,,check_absmax: fusible Bourns SF-1206F corta corriente de falta sin danar PCB
 8,pico_transitorio_U1_con_clamp_v,V,<= 18.5,18.1053,,,,,check_absmax (#334): simulacion RK4 de escalon 36 V con SMBJ16A < 20.0 V absmax
 8,ruido_riel_ultra_20MHz_uvrms,uVrms,<= 0.3,,,,,,rizado_budget: ruido residual total de la cascada en ancho de banda de 20 MHz

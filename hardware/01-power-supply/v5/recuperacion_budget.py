@@ -76,7 +76,9 @@ sec. 9.2) con piezas versionadas en `docs/reference/datasheets/`:
        una sobretension de riel gasta intentos como una sobrecarga y abandona
        al agotar el cupo (sec. 9.2). En cada intento `U19` abre el riel por si
        solo (OVP, p. 20).
-     - Los crowbars de rack (D-F6) no tienen camino al MCU (#476).
+     - Los crowbars de rack (D-F6) no tienen camino al MCU (#476): si su
+       convertidor los suelta y cuanto se calienta el SCR se mide en el
+       bring-up (`check_bringup.py`, paso 8, `crowbar_*`).
      - Desenchufar durante los `T_CONFIRMA_SANO_S` de un intento lo cuenta como
        fallido: desde el MCU no se distingue de un corto que tumba la entrada.
 """

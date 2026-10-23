@@ -330,6 +330,20 @@ El +12 lleva dos cargas por cables distintos: el bus de la fila y la pantalla de
 7" con su retorno dedicado, que es lo que pide `pantalla-motor`. Van juntas en
 el convertidor y separadas en el cableado.
 
+> **Regla de mazo (T26, #477).** La pantalla no tiene red propia en la placa.
+> Su `+12V_RACK` y su retorno salen de `J3.1` y `J3.2` (`GNDA`) como un par
+> propio del mazo, ida y vuelta juntas, hasta la pantalla, sin pasar por el bus
+> de la fila: sus 550 mA no caen por la masa del bus (`pantalla-motor` §6).
+> `J3` es una bornera `MKDS 1,5/4-5,08` (`1715747`) y lleva dos conductores por
+> borne; que los admita está por confirmar en su hoja, que no está en
+> `docs/reference/datasheets/`. `check_telemetria.py` comprueba que el
+> `+12V_RACK` solo sale por `J3`, con `J3.2` en `GNDA`, y el bring-up revisa el
+> mazo (paso 0, `mazo_pantalla_par_propio_desde_J3`). El guion lo contaba como
+> T25; en el censo (`2026-09-08-censo-dv4-resolucion.md`) T25 es el reparto de
+> retornos rack/instrumento, y los cables propios de pantalla y fila son T26.
+> La masa de datos de la pantalla llega por LTDC desde el hub, en `GNDD`, y su
+> encuentro con `GNDA` dentro de la pantalla queda abierto en #480.
+
 **Los tres rendimientos son ESTIMADO** y ~~mueven los 7,99 W enteros~~
 **movían la pérdida publicada por el modelo anterior a M1**
 (`hardware/01-power-supply/v5/ladrillo_budget.py:239`). Es el único término de
