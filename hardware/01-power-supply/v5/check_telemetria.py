@@ -457,7 +457,7 @@ def demo() -> int:
           "la tiene (fuga_budget.py es de la v4, con la red dentro del chasis)")
 
     # T25: el reparto del retorno de la pantalla vive en el cableado.
-    hueco("T25: retorno dedicado de la pantalla (550 mA)",
+    hueco("T25: retorno dedicado de la pantalla (550 mA, #477)",
           "la netlist no tiene conector ni red de retorno de pantalla (J3 lleva un solo pin GNDA); "
           "lo demostraria la medida aislamiento_pantalla_retorno_dedicado, sin medir")
 

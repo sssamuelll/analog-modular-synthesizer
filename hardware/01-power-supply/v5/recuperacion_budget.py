@@ -61,7 +61,7 @@ sec. 9.2) con piezas versionadas en `docs/reference/datasheets/`:
      - El `FLT` de `U19` no distingue una sobretension de una sobrecarga del
        riel: las dos abandonan (la sobrecarga detras de `U19` es un corto de la
        cascada, y abandonar es lo conservador).
-     - Los crowbars de rack (D-F6) no tienen camino al MCU.
+     - Los crowbars de rack (D-F6) no tienen camino al MCU (#476).
      - Desenchufar durante los `T_CONFIRMA_SANO_S` de un intento lo cuenta como
        fallido: desde el MCU no se distingue de un corto que tumba la entrada.
 """

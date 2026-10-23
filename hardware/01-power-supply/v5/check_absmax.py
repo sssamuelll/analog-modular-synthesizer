@@ -58,7 +58,7 @@ el: ninguna se cree.
 
 LO QUE ESTE CALCULO NO CUBRE (se imprime al final):
   * Fallo doble en el negativo (`THN-` en OVP y `U2` en corto): `U6`/`U7` ven
-    `24,6 V` contra `22 V`. El positivo lo cubre el tope M3; el negativo no.
+    `24,6 V` contra `22 V`. El positivo lo cubre el tope M3; el negativo no (#475).
   * `OUT` de `U19` baja a `-V_F` de `D19` (hasta `0,55 V` a `3 A`) durante el
     corte. La hoja da `-0,3 V` absoluto en DC y pide ese Schottky (p. 36, 38),
     sin cifra de transitorio.
@@ -66,7 +66,7 @@ LO QUE ESTE CALCULO NO CUBRE (se imprime al final):
     el SCR aguanta `200 V/us` con `R_GK = 100 ohm` (`nxp-bt151-500r.pdf` p. 6).
   * Un crowbar disparado no llega al MSP430: el SCR se queda conduciendo la
     corriente de pliegue del convertidor (los fusibles de `+-12 V` son de
-    `3 A` y el THN 30 pliega a `1,875 A`).
+    `3 A` y el THN 30 pliega a `1,875 A`) (#476).
 """
 from __future__ import annotations
 
@@ -536,11 +536,11 @@ def demo() -> int:
 
     print("\n  LO QUE NO CUBRE:")
     print(f"    - fallo doble THN- en OVP + U2 en corto: U6/U7 verian {V_OVP_MAX_THN20_V:.1f} V "
-          f"contra 22 V, sin tope (el positivo si lo tiene)")
+          f"contra 22 V, sin tope (el positivo si lo tiene; #475)")
     print("    - OUT de U19 a -V_F de D19 (<= 0,55 V a 3 A) durante el corte; la hoja da "
           "-0,3 V en DC y pide el Schottky")
     print("    - pendiente del riel de rack en enchufe en caliente (el SCR aguanta 200 V/us)")
-    print("    - un crowbar disparado no llega al MSP430: el SCR sigue conduciendo el pliegue")
+    print("    - un crowbar disparado no llega al MSP430: el SCR sigue conduciendo el pliegue (#476)")
 
     print("\nOK: check_absmax.py v5 (#334, #340 y T18..T21 en verde)")
     return 0
