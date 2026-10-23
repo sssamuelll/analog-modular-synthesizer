@@ -17,13 +17,19 @@ gerbers de DOS capas de una placa sin pistas, con un README que decia
        * cada taladro metalizado cae en cobre y los M3 (NPTH) no tienen cobre;
        * los planos de In1 estan rellenados (> 20000 mm2) y hay masa vertida
          en B.Cu (> 5000 mm2).
-  3. BOM y CPL de JLC: cada codigo LCSC es el de bom.csv para esas
-     referencias, y el CPL coloca exactamente lo que el BOM dice, todo con
-     posicion en el fichero de posiciones.
+  3. BOM y CPL de JLC contra la placa y contra bom.csv: cada SMD del fichero
+     de posiciones cuya fila de bom.csv se compra en LCSC (supplier LCSC y
+     codigo) esta en bom-jlc.csv con ESE codigo y en cpl-jlc.csv, y no hay
+     ninguna pieza de mas en ninguno de los dos.
+  4. bom_jlc.py y cpl_jlc.py regenerados en un directorio temporal (desde el
+     pos.csv reexportado, o el commiteado si no hay kicad-cli) y comparados con
+     lo commiteado: si alguien cambia bom.csv y no regenera, sale rojo.
 """
 from __future__ import annotations
 
+import contextlib
 import csv
+import io
 import math
 import os
 import re
@@ -35,7 +41,9 @@ import tempfile
 DIR = os.path.dirname(os.path.abspath(__file__))
 FAB = os.path.join(DIR, "fab")
 sys.path.insert(0, os.path.join(DIR, "kicad"))
+import bom_jlc  # noqa: E402  (generadores del BOM y el CPL de JLC; se regeneran en reexportar)
 import build_fab  # noqa: E402  (las ordenes de exportacion viven alli)
+import cpl_jlc  # noqa: E402
 
 BASE = build_fab.BASE
 COBRE_A_BORDE = 0.20       # mm de cobre al canto de la placa
@@ -188,57 +196,112 @@ def canon(ruta: str) -> list[str]:
     return out
 
 
+def regenerar_jlc(tmp: str) -> list[str]:
+    """Regenera el BOM y el CPL de JLC en `tmp` con bom_jlc.py y cpl_jlc.py, desde
+    el pos.csv de `tmp` y el bom.csv, y los compara con los de fab/.
+
+    Los guiones escriben en rutas fijas (constantes del modulo): se apuntan a
+    `tmp` mientras corren y se dejan como estaban.
+    """
+    fallos = []
+    pos = os.path.join(tmp, build_fab.POSICIONES)
+    bom_tmp = os.path.join(tmp, f"{BASE}-bom-jlc.csv")
+    cpl_tmp = os.path.join(tmp, f"{BASE}-cpl-jlc.csv")
+    guardado = (bom_jlc.POS, bom_jlc.DST, cpl_jlc.POS, cpl_jlc.BOM, cpl_jlc.DST)
+    bom_jlc.POS, bom_jlc.DST = pos, bom_tmp
+    cpl_jlc.POS, cpl_jlc.BOM, cpl_jlc.DST = pos, bom_tmp, cpl_tmp
+    try:
+        for nombre, guion in (("bom_jlc.py", bom_jlc), ("cpl_jlc.py", cpl_jlc)):
+            salida = io.StringIO()
+            with contextlib.redirect_stdout(salida):
+                rc = guion.main()
+            if rc != 0:
+                return [f"{nombre} fallo al regenerar el paquete de JLC: {salida.getvalue().strip()[-300:]}"]
+    finally:
+        bom_jlc.POS, bom_jlc.DST, cpl_jlc.POS, cpl_jlc.BOM, cpl_jlc.DST = guardado
+    for nombre in (f"{BASE}-bom-jlc.csv", f"{BASE}-cpl-jlc.csv"):
+        with open(os.path.join(FAB, nombre), encoding="utf-8", newline="") as fh:
+            commiteado = fh.read().replace("\r\n", "\n")
+        with open(os.path.join(tmp, nombre), encoding="utf-8", newline="") as fh:
+            regenerado = fh.read().replace("\r\n", "\n")
+        if commiteado != regenerado:
+            fallos.append(f"fab/{nombre} NO es lo que genera {'bom_jlc.py' if 'bom' in nombre else 'cpl_jlc.py'} "
+                          f"con el bom.csv y el pos.csv actuales. Corre kicad/build_fab.py")
+    return fallos
+
+
 def reexportar() -> tuple[list[str], list[str]]:
-    """(salidas que no son las de esta placa, huecos)."""
+    """(salidas que no son las de esta placa, huecos).
+
+    Sin kicad-cli no se puede reexportar la placa (hueco), pero el BOM y el CPL
+    de JLC se regeneran igual desde el pos.csv commiteado.
+    """
     cli = build_fab.KICAD_CLI
-    if not cli or not os.path.exists(cli):
-        return [], ["no hay kicad-cli para reexportar y comparar fab/ con la placa"]
-    viejas = []
+    viejas, huecos = [], []
     tmp = tempfile.mkdtemp(prefix="sam17-v5-fab-")
     try:
-        for orden in build_fab.exports(tmp):
-            r = subprocess.run(orden, capture_output=True, text=True)
-            if r.returncode != 0:
-                return [f"kicad-cli fallo al reexportar: {r.stderr.strip()[-300:]}"], []
-        for nombre in build_fab.GERBERS + (build_fab.TALADROS, build_fab.POSICIONES):
-            a, b = os.path.join(FAB, nombre), os.path.join(tmp, nombre)
-            if not os.path.isfile(b) or canon(a) != canon(b):
-                viejas.append(nombre)
+        if not cli or not os.path.exists(cli):
+            huecos.append("no hay kicad-cli para reexportar y comparar fab/ con la placa")
+            shutil.copy(os.path.join(FAB, build_fab.POSICIONES), tmp)
+        else:
+            for orden in build_fab.exports(tmp):
+                r = subprocess.run(orden, capture_output=True, text=True)
+                if r.returncode != 0:
+                    return [f"kicad-cli fallo al reexportar: {r.stderr.strip()[-300:]}"], []
+            sin_ruta = []
+            for nombre in build_fab.GERBERS + (build_fab.TALADROS, build_fab.POSICIONES):
+                a, b = os.path.join(FAB, nombre), os.path.join(tmp, nombre)
+                if not os.path.isfile(b) or canon(a) != canon(b):
+                    sin_ruta.append(nombre)
+            if sin_ruta:
+                viejas.append(f"{len(sin_ruta)} salidas de fab/ NO son las de la placa commiteada: "
+                              f"{sin_ruta}. Corre kicad/build_fab.py")
+        viejas += regenerar_jlc(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-    if viejas:
-        return [f"{len(viejas)} salidas de fab/ NO son las de la placa commiteada: {viejas}. "
-                f"Corre kicad/build_fab.py"], []
-    return [], []
+    return viejas, huecos
 
 
 def jlc() -> list[str]:
+    """El BOM y el CPL de JLC contra la placa y contra bom.csv.
+
+    Lo que JLC tiene que montar es: cada SMD del fichero de posiciones cuya fila
+    de bom.csv se compra en LCSC (supplier LCSC y codigo). Cada una tiene que
+    estar en el BOM de JLC con ESE codigo y en el CPL, y no puede haber mas.
+    """
     fallos = []
-    bom_jlc = os.path.join(FAB, f"{BASE}-bom-jlc.csv")
-    cpl_jlc = os.path.join(FAB, f"{BASE}-cpl-jlc.csv")
     pos = os.path.join(FAB, build_fab.POSICIONES)
-    lcsc_de = {}
+    bom_row: dict[str, tuple[str, str]] = {}
     with open(os.path.join(DIR, "bom.csv"), encoding="utf-8", newline="") as fh:
         for fila in csv.DictReader(fh):
             for r in fila["refs"].split(","):
-                lcsc_de[r.strip()] = fila.get("lcsc", "").strip()
-    en_bom = set()
-    with open(bom_jlc, encoding="utf-8", newline="") as fh:
+                bom_row[r.strip()] = (fila.get("supplier", "").strip(), fila.get("lcsc", "").strip())
+    with open(pos, encoding="utf-8", newline="") as fh:
+        en_pos = {f["Ref"].strip() for f in csv.DictReader(fh)}
+    if huerfanas := sorted(en_pos - set(bom_row)):
+        fallos.append(f"SMD de la placa que bom.csv no tiene: {huerfanas}")
+    debe = {r: bom_row[r][1] for r in sorted(en_pos)
+            if r in bom_row and bom_row[r][0] == "LCSC" and bom_row[r][1]}
+
+    en_bom: dict[str, str] = {}
+    with open(os.path.join(FAB, f"{BASE}-bom-jlc.csv"), encoding="utf-8", newline="") as fh:
         for fila in csv.DictReader(fh):
             for r in fila["Designator"].split(","):
-                en_bom.add(r)
-                if lcsc_de.get(r) != fila["LCSC Part #"]:
-                    fallos.append(f"BOM de JLC: {r} lleva {fila['LCSC Part #']} y bom.csv dice "
-                                  f"'{lcsc_de.get(r, 'nada')}'")
-    with open(cpl_jlc, encoding="utf-8", newline="") as fh:
-        en_cpl = {f["Designator"] for f in csv.DictReader(fh)}
-    with open(pos, encoding="utf-8", newline="") as fh:
-        en_pos = {f["Ref"] for f in csv.DictReader(fh)}
-    if en_cpl != en_bom:
-        fallos.append(f"CPL y BOM de JLC no colocan lo mismo: sobran {sorted(en_cpl - en_bom)}, "
-                      f"faltan {sorted(en_bom - en_cpl)}")
-    if sin_pos := sorted(en_cpl - en_pos):
-        fallos.append(f"el CPL coloca piezas sin posicion en {build_fab.POSICIONES}: {sin_pos}")
+                en_bom[r.strip()] = fila["LCSC Part #"].strip()
+    with open(os.path.join(FAB, f"{BASE}-cpl-jlc.csv"), encoding="utf-8", newline="") as fh:
+        en_cpl = {f["Designator"].strip() for f in csv.DictReader(fh)}
+
+    for r, codigo in debe.items():
+        if r not in en_bom:
+            fallos.append(f"BOM de JLC: falta {r}, SMD de la placa que bom.csv compra en LCSC ({codigo})")
+        elif en_bom[r] != codigo:
+            fallos.append(f"BOM de JLC: {r} lleva {en_bom[r]} y bom.csv dice {codigo}")
+        if r not in en_cpl:
+            fallos.append(f"CPL de JLC: falta {r}, que el BOM de JLC tiene que montar")
+    if sobran := sorted(set(en_bom) - set(debe)):
+        fallos.append(f"BOM de JLC: {len(sobran)} piezas que no son SMD de la placa comprada en LCSC: {sobran}")
+    if sobran := sorted(en_cpl - set(debe)):
+        fallos.append(f"CPL de JLC: {len(sobran)} piezas que no son SMD de la placa comprada en LCSC: {sobran}")
     return fallos
 
 
