@@ -150,17 +150,21 @@ def _disparo_alto_rack12() -> float:
 # TRACO): no se derivan de la netlist.
 _NOMINAL_ETIQUETA = {"AIN0": "nominal", "AIN1": "nominal recortado",
                      "AIN2": "nominal recortado", "AIN3": "nominal"}
+_U2_V = ladrillo_budget.SETPOINT_V["U2"]                 # -12V9 con U6/U7 en corto
+_OVP_THN20_V = check_absmax.V_OVP_MAX_THN20_V            # traco_thn20wi.pdf p. 2
+_SANO_CRUDO_V = check_absmax.v_sano_max_u1_v()           # margen_budget
+_OVP_THN30_V = check_absmax.RACK_RIELES["rack-12"]["ovp_max_v"]
 _ESCENARIOS = {
-    "AIN0": [("post-regulador en corto", -12.90), ("fallo OVP crudo", -24.60), ("apagada", 0.0)],
-    "AIN1": [("maximo sano en vacio", 16.01),
+    "AIN0": [("post-regulador en corto", -_U2_V), ("fallo OVP crudo", -_OVP_THN20_V), ("apagada", 0.0)],
+    "AIN1": [("maximo sano en vacio", _SANO_CRUDO_V),
              ("tope eFuse TPS26631 (modelo RK4)", _pico_tope_u1()), ("apagada", 0.0)],
-    "AIN2": [("maximo sano en vacio", -16.01),
-             ("OVP maximo THN 20-2413WI", -24.60), ("apagada", 0.0)],
-    "AIN3": [("OVP max THN 30-2422WI", -16.56),
+    "AIN2": [("maximo sano en vacio", -_SANO_CRUDO_V),
+             ("OVP maximo THN 20-2413WI", -_OVP_THN20_V), ("apagada", 0.0)],
+    "AIN3": [("OVP max THN 30-2422WI", -_OVP_THN30_V),
              ("disparo crowbar D-F6 (borde alto)", -_disparo_alto_rack12()), ("apagada", 0.0)],
 }
 # Riel negativo vivo con el +5 V caido (peor caso por canal).
-_FALLO_VDD = {"AIN0": -12.90, "AIN2": -24.60, "AIN3": -16.56}
+_FALLO_VDD = {"AIN0": -_U2_V, "AIN2": -_OVP_THN20_V, "AIN3": -_OVP_THN30_V}
 
 # Lo que no se pudo derivar al construir las tablas de abajo; demo() lo imprime.
 _FALLOS: list[str] = []

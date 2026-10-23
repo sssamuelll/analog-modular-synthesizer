@@ -91,14 +91,19 @@ def _margen():
     """margen_budget.py de la v5, cargado al usarlo y no al importar: la v4
     carga este modulo para el modelo RK4, y con su propio directorio en
     sys.path el margen_budget de la v5 acababa importando el rizado_budget
-    equivocado. Por ruta y con nombre propio, por la misma razon."""
+    equivocado. Por ruta y con nombre propio, por la misma razon; y si otro
+    guion ya lo cargo (check_bringup, ladrillo_budget), se usa ese: volver a
+    cargarlo con el rizado_budget de la v5 ya en sys.modules no funciona."""
     if not _MARGEN:
-        spec = importlib.util.spec_from_file_location("_v5_margen_budget",
-                                                      os.path.join(DIR, "margen_budget.py"))
-        assert spec and spec.loader
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        _MARGEN.append(mod)
+        ruta = os.path.normcase(os.path.abspath(os.path.join(DIR, "margen_budget.py")))
+        ya = next((m for m in list(sys.modules.values())
+                   if os.path.normcase(os.path.abspath(getattr(m, "__file__", None) or "")) == ruta), None)
+        if ya is None:
+            spec = importlib.util.spec_from_file_location("_v5_margen_budget", ruta)
+            assert spec and spec.loader
+            ya = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(ya)
+        _MARGEN.append(ya)
     return _MARGEN[0]
 
 
