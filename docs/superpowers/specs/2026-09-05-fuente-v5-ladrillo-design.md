@@ -335,8 +335,12 @@ el convertidor y separadas en el cableado.
 > propio del mazo, ida y vuelta juntas, hasta la pantalla, sin pasar por el bus
 > de la fila: sus 550 mA no caen por la masa del bus (`pantalla-motor` §6).
 > `J3` es una bornera `MKDS 1,5/4-5,08` (`1715747`) y lleva dos conductores por
-> borne; que los admita está por confirmar en su hoja, que no está en
-> `docs/reference/datasheets/`. `check_telemetria.py` comprueba que el
+> borne, que su hoja admite si son de la misma sección
+> (`phoenix-mkds-1715747-2018-11.pdf` p. 2–3): rígido 0,14–1 mm², flexible
+> 0,14–0,75 mm², con puntera sin collar 0,25–0,5 mm², o los dos en una puntera
+> TWIN con collar de 0,5–1 mm²; pelado 7 mm, apriete 0,5–0,6 N·m. El hilo de
+> la pantalla y el del bus de la fila van, pues, de la misma sección en
+> `J3.1` y en `J3.2`. `check_telemetria.py` comprueba que el
 > `+12V_RACK` solo sale por `J3`, con `J3.2` en `GNDA`, y el bring-up revisa el
 > mazo (paso 0, `mazo_pantalla_par_propio_desde_J3`). El guion lo contaba como
 > T25; en el censo (`2026-09-08-censo-dv4-resolucion.md`) T25 es el reparto de

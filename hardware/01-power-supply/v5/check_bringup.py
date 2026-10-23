@@ -159,7 +159,8 @@ def _puntos() -> list[Punto]:
                lo=1000.0))
     p.append(P("0", "mazo_pantalla_par_propio_desde_J3", "si/no",
                "T26 (#477): la pantalla lleva su propio par, +12 V y retorno, de J3.1 y J3.2 "
-               "hasta la pantalla, sin pasar por el bus de la fila",
+               "hasta la pantalla, sin pasar por el bus de la fila; en J3.1 y J3.2 los dos hilos "
+               "de la misma seccion (phoenix-mkds-1715747-2018-11.pdf p. 2-3)",
                literal="si"))
 
     # --- Paso 1: Alimentacion 24V y convertidores DC-DC ------------------

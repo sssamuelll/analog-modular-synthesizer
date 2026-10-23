@@ -4,7 +4,7 @@ paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
 0,continuidad_PE_a_chasis,mohm,<= 50,,,,,,M2 / T17: continuidad de tierra PE desde conector Kycon pin shell a chasis
 0,continuidad_estrella_GNDA_a_chasis,mohm,<= 20,,,,,,T17 / M2: estrella analogica de masa J5 atornillada al chasis
 0,aislamiento_GNDA_a_GNDD,Mohm,>= 1000,,,,,,T16 / M1: separacion galvanica entre masa analogica y masa digital (barrera URB2405 + ISO1541 > 1000 Mohm)
-0,mazo_pantalla_par_propio_desde_J3,si/no,= si,,,,,,"T26 (#477): la pantalla lleva su propio par, +12 V y retorno, de J3.1 y J3.2 hasta la pantalla, sin pasar por el bus de la fila"
+0,mazo_pantalla_par_propio_desde_J3,si/no,= si,,,,,,"T26 (#477): la pantalla lleva su propio par, +12 V y retorno, de J3.1 y J3.2 hasta la pantalla, sin pasar por el bus de la fila; en J3.1 y J3.2 los dos hilos de la misma seccion (phoenix-mkds-1715747-2018-11.pdf p. 2-3)"
 1,tension_ladrillo_vacio,V,23.52 .. 24.48,24,0.48,,,,T09 / L04: salida continua nominal del ladrillo 24 V en vacio
 1,caida_LM74502_ideal_diode,mV,<= 50,,,,,,M5 / L04: caida directa del controlador de diodo ideal + FET inverso
 1,ron_TPS26631_efuse_U16,mohm,19 .. 45,,,,,,"M5: caida de U16 / corriente del cordon, con >= 0,6 A (tps2663.pdf p. 7)"
