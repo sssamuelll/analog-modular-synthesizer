@@ -17,12 +17,13 @@ sec. 9.2) con piezas versionadas en `docs/reference/datasheets/`:
        cotas. Por arriba, el disparo minimo del ladrillo TE90A2403F01: su
        sobrecarga va del 130 al 180 % de `3,75 A` (`ae-TE90-datasheet.pdf`
        p. 2 y p. 5), asi que `U16` corta antes de que el ladrillo entre en
-       hiccup si su maximo queda bajo `4,875 A`. Por abajo, `1,40 x` la
+       hiccup si su maximo queda bajo `4,875 A`. Por abajo, `1,50 x` la
        corriente del cordon a 24 V nominales (`2,67 A`) y `1,30 x` la de su
        peor caso (`2,87 A`, `ladrillo_budget.py`); el minimo de la banda les
-       da `1,57 x` y `1,46 x`. Con `+-7 %` la banda abarca `1,15 x`: con la
-       cascada a 650 mA/riel el cordon nominal eran `2,98 A` y el `1,5 x` no
-       cabia bajo `4,875 A`; con 450 cabe.
+       da `1,57 x` y `1,46 x`. Con `+-7 %` la banda abarca `1,15 x`, asi que
+       con `R11 = 4,02 kohm` el `1,5 x` aguanta el cordon nominal hasta
+       `2,79 A`: con la cascada a 650 mA/riel eran `2,98 A` y la puerta
+       estuvo en `1,40 x`.
      - A diferencia del TPS26630, el TPS26631 deja pasar hasta `2 x I_OL`
        durante `tCB(dly) = 25,5 ms` (con PGOOD alto) antes de regular a `I_OL`,
        y su comparador rapido corta a `3 x I_OL` (`tps2663.pdf` p. 7, 23): ese
@@ -114,7 +115,7 @@ R_ILIM_KOHM = valor("R11") / 1e3
 K_ILIM_TPS26631_A_KOHM = 18.1             # tps2663.pdf p. 22 ec. (5): R = 18,1 / I_OL
 TOL_ILIM_TPS26631_FRAC = 0.07             # +-7 % en tps2663.pdf p. 7
 TOL_ILIM_U19_FRAC = 0.10                  # p. 7: +-10 % a 30 kohm, +-8 % a 9 kohm
-MARGEN_ILIM_NOMINAL = 1.40                # sobre el cordon a 24 V nominales
+MARGEN_ILIM_NOMINAL = 1.50                # sobre el cordon a 24 V nominales
 MARGEN_ILIM_PEOR = 1.30                   # sobre el cordon en su peor caso
 I_OCP_LADRILLO_MIN_A = 1.30 * 3.75        # TE90A2403F01: 3,75 A (p. 5), OCP 130..180 % (p. 2)
 I_CORDON_CONTINUA_A = LADRILLO.corriente_del_cordon_a()
