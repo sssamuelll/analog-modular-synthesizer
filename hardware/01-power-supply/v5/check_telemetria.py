@@ -121,10 +121,10 @@ _RIEL_Y_DESC = {
 _AIN_SENAL = {"AIN0": "-12 V ultra", "AIN1": "VRAW+ crudo",
               "AIN2": "VRAW- crudo", "AIN3": "-12 V rack"}
 
-# Corriente de plena escala de cada shunt. U8/U13/U14 salen del presupuesto del
-# ladrillo. U12 (+5 V auxiliar: telemetria, control y modulo 2) NO tiene
-# presupuesto que la derive: es la cifra declarada en medidas.csv, y se avisa.
-I_AUX_A = 0.300
+# Corriente de plena escala de cada shunt, del presupuesto del ladrillo. La de
+# U12 (+5 V auxiliar) es el techo de diseno del riel, un ESTIMADO alli: nada
+# en el riel la limita, y se avisa.
+I_AUX_A = ladrillo_budget.AUX_A
 
 
 def _corrientes() -> dict[str, float]:
@@ -332,7 +332,7 @@ def demo() -> int:
                   f"{v_sh*i_max*1000:4.1f} mW, V_cm={v_cm:4.1f} V (rango {INA_CM_MIN_V:.0f}..{INA_CM_MAX_V:.0f} V)")
     if "U12" in _SHUNT_R:
         hueco(f"U12: corriente de +5V_AUX ({I_AUX_A*1000:.0f} mA)",
-              "cifra declarada en medidas.csv; ningun presupuesto la deriva")
+              "techo de diseno (ESTIMADO en ladrillo_budget.AUX_A), no una corriente medida ni limitada")
 
     vdd_ads = _tension_de(red_de(nets, f"{_refs('ADS1115')[0]}.8")) if _refs("ADS1115") else None
     print("\n=== 2. Divisores y clamps contra el ADS1115 (T15) ===")

@@ -14,8 +14,8 @@ sec. 9.2) con piezas versionadas en `docs/reference/datasheets/`:
        segunda ecuacion de diseno `I_OL = 18,1 / R_ILIM(kohm) = 4,502 A` nominal
        (`tps2663.pdf` p. 22 ec. 5), con banda de exactitud de `+-7 %` a 4,5 A
        (`tps2663.pdf` p. 7: `4,185 A .. 4,815 A`), por encima de la corriente
-       continua del cordon (`ladrillo_budget.py`) y por debajo de los `7,5 A/pin`
-       del conector Kycon.
+       del cordon en su peor caso (`ladrillo_budget.py`: `3,21 A` con el
+       ladrillo al -5 %) y por debajo de los `7,5 A/pin` del conector Kycon.
      - A diferencia del TPS26630, el TPS26631 deja pasar hasta `2 x I_OL`
        durante `tCB(dly) = 25,5 ms` (con PGOOD alto) antes de regular a `I_OL`,
        y su comparador rapido corta a `3 x I_OL` (`tps2663.pdf` p. 7, 23): ese
@@ -377,9 +377,14 @@ def _verifica_politica(cls_kwargs: dict) -> None:
 def _autocomprobacion() -> None:
     # 1. El limite de corriente del TPS26631 deja pasar la corriente continua
     #    del cordon y protege el conector (15 A/polo).
+    # La corriente del cordon ya es el peor caso (ladrillo al -5 %, cargas en
+    # su techo, ladrillo_budget.py): el 1,5x que se pedia sobre la de 24 V
+    # nominales cubria a ojo esas dos cosas. Los picos los deja pasar el
+    # disyuntor de 2 x I_OL durante tCB >= 20 ms (tps2663.pdf p. 8).
     i_min, i_nom, i_max = corriente_limite_tps26631_a()
-    assert i_min > I_CORDON_CONTINUA_A * 1.5, (
-        f"banda baja de ILIM ({i_min:.2f} A) demasiado cerca de {I_CORDON_CONTINUA_A:.2f} A")
+    assert i_min > I_CORDON_CONTINUA_A, (
+        f"banda baja de ILIM ({i_min:.2f} A) por debajo del cordon en su peor caso "
+        f"({I_CORDON_CONTINUA_A:.2f} A): U16 cortaria con la carga de diseno")
     assert i_max < I_MAX_CONECTOR_POR_POLO_A, (
         f"banda alta de ILIM ({i_max:.2f} A) supera el conector ({I_MAX_CONECTOR_POR_POLO_A:.1f} A)")
     # El TPS26631 deja pasar hasta 2 x I_OL durante 25,5 ms antes de regular
@@ -435,8 +440,9 @@ def demo() -> int:
     print("  1. Dimensionado del eFuse de entrada TI TPS26631 (tps2663.pdf p. 6, 7, 22):")
     print(f"    R_ILIM = {R_ILIM_KOHM:.2f} kohm (1 %) -> I_OL = {i_nom:.2f} A nom "
           f"(banda +-7 %: {i_min:.2f} .. {i_max:.2f} A)")
-    print(f"    corriente continua del cordon: {I_CORDON_CONTINUA_A:.2f} A "
-          f"(holgura al minimo de ILIM: +{i_min - I_CORDON_CONTINUA_A:.2f} A)")
+    print(f"    corriente del cordon en su peor caso: {I_CORDON_CONTINUA_A:.2f} A "
+          f"(holgura al minimo de ILIM: +{i_min - I_CORDON_CONTINUA_A:.2f} A, "
+          f"{i_min / I_CORDON_CONTINUA_A:.2f} x)")
     print(f"    corriente maxima del conector Kycon (2 pines/polo): {I_MAX_CONECTOR_POR_POLO_A:.1f} A")
     print(f"    ventana de R12/R13/R14: arranca {v['arranca']:.2f} V, apaga {v['apaga']:.2f} V, "
           f"sobretension {v['sobretension']:.2f} V (vuelve a {v['vuelve']:.2f} V)")

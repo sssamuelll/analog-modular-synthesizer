@@ -185,14 +185,20 @@ def _puntos() -> list[Punto]:
     p.append(P("1", "potencia_ladrillo_reposo_w", "W",
                "ladrillo_budget: consumo propio del ladrillo y convertidores en vacio",
                hi=2.5))
+    # ladrillo_budget da el PEOR caso (ladrillo al -5 %, rendimientos de
+    # diseno). El suelo es la entrada de los DC-DC con los rendimientos
+    # tipicos de hoja, menos un 10 % porque el tipico no es un minimo, y la
+    # corriente mas baja sale con el ladrillo al +5 %.
+    suelo_w = 0.90 * ladrillo_budget.entrada_dcdc_tipica_hoja_w()
     p.append(P("1", "potencia_ladrillo_sostenida_w", "W",
-               "ladrillo_budget.salida_ladrillo_w(): potencia demandada al ladrillo a carga sostenida",
-               predicho=ladrillo_budget.salida_ladrillo_w(),
-               tol=0.10 * ladrillo_budget.salida_ladrillo_w()))
+               "ladrillo_budget: potencia que da el ladrillo a carga sostenida, entre los "
+               "rendimientos tipicos (-10 %) y salida_ladrillo_w()",
+               lo=suelo_w, hi=ladrillo_budget.salida_ladrillo_w()))
     p.append(P("1", "corriente_ladrillo_sostenida_a", "A",
-               "ladrillo_budget.corriente_del_cordon_a(): corriente total desde 24 V a carga sostenida",
-               predicho=ladrillo_budget.corriente_del_cordon_a(),
-               tol=0.10 * ladrillo_budget.corriente_del_cordon_a()))
+               "ladrillo_budget: corriente del cordon a carga sostenida, del suelo a +5 % al "
+               "peor caso corriente_del_cordon_a()",
+               lo=suelo_w / (ladrillo_budget.V_LADRILLO * (1.0 + ladrillo_budget.TOL_LADRILLO)),
+               hi=ladrillo_budget.corriente_del_cordon_a()))
 
     # --- Paso 2: Rieles crudos +-15.5 V y filtro LC -----------------------
     p.append(P("2", "mas15_minimo_con_carga", "V",
@@ -310,9 +316,10 @@ def _puntos() -> list[Punto]:
 
     # --- Paso 7: Comportamiento termico -----------------------------------
     p.append(P("7", "calor_interior_cajon_w", "W",
-               "ladrillo_budget.calor_del_cajon_w(): calor total disipado dentro del cajon",
-               predicho=ladrillo_budget.calor_del_cajon_w(),
-               tol=0.15 * ladrillo_budget.calor_del_cajon_w()))
+               "ladrillo_budget: calor dentro del cajon, entre los rendimientos tipicos (-10 %) "
+               "y el peor caso calor_del_cajon_w()",
+               lo=0.90 * ladrillo_budget.entrada_dcdc_tipica_hoja_w(),
+               hi=ladrillo_budget.calor_del_cajon_w()))
     p.append(P("7", "temperatura_carcasa_THN30_c", "C",
                "T10 / T27: temperatura de carcasa THN 30-2422WI a 45 C ambiente (< 85 C max)",
                hi=85.0))
@@ -323,10 +330,12 @@ def _puntos() -> list[Punto]:
                "T10 / T27: temperatura de carcasa THN 20-2413WI a 45 C ambiente (< 85 C max)",
                hi=85.0))
     p.append(P("7", "temperatura_U1_LT1963A_c", "C",
-               "T10 / T27: union de U1 LT1963A disipando 1.85 W con disipador (< 90 C)",
+               f"T10 / T27: union de U1 LT1963A disipando hasta "
+               f"{ladrillo_budget.quema_pre_regulador_w('U1'):.2f} W (ladrillo_budget, < 90 C)",
                hi=90.0))
     p.append(P("7", "temperatura_U2_LT3015_c", "C",
-               "T10 / T27: union de U2 LT3015 disipando 1.87 W con disipador (< 90 C)",
+               f"T10 / T27: union de U2 LT3015 disipando hasta "
+               f"{ladrillo_budget.quema_pre_regulador_w('U2'):.2f} W (ladrillo_budget, < 90 C)",
                hi=90.0))
     p.append(P("7", "potencia_derating_ladrillo_45C_w", "W",
                "curvas.derating('TE90A2403F01', 45) * 90.0: potencia garantizada del ladrillo a 45 C",

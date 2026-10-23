@@ -127,10 +127,10 @@ PANTALLA_A = 0.550
 # el techo de diseno de ese riel desde la fuente v2
 # (2026-08-18-fuente-chasis-telemetria.md sec.3.1, "300 mA como limite de diseno";
 # docs/architecture-poly.md sec.9: "de diseno, no una estimacion que se pueda estirar").
-# COPIADOS, no importados: check_telemetria hace `import check_absmax` al
-# cargarse, y con la v4 en sys.path ese nombre ya es el check_absmax de la v4.
-R_SHUNT_AUX_OHM = 0.100         # R20, WSL2512R1000FEA (bom.csv; SHUNTS_V5 U12)
-AUX_A = 0.300                   # SHUNTS_V5 U12
+# El shunt se lee de bom.csv. La corriente vive AQUI y check_telemetria la
+# importa para dimensionar el INA226 U12.
+R_SHUNT_AUX_OHM = _carga("_v5_bom_valores", os.path.join(DIR, "bom_valores.py")).valor("R20")
+AUX_A = 0.300
 # Censo: "con el modulo 2 mas la isla de telemetria ... ~30 mA" (misma spec, sec.3.1).
 AUX_CENSO_A = 0.030
 
