@@ -16,9 +16,11 @@ Tj = aire del cajon + P * theta_JA <= 125 C (TJMAX de las dos hojas, p. 2).
     o supera en las tres columnas (cara de arriba, cara de abajo, area de
     placa). Mas cobre y mas placa solo bajan theta_JA, asi que esa fila es una
     cota. Si ninguna fila queda cubierta, la union no tiene cota de papel: si
-    la hoja da theta_JC, se acota en el bring-up (`check_bringup.py`, paso 7)
-    con lo que la aleta puede subir sobre el aire, `subida_max_aleta_k()`; si
-    no, HUECO. U2 va por ahi: su tabla pide 2500 mm2 abajo.
+    hay theta_JC, se acota en el bring-up; si no, HUECO. U2 va por ahi: su
+    tabla pide 2500 mm2 abajo.
+  * Bring-up (`check_bringup.py`, paso 7): lo que la aleta de cada uno puede
+    subir sobre el aire, `subida_max_aleta_k()`. En U2 es la unica cota; en
+    U1 comprueba la de papel.
     El cobre se mide en `kicad/sam17-power-v5.kicad_pcb` (los rellenos de la
     red de la aleta que tocan su campo de vias), y los rectangulos se leen de
     TERMICO y VIAS_TERMICAS en `kicad/build_pcb.py`.
@@ -67,8 +69,11 @@ TABLA_THETA = {
 }
 HOJA = {"U1": "lt1963a-rev-g-2021-02.pdf p. 19, Table 3",
         "U2": "lt3015-rev-b.pdf p. 19, Table 4"}
-# Union-aleta del DD-Pak: lt3015-rev-b.pdf p. 2, Q package, "qJC = 3C/W".
-THETA_JC_C_W = {"U2": 3.0}
+# Union-aleta del DD-Pak. LT3015: lt3015-rev-b.pdf p. 2, Q package, "qJC =
+# 3C/W". LT1963A: ESTIMADO. Su hoja no da theta_JC del Q package (p. 2 solo
+# trae theta_JA); el unico junction-to-case que imprime es el del TO-220, 4 C/W
+# (p. 19), y se toma para el DD-Pak porque la LT3015 da el mismo para los dos.
+THETA_JC_C_W = {"U1": 4.0, "U2": 3.0}
 
 _HUECOS: list[str] = []
 
@@ -210,13 +215,7 @@ def demo() -> int:
               f"{c['vias']} vias, placa {c['placa']:.0f} mm2")
         th = p[f"theta_{reg}"]
         if th is None and reg in THETA_JC_C_W:
-            sube = subida_max_aleta_k(reg, t_aire)
-            assert sube > 0, (
-                f"{reg}: con {p[f'p_{reg}']:.2f} W y theta_JC {THETA_JC_C_W[reg]:g} C/W la union "
-                f"pasa de TJMAX con la aleta al aire del cajon ({t_aire:.1f} C)")
-            print(f"      ninguna fila de {HOJA[reg]} queda cubierta: se acota en el bring-up, "
-                  f"aleta <= {sube:.1f} K sobre el aire (theta_JC {THETA_JC_C_W[reg]:g} C/W, "
-                  f"check_bringup.py paso 7)")
+            print(f"      ninguna fila de {HOJA[reg]} queda cubierta: se acota en el bring-up")
         elif th is None:
             peor = min(f[3] for f in TABLA_THETA[reg])
             _HUECOS.append(
@@ -228,11 +227,19 @@ def demo() -> int:
         else:
             print(f"      cota {th:g} C/W ({HOJA[reg]}) -> Tj {t_aire + p[f'p_{reg}'] * th:.1f} C "
                   f"contra {TJ_MAX_C:.0f}")
+        if reg in THETA_JC_C_W:
+            sube = subida_max_aleta_k(reg, t_aire)
+            assert sube > 0, (
+                f"{reg}: con {p[f'p_{reg}']:.2f} W y theta_JC {THETA_JC_C_W[reg]:g} C/W la union "
+                f"pasa de TJMAX con la aleta al aire del cajon ({t_aire:.1f} C)")
+            print(f"      bring-up: aleta <= {sube:.1f} K sobre el aire "
+                  f"(theta_JC {THETA_JC_C_W[reg]:g} C/W, check_bringup.py paso 7)")
     _guarda(p)
 
     print("\n  LO QUE NO CUBRE:")
     print("    - el calor de las otras piezas en los planos de la aleta (la tabla mide la pieza sola)")
     print("    - el aire junto a la placa por encima del salto medio de la chimenea")
+    print("    - el theta_JC del DD-Pak de la LT1963A: su hoja solo lo da para el TO-220 (ESTIMADO)")
     if _HUECOS:
         print("\nHUECOS:")
         for h in _HUECOS:

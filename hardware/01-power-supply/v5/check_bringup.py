@@ -339,20 +339,18 @@ def _puntos() -> list[Punto]:
     p.append(P("7", "temperatura_carcasa_THN20_c", "C",
                "T10 / T27: temperatura de carcasa THN 20-2413WI a 45 C ambiente (< 85 C max)",
                hi=85.0))
-    p.append(P("7", "temperatura_U1_LT1963A_c", "C",
-               f"T10 / T27: union de U1 LT1963A disipando hasta "
-               f"{ladrillo_budget.quema_pre_regulador_w('U1'):.2f} W (ladrillo_budget, < 90 C)",
-               hi=90.0))
-    # #478: la tabla de la LT3015 no cubre el cobre de U2, asi que su union se
-    # acota por la aleta: Tj = aleta + P * theta_JC (tj_budget.py).
-    p.append(P("7", "U2_LT3015_subida_aleta_30min_k", "K",
-               f"#478: aleta de U2 sobre el aire del banco tras 30 min entregando "
-               f"{ladrillo_budget.CASCADA_A * 1e3:.0f} mA ({tj_budget.potencia_w('U2'):.2f} W); con el "
-               f"aire del cajon ({derating_budget.aire_cajon_c():.1f} C) y theta_JC "
-               f"{tj_budget.THETA_JC_C_W['U2']:g} C/W la union queda <= 125 C "
-               "(tj_budget.subida_max_aleta_k). La aleta es IN, a -15,5 V: termopar aislado "
-               "o IR sobre cinta Kapton",
-               hi=tj_budget.subida_max_aleta_k("U2", derating_budget.aire_cajon_c())))
+    # #478: la union de U1 y U2 por la aleta, Tj = aleta + P * theta_JC
+    # (tj_budget.py). En U2 es su unica cota: su tabla no cubre su cobre.
+    for reg, pieza, aleta in (("U1", "LT1963A", "GND (GNDA, lt1963a p. 2)"),
+                              ("U2", "LT3015", "IN, a -15,5 V")):
+        p.append(P("7", f"{reg}_{pieza}_subida_aleta_30min_k", "K",
+                   f"#478: aleta de {reg} sobre el aire del banco tras 30 min entregando "
+                   f"{ladrillo_budget.CASCADA_A * 1e3:.0f} mA ({tj_budget.potencia_w(reg):.2f} W); "
+                   f"con el aire del cajon ({derating_budget.aire_cajon_c():.1f} C) y theta_JC "
+                   f"{tj_budget.THETA_JC_C_W[reg]:g} C/W la union queda <= 125 C "
+                   f"(tj_budget.subida_max_aleta_k). La aleta es {aleta}: termopar aislado "
+                   "o IR sobre cinta Kapton",
+                   hi=tj_budget.subida_max_aleta_k(reg, derating_budget.aire_cajon_c())))
     p.append(P("7", "potencia_derating_ladrillo_45C_w", "W",
                "curvas.derating('TE90A2403F01', 45) * 90.0: potencia garantizada del ladrillo a 45 C",
                predicho=curvas.derating("TE90A2403F01", 45.0) * 90.0,
