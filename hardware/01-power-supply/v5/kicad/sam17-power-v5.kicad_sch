@@ -13434,5703 +13434,6273 @@
 		(at 287.02 1402.08)
 		(uuid "d1f07f3c-44dd-5e9d-8bd6-d5429b08da1d")
 	)
-	(label "+24V_RAW"
+	(global_label "+24V_RAW"
+		(shape passive)
 		(at 45.72 35.56 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "aa719859-52f6-5a7b-acc3-bad0d71913a6")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 45.72 38.1 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "8ac4beec-422d-5464-813d-37e89b476e75")
 	)
-	(label "+24V_RAW"
+	(global_label "+24V_RAW"
+		(shape passive)
 		(at 81.28 40.64 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "a79e9125-68c7-5c51-b8d8-897cfd7d1759")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 99.06 40.64 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "06751f13-42c7-5cb4-bb5f-4b94e608eed0")
 	)
-	(label "+24V_RAW"
+	(global_label "+24V_RAW"
+		(shape passive)
 		(at 125.73 35.56 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "450b2221-f964-5ccf-91eb-519fd8e5511d")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 143.51 35.56 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "2299a497-5352-5768-a0f9-d816c261a3cb")
 	)
-	(label "+24V_RAW"
+	(global_label "+24V_RAW"
+		(shape passive)
 		(at 182.88 68.58 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "6229e74b-bc1e-5da3-b0bd-b5663c1ed5e1")
 	)
-	(label "GATE_Q2"
+	(global_label "GATE_Q2"
+		(shape passive)
 		(at 170.18 58.42 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "c2999c62-31b2-547b-9dcc-127907333c0e")
 	)
-	(label "+24V_PROT"
+	(global_label "+24V_PROT"
+		(shape passive)
 		(at 182.88 48.26 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "90a01c3b-f799-5a4b-8fd4-88b830ad7b01")
 	)
-	(label "+24V_RAW"
+	(global_label "+24V_RAW"
+		(shape passive)
 		(at 207.01 36.83 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "944a0fff-f217-5752-a915-d80094820179")
 	)
-	(label "+24V_RAW"
+	(global_label "+24V_RAW"
+		(shape passive)
 		(at 207.01 39.37 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "4e4ba08c-2d58-58c5-a7fa-42086a2ae910")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 207.01 41.91 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "026761a9-8213-5bcf-b24a-6f7dc8e60fb9")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 207.01 44.45 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "41785d8e-f2bc-5c48-8d3b-5bf3e86c7759")
 	)
-	(label "GATE_Q2"
+	(global_label "GATE_Q2"
+		(shape passive)
 		(at 245.11 36.83 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "a132bea6-6c9f-5375-977f-24a73704fc94")
 	)
-	(label "+24V_RAW"
+	(global_label "+24V_RAW"
+		(shape passive)
 		(at 245.11 39.37 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "71975a63-19da-5082-833b-bf48616baf00")
 	)
-	(label "VCAP_U15"
+	(global_label "VCAP_U15"
+		(shape passive)
 		(at 245.11 41.91 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "5c04d1b7-0551-5332-b6cf-1d24ace193d5")
 	)
-	(label "VCAP_U15"
+	(global_label "VCAP_U15"
+		(shape passive)
 		(at 271.78 46.99 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "9bfb3f82-5445-553f-9eb5-d0451d38cd4c")
 	)
-	(label "+24V_RAW"
+	(global_label "+24V_RAW"
+		(shape passive)
 		(at 271.78 64.77 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "ddcc5544-d2d0-5e93-b82b-a2e4b41a71ed")
 	)
-	(label "+24V_RAW"
+	(global_label "+24V_RAW"
+		(shape passive)
 		(at 294.64 46.99 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c996ca43-0ca4-5954-bd36-ab398fb33d35")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 294.64 64.77 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "64a45b80-5506-5750-9db5-72467d1021c4")
 	)
-	(label "+24V_PROT"
+	(global_label "+24V_PROT"
+		(shape passive)
 		(at 38.1 116.84 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "4026da46-5beb-58d7-8ed3-e0c96aae6d0d")
 	)
-	(label "+24V_PROT"
+	(global_label "+24V_PROT"
+		(shape passive)
 		(at 55.88 106.68 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "d520c66e-e27d-5f2c-a90d-f9631c6862a5")
 	)
-	(label "UVLO_U16"
+	(global_label "UVLO_U16"
+		(shape passive)
 		(at 38.1 132.08 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "bb97951f-57c3-52dd-a8bd-8c0361d1b19c")
 	)
-	(label "OVP_U16"
+	(global_label "OVP_U16"
+		(shape passive)
 		(at 38.1 137.16 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "d0024682-4961-5fb4-b608-d404fc515599")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 55.88 154.94 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "2948289c-dbde-535e-81e9-4d071546bf96")
 	)
-	(label "DVDT_U16"
+	(global_label "DVDT_U16"
+		(shape passive)
 		(at 73.66 144.78 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "450962b0-492e-5df2-b861-8007d193c4ed")
 	)
-	(label "ILIM_U16"
+	(global_label "ILIM_U16"
+		(shape passive)
 		(at 73.66 142.24 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "6db13dc5-c4c9-5fd9-991c-cc9e3cf4f460")
 	)
-	(label "SHDN_M5"
+	(global_label "SHDN_M5"
+		(shape passive)
 		(at 38.1 142.24 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "43f415cc-206b-50f5-9be5-fa2187754b1c")
 	)
-	(label "FLT_M5"
+	(global_label "FLT_M5"
+		(shape passive)
 		(at 73.66 129.54 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "5859b460-ee1e-5b61-8edc-07738f100328")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 73.66 121.92 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "1c2e2f93-e33a-53b6-8aad-9e0a0a06f52d")
 	)
-	(label "+24V_SW"
+	(global_label "+24V_SW"
+		(shape passive)
 		(at 73.66 116.84 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "60b8b7f6-1d3e-5578-9eb8-858870e22f95")
 	)
-	(label "ILIM_U16"
+	(global_label "ILIM_U16"
+		(shape passive)
 		(at 93.98 105.41 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "67d34694-013f-5f44-9570-a2d5ea554080")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 93.98 123.19 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "20561f16-2b4c-56a2-ae48-67f5b999f00e")
 	)
-	(label "+24V_PROT"
+	(global_label "+24V_PROT"
+		(shape passive)
 		(at 111.76 107.95 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "99aac37e-18e1-56ce-a974-5a4f9ca240e4")
 	)
-	(label "UVLO_U16"
+	(global_label "UVLO_U16"
+		(shape passive)
 		(at 111.76 125.73 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "5279f969-4508-5384-92f2-835677022a6e")
 	)
-	(label "UVLO_U16"
+	(global_label "UVLO_U16"
+		(shape passive)
 		(at 132.08 105.41 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "ea1af151-aae5-5080-a5c0-2b19de1d9116")
 	)
-	(label "OVP_U16"
+	(global_label "OVP_U16"
+		(shape passive)
 		(at 132.08 123.19 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "4811acc7-ec54-5eee-b005-1ceadf40bf69")
 	)
-	(label "OVP_U16"
+	(global_label "OVP_U16"
+		(shape passive)
 		(at 154.94 105.41 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "9c6ae438-226f-511f-973e-49b1b4283b9c")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 154.94 123.19 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "20a86fdf-9b67-5b08-aca0-85d4adad849b")
 	)
-	(label "DVDT_U16"
+	(global_label "DVDT_U16"
+		(shape passive)
 		(at 175.26 105.41 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "ffd0a5ce-31b4-5de0-ae07-593384010e58")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 175.26 123.19 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "e946ffab-2bf6-52d0-b2e9-5b0ddd5c5dd4")
 	)
-	(label "+24V_PROT"
+	(global_label "+24V_PROT"
+		(shape passive)
 		(at 193.04 107.95 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "69f5f440-f6a1-5713-a978-3e02fd5f0722")
 	)
-	(label "+24V_LDO"
+	(global_label "+24V_LDO"
+		(shape passive)
 		(at 193.04 125.73 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "91fde35a-1c34-59cf-bbf7-fd2c6ee03c5d")
 	)
-	(label "+24V_LDO"
+	(global_label "+24V_LDO"
+		(shape passive)
 		(at 214.63 93.98 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "38ae774b-9aa0-5e2c-b22e-a97678881490")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 232.41 93.98 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "f5808cf2-e21c-52fe-ae75-524862629dfd")
 	)
-	(label "+24V_LDO"
+	(global_label "+24V_LDO"
+		(shape passive)
 		(at 254.0 105.41 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "5b75053d-76ee-5d04-a5c6-e2b078b45e5c")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 254.0 123.19 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "29e8fd24-0fdb-51ee-b241-a39ef6ee3bd6")
 	)
-	(label "+24V_LDO"
+	(global_label "+24V_LDO"
+		(shape passive)
 		(at 278.13 93.98 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "ca8d8917-2cf0-5099-bdbd-2055793982b2")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 278.13 99.06 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "c080b67d-3f06-5329-a332-90782afdad46")
 	)
-	(label "+3V3_MCU"
+	(global_label "+3V3_MCU"
+		(shape passive)
 		(at 306.07 93.98 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "69bb9334-5b5b-5c1a-aa36-ea291469f9d5")
 	)
-	(label "+3V3_MCU"
+	(global_label "+3V3_MCU"
+		(shape passive)
 		(at 332.74 105.41 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "1e2bbfc1-5793-5855-991f-21a783465c43")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 332.74 123.19 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "d8eeaa9f-4771-5c48-93bb-ab7f2c4b3ca4")
 	)
-	(label "+3V3_MCU"
+	(global_label "+3V3_MCU"
+		(shape passive)
 		(at 36.83 176.53 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "69017019-c97a-57a3-bff8-797b5b210f6f")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 36.83 179.07 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "7c5c1ad1-8541-5906-a2fe-2dc61cb54e51")
 	)
-	(label "MCU_RST"
+	(global_label "MCU_RST"
+		(shape passive)
 		(at 36.83 181.61 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "286620e0-ea00-52af-a228-0991ba3e5f06")
 	)
-	(label "MCU_TEST"
+	(global_label "MCU_TEST"
+		(shape passive)
 		(at 36.83 184.15 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "5ffe1d3b-41af-5a94-af0e-6e17d82992d3")
 	)
-	(label "FLT_M5"
+	(global_label "FLT_M5"
+		(shape passive)
 		(at 95.25 179.07 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "4be198f9-c1ca-5ff0-a997-c0044f34a8d2")
 	)
-	(label "SHDN_M5"
+	(global_label "SHDN_M5"
+		(shape passive)
 		(at 95.25 184.15 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "760e4310-c922-57b1-af76-387507fd0dbd")
 	)
-	(label "LED_CTRL"
+	(global_label "LED_CTRL"
+		(shape passive)
 		(at 95.25 186.69 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "190693f3-f8f2-588e-97c4-f9e6141f8a3b")
 	)
-	(label "SW_RESET"
+	(global_label "SW_RESET"
+		(shape passive)
 		(at 95.25 189.23 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "df1ab387-f04c-5ae8-88dd-1b124882978f")
 	)
-	(label "+3V3_MCU"
+	(global_label "+3V3_MCU"
+		(shape passive)
 		(at 121.92 189.23 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "1bab822a-2db2-5969-8225-f21ddcb329c3")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 121.92 207.01 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "a680bc17-cc1e-5da5-a71b-9385dc00640d")
 	)
-	(label "+3V3_MCU"
+	(global_label "+3V3_MCU"
+		(shape passive)
 		(at 139.7 189.23 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "81fabb63-55e8-5fc4-8d7c-1db492f23814")
 	)
-	(label "MCU_RST"
+	(global_label "MCU_RST"
+		(shape passive)
 		(at 139.7 207.01 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "b98f6ad8-7696-5aa4-aa30-607099170a30")
 	)
-	(label "MCU_RST"
+	(global_label "MCU_RST"
+		(shape passive)
 		(at 157.48 186.69 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "09c645c7-5469-5ba7-b75e-2e261bad5a6a")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 157.48 204.47 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "59b7ed35-440c-593f-8b8c-3200fc672ce0")
 	)
-	(label "+3V3_MCU"
+	(global_label "+3V3_MCU"
+		(shape passive)
 		(at 172.72 189.23 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "3d676036-b87e-51ea-aa37-70f9e168c662")
 	)
-	(label "FLT_M5"
+	(global_label "FLT_M5"
+		(shape passive)
 		(at 172.72 207.01 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "7b885471-fdbb-568b-91fd-3fbaef6b353e")
 	)
-	(label "SW_RESET"
+	(global_label "SW_RESET"
+		(shape passive)
 		(at 195.58 177.8 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "fc30717a-b2c6-5eea-8a28-4eebf796f57b")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 215.9 177.8 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "0effad8e-d90b-57d8-91c4-ffa828b0d0b2")
 	)
-	(label "LED_CTRL"
+	(global_label "LED_CTRL"
+		(shape passive)
 		(at 231.14 189.23 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "d3ad9a99-0085-5600-b667-efcf85e85ffa")
 	)
-	(label "LED_ANODE"
+	(global_label "LED_ANODE"
+		(shape passive)
 		(at 231.14 207.01 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "2ab8ae86-554f-5dcd-97af-3abd1d602b1a")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 250.19 177.8 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "6af16844-b8c5-561d-b7b8-034bc83b1c9f")
 	)
-	(label "LED_ANODE"
+	(global_label "LED_ANODE"
+		(shape passive)
 		(at 267.97 177.8 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "b6db5191-73bc-5700-a92f-1a3429ff4043")
 	)
-	(label "+3V3_MCU"
+	(global_label "+3V3_MCU"
+		(shape passive)
 		(at 304.8 177.8 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "a165b513-3348-54f1-8d95-406fc9ea3f7e")
 	)
-	(label "MCU_TEST"
+	(global_label "MCU_TEST"
+		(shape passive)
 		(at 304.8 180.34 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "bc583355-232b-5dd4-a712-bc2c73221edd")
 	)
-	(label "MCU_RST"
+	(global_label "MCU_RST"
+		(shape passive)
 		(at 304.8 182.88 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "d498f2a6-e22b-547c-9304-252fa2362691")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 304.8 185.42 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "637f6777-aa85-5082-aa4a-da8f28dd9a5e")
 	)
-	(label "+24V_SW"
+	(global_label "+24V_SW"
+		(shape passive)
 		(at 30.48 260.35 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "6c830434-55aa-5275-b33c-25651f8061e6")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 30.48 278.13 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "dceaaefa-d89e-5d54-8fbd-61c7275e311d")
 	)
-	(label "+24V_SW"
+	(global_label "+24V_SW"
+		(shape passive)
 		(at 53.34 251.46 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "30eb431c-3fe4-5600-bccf-9c2111d153f8")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 53.34 254.0 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "fd82a543-732d-563e-b5b6-475be3b5739f")
 	)
-	(label "+12V_RAW_RACK"
+	(global_label "+12V_RAW_RACK"
+		(shape passive)
 		(at 88.9 251.46 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "407e7990-5f79-55e5-8f2e-d4e3fdee3b26")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 88.9 254.0 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "632a46a4-cf42-55c6-a9ee-770979d14b16")
 	)
-	(label "-12V_RAW_RACK"
+	(global_label "-12V_RAW_RACK"
+		(shape passive)
 		(at 88.9 256.54 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "ce2ac0f5-07fe-5f03-b0dd-7403aa939bc3")
 	)
-	(label "+24V_SW"
+	(global_label "+24V_SW"
+		(shape passive)
 		(at 124.46 251.46 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "cabe1305-5696-5c0c-9bfe-79e309653f1f")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 124.46 254.0 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "fbf59455-02a8-56ff-9253-cc41118e17ef")
 	)
-	(label "+5V_RAW_DIG"
+	(global_label "+5V_RAW_DIG"
+		(shape passive)
 		(at 154.94 251.46 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "6425163f-41f0-5155-8db8-8d822ecd69e5")
 	)
-	(label "GNDD"
+	(global_label "GNDD"
+		(shape passive)
 		(at 154.94 256.54 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "be8ca6d0-6e54-574c-9bcc-abba31fa74d9")
 	)
-	(label "+5V_RAW_DIG"
+	(global_label "+5V_RAW_DIG"
+		(shape passive)
 		(at 182.88 265.43 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "8de34f3e-0764-50cd-9c94-31264e0bee15")
 	)
-	(label "GNDD"
+	(global_label "GNDD"
+		(shape passive)
 		(at 182.88 283.21 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "47596f67-24f9-533a-83b5-ca34a6656acb")
 	)
-	(label "+24V_SW"
+	(global_label "+24V_SW"
+		(shape passive)
 		(at 205.74 251.46 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "2cb57dab-9507-5237-a75c-459451a42301")
 	)
-	(label "+24V_SW"
+	(global_label "+24V_SW"
+		(shape passive)
 		(at 205.74 254.0 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "4d9878ad-b142-5b8a-af2d-c3b7889e3776")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 205.74 259.08 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "630d9fb5-ab7a-5a9d-a66f-229b5961df03")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 205.74 261.62 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "2367efcc-f003-5288-aa3d-318b96976916")
 	)
-	(label "+5V_RAW_RACK"
+	(global_label "+5V_RAW_RACK"
+		(shape passive)
 		(at 241.3 251.46 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "633d6bac-afca-5975-a06a-905ad8353676")
 	)
-	(label "+5V_RAW_RACK"
+	(global_label "+5V_RAW_RACK"
+		(shape passive)
 		(at 241.3 254.0 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "54ab5d74-790c-539c-8aaa-34502b5dba97")
 	)
-	(label "+24V_SW"
+	(global_label "+24V_SW"
+		(shape passive)
 		(at 271.78 260.35 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "956daa98-9729-5a7b-b96d-a7eae5cfbfe6")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 271.78 278.13 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "66221ac6-e1e8-5b61-8cdb-8ff164c29c29")
 	)
-	(label "+5V_RAW_RACK"
+	(global_label "+5V_RAW_RACK"
+		(shape passive)
 		(at 294.64 265.43 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "ed3d67a1-7b65-5f0e-9134-2cfb476a9c07")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 294.64 283.21 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "cc8b12bd-79c1-5cb9-8552-469eaf7ad99d")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 317.5 251.46 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "c1b0215f-5f31-5a42-ad41-6b21b54367f6")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 332.74 251.46 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "2ed0709e-2848-5c06-83af-ed01c40d59a0")
 	)
-	(label "+24V_SW"
+	(global_label "+24V_SW"
+		(shape passive)
 		(at 35.56 307.34 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "e9df01b9-4608-59c3-97fd-f65de159d2f9")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 35.56 309.88 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "ae1147af-6830-5883-8733-762a06e1cace")
 	)
-	(label "+15V5_RAW"
+	(global_label "+15V5_RAW"
+		(shape passive)
 		(at 71.12 307.34 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "7b5f2780-84e2-50c7-bac4-3b6d0e74a255")
 	)
-	(label "TRIM_PS4"
+	(global_label "TRIM_PS4"
+		(shape passive)
 		(at 71.12 309.88 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "0fa569df-0b63-5390-810f-70c8306d4d39")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 71.12 312.42 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "133f8726-31e4-5dec-814f-e3f14dd486c3")
 	)
-	(label "TRIM_PS4"
+	(global_label "TRIM_PS4"
+		(shape passive)
 		(at 93.98 316.23 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "db19d639-4f3d-51e1-8efd-a8dbbd3b08be")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 93.98 334.01 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "6d87d046-2ba1-58ef-a25a-d9f604c25cb4")
 	)
-	(label "+24V_SW"
+	(global_label "+24V_SW"
+		(shape passive)
 		(at 114.3 307.34 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "f504afb9-c5be-55ca-bc77-2381ed9fb779")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 114.3 309.88 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "33bb04e7-c230-5095-b984-92c81a3f2c3f")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 149.86 307.34 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "86dcf903-14a4-56c8-9375-7eb9d7149772")
 	)
-	(label "TRIM_PS5"
+	(global_label "TRIM_PS5"
+		(shape passive)
 		(at 149.86 309.88 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "64de4c00-e87c-5878-a9f8-1c30d674523a")
 	)
-	(label "-15V5_RAW"
+	(global_label "-15V5_RAW"
+		(shape passive)
 		(at 149.86 312.42 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c1285586-a3f5-5e68-b6bc-76e4979f979a")
 	)
-	(label "TRIM_PS5"
+	(global_label "TRIM_PS5"
+		(shape passive)
 		(at 172.72 316.23 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "5878201e-c877-5ef5-ba87-4215e49f0af6")
 	)
-	(label "-15V5_RAW"
+	(global_label "-15V5_RAW"
+		(shape passive)
 		(at 172.72 334.01 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "f9ecf4dd-f725-57a5-8b65-5ac309faa6af")
 	)
-	(label "+15V5_RAW"
+	(global_label "+15V5_RAW"
+		(shape passive)
 		(at 38.1 401.32 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "0d0b5076-a9ab-5416-ac78-df9173749665")
 	)
-	(label "+15V5_RAW"
+	(global_label "+15V5_RAW"
+		(shape passive)
 		(at 55.88 391.16 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "5bd0829d-ea0e-5acf-9c47-5dc93c9ffcd4")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 38.1 416.56 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "597ae3fe-3a2e-5bc6-8aa9-9d871998f975")
 	)
-	(label "OVP_U19"
+	(global_label "OVP_U19"
+		(shape passive)
 		(at 38.1 421.64 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "91bc4dd6-6a2c-570b-93ae-b113d25979a1")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 55.88 439.42 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "28c7ffea-98e2-5105-84f7-65f2406cd77f")
 	)
-	(label "DVDT_U19"
+	(global_label "DVDT_U19"
+		(shape passive)
 		(at 73.66 429.26 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "3732a08f-811c-5211-90dd-74a4b7f17380")
 	)
-	(label "ILIM_U19"
+	(global_label "ILIM_U19"
+		(shape passive)
 		(at 73.66 426.72 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "0c82cf81-2cf2-5af1-9c1b-37e7f62c7716")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 38.1 429.26 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "6730d8b2-03ef-59fc-8489-15bb5b81308b")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 73.66 406.4 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "4c9ec653-9213-5e73-a5bf-50f393d2cf47")
 	)
-	(label "+15V5_EFUSE"
+	(global_label "+15V5_EFUSE"
+		(shape passive)
 		(at 73.66 401.32 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "404bec21-12f8-5b05-a0c5-31cadc1a13b8")
 	)
-	(label "ILIM_U19"
+	(global_label "ILIM_U19"
+		(shape passive)
 		(at 99.06 389.89 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "70405d29-93a3-54b4-b4a3-e894cf96b3aa")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 99.06 407.67 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "9270c26b-df4b-5b20-b140-9b206414973b")
 	)
-	(label "+15V5_RAW"
+	(global_label "+15V5_RAW"
+		(shape passive)
 		(at 116.84 392.43 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "92b61500-4853-5b2b-af14-86e74b36b304")
 	)
-	(label "OVP_U19"
+	(global_label "OVP_U19"
+		(shape passive)
 		(at 116.84 410.21 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "a16ee01c-f383-5ff8-8837-d13253a4ba16")
 	)
-	(label "OVP_U19"
+	(global_label "OVP_U19"
+		(shape passive)
 		(at 137.16 389.89 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "57c5c9c7-a446-51b5-97cc-a05e2ce98924")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 137.16 407.67 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "030ca26d-4f93-5679-b81c-cda02f78b44e")
 	)
-	(label "DVDT_U19"
+	(global_label "DVDT_U19"
+		(shape passive)
 		(at 157.48 389.89 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "46cf23cf-922f-5f4a-9544-01e402e31ea6")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 157.48 407.67 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "3de081e8-7a80-50d9-9342-3a43c1b3179f")
 	)
-	(label "+15V5_EFUSE"
+	(global_label "+15V5_EFUSE"
+		(shape passive)
 		(at 182.88 394.97 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "ec4cd74f-98bb-570e-9325-87a85e362943")
 	)
-	(label "+15V5_LC"
+	(global_label "+15V5_LC"
+		(shape passive)
 		(at 182.88 412.75 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "2232dc12-9e63-5154-9ba6-cc059cff5a5b")
 	)
-	(label "+15V5_LC"
+	(global_label "+15V5_LC"
+		(shape passive)
 		(at 205.74 389.89 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "718dc5bb-7eb6-5984-967a-56aec920996d")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 205.74 407.67 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "2939648c-e9eb-5e4d-b1f9-2b86d4c5f282")
 	)
-	(label "+15V5_LC"
+	(global_label "+15V5_LC"
+		(shape passive)
 		(at 228.6 389.89 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "acdf7200-73e8-5dec-b782-432ac716f300")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 228.6 407.67 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "008fd65d-a0c2-50cb-ae11-df3da7430548")
 	)
-	(label "+15V5_LC"
+	(global_label "+15V5_LC"
+		(shape passive)
 		(at 248.92 389.89 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "d7b55095-c6e2-5b85-9022-85d7e7eebde7")
 	)
-	(label "C1_NEG"
+	(global_label "C1_NEG"
+		(shape passive)
 		(at 248.92 407.67 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "5bb409d7-f41a-52d5-9235-dfa8580e6904")
 	)
-	(label "C1_NEG"
+	(global_label "C1_NEG"
+		(shape passive)
 		(at 266.7 387.35 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "5ab41744-caab-5387-a15c-0567f639caa6")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 266.7 405.13 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "f292f7c3-ce17-5247-a47a-72e0841943e0")
 	)
-	(label "+15V5_LC"
+	(global_label "+15V5_LC"
+		(shape passive)
 		(at 284.48 389.89 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "4a3846b4-0972-5c4b-b320-bd237109d9fe")
 	)
-	(label "+15V5_FILT"
+	(global_label "+15V5_FILT"
+		(shape passive)
 		(at 284.48 407.67 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "98242854-96ca-584c-8c17-b9450336b830")
 	)
-	(label "+15V5_FILT"
+	(global_label "+15V5_FILT"
+		(shape passive)
 		(at 313.69 381.0 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "e437d957-ad41-5187-a7ff-6e8a4b424050")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 331.47 381.0 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "1ce73625-e757-5b37-a0d0-bc9a4f22d5f0")
 	)
-	(label "-15V5_RAW"
+	(global_label "-15V5_RAW"
+		(shape passive)
 		(at 35.56 473.71 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "288f56d1-1b47-5857-85af-0fc9a1687a0c")
 	)
-	(label "-15V5_LC"
+	(global_label "-15V5_LC"
+		(shape passive)
 		(at 35.56 491.49 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "918e7ba6-2857-58ba-8730-af785196d9aa")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 58.42 468.63 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "e405ccec-6841-5348-a0e3-f30ff7f17002")
 	)
-	(label "-15V5_LC"
+	(global_label "-15V5_LC"
+		(shape passive)
 		(at 58.42 486.41 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "0e094ea1-8cb8-5403-86e3-406dbb4edcb4")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 81.28 468.63 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "84a34c9b-eedf-50fe-b4b9-63a65d42c78b")
 	)
-	(label "-15V5_LC"
+	(global_label "-15V5_LC"
+		(shape passive)
 		(at 81.28 486.41 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "12ed874e-b077-57de-b788-73cf67e27be2")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 101.6 468.63 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "b74ef23e-4475-5edd-a4af-fc8d7c1f8352")
 	)
-	(label "C2_NEG"
+	(global_label "C2_NEG"
+		(shape passive)
 		(at 101.6 486.41 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "418500a3-048e-54c0-866a-15f09f1295f8")
 	)
-	(label "C2_NEG"
+	(global_label "C2_NEG"
+		(shape passive)
 		(at 119.38 468.63 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "89f307e6-6232-5bca-a670-28f8c8d96c99")
 	)
-	(label "-15V5_LC"
+	(global_label "-15V5_LC"
+		(shape passive)
 		(at 119.38 486.41 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "928cbf62-a8b7-5fec-a2c9-c63d72be683f")
 	)
-	(label "-15V5_LC"
+	(global_label "-15V5_LC"
+		(shape passive)
 		(at 139.7 471.17 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "673a052b-af1b-5355-92d3-df6dfd836bf1")
 	)
-	(label "-15V5_FILT"
+	(global_label "-15V5_FILT"
+		(shape passive)
 		(at 139.7 488.95 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "82f73b5d-fcda-5d35-869d-b30bb26aa19a")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 161.29 462.28 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "24604148-da88-59a3-bce1-163821e45c1d")
 	)
-	(label "-15V5_FILT"
+	(global_label "-15V5_FILT"
+		(shape passive)
 		(at 179.07 462.28 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "a639e167-f5f4-53ae-8358-f7a37a7b8568")
 	)
-	(label "+15V5_LC"
+	(global_label "+15V5_LC"
+		(shape passive)
 		(at 205.74 467.36 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "a17e99ab-3a1a-50ee-991a-8f236d5692f4")
 	)
-	(label "-15V5_LC"
+	(global_label "-15V5_LC"
+		(shape passive)
 		(at 223.52 467.36 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "6f56a5b9-1d09-5b7a-8e66-f9894e5185f2")
 	)
-	(label "SHDN_CASCADE"
+	(global_label "SHDN_CASCADE"
+		(shape passive)
 		(at 63.5 538.48 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "2c634c19-66a9-588b-893f-51ab9d19b19b")
 	)
-	(label "VREF_2V5"
+	(global_label "VREF_2V5"
+		(shape passive)
 		(at 38.1 541.02 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "28a76b89-a411-5f65-8441-32b8f76d6c1f")
 	)
-	(label "SENSE_POS"
+	(global_label "SENSE_POS"
+		(shape passive)
 		(at 38.1 535.94 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "af32b81a-3a99-54b1-b39d-eae66e71557d")
 	)
-	(label "REF0_NEG"
+	(global_label "REF0_NEG"
+		(shape passive)
 		(at 96.52 535.94 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "aef6996d-d7ea-5301-9c26-7b075c679fcc")
 	)
-	(label "SENSE_NEG"
+	(global_label "SENSE_NEG"
+		(shape passive)
 		(at 96.52 541.02 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "a2d8b6f9-44c5-5f46-aa14-c98afc5daf20")
 	)
-	(label "SHDN_CASCADE"
+	(global_label "SHDN_CASCADE"
+		(shape passive)
 		(at 121.92 538.48 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "a2f9ac82-90fd-5ba1-a17e-244b9915edbe")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 149.86 571.5 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "964fa5d4-20f8-534a-991b-a41fcada5b17")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 149.86 546.1 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "5e50f402-fc1a-5479-80a2-58b0caad4f20")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 172.72 544.83 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "60fac4ee-cecd-5e1c-8c85-7315bd3bdd83")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 172.72 562.61 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "b3bd9c44-532b-5a4e-b57f-031500235b92")
 	)
-	(label "VREF_2V5"
+	(global_label "VREF_2V5"
+		(shape passive)
 		(at 210.82 553.72 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "5cba7184-7377-5b42-a15f-dc430db4f31e")
 	)
-	(label "VREF_2V5"
+	(global_label "VREF_2V5"
+		(shape passive)
 		(at 203.2 546.1 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "3d6dafe2-86ef-59af-8f90-c2a6099fa666")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 195.58 553.72 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "c7e502bd-5b92-568e-b565-a774b7a23eff")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 231.14 544.83 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c56b9471-c9af-5519-bf65-af0e83631148")
 	)
-	(label "VREF_2V5"
+	(global_label "VREF_2V5"
+		(shape passive)
 		(at 231.14 562.61 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "4c3606ee-5a88-584d-9142-22c53faa5c3f")
 	)
-	(label "+15V5_LC"
+	(global_label "+15V5_LC"
+		(shape passive)
 		(at 248.92 547.37 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "16a33d45-0fc1-5b51-8a4f-b8eeea73cfc8")
 	)
-	(label "SENSE_POS"
+	(global_label "SENSE_POS"
+		(shape passive)
 		(at 248.92 565.15 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "7ee5a345-a848-5450-a888-7a2c09b811f1")
 	)
-	(label "SENSE_POS"
+	(global_label "SENSE_POS"
+		(shape passive)
 		(at 269.24 547.37 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "5604831b-3b8d-5a8f-af03-d5c461aca936")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 269.24 565.15 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "263128be-b1e6-5687-b002-b7b5567c9837")
 	)
-	(label "SHDN_CASCADE"
+	(global_label "SHDN_CASCADE"
+		(shape passive)
 		(at 287.02 549.91 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "9f4b8f46-d0fb-50de-8af9-d8de9e11cf1e")
 	)
-	(label "SENSE_POS"
+	(global_label "SENSE_POS"
+		(shape passive)
 		(at 287.02 567.69 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "dbe30acf-3638-5111-8200-b144bb8d6049")
 	)
-	(label "SENSE_POS"
+	(global_label "SENSE_POS"
+		(shape passive)
 		(at 304.8 547.37 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "0bdb0234-468e-5975-8756-734044469f98")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 304.8 565.15 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "753c0ac4-c0d9-5cc2-9d91-8903a2322929")
 	)
-	(label "VREF_2V5"
+	(global_label "VREF_2V5"
+		(shape passive)
 		(at 327.66 547.37 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "7e439a0c-8506-56b0-8c5a-4f382c5f072c")
 	)
-	(label "SENSE_NEG"
+	(global_label "SENSE_NEG"
+		(shape passive)
 		(at 327.66 565.15 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "ec419676-2f3d-55cc-9b5d-046f754ad89e")
 	)
-	(label "SENSE_NEG"
+	(global_label "SENSE_NEG"
+		(shape passive)
 		(at 33.02 608.33 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "6de368d5-debf-5f0a-a64f-17e01df3aca3")
 	)
-	(label "-15V5_LC"
+	(global_label "-15V5_LC"
+		(shape passive)
 		(at 33.02 626.11 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "d1364539-1d86-5b42-b20d-b4f5c18b9068")
 	)
-	(label "SENSE_NEG"
+	(global_label "SENSE_NEG"
+		(shape passive)
 		(at 53.34 608.33 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "337acb22-ce66-5599-9e3e-91e2eff5a701")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 53.34 626.11 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "5c264f6b-4d2a-502b-af06-d8da50401fae")
 	)
-	(label "REF0_NEG"
+	(global_label "REF0_NEG"
+		(shape passive)
 		(at 73.66 605.79 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "3acbf109-9125-5177-82cb-1200f6e9f985")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 73.66 623.57 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "ee286bd5-f893-5f1d-9ea0-577499186612")
 	)
-	(label "SHDN_CASCADE"
+	(global_label "SHDN_CASCADE"
+		(shape passive)
 		(at 86.36 610.87 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "66d12bf4-f564-5371-aea0-2c82f0fdd1f9")
 	)
-	(label "REF0_NEG"
+	(global_label "REF0_NEG"
+		(shape passive)
 		(at 86.36 628.65 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "2f486e8d-4f82-5f64-b78d-1e36eba95a25")
 	)
-	(label "SHDN_CASCADE"
+	(global_label "SHDN_CASCADE"
+		(shape passive)
 		(at 99.06 610.87 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "b3d0b209-2c0c-5467-8918-fb388e7cecc9")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 99.06 628.65 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "030f77ed-02fb-54ec-85aa-71c942b09169")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 111.76 605.79 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "8e841417-3f6d-5c81-aac3-13eb80a0453b")
 	)
-	(label "SHDN_CASCADE"
+	(global_label "SHDN_CASCADE"
+		(shape passive)
 		(at 111.76 623.57 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "1e1b7415-9841-5aed-a1cb-3dbd450ca631")
 	)
-	(label "SHDN_CASCADE"
+	(global_label "SHDN_CASCADE"
+		(shape passive)
 		(at 40.64 675.64 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "1020ca45-132c-5783-831b-7b33f33ff51c")
 	)
-	(label "+15V5_FILT"
+	(global_label "+15V5_FILT"
+		(shape passive)
 		(at 40.64 673.1 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "f6659611-2df3-58d3-b2ea-42c61eb3231d")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 55.88 688.34 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "87401887-34a2-5100-82df-39b4bb59b646")
 	)
-	(label "+13V1"
+	(global_label "+13V1"
+		(shape passive)
 		(at 71.12 673.1 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "d494d4c3-e0dc-5a7f-9db1-4b1c43ed28ec")
 	)
-	(label "ADJ_U1"
+	(global_label "ADJ_U1"
+		(shape passive)
 		(at 71.12 675.64 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "f5e44df3-24db-54d7-82c0-271d519a4fa0")
 	)
-	(label "+13V1"
+	(global_label "+13V1"
+		(shape passive)
 		(at 93.98 679.45 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c7d4ef87-7b27-5d3e-960e-2a29700968fa")
 	)
-	(label "TRIM_U1_HI"
+	(global_label "TRIM_U1_HI"
+		(shape passive)
 		(at 93.98 697.23 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "40b2ab85-d496-5175-ada1-815146cf9a4e")
 	)
-	(label "TRIM_U1_HI"
+	(global_label "TRIM_U1_HI"
+		(shape passive)
 		(at 114.3 684.53 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "16ea4683-359e-5b72-a96c-103ceeddc0df")
 	)
-	(label "ADJ_U1"
+	(global_label "ADJ_U1"
+		(shape passive)
 		(at 123.19 693.42 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "d48b62a6-dcd7-5235-9b13-cf069a5ddba9")
 	)
-	(label "ADJ_U1"
+	(global_label "ADJ_U1"
+		(shape passive)
 		(at 114.3 702.31 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "8964bbd6-fae4-5964-b735-a6d72ebc64d6")
 	)
-	(label "ADJ_U1"
+	(global_label "ADJ_U1"
+		(shape passive)
 		(at 149.86 681.99 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "0094b6bf-83b5-59ae-9984-b59a36b55d81")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 149.86 699.77 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "05f4be44-715b-5295-9372-795fa589037d")
 	)
-	(label "+13V1"
+	(global_label "+13V1"
+		(shape passive)
 		(at 170.18 679.45 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "56562f6b-59b3-5231-8be5-71d3c7db3b67")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 170.18 697.23 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "e9af427a-a570-5999-b2a6-62c35909a7f3")
 	)
-	(label "+15V5_FILT"
+	(global_label "+15V5_FILT"
+		(shape passive)
 		(at 194.31 673.1 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "63e40503-00e1-54be-8067-5ba5e36c85ef")
 	)
-	(label "+13V1"
+	(global_label "+13V1"
+		(shape passive)
 		(at 212.09 673.1 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "fc407901-de62-5a05-913a-834317bc224b")
 	)
-	(label "+13V1"
+	(global_label "+13V1"
+		(shape passive)
 		(at 233.68 678.18 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "9d066260-16d6-537d-8831-d476c41026b3")
 	)
-	(label "SHDN_CASCADE"
+	(global_label "SHDN_CASCADE"
+		(shape passive)
 		(at 261.62 675.64 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "fa632c27-69fe-5bd5-a4c1-77347ccb9193")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 276.86 688.34 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "70f0ed81-2394-54ce-8d9a-47d341436240")
 	)
-	(label "-15V5_FILT"
+	(global_label "-15V5_FILT"
+		(shape passive)
 		(at 261.62 673.1 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "cc11a1a9-6d32-56f2-b9f6-b583f46cf3de")
 	)
-	(label "ADJ_U2"
+	(global_label "ADJ_U2"
+		(shape passive)
 		(at 292.1 675.64 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "1fb262ba-2162-5b20-8639-63d521e968b0")
 	)
-	(label "-12V9"
+	(global_label "-12V9"
+		(shape passive)
 		(at 292.1 673.1 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "464617a1-bc85-513f-a7b2-f00d9b44329b")
 	)
-	(label "-12V9"
+	(global_label "-12V9"
+		(shape passive)
 		(at 314.96 679.45 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "b9f2388b-b5a7-5432-8360-00a15bf498d2")
 	)
-	(label "TRIM_U2_HI"
+	(global_label "TRIM_U2_HI"
+		(shape passive)
 		(at 314.96 697.23 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "29098d1c-b54f-5c3a-ac26-f28c56b4c878")
 	)
-	(label "TRIM_U2_HI"
+	(global_label "TRIM_U2_HI"
+		(shape passive)
 		(at 30.48 740.41 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "6ef19429-d15d-588a-be06-3c15e126856d")
 	)
-	(label "ADJ_U2"
+	(global_label "ADJ_U2"
+		(shape passive)
 		(at 39.37 749.3 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "ff5644b0-9d84-5360-9b69-56866ae8393d")
 	)
-	(label "ADJ_U2"
+	(global_label "ADJ_U2"
+		(shape passive)
 		(at 30.48 758.19 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "5129790c-32b8-5885-804a-aaaf95366a63")
 	)
-	(label "ADJ_U2"
+	(global_label "ADJ_U2"
+		(shape passive)
 		(at 68.58 735.33 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c70a44cc-02a0-5fbf-a61d-6dd31848a745")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 68.58 753.11 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "bd241258-f248-5ccd-a698-6da962db1b99")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 86.36 732.79 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "4045df22-b5f8-5c11-ac11-3e04c3ea2496")
 	)
-	(label "-12V9"
+	(global_label "-12V9"
+		(shape passive)
 		(at 86.36 750.57 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "501deca1-6f0a-52c9-b073-6cdf126e637e")
 	)
-	(label "-12V9"
+	(global_label "-12V9"
+		(shape passive)
 		(at 107.95 726.44 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "50fabed7-e064-55ba-97de-5e9392537bd5")
 	)
-	(label "-15V5_FILT"
+	(global_label "-15V5_FILT"
+		(shape passive)
 		(at 125.73 726.44 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "20d522ad-3e88-587f-962b-5170d56544b6")
 	)
-	(label "-12V9"
+	(global_label "-12V9"
+		(shape passive)
 		(at 152.4 731.52 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "1cb3fbb6-8038-5a07-808e-400b9814d557")
 	)
-	(label "+13V1"
+	(global_label "+13V1"
+		(shape passive)
 		(at 35.56 800.1 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "00659fc5-9a90-5e25-b04f-b4af92a733be")
 	)
-	(label "+13V1"
+	(global_label "+13V1"
+		(shape passive)
 		(at 35.56 802.64 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "922880f1-ff25-554a-91f2-06d543ea4abf")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 35.56 805.18 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "e8b00a10-8695-5f54-b4bc-b4317ab36750")
 	)
-	(label "+13V1"
+	(global_label "+13V1"
+		(shape passive)
 		(at 66.04 805.18 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "4bc2faf4-1aea-57f6-aa63-fe43cf4101e8")
 	)
-	(label "SET_POS"
+	(global_label "SET_POS"
+		(shape passive)
 		(at 35.56 807.72 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "0cb031fe-8d10-561f-87d0-d7dfc43fddb6")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 50.8 817.88 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "59772a9f-0bb9-5f55-b32f-8066ba7f77b3")
 	)
-	(label "OUTS_POS"
+	(global_label "OUTS_POS"
+		(shape passive)
 		(at 66.04 802.64 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "2349bb1d-eacc-5724-9845-60be0785cc2d")
 	)
-	(label "OUT_U4"
+	(global_label "OUT_U4"
+		(shape passive)
 		(at 66.04 800.1 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "d9e2dc13-9d47-57fa-ae9a-2474bf9bdda6")
 	)
-	(label "+13V1"
+	(global_label "+13V1"
+		(shape passive)
 		(at 93.98 800.1 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "2450f117-cc2e-5aa2-9b12-22740d3ebab4")
 	)
-	(label "+13V1"
+	(global_label "+13V1"
+		(shape passive)
 		(at 93.98 802.64 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "3706520c-f4de-595f-86a2-f72dfba489d6")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 93.98 805.18 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "fab900a0-fa5d-5685-afe0-6ef061c1e29d")
 	)
-	(label "+13V1"
+	(global_label "+13V1"
+		(shape passive)
 		(at 124.46 805.18 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "56a5dfa8-3933-5cab-9aa0-f79d50a62b7c")
 	)
-	(label "SET_POS"
+	(global_label "SET_POS"
+		(shape passive)
 		(at 93.98 807.72 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "2859b583-924b-5bed-9a7f-9c4663ea8c19")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 109.22 817.88 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "f72b4501-9597-5484-b5f1-4f8ee45d5e0f")
 	)
-	(label "OUTS_POS"
+	(global_label "OUTS_POS"
+		(shape passive)
 		(at 124.46 802.64 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "dfca4e47-d30c-5429-b338-4f802f362f4e")
 	)
-	(label "OUT_U5"
+	(global_label "OUT_U5"
+		(shape passive)
 		(at 124.46 800.1 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "380c9de2-617d-5198-bc04-195cee6c7993")
 	)
-	(label "+13V1"
+	(global_label "+13V1"
+		(shape passive)
 		(at 149.86 806.45 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "0764ede1-956b-5d18-a7c2-65499bcfe664")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 149.86 824.23 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "e56ebcb4-c35f-55ea-b55d-d86366c50b87")
 	)
-	(label "OUT_U4"
+	(global_label "OUT_U4"
+		(shape passive)
 		(at 167.64 808.99 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "df39f263-64ad-56bd-8616-604c8d4949e9")
 	)
-	(label "OUTS_POS"
+	(global_label "OUTS_POS"
+		(shape passive)
 		(at 167.64 826.77 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "518596c8-cb98-5a76-b09a-252525984220")
 	)
-	(label "OUT_U5"
+	(global_label "OUT_U5"
+		(shape passive)
 		(at 182.88 808.99 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "06664b2f-4cbe-5a60-a6e5-85f75c87e313")
 	)
-	(label "OUTS_POS"
+	(global_label "OUTS_POS"
+		(shape passive)
 		(at 182.88 826.77 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "fac968de-24d5-56da-823f-9051a977e049")
 	)
-	(label "SET_POS"
+	(global_label "SET_POS"
+		(shape passive)
 		(at 198.12 808.99 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "2332330a-757c-52b5-8ffc-185760378852")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 198.12 826.77 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "f2edfe37-e25d-56dd-9df0-693b7dfe423e")
 	)
-	(label "SET_POS"
+	(global_label "SET_POS"
+		(shape passive)
 		(at 218.44 808.99 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "e03101e7-8a68-570d-91dd-a583ac036cab")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 218.44 826.77 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "e7399dc0-19e0-59cb-845e-59a55477ef8a")
 	)
-	(label "SET_POS"
+	(global_label "SET_POS"
+		(shape passive)
 		(at 238.76 808.99 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "dc9ae19f-d70a-50f9-9a22-570e1049d040")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 238.76 826.77 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "11766510-803a-57bc-af01-c57d29279911")
 	)
-	(label "OUTS_POS"
+	(global_label "OUTS_POS"
+		(shape passive)
 		(at 264.16 808.99 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "441ec239-740e-55ad-97d9-8fda58c3fb98")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 264.16 826.77 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "fba24b68-371d-59c3-a4b5-264e91542112")
 	)
-	(label "OUTS_POS"
+	(global_label "OUTS_POS"
+		(shape passive)
 		(at 281.94 808.99 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "ff814ecf-a8e3-5a4b-a001-ef36fe8f8912")
 	)
-	(label "+12V_ULTRA"
+	(global_label "+12V_ULTRA"
+		(shape passive)
 		(at 281.94 826.77 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "0a5f79a5-fc7e-593f-9e6b-991fd6dfb472")
 	)
-	(label "+12V_ULTRA"
+	(global_label "+12V_ULTRA"
+		(shape passive)
 		(at 299.72 811.53 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "90f382c5-85f1-5f39-968b-d84fc7c1e2c0")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 299.72 829.31 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "8bd8b621-032b-5563-b5af-ab6d9e09635d")
 	)
-	(label "-12V9"
+	(global_label "-12V9"
+		(shape passive)
 		(at 35.56 855.98 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "151e6f71-0e5c-5c08-b6b5-a8f48f1d47ef")
 	)
-	(label "-12V9"
+	(global_label "-12V9"
+		(shape passive)
 		(at 35.56 858.52 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "22a943ba-2868-5f25-8cfc-94ca72828230")
 	)
-	(label "-12V9"
+	(global_label "-12V9"
+		(shape passive)
 		(at 66.04 861.06 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "0dd9f38b-b2f0-5317-a73f-539d1f763911")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 66.04 863.6 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "8f1facbc-02c0-503d-88da-5ad126fb3735")
 	)
-	(label "SET_NEG"
+	(global_label "SET_NEG"
+		(shape passive)
 		(at 35.56 866.14 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "02ba5c75-1220-541a-b069-50026463c4d6")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 50.8 876.3 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "f5afec0a-41b4-5cc9-80ca-143160ad6c65")
 	)
-	(label "-12V_ULTRA"
+	(global_label "-12V_ULTRA"
+		(shape passive)
 		(at 66.04 858.52 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "79c2711a-9bea-5e55-ad29-51e12a3a3772")
 	)
-	(label "OUT_U6"
+	(global_label "OUT_U6"
+		(shape passive)
 		(at 66.04 855.98 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "76974e15-e362-50e1-99c3-baa3da7ad904")
 	)
-	(label "-12V9"
+	(global_label "-12V9"
+		(shape passive)
 		(at 96.52 855.98 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "2bbd6b99-2eec-5d53-baf8-aa7d6c77eefc")
 	)
-	(label "-12V9"
+	(global_label "-12V9"
+		(shape passive)
 		(at 96.52 858.52 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "ccabb8c0-9d76-594d-bc8c-e2e9d223d619")
 	)
-	(label "-12V9"
+	(global_label "-12V9"
+		(shape passive)
 		(at 127.0 861.06 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "1093a0e4-426e-5869-83e5-91a3a57ee9cc")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 127.0 863.6 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "04af4860-e68a-5cc1-aac4-a2c0e118f4b5")
 	)
-	(label "SET_NEG"
+	(global_label "SET_NEG"
+		(shape passive)
 		(at 96.52 866.14 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "1469e37b-cc27-5599-8bef-23af55723789")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 111.76 876.3 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "a80ea2bd-2c88-5c7c-9e8c-3508ace49158")
 	)
-	(label "-12V_ULTRA"
+	(global_label "-12V_ULTRA"
+		(shape passive)
 		(at 127.0 858.52 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c7cac023-73b6-52bf-be65-7013cca0b8b1")
 	)
-	(label "OUT_U7"
+	(global_label "OUT_U7"
+		(shape passive)
 		(at 127.0 855.98 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "f2930d7e-5af2-5e00-8a2c-8fd1916b43c5")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 154.94 862.33 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "7c89afcf-020e-5ba6-a4f8-002965bfd4c0")
 	)
-	(label "-12V9"
+	(global_label "-12V9"
+		(shape passive)
 		(at 154.94 880.11 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "ea1d48d6-da97-5cbe-9d6e-6950e52f3131")
 	)
-	(label "OUT_U6"
+	(global_label "OUT_U6"
+		(shape passive)
 		(at 172.72 864.87 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "fc10c944-3590-5ad5-8cac-3fef78d2e5a3")
 	)
-	(label "-12V_ULTRA"
+	(global_label "-12V_ULTRA"
+		(shape passive)
 		(at 172.72 882.65 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "ffb339ba-66df-5f4d-88d0-3b89f1a08e7b")
 	)
-	(label "OUT_U7"
+	(global_label "OUT_U7"
+		(shape passive)
 		(at 185.42 864.87 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "51bc52bc-1272-5825-bad6-f493e9b36688")
 	)
-	(label "-12V_ULTRA"
+	(global_label "-12V_ULTRA"
+		(shape passive)
 		(at 185.42 882.65 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "27186867-fdf7-5214-921a-09b760331ed1")
 	)
-	(label "SET_NEG"
+	(global_label "SET_NEG"
+		(shape passive)
 		(at 203.2 864.87 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c465caf1-a6d8-54bd-99e5-6629fc68d419")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 203.2 882.65 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "88ddec14-e69e-5f8f-b458-309573788baf")
 	)
-	(label "SET_NEG"
+	(global_label "SET_NEG"
+		(shape passive)
 		(at 223.52 864.87 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "a7f8b876-1eac-5db8-83e4-a25da90beca7")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 223.52 882.65 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "8a9c4364-cdd2-5847-a379-c712af07678f")
 	)
-	(label "SET_NEG"
+	(global_label "SET_NEG"
+		(shape passive)
 		(at 243.84 864.87 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "a8ca618d-a241-5403-ba57-195f3998b8a5")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 243.84 882.65 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "6af5a64c-7892-5181-9b00-947f3c6c4e60")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 266.7 862.33 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "6c22d49c-56a3-5b2b-8585-dca523a00aea")
 	)
-	(label "-12V_ULTRA"
+	(global_label "-12V_ULTRA"
+		(shape passive)
 		(at 266.7 880.11 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "0eeb5bf2-8c49-5f74-8aee-d25cff5d7b29")
 	)
-	(label "+12V_ULTRA"
+	(global_label "+12V_ULTRA"
+		(shape passive)
 		(at 289.56 861.06 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "3c55c040-2a7a-5bc3-9c40-84906bc9d748")
 	)
-	(label "-12V_ULTRA"
+	(global_label "-12V_ULTRA"
+		(shape passive)
 		(at 307.34 861.06 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "0d9a0e40-e252-5910-925e-233c11d2d29b")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 327.66 861.06 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "0b693de0-0dc4-5a8b-bbe2-2855dc629969")
 	)
-	(label "+12V_ULTRA"
+	(global_label "+12V_ULTRA"
+		(shape passive)
 		(at 345.44 869.95 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "7c880942-f09b-505c-8fa5-d652bfdcbfc1")
 	)
-	(label "LED3_A"
+	(global_label "LED3_A"
+		(shape passive)
 		(at 345.44 887.73 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "2b82d32c-3548-5163-99a2-77aa32f0eb5e")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 31.75 909.32 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "64455721-2453-5911-8c29-d5a2175b910d")
 	)
-	(label "LED3_A"
+	(global_label "LED3_A"
+		(shape passive)
 		(at 49.53 909.32 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "e107d6c6-7140-56e4-af1d-7af85fae20b6")
 	)
-	(label "LED4_K"
+	(global_label "LED4_K"
+		(shape passive)
 		(at 68.58 918.21 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c096e22e-93c9-5cea-97c1-a27578c915a0")
 	)
-	(label "-12V_ULTRA"
+	(global_label "-12V_ULTRA"
+		(shape passive)
 		(at 68.58 935.99 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "e891ffc7-b611-5e5d-852b-425da3da86e7")
 	)
-	(label "LED4_K"
+	(global_label "LED4_K"
+		(shape passive)
 		(at 87.63 909.32 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "9fb70463-00e6-500e-8942-856b74202808")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 105.41 909.32 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "31abd646-b68f-5d6e-a94e-a50086e9c574")
 	)
-	(label "+12V_RAW_RACK"
+	(global_label "+12V_RAW_RACK"
+		(shape passive)
 		(at 35.56 999.49 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "fd7ec63a-384e-5975-a9b2-83382a3d7e73")
 	)
-	(label "+12V_FUSED_RACK"
+	(global_label "+12V_FUSED_RACK"
+		(shape passive)
 		(at 35.56 1017.27 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "d74c44c7-8aa7-5bb9-b661-cc79ba292473")
 	)
-	(label "+12V_FUSED_RACK"
+	(global_label "+12V_FUSED_RACK"
+		(shape passive)
 		(at 55.88 1002.03 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "6b66897a-717b-560c-af27-ed4e45aca56a")
 	)
-	(label "+12V_RACK"
+	(global_label "+12V_RACK"
+		(shape passive)
 		(at 55.88 1019.81 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "6e5447e9-db0e-5f05-aab6-d893a23f5e72")
 	)
-	(label "+12V_RACK"
+	(global_label "+12V_RACK"
+		(shape passive)
 		(at 73.66 994.41 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "46c605fd-c275-5114-95ba-c31cc0f494df")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 73.66 1012.19 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "5aba1f9e-efac-55a9-b3a4-44882b2c7f6b")
 	)
-	(label "GATE_SCR1"
+	(global_label "GATE_SCR1"
+		(shape passive)
 		(at 83.82 1005.84 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "13a59db7-5dcd-5134-ac6c-397fb2f3b8cd")
 	)
-	(label "TLK_CB1"
+	(global_label "TLK_CB1"
+		(shape passive)
 		(at 129.54 1000.76 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "392ca892-c803-5692-97ba-e37411e79a82")
 	)
-	(label "REF_CB1"
+	(global_label "REF_CB1"
+		(shape passive)
 		(at 121.92 993.14 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c88e40fa-31d0-52ad-8da7-c3bf4c03b628")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 114.3 1000.76 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "f840db2f-0f41-551f-9c95-06f68c7df459")
 	)
-	(label "+12V_RACK"
+	(global_label "+12V_RACK"
+		(shape passive)
 		(at 154.94 994.41 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "3d6213b9-fb70-5664-be9b-bce9400ac070")
 	)
-	(label "REF_CB1"
+	(global_label "REF_CB1"
+		(shape passive)
 		(at 154.94 1012.19 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "4f10f375-f003-5bdb-8f9d-0c6e01724436")
 	)
-	(label "REF_CB1"
+	(global_label "REF_CB1"
+		(shape passive)
 		(at 175.26 991.87 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "3d0c936d-b912-51f5-81ff-d4408b22b81e")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 175.26 1009.65 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "2902fb29-e344-51c1-a8c5-25c408d1c5f7")
 	)
-	(label "QB_CB1"
+	(global_label "QB_CB1"
+		(shape passive)
 		(at 200.66 1000.76 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "c088264f-3a42-57b2-832a-0a6d3209ad0b")
 	)
-	(label "+12V_RACK"
+	(global_label "+12V_RACK"
+		(shape passive)
 		(at 213.36 1010.92 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "8a7e34b0-b16e-53c9-af1f-a8738e6ccaed")
 	)
-	(label "QC_CB1"
+	(global_label "QC_CB1"
+		(shape passive)
 		(at 213.36 990.6 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "728ce4e6-9511-5221-ac5e-6c3c88c526d2")
 	)
-	(label "QB_CB1"
+	(global_label "QB_CB1"
+		(shape passive)
 		(at 226.06 991.87 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "b54a4c05-ba84-5737-b23a-49d3a9ac93b1")
 	)
-	(label "TLK_CB1"
+	(global_label "TLK_CB1"
+		(shape passive)
 		(at 226.06 1009.65 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "7e5d9796-8896-55d5-afb6-4dd653899ef2")
 	)
-	(label "+12V_RACK"
+	(global_label "+12V_RACK"
+		(shape passive)
 		(at 236.22 994.41 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "e14f6cc8-b5c5-5a54-b57f-7d86b7ce2741")
 	)
-	(label "QB_CB1"
+	(global_label "QB_CB1"
+		(shape passive)
 		(at 236.22 1012.19 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "767a00e7-cffc-593b-9556-af15a8d82973")
 	)
-	(label "QC_CB1"
+	(global_label "QC_CB1"
+		(shape passive)
 		(at 248.92 991.87 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "b92c4878-2cb9-58b4-8e6a-3b47278e05ff")
 	)
-	(label "GATE_SCR1"
+	(global_label "GATE_SCR1"
+		(shape passive)
 		(at 248.92 1009.65 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "b658f4b9-f319-5ab1-a6ce-f3fbd39c8c03")
 	)
-	(label "GATE_SCR1"
+	(global_label "GATE_SCR1"
+		(shape passive)
 		(at 261.62 994.41 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "d52c8933-334d-524f-9f1f-4bf0a96ec1cd")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 261.62 1012.19 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "d53bd010-2f9c-5cff-8375-8286fd7de178")
 	)
-	(label "-12V_RAW_RACK"
+	(global_label "-12V_RAW_RACK"
+		(shape passive)
 		(at 281.94 999.49 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "6098cdf2-cdb7-5fad-b406-46a179309d34")
 	)
-	(label "-12V_RACK"
+	(global_label "-12V_RACK"
+		(shape passive)
 		(at 281.94 1017.27 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "ff95f8d2-7804-5733-9ba6-2973c85b00b4")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 304.8 989.33 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "1fefe7a2-c46e-5548-82ff-82938df14c72")
 	)
-	(label "-12V_RACK"
+	(global_label "-12V_RACK"
+		(shape passive)
 		(at 304.8 1007.11 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "857fa21c-2902-5967-b8fa-ed98b002c137")
 	)
-	(label "GATE_SCR2"
+	(global_label "GATE_SCR2"
+		(shape passive)
 		(at 314.96 1000.76 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "3026593a-5ac1-5b97-82e9-ca5f9574dbb2")
 	)
-	(label "TLK_CB2"
+	(global_label "TLK_CB2"
+		(shape passive)
 		(at 53.34 1069.34 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "2f6a473d-3ec6-5c9e-b07e-7a684a6cc198")
 	)
-	(label "REF_CB2"
+	(global_label "REF_CB2"
+		(shape passive)
 		(at 45.72 1061.72 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "1586505b-08f7-59a6-ac8a-d19484487379")
 	)
-	(label "-12V_RACK"
+	(global_label "-12V_RACK"
+		(shape passive)
 		(at 38.1 1069.34 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "2fdb1dff-9923-50ef-87d0-71f04ecc52e6")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 76.2 1057.91 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "15d25485-286e-5063-9c67-7090cea4dccb")
 	)
-	(label "REF_CB2"
+	(global_label "REF_CB2"
+		(shape passive)
 		(at 76.2 1075.69 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "ffb6b504-bc64-57d0-b6cb-f97a601b1703")
 	)
-	(label "REF_CB2"
+	(global_label "REF_CB2"
+		(shape passive)
 		(at 96.52 1060.45 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "cadcdf93-52d9-52d7-8233-5eb03ef198e8")
 	)
-	(label "-12V_RACK"
+	(global_label "-12V_RACK"
+		(shape passive)
 		(at 96.52 1078.23 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "8b131746-4a59-5f6d-88ea-64fa3ba398fa")
 	)
-	(label "QB_CB2"
+	(global_label "QB_CB2"
+		(shape passive)
 		(at 121.92 1069.34 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "9701a84b-785d-5217-afac-2e1551b04917")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 134.62 1079.5 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "5a9f5bfd-028d-540c-97ef-5ca381073577")
 	)
-	(label "QC_CB2"
+	(global_label "QC_CB2"
+		(shape passive)
 		(at 134.62 1059.18 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "8d036b6a-e018-5140-9a8e-501638536d24")
 	)
-	(label "QB_CB2"
+	(global_label "QB_CB2"
+		(shape passive)
 		(at 147.32 1060.45 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "f82ac535-13c5-56b1-ba67-f66039bc7013")
 	)
-	(label "TLK_CB2"
+	(global_label "TLK_CB2"
+		(shape passive)
 		(at 147.32 1078.23 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "0bc0b75d-283a-5410-940f-6ae695e343a2")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 160.02 1057.91 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c1d77464-fb27-56e0-9562-85320dde93be")
 	)
-	(label "QB_CB2"
+	(global_label "QB_CB2"
+		(shape passive)
 		(at 160.02 1075.69 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "1ae0e158-d954-582d-be64-857ff832688e")
 	)
-	(label "QC_CB2"
+	(global_label "QC_CB2"
+		(shape passive)
 		(at 172.72 1060.45 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "0ed37d75-3157-5080-baf7-23fd2ed73abf")
 	)
-	(label "GATE_SCR2"
+	(global_label "GATE_SCR2"
+		(shape passive)
 		(at 172.72 1078.23 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "aeb48cfc-da9d-5ffa-8571-9034ef13745d")
 	)
-	(label "GATE_SCR2"
+	(global_label "GATE_SCR2"
+		(shape passive)
 		(at 182.88 1062.99 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "23f16cd8-f69f-59fe-b812-8b89605ee738")
 	)
-	(label "-12V_RACK"
+	(global_label "-12V_RACK"
+		(shape passive)
 		(at 182.88 1080.77 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "3611d5d2-d309-5c83-ba61-87fe8a6ef62f")
 	)
-	(label "+5V_RAW_RACK"
+	(global_label "+5V_RAW_RACK"
+		(shape passive)
 		(at 203.2 1065.53 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "9c55f3a6-a42a-570e-b3ab-b8c927fed977")
 	)
-	(label "+5V_FUSED_RACK"
+	(global_label "+5V_FUSED_RACK"
+		(shape passive)
 		(at 203.2 1083.31 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "6e417645-190c-5bba-9cc4-41dd903dfce9")
 	)
-	(label "+5V_FUSED_RACK"
+	(global_label "+5V_FUSED_RACK"
+		(shape passive)
 		(at 223.52 1068.07 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "87dd2352-9a03-5e2c-bff0-5bd02d87d17e")
 	)
-	(label "+5V_RACK"
+	(global_label "+5V_RACK"
+		(shape passive)
 		(at 223.52 1085.85 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "8f4db344-1e75-5397-a717-ba8f76de9244")
 	)
-	(label "+5V_RACK"
+	(global_label "+5V_RACK"
+		(shape passive)
 		(at 241.3 1060.45 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "91362353-0609-5c83-8c87-fcfc9b4d6fe6")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 241.3 1078.23 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "4a341c5a-0766-5394-b237-1934a4235b26")
 	)
-	(label "GATE_SCR3"
+	(global_label "GATE_SCR3"
+		(shape passive)
 		(at 251.46 1071.88 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "122542dc-023b-5a9a-aa52-7fae8d305982")
 	)
-	(label "TLK_CB3"
+	(global_label "TLK_CB3"
+		(shape passive)
 		(at 297.18 1069.34 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "047726d2-8da1-5090-bb38-5d3cae5b4b60")
 	)
-	(label "REF_CB3"
+	(global_label "REF_CB3"
+		(shape passive)
 		(at 289.56 1061.72 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "4fb4d531-cfae-5fdc-9c84-9c6514b3abf0")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 281.94 1069.34 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "d36aa7f5-2692-5470-a4c2-32b5024d102d")
 	)
-	(label "+5V_RACK"
+	(global_label "+5V_RACK"
+		(shape passive)
 		(at 322.58 1060.45 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "b3b914fd-c5b9-558d-a434-aae30335f001")
 	)
-	(label "REF_CB3"
+	(global_label "REF_CB3"
+		(shape passive)
 		(at 322.58 1078.23 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "3ddfea06-a11e-5a77-b1e0-dd06067bec5f")
 	)
-	(label "REF_CB3"
+	(global_label "REF_CB3"
+		(shape passive)
 		(at 33.02 1126.49 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "2d99d109-b690-5968-a365-4c7eb328be1c")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 33.02 1144.27 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "49608ac9-8bc8-5bf8-aa2c-27a9dbafcc3c")
 	)
-	(label "QB_CB3"
+	(global_label "QB_CB3"
+		(shape passive)
 		(at 58.42 1135.38 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "94d71deb-71d3-57c5-b277-69773830098c")
 	)
-	(label "+5V_RACK"
+	(global_label "+5V_RACK"
+		(shape passive)
 		(at 71.12 1145.54 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "a59316a4-8e41-5a8f-a631-fa76544d042f")
 	)
-	(label "QC_CB3"
+	(global_label "QC_CB3"
+		(shape passive)
 		(at 71.12 1125.22 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "9b8a13d6-728c-5359-b40e-1aa952668a73")
 	)
-	(label "QB_CB3"
+	(global_label "QB_CB3"
+		(shape passive)
 		(at 81.28 1126.49 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c05a0b8d-cca1-5d47-b353-f8a3b906da35")
 	)
-	(label "TLK_CB3"
+	(global_label "TLK_CB3"
+		(shape passive)
 		(at 81.28 1144.27 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "22003b2f-4b87-5d27-bc92-88f55a690c48")
 	)
-	(label "+5V_RACK"
+	(global_label "+5V_RACK"
+		(shape passive)
 		(at 93.98 1126.49 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "b56561ed-e291-5664-97db-c3c741dff832")
 	)
-	(label "QB_CB3"
+	(global_label "QB_CB3"
+		(shape passive)
 		(at 93.98 1144.27 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "ffee26b9-f363-5d52-812f-48e35d790951")
 	)
-	(label "QC_CB3"
+	(global_label "QC_CB3"
+		(shape passive)
 		(at 106.68 1126.49 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "0a2fb4f1-5352-5a29-b35f-0dd5cda7ef67")
 	)
-	(label "GATE_SCR3"
+	(global_label "GATE_SCR3"
+		(shape passive)
 		(at 106.68 1144.27 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "063d737e-5f27-5cfd-b473-4382320b00ba")
 	)
-	(label "GATE_SCR3"
+	(global_label "GATE_SCR3"
+		(shape passive)
 		(at 119.38 1129.03 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "d9a1b7fe-c36c-5cd3-a9c5-f01ae946d96c")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 119.38 1146.81 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "6616075f-d562-5e6a-b771-aea5e5cbc371")
 	)
-	(label "+5V_RAW_DIG"
+	(global_label "+5V_RAW_DIG"
+		(shape passive)
 		(at 134.62 1131.57 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "5e48b95c-9444-5930-a20c-132399b7f85c")
 	)
-	(label "+5V_DIG"
+	(global_label "+5V_DIG"
+		(shape passive)
 		(at 134.62 1149.35 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "db429a94-2a65-53d5-9f4d-19a37481dc5e")
 	)
-	(label "+5V_DIG"
+	(global_label "+5V_DIG"
+		(shape passive)
 		(at 154.94 1126.49 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "f3352610-12a4-5d1c-a703-d1ba92d19466")
 	)
-	(label "GNDD"
+	(global_label "GNDD"
+		(shape passive)
 		(at 154.94 1144.27 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "f15cc66c-de25-56ed-a8dd-25a1fdafc910")
 	)
-	(label "GATE_SCR4"
+	(global_label "GATE_SCR4"
+		(shape passive)
 		(at 165.1 1137.92 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "45b6f123-4d34-53f0-b011-e73786f6efeb")
 	)
-	(label "TLK_CB4"
+	(global_label "TLK_CB4"
+		(shape passive)
 		(at 213.36 1132.84 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "8e4cfc6a-6f27-51d8-ad2f-1b01ed7384a8")
 	)
-	(label "REF_CB4"
+	(global_label "REF_CB4"
+		(shape passive)
 		(at 205.74 1125.22 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c74a7360-2c13-54f6-aec3-586be9e1833b")
 	)
-	(label "GNDD"
+	(global_label "GNDD"
+		(shape passive)
 		(at 198.12 1132.84 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "53bf4159-099f-5c8e-91ac-2869934ca143")
 	)
-	(label "+5V_DIG"
+	(global_label "+5V_DIG"
+		(shape passive)
 		(at 236.22 1126.49 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "acbfecec-8569-585d-b2e2-3cd7da689641")
 	)
-	(label "REF_CB4"
+	(global_label "REF_CB4"
+		(shape passive)
 		(at 236.22 1144.27 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "c5911f40-57bf-50bb-b9f7-c78da54eaa0a")
 	)
-	(label "REF_CB4"
+	(global_label "REF_CB4"
+		(shape passive)
 		(at 256.54 1126.49 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c05d185f-fa88-503c-bb8b-2cfc38c47a5e")
 	)
-	(label "GNDD"
+	(global_label "GNDD"
+		(shape passive)
 		(at 256.54 1144.27 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "132016a2-e0a2-5e0d-9e8e-13ef120f7ca0")
 	)
-	(label "QB_CB4"
+	(global_label "QB_CB4"
+		(shape passive)
 		(at 281.94 1135.38 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "9d8f5671-f2fc-51e1-8cf4-1e3ed3b926a2")
 	)
-	(label "+5V_DIG"
+	(global_label "+5V_DIG"
+		(shape passive)
 		(at 294.64 1145.54 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "fb983b1c-e23c-543c-9265-ddb6f06e5600")
 	)
-	(label "QC_CB4"
+	(global_label "QC_CB4"
+		(shape passive)
 		(at 294.64 1125.22 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "de3d95b3-5b64-5cda-85b8-df26d3098b7f")
 	)
-	(label "QB_CB4"
+	(global_label "QB_CB4"
+		(shape passive)
 		(at 307.34 1126.49 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "0c91ad64-6e35-5ee3-b884-99aa177e7852")
 	)
-	(label "TLK_CB4"
+	(global_label "TLK_CB4"
+		(shape passive)
 		(at 307.34 1144.27 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "cbac3f80-6c9a-58f7-8dd3-57fa7b357660")
 	)
-	(label "+5V_DIG"
+	(global_label "+5V_DIG"
+		(shape passive)
 		(at 320.04 1126.49 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "ccd0b89f-fb7d-57df-99db-4e9dff9d592c")
 	)
-	(label "QB_CB4"
+	(global_label "QB_CB4"
+		(shape passive)
 		(at 320.04 1144.27 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "f2d89ef2-3808-598b-9c6f-ab03c40ed933")
 	)
-	(label "QC_CB4"
+	(global_label "QC_CB4"
+		(shape passive)
 		(at 332.74 1126.49 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "6da5318a-1fe0-51af-811e-6708baad6d75")
 	)
-	(label "GATE_SCR4"
+	(global_label "GATE_SCR4"
+		(shape passive)
 		(at 332.74 1144.27 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "78665118-8e3c-55e0-864e-bddc9c854306")
 	)
-	(label "GATE_SCR4"
+	(global_label "GATE_SCR4"
+		(shape passive)
 		(at 342.9 1129.03 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "2975390c-d65d-5abf-b731-820a832e895c")
 	)
-	(label "GNDD"
+	(global_label "GNDD"
+		(shape passive)
 		(at 342.9 1146.81 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "310e3c30-c32c-527b-a882-f848814c7f47")
 	)
-	(label "+5V_RACK"
+	(global_label "+5V_RACK"
+		(shape passive)
 		(at 30.48 1178.56 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "cb9189c9-91b6-5bd7-9d82-3fce9550f13b")
 	)
-	(label "GNDD"
+	(global_label "GNDD"
+		(shape passive)
 		(at 50.8 1178.56 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "48e95f21-693e-5cd3-bd91-db7f59ba3ffd")
 	)
-	(label "+5V_RACK"
+	(global_label "+5V_RACK"
+		(shape passive)
 		(at 66.04 1184.91 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "72045df9-5f23-577d-97f7-b328771d28e7")
 	)
-	(label "LED6_A"
+	(global_label "LED6_A"
+		(shape passive)
 		(at 66.04 1202.69 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "ef00960b-4894-5641-83a9-166d50ba3fef")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 82.55 1173.48 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "7b1a78a1-9707-54e5-8c85-69a0b249818c")
 	)
-	(label "LED6_A"
+	(global_label "LED6_A"
+		(shape passive)
 		(at 100.33 1173.48 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "8b80ceed-5d8f-5daf-b102-f95fc131b849")
 	)
-	(label "+5V_DIG"
+	(global_label "+5V_DIG"
+		(shape passive)
 		(at 119.38 1182.37 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "f25d41ce-b012-5a03-a8ea-47fc2ce799fa")
 	)
-	(label "LED7_A"
+	(global_label "LED7_A"
+		(shape passive)
 		(at 119.38 1200.15 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "d28cda83-d21a-502b-87e9-970282a3953c")
 	)
-	(label "GNDD"
+	(global_label "GNDD"
+		(shape passive)
 		(at 135.89 1173.48 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "6e1a9ea3-cc53-5ed9-bf0c-cbce3b586670")
 	)
-	(label "LED7_A"
+	(global_label "LED7_A"
+		(shape passive)
 		(at 153.67 1173.48 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "1c4b48c4-5a45-5701-aac0-1a2b7a7f6c63")
 	)
-	(label "+5V_RAW_RACK"
+	(global_label "+5V_RAW_RACK"
+		(shape passive)
 		(at 27.94 1258.57 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "7be1eb89-7ed3-571c-ad5e-8494ea3c2438")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 27.94 1276.35 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "b4be7d35-9166-5d57-a7b9-7ea6f019ae98")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 81.28 1262.38 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "fb7423da-44fc-5bd6-9ef6-5c8dca9e39f2")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 81.28 1264.92 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "d446cb06-b0b6-5e46-9b2f-47855a4a3dd8")
 	)
-	(label "SDA_A"
+	(global_label "SDA_A"
+		(shape passive)
 		(at 81.28 1270.0 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "db99d0b7-665c-5671-8d6a-510b1b66d7f0")
 	)
-	(label "SCL_A"
+	(global_label "SCL_A"
+		(shape passive)
 		(at 81.28 1272.54 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "49ae8df7-3bb3-5451-ab08-fbb39ee7c44a")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 66.04 1252.22 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "f0e1eb0a-d169-54c9-a29c-e216ea35a285")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 66.04 1287.78 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "ed56279c-8670-5b3d-a4b4-762590067ff4")
 	)
-	(label "+12V_ULTRA"
+	(global_label "+12V_ULTRA"
+		(shape passive)
 		(at 50.8 1262.38 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "5e848e6d-ed3e-5c42-9665-067135667c05")
 	)
-	(label "+12V_ULTRA"
+	(global_label "+12V_ULTRA"
+		(shape passive)
 		(at 50.8 1275.08 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "3bf7fa49-e7ea-55fa-9c8b-a4aae51c834b")
 	)
-	(label "OUTS_POS"
+	(global_label "OUTS_POS"
+		(shape passive)
 		(at 50.8 1272.54 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "03ade3d9-22e8-5cbe-b550-8ed2ad5e0450")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 104.14 1253.49 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "a4165f9f-302c-548f-836c-d854735fced9")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 104.14 1271.27 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "9756169f-b34c-5fff-a8e5-e35a94882db5")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 165.1 1262.38 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "e7e828de-e166-50dc-97a1-5b4048a4c05a")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 165.1 1264.92 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "f35e1ffd-e5f2-5bc0-9800-14c4b7791c73")
 	)
-	(label "SDA_A"
+	(global_label "SDA_A"
+		(shape passive)
 		(at 165.1 1270.0 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "faf31355-c142-5284-8247-c548a01b0084")
 	)
-	(label "SCL_A"
+	(global_label "SCL_A"
+		(shape passive)
 		(at 165.1 1272.54 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "92be411c-9e68-5f38-92bd-b258aada74e4")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 149.86 1252.22 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "3fdd0d62-784a-58cb-b249-3962ee28c729")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 149.86 1287.78 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "a4094c6d-265c-5c26-8087-605cc6713334")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 134.62 1262.38 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "9216270e-0059-5027-a779-f33e487197c2")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 134.62 1275.08 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "8dd1f97b-c0ff-5569-902f-be0126d47bef")
 	)
-	(label "+5V_RAW_RACK"
+	(global_label "+5V_RAW_RACK"
+		(shape passive)
 		(at 134.62 1272.54 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "c0c2b35a-c8c2-571d-880d-0da5ce75cd1e")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 190.5 1253.49 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "2d4ca037-fbd5-5831-9df5-92ce393fe3bb")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 190.5 1271.27 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "ab0caaea-0a0b-52e1-ba90-14b9210d4cf5")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 256.54 1262.38 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "bf84c319-b8c5-56c6-ac85-746db66d5bdb")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 256.54 1264.92 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "8ebc26a4-98ab-541c-8201-18246f14bccc")
 	)
-	(label "SDA_A"
+	(global_label "SDA_A"
+		(shape passive)
 		(at 256.54 1270.0 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "7f838c96-f346-5173-8cfb-6fadf77caedc")
 	)
-	(label "SCL_A"
+	(global_label "SCL_A"
+		(shape passive)
 		(at 256.54 1272.54 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "15f103d9-aae7-5594-a2b6-dac07c482c40")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 241.3 1252.22 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "391f749e-8570-5249-87bb-06a931ae19b1")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 241.3 1287.78 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "60bdd6fb-fd84-5371-8a63-b5c829ba2aa7")
 	)
-	(label "+12V_RACK"
+	(global_label "+12V_RACK"
+		(shape passive)
 		(at 226.06 1262.38 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "f9b30bbb-f0d7-53cc-bc25-f80aad8353f7")
 	)
-	(label "+12V_RACK"
+	(global_label "+12V_RACK"
+		(shape passive)
 		(at 226.06 1275.08 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "facdf9ad-0f05-5e6a-85b4-5be0a7bd7cea")
 	)
-	(label "+12V_FUSED_RACK"
+	(global_label "+12V_FUSED_RACK"
+		(shape passive)
 		(at 226.06 1272.54 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "9ff90c1b-664e-5b42-b7e3-5f9054d05423")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 281.94 1253.49 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "2558b02c-8811-55aa-8d01-597f13d584cb")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 281.94 1271.27 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "463cccf6-be65-5e5e-bc5c-89bc50c61d03")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 73.66 1328.42 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "30568df5-a0ec-5b25-b614-d671349abf9b")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 73.66 1330.96 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "e75d9884-c33c-5569-b48f-3a7425fd72b1")
 	)
-	(label "SDA_A"
+	(global_label "SDA_A"
+		(shape passive)
 		(at 73.66 1336.04 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "177535c8-a984-5997-8c99-2e3ad5df6409")
 	)
-	(label "SCL_A"
+	(global_label "SCL_A"
+		(shape passive)
 		(at 73.66 1338.58 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "d39bbfae-c4ba-5a15-84f1-452b01095793")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 58.42 1318.26 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "d007a962-6e51-5f64-bd86-eef57d25265f")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 58.42 1353.82 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "097a5ca7-22ad-54f3-8665-27b7e5c63f2a")
 	)
-	(label "+5V_RACK"
+	(global_label "+5V_RACK"
+		(shape passive)
 		(at 43.18 1328.42 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "c202c954-b054-5efa-8d0b-1dce2db298c8")
 	)
-	(label "+5V_RACK"
+	(global_label "+5V_RACK"
+		(shape passive)
 		(at 43.18 1341.12 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "d1885cdb-be92-59d1-b1e7-c5c9fabef4b5")
 	)
-	(label "+5V_FUSED_RACK"
+	(global_label "+5V_FUSED_RACK"
+		(shape passive)
 		(at 43.18 1338.58 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "c67660b9-41ce-5683-af74-53f1e5bac1e9")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 99.06 1319.53 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "81b8bae0-84f3-5daa-afb7-ec00498713a9")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 99.06 1337.31 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "e2f8e461-7a89-5d78-b60c-1c8bd8b0a8f8")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 152.4 1341.12 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "e2e86289-386e-5e86-b768-19e1a23466b5")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 137.16 1351.28 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "27a6f4bf-2ae7-52e2-bb0a-85ba5ffbf998")
 	)
-	(label "AIN0"
+	(global_label "AIN0"
+		(shape passive)
 		(at 121.92 1333.5 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "1c1e0474-f757-575a-b378-dc362620d349")
 	)
-	(label "AIN1"
+	(global_label "AIN1"
+		(shape passive)
 		(at 121.92 1336.04 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "d917c439-9f69-54c0-8d99-1a30ad71bf09")
 	)
-	(label "AIN2"
+	(global_label "AIN2"
+		(shape passive)
 		(at 121.92 1338.58 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "05cc5097-c515-534a-ad9b-43c08119812c")
 	)
-	(label "AIN3"
+	(global_label "AIN3"
+		(shape passive)
 		(at 121.92 1341.12 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "6ac4a71d-7e05-5a4d-9cc1-60ae490a85c3")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 137.16 1318.26 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "2b8703cf-9310-5c9e-a5da-dd001ad8fedf")
 	)
-	(label "SDA_A"
+	(global_label "SDA_A"
+		(shape passive)
 		(at 152.4 1338.58 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "1cf4ab1d-0bb1-5748-8357-191bedb5f062")
 	)
-	(label "SCL_A"
+	(global_label "SCL_A"
+		(shape passive)
 		(at 152.4 1336.04 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "a251f53e-29cb-5e3d-80ed-411c5aea7495")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 175.26 1319.53 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "e7e02feb-4606-5410-aee5-1acb5c59aef5")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 175.26 1337.31 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "7e8d157b-0e56-5c2f-84e9-fa9aacc0bc07")
 	)
-	(label "-12V_ULTRA"
+	(global_label "-12V_ULTRA"
+		(shape passive)
 		(at 195.58 1322.07 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "147b1ce8-752f-5da7-a4a7-bcb6d442bff4")
 	)
-	(label "AIN0"
+	(global_label "AIN0"
+		(shape passive)
 		(at 195.58 1339.85 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "0feb83af-7c8e-5e0b-808d-2d454f6b0d4b")
 	)
-	(label "AIN0"
+	(global_label "AIN0"
+		(shape passive)
 		(at 215.9 1316.99 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "cb1e0d7a-d8f6-5c92-af45-e0172138b29c")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 215.9 1334.77 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "b760c683-210d-5cf9-862e-3121f1428bc5")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 236.22 1310.64 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "766581c5-4da2-5396-8534-dd60b2fde856")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 261.62 1310.64 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "a5fb8f18-6a40-52ba-80b5-cdffe657afc2")
 	)
-	(label "AIN0"
+	(global_label "AIN0"
+		(shape passive)
 		(at 248.92 1320.8 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "00745af4-de18-5b86-99f8-51fe99d297a3")
 	)
-	(label "+15V5_LC"
+	(global_label "+15V5_LC"
+		(shape passive)
 		(at 284.48 1319.53 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "1e79c923-c251-543b-87b8-1dc39521c242")
 	)
-	(label "AIN1"
+	(global_label "AIN1"
+		(shape passive)
 		(at 284.48 1337.31 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "e1fb3fb1-353f-5e43-bff1-65949bd9a2c8")
 	)
-	(label "AIN1"
+	(global_label "AIN1"
+		(shape passive)
 		(at 304.8 1316.99 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "fd745858-d1a1-5020-af51-92b34a9e45d9")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 304.8 1334.77 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "9f005064-52ac-5a28-a59c-5063722dc80e")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 30.48 1376.68 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "82da048f-4ecf-5c59-b8cb-8ea42d758e18")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 55.88 1376.68 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "28f24945-1cf6-5df7-bca5-8d3f5d8b0219")
 	)
-	(label "AIN1"
+	(global_label "AIN1"
+		(shape passive)
 		(at 43.18 1386.84 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "6a4284b9-9d2e-537c-951d-a4dfc059fdbe")
 	)
-	(label "-15V5_LC"
+	(global_label "-15V5_LC"
+		(shape passive)
 		(at 78.74 1388.11 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c3ff276f-b441-58eb-b871-2f3f0f36e9df")
 	)
-	(label "AIN2"
+	(global_label "AIN2"
+		(shape passive)
 		(at 78.74 1405.89 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "77f45d85-db60-5df1-9260-230fee92a650")
 	)
-	(label "AIN2"
+	(global_label "AIN2"
+		(shape passive)
 		(at 99.06 1383.03 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "8bee8083-3337-50ad-906c-d80275cbc9dd")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 99.06 1400.81 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "945081d1-0335-57f0-84b3-896aaf580e9a")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 119.38 1376.68 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "1ffbb28c-b898-50c0-9c65-44c752776436")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 144.78 1376.68 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "6e53b8e4-e644-50c0-9e43-c6174cf824e3")
 	)
-	(label "AIN2"
+	(global_label "AIN2"
+		(shape passive)
 		(at 132.08 1386.84 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "5d26347c-98dd-547d-9d18-c0a006cb0032")
 	)
-	(label "-12V_RACK"
+	(global_label "-12V_RACK"
+		(shape passive)
 		(at 167.64 1388.11 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "0676bf84-5d39-55f2-a223-f608271d044f")
 	)
-	(label "AIN3"
+	(global_label "AIN3"
+		(shape passive)
 		(at 167.64 1405.89 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "0a347272-d74b-5e33-8776-073d7afb112a")
 	)
-	(label "AIN3"
+	(global_label "AIN3"
+		(shape passive)
 		(at 187.96 1383.03 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "1d3e65e0-f693-5044-b8c9-ab25a2aed441")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 187.96 1400.81 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "a71611b4-46d7-5d41-8a18-3de08a927d40")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 208.28 1376.68 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "e7dba2c6-e2d1-5887-9109-c93cf61fc631")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 233.68 1376.68 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "7608a4ea-6113-5800-bd74-ecc218438c39")
 	)
-	(label "AIN3"
+	(global_label "AIN3"
+		(shape passive)
 		(at 220.98 1386.84 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "e621ba02-43f8-5271-b271-2cda20d39a59")
 	)
-	(label "SDA_A"
+	(global_label "SDA_A"
+		(shape passive)
 		(at 292.1 1397.0 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "03a100fc-b539-56df-b81f-801e2dc270e9")
 	)
-	(label "SCL_A"
+	(global_label "SCL_A"
+		(shape passive)
 		(at 292.1 1399.54 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "5293900a-1f41-5938-9c7e-9f25ef8df5a5")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 276.86 1412.24 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "51e5958e-165e-522f-9360-dc63fabf4e7d")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 261.62 1402.08 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "fbb347b2-331a-5360-adce-44b293e59d7f")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 261.62 1399.54 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "3cad1593-0580-5fa4-a1c2-57b8c01e94db")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 261.62 1397.0 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "a5b7b38a-4758-5eea-8132-b6fdde1ac2ec")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 276.86 1386.84 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "6535b163-0dfa-541c-983c-5b46479f55ce")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 314.96 1385.57 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "b46a8b79-b2cc-5ee2-b4ca-25f05e547e2c")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 314.96 1403.35 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "85b34696-d18a-5b12-b922-2f8f5e850310")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 35.56 1432.56 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "65fd5661-fc28-548a-a186-9dfe1dd8c863")
 	)
-	(label "SDA_A"
+	(global_label "SDA_A"
+		(shape passive)
 		(at 35.56 1435.1 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "e35e42ec-a619-5dc0-8910-001191b69eeb")
 	)
-	(label "SCL_A"
+	(global_label "SCL_A"
+		(shape passive)
 		(at 35.56 1437.64 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "5e1d7c7e-bd84-5463-a114-d1f565f39714")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 35.56 1440.18 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "9704919e-3517-5e11-a3e5-642d659f137d")
 	)
-	(label "GNDD"
+	(global_label "GNDD"
+		(shape passive)
 		(at 66.04 1440.18 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "ce9fe375-71d4-5b81-a9c7-66b2bd0674ec")
 	)
-	(label "SCL_D"
+	(global_label "SCL_D"
+		(shape passive)
 		(at 66.04 1437.64 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "06c21c93-2a9a-5018-be3c-5e967ded9656")
 	)
-	(label "SDA_D"
+	(global_label "SDA_D"
+		(shape passive)
 		(at 66.04 1435.1 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c618aaa6-dd56-5936-b67c-45c4329cf8bd")
 	)
-	(label "+3V3_DIG"
+	(global_label "+3V3_DIG"
+		(shape passive)
 		(at 66.04 1432.56 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "86aae052-6dc8-5d7d-850a-16db88efbc03")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 91.44 1441.45 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "27de4de7-4613-5870-9bf3-9673acb476e4")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 91.44 1459.23 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "b454b7e0-2f74-5d93-8077-95bd4d1a3d57")
 	)
-	(label "+3V3_DIG"
+	(global_label "+3V3_DIG"
+		(shape passive)
 		(at 116.84 1443.99 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "3b11f4c5-4f26-56f4-9ccc-4b60330c15a4")
 	)
-	(label "GNDD"
+	(global_label "GNDD"
+		(shape passive)
 		(at 116.84 1461.77 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "6d90170a-bcd9-513c-8c97-f57355c22add")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 134.62 1441.45 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "e1c49f8b-9723-58da-a569-84a5c92185ff")
 	)
-	(label "SDA_A"
+	(global_label "SDA_A"
+		(shape passive)
 		(at 134.62 1459.23 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "f7865939-3557-50a9-80fb-c04bdfc0b9a5")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 149.86 1441.45 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "a75e6d07-05ee-559a-95c4-f8913d0bfe25")
 	)
-	(label "SCL_A"
+	(global_label "SCL_A"
+		(shape passive)
 		(at 149.86 1459.23 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "83617578-e4c4-50d8-841e-dd7a2c395acd")
 	)
-	(label "+3V3_DIG"
+	(global_label "+3V3_DIG"
+		(shape passive)
 		(at 162.56 1443.99 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "06d4130e-7b70-5882-9d69-35cd738d8789")
 	)
-	(label "SDA_D"
+	(global_label "SDA_D"
+		(shape passive)
 		(at 162.56 1461.77 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "b7f38b43-c77b-56ec-9be6-aca8619a24c5")
 	)
-	(label "+3V3_DIG"
+	(global_label "+3V3_DIG"
+		(shape passive)
 		(at 175.26 1443.99 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c7565d88-7527-5d46-b240-4c280dee5b49")
 	)
-	(label "SCL_D"
+	(global_label "SCL_D"
+		(shape passive)
 		(at 175.26 1461.77 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "9b8d046e-b9c5-52f9-bd44-d642eeb1f8fa")
 	)
-	(label "-12V_ULTRA"
+	(global_label "-12V_ULTRA"
+		(shape passive)
 		(at 45.72 1501.14 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c135a24c-5216-5288-b9ae-0f14e2d62d78")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 45.72 1503.68 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "e89af125-9e02-5ad9-b72b-1c5515fe6bd1")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 45.72 1506.22 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "7a255ee0-51b6-50aa-9595-21377adac06d")
 	)
-	(label "+12V_ULTRA"
+	(global_label "+12V_ULTRA"
+		(shape passive)
 		(at 45.72 1508.76 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "6cbdcdbf-9e07-5516-a756-abfa6c0cfa78")
 	)
-	(label "-12V_ULTRA"
+	(global_label "-12V_ULTRA"
+		(shape passive)
 		(at 93.98 1501.14 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "4d924a71-0ef7-59a2-805e-a02765cc3132")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 93.98 1503.68 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "d6574a83-ea2b-5a02-b377-709280b56acb")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 93.98 1506.22 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c457d4b8-ea0f-57e9-b49c-e93c76e633ad")
 	)
-	(label "+12V_ULTRA"
+	(global_label "+12V_ULTRA"
+		(shape passive)
 		(at 93.98 1508.76 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "e406e5c3-9bdd-5b3f-8681-02e8f068e62a")
 	)
-	(label "+12V_RACK"
+	(global_label "+12V_RACK"
+		(shape passive)
 		(at 144.78 1501.14 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "0a746f0d-be2c-5555-8dcd-9a4518163ca7")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 144.78 1503.68 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "841de227-2fa9-5802-b705-3b544624ae45")
 	)
-	(label "-12V_RACK"
+	(global_label "-12V_RACK"
+		(shape passive)
 		(at 144.78 1506.22 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "8105d28b-6d9b-5a38-a67e-5f0a079796a6")
 	)
-	(label "+5V_RACK"
+	(global_label "+5V_RACK"
+		(shape passive)
 		(at 144.78 1508.76 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "ad829477-a0f9-57b9-a150-ce75b31d96b8")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 198.12 1501.14 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "f7a5df57-c22a-5e6d-9cc8-edd45c5151be")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 241.3 1501.14 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "a85f3a96-ed29-5caa-bbc0-35144126a80c")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 241.3 1503.68 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "8c313577-7442-5d0c-90b9-4932899bdfd1")
 	)
-	(label "+3V3_DIG"
+	(global_label "+3V3_DIG"
+		(shape passive)
 		(at 287.02 1501.14 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "a9e0312a-c343-5b18-92a2-a266a9f32a60")
 	)
-	(label "SDA_D"
+	(global_label "SDA_D"
+		(shape passive)
 		(at 287.02 1503.68 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "9ed931c2-1971-57ad-9112-157360474c59")
 	)
-	(label "SCL_D"
+	(global_label "SCL_D"
+		(shape passive)
 		(at 287.02 1506.22 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "a5d47a94-3258-5402-b241-a5eea4220acb")
 	)
-	(label "GNDD"
+	(global_label "GNDD"
+		(shape passive)
 		(at 287.02 1508.76 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "5ed9dad8-9993-51ac-b6f8-490e5f7f2a11")
 	)
-	(label "+5V_DIG"
+	(global_label "+5V_DIG"
+		(shape passive)
 		(at 45.72 1524.0 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "c385f6b4-1ac8-5353-adce-df71d90c66b1")
 	)
-	(label "GNDD"
+	(global_label "GNDD"
+		(shape passive)
 		(at 45.72 1526.54 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left bottom)
+			(justify left)
 		)
 		(uuid "ee0d01c0-c4e7-550d-8036-d810323e974f")
 	)
-	(label "+24V_RAW"
+	(global_label "+24V_RAW"
+		(shape passive)
 		(at 25.4 1559.56 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "6184fd15-409f-57e0-8bac-adf1643f8377")
 	)
-	(label "GND24"
+	(global_label "GND24"
+		(shape passive)
 		(at 66.04 1559.56 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "04195ece-9785-5370-bdd4-378148a27bc1")
 	)
-	(label "GNDA"
+	(global_label "GNDA"
+		(shape passive)
 		(at 106.68 1559.56 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "234cac83-2977-53a8-967a-7e5e94e6a39b")
 	)
-	(label "GNDD"
+	(global_label "GNDD"
+		(shape passive)
 		(at 147.32 1559.56 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "4783876f-00dd-50e4-b695-3e974ae71548")
 	)
-	(label "+3V3_DIG"
+	(global_label "+3V3_DIG"
+		(shape passive)
 		(at 187.96 1559.56 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "3d4a8135-da5f-5a04-b356-ca1db9987c8f")
 	)
-	(label "+24V_PROT"
+	(global_label "+24V_PROT"
+		(shape passive)
 		(at 228.6 1559.56 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "bc856330-cf1d-5fe5-82fb-1f8e5d0fed64")
 	)
-	(label "+24V_LDO"
+	(global_label "+24V_LDO"
+		(shape passive)
 		(at 269.24 1559.56 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "88b5042c-a7fd-56e8-9963-4f2ca9161f27")
 	)
-	(label "+12V_RAW_RACK"
+	(global_label "+12V_RAW_RACK"
+		(shape passive)
 		(at 309.88 1559.56 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "d9261011-4501-5af1-986c-1ef1273f3d0a")
 	)
-	(label "-12V_RAW_RACK"
+	(global_label "-12V_RAW_RACK"
+		(shape passive)
 		(at 25.4 1574.8 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "539333ae-bb65-5943-89da-2def867ec22c")
 	)
-	(label "+15V5_RAW"
+	(global_label "+15V5_RAW"
+		(shape passive)
 		(at 66.04 1574.8 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "aae9c223-c3dd-5eba-9e48-e6ef4bd402df")
 	)
-	(label "-15V5_RAW"
+	(global_label "-15V5_RAW"
+		(shape passive)
 		(at 106.68 1574.8 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "b50afa9c-0dc3-5fc3-9a18-98c83e828b36")
 	)
-	(label "+15V5_FILT"
+	(global_label "+15V5_FILT"
+		(shape passive)
 		(at 147.32 1574.8 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "dabbedda-d939-59fb-97ce-55c53022d604")
 	)
-	(label "-15V5_FILT"
+	(global_label "-15V5_FILT"
+		(shape passive)
 		(at 187.96 1574.8 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "6867a301-1779-558f-8810-c5ef8b87a929")
 	)
-	(label "+5V_RAW_DIG"
+	(global_label "+5V_RAW_DIG"
+		(shape passive)
 		(at 228.6 1574.8 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "b2a89471-869d-5c1f-a46c-2457041f763b")
 	)
-	(label "+5V_RAW_RACK"
+	(global_label "+5V_RAW_RACK"
+		(shape passive)
 		(at 269.24 1574.8 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "87888134-fa33-5d79-b7e8-18952cd24130")
 	)
-	(label "+5V_AUX"
+	(global_label "+5V_AUX"
+		(shape passive)
 		(at 309.88 1574.8 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "764bf590-df29-5458-a553-882a35a25f00")
 	)
-	(label "+5V_RACK"
+	(global_label "+5V_RACK"
+		(shape passive)
 		(at 25.4 1590.04 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "e176728d-12ad-52a2-97eb-4c5236803466")
 	)
-	(label "+5V_DIG"
+	(global_label "+5V_DIG"
+		(shape passive)
 		(at 66.04 1590.04 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "13bf0793-1e8b-5531-9428-48ff8ff07420")
 	)

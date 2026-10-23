@@ -152,7 +152,7 @@
         "min_silk_clearance": 0.0,
         "min_text_height": 0.8,
         "min_text_thickness": 0.08,
-        "min_through_hole_diameter": 0.3,
+        "min_through_hole_diameter": 0.2,
         "min_track_width": 0.15,
         "min_via_annular_width": 0.1,
         "min_via_diameter": 0.6,
@@ -282,7 +282,45 @@
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "priority": 2147483647,
         "schematic_color": "rgba(0, 0, 0, 0.000)",
-        "track_width": 0.2,
+        "track_width": 0.25,
+        "tuning_profile": "",
+        "via_diameter": 0.6,
+        "via_drill": 0.3,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.15,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "Potencia",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 0,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.5,
+        "tuning_profile": "",
+        "via_diameter": 0.8,
+        "via_drill": 0.4,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.15,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "Masa",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 1,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.4,
         "tuning_profile": "",
         "via_diameter": 0.6,
         "via_drill": 0.3,
@@ -294,7 +332,136 @@
     },
     "net_colors": null,
     "netclass_assignments": null,
-    "netclass_patterns": []
+    "netclass_patterns": [
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+24V_RAW"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+24V_PROT"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+24V_SW"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+12V_RAW_RACK"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "-12V_RAW_RACK"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+12V_FUSED_RACK"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+12V_RACK"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "-12V_RACK"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+15V5_RAW"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+15V5_EFUSE"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+15V5_LC"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+15V5_FILT"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "-15V5_RAW"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "-15V5_LC"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "-15V5_FILT"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+13V1"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "-12V9"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+5V_RAW_RACK"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+5V_FUSED_RACK"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+5V_RACK"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+5V_RAW_DIG"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+5V_DIG"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "OUT_U4"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "OUT_U5"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "OUT_U6"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "OUT_U7"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "OUTS_POS"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "\\+12V_ULTRA"
+      },
+      {
+        "netclass": "Potencia",
+        "pattern": "-12V_ULTRA"
+      },
+      {
+        "netclass": "Masa",
+        "pattern": "GND24"
+      },
+      {
+        "netclass": "Masa",
+        "pattern": "GNDA"
+      },
+      {
+        "netclass": "Masa",
+        "pattern": "GNDD"
+      }
+    ]
   },
   "pcbnew": {
     "last_paths": {

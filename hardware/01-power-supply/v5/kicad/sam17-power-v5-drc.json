@@ -1,0 +1,9 @@
+{
+ "pcb": "sam17-power-v5.kicad_pcb",
+ "pcb_sha256": "8c0f5b35f971009b425ff0da8255e739cd46131a170ae197f463ab234b4e8ebb",
+ "kicad_version": "10.0.7",
+ "severidades": "todas (--severity-all) + paridad con el esquematico",
+ "violations": [],
+ "unconnected_items": [],
+ "schematic_parity": []
+}

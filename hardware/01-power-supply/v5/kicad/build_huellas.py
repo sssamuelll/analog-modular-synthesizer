@@ -50,8 +50,13 @@ K78 = {
 }
 
 
+_SEMILLA = {"nombre": "", "n": 0}
+
+
 def _u() -> str:
-    return str(uuid.uuid4())
+    """UUID estable: regenerar la huella sin cambiarla no deja diff."""
+    _SEMILLA["n"] += 1
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"sam17/{_SEMILLA['nombre']}/{_SEMILLA['n']}"))
 
 
 def _rect(x0: float, y0: float, x1: float, y1: float, capa: str, ancho: float) -> str:
@@ -60,7 +65,36 @@ def _rect(x0: float, y0: float, x1: float, y1: float, capa: str, ancho: float) -
             f'(layer "{capa}") (uuid "{_u()}"))')
 
 
+def _linea(xa: float, ya: float, xb: float, yb: float, capa: str, ancho: float) -> str:
+    return (f'  (fp_line (start {xa:g} {ya:g}) (end {xb:g} {yb:g}) '
+            f'(stroke (width {ancho:g}) (type default)) (layer "{capa}") (uuid "{_u()}"))')
+
+
+def _silueta_con_huecos(caja: tuple, pads: list, w: float, h: float, aire: float = 0.2) -> list[str]:
+    """Contorno de serigrafia que se corta donde lo cruza un pad.
+
+    El cuerpo del K78 mide 8.50 mm de alto y sus pads (2.10 mm) asoman por
+    fuera: un rectangulo de serigrafia con las cotas del cuerpo pasa por
+    encima de los ocho pads, y el fabricante lo recorta contra la mascara.
+    Aqui cada lado horizontal se parte en tramos que dejan `aire` a cada pad.
+    """
+    x0, y0, x1, y1 = caja
+    out = [_linea(x0, y0, x0, y1, "F.SilkS", 0.12), _linea(x1, y0, x1, y1, "F.SilkS", 0.12)]
+    for y in (y0, y1):
+        cortes = sorted((px - w / 2 - aire, px + w / 2 + aire) for px, py in pads
+                        if py - h / 2 - aire <= y <= py + h / 2 + aire)
+        xa = x0
+        for ca, cb in cortes:
+            if ca > xa:
+                out.append(_linea(xa, y, ca, y, "F.SilkS", 0.12))
+            xa = max(xa, cb)
+        if xa < x1:
+            out.append(_linea(xa, y, x1, y, "F.SilkS", 0.12))
+    return out
+
+
 def _cabecera(nombre: str, descr: str, tags: str, ref_y: float, val_y: float) -> list[str]:
+    _SEMILLA.update(nombre=nombre, n=0)
     return [f'(footprint "{nombre}"', "  (version 20241229)",
             '  (generator "sam17-build_huellas")', '  (generator_version "10.0")',
             '  (layer "F.Cu")', f'  (descr "{descr}")', f'  (tags "{tags}")',
@@ -98,7 +132,8 @@ def k78() -> str:
                     "DC-DC Mornsun K78 SMD buck", -7.6, 7.6)
     out.append('  (attr smd)')
     out.append(_rect(x0, y0, x1, y1, "F.Fab", 0.1))
-    out.append(_rect(x0 - 0.12, y0 - 0.12, x1 + 0.12, y1 + 0.12, "F.SilkS", 0.12))
+    out.extend(_silueta_con_huecos((x0 - 0.12, y0 - 0.12, x1 + 0.12, y1 + 0.12),
+                                   list(d["pines"].values()), w, h))
     out.append(_rect(x0 - 0.5, -6.6, x1 + 0.5, 6.6, "F.CrtYd", 0.05))
     # Marca del pin 1 en serigrafia, fuera del pad.
     out.append(f'  (fp_circle (center -7.0 6.3) (end -6.8 6.3) (stroke (width 0.2) '

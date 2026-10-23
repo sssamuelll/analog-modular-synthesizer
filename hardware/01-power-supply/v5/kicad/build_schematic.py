@@ -659,10 +659,13 @@ def escribir(bom: dict[str, dict], titulos: list[tuple]) -> None:
                 f'\t\t(uuid "{_uid(f"cable/{x1},{y1},{x2},{y2}")}")', "\t)"]
     for x, y in _ncs:
         out += ["\t(no_connect", f"\t\t(at {x} {y})", f'\t\t(uuid "{_uid(f"nc/{x},{y}")}")', "\t)"]
+    # Etiquetas GLOBALES: una etiqueta local en la hoja raiz da la red "/GNDA",
+    # y la placa la llama "GNDA". El DRC con paridad contaba 199 net_conflict
+    # solo por esa barra. Con globales la red se llama igual en las dos.
     for nombre, x, y, ang in _labels:
-        just = "left bottom" if ang in (0, 90) else "right bottom"
-        out += [f'\t(label "{nombre}"', f"\t\t(at {x} {y} {ang})", "\t\t(effects",
-                "\t\t\t(font", "\t\t\t\t(size 1.27 1.27)", "\t\t\t)",
+        just = "left" if ang in (0, 90) else "right"
+        out += [f'\t(global_label "{nombre}"', "\t\t(shape passive)", f"\t\t(at {x} {y} {ang})",
+                "\t\t(effects", "\t\t\t(font", "\t\t\t\t(size 1.27 1.27)", "\t\t\t)",
                 f"\t\t\t(justify {just})", "\t\t)", f'\t\t(uuid "{_uid(f"etiqueta/{nombre}/{x},{y}")}")', "\t)"]
     for lib, unidad, ref, _v, x, y, rot, _fp in _syms:
         es_flag = ref.startswith("#")

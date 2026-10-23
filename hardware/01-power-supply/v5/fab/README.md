@@ -1,63 +1,101 @@
-# Ficheros de fabricacion -- Modulo 1, version 5 (fuente ladrillo 24V)
+# Ficheros de fabricación — Módulo 1, versión 5 (fuente ladrillo 24 V)
 
-Generados con `kicad-cli` desde `../kicad/sam17-power-v5.kicad_pcb`. Para
-regenerarlos, ver el final de este fichero.
+Todo lo de esta carpeta sale de `../kicad/sam17-power-v5.kicad_pcb` con
+`../kicad/build_fab.py` (kicad-cli). `../check_fab.py` lo reexporta con las
+mismas órdenes y lo compara fichero a fichero: si alguien rerutea y no
+reexporta, la puerta se pone roja.
 
-## Estado: ruteada y con DRC en cero
+## Estado
 
 ```
-DRC (kicad-cli, --severity-all)   0 infracciones   0 sin conectar   0 paridad
-placa                             200 x 150 mm Eurocard, FR-4 1,6 mm, 1 oz cobre
-aislamiento digital (GNDD)        Barrera de 3 mm sobre B.Cu cruzada por aislador ISO1541
-zonas de masa B.Cu                24147 mm2 de cobre relleno (GNDA y GNDD)
-huellas propias                   6 en sam17.pretty, todas contra datasheets de fabricante
+DRC (kicad-cli, todas las severidades + paridad)  0 infracciones · 0 sin conectar · 0 de paridad
+cobre            1331 pistas, 274 vías (72 térmicas de U1/U2, 105 de masa cosidas)
+stackup          F.Cu señal+potencia | In1 masas GND24/GNDA/GNDD | In2 señal | B.Cu señal+masa
 ```
 
-## Arquitectura de potencia externa 24V
+El informe completo es `../kicad/sam17-power-v5-drc.json`, atado al sha256
+de la placa que comprobó: `../kicad/check_pcb.py` lo da por rojo si la placa
+cambió después, y `../kicad/check_drc.py` repite el DRC en vivo.
 
-A diferencia de la v3 (que montaba un transformador toroidal interno de 230 VAC y
-necesitaba una ranura de aislamiento de 6 mm para red electrica), la v5 se alimenta
-de un ladrillo de escritorio externo de 24 VDC / 90-120 W (TE90A2403F01 / GST120A24 /
-GSM120A24) mediante un conector Kycon KPJX-PM-4S con seguro:
+La placa de #474 que había aquí antes no tenía ni una pista (161 huellas,
+0 segmentos, 0 vías) y este README decía "ruteada y con DRC en cero".
 
-  * Toda la tension de entrada es SELV (<60 VDC).
-  * Proteccion M5 activa con eFuse TI TPS26630 (corte <100 ns en sobrecorriente,
-    bloqueo OVP/UVLO) y MCU MSP430FR2111 para registro FRAM de eventos.
-  * Diodo ideal TI LM74502 y MOSFET de canal N para proteccion contra polaridad inversa.
-  * Aislamiento galvanico completo del canal digital (+5V_DIG, GNDD, bus I2C digital J8)
-    mediante convertidor Mornsun URB2405YMD-20WR3 y aislador digital TI ISO1541.
-  * Reguladores LDO lineales de ultra-bajo ruido LT3045 y LT3094 para los rieles
-    analogicos criticos (+-12V_ULTRA).
+## Especificación
 
-## Que se sube a JLCPCB (tres ficheros)
+| | |
+|---|---|
+| Dimensiones | 200 × 150 mm (Eurocard) |
+| Capas | **4** |
+| Cobre | 1 oz exterior: los caminos de 3 A están calculados con ese espesor |
+| Espesor | 1.6 mm, FR-4 |
+| Vías | 252 de 0.6 / 0.3 mm y 22 de 0.8 / 0.4 mm (redes de potencia); las huellas DFN traen sus vías térmicas de 0.2 mm |
+| Pista mínima | 0.187 mm (la entrada a los pines de 0.45 mm de paso) |
+| Holgura mínima | 0.15 mm |
 
-| fichero | donde va | se genera con |
-|---|---|---|
-| `sam17-power-v5-jlcpcb.zip` | "Add gerber file" | bloque de empaquetado al final |
-| `sam17-power-v5-bom-jlc.csv` | "Add BOM File" | `python ../kicad/bom_jlc.py` |
-| `sam17-power-v5-cpl-jlc.csv` | "Add CPL File" | `python ../kicad/cpl_jlc.py` |
+## Cómo está hecha
 
-**Nota sobre CPL**: `sam17-power-v5-pos.csv` es la salida cruda de `kicad-cli pcb export pos`.
-`cpl_jlc.py` traduce las cabeceras al formato de JLCPCB (`Designator,Mid X,Mid Y,Layer,Rotation`),
-redondea a 2 decimales y filtra solo los componentes con codigo LCSC que monta la maquina.
+- **Tres masas en In1**, un polígono por dominio, repetidas en F.Cu y B.Cu:
+  GND24 (entrada del ladrillo y lado primario de los convertidores), GNDA
+  (analógica, rack y telemetría) y GNDD (isla de M1). GNDD queda a ≥ 2 mm de
+  las otras dos en las cuatro capas. GND24 y GNDA se unen **solo** en NT1,
+  pegada a los pads de masa de PS3 (el K78 no es aislado).
+- **Caminos de ~3 A en cobre fijo**, no en pista ruteada: J1 → Q2 → U16 → bus
+  de 2,5 mm a las +Vin de los cinco convertidores (24 V, hasta 2,9 A) y PS2 →
+  F5 → J9 (+5 V digital, hasta 2,9 A). `check_pcb.py` comprueba que cada pad
+  de esos caminos se alcanza desde el origen por cobre de ≥ 1,4 mm (~3 A con
+  10 °C de subida en 1 oz, IPC-2221).
+- **Disipación de U1 y U2** (~1,9 W cada uno en DD-PAK): la aleta de U1 es
+  GNDA y baja al plano por 36 vías; la de U2 es −15V5_FILT y tiene su
+  propio cobre en F.Cu, In2 y B.Cu con otras 36.
+- **Ruteo**: Freerouting 2.4.1 (por línea de órdenes, sin tocar su
+  configuración de usuario) más un rescate propio (`../kicad/rescate.py`)
+  para las conexiones que Freerouting deja abiertas. El juez es el DRC de KiCad.
 
-## Regenerar el paquete completo
+## Qué se sube a JLCPCB
 
-Desde la raiz del repositorio:
+| fichero | dónde va |
+|---|---|
+| los 10 gerbers + `sam17-power-v5.drl`, en un zip | "Add gerber file" (4 capas) |
+| `sam17-power-v5-bom-jlc.csv` | "Add BOM File" |
+| `sam17-power-v5-cpl-jlc.csv` | "Add CPL File" |
+
+El zip no se versiona (cambia de bytes en cada exportación):
 
 ```bash
-# 1. Regenerar PCB y rellenar planos de masa
-& "C:\Program Files\KiCad\10.0\bin\python.exe" hardware/01-power-supply/v5/kicad/build_pcb.py
-
-# 2. Exportar Gerbers y taladros
-& "C:\Program Files\KiCad\10.0\bin\kicad-cli.exe" pcb export gerbers --output hardware/01-power-supply/v5/fab/ --layers F.Cu,B.Cu,F.Mask,B.Mask,F.Silkscreen,Edge.Cuts --no-x2 hardware/01-power-supply/v5/kicad/sam17-power-v5.kicad_pcb
-& "C:\Program Files\KiCad\10.0\bin\kicad-cli.exe" pcb export drill --output hardware/01-power-supply/v5/fab/ --format excellon --excellon-units mm hardware/01-power-supply/v5/kicad/sam17-power-v5.kicad_pcb
-& "C:\Program Files\KiCad\10.0\bin\kicad-cli.exe" pcb export pos --format csv --units mm --side front --output hardware/01-power-supply/v5/fab/sam17-power-v5-pos.csv hardware/01-power-supply/v5/kicad/sam17-power-v5.kicad_pcb
-
-# 3. Generar BOM y CPL de ensamblaje
-python hardware/01-power-supply/v5/kicad/bom_jlc.py
-python hardware/01-power-supply/v5/kicad/cpl_jlc.py
-
-# 4. Validar el paquete
-python hardware/01-power-supply/v5/check_fab.py
+cd hardware/01-power-supply/v5/fab
+zip -j sam17-power-v5-jlcpcb.zip sam17-power-v5-*.g* sam17-power-v5.drl
 ```
+
+**Antes de pagar**, en el visor de colocación de JLC: el giro de algunas
+huellas (SOT-23, electrolíticos, DFN) no coincide con el de su biblioteca y
+`cpl_jlc.py` no lo "corrige" con una tabla de memoria. Se revisa allí.
+
+## Lo que NO monta JLC
+
+- **Módulos fuera de LCSC** (se compran en Farnell/Mouser y van a mano):
+  PS1 (THN 30-2422WI), PS4/PS5 (THN 20-2413WI), PS2 (URB2405YMD-20WR3) y
+  PS3 (K7805T-1000R3, SMD).
+- **THT con código LCSC** (se compran en LCSC y van a mano): conectores,
+  SCR1–SCR4, RV2/RV3, SW1, puntos de prueba.
+- `bom_jlc.py` lo decide por la placa: entra cada huella SMD del fichero de
+  posiciones que se compra en LCSC; una SMD de la placa que no esté en
+  `bom.csv` es un error.
+
+Seis referencias no caben en la serigrafía de las zonas densas y van solo
+en F.Fab (el dibujo de montaje de `../pcb/sam17-power-v5.pdf`): R3, R22,
+R40, R41, R67 y R78.
+
+## Regenerar
+
+Desde la raíz del repositorio, con el Python de KiCad (`pcbnew`) donde hace falta:
+
+```bash
+python hardware/01-power-supply/v5/kicad/build_schematic.py      # esquema, netlist, ERC
+FREEROUTING_JAR=/ruta/freerouting-2.4.1-executable.jar JAVA=/ruta/java25 \
+  python hardware/01-power-supply/v5/kicad/build_pcb.py          # placa + DRC (~1 h)
+python hardware/01-power-supply/v5/kicad/build_fab.py            # esta carpeta y ../pcb/
+python hardware/tools/gates.py                                   # todas las puertas
+```
+
+`build_pcb.py --desde-ruteo=RUTA` repite lo que va después de Freerouting
+sobre la placa ruteada que guardó una corrida anterior.

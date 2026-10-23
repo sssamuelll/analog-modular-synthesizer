@@ -2,7 +2,7 @@
 	(version "E")
 	(design
 		(source "/home/user/sam17/hardware/01-power-supply/v5/kicad/sam17-power-v5.kicad_sch")
-		(date "2026-10-22T22:13:42")
+		(date "2026-10-23T01:49:35")
 		(tool "Eeschema 10.0.7-10.0.7~ubuntu24.04.1")
 		(sheet
 			(number "1")
@@ -16005,7 +16005,7 @@
 	(nets
 		(net
 			(code "1")
-			(name "/+3V3_DIG")
+			(name "+3V3_DIG")
 			(class "Default")
 			(node
 				(ref "C28")
@@ -16037,7 +16037,7 @@
 		)
 		(net
 			(code "2")
-			(name "/+3V3_MCU")
+			(name "+3V3_MCU")
 			(class "Default")
 			(node
 				(ref "C23")
@@ -16080,7 +16080,7 @@
 		)
 		(net
 			(code "3")
-			(name "/+5V_AUX")
+			(name "+5V_AUX")
 			(class "Default")
 			(node
 				(ref "C24")
@@ -16285,8 +16285,8 @@
 		)
 		(net
 			(code "4")
-			(name "/+5V_DIG")
-			(class "Default")
+			(name "+5V_DIG")
+			(class "Potencia")
 			(node
 				(ref "F5")
 				(pin "2")
@@ -16328,8 +16328,8 @@
 		)
 		(net
 			(code "5")
-			(name "/+5V_FUSED_RACK")
-			(class "Default")
+			(name "+5V_FUSED_RACK")
+			(class "Potencia")
 			(node
 				(ref "F4")
 				(pin "2")
@@ -16349,8 +16349,8 @@
 		)
 		(net
 			(code "6")
-			(name "/+5V_RACK")
-			(class "Default")
+			(name "+5V_RACK")
+			(class "Potencia")
 			(node
 				(ref "J3")
 				(pin "4")
@@ -16410,8 +16410,8 @@
 		)
 		(net
 			(code "7")
-			(name "/+5V_RAW_DIG")
-			(class "Default")
+			(name "+5V_RAW_DIG")
+			(class "Potencia")
 			(node
 				(ref "C29")
 				(pin "1")
@@ -16431,8 +16431,8 @@
 		)
 		(net
 			(code "8")
-			(name "/+5V_RAW_RACK")
-			(class "Default")
+			(name "+5V_RAW_RACK")
+			(class "Potencia")
 			(node
 				(ref "C16")
 				(pin "1")
@@ -16469,8 +16469,8 @@
 		)
 		(net
 			(code "9")
-			(name "/+12V_FUSED_RACK")
-			(class "Default")
+			(name "+12V_FUSED_RACK")
+			(class "Potencia")
 			(node
 				(ref "F2")
 				(pin "2")
@@ -16490,8 +16490,8 @@
 		)
 		(net
 			(code "10")
-			(name "/+12V_RACK")
-			(class "Default")
+			(name "+12V_RACK")
+			(class "Potencia")
 			(node
 				(ref "J3")
 				(pin "1")
@@ -16540,8 +16540,8 @@
 		)
 		(net
 			(code "11")
-			(name "/+12V_RAW_RACK")
-			(class "Default")
+			(name "+12V_RAW_RACK")
+			(class "Potencia")
 			(node
 				(ref "F2")
 				(pin "1")
@@ -16556,8 +16556,8 @@
 		)
 		(net
 			(code "12")
-			(name "/+12V_ULTRA")
-			(class "Default")
+			(name "+12V_ULTRA")
+			(class "Potencia")
 			(node
 				(ref "C20")
 				(pin "1")
@@ -16606,8 +16606,8 @@
 		)
 		(net
 			(code "13")
-			(name "/+13V1")
-			(class "Default")
+			(name "+13V1")
+			(class "Potencia")
 			(node
 				(ref "C17")
 				(pin "1")
@@ -16692,8 +16692,8 @@
 		)
 		(net
 			(code "14")
-			(name "/+15V5_EFUSE")
-			(class "Default")
+			(name "+15V5_EFUSE")
+			(class "Potencia")
 			(node
 				(ref "L2")
 				(pin "1")
@@ -16721,8 +16721,8 @@
 		)
 		(net
 			(code "15")
-			(name "/+15V5_FILT")
-			(class "Default")
+			(name "+15V5_FILT")
+			(class "Potencia")
 			(node
 				(ref "D10")
 				(pin "1")
@@ -16749,8 +16749,8 @@
 		)
 		(net
 			(code "16")
-			(name "/+15V5_LC")
-			(class "Default")
+			(name "+15V5_LC")
+			(class "Potencia")
 			(node
 				(ref "C1")
 				(pin "1")
@@ -16796,8 +16796,8 @@
 		)
 		(net
 			(code "17")
-			(name "/+15V5_RAW")
-			(class "Default")
+			(name "+15V5_RAW")
+			(class "Potencia")
 			(node
 				(ref "PS4")
 				(pin "3")
@@ -16836,7 +16836,7 @@
 		)
 		(net
 			(code "18")
-			(name "/+24V_LDO")
+			(name "+24V_LDO")
 			(class "Default")
 			(node
 				(ref "C7")
@@ -16863,8 +16863,8 @@
 		)
 		(net
 			(code "19")
-			(name "/+24V_PROT")
-			(class "Default")
+			(name "+24V_PROT")
+			(class "Potencia")
 			(node
 				(ref "Q2")
 				(pin "5")
@@ -16908,8 +16908,8 @@
 		)
 		(net
 			(code "20")
-			(name "/+24V_RAW")
-			(class "Default")
+			(name "+24V_RAW")
+			(class "Potencia")
 			(node
 				(ref "C10")
 				(pin "1")
@@ -16977,8 +16977,8 @@
 		)
 		(net
 			(code "21")
-			(name "/+24V_SW")
-			(class "Default")
+			(name "+24V_SW")
+			(class "Potencia")
 			(node
 				(ref "C14")
 				(pin "1")
@@ -17046,8 +17046,8 @@
 		)
 		(net
 			(code "22")
-			(name "/-12V9")
-			(class "Default")
+			(name "-12V9")
+			(class "Potencia")
 			(node
 				(ref "C18")
 				(pin "2")
@@ -17144,8 +17144,8 @@
 		)
 		(net
 			(code "23")
-			(name "/-12V_RACK")
-			(class "Default")
+			(name "-12V_RACK")
+			(class "Potencia")
 			(node
 				(ref "F3")
 				(pin "2")
@@ -17187,8 +17187,8 @@
 		)
 		(net
 			(code "24")
-			(name "/-12V_RAW_RACK")
-			(class "Default")
+			(name "-12V_RAW_RACK")
+			(class "Potencia")
 			(node
 				(ref "F3")
 				(pin "1")
@@ -17203,8 +17203,8 @@
 		)
 		(net
 			(code "25")
-			(name "/-12V_ULTRA")
-			(class "Default")
+			(name "-12V_ULTRA")
+			(class "Potencia")
 			(node
 				(ref "C22")
 				(pin "2")
@@ -17263,8 +17263,8 @@
 		)
 		(net
 			(code "26")
-			(name "/-15V5_FILT")
-			(class "Default")
+			(name "-15V5_FILT")
+			(class "Potencia")
 			(node
 				(ref "D11")
 				(pin "2")
@@ -17291,8 +17291,8 @@
 		)
 		(net
 			(code "27")
-			(name "/-15V5_LC")
-			(class "Default")
+			(name "-15V5_LC")
+			(class "Potencia")
 			(node
 				(ref "C4")
 				(pin "2")
@@ -17338,8 +17338,8 @@
 		)
 		(net
 			(code "28")
-			(name "/-15V5_RAW")
-			(class "Default")
+			(name "-15V5_RAW")
+			(class "Potencia")
 			(node
 				(ref "L3")
 				(pin "1")
@@ -17360,7 +17360,7 @@
 		)
 		(net
 			(code "29")
-			(name "/ADJ_U1")
+			(name "ADJ_U1")
 			(class "Default")
 			(node
 				(ref "R6")
@@ -17388,7 +17388,7 @@
 		)
 		(net
 			(code "30")
-			(name "/ADJ_U2")
+			(name "ADJ_U2")
 			(class "Default")
 			(node
 				(ref "R8")
@@ -17416,7 +17416,7 @@
 		)
 		(net
 			(code "31")
-			(name "/AIN0")
+			(name "AIN0")
 			(class "Default")
 			(node
 				(ref "D14")
@@ -17443,7 +17443,7 @@
 		)
 		(net
 			(code "32")
-			(name "/AIN1")
+			(name "AIN1")
 			(class "Default")
 			(node
 				(ref "D15")
@@ -17470,7 +17470,7 @@
 		)
 		(net
 			(code "33")
-			(name "/AIN2")
+			(name "AIN2")
 			(class "Default")
 			(node
 				(ref "D16")
@@ -17497,7 +17497,7 @@
 		)
 		(net
 			(code "34")
-			(name "/AIN3")
+			(name "AIN3")
 			(class "Default")
 			(node
 				(ref "D17")
@@ -17524,7 +17524,7 @@
 		)
 		(net
 			(code "35")
-			(name "/C1_NEG")
+			(name "C1_NEG")
 			(class "Default")
 			(node
 				(ref "C1")
@@ -17539,7 +17539,7 @@
 		)
 		(net
 			(code "36")
-			(name "/C2_NEG")
+			(name "C2_NEG")
 			(class "Default")
 			(node
 				(ref "C2")
@@ -17554,7 +17554,7 @@
 		)
 		(net
 			(code "37")
-			(name "/DVDT_U16")
+			(name "DVDT_U16")
 			(class "Default")
 			(node
 				(ref "C11")
@@ -17570,7 +17570,7 @@
 		)
 		(net
 			(code "38")
-			(name "/DVDT_U19")
+			(name "DVDT_U19")
 			(class "Default")
 			(node
 				(ref "C13")
@@ -17586,7 +17586,7 @@
 		)
 		(net
 			(code "39")
-			(name "/FLT_M5")
+			(name "FLT_M5")
 			(class "Default")
 			(node
 				(ref "R66")
@@ -17608,7 +17608,7 @@
 		)
 		(net
 			(code "40")
-			(name "/GATE_Q2")
+			(name "GATE_Q2")
 			(class "Default")
 			(node
 				(ref "Q2")
@@ -17625,7 +17625,7 @@
 		)
 		(net
 			(code "41")
-			(name "/GATE_SCR1")
+			(name "GATE_SCR1")
 			(class "Default")
 			(node
 				(ref "R53")
@@ -17646,7 +17646,7 @@
 		)
 		(net
 			(code "42")
-			(name "/GATE_SCR2")
+			(name "GATE_SCR2")
 			(class "Default")
 			(node
 				(ref "R54")
@@ -17667,7 +17667,7 @@
 		)
 		(net
 			(code "43")
-			(name "/GATE_SCR3")
+			(name "GATE_SCR3")
 			(class "Default")
 			(node
 				(ref "R55")
@@ -17688,7 +17688,7 @@
 		)
 		(net
 			(code "44")
-			(name "/GATE_SCR4")
+			(name "GATE_SCR4")
 			(class "Default")
 			(node
 				(ref "R56")
@@ -17709,8 +17709,8 @@
 		)
 		(net
 			(code "45")
-			(name "/GND24")
-			(class "Default")
+			(name "GND24")
+			(class "Masa")
 			(node
 				(ref "C10")
 				(pin "2")
@@ -17895,8 +17895,8 @@
 		)
 		(net
 			(code "46")
-			(name "/GNDA")
-			(class "Default")
+			(name "GNDA")
+			(class "Masa")
 			(node
 				(ref "C13")
 				(pin "2")
@@ -18485,8 +18485,8 @@
 		)
 		(net
 			(code "47")
-			(name "/GNDD")
-			(class "Default")
+			(name "GNDD")
+			(class "Masa")
 			(node
 				(ref "C28")
 				(pin "2")
@@ -18558,7 +18558,7 @@
 		)
 		(net
 			(code "48")
-			(name "/ILIM_U16")
+			(name "ILIM_U16")
 			(class "Default")
 			(node
 				(ref "R11")
@@ -18574,7 +18574,7 @@
 		)
 		(net
 			(code "49")
-			(name "/ILIM_U19")
+			(name "ILIM_U19")
 			(class "Default")
 			(node
 				(ref "R34")
@@ -18590,7 +18590,7 @@
 		)
 		(net
 			(code "50")
-			(name "/LED3_A")
+			(name "LED3_A")
 			(class "Default")
 			(node
 				(ref "D3")
@@ -18606,7 +18606,7 @@
 		)
 		(net
 			(code "51")
-			(name "/LED4_K")
+			(name "LED4_K")
 			(class "Default")
 			(node
 				(ref "D4")
@@ -18622,7 +18622,7 @@
 		)
 		(net
 			(code "52")
-			(name "/LED6_A")
+			(name "LED6_A")
 			(class "Default")
 			(node
 				(ref "D6")
@@ -18638,7 +18638,7 @@
 		)
 		(net
 			(code "53")
-			(name "/LED7_A")
+			(name "LED7_A")
 			(class "Default")
 			(node
 				(ref "D7")
@@ -18654,7 +18654,7 @@
 		)
 		(net
 			(code "54")
-			(name "/LED_ANODE")
+			(name "LED_ANODE")
 			(class "Default")
 			(node
 				(ref "D18")
@@ -18670,7 +18670,7 @@
 		)
 		(net
 			(code "55")
-			(name "/LED_CTRL")
+			(name "LED_CTRL")
 			(class "Default")
 			(node
 				(ref "R31")
@@ -18686,7 +18686,7 @@
 		)
 		(net
 			(code "56")
-			(name "/MCU_RST")
+			(name "MCU_RST")
 			(class "Default")
 			(node
 				(ref "C12")
@@ -18713,7 +18713,7 @@
 		)
 		(net
 			(code "57")
-			(name "/MCU_TEST")
+			(name "MCU_TEST")
 			(class "Default")
 			(node
 				(ref "J10")
@@ -18730,8 +18730,8 @@
 		)
 		(net
 			(code "58")
-			(name "/OUTS_POS")
-			(class "Default")
+			(name "OUTS_POS")
+			(class "Potencia")
 			(node
 				(ref "C38")
 				(pin "1")
@@ -18773,8 +18773,8 @@
 		)
 		(net
 			(code "59")
-			(name "/OUT_U4")
-			(class "Default")
+			(name "OUT_U4")
+			(class "Potencia")
 			(node
 				(ref "R15")
 				(pin "1")
@@ -18789,8 +18789,8 @@
 		)
 		(net
 			(code "60")
-			(name "/OUT_U5")
-			(class "Default")
+			(name "OUT_U5")
+			(class "Potencia")
 			(node
 				(ref "R16")
 				(pin "1")
@@ -18805,8 +18805,8 @@
 		)
 		(net
 			(code "61")
-			(name "/OUT_U6")
-			(class "Default")
+			(name "OUT_U6")
+			(class "Potencia")
 			(node
 				(ref "R17")
 				(pin "1")
@@ -18827,8 +18827,8 @@
 		)
 		(net
 			(code "62")
-			(name "/OUT_U7")
-			(class "Default")
+			(name "OUT_U7")
+			(class "Potencia")
 			(node
 				(ref "R18")
 				(pin "1")
@@ -18849,7 +18849,7 @@
 		)
 		(net
 			(code "63")
-			(name "/OVP_U16")
+			(name "OVP_U16")
 			(class "Default")
 			(node
 				(ref "R13")
@@ -18870,7 +18870,7 @@
 		)
 		(net
 			(code "64")
-			(name "/OVP_U19")
+			(name "OVP_U19")
 			(class "Default")
 			(node
 				(ref "R35")
@@ -18891,7 +18891,7 @@
 		)
 		(net
 			(code "65")
-			(name "/QB_CB1")
+			(name "QB_CB1")
 			(class "Default")
 			(node
 				(ref "Q3")
@@ -18912,7 +18912,7 @@
 		)
 		(net
 			(code "66")
-			(name "/QB_CB2")
+			(name "QB_CB2")
 			(class "Default")
 			(node
 				(ref "Q4")
@@ -18933,7 +18933,7 @@
 		)
 		(net
 			(code "67")
-			(name "/QB_CB3")
+			(name "QB_CB3")
 			(class "Default")
 			(node
 				(ref "Q5")
@@ -18954,7 +18954,7 @@
 		)
 		(net
 			(code "68")
-			(name "/QB_CB4")
+			(name "QB_CB4")
 			(class "Default")
 			(node
 				(ref "Q6")
@@ -18975,7 +18975,7 @@
 		)
 		(net
 			(code "69")
-			(name "/QC_CB1")
+			(name "QC_CB1")
 			(class "Default")
 			(node
 				(ref "Q3")
@@ -18991,7 +18991,7 @@
 		)
 		(net
 			(code "70")
-			(name "/QC_CB2")
+			(name "QC_CB2")
 			(class "Default")
 			(node
 				(ref "Q4")
@@ -19007,7 +19007,7 @@
 		)
 		(net
 			(code "71")
-			(name "/QC_CB3")
+			(name "QC_CB3")
 			(class "Default")
 			(node
 				(ref "Q5")
@@ -19023,7 +19023,7 @@
 		)
 		(net
 			(code "72")
-			(name "/QC_CB4")
+			(name "QC_CB4")
 			(class "Default")
 			(node
 				(ref "Q6")
@@ -19039,7 +19039,7 @@
 		)
 		(net
 			(code "73")
-			(name "/REF0_NEG")
+			(name "REF0_NEG")
 			(class "Default")
 			(node
 				(ref "R68")
@@ -19060,7 +19060,7 @@
 		)
 		(net
 			(code "74")
-			(name "/REF_CB1")
+			(name "REF_CB1")
 			(class "Default")
 			(node
 				(ref "R45")
@@ -19081,7 +19081,7 @@
 		)
 		(net
 			(code "75")
-			(name "/REF_CB2")
+			(name "REF_CB2")
 			(class "Default")
 			(node
 				(ref "R46")
@@ -19102,7 +19102,7 @@
 		)
 		(net
 			(code "76")
-			(name "/REF_CB3")
+			(name "REF_CB3")
 			(class "Default")
 			(node
 				(ref "R49")
@@ -19123,7 +19123,7 @@
 		)
 		(net
 			(code "77")
-			(name "/REF_CB4")
+			(name "REF_CB4")
 			(class "Default")
 			(node
 				(ref "R51")
@@ -19144,7 +19144,7 @@
 		)
 		(net
 			(code "78")
-			(name "/SCL_A")
+			(name "SCL_A")
 			(class "Default")
 			(node
 				(ref "R58")
@@ -19196,7 +19196,7 @@
 		)
 		(net
 			(code "79")
-			(name "/SCL_D")
+			(name "SCL_D")
 			(class "Default")
 			(node
 				(ref "J8")
@@ -19218,7 +19218,7 @@
 		)
 		(net
 			(code "80")
-			(name "/SDA_A")
+			(name "SDA_A")
 			(class "Default")
 			(node
 				(ref "R57")
@@ -19270,7 +19270,7 @@
 		)
 		(net
 			(code "81")
-			(name "/SDA_D")
+			(name "SDA_D")
 			(class "Default")
 			(node
 				(ref "J8")
@@ -19292,7 +19292,7 @@
 		)
 		(net
 			(code "82")
-			(name "/SENSE_NEG")
+			(name "SENSE_NEG")
 			(class "Default")
 			(node
 				(ref "C35")
@@ -19318,7 +19318,7 @@
 		)
 		(net
 			(code "83")
-			(name "/SENSE_POS")
+			(name "SENSE_POS")
 			(class "Default")
 			(node
 				(ref "C34")
@@ -19349,7 +19349,7 @@
 		)
 		(net
 			(code "84")
-			(name "/SET_NEG")
+			(name "SET_NEG")
 			(class "Default")
 			(node
 				(ref "C21")
@@ -19381,7 +19381,7 @@
 		)
 		(net
 			(code "85")
-			(name "/SET_POS")
+			(name "SET_POS")
 			(class "Default")
 			(node
 				(ref "C19")
@@ -19413,7 +19413,7 @@
 		)
 		(net
 			(code "86")
-			(name "/SHDN_CASCADE")
+			(name "SHDN_CASCADE")
 			(class "Default")
 			(node
 				(ref "R43")
@@ -19460,7 +19460,7 @@
 		)
 		(net
 			(code "87")
-			(name "/SHDN_M5")
+			(name "SHDN_M5")
 			(class "Default")
 			(node
 				(ref "U16")
@@ -19477,7 +19477,7 @@
 		)
 		(net
 			(code "88")
-			(name "/SW_RESET")
+			(name "SW_RESET")
 			(class "Default")
 			(node
 				(ref "SW1")
@@ -19494,7 +19494,7 @@
 		)
 		(net
 			(code "89")
-			(name "/TLK_CB1")
+			(name "TLK_CB1")
 			(class "Default")
 			(node
 				(ref "R70")
@@ -19510,7 +19510,7 @@
 		)
 		(net
 			(code "90")
-			(name "/TLK_CB2")
+			(name "TLK_CB2")
 			(class "Default")
 			(node
 				(ref "R71")
@@ -19526,7 +19526,7 @@
 		)
 		(net
 			(code "91")
-			(name "/TLK_CB3")
+			(name "TLK_CB3")
 			(class "Default")
 			(node
 				(ref "R72")
@@ -19542,7 +19542,7 @@
 		)
 		(net
 			(code "92")
-			(name "/TLK_CB4")
+			(name "TLK_CB4")
 			(class "Default")
 			(node
 				(ref "R73")
@@ -19558,7 +19558,7 @@
 		)
 		(net
 			(code "93")
-			(name "/TRIM_PS4")
+			(name "TRIM_PS4")
 			(class "Default")
 			(node
 				(ref "PS4")
@@ -19574,7 +19574,7 @@
 		)
 		(net
 			(code "94")
-			(name "/TRIM_PS5")
+			(name "TRIM_PS5")
 			(class "Default")
 			(node
 				(ref "PS5")
@@ -19590,7 +19590,7 @@
 		)
 		(net
 			(code "95")
-			(name "/TRIM_U1_HI")
+			(name "TRIM_U1_HI")
 			(class "Default")
 			(node
 				(ref "R5")
@@ -19606,7 +19606,7 @@
 		)
 		(net
 			(code "96")
-			(name "/TRIM_U2_HI")
+			(name "TRIM_U2_HI")
 			(class "Default")
 			(node
 				(ref "R7")
@@ -19622,7 +19622,7 @@
 		)
 		(net
 			(code "97")
-			(name "/UVLO_U16")
+			(name "UVLO_U16")
 			(class "Default")
 			(node
 				(ref "R12")
@@ -19643,7 +19643,7 @@
 		)
 		(net
 			(code "98")
-			(name "/VCAP_U15")
+			(name "VCAP_U15")
 			(class "Default")
 			(node
 				(ref "C9")
@@ -19659,7 +19659,7 @@
 		)
 		(net
 			(code "99")
-			(name "/VREF_2V5")
+			(name "VREF_2V5")
 			(class "Default")
 			(node
 				(ref "R41")

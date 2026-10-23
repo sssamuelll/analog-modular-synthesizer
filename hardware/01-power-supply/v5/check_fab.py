@@ -1,33 +1,48 @@
-"""Puerta de calidad: valida los ficheros de fabricacion Gerber y Excellon para la fuente v5.
+"""Puerta: el paquete de fabricacion de la v5 es el de la placa commiteada y es fabricable.
 
-    python check_fab.py        # sale con codigo != 0 si el paquete de fab no cumple
+    python check_fab.py        # 0 verde, 1 rojo, 2 hueco (sin kicad-cli para reexportar)
 
-Comprueba:
-  1. Las seis capas Gerber requeridas y el fichero drill existen y no estan vacios.
-  2. El contorno de placa (Edge_Cuts) cierra y mide exactamente 200 x 150 mm (Eurocard).
-  3. Todo el cobre esta dentro del contorno con separacion minima al borde (>= 0.20 mm).
-  4. Los taladros PTH caen sobre cobre y los taladros NPTH (fijacion M3) estan aislados.
-  5. Las zonas de masa en B_Cu estan presentes y rellenadas.
-  6. Los ficheros de ensamblaje JLCPCB (BOM y CPL) existen y estan poblados.
+Lo que se manda a JLC es fab/, no el .kicad_pcb: si alguien rerutea y no
+reexporta, el pedido sale con la placa vieja. La v5 de #474 subio unos
+gerbers de DOS capas de una placa sin pistas, con un README que decia
+"ruteada y con DRC en cero". Esta puerta:
+
+  1. Reexporta con las MISMAS ordenes que build_fab.py (las importa de alli)
+     y compara fichero a fichero, quitando solo las lineas de fecha y version
+     de herramienta. Distinto = rojo. Sin kicad-cli: hueco, no verde.
+  2. Lee los gerbers y el taladro sin KiCad, como los leeria el fabricante:
+       * estan las 10 capas (4 de cobre) y el .drl, y no estan vacias;
+       * el contorno cierra y mide 200 x 150 mm;
+       * el cobre de las 4 capas queda a >= 0.20 mm del canto;
+       * cada taladro metalizado cae en cobre y los M3 (NPTH) no tienen cobre;
+       * los planos de In1 estan rellenados (> 20000 mm2) y hay masa vertida
+         en B.Cu (> 5000 mm2).
+  3. BOM y CPL de JLC: cada codigo LCSC es el de bom.csv para esas
+     referencias, y el CPL coloca exactamente lo que el BOM dice, todo con
+     posicion en el fichero de posiciones.
 """
 from __future__ import annotations
 
+import csv
 import math
 import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 FAB = os.path.join(DIR, "fab")
-BASE = "sam17-power-v5"
+sys.path.insert(0, os.path.join(DIR, "kicad"))
+import build_fab  # noqa: E402  (las ordenes de exportacion viven alli)
 
+BASE = build_fab.BASE
 COBRE_A_BORDE = 0.20       # mm de cobre al canto de la placa
 W, H = 200.0, 150.0        # dimensiones Eurocard en mm
-
-CAPAS = {
-    "F_Cu": "gtl", "B_Cu": "gbl", "F_Mask": "gts",
-    "B_Mask": "gbs", "F_Silkscreen": "gto", "Edge_Cuts": "gm1",
-}
+COBRE = ("F_Cu", "In1_Cu", "In2_Cu", "B_Cu")
+AREA_IN1_MIN = 20000.0     # mm2 de los tres planos de masa rellenados
+AREA_BCU_MIN = 5000.0      # mm2 de masa vertida en B.Cu
 
 
 class Gerber:
@@ -159,62 +174,119 @@ def area(poly: list[tuple[float, float]]) -> float:
                    for i in range(n))) / 2
 
 
+def canon(ruta: str) -> list[str]:
+    """El fichero sin las lineas que cambian entre dos exportaciones identicas
+    (fecha de creacion y version de KiCad en comentarios G04 y ';')."""
+    fecha = re.compile(r"\d{4}-\d{2}-\d{2}|CreationDate|GenerationSoftware|KiCad|ProjectId")
+    out = []
+    with open(ruta, encoding="utf-8", errors="replace") as fh:
+        for cruda in fh:
+            linea = cruda.rstrip("\r\n")
+            if (linea.startswith("G04") or linea.startswith(";")) and fecha.search(linea):
+                continue
+            out.append(linea)
+    return out
+
+
+def reexportar() -> tuple[list[str], list[str]]:
+    """(salidas que no son las de esta placa, huecos)."""
+    cli = build_fab.KICAD_CLI
+    if not cli or not os.path.exists(cli):
+        return [], ["no hay kicad-cli para reexportar y comparar fab/ con la placa"]
+    viejas = []
+    tmp = tempfile.mkdtemp(prefix="sam17-v5-fab-")
+    try:
+        for orden in build_fab.exports(tmp):
+            r = subprocess.run(orden, capture_output=True, text=True)
+            if r.returncode != 0:
+                return [f"kicad-cli fallo al reexportar: {r.stderr.strip()[-300:]}"], []
+        for nombre in build_fab.GERBERS + (build_fab.TALADROS, build_fab.POSICIONES):
+            a, b = os.path.join(FAB, nombre), os.path.join(tmp, nombre)
+            if not os.path.isfile(b) or canon(a) != canon(b):
+                viejas.append(nombre)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    if viejas:
+        return [f"{len(viejas)} salidas de fab/ NO son las de la placa commiteada: {viejas}. "
+                f"Corre kicad/build_fab.py"], []
+    return [], []
+
+
+def jlc() -> list[str]:
+    fallos = []
+    bom_jlc = os.path.join(FAB, f"{BASE}-bom-jlc.csv")
+    cpl_jlc = os.path.join(FAB, f"{BASE}-cpl-jlc.csv")
+    pos = os.path.join(FAB, build_fab.POSICIONES)
+    lcsc_de = {}
+    with open(os.path.join(DIR, "bom.csv"), encoding="utf-8", newline="") as fh:
+        for fila in csv.DictReader(fh):
+            for r in fila["refs"].split(","):
+                lcsc_de[r.strip()] = fila.get("lcsc", "").strip()
+    en_bom = set()
+    with open(bom_jlc, encoding="utf-8", newline="") as fh:
+        for fila in csv.DictReader(fh):
+            for r in fila["Designator"].split(","):
+                en_bom.add(r)
+                if lcsc_de.get(r) != fila["LCSC Part #"]:
+                    fallos.append(f"BOM de JLC: {r} lleva {fila['LCSC Part #']} y bom.csv dice "
+                                  f"'{lcsc_de.get(r, 'nada')}'")
+    with open(cpl_jlc, encoding="utf-8", newline="") as fh:
+        en_cpl = {f["Designator"] for f in csv.DictReader(fh)}
+    with open(pos, encoding="utf-8", newline="") as fh:
+        en_pos = {f["Ref"] for f in csv.DictReader(fh)}
+    if en_cpl != en_bom:
+        fallos.append(f"CPL y BOM de JLC no colocan lo mismo: sobran {sorted(en_cpl - en_bom)}, "
+                      f"faltan {sorted(en_bom - en_cpl)}")
+    if sin_pos := sorted(en_cpl - en_pos):
+        fallos.append(f"el CPL coloca piezas sin posicion en {build_fab.POSICIONES}: {sin_pos}")
+    return fallos
+
+
 def main() -> int:
     fallos: list[str] = []
     capas: dict[str, Gerber] = {}
-
-    # 1. Comprobar existencia y no-vacuidad de capas
-    for nom, ext in CAPAS.items():
-        ruta = os.path.join(FAB, f"{BASE}-{nom}.{ext}")
-        if not os.path.exists(ruta):
-            fallos.append(f"falta la capa {nom} ({ext})")
-            continue
-        g = capas[nom] = Gerber(ruta)
-        if g.vacio:
-            fallos.append(f"la capa {nom} esta vacia")
-
-    drl = os.path.join(FAB, f"{BASE}.drl")
-    if not os.path.exists(drl):
-        fallos.append("falta el fichero de taladros (.drl)")
-        taladros = []
-    else:
-        taladros = lee_drill(drl)
-        if not taladros:
-            fallos.append("el .drl no contiene ningun taladro")
-
-    if fallos:
-        for f in fallos:
-            print(f"FALLO: {f}")
+    faltan = [n for n in build_fab.GERBERS + (build_fab.TALADROS, build_fab.POSICIONES,
+                                              f"{BASE}-bom-jlc.csv", f"{BASE}-cpl-jlc.csv")
+              if not os.path.isfile(os.path.join(FAB, n)) or not os.path.getsize(os.path.join(FAB, n))]
+    if faltan:
+        print(f"FALLO: faltan o estan vacios en fab/: {faltan} -- corre kicad/build_fab.py")
         return 1
+    for nombre in build_fab.GERBERS:
+        clave = nombre[len(BASE) + 1:].split(".")[0]
+        g = capas[clave] = Gerber(os.path.join(FAB, nombre))
+        if g.vacio:
+            fallos.append(f"la capa {clave} esta vacia")
+    taladros = lee_drill(os.path.join(FAB, build_fab.TALADROS))
+    if not taladros:
+        fallos.append("el .drl no contiene ningun taladro")
 
-    # 2. Comprobar que Edge_Cuts cierra y mide 200 x 150 mm
+    # contorno
     borde = capas["Edge_Cuts"]
     bc = borde.caja()
     ancho, alto = bc[2] - bc[0], bc[3] - bc[1]
     if abs(ancho - W) > 0.25 or abs(alto - H) > 0.25:
         fallos.append(f"el contorno mide {ancho:.2f} x {alto:.2f} mm y se esperaba {W:.0f} x {H:.0f} mm")
-
     extremos: dict = {}
     for a, b, _w in borde.trazos:
         for p in (a, b):
             k = (round(p[0], 3), round(p[1], 3))
             extremos[k] = extremos.get(k, 0) + 1
-    sueltos = [p for p, n in extremos.items() if n % 2]
-    if sueltos:
+    if sueltos := [p for p, n in extremos.items() if n % 2]:
         fallos.append(f"el contorno tiene {len(sueltos)} extremos sin cerrar: {sueltos[:3]}")
 
-    # 3. Comprobar que el cobre respeta la distancia al canto
+    # cobre al canto, en las cuatro capas
     x0, y0, x1, y1 = bc[0] + 0.05, bc[1] + 0.05, bc[2] - 0.05, bc[3] - 0.05
-    for nom in ("F_Cu", "B_Cu"):
+    for nom in COBRE:
         peor, donde = 1e9, None
         for px, py, r in capas[nom].puntos():
             d = min(px - r - x0, x1 - px - r, py - r - y0, y1 - py - r)
             if d < peor:
                 peor, donde = d, (px, py)
         if peor < COBRE_A_BORDE:
-            fallos.append(f"{nom}: cobre a {peor:.2f} mm del borde en ({donde[0]:.1f}, {donde[1]:.1f}) (minimo {COBRE_A_BORDE})")
+            fallos.append(f"{nom}: cobre a {peor:.2f} mm del borde en ({donde[0]:.1f}, {donde[1]:.1f}) "
+                          f"(minimo {COBRE_A_BORDE})")
 
-    # 4. Comprobar taladros y cobre
+    # taladros
     npth = [t for t in taladros if t[2] >= 3.0]
     pth = [t for t in taladros if t[2] < 3.0]
 
@@ -227,42 +299,42 @@ def main() -> int:
                 return True
         return any(dentro(p, tx, ty) for p in capa.regiones)
 
-    al_aire = [(tx, ty, td) for tx, ty, td in pth if not (en_cobre(capas["F_Cu"], tx, ty) or en_cobre(capas["B_Cu"], tx, ty))]
+    al_aire = [(tx, ty, td) for tx, ty, td in pth
+               if not (en_cobre(capas["F_Cu"], tx, ty) or en_cobre(capas["B_Cu"], tx, ty))]
     if al_aire:
         fallos.append(f"{len(al_aire)} taladros PTH sin cobre: {al_aire[:4]}")
-
-    npth_con_cobre = [(tx, ty) for tx, ty, _td in npth if en_cobre(capas["F_Cu"], tx, ty)]
-    if npth_con_cobre:
+    if npth_con_cobre := [(tx, ty) for tx, ty, _td in npth if en_cobre(capas["F_Cu"], tx, ty)]:
         fallos.append(f"{len(npth_con_cobre)} taladros NPTH con cobre alrededor en F_Cu: {npth_con_cobre[:3]}")
+    if len(npth) != 4:
+        fallos.append(f"se esperaban los 4 taladros M3 de fijacion y hay {len(npth)} de >= 3 mm")
 
-    # 5. Comprobar que las zonas de masa en B_Cu estan rellenas
+    # planos y vertidos
+    relleno_in1 = sum(area(p) for p in capas["In1_Cu"].regiones)
     relleno_bcu = sum(area(p) for p in capas["B_Cu"].regiones)
-    if relleno_bcu < 5000:
-        fallos.append(f"B_Cu solo contiene {relleno_bcu:.0f} mm2 de cobre en zonas rellenas (se esperaban >5000 mm2)")
+    if relleno_in1 < AREA_IN1_MIN:
+        fallos.append(f"In1_Cu solo tiene {relleno_in1:.0f} mm2 de plano relleno (minimo {AREA_IN1_MIN:.0f})")
+    if relleno_bcu < AREA_BCU_MIN:
+        fallos.append(f"B_Cu solo tiene {relleno_bcu:.0f} mm2 de cobre vertido (minimo {AREA_BCU_MIN:.0f})")
 
-    # 6. Comprobar ficheros JLCPCB
-    bom_jlc = os.path.join(FAB, f"{BASE}-bom-jlc.csv")
-    cpl_jlc = os.path.join(FAB, f"{BASE}-cpl-jlc.csv")
-    if not os.path.exists(bom_jlc) or os.path.getsize(bom_jlc) == 0:
-        fallos.append(f"falta {os.path.basename(bom_jlc)} o esta vacio")
-    if not os.path.exists(cpl_jlc) or os.path.getsize(cpl_jlc) == 0:
-        fallos.append(f"falta {os.path.basename(cpl_jlc)} o esta vacio")
+    fallos += jlc()
+    viejas, huecos = reexportar()
+    fallos += viejas
 
-    # Resumen
-    for nom in CAPAS:
+    for nom in capas:
         g = capas[nom]
-        print(f"  {nom:<14} {len(g.flashes):>5} flashes, {len(g.trazos):>5} trazos, {len(g.regiones):>3} regiones")
+        print(f"  {nom:<14} {len(g.flashes):>5} flashes, {len(g.trazos):>5} trazos, {len(g.regiones):>4} regiones")
     print(f"  {'drill':<14} {len(taladros):>5} taladros ({len(pth)} PTH, {len(npth)} NPTH M3)")
-    print(f"  contorno {ancho:.2f} x {alto:.2f} mm")
-    print(f"  relleno de zona B_Cu: {relleno_bcu:.0f} mm2")
-
+    print(f"  contorno {ancho:.2f} x {alto:.2f} mm; In1 {relleno_in1:.0f} mm2, B.Cu {relleno_bcu:.0f} mm2")
     if fallos:
         print(f"\nFALLO: {len(fallos)} discrepancias en el paquete de fabricacion")
         for f in fallos:
             print(f"  - {f}")
         return 1
-
-    print("\nOK: check_fab v5 -- paquete de fabricacion verificado y consistente")
+    if huecos:
+        for h in huecos:
+            print(f"\nHUECO: {h}")
+        return 2
+    print("\nOK: check_fab v5 -- fab/ es la placa commiteada, 4 capas, fabricable y con BOM/CPL coherentes")
     return 0
 
 
