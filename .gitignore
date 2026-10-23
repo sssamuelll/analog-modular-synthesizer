@@ -194,3 +194,12 @@ docs/reference/datasheets/*.pdf
 !docs/reference/datasheets/msp430fr2111.pdf
 !docs/reference/datasheets/nxp-bt151-500r.pdf
 !docs/reference/datasheets/ti-lm393b.pdf
+!docs/reference/datasheets/tps709.pdf
+!docs/reference/datasheets/diodes_bzt52.pdf
+!docs/reference/datasheets/mdd_ss34.pdf
+!docs/reference/datasheets/onsemi_mmbt3906.pdf
+!docs/reference/datasheets/littelfuse_0466.pdf
+!docs/reference/datasheets/ina226.pdf
+!docs/reference/datasheets/ads1115.pdf
+!docs/reference/datasheets/tmp1075.pdf
+!docs/reference/datasheets/iso1541.pdf
