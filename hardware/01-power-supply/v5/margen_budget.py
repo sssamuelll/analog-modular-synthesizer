@@ -27,12 +27,15 @@ from __future__ import annotations
 import importlib.util
 import os
 import sys
-from typing import Callable
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 V4 = os.path.join(DIR, "..", "v4")
 if V4 not in sys.path:
     sys.path.append(V4)
+TOOLS = os.path.join(DIR, "..", "..", "tools")
+if TOOLS not in sys.path:
+    sys.path.append(TOOLS)
+from canario import borde_rojo  # noqa: E402  (la biseccion de los canarios vive en UN sitio)
 
 _spec_mb4 = importlib.util.spec_from_file_location(
     "_v4_margen_budget", os.path.join(V4, "margen_budget.py"))
@@ -140,31 +143,6 @@ def _guarda_margen_u2(p: dict[str, float]) -> None:
     m = margen_v5_v("U2", v_nom=p["v_nom_v"], tol=p["tol_crudo"],
                     r_efuse_u1=p["r_efuse_u1_ohm"])
     assert m >= 0.0, f"U2 (LT3015) pierde regulacion: margen {m*1000:+.1f} mV"
-
-
-def borde_rojo(guarda: Callable[[dict[str, float]], None],
-               base: dict[str, float], clave: str,
-               lo: float, hi: float, subcadena: str) -> float:
-    def pasa(v: float) -> bool:
-        q = dict(base)
-        q[clave] = v
-        try:
-            guarda(q)
-            return True
-        except AssertionError as exc:
-            assert subcadena in str(exc), (
-                f"En {clave}={v}: esperaba {subcadena!r} y salio {str(exc)!r}")
-            return False
-
-    p_lo, p_hi = pasa(lo), pasa(hi)
-    assert p_lo != p_hi, f"{clave} no cruza el rojo entre {lo} y {hi}"
-    for _ in range(60):
-        m = 0.5 * (lo + hi)
-        if pasa(m) == p_lo:
-            lo = m
-        else:
-            hi = m
-    return 0.5 * (lo + hi)
 
 
 def demo() -> int:
