@@ -20959,7 +20959,7 @@
 				)
 			)
 		)
-		(property "Value" "4.02k"
+		(property "Value" "3.74k"
 			(at 106.68 132.98 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21002,7 +21002,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C17663"
+		(property "LCSC" "C2960937"
 			(at 106.68 114.3 0)
 			(hide yes)
 			(show_name no)
@@ -21013,7 +21013,7 @@
 				)
 			)
 		)
-		(property "MPN" "0805W8F4021T5E"
+		(property "MPN" "FRC0805F3741TS"
 			(at 106.68 114.3 0)
 			(hide yes)
 			(show_name no)

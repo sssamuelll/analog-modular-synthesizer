@@ -9,7 +9,7 @@ reexporta, la puerta se pone roja.
 
 ```
 DRC (kicad-cli, todas las severidades + paridad)  0 infracciones · 0 sin conectar · 0 de paridad
-cobre            1509 pistas, 285 vías (72 térmicas de U1/U2, 107 de masa cosidas)
+cobre            1506 pistas, 285 vías (72 térmicas de U1/U2, 107 de masa cosidas)
 stackup          F.Cu señal+potencia | In1 masas GND24/GNDA/GNDD | In2 señal | B.Cu señal+masa
 ```
 

@@ -513,6 +513,7 @@ def sincronizar(board, comps: dict) -> None:
             fp.SetBoardOnly(True)
             continue
         c = comps[ref]
+        fp.SetValue(c["value"])   # con --desde-ruteo, el valor puede haber cambiado
         for nombre, valor in c["campos"].items():
             fp.SetField(nombre, valor)
             campo = fp.GetField(nombre)
