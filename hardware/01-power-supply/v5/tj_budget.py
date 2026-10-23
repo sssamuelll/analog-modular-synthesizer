@@ -15,7 +15,10 @@ Tj = aire del cajon + P * theta_JA <= 125 C (TJMAX de las dos hojas, p. 2).
   * theta_JA: la fila de la tabla de la hoja cuyo cobre el de la placa iguala
     o supera en las tres columnas (cara de arriba, cara de abajo, area de
     placa). Mas cobre y mas placa solo bajan theta_JA, asi que esa fila es una
-    cota. Si ninguna fila queda cubierta, la union no tiene cota: HUECO.
+    cota. Si ninguna fila queda cubierta, la union no tiene cota de papel: si
+    la hoja da theta_JC, se acota en el bring-up (`check_bringup.py`, paso 7)
+    con lo que la aleta puede subir sobre el aire, `subida_max_aleta_k()`; si
+    no, HUECO. U2 va por ahi: su tabla pide 2500 mm2 abajo.
     El cobre se mide en `kicad/sam17-power-v5.kicad_pcb` (los rellenos de la
     red de la aleta que tocan su campo de vias), y los rectangulos se leen de
     TERMICO y VIAS_TERMICAS en `kicad/build_pcb.py`.
@@ -64,6 +67,8 @@ TABLA_THETA = {
 }
 HOJA = {"U1": "lt1963a-rev-g-2021-02.pdf p. 19, Table 3",
         "U2": "lt3015-rev-b.pdf p. 19, Table 4"}
+# Union-aleta del DD-Pak: lt3015-rev-b.pdf p. 2, Q package, "qJC = 3C/W".
+THETA_JC_C_W = {"U2": 3.0}
 
 _HUECOS: list[str] = []
 
@@ -85,6 +90,12 @@ def potencia_w(reg: str) -> float:
     v_thn = lb.V_CRUDO_CASCADA * (1 + lb.TOL_CRUDO)
     return lb.cascada_w(reg, v_thn=v_thn, iq_pre=ignd_a(reg, i_regulador_a(reg)))[
         f"{reg} (pre-regulador)"]
+
+
+def subida_max_aleta_k(reg: str, t_aire_c: float) -> float:
+    """Lo que puede subir la aleta de `reg` sobre el aire sin que la union pase
+    de TJ_MAX con el aire a `t_aire_c`: la caida aleta-union es P * theta_JC."""
+    return TJ_MAX_C - t_aire_c - potencia_w(reg) * THETA_JC_C_W[reg]
 
 
 def _literal(nombre: str):
@@ -198,7 +209,15 @@ def demo() -> int:
         print(f"      {c['red']}: {c['F.Cu']:.0f} mm2 arriba, {c['B.Cu']:.0f} abajo, "
               f"{c['vias']} vias, placa {c['placa']:.0f} mm2")
         th = p[f"theta_{reg}"]
-        if th is None:
+        if th is None and reg in THETA_JC_C_W:
+            sube = subida_max_aleta_k(reg, t_aire)
+            assert sube > 0, (
+                f"{reg}: con {p[f'p_{reg}']:.2f} W y theta_JC {THETA_JC_C_W[reg]:g} C/W la union "
+                f"pasa de TJMAX con la aleta al aire del cajon ({t_aire:.1f} C)")
+            print(f"      ninguna fila de {HOJA[reg]} queda cubierta: se acota en el bring-up, "
+                  f"aleta <= {sube:.1f} K sobre el aire (theta_JC {THETA_JC_C_W[reg]:g} C/W, "
+                  f"check_bringup.py paso 7)")
+        elif th is None:
             peor = min(f[3] for f in TABLA_THETA[reg])
             _HUECOS.append(
                 f"{reg}: su cobre ({c['F.Cu']:.0f} mm2 arriba, {c['B.Cu']:.0f} abajo) no cubre "

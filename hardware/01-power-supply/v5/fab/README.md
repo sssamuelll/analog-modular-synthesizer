@@ -44,8 +44,9 @@ La placa de #474 que había aquí antes no tenía ni una pista (161 huellas,
   F5 → J9 (+5 V digital, hasta 2,9 A). `check_pcb.py` comprueba que cada pad
   de esos caminos se alcanza desde el origen por cobre de ≥ 1,4 mm (~3 A con
   10 °C de subida en 1 oz, IPC-2221).
-- **Disipación de U1 y U2** (~1,9 W cada uno en DD-PAK; el peor caso de
-  `../ladrillo_budget.py` llega a 3,77 / 3,14 W, #478): la aleta de U1 es
+- **Disipación de U1 y U2** (1,75 / 1,82 W en DD-PAK con la cascada a
+  450 mA/riel, `../tj_budget.py`: la unión de U1 queda en 120,5 °C y la de U2
+  se acota midiendo su aleta en el bring-up, #478): la aleta de U1 es
   GNDA y baja al plano por 36 vías; la de U2 es −15V5_FILT y tiene su
   propio cobre en F.Cu, In2 y B.Cu con otras 36.
 - **Ruteo**: Freerouting 2.4.1 (por línea de órdenes, sin tocar su

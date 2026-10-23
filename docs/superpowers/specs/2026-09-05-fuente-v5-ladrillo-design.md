@@ -669,7 +669,10 @@ firmó en dirección el 2026-09-08 (§9); queda pendiente ejecutar su relevo**
    > `MARGEN`) pide 442. Con 650, `U1` llegaba a 148,9 °C de unión con el aire
    > del cajón a 63,9 °C (`tj_budget.py`); con 450 el cajón baja de 72,61 a
    > 64,93 W, el aire a 62,6 °C, el cordón de 3,21 a 2,87 A en su peor caso y
-   > `U1` a 120,5 °C. El cobre no cambia: la cascada sigue ruteada para 650.
+   > `U1` a 120,5 °C. `U2` (1,82 W) no tiene fila de la hoja que su cobre
+   > cubra: se acota en el bring-up, con la subida de su aleta (paso 7,
+   > `tj_budget.subida_max_aleta_k`). El cobre no cambia: la cascada sigue
+   > ruteada para 650.
 
 ## 9. Lo que hay que firmar
 
