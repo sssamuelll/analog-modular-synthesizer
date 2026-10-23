@@ -10,17 +10,22 @@ sec. 9.2) con piezas versionadas en `docs/reference/datasheets/`:
      (`tps2663.pdf` p. 6-8, 22) en modo latch, precedido por el controlador de
      bloqueo de polaridad inversa **TI LM74502** (`lm74502.pdf` p. 1, -65 V).
      - `RON_max = 53 mohm` entre -40 y +125 C (`tps2663.pdf` p. 7).
-     - Limite de corriente programado con `R_ILIM = 3,74 kohm` (E96 1 %):
-       segunda ecuacion de diseno `I_OL = 18,1 / R_ILIM(kohm) = 4,84 A` nominal
-       (`tps2663.pdf` p. 22 ec. 5), con banda de exactitud de `+-7 %` (la hoja
-       la da a 3 y a 4,02 kohm, p. 7): `4,50 A .. 5,18 A`. El minimo pasa 1,5
-       veces la corriente del cordon con el ladrillo en sus 24 V nominales
-       (`ladrillo_budget.py`: `2,98 A`) y el maximo queda por debajo de los
-       `7,5 A/pin` del conector Kycon.
+     - Limite de corriente programado con `R_ILIM = 4,02 kohm` (E96 1 %):
+       segunda ecuacion de diseno `I_OL = 18,1 / R_ILIM(kohm) = 4,50 A` nominal
+       (`tps2663.pdf` p. 22 ec. 5), con banda de exactitud de `+-7 %`
+       (`tps2663.pdf` p. 7: `4,185 A .. 4,815 A`). La banda cabe entre dos
+       cotas. Por arriba, el disparo minimo del ladrillo TE90A2403F01: su
+       sobrecarga va del 130 al 180 % de `3,75 A` (`ae-TE90-datasheet.pdf`
+       p. 2 y p. 5), asi que `U16` corta antes de que el ladrillo entre en
+       hiccup si su maximo queda bajo `4,875 A`. Por abajo, `1,40 x` la
+       corriente del cordon a 24 V nominales (`2,98 A`) y `1,30 x` la de su
+       peor caso (`3,21 A`, `ladrillo_budget.py`). Con `+-7 %` la banda abarca
+       `1,15 x`: el `1,5 x` sobre la nominal no cabe bajo `4,875 A`.
      - A diferencia del TPS26630, el TPS26631 deja pasar hasta `2 x I_OL`
        durante `tCB(dly) = 25,5 ms` (con PGOOD alto) antes de regular a `I_OL`,
        y su comparador rapido corta a `3 x I_OL` (`tps2663.pdf` p. 7, 23): ese
-       pico, `2 x 5,18 = 10,36 A`, tambien cabe en el conector.
+       pico, `2 x 4,815 = 9,63 A`, tambien cabe en los `7,5 A/pin` del
+       conector Kycon.
      - El de riel `U19` limita con `R34`: su minimo tiene que pasar la rama
        `U1` con la carga en su techo (`ladrillo_budget.corriente_thn_a`). A
        ~1 A la hoja da `+-10 %` (30 kohm) y `+-8 %` (9 kohm): se toma el 10.
@@ -69,8 +74,8 @@ sec. 9.2) con piezas versionadas en `docs/reference/datasheets/`:
      - El `FLT` de `U19` es el mismo para sobretension, sobrecarga, UVLO y
        temperatura (`tps2663.pdf` p. 27), y el MCU no ve la tension del riel:
        una sobretension de riel gasta intentos como una sobrecarga y abandona
-       al agotar el cupo, no en el primer pulso como pide sec. 9.2. En cada
-       intento `U19` abre el riel por si solo (OVP, p. 20).
+       al agotar el cupo (sec. 9.2). En cada intento `U19` abre el riel por si
+       solo (OVP, p. 20).
      - Los crowbars de rack (D-F6) no tienen camino al MCU (#476).
      - Desenchufar durante los `T_CONFIRMA_SANO_S` de un intento lo cuenta como
        fallido: desde el MCU no se distingue de un corto que tumba la entrada.
@@ -105,7 +110,9 @@ R_ILIM_KOHM = valor("R11") / 1e3
 K_ILIM_TPS26631_A_KOHM = 18.1             # tps2663.pdf p. 22 ec. (5): R = 18,1 / I_OL
 TOL_ILIM_TPS26631_FRAC = 0.07             # +-7 % en tps2663.pdf p. 7
 TOL_ILIM_U19_FRAC = 0.10                  # p. 7: +-10 % a 30 kohm, +-8 % a 9 kohm
-MARGEN_ILIM = 1.5                         # sobre la corriente del cordon a 24 V nominales
+MARGEN_ILIM_NOMINAL = 1.40                # sobre el cordon a 24 V nominales
+MARGEN_ILIM_PEOR = 1.30                   # sobre el cordon en su peor caso
+I_OCP_LADRILLO_MIN_A = 1.30 * 3.75        # TE90A2403F01: 3,75 A (p. 5), OCP 130..180 % (p. 2)
 I_CORDON_CONTINUA_A = LADRILLO.corriente_del_cordon_a()
 I_CORDON_NOMINAL_A = LADRILLO.entrada_dcdc_w() / LADRILLO.V_LADRILLO
 I_RIEL_U19_A = LADRILLO.corriente_thn_a("U1")
@@ -428,17 +435,20 @@ def _verifica_politica(cls_kwargs: dict) -> None:
 
 
 def _autocomprobacion() -> None:
-    # 1. El limite de corriente del TPS26631 deja pasar 1,5 veces la corriente
-    #    del cordon a 24 V nominales y protege el conector (15 A/polo). El 1,5x
-    #    cubre lo que ladrillo_budget.no_cubre() deja fuera, no solo el
-    #    ladrillo al -5 %: por eso se mide sobre la nominal y no sobre el peor caso.
+    # 1. La banda de ILIM del TPS26631 cabe entre el ladrillo y la carga: por
+    #    arriba corta antes que la sobrecarga del TE90 (selectividad), y por
+    #    abajo deja holgura sobre el cordon a 24 V nominales y en su peor caso
+    #    para lo que ladrillo_budget.no_cubre() deja fuera. Protege el conector.
     i_min, i_nom, i_max = corriente_limite_tps26631_a()
-    assert i_min > MARGEN_ILIM * I_CORDON_NOMINAL_A, (
-        f"banda baja de ILIM ({i_min:.2f} A) por debajo de {MARGEN_ILIM} x "
-        f"{I_CORDON_NOMINAL_A:.2f} A (cordon a 24 V nominales)")
-    assert i_min > I_CORDON_CONTINUA_A, (
-        f"banda baja de ILIM ({i_min:.2f} A) por debajo del cordon en su peor caso "
-        f"({I_CORDON_CONTINUA_A:.2f} A): U16 cortaria con la carga de diseno")
+    assert i_max < I_OCP_LADRILLO_MIN_A, (
+        f"banda alta de ILIM ({i_max:.3f} A) por encima del disparo minimo del TE90 "
+        f"({I_OCP_LADRILLO_MIN_A:.3f} A): el ladrillo puede entrar en hiccup antes de que U16 corte")
+    assert i_min >= MARGEN_ILIM_NOMINAL * I_CORDON_NOMINAL_A, (
+        f"banda baja de ILIM ({i_min:.3f} A) por debajo de {MARGEN_ILIM_NOMINAL} x "
+        f"{I_CORDON_NOMINAL_A:.3f} A (cordon a 24 V nominales)")
+    assert i_min > MARGEN_ILIM_PEOR * I_CORDON_CONTINUA_A, (
+        f"banda baja de ILIM ({i_min:.3f} A) por debajo de {MARGEN_ILIM_PEOR} x "
+        f"{I_CORDON_CONTINUA_A:.3f} A (cordon en su peor caso)")
     # El de U19 deja pasar su rama con la carga en su techo.
     u19_min, _, _ = corriente_limite_tps26631_a("R34", TOL_ILIM_U19_FRAC)
     assert u19_min > I_RIEL_U19_A, (
@@ -500,9 +510,12 @@ def demo() -> int:
     print("  1. Dimensionado del eFuse de entrada TI TPS26631 (tps2663.pdf p. 6, 7, 22):")
     print(f"    R_ILIM = {R_ILIM_KOHM:.2f} kohm (1 %) -> I_OL = {i_nom:.2f} A nom "
           f"(banda +-7 %: {i_min:.2f} .. {i_max:.2f} A)")
-    print(f"    corriente del cordon a 24 V nominales: {I_CORDON_NOMINAL_A:.2f} A "
-          f"(minimo de ILIM {i_min / I_CORDON_NOMINAL_A:.2f} x, se pide {MARGEN_ILIM} x); "
-          f"en su peor caso {I_CORDON_CONTINUA_A:.2f} A ({i_min / I_CORDON_CONTINUA_A:.2f} x)")
+    print(f"    techo: disparo minimo del TE90 {I_OCP_LADRILLO_MIN_A:.3f} A "
+          f"(maximo de ILIM {i_max:.3f} A)")
+    print(f"    cordon a 24 V nominales {I_CORDON_NOMINAL_A:.3f} A: minimo de ILIM "
+          f"{i_min / I_CORDON_NOMINAL_A:.3f} x (se pide >= {MARGEN_ILIM_NOMINAL} x); "
+          f"en su peor caso {I_CORDON_CONTINUA_A:.3f} A: {i_min / I_CORDON_CONTINUA_A:.3f} x "
+          f"(se pide > {MARGEN_ILIM_PEOR} x)")
     u19_min, u19_nom, u19_max = corriente_limite_tps26631_a("R34", TOL_ILIM_U19_FRAC)
     print(f"    U19: R34 = {valor('R34') / 1e3:.1f} kohm -> I_OL = {u19_nom:.3f} A nom "
           f"(banda +-10 %: {u19_min:.3f} .. {u19_max:.3f} A) contra la rama U1 en su techo "

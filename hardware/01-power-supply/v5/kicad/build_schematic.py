@@ -148,7 +148,7 @@ def entrada_m5() -> None:
     # enchufar, en un reset o programando, U16 sigue apagado hasta que el
     # firmware haya leido la bandera ABANDONADO de la FRAM.
     dos("R83", "R", b, "SHDN_M5", "GND24")
-    dos("R11", "R", b, "ILIM_U16", "GND24")       # 18.1/3.74k = 4.84 A
+    dos("R11", "R", b, "ILIM_U16", "GND24")       # 18.1/4.02k = 4.50 A, < 4.875 del TE90
     # UVLO 17.9 V / OVP 32.7 V con V(UVLOR) = V(OVPR) = 1.2 V (p. 6)
     dos("R12", "R", b, "+24V_PROT", "UVLO_U16")
     dos("R13", "R", b, "UVLO_U16", "OVP_U16")
