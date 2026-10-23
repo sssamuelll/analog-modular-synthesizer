@@ -664,6 +664,13 @@ firmó en dirección el 2026-09-08 (§9); queda pendiente ejecutar su relevo**
    la cascada pasa a ser la línea más gorda del presupuesto. Merece la misma
    pregunta que se le hizo a la fila de abajo. **No se toca en este papel.**
 
+   > **Re-declarada el 2026-10-23: 450 mA/riel.** El peor riel del censo son
+   > 340,2 mA y la regla del 30 % (`hardware/03-vco/consumo_total_budget.py`,
+   > `MARGEN`) pide 442. Con 650, `U1` llegaba a 148,9 °C de unión con el aire
+   > del cajón a 63,9 °C (`tj_budget.py`); con 450 el cajón baja de 72,61 a
+   > 64,93 W, el aire a 62,6 °C y `U1` a 120,5 °C. El cobre no cambia: la
+   > cascada sigue ruteada para 650.
+
 ## 9. Lo que hay que firmar
 
 | | Qué | Dónde | Estado |
@@ -827,8 +834,9 @@ coincidir con `H-V2-TRANSITORIOS` y `H-V2-RESERVA`, y `H-V5-RECONEXION` ~~sigue
 la política que se elija en~~ **hereda la ya elegida en** `H-V2-RECUPERACION`
 (§9.3, 08-09). Contestarlas por separado es una forma de contradecirse.
 
-Y una que este papel **no** propone y hay que decidir aparte: si la cascada
-sigue declarando 650 mA/riel contra un censo de 334 (HUECO 5).
+Y una que este papel **no** propone y hay que decidir aparte: ~~si la cascada
+sigue declarando 650 mA/riel contra un censo de 334 (HUECO 5)~~ **decidida el
+2026-10-23: 450 mA/riel (§8, punto 5)**.
 
 ### 9.3 Las cuatro políticas, decididas — 2026-09-08
 

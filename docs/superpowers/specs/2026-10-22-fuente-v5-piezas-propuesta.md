@@ -19,7 +19,7 @@
 
 ## 2. Convertidores
 
-Cargas del [guion](../../../hardware/01-power-supply/v5/ladrillo_budget.py) (declarado / censo): +12 V 1,050 / 0,850 A · −12 V 0,500 / 0,300 A · +5 V rack 0,500 / 0,300 A · +5 V digital 2,895 / 0,965 A · cada crudo 0,650 / 0,334 A. Aire del case: techo de diseño 65 °C (sala de 45 °C del `calor_budget.py:138` más 20 K del v5 §6) **[comprobado]**.
+Cargas del [guion](../../../hardware/01-power-supply/v5/ladrillo_budget.py) (declarado / censo): +12 V 1,050 / 0,850 A · −12 V 0,500 / 0,300 A · +5 V rack 0,500 / 0,300 A · +5 V digital 2,895 / 0,965 A · cada crudo ~~0,650~~ **0,450** (D-F1, 2026-10-23) / 0,334 A. Aire del case: techo de diseño 65 °C (sala de 45 °C del `calor_budget.py:138` más 20 K del v5 §6) **[comprobado]**.
 
 | Riel | Candidato 1 | Qué cubre | Lo que lo descartaría |
 |---|---|---|---|

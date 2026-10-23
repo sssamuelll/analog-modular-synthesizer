@@ -297,8 +297,8 @@ def _puntos() -> list[Punto]:
                    f"Pinout J2 Eurocard verificado: pin {pin} = {nom:+g} V",
                    predicho=nom, tol=0.30))
     for tp, nom in (("TP3", 12.0), ("TP4", -12.0)):
-        p.append(P("5", f"{tp}_con_carga_650mA", "V",
-                   "Regulacion de carga final en cascada entregando 650 mA continuos",
+        p.append(P("5", f"{tp}_con_carga_450mA", "V",
+                   "Regulacion de carga final en cascada entregando 450 mA continuos (D-F1)",
                    predicho=nom, tol=0.05))
 
     # --- Paso 6: Telemetria contra multimetro -----------------------------

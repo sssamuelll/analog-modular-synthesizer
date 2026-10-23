@@ -31,7 +31,7 @@ que no dice cuanto de si mismo es fe no es un presupuesto.
 
 --- Que rieles ---------------------------------------------------------------
 
-Los 650 mA/riel del modulo 1 son los de +-12 V ULTRA, los del instrumento, que
+Los 450 mA/riel del modulo 1 son los de +-12 V ULTRA, los del instrumento, que
 en la v4 salen de la cascada lineal alimentada por PS1/PS2 (eran el toroidal de
 la v3). El +5 V viene de PS6 aparte (spec del cerebro S9), asi que los DAC, la
 referencia, los micros y los LED NO cargan este presupuesto: cuelgan de otra
@@ -50,8 +50,9 @@ INVITADOS_BUDGET = os.path.join(
 CITADO, DECLARADO, POR_CONFIRMAR = "CITADO", "DECLARADO", "POR_CONFIRMAR"
 
 # --- el techo, y la puerta --------------------------------------------------
-RIEL_MA = 650.0        # hardware/01-power-supply/README.md: "PCB ruteada a
-                       # 650 mA/riel"
+RIEL_MA = 450.0        # D-F1 re-declarada el 2026-10-23 (fuente v5 sec.8,
+                       # punto 5): era 650, el doble del censo. 450 deja el
+                       # peor riel (340,2 mA) dentro del 30 % de MARGEN
 MARGEN = 0.30          # voz-total S8: "si no cierra con un 30 % de margen,
                        # se renegocia antes del cobre"
 USABLE_MA = RIEL_MA / (1.0 + MARGEN)

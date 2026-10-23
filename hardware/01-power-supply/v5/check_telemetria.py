@@ -114,7 +114,7 @@ CLAMP_V = -VF_BAT54_V
 
 # Solo texto: medidas.csv y check_bringup lo copian tal cual.
 _RIEL_Y_DESC = {
-    "U8":  ("+12 V ultra", "D-F1: 650 mA sostenidos"),
+    "U8":  ("+12 V ultra", "D-F1: 450 mA sostenidos"),
     "U12": ("+5 V aux U3", "Alimentacion telemetria y control"),
     "U13": ("+12 V rack",  "D-F2 / T15: 500 mA fila B + 550 mA pantalla"),
     "U14": ("+5 V rack",   "D-F2 / T15: 500 mA fila B"),

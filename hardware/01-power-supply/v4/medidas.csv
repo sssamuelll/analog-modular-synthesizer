@@ -28,11 +28,11 @@ paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
 1,PS6_vacio,V,4.875 .. 5.125,5,0.125,,,,"papel sec.9.1 paso 1: cada IRM uno por uno, en vacio"
 1,PS6_a_nominal,V,4.875 .. 5.125,5,0.125,,,,papel sec.9.1 paso 1: con carga ficticia a su nominal
 1,PS6_rizado_20MHz,Vpp,<= 0.08,,,,,,"hoja p. 2, RIPPLE & NOISE (max.), con el metodo de su Note.2: par trenzado de 12 pulgadas terminado con 0,1 uF || 47 uF, y 20 MHz de ancho de banda"
-1,corriente_red_rms_a_liston,A,2.29747 .. 4.26674,3.28211,0.984632,,,,"fusible_budget.i_red_rms_a('liston'), con pinza"
+1,corriente_red_rms_a_liston,A,2.21747 .. 4.11817,3.16782,0.950346,,,,"fusible_budget.i_red_rms_a('liston'), con pinza"
 1,inrush_pico_arranque_frio,A,<= 106.723,,,,,,fusible_budget: Vpico sobre la NTC fria mas la red
 1,inrush_pico_rearranque_100ms,A,<= 784.791,,,,,,fusible_budget: el caso que dimensiona el fusible. Cortar y volver a los 100 ms
 1,fuga_a_PE_seis_encendidos,mA,<= 3.5,,,,,,"fuga_budget.fuga_total_ma(), con los seis en marcha. Es tambien la medida que arbitra D-F5"
-2,mas15_minimo_con_carga,V,>= 14.3652,,,,,,margen_budget.v_entrada_minima_v(): lo que le tiene que llegar a U1 en el peor caso
+2,mas15_minimo_con_carga,V,>= 14.3812,,,,,,margen_budget.v_entrada_minima_v(): lo que le tiene que llegar a U1 en el peor caso
 2,mas15_necesario_para_regular,V,registro,,,,,,"margen_budget.v_necesaria_v('U1'): REGISTRO del criterio, para que la hoja de campo lleve el numero contra el que se compara. U1 es un LT1963A desde el 2026-09-04 y su margen es POSITIVO; el que sigue en negativo es U2 (HUECO de margen_budget)"
 2,rizado_tras_LC_20MHz,Vpp,<= 0.00365059,,,,,,rizado_budget: los 200 mVp-p del IRM por la transferencia del LC amortiguado a 65 kHz
 2,pico_del_LC_en_resonancia,dB,<= 3,,,,,,rizado_budget.pico_lc_db(): el LC amortiguado no puede amplificar dentro de la banda de 10 Hz-100 kHz
@@ -64,7 +64,7 @@ paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
 7,area_venteo_construida,mm2,>= 21000,,,,,,"el venteo que el papel del case acabe dibujando (#289). Por debajo del que calor_budget pide, el sostenido no vale"
 7,carcasa_PS3_termopar,C,registro,,,,,,REGISTRO: la hoja publica la temperatura del AIRE (-30 a +85 C) y no la de la carcasa. Solo significa algo comparado con la placa siguiente
 7,carcasa_PS6_termopar,C,registro,,,,,,REGISTRO: la hoja publica la temperatura del AIRE (-30 a +85 C) y no la de la carcasa. Solo significa algo comparado con la placa siguiente
-7,NTC_carcasa,C,registro,,,,,,"REGISTRO: fusible_budget la estima disipando 2.77 W dentro del recinto, y la tabla de calor del papel sec.6 no la lleva"
+7,NTC_carcasa,C,registro,,,,,,"REGISTRO: fusible_budget la estima disipando 2.70 W dentro del recinto, y la tabla de calor del papel sec.6 no la lleva"
 7,sostenido_rack+12_medido,A,>= 1.80385,,,,,,calor_budget.SOSTENIDO['rack+12']: la carga que el riel aguanta sin salirse de su curva a la T de arriba
 7,sostenido_rack-12_medido,A,>= 1.80385,,,,,,calor_budget.SOSTENIDO['rack-12']: la carga que el riel aguanta sin salirse de su curva a la T de arriba
 7,sostenido_rack+5_medido,A,>= 3.6,,,,,,calor_budget.SOSTENIDO['rack+5']: la carga que el riel aguanta sin salirse de su curva a la T de arriba

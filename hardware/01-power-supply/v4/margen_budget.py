@@ -246,8 +246,9 @@ V_DROPOUT_TIP = {"U1": 0.19, "U2": 0.20}
 V_ABSMAX_ENTRADA = 20.0
 
 # --- la corriente real de la cascada (#343) -------------------------------
-# 650 mA/riel es lo que la PCB de la cascada rutea y lo que vigila
-# consumo_total_budget.py; se importa, no se copia. Encima, el consumo propio
+# RIEL_MA es la carga declarada de la cascada (D-F1: 650 mA/riel hasta el
+# 2026-10-23, 450 desde entonces) y lo que vigila consumo_total_budget.py; se
+# importa, no se copia. Encima, el consumo propio
 # del pre-regulador a plena carga:
 #   * U1 (LT1963A, lt1963a-rev-g-2021-02.pdf p. 5, "GND Pin Current",
 #     IL = 1,5 A, VIN = VOUT(NOMINAL) + 1 V, fila de punto negro para todo el
