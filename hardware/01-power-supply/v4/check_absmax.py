@@ -108,7 +108,15 @@ def _modelo_tope_v5():
     ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "v5", "check_absmax.py")
     spec = importlib.util.spec_from_file_location("check_absmax_v5", ruta)
     mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    # Al cargarse, la v5 se pone la PRIMERA en sys.path, y sus margen_budget y
+    # rizado_budget se llaman igual que los de aqui: sin devolver sys.path a
+    # como estaba, el fusible_budget de la v4 importaba los de la v5 y
+    # check_bringup.py de la v4 se caia con ImportError.
+    camino = list(sys.path)
+    try:
+        spec.loader.exec_module(mod)
+    finally:
+        sys.path[:] = camino
     return mod
 
 

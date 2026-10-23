@@ -5,7 +5,7 @@
 En la v5 los dos rieles crudos de la cascada ya no salen de dos Mean Well
 IRM-20-15 a 15,0 V de catalogo: salen de dos convertidores aislados **TRACO
 THN 20-2413WI** (`traco_thn20wi.pdf` p. 1-3) recortados por su pin `Trim` a
-**15,5 V** nominales (D-V3), con el eFuse **TI TPS26630** (`tps2663.pdf` p. 7)
+**15,5 V** nominales (D-V3), con el eFuse **TI TPS26631** (`tps2663.pdf` p. 7)
 en serie en la rama positiva antes del filtro LC (M3, #334).
 
 Este guion incorpora:
@@ -14,7 +14,7 @@ Este guion incorpora:
    p. 5), que sube la corriente por el filtro LC positivo a `0,770 A`
    (`0,650 + 0,120 A`), y la del `LT3015` (`U2`, D-F9, `Iq_max = 70 mA`,
    `lt3015-rev-b.pdf` p. 4), que deja la rama negativa en `0,720 A`.
-2. La caida adicional del eFuse `TPS26630` en la rama positiva (`RON_max =
+2. La caida adicional del eFuse `TPS26631` en la rama positiva (`RON_max =
    53 mohm` entre -40 y +125 C, `tps2663.pdf` p. 7: `40,8 mV` a `0,770 A`).
 3. Las cotas de regulacion del `THN 20-2413WI` (`traco_thn20wi.pdf` p. 2):
    exactitud base +-1 %, regulacion de linea +-0,2 % max, regulacion de carga
@@ -55,7 +55,7 @@ IQ_U2_MAX_A = mb4.IQ_U2_MAX_A         # 0,070 A (lt3015-rev-b.pdf p. 5)
 
 R_DCR_BOBINA_OHM = mb4.DCR_OHM             # 0,030 ohm (22 uH)
 R_DCR_FERRITA_OHM = mb4.R_FERRITA_DC_OHM   # 0,050 ohm (perla 600 ohm @ 100 MHz)
-R_ON_EFUSE_U1_OHM = 0.053                  # TI TPS26630 RON max (tps2663.pdf p. 7)
+R_ON_EFUSE_U1_OHM = 0.053                  # TI TPS26631 RON max (tps2663.pdf p. 7)
 
 ESTIMADOS = (
     "TOL_CRUDO_V5=2,5 %: envolvente conservadora para el THN 20-2413WI recortado "
@@ -77,7 +77,7 @@ def corriente_rama_a(reg: str) -> float:
 def resistencia_serie_rama_ohm(reg: str, *, r_efuse_u1: float = R_ON_EFUSE_U1_OHM) -> float:
     """Resistencia DC total entre la salida del THN 20-2413WI y el pin IN de `reg`.
 
-    En `U1` incluye el eFuse `TPS26630` de M3 (#334) antes del LC; en `U2` no
+    En `U1` incluye el eFuse `TPS26631` de M3 (#334) antes del LC; en `U2` no
     hay eFuse en serie porque el `LT3015` aguanta +-33 V de entrada (`lt3015-rev-b.pdf`
     p. 2) frente a los -24,6 V maximos de OVP del THN.
     """
@@ -169,7 +169,7 @@ def borde_rojo(guarda: Callable[[dict[str, float]], None],
 
 def demo() -> int:
     print("margen_budget v5: los dos THN 20-2413WI recortados a 15,5 V + eFuse M3\n")
-    for reg, pieza in (("U1", "LT1963A (D-F8, Iq_max=120 mA #343, eFuse TPS26630)"),
+    for reg, pieza in (("U1", "LT1963A (D-F8, Iq_max=120 mA #343, eFuse TPS26631)"),
                        ("U2", "LT3015  (D-F9, Iq_max=70 mA)")):
         i_tot = corriente_rama_a(reg)
         r_tot = resistencia_serie_rama_ohm(reg)
@@ -186,7 +186,7 @@ def demo() -> int:
         print(f"    MARGEN:               {m_mv:+.0f} mV\n")
 
     print(f"  maximo sano en vacio del crudo: {v_entrada_maxima_sana_v():.3f} V "
-          f"(contra 20,0 V absmax de U1 y 16,92 V max de disparo del TPS26630)\n")
+          f"(contra 20,0 V absmax de U1 y 16,92 V max de disparo del TPS26631)\n")
 
     _guarda_margen_u1(dict(P_BASE))
     _guarda_margen_u2(dict(P_BASE))

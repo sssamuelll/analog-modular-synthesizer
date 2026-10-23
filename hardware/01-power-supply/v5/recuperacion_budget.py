@@ -6,7 +6,7 @@ Resuelve la parte gobernable de **T24 / M5 / H-V2-RECUPERACION** (firmada en
 D-V4 el 2026-09-08 y detallada en `2026-10-22-fuente-v5-piezas-propuesta.md`
 sec. 9.2) con piezas versionadas en `docs/reference/datasheets/`:
 
-  1. **Interruptor de entrada en serie (24 V):** eFuse **TI TPS26630**
+  1. **Interruptor de entrada en serie (24 V):** eFuse **TI TPS26631**
      (`tps2663.pdf` p. 6-8, 22) en modo latch, precedido por el controlador de
      bloqueo de polaridad inversa **TI LM74502** (`lm74502.pdf` p. 1, -65 V).
      - `RON_max = 53 mohm` entre -40 y +125 C (`tps2663.pdf` p. 7).
@@ -15,6 +15,10 @@ sec. 9.2) con piezas versionadas en `docs/reference/datasheets/`:
        (`tps2663.pdf` p. 22 ec. 5), con banda de exactitud de `+-7 %` a 4,5 A
        (`tps2663.pdf` p. 7: `4,185 A .. 4,815 A`), por encima de los `2,69 A`
        continuos del cordon y por debajo de los `7,5 A/pin` del conector Kycon.
+     - A diferencia del TPS26630, el TPS26631 deja pasar hasta `2 x I_OL`
+       durante `tCB(dly) = 25,5 ms` (con PGOOD alto) antes de regular a `I_OL`,
+       y su comparador rapido corta a `3 x I_OL` (`tps2663.pdf` p. 7, 23): ese
+       pico, `2 x 4,815 = 9,63 A`, tambien cabe en el conector.
      - Pin `SHDN` con pull-down al retorno DC (`V(SHUTF) = 0,8 V` max, p. 7):
        mientras el MCU no este vivo y autorice, el eFuse permanece apagado.
 
@@ -40,7 +44,7 @@ sec. 9.2) con piezas versionadas en `docs/reference/datasheets/`:
        entrada de 24 V dentro de la ventana valida (`20..30 V`).
 
   4. **Alcance honesto (T24):** un corto en el cordon del ladrillo *aguas arriba*
-     del vigilante M5 no pasa por el `TPS26630`; depende del hiccup nativo del
+     del vigilante M5 no pasa por el `TPS26631`; depende del hiccup nativo del
      ladrillo (`H-PL-ABANDONO-FUENTE`).
 """
 from __future__ import annotations
@@ -49,8 +53,8 @@ from dataclasses import dataclass
 
 # --- Parametros electricos de hoja (tps2663.pdf y msp430fr2111.pdf) ---------
 R_ILIM_KOHM = 4.02                        # E96 1 %
-K_ILIM_TPS26630_A_KOHM = 18.1             # tps2663.pdf p. 22 ec. (5): R = 18,1 / I_OL
-TOL_ILIM_TPS26630_FRAC = 0.07             # +-7 % en tps2663.pdf p. 7
+K_ILIM_TPS26631_A_KOHM = 18.1             # tps2663.pdf p. 22 ec. (5): R = 18,1 / I_OL
+TOL_ILIM_TPS26631_FRAC = 0.07             # +-7 % en tps2663.pdf p. 7
 I_CORDON_CONTINUA_A = 2.691               # de ladrillo_budget.py (64,58 W / 24 V)
 I_MAX_CONECTOR_POR_POLO_A = 15.0          # Kycon KPJX-PM-4S / KPPX-4P: 2 x 7,5 A
 
@@ -70,13 +74,13 @@ T_REARME_SANO_S = 60.0
 T_BOTON_REARME_S = 2.0
 
 
-def corriente_limite_tps26630_a() -> tuple[float, float, float]:
-    """Devuelve (min_a, nom_a, max_a) del limite de corriente del TPS26630."""
-    nom = K_ILIM_TPS26630_A_KOHM / R_ILIM_KOHM
+def corriente_limite_tps26631_a() -> tuple[float, float, float]:
+    """Devuelve (min_a, nom_a, max_a) del limite de corriente del TPS26631."""
+    nom = K_ILIM_TPS26631_A_KOHM / R_ILIM_KOHM
     return (
-        nom * (1.0 - TOL_ILIM_TPS26630_FRAC),
+        nom * (1.0 - TOL_ILIM_TPS26631_FRAC),
         nom,
-        nom * (1.0 + TOL_ILIM_TPS26630_FRAC),
+        nom * (1.0 + TOL_ILIM_TPS26631_FRAC),
     )
 
 
@@ -109,7 +113,7 @@ class ImagenFRAM:
 
 
 class VigilanteM5:
-    """Simulador discreto del vigilante M5 (TPS26630 + MSP430FR2111 FRAM)."""
+    """Simulador discreto del vigilante M5 (TPS26631 + MSP430FR2111 FRAM)."""
 
     def __init__(self, fram: ImagenFRAM | None = None, *,
                  persiste_en_fram: bool = True,
@@ -163,7 +167,7 @@ class VigilanteM5:
     def intento_energizar(self, *, v_in: float = 24.0,
                           fallo: str | None = None,
                           cae_alimentacion_en_corto: bool = False) -> bool:
-        """Ejecuta un intento de cierre del TPS26630 si la politica lo autoriza."""
+        """Ejecuta un intento de cierre del TPS26631 si la politica lo autoriza."""
         if self.abandonado_ram:
             self.efuse_habilitado = False
             return False
@@ -251,13 +255,17 @@ def _verifica_politica(cls_kwargs: dict) -> None:
 
 
 def _autocomprobacion() -> None:
-    # 1. El limite de corriente del TPS26630 (R_ILIM = 4,02 kohm) deja pasar la
+    # 1. El limite de corriente del TPS26631 (R_ILIM = 4,02 kohm) deja pasar la
     #    corriente continua del cordon (2,69 A) y protege el conector (15 A/polo).
-    i_min, i_nom, i_max = corriente_limite_tps26630_a()
+    i_min, i_nom, i_max = corriente_limite_tps26631_a()
     assert i_min > I_CORDON_CONTINUA_A * 1.5, (
         f"banda baja de ILIM ({i_min:.2f} A) demasiado cerca de {I_CORDON_CONTINUA_A:.2f} A")
     assert i_max < I_MAX_CONECTOR_POR_POLO_A, (
         f"banda alta de ILIM ({i_max:.2f} A) supera el conector ({I_MAX_CONECTOR_POR_POLO_A:.1f} A)")
+    # El TPS26631 deja pasar hasta 2 x I_OL durante 25,5 ms antes de regular
+    # (tps2663.pdf p. 7, 23): tambien ese pico tiene que caber en el conector.
+    assert 2 * i_max < I_MAX_CONECTOR_POR_POLO_A, (
+        f"pico de 2 x ILIM ({2 * i_max:.2f} A) supera el conector ({I_MAX_CONECTOR_POR_POLO_A:.1f} A)")
 
     # 2. La realizacion nominal pasa las 4 propiedades.
     _verifica_politica({})
@@ -279,9 +287,9 @@ def _autocomprobacion() -> None:
 
 
 def demo() -> int:
-    print("recuperacion_budget v5: vigilante de entrada M5 (TPS26630 + LM74502 + MSP430FR2111)\n")
-    i_min, i_nom, i_max = corriente_limite_tps26630_a()
-    print("  1. Dimensionado del eFuse de entrada TI TPS26630 (tps2663.pdf p. 7, 22):")
+    print("recuperacion_budget v5: vigilante de entrada M5 (TPS26631 + LM74502 + MSP430FR2111)\n")
+    i_min, i_nom, i_max = corriente_limite_tps26631_a()
+    print("  1. Dimensionado del eFuse de entrada TI TPS26631 (tps2663.pdf p. 7, 22):")
     print(f"    R_ILIM = {R_ILIM_KOHM:.2f} kohm (1 %) -> I_OL = {i_nom:.2f} A nom "
           f"(banda +-7 %: {i_min:.2f} .. {i_max:.2f} A)")
     print(f"    corriente continua del cordon: {I_CORDON_CONTINUA_A:.2f} A "

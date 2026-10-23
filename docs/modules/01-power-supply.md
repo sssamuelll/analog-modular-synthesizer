@@ -38,7 +38,9 @@ fila Eurorack de invitados (52 HP, D-B2):
 - **±12 V ultra (cascada del instrumento)** — módulos analógicos propios (Voz,
   filtro, VCA, bahía), **650 mA/riel** declarados (D-F1), **334 mA/riel** de
   censo (`consumo_total_budget.py`), rizado y ruido **≤ 0,8 µVrms (10 Hz–100 kHz)**.
-- **+5 V auxiliar (`U3`, local a la cascada)** — **100 mA** hacia el módulo 2 por `J6`.
+- **+5 V auxiliar (`+5V_AUX`)** — **100 mA** hacia el módulo 2 por `J6`. En la v5 sale
+  del +5 V de rack (`PS3`, `K7805T-1000R3`) por el shunt `R20` que mide `U12`; no hay
+  `U3`/LM7805 propio.
 - **±12 V y +5 V de rack (fila B de invitados)** — **500 mA/riel** de techo duro
   (D-B2; censo comercial de 300 mA/riel), con protección crowbar (`D-F6`,
   `BT151-500R` + `TL431BI`) y habilitación conjunta (`D-F4`).
@@ -54,7 +56,8 @@ fila Eurorack de invitados (52 HP, D-B2):
   (`KPPX-4P` en el cordón, 2 pines por polo en paralelo).
 - **Bloqueo de inversión de polaridad**: controlador **TI LM74502** + MOSFET
   en la entrada de 24 V (H-V5-INVERSION).
-- **Vigilante de entrada (`M5`)**: eFuse **TI TPS26630** (`tps2663.pdf`) gobernado
+- **Vigilante de entrada (`M5`)**: eFuse **TI TPS26631** (`tps2663.pdf`; la
+  «TPS26630PWPR» de #474 no existe: TI solo vende el TPS26630 en VQFN-24) gobernado
   por **TI MSP430FR2111** con FRAM no volátil (`msp430fr2111.pdf`): 3 reintentos
   (4 intentos totales) con espera de 1,0 s, filtro de rebote de 100 ms y
   enclavamiento en abandono persistente hasta rearme manual por botón dedicado ≥ 2 s.
@@ -66,22 +69,22 @@ recortados +3,3 %, D-V3):
 
 | Riel | Tope OVP (`M3` / #334) | Pre-regulador | Post-regulador |
 |------|------------------------|---------------|----------------|
-| +12 V ultra | `TPS26630` + `SMBJ16A` (corta a < 18,1 V ante fallo de 36 V) | **LT1963A** (D-F8) | LT3045 ×2 |
-| −12 V ultra | Diodo Schottky de enclavamiento (LT3015 soporta ±33 V) | **LT3015** `LT3015IT#PBF` (D-F9) | LT3094 ×2 |
-| +5 V (`U3`, módulo 2) | — (toma del pre-regulador positivo) | LM7805 | — |
+| +12 V ultra | `TPS26631` (`U19`) + `SMBJ16A` + LC 22 µH / 47 µF (`U1` ve 18,11 V ≤ 20 V ante un fallo de 36 V, `check_absmax.py`) | **LT1963A** `LT1963AEQ` (D-F8) | LT3045 ×2 |
+| −12 V ultra | Diodo Schottky de enclavamiento (LT3015 soporta ±33 V) | **LT3015** `LT3015EQ` (D-F9; DD-PAK, la aleta es IN) | LT3094 ×2 |
+| +5 V aux (módulo 2) | — (del +5 V de rack, `PS3` por el shunt `R20`) | — | — |
 
 Con crudos de **±15,5 V** (D-V3) e incluyendo la resistencia de paso del
-`TPS26630` (`53 mΩ` máx.) y la corriente de tierra máxima del `LT1963A` a 1,5 A
+`TPS26631` (`53 mΩ` máx.) y la corriente de tierra máxima del `LT1963A` a 1,5 A
 en temperatura (`120 mA`, #343), el margen de regulación garantizado en el peor
 caso sube a **+760 mV** en `U1` y **+1017 mV** en `U2`, y la ventana útil del
 detector analógico de `D-F4` (`LM393B` + `TL431BI`) pasa a **+802 mV**.
 
 ## Telemetría (`D-F2`)
 
-Aislada de `GNDD` por un **ISO1541** (`U9`) sobre el conector JST-PH de 4 pines
-(`J8`):
+Aislada de `GNDD` por un **ISO1541** (`U9`) sobre una tira de 4 pines a 2,54 mm
+(`J8`: +3,3 V digital, SDA, SCL, `GNDD`):
 - `U8` (**INA226**, `0x40`): +12 V ultra (tensión y corriente).
-- `U12` (**INA226**, `0x41`): +5 V auxiliar de `U3` (tensión y corriente).
+- `U12` (**INA226**, `0x41`): +5 V auxiliar (tensión y corriente, shunt `R20`).
 - `U13` (**INA226**, `0x44`, D-F2): +12 V de rack a la salida del convertidor.
 - `U14` (**INA226**, `0x45`, D-F2): +5 V de rack a la salida del convertidor.
 - `U10` (**ADS1115**, `0x48`): −12 V ultra, `VRAW+`, `VRAW−` y −12 V de rack.

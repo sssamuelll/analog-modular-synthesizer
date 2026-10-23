@@ -36,7 +36,7 @@ este guion calcula los dos lados por caminos independientes:
 cascada.** El 06-09 se firmo **D-F9** y `U2` paso a LT3015. Con **D-F8** (`U1`
 en LT1963A) e `Iq_max = 120 mA` a plena carga sobre temperatura (#343,
 `lt1963a-rev-g-2021-02.pdf` p. 5), `U1` a 15,0 V queda en +283 mV y a 15,5 V
-sube a +764 mV (+723 mV tras los 41 mV del eFuse `TPS26630` de M3).
+sube a +764 mV (+723 mV tras los 41 mV del eFuse `TPS26631` de M3).
 
 **3. M1 y H-CENSO-ETA-DIGITAL cerrados con hoja.** La decision M1 (2026-09-08)
 exige aislar el convertidor del +5 V digital. El modulo **Mornsun
@@ -103,7 +103,7 @@ LADRILLOS_45C_W = {
 R_CONTACTO_PIN_OHM = 0.030
 N_PINES_PARALELO = 2
 R_BUCLE_CONECTOR_OHM = 2.0 * (R_CONTACTO_PIN_OHM / N_PINES_PARALELO)
-# Vigilante de entrada M5: TI TPS26630 (tps2663.pdf p. 7: RON max 53 mohm a
+# Vigilante de entrada M5: TI TPS26631 (tps2663.pdf p. 7: RON max 53 mohm a
 # TJ=125 C) + bloqueo de polaridad TI LM74502 (lm74502.pdf p. 1) con MOSFET
 # externo de 15 mohm max.
 R_ON_EFUSE_ENTRADA_OHM = 0.053
@@ -288,7 +288,7 @@ def caida_entrada_completa_v(ohm_por_m: float = 0.0132,
     """Caida total desde el ladrillo hasta la entrada de los DC-DC (D-V5, M5).
 
     Suma: cordon (2 hilos) + conector Kycon KPJX-PM-4S/KPPX-4P (2 pines/polo) +
-    MOSFET de polaridad LM74502 + eFuse de entrada TPS26630.
+    MOSFET de polaridad LM74502 + eFuse de entrada TPS26631.
     """
     i_cordon = corriente_del_cordon_a()
     r_serie = R_BUCLE_CONECTOR_OHM + R_ON_POLARIDAD_OHM + R_ON_EFUSE_ENTRADA_OHM
@@ -527,7 +527,7 @@ def demo() -> int:
     v_min_dcdc = tension_minima_en_dcdc_v(0.0132, 2.0)
     print(f"    Con ladrillo al -5 % ({V_LADRILLO*(1-TOL_LADRILLO):.1f} V), cordon 16 AWG "
           f"de 2 m, conector Kycon (30 mohm bucle 2p/polo),\n    LM74502 (15 mohm) "
-          f"y TPS26630 (53 mohm), llegan {v_min_dcdc:.2f} V a los DC-DC contra "
+          f"y TPS26631 (53 mohm), llegan {v_min_dcdc:.2f} V a los DC-DC contra "
           f"{V_ARRANQUE_DCDC_MAX_V:.1f} V max de arranque\n    "
           f"(holgura +{v_min_dcdc - V_ARRANQUE_DCDC_MAX_V:.2f} V).")
 
