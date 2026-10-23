@@ -36,8 +36,9 @@ del censo D-V4 (`2026-09-08-censo-dv4-resolucion.md`) y los issues **#334** y
        `I_GT <= 15 mA`, `I^2t = 72 A^2s`, `t_gt <= 2 us`) + referencia
        **TI TL431BI** (`tl431.pdf` p. 5: `+-0,5 %`, dispersion de disparo
        `+-0,30 V`) + fusible rapido **Bourns SF-1206F** (`bourns_sf1206f.pdf`).
-     - En `+-12 V` (`THN 30-2422WI`, `traco_thn30wi.pdf` p. 2: sobrecarga tipica
-       `150 %` de `1,25 A` = `1,875 A`) y `+5 V` (`RPMB5.0-2.0` / `K7805T-1000R3`),
+     - En `+-12 V` (`THN 30-2422WI`, `traco_thn30wi.pdf` p. 2: limitacion de
+       corriente `150..205 %` de `1,25 A`, `170 %` tipica; `1,875 A` es el
+       minimo) y `+5 V` (`RPMB5.0-2.0` / `K7805T-1000R3`),
        la corriente de pliegue supera en mas de 35 veces los `40 mA` de
        mantenimiento del `BT151-500R`.
 
@@ -56,9 +57,14 @@ del censo D-V4 (`2026-09-08-censo-dv4-resolucion.md`) y los issues **#334** y
 Cada fila de `absmax.csv` sale de un modelo o de la BOM y se comprueba contra
 el: ninguna se cree.
 
+FUERA DE CONTRATO (se imprime al final): el contrato es de fallo simple
+(propuesta de piezas v5 sec. 9.1, #475).
+  * Fallo doble en el negativo (`THN-` en OVP y `U2` en corto): `U6`/`U7` verian
+    `24,6 V` contra `22 V`. Se acepta, sin TVS ni tope.
+  * El fallo doble equivalente en el positivo (`THN+` en OVP y `U1` en corto)
+    sale cubierto por M3, no por requisito: la fila `U4,U5` lo guarda.
+
 LO QUE ESTE CALCULO NO CUBRE (se imprime al final):
-  * Fallo doble en el negativo (`THN-` en OVP y `U2` en corto): `U6`/`U7` ven
-    `24,6 V` contra `22 V`. El positivo lo cubre el tope M3; el negativo no (#475).
   * `OUT` de `U19` baja a `-V_F` de `D19` (hasta `0,55 V` a `3 A`) durante el
     corte. La hoja da `-0,3 V` absoluto en DC y pide ese Schottky (p. 36, 38),
     sin cifra de transitorio.
@@ -534,9 +540,13 @@ def demo() -> int:
     print(f"  canario D-F6: con I_GT > {igt * 1e3:.0f} mA algun PNP no llega a la puerta")
     print(f"  canario D-F6: un despeje > {despeje:.0f} x la fusion pasaria el I2t del SCR")
 
-    print("\n  LO QUE NO CUBRE:")
+    print("\n  FUERA DE CONTRATO (fallo simple, #475):")
     print(f"    - fallo doble THN- en OVP + U2 en corto: U6/U7 verian {V_OVP_MAX_THN20_V:.1f} V "
-          f"contra 22 V, sin tope (el positivo si lo tiene; #475)")
+          f"contra 22 V; se acepta sin TVS ni tope")
+    print(f"    - fallo doble THN+ en OVP + U1 en corto: {con_tope['v_pico_v']:.2f} V en la cascada, "
+          f"cubierto por M3 (fila U4,U5), no por requisito")
+
+    print("\n  LO QUE NO CUBRE:")
     print("    - OUT de U19 a -V_F de D19 (<= 0,55 V a 3 A) durante el corte; la hoja da "
           "-0,3 V en DC y pide el Schottky")
     print("    - pendiente del riel de rack en enchufe en caliente (el SCR aguanta 200 V/us)")
