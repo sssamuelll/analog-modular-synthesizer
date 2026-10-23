@@ -199,6 +199,9 @@ COBRE = [
     ("+5V_DIG", "F.Cu", (80.75, 130.3, 97.6, 132.6)),
     ("+5V_DIG", "F.Cu", (89.0, 128.0, 91.0, 131.6)),
     ("+5V_DIG", "F.Cu", (95.2, 130.3, 97.6, 146.1)),
+    # U4.9 (OUTS_POS) queda entre OUT_U4 y GNDA a 0.5 mm de paso: Freerouting le
+    # cruzo SET_POS por delante y lo dejo sin salida. Se le saca uno fino.
+    ("OUTS_POS", "F.Cu", (148.3, 41.375, 150.5, 41.625)),
 ]
 TIRA_MAX = 2.5               # ancho maximo de cada tira de COBRE
 SOLAPE = 0.3                 # entre rectangulos de COBRE de la misma red que se unen
@@ -241,9 +244,16 @@ _PROYECTO: list[str] = []
 
 
 def guardar(ruta: str, board) -> None:
+    """SaveBoard en LF: en Windows escribe CRLF, git lo guarda en LF y el sha256
+    de la evidencia del DRC dejaria de ser el de la placa commiteada."""
     pcbnew.SaveBoard(ruta, board)
+    with open(ruta, "rb") as fh:
+        datos = fh.read()
+    if b"\r\n" in datos:
+        with open(ruta, "wb") as fh:
+            fh.write(datos.replace(b"\r\n", b"\n"))
     if _PROYECTO:
-        with open(ruta[:-len(".kicad_pcb")] + ".kicad_pro", "w", encoding="utf-8") as fh:
+        with open(ruta[:-len(".kicad_pcb")] + ".kicad_pro", "w", encoding="utf-8", newline="\n") as fh:
             fh.write(_PROYECTO[0])
 
 
@@ -331,7 +341,7 @@ def escribir_reglas() -> None:
                         # y JLC las taladra en 4 capas.
                         "min_through_hole_diameter": 0.2, "min_copper_edge_clearance": 0.5,
                         "min_hole_clearance": 0.25, "min_hole_to_hole": 0.25})
-    with open(PRO, "w", encoding="utf-8") as fh:
+    with open(PRO, "w", encoding="utf-8", newline="\n") as fh:
         json.dump(pro, fh, indent=2)
         fh.write("\n")
     with open(PRO, encoding="utf-8") as fh:

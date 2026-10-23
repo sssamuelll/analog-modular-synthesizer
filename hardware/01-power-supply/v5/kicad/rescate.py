@@ -243,7 +243,9 @@ def _anclas(item, ancho: float) -> list[tuple]:
                 out += [(punto[0], punto[1], c, (x, y), estrecho, borde) for c in capas]
             t += G / 2
         return out
-    if isinstance(item, pcbnew.PCB_VIA):
+    # Por GetClass y no isinstance: GetConnectedItems() devuelve las vias como
+    # PCB_TRACK, y su GetWidth() sin capa tumba el proceso en KiCad 10.0.3.
+    if item.GetClass() == "PCB_VIA":
         x, y = item.GetPosition().x / 1e6, item.GetPosition().y / 1e6
         return [(x + dx * 0.1, y + dy * 0.1, c, (x, y), ancho, (x + dx * 0.1, y + dy * 0.1))
                 for c in CAPAS for dx in (-2, -1, 0, 1, 2) for dy in (-2, -1, 0, 1, 2)]

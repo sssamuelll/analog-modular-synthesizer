@@ -9,7 +9,7 @@ reexporta, la puerta se pone roja.
 
 ```
 DRC (kicad-cli, todas las severidades + paridad)  0 infracciones · 0 sin conectar · 0 de paridad
-cobre            1331 pistas, 274 vías (72 térmicas de U1/U2, 105 de masa cosidas)
+cobre            1509 pistas, 285 vías (72 térmicas de U1/U2, 107 de masa cosidas)
 stackup          F.Cu señal+potencia | In1 masas GND24/GNDA/GNDD | In2 señal | B.Cu señal+masa
 ```
 
@@ -28,7 +28,7 @@ La placa de #474 que había aquí antes no tenía ni una pista (161 huellas,
 | Capas | **4** |
 | Cobre | 1 oz exterior: los caminos de 3 A están calculados con ese espesor |
 | Espesor | 1.6 mm, FR-4 |
-| Vías | 252 de 0.6 / 0.3 mm y 22 de 0.8 / 0.4 mm (redes de potencia); las huellas DFN traen sus vías térmicas de 0.2 mm |
+| Vías | 266 de 0.6 / 0.3 mm y 19 de 0.8 / 0.4 mm (redes de potencia); las huellas DFN traen sus vías térmicas de 0.2 mm |
 | Pista mínima | 0.187 mm (la entrada a los pines de 0.45 mm de paso) |
 | Holgura mínima | 0.15 mm |
 
@@ -44,7 +44,8 @@ La placa de #474 que había aquí antes no tenía ni una pista (161 huellas,
   F5 → J9 (+5 V digital, hasta 2,9 A). `check_pcb.py` comprueba que cada pad
   de esos caminos se alcanza desde el origen por cobre de ≥ 1,4 mm (~3 A con
   10 °C de subida en 1 oz, IPC-2221).
-- **Disipación de U1 y U2** (~1,9 W cada uno en DD-PAK): la aleta de U1 es
+- **Disipación de U1 y U2** (~1,9 W cada uno en DD-PAK; el peor caso de
+  `../ladrillo_budget.py` llega a 3,77 / 3,14 W, #478): la aleta de U1 es
   GNDA y baja al plano por 36 vías; la de U2 es −15V5_FILT y tiene su
   propio cobre en F.Cu, In2 y B.Cu con otras 36.
 - **Ruteo**: Freerouting 2.4.1 (por línea de órdenes, sin tocar su
