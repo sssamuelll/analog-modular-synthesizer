@@ -2,7 +2,7 @@
 	(version "E")
 	(design
 		(source "D:\\Desktop\\projects\\sam17\\.claude\\worktrees\\fuente-v5\\hardware\\01-power-supply\\v5\\kicad\\sam17-power-v5.kicad_sch")
-		(date "2026-10-23T17:11:31")
+		(date "2026-10-23T17:35:21")
 		(tool "Eeschema 10.0.3")
 		(sheet
 			(number "1")
@@ -6172,13 +6172,13 @@
 		)
 		(comp
 			(ref "R11")
-			(value "3.74k")
+			(value "4.02k")
 			(footprint "Resistor_SMD:R_0805_2012Metric")
 			(fields
 				(field
-					(name "LCSC") "C2960937")
+					(name "LCSC") "C17663")
 				(field
-					(name "MPN") "FRC0805F3741TS")
+					(name "MPN") "0805W8F4021T5E")
 				(field
 					(name "Footprint") "Resistor_SMD:R_0805_2012Metric")
 				(field
@@ -6195,11 +6195,11 @@
 			)
 			(property
 				(name "LCSC")
-				(value "C2960937")
+				(value "C17663")
 			)
 			(property
 				(name "MPN")
-				(value "FRC0805F3741TS")
+				(value "0805W8F4021T5E")
 			)
 			(property
 				(name "Sheetname")
