@@ -12,10 +12,10 @@ Este guion incorpora:
 1. `#343`: la corriente de masa maxima del `LT1963A` (`U1`, D-F8) a plena carga
    sobre temperatura (`Iq_max = 120 mA` a 1,5 A, `lt1963a-rev-g-2021-02.pdf`
    p. 5), que sube la corriente por el filtro LC positivo a `0,770 A`
-   (`0,650 + 0,120 A`), y la del `LT3015` (`U2`, D-F9, `Iq_max = 70 mA`,
-   `lt3015-rev-b.pdf` p. 4), que deja la rama negativa en `0,720 A`.
+   (`0,450 + 0,120 A`), y la del `LT3015` (`U2`, D-F9, `Iq_max = 70 mA`,
+   `lt3015-rev-b.pdf` p. 4), que deja la rama negativa en `0,520 A`.
 2. La caida adicional del eFuse `TPS26631` en la rama positiva (`RON_max =
-   53 mohm` entre -40 y +125 C, `tps2663.pdf` p. 7: `40,8 mV` a `0,770 A`).
+   53 mohm` entre -40 y +125 C, `tps2663.pdf` p. 7: `30,2 mV` a `0,570 A`).
 3. Las cotas de regulacion del `THN 20-2413WI` (`traco_thn20wi.pdf` p. 2):
    exactitud base +-1 %, regulacion de linea +-0,2 % max, regulacion de carga
    +-0,5 % max, coeficiente termico +-0,02 %/K max y rizado 100 mVp-p max (se
@@ -52,7 +52,7 @@ RIZADO_CRUDO_VPP_MAX = 0.100          # 100 mVp-p max (traco_thn20wi.pdf p. 2)
 RIZADO_TRAS_LC_VPP = mb4.rizado_en_u1_vpp()  # 1,22 mVp-p tras el LC
 
 # --- Corrientes por rama (#343) y resistencias serie (M3 + LC + ferrita) ----
-I_CARGA_A = mb4.RIEL_MA / 1000.0      # 0,650 A (D-F1)
+I_CARGA_A = mb4.RIEL_MA / 1000.0      # 0,450 A (D-F1, re-declarada 2026-10-23)
 IQ_U1_MAX_A = mb4.IQ_U1_MAX_A         # 0,120 A (lt1963a-rev-g-2021-02.pdf p. 5)
 IQ_U2_MAX_A = mb4.IQ_U2_MAX_A         # 0,070 A (lt3015-rev-b.pdf p. 5)
 

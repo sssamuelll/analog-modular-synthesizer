@@ -107,6 +107,7 @@ rotuladas como historia de la decisión, no como contrato vigente.
 | [`reference/datasheets/ads1115.pdf`](reference/datasheets/ads1115.pdf) | **TI ADS1115 — SBAS444E** (diciembre 2024) — ADC 16 bits I2C | `U10`: entradas entre GND − 0,3 V y VDD + 0,3 V y 10 mA por pin (p. 4), dirección por ADDR (Table 7-2, p. 20) |
 | [`reference/datasheets/tmp1075.pdf`](reference/datasheets/tmp1075.pdf) | **TI TMP1075 — SBOS854F** (junio 2024) — sensor de temperatura I2C | `U11`: dirección por A2/A1/A0 (Table 7-2, p. 14), `V+` ≤ 6,5 V (p. 5) |
 | [`reference/datasheets/iso1541.pdf`](reference/datasheets/iso1541.pdf) | **TI ISO1541 — revisión F** (diciembre 2022) — aislador I2C bidireccional | `U9`, la barrera del I2C de `GNDA` a `GNDD` (M1): `VCC1`/`VCC2` ≤ 6 V (p. 6) |
+| [`reference/datasheets/phoenix-mkds-1715747-2018-11.pdf`](reference/datasheets/phoenix-mkds-1715747-2018-11.pdf) | **Phoenix Contact MKDS 1,5/ 4-5,08 — 1715747** (ficha del 22-11-2018, copia de [rapidonline.com](https://static.rapidonline.com/pdf/52-3856_v1.pdf)) — bornera de PCB de 4 polos, paso 5,08 mm | `J3`: dos conductores por borne **de la misma sección** (rígido 0,14–1 mm², flexible 0,14–0,75 mm², puntera sin collar 0,25–0,5 mm², puntera TWIN con collar 0,5–1 mm²), pelado 7 mm, apriete 0,5–0,6 N·m (p. 2–3) |
 
 Cinco de esas filas llevaban desde siempre sin entrar al índice aunque los
 ficheros sí estaban versionados, y las **ocho** de la fuente v4 entraron al

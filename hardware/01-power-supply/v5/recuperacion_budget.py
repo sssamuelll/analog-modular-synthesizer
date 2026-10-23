@@ -18,9 +18,11 @@ sec. 9.2) con piezas versionadas en `docs/reference/datasheets/`:
        sobrecarga va del 130 al 180 % de `3,75 A` (`ae-TE90-datasheet.pdf`
        p. 2 y p. 5), asi que `U16` corta antes de que el ladrillo entre en
        hiccup si su maximo queda bajo `4,875 A`. Por abajo, `1,40 x` la
-       corriente del cordon a 24 V nominales (`2,98 A`) y `1,30 x` la de su
-       peor caso (`3,21 A`, `ladrillo_budget.py`). Con `+-7 %` la banda abarca
-       `1,15 x`: el `1,5 x` sobre la nominal no cabe bajo `4,875 A`.
+       corriente del cordon a 24 V nominales (`2,67 A`) y `1,30 x` la de su
+       peor caso (`2,87 A`, `ladrillo_budget.py`); el minimo de la banda les
+       da `1,57 x` y `1,46 x`. Con `+-7 %` la banda abarca `1,15 x`: con la
+       cascada a 650 mA/riel el cordon nominal eran `2,98 A` y el `1,5 x` no
+       cabia bajo `4,875 A`; con 450 cabe.
      - A diferencia del TPS26630, el TPS26631 deja pasar hasta `2 x I_OL`
        durante `tCB(dly) = 25,5 ms` (con PGOOD alto) antes de regular a `I_OL`,
        y su comparador rapido corta a `3 x I_OL` (`tps2663.pdf` p. 7, 23): ese

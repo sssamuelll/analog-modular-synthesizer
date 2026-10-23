@@ -1696,15 +1696,16 @@ valle_margen    = 6;   // historico; la banda del valle ya no se perfora
 //
 // Las dos se arreglaron en el origen --v4/calor_budget.py, y la de la Voz
 // derivada del censo, no transcrita-- que es lo que esta misma guarda pide.
-// 72.61 DESDE EL PLAN DEL AIRE (2026-10-12, actualizado 2026-10-22 con M1 y
+// 64.93 DESDE EL PLAN DEL AIRE (2026-10-12, actualizado 2026-10-22 con M1 y
 // 2026-10-23): la fuente v5 (D-V4) saca la etapa AC-DC de la caja, y el calor
 // del cajon es lo que baja por el cordon del ladrillo
 // (hardware/01-power-supply/v5/ladrillo_budget.py, calor_del_cajon_w()):
-// 62.27 W que entregan los DC-DC (cargas, cascada lineal y +5V_AUX) + 9.33
-// perdidos convirtiendo dentro + 1.01 en la cadena de entrada (Kycon, LM74502,
-// TPS26631). Eran 64.58 sin la Ignd de U1/U2 ni de los LT3045/LT3094, sin el
+// 55.92 W que entregan los DC-DC (cargas, cascada lineal y +5V_AUX) + 8.20
+// perdidos convirtiendo dentro + 0.81 en la cadena de entrada (Kycon, LM74502,
+// TPS26631). Eran 72.61 con la cascada a 650 mA/riel (D-F1 la baja a 450 el
+// 2026-10-23), y 64.58 sin la Ignd de U1/U2 ni de los LT3045/LT3094, sin el
 // +5V_AUX de PS3 y sin la cadena de entrada.
-potencia_disipada = 72.61; // W, TODO el cajon: lo que baja por el cordon (fuente v5)
+potencia_disipada = 64.93; // W, TODO el cajon: lo que baja por el cordon (fuente v5)
 // Techo de salto sobre ambiente. 15 K era el criterio de siempre para caja de
 // electronica lineal con electroliticos dentro: a partir de ahi la vida del
 // condensador se parte por dos cada 10 K y deja de ser un detalle.

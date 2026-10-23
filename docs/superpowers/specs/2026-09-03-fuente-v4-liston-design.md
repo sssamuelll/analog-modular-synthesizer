@@ -1292,6 +1292,10 @@ lo que otro no hace** (#214, #206).
 > v4 se conserva íntegro como contrato de `hardware/01-power-supply/v4/`, mientras
 > que la fuente vigente (`v5/`, [`2026-09-05-fuente-v5-ladrillo-design.md`](2026-09-05-fuente-v5-ladrillo-design.md))
 > dimensiona los rieles de rack según D-B2.
+>
+> El 2026-10-23 el ultra de D-F1 baja de 650 a **450 mA/riel** (v5 §8, punto 5).
+> `RIEL_MA` vive en `consumo_total_budget.py` y lo importan las dos versiones,
+> así que los guiones de `v4/` también corren con 450 desde ese día.
 
 **Estas dos filas faltaban.** D-F8 se firmó el 04-09 y vivió sólo en su bloque
 de enmiendas: la cabecera decía «D-F1 a D-F8 decididas (§14)» y §14 se paraba

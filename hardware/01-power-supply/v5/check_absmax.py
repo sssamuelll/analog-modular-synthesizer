@@ -144,7 +144,6 @@ C_LC_F = valor("C3")
 C_DAMP_F = valor("C1")
 ESR_CD_OHM = 0.10                      # ESTIMADO: electrolitico de 220 uF (rizado_budget.py v4)
 R_DAMP_OHM = valor("R37") + ESR_CD_OHM
-I_CARGA_U1_A = 0.770                   # 650 mA + 120 mA Iq (#343)
 # bourns_smbj.pdf p. 2: V_BR 17,8..19,7 V a 1 mA. Para el PICO manda el
 # MAXIMO: con el minimo (que es lo que usaba #474) el TVS recorta antes y el
 # modelo sale optimista.
@@ -294,7 +293,7 @@ def escalon_lc(*, v_fallo_v: float = 36.0,
       v_d: tension en el condensador de amortiguacion de 220 uF (V)
     """
     v0 = 15.50
-    i_l = I_CARGA_U1_A
+    i_l = i_carga = _margen().corriente_rama_a("U1")   # D-F1 + Iq de U1 (#343)
     v_1 = v0 - i_l * R_SERIE_LC_OHM
     v_d = v_1
 
@@ -326,7 +325,7 @@ def escalon_lc(*, v_fallo_v: float = 36.0,
         if con_tvs and v1 > V_BR_SMBJ16A_V:
             i_tvs = (v1 - V_BR_SMBJ16A_V) / R_DIN_SMBJ16A_OHM
 
-        dv1 = (il - I_CARGA_U1_A - i_damp - i_tvs) / C_LC_F
+        dv1 = (il - i_carga - i_damp - i_tvs) / C_LC_F
         dvd = i_damp / C_DAMP_F
         p_tvs = v1 * i_tvs
         return dil, dv1, dvd, p_tvs

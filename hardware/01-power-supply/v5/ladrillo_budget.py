@@ -98,13 +98,14 @@ FILA_B_A = 0.500          # A/riel declarados en la fila de abajo
 # en la fila de 1,5 A, cota de los ~0,7 A que llevan).
 CASCADA_A = m5.I_CARGA_A
 IQ_PRE_A = {"U1": m5.IQ_U1_MAX_A, "U2": m5.IQ_U2_MAX_A}
-# El censo real (invitados_budget) son 340 + 327 mA: la declaracion es el doble.
+# El censo real (invitados_budget) son 340 + 327 mA: la declaracion es el peor
+# de los dos con el 30 % de consumo_total_budget.MARGEN.
 CASCADA_CENSO_A = (0.340 + 0.327) / 2
 # Detras de cada pre-regulador va un PAR de LDO ultra en paralelo (bom.csv:
 # U4,U5 = LT3045 tras U1; U6,U7 = LT3094 tras U2). Su Ignd entra por el pin IN,
 # sale por la masa y no llega a la carga: la pagan U1/U2 y el THN. Fila de
 # ILOAD = 500 mA con VIN = VOUT, que es el peor caso (en caida: Note 6 de la
-# LT3045, Note 11 de la LT3094); cada pieza lleva ~325 mA y la Ignd crece con
+# LT3045, Note 11 de la LT3094); cada pieza lleva ~225 mA y la Ignd crece con
 # la carga.
 LDO_ULTRA = {"U1": "LT3045", "U2": "LT3094"}
 N_LDO_ULTRA_POR_RAMA = 2

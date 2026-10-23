@@ -335,8 +335,12 @@ el convertidor y separadas en el cableado.
 > propio del mazo, ida y vuelta juntas, hasta la pantalla, sin pasar por el bus
 > de la fila: sus 550 mA no caen por la masa del bus (`pantalla-motor` §6).
 > `J3` es una bornera `MKDS 1,5/4-5,08` (`1715747`) y lleva dos conductores por
-> borne; que los admita está por confirmar en su hoja, que no está en
-> `docs/reference/datasheets/`. `check_telemetria.py` comprueba que el
+> borne, que su hoja admite si son de la misma sección
+> (`phoenix-mkds-1715747-2018-11.pdf` p. 2–3): rígido 0,14–1 mm², flexible
+> 0,14–0,75 mm², con puntera sin collar 0,25–0,5 mm², o los dos en una puntera
+> TWIN con collar de 0,5–1 mm²; pelado 7 mm, apriete 0,5–0,6 N·m. El hilo de
+> la pantalla y el del bus de la fila van, pues, de la misma sección en
+> `J3.1` y en `J3.2`. `check_telemetria.py` comprueba que el
 > `+12V_RACK` solo sale por `J3`, con `J3.2` en `GNDA`, y el bring-up revisa el
 > mazo (paso 0, `mazo_pantalla_par_propio_desde_J3`). El guion lo contaba como
 > T25; en el censo (`2026-09-08-censo-dv4-resolucion.md`) T25 es el reparto de
@@ -660,6 +664,16 @@ firmó en dirección el 2026-09-08 (§9); queda pendiente ejecutar su relevo**
    la cascada pasa a ser la línea más gorda del presupuesto. Merece la misma
    pregunta que se le hizo a la fila de abajo. **No se toca en este papel.**
 
+   > **Re-declarada el 2026-10-23: 450 mA/riel.** El peor riel del censo son
+   > 340,2 mA y la regla del 30 % (`hardware/03-vco/consumo_total_budget.py`,
+   > `MARGEN`) pide 442. Con 650, `U1` llegaba a 148,9 °C de unión con el aire
+   > del cajón a 63,9 °C (`tj_budget.py`); con 450 el cajón baja de 72,61 a
+   > 64,93 W, el aire a 62,6 °C, el cordón de 3,21 a 2,87 A en su peor caso y
+   > `U1` a 120,5 °C. `U2` (1,82 W) no tiene fila de la hoja que su cobre
+   > cubra: se acota en el bring-up, con la subida de su aleta (paso 7,
+   > `tj_budget.subida_max_aleta_k`). El cobre no cambia: la cascada sigue
+   > ruteada para 650.
+
 ## 9. Lo que hay que firmar
 
 | | Qué | Dónde | Estado |
@@ -823,8 +837,9 @@ coincidir con `H-V2-TRANSITORIOS` y `H-V2-RESERVA`, y `H-V5-RECONEXION` ~~sigue
 la política que se elija en~~ **hereda la ya elegida en** `H-V2-RECUPERACION`
 (§9.3, 08-09). Contestarlas por separado es una forma de contradecirse.
 
-Y una que este papel **no** propone y hay que decidir aparte: si la cascada
-sigue declarando 650 mA/riel contra un censo de 334 (HUECO 5).
+Y una que este papel **no** propone y hay que decidir aparte: ~~si la cascada
+sigue declarando 650 mA/riel contra un censo de 334 (HUECO 5)~~ **decidida el
+2026-10-23: 450 mA/riel (§8, punto 5)**.
 
 ### 9.3 Las cuatro políticas, decididas — 2026-09-08
 

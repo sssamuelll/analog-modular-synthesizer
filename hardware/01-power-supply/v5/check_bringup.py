@@ -17,7 +17,7 @@ convertidores DC-DC internos:
 Este guion formaliza T28 (H-CENSO-MEDIDA): cada prediccion se importa de los
 presupuestos ejecutables de v5 (ladrillo_budget, margen_budget, rizado_budget,
 secuencia_budget, recuperacion_budget, check_absmax, check_telemetria,
-derating_budget y curvas).
+derating_budget, tj_budget y curvas).
 Ningun numero esta duplicado a mano. Si un presupuesto cambia, la hoja de
 campo cambia al correr `--plantilla`.
 
@@ -41,7 +41,7 @@ if DIR not in sys.path:
 for _mod in [
     "curvas", "ladrillo_budget", "margen_budget", "recuperacion_budget",
     "rizado_budget", "secuencia_budget", "check_absmax", "check_telemetria",
-    "derating_budget"
+    "derating_budget", "tj_budget"
 ]:
     if _mod not in sys.modules or not getattr(sys.modules[_mod], "__file__", "").startswith(DIR):
         _spec = importlib.util.spec_from_file_location(_mod, os.path.join(DIR, f"{_mod}.py"))
@@ -59,6 +59,7 @@ import margen_budget  # noqa: E402
 import recuperacion_budget  # noqa: E402
 import rizado_budget  # noqa: E402
 import secuencia_budget  # noqa: E402
+import tj_budget  # noqa: E402
 
 CSV_PATH = os.path.join(DIR, "medidas.csv")
 COLS = [
@@ -159,7 +160,8 @@ def _puntos() -> list[Punto]:
                lo=1000.0))
     p.append(P("0", "mazo_pantalla_par_propio_desde_J3", "si/no",
                "T26 (#477): la pantalla lleva su propio par, +12 V y retorno, de J3.1 y J3.2 "
-               "hasta la pantalla, sin pasar por el bus de la fila",
+               "hasta la pantalla, sin pasar por el bus de la fila; en J3.1 y J3.2 los dos hilos "
+               "de la misma seccion (phoenix-mkds-1715747-2018-11.pdf p. 2-3)",
                literal="si"))
 
     # --- Paso 1: Alimentacion 24V y convertidores DC-DC ------------------
@@ -296,8 +298,8 @@ def _puntos() -> list[Punto]:
                    f"Pinout J2 Eurocard verificado: pin {pin} = {nom:+g} V",
                    predicho=nom, tol=0.30))
     for tp, nom in (("TP3", 12.0), ("TP4", -12.0)):
-        p.append(P("5", f"{tp}_con_carga_650mA", "V",
-                   "Regulacion de carga final en cascada entregando 650 mA continuos",
+        p.append(P("5", f"{tp}_con_carga_450mA", "V",
+                   "Regulacion de carga final en cascada entregando 450 mA continuos (D-F1)",
                    predicho=nom, tol=0.05))
 
     # --- Paso 6: Telemetria contra multimetro -----------------------------
@@ -341,10 +343,16 @@ def _puntos() -> list[Punto]:
                f"T10 / T27: union de U1 LT1963A disipando hasta "
                f"{ladrillo_budget.quema_pre_regulador_w('U1'):.2f} W (ladrillo_budget, < 90 C)",
                hi=90.0))
-    p.append(P("7", "temperatura_U2_LT3015_c", "C",
-               f"T10 / T27: union de U2 LT3015 disipando hasta "
-               f"{ladrillo_budget.quema_pre_regulador_w('U2'):.2f} W (ladrillo_budget, < 90 C)",
-               hi=90.0))
+    # #478: la tabla de la LT3015 no cubre el cobre de U2, asi que su union se
+    # acota por la aleta: Tj = aleta + P * theta_JC (tj_budget.py).
+    p.append(P("7", "U2_LT3015_subida_aleta_30min_k", "K",
+               f"#478: aleta de U2 sobre el aire del banco tras 30 min entregando "
+               f"{ladrillo_budget.CASCADA_A * 1e3:.0f} mA ({tj_budget.potencia_w('U2'):.2f} W); con el "
+               f"aire del cajon ({derating_budget.aire_cajon_c():.1f} C) y theta_JC "
+               f"{tj_budget.THETA_JC_C_W['U2']:g} C/W la union queda <= 125 C "
+               "(tj_budget.subida_max_aleta_k). La aleta es IN, a -15,5 V: termopar aislado "
+               "o IR sobre cinta Kapton",
+               hi=tj_budget.subida_max_aleta_k("U2", derating_budget.aire_cajon_c())))
     p.append(P("7", "potencia_derating_ladrillo_45C_w", "W",
                "curvas.derating('TE90A2403F01', 45) * 90.0: potencia garantizada del ladrillo a 45 C",
                predicho=curvas.derating("TE90A2403F01", 45.0) * 90.0,
@@ -490,7 +498,7 @@ def main(argv: list[str]) -> int:
     print("  predicciones importadas de: ladrillo_budget, margen_budget, "
           "rizado_budget,")
     print("  secuencia_budget, recuperacion_budget, check_absmax, check_telemetria,")
-    print("  derating_budget y curvas.")
+    print("  derating_budget, tj_budget y curvas.")
     print("  Ninguna esta escrita a mano dos veces.\n")
 
     por_paso: dict[str, list[Punto]] = {}
