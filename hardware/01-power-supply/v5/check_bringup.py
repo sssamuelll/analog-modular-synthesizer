@@ -16,7 +16,8 @@ convertidores DC-DC internos:
 
 Este guion formaliza T28 (H-CENSO-MEDIDA): cada prediccion se importa de los
 presupuestos ejecutables de v5 (ladrillo_budget, margen_budget, rizado_budget,
-secuencia_budget, recuperacion_budget, check_absmax, check_telemetria y curvas).
+secuencia_budget, recuperacion_budget, check_absmax, check_telemetria,
+derating_budget y curvas).
 Ningun numero esta duplicado a mano. Si un presupuesto cambia, la hoja de
 campo cambia al correr `--plantilla`.
 
@@ -39,7 +40,8 @@ if DIR not in sys.path:
 
 for _mod in [
     "curvas", "ladrillo_budget", "margen_budget", "recuperacion_budget",
-    "rizado_budget", "secuencia_budget", "check_absmax", "check_telemetria"
+    "rizado_budget", "secuencia_budget", "check_absmax", "check_telemetria",
+    "derating_budget"
 ]:
     if _mod not in sys.modules or not getattr(sys.modules[_mod], "__file__", "").startswith(DIR):
         _spec = importlib.util.spec_from_file_location(_mod, os.path.join(DIR, f"{_mod}.py"))
@@ -51,6 +53,7 @@ for _mod in [
 import check_absmax  # noqa: E402
 import check_telemetria  # noqa: E402
 import curvas  # noqa: E402
+import derating_budget  # noqa: E402
 import ladrillo_budget  # noqa: E402
 import margen_budget  # noqa: E402
 import recuperacion_budget  # noqa: E402
@@ -354,6 +357,26 @@ def _puntos() -> list[Punto]:
                    f"check_absmax: disparo de proteccion en {riel_crowbar}",
                    predicho=v_disp,
                    tol=check_absmax.TOL_DISPARO_TL431BI_V))
+    # #476: el crowbar enclavado contra el limite de su convertidor. Un pulso en
+    # la puerta del SCR con el riel vivo; si el convertidor entra en hiccup la
+    # corriente cae bajo I_H, el SCR se suelta y el riel vuelve. Si se queda en
+    # corriente constante, 30 min con termopar en la base del SCR: lo que sube
+    # sobre el aire del banco se suma al aire del cajon.
+    t_cajon = derating_budget.aire_cajon_c()
+    for riel in check_absmax.PIEZAS_CROWBAR:
+        pide = check_absmax.corriente_puerta_a(riel)["pide_a"]
+        p.append(P("8", f"crowbar_{riel}_se_suelta_solo", "si/no",
+                   f"#476 REGISTRO: tras un pulso de puerta (>= {pide * 1e3:.0f} mA, "
+                   f"check_absmax.corriente_puerta_a), el convertidor de {riel} suelta el SCR "
+                   "y el riel vuelve sin quitar la entrada"))
+        p.append(P("8", f"crowbar_{riel}_corriente_enclavado_a", "A",
+                   f"#476 REGISTRO: corriente media por el SCR de {riel} enclavado, y si es "
+                   "constante o a pulsos (osciloscopio en el shunt o pinza)"))
+        p.append(P("8", f"crowbar_{riel}_subida_base_scr_30min_k", "K",
+                   f"#476: base del SCR de {riel} sobre el aire del banco tras 30 min enclavado; "
+                   f"con el aire del cajon ({t_cajon:.1f} C) la union queda <= 125 C "
+                   "(check_absmax.subida_max_scr_k)",
+                   hi=check_absmax.subida_max_scr_k(riel, t_cajon)))
     p.append(P("8", "fusible_abre_sin_dano_a_pistas", "si/no",
                "check_absmax: fusible Bourns SF-1206F corta corriente de falta sin danar PCB",
                literal="si"))
@@ -466,7 +489,8 @@ def main(argv: list[str]) -> int:
           f"{len(criterios)} con criterio, {len(registros)} de registro")
     print("  predicciones importadas de: ladrillo_budget, margen_budget, "
           "rizado_budget,")
-    print("  secuencia_budget, recuperacion_budget, check_absmax, check_telemetria y curvas.")
+    print("  secuencia_budget, recuperacion_budget, check_absmax, check_telemetria,")
+    print("  derating_budget y curvas.")
     print("  Ninguna esta escrita a mano dos veces.\n")
 
     por_paso: dict[str, list[Punto]] = {}

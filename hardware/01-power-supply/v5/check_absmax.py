@@ -72,7 +72,9 @@ LO QUE ESTE CALCULO NO CUBRE (se imprime al final):
     el SCR aguanta `200 V/us` con `R_GK = 100 ohm` (`nxp-bt151-500r.pdf` p. 6).
   * Un crowbar disparado no llega al MSP430: el SCR se queda conduciendo la
     corriente de pliegue del convertidor (los fusibles de `+-12 V` son de
-    `3 A` y el THN 30 pliega a `1,875 A`) (#476).
+    `3 A` y el THN 30 pliega a `1,875 A`) (#476). Si el convertidor lo suelta
+    y cuanto se calienta el SCR se mide en el bring-up: `check_bringup.py`,
+    paso 8, puntos `crowbar_*`, con la cota de `subida_max_scr_k()`.
 """
 from __future__ import annotations
 
@@ -167,6 +169,14 @@ I2T_FUSION_A2S = {"SF-1206F300-2": 0.501, "SF-1206F200-2": 0.181, "0466004.NRHF"
 # ESTIMADO: el despeje (fusion + arco) frente a la fusion tipica. Ninguna de
 # las dos hojas da el I^2t de despeje.
 FACTOR_DESPEJE_I2T = 10.0
+# Un SCR enclavado (#476): Tj max 125 C (nxp-bt151-500r.pdf p. 3), Rth(j-mb)
+# <= 1,3 K/W (p. 5), V_T <= 1,75 V a 23 A (p. 6). Los dos fusibles abren al
+# 200 % (bourns_sf1206f.pdf p. 1, <= 60 s; littelfuse_0466.pdf p. 1, <= 5 s):
+# lo que el SCR conduce sin que abra es menos del doble del nominal.
+TJ_MAX_BT151_C = 125.0
+RTH_JMB_BT151_K_W = 1.3
+V_T_MAX_BT151_V = 1.75
+I_NOMINAL_FUSIBLE_A = {"SF-1206F300-2": 3.0, "SF-1206F200-2": 2.0, "0466004.NRHF": 4.0}
 
 # El disparo se calcula de los divisores de la placa: con el TL431 -> PNP ->
 # puerta el umbral es 2,495 V * (1 + R_alta/R_baja), sin V_GT (en #474 el anodo
@@ -234,6 +244,14 @@ def corriente_puerta_a(riel: str, i_gt_a: float = I_GT_MAX_BT151_A) -> dict[str,
     i_base = (v - V_BE_SAT_PNP_V - V_REF_TL431_V) / valor(r_b) - V_BE_SAT_PNP_V / valor(r_be)
     da = min(HFE_MIN_PNP * i_base, (v - V_CE_SAT_PNP_V - V_GT_MAX_BT151_V) / valor(r_c))
     return {"pide_a": pide, "da_a": da, "r_gk_ohm": valor(r_gk)}
+
+
+def subida_max_scr_k(riel: str, t_aire_c: float) -> float:
+    """Lo que puede subir la base del SCR de `riel` sobre el aire, enclavado, sin
+    que la union pase de TJ_MAX con el aire a `t_aire_c`. La caida base-union
+    va con la corriente mas alta que el fusible deja pasar sin abrir."""
+    i_cota = 2.0 * I_NOMINAL_FUSIBLE_A[filas()[PIEZAS_CROWBAR[riel][-1]]["mpn"]]
+    return TJ_MAX_BT151_C - t_aire_c - V_T_MAX_BT151_V * i_cota * RTH_JMB_BT151_K_W
 
 
 # --- U18 (TPS709) detras de R64 + D2 ----------------------------------------
@@ -550,7 +568,8 @@ def demo() -> int:
     print("    - OUT de U19 a -V_F de D19 (<= 0,55 V a 3 A) durante el corte; la hoja da "
           "-0,3 V en DC y pide el Schottky")
     print("    - pendiente del riel de rack en enchufe en caliente (el SCR aguanta 200 V/us)")
-    print("    - un crowbar disparado no llega al MSP430: el SCR sigue conduciendo el pliegue (#476)")
+    print("    - un crowbar disparado no llega al MSP430: el SCR sigue conduciendo el pliegue; "
+          "se mide en el bring-up (paso 8, crowbar_*, #476)")
 
     print("\nOK: check_absmax.py v5 (#334, #340 y T18..T21 en verde)")
     return 0
