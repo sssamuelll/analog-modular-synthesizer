@@ -7,7 +7,7 @@ paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
 0,aislamiento_pantalla_retorno_dedicado,Mohm,>= 1,,,,,,T25: retorno de pantalla aislado de GNDA dentro de la fuente
 1,tension_ladrillo_vacio,V,23.52 .. 24.48,24,0.48,,,,T09 / L04: salida continua nominal del ladrillo 24 V en vacio
 1,caida_LM74502_ideal_diode,mV,<= 50,,,,,,M5 / L04: caida directa del controlador de diodo ideal + FET inverso
-1,caida_TPS26631_efuse_nominal,mV,103 .. 183,143,40,,,,margen_budget: caida de conduccion del eFuse (53 mohm a 2.69 A)
+1,ron_TPS26631_efuse_U16,mohm,19 .. 45,,,,,,"M5: caida de U16 / corriente del cordon, con >= 0,6 A (tps2663.pdf p. 7)"
 1,THN30_mas12_vacio,V,11.76 .. 12.24,12,0.24,,,,M1 / T10: THN30_mas12 en vacio a 24 V de entrada
 1,THN30_mas12_a_nominal,V,11.76 .. 12.24,12,0.24,,,,M1 / T10: THN30_mas12 con carga resistiva a corriente nominal
 1,THN30_mas12_rizado_20MHz,Vpp,<= 0.1,,,,,,T12 / L05: rizado y ruido de conmutacion a 20 MHz de ancho de banda
@@ -31,8 +31,8 @@ paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
 1,corriente_ladrillo_sostenida_a,A,2.4219 .. 2.9601,2.691,0.2691,,,,ladrillo_budget.corriente_del_cordon_a(): corriente total desde 24 V a carga sostenida
 2,mas15_minimo_con_carga,V,>= 14.8855,,,,,,margen_budget.v_entrada_minima_rama_v('U1'): tension minima que alcanza U1 LT1963A
 2,menos15_maximo_con_carga,V,>= 14.9303,,,,,,margen_budget.v_entrada_minima_rama_v('U2'): tension minima que alcanza U2 LT3015
-2,margen_dropout_U1_v,V,0.3 .. 0.94573,0.84573,0.1,,,,margen_budget.margen_v5_v('U1'): holgura de dropout de U1 (> 300 mV requerido)
-2,margen_dropout_U2_v,V,0.3 .. 1.19652,1.09652,0.1,,,,margen_budget.margen_v5_v('U2'): holgura de dropout de U2 (> 300 mV requerido)
+2,margen_dropout_U1_v,V,0.84573 .. 1.97236,,,,,,"margen_budget: IN de U1 menos lo que pide la cascada, entre margen_v5_v('U1') y el maximo sano"
+2,margen_dropout_U2_v,V,1.09652 .. 2.17834,,,,,,"margen_budget: IN de U2 menos lo que pide la cascada, entre margen_v5_v('U2') y el maximo sano"
 2,rizado_tras_LC_20MHz,Vpp,<= 0.003,,,,,,rizado_budget: rizado de conmutacion residual tras filtro LC de 22 uH + 47 uF
 2,pico_LC_en_resonancia,dB,<= 2.5,,,,,,rizado_budget: atenuacion en resonancia (filtro LC amortiguado criticamente)
 2b,quitar_mas15_caen_los_dos,si/no,= si,,,,,,"M4 / #339: al perder el crudo positivo, el comparador LM393B apaga U1 y U2"
@@ -45,7 +45,9 @@ paso,magnitud,unidad,criterio,predicho,tolerancia,medido,placa,fecha,fuente
 2c,tiempo_espera_reintento_s,s,0.85 .. 1.15,1,0.15,,,,M5 / recuperacion_budget: tiempo de enfriamiento entre intentos de arranque
 2c,debounce_deteccion_ms,ms,85 .. 115,100,15,,,,M5 / recuperacion_budget: ventana de discriminacion contra transitorios de insercion
 2c,tiempo_reset_cupo_s,s,55 .. 65,60,5,,,,M5 / recuperacion_budget: tiempo de operacion sana antes de restaurar el cupo
-2c,latch_inmediato_ante_ovp,si/no,= si,,,,,,M5: sobretension en rieles provoca corte y enclavamiento inmediato sin reintentos
+2c,latch_inmediato_ante_ovp,si/no,= si,,,,,,M5: FLT de U19 (P1.2) con la cadena arrancada: corte y enclavamiento sin reintentos
+2c,flt_U19_en_arranque_no_abandona,si/no,= si,,,,,,M5 / recuperacion_budget: 10 arranques completos seguidos no la dejan ABANDONADA (FLT de U19 del arranque)
+2c,shdn_U16_con_MCU_en_reset_v,V,<= 0.8,,,,,,"R83: SHDN de U16 con el MSP430 en reset, por debajo de V(SHUTF) (tps2663.pdf p. 7)"
 2c,persistencia_latch_en_fram,si/no,= si,,,,,,M5: el estado de enclavamiento sobrevive a desconexion de la alimentacion
 2c,pulsador_reset_desbloquea,si/no,= si,,,,,,M5: el pulsador manual de reset en la placa limpia el enclavamiento
 3,TP7_+13V1_sin_carga,V,12.95 .. 13.25,13.1,0.15,,,,Tension sin carga en punto de prueba TP7 (+13.1 V +- 0.15 V)

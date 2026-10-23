@@ -165,9 +165,12 @@ def _puntos() -> list[Punto]:
     p.append(P("1", "caida_LM74502_ideal_diode", "mV",
                "M5 / L04: caida directa del controlador de diodo ideal + FET inverso",
                hi=50.0))
-    p.append(P("1", "caida_TPS26631_efuse_nominal", "mV",
-               "margen_budget: caida de conduccion del eFuse (53 mohm a 2.69 A)",
-               predicho=143.0, tol=40.0))
+    # Resistencia y no caida: la caida depende de la corriente del momento.
+    # tps2663.pdf p. 7, 0,6 A <= I <= 6 A: 19 mohm min (-40..125 C) y 45 mohm
+    # max a 85 C, lo que cubre cualquier banco a temperatura de sala.
+    p.append(P("1", "ron_TPS26631_efuse_U16", "mohm",
+               "M5: caida de U16 / corriente del cordon, con >= 0,6 A (tps2663.pdf p. 7)",
+               lo=19.0, hi=45.0))
     for ref in MODULOS_DCDC:
         v = V_DCDC[ref]
         p.append(P("1", f"{ref}_vacio", "V",
@@ -198,12 +201,15 @@ def _puntos() -> list[Punto]:
     p.append(P("2", "menos15_maximo_con_carga", "V",
                "margen_budget.v_entrada_minima_rama_v('U2'): tension minima que alcanza U2 LT3015",
                lo=margen_budget.v_entrada_minima_rama_v("U2")))
-    p.append(P("2", "margen_dropout_U1_v", "V",
-               "margen_budget.margen_v5_v('U1'): holgura de dropout de U1 (> 300 mV requerido)",
-               lo=0.300, predicho=margen_budget.margen_v5_v("U1"), tol=0.100))
-    p.append(P("2", "margen_dropout_U2_v", "V",
-               "margen_budget.margen_v5_v('U2'): holgura de dropout de U2 (> 300 mV requerido)",
-               lo=0.300, predicho=margen_budget.margen_v5_v("U2"), tol=0.100))
+    # La ventana va del corner bajo (THN al -2,5 %, caliente, caidas maximas)
+    # al alto (THN al +2,5 % y sin caida): una placa sana cae dentro a
+    # cualquier temperatura. Centrada en el corner bajo, una nominal salia roja.
+    for reg in ("U1", "U2"):
+        p.append(P("2", f"margen_dropout_{reg}_v", "V",
+                   f"margen_budget: IN de {reg} menos lo que pide la cascada, entre "
+                   f"margen_v5_v('{reg}') y el maximo sano",
+                   lo=margen_budget.margen_v5_v(reg),
+                   hi=margen_budget.v_entrada_maxima_sana_v() - margen_budget.v_necesaria_minima_v(reg)))
     p.append(P("2", "rizado_tras_LC_20MHz", "Vpp",
                "rizado_budget: rizado de conmutacion residual tras filtro LC de 22 uH + 47 uF",
                hi=0.003))
@@ -245,8 +251,14 @@ def _puntos() -> list[Punto]:
                "M5 / recuperacion_budget: tiempo de operacion sana antes de restaurar el cupo",
                predicho=recuperacion_budget.T_REARME_SANO_S, tol=5.0))
     p.append(P("2c", "latch_inmediato_ante_ovp", "si/no",
-               "M5: sobretension en rieles provoca corte y enclavamiento inmediato sin reintentos",
+               "M5: FLT de U19 (P1.2) con la cadena arrancada: corte y enclavamiento sin reintentos",
                literal="si"))
+    p.append(P("2c", "flt_U19_en_arranque_no_abandona", "si/no",
+               "M5 / recuperacion_budget: 10 arranques completos seguidos no la dejan ABANDONADA (FLT de U19 del arranque)",
+               literal="si"))
+    p.append(P("2c", "shdn_U16_con_MCU_en_reset_v", "V",
+               "R83: SHDN de U16 con el MSP430 en reset, por debajo de V(SHUTF) (tps2663.pdf p. 7)",
+               hi=recuperacion_budget.V_SHUTF_MAX_V))
     p.append(P("2c", "persistencia_latch_en_fram", "si/no",
                "M5: el estado de enclavamiento sobrevive a desconexion de la alimentacion",
                literal="si"))
